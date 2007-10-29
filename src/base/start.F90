@@ -754,7 +754,9 @@ contains
    csi2  = c_si**2
    csim2 = csi2*(1.+alpha)    ! z-equilibrium defined for fixed
                                 ! ratio p_mag/p_gas = alpha = 1/beta
-
+#ifdef COSM_RAYS
+   csim2 = csim2 +csi2*beta_cr
+#endif
 
    ethu = 7.0**2/(5.0/3.0-1.0) * 1.0    ! thermal energy unit=0.76eV/cm**3
                                         ! for c_si= 7km/s, n=1/cm^3 	 

@@ -35,7 +35,7 @@ contains
              b1b =  b(ibx,i,  j,  k)
              b2b = (b(iby,i,  j,  k) + b(iby,i-1,j,  k)       &
                   + b(iby,i-1,j+1,k) + b(iby,i,  j+1,k))/4.
-	if(dimensions .eq. '3d') then
+        if(dimensions .eq. '3d') then
              b3b = (b(ibz,i,  j,  k) + b(ibz,i-1,j,  k)       &
                   + b(ibz,i-1,j,k+1) + b(ibz,i,  j,k+1))/4.
         endif        
@@ -53,7 +53,7 @@ contains
 
              decr2 = (dqp2+dqm2)* (1.0 + sign(1.0, dqm2*dqp2))/4. 
 
-	if(dimensions .eq. '3d') then
+        if(dimensions .eq. '3d') then
              dqm3  = 0.5*((u(iecr,i-1,j ,k  ) + u(iecr,i ,j ,k  ))    &
                          -(u(iecr,i-1,j ,k-1) + u(iecr,i ,j ,k-1)))/dz
              dqp3  = 0.5*((u(iecr,i-1,j ,k+1) + u(iecr,i ,j ,k+1))    &

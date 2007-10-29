@@ -25,8 +25,8 @@ if($argc < 1){
 open MAKEIN, "< Makefile.in" or die $!;
 @makein = <MAKEIN>;
 close MAKEIN;
-rmtree(['source']);
-mkpath(['source']);
+rmtree(['obj']);
+mkpath(['obj']);
 $probdir = "problems/". $ARGV[0] . "/";
 if(!-r $probdir) { die "Can't open $probdir: $!";}
 
@@ -38,7 +38,7 @@ for (@base) {
 }
 @addons = ();
 $defs = $probdir."mhd.def";
-copy($defs,"source/mhd.def");
+copy($defs,"obj/mhd.def");
 open (defs) or die "Can't open the file mhd.def!";
 @fdefs = <defs>;
 @d = grep (/define/,@fdefs);
@@ -73,12 +73,12 @@ push(@addons, "../src/scheme/".$sch."/".$solv."/tv.F90");
 foreach $file (@files) {
    $pos = rindex($file,"\/")+1;
    $len = length($file);
-   push(@symln,"source/".substr($file,$pos,$len-$pos) );
+   push(@symln,"obj/".substr($file,$pos,$len-$pos) );
 }
 for $i (0 .. $#symln){
   symlink($files[$i],$symln[$i]);
 }
-chdir 'source';
+chdir 'obj';
 open(MAKEFILE, "> Makefile");
 
 # Source listing
