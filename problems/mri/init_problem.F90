@@ -119,6 +119,7 @@ contains
     do k = 1,nz
       do j = 1,ny
         do i = 1,nx
+          u(idna,i,j,k) = d0
           call random_number(rand)
           u(imxa:imza,i,j,k) = 0.0
           u(imya,i,j,k) = -qshear*omega*x(i)*u(idna,i,j,k)
