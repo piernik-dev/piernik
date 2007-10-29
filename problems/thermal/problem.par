@@ -1,0 +1,98 @@
+ $DOMAIN_SIZES
+    nxd = 50
+    nyd = 50
+    nzd = 50
+ /  
+
+ $START_CONTROL
+ /
+
+ $RESTART_CONTROL
+    nrestart = 0 
+    new_id   = ''
+ /
+
+ $END_CONTROL
+    tend   = 100.0
+    nend   = 100000 
+ /
+
+ $OUTPUT_CONTROL
+    dt_hdf  = 5.0
+    dt_res  = 100.0
+    vars(1) = 'dens'
+    vars(2) = 'velx'
+    vars(3) = 'vely'
+    vars(4) = 'velz'
+    vars(5) = 'ener'
+    vars(6) = 'magx'
+    vars(7) = 'magy'
+    vars(8) = 'magz'
+    vars(9) = 'esrc'
+    vars(10) = 'eint'
+    vars(11) = 'temp'
+    domain  = 'phys_domain'
+   
+ / 
+
+ $BOUNDARIES
+    bnd_xl = 'per'  
+    bnd_xr = 'per'  
+    bnd_yl = 'per'  
+    bnd_yr = 'per'  
+    bnd_zl = 'per'  
+    bnd_zr = 'per'
+ /
+
+ $DOMAIN_LIMITS
+    xmin   =-250.0
+    xmax   = 250.0
+    ymin   =-250.0
+    ymax   = 250.0
+    zmin   =-250.0
+    zmax   = 250.0
+ /
+
+ $EQUATION_OF_STATE
+    c_si   = 7.0
+    alpha  = 0.0 
+ /  
+
+ $NUMERICAL_PARAMS
+    cfl    = 0.9
+    big    = 0.0
+    small  = 1.e-10
+    smalld = 1.e-5
+    smallei= 1.e-5
+    tune_zeq     = 1.0468
+    tune_zeq_bnd = 0.86
+ /
+ 
+ $GRAVITY
+    grav_model ='null'
+    r_gc   = 8.5
+    nsub   = 10
+ /
+
+ $THERMAL
+    cool_model      = 'c1'
+    heat_model      = 'sup1'
+    coolheat_active = 'yes'    
+    substepping   = 'sweep'
+    cfl_coolheat  = 0.005
+    G_uv1         = 1.0e-24
+    G_sup1        = 1.0e-25
+    L_C 	  = -1.23848d-55 
+ /
+ 
+ 
+ 
+ $PROBLEM_CONTROL
+    problem_name = 'thermal'
+    run_id =  'tst'
+    T0     =  5000.0
+    nbx0    =  0.
+    nby0    = 1.0
+    nbz0    =  0.
+    a_pert  = 0.01
+ /

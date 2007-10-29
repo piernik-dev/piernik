@@ -1,0 +1,104 @@
+ $DOMAIN_SIZES
+    nxd = 40
+    nyd = 40
+    nzd = 40
+ /
+ $MPI_BLOCKS
+    pxsize = 1
+    pysize = 1
+    pzsize = 1    
+ /  
+
+ $START_CONTROL
+ /
+
+ $RESTART_CONTROL
+    restart  = 'last'
+    new_id   = ''
+    nrestart = 0 
+ /
+
+ $END_CONTROL
+    tend   = 0.0015
+    nend   = 1000
+ /
+
+ $OUTPUT_CONTROL
+    dt_hdf  = 0.00001
+    dt_res  = 0.0
+    dt_log  = 0.00001
+    dt_tsl  = 0.001
+    vars(1) = 'dens'
+    vars(2) = 'velx'
+    vars(3) = 'vely'
+    vars(4) = 'velz'
+    vars(5) = 'ener'
+    vars(6) = 'magx'
+    vars(7) = 'magy'
+    vars(8) = 'magz'
+    domain  = 'phys_domain'  
+ / 
+
+ $BOUNDARIES
+    bnd_xl = 'out'  
+    bnd_xr = 'out'  
+    bnd_yl = 'out'  
+    bnd_yr = 'out'  
+    bnd_zl = 'out'  
+    bnd_zr = 'out'
+ /
+
+ $DOMAIN_LIMITS
+    xmin   =-1.0
+    xmax   = 1.0
+    ymin   =-1.0
+    ymax   = 1.0
+    zmin   =-1.0
+    zmax   = 1.0
+ /
+
+ $EQUATION_OF_STATE
+
+ /  
+
+ $NUMERICAL_SETUP
+    cfl    = 0.5
+    big    = 0.e+50
+    small  = 1.e-50
+    smalld = 1.e-3
+    smallei= 1.e-5
+    flux_limiter = 'vanleer'
+    freezing_speed = 'local'
+    integration_order = 3
+    magnetic = 'no'
+    dimensions = '3d'
+    nu_bulk    = 10.0
+    cfl_visc   = 0.4
+ /
+ 
+ $GRAVITY
+    grav_model ='null'
+ /
+ 
+ $THERMAL
+ /
+ 
+ $RESISTIVITY
+ /
+
+ $PROBLEM_CONTROL
+    problem_name ='sedov'
+    run_id =  'tst'
+    d0     = 1.0
+    p0     = 1.0
+    Eexpl  = 1.e6
+    bx0    = 0.0
+    by0    = 0.0
+    bz0    = 0.0
+    x0     = -0.0 
+    y0     = -0.0 
+    z0     = -0.0
+    r0     = 0.25 
+    n_sn   = 1
+    dt_sn  = 0.0
+ /

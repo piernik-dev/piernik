@@ -1,0 +1,79 @@
+ $DOMAIN_SIZES
+    nxd = 10
+    nyd = 10
+    nzd = 100
+ /  
+
+ $START_CONTROL
+ /
+
+ $RESTART_CONTROL
+    nrestart = 0 
+    new_id   = 'new'
+ /
+
+ $END_CONTROL
+    tend   = 20.0
+    nend   = 10000 
+ /
+
+ $OUTPUT_CONTROL
+    dt_hdf  = 0.1
+    dt_res  = 1.0
+    vars(1) = 'dens'
+    vars(2) = 'velx'
+    vars(3) = 'vely'
+    vars(4) = 'velz'
+    vars(5) = 'ener'
+    vars(6) = 'magx'
+    vars(7) = 'magy'
+    vars(8) = 'magz'
+    vars(9) = 'gpot'
+    domain  = 'phys_domain'  
+ / 
+
+ $BOUNDARIES
+    bnd_xl = 'per'  
+    bnd_xr = 'per'  
+    bnd_yl = 'per'  
+    bnd_yr = 'per'  
+    bnd_zl = 'outd'  
+    bnd_zr = 'outd'
+ /
+
+ $DOMAIN_LIMITS
+    xmin   =-250.0
+    xmax   = 250.0
+    ymin   =-250.0
+    ymax   = 250.0
+    zmin   =-500.0
+    zmax   = 500.0
+ /
+
+ $EQUATION_OF_STATE
+    c_si   =  7.
+    alpha  = 0.0 
+ /  
+
+ $NUMERICAL_PARAMS
+    cfl    = 0.1
+    big    = 0.0
+    smalld = 1.e-5
+    smallei= 1.e-5
+ /
+ 
+ $GRAVITY
+    grav_model ='galactic'
+    selfgravity = 'poisson'
+    r_gc   = 8.5
+ /
+ 
+ $PROBLEM_CONTROL
+    problem_name ='poisson'
+    run_id =  'tst'
+    d0     =  1.
+    nbx0    =  0.
+    nby0    = 1.0
+    nbz0    =  0.
+    a_vp    = 0.0
+ /

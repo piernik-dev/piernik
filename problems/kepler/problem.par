@@ -1,0 +1,99 @@
+ $DOMAIN_SIZES
+    nxd = 100
+    nyd = 100
+    nzd = 1
+    nb=6
+ /  
+
+ $MPI_BLOCKS
+    pxsize = 1
+    pysize = 1
+    pzsize = 1    
+ /  
+ $START_CONTROL
+ /
+
+ $RESTART_CONTROL
+    restart  = 'last'
+    new_id   = ''
+    nrestart = 0 
+ /
+
+ $END_CONTROL
+    tend   = 10.0
+    nend   = 10000 
+ /
+
+ $OUTPUT_CONTROL
+    dt_hdf  = 0.1
+    dt_res  = 10.0
+    dt_log  = 0.00001
+    dt_tsl  = 0.00001
+    vars(1) = 'dens'
+    vars(2) = 'velx'
+    vars(3) = 'vely'
+    vars(4) = 'velz'
+    vars(5) = 'ener'
+    domain  = 'full_domain'
+    mag_center = 'no'
+ / 
+
+ $BOUNDARIES
+    bnd_xl = 'cor'  
+    bnd_xr = 'outd'  
+    bnd_yl = 'cor'  
+    bnd_yr = 'outd'  
+    bnd_zl = 'outd'  
+    bnd_zr = 'outd'
+ /
+
+ $DOMAIN_LIMITS
+    xmin   =  0.0
+    xmax   =  1.0
+    ymin   =  0.0
+    ymax   =  1.0
+    zmin   =-4.0e-1
+    zmax   = 4.0e-1
+ /
+
+ $EQUATION_OF_STATE
+    c_si   = 0.2
+    alpha  = 0.0
+ /  
+
+ $NUMERICAL_SETUP
+    cfl    = 0.8
+    big    = 0.0
+    smalld = 1.e-3
+    smallei= 1.e-3
+    flux_limiter = 'vanleer'
+    freezing_speed = 'local'
+    integration_order = 3
+    magnetic = 'no'
+    dimensions = '2dxy'
+ /
+ 
+ $GRAVITY
+    grav_model ='ptmass'
+    ptmass  =  1.0
+    ptm_x   =  0.0
+    ptm_y   =  0.0
+    ptm_z   =  0.0
+    r_smooth=  0.2
+    nsub    = 10
+    r_grav  =  0.7
+    n_gravr = 10
+ /
+ 
+ $THERMAL
+ /
+ 
+ $RESISTIVITY
+ /
+
+ $PROBLEM_CONTROL
+    problem_name ='keplerian_disk'
+    run_id  =  'ts1'
+    d0      = 1.0
+    mag_field_orient = 'toroidal'
+/

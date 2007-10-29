@@ -1,0 +1,22 @@
+#!/usr/bin/perl
+#
+# Written by Michael Wester <wester@math.unm.edu> February 16, 1995
+# Cotopaxi (Consulting), Albuquerque, New Mexico
+#
+# Modified by Kacper Kowalik <kowalik@astri.umk.pl> October, 24, 2007
+#
+use Switch;
+use File::Path;
+use File::Copy;
+system('./makemake',@ARGV);
+chdir('source');
+if($argc == 2) {
+   system('make',$ARGV[1]);
+} else {
+   system('make');
+}
+copy('mhd',"../run/$ARGV[0]");
+chmod 0755, "../run/$ARGV[0]";
+copy('problem.par','../run/problem.par');
+copy('mhd.def','../run/mhd.def');
+

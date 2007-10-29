@@ -1,0 +1,311 @@
+PRO PLOT_MHD
+
+; Written by: M. Hanasz, December 2005 - January 2006
+
+  COMMON dims, nv,nx,ny,nz,nxd,nyd,nzd,nb
+  COMMON mesh, x,y,z
+  COMMON state,iter,t
+  COMMON params, Eexpl,d0,e0,cx,cy,cz
+  COMMON vars, u,b,wa
+  ncolors = !D.N_COLORS -1
+  white = 255
+  amin = 0.0
+  amax = 0.0
+
+  plots  ='z'
+
+  slices ='y'
+
+  sf = 2
+
+;   dir = '/home/mhanasz/mhd/kepler-2d-ssp/'
+
+;   prefix = 'keplerian_disk_sp4'
+
+   dir = '../'
+;   dir = '/home/mhanasz/mhd/src-2d-27-05-07-pawlaszek/
+;   dir = '/smp12/mhanasz/kepler-2d-orig/'
+;   dir = '/smp12/mhanasz/kepler-2d-ssp/'
+;   prefix = 'keplerian_disk_org'
+;   prefix = 'sedov_v3d'
+   prefix = 'keplerian_disk_n4c'
+   prefix = 'parker_instability_nob'
+   prefix = 'parker_instability_z10'
+
+  first=100
+  last =100
+  freq =1
+
+
+  var='magy'
+
+  ylog=0
+  if(var EQ 'dens' OR var EQ 'ener') then ylog=1
+
+  if(var EQ 'dens') then begin
+    amin= 0.01 
+    amax= 1.5 
+  endif
+  if(var EQ 'ener') then begin
+    amin= 1.e-2
+    amax= 0.  
+  endif
+  if(var EQ 'eint') then begin
+    amin= 0.
+    amax= 0.
+  endif
+  if(var EQ 'temp') then begin
+    amin= 0.
+    amax= 0.
+  endif
+  if(var EQ 'velx') then begin
+    amin= 0. 
+    amax= 0. 
+  endif
+  if(var EQ 'vely') then begin
+    amin= 0.
+    amax= 0.
+  endif
+  if(var EQ 'velz') then begin
+    amin= 0.
+    amax= 0.
+  endif
+  if(var EQ 'magx') then begin
+    amin= 0.
+    amax= 0.
+  endif
+  if(var EQ 'magy') then begin
+    amin= 0.001
+    amax= 10.
+  endif
+  if(var EQ 'magz') then begin
+    amin= 0.
+    amax= 0.
+  endif
+  if(var EQ 'esrc') then begin
+    amin=  -0.0
+    amax=  0.0
+  endif
+
+
+  frame   = string(0, format = '(i2.2)')+'_' $
+           +string(0, format = '(i2.2)')+'_' $
+           +string(0, format = '(i2.2)')+'_' $
+           +string(first, format = '(i4.4)')
+
+  filename= dir+prefix+'_'+frame+'.hdf'  
+
+  LOAD_DIMS_HDF, filename, pdims=pdims, pcoords=pcoords, dims=dims, $
+                           nxd,nyd,nzd, nxb,nyb,nzb, nb, $
+                           xmin, xmax, ymin, ymax, zmin, zmax 
+  nproc = pdims(0)*pdims(1)*pdims(2)
+
+  if(nxb eq dims(0)) then begin
+    nx=nxb
+    ny=nyb
+    nz=nzb
+    nb = 0
+  endif else begin
+    nx = dims(0)
+    ny = dims(1)
+    nz = dims(2)
+  endelse
+
+  ix = 1;nxd/2;+nb  ;nxd/2 ; nx/2 ; 3*nx/4 
+;  ix = ix*pdims(0)
+  iy = 1;nyd/2;+nb ; nyd/2 ; ny/2 ; 3*ny/4
+;  iy = iy*pdims(1)
+
+  if(nz eq 1) then begin 
+    iz = 1
+  endif else begin
+    iz = nzd/2;+nb ;nz/2 ;nzd/2 ; nz/2 ; 3*nz/4 
+  endelse
+
+
+;  iz = iz*pdims(2)
+;  iz = 1
+;  ix = 1
+;  iy = 1
+
+
+nxds = sf*nx*pdims(0)
+nyds = sf*ny*pdims(1)
+nzds = sf*nz*pdims(2)
+nzbs = sf*nzb
+nbs = sf*nb
+
+lxb = nbs
+rxb = nxds-nbs
+lyb = nbs
+ryb = nyds-nbs
+lzb = nbs
+rzb = nzds-nbs
+
+if(nxb eq dims(0)) then begin
+  lzb = nbs
+  rzb = nbs+nzds
+endif else begin
+  lzb = nbs
+  rzb = nbs+nzds
+endelse
+
+
+
+
+  if(plots  NE 'n') then WINDOW, 1
+
+  if(nz ne 1) then begin
+  if(slices EQ 'y') then WINDOW, 2, xsize=sf*(nx*pdims(0)+ny*pdims(1)+1)+2, $
+                                    ysize=sf*(nz*pdims(2)+nx*pdims(0)+1)+2, $
+                                    title=var  ;+timestr
+  endif else begin
+  if(slices EQ 'y') then WINDOW, 2, xsize=sf*(ny*pdims(1)+1)+2, $
+                                    ysize=sf*(nx*pdims(0)+1)+2, $
+                                    title=var  ;+timestr
+
+  endelse
+
+
+  for step=first,last,freq do begin
+
+        filepref= dir+prefix  
+        a = LOAD_DATA_HDF(filepref, step, var, $
+                          xcoord = x, ycoord = y, zcoord = z, $
+                          nxa=nxa,nya=nya,nza=nza, $
+                          time = t)
+    
+  timestr = '    t='+strtrim(string(t,format='(f7.2)'),0)
+
+
+
+  if(amin EQ 0.0)  then amin = min(a)
+  if(amax EQ 0.0)  then amax = max(a)
+  yrange = [amin,amax]
+
+
+IF(plots NE 'n') THEN BEGIN
+  WSET, 1
+  WSHOW, 1
+ 
+
+  IF(plots EQ 'x') THEN BEGIN
+    px = a(*,iy-1,iz-1)
+    PLOT,  x, px, line=0, title=var+timestr, $
+              xstyle=1, $
+              yrange=yrange,ystyle=1 ,ylog=ylog 
+  ENDIF ELSE IF (plots EQ 'y') THEN BEGIN
+    py = a(ix-1,*,iz-1)
+    PLOT,  y, py, line=0, title=var+timestr, $
+            xstyle=1, $
+            yrange=yrange,ystyle=1 ,ylog=ylog 
+  ENDIF ELSE IF (plots EQ 'z') THEN BEGIN
+    pz = a(ix-1,iy-1,*)
+    PLOT,  z, pz, line=0, title=var+timestr, $
+            xstyle=1, $
+            yrange=yrange,ystyle=1 ,ylog=ylog 
+  ENDIF
+
+ENDIF
+
+IF(slices EQ 'y') THEN BEGIN
+  WSET, 2
+  WSHOW, 2
+
+  print, 'MIN(',var,') =',amin, '    Max(',var,') =',amax
+  print,''
+
+  if(nza NE 1)  then begin
+
+  image_yz = REFORM(a(ix,*,*),nya,nza)
+  image_yz = REBIN(image_yz,sf*(nya),sf*(nza),/sample)
+  image_yz = BYTSCL(image_yz,min=amin,max=amax,top=254)
+
+
+; Linie pionowe
+  for pc=0,pdims(1)-1 do begin
+    image_yz(0+pc*ny*sf,*)       = white    ; skrajna lewa
+    image_yz((pc+1)*ny*sf-1,*)   = white    ; skrajna prawa
+    if(nb NE 0) then begin
+      image_yz(nbs-1+pc*ny*sf,*)   = white    ; lewe  brzegi bloku 
+      image_yz((pc+1)*ny*sf-nbs,*) = white    ; prawe brzegi bloku
+    endif
+  end 
+
+; Linie poziome
+  for pc=0,pdims(2)-1 do begin
+    image_yz(*,0+pc*nz*sf)       = white    ; skrajna lewa
+    image_yz(*,(pc+1)*nz*sf-1)   = white    ; skrajna prawa
+    if(nb NE 0) then begin
+      image_yz(*,nbs-1+pc*nz*sf)   = white    ; lewe  brzegi bloku
+      image_yz(*,(pc+1)*nz*sf-nbs) = white    ; prawe brzegi bloku
+    endif
+  end 
+
+  TV, image_yz,1,sf*nxa+sf+1
+
+  image_xz = REFORM(a(*,iy,*),nxa,nza)
+  image_xz = REBIN(image_xz,sf*nxa,sf*nza,/sample)
+  image_xz = BYTSCL(image_xz,min=amin,max=amax,top=254)
+
+; Linie pionowe
+  for pc=0,pdims(0)-1 do begin
+    image_xz(0+pc*nx*sf,*)       = white    ; skrajna lewa
+    image_xz((pc+1)*nx*sf-1,*)   = white    ; skrajna prawa
+    if(nb NE 0) then begin
+      image_xz(nbs-1+pc*nx*sf,*)   = white    ; lewe  brzegi bloku
+      image_xz((pc+1)*nx*sf-nbs,*) = white    ; prawe brzegi bloku
+    endif
+  end 
+
+; Linie poziome
+  for pc=0,pdims(2)-1 do begin
+    image_xz(*,0+pc*nz*sf)       = white    ; skrajna lewa
+    image_xz(*,(pc+1)*nz*sf-1)   = white    ; skrajna prawa
+    if(nb NE 0) then begin
+      image_xz(*,nbs-1+pc*nz*sf)   = white    ; lewe  brzegi bloku
+      image_xz(*,(pc+1)*nz*sf-nbs) = white    ; prawe brzegi bloku
+    endif
+  end 
+
+  TV, image_xz, sf*nya+sf+1,sf*nxa+sf+1
+
+  endif
+
+  image_xy = REFORM(a(*,*,iz-1),nxa,nya)
+  image_xy = REBIN(image_xy,sf*nxa,sf*nya,/sample)
+  image_xy = BYTSCL(image_xy,min=amin,max=amax,top=254)
+
+; Linie pionowe
+  for pc=0,pdims(0)-1 do begin
+    image_xy(0+pc*nx*sf,*)       = white    ; skrajna lewa
+    image_xy((pc+1)*nx*sf-1,*)   = white    ; skrajna prawa
+    if(nb NE 0) then begin
+      image_xy(nbs-1+pc*nx*sf,*)   = white    ; lewe  brzegi bloku
+      image_xy((pc+1)*nx*sf-nbs,*) = white    ; prawe brzegi bloku
+    endif
+  end 
+
+; Linie poziome
+  for pc=0,pdims(1)-1 do begin
+    image_xy(*,0+pc*ny*sf)       = white    ; skrajna lewa
+    image_xy(*,(pc+1)*ny*sf-1)   = white    ; skrajna prawa
+    if(nb NE 0) then begin
+      image_xy(*,nbs-1+pc*ny*sf)   = white    ; lewe  brzegi bloku
+      image_xy(*,(pc+1)*ny*sf-nbs) = white    ; prawe brzegi bloku
+    endif
+  end 
+  image_xy = rotate(image_xy,-45)
+
+
+  TV, image_xy,1,1
+
+  nxa=20
+  nya=20
+
+
+endif
+
+endfor
+
+end

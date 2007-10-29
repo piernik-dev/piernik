@@ -1,0 +1,6 @@
+* Shearing boundary
+   -> ISEND, IRECV have ill-defined proc (working only on single processor) : bnd_u@fluid_boundaries.F90
+   -> shearing box implemented only in split schemes !!!                    : split_<solver>_tv.F90
+   -> when calculating tidal terms, velx is interpolated onto the cell's 
+      sides to provide consistency with the scheme                          : relaxing_tvd@split_<solver>_tv.F90
+

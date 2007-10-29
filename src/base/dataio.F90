@@ -1,0 +1,1870 @@
+#include "mhd.def"
+
+!=====================================================================
+!!
+!!  dataio module responsisle for data output
+!!
+!=====================================================================
+!
+module dataio
+
+! Written by G. Kowal
+! Modified for this code and extended by M.Hanasz
+! modifications and extensions by D.Woltanski in lines: 23, 65, 132, 133, 136-137,
+! 474-476, 478, 527-532, 583, 585, 658-669, 829-830, 932, 936, 967, 971-975
+
+  use mpi_setup
+  use start
+!  use utils
+
+
+  implicit none
+
+  integer :: int_lun = 2, log_lun = 3
+  integer :: nhdf, nres, ntsl, nlog 
+  integer :: step_hdf, step_res, nhdf_start, nres_start
+  real    :: t_start, last_hdf_time
+  character(len=128) :: log_file
+  character:: pc1*2,pc2*2,pc3*2
+  logical tsl_firstcall
+  
+  logical wait
+
+
+  integer nchar
+  character msg*16
+  real msg_param
+
+  character cwd*(80)
+!  integer ctoi
+!  external ctoi
+  character hostfull*(80), host*8, fhost*10, fpid*10
+  integer pid, uid, ihost, scstatus 
+  integer getcwd, hostnm, getpid, system
+  external getcwd, hostnm, getpid, system
+
+
+
+  contains
+
+!=======================================================================
+!
+!    \\\\\\\\\\        B E G I N   F U N C T I O N        //////////
+!    //////////                  C T O I                  \\\\\\\\\\
+!
+!=======================================================================
+!
+       function ctoi ( string, istrt, ifin )
+!
+!    jms:zeus3d.ctoi <------------- converts CHAR*8 string to an integer
+!    from jms:zeus2d.strtoi                              ?????????, 19??
+!
+!    written by: Jim Stone
+!    modified 1: January, 1990 by David Clarke; incorporated into ZEUS3D
+!
+!  PURPOSE:  Converts a segment of a character*8 string into an integer.
+!
+!  EXTERNALS: [NONE]
+!
+!-----------------------------------------------------------------------
+!
+!*ca imp
+
+       character*10   string
+       integer       istrt   , ifin    , ishift  , ival    , i
+       integer       ctoi
+
+       integer       asciic  (48:57)
+!
+!      Data Statements
+!
+       data          asciic  / 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 /
+       save          asciic
+!
+!-----------------------------------------------------------------------
+!
+       ishift = 1
+       ival   = 0
+       do 10 i=ifin,istrt,-1
+         ival   = ival + ishift * asciic ( ichar(string(i:i)) )
+         ishift = ishift * 10
+10     continue
+       ctoi = ival
+
+       return
+       end function ctoi
+!
+!=======================================================================
+!
+!    \\\\\\\\\\          E N D   F U N C T I O N          //////////
+!    //////////                  C T O I                  \\\\\\\\\\
+!
+!=======================================================================
+!---------------------------------------------------------------------
+!
+! inititalizes dataio parameters
+!
+!---------------------------------------------------------------------
+!
+  subroutine init_dataio
+
+    wait  = .false.
+    tsl_firstcall = .true.
+
+    nhdf  = 0
+    ntsl  = 0
+    nres  = 0
+    nlog  = 0
+
+    step_hdf  = -1
+    step_res  = -1
+    last_hdf_time = -dt_hdf
+
+    pc1 = '00'
+    pc2 = '00'
+    pc3 = '00'    
+
+    if(psize(1) .gt. 1) pc1 = '0x'
+    if(psize(2) .gt. 1) pc2 = '0x'
+    if(psize(3) .gt. 1) pc3 = '0x'
+
+
+
+      scstatus = GetCWD(cwd)
+      IF(scstatus .ne. 0) stop '(PROBLEMS ACCESSING WORKING DIRECTORY)'
+
+      pid = GetPid()
+!      fpid='./pid.tmp'
+!      OPEN(89, FILE=fpid)
+!        write(89,'(I5)') pid
+!      CLOSE(89)            
+
+
+
+            
+      scstatus = HostNm(hostfull)
+      ihost = index(hostfull,'.')
+      if (ihost .eq. 0) ihost = index(hostfull,' ')
+      host = hostfull(1:ihost-1)
+!      fhost='./host.tmp'
+!      OPEN(99, FILE=fhost)
+!        write(99,'(A8)') host
+!      CLOSE(99)      
+      
+
+  end subroutine init_dataio
+
+!---------------------------------------------------------------------
+!
+! controls data dumping
+!
+!---------------------------------------------------------------------
+!
+  subroutine write_data(output)
+
+!    use start, only:  dt_hdf, dt_res, dt_tsl, dt_log
+!    use start, only:  t, dt, nstep
+    character  :: output*3
+
+!- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+    if (output .eq. 'log' .or. output .eq. 'end') then
+        call write_log
+    endif
+
+    if (output .ne. 'end') then
+      if (dt_tsl .gt. 0.0) then
+        if (ntsl .lt. (int(t / dt_tsl) + 1)) then
+          call write_timeslice
+          ntsl = ntsl + 1
+        endif
+      endif
+    endif
+
+!    CALL checkdf
+
+    if (dt_hdf .gt. 0.0 .and. nstep .gt. step_hdf) then
+!      if ((nhdf-nhdf_start) .lt. (int((t-t_start) / dt_hdf) + 1) &
+      if ((t-last_hdf_time) .ge. dt_hdf &
+                .or. output .eq. 'hdf' .or. output .eq. 'end') then
+        call write_hdf
+        if((t-last_hdf_time) .ge. dt_hdf) last_hdf_time = last_hdf_time + dt_hdf
+        if((t-last_hdf_time) .ge. dt_hdf) last_hdf_time = t ! dodatkowa regulacja w przypadku zmiany dt_hdf na mniejsze przez msg
+        nhdf = nhdf + 1
+        step_hdf = nstep
+      endif
+    endif
+
+
+
+    if (dt_res .gt. 0.0 .and. nstep .gt. step_res) then
+      if ((nres-nres_start) .lt. (int((t-t_start) / dt_res) + 1) &
+                .or. output .eq. 'res' .or. output .eq. 'end') then
+        if (nres .gt. 0) call write_restart
+        nres = nres + 1
+        step_res = nstep
+      endif
+    endif
+
+
+  end subroutine write_data
+
+
+!---------------------------------------------------------------------
+!
+! dumps data to hdf file
+!
+!---------------------------------------------------------------------
+!
+  subroutine write_hdf
+
+    use arrays
+    use init_problem
+
+
+    implicit none
+
+    character(len=128) :: filename,filenamedisp
+    character runname*16
+
+    integer :: sd_id, sds_id, dim_id, iostatus
+    integer :: rank, comp_type
+    integer, dimension(3) :: dims, istart, stride
+    integer, dimension(1) :: comp_prm
+    integer :: sfstart, sfend, sfsnatt, sfcreate, sfwdata, sfscompress, sfendacc &
+             , sfdimid, sfsdmname, sfsdscale, sfsdmstr
+
+    integer :: iv, i, j, k
+    integer :: nxo, nyo, nzo, iso,ieo,jso,jeo,kso,keo
+
+!- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+    if(domain .eq. 'full_domain') then
+      nxo = nx
+      nyo = ny
+      nzo = nz
+      iso = 1
+      ieo = nx
+      jso = 1
+      jeo = ny
+      if(dimensions .eq. '3d') then
+        kso = 1
+        keo = nz
+      elseif(dimensions .eq. '2dxy') then
+        kso = 1
+        keo = 1      
+      endif
+
+    else if(domain .eq. 'phys_domain') then
+      nxo = nxb
+      nyo = nyb
+      nzo = nzb
+      iso    = nb+1
+      ieo    = nb+nxb
+      jso    = nb+1
+      jeo    = nb+nyb
+      if(dimensions .eq. '3d') then      
+        kso    = nb+1
+        keo    = nb+nzb    
+      elseif(dimensions .eq. '2dxy') then
+        kso = 1
+        keo = 1      
+      endif      
+    endif
+
+
+    rank = 3
+    comp_type = 4
+    comp_prm(1) = 6
+    dims(1) = nxo
+    dims(2) = nyo
+    dims(3) = nzo
+    istart(:) = 0
+    stride(:) = 1
+
+!  generate filename
+!
+
+    write (filename,'(a,a1,a3,a1,i2.2,a1,i2.2,a1,i2.2,a1,i4.4,a4)') &
+              trim(problem_name),'_', run_id, &
+              '_',pcoords(1),'_',pcoords(2),'_',pcoords(3),'_',nhdf, '.hdf'
+
+    write (filenamedisp,'(a,a1,a3,a1,a2,a1,a2,a1,a2,a1,i4.4,a4)') &
+              trim(problem_name),'_', run_id,'_',pc1,'_',pc2,'_',pc3,'_',nhdf, '.hdf'
+
+
+    sd_id = sfstart(trim(filename), 4)
+
+! write attrisutes
+!
+    iostatus = sfsnatt( sd_id, 'problem' , 4, 32, problem_name)
+    iostatus = sfsnatt( sd_id, 'run_id'  , 4, 32, run_id      )
+    iostatus = sfsnatt( sd_id, 'domain'  , 4, 32, domain      )
+
+    iostatus = sfsnatt( sd_id, 'psize1'  , 23, 1, psize(1) )
+    iostatus = sfsnatt( sd_id, 'psize2'  , 23, 1, psize(2) )
+    iostatus = sfsnatt( sd_id, 'psize3'  , 23, 1, psize(3) )
+
+    iostatus = sfsnatt( sd_id, 'pcoords1', 23, 1, pcoords(1) )
+    iostatus = sfsnatt( sd_id, 'pcoords2', 23, 1, pcoords(2) )
+    iostatus = sfsnatt( sd_id, 'pcoords3', 23, 1, pcoords(3) )
+
+    iostatus = sfsnatt( sd_id, 'dims1'   , 23, 1, dims(1)    )
+    iostatus = sfsnatt( sd_id, 'dims2'   , 23, 1, dims(2)    )
+    iostatus = sfsnatt( sd_id, 'dims3'   , 23, 1, dims(3)    )
+
+    iostatus = sfsnatt( sd_id, 'nxd'     , 23, 1, nxd     )
+    iostatus = sfsnatt( sd_id, 'nyd'     , 23, 1, nyd     )
+    iostatus = sfsnatt( sd_id, 'nzd'     , 23, 1, nzd     )
+
+    iostatus = sfsnatt( sd_id, 'nxb'     , 23, 1, nxb     )
+    iostatus = sfsnatt( sd_id, 'nyb'     , 23, 1, nyb     )
+    iostatus = sfsnatt( sd_id, 'nzb'     , 23, 1, nzb     )
+    iostatus = sfsnatt( sd_id, 'nb'      , 23, 1, nb      )
+
+    iostatus = sfsnatt( sd_id, 'xmin'    , 6,  1, xmin    )
+    iostatus = sfsnatt( sd_id, 'xmax'    , 6,  1, xmax    )
+    iostatus = sfsnatt( sd_id, 'ymin'    , 6,  1, ymin    )
+    iostatus = sfsnatt( sd_id, 'ymax'    , 6,  1, ymax    )
+    iostatus = sfsnatt( sd_id, 'zmin'    , 6,  1, zmin    )
+    iostatus = sfsnatt( sd_id, 'zmax'    , 6,  1, zmax    )
+
+    iostatus = sfsnatt( sd_id, 'nstep'   , 23, 1, nstep          )
+    iostatus = sfsnatt( sd_id, 'time'    ,  6, 1, t              )
+    iostatus = sfsnatt( sd_id, 'timestep',  6, 1, dt             )
+
+    iostatus = sfsnatt( sd_id, 'gamma'   ,  6, 1, gamma          )
+
+    iv = 1
+
+    do while (len_trim(vars(iv)) .ne. 0)
+
+      select case(vars(iv))
+      case ('dens')
+        wa(iso:ieo,jso:jeo,kso:keo) = u(idna,iso:ieo,jso:jeo,kso:keo)
+      case ('velx')
+        wa(iso:ieo,jso:jeo,kso:keo) = u(imxa,iso:ieo,jso:jeo,kso:keo) / u(idna,iso:ieo,jso:jeo,kso:keo)
+
+      case ('vely')
+        wa(iso:ieo,jso:jeo,kso:keo) = u(imya,iso:ieo,jso:jeo,kso:keo) / u(idna,iso:ieo,jso:jeo,kso:keo)
+
+      case ('velz')
+        wa(iso:ieo,jso:jeo,kso:keo) = u(imza,iso:ieo,jso:jeo,kso:keo) / u(idna,iso:ieo,jso:jeo,kso:keo)
+
+#ifdef ISO
+      case ('ener')
+        wa(iso:ieo,jso:jeo,kso:keo) = 0.5*(u(imxa,iso:ieo,jso:jeo,kso:keo)**2 &  
+                                    +u(imya,iso:ieo,jso:jeo,kso:keo)**2 &
+                                    +u(imza,iso:ieo,jso:jeo,kso:keo)**2)/u(idna,iso:ieo,jso:jeo,kso:keo)
+#else 
+      case ('ener')
+        wa(iso:ieo,jso:jeo,kso:keo) = u(iena,iso:ieo,jso:jeo,kso:keo)
+      case ('eint')
+        wa(iso:ieo,jso:jeo,kso:keo) = u(iena,iso:ieo,jso:jeo,kso:keo) &
+	                            - 0.5*(u(imxa,iso:ieo,jso:jeo,kso:keo)**2 &  
+                                          +u(imya,iso:ieo,jso:jeo,kso:keo)**2 &
+                                          +u(imza,iso:ieo,jso:jeo,kso:keo)**2)/u(idna,iso:ieo,jso:jeo,kso:keo)
+#endif
+#ifdef COSM_RAYS
+      case ('encr')
+        wa(iso:ieo,jso:jeo,kso:keo) = u(iecr,iso:ieo,jso:jeo,kso:keo)
+#endif COSM_RAYS
+
+      case ('gpot')
+        wa(iso:ieo,jso:jeo,kso:keo) = gp(iso:ieo,jso:jeo,kso:keo)
+
+      case ('magx')
+        if(domain .eq. 'full_domain') then
+          if(mag_center .eq. 'yes') then
+            wa(:,:,:) = 0.5*(b(ibx,:,:,:))
+            wa(:,:,:) = wa(:,:,:)  + cshift(wa(:,:,:),shift=1,dim=1)
+          else
+            wa(:,:,:) = b(ibx,:,:,:)
+          endif
+        else if(domain .eq. 'phys_domain') then
+          if(mag_center .eq. 'yes') then
+            wa(iso:ieo,jso:jeo,kso:keo) = 0.5*(b(ibx,iso:ieo,jso:jeo,kso:keo))
+            wa(iso:ieo,jso:jeo,kso:keo) = wa(iso:ieo,jso:jeo,kso:keo) + 0.5*(b(ibx,iso+1:ieo+1,jso:jeo,kso:keo))
+          else
+            wa(iso:ieo,jso:jeo,kso:keo) = b(ibx,iso:ieo,jso:jeo,kso:keo)
+          endif
+        endif
+      case ('magy')
+        if(domain .eq. 'full_domain') then
+          if(mag_center .eq. 'yes') then
+            wa(:,:,:) = 0.5*(b(iby,:,:,:))
+            wa(:,:,:) = wa(:,:,:)  + cshift(wa(:,:,:),shift=1,dim=2)
+          else
+            wa(:,:,:) = b(iby,:,:,:)
+          endif
+        else if(domain .eq. 'phys_domain') then
+          if(mag_center .eq. 'yes') then
+            wa(iso:ieo,jso:jeo,kso:keo) = 0.5*(b(iby,iso:ieo,jso:jeo,kso:keo)) 
+            wa(iso:ieo,jso:jeo,kso:keo) = wa(iso:ieo,jso:jeo,kso:keo) + 0.5*(b(iby,iso:ieo,jso+1:jeo+1,kso:keo))
+          else
+            wa(iso:ieo,jso:jeo,kso:keo) = b(iby,iso:ieo,jso:jeo,kso:keo) 
+          endif
+        endif
+
+      case ('magz')
+        if(domain .eq. 'full_domain') then
+          if(mag_center .eq. 'yes') then
+            wa(:,:,:) = 0.5*(b(ibz,:,:,:)) 
+            wa(:,:,:) = wa(:,:,:)  + cshift(wa(:,:,:),shift=1,dim=3)
+          else
+            wa(:,:,:) = b(ibz,:,:,:) 
+          endif
+        else if(domain .eq. 'phys_domain') then
+          if(mag_center .eq. 'yes') then
+            wa(iso:ieo,jso:jeo,kso:keo) = 0.5*(b(ibz,iso:ieo,jso:jeo,kso:keo)) 
+            wa(iso:ieo,jso:jeo,kso:keo) = wa(iso:ieo,jso:jeo,kso:keo) + 0.5*(b(ibz,iso:ieo,jso:jeo,kso+1:keo+1))
+          else
+            wa(iso:ieo,jso:jeo,kso:keo) = b(ibz,iso:ieo,jso:jeo,kso:keo) 
+          endif
+        endif
+        
+      case ('curx')
+       wa(:,:,:) = (b(ibz,:,:,:)-cshift(b(ibz,:,:,:),shift=-1,dim=2))/dy &
+                 - (b(iby,:,:,:)-cshift(b(iby,:,:,:),shift=-1,dim=3))/dz
+       if(domain .eq. 'full_domain') then
+         if(mag_center .eq. 'yes') then
+           wa(:,:,:) = 0.5*(wa(:,:,:) + cshift(wa(:,:,:),shift=1,dim=1))
+         endif
+       else if(domain .eq. 'phys_domain') then
+         if(mag_center .eq. 'yes') then
+           wa(iso:ieo,jso:jeo,kso:keo) = 0.5*(wa(iso:ieo,jso:jeo,kso:keo)+wa(iso+1:ieo+1,jso:jeo,kso:keo))
+         endif
+       endif
+
+!      case ('curx')
+!      if(resist) then
+!        if(domain .eq. 'full_domain') then
+!          if(mag_center .eq. 'yes') then
+!            wa(:,:,:) = 0.5*(cu(ibx,:,:,:))
+!            wa(:,:,:) = wa(:,:,:)  + cshift(wa(:,:,:),shift=1,dim=1)
+!          else
+!            wa(:,:,:) = b(ibx,:,:,:)
+!          endif
+!        else if(domain .eq. 'phys_domain') then
+!          if(mag_center .eq. 'yes') then
+!            wa(iso:ieo,jso:jeo,kso:keo) = 0.5*(cu(ibx,iso:ieo,jso:jeo,kso:keo))
+!            wa(iso:ieo,jso:jeo,kso:keo) = wa(iso:ieo,jso:jeo,kso:keo) + 0.5*(cu(ibx,iso+1:ieo+1,jso:jeo,kso:keo))
+!          else
+!            wa(iso:ieo,jso:jeo,kso:keo) = cu(ibx,iso:ieo,jso:jeo,kso:keo)
+!          endif
+!        endif
+!      endif
+
+      case ('cury')
+       wa(:,:,:) = (b(ibx,:,:,:)-cshift(b(ibx,:,:,:),shift=-1,dim=3))/dz &
+                 - (b(ibz,:,:,:)-cshift(b(ibz,:,:,:),shift=-1,dim=1))/dx
+       if(domain .eq. 'full_domain') then
+         if(mag_center .eq. 'yes') then
+           wa(:,:,:) = 0.5*(wa(:,:,:) + cshift(wa(:,:,:),shift=1,dim=2))
+         endif
+       else if(domain .eq. 'phys_domain') then
+         if(mag_center .eq. 'yes') then
+           wa(iso:ieo,jso:jeo,kso:keo) = 0.5*(wa(iso:ieo,jso:jeo,kso:keo)+wa(iso:ieo,jso+1:jeo+1,kso:keo)) 
+         endif
+       endif
+
+!      case ('cury')
+!      if(resist) then
+!        if(domain .eq. 'full_domain') then
+!          if(mag_center .eq. 'yes') then
+!            wa(:,:,:) = 0.5*(cu(iby,:,:,:))
+!            wa(:,:,:) = wa(:,:,:)  + cshift(wa(:,:,:),shift=1,dim=2)
+!          else
+!            wa(:,:,:) = cu(iby,:,:,:)
+!          endif
+!        else if(domain .eq. 'phys_domain') then
+!          if(mag_center .eq. 'yes') then
+!            wa(iso:ieo,jso:jeo,kso:keo) = 0.5*(cu(iby,iso:ieo,jso:jeo,kso:keo)) 
+!            wa(iso:ieo,jso:jeo,kso:keo) = wa(iso:ieo,jso:jeo,kso:keo) + 0.5*(cu(iby,iso:ieo,jso+1:jeo+1,kso:keo))
+!          else
+!            wa(iso:ieo,jso:jeo,kso:keo) = cu(iby,iso:ieo,jso:jeo,kso:keo) 
+!          endif
+!        endif
+!      endif
+
+      case ('curz')
+       wa(:,:,:) = (b(iby,:,:,:)-cshift(b(iby,:,:,:),shift=-1,dim=1))/dx &
+                 - (b(ibx,:,:,:)-cshift(b(ibx,:,:,:),shift=-1,dim=2))/dy
+       if(domain .eq. 'full_domain') then
+         if(mag_center .eq. 'yes') then
+           wa(:,:,:) = 0.5*(wa(:,:,:)+ cshift(wa(:,:,:),shift=1,dim=3)) 
+         endif
+       else if(domain .eq. 'phys_domain') then
+         if(mag_center .eq. 'yes') then
+           wa(iso:ieo,jso:jeo,kso:keo) = 0.5*(wa(iso:ieo,jso:jeo,kso:keo) + wa(iso:ieo,jso:jeo,kso+1:keo+1)) 
+         endif
+       endif
+
+!      case ('curz')
+!      if(resist) then
+!        if(domain .eq. 'full_domain') then
+!          if(mag_center .eq. 'yes') then
+!            wa(:,:,:) = 0.5*(cu(ibz,:,:,:)) 
+!            wa(:,:,:) = wa(:,:,:)  + cshift(wa(:,:,:),shift=1,dim=3)
+!          else
+!            wa(:,:,:) = cu(ibz,:,:,:) 
+!          endif
+!        else if(domain .eq. 'phys_domain') then
+!          if(mag_center .eq. 'yes') then
+!            wa(iso:ieo,jso:jeo,kso:keo) = 0.5*(cu(ibz,iso:ieo,jso:jeo,kso:keo)) 
+!            wa(iso:ieo,jso:jeo,kso:keo) = wa(iso:ieo,jso:jeo,kso:keo) + 0.5*(cu(ibz,iso:ieo,jso:jeo,kso+1:keo+1))
+!          else
+!            wa(iso:ieo,jso:jeo,kso:keo) = cu(ibz,iso:ieo,jso:jeo,kso:keo) 
+!          endif
+!        endif
+!      endif
+      case ('esrc')
+!        wa(iso:ieo,jso:jeo,kso:keo) = outwa(iso:ieo,jso:jeo,kso:keo)
+
+!      case ('eint')
+!        wa(iso:ieo,jso:jeo,kso:keo) = outwb(iso:ieo,jso:jeo,kso:keo)
+
+      case ('temp')
+!        wa(iso:ieo,jso:jeo,kso:keo) = outwc(iso:ieo,jso:jeo,kso:keo)
+!DW+
+      case ('grvx')
+        wa(iso:ieo,jso:jeo,kso:keo) = outwa(iso:ieo,jso:jeo,kso:keo)
+
+      case ('grvy')
+        wa(iso:ieo,jso:jeo,kso:keo) = outwb(iso:ieo,jso:jeo,kso:keo)
+
+      case ('grvz')
+        wa(iso:ieo,jso:jeo,kso:keo) = outwc(iso:ieo,jso:jeo,kso:keo)
+!DW-
+      case default
+        print *, 'Variable ', vars(iv), ' is not defined! Skipping.'
+      end select
+!       print *, vars(iv), minval(wa), maxval(wa)
+
+! write data
+!
+      sds_id = sfcreate(sd_id, vars(iv), 5, rank, dims)
+      iostatus = sfscompress(sds_id, comp_type, comp_prm)
+      iostatus = sfwdata(sds_id, istart, stride, dims, real(wa(iso:ieo,jso:jeo,kso:keo),4))
+
+! write coords
+!
+      dim_id = sfdimid( sds_id, 0 )
+      iostatus = sfsdmname( dim_id, 'xc' )
+      iostatus = sfsdscale( dim_id, dims(1), 5, real(x(iso:ieo),4))
+      iostatus = sfsdmstr ( dim_id, 'X', 'pc', '' )
+
+      dim_id = sfdimid( sds_id, 1 )
+      iostatus = sfsdmname( dim_id, 'yc' )
+      iostatus = sfsdscale( dim_id, dims(2), 5, real(y(jso:jeo),4))
+      iostatus = sfsdmstr ( dim_id, 'Y', 'pc', '' )
+
+      dim_id = sfdimid( sds_id, 2 )
+      iostatus = sfsdmname( dim_id, 'zc' )
+      iostatus = sfsdscale( dim_id, dims(3), 5, real(z(kso:keo),4))
+      iostatus = sfsdmstr ( dim_id, 'Z', 'pc', '' )
+
+      iostatus = sfendacc(sds_id)
+
+      iv = iv + 1
+    end do
+
+    iostatus = sfend(sd_id)
+
+
+    if(proc.eq. 0) then
+      open(log_lun, file=log_file, position='append')  
+        
+      write(log_lun,*) 'Writing output   file: ', trim(filenamedisp)    
+      write(*,*)       'Writing output   file: ', trim(filenamedisp)
+
+      close(log_lun)
+    endif
+
+
+  end subroutine write_hdf
+
+!---------------------------------------------------------------------
+!
+! writes restart file
+!
+!---------------------------------------------------------------------
+!
+  subroutine write_restart
+
+    use arrays
+!    use start
+    use grid
+    use init_problem
+
+    implicit none
+
+    character(len=128) :: filename,filenamedisp,filenamelast
+    character*160 syscom
+    logical lastres_exist
+
+    integer :: sd_id, sds_id, dim_id, scstatus
+    integer :: iostatus, ranku, ranks, rankg, comp_type
+    integer, dimension(4) :: dimsu, dimsb, istart, stride
+    integer, dimension(3) :: dims, dimsg
+    integer, dimension(1) :: comp_prm
+    integer :: sfstart, sfend, sfsnatt, sfcreate, sfwdata, sfscompress, sfendacc &
+             , sfdimid, sfsdmname, sfsdscale
+
+!- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+!  prepare data dimensions
+!
+    comp_type   = 4
+    comp_prm(1) = 6
+    istart(:)   = 0
+    stride(:)   = 1
+
+    dims(1)     = nx
+    dims(2)     = ny
+    dims(3)     = nz
+
+
+    ranku       = 4
+    dimsu(1)    = nu   
+    dimsu(2)    = dims(1)
+    dimsu(3)    = dims(2)
+    dimsu(4)    = dims(3)
+    
+    ranks       = 4
+    dimsb(1)    = 3   
+    dimsb(2)    = dims(1)
+    dimsb(3)    = dims(2)
+    dimsb(4)    = dims(3)
+
+    rankg       = 3
+    dimsg(1)    = dims(1)
+    dimsg(2)    = dims(2)
+    dimsg(3)    = dims(3)
+
+!  generate filename
+!
+    write (filename,'(a,a1,a3,a1,3(i2.2,a1),i3.3,a4)') &
+              trim(problem_name),'_', run_id,  &
+              '_',pcoords(1),'_',pcoords(2),'_',pcoords(3),'_',nres, '.res'
+                      
+    write (filenamedisp,'(a,a1,a3,a1,3(a2,a1),i3.3,a4)') &
+              trim(problem_name),'_', run_id, &
+              '_',pc1,'_',pc2,'_',pc3,'_',nres, '.res'
+
+    if((resdel .ne. 0) .and. (nres .gt. resdel)) then
+    write (filenamelast,'(a,a1,a3,a1,3(i2.2,a1),i3.3,a4)') &
+              trim(problem_name),'_', run_id,  &
+              '_',pcoords(1),'_',pcoords(2),'_',pcoords(3),'_',nres-resdel, '.res'
+    endif
+                      
+    sd_id = sfstart(filename, 4)
+
+!!  ATTRIBUTES
+!!
+! write config attrisutes
+!
+    iostatus = sfsnatt( sd_id, 'problem' , 4, 32, problem_name)
+    iostatus = sfsnatt( sd_id, 'run_id'  , 4, 32, run_id      )
+    iostatus = sfsnatt( sd_id, 'domain'  , 4, 32, domain      )
+
+    iostatus = sfsnatt( sd_id, 'psize1'  , 23, 1, psize(1) )
+    iostatus = sfsnatt( sd_id, 'psize2'  , 23, 1, psize(2) )
+    iostatus = sfsnatt( sd_id, 'psize3'  , 23, 1, psize(3) )
+
+    iostatus = sfsnatt( sd_id, 'pcoords1', 23, 1, pcoords(1) )
+    iostatus = sfsnatt( sd_id, 'pcoords2', 23, 1, pcoords(2) )
+    iostatus = sfsnatt( sd_id, 'pcoords3', 23, 1, pcoords(3) )
+
+    iostatus = sfsnatt( sd_id, 'dimsu'   , 23, 1, nu )
+    iostatus = sfsnatt( sd_id, 'dims1'   , 23, 1, dims(1) )
+    iostatus = sfsnatt( sd_id, 'dims2'   , 23, 1, dims(2) )
+    iostatus = sfsnatt( sd_id, 'dims3'   , 23, 1, dims(3) )
+
+    iostatus = sfsnatt( sd_id, 'nxd'     , 23,  1, nxd     )
+    iostatus = sfsnatt( sd_id, 'nyd'     , 23,  1, nyd     )
+    iostatus = sfsnatt( sd_id, 'nzd'     , 23,  1, nzd     )
+
+    iostatus = sfsnatt( sd_id, 'nxb'     , 23,  1, nxb     )
+    iostatus = sfsnatt( sd_id, 'nyb'     , 23,  1, nyb     )
+    iostatus = sfsnatt( sd_id, 'nzb'     , 23,  1, nzb     )
+    iostatus = sfsnatt( sd_id, 'nb'      , 23,  1, nb      )
+
+    iostatus = sfsnatt( sd_id, 'xmin'    ,  6,  1, xmin   )
+    iostatus = sfsnatt( sd_id, 'xmax'    ,  6,  1, xmax   )
+    iostatus = sfsnatt( sd_id, 'ymin'    ,  6,  1, ymin   )
+    iostatus = sfsnatt( sd_id, 'ymax'    ,  6,  1, ymax   )
+    iostatus = sfsnatt( sd_id, 'zmin'    ,  6,  1, zmin   )
+    iostatus = sfsnatt( sd_id, 'zmax'    ,  6,  1, zmax   )
+
+! write evolution attrisutes
+!
+    iostatus = sfsnatt( sd_id, 'nstep'   , 24,  1, nstep   )
+    iostatus = sfsnatt( sd_id, 'time'    ,  6,  1, t       )
+    iostatus = sfsnatt( sd_id, 'timestep',  6,  1, dt      )
+
+! write dataio attrisutes
+!
+    iostatus = sfsnatt( sd_id, 'nres'     , 24, 1, nres + 1 )
+    iostatus = sfsnatt( sd_id, 'nhdf'     , 24, 1, nhdf     )
+    iostatus = sfsnatt( sd_id, 'ntsl'     , 24, 1, ntsl     )
+    iostatus = sfsnatt( sd_id, 'nlog'     , 24, 1, nlog     )
+    iostatus = sfsnatt( sd_id, 'step_res' , 24, 1, nstep     )
+    iostatus = sfsnatt( sd_id, 'step_hdf' , 24, 1, step_hdf )
+    iostatus = sfsnatt( sd_id, 'last_hdf_time', 6, 1, last_hdf_time)
+
+! write fluid variables array
+!
+    sds_id = sfcreate(sd_id, 'fluid_vars', 6, ranku, dimsu)
+    iostatus = sfscompress(sds_id, comp_type, comp_prm)
+    iostatus = sfwdata(sds_id, istart, stride, dimsu, u)
+
+! write magnetic field array
+!
+    sds_id = sfcreate(sd_id, 'mag_field', 6, ranks, dimsb)
+    iostatus = sfscompress(sds_id, comp_type, comp_prm)
+    iostatus = sfwdata(sds_id, istart, stride, dimsb, b)
+
+! write gravitational potential
+!
+    sds_id = sfcreate(sd_id, 'grav_pot', 6, rankg, dimsg)
+    iostatus = sfscompress(sds_id, comp_type, comp_prm)
+    iostatus = sfwdata(sds_id, istart, stride, dimsg, gp)
+
+! write coords
+!
+    dim_id = sfdimid( sds_id, 1 )
+    iostatus = sfsdmname( dim_id, 'x' )
+    iostatus = sfsdscale( dim_id, dimsu(2), 6, x)
+
+    dim_id = sfdimid( sds_id, 2 )
+    iostatus = sfsdmname( dim_id, 'y' )
+    iostatus = sfsdscale( dim_id, dimsu(3), 6, y)
+
+    dim_id = sfdimid( sds_id, 3 )
+    iostatus = sfsdmname( dim_id, 'z' )
+    iostatus = sfsdscale( dim_id, dimsu(4), 6, z)
+
+
+! Na razie nie uzywane - do poprawy
+!    dim_id = sfdimid( sds_id, 4 )
+!    iostatus = sfsdmname( dim_id, 'xl' )
+!    iostatus = sfsdscale( dim_id, dimsu(2), 6, xl)
+!
+!    dim_id = sfdimid( sds_id, 5 )
+!    iostatus = sfsdmname( dim_id, 'yl' )
+!    iostatus = sfsdscale( dim_id, dimsu(3), 6, yl)
+!
+!    dim_id = sfdimid( sds_id, 6 )
+!    iostatus = sfsdmname( dim_id, 'zl' )
+!    iostatus = sfsdscale( dim_id, dimsu(4), 6, zl)
+!
+!    dim_id = sfdimid( sds_id, 7 )
+!    iostatus = sfsdmname( dim_id, 'xr' )
+!    iostatus = sfsdscale( dim_id, dimsu(2), 6, xr)
+!
+!    dim_id = sfdimid( sds_id, 8 )
+!    iostatus = sfsdmname( dim_id, 'yr' )
+!    iostatus = sfsdscale( dim_id, dimsu(3), 6, yr)
+!
+!    dim_id = sfdimid( sds_id, 8 )
+!    iostatus = sfsdmname( dim_id, 'zr' )
+!    iostatus = sfsdscale( dim_id, dimsu(4), 6, zr)
+
+    iostatus = sfendacc(sds_id)
+
+    iostatus = sfend(sd_id)
+
+
+    if(proc.eq. 0) then
+      open(log_lun, file=log_file, position='append')  
+        
+      write(log_lun,*) 'Writing restart  file: ', trim(filenamedisp)    
+      write(*,*)       'Writing restart  file: ', trim(filenamedisp)
+
+      close(log_lun)
+    endif
+
+    if((resdel .ne. 0) .and. (nres .gt. resdel)) then
+        inquire(file=filenamelast, exist=lastres_exist)
+        if(lastres_exist) then
+          syscom='rm '//filenamelast
+          scstatus = system(syscom)
+          write(*,*) trim(filenamelast),' removed'
+        else
+          write(*,*) trim(filenamelast),' does not exist'
+        endif
+    endif
+
+
+  end subroutine write_restart
+
+!---------------------------------------------------------------------
+!
+! read restart file
+!
+!---------------------------------------------------------------------
+!
+  subroutine read_restart !(all)
+
+    use arrays
+    use start
+    use start    
+    use grid
+    use init_problem
+
+    implicit none
+
+!    integer, intent(in) :: all
+
+    character(len=128) :: filename,filenamedisp
+    logical file_exist, log_exist
+
+    integer :: sd_id, sds_id, dim_id, attr_index, sds_index
+    integer :: iostatus, ranku, ranks, rankg
+    integer, dimension(4) :: dimsu, dimsb, istart, stride
+    integer, dimension(3) :: dims, dimsg
+    integer :: sfstart, sfend, sffattr, sfrnatt, sfn2index, sfselect, sfrdata, sfendacc &
+             , sfdimid, sfgdscale
+
+!- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+!  prepare data dimensions
+!
+    istart(:) = 0
+    stride(:) = 1
+
+    ranku = 4
+    dimsu(1) = nu   
+    dimsu(2) = nx
+    dimsu(3) = ny
+    dimsu(4) = nz
+    
+    ranks = 4
+    dimsb(1) = 3   
+    dimsb(2) = nx
+    dimsb(3) = ny
+    dimsb(4) = nz
+
+    rankg = 3
+    dimsg(1) = nx
+    dimsg(2) = ny
+    dimsg(3) = nz
+
+
+!  generate filename
+!
+    write (filename,'(a,a1,a3,a1,3(i2.2,a1),i3.3,a4)') &
+              trim(problem_name),'_', run_id,  &
+              '_',pcoords(1),'_',pcoords(2),'_',pcoords(3),'_',nres, '.res'
+                      
+    write (filenamedisp,'(a,a1,a3,a1,3(a2,a1),i3.3,a4)') &
+              trim(problem_name),'_', run_id, &
+              '_',pc1,'_',pc2,'_',pc3,'_',nres, '.res'
+
+    if(proc.eq. 0) then
+        write(*,*)       'Reading restart  file: ', trim(filenamedisp)
+    endif
+
+    inquire(file =log_file , exist = log_exist)
+    if(file_exist .eq. .true.) then
+      open(log_lun, file=log_file, position='append')  
+        write(log_lun,*) 'Reading restart  file: ', trim(filenamedisp)    
+      close(log_lun)
+    endif
+      
+    inquire(file = filename, exist = file_exist)
+    if(file_exist .eq. .false.) then
+      if(log_exist) then
+        open(log_lun, file=log_file, position='append')  
+          write(log_lun,*) 'Restart  file: ', trim(filename), &
+                         '               does not exist.  ABORTING !!! '   
+        close(log_lun)
+      endif
+
+      write(*,*)       'Restart  file: ', trim(filename), &
+                         '               does not exist.  ABORTING !!! '   
+      call MPI_BARRIER(comm,ierr)
+      call mpistop                             
+      stop
+    endif
+
+
+    
+    sd_id = sfstart(filename, 1)
+
+!!  ATTRisUTES
+!!
+
+! read config attrisutes
+!
+!    iostatus = sfsnatt( sd_id, 'problem' , 4, 32, problem_name)
+!    iostatus = sfsnatt( sd_id, 'run_id'  , 4, 32, run_id      )
+!    iostatus = sfsnatt( sd_id, 'domain'  , 4, 32, domain      )
+
+!    iostatus = sfsnatt( sd_id, 'psize1'  , 23, 1, psize(1) )
+!    iostatus = sfsnatt( sd_id, 'psize2'  , 23, 1, psize(2) )
+!    iostatus = sfsnatt( sd_id, 'psize3'  , 23, 1, psize(3) )
+
+!    iostatus = sfsnatt( sd_id, 'pcoords1', 23, 1, pcoords(1) )
+!    iostatus = sfsnatt( sd_id, 'pcoords2', 23, 1, pcoords(2) )
+!    iostatus = sfsnatt( sd_id, 'pcoords3', 23, 1, pcoords(3) )
+
+!    iostatus = sfsnatt( sd_id, 'dims1'   , 23, 1, dims(1) )
+!    iostatus = sfsnatt( sd_id, 'dims2'   , 23, 1, dims(2) )
+!    iostatus = sfsnatt( sd_id, 'dims3'   , 23, 1, dims(3) )
+
+!    iostatus = sfsnatt( sd_id, 'nxd'     , 23,  1, nxd     )
+!    iostatus = sfsnatt( sd_id, 'nyd'     , 23,  1, nyd     )
+!    iostatus = sfsnatt( sd_id, 'nzd'     , 23,  1, nzd     )
+
+!    iostatus = sfsnatt( sd_id, 'nxb'     , 23,  1, nxb     )
+!    iostatus = sfsnatt( sd_id, 'nyb'     , 23,  1, nyb     )
+!    iostatus = sfsnatt( sd_id, 'nzb'     , 23,  1, nzb     )
+!    iostatus = sfsnatt( sd_id, 'nb'      , 23,  1, nb      )
+
+!    iostatus = sfsnatt( sd_id, 'xmin'    ,  6,  1, xmin   )
+!    iostatus = sfsnatt( sd_id, 'xmax'    ,  6,  1, xmax   )
+!    iostatus = sfsnatt( sd_id, 'ymin'    ,  6,  1, ymin   )
+!    iostatus = sfsnatt( sd_id, 'ymax'    ,  6,  1, ymax   )
+!    iostatus = sfsnatt( sd_id, 'zmin'    ,  6,  1, zmin   )
+!    iostatus = sfsnatt( sd_id, 'zmax'    ,  6,  1, zmax   )
+
+
+! read evolution attrisutes
+!
+      attr_index = sffattr( sd_id, 'nstep'     )
+      iostatus = sfrnatt( sd_id, attr_index, nstep   )
+      attr_index = sffattr( sd_id, 'time'     )
+      iostatus = sfrnatt( sd_id, attr_index, t   )
+      attr_index = sffattr( sd_id, 'timestep' )
+      iostatus = sfrnatt( sd_id, attr_index, dt     )
+
+! read dataio attrisutes
+!
+      attr_index = sffattr( sd_id, 'nres'      )
+      iostatus = sfrnatt( sd_id, attr_index, nres     )
+      attr_index = sffattr( sd_id, 'nhdf'      )
+      iostatus = sfrnatt( sd_id, attr_index, nhdf     )
+      attr_index = sffattr( sd_id, 'ntsl'      )
+      iostatus = sfrnatt( sd_id, attr_index, ntsl     )
+      attr_index = sffattr( sd_id, 'nlog'      )
+      iostatus = sfrnatt( sd_id, attr_index, nlog     )
+      attr_index = sffattr( sd_id, 'step_res'  )
+      iostatus = sfrnatt( sd_id, attr_index, step_res )
+      attr_index = sffattr( sd_id, 'step_hdf'  )
+      iostatus = sfrnatt( sd_id, attr_index, step_hdf )
+      attr_index = sffattr( sd_id, 'last_hdf_time' )
+      iostatus = sfrnatt( sd_id, attr_index, last_hdf_time )
+
+
+! read variables array
+!
+      sds_index = sfn2index(sd_id, 'fluid_vars')
+      sds_id = sfselect(sd_id, sds_index)
+      iostatus = sfrdata(sds_id, istart, stride, dimsu, u)
+
+! read magnetic field
+!
+      sds_index = sfn2index(sd_id, 'mag_field')
+      sds_id = sfselect(sd_id, sds_index)
+      iostatus = sfrdata(sds_id, istart, stride, dimsb, b)
+
+! read gravitational potential
+!
+      sds_index = sfn2index(sd_id, 'grav_pot')
+      sds_id = sfselect(sd_id, sds_index)
+      iostatus = sfrdata(sds_id, istart, stride, dimsg, gp)
+
+! read coords
+!
+!     dim_id = sfdimid( sds_id, 0 )
+!     iostatus = sfgdscale( dim_id, x)
+!
+!     dim_id = sfdimid( sds_id, 1 )
+!     iostatus = sfgdscale( dim_id, y)
+!
+!     dim_id = sfdimid( sds_id, 2 )
+!     iostatus = sfgdscale( dim_id, z)
+
+      iostatus = sfendacc(sds_id)
+
+    iostatus = sfend(sd_id)
+    
+!    write(*,*) 'Done'    
+!    write(*,*)
+
+  end subroutine read_restart
+
+
+!---------------------------------------------------------------------
+!
+! writes integrals to text file
+!
+!---------------------------------------------------------------------
+!
+  subroutine write_timeslice
+
+    use arrays
+    use grid
+    use mpi_setup
+    use constants
+!    use start
+    use init_problem
+    use thermal
+    
+    implicit none
+    integer i,j,k
+
+    character(len=128) :: tsl_file
+
+    real ::  mass,  momx,  momy,  momz,  ener,  eint,  ekin,  emag, epot
+    real :: tot_mass, tot_momx, tot_momy, tot_momz, tot_ener, tot_eint, &
+            tot_ekin, tot_emag, tot_epot
+!DW+
+    real :: amomz, tot_amomz
+!DW-
+!- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+!
+    if (proc .eq. 0) then
+      write (tsl_file,'(a,a1,a3,a1,i3.3,a4)') &
+              trim(problem_name),'_', run_id,'_',nrestart,'.tsl'
+      if (tsl_firstcall) then      
+        open(int_lun, file=tsl_file)
+        if(grav_model .ne. 'null') then
+          write (int_lun, '(a1,20a16)') '#', 'time', 'timestep', 'mass', 'momx', &
+                                             'momy', 'momz', 'amomz', &
+                                             'ener', 'epot', 'eint', 'ekin', 'emag'
+        else
+          write (int_lun, '(a1,20a16)') '#', 'time', 'timestep', 'mass', 'momx', &
+                                             'momy', 'momz', 'amomz', &
+                                             'eint', 'ekin', 'emag'
+        endif
+        write (int_lun, '(a1)') '#'
+        tsl_firstcall = .false.
+      else
+        open(int_lun, file=tsl_file, position='append')
+      endif
+    endif
+
+    mass = sum(u(idna,is:ie,js:je,ks:ke)) * dvol
+    call mpi_allreduce(mass, tot_mass, 1, mpi_real8, mpi_sum, comm3d, ierr)
+
+    momx = sum(u(imxa,is:ie,js:je,ks:ke)) * dvol
+    call mpi_allreduce(momx, tot_momx, 1, mpi_real8, mpi_sum, comm3d, ierr)
+
+    momy = sum(u(imya,is:ie,js:je,ks:ke)) * dvol
+    call mpi_allreduce(momy, tot_momy, 1, mpi_real8, mpi_sum, comm3d, ierr)
+
+    momz = sum(u(imza,is:ie,js:je,ks:ke)) * dvol
+    call mpi_allreduce(momz, tot_momz, 1, mpi_real8, mpi_sum, comm3d, ierr)
+
+#ifndef ISO
+    ener = sum(u(iena,is:ie,js:je,ks:ke)) * dvol
+    call mpi_allreduce(ener, tot_ener, 1, mpi_real8, mpi_sum, comm3d, ierr)
+#endif
+
+#ifdef GRAV
+    epot = sum(u(idna,is:ie,js:je,ks:ke) &
+               *gp(is:ie,js:je,ks:ke)) * dvol
+    call mpi_allreduce(epot, tot_epot, 1, mpi_real8, mpi_sum, comm3d, ierr)
+#endif
+
+    wa(is:ie,js:je,ks:ke) &
+        = 0.5 * (u(imxa,is:ie,js:je,ks:ke)**2   &
+               + u(imya,is:ie,js:je,ks:ke)**2  & 
+               + u(imza,is:ie,js:je,ks:ke)**2)/ & 
+                 u(idna,is:ie,js:je,ks:ke)
+    ekin = sum(wa(is:ie,js:je,ks:ke)) * dvol
+    call mpi_allreduce(ekin, tot_ekin, 1, mpi_real8, mpi_sum, comm3d, ierr)
+
+    wa(is:ie,js:je,ks:ke) &
+       = 0.5 * (b(ibx,is:ie,js:je,ks:ke)**2 + &
+                b(iby,is:ie,js:je,ks:ke)**2 + &
+                b(ibz,is:ie,js:je,ks:ke)**2)
+    emag = sum(wa(is:ie,js:je,ks:ke)) * dvol
+    call mpi_allreduce(emag, tot_emag, 1, mpi_real8, mpi_sum, comm3d, ierr)
+
+!pawlaszek
+!    tot_eint = tot_ener - tot_ekin - tot_emag
+#ifndef ISO
+    tot_eint = tot_ener - tot_ekin
+#endif ISO
+!pawlaszek
+
+!DW+    
+    amomz = 0.0
+    do j=nb+1,nb+nyb
+      do i=nb+1,nb+nxb
+         amomz = amomz + (x(i)*sum(u(imya,i,j,ks:ke)) &
+                       -y(j)*sum(u(imxa,i,j,ks:ke)))*dvol
+      enddo
+    enddo
+    call mpi_allreduce(amomz, tot_amomz, 1, mpi_real8, mpi_sum, comm3d, ierr)    
+!DW-
+
+    if (proc .eq. 0) then
+#ifndef ISO
+      if(grav_model .ne. 'null') then
+      write (int_lun, '(1x,20(1x,1pe15.8))') t, dt, tot_mass, &
+                                tot_momx, tot_momy, tot_momz, tot_amomz, &
+                                tot_ener+tot_epot, tot_epot, tot_eint, tot_ekin, tot_emag 
+      else
+      write (int_lun, '(1x,10(1x,1pe15.8))') t, dt, tot_mass, &
+                                tot_momx, tot_momy, tot_momz, tot_amomz, &
+                                tot_eint, tot_ekin, tot_emag 
+      endif
+#endif ISO
+!DW+
+!                                tot_amomz
+!DW-
+      close(int_lun)
+    endif
+
+
+  end subroutine write_timeslice
+
+!---------------------------------------------------------------------
+!
+! writes timestep diagnostics to the logfile
+!
+!---------------------------------------------------------------------
+!
+  subroutine  write_log
+  
+    use arrays
+    use grid
+    use mpi_setup
+    use constants
+!    use start
+    use init_problem
+    use thermal
+#ifdef RESIST
+    use resistivity
+#endif RESIST
+    
+    
+    
+      
+    implicit none
+  
+    real vx_max, vy_max, vz_max, va2max,va_max, cs2max, cs_max, &
+         dens_min, dens_max, pres_min, pres_max, b_min, b_max, temp_min, temp_max
+    
+    integer, dimension(3) :: loc_vx_max, loc_vy_max, loc_vz_max, loc_va_max, &
+                             loc_cs_max, loc_dens_min, loc_dens_max, loc_pres_min, & 
+                             loc_pres_max, loc_b_min, loc_b_max, &
+                             loc_temp_min,loc_temp_max, loc_esrc_min, loc_esrc_max !, &
+                             !loc_dt_cool, loc_dt_heat
+                             
+    integer               :: proc_vx_max, proc_vy_max, proc_vz_max, proc_va_max, &
+                             proc_cs_max, proc_dens_min, proc_dens_max, proc_pres_min, & 
+                             proc_pres_max, proc_b_min, proc_b_max, &
+                             proc_temp_min, proc_temp_max, proc_esrc_min, proc_esrc_max, &
+                             proc_dt_cool, proc_dt_heat, proc_eta_max 
+                             
+    
+! Timestep diagnostics
+
+    wa         =  u(idna,:,:,:)
+    dens_min      = minval(wa(is:ie,js:je,ks:ke)) 
+    loc_dens_min  = minloc(wa(is:ie,js:je,ks:ke)) &
+                  + (/nb,nb,nb/)
+    call mpifind(dens_min, 'min', loc_dens_min, proc_dens_min)
+
+    wa         =  u(idna,:,:,:)
+    dens_max      = maxval(wa(is:ie,js:je,ks:ke)) 
+    loc_dens_max  = maxloc(wa(is:ie,js:je,ks:ke)) &
+                  + (/nb,nb,nb/)
+    call mpifind(dens_max, 'max', loc_dens_max, proc_dens_max)
+
+ 
+    wa         = abs(u(imxa,:,:,:)/u(idna,:,:,:))
+    vx_max      = maxval(wa(is:ie,js:je,ks:ke)) 
+    loc_vx_max  = maxloc(wa(is:ie,js:je,ks:ke)) &
+                  + (/nb,nb,nb/)
+    call mpifind(vx_max, 'max', loc_vx_max, proc_vx_max)
+
+    wa         = abs(u(imya,:,:,:)/u(idna,:,:,:))
+    vy_max      = maxval(wa(is:ie,js:je,ks:ke)) 
+    loc_vy_max  = maxloc(wa(is:ie,js:je,ks:ke)) & 
+                  + (/nb,nb,nb/)
+    call mpifind(vy_max, 'max', loc_vy_max, proc_vy_max)
+
+    wa         = abs(u(imza,:,:,:)/u(idna,:,:,:))
+    vz_max      = maxval(wa(is:ie,js:je,ks:ke)) 
+    loc_vz_max  = maxloc(wa(is:ie,js:je,ks:ke)) & 
+                  + (/nb,nb,nb/)
+    call mpifind(vz_max, 'max', loc_vz_max, proc_vz_max)
+    
+    wa         = sum(b(:,:,:,:)**2,1)  
+    b_min      = sqrt(minval(wa(is:ie,js:je,ks:ke))) 
+    loc_b_min  = minloc(wa(is:ie,js:je,ks:ke)) &
+                  + (/nb,nb,nb/)
+    call mpifind(b_min, 'min', loc_b_min, proc_b_min)
+
+    b_max      = sqrt(maxval(wa(is:ie,js:je,ks:ke))) 
+    loc_b_max  = maxloc(wa(is:ie,js:je,ks:ke)) &
+                  + (/nb,nb,nb/)
+    call mpifind(b_max, 'max', loc_b_max, proc_b_max)
+        
+    va_max      = sqrt(maxval(wa(is:ie,js:je,ks:ke) &
+                       /u(idna,is:ie,js:je,ks:ke)))
+    loc_va_max  = maxloc(wa(is:ie,js:je,ks:ke) &
+                       /u(idna,is:ie,js:je,ks:ke)) &
+                  + (/nb,nb,nb/)
+    call mpifind(va_max, 'max', loc_va_max, proc_va_max)
+
+
+#ifdef ISO
+    wa            = csi2*u(idna,:,:,:)
+#else
+    wa            = (u(iena,:,:,:) & 
+                  - 0.5*(sum(u(imxa:imza,:,:,:)**2,1) /u(idna,:,:,:) + wa))
+    wa            = max(wa,smallei)
+    wa            = (gamma-1)*wa
+#endif
+
+    pres_min      = minval(wa(is:ie,js:je,ks:ke)) 
+    loc_pres_min  = minloc(wa(is:ie,js:je,ks:ke)) &
+                     + (/nb,nb,nb/)
+    call mpifind(pres_min, 'min', loc_pres_min, proc_pres_min)
+                  
+    pres_max      = maxval(wa(is:ie,js:je,ks:ke)) 
+    loc_pres_max  = maxloc(wa(is:ie,js:je,ks:ke)) &
+                     + (/nb,nb,nb/)
+    call mpifind(pres_max, 'max', loc_pres_max, proc_pres_max)
+                  
+    temp_max      = maxval( hydro_mass / k_B * wa(is:ie,js:je,ks:ke) &
+                                             /u(idna,is:ie,js:je,ks:ke)) 
+    loc_temp_max  = maxloc(wa(is:ie,js:je,ks:ke)    &
+                         /u(idna,is:ie,js:je,ks:ke)  ) &
+                     + (/nb,nb,nb/)
+    call mpifind(temp_max, 'max', loc_temp_max, proc_temp_max)
+
+
+    temp_min      = minval( hydro_mass / k_B * wa(is:ie,js:je,ks:ke) &
+                                             /u(idna,is:ie,js:je,ks:ke)) 
+    loc_temp_min  = minloc(wa(is:ie,js:je,ks:ke)    &
+                         /u(idna,is:ie,js:je,ks:ke)  ) &
+                     + (/nb,nb,nb/)
+    call mpifind(temp_min, 'min', loc_temp_min, proc_temp_min)
+    
+
+#ifdef ISO
+    cs_max        = c_si
+    proc_cs_max   = c_si
+#else
+    cs_max        = sqrt(maxval(gamma*wa(is:ie,js:je,ks:ke) &
+                            /u(idna,is:ie,js:je,ks:ke)))
+    loc_cs_max    = maxloc(gamma*wa(is:ie,js:je,ks:ke) &
+                            /u(idna,is:ie,js:je,ks:ke)) & 
+                     + (/nb,nb,nb/)
+    call mpifind(cs_max, 'max', loc_cs_max, proc_cs_max)
+#endif
+    
+    if(coolheat) then
+      call mpifind(eint_src_min, 'min', loc_dt_cool, proc_dt_cool)
+      call mpifind(eint_src_max, 'max', loc_dt_heat, proc_dt_heat)
+      call mpifind(dt_cool, 'min', loc_dt_cool, proc_dt_cool)
+      call mpifind(dt_heat, 'min', loc_dt_heat, proc_dt_heat)
+    endif
+#ifdef RESIST
+      call mpifind(eta_max, 'max', loc_eta_max, proc_eta_max)
+#endif
+
+    if(proc .eq. 0)  then
+    
+      open(log_lun, file=log_file, position='append')
+
+        write(log_lun,770) 'min(dens)      =', dens_min,  proc_dens_min,  loc_dens_min   
+        write(log_lun,770) 'max(dens)      =', dens_max,  proc_dens_max,  loc_dens_max   
+        write(log_lun,770) 'min(temp)      =', temp_min,  proc_temp_min,  loc_temp_min  
+        write(log_lun,770) 'max(temp)      =', temp_max,  proc_temp_max,  loc_temp_max  
+        write(log_lun,770) 'min(pres)      =', pres_min,  proc_pres_min,  loc_pres_min   
+        write(log_lun,770) 'max(pres)      =', pres_max,  proc_pres_max,  loc_pres_max   
+        write(log_lun,770) 'min(|b|)       =', b_min,     proc_b_min,     loc_b_min   
+        write(log_lun,770) 'max(|b|)       =', b_max,     proc_b_max,     loc_b_max  
+    
+        write(log_lun,777) 'max(|velx|)    =', vx_max, 'dt=',cfl*dx/(vx_max+small), proc_vx_max, loc_vx_max   
+        write(log_lun,777) 'max(|vely|)    =', vy_max, 'dt=',cfl*dy/(vy_max+small), proc_vy_max, loc_vy_max   
+        write(log_lun,777) 'max(|velz|)    =', vz_max, 'dt=',cfl*dz/(vz_max+small), proc_vz_max, loc_vz_max  
+        write(log_lun,777) 'max(v_alfven)  =', va_max, 'dt=',cfl*dxmn/(va_max+small), proc_va_max, loc_va_max   
+        write(log_lun,777) 'max(c_sound)   =', cs_max, 'dt=',cfl*dxmn/(cs_max+small), proc_cs_max, loc_cs_max   
+        write(log_lun,777) 'max(c_fast)    =', sqrt(cs_max**2+va_max**2), 'dt=',cfl*dxmn/sqrt(cs_max**2+va_max**2)   
+        if(coolheat) then
+          write(log_lun,777) 'min(esrc/eint) =',eint_src_min , 'dt=',dt_cool,  proc_dt_cool,  loc_dt_cool
+          write(log_lun,777) 'max(esrc/eint) =',eint_src_max , 'dt=',dt_heat,  proc_dt_heat,  loc_dt_heat 
+        endif
+#ifdef RESIST
+          write(log_lun,777) 'max(eta)       =',eta_max , 'dt=',dt_resist, proc_eta_max, loc_eta_max
+#endif
+
+        write(log_lun,900) nstep,dt,t
+
+      close(log_lun)
+
+    endif
+
+    
+770 format(5x,a16,(1x,e10.4),4(1x,i4)) 
+
+777 format(5x,a16,(1x,e10.4),2x,a3,(1x,e10.4),4(1x,i4)) 
+900 format('   nstep = ',i7,'   dt = ',f22.16,'   t = ',f22.16,2(1x,i4))   
+  
+  end subroutine write_log
+
+
+!
+!=======================================================================
+!
+!                    B E G I N   S U B R O U T I N E
+!                           C H E C K _ D I S K
+!
+!=======================================================================
+!
+      subroutine check_disk
+
+!     written by: michal hanasz
+!     date:       26. june 2003      
+
+!
+      integer scstatus,ispace,islash,i,i1,ldfout,lcwd 
+      logical diskfree,diskaccess
+      integer min_disk_space, darray(3),darray0(3),tarray(3),tarray0(3)
+      character df_file*32,cwd_file*32,fsys*30,dfout*80,cspace*10,cpid*10,cproc*2
+      character fsymtime*80, host_small_space*8, dfout_small_space*80
+      character*160 syscom
+      logical exist
+      integer date_time (8) , sleep_time
+      character (len = 10) big_ben (3) 
+      
+      integer isend(2), irecv(2), loc_proc, ispace_min, isp(1), isp_min(1)
+      real rsend(2), rrecv(2), rsp(1), rsp_min(1)
+      real tsleep
+
+
+!-------------------------------------------------------------------------
+!     Configurable parameters in problem.par
+!-------------------------------------------------------------------------
+!      min_disk_space_MB     ! Minimum free space on the working directory
+!      sleep_minutes         ! Waiting time in minutes
+!      sleep_seconds         ! Waiting time in minutes
+!-------------------------------------------------------------------------
+      min_disk_space = 1000*min_disk_space_MB
+
+      write (cpid,'(i10)') pid
+      write(cproc,'(i2.2)') proc   
+      df_file = trim(cpid)//'_'//trim(host)//'_'//cproc//'_'//'df.tmp'
+      cwd_file= trim(cpid)//'_'//trim(host)//'_'//cproc//'_'//'cwd.tmp'
+      
+      diskfree   = .true.
+      diskaccess = .true.
+      sleep_time = 60*sleep_minutes+sleep_seconds 
+      
+111   continue 
+      
+      lcwd=LEN_TRIM(cwd)
+      islash = INDEX(cwd(2:lcwd),'/')
+      fsys=cwd(2:islash)
+
+!---  check disk access - writing and deleting cwd_file
+
+      call rm_file(cwd_file)
+      open(99,file=cwd_file,status='new',err=221)
+      close(99)
+      call rm_file(cwd_file)
+
+      goto 222  
+221   continue
+        diskaccess=.false.
+222   continue 
+
+      if(diskaccess) then
+        tsleep = 0
+      else
+        tsleep = sleep_time 
+      endif
+
+!---  broadcasting a message (tsleep) on disk inaccessisility
+
+      isend(1) = tsleep
+      isend(2) = proc
+      
+      call MPI_REDUCE(isend, irecv, 1, MPI_2INTEGER, &
+                                       MPI_MINLOC, 0, comm, ierr)
+      if(proc .eq.0) then
+        tsleep   = irecv(1)
+        loc_proc = irecv(2)
+      endif
+
+      call MPI_BCAST(loc_proc, 1, MPI_INTEGER, 0, comm, ierr)
+      call MPI_BCAST(tsleep,   1, MPI_INTEGER, 0, comm, ierr)
+
+      if(tsleep .gt. 0) then
+        if(proc .eq. 0) then
+          write(*,*)
+          write(*,18) (darray(i),i=1,3),(tarray(i),i=1,3) 
+          write(*,*) 'WORKING DIRECTORY UNAVAILABLE, proc =', loc_proc
+          write(*,*) 'WAITING ',sleep_minutes,' min', sleep_minutes,' sec'
+        endif
+        call sleep(tsleep)
+        goto 111
+
+      endif
+      
+!---  disk access restored
+!------------------------------------------------------------------------
+
+
+!--- check disk space on working partition
+
+!     delete df_file if exists
+      call rm_file(df_file)
+
+      syscom='df /'//fsys// '| grep '//fsys// '> '//df_file
+      scstatus = system(syscom)
+      
+
+      open(81,file=df_file,status='old',err=888)
+        read(81,15,err=888,end=888) dfout  
+      close(81)
+
+!     delete df_file
+      call rm_file(df_file)
+
+      ldfout = LEN_TRIM(dfout)
+      cspace = dfout(41:50)
+      
+      do i=1,10
+        i1 = index(cspace(i:10),' ')
+        if(i1 .eq. 0) then
+          ispace = ctoi(cspace,i,10)
+          goto 777  
+        endif
+      enddo
+777   continue
+
+!     find a minimum of disk space, process number, machine and broadcast
+
+      isend(1) = ispace
+      isend(2) = proc
+      
+      call MPI_REDUCE(isend, irecv, 1, MPI_2INTEGER, &
+                                       MPI_MINLOC, 0, comm, ierr)
+      if(proc .eq.0) then
+        ispace   = irecv(1)
+        loc_proc = irecv(2)
+      endif
+
+      call MPI_BCAST(loc_proc, 1, MPI_INTEGER, 0, comm, ierr)
+      call MPI_BCAST(ispace, 1, MPI_INTEGER, 0, comm, ierr)
+      
+      if(ispace .lt. min_disk_space) then 
+
+        diskfree = .false.
+        wait = .true.
+
+        if(loc_proc .ne. 0) then
+          if(proc .eq. loc_proc) then
+            call MPI_SEND  (host,   8, MPI_CHARACTER,        0, 15, comm, ierr)
+          else if(proc .eq. 0) then
+            call MPI_RECV  ( host_small_space,  8, MPI_CHARACTER, loc_proc, 15, comm, status, ierr)
+          endif
+
+          if(proc .eq. loc_proc) then
+            call MPI_SEND  (dfout, 80, MPI_CHARACTER,        0, 16, comm, ierr)
+          else if(proc .eq. 0) then
+            call MPI_RECV  (dfout_small_space, 80, MPI_CHARACTER, loc_proc, 16, comm, status, ierr)
+          endif
+        else
+          host_small_space = host
+          dfout_small_space = dfout
+        endif
+
+        if(proc .eq. 0) then
+
+!--- inform user and write to logfile
+
+          call date_and_time (big_ben (1), big_ben (2), big_ben (3), date_time)  
+          darray(1) = date_time(3)      
+          darray(2) = date_time(2)      
+          darray(3) = date_time(1)       
+          tarray(1) = date_time(5)      
+          tarray(2) = date_time(6)      
+          tarray(3) = date_time(7)      
+
+          write(*,*)
+          write(*,18) (darray(i),i=1,3),(tarray(i),i=1,3) 
+          write(*,*)'!DISK SPACE TOO SMALL:   ', host_small_space
+          write(*,17) dfout_small_space(1:79)
+          write(*,13)   
+          write(*,14) min_disk_space
+          write(*,*) 'WAITING ',sleep_minutes,' min', sleep_seconds,' sec'
+!          write(*,19) sleep_minutes
+
+          open(log_lun, file=log_file, position='append')      
+          write(log_lun,*) 
+          write(log_lun,18) (darray(i),i=1,3),(tarray(i),i=1,3) 
+          write(log_lun,*) '!DISK SPACE TOO SMALL:   ', host_small_space
+          write(log_lun,17) dfout_small_space(1:79)
+          write(log_lun,13)     
+          write(log_lun,14) min_disk_space
+          write(log_lun,*) 
+          close(log_lun)
+        endif !(proc .eq. 0)
+        
+          call sleep(sleep_time)
+
+!---      go back and check again         
+!          goto 111
+
+      else !(ispace .lt. min_disk_space)
+        wait = .false.
+
+! inform if disk space is restored
+
+        if(diskfree .eq. .false.) then
+          if(proc .eq. 0) then
+            write(*,*)
+            write(*,18) (darray(i),i=1,3),(tarray(i),i=1,3) 
+            write(*,*)'!SUFFICIENT DISK SPACE: ', host_small_space
+            write(*,17) dfout(1:79)
+            write(*,13)         
+            write(*,*) 'CONTINUING '
+
+            open(log_lun, file=log_file, position='append')      
+            write(log_lun,*) 
+            write(log_lun,18) (darray(i),i=1,3),(tarray(i),i=1,3) 
+            write(log_lun,*)'!SUFFICIENT DISK SPACE: ', host_small_space
+            write(log_lun,17) dfout(1:79)
+            write(log_lun,13)   
+            write(log_lun,*) 'CONTINUING '
+            write(log_lun,*) 
+            close(log_lun)
+          endif
+          diskfree = .true.
+        endif
+      endif 
+      
+      
+888   continue       
+
+13    format(42x,'----------')
+14    format(23x,'SHOULD BE AT LEAST:',i9)      
+19    format(23x,'waiting',7x,i10,' min')      
+15    format(a80)
+16    format(1x,a40,a8,a10)
+17    format(1x,a79)
+18    format(i2.2,'.',i2.2,'.',i4.4,', ',i2.2,':',i2.2,':',i2.2)
+       
+
+
+      end subroutine check_disk
+!=======================================================================
+!
+!                     E N D   S U B R O U T I N E
+!                             C H E C K D F
+!
+!=======================================================================
+!
+!=======================================================================
+!
+!                    B E G I N   S U B R O U T I N E
+!                             R E A D F M S G
+!
+!=======================================================================
+!
+      subroutine read_file_msg 
+
+!     written by: michal hanasz
+!     date:       26. june 2003      
+!
+!-------------------------------------------------------------------------
+!     configurable parameters: problem.par 
+!-------------------------------------------------------------------------
+!      user_message_file           ! 1st (user) message file (eg.'./msg')
+!      system_message_file         ! 2nd (ups)  message file (eg.'/etc/ups/user/msg')
+!-------------------------------------------------------------------------
+       
+      character user_last_msg_file*80 
+      character system_last_msg_file*80 
+
+
+      character user_msg_time(10)*80,system_msg_time(10)*80
+      
+      character, save :: user_msg_time_old*80,system_msg_time_old*80
+      character*160 syscom
+      logical exist
+      integer i
+       
+      msg=''
+      user_msg_time(9)=''
+      nchar=0
+       
+      open(91,file=user_message_file,status='old',err=224)
+      read(91,fmt=*,err=224,end=224) msg, msg_param 
+      
+      close(91)
+      goto 225
+224   continue
+      close(91)
+
+      open(92,file=user_message_file,status='old',err=333)
+      read(92,fmt=*,err=333,end=333) msg 
+      close(92)
+      goto 225
+333   continue
+      close(92)
+      goto 888
+
+225   continue
+      nchar=len_trim(msg)
+
+      user_last_msg_file='./user_last_msg.tmp'
+      call rm_file(user_last_msg_file)
+      
+      syscom='ls -l --full-time msg >'//user_last_msg_file
+        scstatus = system(syscom)
+      open(93,file=user_last_msg_file,status='old',err=888)
+        read(93,fmt=*,err=888,end=888) (user_msg_time(i), i=1,10) 
+      close(93)
+       
+!---  do the requested action only once for a given user message file
+
+      if(user_msg_time(7) .eq. user_msg_time_old) then
+        msg=''
+        nchar=0
+      else
+        system_msg_time_old= user_msg_time(7)
+        return
+      endif      
+             
+888   continue
+
+      call rm_file(user_message_file)
+
+!------------------------------------------------------------------------
+
+
+       open(96,file=system_message_file,status='old',err=424)
+       read(96,fmt=*,err=424,end=424) msg, msg_param 
+       close(96)
+       goto 425
+424    continue
+       close(96)
+
+       open(97,file=system_message_file,status='old',err=533)
+       read(97,fmt=*,err=533,end=533) msg 
+       close(97)
+       goto 425
+533    continue
+       close(97)
+       goto 999
+
+425    continue
+       nchar=len_trim(msg)
+
+       system_last_msg_file='./system_last_msg.tmp'
+       call rm_file(system_last_msg_file)
+      
+       syscom='ls -l --full-time '//system_message_file//' > '//system_last_msg_file
+       scstatus = system(syscom)
+              
+       open(98,file=system_last_msg_file,status='old',err=999)
+         read(98,fmt=*,err=999,end=999) (system_msg_time(i), i=1,10) 
+       close(98)
+       
+!---  do the requested action only once for a given system message file
+
+       if(system_msg_time(7) .eq. system_msg_time_old) then
+         msg=''
+         nchar=0
+       else
+         system_msg_time_old= system_msg_time(7)
+         return
+       endif     
+             
+999    continue
+       
+       
+       return
+       end subroutine read_file_msg
+
+
+    subroutine rm_file(filename)
+      implicit none
+      character*(*) filename
+      character*160 syscom
+      logical exist
+
+!     delete file if exists
+      inquire(file = filename, exist = exist)
+      if(exist) then
+        syscom='rm '//filename
+        scstatus = system(syscom)
+      endif
+
+    end subroutine rm_file 
+
+!
+!=======================================================================
+!
+!     \\\\\\\\\\     B E G I N   S U B R O U T I N E     //////////
+!     //////////                 C T O R                 \\\\\\\\\\
+!
+!=======================================================================
+!
+       subroutine ctor ( cstr, nch, rval, ierr )
+!
+!    dac:zeus3d.ctor <-------------- translates character string to real
+!                                                          january, 1992
+!
+!      Written by: David Clarke
+!      Modified 1:
+!
+!  PURPOSE:  This subroutine translates a character string to a real
+!  constant.
+!
+!  INPUT VARIABLES:
+!    cstr      character representation of real number
+!    nch       number of characters in "cstr"
+!
+!  OUTPUT VARIABLES
+!    rval      floating representation of real number
+!    ierr      0 => floating conversion successful
+!              1 => non-translatable character found in "cstr"
+!
+!  EXTERNALS: [NONE]
+!
+!-----------------------------------------------------------------------
+!
+!*ca imp
+!
+       character*1   char1
+       character*(*) cstr
+       integer       nch     , ierr    , i       , esign   , ipnt &
+                   , npnt    , more    , iman    , iexp    , j
+       REAL        rval    , msign   , term    , fact
+
+       character*1   ch      (  10)
+       integer       exponent(   4), mantissa(  16)
+!
+!      Data statements
+!
+       data          ch       /'0','1','2','3','4','5','6','7','8','9'/
+!
+!-----------------------------------------------------------------------
+!
+!      Initialise parameters.
+!
+       do 10 i=1,4
+         exponent(i) = 0
+10     continue
+       do 20 i=1,16
+         mantissa(i) = 0
+20     continue
+       rval  = 0.0
+       msign = 1.0
+       esign = 1
+       ipnt  = 0
+       npnt  = 0
+       more  = 1
+       iman  = 0
+       iexp  = 0
+       ierr  = 0
+!
+!      Scan "cstr".
+!
+       do 40 i=1,nch
+         char1 = cstr(i:i)
+         if (char1 .eq. ' ') go to 40
+         if (char1 .eq. '-') then
+           if (more .eq. 1) msign = -1.0
+           if (more .eq. 2) esign = -1
+           go to 40
+         endif
+         if (char1 .eq. '+') go to 40
+         if (char1 .eq. '.') then
+           npnt = 1
+           ipnt = i - 2
+           if (msign .eq. -1.0) ipnt = ipnt - 1
+           go to 40
+         endif
+         if ( (char1 .eq. 'e') .or. (char1 .eq. 'd') ) then
+           more = 2
+           if (npnt .eq. 0) then
+             npnt = 1
+             ipnt = i - 2
+             if (msign .eq. -1.0) ipnt = ipnt - 1
+             if (ipnt .lt. 0) ipnt = 0
+           endif
+           go to 40
+         endif
+         do 30 j=1,10
+           if (char1 .eq. ch(j)) then
+             if (more .eq. 1) then
+               iman = iman + 1
+               mantissa(iman) = j - 1
+             endif
+             if (more .eq. 2) then
+               iexp = iexp + 1
+               exponent(iexp) = j - 1
+             endif
+             go to 40
+           endif
+30       continue
+!
+!      Illegal character found.  Set "ierr" to 1 and return.
+!
+         ierr = 1
+         return
+40     continue
+       if (npnt .eq. 0) ipnt = iman - 1
+!
+!      Evaluate the mantissa.
+!
+       if (iman .gt. 0) then
+         do 50 i=1,iman
+           term =  real(mantissa(i)) * 10.0**ipnt
+           rval = rval + term
+           ipnt = ipnt - 1
+50       continue
+       else
+         rval = 1.0
+       endif
+       rval = rval * msign
+!
+!      Evaluate the exponential factor.
+!
+       fact = 1.0
+       if (iexp .gt. 0) then
+         do 60 i=1,iexp
+           ipnt = iexp - i
+           fact = fact * 10.0 ** (exponent(i) * 10.0**ipnt)
+60       continue
+       endif
+       if (esign .eq. -1) fact = 1.0 / fact
+!
+!      Return real representation of character string.
+!
+       rval = rval * fact
+
+       return
+       end subroutine ctor
+
+!=======================================================================
+!
+!     \\\\\\\\\\       E N D   S U B R O U T I N E       //////////
+!     //////////                 C T O R                 \\\\\\\\\\
+!
+!=======================================================================
+!
+
+
+
+end module dataio
+
+
+
+

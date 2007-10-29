@@ -1,0 +1,12 @@
+/* #define ISO 			*/			
+#define SPLIT
+#define ORIG
+#define LOCAL_FR_SPEED
+#define VANLEER
+/* #define RESIST 		*/
+/* #define VISC			*/
+/* #define HEAT_COND		*/
+/* #define COOL_HEAT		*/
+#define COSM_RAYS
+/* #define GRAV 'null' 		*/
+#define GALAXY

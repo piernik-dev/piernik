@@ -1,0 +1,102 @@
+README for the MHD code 
+-----------------------
+
+by M.Hanasz & collaborators
+Torun Centre for Astronomy
+Nicolaus Copernicus University
+email: mhanasz@astri.uni.torun.pl
+tel. +48(0)56 611 3055
+
+
+KILKA UWAG DO AKTUALNEJ WERSJI KODU MHD (jeszcze bez nazwy)
+
+Ostatnie zmiany - patrz koncowka tego pliku.
+
+1. Kod byl testowany i uruchamiany pod intelem (Makefile.intel). Wyglada na to,
+ze dziala poprawnie.  
+
+2. Nastapila mala zmiana w podstawowym algorytmie: predkosc mrozaca jest teraz
+obliczana lokalnie, dla kazdej komorki (tak jak w kodzie hydro Trac&Pen(2003))
+a nie jak w pierwotnej wersji kodu - indywidualnie dla kazdego sweepu. Ta
+zmiana zapewnia mniejsza dyfuzyjnosc, szczegolnie w przypadku szokow.
+
+3. Mozna teraz wybrac jeden z trzech ogranicznikow strumienia (w pliku
+problem.par) Dostepne sa aktualnie "vanleer", "minmod" i "superbee" 
+
+4. Rownowage grawitacyjna mozna teraz dostrajac z pomoca parametru 
+
+    tune_zeq     = 1.0025
+
+ktory modyfikuje przyspieszenie grawitacyjne na etapie konstrukcji warunku
+poczatkowego. Dopasowujac tune_zeq metoda prob i bledow mozna wygaszac
+oscylacje    zadanego stanu rownowagi w trakcie ewolucji czasowej. Ponadto
+
+    tune_zeq_bnd = 0.9
+
+modyfikuje grawitacje na brzegach gdy uzywany jest hydrostatyczny warunek
+przegowy. Manipulujac tym parametrem tez mozna poprawiac stan rownowagi.
+
+5.Zeby pozbyc sie niepozadanych efektow zwiazanych z grawitacja na brzegach
+mozna ponadto zastosowac wygaszenie grawitacji na duzych wysokosciach z pomoca
+funkcji
+
+    if (n_gravity_profile .ne. 0) then
+      grav(:)=grav(:)/cosh((xsw(:)/(h_gravity_profile))**n_gravity_profile )
+    endif
+
+Mozna obejrzec jak to dziala w przypadku niestabilnosci Parkera w dysku
+galaktycznym, gdzie uzyte zostaly parametry
+
+    h_gravity_profile = 300.
+    n_gravity_profile = 2
+
+6. Ostatnio nie robilem testow stanu rownowagi dla jednorodnej grawitacji, ale
+pamietam, ze w przeszlosci mialem z tym problemy. Zeby to poprawic nalezaloby
+popracowac nad warunkiem brzegoweym typu "reflection-hydrostatic" na dolnym
+brzegu domeny. Ja zrobilem tylko "outflow-hydrostatic". Alternatywnie mozna tez
+sprobowac wygaszania g_z na dolym brzegu poprzez odpowiednia modyfikacje
+funkcji w p. 6.
+
+7. Trwa jeszcze praca nad modulami grzania/chlodzenia i samograwitacji -    
+procedury znajdujace sie w  katalogu zrodlowym nie dzialaja jeszcze poprawnie.
+Kilka uwag do aktualnej wersji kodu mhd.
+
+Ostatnie zmiany (wersja 15-01-07)
+---------------------------------
+
+8. Kod jest zrownoleglony z podzialem na bloki w trzech kierunkach. 
+Podzia³ na bloki zadajemy w nameliscie  MPI_BLOCKS. Ponizej uzyte wartosci 
+zmiennych p{x,y,z}size oznaczaja, ze domena zostaje podzielona na 1 blok w kier
+x, 2 bloki w kier.y i 3 bloki w kier. z. 
+
+$MPI_BLOCKS
+    pxsize = 1
+    pysize = 2
+    pzsize = 3    
+ /  
+
+Trzeba pamietac, zeby calkowite rozmiary siatki nxd, nyd, nzd byly podzielne
+odpowiednio przez liczbe blokow w kazdym kierunku.
+
+Zeby go uruchomic w trybie rownoleglym nalezy zadac liczbe procesow n
+rowna iloczynowi pxsize*pxsize*pxsize, tzn. wykonac instrukcje postaci
+mpirun -n 6 mhd dla powyzszego podzialu na bloki.
+
+9. Poprawione zosta³y warunki brzegowe, w szczególno¶ci warunki typu outflow
+dla pola magnetycznego, realizowane na skladowych sil elektromotorycznych.
+Zmiana polega na tym, ze zamiast przepisywania sil elktromot. z ostatniej
+warstwy komorek w domenie fizycznej na kolejne warstwy komorek brzegowych
+dokonujemy teraz liniowej ekstrapolacji z dwoch przedostatnich warstw komorek na
+warstwy brzegowe, dzieki czemu B ewoluuje na brzegach. W poprzednim podejsciu
+nie bylo gradientow sil elektromotorycznych na brzegach, wiec rowniez nie bylo
+zmian czasowych B na brzegach, przez co np. powstawaly plaszczyzny pradowe na
+granicy domeny i brzegow.
+
+10. W wersji kodu od 5-02-07 jest juz zamplementowana opornosc jednorodna i
+zlokalizowana (Rafal Pawlaszek z moimi poprawkami). Opornosc zlokalizowana
+wymaga jeszcze dopracowania, ale ogolnie dziala.
+
+
+
+
+Michal Hanasz
