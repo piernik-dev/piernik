@@ -9,7 +9,7 @@ use Switch;
 use File::Path;
 use File::Copy;
 system('./makemake',@ARGV);
-chdir('source');
+chdir('obj');
 if($argc == 2) {
    system('make',$ARGV[1]);
 } else {
