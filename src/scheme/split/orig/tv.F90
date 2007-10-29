@@ -199,7 +199,7 @@ module tv ! split orig
 !    gpcr = 0.25*cshift(gpcr,-1)+0.5*gpcr+0.25*cshift(gpcr,1)
 
 #ifndef ISO
-    u1(iena,:) = u1(iena,:) - cn(istep)*gpcr*u1(imxa,:)*dt
+    u1(iena,:) = u1(iena,:) - cn(istep)*u1(imxa,:)/u1(idna,:)*gpcr*dt
 #endif ISO
     u1(imxa,:) = u1(imxa,:) - cn(istep)*gpcr*u1(idna,:)*dt
 
