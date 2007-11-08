@@ -66,7 +66,8 @@ contains
             x3  = xsw - ptm_z
         end select
         rc = dsqrt(x1**2+x2**2)
-        fr = max(1./dcosh((rc/r_grav)**n_gravr),smalld/100.)
+        fr = min( (rc/r_grav)**n_gravr , 100.0)
+        fr = max(1./cosh(fr),smalld/100.)
         gpot = -newtong*ptmass/dsqrt(x1**2+x2**2+x3**2+r_smooth**2)
         gpot = gpot - csim2*dlog(fr) ! *d0
       case ('ptflat')
@@ -85,7 +86,8 @@ contains
             x3  = 0.0
         end select
         rc = dsqrt(x1**2+x2**2)
-        fr = 1./dcosh((rc/r_grav)**n_gravr)+smalld
+        fr(:) = min((rc(:)/r_grav)**n_gravr,100.0)
+        fr = 1./cosh(fr)+smalld
         gpot = -newtong*ptmass/dsqrt(x1**2+x2**2+x3**2+r_smooth**2)
         gpot = gpot - csim2*dlog(fr) ! *d0
       case default
@@ -470,7 +472,7 @@ contains
 
 
     if (n_gravh .ne. 0) then
-      grav(:)=grav(:)/cosh((xsw(:)/(h_grav))**n_gravh )
+      grav(:)=grav(:)/cosh((xsw(:)/h_grav)**n_gravh )
     endif      
      
   end subroutine grav_accel
