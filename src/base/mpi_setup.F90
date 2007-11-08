@@ -1,3 +1,4 @@
+#include "mhd.def"
  module mpi_setup
 
 ! Written by M.Hanasz, April 2006    -  MPI comunication in "z"

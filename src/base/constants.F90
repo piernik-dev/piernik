@@ -1,3 +1,5 @@
+#include "mhd.def"
+
 module constants     ! module containg physical constants !!!
 
   real, parameter :: one  = 1.0

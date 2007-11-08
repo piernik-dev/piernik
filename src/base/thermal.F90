@@ -1,3 +1,4 @@
+#include "mhd.def"
 module thermal
 
 ! Written by R. Kosinki 

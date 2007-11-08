@@ -1,3 +1,4 @@
+#include "mhd.def"
 module timer
 
 ! Written by: M. Hanasz, December 2005 - January 2006

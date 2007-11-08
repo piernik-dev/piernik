@@ -1,3 +1,5 @@
+#include "mhd.def"
+
 module hydrostatic
 
 ! Written by M. Hanasz March-May 2006

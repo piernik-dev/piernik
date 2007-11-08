@@ -1,7 +1,7 @@
 #include "mhd.def"
 
 ! Written by M. Hanasz, 2003
-! Adopted for this code M. Hanasz, October 2007
+! Adapted for this code M. Hanasz, October 2007
 
 module cr_diffusion
 

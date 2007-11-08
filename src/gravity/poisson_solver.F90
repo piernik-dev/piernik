@@ -1,3 +1,4 @@
+#include "mhd.def"
 module poisson_solver
 
 ! Written by G. Kowal

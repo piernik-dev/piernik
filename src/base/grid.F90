@@ -1,3 +1,4 @@
+#include "mhd.def"
 module grid
 
 ! Written by: M. Hanasz, January/February 2006
