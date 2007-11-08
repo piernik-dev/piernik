@@ -90,7 +90,7 @@ contains
     sqr_gm = sqrt(newtong*ptmass)
 
     b0 = sqrt(2.*alpha*d0*c_si**2) 
-    
+    write(*,*) b0 
     allocate(dprof(nz),gpot(nz))
     
     do k=1, nz
@@ -112,11 +112,14 @@ contains
                   
           vx = sqr_gm * (-yj)/(rc**2+r_smooth**2)**0.75
           vy = sqr_gm * ( xi)/(rc**2+r_smooth**2)**0.75
+          vz = 0.0
                   
           if(dimensions .eq.'3d') then
-            u(idna,i,j,k) = dprof(k)/cosh((rc/r_grav)**n_gravr)
+            u(idna,i,j,k) = min((rc/r_grav)**n_gravr,100.0)
+            u(idna,i,j,k) = dprof(k)/cosh(u(idna,i,j,k))
           else
-            u(idna,i,j,k) = d0/cosh((rc/r_grav)**n_gravr)
+            u(idna,i,j,k) = min((rc/r_grav)**n_gravr,100.0)
+            u(idna,i,j,k) = d0/cosh(u(idna,i,j,k))
           endif
           u(idna,i,j,k) = max(u(idna,i,j,k), smalld)
                           
@@ -128,15 +131,15 @@ contains
           u(iena,i,j,k) = max(u(iena,i,j,k), smallei)
           u(iena,i,j,k) = u(iena,i,j,k) +0.5*(vx**2+vy**2+vz**2)*u(idna,i,j,k)
 #endif
-          if(trim(mag_field_orient) .eq. 'toroidal') then
-            b(1,i,j,k)   = -b0*sqrt(u(idna,i,j,k)/d0)*yj/rc
-            b(2,i,j,k)   =  b0*sqrt(u(idna,i,j,k)/d0)*xi/rc
-            b(3,i,j,k)   =  0.0
-          else if(trim(mag_field_orient) .eq. 'vertical') then
+!          if(trim(mag_field_orient) .eq. 'toroidal') then
+!            b(1,i,j,k)   = -b0*sqrt(u(idna,i,j,k)/d0)*yj/rc
+!            b(2,i,j,k)   =  b0*sqrt(u(idna,i,j,k)/d0)*xi/rc
+!            b(3,i,j,k)   =  0.0
+!          else if(trim(mag_field_orient) .eq. 'vertical') then
             b(1,i,j,k)   =  0.0
             b(2,i,j,k)   =  0.0
-            b(3,i,j,k)   =  b0
-          endif
+            b(3,i,j,k)   =  0.0!b0
+!          endif
 
 #ifndef ISO	  
           u(iena,i,j,k)   = u(iena,i,j,k) +0.5*sum(b(:,i,j,k)**2,1)

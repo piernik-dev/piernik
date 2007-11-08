@@ -1,7 +1,7 @@
  $DOMAIN_SIZES
     nxd = 100
     nyd = 100
-    nzd = 160
+    nzd = 1
     nb=6
  /  
 
@@ -25,8 +25,8 @@
  /
 
  $OUTPUT_CONTROL
-    dt_hdf  = 0.05
-    dt_res  = 0.0
+    dt_hdf  = 0.1
+    dt_res  = 10.0
     dt_log  = 0.00001
     dt_tsl  = 0.00001
     vars(1) = 'dens'
@@ -34,7 +34,7 @@
     vars(3) = 'vely'
     vars(4) = 'velz'
     vars(5) = 'ener'
-    domain  = 'phys_domain'
+    domain  = 'full_domain'
     mag_center = 'no'
  / 
 
@@ -48,42 +48,40 @@
  /
 
  $DOMAIN_LIMITS
-    xmin   = 0.0
-    xmax   = 1.0
-    ymin   = 0.0
-    ymax   = 1.0
-    zmin   =-1.5
-    zmax   = 1.5
+    xmin   =  0.0
+    xmax   =  1.0
+    ymin   =  0.0
+    ymax   =  1.0
+    zmin   =-4.0e-1
+    zmax   = 4.0e-1
  /
 
  $EQUATION_OF_STATE
     c_si   = 0.2
-    alpha  = 0.1
+    alpha  = 0.0
  /  
 
  $NUMERICAL_SETUP
     cfl    = 0.8
     big    = 0.0
-    smalld = 1.e-4
-    smallei= 1.e-4
+    smalld = 1.e-3
+    smallei= 1.e-3
     flux_limiter = 'vanleer'
     freezing_speed = 'local'
-    integration_order = 2
+    integration_order = 3
     magnetic = 'no'
-    dimensions = '3d'
-    nu_bulk    = 0.0001
-    cfl_visc   = 0.4
+    dimensions = '2dxy'
  /
  
  $GRAVITY
     grav_model ='ptmass'
-    ptmass  = 1.0
-    ptm_x   = 0.0
-    ptm_y   = 0.0
-    ptm_z   = 0.0
-    r_smooth= 0.2
+    ptmass  =  1.0
+    ptm_x   =  0.0
+    ptm_y   =  0.0
+    ptm_z   =  0.0
+    r_smooth=  0.2
     nsub    = 10
-    r_grav  = 0.6
+    r_grav  =  0.7
     n_gravr = 10
  /
  
@@ -95,7 +93,7 @@
 
  $PROBLEM_CONTROL
     problem_name ='keplerian_disk'
-    run_id  =  'n4c'
+    run_id  =  'ts1'
     d0      = 1.0
     mag_field_orient = 'toroidal'
 /
