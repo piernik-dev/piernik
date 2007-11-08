@@ -202,7 +202,7 @@ module tv ! split orig
 #ifndef ISO
     u1(iena,:) = u1(iena,:) - cn(istep)*u1(imxa,:)/u1(idna,:)*gpcr*dt
 #endif ISO
-    u1(imxa,:) = u1(imxa,:) - cn(istep)*gpcr*u1(idna,:)*dt
+    u1(imxa,:) = u1(imxa,:) - cn(istep)*gpcr*dt
 
 #endif COSM_RAYS
 #ifndef ISO
