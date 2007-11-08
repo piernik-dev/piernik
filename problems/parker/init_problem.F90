@@ -11,13 +11,13 @@ module init_problem
   use fluid_boundaries
   use hydrostatic
 
-  real coldens, d0, nbx0,nby0,nbz0, a_vp, omega, n_x
+  real coldens, d0, nbx0,nby0,nbz0, a_vp, n_x
   character problem_name*32,run_id*3
 
   namelist /PROBLEM_CONTROL/  problem_name, run_id, &
                               d0, &
                               nbx0,nby0,nbz0, &
-			      a_vp, omega, n_x
+			      a_vp, n_x
 
 contains
 
@@ -34,7 +34,6 @@ contains
       nby0    = 1.0
       nbz0    = 0.0
       a_vp    = 0.0
-      omega   = 0.0
       n_x     = 3.0
     
     if(proc .eq. 0) then    
@@ -58,7 +57,6 @@ contains
       rbuff(3) = nby0
       rbuff(4) = nbz0
       rbuff(5) = a_vp
-      rbuff(6) = omega
       rbuff(7) = n_x
 
       call MPI_BCAST(cbuff, 32*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
@@ -79,7 +77,6 @@ contains
       nby0         = rbuff(3)  
       nbz0         = rbuff(4)  
       a_vp         = rbuff(5)  
-      omega        = rbuff(6)
       n_x          = rbuff(7)
 
     endif
@@ -125,6 +122,9 @@ contains
           u(iena,i,j,k)   = c_si**2/(gamma-1.0) * u(idna,i,j,k) &
 	                         +0.5*sum(u(imxa:imza,i,j,k)**2,1)
 #endif
+#ifdef COSM_RAYS
+          u(iecr,i,j,k)   =  beta_cr*c_si**2 * u(idna,i,j,k)/(gamma_cr-1.0)
+#endif COSM_RAYS
         enddo
       enddo
     enddo
