@@ -98,7 +98,6 @@ program mhd
     if (t>=tend .or. nstep>nend ) exit
 
       call mhdstep
-      
       call write_data(output='all')
 
 888   continue

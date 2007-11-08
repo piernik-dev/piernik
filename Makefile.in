@@ -1,5 +1,13 @@
 PROG		 = mhd
 F90		 = mpif90
-F90FLAGS  = -r8 -O3
+F90FLAGS  = -g -C -fpe0 -r8
+#F90FLAGS  = -fastsse -r8
 HDF_LIB  = /opt/intel/hdf4/lib
 MHDF_LIB = /opt/intel/hdf4/include
+
+### PGI
+#F90		 = /opt/pgi/linux86-64/6.0/mpich2/bin/mpif90
+#F90FLAGS  = -g -C -Ktrap=fp -r8
+#F90FLAGS  = -fastsse -r8
+#HDF_LIB  = /opt/pgi/linux86-64/6.0/hdf4/lib
+#MHDF_LIB = /opt/pgi/linux86-64/6.0/hdf4/include

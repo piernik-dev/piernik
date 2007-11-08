@@ -32,7 +32,7 @@ module fluids     ! split fluids
         if(magfield)then
           jp=j+1
           b_x=0.5*b(:,:,j,k)
-          b_x(ibx,:)=b_x(ibx,:)+eoshift(b_x(ibx,:),shift=1,boundary=big)
+          b_x(ibx,1:nx-1)=b_x(ibx,1:nx-1)+b_x(ibx,2:nx);       b_x(ibx,nx) = b_x(ibx,nx-1)
           b_x(iby,:)=b_x(iby,:)+0.5*b(iby,:,jp,k)
           if(dimensions .eq. '3d')  b_x(ibz,:)=b_x(ibz,:)+0.5*b(ibz,:,j,kp)
         else  ! tak "just in case"
@@ -72,7 +72,7 @@ module fluids     ! split fluids
           ip=i+1
           b_y(:,:)=b(:,i,:,k)/2
           b_y(ibx,:)=b_y(ibx,:)+b(ibx,ip,:,k)/2
-          b_y(iby,:)=b_y(iby,:)+eoshift(b_y(iby,:),shift=1,boundary=big)
+          b_y(iby,1:ny-1)=b_y(iby,1:ny-1)+b_y(iby,2:ny);       b_y(iby,ny) = b_y(iby,ny-1)
           if (dimensions .eq. '3d') b_y(ibz,:)=b_y(ibz,:)+b(ibz,i,:,kp)/2
           b_y((/iby,ibx,ibz/),:)=b_y(:,:)
         else
@@ -115,7 +115,7 @@ module fluids     ! split fluids
           b_z(:,:)=b(:,i,j,:)/2
           b_z(ibx,:)=b_z(ibx,:)+b(ibx,ip,j,:)/2
           b_z(iby,:)=b_z(iby,:)+b(iby,i,jp,:)/2
-          b_z(ibz,:)=b_z(ibz,:)+eoshift(b_z(ibz,:),shift=1,boundary=big)
+          b_z(ibz,1:nz-1)=b_z(ibz,1:nz-1)+b_z(ibz,2:nz);       b_z(ibz,nz) = b_z(ibz,nz-1)
           b_z((/ibz,iby,ibx/),:)=b_z(:,:)
         else
           b_z = 0.0

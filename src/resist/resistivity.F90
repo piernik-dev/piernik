@@ -21,9 +21,9 @@ contains
       subroutine compute_resist(eta,ici)
       
       implicit none
-      integer                   :: ici
-      real, dimension(nx,ny,nz) :: eta
-      real, allocatable         ::  wb(:,:,:)
+      integer,intent(in)                    :: ici
+      real, dimension(nx,ny,nz), intent(inout) :: eta
+      real, dimension(:,:,:), allocatable   ::  wb
       allocate(wb(nx,ny,nz))
       
 !--- square current computing in cell corner step by step
@@ -104,6 +104,8 @@ contains
          eta(:,:,:)=0.5*(eta(:,:,:)+cshift(eta(:,:,:),shift=1,dim=xdim))
       endif
 
+      return
+
       end subroutine compute_resist
 
 !-----------------------------------------------------------------------
@@ -114,7 +116,7 @@ contains
       real dx2
 
         dx2 = dxmn**2
-	dt_resist = big
+        dt_resist = 1.e50
         if(eta_max .ne. 0.) then
           dt_resist = cfl_resist*dx2/(2.0*eta_max)
 #ifndef ISO
@@ -140,11 +142,13 @@ contains
 #endif
 
     real                     :: di
-    real,dimension(nx,ny,nz) :: w,wm,wp,dw
-    real,dimension(nx,ny,nz) :: eta
+    real,dimension(:,:,:), allocatable :: w,wm,wp,dw,eta
     integer                  :: ibi,ici,n
 
+    allocate(w(nx,ny,nz), wm(nx,ny,nz), wp(nx,ny,nz), dw(nx,ny,nz), eta(nx,ny,nz))
+
     di = dl(n)
+    eta = 0.0
 
     call compute_resist(eta,ici)
 #ifdef SPLIT
@@ -201,7 +205,7 @@ contains
     wa = (w+dw)*dt
 #endif
 #endif
-
+    deallocate(w,wm,wp,dw,eta)
   end subroutine tvdd
 
 !-------------------------------------------------------------------------------

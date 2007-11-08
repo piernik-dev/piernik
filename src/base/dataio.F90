@@ -1069,7 +1069,6 @@ module dataio
                *gp(is:ie,js:je,ks:ke)) * dvol
     call mpi_allreduce(epot, tot_epot, 1, mpi_real8, mpi_sum, comm3d, ierr)
 #endif
-
     wa(is:ie,js:je,ks:ke) &
         = 0.5 * (u(imxa,is:ie,js:je,ks:ke)**2   &
                + u(imya,is:ie,js:je,ks:ke)**2  & 

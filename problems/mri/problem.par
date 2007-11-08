@@ -1,7 +1,7 @@
  $DOMAIN_SIZES
-    nxd = 40
-    nyd = 40
-    nzd = 40
+    nxd = 64
+    nyd = 64
+    nzd = 64
     nb  = 4
  /  
 

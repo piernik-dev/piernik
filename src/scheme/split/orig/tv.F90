@@ -5,8 +5,7 @@ module tv ! split orig
   contains
   subroutine tvdb(vibj,b,vg,n,dt,di)
     integer i,n,ip,ipp,im
-    real dt
-    real di
+    real :: dt,di,dti
     real, dimension(n) :: vibj,b,vg
 ! locals
     real, dimension(n) :: b1,vibj1,vh
@@ -14,14 +13,16 @@ module tv ! split orig
 
   ! unlike the B field, the vibj lives on the right cell boundary
     vh = 0.0
-    vh =(vg+eoshift(vg,1,boundary=big))*0.5
+    vh(1:n-1) =(vg(1:n-1)+ vg(2:n))*0.5;     vh(n) = vh(n-1)
+
+    dti = dt/di
 
     where(vh > 0.)
       vibj1=b*vg
     elsewhere
       vibj1=eoshift(b*vg,1,boundary=big)
     end where
-    b1=b-(vibj1-eoshift(vibj1,-1,boundary=big))*dt/di*0.5
+    b1(2:n) = b(2:n) -(vibj1(2:n)-vibj1(1:n-1))*dti*0.5;    b1(1) = b(2)
 
     do i=3,n-3
       ip=i+1

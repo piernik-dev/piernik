@@ -13,13 +13,16 @@ module advects    ! split advects
     implicit none
     real, dimension(nx) :: vxby,by_x,vx
     integer                j,k,jm
+
+    vxby = 0.0
     
     do k=1,nz
       do j=2,ny
         jm=j-1
         vx=(u(imxa,:,jm,k)+u(imxa,:,j,k))/(u(idna,:,jm,k)+u(idna,:,j,k))
-        vx=(eoshift(vx,shift=-1,boundary=big) &
-           +eoshift(vx,shift=1,boundary=big)+2.*vx)/4.
+        vx(2:nx-1)=(vx(1:nx-2) + vx(3:nx) + 2.0*vx(2:nx-1))*0.25
+        vx(1)  = vx(2)
+        vx(nx) = vx(nx-1)
         by_x=b(iby,:,j,k)
 #ifdef ORIG
         call tvdb(vxby,by_x,vx,nx,dt,dx)
@@ -48,8 +51,9 @@ module advects    ! split advects
       km=k-1
       do j=1,ny
         vx=(u(imxa,:,j,km)+u(imxa,:,j,k))/(u(idna,:,j,km)+u(idna,:,j,k))
-        vx=(eoshift(vx,-1,boundary=big) &
-           +eoshift(vx,1,boundary=big)+2*vx)/4
+        vx(2:nx-1)=(vx(1:nx-2) + vx(3:nx) + 2.0*vx(2:nx-1))*0.25
+        vx(1)  = vx(2)
+        vx(nx) = vx(nx-1)
         bz_x=b(ibz,:,j,k)
 #ifdef ORIG
         call tvdb(vxbz,bz_x,vx,nx,dt,dx)
@@ -78,8 +82,9 @@ module advects    ! split advects
       km=k-1
       do i=1,nx  
         vy=(u(imya,i,:,km)+u(imya,i,:,k))/(u(idna,i,:,km)+u(idna,i,:,k))
-        vy=(eoshift(vy,-1,boundary=big) &
-           +eoshift(vy,1,boundary=big)+2*vy)/4
+        vy(2:ny-1)=(vy(1:ny-2) + vy(3:ny) + 2.0*vy(2:ny-1))*0.25
+        vy(1)  = vy(2)
+        vy(ny) = vy(ny-1)
         bz_y=b(ibz,i,:,k)
 #ifdef ORIG
         call tvdb(vybz,bz_y,vy,ny,dt,dy)
@@ -108,8 +113,9 @@ module advects    ! split advects
       do i=2,nx
         im=i-1
         vy=(u(imya,im,:,k)+u(imya,i,:,k))/(u(idna,im,:,k)+u(idna,i,:,k))
-        vy=(eoshift(vy,-1,boundary=big) &
-           +eoshift(vy,1,boundary=big)+2*vy)/4
+        vy(2:ny-1)=(vy(1:ny-2) + vy(3:ny) + 2.0*vy(2:ny-1))*0.25
+        vy(1)  = vy(2)
+        vy(ny) = vy(ny-1)
         bx_y=b(ibx,i,:,k)
 #ifdef ORIG
         call tvdb(vybx,bx_y,vy,ny,dt,dy)
@@ -132,12 +138,15 @@ module advects    ! split advects
     real, dimension(nz)  :: vzbx,bx_z,vz
     integer                 j,i,im
 
+    vzbx = 0.0
+
     do j=1,ny
       do i=2,nx
         im=i-1
         vz=(u(imza,im,j,:)+u(imza,i,j,:))/(u(idna,im,j,:)+u(idna,i,j,:))
-        vz=(eoshift(vz,-1,boundary=big) &
-           +eoshift(vz,1,boundary=big)+2*vz)/4
+        vz(2:nz-1)=(vz(1:nz-2) + vz(3:nz) + 2.0*vz(2:nz-1))*0.25
+        vz(1)  = vz(2)
+        vz(nz) = vz(nz-1)
         bx_z=b(ibx,i,j,:)
 #ifdef ORIG
         call tvdb(vzbx,bx_z,vz,nz,dt,dz)
@@ -160,12 +169,15 @@ module advects    ! split advects
     real, dimension(nz)  :: vzby,by_z,vz
     integer                 i,j,jm
 
+    vzby = 0.0
+
     do j=2,ny
       jm=j-1
       do i=1,nx
         vz=(u(imza,i,jm,:)+u(imza,i,j,:))/(u(idna,i,jm,:)+u(idna,i,j,:))
-        vz=(eoshift(vz,-1,boundary=big) &
-           +eoshift(vz,1,boundary=big)+2*vz)/4
+        vz(2:nz-1)=(vz(1:nz-2) + vz(3:nz) + 2.0*vz(2:nz-1))*0.25
+        vz(1)  = vz(2)
+        vz(nz) = vz(nz-1)
         by_z=b(iby,i,j,:)
 #ifdef ORIG
         call tvdb(vzby,by_z,vz,nz,dt,dz)
