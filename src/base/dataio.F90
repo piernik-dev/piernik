@@ -1069,6 +1069,7 @@ module dataio
                *gp(is:ie,js:je,ks:ke)) * dvol
     call mpi_allreduce(epot, tot_epot, 1, mpi_real8, mpi_sum, comm3d, ierr)
 #endif
+
     wa(is:ie,js:je,ks:ke) &
         = 0.5 * (u(imxa,is:ie,js:je,ks:ke)**2   &
                + u(imya,is:ie,js:je,ks:ke)**2  & 
@@ -1196,7 +1197,9 @@ module dataio
                   + (/nb,nb,nb/)
     call mpifind(vz_max, 'max', loc_vz_max, proc_vz_max)
     
-    wa         = sum(b(:,:,:,:)**2,1)  
+!    wa         = sum(b(:,:,:,:)**2,1)  
+    wa(:,:,:)  = b(1,:,:,:)*b(1,:,:,:) + b(2,:,:,:)*b(2,:,:,:) + &
+                 b(3,:,:,:)*b(3,:,:,:)
     b_min      = sqrt(minval(wa(is:ie,js:je,ks:ke))) 
     loc_b_min  = minloc(wa(is:ie,js:je,ks:ke)) &
                   + (/nb,nb,nb/)
