@@ -121,9 +121,6 @@ contains
           dt_resist = cfl_resist*dx2/(2.0*eta_max)
 #ifndef ISO
           dt_resist = min(dt_resist,dt_eint)
-
-        else
-          dt_resist = dt_eint
 #endif	  
         endif
 	
