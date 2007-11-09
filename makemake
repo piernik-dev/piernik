@@ -56,12 +56,10 @@ if( grep { /ORIG/ } @d) {
 if( grep { /UNSPLIT_1D/ } @d) {
    push(@addons, "../src/scheme/unsplit/1D/mhdstep.F90");
    $sch="unsplit";
-}
-if( grep { /UNSPLIT_3D/ } @d) {
+} elsif( grep { /UNSPLIT_3D/ } @d) {
    push(@addons, "../src/scheme/unsplit/3D/mhdstep.F90");
    $sch="unsplit";
-}
-if( grep { /SPLIT/ } @d) {
+} else {
    push(@addons, "../src/scheme/split/mhdstep.F90");
    $sch = 'split';
 }
