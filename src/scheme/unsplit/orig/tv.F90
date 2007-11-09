@@ -4,17 +4,17 @@ module tv      ! unsplit org
   use arrays, only : idna,imxa,imya,imza,ibx,iby,ibz,nu,iena
   contains
   subroutine tvdb(vibj,b,vg,n,dt)
-    integer i,n,ip,ipp,im
-    real dt
-    real, dimension(n) :: vibj,b,vg
+    use func, only : tvdb_emf
+    implicit none
+    integer, intent(in) :: n
+    real, intent(in)    :: dt
+    real, dimension(n)  :: vibj,b,vg
 ! locals
     real, dimension(n) :: vh
-    real w,wp,wm,dw,v
 
   ! unlike the B field, the vibj lives on the right cell boundary
     vh = 0.0
-    vh =(vg+eoshift(vg,1,boundary=big))*0.5
-
+    vh(1:n-1) =(vg(1:n-1)+ vg(2:n))*0.5;     vh(n) = vh(n-1)
     if(istep .eq. 1) then
       where(vh > 0.)
         vibj=b*vg
@@ -24,25 +24,25 @@ module tv      ! unsplit org
       vibj = vibj*dt
 
     else if(istep .eq. 2) then
-
-      do i=3,n-3
-        ip=i+1
-        ipp=ip+1
-        im=i-1
-        v=vh(i)
-        if (v .gt. 0.) then
-          w=vg(i)*b(i)
-          wp=(vg(ip)*b(ip)-w)*0.5
-          wm=(w-vg(im)*b(im))*0.5
-        else
-          w=vg(ip)*b(ip)
-          wp=(w-vg(ipp)*b(ipp))*0.5
-          wm=(vg(i)*b(i)-w)*0.5
-        end if
-        dw=0.
-        if(wm*wp .gt. 0.) dw=2.*wm*wp/(wm+wp)
-        vibj(i)=(w+dw)*dt
-      enddo
+      vibj = tvdb_emf(vh,vg,b,dt)
+!      do i=3,n-3
+!        ip=i+1
+!        ipp=ip+1
+!        im=i-1
+!        v=vh(i)
+!        if (v .gt. 0.) then
+!          w=vg(i)*b(i)
+!          wp=(vg(ip)*b(ip)-w)*0.5
+!          wm=(w-vg(im)*b(im))*0.5
+!        else
+!          w=vg(ip)*b(ip)
+!          wp=(w-vg(ipp)*b(ipp))*0.5
+!          wm=(vg(i)*b(i)-w)*0.5
+!        end if
+!        dw=0.
+!        if(wm*wp .gt. 0.) dw=2.*wm*wp/(wm+wp)
+!        vibj(i)=(w+dw)*dt
+!      enddo
     else 
       stop
     endif
@@ -52,8 +52,9 @@ module tv      ! unsplit org
 
    subroutine relaxing_tvd(ui,u,bi,bb,sweep,i1,i2,dx,n,dt)
  ! Cooling and heating implemented following Rafal Kosinski
-
+#ifdef GRAV
    use gravity, only : grav_pot2accel
+#endif
 
     implicit none
     integer i1,i2, n

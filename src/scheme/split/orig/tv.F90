@@ -3,13 +3,16 @@ module tv ! split orig
   use start
   use arrays, only : idna,imxa,imya,imza,iecr,ibx,iby,ibz,nu,iena,wa
   contains
+
   subroutine tvdb(vibj,b,vg,n,dt,di)
-    integer i,n,ip,ipp,im
-    real :: dt,di,dti
-    real, dimension(n) :: vibj,b,vg
+    use func, only : tvdb_emf
+    implicit none
+    integer, intent(in) :: n
+    real, intent(in)    :: dt,di
+    real, dimension(n)  :: vibj,b,vg
 ! locals
     real, dimension(n) :: b1,vibj1,vh
-    real w,wp,wm,dw,v
+    real  :: dti
 
   ! unlike the B field, the vibj lives on the right cell boundary
     vh = 0.0
@@ -24,24 +27,8 @@ module tv ! split orig
     end where
     b1(2:n) = b(2:n) -(vibj1(2:n)-vibj1(1:n-1))*dti*0.5;    b1(1) = b(2)
 
-    do i=3,n-3
-      ip=i+1
-      ipp=ip+1
-      im=i-1
-      v=vh(i)
-      if (v .gt. 0.) then
-        w=vg(i)*b1(i)
-        wp=(vg(ip)*b1(ip)-w)*0.5
-        wm=(w-vg(im)*b1(im))*0.5
-      else
-        w=vg(ip)*b1(ip)
-        wp=(w-vg(ipp)*b1(ipp))*0.5
-        wm=(vg(i)*b1(i)-w)*0.5
-      end if
-      dw=0.
-      if(wm*wp .gt. 0.) dw=2.*wm*wp/(wm+wp)
-      vibj(i)=(w+dw)*dt
-    end do
+    vibj = tvdb_emf(vh,vg,b1,dt)
+
   end subroutine tvdb
 
    subroutine relaxing_tvd(u,bb,sweep,i1,i2,dx,n,dt)

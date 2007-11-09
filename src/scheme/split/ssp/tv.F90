@@ -4,6 +4,7 @@ module tv   ! split ssp
    use arrays, only : idna,imxa,imya,imza,ibx,iby,ibz,nu,iena
    contains
    subroutine tvdb(vibj,b,vg,n,dt)
+    use func, only : tvdb_emf
     integer i,n,ip,ipp,im
     real dt
     real, dimension(n) :: vibj,b,vg
@@ -13,32 +14,36 @@ module tv   ! split ssp
 
   ! unlike the B field, the vibj lives on the right cell boundary
     vh = 0.0
-    vh =(vg+eoshift(vg,1,boundary=big))*0.5
-
-    do i=3,n-3
-      ip=i+1
-      ipp=ip+1
-      im=i-1
-      v=vh(i)
-      if (v .gt. 0.) then
-        w=vg(i)*b(i)
-        wp=(vg(ip)*b(ip)-w)*0.5
-        wm=(w-vg(im)*b(im))*0.5
-      else
-        w=vg(ip)*b(ip)
-        wp=(w-vg(ipp)*b(ipp))*0.5
-        wm=(vg(i)*b(i)-w)*0.5
-      end if
-      dw=0.
-      if(wm*wp .gt. 0.) dw=2.*wm*wp/(wm+wp)
-      vibj(i)=(w+dw)*dt
-    end do
+    vh(1:n-1) =(vg(1:n-1)+ vg(2:n))*0.5;     vh(n) = vh(n-1)
+    !vh =(vg+eoshift(vg,1,boundary=big))*0.5
+    
+    vibj = tvdb_emf(vh,vg,b,dt)
+!    do i=3,n-3
+!      ip=i+1
+!      ipp=ip+1
+!      im=i-1
+!      v=vh(i)
+!      if (v .gt. 0.) then
+!        w=vg(i)*b(i)
+!        wp=(vg(ip)*b(ip)-w)*0.5
+!        wm=(w-vg(im)*b(im))*0.5
+!      else
+!        w=vg(ip)*b(ip)
+!        wp=(w-vg(ipp)*b(ipp))*0.5
+!        wm=(vg(i)*b(i)-w)*0.5
+!      end if
+!      dw=0.
+!      if(wm*wp .gt. 0.) dw=2.*wm*wp/(wm+wp)
+!      vibj(i)=(w+dw)*dt
+!    end do
   end subroutine tvdb
 
    subroutine relaxing_tvd(u,bb,sweep,i1,i2,dx,n,dt)
  ! Cooling and heating implemented following Rafal Kosinski
 
+#ifdef GRAV
    use gravity, only :grav_pot2accel
+#endif GRAV
    use grid, only : x
 
     implicit none

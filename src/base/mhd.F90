@@ -22,6 +22,7 @@ program mhd
   use diagnostics  
   use timer
   use mpi_setup
+  use fluid_boundaries
 #ifdef GRAV
   use gravity, only : grav_pot_3d
 #endif 
