@@ -236,6 +236,7 @@ module dataio
 
     integer :: iv, i, j, k
     integer :: nxo, nyo, nzo, iso,ieo,jso,jeo,kso,keo
+    real*4, dimension(:,:,:), allocatable :: temp
 
 !- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -272,6 +273,7 @@ module dataio
       endif      
     endif
 
+    allocate(temp(iso:ieo,jso:jeo,kso:keo))
 
     rank = 3
     comp_type = 4
@@ -545,7 +547,8 @@ module dataio
 !
       sds_id = sfcreate(sd_id, vars(iv), 5, rank, dims)
       iostatus = sfscompress(sds_id, comp_type, comp_prm)
-      iostatus = sfwdata(sds_id, istart, stride, dims, real(wa(iso:ieo,jso:jeo,kso:keo),4))
+      temp = real(wa(iso:ieo,jso:jeo,kso:keo),4)
+      iostatus = sfwdata(sds_id, istart, stride, dims, temp)
 
 ! write coords
 !
@@ -580,6 +583,7 @@ module dataio
 
       close(log_lun)
     endif
+    deallocate(temp)
 
 
   end subroutine write_hdf
