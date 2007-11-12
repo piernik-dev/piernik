@@ -43,7 +43,7 @@ module start
   real rorder
   logical bulk_viscosity
   
-  character*16 grav_model, selfgravity
+  character*16 grav_model 
   real g_z
   real dg_dz
   real r_gc
@@ -175,7 +175,6 @@ contains
 
 #ifdef GRAV
   namelist /GRAVITY/ grav_model,  &
-                     selfgravity, &
                      g_z,   &
                      dg_dz, &
                      r_gc,  &
@@ -184,7 +183,6 @@ contains
                      h_grav, r_grav, n_gravr, n_gravr2, n_gravh
 
     grav_model  = 'null'                     
-    selfgravity = 'null'
     g_z     = 0.0 
     dg_dz   = 0.0
     r_gc    = 8500
@@ -439,7 +437,7 @@ contains
       ibuff(80) = integration_order
 
 #ifdef GRAV
-!  namelist /GRAVITY/ grav_model, selfgravity, g_z, dg_dz, r_gc, 
+!  namelist /GRAVITY/ grav_model, g_z, dg_dz, r_gc, 
 !                     ptmass,ptm_x,ptm_y,ptm_z,r_smooth, nsub, 
 !                     tune_zeq, tune_zeq_bnd,
 !                     h_grav, r_grav, n_gravr, n_gravr2, n_gravh
@@ -450,7 +448,6 @@ contains
       ibuff(93) = n_gravh
 
       cbuff(90) = grav_model                 
-      cbuff(91) = selfgravity
 
       rbuff(90)  = g_z    
       rbuff(91)  = dg_dz  
@@ -646,7 +643,7 @@ contains
       integration_order   = ibuff(80)
  
 #ifdef GRAV
-!  namelist /GRAVITY/ grav_model, selfgravity, g_z, dg_dz, r_gc, 
+!  namelist /GRAVITY/ grav_model,  g_z, dg_dz, r_gc, 
 !                     ptmass,ptm_x,ptm_y,ptm_z,r_smooth
 !                     tune_zeq, tune_zeq_bnd,
 !                     h_gravity_profile, r_gravity_profile, n_gravity_profile
@@ -658,7 +655,6 @@ contains
       n_gravh             = ibuff(93) 
 
       grav_model          = trim(cbuff(90))                  
-      selfgravity         = trim(cbuff(91)) 
 
       g_z                 = rbuff(90)    
       dg_dz               = rbuff(91) 
@@ -812,7 +808,7 @@ contains
     end select 
 
 
-    if(grav_model .ne. 'null' .or. selfgravity .ne. 'null') then
+    if(grav_model .ne. 'null') then
       gravaccel = .true.
     else
       gravaccel = .false.

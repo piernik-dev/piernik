@@ -17,7 +17,9 @@ program mhd
   use resistivity
 #endif RESIST
   use mod_mhdstep
-!  use poisson_solver
+#ifdef SELF_GRAV
+  use poisson_solver
+#endif SELF_GRAV
   use dataio
   use diagnostics  
   use timer
@@ -59,7 +61,9 @@ program mhd
     call compute_u_bnd
     call compute_b_bnd
 
-!    if(selfgravity .ne. 'null') call poisson
+#ifdef SELF_GRAV
+    call poisson
+#endif SELF_GRAV
 
     if (proc .eq.0) then
       write (log_file,'(a,a1,a3,a1,i3.3,a4)') &

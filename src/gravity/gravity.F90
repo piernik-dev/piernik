@@ -49,6 +49,7 @@ contains
     
     select case (grav_model)
       case ('null')
+        gpot = 0.0
       ! do nothing
       case ('ptmass') 
         select case (sweep)

@@ -4,9 +4,9 @@ module poisson_solver
 ! Written by G. Kowal
 ! Adopted for this code by R. Maliszewski & M. Hanasz, May 2006
 
-  use start
-  use arrays
-  use grid
+!  use start
+!  use arrays
+!  use grid
   use constants
   implicit none
 
@@ -17,31 +17,29 @@ contains
 !! SUBROUTINE POISSON: solves Poisson equation
 !!
   subroutine poisson
+    use start, only  : bnd_xl, bnd_xr, bnd_yl, bnd_yr, nb, nxd, nyd, dz
+    use arrays, only : idna 
+    implicit none
   
     if( bnd_xl .eq. 'per' .and. bnd_xr .eq. 'per' .and. &
         bnd_yl .eq. 'per' .and. bnd_yr .eq. 'per'      ) then
 
-         call poisson_xyp(u(1,nb+1:nb+nxd,nb+1:nb+nyd,:), &
-                           gp(nb+1:nb+nxd,nb+1:nb+nyd,:),dz0)
-   
+         call poisson_xyp(u(idna,nb+1:nb+nxd,nb+1:nb+nyd,:), &
+                           gp(nb+1:nb+nxd,nb+1:nb+nyd,:),dz)
+  
 ! Boundary conditions
 
          gp(1:nb,:,:)              = gp(nxd+1:nxd+nb,:,:)
          gp(nxd+nb+1:nxd+2*nb,:,:) = gp(nb+1:2*nb,:,:)
          gp(:,1:nb,:)              = gp(:,nyd+1:nyd+nb,:)
          gp(:,nyd+nb+1:nyd+2*nb,:) = gp(:,nb+1:2*nb,:)
+    else
+      write(*,*) 'POISSON SOLVER: not implemented for boundary conditions'
+      write(*,*) '                xdim: ',bnd_xl,',  ', bnd_xr
+      write(*,*) '                ydim: ',bnd_yl,',  ', bnd_yr
+      stop
+    endif
 
-
-  else
-    write(*,*) 'POISSON SOLVER: not implemented for boundary conditions'
-    write(*,*) '                xdim: ',bnd_xl,',  ', bnd_xr
-    write(*,*) '                ydim: ',bnd_yl,',  ', bnd_yr
-    stop
-  endif
-  
-  
-  
-  
   end subroutine poisson
 
 !!=====================================================================

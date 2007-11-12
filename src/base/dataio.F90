@@ -218,6 +218,7 @@ module dataio
 !
   subroutine write_hdf
 
+    use grid, only : dx,dy,dz
     use arrays
     use init_problem
 

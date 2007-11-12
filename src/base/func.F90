@@ -8,6 +8,8 @@ function tvdb_emf(vh,vg,b,dt)
   integer :: i,ip,ipp,im
   real    :: w,wp,wm,dw,v
 
+  tvdb_emf = 0.0
+
   do i = lbound(vh,1)+2, ubound(vh,1)-3
     ip  = i  + 1
     ipp = ip + 1
