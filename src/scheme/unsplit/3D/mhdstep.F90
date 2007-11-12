@@ -5,6 +5,9 @@ module mod_mhdstep ! UNSPLIT 3D
    use time, only : timestep
    use fluids
    use advects
+#ifdef RESIST
+   use resistivity
+#endif 
    contains
 
 subroutine mhdstep
