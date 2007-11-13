@@ -6,6 +6,7 @@ module mag_boundaries
 ! Modified by M. Hanasz - MPI comunication in "z"   - April 2006 
 ! Modified by M. Hanasz - MPI comunication in "xyz" - November 2006 
 ! Modified by M. Hanasz - MPI corner-periodic bcs   - December 2006 
+! Modified by M. Hanasz - MPI shearing-periodic in "x" - November 2007
 
   use mpi_setup
   use start
@@ -25,46 +26,55 @@ subroutine bnd_b(dim)
   integer ireq
   real, allocatable :: send_left(:,:,:,:),recv_left(:,:,:,:),send_right(:,:,:,:),recv_right(:,:,:,:) 
 
-#ifdef SHEAR 
-  if(dim .eq. 'xdim' .and. bnd_xl .eq. 'she' .and. bnd_xr .eq. 'she') then
+! MPI block comunication
 
-     allocate(send_left(3,nb,ny,nz),send_right(3,nb,ny,nz), &
-              recv_left(3,nb,ny,nz),recv_right(3,nb,ny,nz))
+  select case (dim)
+    case ('xdim')
+      allocate(send_left(3,nb,ny,nz),send_right(3,nb,ny,nz), &
+               recv_left(3,nb,ny,nz),recv_right(3,nb,ny,nz))
     
-        send_left (:,:,:,:)  = b(:,nb+1:2*nb,:,:) 
-        send_right(:,:,:,:)  = b(:,nxb+1:nxb+nb,:,:)
+#ifdef SHEAR 
+    
+      send_left (:,:,:,:)  = b(:,nb+1:2*nb,:,:) 
+      send_right(:,:,:,:)  = b(:,nxb+1:nxb+nb,:,:)
 
-
-! przesuwamy o calkowita liczbe komorek
+      if(bnd_xl == 'she') then
 !
-        send_left (:,:,nb+1:nb+nyb,:)  =  cshift(send_left (:,:,nb+1:nb+nyb,:),dim=3,shift= delj)
-        send_right(:,:,nb+1:nb+nyb,:)  =  cshift(send_right(:,:,nb+1:nb+nyb,:),dim=3,shift=-delj)
+! przesuwamy o calkowita liczbe komorek + periodyczny wb w kierunku y
+!
+        send_left (:,:,nb+1:nb+nyb,:)         = cshift(send_left (:,:,nb+1:nb+nyb,:),dim=3,shift= delj)
+        send_left (:,:,1:nb,:)                = send_left  (:,:,nyb+1:nyb+nb,:)
+        send_left (:,:,nb+nyb+1:nyb+2*nb,:)   = send_left  (:,:,nb+1:2*nb,:)
+!
+! remapujemy  - interpolacja kwadratowa
+!
+        send_left (:,:,:,:)  = (1.+eps)*(1.-eps) * send_left (:,:,:,:) &
+                               -0.5*eps*(1.-eps) * cshift(send_left (:,:,:,:),shift=-1,dim=3) &
+                               +0.5*eps*(1.+eps) * cshift(send_left (:,:,:,:),shift=1,dim=3) 
+      endif ! (bnd_xl == 'she')
 
-! periodyczny wb w kierunku y
-        send_left  (:,:,1:nb,:)               = send_left  (:,:,nyb+1:nyb+nb,:)
-        send_left  (:,:,nb+nyb+1:nyb+2*nb,:)  = send_left  (:,:,nb+1:2*nb,:)
+
+      if(bnd_xr == 'she') then
+!
+! przesuwamy o calkowita liczbe komorek + periodyczny wb w kierunku y
+! 
         send_right (:,:,1:nb,:)               = send_right (:,:,nyb+1:nyb+nb,:)
         send_right (:,:,nb+nyb+1:nyb+2*nb,:)  = send_right (:,:,nb+1:2*nb,:)
-
+        send_right (:,:,nb+1:nb+nyb,:)        = cshift(send_right(:,:,nb+1:nb+nyb,:),dim=3,shift=-delj)
 !
-! Teraz remapujemy
+! remapujemy - interpolacja kwadratowa
 !
-
-        send_left (:,:,:,:)  = (1.+eps)*(1.-eps)*send_left (:,:,:,:) &
-                            -0.5*eps*(1.-eps) *cshift(send_left (:,:,:,:),shift=-1,dim=3) &
-                            +0.5*eps*(1.+eps) *cshift(send_left (:,:,:,:),shift=1,dim=3) 
-
-
-        send_right (:,:,:,:) = (1.+eps)*(1-eps)*send_right (:,:,:,:) &         
-                            -0.5*eps*(1.-eps) *cshift(send_right (:,:,:,:),shift=1,dim=3) &
-                            +0.5*eps*(1.+eps) *cshift(send_right (:,:,:,:),shift=-1,dim=3) 
+        send_right (:,:,:,:) = (1.+eps)*(1.-eps) * send_right (:,:,:,:) &         
+                               -0.5*eps*(1.-eps) * cshift(send_right (:,:,:,:),shift=1,dim=3) &
+                               +0.5*eps*(1.+eps) * cshift(send_right (:,:,:,:),shift=-1,dim=3) 
+      endif ! (bnd_xr == 'she')
 !
-! i wysylamy na drugi brzeg
+! wysylamy na drugi brzeg
 !
-        CALL MPI_ISEND   (send_left , 3*ny*nz*nb, MPI_DOUBLE_PRECISION, proc, 10, comm, req(1), ierr)
-        CALL MPI_ISEND   (send_right, 3*ny*nz*nb, MPI_DOUBLE_PRECISION, proc, 20, comm, req(3), ierr)
-        CALL MPI_IRECV   (recv_left , 3*ny*nz*nb, MPI_DOUBLE_PRECISION, proc, 20, comm, req(2), ierr)
-        CALL MPI_IRECV   (recv_right, 3*ny*nz*nb, MPI_DOUBLE_PRECISION, proc, 10, comm, req(4), ierr)
+        CALL MPI_ISEND   (send_left , 3*ny*nz*nb, MPI_DOUBLE_PRECISION, procxl, 10, comm, req(1), ierr)
+        CALL MPI_ISEND   (send_right, 3*ny*nz*nb, MPI_DOUBLE_PRECISION, procxr, 20, comm, req(3), ierr)
+        CALL MPI_IRECV   (recv_left , 3*ny*nz*nb, MPI_DOUBLE_PRECISION, procxl, 20, comm, req(2), ierr)
+        CALL MPI_IRECV   (recv_right, 3*ny*nz*nb, MPI_DOUBLE_PRECISION, procxr, 10, comm, req(4), ierr)
 
         do ireq=1,4 
            call MPI_WAIT(req(ireq),status(1,ireq),ierr)
@@ -72,17 +82,11 @@ subroutine bnd_b(dim)
 
         b(:,1:nb-1,:,:)               = recv_left(:,1:nb-1,:,:)
         b(:,nxb+nb+1+1:nxb+2*nb,:,:)  = recv_right(:,1+1:nb,:,:)
-        deallocate(send_left,send_right,recv_left,recv_right)
-      endif
-!===============================================================================    
-#endif SHEAR
-! MPI block comunication
 
-  select case (dim)
-    case ('xdim')
+!===============================================================================    
+#else SHEAR
+      
       if(pxsize .gt. 1) then 
-        allocate(send_left(3,nb,ny,nz),send_right(3,nb,ny,nz), &
-                 recv_left(3,nb,ny,nz),recv_right(3,nb,ny,nz))
     
         if(procxl .ne. MPI_PROC_NULL) send_left(:,:,:,:)          =  b(:,nb+1:2*nb,:,:)     
         if(procxr .ne. MPI_PROC_NULL) send_right(:,:,:,:)         =  b(:,nxb+1:nxb+nb,:,:)
@@ -99,8 +103,11 @@ subroutine bnd_b(dim)
         if(procxl .ne. MPI_PROC_NULL) b(:,1:nb,:,:)               = recv_left(:,:,:,:)
         if(procxr .ne. MPI_PROC_NULL) b(:,nxb+nb+1:nxb+2*nb,:,:)  = recv_right(:,:,:,:)
           
-        deallocate(send_left,send_right,recv_left,recv_right)
       endif
+#endif SHEAR      
+
+      deallocate(send_left,send_right,recv_left,recv_right)
+      
     case ('ydim')
       if(pysize .gt. 1) then 
         allocate(send_left(3,nx,nb,nz),send_right(3,nx,nb,nz), &

@@ -41,7 +41,6 @@ contains
       dxmn = min(dx,dy)
     endif
       
-    write(*,*) dxmn, dl
 !    write(*,*) 'proc=',proc, zminb, zmaxb, dl(zdim)
 
 
@@ -83,10 +82,9 @@ contains
 
     else if(dimensions .eq. '2dxy') then
    
-      z = 0.0
+      z = 0.0  ! dz =1
       zl = -dz/2.
       zr =  dz/2.
-      dz =  dz
      
     endif
 

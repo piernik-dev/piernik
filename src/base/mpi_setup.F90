@@ -28,6 +28,11 @@
   
   integer pxsize, pysize, pzsize
   namelist /MPI_BLOCKS/ pxsize, pysize, pzsize
+  
+  character*4 bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr
+  character*4 bnd_xl_dom, bnd_xr_dom, bnd_yl_dom, bnd_yr_dom, bnd_zl_dom, bnd_zr_dom
+  namelist /BOUNDARIES/ bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr
+   
   logical mpi
 
 
@@ -40,7 +45,6 @@
     implicit none
     
    
-    character*4 bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr
 
     integer iproc
 
@@ -49,7 +53,6 @@
       pzsize = 1
   
 
-    namelist /BOUNDARIES/ bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr
       bnd_xl = 'per'  
       bnd_xr = 'per'  
       bnd_yl = 'per'  
@@ -57,12 +60,19 @@
       bnd_zl = 'per'  
       bnd_zr = 'per'
 
+      bnd_xl_dom = bnd_xl    
+      bnd_xr_dom = bnd_xr    
+      bnd_yl_dom = bnd_yl    
+      bnd_yr_dom = bnd_yr    
+      bnd_zl_dom = bnd_zl    
+      bnd_zr_dom = bnd_zr  
+
 
     open(1,file='problem.par')
       read(unit=1,nml=MPI_BLOCKS)
       read(unit=1,nml=BOUNDARIES)
     close(1)
-
+    
     psize(1)   = pxsize     
     psize(2)   = pysize    
     psize(3)   = pzsize    
@@ -83,7 +93,7 @@
     if(pxsize*pysize*pzsize .ne. 1) mpi = .true. 
    
 
-    if(bnd_xl(1:3) .eq. 'per') then
+    if(bnd_xl(1:3) .eq. 'per' .or. bnd_xl(1:3) .eq. 'she') then
       periods(1) = .true.  ! x periodic
     else
       periods(1) = .false.  
@@ -105,6 +115,22 @@
     call MPI_CART_COORDS(comm3d, proc, ndims, pcoords, ierr)
 !    write(*,*) 'proc=',proc, '    coords=', pcoords
     
+
+    if(proc == 0) then
+      open(3, file='tmp.log', status='unknown')
+        write(3,"(a35,i2)") 'START OF MHD CODE,  No. of procs = ', nproc
+        write(unit=3,nml=MPI_BLOCKS)  
+        write(unit=3,nml=BOUNDARIES)
+      close(3)      
+        write(*,*)
+        write(*,"(a35,i2)") 'START OF MHD CODE,  No. of procs = ', nproc
+        write(*,*)
+        write(*,nml=MPI_BLOCKS)      
+!        write(*,nml=BOUNDARIES)
+        write(*,*)    
+    endif
+
+
 ! Compute neighbors
 
 
@@ -174,8 +200,45 @@
        else
          procyxl = -1      
        endif
-
     endif
+    
+    
+#ifdef SHEAR
+    if(pcoords(1) .eq. 0) then
+       bnd_xl = 'she'
+    else
+       bnd_xl = 'mpi'    
+    endif
+    
+    if(pcoords(1) .eq. pxsize-1) then
+       bnd_xr = 'she'
+    else
+       bnd_xr = 'mpi'    
+    endif
+
+#else
+    if(procxl .ne. MPI_PROC_NULL .and. procxl .ne. proc) bnd_xl = 'mpi'
+    if(procxr .ne. MPI_PROC_NULL .and. procxr .ne. proc) bnd_xr = 'mpi'
+#endif
+    
+    
+     
+    if(procyl .ne. MPI_PROC_NULL .and. procyl .ne. proc) bnd_yl = 'mpi'
+    if(procyr .ne. MPI_PROC_NULL .and. procyr .ne. proc) bnd_yr = 'mpi'
+     
+    if(proczl .ne. MPI_PROC_NULL .and. proczl .ne. proc) bnd_zl = 'mpi'
+    if(proczr .ne. MPI_PROC_NULL .and. proczr .ne. proc) bnd_zr = 'mpi'
+     
+
+ !   write(*,*) proc, procxl, bnd_xl, procxr, bnd_xr
+!    write(*,*) proc, procyl, bnd_yl, procyr, bnd_yr
+!    write(*,*) proc, proczl, bnd_zl, proczr, bnd_zr
+
+    
+    
+    
+    
+    
     
   end subroutine mpistart
 

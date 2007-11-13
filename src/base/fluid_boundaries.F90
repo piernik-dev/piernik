@@ -3,9 +3,10 @@
 module fluid_boundaries
 
 ! Written  by M. Hanasz - December 2005 - February 2006
-! Modified by M. Hanasz - MPI comunication in "z"   - April 2006 
-! Modified by M. Hanasz - MPI comunication in "xyz" - November 2006 
-! Modified by M. Hanasz - MPI corner-periodic bcs   - December 2006 
+! Modified by M. Hanasz - MPI comunication in "z"      - April 2006 
+! Modified by M. Hanasz - MPI comunication in "xyz"    - November 2006 
+! Modified by M. Hanasz - MPI corner-periodic bcs      - December 2006 
+! Modified by M. Hanasz - MPI shearing-periodic in "x" - November 2007
 
   use start
   use mpi_setup
@@ -37,86 +38,115 @@ subroutine bnd_u(dim)
   real, allocatable :: send_left(:,:,:,:),recv_left(:,:,:,:),send_right(:,:,:,:),recv_right(:,:,:,:) 
 
 ! MPI block comunication
-!  write(*,*) bnd_xl, bnd_xr
   select case (dim)
     case ('xdim')
-#ifdef SHEAR    
-       if(bnd_xl == 'she' .and. bnd_xr == 'she') then
-!          write(*,*) delj, eps
-          allocate(send_right(nu,nb,ny,nz), send_left(nu,nb,ny,nz), &
+        allocate(send_right(nu,nb,ny,nz), send_left(nu,nb,ny,nz), &
                    recv_left(nu,nb,ny,nz), recv_right(nu,nb,ny,nz) )
+    
+   
+#ifdef SHEAR    
 
-          send_left ((/idna,imxa,imza/),:,:,:) =  u((/idna,imxa,imza/),nb+1:2*nb,:,:)
-          send_right((/idna,imxa,imza/),:,:,:) =  u((/idna,imxa,imza/),nxb+1:nxb+nb,:,:)
-#ifdef COSM_RAYS
-          send_left (iecr,:,:,:) = u(iecr,nb+1:2*nb,:,:) 
-          send_right(iecr,:,:,:) = u(iecr,nxb+1:nxb+nb,:,:) 
-#endif COSM_RAYS 
-
+        send_left(:,:,:,:)          =  u(:,nb+1:2*nb,:,:)     
+        send_right(:,:,:,:)         =  u(:,nxb+1:nxb+nb,:,:)
+!
+! odejmujemy ped_y i energie odpowiadajace niezaburzonej rozniczkowej rotacji na lewym brzegu
+!
+        if(bnd_xl == 'she') then
           do i=1,nb
-            send_left (imya,i,:,:) = u(imya,nb+i,:,:) &
-               +qshear*omega * x(nb+i) *  u(idna,nb+i,:,:)
-            send_right(imya,i,:,:) = u(imya,nxb+i,:,:) &
-               +qshear*omega * x(nxb+i) * u(idna,nxb+i,:,:)
-
+            send_left (imya,i,:,:) = send_left(imya,i,:,:) &
+                                         +qshear*omega * x(nb+i)     * send_left(idna,i,:,:)
 #ifndef ISO
-            send_left (iena,i,:,:) = u(iena,nb+i,:,:) &
-                -0.5*(qshear*omega * x(nb+i) )**2 * u(idna,nb+i,:,:)
-            send_right(iena,i,:,:) = u(iena,nxd+i,:,:) &
-                -0.5*(qshear*omega * x(nxb+i))**2 * u(idna,nxb+i,:,:)
+            send_left (iena,i,:,:) = send_left(iena,i,:,:) &
+                                    -0.5*(qshear*omega * x(nb+i))**2 * send_left(idna,i,:,:)
 #endif ISO
           enddo 
-
-          send_left (:,:,nb+1:nb+nyb,:)  = cshift(send_left (:,:,nb+1:nb+nyb,:),dim=3,shift= delj)
-          send_right(:,:,nb+1:nb+nyb,:)  = cshift(send_right(:,:,nb+1:nb+nyb,:),dim=3,shift=-delj)
-
+!
+! przesuwamy o calkowita liczbe komorek + periodyczny wb w kierunku y
+!
+          send_left (:,:,nb+1:nb+nyb,:)        = cshift(send_left (:,:,nb+1:nb+nyb,:),dim=3,shift= delj)
           send_left (:,:,1:nb,:)               = send_left (:,:,nyb+1:nyb+nb,:)
           send_left (:,:,nb+nyb+1:nyb+2*nb,:)  = send_left (:,:,nb+1:2*nb,:)
-          send_right (:,:,1:nb,:)              = send_right(:,:,nyb+1:nyb+nb,:)
-          send_right (:,:,nb+nyb+1:nyb+2*nb,:) = send_right(:,:,nb+1:2*nb,:)
-          
-
-          send_left (:,:,:,:)  = (1.+eps)*(1.-eps)*send_left (:,:,:,:) &
-             -0.5*eps*(1.-eps) *cshift(send_left(:,:,:,:),shift=-1,dim=3) &
-             +0.5*eps*(1.+eps) *cshift(send_left(:,:,:,:),shift=1 ,dim=3)
-          send_right (:,:,:,:) = (1.+eps)*(1-eps)*send_right (:,:,:,:) &
-              -0.5*eps*(1.-eps)*cshift(send_right(:,:,:,:),shift=1 ,dim=3) &
-              +0.5*eps*(1.+eps)*cshift(send_right(:,:,:,:),shift=-1,dim=3)
-
-
+!
+! remapujemy  - interpolacja kwadratowa          
+!
+          send_left (:,:,:,:)  = (1.+eps)*(1.-eps) * send_left (:,:,:,:) &
+                                 -0.5*eps*(1.-eps) * cshift(send_left(:,:,:,:),shift=-1,dim=3) &
+                                 +0.5*eps*(1.+eps) * cshift(send_left(:,:,:,:),shift=1 ,dim=3)
+        endif !(bnd_xl == 'she')
+!
+! odejmujemy ped_y i energie odpowiadajace niezaburzonej rozniczkowej rotacji na prawym brzegu
+!	
+        if(bnd_xr == 'she') then
           do i=1,nb
-             send_left (imya,i,:,:) = send_left (imya,i,:,:) &
-                -qshear*omega * x(nb+nxb+i) * send_left(idna,i,:,:)
-             send_right(imya,i,:,:) = send_right(imya,i,:,:) &
-                -qshear*omega * x(i) * send_right(idna,i,:,:)
-#ifndef ISO  
-             send_left (iena,i,:,:) = send_left (iena,i,:,:) &
-                +0.5*(qshear*omega * x(nb+nxb+i))**2 * send_left(idna,i,:,:)
-             send_right(iena,i,:,:) = send_right(iena,i,:,:) &
-                +0.5*(qshear*omega * x(i))**2 * send_right(idna,i,:,:)
+            send_right(imya,i,:,:) = send_right(imya,i,:,:) &
+                                         +qshear*omega * x(nxb+i)     * send_right(idna,i,:,:)
+#ifndef ISO
+            send_right(iena,i,:,:) = send_right(iena,i,:,:) &
+                                    -0.5*(qshear*omega * x(nxb+i))**2 * send_right(idna,i,:,:)
 #endif ISO
           enddo 
-          CALL MPI_ISEND   (send_left , nu*ny*nz*nb,MPI_DOUBLE_PRECISION, proc, 10, comm, req(1), ierr)
-          CALL MPI_ISEND   (send_right, nu*ny*nz*nb,MPI_DOUBLE_PRECISION, proc, 20, comm, req(3), ierr)
-          CALL MPI_IRECV   (recv_left , nu*ny*nz*nb,MPI_DOUBLE_PRECISION, proc, 20, comm, req(2), ierr)
-          CALL MPI_IRECV   (recv_right, nu*ny*nz*nb,MPI_DOUBLE_PRECISION, proc, 10, comm, req(4), ierr)
+!
+! przesuwamy o calkowita liczbe komorek + periodyczny wb w kierunku y
+!
+          send_right(:,:,nb+1:nb+nyb,:)        = cshift(send_right(:,:,nb+1:nb+nyb,:),dim=3,shift=-delj)
+          send_right (:,:,1:nb,:)              = send_right(:,:,nyb+1:nyb+nb,:)
+          send_right (:,:,nb+nyb+1:nyb+2*nb,:) = send_right(:,:,nb+1:2*nb,:)
+!
+! remapujemy  - interpolacja kwadratowa          
+!
+          send_right (:,:,:,:) = (1.+eps)*(1.-eps) * send_right (:,:,:,:) &
+                                 -0.5*eps*(1.-eps) * cshift(send_right(:,:,:,:),shift=1 ,dim=3) &
+                                 +0.5*eps*(1.+eps) * cshift(send_right(:,:,:,:),shift=-1,dim=3)
+        endif !(bnd_xr == 'she')
+!
+! wysylamy na drugi brzeg
+!
+        CALL MPI_ISEND   (send_left , nu*ny*nz*nb, MPI_DOUBLE_PRECISION, procxl, 10, comm, req(1), ierr)
+        CALL MPI_ISEND   (send_right, nu*ny*nz*nb, MPI_DOUBLE_PRECISION, procxr, 20, comm, req(3), ierr)
+        CALL MPI_IRECV   (recv_left , nu*ny*nz*nb, MPI_DOUBLE_PRECISION, procxl, 20, comm, req(2), ierr)
+        CALL MPI_IRECV   (recv_right, nu*ny*nz*nb, MPI_DOUBLE_PRECISION, procxr, 10, comm, req(4), ierr)
 
-          do ireq = 1,4
-            call MPI_WAIT(req(ireq),status(1,ireq),ierr)  
-          enddo
+        do ireq = 1,4
+          call MPI_WAIT(req(ireq),status(1,ireq),ierr)  
+        enddo
 
-          u(:,1:nb,:,:)              = recv_left(:,1:nb,:,:)
-          u(:,nxb+nb+1:nxb+2*nb,:,:) = recv_right(:,1:nb,:,:)
+!
+! dodajemy ped_y i energie odpowiadajace niezaburzonej rozniczkowej rotacji na prawym brzegu
+!	
+        if(bnd_xr == 'she') then	
+          do i=1,nb
+             recv_right (imya,i,:,:) = recv_right (imya,i,:,:) &
+                                           -qshear*omega * x(nb+nxb+i)     * recv_right(idna,i,:,:)
+#ifndef ISO  
+             recv_right (iena,i,:,:) = recv_right (iena,i,:,:) &
+                                      +0.5*(qshear*omega * x(nb+nxb+i))**2 * recv_right(idna,i,:,:)
+#endif ISO
+          enddo 	  
 
-          u(idna,1:nb,:,:)              = max(u(idna,1:nb,:,:),smalld)
-          u(idna,nxb+nb+1:nxb+2*nb,:,:) = max(u(idna,nxb+nb+1:nxb+2*nb,:,:),smalld)
+        endif !(bnd_xr == 'she')
+!
+! dodajemy ped_y i energie odpowiadajace niezaburzonej rozniczkowej rotacji na lewym brzegu
+!
+        if(bnd_xl == 'she') then
 
-          deallocate(send_right,send_left,recv_right,recv_left)
-      endif ! bnd_xl == 'she' && bnd_xr == 'she'
-#endif SHEAR      
+          do i=1,nb
+             recv_left(imya,i,:,:) = recv_left(imya,i,:,:) &
+                                         -qshear*omega * x(i)     * recv_left(idna,i,:,:)
+#ifndef ISO  
+             recv_left(iena,i,:,:) = recv_left(iena,i,:,:) &
+                                    +0.5*(qshear*omega * x(i))**2 * recv_left(idna,i,:,:)
+#endif ISO
+          enddo 
+        endif !(bnd_xl == 'she')
+
+        u(:,1:nb,:,:)              = recv_left(:,1:nb,:,:)
+        u(:,nxb+nb+1:nxb+2*nb,:,:) = recv_right(:,1:nb,:,:)
+
+        u(idna,1:nb,:,:)              = max(u(idna,1:nb,:,:),smalld)
+        u(idna,nxb+nb+1:nxb+2*nb,:,:) = max(u(idna,nxb+nb+1:nxb+2*nb,:,:),smalld)
+	
+#else SHEAR      
       if(pxsize .gt. 1) then 
-        allocate(send_left(nu,nb,ny,nz),send_right(nu,nb,ny,nz), &
-                 recv_left(nu,nb,ny,nz),recv_right(nu,nb,ny,nz))
     
         if(procxl .ne. MPI_PROC_NULL) send_left(:,:,:,:)          =  u(:,nb+1:2*nb,:,:)     
         if(procxr .ne. MPI_PROC_NULL) send_right(:,:,:,:)         =  u(:,nxb+1:nxb+nb,:,:)
@@ -133,8 +163,9 @@ subroutine bnd_u(dim)
         if(procxl .ne. MPI_PROC_NULL) u(:,1:nb,:,:)               = recv_left(:,:,:,:)
         if(procxr .ne. MPI_PROC_NULL) u(:,nxb+nb+1:nxb+2*nb,:,:)  = recv_right(:,:,:,:)
           
-        deallocate(send_left,send_right,recv_left,recv_right)
       endif
+#endif SHEAR      
+        deallocate(send_left,send_right,recv_left,recv_right)
     case ('ydim')
       if(pysize .gt. 1) then 
         allocate(send_left(nu,nx,nb,nz),send_right(nu,nx,nb,nz), &
