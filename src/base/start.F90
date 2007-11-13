@@ -32,8 +32,6 @@ module start
 
   real xmin, xmax, ymin, ymax, zmin, zmax
 
-  character*4 bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr
-
   real c_si, gamma, alpha 
 
   real cfl, big, small, smalld, smallei, nu_bulk, cfl_visc
@@ -70,7 +68,7 @@ module start
 
 ! Secondary parameters
 
-  real csi2, csim2, amp_ecr_sn, ethu, f_sn, l_x, l_y, l_z
+  real csi2, csim2, amp_ecr_sn, ethu, f_sn
   
 #ifdef SPLIT
 #ifdef ORIG
@@ -138,14 +136,6 @@ contains
     ymax   = 1.0
     zmin   = 0.0
     zmax   = 1.0
-
-  namelist /BOUNDARIES/ bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr
-    bnd_xl = 'per'  
-    bnd_xr = 'per'  
-    bnd_yl = 'per'  
-    bnd_yr = 'per'  
-    bnd_zl = 'per'  
-    bnd_zr = 'per'
  
   namelist /EQUATION_OF_STATE/ c_si, gamma, alpha
     c_si   = 1.0
@@ -238,7 +228,7 @@ contains
   namelist /COSMIC_RAYS/ cr_active, gamma_cr, cr_eff, beta_cr, &
                          K_cr_paral, K_cr_perp, amp_cr, cfl_cr
     cr_active  = 1.0
-    gamma_cr   = 5./3.  ! 4./3.
+    gamma_cr   = 4./3.
     beta_cr    = 0.0
     cr_eff     = 0.1       !  canonical conversion rate of SN en.-> CR
                            !  we fix E_SN=10**51 erg
@@ -263,23 +253,17 @@ contains
   namelist /SHEARING/ omega, qshear
     omega  = 0.0
     qshear = 0.0
-#endif
+#endif SHEAR
 
          
     if(proc .eq. 0) then
-    
-
-      write(*,*)
-      write(*,"(a35,i2)") 'START OF MHD CODE,  No. of procs = ', nproc
-      write(*,*)
-      
+          
       open(1,file='problem.par')
         read(unit=1,nml=DOMAIN_SIZES)  
         read(unit=1,nml=START_CONTROL)  
         read(unit=1,nml=RESTART_CONTROL)  
         read(unit=1,nml=END_CONTROL)  
         read(unit=1,nml=OUTPUT_CONTROL)  
-        read(unit=1,nml=BOUNDARIES)
         read(unit=1,nml=DOMAIN_LIMITS)
         read(unit=1,nml=EQUATION_OF_STATE)
         read(unit=1,nml=NUMERICAL_SETUP)
@@ -304,16 +288,12 @@ contains
 
       close(1)
 
-      open(3, file='tmp.log', status='unknown')
-      write(3,"(a35,i2)") 'START OF MHD CODE,  No. of procs = ', nproc
-        write(*,nml=MPI_BLOCKS)      
-        write(unit=3,nml=MPI_BLOCKS)  
+      open(3, file='tmp.log', position='append')
         write(unit=3,nml=DOMAIN_SIZES)  
         write(unit=3,nml=START_CONTROL)  
         write(unit=3,nml=RESTART_CONTROL)  
         write(unit=3,nml=END_CONTROL)  
-        write(unit=3,nml=OUTPUT_CONTROL)  
-        write(unit=3,nml=BOUNDARIES)
+        write(unit=3,nml=OUTPUT_CONTROL) 
         write(unit=3,nml=DOMAIN_LIMITS)
         write(unit=3,nml=EQUATION_OF_STATE)
         write(unit=3,nml=NUMERICAL_SETUP)
@@ -401,15 +381,6 @@ contains
       rbuff(53) = ymax 
       rbuff(54) = zmin 
       rbuff(55) = zmax 
-
-!  namelist /BOUNDARIES/ bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr
-
-      cbuff(64) = bnd_xl 
-      cbuff(65) = bnd_xr   
-      cbuff(66) = bnd_yl  
-      cbuff(67) = bnd_yr  
-      cbuff(68) = bnd_zl   
-      cbuff(69) = bnd_zr 
  
 !  namelist /EQUATION_OF_STATE/ c_si, gamma, alpha
       rbuff(70) = c_si  
@@ -605,15 +576,6 @@ contains
       zmin                = rbuff(54) 
       zmax                = rbuff(55) 
 
-!  namelist /BOUNDARIES/ bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr
-
-      bnd_xl              = trim(cbuff(64)) 
-      bnd_xr              = trim(cbuff(65))   
-      bnd_yl              = trim(cbuff(66))  
-      bnd_yr              = trim(cbuff(67))   
-      bnd_zl              = trim(cbuff(68))   
-      bnd_zr              = trim(cbuff(69)) 
- 
 
 !  namelist /EQUATION_OF_STATE/ c_si, gamma, alpha
 
@@ -743,10 +705,6 @@ contains
 
 ! Secondary parameters
 
-   l_x = xmax - xmin
-   l_y = ymax - ymin
-   l_z = zmax - zmin
-
    csi2  = c_si**2
    csim2 = csi2*(1.+alpha)    ! z-equilibrium defined for fixed
                                 ! ratio p_mag/p_gas = alpha = 1/beta
@@ -763,7 +721,7 @@ contains
         				! e_0 = 1/(5/3-1)*rho_0*c_s0**2
         				! rho_0=1.67e-24g/cm**3,
         				! c_s0 = 7km/s
-   f_sn = f_sn_kpc2 * l_x/1000.0 * l_y/1000.0 ! SN frequency per horizontal
+   f_sn = f_sn_kpc2 * (xmax-xmin)/1000.0 * (ymax-ymin)/1000.0 ! SN frequency per horizontal
                                               ! surface area of the comp. box 
 #endif GALAXY
 
@@ -788,17 +746,21 @@ contains
 
 !-------------------------                               
 #ifdef ORIG
-
     if(integration_order .gt. 2) then
       stop 'For "ORIG" scheme integration_order must be 1 or 2'
     endif
 #endif
 #ifdef SSP
-
     if(integration_order .gt. 3) then
       stop 'For "SSP" scheme integration_order can`t be greater than 3'
     endif
 #endif
+#ifdef SHEAR
+    if(pysize .gt. 1) then
+      stop 'Shear-pediodic boundary conditions do not permit pysize > 1'
+    endif
+#endif SHEAR
+
 
     select case (dimensions)
       case('3d','2dxy')
@@ -847,20 +809,7 @@ contains
     else
        bulk_viscosity = .false.
     endif
-   
-    if(procxl .ne. MPI_PROC_NULL .and. procxl .ne. proc) bnd_xl = 'mpi'
-    if(procxr .ne. MPI_PROC_NULL .and. procxr .ne. proc) bnd_xr = 'mpi'
-     
-    if(procyl .ne. MPI_PROC_NULL .and. procyl .ne. proc) bnd_yl = 'mpi'
-    if(procyr .ne. MPI_PROC_NULL .and. procyr .ne. proc) bnd_yr = 'mpi'
-     
-    if(proczl .ne. MPI_PROC_NULL .and. proczl .ne. proc) bnd_zl = 'mpi'
-    if(proczr .ne. MPI_PROC_NULL .and. proczr .ne. proc) bnd_zr = 'mpi'
-     
-
-!    write(*,*) proc, procxl, bnd_xl, procxr, bnd_xr
-!    write(*,*) proc, procyl, bnd_yl, procyr, bnd_yr
-!    write(*,*) proc, proczl, bnd_zl, proczr, bnd_zr
+       
 
   end subroutine read_params
   

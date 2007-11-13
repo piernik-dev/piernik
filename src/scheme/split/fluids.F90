@@ -22,6 +22,8 @@ module fluids     ! split fluids
 
   
     b_x = 0.0
+    u_x = 0.0
+    
 #ifdef COSM_RAYS
     call div_v         
 #endif COSM_RAYS
@@ -61,6 +63,8 @@ module fluids     ! split fluids
     real    :: xi,zk
  
     b_y = 0.0
+    u_y = 0.0
+    
 #ifdef COSM_RAYS
     call div_v         
 #endif COSM_RAYS
@@ -103,6 +107,8 @@ module fluids     ! split fluids
     real    :: xi,yj
 
     b_z = 0.0
+    u_z = 0.0
+    
 #ifdef COSM_RAYS
     call div_v         
 #endif COSM_RAYS
