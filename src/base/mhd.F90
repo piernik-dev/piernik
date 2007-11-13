@@ -34,7 +34,7 @@ program mhd
   integer system_status
   character system_command*160
   real tsleep
-
+  
   call mpistart
 
   call timer_start
