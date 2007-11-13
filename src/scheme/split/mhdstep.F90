@@ -11,6 +11,10 @@ module mod_mhdstep   ! SPLIT
 #ifdef SHEAR  
   use shear
 #endif  
+#ifdef COSM_RAYS
+  use cr_src
+#endif
+
   contains
 subroutine mhdstep
     
@@ -28,13 +32,14 @@ subroutine mhdstep
 
   if(proc.eq.0) write(*,900) nstep,dt,t
 900      format('   nstep = ',i7,'   dt = ',f22.16,'   t = ',f22.16)
-  t=t+2.*dt
+
+      t=t+dt
+#ifdef SHEAR
+      call yshift(t)
+#endif      
 
         
 !------------------- X->Y->Z ---------------------
-#ifdef SHEAR
-      call yshift(t-dt)
-#endif      
       call fluidx                         ! x sweep                      
       if(magfield) call magfieldbyzx 
 #ifdef COSM_RAYS          
@@ -53,10 +58,20 @@ subroutine mhdstep
 #endif COSM_RAYS                 
     endif
 
-!------------------- Z->Y->X ---------------------
+! Sources ----------------------------------------
+
+#ifdef COSM_RAYS          
+      call ran_sncr   
+#endif COSM_RAYS       
+
+!-------------------------------------------------
+          
+      t=t+dt
 #ifdef SHEAR
-    call yshift(t)
+      call yshift(t)
 #endif
+
+!------------------- Z->Y->X ---------------------
     if(dimensions .eq. '3d') then
 #ifdef COSM_RAYS          
       call cr_diff_z   
