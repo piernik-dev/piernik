@@ -755,12 +755,6 @@ contains
       stop 'For "SSP" scheme integration_order can`t be greater than 3'
     endif
 #endif
-#ifdef SHEAR
-    if(pysize .gt. 1) then
-      stop 'Shear-pediodic boundary conditions do not permit pysize > 1'
-    endif
-#endif SHEAR
-
 
     select case (dimensions)
       case('3d','2dxy')

@@ -204,6 +204,11 @@
     
     
 #ifdef SHEAR
+
+    if(pysize .gt. 1) then
+      stop 'Shear-pediodic boundary conditions do not permit pysize > 1'
+    endif
+
     if(pcoords(1) .eq. 0) then
        bnd_xl = 'she'
     else
