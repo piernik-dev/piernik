@@ -58,9 +58,9 @@ subroutine bnd_b(dim)
 !
 ! przesuwamy o calkowita liczbe komorek + periodyczny wb w kierunku y
 ! 
+        send_right (:,:,nb+1:nb+nyb,:)        = cshift(send_right(:,:,nb+1:nb+nyb,:),dim=3,shift=-delj)
         send_right (:,:,1:nb,:)               = send_right (:,:,nyb+1:nyb+nb,:)
         send_right (:,:,nb+nyb+1:nyb+2*nb,:)  = send_right (:,:,nb+1:2*nb,:)
-        send_right (:,:,nb+1:nb+nyb,:)        = cshift(send_right(:,:,nb+1:nb+nyb,:),dim=3,shift=-delj)
 !
 ! remapujemy - interpolacja kwadratowa
 !
