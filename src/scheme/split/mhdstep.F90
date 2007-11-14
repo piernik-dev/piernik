@@ -14,6 +14,9 @@ module mod_mhdstep   ! SPLIT
 #ifdef COSM_RAYS
   use cr_src
 #endif
+#ifdef SELF_GRAV
+  use poisson_solver
+#endif
 
   contains
 subroutine mhdstep
@@ -40,17 +43,29 @@ subroutine mhdstep
 
         
 !------------------- X->Y->Z ---------------------
+#ifdef SHEAR
+      call yshift(t-dt)
+#endif      
+#ifdef SELF_GRAV
+      call poisson
+#endif
       call fluidx                         ! x sweep                      
       if(magfield) call magfieldbyzx 
 #ifdef COSM_RAYS          
       call cr_diff_x 
 #endif COSM_RAYS                 
+#ifdef SELF_GRAV
+      call poisson
+#endif
       call fluidy                         ! y sweep                      
       if(magfield) call magfieldbzxy        
 #ifdef COSM_RAYS          
       call cr_diff_y   
 #endif COSM_RAYS                 
     if(dimensions .eq. '3d') then
+#ifdef SELF_GRAV
+      call poisson
+#endif
       call fluidz                         ! z sweep                      
       if(magfield) call magfieldbxyz        
 #ifdef COSM_RAYS          
@@ -77,17 +92,26 @@ subroutine mhdstep
       call cr_diff_z   
 #endif COSM_RAYS                 
       if(magfield) call magfieldbxyz      ! z sweep                       
+#ifdef SELF_GRAV
+      call poisson
+#endif
       call fluidz                         
     endif
 #ifdef COSM_RAYS          
       call cr_diff_y   
 #endif COSM_RAYS                 
       if(magfield) call magfieldbzxy      ! y sweep                       
+#ifdef SELF_GRAV
+      call poisson
+#endif
       call fluidy                         
 #ifdef COSM_RAYS          
       call cr_diff_x   
 #endif COSM_RAYS                 
       if(magfield) call magfieldbyzx      ! x sweep                      
+#ifdef SELF_GRAV
+      call poisson
+#endif
       call fluidx                         
 
 end subroutine mhdstep
