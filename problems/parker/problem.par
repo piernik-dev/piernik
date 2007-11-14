@@ -1,6 +1,6 @@
  $DOMAIN_SIZES
-    nxd = 5
-    nyd = 5
+    nxd = 50
+    nyd = 100
     nzd = 120
     nb  = 4
  /  
@@ -97,21 +97,26 @@
 
   $COSMIC_RAYS
     cfl_cr     = 0.45
-    amp_cr     = 1.0   
-    gamma_cr   = 1.666666
-    K_cr_paral = 10.
-    beta_cr    = 0.0
+    amp_cr     = 1.0  
+    cr_eff     = 1.0 
+    gamma_cr   = 1.555555
+    K_cr_paral = 100.
+    K_cr_perp  = 0.   
+    beta_cr    = 1.0
  /
  
  $GALACTIC_PARAMS 
- /
+    r_sn      =  50.0 
  
 $PROBLEM_CONTROL
     problem_name ='parker_instability'
-    run_id =  'tst'
-    d0     =  1.
+    run_id  =  'tst'
+    d0      =  1.
     nbx0    =  0.
     nby0    = 1.0
     nbz0    =  0.
     a_vp    = 0.0
+    x0      = 0.0 
+    y0      = 0.0 
+    z0      = 100.0 
  /

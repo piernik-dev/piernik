@@ -12,13 +12,14 @@ module init_problem
   use hydrostatic
 
   real coldens, d0, nbx0,nby0,nbz0, a_vp, n_x
+  real x0,y0,z0,r0
   character problem_name*32,run_id*3
 
   namelist /PROBLEM_CONTROL/  problem_name, run_id, &
                               d0, &
                               nbx0,nby0,nbz0, &
-			      a_vp, n_x
-
+			      a_vp, n_x, &
+                              x0,y0,z0, r0 
 contains
 
 !-----------------------------------------------------------------------------
@@ -35,6 +36,9 @@ contains
       nbz0    = 0.0
       a_vp    = 0.0
       n_x     = 3.0
+      x0      = 0.0 
+      y0      = 0.0 
+      z0      = 0.0 
     
     if(proc .eq. 0) then    
       open(1,file='problem.par')
@@ -58,6 +62,9 @@ contains
       rbuff(4) = nbz0
       rbuff(5) = a_vp
       rbuff(7) = n_x
+      rbuff(8) = x0
+      rbuff(9) = y0
+      rbuff(10)= z0
 
       call MPI_BCAST(cbuff, 32*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
       call MPI_BCAST(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
@@ -78,6 +85,9 @@ contains
       nbz0         = rbuff(4)  
       a_vp         = rbuff(5)  
       n_x          = rbuff(7)
+      x0           = rbuff(8) 
+      y0           = rbuff(9)
+      z0           = rbuff(10)
 
     endif
 
@@ -124,6 +134,13 @@ contains
 #endif
 #ifdef COSM_RAYS
           u(iecr,i,j,k)   =  beta_cr*c_si**2 * u(idna,i,j,k)/(gamma_cr-1.0)
+#ifdef GALAXY
+          u(iecr,i,j,k)= u(iecr,i,j,k) &
+	     + amp_ecr_sn*exp(-((x(i)-x0)**2+(y(j)-y0)**2+(z(k)-z0)**2)/r_sn**2)!&
+!             + amp_cr*ethu*exp(-((x(i)-(x0+Lx))**2+(y(j)-y0)**2+(z(k)-z0)**2)/r0**2) &
+!             + amp_cr*ethu*exp(-((x(i)-x0)**2+(y(j)-(y0+Ly))**2+(z(k)-z0)**2)/r0**2) &
+!             + amp_cr*ethu*exp(-((x(i)-(x0+Lx))**2+(y(j)-(y0+Ly))**2+(z(k)-z0)**2)/r0**2)
+#endif GALAXY
 #endif COSM_RAYS
         enddo
       enddo

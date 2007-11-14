@@ -47,6 +47,7 @@ if( grep { /RESIST/} @d) {push(@addons, "../src/resist/resistivity.F90");}
 if( grep { /SHEAR/}  @d) {push(@addons, "../src/shear/shear.F90");}
 if( grep { /COSM_RAYS/} @d) {
    push(@addons, "../src/cosm_rays/cr_diffusion.F90");
+   push(@addons, "../src/cosm_rays/cr_src.F90");
 }
 if( grep { /ORIG/ } @d) {
    $solv="orig";
