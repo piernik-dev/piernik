@@ -1,4 +1,4 @@
-PRO PLOT_MHD
+PRO PLOT_MHD, first,last
 
 ; Written by: M. Hanasz, December 2005 - January 2006
 
@@ -12,23 +12,25 @@ PRO PLOT_MHD
   amin = 0.0
   amax = 0.0
 
-  plots  ='z'
+  plots  ='n'
   slices ='y'
+  dump   ='n'
 
-  sf = 10
+  sf = 1
 
-   dir = '../'
-;   dir = '../../src/'
-  dir = '/scr/symulacje/cr-tests/crshear-res/'
+   dir = '/raid20/kowalik/jeans/'
+;   dir = '../run/'
+;  dir = '/scr/symulacje/cr-tests/crshear-res/'
     prefix = 'cr_shear_r10'
-;    prefix = 'parker_instability_tst'
-  first = 0
-  last  = 50
+    prefix = 'keplerian_disk_n4c'
+    prefix = 'jeans_in_tst'
+ ; first = 0
+;  last  = 200
   freq = 1
 
-  var='magy'
+  var='dens'
 
-  ylog=0
+;  ylog=1
  if(var EQ 'dens' OR var EQ 'ener') then ylog=1
 
   if(var EQ 'dns1') then begin
@@ -102,6 +104,8 @@ PRO PLOT_MHD
            +string(first, format = '(i4.4)')
 
   filename= dir+prefix+'_'+frame+'.hdf'  
+  
+  TVLCT, red, green, blue, /GET
 
   LOAD_DIMS_HDF, filename, pdims=pdims, pcoords=pcoords, dims=dims, $
                            nxd,nyd,nzd, nxb,nyb,nzb, nb, $
@@ -162,17 +166,17 @@ endelse
 
 
   if(plots  NE 'n') then begin
-    WINDOW, 1, XSIZE=600, YSIZE=500
+;    WINDOW, 1, XSIZE=600, YSIZE=500
 ;    WINDOW, 3, XSIZE=600, YSIZE=500
   endif
 
   if(nz ne 1) then begin
-  if(slices EQ 'y') then WINDOW, 2, xsize=sf*(nx*pdims(0)+ny*pdims(1)+1)+2, $
-                                    ysize=sf*(nz*pdims(2)+nx*pdims(0)+1)+2, $
+  if(slices EQ 'y' AND dump NE 'y') then WINDOW, 2, xsize=sf*(nx*pdims(0)+ny*pdims(1)+1)+2, $
+                                    ysize=sf*(nz*pdims(2)+ny*pdims(1)+1)+2, $
                                     title=var  ;+timestr
   endif else begin
-  if(slices EQ 'y') then WINDOW, 2, xsize=sf*(ny*pdims(1)+1)+2, $
-                                    ysize=sf*(nx*pdims(0)+1)+2, $
+  if(slices EQ 'y' AND dump NE 'y') then WINDOW, 2, ysize=sf*(ny*pdims(1)+1)+2, $
+                                    xsize=sf*(nx*pdims(0)+1)+2, $
                                     title=var  ;+timestr
 
   endelse
@@ -217,8 +221,8 @@ IF(plots NE 'n') THEN BEGIN
 ;    OPLOT, x, px2, thick=2
     oplot, x, pxr, line =1,color=254
 
-;    WSET, 3
-;    WSHOW, 3
+    WSET, 3
+    WSHOW, 3
 ;    plot, x, px-px2
 
 ;    print, max(px-px2)
@@ -251,8 +255,8 @@ IF(plots NE 'n') THEN BEGIN
 ;    OPLOT, z, pz2, thick=2
     oplot, z,pzr, line =1,color=254
    
-;    WSET, 3
-;    WSHOW, 3
+    WSET, 3
+    WSHOW, 3
 ;    plot, z, pz-pz2
 
 ;    print, max(pz-pz2)
@@ -262,8 +266,14 @@ IF(plots NE 'n') THEN BEGIN
 ENDIF
 
 IF(slices EQ 'y') THEN BEGIN
-  WSET, 2
-  WSHOW, 2
+   IF(dump NE 'y') THEN BEGIN
+    WSET, 2
+    WSHOW, 2
+   ENDIF ELSE BEGIN
+    xy_name = 'xy'+var+'_'+ prefix +'_'+ string(step,FORMAT='(I4.4)') +'.png'
+    xz_name = 'xz'+var+'_'+ prefix +'_'+ string(step,FORMAT='(I4.4)') +'.png'
+    yz_name = 'yz'+var+'_'+ prefix +'_'+ string(step,FORMAT='(I4.4)') +'.png'
+   ENDELSE
 
    print, 'MIN(',var,') =',min(a), '    Max(',var,') =',max(a),  $
                                    '    Tot(',var,') =',total(a) 
@@ -296,7 +306,11 @@ IF(slices EQ 'y') THEN BEGIN
     endif
   end 
 
-  TV, image_yz,1,sf*nxa+sf+1
+  IF(dump NE 'y') THEN BEGIN
+     TV, image_yz,1,sf*nya+sf+1
+  ENDIF ELSE BEGIN
+     WRITE_PNG,yz_name, image_yz, red,green,blue
+  ENDELSE
 
   image_xz = REFORM(a(*,iy,*),nxa,nza)
   image_xz = REBIN(image_xz,sf*nxa,sf*nza,/sample)
@@ -322,7 +336,11 @@ IF(slices EQ 'y') THEN BEGIN
     endif
   end 
 
-  TV, image_xz, sf*nya+sf+1,sf*nxa+sf+1
+   IF(dump NE 'y') THEN BEGIN
+     TV, image_xz, sf*nya+sf+1,sf*nya+sf+1
+   ENDIF ELSE BEGIN
+     WRITE_PNG,xz_name, image_xz, red,green,blue
+   ENDELSE
 
   endif
 
@@ -352,7 +370,11 @@ IF(slices EQ 'y') THEN BEGIN
 ;  image_xy = rotate(image_xy,-45)
 
 
-  TV, image_xy,1,1
+   IF(dump NE 'y') THEN BEGIN
+     TV, image_xy,1,1
+   ENDIF ELSE BEGIN
+     WRITE_PNG,xy_name, image_xy, red,green,blue
+   ENDELSE
 
   nxa=20
   nya=20
