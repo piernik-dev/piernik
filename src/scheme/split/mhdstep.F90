@@ -40,32 +40,23 @@ subroutine mhdstep
 #ifdef SHEAR
       call yshift(t)
 #endif      
-
-        
-!------------------- X->Y->Z ---------------------
-#ifdef SHEAR
-      call yshift(t-dt)
-#endif      
 #ifdef SELF_GRAV
       call poisson
 #endif
+
+        
+!------------------- X->Y->Z ---------------------
       call fluidx                         ! x sweep                      
       if(magfield) call magfieldbyzx 
 #ifdef COSM_RAYS          
       call cr_diff_x 
 #endif COSM_RAYS                 
-#ifdef SELF_GRAV
-      call poisson
-#endif
       call fluidy                         ! y sweep                      
       if(magfield) call magfieldbzxy        
 #ifdef COSM_RAYS          
       call cr_diff_y   
 #endif COSM_RAYS                 
     if(dimensions .eq. '3d') then
-#ifdef SELF_GRAV
-      call poisson
-#endif
       call fluidz                         ! z sweep                      
       if(magfield) call magfieldbxyz        
 #ifdef COSM_RAYS          
@@ -78,13 +69,15 @@ subroutine mhdstep
 #ifdef COSM_RAYS          
       call ran_sncr   
 #endif COSM_RAYS       
-
-!-------------------------------------------------
-          
       t=t+dt
 #ifdef SHEAR
       call yshift(t)
 #endif
+#ifdef SELF_GRAV
+      call poisson
+#endif
+!-------------------------------------------------
+          
 
 !------------------- Z->Y->X ---------------------
     if(dimensions .eq. '3d') then
@@ -92,26 +85,17 @@ subroutine mhdstep
       call cr_diff_z   
 #endif COSM_RAYS                 
       if(magfield) call magfieldbxyz      ! z sweep                       
-#ifdef SELF_GRAV
-      call poisson
-#endif
       call fluidz                         
     endif
 #ifdef COSM_RAYS          
       call cr_diff_y   
 #endif COSM_RAYS                 
       if(magfield) call magfieldbzxy      ! y sweep                       
-#ifdef SELF_GRAV
-      call poisson
-#endif
       call fluidy                         
 #ifdef COSM_RAYS          
       call cr_diff_x   
 #endif COSM_RAYS                 
       if(magfield) call magfieldbyzx      ! x sweep                      
-#ifdef SELF_GRAV
-      call poisson
-#endif
       call fluidx                         
 
 end subroutine mhdstep
