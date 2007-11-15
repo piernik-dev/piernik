@@ -3,11 +3,6 @@ module poisson_solver
 
 ! Written by G. Kowal
 ! Adopted for this code by R. Maliszewski & M. Hanasz, May 2006
-
-!  use start
-!  use arrays
-!  use grid
-  use constants
   implicit none
 
 contains
@@ -17,12 +12,17 @@ contains
 !! SUBROUTINE POISSON: solves Poisson equation
 !!
   subroutine poisson
-    use start, only  : bnd_xl, bnd_xr, bnd_yl, bnd_yr, nb, nxd, nyd, dz
-    use arrays, only : idna 
+    use start, only  : bnd_xl, bnd_xr, bnd_yl, bnd_yr, &
+         nb, nxd, nyd, nzd
+    use arrays, only : idna,u,gp
+    use grid, only   : dz,nx,ny,nz,nzb
+    use mpi_setup
+    
     implicit none
   
     if( bnd_xl .eq. 'per' .and. bnd_xr .eq. 'per' .and. &
-        bnd_yl .eq. 'per' .and. bnd_yr .eq. 'per'      ) then
+        bnd_yl .eq. 'per' .and. bnd_yr .eq. 'per' .and. &
+        bnd_zl .ne. 'per' .and. bnd_zr .ne. 'per'        ) then
 
          call poisson_xyp(u(idna,nb+1:nb+nxd,nb+1:nb+nyd,:), &
                            gp(nb+1:nb+nxd,nb+1:nb+nyd,:),dz)
@@ -33,6 +33,26 @@ contains
          gp(nxd+nb+1:nxd+2*nb,:,:) = gp(nb+1:2*nb,:,:)
          gp(:,1:nb,:)              = gp(:,nyd+1:nyd+nb,:)
          gp(:,nyd+nb+1:nyd+2*nb,:) = gp(:,nb+1:2*nb,:)
+
+    elseif( bnd_xl .eq. 'per' .and. bnd_xr .eq. 'per' .and. &
+            bnd_yl .eq. 'per' .and. bnd_yr .eq. 'per' .and. &
+            bnd_zl .eq. 'per' .and. bnd_zr .eq. 'per'        ) then
+
+        call poisson_xyzp(u(idna,nb+1:nb+nxd,nb+1:nb+nyd,nb+1:nb+nzd),&
+                gp(nb+1:nb+nxd,nb+1:nb+nyd,nb+1:nb+nzd),dz)
+
+! Boundary conditions
+         gp(1:nb,:,:)              = gp(nxd+1:nxd+nb,:,:)
+         gp(nxd+nb+1:nxd+2*nb,:,:) = gp(nb+1:2*nb,:,:)
+         gp(:,1:nb,:)              = gp(:,nyd+1:nyd+nb,:)
+         gp(:,nyd+nb+1:nyd+2*nb,:) = gp(:,nb+1:2*nb,:)
+         gp(:,:,1:nb)              = gp(:,:,nzd+1:nzd+nb)
+         gp(:,:,nzd+nb+1:nzd+2*nb) = gp(:,:,nb+1:2*nb)
+
+#ifdef SHEAR
+    elseif ( bnd_xl .eq. 'she' .and. bnd_xr .eq. 'she' .and. &
+             bnd_yl .eq. 'per' .and. bnd_yr .eq. 'per' ) then
+#endif SHEAR
     else
       write(*,*) 'POISSON SOLVER: not implemented for boundary conditions'
       write(*,*) '                xdim: ',bnd_xl,',  ', bnd_xr
@@ -49,6 +69,7 @@ contains
 !!
   subroutine poisson_xyp(den, pot, dz)
 
+    use constants, only : fpiG,dpi
     implicit none
 
     real, dimension(:,:,:), intent(in)  :: den
@@ -71,7 +92,6 @@ contains
 
     integer         :: nx, ny, nz, np, p, q, k, info
 
-    real(kind=8), parameter :: dpi = 6.2831853071795865d0
     integer     , parameter :: FFTW_ESTIMATE = 64
 !
 !----------------------------------------------------------------------
@@ -179,7 +199,7 @@ contains
 
 ! deallocate rhofft
 !
-    if (allocated(ipiv))     deallocate(ipiv)
+    if (allocated(ipiv))   deallocate(ipiv)
     if (allocated(vl))     deallocate(vl)
     if (allocated(vd))     deallocate(vd)
     if (allocated(vu))     deallocate(vu)
@@ -192,5 +212,93 @@ contains
     if (allocated(fft))    deallocate(fft)
 
   end subroutine poisson_xyp
+
+!!=====================================================================
+!!
+!! SUBROUTINE POISSON_XYZP: solves Poisson equation for periodic
+!! bnd conditions in X, Y and Z
+!!
+  subroutine poisson_xyzp(den, pot, dz)
+    use start, only : nb
+    use constants, only : fpiG,dpi
+    implicit none
+
+    real, dimension(:,:,:), intent(in)  :: den
+    real, dimension(:,:,:), intent(out) :: pot
+    real, optional,  intent(in)  :: dz
+
+    complex(kind=8), dimension(:,:,:), allocatable :: fft
+    complex(kind=8), dimension(:,:,:), allocatable :: ctmp
+    real(kind=8)   , dimension(:,:,:)  , allocatable :: rtmp
+    real(kind=8)   , dimension(:)    , allocatable    :: kx, ky, kz
+    real(kind=8)    :: norm
+    integer(kind=8) :: planf, plani
+    integer         :: nx, ny, nz, np, i, j, k
+    integer     , parameter :: FFTW_ESTIMATE = 64
+!
+!----------------------------------------------------------------------
+!
+
+! determine input array dimension
+!
+    nx = size(den, 1)
+    ny = size(den, 2)
+    nz = size(den, 3)
+
+! compute dimensions for complex arrays
+!
+    np = nx / 2 + 1
+
+! allocate arrays
+!
+    allocate(fft(np,ny,nz))
+    allocate(ctmp(np,ny,nz))
+    allocate(rtmp(nx,ny,nz))
+    allocate(kx(nx))
+    allocate(ky(ny))
+    allocate(kz(nz))
+
+    norm = 1.0 / real( nx * ny * nz )
+
+! create plan for the forward FFT
+    call dfftw_plan_dft_r2c_3d(planf, nx, ny, nz, den, ctmp, FFTW_ESTIMATE)
+! perform forward FFT 3D
+    call dfftw_execute(planf)
+! destroy plan for the forward FFT
+    call dfftw_destroy_plan(planf)
+
+    fft(:,:,:) = ctmp(:,:,:)*dz*dz
+
+! compute eigenvalues for each p, q and r and solve linear system
+!
+
+    kx(:) = cos(dpi/nx*(/(j,j=0,np-1)/))
+    ky(:) = cos(dpi/ny*(/(j,j=0,ny-1)/))
+    kz(:) = cos(dpi/nz*(/(j,j=0,nz-1)/))
+    forall (i=1:np,j=1:ny,k=1:nz, (kx(i)+ky(j)+kz(k) - 3.0) /= 0.0)
+       fft(i,j,k) = 0.5 * fft(i,j,k) / (kx(i)+ky(j)+kz(k) - 3.0)
+    endforall
+
+! create plan for the inverse FFT3D
+    call dfftw_plan_dft_c2r_3d(plani, nx, ny, nz, fft, rtmp, FFTW_ESTIMATE)
+! perform inverse FFT 3D
+    call dfftw_execute(plani)
+! destroy plan for the inverse FFT3D
+    call dfftw_destroy_plan(plani)
+
+    pot(:,:,:) = fpiG * rtmp(:,:,:) * norm
+
+! deallocate temporary arrays
+!
+    if (allocated(kx))     deallocate(kx)
+    if (allocated(ky))     deallocate(ky)
+    if (allocated(kz))     deallocate(kz)
+    if (allocated(rtmp))   deallocate(rtmp)
+    if (allocated(ctmp))   deallocate(ctmp)
+    if (allocated(fft))    deallocate(fft)
+
+!------------------------------------------
+    end subroutine poisson_xyzp
+
 
 end module poisson_solver
