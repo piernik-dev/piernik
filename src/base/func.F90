@@ -34,7 +34,8 @@ contains
 
 
    subroutine dipol(xi,yj,zk,phi,theta,amp,rmk)
-     use arrays, only : u,b,xl,yl,zl
+     use arrays, only : u,b,xl,yl,zl,ibx,iby,ibz,&
+                        iena,imxa,imya,imza
      use grid, only   : dx,dy,dz
      implicit none
      real, intent(in) :: phi,theta,amp,rmk
@@ -72,8 +73,8 @@ contains
 
      ekin = 0.5*( u(imxa,:,:,:)**2 + u(imya,:,:,:)**2 + &
                   u(imza,:,:,;)**2 ) / u(idna,:,:,:)
-     eint = max( u(iena,:,:,:) - ekin -  0.5*( b(1,:,:,:)**2 + b(2,:,:,:)**2 + &
-            b(3,:,:,;)**2) , smallei)
+     eint = max( u(iena,:,:,:) - ekin -  0.5*( b(ibx,:,:,:)**2 + b(iby,:,:,:)**2 + &
+            b(ibz,:,:,;)**2) , smallei)
             
 #endif
      do i = 1,nx
@@ -102,15 +103,15 @@ contains
        enddo
      enddo
 
-     b(1,1:nx,  1:ny-1,1:nz-1) = b(1,1:nx,  1:ny-1,1:nz-1) + &
+     b(ibx,1:nx,  1:ny-1,1:nz-1) = b(ibx,1:nx,  1:ny-1,1:nz-1) + &
            (A(3,1:nx,2:ny,1:nz-1) - A(3,1:nx,1:ny-1,1:nz-1))/dy - &
            (A(2,1:nx,1:ny,2:nz  ) - A(2,1:nx,1:ny,  1:nz-1))/dz
 
-     b(2,1:nx-1,1:ny,  1:nz-1) = b(2,1:nx-1,1:ny,  1:nz-1) + &
+     b(iby,1:nx-1,1:ny,  1:nz-1) = b(iby,1:nx-1,1:ny,  1:nz-1) + &
            (A(1,1:nx-1,1:ny,2:nz) - A(1,1:nx-1,1:ny,1:nz-1))/dz - &
            (A(3,2:nx,1:ny,1:nz-1) - A(3,1:nx-1,1:ny,1:nz-1))/dx
 
-     b(3,1:nx-1,1:ny-1,1:nz  ) = b(3,1:nx-1,1:ny-1,1:nz  ) + & 
+     b(ibz,1:nx-1,1:ny-1,1:nz  ) = b(ibz,1:nx-1,1:ny-1,1:nz  ) + & 
            (A(2,2:nx,1:ny-1,1:nz) - A(2,1:nx-1,1:ny-1,1:nz))/dx - &
            (A(1,1:nx-1,2:ny,1:nz) - A(1,1:nx-1,1:ny-1,1:nz))/dy
        
