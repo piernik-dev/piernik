@@ -17,6 +17,9 @@ module mod_mhdstep   ! SPLIT
 #ifdef SELF_GRAV
   use poisson_solver
 #endif
+#ifdef GALAXY
+  use init_problem, only : mass_loss_compensate
+#endif
 
   contains
 subroutine mhdstep
@@ -32,6 +35,13 @@ subroutine mhdstep
        nlog = nlog + 1
      endif
   endif
+
+      if (dt_tsl .gt. 0.0) then
+        if (ntsl .lt. (int(t / dt_tsl) + 1)) then
+          call write_timeslice
+          ntsl = ntsl + 1
+        endif
+      endif
 
   if(proc.eq.0) write(*,900) nstep,dt,t
 900      format('   nstep = ',i7,'   dt = ',f22.16,'   t = ',f22.16)
@@ -65,6 +75,10 @@ subroutine mhdstep
     endif
 
 ! Sources ----------------------------------------
+
+#ifdef GALAXY
+      call  mass_loss_compensate     
+#endif GALAXY
 
 #ifdef COSM_RAYS          
       call ran_sncr   
