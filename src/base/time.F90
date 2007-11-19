@@ -44,15 +44,15 @@ contains
     dt = min(dt,dt_coolheat)
 #endif COOL_HEAT
 #ifdef HEAT_COND
-    dt_heatcond = cfl_heatcond * dxmn**2/(K_heatcond+small)
+    dt_heatcond = cfl_heatcond * 0.5*dxmn**2/(K_heatcond+small)
     dt = min(dt,dt_heatcond)
 #endif HEAT_COND
 #ifdef VISC
-    dt_visc = cfl_visc * dxmn**2/(nu_bulk+small)
+    dt_visc = cfl_visc * 0.5*dxmn**2/(nu_bulk+small)
     dt = min(dt,dt_visc)
 #endif VISC   
 #ifdef COSM_RAYS
-    dt_cr = cfl_cr * dxmn**2/(K_cr_paral+K_cr_perp+small)
+    dt_cr = cfl_cr * 0.5*dxmn**2/(K_cr_paral+K_cr_perp+small)
     dt = min(dt,dt_cr)
 #endif COSM_RAYS 
 
