@@ -10,8 +10,8 @@ module init_problem
   use grid
   use fluid_boundaries
   use hydrostatic
-
-  real coldens, d0, nbx0,nby0,nbz0, a_vp, n_x
+  
+  real d0, nbx0,nby0,nbz0, a_vp, n_x
   real x0,y0,z0,r0
   character problem_name*32,run_id*3
 
@@ -101,7 +101,7 @@ contains
 
     integer i,j,k
     real b0, vz
-    real, allocatable :: dprof(:)
+    real mass
 
 
     call read_problem_par
@@ -110,24 +110,27 @@ contains
 
     b0 = sqrt(2.*alpha*d0*c_si**2) 
     
-    allocate(dprof(nz))
-
     call hydrostatic_zeq(1, 1, d0, dprof)    
 
     do k = 1,nz
       do j = 1,ny
         do i = 1,nx
-          u(idna,i,j,k)   = dprof(k) 
+          u(idna,i,j,k)   = max(smalld,dprof(k)) 
+	  
           u(imxa:imza,i,j,k) = 0.0
+#ifdef SHEAR
+          u(imya,i,j,k) = -qshear*omega*x(i)*u(idna,i,j,k)
+#endif SHEAR
 
           if ( abs(z(k)) .le. h_grav) then
             vz = a_vp * cos(2.*pi*n_x*x(i)/Lx)*cos(2.*pi*y(j)/Ly)*(cos(pi*z(k)/h_grav)+1.)/2.
           else
             vz = 0.0
           endif
-!          vz = a_vp * cos(2.*pi*3*x(i)/Lx)*cos(2.*pi*y(j)/Ly)*cos(pi*z(k)/Lz)
 
+          vz = a_vp * cos(2.*pi*3*x(i)/Lx)*cos(2.*pi*y(j)/Ly)*cos(pi*z(k)/Lz)
           u(imza,i,j,k)   = u(imza,i,j,k) + u(idna,i,j,k)*vz
+
 #ifndef ISO
           u(iena,i,j,k)   = c_si**2/(gamma-1.0) * u(idna,i,j,k) &
 	                         +0.5*sum(u(imxa:imza,i,j,k)**2,1)
@@ -136,16 +139,15 @@ contains
           u(iecr,i,j,k)   =  beta_cr*c_si**2 * u(idna,i,j,k)/(gamma_cr-1.0)
 #ifdef GALAXY
           u(iecr,i,j,k)= u(iecr,i,j,k) &
-	     + amp_ecr_sn*exp(-((x(i)-x0)**2+(y(j)-y0)**2+(z(k)-z0)**2)/r_sn**2)!&
-!             + amp_cr*ethu*exp(-((x(i)-(x0+Lx))**2+(y(j)-y0)**2+(z(k)-z0)**2)/r0**2) &
-!             + amp_cr*ethu*exp(-((x(i)-x0)**2+(y(j)-(y0+Ly))**2+(z(k)-z0)**2)/r0**2) &
-!             + amp_cr*ethu*exp(-((x(i)-(x0+Lx))**2+(y(j)-(y0+Ly))**2+(z(k)-z0)**2)/r0**2)
+	     + amp_cr*ethu*exp(-((x(i)-x0)**2+(y(j)-y0)**2+(z(k)-z0)**2)/r_sn**2)  &
+             + amp_cr*ethu*exp(-((x(i)-(x0+Lx))**2+(y(j)-y0)**2+(z(k)-z0)**2)/r_sn**2) &
+             + amp_cr*ethu*exp(-((x(i)-x0)**2+(y(j)-(y0+Ly))**2+(z(k)-z0)**2)/r_sn**2) &
+             + amp_cr*ethu*exp(-((x(i)-(x0+Lx))**2+(y(j)-(y0+Ly))**2+(z(k)-z0)**2)/r_sn**2)
 #endif GALAXY
 #endif COSM_RAYS
         enddo
       enddo
     enddo
-
   
     do k = 1,nz
       do j = 1,ny
@@ -159,12 +161,39 @@ contains
         enddo
       enddo
     enddo
-
-    deallocate(dprof)
+    
+    mass = sum(u(idna,is:ie,js:je,ks:ke)) * dvol
+    call mpi_allreduce(mass, init_mass, 1, mpi_real8, mpi_sum, comm3d, ierr)
+      
     
     return
   end subroutine init_prob
   
+!-----------------------------------------------------------------------------
+  
+  subroutine mass_loss_compensate
+  
+    implicit none
+    
+    real mass,tot_mass
+    integer k
+    
+    mass = sum(u(idna,is:ie,js:je,ks:ke)) * dvol
+    call mpi_allreduce(mass, tot_mass, 1, mpi_real8, mpi_sum, comm3d, ierr)
+
+    mass_loss = max(0.0, init_mass - tot_mass )
+    mass_loss_tot = mass_loss_tot + mass_loss
+
+!     Correction for mass loss through open z-boundaries
+
+    do k=1,nz
+      u(idna,:,:,k) = u(idna,:,:,k) + mass_loss/init_mass * dprof(k)
+#ifndef ISO
+      u(iena,:,:,k) = u(iena,:,:,k) + mass_loss/init_mass * eprof(k)
+#endif
+    enddo
+  
+  end subroutine mass_loss_compensate
 
 end module init_problem
 

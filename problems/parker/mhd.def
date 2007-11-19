@@ -23,7 +23,7 @@
 #undef VISC			
 #undef HEAT_COND	
 #undef COOL_HEAT
-#define COSM_RAYS
+#undef COSM_RAYS
 #define GRAV 
-#define  GALAXY
+#undef  GALAXY
 #undef SHEAR
