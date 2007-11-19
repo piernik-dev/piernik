@@ -1,6 +1,6 @@
  $DOMAIN_SIZES
-    nxd = 25
-    nyd = 50
+    nxd = 50
+    nyd = 100
     nzd = 120
     nb  = 4
  /  
@@ -37,7 +37,7 @@
     vars(5) = 'magx'
     vars(6) = 'magy'
     vars(7) = 'magz'
-    domain  = 'full_domain'
+    domain  = 'phys_domain'
    
  / 
 
@@ -46,8 +46,8 @@
     bnd_xr = 'per'  
     bnd_yl = 'per'  
     bnd_yr = 'per'  
-    bnd_zl = 'outd'  
-    bnd_zr = 'outd'
+    bnd_zl = 'outh'  
+    bnd_zr = 'outh'
  /
 
  $DOMAIN_LIMITS
@@ -78,7 +78,7 @@
     r_gc   = 8500
     nsub   = 100
     tune_zeq     = 1.0 !1.0025
-    tune_zeq_bnd = 0.833  !0.9
+    tune_zeq_bnd = 0.7 !0.9
     h_grav = 300.
     n_gravh = 0    
  /
@@ -110,5 +110,5 @@
     nbx0    =   0.
     nby0    =   1.0
     nbz0    =   0.
-    a_vp    =   0.0
+    a_vp    =   1.0
  /
