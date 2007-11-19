@@ -65,7 +65,10 @@ module arrays
 
   real, allocatable :: u(:,:,:,:)
   real, allocatable :: b(:,:,:,:)
+#ifdef GRAV
   real, allocatable :: gp(:,:,:)     
+  real, allocatable :: dprof(:),eprof(:)
+#endif GRAV
 #ifdef SPLIT
   real, allocatable :: wa(:,:,:),wcu(:,:,:)
 #ifdef SSP
@@ -78,6 +81,7 @@ module arrays
   real, allocatable :: Lu(:,:,:,:),Lb(:,:,:,:)
   real, allocatable :: wa(:,:,:)
 #endif SPLIT
+
 
   real(kind=4), allocatable  :: outwa(:,:,:),outwb(:,:,:),outwc(:,:,:)
 
@@ -165,7 +169,8 @@ contains
 #endif SPLIT
 
 #ifdef GRAV
- allocate(gp(nx,ny,nz))
+    allocate(gp(nx,ny,nz))
+    allocate(dprof(nz),eprof(nz))
 #endif GRAV
 #ifdef SPLIT
     allocate(wa(nx,ny,nz),wcu(nx,ny,nz))
@@ -198,6 +203,7 @@ contains
 #endif SPLIT
 #ifdef GRAV
     deallocate(gp)
+    deallocate(dprof,eprof)
 #endif GRAV
 #ifdef SPLIT
     deallocate(wa,wcu)
