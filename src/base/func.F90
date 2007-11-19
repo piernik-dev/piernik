@@ -71,10 +71,9 @@ contains
        stop
      endif
 
-     ekin = 0.5*( u(imxa,:,:,:)**2 + u(imya,:,:,:)**2 + &
-                  u(imza,:,:,;)**2 ) / u(idna,:,:,:)
-     eint = max( u(iena,:,:,:) - ekin -  0.5*( b(ibx,:,:,:)**2 + b(iby,:,:,:)**2 + &
-            b(ibz,:,:,;)**2) , smallei)
+     ekin(:,:,:) = 0.5*( u(imxa,:,:,:)**2 + u(imya,:,:,:)**2 + u(imza,:,:,:)**2 ) / u(idna,:,:,:)
+     eint(:,:,:) = max( u(iena,:,:,:) - ekin -  0.5*( b(ibx,:,:,:)**2 + b(iby,:,:,:)**2 + &
+            b(ibz,:,:,:)**2) , smallei)
             
 #endif
      do i = 1,nx
