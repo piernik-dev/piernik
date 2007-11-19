@@ -4,6 +4,7 @@ module hydrostatic
 
 ! Written by M. Hanasz March-May 2006
 
+  use constants
   use start
   use arrays
   use grid
@@ -18,15 +19,18 @@ module hydrostatic
     subroutine hydrostatic_zeq(iia,jja, d0, dprof)
       
       implicit none
-      real, intent(in)                 :: d0
+      real, intent(inout)              :: d0
       integer, intent(in)              :: iia, jja
       real, dimension(nz), intent(out) :: dprof
       
       integer nstot
       real, allocatable ::  zs(:), dprofs(:), gprofs(:), gpots(:)
-      integer ks, ksmid, k, ia, ja
+      integer ksub, ksmid, k, ia, ja
       real z1,z2, dzs, factor
-
+      
+      REAL cd, cdold,  dold, dmid, ddmid, dcol_dens,a,b
+      integer iter, itermx
+      
       ia = min(nx,max(1, iia))
       ja = min(ny,max(1, jja))
             
@@ -34,11 +38,26 @@ module hydrostatic
       
       allocate(zs(nstot), dprofs(nstot), gprofs(nstot), gpots(nstot))
           
-      dzs = (zmax-zmin)/real(nstot-2*nb*nsub)
+      itermx = 20
+      if(col_dens .gt. small) then
+        dmid = 1.0
+        ddmid = 1.0  
+        dcol_dens = 0.001*col_dens 
+        iter = 1   
+      elseif(d0 .gt. small) then 
+        dmid = d0
+        iter = 0
+      else      
+        if(proc .eq.0)  write(*,*) 'One of "d0" or "col_dens" must be .ne. 0' 
+         stop	
+      endif   
       
-      do ks=1, nstot
-        zs(ks) = zmin-nb*dl(zdim) + dzs/2 + (ks-1)*dzs  !
-        if(zs(ks) .lt. 0.0) ksmid = ks       ! the midplane is in between 
+
+      dzs = (zmax-zmin)/real(nstot-2*nb*nsub)
+          
+      do ksub=1, nstot
+        zs(ksub) = zmin-nb*dl(zdim) + dzs/2 + (ksub-1)*dzs  !
+        if(zs(ksub) .lt. 0.0) ksmid = ksub      ! the midplane is in between 
       enddo                                  ! ksmid and ksmid+1
       
       if(gp_status .eq. 'undefined') then
@@ -47,46 +66,79 @@ module hydrostatic
         call grav_pot('zsweep', ia,ja, zs, nstot, gpots,gp_status)
         gprofs(1:nstot-1) = (gpots(1:nstot-1) - gpots(2:nstot))/dzs
       endif
-
       gprofs = tune_zeq*gprofs
+
+100   continue
+      
       if(ksmid .lt. nstot) then 
-        dprofs(ksmid+1) = d0
-        do ks=ksmid+1, nstot-1
-          factor = (1.0 + 0.5*dzs*gprofs(ks)/csim2)  &
-                  /(1.0 - 0.5*dzs*gprofs(ks)/csim2)     
-          dprofs(ks+1) = factor * dprofs(ks)  
+        dprofs(ksmid+1) = dmid
+        do ksub=ksmid+1, nstot-1
+          factor = (1.0 + 0.5*dzs*gprofs(ksub)/csim2)  &
+                  /(1.0 - 0.5*dzs*gprofs(ksub)/csim2)     
+          dprofs(ksub+1) = factor * dprofs(ksub)  
         enddo
       endif
         
       if(ksmid .gt. 1) then
-        dprofs(ksmid) = d0
-        do ks=ksmid, 2, -1
-          factor = (1.0 - 0.5*dzs*gprofs(ks)/csim2)  &
-                  /(1.0 + 0.5*dzs*gprofs(ks)/csim2)     
-          dprofs(ks-1) = factor * dprofs(ks)  
+        dprofs(ksmid) = dmid
+        do ksub=ksmid, 2, -1
+          factor = (1.0 - 0.5*dzs*gprofs(ksub)/csim2)  &
+                  /(1.0 + 0.5*dzs*gprofs(ksub)/csim2)     
+          dprofs(ksub-1) = factor * dprofs(ksub)  
         enddo
       endif
             
       dprof(:) =0.0      
       do k=1,nz
-        do ks=1, nstot
-          if(zs(ks) .gt. zl(k) .and. zs(ks) .lt. zr(k)) then
-            dprof(k) = dprof(k) + dprofs(ks)/real(nsub)
+        do ksub=1, nstot
+          if(zs(ksub) .gt. zl(k) .and. zs(ksub) .lt. zr(k)) then
+            dprof(k) = dprof(k) + dprofs(ksub)/real(nsub)
           endif
         enddo
       enddo
 
-!!      if(ia.eq.5 .and.ja.eq.5) then
-!        write(*,*)
-!        write(*,*) 'proc=',proc
-!        do k=1,nz
-!         write(*,999) k, z(k), dprof(k)        
-!        enddo
-!       stop
-!!      endif
 
+#ifdef GALAXY
+
+      cd = sum(dprof(:)) * dz * pc
+       
+      if(col_dens .ne. 0.0) then
+        dmid = d0
+      else
+        col_dens = cd
+      endif
+      
+      if(abs(cd - col_dens) .gt. dcol_dens) then 
+        if(iter .eq. 1) then
+          dold = dmid
+          cdold = cd
+          dmid = dmid+ddmid
+        else
+          a = (cd - cdold)/(dmid - dold)
+          b = cd - a*dmid
+          dold = dmid
+          cdold = cd
+          dmid = (col_dens - b)/a
+        endif
+        d0 = dmid
+      if(proc .eq.0)  write(*,888) d0, cd ,iter
+        iter = iter+1
+        if (iter .gt. itermx) stop
+        goto 100
+      endif 
+
+      if(proc .eq.0)  write(*,888) d0, cd ,iter
+
+#ifndef ISO
+      eprof(:) = c_si**2/(gamma-1.0) * dprof(:)
+#endif
+
+888  format('Midplane density =',f10.4,2x,'Column density =', e10.4,2x,'iter=',i4 )      
+
+#endif GALAXY
 
     deallocate(zs,dprofs,gprofs,gpots)
+
 
     return
 
@@ -107,7 +159,7 @@ module hydrostatic
       
       integer nstot
       real, allocatable ::  zs(:), gprofs(:), dprofs(:), eprofs(:), tprofs(:), cprofs(:), bprofs(:), cfuncs(:)
-      integer ks, ksmid, k
+      integer ksub, ksmid, k
       real z1,z2, dzs, factor, gravz, tmp, dtmpdz,zz(1),gg(1)
       real csim2  
       real tune
@@ -127,9 +179,9 @@ module hydrostatic
       
 ! Search for the index ksmid of the cell, whose center lies just below the midplane
 
-      do ks=1, nstot
-        zs(ks) = zmin-nb*dl(zdim) + dzs/2 + (ks-1)*dzs  
-        if(zs(ks) .lt. 0.0) ksmid = ks       ! the midplane is in between 
+      do ksub=1, nstot
+        zs(ksub) = zmin-nb*dl(zdim) + dzs/2 + (ksub-1)*dzs  
+        if(zs(ksub) .lt. 0.0) ksmid = ksub       ! the midplane is in between 
       enddo                                  ! ksmid and ksmid+1
       
 ! Integration of the hydro-thermal equilibrium up to the top 
@@ -137,24 +189,24 @@ module hydrostatic
       
       if(ksmid .lt. nstot) then 
         tprofs(ksmid+1) = T0
-        do ks=ksmid+1, nstot-1
+        do ksub=ksmid+1, nstot-1
 
-          zz(1) = zs(ks)
+          zz(1) = zs(ksub)
           call grav_accel('zsweep',ia, ja, zz, 1, gg)
           gravz = tune_zeq*gg(1)
 
-          tmp =  tprofs(ks)
+          tmp =  tprofs(ksub)
           call d_temp_dz(gravz,tmp,dtmpdz)
           tmp = tmp + dtmpdz*dzs/2.
 
-          zz(1) =zs(ks) + dzs/2.
+          zz(1) =zs(ksub) + dzs/2.
           call grav_accel('zsweep',ia, ja, zz, 1, gg)
           gravz = tune_zeq*gg(1)
           
           call d_temp_dz(gravz,tmp,dtmpdz)
-          tprofs(ks+1) = tprofs(ks) + dtmpdz*dzs
+          tprofs(ksub+1) = tprofs(ksub) + dtmpdz*dzs
 
-!         write(*,"(i8,5(1x,e10.4))") ks, zs(ks), gravz,dtmpdz, tprofs(ks) 
+!         write(*,"(i8,5(1x,e10.4))") ksub, zs(ksub), gravz,dtmpdz, tprofs(ksub) 
         enddo
       endif
         
@@ -162,24 +214,24 @@ module hydrostatic
       
       if(ksmid .gt. 1) then
         tprofs(ksmid) = T0
-        do ks=ksmid, 2, -1
+        do ksub=ksmid, 2, -1
         
-          zz(1) = zs(ks)
+          zz(1) = zs(ksub)
           call grav_accel('zsweep',ia, ja, zz, 1, gg)
           gravz = tune_zeq*gg(1)
 
-          tmp =  tprofs(ks)
+          tmp =  tprofs(ksub)
           call d_temp_dz(gravz,tmp,dtmpdz)
           tmp = tmp - dtmpdz*dzs/2.
 
-          zz(1) =zs(ks) - dzs/2.
+          zz(1) =zs(ksub) - dzs/2.
           call grav_accel('zsweep',ia, ja, zz, 1, gg)
           gravz = tune_zeq*gg(1)
           
           call d_temp_dz(gravz,tmp,dtmpdz)
-          tprofs(ks-1) = tprofs(ks) - dtmpdz*dzs
+          tprofs(ksub-1) = tprofs(ksub) - dtmpdz*dzs
 
-!         write(*,"(i8,5(1x,e10.4))") ks, zs(ks), gravz,dtmpdz, tprofs(ks)
+!         write(*,"(i8,5(1x,e10.4))") ksub, zs(ksub), gravz,dtmpdz, tprofs(ksub)
         enddo
       endif
 
@@ -199,13 +251,13 @@ module hydrostatic
 !     cprof(:) =0.0      
       bprof(:) =0.0      
       do k=1,nz
-        do ks=1, nstot
-          if(zs(ks) .gt. zl(k) .and. zs(ks) .lt. zr(k)) then
-            dprof(k) = dprof(k) + dprofs(ks)/real(nsub)
-            eprof(k) = eprof(k) + eprofs(ks)/real(nsub)
-            tprof(k) = tprof(k) + tprofs(ks)/real(nsub)
-!           cprof(k) = cprof(k) + cprofs(ks)/real(nsub)
-            bprof(k) = bprof(k) + bprofs(ks)/real(nsub)
+        do ksub=1, nstot
+          if(zs(ksub) .gt. zl(k) .and. zs(ksub) .lt. zr(k)) then
+            dprof(k) = dprof(k) + dprofs(ksub)/real(nsub)
+            eprof(k) = eprof(k) + eprofs(ksub)/real(nsub)
+            tprof(k) = tprof(k) + tprofs(ksub)/real(nsub)
+!           cprof(k) = cprof(k) + cprofs(ksub)/real(nsub)
+            bprof(k) = bprof(k) + bprofs(ksub)/real(nsub)
 
           endif
         enddo
