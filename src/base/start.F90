@@ -64,11 +64,13 @@ module start
   real  cr_active, gamma_cr, cr_eff, beta_cr, K_cr_paral, K_cr_perp, cfl_cr, amp_cr
   real  dt_cr
 
-  real h_sn, r_sn, f_sn_kpc2, t_dw, t_arm
+  real h_sn, r_sn, f_sn_kpc2, t_dw, t_arm, col_dens
 
 ! Secondary parameters
 
   real csi2, csim2, amp_ecr_sn, ethu, f_sn
+
+  real init_mass, mass_loss, mass_loss_tot
   
 #ifdef SPLIT
 #ifdef ORIG
@@ -101,9 +103,11 @@ contains
     dt     = 0.0
 
   namelist /RESTART_CONTROL/ restart, new_id, nrestart, resdel
-    restart = ''        ! w przyszlosci restart='last': autom. wybor ostatniego
+    restart = 'last'   ! 'last': autom. wybor ostatniego 
+                       ! niezaleznie od wartosci "nrestart"
+		       ! cokolwiek innego: decyduje "nrestart" 
     new_id  = ''
-    nrestart=  0
+    nrestart=  3
     resdel  = 0
 
   namelist /END_CONTROL/ tend, nend
@@ -239,14 +243,15 @@ contains
 #endif
 
 #ifdef GALAXY
-  namelist /GALACTIC_PARAMS/ h_sn, r_sn, f_sn_kpc2, t_dw, t_arm 
+  namelist /GALACTIC_PARAMS/ h_sn, r_sn, f_sn_kpc2, t_dw, t_arm,col_dens 
 ! Default galactic parameters
     h_sn      = 266.0		!  uncertain vertical scaleheight of SN
                                 !  from Ferriere 1998
-    r_sn      =  10.0       	!  "typical" SNR II radius
-    f_sn_kpc2 =  20.0       	!  solar galactic radius SN II freq./kpc**2
+    r_sn       =  10.0       	!  "typical" SNR II radius
+    f_sn_kpc2  =  20.0       	!  solar galactic radius SN II freq./kpc**2
     t_dw       = 100.0        	! period of density waves in Myr
     t_arm      = 100.0        	! period of SFR in arms
+    col_dens    = 0.0            ! gas column density
 #endif GALAXY
 
 #ifdef SHEAR
@@ -486,19 +491,20 @@ contains
 #endif
 
 #ifdef GALAXY
-!  namelist /GALACTIC_PARAMS/ h_sn, r_sn, f_sn_kpc2, t_dw, t_arm 
+!  namelist /GALACTIC_PARAMS/ h_sn, r_sn, f_sn_kpc2, t_dw, t_arm, col_dens
 
        rbuff(140) = h_sn  		
        rbuff(141) = r_sn          	
        rbuff(142) = f_sn_kpc2       	
        rbuff(143) = t_dw             	
-       rbuff(144) = t_arm           
+       rbuff(144) = t_arm   
+       rbuff(145) = col_dens              
 #endif GALAXY
 
 #ifdef SHEAR
 !  namelist /SHEARING/ omega, qshear
-       rbuff(145) = omega
-       rbuff(146) = qshear
+       rbuff(160) = omega
+       rbuff(161) = qshear
 #endif
 
 
@@ -694,12 +700,13 @@ contains
        f_sn_kpc2 	  = rbuff(142)        	
        t_dw 		  = rbuff(143)             	
        t_arm 		  = rbuff(144)          
+       col_dens           = rbuff(145)              
 #endif GALAXY
 
 #ifdef SHEAR
 !  namelist /SHEARING/ omega, qshear
-       omega        = rbuff(145)
-       qshear       = rbuff(146)
+       omega              = rbuff(160)
+       qshear             = rbuff(161)
 #endif
     endif  ! (proc .eq. 0)    
 
@@ -803,6 +810,9 @@ contains
     else
        bulk_viscosity = .false.
     endif
+       
+    mass_loss = 0.0
+    mass_loss_tot = 0.0
        
 
   end subroutine read_params
