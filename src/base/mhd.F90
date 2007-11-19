@@ -51,6 +51,14 @@ program mhd
   call grav_pot_3d
 #endif
 
+  if(proc .eq. 0) then 
+    if(restart .eq. 'last') then
+      call find_last_restart(nrestart)
+    endif
+  endif
+  call MPI_BCAST(nrestart, 1, MPI_INTEGER, 0, comm, ierr)
+      
+
   if(nrestart .eq. 0) then
 
     nstep_start = 0
@@ -74,8 +82,9 @@ program mhd
     endif
 
     call write_data(output='all')
-  else
-
+    
+  else  
+  
     call read_problem_par
 
     if (proc .eq.0) then
