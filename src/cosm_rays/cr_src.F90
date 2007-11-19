@@ -1,4 +1,4 @@
-!#include "mhd.def"
+#include "mhd.def"
 
 ! Written by M. Hanasz, 2003
 ! Adapted for this code by M. Hanasz, November 2007
@@ -11,7 +11,9 @@ module cr_src
   use constants
   use grid
   use start
+#ifdef SHEAR  
   use shear
+#endif SHEAR  
   use fluid_boundaries, only : compute_u_bnd 
   
   implicit none
@@ -64,8 +66,9 @@ module cr_src
       endif
     endif
  
-    if(nsn .GT. 0) then  
+!    if(nsn .GT. 0) then  
 
+#ifdef SHEAR
       jsn  = js+int((ysn-ymin)/dy)
       dysn  = dmod(ysn,dy)
        
@@ -85,6 +88,11 @@ module cr_src
       if (jremap .ge. (je+1)) jremap = jremap - nyd
 
       ysni = y(jremap) + epsi + dysn
+#else SHEAR
+      ysno = ysn
+      ysni = ysn
+#endif SHEAR
+
      
       do k=1,nz
         do j=1,ny
@@ -117,7 +125,7 @@ module cr_src
           enddo ! i
         enddo ! j
       enddo ! k
-    endif ! nsn
+!    endif ! nsn
      
     dt_sn_prev = dt_sn_prev + 2.*dt 
 
