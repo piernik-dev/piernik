@@ -17,40 +17,37 @@ module shear
 !     write(*,*) ts,delj,eps
   end subroutine yshift
 
-  function unshear(qty,x,ds,inv)
-    use start, only  : nb
-    use arrays, only : nyb
+  function unshear(qty,x,inv)
+    use start, only  : nb,xmax,xmin,nyd
+    use grid, only   : dy
+    
     logical, optional               :: inv
     real, dimension(:,:,:)          :: qty
-    real, intent(in)                :: ds
     real, dimension(:), intent(in)  :: x
-    real, dimension(size(qty,1),size(qty,2),size(qty,3))      :: unshear
+    real, dimension(size(qty,1),size(qty,2),size(qty,3)) :: unshear
+    integer :: i,sg
+    real    :: fx
 
-    integer :: nx,i,sg
-    real    :: lx,fx
-
-    nx = size(qty,1)
-
-    lx = maxval(x) - minval(x) + x(1) - x(0)
-    fx = ds / lx
+    fx = dely / (xmax - xmin)
     sg = -1
 
     if(present(inv)) then
-      fx = - fx
-      sg = 1
+       fx = - fx
     endif
-
-    do i = 1, nx
+    do i = 1, size(qty,1)
       dl  = fx * x(i)
-      ndl = int(dl)
-      ddl = dl - ndl
-      unshear(i,:,:) = cshift( qty(i,:,:),dim=2, shift=ndl)
+      ndl = mod(int(dl/dy),nyd)
+      ddl = mod(dl,dy)/dy
+
+      unshear(i,:,:) = cshift(qty(i,:,:),dim=1,shift=ndl)
+
       unshear(i,1:nb,:) = unshear(i,nyb+1:nyb+nb,:)
       unshear(i,nb+nyb+1:nyb+2*nb,:) = unshear(i,nb+1:2*nb,:)
-      
+
+     
       unshear(i,:,:) = (1.0+ddl)*(1.0-ddl) * unshear(i,:,:) &
-            - 0.5*(ddl)*(1.0-ddl) * cshift(unshear(i,:,:),shift= sg,dim=3) &
-            + 0.5*(ddl)*(1.0+ddl) * cshift(unshear(i,:,:),shift=-sg,dim=3) 
+            - 0.5*(ddl)*(1.0-ddl) * cshift(unshear(i,:,:),shift= sg,dim=1) &
+            + 0.5*(ddl)*(1.0+ddl) * cshift(unshear(i,:,:),shift=-sg,dim=1) 
 
     enddo
     return
