@@ -16,11 +16,11 @@ module dataio
   use mpi_setup
   use start
 !  use utils
-
+!  use resistivity
 
   implicit none
 
-  integer :: int_lun = 2, log_lun = 3
+  integer :: tsl_lun = 2, log_lun = 3
   integer :: nhdf, nres, ntsl, nlog 
   integer :: step_hdf, step_res, nhdf_start, nres_start
   real    :: t_start, last_hdf_time
@@ -42,6 +42,12 @@ module dataio
   integer pid, uid, ihost, scstatus 
   integer getcwd, hostnm, getpid, system
   external getcwd, hostnm, getpid, system
+
+  real vx_max, vy_max, vz_max, va2max,va_max, cs2max, cs_max, &
+       dens_min, dens_max, pres_min, pres_max, b_min, b_max, temp_min, temp_max
+#ifdef COSM_RAYS
+  real encr_max    
+#endif COSM_RAYS
 
 
 
@@ -172,13 +178,8 @@ module dataio
         call write_log
     endif
 
-    if (output .ne. 'end') then
-      if (dt_tsl .gt. 0.0) then
-        if (ntsl .lt. (int(t / dt_tsl) + 1)) then
+    if (output .eq. 'log' .or. output .eq. 'end') then
           call write_timeslice
-          ntsl = ntsl + 1
-        endif
-      endif
     endif
 
 !    CALL checkdf
@@ -1016,16 +1017,22 @@ module dataio
     use constants
 !    use start
     use init_problem
+#ifdef COOL_HEAT    
     use thermal
+#endif COOL_HEAT    
+#ifdef RESIST
+    use resistivity
+#endif RESIST
     
     implicit none
     integer i,j,k
 
     character(len=128) :: tsl_file
 
-    real ::  mass,  momx,  momy,  momz,  ener,  eint,  ekin,  emag, epot
+    real ::  mass,  momx,  momy,  momz,  ener, encr, eint,  ekin,  emag, epot
     real :: tot_mass, tot_momx, tot_momy, tot_momz, tot_ener, tot_eint, &
-            tot_ekin, tot_emag, tot_epot
+            tot_ekin, tot_emag, tot_epot, tot_encr, &
+	    mflx, mfly, mflz, tot_mflx, tot_mfly, tot_mflz
 !DW+
     real :: amomz, tot_amomz
 !DW-
@@ -1034,21 +1041,33 @@ module dataio
     if (proc .eq. 0) then
       write (tsl_file,'(a,a1,a3,a1,i3.3,a4)') &
               trim(problem_name),'_', run_id,'_',nrestart,'.tsl'
+
       if (tsl_firstcall) then      
-        open(int_lun, file=tsl_file)
-        if(grav_model .ne. 'null') then
-          write (int_lun, '(a1,20a16)') '#', 'time', 'timestep', 'mass', 'momx', &
-                                             'momy', 'momz', 'amomz', &
-                                             'ener', 'epot', 'eint', 'ekin', 'emag'
-        else
-          write (int_lun, '(a1,20a16)') '#', 'time', 'timestep', 'mass', 'momx', &
-                                             'momy', 'momz', 'amomz', &
-                                             'eint', 'ekin', 'emag'
-        endif
-        write (int_lun, '(a1)') '#'
+        open(tsl_lun, file=tsl_file)
+   
+        write (tsl_lun, '(a1,50a16)') '#', 'time', 'timestep', 'mass', &
+                                           'momx', 'momy', 'momz', 'amomz', &
+                                           'ener', 'epot', 'eint', 'ekin', 'emag', &
+					   'mflx', 'mfly', 'mflz', & 
+#ifdef COSM_RAYS
+					   'encr', 'encr_max', &
+#endif COSM_RAYS
+#ifdef RESIST
+                                           'eta_max', &
+#endif RESIST
+! some quantities computed in "write_log".One can add more, or change.
+                                           'vx_max', 'vy_max', 'vz_max', 'va_max', 'cs_max', &
+                                           'dens_min', 'dens_max', 'pres_min', 'pres_max', &
+#ifndef ISO	 
+	                                   'temp_min', 'temp_max',  &
+#endif ISO	  
+	                                   'b_min', 'b_max' 
+                                           
+
+        write (tsl_lun, '(a1)') '#'
         tsl_firstcall = .false.
       else
-        open(int_lun, file=tsl_file, position='append')
+        open(tsl_lun, file=tsl_file, position='append')
       endif
     endif
 
@@ -1064,16 +1083,20 @@ module dataio
     momz = sum(u(imza,is:ie,js:je,ks:ke)) * dvol
     call mpi_allreduce(momz, tot_momz, 1, mpi_real8, mpi_sum, comm3d, ierr)
 
-#ifndef ISO
-    ener = sum(u(iena,is:ie,js:je,ks:ke)) * dvol
-    call mpi_allreduce(ener, tot_ener, 1, mpi_real8, mpi_sum, comm3d, ierr)
-#endif
-
 #ifdef GRAV
-    epot = sum(u(idna,is:ie,js:je,ks:ke) &
-               *gp(is:ie,js:je,ks:ke)) * dvol
+!DW+    
+    amomz = 0.0
+    do j=js,je
+      do i=is,ie
+         amomz = amomz + (x(i)*sum(u(imya,i,j,ks:ke)) &
+                         -y(j)*sum(u(imxa,i,j,ks:ke)))*dvol
+      enddo
+    enddo
+    call mpi_allreduce(amomz, tot_amomz, 1, mpi_real8, mpi_sum, comm3d, ierr)    
+!DW-
+    epot = sum(u(idna,is:ie,js:je,ks:ke) *gp(is:ie,js:je,ks:ke)) * dvol
     call mpi_allreduce(epot, tot_epot, 1, mpi_real8, mpi_sum, comm3d, ierr)
-#endif
+#endif GRAV
 
     wa(is:ie,js:je,ks:ke) &
         = 0.5 * (u(imxa,is:ie,js:je,ks:ke)**2   &
@@ -1090,40 +1113,57 @@ module dataio
     emag = sum(wa(is:ie,js:je,ks:ke)) * dvol
     call mpi_allreduce(emag, tot_emag, 1, mpi_real8, mpi_sum, comm3d, ierr)
 
-!pawlaszek
-!    tot_eint = tot_ener - tot_ekin - tot_emag
-#ifndef ISO
-    tot_eint = tot_ener - tot_ekin
-#endif ISO
-!pawlaszek
+    wa(is:ie,js:je,ks:ke) = b(ibx,is:ie,js:je,ks:ke)
+    mflx = sum(wa(is:ie,js:je,ks:ke)) * dy*dz/nxd
+    call mpi_allreduce(mflx, tot_mflx, 1, mpi_real8, mpi_sum, comm3d, ierr)
 
-!DW+    
-    amomz = 0.0
-    do j=nb+1,nb+nyb
-      do i=nb+1,nb+nxb
-         amomz = amomz + (x(i)*sum(u(imya,i,j,ks:ke)) &
-                       -y(j)*sum(u(imxa,i,j,ks:ke)))*dvol
-      enddo
-    enddo
-    call mpi_allreduce(amomz, tot_amomz, 1, mpi_real8, mpi_sum, comm3d, ierr)    
-!DW-
+    wa(is:ie,js:je,ks:ke) = b(iby,is:ie,js:je,ks:ke)
+    mfly = sum(wa(is:ie,js:je,ks:ke)) * dx*dz/nyd
+    call mpi_allreduce(mfly, tot_mfly, 1, mpi_real8, mpi_sum, comm3d, ierr)
+
+    wa(is:ie,js:je,ks:ke) = b(ibz,is:ie,js:je,ks:ke)
+    mflz = sum(wa(is:ie,js:je,ks:ke)) * dx*dy/nzd
+    call mpi_allreduce(mflz, tot_mflz, 1, mpi_real8, mpi_sum, comm3d, ierr)
+
+
+
+#ifdef ISO
+    tot_eint = csi2*tot_mass
+    tot_ener = tot_eint+tot_ekin+tot_emag
+#else
+    ener = sum(u(iena,is:ie,js:je,ks:ke)) * dvol
+    call mpi_allreduce(ener, tot_ener, 1, mpi_real8, mpi_sum, comm3d, ierr)
+    tot_eint = tot_ener - tot_ekin - tot_emag
+#endif ISO
+#ifdef GRAV
+    tot_ener = tot_ener + tot_epot
+#endif GRAV
+
+#ifdef COSM_RAYS
+    encr = sum(u(iecr,is:ie,js:je,ks:ke)) * dvol
+    call mpi_allreduce(encr, tot_encr, 1, mpi_real8, mpi_sum, comm3d, ierr)
+#endif COSM_RAYS
+
 
     if (proc .eq. 0) then
-#ifndef ISO
-      if(grav_model .ne. 'null') then
-      write (int_lun, '(1x,20(1x,1pe15.8))') t, dt, tot_mass, &
-                                tot_momx, tot_momy, tot_momz, tot_amomz, &
-                                tot_ener+tot_epot, tot_epot, tot_eint, tot_ekin, tot_emag 
-      else
-      write (int_lun, '(1x,10(1x,1pe15.8))') t, dt, tot_mass, &
-                                tot_momx, tot_momy, tot_momz, tot_amomz, &
-                                tot_eint, tot_ekin, tot_emag 
-      endif
-#endif ISO
-!DW+
-!                                tot_amomz
-!DW-
-      close(int_lun)
+      write (tsl_lun, '(1x,50(1x,1pe15.8))') t, dt, tot_mass, &
+                                             tot_momx, tot_momy, tot_momz, tot_amomz, &
+                                             tot_ener, tot_epot, tot_eint, tot_ekin, tot_emag, &
+					     mflx, mfly, mflz, &
+#ifdef COSM_RAYS
+					     tot_encr, encr_max, & 
+#endif COSM_RAYS
+#ifdef RESIST
+                                             eta_max, &
+#endif RESIST
+! some quantities computed in "write_log".One can add more, or change.
+                                             vx_max, vy_max, vz_max, va_max, cs_max, &
+                                             dens_min, dens_max, pres_min, pres_max, &
+#ifndef ISO	  
+	                                     temp_min, temp_max,  &
+#endif ISO	  
+	                                     b_min, b_max 
+      close(tsl_lun)
     endif
 
 
@@ -1153,21 +1193,30 @@ module dataio
       
     implicit none
   
-    real vx_max, vy_max, vz_max, va2max,va_max, cs2max, cs_max, &
-         dens_min, dens_max, pres_min, pres_max, b_min, b_max, temp_min, temp_max
-    
     integer, dimension(3) :: loc_vx_max, loc_vy_max, loc_vz_max, loc_va_max, &
                              loc_cs_max, loc_dens_min, loc_dens_max, loc_pres_min, & 
                              loc_pres_max, loc_b_min, loc_b_max, &
-                             loc_temp_min,loc_temp_max, loc_esrc_min, loc_esrc_max !, &
-                             !loc_dt_cool, loc_dt_heat
+                             loc_temp_min, loc_temp_max
+#ifdef COOL_HEAT			    
+    integer, dimension(3) :: loc_dt_cool, loc_dt_heat
+#endif COOL_HEAT
+#ifdef COSM_RAYS
+    integer, dimension(3) :: loc_encr_max
+#endif COSM_RAYS
                              
     integer               :: proc_vx_max, proc_vy_max, proc_vz_max, proc_va_max, &
                              proc_cs_max, proc_dens_min, proc_dens_max, proc_pres_min, & 
                              proc_pres_max, proc_b_min, proc_b_max, &
-                             proc_temp_min, proc_temp_max, proc_esrc_min, proc_esrc_max, &
-                             proc_dt_cool, proc_dt_heat, proc_eta_max 
-                             
+                             proc_temp_min, proc_temp_max
+#ifdef COOL_HEAT			     
+    integer               :: proc_dt_cool, proc_dt_heat
+#endif COOL_HEAT
+#ifdef RESIST
+    integer               :: proc_eta_max 
+#endif RESIST
+#ifdef COSM_RAYS
+    integer               :: proc_encr_max 
+#endif COSM_RAYS                             
     
 ! Timestep diagnostics
 
@@ -1224,13 +1273,26 @@ module dataio
 
 
 #ifdef ISO
-    wa            = csi2*u(idna,:,:,:)
+    pres_min     = csi2*dens_min
+    loc_pres_min  = loc_dens_min    
+    proc_pres_min = proc_dens_min    
+    pres_max     = csi2*dens_max
+    loc_pres_max  = loc_dens_max
+    proc_pres_max = proc_dens_max    
+    cs_max        = c_si
+    loc_cs_max    = 0
+    proc_cs_max   = 0
+    temp_min      = hydro_mass / k_B * csi2
+    loc_temp_min  = 0
+    proc_temp_min = 0   
+    temp_max      = hydro_mass / k_B * csi2
+    loc_temp_max  = 0
+    proc_temp_max = 0          
 #else
-    wa            = (u(iena,:,:,:) & 
+    wa            = (u(iena,:,:,:) &                ! eint
                   - 0.5*(sum(u(imxa:imza,:,:,:)**2,1) /u(idna,:,:,:) + wa))
     wa            = max(wa,smallei)
-    wa            = (gamma-1)*wa
-#endif
+    wa            = (gamma-1)*wa                    ! pres
 
     pres_min      = minval(wa(is:ie,js:je,ks:ke)) 
     loc_pres_min  = minloc(wa(is:ie,js:je,ks:ke)) &
@@ -1256,12 +1318,7 @@ module dataio
                          /u(idna,is:ie,js:je,ks:ke)  ) &
                      + (/nb,nb,nb/)
     call mpifind(temp_min, 'min', loc_temp_min, proc_temp_min)
-    
 
-#ifdef ISO
-    cs_max        = c_si
-    proc_cs_max   = c_si
-#else
     cs_max        = sqrt(maxval(gamma*wa(is:ie,js:je,ks:ke) &
                             /u(idna,is:ie,js:je,ks:ke)))
     loc_cs_max    = maxloc(gamma*wa(is:ie,js:je,ks:ke) &
@@ -1270,15 +1327,23 @@ module dataio
     call mpifind(cs_max, 'max', loc_cs_max, proc_cs_max)
 #endif
     
-    if(coolheat) then
+#ifdef COOL_HEAT
       call mpifind(eint_src_min, 'min', loc_dt_cool, proc_dt_cool)
       call mpifind(eint_src_max, 'max', loc_dt_heat, proc_dt_heat)
-      call mpifind(dt_cool, 'min', loc_dt_cool, proc_dt_cool)
-      call mpifind(dt_heat, 'min', loc_dt_heat, proc_dt_heat)
-    endif
+      call mpifind(dt_cool,      'min', loc_dt_cool, proc_dt_cool)
+      call mpifind(dt_heat,      'min', loc_dt_heat, proc_dt_heat)
+#endif COOL_HEAT
 #ifdef RESIST
-      call mpifind(eta_max, 'max', loc_eta_max, proc_eta_max)
+! Tu trzba sprawdzic czy poprawnie znajdowane jest max i loc dla wielu procesow
+      call mpifind(eta_max,      'max', loc_eta_max, proc_eta_max)
 #endif
+#ifdef COSM_RAYS
+    wa         =  u(iecr,:,:,:)
+    encr_max      = maxval(wa(is:ie,js:je,ks:ke)) 
+    loc_encr_max  = maxloc(wa(is:ie,js:je,ks:ke)) &
+                  + (/nb,nb,nb/)
+    call mpifind(encr_max, 'max', loc_encr_max, proc_encr_max)
+#endif COSM_RAYS
 
     if(proc .eq. 0)  then
     
@@ -1293,19 +1358,22 @@ module dataio
         write(log_lun,770) 'min(|b|)       =', b_min,     proc_b_min,     loc_b_min   
         write(log_lun,770) 'max(|b|)       =', b_max,     proc_b_max,     loc_b_max  
     
-        write(log_lun,777) 'max(|velx|)    =', vx_max, 'dt=',cfl*dx/(vx_max+small), proc_vx_max, loc_vx_max   
-        write(log_lun,777) 'max(|vely|)    =', vy_max, 'dt=',cfl*dy/(vy_max+small), proc_vy_max, loc_vy_max   
-        write(log_lun,777) 'max(|velz|)    =', vz_max, 'dt=',cfl*dz/(vz_max+small), proc_vz_max, loc_vz_max  
+        write(log_lun,777) 'max(|velx|)    =', vx_max, 'dt=',cfl*dx/(vx_max+small),   proc_vx_max, loc_vx_max   
+        write(log_lun,777) 'max(|vely|)    =', vy_max, 'dt=',cfl*dy/(vy_max+small),   proc_vy_max, loc_vy_max   
+        write(log_lun,777) 'max(|velz|)    =', vz_max, 'dt=',cfl*dz/(vz_max+small),   proc_vz_max, loc_vz_max  
         write(log_lun,777) 'max(v_alfven)  =', va_max, 'dt=',cfl*dxmn/(va_max+small), proc_va_max, loc_va_max   
         write(log_lun,777) 'max(c_sound)   =', cs_max, 'dt=',cfl*dxmn/(cs_max+small), proc_cs_max, loc_cs_max   
         write(log_lun,777) 'max(c_fast)    =', sqrt(cs_max**2+va_max**2), 'dt=',cfl*dxmn/sqrt(cs_max**2+va_max**2)   
-        if(coolheat) then
-          write(log_lun,777) 'min(esrc/eint) =',eint_src_min , 'dt=',dt_cool,  proc_dt_cool,  loc_dt_cool
-          write(log_lun,777) 'max(esrc/eint) =',eint_src_max , 'dt=',dt_heat,  proc_dt_heat,  loc_dt_heat 
-        endif
+#ifdef COOL_HEAT
+        write(log_lun,777) 'min(esrc/eint) =', eint_src_min , 'dt=',dt_cool,   proc_dt_cool,  loc_dt_cool
+        write(log_lun,777) 'max(esrc/eint) =', eint_src_max , 'dt=',dt_heat,   proc_dt_heat,  loc_dt_heat 
+#endif COOL_HEAT       
 #ifdef RESIST
-          write(log_lun,777) 'max(eta)       =',eta_max , 'dt=',dt_resist, proc_eta_max, loc_eta_max
+        write(log_lun,777) 'max(eta)       =', eta_max ,      'dt=',dt_resist, proc_eta_max,  loc_eta_max
 #endif
+#ifdef COSM_RAYS
+        write(log_lun,777) 'max(encr)      =', encr_max,      'dt=',dt_cr,     proc_encr_max, loc_encr_max   
+#endif COSM_RAYS
 
         write(log_lun,900) nstep,dt,t
 
@@ -1698,6 +1766,38 @@ module dataio
        return
        end subroutine read_file_msg
 
+!------------------------------------------------------------------------
+
+      subroutine find_last_restart(restart_number)
+      
+      character restart_file*(80)
+      character*160 syscom
+      integer status,len_restart_fname,restart_number
+      logical exist
+      
+      restart_number = 0 
+
+      call rm_file('restart_list.tmp')
+      
+      syscom = 'ls -r *_00_00_00_???.res > restart_list.tmp'
+      status = system(syscom)
+      
+      open(7,file='restart_list.tmp',status='old',err=333)
+        read(7,*,end=333) restart_file 
+	write(*,*) 'Last restart file = ', trim(restart_file) 
+      close(7)
+      
+      call rm_file('restart_list.tmp')
+      
+      len_restart_fname = len_trim(restart_file)
+      restart_number = ctoi(restart_file,len_restart_fname-6,len_restart_fname-4)
+      
+
+333   continue      
+
+      end subroutine find_last_restart
+
+!------------------------------------------------------------------------
 
     subroutine rm_file(filename)
       implicit none
