@@ -1,14 +1,14 @@
  $DOMAIN_SIZES
-    nxd          = 24
+    nxd          = 25
     nyd          = 50
-    nzd          = 60
+    nzd          = 200
     nb           = 4
  /  
 
  $MPI_BLOCKS
     pxsize       = 1
     pysize       = 1
-    pzsize       = 1    
+    pzsize       = 4    
  /  
 
  $START_CONTROL
@@ -21,15 +21,15 @@
  /
 
  $END_CONTROL
-    tend         = 1.0
-    nend         = 100000 
+    tend         = 1000.0
+    nend         = 1000000 
  /
 
  $OUTPUT_CONTROL
     dt_hdf       = 1.0
-    dt_res       = 20.0
-    dt_log       = 1.0e-6
-    dt_tsl       = 1.0e-6
+    dt_res       = 100.0
+    dt_log       = 1.0e-1
+    dt_tsl       = 1.0e-1
     vars(1)      = 'dens'
     vars(2)      = 'velx'
     vars(3)      = 'vely'
@@ -52,17 +52,17 @@
  /
 
  $DOMAIN_LIMITS
-    xmin         =-240.0
-    xmax         = 240.0
+    xmin         =-250.0
+    xmax         = 250.0
     ymin         =-500.0
     ymax         = 500.0
-    zmin         =-600.0
-    zmax         = 600.0
+    zmin         =-2000.0
+    zmax         = 2000.0
  /
 
  $EQUATION_OF_STATE
     c_si         = 7.0
-    alpha        = 0.1 
+    alpha        = 0.01 
  /  
 
  $NUMERICAL_SETUP
@@ -73,7 +73,7 @@
   /
  
  $GRAVITY
-    grav_model   ='galactic'
+    grav_model ='galactic'
     r_gc         = 5000
     nsub         = 10
  /
@@ -93,8 +93,8 @@
     cfl_cr       = 0.9      ! liczba couranta dla dyfuzji CR (wsp 0.5 w kodzie)
     cr_eff       = 0.1      ! czesc energii SN (=10^51 erg) zamieniona w CR
     gamma_cr     = 1.555555 ! wykl. adiabatyczny CR
-    K_cr_paral   = 1000.    ! wsp. dyfuzji CR wzdluz B
-    K_cr_perp    = 100.     ! wsp. dyfuzji CR wpoprzek B
+    K_cr_paral   = 10000.   ! wsp. dyfuzji CR wzdluz B
+    K_cr_perp    = 1000.    ! wsp. dyfuzji CR wpoprzek B
     beta_cr      = 1.0      ! okresla wklad CR w poczatkowej rownowadze (podobnie jak alfa dla B)
     amp_cr       = 0.0      ! wybuch w init_problem w x0,y0,z0
     smallecr     = 1.e-2    ! lower limit & outflow boundary value for ecr
@@ -115,13 +115,13 @@
  /
  
  $PROBLEM_CONTROL
-    problem_name ='cr_dynamo'
+    problem_name ='crdynamo'
     run_id       = 'tst'
-    d0           =  1.0     ! gestosc na pl.symetrii dysku, brana pod uwage gdy col_dns = 0.0
-    bxn          =  0.0	    ! 
+    d0           =  5.0     ! gestosc na pl.symetrii dysku, brana pod uwage gdy col_dns = 0.0
+    bxn          =  0.0     !
     byn          =  1.0     ! wspolczynniki okreslajace kierunek B
     bzn          =  0.0     !
-    x0           =  0.0     !
-    y0           =  0.0     ! wspolrzedne pojedynczego wybuchu o ampl amp_cr
-    z0           =  0.0     ! zadawanego w init_prob (do celow testowych)
+    x0           =  0.0     ! wspolrzedne pojedynczego wybuchu o ampl amp_cr
+    y0           =  0.0     ! zadawanego w init_prob (do celow testowych)
+    z0           =  0.0     !
  /
