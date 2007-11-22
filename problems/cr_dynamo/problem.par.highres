@@ -120,7 +120,7 @@
     d0           =  5.0     ! gestosc na pl.symetrii dysku, brana pod uwage gdy col_dns = 0.0
     bxn          =  0.0     !
     byn          =  1.0     ! wspolczynniki okreslajace kierunek B
-    bzn          =  0.0     |
+    bzn          =  0.0     !
     x0           =  0.0     ! wspolrzedne pojedynczego wybuchu o ampl amp_cr
     y0           =  0.0     ! zadawanego w init_prob (do celow testowych)
     z0           =  0.0     !

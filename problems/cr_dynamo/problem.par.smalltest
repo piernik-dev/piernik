@@ -115,7 +115,7 @@
  /
  
  $PROBLEM_CONTROL
-    problem_name ='cr_dynamo'
+    problem_name ='crdynamo'
     run_id       = 'tst'
     d0           =  1.0     ! gestosc na pl.symetrii dysku, brana pod uwage gdy col_dns = 0.0
     bxn          =  0.0	    ! 
