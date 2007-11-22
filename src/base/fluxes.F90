@@ -25,6 +25,16 @@ module fluxes
 
     pmag(2:n-1)=(b(ibx,2:n-1)*b(ibx,2:n-1)+b(iby,2:n-1)*b(iby,2:n-1)+b(ibz,2:n-1)*b(ibz,2:n-1))*0.5
     vx(2:n-1)=u(imxa,2:n-1)/u(idna,2:n-1)
+
+! UWAGA ZMIANA W OBLICZANIU LOKALNEJ PREDKOSCI NA PROBE
+! mh 22-11-07 w problemach z udzialem promieniowania kosmicznego
+! uzycie vx prowadzi do nieduzych oscylacji, a dla vt oscylacji nie widac,
+! wobec tego po krotkim powrocie do vx (v.1.2) przywracam vt (v.1.3)
+
+    vy(2:n-1)=u(imya,2:n-1)/u(idna,2:n-1)
+    vz(2:n-1)=u(imza,2:n-1)/u(idna,2:n-1)
+    vt = sqrt(vx*vx+vy*vy+vz*vz)
+    
     
 #ifdef ISO
     p(2:n-1) = csi2*u(idna,2:n-1)
@@ -51,10 +61,14 @@ module fluxes
 !       as in Trac & Pen (2003). This ensures much sharper shocks, 
 !       but sometimes may lead to numerical instabilities   
 #ifdef ISO
-        cfr(1,2:n-1) = abs(vx(2:n-1)) &
+! UWAGA ZMIANA W OBLICZANIU LOKALNEJ PREDKOSCI NA PROBE
+!        cfr(1,2:n-1) = abs(vx(2:n-1)) &
+        cfr(1,2:n-1) = abs(vt(2:n-1)) &
                       +max(sqrt( abs(2*pmag(2:n-1) + p(2:n-1))/u(idna,2:n-1)),small)
 #else ISO   
-        cfr(1,2:n-1) = abs(vx(2:n-1)) &
+! UWAGA ZMIANA W OBLICZANIU LOKALNEJ PREDKOSCI NA PROBE
+!        cfr(1,2:n-1) = abs(vx(2:n-1)) &
+        cfr(1,2:n-1) = abs(vt(2:n-1)) &
                       +max(sqrt( abs(2*pmag(2:n-1) + gamma*p(2:n-1))/u(idna,2:n-1)),small)
 #endif ISO
         cfr(1,1) = cfr(1,2)
@@ -74,6 +88,7 @@ module fluxes
   end subroutine mhdflux
 
 !==========================================================================================
+ 
 
   subroutine flimiter(f,a,b,m,n)
     implicit none
