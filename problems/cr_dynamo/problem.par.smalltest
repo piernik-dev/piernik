@@ -21,7 +21,7 @@
  /
 
  $END_CONTROL
-    tend         = 1.0
+    tend         = 20.0
     nend         = 100000 
  /
 
@@ -106,7 +106,7 @@
     t_dw         = 100.0    ! okres ramion spiralych  ! bez znaczenia
     t_arm        = 100.0    ! czas przejscia ramienia ! jesli t_dw = t_arm
     f_sn_kpc2    = 130.0    ! powierzchniowa czestosc wybuchow na kpc^2 na Myr
-    col_dens     = 27.e20   ! gestosc kolumnowa gazu. jesli 0 brana jest d0
+    col_dens     = 27.e20   ! gestosc kolumnowa gazu. jesli 0 to uzyte jest d0
 /
     
  $SHEARING
