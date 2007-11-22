@@ -1,5 +1,6 @@
 #include "mhd.def"
 module tv      ! unsplit org
+  use constants
   use start
   use arrays, only : idna,imxa,imya,imza,ibx,iby,ibz,nu,iena
   contains
@@ -25,24 +26,6 @@ module tv      ! unsplit org
 
     else if(istep .eq. 2) then
       vibj = tvdb_emf(vh,vg,b,dt)
-!      do i=3,n-3
-!        ip=i+1
-!        ipp=ip+1
-!        im=i-1
-!        v=vh(i)
-!        if (v .gt. 0.) then
-!          w=vg(i)*b(i)
-!          wp=(vg(ip)*b(ip)-w)*0.5
-!          wm=(w-vg(im)*b(im))*0.5
-!        else
-!          w=vg(ip)*b(ip)
-!          wp=(w-vg(ipp)*b(ipp))*0.5
-!          wm=(vg(i)*b(i)-w)*0.5
-!        end if
-!        dw=0.
-!        if(wm*wp .gt. 0.) dw=2.*wm*wp/(wm+wp)
-!        vibj(i)=(w+dw)*dt
-!      enddo
     else 
       stop
     endif
