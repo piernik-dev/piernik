@@ -29,19 +29,19 @@ subroutine mhdstep
 
   call timestep
 
-  if (dt_log .gt. 0.0) then
-     if (nlog .lt. (int(t / dt_log) + 1)) then
-       call write_log
-       nlog = nlog + 1
-     endif
+  if(dt_log .gt. 0.0) then
+    if(nlog .lt. (int(t / dt_log) + 1)) then
+      call write_log
+      nlog = nlog + 1
+    endif
   endif
 
-      if (dt_tsl .gt. 0.0) then
-        if (ntsl .lt. (int(t / dt_tsl) + 1)) then
-          call write_timeslice
-          ntsl = ntsl + 1
-        endif
-      endif
+  if(dt_tsl .gt. 0.0) then
+    if(ntsl .lt. (int(t / dt_tsl) + 1)) then
+      call write_timeslice
+      ntsl = ntsl + 1
+    endif
+  endif
 
   if(proc.eq.0) write(*,900) nstep,dt,t
 900      format('   nstep = ',i7,'   dt = ',f22.16,'   t = ',f22.16)
@@ -76,17 +76,15 @@ subroutine mhdstep
 
 ! Sources ----------------------------------------
 
-#ifdef GALAXY
-      call  mass_loss_compensate     
-#endif GALAXY
-
 #ifdef COSM_RAYS          
       call ran_sncr   
-#endif COSM_RAYS       
+#endif COSM_RAYS
+      
       t=t+dt
 #ifdef SHEAR
       call yshift(t)
 #endif
+
 #ifdef SELF_GRAV
       call poisson
 #endif
