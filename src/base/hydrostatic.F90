@@ -100,7 +100,7 @@ module hydrostatic
 
 #ifdef GALAXY
 
-      cd = sum(dprof(:)) * dz * pc
+      cd = sum(dprofs(:)) * dzs * pc
        
       if(col_dens .ne. 0.0) then
         dmid = d0
@@ -121,7 +121,7 @@ module hydrostatic
           dmid = (col_dens - b)/a
         endif
         d0 = dmid
-      if(proc .eq.0)  write(*,888) d0, cd ,iter
+!       if(proc .eq.0)  write(*,888) d0, cd ,iter
         iter = iter+1
         if (iter .gt. itermx) stop
         goto 100

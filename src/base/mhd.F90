@@ -41,12 +41,14 @@ program mhd
   
   call read_params
     
+  call read_problem_par
+
   call arrays_allocate 
   
   call grid_xyz 
                 
   call init_dataio
-  
+
 #ifdef GRAV
   call grav_pot_3d
 #endif
@@ -69,6 +71,10 @@ program mhd
     call compute_u_bnd
     call compute_b_bnd
 
+#ifdef MASS_COMPENS
+    call save_init_dens
+#endif        
+
 #ifdef SELF_GRAV
     call poisson
 #endif SELF_GRAV
@@ -84,10 +90,8 @@ program mhd
     call write_data(output='all')
     
   else  
-  
-    call read_problem_par
 
-    if (proc .eq.0) then
+    if (proc .eq. 0) then
       write (log_file,'(a,a1,a3,a1,i3.3,a4)') &
               trim(problem_name),'_', run_id,'_',nrestart,'.log'
 
@@ -104,7 +108,12 @@ program mhd
 
     if(new_id .ne. '') run_id=new_id
 
+#ifdef MASS_COMPENS
+    call get_init_mass
+#endif        
+
   endif
+    
   
 !-------------------------------- MAIN LOOP ----------------------------------
   do
@@ -112,6 +121,12 @@ program mhd
     if (t>=tend .or. nstep>nend ) exit
 
       call mhdstep
+
+#ifdef MASS_COMPENS
+      call mass_loss_compensate
+#endif        
+
+            
       call write_data(output='all')
 
 888   continue

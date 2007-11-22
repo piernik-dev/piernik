@@ -9,7 +9,7 @@ module resistivity
       use arrays
       use start
       use grid !, only: dxmn
-      use constants, only: pi
+      use constants, only: pi, small, big
       use mag_boundaries
       
       real eta_max, dt_resist, dt_eint

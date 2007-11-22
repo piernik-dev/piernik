@@ -46,7 +46,7 @@ module dataio
   real vx_max, vy_max, vz_max, va2max,va_max, cs2max, cs_max, &
        dens_min, dens_max, pres_min, pres_max, b_min, b_max, temp_min, temp_max
 #ifdef COSM_RAYS
-  real encr_max    
+  real encr_min, encr_max    
 #endif COSM_RAYS
 
 
@@ -299,7 +299,7 @@ module dataio
 
     sd_id = sfstart(trim(filename), 4)
 
-! write attrisutes
+! write attributes
 !
     iostatus = sfsnatt( sd_id, 'problem' , 4, 32, problem_name)
     iostatus = sfsnatt( sd_id, 'run_id'  , 4, 32, run_id      )
@@ -610,9 +610,9 @@ module dataio
     logical lastres_exist
 
     integer :: sd_id, sds_id, dim_id, scstatus
-    integer :: iostatus, ranku, ranks, rankg, comp_type
+    integer :: iostatus, ranku, rankb, rank3d, comp_type
     integer, dimension(4) :: dimsu, dimsb, istart, stride
-    integer, dimension(3) :: dims, dimsg
+    integer, dimension(3) :: dims, dims3d
     integer, dimension(1) :: comp_prm
     integer :: sfstart, sfend, sfsnatt, sfcreate, sfwdata, sfscompress, sfendacc &
              , sfdimid, sfsdmname, sfsdscale
@@ -637,16 +637,16 @@ module dataio
     dimsu(3)    = dims(2)
     dimsu(4)    = dims(3)
     
-    ranks       = 4
-    dimsb(1)    = 3   
+    rankb       = 4
+    dimsb(1)    = nm   
     dimsb(2)    = dims(1)
     dimsb(3)    = dims(2)
     dimsb(4)    = dims(3)
 
-    rankg       = 3
-    dimsg(1)    = dims(1)
-    dimsg(2)    = dims(2)
-    dimsg(3)    = dims(3)
+    rank3d      = 3
+    dims3d(1)    = dims(1)
+    dims3d(2)    = dims(2)
+    dims3d(3)    = dims(3)
 
 !  generate filename
 !
@@ -668,7 +668,7 @@ module dataio
 
 !!  ATTRIBUTES
 !!
-! write config attrisutes
+! write config attributes
 !
     iostatus = sfsnatt( sd_id, 'problem' , 4, 32, problem_name)
     iostatus = sfsnatt( sd_id, 'run_id'  , 4, 32, run_id      )
@@ -703,13 +703,13 @@ module dataio
     iostatus = sfsnatt( sd_id, 'zmin'    ,  6,  1, zmin   )
     iostatus = sfsnatt( sd_id, 'zmax'    ,  6,  1, zmax   )
 
-! write evolution attrisutes
+! write evolution attributes
 !
     iostatus = sfsnatt( sd_id, 'nstep'   , 24,  1, nstep   )
     iostatus = sfsnatt( sd_id, 'time'    ,  6,  1, t       )
     iostatus = sfsnatt( sd_id, 'timestep',  6,  1, dt      )
 
-! write dataio attrisutes
+! write dataio attributes
 !
     iostatus = sfsnatt( sd_id, 'nres'     , 24, 1, nres + 1 )
     iostatus = sfsnatt( sd_id, 'nhdf'     , 24, 1, nhdf     )
@@ -719,6 +719,24 @@ module dataio
     iostatus = sfsnatt( sd_id, 'step_hdf' , 24, 1, step_hdf )
     iostatus = sfsnatt( sd_id, 'last_hdf_time', 6, 1, last_hdf_time)
 
+! write array of integer scalars 
+!
+!    sds_id   = sfcreate(sd_id, 'intscal', 23, 1, nintscal)
+!    iostatus = sfscompress(sds_id, comp_type, comp_prm)
+!    iostatus = sfwdata(sds_id, istart, stride, nintscal, intscal)
+
+! write array of real scalars
+!
+!    sds_id   = sfcreate(sd_id, 'rlscal', 6, 1, nrlscal)
+!    iostatus = sfscompress(sds_id, comp_type, comp_prm)
+!    iostatus = sfwdata(sds_id, istart, stride, nrlscal, rlscal)
+
+! write initial vertical density profile
+!
+!    sds_id   = sfcreate(sd_id, 'dprof', 6, 1, nz)
+!    iostatus = sfscompress(sds_id, comp_type, comp_prm)
+!    iostatus = sfwdata(sds_id, istart, stride, nz, dprof)
+
 ! write fluid variables array
 !
     sds_id = sfcreate(sd_id, 'fluid_vars', 6, ranku, dimsu)
@@ -727,16 +745,24 @@ module dataio
 
 ! write magnetic field array
 !
-    sds_id = sfcreate(sd_id, 'mag_field', 6, ranks, dimsb)
+    sds_id = sfcreate(sd_id, 'mag_field', 6, rankb, dimsb)
     iostatus = sfscompress(sds_id, comp_type, comp_prm)
     iostatus = sfwdata(sds_id, istart, stride, dimsb, b)
 
+#ifdef GRAV
 ! write gravitational potential
 !
-    sds_id = sfcreate(sd_id, 'grav_pot', 6, rankg, dimsg)
+    sds_id = sfcreate(sd_id, 'grav_pot', 6, rank3d, dims3d)
     iostatus = sfscompress(sds_id, comp_type, comp_prm)
-    iostatus = sfwdata(sds_id, istart, stride, dimsg, gp)
-
+    iostatus = sfwdata(sds_id, istart, stride, dims3d, gp)
+#endif
+#ifdef MASS_COMPENS
+! write initial density distribution
+!
+    sds_id = sfcreate(sd_id, 'dinit', 6, rank3d, dims3d)
+    iostatus = sfscompress(sds_id, comp_type, comp_prm)
+    iostatus = sfwdata(sds_id, istart, stride, dims3d, dinit)
+#endif
 ! write coords
 !
     dim_id = sfdimid( sds_id, 1 )
@@ -827,9 +853,9 @@ module dataio
     logical file_exist, log_exist
 
     integer :: sd_id, sds_id, dim_id, attr_index, sds_index
-    integer :: iostatus, ranku, ranks, rankg
+    integer :: iostatus, ranku, rankb, rank3d
     integer, dimension(4) :: dimsu, dimsb, istart, stride
-    integer, dimension(3) :: dims, dimsg
+    integer, dimension(3) :: dims, dims3d
     integer :: sfstart, sfend, sffattr, sfrnatt, sfn2index, sfselect, sfrdata, sfendacc &
              , sfdimid, sfgdscale
 
@@ -840,22 +866,22 @@ module dataio
     istart(:) = 0
     stride(:) = 1
 
-    ranku = 4
+    ranku    = 4
     dimsu(1) = nu   
     dimsu(2) = nx
     dimsu(3) = ny
     dimsu(4) = nz
     
-    ranks = 4
-    dimsb(1) = 3   
+    rankb    = 4
+    dimsb(1) = nm   
     dimsb(2) = nx
     dimsb(3) = ny
     dimsb(4) = nz
 
-    rankg = 3
-    dimsg(1) = nx
-    dimsg(2) = ny
-    dimsg(3) = nz
+    rank3d   = 3
+    dims3d(1) = nx
+    dims3d(2) = ny
+    dims3d(3) = nz
 
 
 !  generate filename
@@ -899,10 +925,10 @@ module dataio
     
     sd_id = sfstart(filename, 1)
 
-!!  ATTRisUTES
+!!  attributes
 !!
 
-! read config attrisutes
+! read config attributes
 !
 !    iostatus = sfsnatt( sd_id, 'problem' , 4, 32, problem_name)
 !    iostatus = sfsnatt( sd_id, 'run_id'  , 4, 32, run_id      )
@@ -937,7 +963,7 @@ module dataio
 !    iostatus = sfsnatt( sd_id, 'zmax'    ,  6,  1, zmax   )
 
 
-! read evolution attrisutes
+! read evolution attributes
 !
       attr_index = sffattr( sd_id, 'nstep'     )
       iostatus = sfrnatt( sd_id, attr_index, nstep   )
@@ -946,7 +972,7 @@ module dataio
       attr_index = sffattr( sd_id, 'timestep' )
       iostatus = sfrnatt( sd_id, attr_index, dt     )
 
-! read dataio attrisutes
+! read dataio attributes
 !
       attr_index = sffattr( sd_id, 'nres'      )
       iostatus = sfrnatt( sd_id, attr_index, nres     )
@@ -963,6 +989,23 @@ module dataio
       attr_index = sffattr( sd_id, 'last_hdf_time' )
       iostatus = sfrnatt( sd_id, attr_index, last_hdf_time )
 
+! read array of integer scalar quantities - nie dziala, do poprawy
+!
+!      sds_id   = sfn2index(sd_id, 'intscal')
+!      iostatus = sfselect(sds_id, sds_index)
+!      iostatus = sfrdata(sds_id, istart, stride, nintscal, intscal)
+      
+! read array of real scalar quantities - nie dziala, do poprawy
+!
+!      sds_id   = sfn2index(sd_id, 'rlscal')
+!      iostatus = sfselect(sds_id, sds_index)
+!      iostatus = sfrdata(sds_id, istart, stride, nrlscal, rlscal)
+
+! read initial vertical density profile - nie dziala, do poprawy
+!
+!      sds_id   = sfn2index(sd_id, 'dprof')
+!      iostatus = sfselect(sds_id, sds_index)
+!      iostatus = sfrdata(sds_id, istart, stride, nz, dprof)
 
 ! read variables array
 !
@@ -976,11 +1019,20 @@ module dataio
       sds_id = sfselect(sd_id, sds_index)
       iostatus = sfrdata(sds_id, istart, stride, dimsb, b)
 
+#ifdef GRAV
 ! read gravitational potential
 !
       sds_index = sfn2index(sd_id, 'grav_pot')
       sds_id = sfselect(sd_id, sds_index)
-      iostatus = sfrdata(sds_id, istart, stride, dimsg, gp)
+      iostatus = sfrdata(sds_id, istart, stride, dims3d, gp)
+#endif
+#ifdef MASS_COMPENS
+! read initial density distribution
+!
+      sds_index = sfn2index(sd_id, 'dinit')
+      sds_id = sfselect(sd_id, sds_index)
+      iostatus = sfrdata(sds_id, istart, stride, dims3d, dinit)
+#endif 
 
 ! read coords
 !
@@ -1000,7 +1052,46 @@ module dataio
 !    write(*,*) 'Done'    
 !    write(*,*)
 
+!      write(*,*) intscal
+!      write(*,*) rlscal
+!      write(*,*) dprof
+
+
+
+
   end subroutine read_restart
+
+!------------------------------------------------------------------------
+
+    subroutine find_last_restart(restart_number)
+      
+      use init_problem
+      
+      character*120 restart_file, filename
+      character*160 syscom
+      integer iostat,len_restart_fname,restart_number,nres
+      logical exist
+      character(len=128) :: filename_base      
+      
+      restart_number = 0 
+
+      write (filename_base,'(a,a1,a3,a1') &
+              trim(problem_name),'_', run_id,'_'  
+
+      call rm_file('restart_list.tmp')
+      
+      do nres =999,0,-1      
+        write (filename,'(a,a1,a3,a1,3(i2.2,a1),i3.3,a4)') &
+                          trim(problem_name),'_', run_id,'_',0,'_',0,'_',0,'_',nres,'.res'
+        
+        inquire(file = filename, exist = exist)
+        if(exist) then
+           restart_number = nres
+	   return
+        endif      
+      enddo
+      
+    end subroutine find_last_restart
 
 
 !---------------------------------------------------------------------
@@ -1050,7 +1141,7 @@ module dataio
                                            'ener', 'epot', 'eint', 'ekin', 'emag', &
 					   'mflx', 'mfly', 'mflz', & 
 #ifdef COSM_RAYS
-					   'encr', 'encr_max', &
+					   'encr_tot', 'encr_min',  'encr_max',&
 #endif COSM_RAYS
 #ifdef RESIST
                                            'eta_max', &
@@ -1151,7 +1242,7 @@ module dataio
                                              tot_ener, tot_epot, tot_eint, tot_ekin, tot_emag, &
 					     mflx, mfly, mflz, &
 #ifdef COSM_RAYS
-					     tot_encr, encr_max, & 
+					     tot_encr, encr_min, encr_max, & 
 #endif COSM_RAYS
 #ifdef RESIST
                                              eta_max, &
@@ -1201,7 +1292,7 @@ module dataio
     integer, dimension(3) :: loc_dt_cool, loc_dt_heat
 #endif COOL_HEAT
 #ifdef COSM_RAYS
-    integer, dimension(3) :: loc_encr_max
+    integer, dimension(3) :: loc_encr_min, loc_encr_max
 #endif COSM_RAYS
                              
     integer               :: proc_vx_max, proc_vy_max, proc_vz_max, proc_va_max, &
@@ -1215,7 +1306,7 @@ module dataio
     integer               :: proc_eta_max 
 #endif RESIST
 #ifdef COSM_RAYS
-    integer               :: proc_encr_max 
+    integer               :: proc_encr_min, proc_encr_max
 #endif COSM_RAYS                             
     
 ! Timestep diagnostics
@@ -1339,6 +1430,12 @@ module dataio
 #endif
 #ifdef COSM_RAYS
     wa         =  u(iecr,:,:,:)
+    encr_min      = minval(wa(is:ie,js:je,ks:ke)) 
+    loc_encr_min  = minloc(wa(is:ie,js:je,ks:ke)) &
+                  + (/nb,nb,nb/)
+    call mpifind(encr_min, 'min', loc_encr_min, proc_encr_min)
+
+    wa         =  u(iecr,:,:,:)
     encr_max      = maxval(wa(is:ie,js:je,ks:ke)) 
     loc_encr_max  = maxloc(wa(is:ie,js:je,ks:ke)) &
                   + (/nb,nb,nb/)
@@ -1372,6 +1469,7 @@ module dataio
         write(log_lun,777) 'max(eta)       =', eta_max ,      'dt=',dt_resist, proc_eta_max,  loc_eta_max
 #endif
 #ifdef COSM_RAYS
+        write(log_lun,777) 'min(encr)      =', encr_min,         '',  0.0,     proc_encr_min, loc_encr_min   
         write(log_lun,777) 'max(encr)      =', encr_max,      'dt=',dt_cr,     proc_encr_max, loc_encr_max   
 #endif COSM_RAYS
 
@@ -1398,7 +1496,7 @@ module dataio
 !
 !=======================================================================
 !
-      subroutine check_disk
+  subroutine check_disk
 
 !     written by: michal hanasz
 !     date:       26. june 2003      
@@ -1635,7 +1733,7 @@ module dataio
        
 
 
-      end subroutine check_disk
+    end subroutine check_disk
 !=======================================================================
 !
 !                     E N D   S U B R O U T I N E
@@ -1650,7 +1748,7 @@ module dataio
 !
 !=======================================================================
 !
-      subroutine read_file_msg 
+    subroutine read_file_msg 
 
 !     written by: michal hanasz
 !     date:       26. june 2003      
@@ -1764,38 +1862,7 @@ module dataio
        
        
        return
-       end subroutine read_file_msg
-
-!------------------------------------------------------------------------
-
-      subroutine find_last_restart(restart_number)
-      
-      character restart_file*(80)
-      character*160 syscom
-      integer status,len_restart_fname,restart_number
-      logical exist
-      
-      restart_number = 0 
-
-      call rm_file('restart_list.tmp')
-      
-      syscom = 'ls -r *_00_00_00_???.res > restart_list.tmp'
-      status = system(syscom)
-      
-      open(7,file='restart_list.tmp',status='old',err=333)
-        read(7,*,end=333) restart_file 
-	write(*,*) 'Last restart file = ', trim(restart_file) 
-      close(7)
-      
-      call rm_file('restart_list.tmp')
-      
-      len_restart_fname = len_trim(restart_file)
-      restart_number = ctoi(restart_file,len_restart_fname-6,len_restart_fname-4)
-      
-
-333   continue      
-
-      end subroutine find_last_restart
+    end subroutine read_file_msg
 
 !------------------------------------------------------------------------
 

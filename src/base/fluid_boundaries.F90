@@ -361,7 +361,7 @@ subroutine bnd_u(dim)
           do ib=1,nb
             u(:,ib,:,:)                        = u(:,nb+1,:,:)
 #ifdef COSM_RAYS
-            u(iecr,ib,:,:)                     = 0.0
+            u(iecr,ib,:,:)                     = smallecr
 #endif COSM_RAYS
           enddo
         case ('outd')
@@ -373,7 +373,7 @@ subroutine bnd_u(dim)
             u(iena,ib,:,:)                     = u(iena,nb+1,:,:)
 #endif ISO
 #ifdef COSM_RAYS
-            u(iecr,ib,:,:)                     = 0.0
+            u(iecr,ib,:,:)                     = smallecr
 #endif COSM_RAYS
           enddo
         case default 
@@ -403,7 +403,7 @@ subroutine bnd_u(dim)
           do ib=1,nb
             u(:,nb+nxb+ib,:,:)                  = u(:,nb+nxb,:,:)
 #ifdef COSM_RAYS
-            u(iecr,nb+nxb+ib,:,:)               = 0.0
+            u(iecr,nb+nxb+ib,:,:)               = smallecr
 #endif  COSM_RAYS     
           enddo
         case ('outd')
@@ -415,7 +415,7 @@ subroutine bnd_u(dim)
             u(iena,nb+nxb+ib,:,:)               = u(iena,nb+nxb,:,:)
 #endif  ISO     
 #ifdef COSM_RAYS
-            u(iecr,nb+nxb+ib,:,:)               = 0.0
+            u(iecr,nb+nxb+ib,:,:)               = smallecr
 #endif  COSM_RAYS     
           enddo
         case default 
@@ -448,7 +448,7 @@ subroutine bnd_u(dim)
           do ib=1,nb
             u(:,:,ib,:)                         = u(:,:,nb+1,:)
 #ifdef  COSM_RAYS
-            u(iecr,:,ib,:)                      = 0.0
+            u(iecr,:,ib,:)                      = smallecr
 #endif COSM_RAYS
           enddo
         case ('outd')
@@ -460,7 +460,7 @@ subroutine bnd_u(dim)
             u(iena,:,ib,:)                      = u(iena,:,nb+1,:)
 #endif ISO
 #ifdef  COSM_RAYS
-            u(iecr,:,ib,:)                      = 0.0
+            u(iecr,:,ib,:)                      = smallecr
 #endif COSM_RAYS
           enddo
         case default 
@@ -488,7 +488,7 @@ subroutine bnd_u(dim)
           do ib=1,nb
             u(:,:,nb+nyb+ib,:)                  = u(:,:,nb+nyb,:)
 #ifdef COSM_RAYS
-            u(iecr,:,nb+nyb+ib,:)               = 0.0
+            u(iecr,:,nb+nyb+ib,:)               = smallecr
 #endif COSM_RAYS
           enddo
         case ('outd')
@@ -500,7 +500,7 @@ subroutine bnd_u(dim)
             u(iena,:,nb+nyb+ib,:)               = u(iena,:,nb+nyb,:)
 #endif ISO
 #ifdef COSM_RAYS
-            u(iecr,:,nb+nyb+ib,:)               = 0.0
+            u(iecr,:,nb+nyb+ib,:)               = smallecr
 #endif COSM_RAYS
           enddo
         case default 
@@ -532,7 +532,7 @@ subroutine bnd_u(dim)
           do ib=1,nb
             u(:,:,:,ib)                         = u(:,:,:,nb+1)
 #ifdef COSM_RAYS
-            u(iecr,:,:,ib)                      = 0.0
+            u(iecr,:,:,ib)                      = smallecr
 #endif COSM_RAYS
           enddo
         case ('outd')
@@ -544,7 +544,7 @@ subroutine bnd_u(dim)
             u(iena,:,:,ib)                      = u(iena,:,:,nb+1)
 #endif ISO
 #ifdef COSM_RAYS
-            u(iecr,:,:,ib)                      = 0.0
+            u(iecr,:,:,ib)                      = smallecr
 #endif COSM_RAYS
           enddo
 #ifdef GRAV
@@ -596,7 +596,7 @@ subroutine bnd_u(dim)
                 u(iena,i,j,kb-1)                =     ekb(i,j) + eib(i,j)
 #endif ISO
 #ifdef COSM_RAYS       
-                u(iecr,i,j,kb-1)                =     0.0
+                u(iecr,i,j,kb-1)                =     smallecr
 #endif COSM_RAYS
               enddo ! i
             enddo ! j
@@ -627,7 +627,7 @@ subroutine bnd_u(dim)
           do ib=1,nb
             u(:,:,:,nb+nzb+ib)                  = u(:,:,:,nb+nzb)   
 #ifdef COSM_RAYS
-            u(iecr,:,:,nb+nzb+ib)               = 0.0   
+            u(iecr,:,:,nb+nzb+ib)               = smallecr   
 #endif COSM_RAYS
           enddo
         case ('outd')
@@ -639,7 +639,7 @@ subroutine bnd_u(dim)
             u(iena,:,:,nb+nzb+ib)               = u(iena,:,:,nb+nzb)   
 #endif ISO
 #ifdef COSM_RAYS
-            u(iecr,:,:,nb+nzb+ib)               = 0.0   
+            u(iecr,:,:,nb+nzb+ib)               = smallecr   
 #endif COSM_RAYS
           enddo
 #ifdef GRAV
@@ -691,7 +691,7 @@ subroutine bnd_u(dim)
                 u(iena,i,j,kb+1)           =     ekb(i,j) + eib(i,j)
 #endif ISO
 #ifdef COSM_RAYS       
-                u(iecr,i,j,kb+1)           =     0.0
+                u(iecr,i,j,kb+1)           =     smallecr
 #endif COSM_RAYS
               enddo ! i
             enddo ! j

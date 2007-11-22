@@ -18,7 +18,7 @@ module start
   real tend
   integer nend
 
-  real :: omega, qshear          ! Shearing box 
+  real :: omega, qshear          
   
   character restart*16, new_id*3
   integer   nrestart, resdel
@@ -34,7 +34,7 @@ module start
 
   real c_si, gamma, alpha 
 
-  real cfl, big, small, smalld, smallei, nu_bulk, cfl_visc
+  real cfl, smalld, smallei, nu_bulk, cfl_visc
   real tune_zeq, tune_zeq_bnd 
   character*16 flux_limiter, freezing_speed, dimensions, magnetic
   integer integration_order, istep
@@ -61,7 +61,8 @@ module start
   real    cfl_resist, eta_0, eta_1, j_crit, deint_max
   integer eta_scale
 
-  real  cr_active, gamma_cr, cr_eff, beta_cr, K_cr_paral, K_cr_perp, cfl_cr, amp_cr
+  real  cr_active, gamma_cr, cr_eff, beta_cr, K_cr_paral, K_cr_perp, &
+        cfl_cr, amp_cr, smallecr
   real  dt_cr
 
   real h_sn, r_sn, f_sn_kpc2, t_dw, t_arm, col_dens
@@ -149,14 +150,12 @@ contains
 #endif    
     alpha  = 1.0   
 
-  namelist /NUMERICAL_SETUP/  cfl, big, small, smalld, smallei, &
+  namelist /NUMERICAL_SETUP/  cfl, smalld, smallei, &
                               flux_limiter, freezing_speed, &
                               integration_order, &
                               dimensions, magnetic, nu_bulk, cfl_visc
 
     cfl     = 0.7
-    big     = 1.e99
-    small   = 1.e-10
     smalld  = 1.e-10
     smallei = 1.e-10
     flux_limiter = 'vanleer'
@@ -230,7 +229,7 @@ contains
 
 #ifdef COSM_RAYS
   namelist /COSMIC_RAYS/ cr_active, gamma_cr, cr_eff, beta_cr, &
-                         K_cr_paral, K_cr_perp, amp_cr, cfl_cr
+                         K_cr_paral, K_cr_perp, amp_cr, cfl_cr, smallecr
     cr_active  = 1.0
     gamma_cr   = 4./3.
     beta_cr    = 0.0
@@ -240,6 +239,7 @@ contains
     K_cr_perp  = 0.0
     amp_cr     = 0.0
     cfl_cr     = 0.45
+    smallecr   = 0.0
 #endif
 
 #ifdef GALAXY
@@ -392,14 +392,12 @@ contains
       rbuff(71) = gamma 
       rbuff(72) = alpha   
 
-!  namelist /NUMERICAL_SETUP/  cfl, big, small, smalld, smallei,
+!  namelist /NUMERICAL_SETUP/  cfl, smalld, smallei,
 !                              flux_limiter, freezing_speed,
 !                              integration_order, 
 !                              dimensions, magnetic, nu_bulk, cfl_visc
 
       rbuff(80) = cfl   
-      rbuff(81) = big   
-      rbuff(82) = small
       rbuff(83) = smalld
       rbuff(84) = smallei
       rbuff(85) = nu_bulk
@@ -487,7 +485,8 @@ contains
        rbuff(134) = K_cr_paral 
        rbuff(135) = K_cr_perp  
        rbuff(136) = amp_cr    
-       rbuff(137) = cfl_cr    
+       rbuff(137) = cfl_cr   
+       rbuff(138) = smallecr 
 #endif
 
 #ifdef GALAXY
@@ -589,14 +588,12 @@ contains
       gamma               = rbuff(71)
       alpha               = rbuff(72)  
 
-!  namelist /NUMERICAL_SETUP/  cfl, big, small, smalld, smallei,
+!  namelist /NUMERICAL_SETUP/  cfl, smalld, smallei,
 !                              flux_limiter, freezing_speed,    
 !                              integration_order,
 !                              dimensions, magnetic, nu_bulk, cfl_visc
 
       cfl                 = rbuff(80)   
-      big                 = rbuff(81)  
-      small               = rbuff(82)  
       smalld              = rbuff(83)
       smallei             = rbuff(84)
       nu_bulk             = rbuff(85) 
@@ -636,7 +633,7 @@ contains
       r_smooth            = rbuff(99) 
       h_grav              = rbuff(100) 
       r_grav              = rbuff(101) 
-#endif
+#endif GRAV
     
 #ifdef COOL_HEAT
 !  namelist /THERMAL/ cool_model, heat_model, coolheat_active,  &
@@ -662,7 +659,7 @@ contains
       K_heatcond          = rbuff(117) 
       C_heatcond          = rbuff(118) 
       cfl_heatcond        = rbuff(119) 
-#endif       
+#endif COOL_HEAT       
 
 #ifdef RESIST
 !   namelist /RESISTIVITY/ cfl_resist, eta_0, eta_1, j_crit
@@ -675,7 +672,7 @@ contains
        j_crit             = rbuff(123)  
        deint_max          = rbuff(124)
       
-#endif
+#endif RESIST
              
 #ifdef COSM_RAYS
 !  namelist /COSMIC_RAYS/ cr_active, gamma_cr, cr_eff, beta_cr, K_cr_paral, K_cr_perp,&
@@ -688,8 +685,9 @@ contains
        K_cr_paral         = rbuff(134) 
        K_cr_perp          = rbuff(135)
        amp_cr             = rbuff(136) 
-       cfl_cr             = rbuff(137)     
-#endif
+       cfl_cr             = rbuff(137)  
+       smallecr           = rbuff(138)   
+#endif COSM_RAYS
 
 
 #ifdef GALAXY
@@ -707,7 +705,7 @@ contains
 !  namelist /SHEARING/ omega, qshear
        omega              = rbuff(160)
        qshear             = rbuff(161)
-#endif
+#endif SHEAR
     endif  ! (proc .eq. 0)    
 
 ! Secondary parameters
@@ -717,7 +715,7 @@ contains
                                 ! ratio p_mag/p_gas = alpha = 1/beta
 #ifdef COSM_RAYS
    csim2 = csim2 +csi2*beta_cr
-#endif
+#endif COSM_RAYS
 
    ethu = 7.0**2/(5.0/3.0-1.0) * 1.0    ! thermal energy unit=0.76eV/cm**3
                                         ! for c_si= 7km/s, n=1/cm^3 	 
@@ -771,23 +769,24 @@ contains
     end select 
 
 
-    if(grav_model .ne. 'null') then
+#ifdef GRAV
       gravaccel = .true.
-    else
+#else GRAV
       gravaccel = .false.
-    endif   
+#endif GRAV   
 
+#ifdef COOL_HEAT
     if((cool_model .ne. 'null') .or. (heat_model .ne. 'null')) then
       coolheat = .true.
-    else
+#else COOL_HEAT
       coolheat = .false.
-    endif
+#endif COOL_HEAT
     
-    if(K_heatcond .gt. small) then
+#ifdef HEAT_COND
       heatcond = .true.
-    else
+#else HEAT_COND
       heatcond = .false.
-    endif
+#endif HEAT_COND
 
     if(magnetic .eq. 'yes') then
       magfield = .true.
@@ -795,25 +794,27 @@ contains
       magfield = .false.
     endif
    
-    if(eta_0 .ne. 0.0 .or. eta_1 .ne. 0.0) then
+#ifdef RESIST
       resist = .true.
       if(eta_scale .lt. 0) then
         write(*,*) 'eta_scale must be greater or equal 0'
         stop
       endif
-    else
+#else RESIST
       resist = .false.
-    endif
+#endif
    
+#ifdef VISC
     if(nu_bulk .ne. 0.0) then
        bulk_viscosity = .true.
-    else
+#else VISC
        bulk_viscosity = .false.
-    endif
+#endif VISC
        
+#ifdef MASS_COMPENS
     mass_loss = 0.0
     mass_loss_tot = 0.0
-       
+#endif MASS_COMPENS       
 
   end subroutine read_params
   

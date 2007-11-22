@@ -7,6 +7,7 @@ module arrays
   implicit none
   integer :: nx, ny, nz
   integer,parameter  :: xdim=1,ydim=2,zdim=3
+  integer, parameter :: nrlscal=100, nintscal=100   
   
 #ifdef ISO
   integer,parameter  :: nua=4
@@ -27,6 +28,7 @@ module arrays
 #endif DUST
 
   integer,parameter  :: nu=nua+nuc+nud
+  integer,parameter  :: nm=3
   
   integer,parameter  :: idna=1,imxa=2,imya=3,imza=4
 #ifdef ISO
@@ -48,7 +50,7 @@ module arrays
 #endif DUST
    
   integer, dimension(nu) :: iuswpx,iuswpy,iuswpz    
-  integer, dimension(3) :: ibswpx,ibswpy,ibswpz    
+  integer, dimension(nm) :: ibswpx,ibswpy,ibswpz    
    
   integer,parameter  :: ibx=1,iby=2,ibz=3
   integer,parameter  :: icx=1,icy=2,icz=3
@@ -81,11 +83,18 @@ module arrays
   real, allocatable :: Lu(:,:,:,:),Lb(:,:,:,:)
   real, allocatable :: wa(:,:,:)
 #endif SPLIT
+#ifdef MASS_COMPENS
+  real, allocatable :: dinit(:,:,:)    
+#endif        
 
+!#ifdef COOL_HEAT
+  real, allocatable  :: coolheat_profile(:)
+!#endif COOL_HEAT
 
   real(kind=4), allocatable  :: outwa(:,:,:),outwb(:,:,:),outwc(:,:,:)
 
-  real, allocatable  :: coolheat_profile(:)
+  real,    allocatable :: rlscal(:)
+  integer, allocatable :: intscal(:)
 
 contains
   
@@ -152,6 +161,10 @@ contains
 
     allocate(dl(3))
 
+    allocate(rlscal(nrlscal),intscal(nintscal)) ! arrays to store additional
+                                                ! scalar quantities in restart files
+    
+
     allocate(x(nx), xl(nx), xr(nx))
     allocate(y(ny), yl(ny), yr(ny))
     allocate(z(nz), zl(nz), zr(nz))    
@@ -174,18 +187,23 @@ contains
 #endif GRAV
 #ifdef SPLIT
     allocate(wa(nx,ny,nz),wcu(nx,ny,nz))
-#else SPLIT
+#else SPLITnx,ny,nz
     allocate(wa(nx,ny,nz))
 #endif SPLIT
     allocate(outwa(nx,ny,nz),outwb(nx,ny,nz),outwc(nx,ny,nz))
-
-    if(coolheat) allocate( coolheat_profile(nz))
+#ifdef MASS_COMPENS
+    allocate(dinit(nx,ny,nz))    
+#endif        
+!#ifdef COOL_HEAT
+    allocate( coolheat_profile(nz))
+!#endif COOL_HEAT
 
   end subroutine arrays_allocate
       
   subroutine arrays_deallocate
 
     deallocate(dl)
+    deallocate(rlscal,intscal)
     deallocate(x, xl, xr)
     deallocate(y, yl, yr)
     deallocate(z, zl, zr)    
@@ -210,10 +228,14 @@ contains
 #else SPLIT
     deallocate(wa)
 #endif SPLIT
-    deallocate(outwa,outwb,outwc)
-#ifdef COOL_HEAT
+#ifdef MASS_COMPENS
+   deallocate(dinit)    
+#endif        
+!#ifdef COOL_HEAT
     deallocate(coolheat_profile)
-#endif COOL_HEAT
+!#endif COOL_HEAT
+
+    deallocate(outwa,outwb,outwc)
 
   end subroutine arrays_deallocate
       

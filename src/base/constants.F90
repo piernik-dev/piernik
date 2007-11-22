@@ -1,6 +1,6 @@
 #include "mhd.def"
 
-module constants     ! module containg physical constants !!!
+module constants     ! module containg numerical and physical constants !!!
 
   real, parameter :: one  = 1.0
   real, parameter :: half = 0.5
@@ -8,6 +8,10 @@ module constants     ! module containg physical constants !!!
   real, parameter :: twot = 2./3.
   real, parameter :: oneq = 1./4.
   real, parameter :: thrq = 3./4.
+  real, parameter :: small= 1.e-50
+  real, parameter :: big  = 1.e+50
+  
+  
 !  real, dimension(2,3)  :: cn
 !  data                     cn  /one,thrq,onet, &
 !                                one,oneq,twot/

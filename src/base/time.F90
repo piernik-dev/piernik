@@ -7,6 +7,7 @@ module time
 ! Optimalization of cpu-time efficiency of mhdflux, tvd1 by K. Kowalik
 ! Modification history:  see "changelog"  -- warning: out of date
 
+  use constants
   use mpi_setup
   use start
   use arrays
