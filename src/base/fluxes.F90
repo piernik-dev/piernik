@@ -1,3 +1,5 @@
+#include "mhd.def"
+
 module fluxes
   implicit none
 
@@ -5,6 +7,7 @@ module fluxes
 !==========================================================================================
  
   subroutine mhdflux(flux,cfr,u,b,n)
+    use constants
     use arrays
     implicit none
     integer n
@@ -22,12 +25,6 @@ module fluxes
 
     pmag(2:n-1)=(b(ibx,2:n-1)*b(ibx,2:n-1)+b(iby,2:n-1)*b(iby,2:n-1)+b(ibz,2:n-1)*b(ibz,2:n-1))*0.5
     vx(2:n-1)=u(imxa,2:n-1)/u(idna,2:n-1)
-
-! UWAGA ZMIANA W OBLICZANIU LOKALNEJ PREDKOSCI NA PROBE
-    vy(2:n-1)=u(imya,2:n-1)/u(idna,2:n-1)
-    vz(2:n-1)=u(imza,2:n-1)/u(idna,2:n-1)
-    vt = sqrt(vx*vx+vy*vy+vz*vz)
-    
     
 #ifdef ISO
     p(2:n-1) = csi2*u(idna,2:n-1)
@@ -54,14 +51,10 @@ module fluxes
 !       as in Trac & Pen (2003). This ensures much sharper shocks, 
 !       but sometimes may lead to numerical instabilities   
 #ifdef ISO
-! UWAGA ZMIANA W OBLICZANIU LOKALNEJ PREDKOSCI NA PROBE
-!        cfr(1,2:n-1) = abs(vx(2:n-1)) &
-        cfr(1,2:n-1) = abs(vt(2:n-1)) &
+        cfr(1,2:n-1) = abs(vx(2:n-1)) &
                       +max(sqrt( abs(2*pmag(2:n-1) + p(2:n-1))/u(idna,2:n-1)),small)
 #else ISO   
-! UWAGA ZMIANA W OBLICZANIU LOKALNEJ PREDKOSCI NA PROBE
-!        cfr(1,2:n-1) = abs(vx(2:n-1)) &
-        cfr(1,2:n-1) = abs(vt(2:n-1)) &
+        cfr(1,2:n-1) = abs(vx(2:n-1)) &
                       +max(sqrt( abs(2*pmag(2:n-1) + gamma*p(2:n-1))/u(idna,2:n-1)),small)
 #endif ISO
         cfr(1,1) = cfr(1,2)
@@ -87,21 +80,15 @@ module fluxes
     integer m,n
     real, dimension(m,n) :: f,a,b,c
 #ifdef VANLEER
-!   'vanleer' flux limiter is used
-
       c = a*b
       where (c .gt. 0)                                        
-        f=f+2*c/(a+b)
+        f = f+2*c/(a+b)
       endwhere      
 #endif VANLEER
 #ifdef MINMOD
-!   'minmod' flux limiter is used
-
-      f = f+(sign(1.,a)+sign(1.,b))*min(abs(a),abs(b))*0.5
+        f = f+(sign(1.,a)+sign(1.,b))*min(abs(a),abs(b))*0.5
 #endif MINMOD
 #ifdef SUPERBEE
-!   'superbee' flux limiter is used
-
       where (abs(a) .gt. abs(b))
         f = f+(sign(1.,a)+sign(1.,b))*min(abs(a), abs(2*b))*0.5
       elsewhere
