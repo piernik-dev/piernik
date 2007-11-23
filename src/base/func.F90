@@ -35,8 +35,9 @@ contains
 
    subroutine dipol(xi,yj,zk,phi,theta,amp,rmk)
      use arrays, only : u,b,xl,yl,zl,ibx,iby,ibz,&
-                        iena,imxa,imya,imza
+                        iena,imxa,imya,imza,idna
      use grid, only   : dx,dy,dz
+     use start, only  : smallei
      implicit none
      real, intent(in) :: phi,theta,amp,rmk
      real, intent(in) :: xi,yj,zk
