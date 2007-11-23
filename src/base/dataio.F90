@@ -1480,7 +1480,7 @@ module dataio
     endif
 
     
-770 format(5x,a16,(1x,e10.4),4(1x,i4)) 
+770 format(5x,a16,(1x,e15.9),4(1x,i4)) 
 
 777 format(5x,a16,(1x,e10.4),2x,a3,(1x,e10.4),4(1x,i4)) 
 900 format('   nstep = ',i7,'   dt = ',f22.16,'   t = ',f22.16,2(1x,i4))   
