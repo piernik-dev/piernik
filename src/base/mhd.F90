@@ -28,6 +28,7 @@ program mhd
 #ifdef GRAV
   use gravity, only : grav_pot_3d
 #endif 
+  use arrays
 
   implicit none
   character output*3
@@ -122,12 +123,12 @@ program mhd
 
       call mhdstep
 
+  !u(1,:,:,:) = unshear(u(1,:,:,:),x,.true.)
 #ifdef MASS_COMPENS
       call mass_loss_compensate
 #endif        
-
-            
       call write_data(output='all')
+  !u(1,:,:,:) = unshear(u(1,:,:,:),x)
 
 888   continue
 
@@ -182,6 +183,7 @@ program mhd
 
   call write_data(output='end')
 !---------------------------- END OF MAIN LOOP ----------------------------------
+
  
    call arrays_deallocate 
    
