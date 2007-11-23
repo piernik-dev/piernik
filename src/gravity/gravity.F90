@@ -47,11 +47,10 @@ contains
     character, intent(out) :: status*9
     real                  :: x1, x2
     
-    select case (grav_model)
-      case ('null')
+#if GRAV == 'null'
         gpot = 0.0
       ! do nothing
-      case ('ptmass') 
+#elif GRAV == 'ptmass'
         select case (sweep)
           case('xsweep') 
             x1  = y(i1)-ptm_y
@@ -71,7 +70,7 @@ contains
         fr = max(1./cosh(fr),smalld/100.)
         gpot = -newtong*ptmass/dsqrt(x1**2+x2**2+x3**2+r_smooth**2)
         gpot = gpot - csim2*dlog(fr) ! *d0
-      case ('ptflat')
+#elif GRAV == 'ptflat'
         select case (sweep)
           case('xsweep')
             x1  = y(i1)-ptm_y
@@ -91,10 +90,10 @@ contains
         fr = 1./cosh(fr)+smalld
         gpot = -newtong*ptmass/dsqrt(x1**2+x2**2+x3**2+r_smooth**2)
         gpot = gpot - csim2*dlog(fr) ! *d0
-      case default
+#else
         status = 'undefined'
-!        write(*,*) 'GRAV_POT: gravity model not defined'
-    end select
+#warning 'GRAV declared, but gravity model undefined in grav_pot'
+#endif
 
   end subroutine grav_pot
 
@@ -134,142 +133,160 @@ contains
         x2  = y(i2)
     end select
     
-    select case (grav_model)
+!    select case (grav_model)
 
 
-!#if GRAV == 'uniform'
-      case ('uniform')
-        select case (sweep)
-          case('xsweep') 
-            grav = 0.0
-          case('ysweep') 
-            grav = 0.0
-          case('zsweep') 
-            grav = g_z
-        end select
-!#elif GRAV == 'linear'
-      case ('linear')
-        select case (sweep)
-          case('xsweep') 
-            grav = 0.0
-          case('ysweep') 
-            grav = 0.0
-          case('zsweep') 
-            grav = dg_dz*xsw
-        end select
-!#elif GRAV ==  'ptmass'
-      case ('ptmass') 
-        select case (sweep)
-          case('xsweep') 
-            r  = sqrt((xsw-ptm_x)*(xsw-ptm_x) + (x1-ptm_y)*(x1-ptm_y)  &
-                                  + (x2-ptm_z)*(x2-ptm_z) + r_smooth*r_smooth)
-            r32  = r*r*r
-            grav = -newtong*ptmass*xsw/r32
-          case('ysweep') 
-            r  = sqrt((xsw-ptm_y)*(xsw-ptm_y) + (x1-ptm_z)*(x1-ptm_z)  &
-                                  + (x2-ptm_x)*(x2-ptm_x) + r_smooth*r_smooth)
-            r32  = r*r*r
-            grav = -newtong*ptmass*xsw/r32
-          case('zsweep')      
-            r  = sqrt((xsw-ptm_z)*(xsw-ptm_z) + (x1-ptm_x)*(x1-ptm_x)  &
-                                  + (x2-ptm_y)*(x2-ptm_y) + r_smooth*r_smooth)
-            r32  = r*r*r
-            grav = -newtong*ptmass*xsw/r32
-        end select
-!#elif GRAV ==  'ptflat'	
-      case ('ptflat')
-        select case (sweep)
-          case('xsweep')
-            r  = sqrt((xsw-ptm_x)*(xsw-ptm_x) + (x1-ptm_y)*(x1-ptm_y)  &
-                 + r_smooth*r_smooth)
-            r32  = r*r*r
-            grav = -newtong*ptmass*xsw/r32
-          case('ysweep')
-            r  = sqrt((xsw-ptm_y)*(xsw-ptm_y) + (x2-ptm_x)*(x2-ptm_x)  &
-                 + r_smooth*r_smooth)
-            r32  = r*r*r
-            grav = -newtong*ptmass*xsw/r32
-          case('zsweep')
-!            r  = sqrt((x1-ptm_x)*(x1-ptm_x) + (x2-ptm_y)*(x2-ptm_y)    &
-!                 + r_smooth*r_smooth)
-!            r32  = r*r*r
-            grav = 0.0 ! -newtong*ptmass*xsw/r32
-        end select
-!#elif GRAV ==  'galactic'
-      case ('galactic')
-        select case (sweep)
-          case('xsweep') 
-            grav=0.0
-          case('ysweep') 
-            grav=0.0
-          case('zsweep') 
-            grav = cmps2 * (  &
-              (-4.4e-9 * exp(-(r_gc-r_gc_sun)/(4.9*kpc)) * xsw/sqrt(xsw**2+(0.2*kpc)**2)) &    
-             -(1.7e-9 * (r_gc_sun**2 + (2.2*kpc)**2)/(r_gc**2 + (2.2*kpc)**2)*xsw/kpc) )     
-!            -Om*(Om+G) * Z * (kpc ?) ; in the transition region between rigid 
-!                                   ; and flat rotation
-!                                                  F'98: eq.(36)       
-        end select
-
+#if GRAV == 'uniform'
+!      case ('uniform')
+       if (sweep == 'zsweep') then
+          grav = g_z
+       else
+          grav = 0.0
+       endif
+#elif GRAV == 'linear'
+       if (sweep == 'zsweep') then
+          grav = dg_dz*xsw
+       else
+          grav = 0.0
+       endif
+#elif GRAV ==  'ptmass'
+       if (sweep == 'xsweep') then
+         r  = sqrt((xsw-ptm_x)*(xsw-ptm_x) + (x1-ptm_y)*(x1-ptm_y)  &
+               + (x2-ptm_z)*(x2-ptm_z) + r_smooth*r_smooth)
+       elseif(sweep == 'ysweep') then
+         r  = sqrt((xsw-ptm_y)*(xsw-ptm_y) + (x1-ptm_z)*(x1-ptm_z)  &
+               + (x2-ptm_x)*(x2-ptm_x) + r_smooth*r_smooth)
+       else
+         r  = sqrt((xsw-ptm_z)*(xsw-ptm_z) + (x1-ptm_x)*(x1-ptm_x)  &
+               + (x2-ptm_y)*(x2-ptm_y) + r_smooth*r_smooth)
+       endif
+       r32  = r*r*r
+       grav = -newtong*ptmass*xsw/r32
+#elif GRAV ==  'ptflat'	
+       if (sweep == 'xsweep') then
+         r  = sqrt((xsw-ptm_x)*(xsw-ptm_x) + (x1-ptm_y)*(x1-ptm_y)  &
+               + r_smooth*r_smooth)
+         r32  = r*r*r
+         grav = -newtong*ptmass*xsw/r32
+       elseif(sweep == 'ysweep') then
+         r  = sqrt((xsw-ptm_y)*(xsw-ptm_y) + (x2-ptm_x)*(x2-ptm_x)  &
+               + r_smooth*r_smooth)
+         r32  = r*r*r
+         grav = -newtong*ptmass*xsw/r32
+       else
+         grav = 0.0
+       endif
+#elif GRAV ==  'gal_mali'
+       if (sweep == 'zsweep') then
+         grav = -0.87 * (6.8*tanh(3.2 * xsw/(pc*kpc)) + 1.7*xsw/(pc*kpc)) * 1.e-9
+       else
+         grav = 0.0
+       endif
+       
+#elif GRAV ==  'galactic'
+       if (sweep == 'zsweep') then
+         grav = cmps2 * (  &
+           (-4.4e-9 * exp(-(r_gc-r_gc_sun)/(4.9*kpc)) * xsw/sqrt(xsw**2+(0.2*kpc)**2)) &    
+           -( 1.7e-9 * (r_gc_sun**2 + (2.2*kpc)**2)/(r_gc**2 + (2.2*kpc)**2)*xsw/kpc) )     
+!          -Om*(Om+G) * Z * (kpc ?) ! in the transition region between rigid 
+!                                   ! and flat rotation F'98: eq.(36)       
+       else
+         grav=0.0
+       endif
 
 !dw+
 ! galactic case as in ferriere'98
-      case ('galactic_dw')
-        aconst=-vsun/(5000.0*pc*(5000.0-3000.0)*pc) ![pc/s/pc2]
-        bconst=-3000.0*pc*aconst ![1/s]
-        cconst=vsun/5000.0*pc-aconst*5000.0*pc-bconst*log(5000.0*pc) ![1/s]
-        flat=aconst*3000.0*pc+bconst*log(3000.0*pc)+cconst ![1/s]
-        select case (sweep)
-          case('xsweep')
-            do i=1,n 
-              rgc_vect(i) = sqrt(xsw(i)**2+y(i1)**2)
-              if(rgc_vect(i).le.3.0*kpc) then
-                omega=flat
-              else
-                if(rgc_vect(i).ge.5.0*kpc) then
-                  omega=vsun/rgc_vect(i)
-                else
-                  omega=aconst*rgc_vect(i)+bconst*log(rgc_vect(i))+cconst
-                endif
-              endif
-              grav(i)=(-1.0)*omega**2*rgc_vect(i)*xsw(i)/rgc_vect(i)
-            enddo
-          case('ysweep') 
-            do i=1,n
-              rgc_vect(i) = sqrt(x(i2)**2+xsw(i)**2)
-              if(rgc_vect(i).le.3.0*kpc) then
-                omega=flat
-              else
-                if(rgc_vect(i).ge.5.0*kpc) then
-                  omega=vsun/rgc_vect(i)
-                else
-                  omega=aconst*rgc_vect(i)+bconst*log(rgc_vect(i))+cconst
-                endif
-              endif
-              grav(i)=(-1.0)*omega**2*rgc_vect(i)*xsw(i)/rgc_vect(i)
-            enddo
-          case('zsweep') 
-            rgc_scal = sqrt(x(i1)**2+y(i2)**2)
-            if(rgc_scal.le.3.0*kpc) then
-              omega=flat
-              g_shear_rate=0.0
-            else
-              if(rgc_scal.ge.5.0*kpc) then
-                omega=vsun/rgc_scal
-                g_shear_rate=(-1.0)*vsun/rgc_scal
-              else
-                omega=aconst*rgc_scal+bconst*log(rgc_scal)+cconst
-                g_shear_rate=aconst*rgc_scal+bconst
-              endif
-            endif
-            grav=-4.4e-9*cm/sek**2*exp((-1.0)*(rgc_scal-r_gc_sun)/(4.9*kpc))*xsw/sqrt(xsw**2+(0.2*kpc)**2)
-            grav=grav-1.7e-9*cm/sek**2*(r_gc_sun**2+(2.2*kpc)**2)/(rgc_scal**2+(2.2*kpc)**2)*xsw/kpc
-            grav=grav+2*omega*(omega+g_shear_rate)*xsw
+#elif GRAV ==  'galactic_dw'
+        aconst = -vsun / (5000.0 * pc *(5000.0-3000.0) * pc)            ![pc/s/pc2]
+        bconst = -3000.0 * pc * aconst                                  ![1/s]
+        cconst =  vsun/5000.0*pc-aconst*5000.0*pc-bconst*log(5000.0*pc) ![1/s]
+        flat   = aconst * 3000.0 * pc + bconst * log(3000.0*pc)+ cconst ![1/s]
 
-        end select
+        if (sweep == 'zsweep') then
+          rgc_scal = sqrt(x(i1)**2+y(i2)**2)
+          if(rgc_scal.le.3.0*kpc) then
+            omega=flat
+            g_shear_rate=0.0
+          elseif(rgc_scal.ge.5.0*kpc) then
+            omega=vsun/rgc_scal
+            g_shear_rate=(-1.0)*vsun/rgc_scal
+          else     ! 3.0 < x < 5.0
+            omega=aconst*rgc_scal+bconst*log(rgc_scal)+cconst
+            g_shear_rate=aconst*rgc_scal+bconst
+          endif
+
+          grav=-4.4e-9*cm/sek**2*exp((-1.0)*(rgc_scal-r_gc_sun)/(4.9*kpc))*xsw/sqrt(xsw**2+(0.2*kpc)**2)
+          grav=grav-1.7e-9*cm/sek**2*(r_gc_sun**2+(2.2*kpc)**2)/(rgc_scal**2+(2.2*kpc)**2)*xsw/kpc
+          grav=grav+2*omega*(omega+g_shear_rate)*xsw
+          
+        else  ! y or x
+          if(sweep == 'xsweep') then 
+            rgc_vect(:) = sqrt(xsw(:)**2 +   y(i1)**2)
+          elseif(sweep == 'ysweep') then 
+            rgc_vect(:) = sqrt(x(i2)**2  + xsw(i1)**2)
+          endif
+
+          grav = -1.0 * xsw
+          where (rgc_vect <= 3.0*kpc)
+             grav = grav * flat**2 
+          elsewhere (rgc_vect >= 5.0*kpc)
+             grav = grav * (vsun / rgc_vect)**2 
+          elsewhere
+             grav = grav * (aconst*rgc_vect + bconst*log(rgc_vect) + cconst)**2
+          endwhere
+        endif
+
+!        select case (sweep)
+!          case('xsweep')
+!            do i=1,n 
+!              rgc_vect(i) = sqrt(xsw(i)**2+y(i1)**2)
+!              if(rgc_vect(i).le.3.0*kpc) then
+!                omega=flat
+!              else
+!                if(rgc_vect(i).ge.5.0*kpc) then
+!                  omega=vsun/rgc_vect(i)
+!                else
+!                  omega=aconst*rgc_vect(i)+bconst*log(rgc_vect(i))+cconst
+!                endif
+!              endif
+!              grav(i)=(-1.0)*omega**2*rgc_vect(i)*xsw(i)/rgc_vect(i)
+!            enddo
+!          case('ysweep') 
+!            do i=1,n
+!              rgc_vect(i) = sqrt(x(i2)**2+xsw(i)**2)
+!              if(rgc_vect(i).le.3.0*kpc) then
+!                omega=flat
+!              else
+!                if(rgc_vect(i).ge.5.0*kpc) then
+!                  omega=vsun/rgc_vect(i)
+!                else
+!                  omega=aconst*rgc_vect(i)+bconst*log(rgc_vect(i))+cconst
+!                endif
+!              endif
+!              grav(i)=(-1.0)*omega**2*rgc_vect(i)*xsw(i)/rgc_vect(i)
+!            enddo
+!          case('zsweep') 
+!            rgc_scal = sqrt(x(i1)**2+y(i2)**2)
+!            if(rgc_scal.le.3.0*kpc) then
+!              omega=flat
+!              g_shear_rate=0.0
+!            else
+!              if(rgc_scal.ge.5.0*kpc) then
+!                omega=vsun/rgc_scal
+!                g_shear_rate=(-1.0)*vsun/rgc_scal
+!              else
+!                omega=aconst*rgc_scal+bconst*log(rgc_scal)+cconst
+!                g_shear_rate=aconst*rgc_scal+bconst
+!              endif
+!            endif
+!            grav=-4.4e-9*cm/sek**2*exp((-1.0)*(rgc_scal-r_gc_sun)/(4.9*kpc))*xsw/sqrt(xsw**2+(0.2*kpc)**2)
+!            grav=grav-1.7e-9*cm/sek**2*(r_gc_sun**2+(2.2*kpc)**2)/(rgc_scal**2+(2.2*kpc)**2)*xsw/kpc
+!            grav=grav+2*omega*(omega+g_shear_rate)*xsw
+!        end select
 
 ! galactic case as in ferriere'98, but without "omega" in z component
-      case ('galwomeg')
+#elif GRAV ==  'galwomeg'
+!      case ('galwomeg')
         aconst=-vsun/(5000.0*pc*(5000.0-3000.0)*pc) ![pc/s/pc2]
         bconst=-3000.0*pc*aconst ![1/s]
         cconst=vsun/5000.0*pc-aconst*5000.0*pc-bconst*log(5000.0*pc) ![1/s]
@@ -323,7 +340,8 @@ contains
           end select
 
 ! galactic case as in ferriere'98 but constant within 5kpc radius 
-      case ('galcentr')
+#elif GRAV ==  'galcentr'
+!      case ('galcentr')
         aconst=-vsun/(5000.0*pc*(5000.0-3000.0)*pc)
         bconst=-3000.0*pc*aconst
         cconst=vsun/5000.0*pc-aconst*5000.0*pc-bconst*log(5000.0*pc)
@@ -374,7 +392,8 @@ contains
           end select
 
 ! galactic case with z component constant as for sun galactic radius
-      case ('gallksun')
+#elif GRAV ==  'gallksun'
+!      case ('gallksun')
         aconst=-vsun/(5000.0*pc*(5000.0-3000.0)*pc)
         bconst=-3000.0*pc*aconst
         cconst=vsun/5000.0*pc-aconst*5000.0*pc-bconst*log(5000.0*pc)
@@ -421,7 +440,8 @@ contains
 
 
 ! galactic case for pseudo-2d simulations
-      case ('gal_flat')
+#elif GRAV ==  'gal_flat'
+!      case ('gal_flat')
         aconst=-vsun/(5000.0*pc*(5000.0-3000.0)*pc)
         bconst=-3000.0*pc*aconst
         cconst=vsun/5000.0*pc-aconst*5000.0*pc-bconst*log(5000.0*pc)
@@ -460,17 +480,11 @@ contains
            end select
 !dw-
 
-
-      case ('null')
-            grav=0.0
-      case default
-        write(*,*) 'Gravity model: ',grav_model,' not implemented' 
-    end select  
-
-!#else
-!#warning 'GRAV declared, but gravity model undefined'
-!#endif
-
+#elif GRAV ==  'null'
+       grav=0.0
+#else
+#error 'GRAV declared, but gravity model undefined'
+#endif
 
     if (n_gravh .ne. 0) then
       grav(:)=grav(:)/cosh((xsw(:)/h_grav)**n_gravh )
