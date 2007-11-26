@@ -10,16 +10,16 @@ module mod_mhdstep   ! SPLIT
 #endif RESIST
 #ifdef SHEAR  
   use shear
-#endif  
-#ifdef COSM_RAYS
-  use cr_src
-#endif
+#endif SHEAR  
+#ifdef SN_SRC
+  use sn_sources
+#endif SN_SRC
 #ifdef SELF_GRAV
   use poisson_solver
-#endif
+#endif SELF_GRAV
 #ifdef GALAXY
   use init_problem, only : mass_loss_compensate
-#endif
+#endif GALAXY
 
   contains
 subroutine mhdstep
@@ -76,9 +76,10 @@ subroutine mhdstep
 
 ! Sources ----------------------------------------
 
-#ifdef COSM_RAYS          
-      call ran_sncr   
-#endif COSM_RAYS
+#ifdef SN_SRC          
+      call random_sn 
+      call dipol_sn  
+#endif SN_SRC
       
       t=t+dt
 #ifdef SHEAR

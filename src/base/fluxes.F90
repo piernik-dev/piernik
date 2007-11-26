@@ -9,6 +9,7 @@ module fluxes
   subroutine mhdflux(flux,cfr,u,b,n)
     use constants
     use arrays
+    use time, only : c
     implicit none
     integer n
     real, dimension(nu,n)::flux,u,cfr

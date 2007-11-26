@@ -65,8 +65,9 @@ module start
         cfl_cr, amp_cr, smallecr
   real  dt_cr
 
-  real h_sn, r_sn, f_sn_kpc2, t_dw, t_arm, col_dens
-
+  real t_dw, t_arm, col_dens
+  
+  real h_sn, r_sn, f_sn_kpc2, amp_dip_sn
 ! Secondary parameters
 
   real csi2, csim2, amp_ecr_sn, ethu, f_sn
@@ -243,12 +244,8 @@ contains
 #endif
 
 #ifdef GALAXY
-  namelist /GALACTIC_PARAMS/ h_sn, r_sn, f_sn_kpc2, t_dw, t_arm,col_dens 
+  namelist /GALACTIC_PARAMS/ t_dw, t_arm,col_dens 
 ! Default galactic parameters
-    h_sn      = 266.0		!  uncertain vertical scaleheight of SN
-                                !  from Ferriere 1998
-    r_sn       =  10.0       	!  "typical" SNR II radius
-    f_sn_kpc2  =  20.0       	!  solar galactic radius SN II freq./kpc**2
     t_dw       = 100.0        	! period of density waves in Myr
     t_arm      = 100.0        	! period of SFR in arms
     col_dens    = 0.0            ! gas column density
@@ -259,6 +256,14 @@ contains
     omega  = 0.0
     qshear = 0.0
 #endif SHEAR
+
+#ifdef SN_SRC
+  namelist /SN_PARAMS/ h_sn, r_sn, f_sn_kpc2, amp_dip_sn
+    h_sn       = 266.0		!  vertical scaleheight of SN from Ferriere 1998
+    r_sn       =  10.0       	!  "typical" SNR II radius
+    f_sn_kpc2  =  20.0       	!  solar galactic radius SN II freq./kpc**2
+    amp_dip_sn =   1.0e6        
+#endif SN_SRC
 
          
     if(proc .eq. 0) then
@@ -290,6 +295,9 @@ contains
 #ifdef SHEAR
         read(unit=1,nml=SHEARING)
 #endif SHEAR
+#ifdef SN_SRC
+        read(unit=1,nml=SN_PARAMS)
+#endif SN_SRC
 
       close(1)
 
@@ -320,6 +328,9 @@ contains
 #ifdef SHEAR
         write(unit=3,nml=SHEARING)
 #endif SHEAR
+#ifdef SN_SRC
+        write(unit=3,nml=SN_PARAMS)
+#endif SN_SRC
       close(3)
       
     endif 
@@ -506,7 +517,13 @@ contains
        rbuff(161) = qshear
 #endif
 
-
+#ifdef SN_SRC
+!  namelist /SN_PARAMS/ h_sn, r_sn, f_sn_kpc2, amp_dip_sn
+       rbuff(170) = h_sn      		
+       rbuff(171) = r_sn             	
+       rbuff(172) = f_sn_kpc2       	 
+       rbuff(173) = amp_dip_sn      
+#endif SN_SRC
 
 ! Boroadcasting parameters
 
@@ -707,6 +724,14 @@ contains
        qshear             = rbuff(161)
 #endif SHEAR
     endif  ! (proc .eq. 0)    
+
+#ifdef SN_SRC
+!  namelist /SN_PARAMS/ h_sn, r_sn, f_sn_kpc2, amp_dip_sn
+       h_sn               = rbuff(170)   		
+       r_sn               = rbuff(171)          	
+       f_sn_kpc2          = rbuff(172)      	 
+       amp_dip_sn         = rbuff(173)     
+#endif SN_SRC
 
 ! Secondary parameters
 
