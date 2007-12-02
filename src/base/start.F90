@@ -94,17 +94,63 @@ contains
     integer iv
     
   namelist /DOMAIN_SIZES/ nxd, nyd, nzd, nb
+  namelist /START_CONTROL/ nstep, t, dt
+  namelist /RESTART_CONTROL/ restart, new_id, nrestart, resdel
+  namelist /END_CONTROL/ tend, nend
+  namelist /OUTPUT_CONTROL/ dt_hdf, dt_res, dt_tsl, dt_log, & 
+                            domain, vars, mag_center, &
+                            min_disk_space_MB, sleep_minutes, sleep_seconds, &
+                            user_message_file, system_message_file
+  namelist /DOMAIN_LIMITS/ xmin, xmax, ymin, ymax, zmin, zmax  
+  namelist /EQUATION_OF_STATE/ c_si, gamma, alpha
+  namelist /NUMERICAL_SETUP/  cfl, smalld, smallei, &
+                              flux_limiter, freezing_speed, &
+                              integration_order, &
+                              dimensions, magnetic, nu_bulk, cfl_visc
+#ifdef SHEAR
+  namelist /SHEARING/ omega, qshear
+#endif
+#ifdef GRAV
+  namelist /GRAVITY/ grav_model,  &
+                     g_z,   &
+                     dg_dz, &
+                     r_gc,  &
+                     ptmass,ptm_x,ptm_y,ptm_z,r_smooth, &
+                     nsub, tune_zeq, tune_zeq_bnd,      &
+                     h_grav, r_grav, n_gravr, n_gravr2, n_gravh
+#endif
+#ifdef COOL_HEAT
+  namelist /THERMAL/ cool_model, heat_model, coolheat_active,  &
+                     esrc_lower_lim, esrc_upper_lim, &
+                     h_coolheat_profile, n_coolheat_profile, &
+                     G_uv1, G_sup1, cfl_coolheat, L_C, &
+                     K_heatcond, C_heatcond, cfl_heatcond 
+#endif
+#ifdef RESIST
+  namelist /RESISTIVITY/ cfl_resist, eta_0, eta_1, eta_scale, j_crit, deint_max
+#endif
+#ifdef COSM_RAYS
+  namelist /COSMIC_RAYS/ cr_active, gamma_cr, cr_eff, beta_cr, &
+                         K_cr_paral, K_cr_perp, amp_cr, cfl_cr, smallecr
+#endif
+#ifdef GALAXY
+  namelist /GALACTIC_PARAMS/ t_dw, t_arm,col_dens 
+#endif
+#ifdef SHEAR
+  namelist /SHEARING/ omega, qshear
+#endif
+#ifdef SN_SRC
+  namelist /SN_PARAMS/ h_sn, r_sn, f_sn_kpc2, amp_dip_sn
+#endif
     nxd    = 10
     nyd    = 10
     nzd    = 10
     nb     =  4
       
-  namelist /START_CONTROL/ nstep, t, dt
     nstep  = 0
     t      = 0.0
     dt     = 0.0
 
-  namelist /RESTART_CONTROL/ restart, new_id, nrestart, resdel
     restart = 'last'   ! 'last': autom. wybor ostatniego 
                        ! niezaleznie od wartosci "nrestart"
 		       ! cokolwiek innego: decyduje "nrestart" 
@@ -112,15 +158,10 @@ contains
     nrestart=  3
     resdel  = 0
 
-  namelist /END_CONTROL/ tend, nend
     tend   = 1.0
     nend   = 10 
 
 
-  namelist /OUTPUT_CONTROL/ dt_hdf, dt_res, dt_tsl, dt_log, & 
-                            domain, vars, mag_center, &
-                            min_disk_space_MB, sleep_minutes, sleep_seconds, &
-                            user_message_file, system_message_file
                             
     dt_hdf = 0.0
     dt_res = 0.0
@@ -135,7 +176,6 @@ contains
     user_message_file   = './msg'
     system_message_file = '/etc/ups/user/msg'
       
-  namelist /DOMAIN_LIMITS/ xmin, xmax, ymin, ymax, zmin, zmax  
     xmin   = 0.0
     xmax   = 1.0
     ymin   = 0.0
@@ -143,7 +183,6 @@ contains
     zmin   = 0.0
     zmax   = 1.0
  
-  namelist /EQUATION_OF_STATE/ c_si, gamma, alpha
     c_si   = 1.0
     gamma  = 5./3.    ! ignored if ISO
 #ifdef ISO
@@ -151,10 +190,6 @@ contains
 #endif    
     alpha  = 1.0   
 
-  namelist /NUMERICAL_SETUP/  cfl, smalld, smallei, &
-                              flux_limiter, freezing_speed, &
-                              integration_order, &
-                              dimensions, magnetic, nu_bulk, cfl_visc
 
     cfl     = 0.7
     smalld  = 1.e-10
@@ -168,14 +203,6 @@ contains
     cfl_visc  = 0.4
 
 #ifdef GRAV
-  namelist /GRAVITY/ grav_model,  &
-                     g_z,   &
-                     dg_dz, &
-                     r_gc,  &
-                     ptmass,ptm_x,ptm_y,ptm_z,r_smooth, &
-                     nsub, tune_zeq, tune_zeq_bnd,      &
-                     h_grav, r_grav, n_gravr, n_gravr2, n_gravh
-
     grav_model  = 'null'                     
     g_z     = 0.0 
     dg_dz   = 0.0
@@ -196,12 +223,6 @@ contains
 #endif
 
 #ifdef COOL_HEAT
-  namelist /THERMAL/ cool_model, heat_model, coolheat_active,  &
-                     esrc_lower_lim, esrc_upper_lim, &
-                     h_coolheat_profile, n_coolheat_profile, &
-                     G_uv1, G_sup1, cfl_coolheat, L_C, &
-                     K_heatcond, C_heatcond, cfl_heatcond 
-
     cool_model   = 'null'
     heat_model   = 'null'
     coolheat_active = 'no'
@@ -219,7 +240,6 @@ contains
 #endif
 
 #ifdef RESIST
-  namelist /RESISTIVITY/ cfl_resist, eta_0, eta_1, eta_scale, j_crit, deint_max
     cfl_resist  =  0.4
     eta_0       =  0.0
     eta_1       =  0.0
@@ -229,8 +249,6 @@ contains
 #endif
 
 #ifdef COSM_RAYS
-  namelist /COSMIC_RAYS/ cr_active, gamma_cr, cr_eff, beta_cr, &
-                         K_cr_paral, K_cr_perp, amp_cr, cfl_cr, smallecr
     cr_active  = 1.0
     gamma_cr   = 4./3.
     beta_cr    = 0.0
@@ -244,26 +262,25 @@ contains
 #endif
 
 #ifdef GALAXY
-  namelist /GALACTIC_PARAMS/ t_dw, t_arm,col_dens 
 ! Default galactic parameters
     t_dw       = 100.0        	! period of density waves in Myr
     t_arm      = 100.0        	! period of SFR in arms
     col_dens    = 0.0            ! gas column density
-#endif GALAXY
+!--> GALAXY
+#endif 
 
 #ifdef SHEAR
-  namelist /SHEARING/ omega, qshear
     omega  = 0.0
     qshear = 0.0
-#endif SHEAR
-
+!--> SHEAR
+#endif 
 #ifdef SN_SRC
-  namelist /SN_PARAMS/ h_sn, r_sn, f_sn_kpc2, amp_dip_sn
     h_sn       = 266.0		!  vertical scaleheight of SN from Ferriere 1998
     r_sn       =  10.0       	!  "typical" SNR II radius
     f_sn_kpc2  =  20.0       	!  solar galactic radius SN II freq./kpc**2
     amp_dip_sn =   1.0e6        
-#endif SN_SRC
+!--> SN_SRC
+#endif
 
          
     if(proc .eq. 0) then
@@ -294,10 +311,10 @@ contains
 #endif
 #ifdef SHEAR
         read(unit=1,nml=SHEARING)
-#endif SHEAR
+#endif
 #ifdef SN_SRC
         read(unit=1,nml=SN_PARAMS)
-#endif SN_SRC
+#endif
 
       close(1)
 
@@ -327,10 +344,10 @@ contains
 #endif 
 #ifdef SHEAR
         write(unit=3,nml=SHEARING)
-#endif SHEAR
+#endif
 #ifdef SN_SRC
         write(unit=3,nml=SN_PARAMS)
-#endif SN_SRC
+#endif
       close(3)
       
     endif 
@@ -503,13 +520,14 @@ contains
 #ifdef GALAXY
 !  namelist /GALACTIC_PARAMS/ h_sn, r_sn, f_sn_kpc2, t_dw, t_arm, col_dens
 
-       rbuff(140) = h_sn  		
-       rbuff(141) = r_sn          	
-       rbuff(142) = f_sn_kpc2       	
-       rbuff(143) = t_dw             	
-       rbuff(144) = t_arm   
-       rbuff(145) = col_dens              
-#endif GALAXY
+       rbuff(140) = h_sn
+       rbuff(141) = r_sn
+       rbuff(142) = f_sn_kpc2
+       rbuff(143) = t_dw
+       rbuff(144) = t_arm
+       rbuff(145) = col_dens
+!--> GALAXY
+#endif
 
 #ifdef SHEAR
 !  namelist /SHEARING/ omega, qshear
@@ -523,7 +541,8 @@ contains
        rbuff(171) = r_sn             	
        rbuff(172) = f_sn_kpc2       	 
        rbuff(173) = amp_dip_sn      
-#endif SN_SRC
+!--> SN_SRC
+#endif
 
 ! Boroadcasting parameters
 
@@ -650,7 +669,8 @@ contains
       r_smooth            = rbuff(99) 
       h_grav              = rbuff(100) 
       r_grav              = rbuff(101) 
-#endif GRAV
+!--> GRAV
+#endif
     
 #ifdef COOL_HEAT
 !  namelist /THERMAL/ cool_model, heat_model, coolheat_active,  &
@@ -676,7 +696,8 @@ contains
       K_heatcond          = rbuff(117) 
       C_heatcond          = rbuff(118) 
       cfl_heatcond        = rbuff(119) 
-#endif COOL_HEAT       
+!--> COOL_HEAT
+#endif       
 
 #ifdef RESIST
 !   namelist /RESISTIVITY/ cfl_resist, eta_0, eta_1, j_crit
@@ -688,8 +709,8 @@ contains
        eta_1              = rbuff(122)  
        j_crit             = rbuff(123)  
        deint_max          = rbuff(124)
-      
-#endif RESIST
+!--> RESIST
+#endif
              
 #ifdef COSM_RAYS
 !  namelist /COSMIC_RAYS/ cr_active, gamma_cr, cr_eff, beta_cr, K_cr_paral, K_cr_perp,&
@@ -704,7 +725,8 @@ contains
        amp_cr             = rbuff(136) 
        cfl_cr             = rbuff(137)  
        smallecr           = rbuff(138)   
-#endif COSM_RAYS
+!-->  COSM_RAYS
+#endif
 
 
 #ifdef GALAXY
@@ -716,13 +738,15 @@ contains
        t_dw 		  = rbuff(143)             	
        t_arm 		  = rbuff(144)          
        col_dens           = rbuff(145)              
-#endif GALAXY
+!--> GALAXY
+#endif
 
 #ifdef SHEAR
 !  namelist /SHEARING/ omega, qshear
        omega              = rbuff(160)
        qshear             = rbuff(161)
-#endif SHEAR
+!--> SHEAR
+#endif 
     endif  ! (proc .eq. 0)    
 
 #ifdef SN_SRC
@@ -731,7 +755,8 @@ contains
        r_sn               = rbuff(171)          	
        f_sn_kpc2          = rbuff(172)      	 
        amp_dip_sn         = rbuff(173)     
-#endif SN_SRC
+!--> SN_SRC
+#endif
 
 ! Secondary parameters
 
@@ -740,7 +765,7 @@ contains
                                 ! ratio p_mag/p_gas = alpha = 1/beta
 #ifdef COSM_RAYS
    csim2 = csim2 +csi2*beta_cr
-#endif COSM_RAYS
+#endif
 
    ethu = 7.0**2/(5.0/3.0-1.0) * 1.0    ! thermal energy unit=0.76eV/cm**3
                                         ! for c_si= 7km/s, n=1/cm^3 	 
@@ -752,8 +777,9 @@ contains
         				! rho_0=1.67e-24g/cm**3,
         				! c_s0 = 7km/s
    f_sn = f_sn_kpc2 * (xmax-xmin)/1000.0 * (ymax-ymin)/1000.0 ! SN frequency per horizontal
-                                              ! surface area of the comp. box 
-#endif GALAXY
+                                                              ! surface area of the comp. box 
+!--> GALAXY
+#endif
 
 #ifdef SPLIT
 #ifdef ORIG
@@ -761,6 +787,7 @@ contains
   if(integration_order .eq. 1) then
     cn(1) = 1.
   endif
+!--> ORIG
 #endif
 #ifdef SSP
   cn(1:2,1) = (/ 1.   , 1.   /)
@@ -770,7 +797,9 @@ contains
   if(integration_order .eq. 2) then
     cn(1:2,2) = (/ 0.5 , 0.5 /)
   endif
+!--> SSP
 #endif
+!--> SPLIT
 #endif
 
 
@@ -796,22 +825,22 @@ contains
 
 #ifdef GRAV
       gravaccel = .true.
-#else GRAV
+#else 
       gravaccel = .false.
-#endif GRAV   
+#endif 
 
 #ifdef COOL_HEAT
     if((cool_model .ne. 'null') .or. (heat_model .ne. 'null')) then
       coolheat = .true.
-#else COOL_HEAT
+#else 
       coolheat = .false.
-#endif COOL_HEAT
+#endif
     
 #ifdef HEAT_COND
       heatcond = .true.
-#else HEAT_COND
+#else
       heatcond = .false.
-#endif HEAT_COND
+#endif
 
     if(magnetic .eq. 'yes') then
       magfield = .true.
@@ -825,21 +854,21 @@ contains
         write(*,*) 'eta_scale must be greater or equal 0'
         stop
       endif
-#else RESIST
+#else
       resist = .false.
 #endif
    
 #ifdef VISC
     if(nu_bulk .ne. 0.0) then
        bulk_viscosity = .true.
-#else VISC
+#else
        bulk_viscosity = .false.
-#endif VISC
+#endif
        
 #ifdef MASS_COMPENS
     mass_loss = 0.0
     mass_loss_tot = 0.0
-#endif MASS_COMPENS       
+#endif
 
   end subroutine read_params
   

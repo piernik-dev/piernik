@@ -14,7 +14,7 @@ contains
 
 !--------------------------------------------------------------------------
   subroutine grav_pot_3d
-   
+    use grid, only : z 
     implicit none
     integer i, j
     real, allocatable :: gpot(:)
@@ -22,7 +22,7 @@ contains
 
     do j = 1,ny
       do i = 1,nx
-        call grav_pot('zsweep', i,j, z, nz, gpot, gp_status)
+        call grav_pot('zsweep', i,j, z(:), nz, gpot, gp_status)
         if(gp_status .eq. 'undefined') exit
         gp(i,j,:) = gpot
       enddo
@@ -104,8 +104,8 @@ contains
     implicit none
     character, intent(in) :: sweep*6
     integer, intent(in)   :: i1, i2                   ! 
-    integer,intent(in)    :: n
-    real, dimension(n)    :: xsw
+    integer, intent(in)   :: n
+    real, dimension(:)    :: xsw
 !DW+
     real, dimension(n)    :: rgc_vect
 !DW-
@@ -537,9 +537,9 @@ contains
   subroutine grav_accel2pot
   
     implicit none
-    integer i, j, k, ip, pgpmax
+    integer               :: i, j, k, ip, pgpmax
     real gravrx(nx), gravry(ny), gravrz(nz)
-    real gp_max, dgp(3), dgp0
+    real                  :: gp_max, dgp(3), dgp0
     integer, dimension(3) :: loc_gp_max, gploc
     integer               :: proc_gp_max
     integer               :: px, py, pz, pc(3)
@@ -557,13 +557,13 @@ contains
     
     gp(1,1,1) = 0.0
 
-    call grav_accel('xsweep',1,1, xr, nx, gravrx)    
+    call grav_accel("xsweep", 1, 1, xr(:), nx, gravrx)    
     do i = 1, nx-1      
       gp(i+1,1,1) = gp(i,1,1) - gravrx(i)*dl(xdim)
     enddo
     
     do i=1,nx
-      call grav_accel('ysweep',1, i, yr, ny, gravry)
+      call grav_accel('ysweep',1, i, yr(:), ny, gravry)
       do j = 1, ny-1      
         gp(i,j+1,1) = gp(i,j,1) - gravry(j)*dl(ydim)
       enddo
@@ -571,7 +571,7 @@ contains
 
     do i=1,nx
       do j=1,ny
-        call grav_accel('zsweep', i, j, zr, nz, gravrz)
+        call grav_accel('zsweep', i, j, zr(:), nz, gravrz)
         do k = 1, nz-1      
           gp(i,j,k+1) = gp(i,j,k) - gravrz(k)*dl(zdim)
         enddo

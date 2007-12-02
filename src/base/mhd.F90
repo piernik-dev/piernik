@@ -15,11 +15,11 @@ program mhd
   use init_problem  
 #ifdef RESIST
   use resistivity
-#endif RESIST
+#endif 
   use mod_mhdstep
 #ifdef SELF_GRAV
   use poisson_solver
-#endif SELF_GRAV
+#endif 
   use dataio
   use diagnostics  
   use timer
@@ -34,7 +34,8 @@ program mhd
   character output*3
   integer system_status
   character system_command*160
-  real tsleep
+  integer tsleep
+!  real, dimension(:,:,:),allocatable :: ala
   
   call mpistart
 
@@ -78,7 +79,7 @@ program mhd
 
 #ifdef SELF_GRAV
     call poisson
-#endif SELF_GRAV
+#endif 
 
     if (proc .eq.0) then
       write (log_file,'(a,a1,a3,a1,i3.3,a4)') &
@@ -89,7 +90,7 @@ program mhd
     endif
 
     call write_data(output='all')
-    
+   
   else  
 
     if (proc .eq. 0) then
@@ -123,12 +124,10 @@ program mhd
 
       call mhdstep
 
-  !u(1,:,:,:) = unshear(u(1,:,:,:),x,.true.)
 #ifdef MASS_COMPENS
       call mass_loss_compensate
 #endif        
       call write_data(output='all')
-  !u(1,:,:,:) = unshear(u(1,:,:,:),x)
 
 888   continue
 
@@ -173,7 +172,7 @@ program mhd
         if(trim(msg) .eq. 'stop') goto 999
       endif
             
-      if(wait .eq. .true.) go to 888
+      if(wait .eqv. .true.) go to 888
     
    end do ! main loop
 
@@ -181,7 +180,26 @@ program mhd
 
   nstep=nstep-1
 
-  call write_data(output='end')
+!  u(1,nb+1:nx-nb,nb+1:ny-nb,:) = & 
+!     unshear_fft(u(1,nb+1:nx-nb,nb+1:ny-nb,:),x(nb+1:nx-nb),.true.)
+!  allocate(ala(nxd,nyd,nz))
+!  call unshear_fft_b(u(1,nb+1:nx-nb,nb+1:ny-nb,:),x(:),&
+!       u(1,1:nb,nb+1:ny-nb,:),&
+!       u(1,nxd+nb+1:nxd+2*nb,nb+1:ny-nb,:),&
+!       ala(:,:,:),.true.)
+!  u(1,nb+1:nx-nb,nb+1:ny-nb,:) = ala(:,:,:)
+!  call write_hdf
+!  nhdf = nhdf+1
+!  u(1,nb+1:nx-nb,nb+1:ny-nb,:) = &
+!     unshear_fft(u(1,nb+1:nx-nb,nb+1:ny-nb,:),x(nb+1:nx-nb))
+!  call unshear_fft_b(u(1,nb+1:nx-nb,nb+1:ny-nb,:),x(:),&
+!       u(1,1:nb,nb+1:ny-nb,:),&
+!       u(1,nxd+nb+1:nxd+2*nb,nb+1:ny-nb,:),&
+!       ala(:,:,:))
+!  u(1,nb+1:nx-nb,nb+1:ny-nb,:) = ala(:,:,:)
+!  call write_hdf
+!  deallocate(ala)
+
 !---------------------------- END OF MAIN LOOP ----------------------------------
 
  

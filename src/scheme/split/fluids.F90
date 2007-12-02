@@ -9,7 +9,7 @@ module fluids     ! split fluids
   use fluid_boundaries, only : compute_u_bnd 
 #ifdef COSM_RAYS
   use cr_diffusion        
-#endif COSM_RAYS
+#endif 
   contains
   subroutine fluidx
 
@@ -26,7 +26,7 @@ module fluids     ! split fluids
     
 #ifdef COSM_RAYS
     call div_v         
-#endif COSM_RAYS
+#endif 
 
     do k=ks,ke
       kp=k+1
@@ -67,7 +67,7 @@ module fluids     ! split fluids
     
 #ifdef COSM_RAYS
     call div_v         
-#endif COSM_RAYS
+#endif 
 
     do k=ks,ke
       kp=k+1
@@ -111,7 +111,7 @@ module fluids     ! split fluids
     
 #ifdef COSM_RAYS
     call div_v         
-#endif COSM_RAYS
+#endif 
 
     do j=1,ny-1
       jp=j+1

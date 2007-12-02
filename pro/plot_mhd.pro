@@ -1,4 +1,4 @@
-PRO PLOT_MHD, first,last
+PRO PLOT_MHD,first,last,var
 
 ; Written by: M. Hanasz, December 2005 - January 2006
 
@@ -9,33 +9,33 @@ PRO PLOT_MHD, first,last
   COMMON vars, u,b,wa
   ncolors = !D.N_COLORS -1
   white = 255
-  amin = 0.0
-  amax = 0.0
-
   plots  ='n'
   slices ='y'
   dump   ='n'
 
-  sf = 1
+  sf = 4
 
-   dir = '/raid20/kowalik/jeans/'
-;   dir = '../run/'
+   dir = '/raid20/kowalik/jeans_in/'
+   dir = '../obj/'
+;   dir = '/raid20/mhanasz/runs/crdynamo-d-r100/'
 ;  dir = '/scr/symulacje/cr-tests/crshear-res/'
     prefix = 'cr_shear_r10'
     prefix = 'keplerian_disk_n4c'
-    prefix = 'jeans_in_tst'
- ; first = 0
-;  last  = 200
+    prefix = 'jeans_in_dsk'
+    prefix = 'gammie_tst'
+;    prefix = 'slab_uns'
+; first = 0
+;  last  = 0
   freq = 1
 
-  var='dens'
+;  var='gpot'
 
 ;  ylog=1
  if(var EQ 'dens' OR var EQ 'ener') then ylog=1
 
   if(var EQ 'dns1') then begin
-    amin = 0.01
-    amax = 1.2
+    amin = 0.0
+    amax = 0.0
   endif  
    if(var EQ 'dns2') then begin
     amin = 0.01
@@ -46,8 +46,8 @@ PRO PLOT_MHD, first,last
     amax=  0.05
   endif
   if(var EQ 'dens') then begin
-    amin= 0.0
-    amax= 0.0 ; 1.3
+    amin= 0.0; 0.499280 
+    amax= 0.0; 0.51 ; 1.3
   endif
   if(var EQ 'ener') then begin
     amin= 0.0 ;0.01
@@ -166,7 +166,7 @@ endelse
 
 
   if(plots  NE 'n') then begin
-;    WINDOW, 1, XSIZE=600, YSIZE=500
+    WINDOW, 1, XSIZE=600, YSIZE=500
 ;    WINDOW, 3, XSIZE=600, YSIZE=500
   endif
 
@@ -198,20 +198,24 @@ endelse
     
   timestr = '    t='+strtrim(string(t,format='(f7.2)'),0)
 
-;  if(amin EQ 0.0)  then amin = min(a)
-;  if(amax EQ 0.0)  then amax = max(a)
-  amin = min(a)
-  amax = max(a)
+  if(amin EQ 0.0)  then amin = min(a)
+  if(amax EQ 0.0)  then amax = max(a)
+
+;  a = (a - shift(a,1))/(x(1)-x(0))
+;  a(0,*) = a(1,*)
   yrange = [amin,amax]
+;  amin = min(a)
+;  amax = max(a)
 
 
 IF(plots NE 'n') THEN BEGIN
   WSET, 1
-  WSHOW, 1
+;  WSHOW, 1
+  
 
   IF(plots EQ 'x') THEN BEGIN
     px  =  a(*,iy-1,iz-1)
-    px = reform(px, nxd)
+    px = reform(px)
     pxr= rotate(px,2) 
 ;    px2 = a2(*,iy-1,iz-1)
 ;    PLOT,  x, (px*x)^2, line=0, title=var+timestr, $
@@ -222,14 +226,14 @@ IF(plots NE 'n') THEN BEGIN
     oplot, x, pxr, line =1,color=254
 
     WSET, 3
-    WSHOW, 3
+;    WSHOW, 3
 ;    plot, x, px-px2
 
 ;    print, max(px-px2)
 
   ENDIF ELSE IF (plots EQ 'y') THEN BEGIN
     py  =  a(ix-1,*,iz-1)
-    py = reform(py, nyd)
+    py = reform(py);, nyd)
     pyr= rotate(py,2) 
 ;    py2 = a2(ix-1,*,iz-1)
     PLOT,  y, py, line=0, title=var+timestr, $
@@ -256,7 +260,7 @@ IF(plots NE 'n') THEN BEGIN
     oplot, z,pzr, line =1,color=254
    
     WSET, 3
-    WSHOW, 3
+;    WSHOW, 3
 ;    plot, z, pz-pz2
 
 ;    print, max(pz-pz2)
@@ -268,7 +272,7 @@ ENDIF
 IF(slices EQ 'y') THEN BEGIN
    IF(dump NE 'y') THEN BEGIN
     WSET, 2
-    WSHOW, 2
+;    WSHOW, 2
    ENDIF ELSE BEGIN
     xy_name = 'xy'+var+'_'+ prefix +'_'+ string(step,FORMAT='(I4.4)') +'.png'
     xz_name = 'xz'+var+'_'+ prefix +'_'+ string(step,FORMAT='(I4.4)') +'.png'
@@ -378,7 +382,18 @@ IF(slices EQ 'y') THEN BEGIN
 
   nxa=20
   nya=20
-
+;op = RANDOMU(S,25,50,200)
+;FOR I=0, 10 DO op = SMOOTH(op, 3)
+;op = BYTSCL(a,TOP=25)
+;SHADE_VOLUME, a, 10.0 ,V,P,/LOW
+;SCALE3, XRANGE=[0,1], YRANGE=[0,2], ZRANGE=[0,8]
+;img = POLYSHADE(V,P,/T3D)
+;WINDOW,10
+;WSET, 10
+;img = PROJECT_VOL(a,100,100,100,DEPTH_Q=0.7,OPAQUE=qp, TRANS=(!P.T))
+;print, max(img),min(img)
+;TVSCL, img
+;VOLUME,a
 
 endif
 

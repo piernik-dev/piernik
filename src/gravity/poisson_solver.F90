@@ -13,12 +13,14 @@ contains
 !!
   subroutine poisson
     use start, only  : bnd_xl, bnd_xr, bnd_yl, bnd_yr, &
-         nb, nxd, nyd, nzd
-    use arrays, only : idna,u,gp
-    use grid, only   : dz,nx,ny,nz,nzb
+         nb, nxd, nyd, nzd, dimensions
+    use arrays, only : idna,u,gp,x
+    use grid, only   : dz,dx,nx,ny,nz,nzb
     use mpi_setup
+    use shear, only  : unshear_fft
     
     implicit none
+    real, dimension(:,:,:), allocatable :: ala
   
     if( bnd_xl .eq. 'per' .and. bnd_xr .eq. 'per' .and. &
         bnd_yl .eq. 'per' .and. bnd_yr .eq. 'per' .and. &
@@ -52,6 +54,43 @@ contains
 #ifdef SHEAR
     elseif ( bnd_xl .eq. 'she' .and. bnd_xr .eq. 'she' .and. &
              bnd_yl .eq. 'per' .and. bnd_yr .eq. 'per' ) then
+
+
+!          ala = u(idna,:,:,:)
+!         ala = unshear(ala,x,.true.)
+
+         if(dimensions=='3d') then
+           if(.not.allocated(ala)) allocate(ala(nx-2*nb,ny-2*nb,nz-2*nb))
+           ala = u(idna,nb+1:nb+nxd,nb+1:nb+nyd,nb+1:nb+nzd)
+           call poisson_xyzp(ala(:,:,:), &
+                            gp(nb+1:nb+nxd,nb+1:nb+nyd,nb+1:nb+nzd),dz)
+
+           gp(:,:,1:nb)              = gp(:,:,nzd+1:nzd+nb)
+           gp(:,:,nzd+nb+1:nzd+2*nb) = gp(:,:,nb+1:2*nb)
+
+         else
+!           if(.not.allocated(ala)) allocate(ala(1:nb,ny-2*nb,1:1))
+!           ala =  u(idna,nb+1:nb+nxd,nb+1:nb+nyd,1:1)
+!           call poisson_xy(ala(:,:,1), &
+!                            gp(nb+1:nb+nxd,nb+1:nb+nyd,1),dx)
+
+            call poisson_xy2d(u(idna,nb+1:nb+nxd,nb+1:nb+nyd,1), &
+                            gp(nb+1:nb+nxd,      nb+1:nb+nyd,1), &
+                            gp(1:nb,             nb+1:nb+nyd,1), &
+                            gp(nxd+nb+1:nxd+2*nb,nb+1:nb+nyd,1), &
+                            dx)
+
+
+!           gp(1:nb,:,:)              = gp(nxd+1:nxd+nb,:,:)
+!           gp(nxd+nb+1:nxd+2*nb,:,:) = gp(nb+1:2*nb,:,:)
+         endif
+           gp(:,1:nb,:)              = gp(:,nyd+1:nyd+nb,:)
+           gp(:,nyd+nb+1:nyd+2*nb,:) = gp(:,nb+1:2*nb,:)
+
+
+!         gp = unshear(gp,x)
+         if (allocated(ala)) deallocate(ala)
+!         write(*,*) maxval(gp), minval(gp)
 #endif SHEAR
     else
       write(*,*) 'POISSON SOLVER: not implemented for boundary conditions'
@@ -61,6 +100,271 @@ contains
     endif
 
   end subroutine poisson
+
+!!=====================================================================
+!!
+!! SUBROUTINE POISSON_XY2D: solves Poisson equation for periodic
+!! bnd conditions in X and Y in 2D
+!! ASSUMPTION: 1) dx = dy 
+!!
+  subroutine poisson_xy2d(den, pot, lpot, rpot, dx)
+    use start, only : xmin,xmax,ymin,ymax,nyd,nb,nxd
+    use constants, only : newtong,dpi,small
+    use arrays, only : x
+    use shear,  only : dely
+    implicit none
+
+    real, dimension(:,:), intent(in)             :: den
+    real, dimension(:,:), intent(out)            :: pot
+    real, dimension(:,:), intent(out)            :: lpot, rpot
+    real, intent(in)                             :: dx
+
+    complex*16, dimension(size(den,1)/2 + 1)  :: ctmp
+    complex*16, dimension(size(den,1))        :: ctm2
+    complex*16, dimension(size(den,1))        :: ctm3
+    complex*16, dimension(size(den,1))        :: ctm4
+    
+    complex*16, dimension(size(den,1),size(den,1)/2 +1 ) :: fft,fft2
+
+    real(kind=8)   , dimension(size(den,1))   :: rtmp
+    real(kind=8)   , dimension(size(den,1)/2 + 1) :: ky
+    real(kind=8)   , dimension(size(den,1))   :: kx,xx
+
+
+    real(kind=8)    :: lambda, factor, St
+
+    integer(kind=8) :: pf1, pf2, ppb1, pb2
+
+    complex(kind=8), parameter :: j = (0, 1)
+
+    integer*8      :: n,np, p, q, i, info
+
+    integer*8     , parameter :: FFTW_ESTIMATE = 64
+    integer*8     , parameter :: FFTW_FORWARD  = 1
+    integer*8     , parameter :: FFTW_BACKWARD = -1
+!
+!----------------------------------------------------------------------
+!
+
+    St = dely / (xmax - xmin)
+    St = -St * nyd /(ymax - ymin)
+! determine input array dimension
+!
+    n = size(den, 1)
+    xx(:) = x(nb+1:nxd+nb)
+    if (n /= size(den,2)) stop 'nx != ny in poisson_xy'
+
+! compute dimensions for complex arrays
+!
+    np = n / 2 + 1
+
+! compute wave vectors
+!
+    ky(1) = 0.0 
+    do p = 2, np
+      ky(p) = dpi * (p-1) / n !      kx(p) = dpi * (p - 1) / nx
+    enddo
+    
+
+    kx(1) = 0.0
+    do q = 2, np
+      kx(q) = dpi * (q-1) / n !      ky(q) = dpi * (q - 1) / ny
+      kx(n+2-q) = kx(q)
+    enddo
+
+
+! create plan for the forward 1D REAL => COMPLEX  FFT
+!
+    call dfftw_plan_dft_r2c_1d(pf1,  size(rtmp), rtmp, ctmp, FFTW_ESTIMATE)
+
+! perform forward FFT for each k
+!
+    do i = 1, n
+      rtmp(:)   = den(i,:)
+      call dfftw_execute(pf1) 
+      fft(i,:) = ctmp(:) * exp(cmplx(0.0, St*ky(:)*xx(i)))
+    enddo
+    call dfftw_destroy_plan(pf1)
+
+    call dfftw_plan_dft_1d(pf2, size(ctm2), ctm2, ctm3, FFTW_FORWARD, FFTW_ESTIMATE)
+
+!! Shift and perform final FFT
+!
+    do i = 1, np
+      ctm2(:) = fft(:,i)
+      call dfftw_execute(pf2)
+      fft2(:,i) = ctm3(:)
+    enddo
+
+    call dfftw_destroy_plan(pf2)
+
+!! compute eigenvalues for each p and q and solve 
+!!
+    fft2(:,:)  = dpi*newtong*dx*dx * fft2(:,:)
+    do q = 1, np
+      do p = 1, n
+        factor = cos(kx(p)) + cos(ky(q)) - 2.0
+        if(factor == 0) then 
+           fft2(p,q) = cmplx(0.0,0.0)
+        else
+           fft2(p,q) = fft2(p,q) / factor
+        endif
+      enddo
+    enddo
+
+!! create plan for the backward FFT
+!!
+    call dfftw_plan_dft_1d(ppb1, n, ctm3, ctm4, -1, FFTW_ESTIMATE)
+
+    do i = 1,np
+      ctm3(:) = fft2(:,i)
+      call dfftw_execute(ppb1)
+!      fft(:,i) = (1./n) * ctm4(:)
+      fft(:,i) = ctm4(:)
+    enddo
+! destroy plan for the 1st inverse FFT
+!
+    call dfftw_destroy_plan(ppb1)
+
+    call dfftw_plan_dft_c2r_1d(pb2, n, ctmp, rtmp, FFTW_ESTIMATE)
+
+    do i = 1,n
+      ctmp(:)   = fft(i,:)  * exp( cmplx(0.0 , -St*ky(:)*xx(i)) )
+      call dfftw_execute(pb2)
+      pot(i,:)  = rtmp(:) / n / n
+    enddo
+    do i = 1,nb
+      ctmp(:)   = fft(n-nb+i,:) * exp( cmplx(0.0, -St*ky(:)*x(i)) )
+      call dfftw_execute(pb2)
+      lpot(i,:) = rtmp(:) / n / n
+
+      ctmp(:)   = fft(i,:) * exp( cmplx(0.0, -St*ky(:)*x(nxd+nb+i)) )
+      call dfftw_execute(pb2)
+      rpot(i,:) = rtmp(:) / n / n
+    enddo
+! destroy plan for the 1st inverse FFT
+!
+    call dfftw_destroy_plan(pb2)
+    
+    return
+  end subroutine poisson_xy2d
+
+!!=====================================================================
+!!
+!! SUBROUTINE POISSON_XY: solves Poisson equation for periodic
+!! bnd conditions in X and Y in 2D
+!! ASSUMPTION: 1) dx = dy 
+!!
+  subroutine poisson_xy(den, pot, dx)
+
+    use constants, only : newtong,dpi
+    implicit none
+
+    real, dimension(:,:), intent(in)  :: den
+    real, dimension(:,:), intent(out) :: pot
+    real, intent(in)                  :: dx
+
+    complex(kind=8), dimension(:,:)  , allocatable :: ctmp
+
+    real(kind=8)   , dimension(:,:)  , allocatable :: rtmp
+    real(kind=8)   , dimension(:)    , allocatable :: kx, ky
+
+    real(kind=8)    :: lambda, factor
+
+    integer(kind=8) :: planf, planb
+
+    integer         :: nx, ny, np, p, q, k, info
+
+    integer     , parameter :: FFTW_ESTIMATE = 64
+!
+!----------------------------------------------------------------------
+!
+
+! determine input array dimension
+!
+  nx = size(den, 1)
+  ny = size(den, 2)
+  if (nx /= ny) stop 'nx != ny in poisson_xy'
+
+! compute dimensions for complex arrays
+!
+    np = nx / 2 + 1
+
+! allocate arrays
+!
+    allocate(ctmp(np,ny))
+    allocate(rtmp(nx,ny))
+    allocate(kx(np))
+    allocate(ky(ny))
+
+! create plan for the forward FFT
+!
+    call dfftw_plan_dft_r2c_2d(planf, nx, ny, rtmp, ctmp, FFTW_ESTIMATE)
+
+! perform forward FFT for each k
+!
+
+!!!    factor = dx * dx
+   factor = 1.0
+
+    rtmp(:,:)   = factor * den(:,:)
+    call dfftw_execute(planf)
+!    fft(:,:) = ctmp(:,:) !/ real(nx * ny)
+
+! destroy plan for the forward FFT
+!
+    call dfftw_destroy_plan(planf)
+
+! compute wave vectors
+!
+    do p = 1, np
+      kx(p) = dpi * (p - 1) / nx
+      kx(p) = dpi * (p) / nx
+
+    enddo
+
+    ky(1) = 0.0
+    ky(1) = dpi / ny
+    do q = 2, ny / 2 + 1
+      ky(q) = dpi * (q - 1) / ny
+      ky(q) = dpi * (q) / ny
+      ky(ny+2-q) = ky(q)
+    enddo
+
+! compute eigenvalues for each p and q and solve linear system
+!
+
+    ctmp(:,:)  = dpi*newtong*dx*dx * ctmp(:,:)
+
+    do q = 1, ny
+      do p = 1, np
+        factor = cos(kx(p)) + cos(ky(q)) - 2.0 !+ 1.e-10
+        ctmp(p,q) = ctmp(p,q) / factor
+      enddo
+    enddo
+
+! create plan for the backward FFT
+!
+    call dfftw_plan_dft_c2r_2d(planb, nx, ny, ctmp, rtmp, FFTW_ESTIMATE)
+
+! perform inverse FFT for each k
+!
+    call dfftw_execute(planb)
+    pot(:,:) = rtmp(:,:)/(nx*ny)
+
+! destroy plan for the backward FFT
+!
+    call dfftw_destroy_plan(planb)
+
+! deallocate rhofft
+!
+    if (allocated(kx))     deallocate(kx)
+    if (allocated(ky))     deallocate(ky)
+    if (allocated(rtmp))   deallocate(rtmp)
+    if (allocated(ctmp))   deallocate(ctmp)
+
+  end subroutine poisson_xy
+
 
 !!=====================================================================
 !!

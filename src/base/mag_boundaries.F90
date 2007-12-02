@@ -18,7 +18,7 @@ contains
 subroutine bnd_b(dim)
 #ifdef SHEAR
   use shear, only : eps,delj
-#endif SHEAR
+#endif 
 
   implicit none
   character(len=*) :: dim 
@@ -84,8 +84,8 @@ subroutine bnd_b(dim)
         b(:,nxb+nb+1+1:nxb+2*nb,:,:)  = recv_right(:,1+1:nb,:,:)
 
 !===============================================================================    
-#else SHEAR
-      
+! <> SHEAR
+#else       
       if(pxsize .gt. 1) then 
     
         if(procxl .ne. MPI_PROC_NULL) send_left(:,:,:,:)          =  b(:,nb+1:2*nb,:,:)     
@@ -104,7 +104,8 @@ subroutine bnd_b(dim)
         if(procxr .ne. MPI_PROC_NULL) b(:,nxb+nb+1:nxb+2*nb,:,:)  = recv_right(:,:,:,:)
           
       endif
-#endif SHEAR      
+!--> SHEAR
+#endif
 
       deallocate(send_left,send_right,recv_left,recv_right)
       

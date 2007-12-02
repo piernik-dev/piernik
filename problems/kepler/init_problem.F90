@@ -136,9 +136,9 @@ contains
 !            b(2,i,j,k)   =  b0*sqrt(u(idna,i,j,k)/d0)*xi/rc
 !            b(3,i,j,k)   =  0.0
 !          else if(trim(mag_field_orient) .eq. 'vertical') then
-            b(1,i,j,k)   =  0.0
-            b(2,i,j,k)   =  0.0
-            b(3,i,j,k)   =  0.0!b0
+            b(1,i,j,k)   =  1.0
+            b(2,i,j,k)   =  1.0
+            b(3,i,j,k)   =  0.0
 !          endif
 
 #ifndef ISO	  

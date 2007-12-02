@@ -18,7 +18,7 @@ module time
 
 #ifdef COSM_RAYS
   use cr_diffusion
-#endif COSM_RAYS  
+#endif 
 #ifdef RESIST
   use resistivity
 #endif
@@ -39,23 +39,23 @@ contains
 #ifdef RESIST
     call timestep_resist
     dt = min(dt,dt_resist)
-#endif RESIST
+#endif 
 #ifdef COOL_HEAT
     call timestep_coolheat
     dt = min(dt,dt_coolheat)
-#endif COOL_HEAT
+#endif 
 #ifdef HEAT_COND
     dt_heatcond = cfl_heatcond * 0.5*dxmn**2/(K_heatcond+small)
     dt = min(dt,dt_heatcond)
-#endif HEAT_COND
+#endif 
 #ifdef VISC
     dt_visc = cfl_visc * 0.5*dxmn**2/(nu_bulk+small)
     dt = min(dt,dt_visc)
-#endif VISC   
+#endif 
 #ifdef COSM_RAYS
     dt_cr = cfl_cr * 0.5*dxmn**2/(K_cr_paral+K_cr_perp+small)
     dt = min(dt,dt_cr)
-#endif COSM_RAYS 
+#endif 
 
   end subroutine timestep
 
@@ -92,11 +92,13 @@ contains
           p = csi2*u(idna,i,j,k)
           ps =p+pmag
           cf = sqrt(abs(  (2.*pmag+p)/u(idna,i,j,k)) )
-#else ISO
+! <> ISO
+#else 
           ps=(u(iena,i,j,k)-sum(u(imxa:imza,i,j,k)**2,1)/u(idna,i,j,k)/2.)*(gamma-1.)+(2.-gamma)*pmag
           p=ps-pmag          
           cf = sqrt(abs(  (2.*pmag+gamma*p)/u(idna,i,j,k)) )
-#endif ISO
+!--> ISO
+#endif 
 
           cx=max(cx,vx+cf)
           cy=max(cy,vy+cf)

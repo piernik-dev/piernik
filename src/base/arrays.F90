@@ -11,21 +11,21 @@ module arrays
   
 #ifdef ISO
   integer,parameter  :: nua=4
-#else ISO
+#else 
   integer,parameter  :: nua=5
-#endif ISO  
+#endif 
 
 #ifdef COSM_RAYS
   integer,parameter  :: nuc=1
-#else COSM_RAYS
+#else 
   integer,parameter  :: nuc=0  
-#endif COSM_RAYS
+#endif
 
 #ifdef DUST
   integer,parameter  :: nud=1
-#else DUST
+#else 
   integer,parameter  :: nud=0  
-#endif DUST
+#endif 
 
   integer,parameter  :: nu=nua+nuc+nud
   integer,parameter  :: nm=3
@@ -33,21 +33,21 @@ module arrays
   integer,parameter  :: idna=1,imxa=2,imya=3,imza=4
 #ifdef ISO
   integer,parameter  :: iena=0 
-#else ISO
+#else 
   integer,parameter  :: iena=5   
-#endif ISO 
+#endif 
 
 #ifdef COSM_RAYS
   integer,parameter  :: iecr = nua+1
-#else COSM_RAYS
+#else 
   integer,parameter  :: iecr = 0  
-#endif COSM_RAYS
+#endif
 
 #ifdef DUST
   integer,parameter  :: idnd=nua+nuc+1,ivxd=nua+nuc+2,ivyd=nua+nuc+3,ivzd=nua+nuc+4
-#else DUST
+#else 
   integer,parameter  :: idnd=0,ivxd=0,ivyd=0,ivzd=0  
-#endif DUST
+#endif 
    
   integer, dimension(nu) :: iuswpx,iuswpy,iuswpz    
   integer, dimension(nm) :: ibswpx,ibswpy,ibswpz    
@@ -61,40 +61,42 @@ module arrays
 
   real, allocatable :: dl(:)
 
-  real, allocatable  :: x(:), xl(:), xr(:)
-  real, allocatable  :: y(:), yl(:), yr(:)
-  real, allocatable  :: z(:), zl(:), zr(:)
+  real, allocatable, dimension(:)  :: x, xl, xr
+  real, allocatable, dimension(:)  :: y, yl, yr
+  real, allocatable, dimension(:)  :: z, zl, zr
 
-  real, allocatable :: u(:,:,:,:)
-  real, allocatable :: b(:,:,:,:)
+  real, allocatable, dimension(:,:,:,:) :: u,b
 #ifdef GRAV
-  real, allocatable :: gp(:,:,:)     
-  real, allocatable :: dprof(:),eprof(:)
-#endif GRAV
+  real, allocatable, dimension(:,:,:) :: gp
+  real, allocatable, dimension(:)     :: dprof, eprof
+#endif 
 #ifdef SPLIT
-  real, allocatable :: wa(:,:,:),wcu(:,:,:)
+  real, allocatable, dimension(:,:,:) :: wa, wcu
 #ifdef SSP
-  real, allocatable :: bi(:,:,:,:)
-#endif SSP
+  real, allocatable, dimension(:,:,:,:) :: bi
+!--> SSP
+#endif 
 
-#else SPLIT
-  real, allocatable :: bi(:,:,:,:)
-  real, allocatable :: ui(:,:,:,:)
-  real, allocatable :: Lu(:,:,:,:),Lb(:,:,:,:)
-  real, allocatable :: wa(:,:,:)
-#endif SPLIT
+! <> SPLIT
+#else 
+  real, allocatable, dimension(:,:,:,:) :: bi
+  real, allocatable, dimension(:,:,:,:) :: ui
+  real, allocatable, dimension(:,:,:,:) :: Lu, Lb
+  real, allocatable, dimension(:,:,:)   :: wa
+!--> SPLIT
+#endif 
 #ifdef MASS_COMPENS
-  real, allocatable :: dinit(:,:,:)    
+  real, allocatable, dimension(:,:,:)   :: dinit
 #endif        
 
 !#ifdef COOL_HEAT
-  real, allocatable  :: coolheat_profile(:)
+  real, allocatable, dimension(:)       :: coolheat_profile
 !#endif COOL_HEAT
 
-  real(kind=4), allocatable  :: outwa(:,:,:),outwb(:,:,:),outwc(:,:,:)
+  real(kind=4), allocatable, dimension(:,:,:)  :: outwa, outwb, outwc
 
-  real,    allocatable :: rlscal(:)
-  integer, allocatable :: intscal(:)
+  real,    allocatable, dimension(:) :: rlscal
+  integer, allocatable, dimension(:) :: intscal
 
 contains
   
@@ -111,12 +113,12 @@ contains
     iuswpx(iena) = iena
     iuswpy(iena) = iena
     iuswpz(iena) = iena
-#endif ISO
+#endif 
 #ifdef COSM_RAYS
     iuswpx(iecr) = iecr
     iuswpy(iecr) = iecr
     iuswpz(iecr) = iecr
-#endif COSM_RAYS
+#endif 
 
   
     if((mod(nxd, pxsize) .ne. 0) .or. &
@@ -172,24 +174,28 @@ contains
 #ifdef SPLIT
 #ifdef ORIG
     allocate(u(nu,nx,ny,nz),b(3,nx,ny,nz))
-#else ORIG
+! <> ORIG
+#else 
     allocate(u(nu,nx,ny,nz),b(3,nx,ny,nz),bi(3,nx,ny,nz))
-#endif ORIG
-#else SPLIT
+!--> ORIG
+#endif 
+!<> SPLIT
+#else 
     allocate(u(nu,nx,ny,nz),b(3,nx,ny,nz))
     allocate(ui(nu,nx,ny,nz),bi(3,nx,ny,nz))
     allocate(Lu(nu,nx,ny,nz),Lb(3,nx,ny,nz))
-#endif SPLIT
+!--> SPLIT
+#endif 
 
 #ifdef GRAV
     allocate(gp(nx,ny,nz))
     allocate(dprof(nz),eprof(nz))
-#endif GRAV
+#endif 
 #ifdef SPLIT
     allocate(wa(nx,ny,nz),wcu(nx,ny,nz))
-#else SPLITnx,ny,nz
+#else 
     allocate(wa(nx,ny,nz))
-#endif SPLIT
+#endif 
     allocate(outwa(nx,ny,nz),outwb(nx,ny,nz),outwc(nx,ny,nz))
 #ifdef MASS_COMPENS
     allocate(dinit(nx,ny,nz))    
@@ -211,23 +217,29 @@ contains
 #ifdef SPLIT
 #ifdef ORIG
     deallocate(u,b)
-#else ORIG
+! <> ORIG
+#else 
     deallocate(u,b,bi)
-#endif ORIG
-#else SPLIT
+!--> ORIG
+#endif 
+! <> SPLIT
+#else 
     deallocate(u,b)
     deallocate(ui,bi)
     deallocate(Lu,Lb)
-#endif SPLIT
+!--> SPLIT
+#endif 
 #ifdef GRAV
     deallocate(gp)
     deallocate(dprof,eprof)
-#endif GRAV
+#endif 
 #ifdef SPLIT
     deallocate(wa,wcu)
-#else SPLIT
+! <> SPLIT
+#else 
     deallocate(wa)
-#endif SPLIT
+!--> SPLIT
+#endif 
 #ifdef MASS_COMPENS
    deallocate(dinit)    
 #endif        

@@ -6,14 +6,14 @@ module fluxes
   contains
 !==========================================================================================
  
-  subroutine mhdflux(flux,cfr,u,b,n)
+  subroutine mhdflux(flux,cfr,uu,bb,n)
     use constants
     use arrays
     use time, only : c
     implicit none
     integer n
-    real, dimension(nu,n)::flux,u,cfr
-    real, dimension(3,n):: b
+    real, dimension(nu,n)::flux,uu,cfr
+    real, dimension(3,n):: bb
 ! locals
     real, dimension(n) :: vx,vy,vz,vt, ps,p,pmag
 
@@ -24,37 +24,37 @@ module fluxes
     
     cfr = 0.0 
 
-    pmag(2:n-1)=(b(ibx,2:n-1)*b(ibx,2:n-1)+b(iby,2:n-1)*b(iby,2:n-1)+b(ibz,2:n-1)*b(ibz,2:n-1))*0.5
-    vx(2:n-1)=u(imxa,2:n-1)/u(idna,2:n-1)
+    pmag(2:n-1)=(bb(ibx,2:n-1)*bb(ibx,2:n-1)+bb(iby,2:n-1)*bb(iby,2:n-1)+bb(ibz,2:n-1)*bb(ibz,2:n-1))*0.5
+    vx(2:n-1)=uu(imxa,2:n-1)/uu(idna,2:n-1)
 
 ! UWAGA ZMIANA W OBLICZANIU LOKALNEJ PREDKOSCI NA PROBE
 ! mh 22-11-07 w problemach z udzialem promieniowania kosmicznego
 ! uzycie vx prowadzi do nieduzych oscylacji, a dla vt oscylacji nie widac,
 ! wobec tego po krotkim powrocie do vx (v.1.2) przywracam vt (v.1.3)
 
-    vy(2:n-1)=u(imya,2:n-1)/u(idna,2:n-1)
-    vz(2:n-1)=u(imza,2:n-1)/u(idna,2:n-1)
+    vy(2:n-1)=uu(imya,2:n-1)/uu(idna,2:n-1)
+    vz(2:n-1)=uu(imza,2:n-1)/uu(idna,2:n-1)
     vt = sqrt(vx*vx+vy*vy+vz*vz)
     
     
 #ifdef ISO
-    p(2:n-1) = csi2*u(idna,2:n-1)
+    p(2:n-1) = csi2*uu(idna,2:n-1)
     ps(2:n-1)= p(2:n-1) + pmag(2:n-1)
 #else ISO    
-    ps(2:n-1)=(u(iena,2:n-1)-(u(imxa,2:n-1)*u(imxa,2:n-1)+u(imya,2:n-1)*u(imya,2:n-1) & 
-              +u(imza,2:n-1)*u(imza,2:n-1))/u(idna,2:n-1)*0.5)*(gamma-1)+(2-gamma)*pmag(2:n-1)
+    ps(2:n-1)=(uu(iena,2:n-1)-(uu(imxa,2:n-1)*uu(imxa,2:n-1)+uu(imya,2:n-1)*uu(imya,2:n-1) & 
+              +uu(imza,2:n-1)*uu(imza,2:n-1))/uu(idna,2:n-1)*0.5)*(gamma-1)+(2-gamma)*pmag(2:n-1)
     p(2:n-1)=ps(2:n-1)-pmag(2:n-1)
 #endif ISO
-    flux(idna,2:n-1)=u(imxa,2:n-1)
-    flux(imxa,2:n-1)=u(imxa,2:n-1)*vx(2:n-1)+ps(2:n-1)-b(ibx,2:n-1)*b(ibx,2:n-1)
-    flux(imya,2:n-1)=u(imya,2:n-1)*vx(2:n-1)-b(iby,2:n-1)*b(ibx,2:n-1)
-    flux(imza,2:n-1)=u(imza,2:n-1)*vx(2:n-1)-b(ibz,2:n-1)*b(ibx,2:n-1)
+    flux(idna,2:n-1)=uu(imxa,2:n-1)
+    flux(imxa,2:n-1)=uu(imxa,2:n-1)*vx(2:n-1)+ps(2:n-1)-bb(ibx,2:n-1)*bb(ibx,2:n-1)
+    flux(imya,2:n-1)=uu(imya,2:n-1)*vx(2:n-1)-bb(iby,2:n-1)*bb(ibx,2:n-1)
+    flux(imza,2:n-1)=uu(imza,2:n-1)*vx(2:n-1)-bb(ibz,2:n-1)*bb(ibx,2:n-1)
 #ifndef ISO
-    flux(iena,2:n-1)=(u(iena,2:n-1)+ps(2:n-1))*vx(2:n-1)-b(ibx,2:n-1)*(b(ibx,2:n-1)*u(imxa,2:n-1) &
-                +b(iby,2:n-1)*u(imya,2:n-1)+b(ibz,2:n-1)*u(imza,2:n-1))/u(idna,2:n-1)
+    flux(iena,2:n-1)=(uu(iena,2:n-1)+ps(2:n-1))*vx(2:n-1)-bb(ibx,2:n-1)*(bb(ibx,2:n-1)*uu(imxa,2:n-1) &
+                +bb(iby,2:n-1)*uu(imya,2:n-1)+bb(ibz,2:n-1)*uu(imza,2:n-1))/uu(idna,2:n-1)
 #endif ISO
 #ifdef COSM_RAYS
-    flux(iecr,2:n-1)= u(iecr,2:n-1)*vx(2:n-1)
+    flux(iecr,2:n-1)= uu(iecr,2:n-1)*vx(2:n-1)
 #endif COSM_RAYS
 #ifdef LOCAL_FR_SPEED
 
@@ -65,12 +65,12 @@ module fluxes
 ! UWAGA ZMIANA W OBLICZANIU LOKALNEJ PREDKOSCI NA PROBE
 !        cfr(1,2:n-1) = abs(vx(2:n-1)) &
         cfr(1,2:n-1) = abs(vt(2:n-1)) &
-                      +max(sqrt( abs(2*pmag(2:n-1) + p(2:n-1))/u(idna,2:n-1)),small)
+                      +max(sqrt( abs(2*pmag(2:n-1) + p(2:n-1))/uu(idna,2:n-1)),small)
 #else ISO   
 ! UWAGA ZMIANA W OBLICZANIU LOKALNEJ PREDKOSCI NA PROBE
 !        cfr(1,2:n-1) = abs(vx(2:n-1)) &
         cfr(1,2:n-1) = abs(vt(2:n-1)) &
-                      +max(sqrt( abs(2*pmag(2:n-1) + gamma*p(2:n-1))/u(idna,2:n-1)),small)
+                      +max(sqrt( abs(2*pmag(2:n-1) + gamma*p(2:n-1))/uu(idna,2:n-1)),small)
 #endif ISO
         cfr(1,1) = cfr(1,2)
         cfr(1,n) = cfr(1,n-1)   

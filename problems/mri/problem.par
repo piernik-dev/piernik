@@ -1,7 +1,7 @@
  $DOMAIN_SIZES
-    nxd = 64
-    nyd = 64
-    nzd = 64
+    nxd = 31
+    nyd = 63
+    nzd = 31
     nb  = 4
  /  
 
@@ -20,13 +20,13 @@
  /
 
  $END_CONTROL
-    tend   = 20.0
+    tend   = 2.0e5
     nend   = 100000
  /
 
  $OUTPUT_CONTROL
-    dt_hdf  = 0.1
-    dt_res  = 100.0
+    dt_hdf  = 1.e2
+    dt_res  = 1.e5
     dt_log  = 1.0e-6
     dt_tsl  = 1.0e-6
     vars(1) = 'dens'
@@ -37,8 +37,7 @@
     vars(6) = 'magx'
     vars(7) = 'magy'
     vars(8) = 'magz'
-    vars(9) = 'gpot'
-    domain  = 'full_domain'
+    domain  = 'phys_domain'
    
  / 
 
@@ -52,25 +51,24 @@
  /
 
  $DOMAIN_LIMITS
-    xmin   =-1.0
-    xmax   = 1.0
-    ymin   =-1.0
-    ymax   = 1.0
-    zmin   =-6.5
-    zmax   = 6.5
+    xmin   =-0.5
+    xmax   = 0.5
+    ymin   =-3.141562
+    ymax   = 3.141562
+    zmin   =-0.5
+    zmax   = 0.5
  /
 
  $EQUATION_OF_STATE
-    c_si   =  1.
-    alpha  = 1.0 
+    c_si   = 1.e-3
  /  
 
  $NUMERICAL_SETUP
-    cfl    = 0.5
+    cfl    = 0.7
     big    = 1.e+50
     small  = 1.e-50
     smalld = 1.e-5
-    smallei= 1.e-4
+    smallei= 1.e-12
     integration_order = 2
     magnetic = 'yes'
     dimensions = '3d'
@@ -78,12 +76,6 @@
  
  $GRAVITY
     grav_model ='null'
-    r_gc   = 8500
-    nsub   = 10
-    tune_zeq     = 1.0 !1.0025
-    tune_zeq_bnd = 0.833  !0.9
-    h_grav = 300.
-    n_gravh = 0    
  /
  
  $THERMAL
@@ -91,27 +83,25 @@
  
  $RESISTIVITY
     cfl_resist  =  0.9
-    eta_0   	=  0.1
+    eta_0       =  0.0
     eta_1       =  0.0
     j_crit      =  1.0
-    deint_max    = 0.01
+    deint_max   = 0.01
  /
 
  $PROBLEM_CONTROL
-    problem_name ='mri_random_r01'
-    run_id =  'tst'
-    d0     =  1.
-    x0     = 0.0
-    y0     = 0.0
-    z0     = 0.0
-    r0     = 0.25
-    nbx0    = 0.0
-    nby0    = 0.0
-    nbz0    = 1.0
-    a_vp    = 0.0
+    problem_name ='mri'
+    run_id =  'Z3_'
+    d0     =  1.0
+    nbx0   = 0.0
+    nby0   = 0.0
+    nbz0   = 1.0
+    beta   = 100.0 
+    dv     = 5.0e-3
+    dp     = 2.5e-2
  /
 
  $SHEARING
-   omega  = 1.0
+   omega  = 1.0e-3
    qshear = 1.5
  /

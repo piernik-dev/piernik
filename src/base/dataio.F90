@@ -39,15 +39,15 @@ module dataio
 !  integer ctoi
 !  external ctoi
   character hostfull*(80), host*8, fhost*10, fpid*10
-  integer pid, uid, ihost, scstatus 
-  integer getcwd, hostnm, getpid, system
-  external getcwd, hostnm, getpid, system
+  integer :: pid, uid, ihost, scstatus 
+!  integer :: getcwd, hostnm, getpid, system
+!  external getcwd, hostnm, getpid, system
 
   real vx_max, vy_max, vz_max, va2max,va_max, cs2max, cs_max, &
        dens_min, dens_max, pres_min, pres_max, b_min, b_max, temp_min, temp_max
 #ifdef COSM_RAYS
   real encr_min, encr_max    
-#endif COSM_RAYS
+#endif 
 
 
 
@@ -136,7 +136,7 @@ module dataio
 
 
 
-      scstatus = GetCWD(cwd)
+      scstatus =  GetCWD(cwd)
       IF(scstatus .ne. 0) stop '(PROBLEMS ACCESSING WORKING DIRECTORY)'
 
       pid = GetPid()
@@ -152,10 +152,10 @@ module dataio
       ihost = index(hostfull,'.')
       if (ihost .eq. 0) ihost = index(hostfull,' ')
       host = hostfull(1:ihost-1)
-!      fhost='./host.tmp'
-!      OPEN(99, FILE=fhost)
-!        write(99,'(A8)') host
-!      CLOSE(99)      
+ !     fhost='./host.tmp'
+ !     OPEN(99, FILE=fhost)
+ !       write(99,'(A8)') host
+ !     CLOSE(99)      
       
 
   end subroutine init_dataio
@@ -360,6 +360,7 @@ module dataio
         wa(iso:ieo,jso:jeo,kso:keo) = 0.5*(u(imxa,iso:ieo,jso:jeo,kso:keo)**2 &  
                                     +u(imya,iso:ieo,jso:jeo,kso:keo)**2 &
                                     +u(imza,iso:ieo,jso:jeo,kso:keo)**2)/u(idna,iso:ieo,jso:jeo,kso:keo)
+! <> ISO
 #else 
       case ('ener')
         wa(iso:ieo,jso:jeo,kso:keo) = u(iena,iso:ieo,jso:jeo,kso:keo)
@@ -368,11 +369,12 @@ module dataio
 	                            - 0.5*(u(imxa,iso:ieo,jso:jeo,kso:keo)**2 &  
                                           +u(imya,iso:ieo,jso:jeo,kso:keo)**2 &
                                           +u(imza,iso:ieo,jso:jeo,kso:keo)**2)/u(idna,iso:ieo,jso:jeo,kso:keo)
+!--> ISO
 #endif
 #ifdef COSM_RAYS
       case ('encr')
         wa(iso:ieo,jso:jeo,kso:keo) = u(iecr,iso:ieo,jso:jeo,kso:keo)
-#endif COSM_RAYS
+#endif 
 
       case ('gpot')
         wa(iso:ieo,jso:jeo,kso:keo) = gp(iso:ieo,jso:jeo,kso:keo)
@@ -820,7 +822,7 @@ module dataio
     if((resdel .ne. 0) .and. (nres .gt. resdel)) then
         inquire(file=filenamelast, exist=lastres_exist)
         if(lastres_exist) then
-          syscom='rm '//filenamelast
+          syscom='rm -f'//filenamelast
           scstatus = system(syscom)
           write(*,*) trim(filenamelast),' removed'
         else
@@ -899,14 +901,14 @@ module dataio
     endif
 
     inquire(file =log_file , exist = log_exist)
-    if(file_exist .eq. .true.) then
+    if(file_exist .eqv. .true.) then
       open(log_lun, file=log_file, position='append')  
         write(log_lun,*) 'Reading restart  file: ', trim(filenamedisp)    
       close(log_lun)
     endif
       
     inquire(file = filename, exist = file_exist)
-    if(file_exist .eq. .false.) then
+    if(file_exist .eqv. .false.) then
       if(log_exist) then
         open(log_lun, file=log_file, position='append')  
           write(log_lun,*) 'Restart  file: ', trim(filename), &
@@ -1075,8 +1077,7 @@ module dataio
       
       restart_number = 0 
 
-      write (filename_base,'(a,a1,a3,a1') &
-              trim(problem_name),'_', run_id,'_'  
+      write (filename_base,'(a,a1,a3,a1)') trim(problem_name),'_',run_id,'_'
 
       call rm_file('restart_list.tmp')
       
@@ -1110,12 +1111,12 @@ module dataio
     use init_problem
 #ifdef COOL_HEAT    
     use thermal
-#endif COOL_HEAT    
+#endif
 #ifdef RESIST
     use resistivity
-#endif RESIST
-    
-    implicit none
+#endif
+   
+     implicit none
     integer i,j,k
 
     character(len=128) :: tsl_file
@@ -1142,16 +1143,16 @@ module dataio
 					   'mflx', 'mfly', 'mflz', & 
 #ifdef COSM_RAYS
 					   'encr_tot', 'encr_min',  'encr_max',&
-#endif COSM_RAYS
+#endif 
 #ifdef RESIST
                                            'eta_max', &
-#endif RESIST
+#endif
 ! some quantities computed in "write_log".One can add more, or change.
                                            'vx_max', 'vy_max', 'vz_max', 'va_max', 'cs_max', &
                                            'dens_min', 'dens_max', 'pres_min', 'pres_max', &
 #ifndef ISO	 
 	                                   'temp_min', 'temp_max',  &
-#endif ISO	  
+#endif
 	                                   'b_min', 'b_max' 
                                            
 
@@ -1187,7 +1188,8 @@ module dataio
 !DW-
     epot = sum(u(idna,is:ie,js:je,ks:ke) *gp(is:ie,js:je,ks:ke)) * dvol
     call mpi_allreduce(epot, tot_epot, 1, mpi_real8, mpi_sum, comm3d, ierr)
-#endif GRAV
+!--> GRAV
+#endif 
 
     wa(is:ie,js:je,ks:ke) &
         = 0.5 * (u(imxa,is:ie,js:je,ks:ke)**2   &
@@ -1221,38 +1223,40 @@ module dataio
 #ifdef ISO
     tot_eint = csi2*tot_mass
     tot_ener = tot_eint+tot_ekin+tot_emag
+! <> ISO
 #else
     ener = sum(u(iena,is:ie,js:je,ks:ke)) * dvol
     call mpi_allreduce(ener, tot_ener, 1, mpi_real8, mpi_sum, comm3d, ierr)
     tot_eint = tot_ener - tot_ekin - tot_emag
-#endif ISO
+!--> ISO
+#endif 
 #ifdef GRAV
     tot_ener = tot_ener + tot_epot
-#endif GRAV
+#endif 
 
 #ifdef COSM_RAYS
     encr = sum(u(iecr,is:ie,js:je,ks:ke)) * dvol
     call mpi_allreduce(encr, tot_encr, 1, mpi_real8, mpi_sum, comm3d, ierr)
-#endif COSM_RAYS
+#endif
 
 
     if (proc .eq. 0) then
       write (tsl_lun, '(1x,50(1x,1pe15.8))') t, dt, tot_mass, &
                                              tot_momx, tot_momy, tot_momz, tot_amomz, &
                                              tot_ener, tot_epot, tot_eint, tot_ekin, tot_emag, &
-					     mflx, mfly, mflz, &
+                    mflx, mfly, mflz, &
 #ifdef COSM_RAYS
-					     tot_encr, encr_min, encr_max, & 
-#endif COSM_RAYS
+                    tot_encr, encr_min, encr_max, & 
+#endif 
 #ifdef RESIST
                                              eta_max, &
-#endif RESIST
+#endif
 ! some quantities computed in "write_log".One can add more, or change.
                                              vx_max, vy_max, vz_max, va_max, cs_max, &
                                              dens_min, dens_max, pres_min, pres_max, &
 #ifndef ISO	  
 	                                     temp_min, temp_max,  &
-#endif ISO	  
+#endif 
 	                                     b_min, b_max 
       close(tsl_lun)
     endif
@@ -1277,7 +1281,7 @@ module dataio
     use thermal
 #ifdef RESIST
     use resistivity
-#endif RESIST
+#endif 
     
     
     
@@ -1290,10 +1294,10 @@ module dataio
                              loc_temp_min, loc_temp_max
 #ifdef COOL_HEAT			    
     integer, dimension(3) :: loc_dt_cool, loc_dt_heat
-#endif COOL_HEAT
+#endif 
 #ifdef COSM_RAYS
     integer, dimension(3) :: loc_encr_min, loc_encr_max
-#endif COSM_RAYS
+#endif 
                              
     integer               :: proc_vx_max, proc_vy_max, proc_vz_max, proc_va_max, &
                              proc_cs_max, proc_dens_min, proc_dens_max, proc_pres_min, & 
@@ -1301,13 +1305,13 @@ module dataio
                              proc_temp_min, proc_temp_max
 #ifdef COOL_HEAT			     
     integer               :: proc_dt_cool, proc_dt_heat
-#endif COOL_HEAT
+#endif 
 #ifdef RESIST
     integer               :: proc_eta_max 
-#endif RESIST
+#endif 
 #ifdef COSM_RAYS
     integer               :: proc_encr_min, proc_encr_max
-#endif COSM_RAYS                             
+#endif 
     
 ! Timestep diagnostics
 
@@ -1379,6 +1383,7 @@ module dataio
     temp_max      = hydro_mass / k_B * csi2
     loc_temp_max  = 0
     proc_temp_max = 0          
+! <> ISO
 #else
     wa            = (u(iena,:,:,:) &                ! eint
                   - 0.5*(sum(u(imxa:imza,:,:,:)**2,1) /u(idna,:,:,:) + wa))
@@ -1416,6 +1421,7 @@ module dataio
                             /u(idna,is:ie,js:je,ks:ke)) & 
                      + (/nb,nb,nb/)
     call mpifind(cs_max, 'max', loc_cs_max, proc_cs_max)
+!--> ISO
 #endif
     
 #ifdef COOL_HEAT
@@ -1423,7 +1429,7 @@ module dataio
       call mpifind(eint_src_max, 'max', loc_dt_heat, proc_dt_heat)
       call mpifind(dt_cool,      'min', loc_dt_cool, proc_dt_cool)
       call mpifind(dt_heat,      'min', loc_dt_heat, proc_dt_heat)
-#endif COOL_HEAT
+#endif 
 #ifdef RESIST
 ! Tu trzba sprawdzic czy poprawnie znajdowane jest max i loc dla wielu procesow
       call mpifind(eta_max,      'max', loc_eta_max, proc_eta_max)
@@ -1440,7 +1446,7 @@ module dataio
     loc_encr_max  = maxloc(wa(is:ie,js:je,ks:ke)) &
                   + (/nb,nb,nb/)
     call mpifind(encr_max, 'max', loc_encr_max, proc_encr_max)
-#endif COSM_RAYS
+#endif 
 
     if(proc .eq. 0)  then
     
@@ -1464,14 +1470,14 @@ module dataio
 #ifdef COOL_HEAT
         write(log_lun,777) 'min(esrc/eint) =', eint_src_min , 'dt=',dt_cool,   proc_dt_cool,  loc_dt_cool
         write(log_lun,777) 'max(esrc/eint) =', eint_src_max , 'dt=',dt_heat,   proc_dt_heat,  loc_dt_heat 
-#endif COOL_HEAT       
+#endif 
 #ifdef RESIST
         write(log_lun,777) 'max(eta)       =', eta_max ,      'dt=',dt_resist, proc_eta_max,  loc_eta_max
 #endif
 #ifdef COSM_RAYS
         write(log_lun,777) 'min(encr)      =', encr_min,         '',  0.0,     proc_encr_min, loc_encr_min   
         write(log_lun,777) 'max(encr)      =', encr_max,      'dt=',dt_cr,     proc_encr_max, loc_encr_max   
-#endif COSM_RAYS
+#endif
 
         write(log_lun,900) nstep,dt,t
 
@@ -1514,7 +1520,7 @@ module dataio
       
       integer isend(2), irecv(2), loc_proc, ispace_min, isp(1), isp_min(1)
       real rsend(2), rrecv(2), rsp(1), rsp_min(1)
-      real tsleep
+      integer tsleep
 
 
 !-------------------------------------------------------------------------
@@ -1697,7 +1703,7 @@ module dataio
 
 ! inform if disk space is restored
 
-        if(diskfree .eq. .false.) then
+        if(diskfree .eqv. .false.) then
           if(proc .eq. 0) then
             write(*,*)
             write(*,18) (darray(i),i=1,3),(tarray(i),i=1,3) 
@@ -1875,7 +1881,7 @@ module dataio
 !     delete file if exists
       inquire(file = filename, exist = exist)
       if(exist) then
-        syscom='rm '//filename
+        syscom='rm -f'//filename
         scstatus = system(syscom)
       endif
 

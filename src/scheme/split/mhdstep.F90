@@ -7,7 +7,7 @@ module mod_mhdstep   ! SPLIT
   use advects
 #ifdef RESIST  
   use resistivity
-#endif RESIST
+#endif 
 #ifdef SHEAR  
   use shear
 #endif SHEAR  
@@ -44,7 +44,7 @@ subroutine mhdstep
   endif
 
   if(proc.eq.0) write(*,900) nstep,dt,t
-900      format('   nstep = ',i7,'   dt = ',f22.16,'   t = ',f22.16)
+900      format('   nstep = ',i7,'   dt = ',e22.16,'   t = ',e22.16)
 
       t=t+dt
 #ifdef SHEAR
@@ -60,20 +60,19 @@ subroutine mhdstep
       if(magfield) call magfieldbyzx 
 #ifdef COSM_RAYS          
       call cr_diff_x 
-#endif COSM_RAYS                 
+#endif 
       call fluidy                         ! y sweep                      
       if(magfield) call magfieldbzxy        
 #ifdef COSM_RAYS          
       call cr_diff_y   
-#endif COSM_RAYS                 
+#endif
     if(dimensions .eq. '3d') then
       call fluidz                         ! z sweep                      
       if(magfield) call magfieldbxyz        
 #ifdef COSM_RAYS          
       call cr_diff_z   
-#endif COSM_RAYS                 
+#endif 
     endif
-
 ! Sources ----------------------------------------
 
 #ifdef SN_SRC          
@@ -96,18 +95,18 @@ subroutine mhdstep
     if(dimensions .eq. '3d') then
 #ifdef COSM_RAYS          
       call cr_diff_z   
-#endif COSM_RAYS                 
+#endif                 
       if(magfield) call magfieldbxyz      ! z sweep                       
       call fluidz                         
     endif
 #ifdef COSM_RAYS          
       call cr_diff_y   
-#endif COSM_RAYS                 
+#endif                 
       if(magfield) call magfieldbzxy      ! y sweep                       
       call fluidy                         
 #ifdef COSM_RAYS          
       call cr_diff_x   
-#endif COSM_RAYS                 
+#endif                 
       if(magfield) call magfieldbyzx      ! x sweep                      
       call fluidx                         
 
@@ -121,16 +120,16 @@ end subroutine mhdstep
     bi(:,:,:,:) = b(:,:,:,:)
     
     do istep=1, integration_order
-#endif SSP
+#endif 
 
       call advectby_x
 #ifdef RESIST
       call diffuseby_x
-#endif RESIST
+#endif 
       call mag_add(iby,xdim,ibx,ydim)
 #ifdef SSP
     enddo
-#endif SSP
+#endif 
 
     if(dimensions .eq. '3d') then
 
@@ -139,17 +138,17 @@ end subroutine mhdstep
     bi(:,:,:,:) = b(:,:,:,:)
     
     do istep=1, integration_order
-#endif SSP
+#endif 
       call advectbz_x
 
 #ifdef RESIST
       call diffusebz_x
-#endif RESIST
+#endif 
 
       call mag_add(ibz,xdim,ibx,zdim)
 #ifdef SSP
     enddo
-#endif SSP
+#endif 
 
     endif
 
@@ -166,15 +165,15 @@ end subroutine mhdstep
     bi(:,:,:,:) = b(:,:,:,:)
     
     do istep=1, integration_order
-#endif SSP
+#endif 
       call advectbz_y
 #ifdef RESIST
       call diffusebz_y
-#endif RESIST
+#endif 
       call mag_add(ibz,ydim,iby,zdim)
 #ifdef SSP
     enddo
-#endif SSP
+#endif 
 
     endif
 
@@ -183,15 +182,15 @@ end subroutine mhdstep
     bi(:,:,:,:) = b(:,:,:,:)
 
     do istep=1,integration_order
-#endif SSP
+#endif 
       call advectbx_y
 #ifdef RESIST
       call diffusebx_y
-#endif RESIST
+#endif
       call mag_add(ibx,ydim,iby,xdim)
 #ifdef SSP
     enddo
-#endif SSP
+#endif 
 
   end subroutine magfieldbzxy
 
@@ -204,30 +203,30 @@ end subroutine mhdstep
     bi(:,:,:,:) = b(:,:,:,:)
 
     do istep=1,integration_order
-#endif SSP
+#endif 
       call advectbx_z
 #ifdef RESIST
       call diffusebx_z
-#endif RESIST
+#endif 
       call mag_add(ibx,zdim,ibz,xdim)
 #ifdef SSP
     enddo
-#endif SSP
+#endif 
 
 #ifdef SSP
 ! Now bi is the initial magnetic field 
     bi(:,:,:,:) = b(:,:,:,:)
 
     do istep=1,integration_order
-#endif SSP
+#endif 
       call advectby_z
 #ifdef RESIST
       call diffuseby_z
-#endif RESIST
+#endif 
       call mag_add(iby,zdim,ibz,ydim)
 #ifdef SSP
     enddo
-#endif SSP
+#endif 
 
   end subroutine magfieldbxyz
 
@@ -247,8 +246,8 @@ end subroutine mhdstep
     b(ib2,:,:,:) = b(ib2,:,:,:) + wcu/dl(dim2)
     wcu = cshift(wcu,shift=1,dim=dim2)
     b(ib2,:,:,:) = b(ib2,:,:,:) - wcu/dl(dim2)
-
-#endif RESIST
+!--> RESIST
+#endif 
 ! ADVECTION FULL STEP
 
     b(ib1,:,:,:) = b(ib1,:,:,:) - wa/dl(dim1)
@@ -257,8 +256,8 @@ end subroutine mhdstep
     b(ib2,:,:,:) = b(ib2,:,:,:) - wa/dl(dim2)
     wa = cshift(wa,shift=1,dim=dim2)
     b(ib2,:,:,:) = b(ib2,:,:,:) + wa/dl(dim2)
-
-#endif ORIG
+!--> ORIG
+#endif 
 
 #ifdef SSP
 
@@ -277,8 +276,8 @@ end subroutine mhdstep
     b(ib2,:,:,:) = b(ib2,:,:,:) + cn(2,istep)*wcu/dl(dim2)
     wcu = cshift(wcu,shift=1,dim=dim2)
     b(ib2,:,:,:) = b(ib2,:,:,:) - cn(2,istep)*wcu/dl(dim2)
-  
-#endif RESIST
+!--> RESIST 
+#endif 
 ! ADVECTION STEP
 
     b(ib1,:,:,:) = b(ib1,:,:,:) - cn(2,istep)*wa/dl(dim1)
@@ -287,8 +286,8 @@ end subroutine mhdstep
     b(ib2,:,:,:) = b(ib2,:,:,:) - cn(2,istep)*wa/dl(dim2)
     wa = cshift(wa,shift=1,dim=dim2)
     b(ib2,:,:,:) = b(ib2,:,:,:) + cn(2,istep)*wa/dl(dim2)
-
-#endif SSP
+!--> SSP
+#endif 
 
     call compute_b_bnd
 

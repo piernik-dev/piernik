@@ -22,11 +22,11 @@ module tv   ! split ssp
   end subroutine tvdb
 
    subroutine relaxing_tvd(u,bb,sweep,i1,i2,dx,n,dt)
-
+      use fluxes
 #ifdef GRAV
-   use gravity, only :grav_pot2accel
+      use gravity, only :grav_pot2accel
 #endif GRAV
-   use grid, only : x
+      use grid, only : x
 
     implicit none
     integer i1,i2, n

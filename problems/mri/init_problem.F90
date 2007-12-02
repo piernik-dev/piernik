@@ -7,17 +7,12 @@ module init_problem
 
   use arrays
   use start
-  use grid
-  use fluid_boundaries
-  use hydrostatic
 
-  real ::  coldens, d0, nbx0,nby0,nbz0, a_vp, n_x, r0,x0,y0,z0
+  real ::  d0,nbx0,nby0,nbz0,beta,dv
   character problem_name*32,run_id*3
 
   namelist /PROBLEM_CONTROL/  problem_name, run_id, &
-                              d0, &
-                              nbx0,nby0,nbz0, &
-			      a_vp, n_x, r0,x0,y0,z0
+                              d0,nbx0,nby0,nbz0,beta,dv,dp
 
 contains
 
@@ -30,15 +25,10 @@ contains
       problem_name = 'xxx'
       run_id  = 'aaa'
       d0      = 1.0
-      x0      = 0.0
-      y0      = 0.0
-      z0      = 0.0
-      r0      = 0.5
       nbx0    = 0.0
       nby0    = 1.0
       nbz0    = 0.0
-      a_vp    = 0.0
-      n_x     = 3.0
+      beta    = 1.0
     
     if(proc .eq. 0) then    
       open(1,file='problem.par')
@@ -60,13 +50,9 @@ contains
       rbuff(2) = nbx0
       rbuff(3) = nby0
       rbuff(4) = nbz0
-      rbuff(5) = a_vp
-      rbuff(6) = omega
-      rbuff(7) = n_x
-      rbuff(8) = x0
-      rbuff(9) = y0
-      rbuff(10) = z0
-      rbuff(11) = r0
+      rbuff(5) = beta
+      rbuff(6) = dv
+      rbuff(7) = dp
 
       call MPI_BCAST(cbuff, 32*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
       call MPI_BCAST(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
@@ -85,15 +71,9 @@ contains
       nbx0         = rbuff(2)  
       nby0         = rbuff(3)  
       nbz0         = rbuff(4)  
-      a_vp         = rbuff(5)  
-      omega        = rbuff(6)
-      n_x          = rbuff(7)
-      x0           = rbuff(8)
-      y0           = rbuff(9)
-      z0           = rbuff(10)
-      r0           = rbuff(11)
-
-
+      beta         = rbuff(5)
+      dv           = rbuff(6)
+      dp           = rbuff(7)
     endif
 
   end subroutine read_problem_par
@@ -101,20 +81,21 @@ contains
 !-----------------------------------------------------------------------------
 
   subroutine init_prob
+    use grid,  only : x
 
     implicit none
 
-    integer i,j,k
-    real b0, vz
-    real, allocatable :: dprof(:)
-    real, dimension(3) :: rand
+    integer :: i,j,k
+    real :: b0,p0
+    real, dimension(4) :: rand
 
 
     call read_problem_par
 
 !   Secondary parameters
-
-    b0 = sqrt(2.*alpha*d0*c_si**2) 
+    p0 = c_si**2*d0
+    b0 = sqrt(2.0*p0/beta) 
+    
     call random_seed()
     do k = 1,nz
       do j = 1,ny
@@ -123,10 +104,13 @@ contains
           call random_number(rand)
           u(imxa:imza,i,j,k) = 0.0
           u(imya,i,j,k) = -qshear*omega*x(i)*u(idna,i,j,k)
-          u(imxa:imza,i,j,k) = u(imxa:imza,i,j,k) + 0.1*(rand(1)-0.5)
 
+          u(imxa,i,j,k) = u(imxa,i,j,k) + dv*c_si*(rand(1)-0.5)/sqrt(gamma)
+          u(imya,i,j,k) = u(imya,i,j,k) + dv*c_si*(rand(2)-0.5)/sqrt(gamma)
+          u(imza,i,j,k) = u(imza,i,j,k) + dv*c_si*(rand(3)-0.5)/sqrt(gamma)
 #ifndef ISO
-          u(iena,i,j,k)   = 1.0/(gamma-1.0) +0.5*sum(u(imxa:imza,i,j,k)**2,1)
+          u(iena,i,j,k)   = p0/(gamma-1.0)*(1.0 + dp*(rand(4)-0.5)) &
+            + 0.5*sum(u(imxa:imza,i,j,k)**2,1)
 #endif
         enddo
       enddo
@@ -136,9 +120,9 @@ contains
     do k = 1,nz
       do j = 1,ny
         do i = 1,nx
-          b(ibx,i,j,k)   = nbx0 !b0*sqrt(u(idna,i,j,k)/d0)* nbx0/sqrt(nbx0**2+nby0**2+nbz0**2+small)
-          b(iby,i,j,k)   = nby0 !b0*sqrt(u(idna,i,j,k)/d0)* nby0/sqrt(nbx0**2+nby0**2+nbz0**2+small)
-          b(ibz,i,j,k)   = nbz0 !b0*sqrt(u(idna,i,j,k)/d0)* nbz0/sqrt(nbx0**2+nby0**2+nbz0**2+small)
+          b(ibx,i,j,k)   = b0*sqrt(u(idna,i,j,k)/d0)* nbx0/sqrt(nbx0**2+nby0**2+nbz0**2+small)
+          b(iby,i,j,k)   = b0*sqrt(u(idna,i,j,k)/d0)* nby0/sqrt(nbx0**2+nby0**2+nbz0**2+small)
+          b(ibz,i,j,k)   = b0*sqrt(u(idna,i,j,k)/d0)* nbz0/sqrt(nbx0**2+nby0**2+nbz0**2+small)
 #ifndef ISO
           u(iena,i,j,k)   = u(iena,i,j,k) +0.5*sum(b(:,i,j,k)**2,1)
 #endif

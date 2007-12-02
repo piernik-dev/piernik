@@ -10,7 +10,7 @@ module timer
   
   integer       nzones, cpuhours, cpumins, cpusecs , wchours , wcmins  , wcsecs 
   real          zcps,  cputot, cpuallp, wctot, cpu_start, cpu_stop   
-  real(kind=4)  etime, dtime
+!  real(kind=4)  etime, dtime
   real(kind=4)  tarray(2)
   integer       iarray(3)
 
@@ -18,7 +18,7 @@ contains
 
   subroutine timer_start
 
-    external      etime, dtime, itime
+!    external      etime, dtime, itime
 
 !
 !      Initialise cpu and wall clocks.  "cputot" will be the total cpu
@@ -40,7 +40,7 @@ contains
 
   subroutine timer_stop
 
-    external      etime, dtime, itime
+!    external      etime, dtime, itime
 !
 !      Final wall clock time, expressed in hours, minutes, and seconds.
 !

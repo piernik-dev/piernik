@@ -268,8 +268,10 @@
     
     
     character what*(*)
-    real var, rsend(2), rrecv(2)
-    integer loc_arr(3), loc_proc
+    real       :: var
+    real, dimension(2)    :: rsend, rrecv
+    integer, dimension(3) :: loc_arr
+    integer               :: loc_proc
         
     rsend(1) = var
     rsend(2) = proc

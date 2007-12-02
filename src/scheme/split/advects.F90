@@ -26,9 +26,9 @@ module advects    ! split advects
         by_x=b(iby,:,j,k)
 #ifdef ORIG
         call tvdb(vxby,by_x,vx,nx,dt,dx)
-#else ORIG
+#else 
         call tvdb(vxby,by_x,vx,nx,dt)
-#endif ORIG
+#endif 
         wa(:,j,k) = vxby
       end do
     end do
@@ -57,9 +57,9 @@ module advects    ! split advects
         bz_x=b(ibz,:,j,k)
 #ifdef ORIG
         call tvdb(vxbz,bz_x,vx,nx,dt,dx)
-#else ORIG
+#else 
         call tvdb(vxbz,bz_x,vx,nx,dt)
-#endif ORIG
+#endif
         wa(:,j,k) = vxbz
       end do
     end do
@@ -88,9 +88,9 @@ module advects    ! split advects
         bz_y=b(ibz,i,:,k)
 #ifdef ORIG
         call tvdb(vybz,bz_y,vy,ny,dt,dy)
-#else ORIG
+#else 
         call tvdb(vybz,bz_y,vy,ny,dt)
-#endif ORIG
+#endif 
         wa(i,:,k) = vybz
       end do
     end do
@@ -119,9 +119,9 @@ module advects    ! split advects
         bx_y=b(ibx,i,:,k)
 #ifdef ORIG
         call tvdb(vybx,bx_y,vy,ny,dt,dy)
-#else ORIG
+#else 
         call tvdb(vybx,bx_y,vy,ny,dt)
-#endif ORIG
+#endif 
         wa(i,:,k) = vybx
       end do
     end do
@@ -150,9 +150,9 @@ module advects    ! split advects
         bx_z=b(ibx,i,j,:)
 #ifdef ORIG
         call tvdb(vzbx,bx_z,vz,nz,dt,dz)
-#else ORIG
+#else
         call tvdb(vzbx,bx_z,vz,nz,dt)
-#endif ORIG
+#endif
         wa(i,j,:) = vzbx
       end do
     end do
@@ -181,9 +181,9 @@ module advects    ! split advects
         by_z=b(iby,i,j,:)
 #ifdef ORIG
         call tvdb(vzby,by_z,vz,nz,dt,dz)
-#else ORIG
+#else
         call tvdb(vzby,by_z,vz,nz,dt)
-#endif ORIG
+#endif
         wa(i,j,:) = vzby
       end do
     end do

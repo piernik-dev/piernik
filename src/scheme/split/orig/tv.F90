@@ -37,7 +37,7 @@ module tv ! split orig
  ! Cooling and heating implemented following Rafal Kosinski
 #ifdef GRAV
     use gravity, only :grav_pot2accel
-#endif GRAV
+#endif 
     use grid, only : xr
 
     implicit none
@@ -58,10 +58,10 @@ module tv ! split orig
 
 #ifdef GRAV
     real, dimension(nu,n) :: duls,durs
-#endif GRAV
+#endif
 #ifdef COSM_RAYS
     real, dimension(n)    :: divv,decr,gpcr,ecr,tmp
-#endif COSM_RAYS
+#endif
                             
     w         = 0.0
     cfr       = 0.0
@@ -70,7 +70,7 @@ module tv ! split orig
 #ifdef GRAV
     duls = 0.0 
     durs = 0.0
-#endif GRAV
+#endif
     
     u1 = u
 
@@ -115,9 +115,11 @@ module tv ! split orig
     else
       rotfr(:) = 0.0
     endif
-#else  SHEAR
+! <> SHEAR
+#else 
     rotfr(:) = 0.0
-#endif SHEAR
+!--> SHEAR
+#endif 
 
 ! Gravity source terms -------------------------------------
 #ifdef GRAV
@@ -140,12 +142,14 @@ module tv ! split orig
 #ifndef ISO
     duls(iena,:)  = gravr*ul0(imxa,:)*dt 
     durs(iena,:)  = gravl*ur0(imxa,:)*dt
-#endif ISO
+!--> ISO
+#endif 
     duls(imxa,:)  = gravr*ul0(idna,:)*dt
     durs(imxa,:)  = gravl*ur0(idna,:)*dt
     ur1= ur1 + cn(istep)*durs
     ul1= ul1 + cn(istep)*duls
-#endif GRAV
+!--> GRAV
+#endif
 ! ----------------------------------------------------------
 
     u1 = ul1 + ur1
@@ -173,17 +177,17 @@ module tv ! split orig
 
 #ifndef ISO
     u1(iena,:) = u1(iena,:) - cn(istep)*u1(imxa,:)/u1(idna,:)*gpcr*dt
-#endif ISO
+#endif 
     u1(imxa,:) = u1(imxa,:) - cn(istep)*gpcr*dt
-
-#endif COSM_RAYS
+!--> COSM_RAYS
+#endif 
 #ifndef ISO
     ekin = 0.5*(u1(imxa,:)*u1(imxa,:)+u1(imya,:)*u1(imya,:)+u1(imza,:)*u1(imza,:))/u1(idna,:)
     emag = 0.5*(bb(ibx,:)*bb(ibx,:) + bb(iby,:)*bb(iby,:) + bb(ibz,:)*bb(ibz,:)) 
     eint = u1(5,:)-ekin-emag
     eint = max(eint,smallei)
     u1(5,:) = eint+ekin+emag
-#endif ISO
+#endif
     
       u(:,:) = u1(:,:)
   enddo

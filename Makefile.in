@@ -1,13 +1,28 @@
 PROG		 = mhd
 F90		 = mpif90
-F90FLAGS  = -g -C -fpe0 -r8
-#F90FLAGS  = -fastsse -r8
+F90FLAGS  = -g -fpe0 -r8
+F90FLAGS  = -O3 -r8 -ipo
 HDF_LIB  = /opt/intel/hdf4/lib
-MHDF_LIB = /opt/intel/hdf4/include
+MHDF_LIB = /opt/intel/hdf4/include -L/opt/intel/mkl/9.1
 
-### PGI
-#F90		 = /opt/pgi/linux86-64/6.0/mpich2/bin/mpif90
-#F90FLAGS  = -g -C -Ktrap=fp -r8
+### PGI hydra20
+F90		 = /opt/pgi/linux86-64/6.0/mpich2/bin/mpif90
+#F90FLAGS  = -g -Ktrap=fp -r8 -C
+F90FLAGS  = -fastsse -r8
+HDF_LIB  = /opt/pgi/linux86-64/6.0/hdf4/lib -L/opt/pgi/linux86-64/6.0/fftw/lib 
+HDF_LIB  = /opt/pgi/linux86-64/6.0/hdf4/lib -L/opt/pgi/linux86-64/6.0/fftw/lib -lfftw3 -llapack
+MHDF_LIB = /opt/pgi/linux86-64/6.0/hdf4/include
+
+### PGI hydra4
+#F90		 = /opt/pgi/linux86/7.0/mpich2/bin/mpif90
+#F90FLAGS  = -g -Ktrap=fp -r8 -C
 #F90FLAGS  = -fastsse -r8
-#HDF_LIB  = /opt/pgi/linux86-64/6.0/hdf4/lib
-#MHDF_LIB = /opt/pgi/linux86-64/6.0/hdf4/include
+#HDF_LIB  = /opt/pgi/linux86/7.0/hdf4/lib -L/opt/pgi/linux86/7.0/fftw/lib 
+#HDF_LIB  = /opt/pgi/linux86/7.0/hdf4/lib -L/opt/pgi/linux86/7.0/fftw/lib -lfftw3 -llapack
+#MHDF_LIB = /opt/pgi/linux86/7.0/hdf4/include
+
+### GNU 64bit
+F90		 = mpif90
+#F90FLAGS  = -fdefault-real-8 -g
+F90FLAGS  = -fdefault-real-8 -O3 -funroll-loops -m3dnow -msse -msse2 -mfpmath=sse
+HDF_LIB  = . -lfftw3 -llapack 
