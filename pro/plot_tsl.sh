@@ -1,6 +1,6 @@
 #!/bin/tcsh
 
-setenv IDL_PATH "/home/mhanasz/piernik0.1/pro:<IDL_DEFAULT>"
+setenv IDL_PATH "~/piernik0.1/pro:<IDL_DEFAULT>"
 
 echo " "
 echo "WORKING DIRECTORY:"

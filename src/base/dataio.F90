@@ -40,8 +40,12 @@ module dataio
 !  external ctoi
   character hostfull*(80), host*8, fhost*10, fpid*10
   integer :: pid, uid, ihost, scstatus 
-!  integer :: getcwd, hostnm, getpid, system
-!  external getcwd, hostnm, getpid, system
+
+! MH: jesli  te deklaracje konfliktuja w gfortranie 
+! to pewnie trzeba je objac dyrektywami prekompilatora 
+  integer :: getcwd, hostnm, getpid, system
+  external getcwd, hostnm, getpid, system
+! ----------------------------------------------------
 
   real vx_max, vy_max, vz_max, va2max,va_max, cs2max, cs_max, &
        dens_min, dens_max, pres_min, pres_max, b_min, b_max, temp_min, temp_max
