@@ -10,7 +10,6 @@ module sn_sources
   use constants
   use grid
   use start
-  use fluid_boundaries, only : compute_u_bnd 
 #ifdef SHEAR  
   use shear
 #endif SHEAR  
@@ -19,6 +18,7 @@ module sn_sources
   real xsn,ysn,zsn
   real epsi,epso
   real ysna, ysni, ysno
+  real             :: phi,theta
   integer, save :: nsn
   real, save    :: dt_sn_prev, ecr_supl, decr_supl   
   
@@ -33,33 +33,45 @@ module sn_sources
  
   subroutine random_sn
 ! Written by: M. Hanasz  
-    integer i,j,k, ipm, jpm
-    real decr, part_cr_sn      
-    real dt_sn, t_dw1            
-      
-    dt_sn = 1./(f_sn+small) * t_arm/(t_dw+small)   
-      
-    t_dw1  = mod(t,t_dw)
-      
-#ifdef COSM_RAYS
-    if(t_dw1 .lt. t_arm) then
-      part_cr_sn = amp_ecr_sn * 2.*dt/(dt_sn+small)
-    else
-      part_cr_sn = 0.0
-    endif
-#endif COSM_RAYS
 
-    if(dt_sn_prev .gt. dt_sn) then
-      dt_sn_prev = 0.0
-      decr_supl = 0.0
-      nsn = nsn+1
-      call rand_coords
-    endif
+    implicit none 
+    real dt_sn, t_dw1
+    integer isn, nsn, nsn_per_timestep
+    integer, save :: nsn_last            
+      
+    dt_sn = 1./(f_sn+small)  
+      
+    nsn = t/dt_sn
+    nsn_per_timestep = nsn - nsn_last
+    nsn_last = nsn
  
-!    if(nsn .GT. 0) then  
+    do isn = 0, nsn_per_timestep
 
+      call rand_coords
 
-     
+#ifdef COSM_RAYS
+      call cr_sn
+#endif /* COSM_RAYS */
+
+#ifdef DIPOLS
+      call rand_angles !(phi, theta)
+      call dipol_sn
+#endif DIPOLS
+
+    enddo ! isn
+
+    return
+
+  end subroutine random_sn
+
+!--------------------------------------------------------------------------
+ 
+  subroutine cr_sn
+! Written by: M. Hanasz  
+    implicit none
+    integer i,j,k, ipm, jpm   
+    real decr   
+
       do k=1,nz
         do j=1,ny
           do i=1,nx
@@ -72,37 +84,25 @@ module sn_sources
 
               do jpm=-1,1
 
-#ifdef COSM_RAYS
-                decr = part_cr_sn * ethu  &
+
+                decr = amp_ecr_sn * ethu  &
                        * EXP(-((x(i)-xsn+real(ipm)*Lx)**2  &
                        + (y(j)-ysna+real(jpm)*Ly)**2  &
                        + (z(k)-zsn)**2)/r_sn**2)  
 
                 u(iecr,i,j,k) = u(iecr,i,j,k) + decr		
- 
-                if(((i .ge. is) .and. (i .le. ie)) .and. &
-     	           ((j .ge. js) .and. (j .le. je)) .and. &
-     	           ((k .ge. ks) .and. (k .le. ke))) then
-                  decr_supl = decr_supl + decr*dvol
-                  ecr_supl = ecr_supl + decr*dvol
-                endif		
-#endif COSM_RAYS
- 
+  
               enddo ! jpm
             enddo ! ipm
    
           enddo ! i
         enddo ! j
       enddo ! k
-!    endif ! nsn
-     
-    dt_sn_prev = dt_sn_prev + 2.*dt 
 
-    call compute_u_bnd
-      
+         
     return
 
-  end subroutine random_sn
+  end subroutine cr_sn
 
 !--------------------------------------------------------------------------
 
@@ -116,7 +116,7 @@ module sn_sources
     use start, only  : smallei
     implicit none
 !    real, intent(in) :: phi,theta
-    real             :: phi,theta
+!    real             :: phi,theta
 !    real, intent(in) :: amp_dip_sn,rmk
     real             :: rmk
     real             :: temp1,temp2
@@ -158,7 +158,7 @@ module sn_sources
             b(ibz,:,:,:)**2) , smallei)
 #endif ISO
 
-    call rand_angles(phi, theta)
+!    call rand_angles(phi, theta)
      
     do i = 1,nx
       xx = xl(i)
@@ -285,12 +285,13 @@ module sn_sources
 !-----------------------------------------------------------------------
 
 
-  subroutine rand_angles(phi,theta)
+  subroutine rand_angles !(phi,theta)
 ! Written by K. Kowalik
   
     use constants, only : pi
     implicit none
-    real, intent(out) :: phi, theta
+!    real, intent(out) :: phi, theta
+!    real :: phi, theta
     real :: rand(2),rnz,rny,rnx
 
     call random_number(rand)
