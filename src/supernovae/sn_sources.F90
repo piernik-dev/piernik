@@ -19,7 +19,7 @@ module sn_sources
   real epsi,epso
   real ysna, ysni, ysno
   real             :: phi,theta
-  integer, save :: nsn
+  integer, save :: nsn, nsn_last
   real, save    :: dt_sn_prev, ecr_supl, decr_supl   
   
   real gasdev
@@ -36,15 +36,14 @@ module sn_sources
 
     implicit none 
     real dt_sn, t_dw1
-    integer isn, nsn, nsn_per_timestep
-    integer, save :: nsn_last            
+    integer isn, nsn_per_timestep
       
     dt_sn = 1./(f_sn+small)  
       
     nsn = t/dt_sn
     nsn_per_timestep = nsn - nsn_last
     nsn_last = nsn
- 
+    
     do isn = 0, nsn_per_timestep
 
       call rand_coords

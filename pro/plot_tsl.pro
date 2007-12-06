@@ -95,6 +95,13 @@ ENDFOR
 
 if(namearr(0) EQ '#') then namearr = namearr(1:nvar-1)
 nvar = n_elements(namearr)
+IF(nvar MOD 2 EQ 0) THEN BEGIN
+  list_nvar = nvar 
+  list_namearr = namearr  
+ENDIF ELSE BEGIN
+  list_nvar = nvar + 1
+  list_namearr = [namearr,'none']  
+ENDELSE
 
 firststep = 'y'
 
@@ -144,17 +151,21 @@ CASE batchmode OF
   0: BEGIN
        VARIABLES:
        PRINT, ''
-       READ, PROMPT='VARIABLE #/(L)ist/(N)ew data/e(X)it: ', var 
+       READ, PROMPT='VARIABLE #/(l)ist/(n)ew data/e(x)it: ', var 
        IF(var EQ  'x') THEN GOTO, finish
        IF(var EQ  'n') THEN GOTO, start
        IF(var EQ  'l') THEN BEGIN
-         ih = nvar/2
+         ih = list_nvar/2
          FOR i = 0, ih-1 DO BEGIN
-           PRINT, FORMAT='(2(i4,": ",a12,10x))', i, STRTRIM(namearr(i),1), i+ih, STRTRIM(namearr(i+ih),1)
+             PRINT, FORMAT='(2(i4,": ",a12,10x))', i, STRTRIM(list_namearr(i),1), i+ih, STRTRIM(list_namearr(i+ih),1)
          ENDFOR
        GOTO, variables
        ENDIF
        ivar = FIX(var)
+       IF(ivar GE nvar) THEN BEGIN
+         PRINT, '# out of range'
+         GOTO, DISPLAYVAR       
+       ENDIF
        dispind = [ivar]
        disparr = [namearr(ivar)]
        ndisp = 1

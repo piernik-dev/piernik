@@ -17,6 +17,9 @@ module dataio
   use start
 !  use utils
 !  use resistivity
+#ifdef SN_SRC
+  use sn_sources
+#endif /* SN_SRC */
 
   implicit none
 
@@ -342,6 +345,12 @@ module dataio
     iostatus = sfsnatt( sd_id, 'timestep',  6, 1, dt             )
 
     iostatus = sfsnatt( sd_id, 'gamma'   ,  6, 1, gamma          )
+
+
+! write selected problem dependent parameters
+#ifdef SN_SRC
+    iostatus = sfsnatt( sd_id, 'nsn'      , 24, 1, nsn     )
+#endif
 
     iv = 1
 
@@ -725,6 +734,11 @@ module dataio
     iostatus = sfsnatt( sd_id, 'step_hdf' , 24, 1, step_hdf )
     iostatus = sfsnatt( sd_id, 'last_hdf_time', 6, 1, last_hdf_time)
 
+! write selected problem dependent parameters
+#ifdef SN_SRC
+    iostatus = sfsnatt( sd_id, 'nsn'      , 24, 1, nsn     )
+#endif
+
 ! write array of integer scalars 
 !
 !    sds_id   = sfcreate(sd_id, 'intscal', 23, 1, nintscal)
@@ -769,6 +783,7 @@ module dataio
     iostatus = sfscompress(sds_id, comp_type, comp_prm)
     iostatus = sfwdata(sds_id, istart, stride, dims3d, dinit)
 #endif
+
 ! write coords
 !
     dim_id = sfdimid( sds_id, 1 )
@@ -995,6 +1010,11 @@ module dataio
       attr_index = sffattr( sd_id, 'last_hdf_time' )
       iostatus = sfrnatt( sd_id, attr_index, last_hdf_time )
 
+! read selected problem dependent parameters
+#ifdef SN_SRC
+      attr_index = sffattr( sd_id, 'nsn'       )
+      iostatus = sfrnatt( sd_id, attr_index, nsn_last    )
+#endif
 ! read array of integer scalar quantities - nie dziala, do poprawy
 !
 !      sds_id   = sfn2index(sd_id, 'intscal')
@@ -1141,7 +1161,7 @@ module dataio
       if (tsl_firstcall) then      
         open(tsl_lun, file=tsl_file)
    
-        write (tsl_lun, '(a1,50a16)') '#', 'time', 'timestep', 'mass', &
+        write (tsl_lun, '(a1,a8,50a16)') '#','nstep', 'time', 'timestep', 'mass', &
                                            'momx', 'momy', 'momz', 'amomz', &
                                            'ener', 'epot', 'eint', 'ekin', 'emag', &
 					   'mflx', 'mfly', 'mflz', & 
@@ -1245,23 +1265,25 @@ module dataio
 
 
     if (proc .eq. 0) then
-      write (tsl_lun, '(1x,50(1x,1pe15.8))') t, dt, tot_mass, &
-                                             tot_momx, tot_momy, tot_momz, tot_amomz, &
-                                             tot_ener, tot_epot, tot_eint, tot_ekin, tot_emag, &
-                    mflx, mfly, mflz, &
+      write (tsl_lun, '(1x,i8,50(1x,1pe15.8))') &
+                      nstep, &
+                      t, dt, tot_mass, &
+                      tot_momx, tot_momy, tot_momz, tot_amomz, &
+                      tot_ener, tot_epot, tot_eint, tot_ekin, tot_emag, &
+                      mflx, mfly, mflz, &
 #ifdef COSM_RAYS
-                    tot_encr, encr_min, encr_max, & 
+                      tot_encr, encr_min, encr_max, & 
 #endif 
 #ifdef RESIST
-                                             eta_max, &
+                      eta_max, &
 #endif
 ! some quantities computed in "write_log".One can add more, or change.
-                                             vx_max, vy_max, vz_max, va_max, cs_max, &
-                                             dens_min, dens_max, pres_min, pres_max, &
+                      vx_max, vy_max, vz_max, va_max, cs_max, &
+                      dens_min, dens_max, pres_min, pres_max, &
 #ifndef ISO	  
-	                                     temp_min, temp_max,  &
+	              temp_min, temp_max,  &
 #endif 
-	                                     b_min, b_max 
+	              b_min, b_max 
       close(tsl_lun)
     endif
 

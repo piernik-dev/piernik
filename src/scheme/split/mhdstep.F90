@@ -76,8 +76,7 @@ subroutine mhdstep
 ! Sources ----------------------------------------
 
 #ifdef SN_SRC          
-      call random_sn 
-      call dipol_sn  
+      call random_sn   
 #endif SN_SRC
       
       t=t+dt

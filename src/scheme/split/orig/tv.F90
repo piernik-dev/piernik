@@ -34,7 +34,7 @@ module tv ! split orig
 
   subroutine relaxing_tvd(u,bb,sweep,i1,i2,dx,n,dt)
     use fluxes
- ! Cooling and heating implemented following Rafal Kosinski
+
 #ifdef GRAV
     use gravity, only :grav_pot2accel
 #endif 
@@ -45,7 +45,7 @@ module tv ! split orig
     real ::  dt,dx, dtx
     real, dimension(nu,n) :: u,cfr,ul,ur
     real, dimension(3,n)  :: bb
-    real, dimension(n)    :: gravl,gravr,rotfl,rotfr,vx,vxr
+    real, dimension(n)    :: gravl,gravr,rotfr,vx,vxr
     real, dimension(n)    :: dgrp,dgrm,dglp,dglm
            
     character sweep*6
@@ -85,7 +85,7 @@ module tv ! split orig
       ul0 = fl/cfr
     endif
 
-    fl(:,1:n-1) = fl(:,2:n); fl(:,n) = fl(:,1)  
+    fl(:,1:n-1) = fl(:,2:n)                         ; fl(:,n)   = fl(:,n-1)  
 
     if(istep == 2) then
        dfrp(:,1:n-1) = 0.5*(fr(:,2:n) - fr(:,1:n-1)); dfrp(:,n) = dfrp(:,n-1)     ! dfrp=(cshift(fr,shift=1,dim=2)-fr)*0.5      
@@ -124,18 +124,16 @@ module tv ! split orig
 ! Gravity source terms -------------------------------------
 #ifdef GRAV
     call grav_pot2accel(sweep,i1,i2, n, gravr)
-    gravr = gravr + rotfr
-    gravl(2:n) = gravr(1:n-1)                                                   ! gravl      = cshift(gravr,-1) 
-    gravl(1)   = gravl(2)
-    gravr(n)   = gravr(n-1)
+    gravr      = gravr + rotfr                     ;  gravr(n)   = gravr(n-1)
+    gravl(2:n) = gravr(1:n-1)                      ;  gravl(1)   = gravl(2)                                                   ! gravl      = cshift(gravr,-1) 
  
     if(istep == 2) then
       dgrp(1:n-1) = 0.5*(gravr(1:n-1) - gravr(2:n));  dgrp(n) = dgrp(n-1)         ! dgrp = (gravr-cshift(gravr,shift=1))*0.5
-      dgrm(2:n) = dgrp(1:n-1);    dgrm(1) = dgrm(n)                             ! dgrm = (cshift(gravr,shift=-1)-gravr)*0.5
+      dgrm(2:n) = dgrp(1:n-1)                      ;  dgrm(1) = dgrm(2)                             ! dgrm = (cshift(gravr,shift=-1)-gravr)*0.5
       call flimiter(gravr,dgrp,dgrm,1,n)
 
-      dglp(1:n-1) = 0.5*(gravl(2:n) - gravl(1:n-1));   dglp(n) = dglp(n-1)        ! dglp = (cshift(gravl,shift=1)-gravl)*0.5
-      dglm(2:n)   = dglp(1:n-1);  dglm(1) = dglm(n)                             ! dglm = (gravl-cshift(gravl,shift=-1))*0.5
+      dglp(1:n-1) = 0.5*(gravl(2:n) - gravl(1:n-1));  dglp(n) = dglp(n-1)        ! dglp = (cshift(gravl,shift=1)-gravl)*0.5
+      dglm(2:n)   = dglp(1:n-1)                    ;  dglm(1) = dglm(2)                             ! dglm = (gravl-cshift(gravl,shift=-1))*0.5
       call flimiter(gravl,dglp,dglm,1,n)
     endif
 
@@ -150,12 +148,9 @@ module tv ! split orig
     ul1= ul1 + cn(istep)*duls
 !--> GRAV
 #endif
-! ----------------------------------------------------------
 
     u1 = ul1 + ur1
     u1(1,:) = max(u1(1,:), smalld)
-
-! ----------------------------------------------------------
           
 #ifdef COSM_RAYS
     select case (sweep)

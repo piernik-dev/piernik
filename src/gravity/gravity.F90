@@ -92,7 +92,9 @@ contains
         gpot = gpot - csim2*dlog(fr) ! *d0
 #else
         status = 'undefined'
-#warning 'GRAV declared, but gravity model undefined in grav_pot'
+!#warning 'GRAV declared, but gravity model undefined in grav_pot'
+! niektore modele grawitacji realizowane sa za pomoca przyspieszenia 
+! (np. 'galactic') z ktorego liczony jest potencjal
 #endif
 
   end subroutine grav_pot
