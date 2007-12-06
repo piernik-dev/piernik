@@ -46,8 +46,10 @@ module dataio
 
 ! MH: jesli  te deklaracje konfliktuja w gfortranie 
 ! to pewnie trzeba je objac dyrektywami prekompilatora 
+#ifndef GNU
   integer :: getcwd, hostnm, getpid, system
   external getcwd, hostnm, getpid, system
+#endif /* GNU */
 ! ----------------------------------------------------
 
   real vx_max, vy_max, vz_max, va2max,va_max, cs2max, cs_max, &
