@@ -13,10 +13,15 @@ module thermal
 !  where COOL is an empirical cooling function of e only, and HEAT is
 !  an empirical heating function.
 
-  use start
-  use arrays
-  use grid
-  use constants
+  use start, only     : nb, cool_model,heat_model,esrc_upper_lim,esrc_lower_lim, &
+      gamma, alpha, G_uv1, G_sup1, L_C, h_coolheat_profile,C_heatcond, &
+      K_heatcond, cfl_coolheat, dt, n_coolheat_profile, dt_coolheat
+  
+  use arrays, only    : dl, nzb, is,ie,js,je,ks,ke,xdim,ydim,zdim,nx,ny,nz, &
+      u,b,coolheat_profile, z
+!  use grid
+  use constants, only : small, k_B, hydro_mass, cmps2, pc, m_H, chcf
+  use mpi_setup
 
   real    eint_src_max, eint_src_min, dt_cool, dt_heat
   integer loc_dt_cool(3), loc_dt_heat(3)

@@ -3,10 +3,7 @@ module timer
 
 ! Written by: M. Hanasz, December 2005 - January 2006
 
-  use arrays
-  use start, only: t,dt, tend, nstep, nend  
-  use mpi_setup
-  use dataio
+  implicit none
   
   integer       nzones, cpuhours, cpumins, cpusecs , wchours , wcmins  , wcsecs 
   real          zcps,  cputot, cpuallp, wctot, cpu_start, cpu_stop   
@@ -18,7 +15,9 @@ contains
 
   subroutine timer_start
 
-!    external      etime, dtime, itime
+    external      dtime
+    real(kind=4) dtime
+    implicit none
 
 !
 !      Initialise cpu and wall clocks.  "cputot" will be the total cpu
@@ -39,9 +38,15 @@ contains
 !------------------------------------------------------------------------------------------
 
   subroutine timer_stop
+    use start, only: t,dt, tend, nstep, nend,nxd,nyd,nzd
+    use mpi_setup
+    use dataio, only : log_file,log_lun
 
-!    external      etime, dtime, itime
-!
+    implicit none
+
+    external      dtime
+    real(kind=4) dtime
+
 !      Final wall clock time, expressed in hours, minutes, and seconds.
 !
     call itime ( iarray )

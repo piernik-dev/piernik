@@ -1,12 +1,10 @@
 #include "mhd.def" 
 module tv ! split orig
-  use constants
-  use start
-  use arrays, only : idna,imxa,imya,imza,iecr,ibx,iby,ibz,nu,iena,wa
   contains
   
   subroutine tvdb(vibj,b,vg,n,dt,di)
-    use func, only : tvdb_emf
+    use constants, only : big
+    use func, only      : tvdb_emf
     implicit none
     integer, intent(in) :: n
     real, intent(in)    :: dt,di
@@ -33,16 +31,21 @@ module tv ! split orig
   end subroutine tvdb
 
   subroutine relaxing_tvd(u,bb,sweep,i1,i2,dx,n,dt)
+    use start,  only : smallei, smalld, integration_order,cn
+    use arrays, only : idna,imxa,imya,imza,iecr,ibx,iby,ibz,nu,iena,wa
     use fluxes
 
 #ifdef GRAV
     use gravity, only :grav_pot2accel
 #endif 
-    use grid, only : xr
+#ifdef SHEAR
+    use arrays, only : xr
+    use start,  only : qshear, omega
+#endif /* SHEAR */
 
     implicit none
-    integer i1,i2, n
-    real ::  dt,dx, dtx
+    integer :: i1,i2, n, istep
+    real    :: dt,dx,dtx
     real, dimension(nu,n) :: u,cfr,ul,ur
     real, dimension(3,n)  :: bb
     real, dimension(n)    :: gravl,gravr,rotfr,vx,vxr

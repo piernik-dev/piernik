@@ -1,25 +1,23 @@
 
 #include "mhd.def"
 module fluids     ! split fluids
-  use start
-  use arrays
-  use grid
-  use tv
-  use time, only :dt 
-  use fluid_boundaries, only : compute_u_bnd 
-#ifdef COSM_RAYS
-  use cr_diffusion        
-#endif 
   contains
   subroutine fluidx
+
+    use start, only  : dimensions, magfield,dt
+    use arrays, only : u,b,nx,ny,nz,nu,ks,ke,ibx,iby,ibz,iuswpx
+    use grid, only   : dx
+    use tv, only     : relaxing_tvd
+    use fluid_boundaries, only : compute_u_bnd 
+#ifdef COSM_RAYS
+    use cr_diffusion        
+#endif 
 
     implicit none
     real, dimension(3,nx)  :: b_x
     real, dimension(nu,nx) :: u_x
     integer :: j,k,jp,kp
     real    :: yj,zk
-
-
   
     b_x = 0.0
     u_x = 0.0
@@ -54,6 +52,14 @@ module fluids     ! split fluids
 !------------------------------------------------------------------------------------------
 
   subroutine fluidy
+    use start, only  : dimensions, magfield,dt
+    use arrays, only : u,b,nx,ny,nz,nu,ks,ke,ibx,iby,ibz,iuswpy
+    use grid, only   : dy
+    use tv, only     : relaxing_tvd
+    use fluid_boundaries, only : compute_u_bnd 
+#ifdef COSM_RAYS
+    use cr_diffusion        
+#endif 
 
     implicit none
     real, dimension(3,ny)  :: b_y
@@ -98,6 +104,14 @@ module fluids     ! split fluids
 !------------------------------------------------------------------------------------------
 
   subroutine fluidz
+    use start, only  : dimensions, magfield,dt
+    use arrays, only : u,b,nx,ny,nz,nu,ks,ke,ibx,iby,ibz,iuswpz
+    use grid, only   : dz
+    use tv, only     : relaxing_tvd
+    use fluid_boundaries, only : compute_u_bnd 
+#ifdef COSM_RAYS
+    use cr_diffusion        
+#endif 
 
     implicit none
     real, dimension(3,nz)  :: b_z

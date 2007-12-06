@@ -7,21 +7,18 @@ module time
 ! Optimalization of cpu-time efficiency of mhdflux, tvd1 by K. Kowalik
 ! Modification history:  see "changelog"  -- warning: out of date
 
-  use constants
+!  use constants
   use mpi_setup
-  use start
-  use arrays
-  use grid
-  use init_problem 
+!  use start
+!  use arrays
+!  use grid
+!  use init_problem 
 !  use diagnostics
-  use thermal
+!  use thermal
 
 #ifdef COSM_RAYS
   use cr_diffusion
 #endif 
-#ifdef RESIST
-  use resistivity
-#endif
   
   implicit none
   real c
@@ -30,7 +27,12 @@ contains
 
 
   subroutine timestep
-  
+    use start, only : dt, tend, t, dt_mhd, dt_coolheat, &
+         dt_visc, dt_cr
+#ifdef RESIST
+    use resistivity, only : dt_resist
+#endif
+    implicit none
 ! Timestep computation
 
     call timestep_mhd
@@ -62,6 +64,14 @@ contains
 !------------------------------------------------------------------------------------------
 
   subroutine timestep_mhd
+    use grid, only   : dx,dy,dz
+    use start, only  : nb,cfl, gamma,dt_mhd
+    use arrays, only : ks,ke,nyb,nxb,idna,imxa,imya,imza,u,b
+#ifndef ISO
+    use arrays, only : iena
+#endif /* ISO */
+
+    implicit none
 
     real dt_mhd_proc, dt_mhd_all, c_max_all 
     real dt_mhd_proc_x, dt_mhd_proc_y, dt_mhd_proc_z

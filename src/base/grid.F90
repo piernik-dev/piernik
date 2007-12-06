@@ -2,11 +2,7 @@
 module grid
 
 ! Written by: M. Hanasz, January/February 2006
-  use mpi_setup
-  use start
-  use arrays
-
-
+      
   implicit none
   real dx,dy,dz,dxmn,dvol
   
@@ -16,6 +12,10 @@ module grid
 contains
 
   subroutine grid_xyz 
+    use mpi_setup
+    use start, only  : xmin,ymin,zmin,xmax,ymax,zmax, dimensions, nb
+    use arrays, only : dl,xdim,ydim,zdim,xl,yl,zl,x,y,z,xr,yr,zr, &
+       nxb,nyb,nzb,nx,ny,nz
                     
     integer i,j,k 
 

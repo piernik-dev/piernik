@@ -9,31 +9,38 @@ program mhd
 !             within the "mhdblock.f90"
 ! Modification history: see "changelog"
 
-  use start, only: read_params
-  use start, only: t,dt, tend, nstep, nend
-  use grid
-  use init_problem  
+  use start, only: read_params, new_id, restart, dt_hdf, dt_res,dt_log,dt_tsl
+  use start, only: t,dt, tend, nstep, nend, nstep_start, nrestart
+  use arrays, only : arrays_deallocate, arrays_allocate
+  use grid, only : grid_xyz
+  use init_problem, only : problem_name, run_id, init_prob, read_problem_par 
+  use mod_mhdstep, only  : mhdstep
+  use dataio, only : msg,step_res,step_hdf,log_file,nres,nhdf, &
+      t_start, nres_start, nhdf_start, wait, msg_param
+  use dataio, only : init_dataio,read_restart,write_data, check_disk, &
+      read_file_msg, write_timeslice, write_log, write_hdf, write_restart, &
+      find_last_restart
+!  use diagnostics  
+  use timer, only : timer_start, timer_stop
+  use mpi_setup
+  use fluid_boundaries, only : compute_u_bnd
+  use mag_boundaries, only   : compute_b_bnd
 #ifdef RESIST
   use resistivity
 #endif 
-  use mod_mhdstep
 #ifdef SELF_GRAV
   use poisson_solver
 #endif 
-  use dataio
-  use diagnostics  
-  use timer
-  use mpi_setup
-  use fluid_boundaries
 #ifdef GRAV
   use gravity, only : grav_pot_3d
 #endif 
-  use arrays
 
   implicit none
   character output*3
   integer system_status
   character system_command*160
+  external :: system
+  integer  :: system
   integer tsleep
 !  real, dimension(:,:,:),allocatable :: ala
   
@@ -131,7 +138,7 @@ program mhd
 
 888   continue
 
-      call check_disk
+!      call check_disk
 
 !--- process 0 checks for messages
 

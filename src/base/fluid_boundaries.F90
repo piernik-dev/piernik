@@ -7,22 +7,30 @@ module fluid_boundaries
 ! Modified by M. Hanasz - MPI comunication in "xyz"    - November 2006 
 ! Modified by M. Hanasz - MPI corner-periodic bcs      - December 2006 
 ! Modified by M. Hanasz - MPI shearing-periodic in "x" - November 2007
+ 
 
-  use start
+contains
+
+subroutine bnd_u(dim)
   use mpi_setup
-  use arrays
-  use grid  
+  use start,  only : smalld, smallei, bnd_xl, bnd_xr, bnd_yl, bnd_yr, &
+      bnd_zl, bnd_zr, nb, nxd, nyd, nzd, dimensions
+  use arrays, only : x,z,nzb,nyb,nxb,nu,nx,ny,nz, idna, imxa, imya, imza, &
+      u, b
+
+#ifndef ISO
+  use start,  only : gamma
+  use arrays, only : iena
+#endif /* ISO */
 #ifdef GRAV
-  use gravity
+  use gravity, only : grav_accel
+  use start, only : nsub, tune_zeq_bnd
 #endif
 #ifdef SHEAR
   use shear, only : eps,delj, unshear_fft_b, unshear_fft
+  use start, only : qshear, omega
 #endif 
  
-contains
-
-
-subroutine bnd_u(dim)
 
   implicit none
   character(len=*) :: dim 
@@ -335,7 +343,74 @@ subroutine bnd_u(dim)
 
 ! Non-MPI boundary conditions
 
-#ifdef SHEAR  
+#ifdef SHEAR 
+   if( (bnd_xl == 'shef').and.(bnd_xr == 'shef')) then   ! 2d ONLY !!!!!!!
+
+      allocate(send_right(nu,nb,ny,nz), send_left(nu,nb,ny,nz), &
+               recv_left(nu,nb,ny,nz), recv_right(nu,nb,ny,nz) )
+      
+!      send_left (:,:,:,:) = Lu(:,nb+1:2*nb,:,:)
+!      send_right(:,:,:,:) = Lu(:,nxb+1:nxb+nb,:,:)
+
+      do i=1,nb
+#ifndef ISO
+        send_left (iena,i,:,:) = send_left(iena,i,:,:) &
+           +0.5*(qshear*omega * x(nb+i))**2 * send_left(idna,i,:,:) - &
+           qshear*omega *x(nb+1) * send_left(imya,i,:,:)
+        send_right(iena,i,:,:) = send_right(iena,i,:,:) &
+           +0.5*(qshear*omega * x(nxb+i))**2 * send_right(idna,i,:,:) - &
+           qshear*omega*x(nxb+i) * send_right(imya,i,:,:)
+#endif 
+        send_left (imya,i,:,:) = send_left(imya,i,:,:) &
+           -qshear*omega * x(nb+i) * send_left(idna,i,:,:)
+        send_right(imya,i,:,:) = send_right(imya,i,:,:) &
+           -qshear*omega * x(nxb+i) * send_right(idna,i,:,:)
+      enddo 
+!
+! przesuwamy o calkowita liczbe komorek + periodyczny wb w kierunku y
+!
+          send_left (:,:,nb+1:nb+nyb,:)        = cshift(send_left (:,:,nb+1:nb+nyb,:),dim=3,shift= delj)
+          send_left (:,:,1:nb,:)               = send_left (:,:,nyb+1:nyb+nb,:)
+          send_left (:,:,nb+nyb+1:nyb+2*nb,:)  = send_left (:,:,nb+1:2*nb,:)
+!
+! remapujemy  - interpolacja kwadratowa          
+!
+          send_left (:,:,:,:)  = (1.+eps)*(1.-eps) * send_left (:,:,:,:) &
+                                 -0.5*eps*(1.-eps) * cshift(send_left(:,:,:,:),shift=-1,dim=3) &
+                                 +0.5*eps*(1.+eps) * cshift(send_left(:,:,:,:),shift=1 ,dim=3)
+!
+! przesuwamy o calkowita liczbe komorek + periodyczny wb w kierunku y
+!
+          send_right(:,:,nb+1:nb+nyb,:)        = cshift(send_right(:,:,nb+1:nb+nyb,:),dim=3,shift=-delj)
+          send_right (:,:,1:nb,:)              = send_right(:,:,nyb+1:nyb+nb,:)
+          send_right (:,:,nb+nyb+1:nyb+2*nb,:) = send_right(:,:,nb+1:2*nb,:)
+!
+! remapujemy  - interpolacja kwadratowa          
+!
+          send_right (:,:,:,:) = (1.+eps)*(1.-eps) * send_right (:,:,:,:) &
+                                 -0.5*eps*(1.-eps) * cshift(send_right(:,:,:,:),shift=1 ,dim=3) &
+                                 +0.5*eps*(1.+eps) * cshift(send_right(:,:,:,:),shift=-1,dim=3)
+      do i=1,nb
+#ifndef ISO
+        send_left (iena,i,:,:) = send_left(iena,i,:,:) &
+           +0.5*(qshear*omega * x(nxb+nb+i))**2 * send_left(idna,i,:,:) + &
+           qshear*omega *x(nxb+nb+1) * send_left(imya,i,:,:)
+        send_right(iena,i,:,:) = send_right(iena,i,:,:) &
+           +0.5*(qshear*omega * x(i))**2 * send_right(idna,i,:,:) + &
+           qshear*omega*x(i) * send_right(imya,i,:,:)
+#endif 
+        send_left (imya,i,:,:) = send_left(imya,i,:,:) &
+           +qshear*omega * x(nxb+nb+i) * send_left(idna,i,:,:)
+        send_right(imya,i,:,:) = send_right(imya,i,:,:) &
+           +qshear*omega * x(i) * send_right(idna,i,:,:)
+      enddo 
+
+!      Lu(:,1:nb,:,:)              = send_right(:,1:nb,:,:)
+!      Lu(:,nxb+nb+1:nxb+2*nb,:,:) = send_left(:,1:nb,:,:)
+
+      deallocate(send_right,send_left,recv_left,recv_right)
+
+   endif
    if( (bnd_xl == 'she').and.(bnd_xr == 'she')) then   ! 2d ONLY !!!!!!!
       allocate(temp(nxd,nyd,nz))
       allocate(bl(nb,nyd,nz))
@@ -417,11 +492,15 @@ subroutine bnd_u(dim)
             u(iecr,ib,:,:)                     = smallecr
 #endif 
           enddo
+        case ('shef')
+!         Do nothing if 'mpi'
         case default 
           write(*,*) 'Boundary condition ',bnd_xl,' not implemented in ',dim
       end select  ! (bnd_xl)
   
       select case (bnd_xr)
+        case ('shef')
+!         Do nothing if 'mpi'
         case ('she')
 !         Do nothing if 'mpi'
         case ('mpi') 
@@ -756,14 +835,18 @@ subroutine bnd_u(dim)
 end subroutine bnd_u
 
   subroutine compute_u_bnd
+   use start,  only : dimensions
+#ifndef SPLIT
+   use arrays, only : Lu
+#endif
+   implicit none
 
    call bnd_u('xdim')
    call bnd_u('ydim')
    if(dimensions .eq. '3d') call bnd_u('zdim')
-  
-#ifndef SPLIT
-   Lu(:,:,:,: ) =  0.0
 
+#ifndef SPLIT  
+   Lu(:,:,:,: ) =  0.0
 #endif
   end subroutine compute_u_bnd
 

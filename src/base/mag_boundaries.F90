@@ -7,11 +7,9 @@ module mag_boundaries
 ! Modified by M. Hanasz - MPI comunication in "xyz" - November 2006 
 ! Modified by M. Hanasz - MPI corner-periodic bcs   - December 2006 
 ! Modified by M. Hanasz - MPI shearing-periodic in "x" - November 2007
-
   use mpi_setup
-  use start
-  use arrays
-  use grid
+  use start, only  : nb,dimensions 
+  use arrays, only : nx,ny,nz,u,b,ibx,iby,ibz,nxb,nyb,nzb
 
 contains
 
@@ -354,7 +352,7 @@ end subroutine bnd_b
 !=====================================================================================================
 
 subroutine bnd_emf(var, name, dim)
-
+  use arrays, only : nx,ny,nz
 
   implicit none
   real, dimension(nx,ny,nz) :: var

@@ -1,16 +1,15 @@
 
 #include "mhd.def"
 module advects    ! split advects
-  use start
-  use arrays
-  use grid
-  use time, only : dt
-  use tv
-  use mag_boundaries
   contains
   subroutine advectby_x
-
+    use start, only  : dimensions,dt
+    use arrays, only : b,u,wa,nx,ny,nz,idna,imxa,iby
+    use grid, only   : dx
+    use tv, only     : tvdb
+    use mag_boundaries, only : bnd_emf
     implicit none
+
     real, dimension(nx) :: vxby,by_x,vx
     integer                j,k,jm
 
@@ -40,6 +39,11 @@ module advects    ! split advects
   end subroutine advectby_x
 
   subroutine advectbz_x
+    use start, only  : dimensions,dt
+    use arrays, only : b,u,wa,nx,ny,nz,idna,imxa,ibz
+    use grid, only   : dx
+    use tv, only     : tvdb
+    use mag_boundaries, only : bnd_emf
 
     implicit none
     real, dimension(nx) :: vxbz,bz_x,vx
@@ -71,6 +75,11 @@ module advects    ! split advects
   end subroutine advectbz_x
 
   subroutine advectbz_y
+    use start, only  : dimensions,dt
+    use arrays, only : b,u,wa,nx,ny,nz,idna,imya,ibz
+    use grid, only   : dy
+    use tv, only     : tvdb
+    use mag_boundaries, only : bnd_emf
 
     implicit none
     real, dimension(ny)   :: vybz,bz_y,vy
@@ -102,6 +111,11 @@ module advects    ! split advects
   end subroutine advectbz_y
 
   subroutine advectbx_y
+    use start, only  : dimensions,dt
+    use arrays, only : b,u,wa,nx,ny,nz,idna,imya,ibx
+    use grid, only   : dy
+    use tv, only     : tvdb
+    use mag_boundaries, only : bnd_emf
 
     implicit none
     real, dimension(ny) :: vybx,bx_y,vy
@@ -133,6 +147,11 @@ module advects    ! split advects
   end subroutine advectbx_y
 
   subroutine advectbx_z
+    use start, only  : dimensions,dt
+    use arrays, only : b,u,wa,nx,ny,nz,idna,imza,ibx
+    use grid, only   : dz
+    use tv, only     : tvdb
+    use mag_boundaries, only : bnd_emf
 
     implicit none
     real, dimension(nz)  :: vzbx,bx_z,vz
@@ -164,6 +183,11 @@ module advects    ! split advects
   end subroutine advectbx_z
 
   subroutine advectby_z
+    use start, only  : dimensions,dt
+    use arrays, only : b,u,wa,nx,ny,nz,idna,imza,iby
+    use grid, only   : dz
+    use tv, only     : tvdb
+    use mag_boundaries, only : bnd_emf
     
     implicit none
     real, dimension(nz)  :: vzby,by_z,vz

@@ -18,19 +18,19 @@
   integer               :: comm, comm3d
   integer, dimension(3) :: psize, pcoords, coords
   logical               :: periods(3), reorder
-  integer    procxl, procxr, procyl, procyr, proczl, proczr, procxyl, procyxl 
-  integer    pxleft, pxright,pyleft, pyright,pzleft, pzright
+  integer ::   procxl, procxr, procyl, procyr, proczl, proczr, procxyl, procyxl 
+  integer ::   pxleft, pxright,pyleft, pyright,pzleft, pzright
 
   integer,   parameter             :: buffer_dim=200
   character, dimension(buffer_dim) :: cbuff*32
   integer,   dimension(buffer_dim) :: ibuff
   real,      dimension(buffer_dim) :: rbuff
   
-  integer pxsize, pysize, pzsize
+  integer :: pxsize, pysize, pzsize
   namelist /MPI_BLOCKS/ pxsize, pysize, pzsize
   
-  character*4 bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr
-  character*4 bnd_xl_dom, bnd_xr_dom, bnd_yl_dom, bnd_yr_dom, bnd_zl_dom, bnd_zr_dom
+  character*4 :: bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr
+  character*4 :: bnd_xl_dom, bnd_xr_dom, bnd_yl_dom, bnd_yr_dom, bnd_zl_dom, bnd_zr_dom
   namelist /BOUNDARIES/ bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr
    
   logical mpi

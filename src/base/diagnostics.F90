@@ -8,14 +8,13 @@ module diagnostics
 !              Pen, Arras & Wong (2003) code
 
 
-  use start
-  use arrays
-  use grid
 
 contains
 
 
 subroutine maxu(comment)
+  use start, only  : nstep,proc
+  use arrays, only : u,is,ie,js,je,ks,ke
   implicit none
   character comment*(*)
 
@@ -40,6 +39,8 @@ end subroutine maxu
 
 !------------------------------------------------------------------------------------------
 subroutine maxb(comment)
+  use start, only  : nstep,proc
+  use arrays, only : b,is,ie,js,je,ks,ke
   implicit none
   character comment*(*)
 
@@ -59,13 +60,16 @@ end subroutine maxb
 
 
 subroutine test_divb
-
+  use grid, only   : dx,dy,dz
+  use arrays, only : nx,ny,nz,b
+  use constants, only : big
+  implicit none
   real, allocatable   :: divb(:,:,:)
   allocate (divb(nx,ny,nz))
     
-  divb = (eoshift(b(1,:,:,:),shift=1,dim=1,boundary=big) -b(1,:,:,:))*dy0*dz0 &
-        +(eoshift(b(2,:,:,:),shift=1,dim=2,boundary=big) -b(2,:,:,:))*dx0*dz0 &
-        +(eoshift(b(3,:,:,:),shift=1,dim=3,boundary=big) -b(3,:,:,:))*dx0*dy0 
+  divb = (eoshift(b(1,:,:,:),shift=1,dim=1,boundary=big) -b(1,:,:,:))*dy*dz &
+        +(eoshift(b(2,:,:,:),shift=1,dim=2,boundary=big) -b(2,:,:,:))*dx*dz &
+        +(eoshift(b(3,:,:,:),shift=1,dim=3,boundary=big) -b(3,:,:,:))*dx*dy 
 
   write(*,*)  
   write(*,*) 'MAX(|div B|) = ', maxval(abs(divb(2:nx-1,2:ny-1,2:nz-1)))

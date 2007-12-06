@@ -1,8 +1,6 @@
 #include "mhd.def"
 
 module arrays
-  use start 
-  use mpi_setup
 
   implicit none
   integer :: nx, ny, nz
@@ -101,6 +99,8 @@ module arrays
 contains
   
   subroutine arrays_allocate
+  use start, only : nxd, nyd, nzd, nb, dimensions
+  use mpi_setup
 
     iuswpx(idna:imza)=(/idna,imxa,imya,imza/) 
     iuswpy(idna:imza)=(/idna,imya,imxa,imza/) 

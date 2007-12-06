@@ -7,7 +7,7 @@ module mod_mhdstep ! UNSPLIT 1D
    use advects
 #ifdef RESIST
    use resistivity
-#endif RESIST
+#endif /* RESIST */
 #ifdef SHEAR
    use shear, only : yshift
 #endif
@@ -97,14 +97,14 @@ module mod_mhdstep ! UNSPLIT 1D
       call advectby_x
 #ifdef RESIST
       call diffuseby_x
-#endif RESIST
+#endif /* RESIST */
 
     if(dimensions .eq. '3d') then
 
       call advectbz_x
 #ifdef RESIST
       call diffusebz_x
-#endif RESIST
+#endif /* RESIST */
 
     endif
 
@@ -119,14 +119,14 @@ module mod_mhdstep ! UNSPLIT 1D
       call advectbz_y
 #ifdef RESIST
       call diffusebz_y
-#endif RESIST
+#endif /* RESIST */
 
     endif
 
       call advectbx_y
 #ifdef RESIST
       call diffusebx_y
-#endif RESIST
+#endif /* RESIST */
 
   end subroutine magfieldbzxy
 
@@ -137,12 +137,12 @@ module mod_mhdstep ! UNSPLIT 1D
       call advectbx_z
 #ifdef RESIST
       call diffusebx_z
-#endif RESIST
+#endif /* RESIST */
 
       call advectby_z
 #ifdef RESIST
       call diffuseby_z
-#endif RESIST
+#endif /* RESIST */
 
   end subroutine magfieldbxyz
 

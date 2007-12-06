@@ -14,9 +14,10 @@ module dataio
 ! 474-476, 478, 527-532, 583, 585, 658-669, 829-830, 932, 936, 967, 971-975
 
   use mpi_setup
-  use start
 !  use utils
+#ifdef RESISTIVITY
 !  use resistivity
+#endif /* RESISTIVITY */
 #ifdef SN_SRC
   use sn_sources
 #endif /* SN_SRC */
@@ -84,6 +85,7 @@ module dataio
 !-----------------------------------------------------------------------
 !
 !*ca imp
+       implicit none
 
        character*10   string
        integer       istrt   , ifin    , ishift  , ival    , i
@@ -122,7 +124,8 @@ module dataio
 !---------------------------------------------------------------------
 !
   subroutine init_dataio
-
+    use start, only : dt_hdf
+    implicit none
     wait  = .false.
     tsl_firstcall = .true.
 
@@ -149,23 +152,11 @@ module dataio
       IF(scstatus .ne. 0) stop '(PROBLEMS ACCESSING WORKING DIRECTORY)'
 
       pid = GetPid()
-!      fpid='./pid.tmp'
-!      OPEN(89, FILE=fpid)
-!        write(89,'(I5)') pid
-!      CLOSE(89)            
-
-
-
             
       scstatus = HostNm(hostfull)
       ihost = index(hostfull,'.')
       if (ihost .eq. 0) ihost = index(hostfull,' ')
       host = hostfull(1:ihost-1)
- !     fhost='./host.tmp'
- !     OPEN(99, FILE=fhost)
- !       write(99,'(A8)') host
- !     CLOSE(99)      
-      
 
   end subroutine init_dataio
 
@@ -176,9 +167,8 @@ module dataio
 !---------------------------------------------------------------------
 !
   subroutine write_data(output)
-
-!    use start, only:  dt_hdf, dt_res, dt_tsl, dt_log
-!    use start, only:  t, dt, nstep
+    use start, only:  dt_hdf, dt_res, dt_tsl, dt_log, t ,dt, nstep
+    implicit none
     character  :: output*3
 
 !- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -227,12 +217,15 @@ module dataio
 !---------------------------------------------------------------------
 !
   subroutine write_hdf
-
+    use start, only : vars,xmin,xmax,ymin,ymax,zmin,zmax,nstep,t, &
+         domain, nxd,nyd,nzd,nb,mag_center, gamma, dimensions, dt
     use grid, only : dx,dy,dz
-    use arrays
-    use init_problem
-
-
+    use arrays, only : nx,ny,nz,nxb,nyb,nzb,x,y,z,wa,outwa,outwb,outwc,b,u, &
+         idna,imxa,imya,imza,gp,ibx,iby,ibz
+    use init_problem, only : problem_name, run_id
+#ifndef ISO
+    use arrays, only : iena
+#endif /* ISO */
     implicit none
 
     character(len=128) :: filename,filenamedisp
@@ -457,25 +450,6 @@ module dataio
          endif
        endif
 
-!      case ('curx')
-!      if(resist) then
-!        if(domain .eq. 'full_domain') then
-!          if(mag_center .eq. 'yes') then
-!            wa(:,:,:) = 0.5*(cu(ibx,:,:,:))
-!            wa(:,:,:) = wa(:,:,:)  + cshift(wa(:,:,:),shift=1,dim=1)
-!          else
-!            wa(:,:,:) = b(ibx,:,:,:)
-!          endif
-!        else if(domain .eq. 'phys_domain') then
-!          if(mag_center .eq. 'yes') then
-!            wa(iso:ieo,jso:jeo,kso:keo) = 0.5*(cu(ibx,iso:ieo,jso:jeo,kso:keo))
-!            wa(iso:ieo,jso:jeo,kso:keo) = wa(iso:ieo,jso:jeo,kso:keo) + 0.5*(cu(ibx,iso+1:ieo+1,jso:jeo,kso:keo))
-!          else
-!            wa(iso:ieo,jso:jeo,kso:keo) = cu(ibx,iso:ieo,jso:jeo,kso:keo)
-!          endif
-!        endif
-!      endif
-
       case ('cury')
        wa(:,:,:) = (b(ibx,:,:,:)-cshift(b(ibx,:,:,:),shift=-1,dim=3))/dz &
                  - (b(ibz,:,:,:)-cshift(b(ibz,:,:,:),shift=-1,dim=1))/dx
@@ -488,25 +462,6 @@ module dataio
            wa(iso:ieo,jso:jeo,kso:keo) = 0.5*(wa(iso:ieo,jso:jeo,kso:keo)+wa(iso:ieo,jso+1:jeo+1,kso:keo)) 
          endif
        endif
-
-!      case ('cury')
-!      if(resist) then
-!        if(domain .eq. 'full_domain') then
-!          if(mag_center .eq. 'yes') then
-!            wa(:,:,:) = 0.5*(cu(iby,:,:,:))
-!            wa(:,:,:) = wa(:,:,:)  + cshift(wa(:,:,:),shift=1,dim=2)
-!          else
-!            wa(:,:,:) = cu(iby,:,:,:)
-!          endif
-!        else if(domain .eq. 'phys_domain') then
-!          if(mag_center .eq. 'yes') then
-!            wa(iso:ieo,jso:jeo,kso:keo) = 0.5*(cu(iby,iso:ieo,jso:jeo,kso:keo)) 
-!            wa(iso:ieo,jso:jeo,kso:keo) = wa(iso:ieo,jso:jeo,kso:keo) + 0.5*(cu(iby,iso:ieo,jso+1:jeo+1,kso:keo))
-!          else
-!            wa(iso:ieo,jso:jeo,kso:keo) = cu(iby,iso:ieo,jso:jeo,kso:keo) 
-!          endif
-!        endif
-!      endif
 
       case ('curz')
        wa(:,:,:) = (b(iby,:,:,:)-cshift(b(iby,:,:,:),shift=-1,dim=1))/dx &
@@ -521,24 +476,6 @@ module dataio
          endif
        endif
 
-!      case ('curz')
-!      if(resist) then
-!        if(domain .eq. 'full_domain') then
-!          if(mag_center .eq. 'yes') then
-!            wa(:,:,:) = 0.5*(cu(ibz,:,:,:)) 
-!            wa(:,:,:) = wa(:,:,:)  + cshift(wa(:,:,:),shift=1,dim=3)
-!          else
-!            wa(:,:,:) = cu(ibz,:,:,:) 
-!          endif
-!        else if(domain .eq. 'phys_domain') then
-!          if(mag_center .eq. 'yes') then
-!            wa(iso:ieo,jso:jeo,kso:keo) = 0.5*(cu(ibz,iso:ieo,jso:jeo,kso:keo)) 
-!            wa(iso:ieo,jso:jeo,kso:keo) = wa(iso:ieo,jso:jeo,kso:keo) + 0.5*(cu(ibz,iso:ieo,jso:jeo,kso+1:keo+1))
-!          else
-!            wa(iso:ieo,jso:jeo,kso:keo) = cu(ibz,iso:ieo,jso:jeo,kso:keo) 
-!          endif
-!        endif
-!      endif
       case ('esrc')
 !        wa(iso:ieo,jso:jeo,kso:keo) = outwa(iso:ieo,jso:jeo,kso:keo)
 
@@ -615,10 +552,10 @@ module dataio
 !
   subroutine write_restart
 
-    use arrays
-!    use start
-    use grid
-    use init_problem
+    use arrays, only : nxb,nyb,nzb,x,y,z,u,gp,b,nx,ny,nz,nm,nu
+    use start, only  : xmin,xmax,ymin,ymax,zmin,zmax,nxd,nyd,nzd,t,dt, &
+         resdel,nb,nstep,domain
+    use init_problem, only : problem_name, run_id
 
     implicit none
 
@@ -862,15 +799,11 @@ module dataio
 !
   subroutine read_restart !(all)
 
-    use arrays
-    use start
-    use start    
-    use grid
-    use init_problem
+    use arrays, only : u,b,gp,nx,ny,nz,nu,nm
+    use start, only  : t, dt, nstep
+    use init_problem, only : problem_name, run_id
 
     implicit none
-
-!    integer, intent(in) :: all
 
     character(len=128) :: filename,filenamedisp
     logical file_exist, log_exist
@@ -1093,7 +1026,9 @@ module dataio
 
     subroutine find_last_restart(restart_number)
       
-      use init_problem
+      use init_problem, only : problem_name, run_id
+
+      implicit none
       
       character*120 restart_file, filename
       character*160 syscom
@@ -1129,20 +1064,22 @@ module dataio
 !
   subroutine write_timeslice
 
-    use arrays
-    use grid
-    use mpi_setup
-    use constants
-!    use start
-    use init_problem
+    use arrays, only : is,ie,js,je,ks,ke,u,b,idna,imxa,imya,imza, wa, &
+         ibx,iby,ibz,gp,x,y
+    use grid, only  : dvol,dx,dy,dz 
+    use start, only : proc, dt, t, nstep, nrestart,nxd,nyd,nzd
+    use init_problem, only : problem_name, run_id
 #ifdef COOL_HEAT    
     use thermal
 #endif
 #ifdef RESIST
     use resistivity
 #endif
+#ifndef ISO
+    use arrays, only : iena
+#endif /* ISO */
    
-     implicit none
+    implicit none
     integer i,j,k
 
     character(len=128) :: tsl_file
@@ -1150,7 +1087,7 @@ module dataio
     real ::  mass,  momx,  momy,  momz,  ener, encr, eint,  ekin,  emag, epot
     real :: tot_mass, tot_momx, tot_momy, tot_momz, tot_ener, tot_eint, &
             tot_ekin, tot_emag, tot_epot, tot_encr, &
-	    mflx, mfly, mflz, tot_mflx, tot_mfly, tot_mflz
+            mflx, mfly, mflz, tot_mflx, tot_mfly, tot_mflz
 !DW+
     real :: amomz, tot_amomz
 !DW-
@@ -1166,9 +1103,9 @@ module dataio
         write (tsl_lun, '(a1,a8,50a16)') '#','nstep', 'time', 'timestep', 'mass', &
                                            'momx', 'momy', 'momz', 'amomz', &
                                            'ener', 'epot', 'eint', 'ekin', 'emag', &
-					   'mflx', 'mfly', 'mflz', & 
+                                           'mflx', 'mfly', 'mflz', & 
 #ifdef COSM_RAYS
-					   'encr_tot', 'encr_min',  'encr_max',&
+                                           'encr_tot', 'encr_min',  'encr_max',&
 #endif 
 #ifdef RESIST
                                            'eta_max', &
@@ -1177,9 +1114,9 @@ module dataio
                                            'vx_max', 'vy_max', 'vz_max', 'va_max', 'cs_max', &
                                            'dens_min', 'dens_max', 'pres_min', 'pres_max', &
 #ifndef ISO	 
-	                                   'temp_min', 'temp_max',  &
+                                           'temp_min', 'temp_max',  &
 #endif
-	                                   'b_min', 'b_max' 
+                                           'b_min', 'b_max' 
                                            
 
         write (tsl_lun, '(a1)') '#'
@@ -1300,19 +1237,19 @@ module dataio
 !
   subroutine  write_log
   
-    use arrays
-    use grid
-    use mpi_setup
-    use constants
-!    use start
-    use init_problem
-    use thermal
+    use arrays, only : wa,is,ie,js,je,ks,ke,idna,imxa,imya,imza,u,b
+    use grid, only   : dx,dy,dz,dxmn
+    use constants, only : small, hydro_mass, k_B
+    use start, only : t,dt,nstep,sleep_minutes,sleep_seconds, smallei,nb, &
+         gamma,cfl
+!    use init_problem
+!   use thermal
+#ifndef ISO
+    use arrays, only : iena
+#endif /* ISO */
 #ifdef RESIST
     use resistivity
 #endif 
-    
-    
-    
       
     implicit none
   
@@ -1449,8 +1386,7 @@ module dataio
                             /u(idna,is:ie,js:je,ks:ke)) & 
                      + (/nb,nb,nb/)
     call mpifind(cs_max, 'max', loc_cs_max, proc_cs_max)
-!--> ISO
-#endif
+#endif /* ISO */
     
 #ifdef COOL_HEAT
       call mpifind(eint_src_min, 'min', loc_dt_cool, proc_dt_cool)
@@ -1534,7 +1470,8 @@ module dataio
 
 !     written by: michal hanasz
 !     date:       26. june 2003      
-
+      use start, only : sleep_minutes,sleep_seconds, min_disk_space_MB
+      implicit none
 !
       integer scstatus,ispace,islash,i,i1,ldfout,lcwd 
       logical diskfree,diskaccess
@@ -1784,6 +1721,9 @@ module dataio
 !
     subroutine read_file_msg 
 
+      use start, only : user_message_file, system_message_file
+
+
 !     written by: michal hanasz
 !     date:       26. june 2003      
 !
@@ -1793,7 +1733,7 @@ module dataio
 !      user_message_file           ! 1st (user) message file (eg.'./msg')
 !      system_message_file         ! 2nd (ups)  message file (eg.'/etc/ups/user/msg')
 !-------------------------------------------------------------------------
-       
+      implicit none       
       character user_last_msg_file*80 
       character system_last_msg_file*80 
 
@@ -1949,6 +1889,7 @@ module dataio
 !
 !*ca imp
 !
+       implicit none
        character*1   char1
        character*(*) cstr
        integer       nch     , ierr    , i       , esign   , ipnt &

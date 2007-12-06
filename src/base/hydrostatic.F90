@@ -4,19 +4,16 @@ module hydrostatic
 
 ! Written by M. Hanasz March-May 2006
 
-  use constants
-  use start
-  use arrays
-  use grid
-#ifdef GRAV
-  use gravity
-#endif
-  use thermal
 
 #ifdef GRAV
   contains
 
     subroutine hydrostatic_zeq(iia,jja, d0, dprof)
+     use start, only    : nsub,nb,zmin,zmax,tune_zeq,csim2, col_dens, proc
+     use constants, only : k_B, hydro_mass, small
+     use arrays, only   : nx,ny,nz,dl,zdim,z,zl,zr, nzt
+     
+     use gravity, only  : grav_accel
       
       implicit none
       real, intent(inout)              :: d0
@@ -150,6 +147,12 @@ module hydrostatic
 !--------------------------------------------------------------------------
 
     subroutine hydro_thermal_zeq(ia, ja, T0, dprof,eprof,tprof,bprof)
+      use constants, only : k_B, hydro_mass, small
+      use start, only    : nsub,nb,zmin,zmax,tune_zeq,proc,col_dens, &
+         G_sup1, G_uv1, gamma, alpha
+      use arrays, only   : nx,ny,nz,dl,zdim,z,zl,zr, nzt
+      use thermal, only  : d_temp_dz, cool
+     use gravity, only  : grav_accel
       
       implicit none
       integer                          :: ia, ja
