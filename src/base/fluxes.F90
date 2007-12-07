@@ -1,5 +1,7 @@
 #include "mhd.def"
-
+#define SQR(var) var*var
+#define SUM_SQR(x,y,z) SQR(x)+SQR(y)+SQR(z)  
+#define RNG 2:n-1
 module fluxes
   implicit none
 
@@ -34,37 +36,38 @@ module fluxes
     
     cfr = 0.0 
 
-    pmag(2:n-1)=(bb(ibx,2:n-1)*bb(ibx,2:n-1)+bb(iby,2:n-1)*bb(iby,2:n-1)+bb(ibz,2:n-1)*bb(ibz,2:n-1))*0.5
-    vx(2:n-1)=uu(imxa,2:n-1)/uu(idna,2:n-1)
+    pmag(RNG)=0.5*SUM_SQR(bb(ibx,RNG),bb(iby,RNG),bb(ibz,RNG))
+    vx(RNG)=uu(imxa,RNG)/uu(idna,RNG)
 
 ! UWAGA ZMIANA W OBLICZANIU LOKALNEJ PREDKOSCI NA PROBE
 ! mh 22-11-07 w problemach z udzialem promieniowania kosmicznego
 ! uzycie vx prowadzi do nieduzych oscylacji, a dla vt oscylacji nie widac,
 ! wobec tego po krotkim powrocie do vx (v.1.2) przywracam vt (v.1.3)
 
-    vy(2:n-1)=uu(imya,2:n-1)/uu(idna,2:n-1)
-    vz(2:n-1)=uu(imza,2:n-1)/uu(idna,2:n-1)
-    vt = sqrt(vx*vx+vy*vy+vz*vz)
+    vy(RNG)=uu(imya,RNG)/uu(idna,RNG)
+    vz(RNG)=uu(imza,RNG)/uu(idna,RNG)
+    vt = SUM_SQR(vx,vy,vz)
     
     
 #ifdef ISO
-    p(2:n-1) = csi2*uu(idna,2:n-1)
-    ps(2:n-1)= p(2:n-1) + pmag(2:n-1)
+    p(RNG) = csi2*uu(idna,RNG)
+    ps(RNG)= p(RNG) + pmag(RNG)
 #else /* ISO */
-    ps(2:n-1)=(uu(iena,2:n-1)-(uu(imxa,2:n-1)*uu(imxa,2:n-1)+uu(imya,2:n-1)*uu(imya,2:n-1) & 
-              +uu(imza,2:n-1)*uu(imza,2:n-1))/uu(idna,2:n-1)*0.5)*(gamma-1)+(2-gamma)*pmag(2:n-1)
-    p(2:n-1)=ps(2:n-1)-pmag(2:n-1)
+    ps(RNG)=(uu(iena,RNG) - &
+    0.5*SUM_SQR(uu(imxa,RNG),uu(imya,RNG),uu(imza,RNG)) &
+    / uu(idna,RNG))*(gamma-1.0) + (2.0-gamma)*pmag(RNG)
+    p(RNG) = ps(RNG)- pmag(RNG)
 #endif /* ISO */
-    flux(idna,2:n-1)=uu(imxa,2:n-1)
-    flux(imxa,2:n-1)=uu(imxa,2:n-1)*vx(2:n-1)+ps(2:n-1)-bb(ibx,2:n-1)*bb(ibx,2:n-1)
-    flux(imya,2:n-1)=uu(imya,2:n-1)*vx(2:n-1)-bb(iby,2:n-1)*bb(ibx,2:n-1)
-    flux(imza,2:n-1)=uu(imza,2:n-1)*vx(2:n-1)-bb(ibz,2:n-1)*bb(ibx,2:n-1)
+    flux(idna,RNG)=uu(imxa,RNG)
+    flux(imxa,RNG)=uu(imxa,RNG)*vx(RNG)+ps(RNG)-SQR(bb(ibx,RNG))
+    flux(imya,RNG)=uu(imya,RNG)*vx(RNG)-bb(iby,RNG)*bb(ibx,RNG)
+    flux(imza,RNG)=uu(imza,RNG)*vx(RNG)-bb(ibz,RNG)*bb(ibx,RNG)
 #ifndef ISO
-    flux(iena,2:n-1)=(uu(iena,2:n-1)+ps(2:n-1))*vx(2:n-1)-bb(ibx,2:n-1)*(bb(ibx,2:n-1)*uu(imxa,2:n-1) &
-                +bb(iby,2:n-1)*uu(imya,2:n-1)+bb(ibz,2:n-1)*uu(imza,2:n-1))/uu(idna,2:n-1)
+    flux(iena,RNG)=(uu(iena,RNG)+ps(RNG))*vx(RNG)-bb(ibx,RNG)*(bb(ibx,RNG)*uu(imxa,RNG) &
+                +bb(iby,RNG)*uu(imya,RNG)+bb(ibz,RNG)*uu(imza,RNG))/uu(idna,RNG)
 #endif /* ISO */
 #ifdef COSM_RAYS
-    flux(iecr,2:n-1)= uu(iecr,2:n-1)*vx(2:n-1)
+    flux(iecr,RNG)= uu(iecr,RNG)*vx(RNG)
 #endif /* COSM_RAYS */
 #ifdef LOCAL_FR_SPEED
 
@@ -73,14 +76,14 @@ module fluxes
 !       but sometimes may lead to numerical instabilities   
 #ifdef ISO
 ! UWAGA ZMIANA W OBLICZANIU LOKALNEJ PREDKOSCI NA PROBE
-!        cfr(1,2:n-1) = abs(vx(2:n-1)) &
-        cfr(1,2:n-1) = abs(vt(2:n-1)) &
-                      +max(sqrt( abs(2*pmag(2:n-1) + p(2:n-1))/uu(idna,2:n-1)),small)
+!        cfr(1,RNG) = abs(vx(RNG)) &
+        cfr(1,RNG) = abs(vt(RNG)) &
+                      +max(sqrt( abs(2.0*pmag(RNG) + p(RNG))/uu(idna,RNG)),small)
 #else /* ISO */
 ! UWAGA ZMIANA W OBLICZANIU LOKALNEJ PREDKOSCI NA PROBE
-!        cfr(1,2:n-1) = abs(vx(2:n-1)) &
-        cfr(1,2:n-1) = abs(vt(2:n-1)) &
-                      +max(sqrt( abs(2*pmag(2:n-1) + gamma*p(2:n-1))/uu(idna,2:n-1)),small)
+!        cfr(1,RNG) = abs(vx(RNG)) &
+        cfr(1,RNG) = abs(vt(RNG)) &
+                      +max(sqrt( abs(2.0*pmag(RNG) + gamma*p(RNG))/uu(idna,RNG)),small)
 #endif /* ISO */
         cfr(1,1) = cfr(1,2)
         cfr(1,n) = cfr(1,n-1)   
@@ -91,8 +94,8 @@ module fluxes
 !       (c=const for the whole domain) in sobroutine 'timestep' 
 !       Original computation of the freezing speed was done
 !       for each sweep separately:
-!       c=maxval(abs(vx(nb-2:n-1))+sqrt(abs(2*pmag(nb-2:n-1) &
-!                            +gamma*p(nb-2:n-1))/u(idna,nb-2:n-1)))  
+!       c=maxval(abs(vx(nb-RNG))+sqrt(abs(2*pmag(nb-RNG) &
+!                            +gamma*p(nb-RNG))/u(idna,nb-RNG)))  
         cfr(:,:) = c
 #endif /* GLOBAL_FR_SPEED */
 
@@ -107,18 +110,18 @@ module fluxes
     real, dimension(m,n) :: f,a,b,c
 #ifdef VANLEER
       c = a*b
-      where (c .gt. 0)                                        
-        f = f+2*c/(a+b)
+      where (c .gt. 0.0)                                        
+        f = f+2.0*c/(a+b)
       endwhere      
 #endif /* VANLEER */
 #ifdef MINMOD
-        f = f+(sign(1.,a)+sign(1.,b))*min(abs(a),abs(b))*0.5
+        f = f+(sign(1.0,a)+sign(1.0,b))*min(abs(a),abs(b))*0.5
 #endif /* MINMOD */
 #ifdef SUPERBEE
       where (abs(a) .gt. abs(b))
-        f = f+(sign(1.,a)+sign(1.,b))*min(abs(a), abs(2*b))*0.5
+        f = f+(sign(1.0,a)+sign(1.0,b))*min(abs(a), abs(2.0*b))*0.5
       elsewhere
-        f = f+(sign(1.,a)+sign(1.,b))*min(abs(2*a), abs(b))*0.5
+        f = f+(sign(1.0,a)+sign(1.0,b))*min(abs(2.0*a), abs(b))*0.5
       endwhere
 #endif /* SUPERBEE */
  

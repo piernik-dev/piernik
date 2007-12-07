@@ -232,6 +232,9 @@ module dataio
 #ifndef ISO
     use arrays, only : iena
 #endif /* ISO */
+#ifndef SPLIT
+    use arrays, only : Lu
+#endif /* SPLIT */
 #ifdef GRAV
     use arrays, only : gp
 #endif /* GRAV */
@@ -503,7 +506,18 @@ module dataio
            wa(iso:ieo,jso:jeo,kso:keo) = 0.5*(wa(iso:ieo,jso:jeo,kso:keo) + wa(iso:ieo,jso:jeo,kso+1:keo+1)) 
          endif
        endif
-
+#ifndef SPLIT
+      case ('flx1')
+        wa(:,:,:) = Lu(1,:,:,:)
+      case ('flx2')
+        wa(:,:,:) = Lu(2,:,:,:)
+      case ('flx3')
+        wa(:,:,:) = Lu(3,:,:,:)
+      case ('flx4')
+        wa(:,:,:) = Lu(4,:,:,:)
+      case ('flx5')
+        wa(:,:,:) = Lu(5,:,:,:)
+#endif /* SPLIT */
       case ('esrc')
 !        wa(iso:ieo,jso:jeo,kso:keo) = outwa(iso:ieo,jso:jeo,kso:keo)
 

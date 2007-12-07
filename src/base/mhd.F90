@@ -40,8 +40,10 @@ program mhd
   character output*3
   integer system_status
   character system_command*160
+#ifndef GNU
   external :: system
   integer  :: system
+#endif /* GNU */
   integer tsleep
 !  real, dimension(:,:,:),allocatable :: ala
   
