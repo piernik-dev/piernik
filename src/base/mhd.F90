@@ -27,13 +27,14 @@ program mhd
   use mag_boundaries, only   : compute_b_bnd
 #ifdef RESIST
   use resistivity
-#endif 
+#endif /* RESIST */
 #ifdef SELF_GRAV
   use poisson_solver
-#endif 
+#endif /* SELF_GRAV */
 #ifdef GRAV
   use gravity, only : grav_pot_3d
-#endif 
+  use start, only : grav_model
+#endif /* GRAV */
 
   implicit none
   character output*3
@@ -60,7 +61,7 @@ program mhd
 
 #ifdef GRAV
   call grav_pot_3d
-#endif
+#endif /* GRAV */
 
   if(proc .eq. 0) then 
     if(restart .eq. 'last') then
@@ -75,18 +76,26 @@ program mhd
     nstep_start = 0
     t_start     = 0.0
 
+#ifdef GALACTIC_DISK
+    if(grav_model .eq. 'hern93nbody2') call write_data('gpt')
+#endif GALACTIC_DISK
     call init_prob
+#ifdef GALACTIC_DISK
+    if((grav_model .ne. 'null') .and. (grav_model .ne. 'hern93nbody2')) then
+     call write_data('gpt')
+    endif
+#endif GALACTIC_DISK
 
     call compute_u_bnd
     call compute_b_bnd
 
 #ifdef MASS_COMPENS
     call save_init_dens
-#endif        
+#endif /* MASS_COMPENS */
 
 #ifdef SELF_GRAV
     call poisson
-#endif 
+#endif /* SELF_GRAV */
 
     if (proc .eq.0) then
       write (log_file,'(a,a1,a3,a1,i3.3,a4)') &

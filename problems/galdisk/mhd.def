@@ -5,16 +5,16 @@
 #define  SPLIT           /*scheme*/
 
 /* choosing solver */
-#undef  ORIG            /*solver*/
-#define  SSP            /*solver*/
+#define  ORIG            /*solver*/
+#undef  SSP            /*solver*/
 /*===================================/
 
 /* adiabatic or isothermic */
 #define ISO 	
 
 /* choosing freezing speed */
-#undef LOCAL_FR_SPEED
-#define  GLOBAL_FR_SPEED
+#define LOCAL_FR_SPEED
+#undef  GLOBAL_FR_SPEED
 
 /* choosing flux limiter */
 #define VANLEER
@@ -26,7 +26,8 @@
 #undef HEAT_COND	
 #undef COOL_HEAT
 #undef COSM_RAYS
-#define GRAV 'galsmooth'
+#define GRAV
+#define GRAV_GALSMOOTH
 #undef GALAXY
 #define GALACTIC_DISK
 #define SNE_DISTR

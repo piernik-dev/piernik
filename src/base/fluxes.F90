@@ -8,11 +8,17 @@ module fluxes
  
   subroutine mhdflux(flux,cfr,uu,bb,n)
     use start, only : gamma
+#ifdef ISO
+    use start, only : csi2
+#endif /* ISO */
     use constants
     use arrays, only : ibx,iby,ibz,idna,imxa,imya,imza, nu
 #ifndef ISO
     use arrays, only : iena
 #endif /* ISO */
+#ifdef COSM_RAYS
+    use arrays, only :iecr
+#endif /* COSM_RAYS */
     use time, only : c
     implicit none
     integer n

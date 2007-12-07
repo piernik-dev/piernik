@@ -7,7 +7,10 @@ module mod_mhdstep ! UNSPLIT 3D
    use advects
 #ifdef RESIST
    use resistivity
-#endif 
+#endif /* RESIST */
+#ifdef SNE_DISTR
+  use sn_distr
+#endif /* SNE_DISTR */
    contains
 
 subroutine mhdstep
@@ -44,6 +47,10 @@ subroutine mhdstep
     endif
     call integrate
   enddo
+
+#ifdef SNE_DISTR
+      call supernovae_distribution(dt)
+#endif /* SNE_DISTR */
 
 !------------------- Z->Y->X ---------------------
 

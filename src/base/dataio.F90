@@ -2,7 +2,7 @@
 
 !=====================================================================
 !!
-!!  dataio module responsisle for data output
+!!  dataio module responsible for data output
 !!
 !=====================================================================
 !
@@ -57,7 +57,7 @@ module dataio
        dens_min, dens_max, pres_min, pres_max, b_min, b_max, temp_min, temp_max
 #ifdef COSM_RAYS
   real encr_min, encr_max    
-#endif 
+#endif /* COSM_RAYS */
 
 
 
@@ -167,7 +167,7 @@ module dataio
 !---------------------------------------------------------------------
 !
   subroutine write_data(output)
-    use start, only:  dt_hdf, dt_res, dt_tsl, dt_log, t ,dt, nstep
+    use start, only:  dt_hdf, dt_res, dt_tsl, dt_log, t, dt, nstep
     implicit none
     character  :: output*3
 
@@ -183,7 +183,13 @@ module dataio
 
 !    CALL checkdf
 
-    if (dt_hdf .gt. 0.0 .and. nstep .gt. step_hdf) then
+#ifdef GALACTIC_DISK
+    if(output .eq. 'gpt') then
+      call write_gpot
+    endif
+#endif GALACTIC_DISK
+
+    if (dt_hdf .gt. 0.0 .and. nstep .gt. step_hdf .and. output .ne. 'gpt') then
 !      if ((nhdf-nhdf_start) .lt. (int((t-t_start) / dt_hdf) + 1) &
       if ((t-last_hdf_time) .ge. dt_hdf &
                 .or. output .eq. 'hdf' .or. output .eq. 'end') then
@@ -221,11 +227,14 @@ module dataio
          domain, nxd,nyd,nzd,nb,mag_center, gamma, dimensions, dt
     use grid, only : dx,dy,dz
     use arrays, only : nx,ny,nz,nxb,nyb,nzb,x,y,z,wa,outwa,outwb,outwc,b,u, &
-         idna,imxa,imya,imza,gp,ibx,iby,ibz
+         idna,imxa,imya,imza,ibx,iby,ibz
     use init_problem, only : problem_name, run_id
 #ifndef ISO
     use arrays, only : iena
 #endif /* ISO */
+#ifdef GRAV
+    use arrays, only : gp
+#endif /* GRAV */
     implicit none
 
     character(len=128) :: filename,filenamedisp
@@ -238,7 +247,7 @@ module dataio
     integer :: sfstart, sfend, sfsnatt, sfcreate, sfwdata, sfscompress, sfendacc &
              , sfdimid, sfsdmname, sfsdscale, sfsdmstr
 
-    integer :: iv, i, j, k
+    integer :: iv, i, j, k, ibe
     integer :: nxo, nyo, nzo, iso,ieo,jso,jeo,kso,keo
     real*4, dimension(:,:,:), allocatable :: temp
 
@@ -382,10 +391,29 @@ module dataio
 #ifdef COSM_RAYS
       case ('encr')
         wa(iso:ieo,jso:jeo,kso:keo) = u(iecr,iso:ieo,jso:jeo,kso:keo)
+#endif /* COSM_RAYS */
+
+      case ('omga')
+        do ibe=iso,ieo
+          wa(ibe,jso:jeo,kso:keo) = sqrt((u(imxa,ibe,jso:jeo,kso:keo) / u(idna,ibe,jso:jeo,kso:keo) / x(ibe))**2 &
+	                           + (u(imya,ibe,jso:jeo,kso:keo) / u(idna,ibe,jso:jeo,kso:keo) / y(ibe))**2)
+	enddo
+
+      case ('vrot')
+        do ibe=iso,ieo
+          wa(ibe,jso:jeo,kso:keo) = sqrt((u(imxa,ibe,jso:jeo,kso:keo) / u(idna,ibe,jso:jeo,kso:keo) / x(ibe))**2 &
+	                           + (u(imya,ibe,jso:jeo,kso:keo) / u(idna,ibe,jso:jeo,kso:keo) / y(ibe))**2)*sqrt(x(ibe)**2+y(ibe)**2)
+	enddo
+
+#ifndef ISO
+      case ('csnd')
+        wa(iso:ieo,jso:jeo,kso:keo) = sqrt((u(iena,iso:ieo,jso:jeo,kso:keo) & 
+	                      -0.5*(u(imxa,iso:ieo,jso:jeo,kso:keo)**2+u(imya,iso:ieo,jso:jeo,kso:keo)**2+u(imza,iso:ieo,jso:jeo,kso:keo)**2) &
+			      / u(idna,iso:ieo,jso:jeo,kso:keo))*(gamma-1.)*gamma/u(idna,iso:ieo,jso:jeo,kso:keo))
 #endif 
 
-      case ('gpot')
-        wa(iso:ieo,jso:jeo,kso:keo) = gp(iso:ieo,jso:jeo,kso:keo)
+!      case ('gpot')
+!        wa(iso:ieo,jso:jeo,kso:keo) = gp(iso:ieo,jso:jeo,kso:keo)
 
       case ('magx')
         if(domain .eq. 'full_domain') then
@@ -543,6 +571,242 @@ module dataio
 
 
   end subroutine write_hdf
+#ifdef GALACTIC_DISK
+  subroutine write_gpot
+
+    use arrays
+    use init_problem
+
+
+    implicit none
+
+    character(len=128) :: filename,filenamedisp
+    character runname*16
+    character, dimension(16) :: gvars*4
+
+    integer :: sd_id, sds_id, dim_id, iostatus
+    integer :: rank, comp_type
+    integer, dimension(3) :: dims, istart, stride
+    integer, dimension(1) :: comp_prm
+    integer :: sfstart, sfend, sfsnatt, sfcreate, sfwdata, sfscompress, sfendacc &
+             , sfdimid, sfsdmname, sfsdscale, sfsdmstr
+
+    integer :: iv, i, j, k
+    integer :: nxo, nyo, nzo, iso,ieo,jso,jeo,kso,keo
+
+!- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+    if(domain .eq. 'full_domain') then
+      nxo   = nx
+      nyo   = ny
+      nzo   = nz
+      iso   = 1
+      ieo   = nx
+      jso   = 1
+      jeo   = ny
+      if(dimensions .eq. '3d') then
+      kso   = 1
+      keo   = nz
+      elseif(dimensions .eq. '2dxy') then
+        kso = 1
+        keo = 1      
+      endif
+
+    else if(domain .eq. 'phys_domain') then
+      nxo   = nxb
+      nyo   = nyb
+      nzo   = nzb
+      iso    = nb+1
+      ieo    = nb+nxb
+      jso    = nb+1
+      jeo    = nb+nyb
+      if(dimensions .eq. '3d') then      
+        kso    = nb+1
+        keo    = nb+nzb    
+      elseif(dimensions .eq. '2dxy') then
+        kso = 1
+        keo = 1      
+      endif      
+    endif
+
+
+    rank = 3
+    comp_type = 4
+    comp_prm(1) = 6
+    dims(1) = nxo
+    dims(2) = nyo
+    dims(3) = nzo
+    istart(:) = 0
+    stride(:) = 1
+
+!  generate filename
+!
+
+    write (filename,'(a,a5,i2.2,a1,i2.2,a1,i2.2,a1,a8)') &
+              trim(problem_name),'_gpt_', &
+	      pcoords(1),'_',pcoords(2),'_',pcoords(3),'_', '0000.hdf'
+
+    write (filenamedisp,'(a,a5,a2,a1,a2,a1,a2,a1,a8)') &
+              trim(problem_name),'_gpt_',pc1,'_',pc2,'_',pc3,'_', '0000.hdf'
+
+
+    sd_id = sfstart(trim(filename), 4)
+
+! write attributes
+!
+    iostatus = sfsnatt( sd_id, 'problem' , 4, 32, problem_name)
+    iostatus = sfsnatt( sd_id, 'run_id'  , 4, 32, run_id      )
+    iostatus = sfsnatt( sd_id, 'domain'  , 4, 32, domain      )
+
+    iostatus = sfsnatt( sd_id, 'psize1'  , 23, 1, psize(1) )
+    iostatus = sfsnatt( sd_id, 'psize2'  , 23, 1, psize(2) )
+    iostatus = sfsnatt( sd_id, 'psize3'  , 23, 1, psize(3) )
+
+    iostatus = sfsnatt( sd_id, 'pcoords1', 23, 1, pcoords(1) )
+    iostatus = sfsnatt( sd_id, 'pcoords2', 23, 1, pcoords(2) )
+    iostatus = sfsnatt( sd_id, 'pcoords3', 23, 1, pcoords(3) )
+
+    iostatus = sfsnatt( sd_id, 'dims1'   , 23, 1, dims(1)    )
+    iostatus = sfsnatt( sd_id, 'dims2'   , 23, 1, dims(2)    )
+    iostatus = sfsnatt( sd_id, 'dims3'   , 23, 1, dims(3)    )
+
+    iostatus = sfsnatt( sd_id, 'nxd'     , 23, 1, nxd     )
+    iostatus = sfsnatt( sd_id, 'nyd'     , 23, 1, nyd     )
+    iostatus = sfsnatt( sd_id, 'nzd'     , 23, 1, nzd     )
+
+    iostatus = sfsnatt( sd_id, 'nxb'     , 23, 1, nxb     )
+    iostatus = sfsnatt( sd_id, 'nyb'     , 23, 1, nyb     )
+    iostatus = sfsnatt( sd_id, 'nzb'     , 23, 1, nzb     )
+    iostatus = sfsnatt( sd_id, 'nb'      , 23, 1, nb      )
+
+    iostatus = sfsnatt( sd_id, 'xmin'    , 6,  1, xmin    )
+    iostatus = sfsnatt( sd_id, 'xmax'    , 6,  1, xmax    )
+    iostatus = sfsnatt( sd_id, 'ymin'    , 6,  1, ymin    )
+    iostatus = sfsnatt( sd_id, 'ymax'    , 6,  1, ymax    )
+    iostatus = sfsnatt( sd_id, 'zmin'    , 6,  1, zmin    )
+    iostatus = sfsnatt( sd_id, 'zmax'    , 6,  1, zmax    )
+
+    iostatus = sfsnatt( sd_id, 'nstep'   , 23, 1, nstep          )
+    iostatus = sfsnatt( sd_id, 'time'    ,  6, 1, t              )
+    iostatus = sfsnatt( sd_id, 'timestep',  6, 1, dt             )
+
+    iostatus = sfsnatt( sd_id, 'gamma'   ,  6, 1, gamma          )
+
+    do iv=1,16
+
+      select case(iv)
+
+      case (1)
+        gvars(1)='gpot'
+        wa(iso:ieo,jso:jeo,kso:keo) = gp(iso:ieo,jso:jeo,kso:keo)
+
+      case (2)
+        gvars(2)='gdsk'
+        wa(iso:ieo,jso:jeo,kso:keo) = gpotdisk(iso:ieo,jso:jeo,kso:keo)
+	
+      case (3)
+        gvars(3)='ghal'
+        wa(iso:ieo,jso:jeo,kso:keo) = gpothalo(iso:ieo,jso:jeo,kso:keo)
+	
+      case (4)
+        gvars(4)='gblg'
+        wa(iso:ieo,jso:jeo,kso:keo) = gpotbulge(iso:ieo,jso:jeo,kso:keo)
+	
+      case (5)
+        gvars(5)='grxl'
+        wa(iso:ieo,jso:jeo,kso:keo) = (gp(iso:ieo,jso:jeo,kso:keo)-gp(iso-1:ieo-1,jso:jeo,kso:keo))/dx
+
+      case (6)
+        gvars(6)='gryl'
+        wa(iso:ieo,jso:jeo,kso:keo) = (gp(iso:ieo,jso:jeo,kso:keo)-gp(iso:ieo,jso-1:jeo-1,kso:keo))/dy
+
+      case (7)
+        gvars(7)='grzl'
+        wa(iso:ieo,jso:jeo,kso:keo) = (gp(iso:ieo,jso:jeo,kso:keo)-gp(iso:ieo,jso:jeo,kso-1:keo-1))/dz
+
+      case (8)
+        gvars(8)='gdxl'
+        wa(iso:ieo,jso:jeo,kso:keo) = (gpotdisk(iso:ieo,jso:jeo,kso:keo)-gpotdisk(iso-1:ieo-1,jso:jeo,kso:keo))/dx
+
+      case (9)
+        gvars(9)='gdyl'
+        wa(iso:ieo,jso:jeo,kso:keo) = (gpotdisk(iso:ieo,jso:jeo,kso:keo)-gpotdisk(iso:ieo,jso-1:jeo-1,kso:keo))/dy
+
+      case (10)
+        gvars(10)='gdzl'
+        wa(iso:ieo,jso:jeo,kso:keo) = (gpotdisk(iso:ieo,jso:jeo,kso:keo)-gpotdisk(iso:ieo,jso:jeo,kso-1:keo-1))/dz
+
+      case (11)
+        gvars(11)='ghxl'
+        wa(iso:ieo,jso:jeo,kso:keo) = (gpothalo(iso:ieo,jso:jeo,kso:keo)-gpothalo(iso-1:ieo-1,jso:jeo,kso:keo))/dx
+
+      case (12)
+        gvars(12)='ghyl'
+        wa(iso:ieo,jso:jeo,kso:keo) = (gpothalo(iso:ieo,jso:jeo,kso:keo)-gpothalo(iso:ieo,jso-1:jeo-1,kso:keo))/dy
+
+      case (13)
+        gvars(13)='ghzl'
+        wa(iso:ieo,jso:jeo,kso:keo) = (gpothalo(iso:ieo,jso:jeo,kso:keo)-gpothalo(iso:ieo,jso:jeo,kso-1:keo-1))/dz
+
+      case (14)
+        gvars(14)='gbxl'
+        wa(iso:ieo,jso:jeo,kso:keo) = (gpotbulge(iso:ieo,jso:jeo,kso:keo)-gpotbulge(iso-1:ieo-1,jso:jeo,kso:keo))/dx
+
+      case (15)
+        gvars(15)='gbyl'
+        wa(iso:ieo,jso:jeo,kso:keo) = (gpotbulge(iso:ieo,jso:jeo,kso:keo)-gpotbulge(iso:ieo,jso-1:jeo-1,kso:keo))/dy
+
+      case (16)
+        gvars(16)='gbzl'
+        wa(iso:ieo,jso:jeo,kso:keo) = (gpotbulge(iso:ieo,jso:jeo,kso:keo)-gpotbulge(iso:ieo,jso:jeo,kso-1:keo-1))/dz
+
+      case default
+        print *, 'Variable ', gvars(iv), ' is not defined! Skipping.'
+      end select
+!       print *, gvars(iv), minval(wa), maxval(wa)
+
+! write data
+!
+      sds_id = sfcreate(sd_id, gvars(iv), 5, rank, dims)
+      iostatus = sfscompress(sds_id, comp_type, comp_prm)
+      iostatus = sfwdata(sds_id, istart, stride, dims, real(wa(iso:ieo,jso:jeo,kso:keo),4))
+
+! write coords
+!
+      dim_id = sfdimid( sds_id, 0 )
+      iostatus = sfsdmname( dim_id, 'xc' )
+      iostatus = sfsdscale( dim_id, dims(1), 5, real(x(iso:ieo),4))
+      iostatus = sfsdmstr ( dim_id, 'X', 'pc', '' )
+
+      dim_id = sfdimid( sds_id, 1 )
+      iostatus = sfsdmname( dim_id, 'yc' )
+      iostatus = sfsdscale( dim_id, dims(2), 5, real(y(jso:jeo),4))
+      iostatus = sfsdmstr ( dim_id, 'Y', 'pc', '' )
+
+      dim_id = sfdimid( sds_id, 2 )
+      iostatus = sfsdmname( dim_id, 'zc' )
+      iostatus = sfsdscale( dim_id, dims(3), 5, real(z(kso:keo),4))
+      iostatus = sfsdmstr ( dim_id, 'Z', 'pc', '' )
+
+      iostatus = sfendacc(sds_id)
+
+    end do
+
+    iostatus = sfend(sd_id)
+
+
+    if(proc.eq. 0) then
+!      open(log_lun, file=log_file, position='append')  
+        
+!      write(log_lun,*) 'Writing output   file: ', trim(filenamedisp)    
+      write(*,*)       'Writing output   file: ', trim(filenamedisp)
+
+!      close(log_lun)
+    endif
+
+
+  end subroutine write_gpot
+#endif GALACTIC_DISK
 
 !---------------------------------------------------------------------
 !
@@ -552,11 +816,13 @@ module dataio
 !
   subroutine write_restart
 
-    use arrays, only : nxb,nyb,nzb,x,y,z,u,gp,b,nx,ny,nz,nm,nu
+    use arrays, only : nxb,nyb,nzb,x,y,z,u,b,nx,ny,nz,nm,nu
     use start, only  : xmin,xmax,ymin,ymax,zmin,zmax,nxd,nyd,nzd,t,dt, &
          resdel,nb,nstep,domain
     use init_problem, only : problem_name, run_id
-
+#ifdef GRAV
+    use arrays, only : gp
+#endif /* GRAV */
     implicit none
 
     character(len=128) :: filename,filenamedisp,filenamelast
@@ -799,10 +1065,12 @@ module dataio
 !
   subroutine read_restart !(all)
 
-    use arrays, only : u,b,gp,nx,ny,nz,nu,nm
+    use arrays, only : u,b,nx,ny,nz,nu,nm
     use start, only  : t, dt, nstep
     use init_problem, only : problem_name, run_id
-
+#ifdef GRAV
+    use arrays, only : gp
+#endif /* GRAV */
     implicit none
 
     character(len=128) :: filename,filenamedisp
@@ -1065,16 +1333,22 @@ module dataio
   subroutine write_timeslice
 
     use arrays, only : is,ie,js,je,ks,ke,u,b,idna,imxa,imya,imza, wa, &
-         ibx,iby,ibz,gp,x,y
+         ibx,iby,ibz,x,y
     use grid, only  : dvol,dx,dy,dz 
     use start, only : proc, dt, t, nstep, nrestart,nxd,nyd,nzd
+#ifdef GRAV
+    use arrays, only : gp
+#endif /* GRAV */
+#ifdef ISO
+    use start, only : csi2
+#endif /* ISO */
     use init_problem, only : problem_name, run_id
 #ifdef COOL_HEAT    
     use thermal
-#endif
+#endif /* COOL_HEAT */
 #ifdef RESIST
     use resistivity
-#endif
+#endif /* RESIST */
 #ifndef ISO
     use arrays, only : iena
 #endif /* ISO */
@@ -1106,16 +1380,16 @@ module dataio
                                            'mflx', 'mfly', 'mflz', & 
 #ifdef COSM_RAYS
                                            'encr_tot', 'encr_min',  'encr_max',&
-#endif 
+#endif /* COSM_RAYS */
 #ifdef RESIST
                                            'eta_max', &
-#endif
+#endif /* RESIST */
 ! some quantities computed in "write_log".One can add more, or change.
                                            'vx_max', 'vy_max', 'vz_max', 'va_max', 'cs_max', &
                                            'dens_min', 'dens_max', 'pres_min', 'pres_max', &
 #ifndef ISO	 
                                            'temp_min', 'temp_max',  &
-#endif
+#endif /* ISO */
                                            'b_min', 'b_max' 
                                            
 
@@ -1195,12 +1469,12 @@ module dataio
 #endif 
 #ifdef GRAV
     tot_ener = tot_ener + tot_epot
-#endif 
+#endif /* GRAV */
 
 #ifdef COSM_RAYS
     encr = sum(u(iecr,is:ie,js:je,ks:ke)) * dvol
     call mpi_allreduce(encr, tot_encr, 1, mpi_real8, mpi_sum, comm3d, ierr)
-#endif
+#endif /* COSM_RAYS */
 
 
     if (proc .eq. 0) then
@@ -1212,16 +1486,16 @@ module dataio
                       mflx, mfly, mflz, &
 #ifdef COSM_RAYS
                       tot_encr, encr_min, encr_max, & 
-#endif 
+#endif /* COSM_RAYS */
 #ifdef RESIST
                       eta_max, &
-#endif
+#endif /* RESIST */
 ! some quantities computed in "write_log".One can add more, or change.
                       vx_max, vy_max, vz_max, va_max, cs_max, &
                       dens_min, dens_max, pres_min, pres_max, &
 #ifndef ISO	  
 	              temp_min, temp_max,  &
-#endif 
+#endif /* ISO */
 	              b_min, b_max 
       close(tsl_lun)
     endif
@@ -1242,6 +1516,9 @@ module dataio
     use constants, only : small, hydro_mass, k_B
     use start, only : t,dt,nstep,sleep_minutes,sleep_seconds, smallei,nb, &
          gamma,cfl
+#ifdef ISO
+    use start, only : csi2,c_si
+#endif /* ISO */
 !    use init_problem
 !   use thermal
 #ifndef ISO
@@ -1249,7 +1526,7 @@ module dataio
 #endif /* ISO */
 #ifdef RESIST
     use resistivity
-#endif 
+#endif /* RESIST */
       
     implicit none
   
@@ -1259,10 +1536,10 @@ module dataio
                              loc_temp_min, loc_temp_max
 #ifdef COOL_HEAT			    
     integer, dimension(3) :: loc_dt_cool, loc_dt_heat
-#endif 
+#endif /* COOL_HEAT */
 #ifdef COSM_RAYS
     integer, dimension(3) :: loc_encr_min, loc_encr_max
-#endif 
+#endif /* COSM_RAYS */
                              
     integer               :: proc_vx_max, proc_vy_max, proc_vz_max, proc_va_max, &
                              proc_cs_max, proc_dens_min, proc_dens_max, proc_pres_min, & 
@@ -1270,13 +1547,13 @@ module dataio
                              proc_temp_min, proc_temp_max
 #ifdef COOL_HEAT			     
     integer               :: proc_dt_cool, proc_dt_heat
-#endif 
+#endif /* COOL_HEAT */
 #ifdef RESIST
     integer               :: proc_eta_max 
-#endif 
+#endif /* RESIST */
 #ifdef COSM_RAYS
     integer               :: proc_encr_min, proc_encr_max
-#endif 
+#endif /* COSM_RAYS */
     
 ! Timestep diagnostics
 
@@ -1393,11 +1670,11 @@ module dataio
       call mpifind(eint_src_max, 'max', loc_dt_heat, proc_dt_heat)
       call mpifind(dt_cool,      'min', loc_dt_cool, proc_dt_cool)
       call mpifind(dt_heat,      'min', loc_dt_heat, proc_dt_heat)
-#endif 
+#endif /* COOL_HEAT */
 #ifdef RESIST
 ! Tu trzba sprawdzic czy poprawnie znajdowane jest max i loc dla wielu procesow
       call mpifind(eta_max,      'max', loc_eta_max, proc_eta_max)
-#endif
+#endif /* RESIST */
 #ifdef COSM_RAYS
     wa         =  u(iecr,:,:,:)
     encr_min      = minval(wa(is:ie,js:je,ks:ke)) 
@@ -1410,7 +1687,7 @@ module dataio
     loc_encr_max  = maxloc(wa(is:ie,js:je,ks:ke)) &
                   + (/nb,nb,nb/)
     call mpifind(encr_max, 'max', loc_encr_max, proc_encr_max)
-#endif 
+#endif /* COSM_RAYS */
 
     if(proc .eq. 0)  then
     
@@ -1434,14 +1711,14 @@ module dataio
 #ifdef COOL_HEAT
         write(log_lun,777) 'min(esrc/eint) =', eint_src_min , 'dt=',dt_cool,   proc_dt_cool,  loc_dt_cool
         write(log_lun,777) 'max(esrc/eint) =', eint_src_max , 'dt=',dt_heat,   proc_dt_heat,  loc_dt_heat 
-#endif 
+#endif /* COOL_HEAT */
 #ifdef RESIST
         write(log_lun,777) 'max(eta)       =', eta_max ,      'dt=',dt_resist, proc_eta_max,  loc_eta_max
-#endif
+#endif /* RESIST */
 #ifdef COSM_RAYS
         write(log_lun,777) 'min(encr)      =', encr_min,         '',  0.0,     proc_encr_min, loc_encr_min   
         write(log_lun,777) 'max(encr)      =', encr_max,      'dt=',dt_cr,     proc_encr_max, loc_encr_max   
-#endif
+#endif /* COSM_RAYS */
 
         write(log_lun,900) nstep,dt,t
 
@@ -1472,7 +1749,7 @@ module dataio
 !     date:       26. june 2003      
       use start, only : sleep_minutes,sleep_seconds, min_disk_space_MB
       implicit none
-!
+
       integer scstatus,ispace,islash,i,i1,ldfout,lcwd 
       logical diskfree,diskaccess
       integer min_disk_space, darray(3),darray0(3),tarray(3),tarray0(3)
@@ -1530,7 +1807,7 @@ module dataio
         tsleep = sleep_time 
       endif
 
-!---  broadcasting a message (tsleep) on disk inaccessisility
+!---  broadcasting a message (tsleep) on disk inaccessibility
 
       isend(1) = tsleep
       isend(2) = proc

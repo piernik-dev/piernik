@@ -22,6 +22,9 @@ subroutine bnd_u(dim)
   use start,  only : gamma
   use arrays, only : iena
 #endif /* ISO */
+#ifdef ISO
+  use start, only : csi2
+#endif /* ISO */
 #ifdef GRAV
   use gravity, only : grav_accel
   use start, only : nsub, tune_zeq_bnd
@@ -30,6 +33,9 @@ subroutine bnd_u(dim)
   use shear, only : eps,delj, unshear_fft_b, unshear_fft
   use start, only : qshear, omega
 #endif 
+#ifdef COSM_RAYS
+    use arrays, only : iecr
+#endif /* COSM_RAYS */
  
 
   implicit none
@@ -38,7 +44,9 @@ subroutine bnd_u(dim)
   
   real, dimension(nx,ny) :: db, ekb, eib, csi2b
   integer kb, ksub
+#ifdef GRAV
   real, dimension(nsub+1):: zs, dprofs, gprofs
+#endif /* GRAV */
   real dzs, factor
   integer i,j
   real z1,z2
@@ -694,7 +702,7 @@ subroutine bnd_u(dim)
             do j=1,ny
               do i=1,nx
 
-                call grav_accel('zsweep',i,j, zs, nsub, gprofs)
+                call grav_accel('zsweep',i,j, zs, nsub, gprofs, 'default')
                 gprofs=tune_zeq_bnd * gprofs
       
                 dprofs(1) = db(i,j)
@@ -792,7 +800,7 @@ subroutine bnd_u(dim)
             do j=1,ny
               do i=1,nx
 
-                call grav_accel('zsweep',i,j, zs, nsub, gprofs)
+                call grav_accel('zsweep',i,j, zs, nsub, gprofs, 'default')
                 gprofs=tune_zeq_bnd * gprofs
       
                 dprofs(1) = db(i,j)

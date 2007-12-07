@@ -24,7 +24,8 @@
 #undef HEAT_COND	
 #undef COOL_HEAT
 #define COSM_RAYS
-#define GRAV 'galactic'
+#define GRAV
+#define GRAV_GALACTIC
 #define GALAXY
 #define SHEAR
 #define MASS_COMPENS

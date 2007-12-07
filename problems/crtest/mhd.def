@@ -8,5 +8,6 @@
 /* #define HEAT_COND		*/
 /* #define COOL_HEAT		*/
 #define COSM_RAYS
-/* #define GRAV 'null' 		*/
+/* #define GRAV 		*/
+/* #define GRAV_NULL		*/
 #define GALAXY

@@ -27,7 +27,10 @@ module tv   ! split ssp
 #ifdef GRAV
     use gravity, only :grav_pot2accel
 #endif /* GRAV */
-    use grid, only : xr
+    use arrays, only : xr
+#ifdef COSM_RAYS
+    use start, only : gamma_cr, cr_active
+#endif /* COSM_RAYS */
 
     implicit none
     integer i1,i2, n

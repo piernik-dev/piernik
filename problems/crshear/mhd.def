@@ -24,6 +24,7 @@
 #undef HEAT_COND	
 #undef COOL_HEAT
 #define COSM_RAYS
-#define GRAV 'null'
+#define GRAV
+#define GRAV_NULL
 #define GALAXY
 #define SHEAR

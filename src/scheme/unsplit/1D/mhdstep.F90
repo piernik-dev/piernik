@@ -10,7 +10,10 @@ module mod_mhdstep ! UNSPLIT 1D
 #endif /* RESIST */
 #ifdef SHEAR
    use shear, only : yshift
-#endif
+#endif /* SHEAR */
+#ifdef SNE_DISTR
+  use sn_distr
+#endif /* SNE_DISTR */
 
    contains
       subroutine mhdstep
@@ -33,17 +36,21 @@ module mod_mhdstep ! UNSPLIT 1D
 !------------------- X->Y->Z ---------------------
 #ifdef SHEAR
          call yshift(t-dt)
-#endif
+#endif /* SHEAR */
          call sweepx
          call sweepy
          if(dimensions .eq. '3d') then
             call sweepz
          endif
 
+#ifdef SNE_DISTR
+      call supernovae_distribution(dt)
+#endif /* SNE_DISTR */
+
 !------------------- Z->Y->X ---------------------
 #ifdef SHEAR
          call yshift(t)
-#endif
+#endif /* SHEAR */
 
          if(dimensions .eq. '3d') then
             call sweepz

@@ -42,6 +42,9 @@ module tv ! split orig
     use arrays, only : xr
     use start,  only : qshear, omega
 #endif /* SHEAR */
+#ifdef COSM_RAYS
+    use start, only : gamma_cr, cr_active
+#endif /* COSM_RAYS */
 
     implicit none
     integer :: i1,i2, n, istep

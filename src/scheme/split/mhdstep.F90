@@ -1,7 +1,7 @@
 #include "mhd.def"
 module mod_mhdstep   ! SPLIT
   use start, only  : dt_log, magfield, dimensions, t, dt, &
-      dt_tsl, nstep, proc 
+      dt_tsl, nstep, proc, istep, integration_order, cn 
   use dataio, only : write_log, write_timeslice, nlog, ntsl
   use time, only   : timestep
   use arrays, only : dl,ibx,iby,ibz,xdim,ydim,zdim,b,wa
@@ -19,6 +19,9 @@ module mod_mhdstep   ! SPLIT
 #ifdef SN_SRC
   use sn_sources
 #endif /* SN_SRC */
+#ifdef SNE_DISTR
+  use sn_distr
+#endif /* SNE_DISTR */
 #ifdef SELF_GRAV
   use poisson_solver
 #endif /* SELF_GRAV */
@@ -86,6 +89,9 @@ subroutine mhdstep
       call random_sn 
       call dipol_sn  
 #endif /* SN_SRC */
+#ifdef SNE_DISTR
+      call supernovae_distribution(dt)
+#endif /* SNE_DISTR */
       
       t=t+dt
 #ifdef SHEAR

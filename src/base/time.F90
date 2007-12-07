@@ -30,7 +30,7 @@ contains
     use start, only : dt, tend, t, dt_mhd, dt_coolheat, &
          dt_visc, dt_cr
 #ifdef RESIST
-    use resistivity, only : dt_resist
+    use resistivity, only : dt_resist, timestep_resist
 #endif
     implicit none
 ! Timestep computation
@@ -66,6 +66,9 @@ contains
   subroutine timestep_mhd
     use grid, only   : dx,dy,dz
     use start, only  : nb,cfl, gamma,dt_mhd
+#ifdef ISO
+    use start, only : csi2
+#endif /* ISO */
     use arrays, only : ks,ke,nyb,nxb,idna,imxa,imya,imza,u,b
 #ifndef ISO
     use arrays, only : iena

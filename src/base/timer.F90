@@ -14,10 +14,10 @@ module timer
 contains
 
   subroutine timer_start
+    implicit none
 
     external      dtime
     real(kind=4) dtime
-    implicit none
 
 !
 !      Initialise cpu and wall clocks.  "cputot" will be the total cpu

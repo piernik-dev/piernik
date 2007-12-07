@@ -24,6 +24,7 @@
 #undef HEAT_COND	
 #undef COOL_HEAT
 #undef COSM_RAYS
-#define GRAV 'ptmass'
+#define GRAV
+#define GRAV_PTMASS
 #undef  GALAXY
 #undef SHEAR
