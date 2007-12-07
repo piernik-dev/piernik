@@ -38,11 +38,11 @@ HDF_LIB  = . -lfftw3 -llapack -lgfortran -lc
 MHDF_LIB = /opt/pgi/linux86/7.0/hdf4/include
 
 ### SUN 
-F90		 = /opt/sunstudio12/mpich2/bin/mpif90
-F90FLAGS  = -fast -xprofile=collect -dalign -depend -unroll=4 -xtarget=opteron \
+#F90		 = /opt/sunstudio12/mpich2/bin/mpif90
+#F90FLAGS  = -fast -xprofile=collect -dalign -depend -unroll=4 -xtarget=opteron \
  -m64 -xipo -xtypemap=real:64
 #F90FLAGS  = -fast -xprofile=use:mhd.profile -O5 -dalign -depend -unroll=4 \
  -xtarget=opteron -m64 -xipo -xtypemap=real:64
-HDF_LIB  = /opt/sunstudio12/hdf4/lib -L/opt/sunstudio12/fftw/lib
-HDF_LIB += -lfftw3 
-MHDF_LIB = /opt/sunstudio12/hdf4/include
+#HDF_LIB  = /opt/sunstudio12/hdf4/lib -L/opt/sunstudio12/fftw/lib
+#HDF_LIB += -lfftw3 
+#MHDF_LIB = /opt/sunstudio12/hdf4/include
