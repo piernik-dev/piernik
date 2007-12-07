@@ -52,6 +52,9 @@ if( grep { /COSM_RAYS/} @d) {
 if( grep { /SN_SRC/} @d) {
    push(@addons, "../src/supernovae/sn_sources.F90");
 }
+if( grep { /SNE_DISTR/} @d) {
+   push(@addons, "../src/supernovae/sn_distr.F90");
+}
 if( grep { /ORIG/ } @d) {
    $solv="orig";
 } else {

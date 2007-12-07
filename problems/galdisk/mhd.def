@@ -1,0 +1,40 @@
+/*======= re-setup needed ==========*/
+/* choosing scheme */
+#undef UNSPLIT_1D      /*scheme*/
+#undef  UNSPLIT_3D      /*scheme*/
+#define  SPLIT           /*scheme*/
+
+/* choosing solver */
+#undef  ORIG            /*solver*/
+#define  SSP            /*solver*/
+/*===================================/
+
+/* adiabatic or isothermic */
+#define ISO 	
+
+/* choosing freezing speed */
+#undef LOCAL_FR_SPEED
+#define  GLOBAL_FR_SPEED
+
+/* choosing flux limiter */
+#define VANLEER
+#undef MINMOD
+#undef SUPERBEE
+
+#undef RESIST 		
+#undef VISC			
+#undef HEAT_COND	
+#undef COOL_HEAT
+#undef COSM_RAYS
+#define GRAV 'galsmooth'
+#undef GALAXY
+#define GALACTIC_DISK
+#define SNE_DISTR
+#undef SHEAR
+
+/* writing output info into files seperate for each process */
+#undef FILEINFO
+#undef ROTINFO
+#undef HDFSWEEP
+#undef GRV1ORD
+
