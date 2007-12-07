@@ -589,7 +589,7 @@ allocate(gpotdisk(nx,ny,nz),gpothalo(nx,ny,nz),gpotbulge(nx,ny,nz))
 #elif defined (GRAV_NULL)
        grav=0.0
 #else
-#error 'GRAV declared, but gravity model undefined'
+!#error 'GRAV declared, but gravity model undefined'
 #endif
 
 #ifndef GRAV == 'galsmtdec'
