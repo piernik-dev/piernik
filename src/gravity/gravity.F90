@@ -2,12 +2,6 @@
 
 module gravity
 
-  use mpi_setup
-  use start
-  use arrays
-  use grid
-  use constants
-
   character gp_status*9
 #ifdef GALACTIC_DISK
     real, allocatable :: gpotdisk(:,:,:),gpothalo(:,:,:),gpotbulge(:,:,:)
@@ -17,6 +11,7 @@ contains
 
 !--------------------------------------------------------------------------
   subroutine grav_pot_3d
+    use arrays, only : nx,ny,nz,gp,z
     implicit none
     integer i, j
     real, allocatable :: gpot(:)
@@ -110,7 +105,6 @@ allocate(gpotdisk(nx,ny,nz),gpothalo(nx,ny,nz),gpotbulge(nx,ny,nz))
         fr = max(1./cosh(fr),smalld/100.)
         gpot = -newtong*ptmass/dsqrt(x1**2+x2**2+x3**2+r_smooth**2)
         gpot = gpot - csim2*dlog(fr) ! *d0
-
 #elif defined (GRAV_PTFLAT)
         select case (sweep)
           case('xsweep')
@@ -294,6 +288,9 @@ allocate(gpotdisk(nx,ny,nz),gpothalo(nx,ny,nz),gpotbulge(nx,ny,nz))
 !--------------------------------------------------------------------------
    
   subroutine grav_accel(sweep, i1,i2, xsw, n, grav, gravpart)
+    use start, only  : h_grav, n_gravh,nb
+    use arrays, only : gp,x,y,z,dl,xdim,ydim,zdim,nx,ny,nz, &
+      is,ie,js,je,ks,ke, xr,yr,zr
    
     implicit none
     character, intent(in) :: sweep*6, gravpart*7
@@ -494,7 +491,6 @@ allocate(gpotdisk(nx,ny,nz),gpothalo(nx,ny,nz),gpotbulge(nx,ny,nz))
           endif
           grav = -1.0 * xsw(:) * vsun*tanh(rgc_vect(:)/3.0/kpc)/rgc_vect(:)
 	endif
-
 ! galactic case as in ferriere'98 but with smoothed omega with decreasing rotation with z
 #elif defined (GRAV_GALSMTDEC)
         if (sweep == 'zsweep') then
@@ -521,7 +517,6 @@ allocate(gpotdisk(nx,ny,nz),gpothalo(nx,ny,nz),gpotbulge(nx,ny,nz))
             grav(:)=grav(:)**2*(-1.0)*rgc_vect(:)*xsw(:)/rgc_vect(:)
           endif
 	endif
-
 ! galactic case as in ferriere'98 but with smoothed omega with decreasing rotation with x (x axis symmetry)
 #elif defined (GRAV_GALDCZTOX)
         if (sweep == 'xsweep') then
@@ -553,7 +548,6 @@ allocate(gpotdisk(nx,ny,nz),gpothalo(nx,ny,nz),gpotbulge(nx,ny,nz))
             grav(:)=grav(:)**2*(-1.0)*rgc_vect(:)*xsw(:)/rgc_vect(:)
           endif
 	endif
-
 ! galactic case as in ferriere'98 but with smoothed omega and increased at large radii
 #elif defined (GRAV_GALSMINCR)
         if (sweep == 'zsweep') then
@@ -622,7 +616,7 @@ allocate(gpotdisk(nx,ny,nz),gpothalo(nx,ny,nz),gpotbulge(nx,ny,nz))
  
  
   subroutine grav_pot2accel(sweep, i1,i2, n, grav)
-  
+    use arrays, only : gp, dl, xdim, ydim, zdim
     implicit none
     character, intent(in)          :: sweep*6
     integer, intent(in)            :: i1, i2                   
@@ -645,7 +639,11 @@ allocate(gpotdisk(nx,ny,nz),gpothalo(nx,ny,nz),gpotbulge(nx,ny,nz))
 !--------------------------------------------------------------------------
 
   subroutine grav_accel2pot(gravpart)
-  
+    use mpi_setup
+    use arrays, only : gp,dl,xdim,ydim,zdim,is,ie,js,je,ks,ke,nx,ny,nz, &
+      zr,yr,xr
+    use start, only  : nb
+
     implicit none
     character*7 gravpart
     integer               :: i, j, k, ip, pgpmax

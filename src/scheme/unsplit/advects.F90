@@ -4,7 +4,6 @@ module advects    ! unsplit advects
   use arrays
   use grid
   use tv
-  use time, only : dt
   use mag_boundaries
   contains
 

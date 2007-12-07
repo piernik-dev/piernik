@@ -785,6 +785,9 @@ subroutine bnd_emf(var, name, dim)
 end subroutine bnd_emf
 
   subroutine compute_b_bnd
+#ifndef SPLIT
+  use arrays, only : Lb
+#endif /* SPLIT */
 
    call bnd_b('xdim')
    call bnd_b('ydim')

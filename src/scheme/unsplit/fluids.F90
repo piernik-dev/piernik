@@ -5,12 +5,10 @@ module fluids  ! unsplit fluids
   use start
   use arrays
   use tv
-  use time, only : dt
   contains
 !==========================================================================================
 
   subroutine fluidx
-
     implicit none
     real, dimension(3,nx)  :: b_x
     real, dimension(nu,nx) :: u_x
@@ -18,7 +16,7 @@ module fluids  ! unsplit fluids
 #ifdef ORIG
     real, dimension(3,nx)  :: b_i
     real, dimension(nu,nx) :: u_i
-#endif ORIG
+#endif /* ORIG */
 
     integer j,k,jp,kp
     real yj,zk
@@ -27,11 +25,11 @@ module fluids  ! unsplit fluids
     b_x = 0.0
 #ifdef ORIG
     b_i = 0.0
-#endif ORIG
+#endif /* ORIG */
 
 #ifdef COSM_RAYS
    call div_v         
-#endif COSM_RAYS
+#endif /* COSM_RAYS */
 
     do k=ks,ke
       kp=k+1
@@ -47,24 +45,25 @@ module fluids  ! unsplit fluids
           b_i(ibx,:)=b_i(ibx,:)+eoshift(b_i(ibx,:),shift=1,boundary=big)
           b_i(iby,:)=b_i(iby,:)+bi(iby,:,jp,k)*0.5
           if(dimensions .eq. '3d')  b_i(ibz,:)=b_i(ibz,:)+bi(ibz,:,j,kp)*0.5
-#endif ORIG
+#endif /* ORIG */
         else
           b_x = 0.0
 #ifdef ORIG
           b_i = 0.0
-#endif ORIG
+#endif /* ORIG */
         endif
 
         u_x(iuswpx,:)=u(:,:,j,k)
 #ifdef ORIG
         u_i(iuswpx,:)=ui(:,:,j,k)
         call relaxing_tvd(u_i,u_x,b_i,b_x,'xsweep',j,k,dx,nx,dt)
-#else ORIG
+#else /* ORIG */
         call relaxing_tvd(u_x,b_x,'xsweep',j,k,dx,nx,dt)
-#endif ORIG
+#endif /* ORIG */
         Lu(:,:,j,k)=Lu(:,:,j,k)+u_x(iuswpx,:)
       end do
     end do
+
 
   end subroutine fluidx
 
@@ -79,7 +78,7 @@ module fluids  ! unsplit fluids
 #ifdef ORIG
     real, dimension(3,ny)  :: b_i
     real, dimension(nu,ny) :: u_i
-#endif ORIG
+#endif /* ORIG */
     integer i,j,k,ip,jp,kp
     real xi,zk
 
@@ -87,10 +86,10 @@ module fluids  ! unsplit fluids
     b_y = 0.0
 #ifdef ORIG
     b_i = 0.0
-#endif
+#endif /* ORIG */
 #ifdef COSM_RAYS
    call div_v         
-#endif COSM_RAYS
+#endif /* COSM_RAYS */
 
     do k=ks,ke
       kp=k+1
@@ -108,12 +107,12 @@ module fluids  ! unsplit fluids
           b_i(iby,:)=b_i(iby,:)+eoshift(b_i(iby,:),shift=1,boundary=big)
           if (dimensions .eq. '3d') b_i(ibz,:)=b_i(ibz,:)+bi(ibz,i,:,kp)*0.5
           b_i((/iby,ibx,ibz/),:)=b_i(:,:)
-#endif ORIG
+#endif /* ORIG */
         else
           b_y = 0.0
-#ifdef ORIG
+#ifdef ORIG 
           b_i = 0.0
-#endif ORIG
+#endif /* ORIG */
         endif
 
         u_y(iuswpy,:)=u(:,i,:,k) 
@@ -121,10 +120,9 @@ module fluids  ! unsplit fluids
 #ifdef ORIG
         u_i(iuswpy,:)=ui(:,i,:,k) 
         call relaxing_tvd(u_i,u_y,b_i,b_y,'ysweep',k,i,dy,ny,dt)
-#else ORIG
+#else /* ORIG */
         call relaxing_tvd(u_y,b_y,'ysweep',k,i,dy,ny,dt)
-#endif ORIG
-
+#endif /* ORIG */
         Lu(:,i,:,k)=Lu(:,i,:,k)+u_y(iuswpy,:)
 
       end do
@@ -143,7 +141,7 @@ module fluids  ! unsplit fluids
 #ifdef ORIG
     real, dimension(3,nz)  :: b_i
     real, dimension(nu,nz) :: u_i
-#endif ORIG
+#endif /* ORIG */
     integer i,j,k,ip,jp,kp
     real xi,yj
 
@@ -151,10 +149,10 @@ module fluids  ! unsplit fluids
     b_z = 0.0
 #ifdef ORIG
     b_i = 0.0
-#endif ORIG
+#endif /* ORIG */
 #ifdef COSM_RAYS
    call div_v         
-#endif COSM_RAYS
+#endif /* COSM_RAYS */
 
     do j=1,ny-1
       jp=j+1
@@ -172,21 +170,21 @@ module fluids  ! unsplit fluids
           b_i(iby,:)=b_i(iby,:)+bi(iby,i,jp,:)*0.5
           b_i(ibz,:)=b_i(ibz,:)+eoshift(b_i(ibz,:),shift=1,boundary=big)
           b_i((/ibz,iby,ibx/),:)=b_i(:,:)
-#endif ORIG
+#endif /* ORIG */
         else
           b_z = 0.0
-#ifdef ORIG
+#ifdef ORIG 
           b_i = 0.0
-#endif ORIG
+#endif /* ORIG */
         endif
 
         u_z(iuswpz,:)=u(:,i,j,:)
 #ifdef ORIG
         u_i(iuswpz,:)=ui(:,i,j,:) 
         call relaxing_tvd(u_i,u_z,b_i,b_z,'zsweep',i,j,dz,nz,dt)
-#else ORIG
+#else /* ORIG */
         call relaxing_tvd(u_z,b_z,'zsweep',i,j,dz,nz,dt)
-#endif ORIG
+#endif /* ORIG */
 
         Lu(:,i,j,:)=Lu(:,i,j,:)+u_z(iuswpz,:)
 

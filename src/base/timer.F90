@@ -15,9 +15,10 @@ contains
 
   subroutine timer_start
     implicit none
-
+#ifndef GNU
     external      dtime
     real(kind=4) dtime
+#endif /* GNU */
 
 !
 !      Initialise cpu and wall clocks.  "cputot" will be the total cpu
@@ -43,9 +44,10 @@ contains
     use dataio, only : log_file,log_lun
 
     implicit none
-
+#ifndef GNU
     external      dtime
     real(kind=4) dtime
+#endif /* GNU */
 
 !      Final wall clock time, expressed in hours, minutes, and seconds.
 !
