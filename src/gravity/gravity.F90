@@ -2,6 +2,9 @@
 
 module gravity
 
+  use constants
+
+
   character gp_status*9
 #ifdef GALACTIC_DISK
     real, allocatable :: gpotdisk(:,:,:),gpothalo(:,:,:),gpotbulge(:,:,:)
@@ -45,6 +48,7 @@ allocate(gpotdisk(nx,ny,nz),gpothalo(nx,ny,nz),gpotbulge(nx,ny,nz))
 
 !--------------------------------------------------------------------------
   subroutine grav_pot(sweep, i1,i2, xsw, n, gpot,status)
+
    
     implicit none
     character, intent(in) :: sweep*6
