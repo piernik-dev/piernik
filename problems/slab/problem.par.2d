@@ -1,0 +1,113 @@
+ $DOMAIN_SIZES
+    nxd = 120
+    nyd = 120
+    nzd = 1
+    nb  = 4
+ /  
+
+ $MPI_BLOCKS
+    pxsize = 1
+    pysize = 1
+    pzsize = 1    
+ /  
+ $START_CONTROL
+ /
+
+ $RESTART_CONTROL
+    restart  = 'last'
+    new_id   = ''
+    nrestart = 0 
+ /
+
+ $END_CONTROL
+    tend   = 1.0
+    nend   = 90000 
+ /
+
+ $OUTPUT_CONTROL
+    dt_hdf  = 0.1
+    dt_res  = 0.0
+    dt_log  = 0.00001
+    dt_tsl  = 0.00001
+    vars(1) = 'dens'
+    vars(2) = 'velx'
+    vars(3) = 'vely'
+    vars(4) = 'velz'
+    vars(5) = 'ener'
+    vars(6) = 'flx1'
+    vars(7) = 'flx2'
+    vars(8) = 'flx3'
+    vars(9) = 'flx4'
+    vars(10) = 'flx5'
+    domain  = 'full_domain'
+    mag_center = 'no'
+ / 
+
+ $BOUNDARIES
+    bnd_xl = 'she'  
+    bnd_xr = 'she'  
+    bnd_yl = 'per'  
+    bnd_yr = 'per'  
+    bnd_zl = 'per'  
+    bnd_zr = 'per'
+ /
+
+ $DOMAIN_LIMITS
+    xmin   = -1.5807
+    xmax   = 1.5807
+    ymin   = -1.0
+    ymax   = 1.0
+    zmin   = -1.0
+    zmax   = 1.0
+ /
+
+ $EQUATION_OF_STATE
+    c_si   = 1.0
+    alpha  = 0.0
+ /  
+
+ $NUMERICAL_SETUP
+    cfl    = 0.7
+    smalld = 1.e-3
+    smallei= 1.e-5
+    flux_limiter = 'vanleer'
+    freezing_speed = 'global'
+    integration_order = 3
+    magnetic = 'no'
+    dimensions = '2dxy'
+    nu_bulk    = 0.0001
+    cfl_visc   = 0.4
+ /
+ 
+ $GRAVITY
+    grav_model ='null'
+    ptmass  = 0.0
+    ptm_x   = 0.0
+    ptm_y   = 0.0
+    ptm_z   = 0.0
+    r_smooth= 0.2
+    nsub    = 10
+    r_grav  = 0.6
+    n_gravr = 10
+ /
+ 
+ $THERMAL
+ /
+ 
+ $RESISTIVITY
+ /
+
+ $PROBLEM_CONTROL
+    problem_name ='slab'
+    run_id  =  'uns'
+    d0      = 1.0
+    r0      = 0.25
+    bx0     = 0.0
+    by0     = 0.0
+    bz0     = 0.0
+ /
+
+ $SHEARING
+   qshear = 1.5
+   omega  = 0.05
+ /
