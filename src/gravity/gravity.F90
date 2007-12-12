@@ -50,7 +50,6 @@ allocate(gpotdisk(nx,ny,nz),gpothalo(nx,ny,nz),gpotbulge(nx,ny,nz))
   subroutine grav_pot(sweep, i1,i2, xsw, n, gpot,status)
 #ifdef GRAV_GAL_VOLLMER
     use arrays, only : x,y,z
-    use start, only : g_z, dg_dz, ptmass, ptm_x, ptm_y, ptm_z, n_gravr2
 #endif /* GRAV_GAL_VOLLMER */
 
    
@@ -136,23 +135,13 @@ allocate(gpotdisk(nx,ny,nz),gpothalo(nx,ny,nz),gpotbulge(nx,ny,nz))
 ! galactic case as in vollmer'01
 #elif defined (GRAV_GAL_VOLLMER)
         allocate(gpdisk(n),gphalo(n),gpblg(n))
-!	Mhalo = 8.6e10*Msun	!Virgo 
-!	Mbulge= 5.6e9*Msun	!Virgo
-!	Mdisk = 2.6e10*Msun	!Virgo
-!	Mhalo = 0.01*2.43e12*Msun 	!Milky Way
-!	Mbulge= 0.15*2.4e11*Msun	!Milky Way (estimation)
-!	Mdisk = 0.35*5.8e11*Msun	!Milky Way
-!	ahalo = 35.*kpc
-!	bbulge= 1450.*pc
-!	adisk = 8.5*kpc
-!	bdisk = 500.*pc
-        Mhalo = g_z*Msun
-        Mbulge= ptmass*Msun
-        Mdisk = dg_dz*Msun
-        ahalo = n_gravr2*kpc
-        bbulge= ptm_x*pc
-        adisk = ptm_y*kpc
-        bdisk = ptm_z*pc
+	Mhalo = 2.43e11*Msun 	!Milky Way
+	Mbulge= 0.8e10*Msun	!Milky Way (estimation)
+	Mdisk = 3.7e10*Msun	!Milky Way
+	ahalo = 35.*kpc
+	bbulge= 2100.*pc
+	adisk = 4.9*kpc
+	bdisk = 150.*pc
         select case (sweep)
           case('xsweep')
             do i=1,n 
