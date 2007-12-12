@@ -48,6 +48,10 @@ allocate(gpotdisk(nx,ny,nz),gpothalo(nx,ny,nz),gpotbulge(nx,ny,nz))
 
 !--------------------------------------------------------------------------
   subroutine grav_pot(sweep, i1,i2, xsw, n, gpot,status)
+#ifdef GRAV_GAL_VOLLMER
+    use arrays, only : x,y,z
+    use start, only : g_z, dg_dz, ptmass, ptm_x, ptm_y, ptm_z, n_gravr2
+#endif /* GRAV_GAL_VOLLMER */
 
    
     implicit none
@@ -65,7 +69,6 @@ allocate(gpotdisk(nx,ny,nz),gpothalo(nx,ny,nz),gpotbulge(nx,ny,nz))
     integer i
     real, allocatable :: gpdisk(:), gphalo(:), gpblg(:)
     real Mhalo,Mbulge,Mdisk,ahalo,bbulge,adisk,bdisk
-
     
 #ifdef GRAV_NULL
         gpot = 0.0
@@ -133,13 +136,23 @@ allocate(gpotdisk(nx,ny,nz),gpothalo(nx,ny,nz),gpotbulge(nx,ny,nz))
 ! galactic case as in vollmer'01
 #elif defined (GRAV_GAL_VOLLMER)
         allocate(gpdisk(n),gphalo(n),gpblg(n))
-	Mhalo = 8.6e10*Msun 
-	Mbulge= 5.6e9*Msun
-	Mdisk = 2.6e10*Msun
-	ahalo = 12.*kpc
-	bbulge= 387.*pc
-	adisk = 2.7*kpc
-	bdisk = 250.*pc
+!	Mhalo = 8.6e10*Msun	!Virgo 
+!	Mbulge= 5.6e9*Msun	!Virgo
+!	Mdisk = 2.6e10*Msun	!Virgo
+!	Mhalo = 0.01*2.43e12*Msun 	!Milky Way
+!	Mbulge= 0.15*2.4e11*Msun	!Milky Way (estimation)
+!	Mdisk = 0.35*5.8e11*Msun	!Milky Way
+!	ahalo = 35.*kpc
+!	bbulge= 1450.*pc
+!	adisk = 8.5*kpc
+!	bdisk = 500.*pc
+        Mhalo = g_z*Msun
+        Mbulge= ptmass*Msun
+        Mdisk = dg_dz*Msun
+        ahalo = n_gravr2*kpc
+        bbulge= ptm_x*pc
+        adisk = ptm_y*kpc
+        bdisk = ptm_z*pc
         select case (sweep)
           case('xsweep')
             do i=1,n 
@@ -149,6 +162,7 @@ allocate(gpotdisk(nx,ny,nz),gpothalo(nx,ny,nz),gpotbulge(nx,ny,nz))
 	    gpot(i)=gpot(i)-(Mhalo/1.02/ahalo)*(-1.02/(1.+(100.0*kpc/ahalo)**1.02)+log(1.0+(100.0*kpc/ahalo)**1.02))
 	    gpot(i)=gpot(i)+(Mhalo/1.02/ahalo)*(-1.02/(1.+(sqrt(rgc_vect(i)**2+z(i2)**2)/ahalo)**1.02)+log(1.0+(sqrt(rgc_vect(i)**2+z(i2)**2)/ahalo)**1.02))
 	    gpot(i)=gpot(i)-Mbulge/sqrt(rgc_vect(i)**2+z(i2)**2+bbulge**2)
+	    gpot(i)=gpot(i)*newtong
             enddo
           case('ysweep') 
             do i=1,n
@@ -158,6 +172,7 @@ allocate(gpotdisk(nx,ny,nz),gpothalo(nx,ny,nz),gpotbulge(nx,ny,nz))
 	    gpot(i)=gpot(i)-(Mhalo/1.02/ahalo)*(-1.02/(1.+(100.0*kpc/ahalo)**1.02)+log(1.0+(100.0*kpc/ahalo)**1.02))
 	    gpot(i)=gpot(i)+(Mhalo/1.02/ahalo)*(-1.02/(1.+(sqrt(rgc_vect(i)**2+z(i1)**2)/ahalo)**1.02)+log(1.0+(sqrt(rgc_vect(i)**2+z(i1)**2)/ahalo)**1.02))
 	    gpot(i)=gpot(i)-Mbulge/sqrt(rgc_vect(i)**2+z(i1)**2+bbulge**2)
+	    gpot(i)=gpot(i)*newtong
             enddo
           case('zsweep') 
             rgc_scal = sqrt(x(i1)**2+y(i2)**2)
@@ -166,10 +181,10 @@ allocate(gpotdisk(nx,ny,nz),gpothalo(nx,ny,nz),gpotbulge(nx,ny,nz))
 	    gphalo=gphalo-(Mhalo/1.02/ahalo)*(-1.02/(1.+(100.0*kpc/ahalo)**1.02)+log(1.0+(100.0*kpc/ahalo)**1.02))
 	    gphalo=gphalo+(Mhalo/1.02/ahalo)*(-1.02/(1.+(sqrt(rgc_scal**2+xsw**2)/ahalo)**1.02)+log(1.0+(sqrt(rgc_scal**2+xsw**2)/ahalo)**1.02))
 	    gpblg=-Mbulge/sqrt(rgc_scal**2+xsw**2+bbulge**2)
-            gpot=gpdisk+gpblg+gphalo
-	    gpotdisk(i1,i2,:)=gpdisk
-	    gpothalo(i1,i2,:)=gphalo
-	    gpotbulge(i1,i2,:)=gpblg
+            gpot=(gpdisk+gpblg+gphalo)*newtong
+	    gpotdisk(i1,i2,:)=gpdisk*newtong
+	    gpothalo(i1,i2,:)=gphalo*newtong
+	    gpotbulge(i1,i2,:)=gpblg*newtong
         end select
 	    deallocate(gpdisk,gphalo,gpblg)
 
@@ -590,13 +605,13 @@ allocate(gpotdisk(nx,ny,nz),gpothalo(nx,ny,nz),gpotbulge(nx,ny,nz))
 !#error 'GRAV declared, but gravity model undefined'
 #endif
 
-#ifndef GRAV == 'galsmtdec'
-#ifndef GRAV == 'galsmincr'
+#ifndef GRAV_GALSMTDEC
+#ifndef GRAV_GALSMINCR
     if (n_gravh .ne. 0) then
       grav(:)=grav(:)/cosh((xsw(:)/h_grav)**n_gravh )
     endif      
-#endif GRAV == 'galsmincr'
-#endif GRAV == 'galsmtdec'
+#endif /* GRAV_GALSMINCR */
+#endif /* GRAV_GALSMTDEC */
      
   end subroutine grav_accel
 
@@ -776,9 +791,9 @@ allocate(gpotdisk(nx,ny,nz),gpothalo(nx,ny,nz),gpotbulge(nx,ny,nz))
       case('blgpart')
         gpotbulge=gpwork
     end select
-#else GALACTIC_DISK
+#else /* GALACTIC_DISK */
         gp=gpwork
-#endif GALACTIC_DISK
+#endif /* GALACTIC_DISK */
     deallocate(gpwork)
    
   end subroutine grav_accel2pot

@@ -7,6 +7,13 @@
 /* choosing solver */
 #define  ORIG            /*solver*/
 #undef  SSP            /*solver*/
+
+/* choosing unitsystem */
+#undef STANDARD		/*genuine unitsystem*/
+#define PSM		/*pc,Msun,Myr unitsystem*/
+#undef PGM		/*pc,G=1,Myr unitsystem*/
+#undef CGS		/*cm,gram,sek unitsystem*/
+#undef SI		/*metr,kg,sek unitsystem*/
 /*===================================/
 
 /* adiabatic or isothermic */
@@ -27,10 +34,10 @@
 #undef COOL_HEAT
 #undef COSM_RAYS
 #define GRAV
-#define GRAV_GALSMOOTH
+#define GRAV_GAL_VOLLMER
 #undef GALAXY
 #define GALACTIC_DISK
-#define SNE_DISTR
+#undef SNE_DISTR
 #undef SHEAR
 
 /* writing output info into files seperate for each process */

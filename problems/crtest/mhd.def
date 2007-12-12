@@ -1,6 +1,15 @@
 /* #define ISO 			*/			
 #define SPLIT
 #define ORIG
+
+/* choosing unitsystem */
+#define STANDARD		/*genuine unitsystem*/
+#undef PSM		/*pc,Msun,Myr unitsystem*/
+#undef PGM		/*pc,G=1,Myr unitsystem*/
+#undef CGS		/*cm,gram,sek unitsystem*/
+#undef SI		/*metr,kg,sek unitsystem*/
+/*===================================/
+
 #define LOCAL_FR_SPEED
 #define VANLEER
 /* #define RESIST 		*/

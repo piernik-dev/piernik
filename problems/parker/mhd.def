@@ -10,6 +10,14 @@
 #define  ORIG            /*solver*/
 #undef  SSP            /*solver*/
 
+/* choosing unitsystem */
+#define STANDARD		/*genuine unitsystem*/
+#undef PSM		/*pc,Msun,Myr unitsystem*/
+#undef PGM		/*pc,G=1,Myr unitsystem*/
+#undef CGS		/*cm,gram,sek unitsystem*/
+#undef SI		/*metr,kg,sek unitsystem*/
+/*===================================/
+
 /* choosing freezing speed */
 #define LOCAL_FR_SPEED
 #undef  GLOBAL_FR_SPEED
