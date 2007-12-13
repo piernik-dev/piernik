@@ -44,10 +44,11 @@ module fluxes
 ! uzycie vx prowadzi do nieduzych oscylacji, a dla vt oscylacji nie widac,
 ! wobec tego po krotkim powrocie do vx (v.1.2) przywracam vt (v.1.3)
 
+#ifndef OLDLOCALCFR
     vy(RNG)=uu(imya,RNG)/uu(idna,RNG)
     vz(RNG)=uu(imza,RNG)/uu(idna,RNG)
-    vt = SUM_SQR(vx,vy,vz)
-    
+    vt = sqrt(SUM_SQR(vx,vy,vz))
+#endif /* OLDLOCALCFR */    
     
 #ifdef ISO
     p(RNG) = csi2*uu(idna,RNG)
@@ -76,13 +77,19 @@ module fluxes
 !       but sometimes may lead to numerical instabilities   
 #ifdef ISO
 ! UWAGA ZMIANA W OBLICZANIU LOKALNEJ PREDKOSCI NA PROBE
-!        cfr(1,RNG) = abs(vx(RNG)) &
+#ifdef OLDLOCALCFR
+        cfr(1,RNG) = abs(vx(RNG)) &
+#else /* OLDLOCALCFR */
         cfr(1,RNG) = abs(vt(RNG)) &
+#endif /* OLDLOCALCFR */
                       +max(sqrt( abs(2.0*pmag(RNG) + p(RNG))/uu(idna,RNG)),small)
 #else /* ISO */
 ! UWAGA ZMIANA W OBLICZANIU LOKALNEJ PREDKOSCI NA PROBE
-!        cfr(1,RNG) = abs(vx(RNG)) &
+#ifdef OLDLOCALCFR
+        cfr(1,RNG) = abs(vx(RNG)) &
+#else /* OLDLOCALCFR */
         cfr(1,RNG) = abs(vt(RNG)) &
+#endif /* OLDLOCALCFR */
                       +max(sqrt( abs(2.0*pmag(RNG) + gamma*p(RNG))/uu(idna,RNG)),small)
 #endif /* ISO */
         cfr(1,1) = cfr(1,2)

@@ -250,7 +250,7 @@ module dataio
     integer :: sfstart, sfend, sfsnatt, sfcreate, sfwdata, sfscompress, sfendacc &
              , sfdimid, sfsdmname, sfsdscale, sfsdmstr
 
-    integer :: iv, i, j, k, ibe
+    integer :: iv, i, j, k, ibe, jbe
     integer :: nxo, nyo, nzo, iso,ieo,jso,jeo,kso,keo
     real*4, dimension(:,:,:), allocatable :: temp
 
@@ -398,8 +398,10 @@ module dataio
 
       case ('omga')
         do ibe=iso,ieo
-          wa(ibe,jso:jeo,kso:keo) = sqrt((u(imxa,ibe,jso:jeo,kso:keo) / u(idna,ibe,jso:jeo,kso:keo) / x(ibe))**2 &
-	                           + (u(imya,ibe,jso:jeo,kso:keo) / u(idna,ibe,jso:jeo,kso:keo) / y(ibe))**2)
+	  do jbe=jso,jeo
+            wa(ibe,jbe,kso:keo) = sqrt((u(imxa,ibe,jbe,kso:keo) / u(idna,ibe,jbe,kso:keo) / x(ibe))**2 &
+	                            + (u(imya,ibe,jbe,kso:keo) / u(idna,ibe,jbe,kso:keo) / y(jbe))**2)
+	  enddo
 	enddo
 
       case ('vrot')
