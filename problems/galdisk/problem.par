@@ -1,7 +1,7 @@
  $DOMAIN_SIZES
-    nxd = 256
-    nyd = 256
-    nzd = 200
+    nxd = 128
+    nyd = 128
+    nzd = 128
  /  
 
  $MPI_BLOCKS
@@ -26,8 +26,8 @@
  /
 
  $OUTPUT_CONTROL
-    dt_hdf  = 5.0
-    dt_res  = 1.0
+    dt_hdf  = 10.0
+    dt_res  = 50.0
     dt_log  = 0.001
     dt_tsl  = 0.00001
     vars(1) = 'dens'
@@ -51,9 +51,9 @@
 
  $DOMAIN_LIMITS
     xmin   = 0.0
-    xmax   = 1.2e4
+    xmax   = 1.5e4
     ymin   = 0.0
-    ymax   = 1.2e4
+    ymax   = 1.5e4
     zmin   =-5.0e2
     zmax   = 5.0e2
  /
@@ -64,16 +64,16 @@
  /  
 
  $NUMERICAL_SETUP
-    cfl    = 0.5
+    cfl    = 0.8
     smalld = 1.e-8
     smallei= 1.e-8
-    integration_order = 3
+    integration_order = 2
     magnetic = 'no'
     dimensions = '3d'
  /
  
  $GRAVITY
-    grav_model ='galsmtdec'
+    grav_model ='gal_vollmer'
     nsub   = 20
     h_grav = 300.0
     n_gravh = 2
@@ -96,10 +96,10 @@
     run_id  =  'tst'
     rhoa    = 2.0e-8
     d0      = 1.0
-    r_max   = 1.0e4
+    r_max   = 1.2e4
     mtr      = 10
     przypadek = 2
-    bulge   = 'smpl'
+    bulge   = 'null'
     rotsc   = 'auto'
     mf_orient = 'null'
  /
