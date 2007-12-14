@@ -1,0 +1,110 @@
+ $DOMAIN_SIZES
+    nxd = 64
+    nyd = 64
+    nzd = 64
+ /  
+
+ $MPI_BLOCKS
+    pxsize = 1
+    pysize = 1
+    pzsize = 1
+ /
+
+ $START_CONTROL
+ /
+
+ $RESTART_CONTROL
+    restart  = 'last'
+    new_id   = ''
+    nrestart = -1
+    resdel   = 2
+ /
+
+ $END_CONTROL
+    tend   = 10.0e4
+    nend   = 100000 
+ /
+
+ $OUTPUT_CONTROL
+    dt_hdf  = 5.00e-2
+    dt_res  = 50.0
+    dt_log  = 0.001
+    dt_tsl  = 0.00001
+    vars(1) = 'dens'
+    vars(2) = 'velx'
+    vars(3) = 'vely'
+    vars(4) = 'velz'
+    vars(5) = 'ener'
+    vars(6) = 'vrot'
+    vars(7) = 'omga'
+    domain  = 'phys_domain'
+ / 
+
+ $BOUNDARIES
+    bnd_xl = 'cor'  
+    bnd_xr = 'out'  
+    bnd_yl = 'cor'  
+    bnd_yr = 'out'  
+    bnd_zl = 'outd'  
+    bnd_zr = 'outd'
+ /
+
+ $DOMAIN_LIMITS
+    xmin   = 0.0
+    xmax   = 1.5e4
+    ymin   = 0.0
+    ymax   = 1.5e4
+    zmin   =-5.0e2
+    zmax   = 5.0e2
+ /
+
+ $EQUATION_OF_STATE
+    c_si   = 7.0
+    alpha  = 0.0
+ /  
+
+ $NUMERICAL_SETUP
+    cfl    = 0.5
+    smalld = 1.e-8
+    smallei= 1.e-8
+    integration_order = 2
+    magnetic = 'no'
+    dimensions = '3d'
+ /
+ 
+ $GRAVITY
+    grav_model ='gal_vollmer'
+    nsub   = 20
+    h_grav = 300.0
+    n_gravh = 2
+ /
+ 
+ $THERMAL
+ /
+ 
+ $RESISTIVITY
+ /
+ 
+ $COSMIC_RAYS
+ /
+ 
+ $GALACTIC_PARAMS
+ /
+ 
+ $SN_DISTR
+ snenerg = 1.e20
+ sn1time = 445.e2
+ sn2time = 52.e2
+ /
+
+ $PROBLEM_CONTROL
+    problem_name ='galdisk'
+    run_id  =  'tst'
+    rhoa    = 2.0e-8
+    d0      = 1.0
+    r_max   = 1.2e4
+    mtr      = 10
+    przypadek = 1
+    bulge   = 'null'
+    rotsc   = 'auto'
+/
