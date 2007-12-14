@@ -66,7 +66,7 @@ contains
 !===============================================================================================
   subroutine supernovae_distribution(dtime)
     use mpi_setup
-    use start, only : nb, dt
+    use start, only : nb, dt, snenerg, sn1time, sn2time
     implicit none
 
     integer i,j,k, SNInum, SNIInum, isn, ii
@@ -75,9 +75,9 @@ contains
     real, dimension(3) :: snpos
     integer, dimension(2) :: SNno
     
-    SNIfreq  = 1./445./year
-    SNIIfreq = 1./52./year
-    EexplSN  = 1.e51*erg
+    SNIfreq  = 1./sn1time/year
+    SNIIfreq = 1./sn2time/year
+    EexplSN  = snenerg*erg
 
 !===============obliczanie, jaka czesc SN z poprzedniego kroku trzeba doliczyc=======
     SNno(1)=0 					! zerowanie ilosci wylosowanych SNI w aktualnym kroku
@@ -99,6 +99,7 @@ contains
 	dtime=SNIIrest
 	call random_number(los)
       enddo
+      write(*,'(a12,i4.4,a7,i4.4,a6)') 'explosions: ',SNno(1),' SN I, ',SNno(2),' SN II'
     endif
     call MPI_BCAST(SNno, 2, MPI_INTEGER, 0, comm, ierr)	! rozeslanie informacji o ilosci wylosowanych SN
     

@@ -67,7 +67,7 @@ module start
 
   real t_dw, t_arm, col_dens
   
-  real h_sn, r_sn, f_sn_kpc2, amp_dip_sn
+  real h_sn, r_sn, f_sn_kpc2, amp_dip_sn, snenerg, sn1time, sn2time
 ! Secondary parameters
 
   real csi2, csim2, amp_ecr_sn, ethu, f_sn
@@ -141,6 +141,9 @@ contains
 #endif
 #ifdef SN_SRC
   namelist /SN_PARAMS/ h_sn, r_sn, f_sn_kpc2, amp_dip_sn
+#endif
+#ifdef SNE_DISTR
+  namelist /SN_DISTR/ snenerg, sn1time, sn2time
 #endif
     nxd    = 10
     nyd    = 10
@@ -281,6 +284,12 @@ contains
     amp_dip_sn =   1.0e6        
 !--> SN_SRC
 #endif
+#ifdef SNE_DISTR
+    snenerg    = 1.e51		!  typical energy of supernova explosion [erg]
+    sn1time    = 445.0       	!  mean time between typ I supernovae explosions [year]
+    sn2time    =  52.0       	!  mean time between typ II supernovae explosions [year]
+!--> SNE_DISTR
+#endif
 
          
     if(proc .eq. 0) then
@@ -315,6 +324,9 @@ contains
 #ifdef SN_SRC
         read(unit=1,nml=SN_PARAMS)
 #endif
+#ifdef SNE_DISTR
+        read(unit=1,nml=SN_DISTR)
+#endif
 
       close(1)
 
@@ -347,6 +359,9 @@ contains
 #endif
 #ifdef SN_SRC
         write(unit=3,nml=SN_PARAMS)
+#endif
+#ifdef SNE_DISTR
+        write(unit=3,nml=SN_DISTR)
 #endif
       close(3)
       
@@ -542,6 +557,13 @@ contains
        rbuff(172) = f_sn_kpc2       	 
        rbuff(173) = amp_dip_sn      
 !--> SN_SRC
+#endif
+#ifdef SNE_DISTR
+!  namelist /SN_DISTR/ snenerg, sn1time, sn2time
+       rbuff(180) = snenerg
+       rbuff(181) = sn1time
+       rbuff(182) = sn2time
+!--> SNE_DISTR
 #endif
 
 ! Boroadcasting parameters
@@ -756,6 +778,13 @@ contains
        f_sn_kpc2          = rbuff(172)      	 
        amp_dip_sn         = rbuff(173)     
 !--> SN_SRC
+#endif
+#ifdef SNE_DISTR
+!  namelist /SN_DISTR/ snenerg, sn1time, sn2time
+       snenerg            = rbuff(180)   	
+       sn1time		  = rbuff(181)
+       sn2time		  = rbuff(182)	
+!--> SNE_DISTR
 #endif
 
 ! Secondary parameters

@@ -17,7 +17,7 @@
 /*===================================/
 
 /* adiabatic or isothermic */
-#define ISO 	
+#undef ISO 	
 
 /* choosing freezing speed */
 #define LOCAL_FR_SPEED
@@ -38,7 +38,7 @@
 #define GRAV_GAL_VOLLMER
 #undef GALAXY
 #define GALACTIC_DISK
-#undef SNE_DISTR
+#define SNE_DISTR
 #undef SHEAR
 
 /* writing output info into files seperate for each process */
