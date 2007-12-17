@@ -8,6 +8,7 @@ module advects    ! unsplit advects
   contains
 
    subroutine advectby_x
+    use constants, only : big
 
     implicit none
     real, dimension(nx) :: vxby,by_x,vx
@@ -39,6 +40,7 @@ module advects    ! unsplit advects
   end subroutine advectby_x
 
   subroutine advectbz_x
+    use constants, only : big
 
     implicit none
     real, dimension(nx) :: vxbz,bz_x,vx
@@ -72,6 +74,7 @@ module advects    ! unsplit advects
   end subroutine advectbz_x
 
   subroutine advectbz_y
+    use constants, only : big
 
     implicit none
     real, dimension(ny)   :: vybz,bz_y,vy
@@ -105,6 +108,7 @@ module advects    ! unsplit advects
   end subroutine advectbz_y
 
   subroutine advectbx_y
+    use constants, only : big
 
     implicit none
     real, dimension(ny) :: vybx,bx_y,vy
@@ -138,6 +142,7 @@ module advects    ! unsplit advects
   end subroutine advectbx_y
 
   subroutine advectbx_z
+    use constants, only : big
 
     implicit none
     real, dimension(nz)  :: vzbx,bx_z,vz
@@ -169,6 +174,7 @@ module advects    ! unsplit advects
   end subroutine advectbx_z
 
   subroutine advectby_z
+    use constants, only : big
     
     implicit none
     real, dimension(nz)  :: vzby,by_z,vz
