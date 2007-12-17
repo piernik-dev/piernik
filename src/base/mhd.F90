@@ -218,6 +218,7 @@ program mhd
 !  call write_hdf
 !  deallocate(ala)
 
+  call write_data(output='end')
 !---------------------------- END OF MAIN LOOP ----------------------------------
 
  
