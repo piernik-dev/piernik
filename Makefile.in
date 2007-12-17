@@ -7,7 +7,7 @@ PROG		 = mhd
 #HDF_LIB  = /opt/intel/hdf4/lib
 #MHDF_LIB = /opt/intel/hdf4/include -L/opt/intel/mkl/9.1 -L/opt/intel/fftw -lfftw3
 
-### PGI hydra20
+### PGI hydra AMD64
 #F90		 = /opt/pgi/linux86-64/6.0/mpich2/bin/mpif90
 #F90FLAGS  = -g -Ktrap=fp -r8 -C
 #F90FLAGS  = -fastsse -O3 -r8
@@ -15,27 +15,27 @@ PROG		 = mhd
 #HDF_LIB  = /opt/pgi/linux86-64/6.0/hdf4/lib -L/opt/pgi/linux86-64/6.0/fftw/lib -lfftw3 
 #MHDF_LIB = /opt/pgi/linux86-64/6.0/hdf4/include
 
-### PGI hydra4
-#F90		 = /opt/pgi/linux86/7.0/mpich2/bin/mpif90
-#F90FLAGS  = -g -Ktrap=fp -r8 -C
+### PGI hydra AMD_MP
+F90		 = /opt/pgi/linux86/7.0/mpich2/bin/mpif90
+F90FLAGS  = -g -Ktrap=fp -r8 -C
 #F90FLAGS  = -fastsse -r8
-#HDF_LIB  = /opt/pgi/linux86/7.0/hdf4/lib -L/opt/pgi/linux86/7.0/fftw/lib 
-#HDF_LIB  = /opt/pgi/linux86/7.0/hdf4/lib -L/opt/pgi/linux86/7.0/fftw/lib -lfftw3 -llapack
-#MHDF_LIB = /opt/pgi/linux86/7.0/hdf4/include
+HDF_LIB  = /opt/pgi/linux86/7.0/hdf4/lib -L/opt/pgi/linux86/7.0/fftw/lib 
+HDF_LIB  = /opt/pgi/linux86/7.0/hdf4/lib -L/opt/pgi/linux86/7.0/fftw/lib -lfftw3 -llapack
+MHDF_LIB = /opt/pgi/linux86/7.0/hdf4/include
 
-### GNU PGI hydra4
-#F90		 = mpif90
-#F90FLAGS  = -fdefault-real-8
-#F90FLAGS  = -fdefault-real-8 -O3 -funroll-loops -m3dnow -msse -mfpmath=sse
-#HDF_LIB  = . -lfftw3 -llapack -lgfortran -lc
-#MHDF_LIB = /opt/pgi/linux86/7.0/hdf4/include
-
-### GNU PGI hydra20
+### GNU hydra AMD_MP
 F90		 = mpif90
-F90FLAGS  = -fdefault-real-8
-F90FLAGS  = -fdefault-real-8 -O3 -funroll-loops -m3dnow -msse -msse2 -mfpmath=sse
+#F90FLAGS  = -fdefault-real-8
+F90FLAGS  = -fdefault-real-8 -O3 -funroll-loops -m3dnow -msse -mfpmath=sse
 HDF_LIB  = . -lfftw3 -llapack -lgfortran -lc
 MHDF_LIB = /opt/pgi/linux86/7.0/hdf4/include
+
+### GNU hydra AMD64
+#F90		 = mpif90
+#F90FLAGS  = -fdefault-real-8
+#F90FLAGS  = -fdefault-real-8 -O3 -funroll-loops -m3dnow -msse -msse2 -mfpmath=sse
+#HDF_LIB  = . -lfftw3 -llapack -lgfortran -lc
+#MHDF_LIB = /opt/pgi/linux86/7.0/hdf4/include
 
 ### SUN 
 #F90		 = /opt/sunstudio12/mpich2/bin/mpif90

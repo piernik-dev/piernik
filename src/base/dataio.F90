@@ -187,7 +187,7 @@ module dataio
     if(output .eq. 'gpt') then
       call write_gpot
     endif
-#endif GALACTIC_DISK
+#endif /* GALACTIC_DISK */
 
     if (dt_hdf .gt. 0.0 .and. nstep .gt. step_hdf .and. output .ne. 'gpt') then
 !      if ((nhdf-nhdf_start) .lt. (int((t-t_start) / dt_hdf) + 1) &
@@ -413,8 +413,8 @@ module dataio
 #ifndef ISO
       case ('csnd')
         wa(iso:ieo,jso:jeo,kso:keo) = sqrt((u(iena,iso:ieo,jso:jeo,kso:keo) & 
-	                      -0.5*(u(imxa,iso:ieo,jso:jeo,kso:keo)**2+u(imya,iso:ieo,jso:jeo,kso:keo)**2+u(imza,iso:ieo,jso:jeo,kso:keo)**2) &
-			      / u(idna,iso:ieo,jso:jeo,kso:keo))*(gamma-1.)*gamma/u(idna,iso:ieo,jso:jeo,kso:keo))
+       -0.5*(u(imxa,iso:ieo,jso:jeo,kso:keo)**2+u(imya,iso:ieo,jso:jeo,kso:keo)**2+u(imza,iso:ieo,jso:jeo,kso:keo)**2) &
+        / u(idna,iso:ieo,jso:jeo,kso:keo))*(gamma-1.)*gamma/u(idna,iso:ieo,jso:jeo,kso:keo))
 #endif 
 
 !      case ('gpot')
@@ -517,8 +517,10 @@ module dataio
         wa(:,:,:) = Lu(3,:,:,:)
       case ('flx4')
         wa(:,:,:) = Lu(4,:,:,:)
+#ifndef ISO
       case ('flx5')
         wa(:,:,:) = Lu(5,:,:,:)
+#endif /* ~ISO */
 #endif /* SPLIT */
       case ('esrc')
 !        wa(iso:ieo,jso:jeo,kso:keo) = outwa(iso:ieo,jso:jeo,kso:keo)
@@ -822,7 +824,7 @@ module dataio
 
 
   end subroutine write_gpot
-#endif GALACTIC_DISK
+#endif /* GALACTIC_DISK */
 
 !---------------------------------------------------------------------
 !

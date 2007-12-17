@@ -8,7 +8,7 @@ module gravity
   character gp_status*9
 #ifdef GALACTIC_DISK
     real, allocatable :: gpotdisk(:,:,:),gpothalo(:,:,:),gpotbulge(:,:,:)
-#endif GALACTIC_DISK
+#endif /* GALACTIC_DISK */
 
 contains
 
@@ -22,7 +22,7 @@ contains
 
 #ifdef GALACTIC_DISK
 allocate(gpotdisk(nx,ny,nz),gpothalo(nx,ny,nz),gpotbulge(nx,ny,nz))
-#endif GALACTIC_DISK
+#endif /* GALACTIC_DISK */
 
     do j = 1,ny
       do i = 1,nx
@@ -38,7 +38,7 @@ allocate(gpotdisk(nx,ny,nz),gpothalo(nx,ny,nz),gpotbulge(nx,ny,nz))
         call grav_accel2pot('diskprt')
 	call grav_accel2pot('haloprt')
 	call grav_accel2pot('blgpart')
-#endif GALACTIC_DISK
+#endif /* GALACTIC_DISK */
     endif
 
     deallocate(gpot)
