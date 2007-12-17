@@ -9,7 +9,9 @@ module mod_mhdstep   ! SPLIT
   use advects,only : advectby_x, advectbz_x, advectbx_y, &
       advectbz_y, advectbx_z, advectby_z
   use mag_boundaries, only : compute_b_bnd
-
+#ifdef SSP
+  use arrays, only : bi
+#endif /* SSP */
 #ifdef RESIST  
   use resistivity
 #endif /* RESIST */
