@@ -105,7 +105,4 @@
     d0      = 1.0
     r_max   = 1.2e4
     mtr      = 10
-    przypadek = 1
-    bulge   = 'null'
-    rotsc   = 'auto'
 /
