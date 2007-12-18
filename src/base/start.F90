@@ -67,7 +67,7 @@ module start
 
   real t_dw, t_arm, col_dens
   
-  real h_sn, r_sn, f_sn_kpc2, amp_dip_sn, snenerg, sn1time, sn2time
+  real h_sn, r_sn, f_sn_kpc2, amp_dip_sn, snenerg, sn1time, sn2time, r0sn
 ! Secondary parameters
 
   real csi2, csim2, amp_ecr_sn, ethu, f_sn
@@ -143,7 +143,7 @@ contains
   namelist /SN_PARAMS/ h_sn, r_sn, f_sn_kpc2, amp_dip_sn
 #endif
 #ifdef SNE_DISTR
-  namelist /SN_DISTR/ snenerg, sn1time, sn2time
+  namelist /SN_DISTR/ snenerg, sn1time, sn2time, r0sn
 #endif
     nxd    = 10
     nyd    = 10
@@ -288,6 +288,7 @@ contains
     snenerg    = 1.e51		!  typical energy of supernova explosion [erg]
     sn1time    = 445.0       	!  mean time between typ I supernovae explosions [year]
     sn2time    =  52.0       	!  mean time between typ II supernovae explosions [year]
+    r0sn       = 400.0
 !--> SNE_DISTR
 #endif
 
@@ -559,10 +560,11 @@ contains
 !--> SN_SRC
 #endif
 #ifdef SNE_DISTR
-!  namelist /SN_DISTR/ snenerg, sn1time, sn2time
+!  namelist /SN_DISTR/ snenerg, sn1time, sn2time, r0sn
        rbuff(180) = snenerg
        rbuff(181) = sn1time
        rbuff(182) = sn2time
+       rbuff(183) = r0sn
 !--> SNE_DISTR
 #endif
 
@@ -780,10 +782,11 @@ contains
 !--> SN_SRC
 #endif
 #ifdef SNE_DISTR
-!  namelist /SN_DISTR/ snenerg, sn1time, sn2time
+!  namelist /SN_DISTR/ snenerg, sn1time, sn2time, r0sn
        snenerg            = rbuff(180)   	
        sn1time		  = rbuff(181)
        sn2time		  = rbuff(182)	
+       r0sn		  = rbuff(183)
 !--> SNE_DISTR
 #endif
 

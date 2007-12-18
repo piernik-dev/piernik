@@ -399,15 +399,32 @@ module dataio
       case ('omga')
         do ibe=iso,ieo
 	  do jbe=jso,jeo
-            wa(ibe,jbe,kso:keo) = sqrt((u(imxa,ibe,jbe,kso:keo) / u(idna,ibe,jbe,kso:keo) / x(ibe))**2 &
-	                            + (u(imya,ibe,jbe,kso:keo) / u(idna,ibe,jbe,kso:keo) / y(jbe))**2)
+            wa(ibe,jbe,kso:keo) = (u(imya,ibe,jbe,kso:keo) / u(idna,ibe,jbe,kso:keo) * x(ibe) &
+	                         - u(imxa,ibe,jbe,kso:keo) / u(idna,ibe,jbe,kso:keo) * y(jbe))/(x(ibe)**2+y(jbe)**2)
 	  enddo
 	enddo
 
       case ('vrot')
         do ibe=iso,ieo
-          wa(ibe,jso:jeo,kso:keo) = sqrt((u(imxa,ibe,jso:jeo,kso:keo) / u(idna,ibe,jso:jeo,kso:keo) / x(ibe))**2 &
-	                           + (u(imya,ibe,jso:jeo,kso:keo) / u(idna,ibe,jso:jeo,kso:keo) / y(ibe))**2)*sqrt(x(ibe)**2+y(ibe)**2)
+	  do jbe=jso,jeo
+            wa(ibe,jbe,kso:keo) = (u(imya,ibe,jbe,kso:keo) / u(idna,ibe,jbe,kso:keo) * x(ibe) &
+	                         - u(imxa,ibe,jbe,kso:keo) / u(idna,ibe,jbe,kso:keo) * y(jbe))/sqrt(x(ibe)**2+y(jbe)**2)
+	  enddo
+	enddo
+
+      case ('vout')
+        do ibe=iso,ieo
+	  do jbe=jso,jeo
+            wa(ibe,jbe,kso:keo) = (u(imxa,ibe,jbe,kso:keo) / u(idna,ibe,jbe,kso:keo) * x(ibe) &
+	                         + u(imya,ibe,jbe,kso:keo) / u(idna,ibe,jbe,kso:keo) * y(jbe))/sqrt(x(ibe)**2+y(jbe)**2)
+	  enddo
+	enddo
+
+      case ('dcol')
+        do ibe=iso,ieo
+	  do jbe=jso,jeo
+            wa(ibe,jbe,kso:keo) = sum(u(idna,ibe,jbe,kso:keo))*(z(kso)-z(kso-1))
+	  enddo
 	enddo
 
 #ifndef ISO
