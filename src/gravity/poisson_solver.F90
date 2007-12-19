@@ -14,8 +14,8 @@ contains
   subroutine poisson
     use start, only  : bnd_xl, bnd_xr, bnd_yl, bnd_yr, &
          nb, nxd, nyd, nzd, dimensions
-    use arrays, only : idna,u,gp,x
-    use grid, only   : dz,dx,nx,ny,nz,nzb
+    use arrays, only : idna,u,gp,x,nx,ny,nz,nzb
+    use grid, only   : dz,dx
     use mpi_setup
     use shear, only  : unshear_fft
     
@@ -91,7 +91,7 @@ contains
 !         gp = unshear(gp,x)
          if (allocated(ala)) deallocate(ala)
 !         write(*,*) maxval(gp), minval(gp)
-#endif SHEAR
+#endif /* SHEAR */
     else
       write(*,*) 'POISSON SOLVER: not implemented for boundary conditions'
       write(*,*) '                xdim: ',bnd_xl,',  ', bnd_xr
@@ -433,7 +433,7 @@ contains
 !
     factor = 1.0
 
-    if (present(dz) .eq. .true.) factor = dz * dz
+    if (present(dz) .eqv. .true.) factor = dz * dz
 
     do k = 1, nz
       rtmp(:,:)   = factor * den(:,:,k)
