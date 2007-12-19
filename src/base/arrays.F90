@@ -72,17 +72,18 @@ module arrays
   real, allocatable, dimension(:,:,:) :: wa, wcu
 #ifdef SSP
   real, allocatable, dimension(:,:,:,:) :: bi
-!--> SSP
-#endif 
+#endif /* SSP */
 
-! <> SPLIT
-#else 
+#else /* ~SPLIT */ 
   real, allocatable, dimension(:,:,:,:) :: bi
   real, allocatable, dimension(:,:,:,:) :: ui
   real, allocatable, dimension(:,:,:,:) :: Lu, Lb
   real, allocatable, dimension(:,:,:)   :: wa
-!--> SPLIT
-#endif 
+#ifdef FLX_BND
+  real, allocatable, dimension(:,:,:,:) :: flx
+  real, allocatable, dimension(:,:,:)   :: cfr
+#endif /* FLX_BND */
+#endif /* ~SPLIT */ 
 #ifdef MASS_COMPENS
   real, allocatable, dimension(:,:,:)   :: dinit
 #endif        
@@ -174,18 +175,18 @@ contains
 #ifdef SPLIT
 #ifdef ORIG
     allocate(u(nu,nx,ny,nz),b(3,nx,ny,nz))
-! <> ORIG
-#else 
+#else /* ~ORIG */
     allocate(u(nu,nx,ny,nz),b(3,nx,ny,nz),bi(3,nx,ny,nz))
-!--> ORIG
-#endif 
-!<> SPLIT
-#else 
+#endif /* ~ORIG */ 
+#else /* ~SPLIT */
     allocate(u(nu,nx,ny,nz),b(3,nx,ny,nz))
     allocate(ui(nu,nx,ny,nz),bi(3,nx,ny,nz))
     allocate(Lu(nu,nx,ny,nz),Lb(3,nx,ny,nz))
-!--> SPLIT
-#endif 
+#ifdef FLX_BND
+    allocate(flx(nu,nx,ny,nz))
+    allocate(cfr(nx,ny,nz))
+#endif /* FLX_BND */
+#endif /* ~SPLIT */ 
 
 #ifdef GRAV
     allocate(gp(nx,ny,nz))
@@ -217,18 +218,17 @@ contains
 #ifdef SPLIT
 #ifdef ORIG
     deallocate(u,b)
-! <> ORIG
-#else 
+#else /* ~ORIG */ 
     deallocate(u,b,bi)
-!--> ORIG
-#endif 
-! <> SPLIT
-#else 
+#endif /* ~ORIG */ 
+#else /* ~SPLIT */
     deallocate(u,b)
     deallocate(ui,bi)
     deallocate(Lu,Lb)
-!--> SPLIT
-#endif 
+#ifdef FLX_BND
+    deallocate(cfr,flx)
+#endif FLX_BND
+#endif /* ~SPLIT */ 
 #ifdef GRAV
     deallocate(gp)
     deallocate(dprof,eprof)

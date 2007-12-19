@@ -30,7 +30,7 @@ subroutine bnd_u(dim)
   use start, only : nsub, tune_zeq_bnd
 #endif
 #ifdef SHEAR
-  use shear, only : eps,delj, unshear_fft_b, unshear_fft
+  use shear, only : eps,delj, unshear_fft_b, unshear_fft, unshear
   use start, only : qshear, omega
 #endif 
 #ifndef SPLIT
@@ -55,9 +55,14 @@ subroutine bnd_u(dim)
   real z1,z2
   integer ireq
   real, allocatable :: send_left(:,:,:,:),recv_left(:,:,:,:),send_right(:,:,:,:),recv_right(:,:,:,:) 
-  real, allocatable, dimension(:,:,:) :: temp
+  real, allocatable, dimension(:,:,:) :: temp,tem2
   real, allocatable, dimension(:,:,:) :: bl
 ! MPI block comunication
+
+!  write(*,*) '********************************************'
+!  write(*,*) '*        You should not enter bnd_u        *'
+!  write(*,*) '*Boundary conditions are done on fluxes !!!*'
+!  write(*,*) '********************************************'
   select case (dim)
     case ('xdim')
         allocate(send_right(nu,nb,ny,nz), send_left(nu,nb,ny,nz), &
@@ -65,7 +70,6 @@ subroutine bnd_u(dim)
     
    
 #ifdef SHEAR_MPI
-
         send_left(:,:,:,:)          =  u(:,nb+1:2*nb,:,:)     
         send_right(:,:,:,:)         =  u(:,nxb+1:nxb+nb,:,:)
 !
@@ -78,6 +82,9 @@ subroutine bnd_u(dim)
 #ifndef ISO
             send_left (iena,i,:,:) = send_left(iena,i,:,:) &
                                     -0.5*(qshear*omega * x(nb+i))**2 * send_left(idna,i,:,:)
+!            send_left (iena,i,:,:) = send_left(iena,i,:,:) &
+!                                    +(qshear*omega * x(nb+i))*send_left(imya,i,:,:) &
+!                                    +0.5*(qshear*omega*x(nb+i))*send_left(idna,i,:,:)
 #endif 
           enddo 
 !
@@ -103,6 +110,10 @@ subroutine bnd_u(dim)
 #ifndef ISO
             send_right(iena,i,:,:) = send_right(iena,i,:,:) &
                                     -0.5*(qshear*omega * x(nxb+i))**2 * send_right(idna,i,:,:)
+!            send_right(iena,i,:,:) = send_right(iena,i,:,:) &
+!                                    +(qshear*omega*x(nxb+i))*send_right(imya,i,:,:) &
+!                                    +0.5*(qshear*omega * x(nxb+i))**2 * send_right(idna,i,:,:)
+         
 #endif 
           enddo 
 !
@@ -135,12 +146,15 @@ subroutine bnd_u(dim)
 !	
         if(bnd_xr == 'she') then	
           do i=1,nb
-             recv_right (imya,i,:,:) = recv_right (imya,i,:,:) &
-                                           -qshear*omega * x(nb+nxb+i)     * recv_right(idna,i,:,:)
 #ifndef ISO  
              recv_right (iena,i,:,:) = recv_right (iena,i,:,:) &
                                       +0.5*(qshear*omega * x(nb+nxb+i))**2 * recv_right(idna,i,:,:)
+!             recv_right (iena,i,:,:) = recv_right (iena,i,:,:) &
+!                                      -(qshear*omega*x(nb+nxb+i))*recv_right(imya,i,:,:) &
+!                                      +0.5*(qshear*omega * x(nb+nxb+i))**2 * recv_right(idna,i,:,:)
 #endif 
+             recv_right (imya,i,:,:) = recv_right (imya,i,:,:) &
+                                           -qshear*omega * x(nb+nxb+i)     * recv_right(idna,i,:,:)
           enddo 	  
 
         endif !(bnd_xr == 'she')
@@ -150,12 +164,15 @@ subroutine bnd_u(dim)
         if(bnd_xl == 'she') then
 
           do i=1,nb
-             recv_left(imya,i,:,:) = recv_left(imya,i,:,:) &
-                                         -qshear*omega * x(i)     * recv_left(idna,i,:,:)
 #ifndef ISO  
              recv_left(iena,i,:,:) = recv_left(iena,i,:,:) &
                                     +0.5*(qshear*omega * x(i))**2 * recv_left(idna,i,:,:)
+!             recv_left(iena,i,:,:) = recv_left(iena,i,:,:) &
+!                                    -(qshear*omega*x(i))*recv_left(imya,i,:,:)&
+!                                    +0.5*(qshear*omega * x(i))**2 * recv_left(idna,i,:,:)
 #endif 
+             recv_left(imya,i,:,:) = recv_left(imya,i,:,:) &
+                                         -qshear*omega * x(i)     * recv_left(idna,i,:,:)
           enddo 
         endif !(bnd_xl == 'she')
 
@@ -352,44 +369,45 @@ subroutine bnd_u(dim)
 
 ! Non-MPI boundary conditions
 
-#ifdef SHEAR
+#ifdef SHEAR_MY
    if( (bnd_xl == 'she').and.(bnd_xr == 'she')) then   ! 2d ONLY !!!!!!!
-      allocate(temp(nxd,nyd,nz))
-      allocate(bl(nb,nyd,nz))
+      allocate(temp(nxd,ny,nz))
+      allocate(tem2(nxd,ny,nz))
       do i = 1, nu
          if( i == imya ) then
            do j = 1,nx
-             u(i,j,:,:) = u(i,j,:,:) + qshear*omega*x(j) * u(1,j,:,:)
+             u(i,j,:,:) = u(i,j,:,:) + qshear*omega*x(j)*u(1,j,:,:)
            enddo
          endif
+#ifndef ISO
          if( i == iena ) then
            do j = 1,nx
-             u(i,j,:,:) = u(i,j,:,:) - 0.5*(qshear*omega*x(j))**2  * u(1,j,:,:)
+             u(i,j,:,:) = u(i,j,:,:) - 0.5*(qshear*omega*x(j))**2 * u(1,j,:,:)
            enddo
          endif
-
-         temp(:,:,:) = unshear_fft(u(i,nb+1:nx-nb,nb+1:ny-nb,:),x(nb+1:nx-nb),.true.)
-         call unshear_fft_b(temp,x(:),&
-               u(i,1:nb,nb+1:ny-nb,:), &
-!              bl(:,:,:), &
-               u(i,nxd+nb+1:nxd+2*nb,nb+1:ny-nb,:))!,temp(:,:,:))
-!         u(i,nb+1:nx-nb,nb+1:ny-nb,:) = temp(:,:,:)
-!         u(i,1:nb,nb+1:ny-nb,:)       = bl(:,:,:)
+#endif /* ~ISO */
+         temp(:,:,:) = unshear(u(i,nb+1:nxd+nb,:,:),x(nb+1:nxd+nb),.true.)
+         tem2(:,:,:) = unshear(temp(:,:,:),x(nb+1:nxd+nb),.true.)
+         
+         u(i,1:nb,:,:) = tem2(nxd-nb+1:nxd,:,:)
+         u(i,nxd+nb+1:nxd+2*nb,:,:) = tem2(1:nb,:,:)
          if( i == imya ) then
            do j = 1,nx
              u(i,j,:,:) = u(i,j,:,:) - qshear*omega*x(j) * u(1,j,:,:)
            enddo
          endif
+#ifndef ISO
          if( i == iena ) then
            do j = 1,nx
              u(i,j,:,:) = u(i,j,:,:) + 0.5*(qshear*omega*x(j))**2  * u(1,j,:,:)
            enddo
          endif
+#endif /* ~ISO */
       enddo
-      deallocate(temp,bl)
+      deallocate(temp,tem2)
    endif
-!--> SHEAR
-#endif 
+   u(idna,:,:,:) = max(u(idna,:,:,:),smalld)
+#endif /* SHEAR_MY */
 
   select case (dim)
     case ('xdim')      
@@ -782,10 +800,11 @@ end subroutine bnd_u
    use arrays, only : Lu
 #endif
    implicit none
-
+#ifndef FLX_BND
    call bnd_u('xdim')
    call bnd_u('ydim')
    if(dimensions .eq. '3d') call bnd_u('zdim')
+#endif /* ~FLX_BND */
 
 #ifndef SPLIT  
    Lu(:,:,:,: ) =  0.0
