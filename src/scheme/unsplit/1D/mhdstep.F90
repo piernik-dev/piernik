@@ -10,10 +10,14 @@ module mod_mhdstep ! UNSPLIT 1D
 #endif /* RESIST */
 #ifdef SHEAR
    use shear, only : yshift
+   use fluid_boundaries, only: bnd_u
 #endif /* SHEAR */
 #ifdef SNE_DISTR
   use sn_distr
 #endif /* SNE_DISTR */
+#ifdef SELF_GRAV
+    use poisson_solver
+#endif /* SELF_GRAV */
 
    contains
       subroutine mhdstep
@@ -32,25 +36,34 @@ module mod_mhdstep ! UNSPLIT 1D
 
          if(proc.eq.0) write(*,900) nstep,dt,t
 900      format('   nstep = ',i7,'   dt = ',f22.16,'    t = ',f22.16)
-         t=t+2.*dt
+         t=t+dt
 !------------------- X->Y->Z ---------------------
 #ifdef SHEAR
-         call yshift(t-dt)
+         call yshift(t)
 #endif /* SHEAR */
+#ifdef SELF_GRAV
+         call poisson
+#endif /* SELF_GRAV */
+
          call sweepx
          call sweepy
          if(dimensions .eq. '3d') then
             call sweepz
          endif
-
+!         stop
 #ifdef SNE_DISTR
       call supernovae_distribution(dt)
 #endif /* SNE_DISTR */
-
+ 
+        t = t+dt
 !------------------- Z->Y->X ---------------------
 #ifdef SHEAR
          call yshift(t)
 #endif /* SHEAR */
+#ifdef SELF_GRAV
+         call poisson
+#endif /* SELF_GRAV */
+
 
          if(dimensions .eq. '3d') then
             call sweepz
@@ -82,6 +95,10 @@ module mod_mhdstep ! UNSPLIT 1D
             call fluidy
             call integrate
          enddo
+#ifdef FLX_BND
+         call bnd_u('xdim')
+         call bnd_u('ydim')
+#endif /* FLX_BND */
 
       end subroutine sweepy
 
