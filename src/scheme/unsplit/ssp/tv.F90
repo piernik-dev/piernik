@@ -20,18 +20,25 @@ module tv   ! unsplit ssp
 
   end subroutine tvdb
 
-   subroutine relaxing_tvd(u,bb,sweep,i1,i2,dx,n,dt)
-   
+   subroutine relaxing_tvd(u,bb,sweep,i1,i2,dx,n,dt,fx,cx)
+    use fluxes
 #ifdef GRAV
    use gravity, only : grav_pot2accel
+#endif
+#ifdef GLOBAL_FR_SPEED
+   use time, only : c
+#endif
+#ifdef SHEAR
+   use arrays, only : xr
 #endif
 
     implicit none
     integer i1,i2, n
     real :: dt,dx, dtx
+    real, dimension(nu,n), optional :: fx,cx
     real, dimension(nu,n) :: u,cfr,ul,ur
     real, dimension(3,n)  :: bb
-    real, dimension(n)    :: gravl,gravr
+    real, dimension(n)    :: gravl,gravr,rotfr,vxr
     real, dimension(n)    :: dgrp,dgrm,dglp,dglm
            
     character sweep*6
@@ -46,7 +53,7 @@ module tv   ! unsplit ssp
 #ifdef COSM_RAYS
     real q
     real, dimension(n)    :: divv,decr,tmp
-#endif COSM_RAYS
+#endif /* COSM_RAYS */
                             
     w(:,:)    = 0.0
     cfr  = 0.0
@@ -54,9 +61,18 @@ module tv   ! unsplit ssp
 #ifdef GRAV
     duls = 0.0 
     durs = 0.0
-#endif GRAC
+#endif /* GRAV */
     
-    call mhdflux(w,cfr,u,bb,n)
+    if (.not.present(fx)) then
+       call mhdflux(w,cfr,u,bb,n)
+    else
+#ifndef GLOBAL_FR_SPEED
+       cfr = cx
+#else /* ~GLOBAL_FR_SPEED */
+       cfr(:,:) = c
+#endif /* ~GLOBAL_FR_SPEED */
+       w   = fx
+    endif
 
     fr = (u*cfr+w)*0.5
     fl = (u*cfr-w)*0.5
@@ -75,12 +91,30 @@ module tv   ! unsplit ssp
 
     durf(:,2:n) = dtx*(fr(:,2:n) - fr(:,1:n-1));     durf(:,1) = durf(:,n)  ! durf = (fr-cshift(fr,shift=-1,dim=2))/dx*dt 
     dulf(:,2:n) = dtx*(fl(:,2:n) - fl(:,1:n-1));     dulf(:,1) = durf(:,n)  ! dulf = (fl-cshift(fl,shift=-1,dim=2))/dx*dt
+
+#ifdef SHEAR
+    vxr(1:n-1) = 0.5*(u(imya,2:n)/u(idna,2:n) + u(imya,1:n-1)/u(idna,1:n-1))
+    if(sweep .eq. 'xsweep') then
+      rotfr(:) =   2.0*omega*(vxr(:) + qshear*omega*xr(:))
+    else if(sweep .eq. 'ysweep')  then
+      rotfr(:) = - 2.0*omega*vxr(:)
+    else
+      rotfr(:) = 0.0
+    endif
+#else /* ~SHEAR */ 
+      rotfr(:) = 0.0
+#endif /* ~SHEAR */ 
+
     
 #ifdef GRAV
 
 ! Gravity source terms -------------------------------------
 
       call grav_pot2accel(sweep,i1,i2, n, gravr)
+#ifdef SHEAR
+      rotfr(n) = rotfr(n-1)
+      gravr = gravr + rotfr
+#endif /* SHEAR */
       gravl(2:n) = gravr(1:n-1)                                             ! gravl      = cshift(gravr,-1)
       gravl(1)  = gravl(2)
       gravr(n)  = gravr(n-1)
@@ -97,12 +131,12 @@ module tv   ! unsplit ssp
 #ifndef ISO
       duls(iena,:)  = gravr*ul(imxa,:)*dt 
       durs(iena,:)  = gravl*ur(imxa,:)*dt
-#endif ISO
+#endif /* ISO */
       duls(imxa,:)  = gravr*ul(idna,:)*dt
       durs(imxa,:)  = gravl*ur(idna,:)*dt
 
 ! ----------------------------------------------------------
-#endif GRAV
+#endif /* GRAV */
 
    ur = -durf
    ul =  dulf
@@ -131,15 +165,14 @@ module tv   ! unsplit ssp
 !========================================================================
 
   subroutine integrate
-    use fluid_boundaries, only : compute_u_bnd
+    use fluid_boundaries, only : compute_u_bnd,bnd_u
     use mag_boundaries, only :   compute_b_bnd
     use arrays, only : ui,u,bi,b,Lu,Lb,nx,ny,nz
     implicit none
 #ifndef ISO
   real, allocatable :: ekin(:,:,:), emag(:,:,:), eint(:,:,:)
   allocate(ekin(nx,ny,nz),emag(nx,ny,nz),eint(nx,ny,nz))
-#endif ISO
-
+#endif /* ISO */
     select case(istep)
      case(1)
         u(:,:,:,:) = ui(:,:,:,:) + Lu(:,:,:,:)
@@ -167,7 +200,7 @@ module tv   ! unsplit ssp
     eint = u(iena,:,:,:)-ekin-emag
     eint = max(eint,smallei)
     u(iena,:,:,:) = eint+ekin+emag
-#endif ISO
+#endif /* ISO */
     call compute_u_bnd
 
     select case(istep)
@@ -189,7 +222,7 @@ module tv   ! unsplit ssp
 
 #ifndef ISO
   deallocate(ekin,emag,eint)
-#endif ISO
+#endif /* ISO */
 
   end subroutine integrate  
 
