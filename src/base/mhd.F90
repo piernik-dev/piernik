@@ -60,7 +60,6 @@ program mhd
   call grid_xyz 
                 
   call init_dataio
-
 #ifdef GRAV
   call grav_pot_3d
 #endif /* GRAV */
@@ -80,13 +79,13 @@ program mhd
 
 #ifdef GALACTIC_DISK
     if(grav_model .eq. 'hern93nbody2') call write_data('gpt')
-#endif GALACTIC_DISK
+#endif /* GALACTIC_DISK */
     call init_prob
 #ifdef GALACTIC_DISK
     if((grav_model .ne. 'null') .and. (grav_model .ne. 'hern93nbody2')) then
      call write_data('gpt')
     endif
-#endif GALACTIC_DISK
+#endif /* GALACTIC_DISK */
 
     call compute_u_bnd
     call compute_b_bnd
