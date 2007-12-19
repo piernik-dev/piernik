@@ -434,8 +434,8 @@ module dataio
         / u(idna,iso:ieo,jso:jeo,kso:keo))*(gamma-1.)*gamma/u(idna,iso:ieo,jso:jeo,kso:keo))
 #endif 
 
-!      case ('gpot')
-!        wa(iso:ieo,jso:jeo,kso:keo) = gp(iso:ieo,jso:jeo,kso:keo)
+      case ('gpot')
+        wa(iso:ieo,jso:jeo,kso:keo) = gp(iso:ieo,jso:jeo,kso:keo)
 
       case ('magx')
         if(domain .eq. 'full_domain') then
