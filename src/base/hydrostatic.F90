@@ -1,5 +1,10 @@
 #include "mhd.def"
-
+#ifdef GALAXY
+#define ONEOFTWO
+#endif
+#ifdef DCOLUMNUSE
+#define ONEOFTWO
+#endif
 module hydrostatic
 
 ! Written by M. Hanasz March-May 2006
@@ -10,7 +15,7 @@ module hydrostatic
 
     subroutine hydrostatic_zeq(iia,jja, d0, dprof)
      use start, only    : nsub,nb,zmin,zmax,tune_zeq,csim2, col_dens, proc
-     use constants, only : k_B, hydro_mass, small
+     use constants, only : k_B, hydro_mass, small, pc
      use arrays, only   : nx,ny,nz,dl,zdim,z,zl,zr, nzt
      
      use gravity, only  : grav_accel,grav_pot,gp_status
@@ -58,7 +63,7 @@ module hydrostatic
       enddo                                  ! ksmid and ksmid+1
       
       if(gp_status .eq. 'undefined') then
-        call grav_accel('zsweep',ia, ja, zs, nstot, gprofs, 'default')
+        call grav_accel('zsweep',ia, ja, zs, nstot, gprofs)
       else
         call grav_pot('zsweep', ia,ja, zs, nstot, gpots,gp_status)
         gprofs(1:nstot-1) = (gpots(1:nstot-1) - gpots(2:nstot))/dzs
@@ -95,7 +100,7 @@ module hydrostatic
       enddo
 
 
-#ifdef GALAXY
+#ifdef ONEOFTWO
 
       cd = sum(dprofs(:)) * dzs * pc
        
@@ -131,8 +136,7 @@ module hydrostatic
 #endif
 
 888  format('Midplane density =',f10.4,2x,'Column density =', e10.4,2x,'iter=',i4 )      
-!--> GALAXY
-#endif 
+#endif /* ONEOFTWO */
 
     deallocate(zs,dprofs,gprofs,gpots)
 
@@ -175,7 +179,7 @@ module hydrostatic
       nstot=nsub*nzt
       allocate(zs(nstot), gprofs(nstot), dprofs(nstot), eprofs(nstot), tprofs(nstot), cprofs(nstot), bprofs(nstot),cfuncs(nstot))
   
-          call grav_accel('zsweep',ia, ja, z, nz, gprof, 'default')
+          call grav_accel('zsweep',ia, ja, z, nz, gprof)
 !         write(*,*) gprof
 
       dzs = (zmax-zmin)/real(nstot-2*nb*nsub)
@@ -195,7 +199,7 @@ module hydrostatic
         do ksub=ksmid+1, nstot-1
 
           zz(1) = zs(ksub)
-          call grav_accel('zsweep',ia, ja, zz, 1, gg, 'default')
+          call grav_accel('zsweep',ia, ja, zz, 1, gg)
           gravz = tune_zeq*gg(1)
 
           tmp =  tprofs(ksub)
@@ -203,7 +207,7 @@ module hydrostatic
           tmp = tmp + dtmpdz*dzs/2.
 
           zz(1) =zs(ksub) + dzs/2.
-          call grav_accel('zsweep',ia, ja, zz, 1, gg, 'default')
+          call grav_accel('zsweep',ia, ja, zz, 1, gg)
           gravz = tune_zeq*gg(1)
           
           call d_temp_dz(gravz,tmp,dtmpdz)
@@ -220,7 +224,7 @@ module hydrostatic
         do ksub=ksmid, 2, -1
         
           zz(1) = zs(ksub)
-          call grav_accel('zsweep',ia, ja, zz, 1, gg, 'default')
+          call grav_accel('zsweep',ia, ja, zz, 1, gg)
           gravz = tune_zeq*gg(1)
 
           tmp =  tprofs(ksub)
@@ -228,7 +232,7 @@ module hydrostatic
           tmp = tmp - dtmpdz*dzs/2.
 
           zz(1) =zs(ksub) - dzs/2.
-          call grav_accel('zsweep',ia, ja, zz, 1, gg, 'default')
+          call grav_accel('zsweep',ia, ja, zz, 1, gg)
           gravz = tune_zeq*gg(1)
           
           call d_temp_dz(gravz,tmp,dtmpdz)

@@ -37,6 +37,7 @@
 #define GRAV
 #define GRAV_GAL_VOLLMER
 #undef GALAXY
+#define DCOLUMNUSE
 #define GALACTIC_DISK
 #undef SNE_DISTR
 #undef SHEAR

@@ -654,7 +654,7 @@ subroutine bnd_u(dim)
             do j=1,ny
               do i=1,nx
 
-                call grav_accel('zsweep',i,j, zs, nsub, gprofs, 'default')
+                call grav_accel('zsweep',i,j, zs, nsub, gprofs)
                 gprofs=tune_zeq_bnd * gprofs
       
                 dprofs(1) = db(i,j)
@@ -752,7 +752,7 @@ subroutine bnd_u(dim)
             do j=1,ny
               do i=1,nx
 
-                call grav_accel('zsweep',i,j, zs, nsub, gprofs, 'default')
+                call grav_accel('zsweep',i,j, zs, nsub, gprofs)
                 gprofs=tune_zeq_bnd * gprofs
       
                 dprofs(1) = db(i,j)

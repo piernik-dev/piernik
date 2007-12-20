@@ -59,6 +59,7 @@ module constants     ! module containg numerical and physical constants !!!
 	real, parameter :: gram =	6.6732e-8*cm**3/G_one/sek**2
 	real, parameter :: kg =		1.0e3
 	real, parameter :: Msun =	1.989e33*gram
+	real, parameter :: gmu =	2.32e7*Msun
 	real, parameter :: me = 	9.109558e-28*gram
 	real, parameter :: mp = 	1.672614e-24*gram
 	real, parameter :: mH = 	1.673559e-24*gram

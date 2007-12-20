@@ -96,15 +96,18 @@ contains
 
     implicit none
  
-    integer i,j,k
+    integer i,j,k,iu,id,ju,jd
     real xi,yj,zk, rc, vx, vy, vz,rs
     real, allocatable ::dprof(:)
-    real iOmega
-    real alfar, dens0
-    real dnmol, dncold, dnwarm, dnion, dnhot
-    real dcolumn, dcolsmall, cd, cdprevious, d0previous, afactor, bfactor, dcolumnprevious
+    real iOmega, dens0
+#ifdef DCOLUMNUSE
+    real dcmol, dcneut, dcion, dchot
+#else /* DCOLUMNUSE */
+    real dnmol, dncold, dnwarm, dnion, dnhot, alfar
+    real cd, cdprevious, d0previous, afactor, bfactor, dcolumnprevious, dcolumn, dcolsmall
     integer iter, itermax, itermaxwrite, inzfac
-    real xgradgp, xgradp
+#endif /* DCOLUMNUSE */
+    real xgradgp, xgradp, ygradgp, ygradp, gradgp, gradp, sfq
     character syscmd*36,syscmd2*40,syscmd3*37
     integer system, syslog
 
@@ -112,7 +115,9 @@ contains
 
     allocate(dprof(nz))
 
+#ifndef DCOLUMNUSE
     if(proc .eq. 0) write(*,*) 'first loop: calculating dcolumn, dprof'
+#endif /* DCOLUMNUSE */
 
     if(proc .eq. 0) then
       write(syscmd,'(a33,i3.3)') "echo -n 'first loop: j = 001 of '",ny
@@ -125,6 +130,17 @@ contains
       do i = 1,nx
         xi = x(i)
         rc = sqrt(xi**2+yj**2)
+#ifdef DCOLUMNUSE
+            dcmol = 2.6e20/(cm**2)*exp(-((rc - 4.5*kpc)**2-(r_gc_sun - 4.5*kpc)**2)/(2.9*kpc)**2)
+	    dcneut = 6.2e20/(cm**2)
+	    dcion =  1.46e20/(cm**2)*exp(-(rc**2 - r_gc_sun**2)/(37.0*kpc)**2) &
+	          + 1.20e18/(cm**2)*exp(-((rc - 4.0*kpc)**2 - (r_gc_sun - 4.0*kpc)**2)/(2.0*kpc)**2)
+	    dchot = 4.4e18/(cm**2)*(0.12*exp(-(rc-r_gc_sun)/4.9/kpc)+0.88*exp(-((rc-4.5*kpc)**2-(r_gc_sun-4.5*kpc)**2)/(2.9*kpc)**2))
+	    dens0=1.36*mp*(dcmol+dcneut+dcion+dchot)
+
+        d0 = dens0/dl(zdim)/nz
+	call hydrostatic_zeq(i, j, d0, dprof)
+#else /* DCOLUMNUSE */
 	dcolumn = 1.0e-6
         dcolumnprevious = 0.0
         inzfac = 0
@@ -191,6 +207,7 @@ contains
 	if(abs(cd-dcolumn).gt.dcolsmall) then
 	    write(*,*) proc,i,j,'equatorial density accuracy different than required!'
 	endif
+#endif /* DCOLUMNUSE */
 
         do k=1,nz
 	  u(1,i,j,k)=rhoa + dprof(k)/cosh((rc/r_max)**mtr)
@@ -221,19 +238,41 @@ contains
 !         u(1,i,j,k) = max(u(1,i,j,k), smalld)
 	 u(2,i,j,k) = vx*u(1,i,j,k)
          u(3,i,j,k) = vy*u(1,i,j,k)
-           if(i .ne. 1 .and. i .ne. nx) then
-	     xgradgp=(gp(i+1,j,k)-gp(i-1,j,k))/2.0/dl(xdim)
-	     xgradp =-0.5*c_si**2/gamma/u(1,i,j,k)*(u(1,i+1,j,k)-u(1,i-1,j,k))/dl(xdim)
+	   if(i .ne. 1 .and. i .ne. nx) then
+	     iu = i+1
+	     id = i-1
+	     sfq = 0.5
+	   else
+	     if(i .eq. 1) then
+	       iu = i+1
+	       id = i
+	       sfq = 1.0
+	     elseif(i .eq. nx) then
+	       iu = i
+	       id = i-1
+	       sfq = 1.0
+	     endif
            endif
-           if(i .eq. 1) then
-	     xgradgp=(gp(i+1,j,k)-gp(i,j,k))/dl(xdim)
-	     xgradp =-c_si**2/gamma/u(1,i,j,k)*(u(1,i+1,j,k)-u(1,i,j,k))/dl(xdim)
+	   xgradgp=(gp(iu,j,k)-gp(id,j,k))*sfq/dl(xdim)
+           xgradp =-sfq*c_si**2/gamma/u(1,i,j,k)*(u(1,iu,j,k)-u(1,id,j,k))/dl(xdim)
+	   if(j .ne. 1 .and. j .ne. ny) then
+	     ju = j+1
+	     jd = j-1
+	     sfq = 0.5
+	   else
+	     if(j .eq. 1) then
+	       ju = j+1
+	       jd = j
+	       sfq = 1.0
+	     elseif(j .eq. ny) then
+	       ju = j
+	       jd = j-1
+	       sfq = 1.0
+	     endif
            endif
-           if(i .eq. nx) then
-	     xgradgp=(gp(i,j,k)-gp(i-1,j,k))/dl(xdim)
-	     xgradp =-c_si**2/gamma/u(1,i,j,k)*(u(1,i,j,k)-u(1,i-1,j,k))/dl(xdim)
-           endif
-           iOmega=sqrt(abs(xgradgp+xgradp)/abs(xi))
+	   ygradgp=(gp(i,ju,k)-gp(i,jd,k))*sfq/dl(ydim)
+           ygradp =-sfq*c_si**2/gamma/u(1,i,j,k)*(u(1,i,ju,k)-u(1,i,jd,k))/dl(ydim)
+           iOmega=sqrt(abs(sqrt((xgradgp+xgradp)**2+(ygradgp+ygradp)**2))/rc)
 	     u(2,i,j,k)=-iOmega*yj*u(1,i,j,k)
              u(3,i,j,k)= iOmega*xi*u(1,i,j,k)
          u(4,i,j,k) = vz*u(1,i,j,k)
@@ -262,7 +301,9 @@ contains
         enddo
       enddo
     enddo
+#ifndef DCOLUMNUSE
       write(*,*) 'the longest iteration number of steps = ', itermaxwrite
+#endif /* DCOLUMNUSE */
     if(allocated(dprof)) deallocate(dprof)
 
 
