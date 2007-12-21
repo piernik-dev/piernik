@@ -148,7 +148,7 @@ allocate(gpotdisk(nx,ny,nz),gpothalo(nx,ny,nz),gpotbulge(nx,ny,nz))
 	Mbulge=  606.0*gmu !ptmass*Msun !0.8e10*Msun	!Milky Way (estimation)
 	Mdisk = 3690.0*gmu !dg_dz*Msun !3.7e10*Msun	!Milky Way
 	ahalo =   12.0*kpc !n_gravr2*kpc !35.*kpc
-	bbulge= 0.3873*kpc !ptm_x*pc !2100.*pc
+	bbulge= 1.0*kpc !0.3873*kpc !ptm_x*pc !2100.*pc
 	adisk = 5.3178*kpc !ptm_y*kpc !4.9*kpc
 	bdisk = 0.2500*kpc !ptm_z*pc !150.*pc
         if (sweep == 'zsweep') then

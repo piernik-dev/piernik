@@ -77,7 +77,11 @@ contains
     
     SNIfreq  = 1./sn1time/year
     SNIIfreq = 1./sn2time/year
+#ifdef ISO
+    EexplSN  = snenerg
+#else /* ISO */
     EexplSN  = snenerg*erg
+#endif /* ISO */
 
 !===============obliczanie, jaka czesc SN z poprzedniego kroku trzeba doliczyc=======
     SNno(1)=0 					! zerowanie ilosci wylosowanych SNI w aktualnym kroku
@@ -130,7 +134,12 @@ contains
 	  i =nb+int((snpos(1)-xminb)/(xmaxb-xminb)*nxb)
 	  j =nb+int((snpos(2)-yminb)/(ymaxb-yminb)*nyb)
 	  k =nb+int((snpos(3)-zminb)/(zmaxb-zminb)*nzb)
-	  u(5,i,j,k)=u(5,i,j,k)+EexplSN
+	  write(*,*) 'sn position: ',i,j,k
+#ifdef ISO
+          u(1,i,j,k)=u(1,i,j,k)+EexplSN
+#else /* ISO */
+          u(5,i,j,k)=u(5,i,j,k)+EexplSN
+#endif /* ISO */
 	endif
 	endif
 	endif
@@ -164,7 +173,12 @@ contains
 	  i =nb+int((snpos(1)-xminb)/(xmaxb-xminb)*nxb)
 	  j =nb+int((snpos(2)-yminb)/(ymaxb-yminb)*nyb)
 	  k =nb+int((snpos(3)-zminb)/(zmaxb-zminb)*nzb)
-	  u(5,i,j,k)=u(5,i,j,k)+EexplSN
+	  write(*,*) 'sn position: ',i,j,k
+#ifdef ISO
+          u(1,i,j,k)=u(1,i,j,k)+EexplSN
+#else /* ISO */
+          u(5,i,j,k)=u(5,i,j,k)+EexplSN
+#endif /* ISO */
 	endif
 	endif
 	endif

@@ -39,7 +39,9 @@ module hydrostatic
       nstot=nsub*nzt
       
       allocate(zs(nstot), dprofs(nstot), gprofs(nstot), gpots(nstot))
-          
+#ifdef DCOLUMNUSE
+      col_dens = d0
+#endif /* DCOLUMNUSE */          
       itermx = 20
       if(col_dens .gt. small) then
         dmid = 1.0
@@ -129,7 +131,7 @@ module hydrostatic
         goto 100
       endif 
 
-      if(proc .eq.0)  write(*,888) d0, cd ,iter
+!      if(proc .eq.0)  write(*,888) d0, cd ,iter
 
 #ifndef ISO
       eprof(:) = c_si**2/(gamma-1.0) * dprof(:)
