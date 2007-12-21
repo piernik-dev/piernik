@@ -107,7 +107,10 @@ contains
     real cd, cdprevious, d0previous, afactor, bfactor, dcolumnprevious, dcolumn, dcolsmall
     integer iter, itermax, itermaxwrite, inzfac
 #endif /* DCOLUMNUSE */
-    real xgradgp, xgradp, ygradgp, ygradp, gradgp, gradp, sfq
+    real xgradgp, ygradgp, sfq
+#ifdef PRESSURECORRECTION
+    real xgradp, ygradp
+#endif PRESSURECORRECTION
     character syscmd*36,syscmd2*40,syscmd3*37
     integer system, syslog
 
@@ -138,7 +141,7 @@ contains
 	    dchot = 4.4e18/(cm**2)*(0.12*exp(-(rc-r_gc_sun)/4.9/kpc)+0.88*exp(-((rc-4.5*kpc)**2-(r_gc_sun-4.5*kpc)**2)/(2.9*kpc)**2))
 	    dens0=1.36*mp*(dcmol+dcneut+dcion+dchot)
 
-        d0 = dens0/dl(zdim)/nz
+        d0 = dens0   !/dl(zdim)/nz
 	call hydrostatic_zeq(i, j, d0, dprof)
 #else /* DCOLUMNUSE */
 	dcolumn = 1.0e-6
@@ -254,7 +257,9 @@ contains
 	     endif
            endif
 	   xgradgp=(gp(iu,j,k)-gp(id,j,k))*sfq/dl(xdim)
+#ifdef PRESSURECORRECTION
            xgradp =-sfq*c_si**2/gamma/u(1,i,j,k)*(u(1,iu,j,k)-u(1,id,j,k))/dl(xdim)
+#endif /* PRESSURECORRECTION */
 	   if(j .ne. 1 .and. j .ne. ny) then
 	     ju = j+1
 	     jd = j-1
@@ -271,8 +276,12 @@ contains
 	     endif
            endif
 	   ygradgp=(gp(i,ju,k)-gp(i,jd,k))*sfq/dl(ydim)
+#ifdef PRESSURECORRECTION
            ygradp =-sfq*c_si**2/gamma/u(1,i,j,k)*(u(1,i,ju,k)-u(1,i,jd,k))/dl(ydim)
            iOmega=sqrt(abs(sqrt((xgradgp+xgradp)**2+(ygradgp+ygradp)**2))/rc)
+#else /* PRESSURECORRECTION */
+           iOmega=sqrt(abs(sqrt(xgradgp**2+ygradgp**2))/rc)
+#endif /* PRESSURECORRECTION */
 	     u(2,i,j,k)=-iOmega*yj*u(1,i,j,k)
              u(3,i,j,k)= iOmega*xi*u(1,i,j,k)
          u(4,i,j,k) = vz*u(1,i,j,k)
@@ -305,7 +314,6 @@ contains
       write(*,*) 'the longest iteration number of steps = ', itermaxwrite
 #endif /* DCOLUMNUSE */
     if(allocated(dprof)) deallocate(dprof)
-
 
 
 #ifdef SNE_DISTR
