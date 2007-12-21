@@ -92,10 +92,9 @@
  /
  
  $SN_DISTR
- snenerg = 1.e20
+ snenerg = 1.0
  sn1time = 445.e2
  sn2time = 52.e2
- r0sn	 = 400.
  /
 
  $PROBLEM_CONTROL
