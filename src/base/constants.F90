@@ -15,14 +15,6 @@ module constants     ! module containg numerical and physical constants !!!
   real, parameter :: dpi = 2.*pi
   real, parameter :: fpi = 4.*pi
   real, parameter :: e  = 2.718281828459045235
-  real, parameter :: pc = 3.086e18
-  real, parameter :: cmkm = 1.0e5      ! km -> cm 
-  real, parameter :: sekmyr = 3.154e13 ! Myr -> s 
-  real, parameter :: cmps2 = 3.23e8
-  real, parameter :: kpc = 1000.0
-  real, parameter :: r_gc_sun = 8500   ! pc 
-  real, parameter :: vsun =     220.0  
-
 ! units systems:
 !
 ! cm, g, s
@@ -292,6 +284,14 @@ module constants     ! module containg numerical and physical constants !!!
 
   real, parameter :: fpiG  = fpi*G_one
   real, parameter :: newtong = G_one
+  real, parameter :: cmps2 = 3.23e8
+  real, parameter :: pc = 3.086e18
+  real, parameter :: cmkm = 1.0e5      ! km -> cm 
+  real, parameter :: sekmyr = 3.154e13 ! Myr -> s 
+  real, parameter :: kpc = 1000.0
+  real, parameter :: r_gc_sun = 8500   ! pc 
+
+  real, parameter :: vsun =     220.0  
 
 #endif
 
