@@ -278,8 +278,6 @@ module constants     ! module containg numerical and physical constants !!!
   real, parameter :: m_H = 1.66053e-24 ! g 
 
   real, parameter :: G_one = 1.0  ! (scaled units)
-  real, parameter :: hydro_mass = m_H * cmkm**2
-  real, parameter :: chcf = hydro_mass / sekmyr
 
 
   real, parameter :: fpiG  = fpi*G_one
@@ -292,6 +290,8 @@ module constants     ! module containg numerical and physical constants !!!
   real, parameter :: r_gc_sun = 8500   ! pc 
 
   real, parameter :: vsun =     220.0  
+  real, parameter :: hydro_mass = m_H * cmkm**2
+  real, parameter :: chcf = hydro_mass / sekmyr
 
 #endif
 
