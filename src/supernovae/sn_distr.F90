@@ -11,6 +11,7 @@ module sn_distr
 
   real SNIrest, SNIIrest
   real, dimension(1000,2) :: danta1, danta2
+  integer, dimension(2)   :: SNnohistory
 
 
 contains
@@ -28,6 +29,7 @@ contains
   RmaxII   = 15000.0
   SNIrest  = 0.0
   SNIIrest = 0.0
+  call random_seed()
 
   rcl=0.0
   rc=1./real(imax)*RmaxI
@@ -59,14 +61,15 @@ contains
     rcl=rc
   enddo
   danta2(:,1)=danta2(:,1)/danta2(imax,1)
+  SNnohistory(:)=0
 
   end subroutine compute_SNdistr
 
 
 !===============================================================================================
-  subroutine supernovae_distribution(dtime)
+  subroutine supernovae_distribution
     use mpi_setup
-    use start, only : nb, dt, snenerg, sn1time, sn2time
+    use start, only : nb, t, dt, snenerg, sn1time, sn2time
     implicit none
 
     integer i,j,k, SNInum, SNIInum, isn, ii
@@ -89,21 +92,26 @@ contains
     if(proc .eq. 0) then			! losowanie przeprowadzone tylko w zerowym procesie
       dtime=SNIrest+2*dt			! czas dla losowania ilosci SN powiekszony o niewylosowane SN z poprzedniego kroku
       call random_number(los)
-      do while(0.5*los .lt. dtime*SNIfreq)	! SN wylosowana jesli los jest mniejszy niz ilosc przewidywana srednia (dlaczego 0.5?)
+      do while(los .lt. dtime*SNIfreq)	! SN wylosowana jesli los jest mniejszy niz ilosc przewidywana srednia
         SNno(1)=SNno(1)+1			! wtedy wylosowana SN dodawana jest do ilosci wylosowanych w danym kroku
-        SNIrest=dtime-0.5*los/SNIfreq		! obliczanie pozostalego czasu (dlaczego 0.5?)
+        SNIrest=dtime-1./SNIfreq		! obliczanie pozostalego czasu
+!        SNIrest=dtime-2.*los/SNIfreq		! obliczanie pozostalego czasu - druga wersja
         dtime=SNIrest				! ustawianie nowego czasu losowania
         call random_number(los)			! powtorne losowanie i sprawdzenie warunku
       enddo
       dtime=SNIIrest+2*dt			!analogicznie jak dla SNI
       call random_number(los)
-      do while(0.5*los .gt. dtime*SNIIfreq)
+      do while(los .lt. dtime*SNIIfreq)
         SNno(2)=SNno(2)+1
-	SNIIrest=dtime-0.5*los/SNIIfreq
+	SNIIrest=dtime-1./SNIIfreq
+!	SNIIrest=dtime-2.*los/SNIIfreq
 	dtime=SNIIrest
 	call random_number(los)
       enddo
       write(*,'(a12,i4.4,a7,i4.4,a6)') 'explosions: ',SNno(1),' SN I, ',SNno(2),' SN II'
+      SNnohistory = SNnohistory + SNno
+      write(*,'(a22,f8.4,a9,f8.4)') ' SNE frequency: SN I: ',SNno(1)/2./dt,', SN II: ',SNno(2)/2./dt
+      write(*,'(a22,f8.4,a9,f8.4)') 'mean frequency: SN I: ',SNnohistory(1)/t,', SN II: ',SNnohistory(2)/t
     endif
     call MPI_BCAST(SNno, 2, MPI_INTEGER, 0, comm, ierr)	! rozeslanie informacji o ilosci wylosowanych SN
     
@@ -120,7 +128,7 @@ contains
 	  radius =danta1(ii+1,2)-(danta1(ii+1,2)-danta1(ii,2))*(danta1(ii+1,1)-los)/(danta1(ii+1,1)-danta1(ii,1))
 	  call random_number(los)
 	  call random_number(azym)				!exp(-|z|/325*pc)
-	  snpos(3) = sqrt(-2.*log(azym))*cos(2.*pi*los)*325*pc	! ustalana jest wysokosc nad plaszczyzna Galaktyki
+	  snpos(3) = sqrt(-2.*log(azym))*cos(2.*pi*los)*100.0*pc !325.0*pc	! ustalana jest wysokosc nad plaszczyzna Galaktyki
 	  call random_number(los)
 	  azym = 2.*pi*los					! ustalany jest azymut
 	  snpos(1) = radius*cos(azym)				! dokladne liczenie wspolrzednych x,y,z na podstawie promienia, z i azymutu
@@ -134,8 +142,12 @@ contains
 	  i =nb+int((snpos(1)-xminb)/(xmaxb-xminb)*nxb)
 	  j =nb+int((snpos(2)-yminb)/(ymaxb-yminb)*nyb)
 	  k =nb+int((snpos(3)-zminb)/(zmaxb-zminb)*nzb)
-	  write(*,*) 'SN I position: ',i,j,k
+	  write(*,'(a15,i4.4,i4.4,i4.4)') 'SN I position: ',i,j,k
+	  write(*,'(a15,f8.3,1x,f8.3,1x,f8.3)') '     coords:   ',snpos(1),snpos(2),snpos(3)
+	  write(*,'(a15,f8.3,1x,f8.3,1x,f8.3)') '     that is:  ',x(i),y(j),z(k)
 #ifdef ISO
+	  u(2,i,j,k)=u(2,i,j,k)/u(1,i,j,k)*(u(1,i,j,k)+EexplSN)
+	  u(3,i,j,k)=u(3,i,j,k)/u(1,i,j,k)*(u(1,i,j,k)+EexplSN)
           u(1,i,j,k)=u(1,i,j,k)+EexplSN
 #else /* ISO */
           u(5,i,j,k)=u(5,i,j,k)+EexplSN
@@ -159,7 +171,7 @@ contains
 	  radius =danta2(ii+1,2)-(danta2(ii+1,2)-danta2(ii,2))*(danta2(ii+1,1)-los)/(danta2(ii+1,1)-danta2(ii,1))
 	  call random_number(los)
 	  call random_number(azym)
-	  snpos(3) = sqrt(-2.*log(azym))*cos(2.*pi*los)*266*pc		!exp(-|z|/266*pc)
+	  snpos(3) = sqrt(-2.*log(azym))*cos(2.*pi*los)*100.0*pc !266.0*pc		!exp(-|z|/266*pc)
 	  call random_number(los)
 	  azym = 2.*pi*los
 	  snpos(1) = radius*cos(azym)
@@ -173,8 +185,12 @@ contains
 	  i =nb+int((snpos(1)-xminb)/(xmaxb-xminb)*nxb)
 	  j =nb+int((snpos(2)-yminb)/(ymaxb-yminb)*nyb)
 	  k =nb+int((snpos(3)-zminb)/(zmaxb-zminb)*nzb)
-	  write(*,*) 'SN II position: ',i,j,k
+	  write(*,'(a15,i4.4,i4.4,i4.4)') 'SN II position: ',i,j,k
+	  write(*,'(a15,f8.3,1x,f8.3,1x,f8.3)') '     coords:   ',snpos(1),snpos(2),snpos(3)
+	  write(*,'(a15,f8.3,1x,f8.3,1x,f8.3)') '     that is:  ',x(i),y(j),z(k)
 #ifdef ISO
+	  u(2,i,j,k)=u(2,i,j,k)/u(1,i,j,k)*(u(1,i,j,k)+EexplSN)
+	  u(3,i,j,k)=u(3,i,j,k)/u(1,i,j,k)*(u(1,i,j,k)+EexplSN)
           u(1,i,j,k)=u(1,i,j,k)+EexplSN
 #else /* ISO */
           u(5,i,j,k)=u(5,i,j,k)+EexplSN
