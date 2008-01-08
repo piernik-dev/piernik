@@ -91,9 +91,6 @@ subroutine mhdstep
       call random_sn 
       call dipol_sn  
 #endif /* SN_SRC */
-#ifdef SNE_DISTR
-      call supernovae_distribution(dt)
-#endif /* SNE_DISTR */
       
       t=t+dt
 #ifdef SHEAR
@@ -124,6 +121,10 @@ subroutine mhdstep
 #endif /* COSM_RAYS */               
       if(magfield) call magfieldbyzx      ! x sweep                      
       call fluidx                         
+      
+#ifdef SNE_DISTR
+      call supernovae_distribution
+#endif /* SNE_DISTR */
 
 end subroutine mhdstep
 

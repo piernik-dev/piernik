@@ -49,7 +49,7 @@ subroutine mhdstep
   enddo
 
 #ifdef SNE_DISTR
-      call supernovae_distribution(dt)
+      call supernovae_distribution
 #endif /* SNE_DISTR */
 
 !------------------- Z->Y->X ---------------------

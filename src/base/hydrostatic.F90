@@ -2,7 +2,7 @@
 #ifdef GALAXY
 #define ONEOFTWO
 #endif
-#ifdef DCOLUMNUSE
+#ifdef GALACTIC_DISK
 #define ONEOFTWO
 #endif
 module hydrostatic
@@ -39,9 +39,9 @@ module hydrostatic
       nstot=nsub*nzt
       
       allocate(zs(nstot), dprofs(nstot), gprofs(nstot), gpots(nstot))
-#ifdef DCOLUMNUSE
+#ifdef GALACTIC_DISK
       col_dens = d0
-#endif /* DCOLUMNUSE */          
+#endif /* GALACTIC_DISK */          
       itermx = 20
       if(col_dens .gt. small) then
         dmid = 1.0

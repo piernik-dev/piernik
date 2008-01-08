@@ -4,13 +4,14 @@ module init_problem
   
 ! Initial condition for Galactic disk
 ! Written by: D. Wolt, June 2007
-
+! Restrictions: using only cor bnd_cond, disk radius must be smaller than xmax and ymax
   use arrays
   use start
   use grid
   use hydrostatic
   use gravity
   use constants
+  use mpi_setup
 #ifdef SNE_DISTR
   use sn_distr
 #endif SNE_DISTR
@@ -100,30 +101,61 @@ contains
     real xi,yj,zk, rc, vx, vy, vz,rs
     real, allocatable ::dprof(:)
     real iOmega, dens0
-#ifdef DCOLUMNUSE
     real dcmol, dcneut, dcion, dchot
-#else /* DCOLUMNUSE */
-    real dnmol, dncold, dnwarm, dnion, dnhot, alfar
-    real cd, cdprevious, d0previous, afactor, bfactor, dcolumnprevious, dcolumn, dcolsmall
-    integer iter, itermax, itermaxwrite, inzfac
-#endif /* DCOLUMNUSE */
     real xgradgp, ygradgp, sfq
 #ifdef PRESSURECORRECTION
     real xgradp, ygradp
 #endif PRESSURECORRECTION
-    character syscmd*36,syscmd2*40,syscmd3*37
+    character syscmd*37,syscmd2*40,syscmd3*37
     integer system, syslog
+    real,allocatable :: dxzprof(:,:),idxzprof(:,:),jdxzprof(:,:)
+    integer,allocatable :: xproc(:)
+    integer xtag, iproc, ilook
 
     call read_problem_par
 
     allocate(dprof(nz))
-
-#ifndef DCOLUMNUSE
-    if(proc .eq. 0) write(*,*) 'first loop: calculating dcolumn, dprof'
-#endif /* DCOLUMNUSE */
+    allocate(dxzprof(nxt,nz))
+    allocate(idxzprof(nx,nz))
+    allocate(jdxzprof(nx,nz))
+    do i = 1,nx
+      rc = x(i)
+      dcmol = 2.6e20/(cm**2)*exp(-((rc - 4.5*kpc)**2-(r_gc_sun - 4.5*kpc)**2)/(2.9*kpc)**2)
+      dcneut = 6.2e20/(cm**2)
+      dcion =  1.46e20/(cm**2)*exp(-(rc**2 - r_gc_sun**2)/(37.0*kpc)**2) &
+             + 1.20e18/(cm**2)*exp(-((rc - 4.0*kpc)**2 - (r_gc_sun - 4.0*kpc)**2)/(2.0*kpc)**2)
+      dchot = 4.4e18/(cm**2)*(0.12*exp(-(rc-r_gc_sun)/4.9/kpc)+0.88*exp(-((rc-4.5*kpc)**2-(r_gc_sun-4.5*kpc)**2)/(2.9*kpc)**2))
+      d0=1.36*mp*(dcmol+dcneut+dcion+dchot)
+      call hydrostatic_zeq(i, 0, d0, dprof)
+      dxzprof(pcoords(1)*nxb+i,:) = dprof
+      idxzprof(i,:) = dprof
+    enddo
+    if(psize(1) .ne. 1) then
+      allocate(xproc(psize(1)))
+      do i = 1, psize(1)
+        coords = (/i-1,pcoords(2),pcoords(3)/)
+	call MPI_Cart_rank(comm3d, coords, iproc, ierr)
+	xproc(i)=iproc
+      enddo
+      do i = 1, psize(1)
+        xtag = 100*pcoords(3)+10*pcoords(2)+i
+        if(proc .eq. xproc(i)) then
+	  do j = 1, psize(1)
+            if(proc .ne. xproc(j)) then
+	      call MPI_Send(idxzprof,nx*nz,MPI_DOUBLE_PRECISION,xproc(j),xtag,comm,ierr)
+	    endif
+          enddo
+	else
+	  call MPI_Recv(jdxzprof,nx*nz, MPI_DOUBLE_PRECISION,xproc(i),xtag,comm,status,ierr)
+	  dxzprof((i-1)*nxb+1:(i-1)*nxb+nx,:)=jdxzprof(:,:)
+	endif
+      enddo
+      deallocate(xproc)
+    endif
+    deallocate(idxzprof,jdxzprof)
 
     if(proc .eq. 0) then
-      write(syscmd,'(a33,i3.3)') "echo -n 'first loop: j = 001 of '",ny
+      write(syscmd,'(a34,i3.3)') "echo -n 'second loop: j = 001 of '",ny
       syslog=SYSTEM(syscmd)
     endif
     do j = 1,ny
@@ -133,112 +165,19 @@ contains
       do i = 1,nx
         xi = x(i)
         rc = sqrt(xi**2+yj**2)
-#ifdef DCOLUMNUSE
-            dcmol = 2.6e20/(cm**2)*exp(-((rc - 4.5*kpc)**2-(r_gc_sun - 4.5*kpc)**2)/(2.9*kpc)**2)
-	    dcneut = 6.2e20/(cm**2)
-	    dcion =  1.46e20/(cm**2)*exp(-(rc**2 - r_gc_sun**2)/(37.0*kpc)**2) &
-	          + 1.20e18/(cm**2)*exp(-((rc - 4.0*kpc)**2 - (r_gc_sun - 4.0*kpc)**2)/(2.0*kpc)**2)
-	    dchot = 4.4e18/(cm**2)*(0.12*exp(-(rc-r_gc_sun)/4.9/kpc)+0.88*exp(-((rc-4.5*kpc)**2-(r_gc_sun-4.5*kpc)**2)/(2.9*kpc)**2))
-	    dens0=1.36*mp*(dcmol+dcneut+dcion+dchot)
 
-        d0 = dens0   !/dl(zdim)/nz
-	call hydrostatic_zeq(i, j, d0, dprof)
-#else /* DCOLUMNUSE */
-	dcolumn = 1.0e-6
-        dcolumnprevious = 0.0
-        inzfac = 0
-        do while((dcolumn-dcolumnprevious).ge.(1.0e-6*dcolumn))
-          inzfac = inzfac + 1
-          dcolumnprevious = dcolumn
-          dcolumn = 0.0
-          do k = 1,2*inzfac*nz
-            zk = inzfac*zmin + 0.5*dl(zdim) + k*dl(zdim)
-            dnmol = 0.58/(cm**3) * exp(-((rc - 4.5*kpc)**2-(r_gc_sun - 4.5*kpc)**2)/(2.9*kpc)**2) &
-         		& * (rc/r_gc_sun)**(-0.58) * exp(-(zk/(81.0*(rc/r_gc_sun)**(0.58)))**2)
-	    if(rc.lt.r_gc_sun) then
-	      alfar=1.0
-	    else
-	      alfar=rc/r_gc_sun
-	    endif
-	    dncold= 0.34/(cm**3)/alfar**2 * (0.859*exp(-(zk/(127.0*alfar))**2) &
-	                                 & + 0.047*exp(-(zk/(318.0*alfar))**2) &
-	    		                 & + 0.094*exp(-(abs(zk)/(403.0*alfar))))
-	    dnwarm= 0.226/(cm**3)/alfar * ((1.745 - 1.289/alfar)*exp(-(zk/(127.0*alfar))**2) &
-	    		               & + (0.473 -  0.07/alfar)*exp(-(zk/(318.0*alfar))**2) &
-			               & + (0.283 - 0.142/alfar)*exp(-(abs(zk)/(403.0*alfar))))
-	    dnion = 0.0237/(cm**3)*exp(-(rc**2 - r_gc_sun**2)/(37.0*kpc)**2)*exp(-abs(zk)/kpc) &
-		& + 0.0013/(cm**3)*exp(-((rc - 4.0*kpc)**2 &
-		                     & - (r_gc_sun - 4.0*kpc)**2)/(2.0*kpc)**2) &
-			             & *exp(-abs(zk)/150.0/pc)
-	    dnhot = 4.8e-4/(cm**3)*(0.12*exp(-(rc - r_gc_sun)/(4.9*kpc)) + 0.88*exp(-((rc - 4.5*kpc)**2 &
-	    		& - (r_gc_sun - 4.5*kpc)**2)/(2.9*kpc)**2)) * (rc/r_gc_sun)**(-1.65)*exp(-abs(zk) &
-			& /(1.5*kpc*(rc/r_gc_sun)**(1.65)))
-	    dens0=1.36*mp*(dnmol+dncold+dnwarm+dnion+dnhot)
-	    dcolumn=dcolumn+dens0*dl(zdim)
-          enddo !k=1,2*iznfac*nz
-        enddo !inzfac accuracy
-
-        iter=0
-        itermax=100
-        dcolsmall=dcolumn*1.e-8
-        d0 = dcolumn/dl(zdim)/nz
-        call hydrostatic_zeq(i, j, d0, dprof)
-        cd = 0.0
-        do k=1,nz
-	  cd = cd +dprof(k)*nz
-        enddo
-        do while((abs(cd - dcolumn) .gt. dcolsmall).and.(iter .le. itermax))
-          if(iter .eq. 0) then
-            d0previous = d0
-            cdprevious = cd
-            d0 = d0*2.
-          else
-            afactor = (cd - cdprevious)/(d0 - d0previous)
-            bfactor = cd - afactor*d0
-            d0previous = d0
-            cdprevious = cd
-            d0 = (dcolumn - bfactor)/afactor
-          endif
-          iter = iter+1
-	  itermaxwrite = max(itermaxwrite, iter)
-	  call hydrostatic_zeq(i, j, d0, dprof)
-	  cd = 0.0
-	  do k=1,nz
-	    cd = cd + dprof(k)*nz
-	  enddo
-        enddo
-	if(abs(cd-dcolumn).gt.dcolsmall) then
-	    write(*,*) proc,i,j,'equatorial density accuracy different than required!'
+        ilook = (rc-xmin)/dx + 0.5 + nb
+	if(int(ilook) .lt. nxt) then
+	  dprof(:) = dxzprof(int(ilook),:)+(dxzprof(int(ilook)+1,:)-dxzprof(int(ilook),:))*(ilook-int(ilook))
+	else
+	  dprof(:) = dxzprof(nxt,:)
 	endif
-#endif /* DCOLUMNUSE */
-
-        do k=1,nz
-	  u(1,i,j,k)=rhoa + dprof(k)/cosh((rc/r_max)**mtr)
-	  u(1,i,j,k)=max(u(1,i,j,k),smalld)
-	enddo
-      enddo
-    enddo
-    if(proc .eq. 0) then
-      write(*,*)
-      write(*,*) 'second loop: calculating iOmega, u(:,:,:)'
-    endif
-    if(proc .eq. 0) then
-      write(syscmd3,'(a34,i3.3)') "echo -n 'second loop: j = 001 of '",ny
-      syslog=SYSTEM(syscmd3)
-    endif
-    do j = 1,ny
-      write(syscmd2,'(a30,i3.3,a4,i3.3)') "echo -n '\b\b\b\b\b\b\b\b\b\b'",j," of ",ny
-      syslog=SYSTEM(syscmd2)
-      yj = y(j)
-      do i = 1,nx
-	xi = x(i)
-        rc = sqrt(xi**2+yj**2)
-	vz = 0.0
-	do k = 1,nz
+	
+	do k=1,nz
 	 zk=z(k)
 	 rs = sqrt(xi**2+yj**2+zk**2)
-!         u(1,i,j,k) = rhoa + dprof(k)/cosh((rc/r_max)**mtr)
-!         u(1,i,j,k) = max(u(1,i,j,k), smalld)
+         u(1,i,j,k) = rhoa + dprof(k)/cosh((rc/r_max)**mtr)
+         u(1,i,j,k) = max(u(1,i,j,k), smalld)
 	 u(2,i,j,k) = vx*u(1,i,j,k)
          u(3,i,j,k) = vy*u(1,i,j,k)
 	   if(i .ne. 1 .and. i .ne. nx) then
@@ -310,9 +249,7 @@ contains
         enddo
       enddo
     enddo
-#ifndef DCOLUMNUSE
-      write(*,*) 'the longest iteration number of steps = ', itermaxwrite
-#endif /* DCOLUMNUSE */
+    write(*,*) ' '
     if(allocated(dprof)) deallocate(dprof)
 
 

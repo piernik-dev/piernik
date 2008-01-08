@@ -37,15 +37,8 @@
 #define GRAV
 #define GRAV_GAL_VOLLMER
 #undef GALAXY
-#define DCOLUMNUSE
 #undef PRESSURECORRECTION
 #define GALACTIC_DISK
 #undef SNE_DISTR
 #undef SHEAR
-
-/* writing output info into files seperate for each process */
-#undef FILEINFO
-#undef ROTINFO
-#undef HDFSWEEP
-#undef GRV1ORD
 
