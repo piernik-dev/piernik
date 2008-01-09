@@ -90,7 +90,7 @@ module tv   ! unsplit ssp
     call flimiter(fl,dflm,dflp,nu,n)
 
     durf(:,2:n) = dtx*(fr(:,2:n) - fr(:,1:n-1));     durf(:,1) = durf(:,n)  ! durf = (fr-cshift(fr,shift=-1,dim=2))/dx*dt 
-    dulf(:,2:n) = dtx*(fl(:,2:n) - fl(:,1:n-1));     dulf(:,1) = durf(:,n)  ! dulf = (fl-cshift(fl,shift=-1,dim=2))/dx*dt
+    dulf(:,2:n) = dtx*(fl(:,2:n) - fl(:,1:n-1));     dulf(:,1) = dulf(:,n)  ! dulf = (fl-cshift(fl,shift=-1,dim=2))/dx*dt
 
 #ifdef SHEAR
     vxr(1:n-1) = 0.5*(u(imya,2:n)/u(idna,2:n) + u(imya,1:n-1)/u(idna,1:n-1))
