@@ -6,9 +6,9 @@ module gravity
 
 
   character gp_status*9
+  character*7 gravpart
 #ifdef GALACTIC_DISK
     real, allocatable :: gpotdisk(:,:,:),gpothalo(:,:,:),gpotbulge(:,:,:)
-    character*7 gravpart
 #endif /* GALACTIC_DISK */
 
 contains
