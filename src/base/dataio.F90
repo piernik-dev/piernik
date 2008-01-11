@@ -437,10 +437,10 @@ module dataio
        -0.5*(u(imxa,iso:ieo,jso:jeo,kso:keo)**2+u(imya,iso:ieo,jso:jeo,kso:keo)**2+u(imza,iso:ieo,jso:jeo,kso:keo)**2) &
         / u(idna,iso:ieo,jso:jeo,kso:keo))*(gamma-1.)*gamma/u(idna,iso:ieo,jso:jeo,kso:keo))
 #endif 
-
+#ifdef GRAV
       case ('gpot')
         wa(iso:ieo,jso:jeo,kso:keo) = gp(iso:ieo,jso:jeo,kso:keo)
-
+#endif /* GRAV */
       case ('magx')
         if(domain .eq. 'full_domain') then
           if(mag_center .eq. 'yes') then
