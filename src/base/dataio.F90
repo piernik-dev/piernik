@@ -191,6 +191,8 @@ module dataio
 
 #ifdef HDFSWEEP
     if (output .ne. 'gpt') then
+      call write_log
+      call write_timeslice
 #else /* HDFSWEEP */
     if (dt_hdf .gt. 0.0 .and. nstep .gt. step_hdf .and. output .ne. 'gpt') then
 #endif /* HDFSWEEP */
@@ -235,6 +237,7 @@ module dataio
     use init_problem, only : problem_name, run_id
 #ifndef ISO
     use arrays, only : iena
+    use start, only  : gamma
 #endif /* ISO */
 #ifndef SPLIT
     use arrays, only : Lu
@@ -613,8 +616,11 @@ module dataio
 #ifdef GALACTIC_DISK
   subroutine write_gpot
 
-    use arrays
-    use init_problem
+    use arrays, only       : wa, gp,nxb,nyb,nzb,nx,ny,nz,x,y,z
+    use init_problem, only : problem_name, run_id
+    use gravity, only      : gpotdisk,gpothalo,gpotbulge
+    use grid, only         : dx,dy,dz
+    use start, only        : nstep,t,dt,nxd,nyd,nzd,nb,xmin,xmax,ymin,ymax,zmin,zmax,dimensions,gamma,domain
 
 
     implicit none

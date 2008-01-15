@@ -91,7 +91,7 @@
     endif
 
     if(pxsize*pysize*pzsize .ne. 1) mpi = .true. 
-   
+
 
     if(bnd_xl(1:3) .eq. 'per' .or. bnd_xl(1:3) .eq. 'she') then
       periods(1) = .true.  ! x periodic

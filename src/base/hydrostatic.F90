@@ -19,7 +19,10 @@ module hydrostatic
      use arrays, only   : nx,ny,nz,dl,zdim,z,zl,zr, nzt
      
      use gravity, only  : grav_accel,grav_pot,gp_status
-      
+#ifndef ISO
+     use arrays, only   : eprof
+     use start, only    : c_si, gamma
+#endif /* ISO */      
       implicit none
       real, intent(inout)              :: d0
       integer, intent(in)              :: iia, jja
