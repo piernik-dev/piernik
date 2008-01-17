@@ -35,7 +35,7 @@
    
   logical mpi
 
-
+  character cwd*(80)
  contains
 
 !-----------------------------------------------------------------------------
@@ -43,44 +43,94 @@
   subroutine mpistart
 
     implicit none
-    
-   
-
     integer iproc
-
-      pxsize = 1
-      pysize = 1
-      pzsize = 1
-  
-
-      bnd_xl = 'per'  
-      bnd_xr = 'per'  
-      bnd_yl = 'per'  
-      bnd_yr = 'per'  
-      bnd_zl = 'per'  
-      bnd_zr = 'per'
-
-      bnd_xl_dom = bnd_xl    
-      bnd_xr_dom = bnd_xr    
-      bnd_yl_dom = bnd_yl    
-      bnd_yr_dom = bnd_yr    
-      bnd_zl_dom = bnd_zl    
-      bnd_zr_dom = bnd_zr  
-
-
-    open(1,file='problem.par')
-      read(unit=1,nml=MPI_BLOCKS)
-      read(unit=1,nml=BOUNDARIES)
-    close(1)
     
-    psize(1)   = pxsize     
-    psize(2)   = pysize    
-    psize(3)   = pzsize    
+#ifndef GNU
+    integer  :: getcwd
+    external :: getcwd
+#endif /* GNU */
+    character par_file*(100), tmp_log_file*(100)
+    integer :: cwd_status 
 
     call MPI_INIT( ierr )
     call MPI_COMM_RANK(MPI_COMM_WORLD, proc, ierr)
     comm = MPI_COMM_WORLD
     call MPI_COMM_SIZE(comm, nproc, ierr)
+
+    if(proc .eq. 0) then
+      cwd_status =  getcwd(cwd)
+      if(cwd_status .ne. 0) stop '(mpi_setup: problems accessing working directory)'
+      par_file = trim(cwd)//'/problem.par'
+      tmp_log_file = trim(cwd)//'/tmp.log'
+    endif
+    
+    call MPI_BCAST(cwd, 80, MPI_CHARACTER,        0, comm, ierr)
+    
+    pxsize = 1
+    pysize = 1
+    pzsize = 1
+  
+
+    bnd_xl = 'per'  
+    bnd_xr = 'per'  
+    bnd_yl = 'per'  
+    bnd_yr = 'per'  
+    bnd_zl = 'per'  
+    bnd_zr = 'per'
+
+
+    if(proc .eq. 0) then
+    open(1,file=par_file)
+      read(unit=1,nml=MPI_BLOCKS)
+      read(unit=1,nml=BOUNDARIES)
+    close(1)
+    endif
+    
+    if(proc .eq. 0) then
+
+
+      cbuff(1) = bnd_xl 
+      cbuff(2) = bnd_xr
+      cbuff(3) = bnd_yl
+      cbuff(4) = bnd_yr
+      cbuff(5) = bnd_zl
+      cbuff(6) = bnd_zr
+
+      ibuff(1) = pxsize
+      ibuff(2) = pysize
+      ibuff(3) = pzsize
+
+      call MPI_BCAST(cbuff, 32*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
+      call MPI_BCAST(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
+
+    else
+    
+      call MPI_BCAST(cbuff, 32*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
+      call MPI_BCAST(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
+      
+      bnd_xl = cbuff(1)  
+      bnd_xr = cbuff(2)  
+      bnd_yl = cbuff(3)  
+      bnd_yr = cbuff(4) 
+      bnd_zl = cbuff(5)  
+      bnd_zr = cbuff(6)  
+
+      pxsize = ibuff(1)  
+      pysize = ibuff(2)  
+      pzsize = ibuff(3)  
+  
+    endif
+    
+    bnd_xl_dom = bnd_xl    
+    bnd_xr_dom = bnd_xr    
+    bnd_yl_dom = bnd_yl    
+    bnd_yr_dom = bnd_yr    
+    bnd_zl_dom = bnd_zl    
+    bnd_zr_dom = bnd_zr  
+        
+    psize(1)   = pxsize     
+    psize(2)   = pysize    
+    psize(3)   = pzsize    
     
     if(pxsize*pysize*pzsize .ne. nproc) then 
       if(proc .eq.0)  write(*,*) &
@@ -117,7 +167,7 @@
     
 
     if(proc == 0) then
-      open(3, file='tmp.log', status='unknown')
+      open(3, file=tmp_log_file, status='unknown')
         write(3,"(a35,i2)") 'START OF MHD CODE,  No. of procs = ', nproc
         write(unit=3,nml=MPI_BLOCKS)  
         write(unit=3,nml=BOUNDARIES)

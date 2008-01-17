@@ -15,6 +15,12 @@ subroutine bnd_u(dim)
   use mpi_setup
   use start,  only : smalld, smallei, bnd_xl, bnd_xr, bnd_yl, bnd_yr, &
       bnd_zl, bnd_zr, nb, nxd, nyd, nzd, dimensions
+#ifdef COSM_RAYS
+    use start, only : smallecr
+#endif COSM_RAYS
+
+      
+      
   use arrays, only : x,z,nzb,nyb,nxb,nu,nx,ny,nz, idna, imxa, imya, imza, &
       u, b
 
