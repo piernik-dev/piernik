@@ -9,7 +9,7 @@ module fluxes
 !==========================================================================================
  
   subroutine mhdflux(flux,cfr,uu,bb,n)
-    use start, only : gamma
+    use start, only : gamma, gamma_cr
 #ifdef ISO
     use start, only : csi2
 #endif /* ISO */
@@ -28,6 +28,9 @@ module fluxes
     real, dimension(3,n):: bb
 ! locals
     real, dimension(n) :: vx,vy,vz,vt, ps,p,pmag
+!#ifdef COSM_RAYS
+!    real, dimension(n) :: pcr
+!#endif /* COSM_RAYS */
 
     flux   = 0.0
     vx  = 0.0
@@ -59,6 +62,9 @@ module fluxes
     / uu(idna,RNG))*(gamma-1.0) + (2.0-gamma)*pmag(RNG)
     p(RNG) = ps(RNG)- pmag(RNG)
 #endif /* ISO */
+!#ifdef COSM_RAYS
+!    pcr = (gamma_cr-1)*uu(iecr,RNG)
+!#endif COSM_RAYS
     flux(idna,RNG)=uu(imxa,RNG)
     flux(imxa,RNG)=uu(imxa,RNG)*vx(RNG)+ps(RNG)-SQR(bb(ibx,RNG))
     flux(imya,RNG)=uu(imya,RNG)*vx(RNG)-bb(iby,RNG)*bb(ibx,RNG)
@@ -90,7 +96,11 @@ module fluxes
 #else /* OLDLOCALCFR */
         cfr(1,RNG) = abs(vt(RNG)) &
 #endif /* OLDLOCALCFR */
-                      +max(sqrt( abs(2.0*pmag(RNG) + gamma*p(RNG))/uu(idna,RNG)),small)
+                      +max(sqrt( abs(2.0*pmag(RNG) + gamma*p(RNG) &
+!#ifdef COSM_RAYS
+!                                                   + gamma_cr*pcr(RNG) &
+!#endif COSM_RAYS		         
+		          )/uu(idna,RNG)),small)
 #endif /* ISO */
         cfr(1,1) = cfr(1,2)
         cfr(1,n) = cfr(1,n-1)   
