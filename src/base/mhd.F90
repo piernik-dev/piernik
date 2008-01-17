@@ -46,6 +46,11 @@ program mhd
 #endif /* GNU */
   integer tsleep
 !  real, dimension(:,:,:),allocatable :: ala
+
+  character tmp_log_file*(100)
+  integer :: cwd_status 
+
+
   
   call mpistart
 
@@ -83,7 +88,7 @@ program mhd
     call init_prob
 #ifdef GALACTIC_DISK
     if((grav_model .ne. 'null') .and. (grav_model .ne. 'hern93nbody2')) then
-     call write_data('gpt')
+      call write_data('gpt')
     endif
 #endif /* GALACTIC_DISK */
 
@@ -101,8 +106,9 @@ program mhd
     if (proc .eq.0) then
       write (log_file,'(a,a1,a3,a1,i3.3,a4)') &
               trim(problem_name),'_', run_id,'_',nrestart,'.log'
-
-      system_command = 'mv tmp.log '//log_file
+      tmp_log_file = trim(cwd)//'/tmp.log'
+      log_file = trim(cwd)//'/'//trim(log_file)
+      system_command = 'mv '//trim(tmp_log_file)//' '//trim(log_file)
       system_status = SYSTEM(system_command)
     endif
 
@@ -113,8 +119,9 @@ program mhd
     if (proc .eq. 0) then
       write (log_file,'(a,a1,a3,a1,i3.3,a4)') &
               trim(problem_name),'_', run_id,'_',nrestart,'.log'
-
-      system_command = 'mv tmp.log '//log_file
+      tmp_log_file = trim(cwd)//'/tmp.log'
+      log_file = trim(cwd)//'/'//log_file
+      system_command = 'mv '//trim(tmp_log_file)//' '//trim(log_file)
       system_status = SYSTEM(system_command)
     endif
 

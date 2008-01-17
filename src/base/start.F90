@@ -92,6 +92,14 @@ contains
     implicit none
 
     integer iv
+
+    
+  character par_file*(100), tmp_log_file*(100)
+  integer :: cwd_status 
+
+  par_file = trim(cwd)//'/problem.par'
+  tmp_log_file = trim(cwd)//'/tmp.log'
+    
     
   namelist /DOMAIN_SIZES/ nxd, nyd, nzd, nb
   namelist /START_CONTROL/ nstep, t, dt
@@ -176,7 +184,7 @@ contains
     min_disk_space_MB = 100
     sleep_minutes   = 0
     sleep_seconds   = 0
-    user_message_file   = './msg'
+    user_message_file   = trim(cwd)//'/msg'
     system_message_file = '/etc/ups/user/msg'
       
     xmin   = 0.0
@@ -295,7 +303,7 @@ contains
          
     if(proc .eq. 0) then
           
-      open(1,file='problem.par')
+      open(1,file=par_file)
         read(unit=1,nml=DOMAIN_SIZES)  
         read(unit=1,nml=START_CONTROL)  
         read(unit=1,nml=RESTART_CONTROL)  
@@ -331,7 +339,7 @@ contains
 
       close(1)
 
-      open(3, file='tmp.log', position='append')
+      open(3, file=tmp_log_file, position='append')
         write(unit=3,nml=DOMAIN_SIZES)  
         write(unit=3,nml=START_CONTROL)  
         write(unit=3,nml=RESTART_CONTROL)  
