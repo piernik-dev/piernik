@@ -233,6 +233,9 @@ module dataio
     use grid, only : dx,dy,dz
     use arrays, only : nx,ny,nz,nxb,nyb,nzb,x,y,z,wa,outwa,outwb,outwc,b,u, &
          idna,imxa,imya,imza,ibx,iby,ibz
+#ifdef COSM_RAYS
+    use arrays, only : iecr	 
+#endif COSM_RAYS	 
     use init_problem, only : problem_name, run_id
 #ifndef ISO
     use arrays, only : iena
@@ -1450,6 +1453,9 @@ module dataio
 
     use arrays, only : is,ie,js,je,ks,ke,u,b,idna,imxa,imya,imza, wa, &
          ibx,iby,ibz,x,y
+#ifdef COSM_RAYS
+    use arrays, only : iecr	 
+#endif COSM_RAYS	 
     use grid, only  : dvol,dx,dy,dz 
     use start, only : proc, dt, t, nstep, nrestart,nxd,nyd,nzd
 #ifdef GRAV
@@ -1628,10 +1634,17 @@ module dataio
   subroutine  write_log
   
     use arrays, only : wa,is,ie,js,je,ks,ke,idna,imxa,imya,imza,u,b
+#ifdef COSM_RAYS
+    use arrays, only : iecr	 
+#endif COSM_RAYS	 
     use grid, only   : dx,dy,dz,dxmn
     use constants, only : small, hydro_mass, k_B
     use start, only : t,dt,nstep,sleep_minutes,sleep_seconds, smallei,nb, &
          gamma,cfl
+#ifdef COSM_RAYS
+    use start, only : dt_cr	 
+#endif COSM_RAYS	 
+	 
 #ifdef ISO
     use start, only : csi2,c_si
 #endif /* ISO */

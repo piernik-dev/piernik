@@ -2,9 +2,11 @@
 #include "mhd.def"
 module fluids     ! split fluids
   contains
+  
+  
   subroutine fluidx
 
-    use start, only  : dimensions, magfield,dt
+    use start, only  : dimensions, magfield,dt,nb
     use arrays, only : u,b,nx,ny,nz,nu,ks,ke,ibx,iby,ibz,iuswpx
     use grid, only   : dx
     use tv, only     : relaxing_tvd
@@ -52,7 +54,7 @@ module fluids     ! split fluids
 !------------------------------------------------------------------------------------------
 
   subroutine fluidy
-    use start, only  : dimensions, magfield,dt
+    use start, only  : dimensions, magfield,dt,nb
     use arrays, only : u,b,nx,ny,nz,nu,ks,ke,ibx,iby,ibz,iuswpy
     use grid, only   : dy
     use tv, only     : relaxing_tvd
@@ -104,7 +106,7 @@ module fluids     ! split fluids
 !------------------------------------------------------------------------------------------
 
   subroutine fluidz
-    use start, only  : dimensions, magfield,dt
+    use start, only  : dimensions, magfield,dt,nb
     use arrays, only : u,b,nx,ny,nz,nu,ks,ke,ibx,iby,ibz,iuswpz
     use grid, only   : dz
     use tv, only     : relaxing_tvd
@@ -140,8 +142,13 @@ module fluids     ! split fluids
         else
           b_z = 0.0
         endif
-
         u_z(iuswpz,:)=u(:,i,j,:)
+
+! Tymczasowy wpis - do celow diagnostycznych, wykasowac, jesli przeszkadza!
+        if(i == nb+1 .and. j == nb+1) then
+	  write(*,*) 'fluidz'	
+	endif
+
         call relaxing_tvd(u_z,b_z,'zsweep',i,j,dz,nz,dt)
         u(:,i,j,:)=u_z(iuswpz,:)
       end do
