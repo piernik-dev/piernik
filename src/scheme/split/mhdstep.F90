@@ -2,7 +2,7 @@
 module mod_mhdstep   ! SPLIT
   use start, only  : dt_log, magfield, dimensions, t, dt, &
       dt_tsl, nstep, proc, istep, integration_order, cn 
-  use dataio, only : write_log, write_timeslice, nlog, ntsl
+  use dataio, only : write_hdf, write_log,write_timeslice, nlog, ntsl,nhdf
   use time, only   : timestep
   use arrays, only : dl,ibx,iby,ibz,xdim,ydim,zdim,b,wa
   use fluids, only : fluidx, fluidy, fluidz
@@ -12,6 +12,9 @@ module mod_mhdstep   ! SPLIT
 #ifdef SSP
   use arrays, only : bi
 #endif /* SSP */
+#ifdef COSM_RAYS
+    use cr_diffusion
+#endif COSM_RAYS
 #ifdef RESIST  
   use resistivity
 #endif /* RESIST */
@@ -73,17 +76,35 @@ subroutine mhdstep
 #ifdef COSM_RAYS          
       call cr_diff_x 
 #endif /* COSM_RAYS */
+      
+#ifdef DEBUG
+      call write_hdf
+      nhdf = nhdf + 1
+#endif /* DEBUG */
+      
       call fluidy                         ! y sweep                      
       if(magfield) call magfieldbzxy        
 #ifdef COSM_RAYS          
       call cr_diff_y   
 #endif /* COSM_RAYS */
+      
+#ifdef DEBUG
+      call write_hdf
+      nhdf = nhdf + 1
+#endif /* DEBUG */
+      
     if(dimensions .eq. '3d') then
       call fluidz                         ! z sweep                      
       if(magfield) call magfieldbxyz        
 #ifdef COSM_RAYS          
       call cr_diff_z   
 #endif  /* COSM_RAYS */
+      
+#ifdef DEBUG
+      call write_hdf
+      nhdf = nhdf + 1
+#endif /* DEBUG */
+      
     endif
 ! Sources ----------------------------------------
 
@@ -91,6 +112,14 @@ subroutine mhdstep
       call random_sn 
       call dipol_sn  
 #endif /* SN_SRC */
+
+#ifdef SNE_DISTR
+      call supernovae_distribution(dt)
+#ifdef DEBUG
+      call write_hdf
+      nhdf = nhdf + 1
+#endif /* DEBUG */
+#endif /* SNE_DISTR */
       
       t=t+dt
 #ifdef SHEAR
@@ -101,6 +130,7 @@ subroutine mhdstep
       call poisson
 #endif /* SELF_GRAV */
 !-------------------------------------------------
+
           
 
 !------------------- Z->Y->X ---------------------
@@ -110,21 +140,29 @@ subroutine mhdstep
 #endif /* COSM_RAYS */
       if(magfield) call magfieldbxyz      ! z sweep                       
       call fluidz                         
+      
+#ifdef DEBUG
+      call write_hdf
+      nhdf = nhdf + 1
+#endif /* DEBUG */
+      
     endif
 #ifdef COSM_RAYS          
       call cr_diff_y   
 #endif /* COSM_RAYS */
       if(magfield) call magfieldbzxy      ! y sweep                       
       call fluidy                         
+      
+#ifdef DEBUG
+      call write_hdf
+      nhdf = nhdf + 1
+#endif /* DEBUG */
+      
 #ifdef COSM_RAYS          
       call cr_diff_x   
 #endif /* COSM_RAYS */               
       if(magfield) call magfieldbyzx      ! x sweep                      
       call fluidx                         
-      
-#ifdef SNE_DISTR
-      call supernovae_distribution
-#endif /* SNE_DISTR */
 
 end subroutine mhdstep
 
