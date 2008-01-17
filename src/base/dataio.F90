@@ -39,7 +39,6 @@ module dataio
   character msg*16
   real msg_param
 
-  character cwd*(80)
 !  integer ctoi
 !  external ctoi
   character hostfull*(80), host*8, fhost*10, fpid*10
