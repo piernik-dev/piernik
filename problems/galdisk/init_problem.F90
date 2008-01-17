@@ -5,13 +5,15 @@ module init_problem
 ! Initial condition for Galactic disk
 ! Written by: D. Wolt, June 2007
 ! Restrictions: using only cor bnd_cond, disk radius must be smaller than xmax and ymax
+
+  use mpi_setup
   use arrays
   use start
   use grid
   use hydrostatic
   use gravity
   use constants
-  use mpi_setup
+
 #ifdef SNE_DISTR
   use sn_distr
 #endif SNE_DISTR
@@ -33,6 +35,13 @@ contains
 
     implicit none
   
+    
+    character par_file*(100), tmp_log_file*(100)
+    integer :: cwd_status 
+
+    par_file = trim(cwd)//'/problem.par'
+    tmp_log_file = trim(cwd)//'/tmp.log'    
+
 
     problem_name = 'aaa'
     run_id  = 'aa'
@@ -44,11 +53,11 @@ contains
          
     
     if(proc .eq. 0) then
-      open(1,file='problem.par')
+      open(1,file=par_file)
         read(unit=1,nml=PROBLEM_CONTROL)
       close(1)
         write(*,nml=PROBLEM_CONTROL)
-      open(3, file='tmp.log', position='append')
+      open(3, file=tmp_log_file, position='append')
         write(3,nml=PROBLEM_CONTROL)
         write(3,*)
       close(3)
@@ -229,6 +238,12 @@ contains
          u(5,i,j,k) = max(u(5,i,j,k), smallei)
 	 u(5,i,j,k) = u(5,i,j,k) +0.5*(vx**2+vy**2+vz**2)*u(1,i,j,k)
 #endif
+
+#ifdef COSM_RAYS
+          u(iecr,i,j,k)   =  beta_cr*c_si**2 * u(idna,i,j,k)/(gamma_cr-1.0)
+#endif /* COSM_RAYS */
+
+
          select case(mf_orient)
 	 case('null')
          b(1,i,j,k)   = 0.0
