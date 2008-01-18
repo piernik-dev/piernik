@@ -1,10 +1,5 @@
 #include "mhd.def"
 module mod_mhdstep ! UNSPLIT 1D
-   use start
-   use dataio
-   use time, only : timestep
-   use fluids
-   use advects
 #ifdef RESIST
    use resistivity
 #endif /* RESIST */
@@ -15,12 +10,17 @@ module mod_mhdstep ! UNSPLIT 1D
 #ifdef SNE_DISTR
   use sn_distr
 #endif /* SNE_DISTR */
-#ifdef SELF_GRAV
-    use poisson_solver
-#endif /* SELF_GRAV */
+  implicit none
 
    contains
       subroutine mhdstep
+        use start, only : dimensions,dt,dt_log,nstep,t
+        use dataio, only : nlog, write_log
+        use time, only : timestep
+        use mpi_setup, only : proc
+#ifdef SELF_GRAV
+        use poisson_solver, only : poisson
+#endif /* SELF_GRAV */
 
          implicit none
          real tmp
@@ -75,6 +75,9 @@ module mod_mhdstep ! UNSPLIT 1D
 !-------------------------------------------------
 
       subroutine sweepx
+        use start, only: magfield,istep,integration_order
+        use tv, only : initials,integrate
+        use fluids, only : fluidx
 
          call initials
          do istep=1,integration_order
@@ -88,6 +91,9 @@ module mod_mhdstep ! UNSPLIT 1D
 !-----------------------------------------------------------------
 
       subroutine sweepy
+        use start, only: magfield,istep,integration_order
+        use tv, only : initials,integrate
+        use fluids, only : fluidy
 
          call initials
          do istep=1,integration_order
@@ -105,6 +111,9 @@ module mod_mhdstep ! UNSPLIT 1D
 !------------------------------------------------------------------
 
       subroutine sweepz
+        use start, only: magfield,istep,integration_order
+        use tv, only : initials,integrate
+        use fluids, only : fluidz
 
          call initials
          do istep=1,integration_order
@@ -117,6 +126,8 @@ module mod_mhdstep ! UNSPLIT 1D
 
 
   subroutine magfieldbyzx
+    use start, only : dimensions
+    use advects, only : advectbz_x, advectby_x
 
       call advectby_x
 #ifdef RESIST
@@ -137,6 +148,8 @@ module mod_mhdstep ! UNSPLIT 1D
 !------------------------------------------------------------------------------------------
 
   subroutine magfieldbzxy
+    use start, only : dimensions
+    use advects, only : advectbz_y, advectbx_y
 
     if(dimensions .eq. '3d') then
 
@@ -157,6 +170,7 @@ module mod_mhdstep ! UNSPLIT 1D
 !------------------------------------------------------------------------------------------
 
   subroutine magfieldbxyz
+    use advects, only : advectbx_z, advectby_z
 
       call advectbx_z
 #ifdef RESIST
