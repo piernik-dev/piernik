@@ -280,7 +280,9 @@ allocate(gpotdisk(nx,ny,nz),gpothalo(nx,ny,nz),gpotbulge(nx,ny,nz))
     use start, only  : h_grav, n_gravh,nb
     use arrays, only : gp,x,y,z,dl,xdim,ydim,zdim,nx,ny,nz, &
       is,ie,js,je,ks,ke, xr,yr,zr
-   
+#ifdef GRAV_GALACTIC
+    use start, only : r_gc
+#endif /* GRAV_GALACTIC   
     implicit none
     character, intent(in) :: sweep*6
     integer, intent(in)   :: i1, i2
