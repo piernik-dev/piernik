@@ -5,18 +5,7 @@ module init_problem
 ! Initial condition for Galactic disk
 ! Written by: D. Wolt, June 2007
 ! Restrictions: using only cor bnd_cond, disk radius must be smaller than xmax and ymax
-
   use mpi_setup
-  use arrays
-  use start
-  use grid
-  use hydrostatic
-  use gravity
-  use constants
-
-#ifdef SNE_DISTR
-  use sn_distr
-#endif SNE_DISTR
 
   real d0, r_max, rhoa
   integer mtr
@@ -32,7 +21,6 @@ contains
 !-----------------------------------------------------------------------------
 
   subroutine read_problem_par
-
     implicit none
   
     
@@ -103,7 +91,17 @@ contains
 !-----------------------------------------------------------------------------
 
   subroutine init_prob
-
+    use arrays, only    :   u,b,x,y,z,nx,ny,nz,nxt,nxb,dl,gp,xdim,ydim,idna
+    use constants, only :   cm,kpc,mp,r_gc_sun
+    use grid, only      :   dx
+    use hydrostatic, only : hydrostatic_zeq
+    use start, only     :   xmin,nb,smalld,c_si,alpha,gamma
+#ifndef ISO
+    use start, only    :   smallei
+#endif /* ISO */
+#ifdef SNE_DISTR
+  use sn_distr, only  : prepare_SNdistr
+#endif SNE_DISTR
     implicit none
  
     integer i,j,k,iu,id,ju,jd
@@ -169,7 +167,7 @@ contains
     endif
     do j = 1,ny
       write(syscmd2,'(a30,i3.3,a4,i3.3)') "echo -n '\b\b\b\b\b\b\b\b\b\b'",j," of ",ny
-      syslog=SYSTEM(syscmd2)
+      if(proc .eq. 0) syslog=SYSTEM(syscmd2)
       yj = y(j)
       do i = 1,nx
         xi = x(i)
@@ -269,7 +267,7 @@ contains
 
 
 #ifdef SNE_DISTR
-   call compute_SNdistr
+   call prepare_SNdistr
 #endif SNE_DISTR
 
     return
