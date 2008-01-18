@@ -167,6 +167,7 @@ module fluids  ! unsplit fluids
       end do
     end do
 
+
   end subroutine fluidx
 
 !------------------------------------------------------------------------------------------
@@ -179,7 +180,9 @@ module fluids  ! unsplit fluids
     use constants, only : big
     use fluxes, only    : mhdflux
 
+#ifdef FLX_BND
     use arrays, only  : cfr,flx
+#endif
     use start, only   : nb,nxd,nyd,nzd
 #ifdef SHEAR
     use start, only   : omega,qshear
@@ -331,8 +334,9 @@ module fluids  ! unsplit fluids
     use tv, only        : relaxing_tvd
     use constants, only : big
     use fluxes, only    : mhdflux
-
+#ifdef FLX_BND
     use arrays, only  : cfr,flx
+#endif
     use start, only   : nb,nxd,nyd,nzd
 
     implicit none
@@ -355,6 +359,7 @@ module fluids  ! unsplit fluids
    call div_v         
 #endif /* COSM_RAYS */
 
+#ifdef FLX_BND
     do j=1,ny-1
       jp=j+1
       do i=1,nx-1
@@ -386,7 +391,6 @@ module fluids  ! unsplit fluids
 
       end do
     end do
-
     flx(:,1:nb,:,:)              = flx(:,nxd+1:nxd+nb,:,:)
     flx(:,nxd+nb+1:nxd+2*nb,:,:) = flx(:,nb+1:2*nb,:,:)
     flx(:,:,1:nb,:)              = flx(:,:,nyd+1:nyd+nb,:)
@@ -395,7 +399,7 @@ module fluids  ! unsplit fluids
        flx(:,:,:,1:nb)              = flx(:,:,:,nzd+1:nzd+nb)
        flx(:,:,:,nzd+nb+1:nzd+2*nb) = flx(:,:,:,nb+1:2*nb)
     endif
-
+#endif /* FLX_BND */
     do j=1,ny-1
       jp=j+1
       do i=1,nx-1
