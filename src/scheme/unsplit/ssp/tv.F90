@@ -1,8 +1,7 @@
 #include "mhd.def"
 module tv   ! unsplit ssp
-  use constants
-  use start
-  use arrays, only : idna,imxa,imya,imza,ibx,iby,ibz,nu,iena
+!  use constants
+!  use start
   contains
   subroutine tvdb(vibj,b,vg,n,dt)
     use func, only: tvdb_emf
@@ -22,6 +21,7 @@ module tv   ! unsplit ssp
 
    subroutine relaxing_tvd(u,bb,sweep,i1,i2,dx,n,dt,fx,cx)
     use fluxes
+    use arrays, only : nu,idna,imxa,imya,imza,iena
 #ifdef GRAV
    use gravity, only : grav_pot2accel
 #endif
@@ -29,6 +29,7 @@ module tv   ! unsplit ssp
    use time, only : c
 #endif
 #ifdef SHEAR
+   use start, only : omega,qshear
    use arrays, only : xr
 #endif
 
@@ -165,9 +166,11 @@ module tv   ! unsplit ssp
 !========================================================================
 
   subroutine integrate
+    use start, only : istep, integration_order, smalld, smallei
     use fluid_boundaries, only : compute_u_bnd,bnd_u
     use mag_boundaries, only :   compute_b_bnd
     use arrays, only : ui,u,bi,b,Lu,Lb,nx,ny,nz
+    use arrays, only : idna,imxa,imya,imza,ibx,iby,ibz,nu,iena
     implicit none
 #ifndef ISO
   real, allocatable :: ekin(:,:,:), emag(:,:,:), eint(:,:,:)
