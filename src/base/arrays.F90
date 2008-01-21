@@ -227,7 +227,7 @@ contains
     deallocate(Lu,Lb)
 #ifdef FLX_BND
     deallocate(cfr,flx)
-#endif FLX_BND
+#endif /* FLX_BND */
 #endif /* ~SPLIT */ 
 #ifdef GRAV
     deallocate(gp)

@@ -17,9 +17,9 @@ subroutine bnd_u(dim)
       bnd_zl, bnd_zr, nb, nxd, nyd, nzd, dimensions
 #ifdef COSM_RAYS
     use start, only : smallecr
-#endif COSM_RAYS
+#endif /* COSM_RAYS */
 
-      
+     
       
   use arrays, only : x,z,nzb,nyb,nxb,nu,nx,ny,nz, idna, imxa, imya, imza, &
       u, b
