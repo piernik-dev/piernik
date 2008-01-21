@@ -97,8 +97,6 @@ contains
   character par_file*(100), tmp_log_file*(100)
   integer :: cwd_status 
 
-  par_file = trim(cwd)//'/problem.par'
-  tmp_log_file = trim(cwd)//'/tmp.log'
     
     
   namelist /DOMAIN_SIZES/ nxd, nyd, nzd, nb
@@ -153,6 +151,9 @@ contains
 #ifdef SNE_DISTR
   namelist /SN_DISTR/ snenerg, sn1time, sn2time, r0sn
 #endif
+    par_file = trim(cwd)//'/problem.par'
+    tmp_log_file = trim(cwd)//'/tmp.log'
+
     nxd    = 10
     nyd    = 10
     nzd    = 10
