@@ -1,6 +1,6 @@
 #include "mhd.def"
 #define SQR(var) var*var
-#define SUM_SQR(x,y,z) SQR(x)+SQR(y)+SQR(z)  
+#define SUM_SQR(x,y,z) ( SQR(x)+SQR(y)+SQR(z) ) 
 #define RNG 2:n-1
 module fluxes
   implicit none
