@@ -234,7 +234,7 @@ contains
 #ifndef ISO
          u(5,i,j,k) = c_si**2/(gamma-1.0)*u(1,i,j,k)
          u(5,i,j,k) = max(u(5,i,j,k), smallei)
-	 u(5,i,j,k) = u(5,i,j,k) +0.5*(vx**2+vy**2+vz**2)*u(1,i,j,k)
+	 u(5,i,j,k) = u(5,i,j,k) +0.5*(u(2,i,j,k)**2+u(3,i,j,k)**2+u(4,i,j,k)**2)/u(1,i,j,k)
 #endif
 
 #ifdef COSM_RAYS
