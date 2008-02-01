@@ -16,6 +16,9 @@ contains
 !--------------------------------------------------------------------------
   subroutine grav_pot_3d
     use arrays, only : nx,ny,nz,gp,z
+#ifdef ARMS_POTENTIAL
+    use arrays, only : gp1
+#endif /* ARMS_POTENTIAL */
     implicit none
     integer i, j
     real, allocatable :: gpot(:)
@@ -33,6 +36,11 @@ allocate(gpotdisk(nx,ny,nz),gpothalo(nx,ny,nz),gpotbulge(nx,ny,nz))
       enddo
     enddo
     
+#ifdef ARMS_POTENTIAL
+    gp1=gp
+    call compute_arms_potential
+#endif /* ARMS_POTENTIAL */
+
     if(gp_status .eq. 'undefined') then
       gravpart = 'default'
       call grav_accel2pot
@@ -50,6 +58,84 @@ allocate(gpotdisk(nx,ny,nz),gpothalo(nx,ny,nz),gpotbulge(nx,ny,nz))
     deallocate(gpot)
     
   end subroutine grav_pot_3d
+
+  subroutine compute_arms_potential
+  use arrays, only : nx,ny,nz,x,y,z,gp,gp1,gp2,gp3,gp4,gp5
+  use constants, only : pi,km,sek,r_gc_sun,newtong,cm,mH
+  use start, only : t
+!  use start, only : Narm,r0arm,pitchangle,H_arm,d0arm,Rs_arm
+  implicit none
+  integer i,j,k,iarm
+  real xi,yj,zk,r,gamma_arm,Kn,Betan,Dn,C_n(4),gpfactor, scalfaq !,gp2
+  real r0arm,pitchangle,H_arm,d0arm,Rs_arm
+  integer Narm
+
+    Narm = 4
+    pitchangle = pi/180.0*30.0 !15.0
+    Rs_arm = 7.0*kpc
+    d0arm = 14.0/11.0*mH/cm**3
+    r0arm = 8.0*kpc
+    H_arm = 0.18*kpc
+    scalfaq = 80000.0
+    
+    C_n(1)=8.0/3.0/pi
+    C_n(2)=0.5
+    C_n(3)=8.0/15.0/pi
+    C_n(4)=0.1
+    do i=1,nx
+      xi=x(i)
+      do j=1,ny
+        yj=y(j)
+        r=sqrt(xi**2+yj**2)
+        do k=1,nz
+          zk=z(k)
+!          do iarm=1,min(Narm,4)
+            iarm=1
+	    gamma_arm=Narm*(atan(yj/xi)-220.0*km/sek*t/r_gc_sun-log(r/r0arm)/tan(pitchangle))
+            Kn=iarm*narm/r/sin(pitchangle)
+            Betan=Kn*H_arm*(1.0+0.4*Kn*H_arm)
+            Dn=(1.0+Kn*H_arm+0.3*(Kn*H_arm)**2)/(1.0+0.3*Kn*H_arm)
+            gpfactor=-4.0*pi*newtong*H_arm*d0arm*exp(-(r-r0arm)/Rs_arm)/scalfaq
+            gp2(i,j,k)=gpfactor*C_n(iarm)/Kn/Dn*cos(iarm*gamma_arm)*(1.0/cosh(Kn*zk/Betan))**Betan
+
+            iarm=2
+	    gamma_arm=Narm*(atan(yj/xi)-220.0*km/sek*t/r_gc_sun-log(r/r0arm)/tan(pitchangle))
+            Kn=iarm*narm/r/sin(pitchangle)
+            Betan=Kn*H_arm*(1.0+0.4*Kn*H_arm)
+            Dn=(1.0+Kn*H_arm+0.3*(Kn*H_arm)**2)/(1.0+0.3*Kn*H_arm)
+            gpfactor=-4.0*pi*newtong*H_arm*d0arm*exp(-(r-r0arm)/Rs_arm)/scalfaq
+            gp3(i,j,k)=gpfactor*C_n(iarm)/Kn/Dn*cos(iarm*gamma_arm)*(1.0/cosh(Kn*zk/Betan))**Betan
+
+            iarm=3
+	    gamma_arm=Narm*(atan(yj/xi)-220.0*km/sek*t/r_gc_sun-log(r/r0arm)/tan(pitchangle))
+            Kn=iarm*narm/r/sin(pitchangle)
+            Betan=Kn*H_arm*(1.0+0.4*Kn*H_arm)
+            Dn=(1.0+Kn*H_arm+0.3*(Kn*H_arm)**2)/(1.0+0.3*Kn*H_arm)
+            gpfactor=-4.0*pi*newtong*H_arm*d0arm*exp(-(r-r0arm)/Rs_arm)/scalfaq
+            gp4(i,j,k)=gpfactor*C_n(iarm)/Kn/Dn*cos(iarm*gamma_arm)*(1.0/cosh(Kn*zk/Betan))**Betan
+
+            iarm=4
+	    gamma_arm=Narm*(atan(yj/xi)-220.0*km/sek*t/r_gc_sun-log(r/r0arm)/tan(pitchangle))
+            Kn=iarm*narm/r/sin(pitchangle)
+            Betan=Kn*H_arm*(1.0+0.4*Kn*H_arm)
+            Dn=(1.0+Kn*H_arm+0.3*(Kn*H_arm)**2)/(1.0+0.3*Kn*H_arm)
+            gpfactor=-4.0*pi*newtong*H_arm*d0arm*exp(-(r-r0arm)/Rs_arm)/scalfaq
+            gp5(i,j,k)=gpfactor*C_n(iarm)/Kn/Dn*cos(iarm*gamma_arm)*(1.0/cosh(Kn*zk/Betan))**Betan
+	    
+!	    gp5(i,j,k)=gp1(i,j,k)+gp2(i,j,k)+gp3(i,j,k)+gp4(i,j,k)
+
+
+!          enddo
+!          gp(i,j,k)=gp1(i,j,k)*(1.0+gp2/100000.0/(4.0*pi*newtong*H_arm*d0arm)/5.0e3)
+          gp(i,j,k)=gp1(i,j,k)*(1.0+gp2(i,j,k))
+        enddo
+      enddo
+    enddo
+    
+   end subroutine compute_arms_potential
+
+
+
 
 
 !--------------------------------------------------------------------------
