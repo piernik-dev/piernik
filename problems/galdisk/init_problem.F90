@@ -116,8 +116,8 @@ contains
     character syscmd*37,syscmd2*40,syscmd3*37
     integer system, syslog
     real,allocatable :: dxzprof(:,:),idxzprof(:,:),jdxzprof(:,:)
-    integer,allocatable :: xproc(:)
-    integer xtag, iproc, ilook
+    integer,allocatable :: xproc(:), yproc(:)
+    integer xtag, iproc, ilook, jproc, ytag
 
     call read_problem_par
 
@@ -125,6 +125,7 @@ contains
     allocate(dxzprof(nxt,nz))
     allocate(idxzprof(nx,nz))
     allocate(jdxzprof(nx,nz))
+    if(pcoords(2) .eq. 0) then
     do i = 1,nx
       rc = x(i)
       dcmol = 2.6e20/(cm**2)*exp(-((rc - 4.5*kpc)**2-(r_gc_sun - 4.5*kpc)**2)/(2.9*kpc)**2)
@@ -137,6 +138,26 @@ contains
       dxzprof(pcoords(1)*nxb+i,:) = dprof
       idxzprof(i,:) = dprof
     enddo
+    endif
+    if(psize(2) .ne. 1) then
+      allocate(yproc(psize(2)))
+      do j = 1, psize(2)
+        coords = (/pcoords(1),j-1,pcoords(3)/)
+	call MPI_Cart_rank(comm3d, coords, jproc, ierr)
+	yproc(j)=jproc
+      enddo
+      if(proc .eq. yproc(1)) then
+        do j = 2,psize(2)
+	  ytag=1000+100*pcoords(3)+10*j+pcoords(1)
+	  call MPI_Send(idxzprof,nx*nz,MPI_DOUBLE_PRECISION,yproc(j),ytag,comm,ierr)
+	enddo
+      else
+        ytag=1000+100*pcoords(3)+10*(pcoords(2)+1)+pcoords(1)
+	call MPI_Recv(idxzprof,nx*nz,MPI_DOUBLE_PRECISION,yproc(1),ytag,comm,status,ierr)
+	dxzprof(pcoords(1)*nxb+1:pcoords(1)*nxb+nx,:)=idxzprof
+      endif
+      deallocate(yproc)
+    endif
     if(psize(1) .ne. 1) then
       allocate(xproc(psize(1)))
       do i = 1, psize(1)

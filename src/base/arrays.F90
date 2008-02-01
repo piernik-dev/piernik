@@ -65,7 +65,7 @@ module arrays
 
   real, allocatable, dimension(:,:,:,:) :: u,b
 #ifdef GRAV
-  real, allocatable, dimension(:,:,:) :: gp
+  real, allocatable, dimension(:,:,:) :: gp,gp1,gp2,gp3,gp4,gp5
   real, allocatable, dimension(:)     :: dprof, eprof
 #endif 
 #ifdef SPLIT
@@ -190,8 +190,15 @@ contains
 
 #ifdef GRAV
     allocate(gp(nx,ny,nz))
+#ifdef ARMS_POTENTIAL
+    allocate(gp1(nx,ny,nz))
+    allocate(gp2(nx,ny,nz))
+    allocate(gp3(nx,ny,nz))
+    allocate(gp4(nx,ny,nz))
+    allocate(gp5(nx,ny,nz))
+#endif /* ARMS_POTENTIAL */
     allocate(dprof(nz),eprof(nz))
-#endif 
+#endif /* GRAV */
 #ifdef SPLIT
     allocate(wa(nx,ny,nz),wcu(nx,ny,nz))
 #else 
@@ -231,15 +238,16 @@ contains
 #endif /* ~SPLIT */ 
 #ifdef GRAV
     deallocate(gp)
+#ifdef ARMS_POTENTIAL
+    deallocate(gp1,gp2,gp3,gp4,gp5)
+#endif /* ARMS_POTENTIAL */
     deallocate(dprof,eprof)
 #endif 
 #ifdef SPLIT
     deallocate(wa,wcu)
-! <> SPLIT
-#else 
+#else /* SPLIT */
     deallocate(wa)
-!--> SPLIT
-#endif 
+#endif /* SPLIT */
 #ifdef MASS_COMPENS
    deallocate(dinit)    
 #endif        

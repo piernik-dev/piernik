@@ -39,6 +39,7 @@
 #undef GALAXY
 #undef PRESSURECORRECTION
 #define GALACTIC_DISK
-#define SNE_DISTR
+#define ARMS_POTENTIAL
+#undef SNE_DISTR
 #undef SHEAR
 
