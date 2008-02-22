@@ -144,11 +144,6 @@ module fluids     ! split fluids
         endif
         u_z(iuswpz,:)=u(:,i,j,:)
 
-! Tymczasowy wpis - do celow diagnostycznych, wykasowac, jesli przeszkadza!
-        if(i == nb+1 .and. j == nb+1) then
-	  write(*,*) 'fluidz'	
-	endif
-
         call relaxing_tvd(u_z,b_z,'zsweep',i,j,dz,nz,dt)
         u(:,i,j,:)=u_z(iuswpz,:)
       end do
