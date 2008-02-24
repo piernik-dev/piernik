@@ -100,8 +100,12 @@ contains
     use start, only    :   smallei
 #endif /* ISO */
 #ifdef SNE_DISTR
-  use sn_distr, only  : prepare_SNdistr
+    use sn_distr, only  : prepare_SNdistr
 #endif SNE_DISTR
+#ifdef COSM_RAYS
+    use arrays, only    :  iecr
+    use start, only     : gamma_cr, beta_cr
+#endif /* COSM_RAYS */
     implicit none
  
     integer i,j,k,iu,id,ju,jd

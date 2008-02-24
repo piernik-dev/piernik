@@ -114,7 +114,7 @@ subroutine mhdstep
 #endif /* SN_SRC */
 
 #ifdef SNE_DISTR
-      call supernovae_distribution(dt)
+      call supernovae_distribution
 #ifdef DEBUG
       call write_hdf
       nhdf = nhdf + 1
