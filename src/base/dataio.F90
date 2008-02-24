@@ -145,17 +145,12 @@ module dataio
     if(psize(2) .gt. 1) pc2 = '0x'
     if(psize(3) .gt. 1) pc3 = '0x'
 
-
-
-      scstatus =  GetCWD(cwd)
-      IF(scstatus .ne. 0) stop '(PROBLEMS ACCESSING WORKING DIRECTORY)'
-
-      pid = GetPid()
+    pid = GetPid()
             
-      scstatus = HostNm(hostfull)
-      ihost = index(hostfull,'.')
-      if (ihost .eq. 0) ihost = index(hostfull,' ')
-      host = hostfull(1:ihost-1)
+    scstatus = HostNm(hostfull)
+    ihost = index(hostfull,'.')
+    if (ihost .eq. 0) ihost = index(hostfull,' ')
+    host = hostfull(1:ihost-1)
 
   end subroutine init_dataio
 
@@ -184,7 +179,7 @@ module dataio
 
 #ifdef GALACTIC_DISK
     if(output .eq. 'gpt') then
-      call write_gpot
+!      call write_gpot
     endif
 #endif /* GALACTIC_DISK */
 
@@ -228,14 +223,15 @@ module dataio
 !---------------------------------------------------------------------
 !
   subroutine write_hdf
+    use mpi_setup, only: cwd
     use start, only : vars,xmin,xmax,ymin,ymax,zmin,zmax,nstep,t, &
          domain, nxd,nyd,nzd,nb,mag_center, gamma, dimensions, dt
     use grid, only : dx,dy,dz
     use arrays, only : nx,ny,nz,nxb,nyb,nzb,x,y,z,wa,outwa,outwb,outwc,b,u, &
          idna,imxa,imya,imza,ibx,iby,ibz
 #ifdef COSM_RAYS
-    use arrays, only : iecr
-#endif /* COSM_RAYS */
+    use arrays, only : iecr	 
+#endif /* COSM_RAYS */	 
     use init_problem, only : problem_name, run_id
 #ifndef ISO
     use arrays, only : iena
@@ -249,7 +245,7 @@ module dataio
 #endif /* GRAV */
     implicit none
 
-    character(len=128) :: filename,filenamedisp
+    character(len=128) :: hdf_file,file_name_hdf,file_name_disp
     character runname*16
 
     integer :: sd_id, sds_id, dim_id, iostatus
@@ -312,15 +308,14 @@ module dataio
 !  generate filename
 !
 
-    write (filename,'(a,a1,a3,a1,i2.2,a1,i2.2,a1,i2.2,a1,i4.4,a4)') &
-              trim(problem_name),'_', run_id, &
+    write (file_name_hdf,'(a,a1,a,a1,a3,a1,i2.2,a1,i2.2,a1,i2.2,a1,i4.4,a4)') &
+              trim(cwd),'/',trim(problem_name),'_', run_id, &
               '_',pcoords(1),'_',pcoords(2),'_',pcoords(3),'_',nhdf, '.hdf'
 
-    write (filenamedisp,'(a,a1,a3,a1,a2,a1,a2,a1,a2,a1,i4.4,a4)') &
+    write (file_name_disp,'(a,a1,a3,a1,a2,a1,a2,a1,a2,a1,i4.4,a4)') &
               trim(problem_name),'_', run_id,'_',pc1,'_',pc2,'_',pc3,'_',nhdf, '.hdf'
 
-
-    sd_id = sfstart(trim(filename), 4)
+    sd_id = sfstart(trim(file_name_hdf), 4)
 
 ! write attributes
 !
@@ -389,8 +384,7 @@ module dataio
         wa(iso:ieo,jso:jeo,kso:keo) = 0.5*(u(imxa,iso:ieo,jso:jeo,kso:keo)**2 &  
                                     +u(imya,iso:ieo,jso:jeo,kso:keo)**2 &
                                     +u(imza,iso:ieo,jso:jeo,kso:keo)**2)/u(idna,iso:ieo,jso:jeo,kso:keo)
-! <> ISO
-#else 
+#else /* ISO */
       case ('ener')
         wa(iso:ieo,jso:jeo,kso:keo) = u(iena,iso:ieo,jso:jeo,kso:keo)
       case ('eint')
@@ -398,8 +392,7 @@ module dataio
 	                            - 0.5*(u(imxa,iso:ieo,jso:jeo,kso:keo)**2 &  
                                           +u(imya,iso:ieo,jso:jeo,kso:keo)**2 &
                                           +u(imza,iso:ieo,jso:jeo,kso:keo)**2)/u(idna,iso:ieo,jso:jeo,kso:keo)
-!--> ISO
-#endif
+#endif /* ISO */
 #ifdef COSM_RAYS
       case ('encr')
         wa(iso:ieo,jso:jeo,kso:keo) = u(iecr,iso:ieo,jso:jeo,kso:keo)
@@ -441,7 +434,7 @@ module dataio
         wa(iso:ieo,jso:jeo,kso:keo) = sqrt((u(iena,iso:ieo,jso:jeo,kso:keo) & 
        -0.5*(u(imxa,iso:ieo,jso:jeo,kso:keo)**2+u(imya,iso:ieo,jso:jeo,kso:keo)**2+u(imza,iso:ieo,jso:jeo,kso:keo)**2) &
         / u(idna,iso:ieo,jso:jeo,kso:keo))*(gamma-1.)*gamma/u(idna,iso:ieo,jso:jeo,kso:keo))
-#endif 
+#endif /* ISO */
 #ifdef GRAV
       case ('gpot')
         wa(iso:ieo,jso:jeo,kso:keo) = gp(iso:ieo,jso:jeo,kso:keo)
@@ -606,8 +599,8 @@ module dataio
     if(proc.eq. 0) then
       open(log_lun, file=log_file, position='append')  
         
-      write(log_lun,*) 'Writing output   file: ', trim(filenamedisp)    
-      write(*,*)       'Writing output   file: ', trim(filenamedisp)
+      write(log_lun,*) 'Writing output   file: ', trim(file_name_disp)    
+      write(*,*)       'Writing output   file: ', trim(file_name_disp)
 
       close(log_lun)
     endif
@@ -615,7 +608,8 @@ module dataio
 
 
   end subroutine write_hdf
-#ifdef GALACTIC_DISK
+
+#ifdef GALACTIC_DISK_
   subroutine write_gpot
 
     use arrays, only       : wa, gp,nxb,nyb,nzb,nx,ny,nz,x,y,z
@@ -627,7 +621,7 @@ module dataio
 
     implicit none
 
-    character(len=128) :: filename,filenamedisp
+    character(len=128) :: file_name_hdf,file_name_disp
     character runname*16
     character, dimension(24) :: gvars*4
 
@@ -689,15 +683,15 @@ module dataio
 !  generate filename
 !
 
-    write (filename,'(a,a5,i2.2,a1,i2.2,a1,i2.2,a1,a8)') &
-              trim(problem_name),'_gpt_', &
+    write (file_name_hdf,'(a,a1,a,a5,i2.2,a1,i2.2,a1,i2.2,a1,a8)') &
+              trim(cwd),'/',trim(problem_name),'_gpt_', &
 	      pcoords(1),'_',pcoords(2),'_',pcoords(3),'_', '0000.hdf'
 
-    write (filenamedisp,'(a,a5,a2,a1,a2,a1,a2,a1,a8)') &
-              trim(problem_name),'_gpt_',pc1,'_',pc2,'_',pc3,'_', '0000.hdf'
+    write (file_name_disp,'(a,a1,a,a5,a2,a1,a2,a1,a2,a1,a8)') &
+              trim(cwd),'/',trim(problem_name),'_gpt_',pc1,'_',pc2,'_',pc3,'_', '0000.hdf'
 
 
-    sd_id = sfstart(trim(filename), 4)
+    sd_id = sfstart(trim(file_name_hdf), 4)
 
 ! write attributes
 !
@@ -917,8 +911,8 @@ module dataio
     if(proc.eq. 0) then
 !      open(log_lun, file=log_file, position='append')  
         
-!      write(log_lun,*) 'Writing output   file: ', trim(filenamedisp)    
-      write(*,*)       'Writing output   file: ', trim(filenamedisp)
+!      write(log_lun,*) 'Writing output   file: ', trim(file_name_disp)    
+      write(*,*)       'Writing output   file: ', trim(file_name_disp)
 
 !      close(log_lun)
     endif
@@ -944,7 +938,7 @@ module dataio
 #endif /* GRAV */
     implicit none
 
-    character(len=128) :: filename,filenamedisp,filenamelast
+    character(len=128) :: file_name_res,file_name_disp,file_name_last
     character*160 syscom
     logical lastres_exist
 
@@ -989,21 +983,21 @@ module dataio
 
 !  generate filename
 !
-    write (filename,'(a,a1,a3,a1,3(i2.2,a1),i3.3,a4)') &
-              trim(problem_name),'_', run_id,  &
+    write (file_name_res,'(a,a1,a,a1,a3,a1,3(i2.2,a1),i3.3,a4)') &
+              trim(cwd),'/',trim(problem_name),'_', run_id,  &
               '_',pcoords(1),'_',pcoords(2),'_',pcoords(3),'_',nres, '.res'
                       
-    write (filenamedisp,'(a,a1,a3,a1,3(a2,a1),i3.3,a4)') &
+    write (file_name_disp,'(a,a1,a3,a1,3(a2,a1),i3.3,a4)') &
               trim(problem_name),'_', run_id, &
               '_',pc1,'_',pc2,'_',pc3,'_',nres, '.res'
 
     if((resdel .ne. 0) .and. (nres .gt. resdel)) then
-    write (filenamelast,'(a,a1,a3,a1,3(i2.2,a1),i3.3,a4)') &
-              trim(problem_name),'_', run_id,  &
+    write (file_name_last,'(a,a1,a,a1,a3,a1,3(i2.2,a1),i3.3,a4)') &
+              trim(cwd),'/',trim(problem_name),'_', run_id,  &
               '_',pcoords(1),'_',pcoords(2),'_',pcoords(3),'_',nres-resdel, '.res'
     endif
                       
-    sd_id = sfstart(filename, 4)
+    sd_id = sfstart(file_name_res, 4)
 
 !!  ATTRIBUTES
 !!
@@ -1156,20 +1150,20 @@ module dataio
     if(proc.eq. 0) then
       open(log_lun, file=log_file, position='append')  
         
-      write(log_lun,*) 'Writing restart  file: ', trim(filenamedisp)    
-      write(*,*)       'Writing restart  file: ', trim(filenamedisp)
+      write(log_lun,*) 'Writing restart  file: ', trim(file_name_disp)    
+      write(*,*)       'Writing restart  file: ', trim(file_name_disp)
 
       close(log_lun)
     endif
 
     if((resdel .ne. 0) .and. (nres .gt. resdel)) then
-        inquire(file=filenamelast, exist=lastres_exist)
+        inquire(file=file_name_last, exist=lastres_exist)
         if(lastres_exist) then
-          syscom='rm -f'//filenamelast
+          syscom='rm -f'//file_name_last
           scstatus = system(syscom)
-          write(*,*) trim(filenamelast),' removed'
+          write(*,*) trim(file_name_last),' removed'
         else
-          write(*,*) trim(filenamelast),' does not exist'
+          write(*,*) trim(file_name_last),' does not exist'
         endif
     endif
 
@@ -1192,7 +1186,7 @@ module dataio
 #endif /* GRAV */
     implicit none
 
-    character(len=128) :: filename,filenamedisp
+    character(len=128) :: file_name_res,file_name_disp
     logical file_exist, log_exist
 
     integer :: sd_id, sds_id, dim_id, attr_index, sds_index
@@ -1229,35 +1223,35 @@ module dataio
 
 !  generate filename
 !
-    write (filename,'(a,a1,a3,a1,3(i2.2,a1),i3.3,a4)') &
-              trim(problem_name),'_', run_id,  &
+    write (file_name_res,'(a,a1,a,a1,a3,a1,3(i2.2,a1),i3.3,a4)') &
+              trim(cwd),'/',trim(problem_name),'_', run_id,  &
               '_',pcoords(1),'_',pcoords(2),'_',pcoords(3),'_',nres, '.res'
                       
-    write (filenamedisp,'(a,a1,a3,a1,3(a2,a1),i3.3,a4)') &
+    write (file_name_disp,'(a,a1,a3,a1,3(a2,a1),i3.3,a4)') &
               trim(problem_name),'_', run_id, &
               '_',pc1,'_',pc2,'_',pc3,'_',nres, '.res'
 
     if(proc.eq. 0) then
-        write(*,*)       'Reading restart  file: ', trim(filenamedisp)
+        write(*,*)       'Reading restart  file: ', trim(file_name_disp)
     endif
 
     inquire(file =log_file , exist = log_exist)
     if(file_exist .eqv. .true.) then
       open(log_lun, file=log_file, position='append')  
-        write(log_lun,*) 'Reading restart  file: ', trim(filenamedisp)    
+        write(log_lun,*) 'Reading restart  file: ', trim(file_name_disp)    
       close(log_lun)
     endif
       
-    inquire(file = filename, exist = file_exist)
+    inquire(file = file_name_res, exist = file_exist)
     if(file_exist .eqv. .false.) then
       if(log_exist) then
         open(log_lun, file=log_file, position='append')  
-          write(log_lun,*) 'Restart  file: ', trim(filename), &
+          write(log_lun,*) 'Restart  file: ', trim(file_name_res), &
                          '               does not exist.  ABORTING !!! '   
         close(log_lun)
       endif
 
-      write(*,*)       'Restart  file: ', trim(filename), &
+      write(*,*)       'Restart  file: ', trim(file_name_res), &
                          '               does not exist.  ABORTING !!! '   
       call MPI_BARRIER(comm,ierr)
       call mpistop                             
@@ -1266,7 +1260,7 @@ module dataio
 
 
     
-    sd_id = sfstart(filename, 1)
+    sd_id = sfstart(file_name_res, 1)
 
 !!  attributes
 !!
@@ -1417,23 +1411,23 @@ module dataio
 
       implicit none
       
-      character*120 restart_file, filename
+      character*120 restart_file, file_name
       character*160 syscom
       integer iostat,len_restart_fname,restart_number,nres
       logical exist
-      character(len=128) :: filename_base      
+      character(len=128) :: file_name_base      
       
       restart_number = 0 
 
-      write (filename_base,'(a,a1,a3,a1)') trim(problem_name),'_',run_id,'_'
+      write (file_name_base,'(a,a1,a3,a1)') trim(problem_name),'_',run_id,'_'
 
       call rm_file('restart_list.tmp')
       
       do nres =999,0,-1      
-        write (filename,'(a,a1,a3,a1,3(i2.2,a1),i3.3,a4)') &
-                          trim(problem_name),'_', run_id,'_',0,'_',0,'_',0,'_',nres,'.res'
+        write (file_name,'(a,a1,a,a1,a3,a1,3(i2.2,a1),i3.3,a4)') &
+               trim(cwd),'/',trim(problem_name),'_', run_id,'_',0,'_',0,'_',0,'_',nres,'.res'
         
-        inquire(file = filename, exist = exist)
+        inquire(file = file_name, exist = exist)
         if(exist) then
            restart_number = nres
 	   return
@@ -1452,10 +1446,10 @@ module dataio
   subroutine write_timeslice
 
     use arrays, only : is,ie,js,je,ks,ke,u,b,idna,imxa,imya,imza, wa, &
-         ibx,iby,ibz,x,y
+         ibx,iby,ibz,x,y,z,wa
 #ifdef COSM_RAYS
-    use arrays, only : iecr
-#endif /* COSM_RAYS */
+    use arrays, only : iecr	 
+#endif /* COSM_RAYS */	 
     use grid, only  : dvol,dx,dy,dz 
     use start, only : proc, dt, t, nstep, nrestart,nxd,nyd,nzd
 #ifdef GRAV
@@ -1474,6 +1468,9 @@ module dataio
 #ifndef ISO
     use arrays, only : iena
 #endif /* ISO */
+#ifdef COSM_RAYS
+    use arrays, only : iecr
+#endif COSM_RAYS
    
     implicit none
     integer i,j,k
@@ -1490,8 +1487,8 @@ module dataio
 !- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 !
     if (proc .eq. 0) then
-      write (tsl_file,'(a,a1,a3,a1,i3.3,a4)') &
-              trim(problem_name),'_', run_id,'_',nrestart,'.tsl'
+      write (tsl_file,'(a,a1,a,a1,a3,a1,i3.3,a4)') &
+              trim(cwd),'/',trim(problem_name),'_', run_id,'_',nrestart,'.tsl'
 
       if (tsl_firstcall) then      
         open(tsl_lun, file=tsl_file)
@@ -1639,9 +1636,9 @@ module dataio
     use start, only : t,dt,nstep,sleep_minutes,sleep_seconds, smallei,nb, &
          gamma,cfl
 #ifdef COSM_RAYS
-    use start, only : dt_cr
-    use arrays, only : iecr
-#endif /* COSM_RAYS */
+    use start, only  : dt_cr	 
+    use arrays, only : iecr	 
+#endif /* COSM_RAYS */	 	 
 #ifdef ISO
     use start, only : csi2,c_si
 #endif /* ISO */
@@ -2243,16 +2240,16 @@ module dataio
 
 !------------------------------------------------------------------------
 
-    subroutine rm_file(filename)
+    subroutine rm_file(file_name)
       implicit none
-      character*(*) filename
+      character*(*) file_name
       character*160 syscom
       logical exist
 
 !     delete file if exists
-      inquire(file = filename, exist = exist)
+      inquire(file = file_name, exist = exist)
       if(exist) then
-        syscom='rm -f'//filename
+        syscom='rm -f'//file_name
         scstatus = system(syscom)
       endif
 

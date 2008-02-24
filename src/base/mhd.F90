@@ -15,6 +15,7 @@ program mhd
   use grid, only : grid_xyz
   use init_problem, only : problem_name, run_id, init_prob, read_problem_par 
   use mod_mhdstep, only  : mhdstep
+  use dataio, only : host, pid  
   use dataio, only : msg,step_res,step_hdf,log_file,nres,nhdf, &
       t_start, nres_start, nhdf_start, wait, msg_param
   use dataio, only : init_dataio,read_restart,write_data, check_disk, &
@@ -39,7 +40,7 @@ program mhd
   implicit none
   character output*3
   integer system_status
-  character system_command*160
+  character system_command*160, cmd*256
 #ifndef GNU
   external :: system
   integer  :: system
@@ -48,9 +49,10 @@ program mhd
 !  real, dimension(:,:,:),allocatable :: ala
 
   character tmp_log_file*(100)
-  integer :: cwd_status 
 
-
+  CALL getarg(1, cwd)
+  IF (LEN_TRIM(cwd) == 0) cwd = '.'
+  
   
   call mpistart
 

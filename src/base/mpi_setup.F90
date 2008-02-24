@@ -3,7 +3,7 @@
 
 ! Written by M.Hanasz, April 2006    -  MPI comunication in "z"
 ! Modified by M. Hanasz - MPI comunication in "z"   - April 2006 
-! Modified by M. Hanasz - MPI comunication in "xyz" - November 2006 
+! Modified by M. Hanasz - MPI comunication in "xyz" - November 2006
 
 !  use mpi
 
@@ -33,9 +33,9 @@
   character*4 :: bnd_xl_dom, bnd_xr_dom, bnd_yl_dom, bnd_yr_dom, bnd_zl_dom, bnd_zr_dom
   namelist /BOUNDARIES/ bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr
    
-  logical mpi
-
-  character cwd*(80)
+  logical     :: mpi
+  character   :: cwd*(80) 
+  
  contains
 
 !-----------------------------------------------------------------------------
@@ -45,27 +45,52 @@
     implicit none
     integer iproc
     
+    character*(80) :: cwd_proc,  cwd_all (0:1024)
+    character*(8)  :: host_proc, host_all(0:1024)
+    integer        :: pid_proc,  pid_all (0:1024)
+    
 #ifndef GNU
-    integer  :: getcwd
-    external :: getcwd
+    integer  :: getcwd, getpid, hostnm
+    external :: getcwd, getpid, hostnm 
 #endif /* GNU */
-    character par_file*(100), tmp_log_file*(100)
-    integer :: cwd_status 
+    character par_file*(100), tmp_log_file*(100), cwd_file*9
+    integer :: cwd_status, scstatus 
+    logical par_file_exist
 
     call MPI_INIT( ierr )
     call MPI_COMM_RANK(MPI_COMM_WORLD, proc, ierr)
     comm = MPI_COMM_WORLD
     call MPI_COMM_SIZE(comm, nproc, ierr)
 
+#ifndef GNU
+
+    pid_proc = getpid()
+    status = hostnm(host_proc)
+    cwd_status =  getcwd(cwd_proc)
+    if(cwd_status .ne. 0) stop 'mpi_setup: problems accessing working directory'
+  
     if(proc .eq. 0) then
-      cwd_status =  getcwd(cwd)
-      if(cwd_status .ne. 0) stop '(mpi_setup: problems accessing working directory)'
       par_file = trim(cwd)//'/problem.par'
-      tmp_log_file = trim(cwd)//'/tmp.log'
+      inquire(file=par_file, exist=par_file_exist)
+      if(.not. par_file_exist) stop '"problem.par" does not exist in the working directory'      
+      tmp_log_file = trim(cwd)//'/tmp.log'      
     endif
+#endif /* GNU */
     
-    call MPI_BCAST(cwd, 80, MPI_CHARACTER,        0, comm, ierr)
+!    call MPI_BCAST(cwd, 80, MPI_CHARACTER,        0, comm, ierr)
     
+    call MPI_GATHER ( cwd_proc, 80, MPI_CHARACTER, &
+                      cwd_all,  80, MPI_CHARACTER, &
+                      0, comm,err )
+		      
+    call MPI_GATHER ( host_proc, 8, MPI_CHARACTER, &
+                      host_all,  8, MPI_CHARACTER, &
+                      0, comm,err )
+		      
+    call MPI_GATHER ( pid_proc, 1, MPI_INTEGER, &
+                      pid_all,  1, MPI_INTEGER, &
+                      0, comm,err )
+		      
     pxsize = 1
     pysize = 1
     pzsize = 1
@@ -165,12 +190,21 @@
     call MPI_CART_COORDS(comm3d, proc, ndims, pcoords, ierr)
 !    write(*,*) 'proc=',proc, '    coords=', pcoords
     
-
     if(proc == 0) then
       open(3, file=tmp_log_file, status='unknown')
         write(3,"(a35,i2)") 'START OF MHD CODE,  No. of procs = ', nproc
+
+	write(3,*)
+	write(3,*) 'PROCESSES:'
+        do iproc = 0, nproc-1
+          write(3,"(a6,i2,a7,i6,a1,a,a7,a)") ' proc=',iproc,',  pid=',pid_all(iproc), '@',trim(host_all(iproc)), &
+	                                      ',  cwd=',trim(cwd)
+        enddo  
+	write(3,*)
+
         write(unit=3,nml=MPI_BLOCKS)  
         write(unit=3,nml=BOUNDARIES)
+   
       close(3)      
         write(*,*)
         write(*,"(a35,i2)") 'START OF MHD CODE,  No. of procs = ', nproc
