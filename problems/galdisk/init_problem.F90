@@ -123,8 +123,6 @@ contains
     integer,allocatable :: xproc(:), yproc(:)
     integer xtag, iproc, ilook, jproc, ytag
 
-    call read_problem_par
-
     allocate(dprof(nz))
     allocate(dxzprof(nxt,nz))
     allocate(idxzprof(nx,nz))
@@ -132,16 +130,23 @@ contains
     if(pcoords(2) .eq. 0) then
     do i = 1,nx
       rc = x(i)
-      dcmol = 2.6e20/(cm**2)*exp(-((rc - 4.5*kpc)**2-(r_gc_sun - 4.5*kpc)**2)/(2.9*kpc)**2)
-      dcneut = 6.2e20/(cm**2)
-      dcion =  1.46e20/(cm**2)*exp(-(rc**2 - r_gc_sun**2)/(37.0*kpc)**2) &
-             + 1.20e18/(cm**2)*exp(-((rc - 4.0*kpc)**2 - (r_gc_sun - 4.0*kpc)**2)/(2.0*kpc)**2)
-      dchot = 4.4e18/(cm**2)*(0.12*exp(-(rc-r_gc_sun)/4.9/kpc)+0.88*exp(-((rc-4.5*kpc)**2-(r_gc_sun-4.5*kpc)**2)/(2.9*kpc)**2))
-      d0=1.36*mp*(dcmol+dcneut+dcion+dchot)
+      
+      dcmol = 2.6*0.8*exp(-((rc - 4.5*kpc)**2-(r_gc_sun - 4.5*kpc)**2)/(2.9*kpc)**2)
+      dcneut = 6.2*0.8
+      dcion =  1.46*0.8*exp(-(rc**2 - r_gc_sun**2)/(37.0*kpc)**2) &
+             + 1.20e-2*0.8*exp(-((rc - 4.0*kpc)**2 - (r_gc_sun - 4.0*kpc)**2)/(2.0*kpc)**2)
+      dchot = 4.4e-2*0.8*(0.12*exp(-(rc-r_gc_sun)/4.9/kpc)+0.88*exp(-((rc-4.5*kpc)**2-(r_gc_sun-4.5*kpc)**2)/(2.9*kpc)**2))
+      d0=(dcmol+dcneut+dcion+dchot) * 1.36 
       call hydrostatic_zeq(i, 0, d0, dprof)
+
       dxzprof(pcoords(1)*nxb+i,:) = dprof
       idxzprof(i,:) = dprof
+
     enddo
+    
+!    write(*,*) dprof
+!    stop
+    
     endif
     if(psize(2) .ne. 1) then
       allocate(yproc(psize(2)))
