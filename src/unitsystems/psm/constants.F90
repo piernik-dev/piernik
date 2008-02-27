@@ -69,6 +69,7 @@ module constants     ! module containg numerical and physical constants !!!
 ! energy units:
 	real, parameter :: joul =	kg*metr**2/sek**2
 	real, parameter :: erg =	gram*cm**2/sek**2
+	real, parameter :: eV   =       1.6022e-12*erg	
 ! density units:
 	real, parameter :: ppcm3 =	1.36 * mp / cm**3
 	real, parameter :: ppcm2 =	1.36 * mp / cm**2

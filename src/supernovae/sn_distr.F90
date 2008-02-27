@@ -124,10 +124,17 @@ contains
   use arrays, only: nx,ny,nz,x,y,z,nxb,nyb,nzb,xdim,ydim,zdim,dl,u
   use grid, only: xminb,xmaxb,yminb,ymaxb,zminb,zmaxb
   use start, only: r0sn,nb
+  use constants
+#ifdef COSM_RAYS
+  use arrays, only : iecr
+  use start, only  : r_sn, cr_eff           
+#endif COSM_RAYS
   implicit none
   real, dimension(3) :: snpos
   real r1sn
   integer ic,jc,kc,i,j,k
+  real e_sn, amp_sn, amp_cr 
+  
   
   if((snpos(1)+r0sn .ge. xminb-nb*dl(xdim)) .and. (snpos(1)-r0sn .le. xmaxb+nb*dl(xdim))) then
   if((snpos(2)+r0sn .ge. yminb-nb*dl(ydim)) .and. (snpos(2)-r0sn .le. ymaxb+nb*dl(ydim))) then
@@ -145,12 +152,28 @@ contains
         r1sn = sqrt((snpos(1)-x(i))**2+(snpos(2)-y(j))**2+(snpos(3)-z(k))**2)
 	if(r1sn .lt. r0sn) then
 #ifdef ISO
-	  u(2,i,j,k)=u(2,i,j,k)/u(1,i,j,k)*(u(1,i,j,k)+EexplSN*exp(-r1sn**2/r0sn**2))
-	  u(3,i,j,k)=u(3,i,j,k)/u(1,i,j,k)*(u(1,i,j,k)+EexplSN*exp(-r1sn**2/r0sn**2))
-          u(1,i,j,k)=u(1,i,j,k)+EexplSN*exp(-r1sn**2/r0sn**2)
+!	  u(2,i,j,k)=u(2,i,j,k)/u(1,i,j,k)*(u(1,i,j,k)+EexplSN*exp(-r1sn**2/r0sn**2))
+!	  u(3,i,j,k)=u(3,i,j,k)/u(1,i,j,k)*(u(1,i,j,k)+EexplSN*exp(-r1sn**2/r0sn**2))
+!          u(1,i,j,k)=u(1,i,j,k)+EexplSN*exp(-r1sn**2/r0sn**2)
 #else /* ISO */
-          u(5,i,j,k)=u(5,i,j,k)+EexplSN*exp(-r1sn**2/r0sn**2)
+!          u(5,i,j,k)=u(5,i,j,k)+EexplSN*exp(-r1sn**2/r0sn**2)
 #endif /* ISO */
+
+#ifdef COSM_RAYS
+         
+	 e_sn = 10e+51*erg
+	 
+         amp_sn = e_sn/(sqrt(pi)*r0sn*pc)**3 
+	 
+	 amp_cr = cr_eff * amp_sn
+
+         u(iecr,i,j,k) = u(iecr,i,j,k) + amp_cr*exp(-r1sn**2/r0sn**2)
+	 
+!	 write(*,*) e_sn, amp_cr, r0sn, pc, erg
+!	 stop
+	 
+#endif COSM_RAYS
+
 	endif
       endif
     enddo

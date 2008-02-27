@@ -160,7 +160,7 @@ module tv   ! split ssp
     vx = u1(imxa,:)/u1(idna,:)
     ecr = u1(iecr,:)
     
-    gpcr(2:n-1) = cr_active*(gamma_cr -1.)*(ecr(2:n)-ecr(1:n-1))/(2.*dx) ; gpcr(1)=gpcr(2) ; gpcr(n) = gpcr(n-1)
+    gpcr(2:n-1) = cr_active*(gamma_cr -1.)*(ecr(3:n)-ecr(1:n-2))/(2.*dx) ; gpcr(1:2)=0.0 ; gpcr(n-1:n) = 0.0
 
 #ifndef ISO
     u1(iena,:) = u1(iena,:) - cn(2,istep)*u1(imxa,:)/u1(idna,:)*gpcr*dt
