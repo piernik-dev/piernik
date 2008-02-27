@@ -1,4 +1,7 @@
-/* #define ISO 			*/			
+
+#undef DEBUG
+
+#define ISO 					
 #define SPLIT
 #define ORIG
 
@@ -8,15 +11,18 @@
 #undef PGM		/*pc,G=1,Myr unitsystem*/
 #undef CGS		/*cm,gram,sek unitsystem*/
 #undef SI		/*metr,kg,sek unitsystem*/
-/*===================================/
+/*===================================*/
 
-#define LOCAL_FR_SPEED
+#undef LOCAL_FR_SPEED
+#define  GLOBAL_FR_SPEED
+#undef OLDLOCALCFR
+
 #define VANLEER
 /* #define RESIST 		*/
 /* #define VISC			*/
 /* #define HEAT_COND		*/
 /* #define COOL_HEAT		*/
 #define COSM_RAYS
-/* #define GRAV 		*/
+#undef GRAV 		
 /* #define GRAV_NULL		*/
-#define GALAXY
+#undef GALAXY

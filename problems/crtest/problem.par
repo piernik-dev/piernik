@@ -1,7 +1,7 @@
  $DOMAIN_SIZES
     nxd = 50
     nyd = 50
-    nzd = 50
+    nzd = 1
  /
  $MPI_BLOCKS
     pxsize = 1
@@ -70,7 +70,7 @@
     freezing_speed = 'local'
     integration_order = 2
     magnetic = 'yes'
-    dimensions = '3d'
+    dimensions = '2dxy'
     nu_bulk    = 10.0
     cfl_visc   = 0.4
  /
