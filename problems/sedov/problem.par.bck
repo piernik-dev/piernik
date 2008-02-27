@@ -4,9 +4,9 @@
     nzd = 40
  /
  $MPI_BLOCKS
-    pxsize = 1
-    pysize = 1
-    pzsize = 1    
+    pxsize = 2
+    pysize = 2
+    pzsize = 2    
  /  
 
  $START_CONTROL
@@ -62,13 +62,9 @@
  /  
 
  $NUMERICAL_SETUP
-    cfl    = 0.5
-    big    = 0.e+50
-    small  = 1.e-50
+    cfl    = 0.9
     smalld = 1.e-3
     smallei= 1.e-5
-    flux_limiter = 'vanleer'
-    freezing_speed = 'local'
     integration_order = 3
     magnetic = 'no'
     dimensions = '3d'
@@ -88,7 +84,7 @@
 
  $PROBLEM_CONTROL
     problem_name ='sedov'
-    run_id =  'o3d'
+    run_id =  'tst'
     d0     = 1.0
     p0     = 1.0
     Eexpl  = 1.e6
