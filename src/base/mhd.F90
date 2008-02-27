@@ -50,8 +50,8 @@ program mhd
 
   character tmp_log_file*(100)
 
-  CALL getarg(1, cwd)
-  IF (LEN_TRIM(cwd) == 0) cwd = '.'
+  call getarg(1, cwd)
+  if (LEN_TRIM(cwd) == 0) cwd = '.'
   
   
   call mpistart

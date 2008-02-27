@@ -14,14 +14,14 @@ module hydrostatic
   contains
 
     subroutine hydrostatic_zeq(iia,jja, d0, dprof)
-     use start, only    : nsub,nb,zmin,zmax,tune_zeq,csim2, col_dens, proc
-     use constants, only : k_B, hydro_mass, small, pc
-     use arrays, only   : nx,ny,nz,dl,zdim,z,zl,zr, nzt
+      use start, only    : nsub,nb,zmin,zmax,tune_zeq,csim2, col_dens, proc
+      use constants, only : k_B, hydro_mass, small, pc
+      use arrays, only   : nx,ny,nz,dl,zdim,z,zl,zr, nzt
      
-     use gravity, only  : grav_accel,grav_pot,gp_status
+      use gravity, only  : grav_accel,grav_pot,gp_status
 #ifndef ISO
-     use arrays, only   : eprof
-     use start, only    : c_si, gamma
+      use arrays, only   : eprof
+      use start, only    : c_si, gamma
 #endif /* ISO */      
       implicit none
       real, intent(inout)              :: d0

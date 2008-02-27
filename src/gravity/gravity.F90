@@ -6,7 +6,7 @@ module gravity
 
 
   character gp_status*9
-  character*7 gravpart
+    character*7 gravpart  
 #ifdef GALACTIC_DISK
     real, allocatable :: gpotdisk(:,:,:),gpothalo(:,:,:),gpotbulge(:,:,:)
 #endif /* GALACTIC_DISK */
@@ -42,7 +42,7 @@ allocate(gpotdisk(nx,ny,nz),gpothalo(nx,ny,nz),gpotbulge(nx,ny,nz))
 #endif /* ARMS_POTENTIAL */
 
     if(gp_status .eq. 'undefined') then
-      gravpart = 'default'
+!      gravpart = 'default'
       call grav_accel2pot
 #ifdef GALACTIC_DISK
         gravpart = 'diskprt'
@@ -164,6 +164,8 @@ allocate(gpotdisk(nx,ny,nz),gpothalo(nx,ny,nz),gpotbulge(nx,ny,nz))
     real, allocatable :: gpdisk(:), gphalo(:), gpblg(:)
     real Mhalo,Mbulge,Mdisk,ahalo,bbulge,adisk,bdisk
     
+    status = ''
+
 #ifdef GRAV_NULL
         gpot = 0.0
       ! do nothing
@@ -231,10 +233,10 @@ allocate(gpotdisk(nx,ny,nz),gpothalo(nx,ny,nz),gpotbulge(nx,ny,nz))
 #elif defined (GRAV_GAL_VOLLMER)
         allocate(gpdisk(n),gphalo(n),gpblg(n))
 	Mhalo = 4615.0*gmu !g_z*Msun !2.43e11*Msun 	!Milky Way
-	Mbulge=  606.0*gmu !ptmass*Msun !0.8e10*Msun	!Milky Way (estimation)
+	Mbulge= 0.0 ! 606.0*gmu !ptmass*Msun !0.8e10*Msun	!Milky Way (estimation)
 	Mdisk = 3690.0*gmu !dg_dz*Msun !3.7e10*Msun	!Milky Way
 	ahalo =   12.0*kpc !n_gravr2*kpc !35.*kpc
-	bbulge= 1.0*kpc !0.3873*kpc !ptm_x*pc !2100.*pc
+	bbulge= 3.0*kpc !0.3873*kpc !ptm_x*pc !2100.*pc
 	adisk = 5.3178*kpc !ptm_y*kpc !4.9*kpc
 	bdisk = 0.2500*kpc !ptm_z*pc !150.*pc
         if (sweep == 'zsweep') then
@@ -363,7 +365,7 @@ allocate(gpotdisk(nx,ny,nz),gpothalo(nx,ny,nz),gpotbulge(nx,ny,nz))
 !--------------------------------------------------------------------------
    
   subroutine grav_accel(sweep, i1,i2, xsw, n, grav)
-    use start, only  : h_grav, n_gravh,nb
+    use start, only  : h_grav, n_gravh,nb, r_gc
     use arrays, only : gp,x,y,z,dl,xdim,ydim,zdim,nx,ny,nz, &
       is,ie,js,je,ks,ke, xr,yr,zr
 #ifdef GRAV_GALACTIC
@@ -453,20 +455,20 @@ allocate(gpotdisk(nx,ny,nz),gpothalo(nx,ny,nz),gpotbulge(nx,ny,nz))
        
 #elif defined (GRAV_GALACTIC)
        if (sweep == 'zsweep') then
-	    select case(gravpart)
-	      case('diskprt')
-	        grav = cmps2*(-4.4e-9 * exp(-(r_gc-r_gc_sun)/(4.9*kpc)) * xsw/sqrt(xsw**2+(0.2*kpc)**2))
-	      case('haloprt')
-	        grav = cmps2*(-(1.7e-9 * (r_gc_sun**2 + (2.2*kpc)**2)/(r_gc**2 + (2.2*kpc)**2)*xsw/kpc) )
-	      case('blgpart')
-	        grav = 0.0
-	      case('default')
+!	    select case(gravpart)
+!	      case('diskprt')
+!	        grav = cmps2*(-4.4e-9 * exp(-(r_gc-r_gc_sun)/(4.9*kpc)) * xsw/sqrt(xsw**2+(0.2*kpc)**2))
+!	      case('haloprt')
+!	        grav = cmps2*(-(1.7e-9 * (r_gc_sun**2 + (2.2*kpc)**2)/(r_gc**2 + (2.2*kpc)**2)*xsw/kpc) )
+!	      case('blgpart')
+!	        grav = 0.0
+!	      case('default')
          grav = cmps2 * (  &
            (-4.4e-9 * exp(-(r_gc-r_gc_sun)/(4.9*kpc)) * xsw/sqrt(xsw**2+(0.2*kpc)**2)) &    
            -( 1.7e-9 * (r_gc_sun**2 + (2.2*kpc)**2)/(r_gc**2 + (2.2*kpc)**2)*xsw/kpc) )     
 !          -Om*(Om+G) * Z * (kpc ?) ! in the transition region between rigid 
 !                                   ! and flat rotation F'98: eq.(36)       
-        end select
+!        end select
        else
          grav=0.0
        endif

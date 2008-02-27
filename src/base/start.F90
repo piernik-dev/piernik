@@ -297,7 +297,7 @@ contains
     snenerg    = 1.e51		!  typical energy of supernova explosion [erg]
     sn1time    = 445.0       	!  mean time between typ I supernovae explosions [year]
     sn2time    =  52.0       	!  mean time between typ II supernovae explosions [year]
-    r0sn       = 400.0
+    r0sn       =  50.0
 !--> SNE_DISTR
 #endif
 
