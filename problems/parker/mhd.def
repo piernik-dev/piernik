@@ -1,3 +1,6 @@
+
+#undef DEBUG
+
 /* adiabatic or isothermal */
 #define ISO 	
 
@@ -20,6 +23,7 @@
 
 /* choosing freezing speed */
 #define LOCAL_FR_SPEED
+#define OLDLOCALCFR
 #undef  GLOBAL_FR_SPEED
 
 /* choosing flux limiter */
@@ -33,5 +37,7 @@
 #undef COOL_HEAT
 #undef COSM_RAYS
 #define GRAV 
+#define GRAV_GALACTIC
+#undef GALACTIC_DISK
 #undef  GALAXY
 #undef SHEAR

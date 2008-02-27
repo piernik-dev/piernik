@@ -96,6 +96,8 @@ contains
 !-----------------------------------------------------------------------------
 
   subroutine init_prob
+  
+    use constants
 
     implicit none
 
