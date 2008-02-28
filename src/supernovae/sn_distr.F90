@@ -101,7 +101,7 @@ contains
       SNno=pot*int(dtime*SNfreq)
       SNtrest=dtime-(real(SNno))/SNfreq
       
-      call write_sninfo(SNno)
+!      call write_sninfo(SNno)
     endif
     call MPI_BCAST(SNno, 2, MPI_INTEGER, 0, comm, ierr)
     
@@ -194,9 +194,16 @@ contains
  real, dimension(3) :: snpos
  real, dimension(4) :: los4
  real radius, azym
- integer ii
+ integer ii, i
+ real rand
+ external rand
 
  call random_number(los4)
+
+! do i=1,4
+!   los4(i) =rand()
+! enddo
+
  ii=1
  do while(danta(itype,ii,1) .lt. los4(1))
    ii=ii+1
@@ -217,7 +224,7 @@ contains
  use start, only: t,dt
  implicit none
  integer, dimension(2) :: SNno
-      write(*,'(a12,i4.4,a7,i4.4,a6)') 'explosions: ',SNno(1),' SN I, ',SNno(2),' SN II'
+      write(*,'(a12,i8,a7,i8,a6)') 'explosions: ',SNno(1),' SN I, ',SNno(2),' SN II'
       SNnohistory = SNnohistory + SNno
       write(*,'(a22,f8.4,a9,f8.4)') ' SNE frequency: SN I: ',SNno(1)/2./dt,', SN II: ',SNno(2)/2./dt
       write(*,'(a22,f8.4,a9,f8.4)') 'mean frequency: SN I: ',SNnohistory(1)/t,', SN II: ',SNnohistory(2)/t
@@ -246,10 +253,13 @@ contains
 
       function gasdev(x,y)
 
+      implicit none
       integer idum
       real x, y, x1, y1,  r
       real gasdev, rand(2)
       real fac,rsq
+      real, save :: gset
+      integer, save :: iset, irand
  
       if (iset.eq.0) then
 1       x1=2.*x-1.

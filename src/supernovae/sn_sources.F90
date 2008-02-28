@@ -312,10 +312,13 @@ module sn_sources
 
       function gasdev(x,y)
 
+      implicit none
       integer idum
       real x, y, x1, y1,  r
       real gasdev, rand(2)
       real fac,rsq
+      real, save :: gset
+      integer, save :: iset, irand
  
       if (iset.eq.0) then
 1       x1=2.*x-1.
@@ -338,6 +341,8 @@ module sn_sources
       endif
       return
       end function gasdev
+
+
 
 !=======================================================================
 !
