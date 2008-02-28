@@ -196,7 +196,7 @@ contains
       syslog=SYSTEM(syscmd)
     endif
     do j = 1,ny
-      write(syscmd2,'(a30,i3.3,a4,i3.3)') "echo -n '\b\b\b\b\b\b\b\b\b\b'",j," of ",ny
+!      write(syscmd2,'(a30,i3.3,a4,i3.3)') "echo -n '\b\b\b\b\b\b\b\b\b\b'",j," of ",ny
       if(proc .eq. 0) syslog=SYSTEM(syscmd2)
       yj = y(j)
       do i = 1,nx
@@ -213,10 +213,10 @@ contains
 	do k=1,nz
 	 zk=z(k)
 	 rs = sqrt(xi**2+yj**2+zk**2)
-         u(1,i,j,k) = rhoa + dprof(k)/cosh((rc/r_max)**mtr)
+         u(1,i,j,k) = rhoa + dprof(k)/cosh(min((rc/r_max)**mtr,100.0))
          u(1,i,j,k) = max(u(1,i,j,k), smalld)
-	 u(2,i,j,k) = vx*u(1,i,j,k)
-         u(3,i,j,k) = vy*u(1,i,j,k)
+!         u(2,i,j,k) = vx*u(1,i,j,k)
+!         u(3,i,j,k) = vy*u(1,i,j,k)
 	   if(i .ne. 1 .and. i .ne. nx) then
 	     iu = i+1
 	     id = i-1
@@ -260,7 +260,7 @@ contains
 #endif /* PRESSURECORRECTION */
 	     u(2,i,j,k)=-iOmega*yj*u(1,i,j,k)
              u(3,i,j,k)= iOmega*xi*u(1,i,j,k)
-         u(4,i,j,k) = vz*u(1,i,j,k)
+!         u(4,i,j,k) = vz*u(1,i,j,k)
 #ifndef ISO
          u(5,i,j,k) = c_si**2/(gamma-1.0)*u(1,i,j,k)
          u(5,i,j,k) = max(u(5,i,j,k), smallei)
