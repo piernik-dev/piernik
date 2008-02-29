@@ -1470,7 +1470,7 @@ module dataio
 #endif /* ISO */
 #ifdef COSM_RAYS
     use arrays, only : iecr
-#endif COSM_RAYS
+#endif /* COSM_RAYS */
    
     implicit none
     integer i,j,k
