@@ -14,7 +14,7 @@ module mod_mhdstep   ! SPLIT
 #endif /* SSP */
 #ifdef COSM_RAYS
     use cr_diffusion
-#endif COSM_RAYS
+#endif /* COSM_RAYS */
 #ifdef RESIST  
   use resistivity
 #endif /* RESIST */
