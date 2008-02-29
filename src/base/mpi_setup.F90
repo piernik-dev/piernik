@@ -62,8 +62,6 @@
     comm = MPI_COMM_WORLD
     call MPI_COMM_SIZE(comm, nproc, ierr)
 
-#ifndef GNU
-
     pid_proc = getpid()
     status = hostnm(host_proc)
     cwd_status =  getcwd(cwd_proc)
@@ -75,7 +73,6 @@
       if(.not. par_file_exist) stop '"problem.par" does not exist in the working directory'      
       tmp_log_file = trim(cwd)//'/tmp.log'      
     endif
-#endif /* GNU */
     
 !    call MPI_BCAST(cwd, 80, MPI_CHARACTER,        0, comm, ierr)
     
