@@ -936,6 +936,10 @@ module dataio
 #ifdef GRAV
     use arrays, only : gp
 #endif /* GRAV */
+#ifdef MASS_COMPENS
+    use arrays, only : dinit
+#endif /*  MASS_COMPENS */
+
     implicit none
 
     character(len=128) :: file_name_res,file_name_disp,file_name_last
@@ -1184,6 +1188,10 @@ module dataio
 #ifdef GRAV
     use arrays, only : gp
 #endif /* GRAV */
+#ifdef MASS_COMPENS
+    use arrays, only : dinit
+#endif /*  MASS_COMPENS */
+
     implicit none
 
     character(len=128) :: file_name_res,file_name_disp
