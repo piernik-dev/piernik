@@ -28,7 +28,7 @@ module start
   character, dimension(nvarsmx):: vars*4
   real dt_hdf, dt_res, dt_tsl, dt_log
   integer min_disk_space_MB, sleep_minutes, sleep_seconds
-  character*32  user_message_file, system_message_file
+  character*160  user_message_file, system_message_file
 
   real xmin, xmax, ymin, ymax, zmin, zmax
 
@@ -110,7 +110,6 @@ contains
   namelist /DOMAIN_LIMITS/ xmin, xmax, ymin, ymax, zmin, zmax  
   namelist /EQUATION_OF_STATE/ c_si, gamma, alpha
   namelist /NUMERICAL_SETUP/  cfl, smalld, smallei, &
-                              flux_limiter, freezing_speed, &
                               integration_order, &
                               dimensions, magnetic, nu_bulk, cfl_visc
 #ifdef SHEAR
