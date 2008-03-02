@@ -36,6 +36,9 @@ program mhd
   use gravity, only : grav_pot_3d
   use start, only : grav_model
 #endif /* GRAV */
+#ifdef SNE_DISTR
+    use sn_distr, only  : prepare_SNdistr
+#endif SNE_DISTR
 
   implicit none
   character output*3
@@ -77,6 +80,10 @@ program mhd
     endif
   endif
   call MPI_BCAST(nrestart, 1, MPI_INTEGER, 0, comm, ierr)
+
+#ifdef SNE_DISTR
+   call prepare_SNdistr
+#endif /* SNE_DISTR */
       
 
   if(nrestart .eq. 0) then
