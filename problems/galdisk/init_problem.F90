@@ -99,9 +99,10 @@ contains
 #ifndef ISO
     use start, only    :   smallei
 #endif /* ISO */
-#ifdef SNE_DISTR
-    use sn_distr, only  : prepare_SNdistr
-#endif SNE_DISTR
+
+! wolanie prepare_snedistr przeniesione do mhd - procedura musi byc wolana
+! rowniez po restarcie 
+
 #ifdef COSM_RAYS
     use arrays, only    :  iecr
     use start, only     : gamma_cr, beta_cr
@@ -295,10 +296,6 @@ contains
     write(*,*) ' '
     if(allocated(dprof)) deallocate(dprof)
 
-
-#ifdef SNE_DISTR
-   call prepare_SNdistr
-#endif SNE_DISTR
 
     return
   end subroutine init_prob  
