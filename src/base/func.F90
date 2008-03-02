@@ -1,6 +1,9 @@
 #include "mhd.def"
 module func
 contains
+
+! Te procedury powinny sie znalezc docelowo w jakims innym module. 
+
   function tvdb_emf(vh,vg,b,dt)
     implicit none
     real, dimension(:), intent(in) :: vh,vg,b
@@ -31,6 +34,9 @@ contains
     enddo
     return
   end function tvdb_emf
+
+!-----------------------------------------------------------------------------
+
 
 end module func
 
