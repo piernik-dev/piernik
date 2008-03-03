@@ -1,0 +1,37 @@
+#define GNU
+#undef FLX_BND
+/* adiabatic or isothermic */
+#undef ISO 	
+
+
+/* choosing scheme */
+#define  UNSPLIT_1D      /*scheme*/
+#undef  UNSPLIT_3D      /*scheme*/
+#undef SPLIT           /*scheme*/
+
+/* choosing solver */
+#undef  ORIG            /*solver*/
+#define  SSP            /*solver*/
+
+/* choosing freezing speed */
+#define   LOCAL_FR_SPEED
+#undef    GLOBAL_FR_SPEED
+
+/* choosing flux limiter */
+#define VANLEER
+#undef MINMOD
+#undef SUPERBEE
+
+#undef RESIST 		
+#undef VISC			
+#undef HEAT_COND	
+#undef COOL_HEAT
+#undef COSM_RAYS
+#define GRAV 
+#define GRAV_NULL
+#undef SELF_GRAV
+#undef GALAXY
+#undef SHEAR
+#undef SHEAR_MPI
+
+#define STANDARD
