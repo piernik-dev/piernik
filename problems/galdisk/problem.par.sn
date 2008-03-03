@@ -16,7 +16,7 @@
  $RESTART_CONTROL
     restart  = 'last'
     new_id   = ''
-    nrestart = -1
+    nrestart = 0
     resdel   = 2
  /
 
@@ -51,20 +51,20 @@
 
  $DOMAIN_LIMITS
     xmin   = 0.0
-    xmax   = 1.5e4
+    xmax   = 1.6e4
     ymin   = 0.0
-    ymax   = 1.5e4
+    ymax   = 1.6e4
     zmin   =-5.0e2
     zmax   = 5.0e2
  /
 
  $EQUATION_OF_STATE
-    c_si   = 7.0
+    c_si   = 10.0
     alpha  = 0.0
  /  
 
  $NUMERICAL_SETUP
-    cfl    = 0.5
+    cfl    = 0.8
     smalld = 1.e-8
     smallei= 1.e-8
     integration_order = 2
@@ -104,4 +104,6 @@
     d0      = 1.0
     r_max   = 1.2e4
     mtr      = 10
-/
+    mf_orient = 'null'
+ /
+
