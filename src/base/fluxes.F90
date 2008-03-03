@@ -131,6 +131,9 @@ module fluxes
         f = f+2.0*c/(a+b)
       endwhere      
 #endif /* VANLEER */
+#ifdef MONCEN
+        f = f+(sign(1.0,a)+sign(1.0,b))*min(2.*abs(a),2.*abs(b),0.5*abs(a+b))*0.5
+#endif /* MONCEN */
 #ifdef MINMOD
         f = f+(sign(1.0,a)+sign(1.0,b))*min(abs(a),abs(b))*0.5
 #endif /* MINMOD */
