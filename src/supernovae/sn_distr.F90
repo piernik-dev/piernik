@@ -43,7 +43,7 @@ contains
 #ifdef ISO
   EexplSN  = snenerg
 #else /* ISO */
-  EexplSN  = snenerg*erg
+  EexplSN  = snenerg*erg/(4./3.*pi*r0sn**3)
 #endif /* ISO */
   call random_seed()
 
@@ -92,6 +92,7 @@ contains
     real, dimension(3) :: snpos
     real, dimension(2) :: dtime
     integer, dimension(2) :: SNno, pot
+    real, allocatable, dimension(:,:) :: snposarray
     
 
     SNno(:)=0
@@ -105,13 +106,20 @@ contains
     endif
     call MPI_BCAST(SNno, 2, MPI_INTEGER, 0, comm, ierr)
     
-    do itype = 1,2
-    if(SNno(itype) .gt. 0) then
-      do isn=1,SNno(itype)
-	  call rand_galcoord(snpos)
-	  call add_explosion(snpos)
+    allocate(snposarray(sum(SNno,1),3))
+    if(proc .eq. 0) then
+      do itype = 1,2
+        if(SNno(itype) .gt. 0) then
+          do isn=1,SNno(itype)
+	    call rand_galcoord(snpos)
+	    snposarray(isn+SNno(1)*(itype-1),:)=snpos
+          enddo
+        endif
       enddo
     endif
+    call MPI_BCAST(snposarray, 3*sum(SNno,1), MPI_DOUBLE_PRECISION, 0, comm, ierr)
+    do isn=1,sum(SNno,1)
+      call add_explosion(snpos)
     enddo
 
     return
