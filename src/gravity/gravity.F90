@@ -59,6 +59,7 @@ allocate(gpotdisk(nx,ny,nz),gpothalo(nx,ny,nz),gpotbulge(nx,ny,nz))
     
   end subroutine grav_pot_3d
 
+#ifdef ARMS_POTENTIAL
   subroutine compute_arms_potential
   use arrays, only : nx,ny,nz,x,y,z,gp,gp1,gp2,gp3,gp4,gp5
   use constants, only : pi,km,sek,r_gc_sun,newtong,cm,mH
@@ -135,6 +136,7 @@ allocate(gpotdisk(nx,ny,nz),gpothalo(nx,ny,nz),gpotbulge(nx,ny,nz))
    end subroutine compute_arms_potential
 
 
+#endif /* ARMS_POTENTIAL */
 
 
 
