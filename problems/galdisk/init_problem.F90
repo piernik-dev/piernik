@@ -110,14 +110,14 @@ contains
     implicit none
  
     integer i,j,k,iu,id,ju,jd
-    real xi,yj,zk, rc, vx, vy, vz,rs
+    real xi,yj,zk, rc, vx, vy, rs
     real, allocatable ::dprof(:)
     real iOmega, dens0
     real dcmol, dcneut, dcion, dchot
     real xgradgp, ygradgp, sfq
 #ifdef PRESSURECORRECTION
     real xgradp, ygradp
-#endif PRESSURECORRECTION
+#endif /* PRESSURECORRECTION */
     character syscmd*37,syscmd2*40,syscmd3*37
     integer system, syslog
     real,allocatable :: dxzprof(:,:),idxzprof(:,:),jdxzprof(:,:)
@@ -216,8 +216,6 @@ contains
 	 rs = sqrt(xi**2+yj**2+zk**2)
          u(1,i,j,k) = rhoa + dprof(k)/cosh(min((rc/r_max)**mtr,100.0))
          u(1,i,j,k) = max(u(1,i,j,k), smalld)
-!         u(2,i,j,k) = vx*u(1,i,j,k)
-!         u(3,i,j,k) = vy*u(1,i,j,k)
 	   if(i .ne. 1 .and. i .ne. nx) then
 	     iu = i+1
 	     id = i-1
@@ -261,12 +259,12 @@ contains
 #endif /* PRESSURECORRECTION */
 	     u(2,i,j,k)=-iOmega*yj*u(1,i,j,k)
              u(3,i,j,k)= iOmega*xi*u(1,i,j,k)
-!         u(4,i,j,k) = vz*u(1,i,j,k)
+             u(4,i,j,k) = 0.0
 #ifndef ISO
          u(5,i,j,k) = c_si**2/(gamma-1.0)*u(1,i,j,k)
          u(5,i,j,k) = max(u(5,i,j,k), smallei)
 	 u(5,i,j,k) = u(5,i,j,k) +0.5*(u(2,i,j,k)**2+u(3,i,j,k)**2+u(4,i,j,k)**2)/u(1,i,j,k)
-#endif
+#endif /* ISO */
 
 #ifdef COSM_RAYS
           u(iecr,i,j,k)   =  beta_cr*c_si**2 * u(idna,i,j,k)/(gamma_cr-1.0)
@@ -289,7 +287,7 @@ contains
 	 end select
 #ifndef ISO
          u(5,i,j,k)   = u(5,i,j,k) +0.5*sum(b(:,i,j,k)**2,1)
-#endif
+#endif /* ISO */
         enddo
       enddo
     enddo
