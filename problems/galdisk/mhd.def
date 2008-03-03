@@ -1,5 +1,6 @@
 
 #undef DEBUG
+#undef GNU
 
 /*======= re-setup needed ==========*/
 /* choosing scheme */
@@ -29,6 +30,7 @@
 
 /* choosing flux limiter */
 #define VANLEER
+#undef MONCEN
 #undef MINMOD
 #undef SUPERBEE
 
@@ -40,17 +42,12 @@
 #define GRAV
 #define GRAV_GAL_VOLLMER
 #undef GALAXY
-#define DCOLUMNUSE
 #undef PRESSURECORRECTION
 #define GALACTIC_DISK
+#undef ARMS_POTENTIAL
 #define SNE_DISTR
 #undef SN_SRC
 #undef SHEAR
 #undef FLX_BND
 
-/* writing output info into files seperate for each process */
-#undef FILEINFO
-#undef ROTINFO
-#undef HDFSWEEP
-#undef GRV1ORD
 
