@@ -1,13 +1,13 @@
  $DOMAIN_SIZES
-    nxd = 256
-    nyd = 256
+    nxd = 512
+    nyd = 512
     nzd = 1
     nb  = 4
  /  
 
  $MPI_BLOCKS
-    pxsize = 1
-    pysize = 1
+    pxsize = 2
+    pysize = 2
     pzsize = 1    
  /  
 
@@ -21,12 +21,12 @@
  /
 
  $END_CONTROL
-    tend   = 10.0
+    tend   = 0.5
     nend   = 90000 
  /
 
  $OUTPUT_CONTROL
-    dt_hdf  = 0.48
+    dt_hdf  = 0.01
     dt_res  = 0.0
     dt_log  = 0.00001
     dt_tsl  = 0.00001
@@ -84,11 +84,16 @@
  /
  
  $RESISTIVITY
+   eta_0      = 1.0e-4
+   cfl_resist = 0.5
+   eta_1      = 0.0
+   j_crit     = 1.0
+   demag_max  = 0.01
  /
 
  $PROBLEM_CONTROL
-    problem_name ='otvortex'
-    run_id  =  'tst'
+    problem_name = 'otvortex'
+    run_id       = 'rs4'
  /
 
  $SHEARING

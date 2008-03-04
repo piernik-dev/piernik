@@ -1,13 +1,13 @@
  $DOMAIN_SIZES
-    nxd = 800
-    nyd = 10
+    nxd = 512
+    nyd = 512
     nzd = 1
     nb  = 4
  /  
 
  $MPI_BLOCKS
-    pxsize = 1
-    pysize = 1
+    pxsize = 2
+    pysize = 2
     pzsize = 1    
  /  
 
@@ -21,12 +21,12 @@
  /
 
  $END_CONTROL
-    tend   = 10.0
+    tend   = 0.5
     nend   = 90000 
  /
 
  $OUTPUT_CONTROL
-    dt_hdf  = 10.0
+    dt_hdf  = 0.01
     dt_res  = 0.0
     dt_log  = 0.00001
     dt_tsl  = 0.00001
@@ -43,8 +43,8 @@
  / 
 
  $BOUNDARIES
-    bnd_xl = 'out'  
-    bnd_xr = 'out'  
+    bnd_xl = 'per'  
+    bnd_xr = 'per'  
     bnd_yl = 'per'  
     bnd_yr = 'per'  
     bnd_zl = 'per'  
@@ -53,7 +53,7 @@
 
  $DOMAIN_LIMITS
     xmin   = 0.0
-    xmax   = 100.0
+    xmax   = 1.0
     ymin   = 0.0
     ymax   = 1.0
     zmin   = -0.5
@@ -62,15 +62,15 @@
 
  $EQUATION_OF_STATE
     c_si   = 1.0
-    gamma  = 2.0
+    gamma  = 1.666667
     alpha  = 0.0
  /  
 
  $NUMERICAL_SETUP
     cfl    = 0.7
-    smalld = 1.e-3
-    smallei= 1.e-5
-    integration_order = 2
+    smalld = 1.e-4
+    smallei= 1.e-7
+    integration_order = 3
     magnetic = 'yes'
     dimensions = '2dxy'
     nu_bulk    = 0.0001
@@ -84,16 +84,15 @@
  /
  
  $RESISTIVITY
+   eta_0      = 1.0e-6
+   cfl_resist = 0.5
+   eta_1      = 0.0
+   j_crit     = 1.0
  /
 
  $PROBLEM_CONTROL
-    problem_name ='shock2d'
-    run_id  =  'tst'
-    d0      = 1.0
-    r0      = 0.125
-    bx0     = 0.0
-    by0     = 0.0
-    bz0     = 0.0
+    problem_name = 'otvortex'
+    run_id       = 'rs6'
  /
 
  $SHEARING

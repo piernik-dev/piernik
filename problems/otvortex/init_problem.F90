@@ -103,6 +103,7 @@ contains
     pre =  5.0/(12.0*pi)
     b0  = 1./sqrt(fpi)
     vz = 0.0
+    bz0 = 0.0
 
     do j=1,ny
        do i = 1,nx
@@ -110,9 +111,9 @@ contains
        enddo
     enddo
 
-    b(1,1:nx,1:ny-1,1)   = (A(1:nx,2:ny,1) - A(1:nx,1:ny-1,1))/dy
-    b(2,1:nx-1,1:ny,1)   = (A(2:nx,1:ny,1) - A(1:nx-1,1:ny,1))/dx
-    b(3,:,:,:)           =  0.0
+!    b(1,1:nx,1:ny-1,1)   = (A(1:nx,2:ny,1) - A(1:nx,1:ny-1,1))/dy
+!    b(2,1:nx-1,1:ny,1)   = (A(2:nx,1:ny,1) - A(1:nx-1,1:ny,1))/dx
+!    b(3,:,:,:)           =  0.0
 
     do j = 1,ny
       yj = y(j)
@@ -123,6 +124,8 @@ contains
 
           vx  = -dsin(dpi*yj)
           vy  = dsin(dpi*xi)
+          bx  = b0*vx
+          by  = b0*dsin(fpi*xi)
 
           
           u(idna,i,j,k) = rho
@@ -135,6 +138,9 @@ contains
           u(iena,i,j,k) = max(u(iena,i,j,k), smallei)
           u(iena,i,j,k) = u(iena,i,j,k) +0.5*(vx**2+vy**2+vz**2)*u(idna,i,j,k)
 #endif
+          b(1,i,j,k)  = bx
+          b(2,i,j,k)  = by
+          b(3,i,j,k)  = bz
 
 #ifndef ISO	  
           u(iena,i,j,k)   = u(iena,i,j,k) +0.5*sum(b(:,i,j,k)**2,1)

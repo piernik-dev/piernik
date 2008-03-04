@@ -22,7 +22,7 @@
 #undef MINMOD
 #undef SUPERBEE
 
-#undef RESIST 		
+#define RESIST 		
 #undef VISC			
 #undef HEAT_COND	
 #undef COOL_HEAT
