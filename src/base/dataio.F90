@@ -43,15 +43,6 @@ module dataio
 !  external ctoi
   character hostfull*(80), host*8, fhost*10, fpid*10
   integer :: pid, uid, ihost, scstatus 
-
-! MH: jesli  te deklaracje konfliktuja w gfortranie 
-! to pewnie trzeba je objac dyrektywami prekompilatora 
-#ifndef GNU
-  integer :: getcwd, hostnm, getpid, system
-  external getcwd, hostnm, getpid, system
-#endif /* GNU */
-! ----------------------------------------------------
-
   real vx_max, vy_max, vz_max, va2max,va_max, cs2max, cs_max, &
        dens_min, dens_max, pres_min, pres_max, b_min, b_max, temp_min, temp_max
 #ifdef COSM_RAYS
@@ -125,6 +116,8 @@ module dataio
   subroutine init_dataio
     use start, only : dt_hdf
     implicit none
+    integer(kind=1) :: getpid
+    integer(kind=1) :: hostnm
     wait  = .false.
     tsl_firstcall = .true.
 
@@ -145,9 +138,9 @@ module dataio
     if(psize(2) .gt. 1) pc2 = '0x'
     if(psize(3) .gt. 1) pc3 = '0x'
 
-    pid = GetPid()
+    pid = getpid()
             
-    scstatus = HostNm(hostfull)
+    scstatus = hostnm(hostfull)
     ihost = index(hostfull,'.')
     if (ihost .eq. 0) ihost = index(hostfull,' ')
     host = hostfull(1:ihost-1)
@@ -953,6 +946,8 @@ module dataio
     integer, dimension(1) :: comp_prm
     integer :: sfstart, sfend, sfsnatt, sfcreate, sfwdata, sfscompress, sfendacc &
              , sfdimid, sfsdmname, sfsdscale
+
+    integer(kind=1) :: system
 
 !- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -1895,6 +1890,7 @@ module dataio
       real rsend(2), rrecv(2), rsp(1), rsp_min(1)
       integer tsleep
 
+      integer(kind=1) :: system
 
 !-------------------------------------------------------------------------
 !     Configurable parameters in problem.par
@@ -2152,6 +2148,7 @@ module dataio
       character*160 syscom
       logical exist
       integer i
+      integer(kind=1) :: system
        
       msg=''
       user_msg_time(9)=''
@@ -2180,7 +2177,7 @@ module dataio
       call rm_file(user_last_msg_file)
       
       syscom='ls -l --full-time msg >'//user_last_msg_file
-        scstatus = system(syscom)
+      scstatus = system(syscom)
       open(93,file=user_last_msg_file,status='old',err=888)
         read(93,fmt=*,err=888,end=888) (user_msg_time(i), i=1,10) 
       close(93)
@@ -2253,6 +2250,7 @@ module dataio
       character*(*) file_name
       character*160 syscom
       logical exist
+      integer(kind=1) :: system
 
 !     delete file if exists
       inquire(file = file_name, exist = exist)
