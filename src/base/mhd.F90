@@ -38,7 +38,7 @@ program mhd
 #endif /* GRAV */
 #ifdef SNE_DISTR
     use sn_distr, only  : prepare_SNdistr
-#endif SNE_DISTR
+#endif /* SNE_DISTR */
 #ifdef MASS_COMPENS
     use start,  only        :   init_mass, mass_loss, mass_loss_tot   
     use init_problem,  only :   save_init_dens, get_init_mass, mass_loss_compensate   
@@ -48,12 +48,8 @@ program mhd
   character output*3
   integer system_status
   character system_command*160, cmd*256
-#ifndef GNU
-  external :: system
-  integer  :: system
-#endif /* GNU */
+  integer(kind=1)  :: system
   integer tsleep
-!  real, dimension(:,:,:),allocatable :: ala
 
   character tmp_log_file*(100)
 

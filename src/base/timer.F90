@@ -8,17 +8,14 @@ module timer
   integer       nzones, cpuhours, cpumins, cpusecs , wchours , wcmins  , wcsecs 
   real          zcps,  cputot, cpuallp, wctot, cpu_start, cpu_stop   
 !  real(kind=4)  etime, dtime
-  real(kind=4)  tarray(2)
+  real(kind=4),dimension(2) ::  tarray
   integer       iarray(3)
 
 contains
 
   subroutine timer_start
     implicit none
-#ifndef GNU
-    external      dtime
-    real(kind=4) dtime
-#endif /* GNU */
+    real(kind=4) :: dtime
 
 !
 !      Initialise cpu and wall clocks.  "cputot" will be the total cpu
@@ -44,10 +41,7 @@ contains
     use dataio, only : log_file,log_lun
 
     implicit none
-#ifndef GNU
-    external      dtime
     real(kind=4) dtime
-#endif /* GNU */
 
 !      Final wall clock time, expressed in hours, minutes, and seconds.
 !

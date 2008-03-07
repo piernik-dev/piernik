@@ -49,10 +49,7 @@
     character*(8)  :: host_proc, host_all(0:1024)
     integer        :: pid_proc,  pid_all (0:1024)
     
-#ifndef GNU
-    integer  :: getcwd, getpid, hostnm
-    external :: getcwd, getpid, hostnm 
-#endif /* GNU */
+    integer(kind=1)  :: getcwd, getpid, hostnm
     character par_file*(100), tmp_log_file*(100), cwd_file*9
     integer :: cwd_status, scstatus 
     logical par_file_exist
@@ -66,7 +63,11 @@
     status = hostnm(host_proc)
     cwd_status =  getcwd(cwd_proc)
     if(cwd_status .ne. 0) stop 'mpi_setup: problems accessing working directory'
-  
+#ifdef DEBUG    
+    write(*,*) 'pid  in mpi_setup: ',pid_proc
+    write(*,*) 'host in mpi_setup: ',host_proc
+    write(*,*) 'cwd  in mpi_setup: ',cwd_proc
+#endif
     if(proc .eq. 0) then
       par_file = trim(cwd)//'/problem.par'
       inquire(file=par_file, exist=par_file_exist)
