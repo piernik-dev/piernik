@@ -39,6 +39,10 @@ program mhd
 #ifdef SNE_DISTR
     use sn_distr, only  : prepare_SNdistr
 #endif SNE_DISTR
+#ifdef MASS_COMPENS
+    use start,  only        :   init_mass, mass_loss, mass_loss_tot   
+    use init_problem,  only :   save_init_dens, get_init_mass, mass_loss_compensate   
+#endif  /* MASS_COMPENS */
 
   implicit none
   character output*3
