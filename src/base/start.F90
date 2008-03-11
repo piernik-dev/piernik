@@ -5,6 +5,7 @@ module start
 ! Written by: M. Hanasz, January 2006
 
   use mpi_setup
+  
 
   implicit none
 
@@ -35,6 +36,10 @@ module start
   real c_si, gamma, alpha 
 
   real cfl, smalld, smallei, nu_bulk, cfl_visc
+#ifdef VZ_LIMITS
+  real   :: floor_vz, ceil_vz 
+#endif /* VZ_LIMITS */    
+  
   real tune_zeq, tune_zeq_bnd 
   character*16 flux_limiter, freezing_speed, dimensions, magnetic
   integer integration_order, istep
@@ -110,8 +115,12 @@ contains
   namelist /DOMAIN_LIMITS/ xmin, xmax, ymin, ymax, zmin, zmax  
   namelist /EQUATION_OF_STATE/ c_si, gamma, alpha
   namelist /NUMERICAL_SETUP/  cfl, smalld, smallei, &
+#ifdef VZ_LIMITS
+                              floor_vz, ceil_vz, &
+#endif /* VZ_LIMITS */    
                               integration_order, &
                               dimensions, magnetic, nu_bulk, cfl_visc
+			      
 #ifdef SHEAR
   namelist /SHEARING/ omega, qshear
 #endif
@@ -150,6 +159,9 @@ contains
 #ifdef SNE_DISTR
   namelist /SN_DISTR/ snenerg, sn1time, sn2time, r0sn
 #endif
+
+
+
     par_file = trim(cwd)//'/problem.par'
     tmp_log_file = trim(cwd)//'/tmp.log'
 
@@ -185,7 +197,7 @@ contains
     sleep_minutes   = 0
     sleep_seconds   = 0
     user_message_file   = trim(cwd)//'/msg'
-    system_message_file = '/etc/ups/user/msg'
+    system_message_file = '/tmp/piernik_msg'
       
     xmin   = 0.0
     xmax   = 1.0
@@ -212,6 +224,10 @@ contains
     magnetic  = 'yes'
     nu_bulk   = 0.0
     cfl_visc  = 0.4
+#ifdef VZ_LIMITS
+    floor_vz  = -1.e99
+    ceil_vz   =  1.e99 
+#endif /* VZ_LIMITS */    
 
 #ifdef GRAV
     grav_model  = 'null'                     
@@ -448,12 +464,16 @@ contains
 !                              flux_limiter, freezing_speed,
 !                              integration_order, 
 !                              dimensions, magnetic, nu_bulk, cfl_visc
-
+!                              floor_vz, ceil_vz
       rbuff(80) = cfl   
       rbuff(83) = smalld
       rbuff(84) = smallei
       rbuff(85) = nu_bulk
       rbuff(86) = cfl_visc
+#ifdef VZ_LIMITS
+      rbuff(87) = floor_vz
+      rbuff(88) = ceil_vz 
+#endif /* VZ_LIMITS */    
 
       cbuff(80) = flux_limiter
       cbuff(81) = freezing_speed
@@ -660,12 +680,17 @@ contains
 !                              flux_limiter, freezing_speed,    
 !                              integration_order,
 !                              dimensions, magnetic, nu_bulk, cfl_visc
+!                              floor_vz, ceil_vz 
 
       cfl                 = rbuff(80)   
       smalld              = rbuff(83)
       smallei             = rbuff(84)
       nu_bulk             = rbuff(85) 
       cfl_visc            = rbuff(86) 
+#ifdef VZ_LIMITS
+      floor_vz            = rbuff(87) 
+      ceil_vz             = rbuff(88)  
+#endif /* VZ_LIMITS */    
 
 
       flux_limiter        = trim(cbuff(80)) 
