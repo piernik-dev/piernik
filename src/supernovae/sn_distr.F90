@@ -15,16 +15,15 @@ module sn_distr
 
 contains
 
-!!-----------------------------------------------------------------------------
+!-----------------------------------------------------------------------------
 
 
   subroutine prepare_SNdistr
   use start, only: snenerg,sn1time,sn2time,r0sn
   use grid, only: dx,dy,dz
-  use constants, only: pi,kpc,pc,year
-#ifndef ISO
-  use constants, only: erg
-#endif /* ISO */
+
+  use constants
+
   implicit none
   real RmaxI, RmaxII, rcl, rc
   integer i,imax
@@ -43,7 +42,7 @@ contains
 #ifdef ISO
   EexplSN  = snenerg
 #else /* ISO */
-  EexplSN  = snenerg*erg/(4./3.*pi*r0sn**3)
+  EexplSN  = snenerg*erg
 #endif /* ISO */
   call random_seed()
 
@@ -92,7 +91,6 @@ contains
     real, dimension(3) :: snpos
     real, dimension(2) :: dtime
     integer, dimension(2) :: SNno, pot
-    real, allocatable, dimension(:,:) :: snposarray
     
 
     SNno(:)=0
@@ -106,20 +104,13 @@ contains
     endif
     call MPI_BCAST(SNno, 2, MPI_INTEGER, 0, comm, ierr)
     
-    allocate(snposarray(sum(SNno,1),3))
-    if(proc .eq. 0) then
-      do itype = 1,2
-        if(SNno(itype) .gt. 0) then
-          do isn=1,SNno(itype)
-	    call rand_galcoord(snpos)
-	    snposarray(isn+SNno(1)*(itype-1),:)=snpos
-          enddo
-        endif
+    do itype = 1,2
+    if(SNno(itype) .gt. 0) then
+      do isn=1,SNno(itype)
+	  call rand_galcoord(snpos)
+	  call add_explosion(snpos)
       enddo
     endif
-    call MPI_BCAST(snposarray, 3*sum(SNno,1), MPI_DOUBLE_PRECISION, 0, comm, ierr)
-    do isn=1,sum(SNno,1)
-      call add_explosion(snpos)
     enddo
 
     return
