@@ -2255,7 +2255,7 @@ module dataio
 !     delete file if exists
       inquire(file = file_name, exist = exist)
       if(exist) then
-        syscom='rm -f'//file_name
+        syscom='rm -f '//trim(file_name)
         scstatus = system(syscom)
       endif
 
