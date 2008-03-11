@@ -12,6 +12,8 @@ module init_problem
   character problem_name*32,run_id*3
   character mf_orient*32
 
+  real,allocatable  :: omega_xy(:,:)
+
   namelist /PROBLEM_CONTROL/  problem_name, run_id, &
                               rhoa,d0,r_max,mtr, mf_orient
 
@@ -120,7 +122,7 @@ contains
 #endif /* PRESSURECORRECTION */
     character syscmd*37,syscmd2*40,syscmd3*37
     integer system, syslog
-    real,allocatable :: dxzprof(:,:),idxzprof(:,:),jdxzprof(:,:)
+    real,allocatable  :: dxzprof(:,:),idxzprof(:,:),jdxzprof(:,:)        
     integer,allocatable :: xproc(:), yproc(:)
     integer xtag, iproc, ilook, jproc, ytag
 
@@ -128,6 +130,10 @@ contains
     allocate(dxzprof(nxt,nz))
     allocate(idxzprof(nx,nz))
     allocate(jdxzprof(nx,nz))
+    allocate(omega_xy(nx,ny))
+    
+    
+    
     if(pcoords(2) .eq. 0) then
     do i = 1,nx
       rc = x(i)
@@ -193,12 +199,12 @@ contains
     deallocate(idxzprof,jdxzprof)
 
     if(proc .eq. 0) then
-      write(syscmd,'(a34,i3.3)') "echo -n 'second loop: j = 001 of '",ny
-      syslog=SYSTEM(syscmd)
+!      write(syscmd,'(a34,i3.3)') "echo -n 'second loop: j = 001 of '",ny
+!      syslog=SYSTEM(syscmd)
     endif
     do j = 1,ny
 !      write(syscmd2,'(a30,i3.3,a4,i3.3)') "echo -n '\b\b\b\b\b\b\b\b\b\b'",j," of ",ny
-      if(proc .eq. 0) syslog=SYSTEM(syscmd2)
+!      if(proc .eq. 0) syslog=SYSTEM(syscmd2)
       yj = y(j)
       do i = 1,nx
         xi = x(i)
@@ -257,6 +263,8 @@ contains
 #else /* PRESSURECORRECTION */
            iOmega=sqrt(abs(sqrt(xgradgp**2+ygradgp**2))/rc)
 #endif /* PRESSURECORRECTION */
+           omega_xy(i,j) = iomega
+                 
 	     u(2,i,j,k)=-iOmega*yj*u(1,i,j,k)
              u(3,i,j,k)= iOmega*xi*u(1,i,j,k)
              u(4,i,j,k) = 0.0
@@ -298,6 +306,91 @@ contains
     return
   end subroutine init_prob  
 
+!=============================================================================
+! Te procedury powinny sie znalezc docelowo w jakims innym module. 
+
+  subroutine mass_loss_compensate
+  
+    use arrays, only    :   u,x,y, nx,ny
+    use arrays, only    :   idna, imxa, imya, iena
+    use arrays, only    :   dinit   
+    use start,  only    :   smalld, init_mass, mass_loss, mass_loss_tot   
+    implicit none
+    
+    real tot_mass, dmass
+    real r
+    integer i,j
+    
+      call total_mass(tot_mass)
+
+      mass_loss = max(0.0,init_mass - tot_mass) 
+
+      dmass =  mass_loss/init_mass
+
+      do i=1,nx
+        do j=1,ny
+          u(idna,i,j,:) = u(idna,i,j,:) + dmass * dinit(i,j,:)
+          u(imxa,i,j,:) = u(imxa,i,j,:) - dmass*omega_xy(i,j)*y(j)*(dinit(i,j,:)-smalld)
+          u(imya,i,j,:) = u(imya,i,j,:) + dmass*omega_xy(i,j)*x(i)*(dinit(i,j,:)-smalld)
+
+#ifndef ISO
+          u(iena,i,j,:) = u(iena,i,j,:) + dmass*(c_si**2/(gamma-1.0)*dinit(i,j,:) 
+	  u(iena,i,j,:) = u(iena,i,j,:) + dmass*0.5*omega_xy(i,j)**2*(x(i)**2 + y(j)**2)*dinit(i,j,:)
+#endif /* ISO */
+        enddo
+      enddo
+
+  end subroutine mass_loss_compensate
+  
+!-----------------------------------------------------------------------------
+   
+  subroutine save_init_dens
+  
+    use arrays, only    :  idna,is,ie,js,je,ks,ke  
+    use arrays, only    :  u, dinit  
+    use grid,   only    :  dvol 
+    use start,  only    :  init_mass  
+  
+    implicit none
+    real mass
+    
+      dinit(:,:,:) = u(idna,:,:,:)
+      mass = sum(dinit(is:ie,js:je,ks:ke)) * dvol
+      call MPI_ALLREDUCE(mass, init_mass, 1, mpi_real8, mpi_sum, comm3d, ierr)
+
+  end subroutine save_init_dens
+  
+!-----------------------------------------------------------------------------
+   
+  subroutine get_init_mass
+    use arrays, only    :  idna,is,ie,js,je,ks,ke  
+    use arrays, only    :  dinit   
+    use grid,   only    :  dvol 
+    use start,  only    :  init_mass
+
+    implicit none
+    real mass
+    
+      mass = sum(dinit(is:ie,js:je,ks:ke)) * dvol
+      call MPI_ALLREDUCE(mass, init_mass, 1, mpi_real8, mpi_sum, comm3d, ierr)
+
+  end subroutine get_init_mass
+  
+!-----------------------------------------------------------------------------
+   
+  
+  subroutine total_mass(tmass)
+    use arrays, only    :  idna,is,ie,js,je,ks,ke  
+    use arrays, only    :  u   
+    use grid,   only    :  dvol 
+
+    implicit none
+    real mass, tmass
+   
+      mass = sum(u(idna,is:ie,js:je,ks:ke)) * dvol
+      call MPI_ALLREDUCE(mass, tmass, 1, mpi_real8, mpi_sum, comm3d, ierr)
+
+  end subroutine total_mass
 !-----------------------------------------------------------------------------------------------------------------------------------
 
 end module init_problem

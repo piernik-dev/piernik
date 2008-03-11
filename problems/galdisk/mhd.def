@@ -46,8 +46,10 @@
 #define GALACTIC_DISK
 #undef ARMS_POTENTIAL
 #define SNE_DISTR
+#define MASS_COMPENS
 #undef SN_SRC
 #undef SHEAR
 #undef FLX_BND
+#define VZ_LIMITS
 
 
