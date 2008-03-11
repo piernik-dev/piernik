@@ -45,6 +45,11 @@ module tv ! split orig
 #ifdef COSM_RAYS
     use start, only : gamma_cr, cr_active
 #endif /* COSM_RAYS */
+#ifdef VZ_LIMITS
+    use arrays, only : z
+    use start, only : floor_vz, ceil_vz
+#endif /* VZ_LIMITS */    
+
 
     implicit none
     integer :: i1,i2, n, istep
@@ -68,6 +73,7 @@ module tv ! split orig
 #ifdef COSM_RAYS
     real, dimension(n)    :: divv,decr,gpcr,ecr,tmp
 #endif /* COSM_RAYS */
+
                             
     w         = 0.0
     cfr       = 0.0
@@ -152,7 +158,19 @@ module tv ! split orig
 #endif /* GRAV */
 
     u1 = ul1 + ur1
-    u1(1,:) = max(u1(1,:), smalld)
+    u1(idna,:) = max(u1(idna,:), smalld)
+
+
+#ifdef VZ_LIMITS
+    if(sweep .eq. 'zsweep') then
+      where((z(:) .gt. 0.0) .and. (u1(imxa,:) .lt.  floor_vz*u(idna,:)))      
+        u1(imxa,:) =  floor_vz*u(idna,:)
+      endwhere       
+      where((z(:) .lt. 0.0) .and. (u1(imxa,:) .gt. -floor_vz*u(idna,:)))
+        u1(imxa,:) = -floor_vz*u(idna,:) 
+      endwhere
+    endif  
+#endif /* VZ_LIMITS */  
           
 #ifdef COSM_RAYS
     select case (sweep)
@@ -187,7 +205,20 @@ module tv ! split orig
     eint = max(eint,smallei)
     u1(5,:) = eint+ekin+emag
 #endif /* ISO */
-    
+
+#ifdef VZ_LIMITS
+! Dwukrotne ograniczanie vz moze byc zbedne (patrz wyzej)
+! Ten fragment bedzie mozna ewentualnie wykasowac po testach
+    if(sweep .eq. 'zsweep') then
+      where((z(:) .gt. 0.0) .and. (u1(imxa,:) .lt.  floor_vz*u(idna,:)))      
+        u1(imxa,:) =  floor_vz*u(idna,:)
+      endwhere       
+      where((z(:) .lt. 0.0) .and. (u1(imxa,:) .gt. -floor_vz*u(idna,:)))
+        u1(imxa,:) = -floor_vz*u(idna,:) 
+      endwhere
+    endif  
+#endif /* VZ_LIMITS */    
+
       u(:,:) = u1(:,:)
   enddo
 
