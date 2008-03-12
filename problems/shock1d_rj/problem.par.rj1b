@@ -1,7 +1,7 @@
  $DOMAIN_SIZES
     nxd = 512
-    nyd = 10
-    nzd = 1
+    nyd = 4
+    nzd = 4
     nb  = 4
  /  
 
@@ -72,7 +72,7 @@
     smallei= 1.e-5
     integration_order = 3
     magnetic = 'yes'
-    dimensions = '2dxy'
+    dimensions = '3d'
     nu_bulk    = 0.0001
     cfl_visc   = 0.4
  /

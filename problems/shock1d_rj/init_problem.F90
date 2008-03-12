@@ -172,6 +172,7 @@ contains
         enddo
       enddo
     enddo
+    write(*,*) maxval(b(3,:,:,:)), minval(b(3,:,:,:))
     return
   end subroutine init_prob  
   
