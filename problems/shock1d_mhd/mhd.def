@@ -1,4 +1,3 @@
-#define GNU
 #undef FLX_BND
 /* adiabatic or isothermic */
 #undef ISO 	
@@ -6,8 +5,8 @@
 
 /* choosing scheme */
 #undef  UNSPLIT_1D      /*scheme*/
-#undef  UNSPLIT_3D      /*scheme*/
-#define SPLIT           /*scheme*/
+#define UNSPLIT_3D      /*scheme*/
+#undef  SPLIT           /*scheme*/
 
 /* choosing solver */
 #undef  ORIG            /*solver*/

@@ -1,5 +1,5 @@
  $DOMAIN_SIZES
-    nxd = 800
+    nxd = 512
     nyd = 10
     nzd = 1
     nb  = 4
@@ -21,12 +21,12 @@
  /
 
  $END_CONTROL
-    tend   = 10.0
+    tend   = 0.08
     nend   = 90000 
  /
 
  $OUTPUT_CONTROL
-    dt_hdf  = 10.0
+    dt_hdf  = 0.001
     dt_res  = 0.0
     dt_log  = 0.00001
     dt_tsl  = 0.00001
@@ -53,7 +53,7 @@
 
  $DOMAIN_LIMITS
     xmin   = 0.0
-    xmax   = 100.0
+    xmax   = 1.0
     ymin   = 0.0
     ymax   = 1.0
     zmin   = -0.5
@@ -62,15 +62,15 @@
 
  $EQUATION_OF_STATE
     c_si   = 1.0
-    gamma  = 2.0
+    gamma  = 1.6666666666667
     alpha  = 0.0
  /  
 
  $NUMERICAL_SETUP
-    cfl    = 0.7
+    cfl    = 0.1
     smalld = 1.e-3
     smallei= 1.e-5
-    integration_order = 2
+    integration_order = 3
     magnetic = 'yes'
     dimensions = '2dxy'
     nu_bulk    = 0.0001
@@ -84,16 +84,28 @@
  /
  
  $RESISTIVITY
+   eta_0 = 1.e-6
  /
 
  $PROBLEM_CONTROL
-    problem_name ='shock2d'
-    run_id  =  'tst'
-    d0      = 1.0
-    r0      = 0.125
-    bx0     = 0.0
-    by0     = 0.0
-    bz0     = 0.0
+    problem_name ='shock1d'
+    run_id  =  'rj1'
+    dl      =  1.0
+    vxl     = 10.0
+    vyl     =  0.0
+    vzl     =  0.0
+    bxl     =  1.410473959  ! 5.0/sqrt(4pi)
+    byl     =  1.410473959  ! 5.0/sqrt(4pi)
+    bzl     =  0.0
+    el      =  20.0
+    dr      =  1.0
+    vxr     =  -10.0
+    vyr     =  0.0
+    vzr     =  0.0
+    bxr     =  1.410473959
+    byr     =  1.410473959
+    bzr     =  0.0
+    er      =  1.0
  /
 
  $SHEARING
