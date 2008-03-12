@@ -1,7 +1,5 @@
-#undef FLX_BND
 /* adiabatic or isothermic */
 #undef ISO 	
-
 
 /* choosing scheme */
 #undef  UNSPLIT_1D      /*scheme*/
@@ -32,5 +30,6 @@
 #undef GALAXY
 #undef SHEAR
 #undef SHEAR_MPI
+#undef FLX_BND
 
 #define STANDARD
