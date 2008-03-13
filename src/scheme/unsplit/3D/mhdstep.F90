@@ -36,6 +36,7 @@ subroutine mhdstep
 
   call initials
 
+
   do istep=1,integration_order
     if(magfield) call magfieldbyzx
     call fluidx                           ! x sweep
@@ -76,14 +77,14 @@ end subroutine mhdstep
       call advectby_x
 #ifdef RESIST
       call diffuseby_x
-#endif RESIST
+#endif /* RESIST */
 
     if(dimensions .eq. '3d') then
 
       call advectbz_x
 #ifdef RESIST
       call diffusebz_x
-#endif RESIST
+#endif /* RESIST */
 
     endif
 
@@ -98,14 +99,14 @@ end subroutine mhdstep
       call advectbz_y
 #ifdef RESIST
       call diffusebz_y
-#endif RESIST
+#endif /* RESIST */
 
     endif
 
       call advectbx_y
 #ifdef RESIST
       call diffusebx_y
-#endif RESIST
+#endif /* RESIST */
 
   end subroutine magfieldbzxy
 
@@ -116,12 +117,12 @@ end subroutine mhdstep
       call advectbx_z
 #ifdef RESIST
       call diffusebx_z
-#endif RESIST
+#endif /* RESIST */
 
       call advectby_z
 #ifdef RESIST
       call diffuseby_z
-#endif RESIST
+#endif /* RESIST */
 
   end subroutine magfieldbxyz
 
