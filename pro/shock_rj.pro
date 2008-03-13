@@ -9,14 +9,12 @@ PRO PLOTMHD,ff=first,lf=last,var=var,zoom=sf,log=llog,min=amin,max=amax,fix=run
   COMMON params, Eexpl,d0,e0,cx,cy,cz
   COMMON vars, u,b,wa
 
-  DEVICE,DECOMPOSED=0,RETAIN=2
-
   ncolors = !D.N_COLORS -1
   white = 255
   plots  ='x'
 
-   dir = '../run/'
-    prefix = 'shock1d_r' + run
+  dir = '../run/'
+  prefix = 'shock1d_r' + run
   freq = 1
   step = first
 
@@ -58,7 +56,7 @@ PRO PLOTMHD,ff=first,lf=last,var=var,zoom=sf,log=llog,min=amin,max=amax,fix=run
             xcoord = x, ycoord = y, zcoord = z, $
             nxa=nxa,nya=nya,nza=nza, $
             time = t)
-    a = atan(a/b)
+    a = atan(a/(b+1.e-5))
   endif else begin
     a = LOAD_DATA_HDF(dir,prefix, step, var, $
             xcoord = x, ycoord = y, zcoord = z, $
@@ -74,9 +72,6 @@ PRO PLOTMHD,ff=first,lf=last,var=var,zoom=sf,log=llog,min=amin,max=amax,fix=run
   amin = min(a)
   amax = max(a)
 
-  WSET, 1
-  WSHOW, 1
-
   px  =  a(*,iy-1,iz-1)
   px = reform(px)
   PLOT,  x, px, line=0, title=var+timestr, $
@@ -90,18 +85,21 @@ pro shock_rj,f=frm,run=run
 ;   f   -> number of frame (usually 1)
 ;   run -> run prefix: '1a','1b','2a' etc.
 
-
-WINDOW,1, XSIZE=900,YSIZE=900
-!P.MULTI=[0,3,3]
+set_plot,'PS'
+device,/ENCAPSULATED, filename='shock1d_r' + run + '.ps', XSIZE=12, YSIZE=9, /INCHES
+!P.MULTI=[0,3,3,0,1]
 plotmhd,zoom=1.0,log=0,ff=frm,lf=frm,var='dens',fix=run,min=0.0,max=0.0
-plotmhd,zoom=1.0,log=0,ff=frm,lf=frm,var='eint',fix=run,min=0.0,max=0.0
-plotmhd,zoom=1.0,log=0,ff=frm,lf=frm,var='ener',fix=run,min=0.0,max=0.0
 plotmhd,zoom=1.0,log=0,ff=frm,lf=frm,var='velx',fix=run,min=0.0,max=0.0
-plotmhd,zoom=1.0,log=0,ff=frm,lf=frm,var='vely',fix=run,min=0.0,max=0.0
-plotmhd,zoom=1.0,log=0,ff=frm,lf=frm,var='velz',fix=run,min=0.0,max=0.0
 plotmhd,zoom=1.0,log=0,ff=frm,lf=frm,var='magy',fix=run,min=0.0,max=0.0
+plotmhd,zoom=1.0,log=0,ff=frm,lf=frm,var='eint',fix=run,min=0.0,max=0.0
+plotmhd,zoom=1.0,log=0,ff=frm,lf=frm,var='vely',fix=run,min=0.0,max=0.0
 plotmhd,zoom=1.0,log=0,ff=frm,lf=frm,var='magz',fix=run,min=0.0,max=0.0
+plotmhd,zoom=1.0,log=0,ff=frm,lf=frm,var='ener',fix=run,min=0.0,max=0.0
+plotmhd,zoom=1.0,log=0,ff=frm,lf=frm,var='velz',fix=run,min=0.0,max=0.0
 plotmhd,zoom=1.0,log=0,ff=frm,lf=frm,var='phi', fix=run,min=0.0,max=0.0
+device,/close
+set_plot,'X'
+!P.MULTI = 0
 end
 
 
