@@ -6,7 +6,7 @@
  /  
 
  $MPI_BLOCKS
-    pxsize = 1
+    pxsize = 2
     pysize = 1
     pzsize = 1    
  /  
@@ -28,8 +28,8 @@
  $OUTPUT_CONTROL
     dt_hdf  = 0.5
     dt_res  = 0.0
-    dt_log  = 0.00001
-    dt_tsl  = 0.00001
+    dt_log  = 0.1
+    dt_tsl  = 0.1
     vars(1) = 'dens'
     vars(2) = 'velx'
     vars(3) = 'vely'
@@ -56,8 +56,8 @@
     xmax   = 1.0
     ymin   = 0.0
     ymax   = 1.0
-    zmin   = -0.5
-    zmax   = 0.5
+    zmin   = 0.0
+    zmax   = 1.0
  /
 
  $EQUATION_OF_STATE

@@ -21,12 +21,12 @@
  /
 
  $END_CONTROL
-    tend   = 0.03
+    tend   = 0.15
     nend   = 90000 
  /
 
  $OUTPUT_CONTROL
-    dt_hdf  = 0.1
+    dt_hdf  = 0.5
     dt_res  = 0.0
     dt_log  = 0.1
     dt_tsl  = 0.1
@@ -89,24 +89,24 @@
 
  $PROBLEM_CONTROL
     problem_name ='shock1d'
-    run_id  =  'r1b'
-    dl      =  1.0
-    vxl     =  0.0
-    vyl     =  0.0
+    run_id  =  'r4c'
+    dl      =  0.65
+    vxl     =  0.667
+    vyl     =  -0.257
     vzl     =  0.0
-    bxl     =  0.8462843753 ! 3.0/sqrt(4pi)
-    byl     =  1.410473959  ! 5.0/sqrt(4pi)
+    bxl     =  0.75
+    byl     =  0.55
     bzl     =  0.0
-    el      =  1.0
+    el      =  0.5
 
-    dr      =  0.1
-    vxr     =  0.0
-    vyr     =  0.0
+    dr      =  1.0
+    vxr     =  0.4
+    vyr     =  -0.94
     vzr     =  0.0
-    bxr     =  0.8462843753 ! 3.0/sqrt(4pi)
-    byr     =  0.5641895835 ! 2.0/sqrt(4pi)
+    bxr     =  0.75
+    byr     =  0.0
     bzr     =  0.0
-    er      =  10.0
+    er      =  0.75
  /
 
  $SHEARING
