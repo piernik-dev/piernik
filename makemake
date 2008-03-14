@@ -42,7 +42,10 @@ copy($defs,"obj/mhd.def");
 open (defs) or die "Can't open the file mhd.def!";
 @fdefs = <defs>;
 @d = grep (/define/,@fdefs);
-if( grep { /GRAV/ }  @d) {push(@addons, "../src/gravity/gravity.F90");}
+if( grep { /GRAV/ }  @d) {
+   push(@addons, "../src/gravity/gravity.F90");
+   push(@addons, "../src/gravity/hydrostatic.F90");
+   }
 if( grep { /SELF_GRAV/ }  @d) {push(@addons, "../src/gravity/poisson_solver.F90");}
 if( grep { /RESIST/} @d) {push(@addons, "../src/resist/resistivity.F90");}
 if( grep { /SHEAR/}  @d) {push(@addons, "../src/shear/shear.F90");}
