@@ -49,7 +49,10 @@ if( grep { /PGM/ } @u) {push(@addons, "../src/unitsystems/pgm/constants.F90");}
 if( grep { /CGS/ } @u) {push(@addons, "../src/unitsystems/cgs/constants.F90");}
 if( grep { /SI/ } @u) {push(@addons, "../src/unitsystems/SI/constants.F90");}
 if( grep { /DMY/ } @u) {push(@addons, "../src/unitsystems/dmy/constants.F90");}
-if( grep { /GRAV/ }  @d) {push(@addons, "../src/gravity/gravity.F90");}
+if( grep { /GRAV/ }  @d) {
+   push(@addons, "../src/gravity/gravity.F90");
+   push(@addons, "../src/gravity/hydrostatic.F90");
+   }
 if( grep { /SELF_GRAV/ }  @d) {push(@addons, "../src/gravity/poisson_solver.F90");}
 if( grep { /RESIST/} @d) {push(@addons, "../src/resist/resistivity.F90");}
 if( grep { /SHEAR/}  @d) {push(@addons, "../src/shear/shear.F90");}
