@@ -145,7 +145,7 @@ program mhd
 
 #ifdef MASS_COMPENS
     call get_init_mass
-#endif        
+#endif /* MASS_COMPENS */     
 
   endif
     
@@ -159,7 +159,7 @@ program mhd
 
 #ifdef MASS_COMPENS
       call mass_loss_compensate
-#endif        
+#endif /* MASS_COMPENS */
       call write_data(output='all')
 
 888   continue
