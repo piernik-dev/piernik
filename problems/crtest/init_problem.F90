@@ -137,19 +137,19 @@ contains
           u(iena,i,j,k)   = p0/(gamma-1.0)
 	  u(iena,i,j,k)   = u(iena,i,j,k) &
 	                  + 0.5*sum(u(imxa:imza,i,j,k)**2,1)/u(idna,i,j,k)
-#endif
+#endif /* ISO */
 
 #ifdef COSM_RAYS
 !          u(iecr,i,j,k) =  beta_cr*c_si**2 * u(idna,i,j,k)/(gamma_cr-1.0)
           u(iecr,i,j,k)   = p0/(gamma-1.0)
-#endif 
+#endif /* COSM_RAYS */
 
           b(ibx,i,j,k)   = bx0
           b(iby,i,j,k)   = by0
           b(ibz,i,j,k)   = bz0
 #ifndef ISO	  	  
           u(iena,i,j,k)   = u(iena,i,j,k) + 0.5*sum(b(:,i,j,k)**2,1)
-#endif
+#endif /* ISO */
         enddo
       enddo
     enddo
@@ -173,7 +173,7 @@ contains
 !             + amp_cr*ethu*exp(-((x(i)-x0)**2+(y(j)-(y0+Ly))**2+(z(k)-z0)**2)/r0**2) &
 !             + amp_cr*ethu*exp(-((x(i)-(x0+Lx))**2+(y(j)-(y0+Ly))**2+(z(k)-z0)**2)/r0**2)
 
-#endif
+#endif /* ISO */
 #ifdef COSM_RAYS
 
             u(iecr,i,j,k)= u(iecr,i,j,k) &
@@ -183,7 +183,7 @@ contains
 !             + amp_cr*ethu*exp(-((x(i)-(x0+Lx))**2+(y(j)-y0)**2+(z(k)-z0)**2)/r0**2) &
 !             + amp_cr*ethu*exp(-((x(i)-x0)**2+(y(j)-(y0+Ly))**2+(z(k)-z0)**2)/r0**2) &
 !             + amp_cr*ethu*exp(-((x(i)-(x0+Lx))**2+(y(j)-(y0+Ly))**2+(z(k)-z0)**2)/r0**2)
-#endif 
+#endif /* COSM_RAYS */
 
 
         enddo
