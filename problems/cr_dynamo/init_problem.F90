@@ -110,13 +110,13 @@ contains
           u(imxa:imza,i,j,k) = 0.0
 #ifdef SHEAR
           u(imya,i,j,k) = -qshear*omega*x(i)*u(idna,i,j,k)
-#endif SHEAR
+#endif /* SHEAR */
 
 
 #ifndef ISO
           u(iena,i,j,k)   = c_si**2/(gamma-1.0) * u(idna,i,j,k) &
 	                         +0.5*sum(u(imxa:imza,i,j,k)**2,1)/u(idna,i,j,k)
-#endif
+#endif /* ISO */
 #ifdef COSM_RAYS
           u(iecr,i,j,k)   =  beta_cr*c_si**2 * u(idna,i,j,k)/(gamma_cr-1.0)
 #ifdef GALAXY
@@ -126,8 +126,8 @@ contains
              + amp_cr*exp(-((x(i)-(x0+Lx))**2+(y(j)-y0)**2+(z(k)-z0)**2)/r_sn**2) &
              + amp_cr*exp(-((x(i)-x0)**2+(y(j)-(y0+Ly))**2+(z(k)-z0)**2)/r_sn**2) &
              + amp_cr*exp(-((x(i)-(x0+Lx))**2+(y(j)-(y0+Ly))**2+(z(k)-z0)**2)/r_sn**2)
-#endif GALAXY
-#endif COSM_RAYS
+#endif /* GALAXY */
+#endif /* COSM_RAYS */
         enddo
       enddo
     enddo
@@ -140,7 +140,7 @@ contains
           b(ibz,i,j,k)   = b0*sqrt(u(idna,i,j,k)/d0)* bzn/sqrt(bxn**2+byn**2+bzn**2)
 #ifndef ISO
           u(iena,i,j,k)   = u(iena,i,j,k) +0.5*sum(b(:,i,j,k)**2,1)
-#endif
+#endif /* ISO */
         enddo
       enddo
     enddo
@@ -167,13 +167,13 @@ contains
         u(idna,:,:,:) = u(idna,:,:,:) + dmass * dinit(:,:,:)
 #ifdef SHEAR
         u(imya,:,:,:) = u(imya,:,:,:) - dmass * qshear*omega*x(i) * dinit(:,:,:)
-#endif SHEAR
+#endif /* SHEAR */
 #ifndef ISO
         u(iena,:,:,:) = u(iena,:,:,:) + dmass * (c_si**2/(gamma-1.0) * dinit(:,:,:) 
 #ifdef SHEAR
 	u(iena,:,:,:) = u(iena,:,:,:) + dmass * 0.5 * (qshear*omega*x(i))**2) * dinit(:,:,:)
-#endif SHEAR
-#endif ISO
+#endif /* SHEAR */
+#endif /* ISO */
       enddo
 
   end subroutine mass_loss_compensate
