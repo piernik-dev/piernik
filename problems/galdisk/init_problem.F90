@@ -11,11 +11,12 @@ module init_problem
   integer mtr
   character problem_name*32,run_id*3
   character mf_orient*32
+  integer pres_cor
 
   real,allocatable  :: omega_xy(:,:)
 
   namelist /PROBLEM_CONTROL/  problem_name, run_id, &
-                              rhoa,d0,r_max,mtr, mf_orient
+                              rhoa,d0,r_max,mtr, mf_orient, pres_cor
 
 
 contains
@@ -40,6 +41,7 @@ contains
     r_max   = 0.8
     mtr      = 10
     mf_orient = 'null' ! 'toroidal', 'vertical'
+    pres_cor = 0
          
     
     if(proc .eq. 0) then
@@ -65,6 +67,7 @@ contains
       rbuff(3) = r_max
 
       ibuff(1) = mtr
+      ibuff(2) = pres_cor
     
       call MPI_BCAST(cbuff, 32*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
       call MPI_BCAST(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
@@ -85,6 +88,7 @@ contains
       r_max	   = rbuff(3)
     
       mtr          = ibuff(1)
+      pres_cor	   = ibuff(2)
     
     endif
 
@@ -117,12 +121,10 @@ contains
     real iOmega, dens0
     real dcmol, dcneut, dcion, dchot
     real xgradgp, ygradgp, sfq
-#ifdef PRESSURECORRECTION
     real xgradp, ygradp
-#endif /* PRESSURECORRECTION */
     character syscmd*37,syscmd2*40,syscmd3*37
     integer system, syslog
-    real,allocatable  :: dxzprof(:,:),idxzprof(:,:),jdxzprof(:,:)        
+    real,allocatable :: dxzprof(:,:),idxzprof(:,:),jdxzprof(:,:)
     integer,allocatable :: xproc(:), yproc(:)
     integer xtag, iproc, ilook, jproc, ytag
 
@@ -198,13 +200,17 @@ contains
     endif
     deallocate(idxzprof,jdxzprof)
 
+#ifdef VERBOSE
     if(proc .eq. 0) then
-!      write(syscmd,'(a34,i3.3)') "echo -n 'second loop: j = 001 of '",ny
-!      syslog=SYSTEM(syscmd)
+      write(syscmd,'(a34,i3.3)') "echo -n 'second loop: j = 001 of '",ny
+      syslog=SYSTEM(syscmd)
     endif
     do j = 1,ny
-!      write(syscmd2,'(a30,i3.3,a4,i3.3)') "echo -n '\b\b\b\b\b\b\b\b\b\b'",j," of ",ny
-!      if(proc .eq. 0) syslog=SYSTEM(syscmd2)
+      write(syscmd2,'(a30,i3.3,a4,i3.3)') "echo -n '\b\b\b\b\b\b\b\b\b\b'",j," of ",ny
+      if(proc .eq. 0) syslog=SYSTEM(syscmd2)
+#else /* VERBOSE */
+    do j = 1,ny
+#endif /* VERBOSE */
       yj = y(j)
       do i = 1,nx
         xi = x(i)
@@ -238,9 +244,7 @@ contains
 	     endif
            endif
 	   xgradgp=(gp(iu,j,k)-gp(id,j,k))*sfq/dl(xdim)
-#ifdef PRESSURECORRECTION
-           xgradp =-sfq*c_si**2/gamma/u(1,i,j,k)*(u(1,iu,j,k)-u(1,id,j,k))/dl(xdim)
-#endif /* PRESSURECORRECTION */
+           if(pres_cor .eq. 1) xgradp =-sfq*c_si**2/gamma/u(1,i,j,k)*(u(1,iu,j,k)-u(1,id,j,k))/dl(xdim)
 	   if(j .ne. 1 .and. j .ne. ny) then
 	     ju = j+1
 	     jd = j-1
@@ -257,13 +261,13 @@ contains
 	     endif
            endif
 	   ygradgp=(gp(i,ju,k)-gp(i,jd,k))*sfq/dl(ydim)
-#ifdef PRESSURECORRECTION
-           ygradp =-sfq*c_si**2/gamma/u(1,i,j,k)*(u(1,i,ju,k)-u(1,i,jd,k))/dl(ydim)
-           iOmega=sqrt(abs(sqrt((xgradgp+xgradp)**2+(ygradgp+ygradp)**2))/rc)
-#else /* PRESSURECORRECTION */
-           iOmega=sqrt(abs(sqrt(xgradgp**2+ygradgp**2))/rc)
-#endif /* PRESSURECORRECTION */
-           omega_xy(i,j) = iomega
+           if(pres_cor .eq. 1) then
+             ygradp =-sfq*c_si**2/gamma/u(1,i,j,k)*(u(1,i,ju,k)-u(1,i,jd,k))/dl(ydim)
+             iOmega=sqrt(abs(sqrt((xgradgp+xgradp)**2+(ygradgp+ygradp)**2))/rc)
+	   else
+             iOmega=sqrt(abs(sqrt(xgradgp**2+ygradgp**2))/rc)
+           endif
+           omega_xy(i,j) = iOmega
                  
 	     u(2,i,j,k)=-iOmega*yj*u(1,i,j,k)
              u(3,i,j,k)= iOmega*xi*u(1,i,j,k)
@@ -314,7 +318,7 @@ contains
     use arrays, only    :   u,x,y, nx,ny
     use arrays, only    :   idna, imxa, imya, iena
     use arrays, only    :   dinit   
-    use start,  only    :   smalld, init_mass, mass_loss, mass_loss_tot   
+    use start,  only    :   smalld, init_mass, mass_loss, mass_loss_tot, c_si, gamma
     implicit none
     
     real tot_mass, dmass
@@ -334,7 +338,7 @@ contains
           u(imya,i,j,:) = u(imya,i,j,:) + dmass*omega_xy(i,j)*x(i)*(dinit(i,j,:)-smalld)
 
 #ifndef ISO
-          u(iena,i,j,:) = u(iena,i,j,:) + dmass*(c_si**2/(gamma-1.0)*dinit(i,j,:) 
+          u(iena,i,j,:) = u(iena,i,j,:) + dmass*(c_si**2/(gamma-1.0))*dinit(i,j,:) 
 	  u(iena,i,j,:) = u(iena,i,j,:) + dmass*0.5*omega_xy(i,j)**2*(x(i)**2 + y(j)**2)*dinit(i,j,:)
 #endif /* ISO */
         enddo
