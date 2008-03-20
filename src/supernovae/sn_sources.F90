@@ -12,18 +12,18 @@ module sn_sources
   use start
 #ifdef SHEAR  
   use shear
-#endif SHEAR  
+#endif /* SHEAR */
   
   implicit none
-  real xsn,ysn,zsn
-  real epsi,epso
+  real xsn, ysn, zsn
+  real epsi, epso
   real ysna, ysni, ysno
-  real             :: phi,theta
+  real             :: phi, theta
   integer, save :: nsn, nsn_last
-  real, save    :: dt_sn_prev, ecr_supl, decr_supl   
+  real, save    :: dt_sn_prev, ecr_supl, decr_supl
   
   real gasdev
-  real,    save :: gset             
+  real,    save :: gset
   integer, save :: irand, iset
   
 
@@ -55,7 +55,7 @@ module sn_sources
 #ifdef DIPOLS
       call rand_angles !(phi, theta)
       call dipol_sn
-#endif DIPOLS
+#endif /* DIPOLS */
 
     enddo ! isn
 
@@ -123,7 +123,7 @@ module sn_sources
     real, dimension(:,:,:,:), allocatable :: A
 #ifndef ISO
     real, dimension(:,:,:), allocatable :: ekin,eint
-#endif ISO
+#endif /* ISO */
 
 
     real :: xx, yy, zz, x, y, z, r, rc, sint
@@ -155,7 +155,7 @@ module sn_sources
     ekin(:,:,:) = 0.5*( u(imxa,:,:,:)**2 + u(imya,:,:,:)**2 + u(imza,:,:,:)**2 ) / u(idna,:,:,:)
     eint(:,:,:) = max( u(iena,:,:,:) - ekin -  0.5*( b(ibx,:,:,:)**2 + b(iby,:,:,:)**2 + &
             b(ibz,:,:,:)**2) , smallei)
-#endif ISO
+#endif /* ISO */
 
 !    call rand_angles(phi, theta)
      
@@ -226,7 +226,7 @@ module sn_sources
              b(2,:,:,:)**2 + b(3,:,:,:)**2)
     if (allocated(eint)) deallocate(eint)
     if (allocated(ekin)) deallocate(ekin)
-#endif
+#endif /* ISO */
     if (allocated(A)) deallocate(A)
 
   end subroutine dipol_sn
@@ -273,10 +273,10 @@ module sn_sources
       if (jremap .ge. (je+1)) jremap = jremap - nyd
 
       ysni = y(jremap) + epsi + dysn
-#else SHEAR
+#else /* SHEAR */
       ysno = ysn
       ysni = ysn
-#endif SHEAR
+#endif /* SHEAR */
   
   
   end subroutine rand_coords
