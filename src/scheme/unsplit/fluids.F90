@@ -182,13 +182,13 @@ module fluids  ! unsplit fluids
 
 #ifdef FLX_BND
     use arrays, only  : cfr,flx
-#endif
+#endif /* FLX_BND */
     use start, only   : nb,nxd,nyd,nzd
 #ifdef SHEAR
     use start, only   : omega,qshear
     use arrays, only  : x
     use shear, only   : unshear
-#endif
+#endif /* SHEAR */
 
     implicit none
     real, dimension(3,ny)  :: b_y
@@ -336,7 +336,7 @@ module fluids  ! unsplit fluids
     use fluxes, only    : mhdflux
 #ifdef FLX_BND
     use arrays, only  : cfr,flx
-#endif
+#endif /* FLX_BND */
     use start, only   : nb,nxd,nyd,nzd
 
     implicit none
