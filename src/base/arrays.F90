@@ -4,58 +4,58 @@ module arrays
 
   implicit none
   integer :: nx, ny, nz
-  integer,parameter  :: xdim=1,ydim=2,zdim=3
-  integer, parameter :: nrlscal=100, nintscal=100   
+  integer,parameter  :: xdim=1, ydim=2, zdim=3
+  integer, parameter :: nrlscal=100, nintscal=100
   
 #ifdef ISO
   integer,parameter  :: nua=4
-#else 
+#else /* ISO */
   integer,parameter  :: nua=5
-#endif 
+#endif /* ISO */
 
 #ifdef COSM_RAYS
   integer,parameter  :: nuc=1
-#else 
-  integer,parameter  :: nuc=0  
-#endif
+#else /* COSM_RAYS */
+  integer,parameter  :: nuc=0
+#endif /* COSM_RAYS */
 
 #ifdef DUST
   integer,parameter  :: nud=1
-#else 
-  integer,parameter  :: nud=0  
-#endif 
+#else /* DUST */
+  integer,parameter  :: nud=0
+#endif /* DUST */
 
   integer,parameter  :: nu=nua+nuc+nud
   integer,parameter  :: nm=3
   
-  integer,parameter  :: idna=1,imxa=2,imya=3,imza=4
+  integer,parameter  :: idna=1, imxa=2, imya=3, imza=4
 #ifdef ISO
-  integer,parameter  :: iena=0 
-#else 
-  integer,parameter  :: iena=5   
-#endif 
+  integer,parameter  :: iena=0
+#else /* ISO */
+  integer,parameter  :: iena=5
+#endif /* ISO */
 
 #ifdef COSM_RAYS
   integer,parameter  :: iecr = nua+1
-#else 
-  integer,parameter  :: iecr = 0  
-#endif
+#else /* COSM_RAYS */
+  integer,parameter  :: iecr = 0
+#endif /* COSM_RAYS */
 
 #ifdef DUST
-  integer,parameter  :: idnd=nua+nuc+1,ivxd=nua+nuc+2,ivyd=nua+nuc+3,ivzd=nua+nuc+4
-#else 
-  integer,parameter  :: idnd=0,ivxd=0,ivyd=0,ivzd=0  
-#endif 
+  integer,parameter  :: idnd=nua+nuc+1, ivxd=nua+nuc+2, ivyd=nua+nuc+3, ivzd=nua+nuc+4
+#else /* DUST */
+  integer,parameter  :: idnd=0, ivxd=0, ivyd=0, ivzd=0
+#endif /* DUST */
    
-  integer, dimension(nu) :: iuswpx,iuswpy,iuswpz    
-  integer, dimension(nm) :: ibswpx,ibswpy,ibswpz    
+  integer, dimension(nu) :: iuswpx, iuswpy, iuswpz
+  integer, dimension(nm) :: ibswpx, ibswpy, ibswpz
    
-  integer,parameter  :: ibx=1,iby=2,ibz=3
-  integer,parameter  :: icx=1,icy=2,icz=3
+  integer,parameter  :: ibx=1, iby=2, ibz=3
+  integer,parameter  :: icx=1, icy=2, icz=3
 
   integer nxb, nyb, nzb
   integer nxt, nyt, nzt
-  integer is, ie, js, je, ks, ke 
+  integer is, ie, js, je, ks, ke
 
   real, allocatable :: dl(:)
 
@@ -63,11 +63,11 @@ module arrays
   real, allocatable, dimension(:)  :: y, yl, yr
   real, allocatable, dimension(:)  :: z, zl, zr
 
-  real, allocatable, dimension(:,:,:,:) :: u,b
+  real, allocatable, dimension(:,:,:,:) :: u, b
 #ifdef GRAV
-  real, allocatable, dimension(:,:,:) :: gp,gp1,gp2,gp3,gp4,gp5
+  real, allocatable, dimension(:,:,:) :: gp, gp1, gp2, gp3, gp4, gp5
   real, allocatable, dimension(:)     :: dprof, eprof
-#endif 
+#endif /* GRAV */
 #ifdef SPLIT
   real, allocatable, dimension(:,:,:) :: wa, wcu
 #ifdef SSP
@@ -86,11 +86,11 @@ module arrays
 #endif /* ~SPLIT */ 
 #ifdef MASS_COMPENS
   real, allocatable, dimension(:,:,:)   :: dinit
-#endif        
+#endif /* MASS_COMPENS */
 
 !#ifdef COOL_HEAT
   real, allocatable, dimension(:)       :: coolheat_profile
-!#endif COOL_HEAT
+!#endif /* COOL_HEAT */
 
   real(kind=4), allocatable, dimension(:,:,:)  :: outwa, outwb, outwc
 
@@ -114,12 +114,12 @@ contains
     iuswpx(iena) = iena
     iuswpy(iena) = iena
     iuswpz(iena) = iena
-#endif 
+#endif /* ISO */
 #ifdef COSM_RAYS
     iuswpx(iecr) = iecr
     iuswpy(iecr) = iecr
     iuswpz(iecr) = iecr
-#endif 
+#endif /* COSM_RAYS */
 
   
     if((mod(nxd, pxsize) .ne. 0) .or. &
@@ -201,16 +201,16 @@ contains
 #endif /* GRAV */
 #ifdef SPLIT
     allocate(wa(nx,ny,nz),wcu(nx,ny,nz))
-#else 
+#else /* SPLIT */
     allocate(wa(nx,ny,nz))
-#endif 
+#endif /* SPLIT */
     allocate(outwa(nx,ny,nz),outwb(nx,ny,nz),outwc(nx,ny,nz))
 #ifdef MASS_COMPENS
     allocate(dinit(nx,ny,nz))    
-#endif        
+#endif /* MASS_COMPENS */
 !#ifdef COOL_HEAT
     allocate( coolheat_profile(nz))
-!#endif COOL_HEAT
+!#endif /* COOL_HEAT */
 
   end subroutine arrays_allocate
       
@@ -242,7 +242,7 @@ contains
     deallocate(gp1,gp2,gp3,gp4,gp5)
 #endif /* ARMS_POTENTIAL */
     deallocate(dprof,eprof)
-#endif 
+#endif /* GRAV */
 #ifdef SPLIT
     deallocate(wa,wcu)
 #else /* SPLIT */
@@ -250,10 +250,10 @@ contains
 #endif /* SPLIT */
 #ifdef MASS_COMPENS
    deallocate(dinit)    
-#endif        
+#endif /* MASS_COMPENS */     
 !#ifdef COOL_HEAT
     deallocate(coolheat_profile)
-!#endif COOL_HEAT
+!#endif /* COOL_HEAT */
 
     deallocate(outwa,outwb,outwc)
 
