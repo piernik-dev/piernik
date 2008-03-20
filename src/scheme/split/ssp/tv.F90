@@ -111,11 +111,9 @@ module tv   ! split ssp
     else
       rotfr(:) = 0.0
     endif
-! <> SHEAR
-#else 
+#else /* SHEAR */
     rotfr(:) = 0.0
-!--> SHEAR
-#endif 
+#endif /* SHEAR */
 
 ! Gravity source terms -------------------------------------
 #ifdef GRAV
@@ -164,10 +162,9 @@ module tv   ! split ssp
 
 #ifndef ISO
     u1(iena,:) = u1(iena,:) - cn(2,istep)*u1(imxa,:)/u1(idna,:)*gpcr*dt
-#endif 
+#endif /* ISO */
     u1(imxa,:) = u1(imxa,:) - cn(2,istep)*gpcr*dt
-!--> COSM_RAYS
-#endif 
+#endif /* COSM_RAYS */
 #ifndef ISO
     ekin = 0.5*(u1(imxa,:)*u1(imxa,:)+u1(imya,:)*u1(imya,:)+u1(imza,:)*u1(imza,:))/u1(idna,:)
     emag = 0.5*(bb(ibx,:)*bb(ibx,:) + bb(iby,:)*bb(iby,:) + bb(ibz,:)*bb(ibz,:)) 
