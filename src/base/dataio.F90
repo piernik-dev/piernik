@@ -25,7 +25,7 @@ module dataio
   implicit none
 
   integer :: tsl_lun = 2, log_lun = 3
-  integer :: nhdf, nres, ntsl, nlog 
+  integer :: nhdf, nres, ntsl, nlog
   integer :: step_hdf, step_res, nhdf_start, nres_start
   real    :: t_start, last_hdf_time
   character(len=128) :: log_file
@@ -42,11 +42,11 @@ module dataio
 !  integer ctoi
 !  external ctoi
   character hostfull*(80), host*8, fhost*10, fpid*10
-  integer :: pid, uid, ihost, scstatus 
+  integer :: pid, uid, ihost, scstatus
   real vx_max, vy_max, vz_max, va2max,va_max, cs2max, cs_max, &
        dens_min, dens_max, pres_min, pres_max, b_min, b_max, temp_min, temp_max
 #ifdef COSM_RAYS
-  real encr_min, encr_max    
+  real encr_min, encr_max
 #endif /* COSM_RAYS */
 
 
@@ -175,6 +175,9 @@ module dataio
 !      call write_gpot
     endif
 #endif /* GALACTIC_DISK */
+#ifdef BLOB
+      call write_blob
+#endif /* BLOB */
 
 #ifdef HDFSWEEP
     if (output .ne. 'gpt') then
@@ -354,7 +357,7 @@ module dataio
 ! write selected problem dependent parameters
 #ifdef SN_SRC
     iostatus = sfsnatt( sd_id, 'nsn'      , 24, 1, nsn     )
-#endif
+#endif /* SN_SRC */
 
     iv = 1
 
@@ -1054,7 +1057,7 @@ module dataio
 ! write selected problem dependent parameters
 #ifdef SN_SRC
     iostatus = sfsnatt( sd_id, 'nsn'      , 24, 1, nsn     )
-#endif
+#endif /* SN_SRC */
 
 ! write array of integer scalars 
 !
@@ -1092,14 +1095,14 @@ module dataio
     sds_id = sfcreate(sd_id, 'grav_pot', 6, rank3d, dims3d)
     iostatus = sfscompress(sds_id, comp_type, comp_prm)
     iostatus = sfwdata(sds_id, istart, stride, dims3d, gp)
-#endif
+#endif /* GRAV */
 #ifdef MASS_COMPENS
 ! write initial density distribution
 !
     sds_id = sfcreate(sd_id, 'dinit', 6, rank3d, dims3d)
     iostatus = sfscompress(sds_id, comp_type, comp_prm)
     iostatus = sfwdata(sds_id, istart, stride, dims3d, dinit)
-#endif
+#endif /* MASS_COMPENS */
 
 ! write coords
 !
@@ -1333,7 +1336,7 @@ module dataio
 #ifdef SN_SRC
       attr_index = sffattr( sd_id, 'nsn'       )
       iostatus = sfrnatt( sd_id, attr_index, nsn_last    )
-#endif
+#endif /* SN_SRC */
 ! read array of integer scalar quantities - nie dziala, do poprawy
 !
 !      sds_id   = sfn2index(sd_id, 'intscal')
@@ -1370,14 +1373,14 @@ module dataio
       sds_index = sfn2index(sd_id, 'grav_pot')
       sds_id = sfselect(sd_id, sds_index)
       iostatus = sfrdata(sds_id, istart, stride, dims3d, gp)
-#endif
+#endif /* GRAV */
 #ifdef MASS_COMPENS
 ! read initial density distribution
 !
       sds_index = sfn2index(sd_id, 'dinit')
       sds_id = sfselect(sd_id, sds_index)
       iostatus = sfrdata(sds_id, istart, stride, dims3d, dinit)
-#endif 
+#endif /* MASS_COMPENS */
 
 ! read coords
 !
@@ -1547,8 +1550,7 @@ module dataio
 !DW-
     epot = sum(u(idna,is:ie,js:je,ks:ke) *gp(is:ie,js:je,ks:ke)) * dvol
     call mpi_allreduce(epot, tot_epot, 1, mpi_real8, mpi_sum, comm3d, ierr)
-!--> GRAV
-#endif 
+#endif /* GRAV */
 
     wa(is:ie,js:je,ks:ke) &
         = 0.5 * (u(imxa,is:ie,js:je,ks:ke)**2   &
@@ -1582,13 +1584,11 @@ module dataio
 #ifdef ISO
     tot_eint = csi2*tot_mass
     tot_ener = tot_eint+tot_ekin+tot_emag
-! <> ISO
-#else
+#else /* ISO */
     ener = sum(u(iena,is:ie,js:je,ks:ke)) * dvol
     call mpi_allreduce(ener, tot_ener, 1, mpi_real8, mpi_sum, comm3d, ierr)
     tot_eint = tot_ener - tot_ekin - tot_emag
-!--> ISO
-#endif 
+#endif /* ISO */
 #ifdef GRAV
     tot_ener = tot_ener + tot_epot
 #endif /* GRAV */
@@ -1751,8 +1751,7 @@ module dataio
     temp_max      = hydro_mass / k_B * csi2
     loc_temp_max  = 0
     proc_temp_max = 0          
-! <> ISO
-#else
+#else /* ISO */
     wa            = (u(iena,:,:,:) &                ! eint
                   - 0.5*(sum(u(imxa:imza,:,:,:)**2,1) /u(idna,:,:,:) + wa))
     wa            = max(wa,smallei)
@@ -2415,7 +2414,47 @@ module dataio
 !
 !=======================================================================
 !
+#ifdef BLOB
+!-----------------------------------------------------------------------
+! estimation of the fraction of cloud matter is not destructed
+!-----------------------------------------------------------------------
 
+  subroutine write_blob
+
+    use arrays, only : nxb,nyb,nzb,u
+    use constants, only : pi
+    use grid, only  : dx,dy,dz 
+    use start, only : gamma,t,nstep
+    use init_problem, only : chi,denv,tkh,Mext,rblob
+   
+    implicit none
+    integer i,j,k
+    real mass, eint, csirel, masssum
+
+   
+   if(proc .eq. 0) open(5,file='cloudfrac.out',position='append')
+   mass = 0.0
+   do i=1,nxb
+   do j=1,nyb
+   do k=1,nzb
+     if(u(1,i,j,k) .gt. 0.64*chi*denv) then
+       eint=u(5,i,j,k)-0.5*(u(2,i,j,k)**2+u(3,i,j,k)**2+u(4,i,j,k)**2)/u(1,i,j,k)
+       csirel =sqrt(eint*(gamma-1)*tkh*Mext*gamma/3.2/rblob/sqrt(chi)/u(1,i,j,k))
+       if(csirel .lt. 0.9) then
+         mass = mass + u(1,i,j,k)*dx*dy*dz
+       endif
+     endif
+   enddo
+   enddo
+   enddo   
+     
+   call MPI_REDUCE(mass,masssum,1,MPI_DOUBLE_PRECISION,MPI_SUM,0,comm,ierr)
+   if(proc .eq. 0) write(5,555) nstep,t,t/tkh,masssum,masssum/(4./3.*pi*rblob**3*chi*denv)
+555 format(i5,4(1x,e20.10))
+   if(proc .eq. 0) close(5)
+
+  end subroutine write_blob
+#endif /* BLOB */
 
 
 end module dataio
