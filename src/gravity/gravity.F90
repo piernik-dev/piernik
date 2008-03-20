@@ -6,9 +6,9 @@ module gravity
 
 
   character gp_status*9
-    character*7 gravpart  
+  character*7 gravpart
 #ifdef GALACTIC_DISK
-    real, allocatable :: gpotdisk(:,:,:),gpothalo(:,:,:),gpotbulge(:,:,:)
+    real, allocatable :: gpotdisk(:,:,:), gpothalo(:,:,:), gpotbulge(:,:,:)
 #endif /* GALACTIC_DISK */
 
 contains
@@ -148,6 +148,14 @@ allocate(gpotdisk(nx,ny,nz),gpothalo(nx,ny,nz),gpotbulge(nx,ny,nz))
 #ifdef GRAV_GAL_FERRIERE
     use arrays, only : x,y,z
 #endif /* GRAV_GAL_FERRIERE */
+#ifdef GRAV_PTMASS
+    use start, only : r_smooth,csim2,ptm_x,ptm_y,ptm_z,ptmass,n_gravr,h_grav,r_grav,smalld
+    use arrays, only : x,y,z
+#endif /* GRAV_PTMASS */
+#ifdef GRAV_PTFLAT
+    use start, only : r_smooth,csim2,ptm_x,ptm_y,ptm_z,ptmass,n_gravr,h_grav,r_grav,smalld
+    use arrays, only : x,y,z
+#endif /* GRAV_PTFLAT */
 
    
     implicit none
@@ -250,9 +258,11 @@ allocate(gpotdisk(nx,ny,nz),gpothalo(nx,ny,nz),gpotbulge(nx,ny,nz))
 	    gphalo=gphalo+(Mhalo/1.02/ahalo)*(-1.02/(1.+(rgsv/ahalo)**1.02)+log(1.0+(rgsv/ahalo)**1.02))
 	    gpblg=-Mbulge/sqrt(rgsv**2+bbulge**2)
             gpot=(gpdisk+gpblg+gphalo)*newtong
+            if(status .ne. 'hydrozeq') then
 	    gpotdisk(i1,i2,:)=gpdisk*newtong
 	    gpothalo(i1,i2,:)=gphalo*newtong
 	    gpotbulge(i1,i2,:)=gpblg*newtong
+            endif
 	else ! y or x
 	  if (sweep == 'xsweep') then
             seccoord = y(i1)
@@ -355,12 +365,12 @@ allocate(gpotdisk(nx,ny,nz),gpothalo(nx,ny,nz),gpotbulge(nx,ny,nz))
 	    deallocate(gpdisk,gphalo,gpblg)
 
 
-#else
+#else /* GRAV_(SPECIFIED) */
         status = 'undefined'
 !#warning 'GRAV declared, but gravity model undefined in grav_pot'
 ! niektore modele grawitacji realizowane sa za pomoca przyspieszenia 
 ! (np. 'galactic') z ktorego liczony jest potencjal
-#endif
+#endif /* GRAV_(SPECIFIED) */
 
   end subroutine grav_pot
 
@@ -373,6 +383,12 @@ allocate(gpotdisk(nx,ny,nz),gpothalo(nx,ny,nz),gpotbulge(nx,ny,nz))
 #ifdef GRAV_GALACTIC
     use start, only : r_gc
 #endif /* GRAV_GALACTIC */
+#ifdef GRAV_PTMASS
+    use start, only : r_smooth,csim2,ptm_x,ptm_y,ptm_z,ptmass,n_gravr,h_grav,r_grav,smalld
+#endif /* GRAV_PTMASS */
+#ifdef GRAV_PTFLAT
+    use start, only : r_smooth,csim2,ptm_x,ptm_y,ptm_z,ptmass,n_gravr,h_grav,r_grav,smalld
+#endif /* GRAV_PTFLAT */
     implicit none
     character, intent(in) :: sweep*6
     integer, intent(in)   :: i1, i2
@@ -698,9 +714,9 @@ allocate(gpotdisk(nx,ny,nz),gpothalo(nx,ny,nz),gpotbulge(nx,ny,nz))
 
 #elif defined (GRAV_NULL)
        grav=0.0
-#else
+#else /* GRAV_(SPECIFIED) */
 !#error 'GRAV declared, but gravity model undefined'
-#endif
+#endif /* GRAV_(SPECIFIED) */
 
 #ifndef GRAV_GALSMTDEC
 #ifndef GRAV_GALSMINCR
