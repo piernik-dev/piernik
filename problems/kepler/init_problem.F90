@@ -130,7 +130,7 @@ contains
           u(iena,i,j,k) = c_si**2/(gamma-1.0)*u(idna,i,j,k)
           u(iena,i,j,k) = max(u(iena,i,j,k), smallei)
           u(iena,i,j,k) = u(iena,i,j,k) +0.5*(vx**2+vy**2+vz**2)*u(idna,i,j,k)
-#endif
+#endif /* ISO */
 !          if(trim(mag_field_orient) .eq. 'toroidal') then
 !            b(1,i,j,k)   = -b0*sqrt(u(idna,i,j,k)/d0)*yj/rc
 !            b(2,i,j,k)   =  b0*sqrt(u(idna,i,j,k)/d0)*xi/rc
@@ -143,7 +143,7 @@ contains
 
 #ifndef ISO	  
           u(iena,i,j,k)   = u(iena,i,j,k) +0.5*sum(b(:,i,j,k)**2,1)
-#endif
+#endif /* ISO */
         enddo
       enddo
     enddo
