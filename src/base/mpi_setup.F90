@@ -9,17 +9,17 @@
 
   implicit none
   include 'mpif.h'
-  integer nproc, proc, ierr , rc 
+  integer nproc, proc, ierr , rc
   integer status(MPI_STATUS_SIZE,4)
-  integer req(4),err(4)
+  integer req(4), err(4)
 
   
   integer, parameter    :: ndims = 3       ! 3D grid
   integer               :: comm, comm3d
   integer, dimension(3) :: psize, pcoords, coords
   logical               :: periods(3), reorder
-  integer ::   procxl, procxr, procyl, procyr, proczl, proczr, procxyl, procyxl 
-  integer ::   pxleft, pxright,pyleft, pyright,pzleft, pzright
+  integer ::   procxl, procxr, procyl, procyr, proczl, proczr, procxyl, procyxl
+  integer ::   pxleft, pxright, pyleft, pyright, pzleft, pzright
 
   integer,   parameter             :: buffer_dim=200
   character, dimension(buffer_dim) :: cbuff*32
@@ -34,7 +34,7 @@
   namelist /BOUNDARIES/ bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr
    
   logical     :: mpi
-  character   :: cwd*(80) 
+  character   :: cwd*(80)
   
  contains
 
@@ -67,7 +67,7 @@
     write(*,*) 'pid  in mpi_setup: ',pid_proc
     write(*,*) 'host in mpi_setup: ',host_proc
     write(*,*) 'cwd  in mpi_setup: ',cwd_proc
-#endif
+#endif /* DEBUG */
     if(proc .eq. 0) then
       par_file = trim(cwd)//'/problem.par'
       inquire(file=par_file, exist=par_file_exist)
@@ -303,10 +303,10 @@
        bnd_xr = 'mpi'    
     endif
 
-#else
+#else /* SHEAR */
     if(procxl .ne. MPI_PROC_NULL .and. procxl .ne. proc) bnd_xl = 'mpi'
     if(procxr .ne. MPI_PROC_NULL .and. procxr .ne. proc) bnd_xr = 'mpi'
-#endif
+#endif /* SHEAR */
     
     
      
