@@ -24,14 +24,14 @@ module tv   ! unsplit ssp
     use arrays, only : nu,idna,imxa,imya,imza,iena
 #ifdef GRAV
    use gravity, only : grav_pot2accel
-#endif
+#endif /* GRAV */
 #ifdef GLOBAL_FR_SPEED
    use time, only : c
-#endif
+#endif /* GLOBAL_FR_SPEED */
 #ifdef SHEAR
    use start, only : omega,qshear
    use arrays, only : xr
-#endif
+#endif /* SHEAR */
 
     implicit none
     integer i1,i2, n
@@ -49,7 +49,7 @@ module tv   ! unsplit ssp
                              dulf,durf
 #ifdef GRAV
     real, dimension(nu,n) :: duls,durs
-#endif
+#endif /* GRAV */
 
 #ifdef COSM_RAYS
     real q
@@ -145,7 +145,7 @@ module tv   ! unsplit ssp
 #ifdef GRAV
       ur = ur + durs
       ul = ul + duls
-#endif
+#endif /* GRAV */
 
    u = ur + ul
 
