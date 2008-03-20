@@ -31,7 +31,7 @@ subroutine maxu(comment)
 #ifndef ISO
   write(*,*) 'max(u5)=',maxval(u(5,is:ie,js:je,ks:ke)), &
                         maxloc(u(5,is:ie,js:je,ks:ke))
-#endif
+#endif /* ISO */
   write(*,*)    
   
 end subroutine maxu  
