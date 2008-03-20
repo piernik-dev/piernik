@@ -159,15 +159,15 @@ contains
         r1sn = sqrt((snpos(1)-x(i))**2+(snpos(2)-y(j))**2+(snpos(3)-z(k))**2)
 	if(r1sn .lt. r0sn) then
 	  if(add_mass .eq. 'yes') then
-	    u(2,i,j,k)=u(2,i,j,k)/u(1,i,j,k)*(u(1,i,j,k)+MexplSN*exp(-r1sn**2/r0sn**2))/(sqrt(pi)*r0sn*pc)**3
-	    u(3,i,j,k)=u(3,i,j,k)/u(1,i,j,k)*(u(1,i,j,k)+MexplSN*exp(-r1sn**2/r0sn**2))/(sqrt(pi)*r0sn*pc)**3
-            u(1,i,j,k)=u(1,i,j,k)+MexplSN*exp(-r1sn**2/r0sn**2)/(sqrt(pi)*r0sn*pc)**3
-	    massadd=massadd+MexplSN*exp(-r1sn**2/r0sn**2)/(sqrt(pi)*r0sn*pc)**3*dx*dy*dz
+	    u(2,i,j,k)=u(2,i,j,k)/u(1,i,j,k)*(u(1,i,j,k)+MexplSN*exp(-r1sn**2/r0sn**2))/(sqrt(pi)*r0sn)**3
+	    u(3,i,j,k)=u(3,i,j,k)/u(1,i,j,k)*(u(1,i,j,k)+MexplSN*exp(-r1sn**2/r0sn**2))/(sqrt(pi)*r0sn)**3
+            u(1,i,j,k)=u(1,i,j,k)+MexplSN*exp(-r1sn**2/r0sn**2)/(sqrt(pi)*r0sn)**3
+	    massadd=massadd+MexplSN*exp(-r1sn**2/r0sn**2)/(sqrt(pi)*r0sn)**3*dx*dy*dz
 	  endif
 #ifndef ISO
           if(add_ener .eq. 'yes') then
-	    u(5,i,j,k)=u(5,i,j,k)+EexplSN*exp(-r1sn**2/r0sn**2)/(sqrt(pi)*r0sn*pc)**3
-	    eneradd=eneradd+EexplSN*exp(-r1sn**2/r0sn**2)/(sqrt(pi)*r0sn*pc)**3*dx*dy*dz
+	    u(5,i,j,k)=u(5,i,j,k)+EexplSN*exp(-r1sn**2/r0sn**2)/(sqrt(pi)*r0sn)**3
+	    eneradd=eneradd+EexplSN*exp(-r1sn**2/r0sn**2)/(sqrt(pi)*r0sn)**3*dx*dy*dz
 	  endif
 #endif /* ISO */
 
@@ -176,7 +176,7 @@ contains
 	 if(add_encr .eq. 'yes') then
 	   e_sn = 1.0e+51*erg
 	 
-           amp_sn = e_sn/(sqrt(pi)*r0sn*pc)**3 
+           amp_sn = e_sn/(sqrt(pi)*r0sn)**3 
 	 
 	   amp_cr = cr_eff * amp_sn
 
