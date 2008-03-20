@@ -13,7 +13,7 @@ module fluids     ! split fluids
     use fluid_boundaries, only : compute_u_bnd 
 #ifdef COSM_RAYS
     use cr_diffusion        
-#endif 
+#endif /* COSM_RAYS */
 
     implicit none
     real, dimension(3,nx)  :: b_x
@@ -26,7 +26,7 @@ module fluids     ! split fluids
     
 #ifdef COSM_RAYS
     call div_v         
-#endif 
+#endif /* COSM_RAYS */
 
     do k=ks,ke
       kp=k+1
@@ -61,7 +61,7 @@ module fluids     ! split fluids
     use fluid_boundaries, only : compute_u_bnd 
 #ifdef COSM_RAYS
     use cr_diffusion        
-#endif 
+#endif /* COSM_RAYS */
 
     implicit none
     real, dimension(3,ny)  :: b_y
@@ -75,7 +75,7 @@ module fluids     ! split fluids
     
 #ifdef COSM_RAYS
     call div_v         
-#endif 
+#endif /* COSM_RAYS */
 
     do k=ks,ke
       kp=k+1
@@ -113,7 +113,7 @@ module fluids     ! split fluids
     use fluid_boundaries, only : compute_u_bnd 
 #ifdef COSM_RAYS
     use cr_diffusion        
-#endif 
+#endif /* COSM_RAYS */
 
     implicit none
     real, dimension(3,nz)  :: b_z
@@ -127,7 +127,7 @@ module fluids     ! split fluids
     
 #ifdef COSM_RAYS
     call div_v         
-#endif 
+#endif /* COSM_RAYS */
 
     do j=1,ny-1
       jp=j+1
