@@ -1,10 +1,10 @@
 #include "mhd.def"
 #ifdef GALAXY
 #define ONEOFTWO
-#endif
+#endif /* GALAXY */
 #ifdef GALACTIC_DISK
 #define ONEOFTWO
-#endif
+#endif /* GALACTIC_DISK */
 module hydrostatic
 
 ! Written by M. Hanasz March-May 2006
@@ -70,6 +70,7 @@ module hydrostatic
       if(gp_status .eq. 'undefined') then
         call grav_accel('zsweep',ia, ja, zs, nstot, gprofs)
       else
+        gp_status = 'hydrozeq'
         call grav_pot('zsweep', ia,ja, zs, nstot, gpots,gp_status)
         gprofs(1:nstot-1) = (gpots(1:nstot-1) - gpots(2:nstot))/dzs
       endif
@@ -138,7 +139,7 @@ module hydrostatic
 
 #ifndef ISO
       eprof(:) = c_si**2/(gamma-1.0) * dprof(:)
-#endif
+#endif /* ISO */
 
 888  format('Midplane density =',f10.4,2x,'Column density =', e10.4,2x,'iter=',i4 )      
 #endif /* ONEOFTWO */
@@ -288,6 +289,5 @@ module hydrostatic
 999 format((1x,i4),10(1x,e10.4))
 
       end subroutine hydro_thermal_zeq
-!--> GRAV
-#endif 
+#endif /* GRAV */
 end module hydrostatic
