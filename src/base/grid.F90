@@ -4,9 +4,9 @@ module grid
 ! Written by: M. Hanasz, January/February 2006
       
   implicit none
-  real dx,dy,dz,dxmn,dvol
+  real dx, dy, dz, dxmn, dvol
   
-  real xminb,xmaxb, yminb,ymaxb, zminb,zmaxb
+  real xminb, xmaxb, yminb, ymaxb, zminb, zmaxb
   real Lx, Ly, Lz
 
 contains
