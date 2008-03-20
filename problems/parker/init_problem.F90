@@ -122,7 +122,7 @@ contains
           u(imxa:imza,i,j,k) = 0.0
 #ifdef SHEAR
           u(imya,i,j,k) = -qshear*omega*x(i)*u(idna,i,j,k)
-#endif SHEAR
+#endif /* SHEAR */
 
           if ( abs(z(k)) .le. h_grav) then
             vz = a_vp * cos(2.*pi*n_x*x(i)/Lx)*cos(2.*pi*y(j)/Ly)*(cos(pi*z(k)/h_grav)+1.)/2.
@@ -136,7 +136,7 @@ contains
 #ifndef ISO
           u(iena,i,j,k)   = c_si**2/(gamma-1.0) * u(idna,i,j,k) &
 	                         +0.5*sum(u(imxa:imza,i,j,k)**2,1)
-#endif
+#endif /* ISO */
 #ifdef COSM_RAYS
           u(iecr,i,j,k)   =  beta_cr*c_si**2 * u(idna,i,j,k)/(gamma_cr-1.0)
 #ifdef GALAXY
@@ -145,8 +145,8 @@ contains
              + amp_cr*ethu*exp(-((x(i)-(x0+Lx))**2+(y(j)-y0)**2+(z(k)-z0)**2)/r_sn**2) &
              + amp_cr*ethu*exp(-((x(i)-x0)**2+(y(j)-(y0+Ly))**2+(z(k)-z0)**2)/r_sn**2) &
              + amp_cr*ethu*exp(-((x(i)-(x0+Lx))**2+(y(j)-(y0+Ly))**2+(z(k)-z0)**2)/r_sn**2)
-#endif GALAXY
-#endif COSM_RAYS
+#endif /* GALAXY */
+#endif /* COSM_RAYS */
         enddo
       enddo
     enddo
@@ -159,7 +159,7 @@ contains
           b(ibz,i,j,k)   = b0*sqrt(u(idna,i,j,k)/d0)* nbz0/sqrt(nbx0**2+nby0**2+nbz0**2)
 #ifndef ISO
           u(iena,i,j,k)   = u(iena,i,j,k) +0.5*sum(b(:,i,j,k)**2,1)
-#endif
+#endif /* ISO */
         enddo
       enddo
     enddo
@@ -192,7 +192,7 @@ contains
       u(idna,:,:,k) = u(idna,:,:,k) + mass_loss/init_mass * dprof(k)
 #ifndef ISO
       u(iena,:,:,k) = u(iena,:,:,k) + mass_loss/init_mass * eprof(k)
-#endif
+#endif /* ISO */
     enddo
   
   end subroutine mass_loss_compensate
