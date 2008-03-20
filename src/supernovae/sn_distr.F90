@@ -174,7 +174,7 @@ contains
 #ifdef COSM_RAYS
          
 	 if(add_encr .eq. 'yes') then
-	   e_sn = 10e+51*erg
+	   e_sn = 1.0e+51*erg
 	 
            amp_sn = e_sn/(sqrt(pi)*r0sn*pc)**3 
 	 
