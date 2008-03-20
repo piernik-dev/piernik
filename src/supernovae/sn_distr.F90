@@ -7,7 +7,7 @@ module sn_distr
 
   real,dimension(2)       :: SNtrest, SNheight, SNfreq
   real, dimension(2,1000,2) :: danta
-  real EexplSN,r0snx,r0sny,r0snz
+  real MexplSN,EexplSN,r0snx,r0sny,r0snz
   integer, dimension(2)   :: SNnohistory
   integer, dimension(3)   :: rintsn
   integer itype
@@ -19,11 +19,9 @@ contains
 
 
   subroutine prepare_SNdistr
-  use start, only: snenerg,sn1time,sn2time,r0sn
+  use start, only: snemass,snenerg,sn1time,sn2time,r0sn
   use grid, only: dx,dy,dz
-
   use constants
-
   implicit none
   real RmaxI, RmaxII, rcl, rc
   integer i,imax
@@ -39,9 +37,9 @@ contains
   r0snx = int(r0sn/dx)+1
   r0sny = int(r0sn/dy)+1
   r0snz = int(r0sn/dz)+1
-#ifdef ISO
-  EexplSN  = snenerg
-#else /* ISO */
+
+  MexplSN  = snemass*Msun
+#ifndef ISO
   EexplSN  = snenerg*erg
 #endif /* ISO */
   call random_seed()
@@ -91,6 +89,7 @@ contains
     real, dimension(3) :: snpos
     real, dimension(2) :: dtime
     integer, dimension(2) :: SNno, pot
+    real, allocatable, dimension(:,:) :: snposarray
     
 
     SNno(:)=0
@@ -99,18 +98,26 @@ contains
       pot  = relato0((/0.0,0.0/),dtime*SNfreq)	   ! zabezpiecza przed ujemna iloscia wybuchow
       SNno=pot*int(dtime*SNfreq)
       SNtrest=dtime-(real(SNno))/SNfreq
-      
-!      call write_sninfo(SNno)
+#ifdef VERBOSE      
+      call write_sninfo(SNno)
+#endif /* VERBOSE */
     endif
     call MPI_BCAST(SNno, 2, MPI_INTEGER, 0, comm, ierr)
     
-    do itype = 1,2
-    if(SNno(itype) .gt. 0) then
-      do isn=1,SNno(itype)
-	  call rand_galcoord(snpos)
-	  call add_explosion(snpos)
+    allocate(snposarray(sum(SNno,1),3))
+    if(proc .eq. 0) then
+      do itype = 1,2
+        if(SNno(itype) .gt. 0) then
+          do isn=1,SNno(itype)
+	    call rand_galcoord(snpos)
+	    snposarray(isn+SNno(1)*(itype-1),:)=snpos
+          enddo
+        endif
       enddo
     endif
+    call MPI_BCAST(snposarray, 3*sum(SNno,1), MPI_DOUBLE_PRECISION, 0, comm, ierr)
+    do isn=1,sum(SNno,1)
+      call add_explosion(snposarray(isn,:))
     enddo
 
     return
@@ -121,16 +128,17 @@ contains
 
   subroutine add_explosion(snpos)
   use arrays, only: nx,ny,nz,x,y,z,nxb,nyb,nzb,xdim,ydim,zdim,dl,u
-  use grid, only: xminb,xmaxb,yminb,ymaxb,zminb,zmaxb
-  use start, only: r0sn,nb
+  use grid, only: xminb,xmaxb,yminb,ymaxb,zminb,zmaxb,dx,dy,dz
+  use start, only: r0sn,nb,add_mass,add_ener,add_encr
   use constants
 #ifdef COSM_RAYS
   use arrays, only : iecr
   use start, only  : r_sn, cr_eff           
-#endif COSM_RAYS
+#endif /* COSM_RAYS */
   implicit none
   real, dimension(3) :: snpos
   real r1sn
+  real massadd,eneradd,encradd
   integer ic,jc,kc,i,j,k
   real e_sn, amp_sn, amp_cr 
   
@@ -141,43 +149,62 @@ contains
     ic =nb+int((snpos(1)-xminb)/(xmaxb-xminb)*nxb)
     jc =nb+int((snpos(2)-yminb)/(ymaxb-yminb)*nyb)
     kc =nb+int((snpos(3)-zminb)/(zmaxb-zminb)*nzb)
+    massadd=0.0
+    eneradd=0.0
+    encradd=0.0
     do i = ic-r0snx,ic+r0snx
     do j = jc-r0sny,jc+r0sny
     do k = kc-r0snz,kc+r0snz
       if((i .ge. 1) .and. (i .le. nx) .and. (j .ge. 1) .and. (j .le. ny) .and. (k .ge. 1) .and. (k .le. nz)) then
-!	      write(*,'(a3,i1.1,a11,i4.4,i4.4,i4.4)') 'SN ',itype,' position: ',i,j,k
-!	      write(*,'(a15,f8.3,1x,f8.3,1x,f8.3)') '     coords:   ',snpos(1),snpos(2),snpos(3)
-!	      write(*,'(a15,f8.3,1x,f8.3,1x,f8.3)') '     that is:  ',x(i),y(j),z(k)
         r1sn = sqrt((snpos(1)-x(i))**2+(snpos(2)-y(j))**2+(snpos(3)-z(k))**2)
 	if(r1sn .lt. r0sn) then
-#ifdef ISO
-!	  u(2,i,j,k)=u(2,i,j,k)/u(1,i,j,k)*(u(1,i,j,k)+EexplSN*exp(-r1sn**2/r0sn**2))
-!	  u(3,i,j,k)=u(3,i,j,k)/u(1,i,j,k)*(u(1,i,j,k)+EexplSN*exp(-r1sn**2/r0sn**2))
-!          u(1,i,j,k)=u(1,i,j,k)+EexplSN*exp(-r1sn**2/r0sn**2)
-#else /* ISO */
-!          u(5,i,j,k)=u(5,i,j,k)+EexplSN*exp(-r1sn**2/r0sn**2)
+	  if(add_mass .eq. 'yes') then
+	    u(2,i,j,k)=u(2,i,j,k)/u(1,i,j,k)*(u(1,i,j,k)+MexplSN*exp(-r1sn**2/r0sn**2))/(sqrt(pi)*r0sn*pc)**3
+	    u(3,i,j,k)=u(3,i,j,k)/u(1,i,j,k)*(u(1,i,j,k)+MexplSN*exp(-r1sn**2/r0sn**2))/(sqrt(pi)*r0sn*pc)**3
+            u(1,i,j,k)=u(1,i,j,k)+MexplSN*exp(-r1sn**2/r0sn**2)/(sqrt(pi)*r0sn*pc)**3
+	    massadd=massadd+MexplSN*exp(-r1sn**2/r0sn**2)/(sqrt(pi)*r0sn*pc)**3*dx*dy*dz
+	  endif
+#ifndef ISO
+          if(add_ener .eq. 'yes') then
+	    u(5,i,j,k)=u(5,i,j,k)+EexplSN*exp(-r1sn**2/r0sn**2)/(sqrt(pi)*r0sn*pc)**3
+	    eneradd=eneradd+EexplSN*exp(-r1sn**2/r0sn**2)/(sqrt(pi)*r0sn*pc)**3*dx*dy*dz
+	  endif
 #endif /* ISO */
 
 #ifdef COSM_RAYS
          
-	 e_sn = 10e+51*erg
+	 if(add_encr .eq. 'yes') then
+	   e_sn = 10e+51*erg
 	 
-         amp_sn = e_sn/(sqrt(pi)*r0sn*pc)**3 
+           amp_sn = e_sn/(sqrt(pi)*r0sn*pc)**3 
 	 
-	 amp_cr = cr_eff * amp_sn
+	   amp_cr = cr_eff * amp_sn
 
-         u(iecr,i,j,k) = u(iecr,i,j,k) + amp_cr*exp(-r1sn**2/r0sn**2)
+           u(iecr,i,j,k) = u(iecr,i,j,k) + amp_cr*exp(-r1sn**2/r0sn**2)
+	   
+	   encradd=encradd+amp_cr*exp(-r1sn**2/r0sn**2)*dx*dy*dz
 	 
-!	 write(*,*) e_sn, amp_cr, r0sn, pc, erg
-!	 stop
+!	   write(*,*) e_sn, amp_cr, r0sn, pc, erg
+!	   stop
+         endif
 	 
-#endif COSM_RAYS
+#endif /* COSM_RAYS */
 
 	endif
       endif
     enddo
     enddo
     enddo
+#ifdef VERBOSE
+	      write(*,'(a3,i1.1,a11,i4.4,i4.4,i4.4)') 'SN ',itype,' position: ',ic,jc,kc
+	      write(*,'(a15,f8.3,1x,f8.3,1x,f8.3)')   '     coords:   ',snpos(1),snpos(2),snpos(3)
+if((ic .ge. 1) .and. (ic .le. nx) .and. (jc .ge. 1) .and. (jc .le. ny) .and. (kc .ge. 1) .and. (kc .le. nz)) then
+	      write(*,'(a15,f8.3,1x,f8.3,1x,f8.3)')   '     that is:  ',x(ic),y(jc),z(kc)
+endif
+	      if(add_mass .eq. 'yes') write(*,'(a19,e15.8,a5)') '   mass injection: ',massadd/Msun,' Msun'
+	      if(add_ener .eq. 'yes') write(*,'(a19,e15.8,a4)') ' energy injection: ',eneradd/erg,' erg'
+	      if(add_encr .eq. 'yes') write(*,'(a19,e15.8,a4)') 'CR energy inject.: ',encradd/erg,' erg'
+#endif /* VERBOSE */
   endif
   endif
   endif
@@ -225,8 +252,8 @@ contains
  integer, dimension(2) :: SNno
       write(*,'(a12,i8,a7,i8,a6)') 'explosions: ',SNno(1),' SN I, ',SNno(2),' SN II'
       SNnohistory = SNnohistory + SNno
-      write(*,'(a22,f8.4,a9,f8.4)') ' SNE frequency: SN I: ',SNno(1)/2./dt,', SN II: ',SNno(2)/2./dt
-      write(*,'(a22,f8.4,a9,f8.4)') 'mean frequency: SN I: ',SNnohistory(1)/t,', SN II: ',SNnohistory(2)/t
+      write(*,'(a22,f8.4,a9,f10.4)') ' SNE frequency: SN I: ',SNno(1)/2./dt,', SN II: ',SNno(2)/2./dt
+      write(*,'(a22,f8.4,a9,f10.4)') 'mean frequency: SN I: ',SNnohistory(1)/t,', SN II: ',SNnohistory(2)/t
  return
  end subroutine write_sninfo
   
