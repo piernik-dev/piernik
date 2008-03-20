@@ -118,23 +118,23 @@ contains
           u(imxa:imza,i,j,k) = 0.0
 #ifdef SHEAR
           u(imya,i,j,k) = -qshear*omega*x(i)*u(idna,i,j,k)
-#endif SHEAR
+#endif /* SHEAR */
 #ifndef ISO	  	  	  
           u(iena,i,j,k)   = p0/(gamma-1.0)
 	  u(iena,i,j,k)   = u(iena,i,j,k) &
 	                  + 0.5*sum(u(imxa:imza,i,j,k)**2,1)/u(idna,i,j,k)
-#endif ISO
+#endif /* ISO */
 
 #ifdef COSM_RAYS
           u(iecr,i,j,k) =  beta_cr*c_si**2 * u(idna,i,j,k)/(gamma_cr-1.0)
-#endif COSM_RAYS 
+#endif /* COSM_RAYS */
 
           b(ibx,i,j,k)   = bx0
           b(iby,i,j,k)   = by0
           b(ibz,i,j,k)   = bz0
 #ifndef ISO	  	  
           u(iena,i,j,k)   = u(iena,i,j,k) + 0.5*sum(b(:,i,j,k)**2,1)
-#endif ISO
+#endif /* ISO */
         enddo
       enddo
     enddo
@@ -149,7 +149,7 @@ contains
              + amp_cr*ethu*exp(-((x(i)-(x0+Lx))**2+(y(j)-y0)**2+(z(k)-z0)**2)/r_sn**2) &
              + amp_cr*ethu*exp(-((x(i)-x0)**2+(y(j)-(y0+Ly))**2+(z(k)-z0)**2)/r_sn**2) &
              + amp_cr*ethu*exp(-((x(i)-(x0+Lx))**2+(y(j)-(y0+Ly))**2+(z(k)-z0)**2)/r_sn**2)
-#endif 
+#endif /* COSM_RAYS */
           enddo
         enddo
       enddo
