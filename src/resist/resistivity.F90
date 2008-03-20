@@ -92,7 +92,7 @@ contains
                       +b(ibz,is:ie,js:je,ks:ke)**2))&
                         /(eta(is:ie,js:je,ks:ke)   &
                         *wb(is:ie,js:je,ks:ke)+small))) 
-#endif
+#endif /* ISO */
         
       deallocate(wb)
 
@@ -121,7 +121,7 @@ contains
           dt_resist = cfl_resist*dx2/(2.0*eta_max)
 #ifndef ISO
           dt_resist = min(dt_resist,dt_eint)
-#endif	  
+#endif /* ISO */
         endif
 	
 
@@ -135,8 +135,8 @@ contains
 #ifdef SPLIT
 #ifdef ORIG
     real,dimension(nx,ny,nz) :: b1
-#endif
-#endif
+#endif /* ORIG */
+#endif /* SPLIT */
 
     real                     :: di
     real,dimension(:,:,:), allocatable :: w,wm,wp,dw,eta
@@ -164,7 +164,7 @@ contains
     dw = 0.
     where(wm*wp > 0.) dw=2.*wm*wp/(wm+wp)
     wcu = (w+dw)*dt
-#endif
+#endif /* ORIG */
 #ifdef SSP
 
     w(:,:,:) = (b(ibi,:,:,:)-cshift(b(ibi,:,:,:),shift=-1,dim=n))/di
@@ -174,8 +174,8 @@ contains
     dw = 0.
     where(wm*wp > 0.) dw=2.*wm*wp/(wm+wp)
     wcu = (w+dw)*dt
-#endif
-#else
+#endif /* SSP */
+#else /* SPLIT */
 
     w(:,:,:) = (b(ibi,:,:,:)-cshift(b(ibi,:,:,:),shift=-1,dim=n))/di
     w  = eta*w
@@ -193,15 +193,15 @@ contains
       write(*,*) 'That high integration order not implemented'
       stop
     endif
-#endif
+#endif /* ORIG */
 #ifdef SSP
     wp = (cshift(w,shift=1,dim=n)-w)/2.
     wm = (w-cshift(w,shift=-1,dim=n))/2.
     dw = 0.
     where(wm*wp > 0.) dw=2.*wm*wp/(wm+wp)
     wa = (w+dw)*dt
-#endif
-#endif
+#endif /* SSP */
+#endif /* SPLIT */
     deallocate(w,wm,wp,dw,eta)
   end subroutine tvdd
 
@@ -215,7 +215,7 @@ contains
     call bnd_emf(wcu,'emfz','xdim')
     call bnd_emf(wcu,'emfz','ydim')
     if(dimensions .eq. '3d') call bnd_emf(wcu,'emfz','zdim')
-#else
+#else /* SPLIT */
 
     call bnd_emf(wa,'emfz','xdim')
     call bnd_emf(wa,'emfz','ydim')
@@ -228,7 +228,7 @@ contains
     Lb(ibx,:,:,:) = Lb(ibx,:,:,:) + wa/dl(ydim)
     wa = cshift(wa,shift=1,dim=ydim)
     Lb(ibx,:,:,:) = Lb(ibx,:,:,:) - wa/dl(ydim)
-#endif
+#endif /* SPLIT */
 
   end subroutine diffuseby_x
 
@@ -240,7 +240,7 @@ contains
     call bnd_emf(wcu,'emfy','xdim')
     call bnd_emf(wcu,'emfy','ydim')
     if(dimensions .eq. '3d') call bnd_emf(wcu,'emfy','zdim')
-#else
+#else /* SPLIT */
 
     call bnd_emf(wa, 'emfy', 'xdim')
     call bnd_emf(wa, 'emfy', 'ydim')
@@ -253,7 +253,7 @@ contains
     Lb(ibx,:,:,:) = Lb(ibx,:,:,:) + wa/dl(zdim)
     wa = cshift(wa,shift=1,dim=zdim)
     Lb(ibx,:,:,:) = Lb(ibx,:,:,:) - wa/dl(zdim)
-#endif
+#endif /* SPLIT */
 
   end subroutine diffusebz_x
 
@@ -265,7 +265,7 @@ contains
     call bnd_emf(wcu,'emfx','ydim')
     if(dimensions .eq. '3d') call bnd_emf(wcu,'emfx','zdim')
     call bnd_emf(wcu,'emfx','xdim')
-#else
+#else /* SPLIT */
 
     call bnd_emf(wa, 'emfx', 'ydim')
     if(dimensions .eq. '3d') call bnd_emf(wa, 'emfx', 'zdim')
@@ -278,7 +278,7 @@ contains
     Lb(iby,:,:,:) = Lb(iby,:,:,:) + wa/dl(zdim)
     wa = cshift(wa,shift=1,dim=zdim)
     Lb(iby,:,:,:) = Lb(iby,:,:,:) - wa/dl(zdim)
-#endif
+#endif /* SPLIT */
   end subroutine diffusebz_y
 
   subroutine diffusebx_y
@@ -289,7 +289,7 @@ contains
     call bnd_emf(wcu, 'emfz', 'ydim')
     if(dimensions .eq. '3d') call bnd_emf(wcu, 'emfz', 'zdim')
     call bnd_emf(wcu, 'emfz', 'xdim')
-#else
+#else /* SPLIT */
 
     call bnd_emf(wa, 'emfz', 'ydim')
     if(dimensions .eq. '3d') call bnd_emf(wa, 'emfz', 'zdim')
@@ -302,7 +302,7 @@ contains
     Lb(iby,:,:,:) = Lb(iby,:,:,:) + wa/dl(xdim)
     wa = cshift(wa,shift=1,dim=xdim)
     Lb(iby,:,:,:) = Lb(iby,:,:,:) - wa/dl(xdim)
-#endif
+#endif /* SPLIT */
   end subroutine diffusebx_y
 
   subroutine diffusebx_z
@@ -313,7 +313,7 @@ contains
     call bnd_emf(wcu, 'emfy', 'zdim')
     call bnd_emf(wcu, 'emfy', 'xdim')
     call bnd_emf(wcu, 'emfy', 'ydim')
-#else
+#else /* SPLIT */
 
     call bnd_emf(wa, 'emfy', 'zdim')
     call bnd_emf(wa, 'emfy', 'xdim')
@@ -326,7 +326,7 @@ contains
     Lb(ibz,:,:,:) = Lb(ibz,:,:,:) + wa/dl(xdim)
     wa = cshift(wa,shift=1,dim=xdim)
     Lb(ibz,:,:,:) = Lb(ibz,:,:,:) - wa/dl(xdim)
-#endif
+#endif /* SPLIT */
   end subroutine diffusebx_z
 
   subroutine diffuseby_z
@@ -337,7 +337,7 @@ contains
     call bnd_emf(wcu, 'emfx', 'zdim')
     call bnd_emf(wcu, 'emfx', 'xdim')
     call bnd_emf(wcu, 'emfx', 'ydim')
-#else
+#else /* SPLIT */
 
     call bnd_emf(wa, 'emfx', 'zdim')
     call bnd_emf(wa, 'emfx', 'xdim')
@@ -350,7 +350,7 @@ contains
     Lb(ibz,:,:,:) = Lb(ibz,:,:,:) + wa/dl(ydim)
     wa = cshift(wa,shift=1,dim=ydim)
     Lb(ibz,:,:,:) = Lb(ibz,:,:,:) - wa/dl(ydim)
-#endif
+#endif /* SPLIT */
   end subroutine diffuseby_z
 
 end module resistivity
