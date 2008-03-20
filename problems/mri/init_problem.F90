@@ -111,7 +111,7 @@ contains
 #ifndef ISO
           u(iena,i,j,k)   = p0/(gamma-1.0)*(1.0 + dp*(rand(4)-0.5)) &
             + 0.5*sum(u(imxa:imza,i,j,k)**2,1)
-#endif
+#endif /* ISO */
         enddo
       enddo
     enddo
@@ -125,7 +125,7 @@ contains
           b(ibz,i,j,k)   = b0*sqrt(u(idna,i,j,k)/d0)* nbz0/sqrt(nbx0**2+nby0**2+nbz0**2+small)
 #ifndef ISO
           u(iena,i,j,k)   = u(iena,i,j,k) +0.5*sum(b(:,i,j,k)**2,1)
-#endif
+#endif /* ISO */
         enddo
       enddo
     enddo
