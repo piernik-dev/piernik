@@ -796,7 +796,7 @@ end subroutine bnd_emf
 #ifndef SPLIT
    Lb(:,:,:,:) = 0.0
  
-#endif
+#endif /* SPLIT */
   end subroutine compute_b_bnd
 
 end module mag_boundaries
