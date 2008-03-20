@@ -65,6 +65,7 @@ module constants     ! module containg numerical and physical constants !!!
 ! energy units:
 	real, parameter :: joul =     kg*metr**2/sek**2
 	real, parameter :: erg =      gram*cm**2/sek**2
+	real, parameter :: eV =       1.6022e-12*erg	
 ! density units:
 	real, parameter :: ppcm3 =    1.36 * mp / cm**3
 	real, parameter :: ppcm2 =    1.36 * mp / cm**2
@@ -124,6 +125,7 @@ module constants     ! module containg numerical and physical constants !!!
 ! energy units:
 	real, parameter :: joul =  kg*metr**2/sek**2
 	real, parameter :: erg =   gram*cm**2/sek**2
+	real, parameter :: eV =    1.6022e-12*erg	
 ! density units:
 	real, parameter :: ppcm3 = 1.36 * mp / cm**3
 	real, parameter :: ppcm2 = 1.36 * mp / cm**2
@@ -182,6 +184,7 @@ module constants     ! module containg numerical and physical constants !!!
 ! energy units:
 	real, parameter :: joul =     1.0      !kg*metr**2/sek**2
 	real, parameter :: erg =      1.0e-7   !g*cm**2/sek**2
+	real, parameter :: eV =       1.6022e-12*erg	
 ! density units:
 	real, parameter :: ppcm3 = 1.36 * mp / cm**3
 	real, parameter :: ppcm2 = 1.36 * mp / cm**2
@@ -241,6 +244,7 @@ module constants     ! module containg numerical and physical constants !!!
 ! energy units:
 	real, parameter :: joul =     1.0e7 !kg*metr**2/sek**2
 	real, parameter :: erg =      1.0   !g*cm**2/sek**2
+	real, parameter :: eV =       1.6022e-12*erg	
 ! density units:
 	real, parameter :: ppcm3 = 1.36 * mp / cm**3
 	real, parameter :: ppcm2 = 1.36 * mp / cm**2
@@ -293,6 +297,6 @@ module constants     ! module containg numerical and physical constants !!!
   real, parameter :: hydro_mass = m_H * cmkm**2
   real, parameter :: chcf = hydro_mass / sekmyr
 
-#endif
+#endif /* PGM, PSM, SI, CGS, STANDARD */
 
 end module constants
