@@ -137,14 +137,14 @@ contains
           u(iena,i,j,k) = pre/(gamma-1.0)
           u(iena,i,j,k) = max(u(iena,i,j,k), smallei)
           u(iena,i,j,k) = u(iena,i,j,k) +0.5*(vx**2+vy**2+vz**2)*u(idna,i,j,k)
-#endif
+#endif /* ISO */
           b(1,i,j,k)  = bx
           b(2,i,j,k)  = by
           b(3,i,j,k)  = bz
 
 #ifndef ISO	  
           u(iena,i,j,k)   = u(iena,i,j,k) +0.5*sum(b(:,i,j,k)**2,1)
-#endif
+#endif /* ISO */
         enddo
       enddo
     enddo
