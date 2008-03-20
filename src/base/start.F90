@@ -5,7 +5,7 @@ module start
 ! Written by: M. Hanasz, January 2006
 
   use mpi_setup
-  
+
 
   implicit none
 
@@ -19,7 +19,7 @@ module start
   real tend
   integer nend
 
-  real :: omega, qshear          
+  real :: omega, qshear
   
   character restart*16, new_id*3
   integer   nrestart, resdel
@@ -33,32 +33,32 @@ module start
 
   real xmin, xmax, ymin, ymax, zmin, zmax
 
-  real c_si, gamma, alpha 
+  real c_si, gamma, alpha
 
   real cfl, smalld, smallei, nu_bulk, cfl_visc
 #ifdef VZ_LIMITS
-  real   :: floor_vz, ceil_vz 
+  real   :: floor_vz, ceil_vz
 #endif /* VZ_LIMITS */    
   
-  real tune_zeq, tune_zeq_bnd 
+  real tune_zeq, tune_zeq_bnd
   character*16 flux_limiter, freezing_speed, dimensions, magnetic
   integer integration_order, istep
   real rorder
   logical bulk_viscosity
   
-  character*16 grav_model 
+  character*16 grav_model
   real g_z
   real dg_dz
   real r_gc
-  real ptmass, ptm_x, ptm_y, ptm_z, r_smooth 
+  real ptmass, ptm_x, ptm_y, ptm_z, r_smooth
   integer nsub
   real    h_grav,  r_grav
-  integer n_gravh, n_gravr,n_gravr2   
+  integer n_gravh, n_gravr, n_gravr2
 
-  character cool_model*16, heat_model*16, coolheat_active*3,substepping*8
+  character cool_model*16, heat_model*16, coolheat_active*3, substepping*8
   real G_uv1, G_sup1, cfl_coolheat, esrc_lower_lim, esrc_upper_lim
   real h_coolheat_profile
-  integer n_coolheat_profile    
+  integer n_coolheat_profile
   real L_C, K_heatcond, C_heatcond, dt_heatcond, cfl_heatcond
   logical gravaccel, coolheat, heatcond
 
@@ -72,7 +72,8 @@ module start
 
   real t_dw, t_arm, col_dens
   
-  real h_sn, r_sn, f_sn_kpc2, amp_dip_sn, snenerg, sn1time, sn2time, r0sn
+  real h_sn, r_sn, f_sn_kpc2, amp_dip_sn, snenerg, snemass, sn1time, sn2time, r0sn
+  character*3 add_mass, add_ener, add_encr
 ! Secondary parameters
 
   real csi2, csim2, amp_ecr_sn, ethu, f_sn
@@ -82,11 +83,11 @@ module start
 #ifdef SPLIT
 #ifdef ORIG
   real, dimension(2)  :: cn
-#endif
+#endif /* ORIG */
 #ifdef SSP
   real, dimension(2,3)  :: cn
-#endif
-#endif
+#endif /* SSP */
+#endif /* SPLIT */
 
 !-------------------------------------------------------------------------------
 contains
@@ -120,10 +121,10 @@ contains
 #endif /* VZ_LIMITS */    
                               integration_order, &
                               dimensions, magnetic, nu_bulk, cfl_visc
-			      
+
 #ifdef SHEAR
   namelist /SHEARING/ omega, qshear
-#endif
+#endif /* SHEAR */
 #ifdef GRAV
   namelist /GRAVITY/ grav_model,  &
                      g_z,   &
@@ -132,33 +133,33 @@ contains
                      ptmass,ptm_x,ptm_y,ptm_z,r_smooth, &
                      nsub, tune_zeq, tune_zeq_bnd,      &
                      h_grav, r_grav, n_gravr, n_gravr2, n_gravh
-#endif
+#endif /* GRAV */
 #ifdef COOL_HEAT
   namelist /THERMAL/ cool_model, heat_model, coolheat_active,  &
                      esrc_lower_lim, esrc_upper_lim, &
                      h_coolheat_profile, n_coolheat_profile, &
                      G_uv1, G_sup1, cfl_coolheat, L_C, &
                      K_heatcond, C_heatcond, cfl_heatcond 
-#endif
+#endif /* COOL_HEAT */
 #ifdef RESIST
   namelist /RESISTIVITY/ cfl_resist, eta_0, eta_1, eta_scale, j_crit, deint_max
-#endif
+#endif /* RESIST */
 #ifdef COSM_RAYS
   namelist /COSMIC_RAYS/ cr_active, gamma_cr, cr_eff, beta_cr, &
                          K_cr_paral, K_cr_perp, amp_cr, cfl_cr, smallecr
-#endif
+#endif /* COSM_RAYS */
 #ifdef GALAXY
   namelist /GALACTIC_PARAMS/ t_dw, t_arm,col_dens 
-#endif
+#endif /* GALAXY */
 #ifdef SHEAR
   namelist /SHEARING/ omega, qshear
-#endif
+#endif /* SHEAR */
 #ifdef SN_SRC
   namelist /SN_PARAMS/ h_sn, r_sn, f_sn_kpc2, amp_dip_sn
-#endif
+#endif /* SN_SRC */
 #ifdef SNE_DISTR
-  namelist /SN_DISTR/ snenerg, sn1time, sn2time, r0sn
-#endif
+  namelist /SN_DISTR/ snenerg, snemass, sn1time, sn2time, r0sn, add_mass, add_ener, add_encr
+#endif /* SNE_DISTR */
 
 
 
@@ -210,7 +211,7 @@ contains
     gamma  = 5./3.    ! ignored if ISO
 #ifdef ISO
 !    gamma  = 1.
-#endif    
+#endif /* ISO */
     alpha  = 1.0   
 
 
@@ -247,7 +248,7 @@ contains
     n_gravr = 0
     n_gravr2= 0
     n_gravh = 0
-#endif
+#endif /* GRAV */
 
 #ifdef COOL_HEAT
     cool_model   = 'null'
@@ -264,7 +265,7 @@ contains
     K_heatcond    = 0.0
     C_heatcond    = 1.5e-5
     cfl_heatcond = 0.45
-#endif
+#endif /* COOL_HEAT */
 
 #ifdef RESIST
     cfl_resist  =  0.4
@@ -273,7 +274,7 @@ contains
     eta_scale   =  4
     j_crit      =  1.0e6
     deint_max   = 0.01
-#endif
+#endif /* RESIST */
 
 #ifdef COSM_RAYS
     cr_active  = 1.0
@@ -286,35 +287,35 @@ contains
     amp_cr     = 0.0
     cfl_cr     = 0.45
     smallecr   = 0.0
-#endif
+#endif /* COSM_RAYS */
 
 #ifdef GALAXY
 ! Default galactic parameters
     t_dw       = 100.0        	! period of density waves in Myr
     t_arm      = 100.0        	! period of SFR in arms
     col_dens    = 0.0            ! gas column density
-!--> GALAXY
-#endif 
+#endif /* GALAXY */
 
 #ifdef SHEAR
     omega  = 0.0
     qshear = 0.0
-!--> SHEAR
-#endif 
+#endif /* SHEAR */
 #ifdef SN_SRC
     h_sn       = 266.0		!  vertical scaleheight of SN from Ferriere 1998
     r_sn       =  10.0       	!  "typical" SNR II radius
     f_sn_kpc2  =  20.0       	!  solar galactic radius SN II freq./kpc**2
     amp_dip_sn =   1.0e6        
-!--> SN_SRC
-#endif
+#endif /* SN_SRC */
 #ifdef SNE_DISTR
     snenerg    = 1.e51		!  typical energy of supernova explosion [erg]
+    snemass    =  10.0		!  typical preSN stellar matter mass injection [Msun]
     sn1time    = 445.0       	!  mean time between typ I supernovae explosions [year]
     sn2time    =  52.0       	!  mean time between typ II supernovae explosions [year]
-    r0sn       =  50.0
-!--> SNE_DISTR
-#endif
+    r0sn       =  50.0		!  radius of an area, where mass/ener/encr is added [actually used unit of length]
+    add_mass   = 'yes'		!  permission for inserting snemass inside randomly selected areas
+    add_ener   = 'yes'		!  permission for inserting snenerg inside randomly selected areas
+    add_encr   = 'yes'		!  permission for inserting CR energy inside randomly selected areas
+#endif /* SNE_DISTR */
 
          
     if(proc .eq. 0) then
@@ -330,28 +331,28 @@ contains
         read(unit=1,nml=NUMERICAL_SETUP)
 #ifdef GRAV	
         read(unit=1,nml=GRAVITY)
-#endif
+#endif /* GRAV */
 #ifdef COOL_HEAT
         read(unit=1,nml=THERMAL)
-#endif
+#endif /* COOL_HEAT */
 #ifdef RESIST
         read(unit=1,nml=RESISTIVITY)
-#endif
+#endif /* RESIST */
 #ifdef COSM_RAYS
         read(unit=1,nml=COSMIC_RAYS)
-#endif
+#endif /* COSM_RAYS */
 #ifdef GALAXY
         read(unit=1,nml=GALACTIC_PARAMS)
-#endif
+#endif /* GALAXY */
 #ifdef SHEAR
         read(unit=1,nml=SHEARING)
-#endif
+#endif /* SHEAR */
 #ifdef SN_SRC
         read(unit=1,nml=SN_PARAMS)
-#endif
+#endif /* SN_SRC */
 #ifdef SNE_DISTR
         read(unit=1,nml=SN_DISTR)
-#endif
+#endif /* SNE_DISTR */
 
       close(1)
 
@@ -366,28 +367,28 @@ contains
         write(unit=3,nml=NUMERICAL_SETUP)
 #ifdef GRAV	
         write(unit=3,nml=GRAVITY)
-#endif 	
+#endif /* GRAV */
 #ifdef COOL_HEAT
         write(unit=3,nml=THERMAL)
-#endif
+#endif /* COOL_HEAT */
 #ifdef RESIST
         write(unit=3,nml=RESISTIVITY)
-#endif
+#endif /* RESIST */
 #ifdef COSM_RAYS
         write(unit=3,nml=COSMIC_RAYS)
-#endif
+#endif /* COSM_RAYS */
 #ifdef GALAXY
         write(unit=3,nml=GALACTIC_PARAMS)
-#endif 
+#endif /* GALAXY */
 #ifdef SHEAR
         write(unit=3,nml=SHEARING)
-#endif
+#endif /* SHEAR */
 #ifdef SN_SRC
         write(unit=3,nml=SN_PARAMS)
-#endif
+#endif /* SN_SRC */
 #ifdef SNE_DISTR
         write(unit=3,nml=SN_DISTR)
-#endif
+#endif /* SNE_DISTR */
       close(3)
       
     endif 
@@ -507,7 +508,7 @@ contains
       rbuff(99)  = r_smooth
       rbuff(100) = h_grav
       rbuff(101) = r_grav
-#endif
+#endif /* GRAV */
 
 #ifdef COOL_HEAT   
 !  namelist /THERMAL/ cool_model, heat_model, coolheat_active, &
@@ -533,7 +534,7 @@ contains
        rbuff(117) = K_heatcond  
        rbuff(118) = C_heatcond  
        rbuff(119) = cfl_heatcond  
-#endif
+#endif /* COOL_HEAT */
 
 #ifdef RESIST
 !   namelist /RESISTIVITY/ cfl_resist, eta_0, eta_1, j_crit
@@ -545,7 +546,7 @@ contains
        rbuff(122) = eta_1
        rbuff(123) = j_crit
        rbuff(124) = deint_max
-#endif
+#endif /* RESIST */
              
 #ifdef COSM_RAYS
 !  namelist /COSMIC_RAYS/ cr_active, gamma_cr, cr_eff, beta_cr, K_cr_paral, K_cr_perp,&
@@ -559,7 +560,7 @@ contains
        rbuff(136) = amp_cr    
        rbuff(137) = cfl_cr   
        rbuff(138) = smallecr 
-#endif
+#endif /* COSM_RAYS */
 
 #ifdef GALAXY
 !  namelist /GALACTIC_PARAMS/ h_sn, r_sn, f_sn_kpc2, t_dw, t_arm, col_dens
@@ -570,14 +571,13 @@ contains
        rbuff(143) = t_dw
        rbuff(144) = t_arm
        rbuff(145) = col_dens
-!--> GALAXY
-#endif
+#endif /* GALAXY */
 
 #ifdef SHEAR
 !  namelist /SHEARING/ omega, qshear
        rbuff(160) = omega
        rbuff(161) = qshear
-#endif
+#endif /* SHEAR */
 
 #ifdef SN_SRC
 !  namelist /SN_PARAMS/ h_sn, r_sn, f_sn_kpc2, amp_dip_sn
@@ -585,16 +585,18 @@ contains
        rbuff(171) = r_sn             	
        rbuff(172) = f_sn_kpc2       	 
        rbuff(173) = amp_dip_sn      
-!--> SN_SRC
-#endif
+#endif /* SN_SRC */
 #ifdef SNE_DISTR
-!  namelist /SN_DISTR/ snenerg, sn1time, sn2time, r0sn
+!  namelist /SN_DISTR/ snenerg, snemass, sn1time, sn2time, r0sn, add_mass, add_ener, add_encr
        rbuff(180) = snenerg
-       rbuff(181) = sn1time
-       rbuff(182) = sn2time
-       rbuff(183) = r0sn
-!--> SNE_DISTR
-#endif
+       rbuff(181) = snemass
+       rbuff(182) = sn1time
+       rbuff(183) = sn2time
+       rbuff(184) = r0sn
+       cbuff(180) = add_mass
+       cbuff(181) = add_ener
+       cbuff(182) = add_encr
+#endif /* SNE_DISTR */	
 
 ! Boroadcasting parameters
 
@@ -726,8 +728,7 @@ contains
       r_smooth            = rbuff(99) 
       h_grav              = rbuff(100) 
       r_grav              = rbuff(101) 
-!--> GRAV
-#endif
+#endif /* GRAV */
     
 #ifdef COOL_HEAT
 !  namelist /THERMAL/ cool_model, heat_model, coolheat_active,  &
@@ -753,8 +754,7 @@ contains
       K_heatcond          = rbuff(117) 
       C_heatcond          = rbuff(118) 
       cfl_heatcond        = rbuff(119) 
-!--> COOL_HEAT
-#endif       
+#endif /* COOL_HEAT */
 
 #ifdef RESIST
 !   namelist /RESISTIVITY/ cfl_resist, eta_0, eta_1, j_crit
@@ -766,8 +766,7 @@ contains
        eta_1              = rbuff(122)  
        j_crit             = rbuff(123)  
        deint_max          = rbuff(124)
-!--> RESIST
-#endif
+#endif /* RESIST */
              
 #ifdef COSM_RAYS
 !  namelist /COSMIC_RAYS/ cr_active, gamma_cr, cr_eff, beta_cr, K_cr_paral, K_cr_perp,&
@@ -782,8 +781,7 @@ contains
        amp_cr             = rbuff(136) 
        cfl_cr             = rbuff(137)  
        smallecr           = rbuff(138)   
-!-->  COSM_RAYS
-#endif
+#endif /* COSM_RAYS */
 
 
 #ifdef GALAXY
@@ -795,15 +793,13 @@ contains
        t_dw 		  = rbuff(143)             	
        t_arm 		  = rbuff(144)          
        col_dens           = rbuff(145)              
-!--> GALAXY
-#endif
+#endif /* GALAXY */
 
 #ifdef SHEAR
 !  namelist /SHEARING/ omega, qshear
        omega              = rbuff(160)
        qshear             = rbuff(161)
-!--> SHEAR
-#endif 
+#endif /* SHEAR */
     endif  ! (proc .eq. 0)    
 
 #ifdef SN_SRC
@@ -812,16 +808,18 @@ contains
        r_sn               = rbuff(171)          	
        f_sn_kpc2          = rbuff(172)      	 
        amp_dip_sn         = rbuff(173)     
-!--> SN_SRC
-#endif
+#endif /* SN_SRC */
 #ifdef SNE_DISTR
-!  namelist /SN_DISTR/ snenerg, sn1time, sn2time, r0sn
-       snenerg            = rbuff(180)   	
-       sn1time		  = rbuff(181)
-       sn2time		  = rbuff(182)	
-       r0sn		  = rbuff(183)
-!--> SNE_DISTR
-#endif
+!  namelist /SN_DISTR/ snenerg, snemass, sn1time, sn2time, r0sn, add_mass, add_ener, add_encr
+       snenerg            = rbuff(180)  
+       snemass		  = rbuff(181) 	
+       sn1time		  = rbuff(182)
+       sn2time		  = rbuff(183)	
+       r0sn		  = rbuff(184)
+       add_mass		  = cbuff(180)
+       add_ener		  = cbuff(181)
+       add_encr		  = cbuff(182)
+#endif /* SNE_DISTR */
 
 ! Secondary parameters
 
@@ -830,7 +828,7 @@ contains
                                 ! ratio p_mag/p_gas = alpha = 1/beta
 #ifdef COSM_RAYS
    csim2 = csim2 +csi2*beta_cr
-#endif
+#endif /* COSM_RAYS */
 
    ethu = 7.0**2/(5.0/3.0-1.0) * 1.0    ! thermal energy unit=0.76eV/cm**3
                                         ! for c_si= 7km/s, n=1/cm^3 	 
@@ -843,8 +841,7 @@ contains
         				! c_s0 = 7km/s
    f_sn = f_sn_kpc2 * (xmax-xmin)/1000.0 * (ymax-ymin)/1000.0 ! SN frequency per horizontal
                                                               ! surface area of the comp. box 
-!--> GALAXY
-#endif
+#endif /* GALAXY */
 
 #ifdef SPLIT
 #ifdef ORIG
@@ -852,8 +849,7 @@ contains
   if(integration_order .eq. 1) then
     cn(1) = 1.
   endif
-!--> ORIG
-#endif
+#endif /* ORIG */
 #ifdef SSP
   cn(1:2,1) = (/ 1.   , 1.   /)
   cn(1:2,2) = (/ 0.75 , 0.25 /)
@@ -862,10 +858,8 @@ contains
   if(integration_order .eq. 2) then
     cn(1:2,2) = (/ 0.5 , 0.5 /)
   endif
-!--> SSP
-#endif
-!--> SPLIT
-#endif
+#endif /* SSP */
+#endif /* SPLIT */
 
 
 !-------------------------                               
@@ -873,12 +867,12 @@ contains
     if(integration_order .gt. 2) then
       stop 'For "ORIG" scheme integration_order must be 1 or 2'
     endif
-#endif
+#endif /* ORIG */
 #ifdef SSP
     if(integration_order .gt. 3) then
       stop 'For "SSP" scheme integration_order can`t be greater than 3'
     endif
-#endif
+#endif /* SSP */
 
     select case (dimensions)
       case('3d','2dxy')
@@ -890,22 +884,22 @@ contains
 
 #ifdef GRAV
       gravaccel = .true.
-#else 
+#else /* GRAV */
       gravaccel = .false.
-#endif 
+#endif /* GRAV */
 
 #ifdef COOL_HEAT
     if((cool_model .ne. 'null') .or. (heat_model .ne. 'null')) then
       coolheat = .true.
-#else 
+#else /* COOL_HEAT */
       coolheat = .false.
-#endif
+#endif /* COOL_HEAT */
     
 #ifdef HEAT_COND
       heatcond = .true.
-#else
+#else /* HEAT_COND */
       heatcond = .false.
-#endif
+#endif /* HEAT_COND */
 
     if(magnetic .eq. 'yes') then
       magfield = .true.
@@ -919,21 +913,21 @@ contains
         write(*,*) 'eta_scale must be greater or equal 0'
         stop
       endif
-#else
+#else /* RESIST */
       resist = .false.
-#endif
+#endif /* RESIST */
    
 #ifdef VISC
     if(nu_bulk .ne. 0.0) then
        bulk_viscosity = .true.
-#else
+#else /* VISC */
        bulk_viscosity = .false.
-#endif
+#endif /* VISC */
        
 #ifdef MASS_COMPENS
     mass_loss = 0.0
     mass_loss_tot = 0.0
-#endif
+#endif /* MASS_COMPENS */
 
   end subroutine read_params
   
