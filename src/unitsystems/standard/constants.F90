@@ -11,12 +11,6 @@ module constants     ! module containg numerical and physical constants !!!
   real, parameter :: small= 1.e-50
   real, parameter :: big  = 1.e+50
   
-  
-!  real, dimension(2,3)  :: cn
-!  data                     cn  /one,thrq,onet, &
-!                                one,oneq,twot/
-  
-  
   real, parameter :: pi = 3.141592653589793238
   real, parameter :: dpi = 2.*pi
   real, parameter :: fpi = 4.*pi
