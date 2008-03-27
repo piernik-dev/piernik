@@ -97,13 +97,14 @@ contains
 !-----------------------------------------------------------------------------
 
   subroutine init_prob
-    use arrays, only    :   u,b,x,y,z,nx,ny,nz,nxt,nxb,dl,gp,xdim,ydim,idna
+    use arrays, only    :   u,b,x,y,z,nx,ny,nz,nxt,nxb,dl,gp,xdim,ydim
+    use arrays, only    :   idna,imxa,imya,imza,iena,ibx,iby,ibz
     use constants, only :   cm,kpc,mp,r_gc_sun
     use grid, only      :   dx
     use hydrostatic, only : hydrostatic_zeq
     use start, only     :   xmin,nb,smalld,c_si,alpha,gamma
 #ifndef ISO
-    use start, only    :   smallei
+    use start, only     :   smallei
 #endif /* ISO */
 
 ! wolanie prepare_snedistr przeniesione do mhd - procedura musi byc wolana
@@ -116,7 +117,7 @@ contains
     implicit none
  
     integer i,j,k,iu,id,ju,jd
-    real xi,yj,zk, rc, vx, vy, rs
+    real xi,yj,zk, rc, rs
     real, allocatable ::dprof(:)
     real iOmega, dens0
     real dcmol, dcneut, dcion, dchot
@@ -226,8 +227,8 @@ contains
 	do k=1,nz
 	 zk=z(k)
 	 rs = sqrt(xi**2+yj**2+zk**2)
-         u(1,i,j,k) = rhoa + dprof(k)/cosh(min((rc/r_max)**mtr,100.0))
-         u(1,i,j,k) = max(u(1,i,j,k), smalld)
+         u(idna,i,j,k) = rhoa + dprof(k)/cosh(min((rc/r_max)**mtr,100.0))
+         u(idna,i,j,k) = max(u(idna,i,j,k), smalld)
 	   if(i .ne. 1 .and. i .ne. nx) then
 	     iu = i+1
 	     id = i-1
@@ -269,13 +270,13 @@ contains
            endif
            omega_xy(i,j) = iOmega
                  
-	     u(2,i,j,k)=-iOmega*yj*u(1,i,j,k)
-             u(3,i,j,k)= iOmega*xi*u(1,i,j,k)
-             u(4,i,j,k) = 0.0
+	     u(imxa,i,j,k)=-iOmega*yj*u(idna,i,j,k)
+             u(imya,i,j,k)= iOmega*xi*u(idna,i,j,k)
+             u(imza,i,j,k) = 0.0
 #ifndef ISO
-         u(5,i,j,k) = c_si**2/(gamma-1.0)*u(1,i,j,k)
-         u(5,i,j,k) = max(u(5,i,j,k), smallei)
-	 u(5,i,j,k) = u(5,i,j,k) +0.5*(u(2,i,j,k)**2+u(3,i,j,k)**2+u(4,i,j,k)**2)/u(1,i,j,k)
+         u(iena,i,j,k) = c_si**2/(gamma-1.0)*u(idna,i,j,k)
+         u(iena,i,j,k) = max(u(iena,i,j,k), smallei)
+	 u(iena,i,j,k) = u(iena,i,j,k) +0.5*(u(imxa,i,j,k)**2+u(imya,i,j,k)**2+u(imza,i,j,k)**2)/u(idna,i,j,k)
 #endif /* ISO */
 
 #ifdef COSM_RAYS
@@ -285,20 +286,20 @@ contains
 
          select case(mf_orient)
 	 case('null')
-         b(1,i,j,k)   = 0.0
-         b(2,i,j,k)   = 0.0
-         b(3,i,j,k)   = 0.0
+         b(ibx,i,j,k)   = 0.0
+         b(iby,i,j,k)   = 0.0
+         b(ibz,i,j,k)   = 0.0
          case('vertical')
-         b(1,i,j,k)   = 0.0
-         b(2,i,j,k)   = 0.0
-         b(3,i,j,k)   = sqrt(2.*alpha*d0*c_si**2)
+         b(ibx,i,j,k)   = 0.0
+         b(iby,i,j,k)   = 0.0
+         b(ibz,i,j,k)   = sqrt(2.*alpha*d0*c_si**2)
 	 case('toroidal')
-         b(1,i,j,k)   =-sqrt(2.*alpha*c_si**2*u(idna,i,j,k))*yj/rc
-         b(2,i,j,k)   = sqrt(2.*alpha*c_si**2*u(idna,i,j,k))*xi/rc
-         b(3,i,j,k)   = 0.0
+         b(ibx,i,j,k)   =-sqrt(2.*alpha*c_si**2*u(idna,i,j,k))*yj/rc
+         b(iby,i,j,k)   = sqrt(2.*alpha*c_si**2*u(idna,i,j,k))*xi/rc
+         b(ibz,i,j,k)   = 0.0
 	 end select
 #ifndef ISO
-         u(5,i,j,k)   = u(5,i,j,k) +0.5*sum(b(:,i,j,k)**2,1)
+         u(iena,i,j,k)   = u(iena,i,j,k) +0.5*sum(b(:,i,j,k)**2,1)
 #endif /* ISO */
         enddo
       enddo
