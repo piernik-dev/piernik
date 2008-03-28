@@ -46,7 +46,7 @@ module start
   real rorder
   logical bulk_viscosity
   
-  character*16 grav_model
+  character*3 gpt_hdf
   real g_z
   real dg_dz
   real r_gc
@@ -126,7 +126,7 @@ contains
   namelist /SHEARING/ omega, qshear
 #endif /* SHEAR */
 #ifdef GRAV
-  namelist /GRAVITY/ grav_model,  &
+  namelist /GRAVITY/ gpt_hdf,  &
                      g_z,   &
                      dg_dz, &
                      r_gc,  &
@@ -231,7 +231,7 @@ contains
 #endif /* VZ_LIMITS */    
 
 #ifdef GRAV
-    grav_model  = 'null'                     
+    gpt_hdf = 'no'
     g_z     = 0.0 
     dg_dz   = 0.0
     r_gc    = 8500
@@ -484,7 +484,7 @@ contains
       ibuff(80) = integration_order
 
 #ifdef GRAV
-!  namelist /GRAVITY/ grav_model, g_z, dg_dz, r_gc, 
+!  namelist /GRAVITY/ gpt_hdf, g_z, dg_dz, r_gc, 
 !                     ptmass,ptm_x,ptm_y,ptm_z,r_smooth, nsub, 
 !                     tune_zeq, tune_zeq_bnd,
 !                     h_grav, r_grav, n_gravr, n_gravr2, n_gravh
@@ -494,7 +494,7 @@ contains
       ibuff(92) = n_gravr2
       ibuff(93) = n_gravh
 
-      cbuff(90) = grav_model                 
+      cbuff(90) = gpt_hdf
 
       rbuff(90)  = g_z    
       rbuff(91)  = dg_dz  
@@ -703,7 +703,7 @@ contains
       integration_order   = ibuff(80)
  
 #ifdef GRAV
-!  namelist /GRAVITY/ grav_model,  g_z, dg_dz, r_gc, 
+!  namelist /GRAVITY/ gpt_hdf,  g_z, dg_dz, r_gc, 
 !                     ptmass,ptm_x,ptm_y,ptm_z,r_smooth
 !                     tune_zeq, tune_zeq_bnd,
 !                     h_gravity_profile, r_gravity_profile, n_gravity_profile
@@ -714,7 +714,7 @@ contains
       n_gravr2            = ibuff(92)
       n_gravh             = ibuff(93) 
 
-      grav_model          = trim(cbuff(90))                  
+      gpt_hdf             = trim(cbuff(90))                  
 
       g_z                 = rbuff(90)    
       dg_dz               = rbuff(91) 
