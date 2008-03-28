@@ -421,8 +421,6 @@ allocate(gpotdisk(nx,ny,nz),gpothalo(nx,ny,nz),gpotbulge(nx,ny,nz))
         x2  = y(i2)
     end select
     
-!    select case (grav_model)
-
 
 #ifdef GRAV_UNIFORM
 !      case ('uniform')
