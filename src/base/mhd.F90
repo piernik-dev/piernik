@@ -34,7 +34,6 @@ program mhd
 #endif /* SELF_GRAV */
 #ifdef GRAV
   use gravity, only : grav_pot_3d
-  use start, only : grav_model
 #endif /* GRAV */
 #ifdef SNE_DISTR
     use sn_distr, only  : prepare_SNdistr
@@ -91,15 +90,10 @@ program mhd
     nstep_start = 0
     t_start     = 0.0
 
-#ifdef GALACTIC_DISK
-    if(grav_model .eq. 'hern93nbody2') call write_data('gpt')
-#endif /* GALACTIC_DISK */
     call init_prob
-#ifdef GALACTIC_DISK
-    if((grav_model .ne. 'null') .and. (grav_model .ne. 'hern93nbody2')) then
-      call write_data('gpt')
-    endif
-#endif /* GALACTIC_DISK */
+#ifdef GRAV
+    if(gpt_hdf .eq. 'yes') call write_data('gpt')
+#endif /* GRAV */
 
     call compute_u_bnd
     call compute_b_bnd
