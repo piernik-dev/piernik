@@ -1,3 +1,5 @@
+#include "mhd.def"
+
 module init_problem
   
 ! Initial condition for Parker instability in realistic galactic gravity 
@@ -25,7 +27,7 @@ contains
   subroutine read_problem_par
 
     implicit none
-   
+    
       problem_name = 'xxx'
       run_id  = 'aaa'
       d0      = 1.0
@@ -103,7 +105,8 @@ contains
     allocate(dprof(nz),eprof(nz),tprof(nz),bprof(nz),cfunc(nz))
 
 
-    if (grav_model .ne. 'null') then
+#ifdef GRAV
+#ifndef GRAV_NULL
 
       if (coolheat) then
 
@@ -115,7 +118,13 @@ contains
 
       endif
       
-    else
+#else /* GRAV_NULL */
+#define NO_GRAV
+#endif /* GRAV_NULL */
+#else /* GRAV */
+#define NO_GRAV
+#endif /* GRAV */
+#ifdef NO_GRAV
 
       if (coolheat) then
 
@@ -132,7 +141,7 @@ contains
      
       endif
 
-    endif
+#endif /* NO_GRAV */
 
 
     do k = 1,nz
@@ -144,19 +153,19 @@ contains
           vx=0.0
           vy=0.0
           vz=0.0
-          if(grav_model .ne. 'null') then
+#ifndef NO_GRAV
             if(abs(z(k)) .lt. h_pert) then
               vz = a_pert &
 	           * cos(2.*pi*3*x(i)/Lx)*cos(2.*pi*y(j)/Ly)*cos(0.5*pi*z(k)/h_pert)
             endif
-	  else
+#else /* NO_GRAV */
 !	    u(1,i,j,k) = u(1,i,j,k) + a_pert &
 !	           * cos(2.*pi*x(i)/Lx)*cos(2.*pi*y(j)/Ly)*cos(2.*pi*z(k)/Lz)	  
 
             vx = -a_pert*cs* sin(2.*pi*x(i)/Lx)*cos(2.*pi*y(j)/Ly)*cos(2.*pi*z(k)/Lz)
             vy = -a_pert*cs* cos(2.*pi*x(i)/Lx)*sin(2.*pi*y(j)/Ly)*cos(2.*pi*z(k)/Lz)
             vz = -a_pert*cs* cos(2.*pi*x(i)/Lx)*cos(2.*pi*y(j)/Ly)*sin(2.*pi*z(k)/Lz)
-	  endif
+#endif /* NO_GRAV */
 	  
 	  
           u(2,i,j,k)   = u(2,i,j,k) + u(1,i,j,k)*vx
