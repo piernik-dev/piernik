@@ -77,7 +77,6 @@
  /
  
  $GRAVITY
-    grav_model ='null'
  /
  
  $THERMAL
