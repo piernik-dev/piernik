@@ -76,7 +76,6 @@
  /
 
  $GRAVITY
-    grav_model = 'ptflat'
     ptmass     =  1.0
     ptm_x      =  0.0
     ptm_y      =  0.0
