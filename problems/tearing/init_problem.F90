@@ -1,3 +1,5 @@
+#include "mhd.def"
+
 module init_problem
   
 ! Initial condition for tearing instability problem
