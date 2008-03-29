@@ -1,6 +1,7 @@
 
 #undef DEBUG
 #undef GNU
+#undef VERBOSE
 
 /*======= re-setup needed ==========*/
 /* choosing scheme */
@@ -16,11 +17,12 @@
 #undef STANDARD		/*genuine unitsystem*/
 #define PSM		/*pc,Msun,Myr unitsystem*/
 #undef PGM		/*pc,G=1,Myr unitsystem*/
+#undef DMY		/*cm^16,Msun,year unitsystem*/
 #undef CGS		/*cm,gram,sek unitsystem*/
 #undef SI		/*metr,kg,sek unitsystem*/
 /*===================================*/
 
-/* adiabatic or isothermic */
+/* adiabatic or isothermal */
 #define ISO 	
 
 /* choosing freezing speed */
@@ -34,20 +36,30 @@
 #undef MINMOD
 #undef SUPERBEE
 
+/* physics including */
 #undef RESIST 		
 #undef VISC			
 #undef HEAT_COND	
 #undef COOL_HEAT
 #undef COSM_RAYS
+
+/* gravity type choosing */
 #define GRAV
 #define GRAV_GAL_VOLLMER
+#undef SELF_GRAV
+
+/* structure features including */
 #undef GALAXY
-#undef PRESSURECORRECTION
 #define GALACTIC_DISK
 #undef ARMS_POTENTIAL
 #define SNE_DISTR
+#undef MASS_COMPENS
 #undef SN_SRC
+
+/* numerical solutions and limitations */
 #undef SHEAR
+#undef SHEAR_MPI
 #undef FLX_BND
+#undef VZ_LIMITS
 
-
+/* problem specific directives */

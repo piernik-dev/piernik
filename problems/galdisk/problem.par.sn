@@ -73,7 +73,6 @@
  /
  
  $GRAVITY
-    grav_model ='gal_vollmer'
     nsub   = 20
     h_grav = 300.0
     n_gravh = 2

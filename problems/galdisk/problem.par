@@ -1,7 +1,7 @@
  $DOMAIN_SIZES
-    nxd = 30
-    nyd = 30
-    nzd = 60
+    nxd = 100
+    nyd = 100
+    nzd = 30
     nb  = 5
  /  
 
@@ -21,13 +21,13 @@
  /
 
  $END_CONTROL
-    tend   = 1.0e0
+    tend   = 1.0e2
     nend   = 100000 
  /
 
  $OUTPUT_CONTROL
     dt_hdf  = 1.0e0
-    dt_res  = 0.0e0
+    dt_res  = 100.0e0
     dt_log  = 0.001
     dt_tsl  = 0.00001
     vars(1) = 'dens'
@@ -56,8 +56,8 @@
     xmax   = 1.6e4
     ymin   = 0.0
     ymax   = 1.6e4
-    zmin   =-2.0e3
-    zmax   = 2.0e3
+    zmin   =-0.5e3
+    zmax   = 0.5e3
  /
 
  $EQUATION_OF_STATE
@@ -72,12 +72,12 @@
     integration_order = 2
     magnetic = 'yes'
     dimensions = '3d'
-    floor_vz   = -10.0
  /
  
  $GRAVITY
-    grav_model ='gal_vollmer'
-    nsub   = 10
+    nsub   = 20
+    h_grav = 300.0
+    n_gravh = 2
  /
  
  $THERMAL
@@ -93,10 +93,10 @@
   $COSMIC_RAYS
     cr_active    = 1.0      ! gdy 0 wtedy grad p_cr nie jest brany pod uwage w r.ruchu
     cfl_cr       = 0.8      ! liczba couranta dla dyfuzji CR (wsp 0.5 w kodzie)
-    cr_eff       = 0.1      ! czesc energii SN (=10^51 erg) zamieniona w CR
+    cr_eff       = 0.001      ! czesc energii SN (=10^51 erg) zamieniona w CR
     gamma_cr     = 1.555555 ! wykl. adiabatyczny CR
-    K_cr_paral   = 10000.   ! wsp. dyfuzji CR wzdluz B
-    K_cr_perp    = 1000.    ! wsp. dyfuzji CR wpoprzek B
+    K_cr_paral   = 1000.   ! wsp. dyfuzji CR wzdluz B
+    K_cr_perp    = 100.    ! wsp. dyfuzji CR wpoprzek B
     beta_cr      = 0.0      ! okresla wklad CR w poczatkowej rownowadze (podobnie jak alfa dla B)
     amp_cr       = 0.0      ! wybuch w init_problem w x0,y0,z0
     smallecr     = 1.0e-6    ! lower limit & outflow boundary value for ecr
@@ -110,11 +110,12 @@
     sn1time = 1.e10
     sn2time = 50.0
     r0sn    = 50.0
+
  /
 
  $PROBLEM_CONTROL
     problem_name ='galdisk'
-    run_id  =  'ts3'
+    run_id  =  'ts1'
     rhoa    = 1.0e-4
     d0      = 1.0
     r_max   = 1.2e4
