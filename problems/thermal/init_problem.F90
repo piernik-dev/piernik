@@ -6,6 +6,7 @@ module init_problem
 ! Written by: M. Hanasz, February 2006
 
   use arrays
+  use constants
   use start
   use grid
   use fluid_boundaries
@@ -105,7 +106,6 @@ contains
     allocate(dprof(nz),eprof(nz),tprof(nz),bprof(nz),cfunc(nz))
 
 
-#ifdef GRAV
 #ifndef GRAV_NULL
 
       if (coolheat) then
@@ -119,12 +119,6 @@ contains
       endif
       
 #else /* GRAV_NULL */
-#define NO_GRAV
-#endif /* GRAV_NULL */
-#else /* GRAV */
-#define NO_GRAV
-#endif /* GRAV */
-#ifdef NO_GRAV
 
       if (coolheat) then
 
@@ -141,7 +135,7 @@ contains
      
       endif
 
-#endif /* NO_GRAV */
+#endif /* GRAV_NULL */
 
 
     do k = 1,nz
