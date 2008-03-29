@@ -1,3 +1,5 @@
+#include "mhd.def"
+
 module init_problem
   
 ! Initial condition for Parker instability in realistic galactic gravity 
@@ -91,6 +93,8 @@ contains
 
   subroutine init_prob
 
+    use constants, only : pi
+    use thermal, only : cool_heat_profile
     implicit none
 
     integer i,j,k
@@ -104,7 +108,8 @@ contains
 !             coolheat_profile(nz))
 
 
-    if (grav_model .ne. 'null') then
+#ifdef GRAV
+#ifndef GRAV_NULL
 
       if (coolheat) then
 
@@ -121,7 +126,13 @@ contains
 
       endif
       
-    else
+#else /* GRAV_NULL */
+#define NO_GRAV
+#endif /* GRAV_NULL */
+#else /* GRAV */
+#define NO_GRAV
+#endif /* GRAV */
+#ifdef NO_GRAV
 
       if (coolheat) then
 
@@ -139,7 +150,7 @@ contains
      
       endif
 
-    endif
+#endif /* NO_GRAV */
 
 
     do k = 1,nz

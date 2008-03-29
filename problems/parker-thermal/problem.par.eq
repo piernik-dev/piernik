@@ -70,7 +70,6 @@
  /
  
  $GRAVITY
-    grav_model ='galactic'
     r_gc   = 8.5
     nsub   = 10
     h_gravity_profile =300.
