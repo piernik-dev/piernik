@@ -34,6 +34,7 @@ program mhd
 #endif /* SELF_GRAV */
 #ifdef GRAV
   use gravity, only : grav_pot_3d
+  use start, only : gpt_hdf
 #endif /* GRAV */
 #ifdef SNE_DISTR
     use sn_distr, only  : prepare_SNdistr
