@@ -1,3 +1,5 @@
+#include "mhd.def"
+
 module init_problem
   
 ! Initial condition for Parker-Jeans instability (under construction)
@@ -84,6 +86,7 @@ contains
 
   subroutine init_prob
 
+    use constants, only : pi
     implicit none
 
     integer i,j,k
