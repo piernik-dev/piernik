@@ -44,10 +44,8 @@
 #undef COSM_RAYS
 
 /* gravity type choosing */
-#define GRAV
-#ifdef GRAV
-#define GRAV_NULL
-#endif /* GRAV */
+#undef GRAV
+#undef GRAV_NULL
 #undef SELF_GRAV
 
 /* structure features including */
