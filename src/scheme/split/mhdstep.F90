@@ -30,9 +30,9 @@ module mod_mhdstep   ! SPLIT
 #ifdef SELF_GRAV
   use poisson_solver
 #endif /* SELF_GRAV */
-#ifdef GALAXY
+#ifdef MASS_COMPENS
   use init_problem, only : mass_loss_compensate
-#endif /* GALAXY */
+#endif /* MASS_COMPENS */
 
   implicit none
 
