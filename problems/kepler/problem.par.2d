@@ -73,7 +73,6 @@
  /
  
  $GRAVITY
-    grav_model ='ptmass'
     ptmass  =  1.0
     ptm_x   =  0.0
     ptm_y   =  0.0
