@@ -63,7 +63,6 @@
  /
  
  $GRAVITY
-    grav_model ='galactic'
     selfgravity = 'poisson'
     r_gc   = 8.5
  /
