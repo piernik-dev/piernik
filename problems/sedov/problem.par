@@ -20,7 +20,7 @@
 
  $END_CONTROL
     tend   = 0.0015
-    nend   = 10
+    nend   = 1000
  /
 
  $OUTPUT_CONTROL
@@ -73,7 +73,6 @@
  /
  
  $GRAVITY
-    grav_model ='null'
  /
  
  $THERMAL
