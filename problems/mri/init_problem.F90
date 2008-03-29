@@ -81,7 +81,8 @@ contains
 !-----------------------------------------------------------------------------
 
   subroutine init_prob
-    use grid,  only : x
+    use arrays,  only : x
+    use constants, only : small
 
     implicit none
 
