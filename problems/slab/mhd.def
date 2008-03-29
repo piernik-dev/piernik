@@ -1,7 +1,9 @@
-#define GNU
-/* adiabatic or isothermic */
-#undef ISO 	
 
+#undef DEBUG
+#define GNU
+#undef VERBOSE
+
+/*======= re-setup needed ==========*/
 /* choosing scheme */
 #define UNSPLIT_1D      /*scheme*/
 #undef  UNSPLIT_3D      /*scheme*/
@@ -11,22 +13,53 @@
 #undef  ORIG            /*solver*/
 #define  SSP            /*solver*/
 
+/* choosing unitsystem */
+#define STANDARD		/*genuine unitsystem*/
+#undef PSM		/*pc,Msun,Myr unitsystem*/
+#undef PGM		/*pc,G=1,Myr unitsystem*/
+#undef DMY		/*cm^16,Msun,year unitsystem*/
+#undef CGS		/*cm,gram,sek unitsystem*/
+#undef SI		/*metr,kg,sek unitsystem*/
+/*===================================*/
+
+/* adiabatic or isothermal */
+#undef ISO
+
 /* choosing freezing speed */
-#undef   LOCAL_FR_SPEED
+#undef LOCAL_FR_SPEED
 #define  GLOBAL_FR_SPEED
+#undef OLDLOCALCFR
 
 /* choosing flux limiter */
 #define VANLEER
+#undef MONCEN
 #undef MINMOD
 #undef SUPERBEE
 
+/* physics including */
 #undef RESIST 		
 #undef VISC			
 #undef HEAT_COND	
 #undef COOL_HEAT
 #undef COSM_RAYS
-#define GRAV 
-#define GRAV_NULL
+
+/* gravity type choosing */
+#undef GRAV
+#undef GRAV_NULL
 #undef SELF_GRAV
-#undef  GALAXY
+
+/* structure features including */
+#undef GALAXY
+#undef GALACTIC_DISK
+#undef ARMS_POTENTIAL
+#undef SNE_DISTR
+#undef MASS_COMPENS
+#undef SN_SRC
+
+/* numerical solutions and limitations */
 #define SHEAR
+#undef SHEAR_MPI
+#undef FLX_BND
+#undef VZ_LIMITS
+
+/* problem specific directives */
