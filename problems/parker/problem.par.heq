@@ -75,7 +75,6 @@
   /
  
  $GRAVITY
-    grav_model ='galactic'
     r_gc   = 8500
     nsub   = 10
     tune_zeq     = 1.0 !1.0025
