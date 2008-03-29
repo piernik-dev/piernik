@@ -73,7 +73,6 @@
   /
  
  $GRAVITY
-    grav_model ='galactic'
     r_gc         = 5000
     nsub         = 10
  /
