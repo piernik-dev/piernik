@@ -11,6 +11,7 @@ module resistivity
       use grid !, only: dxmn
       use constants, only: pi, small, big
       use mag_boundaries
+      use mpi_setup
       
       real eta_max, dt_resist, dt_eint
       real eta_max_proc, eta_max_all
@@ -70,12 +71,13 @@ contains
           endwhere
         endif
 
-        eta_max_proc      = maxval(eta(nb+1:nx-nb,nb+1:ny-nb,ks:ke))
-        loc_eta_max       = maxloc(eta(nb+1:nx-nb,nb+1:ny-nb,ks:ke))
+        eta_max_proc      = maxval(eta(is:ie,js:je,ks:ke))
+        loc_eta_max       = maxloc(eta(is:ie,js:je,ks:ke))
         
         eta_max = eta_max_proc
 
-        call MPI_REDUCE(eta_max_proc, eta_max_all, 1, MPI_DOUBLE_PRECISION, MPI_MIN, 0, comm, ierr)
+!        call MPI_REDUCE(eta_max_proc, eta_max_all, 1, MPI_DOUBLE_PRECISION, MPI_MIN, 0, comm, ierr)
+        call MPI_REDUCE(eta_max_proc, eta_max_all, 1, MPI_DOUBLE_PRECISION, MPI_MAX, 0, comm, ierr)
         call MPI_BCAST (eta_max_all, 1, MPI_DOUBLE_PRECISION, 0, comm, ierr)
     
         eta_max = eta_max_all
@@ -113,17 +115,22 @@ contains
       subroutine timestep_resist
 
       implicit none
-      real dx2
+      real dx2, dt_resist_min
 
-        dx2 = dxmn**2
-        dt_resist = 1.e50
         if(eta_max .ne. 0.) then
+                dx2 = dxmn**2
           dt_resist = cfl_resist*dx2/(2.0*eta_max)
 #ifndef ISO
           dt_resist = min(dt_resist,dt_eint)
 #endif /* ISO */
+        else
+          dt_resist = dt_eint
         endif
 	
+        call MPI_REDUCE(dt_resist, dt_resist_min, 1, MPI_DOUBLE_PRECISION, MPI_MIN, 0, comm, ierr)
+        call MPI_BCAST (dt_resist_min, 1, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+
+        dt_resist = dt_resist_min
 
       end subroutine timestep_resist
 
