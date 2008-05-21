@@ -4,14 +4,13 @@
 ! Written by M.Hanasz, April 2006    -  MPI comunication in "z"
 ! Modified by M. Hanasz - MPI comunication in "z"   - April 2006 
 ! Modified by M. Hanasz - MPI comunication in "xyz" - November 2006
-
-!  use mpi
+! Modified by K. Kowalik - procedure simplification, comm on-the-fly - May 2008
 
   implicit none
   include 'mpif.h'
-  integer nproc, proc, ierr , rc
-  integer status(MPI_STATUS_SIZE,4)
-  integer req(4), err(4)
+  integer :: nproc, proc, ierr , rc
+  integer :: status(MPI_STATUS_SIZE,4)
+  integer, dimension(4) :: req, err
 
   
   integer, parameter    :: ndims = 3       ! 3D grid
@@ -35,6 +34,20 @@
    
   logical     :: mpi
   character   :: cwd*(80)
+
+  integer :: MPI_XZ_LEFT_BND, MPI_XZ_RIGHT_BND
+  integer :: MPI_XZ_LEFT_DOM, MPI_XZ_RIGHT_DOM
+  integer :: MPI_XY_LEFT_BND, MPI_XY_RIGHT_BND
+  integer :: MPI_XY_LEFT_DOM, MPI_XY_RIGHT_DOM
+  integer :: MPI_YZ_LEFT_BND, MPI_YZ_RIGHT_BND
+  integer :: MPI_YZ_LEFT_DOM, MPI_YZ_RIGHT_DOM
+
+  integer :: MAG_XZ_LEFT_BND, MAG_XZ_RIGHT_BND
+  integer :: MAG_XZ_LEFT_DOM, MAG_XZ_RIGHT_DOM
+  integer :: MAG_XY_LEFT_BND, MAG_XY_RIGHT_BND
+  integer :: MAG_XY_LEFT_DOM, MAG_XY_RIGHT_DOM
+  integer :: MAG_YZ_LEFT_BND, MAG_YZ_RIGHT_BND
+  integer :: MAG_YZ_LEFT_DOM, MAG_YZ_RIGHT_DOM
   
  contains
 
@@ -53,6 +66,7 @@
     character par_file*(100), tmp_log_file*(100), cwd_file*9
     integer :: cwd_status, scstatus 
     logical par_file_exist
+
 
     call MPI_INIT( ierr )
     call MPI_COMM_RANK(MPI_COMM_WORLD, proc, ierr)
@@ -80,15 +94,15 @@
     call MPI_GATHER ( cwd_proc, 80, MPI_CHARACTER, &
                       cwd_all,  80, MPI_CHARACTER, &
                       0, comm,err )
-		      
+
     call MPI_GATHER ( host_proc, 8, MPI_CHARACTER, &
                       host_all,  8, MPI_CHARACTER, &
                       0, comm,err )
-		      
+
     call MPI_GATHER ( pid_proc, 1, MPI_INTEGER, &
                       pid_all,  1, MPI_INTEGER, &
                       0, comm,err )
-		      
+
     pxsize = 1
     pysize = 1
     pzsize = 1
@@ -110,7 +124,6 @@
     endif
     
     if(proc .eq. 0) then
-
 
       cbuff(1) = bnd_xl 
       cbuff(2) = bnd_xr
@@ -192,13 +205,13 @@
       open(3, file=tmp_log_file, status='unknown')
         write(3,"(a35,i2)") 'START OF MHD CODE,  No. of procs = ', nproc
 
-	write(3,*)
-	write(3,*) 'PROCESSES:'
+   write(3,*)
+   write(3,*) 'PROCESSES:'
         do iproc = 0, nproc-1
           write(3,"(a6,i2,a7,i6,a1,a,a7,a)") ' proc=',iproc,',  pid=',pid_all(iproc), '@',trim(host_all(iproc)), &
-	                                      ',  cwd=',trim(cwd)
+                                         ',  cwd=',trim(cwd)
         enddo  
-	write(3,*)
+   write(3,*)
 
         write(unit=3,nml=MPI_BLOCKS)  
         write(unit=3,nml=BOUNDARIES)
@@ -223,67 +236,24 @@
     pzleft  = pcoords(3) - 1
     pzright = pcoords(3) + 1
         
-    coords = (/pxleft,pcoords(2),pcoords(3)/)
-    if(pxleft .ne. -1 .or. periods(1)) then
-      call MPI_Cart_rank(comm3d,coords,procxl,ierr)
-    else
-      procxl = MPI_PROC_NULL
-    endif
-
-    coords = (/pxright,pcoords(2),pcoords(3)/)
-    if(pxright .ne. psize(1) .or. periods(1)) then
-      call MPI_Cart_rank(comm3d,coords,procxr,ierr)
-    else
-      procxr = MPI_PROC_NULL
-    endif
-!    write(*,*) 'xdir: ',procxl, proc, procxr
-
-    coords = (/pcoords(1),pyleft,pcoords(3)/)
-    if(pyleft .ne. -1 .or. periods(2)) then
-      call MPI_Cart_rank(comm3d,coords,procyl,ierr)
-    else
-      procyl = MPI_PROC_NULL
-    endif
-
-    coords = (/pcoords(1),pyright,pcoords(3)/)
-    if(pyright .ne. psize(2) .or. periods(2)) then
-      call MPI_Cart_rank(comm3d,coords,procyr,ierr)
-    else
-      procyr = MPI_PROC_NULL
-    endif
-!    write(*,*) 'ydir: ',procyl, proc, procyr
-
-    coords = (/pcoords(1),pcoords(2),pzleft/)
-    if(pzleft .ne. -1 .or. periods(3)) then
-      call MPI_Cart_rank(comm3d,coords,proczl,ierr)
-    else
-      proczl = MPI_PROC_NULL
-    endif
-
-    coords = (/pcoords(1),pcoords(2),pzright/)
-    if(pzright .ne. psize(3) .or. periods(3)) then
-      call MPI_Cart_rank(comm3d,coords,proczr,ierr)
-    else
-      proczr = MPI_PROC_NULL
-    endif
-!    write(*,*) 'zdir: ',proczl, proc, proczr
-!    write(*,*)
+    call MPI_CART_SHIFT(comm3d,0,1,procxl,procxr,ierr)   ! x dim
+    call MPI_CART_SHIFT(comm3d,1,1,procyl,procyr,ierr)   ! y dim
+    call MPI_CART_SHIFT(comm3d,2,1,proczl,proczr,ierr)   ! z dim
 
     if(bnd_xl(1:3) .eq. 'cor' .and. bnd_yl(1:3) .eq. 'cor' ) then
        if(pcoords(1) .eq. 0 .and. pcoords(2) .gt. 0) then
          coords = (/pcoords(2),pcoords(1),pcoords(3)/)
          call MPI_Cart_rank(comm3d,coords,procxyl,ierr)
        else 
-         procxyl = -1
+         procxyl = MPI_PROC_NULL
        endif
        if(pcoords(2) .eq. 0 .and. pcoords(1) .gt. 0 ) then
          coords = (/pcoords(2),pcoords(1),pcoords(3)/)
          call MPI_Cart_rank(comm3d,coords,procyxl,ierr) 
        else
-         procyxl = -1      
+         procyxl = MPI_PROC_NULL
        endif
     endif
-    
     
 #ifdef SHEAR
 
@@ -307,26 +277,24 @@
     if(procxl .ne. MPI_PROC_NULL .and. procxl .ne. proc) bnd_xl = 'mpi'
     if(procxr .ne. MPI_PROC_NULL .and. procxr .ne. proc) bnd_xr = 'mpi'
 #endif /* SHEAR */
-    
-    
      
     if(procyl .ne. MPI_PROC_NULL .and. procyl .ne. proc) bnd_yl = 'mpi'
     if(procyr .ne. MPI_PROC_NULL .and. procyr .ne. proc) bnd_yr = 'mpi'
      
     if(proczl .ne. MPI_PROC_NULL .and. proczl .ne. proc) bnd_zl = 'mpi'
     if(proczr .ne. MPI_PROC_NULL .and. proczr .ne. proc) bnd_zr = 'mpi'
-     
 
- !   write(*,*) proc, procxl, bnd_xl, procxr, bnd_xr
+!    write(*,*) proc, procxl, bnd_xl, procxr, bnd_xr
 !    write(*,*) proc, procyl, bnd_yl, procyr, bnd_yr
 !    write(*,*) proc, proczl, bnd_zl, proczr, bnd_zr
 
-    
-    
-    
-    
-    
-    
+#ifdef DEBUG
+    write(*,*) 'xdir: ',procxl, proc, procxr
+    write(*,*) 'ydir: ',procyl, proc, procyr
+    write(*,*) 'zdir: ',proczl, proc, proczr
+    write(*,*)
+#endif /* DEBUG */
+
   end subroutine mpistart
 
   
@@ -337,7 +305,7 @@
 
    implicit none
 
-   call MPI_FINALIZE(rc)
+   call MPI_FINALIZE()
 
   end subroutine mpistop
 

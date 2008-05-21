@@ -24,6 +24,7 @@ program mhd
 !  use diagnostics  
   use timer, only : timer_start, timer_stop
   use mpi_setup
+  use mpi_bnd
   use fluid_boundaries, only : compute_u_bnd
   use mag_boundaries, only   : compute_b_bnd
 #ifdef RESIST
@@ -68,6 +69,8 @@ program mhd
   call arrays_allocate 
   
   call grid_xyz 
+
+  call mpi_bnd_prep
                 
   call init_dataio
 #ifdef GRAV
@@ -79,6 +82,7 @@ program mhd
       call find_last_restart(nrestart)
     endif
   endif
+  call MPI_BARRIER(comm,ierr)
   call MPI_BCAST(nrestart, 1, MPI_INTEGER, 0, comm, ierr)
 
 #ifdef SNE_DISTR

@@ -187,71 +187,84 @@ subroutine bnd_u(dim)
 
         u(idna,1:nb,:,:)              = max(u(idna,1:nb,:,:),smalld)
         u(idna,nxb+nb+1:nxb+2*nb,:,:) = max(u(idna,nxb+nb+1:nxb+2*nb,:,:),smalld)
+      deallocate(send_left,send_right,recv_left,recv_right)
 #else /* SHEAR_MPI */ 
       if(pxsize .gt. 1) then 
     
-        if(procxl .ne. MPI_PROC_NULL) send_left(:,:,:,:)          =  u(:,nb+1:2*nb,:,:)     
-        if(procxr .ne. MPI_PROC_NULL) send_right(:,:,:,:)         =  u(:,nxb+1:nxb+nb,:,:)
+!        if(procxl .ne. MPI_PROC_NULL) send_left(:,:,:,:)          =  u(:,nb+1:2*nb,:,:)     
+!        if(procxr .ne. MPI_PROC_NULL) send_right(:,:,:,:)         =  u(:,nxb+1:nxb+nb,:,:)
 
-        CALL MPI_ISEND   (send_left , nu*ny*nz*nb, MPI_DOUBLE_PRECISION, procxl, 10, comm, req(1), ierr)
-        CALL MPI_ISEND   (send_right, nu*ny*nz*nb, MPI_DOUBLE_PRECISION, procxr, 20, comm, req(3), ierr)
-        CALL MPI_IRECV   (recv_left , nu*ny*nz*nb, MPI_DOUBLE_PRECISION, procxl, 20, comm, req(2), ierr)
-        CALL MPI_IRECV   (recv_right, nu*ny*nz*nb, MPI_DOUBLE_PRECISION, procxr, 10, comm, req(4), ierr)
+!        CALL MPI_ISEND   (send_left , nu*ny*nz*nb, MPI_DOUBLE_PRECISION, procxl, 10, comm, req(1), ierr)
+!        CALL MPI_ISEND   (send_right, nu*ny*nz*nb, MPI_DOUBLE_PRECISION, procxr, 20, comm, req(3), ierr)
+!        CALL MPI_IRECV   (recv_left , nu*ny*nz*nb, MPI_DOUBLE_PRECISION, procxl, 20, comm, req(2), ierr)
+!        CALL MPI_IRECV   (recv_right, nu*ny*nz*nb, MPI_DOUBLE_PRECISION, procxr, 10, comm, req(4), ierr)
+        CALL MPI_ISEND   (u(1,1,1,1), 1, MPI_YZ_LEFT_DOM,  procxl, 10, comm3d, req(1), ierr)
+        CALL MPI_ISEND   (u(1,1,1,1), 1, MPI_YZ_RIGHT_DOM, procxr, 20, comm3d, req(3), ierr)
+        CALL MPI_IRECV   (u(1,1,1,1), 1, MPI_YZ_LEFT_BND,  procxl, 20, comm3d, req(2), ierr)
+        CALL MPI_IRECV   (u(1,1,1,1), 1, MPI_YZ_RIGHT_BND, procxr, 10, comm3d, req(4), ierr)
 
         do ireq=1,4 
           call MPI_WAIT(req(ireq),status(1,ireq),ierr)  
         enddo
 
-        if(procxl .ne. MPI_PROC_NULL) u(:,1:nb,:,:)               = recv_left(:,:,:,:)
-        if(procxr .ne. MPI_PROC_NULL) u(:,nxb+nb+1:nxb+2*nb,:,:)  = recv_right(:,:,:,:)
+!        if(procxl .ne. MPI_PROC_NULL) u(:,1:nb,:,:)               = recv_left(:,:,:,:)
+!        if(procxr .ne. MPI_PROC_NULL) u(:,nxb+nb+1:nxb+2*nb,:,:)  = recv_right(:,:,:,:)
           
       endif
 #endif /* SHEAR_MPI */ 
-        deallocate(send_left,send_right,recv_left,recv_right)
     case ('ydim')
       if(pysize .gt. 1) then 
-        allocate(send_left(nu,nx,nb,nz),send_right(nu,nx,nb,nz), &
-                 recv_left(nu,nx,nb,nz),recv_right(nu,nx,nb,nz))
-    
-        if(procyl .ne. MPI_PROC_NULL) send_left(:,:,:,:)          =  u(:,:,nb+1:2*nb,:)    
-        if(procyr .ne. MPI_PROC_NULL) send_right(:,:,:,:)         =  u(:,:,nyb+1:nyb+nb,:)
+!        allocate(send_left(nu,nx,nb,nz),send_right(nu,nx,nb,nz), &
+!                 recv_left(nu,nx,nb,nz),recv_right(nu,nx,nb,nz))
+!    
+!        if(procyl .ne. MPI_PROC_NULL) send_left(:,:,:,:)          =  u(:,:,nb+1:2*nb,:)    
+!        if(procyr .ne. MPI_PROC_NULL) send_right(:,:,:,:)         =  u(:,:,nyb+1:nyb+nb,:)
+!
+!        CALL MPI_ISEND   (send_left , nu*nx*nb*nz, MPI_DOUBLE_PRECISION, procyl, 30, comm, req(1), ierr)
+!        CALL MPI_ISEND   (send_right, nu*nx*nb*nz, MPI_DOUBLE_PRECISION, procyr, 40, comm, req(3), ierr)
+!        CALL MPI_IRECV   (recv_left , nu*nx*nb*nz, MPI_DOUBLE_PRECISION, procyl, 40, comm, req(2), ierr)
+!        CALL MPI_IRECV   (recv_right, nu*nx*nb*nz, MPI_DOUBLE_PRECISION, procyr, 30, comm, req(4), ierr)
 
-        CALL MPI_ISEND   (send_left , nu*nx*nb*nz, MPI_DOUBLE_PRECISION, procyl, 30, comm, req(1), ierr)
-        CALL MPI_ISEND   (send_right, nu*nx*nb*nz, MPI_DOUBLE_PRECISION, procyr, 40, comm, req(3), ierr)
-        CALL MPI_IRECV   (recv_left , nu*nx*nb*nz, MPI_DOUBLE_PRECISION, procyl, 40, comm, req(2), ierr)
-        CALL MPI_IRECV   (recv_right, nu*nx*nb*nz, MPI_DOUBLE_PRECISION, procyr, 30, comm, req(4), ierr)
+        CALL MPI_ISEND   (u(1,1,1,1), 1, MPI_XZ_LEFT_DOM,  procyl, 30, comm3d, req(1), ierr)
+        CALL MPI_ISEND   (u(1,1,1,1), 1, MPI_XZ_RIGHT_DOM, procyr, 40, comm3d, req(3), ierr)
+        CALL MPI_IRECV   (u(1,1,1,1), 1, MPI_XZ_LEFT_BND,  procyl, 40, comm3d, req(2), ierr)
+        CALL MPI_IRECV   (u(1,1,1,1), 1, MPI_XZ_RIGHT_BND, procyr, 30, comm3d, req(4), ierr)
 
         do ireq=1,4 
           call MPI_WAIT(req(ireq),status(1,ireq),ierr)  
         enddo
 
-        if(procyl .ne. MPI_PROC_NULL) u(:,:,1:nb,:)               = recv_left(:,:,:,:)
-        if(procyr .ne. MPI_PROC_NULL) u(:,:,nyb+nb+1:nyb+2*nb,:)  = recv_right(:,:,:,:)
+!        if(procyl .ne. MPI_PROC_NULL) u(:,:,1:nb,:)               = recv_left(:,:,:,:)
+!        if(procyr .ne. MPI_PROC_NULL) u(:,:,nyb+nb+1:nyb+2*nb,:)  = recv_right(:,:,:,:)
           
-        deallocate(send_left,send_right,recv_left,recv_right)
+!        deallocate(send_left,send_right,recv_left,recv_right)
       endif
 
     case ('zdim')
       if(pzsize .gt. 1) then 
-        allocate(send_left(nu,nx,ny,nb),send_right(nu,nx,ny,nb), &
-                 recv_left(nu,nx,ny,nb),recv_right(nu,nx,ny,nb))
+!        allocate(send_left(nu,nx,ny,nb),send_right(nu,nx,ny,nb), &
+!                 recv_left(nu,nx,ny,nb),recv_right(nu,nx,ny,nb))
     
-        if(proczl .ne. MPI_PROC_NULL) send_left(:,:,:,:)          =  u(:,:,:,nb+1:2*nb)    
-        if(proczr .ne. MPI_PROC_NULL) send_right(:,:,:,:)         =  u(:,:,:,nzb+1:nzb+nb)
+!        if(proczl .ne. MPI_PROC_NULL) send_left(:,:,:,:)          =  u(:,:,:,nb+1:2*nb)    
+!        if(proczr .ne. MPI_PROC_NULL) send_right(:,:,:,:)         =  u(:,:,:,nzb+1:nzb+nb)
 
-        CALL MPI_ISEND   (send_left , nu*nx*ny*nb, MPI_DOUBLE_PRECISION, proczl, 50, comm, req(1), ierr)
-        CALL MPI_ISEND   (send_right, nu*nx*ny*nb, MPI_DOUBLE_PRECISION, proczr, 60, comm, req(3), ierr)
-        CALL MPI_IRECV   (recv_left , nu*nx*ny*nb, MPI_DOUBLE_PRECISION, proczl, 60, comm, req(2), ierr)
-        CALL MPI_IRECV   (recv_right, nu*nx*ny*nb, MPI_DOUBLE_PRECISION, proczr, 50, comm, req(4), ierr)
+!        CALL MPI_ISEND   (send_left , nu*nx*ny*nb, MPI_DOUBLE_PRECISION, proczl, 50, comm, req(1), ierr)
+!        CALL MPI_ISEND   (send_right, nu*nx*ny*nb, MPI_DOUBLE_PRECISION, proczr, 60, comm, req(3), ierr)
+!        CALL MPI_IRECV   (recv_left , nu*nx*ny*nb, MPI_DOUBLE_PRECISION, proczl, 60, comm, req(2), ierr)
+!        CALL MPI_IRECV   (recv_right, nu*nx*ny*nb, MPI_DOUBLE_PRECISION, proczr, 50, comm, req(4), ierr)
+        CALL MPI_ISEND   (u(1,1,1,1), 1, MPI_XY_LEFT_DOM,  proczl, 50, comm3d, req(1), ierr)
+        CALL MPI_ISEND   (u(1,1,1,1), 1, MPI_XY_RIGHT_DOM, proczr, 60, comm3d, req(3), ierr)
+        CALL MPI_IRECV   (u(1,1,1,1), 1, MPI_XY_LEFT_BND,  proczl, 60, comm3d, req(2), ierr)
+        CALL MPI_IRECV   (u(1,1,1,1), 1, MPI_XY_RIGHT_BND, proczr, 50, comm3d, req(4), ierr)
 
         do ireq=1,4 
           call MPI_WAIT(req(ireq),status(1,ireq),ierr)  
         enddo
 
-        if(proczl .ne. MPI_PROC_NULL) u(:,:,:,1:nb)               = recv_left(:,:,:,:)
-        if(proczr .ne. MPI_PROC_NULL) u(:,:,:,nzb+nb+1:nzb+2*nb)  = recv_right(:,:,:,:)
+!        if(proczl .ne. MPI_PROC_NULL) u(:,:,:,1:nb)               = recv_left(:,:,:,:)
+!        if(proczr .ne. MPI_PROC_NULL) u(:,:,:,nzb+nb+1:nzb+2*nb)  = recv_right(:,:,:,:)
           
-        deallocate(send_left,send_right,recv_left,recv_right)
+!        deallocate(send_left,send_right,recv_left,recv_right)
       endif
   end select ! (dim)
 
