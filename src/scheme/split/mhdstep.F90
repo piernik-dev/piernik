@@ -285,6 +285,7 @@ end subroutine mhdstep
   end subroutine magfieldbxyz
 
   subroutine mag_add(ib1,dim1,ib2,dim2)
+    use func, only: pshift, mshift
 
     implicit none
     integer             :: ib1,ib2,dim1,dim2
@@ -294,20 +295,25 @@ end subroutine mhdstep
 ! DIFFUSION FULL STEP
 
     b(ib1,:,:,:) = b(ib1,:,:,:) - wcu/dl(dim1)
-    wcu = cshift(wcu,shift=1,dim=dim1)
+!   wcu = cshift(wcu,shift= 1,dim=dim1) 
+    wcu = pshift(wcu,dim1)
     b(ib1,:,:,:) = b(ib1,:,:,:) + wcu/dl(dim1)
-    wcu = cshift(wcu,shift=-1,dim=dim1)
+!   wcu = cshift(wcu,shift=-1,dim=dim1)
+    wcu = mshift(wcu,dim1)
     b(ib2,:,:,:) = b(ib2,:,:,:) + wcu/dl(dim2)
-    wcu = cshift(wcu,shift=1,dim=dim2)
+!   wcu = cshift(wcu,shift= 1,dim=dim2)
+    wcu = pshift(wcu,dim2)
     b(ib2,:,:,:) = b(ib2,:,:,:) - wcu/dl(dim2)
 #endif /* RESIST */
 ! ADVECTION FULL STEP
 
     b(ib1,:,:,:) = b(ib1,:,:,:) - wa/dl(dim1)
-    wa = cshift(wa,shift=-1,dim=dim1)
+!   wa = cshift(wa,shift=-1,dim=dim1)
+    wa = mshift(wa,dim1)
     b(ib1,:,:,:) = b(ib1,:,:,:) + wa/dl(dim1)
     b(ib2,:,:,:) = b(ib2,:,:,:) - wa/dl(dim2)
-    wa = cshift(wa,shift=1,dim=dim2)
+!   wa = cshift(wa,shift=1,dim=dim2)
+    wa = pshift(wa,dim2)
     b(ib2,:,:,:) = b(ib2,:,:,:) + wa/dl(dim2)
 #endif /* ORIG */ 
 
@@ -322,20 +328,25 @@ end subroutine mhdstep
 ! DIFFUSION STEP
 
     b(ib1,:,:,:) = b(ib1,:,:,:) - cn(2,istep)*wcu/dl(dim1)
-    wcu = cshift(wcu,shift=1,dim=dim1)
+!   wcu = cshift(wcu,shift=1,dim=dim1)
+    wcu = pshift(wcu,dim1)
     b(ib1,:,:,:) = b(ib1,:,:,:) + cn(2,istep)*wcu/dl(dim1)
-    wcu = cshift(wcu,shift=-1,dim=dim1)
+!   wcu = cshift(wcu,shift=-1,dim=dim1)
+    wcu = mshift(wcu,dim1)
     b(ib2,:,:,:) = b(ib2,:,:,:) + cn(2,istep)*wcu/dl(dim2)
-    wcu = cshift(wcu,shift=1,dim=dim2)
+!   wcu = cshift(wcu,shift=1,dim=dim2)
+    wcu = pshift(wcu,dim2)
     b(ib2,:,:,:) = b(ib2,:,:,:) - cn(2,istep)*wcu/dl(dim2)
 #endif /* RESIST */
 ! ADVECTION STEP
 
     b(ib1,:,:,:) = b(ib1,:,:,:) - cn(2,istep)*wa/dl(dim1)
-    wa = cshift(wa,shift=-1,dim=dim1)
+!   wa = cshift(wa,shift=-1,dim=dim1)
+    wa = mshift(wa,dim1)
     b(ib1,:,:,:) = b(ib1,:,:,:) + cn(2,istep)*wa/dl(dim1)
     b(ib2,:,:,:) = b(ib2,:,:,:) - cn(2,istep)*wa/dl(dim2)
-    wa = cshift(wa,shift=1,dim=dim2)
+!   wa = cshift(wa,shift=1,dim=dim2)
+    wa = pshift(wa,dim2)
     b(ib2,:,:,:) = b(ib2,:,:,:) + cn(2,istep)*wa/dl(dim2)
 #endif /* SSP */ 
 

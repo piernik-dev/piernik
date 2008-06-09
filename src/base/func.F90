@@ -37,6 +37,53 @@ contains
 
 !-----------------------------------------------------------------------------
 
+  function pshift(tab,d)
+    implicit none
+    real, dimension(:,:,:) :: tab
+    integer :: d
+    integer :: lx,ly,lz
+    real, dimension(SIZE(tab,1),SIZE(tab,2),SIZE(tab,3)) :: pshift
+
+    lx = SIZE(tab,1)
+    ly = SIZE(tab,2)
+    lz = SIZE(tab,3)
+
+    if(d==1) then
+      pshift(1:lx-1,:,:) = tab(2:lx,:,:); tab(lx,:,:) = tab(1,:,:)
+    else if(d==2) then
+      pshift(:,1:ly-1,:) = tab(:,2:ly,:); tab(:,ly,:) = tab(:,1,:)
+    else if(d==3) then
+      pshift(:,:,1:lz-1) = tab(:,:,2:lz); tab(:,:,lz) = tab(:,:,1)
+    else
+       write(*,*) 'Dim ill defined in pshift!'
+    endif
+
+    return
+  end function pshift
+
+  function mshift(tab,d)
+    implicit none
+    real, dimension(:,:,:) :: tab
+    integer :: d
+    integer :: lx,ly,lz
+    real, dimension(SIZE(tab,1),SIZE(tab,2),SIZE(tab,3)) :: mshift
+
+    lx = SIZE(tab,1)
+    ly = SIZE(tab,2)
+    lz = SIZE(tab,3)
+
+    if(d==1) then
+      mshift(2:lx,:,:) = tab(1:lx-1,:,:); tab(1,:,:) = tab(lx,:,:)
+    else if(d==2) then
+      mshift(:,2:ly,:) = tab(:,1:ly-1,:); tab(:,1,:) = tab(:,ly,:)
+    else if(d==3) then
+      mshift(:,:,2:lz) = tab(:,:,1:lz-1); tab(:,:,1) = tab(:,:,lz)
+    else
+       write(*,*) 'Dim ill defined in mshift!'
+    endif
+
+    return
+  end function mshift
 
 end module func
 
