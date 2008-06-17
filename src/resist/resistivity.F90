@@ -76,7 +76,6 @@ contains
         
         eta_max = eta_max_proc
 
-!        call MPI_REDUCE(eta_max_proc, eta_max_all, 1, MPI_DOUBLE_PRECISION, MPI_MIN, 0, comm, ierr)
         call MPI_REDUCE(eta_max_proc, eta_max_all, 1, MPI_DOUBLE_PRECISION, MPI_MAX, 0, comm, ierr)
         call MPI_BCAST (eta_max_all, 1, MPI_DOUBLE_PRECISION, 0, comm, ierr)
     
@@ -114,19 +113,21 @@ contains
 
       subroutine timestep_resist
 
-      implicit none
-      real dx2, dt_resist_min
+        use constants, only : big
+
+        implicit none
+        real dx2,dt_resist_all
 
         if(eta_max .ne. 0.) then
-                dx2 = dxmn**2
-          dt_resist = cfl_resist*dx2/(2.0*eta_max)
+          dx2 = dxmn**2
+          dt_resist = cfl_resist*dx2/(2.*eta_max)
 #ifndef ISO
           dt_resist = min(dt_resist,dt_eint)
 #endif /* ISO */
         else
-          dt_resist = dt_eint
+          dt_resist = big
         endif
-	
+        
         call MPI_REDUCE(dt_resist, dt_resist_min, 1, MPI_DOUBLE_PRECISION, MPI_MIN, 0, comm, ierr)
         call MPI_BCAST (dt_resist_min, 1, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
