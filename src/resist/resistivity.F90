@@ -1,4 +1,5 @@
 #include "mhd.def"
+#define SQR(var) (var*var)
 
 module resistivity
 
@@ -20,6 +21,7 @@ module resistivity
 contains
 
       subroutine compute_resist(eta,ici)
+       use func, only : mshift, pshift
       
       implicit none
       integer,intent(in)                    :: ici
@@ -30,43 +32,40 @@ contains
 !--- square current computing in cell corner step by step
 
 !--- current_z
-        wb(:,:,:) = (b(iby,:,:,:)-cshift(b(iby,:,:,:),shift=-1,dim=xdim))/dl(xdim) &
-                   -(b(ibx,:,:,:)-cshift(b(ibx,:,:,:),shift=-1,dim=ydim))/dl(ydim)
+       wb(:,:,:) = (b(iby,:,:,:)-mshift(b(iby,:,:,:),xdim))/dl(xdim) &
+                   -(b(ibx,:,:,:)-mshift(b(ibx,:,:,:),ydim))/dl(ydim)
 
-       eta(:,:,:) = (wb(:,:,:) &
-             +cshift(wb(:,:,:),shift=-1,dim=zdim))**2/4.0
+       eta(:,:,:) = 0.25*SQR( wb(:,:,:) + mshift(wb(:,:,:),zdim) )
 
      if(dimensions .eq. '3d') then
 !--- current_x
-        wb(:,:,:) = (b(ibz,:,:,:)-cshift(b(ibz,:,:,:),shift=-1,dim=ydim))/dl(ydim) &
-                   -(b(iby,:,:,:)-cshift(b(iby,:,:,:),shift=-1,dim=zdim))/dl(zdim)
+       wb(:,:,:) = (b(ibz,:,:,:)-mshift(b(ibz,:,:,:),ydim))/dl(ydim) &
+                   -(b(iby,:,:,:)-mshift(b(iby,:,:,:),zdim))/dl(zdim)
 
-       eta(:,:,:) = eta(:,:,:) + (wb(:,:,:) &
-                          +cshift(wb(:,:,:),shift=-1,dim=xdim))**2/4.0
+       eta(:,:,:) = eta(:,:,:) + 0.25*SQR( wb(:,:,:)+mshift(wb(:,:,:),xdim) )
 !--- current_y
-        wb(:,:,:) = (b(ibx,:,:,:)-cshift(b(ibx,:,:,:),shift=-1,dim=zdim))/dl(zdim) &
-                   -(b(ibz,:,:,:)-cshift(b(ibz,:,:,:),shift=-1,dim=xdim))/dl(xdim)
+       wb(:,:,:) = (b(ibx,:,:,:)-mshift(b(ibx,:,:,:),zdim))/dl(zdim) &
+                   -(b(ibz,:,:,:)-mshift(b(ibz,:,:,:),xdim))/dl(xdim)
 
-       eta(:,:,:) = eta(:,:,:) + (wb(:,:,:) &
-                          +cshift(wb(:,:,:),shift=-1,dim=ydim))**2/4.0
+       eta(:,:,:) = eta(:,:,:) +0.25*SQR( wb(:,:,:) + mshift(wb(:,:,:),ydim))
      endif
 
 !--- wb = current**2
         wb(:,:,:) = eta(:,:,:)
 
-        eta(:,:,:) = eta_0 + eta_1*sqrt(max(0.0,eta(:,:,:)-j_crit**2))
+        eta(:,:,:) = eta_0 + eta_1*sqrt(max(0.0,eta(:,:,:)-SQR(j_crit) ))
 
         if(dimensions .eq. '3d') then
           where(eta > eta_0)
-            eta(:,:,:) = (cshift(eta(:,:,:),shift=-1,dim=xdim) + cshift(eta(:,:,:),shift=1,dim=xdim) &
-                         +cshift(eta(:,:,:),shift=-1,dim=ydim) + cshift(eta(:,:,:),shift=1,dim=ydim) &
-                         +cshift(eta(:,:,:),shift=-1,dim=zdim) + cshift(eta(:,:,:),shift=1,dim=zdim) &
+            eta(:,:,:) = (mshift(eta(:,:,:),xdim) + pshift(eta(:,:,:),xdim) &
+                         +mshift(eta(:,:,:),ydim) + pshift(eta(:,:,:),ydim) &
+                         +mshift(eta(:,:,:),zdim) + pshift(eta(:,:,:),zdim) &
                          +dble(eta_scale)*eta(:,:,:))/(6.+dble(eta_scale))
           endwhere
         else
           where(eta > eta_0)
-            eta(:,:,:) = (cshift(eta(:,:,:),shift=-1,dim=xdim) + cshift(eta(:,:,:),shift=1,dim=xdim) &
-                         +cshift(eta(:,:,:),shift=-1,dim=ydim) + cshift(eta(:,:,:),shift=1,dim=ydim) &
+            eta(:,:,:) = (mshift(eta(:,:,:),xdim) + pshift(eta(:,:,:),xdim) &
+                         +mshift(eta(:,:,:),ydim) + pshift(eta(:,:,:),ydim) &
                          +dble(eta_scale)*eta(:,:,:))/(4.+dble(eta_scale))
           endwhere
         endif
@@ -84,13 +83,13 @@ contains
 #ifndef ISO
         dt_eint = deint_max * abs(minval( &
                   ( u(iena,is:ie,js:je,ks:ke) &
-                  - 0.5*(u(imxa,is:ie,js:je,ks:ke)**2  &
-                        +u(imya,is:ie,js:je,ks:ke)**2  &
-                        +u(imza,is:ie,js:je,ks:ke)**2) &
+                  - 0.5*( SQR(u(imxa,is:ie,js:je,ks:ke))  &
+                        + SQR(u(imya,is:ie,js:je,ks:ke))  &
+                        + SQR(u(imza,is:ie,js:je,ks:ke)) )&
                         /u(idna,is:ie,js:je,ks:ke)     &
-                - 0.5*(b(ibx,is:ie,js:je,ks:ke)**2  &
-                      +b(iby,is:ie,js:je,ks:ke)**2  &
-                      +b(ibz,is:ie,js:je,ks:ke)**2))&
+                - 0.5*( SQR(b(ibx,is:ie,js:je,ks:ke))  &
+                      + SQR(b(iby,is:ie,js:je,ks:ke))  &
+                      + SQR(b(ibz,is:ie,js:je,ks:ke))))&
                         /(eta(is:ie,js:je,ks:ke)   &
                         *wb(is:ie,js:je,ks:ke)+small))) 
 #endif /* ISO */
@@ -98,11 +97,11 @@ contains
       deallocate(wb)
 
       if (ici .eq. icz) then
-         eta(:,:,:)=0.5*(eta(:,:,:)+cshift(eta(:,:,:),shift=1,dim=zdim))
+         eta(:,:,:)=0.5*(eta(:,:,:)+pshift(eta(:,:,:),zdim))
       elseif(ici .eq. icy) then
-         eta(:,:,:)=0.5*(eta(:,:,:)+cshift(eta(:,:,:),shift=1,dim=ydim))
+         eta(:,:,:)=0.5*(eta(:,:,:)+pshift(eta(:,:,:),ydim))
       elseif(ici .eq. icx) then
-         eta(:,:,:)=0.5*(eta(:,:,:)+cshift(eta(:,:,:),shift=1,dim=xdim))
+         eta(:,:,:)=0.5*(eta(:,:,:)+pshift(eta(:,:,:),xdim))
       endif
 
       return
@@ -119,7 +118,7 @@ contains
         real dx2,dt_resist_all
 
         if(eta_max .ne. 0.) then
-          dx2 = dxmn**2
+          dx2 = SQR(dxmn)
           dt_resist = cfl_resist*dx2/(2.*eta_max)
 #ifndef ISO
           dt_resist = min(dt_resist,dt_eint)
@@ -138,6 +137,7 @@ contains
 !-----------------------------------------------------------------------------
 
   subroutine tvdd(ibi,ici,n)
+    use func, only : mshift, pshift
 
     implicit none
 #ifdef SPLIT
@@ -160,40 +160,40 @@ contains
 #ifdef ORIG
 
 ! HALF STEP
-    w(:,:,:) = (b(ibi,:,:,:)-cshift(b(ibi,:,:,:),shift=-1,dim=n))/di
+    w(:,:,:) = (b(ibi,:,:,:)-mshift(b(ibi,:,:,:),n))/di
     w  = eta*w
-    b1 = b(ibi,:,:,:)+(cshift(w,shift=1,dim=n)-w)*dt/di/2.
+    b1 = b(ibi,:,:,:)+0.5*(pshift(w,n)-w)*dt/di
 
 ! FULL STEP
-    w(:,:,:) = (b1(:,:,:)-cshift(b1(:,:,:),shift=-1,dim=n))/di
+    w(:,:,:) = (b1(:,:,:)-mshift(b1(:,:,:),n))/di
     w  = eta*w
-    wp = (cshift(w,shift=1,dim=n)-w)/2.
-    wm = (w-cshift(w,shift=-1,dim=n))/2.
+    wp = 0.5*(pshift(w,n)-w)
+    wm = 0.5*(w-mshift(w,n))
     dw = 0.
     where(wm*wp > 0.) dw=2.*wm*wp/(wm+wp)
     wcu = (w+dw)*dt
 #endif /* ORIG */
 #ifdef SSP
 
-    w(:,:,:) = (b(ibi,:,:,:)-cshift(b(ibi,:,:,:),shift=-1,dim=n))/di
+    w(:,:,:) = (b(ibi,:,:,:)-mshift(b(ibi,:,:,:),n))/di
     w  = eta*w
-    wp = (cshift(w,shift=1,dim=n)-w)/2.
-    wm = (w-cshift(w,shift=-1,dim=n))/2.
+    wp = 0.5*(pshift(w,n)-w)
+    wm = 0.5*(w-mshift(w,n))
     dw = 0.
     where(wm*wp > 0.) dw=2.*wm*wp/(wm+wp)
     wcu = (w+dw)*dt
 #endif /* SSP */
 #else /* SPLIT */
 
-    w(:,:,:) = (b(ibi,:,:,:)-cshift(b(ibi,:,:,:),shift=-1,dim=n))/di
+    w(:,:,:) = (b(ibi,:,:,:)-mshift(b(ibi,:,:,:),n))/di
     w  = eta*w
 #ifdef ORIG
 
     if(istep .eq. 1) then
       wa = w*dt
     elseif(istep .eq. 2) then
-      wp = (cshift(w,shift=1,dim=n)-w)/2.
-      wm = (w-cshift(w,shift=-1,dim=n))/2.
+      wp = 0.5*(pshift(w,n)-w)
+      wm = 0.5*(w-mshift(w,n))
       dw = 0.
       where(wm*wp > 0.) dw=2.*wm*wp/(wm+wp)
       wa = (w+dw)*dt
@@ -203,8 +203,8 @@ contains
     endif
 #endif /* ORIG */
 #ifdef SSP
-    wp = (cshift(w,shift=1,dim=n)-w)/2.
-    wm = (w-cshift(w,shift=-1,dim=n))/2.
+    wp = 0.5*(pshift(w,n)-w)
+    wm = 0.5*(w-mshift(w,n))
     dw = 0.
     where(wm*wp > 0.) dw=2.*wm*wp/(wm+wp)
     wa = (w+dw)*dt
@@ -216,6 +216,7 @@ contains
 !-------------------------------------------------------------------------------
 
   subroutine diffuseby_x
+    use func, only : mshift, pshift
   
     call tvdd(iby,icz,xdim)
 #ifdef SPLIT
@@ -230,17 +231,18 @@ contains
     if(dimensions .eq. '3d') call bnd_emf(wa,'emfz','zdim')
 
     Lb(iby,:,:,:) = Lb(iby,:,:,:) - wa/dl(xdim)
-    wa = cshift(wa,shift=1,dim=xdim)
+    wa = pshift(wa,xdim)
     Lb(iby,:,:,:) = Lb(iby,:,:,:) + wa/dl(xdim)
-    wa = cshift(wa,shift=-1,dim=xdim)
+    wa = mshift(wa,xdim)
     Lb(ibx,:,:,:) = Lb(ibx,:,:,:) + wa/dl(ydim)
-    wa = cshift(wa,shift=1,dim=ydim)
+    wa = pshift(wa,ydim)
     Lb(ibx,:,:,:) = Lb(ibx,:,:,:) - wa/dl(ydim)
 #endif /* SPLIT */
 
   end subroutine diffuseby_x
 
   subroutine diffusebz_x
+    use func, only : mshift, pshift
 
     call tvdd(ibz,icy,xdim)
 #ifdef SPLIT
@@ -255,17 +257,18 @@ contains
     if(dimensions .eq. '3d') call bnd_emf(wa, 'emfy', 'zdim')
 
     Lb(ibz,:,:,:) = Lb(ibz,:,:,:) - wa/dl(xdim)
-    wa = cshift(wa,shift=1,dim=xdim)
+    wa = pshift(wa,xdim)
     Lb(ibz,:,:,:) = Lb(ibz,:,:,:) + wa/dl(xdim)
-    wa = cshift(wa,shift=-1,dim=xdim)
+    wa = mshift(wa,xdim)
     Lb(ibx,:,:,:) = Lb(ibx,:,:,:) + wa/dl(zdim)
-    wa = cshift(wa,shift=1,dim=zdim)
+    wa = pshift(wa,zdim)
     Lb(ibx,:,:,:) = Lb(ibx,:,:,:) - wa/dl(zdim)
 #endif /* SPLIT */
 
   end subroutine diffusebz_x
 
   subroutine diffusebz_y
+    use func, only : mshift, pshift
 
     call tvdd(ibz,icx,ydim)
 #ifdef SPLIT
@@ -280,16 +283,17 @@ contains
     call bnd_emf(wa, 'emfx', 'xdim')
   
     Lb(ibz,:,:,:) = Lb(ibz,:,:,:) - wa/dl(ydim)
-    wa = cshift(wa,shift=1,dim=ydim)
+    wa = pshift(wa,ydim)
     Lb(ibz,:,:,:) = Lb(ibz,:,:,:) + wa/dl(ydim)
-    wa = cshift(wa,shift=-1,dim=ydim)
+    wa = mshift(wa,ydim)
     Lb(iby,:,:,:) = Lb(iby,:,:,:) + wa/dl(zdim)
-    wa = cshift(wa,shift=1,dim=zdim)
+    wa = pshift(wa,zdim)
     Lb(iby,:,:,:) = Lb(iby,:,:,:) - wa/dl(zdim)
 #endif /* SPLIT */
   end subroutine diffusebz_y
 
   subroutine diffusebx_y
+    use func, only : mshift, pshift
 
     call tvdd(ibx,icz,ydim)
 #ifdef SPLIT
@@ -304,16 +308,17 @@ contains
     call bnd_emf(wa, 'emfz', 'xdim')
 
     Lb(ibx,:,:,:) = Lb(ibx,:,:,:) - wa/dl(ydim)
-    wa = cshift(wa,shift=1,dim=ydim)
+    wa = pshift(wa,ydim)
     Lb(ibx,:,:,:) = Lb(ibx,:,:,:) + wa/dl(ydim)
-    wa = cshift(wa,shift=-1,dim=ydim)
+    wa = mshift(wa,ydim)
     Lb(iby,:,:,:) = Lb(iby,:,:,:) + wa/dl(xdim)
-    wa = cshift(wa,shift=1,dim=xdim)
+    wa = pshift(wa,xdim)
     Lb(iby,:,:,:) = Lb(iby,:,:,:) - wa/dl(xdim)
 #endif /* SPLIT */
   end subroutine diffusebx_y
 
   subroutine diffusebx_z
+    use func, only : mshift, pshift
 
     call tvdd(ibx,icy,zdim)
 #ifdef SPLIT
@@ -328,16 +333,17 @@ contains
     call bnd_emf(wa, 'emfy', 'ydim')
 
     Lb(ibx,:,:,:) = Lb(ibx,:,:,:) - wa/dl(zdim)
-    wa = cshift(wa,shift=1,dim=zdim)
+    wa = pshift(wa,zdim)
     Lb(ibx,:,:,:) = Lb(ibx,:,:,:) + wa/dl(zdim)
-    wa = cshift(wa,shift=-1,dim=zdim)
+    wa = mshift(wa,zdim)
     Lb(ibz,:,:,:) = Lb(ibz,:,:,:) + wa/dl(xdim)
-    wa = cshift(wa,shift=1,dim=xdim)
+    wa = pshift(wa,xdim)
     Lb(ibz,:,:,:) = Lb(ibz,:,:,:) - wa/dl(xdim)
 #endif /* SPLIT */
   end subroutine diffusebx_z
 
   subroutine diffuseby_z
+    use func, only : mshift, pshift
     
     call tvdd(iby,icx,zdim)
 #ifdef SPLIT
@@ -352,11 +358,11 @@ contains
     call bnd_emf(wa, 'emfx', 'ydim')
 
     Lb(iby,:,:,:) = Lb(iby,:,:,:) - wa/dl(zdim)
-    wa = cshift(wa,shift=1,dim=zdim)
+    wa = pshift(wa,zdim)
     Lb(iby,:,:,:) = Lb(iby,:,:,:) + wa/dl(zdim)
-    wa = cshift(wa,shift=-1,dim=zdim)
+    wa = mshift(wa,zdim)
     Lb(ibz,:,:,:) = Lb(ibz,:,:,:) + wa/dl(ydim)
-    wa = cshift(wa,shift=1,dim=ydim)
+    wa = pshift(wa,ydim)
     Lb(ibz,:,:,:) = Lb(ibz,:,:,:) - wa/dl(ydim)
 #endif /* SPLIT */
   end subroutine diffuseby_z
