@@ -1,5 +1,4 @@
 #include "mhd.def"
-#define SQR(var) (var*var)
 
 module resistivity
 
@@ -35,25 +34,25 @@ contains
        wb(:,:,:) = (b(iby,:,:,:)-mshift(b(iby,:,:,:),xdim))/dl(xdim) &
                    -(b(ibx,:,:,:)-mshift(b(ibx,:,:,:),ydim))/dl(ydim)
 
-       eta(:,:,:) = 0.25*SQR( wb(:,:,:) + mshift(wb(:,:,:),zdim) )
+       eta(:,:,:) = 0.25*( wb(:,:,:) + mshift(wb(:,:,:),zdim) )**2
 
      if(dimensions .eq. '3d') then
 !--- current_x
        wb(:,:,:) = (b(ibz,:,:,:)-mshift(b(ibz,:,:,:),ydim))/dl(ydim) &
                    -(b(iby,:,:,:)-mshift(b(iby,:,:,:),zdim))/dl(zdim)
 
-       eta(:,:,:) = eta(:,:,:) + 0.25*SQR( wb(:,:,:)+mshift(wb(:,:,:),xdim) )
+       eta(:,:,:) = eta(:,:,:) + 0.25*( wb(:,:,:)+mshift(wb(:,:,:),xdim) )**2
 !--- current_y
        wb(:,:,:) = (b(ibx,:,:,:)-mshift(b(ibx,:,:,:),zdim))/dl(zdim) &
                    -(b(ibz,:,:,:)-mshift(b(ibz,:,:,:),xdim))/dl(xdim)
 
-       eta(:,:,:) = eta(:,:,:) +0.25*SQR( wb(:,:,:) + mshift(wb(:,:,:),ydim))
+       eta(:,:,:) = eta(:,:,:) +0.25*( wb(:,:,:) + mshift(wb(:,:,:),ydim))**2
      endif
 
 !--- wb = current**2
         wb(:,:,:) = eta(:,:,:)
 
-        eta(:,:,:) = eta_0 + eta_1*sqrt(max(0.0,eta(:,:,:)-SQR(j_crit) ))
+        eta(:,:,:) = eta_0 + eta_1*sqrt(max(0.0,eta(:,:,:)- j_crit**2 ))
 
         if(dimensions .eq. '3d') then
           where(eta > eta_0)
@@ -81,17 +80,17 @@ contains
         eta_max = eta_max_all
 
 #ifndef ISO
-        dt_eint = deint_max * abs(minval( &
-                  ( u(iena,is:ie,js:je,ks:ke) &
-                  - 0.5*( SQR(u(imxa,is:ie,js:je,ks:ke))  &
-                        + SQR(u(imya,is:ie,js:je,ks:ke))  &
-                        + SQR(u(imza,is:ie,js:je,ks:ke)) )&
-                        /u(idna,is:ie,js:je,ks:ke)     &
-                - 0.5*( SQR(b(ibx,is:ie,js:je,ks:ke))  &
-                      + SQR(b(iby,is:ie,js:je,ks:ke))  &
-                      + SQR(b(ibz,is:ie,js:je,ks:ke))))&
-                        /(eta(is:ie,js:je,ks:ke)   &
-                        *wb(is:ie,js:je,ks:ke)+small))) 
+        dt_eint = deint_max * abs(minval(               &
+                  ( u(iena,is:ie,js:je,ks:ke)           &
+                  - 0.5*( u(imxa,is:ie,js:je,ks:ke)**2  &
+                        + u(imya,is:ie,js:je,ks:ke)**2  &
+                        + u(imza,is:ie,js:je,ks:ke)**2 )&
+                        /u(idna,is:ie,js:je,ks:ke)      &
+                  - 0.5*( b(ibx,is:ie,js:je,ks:ke)**2   &
+                        + b(iby,is:ie,js:je,ks:ke)**2   &
+                        + b(ibz,is:ie,js:je,ks:ke)**2)) &
+                        /( eta(is:ie,js:je,ks:ke)       &
+                        *wb(is:ie,js:je,ks:ke)+small) )) 
 #endif /* ISO */
         
       deallocate(wb)
@@ -118,7 +117,7 @@ contains
         real dx2,dt_resist_all
 
         if(eta_max .ne. 0.) then
-          dx2 = SQR(dxmn)
+          dx2 = dxmn**2
           dt_resist = cfl_resist*dx2/(2.*eta_max)
 #ifndef ISO
           dt_resist = min(dt_resist,dt_eint)
