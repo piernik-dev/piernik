@@ -1,6 +1,4 @@
 #include "mhd.def"
-#define SQR(var) ( var*var )
-#define SUM_SQR(x,y,z) ( SQR(x)+SQR(y)+SQR(z) ) 
 #define RNG 2:n-1
 module fluxes
   implicit none
@@ -39,7 +37,7 @@ module fluxes
     
     cfr = 0.0 
 
-    pmag(RNG)=0.5*SUM_SQR(bb(ibx,RNG),bb(iby,RNG),bb(ibz,RNG))
+    pmag(RNG)=0.5*( bb(ibx,RNG)**2 + bb(iby,RNG)**2 +bb(ibz,RNG)**2 )
     vx(RNG)=uu(imxa,RNG)/uu(idna,RNG)
 
 ! UWAGA ZMIANA W OBLICZANIU LOKALNEJ PREDKOSCI NA PROBE
@@ -50,7 +48,7 @@ module fluxes
 #ifndef OLDLOCALCFR
     vy(RNG)=uu(imya,RNG)/uu(idna,RNG)
     vz(RNG)=uu(imza,RNG)/uu(idna,RNG)
-    vt = sqrt(SUM_SQR(vx,vy,vz))
+    vt = sqrt(vx**2 + vy**2 + vz**2)
 #endif /* OLDLOCALCFR */    
     
 #ifdef ISO
@@ -58,15 +56,15 @@ module fluxes
     ps(RNG)= p(RNG) + pmag(RNG)
 #else /* ISO */
     ps(RNG)=(uu(iena,RNG) - &
-    0.5*SUM_SQR(uu(imxa,RNG),uu(imya,RNG),uu(imza,RNG)) &
-    / uu(idna,RNG))*(gamma-1.0) + (2.0-gamma)*pmag(RNG)
+      0.5*( uu(imxa,RNG)**2 + uu(imya,RNG)**2 + uu(imza,RNG)**2 ) &
+          / uu(idna,RNG))*(gamma-1.0) + (2.0-gamma)*pmag(RNG)
     p(RNG) = ps(RNG)- pmag(RNG)
 #endif /* ISO */
 !#ifdef COSM_RAYS
 !    pcr = (gamma_cr-1)*uu(iecr,RNG)
 !#endif COSM_RAYS
     flux(idna,RNG)=uu(imxa,RNG)
-    flux(imxa,RNG)=uu(imxa,RNG)*vx(RNG)+ps(RNG)-SQR(bb(ibx,RNG))
+    flux(imxa,RNG)=uu(imxa,RNG)*vx(RNG)+ps(RNG) - bb(ibx,RNG)**2
     flux(imya,RNG)=uu(imya,RNG)*vx(RNG)-bb(iby,RNG)*bb(ibx,RNG)
     flux(imza,RNG)=uu(imza,RNG)*vx(RNG)-bb(ibz,RNG)*bb(ibx,RNG)
 #ifndef ISO
@@ -100,7 +98,7 @@ module fluxes
 !#ifdef COSM_RAYS
 !                                                   + gamma_cr*pcr(RNG) &
 !#endif COSM_RAYS		         
-		          )/uu(idna,RNG)),small)
+                )/uu(idna,RNG)),small)
 #endif /* ISO */
         cfr(1,1) = cfr(1,2)
         cfr(1,n) = cfr(1,n-1)   

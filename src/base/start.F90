@@ -47,7 +47,7 @@ module start
   logical bulk_viscosity
   
   character*3 gpt_hdf
-  real g_z
+  real :: g_z, g_y
   real dg_dz
   real r_gc
   real ptmass, ptm_x, ptm_y, ptm_z, r_smooth
@@ -128,6 +128,7 @@ contains
 #ifdef GRAV
   namelist /GRAVITY/ gpt_hdf,  &
                      g_z,   &
+                     g_y,   &
                      dg_dz, &
                      r_gc,  &
                      ptmass,ptm_x,ptm_y,ptm_z,r_smooth, &
@@ -233,6 +234,7 @@ contains
 #ifdef GRAV
     gpt_hdf = 'no'
     g_z     = 0.0 
+    g_y     = 0.0
     dg_dz   = 0.0
     r_gc    = 8500
     ptmass  = 0.0
@@ -484,7 +486,7 @@ contains
       ibuff(80) = integration_order
 
 #ifdef GRAV
-!  namelist /GRAVITY/ gpt_hdf, g_z, dg_dz, r_gc, 
+!  namelist /GRAVITY/ gpt_hdf, g_z, g_y, dg_dz, r_gc, 
 !                     ptmass,ptm_x,ptm_y,ptm_z,r_smooth, nsub, 
 !                     tune_zeq, tune_zeq_bnd,
 !                     h_grav, r_grav, n_gravr, n_gravr2, n_gravh
@@ -497,6 +499,7 @@ contains
       cbuff(90) = gpt_hdf
 
       rbuff(90)  = g_z    
+      rbuff(185) = g_y
       rbuff(91)  = dg_dz  
       rbuff(92)  = r_gc   
       rbuff(93)  = ptmass 
@@ -703,7 +706,7 @@ contains
       integration_order   = ibuff(80)
  
 #ifdef GRAV
-!  namelist /GRAVITY/ gpt_hdf,  g_z, dg_dz, r_gc, 
+!  namelist /GRAVITY/ gpt_hdf,  g_z, g_y, dg_dz, r_gc, 
 !                     ptmass,ptm_x,ptm_y,ptm_z,r_smooth
 !                     tune_zeq, tune_zeq_bnd,
 !                     h_gravity_profile, r_gravity_profile, n_gravity_profile
@@ -717,6 +720,7 @@ contains
       gpt_hdf             = trim(cbuff(90))                  
 
       g_z                 = rbuff(90)    
+      g_y                 = rbuff(185)
       dg_dz               = rbuff(91) 
       r_gc                = rbuff(92)  
       ptmass              = rbuff(93) 
