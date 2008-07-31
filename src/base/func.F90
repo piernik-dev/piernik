@@ -1,9 +1,22 @@
 #include "mhd.def"
+!>
+!! \brief Module that contains unclassified functions
+!!
+!! This module should be empty. Every function or subroutine placed here belong
+!! elsewhere. We are yet unsure where to put them.
+!! \todo Move all structures elsewhere
+!! \warning Procedures \a dipol and \a rn_angles were moved to sn_sources.F90
+!<
 module func
-contains
+  contains
 
-! Te procedury powinny sie znalezc docelowo w jakims innym module. 
-
+!>
+!! \brief Function that evolves EMFs in time
+!! \param vh velocity perpendicular to #b
+!! \param vg velocity perpendicular to #b
+!! \param b one component of magnetic field
+!! \param dt timestep
+!<
   function tvdb_emf(vh,vg,b,dt)
     implicit none
     real, dimension(:), intent(in) :: vh,vg,b
@@ -37,6 +50,15 @@ contains
 
 !-----------------------------------------------------------------------------
 
+!> 
+!! \brief Function makes one-cell,foreward circular shift of 3D array in any direction
+!! \param tab input array
+!! \param d shift's direction, where 1,2,3 corresponds to \a x,\a y,\a z respectively
+!! \return real, dimension(SIZE(tab,1),SIZE(tab,2),SIZE(tab,3))
+!!
+!! Functions was written in order to significantly improve
+!! the performance at the cost of the flexibility of original \p CSHIFT.
+!<
   function pshift(tab,d)
     implicit none
     real, dimension(:,:,:) :: tab
@@ -60,13 +82,22 @@ contains
 
     return
   end function pshift
-
+ 
+!> 
+!! \brief Function makes one-cell, backward circular shift of 3D array in any direction
+!! \param tab input array
+!! \param d shift's direction, where 1,2,3 corresponds to \a x,\a y,\a z respectively
+!! \return real, dimension(SIZE(tab,1),SIZE(tab,2),SIZE(tab,3))
+!!
+!! Functions was written in order to significantly improve
+!! the performance at the cost of the flexibility of original \p CSHIFT.
+!<
   function mshift(tab,d)
     implicit none
     real, dimension(:,:,:) :: tab
-    integer :: d
-    integer :: lx,ly,lz
-    real, dimension(SIZE(tab,1),SIZE(tab,2),SIZE(tab,3)) :: mshift
+    integer :: d 
+    integer :: lx,ly,lz 
+    real, dimension(SIZE(tab,1) , SIZE(tab,2) , SIZE(tab,3)) :: mshift
 
     lx = SIZE(tab,1)
     ly = SIZE(tab,2)
@@ -86,7 +117,3 @@ contains
   end function mshift
 
 end module func
-
-!!! MH: procedury "dipol" i "rn_angles"
-!!! zostaly przeniesione (z nieiwlkimi przrzerobkami) do modulu sn_sources.F90
-!!! w katalogu src/supernovae
