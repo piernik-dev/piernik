@@ -1,3 +1,4 @@
+! $Id$
 #include "mhd.def"
 ! Written by M. Hanasz, 2003, 2007 & K. Kowalik 2007 
 ! Adapted for this code by M. Hanasz, November 2007
