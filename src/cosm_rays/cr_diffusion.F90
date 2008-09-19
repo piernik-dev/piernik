@@ -1,3 +1,4 @@
+! $Id$
 #include "mhd.def"
 
 ! Written by M. Hanasz, 2003
