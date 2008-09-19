@@ -1,3 +1,4 @@
+! $Id$
 #include "mhd.def"
 module mod_mhdstep ! UNSPLIT 1D
 #ifdef RESIST

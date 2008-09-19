@@ -1,3 +1,4 @@
+! $Id$
 #include "mhd.def"
 module mod_mhdstep   ! SPLIT
   use start, only  : dt_log, magfield, dimensions, t, dt, &

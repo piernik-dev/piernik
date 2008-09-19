@@ -1,3 +1,4 @@
+! $Id$
 #include "mhd.def"
 module advects    ! unsplit advects
   use start

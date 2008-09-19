@@ -1,4 +1,4 @@
-
+! $Id$
 #include "mhd.def"
 module fluids     ! split fluids
   contains
