@@ -24,11 +24,11 @@ MHDF_LIB = /opt/pgi/linux86-64/6.0/hdf4/include
 #MHDF_LIB = /opt/pgi/linux86/7.0/hdf4/include
 
 ### GNU hydra AMD_MP (e.g. hydra4)
-#F90		 = mpif90
-#F90FLAGS  = -fdefault-real-8
+F90		 = mpif90
+F90FLAGS  = -fdefault-real-8
 #F90FLAGS  = -fdefault-real-8 -O3 -funroll-loops -m3dnow -msse -mfpmath=sse
-#HDF_LIB  = . -lfftw3 -llapack -lgfortran -lc
-#MHDF_LIB = /opt/pgi/linux86/7.0/hdf4/include
+HDF_LIB  = . -lfftw3 -llapack -lgfortran -lc
+MHDF_LIB = /opt/pgi/linux86/7.0/hdf4/include
 
 ### GNU hydra AMD64
 #F90		 = /usr/bin/mpif90
