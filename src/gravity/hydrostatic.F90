@@ -1,3 +1,4 @@
+! $Id$
 #include "mhd.def"
 #ifdef GALAXY
 #define ONEOFTWO
