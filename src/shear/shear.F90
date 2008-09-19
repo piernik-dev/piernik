@@ -1,3 +1,4 @@
+! $Id$
 #include "mhd.def"
 module shear
   real    :: ts, dely, eps
