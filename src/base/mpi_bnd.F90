@@ -1,3 +1,4 @@
+! $Id$
 module mpi_bnd
 
 contains

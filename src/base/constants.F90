@@ -1,3 +1,4 @@
+! $Id$
 #include "mhd.def"
 
 module constants     ! module containg numerical and physical constants !!!

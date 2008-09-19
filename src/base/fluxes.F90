@@ -1,3 +1,4 @@
+! $Id$
 #include "mhd.def"
 #define RNG 2:n-1
 module fluxes

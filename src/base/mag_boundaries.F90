@@ -1,3 +1,4 @@
+! $Id$
 #include "mhd.def"
 
 module mag_boundaries
