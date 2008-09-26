@@ -386,7 +386,7 @@ module dataio
         wa(iso:ieo,jso:jeo,kso:keo) = u(iena,iso:ieo,jso:jeo,kso:keo)
       case ('eint')
         wa(iso:ieo,jso:jeo,kso:keo) = u(iena,iso:ieo,jso:jeo,kso:keo) &
-	                            - 0.5*(u(imxa,iso:ieo,jso:jeo,kso:keo)**2 &  
+                                    - 0.5*(u(imxa,iso:ieo,jso:jeo,kso:keo)**2 &  
                                           +u(imya,iso:ieo,jso:jeo,kso:keo)**2 &
                                           +u(imza,iso:ieo,jso:jeo,kso:keo)**2)/u(idna,iso:ieo,jso:jeo,kso:keo)
 #endif /* ISO */
@@ -397,11 +397,11 @@ module dataio
 
       case ('omga')
         do ibe=iso,ieo
-	  do jbe=jso,jeo
+          do jbe=jso,jeo
             wa(ibe,jbe,kso:keo) = (u(imya,ibe,jbe,kso:keo) / u(idna,ibe,jbe,kso:keo) * x(ibe) &
-	                         - u(imxa,ibe,jbe,kso:keo) / u(idna,ibe,jbe,kso:keo) * y(jbe))/(x(ibe)**2+y(jbe)**2)
-	  enddo
-	enddo
+                            - u(imxa,ibe,jbe,kso:keo) / u(idna,ibe,jbe,kso:keo) * y(jbe))/(x(ibe)**2+y(jbe)**2)
+        enddo
+      enddo
 
       case ('vrot')
         do ibe=iso,ieo
@@ -538,14 +538,6 @@ module dataio
         wa(:,:,:) = Lu(5,:,:,:)
 #endif /* ~ISO */
 #endif /* SPLIT */
-      case ('esrc')
-!        wa(iso:ieo,jso:jeo,kso:keo) = outwa(iso:ieo,jso:jeo,kso:keo)
-
-!      case ('eint')
-!        wa(iso:ieo,jso:jeo,kso:keo) = outwb(iso:ieo,jso:jeo,kso:keo)
-
-      case ('temp')
-!        wa(iso:ieo,jso:jeo,kso:keo) = outwc(iso:ieo,jso:jeo,kso:keo)
 !DW+
       case ('grvx')
         wa(iso:ieo,jso:jeo,kso:keo) = outwa(iso:ieo,jso:jeo,kso:keo)
@@ -559,7 +551,6 @@ module dataio
       case default
         print *, 'Variable ', vars(iv), ' is not defined! Skipping.'
       end select
-!       print *, vars(iv), minval(wa), maxval(wa)
 
 ! write data
 !
@@ -1119,32 +1110,6 @@ module dataio
     iostatus = sfsdmname( dim_id, 'z' )
     iostatus = sfsdscale( dim_id, dimsu(4), 6, z)
 
-
-! Na razie nie uzywane - do poprawy
-!    dim_id = sfdimid( sds_id, 4 )
-!    iostatus = sfsdmname( dim_id, 'xl' )
-!    iostatus = sfsdscale( dim_id, dimsu(2), 6, xl)
-!
-!    dim_id = sfdimid( sds_id, 5 )
-!    iostatus = sfsdmname( dim_id, 'yl' )
-!    iostatus = sfsdscale( dim_id, dimsu(3), 6, yl)
-!
-!    dim_id = sfdimid( sds_id, 6 )
-!    iostatus = sfsdmname( dim_id, 'zl' )
-!    iostatus = sfsdscale( dim_id, dimsu(4), 6, zl)
-!
-!    dim_id = sfdimid( sds_id, 7 )
-!    iostatus = sfsdmname( dim_id, 'xr' )
-!    iostatus = sfsdscale( dim_id, dimsu(2), 6, xr)
-!
-!    dim_id = sfdimid( sds_id, 8 )
-!    iostatus = sfsdmname( dim_id, 'yr' )
-!    iostatus = sfsdscale( dim_id, dimsu(3), 6, yr)
-!
-!    dim_id = sfdimid( sds_id, 8 )
-!    iostatus = sfsdmname( dim_id, 'zr' )
-!    iostatus = sfsdscale( dim_id, dimsu(4), 6, zr)
-
     iostatus = sfendacc(sds_id)
 
     iostatus = sfend(sd_id)
@@ -1484,12 +1449,15 @@ module dataio
 
     character(len=128) :: tsl_file
 
-    real ::  mass,  momx,  momy,  momz,  ener, encr, eint,  ekin,  emag, epot
-    real :: tot_mass, tot_momx, tot_momy, tot_momz, tot_ener, tot_eint, &
-            tot_ekin, tot_emag, tot_epot, tot_encr, &
-            mflx, mfly, mflz, tot_mflx, tot_mfly, tot_mflz
+    real :: mass = 0.0, momx = 0.0, momy = 0.0,  momz = 0.0, ener = 0.0, &
+            encr = 0.0, eint = 0.0, ekin = 0.0,  emag = 0.0, epot = 0.0, &
+            tot_mass = 0.0, tot_momx = 0.0, tot_momy = 0.0, tot_momz = 0.0, &
+            tot_ener = 0.0, tot_eint = 0.0, tot_ekin = 0.0, tot_emag = 0.0, &
+            tot_epot = 0.0, tot_encr = 0.0, mflx = 0.0, mfly = 0.0, mflz = 0.0, &
+            tot_mflx = 0.0, tot_mfly = 0.0, tot_mflz = 0.0
 !DW+
-    real :: amomz, tot_amomz
+    real :: amomz = 0.0 
+    real :: tot_amomz = 0.0
 !DW-
 !- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 !
@@ -1753,8 +1721,14 @@ module dataio
     loc_temp_max  = 0
     proc_temp_max = 0          
 #else /* ISO */
-    wa            = (u(iena,:,:,:) &                ! eint
-                  - 0.5*(sum(u(imxa:imza,:,:,:)**2,1) /u(idna,:,:,:) + wa))
+    wa            = u(iena,:,:,:)                
+!    wa            = wa - 0.5*(sum(u(imxa:imza,:,:,:)**2,1) /u(idna,:,:,:))
+    wa            = wa - 0.5 * u(imxa,:,:,:)**2 / u(idna,:,:,:)
+    wa            = wa - 0.5 * u(imya,:,:,:)**2 / u(idna,:,:,:)
+    wa            = wa - 0.5 * u(imza,:,:,:)**2 / u(idna,:,:,:)
+    wa            = wa - b(1,:,:,:)**2    
+    wa            = wa - b(2,:,:,:)**2    
+    wa            = wa - b(3,:,:,:)**2    
     wa            = max(wa,smallei)
     wa            = (gamma-1)*wa                    ! pres
 
