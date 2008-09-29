@@ -61,7 +61,6 @@ program mhd
   
   call mpistart
 
-  call timer_start
   
   call read_params
     
@@ -151,6 +150,7 @@ program mhd
     
   
 !-------------------------------- MAIN LOOP ----------------------------------
+  call timer_start
   do
     nstep=nstep+1
     if (t>=tend .or. nstep>nend ) exit
@@ -210,37 +210,18 @@ program mhd
    end do ! main loop
 
 999 continue
+  call timer_stop
 
   nstep=nstep-1
-
-!  u(1,nb+1:nx-nb,nb+1:ny-nb,:) = & 
-!     unshear_fft(u(1,nb+1:nx-nb,nb+1:ny-nb,:),x(nb+1:nx-nb),.true.)
-!  allocate(ala(nxd,nyd,nz))
-!  call unshear_fft_b(u(1,nb+1:nx-nb,nb+1:ny-nb,:),x(:),&
-!       u(1,1:nb,nb+1:ny-nb,:),&
-!       u(1,nxd+nb+1:nxd+2*nb,nb+1:ny-nb,:),&
-!       ala(:,:,:),.true.)
-!  u(1,nb+1:nx-nb,nb+1:ny-nb,:) = ala(:,:,:)
-!  call write_hdf
-!  nhdf = nhdf+1
-!  u(1,nb+1:nx-nb,nb+1:ny-nb,:) = &
-!     unshear_fft(u(1,nb+1:nx-nb,nb+1:ny-nb,:),x(nb+1:nx-nb))
-!  call unshear_fft_b(u(1,nb+1:nx-nb,nb+1:ny-nb,:),x(:),&
-!       u(1,1:nb,nb+1:ny-nb,:),&
-!       u(1,nxd+nb+1:nxd+2*nb,nb+1:ny-nb,:),&
-!       ala(:,:,:))
-!  u(1,nb+1:nx-nb,nb+1:ny-nb,:) = ala(:,:,:)
-!  call write_hdf
-!  deallocate(ala)
 
   call write_data(output='end')
 !---------------------------- END OF MAIN LOOP ----------------------------------
 
  
+   call MPI_BARRIER(comm,ierr)
    call arrays_deallocate 
-   
-   call timer_stop
 
+   call MPI_BARRIER(comm,ierr)
    call mpistop 
 !   write(*,*)
 
