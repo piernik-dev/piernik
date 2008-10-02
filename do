@@ -22,7 +22,7 @@ if($argc < 1){
    print "USAGE: makemake <problem>\n";
    die;
 }
-open MAKEIN, "< Makefile.in" or die $!;
+open MAKEIN, "< compilers/Makefile.in" or die $!;
 @makein = <MAKEIN>;
 close MAKEIN;
 rmtree(['obj']);
