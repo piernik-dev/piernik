@@ -10,11 +10,18 @@ if($argc < 1){
    print "into 'compilers' directory, that contains environment you need.\n";
    print "The name of that file should be '<compset>.in', where <compset> is\n";
    print "a part of this name, that you want to use while changing the compiler.\n";
+   print "Available compilers are:\n";
+   print " \n";
+   system("cd ../compilers && ls *.in && cd ../obj");
    print " \n";
 #   die;
 } else {
 $compdir = "../compilers/". $ARGV[0] . ".in";
-if(!-r $compdir) { die "Can't open $compdir: $!";}
+if(!-r $compdir) { 
+print "Available compilers are:\n";
+system("cd ../compilers && ls *.in && cd ../obj");
+die "Can't open $compdir: $!";
+}
 open MAKEIN, $compdir or die $!;
 @makein = <MAKEIN>;
 close MAKEIN;
