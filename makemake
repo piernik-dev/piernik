@@ -38,6 +38,8 @@ for (@base) {
    s/src/\.\.\/src/;
 }
 @addons = ();
+copy("compilers/newcompiler","obj/newcompiler");
+system("chmod a+x obj/newcompiler");
 $defs = $probdir."mhd.def";
 copy($defs,"obj/mhd.def");
 open (defs) or die "Can't open the file mhd.def!";
@@ -90,11 +92,11 @@ for $i (0 .. $#symln){
    copy($files[$i],".") or die "$files[$i] cannot be copied";
 }
 #chdir 'obj';
-open(MAKEFILE, "> Makefile");
+open(MAKEFILE, "> Makefile-prep");
 
 # Source listing
 #
-print MAKEFILE @makein;
+#print MAKEFILE @makein;
 #foreach $line (@makein){
 #   print "$line";
 #}
@@ -171,6 +173,7 @@ print MAKEFILE "%.o : %.mod\n\n";
 &MakeDepends("*.c",     '^\s*#\s*include\s+["\']([^"\']+)["\']');
 
 system("./post","mhd",$ARGV[0]);
+system("./newcompiler Makefile");
 
 #
 # &PrintWords(current output column, extra tab?, word list); --- print words
