@@ -1,0 +1,33 @@
+#!/usr/bin/perl
+# Written by Dominik Woltanski <minikwolt@astri.umk.pl> October 1, 2008
+use Switch;
+use File::Path;
+use File::Copy;
+my $argc = $#ARGV+1;
+if($argc < 1){
+   print "USAGE: newcompiler <compset>\n";
+   print "If you need a non-standard compiler, please, add a new file\n";
+   print "into 'compilers' directory, that contains environment you need.\n";
+   print "The name of that file should be '<compset>.in', where <compset> is\n";
+   print "a part of this name, that you want to use while changing the compiler.\n";
+   print " \n";
+#   die;
+} else {
+$compdir = "../compilers/". $ARGV[0] . ".in";
+if(!-r $compdir) { die "Can't open $compdir: $!";}
+open MAKEIN, $compdir or die $!;
+@makein = <MAKEIN>;
+close MAKEIN;
+#rmtree(['obj']);
+#mkpath(['obj']);
+open MAKEPREP, "< Makefile-prep" or die $!;
+@makeprep = <MAKEPREP>;
+close MAKEPREP;
+
+open(MAKEFILE, "> Makefile");
+print MAKEFILE @makein;
+print MAKEFILE @makeprep;
+close MAKEFILE;
+
+#system("./post","mhd",$ARGV[0]);
+}

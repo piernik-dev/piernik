@@ -1,0 +1,8 @@
+PROG		 = mhd
+
+### INTEL 
+F90		 = /opt/intel/mpich2/bin/mpif90
+F90FLAGS  = -O3 -r8 -ipo
+HDF_LIB  = /opt/intel/hdf4/lib
+MHDF_LIB = /opt/intel/hdf4/include -L/opt/intel/mkl/9.1 -L/opt/intel/fftw -lfftw3
+

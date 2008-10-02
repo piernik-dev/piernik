@@ -1,0 +1,8 @@
+PROG		 = mhd
+
+### GNU tres AMD64
+F90		 = /usr/bin/mpif90
+F90FLAGS  = -fdefault-real-8 -ffpe-trap=invalid,zero,overflow,underflow,precision,denormal
+HDF_LIB  = . -lfftw3 -llapack -lgfortran -lc
+MHDF_LIB = /usr/include
+

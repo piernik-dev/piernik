@@ -1,0 +1,49 @@
+PROG		 = mhd
+
+### INTEL 
+#F90		 = /opt/intel/mpich2/bin/mpif90
+#F90FLAGS  = -g -fpe0 -r8
+#F90FLAGS  = -O3 -r8 -ipo
+#HDF_LIB  = /opt/intel/hdf4/lib
+#MHDF_LIB = /opt/intel/hdf4/include -L/opt/intel/mkl/9.1 -L/opt/intel/fftw -lfftw3
+
+### PGI hydra AMD64
+F90		 = /opt/pgi/linux86-64/6.0/mpich2/bin/mpif90
+F90FLAGS  = -g -Ktrap=fp -r8 -C
+#F90FLAGS  = -fastsse -O3 -r8
+HDF_LIB  = /opt/pgi/linux86-64/6.0/hdf4/lib -L/opt/pgi/linux86-64/6.0/fftw/lib 
+#HDF_LIB  = /opt/pgi/linux86-64/6.0/hdf4/lib -L/opt/pgi/linux86-64/6.0/fftw/lib -lfftw3 
+MHDF_LIB = /opt/pgi/linux86-64/6.0/hdf4/include
+
+### PGI hydra AMD_MP
+#F90		 = /opt/pgi/linux86/7.0/mpich2/bin/mpif90
+#F90FLAGS  = -g -Ktrap=fp -r8 -C
+#F90FLAGS  = -fastsse -r8
+#HDF_LIB  = /opt/pgi/linux86/7.0/hdf4/lib -L/opt/pgi/linux86/7.0/fftw/lib 
+#HDF_LIB  = /opt/pgi/linux86/7.0/hdf4/lib -L/opt/pgi/linux86/7.0/fftw/lib -lfftw3 -llapack
+#MHDF_LIB = /opt/pgi/linux86/7.0/hdf4/include
+
+### GNU hydra AMD_MP (e.g. hydra4)
+F90		 = mpif90
+F90FLAGS  = -fdefault-real-8
+#F90FLAGS  = -fdefault-real-8 -O3 -funroll-loops -m3dnow -msse -mfpmath=sse
+HDF_LIB  = . -lfftw3 -llapack -lgfortran -lc
+MHDF_LIB = /opt/pgi/linux86/7.0/hdf4/include
+
+### GNU hydra AMD64
+#F90		 = /usr/bin/mpif90
+#F90FLAGS  = -fdefault-real-8 -ffpe-trap=invalid,zero,overflow,underflow,precision,denormal
+#F90FLAGS  = -fdefault-real-8
+#F90FLAGS  = -fdefault-real-8 -O3 -funroll-loops -m3dnow -msse -msse2 -mfpmath=sse
+#HDF_LIB  = . -lfftw3 -llapack -lgfortran -lc
+#MHDF_LIB = /opt/pgi/linux86/7.0/hdf4/include
+
+### SUN 
+#F90		 = /opt/sunstudio12/mpich2/bin/mpif90
+#F90FLAGS  = -fast -xprofile=collect -dalign -depend -unroll=4 -xtarget=opteron \
+# -m64 -xipo -xtypemap=real:64
+#F90FLAGS  = -fast -xprofile=use:mhd.profile -O5 -dalign -depend -unroll=4 \
+# -xtarget=opteron -m64 -xipo -xtypemap=real:64
+#HDF_LIB  = /opt/sunstudio12/hdf4/lib -L/opt/sunstudio12/fftw/lib
+#HDF_LIB += -lfftw3 
+#MHDF_LIB = /opt/sunstudio12/hdf4/include
