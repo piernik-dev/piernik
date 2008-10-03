@@ -47,13 +47,14 @@ program mhd
     use init_problem,  only :   save_init_dens, get_init_mass, mass_loss_compensate   
 #endif  /* MASS_COMPENS */
     use types
+    use comp_log, only : nenv,env
 
   implicit none
   character output*3
   integer system_status
   character system_command*160, cmd*256
   integer(kind=1)  :: system
-  integer tsleep
+  integer tsleep, i
 
   character tmp_log_file*(100)
   type(hdf) :: chdf
@@ -119,6 +120,11 @@ program mhd
       log_file = trim(cwd)//'/'//trim(log_file)
       system_command = 'mv '//trim(tmp_log_file)//' '//trim(log_file)
       system_status = SYSTEM(system_command)
+      open(3, file=log_file, position='append')
+         do i=1,nenv
+           write(3,*) trim(env(i))
+         enddo
+      close(3)
     endif
 
     call write_data(output='all')
