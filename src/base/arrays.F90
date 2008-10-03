@@ -1,5 +1,5 @@
 ! $Id$
-#include "mhd.def"
+#include "piernik.def"
 
 module arrays
 
@@ -85,6 +85,9 @@ module arrays
   real, allocatable, dimension(:,:,:)   :: cfr
 #endif /* FLX_BND */
 #endif /* ~SPLIT */ 
+#ifdef PNE
+  real, allocatable, dimension(:) :: ovrlp
+#endif /* PNE */
 #ifdef MASS_COMPENS
   real, allocatable, dimension(:,:,:)   :: dinit
 #endif /* MASS_COMPENS */
@@ -249,9 +252,12 @@ contains
 #else /* SPLIT */
     deallocate(wa)
 #endif /* SPLIT */
+#ifdef PNE
+    deallocate(ovrlp)
+#endif /* PNE */
 #ifdef MASS_COMPENS
    deallocate(dinit)    
-#endif /* MASS_COMPENS */     
+#endif /* MASS_COMPENS */
 !#ifdef COOL_HEAT
     deallocate(coolheat_profile)
 !#endif /* COOL_HEAT */

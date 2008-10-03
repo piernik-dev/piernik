@@ -1,5 +1,5 @@
 ! $Id$
-#include "mhd.def"
+#include "piernik.def"
 #define RNG 2:n-1
 module fluxes
   implicit none
