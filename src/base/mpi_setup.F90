@@ -9,7 +9,7 @@
 
   implicit none
   include 'mpif.h'
-  integer :: nproc, proc, ierr , rc
+  integer :: nproc, proc, ierr , rc, info
   integer :: status(MPI_STATUS_SIZE,4)
   integer, dimension(4) :: req, err
 
@@ -72,6 +72,7 @@
     call MPI_INIT( ierr )
     call MPI_COMM_RANK(MPI_COMM_WORLD, proc, ierr)
     comm = MPI_COMM_WORLD
+    info = MPI_INFO_NULL
     call MPI_COMM_SIZE(comm, nproc, ierr)
 
     pid_proc = getpid()

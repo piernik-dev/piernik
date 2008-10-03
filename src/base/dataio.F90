@@ -13,7 +13,7 @@ module dataio
 ! Modified for this code and extended by M.Hanasz
 ! modifications and extensions by D.Woltanski in lines: 23, 65, 132, 133, 136-137,
 ! 474-476, 478, 527-532, 583, 585, 658-669, 829-830, 932, 936, 967, 971-975
-
+  use types
   use mpi_setup
 !  use utils
 #ifdef RESISTIVITY
@@ -35,6 +35,8 @@ module dataio
   
   logical wait
 
+  type(hdf) :: chdf
+
 
   integer nchar
   character msg*16
@@ -53,6 +55,39 @@ module dataio
 
 
   contains
+
+     subroutine set_container(chdf)
+       use types
+       implicit none
+       type(hdf), intent(out) :: chdf
+
+       chdf%nhdf = nhdf
+       chdf%ntsl = ntsl
+       chdf%nres = nres
+       chdf%nlog = nlog
+       chdf%step_hdf = step_hdf
+       chdf%log_lun = log_lun
+       chdf%last_hdf_time = last_hdf_time
+       chdf%log_file = log_file
+
+     end subroutine set_container
+
+     subroutine get_container(chdf)
+       use types
+       implicit none
+       type(hdf), intent(in) :: chdf
+
+       nhdf = chdf%nhdf 
+       ntsl = chdf%ntsl
+       nres = chdf%nres
+       nlog = chdf%nlog
+       step_hdf =  chdf%step_hdf
+       log_lun = chdf%log_lun
+       last_hdf_time = chdf%last_hdf_time
+       log_file = chdf%log_file
+
+     end subroutine get_container
+
 
 !=======================================================================
 !
@@ -156,8 +191,16 @@ module dataio
 !
   subroutine write_data(output)
     use start, only:  dt_hdf, dt_res, dt_tsl, dt_log, t, dt, nstep
+#ifdef HDF5
+    use init_problem, only:  problem_name, run_id
+    use dataio_hdf5, only: write_hdf5, write_restart_hdf5
+#endif /* HDF5 */
     implicit none
-    character  :: output*3
+    character  :: output*3 
+#ifdef HDF5
+    character :: filename*128
+#endif /* HDF5 */
+
 
 !- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -190,7 +233,12 @@ module dataio
 !      if ((nhdf-nhdf_start) .lt. (int((t-t_start) / dt_hdf) + 1) &
       if ((t-last_hdf_time) .ge. dt_hdf &
                 .or. output .eq. 'hdf' .or. output .eq. 'end') then
+#ifndef HDF5
         call write_hdf
+#else /* HDF5 */
+     call set_container(chdf)
+     call write_hdf5(chdf)
+#endif
         if((t-last_hdf_time) .ge. dt_hdf) last_hdf_time = last_hdf_time + dt_hdf
         if((t-last_hdf_time) .ge. dt_hdf) last_hdf_time = t ! dodatkowa regulacja w przypadku zmiany dt_hdf na mniejsze przez msg
         nhdf = nhdf + 1
@@ -203,7 +251,19 @@ module dataio
     if (dt_res .gt. 0.0 .and. nstep .gt. step_res) then
       if ((nres-nres_start) .lt. (int((t-t_start) / dt_res) + 1) &
                 .or. output .eq. 'res' .or. output .eq. 'end') then
-        if (nres .gt. 0) call write_restart
+         if (nres > 0) then
+#ifdef HDF5
+           if(proc==0) then
+              write (filename,'(a,a1,a3,a1,i4.4,a4)') &
+                trim(problem_name),'_', run_id,'_',nres,'.res'
+           endif
+           call MPI_BCAST(filename, 128, MPI_CHARACTER, 0, comm, ierr)
+           call set_container(chdf); chdf%nstep = nstep
+           call write_restart_hdf5(filename,chdf)
+#else
+           call write_restart
+#endif
+        endif
         nres = nres + 1
         step_res = nstep
       endif
@@ -386,7 +446,7 @@ module dataio
         wa(iso:ieo,jso:jeo,kso:keo) = u(iena,iso:ieo,jso:jeo,kso:keo)
       case ('eint')
         wa(iso:ieo,jso:jeo,kso:keo) = u(iena,iso:ieo,jso:jeo,kso:keo) &
-                                    - 0.5*(u(imxa,iso:ieo,jso:jeo,kso:keo)**2 &  
+	                            - 0.5*(u(imxa,iso:ieo,jso:jeo,kso:keo)**2 &  
                                           +u(imya,iso:ieo,jso:jeo,kso:keo)**2 &
                                           +u(imza,iso:ieo,jso:jeo,kso:keo)**2)/u(idna,iso:ieo,jso:jeo,kso:keo)
 #endif /* ISO */
@@ -397,11 +457,11 @@ module dataio
 
       case ('omga')
         do ibe=iso,ieo
-          do jbe=jso,jeo
+	  do jbe=jso,jeo
             wa(ibe,jbe,kso:keo) = (u(imya,ibe,jbe,kso:keo) / u(idna,ibe,jbe,kso:keo) * x(ibe) &
-                            - u(imxa,ibe,jbe,kso:keo) / u(idna,ibe,jbe,kso:keo) * y(jbe))/(x(ibe)**2+y(jbe)**2)
-        enddo
-      enddo
+	                         - u(imxa,ibe,jbe,kso:keo) / u(idna,ibe,jbe,kso:keo) * y(jbe))/(x(ibe)**2+y(jbe)**2)
+	  enddo
+	enddo
 
       case ('vrot')
         do ibe=iso,ieo
@@ -1234,44 +1294,6 @@ module dataio
     
     sd_id = sfstart(file_name_res, 1)
 
-!!  attributes
-!!
-
-! read config attributes
-!
-!    iostatus = sfsnatt( sd_id, 'problem' , 4, 32, problem_name)
-!    iostatus = sfsnatt( sd_id, 'run_id'  , 4, 32, run_id      )
-!    iostatus = sfsnatt( sd_id, 'domain'  , 4, 32, domain      )
-
-!    iostatus = sfsnatt( sd_id, 'psize1'  , 23, 1, psize(1) )
-!    iostatus = sfsnatt( sd_id, 'psize2'  , 23, 1, psize(2) )
-!    iostatus = sfsnatt( sd_id, 'psize3'  , 23, 1, psize(3) )
-
-!    iostatus = sfsnatt( sd_id, 'pcoords1', 23, 1, pcoords(1) )
-!    iostatus = sfsnatt( sd_id, 'pcoords2', 23, 1, pcoords(2) )
-!    iostatus = sfsnatt( sd_id, 'pcoords3', 23, 1, pcoords(3) )
-
-!    iostatus = sfsnatt( sd_id, 'dims1'   , 23, 1, dims(1) )
-!    iostatus = sfsnatt( sd_id, 'dims2'   , 23, 1, dims(2) )
-!    iostatus = sfsnatt( sd_id, 'dims3'   , 23, 1, dims(3) )
-
-!    iostatus = sfsnatt( sd_id, 'nxd'     , 23,  1, nxd     )
-!    iostatus = sfsnatt( sd_id, 'nyd'     , 23,  1, nyd     )
-!    iostatus = sfsnatt( sd_id, 'nzd'     , 23,  1, nzd     )
-
-!    iostatus = sfsnatt( sd_id, 'nxb'     , 23,  1, nxb     )
-!    iostatus = sfsnatt( sd_id, 'nyb'     , 23,  1, nyb     )
-!    iostatus = sfsnatt( sd_id, 'nzb'     , 23,  1, nzb     )
-!    iostatus = sfsnatt( sd_id, 'nb'      , 23,  1, nb      )
-
-!    iostatus = sfsnatt( sd_id, 'xmin'    ,  6,  1, xmin   )
-!    iostatus = sfsnatt( sd_id, 'xmax'    ,  6,  1, xmax   )
-!    iostatus = sfsnatt( sd_id, 'ymin'    ,  6,  1, ymin   )
-!    iostatus = sfsnatt( sd_id, 'ymax'    ,  6,  1, ymax   )
-!    iostatus = sfsnatt( sd_id, 'zmin'    ,  6,  1, zmin   )
-!    iostatus = sfsnatt( sd_id, 'zmax'    ,  6,  1, zmax   )
-
-
 ! read evolution attributes
 !
       attr_index = sffattr( sd_id, 'nstep'     )
@@ -1303,23 +1325,6 @@ module dataio
       attr_index = sffattr( sd_id, 'nsn'       )
       iostatus = sfrnatt( sd_id, attr_index, nsn_last    )
 #endif /* SN_SRC */
-! read array of integer scalar quantities - nie dziala, do poprawy
-!
-!      sds_id   = sfn2index(sd_id, 'intscal')
-!      iostatus = sfselect(sds_id, sds_index)
-!      iostatus = sfrdata(sds_id, istart, stride, nintscal, intscal)
-      
-! read array of real scalar quantities - nie dziala, do poprawy
-!
-!      sds_id   = sfn2index(sd_id, 'rlscal')
-!      iostatus = sfselect(sds_id, sds_index)
-!      iostatus = sfrdata(sds_id, istart, stride, nrlscal, rlscal)
-
-! read initial vertical density profile - nie dziala, do poprawy
-!
-!      sds_id   = sfn2index(sd_id, 'dprof')
-!      iostatus = sfselect(sds_id, sds_index)
-!      iostatus = sfrdata(sds_id, istart, stride, nz, dprof)
 
 ! read variables array
 !
@@ -1348,31 +1353,10 @@ module dataio
       iostatus = sfrdata(sds_id, istart, stride, dims3d, dinit)
 #endif /* MASS_COMPENS */
 
-! read coords
-!
-!     dim_id = sfdimid( sds_id, 0 )
-!     iostatus = sfgdscale( dim_id, x)
-!
-!     dim_id = sfdimid( sds_id, 1 )
-!     iostatus = sfgdscale( dim_id, y)
-!
-!     dim_id = sfdimid( sds_id, 2 )
-!     iostatus = sfgdscale( dim_id, z)
-
       iostatus = sfendacc(sds_id)
 
     iostatus = sfend(sd_id)
     
-!    write(*,*) 'Done'    
-!    write(*,*)
-
-!      write(*,*) intscal
-!      write(*,*) rlscal
-!      write(*,*) dprof
-
-
-
-
   end subroutine read_restart
 
 !------------------------------------------------------------------------
@@ -1396,13 +1380,17 @@ module dataio
       call rm_file('restart_list.tmp')
       
       do nres =999,0,-1      
+#ifdef HDF5
+        write (file_name,'(a,a1,a,a1,a3,a1,i4.4,a4)') &
+               trim(cwd),'/',trim(problem_name),'_', run_id,'_',nres,'.res'
+#else
         write (file_name,'(a,a1,a,a1,a3,a1,3(i2.2,a1),i3.3,a4)') &
                trim(cwd),'/',trim(problem_name),'_', run_id,'_',0,'_',0,'_',0,'_',nres,'.res'
-        
+#endif  
         inquire(file = file_name, exist = exist)
         if(exist) then
            restart_number = nres
-	   return
+        return
         endif      
       enddo
       

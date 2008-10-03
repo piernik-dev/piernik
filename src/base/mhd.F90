@@ -21,7 +21,8 @@ program mhd
       t_start, nres_start, nhdf_start, wait, msg_param
   use dataio, only : init_dataio,read_restart,write_data, check_disk, &
       read_file_msg, write_timeslice, write_log, write_hdf, write_restart, &
-      find_last_restart
+      find_last_restart, get_container, set_container
+  use dataio_hdf5, only: read_restart_hdf5
 !  use diagnostics  
   use timer, only : timer_start, timer_stop
   use mpi_setup
@@ -45,6 +46,7 @@ program mhd
     use start,  only        :   init_mass, mass_loss, mass_loss_tot   
     use init_problem,  only :   save_init_dens, get_init_mass, mass_loss_compensate   
 #endif  /* MASS_COMPENS */
+    use types
 
   implicit none
   character output*3
@@ -54,6 +56,7 @@ program mhd
   integer tsleep
 
   character tmp_log_file*(100)
+  type(hdf) :: chdf
 
   call getarg(1, cwd)
   if (LEN_TRIM(cwd) == 0) cwd = '.'
@@ -61,7 +64,6 @@ program mhd
   
   call mpistart
 
-  
   call read_params
     
   call read_problem_par
@@ -76,7 +78,6 @@ program mhd
 #ifdef GRAV
   call grav_pot_3d
 #endif /* GRAV */
-
   if(proc .eq. 0) then 
     if(restart .eq. 'last') then
       call find_last_restart(nrestart)
@@ -97,7 +98,7 @@ program mhd
 
     call init_prob
 #ifdef GRAV
-    if(gpt_hdf .eq. 'yes') call write_data('gpt')
+!    if(gpt_hdf .eq. 'yes') call write_data('gpt')
 #endif /* GRAV */
 
     call compute_u_bnd
@@ -123,7 +124,6 @@ program mhd
     call write_data(output='all')
    
   else  
-
     if (proc .eq. 0) then
       write (log_file,'(a,a1,a3,a1,i3.3,a4)') &
               trim(problem_name),'_', run_id,'_',nrestart,'.log'
@@ -133,8 +133,15 @@ program mhd
       system_status = SYSTEM(system_command)
     endif
 
+#ifdef HDF5
+    call set_container(chdf); chdf%nres = nrestart
+    call read_restart_hdf5(chdf)
+    call get_container(chdf); nstep = chdf%nstep
+#else
     nres = nrestart
     call read_restart
+#endif
+
     nstep_start = nstep
     t_start     = t
     nres_start  = nrestart
@@ -143,15 +150,14 @@ program mhd
     if(new_id .ne. '') run_id=new_id
 
 #ifdef MASS_COMPENS
-    call get_init_mass
-#endif /* MASS_COMPENS */
+      call get_init_mass
+#endif /* MASS_COMPENS */     
 
   endif
-    
-    
-  
+  call MPI_BARRIER(comm3d,ierr)
 !-------------------------------- MAIN LOOP ----------------------------------
   call timer_start
+  
   do
     nstep=nstep+1
     if (t>=tend .or. nstep>nend ) exit
@@ -161,6 +167,7 @@ program mhd
 #ifdef MASS_COMPENS
       call mass_loss_compensate
 #endif /* MASS_COMPENS */
+      call MPI_BARRIER(comm3d,ierr)
       call write_data(output='all')
 
 888   continue
@@ -177,10 +184,9 @@ program mhd
       
 !---  if a user message is received then:
       if (len_trim(msg) .ne. 0) then
-!        write(*,*) proc, msg, msg_param
         if(trim(msg) .eq. 'res' .or. trim(msg) .eq. 'dump' ) then
           nres = max(nres,1)
-          call write_restart    
+          call write_restart
           nres = nres + 1
           step_res = nstep        
         endif  
@@ -211,20 +217,19 @@ program mhd
    end do ! main loop
 
 999 continue
-  call timer_stop
 
   nstep=nstep-1
+  call timer_stop
 
   call write_data(output='end')
 !---------------------------- END OF MAIN LOOP ----------------------------------
 
  
-   call MPI_BARRIER(comm,ierr)
-   call arrays_deallocate 
+  call MPI_BARRIER(comm,ierr)
+  call arrays_deallocate 
 
-   call MPI_BARRIER(comm,ierr)
-   call mpistop 
-!   write(*,*)
+  call MPI_BARRIER(comm,ierr)
+  call mpistop 
 
 end program mhd
 
