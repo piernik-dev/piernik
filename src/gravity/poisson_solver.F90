@@ -1,5 +1,5 @@
 ! $Id$
-#include "mhd.def"
+#include "piernik.def"
 module poisson_solver
 
 ! Written by G. Kowal

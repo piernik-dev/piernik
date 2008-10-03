@@ -1,5 +1,5 @@
 ! $Id$
-#include "mhd.def"
+#include "piernik.def"
 module shear
   real    :: ts, dely, eps
   integer :: delj
@@ -233,6 +233,6 @@ module shear
     enddo
     if (allocated(temp)) deallocate(temp)
     return
-  end function
+  end function unshear
 end module shear
 

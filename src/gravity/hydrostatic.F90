@@ -1,11 +1,6 @@
 ! $Id$
-#include "mhd.def"
-#ifdef GALAXY
-#define ONEOFTWO
-#endif /* GALAXY */
-#ifdef GALACTIC_DISK
-#define ONEOFTWO
-#endif /* GALACTIC_DISK */
+#include "piernik.def"
+
 module hydrostatic
 
 ! Written by M. Hanasz March-May 2006
@@ -107,7 +102,7 @@ module hydrostatic
       enddo
 
 
-#ifdef ONEOFTWO
+#if defined GALAXY || defined GALACTIC_DISK
 
       cd = sum(dprofs(:)) * dzs * pc
        
@@ -143,7 +138,7 @@ module hydrostatic
 #endif /* ISO */
 
 888  format('Midplane density =',f10.4,2x,'Column density =', e10.4,2x,'iter=',i4 )      
-#endif /* ONEOFTWO */
+#endif /* GALAXY || GALACTIC_DISK */
 
     deallocate(zs,dprofs,gprofs,gpots)
 

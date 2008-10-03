@@ -1,5 +1,5 @@
 ! $Id$
-#include "mhd.def"
+#include "piernik.def"
 
 ! Written by M. Hanasz, 2003
 ! Adapted for this code M. Hanasz, October 2007
