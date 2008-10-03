@@ -40,9 +40,9 @@ for (@base) {
 @addons = ();
 copy("compilers/newcompiler","obj/newcompiler");
 system("chmod a+x obj/newcompiler");
-$defs = $probdir."mhd.def";
-copy($defs,"obj/mhd.def");
-open (defs) or die "Can't open the file mhd.def!";
+$defs = $probdir."piernik.def";
+copy($defs,"obj/piernik.def");
+open (defs) or die "Can't open the file piernik.def!";
 @fdefs = <defs>;
 @d = grep (/define/,@fdefs);
 if( grep { /GRAV/ }  @d) {
@@ -130,7 +130,7 @@ print MAKEFILE "date: \n";
 print MAKEFILE "\trm -f env.*\n";
 print MAKEFILE "\tcp ../src/base/env.F90 .\n";
 print MAKEFILE "\thead -n 1 *.F90 | grep Id > env.dat\n";
-print MAKEFILE "\tcat mhd.def >> env.dat\n";
+print MAKEFILE "\tcat piernik.def >> env.dat\n";
 print MAKEFILE "\twc -l env.dat | awk '{print \"\tinteger, parameter :: nenv = \"\$\$1\"+1\"}' - >> env.F90\n";
 print MAKEFILE "\techo \"   character*128, dimension(nenv) :: env = (/ &\" >> env.F90\n";
 print MAKEFILE "\tawk '{printf(\"\\t\\t \\\" %s \\\" ,&\\n\",\$\$0)}' env.dat >> env.F90\n";

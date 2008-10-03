@@ -1,4 +1,4 @@
-#include "mhd.def"
+#include "piernik.def"
 
 module init_problem
   

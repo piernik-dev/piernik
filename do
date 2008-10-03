@@ -39,9 +39,9 @@ for (@base) {
 @addons = ();
 copy("compilers/newcompiler","obj/newcompiler");
 system("chmod a+x obj/newcompiler");
-$defs = $probdir."mhd.def";
-copy($defs,"obj/mhd.def");
-open (defs) or die "Can't open the file mhd.def!";
+$defs = $probdir."piernik.def";
+copy($defs,"obj/piernik.def");
+open (defs) or die "Can't open the file piernik.def!";
 @fdefs = <defs>;
 @d = grep (/define/,@fdefs);
 @u = grep (/unitsystem/,@d);

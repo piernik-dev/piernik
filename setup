@@ -17,8 +17,8 @@ if($argc == 2) {
 }
 rmtree(['../run']);
 mkpath(['../run']);
-copy('mhd',"../run/$ARGV[0]");
+copy('piernik',"../run/$ARGV[0]");
 chmod 0755, "../run/$ARGV[0]";
 copy('problem.par','../run/problem.par');
-copy('mhd.def','../run/mhd.def');
+copy('piernik.def','../run/piernik.def');
 
