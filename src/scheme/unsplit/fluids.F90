@@ -1,5 +1,5 @@
 ! $Id$
-#include "mhd.def"
+#include "piernik.def"
 module fluids  ! unsplit fluids
 !  use grid
 !  use start

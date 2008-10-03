@@ -1,5 +1,5 @@
 ! $Id$
-#include "mhd.def"
+#include "piernik.def"
 module tv   ! unsplit ssp
 !  use constants
 !  use start

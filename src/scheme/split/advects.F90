@@ -1,5 +1,5 @@
 ! $Id$
-#include "mhd.def"
+#include "piernik.def"
 module advects    ! split advects
   contains
   subroutine advectby_x

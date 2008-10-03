@@ -1,5 +1,5 @@
 ! $Id$
-#include "mhd.def"
+#include "piernik.def"
 module advects    ! unsplit advects
   use start
   use arrays

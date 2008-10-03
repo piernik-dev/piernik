@@ -1,5 +1,5 @@
 ! $Id$
-#include "mhd.def"
+#include "piernik.def"
 module mod_mhdstep   ! SPLIT
   use start, only  : dt_log, magfield, dimensions, t, dt, &
       dt_tsl, nstep, proc, istep, integration_order, cn 

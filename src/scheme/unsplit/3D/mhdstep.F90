@@ -1,5 +1,5 @@
 ! $Id$
-#include "mhd.def" 
+#include "piernik.def" 
 module mod_mhdstep ! UNSPLIT 3D
    use start
    use dataio

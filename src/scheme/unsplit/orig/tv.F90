@@ -1,5 +1,5 @@
 ! $Id$
-#include "mhd.def"
+#include "piernik.def"
 module tv      ! unsplit org
   contains
   subroutine tvdb(vibj,b,vg,n,dt)
