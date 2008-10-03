@@ -1,4 +1,5 @@
-#include "mhd.def"
+! $Id$
+#include "piernik.def"
 
 module constants     ! module containg numerical and physical constants !!!
 		     !	   actual units system is pc, G_one, Myr	!!!
