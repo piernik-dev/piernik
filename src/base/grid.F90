@@ -1,5 +1,5 @@
 ! $Id$
-#include "mhd.def"
+#include "piernik.def"
 module grid
 
 ! Written by: M. Hanasz, January/February 2006

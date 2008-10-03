@@ -1,13 +1,13 @@
 ! $Id$
-#include "mhd.def"
+#include "piernik.def"
 module timer
 
 ! Written by: M. Hanasz, December 2005 - January 2006
 
   implicit none
   
-  integer       nzones, cpuhours, cpumins, cpusecs , wchours , wcmins  , wcsecs 
-  real          zcps,  cputot, cpuallp, wctot, cpu_start, cpu_stop   
+  integer       nzones, cpuhours, cpumins, cpusecs , wchours , wcmins  , wcsecs
+  real          zcps,  cputot, cpuallp, wctot, cpu_start, cpu_stop
 !  real(kind=4)  etime, dtime
   real(kind=4),dimension(2) ::  tarray
   integer       iarray(3)

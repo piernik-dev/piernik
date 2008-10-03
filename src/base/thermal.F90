@@ -1,5 +1,5 @@
 ! $Id$
-#include "mhd.def"
+#include "piernik.def"
 module thermal
 
 ! Written by R. Kosinki 

@@ -1,5 +1,5 @@
 ! $Id$
-#include "mhd.def"
+#include "piernik.def"
 !>
 !! \brief Module that contains unclassified functions
 !!

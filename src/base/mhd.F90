@@ -1,5 +1,5 @@
 ! $Id$
-#include "mhd.def"
+#include "piernik.def"
 
 program mhd
 
@@ -144,9 +144,10 @@ program mhd
 
 #ifdef MASS_COMPENS
     call get_init_mass
-#endif /* MASS_COMPENS */     
+#endif /* MASS_COMPENS */
 
   endif
+    
     
   
 !-------------------------------- MAIN LOOP ----------------------------------

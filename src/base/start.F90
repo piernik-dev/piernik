@@ -1,5 +1,5 @@
 ! $Id$
-#include "mhd.def"
+#include "piernik.def"
 
 module start
 
@@ -74,7 +74,7 @@ module start
   real t_dw, t_arm, col_dens
   
   real h_sn, r_sn, f_sn_kpc2, amp_dip_sn, snenerg, snemass, sn1time, sn2time, r0sn
-  character*3 add_mass, add_ener, add_encr
+  character*3 add_mass, add_ener, add_encr, add_magn
 ! Secondary parameters
 
   real csi2, csim2, amp_ecr_sn, ethu, f_sn
@@ -160,7 +160,7 @@ contains
   namelist /SN_PARAMS/ h_sn, r_sn, f_sn_kpc2, amp_dip_sn
 #endif /* SN_SRC */
 #ifdef SNE_DISTR
-  namelist /SN_DISTR/ snenerg, snemass, sn1time, sn2time, r0sn, add_mass, add_ener, add_encr
+  namelist /SN_DISTR/ snenerg, snemass, sn1time, sn2time, r0sn, add_mass, add_ener, add_encr, add_magn
 #endif /* SNE_DISTR */
 
 
@@ -318,6 +318,7 @@ contains
     add_mass   = 'yes'		!  permission for inserting snemass inside randomly selected areas
     add_ener   = 'yes'		!  permission for inserting snenerg inside randomly selected areas
     add_encr   = 'yes'		!  permission for inserting CR energy inside randomly selected areas
+    add_magn   = 'yes'		!  permission for inserting dipolar magnetic field centered at randomly selected areas
 #endif /* SNE_DISTR */
 
          
@@ -591,7 +592,7 @@ contains
        rbuff(173) = amp_dip_sn      
 #endif /* SN_SRC */
 #ifdef SNE_DISTR
-!  namelist /SN_DISTR/ snenerg, snemass, sn1time, sn2time, r0sn, add_mass, add_ener, add_encr
+!  namelist /SN_DISTR/ snenerg, snemass, sn1time, sn2time, r0sn, add_mass, add_ener, add_encr, add_magn
        rbuff(180) = snenerg
        rbuff(181) = snemass
        rbuff(182) = sn1time
@@ -600,6 +601,7 @@ contains
        cbuff(180) = add_mass
        cbuff(181) = add_ener
        cbuff(182) = add_encr
+       cbuff(183) = add_magn
 #endif /* SNE_DISTR */	
 
 ! Boroadcasting parameters
@@ -815,7 +817,7 @@ contains
        amp_dip_sn         = rbuff(173)     
 #endif /* SN_SRC */
 #ifdef SNE_DISTR
-!  namelist /SN_DISTR/ snenerg, snemass, sn1time, sn2time, r0sn, add_mass, add_ener, add_encr
+!  namelist /SN_DISTR/ snenerg, snemass, sn1time, sn2time, r0sn, add_mass, add_ener, add_encr, add_magn
        snenerg            = rbuff(180)  
        snemass		  = rbuff(181) 	
        sn1time		  = rbuff(182)
@@ -824,6 +826,7 @@ contains
        add_mass		  = cbuff(180)
        add_ener		  = cbuff(181)
        add_encr		  = cbuff(182)
+       add_magn		  = cbuff(183)
 #endif /* SNE_DISTR */
 
 ! Secondary parameters
