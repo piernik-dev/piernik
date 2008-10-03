@@ -22,8 +22,9 @@ contains
 !-----------------------------------------------------------------------------
 
   subroutine read_problem_par
-
+    use comp_log
     implicit none
+    integer :: i
     
       t_sn = 0.0
   
@@ -51,6 +52,9 @@ contains
       open(3, file='tmp.log', position='append')
         write(3,nml=PROBLEM_CONTROL)
         write(3,*)
+        do i=1,nenv
+           write(3,*) trim(env(i))
+        enddo
       close(3)
     endif
 
