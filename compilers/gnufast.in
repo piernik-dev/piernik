@@ -1,4 +1,4 @@
-PROG		 = mhd
+PROG		 = piernik
 
 ### GNU hydra AMD64
 F90		 = /usr/bin/mpif90

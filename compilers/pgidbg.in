@@ -1,4 +1,4 @@
-PROG		 = mhd
+PROG		 = piernik
 
 ### PGI hydra AMD64
 F90		 = /opt/pgi/linux86-64/6.0/mpich2/bin/mpif90

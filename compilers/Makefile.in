@@ -1,4 +1,4 @@
-PROG		 = mhd
+PROG		 = piernik
 
 ### INTEL 
 #F90		 = /opt/intel/mpich2/bin/mpif90
