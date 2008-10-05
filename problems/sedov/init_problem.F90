@@ -196,5 +196,20 @@ contains
 
   end subroutine random_explosion
 
+  subroutine user_plt(var,ij,xn,tab)
+    use start, only : nb
+    use arrays, only : u,nyb,nzb,nxb
+    implicit none
+    character(LEN=4)     :: var
+    character(LEN=2)     :: ij
+    integer              :: xn
+    real, dimension(:,:) :: tab
+
+    if(var=="dens" .and. ij=="yz") tab(:,:) = u(1,xn,nb+1:nyb+nb,nb+1:nzb+nb)
+    if(var=="dens" .and. ij=="xz") tab(:,:) = u(1,nb+1:nxb+nb,xn,nb+1:nzb+nb)
+    if(var=="dens" .and. ij=="xy") tab(:,:) = u(1,nb+1:nxb+nb,nb+1:nyb+nb,xn)
+ 
+  end subroutine user_plt
+
 end module init_problem
 

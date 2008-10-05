@@ -1,6 +1,5 @@
-
+#define HDF5
 #undef DEBUG
-#undef GNU
 #undef VERBOSE
 
 /*======= re-setup needed ==========*/
