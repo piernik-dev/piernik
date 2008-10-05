@@ -22,7 +22,7 @@ program mhd
   use dataio, only : init_dataio,read_restart,write_data, check_disk, &
       read_file_msg, write_timeslice, write_log, write_hdf, write_restart, &
       find_last_restart, get_container, set_container
-  use dataio_hdf5, only: read_restart_hdf5
+  use dataio_hdf5, only: read_restart_hdf5, write_plot
 !  use diagnostics  
   use timer, only : timer_start, timer_stop
   use mpi_setup
@@ -127,6 +127,7 @@ program mhd
       close(3)
     endif
 
+    call set_container(chdf); chdf%nres = nrestart
     call write_data(output='all')
    
   else  
@@ -167,6 +168,7 @@ program mhd
   do
     nstep=nstep+1
     if (t>=tend .or. nstep>nend ) exit
+      call write_plot(chdf,"dens")
 
       call mhdstep
 
