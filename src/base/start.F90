@@ -80,6 +80,8 @@ module start
   real csi2, csim2, amp_ecr_sn, ethu, f_sn
 
   real init_mass, mass_loss, mass_loss_tot
+
+  integer :: ix,iy,iz
   
 #ifdef SPLIT
 #ifdef ORIG
@@ -111,7 +113,7 @@ contains
   namelist /RESTART_CONTROL/ restart, new_id, nrestart, resdel
   namelist /END_CONTROL/ tend, nend
   namelist /OUTPUT_CONTROL/ dt_hdf, dt_res, dt_tsl, dt_log, & 
-                            domain, vars, mag_center, &
+                            domain, vars, mag_center, ix, iy, iz,&
                             min_disk_space_MB, sleep_minutes, sleep_seconds, &
                             user_message_file, system_message_file
   namelist /DOMAIN_LIMITS/ xmin, xmax, ymin, ymax, zmin, zmax  
@@ -320,6 +322,9 @@ contains
     add_encr   = 'yes'		!  permission for inserting CR energy inside randomly selected areas
     add_magn   = 'yes'		!  permission for inserting dipolar magnetic field centered at randomly selected areas
 #endif /* SNE_DISTR */
+    ix = 20
+    iy = 20
+    iz = 20
 
          
     if(proc .eq. 0) then
@@ -429,12 +434,15 @@ contains
       rbuff(30) = tend  
 
 !  namelist /OUTPUT_CONTROL/ dt_hdf, dt_res, dt_tsl, domain, vars, mag_center, &
-!                            min_disk_space_MB, sleep_minutes, &
+!                            min_disk_space_MB, sleep_minutes, ix, iy, iz&
 !                            user_message_file, system_message_file
 
       ibuff(40) = min_disk_space_MB
       ibuff(41) = sleep_minutes
       ibuff(42) = sleep_seconds
+      ibuff(43) = ix
+      ibuff(44) = iy
+      ibuff(45) = iz
                                   
       rbuff(40) = dt_hdf 
       rbuff(41) = dt_res 
@@ -645,12 +653,15 @@ contains
       tend                = rbuff(30) 
 
 !  namelist /OUTPUT_CONTROL/ dt_hdf, dt_res, dt_tsl, domain, vars, mag_center, &
-!                            min_disk_space_MB, sleep_minutes, &
+!                            min_disk_space_MB, sleep_minutes, ix, iy, iz &
 !                            user_message_file, system_message_file
 
       min_disk_space_MB   = ibuff(40)
       sleep_minutes       = ibuff(41) 
       sleep_seconds       = ibuff(42) 
+      ix                  = ibuff(43)
+      iy                  = ibuff(44)
+      iz                  = ibuff(45)
                                   
                             
       dt_hdf              = rbuff(40)
