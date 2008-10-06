@@ -111,7 +111,6 @@ subroutine mhdstep
 
 #ifdef SN_SRC          
       call random_sn 
-      call dipol_sn  
 #endif /* SN_SRC */
 
 #ifdef SNE_DISTR
