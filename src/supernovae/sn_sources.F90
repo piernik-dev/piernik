@@ -23,9 +23,9 @@ module sn_sources
   integer, save :: nsn, nsn_last
   real, save    :: dt_sn_prev, ecr_supl, decr_supl
   
-  real gasdev
+!  real gasdev
   real,    save :: gset
-  integer, save :: irand, iset
+  integer, save :: irand, iset, howmulti
   
 
  contains
@@ -55,12 +55,9 @@ module sn_sources
 
 #ifdef DIPOLS
       call rand_angles !(phi, theta)
-      call dipol_sn
+      howmulti = 2 		!(1 for dipoles, 2 for quadrupoles)
+      call magn_multipole_sn
 #endif /* DIPOLS */
-#ifdef QUADRUPOLES
-      call rand_angles !(phi, theta)
-      call quad_sn
-#endif /* QUADRUPOLES */
 
     enddo ! isn
 
@@ -110,136 +107,8 @@ module sn_sources
 
 !--------------------------------------------------------------------------
 
-  subroutine dipol_sn !(amp,rmk)
-! Writen by: K.Kowalik
-  
-    use constants
-    use arrays, only : u,b,xl,yl,zl,ibx,iby,ibz,&
-                        iena,imxa,imya,imza,idna
-    use grid, only   : dx,dy,dz
-    use start, only  : smallei
-    implicit none
-!    real, intent(in) :: phi,theta
-!    real             :: phi,theta
-!    real, intent(in) :: amp_dip_sn,rmk
-    real             :: rmk
-    real             :: temp1,temp2
-    integer          :: ipm, jpm
-    real, dimension(:,:,:,:), allocatable :: A
-#ifndef ISO
-    real, dimension(:,:,:), allocatable :: ekin,eint
-#endif /* ISO */
-
-
-    real :: xx, yy, zz, x, y, z, r, rc, sint
-    real :: Aphi
-    integer :: nx,ny,nz,i,j,k
-
-    rmk = r_sn
-    
-    nx = size(b,2)
-    ny = size(b,3)
-    nz = size(b,4)
-
-    if(.not.allocated(A)) then
-        allocate(A(3,nx,ny,nz))
-    else
-      write(*,*) 'erroneous array allocation in dipol'
-      stop
-    endif
-
-#ifndef ISO
-    if(.not.allocated(ekin).and. .not.allocated(eint)) then
-        allocate(eint(nx,ny,nz))
-        allocate(ekin(nx,ny,nz))
-    else
-      write(*,*) 'erroneous array allocation in dipol'
-      stop
-    endif
-
-    ekin(:,:,:) = 0.5*( u(imxa,:,:,:)**2 + u(imya,:,:,:)**2 + u(imza,:,:,:)**2 ) / u(idna,:,:,:)
-    eint(:,:,:) = max( u(iena,:,:,:) - ekin -  0.5*( b(ibx,:,:,:)**2 + b(iby,:,:,:)**2 + &
-            b(ibz,:,:,:)**2) , smallei)
-#endif /* ISO */
-
-!    call rand_angles(phi, theta)
-     
-    do i = 1,nx
-      xx = xl(i)
-      do j = 1,ny
-        yy = yl(j)
-        do k = 1,nz 
-          zz = zl(k)
-	  
-	    A(:,i,j,k) = 0.0
-
-            do ipm=-1,1
-
-              if(ipm .eq. -1) ysna = ysno
-              if(ipm .eq.  0) ysna = ysn
-              if(ipm .eq.  1) ysna = ysni
-
-              do jpm=-1,1
-
-                x    = ((xx-xsn+real(ipm)*Lx)*cos(phi)+(yy-ysna+real(jpm)*Ly)*sin(phi)) &
-	                       *cos(theta)-(zz-zsn)*sin(theta) 
-                y    = ((yy-ysna+real(jpm)*Ly)*cos(phi)-(xx-xsn+real(ipm)*Lx)*sin(phi))
-                z    = ((xx-xsn+real(ipm)*Lx)*cos(phi)+(yy-ysna+real(jpm)*Ly)*sin(phi)) &
-	                       *sin(theta)+(zz-zsn)*cos(theta) 
-                  
-                r    = sqrt(x**2 + y**2 + z**2)
-                rc   = sqrt(x**2 + y**2)
-                sint = rc/(r+small)
-
-                Aphi =  amp_dip_sn * r*sint / (rmk**2 + r**2 + 2.*rmk*r*sint)**1.5
-                temp1 = -1.0 *Aphi* y / (rc+small)
-                temp2 = Aphi * x / (rc+small)
-	   
-                A(1,i,j,k) = A(1,i,j,k) + temp1*cos(theta)*cos(phi) - temp2*sin(phi)
-                A(2,i,j,k) = A(2,i,j,k) + temp1*cos(theta)*sin(phi) + temp2*cos(phi)
-                A(3,i,j,k) = A(3,i,j,k) - temp1*sin(theta)
-
-              enddo ! jpm
-            enddo ! ipm
-
-
-        enddo
-      enddo
-    enddo
-     
-
-    b(ibx,1:nx,  1:ny-1,1:nz-1) = b(ibx,1:nx,  1:ny-1,1:nz-1) + &
-           (A(3,1:nx,2:ny,1:nz-1) - A(3,1:nx,1:ny-1,1:nz-1))/dy - &
-           (A(2,1:nx,1:ny,2:nz  ) - A(2,1:nx,1:ny,  1:nz-1))/dz
-
-    b(iby,1:nx-1,1:ny,  1:nz-1) = b(iby,1:nx-1,1:ny,  1:nz-1) + &
-           (A(1,1:nx-1,1:ny,2:nz) - A(1,1:nx-1,1:ny,1:nz-1))/dz - &
-           (A(3,2:nx,1:ny,1:nz-1) - A(3,1:nx-1,1:ny,1:nz-1))/dx
-
-    b(ibz,1:nx-1,1:ny-1,1:nz  ) = b(ibz,1:nx-1,1:ny-1,1:nz  ) + & 
-           (A(2,2:nx,1:ny-1,1:nz) - A(2,1:nx-1,1:ny-1,1:nz))/dx - &
-           (A(1,1:nx-1,2:ny,1:nz) - A(1,1:nx-1,1:ny-1,1:nz))/dy
-       
-!     write(*,*) maxval(b(1,:,:,:))
-!     write(*,*) maxval(b(2,:,:,:))
-!     write(*,*) maxval(b(3,:,:,:))
-
-!     stop 
-
-#ifndef ISO
-    u(iena,:,:,:) = eint + ekin + 0.5*(b(1,:,:,:)**2 + &
-             b(2,:,:,:)**2 + b(3,:,:,:)**2)
-    if (allocated(eint)) deallocate(eint)
-    if (allocated(ekin)) deallocate(ekin)
-#endif /* ISO */
-    if (allocated(A)) deallocate(A)
-
-  end subroutine dipol_sn
-
-!--------------------------------------------------------------------------
-
-  subroutine quad_sn !(amp,rmk)
-! Writen by: K.Kowalik
+  subroutine magn_multipole_sn !(amp,rmk,howmulti)
+! Writen by: K.Kowalik (as: dipol_sn)
 ! Modified by: D.Woltanski
   
     use constants
@@ -316,13 +185,13 @@ module sn_sources
                 z    = ((xx-xsn+real(ipm)*Lx)*cos(phi)+(yy-ysna+real(jpm)*Ly)*sin(phi)) &
 	                       *sin(theta)+(zz-zsn)*cos(theta) 
                 
-		do kpm=1,2
+		do kpm=1,howmulti
 		                
-		  r    = sqrt(x**2 + y**2 + (z+real(2*kpm-3)*rmk)**2)
+		  r    = sqrt(x**2 + y**2 + (z+real(2*kpm-howmulti-1)*rmk)**2)
                   rc   = sqrt(x**2 + y**2)
                   sint = rc/(r+small)
 
-                  Aphi =  real(2*kpm-3)*amp_dip_sn * r*sint / (rmk**2 + r**2 + 2.*rmk*r*sint)**1.5
+                  Aphi =  real(2*kpm-howmulti-1)*amp_dip_sn * r*sint / (rmk**2 + r**2 + 2.*rmk*r*sint)**1.5
                   temp1 = -1.0 *Aphi* y / (rc+small)
                   temp2 = Aphi * x / (rc+small)
 	   
@@ -366,7 +235,7 @@ module sn_sources
 #endif /* ISO */
     if (allocated(A)) deallocate(A)
 
-  end subroutine quad_sn
+  end subroutine magn_multipole_sn
 
 
 
