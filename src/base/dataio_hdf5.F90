@@ -31,7 +31,7 @@ module dataio_hdf5
       use init_problem, only : user_plt
       
       character(LEN=2) :: plane
-      integer, dimension(3) :: remain
+      logical, dimension(3) :: remain
       integer :: comm2d,lp,ls,xn,error
       logical, save :: first_entry = .true.
       real, dimension(:,:), allocatable :: send
@@ -49,7 +49,7 @@ module dataio_hdf5
       integer(HID_T) :: file_id       !> File identifier 
       integer(HID_T) :: dset_id       !> Dataset identifier 
 
-      integer :: nib,nid,njb,njd,nkb,pisize,pjsize, fe
+      integer :: nib,nid,njb,njd,nkb,pisize,pjsize, fe,pf
       logical :: fexist
 
       fe = LEN(trim(chdf%log_file))
@@ -60,7 +60,7 @@ module dataio_hdf5
       select case(plane)
          case("yz")
             xn     = ix + nb - pcoords(1)*nxb
-            remain = (/0,1,1/)
+            remain = (/.false.,.true.,.true./)
             pij    = "yz_"
             nib    = nyb
             nid    = nyd
@@ -71,7 +71,7 @@ module dataio_hdf5
             pjsize = pzsize
          case("xz")
             xn     = iy + nb - pcoords(2)*nyb
-            remain = (/1,0,1/)
+            remain = (/.true.,.false.,.true./)
             pij    = "xz_"
             nib    = nxb
             nid    = nxd
@@ -82,7 +82,7 @@ module dataio_hdf5
             pjsize = pzsize
          case("xy")
             xn     = iz + nb - pcoords(3)*nzb
-            remain = (/1,1,0/)
+            remain = (/.true.,.true.,.false./)
             pij    = "xy_"
             nib    = nxb
             nid    = nxd
@@ -95,6 +95,15 @@ module dataio_hdf5
             write(*,*) "error while in write_plot_hdf5"
       end select
 
+      if(proc==0 .and. first_entry) then
+        call H5open_f(error)
+        call H5Fcreate_f(fname, H5F_ACC_TRUNC_F, file_id, error)
+        call H5Fclose_f(file_id,error)
+        call H5close_f(error)
+        first_entry=.false.
+      endif
+
+      call H5open_f(error)
       call MPI_BARRIER(comm3d,ierr)
       call MPI_CART_SUB(comm3d,remain,comm2d,ierr)
       call MPI_COMM_SIZE(comm2d, ls, ierr)
@@ -117,28 +126,17 @@ module dataio_hdf5
                      int( (255* (temp(:,:,(j+1)+i*pjsize)-imin)) / (imax-imin), 4)
                enddo
             enddo
-            call H5open_f(error)
-            if(first_entry) then
-!               inquire(file=fname, exist = fexist)
-!               if(fexist) then
-!                  call H5Fopen_f(fname, H5F_ACC_RDWR_F, file_id, error) 
-!               else
-                  call H5Fcreate_f(trim(fname), H5F_ACC_TRUNC_F, file_id, error)
-!               endif
-               first_entry = .false.
-            else
-               call H5Fopen_f(trim(fname), H5F_ACC_RDWR_F, file_id, error) 
-            endif
+            call H5Fopen_f(fname, H5F_ACC_RDWR_F, file_id, error) 
             write(dname,'(a3,a4,a1,i4.4)') pij,var,"_",nimg
             call H5IMmake_image_8bit_f(file_id, dname, int(nid,HSIZE_T), &
                int(njd,HSIZE_T), img, error)
             call H5Fclose_f(file_id,error)
-            call H5close_f(error)
          endif
          deallocate(send)
          if(lp == 0) deallocate(temp,img)
       endif
       call MPI_BARRIER(comm3d,ierr)
+      call H5close_f(error)
 
    end subroutine write_plot_hdf5
    
@@ -180,6 +178,7 @@ module dataio_hdf5
      dims(2) = ny
      dims(3) = nz
 
+     call MPI_BARRIER(comm3d,ierr)
      CALL h5open_f(error)
      CALL h5pcreate_f(H5P_FILE_ACCESS_F, plist_id, error)
      CALL h5pset_fapl_mpio_f(plist_id, comm3d, info, error)
@@ -714,7 +713,8 @@ module dataio_hdf5
    subroutine write_hdf5(chdf)
 
      use types
-     use mpi_setup, only: pcoords, comm3d, proc, info, psize,ierr
+!     use mpi_setup, only: pcoords, comm3d, proc, info, psize,ierr
+     use mpi_setup
      use arrays, only : idna, imxa, imya, imza, iena, nxb,nyb,nzb, u, nx,ny,nz
      use start, only : t,nxd,nyd,nzd,nb, domain, xmin,xmax, &
          ymin,ymax, zmin,zmax, nstep,dt
@@ -738,6 +738,7 @@ module dataio_hdf5
      lfile = chdf%log_file
      write(dd,'(i4.4)') chdf%nhdf
      fname = trim(problem_name)//"_"//trim(run_id)//"_"//dd//".h5"
+     call MPI_BCAST(fname, LEN(fname), MPI_CHARACTER, 0, comm3d, ierr)
 
      CALL h5open_f(error) 
      ! 
@@ -769,6 +770,7 @@ module dataio_hdf5
      ! Close the property list.
      !
      CALL h5fclose_f(file_id, error)
+     call MPI_BARRIER(comm3d,ierr)
      if(proc == 0) then
         CALL h5fopen_f (fname, H5F_ACC_RDWR_F, file_id, error)
 
