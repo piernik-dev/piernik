@@ -168,7 +168,7 @@ program mhd
   do
     nstep=nstep+1
     if (t>=tend .or. nstep>nend ) exit
-      call write_plot(chdf,"dens")
+      call write_plot(chdf)
 
       call mhdstep
 
