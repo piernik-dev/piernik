@@ -71,12 +71,10 @@ subroutine bnd_u(dim)
 !  write(*,*) '*Boundary conditions are done on fluxes !!!*'
 !  write(*,*) '********************************************'
   select case (dim)
-    case ('xdim')
+    case ('xdim')   
+#ifdef SHEAR_MPI
         allocate(send_right(nu,nb,ny,nz), send_left(nu,nb,ny,nz), &
                  recv_left(nu,nb,ny,nz), recv_right(nu,nb,ny,nz) )
-    
-   
-#ifdef SHEAR_MPI
         send_left(:,:,:,:)          =  u(:,nb+1:2*nb,:,:)     
         send_right(:,:,:,:)         =  u(:,nxb+1:nxb+nb,:,:)
 !
@@ -210,7 +208,7 @@ subroutine bnd_u(dim)
 
 !        if(procxl .ne. MPI_PROC_NULL) u(:,1:nb,:,:)               = recv_left(:,:,:,:)
 !        if(procxr .ne. MPI_PROC_NULL) u(:,nxb+nb+1:nxb+2*nb,:,:)  = recv_right(:,:,:,:)
-          
+       
       endif
 #endif /* SHEAR_MPI */ 
     case ('ydim')

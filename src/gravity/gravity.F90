@@ -142,7 +142,7 @@ allocate(gpotdisk(nx,ny,nz),gpothalo(nx,ny,nz),gpotbulge(nx,ny,nz))
 
 
 !--------------------------------------------------------------------------
-  subroutine grav_pot(sweep, i1,i2, xsw, n, gpot,status)
+  subroutine grav_pot(sweep, i1,i2, xsw, n, gpot,status,temp_log)
 #ifdef GRAV_GAL_VOLLMER
     use arrays, only : x,y,z
 #endif /* GRAV_GAL_VOLLMER */
@@ -158,84 +158,84 @@ allocate(gpotdisk(nx,ny,nz),gpothalo(nx,ny,nz),gpotbulge(nx,ny,nz))
     use arrays, only : x,y,z
 #endif /* GRAV_PTFLAT */
 
-   
     implicit none
     character, intent(in) :: sweep*6
     integer, intent(in)   :: i1, i2                   ! 
     integer,intent(in)    :: n
+    logical, optional     :: temp_log
     real, dimension(n)    :: xsw, x3, rc,fr,gr
     real, dimension(n),intent(out) :: gpot
-    character, intent(out) :: status*9
-    real                  :: x1, x2
-    
-    real, dimension(n)	  :: rgcv, rgsv
-    real aconst, bconst, cconst, flat, omega, g_shear_rate
-    real rgcs, seccoord, zet
-    integer i
-    real, allocatable :: gpdisk(:), gphalo(:), gpblg(:)
-    real Mhalo,Mbulge,Mdisk,ahalo,bbulge,adisk,bdisk
-    
-    status = ''
+       character, intent(inout) :: status*9
+       real                  :: x1, x2
+       
+       real, dimension(n)	  :: rgcv, rgsv
+       real aconst, bconst, cconst, flat, omega, g_shear_rate
+       real rgcs, seccoord, zet
+       integer i,ierr
+       real, allocatable :: gpdisk(:), gphalo(:), gpblg(:)
+       real Mhalo,Mbulge,Mdisk,ahalo,bbulge,adisk,bdisk
+       
+       status = ''
 
 #ifdef GRAV_NULL
-        gpot = 0.0
-      ! do nothing
+           gpot = 0.0
+         ! do nothing
 #elif defined (GRAV_UNIFORM)
-        select case (sweep)
-	  case('xsweep')
-	    gpot = -g_z*z(i2)
-	  case('ysweep')
-	    gpot = -g_z*z(i1)
-	  case('zsweep')
-	    gpot = -g_z*xsw
-	end select
+           select case (sweep)
+        case('xsweep')
+          gpot = -g_z*z(i2)
+        case('ysweep')
+          gpot = -g_z*z(i1)
+        case('zsweep')
+          gpot = -g_z*xsw
+      end select
 #elif defined (GRAV_LINEAR)
-        select case (sweep)
-	  case('xsweep') 
-	    gpot = -0.5*dg_dz*z(i2)**2
-	  case('ysweep') 
-	    gpot = -0.5*dg_dz*z(i1)**2
-	  case('zsweep') 
-	    gpot = -0.5*dg_dz*xsw**2
-        end select
-	    
+           select case (sweep)
+        case('xsweep') 
+          gpot = -0.5*dg_dz*z(i2)**2
+        case('ysweep') 
+          gpot = -0.5*dg_dz*z(i1)**2
+        case('zsweep') 
+          gpot = -0.5*dg_dz*xsw**2
+           end select
+          
 #elif defined (GRAV_PTMASS)
-        select case (sweep)
-          case('xsweep') 
-            x1  = y(i1)-ptm_y
-            x2  = z(i2)-ptm_z
-            x3  = xsw - ptm_x
-          case('ysweep') 
-            x1  = z(i1)-ptm_z
-            x2  = x(i2)-ptm_x
-            x3  = xsw - ptm_y
-          case('zsweep') 
-            x1  = x(i1)-ptm_x
-            x2  = y(i2)-ptm_y
-            x3  = xsw - ptm_z
-        end select
-        rc = dsqrt(x1**2+x2**2)
-        fr = min( (rc/r_grav)**n_gravr , 100.0)
-        fr = max(1./cosh(fr),smalld/100.)
-        gpot = -newtong*ptmass/dsqrt(x1**2+x2**2+x3**2+r_smooth**2)
-        gpot = gpot - csim2*dlog(fr) ! *d0
+           select case (sweep)
+             case('xsweep') 
+               x1  = y(i1)-ptm_y
+               x2  = z(i2)-ptm_z
+               x3  = xsw - ptm_x
+             case('ysweep') 
+               x1  = z(i1)-ptm_z
+               x2  = x(i2)-ptm_x
+               x3  = xsw - ptm_y
+             case('zsweep') 
+               x1  = x(i1)-ptm_x
+               x2  = y(i2)-ptm_y
+               x3  = xsw - ptm_z
+           end select
+           rc = dsqrt(x1**2+x2**2)
+           fr = min( (rc/r_grav)**n_gravr , 100.0)
+           fr = max(1./cosh(fr),smalld/100.)
+           gpot = -newtong*ptmass/dsqrt(x1**2+x2**2+x3**2+r_smooth**2)
+           gpot = gpot - csim2*dlog(fr) ! *d0
 #elif defined (GRAV_PTFLAT)
-        select case (sweep)
-          case('xsweep')
-            x1  = y(i1)-ptm_y
-            x2  = 0.0
-            x3  = xsw - ptm_x
-          case('ysweep')
-            x1  = 0.0
-            x2  = x(i2)-ptm_x
-            x3  = xsw - ptm_y
-          case('zsweep')
-            x1  = x(i1)-ptm_x
-            x2  = y(i2)-ptm_y
-            x3  = 0.0
-        end select
-        rc = dsqrt(x1**2+x2**2)
-        fr(:) = min((rc(:)/r_grav)**n_gravr,100.0)
+           select case (sweep)
+             case('xsweep')
+               x1  = y(i1)-ptm_y
+               x2  = 0.0
+               x3  = xsw - ptm_x
+             case('ysweep')
+               x1  = 0.0
+               x2  = x(i2)-ptm_x
+               x3  = xsw - ptm_y
+             case('zsweep')
+               x1  = x(i1)-ptm_x
+               x2  = y(i2)-ptm_y
+               x3  = 0.0
+           end select
+           rc = dsqrt(x1**2+x2**2)
+           fr(:) = min((rc(:)/r_grav)**n_gravr,100.0)
         fr = 1./cosh(fr)+smalld
         gpot = -newtong*ptmass/dsqrt(x1**2+x2**2+x3**2+r_smooth**2)
         gpot = gpot - csim2*dlog(fr) ! *d0
@@ -259,10 +259,10 @@ allocate(gpotdisk(nx,ny,nz),gpothalo(nx,ny,nz),gpotbulge(nx,ny,nz))
 	    gphalo=gphalo+(Mhalo/1.02/ahalo)*(-1.02/(1.+(rgsv/ahalo)**1.02)+log(1.0+(rgsv/ahalo)**1.02))
 	    gpblg=-Mbulge/sqrt(rgsv**2+bbulge**2)
             gpot=(gpdisk+gpblg+gphalo)*newtong
-            if(status .ne. 'hydrozeq') then
-	    gpotdisk(i1,i2,:)=gpdisk*newtong
-	    gpothalo(i1,i2,:)=gphalo*newtong
-	    gpotbulge(i1,i2,:)=gpblg*newtong
+            if(.not.present(temp_log)) then
+               gpotdisk(i1,i2,:)=gpdisk*newtong
+               gpothalo(i1,i2,:)=gphalo*newtong
+               gpotbulge(i1,i2,:)=gpblg*newtong
             endif
 	else ! y or x
 	  if (sweep == 'xsweep') then
