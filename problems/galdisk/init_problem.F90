@@ -402,7 +402,7 @@ contains
   subroutine user_plt(var,ij,xn,tab)
     use start, only : nb
     use arrays, only : u,b,nyb,nzb,nxb,idna,imxa,imya,imza,ibx,iby,ibz
-#ifdef ISO
+#ifndef ISO
     use arrays, only : iena
 #endif
     implicit none
