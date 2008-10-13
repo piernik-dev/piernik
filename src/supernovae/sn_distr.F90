@@ -8,7 +8,8 @@ module sn_distr
 
   real,dimension(2)       :: SNtrest, SNheight, SNfreq
   real, dimension(2,1000,2) :: danta
-  real MexplSN,EexplSN,r0snx,r0sny,r0snz
+  real MexplSN,EexplSN
+  integer :: r0snx,r0sny,r0snz
   integer, dimension(2)   :: SNnohistory
   integer, dimension(3)   :: rintsn
   integer itype
