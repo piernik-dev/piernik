@@ -67,7 +67,7 @@ module hydrostatic
         call grav_accel('zsweep',ia, ja, zs, nstot, gprofs)
       else
         gp_status = 'hydrozeq'
-        call grav_pot('zsweep', ia,ja, zs, nstot, gpots,gp_status)
+        call grav_pot('zsweep', ia,ja, zs, nstot, gpots,gp_status,.true.)
         gprofs(1:nstot-1) = (gpots(1:nstot-1) - gpots(2:nstot))/dzs
       endif
       gprofs = tune_zeq*gprofs
