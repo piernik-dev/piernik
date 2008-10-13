@@ -398,7 +398,7 @@ contains
 
   end subroutine total_mass
 !-----------------------------------------------------------------------------------------------------------------------------------
-
+#ifdef HDF5
   subroutine user_plt(var,ij,xn,tab)
     use start, only : nb
     use arrays, only : u,b,nyb,nzb,nxb,idna,imxa,imya,imza,ibx,iby,ibz
@@ -514,6 +514,6 @@ contains
     end select
 
   end subroutine user_hdf5
-
+#endif /* HDF5 */
 end module init_problem
 
