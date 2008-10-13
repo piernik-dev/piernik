@@ -115,7 +115,7 @@ contains
         use constants, only : big
 
         implicit none
-        real dx2,dt_resist_all
+        real dx2,dt_resist_min
 
         if(eta_max .ne. 0.) then
           dx2 = dxmn**2
