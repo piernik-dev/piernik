@@ -853,11 +853,13 @@ contains
                                         ! for c_si= 7km/s, n=1/cm^3 	 
                                         ! gamma=5.3
 #ifdef GALAXY
+#ifdef COSM_RAYS
    amp_ecr_sn = 4.96e6*cr_eff/r_sn**3   ! cosmic ray explosion amplitude 
                                         ! in units: 
         				! e_0 = 1/(5/3-1)*rho_0*c_s0**2
         				! rho_0=1.67e-24g/cm**3,
         				! c_s0 = 7km/s
+#endif /* COSM_RAYS */
    f_sn = f_sn_kpc2 * (xmax-xmin)/1000.0 * (ymax-ymin)/1000.0 ! SN frequency per horizontal
                                                               ! surface area of the comp. box 
 #endif /* GALAXY */
