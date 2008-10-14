@@ -1,3 +1,4 @@
+#define RNG nb+1:nx-nb, nb+1:ny-nb, nb+1:nz-nb
 #include "piernik.def"
 
 module init_problem
@@ -214,6 +215,125 @@ contains
       call MPI_ALLREDUCE(mass, tmass, 1, mpi_real8, mpi_sum, comm3d, ierr)
 
   end subroutine total_mass
+  subroutine user_plt(var,ij,xn,tab)
+  ! COPIED FROM SEDOV PROBLEM, HAS TO BE CORRECTED !
+    use start, only : nb
+    use arrays, only : u,b,nyb,nzb,nxb,idna,imxa,imya,imza,ibx,iby,ibz
+#ifdef ISO
+    use arrays, only : iena
+#endif
+    implicit none
+    character(LEN=4)     :: var
+    character(LEN=2)     :: ij
+    integer              :: xn
+    real, dimension(:,:) :: tab
+
+    select case(var)
+      case ("dens")
+         if(ij=="yz") tab(:,:) = u(idna,xn,nb+1:nyb+nb,nb+1:nzb+nb)
+         if(ij=="xz") tab(:,:) = u(idna,nb+1:nxb+nb,xn,nb+1:nzb+nb)
+         if(ij=="xy") tab(:,:) = u(idna,nb+1:nxb+nb,nb+1:nyb+nb,xn)
+      case ("velx")
+         if(ij=="yz") tab(:,:) = u(imxa,xn,nb+1:nyb+nb,nb+1:nzb+nb) / &
+                        u(idna,xn,nb+1:nyb+nb,nb+1:nzb+nb)
+         if(ij=="xz") tab(:,:) = u(imxa,nb+1:nxb+nb,xn,nb+1:nzb+nb) / &
+                        u(idna,nb+1:nxb+nb,xn,nb+1:nzb+nb)
+         if(ij=="xy") tab(:,:) = u(imxa,nb+1:nxb+nb,nb+1:nyb+nb,xn) / &
+                        u(idna,nb+1:nxb+nb,nb+1:nyb+nb,xn)
+      case ("vely")
+         if(ij=="yz") tab(:,:) = u(imya,xn,nb+1:nyb+nb,nb+1:nzb+nb) / &
+                        u(idna,xn,nb+1:nyb+nb,nb+1:nzb+nb)
+         if(ij=="xz") tab(:,:) = u(imya,nb+1:nxb+nb,xn,nb+1:nzb+nb) / &
+                        u(idna,nb+1:nxb+nb,xn,nb+1:nzb+nb)
+         if(ij=="xy") tab(:,:) = u(imya,nb+1:nxb+nb,nb+1:nyb+nb,xn) / &
+                        u(idna,nb+1:nxb+nb,nb+1:nyb+nb,xn)
+      case ("velz")
+         if(ij=="yz") tab(:,:) = u(imza,xn,nb+1:nyb+nb,nb+1:nzb+nb) / &
+                        u(idna,xn,nb+1:nyb+nb,nb+1:nzb+nb)
+         if(ij=="xz") tab(:,:) = u(imza,nb+1:nxb+nb,xn,nb+1:nzb+nb) / &
+                        u(idna,nb+1:nxb+nb,xn,nb+1:nzb+nb)
+         if(ij=="xy") tab(:,:) = u(imza,nb+1:nxb+nb,nb+1:nyb+nb,xn) / &
+                        u(idna,nb+1:nxb+nb,nb+1:nyb+nb,xn)
+      case ("ener")
+#ifndef ISO
+         if(ij=="yz") tab(:,:) = u(iena,xn,nb+1:nyb+nb,nb+1:nzb+nb)
+         if(ij=="xz") tab(:,:) = u(iena,nb+1:nxb+nb,xn,nb+1:nzb+nb)
+         if(ij=="xy") tab(:,:) = u(iena,nb+1:nxb+nb,nb+1:nyb+nb,xn)
+#else
+         if(ij=="yz") tab(:,:) = 0.5 * ( &
+                          u(imxa,xn,nb+1:nyb+nb,nb+1:nzb+nb)**2 &
+                        + u(imya,xn,nb+1:nyb+nb,nb+1:nzb+nb)**2 &
+                        + u(imza,xn,nb+1:nyb+nb,nb+1:nzb+nb)**2) / &
+                             u(idna,xn,nb+1:nyb+nb,nb+1:nzb+nb)
+         if(ij=="xz") tab(:,:) = 0.5 * ( &
+                          u(imxa,nb+1:nxb+nb,xn,nb+1:nzb+nb)**2 &
+                         +u(imya,nb+1:nxb+nb,xn,nb+1:nzb+nb)**2 &
+                         +u(imza,nb+1:nxb+nb,xn,nb+1:nzb+nb)**2) / &
+                             u(idna,nb+1:nxb+nb,xn,nb+1:nzb+nb)
+         if(ij=="xy") tab(:,:) = 0.5 * ( &
+                          u(imxa,nb+1:nxb+nb,nb+1:nyb+nb,xn)**2 &
+                         +u(imya,nb+1:nxb+nb,nb+1:nyb+nb,xn)**2 &
+                         +u(imza,nb+1:nxb+nb,nb+1:nyb+nb,xn)**2) / &
+                             u(idna,nb+1:nxb+nb,nb+1:nyb+nb,xn)
+#endif /* ISO */
+      case ("magx")
+         if(ij=="yz") tab(:,:) = b(ibx,xn,nb+1:nyb+nb,nb+1:nzb+nb)
+         if(ij=="xz") tab(:,:) = b(ibx,nb+1:nxb+nb,xn,nb+1:nzb+nb)
+         if(ij=="xy") tab(:,:) = b(ibx,nb+1:nxb+nb,nb+1:nyb+nb,xn)
+      case ("magy")
+         if(ij=="yz") tab(:,:) = b(iby,xn,nb+1:nyb+nb,nb+1:nzb+nb)
+         if(ij=="xz") tab(:,:) = b(iby,nb+1:nxb+nb,xn,nb+1:nzb+nb)
+         if(ij=="xy") tab(:,:) = b(iby,nb+1:nxb+nb,nb+1:nyb+nb,xn)
+      case ("magz")
+         if(ij=="yz") tab(:,:) = b(ibz,xn,nb+1:nyb+nb,nb+1:nzb+nb)
+         if(ij=="xz") tab(:,:) = b(ibz,nb+1:nxb+nb,xn,nb+1:nzb+nb)
+         if(ij=="xy") tab(:,:) = b(ibz,nb+1:nxb+nb,nb+1:nyb+nb,xn)
+
+      case default
+         write(*,*) "Unknonw var = ",var," in user_plt!"
+   end select
+ 
+  end subroutine user_plt
+
+  subroutine user_hdf5(var,tab)
+  ! COPIED FROM SEDOV PROBLEM! HAS TO BE CORRECTED !
+    use arrays, only : u,b,idna,imxa,imya,imza,ibx,iby,ibz
+#ifndef ISO
+    use arrays, only : iena
+#endif
+    implicit none
+    character(LEN=4)     :: var
+    real*4, dimension(:,:,:) :: tab
+
+    select case(var)
+      case("dens")
+         tab(:,:,:) = real(u(idna,RNG),4)
+      case("velx")
+         tab(:,:,:) = real(u(imxa,RNG) / u(idna,RNG),4)
+      case("vely")
+         tab(:,:,:) = real(u(imya,RNG) / u(idna,RNG),4)
+      case("velz")
+         tab(:,:,:) = real(u(imza,RNG) / u(idna,RNG),4)
+      case("ener")
+#ifdef ISO
+         tab(:,:,:) = real(0.5 *( u(imxa,RNG)**2 &
+	                        + u(imya,RNG)**2 &
+				+ u(imza,RNG)**2 ) &
+            / u(idna,RNG),4)
+#else
+         tab(:,:,:) = real(u(iena,RNG),4)
+#endif
+      case("magx")
+         tab(:,:,:) = real(b(ibx,RNG),4)
+      case("magy")
+         tab(:,:,:) = real(b(iby,RNG),4)
+      case("magz")
+         tab(:,:,:) = real(b(ibz,RNG),4)
+      case default
+         write(*,*) "Error in user_hdf5"
+    end select
+
+  end subroutine user_hdf5
 
 end module init_problem
 
