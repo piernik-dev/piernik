@@ -32,6 +32,21 @@ module constants     ! module containg numerical and physical constants !!!
 	real, parameter :: kg =		1.0e3*gram			! psm
 	real, parameter :: Msun =	1.0				! psm
 
+#elif defined GSM
+! uses: length --> kpc, mass --> 10^6*Msun, time --> Gyr, temperature --> kelvin
+! length units:
+	real, parameter :: cm = 	1.0/3.0856e21			! psm
+	real, parameter :: metr = 	1.0e2*cm			! psm
+	real, parameter :: pc =		1.0e-3				! psm
+! time units:
+	real, parameter :: sek =	1.0e-9/365.2652/24.0/3600.0	! psm
+	real, parameter :: year =	1.0e-9				! psm
+	real, parameter :: myr =	1.0e-3				! psm
+! mass units:
+	real, parameter :: gram =	1.0e-6/1.989e33			! psm
+	real, parameter :: kg =		1.0e3*gram			! psm
+	real, parameter :: Msun =	1.0e-6				! psm
+
 #elif defined (PGM)
 ! uses: length --> pc, newtong --> 1.0, time --> myr, temperature --> kelvin
 ! length units:
