@@ -55,7 +55,8 @@
 #undef ARMS_POTENTIAL
 #define SNE_DISTR
 #define MASS_COMPENS
-#undef SN_SRC
+#define SN_SRC
+#define DIPOLS
 
 /* numerical solutions and limitations */
 #undef SHEAR

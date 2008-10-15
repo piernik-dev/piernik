@@ -16,6 +16,7 @@
 /* choosing unitsystem */
 #undef STANDARD		/*genuine unitsystem*/
 #define PSM		/*pc,Msun,Myr unitsystem*/
+#undef GSM		/*kpc,10^6Msun,Gyr unitsystem*/
 #undef PGM		/*pc,G=1,Myr unitsystem*/
 #undef DMY		/*cm^16,Msun,year unitsystem*/
 #undef CGS		/*cm,gram,sek unitsystem*/
@@ -54,7 +55,8 @@
 #undef ARMS_POTENTIAL
 #define SNE_DISTR
 #undef MASS_COMPENS
-#undef SN_SRC
+#define SN_SRC
+#define DIPOLS
 
 /* numerical solutions and limitations */
 #undef SHEAR

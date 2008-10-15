@@ -90,6 +90,10 @@
  $GALACTIC_PARAMS
  /
  
+ $SN_PARAMS
+ howmulti = 2
+ /
+
  $SN_DISTR
  snenerg = 1.0
  sn1time = 445.e2

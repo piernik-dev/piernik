@@ -315,6 +315,7 @@ contains
 !=============================================================================
 ! Te procedury powinny sie znalezc docelowo w jakims innym module. 
 
+#ifdef MASS_COMPENS
   subroutine mass_loss_compensate
   
     use arrays, only    :   u,x,y, nx,ny
@@ -381,6 +382,7 @@ contains
       call MPI_ALLREDUCE(mass, init_mass, 1, mpi_real8, mpi_sum, comm3d, ierr)
 
   end subroutine get_init_mass
+#endif /* MASS_COMPENS */
   
 !-----------------------------------------------------------------------------
    
@@ -479,7 +481,8 @@ contains
   end subroutine user_plt
 
   subroutine user_hdf5(var,tab)
-    use arrays, only : u,b,idna,imxa,imya,imza,ibx,iby,ibz
+    use arrays, only : u,b,idna,imxa,imya,imza,ibx,iby,ibz,nx,ny,nz
+    use start,  only : nb
 #ifndef ISO
     use arrays, only : iena
 #endif
