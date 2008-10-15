@@ -115,7 +115,7 @@ module constants     ! module containg numerical and physical constants !!!
 	real, parameter :: km =		1.0e5*cm
 	real, parameter :: au =		1.49597892e13*cm
 	real, parameter :: kpc =	1000.0*pc
-	real, parameter :: ly =		9.4605e17*cm
+	real, parameter :: lyr =	9.4605e17*cm
 ! time units:
 	real, parameter :: minute =	60.0*sek
 	real, parameter :: hour =	3600.0*sek
