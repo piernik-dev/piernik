@@ -118,8 +118,17 @@ contains
       enddo
     endif
     call MPI_BCAST(snposarray, 3*sum(SNno,1), MPI_DOUBLE_PRECISION, 0, comm, ierr)
+#ifdef VERBOSE
+    itype = 1
+#endif /* VERBOSE */
     do isn=1,sum(SNno,1)
+#ifdef VERBOSE
+      if(isn .gt. SNno(1)) itype = 2
+#endif /* VERBOSE */
       call add_explosion(snposarray(isn,:))
+#ifdef VERBOSE
+      write(*,*) 'added ',isn,'. SN of ',sum(SNno,1)
+#endif /* VERBOSE */
     enddo
 
     return
@@ -137,6 +146,9 @@ contains
   use arrays, only : iecr
   use start, only  : r_sn, cr_eff           
 #endif /* COSM_RAYS */
+#ifdef DIPOLS
+  use sn_sources, only : rand_angles,magn_multipole_sn,xsn,ysn,zsn
+#endif /* DIPOLS */
   implicit none
   real, dimension(3) :: snpos
   real r1sn
@@ -212,7 +224,14 @@ endif
   endif
   endif
   endif
-  
+
+#ifdef DIPOLS
+  call rand_angles
+  xsn = snpos(1)
+  ysn = snpos(2)
+  zsn = snpos(3)
+  call magn_multipole_sn
+#endif /* DIPOLS */  
   return
   end subroutine add_explosion
 

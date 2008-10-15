@@ -7,10 +7,6 @@
 module sn_sources
 
 
-  use arrays
-  use constants
-  use grid
-  use start
 #ifdef SHEAR  
   use shear
 #endif /* SHEAR */
@@ -25,7 +21,7 @@ module sn_sources
   
 !  real gasdev
   real,    save :: gset
-  integer, save :: irand, iset, howmulti
+  integer, save :: irand, iset
   
 
  contains
@@ -34,6 +30,8 @@ module sn_sources
  
   subroutine random_sn
 ! Written by: M. Hanasz  
+    use start, only : f_sn,t
+    use constants, only : small
 
     implicit none 
     real dt_sn, t_dw1
@@ -55,7 +53,7 @@ module sn_sources
 
 #ifdef DIPOLS
       call rand_angles !(phi, theta)
-      howmulti = 2 		!(1 for dipoles, 2 for quadrupoles)
+!      howmulti = 2 		!(1 for dipoles, 2 for quadrupoles)
       call magn_multipole_sn
 #endif /* DIPOLS */
 
@@ -68,7 +66,10 @@ module sn_sources
 !--------------------------------------------------------------------------
  
   subroutine cr_sn
-! Written by: M. Hanasz  
+! Written by: M. Hanasz 
+    use arrays, only : nx,ny,nz,iecr,u,x,y,z
+    use start,  only : amp_ecr_sn,r_sn,ethu
+    use grid,   only : Lx,Ly
     implicit none
     integer i,j,k, ipm, jpm   
     real decr   
@@ -110,6 +111,9 @@ module sn_sources
   subroutine magn_multipole_sn !(amp,rmk,howmulti)
 ! Writen by: K.Kowalik (as: dipol_sn)
 ! Modified by: D.Woltanski
+  use constants, only : small
+  use start, only : amp_dip_sn,howmulti,r_sn
+  use grid,  only : Lx,Ly
   
     use constants
     use arrays, only : u,b,xl,yl,zl,ibx,iby,ibz,&
@@ -243,6 +247,8 @@ module sn_sources
  
   subroutine rand_coords
 ! Written by M. Hanasz
+   use start,  only : h_sn,dimensions,xmin,ymin
+   use grid,   only : Lx,Ly
 
     real rand(4), znorm
     integer jsn,jremap 
