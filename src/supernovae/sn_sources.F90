@@ -111,7 +111,7 @@ module sn_sources
   subroutine magn_multipole_sn !(amp,rmk,howmulti)
 ! Writen by: K.Kowalik (as: dipol_sn)
 ! Modified by: D.Woltanski
-  use constants, only : small
+!  use constants, only : small
   use start, only : amp_dip_sn,howmulti,r_sn
   use grid,  only : Lx,Ly
   
@@ -249,6 +249,11 @@ module sn_sources
 ! Written by M. Hanasz
    use start,  only : h_sn,dimensions,xmin,ymin
    use grid,   only : Lx,Ly
+#ifdef SHEAR
+   use arrays, only : y,js,je
+   use grid,   only : dy
+   use start,  only : nyd
+#endif /* SHEAR */
 
     real rand(4), znorm
     integer jsn,jremap 
