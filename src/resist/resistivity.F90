@@ -26,26 +26,32 @@ contains
       implicit none
       integer,intent(in)                    :: ici
       real, dimension(nx,ny,nz), intent(inout) :: eta
-      real, dimension(:,:,:), allocatable   ::  wb
-      allocate(wb(nx,ny,nz))
+      real, dimension(:,:,:), allocatable   ::  wb,etahelp
+      allocate(wb(nx,ny,nz),etahelp(nx,ny,nz))
       
 !--- square current computing in cell corner step by step
 
 !--- current_z
-       wb(:,:,:) = (b(iby,:,:,:)-mshift(b(iby,:,:,:),xdim))/dl(xdim) &
-                   -(b(ibx,:,:,:)-mshift(b(ibx,:,:,:),ydim))/dl(ydim)
+!       wb(:,:,:) = (b(iby,:,:,:)-mshift(b(iby,:,:,:),xdim))/dl(xdim) &
+!                   -(b(ibx,:,:,:)-mshift(b(ibx,:,:,:),ydim))/dl(ydim)
+       wb(:,:,:) = (b(iby,:,:,:)-mshift(b(iby,:,:,:),xdim))/dl(xdim)
+       wb = wb -   (b(ibx,:,:,:)-mshift(b(ibx,:,:,:),ydim))/dl(ydim)
 
        eta(:,:,:) = 0.25*( wb(:,:,:) + mshift(wb(:,:,:),zdim) )**2
 
      if(dimensions .eq. '3d') then
 !--- current_x
-       wb(:,:,:) = (b(ibz,:,:,:)-mshift(b(ibz,:,:,:),ydim))/dl(ydim) &
-                   -(b(iby,:,:,:)-mshift(b(iby,:,:,:),zdim))/dl(zdim)
+!       wb(:,:,:) = (b(ibz,:,:,:)-mshift(b(ibz,:,:,:),ydim))/dl(ydim) &
+!                   -(b(iby,:,:,:)-mshift(b(iby,:,:,:),zdim))/dl(zdim)
+       wb(:,:,:) = (b(ibz,:,:,:)-mshift(b(ibz,:,:,:),ydim))/dl(ydim)
+       wb = wb -   (b(iby,:,:,:)-mshift(b(iby,:,:,:),zdim))/dl(zdim)
 
        eta(:,:,:) = eta(:,:,:) + 0.25*( wb(:,:,:)+mshift(wb(:,:,:),xdim) )**2
 !--- current_y
-       wb(:,:,:) = (b(ibx,:,:,:)-mshift(b(ibx,:,:,:),zdim))/dl(zdim) &
-                   -(b(ibz,:,:,:)-mshift(b(ibz,:,:,:),xdim))/dl(xdim)
+!       wb(:,:,:) = (b(ibx,:,:,:)-mshift(b(ibx,:,:,:),zdim))/dl(zdim) &
+!                   -(b(ibz,:,:,:)-mshift(b(ibz,:,:,:),xdim))/dl(xdim)
+       wb(:,:,:) = (b(ibx,:,:,:)-mshift(b(ibx,:,:,:),zdim))/dl(zdim)
+       wb = wb -   (b(ibz,:,:,:)-mshift(b(ibz,:,:,:),xdim))/dl(xdim)
 
        eta(:,:,:) = eta(:,:,:) +0.25*( wb(:,:,:) + mshift(wb(:,:,:),ydim))**2
      endif
@@ -54,13 +60,18 @@ contains
         wb(:,:,:) = eta(:,:,:)
 
         eta(:,:,:) = eta_0 + eta_1*sqrt(max(0.0,eta(:,:,:)- j_crit**2 ))
-
+!! \todo Following lines are splitted into separate lines because of intel and gnu dbgs
+!! shoud that be so? Is there any other solution instead splitting?
         if(dimensions .eq. '3d') then
+	  etahelp(:,:,:)  =   mshift(eta(:,:,:),xdim)
+	  etahelp = etahelp + pshift(eta(:,:,:),xdim)
+          etahelp = etahelp + mshift(eta(:,:,:),ydim)
+	  etahelp = etahelp + pshift(eta(:,:,:),ydim)
+          etahelp = etahelp + mshift(eta(:,:,:),zdim)
+	  etahelp = etahelp + pshift(eta(:,:,:),zdim)
+          etahelp = (etahelp+dble(eta_scale)*eta(:,:,:))/(6.+dble(eta_scale))
           where(eta > eta_0)
-            eta(:,:,:) = (mshift(eta(:,:,:),xdim) + pshift(eta(:,:,:),xdim) &
-                         +mshift(eta(:,:,:),ydim) + pshift(eta(:,:,:),ydim) &
-                         +mshift(eta(:,:,:),zdim) + pshift(eta(:,:,:),zdim) &
-                         +dble(eta_scale)*eta(:,:,:))/(6.+dble(eta_scale))
+	    eta = etahelp
           endwhere
         else
           where(eta > eta_0)
@@ -94,7 +105,7 @@ contains
                         *wb(is:ie,js:je,ks:ke)+small) )) 
 #endif /* ISO */
         
-      deallocate(wb)
+      deallocate(wb,etahelp)
 
       if (ici .eq. icz) then
          eta(:,:,:)=0.5*(eta(:,:,:)+pshift(eta(:,:,:),zdim))
