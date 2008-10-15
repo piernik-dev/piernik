@@ -295,8 +295,8 @@ contains
          b(iby,i,j,k)   = 0.0
          b(ibz,i,j,k)   = sqrt(2.*alpha*d0*c_si**2)
 	 case('toroidal')
-         b(ibx,i,j,k)   =-sqrt(2.*alpha*c_si**2*u(idna,i,j,k))*yj/rc
-         b(iby,i,j,k)   = sqrt(2.*alpha*c_si**2*u(idna,i,j,k))*xi/rc
+         b(ibx,i,j,k)   =-sqrt(2.*alpha*c_si**2*(u(idna,i,j,k)-max(rhoa,smalld) ))*yj/rc
+         b(iby,i,j,k)   = sqrt(2.*alpha*c_si**2*(u(idna,i,j,k)-max(rhoa,smalld) ))*xi/rc
          b(ibz,i,j,k)   = 0.0
 	 end select
 #ifndef ISO
