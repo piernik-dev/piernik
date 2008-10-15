@@ -74,6 +74,7 @@ module start
   real t_dw, t_arm, col_dens
   
   real h_sn, r_sn, f_sn_kpc2, amp_dip_sn, snenerg, snemass, sn1time, sn2time, r0sn
+  integer howmulti
   character*3 add_mass, add_ener, add_encr, add_magn
 ! Secondary parameters
 
@@ -159,7 +160,7 @@ contains
   namelist /SHEARING/ omega, qshear
 #endif /* SHEAR */
 #ifdef SN_SRC
-  namelist /SN_PARAMS/ h_sn, r_sn, f_sn_kpc2, amp_dip_sn
+  namelist /SN_PARAMS/ h_sn, r_sn, f_sn_kpc2, amp_dip_sn, howmulti
 #endif /* SN_SRC */
 #ifdef SNE_DISTR
   namelist /SN_DISTR/ snenerg, snemass, sn1time, sn2time, r0sn, add_mass, add_ener, add_encr, add_magn
@@ -310,6 +311,7 @@ contains
     r_sn       =  10.0       	!  "typical" SNR II radius
     f_sn_kpc2  =  20.0       	!  solar galactic radius SN II freq./kpc**2
     amp_dip_sn =   1.0e6        
+    howmulti   = 2		! 1 for dipols, 2 for quadrupoles
 #endif /* SN_SRC */
 #ifdef SNE_DISTR
     snenerg    = 1.e51		!  typical energy of supernova explosion [erg]
@@ -593,11 +595,12 @@ contains
 #endif /* SHEAR */
 
 #ifdef SN_SRC
-!  namelist /SN_PARAMS/ h_sn, r_sn, f_sn_kpc2, amp_dip_sn
+!  namelist /SN_PARAMS/ h_sn, r_sn, f_sn_kpc2, amp_dip_sn, howmulti
        rbuff(170) = h_sn      		
        rbuff(171) = r_sn             	
        rbuff(172) = f_sn_kpc2       	 
        rbuff(173) = amp_dip_sn      
+       ibuff(170) = howmulti
 #endif /* SN_SRC */
 #ifdef SNE_DISTR
 !  namelist /SN_DISTR/ snenerg, snemass, sn1time, sn2time, r0sn, add_mass, add_ener, add_encr, add_magn
@@ -821,11 +824,12 @@ contains
     endif  ! (proc .eq. 0)    
 
 #ifdef SN_SRC
-!  namelist /SN_PARAMS/ h_sn, r_sn, f_sn_kpc2, amp_dip_sn
+!  namelist /SN_PARAMS/ h_sn, r_sn, f_sn_kpc2, amp_dip_sn, howmulti
        h_sn               = rbuff(170)   		
        r_sn               = rbuff(171)          	
        f_sn_kpc2          = rbuff(172)      	 
        amp_dip_sn         = rbuff(173)     
+       howmulti		  = ibuff(170)
 #endif /* SN_SRC */
 #ifdef SNE_DISTR
 !  namelist /SN_DISTR/ snenerg, snemass, sn1time, sn2time, r0sn, add_mass, add_ener, add_encr, add_magn
