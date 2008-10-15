@@ -72,11 +72,11 @@ module func
     lz = SIZE(tab,3)
 
     if(d==1) then
-      pshift(1:lx-1,:,:) = tab(2:lx,:,:); tab(lx,:,:) = tab(1,:,:)
+      pshift(1:lx-1,:,:) = tab(2:lx,:,:); pshift(lx,:,:) = tab(1,:,:)
     else if(d==2) then
-      pshift(:,1:ly-1,:) = tab(:,2:ly,:); tab(:,ly,:) = tab(:,1,:)
+      pshift(:,1:ly-1,:) = tab(:,2:ly,:); pshift(:,ly,:) = tab(:,1,:)
     else if(d==3) then
-      pshift(:,:,1:lz-1) = tab(:,:,2:lz); tab(:,:,lz) = tab(:,:,1)
+      pshift(:,:,1:lz-1) = tab(:,:,2:lz); pshift(:,:,lz) = tab(:,:,1)
     else
        write(*,*) 'Dim ill defined in pshift!'
     endif
@@ -105,11 +105,11 @@ module func
     lz = SIZE(tab,3)
 
     if(d==1) then
-      mshift(2:lx,:,:) = tab(1:lx-1,:,:); tab(1,:,:) = tab(lx,:,:)
+      mshift(2:lx,:,:) = tab(1:lx-1,:,:); mshift(1,:,:) = tab(lx,:,:)
     else if(d==2) then
-      mshift(:,2:ly,:) = tab(:,1:ly-1,:); tab(:,1,:) = tab(:,ly,:)
+      mshift(:,2:ly,:) = tab(:,1:ly-1,:); mshift(:,1,:) = tab(:,ly,:)
     else if(d==3) then
-      mshift(:,:,2:lz) = tab(:,:,1:lz-1); tab(:,:,1) = tab(:,:,lz)
+      mshift(:,:,2:lz) = tab(:,:,1:lz-1); mshift(:,:,1) = tab(:,:,lz)
     else
        write(*,*) 'Dim ill defined in mshift!'
     endif
