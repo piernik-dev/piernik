@@ -110,7 +110,9 @@ subroutine mhdstep
 ! Sources ----------------------------------------
 
 #ifdef SN_SRC          
+#ifndef SNE_DISTR
       call random_sn 
+#endif /* SNE_DISTR */
 #endif /* SN_SRC */
 
 #ifdef SNE_DISTR
