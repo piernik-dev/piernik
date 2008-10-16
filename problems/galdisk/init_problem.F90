@@ -29,7 +29,6 @@ contains
   
     
     character par_file*(100), tmp_log_file*(100)
-    integer :: cwd_status 
 
     par_file = trim(cwd)//'/problem.par'
     tmp_log_file = trim(cwd)//'/tmp.log'    
@@ -120,11 +119,11 @@ contains
     integer i,j,k,iu,id,ju,jd
     real xi,yj,zk, rc, rs
     real, allocatable ::dprof(:)
-    real iOmega, dens0
+    real iOmega
     real dcmol, dcneut, dcion, dchot
     real xgradgp, ygradgp, sfq
     real xgradp, ygradp
-    character syscmd*37,syscmd2*40,syscmd3*37
+    character syscmd*37,syscmd2*40
     integer system, syslog
     real,allocatable :: dxzprof(:,:),idxzprof(:,:),jdxzprof(:,:)
     integer,allocatable :: xproc(:), yproc(:)
@@ -325,7 +324,6 @@ contains
     implicit none
     
     real tot_mass, dmass
-    real r
     integer i,j
     
       call total_mass(tot_mass)
