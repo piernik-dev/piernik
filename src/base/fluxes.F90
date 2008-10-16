@@ -26,7 +26,10 @@ module fluxes
     real, dimension(nu,n)::flux,uu,cfr
     real, dimension(3,n):: bb
 ! locals
-    real, dimension(n) :: vx,vy,vz,vt, ps,p,pmag
+    real, dimension(n) :: vx,vy,vz,ps,p,pmag
+#ifndef OLDLOCALCFR
+    real, dimension(n) :: vt
+#endif /* OLDLOCALCFR */
 !#ifdef COSM_RAYS
 !    real, dimension(n) :: pcr
 !#endif /* COSM_RAYS */

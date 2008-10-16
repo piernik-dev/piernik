@@ -24,7 +24,7 @@ program mhd
       find_last_restart, get_container, set_container
 #ifdef HDF5
   use dataio_hdf5, only: read_restart_hdf5, write_plot
-#endif  
+#endif /* HDF5 */
 !  use diagnostics  
   use timer, only : timer_start, timer_stop
   use mpi_setup
@@ -52,9 +52,8 @@ program mhd
     use comp_log, only : nenv,env
 
   implicit none
-  character output*3
   integer system_status
-  character system_command*160, cmd*256
+  character system_command*160
   integer(kind=1)  :: system
   integer tsleep, i
 
@@ -146,10 +145,10 @@ program mhd
     call set_container(chdf); chdf%nres = nrestart
     call read_restart_hdf5(chdf)
     call get_container(chdf); nstep = chdf%nstep
-#else
+#else /* HDF5 */
     nres = nrestart
     call read_restart
-#endif
+#endif /* HDF5 */
 
     nstep_start = nstep
     t_start     = t
@@ -159,8 +158,8 @@ program mhd
     if(new_id .ne. '') run_id=new_id
 
 #ifdef MASS_COMPENS
-      call get_init_mass
-#endif /* MASS_COMPENS */     
+    call get_init_mass
+#endif /* MASS_COMPENS */
 
   endif
   call MPI_BARRIER(comm3d,ierr)
@@ -173,7 +172,7 @@ program mhd
 
 #ifdef HDF5
       call write_plot(chdf)
-#endif
+#endif /* HDF5 */
 
       call mhdstep
 

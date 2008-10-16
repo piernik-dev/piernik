@@ -88,7 +88,7 @@ contains
     endif
 
 
-5   format('proc =',i2, '    CPU time  = ', f8.2,' s')
+!5   format('proc =',i2, '    CPU time  = ', f8.2,' s')
 10  format('CPU time        = ', f12.2,' s')
 20  format('Wall clock time = ', f12.2,' s')
 30  format('Zone-cycles / s = ',1pe12.5)

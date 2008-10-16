@@ -105,7 +105,6 @@ contains
 
     
   character par_file*(100), tmp_log_file*(100)
-  integer :: cwd_status 
 
     
     

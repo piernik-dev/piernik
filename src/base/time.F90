@@ -83,8 +83,8 @@ contains
 
 ! locals
     real pmag
-    real v,ps,p,bx,by,bz
-    integer i,j,k,ip,jp,kp
+    real v,ps,p
+    integer i,j,k
 
     cx    = 0.0
     cy    = 0.0

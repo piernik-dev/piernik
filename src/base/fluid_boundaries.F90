@@ -50,7 +50,7 @@ subroutine bnd_u(dim)
 
   implicit none
   character(len=*) :: dim 
-  integer ib, k
+  integer ib
   
   real, dimension(nx,ny) :: db, ekb, eib, csi2b
   integer kb, ksub
@@ -61,9 +61,13 @@ subroutine bnd_u(dim)
   integer i,j
   real z1,z2
   integer ireq
-  real, allocatable :: send_left(:,:,:,:),recv_left(:,:,:,:),send_right(:,:,:,:),recv_right(:,:,:,:) 
+  real, allocatable :: send_left(:,:,:,:),recv_left(:,:,:,:)
+#ifdef SHEAR_MPI
+  real, allocatable :: send_right(:,:,:,:),recv_right(:,:,:,:) 
+#endif /* SHEAR_MPI */
+#ifdef SHEAR_MY
   real, allocatable, dimension(:,:,:) :: temp,tem2
-  real, allocatable, dimension(:,:,:) :: bl
+#endif /* SHEAR_MY */
 ! MPI block comunication
 
 !  write(*,*) '********************************************'
@@ -678,7 +682,6 @@ subroutine bnd_u(dim)
                   factor = (1.0 + 0.5*dzs*gprofs(ksub)/csi2b(i,j))  &
                                /(1.0 - 0.5*dzs*gprofs(ksub)/csi2b(i,j)) 
                   dprofs(ksub+1) = factor * dprofs(ksub)        
-!                 if(i.eq.7 .and. j.eq.7) write(*,999) ksub, zs(ksub), dprofs(ksub)   
                 enddo
           
                 db(i,j)  = dprofs(nsub+1)
@@ -773,7 +776,6 @@ subroutine bnd_u(dim)
                   factor = (1.0 + 0.5*dzs*gprofs(ksub)/csi2b(i,j))  &
                                /(1.0 - 0.5*dzs*gprofs(ksub)/csi2b(i,j)) 
                   dprofs(ksub+1) = factor * dprofs(ksub)        
-!                 if(i.eq.7 .and. j.eq.7) write(*,999) ksub, zs(ksub), dprofs(ksub)   
                 enddo
           
                 db(i,j)  = dprofs(nsub+1)
@@ -801,7 +803,6 @@ subroutine bnd_u(dim)
           
     end select  ! (dim)
 
- 999   format(i4,10(1x,e20.10))
 
      
 end subroutine bnd_u

@@ -1,3 +1,4 @@
+
 ! $Id$
 #include "piernik.def"
 
@@ -195,8 +196,11 @@ module dataio
     use init_problem, only:  problem_name, run_id
     use dataio_hdf5, only: write_hdf5, write_restart_hdf5
 #endif /* HDF5 */
+#ifdef USER_IO
+    use init_problem, only : user_io_routine
+#endif /* USER_IO */
     implicit none
-    character  :: output*3 
+    character  :: output*3
 #ifdef HDF5
     character :: filename*128
 #endif /* HDF5 */
@@ -222,6 +226,9 @@ module dataio
 #ifdef BLOB
       call write_blob
 #endif /* BLOB */
+#ifdef USER_IO
+      call user_io_routine
+#endif /* USER_IO */
 
 #ifdef HDFSWEEP
     if (output .ne. 'gpt') then
@@ -238,7 +245,7 @@ module dataio
 #else /* HDF5 */
      call set_container(chdf)
      call write_hdf5(chdf)
-#endif
+#endif /* HDF5 */
         if((t-last_hdf_time) .ge. dt_hdf) last_hdf_time = last_hdf_time + dt_hdf
         if((t-last_hdf_time) .ge. dt_hdf) last_hdf_time = t ! dodatkowa regulacja w przypadku zmiany dt_hdf na mniejsze przez msg
         nhdf = nhdf + 1
@@ -260,9 +267,9 @@ module dataio
            call MPI_BCAST(filename, 128, MPI_CHARACTER, 0, comm, ierr)
            call set_container(chdf); chdf%nstep = nstep
            call write_restart_hdf5(filename,chdf)
-#else
+#else /* HDF5 */
            call write_restart
-#endif
+#endif /* HDF5 */
         endif
         nres = nres + 1
         step_res = nstep
@@ -302,8 +309,7 @@ module dataio
 #endif /* GRAV */
     implicit none
 
-    character(len=128) :: hdf_file,file_name_hdf,file_name_disp
-    character runname*16
+    character(len=128) :: file_name_hdf,file_name_disp
 
     integer :: sd_id, sds_id, dim_id, iostatus
     integer :: rank, comp_type
@@ -312,7 +318,7 @@ module dataio
     integer :: sfstart, sfend, sfsnatt, sfcreate, sfwdata, sfscompress, sfendacc &
              , sfdimid, sfsdmname, sfsdscale, sfsdmstr
 
-    integer :: iv, i, j, k, ibe, jbe
+    integer :: iv, ibe, jbe
     integer :: nxo, nyo, nzo, iso,ieo,jso,jeo,kso,keo
     real*4, dimension(:,:,:), allocatable :: temp
 
@@ -670,7 +676,6 @@ module dataio
     implicit none
 
     character(len=128) :: file_name_hdf,file_name_disp
-    character runname*16
     character, dimension(24) :: gvars*4
 
     integer :: sd_id, sds_id, dim_id, iostatus
@@ -680,7 +685,7 @@ module dataio
     integer :: sfstart, sfend, sfsnatt, sfcreate, sfwdata, sfscompress, sfendacc &
              , sfdimid, sfsdmname, sfsdscale, sfsdmstr
 
-    integer :: iv, i, j, k, ibe, jbe
+    integer :: iv, i, j, ibe, jbe
     integer :: nxo, nyo, nzo, iso,ieo,jso,jeo,kso,keo
 
 !- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -1221,12 +1226,11 @@ module dataio
     character(len=128) :: file_name_res,file_name_disp
     logical file_exist, log_exist
 
-    integer :: sd_id, sds_id, dim_id, attr_index, sds_index
+    integer :: sd_id, sds_id, attr_index, sds_index
     integer :: iostatus, ranku, rankb, rank3d
     integer, dimension(4) :: dimsu, dimsb, istart, stride
-    integer, dimension(3) :: dims, dims3d
-    integer :: sfstart, sfend, sffattr, sfrnatt, sfn2index, sfselect, sfrdata, sfendacc &
-             , sfdimid, sfgdscale
+    integer, dimension(3) :: dims3d
+    integer :: sfstart, sfend, sffattr, sfrnatt, sfn2index, sfselect, sfrdata, sfendacc
 
 !- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -1367,9 +1371,8 @@ module dataio
 
       implicit none
       
-      character*120 restart_file, file_name
-      character*160 syscom
-      integer iostat,len_restart_fname,restart_number,nres
+      character*120 file_name
+      integer restart_number,nres
       logical exist
       character(len=128) :: file_name_base      
       
@@ -1383,10 +1386,10 @@ module dataio
 #ifdef HDF5
         write (file_name,'(a,a1,a,a1,a3,a1,i4.4,a4)') &
                trim(cwd),'/',trim(problem_name),'_', run_id,'_',nres,'.res'
-#else
+#else /* HDF5 */
         write (file_name,'(a,a1,a,a1,a3,a1,3(i2.2,a1),i3.3,a4)') &
                trim(cwd),'/',trim(problem_name),'_', run_id,'_',0,'_',0,'_',0,'_',nres,'.res'
-#endif  
+#endif /* HDF5 */
         inquire(file = file_name, exist = exist)
         if(exist) then
            restart_number = nres
@@ -1433,12 +1436,12 @@ module dataio
 #endif /* COSM_RAYS */
    
     implicit none
-    integer i,j,k
+    integer i,j
 
     character(len=128) :: tsl_file
 
     real :: mass = 0.0, momx = 0.0, momy = 0.0,  momz = 0.0, ener = 0.0, &
-            encr = 0.0, eint = 0.0, ekin = 0.0,  emag = 0.0, epot = 0.0, &
+            encr = 0.0, ekin = 0.0,  emag = 0.0, epot = 0.0, &
             tot_mass = 0.0, tot_momx = 0.0, tot_momy = 0.0, tot_momz = 0.0, &
             tot_ener = 0.0, tot_eint = 0.0, tot_ekin = 0.0, tot_emag = 0.0, &
             tot_epot = 0.0, tot_encr = 0.0, mflx = 0.0, mfly = 0.0, mflz = 0.0, &
@@ -1840,16 +1843,14 @@ module dataio
 
       integer scstatus,ispace,islash,i,i1,ldfout,lcwd 
       logical diskfree,diskaccess
-      integer min_disk_space, darray(3),darray0(3),tarray(3),tarray0(3)
+      integer min_disk_space, darray(3),tarray(3)
       character df_file*32,cwd_file*32,fsys*30,dfout*80,cspace*10,cpid*10,cproc*2
-      character fsymtime*80, host_small_space*8, dfout_small_space*80
+      character host_small_space*8, dfout_small_space*80
       character*160 syscom
-      logical exist
       integer date_time (8) , sleep_time
       character (len = 10) big_ben (3) 
       
-      integer isend(2), irecv(2), loc_proc, ispace_min, isp(1), isp_min(1)
-      real rsend(2), rrecv(2), rsp(1), rsp_min(1)
+      integer isend(2), irecv(2), loc_proc
       integer tsleep
 
       integer(kind=1) :: system
@@ -2011,7 +2012,6 @@ module dataio
           write(*,13)   
           write(*,14) min_disk_space
           write(*,*) 'WAITING ',sleep_minutes,' min', sleep_seconds,' sec'
-!          write(*,19) sleep_minutes
 
           open(log_lun, file=log_file, position='append')      
           write(log_lun,*) 
@@ -2062,9 +2062,7 @@ module dataio
 
 13    format(42x,'----------')
 14    format(23x,'SHOULD BE AT LEAST:',i9)      
-19    format(23x,'waiting',7x,i10,' min')      
 15    format(a80)
-16    format(1x,a40,a8,a10)
 17    format(1x,a79)
 18    format(i2.2,'.',i2.2,'.',i4.4,', ',i2.2,':',i2.2,':',i2.2)
        
@@ -2108,7 +2106,6 @@ module dataio
       
       character, save :: user_msg_time_old*80,system_msg_time_old*80
       character*160 syscom
-      logical exist
       integer i
       integer(kind=1) :: system
        

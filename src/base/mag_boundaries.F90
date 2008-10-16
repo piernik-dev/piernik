@@ -21,10 +21,12 @@ subroutine bnd_b(dim)
 
   implicit none
   character(len=*) :: dim 
-  integer ib, i, j, k
+  integer i, j
   integer ireq
-  real, allocatable :: send_left(:,:,:,:),recv_left(:,:,:,:),send_right(:,:,:,:),recv_right(:,:,:,:) 
-
+  real, allocatable :: send_left(:,:,:,:),recv_left(:,:,:,:)
+#ifdef SHEAR
+  real, allocatable :: send_right(:,:,:,:),recv_right(:,:,:,:) 
+#endif /* SHEAR */
 ! MPI block comunication
 
   select case (dim)
@@ -355,9 +357,6 @@ subroutine bnd_b(dim)
           
     end select  ! (dim)
 
- 999   format(i4,10(1x,e20.10))
-
-     
 end subroutine bnd_b
 
 

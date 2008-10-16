@@ -64,8 +64,8 @@
     integer        :: pid_proc,  pid_all (0:1024)
     
     integer(kind=1)  :: getcwd, getpid, hostnm
-    character par_file*(100), tmp_log_file*(100), cwd_file*9
-    integer :: cwd_status, scstatus 
+    character par_file*(100), tmp_log_file*(100)
+    integer :: cwd_status
     logical par_file_exist
 
 

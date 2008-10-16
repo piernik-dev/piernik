@@ -8,7 +8,6 @@ contains
     use start, only  : nb
 
     implicit none
-    integer :: i
     integer, dimension(4) :: sizes, subsizes, starts
     integer*4 :: ord
     integer*4 :: old

@@ -41,8 +41,6 @@ contains
     real, dimension(n) :: cfunc, hfunc
     real, dimension(n),intent(out) :: esrc
     real, dimension(n) :: temp
-!    real, dimension(n) :: a,b,c
-    integer k
     
       temp(:) = 0.0
       cfunc(:) = 0.0
@@ -207,7 +205,7 @@ contains
     
     
     real eint_src_min_sweep,eint_src_max_sweep
-    real, dimension(nz) :: eint, dens, temp, eint_src
+    real, dimension(nz) :: eint, dens, eint_src
     integer loc_dt_cool3(1), loc_dt_heat3(1)
     integer i,j
 
