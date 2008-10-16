@@ -80,15 +80,15 @@ contains
       call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
       
       problem_name = cbuff(1)   
-      run_id       = cbuff(2)   
-      mf_orient	   = cbuff(3)
+      run_id       = cbuff(2)
+      mf_orient    = cbuff(3)
 
       rhoa         = rbuff(1)  
       d0           = rbuff(2)  
-      r_max	   = rbuff(3)
+      r_max        = rbuff(3)
     
       mtr          = ibuff(1)
-      pres_cor	   = ibuff(2)
+      pres_cor     = ibuff(2)
     
     endif
 
@@ -156,24 +156,24 @@ contains
     
 !    write(*,*) dprof
 !    stop
-    
+
     endif
     if(psize(2) .ne. 1) then
       allocate(yproc(psize(2)))
       do j = 1, psize(2)
         coords = (/pcoords(1),j-1,pcoords(3)/)
-	call MPI_Cart_rank(comm3d, coords, jproc, ierr)
-	yproc(j)=jproc
+        call MPI_Cart_rank(comm3d, coords, jproc, ierr)
+        yproc(j)=jproc
       enddo
       if(proc .eq. yproc(1)) then
         do j = 2,psize(2)
-	  ytag=1000+100*pcoords(3)+10*j+pcoords(1)
-	  call MPI_Send(idxzprof,nx*nz,MPI_DOUBLE_PRECISION,yproc(j),ytag,comm,ierr)
-	enddo
+          ytag=1000+100*pcoords(3)+10*j+pcoords(1)
+          call MPI_Send(idxzprof,nx*nz,MPI_DOUBLE_PRECISION,yproc(j),ytag,comm,ierr)
+        enddo
       else
         ytag=1000+100*pcoords(3)+10*(pcoords(2)+1)+pcoords(1)
-	call MPI_Recv(idxzprof,nx*nz,MPI_DOUBLE_PRECISION,yproc(1),ytag,comm,status,ierr)
-	dxzprof(pcoords(1)*nxb+1:pcoords(1)*nxb+nx,:)=idxzprof
+        call MPI_Recv(idxzprof,nx*nz,MPI_DOUBLE_PRECISION,yproc(1),ytag,comm,status,ierr)
+        dxzprof(pcoords(1)*nxb+1:pcoords(1)*nxb+nx,:)=idxzprof
       endif
       deallocate(yproc)
     endif
@@ -181,21 +181,21 @@ contains
       allocate(xproc(psize(1)))
       do i = 1, psize(1)
         coords = (/i-1,pcoords(2),pcoords(3)/)
-	call MPI_Cart_rank(comm3d, coords, iproc, ierr)
-	xproc(i)=iproc
+        call MPI_Cart_rank(comm3d, coords, iproc, ierr)
+        xproc(i)=iproc
       enddo
       do i = 1, psize(1)
         xtag = 100*pcoords(3)+10*pcoords(2)+i
         if(proc .eq. xproc(i)) then
-	  do j = 1, psize(1)
+          do j = 1, psize(1)
             if(proc .ne. xproc(j)) then
-	      call MPI_Send(idxzprof,nx*nz,MPI_DOUBLE_PRECISION,xproc(j),xtag,comm,ierr)
-	    endif
+              call MPI_Send(idxzprof,nx*nz,MPI_DOUBLE_PRECISION,xproc(j),xtag,comm,ierr)
+            endif
           enddo
-	else
-	  call MPI_Recv(jdxzprof,nx*nz, MPI_DOUBLE_PRECISION,xproc(i),xtag,comm,status,ierr)
-	  dxzprof((i-1)*nxb+1:(i-1)*nxb+nx,:)=jdxzprof(:,:)
-	endif
+        else
+          call MPI_Recv(jdxzprof,nx*nz, MPI_DOUBLE_PRECISION,xproc(i),xtag,comm,status,ierr)
+          dxzprof((i-1)*nxb+1:(i-1)*nxb+nx,:)=jdxzprof(:,:)
+        endif
       enddo
       deallocate(xproc)
     endif
@@ -218,65 +218,65 @@ contains
         rc = sqrt(xi**2+yj**2)
 
         ilook = (rc-xmin)/dx + 0.5 + nb
-	if(int(ilook) .lt. nxt) then
-	  dprof(:) = dxzprof(int(ilook),:)+(dxzprof(int(ilook)+1,:)-dxzprof(int(ilook),:))*(ilook-int(ilook))
-	else
-	  dprof(:) = dxzprof(nxt,:)
-	endif
-	
-	do k=1,nz
-	 zk=z(k)
-	 rs = sqrt(xi**2+yj**2+zk**2)
+        if(int(ilook) .lt. nxt) then
+          dprof(:) = dxzprof(int(ilook),:)+(dxzprof(int(ilook)+1,:)-dxzprof(int(ilook),:))*(ilook-int(ilook))
+        else
+          dprof(:) = dxzprof(nxt,:)
+        endif
+
+       do k=1,nz
+         zk=z(k)
+         rs = sqrt(xi**2+yj**2+zk**2)
          u(idna,i,j,k) = rhoa + dprof(k)/cosh(min((rc/r_max)**mtr,100.0))
          u(idna,i,j,k) = max(u(idna,i,j,k), smalld)
-	   if(i .ne. 1 .and. i .ne. nx) then
-	     iu = i+1
-	     id = i-1
-	     sfq = 0.5
-	   else
-	     if(i .eq. 1) then
-	       iu = i+1
-	       id = i
-	       sfq = 1.0
-	     elseif(i .eq. nx) then
-	       iu = i
-	       id = i-1
-	       sfq = 1.0
-	     endif
+           if(i .ne. 1 .and. i .ne. nx) then
+             iu = i+1
+             id = i-1
+             sfq = 0.5
+           else
+             if(i .eq. 1) then
+               iu = i+1
+               id = i
+               sfq = 1.0
+             elseif(i .eq. nx) then
+               iu = i
+               id = i-1
+               sfq = 1.0
+             endif
            endif
-	   xgradgp=(gp(iu,j,k)-gp(id,j,k))*sfq/dl(xdim)
+           xgradgp=(gp(iu,j,k)-gp(id,j,k))*sfq/dl(xdim)
            if(pres_cor .eq. 1) xgradp =-sfq*c_si**2/gamma/u(1,i,j,k)*(u(1,iu,j,k)-u(1,id,j,k))/dl(xdim)
-	   if(j .ne. 1 .and. j .ne. ny) then
-	     ju = j+1
-	     jd = j-1
-	     sfq = 0.5
-	   else
-	     if(j .eq. 1) then
-	       ju = j+1
-	       jd = j
-	       sfq = 1.0
-	     elseif(j .eq. ny) then
-	       ju = j
-	       jd = j-1
-	       sfq = 1.0
-	     endif
+           if(j .ne. 1 .and. j .ne. ny) then
+             ju = j+1
+             jd = j-1
+             sfq = 0.5
+           else
+             if(j .eq. 1) then
+               ju = j+1
+               jd = j
+               sfq = 1.0
+             elseif(j .eq. ny) then
+               ju = j
+               jd = j-1
+               sfq = 1.0
+             endif
            endif
-	   ygradgp=(gp(i,ju,k)-gp(i,jd,k))*sfq/dl(ydim)
+           ygradgp=(gp(i,ju,k)-gp(i,jd,k))*sfq/dl(ydim)
            if(pres_cor .eq. 1) then
              ygradp =-sfq*c_si**2/gamma/u(1,i,j,k)*(u(1,i,ju,k)-u(1,i,jd,k))/dl(ydim)
              iOmega=sqrt(abs(sqrt((xgradgp+xgradp)**2+(ygradgp+ygradp)**2))/rc)
-	   else
+           else
              iOmega=sqrt(abs(sqrt(xgradgp**2+ygradgp**2))/rc)
            endif
            omega_xy(i,j) = iOmega
                  
-	     u(imxa,i,j,k)=-iOmega*yj*u(idna,i,j,k)
+             u(imxa,i,j,k)=-iOmega*yj*u(idna,i,j,k)
              u(imya,i,j,k)= iOmega*xi*u(idna,i,j,k)
              u(imza,i,j,k) = 0.0
 #ifndef ISO
          u(iena,i,j,k) = c_si**2/(gamma-1.0)*u(idna,i,j,k)
          u(iena,i,j,k) = max(u(iena,i,j,k), smallei)
-	 u(iena,i,j,k) = u(iena,i,j,k) +0.5*(u(imxa,i,j,k)**2+u(imya,i,j,k)**2+u(imza,i,j,k)**2)/u(idna,i,j,k)
+         u(iena,i,j,k) = u(iena,i,j,k) +0.5*(u(imxa,i,j,k)**2+u(imya,i,j,k)**2+u(imza,i,j,k)**2)/u(idna,i,j,k)
 #endif /* ISO */
 
 #ifdef COSM_RAYS
@@ -285,19 +285,19 @@ contains
 
 
          select case(mf_orient)
-	 case('null')
-         b(ibx,i,j,k)   = 0.0
-         b(iby,i,j,k)   = 0.0
-         b(ibz,i,j,k)   = 0.0
+         case('null')
+           b(ibx,i,j,k)   = 0.0
+           b(iby,i,j,k)   = 0.0
+           b(ibz,i,j,k)   = 0.0
          case('vertical')
-         b(ibx,i,j,k)   = 0.0
-         b(iby,i,j,k)   = 0.0
-         b(ibz,i,j,k)   = sqrt(2.*alpha*d0*c_si**2)
-	 case('toroidal')
-         b(ibx,i,j,k)   =-sqrt(2.*alpha*c_si**2*(u(idna,i,j,k)-max(rhoa,smalld) ))*yj/rc
-         b(iby,i,j,k)   = sqrt(2.*alpha*c_si**2*(u(idna,i,j,k)-max(rhoa,smalld) ))*xi/rc
-         b(ibz,i,j,k)   = 0.0
-	 end select
+           b(ibx,i,j,k)   = 0.0
+           b(iby,i,j,k)   = 0.0
+           b(ibz,i,j,k)   = sqrt(2.*alpha*d0*c_si**2)
+         case('toroidal')
+           b(ibx,i,j,k)   =-sqrt(2.*alpha*c_si**2*(u(idna,i,j,k)-max(rhoa,smalld) ))*yj/rc
+           b(iby,i,j,k)   = sqrt(2.*alpha*c_si**2*(u(idna,i,j,k)-max(rhoa,smalld) ))*xi/rc
+           b(ibz,i,j,k)   = 0.0
+         end select
 #ifndef ISO
          u(iena,i,j,k)   = u(iena,i,j,k) +0.5*sum(b(:,i,j,k)**2,1)
 #endif /* ISO */
@@ -340,7 +340,7 @@ contains
 
 #ifndef ISO
           u(iena,i,j,:) = u(iena,i,j,:) + dmass*(c_si**2/(gamma-1.0))*dinit(i,j,:) 
-	  u(iena,i,j,:) = u(iena,i,j,:) + dmass*0.5*omega_xy(i,j)**2*(x(i)**2 + y(j)**2)*dinit(i,j,:)
+          u(iena,i,j,:) = u(iena,i,j,:) + dmass*0.5*omega_xy(i,j)**2*(x(i)**2 + y(j)**2)*dinit(i,j,:)
 #endif /* ISO */
         enddo
       enddo

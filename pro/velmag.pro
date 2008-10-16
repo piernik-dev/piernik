@@ -11,30 +11,31 @@ PRO VELMAG
 ;  device,decomposed=0,retain=2
 
  write = 'write'  ; set this to 'write' if You want to save images to file
- sf = 2
+ sf = 4
 
- plane='XY'
+ plane='YZ'
  nvh=30    ; liczba wektorkow w kier. horyzontalnym
  nvv=30    ; liczba wektorkow w kier. wertykalnym 
 
+winnum=2
 
+    dir='/home/wolt/somerun/quadnew/'
+    prefix = 'quadrupole_tst'
 
-    dir='../../sol/TI.0.0.v0.1/'
-    prefix = 'tearing_tst'
-
-  var1='ccur'
+  var1='maga'
   vecx='magx'
   vecy='magy'
   vecz='magz'
 
   first=0
-  last =200
+  last =0
   freq =1
 ;  step = 150
 
   ylog=0
 ;  if(var EQ 'dens' OR var EQ 'ener') then ylog=1
-
+amin=0.0
+amax=1.0e-1
   if(var1 EQ 'dens') then begin
     amin= 0.02;-0.01
     amax= 2.5
@@ -116,7 +117,7 @@ PRO VELMAG
   a1   = LOAD_DATA_HDF(dir, prefix, step, var1,  xcoord = x, ycoord = y, zcoord = z, time = t)
   ax   = LOAD_DATA_HDF(dir, prefix, step, vecx,  xcoord = x, ycoord = y, zcoord = z, time = t)
   ay   = LOAD_DATA_HDF(dir, prefix, step, vecy,  xcoord = x, ycoord = y, zcoord = z, time = t)
-;  az   = LOAD_DATA_HDF(dir, prefix, step, vecz,  xcoord = x, ycoord = y, zcoord = z, time = t)
+  az   = LOAD_DATA_HDF(dir, prefix, step, vecz,  xcoord = x, ycoord = y, zcoord = z, time = t)
 
   timestr = '    t='+strtrim(string(t,format='(f7.2)'),0)
 
@@ -189,7 +190,7 @@ white = 255
   'YZ': 	begin
  ;-- YZ axis
 
-  window,1,xsize=sf*ny,ysize=sf*nz, title='YZ axis.'+timestr
+  window,winnum,xsize=sf*ny,ysize=sf*nz, title='YZ axis.'+timestr
   image_yz = REFORM(a1(ix,*,*),ny,nz)
   image_yz = REBIN(image_yz,sf*ny,sf*nz,/sample)
   image_yz = BYTSCL(image_yz,min=amin,max=amax,top=254)

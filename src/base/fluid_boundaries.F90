@@ -654,13 +654,13 @@ subroutine bnd_u(dim)
           do ib=1,nb
             kb = nb+2-ib
             db = u(idna,:,:,kb) 
-	    db = max(db,smalld)
+            db = max(db,smalld)
 #ifdef ISO
             csi2b = csi2
 #else /* ISO */
             ekb= 0.5*(u(imxa,:,:,kb)**2+u(imya,:,:,kb)**2+u(imza,:,:,kb)**2)/db         
             eib = u(iena,:,:,kb) - ekb
-	    eib = max(eib,smallei)
+            eib = max(eib,smallei)
             csi2b = (gamma-1)*eib/db
 #endif /* ISO */
             z1 = z(kb)

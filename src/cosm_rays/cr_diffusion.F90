@@ -115,7 +115,7 @@ contains
                   + b(ibx,i+1,j-1,k) + b(ibx,i+1,j,k))/4. 
 
              b2b =  b(iby,i,j,k) 
-	if(dimensions .eq. '3d') then
+        if(dimensions .eq. '3d') then
              b3b = (b(ibz,i,j,k) + b(ibz,i,j-1,k)   &
                   + b(ibz,i,j-1,k+1) + b(ibz,i,j,k+1))/4.     
         endif
@@ -133,7 +133,7 @@ contains
 
              decr2 = (u(iecr,i,j,k) - u(iecr,i,j-1,k))/dy
 
-	if(dimensions .eq. '3d') then
+        if(dimensions .eq. '3d') then
              dqm2  = 0.5*((u(iecr,i ,j-1,k  ) + u(iecr,i ,j  ,k  ))   &
                          -(u(iecr,i ,j-1,k-1) + u(iecr,i ,j  ,k-1)))/dz
              dqp2  = 0.5*((u(iecr,i ,j-1,k+1) + u(iecr,i ,j  ,k+1))   &
@@ -178,7 +178,7 @@ contains
 
 !=======================================================================
 !
-	if(dimensions .eq. '3d') then
+      if(dimensions .eq. '3d') then
       do 100 k=ks,ke+1
         do 100 j=js,je
           do 100 i=is,ie
@@ -241,18 +241,18 @@ contains
       k=1
       do j=2,ny-1 
         tmp=u(imxa,:,j,k)/u(idna,:,j,k)
-	wa(:,j,k) = (eoshift(tmp,1) - eoshift(tmp,-1))/(2.*dx)
-	tmp=(u(imya,:,j+1,k)/u(idna,:,j+1,k)-u(imya,:,j-1,k)/u(idna,:,j-1,k))/(2.*dy)
+        wa(:,j,k) = (eoshift(tmp,1) - eoshift(tmp,-1))/(2.*dx)
+        tmp=(u(imya,:,j+1,k)/u(idna,:,j+1,k)-u(imya,:,j-1,k)/u(idna,:,j-1,k))/(2.*dy)
         wa(:,j,k) = wa(:,j,k) + tmp 
       enddo
     else if (dimensions .eq. '3d') then
       do k=2,nz-1
         do j=2,ny-1 
           tmp=u(imxa,:,j,k)/u(idna,:,j,k)
-   	  wa(:,j,k) = (eoshift(tmp,1) - eoshift(tmp,-1))/(2.*dx)
-	  tmp=(u(imya,:,j+1,k)/u(idna,:,j+1,k)-u(imya,:,j-1,k)/u(idna,:,j-1,k))/(2.*dy)
+          wa(:,j,k) = (eoshift(tmp,1) - eoshift(tmp,-1))/(2.*dx)
+          tmp=(u(imya,:,j+1,k)/u(idna,:,j+1,k)-u(imya,:,j-1,k)/u(idna,:,j-1,k))/(2.*dy)
           wa(:,j,k) = wa(:,j,k) + tmp 
-  	  tmp=(u(imza,:,j,k+1)/u(idna,:,j,k+1)-u(imza,:,j,k-1)/u(idna,:,j,k-1))/(2.*dz)
+          tmp=(u(imza,:,j,k+1)/u(idna,:,j,k+1)-u(imza,:,j,k-1)/u(idna,:,j,k-1))/(2.*dz)
           wa(:,j,k) = wa(:,j,k) + tmp    
         enddo
       enddo     

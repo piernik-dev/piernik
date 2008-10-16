@@ -306,22 +306,22 @@ contains
     qshear = 0.0
 #endif /* SHEAR */
 #ifdef SN_SRC
-    h_sn       = 266.0		!  vertical scaleheight of SN from Ferriere 1998
-    r_sn       =  10.0       	!  "typical" SNR II radius
-    f_sn_kpc2  =  20.0       	!  solar galactic radius SN II freq./kpc**2
+    h_sn       = 266.0	        !  vertical scaleheight of SN from Ferriere 1998
+    r_sn       =  10.0          !  "typical" SNR II radius
+    f_sn_kpc2  =  20.0          !  solar galactic radius SN II freq./kpc**2
     amp_dip_sn =   1.0e6        
-    howmulti   = 2		! 1 for dipols, 2 for quadrupoles
+    howmulti   = 2              ! 1 for dipols, 2 for quadrupoles
 #endif /* SN_SRC */
 #ifdef SNE_DISTR
-    snenerg    = 1.e51		!  typical energy of supernova explosion [erg]
-    snemass    =  10.0		!  typical preSN stellar matter mass injection [Msun]
-    sn1time    = 445.0       	!  mean time between typ I supernovae explosions [year]
-    sn2time    =  52.0       	!  mean time between typ II supernovae explosions [year]
-    r0sn       =  50.0		!  radius of an area, where mass/ener/encr is added [actually used unit of length]
-    add_mass   = 'yes'		!  permission for inserting snemass inside randomly selected areas
-    add_ener   = 'yes'		!  permission for inserting snenerg inside randomly selected areas
-    add_encr   = 'yes'		!  permission for inserting CR energy inside randomly selected areas
-    add_magn   = 'yes'		!  permission for inserting dipolar magnetic field centered at randomly selected areas
+    snenerg    = 1.e51	        !  typical energy of supernova explosion [erg]
+    snemass    =  10.0	        !  typical preSN stellar matter mass injection [Msun]
+    sn1time    = 445.0          !  mean time between typ I supernovae explosions [year]
+    sn2time    =  52.0          !  mean time between typ II supernovae explosions [year]
+    r0sn       =  50.0	        !  radius of an area, where mass/ener/encr is added [actually used unit of length]
+    add_mass   = 'yes'	        !  permission for inserting snemass inside randomly selected areas
+    add_ener   = 'yes'	        !  permission for inserting snenerg inside randomly selected areas
+    add_encr   = 'yes'	        !  permission for inserting CR energy inside randomly selected areas
+    add_magn   = 'yes'	        !  permission for inserting dipolar magnetic field centered at randomly selected areas
 #endif /* SNE_DISTR */
     ix = 20
     iy = 20
@@ -595,9 +595,9 @@ contains
 
 #ifdef SN_SRC
 !  namelist /SN_PARAMS/ h_sn, r_sn, f_sn_kpc2, amp_dip_sn, howmulti
-       rbuff(170) = h_sn      		
-       rbuff(171) = r_sn             	
-       rbuff(172) = f_sn_kpc2       	 
+       rbuff(170) = h_sn
+       rbuff(171) = r_sn
+       rbuff(172) = f_sn_kpc2
        rbuff(173) = amp_dip_sn      
        ibuff(170) = howmulti
 #endif /* SN_SRC */
@@ -792,7 +792,7 @@ contains
 !  namelist /COSMIC_RAYS/ cr_active, gamma_cr, cr_eff, beta_cr, K_cr_paral, K_cr_perp,&
 !  			 amp_cr, cfl_cr
 
-       cr_active 	  = rbuff(130) 
+       cr_active          = rbuff(130) 
        gamma_cr           = rbuff(131) 
        cr_eff             = rbuff(132) 
        beta_cr            = rbuff(133)
@@ -824,23 +824,23 @@ contains
 
 #ifdef SN_SRC
 !  namelist /SN_PARAMS/ h_sn, r_sn, f_sn_kpc2, amp_dip_sn, howmulti
-       h_sn               = rbuff(170)   		
-       r_sn               = rbuff(171)          	
-       f_sn_kpc2          = rbuff(172)      	 
-       amp_dip_sn         = rbuff(173)     
-       howmulti		  = ibuff(170)
+       h_sn               = rbuff(170)
+       r_sn               = rbuff(171)
+       f_sn_kpc2          = rbuff(172)
+       amp_dip_sn         = rbuff(173)
+       howmulti	          = ibuff(170)
 #endif /* SN_SRC */
 #ifdef SNE_DISTR
 !  namelist /SN_DISTR/ snenerg, snemass, sn1time, sn2time, r0sn, add_mass, add_ener, add_encr, add_magn
        snenerg            = rbuff(180)  
-       snemass		  = rbuff(181) 	
-       sn1time		  = rbuff(182)
-       sn2time		  = rbuff(183)	
-       r0sn		  = rbuff(184)
-       add_mass		  = cbuff(180)
-       add_ener		  = cbuff(181)
-       add_encr		  = cbuff(182)
-       add_magn		  = cbuff(183)
+       snemass	          = rbuff(181) 	
+       sn1time	          = rbuff(182)
+       sn2time	          = rbuff(183)	
+       r0sn	          = rbuff(184)
+       add_mass	          = cbuff(180)
+       add_ener	          = cbuff(181)
+       add_encr	          = cbuff(182)
+       add_magn	          = cbuff(183)
 #endif /* SNE_DISTR */
 
 ! Secondary parameters

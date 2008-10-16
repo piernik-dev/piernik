@@ -2,7 +2,7 @@ PROG		 = piernik
 
 ### GNU hydra AMD64
 F90		 = /usr/bin/mpif90
-F90FLAGS  = -fdefault-real-8 -ffpe-trap=invalid,zero,overflow,underflow,precision,denormal
+F90FLAGS  = -g -fdefault-real-8 -ffpe-trap=invalid,zero,overflow,underflow,precision
 HDF_LIB  = . -lfftw3 -llapack -lgfortran -lc
 MHDF_LIB = /opt/pgi/linux86/7.0/hdf4/include
 

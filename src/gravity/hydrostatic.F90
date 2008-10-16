@@ -52,7 +52,7 @@ module hydrostatic
         iter = 0
       else      
         if(proc .eq.0)  write(*,*) 'One of "d0" or "col_dens" must be .ne. 0' 
-         stop	
+         stop
       endif   
       
 

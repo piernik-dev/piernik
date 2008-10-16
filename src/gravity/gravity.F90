@@ -47,12 +47,12 @@ allocate(gpotdisk(nx,ny,nz),gpothalo(nx,ny,nz),gpotbulge(nx,ny,nz))
       call grav_accel2pot
 #ifdef GALACTIC_DISK
         gravpart = 'diskprt'
-	call grav_accel2pot
-	gravpart = 'haloprt'
-	call grav_accel2pot
-	gravpart = 'blgpart'
-	call grav_accel2pot
-	gravpart='default'
+        call grav_accel2pot
+        gravpart = 'haloprt'
+        call grav_accel2pot
+        gravpart = 'blgpart'
+        call grav_accel2pot
+        gravpart='default'
 #endif /* GALACTIC_DISK */
     endif
 
@@ -170,7 +170,7 @@ allocate(gpotdisk(nx,ny,nz),gpothalo(nx,ny,nz),gpotbulge(nx,ny,nz))
        real                  :: x1, x2
        real, dimension(n)    :: x3, rc, fr
 #endif /* GRAV_PTMASS || GRAV_PTFLAT */       
-       real, dimension(n)	  :: rgcv, rgsv
+       real, dimension(n)    :: rgcv, rgsv
 #ifdef GRAV_GAL_FERRIERE
        real aconst, bconst, cconst, flat, omega, g_shear_rate
 #endif /* GRAV_GAL_FERRIERE */
@@ -249,46 +249,46 @@ allocate(gpotdisk(nx,ny,nz),gpothalo(nx,ny,nz),gpotbulge(nx,ny,nz))
 ! galactic case as in vollmer'01 (gravitational potential of Allen & Santillan '01)
 #elif defined (GRAV_GAL_VOLLMER)
         allocate(gpdisk(n),gphalo(n),gpblg(n))
-	Mhalo = 4615.0*gmu !g_z*Msun !2.43e11*Msun 	!Milky Way
-	Mbulge= 0.0 ! 606.0*gmu !ptmass*Msun !0.8e10*Msun	!Milky Way (estimation)
-	Mdisk = 3690.0*gmu !dg_dz*Msun !3.7e10*Msun	!Milky Way
-	ahalo =   12.0*kpc !n_gravr2*kpc !35.*kpc
-	bbulge= 3.0*kpc !0.3873*kpc !ptm_x*pc !2100.*pc
-	adisk = 5.3178*kpc !ptm_y*kpc !4.9*kpc
-	bdisk = 0.2500*kpc !ptm_z*pc !150.*pc
+        Mhalo = 4615.0*gmu !g_z*Msun !2.43e11*Msun 	!Milky Way
+        Mbulge= 0.0 ! 606.0*gmu !ptmass*Msun !0.8e10*Msun	!Milky Way (estimation)
+        Mdisk = 3690.0*gmu !dg_dz*Msun !3.7e10*Msun	!Milky Way
+        ahalo =   12.0*kpc !n_gravr2*kpc !35.*kpc
+        bbulge= 3.0*kpc !0.3873*kpc !ptm_x*pc !2100.*pc
+        adisk = 5.3178*kpc !ptm_y*kpc !4.9*kpc
+        bdisk = 0.2500*kpc !ptm_z*pc !150.*pc
         if (sweep == 'zsweep') then
             rgcs = sqrt(x(i1)**2+y(i2)**2)
-	    rgsv = sqrt(x(i1)**2+y(i2)**2+xsw**2)
-	    gpdisk=-Mdisk/sqrt(rgcs**2+(adisk+sqrt(xsw**2+bdisk**2))**2)
-	    gphalo=-1./rgsv*Mhalo*(rgsv/ahalo)**2.02/(1.+(rgsv/ahalo)**1.02)
-	    gphalo=gphalo-(Mhalo/1.02/ahalo)*(-1.02/(1.+(100.0*kpc/ahalo)**1.02)+log(1.0+(100.0*kpc/ahalo)**1.02))
-	    gphalo=gphalo+(Mhalo/1.02/ahalo)*(-1.02/(1.+(rgsv/ahalo)**1.02)+log(1.0+(rgsv/ahalo)**1.02))
-	    gpblg=-Mbulge/sqrt(rgsv**2+bbulge**2)
+            rgsv = sqrt(x(i1)**2+y(i2)**2+xsw**2)
+            gpdisk=-Mdisk/sqrt(rgcs**2+(adisk+sqrt(xsw**2+bdisk**2))**2)
+            gphalo=-1./rgsv*Mhalo*(rgsv/ahalo)**2.02/(1.+(rgsv/ahalo)**1.02)
+            gphalo=gphalo-(Mhalo/1.02/ahalo)*(-1.02/(1.+(100.0*kpc/ahalo)**1.02)+log(1.0+(100.0*kpc/ahalo)**1.02))
+            gphalo=gphalo+(Mhalo/1.02/ahalo)*(-1.02/(1.+(rgsv/ahalo)**1.02)+log(1.0+(rgsv/ahalo)**1.02))
+            gpblg=-Mbulge/sqrt(rgsv**2+bbulge**2)
             gpot=(gpdisk+gpblg+gphalo)*newtong
             if(.not.present(temp_log)) then
                gpotdisk(i1,i2,:)=gpdisk*newtong
                gpothalo(i1,i2,:)=gphalo*newtong
                gpotbulge(i1,i2,:)=gpblg*newtong
             endif
-	else ! y or x
-	  if (sweep == 'xsweep') then
+        else ! y or x
+          if (sweep == 'xsweep') then
             seccoord = y(i1)
-	    zet = z(i2)
-	  elseif (sweep == 'ysweep') then
+            zet = z(i2)
+          elseif (sweep == 'ysweep') then
             seccoord = x(i2)
-	    zet = z(i1)
-	  endif
+            zet = z(i1)
+          endif
           do i=1,n
             rgcv(i) = sqrt(xsw(i)**2+seccoord**2)
-	    rgsv(i) = sqrt(xsw(i)**2+seccoord**2+zet**2)
-	    gpot(i)=-Mdisk/sqrt(rgcv(i)**2+(adisk+sqrt(zet**2+bdisk**2))**2)
-	    gpot(i)=gpot(i)-1./rgsv(i)*Mhalo*(rgsv(i)/ahalo)**2.02/(1.+(rgsv(i)/ahalo))
-	    gpot(i)=gpot(i)-(Mhalo/1.02/ahalo)*(-1.02/(1.+(100.0*kpc/ahalo)**1.02)+log(1.0+(100.0*kpc/ahalo)**1.02))
-	    gpot(i)=gpot(i)+(Mhalo/1.02/ahalo)*(-1.02/(1.+(rgsv(i)/ahalo)**1.02)+log(1.0+(rgsv(i)/ahalo)**1.02))
-	    gpot(i)=gpot(i)-Mbulge/sqrt(rgsv(i)**2+bbulge**2)
-	    gpot(i)=gpot(i)*newtong
+            rgsv(i) = sqrt(xsw(i)**2+seccoord**2+zet**2)
+            gpot(i)=-Mdisk/sqrt(rgcv(i)**2+(adisk+sqrt(zet**2+bdisk**2))**2)
+            gpot(i)=gpot(i)-1./rgsv(i)*Mhalo*(rgsv(i)/ahalo)**2.02/(1.+(rgsv(i)/ahalo))
+            gpot(i)=gpot(i)-(Mhalo/1.02/ahalo)*(-1.02/(1.+(100.0*kpc/ahalo)**1.02)+log(1.0+(100.0*kpc/ahalo)**1.02))
+            gpot(i)=gpot(i)+(Mhalo/1.02/ahalo)*(-1.02/(1.+(rgsv(i)/ahalo)**1.02)+log(1.0+(rgsv(i)/ahalo)**1.02))
+            gpot(i)=gpot(i)-Mbulge/sqrt(rgsv(i)**2+bbulge**2)
+            gpot(i)=gpot(i)*newtong
           enddo
-	endif
+        endif
         deallocate(gpdisk,gphalo,gpblg)
 
 ! galactic case as in ferriere'98

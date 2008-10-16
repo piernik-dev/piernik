@@ -9,8 +9,8 @@ contains
 
     implicit none
     integer, dimension(4) :: sizes, subsizes, starts
-    integer*4 :: ord
-    integer*4 :: old
+    integer(kind=4) :: ord
+    integer(kind=4) :: old
 
     ord = MPI_ORDER_FORTRAN
     old = MPI_DOUBLE_PRECISION

@@ -294,7 +294,7 @@ module dataio
     use arrays, only : nx,ny,nz,nxb,nyb,nzb,x,y,z,wa,outwa,outwb,outwc,b,u, &
          idna,imxa,imya,imza,ibx,iby,ibz
 #ifdef COSM_RAYS
-    use arrays, only : iecr	 
+    use arrays, only : iecr
 #endif /* COSM_RAYS */	 
     use init_problem, only : problem_name, run_id
 #ifndef ISO
@@ -320,7 +320,7 @@ module dataio
 
     integer :: iv, ibe, jbe
     integer :: nxo, nyo, nzo, iso,ieo,jso,jeo,kso,keo
-    real*4, dimension(:,:,:), allocatable :: temp
+    real(kind=4), dimension(:,:,:), allocatable :: temp
 
 !- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -452,7 +452,7 @@ module dataio
         wa(iso:ieo,jso:jeo,kso:keo) = u(iena,iso:ieo,jso:jeo,kso:keo)
       case ('eint')
         wa(iso:ieo,jso:jeo,kso:keo) = u(iena,iso:ieo,jso:jeo,kso:keo) &
-	                            - 0.5*(u(imxa,iso:ieo,jso:jeo,kso:keo)**2 &  
+                                    - 0.5*(u(imxa,iso:ieo,jso:jeo,kso:keo)**2 &
                                           +u(imya,iso:ieo,jso:jeo,kso:keo)**2 &
                                           +u(imza,iso:ieo,jso:jeo,kso:keo)**2)/u(idna,iso:ieo,jso:jeo,kso:keo)
 #endif /* ISO */
@@ -463,34 +463,34 @@ module dataio
 
       case ('omga')
         do ibe=iso,ieo
-	  do jbe=jso,jeo
+          do jbe=jso,jeo
             wa(ibe,jbe,kso:keo) = (u(imya,ibe,jbe,kso:keo) / u(idna,ibe,jbe,kso:keo) * x(ibe) &
-	                         - u(imxa,ibe,jbe,kso:keo) / u(idna,ibe,jbe,kso:keo) * y(jbe))/(x(ibe)**2+y(jbe)**2)
-	  enddo
-	enddo
+                                 - u(imxa,ibe,jbe,kso:keo) / u(idna,ibe,jbe,kso:keo) * y(jbe))/(x(ibe)**2+y(jbe)**2)
+          enddo
+        enddo
 
       case ('vrot')
         do ibe=iso,ieo
-	  do jbe=jso,jeo
+          do jbe=jso,jeo
             wa(ibe,jbe,kso:keo) = (u(imya,ibe,jbe,kso:keo) / u(idna,ibe,jbe,kso:keo) * x(ibe) &
-	                         - u(imxa,ibe,jbe,kso:keo) / u(idna,ibe,jbe,kso:keo) * y(jbe))/sqrt(x(ibe)**2+y(jbe)**2)
-	  enddo
-	enddo
+                                 - u(imxa,ibe,jbe,kso:keo) / u(idna,ibe,jbe,kso:keo) * y(jbe))/sqrt(x(ibe)**2+y(jbe)**2)
+          enddo
+        enddo
 
       case ('vout')
         do ibe=iso,ieo
-	  do jbe=jso,jeo
+          do jbe=jso,jeo
             wa(ibe,jbe,kso:keo) = (u(imxa,ibe,jbe,kso:keo) / u(idna,ibe,jbe,kso:keo) * x(ibe) &
-	                         + u(imya,ibe,jbe,kso:keo) / u(idna,ibe,jbe,kso:keo) * y(jbe))/sqrt(x(ibe)**2+y(jbe)**2)
-	  enddo
-	enddo
+                                 + u(imya,ibe,jbe,kso:keo) / u(idna,ibe,jbe,kso:keo) * y(jbe))/sqrt(x(ibe)**2+y(jbe)**2)
+          enddo
+        enddo
 
       case ('dcol')
         do ibe=iso,ieo
-	  do jbe=jso,jeo
+          do jbe=jso,jeo
             wa(ibe,jbe,kso:keo) = sum(u(idna,ibe,jbe,kso:keo))*(z(kso)-z(kso-1))
-	  enddo
-	enddo
+          enddo
+        enddo
 
 #ifndef ISO
       case ('csnd')
@@ -1411,7 +1411,7 @@ module dataio
     use arrays, only : is,ie,js,je,ks,ke,u,b,idna,imxa,imya,imza, wa, &
          ibx,iby,ibz,x,y,z,wa
 #ifdef COSM_RAYS
-    use arrays, only : iecr	 
+    use arrays, only : iecr
 #endif /* COSM_RAYS */	 
     use grid, only  : dvol,dx,dy,dz 
     use start, only : proc, dt, t, nstep, nrestart,nxd,nyd,nzd
@@ -1576,9 +1576,9 @@ module dataio
                       vx_max, vy_max, vz_max, va_max, cs_max, &
                       dens_min, dens_max, pres_min, pres_max, &
 #ifndef ISO	  
-	              temp_min, temp_max,  &
+                      temp_min, temp_max,  &
 #endif /* ISO */
-	              b_min, b_max 
+                      b_min, b_max
       close(tsl_lun)
     endif
 
@@ -1599,8 +1599,8 @@ module dataio
     use start, only : t,dt,nstep,sleep_minutes,sleep_seconds, smallei,nb, &
          gamma,cfl
 #ifdef COSM_RAYS
-    use start, only  : dt_cr	 
-    use arrays, only : iecr	 
+    use start, only  : dt_cr
+    use arrays, only : iecr
 #endif /* COSM_RAYS */	 	 
 #ifdef ISO
     use start, only : csi2,c_si
