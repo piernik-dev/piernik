@@ -87,7 +87,7 @@ contains
     use start, only : dt
     implicit none
 
-    integer i,j,k,ic,jc,kc, isn
+    integer isn
     real, dimension(3) :: snpos
     real, dimension(2) :: dtime
     integer, dimension(2) :: SNno, pot
@@ -127,7 +127,7 @@ contains
 #endif /* VERBOSE */
       call add_explosion(snposarray(isn,:))
 #ifdef VERBOSE
-      write(*,*) 'added ',isn,'. SN of ',sum(SNno,1)
+      if(proc .eq. 0) write(*,*) 'added ',isn,'. SN of ',sum(SNno,1)
 #endif /* VERBOSE */
     enddo
 
@@ -303,10 +303,9 @@ endif
       function gasdev(x,y)
 
       implicit none
-      integer idum
       real x, y, x1, y1,  r
       real gasdev, rand(2)
-      real fac,rsq
+      real fac
       real, save :: gset
       integer, save :: iset, irand
  
