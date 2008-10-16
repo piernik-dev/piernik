@@ -29,6 +29,8 @@ contains
 !=======================================================================
 
 
+      decr3=0.0
+      b3b = 0.0
       do 30 k=ks,ke
         do 20 j=js,je
           do 10 i=is,ie+1
@@ -103,6 +105,8 @@ contains
 !=======================================================================
 !
 
+      decr3=0.0
+      b3b = 0.0
       do 30 k=ks,ke
         do 20 j=js,je+1
           do 10 i=is,ie
@@ -229,8 +233,8 @@ contains
 
   subroutine div_v
     implicit none
-    real, dimension(nx)  :: dvx,dvy,dvz, tmp
-    integer i,j,k
+    real, dimension(nx)  :: tmp
+    integer j,k
 
     wa(:,:,:) = 0.0
     if(dimensions .eq. '2dxy') then

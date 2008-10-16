@@ -27,7 +27,7 @@ module hydrostatic
       integer nstot
       real, allocatable ::  zs(:), dprofs(:), gprofs(:), gpots(:)
       integer ksub, ksmid, k, ia, ja
-      real z1,z2, dzs, factor
+      real dzs, factor
       
       REAL cd, cdold,  dold, dmid, ddmid, dcol_dens,a,b
       integer iter, itermx
@@ -137,7 +137,7 @@ module hydrostatic
       eprof(:) = c_si**2/(gamma-1.0) * dprof(:)
 #endif /* ISO */
 
-888  format('Midplane density =',f10.4,2x,'Column density =', e10.4,2x,'iter=',i4 )      
+!888  format('Midplane density =',f10.4,2x,'Column density =', e10.4,2x,'iter=',i4 )      
 #endif /* GALAXY || GALACTIC_DISK */
 
     deallocate(zs,dprofs,gprofs,gpots)
@@ -145,8 +145,6 @@ module hydrostatic
 
     return
 
-
-999 format((1x,i4),10(1x,e10.4))
 
       end subroutine hydrostatic_zeq
 
@@ -169,9 +167,7 @@ module hydrostatic
       integer nstot
       real, allocatable ::  zs(:), gprofs(:), dprofs(:), eprofs(:), tprofs(:), cprofs(:), bprofs(:), cfuncs(:)
       integer ksub, ksmid, k
-      real z1,z2, dzs, factor, gravz, tmp, dtmpdz,zz(1),gg(1)
-      real csim2  
-      real tune
+      real dzs, gravz, tmp, dtmpdz,zz(1),gg(1)
 
       ia = max(1, ia)
       ia = min(nx,ia)
@@ -281,8 +277,6 @@ module hydrostatic
 
     return
 
-
-999 format((1x,i4),10(1x,e10.4))
 
       end subroutine hydro_thermal_zeq
 #endif /* GRAV */

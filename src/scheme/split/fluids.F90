@@ -19,7 +19,6 @@ module fluids     ! split fluids
     real, dimension(3,nx)  :: b_x
     real, dimension(nu,nx) :: u_x
     integer :: j,k,jp,kp
-    real    :: yj,zk
   
     b_x = 0.0
     u_x = 0.0
@@ -67,8 +66,7 @@ module fluids     ! split fluids
     real, dimension(3,ny)  :: b_y
     real, dimension(nu,ny) :: u_y
     
-    integer :: i,j,k,ip,jp,kp
-    real    :: xi,zk
+    integer :: i,k,ip,kp
  
     b_y = 0.0
     u_y = 0.0
@@ -119,8 +117,7 @@ module fluids     ! split fluids
     real, dimension(3,nz)  :: b_z
     real, dimension(nu,nz) :: u_z
     
-    integer :: i,j,k,ip,jp,kp
-    real    :: xi,yj
+    integer :: i,j,ip,jp
 
     b_z = 0.0
     u_z = 0.0

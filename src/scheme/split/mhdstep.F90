@@ -41,7 +41,6 @@ module mod_mhdstep   ! SPLIT
 subroutine mhdstep
     
   implicit none
-  real tmp
 
   call timestep
 

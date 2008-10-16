@@ -163,15 +163,21 @@ allocate(gpotdisk(nx,ny,nz),gpothalo(nx,ny,nz),gpotbulge(nx,ny,nz))
     integer, intent(in)   :: i1, i2                   ! 
     integer,intent(in)    :: n
     logical, optional     :: temp_log
-    real, dimension(n)    :: xsw, x3, rc,fr,gr
+    real, dimension(n)    :: xsw
     real, dimension(n),intent(out) :: gpot
        character, intent(inout) :: status*9
+#if defined GRAV_PTMASS || defined GRAV_PTFLAT
        real                  :: x1, x2
-       
+       real, dimension(n)    :: x3, rc, fr
+#endif /* GRAV_PTMASS || GRAV_PTFLAT */       
        real, dimension(n)	  :: rgcv, rgsv
+#ifdef GRAV_GAL_FERRIERE
        real aconst, bconst, cconst, flat, omega, g_shear_rate
+#endif /* GRAV_GAL_FERRIERE */
+#if defined GRAV_GAL_VOLLMER || defined GRAV_GAL_FERRIERE
+       integer i
+#endif /* GRAV_GAL_VOLLMER || GRAV_GAL_FERRIERE */
        real rgcs, seccoord, zet
-       integer i,ierr
        real, allocatable :: gpdisk(:), gphalo(:), gpblg(:)
        real Mhalo,Mbulge,Mdisk,ahalo,bbulge,adisk,bdisk
        
@@ -384,31 +390,30 @@ allocate(gpotdisk(nx,ny,nz),gpothalo(nx,ny,nz),gpotbulge(nx,ny,nz))
 #ifdef GRAV_GALACTIC
     use start, only : r_gc
 #endif /* GRAV_GALACTIC */
-#ifdef GRAV_PTMASS
+#if defined GRAV_PTMASS || GRAV_PTFLAT
     use start, only : r_smooth,csim2,ptm_x,ptm_y,ptm_z,ptmass,n_gravr,h_grav,r_grav,smalld
-#endif /* GRAV_PTMASS */
-#ifdef GRAV_PTFLAT
-    use start, only : r_smooth,csim2,ptm_x,ptm_y,ptm_z,ptmass,n_gravr,h_grav,r_grav,smalld
-#endif /* GRAV_PTFLAT */
+#endif /* GRAV_PTMASS || GRAV_PTFLAT */
     implicit none
     character, intent(in) :: sweep*6
     integer, intent(in)   :: i1, i2
     integer, intent(in)   :: n
     real, dimension(:)    :: xsw
-!DW+
-    real, dimension(n)    :: rgcv
-!DW-
     real, dimension(n),intent(out) :: grav
-    
     real                  :: x1, x2
+#if defined GRAV_PTMASS || defined GRAV_PTFLAT
     real, dimension(n)    :: r, r32
-!DW+
-    real rstar
-    real aconst, bconst, cconst, flat, omega, g_shear_rate
-    real rgcs
-!DW-
-    
+#endif /* GRAV_PTMASS || GRAV_PTFLAT */
+#if defined GRAV_GALACTIC_DW || defined GRAV_GAL_FLAT || defined GRAV_GALSMOOTH
+    real aconst, bconst, cconst, flat, g_shear_rate, omega, rgcs, rstar
+    real, dimension(n)    :: rgcv
+#endif /* GRAV_GALACTIC_DW  || GRAV_GAL_FLAT || GRAV_GALSMOOTH */
+#if defined GRAV_GALSMTDEC || defined GRAV_GALDCZTOX || defined GRAV_GALSMINCR
+    real aconst, bconst, cconst, flat, g_shear_rate, omega, rgcs, rstar
+    real, dimension(n)    :: rgcv
+#endif /* GRAV_GALSMTDEC  || GRAV_GALDCZTOX || GRAV_GALSMINCR */
+#ifdef GRAV_GALSMOOTH    
     integer i
+#endif /* GRAV_GALSMOOTH */
 
     select case (sweep)
       case('xsweep') 
@@ -779,8 +784,8 @@ allocate(gpotdisk(nx,ny,nz),gpothalo(nx,ny,nz),gpotbulge(nx,ny,nz))
     integer               :: i, j, k, ip, pgpmax
     real, allocatable     :: gpwork(:,:,:)
     real gravrx(nx), gravry(ny), gravrz(nz)
-    real                  :: gp_max, dgp(3), dgp0
-    integer, dimension(3) :: loc_gp_max, gploc
+    real                  :: gp_max
+    integer, dimension(3) :: loc_gp_max
     integer               :: proc_gp_max
     integer               :: px, py, pz, pc(3)
     real dgpx_proc, dgpx_all(0:nproc-1), &

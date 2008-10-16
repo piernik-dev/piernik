@@ -236,7 +236,7 @@ module sn_distr
       real, dimension(3) :: snpos
       real, dimension(4) :: los4
       real :: radius, azym
-      integer ii, i
+      integer ii
 !      real rand
 !      external rand
 

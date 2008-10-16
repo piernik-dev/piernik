@@ -1,4 +1,5 @@
 #!/usr/bin/perl
+# $Id$
 #
 # Usage: makemake {<program name> {<F90 compiler or fc or f77 or cc or c>}}
 #
@@ -44,13 +45,15 @@ copy($defs,"obj/piernik.def");
 open (defs) or die "Can't open the file piernik.def!";
 @fdefs = <defs>;
 @d = grep (/define/,@fdefs);
-@u = grep (/unitsystem/,@d);
-if( grep { /STANDARD/ } @u) {push(@addons, "../src/unitsystems/standard/constants.F90");}
-if( grep { /PSM/ } @u) {push(@addons, "../src/unitsystems/psm/constants.F90");}
-if( grep { /PGM/ } @u) {push(@addons, "../src/unitsystems/pgm/constants.F90");}
-if( grep { /CGS/ } @u) {push(@addons, "../src/unitsystems/cgs/constants.F90");}
-if( grep { /SI/ } @u) {push(@addons, "../src/unitsystems/SI/constants.F90");}
-if( grep { /DMY/ } @u) {push(@addons, "../src/unitsystems/dmy/constants.F90");}
+if( grep { /HDF5/ }  @d) {
+#do nothing, base is ok
+} else {
+for (@base) {
+    if(/hdf5/) {
+    $_ = substr($_, 1, 26)
+    }
+}
+}
 if( grep { /GRAV/ }  @d) {
    push(@addons, "../src/gravity/gravity.F90");
    push(@addons, "../src/gravity/hydrostatic.F90");
@@ -123,10 +126,24 @@ print MAKEFILE "LIBS = -L\$(HDF_LIB) -L\${MHDF_LIB} -lmfhdf -ldf -ljpeg -lz\n\n"
 #
 # make
 #
-print MAKEFILE "all: \$(PROG)\n\n";
+print MAKEFILE "all: date \$(PROG) \n\n";
 print MAKEFILE "\$(PROG): \$(OBJS)\n";
 print MAKEFILE "\t\$(", &LanguageCompiler($ARGV[1], @srcs);
 print MAKEFILE ") \$(LDFLAGS) -o \$@ \$(OBJS) \$(LIBS)\n\n";
+#
+# make date
+#
+print MAKEFILE "date: \n";
+print MAKEFILE "\trm -f env.*\n";
+print MAKEFILE "\tcp ../src/base/env.F90 .\n";
+print MAKEFILE "\thead -n 1 *.F90 | grep Id > env.dat\n";
+print MAKEFILE "\tcat piernik.def >> env.dat\n";
+print MAKEFILE "\twc -l env.dat | awk '{print \"\tinteger, parameter :: nenv = \"\$\$1\"+1\"}' - >> env.F90\n";
+print MAKEFILE "\techo \"   character*128, dimension(nenv) :: env = (/ &\" >> env.F90\n";
+print MAKEFILE "\tawk '{printf(\"\\t\\t \\\" %s \\\" ,&\\n\",\$\$0)}' env.dat >> env.F90\n";
+print MAKEFILE "\techo '      \" \" /)' >> env.F90\n";
+print MAKEFILE "\techo 'end module comp_log' >> env.F90\n\n";
+
 #
 # make clean
 #

@@ -27,7 +27,7 @@ module sn_sources
       use constants, only : small
 
       implicit none 
-      real :: dt_sn, t_dw1
+      real :: dt_sn
       real, dimension(2) :: orient
       real, dimension(3) :: snpos
       integer :: isn, nsn_per_timestep
@@ -237,12 +237,14 @@ module sn_sources
       use arrays, only : y,js,je
       use grid,   only : dy
       use start,  only : nyd
+
+      integer :: jsn,jremap 
+      real :: dysn
 #endif /* SHEAR */
     
       real, dimension(3), intent(out) :: pos
       real, dimension(4) :: rand
-      integer :: jsn,jremap 
-      real :: dysn,xsn,ysn,zsn,znorm
+      real :: xsn,ysn,zsn,znorm
 
       call random_number(rand)
       xsn = xmin+ Lx*rand(1)

@@ -59,15 +59,17 @@ module tv ! split orig
     implicit none
     integer :: i1,i2, n, istep
     real    :: dt,dx,dtx
-    real, dimension(nu,n) :: u,cfr,ul,ur
+    real, dimension(nu,n) :: u,cfr
     real, dimension(3,n)  :: bb
-    real, dimension(n)    :: gravl,gravr,rotfr,vx,vxr
+    real, dimension(n)    :: gravl,gravr,rotfr,vx
     real, dimension(n)    :: dgrp,dgrm,dglp,dglm
-
+#ifdef SHEAR
+    real, dimension(n)    :: vxr
+#endif /* SHEAR */
     character sweep*6
 
 !locals
-    real, dimension(nu,n) :: w,fr,fl,flux,dfrp,dfrm,dflm,dflp,dulf,durf
+    real, dimension(nu,n) :: w,fr,fl,dfrp,dfrm,dflm,dflp,dulf,durf
     real, dimension(nu,n) :: ul0,ur0,u1,ul1,ur1
 #ifndef ISO
     real, dimension(n)    :: ekin,eint,emag
@@ -76,7 +78,7 @@ module tv ! split orig
     real, dimension(nu,n) :: duls,durs
 #endif /* GRAV */
 #ifdef COSM_RAYS
-    real, dimension(n)    :: divv,decr,gpcr,ecr,tmp
+    real, dimension(n)    :: divv,decr,gpcr,ecr
 #endif /* COSM_RAYS */
 
 
