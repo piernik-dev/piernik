@@ -136,6 +136,10 @@ module sn_sources
     real :: xx, yy, zz, x, y, z, r, rc, sint
     real :: Aphi
     integer :: nx,ny,nz,i,j,k
+    integer, dimension(2) :: amp_fac
+    
+    amp_fac(1) =  1
+    amp_fac(2) = -1
 
     rmk = r_sn
     
@@ -195,7 +199,7 @@ module sn_sources
                   rc   = sqrt(x**2 + y**2)
                   sint = rc/(r+small)
 
-                  Aphi =  real(2*kpm-howmulti-1)*amp_dip_sn * r*sint / (rmk**2 + r**2 + 2.*rmk*r*sint)**1.5
+                  Aphi =  real(amp_fac(kpm))*amp_dip_sn * r*sint / (rmk**2 + r**2 + 2.*rmk*r*sint)**1.5
                   temp1 = -1.0 *Aphi* y / (rc+small)
                   temp2 = Aphi * x / (rc+small)
 	   
@@ -215,7 +219,7 @@ module sn_sources
 
     b(ibx,1:nx,  1:ny-1,1:nz-1) = b(ibx,1:nx,  1:ny-1,1:nz-1) + &
            (A(3,1:nx,2:ny,1:nz-1) - A(3,1:nx,1:ny-1,1:nz-1))/dy - &
-           (A(2,1:nx,1:ny,2:nz  ) - A(2,1:nx,1:ny,  1:nz-1))/dz
+           (A(2,1:nx,1:ny-1,2:nz) - A(2,1:nx,1:ny-1,1:nz-1))/dz
 
     b(iby,1:nx-1,1:ny,  1:nz-1) = b(iby,1:nx-1,1:ny,  1:nz-1) + &
            (A(1,1:nx-1,1:ny,2:nz) - A(1,1:nx-1,1:ny,1:nz-1))/dz - &
@@ -326,15 +330,14 @@ module sn_sources
 !      ///////    F R O M   N U M E R I C A L   R E C I P E S   \\\\\\\
 !
 !=======================================================================
-
+! idum and rsq variables were moved out due to being unused
 
       function gasdev(x,y)
 
       implicit none
-      integer idum
       real x, y, x1, y1,  r
       real gasdev, rand(2)
-      real fac,rsq
+      real fac
       real, save :: gset
       integer, save :: iset, irand
  
