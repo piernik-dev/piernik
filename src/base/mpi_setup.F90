@@ -53,15 +53,14 @@
  contains
 
 !-----------------------------------------------------------------------------
-
   subroutine mpistart
 
     implicit none
     integer iproc
     
-    character*(80) :: cwd_proc,  cwd_all (0:1024)
-    character*(8)  :: host_proc, host_all(0:1024)
-    integer        :: pid_proc,  pid_all (0:1024)
+    character*(80) :: cwd_proc,  cwd_all (0:4096)
+    character*(8)  :: host_proc, host_all(0:4096)
+    integer        :: pid_proc,  pid_all (0:4096)
     
     integer(kind=1)  :: getcwd, getpid, hostnm
     character par_file*(100), tmp_log_file*(100)
