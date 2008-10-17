@@ -219,12 +219,12 @@ module sn_distr
                if(add_ener .eq. 'yes') write(*,'(a19,e15.8,a4)') ' energy injection: ',eneradd/erg,' erg'
                if(add_encr .eq. 'yes') write(*,'(a19,e15.8,a4)') 'CR energy inject.: ',encradd/erg,' erg'
 #endif /* VERBOSE */
-#ifdef DIPOLS
-               call magn_multipole_sn(rand_angles(),snpos)
-#endif /* DIPOLS */  
             endif
          endif
       endif
+#ifdef DIPOLS
+      call magn_multipole_sn(rand_angles(),snpos)
+#endif /* DIPOLS */  
       return
    end subroutine add_explosion
 
