@@ -1270,13 +1270,14 @@ module dataio
     if(proc.eq. 0) then
         write(*,*)       'Reading restart  file: ', trim(file_name_disp)
     endif
-
+  if(proc==0) then
     inquire(file =log_file , exist = log_exist)
     if(file_exist .eqv. .true.) then
       open(log_lun, file=log_file, position='append')  
         write(log_lun,*) 'Reading restart  file: ', trim(file_name_disp)    
       close(log_lun)
     endif
+  endif
       
     inquire(file = file_name_res, exist = file_exist)
     if(file_exist .eqv. .false.) then
@@ -1293,7 +1294,6 @@ module dataio
       call mpistop                             
       stop
     endif
-
 
     
     sd_id = sfstart(file_name_res, 1)
