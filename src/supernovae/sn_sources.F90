@@ -186,7 +186,7 @@ module sn_sources
 
                   do jpm=-1,1
 #else
-                     ipm = 0; jpm=0
+                     ipm = 0; jpm=0; ysna = ysn
 #endif /* SHEAR */
 
                      x    = ((xx-xsn+real(ipm)*Lx)*cos_phi+(yy-ysna+real(jpm)*Ly)*sin_phi) &
