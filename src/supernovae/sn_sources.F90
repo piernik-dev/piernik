@@ -122,6 +122,7 @@ module sn_sources
 #endif /* ISO */
       real :: xx, yy, zz, x, y, z, r, rc, sint
       real :: Aphi
+      real :: sin_theta, cos_theta, sin_phi, cos_phi
       integer :: nx,ny,nz,i,j,k
       integer, dimension(2), parameter :: amp_fac = (/1,-1/)
 
@@ -133,6 +134,11 @@ module sn_sources
 
       phi   = orient(1)
       theta = orient(2)
+
+      sin_theta = sin(theta)
+      cos_theta = cos(theta)
+      sin_phi = sin(phi)
+      cos_phi = cos(phi)
 
       nx = size(b,2)
       ny = size(b,3)
@@ -167,7 +173,11 @@ module sn_sources
                zz = zl(k)
  
                A(:,i,j,k) = 0.0
-
+             !>
+             !! \todo Following lines are also needed for strict periodic domain,
+             !! and corner-periodic boundaries. It's only temporary solution!!!
+             !<
+#ifdef SHEAR
                do ipm=-1,1
 
                   if(ipm .eq. -1) ysna = ysno
@@ -175,12 +185,15 @@ module sn_sources
                   if(ipm .eq.  1) ysna = ysni
 
                   do jpm=-1,1
+#else
+                     ipm = 0; jpm=0
+#endif /* SHEAR */
 
-                     x    = ((xx-xsn+real(ipm)*Lx)*cos(phi)+(yy-ysna+real(jpm)*Ly)*sin(phi)) &
-                             *cos(theta)-(zz-zsn)*sin(theta) 
-                     y    = ((yy-ysna+real(jpm)*Ly)*cos(phi)-(xx-xsn+real(ipm)*Lx)*sin(phi))
-                     z    = ((xx-xsn+real(ipm)*Lx)*cos(phi)+(yy-ysna+real(jpm)*Ly)*sin(phi)) &
-                             *sin(theta)+(zz-zsn)*cos(theta) 
+                     x    = ((xx-xsn+real(ipm)*Lx)*cos_phi+(yy-ysna+real(jpm)*Ly)*sin_phi) &
+                             *cos_theta-(zz-zsn)*sin_theta 
+                     y    = ((yy-ysna+real(jpm)*Ly)*cos_phi-(xx-xsn+real(ipm)*Lx)*sin_phi)
+                     z    = ((xx-xsn+real(ipm)*Lx)*cos_phi+(yy-ysna+real(jpm)*Ly)*sin_phi) &
+                             *sin_theta+(zz-zsn)*cos_theta 
                 
                         do kpm=1,howmulti
                 
@@ -191,13 +204,15 @@ module sn_sources
                            temp1 = -1.0 *Aphi* y / (rc+small)
                            temp2 = Aphi * x / (rc+small)
   
-                           A(1,i,j,k) = A(1,i,j,k) + temp1*cos(theta)*cos(phi) - temp2*sin(phi)
-                           A(2,i,j,k) = A(2,i,j,k) + temp1*cos(theta)*sin(phi) + temp2*cos(phi)
-                           A(3,i,j,k) = A(3,i,j,k) - temp1*sin(theta)
+                           A(1,i,j,k) = A(1,i,j,k) + temp1*cos_theta*cos_phi - temp2*sin_phi
+                           A(2,i,j,k) = A(2,i,j,k) + temp1*cos_theta*sin_phi + temp2*cos_phi
+                           A(3,i,j,k) = A(3,i,j,k) - temp1*sin_theta
 
                         enddo ! kpm
+#ifdef SHEAR
                   enddo ! jpm
                enddo ! ipm
+#endif /* SHEAR */
             enddo
          enddo
       enddo
