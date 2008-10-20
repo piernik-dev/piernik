@@ -121,7 +121,7 @@ module sn_sources
       real, dimension(:,:,:), allocatable :: ekin,eint
 #endif /* ISO */
       real :: xx, yy, zz, x, y, z, r, rc, sint
-      real :: Aphi
+      real :: Aphi, r_aux
       real :: sin_theta, cos_theta, sin_phi, cos_phi
       integer :: nx,ny,nz,i,j,k
       integer, dimension(2), parameter :: amp_fac = (/1,-1/)
@@ -185,22 +185,30 @@ module sn_sources
                   if(ipm .eq.  1) ysna = ysni
 
                   do jpm=-1,1
-#else
-                     ipm = 0; jpm=0; ysna = ysn
-#endif /* SHEAR */
-
                      x    = ((xx-xsn+real(ipm)*Lx)*cos_phi+(yy-ysna+real(jpm)*Ly)*sin_phi) &
                              *cos_theta-(zz-zsn)*sin_theta 
                      y    = ((yy-ysna+real(jpm)*Ly)*cos_phi-(xx-xsn+real(ipm)*Lx)*sin_phi)
                      z    = ((xx-xsn+real(ipm)*Lx)*cos_phi+(yy-ysna+real(jpm)*Ly)*sin_phi) &
                              *sin_theta+(zz-zsn)*cos_theta 
                 
+#else
+!                    ipm = 0; jpm=0; ysna = ysn
+                     x    = ((xx-xsn)*cos_phi+(yy-ysn)*sin_phi) * cos_theta-(zz-zsn)*sin_theta 
+                     y    = ((yy-ysn)*cos_phi-(xx-xsn)*sin_phi)
+                     z    = ((xx-xsn)*cos_phi+(yy-ysn)*sin_phi) * sin_theta+(zz-zsn)*cos_theta          
+#endif /* SHEAR */
                         do kpm=1,howmulti
                 
                            r    = sqrt(x**2 + y**2 + (z+real(2*kpm-howmulti-1)*rmk)**2)
                            rc   = sqrt(x**2 + y**2)
                            sint = rc/(r+small)
-                           Aphi =  real(amp_fac(kpm)) * amp_dip_sn * r*sint / (rmk**2 + r**2 + 2.*rmk*r*sint)**1.5
+
+                           r_aux = 1.0 / (rmk**2 + r**2 + 2.*rmk*r*sint)
+                           r_aux = r_aux*r_aux*r_aux
+                           r_aux = sqrt(r_aux)
+
+!                          Aphi =  real(amp_fac(kpm)) * amp_dip_sn * r*sint / (rmk**2 + r**2 + 2.*rmk*r*sint)**1.5
+                           Aphi =  real(amp_fac(kpm)) * amp_dip_sn * r*sint * r_aux
                            temp1 = -1.0 *Aphi* y / (rc+small)
                            temp2 = Aphi * x / (rc+small)
   
