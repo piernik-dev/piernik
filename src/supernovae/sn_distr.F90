@@ -83,13 +83,21 @@ module sn_distr
    subroutine supernovae_distribution
       use mpi_setup
       use start, only : dt
+      use arrays, only : b,nx,ny,nz,ibx,iby,ibz
+      use grid, only : dx,dy,dz
       implicit none
 
       integer :: isn
       real, dimension(3) :: snpos
       real, dimension(2) :: dtime
       integer, dimension(2) :: SNno, pot
+      integer :: fl
       real, allocatable, dimension(:,:) :: snposarray
+      real, dimension(:,:,:,:), allocatable :: A
+#ifndef ISO
+      real, dimension(:,:,:), allocatable :: ekin,eint
+#endif /* ISO */
+
     
 
       SNno(:)=0
@@ -123,7 +131,39 @@ module sn_distr
 #ifdef VERBOSE
          if(isn .gt. SNno(1)) itype = 2
 #endif /* VERBOSE */
-         call add_explosion(snposarray(isn,:))
+         if(isn==1) then 
+            allocate(A(3,nx,ny,nz))
+            A(:,:,:,:) = 0.0
+#ifndef ISO            
+            allocate(eint(nx,ny,nz))
+            allocate(ekin(nx,ny,nz))
+            ekin(:,:,:) = 0.5*( u(imxa,:,:,:)**2 + u(imya,:,:,:)**2 + u(imza,:,:,:) )**2 / u(idna,:,:,:)
+            eint(:,:,:) = max( u(iena,:,:,:) - ekin -  0.5*(b(ibx,:,:,:)**2 + b(iby,:,:,:)**2 + &
+                               b(ibz,:,:,:)**2) , smallei)
+#endif /* ISO */
+         endif
+         call add_explosion(snposarray(isn,:),A)
+         if(isn==sum(SNno,1)) then
+            b(ibx,1:nx,  1:ny-1,1:nz-1) = b(ibx,1:nx,  1:ny-1,1:nz-1) + &
+               (A(3,1:nx,2:ny,1:nz-1) - A(3,1:nx,1:ny-1,1:nz-1))/dy - &
+               (A(2,1:nx,1:ny-1,2:nz) - A(2,1:nx,1:ny-1,1:nz-1))/dz
+
+            b(iby,1:nx-1,1:ny,  1:nz-1) = b(iby,1:nx-1,1:ny,  1:nz-1) + &
+               (A(1,1:nx-1,1:ny,2:nz) - A(1,1:nx-1,1:ny,1:nz-1))/dz - &
+               (A(3,2:nx,1:ny,1:nz-1) - A(3,1:nx-1,1:ny,1:nz-1))/dx
+
+            b(ibz,1:nx-1,1:ny-1,1:nz  ) = b(ibz,1:nx-1,1:ny-1,1:nz  ) + & 
+               (A(2,2:nx,1:ny-1,1:nz) - A(2,1:nx-1,1:ny-1,1:nz))/dx - &
+               (A(1,1:nx-1,2:ny,1:nz) - A(1,1:nx-1,1:ny-1,1:nz))/dy
+
+            deallocate(A)
+#ifndef ISO
+            u(iena,:,:,:) = eint + ekin + 0.5*(b(1,:,:,:)**2 + &
+                 b(2,:,:,:)**2 + b(3,:,:,:)**2)
+
+            deallocate(ekin,eint)
+#endif
+         endif
 #ifdef VERBOSE
          if(proc .eq. 0) write(*,*) 'added ',isn,'. SN of ',sum(SNno,1)
 #endif /* VERBOSE */
@@ -135,7 +175,7 @@ module sn_distr
 
 !------------------------------------------------
 
-   subroutine add_explosion(snpos)
+   subroutine add_explosion(snpos,A)
       use arrays, only: nx,ny,nz,x,y,z,nxb,nyb,nzb,xdim,ydim,zdim,dl,u
       use grid, only: xminb,xmaxb,yminb,ymaxb,zminb,zmaxb,dx,dy,dz
       use start, only: r0sn,nb,add_mass,add_ener,add_encr
@@ -151,7 +191,8 @@ module sn_distr
       real, dimension(3) :: snpos
       real    :: r1sn
       real    :: massadd,eneradd,encradd,normscal,normvalu
-      integer :: ic,jc,kc,i,j,k
+      real, dimension(:,:,:,:) :: A
+      integer :: ic,jc,kc,i,j,k, fl
       real    :: e_sn, amp_sn, amp_cr 
   
   
@@ -219,12 +260,12 @@ module sn_distr
                if(add_ener .eq. 'yes') write(*,'(a19,e15.8,a4)') ' energy injection: ',eneradd/erg,' erg'
                if(add_encr .eq. 'yes') write(*,'(a19,e15.8,a4)') 'CR energy inject.: ',encradd/erg,' erg'
 #endif /* VERBOSE */
+#ifdef DIPOLS
+               call magn_multipole_sn(rand_angles(),snpos,A)
+#endif /* DIPOLS */  
             endif
          endif
       endif
-#ifdef DIPOLS
-      call magn_multipole_sn(rand_angles(),snpos)
-#endif /* DIPOLS */  
       return
    end subroutine add_explosion
 
