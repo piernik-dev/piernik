@@ -1565,7 +1565,7 @@ module dataio
                       t, dt, tot_mass, &
                       tot_momx, tot_momy, tot_momz, tot_amomz, &
                       tot_ener, tot_epot, tot_eint, tot_ekin, tot_emag, &
-                      mflx, mfly, mflz, &
+                      tot_mflx, tot_mfly, tot_mflz, &
 #ifdef COSM_RAYS
                       tot_encr, encr_min, encr_max, & 
 #endif /* COSM_RAYS */
