@@ -52,14 +52,13 @@ subroutine bnd_u(dim)
   character(len=*) :: dim 
   integer ib
   
-  real, dimension(nx,ny) :: db, ekb, eib, csi2b
-  integer kb, ksub
 #ifdef GRAV
+  integer kb, ksub
+  real, dimension(nx,ny) :: db, ekb, eib, csi2b
   real, dimension(nsub+1):: zs, dprofs, gprofs
+  real dzs, factor, z1, z2
 #endif /* GRAV */
-  real dzs, factor
   integer i,j
-  real z1,z2
   integer ireq
   real, allocatable :: send_left(:,:,:,:),recv_left(:,:,:,:)
 #ifdef SHEAR_MPI
