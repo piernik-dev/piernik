@@ -1434,6 +1434,9 @@ module dataio
 #ifdef COSM_RAYS
     use arrays, only : iecr
 #endif /* COSM_RAYS */
+#ifdef SNE_DISTR
+    use sn_distr, only : emagadd, tot_emagadd
+#endif /* SNE_DISTR */
    
     implicit none
     integer i,j
@@ -1446,10 +1449,11 @@ module dataio
             tot_ener = 0.0, tot_eint = 0.0, tot_ekin = 0.0, tot_emag = 0.0, &
             tot_epot = 0.0, tot_encr = 0.0, mflx = 0.0, mfly = 0.0, mflz = 0.0, &
             tot_mflx = 0.0, tot_mfly = 0.0, tot_mflz = 0.0
-!DW+
     real :: amomz = 0.0 
     real :: tot_amomz = 0.0
-!DW-
+#ifdef SNE_DISTR
+	 real :: sum_emagadd = 0.0
+#endif /* SNE_DISTR */
 !- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 !
     if (proc .eq. 0) then
@@ -1475,6 +1479,9 @@ module dataio
 #ifndef ISO	 
                                            'temp_min', 'temp_max',  &
 #endif /* ISO */
+#ifdef SNE_DISTR
+                      							 'sum_emagadd', 'tot_emagadd', &
+#endif /* SNE_DISTR */
                                            'b_min', 'b_max' 
                                            
 
@@ -1557,7 +1564,10 @@ module dataio
     encr = sum(u(iecr,is:ie,js:je,ks:ke)) * dvol
     call mpi_allreduce(encr, tot_encr, 1, mpi_real8, mpi_sum, comm3d, ierr)
 #endif /* COSM_RAYS */
-
+#ifdef SNE_DISTR
+    call mpi_allreduce(emagadd, sum_emagadd, 1, mpi_real8, mpi_sum, comm3d, ierr)
+	 tot_emagadd = tot_emagadd + sum_emagadd
+#endif /* SNE_DISTR */
 
     if (proc .eq. 0) then
       write (tsl_lun, '(1x,i8,50(1x,1pe15.8))') &
@@ -1578,6 +1588,9 @@ module dataio
 #ifndef ISO	  
                       temp_min, temp_max,  &
 #endif /* ISO */
+#ifdef SNE_DISTR
+                      sum_emagadd, tot_emagadd, &
+#endif /* SNE_DISTR */
                       b_min, b_max
       close(tsl_lun)
     endif

@@ -8,7 +8,7 @@ module sn_distr
 
    real, dimension(2)        :: SNtrest, SNheight, SNfreq
    real, dimension(2,1000,2) :: danta
-   real    :: MexplSN,EexplSN
+   real    :: MexplSN,EexplSN,emagadd,tot_emagadd
    integer :: r0snx,r0sny,r0snz
    integer, dimension(2)   :: SNnohistory
    integer, dimension(3)   :: rintsn
@@ -26,7 +26,9 @@ module sn_distr
       real :: RmaxI, RmaxII, rcl, rc
       integer :: i,imax
 
-      imax        = 1e3
+      emagadd     = 0.0
+		tot_emagadd = 0.0
+		imax        = 1e3
       RmaxI       = 50.0*kpc
       RmaxII      = 15.0*kpc
       SNheight(1) = 100.0*pc !325.0*pc 	!exp(-|z|/325*pc)
@@ -82,9 +84,9 @@ module sn_distr
 !===============================================================================================
    subroutine supernovae_distribution
       use mpi_setup
-      use start, only : dt
-      use arrays, only : b,nx,ny,nz,ibx,iby,ibz
-      use grid, only : dx,dy,dz
+      use start, only : dt,smallei,nb
+      use arrays, only : u,b,nx,ny,nz,ibx,iby,ibz,idna,imxa,imya,imza,iena
+      use grid, only : dx,dy,dz,dvol
       implicit none
 
       integer :: isn
@@ -140,6 +142,7 @@ module sn_distr
             ekin(:,:,:) = 0.5*( u(imxa,:,:,:)**2 + u(imya,:,:,:)**2 + u(imza,:,:,:) )**2 / u(idna,:,:,:)
             eint(:,:,:) = max( u(iena,:,:,:) - ekin -  0.5*(b(ibx,:,:,:)**2 + b(iby,:,:,:)**2 + &
                                b(ibz,:,:,:)**2) , smallei)
+				emagadd = sum(u(iena,nb+1:nx-nb,nb+1:ny-nb,nb+1:nz-nb))*dvol
 #endif /* ISO */
          endif
          call add_explosion(snposarray(isn,:),A)
@@ -160,7 +163,7 @@ module sn_distr
 #ifndef ISO
             u(iena,:,:,:) = eint + ekin + 0.5*(b(1,:,:,:)**2 + &
                  b(2,:,:,:)**2 + b(3,:,:,:)**2)
-
+				emagadd = sum(u(iena,nb+1:nx-nb,nb+1:ny-nb,nb+1:nz-nb))*dvol - emagadd
             deallocate(ekin,eint)
 #endif
          endif
@@ -233,14 +236,14 @@ module sn_distr
                                  eneradd=eneradd+EexplSN*exp(-r1sn**2/r0sn**2)*normvalu*dx*dy*dz
                               endif
 #endif /* ISO */
-#ifdef COSM_RAYS     
+#ifdef COSM_RAYS
                               if(add_encr .eq. 'yes') then
                                  e_sn = 1.0e+51*erg
                                  amp_sn = e_sn * normvalu
                                  amp_cr = cr_eff * amp_sn
-                                 
+
                                  u(iecr,i,j,k) = u(iecr,i,j,k) + amp_cr*exp(-r1sn**2/r0sn**2)
-      
+
                                  encradd=encradd+amp_cr*exp(-r1sn**2/r0sn**2)*dx*dy*dz
                               endif
 #endif /* COSM_RAYS */
