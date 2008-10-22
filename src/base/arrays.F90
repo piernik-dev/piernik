@@ -100,6 +100,10 @@ module arrays
 
   real,    allocatable, dimension(:) :: rlscal
   integer, allocatable, dimension(:) :: intscal
+#ifdef KEPLER_SUPPRESSION
+  real, allocatable, dimension(:,:,:) :: omx0, omy0
+  real, allocatable, dimension(:,:)   :: alfsup
+#endif /* KEPLER_SUPPRESSION */
 
 contains
   
@@ -261,6 +265,11 @@ contains
 !#ifdef COOL_HEAT
     deallocate(coolheat_profile)
 !#endif /* COOL_HEAT */
+#ifdef KEPLER_SUPPRESSION
+    if(allocated(alfsup)) deallocate(alfsup)
+    if(allocated(omx0)) deallocate(omx0)
+    if(allocated(omy0)) deallocate(omy0)
+#endif /* KEPLER_SUPPRESSION */
 
     deallocate(outwa,outwb,outwc)
 

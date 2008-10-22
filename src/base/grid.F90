@@ -14,11 +14,14 @@ contains
 
   subroutine grid_xyz 
     use mpi_setup
-    use start, only  : xmin,ymin,zmin,xmax,ymax,zmax, dimensions, nb
+    use start, only  : xmin,ymin,zmin,xmax,ymax,zmax, dimensions, nb, maxxyz
     use arrays, only : dl,xdim,ydim,zdim,xl,yl,zl,x,y,z,xr,yr,zr, &
        nxb,nyb,nzb,nx,ny,nz
                     
     integer i,j,k 
+
+    maxxyz = max(size(x),size(y))
+    maxxyz = max(size(z),maxxyz)
 
     xminb = xmin + real(pcoords(1))*(xmax-xmin)/real(psize(1))
     xmaxb = xmin + real(pcoords(1)+1)*(xmax-xmin)/real(psize(1))

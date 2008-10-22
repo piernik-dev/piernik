@@ -54,7 +54,9 @@ module tv ! split orig
     use arrays, only : z
     use start, only : floor_vz, ceil_vz
 #endif /* VZ_LIMITS */
-
+#ifdef KEPLER_SUPPRESSION
+    use rotsource, only : kepler_suppression
+#endif /* KEPLER_SUPPRESSION */
 
     implicit none
     integer :: i1,i2, n, istep
@@ -66,6 +68,9 @@ module tv ! split orig
 #ifdef SHEAR
     real, dimension(n)    :: vxr
 #endif /* SHEAR */
+#ifdef KEPLER_SUPPRESSION
+    real, dimension(nu,n) :: Duus
+#endif /* KEPLER_SUPPRESSION */
     character sweep*6
 
 !locals
@@ -166,6 +171,11 @@ module tv ! split orig
 
     u1 = ul1 + ur1
     u1(idna,:) = max(u1(idna,:), smalld)
+	
+#ifdef KEPLER_SUPPRESSION
+	call kepler_suppression(Duus,u,sweep,i1,i2,n,dt)
+	u1 = u1 + Duus
+#endif /* KEPLER_SUPPRESSION */
 
 #ifdef VZ_LIMITS
     if(sweep .eq. 'zsweep') then

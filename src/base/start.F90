@@ -18,7 +18,7 @@ module start
   integer nstep_start
 
   real tend
-  integer nend
+  integer nend, maxxyz
 
   real :: omega, qshear
   
@@ -70,6 +70,9 @@ module start
   real  cr_active, gamma_cr, cr_eff, beta_cr, K_cr_paral, K_cr_perp, &
         cfl_cr, amp_cr, smallecr
   real  dt_cr
+#ifdef KEPLER_SUPPRESSION
+  real  dt_supp
+#endif /* KEPLER_SUPPRESSION */
 
   real t_dw, t_arm, col_dens
   

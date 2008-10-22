@@ -45,15 +45,6 @@ copy($defs,"obj/piernik.def");
 open (defs) or die "Can't open the file piernik.def!";
 @fdefs = <defs>;
 @d = grep (/define/,@fdefs);
-if( grep { /HDF5/ }  @d) {
-#do nothing, base is ok
-} else {
-for (@base) {
-    if(/hdf5/) {
-    $_ = substr($_, 1, 26)
-    }
-}
-}
 if( grep { /GRAV/ }  @d) {
    push(@addons, "../src/gravity/gravity.F90");
    push(@addons, "../src/gravity/hydrostatic.F90");

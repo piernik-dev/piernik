@@ -33,6 +33,9 @@ module tv   ! unsplit ssp
    use start, only : omega,qshear
    use arrays, only : xr
 #endif /* SHEAR */
+#ifdef KEPLER_SUPPRESSION
+    use rotsource, only : kepler_suppression
+#endif /* KEPLER_SUPPRESSION */
 
     implicit none
     integer i1,i2, n
@@ -42,6 +45,9 @@ module tv   ! unsplit ssp
     real, dimension(3,n)  :: bb
     real, dimension(n)    :: gravl,gravr,rotfr,vxr
     real, dimension(n)    :: dgrp,dgrm,dglp,dglm
+#ifdef KEPLER_SUPPRESSION
+    real, dimension(nu,n) :: Duus
+#endif /* KEPLER_SUPPRESSION */
            
     character sweep*6
           
@@ -149,6 +155,11 @@ module tv   ! unsplit ssp
 #endif /* GRAV */
 
    u = ur + ul
+	
+#ifdef KEPLER_SUPPRESSION
+	call kepler_suppression(Duus,u,sweep,i1,i2,n,dt)
+	u = u + Duus
+#endif /* KEPLER_SUPPRESSION */
 
     return
 

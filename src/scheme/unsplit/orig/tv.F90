@@ -43,6 +43,9 @@ module tv      ! unsplit org
 #ifdef GRAV
    use gravity, only : grav_pot2accel
 #endif
+#ifdef KEPLER_SUPPRESSION
+    use rotsource, only : kepler_suppression
+#endif /* KEPLER_SUPPRESSION */
 
     implicit none
     integer i1,i2, n
@@ -51,6 +54,9 @@ module tv      ! unsplit org
     real, dimension(3,n)  :: bb,bi
     real, dimension(n)    :: gravl,gravr
     real, dimension(n)    :: dgrp,dgrm,dglp,dglm
+#ifdef KEPLER_SUPPRESSION
+    real, dimension(nu,n) :: Duus
+#endif /* KEPLER_SUPPRESSION */
            
     character sweep*6
           
@@ -144,6 +150,11 @@ module tv      ! unsplit org
 #endif /* GRAV */
 
    u = ur + ul
+	
+#ifdef KEPLER_SUPPRESSION
+	call kepler_suppression(Duus,u,sweep,i1,i2,n,dt)
+	u = u + Duus
+#endif /* KEPLER_SUPPRESSION */
 
     return
 

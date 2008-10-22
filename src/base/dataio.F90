@@ -461,6 +461,7 @@ module dataio
       case ('encr')
         wa(iso:ieo,jso:jeo,kso:keo) = u(iecr,iso:ieo,jso:jeo,kso:keo)
 #endif /* COSM_RAYS */
+
       case ('divb')
         wa(iso:ieo-1,jso:jeo-1,kso:keo-1) = &
            (b(1,iso+1:ieo, jso:jeo-1, kso:keo-1) - b(1,iso:ieo-1, jso:jeo-1, kso:keo-1))*dy*dz &
@@ -1616,7 +1617,7 @@ module dataio
 !
   subroutine  write_log
   
-    use arrays, only : wa,is,ie,js,je,ks,ke,idna,imxa,imya,imza,u,b
+    use arrays, only : wa,is,ie,js,je,ks,ke,idna,imxa,imya,imza,u,b,nx,ny,nz
     use grid, only   : dx,dy,dz,dxmn
     use constants, only : small, hydro_mass, k_B
     use start, only : t,dt,nstep,sleep_minutes,sleep_seconds, smallei,nb, &

@@ -60,8 +60,10 @@ contains
         wb(:,:,:) = eta(:,:,:)
 
         eta(:,:,:) = eta_0 + eta_1*sqrt(max(0.0,eta(:,:,:)- j_crit**2 ))
+!>
 !! \todo Following lines are splitted into separate lines because of intel and gnu dbgs
 !! shoud that be so? Is there any other solution instead splitting?
+!<
         if(dimensions .eq. '3d') then
 	  etahelp(:,:,:)  =   mshift(eta(:,:,:),xdim)
 	  etahelp = etahelp + pshift(eta(:,:,:),xdim)

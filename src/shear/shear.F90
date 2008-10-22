@@ -26,16 +26,16 @@ module shear
     real, dimension(:,:,:)          :: qty
     real, dimension(:), intent(in)  :: xx
     real ,dimension(size(xx) - 2*nb):: x
-    real, dimension(nb,size(qty,2),size(qty,3)),intent(out)           :: lb,rb
-    real, dimension(size(qty,1),size(qty,2),size(qty,3))              :: unshear_fft
+    real, dimension(nb,size(qty,2),size(qty,3)),intent(out)  :: lb,rb
+    real, dimension(size(qty,1),size(qty,2),size(qty,3))     :: unshear_fft
     integer :: nx,ny,nz,p,np
     real    :: St
 
-    integer*8 :: planf,planb
+    integer(kind=8) :: planf,planb
 
-    complex*16, dimension(size(qty,2)/2 +1) :: ctmp
-    real(kind=8)   , dimension(size(qty,2)) :: rtmp
-    real(kind=8)   , dimension(size(qty,2)/2+1):: ky
+    complex*16      , dimension(size(qty,2)/2 +1) :: ctmp
+    real(kind=8)    , dimension(size(qty,2))      :: rtmp
+    real(kind=8)    , dimension(size(qty,2)/2+1)  :: ky
 
     integer     , parameter :: FFTW_ESTIMATE = 64
 
@@ -127,11 +127,11 @@ module shear
     integer :: nx,ny,nz,p,np
     real    :: St
 
-    integer*8 :: planf,planb
+    integer(kind=8) :: planf,planb
 
-    complex*16, dimension(:)    , allocatable :: ctmp
-    real(kind=8)   , dimension(:)     , allocatable :: rtmp
-    real(kind=8)   , dimension(:)     , allocatable :: ky
+    complex*16      , dimension(:)    , allocatable :: ctmp
+    real(kind=8)    , dimension(:)    , allocatable :: rtmp
+    real(kind=8)    , dimension(:)    , allocatable :: ky
 
     integer     , parameter :: FFTW_ESTIMATE = 64
 

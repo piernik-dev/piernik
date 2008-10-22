@@ -1,4 +1,4 @@
-! $Id$
+				! $Id$
 #include "piernik.def"
 module tv ! split ssp
   contains
@@ -43,6 +43,9 @@ module tv ! split ssp
     use arrays, only : z
     use start, only : floor_vz, ceil_vz
 #endif /* VZ_LIMITS */
+#ifdef KEPLER_SUPPRESSION
+    use rotsource, only : kepler_suppression
+#endif /* KEPLER_SUPPRESSION */
 
 
     implicit none
@@ -50,9 +53,14 @@ module tv ! split ssp
     real    :: dt,dx,dtx
     real, dimension(nu,n) :: u,cfr,ul,ur
     real, dimension(3,n)  :: bb
-    real, dimension(n)    :: gravl,gravr,rotfr,vx,vxr
+    real, dimension(n)    :: rotfr,vx,vxr
+#ifdef GRAV
     real, dimension(n)    :: dgrp,dgrm,dglp,dglm
-
+    real, dimension(n)    :: gravl, gravr
+#endif /* GRAV */
+#ifdef KEPLER_SUPPRESSION
+    real, dimension(nu,n) :: Duus
+#endif /* KEPLER_SUPPRESSION */
     character sweep*6
 
 !locals
@@ -158,6 +166,11 @@ module tv ! split ssp
 
     u1 = ul1 + ur1
     u1(idna,:) = max(u1(idna,:), smalld)
+	
+#ifdef KEPLER_SUPPRESSION
+	call kepler_suppression(Duus,u,sweep,i1,i2,n,dt)
+	u1 = u1 + Duus
+#endif /* KEPLER_SUPPRESSION */
 
 #ifdef VZ_LIMITS
     if(sweep .eq. 'zsweep') then

@@ -33,7 +33,16 @@ contains
 #ifdef RESIST
     use resistivity, only : dt_resist, timestep_resist
 #endif /* RESIST */
+#ifdef KEPLER_SUPPRESSION
+    use arrays, only : u, idna
+    use arrays, only : alfsup,nz,omx0,omy0,x,y,nx,ny,imxa,imya
+    use start,  only : dt_supp
+#endif /* KEPLER_SUPPRESSION */
     implicit none
+#ifdef KEPLER_SUPPRESSION
+    real,allocatable,dimension(:,:) :: velx,vely,dvx,dvy
+    integer k
+#endif /* KEPLER_SUPPRESSION */
 ! Timestep computation
 
     call timestep_mhd
@@ -59,6 +68,13 @@ contains
     dt_cr = cfl_cr * 0.5*dxmn**2/(K_cr_paral+K_cr_perp+small)
     dt = min(dt,dt_cr)
 #endif /* COSM_RAYS */
+#ifdef KEPLER_SUPPRESSION
+    dt_supp = big
+      do k=1,nz
+        dt_supp = min(dt_supp, minval(abs(1./(alfsup+small)/u(idna,:,:,k))))
+      enddo
+    dt = min(dt,dt_supp)
+#endif /* KEPLER_SUPPRESSION */
 
   end subroutine timestep
 
