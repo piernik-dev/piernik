@@ -48,7 +48,8 @@ module dataio
   character hostfull*(80), host*8, fhost*10, fpid*10
   integer :: pid, uid, ihost, scstatus
   real vx_max, vy_max, vz_max, va2max,va_max, cs2max, cs_max, &
-       dens_min, dens_max, pres_min, pres_max, b_min, b_max, temp_min, temp_max
+       dens_min, dens_max, pres_min, pres_max, b_min, b_max,  &
+       temp_min, temp_max, divb_max
 #ifdef COSM_RAYS
   real encr_min, encr_max
 #endif /* COSM_RAYS */
@@ -460,6 +461,15 @@ module dataio
       case ('encr')
         wa(iso:ieo,jso:jeo,kso:keo) = u(iecr,iso:ieo,jso:jeo,kso:keo)
 #endif /* COSM_RAYS */
+      case ('divb')
+        wa(iso:ieo-1,jso:jeo-1,kso:keo-1) = &
+           (b(1,iso+1:ieo, jso:jeo-1, kso:keo-1) - b(1,iso:ieo-1, jso:jeo-1, kso:keo-1)) &
+          +(b(2,iso:ieo-1, jso+1:jeo, kso:keo-1) - b(2,iso:ieo-1, jso:jeo-1, kso:keo-1)) &
+          +(b(3,iso:ieo-1, jso:jeo-1, kso+1:keo) - b(3,iso:ieo-1, jso:jeo-1, kso:keo-1))
+        wa = abs(wa)
+        wa(ieo,:,:) = wa(ieo-1,:,:)
+        wa(:,jeo,:) = wa(:,jeo-1,:)
+        wa(:,:,keo) = wa(:,:,keo-1)
 
       case ('omga')
         do ibe=iso,ieo
@@ -1482,7 +1492,7 @@ module dataio
 #ifdef SNE_DISTR
                       							 'sum_emagadd', 'tot_emagadd', &
 #endif /* SNE_DISTR */
-                                           'b_min', 'b_max' 
+                                           'b_min', 'b_max', 'divb_max'
                                            
 
         write (tsl_lun, '(a1)') '#'
@@ -1591,7 +1601,7 @@ module dataio
 #ifdef SNE_DISTR
                       sum_emagadd, tot_emagadd, &
 #endif /* SNE_DISTR */
-                      b_min, b_max
+                      b_min, b_max, divb_max
       close(tsl_lun)
     endif
 
@@ -1632,7 +1642,7 @@ module dataio
     integer, dimension(3) :: loc_vx_max, loc_vy_max, loc_vz_max, loc_va_max, &
                              loc_cs_max, loc_dens_min, loc_dens_max, loc_pres_min, & 
                              loc_pres_max, loc_b_min, loc_b_max, &
-                             loc_temp_min, loc_temp_max
+                             loc_temp_min, loc_temp_max, loc_divb_max
 #ifdef COOL_HEAT			    
     integer, dimension(3) :: loc_dt_cool, loc_dt_heat
 #endif /* COOL_HEAT */
@@ -1643,7 +1653,7 @@ module dataio
     integer               :: proc_vx_max, proc_vy_max, proc_vz_max, proc_va_max, &
                              proc_cs_max, proc_dens_min, proc_dens_max, proc_pres_min, & 
                              proc_pres_max, proc_b_min, proc_b_max, &
-                             proc_temp_min, proc_temp_max
+                             proc_temp_min, proc_temp_max, proc_divb_max
 #ifdef COOL_HEAT			     
     integer               :: proc_dt_cool, proc_dt_heat
 #endif /* COOL_HEAT */
@@ -1707,6 +1717,19 @@ module dataio
                   + (/nb,nb,nb/)
     call mpifind(va_max, 'max', loc_va_max, proc_va_max)
 
+    wa(1:nx-1,1:ny-1,1:nz-1) = &
+          (b(1,2:nx,1:ny-1,1:nz-1) - b(1,1:nx-1,1:ny-1,1:nz-1))*dy*dz &
+         +(b(2,1:nx-1,2:ny,1:nz-1) - b(2,1:nx-1,1:ny-1,1:nz-1))*dx*dz &
+         +(b(3,1:nx-1,1:ny-1,2:nz) - b(3,1:nx-1,1:ny-1,1:nz-1))*dx*dy
+
+    wa(nx,:,:) = wa(nx-1,:,:)
+    wa(:,ny,:) = wa(:,ny-1,:)
+    wa(:,:,nz) = wa(:,:,nz-1)
+    wa = abs(wa)
+
+    divb_max      = maxval(wa(is:ie,js:je,ks:ke))
+    loc_divb_max  = maxloc(wa(is:ie,js:je,ks:ke)) + (/nb,nb,nb/)
+    call mpifind(divb_max, 'max', loc_divb_max, proc_divb_max)
 
 #ifdef ISO
     pres_min     = csi2*dens_min
@@ -1805,6 +1828,7 @@ module dataio
         write(log_lun,770) 'max(pres)      =', pres_max,  proc_pres_max,  loc_pres_max   
         write(log_lun,770) 'min(|b|)       =', b_min,     proc_b_min,     loc_b_min   
         write(log_lun,770) 'max(|b|)       =', b_max,     proc_b_max,     loc_b_max  
+        write(log_lun,770) 'max(|divb|)    =', divb_max,  proc_divb_max,  loc_divb_max  
     
         write(log_lun,777) 'max(|velx|)    =', vx_max, 'dt=',cfl*dx/(vx_max+small),   proc_vx_max, loc_vx_max   
         write(log_lun,777) 'max(|vely|)    =', vy_max, 'dt=',cfl*dy/(vy_max+small),   proc_vy_max, loc_vy_max   
