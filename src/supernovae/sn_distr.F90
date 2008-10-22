@@ -87,6 +87,7 @@ module sn_distr
       use start, only : dt,smallei,nb
       use arrays, only : u,b,nx,ny,nz,ibx,iby,ibz,idna,imxa,imya,imza,iena
       use grid, only : dx,dy,dz,dvol
+      use sn_sources, only : rand_angles
       implicit none
 
       integer :: isn
@@ -94,7 +95,7 @@ module sn_distr
       real, dimension(2) :: dtime
       integer, dimension(2) :: SNno, pot
       integer :: fl
-      real, allocatable, dimension(:,:) :: snposarray
+      real, allocatable, dimension(:,:) :: snposarray,snangarray
       real, dimension(:,:,:,:), allocatable :: A
 #ifndef ISO
       real, dimension(:,:,:), allocatable :: ekin,eint
@@ -114,18 +115,20 @@ module sn_distr
       endif
       call MPI_BCAST(SNno, 2, MPI_INTEGER, 0, comm, ierr)
     
-      allocate(snposarray(sum(SNno,1),3))
+      allocate(snposarray(sum(SNno,1),3), snangarray(sum(SNno,1),2))
       if(proc .eq. 0) then
          do itype = 1,2
             if(SNno(itype) .gt. 0) then
                do isn=1,SNno(itype)
                   call rand_galcoord(snpos)
                   snposarray(isn+SNno(1)*(itype-1),:)=snpos
+                  snangarray(isn+SNno(1)*(itype-1),:)=rand_angles()
                enddo
             endif
          enddo
       endif
       call MPI_BCAST(snposarray, 3*sum(SNno,1), MPI_DOUBLE_PRECISION, 0, comm, ierr)
+      call MPI_BCAST(snangarray, 2*sum(SNno,1), MPI_DOUBLE_PRECISION, 0, comm, ierr)
 #ifdef VERBOSE
       itype = 1
 #endif /* VERBOSE */
@@ -142,10 +145,10 @@ module sn_distr
             ekin(:,:,:) = 0.5*( u(imxa,:,:,:)**2 + u(imya,:,:,:)**2 + u(imza,:,:,:) )**2 / u(idna,:,:,:)
             eint(:,:,:) = max( u(iena,:,:,:) - ekin -  0.5*(b(ibx,:,:,:)**2 + b(iby,:,:,:)**2 + &
                                b(ibz,:,:,:)**2) , smallei)
-				emagadd = sum(u(iena,nb+1:nx-nb,nb+1:ny-nb,nb+1:nz-nb))*dvol
+            emagadd = sum(u(iena,nb+1:nx-nb,nb+1:ny-nb,nb+1:nz-nb))*dvol
 #endif /* ISO */
          endif
-         call add_explosion(snposarray(isn,:),A)
+         call add_explosion(snposarray(isn,:),snangarray(isn,:),A)
          if(isn==sum(SNno,1)) then
             b(ibx,1:nx,  1:ny-1,1:nz-1) = b(ibx,1:nx,  1:ny-1,1:nz-1) + &
                (A(3,1:nx,2:ny,1:nz-1) - A(3,1:nx,1:ny-1,1:nz-1))/dy - &
@@ -163,7 +166,7 @@ module sn_distr
 #ifndef ISO
             u(iena,:,:,:) = eint + ekin + 0.5*(b(1,:,:,:)**2 + &
                  b(2,:,:,:)**2 + b(3,:,:,:)**2)
-				emagadd = sum(u(iena,nb+1:nx-nb,nb+1:ny-nb,nb+1:nz-nb))*dvol - emagadd
+            emagadd = sum(u(iena,nb+1:nx-nb,nb+1:ny-nb,nb+1:nz-nb))*dvol - emagadd
             deallocate(ekin,eint)
 #endif
          endif
@@ -172,13 +175,14 @@ module sn_distr
 #endif /* VERBOSE */
       enddo
       call MPI_BARRIER(comm,ierr)
+      deallocate(snposarray,snangarray)
       return
 
    end subroutine supernovae_distribution  
 
 !------------------------------------------------
 
-   subroutine add_explosion(snpos,A)
+   subroutine add_explosion(snpos,angles,A)
       use arrays, only: nx,ny,nz,x,y,z,nxb,nyb,nzb,xdim,ydim,zdim,dl,u
       use grid, only: xminb,xmaxb,yminb,ymaxb,zminb,zmaxb,dx,dy,dz
       use start, only: r0sn,nb,add_mass,add_ener,add_encr
@@ -188,10 +192,11 @@ module sn_distr
       use start, only  : r_sn, cr_eff           
 #endif /* COSM_RAYS */
 #ifdef DIPOLS
-      use sn_sources, only : rand_angles,magn_multipole_sn
+      use sn_sources, only : magn_multipole_sn
 #endif /* DIPOLS */
       implicit none
       real, dimension(3) :: snpos
+      real, dimension(2) :: angles
       real    :: r1sn
       real    :: massadd,eneradd,encradd,normscal,normvalu
       real, dimension(:,:,:,:) :: A
@@ -264,7 +269,7 @@ module sn_distr
                if(add_encr .eq. 'yes') write(*,'(a19,e15.8,a4)') 'CR energy inject.: ',encradd/erg,' erg'
 #endif /* VERBOSE */
 #ifdef DIPOLS
-               call magn_multipole_sn(rand_angles(),snpos,A)
+               call magn_multipole_sn(angles,snpos,A)
 #endif /* DIPOLS */  
             endif
          endif
