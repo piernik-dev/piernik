@@ -1,0 +1,131 @@
+ $DOMAIN_SIZES
+    nxd = 800
+    nyd = 800
+    nzd = 160
+    nb  = 5
+ /  
+
+ $MPI_BLOCKS
+    pxsize = 16
+    pysize = 16
+    pzsize = 4
+ /
+
+ $START_CONTROL
+ /
+
+ $RESTART_CONTROL
+    restart  = 'last'
+    new_id   = ''
+    nrestart = 0
+ /
+
+ $END_CONTROL
+    tend   = 1000.0
+    nend   = 10000000
+ /
+
+ $OUTPUT_CONTROL
+    dt_hdf  = 10.0
+    dt_res  = 500.0
+    dt_log  = 1.0
+    dt_tsl  = 1.0
+    vars(1) = 'dens'
+    vars(2) = 'velx'
+    vars(3) = 'vely'
+    vars(4) = 'velz'
+    vars(5) = 'ener'
+    vars(6) = 'encr'
+    vars(7) = 'magx'
+    vars(8) = 'magy'
+    vars(9) = 'magz'
+    domain  = 'phys_domain'
+ / 
+
+ $BOUNDARIES
+    bnd_xl = 'out'  
+    bnd_xr = 'out'  
+    bnd_yl = 'out'  
+    bnd_yr = 'out'  
+    bnd_zl = 'outd'  
+    bnd_zr = 'outd'
+ /
+
+ $DOMAIN_LIMITS
+    xmin   =-2.0e4
+    xmax   = 2.0e4
+    ymin   =-2.0e4
+    ymax   = 2.0e4
+    zmin   =-4.0e3
+    zmax   = 4.0e3
+ /
+
+ $EQUATION_OF_STATE
+    c_si   = 10.0
+    alpha  = 0.01
+ /  
+
+ $NUMERICAL_SETUP
+    cfl    = 0.9
+    smalld = 1.e-6
+    smallei= 1.e-4
+    integration_order = 2
+    magnetic = 'yes'
+    dimensions = '3d'
+    floor_vz   = -30.0
+ /
+ 
+ $GRAVITY
+    nsub   = 10
+ /
+ 
+ $THERMAL
+ /
+ 
+ $RESISTIVITY
+    cfl_resist   =    0.9   ! liczba Couranta dla opornosci, (wsp. 0.5) w kodzie 
+    eta_0   	 =    0.0   ! opornosc jednorodna
+    eta_1        =    0.0   ! opornosc zlokalizowana, dziala powyzej j_crit
+    j_crit       = 1000.0   ! prad krytyczny
+ /
+ 
+ $COSMIC_RAYS
+    cr_active    = 1.0      ! gdy 0 wtedy grad p_cr nie jest brany pod uwage w r.ruchu
+    cfl_cr       = 0.9      ! liczba couranta dla dyfuzji CR (wsp 0.5 w kodzie)
+    cr_eff       = 0.1      ! czesc energii SN (=10^51 erg) zamieniona w CR
+    gamma_cr     = 1.555555 ! wykl. adiabatyczny CR
+    K_cr_paral   = 10000.   ! wsp. dyfuzji CR wzdluz B
+    K_cr_perp    = 100.     ! wsp. dyfuzji CR wpoprzek B
+    beta_cr      = 4.0      ! okresla wklad CR w poczatkowej rownowadze (podobnie jak alfa dla B)
+    amp_cr       = 0.0      ! wybuch w init_problem w x0,y0,z0
+    smallecr     = 1.0e-5    ! lower limit & outflow boundary value for ecr
+ /
+ 
+ $GALACTIC_PARAMS
+ /
+ 
+ $SN_PARAMS
+    howmulti   = 1
+    amp_dip_sn = 1.0
+    r_sn       = 50.0
+ /
+
+ $SN_DISTR
+    snenerg = 1.0
+    sn1time = 1.e10
+    sn2time = 55.0
+    r0sn    = 50.0
+ /
+
+ $PROBLEM_CONTROL
+    problem_name ='galdisk'
+    run_id  =  'sn0'
+    rhoa    = 1.0e-4
+    d0      = 1.0
+    r_max   = 1.2e4
+    mtr      = 10
+    mf_orient = 'none'
+	 alfasupp  = 1.0
+	 rsup      = 1.7e4
+ /
+
