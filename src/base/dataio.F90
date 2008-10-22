@@ -463,9 +463,9 @@ module dataio
 #endif /* COSM_RAYS */
       case ('divb')
         wa(iso:ieo-1,jso:jeo-1,kso:keo-1) = &
-           (b(1,iso+1:ieo, jso:jeo-1, kso:keo-1) - b(1,iso:ieo-1, jso:jeo-1, kso:keo-1)) &
-          +(b(2,iso:ieo-1, jso+1:jeo, kso:keo-1) - b(2,iso:ieo-1, jso:jeo-1, kso:keo-1)) &
-          +(b(3,iso:ieo-1, jso:jeo-1, kso+1:keo) - b(3,iso:ieo-1, jso:jeo-1, kso:keo-1))
+           (b(1,iso+1:ieo, jso:jeo-1, kso:keo-1) - b(1,iso:ieo-1, jso:jeo-1, kso:keo-1))*dy*dz &
+          +(b(2,iso:ieo-1, jso+1:jeo, kso:keo-1) - b(2,iso:ieo-1, jso:jeo-1, kso:keo-1))*dx*dz &
+          +(b(3,iso:ieo-1, jso:jeo-1, kso+1:keo) - b(3,iso:ieo-1, jso:jeo-1, kso:keo-1))*dx*dy
         wa = abs(wa)
         wa(ieo,:,:) = wa(ieo-1,:,:)
         wa(:,jeo,:) = wa(:,jeo-1,:)
@@ -1490,7 +1490,7 @@ module dataio
                                            'temp_min', 'temp_max',  &
 #endif /* ISO */
 #ifdef SNE_DISTR
-                      							 'sum_emagadd', 'tot_emagadd', &
+                                           'sum_emagadd', 'tot_emagadd', &
 #endif /* SNE_DISTR */
                                            'b_min', 'b_max', 'divb_max'
                                            
@@ -1576,7 +1576,7 @@ module dataio
 #endif /* COSM_RAYS */
 #ifdef SNE_DISTR
     call mpi_allreduce(emagadd, sum_emagadd, 1, mpi_real8, mpi_sum, comm3d, ierr)
-	 tot_emagadd = tot_emagadd + sum_emagadd
+    tot_emagadd = tot_emagadd + sum_emagadd
 #endif /* SNE_DISTR */
 
     if (proc .eq. 0) then
