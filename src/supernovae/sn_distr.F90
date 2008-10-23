@@ -186,7 +186,7 @@ module sn_distr
 
    subroutine add_explosion(snpos,angles,A)
       use arrays, only: nx,ny,nz,x,y,z,nxb,nyb,nzb,xdim,ydim,zdim,dl,u
-      use grid, only: xminb,xmaxb,yminb,ymaxb,zminb,zmaxb,dx,dy,dz
+      use grid, only: xminb,xmaxb,yminb,ymaxb,zminb,zmaxb,dx,dy,dz,Lx,Ly,Lz
       use start, only: r0sn,nb,add_mass,add_ener,add_encr
       use constants
 #ifdef COSM_RAYS
@@ -270,12 +270,23 @@ module sn_distr
                if(add_ener .eq. 'yes') write(*,'(a19,e15.8,a4)') ' energy injection: ',eneradd/erg,' erg'
                if(add_encr .eq. 'yes') write(*,'(a19,e15.8,a4)') 'CR energy inject.: ',encradd/erg,' erg'
 #endif /* VERBOSE */
-#ifdef DIPOLS
-               call magn_multipole_sn(angles,snpos,A)
-#endif /* DIPOLS */  
             endif
          endif
       endif
+#ifdef DIPOLS
+      if((snpos(1) .ge. xminb-Lx) .and. &
+         (snpos(1) .le. xmaxb+Lx)) then
+         if((snpos(2) .ge. yminb-Ly) .and. &
+            (snpos(2) .le. ymaxb+Ly)) then
+            if((snpos(3) .ge. zminb-Lz) .and. &
+               (snpos(3) .le. zmaxb+Lz))then
+
+                  call magn_multipole_sn(angles,snpos,A)
+
+            endif
+         endif
+      endif
+#endif /* DIPOLS */  
       return
    end subroutine add_explosion
 
