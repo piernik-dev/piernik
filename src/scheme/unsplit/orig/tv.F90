@@ -153,7 +153,9 @@ module tv      ! unsplit org
 	
 #ifdef KEPLER_SUPPRESSION
 	call kepler_suppression(Duus,u,sweep,i1,i2,n,dt)
+#ifndef OVERLAP
 	u = u + Duus
+#endif /* OVERLAP */
 #endif /* KEPLER_SUPPRESSION */
 
     return

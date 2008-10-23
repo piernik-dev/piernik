@@ -167,11 +167,6 @@ module tv ! split ssp
     u1 = ul1 + ur1
     u1(idna,:) = max(u1(idna,:), smalld)
 	
-#ifdef KEPLER_SUPPRESSION
-	call kepler_suppression(Duus,u,sweep,i1,i2,n,dt)
-	u1 = u1 + Duus
-#endif /* KEPLER_SUPPRESSION */
-
 #ifdef VZ_LIMITS
     if(sweep .eq. 'zsweep') then
       where((z(:) .gt. 0.0) .and. (u1(imxa,:) .lt.  floor_vz*u(idna,:)))
@@ -228,6 +223,13 @@ module tv ! split ssp
       endwhere
     endif
 #endif /* VZ_LIMITS */
+
+#ifdef KEPLER_SUPPRESSION
+	call kepler_suppression(Duus,u1,sweep,i1,i2,n,dt)
+#ifndef OVERLAP
+	u1 = u1 + Duus
+#endif /* OVERLAP */
+#endif /* KEPLER_SUPPRESSION */
 
       u(:,:) = u1(:,:)
   enddo
