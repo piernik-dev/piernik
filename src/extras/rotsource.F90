@@ -4,7 +4,7 @@ module rotsource
 #ifdef KEPLER_SUPPRESSION
 contains
 subroutine kepler_suppression(Duus,uu,sweep,i1,i2,n,dt)
-    use arrays, only : alfsup,omx0,omy0,nu,x,y,z,nx,ny,idna,imxa,imya
+    use arrays, only : alfsup,omx0,omy0,nu,x,y,z,nx,ny,idna,imxa,imya,den0
     use start,  only : maxxyz
 #ifndef ISO
   use arrays, only : nadiab,fadiab,iena
@@ -13,8 +13,8 @@ subroutine kepler_suppression(Duus,uu,sweep,i1,i2,n,dt)
   integer n,i,j,k,i1,i2,ifl,ni1,ni2
   character sweep*6
   real,dimension(nu,n)      :: Duus,uu
-  real, dimension(n)        :: kplrsup,velcoor,vel0
-  real, dimension(maxxyz)   :: r1,r2
+  real, dimension(n)        :: kplrsup,velcoor,vel0,dns0
+  real, dimension(maxxyz)   :: r1,r2,alf
   real :: a1,dt
   integer :: rend,ii
 
@@ -25,13 +25,17 @@ subroutine kepler_suppression(Duus,uu,sweep,i1,i2,n,dt)
         rend  = size(x)
         r1(1:rend) = x(:)                            ! r1   max(size(x),size(y),size(z))
         r2(1:rend) = a1 / (r1(1:rend)*r1(1:rend) + a1 * a1)
+		  alf(1:rend) = alfsup(:,i1)
 	vel0(:)  = omx0(:,i1,i2)
+	dns0(:)  = den0(:,i1,i2)
       case('ysweep')
         a1    = x(i2)
         rend  = size(y)
         r1(1:rend) = y(1:rend)
         r2(1:rend) = a1 / (r1(1:rend)*r1(1:rend) + a1 * a1)
+		  alf(1:rend) = alfsup(i2,:)
 	vel0(:)  = omy0(i2,:,i1)
+	dns0(:)  = den0(i2,:,i1)
       case('zsweep')
         a1    = 1.0
         rend  = size(z)
@@ -40,6 +44,10 @@ subroutine kepler_suppression(Duus,uu,sweep,i1,i2,n,dt)
     end select
 
     if(sweep .ne. 'zsweep') then
+#ifdef OVERLAP
+	 uu(idna,:) = (1.-alf)*uu(idna,:) + alf*dns0
+    uu(imxa,:) = (1.-alf)*uu(imxa,:) + alf*vel0*dns0
+#else /* OVERLAP */
 #ifdef KEPL_SUPP_SIMX
         velcoor(:)=uu(imxa,:)/uu(idna,:)
 	kplrsup(:)=-alfsup(:,i1)*(velcoor(:)-vel0(:)) !*uu(idna,:)
@@ -47,6 +55,7 @@ subroutine kepler_suppression(Duus,uu,sweep,i1,i2,n,dt)
         velcoor(:)=(uu(imxa,:)*a1-uu(imya,:)*r1)/uu(idna,:)*r2
         kplrsup(:)=-alfsup(:,i1)*(velcoor(:)-vel0(:))!*uu(idna,:)
 #endif /* KEPL_SUPP_SIMX */
+#endif /* OVERLAP */
     else
       kplrsup(:)=0.0
     endif
