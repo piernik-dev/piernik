@@ -88,6 +88,7 @@ module sn_distr
       use arrays, only : u,b,nx,ny,nz,ibx,iby,ibz,idna,imxa,imya,imza,iena
       use grid, only : dx,dy,dz,dvol
       use sn_sources, only : rand_angles
+      use mag_boundaries, only : compute_b_bnd
       implicit none
 
       integer :: isn
@@ -175,6 +176,7 @@ module sn_distr
 #endif /* VERBOSE */
       enddo
       call MPI_BARRIER(comm,ierr)
+      call compute_b_bnd
       deallocate(snposarray,snangarray)
       return
 
