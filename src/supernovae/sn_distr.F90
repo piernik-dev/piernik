@@ -27,8 +27,8 @@ module sn_distr
       integer :: i,imax
 
       emagadd     = 0.0
-		tot_emagadd = 0.0
-		imax        = 1e3
+      tot_emagadd = 0.0
+      imax        = 1e3
       RmaxI       = 50.0*kpc
       RmaxII      = 15.0*kpc
       SNheight(1) = 100.0*pc !325.0*pc 	!exp(-|z|/325*pc)
@@ -270,10 +270,15 @@ module sn_distr
                if(add_ener .eq. 'yes') write(*,'(a19,e15.8,a4)') ' energy injection: ',eneradd/erg,' erg'
                if(add_encr .eq. 'yes') write(*,'(a19,e15.8,a4)') 'CR energy inject.: ',encradd/erg,' erg'
 #endif /* VERBOSE */
+#ifdef DIPOLS
+#ifndef DIP9
+                  call magn_multipole_sn(angles,snpos,A)
+#endif
+#endif
             endif
          endif
       endif
-#ifdef DIPOLS
+#ifdef DIP9
       if((snpos(1) .ge. xminb-Lx) .and. &
          (snpos(1) .le. xmaxb+Lx)) then
          if((snpos(2) .ge. yminb-Ly) .and. &
@@ -286,7 +291,7 @@ module sn_distr
             endif
          endif
       endif
-#endif /* DIPOLS */  
+#endif /* DIP9 */  
       return
    end subroutine add_explosion
 
