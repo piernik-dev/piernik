@@ -69,11 +69,13 @@ contains
     dt = min(dt,dt_cr)
 #endif /* COSM_RAYS */
 #ifdef KEPLER_SUPPRESSION
+#ifndef OVERLAP
     dt_supp = big
       do k=1,nz
         dt_supp = min(dt_supp, minval(abs(1./(alfsup+small)/u(idna,:,:,k))))
       enddo
     dt = min(dt,dt_supp)
+#endif /* OVERLAP */
 #endif /* KEPLER_SUPPRESSION */
 
   end subroutine timestep
