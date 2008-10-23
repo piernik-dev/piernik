@@ -65,3 +65,5 @@
 
 /* problem specific directives */
 #define KEPLER_SUPPRESSION
+#define OVERLAP
+#undef DIP9

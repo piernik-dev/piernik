@@ -108,7 +108,7 @@ contains
   subroutine init_prob
     use arrays, only    :   u,b,x,y,z,nx,ny,nz,nxt,nxb,dl,gp,xdim,ydim
     use arrays, only    :   idna,imxa,imya,imza,iena,ibx,iby,ibz
-    use constants, only :   cm,kpc,mp,r_gc_sun
+    use constants, only :   cm,kpc,mp,r_gc_sun,pi
     use grid, only      :   dx
     use hydrostatic, only : hydrostatic_zeq
     use start, only     :   xmin,nb,smalld,c_si,alpha,gamma
@@ -116,7 +116,7 @@ contains
     use start, only     :   smallei
 #endif /* ISO */
 #ifdef KEPLER_SUPPRESSION
-    use arrays,      only : alfsup,omx0,omy0
+    use arrays,      only : alfsup,omx0,omy0,den0
 #endif /* KEPLER_SUPPRESSION */
 
 ! wolanie prepare_snedistr przeniesione do mhd - procedura musi byc wolana
@@ -140,6 +140,7 @@ contains
     real,allocatable :: dxzprof(:,:),idxzprof(:,:),jdxzprof(:,:)
     integer,allocatable :: xproc(:), yproc(:)
     integer xtag, iproc, ilook, jproc, ytag
+	 real rb,xp,yp,rp2
 
     allocate(dprof(nz))
     allocate(dxzprof(nxt,nz))
@@ -148,8 +149,12 @@ contains
     allocate(omega_xy(nx,ny))
 #ifdef KEPLER_SUPPRESSION
     allocate(alfsup(nx,ny))
+	 allocate(den0(nx,ny,nz))
     allocate(omx0(nx,ny,nz))
     allocate(omy0(nx,ny,nz))
+	 rb = rsup/10.
+	 xp = rsup
+	 yp = rsup
 #endif /* KEPLER_SUPPRESSION */
     
     
@@ -242,7 +247,7 @@ contains
 	endif
 	
 #ifdef KEPLER_SUPPRESSION
-	    alfsup(i,j) = alfasupp*(tanh((rc-rsup)*12.) + 1.)/2.
+	    alfsup(i,j) = alfasupp*(tanh((rc-rsup)/rsup*25.) + 1.)/2.
 #endif /* KEPLER_SUPPRESSION */
 
 	do k=1,nz
@@ -297,6 +302,17 @@ contains
 #ifdef KEPLER_SUPPRESSION
 	  omx0(i,j,k)=-iOmega*yj
 	  omy0(i,j,k)= iOmega*xi
+	  den0(i,j,k)= u(idna,i,j,k)
+#ifdef OVERLAPTEST
+	  ! test !
+	  rp2 = (abs(xi)-xp)**2+(abs(yj)-yp)**2+zk**2
+	  if(rp2 .le. rb**2) then
+	  u(idna,i,j,k) = 100.*u(idna,i,j,k)*exp(-rp2/rb**2*2.)
+	  u(imxa,i,j,k) = iOmega*xi*u(idna,i,j,k)
+	  u(imya,i,j,k) = iOmega*yj*u(idna,i,j,k)
+	  endif
+	  ! test !
+#endif /* OVERLAPTEST */
 #endif /* KEPLER_SUPPRESSION */
 #ifndef ISO
          u(iena,i,j,k) = c_si**2/(gamma-1.0)*u(idna,i,j,k)
