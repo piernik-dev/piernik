@@ -14,15 +14,39 @@
 # Cotopaxi (Consulting), Albuquerque, New Mexico
 #
 # Modified by Kacper Kowalik <kowalik@astri.umk.pl> October, 24, 2007
-#
+# Modified by Dominik Woltanski <minikwolt@astri.umk.pl> April-June, 2008
 use Switch;
 use File::Path;
 use File::Copy;
 my $argc = $#ARGV+1;
 if($argc < 1){
    print "USAGE: makemake <problem>\n";
-   die;
-}
+   print "Other options:\n";
+   print " makemake problems   -  available problems names and their descriptions,\n";
+   print " makemake setup      -  how to run the code instruction,\n";
+   print " Enjoy your work with piernik!\n";
+   print " \n";
+#   die;
+} else {
+if($ARGV[0] eq "problems"){
+         print " \n";
+	 system ( "cat ./problems/*/info");
+	 print " \n";
+} elsif ($ARGV[0] eq "setup"){
+         print " \n";
+	 print "> makemake <problem>  - creating obj directory with necessary source linked inside\n";
+	 print "> cd obj\n";
+	 print "# choose Fortran compilator settings (if different than default) typing:\n";
+	 print "> newcompilator <settingsname>\n";
+	 print "# modify piernik.def file with precompilator directives and number of fluids if needed\n";
+	 print "> make\n";
+	 print "# create run directory where you want\n";
+	 print "> cp {piernik,problem.par} /<where-you-want>/<your-run-directory>/.\n";
+	 print "> cd /<where-you-want>/<your-run-directory>/\n";
+	 print "# specify var names which you want to visualize in problem.par file \n";
+	 print "> ./piernik or >mpirun -n <np> ./piernik\n";
+	 print " \n";
+} else {
 open MAKEIN, "< compilers/Makefile.in" or die $!;
 @makein = <MAKEIN>;
 close MAKEIN;
@@ -175,6 +199,8 @@ print MAKEFILE "%.o : %.mod\n\n";
 
 system("./post","mhd",$ARGV[0]);
 system("./newcompiler Makefile");
+}
+}
 
 #
 # &PrintWords(current output column, extra tab?, word list); --- print words
