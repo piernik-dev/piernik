@@ -37,7 +37,7 @@ if($ARGV[0] eq "problems"){
 	 print "> makemake <problem>  - creating obj directory with necessary source linked inside\n";
 	 print "> cd obj\n";
 	 print "# choose Fortran compilator settings (if different than default) typing:\n";
-	 print "> newcompilator <settingsname>\n";
+	 print "> newcompiler <settingsname>\n";
 	 print "# modify piernik.def file with precompilator directives if needed\n";
 	 print "> make\n";
 	 print "# create run directory where you want\n";
