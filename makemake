@@ -45,6 +45,9 @@ if($ARGV[0] eq "problems"){
 	 print "> cd /<where-you-want>/<your-run-directory>/\n";
 	 print "# specify var names which you want to visualize in problem.par file \n";
 	 print "> ./piernik or >mpirun -n <np> ./piernik\n";
+	 print "!===================================================================================!\n";
+	 print "# there is also one script to do all these things above at once:\n";
+	 print "> setup <problem>\n";
 	 print " \n";
 } else {
 open MAKEIN, "< compilers/Makefile.in" or die $!;
