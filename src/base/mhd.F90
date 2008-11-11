@@ -140,6 +140,7 @@ program mhd
       system_command = 'mv '//trim(tmp_log_file)//' '//trim(log_file)
       system_status = SYSTEM(system_command)
     endif
+    call init_prob
 
 #ifdef HDF5
     call set_container(chdf); chdf%nres = nrestart

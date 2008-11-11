@@ -88,7 +88,7 @@ module sn_distr
       use arrays, only : u,b,nx,ny,nz,ibx,iby,ibz,idna,imxa,imya,imza,iena
       use grid, only : dx,dy,dz,dvol
       use sn_sources, only : rand_angles
-      use mag_boundaries, only : compute_b_bnd
+      use mag_boundaries, only : compute_b_bnd, bnd_a
       implicit none
 
       integer :: isn
@@ -101,8 +101,6 @@ module sn_distr
 #ifndef ISO
       real, dimension(:,:,:), allocatable :: ekin,eint
 #endif /* ISO */
-
-    
 
       SNno(:)=0
       if(proc .eq. 0) then
@@ -133,49 +131,50 @@ module sn_distr
 #ifdef VERBOSE
       itype = 1
 #endif /* VERBOSE */
+
+      allocate(A(3,nx,ny,nz))
+      A(:,:,:,:) = 0.0
+#ifndef ISO            
+      allocate(eint(nx,ny,nz))
+      allocate(ekin(nx,ny,nz))
+      ekin(:,:,:) = 0.5*( u(imxa,:,:,:)**2 + u(imya,:,:,:)**2 + u(imza,:,:,:) )**2 / u(idna,:,:,:)
+      eint(:,:,:) = max( u(iena,:,:,:) - ekin -  0.5*(b(ibx,:,:,:)**2 + b(iby,:,:,:)**2 + &
+                         b(ibz,:,:,:)**2) , smallei)
+      emagadd = sum(u(iena,nb+1:nx-nb,nb+1:ny-nb,nb+1:nz-nb))*dvol
+#endif /* ISO */
+
       do isn=1,sum(SNno,1)
 #ifdef VERBOSE
          if(isn .gt. SNno(1)) itype = 2
 #endif /* VERBOSE */
-         if(isn==1) then 
-            allocate(A(3,nx,ny,nz))
-            A(:,:,:,:) = 0.0
-#ifndef ISO            
-            allocate(eint(nx,ny,nz))
-            allocate(ekin(nx,ny,nz))
-            ekin(:,:,:) = 0.5*( u(imxa,:,:,:)**2 + u(imya,:,:,:)**2 + u(imza,:,:,:) )**2 / u(idna,:,:,:)
-            eint(:,:,:) = max( u(iena,:,:,:) - ekin -  0.5*(b(ibx,:,:,:)**2 + b(iby,:,:,:)**2 + &
-                               b(ibz,:,:,:)**2) , smallei)
-            emagadd = sum(u(iena,nb+1:nx-nb,nb+1:ny-nb,nb+1:nz-nb))*dvol
-#endif /* ISO */
-         endif
          call add_explosion(snposarray(isn,:),snangarray(isn,:),A)
-         if(isn==sum(SNno,1)) then
-            b(ibx,1:nx,  1:ny-1,1:nz-1) = b(ibx,1:nx,  1:ny-1,1:nz-1) + &
-               (A(3,1:nx,2:ny,1:nz-1) - A(3,1:nx,1:ny-1,1:nz-1))/dy - &
-               (A(2,1:nx,1:ny-1,2:nz) - A(2,1:nx,1:ny-1,1:nz-1))/dz
-
-            b(iby,1:nx-1,1:ny,  1:nz-1) = b(iby,1:nx-1,1:ny,  1:nz-1) + &
-               (A(1,1:nx-1,1:ny,2:nz) - A(1,1:nx-1,1:ny,1:nz-1))/dz - &
-               (A(3,2:nx,1:ny,1:nz-1) - A(3,1:nx-1,1:ny,1:nz-1))/dx
-
-            b(ibz,1:nx-1,1:ny-1,1:nz  ) = b(ibz,1:nx-1,1:ny-1,1:nz  ) + & 
-               (A(2,2:nx,1:ny-1,1:nz) - A(2,1:nx-1,1:ny-1,1:nz))/dx - &
-               (A(1,1:nx-1,2:ny,1:nz) - A(1,1:nx-1,1:ny-1,1:nz))/dy
-
-            deallocate(A)
-#ifndef ISO
-            u(iena,:,:,:) = eint + ekin + 0.5*(b(1,:,:,:)**2 + &
-                 b(2,:,:,:)**2 + b(3,:,:,:)**2)
-            emagadd = sum(u(iena,nb+1:nx-nb,nb+1:ny-nb,nb+1:nz-nb))*dvol - emagadd
-            deallocate(ekin,eint)
-#endif
-         endif
 #ifdef VERBOSE
          if(proc .eq. 0) write(*,*) 'added ',isn,'. SN of ',sum(SNno,1)
 #endif /* VERBOSE */
       enddo
       call MPI_BARRIER(comm,ierr)
+
+      call bnd_a(A)
+
+      b(ibx,1:nx,  1:ny-1,1:nz-1) = b(ibx,1:nx,  1:ny-1,1:nz-1) + &
+         (A(3,1:nx,2:ny,1:nz-1) - A(3,1:nx,1:ny-1,1:nz-1))/dy - &
+         (A(2,1:nx,1:ny-1,2:nz) - A(2,1:nx,1:ny-1,1:nz-1))/dz
+
+      b(iby,1:nx-1,1:ny,  1:nz-1) = b(iby,1:nx-1,1:ny,  1:nz-1) + &
+         (A(1,1:nx-1,1:ny,2:nz) - A(1,1:nx-1,1:ny,1:nz-1))/dz - &
+         (A(3,2:nx,1:ny,1:nz-1) - A(3,1:nx-1,1:ny,1:nz-1))/dx
+
+      b(ibz,1:nx-1,1:ny-1,1:nz  ) = b(ibz,1:nx-1,1:ny-1,1:nz  ) + & 
+         (A(2,2:nx,1:ny-1,1:nz) - A(2,1:nx-1,1:ny-1,1:nz))/dx - &
+         (A(1,1:nx-1,2:ny,1:nz) - A(1,1:nx-1,1:ny-1,1:nz))/dy
+
+      deallocate(A)
+#ifndef ISO
+      u(iena,:,:,:) = eint + ekin + 0.5*(b(1,:,:,:)**2 + &
+           b(2,:,:,:)**2 + b(3,:,:,:)**2)
+      emagadd = sum(u(iena,nb+1:nx-nb,nb+1:ny-nb,nb+1:nz-nb))*dvol - emagadd
+      deallocate(ekin,eint)
+#endif
       call compute_b_bnd
       deallocate(snposarray,snangarray)
       return
@@ -279,12 +278,12 @@ module sn_distr
          endif
       endif
 #ifdef DIP9
-      if((snpos(1) .ge. xminb-Lx) .and. &
-         (snpos(1) .le. xmaxb+Lx)) then
-         if((snpos(2) .ge. yminb-Ly) .and. &
-            (snpos(2) .le. ymaxb+Ly)) then
-            if((snpos(3) .ge. zminb-Lz) .and. &
-               (snpos(3) .le. zmaxb+Lz))then
+      if((snpos(1) .ge. xminb-0.25*Lx) .and. &
+         (snpos(1) .le. xmaxb+0.25*Lx)) then
+         if((snpos(2) .ge. yminb-0.25*Ly) .and. &
+            (snpos(2) .le. ymaxb+0.25*Ly)) then
+            if((snpos(3) .ge. zminb-0.25*Lz) .and. &
+               (snpos(3) .le. zmaxb+0.25*Lz))then
 
                   call magn_multipole_sn(angles,snpos,A)
 

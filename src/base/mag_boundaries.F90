@@ -14,6 +14,46 @@ module mag_boundaries
 
 contains
 
+subroutine bnd_a(A)
+   implicit none
+   integer :: ireq
+   real, dimension(:,:,:,:) :: A
+
+   if(pxsize .gt. 1) then 
+
+      CALL MPI_ISEND  (A(1,1,1,1), 1, MAG_YZ_LEFT_DOM,  procxl, 10, comm3d, req(1), ierr)
+      CALL MPI_ISEND  (A(1,1,1,1), 1, MAG_YZ_RIGHT_DOM, procxr, 20, comm3d, req(3), ierr)
+      CALL MPI_IRECV  (A(1,1,1,1), 1, MAG_YZ_LEFT_BND,  procxl, 20, comm3d, req(2), ierr)
+      CALL MPI_IRECV  (A(1,1,1,1), 1, MAG_YZ_RIGHT_BND, procxr, 10, comm3d, req(4), ierr)
+
+      do ireq=1,4 
+         call MPI_WAIT(req(ireq),status(1,ireq),ierr)  
+      enddo
+   endif
+   
+   if(pysize .gt. 1) then 
+      CALL MPI_ISEND  (A(1,1,1,1), 1, MAG_XZ_LEFT_DOM,  procyl, 30, comm3d, req(1), ierr)
+      CALL MPI_ISEND  (A(1,1,1,1), 1, MAG_XZ_RIGHT_DOM, procyr, 40, comm3d, req(3), ierr)
+      CALL MPI_IRECV  (A(1,1,1,1), 1, MAG_XZ_LEFT_BND,  procyl, 40, comm3d, req(2), ierr)
+      CALL MPI_IRECV  (A(1,1,1,1), 1, MAG_XZ_RIGHT_BND, procyr, 30, comm3d, req(4), ierr)
+
+      do ireq=1,4 
+         call MPI_WAIT(req(ireq),status(1,ireq),ierr)  
+      enddo
+   endif
+
+   if(pzsize .gt. 1) then 
+      CALL MPI_ISEND  (A(1,1,1,1), 1, MAG_XY_LEFT_DOM,  proczl, 50, comm3d, req(1), ierr)
+      CALL MPI_ISEND  (A(1,1,1,1), 1, MAG_XY_RIGHT_DOM, proczr, 60, comm3d, req(3), ierr)
+      CALL MPI_IRECV  (A(1,1,1,1), 1, MAG_XY_LEFT_BND,  proczl, 60, comm3d, req(2), ierr)
+      CALL MPI_IRECV  (A(1,1,1,1), 1, MAG_XY_RIGHT_BND, proczr, 50, comm3d, req(4), ierr)
+
+      do ireq=1,4 
+         call MPI_WAIT(req(ireq),status(1,ireq),ierr)  
+      enddo
+   endif
+end subroutine bnd_a
+
 subroutine bnd_b(dim)
 #ifdef SHEAR
   use shear, only : eps,delj
