@@ -8,14 +8,7 @@ module time
 ! Optimalization of cpu-time efficiency of mhdflux, tvd1 by K. Kowalik
 ! Modification history:  see "changelog"  -- warning: out of date
 
-!  use constants
   use mpi_setup
-!  use start
-!  use arrays
-!  use grid
-!  use init_problem 
-!  use diagnostics
-!  use thermal
 
 #ifdef COSM_RAYS
   use cr_diffusion

@@ -51,7 +51,7 @@ module func
 
 !-----------------------------------------------------------------------------
 
-!> 
+!>
 !! \brief Function makes one-cell,foreward circular shift of 3D array in any direction
 !! \param tab input array
 !! \param d shift's direction, where 1,2,3 corresponds to \a x,\a y,\a z respectively
@@ -83,8 +83,8 @@ module func
 
     return
   end function pshift
- 
-!> 
+
+!>
 !! \brief Function makes one-cell, backward circular shift of 3D array in any direction
 !! \param tab input array
 !! \param d shift's direction, where 1,2,3 corresponds to \a x,\a y,\a z respectively
@@ -96,8 +96,8 @@ module func
   function mshift(tab,d)
     implicit none
     real, dimension(:,:,:) :: tab
-    integer :: d 
-    integer :: lx,ly,lz 
+    integer :: d
+    integer :: lx,ly,lz
     real, dimension(SIZE(tab,1) , SIZE(tab,2) , SIZE(tab,3)) :: mshift
 
     lx = SIZE(tab,1)
