@@ -108,7 +108,7 @@ contains
   subroutine init_prob
     use arrays, only    :   u,b,x,y,z,nx,ny,nz,nxt,nxb,dl,gp,xdim,ydim
     use arrays, only    :   idna,imxa,imya,imza,iena,ibx,iby,ibz
-    use constants, only :   cm,kpc,mp,r_gc_sun,pi
+    use constants, only :   cm,kpc,mp,r_gc_sun
     use grid, only      :   dx
     use hydrostatic, only : hydrostatic_zeq
     use start, only     :   xmin,nb,smalld,c_si,alpha,gamma

@@ -2,7 +2,7 @@
 #include "piernik.def"
 
 module init_problem
-  
+
 ! Initial condition for the cosmic ray driven dynamo
 ! Based on Parker instability setup
 ! Written by: M. Hanasz, February 2006
@@ -13,7 +13,7 @@ module init_problem
   use grid
   use fluid_boundaries
   use hydrostatic
-  
+
   real d0, bxn,byn,bzn
   character problem_name*32,run_id*3
 
@@ -28,7 +28,7 @@ contains
   subroutine read_problem_par
 
     implicit none
-   
+
       problem_name = 'xxx'
       run_id  = 'aaa'
       d0      = 1.0
@@ -38,8 +38,8 @@ contains
       x0     = 0.0
       y0     = 0.0
       z0     = 0.0
-    
-    if(proc .eq. 0) then    
+
+    if(proc .eq. 0) then
       open(1,file='problem.par')
         read(unit=1,nml=PROBLEM_CONTROL)
         write(*,nml=PROBLEM_CONTROL)
@@ -49,7 +49,7 @@ contains
         write(3,*)
       close(3)
     endif
-    
+
     if(proc .eq. 0) then
 
       cbuff(1) =  problem_name
@@ -68,21 +68,21 @@ contains
       call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
     else
-    
+
       call MPI_BCAST(cbuff, 32*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
       call MPI_BCAST(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
       call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
-      
-      problem_name = cbuff(1)   
-      run_id       = cbuff(2)   
 
-      d0           = rbuff(1)  
-      bxn          = rbuff(2)  
-      byn          = rbuff(3)  
-      bzn          = rbuff(4)  
-      x0           = rbuff(5) 
-      y0           = rbuff(6) 
-      z0           = rbuff(6) 
+      problem_name = cbuff(1)
+      run_id       = cbuff(2)
+
+      d0           = rbuff(1)
+      bxn          = rbuff(2)
+      byn          = rbuff(3)
+      bzn          = rbuff(4)
+      x0           = rbuff(5)
+      y0           = rbuff(6)
+      z0           = rbuff(6)
 
     endif
 
@@ -99,15 +99,15 @@ contains
 
 !   Secondary parameters
 
-    b0 = sqrt(2.*alpha*d0*c_si**2) 
-    
-    call hydrostatic_zeq(1, 1, d0, dprof)    
+    b0 = sqrt(2.*alpha*d0*c_si**2)
+
+    call hydrostatic_zeq(1, 1, d0, dprof)
 
     do k = 1,nz
       do j = 1,ny
         do i = 1,nx
-          u(idna,i,j,k)   = max(smalld,dprof(k)) 
-	  
+          u(idna,i,j,k)   = max(smalld,dprof(k))
+
           u(imxa:imza,i,j,k) = 0.0
 #ifdef SHEAR
           u(imya,i,j,k) = -qshear*omega*x(i)*u(idna,i,j,k)
@@ -132,7 +132,7 @@ contains
         enddo
       enddo
     enddo
-  
+
     do k = 1,nz
       do j = 1,ny
         do i = 1,nx
@@ -145,22 +145,22 @@ contains
         enddo
       enddo
     enddo
-              
+
     return
   end subroutine init_prob
-  
+
 !-----------------------------------------------------------------------------
 
   subroutine mass_loss_compensate
-  
+
     implicit none
-    
+
     real tot_mass, dmass
     integer i
-    
+
       call total_mass(tot_mass)
 
-      mass_loss = max(0.0,init_mass - tot_mass) 
+      mass_loss = max(0.0,init_mass - tot_mass)
 
       dmass = mass_loss/init_mass
 
@@ -170,7 +170,7 @@ contains
         u(imya,:,:,:) = u(imya,:,:,:) - dmass * qshear*omega*x(i) * dinit(:,:,:)
 #endif /* SHEAR */
 #ifndef ISO
-        u(iena,:,:,:) = u(iena,:,:,:) + dmass * (c_si**2/(gamma-1.0) * dinit(:,:,:) 
+        u(iena,:,:,:) = u(iena,:,:,:) + dmass * (c_si**2/(gamma-1.0) * dinit(:,:,:)
 #ifdef SHEAR
 	u(iena,:,:,:) = u(iena,:,:,:) + dmass * 0.5 * (qshear*omega*x(i))**2) * dinit(:,:,:)
 #endif /* SHEAR */
@@ -178,39 +178,39 @@ contains
       enddo
 
   end subroutine mass_loss_compensate
-  
+
 !=============================================================================
-! Te procedury powinny sie znalezc docelowo w jakims innym module. 
-   
+! Te procedury powinny sie znalezc docelowo w jakims innym module.
+
   subroutine save_init_dens
     implicit none
     real mass
-    
+
       dinit(:,:,:) = u(idna,:,:,:)
       mass = sum(dinit(is:ie,js:je,ks:ke)) * dvol
       call MPI_ALLREDUCE(mass, init_mass, 1, mpi_real8, mpi_sum, comm3d, ierr)
 
   end subroutine save_init_dens
-  
+
 !-----------------------------------------------------------------------------
-   
+
   subroutine get_init_mass
     implicit none
     real mass
-    
+
       mass = sum(dinit(is:ie,js:je,ks:ke)) * dvol
       call MPI_ALLREDUCE(mass, init_mass, 1, mpi_real8, mpi_sum, comm3d, ierr)
 
   end subroutine get_init_mass
-  
+
 !-----------------------------------------------------------------------------
-   
-  
+
+
   subroutine total_mass(tmass)
 
     implicit none
     real mass, tmass
-   
+
       mass = sum(u(idna,is:ie,js:je,ks:ke)) * dvol
       call MPI_ALLREDUCE(mass, tmass, 1, mpi_real8, mpi_sum, comm3d, ierr)
 
@@ -292,7 +292,7 @@ contains
       case default
          write(*,*) "Unknonw var = ",var," in user_plt!"
    end select
- 
+
   end subroutine user_plt
 
   subroutine user_hdf5(var,tab)
@@ -303,7 +303,7 @@ contains
 #endif
     implicit none
     character(LEN=4)     :: var
-    real*4, dimension(:,:,:) :: tab
+    real(kind=4), dimension(:,:,:) :: tab
 
     select case(var)
       case("dens")
