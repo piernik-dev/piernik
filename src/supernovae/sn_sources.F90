@@ -322,8 +322,8 @@ module sn_sources
       use constants, only : pi
       implicit none
       real :: rand(2)                  
-      real :: rnx,rny,rnz               !> Point's position in cartesian coordinates
-      real, dimension(2) :: rand_angles !> Latidue and longitude
+      real :: rnx,rny,rnz               !! Point's position in cartesian coordinates
+      real, dimension(2) :: rand_angles !! Latidue and longitude
 
       call random_number(rand)
       rnz = (1.0-2.0*rand(1))
