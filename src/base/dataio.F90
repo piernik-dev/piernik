@@ -1728,15 +1728,19 @@ module dataio
                   + (/nb,nb,nb/)
     call mpifind(va_max, 'max', loc_va_max, proc_va_max)
 
-    wa(1:nx-1,1:ny-1,1:nz-1) = &
+    if(dimensions .eq. '3d') then
+       wa(1:nx-1,1:ny-1,1:nz-1) = &
           (b(1,2:nx,1:ny-1,1:nz-1) - b(1,1:nx-1,1:ny-1,1:nz-1))*dy*dz &
          +(b(2,1:nx-1,2:ny,1:nz-1) - b(2,1:nx-1,1:ny-1,1:nz-1))*dx*dz &
          +(b(3,1:nx-1,1:ny-1,2:nz) - b(3,1:nx-1,1:ny-1,1:nz-1))*dx*dy
 
-    wa(nx,:,:) = wa(nx-1,:,:)
-    wa(:,ny,:) = wa(:,ny-1,:)
-    wa(:,:,nz) = wa(:,:,nz-1)
-    wa = abs(wa)
+       wa(nx,:,:) = wa(nx-1,:,:)
+       wa(:,ny,:) = wa(:,ny-1,:)
+       wa(:,:,nz) = wa(:,:,nz-1)
+       wa = abs(wa)
+    elseif(dimensions .eq. '2dxy') then
+       wa = 0.0   !\todo Divergence in 2D
+    endif
 
     divb_max      = maxval(wa(is:ie,js:je,ks:ke))
     loc_divb_max  = maxloc(wa(is:ie,js:je,ks:ke)) + (/nb,nb,nb/)

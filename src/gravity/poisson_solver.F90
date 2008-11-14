@@ -18,7 +18,9 @@ contains
     use arrays, only : idna,u,gp,x,nx,ny,nz,nzb
     use grid, only   : dz,dx
     use mpi_setup
+#ifdef SHEAR    
     use shear, only  : unshear_fft
+#endif /* SHEAR */
     
     implicit none
     real, dimension(:,:,:), allocatable :: ala
@@ -56,25 +58,16 @@ contains
     elseif ( bnd_xl .eq. 'she' .and. bnd_xr .eq. 'she' .and. &
              bnd_yl .eq. 'per' .and. bnd_yr .eq. 'per' ) then
 
-
-!          ala = u(idna,:,:,:)
-!         ala = unshear(ala,x,.true.)
-
          if(dimensions=='3d') then
            if(.not.allocated(ala)) allocate(ala(nx-2*nb,ny-2*nb,nz-2*nb))
            ala = u(idna,nb+1:nb+nxd,nb+1:nb+nyd,nb+1:nb+nzd)
            call poisson_xyzp(ala(:,:,:), &
-                            gp(nb+1:nb+nxd,nb+1:nb+nyd,nb+1:nb+nzd),dz)
+                gp(nb+1:nb+nxd,nb+1:nb+nyd,nb+1:nb+nzd),dz)
 
            gp(:,:,1:nb)              = gp(:,:,nzd+1:nzd+nb)
            gp(:,:,nzd+nb+1:nzd+2*nb) = gp(:,:,nb+1:2*nb)
 
          else
-!           if(.not.allocated(ala)) allocate(ala(1:nb,ny-2*nb,1:1))
-!           ala =  u(idna,nb+1:nb+nxd,nb+1:nb+nyd,1:1)
-!           call poisson_xy(ala(:,:,1), &
-!                            gp(nb+1:nb+nxd,nb+1:nb+nyd,1),dx)
-
             call poisson_xy2d(u(idna,nb+1:nb+nxd,nb+1:nb+nyd,1), &
                             gp(nb+1:nb+nxd,      nb+1:nb+nyd,1), &
                             gp(1:nb,             nb+1:nb+nyd,1), &
@@ -82,16 +75,11 @@ contains
                             dx)
 
 
-!           gp(1:nb,:,:)              = gp(nxd+1:nxd+nb,:,:)
-!           gp(nxd+nb+1:nxd+2*nb,:,:) = gp(nb+1:2*nb,:,:)
          endif
-           gp(:,1:nb,:)              = gp(:,nyd+1:nyd+nb,:)
-           gp(:,nyd+nb+1:nyd+2*nb,:) = gp(:,nb+1:2*nb,:)
+         gp(:,1:nb,:)              = gp(:,nyd+1:nyd+nb,:)
+         gp(:,nyd+nb+1:nyd+2*nb,:) = gp(:,nb+1:2*nb,:)
 
-
-!         gp = unshear(gp,x)
          if (allocated(ala)) deallocate(ala)
-!         write(*,*) maxval(gp), minval(gp)
 #endif /* SHEAR */
     else
       write(*,*) 'POISSON SOLVER: not implemented for boundary conditions'
@@ -108,6 +96,7 @@ contains
 !! bnd conditions in X and Y in 2D
 !! ASSUMPTION: 1) dx = dy 
 !!
+#ifdef SHEAR
   subroutine poisson_xy2d(den, pot, lpot, rpot, dx)
     use start, only : xmin,xmax,ymin,ymax,nyd,nb,nxd
     use constants, only : newtong,dpi,small
@@ -249,6 +238,7 @@ contains
     
     return
   end subroutine poisson_xy2d
+#endif /* SHEAR */
 
 !!=====================================================================
 !!
