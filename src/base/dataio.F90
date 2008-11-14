@@ -292,6 +292,7 @@ module dataio
     use start, only : vars,xmin,xmax,ymin,ymax,zmin,zmax,nstep,t, &
          domain, nxd,nyd,nzd,nb,mag_center, gamma, dimensions, dt
     use grid, only : dx,dy,dz
+	 use constants, only : Gs
     use arrays, only : nx,ny,nz,nxb,nyb,nzb,x,y,z,wa,outwa,outwb,outwc,b,u, &
          idna,imxa,imya,imza,ibx,iby,ibz
 #ifdef COSM_RAYS
@@ -320,8 +321,11 @@ module dataio
              , sfdimid, sfsdmname, sfsdscale, sfsdmstr
 
     integer :: iv, ibe, jbe
-    integer :: nxo, nyo, nzo, iso,ieo,jso,jeo,kso,keo
+    integer :: nxo = 1, nyo = 1, nzo = 1, &
+               iso = 1, jso = 1, kso = 1, &
+               ieo = 1, jeo = 1, keo = 1
     real(kind=4), dimension(:,:,:), allocatable :: temp
+	 real :: magunit
 
 !- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -514,52 +518,55 @@ module dataio
         wa(iso:ieo,jso:jeo,kso:keo) = gp(iso:ieo,jso:jeo,kso:keo)
 #endif /* GRAV */
       case ('magx')
+		  magunit=Gs
         if(domain .eq. 'full_domain') then
           if(mag_center .eq. 'yes') then
-            wa(:,:,:) = 0.5*(b(ibx,:,:,:))
+            wa(:,:,:) = 0.5*(b(ibx,:,:,:)/magunit)
             wa(:,:,:) = wa(:,:,:)  + cshift(wa(:,:,:),shift=1,dim=1)
           else
-            wa(:,:,:) = b(ibx,:,:,:)
+            wa(:,:,:) = b(ibx,:,:,:)/magunit
           endif
         else if(domain .eq. 'phys_domain') then
           if(mag_center .eq. 'yes') then
-            wa(iso:ieo,jso:jeo,kso:keo) = 0.5*(b(ibx,iso:ieo,jso:jeo,kso:keo))
-            wa(iso:ieo,jso:jeo,kso:keo) = wa(iso:ieo,jso:jeo,kso:keo) + 0.5*(b(ibx,iso+1:ieo+1,jso:jeo,kso:keo))
+            wa(iso:ieo,jso:jeo,kso:keo) = 0.5*(b(ibx,iso:ieo,jso:jeo,kso:keo))/magunit
+            wa(iso:ieo,jso:jeo,kso:keo) = wa(iso:ieo,jso:jeo,kso:keo) + 0.5*(b(ibx,iso+1:ieo+1,jso:jeo,kso:keo))/magunit
           else
-            wa(iso:ieo,jso:jeo,kso:keo) = b(ibx,iso:ieo,jso:jeo,kso:keo)
+            wa(iso:ieo,jso:jeo,kso:keo) = b(ibx,iso:ieo,jso:jeo,kso:keo)/magunit
           endif
         endif
       case ('magy')
-        if(domain .eq. 'full_domain') then
+        magunit=Gs
+		  if(domain .eq. 'full_domain') then
           if(mag_center .eq. 'yes') then
-            wa(:,:,:) = 0.5*(b(iby,:,:,:))
+            wa(:,:,:) = 0.5*(b(iby,:,:,:)/magunit)
             wa(:,:,:) = wa(:,:,:)  + cshift(wa(:,:,:),shift=1,dim=2)
           else
-            wa(:,:,:) = b(iby,:,:,:)
+            wa(:,:,:) = b(iby,:,:,:)/magunit
           endif
         else if(domain .eq. 'phys_domain') then
           if(mag_center .eq. 'yes') then
-            wa(iso:ieo,jso:jeo,kso:keo) = 0.5*(b(iby,iso:ieo,jso:jeo,kso:keo))
-            wa(iso:ieo,jso:jeo,kso:keo) = wa(iso:ieo,jso:jeo,kso:keo) + 0.5*(b(iby,iso:ieo,jso+1:jeo+1,kso:keo))
+            wa(iso:ieo,jso:jeo,kso:keo) = 0.5*(b(iby,iso:ieo,jso:jeo,kso:keo))/magunit
+            wa(iso:ieo,jso:jeo,kso:keo) = wa(iso:ieo,jso:jeo,kso:keo) + 0.5*(b(iby,iso:ieo,jso+1:jeo+1,kso:keo))/magunit
           else
-            wa(iso:ieo,jso:jeo,kso:keo) = b(iby,iso:ieo,jso:jeo,kso:keo)
+            wa(iso:ieo,jso:jeo,kso:keo) = b(iby,iso:ieo,jso:jeo,kso:keo)/magunit
           endif
         endif
 
       case ('magz')
-        if(domain .eq. 'full_domain') then
+        magunit=Gs
+		  if(domain .eq. 'full_domain') then
           if(mag_center .eq. 'yes') then
-            wa(:,:,:) = 0.5*(b(ibz,:,:,:))
+            wa(:,:,:) = 0.5*(b(ibz,:,:,:)/magunit)
             wa(:,:,:) = wa(:,:,:)  + cshift(wa(:,:,:),shift=1,dim=3)
           else
-            wa(:,:,:) = b(ibz,:,:,:)
+            wa(:,:,:) = b(ibz,:,:,:)/magunit
           endif
         else if(domain .eq. 'phys_domain') then
           if(mag_center .eq. 'yes') then
-            wa(iso:ieo,jso:jeo,kso:keo) = 0.5*(b(ibz,iso:ieo,jso:jeo,kso:keo))
-            wa(iso:ieo,jso:jeo,kso:keo) = wa(iso:ieo,jso:jeo,kso:keo) + 0.5*(b(ibz,iso:ieo,jso:jeo,kso+1:keo+1))
+            wa(iso:ieo,jso:jeo,kso:keo) = 0.5*(b(ibz,iso:ieo,jso:jeo,kso:keo))/magunit
+            wa(iso:ieo,jso:jeo,kso:keo) = wa(iso:ieo,jso:jeo,kso:keo) + 0.5*(b(ibz,iso:ieo,jso:jeo,kso+1:keo+1))/magunit
           else
-            wa(iso:ieo,jso:jeo,kso:keo) = b(ibz,iso:ieo,jso:jeo,kso:keo)
+            wa(iso:ieo,jso:jeo,kso:keo) = b(ibz,iso:ieo,jso:jeo,kso:keo)/magunit
           endif
         endif
 
