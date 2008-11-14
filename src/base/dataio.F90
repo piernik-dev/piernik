@@ -1433,6 +1433,7 @@ module dataio
 #endif /* COSM_RAYS */
     use grid, only  : dvol,dx,dy,dz
     use start, only : proc, dt, t, nstep, nrestart,nxd,nyd,nzd
+	 use constants, only : Gs
 #ifdef GRAV
     use arrays, only : gp
 #endif /* GRAV */
@@ -1479,10 +1480,12 @@ module dataio
 #ifdef SNE_DISTR
 	 real :: sum_emagadd = 0.0
 #endif /* SNE_DISTR */
+    real :: magunit
 !- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 !
     if (proc .eq. 0) then
-      write (tsl_file,'(a,a1,a,a1,a3,a1,i3.3,a4)') &
+      magunit = Gs
+		write (tsl_file,'(a,a1,a,a1,a3,a1,i3.3,a4)') &
               trim(cwd),'/',trim(problem_name),'_', run_id,'_',nrestart,'.tsl'
 
       if (tsl_firstcall) then
@@ -1559,15 +1562,15 @@ module dataio
     emag = sum(wa(is:ie,js:je,ks:ke)) * dvol
     call mpi_allreduce(emag, tot_emag, 1, mpi_real8, mpi_sum, comm3d, ierr)
 
-    wa(is:ie,js:je,ks:ke) = b(ibx,is:ie,js:je,ks:ke)
+    wa(is:ie,js:je,ks:ke) = b(ibx,is:ie,js:je,ks:ke)/magunit
     mflx = sum(wa(is:ie,js:je,ks:ke)) * dy*dz/nxd
     call mpi_allreduce(mflx, tot_mflx, 1, mpi_real8, mpi_sum, comm3d, ierr)
 
-    wa(is:ie,js:je,ks:ke) = b(iby,is:ie,js:je,ks:ke)
+    wa(is:ie,js:je,ks:ke) = b(iby,is:ie,js:je,ks:ke)/magunit
     mfly = sum(wa(is:ie,js:je,ks:ke)) * dx*dz/nyd
     call mpi_allreduce(mfly, tot_mfly, 1, mpi_real8, mpi_sum, comm3d, ierr)
 
-    wa(is:ie,js:je,ks:ke) = b(ibz,is:ie,js:je,ks:ke)
+    wa(is:ie,js:je,ks:ke) = b(ibz,is:ie,js:je,ks:ke)/magunit
     mflz = sum(wa(is:ie,js:je,ks:ke)) * dx*dy/nzd
     call mpi_allreduce(mflz, tot_mflz, 1, mpi_real8, mpi_sum, comm3d, ierr)
 
