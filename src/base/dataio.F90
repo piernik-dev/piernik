@@ -1631,7 +1631,7 @@ module dataio
     use grid, only   : dx,dy,dz,dxmn
     use constants, only : small, hydro_mass, k_B
     use start, only : t,dt,nstep,sleep_minutes,sleep_seconds, smallei,nb, &
-         gamma,cfl
+         gamma,cfl, dimensions
 #ifdef COSM_RAYS
     use start, only  : dt_cr
     use arrays, only : iecr
