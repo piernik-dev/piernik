@@ -1,4 +1,4 @@
-#define HDF5
+#undef HDF5
 #undef DEBUG
 #undef VERBOSE
 
