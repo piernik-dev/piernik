@@ -143,7 +143,7 @@ module constants     ! module containg numerical and physical constants !!!
         real, parameter :: gasRconst =  8.31434e7*erg/kelvin !/mol
         real, parameter :: clight =     2.997924562e10*cm/sek
 		  
-		  real, parameter :: Gs     =     4.*pi*sek*sqrt(cm/gram)
+		  real, parameter :: Gs     =     sqrt(4.*pi*cm/gram)*sek
 		  real, parameter :: mGs	 =		 Gs*1.e-6
 		  real, parameter :: Tesla  =     1.e4*Gs
 #ifdef PGM
