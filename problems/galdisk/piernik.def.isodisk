@@ -14,16 +14,18 @@
 #undef  SSP            /*solver*/
 
 /* choosing unitsystem */
-#undef STANDARD		/*genuine unitsystem*/
-#define PSM		/*pc,Msun,Myr unitsystem*/
-#undef PGM		/*pc,G=1,Myr unitsystem*/
-#undef DMY		/*cm^16,Msun,year unitsystem*/
-#undef CGS		/*cm,gram,sek unitsystem*/
-#undef SI		/*metr,kg,sek unitsystem*/
+#undef STANDARD         /*genuine unitsystem*/
+#define PSM             /*pc,Msun,Myr unitsystem*/
+#undef VINE             /*3.5kpc,5.6e10Msun,13.1Myr unitsystem*/
+#undef GSM              /*kpc,10^6Msun,Gyr unitsystem*/
+#undef PGM              /*pc,G=1,Myr unitsystem*/
+#undef DMY              /*cm^16,Msun,year unitsystem*/
+#undef CGS              /*cm,gram,sek unitsystem*/
+#undef SI               /*metr,kg,sek unitsystem*/
 /*===================================*/
 
 /* adiabatic or isothermal */
-#define ISO 	
+#define ISO
 
 /* choosing freezing speed */
 #define LOCAL_FR_SPEED
@@ -37,9 +39,9 @@
 #undef SUPERBEE
 
 /* physics including */
-#undef RESIST 		
-#undef VISC			
-#undef HEAT_COND	
+#undef RESIST
+#undef VISC
+#undef HEAT_COND
 #undef COOL_HEAT
 #undef COSM_RAYS
 

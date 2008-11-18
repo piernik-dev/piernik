@@ -14,8 +14,9 @@
 #undef  SSP            /*solver*/
 
 /* choosing unitsystem */
-#undef STANDARD	        /*genuine unitsystem*/
+#undef STANDARD         /*genuine unitsystem*/
 #define PSM             /*pc,Msun,Myr unitsystem*/
+#undef VINE             /*3.5kpc,5.6e10Msun,13.1Myr unitsystem*/
 #undef GSM              /*kpc,10^6Msun,Gyr unitsystem*/
 #undef PGM              /*pc,G=1,Myr unitsystem*/
 #undef DMY              /*cm^16,Msun,year unitsystem*/
