@@ -1,4 +1,3 @@
-
 ! $Id$
 #include "piernik.def"
 
@@ -221,7 +220,7 @@ module dataio
 
 #ifdef GALACTIC_DISK
     if(output .eq. 'gpt') then
-!      call write_gpot
+      call write_gpot
     endif
 #endif /* GALACTIC_DISK */
 #ifdef BLOB
@@ -292,7 +291,9 @@ module dataio
     use start, only : vars,xmin,xmax,ymin,ymax,zmin,zmax,nstep,t, &
          domain, nxd,nyd,nzd,nb,mag_center, gamma, dimensions, dt
     use grid, only : dx,dy,dz
-	 use constants, only : Gs
+#ifndef STANDARD
+    use constants, only : Gs
+#endif /* STANDARD */
     use arrays, only : nx,ny,nz,nxb,nyb,nzb,x,y,z,wa,outwa,outwb,outwc,b,u, &
          idna,imxa,imya,imza,ibx,iby,ibz
 #ifdef COSM_RAYS
@@ -325,7 +326,7 @@ module dataio
                iso = 1, jso = 1, kso = 1, &
                ieo = 1, jeo = 1, keo = 1
     real(kind=4), dimension(:,:,:), allocatable :: temp
-	 real :: magunit
+    real :: magunit
 
 !- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -457,10 +458,11 @@ module dataio
         wa(iso:ieo,jso:jeo,kso:keo) = u(iena,iso:ieo,jso:jeo,kso:keo)
       case ('eint')
         wa(iso:ieo,jso:jeo,kso:keo) = u(iena,iso:ieo,jso:jeo,kso:keo) &
-                                    - 0.5*(u(imxa,iso:ieo,jso:jeo,kso:keo)**2 &
-                                          +u(imya,iso:ieo,jso:jeo,kso:keo)**2 &
-                                          +u(imza,iso:ieo,jso:jeo,kso:keo)**2)/u(idna,iso:ieo,jso:jeo,kso:keo)
+                               - 0.5*(u(imxa,iso:ieo,jso:jeo,kso:keo)**2 &
+                                     +u(imya,iso:ieo,jso:jeo,kso:keo)**2 &
+                                     +u(imza,iso:ieo,jso:jeo,kso:keo)**2)/u(idna,iso:ieo,jso:jeo,kso:keo)
 #endif /* ISO */
+
 #ifdef COSM_RAYS
       case ('encr')
         wa(iso:ieo,jso:jeo,kso:keo) = u(iecr,iso:ieo,jso:jeo,kso:keo)
@@ -468,9 +470,9 @@ module dataio
 
       case ('divb')
         wa(iso:ieo-1,jso:jeo-1,kso:keo-1) = &
-           (b(1,iso+1:ieo, jso:jeo-1, kso:keo-1) - b(1,iso:ieo-1, jso:jeo-1, kso:keo-1))*dy*dz &
-          +(b(2,iso:ieo-1, jso+1:jeo, kso:keo-1) - b(2,iso:ieo-1, jso:jeo-1, kso:keo-1))*dx*dz &
-          +(b(3,iso:ieo-1, jso:jeo-1, kso+1:keo) - b(3,iso:ieo-1, jso:jeo-1, kso:keo-1))*dx*dy
+           (b(ibx,iso+1:ieo,jso:jeo-1,kso:keo-1) - b(ibx,iso:ieo-1,jso:jeo-1,kso:keo-1))*dy*dz &
+          +(b(iby,iso:ieo-1,jso+1:jeo,kso:keo-1) - b(iby,iso:ieo-1,jso:jeo-1,kso:keo-1))*dx*dz &
+          +(b(ibz,iso:ieo-1,jso:jeo-1,kso+1:keo) - b(ibz,iso:ieo-1,jso:jeo-1,kso:keo-1))*dx*dy
         wa = abs(wa)
         wa(ieo,:,:) = wa(ieo-1,:,:)
         wa(:,jeo,:) = wa(:,jeo-1,:)
@@ -518,7 +520,11 @@ module dataio
         wa(iso:ieo,jso:jeo,kso:keo) = gp(iso:ieo,jso:jeo,kso:keo)
 #endif /* GRAV */
       case ('magx')
-		  magunit=Gs
+#ifdef STANDARD
+        magunit = 1.0
+#else /* STANDARD */
+        magunit = Gs
+#endif /* STANDARD */
         if(domain .eq. 'full_domain') then
           if(mag_center .eq. 'yes') then
             wa(:,:,:) = 0.5*(b(ibx,:,:,:)/magunit)
@@ -535,8 +541,12 @@ module dataio
           endif
         endif
       case ('magy')
-        magunit=Gs
-		  if(domain .eq. 'full_domain') then
+#ifdef STANDARD
+        magunit = 1.0
+#else /* STANDARD */
+        magunit = Gs
+#endif /* STANDARD */
+        if(domain .eq. 'full_domain') then
           if(mag_center .eq. 'yes') then
             wa(:,:,:) = 0.5*(b(iby,:,:,:)/magunit)
             wa(:,:,:) = wa(:,:,:)  + cshift(wa(:,:,:),shift=1,dim=2)
@@ -553,8 +563,12 @@ module dataio
         endif
 
       case ('magz')
-        magunit=Gs
-		  if(domain .eq. 'full_domain') then
+#ifdef STANDARD
+        magunit = 1.0
+#else /* STANDARD */
+        magunit = Gs
+#endif /* STANDARD */
+        if(domain .eq. 'full_domain') then
           if(mag_center .eq. 'yes') then
             wa(:,:,:) = 0.5*(b(ibz,:,:,:)/magunit)
             wa(:,:,:) = wa(:,:,:)  + cshift(wa(:,:,:),shift=1,dim=3)
@@ -704,7 +718,8 @@ module dataio
              , sfdimid, sfsdmname, sfsdscale, sfsdmstr
 
     integer :: iv, i, j, ibe, jbe
-    integer :: nxo, nyo, nzo, iso,ieo,jso,jeo,kso,keo
+    integer :: nxo = 1, nyo = 1, nzo = 1, &
+                  iso = 1, ieo = 1, jso = 1, jeo = 1, kso = 1, keo = 1
 
 !- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -1433,7 +1448,9 @@ module dataio
 #endif /* COSM_RAYS */
     use grid, only  : dvol,dx,dy,dz
     use start, only : proc, dt, t, nstep, nrestart,nxd,nyd,nzd
-	 use constants, only : Gs
+#ifndef STANDARD
+    use constants, only : Gs
+#endif /* STANDARD */
 #ifdef GRAV
     use arrays, only : gp
 #endif /* GRAV */
@@ -1458,8 +1475,8 @@ module dataio
 #endif /* SNE_DISTR */
 
     implicit none
-    integer i,j
 
+    integer i,j
     character(len=128) :: tsl_file
 
     real :: mass = 0.0, momx = 0.0, momy = 0.0,  momz = 0.0, &
@@ -1478,14 +1495,18 @@ module dataio
     real :: encr = 0.0, tot_encr = 0.0
 #endif /* COSM_RAYS */
 #ifdef SNE_DISTR
-	 real :: sum_emagadd = 0.0
+    real :: sum_emagadd = 0.0
 #endif /* SNE_DISTR */
     real :: magunit
 !- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 !
     if (proc .eq. 0) then
+#ifdef STANDARD
+      magunit = 1.0
+#else /* STANDARD */
       magunit = Gs
-		write (tsl_file,'(a,a1,a,a1,a3,a1,i3.3,a4)') &
+#endif /* STANDARD */
+      write (tsl_file,'(a,a1,a,a1,a3,a1,i3.3,a4)') &
               trim(cwd),'/',trim(problem_name),'_', run_id,'_',nrestart,'.tsl'
 
       if (tsl_firstcall) then
