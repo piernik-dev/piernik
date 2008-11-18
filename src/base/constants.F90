@@ -11,7 +11,7 @@ module constants     ! module containg numerical and physical constants !!!
   real, parameter :: thrq = 3./4.
   real, parameter :: small= 1.e-50
   real, parameter :: big  = 1.e+50
-  
+
   real, parameter :: pi = 3.141592653589793238
   real, parameter :: dpi = 2.*pi
   real, parameter :: fpi = 4.*pi
@@ -32,19 +32,34 @@ module constants     ! module containg numerical and physical constants !!!
         real, parameter :: kg =         1.0e3*gram
         real, parameter :: Msun =       1.0
 
+#elif defined VINE
+! uses: length --> 3.5kpc, mass --> 5.6e10*Msun, time --> 13.1Myr, temperature --> kelvin
+! length units:
+        real, parameter :: pc =         1.0e-3/3.5
+        real, parameter :: cm =         pc/3.0856e18
+        real, parameter :: metr =       1.0e2*cm
+! time units:
+        real, parameter :: myr =        1.0/13.1
+        real, parameter :: year =       1.0e-6*myr
+        real, parameter :: sek =        year/365.2652/24.0/3600.0
+! mass units:
+        real, parameter :: Msun =       1.0e-10/5.6
+        real, parameter :: gram =       Msun/1.989e33
+        real, parameter :: kg =         1.0e3*gram
+
 #elif defined GSM
 ! uses: length --> kpc, mass --> 10^6*Msun, time --> Gyr, temperature --> kelvin
 ! length units:
-	real, parameter :: cm =         1.0/3.0856e21
+        real, parameter :: cm =         1.0/3.0856e21
         real, parameter :: metr =       1.0e2*cm
-        real, parameter :: pc =	        1.0e-3
+        real, parameter :: pc =         1.0e-3
 ! time units:
         real, parameter :: sek =        1.0e-9/365.2652/24.0/3600.0
         real, parameter :: year =       1.0e-9
         real, parameter :: myr =        1.0e-3
 ! mass units:
         real, parameter :: gram =       1.0e-6/1.989e33
-        real, parameter :: kg =	        1.0e3*gram
+        real, parameter :: kg =         1.0e3*gram
         real, parameter :: Msun =       1.0e-6
 
 #elif defined (PGM)
@@ -108,7 +123,7 @@ module constants     ! module containg numerical and physical constants !!!
         real, parameter :: kg =	        1.0e3*gram
         real, parameter :: Msun =       1.989e33
 
-#endif /* PSM, PGM, DMY, SI, CGS */
+#endif /* PSM, VINE, GSM, PGM, DMY, SI, CGS */
 
 #ifndef STANDARD
 ! length units:
@@ -142,12 +157,12 @@ module constants     ! module containg numerical and physical constants !!!
         real, parameter :: kboltz =     1.380622e-16*erg/kelvin
         real, parameter :: gasRconst =  8.31434e7*erg/kelvin !/mol
         real, parameter :: clight =     2.997924562e10*cm/sek
-		  
-		  real, parameter :: Gs     =     sqrt(4.*pi*cm/gram)*sek
-		  real, parameter :: mGs	 =		 Gs*1.e-6
-		  real, parameter :: Tesla  =     1.e4*Gs
+
+        real, parameter :: Gs     =     sqrt(4.*pi*cm/gram)*sek
+        real, parameter :: mGs    =     Gs*1.e-6
+        real, parameter :: Tesla  =     1.e4*Gs
 #ifdef PGM
-        real, parameter :: newtong =    G_one				! pgm
+        real, parameter :: newtong =    G_one              ! pgm
 #else /* PGM */
         real, parameter :: newtong =    6.6732e-8*cm**3/gram/sek**2
 #endif /* PGM */
@@ -170,11 +185,11 @@ module constants     ! module containg numerical and physical constants !!!
 #else /* STANDARD */
   real, parameter :: sek =      1.0e-6/365.2652/24.0/3600.0
   real, parameter :: cm =       1.0/3.0856e18
-  
-  
+
+
   real, parameter :: G_cgs = 6.6725985E-8  ! (cgs)
-  real, parameter :: k_B = 1.38066e-16 ! erg/K 
-  real, parameter :: m_H = 1.66053e-24 ! g 
+  real, parameter :: k_B = 1.38066e-16 ! erg/K
+  real, parameter :: m_H = 1.66053e-24 ! g
 
   real, parameter :: G_one = 1.0  ! (scaled units)
 
@@ -183,12 +198,12 @@ module constants     ! module containg numerical and physical constants !!!
   real, parameter :: newtong = G_one
   real, parameter :: cmps2 = 3.23e8
   real, parameter :: pc = 3.086e18
-  real, parameter :: cmkm = 1.0e5      ! km -> cm 
-  real, parameter :: sekmyr = 3.154e13 ! Myr -> s 
+  real, parameter :: cmkm = 1.0e5      ! km -> cm
+  real, parameter :: sekmyr = 3.154e13 ! Myr -> s
   real, parameter :: kpc = 1000.0
-  real, parameter :: r_gc_sun = 8500   ! pc 
+  real, parameter :: r_gc_sun = 8500   ! pc
 
-  real, parameter :: vsun =     220.0  
+  real, parameter :: vsun =     220.0
   real, parameter :: hydro_mass = m_H * cmkm**2
   real, parameter :: chcf = hydro_mass / sekmyr
 #endif /* STANDARD */
