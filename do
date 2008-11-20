@@ -14,15 +14,47 @@
 # Cotopaxi (Consulting), Albuquerque, New Mexico
 #
 # Modified by Kacper Kowalik <kowalik@astri.umk.pl> October, 24, 2007
-#
+# Modified by Dominik Woltanski <minikwolt@astri.umk.pl> April-June, 2008
 use Switch;
 use File::Path;
 use File::Copy;
 my $argc = $#ARGV+1;
 if($argc < 1){
-   print "USAGE: makemake <problem>\n";
-   die;
-}
+   print "USAGE: do <problem>\n";
+   print "Other options:\n";
+   print " do problems   -  available problems names and their descriptions,\n";
+   print " do unitsystem -  available unitsystems names and their descriptions,\n";
+   print " do setup      -  how to run the code instruction,\n";
+   print " Enjoy your work with piernik!\n";
+   print " \n";
+#   die;
+} else {
+if($ARGV[0] eq "problems"){
+   print " \n";
+   system ( "cat ./problems/*/info");
+   print " \n";
+} elsif ($ARGV[0] eq "unitsystem"){
+   print " \n";
+   system ( "grep uses ./src/base/constants.F90");
+   print " \n";
+} elsif ($ARGV[0] eq "setup"){
+   print " \n";
+   print "> do <problem>  - creating obj directory with necessary source linked inside\n";
+   print "> cd obj\n";
+   print "# choose Fortran compiler settings (if different than default) typing:\n";
+   print "> newcompiler <settingsname>\n";
+   print "# modify piernik.def file with precompiler directives if needed\n";
+   print "> make\n";
+   print "# create run directory where you want\n";
+   print "> cp {piernik,problem.par} /<where-you-want>/<your-run-directory>/.\n";
+   print "> cd /<where-you-want>/<your-run-directory>/\n";
+   print "# specify var names which you want to visualize in problem.par file \n";
+   print "> ./piernik or >mpirun -n <np> ./piernik\n";
+   print "!===================================================================================!\n";
+   print "# there is also one script to do all these things above at once:\n";
+   print "> setup <problem>\n";
+   print " \n";
+} else {
 open MAKEIN, "< compilers/Makefile.in" or die $!;
 @makein = <MAKEIN>;
 close MAKEIN;
@@ -31,7 +63,7 @@ mkpath(['obj']);
 $probdir = "problems/". $ARGV[0] . "/";
 if(!-r $probdir) { die "Can't open $probdir: $!";}
 
-@prob = ( "../" . $probdir . "init_problem.F90", 
+@prob = ( "../" . $probdir . "init_problem.F90",
           "../" . $probdir . "problem.par" );
 @base = <src/base/*.F90>;
 for (@base) {
@@ -52,6 +84,8 @@ if( grep { /GRAV/ }  @d) {
 if( grep { /SELF_GRAV/ }  @d) {push(@addons, "../src/gravity/poisson_solver.F90");}
 if( grep { /RESIST/} @d) {push(@addons, "../src/resist/resistivity.F90");}
 if( grep { /SHEAR/}  @d) {push(@addons, "../src/shear/shear.F90");}
+if( grep { /HDF5/}  @d) {push(@addons, "../src/hdf5/dataio_hdf5.F90");}
+if( grep { /KEPLER_SUPPRESSION/} @d) {push(@addons, "../src/extras/rotsource.F90");}
 if( grep { /COSM_RAYS/} @d) {
    push(@addons, "../src/cosm_rays/cr_diffusion.F90");
 }
@@ -172,6 +206,8 @@ print MAKEFILE "%.o : %.mod\n\n";
 
 system("./post","mhd",$ARGV[0]);
 system("./newcompiler Makefile");
+}
+}
 
 #
 # &PrintWords(current output column, extra tab?, word list); --- print words

@@ -23,32 +23,37 @@ if($argc < 1){
    print "USAGE: makemake <problem>\n";
    print "Other options:\n";
    print " makemake problems   -  available problems names and their descriptions,\n";
+   print " makemake unitsystem -  available unitsystems names and their descriptions,\n";
    print " makemake setup      -  how to run the code instruction,\n";
    print " Enjoy your work with piernik!\n";
    print " \n";
 #   die;
 } else {
 if($ARGV[0] eq "problems"){
-         print " \n";
-	 system ( "cat ./problems/*/info");
-	 print " \n";
+   print " \n";
+   system ( "cat ./problems/*/info");
+   print " \n";
+} elsif ($ARGV[0] eq "unitsystem"){
+   print " \n";
+   system ( "grep uses ./src/base/constants.F90");
+   print " \n";
 } elsif ($ARGV[0] eq "setup"){
-         print " \n";
-	 print "> makemake <problem>  - creating obj directory with necessary source linked inside\n";
-	 print "> cd obj\n";
-	 print "# choose Fortran compilator settings (if different than default) typing:\n";
-	 print "> newcompiler <settingsname>\n";
-	 print "# modify piernik.def file with precompilator directives if needed\n";
-	 print "> make\n";
-	 print "# create run directory where you want\n";
-	 print "> cp {piernik,problem.par} /<where-you-want>/<your-run-directory>/.\n";
-	 print "> cd /<where-you-want>/<your-run-directory>/\n";
-	 print "# specify var names which you want to visualize in problem.par file \n";
-	 print "> ./piernik or >mpirun -n <np> ./piernik\n";
-	 print "!===================================================================================!\n";
-	 print "# there is also one script to do all these things above at once:\n";
-	 print "> setup <problem>\n";
-	 print " \n";
+   print " \n";
+   print "> makemake <problem>  - creating obj directory with necessary source linked inside\n";
+   print "> cd obj\n";
+   print "# choose Fortran compiler settings (if different than default) typing:\n";
+   print "> newcompiler <settingsname>\n";
+   print "# modify piernik.def file with precompiler directives if needed\n";
+   print "> make\n";
+   print "# create run directory where you want\n";
+   print "> cp {piernik,problem.par} /<where-you-want>/<your-run-directory>/.\n";
+   print "> cd /<where-you-want>/<your-run-directory>/\n";
+   print "# specify var names which you want to visualize in problem.par file \n";
+   print "> ./piernik or >mpirun -n <np> ./piernik\n";
+   print "!===================================================================================!\n";
+   print "# there is also one script to do all these things above at once:\n";
+   print "> setup <problem>\n";
+   print " \n";
 } else {
 open MAKEIN, "< compilers/Makefile.in" or die $!;
 @makein = <MAKEIN>;
@@ -58,7 +63,7 @@ mkpath(['obj']);
 $probdir = "problems/". $ARGV[0] . "/";
 if(!-r $probdir) { die "Can't open $probdir: $!";}
 
-@prob = ( "../" . $probdir . "init_problem.F90", 
+@prob = ( "../" . $probdir . "init_problem.F90",
           "../" . $probdir . "problem.par" );
 @base = <src/base/*.F90>;
 for (@base) {
