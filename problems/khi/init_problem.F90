@@ -1,12 +1,12 @@
 #include "piernik.def"
 
 module init_problem
-  
+
 ! Initial condition for fluid flows for Kelvin-Helmholtz Instability
 ! Written by: D. Woltanski, February 2008
 
   use mpi_setup
-  
+
   character problem_name*32,run_id*3
   real chi,dbot,lpert,Mtop,Mbot,dpert,tkh,vtransf
 
@@ -20,13 +20,12 @@ contains
 
   subroutine read_problem_par
     implicit none
-  
-    
+
+
     character par_file*(100), tmp_log_file*(100)
-    integer :: cwd_status 
 
     par_file = trim(cwd)//'/problem.par'
-    tmp_log_file = trim(cwd)//'/tmp.log'    
+    tmp_log_file = trim(cwd)//'/tmp.log'
 
 
     problem_name = 'aaa'
@@ -39,8 +38,8 @@ contains
     dpert   = 80.0
     tkh     = 1.70
     vtransf = 0.0
-         
-    
+
+
     if(proc .eq. 0) then
       open(1,file=par_file)
         read(unit=1,nml=PROBLEM_CONTROL)
@@ -67,29 +66,29 @@ contains
       rbuff(7) = tkh
       rbuff(8) = vtransf
 
-    
+
       call MPI_BCAST(cbuff, 32*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
       call MPI_BCAST(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
       call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
     else
-    
+
       call MPI_BCAST(cbuff, 32*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
       call MPI_BCAST(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
       call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
-      
-      problem_name = cbuff(1)   
-      run_id       = cbuff(2)   
 
-      chi          = rbuff(1)  
-      dbot         = rbuff(2)  
+      problem_name = cbuff(1)
+      run_id       = cbuff(2)
+
+      chi          = rbuff(1)
+      dbot         = rbuff(2)
       lpert	   = rbuff(3)
       Mtop	   = rbuff(4)
       Mbot	   = rbuff(5)
       dpert	   = rbuff(6)
       tkh	   = rbuff(7)
       vtransf      = rbuff(8)
-    
+
     endif
 
   end subroutine read_problem_par
@@ -100,10 +99,10 @@ contains
     use arrays, only    :   u,x,y,nx,ny
     use start, only     :   ymin,ymax,gamma,dimensions
     implicit none
-    
+
     real dtop,lambda,boxlen,p0,vtop,vbot,k0,vp,rcx,rcy,rc
     integer i,j
- 
+
 dtop = dbot/chi
 lambda = 1./6.
 gamma = 5./3.
@@ -140,7 +139,7 @@ boxlen = ymax-ymin
 
 
     return
-  end subroutine init_prob  
+  end subroutine init_prob
 
 !-----------------------------------------------------------------------------------------------------------------------------------
 
