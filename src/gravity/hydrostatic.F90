@@ -29,7 +29,10 @@ module hydrostatic
       integer ksub, ksmid, k, ia, ja
       real dzs, factor
 
-      REAL cd, cdold,  dold, dmid, ddmid, dcol_dens,a,b
+#if defined GALAXY || defined GALACTIC_DISK
+      real cd, cdold,  dold, a, b
+#endif /* GALAXY || GALACTIC_DISK */
+      real dmid, ddmid, dcol_dens
       integer iter, itermx
 
       ia = min(nx,max(1, iia))
@@ -72,7 +75,9 @@ module hydrostatic
       endif
       gprofs = tune_zeq*gprofs
 
+#if defined GALAXY || defined GALACTIC_DISK
 100   continue
+#endif /* GALAXY || GALACTIC_DISK */
 
       if(ksmid .lt. nstot) then
         dprofs(ksmid+1) = dmid
