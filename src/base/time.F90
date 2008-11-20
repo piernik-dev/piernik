@@ -33,8 +33,10 @@ contains
 #endif /* KEPLER_SUPPRESSION */
     implicit none
 #ifdef KEPLER_SUPPRESSION
+#ifndef OVERLAP
     real,allocatable,dimension(:,:) :: velx,vely,dvx,dvy
     integer k
+#endif /* OVERLAP */
 #endif /* KEPLER_SUPPRESSION */
 ! Timestep computation
 
