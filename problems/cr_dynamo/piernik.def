@@ -37,9 +37,9 @@
 #undef SUPERBEE
 
 /* physics including */
-#define RESIST 		
-#undef VISC			
-#undef HEAT_COND	
+#define RESIST
+#undef VISC
+#undef HEAT_COND
 #undef COOL_HEAT
 #define COSM_RAYS
 
