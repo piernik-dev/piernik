@@ -3,22 +3,22 @@
 module grid
 
 ! Written by: M. Hanasz, January/February 2006
-      
+
   implicit none
   real dx, dy, dz, dxmn, dvol
-  
+
   real xminb, xmaxb, yminb, ymaxb, zminb, zmaxb
   real Lx, Ly, Lz
 
 contains
 
-  subroutine grid_xyz 
+  subroutine grid_xyz
     use mpi_setup
     use start, only  : xmin,ymin,zmin,xmax,ymax,zmax, dimensions, nb, maxxyz
     use arrays, only : dl,xdim,ydim,zdim,xl,yl,zl,x,y,z,xr,yr,zr, &
        nxb,nyb,nzb,nx,ny,nz
-                    
-    integer i,j,k 
+
+    integer i,j,k
 
     maxxyz = max(size(x),size(y))
     maxxyz = max(size(z),maxxyz)
@@ -44,23 +44,23 @@ contains
       dl(zdim) = dz
       dxmn = min(dx,dy)
     endif
-      
+
 !    write(*,*) 'proc=',proc, zminb, zmaxb, dl(zdim)
 
 
 !--- Asignments -----------------------------------------------------------
     ! left zone boundaries:  xl, yl, zl
-    ! zone centers:          x,  y,  z 
+    ! zone centers:          x,  y,  z
     ! right zone boundaries: xr, yr, zr
 
 !--- x-grids --------------------------------------------------------------
-    
+
     do i= 1, nx
       x(i)  = xminb + 0.5*dx + (i-nb-1)*dx
       xl(i) = x(i)  - 0.5*dx
       xr(i) = x(i)  + 0.5*dx
     enddo
-       
+
 !--- y-grids --------------------------------------------------------------
 
 
@@ -70,7 +70,7 @@ contains
       yl(j) = y(j)  - 0.5*dy
       yr(j) = y(j)  + 0.5*dy
     enddo
-       
+
 
 !--- z-grids --------------------------------------------------------------
 
@@ -80,16 +80,16 @@ contains
         z(k)  = zminb + 0.5*dz + (k-nb-1) * dz
         zl(k) = z(k)  - 0.5*dz
         zr(k) = z(k)  + 0.5*dz
-      enddo      
-       
+      enddo
+
 !--------------------------------------------------------------------------
 
     else if(dimensions .eq. '2dxy') then
-   
+
       z = 0.0  ! dz =1
       zl = -dz/2.
       zr =  dz/2.
-     
+
     endif
 
     dvol = dx*dy*dz

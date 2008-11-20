@@ -2,7 +2,7 @@
 #include "piernik.def"
 
 module sn_distr
-  
+
 ! Supernovae distribution and drawing
 ! Written by: D. Woltanski, December 2007
 
@@ -61,7 +61,7 @@ module sn_distr
          rcl=rc
       enddo
       danta(1,:,1)=danta(1,:,1)/danta(1,imax,1)
-    
+
       rcl=0.0
       rc=1./real(imax)*RmaxII
       rc=real(i)/real(imax)*RmaxII
@@ -95,7 +95,6 @@ module sn_distr
       real, dimension(3) :: snpos
       real, dimension(2) :: dtime
       integer, dimension(2) :: SNno, pot
-      integer :: fl
       real, allocatable, dimension(:,:) :: snposarray,snangarray
       real, dimension(:,:,:,:), allocatable :: A
 #ifndef ISO
@@ -108,12 +107,12 @@ module sn_distr
          pot  = relato0((/0.0,0.0/),dtime*SNfreq)     ! zabezpiecza przed ujemna iloscia wybuchow
          SNno=pot*int(dtime*SNfreq)
          SNtrest=dtime-(real(SNno))/SNfreq
-#ifdef VERBOSE      
+#ifdef VERBOSE
          call write_sninfo(SNno)
 #endif /* VERBOSE */
       endif
       call MPI_BCAST(SNno, 2, MPI_INTEGER, 0, comm, ierr)
-    
+
       allocate(snposarray(sum(SNno,1),3), snangarray(sum(SNno,1),2))
       if(proc .eq. 0) then
          do itype = 1,2
@@ -134,7 +133,7 @@ module sn_distr
 
       allocate(A(3,nx,ny,nz))
       A(:,:,:,:) = 0.0
-#ifndef ISO            
+#ifndef ISO
       allocate(eint(nx,ny,nz))
       allocate(ekin(nx,ny,nz))
       ekin(:,:,:) = 0.5*( u(imxa,:,:,:)**2 + u(imya,:,:,:)**2 + u(imza,:,:,:) )**2 / u(idna,:,:,:)
@@ -164,7 +163,7 @@ module sn_distr
          (A(1,1:nx-1,1:ny,2:nz) - A(1,1:nx-1,1:ny,1:nz-1))/dz - &
          (A(3,2:nx,1:ny,1:nz-1) - A(3,1:nx-1,1:ny,1:nz-1))/dx
 
-      b(ibz,1:nx-1,1:ny-1,1:nz  ) = b(ibz,1:nx-1,1:ny-1,1:nz  ) + & 
+      b(ibz,1:nx-1,1:ny-1,1:nz  ) = b(ibz,1:nx-1,1:ny-1,1:nz  ) + &
          (A(2,2:nx,1:ny-1,1:nz) - A(2,1:nx-1,1:ny-1,1:nz))/dx - &
          (A(1,1:nx-1,2:ny,1:nz) - A(1,1:nx-1,1:ny-1,1:nz))/dy
 
@@ -179,7 +178,7 @@ module sn_distr
       deallocate(snposarray,snangarray)
       return
 
-   end subroutine supernovae_distribution  
+   end subroutine supernovae_distribution
 
 !------------------------------------------------
 
@@ -190,7 +189,7 @@ module sn_distr
       use constants
 #ifdef COSM_RAYS
       use arrays, only : iecr
-      use start, only  : r_sn, cr_eff           
+      use start, only  : r_sn, cr_eff
 #endif /* COSM_RAYS */
 #ifdef DIPOLS
       use sn_sources, only : magn_multipole_sn
@@ -201,10 +200,10 @@ module sn_distr
       real    :: r1sn
       real    :: massadd,eneradd,encradd,normscal,normvalu
       real, dimension(:,:,:,:) :: A
-      integer :: ic,jc,kc,i,j,k, fl
-      real    :: e_sn, amp_sn, amp_cr 
-  
-  
+      integer :: ic,jc,kc,i,j,k
+      real    :: e_sn, amp_sn, amp_cr
+
+
       if((snpos(1)+r0sn .ge. xminb-nb*dl(xdim)) .and. &
          (snpos(1)-r0sn .le. xmaxb+nb*dl(xdim))) then
          if((snpos(2)+r0sn .ge. yminb-nb*dl(ydim)) .and. &
@@ -272,8 +271,8 @@ module sn_distr
 #ifdef DIPOLS
 #ifndef DIP9
                   call magn_multipole_sn(angles,snpos,A)
-#endif
-#endif
+#endif /* DIP9 */
+#endif /* DIPOLS */
             endif
          endif
       endif
@@ -290,7 +289,7 @@ module sn_distr
             endif
          endif
       endif
-#endif /* DIP9 */  
+#endif /* DIP9 */
       return
    end subroutine add_explosion
 
@@ -318,7 +317,7 @@ module sn_distr
       snpos(1) = radius*cos(azym)
       snpos(2) = radius*sin(azym)
       snpos(3) = gasdev(los4(3),los4(4))*SNheight(itype)
- 
+
       return
    end subroutine rand_galcoord
 
@@ -335,7 +334,7 @@ module sn_distr
       write(*,'(a22,f8.4,a9,f10.4)') 'mean frequency: SN I: ',SNnohistory(1)/t,', SN II: ',SNnohistory(2)/t
       return
    end subroutine write_sninfo
-  
+
 !--------------------------------------------------
 
    function relato0(a,b)
@@ -366,7 +365,7 @@ module sn_distr
       real fac
       real, save :: gset
       integer, save :: iset, irand
- 
+
       if (iset.eq.0) then
 1        x1=2.*x-1.
          y1=2.*y-1.

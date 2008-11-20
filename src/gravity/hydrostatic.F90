@@ -13,56 +13,56 @@ module hydrostatic
       use start, only    : nsub,nb,zmin,zmax,tune_zeq,csim2, col_dens, proc
       use constants, only : k_B, hydro_mass, small, pc
       use arrays, only   : nx,ny,nz,dl,zdim,z,zl,zr, nzt
-     
+
       use gravity, only  : grav_accel,grav_pot,gp_status
 #ifndef ISO
       use arrays, only   : eprof
       use start, only    : c_si, gamma
-#endif /* ISO */      
+#endif /* ISO */
       implicit none
       real, intent(inout)              :: d0
       integer, intent(in)              :: iia, jja
       real, dimension(nz), intent(out) :: dprof
-      
+
       integer nstot
       real, allocatable ::  zs(:), dprofs(:), gprofs(:), gpots(:)
       integer ksub, ksmid, k, ia, ja
       real dzs, factor
-      
+
       REAL cd, cdold,  dold, dmid, ddmid, dcol_dens,a,b
       integer iter, itermx
-      
+
       ia = min(nx,max(1, iia))
       ja = min(ny,max(1, jja))
-            
+
       nstot=nsub*nzt
-      
+
       allocate(zs(nstot), dprofs(nstot), gprofs(nstot), gpots(nstot))
 #ifdef GALACTIC_DISK
       col_dens = d0
-#endif /* GALACTIC_DISK */          
+#endif /* GALACTIC_DISK */
       itermx = 20
       if(col_dens .gt. small) then
         dmid = 1.0
-        ddmid = 1.0  
-        dcol_dens = 0.001*col_dens 
-        iter = 1   
-      elseif(d0 .gt. small) then 
+        ddmid = 1.0
+        dcol_dens = 0.001*col_dens
+        iter = 1
+      elseif(d0 .gt. small) then
         dmid = d0
         iter = 0
-      else      
-        if(proc .eq.0)  write(*,*) 'One of "d0" or "col_dens" must be .ne. 0' 
+      else
+        if(proc .eq.0)  write(*,*) 'One of "d0" or "col_dens" must be .ne. 0'
          stop
-      endif   
-      
+      endif
+
 
       dzs = (zmax-zmin)/real(nstot-2*nb*nsub)
-          
+
       do ksub=1, nstot
         zs(ksub) = zmin-nb*dl(zdim) + dzs/2 + (ksub-1)*dzs  !
-        if(zs(ksub) .lt. 0.0) ksmid = ksub      ! the midplane is in between 
+        if(zs(ksub) .lt. 0.0) ksmid = ksub      ! the midplane is in between
       enddo                                  ! ksmid and ksmid+1
-      
+
       if(gp_status .eq. 'undefined') then
         call grav_accel('zsweep',ia, ja, zs, nstot, gprofs)
       else
@@ -73,26 +73,26 @@ module hydrostatic
       gprofs = tune_zeq*gprofs
 
 100   continue
-      
-      if(ksmid .lt. nstot) then 
+
+      if(ksmid .lt. nstot) then
         dprofs(ksmid+1) = dmid
         do ksub=ksmid+1, nstot-1
           factor = (1.0 + 0.5*dzs*gprofs(ksub)/csim2)  &
-                  /(1.0 - 0.5*dzs*gprofs(ksub)/csim2)     
-          dprofs(ksub+1) = factor * dprofs(ksub)  
+                  /(1.0 - 0.5*dzs*gprofs(ksub)/csim2)
+          dprofs(ksub+1) = factor * dprofs(ksub)
         enddo
       endif
-        
+
       if(ksmid .gt. 1) then
         dprofs(ksmid) = dmid
         do ksub=ksmid, 2, -1
           factor = (1.0 - 0.5*dzs*gprofs(ksub)/csim2)  &
-                  /(1.0 + 0.5*dzs*gprofs(ksub)/csim2)     
-          dprofs(ksub-1) = factor * dprofs(ksub)  
+                  /(1.0 + 0.5*dzs*gprofs(ksub)/csim2)
+          dprofs(ksub-1) = factor * dprofs(ksub)
         enddo
       endif
-            
-      dprof(:) =0.0      
+
+      dprof(:) =0.0
       do k=1,nz
         do ksub=1, nstot
           if(zs(ksub) .gt. zl(k) .and. zs(ksub) .lt. zr(k)) then
@@ -105,14 +105,14 @@ module hydrostatic
 #if defined GALAXY || defined GALACTIC_DISK
 
       cd = sum(dprofs(:)) * dzs * pc
-       
+
       if(col_dens .ne. 0.0) then
         dmid = d0
       else
         col_dens = cd
       endif
-      
-      if(abs(cd - col_dens) .gt. dcol_dens) then 
+
+      if(abs(cd - col_dens) .gt. dcol_dens) then
         if(iter .eq. 1) then
           dold = dmid
           cdold = cd
@@ -129,7 +129,7 @@ module hydrostatic
         iter = iter+1
         if (iter .gt. itermx) stop
         goto 100
-      endif 
+      endif
 
 !      if(proc .eq.0)  write(*,888) d0, cd ,iter
 
@@ -137,7 +137,7 @@ module hydrostatic
       eprof(:) = c_si**2/(gamma-1.0) * dprof(:)
 #endif /* ISO */
 
-!888  format('Midplane density =',f10.4,2x,'Column density =', e10.4,2x,'iter=',i4 )      
+!888  format('Midplane density =',f10.4,2x,'Column density =', e10.4,2x,'iter=',i4 )
 #endif /* GALAXY || GALACTIC_DISK */
 
     deallocate(zs,dprofs,gprofs,gpots)
@@ -157,13 +157,13 @@ module hydrostatic
       use arrays, only   : nx,ny,nz,dl,zdim,z,zl,zr, nzt
       use thermal, only  : d_temp_dz, cool
      use gravity, only  : grav_accel
-      
+
       implicit none
       integer                          :: ia, ja
       real, intent(in)                 :: T0
       real, dimension(nz), intent(out) :: dprof,eprof,tprof,bprof
       real gprof(nz)
-      
+
       integer nstot
       real, allocatable ::  zs(:), gprofs(:), dprofs(:), eprofs(:), tprofs(:), cprofs(:), bprofs(:), cfuncs(:)
       integer ksub, ksmid, k
@@ -173,26 +173,26 @@ module hydrostatic
       ia = min(nx,ia)
       ja = max(1, ja)
       ja = min(ny,ja)
-                  
+
       nstot=nsub*nzt
       allocate(zs(nstot), gprofs(nstot), dprofs(nstot), eprofs(nstot), tprofs(nstot), cprofs(nstot), bprofs(nstot),cfuncs(nstot))
-  
+
           call grav_accel('zsweep',ia, ja, z, nz, gprof)
 !         write(*,*) gprof
 
       dzs = (zmax-zmin)/real(nstot-2*nb*nsub)
-      
+
 ! Search for the index ksmid of the cell, whose center lies just below the midplane
 
       do ksub=1, nstot
-        zs(ksub) = zmin-nb*dl(zdim) + dzs/2 + (ksub-1)*dzs  
-        if(zs(ksub) .lt. 0.0) ksmid = ksub       ! the midplane is in between 
+        zs(ksub) = zmin-nb*dl(zdim) + dzs/2 + (ksub-1)*dzs
+        if(zs(ksub) .lt. 0.0) ksmid = ksub       ! the midplane is in between
       enddo                                  ! ksmid and ksmid+1
-      
-! Integration of the hydro-thermal equilibrium up to the top 
+
+! Integration of the hydro-thermal equilibrium up to the top
 ! of the subdivided z-grid
-      
-      if(ksmid .lt. nstot) then 
+
+      if(ksmid .lt. nstot) then
         tprofs(ksmid+1) = T0
         do ksub=ksmid+1, nstot-1
 
@@ -207,20 +207,20 @@ module hydrostatic
           zz(1) =zs(ksub) + dzs/2.
           call grav_accel('zsweep',ia, ja, zz, 1, gg)
           gravz = tune_zeq*gg(1)
-          
+
           call d_temp_dz(gravz,tmp,dtmpdz)
           tprofs(ksub+1) = tprofs(ksub) + dtmpdz*dzs
 
-!         write(*,"(i8,5(1x,e10.4))") ksub, zs(ksub), gravz,dtmpdz, tprofs(ksub) 
+!         write(*,"(i8,5(1x,e10.4))") ksub, zs(ksub), gravz,dtmpdz, tprofs(ksub)
         enddo
       endif
-        
+
 ! Integration of the hydro-thermal equilibrium down to the bottom of the z-subgrid
-      
+
       if(ksmid .gt. 1) then
         tprofs(ksmid) = T0
         do ksub=ksmid, 2, -1
-        
+
           zz(1) = zs(ksub)
           call grav_accel('zsweep',ia, ja, zz, 1, gg)
           gravz = tune_zeq*gg(1)
@@ -232,7 +232,7 @@ module hydrostatic
           zz(1) =zs(ksub) - dzs/2.
           call grav_accel('zsweep',ia, ja, zz, 1, gg)
           gravz = tune_zeq*gg(1)
-          
+
           call d_temp_dz(gravz,tmp,dtmpdz)
           tprofs(ksub-1) = tprofs(ksub) - dtmpdz*dzs
 
@@ -246,15 +246,15 @@ module hydrostatic
       dprofs(:) = G_sup1/(cfuncs(:) - G_uv1)
       cprofs(:) = sqrt(tprofs(:)*k_B / hydro_mass)
       eprofs(:) = cprofs(:)**2/(gamma-1.0) * dprofs(:)
-      bprofs(:) = sqrt(2.*alpha*dprofs(:)*cprofs(:)**2) 
+      bprofs(:) = sqrt(2.*alpha*dprofs(:)*cprofs(:)**2)
 
-! Remapping of the subgrid quantities onto a basic z-grid 
-            
-      dprof(:) =0.0      
-      eprof(:) =0.0      
-      tprof(:) =0.0      
-!     cprof(:) =0.0      
-      bprof(:) =0.0      
+! Remapping of the subgrid quantities onto a basic z-grid
+
+      dprof(:) =0.0
+      eprof(:) =0.0
+      tprof(:) =0.0
+!     cprof(:) =0.0
+      bprof(:) =0.0
       do k=1,nz
         do ksub=1, nstot
           if(zs(ksub) .gt. zl(k) .and. zs(ksub) .lt. zr(k)) then

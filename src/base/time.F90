@@ -13,7 +13,7 @@ module time
 #ifdef COSM_RAYS
   use cr_diffusion
 #endif /* COSM_RAYS */
-  
+
   implicit none
   real c
 
@@ -88,7 +88,7 @@ contains
 
     implicit none
 
-    real dt_mhd_proc, dt_mhd_all, c_max_all 
+    real dt_mhd_proc, dt_mhd_all, c_max_all
     real dt_mhd_proc_x, dt_mhd_proc_y, dt_mhd_proc_z
     real cx, cy, cz, vx, vy, vz, cf
 
@@ -110,7 +110,7 @@ contains
           vy=abs(u(imya,i,j,k)/u(idna,i,j,k))
           vz=abs(u(imza,i,j,k)/u(idna,i,j,k))
           v = max(vx,vy,vz)
-          
+
           pmag = sum(b(:,i,j,k)**2,1)/2.
 
 #ifdef ISO
@@ -119,7 +119,7 @@ contains
           cf = sqrt(abs(  (2.*pmag+p)/u(idna,i,j,k)) )
 #else /* ISO */
           ps=(u(iena,i,j,k)-sum(u(imxa:imza,i,j,k)**2,1)/u(idna,i,j,k)/2.)*(gamma-1.)+(2.-gamma)*pmag
-          p=ps-pmag          
+          p=ps-pmag
           cf = sqrt(abs(  (2.*pmag+gamma*p)/u(idna,i,j,k)) )
 #endif /* ISO */
 
@@ -139,9 +139,9 @@ contains
 
     call MPI_REDUCE(c, c_max_all, 1, MPI_DOUBLE_PRECISION, MPI_MAX, 0, comm, ierr)
     call MPI_BCAST(c_max_all, 1, MPI_DOUBLE_PRECISION, 0, comm, ierr)
-    
+
     c = c_max_all
-    
+
     call MPI_REDUCE(dt_mhd_proc, dt_mhd_all, 1, MPI_DOUBLE_PRECISION, MPI_MIN, 0, comm, ierr)
     call MPI_BCAST(dt_mhd_all, 1, MPI_DOUBLE_PRECISION, 0, comm, ierr)
     dt_mhd = cfl*dt_mhd_all

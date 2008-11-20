@@ -36,7 +36,7 @@ allocate(gpotdisk(nx,ny,nz),gpothalo(nx,ny,nz),gpotbulge(nx,ny,nz))
         gp(i,j,:) = gpot
       enddo
     enddo
-    
+
 #ifdef ARMS_POTENTIAL
     gp1=gp
     call compute_arms_potential
@@ -57,7 +57,7 @@ allocate(gpotdisk(nx,ny,nz),gpothalo(nx,ny,nz),gpotbulge(nx,ny,nz))
     endif
 
     deallocate(gpot)
-    
+
   end subroutine grav_pot_3d
 
 #ifdef ARMS_POTENTIAL
@@ -79,7 +79,7 @@ allocate(gpotdisk(nx,ny,nz),gpothalo(nx,ny,nz),gpotbulge(nx,ny,nz))
     r0arm = 8.0*kpc
     H_arm = 0.18*kpc
     scalfaq = 80000.0
-    
+
     C_n(1)=8.0/3.0/pi
     C_n(2)=0.5
     C_n(3)=8.0/15.0/pi
@@ -123,7 +123,7 @@ allocate(gpotdisk(nx,ny,nz),gpothalo(nx,ny,nz),gpotbulge(nx,ny,nz))
             Dn=(1.0+Kn*H_arm+0.3*(Kn*H_arm)**2)/(1.0+0.3*Kn*H_arm)
             gpfactor=-4.0*pi*newtong*H_arm*d0arm*exp(-(r-r0arm)/Rs_arm)/scalfaq
             gp5(i,j,k)=gpfactor*C_n(iarm)/Kn/Dn*cos(iarm*gamma_arm)*(1.0/cosh(Kn*zk/Betan))**Betan
-	    
+
 !	    gp5(i,j,k)=gp1(i,j,k)+gp2(i,j,k)+gp3(i,j,k)+gp4(i,j,k)
 
 
@@ -133,7 +133,7 @@ allocate(gpotdisk(nx,ny,nz),gpothalo(nx,ny,nz),gpotbulge(nx,ny,nz))
         enddo
       enddo
     enddo
-    
+
    end subroutine compute_arms_potential
 
 
@@ -143,24 +143,17 @@ allocate(gpotdisk(nx,ny,nz),gpothalo(nx,ny,nz),gpotbulge(nx,ny,nz))
 
 !--------------------------------------------------------------------------
   subroutine grav_pot(sweep, i1,i2, xsw, n, gpot,status,temp_log)
-#ifdef GRAV_GAL_VOLLMER
+#if defined GRAV_GAL_VOLLMER || defined GRAV_GAL_FERRIERE
     use arrays, only : x,y,z
-#endif /* GRAV_GAL_VOLLMER */
-#ifdef GRAV_GAL_FERRIERE
+#endif /* GRAV_GAL_VOLLMER || GRAV_GAL_FERRIERE */
+#if defined GRAV_PTMASS || defined GRAV_PTFLAT
+    use start,  only : r_smooth,csim2,ptm_x,ptm_y,ptm_z,ptmass,n_gravr,h_grav,r_grav,smalld
     use arrays, only : x,y,z
-#endif /* GRAV_GAL_FERRIERE */
-#ifdef GRAV_PTMASS
-    use start, only : r_smooth,csim2,ptm_x,ptm_y,ptm_z,ptmass,n_gravr,h_grav,r_grav,smalld
-    use arrays, only : x,y,z
-#endif /* GRAV_PTMASS */
-#ifdef GRAV_PTFLAT
-    use start, only : r_smooth,csim2,ptm_x,ptm_y,ptm_z,ptmass,n_gravr,h_grav,r_grav,smalld
-    use arrays, only : x,y,z
-#endif /* GRAV_PTFLAT */
+#endif /* GRAV_PTMASS || GRAV_PTFLAT */
 
     implicit none
     character, intent(in) :: sweep*6
-    integer, intent(in)   :: i1, i2                   ! 
+    integer, intent(in)   :: i1, i2                   !
     integer,intent(in)    :: n
     logical, optional     :: temp_log
     real, dimension(n)    :: xsw
@@ -169,18 +162,20 @@ allocate(gpotdisk(nx,ny,nz),gpothalo(nx,ny,nz),gpotbulge(nx,ny,nz))
 #if defined GRAV_PTMASS || defined GRAV_PTFLAT
        real                  :: x1, x2
        real, dimension(n)    :: x3, rc, fr
-#endif /* GRAV_PTMASS || GRAV_PTFLAT */       
-       real, dimension(n)    :: rgcv, rgsv
+#endif /* GRAV_PTMASS || GRAV_PTFLAT */
 #ifdef GRAV_GAL_FERRIERE
        real aconst, bconst, cconst, flat, omega, g_shear_rate
 #endif /* GRAV_GAL_FERRIERE */
 #if defined GRAV_GAL_VOLLMER || defined GRAV_GAL_FERRIERE
        integer i
-#endif /* GRAV_GAL_VOLLMER || GRAV_GAL_FERRIERE */
-       real rgcs, seccoord, zet
        real, allocatable :: gpdisk(:), gphalo(:), gpblg(:)
-       real Mhalo,Mbulge,Mdisk,ahalo,bbulge,adisk,bdisk
-       
+       real rgcs, seccoord, zet
+       real, dimension(n)    :: rgcv
+#endif /* GRAV_GAL_VOLLMER || GRAV_GAL_FERRIERE */
+#ifdef GRAV_GAL_VOLLMER
+       real Mhalo, Mbulge, Mdisk, ahalo, bbulge, adisk, bdisk
+       real, dimension(n)    :: rgsv
+#endif /* GRAV_GAL_VOLLMER */
        status = ''
 
 #ifdef GRAV_NULL
@@ -197,25 +192,25 @@ allocate(gpotdisk(nx,ny,nz),gpothalo(nx,ny,nz),gpotbulge(nx,ny,nz))
       end select
 #elif defined (GRAV_LINEAR)
            select case (sweep)
-        case('xsweep') 
+        case('xsweep')
           gpot = -0.5*dg_dz*z(i2)**2
-        case('ysweep') 
+        case('ysweep')
           gpot = -0.5*dg_dz*z(i1)**2
-        case('zsweep') 
+        case('zsweep')
           gpot = -0.5*dg_dz*xsw**2
            end select
-          
+
 #elif defined (GRAV_PTMASS)
            select case (sweep)
-             case('xsweep') 
+             case('xsweep')
                x1  = y(i1)-ptm_y
                x2  = z(i2)-ptm_z
                x3  = xsw - ptm_x
-             case('ysweep') 
+             case('ysweep')
                x1  = z(i1)-ptm_z
                x2  = x(i2)-ptm_x
                x3  = xsw - ptm_y
-             case('zsweep') 
+             case('zsweep')
                x1  = x(i1)-ptm_x
                x2  = y(i2)-ptm_y
                x3  = xsw - ptm_z
@@ -299,90 +294,90 @@ allocate(gpotdisk(nx,ny,nz),gpothalo(nx,ny,nz),gpotbulge(nx,ny,nz))
         cconst=vsun/5000.0*pc-aconst*5000.0*pc-bconst*log(5000.0*pc) ![1/s]
         flat=aconst*3000.0*pc+bconst*log(3000.0*pc)+cconst ![1/s]
         if (sweep == 'zsweep') then
-            rgcs = sqrt(x(i1)**2+y(i2)**2)
-            if(rgcs.le.3.0*kpc) then
+           rgcs = sqrt(x(i1)**2+y(i2)**2)
+           if(rgcs.le.3.0*kpc) then
               omega=flat
               g_shear_rate=0.0
-            else
+           else
               if(rgcs.ge.5.0*kpc) then
-                omega=vsun/rgcs
-                g_shear_rate=(-1.0)*vsun/rgcs
+                 omega=vsun/rgcs
+                 g_shear_rate=(-1.0)*vsun/rgcs
               else
-                omega=aconst*rgcs+bconst*log(rgcs)+cconst
-                g_shear_rate=aconst*rgcs+bconst
+                 omega=aconst*rgcs+bconst*log(rgcs)+cconst
+                 g_shear_rate=aconst*rgcs+bconst
               endif
-            endif
-	    gpdisk=4.4e-9*cm/sek**2*exp((-1.0)*(rgcs-r_gc_sun)/(4.9*kpc))*(sqrt(xsw**2+(0.2*kpc)**2)-sqrt((0.2*kpc)**2))
-	    gphalo=1.7e-9*cm/sek**2*(r_gc_sun**2+(2.2*kpc)**2)/(rgcs**2+(2.2*kpc)**2)*xsw**2/2.0/kpc
-	    gpblg=omega*(omega+g_shear_rate)*xsw**2
-	    if(rgcs.le.3.0*kpc) then
-	      gpblg=gpblg+0.5*flat**2*rgcs**2
-	    else
-	      if(rgcs.ge.5.0*kpc) then
-	        gpblg=gpblg+0.5*flat**2*(3.0*kpc)**2 &
-		    +8.0*aconst*kpc**2+bconst*(5.0*kpc*log(5.0*kpc/e)-3.0*kpc*log(3.0*kpc/e))+cconst*2.0*kpc &
-		    +vsun*log(rgcs/5.0/kpc)
-	      else
-	        gpblg=gpblg+0.5*flat**2*(3.0*kpc)**2 +0.5*aconst*(rgcs**2-(3.0*kpc)**2) &
-		    +bconst*(rgcs*log(rgcs/e)-3.0*kpc*log(3.0*kpc/e))+cconst*(rgcs-3.0*kpc)
-	      endif
-	    endif
-            gpot=gpdisk+gpblg+gphalo
-	    gpotdisk(i1,i2,:)=gpdisk
-	    gpothalo(i1,i2,:)=gphalo
-	    gpotbulge(i1,i2,:)=gpblg
-	else
-	  if (sweep == 'xsweep') then
-            seccoord = y(i1)
-	    zet = z(i2)
-	  elseif (sweep == 'ysweep') then
-            seccoord = x(i2)
-	    zet = z(i1)
-	  endif
-	    do i=1,n
+           endif
+           gpdisk=4.4e-9*cm/sek**2*exp((-1.0)*(rgcs-r_gc_sun)/(4.9*kpc))*(sqrt(xsw**2+(0.2*kpc)**2)-sqrt((0.2*kpc)**2))
+           gphalo=1.7e-9*cm/sek**2*(r_gc_sun**2+(2.2*kpc)**2)/(rgcs**2+(2.2*kpc)**2)*xsw**2/2.0/kpc
+           gpblg=omega*(omega+g_shear_rate)*xsw**2
+           if(rgcs.le.3.0*kpc) then
+              gpblg=gpblg+0.5*flat**2*rgcs**2
+           else
+              if(rgcs.ge.5.0*kpc) then
+                 gpblg=gpblg+0.5*flat**2*(3.0*kpc)**2 &
+                      +8.0*aconst*kpc**2+bconst*(5.0*kpc*log(5.0*kpc/e)-3.0*kpc*log(3.0*kpc/e))+cconst*2.0*kpc &
+                      +vsun*log(rgcs/5.0/kpc)
+              else
+                 gpblg=gpblg+0.5*flat**2*(3.0*kpc)**2 +0.5*aconst*(rgcs**2-(3.0*kpc)**2) &
+                      +bconst*(rgcs*log(rgcs/e)-3.0*kpc*log(3.0*kpc/e))+cconst*(rgcs-3.0*kpc)
+              endif
+           endif
+           gpot=gpdisk+gpblg+gphalo
+           gpotdisk(i1,i2,:)=gpdisk
+           gpothalo(i1,i2,:)=gphalo
+           gpotbulge(i1,i2,:)=gpblg
+        else
+           if (sweep == 'xsweep') then
+              seccoord = y(i1)
+              zet = z(i2)
+           elseif (sweep == 'ysweep') then
+              seccoord = x(i2)
+              zet = z(i1)
+           endif
+           do i=1,n
               rgcv(i) = sqrt(xsw(i)**2+seccoord**2)
               if(rgcv(i).le.3.0*kpc) then
-                omega=flat
-                g_shear_rate=0.0
+                 omega=flat
+                 g_shear_rate=0.0
               else
-                if(rgcv(i).ge.5.0*kpc) then
-                  omega=vsun/rgcv(i)
-                  g_shear_rate=(-1.0)*vsun/rgcv(i)
-                else
-                  omega=aconst*rgcv(i)+bconst*log(rgcv(i))+cconst
-                g_shear_rate=aconst*rgcv(i)+bconst
-                endif
+                 if(rgcv(i).ge.5.0*kpc) then
+                    omega=vsun/rgcv(i)
+                    g_shear_rate=(-1.0)*vsun/rgcv(i)
+                 else
+                    omega=aconst*rgcv(i)+bconst*log(rgcv(i))+cconst
+                    g_shear_rate=aconst*rgcv(i)+bconst
+                 endif
               endif
-	      gpot(i)=4.4e-9*cm/sek**2*exp((-1.0)*(rgcv(i)-r_gc_sun)/(4.9*kpc))*(sqrt(zet**2+(0.2*kpc)**2)-sqrt((0.2*kpc)**2))
-	      gpot(i)=gpot(i)+1.7e-9*cm/sek**2*(r_gc_sun**2+(2.2*kpc)**2)/(rgcv(i)**2+(2.2*kpc)**2)*zet**2/2.0/kpc
-	      gpot(i)=gpot(i)+omega*(omega+g_shear_rate)*zet**2
-	      if(rgcv(i).le.3.0*kpc) then
-	        gpot(i)=gpot(i)+0.5*flat**2*rgcv(i)**2
-	      else
-	        if(rgcv(i).ge.5.0*kpc) then
-	          gpot(i)=gpot(i)+0.5*flat**2*(3.0*kpc)**2 &
-		      +8.0*aconst*kpc**2+bconst*(5.0*kpc*log(5.0*kpc/e)-3.0*kpc*log(3.0*kpc/e))+cconst*2.0*kpc &
-		      +vsun*log(rgcv(i)/5.0/kpc)
-	        else
-	          gpot(i)=gpot(i)+0.5*flat**2*(3.0*kpc)**2 +0.5*aconst*(rgcv(i)**2-(3.0*kpc)**2) &
-		      +bconst*(rgcv(i)*log(rgcv(i)/e)-3.0*kpc*log(3.0*kpc/e))+cconst*(rgcv(i)-3.0*kpc)
-	        endif
-	      endif
-            enddo
-	    deallocate(gpdisk,gphalo,gpblg)
+              gpot(i)=4.4e-9*cm/sek**2*exp((-1.0)*(rgcv(i)-r_gc_sun)/(4.9*kpc))*(sqrt(zet**2+(0.2*kpc)**2)-sqrt((0.2*kpc)**2))
+              gpot(i)=gpot(i)+1.7e-9*cm/sek**2*(r_gc_sun**2+(2.2*kpc)**2)/(rgcv(i)**2+(2.2*kpc)**2)*zet**2/2.0/kpc
+              gpot(i)=gpot(i)+omega*(omega+g_shear_rate)*zet**2
+              if(rgcv(i).le.3.0*kpc) then
+                 gpot(i)=gpot(i)+0.5*flat**2*rgcv(i)**2
+              else
+                 if(rgcv(i).ge.5.0*kpc) then
+                    gpot(i)=gpot(i)+0.5*flat**2*(3.0*kpc)**2 &
+                           +8.0*aconst*kpc**2+bconst*(5.0*kpc*log(5.0*kpc/e)-3.0*kpc*log(3.0*kpc/e))+cconst*2.0*kpc &
+                           +vsun*log(rgcv(i)/5.0/kpc)
+                 else
+                    gpot(i)=gpot(i)+0.5*flat**2*(3.0*kpc)**2 +0.5*aconst*(rgcv(i)**2-(3.0*kpc)**2) &
+                           +bconst*(rgcv(i)*log(rgcv(i)/e)-3.0*kpc*log(3.0*kpc/e))+cconst*(rgcv(i)-3.0*kpc)
+                 endif
+              endif
+           enddo
+           deallocate(gpdisk,gphalo,gpblg)
 
 
 #else /* GRAV_(SPECIFIED) */
         status = 'undefined'
 !#warning 'GRAV declared, but gravity model undefined in grav_pot'
-! niektore modele grawitacji realizowane sa za pomoca przyspieszenia 
+! niektore modele grawitacji realizowane sa za pomoca przyspieszenia
 ! (np. 'galactic') z ktorego liczony jest potencjal
 #endif /* GRAV_(SPECIFIED) */
 
   end subroutine grav_pot
 
 !--------------------------------------------------------------------------
-   
+
   subroutine grav_accel(sweep, i1,i2, xsw, n, grav)
     use start, only  : h_grav, n_gravh,nb, r_gc
     use arrays, only : gp,x,y,z,dl,xdim,ydim,zdim,nx,ny,nz, &
@@ -411,22 +406,22 @@ allocate(gpotdisk(nx,ny,nz),gpothalo(nx,ny,nz),gpotbulge(nx,ny,nz))
     real aconst, bconst, cconst, flat, g_shear_rate, omega, rgcs, rstar
     real, dimension(n)    :: rgcv
 #endif /* GRAV_GALSMTDEC  || GRAV_GALDCZTOX || GRAV_GALSMINCR */
-#ifdef GRAV_GALSMOOTH    
+#ifdef GRAV_GALSMOOTH
     integer i
 #endif /* GRAV_GALSMOOTH */
 
     select case (sweep)
-      case('xsweep') 
+      case('xsweep')
         x1  = y(i1)
         x2  = z(i2)
-      case('ysweep') 
+      case('ysweep')
         x1  = z(i1)
         x2  = x(i2)
-      case('zsweep') 
+      case('zsweep')
         x1  = x(i1)
         x2  = y(i2)
     end select
-    
+
 
 #ifdef GRAV_UNIFORM
 !      case ('uniform')
@@ -474,7 +469,7 @@ allocate(gpotdisk(nx,ny,nz),gpothalo(nx,ny,nz),gpotbulge(nx,ny,nz))
        else
          grav = 0.0
        endif
-       
+
 #elif defined (GRAV_GALACTIC)
        if (sweep == 'zsweep') then
 !	    select case(gravpart)
@@ -486,10 +481,10 @@ allocate(gpotdisk(nx,ny,nz),gpothalo(nx,ny,nz),gpotbulge(nx,ny,nz))
 !	        grav = 0.0
 !	      case('default')
          grav = cmps2 * (  &
-           (-4.4e-9 * exp(-(r_gc-r_gc_sun)/(4.9*kpc)) * xsw/sqrt(xsw**2+(0.2*kpc)**2)) &    
-           -( 1.7e-9 * (r_gc_sun**2 + (2.2*kpc)**2)/(r_gc**2 + (2.2*kpc)**2)*xsw/kpc) )     
-!          -Om*(Om+G) * Z * (kpc ?) ! in the transition region between rigid 
-!                                   ! and flat rotation F'98: eq.(36)       
+           (-4.4e-9 * exp(-(r_gc-r_gc_sun)/(4.9*kpc)) * xsw/sqrt(xsw**2+(0.2*kpc)**2)) &
+           -( 1.7e-9 * (r_gc_sun**2 + (2.2*kpc)**2)/(r_gc**2 + (2.2*kpc)**2)*xsw/kpc) )
+!          -Om*(Om+G) * Z * (kpc ?) ! in the transition region between rigid
+!                                   ! and flat rotation F'98: eq.(36)
 !        end select
        else
          grav=0.0
@@ -526,17 +521,17 @@ allocate(gpotdisk(nx,ny,nz),gpothalo(nx,ny,nz),gpotbulge(nx,ny,nz))
 	  endif
 
         else  ! y or x
-          if(sweep == 'xsweep') then 
+          if(sweep == 'xsweep') then
             rgcv(:) = sqrt(xsw(:)**2 +   y(i1)**2)
-          elseif(sweep == 'ysweep') then 
+          elseif(sweep == 'ysweep') then
             rgcv(:) = sqrt(x(i2)**2  +  xsw(:)**2)
           endif
 
           grav = -1.0 * xsw
           where (rgcv <= 3.0*kpc)
-             grav = grav * flat**2 
+             grav = grav * flat**2
           elsewhere (rgcv >= 5.0*kpc)
-             grav = grav * (vsun / rgcv)**2 
+             grav = grav * (vsun / rgcv)**2
           elsewhere
              grav = grav * (aconst*rgcv + bconst*log(rgcv) + cconst)**2
           endwhere
@@ -551,19 +546,19 @@ allocate(gpotdisk(nx,ny,nz),gpothalo(nx,ny,nz),gpotbulge(nx,ny,nz))
 
         if (sweep == 'zsweep') then
             grav = 0.0
-          
+
         else  ! y or x
-          if(sweep == 'xsweep') then 
+          if(sweep == 'xsweep') then
             rgcv(:) = sqrt(xsw(:)**2 +   y(i1)**2)
-          elseif(sweep == 'ysweep') then 
+          elseif(sweep == 'ysweep') then
             rgcv(:) = sqrt(x(i2)**2  +  xsw(:)**2)
           endif
 
           grav = -1.0 * xsw
           where (rgcv <= 3.0*kpc)
-             grav = grav * flat**2 
+             grav = grav * flat**2
           elsewhere (rgcv >= 5.0*kpc)
-             grav = grav * (vsun / rgcv)**2 
+             grav = grav * (vsun / rgcv)**2
           elsewhere
              grav = grav * (aconst*rgcv + bconst*log(rgcv) + cconst)**2
           endwhere
@@ -585,9 +580,9 @@ allocate(gpotdisk(nx,ny,nz),gpothalo(nx,ny,nz),gpotbulge(nx,ny,nz))
 !              grav=grav+2*omega*(omega+g_shear_rate)*xsw
 !	    endif
 !        else  ! y or x
-!          if(sweep == 'xsweep') then 
+!          if(sweep == 'xsweep') then
 !            rgcv(:) = sqrt(xsw(:)**2 +   y(i1)**2)
-!          elseif(sweep == 'ysweep') then 
+!          elseif(sweep == 'ysweep') then
 !            rgcv(:) = sqrt(x(i2)**2  +  xsw(:)**2)
 !          endif
 !          grav = -1.0 * xsw(:) * vsun*tanh(rgcv(:)/3.0/kpc)/rgcv(:)
@@ -596,13 +591,13 @@ allocate(gpotdisk(nx,ny,nz),gpothalo(nx,ny,nz),gpotbulge(nx,ny,nz))
           case('xsweep')
             grav(:)=0.0
 	    if((gravpart .eq. 'default') .or. (gravpart .eq. 'blgpart')) then
-	    do i=1,n 
+	    do i=1,n
               rgcv(i) = sqrt(xsw(i)**2+y(i1)**2)
 	      omega=vsun*tanh(rgcv(i)/3.0/kpc)/rgcv(i)
               grav(i)=(-1.0)*omega**2*rgcv(i)*xsw(i)/rgcv(i)
             enddo
 	    endif
-          case('ysweep') 
+          case('ysweep')
             grav(:)=0.0
 	    if((gravpart .eq. 'default') .or. (gravpart .eq. 'blgpart')) then
             do i=1,n
@@ -611,7 +606,7 @@ allocate(gpotdisk(nx,ny,nz),gpothalo(nx,ny,nz),gpotbulge(nx,ny,nz))
               grav(i)=(-1.0)*omega**2*rgcv(i)*xsw(i)/rgcv(i)
             enddo
 	    endif
-          case('zsweep') 
+          case('zsweep')
             grav(:)=0.0
 	    rgcs = sqrt(x(i1)**2+y(i2)**2)
 	    omega=vsun*tanh(rgcs/3.0/kpc)/rgcs
@@ -643,11 +638,11 @@ allocate(gpotdisk(nx,ny,nz),gpothalo(nx,ny,nz),gpotbulge(nx,ny,nz))
               grav=grav+2*omega*(omega+g_shear_rate)*xsw*(exp(-xsw**2/2.0/h_grav**n_gravh))**2
 	    endif
         else  ! y or x
-          if(sweep == 'xsweep') then 
+          if(sweep == 'xsweep') then
             rgcv(:) = sqrt(xsw(:)**2 +   y(i1)**2)
             grav(:)=vsun*tanh(rgcv(:)/3.0/kpc)/rgcv(:)*exp(-z(i2)**2/2.0/h_grav**n_gravh)
             grav(:)=grav(:)**2*(-1.0)*rgcv(:)*xsw(:)/rgcv(:)
-          elseif(sweep == 'ysweep') then 
+          elseif(sweep == 'ysweep') then
             rgcv(:) = sqrt(x(i2)**2  +  xsw(:)**2)
 	    grav(:)=vsun*tanh(rgcv(i)/3000.0/pc)/rgcv(i)*exp(-z(i1)**2/2.0/h_grav**n_gravh)
             grav(:)=grav(:)**2*(-1.0)*rgcv(:)*xsw(:)/rgcv(:)
@@ -656,7 +651,7 @@ allocate(gpotdisk(nx,ny,nz),gpothalo(nx,ny,nz),gpotbulge(nx,ny,nz))
 ! galactic case as in ferriere'98 but with smoothed omega with decreasing rotation with x (x axis symmetry)
 #elif defined (GRAV_GALDCZTOX)
         if (sweep == 'xsweep') then
-          case('xsweep') 
+          case('xsweep')
             grav(:)=0.0
 	    rgcs = sqrt(z(i2)**2+y(i1)**2)
 	    omega=vsun*tanh(rgcs/3.0/kpc)/rgcs !*exp(-xsw**2/2.0/h_grav**n_gravh)
@@ -671,11 +666,11 @@ allocate(gpotdisk(nx,ny,nz),gpothalo(nx,ny,nz),gpotbulge(nx,ny,nz))
               grav=grav+2*omega*(omega+g_shear_rate)*xsw*(exp(-xsw**2/2.0/h_grav**n_gravh))**2
 	    endif
         else  ! y or z
-          if(sweep == 'zsweep') then 
+          if(sweep == 'zsweep') then
             rgcv(:) = sqrt(xsw(:)**2+y(i2)**2)
 	    grav(:)=vsun*tanh(rgcv(:)/3.0/kpc)/rgcv(:)*exp(-x(i1)**2/2.0/h_grav**n_gravh)
             grav(:)=grav(:)**2*(-1.0)*rgcv(:)*xsw(:)/rgcv(:)
-          elseif(sweep == 'ysweep') then 
+          elseif(sweep == 'ysweep') then
             rgcv(:) = sqrt(z(i1)**2+xsw(:)**2)
 	    grav(:)=vsun*tanh(rgcv(:)/3000.0/pc)/rgcv(:)*exp(-x(i2)**2/2.0/h_grav**n_gravh)
             grav(:)=grav(:)**2*(-1.0)*rgcv(:)*xsw(:)/rgcv(:)
@@ -701,12 +696,12 @@ allocate(gpotdisk(nx,ny,nz),gpothalo(nx,ny,nz),gpotbulge(nx,ny,nz))
 !	      grav=grav*(2.-1./cosh((rc/r_grav)**n_gravr))
             endif
         else  ! y or x
-          if(sweep == 'xsweep') then 
+          if(sweep == 'xsweep') then
             rgcv(:) = sqrt(xsw(:)**2+y(i1)**2)
 	    grav(:)=vsun*tanh(rgcv(:)/3.0/kpc)/rgcv(:)
             grav(:)=grav(:)**2*(-1.0)*xsw(i)
 	    grav(:)=grav(:)*(2.-1./cosh((rgcv(:)/r_grav)**n_gravr))
-          elseif(sweep == 'ysweep') then 
+          elseif(sweep == 'ysweep') then
             rgcv(:) = sqrt(x(i2)**2+xsw(:)**2)
 	    grav(:)=vsun*tanh(rgcv(:)/3000.0/pc)/rgcv(:)
             grav(:)=grav(:)**2*(-1.0)*xsw(:)
@@ -726,41 +721,41 @@ allocate(gpotdisk(nx,ny,nz),gpothalo(nx,ny,nz),gpotbulge(nx,ny,nz))
 #ifndef GRAV_GALSMINCR
     if (n_gravh .ne. 0) then
       grav(:)=grav(:)/cosh((xsw(:)/h_grav)**n_gravh )
-    endif      
+    endif
 #endif /* GRAV_GALSMINCR */
 #endif /* GRAV_GALSMTDEC */
-     
+
   end subroutine grav_accel
 
 !--------------------------------------------------------------------------
-   
+
 !  subroutine grav_profile
 !
-!    implicit none 
+!    implicit none
 !
 !        if(n_gravh .ne. 0) then
 !          gravity_profile = 1./cosh((z/(h_grav))**n_gravh)
 !        else
 !         gravity_profile(:) = 1.
 !       endif
-!       
+!
 !       write(*,*) gravity_profile
-! 
+!
 !  end subroutine  grav_profile
 !
-!*****************************************************************************  
- 
- 
+!*****************************************************************************
+
+
   subroutine grav_pot2accel(sweep, i1,i2, n, grav)
     use arrays, only : gp, dl, xdim, ydim, zdim
     implicit none
     character, intent(in)          :: sweep*6
-    integer, intent(in)            :: i1, i2                   
+    integer, intent(in)            :: i1, i2
     integer, intent(in)            :: n
     real, dimension(n),intent(out) :: grav
-  
-! Gravitational accelleration is computed on right cell boundaries 
-  
+
+! Gravitational accelleration is computed on right cell boundaries
+
     select case(sweep)
       case('xsweep')
         grav(1:n-1) = (gp(1:n-1,i1,i2) - gp(2:n,i1,i2))/dl(xdim)
@@ -769,7 +764,7 @@ allocate(gpotdisk(nx,ny,nz),gpothalo(nx,ny,nz),gpotbulge(nx,ny,nz))
       case('zsweep')
         grav(1:n-1) = (gp(i1,i2,1:n-1) - gp(i1,i2,2:n))/dl(zdim)
     end select
-  
+
   end subroutine grav_pot2accel
 
 !--------------------------------------------------------------------------
@@ -795,25 +790,25 @@ allocate(gpotdisk(nx,ny,nz),gpothalo(nx,ny,nz),gpotbulge(nx,ny,nz))
          dgpy(0:pxsize-1,0:pysize-1,0:pzsize-1), &
          dgpz(0:pxsize-1,0:pysize-1,0:pzsize-1), &
          ddgp(0:pxsize-1,0:pysize-1,0:pzsize-1)
-    
-    
-! Gravitational potential gp(i,j,k) is defined in cell centers  
-! First we find gp(:,:,:) in each block separately assuming:  
+
+
+! Gravitational potential gp(i,j,k) is defined in cell centers
+! First we find gp(:,:,:) in each block separately assuming:
 ! Instead of gp, gpwork is used to not change already computed gp when
 ! disk, bulge and halo parts of galactic potential are computed.
 ! gravpart is used to distinguish which part has to be computed.
-    
+
     allocate(gpwork(nx,ny,nz))
     gpwork(1,1,1) = 0.0
 
-    call grav_accel('xsweep',1,1, xr(:), nx, gravrx)    
-    do i = 1, nx-1      
+    call grav_accel('xsweep',1,1, xr(:), nx, gravrx)
+    do i = 1, nx-1
       gpwork(i+1,1,1) = gpwork(i,1,1) - gravrx(i)*dl(xdim)
     enddo
-    
+
     do i=1,nx
       call grav_accel('ysweep',1, i, yr(:), ny, gravry)
-      do j = 1, ny-1      
+      do j = 1, ny-1
         gpwork(i,j+1,1) = gpwork(i,j,1) - gravry(j)*dl(ydim)
       enddo
     enddo
@@ -821,12 +816,12 @@ allocate(gpotdisk(nx,ny,nz),gpothalo(nx,ny,nz),gpotbulge(nx,ny,nz))
     do i=1,nx
       do j=1,ny
         call grav_accel('zsweep', i, j, zr(:), nz, gravrz)
-        do k = 1, nz-1      
+        do k = 1, nz-1
           gpwork(i,j,k+1) = gpwork(i,j,k) - gravrz(k)*dl(zdim)
         enddo
       enddo
     enddo
-            
+
     dgpx_proc = gpwork(is,1,1)-gpwork(1,1,1)
     dgpy_proc = gpwork(1,js,1)-gpwork(1,1,1)
     dgpz_proc = gpwork(1,1,ks)-gpwork(1,1,1)
@@ -840,62 +835,62 @@ allocate(gpotdisk(nx,ny,nz),gpothalo(nx,ny,nz),gpotbulge(nx,ny,nz))
     call MPI_GATHER ( dgpz_proc, 1, MPI_DOUBLE_PRECISION, &
                       dgpz_all,  1, MPI_DOUBLE_PRECISION, &
                       0, comm3d,err )
-                      
+
 
     if(proc .eq. 0) then
-    
+
       do ip = 0, nproc-1
         call MPI_CART_COORDS(comm3d, ip, ndims, pc, ierr)
-       
+
         px = pc(1)
         py = pc(2)
         pz = pc(3)
-      
+
         dgpx(px,py,pz) = dgpx_all(ip)
         dgpy(px,py,pz) = dgpy_all(ip)
         dgpz(px,py,pz) = dgpz_all(ip)
 
       enddo
-    
+
       ddgp(0,0,0) = 0.0
-      do i = 1, pxsize-1      
+      do i = 1, pxsize-1
         ddgp(i,0,0) = ddgp(i-1,0,0) + dgpx(i-1,0,0)
       enddo
-   
+
       do i=0, pxsize-1
-        do j = 1, pysize-1      
+        do j = 1, pysize-1
           ddgp(i,j,0) = ddgp(i,j-1,0) + dgpy(i,j-1,0)
         enddo
       enddo
 
       do i=0, pxsize-1
         do j=0, pysize-1
-          do k = 1, pzsize-1      
+          do k = 1, pzsize-1
              ddgp(i,j,k)= ddgp(i,j,k-1) + dgpz(i,j,k-1)
           enddo
         enddo
       enddo
-    
+
     endif
 
-    call MPI_BCAST(ddgp, nproc, MPI_DOUBLE_PRECISION, 0, comm, ierr)       
+    call MPI_BCAST(ddgp, nproc, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
     px = pcoords(1)
     py = pcoords(2)
     pz = pcoords(3)
-    
+
     gpwork = gpwork + ddgp(px,py,pz)
-      
-    gp_max      = maxval(gpwork(is:ie,js:je,ks:ke)) 
+
+    gp_max      = maxval(gpwork(is:ie,js:je,ks:ke))
     loc_gp_max  = maxloc(gpwork(is:ie,js:je,ks:ke)) &
                   + (/nb,nb,nb/)
-                  
+
     call mpifind(gp_max, 'max', loc_gp_max, proc_gp_max)
     pgpmax = proc_gp_max
-    
-    call MPI_BCAST(gp_max, 1, MPI_DOUBLE_PRECISION, pgpmax, comm, ierr)       
+
+    call MPI_BCAST(gp_max, 1, MPI_DOUBLE_PRECISION, pgpmax, comm, ierr)
     gpwork = gpwork - gp_max
-   
+
 #ifdef GALACTIC_DISK
     select case(gravpart)
       case('default')
@@ -911,7 +906,7 @@ allocate(gpotdisk(nx,ny,nz),gpothalo(nx,ny,nz),gpotbulge(nx,ny,nz))
         gp=gpwork
 #endif /* GALACTIC_DISK */
     deallocate(gpwork)
-   
+
   end subroutine grav_accel2pot
 
 

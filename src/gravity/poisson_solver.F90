@@ -18,20 +18,20 @@ contains
     use arrays, only : idna,u,gp,x,nx,ny,nz,nzb
     use grid, only   : dz,dx
     use mpi_setup
-#ifdef SHEAR    
+#ifdef SHEAR
     use shear, only  : unshear_fft
 #endif /* SHEAR */
-    
+
     implicit none
     real, dimension(:,:,:), allocatable :: ala
-  
+
     if( bnd_xl .eq. 'per' .and. bnd_xr .eq. 'per' .and. &
         bnd_yl .eq. 'per' .and. bnd_yr .eq. 'per' .and. &
         bnd_zl .ne. 'per' .and. bnd_zr .ne. 'per'        ) then
 
          call poisson_xyp(u(idna,nb+1:nb+nxd,nb+1:nb+nyd,:), &
                            gp(nb+1:nb+nxd,nb+1:nb+nyd,:),dz)
-  
+
 ! Boundary conditions
 
          gp(1:nb,:,:)              = gp(nxd+1:nxd+nb,:,:)
@@ -94,7 +94,7 @@ contains
 !!
 !! SUBROUTINE POISSON_XY2D: solves Poisson equation for periodic
 !! bnd conditions in X and Y in 2D
-!! ASSUMPTION: 1) dx = dy 
+!! ASSUMPTION: 1) dx = dy
 !!
 #ifdef SHEAR
   subroutine poisson_xy2d(den, pot, lpot, rpot, dx)
@@ -113,7 +113,7 @@ contains
     complex*16, dimension(size(den,1))        :: ctm2
     complex*16, dimension(size(den,1))        :: ctm3
     complex*16, dimension(size(den,1))        :: ctm4
-    
+
     complex*16, dimension(size(den,1),size(den,1)/2 +1 ) :: fft,fft2
 
     real(kind=8)   , dimension(size(den,1))   :: rtmp
@@ -150,11 +150,11 @@ contains
 
 ! compute wave vectors
 !
-    ky(1) = 0.0 
+    ky(1) = 0.0
     do p = 2, np
       ky(p) = dpi * (p-1) / n !      kx(p) = dpi * (p - 1) / nx
     enddo
-    
+
 
     kx(1) = 0.0
     do q = 2, np
@@ -171,7 +171,7 @@ contains
 !
     do i = 1, n
       rtmp(:)   = den(i,:)
-      call dfftw_execute(pf1) 
+      call dfftw_execute(pf1)
       fft(i,:) = ctmp(:) * exp(cmplx(0.0, St*ky(:)*xx(i)))
     enddo
     call dfftw_destroy_plan(pf1)
@@ -188,13 +188,13 @@ contains
 
     call dfftw_destroy_plan(pf2)
 
-!! compute eigenvalues for each p and q and solve 
+!! compute eigenvalues for each p and q and solve
 !!
     fft2(:,:)  = dpi*newtong*dx*dx * fft2(:,:)
     do q = 1, np
       do p = 1, n
         factor = cos(kx(p)) + cos(ky(q)) - 2.0
-        if(factor == 0) then 
+        if(factor == 0) then
            fft2(p,q) = cmplx(0.0,0.0)
         else
            fft2(p,q) = fft2(p,q) / factor
@@ -235,7 +235,7 @@ contains
 ! destroy plan for the 1st inverse FFT
 !
     call dfftw_destroy_plan(pb2)
-    
+
     return
   end subroutine poisson_xy2d
 #endif /* SHEAR */
@@ -244,7 +244,7 @@ contains
 !!
 !! SUBROUTINE POISSON_XY: solves Poisson equation for periodic
 !! bnd conditions in X and Y in 2D
-!! ASSUMPTION: 1) dx = dy 
+!! ASSUMPTION: 1) dx = dy
 !!
   subroutine poisson_xy(den, pot, dx)
 

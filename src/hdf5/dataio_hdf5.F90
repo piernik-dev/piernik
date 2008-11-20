@@ -18,8 +18,8 @@ module dataio_hdf5
       type(hdf)     :: chdf
       integer :: i,error,fe
       logical, save :: first_entry = .true.
-      integer(HID_T) :: file_id       !> File identifier 
-      integer(HID_T) :: gr_id,gr2_id  !> Group indentifier 
+      integer(HID_T) :: file_id       !> File identifier
+      integer(HID_T) :: gr_id,gr2_id  !> Group indentifier
 
       if(first_entry) then
          ie = 1
@@ -28,7 +28,7 @@ module dataio_hdf5
          enddo
          ie = ie - 1
       endif
-      
+
       if(proc==0 .and. first_entry) then
          fe = LEN(trim(chdf%log_file))
          fname = trim(chdf%log_file(1:fe-3)//"plt")
@@ -57,7 +57,7 @@ module dataio_hdf5
          first_entry = .false.
       endif
 
-      do i = 1,ie  
+      do i = 1,ie
         if(ix > 0) call write_plot_hdf5(chdf,vars(i),"yz",nimg)
         if(iy > 0) call write_plot_hdf5(chdf,vars(i),"xz",nimg)
         if(iz > 0) call write_plot_hdf5(chdf,vars(i),"xy",nimg)
@@ -74,7 +74,7 @@ module dataio_hdf5
       use arrays, only : nxb,nyb,nzb,u
       use start, only : ix,iy,iz,nxd,nyd,nzd,nb
       use init_problem, only : user_plt
-      
+
       character(LEN=2) :: plane
       integer, dimension(3) :: remain
       integer :: comm2d,lp,ls,xn,error
@@ -91,16 +91,16 @@ module dataio_hdf5
       character(LEN=12) :: dname
 
       integer(HSIZE_T) :: width, height
-      integer(HID_T) :: file_id       !> File identifier 
-      integer(HID_T) :: dset_id       !> Dataset identifier 
-      integer(HID_T) :: gr_id,gr2_id  !> Group indentifier 
+      integer(HID_T) :: file_id       !> File identifier
+      integer(HID_T) :: dset_id       !> Dataset identifier
+      integer(HID_T) :: gr_id,gr2_id  !> Group indentifier
 
       integer :: nib,nid,njb,njd,nkb,pisize,pjsize, fe
       logical :: fexist
 
       fe = LEN(trim(chdf%log_file))
       fname = trim(chdf%log_file(1:fe-3)//"plt")
-      
+
 
       select case(plane)
          case("yz")
@@ -154,7 +154,7 @@ module dataio_hdf5
                          temp, nib*njb, MPI_DOUBLE_PRECISION, &
                          0, comm2d,ierr)
 
-         if(lp == 0) then 
+         if(lp == 0) then
             imax = maxval(temp); imin = minval(temp)
             do i = 0, pisize-1
                do j = 0, pjsize-1
@@ -163,7 +163,7 @@ module dataio_hdf5
                enddo
             enddo
             call H5open_f(error)
-            call H5Fopen_f(fname, H5F_ACC_RDWR_F, file_id, error) 
+            call H5Fopen_f(fname, H5F_ACC_RDWR_F, file_id, error)
             call H5Gopen_f(file_id,plane,gr_id,error)
             call H5Gopen_f(gr_id,var,gr2_id,error)
             write(dname,'(a3,a4,a1,i4.4)') pij,var,"_",nimg
@@ -180,7 +180,7 @@ module dataio_hdf5
       call MPI_BARRIER(comm3d,ierr)
 
    end subroutine write_plot_hdf5
-   
+
    subroutine write_restart_hdf5(filename,chdf)
      use types
      use mpi_setup
@@ -192,16 +192,16 @@ module dataio_hdf5
      type(hdf) :: chdf
      integer   :: llun,fe
      CHARACTER :: filename*128 !> HDF File name
-     character :: lfile*128  
+     character :: lfile*128
 
-     integer(HID_T) :: file_id       !> File identifier 
-     integer(HID_T) :: dset_id       !> Dataset identifier 
-     integer(HID_T) :: plist_id      !> Property list identifier 
-     integer(HID_T) :: filespace     !> Dataspace identifier in file 
+     integer(HID_T) :: file_id       !> File identifier
+     integer(HID_T) :: dset_id       !> Dataset identifier
+     integer(HID_T) :: plist_id      !> Property list identifier
+     integer(HID_T) :: filespace     !> Dataspace identifier in file
      integer(HID_T) :: memspace      !> Dataspace identifier in memory
 
-     integer(HSIZE_T),  DIMENSION(:), allocatable :: count  
-     integer(HSSIZE_T), DIMENSION(:), allocatable :: offset 
+     integer(HSIZE_T),  DIMENSION(:), allocatable :: count
+     integer(HSSIZE_T), DIMENSION(:), allocatable :: offset
      integer(HSIZE_T),  DIMENSION(:), allocatable :: stride
      integer(HSIZE_T),  DIMENSION(:), allocatable :: block
      integer(HSIZE_T),  DIMENSION(:), allocatable :: dimsf, dimsfi, chunk_dims
@@ -236,10 +236,10 @@ module dataio_hdf5
      dimsfi = dimsf
      chunk_dims = (/nu,nx,ny,nz/)                   ! Chunks dimensions
 
-     ! Create the data space for the  dataset. 
+     ! Create the data space for the  dataset.
      CALL h5screate_simple_f(rank, dimsf, filespace, error)
      CALL h5screate_simple_f(rank, chunk_dims, memspace, error)
-     
+
      ! Create chunked dataset.
      CALL h5pcreate_f(H5P_DATASET_CREATE_F, plist_id, error)
      CALL h5pset_chunk_f(plist_id, rank, chunk_dims, error)
@@ -248,9 +248,9 @@ module dataio_hdf5
      CALL h5sclose_f(filespace, error)
 
      ! Each process defines dataset in memory and writes it to the hyperslab
-     ! in the file. 
-     stride(:) = 1 
-     count(:)  = 1 
+     ! in the file.
+     stride(:) = 1
+     count(:)  = 1
      block(:)  = chunk_dims(:)
 
      offset(1)   = 0
@@ -260,7 +260,7 @@ module dataio_hdf5
      CALL h5dget_space_f(dset_id, filespace, error)
      CALL h5sselect_hyperslab_f (filespace, H5S_SELECT_SET_F, offset, count, error, &
                                  stride, block)
-     CALL h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error) 
+     CALL h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error)
      CALL h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_COLLECTIVE_F, error)
      CALL h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, u(:,:,:,:), dimsfi, error, &
                      file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
@@ -277,10 +277,10 @@ module dataio_hdf5
      dimsfi = dimsf
      chunk_dims = (/3,nx,ny,nz/)                 ! Chunks dimensions
 
-     ! Create the data space for the  dataset. 
+     ! Create the data space for the  dataset.
      CALL h5screate_simple_f(rank, dimsf, filespace, error)
      CALL h5screate_simple_f(rank, chunk_dims, memspace, error)
-     
+
      ! Create chunked dataset.
      CALL h5pcreate_f(H5P_DATASET_CREATE_F, plist_id, error)
      CALL h5pset_chunk_f(plist_id, rank, chunk_dims, error)
@@ -289,9 +289,9 @@ module dataio_hdf5
      CALL h5sclose_f(filespace, error)
 
      ! Each process defines dataset in memory and writes it to the hyperslab
-     ! in the file. 
-     stride(:) = 1 
-     count(:)  = 1 
+     ! in the file.
+     stride(:) = 1
+     count(:)  = 1
      block(:)  = chunk_dims(:)
 
      offset(1)   = 0
@@ -301,7 +301,7 @@ module dataio_hdf5
      CALL h5dget_space_f(dset_id, filespace, error)
      CALL h5sselect_hyperslab_f (filespace, H5S_SELECT_SET_F, offset, count, error, &
                                  stride, block)
-     CALL h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error) 
+     CALL h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error)
      CALL h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_COLLECTIVE_F, error)
      CALL h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, b(:,:,:,:), dimsfi, error, &
                      file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
@@ -312,7 +312,7 @@ module dataio_hdf5
      !----------------------------------------------------------------------------------
      deallocate(dimsf,dimsfi,chunk_dims)
      deallocate(count,offset,stride,block)
-    
+
      rank = 1
      allocate(dimsf(rank),dimsfi(rank),chunk_dims(rank))
      allocate(count(rank),offset(rank),stride(rank),block(rank))
@@ -324,10 +324,10 @@ module dataio_hdf5
      dimsfi = dimsf
      chunk_dims = (/nx/)    ! Chunks dimensions
 
-     ! Create the data space for the  dataset. 
+     ! Create the data space for the  dataset.
      CALL h5screate_simple_f(rank, dimsf, filespace, error)
      CALL h5screate_simple_f(rank, chunk_dims, memspace, error)
-     
+
      ! Create chunked dataset.
      CALL h5pcreate_f(H5P_DATASET_CREATE_F, plist_id, error)
      CALL h5pset_chunk_f(plist_id, rank, chunk_dims, error)
@@ -336,9 +336,9 @@ module dataio_hdf5
      CALL h5sclose_f(filespace, error)
 
      ! Each process defines dataset in memory and writes it to the hyperslab
-     ! in the file. 
-     stride(:) = 1 
-     count(:)  = 1 
+     ! in the file.
+     stride(:) = 1
+     count(:)  = 1
      block(:)  = chunk_dims(:)
 
      offset(1) = pcoords(1)*chunk_dims(1)
@@ -347,7 +347,7 @@ module dataio_hdf5
      CALL h5dget_space_f(dset_id, filespace, error)
      CALL h5sselect_hyperslab_f (filespace, H5S_SELECT_SET_F, offset, count, error, &
                                  stride, block)
-     CALL h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error) 
+     CALL h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error)
      CALL h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_COLLECTIVE_F, error)
      CALL h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, x(:), dimsfi, error, &
                      file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
@@ -364,10 +364,10 @@ module dataio_hdf5
      dimsfi = dimsf
      chunk_dims = (/ny/)    ! Chunks dimensions
 
-     ! Create the data space for the  dataset. 
+     ! Create the data space for the  dataset.
      CALL h5screate_simple_f(rank, dimsf, filespace, error)
      CALL h5screate_simple_f(rank, chunk_dims, memspace, error)
-     
+
      ! Create chunked dataset.
      CALL h5pcreate_f(H5P_DATASET_CREATE_F, plist_id, error)
      CALL h5pset_chunk_f(plist_id, rank, chunk_dims, error)
@@ -376,9 +376,9 @@ module dataio_hdf5
      CALL h5sclose_f(filespace, error)
 
      ! Each process defines dataset in memory and writes it to the hyperslab
-     ! in the file. 
-     stride(:) = 1 
-     count(:)  = 1 
+     ! in the file.
+     stride(:) = 1
+     count(:)  = 1
      block(:)  = chunk_dims(:)
 
      offset(1) = pcoords(2)*chunk_dims(1)
@@ -387,7 +387,7 @@ module dataio_hdf5
      CALL h5dget_space_f(dset_id, filespace, error)
      CALL h5sselect_hyperslab_f (filespace, H5S_SELECT_SET_F, offset, count, error, &
                                  stride, block)
-     CALL h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error) 
+     CALL h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error)
      CALL h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_COLLECTIVE_F, error)
      CALL h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, y(:), dimsfi, error, &
                      file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
@@ -404,10 +404,10 @@ module dataio_hdf5
      dimsfi = dimsf
      chunk_dims = (/nz/)    ! Chunks dimensions
 
-     ! Create the data space for the  dataset. 
+     ! Create the data space for the  dataset.
      CALL h5screate_simple_f(rank, dimsf, filespace, error)
      CALL h5screate_simple_f(rank, chunk_dims, memspace, error)
-     
+
      ! Create chunked dataset.
      CALL h5pcreate_f(H5P_DATASET_CREATE_F, plist_id, error)
      CALL h5pset_chunk_f(plist_id, rank, chunk_dims, error)
@@ -416,9 +416,9 @@ module dataio_hdf5
      CALL h5sclose_f(filespace, error)
 
      ! Each process defines dataset in memory and writes it to the hyperslab
-     ! in the file. 
-     stride(:) = 1 
-     count(:)  = 1 
+     ! in the file.
+     stride(:) = 1
+     count(:)  = 1
      block(:)  = chunk_dims(:)
 
      offset(1) = pcoords(3)*chunk_dims(1)
@@ -427,7 +427,7 @@ module dataio_hdf5
      CALL h5dget_space_f(dset_id, filespace, error)
      CALL h5sselect_hyperslab_f (filespace, H5S_SELECT_SET_F, offset, count, error, &
                                  stride, block)
-     CALL h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error) 
+     CALL h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error)
      CALL h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_COLLECTIVE_F, error)
      CALL h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, z(:), dimsfi, error, &
                      file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
@@ -531,14 +531,14 @@ module dataio_hdf5
      CHARACTER(LEN=128) :: log_file  ! File name
      CHARACTER(LEN=128) :: filename  ! File name
 
-     integer(HID_T) :: file_id       ! File identifier 
-     integer(HID_T) :: dset_id       ! Dataset identifier 
-     integer(HID_T) :: plist_id      ! Property list identifier 
-     integer(HID_T) :: filespace     ! Dataspace identifier in file 
+     integer(HID_T) :: file_id       ! File identifier
+     integer(HID_T) :: dset_id       ! Dataset identifier
+     integer(HID_T) :: plist_id      ! Property list identifier
+     integer(HID_T) :: filespace     ! Dataspace identifier in file
      integer(HID_T) :: memspace      ! Dataspace identifier in memory
 
-     integer(HSIZE_T),  DIMENSION(:), allocatable :: count  
-     integer(HSSIZE_T), DIMENSION(:), allocatable :: offset 
+     integer(HSIZE_T),  DIMENSION(:), allocatable :: count
+     integer(HSSIZE_T), DIMENSION(:), allocatable :: offset
      integer(HSIZE_T),  DIMENSION(:), allocatable :: stride
      integer(HSIZE_T),  DIMENSION(:), allocatable :: block
      integer(HSIZE_T),  DIMENSION(:), allocatable :: dimsf, dimsfi, chunk_dims
@@ -608,9 +608,9 @@ module dataio_hdf5
      call h5pget_chunk_f(plist_id, rank, chunk_dims, error)
 
      ! Each process defines dataset in memory and writes it to the hyperslab
-     ! in the file. 
-     stride(:) = 1 
-     count(:)  = 1 
+     ! in the file.
+     stride(:) = 1
+     count(:)  = 1
      block(:)  = chunk_dims(:)
 
      offset(1)   = 0
@@ -619,7 +619,7 @@ module dataio_hdf5
      ! Select hyperslab in the file.
      CALL h5sselect_hyperslab_f (filespace, H5S_SELECT_SET_F, offset, count, error, &
                                  stride, block)
-     CALL h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error) 
+     CALL h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error)
      CALL h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_COLLECTIVE_F, error)
      CALL h5screate_simple_f(rank, chunk_dims, memspace, error)
      CALL h5dread_f(dset_id, H5T_NATIVE_DOUBLE, u, dimsfi, error, &
@@ -647,9 +647,9 @@ module dataio_hdf5
 
 
      ! Each process defines dataset in memory and writes it to the hyperslab
-     ! in the file. 
-     stride(:) = 1 
-     count(:)  = 1 
+     ! in the file.
+     stride(:) = 1
+     count(:)  = 1
      block(:)  = chunk_dims(:)
 
      offset(1)   = 0
@@ -658,7 +658,7 @@ module dataio_hdf5
      ! Select hyperslab in the file.
      CALL h5sselect_hyperslab_f (filespace, H5S_SELECT_SET_F, offset, count, error, &
                                  stride, block)
-     CALL h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error) 
+     CALL h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error)
      CALL h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_COLLECTIVE_F, error)
      CALL h5screate_simple_f(rank, chunk_dims, memspace, error)
      CALL h5dread_f(dset_id, H5T_NATIVE_DOUBLE, b, dimsfi, error, &
@@ -751,17 +751,17 @@ module dataio_hdf5
      use start, only : t,nxd,nyd,nzd,nb, domain, xmin,xmax, &
          ymin,ymax, zmin,zmax, nstep,dt, vars
      use init_problem, only : problem_name, run_id, user_hdf5
-     
+
      IMPLICIT NONE
      type(hdf) :: chdf
-     integer(HID_T) :: file_id       ! File identifier 
-     integer(HID_T) :: plist_id      ! Property list identifier 
+     integer(HID_T) :: file_id       ! File identifier
+     integer(HID_T) :: plist_id      ! Property list identifier
      integer :: llun,fe
      CHARACTER :: lfile*128, dd*4 ! File name
      CHARACTER(LEN=32) :: fname
 
      REAL*4, ALLOCATABLE :: data (:,:,:)  ! Data to write
-     integer :: error, error_n, i   
+     integer :: error, error_n, i
      integer(SIZE_T) :: bufsize = 1
 
      ! Initialize HDF5 library and Fortran interfaces.
@@ -771,8 +771,8 @@ module dataio_hdf5
      write(dd,'(i4.4)') chdf%nhdf
      fname = trim(problem_name)//"_"//trim(run_id)//"_"//dd//".h5"
 
-     CALL h5open_f(error) 
-     ! 
+     CALL h5open_f(error)
+     !
      ! Setup file access property list with parallel I/O access.
      !
      CALL h5pcreate_f(H5P_FILE_ACCESS_F, plist_id, error)
@@ -875,19 +875,19 @@ module dataio_hdf5
           implicit none
           real*4, dimension(:,:,:) :: data
 
-     integer :: rank = 3 ! Dataset rank 
+     integer :: rank = 3 ! Dataset rank
 
      CHARACTER(LEN=4) :: dsetname    ! Dataset name
 
-     integer(HID_T) :: file_id       ! Dataset identifier 
-     integer(HID_T) :: dset_id       ! Dataset identifier 
-     integer(HID_T) :: plist_id       ! Dataset identifier 
-     integer(HID_T) :: filespace     ! Dataspace identifier in file 
+     integer(HID_T) :: file_id       ! Dataset identifier
+     integer(HID_T) :: dset_id       ! Dataset identifier
+     integer(HID_T) :: plist_id       ! Dataset identifier
+     integer(HID_T) :: filespace     ! Dataspace identifier in file
      integer(HID_T) :: memspace      ! Dataspace identifier in memory
 
      integer, parameter :: ndims = 3
-     integer(HSIZE_T),  DIMENSION(ndims) :: count  
-     integer(HSSIZE_T), DIMENSION(ndims) :: offset 
+     integer(HSIZE_T),  DIMENSION(ndims) :: count
+     integer(HSSIZE_T), DIMENSION(ndims) :: offset
      integer(HSIZE_T),  DIMENSION(ndims) :: stride
      integer(HSIZE_T),  DIMENSION(ndims) :: block
      integer(HSIZE_T), DIMENSION(ndims) :: dimsf, dimsfi, chunk_dims
@@ -897,7 +897,7 @@ module dataio_hdf5
      dimsfi = dimsf
      chunk_dims = (/nxb,nyb,nzb/) ! Chunks dimensions
      !
-     ! Create the data space for the  dataset. 
+     ! Create the data space for the  dataset.
      !
      CALL h5screate_simple_f(rank, dimsf, filespace, error)
      CALL h5screate_simple_f(rank, chunk_dims, memspace, error)
@@ -913,30 +913,30 @@ module dataio_hdf5
 
      !
      ! Each process defines dataset in memory and writes it to the hyperslab
-     ! in the file. 
+     ! in the file.
      !
-     stride(:) = 1 
-     count(:) =  1 
+     stride(:) = 1
+     count(:) =  1
      block(:) = chunk_dims(:)
 
      offset(:) = pcoords(:)*chunk_dims(:)
-     ! 
+     !
      ! Select hyperslab in the file.
      !
      CALL h5dget_space_f(dset_id, filespace, error)
      CALL h5sselect_hyperslab_f (filespace, H5S_SELECT_SET_F, offset, count, error, &
                                  stride, block)
-     ! 
+     !
      ! Initialize data buffer with trivial data.
      !
      !
      ! Create property list for collective dataset write
      !
-     CALL h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error) 
+     CALL h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error)
      CALL h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_COLLECTIVE_F, error)
-     
+
      !
-     ! Write the dataset collectively. 
+     ! Write the dataset collectively.
      !
      CALL h5dwrite_f(dset_id, H5T_NATIVE_real, data, dimsfi, error, &
                      file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)

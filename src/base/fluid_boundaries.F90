@@ -54,7 +54,10 @@ subroutine bnd_u(dim)
 
 #ifdef GRAV
   integer kb, ksub
-  real, dimension(nx,ny) :: db, ekb, eib, csi2b
+  real, dimension(nx,ny) :: db, csi2b
+#ifndef ISO
+  real, dimension(nx,ny) :: ekb, eib
+#endif /* ISO */
   real, dimension(nsub+1):: zs, dprofs, gprofs
   real dzs, factor, z1, z2
 #endif /* GRAV */

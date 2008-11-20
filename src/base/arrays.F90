@@ -7,7 +7,7 @@ module arrays
   integer :: nx, ny, nz
   integer,parameter  :: xdim=1, ydim=2, zdim=3
   integer, parameter :: nrlscal=100, nintscal=100
-  
+
 #ifdef ISO
   integer,parameter  :: nua=4
 #else /* ISO */
@@ -28,7 +28,7 @@ module arrays
 
   integer,parameter  :: nu=nua+nuc+nud
   integer,parameter  :: nm=3
-  
+
   integer,parameter  :: idna=1, imxa=2, imya=3, imza=4
 #ifdef ISO
   integer,parameter  :: iena=0
@@ -47,12 +47,12 @@ module arrays
 #else /* DUST */
   integer,parameter  :: idnd=0, ivxd=0, ivyd=0, ivzd=0
 #endif /* DUST */
-   
+
   integer, dimension(nu) :: iuswpx, iuswpy, iuswpz
   integer, dimension(nm) :: ibswpx, ibswpy, ibswpz
-   
-  integer,parameter  :: ibx=1, iby=2, ibz=3
-  integer,parameter  :: icx=1, icy=2, icz=3
+
+  integer, parameter  :: ibx=1, iby=2, ibz=3
+  integer, parameter  :: icx=1, icy=2, icz=3
 
   integer nxb, nyb, nzb
   integer nxt, nyt, nzt
@@ -75,7 +75,7 @@ module arrays
   real, allocatable, dimension(:,:,:,:) :: bi
 #endif /* SSP */
 
-#else /* ~SPLIT */ 
+#else /* ~SPLIT */
   real, allocatable, dimension(:,:,:,:) :: bi
   real, allocatable, dimension(:,:,:,:) :: ui
   real, allocatable, dimension(:,:,:,:) :: Lu, Lb
@@ -84,7 +84,7 @@ module arrays
   real, allocatable, dimension(:,:,:,:) :: flx
   real, allocatable, dimension(:,:,:)   :: cfr
 #endif /* FLX_BND */
-#endif /* ~SPLIT */ 
+#endif /* ~SPLIT */
 #ifdef PNE
   real, allocatable, dimension(:) :: ovrlp
 #endif /* PNE */
@@ -106,18 +106,18 @@ module arrays
 #endif /* KEPLER_SUPPRESSION */
 
 contains
-  
+
   subroutine arrays_allocate
   use start, only : nxd, nyd, nzd, nb, dimensions
   use mpi_setup
 
-    iuswpx(idna:imza)=(/idna,imxa,imya,imza/) 
-    iuswpy(idna:imza)=(/idna,imya,imxa,imza/) 
-    iuswpz(idna:imza)=(/idna,imza,imya,imxa/) 
-    ibswpx(ibx:ibz)  =(/ibx,iby,ibz/)    
-    ibswpy(ibx:ibz)  =(/iby,ibx,ibz/)    
-    ibswpz(ibx:ibz)  =(/ibz,iby,ibx/)    
-    
+    iuswpx(idna:imza)=(/idna,imxa,imya,imza/)
+    iuswpy(idna:imza)=(/idna,imya,imxa,imza/)
+    iuswpz(idna:imza)=(/idna,imza,imya,imxa/)
+    ibswpx(ibx:ibz)  =(/ibx,iby,ibz/)
+    ibswpy(ibx:ibz)  =(/iby,ibx,ibz/)
+    ibswpz(ibx:ibz)  =(/ibz,iby,ibx/)
+
 #ifndef ISO
     iuswpx(iena) = iena
     iuswpy(iena) = iena
@@ -129,35 +129,35 @@ contains
     iuswpz(iecr) = iecr
 #endif /* COSM_RAYS */
 
-  
+
     if((mod(nxd, pxsize) .ne. 0) .or. &
        (mod(nyd, pysize) .ne. 0) .or. &
-       (mod(nzd, pzsize) .ne. 0)) then 
-      call mpistop 
+       (mod(nzd, pzsize) .ne. 0)) then
+      call mpistop
       if (proc .eq. 0) then
-        write(*,*) 'One of: (mod(nxd,pxsize) .or. mod(nyd,pysize) .or. mod(nzd,pzsize)) .ne. 0' 
+        write(*,*) 'One of: (mod(nxd,pxsize) .or. mod(nyd,pysize) .or. mod(nzd,pzsize)) .ne. 0'
       endif
-      stop 
-    endif 
-    
+      stop
+    endif
+
     nxb = nxd/pxsize     !
-    nyb = nyd/pysize     ! Block 'physical' grid sizes 
+    nyb = nyd/pysize     ! Block 'physical' grid sizes
     nzb = nzd/pzsize     !
-    
+
     nx=nxb+2*nb          !
     ny=nyb+2*nb          ! Block total grid sizes
     nz=nzb+2*nb          !
- 
+
     nxt=nxd+2*nb         !
     nyt=nyd+2*nb         ! Domain total grid sizes
     nzt=nzd+2*nb         !
- 
- 
+
+
     is = nb+1
     ie = nb+nxb
     js = nb+1
     je = nb+nyb
-    
+
     if(dimensions .eq. '3d') then
       ks = nb+1
       ke = nb+nzb
@@ -174,18 +174,18 @@ contains
 
     allocate(rlscal(nrlscal),intscal(nintscal)) ! arrays to store additional
                                                 ! scalar quantities in restart files
-    
+
 
     allocate(x(nx), xl(nx), xr(nx))
     allocate(y(ny), yl(ny), yr(ny))
-    allocate(z(nz), zl(nz), zr(nz))    
+    allocate(z(nz), zl(nz), zr(nz))
 
 #ifdef SPLIT
 #ifdef ORIG
     allocate(u(nu,nx,ny,nz),b(3,nx,ny,nz))
 #else /* ~ORIG */
     allocate(u(nu,nx,ny,nz),b(3,nx,ny,nz),bi(3,nx,ny,nz))
-#endif /* ~ORIG */ 
+#endif /* ~ORIG */
 #else /* ~SPLIT */
     allocate(u(nu,nx,ny,nz),b(3,nx,ny,nz))
     allocate(ui(nu,nx,ny,nz),bi(3,nx,ny,nz))
@@ -194,7 +194,7 @@ contains
     allocate(flx(nu,nx,ny,nz))
     allocate(cfr(nx,ny,nz))
 #endif /* FLX_BND */
-#endif /* ~SPLIT */ 
+#endif /* ~SPLIT */
 
 #ifdef GRAV
     allocate(gp(nx,ny,nz))
@@ -214,28 +214,28 @@ contains
 #endif /* SPLIT */
     allocate(outwa(nx,ny,nz),outwb(nx,ny,nz),outwc(nx,ny,nz))
 #ifdef MASS_COMPENS
-    allocate(dinit(nx,ny,nz))    
+    allocate(dinit(nx,ny,nz))
 #endif /* MASS_COMPENS */
 !#ifdef COOL_HEAT
     allocate( coolheat_profile(nz))
 !#endif /* COOL_HEAT */
 
   end subroutine arrays_allocate
-      
+
   subroutine arrays_deallocate
 
     deallocate(dl)
     deallocate(rlscal,intscal)
     deallocate(x, xl, xr)
     deallocate(y, yl, yr)
-    deallocate(z, zl, zr)    
+    deallocate(z, zl, zr)
 
 #ifdef SPLIT
 #ifdef ORIG
     deallocate(u,b)
-#else /* ~ORIG */ 
+#else /* ~ORIG */
     deallocate(u,b,bi)
-#endif /* ~ORIG */ 
+#endif /* ~ORIG */
 #else /* ~SPLIT */
     deallocate(u,b)
     deallocate(ui,bi)
@@ -243,7 +243,7 @@ contains
 #ifdef FLX_BND
     deallocate(cfr,flx)
 #endif /* FLX_BND */
-#endif /* ~SPLIT */ 
+#endif /* ~SPLIT */
 #ifdef GRAV
     deallocate(gp)
 #ifdef ARMS_POTENTIAL
@@ -260,7 +260,7 @@ contains
     deallocate(ovrlp)
 #endif /* PNE */
 #ifdef MASS_COMPENS
-   deallocate(dinit)    
+   deallocate(dinit)
 #endif /* MASS_COMPENS */
 !#ifdef COOL_HEAT
     deallocate(coolheat_profile)
@@ -275,6 +275,6 @@ contains
     deallocate(outwa,outwb,outwc)
 
   end subroutine arrays_deallocate
-      
+
 end module arrays
 

@@ -13,7 +13,7 @@ module resistivity
       use constants, only: pi, small, big
       use mag_boundaries
       use mpi_setup
-      
+
       real eta_max, dt_resist, dt_eint
       real eta_max_proc, eta_max_all
       integer loc_eta_max(3)
@@ -22,13 +22,13 @@ contains
 
       subroutine compute_resist(eta,ici)
        use func, only : mshift, pshift
-      
+
       implicit none
       integer,intent(in)                    :: ici
       real, dimension(nx,ny,nz), intent(inout) :: eta
       real, dimension(:,:,:), allocatable   ::  wb,etahelp
       allocate(wb(nx,ny,nz),etahelp(nx,ny,nz))
-      
+
 !--- square current computing in cell corner step by step
 
 !--- current_z
@@ -85,12 +85,12 @@ contains
 
         eta_max_proc      = maxval(eta(is:ie,js:je,ks:ke))
         loc_eta_max       = maxloc(eta(is:ie,js:je,ks:ke))
-        
+
         eta_max = eta_max_proc
 
         call MPI_REDUCE(eta_max_proc, eta_max_all, 1, MPI_DOUBLE_PRECISION, MPI_MAX, 0, comm, ierr)
         call MPI_BCAST (eta_max_all, 1, MPI_DOUBLE_PRECISION, 0, comm, ierr)
-    
+
         eta_max = eta_max_all
 
 #ifndef ISO
@@ -104,9 +104,9 @@ contains
                         + b(iby,is:ie,js:je,ks:ke)**2   &
                         + b(ibz,is:ie,js:je,ks:ke)**2)) &
                         /( eta(is:ie,js:je,ks:ke)       &
-                        *wb(is:ie,js:je,ks:ke)+small) )) 
+                        *wb(is:ie,js:je,ks:ke)+small) ))
 #endif /* ISO */
-        
+
       deallocate(wb,etahelp)
 
       if (ici .eq. icz) then
@@ -139,7 +139,7 @@ contains
         else
           dt_resist = big
         endif
-        
+
         call MPI_REDUCE(dt_resist, dt_resist_min, 1, MPI_DOUBLE_PRECISION, MPI_MIN, 0, comm, ierr)
         call MPI_BCAST (dt_resist_min, 1, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
@@ -230,7 +230,7 @@ contains
 
   subroutine diffuseby_x
     use func, only : mshift, pshift
-  
+
     call tvdd(iby,icz,xdim)
 #ifdef SPLIT
 
@@ -294,7 +294,7 @@ contains
     call bnd_emf(wa, 'emfx', 'ydim')
     if(dimensions .eq. '3d') call bnd_emf(wa, 'emfx', 'zdim')
     call bnd_emf(wa, 'emfx', 'xdim')
-  
+
     Lb(ibz,:,:,:) = Lb(ibz,:,:,:) - wa/dl(ydim)
     wa = pshift(wa,ydim)
     Lb(ibz,:,:,:) = Lb(ibz,:,:,:) + wa/dl(ydim)
@@ -357,7 +357,7 @@ contains
 
   subroutine diffuseby_z
     use func, only : mshift, pshift
-    
+
     call tvdd(iby,icx,zdim)
 #ifdef SPLIT
 

@@ -18,7 +18,7 @@ module constants     ! module containg numerical and physical constants !!!
   real, parameter :: e  = 2.718281828459045235
 
 #ifdef PSM
-! uses: length --> pc, mass --> Msun, time --> myr, temperature --> kelvin
+! PSM  uses: length --> pc,     mass --> Msun,        time --> myr,     temperature --> kelvin
 ! length units:
         real, parameter :: cm =         1.0/3.0856e18
         real, parameter :: metr =       1.0e2*cm
@@ -33,7 +33,7 @@ module constants     ! module containg numerical and physical constants !!!
         real, parameter :: Msun =       1.0
 
 #elif defined VINE
-! uses: length --> 3.5kpc, mass --> 5.6e10*Msun, time --> 13.1Myr, temperature --> kelvin
+! VINE uses: length --> 3.5kpc, mass --> 5.6e10*Msun, time --> 13.1Myr, temperature --> kelvin
 ! length units:
         real, parameter :: pc =         1.0e-3/3.5
         real, parameter :: cm =         pc/3.0856e18
@@ -48,7 +48,7 @@ module constants     ! module containg numerical and physical constants !!!
         real, parameter :: kg =         1.0e3*gram
 
 #elif defined GSM
-! uses: length --> kpc, mass --> 10^6*Msun, time --> Gyr, temperature --> kelvin
+! GSM  uses: length --> kpc,    mass --> 10^6*Msun,   time --> Gyr,     temperature --> kelvin
 ! length units:
         real, parameter :: cm =         1.0/3.0856e21
         real, parameter :: metr =       1.0e2*cm
@@ -63,7 +63,7 @@ module constants     ! module containg numerical and physical constants !!!
         real, parameter :: Msun =       1.0e-6
 
 #elif defined (PGM)
-! uses: length --> pc, newtong --> 1.0, time --> myr, temperature --> kelvin
+! PGM  uses: length --> pc,     newtong --> 1.0,      time --> myr,     temperature --> kelvin
 ! length units:
         real, parameter :: cm =         1.0/3.0856e18
         real, parameter :: metr =       1.0e2*cm
@@ -79,7 +79,7 @@ module constants     ! module containg numerical and physical constants !!!
         real, parameter :: Msun =       1.989e33*gram
 
 #elif defined (DMY)
-! uses: length --> cm^16, mass --> Msun, time --> year, temperature --> kelvin
+! DMY  uses: length --> cm^16,  mass --> Msun,        time --> year,    temperature --> kelvin
 ! length units:
         real, parameter :: cm =         1.0e-16
         real, parameter :: metr =       1.0e2*cm
@@ -94,7 +94,7 @@ module constants     ! module containg numerical and physical constants !!!
         real, parameter :: Msun =       1.0
 
 #elif defined(SI)
-! uses: length --> metr, mass --> kg, time --> sek, temperature --> kelvin
+! SI   uses: length --> metr,   mass --> kg,          time --> sek,     temperature --> kelvin
 ! length units:
         real, parameter :: cm =         1.0e-2
         real, parameter :: metr =       1.0
@@ -109,7 +109,7 @@ module constants     ! module containg numerical and physical constants !!!
         real, parameter :: Msun =       1.989e30
 
 #elif defined(CGS)
-! uses: length --> cm, mass --> gram, time --> sek, temperature --> kelvin
+! CGS  uses: length --> cm,     mass --> gram,        time --> sek,     temperature --> kelvin
 ! length units:
         real, parameter :: cm =         1.0
         real, parameter :: metr =       1.0e2*cm
@@ -183,6 +183,7 @@ module constants     ! module containg numerical and physical constants !!!
         real, parameter :: cmps2 = cm/sek**2
 
 #else /* STANDARD */
+! STANDARD uses: scaled units, sometimes incosistent
   real, parameter :: sek =      1.0e-6/365.2652/24.0/3600.0
   real, parameter :: cm =       1.0/3.0856e18
 

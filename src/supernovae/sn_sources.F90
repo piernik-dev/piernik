@@ -1,15 +1,15 @@
 ! $Id$
 #include "piernik.def"
-! Written by M. Hanasz, 2003, 2007 & K. Kowalik 2007 
+! Written by M. Hanasz, 2003, 2007 & K. Kowalik 2007
 ! Adapted for this code by M. Hanasz, November 2007
 
 module sn_sources
 
 
-#ifdef SHEAR  
+#ifdef SHEAR
    use shear
 #endif /* SHEAR */
-  
+
    implicit none
    real epsi, epso
    real ysna, ysni, ysno
@@ -17,27 +17,27 @@ module sn_sources
    real, save    :: dt_sn_prev, ecr_supl, decr_supl
    real,    save :: gset
    integer, save :: irand, iset
-  
+
 
    contains
 
    subroutine random_sn
-! Written by: M. Hanasz  
+! Written by: M. Hanasz
       use start, only : f_sn,t
       use constants, only : small
 
-      implicit none 
+      implicit none
       real :: dt_sn
-      real, dimension(2) :: orient
+!      real, dimension(2) :: orient
       real, dimension(3) :: snpos
       integer :: isn, nsn_per_timestep
-      
-      dt_sn = 1./(f_sn+small)  
-        
+
+      dt_sn = 1./(f_sn+small)
+
       nsn = t/dt_sn
       nsn_per_timestep = nsn - nsn_last
       nsn_last = nsn
-    
+
       do isn = 0, nsn_per_timestep
 
          call rand_coords(snpos)
@@ -54,15 +54,15 @@ module sn_sources
    end subroutine random_sn
 
 !--------------------------------------------------------------------------
- 
+
    subroutine cr_sn(pos)
-! Written by: M. Hanasz 
+! Written by: M. Hanasz
       use arrays, only : nx,ny,nz,iecr,u,x,y,z
       use start,  only : amp_ecr_sn,r_sn,ethu
       use grid,   only : Lx,Ly
       implicit none
       real, dimension(3), intent(in) :: pos
-      integer i,j,k, ipm, jpm   
+      integer i,j,k, ipm, jpm
       real decr, xsn,ysn,zsn
       xsn = pos(1)
       ysn = pos(2)
@@ -71,7 +71,7 @@ module sn_sources
       do k=1,nz
          do j=1,ny
             do i=1,nx
- 
+
                do ipm=-1,1
 
                   if(ipm .eq. -1) ysna = ysno
@@ -83,17 +83,17 @@ module sn_sources
                      decr = amp_ecr_sn * ethu  &
                            * EXP(-((x(i)-xsn+real(ipm)*Lx)**2  &
                            + (y(j)-ysna+real(jpm)*Ly)**2  &
-                           + (z(k)-zsn)**2)/r_sn**2)  
+                           + (z(k)-zsn)**2)/r_sn**2)
 
                      u(iecr,i,j,k) = u(iecr,i,j,k) + decr
-  
+
                   enddo ! jpm
                enddo ! ipm
-  
+
             enddo ! i
          enddo ! j
       enddo ! k
-   
+
       return
 
    end subroutine cr_sn
@@ -115,7 +115,10 @@ module sn_sources
       real             :: phi,theta,xsn,ysn,zsn
       real             :: rmk
       real             :: temp1,temp2
-      integer          :: ipm, jpm, kpm
+      integer          :: kpm
+#ifdef SHEAR
+      integer          :: ipm, jpm
+#endif /* SHEAR */
       real, dimension(:,:,:,:) :: A
 !     real, dimension(:,:,:,:), allocatable :: A
 #ifndef ISO
@@ -166,16 +169,16 @@ module sn_sources
          xx = xl(i)
          do j = 1,ny
             yy = yl(j)
-            do k = 1,nz 
+            do k = 1,nz
                zz = zl(k)
- 
+
 !              A(:,i,j,k) = 0.0
              !>
              !! \todo Following lines are also needed for strict periodic domain,
              !! and corner-periodic boundaries. It's only temporary solution!!!
              !<
 #ifdef SHEAR
-               do ipm=-1,1
+!                do ipm=-1,1
 
                   if(ipm .eq. -1) ysna = ysno
                   if(ipm .eq.  0) ysna = ysn
@@ -183,19 +186,19 @@ module sn_sources
 
                   do jpm=-1,1
                      x    = ((xx-xsn+real(ipm)*Lx)*cos_phi+(yy-ysna+real(jpm)*Ly)*sin_phi) &
-                             *cos_theta-(zz-zsn)*sin_theta 
+                             *cos_theta-(zz-zsn)*sin_theta
                      y    = ((yy-ysna+real(jpm)*Ly)*cos_phi-(xx-xsn+real(ipm)*Lx)*sin_phi)
                      z    = ((xx-xsn+real(ipm)*Lx)*cos_phi+(yy-ysna+real(jpm)*Ly)*sin_phi) &
-                             *sin_theta+(zz-zsn)*cos_theta 
-                
+                             *sin_theta+(zz-zsn)*cos_theta
+
 #else
 !                    ipm = 0; jpm=0; ysna = ysn
-                     x    = ((xx-xsn)*cos_phi+(yy-ysn)*sin_phi) * cos_theta-(zz-zsn)*sin_theta 
+                     x    = ((xx-xsn)*cos_phi+(yy-ysn)*sin_phi) * cos_theta-(zz-zsn)*sin_theta
                      y    = ((yy-ysn)*cos_phi-(xx-xsn)*sin_phi)
-                     z    = ((xx-xsn)*cos_phi+(yy-ysn)*sin_phi) * sin_theta+(zz-zsn)*cos_theta          
+                     z    = ((xx-xsn)*cos_phi+(yy-ysn)*sin_phi) * sin_theta+(zz-zsn)*cos_theta
 #endif /* SHEAR */
                         do kpm=1,howmulti
-                
+
                            r    = sqrt(x**2 + y**2 + (z+real(2*kpm-howmulti-1)*rmk)**2)
                            rc   = sqrt(x**2 + y**2)
                            sint = rc/(r+small)
@@ -208,7 +211,7 @@ module sn_sources
                            Aphi =  real(amp_fac(kpm)) * amp_dip_sn * r*sint * r_aux
                            temp1 = -1.0 *Aphi* y / (rc+small)
                            temp2 = Aphi * x / (rc+small)
-  
+
                            A(1,i,j,k) = A(1,i,j,k) + temp1*cos_theta*cos_phi - temp2*sin_phi
                            A(2,i,j,k) = A(2,i,j,k) + temp1*cos_theta*sin_phi + temp2*cos_phi
                            A(3,i,j,k) = A(3,i,j,k) - temp1*sin_theta
@@ -221,7 +224,7 @@ module sn_sources
             enddo
          enddo
       enddo
-     
+
 !      if(fl == 1) then
 !         b(ibx,1:nx,  1:ny-1,1:nz-1) = b(ibx,1:nx,  1:ny-1,1:nz-1) + &
 !            (A(3,1:nx,2:ny,1:nz-1) - A(3,1:nx,1:ny-1,1:nz-1))/dy - &
@@ -231,10 +234,10 @@ module sn_sources
 !            (A(1,1:nx-1,1:ny,2:nz) - A(1,1:nx-1,1:ny,1:nz-1))/dz - &
 !            (A(3,2:nx,1:ny,1:nz-1) - A(3,1:nx-1,1:ny,1:nz-1))/dx
 !
-!         b(ibz,1:nx-1,1:ny-1,1:nz  ) = b(ibz,1:nx-1,1:ny-1,1:nz  ) + & 
+!         b(ibz,1:nx-1,1:ny-1,1:nz  ) = b(ibz,1:nx-1,1:ny-1,1:nz  ) + &
 !            (A(2,2:nx,1:ny-1,1:nz) - A(2,1:nx-1,1:ny-1,1:nz))/dx - &
 !            (A(1,1:nx-1,2:ny,1:nz) - A(1,1:nx-1,1:ny-1,1:nz))/dy
-       
+
 #ifndef ISO
 !         u(iena,:,:,:) = eint + ekin + 0.5*(b(1,:,:,:)**2 + &
 !            b(2,:,:,:)**2 + b(3,:,:,:)**2)
@@ -249,7 +252,7 @@ module sn_sources
 
 
 !--------------------------------------------------------------------------
- 
+
    subroutine rand_coords(pos)
 ! Written by M. Hanasz
       use start,  only : h_sn,dimensions,xmin,ymin
@@ -259,10 +262,10 @@ module sn_sources
       use grid,   only : dy
       use start,  only : nyd
 
-      integer :: jsn,jremap 
+      integer :: jsn,jremap
       real :: dysn
 #endif /* SHEAR */
-    
+
       real, dimension(3), intent(out) :: pos
       real, dimension(4) :: rand
       real :: xsn,ysn,zsn,znorm
@@ -272,8 +275,8 @@ module sn_sources
       ysn = ymin+ Ly*rand(2)
 
       if(dimensions == '3d') then
-         irand = irand+4  
-         znorm = gasdev(rand(3), rand(4)) 
+         irand = irand+4
+         znorm = gasdev(rand(3), rand(4))
          zsn = h_sn*znorm
       else
          zsn = 0.0
@@ -282,19 +285,19 @@ module sn_sources
 #ifdef SHEAR
       jsn  = js+int((ysn-ymin)/dy)
       dysn  = dmod(ysn,dy)
-       
-      epsi   = eps*dy 
+
+      epsi   = eps*dy
       epso   = -epsi
 
 !  outer boundary
-      jremap = jsn - delj 
+      jremap = jsn - delj
       jremap = mod(mod(jremap, nyd)+nyd,nyd)
       if (jremap .le. (js-1)) jremap = jremap + nyd
 
       ysno = y(jremap) + epso + dysn
- 
+
 !  inner boundary
-      jremap = jsn + delj 
+      jremap = jsn + delj
       jremap = mod(jremap, nyd)+nyd
       if (jremap .ge. (je+1)) jremap = jremap - nyd
 
@@ -308,7 +311,7 @@ module sn_sources
       pos(2) = ysn
       pos(3) = zsn
       return
-  
+
    end subroutine rand_coords
 
 !-----------------------------------------------------------------------
@@ -318,10 +321,10 @@ module sn_sources
 !! sphere with uniform distribution and returns its latidude and longitude
 !<
    function rand_angles()
-  
+
       use constants, only : pi
       implicit none
-      real :: rand(2)                  
+      real :: rand(2)
       real :: rnx,rny,rnz               !! Point's position in cartesian coordinates
       real, dimension(2) :: rand_angles !! Latidue and longitude
 
@@ -331,7 +334,7 @@ module sn_sources
       rny = sqrt(1.0-rnz**2)*sin(2.*pi*rand(2))
       rand_angles(1) = 2.0*pi*rand(2)
       rand_angles(2) = acos(rnz/sqrt(rnz**2+rny**2+rnx**2) )
- 
+
    end function rand_angles
 
 !=======================================================================
@@ -351,7 +354,7 @@ module sn_sources
       real, dimension(2) :: rand
       real, save :: gset
       integer, save :: iset, irand
- 
+
       if (iset.eq.0) then
 1        x1 = 2.0*x - 1.0
          y1 = 2.0*y - 1.0

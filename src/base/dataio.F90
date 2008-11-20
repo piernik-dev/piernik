@@ -717,7 +717,7 @@ module dataio
     integer :: sfstart, sfend, sfsnatt, sfcreate, sfwdata, sfscompress, sfendacc &
              , sfdimid, sfsdmname, sfsdscale, sfsdmstr
 
-    integer :: iv, i, j, ibe, jbe
+    integer :: iv, ibe, jbe
     integer :: nxo = 1, nyo = 1, nzo = 1, &
                   iso = 1, ieo = 1, jso = 1, jeo = 1, kso = 1, keo = 1
 
@@ -771,7 +771,7 @@ module dataio
 
     write (file_name_hdf,'(a,a1,a,a5,i2.2,a1,i2.2,a1,i2.2,a1,a8)') &
               trim(cwd),'/',trim(problem_name),'_gpt_', &
-	      pcoords(1),'_',pcoords(2),'_',pcoords(3),'_', '0000.hdf'
+              pcoords(1),'_',pcoords(2),'_',pcoords(3),'_', '0000.hdf'
 
     write (file_name_disp,'(a,a1,a,a5,a2,a1,a2,a1,a2,a1,a8)') &
               trim(cwd),'/',trim(problem_name),'_gpt_',pc1,'_',pc2,'_',pc3,'_', '0000.hdf'
@@ -889,75 +889,75 @@ module dataio
 
       case (17)
         gvars(17)='vrgx'
-	do ibe = iso,ieo
-	do jbe = jso,jeo
-        wa(ibe,jbe,kso:keo) = (gp(ibe+1,jbe,kso:keo)-gp(ibe-1,jbe,kso:keo))/dx/2.0
-	wa(ibe,jbe,kso:keo) = sqrt(abs(wa(ibe,jbe,kso:keo)/x(ibe)))*sqrt(x(ibe)**2+y(jbe)**2)
-	enddo
-	enddo
+        do ibe = iso,ieo
+           do jbe = jso,jeo
+              wa(ibe,jbe,kso:keo) = (gp(ibe+1,jbe,kso:keo)-gp(ibe-1,jbe,kso:keo))/dx/2.0
+              wa(ibe,jbe,kso:keo) = sqrt(abs(wa(ibe,jbe,kso:keo)/x(ibe)))*sqrt(x(ibe)**2+y(jbe)**2)
+           enddo
+        enddo
 
       case (18)
         gvars(18)='vrgy'
-	do ibe = iso,ieo
-	do jbe = jso,jeo
-        wa(ibe,jbe,kso:keo) = (gp(ibe,jbe+1,kso:keo)-gp(ibe,jbe-1,kso:keo))/dy/2.0
-	wa(ibe,jbe,kso:keo) = sqrt(abs(wa(ibe,jbe,kso:keo)/y(jbe)))*sqrt(x(ibe)**2+y(jbe)**2)
-	enddo
-	enddo
+        do ibe = iso,ieo
+           do jbe = jso,jeo
+              wa(ibe,jbe,kso:keo) = (gp(ibe,jbe+1,kso:keo)-gp(ibe,jbe-1,kso:keo))/dy/2.0
+              wa(ibe,jbe,kso:keo) = sqrt(abs(wa(ibe,jbe,kso:keo)/y(jbe)))*sqrt(x(ibe)**2+y(jbe)**2)
+           enddo
+        enddo
 
       case (19)
         gvars(19)='vrdx'
-	do ibe = iso,ieo
-	do jbe = jso,jeo
-        wa(ibe,jbe,kso:keo) = (gpotdisk(ibe+1,jbe,kso:keo)-gpotdisk(ibe-1,jbe,kso:keo))/dx/2.0
-	wa(ibe,jbe,kso:keo) = sqrt(abs(wa(ibe,jbe,kso:keo)/x(ibe)))*sqrt(x(ibe)**2+y(jbe)**2)
-	enddo
-	enddo
+        do ibe = iso,ieo
+           do jbe = jso,jeo
+              wa(ibe,jbe,kso:keo) = (gpotdisk(ibe+1,jbe,kso:keo)-gpotdisk(ibe-1,jbe,kso:keo))/dx/2.0
+              wa(ibe,jbe,kso:keo) = sqrt(abs(wa(ibe,jbe,kso:keo)/x(ibe)))*sqrt(x(ibe)**2+y(jbe)**2)
+           enddo
+        enddo
 
       case (20)
         gvars(20)='vrdy'
-	do ibe = iso,ieo
-	do jbe = jso,jeo
-        wa(ibe,jbe,kso:keo) = (gpotdisk(ibe,jbe+1,kso:keo)-gpotdisk(ibe,jbe-1,kso:keo))/dy/2.0
-	wa(ibe,jbe,kso:keo) = sqrt(abs(wa(ibe,jbe,kso:keo)/y(jbe)))*sqrt(x(ibe)**2+y(jbe)**2)
-	enddo
-	enddo
+        do ibe = iso,ieo
+           do jbe = jso,jeo
+              wa(ibe,jbe,kso:keo) = (gpotdisk(ibe,jbe+1,kso:keo)-gpotdisk(ibe,jbe-1,kso:keo))/dy/2.0
+              wa(ibe,jbe,kso:keo) = sqrt(abs(wa(ibe,jbe,kso:keo)/y(jbe)))*sqrt(x(ibe)**2+y(jbe)**2)
+           enddo
+        enddo
 
       case (21)
         gvars(21)='vrhx'
-	do ibe = iso,ieo
-	do jbe = jso,jeo
-        wa(ibe,jbe,kso:keo) = (gpothalo(ibe+1,jbe,kso:keo)-gpothalo(ibe-1,jbe,kso:keo))/dx/2.0
-	wa(ibe,jbe,kso:keo) = sqrt(abs(wa(ibe,jbe,kso:keo)/x(ibe)))*sqrt(x(ibe)**2+y(jbe)**2)
-	enddo
-	enddo
+        do ibe = iso,ieo
+           do jbe = jso,jeo
+              wa(ibe,jbe,kso:keo) = (gpothalo(ibe+1,jbe,kso:keo)-gpothalo(ibe-1,jbe,kso:keo))/dx/2.0
+              wa(ibe,jbe,kso:keo) = sqrt(abs(wa(ibe,jbe,kso:keo)/x(ibe)))*sqrt(x(ibe)**2+y(jbe)**2)
+           enddo
+        enddo
 
       case (22)
         gvars(22)='vrhy'
-	do ibe = iso,ieo
-	do jbe = jso,jeo
-        wa(ibe,jbe,kso:keo) = (gpothalo(ibe,jbe+1,kso:keo)-gpothalo(ibe,jbe-1,kso:keo))/dy/2.0
-	wa(ibe,jbe,kso:keo) = sqrt(abs(wa(ibe,jbe,kso:keo)/y(jbe)))*sqrt(x(ibe)**2+y(jbe)**2)
-	enddo
-	enddo
+        do ibe = iso,ieo
+           do jbe = jso,jeo
+              wa(ibe,jbe,kso:keo) = (gpothalo(ibe,jbe+1,kso:keo)-gpothalo(ibe,jbe-1,kso:keo))/dy/2.0
+              wa(ibe,jbe,kso:keo) = sqrt(abs(wa(ibe,jbe,kso:keo)/y(jbe)))*sqrt(x(ibe)**2+y(jbe)**2)
+           enddo
+        enddo
 
       case (23)
         gvars(23)='vrbx'
-	do ibe = iso,ieo
-	do jbe = jso,jeo
-        wa(ibe,jbe,kso:keo) = (gpotbulge(ibe+1,jbe,kso:keo)-gpotbulge(ibe-1,jbe,kso:keo))/dx/2.0
-	wa(ibe,jbe,kso:keo) = sqrt(abs(wa(ibe,jbe,kso:keo)/x(ibe)))*sqrt(x(ibe)**2+y(jbe)**2)
-	enddo
-	enddo
+        do ibe = iso,ieo
+           do jbe = jso,jeo
+              wa(ibe,jbe,kso:keo) = (gpotbulge(ibe+1,jbe,kso:keo)-gpotbulge(ibe-1,jbe,kso:keo))/dx/2.0
+              wa(ibe,jbe,kso:keo) = sqrt(abs(wa(ibe,jbe,kso:keo)/x(ibe)))*sqrt(x(ibe)**2+y(jbe)**2)
+           enddo
+        enddo
 
       case (24)
         gvars(24)='vrby'
-	do ibe = iso,ieo
-	do jbe = jso,jeo
-        wa(ibe,jbe,kso:keo) = (gpotbulge(ibe,jbe+1,kso:keo)-gpotbulge(ibe,jbe-1,kso:keo))/dy/2.0
-	wa(ibe,jbe,kso:keo) = sqrt(abs(wa(ibe,jbe,kso:keo)/y(jbe)))*sqrt(x(ibe)**2+y(jbe)**2)
-	enddo
-	enddo
+        do ibe = iso,ieo
+           do jbe = jso,jeo
+              wa(ibe,jbe,kso:keo) = (gpotbulge(ibe,jbe+1,kso:keo)-gpotbulge(ibe,jbe-1,kso:keo))/dy/2.0
+              wa(ibe,jbe,kso:keo) = sqrt(abs(wa(ibe,jbe,kso:keo)/y(jbe)))*sqrt(x(ibe)**2+y(jbe)**2)
+           enddo
+        enddo
 
       case default
         print *, 'Variable ', gvars(iv), ' is not defined! Skipping.'
@@ -1476,7 +1476,6 @@ module dataio
 
     implicit none
 
-    integer i,j
     character(len=128) :: tsl_file
 
     real :: mass = 0.0, momx = 0.0, momy = 0.0,  momz = 0.0, &
@@ -1489,6 +1488,7 @@ module dataio
             tot_epot = 0.0, mflx = 0.0, mfly = 0.0, mflz = 0.0, &
             tot_mflx = 0.0, tot_mfly = 0.0, tot_mflz = 0.0
 #ifdef GRAV
+    integer i,j
     real :: epot =0.0, amomz = 0.0, tot_amomz = 0.0
 #endif /* GRAV */
 #ifdef COSM_RAYS

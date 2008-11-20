@@ -21,7 +21,7 @@ contains
     sizes    = (/nu,nx,ny,nz/)
     subsizes = (/nu,nb,ny,nz/)
     starts   = (/0,0,0,0/)
-   
+
     call MPI_TYPE_CREATE_SUBARRAY(4,sizes,subsizes,starts,ord,&
            old,MPI_YZ_LEFT_BND,ierr)
     call MPI_TYPE_COMMIT(MPI_YZ_LEFT_BND,ierr)
@@ -73,7 +73,7 @@ contains
     sizes    = (/nu,nx,ny,nz/)
     subsizes = (/nu,nx,nb,nz/)
     starts   = (/0,0,0,0/)
-   
+
     call MPI_TYPE_CREATE_SUBARRAY(4,sizes,subsizes,starts,ord,&
            old,MPI_XZ_LEFT_BND,ierr)
     call MPI_TYPE_COMMIT(MPI_XZ_LEFT_BND,ierr)
@@ -99,7 +99,7 @@ contains
     sizes    = (/3,nx,ny,nz/)
     subsizes = (/3,nx,nb,nz/)
     starts   = (/0,0,0,0/)
-   
+
     call MPI_TYPE_CREATE_SUBARRAY(4,sizes,subsizes,starts,ord,&
            old,MAG_XZ_LEFT_BND,ierr)
     call MPI_TYPE_COMMIT(MAG_XZ_LEFT_BND,ierr)
@@ -125,7 +125,7 @@ contains
     sizes    = (/nu,nx,ny,nz/)
     subsizes = (/nu,nx,ny,nb/)
     starts   = (/0,0,0,0/)
-   
+
     call MPI_TYPE_CREATE_SUBARRAY(4,sizes,subsizes,starts,ord,&
            old,MPI_XY_LEFT_BND,ierr)
     call MPI_TYPE_COMMIT(MPI_XY_LEFT_BND,ierr)
@@ -151,7 +151,7 @@ contains
     sizes    = (/3,nx,ny,nz/)
     subsizes = (/3,nx,ny,nb/)
     starts   = (/0,0,0,0/)
-   
+
     call MPI_TYPE_CREATE_SUBARRAY(4,sizes,subsizes,starts,ord,&
            old,MAG_XY_LEFT_BND,ierr)
     call MPI_TYPE_COMMIT(MAG_XY_LEFT_BND,ierr)
@@ -170,7 +170,7 @@ contains
     call MPI_TYPE_CREATE_SUBARRAY(4,sizes,subsizes,starts,ord,&
            old,MAG_XY_RIGHT_BND,ierr)
     call MPI_TYPE_COMMIT(MAG_XY_RIGHT_BND,ierr)
-    
+
 
   end subroutine mpi_bnd_prep
 end module mpi_bnd

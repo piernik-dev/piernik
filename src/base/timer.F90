@@ -5,7 +5,7 @@ module timer
 ! Written by: M. Hanasz, December 2005 - January 2006
 
   implicit none
-  
+
   integer       nzones, cpuhours, cpumins, cpusecs , wchours , wcmins  , wcsecs
   real          zcps,  cputot, cpuallp, wctot, cpu_start, cpu_stop
 !  real(kind=4)  etime, dtime
@@ -51,11 +51,11 @@ contains
     wchours  =  int ( wctot / 3600.0 )
     wcmins   =  int ( wctot / 60.0   ) - 60   * wchours
     wcsecs   =  int ( wctot + 0.5    ) - 3600 * wchours &
-                                       - 60   * wcmins  
+                                       - 60   * wcmins
 !
 !      cpu usage, expressed in hours, minutes, and seconds.
 !
-    cputot  = dtime ( tarray ) 
+    cputot  = dtime ( tarray )
     cpu_stop = tarray(1) +tarray(2)
     cputot = cpu_stop-cpu_start
 
@@ -63,14 +63,14 @@ contains
     cpumins  =  int ( cputot / 60.0   ) - 60   * cpuhours
     cpusecs  =  int ( cputot + 0.5    ) - 3600 * cpuhours &
                                         - 60   * cpumins
-    nzones = nxd * nyd * nzd      
+    nzones = nxd * nyd * nzd
 
 
     call MPI_REDUCE(cputot, cpuallp, 1, MPI_DOUBLE_PRECISION, MPI_SUM, 0, comm, ierr)
-   
+
     if(proc.eq. 0) then
 
-      zcps  = real(nstep) * real(nzones) / cpuallp 
+      zcps  = real(nstep) * real(nzones) / cpuallp
 
       write(*,*)
       write (*, 10) cpuallp
@@ -78,7 +78,7 @@ contains
       write (*, 30) zcps
       write(*,*)
 
-      open(log_lun, file=log_file, position='append')      
+      open(log_lun, file=log_file, position='append')
         write(log_lun,*)
         write (log_lun, 10) cpuallp
         write (log_lun, 20) wctot
