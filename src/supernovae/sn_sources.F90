@@ -178,7 +178,7 @@ module sn_sources
              !! and corner-periodic boundaries. It's only temporary solution!!!
              !<
 #ifdef SHEAR
-!                do ipm=-1,1
+               do ipm=-1,1
 
                   if(ipm .eq. -1) ysna = ysno
                   if(ipm .eq.  0) ysna = ysn
@@ -325,8 +325,8 @@ module sn_sources
       use constants, only : pi
       implicit none
       real :: rand(2)
-      real :: rnx,rny,rnz               !! Point's position in cartesian coordinates
-      real, dimension(2) :: rand_angles !! Latidue and longitude
+      real :: rnx,rny,rnz               !> Point's position in cartesian coordinates
+      real, dimension(2) :: rand_angles !> Latidue and longitude
 
       call random_number(rand)
       rnz = (1.0-2.0*rand(1))
