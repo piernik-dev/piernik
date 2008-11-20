@@ -53,7 +53,10 @@ module tv ! split ssp
     real    :: dt,dx,dtx
     real, dimension(nu,n) :: u,cfr,ul,ur
     real, dimension(3,n)  :: bb
-    real, dimension(n)    :: rotfr,vx,vxr
+    real, dimension(n)    :: rotfr
+#ifdef SHEAR
+    real, dimension(n)    :: vx,vxr
+#endif /* SHEAR */
 #ifdef GRAV
     real, dimension(n)    :: dgrp,dgrm,dglp,dglm
     real, dimension(n)    :: gravl, gravr
@@ -166,7 +169,7 @@ module tv ! split ssp
 
     u1 = ul1 + ur1
     u1(idna,:) = max(u1(idna,:), smalld)
-	
+
 #ifdef VZ_LIMITS
     if(sweep .eq. 'zsweep') then
       where((z(:) .gt. 0.0) .and. (u1(imxa,:) .lt.  floor_vz*u(idna,:)))

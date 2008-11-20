@@ -1,26 +1,26 @@
 ! $Id$
 #include "piernik.def"
 module mod_mhdstep   ! SPLIT
-  use start, only  : dt_log, magfield, dimensions, t, dt, &
-      dt_tsl, nstep, proc, istep, integration_order, cn 
-  use dataio, only : write_hdf, write_log,write_timeslice, nlog, ntsl,nhdf
-  use time, only   : timestep
-  use arrays, only : dl,ibx,iby,ibz,xdim,ydim,zdim,b,wa
-  use fluids, only : fluidx, fluidy, fluidz
-  use advects,only : advectby_x, advectbz_x, advectbx_y, &
-      advectbz_y, advectbx_z, advectby_z
-  use mag_boundaries, only : compute_b_bnd
-#ifdef SSP
-  use arrays, only : bi
-#endif /* SSP */
+
+  implicit none
+
+  contains
+
+subroutine mhdstep
+  use start,  only : dimensions,dt,dt_log,dt_tsl,nstep,t,magfield
+  use dataio, only : nlog,ntsl,write_log,write_timeslice
+  use time,   only : timestep
+  use fluids, only : fluidx,fluidy,fluidz
+  use mpi_setup, only : proc
+#ifdef DEBUG
+  use dataio, only : nhdf,write_hdf
+#endif /* DEBUG */
 #ifdef COSM_RAYS
-    use cr_diffusion
+  use cr_diffusion
 #endif /* COSM_RAYS */
-#ifdef RESIST  
-  use resistivity
-#endif /* RESIST */
-#ifdef SHEAR  
-  use shear
+#ifdef SHEAR
+  use shear, only : yshift
+  use fluid_boundaries, only : bnd_u
 #endif /* SHEAR */
 #ifdef SN_SRC
   use sn_sources
@@ -29,18 +29,15 @@ module mod_mhdstep   ! SPLIT
   use sn_distr
 #endif /* SNE_DISTR */
 #ifdef SELF_GRAV
-  use poisson_solver
+  use poisson_solver, only : poisson
 #endif /* SELF_GRAV */
 #ifdef MASS_COMPENS
   use init_problem, only : mass_loss_compensate
 #endif /* MASS_COMPENS */
-
   implicit none
-
-  contains
-subroutine mhdstep
-    
-  implicit none
+#ifdef DEBUG
+  integer system, syslog
+#endif /* DEBUG */
 
   call timestep
 
@@ -62,6 +59,7 @@ subroutine mhdstep
 900      format('   nstep = ',i7,'   dt = ',e22.16,'   t = ',e22.16)
 
       t=t+dt
+
 #ifdef SHEAR
       call yshift(t)
 #endif /* SHEAR */
@@ -69,48 +67,44 @@ subroutine mhdstep
       call poisson
 #endif /* SELF_GRAV */
 
-        
 !------------------- X->Y->Z ---------------------
-      call fluidx                         ! x sweep                      
-      if(magfield) call magfieldbyzx 
-#ifdef COSM_RAYS          
-      call cr_diff_x 
+      call fluidx
+      if(magfield) call magfieldbyzx
+#ifdef COSM_RAYS
+      call cr_diff_x
 #endif /* COSM_RAYS */
-      
 #ifdef DEBUG
       call write_hdf
       nhdf = nhdf + 1
 #endif /* DEBUG */
-      
-      call fluidy                         ! y sweep                      
-      if(magfield) call magfieldbzxy        
-#ifdef COSM_RAYS          
-      call cr_diff_y   
+
+      call fluidy
+      if(magfield) call magfieldbzxy
+#ifdef COSM_RAYS
+      call cr_diff_y
 #endif /* COSM_RAYS */
-      
 #ifdef DEBUG
       call write_hdf
       nhdf = nhdf + 1
 #endif /* DEBUG */
-      
+
     if(dimensions .eq. '3d') then
-      call fluidz                         ! z sweep                      
-      if(magfield) call magfieldbxyz        
-#ifdef COSM_RAYS          
-      call cr_diff_z   
+      call fluidz
+      if(magfield) call magfieldbxyz
+#ifdef COSM_RAYS
+      call cr_diff_z
 #endif  /* COSM_RAYS */
-      
 #ifdef DEBUG
       call write_hdf
       nhdf = nhdf + 1
 #endif /* DEBUG */
-      
     endif
+
 ! Sources ----------------------------------------
 
-#ifdef SN_SRC          
+#ifdef SN_SRC
 #ifndef SNE_DISTR
-      call random_sn 
+      call random_sn
 #endif /* SNE_DISTR */
 #endif /* SN_SRC */
 
@@ -121,7 +115,7 @@ subroutine mhdstep
       nhdf = nhdf + 1
 #endif /* DEBUG */
 #endif /* SNE_DISTR */
-      
+
       t=t+dt
 #ifdef SHEAR
       call yshift(t)
@@ -132,50 +126,58 @@ subroutine mhdstep
 #endif /* SELF_GRAV */
 !-------------------------------------------------
 
-          
+
 
 !------------------- Z->Y->X ---------------------
     if(dimensions .eq. '3d') then
-#ifdef COSM_RAYS          
-      call cr_diff_z   
+#ifdef COSM_RAYS
+      call cr_diff_z
 #endif /* COSM_RAYS */
-      if(magfield) call magfieldbxyz      ! z sweep                       
-      call fluidz                         
-      
+      if(magfield) call magfieldbxyz
+      call fluidz
 #ifdef DEBUG
       call write_hdf
       nhdf = nhdf + 1
 #endif /* DEBUG */
-      
     endif
-#ifdef COSM_RAYS          
-      call cr_diff_y   
+
+#ifdef COSM_RAYS
+      call cr_diff_y
 #endif /* COSM_RAYS */
-      if(magfield) call magfieldbzxy      ! y sweep                       
-      call fluidy                         
-      
+      if(magfield) call magfieldbzxy
+      call fluidy
 #ifdef DEBUG
       call write_hdf
       nhdf = nhdf + 1
 #endif /* DEBUG */
-      
-#ifdef COSM_RAYS          
-      call cr_diff_x   
-#endif /* COSM_RAYS */               
-      if(magfield) call magfieldbyzx      ! x sweep                      
-      call fluidx                         
+
+#ifdef COSM_RAYS
+      call cr_diff_x
+#endif /* COSM_RAYS */
+      if(magfield) call magfieldbyzx
+      call fluidx
 
 end subroutine mhdstep
 
 
   subroutine magfieldbyzx
+    use start,   only : dimensions
+    use arrays,  only : b,ibx,iby,ibz,xdim,ydim,zdim
+    use advects, only : advectby_x,advectbz_x
+#ifdef SSP
+    use start,   only : integration_order,istep
+    use arrays,  only : bi
+#endif /* SSP */
+#ifdef RESIST
+    use resistivity, only : diffuseby_x,diffusebz_x
+#endif /* RESIST */
 
 #ifdef SSP
-! Now bi is the initial magnetic field 
+! Now bi is the initial magnetic field
     bi(:,:,:,:) = b(:,:,:,:)
-    
+
     do istep=1, integration_order
-#endif /* SSP */ 
+#endif /* SSP */
 
       call advectby_x
 #ifdef RESIST
@@ -189,9 +191,9 @@ end subroutine mhdstep
     if(dimensions .eq. '3d') then
 
 #ifdef SSP
-! Now bi is the initial magnetic field 
+! Now bi is the initial magnetic field
     bi(:,:,:,:) = b(:,:,:,:)
-    
+
     do istep=1, integration_order
 #endif /* SSP */
       call advectbz_x
@@ -203,7 +205,7 @@ end subroutine mhdstep
       call mag_add(ibz,xdim,ibx,zdim)
 #ifdef SSP
     enddo
-#endif /* SSP */ 
+#endif /* SSP */
 
     endif
 
@@ -212,13 +214,23 @@ end subroutine mhdstep
 !------------------------------------------------------------------------------------------
 
   subroutine magfieldbzxy
+    use start,   only : dimensions
+    use arrays,  only : b,ibx,iby,ibz,xdim,ydim,zdim
+    use advects, only : advectbx_y,advectbz_y
+#ifdef SSP
+    use start,   only : integration_order,istep
+    use arrays,  only : bi
+#endif /* SSP */
+#ifdef RESIST
+    use resistivity, only : diffusebx_y,diffusebz_y
+#endif /* RESIST */
 
     if(dimensions .eq. '3d') then
 
 #ifdef SSP
-! Now bi is the initial magnetic field 
+! Now bi is the initial magnetic field
     bi(:,:,:,:) = b(:,:,:,:)
-    
+
     do istep=1, integration_order
 #endif /* SSP */
       call advectbz_y
@@ -233,7 +245,7 @@ end subroutine mhdstep
     endif
 
 #ifdef SSP
-! Now bi is the initial magnetic field 
+! Now bi is the initial magnetic field
     bi(:,:,:,:) = b(:,:,:,:)
 
     do istep=1,integration_order
@@ -252,9 +264,19 @@ end subroutine mhdstep
 !------------------------------------------------------------------------------------------
 
   subroutine magfieldbxyz
+    use start,   only : dimensions
+    use arrays,  only : b,ibx,iby,ibz,xdim,ydim,zdim
+    use advects, only : advectbx_z,advectby_z
+#ifdef SSP
+    use start,   only : integration_order,istep
+    use arrays,  only : bi
+#endif /* SSP */
+#ifdef RESIST
+    use resistivity, only : diffusebx_z,diffuseby_z
+#endif /* RESIST */
 
 #ifdef SSP
-! Now bi is the initial magnetic field 
+! Now bi is the initial magnetic field
     bi(:,:,:,:) = b(:,:,:,:)
 
     do istep=1,integration_order
@@ -262,14 +284,14 @@ end subroutine mhdstep
       call advectbx_z
 #ifdef RESIST
       call diffusebx_z
-#endif /* RESIST */ 
+#endif /* RESIST */
       call mag_add(ibx,zdim,ibz,xdim)
 #ifdef SSP
     enddo
 #endif /* SSP */
 
 #ifdef SSP
-! Now bi is the initial magnetic field 
+! Now bi is the initial magnetic field
     bi(:,:,:,:) = b(:,:,:,:)
 
     do istep=1,integration_order
@@ -286,7 +308,13 @@ end subroutine mhdstep
   end subroutine magfieldbxyz
 
   subroutine mag_add(ib1,dim1,ib2,dim2)
-    use func, only: pshift, mshift
+    use func,   only : pshift, mshift
+    use arrays, only : b,dl,wa,wcu
+    use mag_boundaries, only : compute_b_bnd
+#ifdef SSP
+    use start,   only : cn,istep
+    use arrays,  only : bi
+#endif /* SSP */
 
     implicit none
     integer             :: ib1,ib2,dim1,dim2
@@ -296,7 +324,7 @@ end subroutine mhdstep
 ! DIFFUSION FULL STEP
 
     b(ib1,:,:,:) = b(ib1,:,:,:) - wcu/dl(dim1)
-!   wcu = cshift(wcu,shift= 1,dim=dim1) 
+!   wcu = cshift(wcu,shift= 1,dim=dim1)
     wcu = pshift(wcu,dim1)
     b(ib1,:,:,:) = b(ib1,:,:,:) + wcu/dl(dim1)
 !   wcu = cshift(wcu,shift=-1,dim=dim1)
@@ -316,7 +344,7 @@ end subroutine mhdstep
 !   wa = cshift(wa,shift=1,dim=dim2)
     wa = pshift(wa,dim2)
     b(ib2,:,:,:) = b(ib2,:,:,:) + wa/dl(dim2)
-#endif /* ORIG */ 
+#endif /* ORIG */
 
 #ifdef SSP
 
@@ -349,7 +377,7 @@ end subroutine mhdstep
 !   wa = cshift(wa,shift=1,dim=dim2)
     wa = pshift(wa,dim2)
     b(ib2,:,:,:) = b(ib2,:,:,:) + cn(2,istep)*wa/dl(dim2)
-#endif /* SSP */ 
+#endif /* SSP */
 
     call compute_b_bnd
 

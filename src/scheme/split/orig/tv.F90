@@ -63,8 +63,16 @@ module tv ! split orig
     real    :: dt,dx,dtx
     real, dimension(nu,n) :: u,cfr
     real, dimension(3,n)  :: bb
-    real, dimension(n)    :: gravl,gravr,rotfr,vx
+#ifdef COSM_RAYS
+    real, dimension(n)    :: vx
+#endif /* COSM_RAYS */
+#ifdef GRAV
+    real, dimension(n)    :: gravl,gravr
     real, dimension(n)    :: dgrp,dgrm,dglp,dglm
+#endif /* GRAV */
+#if defined GRAV || defined SHEAR
+    real, dimension(n)    :: rotfr
+#endif /* GRAV || SHEAR */
 #ifdef SHEAR
     real, dimension(n)    :: vxr
 #endif /* SHEAR */
@@ -140,7 +148,9 @@ module tv ! split orig
       rotfr(:) = 0.0
     endif
 #else /* SHEAR */
+#ifdef GRAV
     rotfr(:) = 0.0
+#endif /* GRAV */
 #endif /* SHEAR */
 
 ! Gravity source terms -------------------------------------
@@ -171,7 +181,7 @@ module tv ! split orig
 
     u1 = ul1 + ur1
     u1(idna,:) = max(u1(idna,:), smalld)
-	
+
 #ifdef VZ_LIMITS
     if(sweep .eq. 'zsweep') then
       where((z(:) .gt. 0.0) .and. (u1(imxa,:) .lt.  floor_vz*u(idna,:)))
