@@ -4,6 +4,12 @@
     nzd = 100
  /  
 
+ $MPI_BLOCKS
+    pxsize = 1
+    pysize = 1
+    pzsize = 1
+ /
+
  $START_CONTROL
  /
 
@@ -20,6 +26,8 @@
  $OUTPUT_CONTROL
     dt_hdf  = 0.1
     dt_res  = 1.0
+    dt_log  = 1.0e-3
+    dt_tsl  = 1.0e-3
     vars(1) = 'dens'
     vars(2) = 'velx'
     vars(3) = 'vely'
@@ -62,17 +70,25 @@
     smallei= 1.e-5
  /
  
+ $NUMERICAL_SETUP
+    cfl    = 0.9
+    smalld = 1.e-6
+    smallei= 1.e-7
+    integration_order = 2
+    magnetic = 'no'
+    dimensions = '3d'
+ /
+
  $GRAVITY
-    selfgravity = 'poisson'
     r_gc   = 8.5
  /
  
  $PROBLEM_CONTROL
     problem_name ='poisson'
     run_id =  'tst'
-    d0     =  1.
-    nbx0    =  0.
-    nby0    = 1.0
-    nbz0    =  0.
-    a_vp    = 0.0
+    d0     =  1.0
+    nbx0   =  0.0
+    nby0   =  0.0
+    nbz0   =  0.0
+    a_vp   =  0.0
  /

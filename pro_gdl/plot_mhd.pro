@@ -25,7 +25,7 @@ PRO PLOT_MHD,first,last,var
     prefix = 'keplerian_disk_n4c'
     prefix = 'jeans_in_dsk'
     prefix = 'gammie_tst'
-    prefix = 'slab_uns'
+    prefix = 'galdisk_tst'
 ; first = 0
 ;  last  = 0
   freq = 1

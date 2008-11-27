@@ -1,6 +1,4 @@
-
 #undef DEBUG
-#undef GNU
 #undef VERBOSE
 
 /*======= re-setup needed ==========*/
@@ -46,7 +44,7 @@
 /* gravity type choosing */
 #define GRAV
 #define GRAV_GALACTIC
-/* #define SELF_GRAV */
+#define SELF_GRAV
 
 /* structure features including */
 #undef GALAXY
@@ -57,7 +55,7 @@
 #undef SN_SRC
 
 /* numerical solutions and limitations */
-#define SHEAR
+#undef SHEAR
 #undef SHEAR_MPI
 #undef FLX_BND
 #undef VZ_LIMITS

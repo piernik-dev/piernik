@@ -9,101 +9,89 @@ PRO PLOT_MHD,first,last,var
   COMMON vars, u,b,wa
   ncolors = !D.N_COLORS -1
   white = 255
-  plots  ='n'
+  plots  ='x'
   slices ='y'
   dump   ='n'
 
-  sf = 4
+  sf = 2
 
-   dir = '/raid20/kowalik/jeans_in/'
-   dir = '../obj/'
-;   dir = '/raid20/mhanasz/runs/crdynamo-d-r100/'
-;  dir = '/scr/symulacje/cr-tests/crshear-res/'
-    prefix = 'cr_shear_r10'
-    prefix = 'keplerian_disk_n4c'
-    prefix = 'jeans_in_dsk'
-    prefix = 'gammie_tst'
-;    prefix = 'slab_uns'
-; first = 0
-;  last  = 0
+  dir = '../obj/'
+  prefix = 'galdisk_sn0'
+
+;===============================================================================
+data_files = FINDFILE(dir+'/'+prefix+'_00_00_00_*.hdf', Count=n_files)
+IF(n_files EQ 0) THEN GOTO, SKIP
+;===============================================================================
+
+
+;  first = 0
+;  last  = n_files -1
   freq = 1
 
-;  var='gpot'
+;  var='ener'
 
-;  ylog=1
- if(var EQ 'dens' OR var EQ 'ener') then ylog=1
 
-  if(var EQ 'dns1') then begin
-    amin = 0.0
-    amax = 0.0
-  endif  
-   if(var EQ 'dns2') then begin
-    amin = 0.01
-    amax = 2.2
-  endif
-  if(var EQ 'vy_1') then begin
-    amin = -0.05
-    amax=  0.05
-  endif
-  if(var EQ 'dens') then begin
-    amin= 0.0; 0.499280 
-    amax= 0.0; 0.51 ; 1.3
-  endif
-  if(var EQ 'ener') then begin
-    amin= 0.0 ;0.01
-    amax= 0.0 ;75.  
-  endif
-  if(var EQ 'eint') then begin
-    amin= 0.0 ;0.1
-    amax= 0.0 ;1.8
-  endif
-  if(var EQ 'temp') then begin
-    amin= 0.
-    amax= 0.
-  endif
-  if(var EQ 'velx') then begin
-    amin= 0.0 ;-1.8 
-    amax= 0.0 ;0.8
-  endif
-  if(var EQ 'vely') then begin
-    amin= -0.1
-    amax= 1.
-  endif
-  if(var EQ 'velz') then begin
-    amin= -1.0
-    amax= 1.0
-  endif
-  if(var EQ 'magx') then begin
-    amin= 3.0 ;-0.5
-    amax= 33.0 ;0.5
-  endif
-  if(var EQ 'magy') then begin
-    amin= 0.0;
-    amax= 12.0
-  endif
-  if(var EQ 'magz') then begin
-    amin= 0.
-    amax= 0.
-  endif
-  if(var EQ 'esrc') then begin
-    amin=  -0.0
-    amax=  0.0
-  endif
-  if(var EQ 'gpot') then begin
-    amin=  0.0
+ if(var EQ 'dens' OR var EQ 'ener' ) then ylog=1
+
+  if(var EQ 'magp') then begin
+    amin= 0.0
     amax= 0.0
   endif
-  if(var EQ 'ccur') then begin
-    amin = 0.0
-    amax = 0.05
+  if(var EQ 'divb') then begin
+    amin= 0.0
+    amax= 0.0
+  endif
+  if(var EQ 'dens') then begin
+    amin= 0.0
+    amax= 0.0
+  endif
+  if(var EQ 'ener') then begin
+    amin= 0.0 
+    amax= 0.0 
+  endif
+  if(var EQ 'eint') then begin
+    amin= 0.0
+    amax= 0.0 
+  endif
+  if(var EQ 'temp') then begin
+    amin= 0.0
+    amax= 0.0
+  endif
+  if(var EQ 'velx') then begin
+    amin= 0.0 
+    amax= 0.0 
+  endif
+  if(var EQ 'vely') then begin
+    amin= 0.0
+    amax= 0.0
+  endif
+  if(var EQ 'velz') then begin
+    amin= 0.0
+    amax= 0.0
+  endif
+  if(var EQ 'magx') then begin
+    amin= 0.0 
+    amax= 0.0 
+  endif
+  if(var EQ 'magy') then begin
+    amin= 0.0
+    amax= 0.0
+  endif
+  if(var EQ 'magz') then begin
+    amin= 0.0
+    amax= 0.0
+  endif
+  if(var EQ 'gpot') then begin
+    amin= 0.0
+    amax= 0.0
   endif
 
   frame   = string(0, format = '(i2.2)')+'_' $
            +string(0, format = '(i2.2)')+'_' $
            +string(0, format = '(i2.2)')+'_' $
            +string(first, format = '(i4.4)')
-
-  filename= dir+prefix+'_'+frame+'.hdf'  
+ 
+  filename = data_files(0)
   
   TVLCT, red, green, blue, /GET
 
@@ -123,22 +111,16 @@ PRO PLOT_MHD,first,last,var
     nz = dims(2)
   endelse
 
-  ix = nxd/2;+nb  ;nxd/2 ; nx/2 ; 3*nx/4 
-;  ix = ix*pdims(0)
-  iy = nyd/2;+nb ; nyd/2 ; ny/2 ; 3*ny/4
-;  iy = iy*pdims(1)
+  ix = nxd/2  
+
+  iy = nyd/2  
+
 
   if(nz eq 1) then begin 
     iz = 1
   endif else begin
     iz = nzd/2;+nb ;nz/2 ;nzd/2 ; nz/2 ; 3*nz/4 
   endelse
-
-
-;  iz = iz*pdims(2)
-;  iz = 1
-;  ix = 1
-;  iy = 1
 
 
 nxds = sf*nx*pdims(0)
@@ -163,11 +145,8 @@ endif else begin
 endelse
 
 
-
-
   if(plots  NE 'n') then begin
     WINDOW, 1, XSIZE=600, YSIZE=500
-;    WINDOW, 3, XSIZE=600, YSIZE=500
   endif
 
   if(nz ne 1) then begin
@@ -185,85 +164,51 @@ endelse
   for step=first,last,freq do begin
 
         filepref= dir+prefix  
-        a = LOAD_DATA_HDF(dir,prefix, step, var, $
-                          xcoord = x, ycoord = y, zcoord = z, $
+        a = LOAD_DATA_HDF(dir,prefix, step, var, xcoord = x, ycoord = y, zcoord = z, $
                           nxa=nxa,nya=nya,nza=nza, $
                           time = t)
-    
-;        filepref2 = dir2+prefix
-;        a2 = LOAD_DATA_HDF(filepref2, step, var, $
-;                          xcoord = x, ycoord = y, zcoord = z, $
-;                          nxa=nxa,nya=nya,nza=nza, $
-;                          time = t)
-    
+        
   timestr = '    t='+strtrim(string(t,format='(f7.2)'),0)
 
-  if(amin EQ 0.0)  then amin = min(a)
-  if(amax EQ 0.0)  then amax = max(a)
-
-;  a = (a - shift(a,1))/(x(1)-x(0))
-;  a(0,*) = a(1,*)
+;  if(amin EQ 0.0)  then amin = min(a)
+;  if(amax EQ 0.0)  then amax = max(a)
+;  a = alog(a+1.e-15)
   yrange = [amin,amax]
-;  amin = min(a)
-;  amax = max(a)
+  amin = min(a)
+  amax = max(a)
 
 
 IF(plots NE 'n') THEN BEGIN
   WSET, 1
-;  WSHOW, 1
   
 
   IF(plots EQ 'x') THEN BEGIN
     px  =  a(*,iy-1,iz-1)
     px = reform(px)
     pxr= rotate(px,2) 
-;    px2 = a2(*,iy-1,iz-1)
-;    PLOT,  x, (px*x)^2, line=0, title=var+timestr, $
     PLOT,  x, px, line=0, title=var+timestr, $
               xstyle=1;, $
-;              yrange=yrange,ystyle=1 ,ylog=ylog 
-;    OPLOT, x, px2, thick=2
     oplot, x, pxr, line =1,color=254
-
-    WSET, 3
-;    WSHOW, 3
-;    plot, x, px-px2
-
-;    print, max(px-px2)
 
   ENDIF ELSE IF (plots EQ 'y') THEN BEGIN
     py  =  a(ix-1,*,iz-1)
     py = reform(py);, nyd)
     pyr= rotate(py,2) 
-;    py2 = a2(ix-1,*,iz-1)
     PLOT,  y, py, line=0, title=var+timestr, $
             xstyle=1, $
             yrange=yrange,ystyle=1 ,ylog=ylog
-;    OPLOT, y, py2, thick=2
     oplot, y, pyr, line =1,color=254
-
-;    WSET, 3
-;    WSHOW, 3
-;    plot, y, py-py2
-
-;    print, max(py-py2)
 
   ENDIF ELSE IF (plots EQ 'z') THEN BEGIN
     pz  =  a(ix-1,iy-1,*)
     pz = reform(pz, nzd)
     pzr= rotate(pz,2) 
-;    pz2 = a2(ix-1,iy-1,*)
+
     PLOT,  z, pz, line=0, title=var+timestr, $
             xstyle=1, $
             yrange=yrange,ystyle=1 ,ylog=ylog 
-;    OPLOT, z, pz2, thick=2
     oplot, z,pzr, line =1,color=254
    
-    WSET, 3
-;    WSHOW, 3
-;    plot, z, pz-pz2
-
-;    print, max(pz-pz2)
 
   ENDIF
 
@@ -271,8 +216,7 @@ ENDIF
 
 IF(slices EQ 'y') THEN BEGIN
    IF(dump NE 'y') THEN BEGIN
-    WSET, 2
-;    WSHOW, 2
+     WSET, 2
    ENDIF ELSE BEGIN
     xy_name = 'xy'+var+'_'+ prefix +'_'+ string(step,FORMAT='(I4.4)') +'.png'
     xz_name = 'xz'+var+'_'+ prefix +'_'+ string(step,FORMAT='(I4.4)') +'.png'
@@ -291,24 +235,24 @@ IF(slices EQ 'y') THEN BEGIN
 
 
 ; Linie pionowe
-  for pc=0,pdims(1)-1 do begin
-    image_yz(0+pc*ny*sf,*)       = white    ; skrajna lewa
-    image_yz((pc+1)*ny*sf-1,*)   = white    ; skrajna prawa
-    if(nb NE 0) then begin
-      image_yz(nbs-1+pc*ny*sf,*)   = white    ; lewe  brzegi bloku 
-      image_yz((pc+1)*ny*sf-nbs,*) = white    ; prawe brzegi bloku
-    endif
-  end 
+;  for pc=0,pdims(1)-1 do begin
+;    image_yz(0+pc*ny*sf,*)       = white    ; skrajna lewa
+;    image_yz((pc+1)*ny*sf-1,*)   = white    ; skrajna prawa
+;    if(nb NE 0) then begin
+;      image_yz(nbs-1+pc*ny*sf,*)   = white    ; lewe  brzegi bloku 
+;      image_yz((pc+1)*ny*sf-nbs,*) = white    ; prawe brzegi bloku
+;    endif
+;  end 
 
 ; Linie poziome
-  for pc=0,pdims(2)-1 do begin
-    image_yz(*,0+pc*nz*sf)       = white    ; skrajna lewa
-    image_yz(*,(pc+1)*nz*sf-1)   = white    ; skrajna prawa
-    if(nb NE 0) then begin
-      image_yz(*,nbs-1+pc*nz*sf)   = white    ; lewe  brzegi bloku
-      image_yz(*,(pc+1)*nz*sf-nbs) = white    ; prawe brzegi bloku
-    endif
-  end 
+;  for pc=0,pdims(2)-1 do begin
+;    image_yz(*,0+pc*nz*sf)       = white    ; skrajna lewa
+;    image_yz(*,(pc+1)*nz*sf-1)   = white    ; skrajna prawa
+;    if(nb NE 0) then begin
+;      image_yz(*,nbs-1+pc*nz*sf)   = white    ; lewe  brzegi bloku
+;      image_yz(*,(pc+1)*nz*sf-nbs) = white    ; prawe brzegi bloku
+;    endif
+;  end 
 
   IF(dump NE 'y') THEN BEGIN
      TV, image_yz,1,sf*nya+sf+1
@@ -321,24 +265,24 @@ IF(slices EQ 'y') THEN BEGIN
   image_xz = BYTSCL(image_xz,min=amin,max=amax,top=254)
 
 ; Linie pionowe
-  for pc=0,pdims(0)-1 do begin
-    image_xz(0+pc*nx*sf,*)       = white    ; skrajna lewa
-    image_xz((pc+1)*nx*sf-1,*)   = white    ; skrajna prawa
-    if(nb NE 0) then begin
-      image_xz(nbs-1+pc*nx*sf,*)   = white    ; lewe  brzegi bloku
-      image_xz((pc+1)*nx*sf-nbs,*) = white    ; prawe brzegi bloku
-    endif
-  end 
+;  for pc=0,pdims(0)-1 do begin
+;    image_xz(0+pc*nx*sf,*)       = white    ; skrajna lewa
+;    image_xz((pc+1)*nx*sf-1,*)   = white    ; skrajna prawa
+;    if(nb NE 0) then begin
+;      image_xz(nbs-1+pc*nx*sf,*)   = white    ; lewe  brzegi bloku
+;      image_xz((pc+1)*nx*sf-nbs,*) = white    ; prawe brzegi bloku
+;    endif
+;  end 
 
 ; Linie poziome
-  for pc=0,pdims(2)-1 do begin
-    image_xz(*,0+pc*nz*sf)       = white    ; skrajna lewa
-    image_xz(*,(pc+1)*nz*sf-1)   = white    ; skrajna prawa
-    if(nb NE 0) then begin
-      image_xz(*,nbs-1+pc*nz*sf)   = white    ; lewe  brzegi bloku
-      image_xz(*,(pc+1)*nz*sf-nbs) = white    ; prawe brzegi bloku
-    endif
-  end 
+;  for pc=0,pdims(2)-1 do begin
+;    image_xz(*,0+pc*nz*sf)       = white    ; skrajna lewa
+;    image_xz(*,(pc+1)*nz*sf-1)   = white    ; skrajna prawa
+;    if(nb NE 0) then begin
+;      image_xz(*,nbs-1+pc*nz*sf)   = white    ; lewe  brzegi bloku
+;      image_xz(*,(pc+1)*nz*sf-nbs) = white    ; prawe brzegi bloku
+;    endif
+;  end 
 
    IF(dump NE 'y') THEN BEGIN
      TV, image_xz, sf*nya+sf+1,sf*nya+sf+1
@@ -353,24 +297,24 @@ IF(slices EQ 'y') THEN BEGIN
   image_xy = BYTSCL(image_xy,min=amin,max=amax,top=254)
 
 ; Linie pionowe
-  for pc=0,pdims(0)-1 do begin
-    image_xy(0+pc*nx*sf,*)       = white    ; skrajna lewa
-    image_xy((pc+1)*nx*sf-1,*)   = white    ; skrajna prawa
-    if(nb NE 0) then begin
-      image_xy(nbs-1+pc*nx*sf,*)   = white    ; lewe  brzegi bloku
-      image_xy((pc+1)*nx*sf-nbs,*) = white    ; prawe brzegi bloku
-    endif
-  end 
+;  for pc=0,pdims(0)-1 do begin
+;    image_xy(0+pc*nx*sf,*)       = white    ; skrajna lewa
+;    image_xy((pc+1)*nx*sf-1,*)   = white    ; skrajna prawa
+;    if(nb NE 0) then begin
+;      image_xy(nbs-1+pc*nx*sf,*)   = white    ; lewe  brzegi bloku
+;      image_xy((pc+1)*nx*sf-nbs,*) = white    ; prawe brzegi bloku
+;    endif
+;  end 
 
 ; Linie poziome
-  for pc=0,pdims(1)-1 do begin
-    image_xy(*,0+pc*ny*sf)       = white    ; skrajna lewa
-    image_xy(*,(pc+1)*ny*sf-1)   = white    ; skrajna prawa
-    if(nb NE 0) then begin
-      image_xy(*,nbs-1+pc*ny*sf)   = white    ; lewe  brzegi bloku
-      image_xy(*,(pc+1)*ny*sf-nbs) = white    ; prawe brzegi bloku
-    endif
-  end 
+;  for pc=0,pdims(1)-1 do begin
+;    image_xy(*,0+pc*ny*sf)       = white    ; skrajna lewa
+;    image_xy(*,(pc+1)*ny*sf-1)   = white    ; skrajna prawa
+;    if(nb NE 0) then begin
+;      image_xy(*,nbs-1+pc*ny*sf)   = white    ; lewe  brzegi bloku
+;      image_xy(*,(pc+1)*ny*sf-nbs) = white    ; prawe brzegi bloku
+;    endif
+;  end 
 ;  image_xy = rotate(image_xy,-45)
 
 
@@ -380,23 +324,11 @@ IF(slices EQ 'y') THEN BEGIN
      WRITE_PNG,xy_name, image_xy, red,green,blue
    ENDELSE
 
-  nxa=20
-  nya=20
-;op = RANDOMU(S,25,50,200)
-;FOR I=0, 10 DO op = SMOOTH(op, 3)
-;op = BYTSCL(a,TOP=25)
-;SHADE_VOLUME, a, 10.0 ,V,P,/LOW
-;SCALE3, XRANGE=[0,1], YRANGE=[0,2], ZRANGE=[0,8]
-;img = POLYSHADE(V,P,/T3D)
-;WINDOW,10
-;WSET, 10
-;img = PROJECT_VOL(a,100,100,100,DEPTH_Q=0.7,OPAQUE=qp, TRANS=(!P.T))
-;print, max(img),min(img)
-;TVSCL, img
-;VOLUME,a
 
 endif
 
 endfor
+
+SKIP:
 
 end
