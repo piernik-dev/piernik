@@ -2,28 +2,38 @@
 #include "piernik.def"
 
 module start
-
 ! Written by: M. Hanasz, January 2006
-
   use mpi_setup
-
 
   implicit none
 
-  integer nxd, nyd, nzd, nb
+  integer :: nxd !< total number of physical cells in x direction
+  integer :: nyd !< total number of physical cells in y direction
+  integer :: nzd !< total number of physical cells in z direction
+  integer :: nb  !< number of ghost cells of each block
 
-  real t,dt
-  real dt_mhd, dt_coolheat, dt_visc
-  integer nstep
-  integer nstep_start
+  real :: t  !< time of computation in physical units
+  real :: dt !< current timestep in physical units
+  ! \todo dt_mhd, dt_coolheat, dt_visc should be moved to relevant module
+  real :: dt_mhd        !< temporary variable used to store timestep according to CFL limit
+  real :: dt_coolheat   !< temporary variable used to store timestep according to cooling/heating related limit
+  real :: dt_visc       !< temporary variable used to store timestep according to viscosity related limit
 
-  real tend
-  integer nend, maxxyz
+  integer :: nstep       !< current step number
+  integer :: nstep_start !< sets initial step number (new run -> 0, restart -> last nstep)
 
-  real :: omega, qshear
+  real    :: tend !< when t >= tend simulations stops. Parameter that can be set in problem.par
+  integer :: nend !< when nstep >= nend simulations stops. Parameter that can be set in problem.par
+  integer :: maxxyz
 
-  character restart*16, new_id*3
-  integer   nrestart, resdel
+  ! \todo omega, qshear should be moved to relevant module
+  real :: omega  !< Keplerian frequency. Used in shearing box.  Parameter that can be set in problem.par
+  real :: qshear !< q = -d \log \Omega / dR. Used in shearing box.  Parameter that can be set in problem.par
+
+  character :: restart*16 
+  character :: new_id*3
+  integer   :: nrestart
+  integer   :: resdel
 
   character domain*16,mag_center*16
   integer, parameter      :: nvarsmx =16
