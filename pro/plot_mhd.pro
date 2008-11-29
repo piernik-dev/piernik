@@ -33,6 +33,10 @@ IF(n_files EQ 0) THEN GOTO, SKIP
 
  if(var EQ 'dens' OR var EQ 'ener' ) then ylog=1
 
+  if(var EQ 'vrot') then begin
+    amin= 0.0
+    amax= 0.0
+  endif
   if(var EQ 'magp') then begin
     amin= 0.0
     amax= 0.0
