@@ -1500,12 +1500,12 @@ module dataio
     real :: magunit
 !- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 !
-    if (proc .eq. 0) then
 #ifdef STANDARD
       magunit = 1.0
 #else /* STANDARD */
       magunit = Gs
 #endif /* STANDARD */
+    if (proc .eq. 0) then
       write (tsl_file,'(a,a1,a,a1,a3,a1,i3.3,a4)') &
               trim(cwd),'/',trim(problem_name),'_', run_id,'_',nrestart,'.tsl'
 
