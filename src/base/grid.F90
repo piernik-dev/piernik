@@ -5,10 +5,21 @@ module grid
 ! Written by: M. Hanasz, January/February 2006
 
   implicit none
-  real dx, dy, dz, dxmn, dvol
+  real :: dx   !< size of one computational cell in x direction
+  real :: dy   !< size of one computational cell in y direction
+  real :: dz   !< size of one computational cell in z direction
+  real :: dxmn !< min(dx,dy,dz)
+  real :: dvol !< volume of one computational cell
 
-  real xminb, xmaxb, yminb, ymaxb, zminb, zmaxb
-  real Lx, Ly, Lz
+  real :: xminb !< physical coordinate of the left  (in x direction) boundary of given block
+  real :: xmaxb !< physical coordinate of the right (in x direction) boundary of given block
+  real :: yminb !< physical coordinate of the left  (in y direction) boundary of given block
+  real :: ymaxb !< physical coordinate of the right (in y direction) boundary of given block
+  real :: zminb !< physical coordinate of the left  (in z direction) boundary of given block
+  real :: zmaxb !< physical coordinate of the right (in z direction) boundary of given block
+  real :: Lx !< size of the physical domain in x direction
+  real :: Ly !< size of the physical domain in x direction
+  real :: Lz !< size of the physical domain in x direction
 
 contains
 
@@ -17,7 +28,7 @@ contains
     use start, only  : xmin,ymin,zmin,xmax,ymax,zmax, dimensions, nb, maxxyz
     use arrays, only : dl,xdim,ydim,zdim,xl,yl,zl,x,y,z,xr,yr,zr, &
        nxb,nyb,nzb,nx,ny,nz
-
+    implicit none
     integer i,j,k
 
     maxxyz = max(size(x),size(y))
