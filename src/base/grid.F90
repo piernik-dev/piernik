@@ -4,62 +4,62 @@ module grid
 
 ! Written by: M. Hanasz, January/February 2006
 
-  implicit none
-  real :: dx   !< size of one computational cell in x direction
-  real :: dy   !< size of one computational cell in y direction
-  real :: dz   !< size of one computational cell in z direction
-  real :: dxmn !< min(dx,dy,dz)
-  real :: dvol !< volume of one computational cell
-
-  real :: xminb !< physical coordinate of the left  (in x direction) boundary of given block
-  real :: xmaxb !< physical coordinate of the right (in x direction) boundary of given block
-  real :: yminb !< physical coordinate of the left  (in y direction) boundary of given block
-  real :: ymaxb !< physical coordinate of the right (in y direction) boundary of given block
-  real :: zminb !< physical coordinate of the left  (in z direction) boundary of given block
-  real :: zmaxb !< physical coordinate of the right (in z direction) boundary of given block
-  real :: Lx !< size of the physical domain in x direction
-  real :: Ly !< size of the physical domain in x direction
-  real :: Lz !< size of the physical domain in x direction
+   implicit none
+   real :: dx   !< size of one computational cell in x direction
+   real :: dy   !< size of one computational cell in y direction
+   real :: dz   !< size of one computational cell in z direction
+   real :: dxmn !< min(dx,dy,dz)
+   real :: dvol !< volume of one computational cell
+   
+   real :: xminb !< physical coordinate of the left  (in x direction) boundary of given block
+   real :: xmaxb !< physical coordinate of the right (in x direction) boundary of given block
+   real :: yminb !< physical coordinate of the left  (in y direction) boundary of given block
+   real :: ymaxb !< physical coordinate of the right (in y direction) boundary of given block
+   real :: zminb !< physical coordinate of the left  (in z direction) boundary of given block
+   real :: zmaxb !< physical coordinate of the right (in z direction) boundary of given block
+   real :: Lx !< size of the physical domain in x direction
+   real :: Ly !< size of the physical domain in x direction
+   real :: Lz !< size of the physical domain in x direction
 
 contains
 
-  subroutine grid_xyz
-    use mpi_setup
-    use start, only  : xmin,ymin,zmin,xmax,ymax,zmax, dimensions, nb, maxxyz
-    use arrays, only : dl,xdim,ydim,zdim,xl,yl,zl,x,y,z,xr,yr,zr, &
-       nxb,nyb,nzb,nx,ny,nz
-    implicit none
-    integer :: i,j,k
+   subroutine grid_xyz
+      use mpi_setup
+      use start, only  : xmin,ymin,zmin,xmax,ymax,zmax, dimensions, nb, maxxyz
+      use arrays, only : dl,xdim,ydim,zdim,xl,yl,zl,x,y,z,xr,yr,zr, &
+         nxb,nyb,nzb,nx,ny,nz
+      implicit none
+      integer :: i,j,k
 
-    Lx = xmax - xmin
-    Ly = ymax - ymin
-    Lz = zmax - zmin
+      Lx = xmax - xmin
+      Ly = ymax - ymin
+      Lz = zmax - zmin
 
-    maxxyz = max(size(x),size(y))
-    maxxyz = max(size(z),maxxyz)
+      maxxyz = max(size(x),size(y))
+      maxxyz = max(size(z),maxxyz)
 
-    xminb = xmin + real(pcoords(1)  ) * Lx / real(psize(1))
-    xmaxb = xmin + real(pcoords(1)+1) * Lx / real(psize(1))
-    yminb = ymin + real(pcoords(2)  ) * Ly / real(psize(2))
-    ymaxb = ymin + real(pcoords(2)+1) * Ly / real(psize(2))
-    zminb = zmin + real(pcoords(3)  ) * Lz / real(psize(3))
-    zmaxb = zmin + real(pcoords(3)+1) * Lz / real(psize(3))
+      xminb = xmin + real(pcoords(1)  ) * Lx / real(psize(1))
+      xmaxb = xmin + real(pcoords(1)+1) * Lx / real(psize(1))
+      yminb = ymin + real(pcoords(2)  ) * Ly / real(psize(2))
+      ymaxb = ymin + real(pcoords(2)+1) * Ly / real(psize(2))
+      zminb = zmin + real(pcoords(3)  ) * Lz / real(psize(3))
+      zmaxb = zmin + real(pcoords(3)+1) * Lz / real(psize(3))
 
-    dx = (xmaxb-xminb)/nxb
-    dy = (ymaxb-yminb)/nyb
-    dl(xdim) = dx
-    dl(ydim) = dy
-    if(dimensions .eq. '3d') then
-      dz = (zmaxb-zminb)/nzb
-      dl(zdim) = dz
-      dxmn = min(dx,dy,dz)
-    else if (dimensions .eq. '2dxy') then
-      dz = 1.0
-      dl(zdim) = dz
-      dxmn = min(dx,dy)
-    endif
+      dx = (xmaxb-xminb)/nxb
+      dy = (ymaxb-yminb)/nyb
+      dl(xdim) = dx
+      dl(ydim) = dy
+      if(dimensions .eq. '3d') then
+         dz = (zmaxb-zminb)/nzb
+         dl(zdim) = dz
+         dxmn = min(dx,dy,dz)
+      else if (dimensions .eq. '2dxy') then
+         dz = 1.0
+         dl(zdim) = dz
+         dxmn = min(dx,dy)
+      endif
 
-    dvol = dx*dy*dz
+      dvol = dx*dy*dz
 
 !--- Asignments -----------------------------------------------------------
     ! left zone boundaries:  xl, yl, zl
@@ -68,34 +68,34 @@ contains
 
 !--- x-grids --------------------------------------------------------------
 
-    do i= 1, nx
-      x(i)  = xminb + 0.5*dx + (i-nb-1)*dx
-      xl(i) = x(i)  - 0.5*dx
-      xr(i) = x(i)  + 0.5*dx
-    enddo
+      do i= 1, nx
+         x(i)  = xminb + 0.5*dx + (i-nb-1)*dx
+         xl(i) = x(i)  - 0.5*dx
+         xr(i) = x(i)  + 0.5*dx
+      enddo
 
 !--- y-grids --------------------------------------------------------------
 
-    do j= 1, ny
-      y(j)  = yminb + 0.5*dy + (j-nb-1)*dy
-      yl(j) = y(j)  - 0.5*dy
-      yr(j) = y(j)  + 0.5*dy
-    enddo
+      do j= 1, ny
+         y(j)  = yminb + 0.5*dy + (j-nb-1)*dy
+         yl(j) = y(j)  - 0.5*dy
+         yr(j) = y(j)  + 0.5*dy
+      enddo
 
 !--- z-grids --------------------------------------------------------------
 
-    if(dimensions .eq. '3d') then
-      do k= 1, nz
-        z(k)  = zminb + 0.5*dz + (k-nb-1) * dz
-        zl(k) = z(k)  - 0.5*dz
-        zr(k) = z(k)  + 0.5*dz
-      enddo
-    else if(dimensions .eq. '2dxy') then
-      z  = 0.0
-      zl = -dz/2.
-      zr =  dz/2.
-    endif
+      if(dimensions .eq. '3d') then
+         do k= 1, nz
+            z(k)  = zminb + 0.5*dz + (k-nb-1) * dz
+            zl(k) = z(k)  - 0.5*dz
+            zr(k) = z(k)  + 0.5*dz
+         enddo
+      else if(dimensions .eq. '2dxy') then
+         z  = 0.0
+         zl = -dz/2.
+         zr =  dz/2.
+      endif
 
-  end subroutine grid_xyz
+   end subroutine grid_xyz
 
 end module grid
