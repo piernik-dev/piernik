@@ -29,18 +29,21 @@ contains
     use arrays, only : dl,xdim,ydim,zdim,xl,yl,zl,x,y,z,xr,yr,zr, &
        nxb,nyb,nzb,nx,ny,nz
     implicit none
-    integer i,j,k
+    integer :: i,j,k
+
+    Lx = xmax - xmin
+    Ly = ymax - ymin
+    Lz = zmax - zmin
 
     maxxyz = max(size(x),size(y))
     maxxyz = max(size(z),maxxyz)
 
-    xminb = xmin + real(pcoords(1))*(xmax-xmin)/real(psize(1))
-    xmaxb = xmin + real(pcoords(1)+1)*(xmax-xmin)/real(psize(1))
-    yminb = ymin + real(pcoords(2))*(ymax-ymin)/real(psize(2))
-    ymaxb = ymin + real(pcoords(2)+1)*(ymax-ymin)/real(psize(2))
-    zminb = zmin + real(pcoords(3))*(zmax-zmin)/real(psize(3))
-    zmaxb = zmin + real(pcoords(3)+1)*(zmax-zmin)/real(psize(3))
-
+    xminb = xmin + real(pcoords(1)  ) * Lx / real(psize(1))
+    xmaxb = xmin + real(pcoords(1)+1) * Lx / real(psize(1))
+    yminb = ymin + real(pcoords(2)  ) * Ly / real(psize(2))
+    ymaxb = ymin + real(pcoords(2)+1) * Ly / real(psize(2))
+    zminb = zmin + real(pcoords(3)  ) * Lz / real(psize(3))
+    zmaxb = zmin + real(pcoords(3)+1) * Lz / real(psize(3))
 
     dx = (xmaxb-xminb)/nxb
     dy = (ymaxb-yminb)/nyb
@@ -56,8 +59,7 @@ contains
       dxmn = min(dx,dy)
     endif
 
-!    write(*,*) 'proc=',proc, zminb, zmaxb, dl(zdim)
-
+    dvol = dx*dy*dz
 
 !--- Asignments -----------------------------------------------------------
     ! left zone boundaries:  xl, yl, zl
@@ -74,40 +76,25 @@ contains
 
 !--- y-grids --------------------------------------------------------------
 
-
     do j= 1, ny
-
       y(j)  = yminb + 0.5*dy + (j-nb-1)*dy
       yl(j) = y(j)  - 0.5*dy
       yr(j) = y(j)  + 0.5*dy
     enddo
 
-
 !--- z-grids --------------------------------------------------------------
 
     if(dimensions .eq. '3d') then
-
       do k= 1, nz
         z(k)  = zminb + 0.5*dz + (k-nb-1) * dz
         zl(k) = z(k)  - 0.5*dz
         zr(k) = z(k)  + 0.5*dz
       enddo
-
-!--------------------------------------------------------------------------
-
     else if(dimensions .eq. '2dxy') then
-
-      z = 0.0  ! dz =1
+      z  = 0.0
       zl = -dz/2.
       zr =  dz/2.
-
     endif
-
-    dvol = dx*dy*dz
-
-    Lx = xmax - xmin
-    Ly = ymax - ymin
-    Lz = zmax - zmin
 
   end subroutine grid_xyz
 
