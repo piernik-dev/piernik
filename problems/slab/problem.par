@@ -20,12 +20,12 @@
  /
 
  $END_CONTROL
-    tend   = 1.0
+    tend   = 10.0
     nend   = 90000 
  /
 
  $OUTPUT_CONTROL
-    dt_hdf  = 0.1
+    dt_hdf  = 0.5
     dt_res  = 0.0
     dt_log  = 0.00001
     dt_tsl  = 0.00001
@@ -70,8 +70,6 @@
     cfl    = 0.7
     smalld = 1.e-3
     smallei= 1.e-5
-    flux_limiter = 'vanleer'
-    freezing_speed = 'global'
     integration_order = 3
     magnetic = 'no'
     dimensions = '2dxy'
@@ -108,5 +106,5 @@
 
  $SHEARING
    qshear = 1.5
-   omega  = 0.05
+   omega  = 0.1
  /

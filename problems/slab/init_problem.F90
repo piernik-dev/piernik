@@ -11,9 +11,10 @@ module init_problem
 #ifndef ISO
   use arrays, only : iena
 #endif /* ISO */
-  use start,  only : qshear, omega, proc, smallei, smalld, gamma, &
+  use start,  only : proc, smallei, smalld, gamma, &
       rbuff, cbuff, ibuff
   use mpi_setup
+  use shear, only: qshear, omega
 !  use grid
 
   real :: d0,r0,bx0,by0,bz0
