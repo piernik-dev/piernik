@@ -101,7 +101,7 @@ module constants     ! module containg numerical and physical constants !!!
         real, parameter :: pc =	        3.0856e18*cm
 ! time units:
         real, parameter :: sek =        1.0
-        real, parameter :: year =       365.2652*day
+        real, parameter :: year =       365.2652*24.*3600.*sek
         real, parameter :: myr =        1.0e6*year
 ! mass units:
         real, parameter :: gram =       1.0e-3
@@ -116,7 +116,7 @@ module constants     ! module containg numerical and physical constants !!!
         real, parameter :: pc =	        3.0856e18*cm
 ! time units:
         real, parameter :: sek =        1.0
-        real, parameter :: year =       365.2652*day
+        real, parameter :: year =       365.2652*24.*3600.*sek
         real, parameter :: myr =        1.0e6*year
 ! mass units:
         real, parameter :: gram =       1.0
