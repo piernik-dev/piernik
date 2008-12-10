@@ -1,0 +1,335 @@
+    use arrays, only : wa,is,ie,js,je,ks,ke,idna,imxa,imya,imza,u,b,nx,ny,nz,nfluid,ibx,iby,ibz
+    use arrays, only : nfluid,nfmagn,fmagn,nadiab
+    use grid, only   : dx,dy,dz,dxmn
+    use constants, only : small, hydro_mass, k_B
+    use start, only : t,dt,nstep,sleep_minutes,sleep_seconds, smallei,nb, &
+         gamma,cfl
+#ifdef COSM_RAYS
+    use start, only  : dt_cr
+    use arrays, only : iecr
+#endif /* COSM_RAYS */
+#ifdef ISO
+    use start, only : csi2,c_si
+#endif /* ISO */
+!    use init_problem
+!   use thermal
+#ifndef ISO
+    use arrays, only : iena
+#endif /* ISO */
+#ifdef RESIST
+    use resistivity
+#endif /* RESIST */
+#ifdef COLLISIONS
+    use start, only : dt_colls
+#endif /* COLLISIONS */
+#ifdef KEPLER_SUPPRESSION
+    use	start,  only : cfl_colls, dt_supp
+    use arrays, only : alfsup,nfluid,nz,omx0,omy0,x,y,nx,ny,imxa,imya
+#endif /* KEPLER_SUPPRESSION */
+
+    implicit none
+
+    real, allocatable, dimension(:,:,:,:) :: wa4
+    integer, dimension(3) :: loc_b_min, loc_b_max, loc_divb_max
+    integer, dimension(4) :: loc_vx_max, loc_vy_max, loc_vz_max, loc_va_max, &
+                             loc_cs_max, loc_dens_min, loc_dens_max, loc_pres_min, &
+                             loc_pres_max, loc_temp_min, loc_temp_max
+#ifdef COOL_HEAT
+    integer, dimension(4) :: loc_dt_cool, loc_dt_heat
+#endif /* COOL_HEAT */
+#ifdef COSM_RAYS
+    integer, dimension(4) :: loc_encr_min, loc_encr_max
+#endif /* COSM_RAYS */
+
+    integer               :: proc_vx_max, proc_vy_max, proc_vz_max, proc_va_max, &
+                             proc_cs_max, proc_dens_min, proc_dens_max, proc_pres_min, &
+                             proc_pres_max, proc_b_min, proc_b_max, &
+                             proc_temp_min, proc_temp_max, proc_divb_max, ifl
+#ifdef COOL_HEAT
+    integer               :: proc_dt_cool, proc_dt_heat
+#endif /* COOL_HEAT */
+#ifdef RESIST
+    integer               :: proc_eta_max
+#endif /* RESIST */
+#ifdef COSM_RAYS
+    integer               :: proc_encr_min, proc_encr_max
+#endif /* COSM_RAYS */
+#ifdef KEPLER_SUPPRESSION
+    integer               :: proc_asupp_min, proc_asupp_max
+    integer, dimension(4) :: loc_asupp_min, loc_asupp_max
+    real,allocatable,dimension(:,:) :: velx,vely,dvx,dvy
+    real wa4_pom
+    integer i,j,k
+#endif /* KEPLER_SUPPRESSION */
+
+! Timestep diagnostics
+
+
+    allocate(wa4(nfluid,nx,ny,nz))
+
+    wa4         =  u(idna,:,:,:)
+    dens_min      = minval(wa4(1:nfluid,is:ie,js:je,ks:ke))
+    loc_dens_min  = minloc(wa4(1:nfluid,is:ie,js:je,ks:ke)) &
+                  + (/0,nb,nb,nb/)
+    call mpifind(dens_min, 'min', loc_dens_min, proc_dens_min)
+
+    wa4         =  u(idna,:,:,:)
+    dens_max      = maxval(wa4(1:nfluid,is:ie,js:je,ks:ke))
+    loc_dens_max  = maxloc(wa4(1:nfluid,is:ie,js:je,ks:ke)) &
+                  + (/0,nb,nb,nb/)
+    call mpifind(dens_max, 'max', loc_dens_max, proc_dens_max)
+
+
+    wa4         = abs(u(imxa,:,:,:)/u(idna,:,:,:))
+    vx_max      = maxval(wa4(1:nfluid,is:ie,js:je,ks:ke))
+    loc_vx_max  = maxloc(wa4(1:nfluid,is:ie,js:je,ks:ke)) &
+                  + (/0,nb,nb,nb/)
+    call mpifind(vx_max, 'max', loc_vx_max, proc_vx_max)
+
+    wa4         = abs(u(imya,:,:,:)/u(idna,:,:,:))
+    vy_max      = maxval(wa4(1:nfluid,is:ie,js:je,ks:ke))
+    loc_vy_max  = maxloc(wa4(1:nfluid,is:ie,js:je,ks:ke)) &
+                  + (/0,nb,nb,nb/)
+    call mpifind(vy_max, 'max', loc_vy_max, proc_vy_max)
+
+    wa4         = abs(u(imza,:,:,:)/u(idna,:,:,:))
+    vz_max      = maxval(wa4(1:nfluid,is:ie,js:je,ks:ke))
+    loc_vz_max  = maxloc(wa4(1:nfluid,is:ie,js:je,ks:ke)) &
+                  + (/0,nb,nb,nb/)
+    call mpifind(vz_max, 'max', loc_vz_max, proc_vz_max)
+
+!    wa         = sum(b(:,:,:,:)**2,1)
+    wa(:,:,:)  = b(1,:,:,:)*b(1,:,:,:) + b(2,:,:,:)*b(2,:,:,:) + &
+                 b(3,:,:,:)*b(3,:,:,:)
+    b_min      = sqrt(minval(wa(is:ie,js:je,ks:ke)))
+    loc_b_min  = minloc(wa(is:ie,js:je,ks:ke)) &
+                  + (/nb,nb,nb/)
+    call mpifind(b_min, 'min', loc_b_min, proc_b_min)
+
+    b_max      = sqrt(maxval(wa(is:ie,js:je,ks:ke)))
+    loc_b_max  = maxloc(wa(is:ie,js:je,ks:ke)) &
+                  + (/nb,nb,nb/)
+    call mpifind(b_max, 'max', loc_b_max, proc_b_max)
+
+    va_max      = sqrt(maxval(spread(wa(is:ie,js:je,ks:ke),1,nfmagn) &
+                       /u(idna(fmagn),is:ie,js:je,ks:ke)))
+    loc_va_max  = maxloc(spread(wa(is:ie,js:je,ks:ke),1,nfmagn) &
+                       /u(idna(fmagn),is:ie,js:je,ks:ke)) &
+                  + (/0,nb,nb,nb/)
+    call mpifind(va_max, 'max', loc_va_max, proc_va_max)
+
+
+#ifdef ISO
+    pres_min     = csi2*dens_min
+    loc_pres_min  = loc_dens_min
+    proc_pres_min = proc_dens_min
+    pres_max     = csi2*dens_max
+    loc_pres_max  = loc_dens_max
+    proc_pres_max = proc_dens_max
+    cs_max        = c_si
+    loc_cs_max    = 0
+    proc_cs_max   = 0
+    temp_min      = hydro_mass / k_B * csi2
+    loc_temp_min  = 0
+    proc_temp_min = 0
+    temp_max      = hydro_mass / k_B * csi2
+    loc_temp_max  = 0
+    proc_temp_max = 0
+#else /* ISO */
+    wa4(1:nadiab,:,:,:) = (u(iena,:,:,:) &                ! eint
+                  - 0.5*((u(imxa(1:nadiab),:,:,:)**2 +u(imya(1:nadiab),:,:,:)**2 &
+		         +u(imza(1:nadiab),:,:,:)**2)/u(idna(1:nadiab),:,:,:)))
+    wa4(fmagn,:,:,:)    = wa4(fmagn,:,:,:) - spread(0.5*wa,1,nfmagn)
+    wa4(1:nadiab,:,:,:) = max(wa4(1:nadiab,:,:,:),smallei)
+    do ifl=1,nadiab
+    wa4(ifl,:,:,:) = (gamma(ifl)-1)*wa4(ifl,:,:,:)           ! pres
+    enddo
+
+    pres_min      = minval(wa4(1:nadiab,is:ie,js:je,ks:ke))
+    loc_pres_min  = minloc(wa4(1:nadiab,is:ie,js:je,ks:ke)) &
+                     + (/0,nb,nb,nb/)
+    call mpifind(pres_min, 'min', loc_pres_min, proc_pres_min)
+
+    pres_max      = maxval(wa4(1:nadiab,is:ie,js:je,ks:ke))
+    loc_pres_max  = maxloc(wa4(1:nadiab,is:ie,js:je,ks:ke)) &
+                     + (/0,nb,nb,nb/)
+    call mpifind(pres_max, 'max', loc_pres_max, proc_pres_max)
+
+    temp_max      = maxval( hydro_mass / k_B * wa4(1:nadiab,is:ie,js:je,ks:ke) &
+                                             /u(idna(1:nadiab),is:ie,js:je,ks:ke))
+    loc_temp_max  = maxloc(wa4(1:nadiab,is:ie,js:je,ks:ke)    &
+                         /u(idna(1:nadiab),is:ie,js:je,ks:ke)  ) &
+                     + (/0,nb,nb,nb/)
+    call mpifind(temp_max, 'max', loc_temp_max, proc_temp_max)
+
+
+    temp_min      = minval( hydro_mass / k_B * wa4(1:nadiab,is:ie,js:je,ks:ke) &
+                                             /u(idna(1:nadiab),is:ie,js:je,ks:ke))
+    loc_temp_min  = minloc(wa4(1:nadiab,is:ie,js:je,ks:ke)    &
+                         /u(idna(1:nadiab),is:ie,js:je,ks:ke)  ) &
+                     + (/0,nb,nb,nb/)
+    call mpifind(temp_min, 'min', loc_temp_min, proc_temp_min)
+
+    do ifl=1,nadiab
+      wa4(ifl,:,:,:) = gamma(ifl)*wa4(ifl,:,:,:)
+    enddo
+    cs_max        = sqrt(maxval(wa4(1:nadiab,is:ie,js:je,ks:ke) &
+                            /u(idna(1:nadiab),is:ie,js:je,ks:ke)))
+    loc_cs_max    = maxloc(wa4(1:nadiab,is:ie,js:je,ks:ke) &
+                            /u(idna(1:nadiab),is:ie,js:je,ks:ke)) &
+                     + (/0,nb,nb,nb/)
+    call mpifind(cs_max, 'max', loc_cs_max, proc_cs_max)
+#endif /* ISO */
+
+#ifdef COOL_HEAT
+      call mpifind(eint_src_min, 'min', loc_dt_cool, proc_dt_cool)
+      call mpifind(eint_src_max, 'max', loc_dt_heat, proc_dt_heat)
+      call mpifind(dt_cool,      'min', loc_dt_cool, proc_dt_cool)
+      call mpifind(dt_heat,      'min', loc_dt_heat, proc_dt_heat)
+#endif /* COOL_HEAT */
+#ifdef RESIST
+! Tu trzba sprawdzic czy poprawnie znajdowane jest max i loc dla wielu procesow
+      call mpifind(eta_max,      'max', loc_eta_max, proc_eta_max)
+#endif /* RESIST */
+
+    wa(1:nx-1,1:ny-1,1:max(nz-1,1)) = &
+                 (b(ibx,2:nx,1:ny-1,1:max(nz-1,1)) - b(ibx,1:nx-1,1:ny-1,1:max(nz-1,1)))*dy*dz &
+                +(b(iby,1:nx-1,2:ny,1:max(nz-1,1)) - b(iby,1:nx-1,1:ny-1,1:max(nz-1,1)))*dx*dz &
+                +(b(ibz,1:nx-1,1:ny-1,min(2,nz):nz) - b(ibz,1:nx-1,1:ny-1,1:max(nz-1,1)))*dx*dy
+!    wa = (cshift(b(ibx,:,:,:),dim=1,shift=1) - b(ibx,:,:,:))*dy*dz &
+!        +(cshift(b(iby,:,:,:),dim=2,shift=1) - b(iby,:,:,:))*dx*dz &
+!        +(cshift(b(ibz,:,:,:),dim=3,shift=1) - b(ibz,:,:,:))*dx*dy
+    wa = abs(wa)
+
+    wa(ie,:,:) = wa(ie-1,:,:)
+    wa(:,je,:) = wa(:,je-1,:)
+    wa(:,:,ke) = wa(:,:,max(ke-1,1))
+
+    divb_max      = maxval(wa(is:ie,js:je,ks:ke))
+    loc_divb_max  = maxloc(wa(is:ie,js:je,ks:ke)) &
+                  + (/nb,nb,nb/)
+    call mpifind(divb_max, 'max', loc_divb_max, proc_divb_max)
+
+#ifdef KEPLER_SUPPRESSION
+    allocate(velx(nx,ny),vely(nx,ny),dvx(nx,ny),dvy(nx,ny))
+    do ifl = 1,nfluid
+    do k = 1,nz
+    velx=u(imxa(ifl),:,:,k)/u(idna(ifl),:,:,k)
+#ifdef KEPL_SUPP_SIMX
+    dvx(:,:)=u(imxa(ifl),:,:,k)-omx0(ifl,:,:,k)
+    wa4(ifl,:,:,k) = (abs(velx)+small)/(abs(dvx)+small)/(abs(alfsup)+small)
+#else /* KEPL_SUPP_SIMX */
+    vely=u(imya(ifl),:,:,k)/u(idna(ifl),:,:,k)
+    do j=1,ny
+    dvx(:,j)=(velx(:,j)*y(j)-vely(:,j)*x(:))*y(j)/(x(:)**2+y(j)**2)-omx0(ifl,:,j,k)
+    enddo
+    do j=1,nx
+    dvy(j,:)=(vely(j,:)*x(j)-velx(j,:)*y(:))*x(j)/(y(:)**2+x(j)**2)-omy0(ifl,j,:,k)
+    enddo
+    do i=1,nx
+    do j=1,ny
+    wa4_pom        = (abs(vely(i,j))+small)/(abs(dvy(i,j))+small)/(abs(alfsup(i,j))+small)
+    wa4(ifl,i,j,k) = (abs(velx(i,j))+small)/(abs(dvx(i,j))+small)/(abs(alfsup(i,j))+small)
+    wa4(ifl,i,j,k) = min(wa4(ifl,i,j,k),wa4_pom)
+    enddo
+    enddo
+#endif /* KEPL_SUPP_SIMX */
+    enddo
+    enddo
+    deallocate(velx,vely,dvx,dvy)
+!    wa4           = spread(spread(alfsup,3,nz),1,nfluid)/u(idna,:,:,:)+small
+    asupp_min     = minval(wa4(1:nfluid,is:ie,js:je,ks:ke))
+    loc_asupp_min = minloc(wa4(1:nfluid,is:ie,js:je,ks:ke))
+    call mpifind(asupp_min, 'min', loc_asupp_min, proc_asupp_min)
+    asupp_max     = maxval(wa4(1:nfluid,is:ie,js:je,ks:ke))
+    loc_asupp_max = maxloc(wa4(1:nfluid,is:ie,js:je,ks:ke))
+    call mpifind(asupp_max, 'max', loc_asupp_max, proc_asupp_max)
+#endif /* KEPLER_SUPPRESSION */
+
+    deallocate(wa4)
+
+#ifdef COSM_RAYS
+    allocate(wa4(COSM_RAYS,nx,ny,nz))
+    wa4         =  u(iecr,:,:,:)
+    encr_min      = minval(wa4(:,is:ie,js:je,ks:ke))
+    loc_encr_min  = minloc(wa4(:,is:ie,js:je,ks:ke)) &
+                  + (/0,nb,nb,nb/)
+    call mpifind(encr_min, 'min', loc_encr_min, proc_encr_min)
+
+    wa4         =  u(iecr,:,:,:)
+    encr_max      = maxval(wa4(:,is:ie,js:je,ks:ke))
+    loc_encr_max  = maxloc(wa4(:,is:ie,js:je,ks:ke)) &
+                  + (/0,nb,nb,nb/)
+    call mpifind(encr_max, 'max', loc_encr_max, proc_encr_max)
+    deallocate(wa4)
+#endif /* COSM_RAYS */
+
+    if(proc .eq. 0)  then
+
+      open(log_lun, file=log_file, position='append')
+
+        write(log_lun,771) 'min(dens)        =', dens_min,  proc_dens_min,  loc_dens_min
+        write(log_lun,771) 'max(dens)        =', dens_max,  proc_dens_max,  loc_dens_max
+        write(log_lun,771) 'min(temp)        =', temp_min,  proc_temp_min,  loc_temp_min
+        write(log_lun,771) 'max(temp)        =', temp_max,  proc_temp_max,  loc_temp_max
+        write(log_lun,771) 'min(pres)        =', pres_min,  proc_pres_min,  loc_pres_min
+        write(log_lun,771) 'max(pres)        =', pres_max,  proc_pres_max,  loc_pres_max
+        write(log_lun,770) 'min(|b|)         =', b_min,     proc_b_min,     loc_b_min
+        write(log_lun,770) 'max(|b|)         =', b_max,     proc_b_max,     loc_b_max
+        write(log_lun,770) 'max(|divb|)      =', divb_max,  proc_divb_max,  loc_divb_max
+
+        write(log_lun,777) 'max(|velx|)      =', vx_max, 'dt=',cfl*dx/(vx_max+small),   proc_vx_max, loc_vx_max
+        write(log_lun,777) 'max(|vely|)      =', vy_max, 'dt=',cfl*dy/(vy_max+small),   proc_vy_max, loc_vy_max
+        write(log_lun,777) 'max(|velz|)      =', vz_max, 'dt=',cfl*dz/(vz_max+small),   proc_vz_max, loc_vz_max
+        write(log_lun,777) 'max(v_alfven)    =', va_max, 'dt=',cfl*dxmn/(va_max+small), proc_va_max, loc_va_max
+        write(log_lun,777) 'max(c_sound )    =', cs_max, 'dt=',cfl*dxmn/(cs_max+small), proc_cs_max, loc_cs_max
+        write(log_lun,777) 'max(c_fast  )    =', sqrt(cs_max**2+va_max**2), 'dt=',cfl*dxmn/sqrt(cs_max**2+va_max**2)
+#ifdef COSM_RAYS
+        write(log_lun,777) 'min(encr)        =', encr_min,         '',  0.0,     proc_encr_min, loc_encr_min
+        write(log_lun,777) 'max(encr)        =', encr_max,      'dt=',dt_cr,     proc_encr_max, loc_encr_max
+#endif /* COSM_RAYS */
+#ifdef COOL_HEAT
+        write(log_lun,778) 'min(esrc/eint)   =', eint_src_min , 'dt=',dt_cool,   proc_dt_cool,  loc_dt_cool
+        write(log_lun,778) 'max(esrc/eint)   =', eint_src_max , 'dt=',dt_heat,   proc_dt_heat,  loc_dt_heat
+#endif /* COOL_HEAT */
+#ifdef RESIST
+        write(log_lun,776) 'max(eta)         =', eta_max ,      'dt=',dt_resist, proc_eta_max,  loc_eta_max
+#endif /* RESIST */
+#ifdef COLLISIONS
+        write(log_lun,'(2x,a36,e10.4)') 'collisions with fluid ~1/dens, dt = ',dt_colls
+#endif /* COLLISIONS */
+#ifdef KEPLER_SUPPRESSION
+        write(log_lun,779) 'min(alfsup*dens) =',asupp_min, 'dt=',cfl_colls*asupp_min, proc_asupp_min, loc_asupp_min
+        write(log_lun,779) 'max(alfsup*dens) =',asupp_max, 'dt=',cfl_colls*asupp_max, proc_asupp_max, loc_asupp_max
+	write(log_lun,'(5x,a10,e10.4)') 'dt_supp = ',dt_supp
+#endif /* KEPLER_SUPPRESSION */
+
+      close(log_lun)
+
+    endif
+
+    if(proc .eq. 0)  then
+      open(log_lun, file=log_file, position='append')
+        write(log_lun,'(a80)') '================================================================================'
+	write(log_lun,900) nstep,dt,t
+        write(log_lun,'(a80)') '================================================================================'
+      close(log_lun)
+    endif
+
+
+
+770 format(5x,a18,(1x,e15.9),4(1x,i4))
+771 format(5x,a18,(1x,e15.9),5(1x,i4))
+#ifdef RESIST
+776 format(5x,a18,(1x,e10.4),2x,a3,(1x,e10.4),4(1x,i4))
+#endif /* RESIST */
+777 format(5x,a18,(1x,e10.4),2x,a3,(1x,e10.4),5(1x,i4))
+#ifdef COOL_HEAT
+778 format(2x,a18,(1x,e10.4),2x,a3,(1x,e10.4),4(1x,i4))
+#endif /* COOL_HEAT */
+#ifdef KEPLER_SUPPRESSION
+779 format(5x,a18,(1x,e10.4),2x,a3,(1x,e10.4),5(1x,i4))
+#endif /* KEPLER_SUPPRESSION */
+
+900 format('   nstep = ',i7,'   dt = ',f22.16,'   t = ',f22.16,2(1x,i4))
+

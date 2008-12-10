@@ -1,8 +1,7 @@
  $DOMAIN_SIZES
-    nxd = 400
-    nyd = 400
-    nzd = 160
-    nb  = 5
+    nxd = 128
+    nyd = 128
+    nzd = 128
  /  
 
  $MPI_BLOCKS
@@ -22,26 +21,22 @@
  /
 
  $END_CONTROL
-    tend   = 1.0e3
-    nend   = 10000000
+    tend   = 10.0e4
+    nend   = 100000 
  /
 
  $OUTPUT_CONTROL
-    dt_hdf  = 5.0
-    dt_res  = 25.0
-    dt_log  = 1.0
-    dt_tsl  = 1.0
+    dt_hdf  = 10.0
+    dt_res  = 50.0
+    dt_log  = 0.001
+    dt_tsl  = 0.00001
     vars(1) = 'dens'
     vars(2) = 'velx'
     vars(3) = 'vely'
     vars(4) = 'velz'
     vars(5) = 'ener'
-    vars(6) = 'encr'
-    vars(7) = 'vrot'
-    vars(8) = 'omga'
-    vars(9) = 'magx'
-    vars(10)= 'magy'
-    vars(11)= 'magz'
+    vars(6) = 'vrot'
+    vars(7) = 'omga'
     domain  = 'phys_domain'
  / 
 
@@ -58,9 +53,9 @@
     xmin   = 0.0
     xmax   = 2.0e4
     ymin   = 0.0
-    ymax   = 2.0e4
-    zmin   =-4.0e3
-    zmax   = 4.0e3
+    ymax   = 1.6e4
+    zmin   =-1.0e2
+    zmax   = 1.0e2
  /
 
  $EQUATION_OF_STATE
@@ -70,18 +65,16 @@
 
  $NUMERICAL_SETUP
     cfl    = 0.9
-    smalld = 1.e-6
-    smallei= 1.e-4
+    smalld = 1.e-8
+    smallei= 1.e-8
     integration_order = 3
     magnetic = 'yes'
     dimensions = '3d'
-    floor_vz   = -30.0
+    floor_vz   = -10.0
  /
  
  $GRAVITY
-    nsub   = 20
-    h_grav = 300.0
-    n_gravh = 2
+    nsub   = 10
  /
  
  $THERMAL
@@ -96,12 +89,12 @@
  
  $COSMIC_RAYS
     cr_active    = 1.0      ! gdy 0 wtedy grad p_cr nie jest brany pod uwage w r.ruchu
-    cfl_cr       = 0.9      ! liczba couranta dla dyfuzji CR (wsp 0.5 w kodzie)
+    cfl_cr       = 0.8      ! liczba couranta dla dyfuzji CR (wsp 0.5 w kodzie)
     cr_eff       = 0.1      ! czesc energii SN (=10^51 erg) zamieniona w CR
     gamma_cr     = 1.555555 ! wykl. adiabatyczny CR
-    K_cr_paral   = 200000.   ! wsp. dyfuzji CR wzdluz B
+    K_cr_paral   = 10000.   ! wsp. dyfuzji CR wzdluz B
     K_cr_perp    = 1000.    ! wsp. dyfuzji CR wpoprzek B
-    beta_cr      = 4.0      ! okresla wklad CR w poczatkowej rownowadze (podobnie jak alfa dla B)
+    beta_cr      = 0.0      ! okresla wklad CR w poczatkowej rownowadze (podobnie jak alfa dla B)
     amp_cr       = 0.0      ! wybuch w init_problem w x0,y0,z0
     smallecr     = 1.0e-5    ! lower limit & outflow boundary value for ecr
  /
@@ -123,7 +116,7 @@
  $PROBLEM_CONTROL
     problem_name ='galdisk'
     run_id  =  'tst'
-    rhoa    = 1.0e-4
+    rhoa    = 2.0e-8
     d0      = 1.0
     r_max   = 1.2e4
     mtr      = 10

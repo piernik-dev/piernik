@@ -305,6 +305,8 @@ subroutine bnd_b(dim)
           b(:,1:nb,:,:)                  = b(:,nxb+1:nxb+nb,:,:)
         case ('cor')
 !         Do nothing if 'cor'
+        case ('inf')
+!         Do nothing if 'inf'
         case ('ref')
 !         Do nothing if 'ref'
         case ('out')
@@ -321,6 +323,10 @@ subroutine bnd_b(dim)
 !         Do nothing if 'mpi'
         case ('per')
           b(:,nxb+nb+1:nxb+2*nb,:,:)     = b(:,nb+1:2*nb,:,:)
+        case ('cor')
+!         Do nothing if 'cor'
+        case ('inf')
+!         Do nothing if 'inf'
         case ('ref')
 !         Do nothing if 'ref'
         case ('out')
@@ -340,6 +346,8 @@ subroutine bnd_b(dim)
           b(:,:,1:nb,:)                  = b(:,:,nyb+1:nyb+nb,:)
         case ('cor')
 !         Do nothing if 'cor'
+        case ('inf')
+!         Do nothing if 'inf'
         case ('ref')
 !         Do nothing if 'ref'
         case ('out')
@@ -354,6 +362,10 @@ subroutine bnd_b(dim)
 !         Do nothing if 'mpi'
         case ('per')
           b(:,:,nyb+nb+1:nyb+2*nb,:)     = b(:,:,nb+1:2*nb,:)
+        case ('cor')
+!         Do nothing if 'cor'
+        case ('inf')
+!         Do nothing if 'inf'
         case ('ref')
 !         Do nothing if 'ref'
         case ('out')
@@ -427,6 +439,8 @@ subroutine bnd_emf(var, name, dim)
 !             Do nothing if 'per'
             case ('cor')
 !             Do nothing if 'cor'
+            case ('inf')
+!             Do nothing if 'inf'
             case ('ref')
               var(nb,:,:)                 = 0.0
               do ib=1,nb-1
@@ -450,6 +464,8 @@ subroutine bnd_emf(var, name, dim)
 !             Do nothing if 'per'
             case ('cor')
 !             Do nothing if 'cor'
+            case ('inf')
+!             Do nothing if 'inf'
             case ('ref')
               var(nb+nxb,:,:)             = 0.0
               do ib=1,nb-1
@@ -475,6 +491,8 @@ subroutine bnd_emf(var, name, dim)
 !             Do nothing if 'per'
             case ('cor')
 !             Do nothing if 'cor'
+            case ('inf')
+!             Do nothing if 'inf'
             case ('ref')
               var(nb+1,:,:)               = 0.0
               do ib=1,nb
@@ -498,6 +516,8 @@ subroutine bnd_emf(var, name, dim)
 !             Do nothing if 'per'
             case ('cor')
 !             Do nothing if 'cor'
+            case ('inf')
+!             Do nothing if 'inf'
             case ('ref')
               var(nb+nxb+1,:,:)           = 0.0
               do ib=1,nb-1
@@ -523,6 +543,8 @@ subroutine bnd_emf(var, name, dim)
 !             Do nothing if 'per'
             case ('cor')
 !             Do nothing if 'cor'
+            case ('inf')
+!             Do nothing if 'inf'
             case ('ref')
               do ib=1,nb
                 var(nb+1-ib,:,:)          = var(nb+ib,:,:)
@@ -545,6 +567,8 @@ subroutine bnd_emf(var, name, dim)
 !             Do nothing if 'per'
             case ('cor')
 !             Do nothing if 'cor'
+            case ('inf')
+!             Do nothing if 'inf'
             case ('ref')
               do ib=1,nb
                 var(nb+nxb+ib,:,:)        = var(nb+nxb+1-ib,:,:)
@@ -572,6 +596,8 @@ subroutine bnd_emf(var, name, dim)
 !             Do nothing if 'per'
             case ('cor')
 !             Do nothing if 'cor'
+            case ('inf')
+!             Do nothing if 'inf'
             case ('ref')
               var(:,nb,:)                 = 0.0
               do ib=1,nb-1
@@ -593,6 +619,8 @@ subroutine bnd_emf(var, name, dim)
 !             Do nothing if 'per'
             case ('cor')
 !             Do nothing if 'cor'
+            case ('inf')
+!             Do nothing if 'inf'
             case ('ref')
               var(:,nb+nyb,:)             = 0.0
               do ib=1,nb-1
@@ -616,6 +644,8 @@ subroutine bnd_emf(var, name, dim)
 !             Do nothing if 'per'
             case ('cor')
 !             Do nothing if 'cor'
+            case ('inf')
+!             Do nothing if 'inf'
             case ('ref')
               var(:,nb+1,:)               = 0.0
               do ib=1,nb
@@ -637,6 +667,8 @@ subroutine bnd_emf(var, name, dim)
 !             Do nothing if 'per'
             case ('cor')
 !             Do nothing if 'cor'
+            case ('inf')
+!             Do nothing if 'inf'
             case ('ref')
               var(:,nb+nyb+1,:)           = 0.0
               do ib=1,nb-1
@@ -660,6 +692,8 @@ subroutine bnd_emf(var, name, dim)
 !             Do nothing if 'per'
             case ('cor')
 !             Do nothing if 'cor'
+            case ('inf')
+!             Do nothing if 'inf'
             case ('ref')
               do ib=1,nb
                 var(:,nb+1-ib,:)          = var(:,nb+ib,:)
@@ -680,6 +714,8 @@ subroutine bnd_emf(var, name, dim)
 !             Do nothing if 'per'
             case ('cor')
 !             Do nothing if 'cor'
+            case ('inf')
+!             Do nothing if 'inf'
             case ('ref')
               do ib=1,nb
                 var(:,nb+nyb+ib,:)        = var(:,nb+nyb+1-ib,:)
@@ -709,6 +745,8 @@ subroutine bnd_emf(var, name, dim)
 !             Do nothing if 'per'
             case ('cor')
 !             Do nothing if 'cor'
+            case ('inf')
+!             Do nothing if 'inf'
             case ('ref')
               var(:,:,nb)                 = 0.0
               do ib=1,nb-1
@@ -730,6 +768,8 @@ subroutine bnd_emf(var, name, dim)
 !             Do nothing if 'per'
             case ('cor')
 !             Do nothing if 'cor'
+            case ('inf')
+!             Do nothing if 'inf'
            case ('ref')
              var(:,:,nb+nzb)             = 0.0
              do ib=1,nb-1
@@ -754,6 +794,8 @@ subroutine bnd_emf(var, name, dim)
 !             Do nothing if 'per'
             case ('cor')
 !             Do nothing if 'cor'
+            case ('inf')
+!             Do nothing if 'inf'
             case ('ref')
               var(:,:,nb+1)               = 0.0
               do ib=1,nb
@@ -775,6 +817,8 @@ subroutine bnd_emf(var, name, dim)
 !             Do nothing if 'per'
             case ('cor')
 !             Do nothing if 'cor'
+            case ('inf')
+!             Do nothing if 'inf'
            case ('ref')
              var(:,:,nb+nzb+1)           = 0.0
              do ib=1,nb-1
@@ -798,6 +842,8 @@ subroutine bnd_emf(var, name, dim)
 !             Do nothing if 'per'
             case ('cor')
 !             Do nothing if 'cor'
+            case ('inf')
+!             Do nothing if 'inf'
             case ('ref')
               do ib=1,nb
                 var(:,:,nb+1-ib)          = var(:,:,nb+ib)
@@ -818,6 +864,8 @@ subroutine bnd_emf(var, name, dim)
 !             Do nothing if 'per'
             case ('cor')
 !             Do nothing if 'cor'
+            case ('inf')
+!             Do nothing if 'inf'
             case ('ref')
               do ib=1,nb
                 var(:,:,nb+nzb+ib)        = var(:,:,nb+nzb+1-ib)

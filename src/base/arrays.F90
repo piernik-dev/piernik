@@ -1,52 +1,83 @@
 ! $Id$
 #include "piernik.def"
+#ifdef IONIZED
+#define NUMBION IONIZED
+#else /* IONIZED */
+#define NUMBION 0
+#endif /* IONIZED */
+#ifdef NEUTRAL
+#define NUMBNEUT NEUTRAL
+#else /* NEUTRAL */
+#define NUMBNEUT 0
+#endif /* NEUTRAL */
+#ifdef MOLECULAR
+#define NUMBMOLEC MOLECULAR
+#else /* MOLECULAR */
+#define NUMBMOLEC 0
+#endif /* MOLECULAR */
+#ifdef DUST
+#define NUMBDUST DUST
+#else /* DUST */
+#define NUMBDUST 0
+#endif /* DUST */
+#ifdef COSM_RAYS
+#define NUMBCR COSM_RAYS
+#else /* COSM_RAYS */
+#define NUMBCR 0
+#endif /* COSM_RAYS */
+#define NUMBFLUID NUMBION+NUMBNEUT+NUMBMOLEC+NUMBDUST
+#ifdef ISO
+#define NUPF 4
+#else /* ISO */
+#define NUPF 5
+#endif /* ISO */
 
 module arrays
 
   implicit none
   integer :: nx, ny, nz
   integer,parameter  :: xdim=1, ydim=2, zdim=3
-  integer, parameter :: nrlscal=100, nintscal=100
+  integer,parameter  :: nrlscal=100, nintscal=100
+  integer,allocatable,dimension(:) :: idna, imxa, imya, imza, iena, magn
+  integer,allocatable,dimension(:) :: fiond, fmagn, fdust, findex, fadiab
 
-#ifdef ISO
-  integer,parameter  :: nua=4
-#else /* ISO */
-  integer,parameter  :: nua=5
-#endif /* ISO */
+  integer, parameter :: nfi=NUMBION
+  integer, parameter :: nui=nfi*NUPF
+  integer, parameter :: nfn=NUMBNEUT
+  integer, parameter :: nun=nfn*NUPF
+  integer, parameter :: nfm=NUMBMOLEC
+  integer, parameter :: num=nfm*NUPF
+  integer, parameter :: nfd=NUMBDUST
+  integer, parameter :: nud=nfd*4
+  integer, parameter :: nfluid=NUMBFLUID
+  integer, parameter :: nadiab=(NUMBFLUID-NUMBDUST)*(NUPF-4)
+  integer, parameter :: nfion =NUMBION
+  integer, parameter :: nfmagn=NUMBION
+  integer, parameter :: ndust =NUMBDUST
+  integer, parameter :: nuc=NUMBCR
 
-#ifdef COSM_RAYS
-  integer,parameter  :: nuc=1
-#else /* COSM_RAYS */
-  integer,parameter  :: nuc=0
-#endif /* COSM_RAYS */
+  integer, parameter :: nu=nui+nun+num+nud+nuc
+  integer, parameter :: nm=3
 
+#ifdef IONIZED
+  integer, dimension(IONIZED)       :: idni, imxi, imyi, imzi, ieni
+  integer, dimension(IONIZED*NUPF)  :: aions
+#endif /* IONIZED */
+#ifdef NEUTRAL
+  integer,dimension(NEUTRAL)        :: idnn, imxn, imyn, imzn, ienn
+  integer,dimension(NEUTRAL*NUPF)   :: aneut
+#endif /* NEUTRAL */
+#ifdef MOLECULAR
+  integer,dimension(MOLECULAR)      :: idnm, imxm, imym, imzm, ienm
+  integer,dimension(MOLECULAR*NUPF) :: amols
+#endif /* MOLECULAR */
 #ifdef DUST
-  integer,parameter  :: nud=1
-#else /* DUST */
-  integer,parameter  :: nud=0
+  integer,dimension(DUST)   :: idnd, imxd, imyd, imzd
+  integer,dimension(DUST*4) :: adust
 #endif /* DUST */
-
-  integer,parameter  :: nu=nua+nuc+nud
-  integer,parameter  :: nm=3
-
-  integer,parameter  :: idna=1, imxa=2, imya=3, imza=4
-#ifdef ISO
-  integer,parameter  :: iena=0
-#else /* ISO */
-  integer,parameter  :: iena=5
-#endif /* ISO */
-
 #ifdef COSM_RAYS
-  integer,parameter  :: iecr = nua+1
-#else /* COSM_RAYS */
-  integer,parameter  :: iecr = 0
+  integer,dimension(COSM_RAYS)  :: iecr
 #endif /* COSM_RAYS */
-
-#ifdef DUST
-  integer,parameter  :: idnd=nua+nuc+1, ivxd=nua+nuc+2, ivyd=nua+nuc+3, ivzd=nua+nuc+4
-#else /* DUST */
-  integer,parameter  :: idnd=0, ivxd=0, ivyd=0, ivzd=0
-#endif /* DUST */
 
   integer, dimension(nu) :: iuswpx, iuswpy, iuswpz
   integer, dimension(nm) :: ibswpx, ibswpy, ibswpz
@@ -66,7 +97,7 @@ module arrays
 
   real, allocatable, dimension(:,:,:,:) :: u, b
 #ifdef GRAV
-  real, allocatable, dimension(:,:,:) :: gp, gp1, gp2, gp3, gp4, gp5
+  real, allocatable, dimension(:,:,:) :: gp
   real, allocatable, dimension(:)     :: dprof, eprof
 #endif /* GRAV */
 #ifdef SPLIT
@@ -85,9 +116,6 @@ module arrays
   real, allocatable, dimension(:,:,:)   :: cfr
 #endif /* FLX_BND */
 #endif /* ~SPLIT */
-#ifdef PNE
-  real, allocatable, dimension(:) :: ovrlp
-#endif /* PNE */
 #ifdef MASS_COMPENS
   real, allocatable, dimension(:,:,:)   :: dinit
 #endif /* MASS_COMPENS */
@@ -98,26 +126,139 @@ module arrays
 
   real(kind=4), allocatable, dimension(:,:,:)  :: outwa, outwb, outwc
 
-  real,    allocatable, dimension(:) :: rlscal
-  integer, allocatable, dimension(:) :: intscal
+#if defined COSM_RAYS || defined PRESS_GRAD_EXCH
+  real, allocatable, dimension(:,:,:,:) :: divvel
+#endif /* COSM_RAYS || PRESS_GRAD_EXCH */
 #ifdef KEPLER_SUPPRESSION
   real, allocatable, dimension(:,:,:) :: omx0, omy0,den0
   real, allocatable, dimension(:,:)   :: alfsup
 #endif /* KEPLER_SUPPRESSION */
 
+  real,    allocatable, dimension(:)       :: rlscal
+  integer, allocatable, dimension(:)       :: intscal
+  real,    allocatable, dimension(:,:)     :: ul0, ur0
+  real,    allocatable, dimension(:,:,:,:) :: bndxrar, bndyrar
+
+#ifdef KEPLER_SUPPRESSION
+  real, allocatable, dimension(:,:,:,:) :: omx0, omy0
+  real, allocatable, dimension(:,:)     :: alfsup
+#endif /* KEPLER_SUPPRESSION */
+
 contains
 
   subroutine arrays_allocate
-  use start, only : nxd, nyd, nzd, nb, dimensions
+  use start, only : nxd, nyd, nzd, nb, dimensions, gamma
   use mpi_setup
+  integer ifluid,ifion,imagn,iadiab,idust,iter
+#ifdef IONIZED
+  integer nuipf
+#endif /* IONIZED */
+#ifdef NEUTRAL
+  integer nunpf
+#endif /* NEUTRAL */
+#ifdef MOLECULAR
+  integer numpf
+#endif /* MOLECULAR */
+#ifdef DUST
+  integer nudpf
+#endif /* DUST */
+  character fluidtype*10
 
-    iuswpx(idna:imza)=(/idna,imxa,imya,imza/)
-    iuswpy(idna:imza)=(/idna,imya,imxa,imza/)
-    iuswpz(idna:imza)=(/idna,imza,imya,imxa/)
-    ibswpx(ibx:ibz)  =(/ibx,iby,ibz/)
-    ibswpy(ibx:ibz)  =(/iby,ibx,ibz/)
-    ibswpz(ibx:ibz)  =(/ibz,iby,ibx/)
+    ifluid = 1
+    ifion  = 1
+    imagn  = 1
+    idust  = 1
+    iadiab = 1
+#ifdef IONIZED
+    nuipf = NUPF
+    do iter=1,IONIZED
+      idni(iter)=(iter-1)*nuipf+1
+      imxi(iter)=(iter-1)*nuipf+2
+      imyi(iter)=(iter-1)*nuipf+3
+      imzi(iter)=(iter-1)*nuipf+4
+#ifndef ISO
+      ieni(iter)=(iter-1)*nuipf+5
+#endif /* ISO */
+    enddo
+#endif /* IONIZED */
 
+#ifdef NEUTRAL
+    nunpf = NUPF
+    do iter=1,NEUTRAL
+      idnn(iter)=nui+(iter-1)*nunpf+1
+      imxn(iter)=nui+(iter-1)*nunpf+2
+      imyn(iter)=nui+(iter-1)*nunpf+3
+      imzn(iter)=nui+(iter-1)*nunpf+4
+#ifndef ISO
+      ienn(iter)=nui+(iter-1)*nunpf+5
+#endif /* ISO */
+    enddo
+#endif /* NEUTRAL */
+
+#ifdef MOLECULAR
+    numpf = NUPF
+    do iter=1,MOLECULAR
+      idnm(iter)=nui+nun+(iter-1)*numpf+1
+      imxm(iter)=nui+nun+(iter-1)*numpf+2
+      imym(iter)=nui+nun+(iter-1)*numpf+3
+      imzm(iter)=nui+nun+(iter-1)*numpf+4
+#ifndef ISO
+      ienm(iter)=nui+nun+(iter-1)*numpf+5
+#endif /* ISO */
+    enddo
+#endif /* MOLECULAR */
+
+#ifdef DUST
+    nudpf = 4
+    do iter=1,DUST
+      idnd(iter)=nui+nun+num+(iter-1)*nudpf+1
+      imxd(iter)=nui+nun+num+(iter-1)*nudpf+2
+      imyd(iter)=nui+nun+num+(iter-1)*nudpf+3
+      imzd(iter)=nui+nun+num+(iter-1)*nudpf+4
+    enddo
+#endif /* DUST */
+
+#ifdef COSM_RAYS
+    do iter=1,COSM_RAYS
+      iecr(iter)=nui+nun+num+nud+iter
+    enddo
+#endif /* COSM_RAYS */
+
+
+    allocate(idna(nfluid),imxa(nfluid),imya(nfluid),imza(nfluid))
+    allocate(magn(nfluid),fiond(nfion),fmagn(nfmagn),fdust(ndust),findex(nfluid),fadiab(nadiab))
+    magn=0
+#ifndef ISO
+    allocate(iena(nadiab))
+#endif /* ISO */
+#ifdef IONIZED
+    do iter=1,IONIZED
+#include "arrions.def"
+    ifluid=ifluid+1
+    enddo
+#endif /* IONIZED */
+#ifdef NEUTRAL
+    do iter=1,NEUTRAL
+#include "arrneut.def"
+    ifluid=ifluid+1
+    enddo
+#endif /* NEUTRAL */
+#ifdef MOLECULAR
+    do iter=1,MOLECULAR
+#include "arrmols.def"
+    ifluid=ifluid+1
+    enddo
+#endif /* MOLECULAR */
+#ifdef DUST
+    do iter=1,DUST
+#include "arrdust.def"
+    ifluid=ifluid+1
+    idust=idust+1
+    enddo
+#endif /* DUST */
+    iuswpx(idna)=idna ; iuswpx(imxa)=imxa ; iuswpx(imya)=imya ; iuswpx(imza)=imza
+    iuswpy(idna)=idna ; iuswpy(imxa)=imya ; iuswpy(imya)=imxa ; iuswpy(imza)=imza
+    iuswpz(idna)=idna ; iuswpz(imxa)=imza ; iuswpz(imya)=imya ; iuswpz(imza)=imxa
 #ifndef ISO
     iuswpx(iena) = iena
     iuswpy(iena) = iena
@@ -127,8 +268,12 @@ contains
     iuswpx(iecr) = iecr
     iuswpy(iecr) = iecr
     iuswpz(iecr) = iecr
+#include "arrcray.def"
 #endif /* COSM_RAYS */
 
+    ibswpx(ibx:ibz)  =(/ibx,iby,ibz/)
+    ibswpy(ibx:ibz)  =(/iby,ibx,ibz/)
+    ibswpz(ibx:ibz)  =(/ibz,iby,ibx/)
 
     if((mod(nxd, pxsize) .ne. 0) .or. &
        (mod(nyd, pysize) .ne. 0) .or. &
@@ -198,13 +343,6 @@ contains
 
 #ifdef GRAV
     allocate(gp(nx,ny,nz))
-#ifdef ARMS_POTENTIAL
-    allocate(gp1(nx,ny,nz))
-    allocate(gp2(nx,ny,nz))
-    allocate(gp3(nx,ny,nz))
-    allocate(gp4(nx,ny,nz))
-    allocate(gp5(nx,ny,nz))
-#endif /* ARMS_POTENTIAL */
     allocate(dprof(nz),eprof(nz))
 #endif /* GRAV */
 #ifdef SPLIT
@@ -219,6 +357,9 @@ contains
 !#ifdef COOL_HEAT
     allocate( coolheat_profile(nz))
 !#endif /* COOL_HEAT */
+#if defined COSM_RAYS || defined PRESS_GRAD_EXCH
+    allocate(divvel(nfluid,nx,ny,nz))
+#endif /* COSM_RAYS || PRESS_GRAD_EXCH */
 
   end subroutine arrays_allocate
 
@@ -246,9 +387,6 @@ contains
 #endif /* ~SPLIT */
 #ifdef GRAV
     deallocate(gp)
-#ifdef ARMS_POTENTIAL
-    deallocate(gp1,gp2,gp3,gp4,gp5)
-#endif /* ARMS_POTENTIAL */
     deallocate(dprof,eprof)
 #endif /* GRAV */
 #ifdef SPLIT
@@ -265,13 +403,16 @@ contains
 !#ifdef COOL_HEAT
     deallocate(coolheat_profile)
 !#endif /* COOL_HEAT */
+#if defined COSM_RAYS || defined PRESS_GRAD_EXCH
+    deallocate(divvel)
+#endif /* COSM_RAYS || PRESS_GRAD_EXCH */
 #ifdef KEPLER_SUPPRESSION
     if(allocated(alfsup)) deallocate(alfsup)
     if(allocated(omx0)) deallocate(omx0)
     if(allocated(omy0)) deallocate(omy0)
-	 if(allocated(den0)) deallocate(den0)
 #endif /* KEPLER_SUPPRESSION */
-
+    if(allocated(bndxrar)) deallocate(bndxrar)
+    if(allocated(bndyrar)) deallocate(bndyrar)
     deallocate(outwa,outwb,outwc)
 
   end subroutine arrays_deallocate

@@ -1,5 +1,4 @@
-! $Id$
-#include "piernik.def"
+#include "mhd.def"
 module tv ! split orig
   contains
 
@@ -32,12 +31,12 @@ module tv ! split orig
   end subroutine tvdb
 
   subroutine relaxing_tvd(u,bb,sweep,i1,i2,dx,n,dt)
-    use start,  only : smalld, integration_order,cn
-    use arrays, only : idna,imxa,imya,imza,nu
+    use start,  only : smalld, integration_order,cn,collfaq,maxxyz
+    use arrays, only : idna,imxa,imya,imza,nu,nfluid,x,y,z,imxi,imyi,imzi,idni
     use fluxes
 #ifndef ISO
     use start,  only : smallei
-    use arrays, only : iena,ibx,iby,ibz
+    use arrays, only : nadiab,fadiab,iena,ibx,iby,ibz
 #endif /* ISO */
 #ifdef GRAV
     use gravity, only :grav_pot2accel
@@ -54,12 +53,14 @@ module tv ! split orig
     use arrays, only : z
     use start, only : floor_vz, ceil_vz
 #endif /* VZ_LIMITS */
-#ifdef KEPLER_SUPPRESSION
-    use rotsource, only : kepler_suppression
-#endif /* KEPLER_SUPPRESSION */
 
     implicit none
-    integer :: i1,i2, n, istep
+    integer :: i1,i2, n, istep, ifluid,ifl,jfl
+    
+    real, dimension(maxxyz) :: r1,r2
+    real :: a1
+    integer :: rend
+
     real    :: dt,dx,dtx
     real, dimension(nu,n) :: u,cfr
     real, dimension(3,n)  :: bb
@@ -69,29 +70,25 @@ module tv ! split orig
 #ifdef GRAV
     real, dimension(n)    :: gravl,gravr
     real, dimension(n)    :: dgrp,dgrm,dglp,dglm
-#endif /* GRAV */
-#if defined GRAV || defined SHEAR
-    real, dimension(n)    :: rotfr
-#endif /* GRAV || SHEAR */
-#ifdef SHEAR
-    real, dimension(n)    :: vxr
-#endif /* SHEAR */
-#ifdef KEPLER_SUPPRESSION
-    real, dimension(nu,n) :: Duus
-#endif /* KEPLER_SUPPRESSION */
+    real, dimension(nfluid,nfluid,n) :: flch
+    real, dimension(nfluid,n) :: colls
+           
+  real, dimension(nfluid,n) :: velcoor
     character sweep*6
 
 !locals
-    real, dimension(nu,n) :: w,fr,fl,dfrp,dfrm,dflm,dflp,dulf,durf
+    real, dimension(nu,n) :: w,fr,fl,flux,dfrp,dfrm,dflm,dflp,dulf,durf
     real, dimension(nu,n) :: ul0,ur0,u1,ul1,ur1
 #ifndef ISO
-    real, dimension(n)    :: ekin,eint,emag
+    real, dimension(nadiab,n)    :: ekin,eint
+    real, dimension(n)    :: emag
 #endif /* ISO */
 #ifdef GRAV
     real, dimension(nu,n) :: duls,durs
 #endif /* GRAV */
 #ifdef COSM_RAYS
-    real, dimension(n)    :: divv,decr,gpcr,ecr
+    real, dimension(n)    :: divv,gpcr,tmp,ecr
+    real, dimension(COSM_RAYS,n) :: decr
 #endif /* COSM_RAYS */
 
 
@@ -169,12 +166,14 @@ module tv ! split orig
       call flimiter(gravl,dglp,dglm,1,n)
     endif
 
+    do ifluid=1,nfluid
 #ifndef ISO
-    duls(iena,:)  = gravr*ul0(imxa,:)*dt
-    durs(iena,:)  = gravl*ur0(imxa,:)*dt
+       duls(iena(ifluid),:)  = gravr*ul0(imxa(ifluid),:)*dt
+       durs(iena(ifluid),:)  = gravl*ur0(imxa(ifluid),:)*dt
 #endif /* ISO */
-    duls(imxa,:)  = gravr*ul0(idna,:)*dt
-    durs(imxa,:)  = gravl*ur0(idna,:)*dt
+       duls(imxa(ifluid),:)  = gravr*ul0(idna(ifluid),:)*dt
+       durs(imxa(ifluid),:)  = gravl*ur0(idna(ifluid),:)*dt
+    enddo
     ur1= ur1 + cn(istep)*durs
     ul1= ul1 + cn(istep)*duls
 #endif /* GRAV */
@@ -193,6 +192,69 @@ module tv ! split orig
     endif
 #endif /* VZ_LIMITS */
 
+#ifdef COLLISIONS
+!-----collisions between fluids------
+    select case(sweep)
+       case('xsweep')
+         a1    = y(i1)
+         rend  = size(x)
+         r1(1:rend) = x(:)                            ! r1   max(size(x),size(y),size(z))
+         r2(1:rend) = a1 / (r1(1:rend)*r1(1:rend) + a1 * a1)
+       case('ysweep')
+         a1    = x(i2)
+         rend  = size(y)
+         r1(1:rend) = y(1:rend)
+         r2(1:rend) = a1 / (r1(1:rend)*r1(1:rend) + a1 * a1)
+       case('zsweep')
+         a1    = 1.0
+         rend  = size(z)
+         r1(1:rend) = 0.0
+         r2(1:rend) = 1.0
+    end select
+
+    
+
+    do ifl=1,nfluid
+       do jfl=1,nfluid
+#ifdef COLLS_MODIF
+          velcoor(ifl,:) = ( u1(imxa(ifl),:)*a1 - u1(imya(ifl),:)*r1(:) ) / u1(idna(ifl),:) * r2(:)
+          velcoor(jfl,:) = ( u1(imxa(ifl),:)*a1 - u1(imya(ifl),:)*r1(:) ) / u1(idna(ifl),:) * r2(:)
+!          select case(sweep)
+!             case('xsweep') 
+!                velcoor(ifl,:)= ( u1(imxa(ifl),:)*y(i1) - u1(imya(ifl),:)*x(:) ) / u1(idna(ifl),:) * y(i1) / (x(:)**2+y(i1)**2) 
+!                velcoor(jfl,:)= ( u1(imxa(jfl),:)*y(i1) - u1(imya(jfl),:)*x(:) ) / u1(idna(jfl),:) * y(i1) / (x(:)**2+y(i1)**2)
+!             case('ysweep')
+!                velcoor(ifl,:)= ( u1(imxa(ifl),:)*x(i2) - u1(imya(ifl),:)*y(:) ) / u1(idna(ifl),:) * x(i2) / (y(:)**2+x(i2)**2)
+!                velcoor(jfl,:)= ( u1(imxa(jfl),:)*x(i2) - u1(imya(jfl),:)*y(:) ) / u1(idna(jfl),:) * x(i2) / (y(:)**2+x(i2)**2)
+!             case('zsweep')
+!                velcoor(:,:)=(u1(imxa,:)/u1(idna,:))
+!             case('default')
+!                write(*,*) 'smth wrong with velocities near collisions'
+!          end select
+#endif /* COLLS_MODIF */
+          if(ifl .ne. jfl) then
+             flch(ifl,jfl,:)= u1(idna(ifl),:) * u1(idna(jfl),:) &
+#ifdef COLLS_MODIF
+              *( velcoor(jfl,:) - velcoor(ifl,:) )
+#else /* COLLS_MODIF */
+              *( u1(imxa(jfl),:)/u1(idna(jfl),:) - u1(imxa(ifl),:)/u1(idna(ifl),:))
+#endif /* COLLS_MODIF */
+          else
+             flch(ifl,jfl,:)=0.0
+          endif
+       enddo
+    enddo
+    do ifl=1,nfluid
+       colls(ifl,:)=cn(istep)*collfaq*sum(flch(ifl,:,:),1)
+    enddo
+#ifndef ISO
+    u1(iena,:)=u1(iena,:)+(u1(imxa,:)*colls*dt+0.5*(colls*dt)**2)/u1(idna,:)
+#endif /* ISO */
+    u1(imxa,:)=u1(imxa,:)+colls*dt
+
+!------------------------------------
+#endif /* COLLISIONS */
+          
 #ifdef COSM_RAYS
     select case (sweep)
       case('xsweep')
@@ -203,27 +265,30 @@ module tv ! split orig
         divv = wa(i1,i2,:)
     end select
 
-    decr(:)  = -(gamma_cr-1.)*u1(iecr,:)*divv(:)*dt
-    u1(iecr,:) = u1(iecr,:) + cn(istep)*decr(:)
-    u1(iecr,:) = max(smallecr,u1(iecr,:))
+    ! tylko dla pierwszego binu energetycznego
+    decr(1,:)  = -(gamma_cr-1.)*u1(iecr(1),:)*divv(:)*dt
+    u1(iecr(1),:) = u1(iecr(1),:) + cn(istep)*decr(1,:)
+    u1(iecr(1),:) = max(smallecr,u1(iecr(1),:))
 
-    vx = u1(imxa,:)/u1(idna,:)
-    ecr = u1(iecr,:)
+    vx = u1(imxi(1),:)/u1(idni(1),:)
+    ecr = u1(iecr(1),:)
 
     gpcr(2:n-1) = cr_active*(gamma_cr -1.)*(ecr(3:n)-ecr(1:n-2))/(2.*dx) ; gpcr(1:2)=0.0 ; gpcr(n-1:n) = 0.0
 
 #ifndef ISO
     u1(iena,:) = u1(iena,:) - cn(istep)*u1(imxa,:)/u1(idna,:)*gpcr*dt
 #endif /* ISO */
-    u1(imxa,:) = u1(imxa,:) - cn(istep)*gpcr*dt
+    u1(imxi(1),:) = u1(imxi(1),:) - cn(istep)*gpcr*dt ! tylko dla pierwszego binu energetycznego 
 
 #endif /* COSM_RAYS */
 #ifndef ISO
-    ekin = 0.5*(u1(imxa,:)*u1(imxa,:)+u1(imya,:)*u1(imya,:)+u1(imza,:)*u1(imza,:))/u1(idna,:)
-    emag = 0.5*(bb(ibx,:)*bb(ibx,:) + bb(iby,:)*bb(iby,:) + bb(ibz,:)*bb(ibz,:))
-    eint = u1(iena,:)-ekin-emag
+    ekin = 0.5*(u1(imxa(fadiab),:)*u1(imxa(fadiab),:) &
+               +u1(imya(fadiab),:)*u1(imya(fadiab),:) &
+	       +u1(imza(fadiab),:)*u1(imza(fadiab),:))/u1(idna(fadiab),:)
+    emag = 0.5*(bb(ibx,:)*bb(ibx,:) + bb(iby,:)*bb(iby,:) + bb(ibz,:)*bb(ibz,:)) 
+    eint = u1(iena,:)-ekin-spread(emag,1,nadiab)
     eint = max(eint,smallei)
-    u1(iena,:) = eint+ekin+emag
+    u1(iena,:) = eint+ekin+spread(emag,1,nadiab)
 #endif /* ISO */
 
 #ifdef VZ_LIMITS

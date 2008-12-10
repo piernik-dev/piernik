@@ -1,6 +1,28 @@
 ! $Id$
 #include "piernik.def"
 
+#ifdef IONIZED
+#define NUMBION IONIZED
+#else /* IONIZED */
+#define NUMBION 0
+#endif /* IONIZED */
+#ifdef NEUTRAL
+#define NUMBNEUT NEUTRAL
+#else /* NEUTRAL */
+#define NUMBNEUT 0
+#endif /* NEUTRAL */
+#ifdef MOLECULAR
+#define NUMBMOLEC MOLECULAR
+#else /* MOLECULAR */
+#define NUMBMOLEC 0
+#endif /* MOLECULAR */
+#ifdef DUST
+#define NUMBDUST DUST
+#else /* DUST */
+#define NUMBDUST 0
+#endif /* DUST */
+#define NUMBFLUID NUMBION+NUMBNEUT+NUMBMOLEC+NUMBDUST
+
 module start
 ! Written by: M. Hanasz, January 2006
   use mpi_setup
@@ -12,19 +34,19 @@ module start
   integer :: nzd !< total number of physical cells in z direction
   integer :: nb  !< number of ghost cells of each block
 
-  real :: t  !< time of computation in physical units
-  real :: dt !< current timestep in physical units
-  ! \todo dt_mhd, dt_coolheat, dt_visc should be moved to relevant module
-  real :: dt_mhd        !< temporary variable used to store timestep according to CFL limit
-  real :: dt_coolheat   !< temporary variable used to store timestep according to cooling/heating related limit
-  real :: dt_visc       !< temporary variable used to store timestep according to viscosity related limit
+  real t,dt
+  real dt_mhd, dt_coolheat, dt_visc
+  real collfaq, cfl_colls
+  integer nstep
+  integer nstep_start
 
-  integer :: nstep       !< current step number
-  integer :: nstep_start !< sets initial step number (new run -> 0, restart -> last nstep)
+  real tend
+  integer nend, maxxyz
 
-  real    :: tend !< when t >= tend simulations stops. Parameter that can be set in problem.par
-  integer :: nend !< when nstep >= nend simulations stops. Parameter that can be set in problem.par
-  integer :: maxxyz
+  real :: omega, qshear
+
+  character restart*16, new_id*3
+  integer   nrestart, resdel
 
   ! \todo omega, qshear should be moved to relevant module
   real :: omega  !< Keplerian frequency. Used in shearing box.  Parameter that can be set in problem.par
@@ -44,7 +66,8 @@ module start
 
   real xmin, xmax, ymin, ymax, zmin, zmax
 
-  real :: c_si, gamma, alpha
+  real :: c_si, alpha, tauc
+  real, dimension(NUMBFLUID) :: gamma
 
   real cfl, smalld, smallei, nu_bulk, cfl_visc
 #ifdef VZ_LIMITS
@@ -79,7 +102,7 @@ module start
 
   real  cr_active, gamma_cr, cr_eff, beta_cr, K_cr_paral, K_cr_perp, &
         cfl_cr, amp_cr, smallecr
-  real  dt_cr
+  real  dt_cr, dt_colls, dt_supp
 #ifdef KEPLER_SUPPRESSION
   real  dt_supp
 #endif /* KEPLER_SUPPRESSION */
@@ -97,14 +120,12 @@ module start
 
   integer :: ix,iy,iz
 
-#ifdef SPLIT
 #ifdef ORIG
-  real, dimension(2)  :: cn
+  real, dimension(3,2)  :: cn
 #endif /* ORIG */
 #ifdef SSP
-  real, dimension(2,3)  :: cn
+  real, dimension(3,3)  :: cn
 #endif /* SSP */
-#endif /* SPLIT */
 
 !-------------------------------------------------------------------------------
 contains
@@ -130,11 +151,14 @@ contains
                             min_disk_space_MB, sleep_minutes, sleep_seconds, &
                             user_message_file, system_message_file
   namelist /DOMAIN_LIMITS/ xmin, xmax, ymin, ymax, zmin, zmax
-  namelist /EQUATION_OF_STATE/ c_si, gamma, alpha
+  namelist /EQUATION_OF_STATE/ c_si, gamma, alpha, tauc
   namelist /NUMERICAL_SETUP/  cfl, smalld, smallei, &
 #ifdef VZ_LIMITS
                               floor_vz, ceil_vz, &
 #endif /* VZ_LIMITS */
+#ifdef COLLISIONS
+			      cfl_colls, &
+#endif /* COLLISIONS */
                               integration_order, &
                               dimensions, magnetic, nu_bulk, cfl_visc
 
@@ -244,6 +268,9 @@ contains
     floor_vz  = -1.e99
     ceil_vz   =  1.e99
 #endif /* VZ_LIMITS */
+#if defined COLLISIONS || defined KEPLER_SUPPRESSION
+    cfl_colls = 0.01
+#endif /* COLLISIONS || KEPLER_SUPPRESION */
 
 #ifdef GRAV
     gpt_hdf = 'no'
@@ -480,16 +507,19 @@ contains
       rbuff(54) = zmin
       rbuff(55) = zmax
 
-!  namelist /EQUATION_OF_STATE/ c_si, gamma, alpha
+!  namelist /EQUATION_OF_STATE/ c_si, gamma, alpha, tauc
       rbuff(70) = c_si
-      rbuff(71) = gamma
-      rbuff(72) = alpha
+      rbuff(71) = alpha
+      rbuff(72) = tauc
+      do iv = 1, NUMBFLUID
+        rbuff(72+iv) = gamma(iv)
+      enddo
 
 !  namelist /NUMERICAL_SETUP/  cfl, smalld, smallei,
 !                              flux_limiter, freezing_speed,
 !                              integration_order,
 !                              dimensions, magnetic, nu_bulk, cfl_visc
-!                              floor_vz, ceil_vz
+!                              floor_vz, ceil_vz, cfl_colls
       rbuff(80) = cfl
       rbuff(83) = smalld
       rbuff(84) = smallei
@@ -499,6 +529,9 @@ contains
       rbuff(87) = floor_vz
       rbuff(88) = ceil_vz
 #endif /* VZ_LIMITS */
+#ifdef COLLISIONS
+      rbuff(89) = cfl_colls
+#endif /* COLLISIONS */
 
       cbuff(80) = flux_limiter
       cbuff(81) = freezing_speed
@@ -702,17 +735,20 @@ contains
       zmax                = rbuff(55)
 
 
-!  namelist /EQUATION_OF_STATE/ c_si, gamma, alpha
+!  namelist /EQUATION_OF_STATE/ c_si, gamma, alpha, tauc
 
       c_si                = rbuff(70)
-      gamma               = rbuff(71)
-      alpha               = rbuff(72)
+      alpha               = rbuff(71)
+      tauc                = rbuff(72)
+      do iv=1,NUMBFLUID
+        gamma(iv)         = rbuff(72+iv)
+      enddo
 
 !  namelist /NUMERICAL_SETUP/  cfl, smalld, smallei,
 !                              flux_limiter, freezing_speed,
 !                              integration_order,
 !                              dimensions, magnetic, nu_bulk, cfl_visc
-!                              floor_vz, ceil_vz
+!                              floor_vz, ceil_vz , cfl_colls
 
       cfl                 = rbuff(80)
       smalld              = rbuff(83)
@@ -723,6 +759,9 @@ contains
       floor_vz            = rbuff(87)
       ceil_vz             = rbuff(88)
 #endif /* VZ_LIMITS */
+#ifdef COLLISIONS
+      cfl_colls	          = rbuff(89)
+#endif /* COLLISIONS */
 
 
       flux_limiter        = trim(cbuff(80))
@@ -878,23 +917,22 @@ contains
                                                               ! surface area of the comp. box
 #endif /* GALAXY */
 
-#ifdef SPLIT
 #ifdef ORIG
-  cn(1:2) = (/0.5 , 1./);
+  cn(1:3,1) = (/ 1. , 0.5 , 0.0 /)
+  cn(1:3,2) = (/ 1. , 1.  , 0.0 /)
   if(integration_order .eq. 1) then
-    cn(1) = 1.
+    cn(2,1) = 1.
   endif
 #endif /* ORIG */
 #ifdef SSP
-  cn(1:2,1) = (/ 1.   , 1.   /)
-  cn(1:2,2) = (/ 0.75 , 0.25 /)
-  cn(1:2,3) = (/ 1./3., 2./3./)
+  cn(1:3,1) = (/ 0.   , 1.   , 0.0 /)
+  cn(1:3,2) = (/ 0.75 , 0.25 , 1.0 /)
+  cn(1:3,3) = (/ 1./3., 2./3., 1.0 /)
 
   if(integration_order .eq. 2) then
-    cn(1:2,2) = (/ 0.5 , 0.5 /)
+    cn(1:3,2) = (/ 0.5 , 0.5 , 1.0 /)
   endif
 #endif /* SSP */
-#endif /* SPLIT */
 
 
 !-------------------------

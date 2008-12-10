@@ -4,3 +4,4 @@
    -> when calculating tidal terms, velx is interpolated onto the cell's 
       sides to provide consistency with the scheme                          : relaxing_tvd@split_<solver>_tv.F90
 
+checking merging

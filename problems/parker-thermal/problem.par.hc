@@ -60,13 +60,10 @@
 
  $NUMERICAL_SETUP
     cfl    = 0.9
-    big    = 1.e+50
-    small  = 1.e-50
     smalld = 1.e-4
     smallei= 1.e-3
     tune_zeq     = 1.05
     tune_zeq_bnd = 0.80
-    flux_limiter = 'vanleer'
  /
  
  $GRAVITY

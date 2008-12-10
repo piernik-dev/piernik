@@ -1,0 +1,2 @@
+! $Id$
+    write(*,*) 'cosmic rays on as ', COSM_RAYS ,' bins'

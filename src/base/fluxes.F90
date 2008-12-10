@@ -1,5 +1,7 @@
 ! $Id$
 #include "piernik.def"
+#define SQR(var) ((var)*(var))
+#define SUM_SQR(x,y,z) ( (x)**2+(y)**2+(z)**2 )
 #define RNG 2:n-1
 module fluxes
   implicit none
@@ -13,23 +15,26 @@ module fluxes
     use start, only : csi2
 #endif /* ISO */
     use constants
-    use arrays, only : ibx,iby,ibz,idna,imxa,imya,imza, nu
+    use arrays, only : ibx,iby,ibz,idna,imxa,imya,imza, nu,magn,nfluid,nfmagn,fmagn,nadiab
 #ifndef ISO
-    use arrays, only : iena
+    use arrays, only : iena, fadiab
 #endif /* ISO */
 #ifdef COSM_RAYS
     use arrays, only : iecr
 #endif /* COSM_RAYS */
+#ifdef DUST
+    use arrays, only : fdust
+#endif /* DUST */
+    use allfluxes, only : all_flux
     use time, only : c
     implicit none
-    integer n
+    integer :: n,i, indx
     real, dimension(nu,n)::flux,uu,cfr
     real, dimension(3,n):: bb
+    real, dimension(nfmagn,3,n) :: bbn
 ! locals
-    real, dimension(n) :: vx,vy,vz,ps,p,pmag
-#ifndef OLDLOCALCFR
-    real, dimension(n) :: vt
-#endif /* OLDLOCALCFR */
+    real, dimension(nfmagn,n) :: pmag
+    real, dimension(nfluid,n) :: vx,vy,vz,vt,ps,p
 !#ifdef COSM_RAYS
 !    real, dimension(n) :: pcr
 !#endif /* COSM_RAYS */
@@ -41,72 +46,92 @@ module fluxes
 
     cfr = 0.0
 
-    pmag(RNG)=0.5*( bb(ibx,RNG)**2 + bb(iby,RNG)**2 +bb(ibz,RNG)**2 )
-    vx(RNG)=uu(imxa,RNG)/uu(idna,RNG)
-
-! UWAGA ZMIANA W OBLICZANIU LOKALNEJ PREDKOSCI NA PROBE
-! mh 22-11-07 w problemach z udzialem promieniowania kosmicznego
-! uzycie vx prowadzi do nieduzych oscylacji, a dla vt oscylacji nie widac,
-! wobec tego po krotkim powrocie do vx (v.1.2) przywracam vt (v.1.3)
-
-#ifndef OLDLOCALCFR
-    vy(RNG)=uu(imya,RNG)/uu(idna,RNG)
-    vz(RNG)=uu(imza,RNG)/uu(idna,RNG)
-    vt = sqrt(vx**2 + vy**2 + vz**2)
+#ifdef IONIZED
+    bbn    = spread(bb,1,nfmagn)
+    pmag(:,RNG) = 0.5*SUM_SQR(bbn(:,ibx,RNG),bbn(:,iby,RNG),bbn(:,ibz,RNG))
+#endif /* IONIZED */
+    vx(:,RNG)=uu(imxa,RNG)/uu(idna,RNG)
+#ifdef OLDLOCALCFR
+    vt(:,RNG)=vx(:,RNG)
+#else /* OLDLOCALCFR */
+    vy(:,RNG)=uu(imya,RNG)/uu(idna,RNG)
+    vz(:,RNG)=uu(imza,RNG)/uu(idna,RNG)
+    vt = sqrt(SUM_SQR(vx,vy,vz))
 #endif /* OLDLOCALCFR */
 
 #ifdef ISO
-    p(RNG) = csi2*uu(idna,RNG)
-    ps(RNG)= p(RNG) + pmag(RNG)
+    p(:,RNG) = csi2*uu(idna,RNG)
+    ps(:,RNG)= p(:,RNG)
+#ifdef IONIZED
+    ps(fmagn,RNG)= p(fmagn,RNG) + pmag(fmagn,RNG) 
+#endif /* IONIZED */
 #else /* ISO */
-    ps(RNG)=(uu(iena,RNG) - &
-      0.5*( uu(imxa,RNG)**2 + uu(imya,RNG)**2 + uu(imza,RNG)**2 ) &
-          / uu(idna,RNG))*(gamma-1.0) + (2.0-gamma)*pmag(RNG)
-    p(RNG) = ps(RNG)- pmag(RNG)
+    ps(fadiab,RNG)=(uu(iena(fadiab),RNG) - &
+       0.5*( uu(imxa(fadiab),RNG)**2 + &
+             uu(imya(fadiab),RNG)**2 + &
+             uu(imza(fadiab),RNG)**2) &
+       / uu(idna(fadiab),RNG))
+    do i=1,nadiab
+      indx = fadiab(i)
+      ps(indx,:) = ps(indx,:) * (gamma(indx)-1.0d0)
+    enddo
+    p(fadiab,RNG) = ps(fadiab,RNG)
+#ifdef IONIZED
+    do i=1,nfmagn
+      indx = fmagn(i)
+      ps(indx,RNG)= ps(indx,RNG) + (2.0d0 - gamma(indx))*pmag(indx,RNG)
+    enddo
+    p(fmagn,RNG) = ps(fmagn,RNG)- pmag(fmagn,RNG)
+#endif /* IONIZED */
 #endif /* ISO */
-!#ifdef COSM_RAYS
-!    pcr = (gamma_cr-1)*uu(iecr,RNG)
-!#endif COSM_RAYS
+#ifdef DUST
+    ps(fdust,RNG)=0.0
+    p(fdust,RNG) =0.0
+#endif /* DUST */
     flux(idna,RNG)=uu(imxa,RNG)
-    flux(imxa,RNG)=uu(imxa,RNG)*vx(RNG)+ps(RNG) - bb(ibx,RNG)**2
-    flux(imya,RNG)=uu(imya,RNG)*vx(RNG)-bb(iby,RNG)*bb(ibx,RNG)
-    flux(imza,RNG)=uu(imza,RNG)*vx(RNG)-bb(ibz,RNG)*bb(ibx,RNG)
+    flux(imxa,RNG)=uu(imxa,RNG)*vx(:,RNG)+ps(:,RNG)
+    flux(imya,RNG)=uu(imya,RNG)*vx(:,RNG)
+    flux(imza,RNG)=uu(imza,RNG)*vx(:,RNG)
+#ifdef IONIZED
+    flux(imxa(fmagn),RNG)=flux(imxa(fmagn),RNG)- SQR(bbn(fmagn,ibx,RNG))
+    flux(imya(fmagn),RNG)=flux(imya(fmagn),RNG) - bbn(fmagn,iby,RNG)*bbn(fmagn,ibx,RNG)
+    flux(imza(fmagn),RNG)=flux(imza(fmagn),RNG) - bbn(fmagn,ibz,RNG)*bbn(fmagn,ibx,RNG)
+#endif /* IONIZED */
 #ifndef ISO
-    flux(iena,RNG)=(uu(iena,RNG)+ps(RNG))*vx(RNG)-bb(ibx,RNG)*(bb(ibx,RNG)*uu(imxa,RNG) &
-                +bb(iby,RNG)*uu(imya,RNG)+bb(ibz,RNG)*uu(imza,RNG))/uu(idna,RNG)
+    flux(iena,RNG)=(uu(iena,RNG)+ps(:,RNG))*vx(:,RNG)
+#ifdef IONIZED
+    flux(iena(fmagn),RNG)=flux(iena(fmagn),RNG) -bbn(fmagn,ibx,RNG) &
+                           *(uu(imxa(fmagn),RNG)*bbn(fmagn,ibx,RNG) &
+                            +uu(imya(fmagn),RNG)*bbn(fmagn,iby,RNG) &
+                            +uu(imza(fmagn),RNG)*bbn(fmagn,ibz,RNG))/uu(idna(fmagn),RNG)
+#endif /* IONIZED */
 #endif /* ISO */
-#ifdef COSM_RAYS
-    flux(iecr,RNG)= uu(iecr,RNG)*vx(RNG)
-#endif /* COSM_RAYS */
 #ifdef LOCAL_FR_SPEED
 
 !       The freezing speed is now computed locally (in each cell)
 !       as in Trac & Pen (2003). This ensures much sharper shocks,
 !       but sometimes may lead to numerical instabilities
-#ifdef ISO
-! UWAGA ZMIANA W OBLICZANIU LOKALNEJ PREDKOSCI NA PROBE
-#ifdef OLDLOCALCFR
-    cfr(1,RNG) = abs(vx(RNG)) &
-#else /* OLDLOCALCFR */
-    cfr(1,RNG) = abs(vt(RNG)) &
-#endif /* OLDLOCALCFR */
-               + max(sqrt( abs(2.0*pmag(RNG) + p(RNG))/uu(idna,RNG)),small)
-#else /* ISO */
-! UWAGA ZMIANA W OBLICZANIU LOKALNEJ PREDKOSCI NA PROBE
-#ifdef OLDLOCALCFR
-    cfr(1,RNG) = abs(vx(RNG)) &
-#else /* OLDLOCALCFR */
-    cfr(1,RNG) = abs(vt(RNG)) &
-#endif /* OLDLOCALCFR */
-               + max(sqrt( abs(2.0*pmag(RNG) + gamma*p(RNG) &
-!#ifdef COSM_RAYS
-!                                                   + gamma_cr*pcr(RNG) &
-!#endif COSM_RAYS
-                )/uu(idna,RNG)),small)
+#ifndef ISO
+    do i=1,nadiab
+      indx = fadiab(i)
+      p(indx,RNG) = gamma(indx)*p(fadiab(indx),RNG) ! UWAGA : przy ewentualnym dalszym korzystaniu z p
+    enddo
 #endif /* ISO */
-    cfr(1,1) = cfr(1,2)
-    cfr(1,n) = cfr(1,n-1)
-    cfr = spread(cfr(1,:),1,nu)
+    p(fmagn,RNG)= p(fmagn,RNG)+ 2.0 * pmag(fmagn,RNG)  ! UWAGA : przy ewentualnym dalszym korzystaniu z p
+    cfr(idna,RNG) = abs(vt(:,RNG))+max(sqrt(abs(p(:,RNG))/uu(idna,RNG)),small)
+    cfr(idna,1) = cfr(idna,2)
+    cfr(idna,n) = cfr(idna,n-1)
+    cfr(imxa,:) = cfr(idna,:)
+    cfr(imya,:) = cfr(idna,:)
+    cfr(imza,:) = cfr(idna,:)
+#ifndef ISO
+    cfr(iena(fadiab),:)=cfr(idna(fadiab),:)
+#endif /* ISO */
+    call all_flux(flux,cfr,uu,bb,n)
+#ifdef COMMONCFR
+    cfr(1,:) = maxval(cfr(:,:),DIM=1)
+    cfr(:,:) = spread(cfr(1,:),DIM=1,NCOPIES=nu)
+#endif /* COMMONCFR */
 #endif /* LOCAL_FR_SPEED */
 #ifdef GLOBAL_FR_SPEED
 !       The freezing speed is now computed globally
@@ -149,5 +174,65 @@ module fluxes
 
     return
   end subroutine flimiter
+
+  subroutine flux_limit(fr,fl,m,n)
+    use start, only : istep
+
+    implicit none
+    integer             :: m,n
+    real,dimension(m,n) :: fr,fl,dfrp,dfrm,dflp,dflm
+
+#ifdef ORIG
+    if(istep == 2) then
+      dfrp(:,1:n-1) = 0.5*(fr(:,2:n) - fr(:,1:n-1)); dfrp(:,n) = dfrp(:,n-1)
+      dfrm(:,2:n)   = dfrp(:,1:n-1);                 dfrm(:,1) = dfrm(:,2)
+      call flimiter(fr,dfrm,dfrp,m,n)
+
+      dflp(:,1:n-1) = 0.5*(fl(:,1:n-1) - fl(:,2:n)); dflp(:,n) = dflp(:,n-1)
+      dflm(:,2:n)   = dflp(:,1:n-1);                 dflm(:,1) = dflm(:,2)
+      call flimiter(fl,dflm,dflp,m,n)
+    endif
+#endif /* ORIG */
+#ifdef SSP
+      dfrp(:,1:n-1) = 0.5*(fr(:,2:n) - fr(:,1:n-1)); dfrp(:,n) = dfrp(:,n-1)
+      dfrm(:,2:n)   = dfrp(:,1:n-1);                 dfrm(:,1) = dfrm(:,2)
+      call flimiter(fr,dfrm,dfrp,m,n)
+
+      dflp(:,1:n-1) = 0.5*(fl(:,1:n-1) - fl(:,2:n)); dflp(:,n) = dflp(:,n-1)
+      dflm(:,2:n)   = dflp(:,1:n-1);                 dflm(:,1) = dflm(:,2)
+      call flimiter(fl,dflm,dflp,m,n)
+#endif /* SSP */
+
+  end subroutine flux_limit
+
+  subroutine grav_limit(gravr,gravl,n)
+   use start, only : istep
+
+   implicit none
+   integer             :: n
+   real,dimension(n)   :: gravr,gravl,dgrp,dgrm,dglp,dglm
+
+#ifdef ORIG
+    if(istep == 2) then
+      dgrp(1:n-1) = 0.5*(gravr(1:n-1) - gravr(2:n));  dgrp(n) = dgrp(n-1)
+      dgrm(2:n) = dgrp(1:n-1)                      ;  dgrm(1) = dgrm(2)
+      call flimiter(gravr,dgrm,dgrp,1,n)
+
+      dglp(1:n-1) = 0.5*(gravl(2:n) - gravl(1:n-1));  dglp(n) = dglp(n-1)
+      dglm(2:n)   = dglp(1:n-1)                    ;  dglm(1) = dglm(2)
+      call flimiter(gravl,dglm,dglp,1,n)
+    endif
+#endif /* ORIG */
+#ifdef SSP
+      dgrp(1:n-1) = 0.5*(gravr(1:n-1) - gravr(2:n));  dgrp(n) = dgrp(n-1)
+      dgrm(2:n) = dgrp(1:n-1)                      ;  dgrm(1) = dgrm(2)
+      call flimiter(gravr,dgrm,dgrp,1,n)
+
+      dglp(1:n-1) = 0.5*(gravl(2:n) - gravl(1:n-1));  dglp(n) = dglp(n-1)
+      dglm(2:n)   = dglp(1:n-1)                    ;  dglm(1) = dglm(2)
+      call flimiter(gravl,dglm,dglp,1,n)
+#endif /* SSP */
+
+  end subroutine grav_limit
 
 end module fluxes

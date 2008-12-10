@@ -185,7 +185,7 @@ module sn_distr
    subroutine add_explosion(snpos,angles,A)
       use arrays, only: nx,ny,nz,x,y,z,nxb,nyb,nzb,xdim,ydim,zdim,dl,u
       use grid, only: xminb,xmaxb,yminb,ymaxb,zminb,zmaxb,dx,dy,dz,Lx,Ly,Lz
-      use start, only: r0sn,nb,add_mass,add_ener,add_encr,add_magn
+      use start, only: r0sn,nb,add_mass,add_ener,add_encr
       use constants
 #ifdef COSM_RAYS
       use arrays, only : iecr
@@ -270,16 +270,25 @@ module sn_distr
 #endif /* VERBOSE */
 #ifdef DIPOLS
 #ifndef DIP9
-               if(add_magn == 'yes') call magn_multipole_sn(angles,snpos,A)
+                  call magn_multipole_sn(angles,snpos,A)
 #endif /* DIP9 */
 #endif /* DIPOLS */
             endif
          endif
       endif
 #ifdef DIP9
-        
-      if(add_magn == 'yes') call magn_multipole_sn(angles,snpos,A)
+      if((snpos(1) .ge. xminb-0.25*Lx) .and. &
+         (snpos(1) .le. xmaxb+0.25*Lx)) then
+         if((snpos(2) .ge. yminb-0.25*Ly) .and. &
+            (snpos(2) .le. ymaxb+0.25*Ly)) then
+            if((snpos(3) .ge. zminb-0.25*Lz) .and. &
+               (snpos(3) .le. zmaxb+0.25*Lz))then
 
+                  call magn_multipole_sn(angles,snpos,A)
+
+            endif
+         endif
+      endif
 #endif /* DIP9 */
       return
    end subroutine add_explosion

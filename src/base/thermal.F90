@@ -32,22 +32,22 @@ contains
 
 !--------------------------------------------------------------------------
 
-  subroutine cool_heat (sweep, i1, i2, n, dens, eint,  esrc)
+  subroutine cool_heat (sweep, i1, i2, n, dens, eint,  esrc, ifl)
 
     implicit none
     character, intent(in) :: sweep*6
-    integer,intent(in)    :: n, i1, i2
+    integer,intent(in)    :: n, i1, i2, ifl
     real, dimension(n),intent(in) :: dens, eint
     real, dimension(n) :: cfunc, hfunc
     real, dimension(n),intent(out) :: esrc
     real, dimension(n) :: temp
 
-      temp(:)  = 0.0
+      temp(:) = 0.0
       cfunc(:) = 0.0
       hfunc(:) = 0.0
       esrc(:)  = 0.0
 
-      temp = (gamma-1) * hydro_mass / k_B * eint / dens
+      temp = (gamma(ifl)-1) * hydro_mass / k_B * eint / dens
 
       call cool(n, temp, cfunc)
       cfunc = cfunc / chcf
@@ -207,7 +207,7 @@ contains
     real eint_src_min_sweep,eint_src_max_sweep
     real, dimension(nz) :: eint, dens, eint_src
     integer loc_dt_cool3(1), loc_dt_heat3(1)
-    integer i,j
+    integer i,j, jfl
 
     real dt_coolheat_all, dt_coolheat_proc
 
@@ -215,12 +215,14 @@ contains
     eint_src_max = 0.0
     eint_src_min = 0.0
 
+    jfl = 1
     do j=js,je
       do i=is,ie
-        dens = u(idna,i,j,:)
-        eint = u(iena,i,j,:)-sum(u(imxa:imza,i,j,:)**2,1)/u(idna,i,j,:)/2-sum(b(:,i,j,:)**2,1)/2
+        dens = u(idna(jfl),i,j,:)
+        eint = u(iena(jfl),i,j,:)-sum(u(imxa(jfl):imza(jfl),i,j,:)**2,1)/u(idna(jfl),i,j,:)/2 &
+	     -sum(b(:,i,j,:)**2,1)/2
 
-        call cool_heat ('zsweep', i, j, nz, dens, eint,  eint_src)
+        call cool_heat ('zsweep', i, j, nz, dens, eint,  eint_src, jfl)
 
         eint_src_min_sweep = MINVAL(eint_src(nb+1:nb+nzb)/eint(nb+1:nb+nzb))
         eint_src_max_sweep = MAXVAL(eint_src(nb+1:nb+nzb)/eint(nb+1:nb+nzb))
@@ -262,16 +264,17 @@ contains
 
     implicit none
 
+    integer ifl
     real, allocatable   :: temp(:,:,:),dtemp(:,:,:)
     allocate (temp(nx,ny,nz),dtemp(nx,ny,nz))
 
-!    temp = (gamma-1) * hydro_mass / k_B * eint / dens
+!    temp = (gamma(ifl)-1) * hydro_mass / k_B * eint / dens
 !    dtemp = (eoshift(temp,1) - temp)/dx(1,:)
 !    flux_heat = -1.5e-5*K_heatcond * dtemp
 !    eint=eint-(flux_heat-eoshift(flux_heat,shift=-1,boundary=big))/dx(1,:)*dt
 
 ! Temperature
-    temp = (gamma-1) * hydro_mass / k_B * (  &
+    temp = (gamma(ifl)-1) * hydro_mass / k_B * (  &
            u(5,:,:,:)  - 0.5*( u(2,:,:,:)*u(2,:,:,:) &
                               +u(3,:,:,:)*u(3,:,:,:) &
                               +u(4,:,:,:)*u(4,:,:,:))/u(1,:,:,:) &

@@ -18,7 +18,7 @@
   integer               :: comm, comm3d
   integer, dimension(3) :: psize, pcoords, coords
   logical               :: periods(3), reorder
-  integer ::   procxl, procxr, procyl, procyr, proczl, proczr, procxyl, procyxl
+  integer ::   procxl, procxr, procyl, procyr, proczl, proczr, procxyl, procyxl, procxyr, procyxr
   integer ::   pxleft, pxright, pyleft, pyright, pzleft, pzright
 
   integer,   parameter             :: buffer_dim=200
@@ -256,6 +256,22 @@
          procyxl = MPI_PROC_NULL
        endif
     endif
+
+    if(bnd_xr(1:3) .eq. 'cor' .and. bnd_yr(1:3) .eq. 'cor' ) then
+       if(pcoords(1) .eq. psize(1)-1 .and. pcoords(2) .lt. psize(2)-1) then
+         coords = (/pcoords(2),pcoords(1),pcoords(3)/)
+         call MPI_Cart_rank(comm3d,coords,procxyr,ierr)
+       else
+         procxyr = MPI_PROC_NULL
+       endif
+       if(pcoords(2) .eq. psize(2)-1 .and. pcoords(1) .lt. psize(2)-1 ) then
+         coords = (/pcoords(2),pcoords(1),pcoords(3)/)
+         call MPI_Cart_rank(comm3d,coords,procyxr,ierr)
+       else
+         procyxr = MPI_PROC_NULL
+       endif
+    endif
+
 
 #ifdef SHEAR
 

@@ -1,0 +1,92 @@
+ $DOMAIN_SIZES
+    nxd = 100
+    nyd = 100
+    nzd = 100
+ /  
+
+ $MPI_BLOCKS
+    pxsize = 1
+    pysize = 1
+    pzsize = 2
+
+ $START_CONTROL
+ /
+
+ $RESTART_CONTROL
+    restart  = 'last'
+    new_id   = ''
+    nrestart = 0
+    resdel   = 2
+ /
+
+ $END_CONTROL
+    tend   = 10.0e4
+    nend   = 100000 
+ /
+
+ $OUTPUT_CONTROL
+    dt_hdf  = 5.0
+    dt_res  = 1.0
+    dt_log  = 0.001
+    dt_tsl  = 0.00001
+    vars(1) = 'dens'
+    vars(2) = 'velx'
+    vars(3) = 'vely'
+    vars(4) = 'velz'
+    vars(5) = 'ener'
+    domain  = 'phys_domain'
+ / 
+
+ $BOUNDARIES
+    bnd_xl = 'out'  
+    bnd_xr = 'out'  
+    bnd_yl = 'out'  
+    bnd_yr = 'out'  
+    bnd_zl = 'out'  
+    bnd_zr = 'out'
+ /
+
+ $DOMAIN_LIMITS
+    xmin   =-2.0e2
+    xmax   = 2.0e2
+    ymin   =-2.0e2
+    ymax   = 2.0e2
+    zmin   =-2.0e2
+    zmax   = 2.0e2
+ /
+
+ $EQUATION_OF_STATE
+    c_si   = 7.0
+    alpha  = 0.0
+ /  
+
+ $NUMERICAL_SETUP
+    cfl    = 0.5
+    smalld = 1.e-8
+    smallei= 1.e-8
+    integration_order = 3
+    magnetic = 'no'
+    dimensions = '3d'
+ /
+ 
+ $GRAVITY
+ /
+ 
+ $THERMAL
+ /
+ 
+ $RESISTIVITY
+ /
+
+ $PROBLEM_CONTROL
+    problem_name ='dustfronts'
+    run_id  =  'tst'
+    rhoa    = 2.0e-8
+    rhol    = 2.0e-1
+    rhor    = 3.0e-1
+    distl   = 50.0
+    distr   = 60.0
+    vxl     = 100.0
+    vxr     = 100.0
+    mtr      = 10
+/

@@ -61,32 +61,40 @@ subroutine mhdstep
       t=t+dt
 
 #ifdef SHEAR
-      call yshift(t)
+      call yshift(t,dt)
+      call bnd_u('xdim')
+      call bnd_u('ydim')
 #endif /* SHEAR */
 #ifdef SELF_GRAV
       call poisson
 #endif /* SELF_GRAV */
 
 !------------------- X->Y->Z ---------------------
+#ifndef ONLYZSWEEP
       call fluidx
       if(magfield) call magfieldbyzx
 #ifdef COSM_RAYS
       call cr_diff_x
 #endif /* COSM_RAYS */
 #ifdef DEBUG
+      syslog = system('echo -n sweep x')
       call write_hdf
       nhdf = nhdf + 1
 #endif /* DEBUG */
+#endif /* ONLYZSWEEP */
 
+#ifndef ONLYZSWEEP
       call fluidy
       if(magfield) call magfieldbzxy
 #ifdef COSM_RAYS
       call cr_diff_y
 #endif /* COSM_RAYS */
 #ifdef DEBUG
+      syslog = system('echo -n sweep y')
       call write_hdf
       nhdf = nhdf + 1
 #endif /* DEBUG */
+#endif /* ONLYZSWEEP */
 
     if(dimensions .eq. '3d') then
       call fluidz
@@ -95,6 +103,7 @@ subroutine mhdstep
       call cr_diff_z
 #endif  /* COSM_RAYS */
 #ifdef DEBUG
+      syslog = system('echo -n sweep z')
       call write_hdf
       nhdf = nhdf + 1
 #endif /* DEBUG */
@@ -108,17 +117,11 @@ subroutine mhdstep
 #endif /* SNE_DISTR */
 #endif /* SN_SRC */
 
-#ifdef SNE_DISTR
-      call supernovae_distribution
-#ifdef DEBUG
-      call write_hdf
-      nhdf = nhdf + 1
-#endif /* DEBUG */
-#endif /* SNE_DISTR */
-
       t=t+dt
 #ifdef SHEAR
-      call yshift(t)
+      call yshift(t,dt)
+      call bnd_u('xdim')
+      call bnd_u('ydim')
 #endif /* SHEAR */
 
 #ifdef SELF_GRAV
@@ -136,26 +139,46 @@ subroutine mhdstep
       if(magfield) call magfieldbxyz
       call fluidz
 #ifdef DEBUG
+      syslog = system('echo -n sweep z')
       call write_hdf
       nhdf = nhdf + 1
 #endif /* DEBUG */
     endif
 
+#ifndef ONLYZSWEEP
 #ifdef COSM_RAYS
       call cr_diff_y
 #endif /* COSM_RAYS */
       if(magfield) call magfieldbzxy
       call fluidy
 #ifdef DEBUG
+      syslog = system('echo -n sweep y')
       call write_hdf
       nhdf = nhdf + 1
 #endif /* DEBUG */
+#endif /* ONLYZSWEEP */
 
+#ifndef ONLYZSWEEP
 #ifdef COSM_RAYS
       call cr_diff_x
 #endif /* COSM_RAYS */
       if(magfield) call magfieldbyzx
       call fluidx
+#ifdef DEBUG
+      syslog = system('echo -n sweep x')
+      call write_hdf
+      nhdf = nhdf + 1
+#endif /* DEBUG */
+#endif /* ONLYZSWEEP */
+
+#ifdef SNE_DISTR
+      call supernovae_distribution
+#ifdef DEBUG
+      syslog = system('echo -n sne_dis')
+      call write_hdf
+      nhdf = nhdf + 1
+#endif /* DEBUG */
+#endif /* SNE_DISTR */
 
 end subroutine mhdstep
 

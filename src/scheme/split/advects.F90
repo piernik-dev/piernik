@@ -4,21 +4,24 @@ module advects    ! split advects
   contains
   subroutine advectby_x
     use start, only  : dimensions,dt
-    use arrays, only : b,u,wa,nx,ny,nz,idna,imxa,iby
+    use arrays, only : b,u,wa,nx,ny,nz,idna,imxa,iby,magn,nfluid
     use grid, only   : dx
     use tv, only     : tvdb
     use mag_boundaries, only : bnd_emf
     implicit none
 
     real, dimension(nx) :: vxby,by_x,vx
-    integer                j,k,jm
+    integer                j,k,jm,ifluid
 
     vxby = 0.0
     
     do k=1,nz
       do j=2,ny
         jm=j-1
-        vx=(u(imxa,:,jm,k)+u(imxa,:,j,k))/(u(idna,:,jm,k)+u(idna,:,j,k))
+	vx=0.0
+	do ifluid=1,nfluid
+        if(magn(ifluid) .eq. 1) vx=(u(imxa(ifluid),:,jm,k)+u(imxa(ifluid),:,j,k))/(u(idna(ifluid),:,jm,k)+u(idna(ifluid),:,j,k))
+	enddo
         vx(2:nx-1)=(vx(1:nx-2) + vx(3:nx) + 2.0*vx(2:nx-1))*0.25
         vx(1)  = vx(2)
         vx(nx) = vx(nx-1)
@@ -40,21 +43,24 @@ module advects    ! split advects
 
   subroutine advectbz_x
     use start, only  : dimensions,dt
-    use arrays, only : b,u,wa,nx,ny,nz,idna,imxa,ibz
+    use arrays, only : b,u,wa,nx,ny,nz,idna,imxa,ibz,magn,nfluid
     use grid, only   : dx
     use tv, only     : tvdb
     use mag_boundaries, only : bnd_emf
 
     implicit none
     real, dimension(nx) :: vxbz,bz_x,vx
-    integer                j,k,km
+    integer                j,k,km,ifluid
 
     vxbz = 0.0
 
     do k=2,nz
       km=k-1
       do j=1,ny
-        vx=(u(imxa,:,j,km)+u(imxa,:,j,k))/(u(idna,:,j,km)+u(idna,:,j,k))
+        vx=0.0
+	do ifluid=1,nfluid
+        if(magn(ifluid) .eq. 1) vx=(u(imxa(ifluid),:,j,km)+u(imxa(ifluid),:,j,k))/(u(idna(ifluid),:,j,km)+u(idna(ifluid),:,j,k))
+	enddo
         vx(2:nx-1)=(vx(1:nx-2) + vx(3:nx) + 2.0*vx(2:nx-1))*0.25
         vx(1)  = vx(2)
         vx(nx) = vx(nx-1)
@@ -76,21 +82,26 @@ module advects    ! split advects
 
   subroutine advectbz_y
     use start, only  : dimensions,dt
-    use arrays, only : b,u,wa,nx,ny,nz,idna,imya,ibz
+    use arrays, only : b,u,wa,nx,ny,nz,idna,imya,ibz,magn,nfluid
     use grid, only   : dy
     use tv, only     : tvdb
     use mag_boundaries, only : bnd_emf
 
     implicit none
     real, dimension(ny)   :: vybz,bz_y,vy
-    integer                  i,k,km
+    integer                  i,k,km,ifluid
 
     vybz = 0.0
 
     do k=2,nz
       km=k-1
       do i=1,nx  
-        vy=(u(imya,i,:,km)+u(imya,i,:,k))/(u(idna,i,:,km)+u(idna,i,:,k))
+        vy=0.0
+        do ifluid=1,nfluid
+          if(magn(ifluid) .eq. 1)  then 
+              vy=vy+(u(imya(ifluid),i,:,km)+u(imya(ifluid),i,:,k))/(u(idna(ifluid),i,:,km)+u(idna(ifluid),i,:,k))
+          endif
+        enddo
         vy(2:ny-1)=(vy(1:ny-2) + vy(3:ny) + 2.0*vy(2:ny-1))*0.25
         vy(1)  = vy(2)
         vy(ny) = vy(ny-1)
@@ -112,21 +123,24 @@ module advects    ! split advects
 
   subroutine advectbx_y
     use start, only  : dimensions,dt
-    use arrays, only : b,u,wa,nx,ny,nz,idna,imya,ibx
+    use arrays, only : b,u,wa,nx,ny,nz,idna,imya,ibx,magn,nfluid
     use grid, only   : dy
     use tv, only     : tvdb
     use mag_boundaries, only : bnd_emf
 
     implicit none
     real, dimension(ny) :: vybx,bx_y,vy
-    integer                k,i,im
+    integer                k,i,im,ifluid
 
     vybx = 0.0
 
     do k=1,nz
       do i=2,nx
         im=i-1
-        vy=(u(imya,im,:,k)+u(imya,i,:,k))/(u(idna,im,:,k)+u(idna,i,:,k))
+        vy=0.0
+	do ifluid=1,nfluid
+	if(magn(ifluid) .eq. 1) vy=(u(imya(ifluid),im,:,k)+u(imya(ifluid),i,:,k))/(u(idna(ifluid),im,:,k)+u(idna(ifluid),i,:,k))
+	enddo
         vy(2:ny-1)=(vy(1:ny-2) + vy(3:ny) + 2.0*vy(2:ny-1))*0.25
         vy(1)  = vy(2)
         vy(ny) = vy(ny-1)
@@ -148,21 +162,24 @@ module advects    ! split advects
 
   subroutine advectbx_z
     use start, only  : dimensions,dt
-    use arrays, only : b,u,wa,nx,ny,nz,idna,imza,ibx
+    use arrays, only : b,u,wa,nx,ny,nz,idna,imza,ibx,magn,nfluid
     use grid, only   : dz
     use tv, only     : tvdb
     use mag_boundaries, only : bnd_emf
 
     implicit none
     real, dimension(nz)  :: vzbx,bx_z,vz
-    integer                 j,i,im
+    integer                 j,i,im,ifluid
 
     vzbx = 0.0
 
     do j=1,ny
       do i=2,nx
         im=i-1
-        vz=(u(imza,im,j,:)+u(imza,i,j,:))/(u(idna,im,j,:)+u(idna,i,j,:))
+	vz=0.0
+	do ifluid=1,nfluid
+        if(magn(ifluid) .eq. 1) vz=(u(imza(ifluid),im,j,:)+u(imza(ifluid),i,j,:))/(u(idna(ifluid),im,j,:)+u(idna(ifluid),i,j,:))
+	enddo
         vz(2:nz-1)=(vz(1:nz-2) + vz(3:nz) + 2.0*vz(2:nz-1))*0.25
         vz(1)  = vz(2)
         vz(nz) = vz(nz-1)
@@ -184,21 +201,24 @@ module advects    ! split advects
 
   subroutine advectby_z
     use start, only  : dimensions,dt
-    use arrays, only : b,u,wa,nx,ny,nz,idna,imza,iby
+    use arrays, only : b,u,wa,nx,ny,nz,idna,imza,iby,magn,nfluid
     use grid, only   : dz
     use tv, only     : tvdb
     use mag_boundaries, only : bnd_emf
     
     implicit none
     real, dimension(nz)  :: vzby,by_z,vz
-    integer                 i,j,jm
+    integer                 i,j,jm,ifluid
 
     vzby = 0.0
 
     do j=2,ny
       jm=j-1
       do i=1,nx
-        vz=(u(imza,i,jm,:)+u(imza,i,j,:))/(u(idna,i,jm,:)+u(idna,i,j,:))
+        vz=0.0
+	do ifluid=1,nfluid
+	if(magn(ifluid) .eq. 1) vz=(u(imza(ifluid),i,jm,:)+u(imza(ifluid),i,j,:))/(u(idna(ifluid),i,jm,:)+u(idna(ifluid),i,j,:))
+	enddo
         vz(2:nz-1)=(vz(1:nz-2) + vz(3:nz) + 2.0*vz(2:nz-1))*0.25
         vz(1)  = vz(2)
         vz(nz) = vz(nz-1)

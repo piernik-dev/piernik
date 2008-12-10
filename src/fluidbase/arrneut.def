@@ -1,0 +1,24 @@
+! $Id$
+    idna(ifluid)=idnn(iter)
+    imxa(ifluid)=imxn(iter)
+    imya(ifluid)=imyn(iter)
+    imza(ifluid)=imzn(iter)
+
+    aneut((iter-1)*nunpf+1)=idnn(iter)
+    aneut((iter-1)*nunpf+2)=imxn(iter)
+    aneut((iter-1)*nunpf+3)=imyn(iter)
+    aneut((iter-1)*nunpf+4)=imzn(iter)
+
+    findex(ifluid)=nunpf
+
+#ifdef ISO
+    fluidtype = 'isothermal'
+    gamma(ifluid) = 1.0
+#else /* ISO */
+    iena(ifluid)=ienn(iter)
+    aneut((iter-1)*nunpf+5)=ienn(iter)
+    fadiab(iadiab)=ifluid
+    iadiab=iadiab+1
+    fluidtype = 'adiabatic'
+#endif /* ISO */
+    write(*,'(a6,i2,a11,a10)') 'fluid ',ifluid,' neutral   ',fluidtype

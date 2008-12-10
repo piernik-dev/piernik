@@ -325,8 +325,8 @@ module sn_sources
       use constants, only : pi
       implicit none
       real :: rand(2)
-      real :: rnx,rny,rnz               !! Points position in cartesian coordinates
-      real, dimension(2) :: rand_angles !! Latidue and longitude
+      real :: rnx,rny,rnz               !> Point's position in cartesian coordinates
+      real, dimension(2) :: rand_angles !> Latidue and longitude
 
       call random_number(rand)
       rnz = (1.0-2.0*rand(1))
@@ -337,6 +337,12 @@ module sn_sources
 
    end function rand_angles
 
+!=======================================================================
+!
+!      \\\\\\\         B E G I N   S U B R O U T I N E S        ///////
+!      ///////    F R O M   N U M E R I C A L   R E C I P E S   \\\\\\\
+!
+!=======================================================================
 ! idum and rsq variables were moved out due to being unused
 
    function gasdev(x,y)
@@ -371,4 +377,10 @@ module sn_sources
       return
    end function gasdev
 
+!=======================================================================
+!
+!      \\\\\\\          E N D   S U B R O U T I N E S           ///////
+!      ///////    F R O M   N U M E R I C A L   R E C I P E S   \\\\\\\
+!
+!=======================================================================
 end module sn_sources

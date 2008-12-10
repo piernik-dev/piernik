@@ -52,6 +52,9 @@ module dataio
 #ifdef COSM_RAYS
   real encr_min, encr_max
 #endif /* COSM_RAYS */
+#ifdef KEPLER_SUPPRESSION
+  real asupp_min, asupp_max
+#endif /* KEPLER_SUPPRESSION */
 
 
 
@@ -295,7 +298,7 @@ module dataio
     use constants, only : Gs
 #endif /* STANDARD */
     use arrays, only : nx,ny,nz,nxb,nyb,nzb,x,y,z,wa,outwa,outwb,outwc,b,u, &
-         idna,imxa,imya,imza,ibx,iby,ibz
+         idna,imxa,imya,imza,ibx,iby,ibz,nfluid,nadiab
 #ifdef COSM_RAYS
     use arrays, only : iecr
 #endif /* COSM_RAYS */
@@ -310,9 +313,14 @@ module dataio
 #ifdef GRAV
     use arrays, only : gp
 #endif /* GRAV */
+#ifdef KEPLER_SUPPRESSION
+    use arrays,    only : omx0,omy0,alfsup
+    use constants, only : small
+#endif /* KEPLER_SUPPRESSION */
     implicit none
 
     character(len=128) :: file_name_hdf,file_name_disp
+    character varname*4, gammaifl*6
 
     integer :: sd_id, sds_id, dim_id, iostatus
     integer :: rank, comp_type
@@ -321,12 +329,16 @@ module dataio
     integer :: sfstart, sfend, sfsnatt, sfcreate, sfwdata, sfscompress, sfendacc &
              , sfdimid, sfsdmname, sfsdscale, sfsdmstr
 
-    integer :: iv, ibe, jbe
+    integer :: iv, ibe, jbe, ifl, iw
     integer :: nxo = 1, nyo = 1, nzo = 1, &
                iso = 1, jso = 1, kso = 1, &
                ieo = 1, jeo = 1, keo = 1
     real(kind=4), dimension(:,:,:), allocatable :: temp
     real :: magunit
+#ifdef KEPLER_SUPPRESSION
+    real,allocatable,dimension(:,:) :: velx,vely,dvx,dvy
+    integer :: i, j, k
+#endif /* KEPLER_SUPPRESSION */
 
 !- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -424,7 +436,10 @@ module dataio
     iostatus = sfsnatt( sd_id, 'time'    ,  6, 1, t              )
     iostatus = sfsnatt( sd_id, 'timestep',  6, 1, dt             )
 
-    iostatus = sfsnatt( sd_id, 'gamma'   ,  6, 1, gamma          )
+    do ifl=1,nfluid
+    write(gammaifl,'(a5,i1)') 'gamma',ifl
+    iostatus = sfsnatt( sd_id, gammaifl   ,  6, 1, gamma(ifl)     )
+    enddo
 
 
 ! write selected problem dependent parameters
@@ -433,40 +448,187 @@ module dataio
 #endif /* SN_SRC */
 
     iv = 1
+    iw = 0
+    ifl = 1
 
     do while (len_trim(vars(iv)) .ne. 0)
 
       select case(vars(iv))
       case ('dens')
-        wa(iso:ieo,jso:jeo,kso:keo) = u(idna,iso:ieo,jso:jeo,kso:keo)
+        write(varname,'(a3,i1)') 'den',ifl
+        wa(iso:ieo,jso:jeo,kso:keo) = u(idna(ifl),iso:ieo,jso:jeo,kso:keo)
+        call next_fluid_or_var(ifl,iw,nfluid)
+
       case ('velx')
-        wa(iso:ieo,jso:jeo,kso:keo) = u(imxa,iso:ieo,jso:jeo,kso:keo) / u(idna,iso:ieo,jso:jeo,kso:keo)
+        write(varname,'(a3,i1)') 'vlx',ifl
+        wa(iso:ieo,jso:jeo,kso:keo) = u(imxa(ifl),iso:ieo,jso:jeo,kso:keo) / u(idna(ifl),iso:ieo,jso:jeo,kso:keo)
+        call next_fluid_or_var(ifl,iw,nfluid)
 
       case ('vely')
-        wa(iso:ieo,jso:jeo,kso:keo) = u(imya,iso:ieo,jso:jeo,kso:keo) / u(idna,iso:ieo,jso:jeo,kso:keo)
+        write(varname,'(a3,i1)') 'vly',ifl
+        wa(iso:ieo,jso:jeo,kso:keo) = u(imya(ifl),iso:ieo,jso:jeo,kso:keo) / u(idna(ifl),iso:ieo,jso:jeo,kso:keo)
+        call next_fluid_or_var(ifl,iw,nfluid)
 
       case ('velz')
-        wa(iso:ieo,jso:jeo,kso:keo) = u(imza,iso:ieo,jso:jeo,kso:keo) / u(idna,iso:ieo,jso:jeo,kso:keo)
+        write(varname,'(a3,i1)') 'vlz',ifl
+        wa(iso:ieo,jso:jeo,kso:keo) = u(imza(ifl),iso:ieo,jso:jeo,kso:keo) / u(idna(ifl),iso:ieo,jso:jeo,kso:keo)
+        call next_fluid_or_var(ifl,iw,nfluid)
 
 #ifdef ISO
       case ('ener')
-        wa(iso:ieo,jso:jeo,kso:keo) = 0.5*(u(imxa,iso:ieo,jso:jeo,kso:keo)**2 &
-                                    +u(imya,iso:ieo,jso:jeo,kso:keo)**2 &
-                                    +u(imza,iso:ieo,jso:jeo,kso:keo)**2)/u(idna,iso:ieo,jso:jeo,kso:keo)
+        write(varname,'(a3,i1)') 'ene',ifl
+        wa(iso:ieo,jso:jeo,kso:keo) = 0.5*(u(imxa(ifl),iso:ieo,jso:jeo,kso:keo)**2 &
+                                    +u(imya(ifl),iso:ieo,jso:jeo,kso:keo)**2 &
+                                    +u(imza(ifl),iso:ieo,jso:jeo,kso:keo)**2)/u(idna(ifl),iso:ieo,jso:jeo,kso:keo)
+        call next_fluid_or_var(ifl,iw,nfluid-nadiab)
+
 #else /* ISO */
       case ('ener')
-        wa(iso:ieo,jso:jeo,kso:keo) = u(iena,iso:ieo,jso:jeo,kso:keo)
+        write(varname,'(a3,i1)') 'ene',ifl
+        wa(iso:ieo,jso:jeo,kso:keo) = u(iena(ifl),iso:ieo,jso:jeo,kso:keo)
+        call next_fluid_or_var(ifl,iw,nadiab)
+
       case ('eint')
-        wa(iso:ieo,jso:jeo,kso:keo) = u(iena,iso:ieo,jso:jeo,kso:keo) &
-                               - 0.5*(u(imxa,iso:ieo,jso:jeo,kso:keo)**2 &
-                                     +u(imya,iso:ieo,jso:jeo,kso:keo)**2 &
-                                     +u(imza,iso:ieo,jso:jeo,kso:keo)**2)/u(idna,iso:ieo,jso:jeo,kso:keo)
+        write(varname,'(a3,i1)') 'ein',ifl
+        wa(iso:ieo,jso:jeo,kso:keo) = u(iena(ifl),iso:ieo,jso:jeo,kso:keo) &
+                               - 0.5*(u(imxa(ifl),iso:ieo,jso:jeo,kso:keo)**2 &
+                                     +u(imya(ifl),iso:ieo,jso:jeo,kso:keo)**2 &
+                                     +u(imza(ifl),iso:ieo,jso:jeo,kso:keo)**2)/u(idna(ifl),iso:ieo,jso:jeo,kso:keo)
+        call next_fluid_or_var(ifl,iw,nadiab)
 #endif /* ISO */
 
 #ifdef COSM_RAYS
       case ('encr')
-        wa(iso:ieo,jso:jeo,kso:keo) = u(iecr,iso:ieo,jso:jeo,kso:keo)
+        write(varname,'(a3,i1)') 'enc', ifl
+        wa(iso:ieo,jso:jeo,kso:keo) = u(iecr(ifl), iso:ieo, jso:jeo, kso:keo)
+        call next_fluid_or_var(ifl,iw,COSM_RAYS)
 #endif /* COSM_RAYS */
+
+#ifdef KEPLER_SUPPRESSION
+      case ('tspx')
+        write(varname,'(a3,i1)') 'tsx', ifl
+        allocate(velx(nx,ny),vely(nx,ny),dvx(nx,ny))
+        do k = kso,keo
+          velx=u(imxa(ifl),:,:,k)/u(idna(ifl),:,:,k)
+#ifdef KEPL_SUPP_SIMX
+          dvx(:,:)=u(imxa(ifl),:,:,k)-omx0(ifl,:,:,k)
+          wa(:,:,k) = (abs(velx)+small)/(abs(dvx)+small)/(abs(alfsup)+small)
+#else /* KEPL_SUPP_SIMX */
+          vely=u(imya(ifl),:,:,k)/u(idna(ifl),:,:,k)
+          do j=jso,jeo
+            dvx(:,j)=(velx(:,j)*y(j)-vely(:,j)*x(:))*y(j)/(x(:)**2+y(j)**2)-omx0(ifl,:,j,k)
+          enddo
+#endif /* KEPL_SUPP_SIMX */
+          wa(iso:ieo,jso:jeo,k) = abs(velx(iso:ieo,jso:jeo)+small)/(abs(dvx(iso:ieo,jso:jeo)+small) &
+                              /(abs(alfsup(iso:ieo,jso:jeo))+small))
+        enddo
+        deallocate(velx,vely,dvx)
+        call next_fluid_or_var(ifl,iw,nfluid)
+
+      case ('tspy')
+        write(varname,'(a3,i1)') 'tsy', ifl
+        allocate(velx(nx,ny),vely(nx,ny),dvy(nx,ny))
+        do k = kso,keo
+          velx=u(imxa(ifl),:,:,k)/u(idna(ifl),:,:,k)
+          vely=u(imya(ifl),:,:,k)/u(idna(ifl),:,:,k)
+          do i=iso,ieo
+            dvy(i,:)=(vely(i,:)*x(i)-velx(i,:)*y(:))*x(i)/(y(:)**2+x(i)**2)-omy0(ifl,i,:,k)
+          enddo
+          wa(iso:ieo,jso:jeo,k) = abs(vely(iso:ieo,jso:jeo)+small)/((abs(dvy(iso:ieo,jso:jeo))+small) &
+                              /(abs(alfsup(iso:ieo,jso:jeo))+small))
+        enddo
+        deallocate(velx,vely,dvy)
+        call next_fluid_or_var(ifl,iw,nfluid)
+
+      case ('asup')
+        write(varname,'(a3,i1)') 'asp', ifl
+        do k = kso,keo
+          wa(iso:ieo,jso:jeo,k) = alfsup(iso:ieo,jso:jeo)
+        enddo
+        call next_fluid_or_var(ifl,iw,nfluid)
+
+      case ('dvlx')
+        write(varname,'(a3,i1)') 'dvx', ifl
+        allocate(velx(nx,ny),vely(nx,ny),dvx(nx,ny))
+        do k = kso,keo
+          velx=u(imxa(ifl),:,:,k)/u(idna(ifl),:,:,k)
+#ifdef KEPL_SUPP_SIMX
+          wa(iso:ieo,jso:jeo,k)=u(imxa(ifl),iso:ieo,jso:jeo,k)-omx0(ifl,iso:ieo,jso:jeo,k)
+#else /* KEPL_SUPP_SIMX */
+          vely=u(imya(ifl),:,:,k)/u(idna(ifl),:,:,k)
+          do j=jso,jeo
+            wa(iso:ieo,j,k)=(velx(iso:ieo,j)*y(j)-vely(iso:ieo,j)*x(iso:iso))*y(j)/(x(iso:ieo)**2+y(j)**2)-omx0(ifl,iso:ieo,j,k)
+          enddo
+#endif /* KEPL_SUPP_SIMX */
+        enddo
+        deallocate(velx,vely,dvx)
+        call next_fluid_or_var(ifl,iw,nfluid)
+
+      case ('dvly')
+        write(varname,'(a3,i1)') 'dvy', ifl
+        allocate(velx(nx,ny),vely(nx,ny),dvy(nx,ny))
+        do k = kso,keo
+          velx=u(imxa(ifl),:,:,k)/u(idna(ifl),:,:,k)
+          vely=u(imya(ifl),:,:,k)/u(idna(ifl),:,:,k)
+          do i=iso,ieo
+            wa(i,jso:jeo,k)=(vely(i,jso:jeo)*x(i)-velx(i,jso:jeo)*y(jso:jeo))*x(i)/(y(jso:jeo)**2+x(i)**2)-omy0(ifl,i,jso:jeo,k)
+          enddo
+        enddo
+        deallocate(velx,vely,dvy)
+        call next_fluid_or_var(ifl,iw,nfluid)
+
+!   case ('dvrt')
+!     write(varname,'(a3,i1)') 'dvr',ifl
+!     do ibe=iso,ieo
+!       do jbe=jso,jeo
+!         wa(ibe,jbe,kso:keo) = (u(imya(ifl),ibe,jbe,kso:keo) / u(idna(ifl),ibe,jbe,kso:keo) * x(ibe) &
+!                              - u(imxa(ifl),ibe,jbe,kso:keo) / u(idna(ifl),ibe,jbe,kso:keo) * y(jbe))/sqrt(x(ibe)**2+y(jbe)**2)
+!       enddo
+!     enddo
+!     call next_fluid_or_var(ifl,iw,nfluid)
+
+      case ('ovrt')
+        write(varname,'(a3,i1)') 'ovr',ifl
+        do ibe=iso,ieo
+          do jbe=jso,jeo
+            wa(ibe,jbe,kso:keo) = (omy0(ifl,ibe,jbe,kso:keo) * x(ibe) &
+                                 - omx0(ifl,ibe,jbe,kso:keo)  * y(jbe))/sqrt(x(ibe)**2+y(jbe)**2)
+          enddo
+        enddo
+        call next_fluid_or_var(ifl,iw,nfluid)
+
+      case ('dumx')
+        write(varname,'(a3,i1)') 'dmx', ifl
+        allocate(velx(nx,ny),vely(nx,ny),dvx(nx,ny))
+        do k = kso,keo
+          velx=u(imxa(ifl),:,:,k)/u(idna(ifl),:,:,k)
+#ifdef KEPL_SUPP_SIMX
+          wa(iso:ieo,jso:jeo,k)=u(imxa(ifl),iso:ieo,jso:jeo,k)-omx0(ifl,iso:ieo,jso:jeo,k)
+#else /* KEPL_SUPP_SIMX */
+          vely=u(imya(ifl),:,:,k)/u(idna(ifl),:,:,k)
+          do j=jso,jeo
+            wa(iso:ieo,j,k)=(velx(iso:ieo,j)*y(j)-vely(iso:ieo,j)*x(iso:iso))*y(j)/(x(iso:ieo)**2+y(j)**2)-omx0(ifl,iso:ieo,j,k)
+          enddo
+#endif /* KEPL_SUPP_SIMX */
+          wa(iso:ieo,jso:jeo,k)=wa(iso:ieo,jso:jeo,k)*u(idna(ifl),iso:ieo,jso:jeo,k)*(-alfsup(iso:ieo,jso:jeo))*dt
+        enddo
+        deallocate(velx,vely,dvx)
+        call next_fluid_or_var(ifl,iw,nfluid)
+
+      case ('dumy')
+        write(varname,'(a3,i1)') 'dmy', ifl
+        allocate(velx(nx,ny),vely(nx,ny),dvy(nx,ny))
+        do k = kso,keo
+          velx=u(imxa(ifl),:,:,k)/u(idna(ifl),:,:,k)
+          vely=u(imya(ifl),:,:,k)/u(idna(ifl),:,:,k)
+          do i=iso,ieo
+            wa(i,jso:jeo,k)=(vely(i,jso:jeo)*x(i)-velx(i,jso:jeo)*y(jso:jeo))*x(i)/(y(jso:jeo)**2+x(i)**2)-omy0(ifl,i,jso:jeo,k)
+          enddo
+          wa(iso:ieo,jso:jeo,k)=wa(iso:ieo,jso:jeo,k)*u(idna(ifl),iso:ieo,jso:jeo,k)*(-alfsup(iso:ieo,jso:jeo))*dt
+        enddo
+        deallocate(velx,vely,dvy)
+        call next_fluid_or_var(ifl,iw,nfluid)
+#endif /* KEPLER_SUPPRESSION */
 
       case ('divb')
         wa(iso:ieo-1,jso:jeo-1,kso:keo-1) = &
@@ -479,44 +641,58 @@ module dataio
         wa(:,:,keo) = wa(:,:,keo-1)
 
       case ('omga')
+        write(varname,'(a3,i1)') 'omg',ifl
         do ibe=iso,ieo
           do jbe=jso,jeo
-            wa(ibe,jbe,kso:keo) = (u(imya,ibe,jbe,kso:keo) / u(idna,ibe,jbe,kso:keo) * x(ibe) &
-                                 - u(imxa,ibe,jbe,kso:keo) / u(idna,ibe,jbe,kso:keo) * y(jbe))/(x(ibe)**2+y(jbe)**2)
+            wa(ibe,jbe,kso:keo) = (u(imya(ifl),ibe,jbe,kso:keo) / u(idna(ifl),ibe,jbe,kso:keo) * x(ibe) &
+                                 - u(imxa(ifl),ibe,jbe,kso:keo) / u(idna(ifl),ibe,jbe,kso:keo) * y(jbe))/(x(ibe)**2+y(jbe)**2)
           enddo
         enddo
+        call next_fluid_or_var(ifl,iw,nfluid)
 
       case ('vrot')
+        write(varname,'(a3,i1)') 'vrt',ifl
         do ibe=iso,ieo
           do jbe=jso,jeo
-            wa(ibe,jbe,kso:keo) = (u(imya,ibe,jbe,kso:keo) / u(idna,ibe,jbe,kso:keo) * x(ibe) &
-                                 - u(imxa,ibe,jbe,kso:keo) / u(idna,ibe,jbe,kso:keo) * y(jbe))/sqrt(x(ibe)**2+y(jbe)**2)
+            wa(ibe,jbe,kso:keo) = (u(imya(ifl),ibe,jbe,kso:keo) / u(idna(ifl),ibe,jbe,kso:keo) * x(ibe) &
+                                 - u(imxa(ifl),ibe,jbe,kso:keo) / u(idna(ifl),ibe,jbe,kso:keo) * y(jbe))/sqrt(x(ibe)**2+y(jbe)**2)
           enddo
         enddo
+        call next_fluid_or_var(ifl,iw,nfluid)
 
       case ('vout')
+        write(varname,'(a3,i1)') 'vou',ifl
         do ibe=iso,ieo
           do jbe=jso,jeo
-            wa(ibe,jbe,kso:keo) = (u(imxa,ibe,jbe,kso:keo) / u(idna,ibe,jbe,kso:keo) * x(ibe) &
-                                 + u(imya,ibe,jbe,kso:keo) / u(idna,ibe,jbe,kso:keo) * y(jbe))/sqrt(x(ibe)**2+y(jbe)**2)
+            wa(ibe,jbe,kso:keo) = (u(imxa(ifl),ibe,jbe,kso:keo) / u(idna(ifl),ibe,jbe,kso:keo) * x(ibe) &
+                                 + u(imya(ifl),ibe,jbe,kso:keo) / u(idna(ifl),ibe,jbe,kso:keo) * y(jbe))/sqrt(x(ibe)**2+y(jbe)**2)
           enddo
         enddo
+        call next_fluid_or_var(ifl,iw,nfluid)
 
       case ('dcol')
+        write(varname,'(a3,i1)') 'dcl',ifl
         do ibe=iso,ieo
           do jbe=jso,jeo
-            wa(ibe,jbe,kso:keo) = sum(u(idna,ibe,jbe,kso:keo))*(z(kso)-z(kso-1))
+            wa(ibe,jbe,kso:keo) = sum(u(idna(ifl),ibe,jbe,kso:keo))*(z(kso)-z(kso-1))
           enddo
         enddo
+        call next_fluid_or_var(ifl,iw,nfluid)
 
 #ifndef ISO
       case ('csnd')
-        wa(iso:ieo,jso:jeo,kso:keo) = sqrt((u(iena,iso:ieo,jso:jeo,kso:keo) &
-       -0.5*(u(imxa,iso:ieo,jso:jeo,kso:keo)**2+u(imya,iso:ieo,jso:jeo,kso:keo)**2+u(imza,iso:ieo,jso:jeo,kso:keo)**2) &
-        / u(idna,iso:ieo,jso:jeo,kso:keo))*(gamma-1.)*gamma/u(idna,iso:ieo,jso:jeo,kso:keo))
+        write(varname,'(a3,i1)') 'csn',ifl
+        wa(iso:ieo,jso:jeo,kso:keo) = sqrt((u(iena(ifl),iso:ieo,jso:jeo,kso:keo) &
+                                      -0.5*(u(imxa(ifl),iso:ieo,jso:jeo,kso:keo)**2  &
+                                           +u(imya(ifl),iso:ieo,jso:jeo,kso:keo)**2  &
+                                           +u(imza(ifl),iso:ieo,jso:jeo,kso:keo)**2) &
+                                          / u(idna(ifl),iso:ieo,jso:jeo,kso:keo))*(gamma(ifl)-1.) &
+                                *gamma(ifl)/u(idna(ifl),iso:ieo,jso:jeo,kso:keo))
+       call next_fluid_or_var(ifl,iw,nadiab)
 #endif /* ISO */
 #ifdef GRAV
       case ('gpot')
+        varname = 'gpot'
         wa(iso:ieo,jso:jeo,kso:keo) = gp(iso:ieo,jso:jeo,kso:keo)
 #endif /* GRAV */
       case ('magx')
@@ -525,6 +701,7 @@ module dataio
 #else /* STANDARD */
         magunit = Gs
 #endif /* STANDARD */
+        varname = 'magx'
         if(domain .eq. 'full_domain') then
           if(mag_center .eq. 'yes') then
             wa(:,:,:) = 0.5*(b(ibx,:,:,:)/magunit)
@@ -546,6 +723,7 @@ module dataio
 #else /* STANDARD */
         magunit = Gs
 #endif /* STANDARD */
+        varname = 'magy'
         if(domain .eq. 'full_domain') then
           if(mag_center .eq. 'yes') then
             wa(:,:,:) = 0.5*(b(iby,:,:,:)/magunit)
@@ -568,6 +746,7 @@ module dataio
 #else /* STANDARD */
         magunit = Gs
 #endif /* STANDARD */
+        varname = 'magz'
         if(domain .eq. 'full_domain') then
           if(mag_center .eq. 'yes') then
             wa(:,:,:) = 0.5*(b(ibz,:,:,:)/magunit)
@@ -585,6 +764,7 @@ module dataio
         endif
 
       case ('curx')
+       varname = 'curx'
        wa(:,:,:) = (b(ibz,:,:,:)-cshift(b(ibz,:,:,:),shift=-1,dim=2))/dy &
                  - (b(iby,:,:,:)-cshift(b(iby,:,:,:),shift=-1,dim=3))/dz
        if(domain .eq. 'full_domain') then
@@ -598,6 +778,7 @@ module dataio
        endif
 
       case ('cury')
+       varname = 'cury'
        wa(:,:,:) = (b(ibx,:,:,:)-cshift(b(ibx,:,:,:),shift=-1,dim=3))/dz &
                  - (b(ibz,:,:,:)-cshift(b(ibz,:,:,:),shift=-1,dim=1))/dx
        if(domain .eq. 'full_domain') then
@@ -611,6 +792,7 @@ module dataio
        endif
 
       case ('curz')
+       varname = 'curz'
        wa(:,:,:) = (b(iby,:,:,:)-cshift(b(iby,:,:,:),shift=-1,dim=1))/dx &
                  - (b(ibx,:,:,:)-cshift(b(ibx,:,:,:),shift=-1,dim=2))/dy
        if(domain .eq. 'full_domain') then
@@ -624,26 +806,45 @@ module dataio
        endif
 #ifndef SPLIT
       case ('flx1')
+        varname = 'flx1'
         wa(:,:,:) = Lu(1,:,:,:)
       case ('flx2')
+        varname = 'flx2'
         wa(:,:,:) = Lu(2,:,:,:)
       case ('flx3')
+        varname = 'flx3'
         wa(:,:,:) = Lu(3,:,:,:)
       case ('flx4')
+        varname = 'flx4'
         wa(:,:,:) = Lu(4,:,:,:)
 #ifndef ISO
       case ('flx5')
+        varname = 'flx5'
         wa(:,:,:) = Lu(5,:,:,:)
 #endif /* ~ISO */
 #endif /* SPLIT */
+      case ('esrc')
+         varname = 'esrc'
+!        wa(iso:ieo,jso:jeo,kso:keo) = outwa(iso:ieo,jso:jeo,kso:keo)
+
+!      case ('eint')
+!        varname = 'eint'
+!        wa(iso:ieo,jso:jeo,kso:keo) = outwb(iso:ieo,jso:jeo,kso:keo)
+
+      case ('temp')
+         varname = 'temp'
+!        wa(iso:ieo,jso:jeo,kso:keo) = outwc(iso:ieo,jso:jeo,kso:keo)
 !DW+
       case ('grvx')
+        varname = 'grvx'
         wa(iso:ieo,jso:jeo,kso:keo) = outwa(iso:ieo,jso:jeo,kso:keo)
 
       case ('grvy')
+        varname = 'grvy'
         wa(iso:ieo,jso:jeo,kso:keo) = outwb(iso:ieo,jso:jeo,kso:keo)
 
       case ('grvz')
+        varname = 'grvz'
         wa(iso:ieo,jso:jeo,kso:keo) = outwc(iso:ieo,jso:jeo,kso:keo)
 !DW-
       case default
@@ -652,7 +853,7 @@ module dataio
 
 ! write data
 !
-      sds_id = sfcreate(sd_id, vars(iv), 5, rank, dims)
+      sds_id = sfcreate(sd_id, varname, 5, rank, dims)
       iostatus = sfscompress(sds_id, comp_type, comp_prm)
       temp = real(wa(iso:ieo,jso:jeo,kso:keo),4)
       iostatus = sfwdata(sds_id, istart, stride, dims, temp)
@@ -676,7 +877,7 @@ module dataio
 
       iostatus = sfendacc(sds_id)
 
-      iv = iv + 1
+      if(iw .eq. 0) iv = iv + 1
     end do
 
     iostatus = sfend(sd_id)
@@ -694,6 +895,19 @@ module dataio
 
 
   end subroutine write_hdf
+
+  subroutine next_fluid_or_var(ifluid,ivar,nfluids)
+  implicit none
+  integer ifluid,ivar,nfluids
+	if(ifluid .lt. nfluids) then
+	  ifluid=ifluid+1
+	  ivar=1
+	else
+	  ivar=0
+	  ifluid=1
+	endif
+	return
+  end subroutine next_fluid_or_var
 
 #ifdef GALACTIC_DISK
   subroutine write_gpot
@@ -817,7 +1031,7 @@ module dataio
     iostatus = sfsnatt( sd_id, 'time'    ,  6, 1, t              )
     iostatus = sfsnatt( sd_id, 'timestep',  6, 1, dt             )
 
-    iostatus = sfsnatt( sd_id, 'gamma'   ,  6, 1, gamma          )
+!    iostatus = sfsnatt( sd_id, 'gamma'   ,  6, 1, gamma          )
 
     do iv=1,24
 
@@ -1506,6 +1720,11 @@ module dataio
       magunit = Gs
 #endif /* STANDARD */
     if (proc .eq. 0) then
+#ifdef STANDARD
+      magunit = 1.0
+#else /* STANDARD */
+      magunit = Gs
+#endif /* STANDARD */
       write (tsl_file,'(a,a1,a,a1,a3,a1,i3.3,a4)') &
               trim(cwd),'/',trim(problem_name),'_', run_id,'_',nrestart,'.tsl'
 
@@ -1564,15 +1783,15 @@ module dataio
     enddo
     call mpi_allreduce(amomz, tot_amomz, 1, mpi_real8, mpi_sum, comm3d, ierr)
 !DW-
-    epot = sum(u(idna,is:ie,js:je,ks:ke) *gp(is:ie,js:je,ks:ke)) * dvol
+    epot = sum(u(idna(1),is:ie,js:je,ks:ke) *gp(is:ie,js:je,ks:ke)) * dvol
     call mpi_allreduce(epot, tot_epot, 1, mpi_real8, mpi_sum, comm3d, ierr)
 #endif /* GRAV */
 
     wa(is:ie,js:je,ks:ke) &
-        = 0.5 * (u(imxa,is:ie,js:je,ks:ke)**2   &
-               + u(imya,is:ie,js:je,ks:ke)**2  &
-               + u(imza,is:ie,js:je,ks:ke)**2)/ &
-                 u(idna,is:ie,js:je,ks:ke)
+        = 0.5 * (u(imxa(1),is:ie,js:je,ks:ke)**2   &
+               + u(imya(1),is:ie,js:je,ks:ke)**2  &
+               + u(imza(1),is:ie,js:je,ks:ke)**2)/ &
+                 u(idna(1),is:ie,js:je,ks:ke)
     ekin = sum(wa(is:ie,js:je,ks:ke)) * dvol
     call mpi_allreduce(ekin, tot_ekin, 1, mpi_real8, mpi_sum, comm3d, ierr)
 
@@ -1658,253 +1877,12 @@ module dataio
 !
   subroutine  write_log
 
-    use arrays, only : wa,is,ie,js,je,ks,ke,idna,imxa,imya,imza,u,b,nx,ny,nz
-    use grid, only   : dx,dy,dz,dxmn
-    use constants, only : small, hydro_mass, k_B
-    use start, only : t,dt,nstep,sleep_minutes,sleep_seconds, smallei,nb, &
-         gamma,cfl, dimensions
-#ifdef COSM_RAYS
-    use start, only  : dt_cr
-    use arrays, only : iecr
-#endif /* COSM_RAYS */
-#ifdef ISO
-    use start, only : csi2,c_si
-#endif /* ISO */
-!    use init_problem
-!   use thermal
-#ifndef ISO
-    use arrays, only : iena
-#endif /* ISO */
-#ifdef RESIST
-    use resistivity
-#endif /* RESIST */
-
-    implicit none
-
-    integer, dimension(3) :: loc_vx_max, loc_vy_max, loc_vz_max, loc_va_max, &
-                             loc_cs_max, loc_dens_min, loc_dens_max, loc_pres_min, &
-                             loc_pres_max, loc_b_min, loc_b_max, &
-                             loc_temp_min, loc_temp_max, loc_divb_max
-#ifdef COOL_HEAT
-    integer, dimension(3) :: loc_dt_cool, loc_dt_heat
-#endif /* COOL_HEAT */
-#ifdef COSM_RAYS
-    integer, dimension(3) :: loc_encr_min, loc_encr_max
-#endif /* COSM_RAYS */
-
-    integer               :: proc_vx_max, proc_vy_max, proc_vz_max, proc_va_max, &
-                             proc_cs_max, proc_dens_min, proc_dens_max, proc_pres_min, &
-                             proc_pres_max, proc_b_min, proc_b_max, &
-                             proc_temp_min, proc_temp_max, proc_divb_max
-#ifdef COOL_HEAT
-    integer               :: proc_dt_cool, proc_dt_heat
-#endif /* COOL_HEAT */
-#ifdef RESIST
-    integer               :: proc_eta_max
-#endif /* RESIST */
-#ifdef COSM_RAYS
-    integer               :: proc_encr_min, proc_encr_max
-#endif /* COSM_RAYS */
-
-! Timestep diagnostics
-
-    wa         =  u(idna,:,:,:)
-    dens_min      = minval(wa(is:ie,js:je,ks:ke))
-    loc_dens_min  = minloc(wa(is:ie,js:je,ks:ke)) &
-                  + (/nb,nb,nb/)
-    call mpifind(dens_min, 'min', loc_dens_min, proc_dens_min)
-
-    wa         =  u(idna,:,:,:)
-    dens_max      = maxval(wa(is:ie,js:je,ks:ke))
-    loc_dens_max  = maxloc(wa(is:ie,js:je,ks:ke)) &
-                  + (/nb,nb,nb/)
-    call mpifind(dens_max, 'max', loc_dens_max, proc_dens_max)
-
-
-    wa         = abs(u(imxa,:,:,:)/u(idna,:,:,:))
-    vx_max      = maxval(wa(is:ie,js:je,ks:ke))
-    loc_vx_max  = maxloc(wa(is:ie,js:je,ks:ke)) &
-                  + (/nb,nb,nb/)
-    call mpifind(vx_max, 'max', loc_vx_max, proc_vx_max)
-
-    wa         = abs(u(imya,:,:,:)/u(idna,:,:,:))
-    vy_max      = maxval(wa(is:ie,js:je,ks:ke))
-    loc_vy_max  = maxloc(wa(is:ie,js:je,ks:ke)) &
-                  + (/nb,nb,nb/)
-    call mpifind(vy_max, 'max', loc_vy_max, proc_vy_max)
-
-    wa         = abs(u(imza,:,:,:)/u(idna,:,:,:))
-    vz_max      = maxval(wa(is:ie,js:je,ks:ke))
-    loc_vz_max  = maxloc(wa(is:ie,js:je,ks:ke)) &
-                  + (/nb,nb,nb/)
-    call mpifind(vz_max, 'max', loc_vz_max, proc_vz_max)
-
-!    wa         = sum(b(:,:,:,:)**2,1)
-    wa(:,:,:)  = b(1,:,:,:)*b(1,:,:,:) + b(2,:,:,:)*b(2,:,:,:) + &
-                 b(3,:,:,:)*b(3,:,:,:)
-    b_min      = sqrt(minval(wa(is:ie,js:je,ks:ke)))
-    loc_b_min  = minloc(wa(is:ie,js:je,ks:ke)) &
-                  + (/nb,nb,nb/)
-    call mpifind(b_min, 'min', loc_b_min, proc_b_min)
-
-    b_max      = sqrt(maxval(wa(is:ie,js:je,ks:ke)))
-    loc_b_max  = maxloc(wa(is:ie,js:je,ks:ke)) &
-                  + (/nb,nb,nb/)
-    call mpifind(b_max, 'max', loc_b_max, proc_b_max)
-
-    va_max      = sqrt(maxval(wa(is:ie,js:je,ks:ke) &
-                       /u(idna,is:ie,js:je,ks:ke)))
-    loc_va_max  = maxloc(wa(is:ie,js:je,ks:ke) &
-                       /u(idna,is:ie,js:je,ks:ke)) &
-                  + (/nb,nb,nb/)
-    call mpifind(va_max, 'max', loc_va_max, proc_va_max)
-
-    if(dimensions .eq. '3d') then
-       wa(1:nx-1,1:ny-1,1:nz-1) = &
-          (b(1,2:nx,1:ny-1,1:nz-1) - b(1,1:nx-1,1:ny-1,1:nz-1))*dy*dz &
-         +(b(2,1:nx-1,2:ny,1:nz-1) - b(2,1:nx-1,1:ny-1,1:nz-1))*dx*dz &
-         +(b(3,1:nx-1,1:ny-1,2:nz) - b(3,1:nx-1,1:ny-1,1:nz-1))*dx*dy
-
-       wa(nx,:,:) = wa(nx-1,:,:)
-       wa(:,ny,:) = wa(:,ny-1,:)
-       wa(:,:,nz) = wa(:,:,nz-1)
-       wa = abs(wa)
-    elseif(dimensions .eq. '2dxy') then
-       wa = 0.0   !\todo Divergence in 2D
-    endif
-
-    divb_max      = maxval(wa(is:ie,js:je,ks:ke))
-    loc_divb_max  = maxloc(wa(is:ie,js:je,ks:ke)) + (/nb,nb,nb/)
-    call mpifind(divb_max, 'max', loc_divb_max, proc_divb_max)
-
-#ifdef ISO
-    pres_min     = csi2*dens_min
-    loc_pres_min  = loc_dens_min
-    proc_pres_min = proc_dens_min
-    pres_max     = csi2*dens_max
-    loc_pres_max  = loc_dens_max
-    proc_pres_max = proc_dens_max
-    cs_max        = c_si
-    loc_cs_max    = 0
-    proc_cs_max   = 0
-    temp_min      = hydro_mass / k_B * csi2
-    loc_temp_min  = 0
-    proc_temp_min = 0
-    temp_max      = hydro_mass / k_B * csi2
-    loc_temp_max  = 0
-    proc_temp_max = 0
-#else /* ISO */
-    wa            = u(iena,:,:,:)
-!    wa            = wa - 0.5*(sum(u(imxa:imza,:,:,:)**2,1) /u(idna,:,:,:))
-    wa            = wa - 0.5 * u(imxa,:,:,:)**2 / u(idna,:,:,:)
-    wa            = wa - 0.5 * u(imya,:,:,:)**2 / u(idna,:,:,:)
-    wa            = wa - 0.5 * u(imza,:,:,:)**2 / u(idna,:,:,:)
-    wa            = wa - b(1,:,:,:)**2
-    wa            = wa - b(2,:,:,:)**2
-    wa            = wa - b(3,:,:,:)**2
-    wa            = max(wa,smallei)
-    wa            = (gamma-1)*wa                    ! pres
-
-    pres_min      = minval(wa(is:ie,js:je,ks:ke))
-    loc_pres_min  = minloc(wa(is:ie,js:je,ks:ke)) &
-                     + (/nb,nb,nb/)
-    call mpifind(pres_min, 'min', loc_pres_min, proc_pres_min)
-
-    pres_max      = maxval(wa(is:ie,js:je,ks:ke))
-    loc_pres_max  = maxloc(wa(is:ie,js:je,ks:ke)) &
-                     + (/nb,nb,nb/)
-    call mpifind(pres_max, 'max', loc_pres_max, proc_pres_max)
-
-    temp_max      = maxval( hydro_mass / k_B * wa(is:ie,js:je,ks:ke) &
-                                             /u(idna,is:ie,js:je,ks:ke))
-    loc_temp_max  = maxloc(wa(is:ie,js:je,ks:ke)    &
-                         /u(idna,is:ie,js:je,ks:ke)  ) &
-                     + (/nb,nb,nb/)
-    call mpifind(temp_max, 'max', loc_temp_max, proc_temp_max)
-
-
-    temp_min      = minval( hydro_mass / k_B * wa(is:ie,js:je,ks:ke) &
-                                             /u(idna,is:ie,js:je,ks:ke))
-    loc_temp_min  = minloc(wa(is:ie,js:je,ks:ke)    &
-                         /u(idna,is:ie,js:je,ks:ke)  ) &
-                     + (/nb,nb,nb/)
-    call mpifind(temp_min, 'min', loc_temp_min, proc_temp_min)
-
-    cs_max        = sqrt(maxval(gamma*wa(is:ie,js:je,ks:ke) &
-                            /u(idna,is:ie,js:je,ks:ke)))
-    loc_cs_max    = maxloc(gamma*wa(is:ie,js:je,ks:ke) &
-                            /u(idna,is:ie,js:je,ks:ke)) &
-                     + (/nb,nb,nb/)
-    call mpifind(cs_max, 'max', loc_cs_max, proc_cs_max)
-#endif /* ISO */
-
-#ifdef COOL_HEAT
-      call mpifind(eint_src_min, 'min', loc_dt_cool, proc_dt_cool)
-      call mpifind(eint_src_max, 'max', loc_dt_heat, proc_dt_heat)
-      call mpifind(dt_cool,      'min', loc_dt_cool, proc_dt_cool)
-      call mpifind(dt_heat,      'min', loc_dt_heat, proc_dt_heat)
-#endif /* COOL_HEAT */
-#ifdef RESIST
-! Tu trzba sprawdzic czy poprawnie znajdowane jest max i loc dla wielu procesow
-      call mpifind(eta_max,      'max', loc_eta_max, proc_eta_max)
-#endif /* RESIST */
-#ifdef COSM_RAYS
-    wa         =  u(iecr,:,:,:)
-    encr_min      = minval(wa(is:ie,js:je,ks:ke))
-    loc_encr_min  = minloc(wa(is:ie,js:je,ks:ke)) &
-                  + (/nb,nb,nb/)
-    call mpifind(encr_min, 'min', loc_encr_min, proc_encr_min)
-
-    wa         =  u(iecr,:,:,:)
-    encr_max      = maxval(wa(is:ie,js:je,ks:ke))
-    loc_encr_max  = maxloc(wa(is:ie,js:je,ks:ke)) &
-                  + (/nb,nb,nb/)
-    call mpifind(encr_max, 'max', loc_encr_max, proc_encr_max)
-#endif /* COSM_RAYS */
-
-    if(proc .eq. 0)  then
-
-      open(log_lun, file=log_file, position='append')
-
-        write(log_lun,770) 'min(dens)      =', dens_min,  proc_dens_min,  loc_dens_min
-        write(log_lun,770) 'max(dens)      =', dens_max,  proc_dens_max,  loc_dens_max
-        write(log_lun,770) 'min(temp)      =', temp_min,  proc_temp_min,  loc_temp_min
-        write(log_lun,770) 'max(temp)      =', temp_max,  proc_temp_max,  loc_temp_max
-        write(log_lun,770) 'min(pres)      =', pres_min,  proc_pres_min,  loc_pres_min
-        write(log_lun,770) 'max(pres)      =', pres_max,  proc_pres_max,  loc_pres_max
-        write(log_lun,770) 'min(|b|)       =', b_min,     proc_b_min,     loc_b_min
-        write(log_lun,770) 'max(|b|)       =', b_max,     proc_b_max,     loc_b_max
-        write(log_lun,770) 'max(|divb|)    =', divb_max,  proc_divb_max,  loc_divb_max
-
-        write(log_lun,777) 'max(|velx|)    =', vx_max, 'dt=',cfl*dx/(vx_max+small),   proc_vx_max, loc_vx_max
-        write(log_lun,777) 'max(|vely|)    =', vy_max, 'dt=',cfl*dy/(vy_max+small),   proc_vy_max, loc_vy_max
-        write(log_lun,777) 'max(|velz|)    =', vz_max, 'dt=',cfl*dz/(vz_max+small),   proc_vz_max, loc_vz_max
-        write(log_lun,777) 'max(v_alfven)  =', va_max, 'dt=',cfl*dxmn/(va_max+small), proc_va_max, loc_va_max
-        write(log_lun,777) 'max(c_sound)   =', cs_max, 'dt=',cfl*dxmn/(cs_max+small), proc_cs_max, loc_cs_max
-        write(log_lun,777) 'max(c_fast)    =', sqrt(cs_max**2+va_max**2), 'dt=',cfl*dxmn/sqrt(cs_max**2+va_max**2)
-#ifdef COOL_HEAT
-        write(log_lun,777) 'min(esrc/eint) =', eint_src_min , 'dt=',dt_cool,   proc_dt_cool,  loc_dt_cool
-        write(log_lun,777) 'max(esrc/eint) =', eint_src_max , 'dt=',dt_heat,   proc_dt_heat,  loc_dt_heat
-#endif /* COOL_HEAT */
-#ifdef RESIST
-        write(log_lun,777) 'max(eta)       =', eta_max ,      'dt=',dt_resist, proc_eta_max,  loc_eta_max
-#endif /* RESIST */
-#ifdef COSM_RAYS
-        write(log_lun,777) 'min(encr)      =', encr_min,         '',  0.0,     proc_encr_min, loc_encr_min
-        write(log_lun,777) 'max(encr)      =', encr_max,      'dt=',dt_cr,     proc_encr_max, loc_encr_max
-#endif /* COSM_RAYS */
-
-        write(log_lun,900) nstep,dt,t
-
-      close(log_lun)
-
-    endif
-
-
-770 format(5x,a16,(1x,e15.9),4(1x,i4))
-
-777 format(5x,a16,(1x,e10.4),2x,a3,(1x,e10.4),4(1x,i4))
-900 format('   nstep = ',i7,'   dt = ',f22.16,'   t = ',f22.16,2(1x,i4))
+#define WRITE_LOG_SHORT
+#ifdef WRITE_LOG_SHORT
+#include "datalogshort.def"
+#else /* WRITE_LOG_SHORT */
+#include "dataloglong.def"
+#endif /* WRITE_LOG_SHORT */
 
   end subroutine write_log
 
@@ -2482,7 +2460,7 @@ module dataio
    do k=1,nzb
      if(u(1,i,j,k) .gt. 0.64*chi*denv) then
        eint=u(5,i,j,k)-0.5*(u(2,i,j,k)**2+u(3,i,j,k)**2+u(4,i,j,k)**2)/u(1,i,j,k)
-       csirel =sqrt(eint*(gamma-1)*tkh*Mext*gamma/3.2/rblob/sqrt(chi)/u(1,i,j,k))
+       csirel =sqrt(eint*(gamma(1)-1)*tkh*Mext*gamma(1)/3.2/rblob/sqrt(chi)/u(1,i,j,k))
        if(csirel .lt. 0.9) then
          mass = mass + u(1,i,j,k)*dx*dy*dz
        endif

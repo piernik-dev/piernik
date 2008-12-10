@@ -60,12 +60,8 @@
 
  $NUMERICAL_SETUP
     cfl    = 0.9
-    big    = 1.e+50
-    small  = 1.e-50
     smalld = 1.e-4
     smallei= 1.e-3
-    flux_limiter = 'vanleer'
-    freezing_speed = 'global'
  /
  
  $GRAVITY

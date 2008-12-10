@@ -66,12 +66,8 @@
 
  $NUMERICAL_SETUP
     cfl    = 0.8
-    big    = 1.e+50
-    small  = 1.e-50
     smalld = 1.e-5
     smallei= 1.e-4
-    flux_limiter = 'vanleer'
-    freezing_speed = 'local'
     integration_order  = 2
   /
  

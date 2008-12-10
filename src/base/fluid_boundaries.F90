@@ -23,7 +23,7 @@ subroutine bnd_u(dim)
 
 
   use arrays, only : x,z,nzb,nyb,nxb,nu,nx,ny,nz, idna, imxa, imya, imza, &
-      u, b
+      u, b, nfluid, bndxrar, bndyrar
 
 #ifndef ISO
   use start,  only : gamma
@@ -54,11 +54,15 @@ subroutine bnd_u(dim)
 
 #ifdef GRAV
   integer kb, ksub
-  real, dimension(nx,ny) :: db, csi2b
+  real, dimension(nfluid,nx,ny) :: db, csi2b
 #ifndef ISO
-  real, dimension(nx,ny) :: ekb, eib
+  real, dimension(nfluid,nx,ny) :: ekb, eib
+  integer ifluid
 #endif /* ISO */
-  real, dimension(nsub+1):: zs, dprofs, gprofs
+  real, dimension(nsub+1):: zs, gprofs
+  real, dimension(nfluid,nsub+1) :: dprofs
+  real, dimension(nfluid) :: factor
+  real dzs,z1,z2
   real dzs, factor, z1, z2
 #endif /* GRAV */
   integer i,j
@@ -93,9 +97,6 @@ subroutine bnd_u(dim)
 #ifndef ISO
             send_left (iena,i,:,:) = send_left(iena,i,:,:) &
                                     -0.5*(qshear*omega * x(nb+i))**2 * send_left(idna,i,:,:)
-!            send_left (iena,i,:,:) = send_left(iena,i,:,:) &
-!                                    +(qshear*omega * x(nb+i))*send_left(imya,i,:,:) &
-!                                    +0.5*(qshear*omega*x(nb+i))*send_left(idna,i,:,:)
 #endif /* ISO */
           enddo
 !
@@ -121,9 +122,6 @@ subroutine bnd_u(dim)
 #ifndef ISO
             send_right(iena,i,:,:) = send_right(iena,i,:,:) &
                                     -0.5*(qshear*omega * x(nxb+i))**2 * send_right(idna,i,:,:)
-!            send_right(iena,i,:,:) = send_right(iena,i,:,:) &
-!                                    +(qshear*omega*x(nxb+i))*send_right(imya,i,:,:) &
-!                                    +0.5*(qshear*omega * x(nxb+i))**2 * send_right(idna,i,:,:)
 
 #endif /* ISO */
           enddo
@@ -160,9 +158,6 @@ subroutine bnd_u(dim)
 #ifndef ISO
              recv_right (iena,i,:,:) = recv_right (iena,i,:,:) &
                                       +0.5*(qshear*omega * x(nb+nxb+i))**2 * recv_right(idna,i,:,:)
-!             recv_right (iena,i,:,:) = recv_right (iena,i,:,:) &
-!                                      -(qshear*omega*x(nb+nxb+i))*recv_right(imya,i,:,:) &
-!                                      +0.5*(qshear*omega * x(nb+nxb+i))**2 * recv_right(idna,i,:,:)
 #endif /* ISO */
              recv_right (imya,i,:,:) = recv_right (imya,i,:,:) &
                                            -qshear*omega * x(nb+nxb+i)     * recv_right(idna,i,:,:)
@@ -178,9 +173,6 @@ subroutine bnd_u(dim)
 #ifndef ISO
              recv_left(iena,i,:,:) = recv_left(iena,i,:,:) &
                                     +0.5*(qshear*omega * x(i))**2 * recv_left(idna,i,:,:)
-!             recv_left(iena,i,:,:) = recv_left(iena,i,:,:) &
-!                                    -(qshear*omega*x(i))*recv_left(imya,i,:,:)&
-!                                    +0.5*(qshear*omega * x(i))**2 * recv_left(idna,i,:,:)
 #endif /* ISO */
              recv_left(imya,i,:,:) = recv_left(imya,i,:,:) &
                                          -qshear*omega * x(i)     * recv_left(idna,i,:,:)
@@ -196,13 +188,6 @@ subroutine bnd_u(dim)
 #else /* SHEAR_MPI */
       if(pxsize .gt. 1) then
 
-!        if(procxl .ne. MPI_PROC_NULL) send_left(:,:,:,:)          =  u(:,nb+1:2*nb,:,:)
-!        if(procxr .ne. MPI_PROC_NULL) send_right(:,:,:,:)         =  u(:,nxb+1:nxb+nb,:,:)
-
-!        CALL MPI_ISEND   (send_left , nu*ny*nz*nb, MPI_DOUBLE_PRECISION, procxl, 10, comm, req(1), ierr)
-!        CALL MPI_ISEND   (send_right, nu*ny*nz*nb, MPI_DOUBLE_PRECISION, procxr, 20, comm, req(3), ierr)
-!        CALL MPI_IRECV   (recv_left , nu*ny*nz*nb, MPI_DOUBLE_PRECISION, procxl, 20, comm, req(2), ierr)
-!        CALL MPI_IRECV   (recv_right, nu*ny*nz*nb, MPI_DOUBLE_PRECISION, procxr, 10, comm, req(4), ierr)
         CALL MPI_ISEND   (u(1,1,1,1), 1, MPI_YZ_LEFT_DOM,  procxl, 10, comm3d, req(1), ierr)
         CALL MPI_ISEND   (u(1,1,1,1), 1, MPI_YZ_RIGHT_DOM, procxr, 20, comm3d, req(3), ierr)
         CALL MPI_IRECV   (u(1,1,1,1), 1, MPI_YZ_LEFT_BND,  procxl, 20, comm3d, req(2), ierr)
@@ -212,23 +197,10 @@ subroutine bnd_u(dim)
           call MPI_WAIT(req(ireq),status(1,ireq),ierr)
         enddo
 
-!        if(procxl .ne. MPI_PROC_NULL) u(:,1:nb,:,:)               = recv_left(:,:,:,:)
-!        if(procxr .ne. MPI_PROC_NULL) u(:,nxb+nb+1:nxb+2*nb,:,:)  = recv_right(:,:,:,:)
-
       endif
 #endif /* SHEAR_MPI */
     case ('ydim')
       if(pysize .gt. 1) then
-!        allocate(send_left(nu,nx,nb,nz),send_right(nu,nx,nb,nz), &
-!                 recv_left(nu,nx,nb,nz),recv_right(nu,nx,nb,nz))
-!
-!        if(procyl .ne. MPI_PROC_NULL) send_left(:,:,:,:)          =  u(:,:,nb+1:2*nb,:)
-!        if(procyr .ne. MPI_PROC_NULL) send_right(:,:,:,:)         =  u(:,:,nyb+1:nyb+nb,:)
-!
-!        CALL MPI_ISEND   (send_left , nu*nx*nb*nz, MPI_DOUBLE_PRECISION, procyl, 30, comm, req(1), ierr)
-!        CALL MPI_ISEND   (send_right, nu*nx*nb*nz, MPI_DOUBLE_PRECISION, procyr, 40, comm, req(3), ierr)
-!        CALL MPI_IRECV   (recv_left , nu*nx*nb*nz, MPI_DOUBLE_PRECISION, procyl, 40, comm, req(2), ierr)
-!        CALL MPI_IRECV   (recv_right, nu*nx*nb*nz, MPI_DOUBLE_PRECISION, procyr, 30, comm, req(4), ierr)
 
         CALL MPI_ISEND   (u(1,1,1,1), 1, MPI_XZ_LEFT_DOM,  procyl, 30, comm3d, req(1), ierr)
         CALL MPI_ISEND   (u(1,1,1,1), 1, MPI_XZ_RIGHT_DOM, procyr, 40, comm3d, req(3), ierr)
@@ -239,24 +211,11 @@ subroutine bnd_u(dim)
           call MPI_WAIT(req(ireq),status(1,ireq),ierr)
         enddo
 
-!        if(procyl .ne. MPI_PROC_NULL) u(:,:,1:nb,:)               = recv_left(:,:,:,:)
-!        if(procyr .ne. MPI_PROC_NULL) u(:,:,nyb+nb+1:nyb+2*nb,:)  = recv_right(:,:,:,:)
-
-!        deallocate(send_left,send_right,recv_left,recv_right)
       endif
 
     case ('zdim')
       if(pzsize .gt. 1) then
-!        allocate(send_left(nu,nx,ny,nb),send_right(nu,nx,ny,nb), &
-!                 recv_left(nu,nx,ny,nb),recv_right(nu,nx,ny,nb))
 
-!        if(proczl .ne. MPI_PROC_NULL) send_left(:,:,:,:)          =  u(:,:,:,nb+1:2*nb)
-!        if(proczr .ne. MPI_PROC_NULL) send_right(:,:,:,:)         =  u(:,:,:,nzb+1:nzb+nb)
-
-!        CALL MPI_ISEND   (send_left , nu*nx*ny*nb, MPI_DOUBLE_PRECISION, proczl, 50, comm, req(1), ierr)
-!        CALL MPI_ISEND   (send_right, nu*nx*ny*nb, MPI_DOUBLE_PRECISION, proczr, 60, comm, req(3), ierr)
-!        CALL MPI_IRECV   (recv_left , nu*nx*ny*nb, MPI_DOUBLE_PRECISION, proczl, 60, comm, req(2), ierr)
-!        CALL MPI_IRECV   (recv_right, nu*nx*ny*nb, MPI_DOUBLE_PRECISION, proczr, 50, comm, req(4), ierr)
         CALL MPI_ISEND   (u(1,1,1,1), 1, MPI_XY_LEFT_DOM,  proczl, 50, comm3d, req(1), ierr)
         CALL MPI_ISEND   (u(1,1,1,1), 1, MPI_XY_RIGHT_DOM, proczr, 60, comm3d, req(3), ierr)
         CALL MPI_IRECV   (u(1,1,1,1), 1, MPI_XY_LEFT_BND,  proczl, 60, comm3d, req(2), ierr)
@@ -266,10 +225,6 @@ subroutine bnd_u(dim)
           call MPI_WAIT(req(ireq),status(1,ireq),ierr)
         enddo
 
-!        if(proczl .ne. MPI_PROC_NULL) u(:,:,:,1:nb)               = recv_left(:,:,:,:)
-!        if(proczr .ne. MPI_PROC_NULL) u(:,:,:,nzb+nb+1:nzb+2*nb)  = recv_right(:,:,:,:)
-
-!        deallocate(send_left,send_right,recv_left,recv_right)
       endif
   end select ! (dim)
 
@@ -390,6 +345,141 @@ subroutine bnd_u(dim)
     endif
   endif
 
+!wolt - proba--------------------------------------------------
+
+! MPI + non-MPI out-corner-periodic boundary condition
+
+  if(bnd_yr .eq. 'cor') then
+!   - upper to onecell outflow
+    if(pcoords(2) .eq. psize(2)-1 .and. pcoords(1) .eq. psize(1)-1) then
+      do i=1,nx
+!        do j=ny-1,ny
+          u(idna,i,ny,:) =  u(idna,i,ny-1,:)
+          u(imxa,i,ny,:) =  u(imya,i,ny-1,:)
+          u(imya,i,ny,:) =  u(imxa,i,ny-1,:)
+          u(imza,i,ny,:) =  u(imza,i,ny-1,:)
+#ifndef ISO
+          u(iena,i,ny,:) =  u(iena,i,ny-1,:)
+#endif /* ISO */
+#ifdef COSM_RAYS
+          u(iecr,i,ny,:) =  u(iecr,i,ny-1,:)
+#endif /* COSM_RAYS */
+!        enddo
+      enddo
+    endif
+
+    if(procyxr .gt. 0) then
+      allocate(send_left(nu,nx,nb,nz), recv_left(nu,nb,ny,nz))
+
+      do j=1,nb
+        send_left(:,:,nb+1-j,:)    =  u(:,:,ny+1-min(j,2),:)
+        send_left(imxa,:,nb+1-j,:) = -u(imya,:,nx+1-min(j,2),:)
+        send_left(imya,:,nb+1-j,:) =  u(imxa,:,nx+1-min(j,2),:)
+      enddo
+
+      CALL MPI_ISEND   (send_left , nu*nx*nb*nz, MPI_DOUBLE_PRECISION, procyxr, 170, comm, req(1), ierr)
+      CALL MPI_IRECV   (recv_left , nu*nb*ny*nz, MPI_DOUBLE_PRECISION, procyxr, 180, comm, req(2), ierr)
+
+      do ireq=1,2
+        call MPI_WAIT(req(ireq),status(1,ireq),ierr)
+      enddo
+
+!      do i=1,nb
+!        do j=1,ny
+	   u(:,:,ny,:) = u(:,:,ny-1,:)
+!          u(idna,i,j,:) =  recv_left(idna,j,nb+1-i,:)
+!          u(imxa,i,j,:) = -recv_left(imya,j,nb+1-i,:)
+!          u(imya,i,j,:) =  recv_left(imxa,j,nb+1-i,:)
+!          u(imza,i,j,:) =  recv_left(imza,j,nb+1-i,:)
+#ifndef ISO
+!          u(iena,i,j,:) =  recv_left(iena,j,nb+1-i,:)
+#endif /* ISO */
+#ifdef COSM_RAYS
+!          u(iecr,i,j,:) =  recv_left(iecr,j,nb+1-i,:)
+#endif /* COSM_RAYS */
+!        enddo
+!      enddo
+
+      deallocate(send_left,recv_left)
+    endif
+  endif
+
+  if(bnd_xr .eq. 'cor') then
+!   - upper to right
+    if(pcoords(1) .eq. psize(1)-1 .and. pcoords(2) .eq. psize(2)-1 ) then
+      do i=nx+1-nb,nx
+        do j=1,ny+i-nx-1
+          u(idna,i,j,:) =  u(idna,max(j,ny-1),i,:)
+          u(imxa,i,j,:) = -u(imya,max(j,ny-1),i,:)
+          u(imya,i,j,:) =  u(imxa,max(j,ny-1),i,:)
+          u(imza,i,j,:) =  u(imza,max(j,ny-1),i,:)
+#ifndef ISO
+          u(iena,i,j,:) =  u(iena,max(j,ny-1),i,:)
+#endif /* ISO */
+#ifdef COSM_RAYS
+          u(iecr,i,j,:) =  u(iecr,max(j,ny-1),i,:)
+#endif /* COSM_RAYS */
+        enddo
+      enddo
+    endif
+
+    if(procxyr .gt. 0) then
+      allocate(send_left(nu,nb,ny,nz), recv_left(nu,nx,nb,nz))
+
+      send_left(:,:,:,:) = u(:,:,ny-nb+1:ny,:)
+
+      CALL MPI_ISEND   (send_left , nu*nb*ny*nz, MPI_DOUBLE_PRECISION, procxyr, 180, comm, req(1), ierr)
+      CALL MPI_IRECV   (recv_left , nu*nx*nb*nz, MPI_DOUBLE_PRECISION, procxyr, 170, comm, req(2), ierr)
+
+      do ireq=1,2
+        call MPI_WAIT(req(ireq),status(1,ireq),ierr)
+      enddo
+
+      do j=1,ny
+        do i=1,nb
+          u(idna,nx-nb+i,j,:) =  recv_left(idna,j,i,:)
+          u(imxa,nx-nb+i,j,:) =  recv_left(imya,j,i,:)
+          u(imya,nx-nb+i,j,:) =  recv_left(imxa,j,i,:)
+          u(imza,nx-nb+i,j,:) =  recv_left(imza,j,i,:)
+#ifndef ISO
+          u(iena,nx-nb+i,j,:) =  recv_left(iena,j,i,:)
+#endif /* ISO */
+#ifdef COSM_RAYS
+          u(iecr,nx-nb+i,j,:) =  recv_left(iecr,j,i,:)
+#endif /* COSM_RAYS */
+        enddo
+      enddo
+
+      deallocate(send_left,recv_left)
+    endif
+  endif
+
+!---------------iflow bnd condit.---------------------------------
+
+
+  if(bnd_yr .eq. 'inf') then
+!   - upper to onecell outflow
+    if(pcoords(2) .eq. psize(2)-1) then
+      do j=1,nb
+        u(:,:,ny-nb+j,:) =  bndyrar(:,:,j,:)
+      enddo
+    endif
+
+  endif
+
+  if(bnd_xr .eq. 'inf') then
+!   - upper to right
+    if(pcoords(1) .eq. psize(1)-1) then
+      do i=1,nb
+        u(:,nx-nb+i,:,:) =  bndxrar(:,i,:,:)
+      enddo
+    endif
+
+  endif
+
+
+
+!===============================================================
 
 ! Non-MPI boundary conditions
 
@@ -427,6 +517,12 @@ subroutine bnd_u(dim)
            enddo
          endif
 #endif /* ~ISO */
+!         do k = 1, nz
+!            temp(:,:,k:k) = unshear_fft(u(i,nxd+1:nxd+nb,nb+1:ny-nb,k:k),x(nxd+1:nxd+nb),bdely,.true.)
+!            u(i,1:nb,nb+1:ny-nb,k:k) = unshear_fft(temp(:,:,k:k), x(1:nb),bdely)
+!            temp(:,:,k:k) = unshear_fft(u(i,nb+1:2*nb,nb+1:ny-nb,k:k),x(nb+1:2*nb),bdely,.true.)
+!            u(i,nxd+nb+1:nxd+2*nb,nb+1:ny-nb,k:k) = unshear_fft(temp(:,:,k:k),x(nxd+nb+1:nxd+2*nb),bdely)
+!s         enddo
       enddo
       deallocate(temp,tem2)
    endif
@@ -445,6 +541,8 @@ subroutine bnd_u(dim)
           u(:,1:nb,:,:)                        = u(:,nxb+1:nxb+nb,:,:)
         case ('cor')
 !         Do nothing if 'cor'
+        case ('inf')
+!         Do nothing if 'inf'
         case ('ref')
           do ib=1,nb
 
@@ -491,6 +589,10 @@ subroutine bnd_u(dim)
 !         Do nothing if mpi
         case ('per')
           u(:,nxb+nb+1:nxb+2*nb,:,:)            = u(:,nb+1:2*nb,:,:)
+        case ('cor')
+!         Do nothing if 'cor'
+        case ('inf')
+!         Do nothing if 'inf'
         case ('ref')
           do ib=1,nb
 
@@ -536,6 +638,8 @@ subroutine bnd_u(dim)
           u(:,:,1:nb,:)                         = u(:,:,nyb+1:nyb+nb,:)
         case ('cor')
 !         Do nothing if 'cor'
+        case ('inf')
+!         Do nothing if 'inf'
         case ('ref')
           do ib=1,nb
 
@@ -576,6 +680,10 @@ subroutine bnd_u(dim)
 !         Do nothing if mpi
         case ('per')
           u(:,:,nyb+nb+1:nyb+2*nb,:)            = u(:,:,nb+1:2*nb,:)
+        case ('cor')
+!         Do nothing if 'cor'
+        case ('inf')
+!         Do nothing if 'inf'
         case ('ref')
           do ib=1,nb
 
@@ -663,7 +771,9 @@ subroutine bnd_u(dim)
             ekb= 0.5*(u(imxa,:,:,kb)**2+u(imya,:,:,kb)**2+u(imza,:,:,kb)**2)/db
             eib = u(iena,:,:,kb) - ekb
             eib = max(eib,smallei)
-            csi2b = (gamma-1)*eib/db
+            do ifluid=1,nfluid
+               csi2b(ifluid,:,:) = (gamma(ifluid)-1.0)*eib(ifluid,:,:)/db(ifluid,:,:)
+            enddo
 #endif /* ISO */
             z1 = z(kb)
             z2 = z(kb-1)
@@ -679,24 +789,27 @@ subroutine bnd_u(dim)
                 call grav_accel('zsweep',i,j, zs, nsub, gprofs)
                 gprofs=tune_zeq_bnd * gprofs
 
-                dprofs(1) = db(i,j)
+                dprofs(:,1) = db(:,i,j)
                 do ksub=1, nsub
-                  factor = (1.0 + 0.5*dzs*gprofs(ksub)/csi2b(i,j))  &
-                               /(1.0 - 0.5*dzs*gprofs(ksub)/csi2b(i,j))
-                  dprofs(ksub+1) = factor * dprofs(ksub)
+                  factor = (1.0 + 0.5*dzs*gprofs(ksub)/csi2b(:,i,j))  &
+                               /(1.0 - 0.5*dzs*gprofs(ksub)/csi2b(:,i,j))
+                  dprofs(:,ksub+1) = factor * dprofs(:,ksub)
+!                 if(i.eq.7 .and. j.eq.7) write(*,999) ksub, zs(ksub), dprofs(ksub)
                 enddo
 
-                db(i,j)  = dprofs(nsub+1)
-                db(i,j)  = max(db(i,j), smalld)
+                db(:,i,j)  = dprofs(:,nsub+1)
+                db(:,i,j)  = max(db(:,i,j), smalld)
 
-                u(idna,i,j,kb-1)                =     db(i,j)
-                u(imxa:imza,i,j,kb-1)           =     u(imxa:imza,i,j,kb)
+                u(idna,i,j,kb-1)           =     db(:,i,j)
+                u(imxa,i,j,kb-1)           =     u(imxa,i,j,kb)
+                u(imya,i,j,kb-1)           =     u(imya,i,j,kb)
+                u(imza,i,j,kb-1)           =     u(imza,i,j,kb)
 ! zakomentowac nastepna linie jesli warunek diodowy nie ma byc stosowany razem z hydrostatycznym
 !                u(imza,i,j,kb-1)               =     min(u(imza,i,j,kb-1),0.0)
 #ifndef ISO
-                eib(i,j) = csi2b(i,j)*db(i,j)/(gamma-1)
-                eib(i,j) = max(eib(i,j), smallei)
-                u(iena,i,j,kb-1)                =     ekb(i,j) + eib(i,j)
+                eib(:,i,j) = csi2b(:,i,j)*db(:,i,j)/(gamma-1)
+                eib(:,i,j) = max(eib(:,i,j), smallei)
+                u(iena,i,j,kb-1)                =     ekb(:,i,j) + eib(:,i,j)
 #endif /* ISO */
 #ifdef COSM_RAYS
                 u(iecr,i,j,kb-1)                =     smallecr
@@ -757,7 +870,9 @@ subroutine bnd_u(dim)
             ekb= 0.5*(u(imxa,:,:,kb)**2+u(imya,:,:,kb)**2+u(imza,:,:,kb)**2)/db
             eib = u(iena,:,:,kb) - ekb
             eib = max(eib,smallei)
-            csi2b = (gamma-1)*eib/db
+            do ifluid=1,nfluid
+               csi2b(ifluid,:,:) = (gamma(ifluid)-1.0)*eib(ifluid,:,:)/db(ifluid,:,:)
+            enddo
 #endif /* ISO */
             z1 = z(kb)
             z2 = z(kb+1)
@@ -773,24 +888,27 @@ subroutine bnd_u(dim)
                 call grav_accel('zsweep',i,j, zs, nsub, gprofs)
                 gprofs=tune_zeq_bnd * gprofs
 
-                dprofs(1) = db(i,j)
+                dprofs(:,1) = db(:,i,j)
                 do ksub=1, nsub
-                  factor = (1.0 + 0.5*dzs*gprofs(ksub)/csi2b(i,j))  &
-                               /(1.0 - 0.5*dzs*gprofs(ksub)/csi2b(i,j))
-                  dprofs(ksub+1) = factor * dprofs(ksub)
+                  factor = (1.0 + 0.5*dzs*gprofs(ksub)/csi2b(:,i,j))  &
+                               /(1.0 - 0.5*dzs*gprofs(ksub)/csi2b(:,i,j))
+                  dprofs(:,ksub+1) = factor * dprofs(:,ksub)
+!                 if(i.eq.7 .and. j.eq.7) write(*,999) ksub, zs(ksub), dprofs(ksub)
                 enddo
 
-                db(i,j)  = dprofs(nsub+1)
-                db(i,j)  = max(db(i,j), smalld)
+                db(:,i,j)  = dprofs(:,nsub+1)
+                db(:,i,j)  = max(db(:,i,j), smalld)
 
-                u(idna,i,j,kb+1)           =     db(i,j)
-                u(imxa:imza,i,j,kb+1)      =     u(imxa:imza,i,j,kb)
+                u(idna,i,j,kb+1)      =     db(:,i,j)
+                u(imxa,i,j,kb+1)      =     u(imxa,i,j,kb)
+                u(imya,i,j,kb+1)      =     u(imya,i,j,kb)
+                u(imza,i,j,kb+1)      =     u(imza,i,j,kb)
 ! zakomentowac nastepna linie jesli warunek diodowy nie ma byc stosowany razem z hydrostatycznym
 !                u(imza,i,j,kb+1)           =     max(u(imza,i,j,kb+1),0.0)
 #ifndef ISO
-                eib(i,j) = csi2b(i,j)*db(i,j)/(gamma-1)
-                eib(i,j) = max(eib(i,j), smallei)
-                u(iena,i,j,kb+1)           =     ekb(i,j) + eib(i,j)
+                eib(:,i,j) = csi2b(:,i,j)*db(:,i,j)/(gamma-1)
+                eib(:,i,j) = max(eib(:,i,j), smallei)
+                u(iena,i,j,kb+1)           =     ekb(:,i,j) + eib(:,i,j)
 #endif /* ISO */
 #ifdef COSM_RAYS
                 u(iecr,i,j,kb+1)           =     smallecr

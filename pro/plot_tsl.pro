@@ -229,9 +229,11 @@ ENDIF ELSE IF (output EQ 's' OR output EQ 'ps' OR output EQ 'png') THEN BEGIN
   plotname1=STRSPLIT(plotname0 ,/EXTRACT)
   plotname = STRJOIN(plotname1,'_')
 
-  plot_dir= work_dir+'/plots'
-  plot_exist= FILE_TEST(plot_dir,/directory)
-  IF(plot_exist NE 1) THEN SPAWN, 'mkdir ' + plot_dir
+  IF(output NE 's') THEN BEGIN
+    plot_dir= work_dir+'/plots'
+    plot_exist= FILE_TEST(plot_dir,/directory)
+    IF(plot_exist NE 1) THEN SPAWN, 'mkdir ' + plot_dir
+  ENDIF
 
 
 

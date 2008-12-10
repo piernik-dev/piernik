@@ -1,4 +1,3 @@
-#define RNG nb+1:nx-nb, nb+1:ny-nb, nb+1:nz-nb
 #include "piernik.def"
 
 module init_problem
@@ -100,6 +99,9 @@ contains
       use start, only     :   xmin,nb,smalld,c_si,alpha,gamma
 #ifndef ISO
       use start, only     :   smallei
+#ifdef DUST
+    use arrays, only    :   fdust
+#endif /* DUST */
 #endif /* ISO */
 
 ! wolanie prepare_snedistr przeniesione do mhd - procedura musi byc wolana
@@ -111,20 +113,25 @@ contains
 #endif /* COSM_RAYS */
       implicit none
 
-      integer :: i, j, k, iu, id, ju, jd
-      real    :: xi, yj, zk, rc, rs
-      real, allocatable, dimension(:) :: dprof
-      real :: iOmega
-      real :: dcmol, dcneut, dcion, dchot
-      real :: xgradgp, ygradgp, sfq
-      real :: xgradp, ygradp
-#ifdef VERBOSE
-      character syscmd*37, syscmd2*40
-      integer :: system, syslog
-#endif /* VERBOSE */
-      real, allocatable, dimension(:,:)  :: dxzprof, idxzprof, jdxzprof
-      integer, allocatable, dimension(:) :: xproc, yproc
-      integer :: xtag, iproc, ilook, jproc, ytag
+    allocate(dprof(nz))
+    allocate(dxzprof(nxt,nz))
+    allocate(idxzprof(nx,nz))
+    allocate(jdxzprof(nx,nz))
+    allocate(omega_xy(nx,ny))
+    
+    
+    
+    if(pcoords(2) .eq. 0) then
+    do i = 1,nx
+      rc = x(i)
+
+      dcmol = 2.6e20/(cm**2)*exp(-((rc - 4.5*kpc)**2-(r_gc_sun - 4.5*kpc)**2)/(2.9*kpc)**2)
+      dcneut = 6.2e20/(cm**2)
+      dcion =  1.46e20/(cm**2)*exp(-(rc**2 - r_gc_sun**2)/(37.0*kpc)**2) &
+             + 1.20e18/(cm**2)*exp(-((rc - 4.0*kpc)**2 - (r_gc_sun - 4.0*kpc)**2)/(2.0*kpc)**2)
+      dchot = 4.4e18/(cm**2)*(0.12*exp(-(rc-r_gc_sun)/4.9/kpc)+0.88*exp(-((rc-4.5*kpc)**2-(r_gc_sun-4.5*kpc)**2)/(2.9*kpc)**2))
+      d0=(dcmol+dcneut+dcion+dchot) * 1.36 * mp
+      call hydrostatic_zeq(i, 0, d0, dprof)
 
       allocate(dprof(nz))
       allocate(dxzprof(nxt,nz))
@@ -280,22 +287,22 @@ contains
 #endif /* COSM_RAYS */
 
 
-               select case(mf_orient)
-                  case('null')
-                     b(ibx,i,j,k)   = 0.0
-                     b(iby,i,j,k)   = 0.0
-                     b(ibz,i,j,k)   = 0.0
-                  case('vertical')
-                     b(ibx,i,j,k)   = 0.0
-                     b(iby,i,j,k)   = 0.0
-                     b(ibz,i,j,k)   = sqrt(2.*alpha*d0*c_si**2)
-                  case('toroidal')
-                     b(ibx,i,j,k)   =-sqrt(2.*alpha*c_si**2*(u(idna,i,j,k)-max(rhoa,smalld) ))*yj/rc
-                     b(iby,i,j,k)   = sqrt(2.*alpha*c_si**2*(u(idna,i,j,k)-max(rhoa,smalld) ))*xi/rc
-                     b(ibz,i,j,k)   = 0.0
-               end select
+         select case(mf_orient)
+	 case('null')
+         b(ibx,i,j,k)   = 0.0
+         b(iby,i,j,k)   = 0.0
+         b(ibz,i,j,k)   = 0.0
+         case('vertical')
+         b(ibx,i,j,k)   = 0.0
+         b(iby,i,j,k)   = 0.0
+         b(ibz,i,j,k)   = sqrt(2.*alpha*d0*c_si**2)
+	 case('toroidal')
+         b(ibx,i,j,k)   =-sqrt(2.*alpha*c_si**2*u(idna(1),i,j,k))*yj/rc
+         b(iby,i,j,k)   = sqrt(2.*alpha*c_si**2*u(idna(1),i,j,k))*xi/rc
+         b(ibz,i,j,k)   = 0.0
+	 end select
 #ifndef ISO
-               u(iena,i,j,k)   = u(iena,i,j,k) +0.5*sum(b(:,i,j,k)**2,1)
+         u(iena(1),i,j,k)   = u(iena(1),i,j,k) +0.5*sum(b(:,i,j,k)**2,1)
 #endif /* ISO */
             enddo
          enddo

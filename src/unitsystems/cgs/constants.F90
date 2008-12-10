@@ -1,4 +1,3 @@
-! $Id$
 #include "piernik.def"
 
 module constants     ! module containg numerical and physical constants !!!

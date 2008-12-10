@@ -62,19 +62,23 @@ end subroutine maxb
 
 subroutine test_divb
   use grid, only   : dx,dy,dz
-  use arrays, only : nx,ny,nz,b
+  use arrays, only : nx,ny,nz,b,is,ie,js,je,ks,ke
   use constants, only : big
+  use start, only : nb
   implicit none
-  real, allocatable   :: divb(:,:,:)
+  real(kind=8), allocatable   :: divb(:,:,:)
   allocate (divb(nx,ny,nz))
 
-  divb = (eoshift(b(1,:,:,:),shift=1,dim=1,boundary=big) -b(1,:,:,:))*dy*dz &
-        +(eoshift(b(2,:,:,:),shift=1,dim=2,boundary=big) -b(2,:,:,:))*dx*dz &
-        +(eoshift(b(3,:,:,:),shift=1,dim=3,boundary=big) -b(3,:,:,:))*dx*dy
+  divb = 0.0
+  divb = (eoshift(b(1,:,:,:),shift=1,dim=1,boundary=0.0) -b(1,:,:,:))*dy*dz &
+        +(eoshift(b(2,:,:,:),shift=1,dim=2,boundary=0.0) -b(2,:,:,:))*dx*dz &
+        +(eoshift(b(3,:,:,:),shift=1,dim=3,boundary=0.0) -b(3,:,:,:))*dx*dy
+  divb = abs(divb)
 
   write(*,*)
-  write(*,*) 'MAX(|div B|) = ', maxval(abs(divb(2:nx-1,2:ny-1,2:nz-1)))
-  write(*,*)
+  write(*,*) 'MAX(|div B|) = ', maxval(divb(nb+1:nx-nb,nb+1:ny-nb,nb+1:nz-nb))
+  write(*,*) 'LOC(|div B|) = ', maxloc(divb(nb+1:nx-nb,nb+1:ny-nb,nb+1:nz-nb)) + (/nb,nb,nb/)
+  write(*,*) divb(8,55,53)
 
   deallocate (divb)
 

@@ -67,8 +67,6 @@
     cfl    = 0.5
     smalld = 1.e-2
     smallei= 1.e-5
-    flux_limiter = 'vanleer'
-    freezing_speed = 'local'
     integration_order = 2
     magnetic = 'yes'
     dimensions = '2dxy'

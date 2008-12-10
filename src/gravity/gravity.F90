@@ -146,10 +146,10 @@ allocate(gpotdisk(nx,ny,nz),gpothalo(nx,ny,nz),gpotbulge(nx,ny,nz))
 #if defined GRAV_GAL_VOLLMER || defined GRAV_GAL_FERRIERE
     use arrays, only : x,y,z
 #endif /* GRAV_GAL_VOLLMER || GRAV_GAL_FERRIERE */
-#if defined GRAV_PTMASS || defined GRAV_PTFLAT
+#if defined GRAV_PTMASS || defined GRAV_PTFLAT || defined GRAV_PTMASSPURE
     use start,  only : r_smooth,csim2,ptm_x,ptm_y,ptm_z,ptmass,n_gravr,h_grav,r_grav,smalld
     use arrays, only : x,y,z
-#endif /* GRAV_PTMASS || GRAV_PTFLAT */
+#endif /* GRAV_PTMASS || GRAV_PTFLAT || GRAV_PTMASSPURE */
 
     implicit none
     character, intent(in) :: sweep*6
@@ -159,10 +159,10 @@ allocate(gpotdisk(nx,ny,nz),gpothalo(nx,ny,nz),gpotbulge(nx,ny,nz))
     real, dimension(n)    :: xsw
     real, dimension(n),intent(out) :: gpot
        character, intent(inout) :: status*9
-#if defined GRAV_PTMASS || defined GRAV_PTFLAT
+#if defined GRAV_PTMASS || defined GRAV_PTFLAT || defined GRAV_PTMASSPURE
        real                  :: x1, x2
        real, dimension(n)    :: x3, rc, fr
-#endif /* GRAV_PTMASS || GRAV_PTFLAT */
+#endif /* GRAV_PTMASS || GRAV_PTFLAT || GRAV_PTMASSPURE */
 #ifdef GRAV_GAL_FERRIERE
        real aconst, bconst, cconst, flat, omega, g_shear_rate
 #endif /* GRAV_GAL_FERRIERE */
@@ -220,6 +220,23 @@ allocate(gpotdisk(nx,ny,nz),gpothalo(nx,ny,nz),gpotbulge(nx,ny,nz))
            fr = max(1./cosh(fr),smalld/100.)
            gpot = -newtong*ptmass/dsqrt(x1**2+x2**2+x3**2+r_smooth**2)
            gpot = gpot - csim2*dlog(fr) ! *d0
+#elif defined (GRAV_PTMASSPURE)
+           select case (sweep)
+             case('xsweep')
+               x1  = y(i1)-ptm_y
+               x2  = z(i2)-ptm_z
+               x3  = xsw - ptm_x
+             case('ysweep')
+               x1  = z(i1)-ptm_z
+               x2  = x(i2)-ptm_x
+               x3  = xsw - ptm_y
+             case('zsweep')
+               x1  = x(i1)-ptm_x
+               x2  = y(i2)-ptm_y
+               x3  = xsw - ptm_z
+           end select
+           rc = dsqrt(x1**2+x2**2)
+           gpot = -newtong*ptmass/dsqrt(x1**2+x2**2+x3**2+r_smooth**2)
 #elif defined (GRAV_PTFLAT)
            select case (sweep)
              case('xsweep')
@@ -748,6 +765,9 @@ allocate(gpotdisk(nx,ny,nz),gpothalo(nx,ny,nz),gpotbulge(nx,ny,nz))
 
   subroutine grav_pot2accel(sweep, i1,i2, n, grav)
     use arrays, only : gp, dl, xdim, ydim, zdim
+#ifdef KEPL_SUPP_TEST_HELP
+    use arrays, only : u,imxa
+#endif /* KEPL_SUPP_TEST_HELP */
     implicit none
     character, intent(in)          :: sweep*6
     integer, intent(in)            :: i1, i2
@@ -764,6 +784,9 @@ allocate(gpotdisk(nx,ny,nz),gpothalo(nx,ny,nz),gpotbulge(nx,ny,nz))
       case('zsweep')
         grav(1:n-1) = (gp(i1,i2,1:n-1) - gp(i1,i2,2:n))/dl(zdim)
     end select
+#ifdef KEPL_SUPP_TEST_HELP
+    grav(1:n-1) = grav(1:n-1)*maxval(abs(u(imxa,:,:,:)))/1.38726
+#endif /* KEPL_SUPP_TEST_HELP */
 
   end subroutine grav_pot2accel
 

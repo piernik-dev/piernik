@@ -129,14 +129,17 @@ contains
     do k = 1,nz
       do j = 1,ny
         do i = 1,nx
-          u(1,i,j,k)   = d0 
-          u(2:4,i,j,k) = 0.0
-          u(5,i,j,k)   = p0/(gamma-1.0)
-	  u(5,i,j,k)   = u(5,i,j,k) + 0.5*sum(u(2:4,i,j,k)**2,1)/u(1,i,j,k)
+          u(idna,i,j,k)   = d0 
+          u(imxa,i,j,k) = 0.0
+          u(imya,i,j,k) = 0.0
+          u(imza,i,j,k) = 0.0
+          u(iena,i,j,k)   = p0/(gamma-1.0)
+	  u(iena,i,j,k)   = u(iena,i,j,k) + 0.5*(u(imxa,i,j,k)**2 +u(imya,i,j,k)**2 &
+	                                        +u(imza,i,j,k)**2)/u(idna,i,j,k)
           b(1,i,j,k)   = bx0
           b(2,i,j,k)   = by0
           b(3,i,j,k)   = bz0
-          u(5,i,j,k)   = u(5,i,j,k) + 0.5*sum(b(:,i,j,k)**2,1)
+          u(iena(fmagn),i,j,k)   = u(iena(fmagn),i,j,k) + spread(0.5*sum(b(:,i,j,k)**2,1),1,nfmagn)
         enddo
       enddo
     enddo
@@ -149,7 +152,7 @@ contains
       do j = nb+1,ny-nb
         do i = nb+1,nx-nb
           if(((x(i)-x0)**2+(y(j)-y0)**2+(z(k)-z0)**2) .lt. r0**2) then
-            u(5,i,j,k)   = u(5,i,j,k) + Eexpl
+            u(iena,i,j,k)   = u(iena,i,j,k) + Eexpl
           endif
         enddo
       enddo
@@ -187,7 +190,7 @@ contains
       do j = 1,ny
         do i = 1,nx
           if(((x(i)-x0)**2+(y(j)-y0)**2+(z(k)-z0)**2) .lt. r0**2) then
-            u(5,i,j,k)   = u(5,i,j,k) + Eexpl
+            u(iena,i,j,k)   = u(iena,i,j,k) + Eexpl
           endif
         enddo
       enddo

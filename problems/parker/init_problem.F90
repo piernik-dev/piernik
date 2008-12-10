@@ -119,7 +119,9 @@ contains
         do i = 1,nx
           u(idna,i,j,k)   = max(smalld,dprof(k)) 
 	  
-          u(imxa:imza,i,j,k) = 0.0
+          u(imxa,i,j,k) = 0.0
+	  u(imya,i,j,k) = 0.0
+	  u(imza,i,j,k) = 0.0
 #ifdef SHEAR
           u(imya,i,j,k) = -qshear*omega*x(i)*u(idna,i,j,k)
 #endif /* SHEAR */
@@ -154,9 +156,12 @@ contains
     do k = 1,nz
       do j = 1,ny
         do i = 1,nx
-          b(ibx,i,j,k)   = b0*sqrt(u(idna,i,j,k)/d0)* nbx0/sqrt(nbx0**2+nby0**2+nbz0**2)
-          b(iby,i,j,k)   = b0*sqrt(u(idna,i,j,k)/d0)* nby0/sqrt(nbx0**2+nby0**2+nbz0**2)
-          b(ibz,i,j,k)   = b0*sqrt(u(idna,i,j,k)/d0)* nbz0/sqrt(nbx0**2+nby0**2+nbz0**2)
+!          b(ibx,i,j,k)   = b0*sqrt(sum(u(idna(fmagn),i,j,k),1)/d0)* nbx0/sqrt(nbx0**2+nby0**2+nbz0**2)
+!          b(iby,i,j,k)   = b0*sqrt(sum(u(idna(fmagn),i,j,k),1)/d0)* nby0/sqrt(nbx0**2+nby0**2+nbz0**2)
+!          b(ibz,i,j,k)   = b0*sqrt(sum(u(idna(fmagn),i,j,k),1)/d0)* nbz0/sqrt(nbx0**2+nby0**2+nbz0**2)
+          b(ibx,i,j,k)   = b0*sqrt(u(idna(1),i,j,k)/d0)* nbx0/sqrt(nbx0**2+nby0**2+nbz0**2)
+          b(iby,i,j,k)   = b0*sqrt(u(idna(1),i,j,k)/d0)* nby0/sqrt(nbx0**2+nby0**2+nbz0**2)
+          b(ibz,i,j,k)   = b0*sqrt(u(idna(1),i,j,k)/d0)* nbz0/sqrt(nbx0**2+nby0**2+nbz0**2)
 #ifndef ISO
           u(iena,i,j,k)   = u(iena,i,j,k) +0.5*sum(b(:,i,j,k)**2,1)
 #endif /* ISO */

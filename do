@@ -25,7 +25,11 @@ if($argc < 1){
    print " do problems   -  available problems names and their descriptions,\n";
    print " do unitsystem -  available unitsystems names and their descriptions,\n";
    print " do setup      -  how to run the code instruction,\n";
-   print " Enjoy your work with piernik!\n";
+   print " do arrays     -  some important arrays descriptions,\n";
+   print " do hdf        -  some instruction how to visualize results.\n";
+   print " Attention! There is a new version of multipiernik!\n";
+   print " If you want to use the new version type 'makemake' or 'newdo' instead of 'do'.\n";
+   print " Enjoy the Gingercode!\n";
    print " \n";
 #   die;
 } else {
@@ -43,16 +47,38 @@ if($ARGV[0] eq "problems"){
    print "> cd obj\n";
    print "# choose Fortran compiler settings (if different than default) typing:\n";
    print "> newcompiler <settingsname>\n";
-   print "# modify piernik.def file with precompiler directives if needed\n";
+   print "# modify piernik.def file with precompiler directives and number of fluids if needed\n";
    print "> make\n";
    print "# create run directory where you want\n";
    print "> cp {piernik,problem.par} /<where-you-want>/<your-run-directory>/.\n";
    print "> cd /<where-you-want>/<your-run-directory>/\n";
    print "# specify var names which you want to visualize in problem.par file \n";
    print "> ./piernik or >mpirun -n <np> ./piernik\n";
-   print "!===================================================================================!\n";
-   print "# there is also one script to do all these things above at once:\n";
-   print "> setup <problem>\n";
+   print " \n";
+} elsif ($ARGV[0] eq "arrays"){
+   print " \n";
+   print "u(nu,nx,ny,nz) - fluid quantity array: nu - number of quantities like density,\n";
+   print "                 momentum, energy; nx,ny,nz - number of cells in each direction;\n";
+   print "idna           - density u-array-position index array of all fluids;\n";
+   print "imxa,imya,imza - x,y,z-component of momentum u-array-position index of all fluids;\n";
+   print "iena,iecr      - energy of adiabatic fluids and CR anargy u-array-position indexes;\n";
+   print "nfluid,nadiab,nmagn - number of all, adiabatic and magnetized fluids;\n";
+   print "fadiab,fmagn   - arrays of numbers of adiabatic and magnetized fluids;\n";
+   print "#ifdef ISO     - all fluids are isothermal, there is no iena position in u array;\n";
+   print "#ifndef ISO    - only DUST fluids are isothermal, other fluids are adiabatic.\n";
+   print " \n";
+} elsif ($ARGV[0] eq "hdf"){
+   print " \n";
+   print " use plot_mhd.pro routines in ./pro directory to visualize results from hdf files:\n";
+   print " use following var's:\n";
+   print " den1,den2... - densities of first and next fluids;\n";
+   print " vlx1,vly2... - x,y,z-components of velocity of different fluids;\n";
+   print " vou1,vrt2... - radial and rotational (azimutal) components of velocity;\n";
+   print " ene1,ein2... - energy and internal energy;\n";
+   print " magx,magy,magz - x,y,z-components of magnetic field.\n";
+   print " Some of them you should insert into problem.par file before runing the simulation.\n";
+   print " In problem.par var names could be a bit different: dens, velx, vely, velz, ener, eint.\n";
+   print " Do not specify names for each fluid.\n";
    print " \n";
 } else {
 open MAKEIN, "< compilers/default.in" or die $!;
@@ -85,7 +111,6 @@ if( grep { /SELF_GRAV/ }  @d) {push(@addons, "../src/gravity/poisson_solver.F90"
 if( grep { /RESIST/} @d) {push(@addons, "../src/resist/resistivity.F90");}
 if( grep { /SHEAR/}  @d) {push(@addons, "../src/shear/shear.F90");}
 if( grep { /HDF5/}  @d) {push(@addons, "../src/hdf5/dataio_hdf5.F90");}
-if( grep { /KEPLER_SUPPRESSION/} @d) {push(@addons, "../src/extras/rotsource.F90");}
 if( grep { /COSM_RAYS/} @d) {
    push(@addons, "../src/cosm_rays/cr_diffusion.F90");
 }

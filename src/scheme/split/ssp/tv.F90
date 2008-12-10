@@ -1,9 +1,9 @@
-				! $Id$
-#include "piernik.def"
+#include "mhd.def"
 module tv ! split ssp
   contains
 
   subroutine tvdb(vibj,b,vg,n,dt)
+
     use func, only      : tvdb_emf
     implicit none
     integer, intent(in) :: n
@@ -21,12 +21,12 @@ module tv ! split ssp
   end subroutine tvdb
 
   subroutine relaxing_tvd(u,bb,sweep,i1,i2,dx,n,dt)
-    use start,  only : smalld, integration_order,cn
-    use arrays, only : idna,imxa,imya,imza,nu
+    use start,  only : smalld, integration_order,cn,collfaq
+    use arrays, only : idna,imxa,imya,imza,nu,nfluid,x,y
     use fluxes
 #ifndef ISO
     use start,  only : smallei
-    use arrays, only : iena,ibx,iby,ibz
+    use arrays, only : nadiab,fadiab,iena,ibx,iby,ibz
 #endif /* ISO */
 #ifdef GRAV
     use gravity, only :grav_pot2accel
@@ -43,13 +43,10 @@ module tv ! split ssp
     use arrays, only : z
     use start, only : floor_vz, ceil_vz
 #endif /* VZ_LIMITS */
-#ifdef KEPLER_SUPPRESSION
-    use rotsource, only : kepler_suppression
-#endif /* KEPLER_SUPPRESSION */
 
 
     implicit none
-    integer :: i1,i2, n, istep
+    integer :: i1,i2, n, istep, ifluid,ifl,jfl
     real    :: dt,dx,dtx
     real, dimension(nu,n) :: u,cfr,ul,ur
     real, dimension(3,n)  :: bb
@@ -59,18 +56,18 @@ module tv ! split ssp
 #endif /* SHEAR */
 #ifdef GRAV
     real, dimension(n)    :: dgrp,dgrm,dglp,dglm
-    real, dimension(n)    :: gravl, gravr
-#endif /* GRAV */
-#ifdef KEPLER_SUPPRESSION
-    real, dimension(nu,n) :: Duus
-#endif /* KEPLER_SUPPRESSION */
+    real, dimension(nfluid,nfluid,n) :: flch
+    real, dimension(nfluid,n) :: colls
+           
+  real, dimension(nfluid,n) :: velcoor
     character sweep*6
 
 !locals
     real, dimension(nu,n) :: w,fr,fl,flux,dfrp,dfrm,dflm,dflp,dulf,durf
     real, dimension(nu,n) :: ul0,ur0,u1,ul1,ur1
 #ifndef ISO
-    real, dimension(n)    :: ekin,eint,emag
+    real, dimension(nadiab,n)    :: ekin,eint
+    real, dimension(n)    :: emag
 #endif /* ISO */
 #ifdef GRAV
     real, dimension(nu,n) :: duls,durs
@@ -100,8 +97,9 @@ module tv ! split ssp
 
     fr = (u1*cfr+w)*0.5
     fl = (u1*cfr-w)*0.5
-    ur = fr/cfr
-    ul = fl/cfr
+ 
+      ur = fr/cfr
+      ul = fl/cfr
 
     if(istep == 1) then
       ur0 = ur
@@ -118,7 +116,6 @@ module tv ! split ssp
        dflp(:,1:n-1) = 0.5*(fl(:,1:n-1) - fl(:,2:n)); dflp(:,n) = dflp(:,n-1)
        dflm(:,2:n)   = dflp(:,1:n-1);                 dflm(:,1) = dflm(:,2)
       call flimiter(fl,dflm,dflp,nu,n)
-
 
     durf(:,2:n) = dtx*(fr(:,2:n) - fr(:,1:n-1));     durf(:,1) = durf(:,2)
     dulf(:,2:n) = dtx*(fl(:,2:n) - fl(:,1:n-1));     dulf(:,1) = dulf(:,2)
@@ -148,6 +145,7 @@ module tv ! split ssp
     gravr      = gravr + rotfr                     ;  gravr(n)   = gravr(n-1)
     gravl(2:n) = gravr(1:n-1)                      ;  gravl(1)   = gravl(2)
 
+
       dgrp(1:n-1) = 0.5*(gravr(1:n-1) - gravr(2:n));  dgrp(n) = dgrp(n-1)
       dgrm(2:n) = dgrp(1:n-1)                      ;  dgrm(1) = dgrm(2)
       call flimiter(gravr,dgrp,dgrm,1,n)
@@ -156,13 +154,14 @@ module tv ! split ssp
       dglm(2:n)   = dglp(1:n-1)                    ;  dglm(1) = dglm(2)
       call flimiter(gravl,dglp,dglm,1,n)
 
-
+    do ifluid=1,nfluid
 #ifndef ISO
-    duls(iena,:)  = gravr*ul(imxa,:)*dt
-    durs(iena,:)  = gravl*ur(imxa,:)*dt
+    duls(iena(ifluid),:)  = gravr*ul(imxa(ifluid),:)*dt
+    durs(iena(ifluid),:)  = gravl*ur(imxa(ifluid),:)*dt
 #endif /* ISO */
-    duls(imxa,:)  = gravr*ul(idna,:)*dt
-    durs(imxa,:)  = gravl*ur(idna,:)*dt
+    duls(imxa(ifluid),:)  = gravr*ul(idna(ifluid),:)*dt
+    durs(imxa(ifluid),:)  = gravl*ur(idna(ifluid),:)*dt
+    enddo
     ur1= ur1 + cn(2,istep)*durs
     ul1= ul1 + cn(2,istep)*duls
 #endif /* GRAV */
@@ -181,6 +180,48 @@ module tv ! split ssp
     endif
 #endif /* VZ_LIMITS */
 
+#ifdef COLLISIONS
+!-----collisions between fluids------
+
+    do ifl=1,nfluid
+    do jfl=1,nfluid
+#ifdef COLLS_MODIF
+    select case(sweep)
+    case('xsweep')
+    velcoor(ifl,:)=(u1(imxa(ifl),:)*y(i1)-u1(imya(ifl),:)*x(:))/u1(idna(ifl),:)*y(i1)/(x(:)**2+y(i1)**2)
+    velcoor(jfl,:)=(u1(imxa(jfl),:)*y(i1)-u1(imya(jfl),:)*x(:))/u1(idna(jfl),:)*y(i1)/(x(:)**2+y(i1)**2)
+    case('ysweep')
+    velcoor(ifl,:)=(u1(imxa(ifl),:)*x(i2)-u1(imya(ifl),:)*y(:))/u1(idna(ifl),:)*x(i2)/(y(:)**2+x(i2)**2)
+    velcoor(jfl,:)=(u1(imxa(jfl),:)*x(i2)-u1(imya(jfl),:)*y(:))/u1(idna(jfl),:)*x(i2)/(y(:)**2+x(i2)**2)
+    case('zsweep')
+    velcoor(:,:)=(u1(imxa,:)/u1(idna,:))
+    case('default')
+    write(*,*) 'smth wrong with velocities near collisions'
+    end select
+#endif /* COLLS_MODIF */
+    if(ifl .ne. jfl) then
+    flch(ifl,jfl,:)=u1(idna(ifl),:)*u1(idna(jfl),:) &
+#ifdef COLLS_MODIF
+                    *(velcoor(jfl,:)-velcoor(ifl,:))
+#else /* COLLS_MODIF */
+                   *(u1(imxa(jfl),:)/u1(idna(jfl),:)-u1(imxa(ifl),:)/u1(idna(ifl),:))
+#endif /* COLLS_MODIF */
+    else
+    flch(ifl,jfl,:)=0.0
+    endif
+    enddo
+    enddo
+    do ifl=1,nfluid
+    colls(ifl,:)=cn(istep)*collfaq*sum(flch(ifl,:,:),1)
+    enddo
+#ifndef ISO
+    u1(iena,:)=u1(iena,:)+(u1(imxa,:)*colls*dt+0.5*(colls*dt)**2)/u1(idna,:)
+#endif /* ISO */
+    u1(imxa,:)=u1(imxa,:)+colls*dt
+
+!------------------------------------
+#endif /* COLLISIONS */
+          
 #ifdef COSM_RAYS
     select case (sweep)
       case('xsweep')
@@ -207,11 +248,13 @@ module tv ! split ssp
 
 #endif /* COSM_RAYS */
 #ifndef ISO
-    ekin = 0.5*(u1(imxa,:)*u1(imxa,:)+u1(imya,:)*u1(imya,:)+u1(imza,:)*u1(imza,:))/u1(idna,:)
+    ekin = 0.5*(u1(imxa(fadiab),:)*u1(imxa(fadiab),:) &
+               +u1(imya(fadiab),:)*u1(imya(fadiab),:) &
+	       +u1(imza(fadiab),:)*u1(imza(fadiab),:))/u1(idna(fadiab),:)
     emag = 0.5*(bb(ibx,:)*bb(ibx,:) + bb(iby,:)*bb(iby,:) + bb(ibz,:)*bb(ibz,:))
-    eint = u1(iena,:)-ekin-emag
+    eint = u1(iena,:)-ekin-spread(emag,1,nadiab)
     eint = max(eint,smallei)
-    u1(iena,:) = eint+ekin+emag
+    u1(iena,:) = eint+ekin+spread(emag,1,nadiab)
 #endif /* ISO */
 
 #ifdef VZ_LIMITS
@@ -226,13 +269,6 @@ module tv ! split ssp
       endwhere
     endif
 #endif /* VZ_LIMITS */
-
-#ifdef KEPLER_SUPPRESSION
-	call kepler_suppression(Duus,u1,sweep,i1,i2,n,dt)
-#ifndef OVERLAP
-	u1 = u1 + Duus
-#endif /* OVERLAP */
-#endif /* KEPLER_SUPPRESSION */
 
       u(:,:) = u1(:,:)
   enddo

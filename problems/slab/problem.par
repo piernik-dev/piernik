@@ -34,11 +34,6 @@
     vars(3) = 'vely'
     vars(4) = 'velz'
     vars(5) = 'ener'
-    vars(6) = 'flx1'
-    vars(7) = 'flx2'
-    vars(8) = 'flx3'
-    vars(9) = 'flx4'
-    vars(10) = 'flx5'
     domain  = 'full_domain'
     mag_center = 'no'
  / 
@@ -70,7 +65,7 @@
     cfl    = 0.7
     smalld = 1.e-3
     smallei= 1.e-5
-    integration_order = 3
+    integration_order = 2
     magnetic = 'no'
     dimensions = '2dxy'
     nu_bulk    = 0.0001
