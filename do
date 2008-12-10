@@ -55,7 +55,7 @@ if($ARGV[0] eq "problems"){
    print "> setup <problem>\n";
    print " \n";
 } else {
-open MAKEIN, "< compilers/Makefile.in" or die $!;
+open MAKEIN, "< compilers/default.in" or die $!;
 @makein = <MAKEIN>;
 close MAKEIN;
 rmtree(['obj']);
