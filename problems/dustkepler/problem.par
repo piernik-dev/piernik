@@ -98,9 +98,10 @@
     d0      = 1.0
     dout    = 1.0e-4
     r_max   = 1.0e-1
+	 collf   = 10.0
     alfasupp= 1.0e1
-    rsup1   = 0.2e1
-    rsup2   = 0.3e1
+    rsup1   = 1.2
+    rsup2   = 1.3
     rsup3   = 0.5e1
     rsup4   = 1.1
     suppkind= 'smout'

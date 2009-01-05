@@ -6,7 +6,7 @@
 #ifdef COSM_RAYS
     use start, only  : dt_cr
     use arrays, only : iecr
-#endif /* COSM_RAYS */	 	 
+#endif /* COSM_RAYS */
 #ifdef ISO
     use start, only : csi2,c_si
 #endif /* ISO */
@@ -22,32 +22,32 @@
     use start, only : dt_colls
 #endif /* COLLISIONS */
 #ifdef KEPLER_SUPPRESSION
-    use	start, only : cfl_colls, dt_supp
-    use arrays, only : nz,alfsup
+    use start,  only : cfl_colls, dt_supp
+    use arrays, only : nz, alfsup
 #endif /* KEPLER_SUPPRESSION */
-      
+
     implicit none
-  
+
     integer, dimension(3) :: loc_vx_max, loc_vy_max, loc_vz_max, loc_va_max, &
-                             loc_cs_max, loc_dens_min, loc_dens_max, loc_pres_min, & 
+                             loc_cs_max, loc_dens_min, loc_dens_max, loc_pres_min, &
                              loc_pres_max, loc_b_min, loc_b_max, &
                              loc_temp_min, loc_temp_max, loc_divb_max
-#ifdef COOL_HEAT			    
+#ifdef COOL_HEAT
     integer, dimension(3) :: loc_dt_cool, loc_dt_heat
 #endif /* COOL_HEAT */
 #ifdef COSM_RAYS
     integer, dimension(3) :: loc_encr_min, loc_encr_max
 #endif /* COSM_RAYS */
-                             
+
     integer               :: proc_vx_max, proc_vy_max, proc_vz_max, proc_va_max, &
-                             proc_cs_max, proc_dens_min, proc_dens_max, proc_pres_min, & 
+                             proc_cs_max, proc_dens_min, proc_dens_max, proc_pres_min, &
                              proc_pres_max, proc_b_min, proc_b_max, &
                              proc_temp_min, proc_temp_max, proc_divb_max, ifl
-#ifdef COOL_HEAT			     
+#ifdef COOL_HEAT
     integer               :: proc_dt_cool, proc_dt_heat
 #endif /* COOL_HEAT */
 #ifdef RESIST
-    integer               :: proc_eta_max 
+    integer               :: proc_eta_max
 #endif /* RESIST */
 #ifdef COSM_RAYS
     integer               :: proc_encr_min, proc_encr_max
@@ -56,55 +56,55 @@
     integer               :: proc_asupp_min, proc_asupp_max
     integer, dimension(3) :: loc_asupp_min, loc_asupp_max
 #endif /* KEPLER_SUPPRESSION */
-    
+
 ! Timestep diagnostics
 
-    
+
   do ifl=1,nfluid
     wa         =  u(idna(ifl),:,:,:)
-    dens_min      = minval(wa(is:ie,js:je,ks:ke)) 
+    dens_min      = minval(wa(is:ie,js:je,ks:ke))
     loc_dens_min  = minloc(wa(is:ie,js:je,ks:ke)) &
                   + (/nb,nb,nb/)
     call mpifind(dens_min, 'min', loc_dens_min, proc_dens_min)
 
     wa         =  u(idna(ifl),:,:,:)
-    dens_max      = maxval(wa(is:ie,js:je,ks:ke)) 
+    dens_max      = maxval(wa(is:ie,js:je,ks:ke))
     loc_dens_max  = maxloc(wa(is:ie,js:je,ks:ke)) &
                   + (/nb,nb,nb/)
     call mpifind(dens_max, 'max', loc_dens_max, proc_dens_max)
 
- 
+
     wa         = abs(u(imxa(ifl),:,:,:)/u(idna(ifl),:,:,:))
-    vx_max      = maxval(wa(is:ie,js:je,ks:ke)) 
+    vx_max      = maxval(wa(is:ie,js:je,ks:ke))
     loc_vx_max  = maxloc(wa(is:ie,js:je,ks:ke)) &
                   + (/nb,nb,nb/)
     call mpifind(vx_max, 'max', loc_vx_max, proc_vx_max)
 
     wa         = abs(u(imya(ifl),:,:,:)/u(idna(ifl),:,:,:))
-    vy_max      = maxval(wa(is:ie,js:je,ks:ke)) 
-    loc_vy_max  = maxloc(wa(is:ie,js:je,ks:ke)) & 
+    vy_max      = maxval(wa(is:ie,js:je,ks:ke))
+    loc_vy_max  = maxloc(wa(is:ie,js:je,ks:ke)) &
                   + (/nb,nb,nb/)
     call mpifind(vy_max, 'max', loc_vy_max, proc_vy_max)
 
     wa         = abs(u(imza(ifl),:,:,:)/u(idna(ifl),:,:,:))
-    vz_max      = maxval(wa(is:ie,js:je,ks:ke)) 
-    loc_vz_max  = maxloc(wa(is:ie,js:je,ks:ke)) & 
+    vz_max      = maxval(wa(is:ie,js:je,ks:ke))
+    loc_vz_max  = maxloc(wa(is:ie,js:je,ks:ke)) &
                   + (/nb,nb,nb/)
     call mpifind(vz_max, 'max', loc_vz_max, proc_vz_max)
-    
-!    wa         = sum(b(:,:,:,:)**2,1)  
+
+!    wa         = sum(b(:,:,:,:)**2,1)
     wa(:,:,:)  = b(1,:,:,:)*b(1,:,:,:) + b(2,:,:,:)*b(2,:,:,:) + &
                  b(3,:,:,:)*b(3,:,:,:)
-    b_min      = sqrt(minval(wa(is:ie,js:je,ks:ke))) 
+    b_min      = sqrt(minval(wa(is:ie,js:je,ks:ke)))
     loc_b_min  = minloc(wa(is:ie,js:je,ks:ke)) &
                   + (/nb,nb,nb/)
     call mpifind(b_min, 'min', loc_b_min, proc_b_min)
 
-    b_max      = sqrt(maxval(wa(is:ie,js:je,ks:ke))) 
+    b_max      = sqrt(maxval(wa(is:ie,js:je,ks:ke)))
     loc_b_max  = maxloc(wa(is:ie,js:je,ks:ke)) &
                   + (/nb,nb,nb/)
     call mpifind(b_max, 'max', loc_b_max, proc_b_max)
-        
+
     va_max      = sqrt(maxval(wa(is:ie,js:je,ks:ke) &
                        /u(idna(ifl),is:ie,js:je,ks:ke)))
     loc_va_max  = maxloc(wa(is:ie,js:je,ks:ke) &
@@ -115,38 +115,38 @@
 
 #ifdef ISO
     pres_min     = csi2*dens_min
-    loc_pres_min  = loc_dens_min    
-    proc_pres_min = proc_dens_min    
+    loc_pres_min  = loc_dens_min
+    proc_pres_min = proc_dens_min
     pres_max     = csi2*dens_max
     loc_pres_max  = loc_dens_max
-    proc_pres_max = proc_dens_max    
+    proc_pres_max = proc_dens_max
     cs_max        = c_si
     loc_cs_max    = 0
     proc_cs_max   = 0
     temp_min      = hydro_mass / k_B * csi2
     loc_temp_min  = 0
-    proc_temp_min = 0   
+    proc_temp_min = 0
     temp_max      = hydro_mass / k_B * csi2
     loc_temp_max  = 0
-    proc_temp_max = 0          
+    proc_temp_max = 0
 #else /* ISO */
     wa            = (u(iena(ifl),:,:,:) &                ! eint
                   - 0.5*(sum(u(imxa(ifl):imza(ifl),:,:,:)**2,1) /u(idna(ifl),:,:,:) + wa))
     wa            = max(wa,smallei)
     wa            = (gamma(ifl)-1)*wa                    ! pres
 
-    pres_min      = minval(wa(is:ie,js:je,ks:ke)) 
+    pres_min      = minval(wa(is:ie,js:je,ks:ke))
     loc_pres_min  = minloc(wa(is:ie,js:je,ks:ke)) &
                      + (/nb,nb,nb/)
     call mpifind(pres_min, 'min', loc_pres_min, proc_pres_min)
-                  
-    pres_max      = maxval(wa(is:ie,js:je,ks:ke)) 
+
+    pres_max      = maxval(wa(is:ie,js:je,ks:ke))
     loc_pres_max  = maxloc(wa(is:ie,js:je,ks:ke)) &
                      + (/nb,nb,nb/)
     call mpifind(pres_max, 'max', loc_pres_max, proc_pres_max)
-                  
+
     temp_max      = maxval( hydro_mass / k_B * wa(is:ie,js:je,ks:ke) &
-                                             /u(idna(ifl),is:ie,js:je,ks:ke)) 
+                                             /u(idna(ifl),is:ie,js:je,ks:ke))
     loc_temp_max  = maxloc(wa(is:ie,js:je,ks:ke)    &
                          /u(idna(ifl),is:ie,js:je,ks:ke)  ) &
                      + (/nb,nb,nb/)
@@ -154,7 +154,7 @@
 
 
     temp_min      = minval( hydro_mass / k_B * wa(is:ie,js:je,ks:ke) &
-                                             /u(idna(ifl),is:ie,js:je,ks:ke)) 
+                                             /u(idna(ifl),is:ie,js:je,ks:ke))
     loc_temp_min  = minloc(wa(is:ie,js:je,ks:ke)    &
                          /u(idna(ifl),is:ie,js:je,ks:ke)  ) &
                      + (/nb,nb,nb/)
@@ -163,11 +163,11 @@
     cs_max        = sqrt(maxval(gamma(ifl)*wa(is:ie,js:je,ks:ke) &
                             /u(idna(ifl),is:ie,js:je,ks:ke)))
     loc_cs_max    = maxloc(gamma(ifl)*wa(is:ie,js:je,ks:ke) &
-                            /u(idna(ifl),is:ie,js:je,ks:ke)) & 
+                            /u(idna(ifl),is:ie,js:je,ks:ke)) &
                      + (/nb,nb,nb/)
     call mpifind(cs_max, 'max', loc_cs_max, proc_cs_max)
 #endif /* ISO */
-    
+
 #ifdef COOL_HEAT
       call mpifind(eint_src_min, 'min', loc_dt_cool, proc_dt_cool)
       call mpifind(eint_src_max, 'max', loc_dt_heat, proc_dt_heat)
@@ -192,11 +192,11 @@
     wa(:,je,:) = wa(:,je-1,:)
     wa(:,:,ke) = wa(:,:,max(ke-1,1))
 
-    divb_max      = maxval(wa(is:ie,js:je,ks:ke)) 
+    divb_max      = maxval(wa(is:ie,js:je,ks:ke))
     loc_divb_max  = maxloc(wa(is:ie,js:je,ks:ke)) &
                   + (/nb,nb,nb/)
     call mpifind(divb_max, 'max', loc_divb_max, proc_divb_max)
-    
+
 #ifdef KEPLER_SUPPRESSION
       wa            = spread(alfsup,3,nz)/u(idna(ifl),:,:,:)+small
       asupp_min     = minval(wa(is:ie,js:je,ks:ke))
@@ -208,41 +208,44 @@
 #endif /* KEPLER_SUPPRESSION */
 
     if(proc .eq. 0)  then
-    
+
       open(log_lun, file=log_file, position='append')
 
         write(log_lun,'(a22,i2,a36)') '--------------- Fluid ',ifl,' characteristics -------------------'
 
-        write(log_lun,771) 'min(dens',ifl,' )   =', dens_min,  proc_dens_min,  loc_dens_min   
-        write(log_lun,771) 'max(dens',ifl,' )   =', dens_max,  proc_dens_max,  loc_dens_max   
-        write(log_lun,771) 'min(temp',ifl,' )   =', temp_min,  proc_temp_min,  loc_temp_min  
-        write(log_lun,771) 'max(temp',ifl,' )   =', temp_max,  proc_temp_max,  loc_temp_max  
-        write(log_lun,771) 'min(pres',ifl,' )   =', pres_min,  proc_pres_min,  loc_pres_min   
-        write(log_lun,771) 'max(pres',ifl,' )   =', pres_max,  proc_pres_max,  loc_pres_max   
-        write(log_lun,770) 'min(|b|)       =', b_min,     proc_b_min,     loc_b_min   
-        write(log_lun,770) 'max(|b|)       =', b_max,     proc_b_max,     loc_b_max  
-        write(log_lun,770) 'max(|divb|)    =', divb_max,  proc_divb_max,  loc_divb_max  
-    
-        write(log_lun,778) 'max(|velx|  ',ifl,' ) =', vx_max, 'dt=',cfl*dx/(vx_max+small),   proc_vx_max, loc_vx_max   
-        write(log_lun,778) 'max(|vely|  ',ifl,' ) =', vy_max, 'dt=',cfl*dy/(vy_max+small),   proc_vy_max, loc_vy_max   
-        write(log_lun,778) 'max(|velz|  ',ifl,' ) =', vz_max, 'dt=',cfl*dz/(vz_max+small),   proc_vz_max, loc_vz_max  
-        write(log_lun,778) 'max(v_alfven',ifl,' ) =', va_max, 'dt=',cfl*dxmn/(va_max+small), proc_va_max, loc_va_max   
-        write(log_lun,778) 'max(c_sound ',ifl,' ) =', cs_max, 'dt=',cfl*dxmn/(cs_max+small), proc_cs_max, loc_cs_max   
-        write(log_lun,778) 'max(c_fast  ',ifl,' ) =', sqrt(cs_max**2+va_max**2), 'dt=',cfl*dxmn/sqrt(cs_max**2+va_max**2)   
+        write(log_lun,771) 'min(dens',ifl,' )   =', dens_min,  proc_dens_min,  loc_dens_min
+        write(log_lun,771) 'max(dens',ifl,' )   =', dens_max,  proc_dens_max,  loc_dens_max
+        write(log_lun,771) 'min(temp',ifl,' )   =', temp_min,  proc_temp_min,  loc_temp_min
+        write(log_lun,771) 'max(temp',ifl,' )   =', temp_max,  proc_temp_max,  loc_temp_max
+        write(log_lun,771) 'min(pres',ifl,' )   =', pres_min,  proc_pres_min,  loc_pres_min
+        write(log_lun,771) 'max(pres',ifl,' )   =', pres_max,  proc_pres_max,  loc_pres_max
+        write(log_lun,770) 'min(|b|)       =', b_min,     proc_b_min,     loc_b_min
+        write(log_lun,770) 'max(|b|)       =', b_max,     proc_b_max,     loc_b_max
+        write(log_lun,770) 'max(|divb|)    =', divb_max,  proc_divb_max,  loc_divb_max
+
+        write(log_lun,777) 'max(|velx|  ',ifl,' ) =', vx_max, 'dt=',cfl*dx/(vx_max+small),   proc_vx_max, loc_vx_max
+        write(log_lun,777) 'max(|vely|  ',ifl,' ) =', vy_max, 'dt=',cfl*dy/(vy_max+small),   proc_vy_max, loc_vy_max
+        write(log_lun,777) 'max(|velz|  ',ifl,' ) =', vz_max, 'dt=',cfl*dz/(vz_max+small),   proc_vz_max, loc_vz_max
+        write(log_lun,777) 'max(v_alfven',ifl,' ) =', va_max, 'dt=',cfl*dxmn/(va_max+small), proc_va_max, loc_va_max
+        write(log_lun,777) 'max(c_sound ',ifl,' ) =', cs_max, 'dt=',cfl*dxmn/(cs_max+small), proc_cs_max, loc_cs_max
+        write(log_lun,777) 'max(c_fast  ',ifl,' ) =', sqrt(cs_max**2+va_max**2), 'dt=',cfl*dxmn/sqrt(cs_max**2+va_max**2)
 #ifdef COOL_HEAT
-        write(log_lun,779) 'min(esrc/eint',ifl,') =', eint_src_min , 'dt=',dt_cool,   proc_dt_cool,  loc_dt_cool
-        write(log_lun,779) 'max(esrc/eint',ifl,') =', eint_src_max , 'dt=',dt_heat,   proc_dt_heat,  loc_dt_heat 
+        write(log_lun,778) 'min(esrc/eint',ifl,') =', eint_src_min , 'dt=',dt_cool,   proc_dt_cool,  loc_dt_cool
+        write(log_lun,778) 'max(esrc/eint',ifl,') =', eint_src_max , 'dt=',dt_heat,   proc_dt_heat,  loc_dt_heat
 #endif /* COOL_HEAT */
 #ifdef RESIST
-        write(log_lun,777) 'max(eta)       =', eta_max ,      'dt=',dt_resist, proc_eta_max,  loc_eta_max
+        write(log_lun,776) 'max(eta)       =', eta_max ,      'dt=',dt_resist, proc_eta_max,  loc_eta_max
 #endif /* RESIST */
 #ifdef COLLISIONS
         write(log_lun,'(2x,a22,i2,a15,e10.4)') 'collisions with fluid ',ifl,' ~1/dens, dt = ',dt_colls
 #endif /* COLLISIONS */
 #ifdef KEPLER_SUPPRESSION
-        write(log_lun,776) 'min(alfsup*dens',ifl,' ) =',asupp_min, 'dt=',cfl_colls/asupp_min, proc_asupp_min, loc_asupp_min
-        write(log_lun,776) 'max(alfsup*dens',ifl,' ) =',asupp_max, 'dt=',cfl_colls/asupp_max, proc_asupp_max, loc_asupp_max
-	write(log_lun,'(5x,a10,e10.4)') 'dt_supp = ',dt_supp
+!>
+!! \todo Check and probably change the log of KEPLER_SUPPRESSION
+!<
+        write(log_lun,779) 'min(alfsup*dens',ifl,' ) =',asupp_min, 'dt=',cfl_colls/asupp_min, proc_asupp_min, loc_asupp_min
+        write(log_lun,779) 'max(alfsup*dens',ifl,' ) =',asupp_max, 'dt=',cfl_colls/asupp_max, proc_asupp_max, loc_asupp_max
+        write(log_lun,'(5x,a10,e10.4)') 'dt_supp = ',dt_supp
 #endif /* KEPLER_SUPPRESSION */
 
       close(log_lun)
@@ -253,21 +256,21 @@
 #ifdef COSM_RAYS
   do ifl=1,COSM_RAYS
     wa         =  u(iecr(ifl),:,:,:)
-    encr_min      = minval(wa(is:ie,js:je,ks:ke)) 
+    encr_min      = minval(wa(is:ie,js:je,ks:ke))
     loc_encr_min  = minloc(wa(is:ie,js:je,ks:ke)) &
                   + (/nb,nb,nb/)
     call mpifind(encr_min, 'min', loc_encr_min, proc_encr_min)
 
     wa         =  u(iecr(ifl),:,:,:)
-    encr_max      = maxval(wa(is:ie,js:je,ks:ke)) 
+    encr_max      = maxval(wa(is:ie,js:je,ks:ke))
     loc_encr_max  = maxloc(wa(is:ie,js:je,ks:ke)) &
                   + (/nb,nb,nb/)
     call mpifind(encr_max, 'max', loc_encr_max, proc_encr_max)
     if(proc .eq. 0)  then
       open(log_lun, file=log_file, position='append')
         write(log_lun,'(a22,i2,a36)') '-------------- CR bin ',ifl,' characteristics -------------------'
-        write(log_lun,777) 'min(encr)      =', encr_min,         '',  0.0,     proc_encr_min, loc_encr_min   
-        write(log_lun,777) 'max(encr)      =', encr_max,      'dt=',dt_cr,     proc_encr_max, loc_encr_max   
+        write(log_lun,776) 'min(encr)      =', encr_min,         '',  0.0,     proc_encr_min, loc_encr_min
+        write(log_lun,776) 'max(encr)      =', encr_max,      'dt=',dt_cr,     proc_encr_max, loc_encr_max
       close(log_lun)
     endif
   enddo
@@ -278,18 +281,24 @@
     if(proc .eq. 0)  then
       open(log_lun, file=log_file, position='append')
         write(log_lun,'(a80)') '================================================================================'
-	write(log_lun,900) nstep,dt,t
+        write(log_lun,900) nstep,dt,t
         write(log_lun,'(a80)') '================================================================================'
       close(log_lun)
     endif
 
 
-    
-770 format(5x,a16,(1x,e15.9),4(1x,i4)) 
-771 format(5x,a8,i2,a6,(1x,e15.9),4(1x,i4)) 
-777 format(5x,a16,(1x,e10.4),2x,a3,(1x,e10.4),4(1x,i4)) 
-776 format(2x,a15,i2,a4,(1x,e10.4),2x,a3,(1x,e10.4),4(1x,i4))
-778 format(5x,a12,i2,a4,(1x,e10.4),2x,a3,(1x,e10.4),4(1x,i4)) 
-779 format(4x,a13,i2,a3,(1x,e10.4),2x,a3,(1x,e10.4),4(1x,i4)) 
-900 format('   nstep = ',i7,'   dt = ',f22.16,'   t = ',f22.16,2(1x,i4))   
-  
+
+770 format(5x,a16,(1x,e15.9),4(1x,i4))
+771 format(5x,a8,i2,a6,(1x,e15.9),4(1x,i4))
+#if defined RESIST || defined COSM_RAYS
+776 format(5x,a16,(1x,e10.4),2x,a3,(1x,e10.4),4(1x,i4))
+#endif /* RESIST || COSM_RAYS */
+777 format(5x,a12,i2,a4,(1x,e10.4),2x,a3,(1x,e10.4),4(1x,i4))
+#ifdef COOL_HEAT
+778 format(4x,a13,i2,a3,(1x,e10.4),2x,a3,(1x,e10.4),4(1x,i4))
+#endif /* COOL_HEAT */
+#ifdef KEPLER_SUPPRESSION
+779 format(2x,a15,i2,a4,(1x,e10.4),2x,a3,(1x,e10.4),4(1x,i4))
+#endif /* KEPLER_SUPPRESSION */
+900 format('   nstep = ',i7,'   dt = ',f22.16,'   t = ',f22.16,2(1x,i4))
+

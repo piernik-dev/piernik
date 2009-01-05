@@ -24,15 +24,15 @@
 #define NUMBFLUID NUMBION+NUMBNEUT+NUMBMOLEC+NUMBDUST
 
 module start
+
 ! Written by: M. Hanasz, January 2006
+
   use mpi_setup
+
 
   implicit none
 
-  integer :: nxd !< total number of physical cells in x direction
-  integer :: nyd !< total number of physical cells in y direction
-  integer :: nzd !< total number of physical cells in z direction
-  integer :: nb  !< number of ghost cells of each block
+  integer nxd, nyd, nzd, nb
 
   real t,dt
   real dt_mhd, dt_coolheat, dt_visc
@@ -47,15 +47,6 @@ module start
 
   character restart*16, new_id*3
   integer   nrestart, resdel
-
-  ! \todo omega, qshear should be moved to relevant module
-  real :: omega  !< Keplerian frequency. Used in shearing box.  Parameter that can be set in problem.par
-  real :: qshear !< q = -d \log \Omega / dR. Used in shearing box.  Parameter that can be set in problem.par
-
-  character :: restart*16 
-  character :: new_id*3
-  integer   :: nrestart
-  integer   :: resdel
 
   character domain*16,mag_center*16
   integer, parameter      :: nvarsmx =16
@@ -100,12 +91,9 @@ module start
   real    cfl_resist, eta_0, eta_1, j_crit, deint_max
   integer eta_scale
 
-  real  cr_active, gamma_cr, cr_eff, beta_cr, K_cr_paral, K_cr_perp, &
-        cfl_cr, amp_cr, smallecr
+!  real  cr_active, gamma_cr, cr_eff, beta_cr, K_cr_paral, K_cr_perp, &
+!        cfl_cr, amp_cr, smallecr
   real  dt_cr, dt_colls, dt_supp
-#ifdef KEPLER_SUPPRESSION
-  real  dt_supp
-#endif /* KEPLER_SUPPRESSION */
 
   real t_dw, t_arm, col_dens
 
@@ -157,7 +145,7 @@ contains
                               floor_vz, ceil_vz, &
 #endif /* VZ_LIMITS */
 #ifdef COLLISIONS
-			      cfl_colls, &
+                              cfl_colls, &
 #endif /* COLLISIONS */
                               integration_order, &
                               dimensions, magnetic, nu_bulk, cfl_visc
@@ -185,10 +173,10 @@ contains
 #ifdef RESIST
   namelist /RESISTIVITY/ cfl_resist, eta_0, eta_1, eta_scale, j_crit, deint_max
 #endif /* RESIST */
-#ifdef COSM_RAYS
-  namelist /COSMIC_RAYS/ cr_active, gamma_cr, cr_eff, beta_cr, &
-                         K_cr_paral, K_cr_perp, amp_cr, cfl_cr, smallecr
-#endif /* COSM_RAYS */
+!#ifdef COSM_RAYS
+!  namelist /COSMIC_RAYS/ cr_active, gamma_cr, cr_eff, beta_cr, &
+!                         K_cr_paral, K_cr_perp, amp_cr, cfl_cr, smallecr
+!#endif /* COSM_RAYS */
 #ifdef GALAXY
   namelist /GALACTIC_PARAMS/ t_dw, t_arm,col_dens
 #endif /* GALAXY */
@@ -216,7 +204,7 @@ contains
 
     restart = 'last'   ! 'last': autom. wybor ostatniego
                        ! niezaleznie od wartosci "nrestart"
-		       ! cokolwiek innego: decyduje "nrestart"
+                       ! cokolwiek innego: decyduje "nrestart"
     new_id  = ''
     nrestart=  3
     resdel  = 0
@@ -386,9 +374,9 @@ contains
 #ifdef RESIST
         read(unit=1,nml=RESISTIVITY)
 #endif /* RESIST */
-#ifdef COSM_RAYS
-        read(unit=1,nml=COSMIC_RAYS)
-#endif /* COSM_RAYS */
+!#ifdef COSM_RAYS
+!        read(unit=1,nml=COSMIC_RAYS)
+!#endif /* COSM_RAYS */
 #ifdef GALAXY
         read(unit=1,nml=GALACTIC_PARAMS)
 #endif /* GALAXY */
@@ -422,9 +410,9 @@ contains
 #ifdef RESIST
         write(unit=3,nml=RESISTIVITY)
 #endif /* RESIST */
-#ifdef COSM_RAYS
-        write(unit=3,nml=COSMIC_RAYS)
-#endif /* COSM_RAYS */
+!#ifdef COSM_RAYS
+!        write(unit=3,nml=COSMIC_RAYS)
+!#endif /* COSM_RAYS */
 #ifdef GALAXY
         write(unit=3,nml=GALACTIC_PARAMS)
 #endif /* GALAXY */
@@ -606,19 +594,19 @@ contains
        rbuff(124) = deint_max
 #endif /* RESIST */
 
-#ifdef COSM_RAYS
+!#ifdef COSM_RAYS
 !  namelist /COSMIC_RAYS/ cr_active, gamma_cr, cr_eff, beta_cr, K_cr_paral, K_cr_perp,&
-!  			 amp_cr, cfl_cr
-       rbuff(130) = cr_active
-       rbuff(131) = gamma_cr
-       rbuff(132) = cr_eff
-       rbuff(133) = beta_cr
-       rbuff(134) = K_cr_paral
-       rbuff(135) = K_cr_perp
-       rbuff(136) = amp_cr
-       rbuff(137) = cfl_cr
-       rbuff(138) = smallecr
-#endif /* COSM_RAYS */
+!                         amp_cr, cfl_cr
+!       rbuff(130) = cr_active
+!       rbuff(131) = gamma_cr
+!       rbuff(132) = cr_eff
+!       rbuff(133) = beta_cr
+!       rbuff(134) = K_cr_paral
+!       rbuff(135) = K_cr_perp
+!       rbuff(136) = amp_cr
+!       rbuff(137) = cfl_cr
+!       rbuff(138) = smallecr
+!#endif /* COSM_RAYS */
 
 #ifdef GALAXY
 !  namelist /GALACTIC_PARAMS/ h_sn, r_sn, f_sn_kpc2, t_dw, t_arm, col_dens
@@ -838,20 +826,20 @@ contains
        deint_max          = rbuff(124)
 #endif /* RESIST */
 
-#ifdef COSM_RAYS
+!#ifdef COSM_RAYS
 !  namelist /COSMIC_RAYS/ cr_active, gamma_cr, cr_eff, beta_cr, K_cr_paral, K_cr_perp,&
-!  			 amp_cr, cfl_cr
-
-       cr_active          = rbuff(130)
-       gamma_cr           = rbuff(131)
-       cr_eff             = rbuff(132)
-       beta_cr            = rbuff(133)
-       K_cr_paral         = rbuff(134)
-       K_cr_perp          = rbuff(135)
-       amp_cr             = rbuff(136)
-       cfl_cr             = rbuff(137)
-       smallecr           = rbuff(138)
-#endif /* COSM_RAYS */
+!                         amp_cr, cfl_cr
+!
+!       cr_active          = rbuff(130)
+!       gamma_cr           = rbuff(131)
+!       cr_eff             = rbuff(132)
+!       beta_cr            = rbuff(133)
+!       K_cr_paral         = rbuff(134)
+!       K_cr_perp          = rbuff(135)
+!       amp_cr             = rbuff(136)
+!       cfl_cr             = rbuff(137)
+!       smallecr           = rbuff(138)
+!#endif /* COSM_RAYS */
 
 
 #ifdef GALAXY

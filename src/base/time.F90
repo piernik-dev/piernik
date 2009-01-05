@@ -123,7 +123,7 @@ contains
     use arrays, only : ks,ke,nyb,nxb,idna,imxa,imya,imza,u,b
     use arrays, only : iena,nfluid,nadiab,magn
 #ifdef DUST
-    use arrays, only : idnd
+    use dusts, only : idnd
 #endif /* DUST */
 
     implicit none

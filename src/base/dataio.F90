@@ -850,6 +850,7 @@ module dataio
       case default
         print *, 'Variable ', vars(iv), ' is not defined! Skipping.'
       end select
+!       print *, vars(iv), minval(wa), maxval(wa)
 
 ! write data
 !
@@ -1714,11 +1715,6 @@ module dataio
     real :: magunit
 !- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 !
-#ifdef STANDARD
-      magunit = 1.0
-#else /* STANDARD */
-      magunit = Gs
-#endif /* STANDARD */
     if (proc .eq. 0) then
 #ifdef STANDARD
       magunit = 1.0
@@ -1876,14 +1872,11 @@ module dataio
 !---------------------------------------------------------------------
 !
   subroutine  write_log
-
-#define WRITE_LOG_SHORT
-#ifdef WRITE_LOG_SHORT
+#ifdef SHORT_LOG
 #include "datalogshort.def"
-#else /* WRITE_LOG_SHORT */
+#else /* SHORT_LOG */
 #include "dataloglong.def"
-#endif /* WRITE_LOG_SHORT */
-
+#endif /* SHORT_LOG */
   end subroutine write_log
 
 

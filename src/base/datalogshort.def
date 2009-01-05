@@ -23,7 +23,7 @@
     use start, only : dt_colls
 #endif /* COLLISIONS */
 #ifdef KEPLER_SUPPRESSION
-    use	start,  only : cfl_colls, dt_supp
+    use start,  only : cfl_colls, dt_supp
     use arrays, only : alfsup,nfluid,nz,omx0,omy0,x,y,nx,ny,imxa,imya
 #endif /* KEPLER_SUPPRESSION */
 
@@ -299,9 +299,12 @@
         write(log_lun,'(2x,a36,e10.4)') 'collisions with fluid ~1/dens, dt = ',dt_colls
 #endif /* COLLISIONS */
 #ifdef KEPLER_SUPPRESSION
+!>
+!! \todo Check and probably change the log of KEPLER_SUPPRESSION
+!<
         write(log_lun,779) 'min(alfsup*dens) =',asupp_min, 'dt=',cfl_colls*asupp_min, proc_asupp_min, loc_asupp_min
         write(log_lun,779) 'max(alfsup*dens) =',asupp_max, 'dt=',cfl_colls*asupp_max, proc_asupp_max, loc_asupp_max
-	write(log_lun,'(5x,a10,e10.4)') 'dt_supp = ',dt_supp
+        write(log_lun,'(5x,a10,e10.4)') 'dt_supp = ',dt_supp
 #endif /* KEPLER_SUPPRESSION */
 
       close(log_lun)
@@ -311,7 +314,7 @@
     if(proc .eq. 0)  then
       open(log_lun, file=log_file, position='append')
         write(log_lun,'(a80)') '================================================================================'
-	write(log_lun,900) nstep,dt,t
+        write(log_lun,900) nstep,dt,t
         write(log_lun,'(a80)') '================================================================================'
       close(log_lun)
     endif
@@ -330,6 +333,5 @@
 #ifdef KEPLER_SUPPRESSION
 779 format(5x,a18,(1x,e10.4),2x,a3,(1x,e10.4),5(1x,i4))
 #endif /* KEPLER_SUPPRESSION */
-
 900 format('   nstep = ',i7,'   dt = ',f22.16,'   t = ',f22.16,2(1x,i4))
 

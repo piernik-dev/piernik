@@ -161,7 +161,7 @@ contains
 !            u(idna,i,j,k) = min((rc/r_grav)**n_gravr,100.0)
 !            u(idna,i,j,k) = 3.5*rc/r_max*exp(-3.5*rc/r_max)*d0 !/cosh((rc/r_max)**25.0)
             u(idna,i,j,k) = 9.5*(rc/rsup1)**2*exp(-3.5*(rc/rsup1)**2)*d0 !/cosh((rc/r_max)**25.0)
-            u(idna(1),i,j,k) = d0/cosh(min((rc/rsup2)**25.0,690.0))
+!            u(idna(1),i,j,k) = d0/cosh(min((rc/rsup2)**25.0,690.0))
             u(idna(2),i,j,k) = d0/100.0/cosh(min((rc/rsup2)**25.0,690.0))
           endif
 	  u(idna,i,j,k) = max(u(idna,i,j,k), smalld)

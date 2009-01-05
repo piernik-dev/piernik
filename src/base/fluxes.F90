@@ -10,7 +10,7 @@ module fluxes
 !==========================================================================================
 
   subroutine mhdflux(flux,cfr,uu,bb,n)
-    use start, only : gamma, gamma_cr
+    use start, only : gamma !, gamma_cr
 #ifdef ISO
     use start, only : csi2
 #endif /* ISO */
@@ -20,7 +20,7 @@ module fluxes
     use arrays, only : iena, fadiab
 #endif /* ISO */
 #ifdef COSM_RAYS
-    use arrays, only : iecr
+    use cosmic_rays, only : iecr, gamma_cr
 #endif /* COSM_RAYS */
 #ifdef DUST
     use arrays, only : fdust
@@ -63,7 +63,7 @@ module fluxes
     p(:,RNG) = csi2*uu(idna,RNG)
     ps(:,RNG)= p(:,RNG)
 #ifdef IONIZED
-    ps(fmagn,RNG)= p(fmagn,RNG) + pmag(fmagn,RNG) 
+    ps(fmagn,RNG)= p(fmagn,RNG) + pmag(fmagn,RNG)
 #endif /* IONIZED */
 #else /* ISO */
     ps(fadiab,RNG)=(uu(iena(fadiab),RNG) - &

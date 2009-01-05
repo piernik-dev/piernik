@@ -7,20 +7,16 @@
 !<
 module allfluxes
 #ifdef IONIZED
-  use ionizeds, only : flux_ionized
-  use arrays,   only : aions
+  use ionizeds, only : flux_ionized, aions
 #endif /* IONIZED */
 #ifdef NEUTRAL
-  use neutrals, only : flux_neutral
-  use arrays,   only : aneut
+  use neutrals, only : flux_neutral, aneut
 #endif /* NEUTRAL */
 #ifdef MOLECULAR
-  use moleculars, only : flux_molecular
-  use arrays,   only : amols
+  use moleculars, only : flux_molecular, amols
 #endif /* MOLECULAR */
 #ifdef DUST
-  use dusts, only : flux_dust
-  use arrays,   only : adust
+  use dusts, only : flux_dust, adust
 #endif /* DUST */
 #ifdef COSM_RAYS
   use cosmic_rays, only : flux_cr
@@ -39,7 +35,7 @@ contains
 subroutine all_flux(flux,cfr,uu,bb,n)
     use arrays, only : nu,nui,nun,num,nud
 #ifdef COSM_RAYS
-    use arrays, only : iecr
+    use cosmic_rays, only : iecr
 #endif /* COSM_RAYS */
     implicit none
     integer n
@@ -62,7 +58,7 @@ subroutine all_flux(flux,cfr,uu,bb,n)
    iflux=flux(aions,:)
    icfr=cfr(aions,:)
    iuu=uu(aions,:)
-   call flux_ionized(iflux,icfr,iuu,bb,n)
+   call flux_ionized(iflux,icfr,iuu,nui,bb,n)
    flux(aions,:)=iflux
    cfr(aions,:) =icfr
    uu(aions,:)  =iuu
@@ -89,13 +85,13 @@ subroutine all_flux(flux,cfr,uu,bb,n)
    dflux=flux(adust,:)
    dcfr=cfr(adust,:)
    duu=uu(adust,:)
-   call flux_dust(dflux,dcfr,duu,n)
+   call flux_dust(dflux,dcfr,duu,nud,n)
    flux(adust,:)=dflux
    cfr(adust,:)=dcfr
    uu(adust,:)=duu
 #endif /* DUST */
 #ifdef COSM_RAYS
-   call flux_cr(flux,cfr,uu,bb,n)
+   call flux_cr(flux,cfr,uu,bb,nu,n)
 #endif /* COSM_RAYS */
 
 end subroutine all_flux
