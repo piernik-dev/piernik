@@ -11,17 +11,12 @@
 #else /* NEUTRAL */
 #define NUMBNEUT 0
 #endif /* NEUTRAL */
-#ifdef MOLECULAR
-#define NUMBMOLEC MOLECULAR
-#else /* MOLECULAR */
-#define NUMBMOLEC 0
-#endif /* MOLECULAR */
 #ifdef DUST
 #define NUMBDUST DUST
 #else /* DUST */
 #define NUMBDUST 0
 #endif /* DUST */
-#define NUMBFLUID NUMBION+NUMBNEUT+NUMBMOLEC+NUMBDUST
+#define NUMBFLUID NUMBION+NUMBNEUT+NUMBDUST
 
 module start
 

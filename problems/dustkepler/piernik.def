@@ -28,7 +28,6 @@
 /* number of different fluids */
 #define IONIZED 1
 #undef NEUTRAL
-#undef MOLECULAR
 #define DUST 1
 #undef COSM_RAYS
 

@@ -19,7 +19,7 @@ module init_problem
                                rhoa,d0,r_max,mtr, mf_orient, pres_cor
 
 
-contains
+   contains
 
 !-----------------------------------------------------------------------------
 
@@ -100,7 +100,7 @@ contains
 #ifndef ISO
       use start, only     :   smallei
 #ifdef DUST
-    use arrays, only    :   fdust
+      use arrays, only    :   fdust
 #endif /* DUST */
 #endif /* ISO */
 
@@ -111,27 +111,29 @@ contains
       use arrays, only    :  iecr
       use start, only     : gamma_cr, beta_cr
 #endif /* COSM_RAYS */
+#ifdef GALACTIC_DISK
+      use gravity_user, only : gpotdisk, gpothalo, gpotbulge
+#endif /* GALACTIC_DISK */
       implicit none
 
-    allocate(dprof(nz))
-    allocate(dxzprof(nxt,nz))
-    allocate(idxzprof(nx,nz))
-    allocate(jdxzprof(nx,nz))
-    allocate(omega_xy(nx,ny))
-    
-    
-    
-    if(pcoords(2) .eq. 0) then
-    do i = 1,nx
-      rc = x(i)
+      integer :: i, j, k, iu, id, ju, jd
+      real    :: xi, yj, zk, rc, rs
+      real, allocatable, dimension(:) :: dprof
+      real :: iOmega
+      real :: dcmol, dcneut, dcion, dchot
+      real :: xgradgp, ygradgp, sfq
+      real :: xgradp, ygradp
+#ifdef VERBOSE
+      character syscmd*37, syscmd2*40
+      integer :: system, syslog
+#endif /* VERBOSE */
+      real, allocatable, dimension(:,:)  :: dxzprof, idxzprof, jdxzprof
+      integer, allocatable, dimension(:) :: xproc, yproc
+      integer :: xtag, iproc, ilook, jproc, ytag
 
-      dcmol = 2.6e20/(cm**2)*exp(-((rc - 4.5*kpc)**2-(r_gc_sun - 4.5*kpc)**2)/(2.9*kpc)**2)
-      dcneut = 6.2e20/(cm**2)
-      dcion =  1.46e20/(cm**2)*exp(-(rc**2 - r_gc_sun**2)/(37.0*kpc)**2) &
-             + 1.20e18/(cm**2)*exp(-((rc - 4.0*kpc)**2 - (r_gc_sun - 4.0*kpc)**2)/(2.0*kpc)**2)
-      dchot = 4.4e18/(cm**2)*(0.12*exp(-(rc-r_gc_sun)/4.9/kpc)+0.88*exp(-((rc-4.5*kpc)**2-(r_gc_sun-4.5*kpc)**2)/(2.9*kpc)**2))
-      d0=(dcmol+dcneut+dcion+dchot) * 1.36 * mp
-      call hydrostatic_zeq(i, 0, d0, dprof)
+#ifdef GALACTIC_DISK
+      allocate(gpotdisk(nx,ny,nz),gpothalo(nx,ny,nz),gpotbulge(nx,ny,nz))
+#endif /* GALACTIC_DISK */
 
       allocate(dprof(nz))
       allocate(dxzprof(nxt,nz))
@@ -143,12 +145,13 @@ contains
          do i = 1,nx
             rc = x(i)
 
-            dcmol  = 2.6*0.8*exp(-((rc - 4.5*kpc)**2-(r_gc_sun - 4.5*kpc)**2)/(2.9*kpc)**2)
-            dcneut = 6.2*0.8
-            dcion  = 1.46*0.8*exp(-(rc**2 - r_gc_sun**2)/(37.0*kpc)**2) &
-                   + 1.20e-2*0.8*exp(-((rc - 4.0*kpc)**2 - (r_gc_sun - 4.0*kpc)**2)/(2.0*kpc)**2)
-            dchot  = 4.4e-2*0.8*(0.12*exp(-(rc-r_gc_sun)/4.9/kpc)+0.88*exp(-((rc-4.5*kpc)**2-(r_gc_sun-4.5*kpc)**2)/(2.9*kpc)**2))
-            d0 = (dcmol+dcneut+dcion+dchot) * 1.36
+            dcmol = 2.6e20/(cm**2)*exp(-((rc - 4.5*kpc)**2-(r_gc_sun - 4.5*kpc)**2)/(2.9*kpc)**2)
+            dcneut = 6.2e20/(cm**2)
+            dcion =  1.46e20/(cm**2)*exp(-(rc**2 - r_gc_sun**2)/(37.0*kpc)**2) &
+                   + 1.20e18/(cm**2)*exp(-((rc - 4.0*kpc)**2 - (r_gc_sun - 4.0*kpc)**2)/(2.0*kpc)**2)
+            dchot = 4.4e18/(cm**2)*(0.12*exp(-(rc-r_gc_sun)/4.9/kpc)+0.88*exp(-((rc-4.5*kpc)**2 &
+                                             -(r_gc_sun-4.5*kpc)**2)/(2.9*kpc)**2))
+            d0=(dcmol+dcneut+dcion+dchot) * 1.36 * mp
             call hydrostatic_zeq(i, 0, d0, dprof)
 
             dxzprof(pcoords(1)*nxb+i,:) = dprof
@@ -244,7 +247,7 @@ contains
                endif
                xgradgp=(gp(iu,j,k)-gp(id,j,k))*sfq/dl(xdim)
 
-               if(pres_cor .eq. 1) xgradp =-sfq*c_si**2/gamma/u(1,i,j,k)*(u(1,iu,j,k)-u(1,id,j,k))/dl(xdim)
+               if(pres_cor .eq. 1) xgradp =-sfq*c_si**2/gamma(1)/u(1,i,j,k)*(u(1,iu,j,k)-u(1,id,j,k))/dl(xdim)
 
                if(j .ne. 1 .and. j .ne. ny) then
                   ju = j+1
@@ -265,7 +268,7 @@ contains
                ygradgp=(gp(i,ju,k)-gp(i,jd,k))*sfq/dl(ydim)
 
                if(pres_cor .eq. 1) then
-                  ygradp =-sfq*c_si**2/gamma/u(1,i,j,k)*(u(1,i,ju,k)-u(1,i,jd,k))/dl(ydim)
+                  ygradp =-sfq*c_si**2/gamma(1)/u(1,i,j,k)*(u(1,i,ju,k)-u(1,i,jd,k))/dl(ydim)
                   iOmega=sqrt(abs(sqrt((xgradgp+xgradp)**2+(ygradgp+ygradp)**2))/rc)
                else
                   iOmega=sqrt(abs(sqrt(xgradgp**2+ygradgp**2))/rc)
@@ -287,26 +290,27 @@ contains
 #endif /* COSM_RAYS */
 
 
-         select case(mf_orient)
-	 case('null')
-         b(ibx,i,j,k)   = 0.0
-         b(iby,i,j,k)   = 0.0
-         b(ibz,i,j,k)   = 0.0
-         case('vertical')
-         b(ibx,i,j,k)   = 0.0
-         b(iby,i,j,k)   = 0.0
-         b(ibz,i,j,k)   = sqrt(2.*alpha*d0*c_si**2)
-	 case('toroidal')
-         b(ibx,i,j,k)   =-sqrt(2.*alpha*c_si**2*u(idna(1),i,j,k))*yj/rc
-         b(iby,i,j,k)   = sqrt(2.*alpha*c_si**2*u(idna(1),i,j,k))*xi/rc
-         b(ibz,i,j,k)   = 0.0
-	 end select
+               select case(mf_orient)
+                  case('null')
+                     b(ibx,i,j,k)   = 0.0
+                     b(iby,i,j,k)   = 0.0
+                     b(ibz,i,j,k)   = 0.0
+                  case('vertical')
+                     b(ibx,i,j,k)   = 0.0
+                     b(iby,i,j,k)   = 0.0
+                     b(ibz,i,j,k)   = sqrt(2.*alpha*d0*c_si**2)
+                  case('toroidal')
+                     b(ibx,i,j,k)   =-sqrt(2.*alpha*c_si**2*(u(idna(1),i,j,k)-max(rhoa,smalld) ))*yj/rc
+                     b(iby,i,j,k)   = sqrt(2.*alpha*c_si**2*(u(idna(1),i,j,k)-max(rhoa,smalld) ))*xi/rc
+                     b(ibz,i,j,k)   = 0.0
+               end select
 #ifndef ISO
-         u(iena(1),i,j,k)   = u(iena(1),i,j,k) +0.5*sum(b(:,i,j,k)**2,1)
+               u(iena(1),i,j,k)   = u(iena(1),i,j,k) +0.5*sum(b(:,i,j,k)**2,1)
 #endif /* ISO */
             enddo
          enddo
       enddo
+      write(*,*) ' '
       if(allocated(dprof)) deallocate(dprof)
 
       return
@@ -335,13 +339,13 @@ contains
 
       do i=1,nx
          do j=1,ny
-            u(idna,i,j,:) = u(idna,i,j,:) + dmass * dinit(i,j,:)
-            u(imxa,i,j,:) = u(imxa,i,j,:) - dmass*omega_xy(i,j)*y(j)*(dinit(i,j,:)-smalld)
-            u(imya,i,j,:) = u(imya,i,j,:) + dmass*omega_xy(i,j)*x(i)*(dinit(i,j,:)-smalld)
+            u(idna,i,j,:) = u(idna,i,j,:) + dmass * dinit(:,i,j,:)
+            u(imxa,i,j,:) = u(imxa,i,j,:) - dmass*omega_xy(i,j)*y(j)*(dinit(:,i,j,:)-smalld)
+            u(imya,i,j,:) = u(imya,i,j,:) + dmass*omega_xy(i,j)*x(i)*(dinit(:,i,j,:)-smalld)
 
 #ifndef ISO
-            u(iena,i,j,:) = u(iena,i,j,:) + dmass*(c_si**2/(gamma-1.0))*dinit(i,j,:)
-            u(iena,i,j,:) = u(iena,i,j,:) + dmass*0.5*omega_xy(i,j)**2*(x(i)**2 + y(j)**2)*dinit(i,j,:)
+            u(iena,i,j,:) = u(iena,i,j,:) + dmass*(c_si**2/(gamma-1.0))*dinit(:,i,j,:)
+            u(iena,i,j,:) = u(iena,i,j,:) + dmass*0.5*omega_xy(i,j)**2*(x(i)**2 + y(j)**2)*dinit(:,i,j,:)
 #endif /* ISO */
          enddo
       enddo
@@ -360,8 +364,8 @@ contains
       implicit none
       real :: mass
 
-      dinit(:,:,:) = u(idna,:,:,:)
-      mass = sum(dinit(is:ie,js:je,ks:ke)) * dvol
+      dinit(:,:,:,:) = u(idna,:,:,:)
+      mass = sum(dinit(:,is:ie,js:je,ks:ke)) * dvol
       call MPI_ALLREDUCE(mass, init_mass, 1, mpi_real8, mpi_sum, comm3d, ierr)
 
    end subroutine save_init_dens
@@ -377,7 +381,7 @@ contains
       implicit none
       real :: mass
 
-      mass = sum(dinit(is:ie,js:je,ks:ke)) * dvol
+      mass = sum(dinit(:,is:ie,js:je,ks:ke)) * dvol
       call MPI_ALLREDUCE(mass, init_mass, 1, mpi_real8, mpi_sum, comm3d, ierr)
 
    end subroutine get_init_mass
@@ -398,123 +402,6 @@ contains
 
    end subroutine total_mass
 !-----------------------------------------------------------------------------------------------------------------------------------
-#ifdef HDF5
-   subroutine user_plt(var,ij,xn,tab)
-      use start, only : nb
-      use arrays, only : u,b,nyb,nzb,nxb,idna,imxa,imya,imza,ibx,iby,ibz
-#ifndef ISO
-      use arrays, only : iena
-#endif
-      implicit none
-      character(LEN=4)     :: var
-      character(LEN=2)     :: ij
-      integer              :: xn
-      real, dimension(:,:) :: tab
 
-      select case(var)
-         case ("dens")
-            if(ij=="yz") tab(:,:) = u(idna,xn,nb+1:nyb+nb,nb+1:nzb+nb)
-            if(ij=="xz") tab(:,:) = u(idna,nb+1:nxb+nb,xn,nb+1:nzb+nb)
-            if(ij=="xy") tab(:,:) = u(idna,nb+1:nxb+nb,nb+1:nyb+nb,xn)
-         case ("velx")
-            if(ij=="yz") tab(:,:) = u(imxa,xn,nb+1:nyb+nb,nb+1:nzb+nb) / &
-                                    u(idna,xn,nb+1:nyb+nb,nb+1:nzb+nb)
-            if(ij=="xz") tab(:,:) = u(imxa,nb+1:nxb+nb,xn,nb+1:nzb+nb) / &
-                                    u(idna,nb+1:nxb+nb,xn,nb+1:nzb+nb)
-            if(ij=="xy") tab(:,:) = u(imxa,nb+1:nxb+nb,nb+1:nyb+nb,xn) / &
-                                    u(idna,nb+1:nxb+nb,nb+1:nyb+nb,xn)
-         case ("vely")
-            if(ij=="yz") tab(:,:) = u(imya,xn,nb+1:nyb+nb,nb+1:nzb+nb) / &
-                                    u(idna,xn,nb+1:nyb+nb,nb+1:nzb+nb)
-            if(ij=="xz") tab(:,:) = u(imya,nb+1:nxb+nb,xn,nb+1:nzb+nb) / &
-                                    u(idna,nb+1:nxb+nb,xn,nb+1:nzb+nb)
-            if(ij=="xy") tab(:,:) = u(imya,nb+1:nxb+nb,nb+1:nyb+nb,xn) / &
-                                    u(idna,nb+1:nxb+nb,nb+1:nyb+nb,xn)
-         case ("velz")
-            if(ij=="yz") tab(:,:) = u(imza,xn,nb+1:nyb+nb,nb+1:nzb+nb) / &
-                                    u(idna,xn,nb+1:nyb+nb,nb+1:nzb+nb)
-            if(ij=="xz") tab(:,:) = u(imza,nb+1:nxb+nb,xn,nb+1:nzb+nb) / &
-                                    u(idna,nb+1:nxb+nb,xn,nb+1:nzb+nb)
-            if(ij=="xy") tab(:,:) = u(imza,nb+1:nxb+nb,nb+1:nyb+nb,xn) / &
-                                    u(idna,nb+1:nxb+nb,nb+1:nyb+nb,xn)
-         case ("ener")
-#ifndef ISO
-            if(ij=="yz") tab(:,:) = u(iena,xn,nb+1:nyb+nb,nb+1:nzb+nb)
-            if(ij=="xz") tab(:,:) = u(iena,nb+1:nxb+nb,xn,nb+1:nzb+nb)
-            if(ij=="xy") tab(:,:) = u(iena,nb+1:nxb+nb,nb+1:nyb+nb,xn)
-#else
-            if(ij=="yz") tab(:,:) = 0.5 * (
-                             u(imxa,xn,nb+1:nyb+nb,nb+1:nzb+nb)**2 &
-                           + u(imya,xn,nb+1:nyb+nb,nb+1:nzb+nb)**2 &
-                           + u(imza,xn,nb+1:nyb+nb,nb+1:nzb+nb)**2) / &
-                             u(idna,xn,nb+1:nyb+nb,nb+1:nzb+nb)
-            if(ij=="xz") tab(:,:) = 0.5 * (
-                             u(imxa,nb+1:nxb+nb,xn,nb+1:nzb+nb)**2 &
-                           + u(imya,nb+1:nxb+nb,xn,nb+1:nzb+nb)**2 &
-                           + u(imza,nb+1:nxb+nb,xn,nb+1:nzb+nb)**2) / &
-                             u(idna,nb+1:nxb+nb,xn,nb+1:nzb+nb)
-            if(ij=="xy") tab(:,:) = 0.5 * (
-                             u(imxa,nb+1:nxb+nb,nb+1:nyb+nb,xn)**2 &
-                           + u(imya,nb+1:nxb+nb,nb+1:nyb+nb,xn)**2 &
-                           + u(imza,nb+1:nxb+nb,nb+1:nyb+nb,xn)**2) / &
-                             u(idna,nb+1:nxb+nb,nb+1:nyb+nb,xn)
-#endif /* ISO */
-         case ("magx")
-            if(ij=="yz") tab(:,:) = b(ibx,xn,nb+1:nyb+nb,nb+1:nzb+nb)
-            if(ij=="xz") tab(:,:) = b(ibx,nb+1:nxb+nb,xn,nb+1:nzb+nb)
-            if(ij=="xy") tab(:,:) = b(ibx,nb+1:nxb+nb,nb+1:nyb+nb,xn)
-         case ("magy")
-            if(ij=="yz") tab(:,:) = b(iby,xn,nb+1:nyb+nb,nb+1:nzb+nb)
-            if(ij=="xz") tab(:,:) = b(iby,nb+1:nxb+nb,xn,nb+1:nzb+nb)
-            if(ij=="xy") tab(:,:) = b(iby,nb+1:nxb+nb,nb+1:nyb+nb,xn)
-         case ("magz")
-            if(ij=="yz") tab(:,:) = b(ibz,xn,nb+1:nyb+nb,nb+1:nzb+nb)
-            if(ij=="xz") tab(:,:) = b(ibz,nb+1:nxb+nb,xn,nb+1:nzb+nb)
-            if(ij=="xy") tab(:,:) = b(ibz,nb+1:nxb+nb,nb+1:nyb+nb,xn)
-
-         case default
-            write(*,*) "Unknonw var = ",var," in user_plt!"
-      end select
-
-   end subroutine user_plt
-
-   subroutine user_hdf5(var,tab)
-      use arrays, only : u,b,idna,imxa,imya,imza,ibx,iby,ibz,nx,ny,nz
-      use start,  only : nb
-#ifndef ISO
-      use arrays, only : iena
-#endif
-      implicit none
-      character(LEN=4)     :: var
-      real*4, dimension(:,:,:) :: tab
-
-      select case(var)
-         case("dens")
-            tab(:,:,:) = real(u(idna,RNG),4)
-         case("velx")
-            tab(:,:,:) = real(u(imxa,RNG) / u(idna,RNG),4)
-         case("vely")
-            tab(:,:,:) = real(u(imya,RNG) / u(idna,RNG),4)
-         case("velz")
-            tab(:,:,:) = real(u(imza,RNG) / u(idna,RNG),4)
-         case("ener")
-#ifdef ISO
-            tab(:,:,:) = real(0.5 *( u(imxa,RNG)**2 + u(imya,RNG)**2 + u(imza,RNG)**2 ) &
-               / u(idna,RNG),4)
-#else
-            tab(:,:,:) = real(u(iena,RNG),4)
-#endif
-         case("magx")
-            tab(:,:,:) = real(b(ibx,RNG),4)
-         case("magy")
-            tab(:,:,:) = real(b(iby,RNG),4)
-         case("magz")
-            tab(:,:,:) = real(b(ibz,RNG),4)
-         case default
-            write(*,*) "Error in user_hdf5"
-      end select
-
-   end subroutine user_hdf5
-#endif /* HDF5 */
 end module init_problem
 

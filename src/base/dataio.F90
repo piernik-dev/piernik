@@ -898,16 +898,16 @@ module dataio
   end subroutine write_hdf
 
   subroutine next_fluid_or_var(ifluid,ivar,nfluids)
-  implicit none
-  integer ifluid,ivar,nfluids
-	if(ifluid .lt. nfluids) then
-	  ifluid=ifluid+1
-	  ivar=1
-	else
-	  ivar=0
-	  ifluid=1
-	endif
-	return
+    implicit none
+    integer ifluid,ivar,nfluids
+    if(ifluid .lt. nfluids) then
+      ifluid=ifluid+1
+      ivar=1
+    else
+      ivar=0
+      ifluid=1
+    endif
+    return
   end subroutine next_fluid_or_var
 
 #ifdef GALACTIC_DISK
@@ -915,7 +915,7 @@ module dataio
 
     use arrays, only       : wa, gp,nxb,nyb,nzb,nx,ny,nz,x,y,z
     use init_problem, only : problem_name, run_id
-    use gravity, only      : gpotdisk,gpothalo,gpotbulge
+    use gravity_user, only : gpotdisk,gpothalo,gpotbulge
     use grid, only         : dx,dy,dz
     use start, only        : nstep,t,dt,nxd,nyd,nzd,nb,xmin,xmax,ymin,ymax,zmin,zmax,dimensions,gamma,domain
 

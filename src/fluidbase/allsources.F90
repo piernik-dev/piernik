@@ -13,9 +13,6 @@ module allsources
 #ifdef NEUTRAL
    use neutrals, only : src_neutral
 #endif /* NEUTRAL */
-#ifdef MOLECULAR
-   use moleculars, only : src_molecular
-#endif /* MOLECULAR */
 #ifdef DUST
    use dusts, only : src_dust
 #endif /* DUST */
@@ -70,11 +67,6 @@ module allsources
       call src_neutral !(Duuss,uu,sweep,i1,i2,n,dt)
 !      Duus=Duus+Duuss
 #endif /* NEUTRAL */
-
-#ifdef MOLECULAR
-      call src_molecular !(Duuss,uu,sweep,i1,i2,n,dt)
-!      Duus=Duus+Duuss
-#endif /* MOLECULAR */
 
 #ifdef DUST
       call src_dust !(Duuss,uu,sweep,i1,i2,n,dt)

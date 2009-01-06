@@ -23,7 +23,13 @@
 /*===================================*/
 
 /* adiabatic or isothermal */
-#define ISO
+#undef ISO
+
+/* number of different fluids */
+#define IONIZED 1
+#undef NEUTRAL
+#undef DUST
+#undef COSM_RAYS
 
 /* choosing freezing speed */
 #define LOCAL_FR_SPEED
@@ -41,7 +47,12 @@
 #undef VISC			
 #undef HEAT_COND	
 #undef COOL_HEAT
-#undef COSM_RAYS
+#undef SIMPLE_COOL
+#define ANY_SOURCES
+#define KEPLER_SUPPRESSION
+#undef COLLISIONS
+#undef COLLS_MODIF
+#undef PRESS_GRAD_EXCH
 
 /* gravity type choosing */
 #define GRAV
@@ -60,6 +71,9 @@
 #undef SHEAR
 #undef SHEAR_MPI
 #undef FLX_BND
+#define ANY_LIMITS
 #undef VZ_LIMITS
+#undef ONLYZSWEEP
 
 /* problem specific directives */
+#define KEPL_SUPP_SIMX

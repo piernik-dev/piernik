@@ -10,7 +10,7 @@ module ionizeds
    implicit none
    integer, dimension(IONIZED)       :: idni, imxi, imyi, imzi, ieni
    integer, dimension(IONIZED*NUPF)  :: aions
-   integer, parameter :: nuipf = NUPF
+   integer, parameter :: nuipf = NUPF ! nuipf (nui Per Fluid) - values: 4 (ISO) or 5 (ADIAB)
    contains
 
    subroutine add_ion_index
@@ -28,14 +28,28 @@ module ionizeds
 
    end subroutine add_ion_index
 
-   subroutine specify_ionized(nfl,nad,ifl,iadiab,ifion,imagn,idna,imxa,imya,imza,iena,findex,magn,fiond,fmagn,gamma,fadiab)
+   subroutine specify_ionized(nfl,nad,ifl,iadiab,imagn,idna,imxa,imya,imza,iena,findex,magn,fmagn,gamma,fadiab)
+! aions  (Array of IONizedS indexes in u)
+! iadiab (Iteration number of current ADIABatic fluid)
+! imagn  (Iteration number of current MAGNetized)
+! nfl    (Number of all FLuids)
+! nad    (Number of all ADiabatic fluids)
+! ifl    (Iteration number of current fluid)
+! iter   (ITERATION variable)
+! fmagn  (array of reference numbers of Fluids MAGNetized)
+
+! f_____ = array of fluids reference numbers
+! n_____ = number of specific type fluids
+! a_____ = array of indexes indicating variables corresponding to specific type fluid
+! i_____ = iteration variables over specific type fluids numbers
+
       use mpi_setup
       implicit none
-      integer :: iadiab, ifion, imagn, nfl,nad
+      integer :: iadiab, imagn, nfl,nad
       integer :: ifl, iter
       integer, dimension(nfl) :: idna,imxa,imya,imza,findex,magn
       integer, dimension(nad) :: iena,fadiab
-      integer, dimension(IONIZED) :: fiond,fmagn
+      integer, dimension(IONIZED) :: fmagn
       real, dimension(nfl) :: gamma
       character fluidtype*10, par_file*(100), tmp_log_file*(100)
 
@@ -63,11 +77,9 @@ module ionizeds
          aions((iter-1)*nuipf+4)=imzi(iter)
 
          findex(ifl)=nuipf
-         magn(ifl)=1
-         fiond(ifion)=ifl
-         fmagn(imagn)=ifl
-         ifion=ifion+1
-         imagn=imagn+1
+         magn(ifl)=1      ! used in time, advects
+         fmagn(imagn)=ifl ! used in write_log, fluxes
+         imagn=imagn+1    ! used to give values for fmagn
 
 #ifdef ISO
          fluidtype = 'isothermal'
@@ -80,13 +92,16 @@ module ionizeds
          fluidtype = 'adiabatic'
 #endif /* ISO */
          write(*,'(a6,i2,a11,a10)') 'fluid ',ifl,' ionized   ',fluidtype
-!#include "arrions.def"
          ifl=ifl+1
       enddo
    end subroutine specify_ionized
 
    subroutine flux_ionized(iflux,icfr,iuu,nuio,bb,n)
-!use arra   ys, only : nui
+! nuio  - nui here, different name for a simpler debugging
+! iflux - Ionized part of FLUX array
+! icfr  - Ionized part of CFR array
+! iuu   - Ionized part of UU array
+!      use arrays, only : nui
       implicit none
       integer n, nuio
       real, dimension(nuio,n) :: iflux,icfr,iuu

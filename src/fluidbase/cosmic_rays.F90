@@ -26,6 +26,7 @@ module cosmic_rays
    end subroutine add_cr_index
 
    subroutine specify_cosmrays
+      use mpi_setup
       implicit none
       write(*,*) 'cosmic rays on as ', COSM_RAYS ,' bins'
       character par_file*(100), tmp_log_file*(100)

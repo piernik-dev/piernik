@@ -12,9 +12,6 @@ module allfluxes
 #ifdef NEUTRAL
   use neutrals, only : flux_neutral, aneut
 #endif /* NEUTRAL */
-#ifdef MOLECULAR
-  use moleculars, only : flux_molecular, amols
-#endif /* MOLECULAR */
 #ifdef DUST
   use dusts, only : flux_dust, adust
 #endif /* DUST */
@@ -33,7 +30,7 @@ contains
 !! \param n number of cells in the current sweep
 !<
 subroutine all_flux(flux,cfr,uu,bb,n)
-    use arrays, only : nu,nui,nun,num,nud
+    use arrays, only : nu,nui,nun,nud
 #ifdef COSM_RAYS
     use cosmic_rays, only : iecr
 #endif /* COSM_RAYS */
@@ -47,9 +44,6 @@ subroutine all_flux(flux,cfr,uu,bb,n)
 #ifdef NEUTRAL
     real, dimension(nun,n) :: nflux,ncfr,nuu
 #endif /* NEUTRAL */
-#ifdef MOLECULAR
-    real, dimension(num,n) :: mflux,mcfr,muu
-#endif /* MOLECULAR */
 #ifdef DUST
     real, dimension(nud,n) :: dflux,dcfr,duu
 #endif /* DUST */
@@ -67,20 +61,11 @@ subroutine all_flux(flux,cfr,uu,bb,n)
    nflux=flux(aneut,:)
    ncfr=cfr(aneut,:)
    nuu=uu(aneut,:)
-   call flux_neutral(nflux,ncfr,nuu,n)
+   call flux_neutral(nflux,ncfr,nuu,nun,n)
    flux(aneut,:)=nflux
    cfr(aneut,:)=ncfr
    uu(aneut,:)=nuu
 #endif /* NEUTRAL */
-#ifdef MOLECULAR
-   mflux=flux(amols,:)
-   mcfr=cfr(amols,:)
-   muu=uu(amols,:)
-   call flux_molecular(mflux,mcfr,muu,n)
-   flux(amols,:)=mflux
-   cfr(amols,:)=mcfr
-   uu(amols,:)=muu
-#endif /* MOLECULAR */
 #ifdef DUST
    dflux=flux(adust,:)
    dcfr=cfr(adust,:)

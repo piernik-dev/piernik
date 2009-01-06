@@ -28,7 +28,6 @@
 /* number of different fluids */
 #define IONIZED 1
 #define NEUTRAL 1
-#undef MOLECULAR
 #undef DUST
 #undef COSM_RAYS
 
@@ -57,7 +56,7 @@
 
 /* gravity type choosing */
 #define GRAV
-#define GRAV_GAL_VOLLMER
+#define GRAV_USER
 #undef SELF_GRAV
 
 /* structure features including */
@@ -77,3 +76,4 @@
 #define ONLYZSWEEP
 
 /* problem specific directives */
+#define GRAV_GAL_VOLLMER

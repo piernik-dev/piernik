@@ -29,7 +29,7 @@ subroutine floor_ceiling(callnumb,n)
   implicit none
   integer n,i1,i2,callnumb
   character sweep*6
-  real,dimension(nu,n)        :: ufc
+  real,dimension(nu,n) :: ufc
 
 #ifdef COSM_RAYS
 !    ufc(iecr,:) = max(smallecr,ufc(iecr,:))
@@ -37,7 +37,7 @@ subroutine floor_ceiling(callnumb,n)
 
 #ifdef VZ_LIMITS
     if(sweep .eq. 'zsweep') then
-      call vz_limits
+      call vz_limits(ufc,n)
     endif
 #endif /* VZ_LIMITS */
 
@@ -48,13 +48,15 @@ end subroutine floor_ceiling
 !================================ELEMENTARY SUBROUTINES===================================
 
 #ifdef VZ_LIMITS
-subroutine vz_limits
-    use arrays, only : z,idna,imxa,imza,nz
+subroutine vz_limits(ufc,n)
+    use arrays, only : z,idna,imxa,imza,nz,nu
     use start, only : floor_vz, ceil_vz
 #ifndef SPLIT
     use arrays, only : u
 #endif /* !SPLIT */
     implicit none
+    integer :: n
+    real,dimension(nu,n) :: ufc
     integer k
 
       do k=1,nz

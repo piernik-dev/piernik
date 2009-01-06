@@ -14,18 +14,22 @@
 #undef  SSP            /*solver*/
 
 /* choosing unitsystem */
-#undef STANDARD         /*genuine unitsystem*/
-#define PSM             /*pc,Msun,Myr unitsystem*/
-#undef VINE             /*3.5kpc,5.6e10Msun,13.1Myr unitsystem*/
-#undef GSM              /*kpc,10^6Msun,Gyr unitsystem*/
-#undef PGM              /*pc,G=1,Myr unitsystem*/
-#undef DMY              /*cm^16,Msun,year unitsystem*/
-#undef CGS              /*cm,gram,sek unitsystem*/
-#undef SI               /*metr,kg,sek unitsystem*/
+#undef STANDARD		/*genuine unitsystem*/
+#define PSM		/*pc,Msun,Myr unitsystem*/
+#undef PGM		/*pc,G=1,Myr unitsystem*/
+#undef DMY		/*cm^16,Msun,year unitsystem*/
+#undef CGS		/*cm,gram,sek unitsystem*/
+#undef SI		/*metr,kg,sek unitsystem*/
 /*===================================*/
 
 /* adiabatic or isothermal */
-#undef ISO
+#define ISO
+
+/* number of different fluids */
+#define IONIZED 1
+#undef NEUTRAL
+#undef DUST
+#undef COSM_RAYS
 
 /* choosing freezing speed */
 #define LOCAL_FR_SPEED
@@ -39,30 +43,37 @@
 #undef SUPERBEE
 
 /* physics including */
-#undef RESIST
-#undef VISC
-#undef HEAT_COND
+#undef RESIST 		
+#undef VISC			
+#undef HEAT_COND	
 #undef COOL_HEAT
-#define COSM_RAYS
+#undef SIMPLE_COOL
+#define ANY_SOURCES
+#undef KEPLER_SUPPRESSION
+#define COLLISIONS
+#undef COLLS_MODIF
+#undef PRESS_GRAD_EXCH
 
 /* gravity type choosing */
 #define GRAV
-#define GRAV_GAL_VOLLMER
+#define GRAV_USER
 #undef SELF_GRAV
 
 /* structure features including */
 #undef GALAXY
 #define GALACTIC_DISK
 #undef ARMS_POTENTIAL
-#define SNE_DISTR
+#undef SNE_DISTR
 #define MASS_COMPENS
-#define SN_SRC
-#define DIPOLS
+#undef SN_SRC
 
 /* numerical solutions and limitations */
 #undef SHEAR
 #undef SHEAR_MPI
 #undef FLX_BND
+#define ANY_LIMITS
 #define VZ_LIMITS
+#undef ONLYZSWEEP
 
 /* problem specific directives */
+#define GRAV_GAL_VOLLMER

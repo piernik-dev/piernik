@@ -30,6 +30,7 @@ module neutrals
    end subroutine add_neut_index
 
    subroutine specify_neutral(nfl,nad,ifl,iadiab,idna,imxa,imya,imza,iena,findex,gamma,fadiab)
+      use mpi_setup
       implicit none
       integer :: iadiab, nfl, nad
       integer :: ifl, iter

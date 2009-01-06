@@ -10,11 +10,6 @@
 #else /* NEUTRAL */
 #define NUMBNEUT 0
 #endif /* NEUTRAL */
-#ifdef MOLECULAR
-#define NUMBMOLEC MOLECULAR
-#else /* MOLECULAR */
-#define NUMBMOLEC 0
-#endif /* MOLECULAR */
 #ifdef DUST
 #define NUMBDUST DUST
 #else /* DUST */
@@ -25,7 +20,7 @@
 #else /* COSM_RAYS */
 #define NUMBCR 0
 #endif /* COSM_RAYS */
-#define NUMBFLUID NUMBION+NUMBNEUT+NUMBMOLEC+NUMBDUST
+#define NUMBFLUID NUMBION+NUMBNEUT+NUMBDUST
 #ifdef ISO
 #define NUPF 4
 #else /* ISO */
@@ -39,14 +34,12 @@ module arrays
    integer,parameter  :: xdim=1, ydim=2, zdim=3
    integer,parameter  :: nrlscal=100, nintscal=100
    integer,allocatable,dimension(:) :: idna, imxa, imya, imza, iena, magn
-   integer,allocatable,dimension(:) :: fiond, fmagn, fdust, findex, fadiab
+   integer,allocatable,dimension(:) :: fmagn, fdust, findex, fadiab
 
    integer, parameter :: nfi=NUMBION
    integer, parameter :: nui=nfi*NUPF
    integer, parameter :: nfn=NUMBNEUT
    integer, parameter :: nun=nfn*NUPF
-   integer, parameter :: nfm=NUMBMOLEC
-   integer, parameter :: num=nfm*NUPF
    integer, parameter :: nfd=NUMBDUST
    integer, parameter :: nud=nfd*4
    integer, parameter :: nfluid=NUMBFLUID
@@ -56,7 +49,7 @@ module arrays
    integer, parameter :: ndust =NUMBDUST
    integer, parameter :: nuc=NUMBCR
 
-   integer, parameter :: nu=nui+nun+num+nud+nuc
+   integer, parameter :: nu=nui+nun+nud+nuc
    integer, parameter :: nm=3
 
    integer, dimension(nu) :: iuswpx, iuswpy, iuswpz
@@ -97,7 +90,7 @@ module arrays
 #endif /* FLX_BND */
 #endif /* ~SPLIT */
 #ifdef MASS_COMPENS
-   real, allocatable, dimension(:,:,:)   :: dinit
+    real, allocatable, dimension(:,:,:,:)   :: dinit
 #endif /* MASS_COMPENS */
 
 !#ifdef COOL_HEAT
@@ -129,11 +122,8 @@ module arrays
       use ionizeds, only : add_ion_index, specify_ionized
 #endif /* IONIZED */
 #ifdef NEUTRAL
-      use neutrals, only : add_neut_index, specify_neutrals
+      use neutrals, only : add_neut_index, specify_neutral
 #endif /* NEUTRAL */
-#ifdef MOLECULAR
-      use moleculars, only : add_mol_index, specify_molecular
-#endif /* MOLECULAR */
 #ifdef DUST
       use dusts, only : add_dust_index, specify_dust
 #endif /* DUST */
@@ -141,23 +131,19 @@ module arrays
       use cosmic_rays, only : add_cr_index, specify_cosmrays
 #endif /* COSM_RAYS */
 
-      integer ifluid,ifion,imagn,iadiab,idust,iter
+      integer ifluid,imagn,iadiab,idust,iter
 #ifdef IONIZED
       integer nuipf
 #endif /* IONIZED */
 #ifdef NEUTRAL
       integer nunpf
 #endif /* NEUTRAL */
-#ifdef MOLECULAR
-      integer numpf
-#endif /* MOLECULAR */
 #ifdef DUST
       integer nudpf
 #endif /* DUST */
       character fluidtype*10
 
       ifluid = 1
-      ifion  = 1
       imagn  = 1
       idust  = 1
       iadiab = 1
@@ -167,9 +153,6 @@ module arrays
 #ifdef NEUTRAL
       call add_neut_index(nui)
 #endif /* NEUTRAL */
-#ifdef MOLECULAR
-      call add_mol_index(nui+nun)
-#endif /* MOLECULAR */
 #ifdef DUST
       call add_dust_index(nui+nun+num)
 #endif /* DUST */
@@ -179,20 +162,17 @@ module arrays
 
 
       allocate(idna(nfluid),imxa(nfluid),imya(nfluid),imza(nfluid))
-      allocate(magn(nfluid),fiond(nfion),fmagn(nfmagn),fdust(ndust),findex(nfluid),fadiab(nadiab))
+      allocate(magn(nfluid),fmagn(nfmagn),fdust(ndust),findex(nfluid),fadiab(nadiab))
       magn=0
 #ifndef ISO
       allocate(iena(nadiab))
 #endif /* ISO */
 #ifdef IONIZED
-      call specify_ionized(nfluid,nadiab,ifluid,iadiab,ifion,imagn,idna,imxa,imya,imza,iena,findex,magn,fiond,fmagn,gamma,fadiab)
+      call specify_ionized(nfluid,nadiab,ifluid,iadiab,imagn,idna,imxa,imya,imza,iena,findex,magn,fmagn,gamma,fadiab)
 #endif /* IONIZED */
 #ifdef NEUTRAL
       call specify_neutral(nfluid,nadiab,ifluid,iadiab,idna,imxa,imya,imza,iena,findex,gamma,fadiab)
 #endif /* NEUTRAL */
-#ifdef MOLECULAR
-      call specify_molecular(nfluid,nadiab,ifluid,iadiab,idna,imxa,imya,imza,iena,findex,gamma,fadiab)
-#endif /* MOLECULAR */
 #ifdef DUST
       call specify_dust(nfluid,ifluid,idna,imxa,imya,imza,findex,gamma,fdust,idust)
 #endif /* DUST */
@@ -292,7 +272,7 @@ module arrays
 #endif /* SPLIT */
       allocate(outwa(nx,ny,nz),outwb(nx,ny,nz),outwc(nx,ny,nz))
 #ifdef MASS_COMPENS
-      allocate(dinit(nx,ny,nz))
+      allocate(dinit(nfluid,nx,ny,nz))
 #endif /* MASS_COMPENS */
 !#ifdef COOL_HEAT
       allocate( coolheat_profile(nz))
