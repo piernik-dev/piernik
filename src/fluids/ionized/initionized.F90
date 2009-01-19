@@ -7,7 +7,6 @@ module initionized
 
     real                  :: gamma_ion, cs_iso_ion,cs_iso_ion2
 
-    integer, parameter    :: ibx=1, iby=2, ibz=3
     integer               :: idni, imxi, imyi, imzi
 #ifndef ISO
     integer               :: ieni
