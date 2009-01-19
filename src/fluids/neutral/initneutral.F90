@@ -8,9 +8,9 @@ module initneutral
     real                  :: gamma_neu, cs_iso_neu,cs_iso_neu2
 
     integer, parameter    :: ibx=1, iby=2, ibz=3
-    integer               :: idni, imxi, imyi, imzi
+    integer               :: idnn, imxn, imyn, imzn
 #ifndef ISO
-    integer               :: ieni
+    integer               :: ienn
 #endif /* ISO */    
 
     integer, allocatable, dimension(:)  :: iarr_neu 
@@ -75,32 +75,32 @@ module initneutral
     integer, nvar, nvar_neu
 
    
-      idni = nvar + 1
-      imxi = nvar + 2
-      imyi = nvar + 3
-      imzi = nvar + 4
+      idnn = nvar + 1
+      imxn = nvar + 2
+      imyn = nvar + 3
+      imzn = nvar + 4
            
 #ifdef ISO
       nvar_neu      = 4
-      nvar          = imzi
+      nvar          = imzn
 
       allocate(iarr_neu(nvar_neu),iarr_neu_swpx(nvar_neu), iarr_neu_swpy(nvar_neu), iarr_neu_swpz(nvar_neu))
 
-      iarr_neu      = [idni,imxi,imyi,imzi] 
-      iarr_neu_swpx = [idni,imxi,imyi,imzi]
-      iarr_neu_swpy = [idni,imyi,imxi,imzi]
-      iarr_neu_swpz = [idni,imzi,imyi,imxi]
+      iarr_neu      = [idnn,imxn,imyn,imzn] 
+      iarr_neu_swpx = [idnn,imxn,imyn,imzn]
+      iarr_neu_swpy = [idnn,imyn,imxn,imzn]
+      iarr_neu_swpz = [idnn,imzn,imyn,imxn]
 #else
-      ieni          = nvar + 5
+      ienn          = nvar + 5
       nvar_neu      = 5
-      nvar          = ieni 
+      nvar          = ienn 
 
       allocate(iarr_neu(nvar_neu),iarr_neu_swpx(nvar_neu), iarr_neu_swpy(nvar_neu), iarr_neu_swpz(nvar_neu))     
 
-      iarr_neu      = [idni,imxi,imyi,imzi,ieni] 
-      iarr_neu_swpx = [idni,imxi,imyi,imzi,ieni]
-      iarr_neu_swpy = [idni,imyi,imxi,imzi,ieni]
-      iarr_neu_swpz = [idni,imzi,imyi,imxi,ieni]
+      iarr_neu      = [idnn,imxn,imyn,imzn,ienn] 
+      iarr_neu_swpx = [idnn,imxn,imyn,imzn,ienn]
+      iarr_neu_swpy = [idnn,imyn,imxn,imzn,ienn]
+      iarr_neu_swpz = [idnn,imzn,imyn,imxn,ienn]
 #endif /* ISO */   
 
 !      write(*,*) 'neutral_index', iarr_neu_swpx
