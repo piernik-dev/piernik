@@ -30,7 +30,7 @@ module fluidindex
 #endif /* IONIZED */
 
 #ifdef NEUTRAL
-   integer :: nvar_neut,beg_neut,end_neut,i_neut
+   integer :: nvar_neu,beg_neu,end_neu,i_neu
 #endif /* NEUTRAL */
 
 #ifdef DUST
@@ -57,7 +57,7 @@ module fluidindex
 
 #ifdef NEUTRAL
       use initneutral, only 	: neutral_index
-      use initneutral, only 	: iarr_neut_swpx, iarr_neut_swpy, iarr_neut_swpz
+      use initneutral, only 	: iarr_neu_swpx, iarr_neu_swpy, iarr_neu_swpz
       use initneutral, only 	: idnn,imxn,imyn,imzn
 #ifndef ISO 
       use initneutral, only 	: ienn
@@ -66,13 +66,13 @@ module fluidindex
 
 #ifdef DUST
       use initdust, only 	: dust_index
-      use initdust, only 	: iarr_dust_swpx, iarr_dust_swpy, iarr_dust_swpz
+      use initdust, only 	: iarr_dst_swpx, iarr_dst_swpy, iarr_dst_swpz
       use initdust, only 	: idnd,imxd,imyd,imzd      
 #endif /* DUST */
 
 #ifdef COSM_RAYS
       use initcr, only 	: dust_index
-      use initcr, only 	: iarr_cr_swpx, iarr_cr_swpy, iarr_cr_swpz
+      use initcr, only 	: iarr_crs_swpx, iarr_crs_swpy, iarr_crs_swpz
       use initcr, only 	: iecr           
 #endif /* COSM_RAYS */
 
@@ -103,13 +103,13 @@ module fluidindex
 #endif /* IONIZED */
 
 #ifdef NEUTRAL
-      nvar_neut = 0
-      beg_neut = nvar + 1
-      call neutral_index(nvar,nvar_neut) 
-      end_neut = nvar    
+      nvar_neu = 0
+      beg_neu = nvar + 1
+      call neutral_index(nvar,nvar_neu) 
+      end_neu = nvar    
       ncomponents  = ncomponents + 1
       nfluid = nfluid + 1   
-      i_neut = ncomponents 
+      i_neu = ncomponents 
 #ifndef ISO 
       nadiab = nadiab + 1
 #endif /* ISO */      
@@ -169,16 +169,16 @@ module fluidindex
 #endif /* IONIZED */
       
 #ifdef NEUTRAL
-      iarr_all_swpx(beg_neut:end_neut) = iarr_neut_swpx
-      iarr_all_swpy(beg_neut:end_neut) = iarr_neut_swpy
-      iarr_all_swpz(beg_neut:end_neut) = iarr_neut_swpz    
+      iarr_all_swpx(beg_neu:end_neu) = iarr_neu_swpx
+      iarr_all_swpy(beg_neu:end_neu) = iarr_neu_swpy
+      iarr_all_swpz(beg_neu:end_neu) = iarr_neu_swpz    
 
-      iarr_all_dn(i_neut)    = idnn
-      iarr_all_mx(i_neut)    = imxn
-      iarr_all_my(i_neut)    = imyn
-      iarr_all_mz(i_neut)    = imzn
+      iarr_all_dn(i_neu)    = idnn
+      iarr_all_mx(i_neu)    = imxn
+      iarr_all_my(i_neu)    = imyn
+      iarr_all_mz(i_neu)    = imzn
 #ifndef ISO
-      iarr_all_en(i_neut)    = ienn
+      iarr_all_en(i_neu)    = ienn
 #endif /* ISO */
 #endif /* NEUTRAL */
       
