@@ -10,25 +10,36 @@ PRO VELMAG
   device,true_color=24,decomposed=0,retain=2
 ;  device,decomposed=0,retain=2
 
- write = 'write'  ; set this to 'write' if You want to save images to file
- sf = 4
+ loadct, 0
 
- plane='YZ'
- nvh=30    ; liczba wektorkow w kier. horyzontalnym
- nvv=30    ; liczba wektorkow w kier. wertykalnym 
+
+ write = 'write'  ; set this to 'write' if You want to save images to file
+ sf = 3
+
+ plane='XY'
+ nvh=15    ; liczba wektorkow w kier. horyzontalnym
+ nvv=15    ; liczba wektorkow w kier. wertykalnym 
 
 winnum=2
 
-    dir='/home/wolt/somerun/quadnew/'
-    prefix = 'quadrupole_tst'
+;    dir='/home/wolt/somerun/quadnew/'
+;    prefix = 'quadrupole_tst'
 
-  var1='maga'
-  vecx='magx'
-  vecy='magy'
-  vecz='magz'
+  dir = '../obj/b3-k1000/'
+  prefix = 'cr_test_b_3'
 
-  first=0
-  last =0
+
+;  var1='magx'
+;  vecx='magx'
+;  vecy='magy'
+;  vecz='magz'
+  var1='dens'
+  vecx='velx'
+  vecy='vely'
+  vecz='velz'
+
+  first=6
+  last =6
   freq =1
 ;  step = 150
 
@@ -37,12 +48,16 @@ winnum=2
 amin=0.0
 amax=1.0e-1
   if(var1 EQ 'dens') then begin
-    amin= 0.02;-0.01
-    amax= 2.5
+    amin= 0.5 ;0.02;-0.01
+    amax= 2.0 ;2.5
   endif
   if(var1 EQ 'eint') then begin
     amin= 0.
     amax= 0.
+  endif
+  if(var1 EQ 'encr') then begin
+    amin= 0.01
+    amax= 8.
   endif
   if(var1 EQ 'temp') then begin
     amin= 0.
@@ -305,7 +320,8 @@ white = 255
   
   if (write EQ 'write') then begin
     file1 =var1+'_'+framenum
-    WRITE_PNG, dir+'movie/'+file1+'.png',TVRD(TRUE=1)
+;    WRITE_PNG, dir+'movie/'+file1+'.png',TVRD(TRUE=1)
+    WRITE_PNG, './'+file1+'.png',TVRD(TRUE=1)
   endif 
 
  end
