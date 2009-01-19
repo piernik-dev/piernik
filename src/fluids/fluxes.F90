@@ -38,11 +38,8 @@ subroutine all_fluxes(flux,cfr,uu,bb,n)
 
     use fluidindex, only : nvar
 
-#ifdef MAGNETIC
-    use fluidindex, only : nmag
-#endif /* MAGNETIC */
-
 #ifdef IONIZED
+    use fluidindex, only : nmag
     use fluidindex, only : nvar_ion
 #endif /* IONIZED */
 

@@ -16,14 +16,14 @@ module fluidindex
 #endif /* COSM_RAYS */ 
    integer, allocatable, dimension(:) :: iarr_all_swpx, iarr_all_swpy, iarr_all_swpz
 
-#ifdef MAGNETIC
+#ifdef IONIZED
    integer :: nmag
    integer, allocatable, dimension(:) :: iarr_mag_swpx, iarr_mag_swpy, iarr_mag_swpz, iarr_all_mag
    integer, parameter  :: ibx=1, iby=2, ibz=3
 #ifdef RESISTIVE
    integer, parameter  :: icx=1, icy=2, icz=3
 #endif /RESISTIVE */
-#endif /* MAGNETIC */
+#endif /* IONIZED */
 
 #ifdef IONIZED
    integer :: nvar_ion,beg_ion,end_ion,i_ion
@@ -85,11 +85,8 @@ module fluidindex
       nadiab = 0
       
      
-#ifdef MAGNETIC
-      nmag = 3
-#endif /* MAGNETIC */
-
 #ifdef IONIZED
+      nmag = 3
       nvar_ion  = 0
       beg_ion   = nvar + 1
       call ionized_index(nvar,nvar_ion) 
@@ -134,9 +131,9 @@ module fluidindex
       i_cr = ncomponents                
 #endif /* COSM_RAYS */     
 
-#ifdef MAGNETIC
+#ifdef IONIZED
       allocate(iarr_mag_swpx(nmag),iarr_mag_swpy(nmag),iarr_mag_swpz(nmag),iarr_all_mag(nmag))
-#endif /* MAGNETIC */
+#endif /* IONIZED */
       allocate(iarr_all_swpx(nvar),iarr_all_swpy(nvar),iarr_all_swpz(nvar))
       allocate(iarr_all_dn(nfluid),iarr_all_mx(nfluid),iarr_all_my(nfluid),iarr_all_mz(nfluid))
 #ifndef ISO      
@@ -146,12 +143,12 @@ module fluidindex
       allocate(iarr_all_cr(nvar_cr))  
 #endif /* COSM_RAYS */
 
-#ifdef MAGNETIC
+#ifdef IONIZED
       iarr_mag_swpx = [ibx,iby,ibz]
       iarr_mag_swpy = [iby,ibx,ibz]
       iarr_mag_swpz = [ibz,iby,ibx]
       iarr_all_mag  = [ibx,iby,ibz]
-#endif /* MAGNETIC */
+#endif /* IONIZED */
 
 
 #ifdef IONIZED
