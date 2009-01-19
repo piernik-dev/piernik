@@ -1,5 +1,5 @@
-    use fluidindex,   only : nfluid
-    use initionized, only : ibx,iby,ibz
+    use fluidindex, only : nfluid
+    use fluidindex, only : ibx,iby,ibz
     use fluidindex, only : iarr_all_dn,iarr_all_mx,iarr_all_my,iarr_all_mz
 #ifndef ISO
     use fluidindex, only : iarr_all_en

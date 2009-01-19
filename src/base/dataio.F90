@@ -298,8 +298,10 @@ module dataio
     use constants, only : Gs
 #endif /* STANDARD */
 
-    use fluidindex,   only : nfluid
-    use initionized, only : ibx,iby,ibz
+    use fluidindex,  only : nfluid    
+    use fluidindex,  only : ibx,iby,ibz
+
+    
     use fluidindex, only : nvar, iarr_all_dn,iarr_all_mx,iarr_all_my,iarr_all_mz
 #ifndef ISO
     use fluidindex, only : iarr_all_en
@@ -1663,9 +1665,8 @@ module dataio
   subroutine write_timeslice
 
     use fluidindex,   only : nfluid
-#ifdef IONIZED
-    use initionized, only : ibx,iby,ibz
-#endif IONIZED
+    use fluidindex,   only : ibx,iby,ibz
+
     use fluidindex, only : nvar, iarr_all_dn,iarr_all_mx,iarr_all_my,iarr_all_mz
 #ifndef ISO
     use fluidindex, only : iarr_all_en
