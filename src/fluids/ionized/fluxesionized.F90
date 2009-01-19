@@ -4,31 +4,26 @@
 module fluxesionized
   implicit none
 
-  contains
+  contains 
 !==========================================================================================
 
   subroutine flux_ion(flux,cfr,uu,bb,n)
-    use initionized, only : gamma_ion
-#ifdef ISO
-    use start, only : csi2
-#endif /* ISO */
+    use initionized, only : gamma_ion, cs_iso_ion2
     use constants
-    use fluidindex, only : nvar
-#ifdef IONIZED
-    use fluidindex, only : nmag
+    use fluidindex, only  : nvar   
+    use fluidindex, only  : nmag
     use initionized, only : ibx,iby,ibz
-#endif /* IONIZED */
     use initionized, only : idni,imxi,imyi,imzi
 #ifndef ISO
     use initionized, only : ieni
 #endif /* ISO */
-#ifdef COSM_RAYS
-    use arrays, only : iecr
-#endif /* COSM_RAYS */
-    use timestep, only : c_all
+!#ifdef COSM_RAYS
+!    use arrays, only : iecr
+!#endif /* COSM_RAYS */
+    use timestepion, only : c_ion
     implicit none
     integer n
-    real, dimension(nvar,n)::flux,uu,cfr
+    real, dimension(nvar,n):: flux,uu,cfr
     real, dimension(nmag,n):: bb
 ! locals
     real, dimension(n) :: vx,ps,p,pmag  
@@ -41,7 +36,7 @@ module fluxesionized
     vx(RNG)=uu(imxi,RNG)/uu(idni,RNG)
 
 #ifdef ISO
-    p(RNG) = csi2*uu(idni,RNG)
+    p(RNG) = cs_iso_ion2*uu(idni,RNG)
     ps(RNG)= p(RNG) + pmag(RNG)
 #else /* ISO */
     ps(RNG)=(uu(ieni,RNG) - &
@@ -58,9 +53,9 @@ module fluxesionized
     flux(ieni,RNG)=(uu(ieni,RNG)+ps(RNG))*vx(RNG)-bb(ibx,RNG)*(bb(ibx,RNG)*uu(imxi,RNG) &
                 +bb(iby,RNG)*uu(imyi,RNG)+bb(ibz,RNG)*uu(imzi,RNG))/uu(idni,RNG)
 #endif /* ISO */
-#ifdef COSM_RAYS
-    flux(iecr,RNG)= uu(iecr,RNG)*vx(RNG)
-#endif /* COSM_RAYS */
+!#ifdef COSM_RAYS
+!    flux(iecr,RNG)= uu(iecr,RNG)*vx(RNG)
+!#endif /* COSM_RAYS */
 #ifdef LOCAL_FR_SPEED
 
 !       The freezing speed is now computed locally (in each cell)
@@ -81,7 +76,7 @@ module fluxesionized
 #ifdef GLOBAL_FR_SPEED
 !       The freezing speed is now computed globally
 !       (c=const for the whole domain) in sobroutine 'timestep'
-    cfr(:,:) = c_all
+    cfr(:,:) = c_ion
 !    write(*,*) c_all
 !    stop
 #endif /* GLOBAL_FR_SPEED */

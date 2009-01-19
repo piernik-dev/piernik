@@ -16,7 +16,7 @@ module initionized
     integer, allocatable, dimension(:)  :: iarr_ion 
     integer, allocatable, dimension(:)  :: iarr_ion_swpx, iarr_ion_swpy, iarr_ion_swpz
 
-  contains
+ contains
 
 
   subroutine init_ionized
@@ -72,7 +72,7 @@ module initionized
   subroutine ionized_index(nvar,nvar_ion)
   
     implicit none
-    integer :: nvar, nvar_ion
+    integer, nvar, nvar_ion
 
    
       idni = nvar + 1

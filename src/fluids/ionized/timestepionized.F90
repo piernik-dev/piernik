@@ -5,14 +5,13 @@ module timestepionized
 
   real :: dt_ion,c_ion
 
-contains
+ contains 
 
   subroutine timestep_ion
     use mpi_setup
     use grid, only   : dx,dy,dz
     use start, only  : nb,cfl
-!    use timestep, only : dt_ion
-    use initionized, only : gamma_ion, cs_iso_ion,cs_iso_ion2   
+    use initionized, only : gamma_ion, cs_iso_ion2   
     use initionized, only : idni,imxi,imyi,imzi
 #ifndef ISO
     use initionized, only : ieni
@@ -31,7 +30,6 @@ contains
     real pmag
     real v,ps,p
     integer i,j,k
-    real csi_sq
 
 
     cx    = 0.0
@@ -50,7 +48,7 @@ contains
           pmag = sum(b(:,i,j,k)**2,1)/2.
 
 #ifdef ISO
-            p = csi_sq*u(idni,i,j,k)
+            p = csi_iso_ion2*u(idni,i,j,k)
             ps =p+pmag
             cf = sqrt(abs(  (2.*pmag+p)/u(idni,i,j,k)) )
 #else /* ISO */
