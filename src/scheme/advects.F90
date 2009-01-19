@@ -6,13 +6,16 @@ module advects    ! both advects
 
   subroutine advectby_x
     use start,  only : dimensions,dt
-    use arrays, only : b,u,wa,nx,ny,nz,idna,imxa,iby,magn,nfluid
+    use fluidindex,   only : nfluid
+    use initionized, only : ibx,iby,ibz
+    use initionized, only : idni,imxi
+    use arrays, only : b,u,wa,nx,ny,nz
     use grid,   only : dx
 #ifndef SPLIT
-    use arrays, only : Lb,ibx,xdim,iby,ydim
+    use arrays, only : Lb,xdim,ydim
     use grid,   only : dy
 #endif /* SPLIT */
-    use tv,     only : tvdb
+    use rtvd,     only : tvdb
     use mag_boundaries, only : bnd_emf
 
     implicit none
@@ -25,9 +28,7 @@ module advects    ! both advects
       do j=2,ny
         jm=j-1
 	vx=0.0
-	do ifluid=1,nfluid
-        if(magn(ifluid) .eq. 1) vx=(u(imxa(ifluid),:,jm,k)+u(imxa(ifluid),:,j,k))/(u(idna(ifluid),:,jm,k)+u(idna(ifluid),:,j,k))
-	enddo
+        vx=(u(imxi,:,jm,k)+u(imxi,:,j,k))/(u(idni,:,jm,k)+u(idni,:,j,k))
         vx(2:nx-1)=(vx(1:nx-2) + vx(3:nx) + 2.0*vx(2:nx-1))*0.25
         vx(1)  = vx(2)
         vx(nx) = vx(nx-1)
@@ -58,11 +59,14 @@ module advects    ! both advects
 
   subroutine advectbz_x
     use start,  only : dimensions,dt
-    use arrays, only : b,u,wa,nx,ny,nz,idna,imxa,ibz,magn,nfluid
+    use fluidindex,   only : nfluid
+    use initionized, only : ibx,iby,ibz
+    use initionized, only : idni,imxi
+    use arrays, only : b,u,wa,nx,ny,nz
     use grid,   only : dx
-    use tv,     only : tvdb
+    use rtvd,   only : tvdb
 #ifndef SPLIT
-    use arrays, only : Lb,ibx,xdim,ibz,zdim
+    use arrays, only : Lb,xdim,zdim
     use grid,   only : dz
 #endif /* SPLIT */
     use mag_boundaries, only : bnd_emf
@@ -77,9 +81,7 @@ module advects    ! both advects
       km=k-1
       do j=1,ny
         vx=0.0
-	do ifluid=1,nfluid
-        if(magn(ifluid) .eq. 1) vx=(u(imxa(ifluid),:,j,km)+u(imxa(ifluid),:,j,k))/(u(idna(ifluid),:,j,km)+u(idna(ifluid),:,j,k))
-	enddo
+        vx=(u(imxi,:,j,km)+u(imxi,:,j,k))/(u(idni,:,j,km)+u(idni,:,j,k))
         vx(2:nx-1)=(vx(1:nx-2) + vx(3:nx) + 2.0*vx(2:nx-1))*0.25
         vx(1)  = vx(2)
         vx(nx) = vx(nx-1)
@@ -110,11 +112,14 @@ module advects    ! both advects
 
   subroutine advectbz_y
     use start,  only : dimensions,dt
-    use arrays, only : b,u,wa,nx,ny,nz,idna,imya,ibz,magn,nfluid
+    use fluidindex,   only : nfluid
+    use initionized, only : ibx,iby,ibz
+    use initionized, only : idni,imyi
+    use arrays, only : b,u,wa,nx,ny,nz
     use grid,   only : dy
-    use tv,     only : tvdb
+    use rtvd,   only : tvdb
 #ifndef SPLIT
-    use arrays, only : Lb,iby,ydim,ibz,zdim
+    use arrays, only : Lb,ydim,zdim
     use grid,   only : dz
 #endif /* SPLIT */
     use mag_boundaries, only : bnd_emf
@@ -129,10 +134,7 @@ module advects    ! both advects
       km=k-1
       do i=1,nx
         vy=0.0
-        do ifluid=1,nfluid
-          if(magn(ifluid) .eq. 1) vy=vy+(u(imya(ifluid),i,:,km)+u(imya(ifluid),i,:,k)) &
-	                               /(u(idna(ifluid),i,:,km)+u(idna(ifluid),i,:,k))
-	enddo
+        vy=vy+(u(imyi,i,:,km)+u(imyi,i,:,k))/(u(idni,i,:,km)+u(idni,i,:,k))
         vy(2:ny-1)=(vy(1:ny-2) + vy(3:ny) + 2.0*vy(2:ny-1))*0.25
         vy(1)  = vy(2)
         vy(ny) = vy(ny-1)
@@ -163,11 +165,14 @@ module advects    ! both advects
 
   subroutine advectbx_y
     use start,  only : dimensions,dt
-    use arrays, only : b,u,wa,nx,ny,nz,idna,imya,ibx,magn,nfluid
+    use fluidindex,   only : nfluid
+    use initionized, only : ibx,iby,ibz
+    use initionized, only : idni,imyi
+    use arrays, only : b,u,wa,nx,ny,nz
     use grid,   only : dy
-    use tv,     only : tvdb
+    use rtvd,     only : tvdb
 #ifndef SPLIT
-    use arrays, only : Lb,iby,ydim,ibx,xdim
+    use arrays, only : Lb,ydim,xdim
     use grid,   only : dx
 #endif /* SPLIT */
     use mag_boundaries, only : bnd_emf
@@ -182,9 +187,7 @@ module advects    ! both advects
       do i=2,nx
         im=i-1
         vy=0.0
-	do ifluid=1,nfluid
-	if(magn(ifluid) .eq. 1) vy=(u(imya(ifluid),im,:,k)+u(imya(ifluid),i,:,k))/(u(idna(ifluid),im,:,k)+u(idna(ifluid),i,:,k))
-	enddo
+	vy=(u(imyi,im,:,k)+u(imyi,i,:,k))/(u(idni,im,:,k)+u(idni,i,:,k))
         vy(2:ny-1)=(vy(1:ny-2) + vy(3:ny) + 2.0*vy(2:ny-1))*0.25
         vy(1)  = vy(2)
         vy(ny) = vy(ny-1)
@@ -215,11 +218,14 @@ module advects    ! both advects
 
   subroutine advectbx_z
     use start,  only : dimensions,dt
-    use arrays, only : b,u,wa,nx,ny,nz,idna,imza,ibx,magn,nfluid
+    use fluidindex,   only : nfluid
+    use initionized, only : ibx,iby,ibz
+    use initionized, only : idni,imzi
+    use arrays, only : b,u,wa,nx,ny,nz
     use grid,   only : dz
-    use tv,     only : tvdb
+    use rtvd,     only : tvdb
 #ifndef SPLIT
-    use arrays, only : Lb,ibz,zdim,ibx,xdim
+    use arrays, only : Lb,zdim,xdim
     use grid,   only : dx
 #endif /* SPLIT */
     use mag_boundaries, only : bnd_emf
@@ -234,9 +240,7 @@ module advects    ! both advects
       do i=2,nx
         im=i-1
 	vz=0.0
-	do ifluid=1,nfluid
-        if(magn(ifluid) .eq. 1) vz=(u(imza(ifluid),im,j,:)+u(imza(ifluid),i,j,:))/(u(idna(ifluid),im,j,:)+u(idna(ifluid),i,j,:))
-	enddo
+        vz=(u(imzi,im,j,:)+u(imzi,i,j,:))/(u(idni,im,j,:)+u(idni,i,j,:))
         vz(2:nz-1)=(vz(1:nz-2) + vz(3:nz) + 2.0*vz(2:nz-1))*0.25
         vz(1)  = vz(2)
         vz(nz) = vz(nz-1)
@@ -267,11 +271,14 @@ module advects    ! both advects
 
   subroutine advectby_z
     use start,  only : dimensions,dt
-    use arrays, only : b,u,wa,nx,ny,nz,idna,imza,iby,magn,nfluid
+    use fluidindex,   only : nfluid
+    use initionized, only : ibx,iby,ibz
+    use initionized, only : idni,imzi
+    use arrays, only : b,u,wa,nx,ny,nz
     use grid,   only : dz
-    use tv,     only : tvdb
+    use rtvd,     only : tvdb
 #ifndef SPLIT
-    use arrays, only : Lb,ibz,zdim,iby,ydim
+    use arrays, only : Lb,zdim,ydim
     use grid,   only : dy
 #endif /* SPLIT */
     use mag_boundaries, only : bnd_emf
@@ -286,9 +293,7 @@ module advects    ! both advects
       jm=j-1
       do i=1,nx
         vz=0.0
-	do ifluid=1,nfluid
-	if(magn(ifluid) .eq. 1) vz=(u(imza(ifluid),i,jm,:)+u(imza(ifluid),i,j,:))/(u(idna(ifluid),i,jm,:)+u(idna(ifluid),i,j,:))
-	enddo
+	vz=(u(imzi,i,jm,:)+u(imzi,i,j,:))/(u(idni,i,jm,:)+u(idni,i,j,:))
         vz(2:nz-1)=(vz(1:nz-2) + vz(3:nz) + 2.0*vz(2:nz-1))*0.25
         vz(1)  = vz(2)
         vz(nz) = vz(nz-1)

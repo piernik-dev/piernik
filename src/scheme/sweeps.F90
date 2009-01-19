@@ -1,23 +1,28 @@
-! $Id$
+! $Id: fluids.F90 362 2008-10-16 17:51:20Z wolt $
 #include "piernik.def"
-module fluids     ! split fluids
+module sweeps     ! split sweeps
   contains
   
   
-  subroutine fluidx
+  subroutine sweepx
 
+    use fluidindex,   only : nvar, iarr_all_swpx
+#ifdef IONIZED
+    use fluidindex,   only : nmag
+    use initionized,  only : ibx,iby,ibz
+#endif IONIZED
     use start, only  : dimensions, magfield,dt,nb
-    use arrays, only : u,b,nx,ny,nz,nu,ks,ke,ibx,iby,ibz,iuswpx
+    use arrays, only : u,b,nx,ny,nz,ks,ke
     use grid, only   : dx
-    use tv, only     : relaxing_tvd
+    use rtvd, only     : relaxing_tvd
     use fluid_boundaries, only : compute_u_bnd 
 #ifdef COSM_RAYS
     use cr_diffusion        
 #endif /* COSM_RAYS */
 
     implicit none
-    real, dimension(3,nx)  :: b_x
-    real, dimension(nu,nx) :: u_x
+    real, dimension(nmag,nx)  :: b_x
+    real, dimension(nvar,nx)  :: u_x
     integer :: j,k,jp,kp
   
     b_x = 0.0
@@ -40,31 +45,44 @@ module fluids     ! split fluids
           b_x = 0.0
         endif
 
-        u_x(iuswpx,:)=u(:,:,j,k)
+!        write(*,*) 'sweepx:'	
+!        write(*,*) iarr_all_swpx	
+
+        u_x(iarr_all_swpx,:)=u(:,:,j,k)
+
+!	write(*,*) nvar,nmag
+!	write(*,*) u_x(1,:)
+!	write(*,*) b_x(1,:)
+	
         call relaxing_tvd(u_x,b_x,'xsweep',j,k,dx,nx,dt)
-        u(:,:,j,k)=u_x(iuswpx,:)
+        u(:,:,j,k)=u_x(iarr_all_swpx,:)
       end do
     end do
 
     call compute_u_bnd
 
-  end subroutine fluidx
+  end subroutine sweepx
 
 !------------------------------------------------------------------------------------------
 
-  subroutine fluidy
+  subroutine sweepy
+    use fluidindex, only : nvar, iarr_all_swpy
+#ifdef IONIZED
+    use fluidindex,   only : nmag
+    use initionized, only : ibx,iby,ibz
+#endif IONIZED
     use start, only  : dimensions, magfield,dt,nb
-    use arrays, only : u,b,nx,ny,nz,nu,ks,ke,ibx,iby,ibz,iuswpy
+    use arrays, only : u,b,nx,ny,nz,ks,ke
     use grid, only   : dy
-    use tv, only     : relaxing_tvd
+    use rtvd, only     : relaxing_tvd
     use fluid_boundaries, only : compute_u_bnd 
 #ifdef COSM_RAYS
     use cr_diffusion        
 #endif /* COSM_RAYS */
 
     implicit none
-    real, dimension(3,ny)  :: b_y
-    real, dimension(nu,ny) :: u_y
+    real, dimension(nmag,ny)  :: b_y
+    real, dimension(nvar,ny)  :: u_y
     
     integer :: i,k,ip,kp
  
@@ -89,33 +107,38 @@ module fluids     ! split fluids
           b_y = 0.0
         endif
 
-        u_y(iuswpy,:)=u(:,i,:,k) 
+        u_y(iarr_all_swpy,:)=u(:,i,:,k) 
 
         call relaxing_tvd(u_y,b_y,'ysweep',k,i,dy,ny,dt)
-        u(:,i,:,k)=u_y(iuswpy,:)
+        u(:,i,:,k)=u_y(iarr_all_swpy,:)
 
       end do
     end do
 
     call compute_u_bnd
 
-  end subroutine fluidy
+  end subroutine sweepy
 
 !------------------------------------------------------------------------------------------
 
-  subroutine fluidz
+  subroutine sweepz
+    use fluidindex, only   : nvar, iarr_all_swpz
+#ifdef IONIZED
+    use fluidindex, only   : nmag
+    use initionized, only : ibx,iby,ibz
+#endif IONIZED
     use start, only  : dimensions, magfield,dt,nb
-    use arrays, only : u,b,nx,ny,nz,nu,ks,ke,ibx,iby,ibz,iuswpz
+    use arrays, only : u,b,nx,ny,nz,ks,ke
     use grid, only   : dz
-    use tv, only     : relaxing_tvd
+    use rtvd, only     : relaxing_tvd
     use fluid_boundaries, only : compute_u_bnd 
 #ifdef COSM_RAYS
     use cr_diffusion        
 #endif /* COSM_RAYS */
 
     implicit none
-    real, dimension(3,nz)  :: b_z
-    real, dimension(nu,nz) :: u_z
+    real, dimension(nmag,nz)  :: b_z
+    real, dimension(nvar,nz)  :: u_z
     
     integer :: i,j,ip,jp
 
@@ -139,14 +162,14 @@ module fluids     ! split fluids
         else
           b_z = 0.0
         endif
-        u_z(iuswpz,:)=u(:,i,j,:)
+        u_z(iarr_all_swpz,:)=u(:,i,j,:)
 
         call relaxing_tvd(u_z,b_z,'zsweep',i,j,dz,nz,dt)
-        u(:,i,j,:)=u_z(iuswpz,:)
+        u(:,i,j,:)=u_z(iarr_all_swpz,:)
       end do
     end do
     
     call compute_u_bnd
 
-  end subroutine fluidz
-end module fluids
+  end subroutine sweepz
+end module sweeps

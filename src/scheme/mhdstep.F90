@@ -1,16 +1,16 @@
 ! $Id$
 #include "piernik.def"
-module mod_mhdstep   ! SPLIT
+module mhdstep   ! SPLIT
 
   implicit none
 
   contains
 
-subroutine mhdstep
+subroutine mhd_step
   use start,  only : dimensions,dt,dt_log,dt_tsl,nstep,t,magfield
   use dataio, only : nlog,ntsl,write_log,write_timeslice
-  use time,   only : timestep
-  use fluids, only : fluidx,fluidy,fluidz
+  use timestep,   only : time_step
+  use sweeps, only : sweepx,sweepy,sweepz
   use mpi_setup, only : proc
 #ifdef DEBUG
   use dataio, only : nhdf,write_hdf
@@ -39,7 +39,7 @@ subroutine mhdstep
   integer system, syslog
 #endif /* DEBUG */
 
-  call timestep
+  call time_step
 
   if(dt_log .gt. 0.0) then
     if(nlog .lt. (int(t / dt_log) + 1)) then
@@ -71,7 +71,7 @@ subroutine mhdstep
 
 !------------------- X->Y->Z ---------------------
 #ifndef ONLYZSWEEP
-      call fluidx
+      call sweepx
       if(magfield) call magfieldbyzx
 #ifdef COSM_RAYS
       call cr_diff_x
@@ -84,7 +84,7 @@ subroutine mhdstep
 #endif /* ONLYZSWEEP */
 
 #ifndef ONLYZSWEEP
-      call fluidy
+      call sweepy
       if(magfield) call magfieldbzxy
 #ifdef COSM_RAYS
       call cr_diff_y
@@ -97,7 +97,7 @@ subroutine mhdstep
 #endif /* ONLYZSWEEP */
 
     if(dimensions .eq. '3d') then
-      call fluidz
+      call sweepz
       if(magfield) call magfieldbxyz
 #ifdef COSM_RAYS
       call cr_diff_z
@@ -137,7 +137,7 @@ subroutine mhdstep
       call cr_diff_z
 #endif /* COSM_RAYS */
       if(magfield) call magfieldbxyz
-      call fluidz
+      call sweepz
 #ifdef DEBUG
       syslog = system('echo -n sweep z')
       call write_hdf
@@ -150,7 +150,7 @@ subroutine mhdstep
       call cr_diff_y
 #endif /* COSM_RAYS */
       if(magfield) call magfieldbzxy
-      call fluidy
+      call sweepy
 #ifdef DEBUG
       syslog = system('echo -n sweep y')
       call write_hdf
@@ -163,7 +163,7 @@ subroutine mhdstep
       call cr_diff_x
 #endif /* COSM_RAYS */
       if(magfield) call magfieldbyzx
-      call fluidx
+      call sweepx
 #ifdef DEBUG
       syslog = system('echo -n sweep x')
       call write_hdf
@@ -180,12 +180,13 @@ subroutine mhdstep
 #endif /* DEBUG */
 #endif /* SNE_DISTR */
 
-end subroutine mhdstep
+end subroutine mhd_step
 
 
   subroutine magfieldbyzx
     use start,   only : dimensions
-    use arrays,  only : b,ibx,iby,ibz,xdim,ydim,zdim
+    use initionized, only : ibx,iby,ibz
+    use arrays,  only : b,xdim,ydim,zdim
     use advects, only : advectby_x,advectbz_x
 #ifdef SSP
     use start,   only : integration_order,istep
@@ -238,7 +239,8 @@ end subroutine mhdstep
 
   subroutine magfieldbzxy
     use start,   only : dimensions
-    use arrays,  only : b,ibx,iby,ibz,xdim,ydim,zdim
+    use initionized, only : ibx,iby,ibz
+    use arrays,  only : b,xdim,ydim,zdim
     use advects, only : advectbx_y,advectbz_y
 #ifdef SSP
     use start,   only : integration_order,istep
@@ -288,7 +290,8 @@ end subroutine mhdstep
 
   subroutine magfieldbxyz
     use start,   only : dimensions
-    use arrays,  only : b,ibx,iby,ibz,xdim,ydim,zdim
+    use initionized, only : ibx,iby,ibz
+    use arrays,  only : b,xdim,ydim,zdim
     use advects, only : advectbx_z,advectby_z
 #ifdef SSP
     use start,   only : integration_order,istep
@@ -406,4 +409,4 @@ end subroutine mhdstep
 
   end subroutine mag_add
 
-end module mod_mhdstep
+end module mhdstep
