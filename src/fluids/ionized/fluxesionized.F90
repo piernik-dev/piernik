@@ -14,7 +14,7 @@ module fluxesionized
 #endif /* ISO */
     use constants
     use fluidindex, only : nvar
-#ifdef IONIZED    
+#ifdef IONIZED
     use fluidindex, only : nmag
     use initionized, only : ibx,iby,ibz
 #endif /* IONIZED */

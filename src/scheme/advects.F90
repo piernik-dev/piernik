@@ -33,11 +33,11 @@ module advects    ! both advects
         vx(1)  = vx(2)
         vx(nx) = vx(nx-1)
         by_x=b(iby,:,j,k)
-#if defined ORIG && defined SPLIT
+!#if defined ORIG && defined SPLIT
         call tvdb(vxby,by_x,vx,nx,dt,dx)
-#else /* ORIG && SPLIT */
-        call tvdb(vxby,by_x,vx,nx,dt)
-#endif /* ORIG && SPLIT */
+!#else /* ORIG && SPLIT */
+!        call tvdb(vxby,by_x,vx,nx,dt)
+!#endif /* ORIG && SPLIT */
         wa(:,j,k) = vxby
       end do
     end do
@@ -86,11 +86,11 @@ module advects    ! both advects
         vx(1)  = vx(2)
         vx(nx) = vx(nx-1)
         bz_x=b(ibz,:,j,k)
-#if defined ORIG && defined SPLIT
+!#if defined ORIG && defined SPLIT
         call tvdb(vxbz,bz_x,vx,nx,dt,dx)
-#else /* ORIG && SPLIT */
-        call tvdb(vxbz,bz_x,vx,nx,dt)
-#endif /* ORIG && SPLIT */
+!#else /* ORIG && SPLIT */
+!        call tvdb(vxbz,bz_x,vx,nx,dt)
+!#endif /* ORIG && SPLIT */
         wa(:,j,k) = vxbz
       end do
     end do
@@ -139,11 +139,11 @@ module advects    ! both advects
         vy(1)  = vy(2)
         vy(ny) = vy(ny-1)
         bz_y=b(ibz,i,:,k)
-#if defined ORIG && defined SPLIT
+!#if defined ORIG && defined SPLIT
         call tvdb(vybz,bz_y,vy,ny,dt,dy)
-#else /* ORIG && SPLIT */
-        call tvdb(vybz,bz_y,vy,ny,dt)
-#endif /* ORIG && SPLIT */
+!#else /* ORIG && SPLIT */
+!        call tvdb(vybz,bz_y,vy,ny,dt)
+!#endif /* ORIG && SPLIT */
         wa(i,:,k) = vybz
       end do
     end do
@@ -192,11 +192,11 @@ module advects    ! both advects
         vy(1)  = vy(2)
         vy(ny) = vy(ny-1)
         bx_y=b(ibx,i,:,k)
-#if defined ORIG && defined SPLIT
+!#if defined ORIG && defined SPLIT
         call tvdb(vybx,bx_y,vy,ny,dt,dy)
-#else /* ORIG && SPLIT */
-        call tvdb(vybx,bx_y,vy,ny,dt)
-#endif /* ORIG && SPLIT */
+!#else /* ORIG && SPLIT */
+!        call tvdb(vybx,bx_y,vy,ny,dt)
+!#endif /* ORIG && SPLIT */
         wa(i,:,k) = vybx
       end do
     end do
@@ -245,11 +245,11 @@ module advects    ! both advects
         vz(1)  = vz(2)
         vz(nz) = vz(nz-1)
         bx_z=b(ibx,i,j,:)
-#if defined ORIG && defined SPLIT
+!#if defined ORIG && defined SPLIT
         call tvdb(vzbx,bx_z,vz,nz,dt,dz)
-#else /* ORIG && SPLIT */
-        call tvdb(vzbx,bx_z,vz,nz,dt)
-#endif /* ORIG && SPLIT */
+!#else /* ORIG && SPLIT */
+!        call tvdb(vzbx,bx_z,vz,nz,dt)
+!#endif /* ORIG && SPLIT */
         wa(i,j,:) = vzbx
       end do
     end do
@@ -298,11 +298,11 @@ module advects    ! both advects
         vz(1)  = vz(2)
         vz(nz) = vz(nz-1)
         by_z=b(iby,i,j,:)
-#if defined ORIG && defined SPLIT
+!#if defined ORIG && defined SPLIT
         call tvdb(vzby,by_z,vz,nz,dt,dz)
-#else /* ORIG && SPLIT */
-        call tvdb(vzby,by_z,vz,nz,dt)
-#endif /* ORIG && SPLIT */
+!#else /* ORIG && SPLIT */
+!        call tvdb(vzby,by_z,vz,nz,dt)
+!#endif /* ORIG && SPLIT */
         wa(i,j,:) = vzby
       end do
     end do

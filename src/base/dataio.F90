@@ -645,35 +645,35 @@ module dataio
         wa(:,jeo,:) = wa(:,jeo-1,:)
         wa(:,:,keo) = wa(:,:,keo-1)
 
-      case ('omga')
-        write(varname,'(a3,i1)') 'omg',ifl
-        do ibe=iso,ieo
-          do jbe=jso,jeo
-            wa(ibe,jbe,kso:keo) = (u(iarr_all_my(ifl),ibe,jbe,kso:keo) / u(iarr_all_dn(ifl),ibe,jbe,kso:keo) * x(ibe) &
-                                 - u(iarr_all_mx(ifl),ibe,jbe,kso:keo) / u(iarr_all_dn(ifl),ibe,jbe,kso:keo) * y(jbe))/(x(ibe)**2+y(jbe)**2)
-          enddo
-        enddo
-        call next_fluid_or_var(ifl,iw,nfluid)
-
-      case ('vrot')
-        write(varname,'(a3,i1)') 'vrt',ifl
-        do ibe=iso,ieo
-          do jbe=jso,jeo
-            wa(ibe,jbe,kso:keo) = (u(iarr_all_my(ifl),ibe,jbe,kso:keo) / u(iarr_all_dn(ifl),ibe,jbe,kso:keo) * x(ibe) &
-                                 - u(iarr_all_mx(ifl),ibe,jbe,kso:keo) / u(iarr_all_dn(ifl),ibe,jbe,kso:keo) * y(jbe))/sqrt(x(ibe)**2+y(jbe)**2)
-          enddo
-        enddo
-        call next_fluid_or_var(ifl,iw,nfluid)
-
-      case ('vout')
-        write(varname,'(a3,i1)') 'vou',ifl
-        do ibe=iso,ieo
-          do jbe=jso,jeo
-            wa(ibe,jbe,kso:keo) = (u(iarr_all_mx(ifl),ibe,jbe,kso:keo) / u(iarr_all_dn(ifl),ibe,jbe,kso:keo) * x(ibe) &
-                                 + u(iarr_all_my(ifl),ibe,jbe,kso:keo) / u(iarr_all_dn(ifl),ibe,jbe,kso:keo) * y(jbe))/sqrt(x(ibe)**2+y(jbe)**2)
-          enddo
-        enddo
-        call next_fluid_or_var(ifl,iw,nfluid)
+!      case ('omga')
+!        write(varname,'(a3,i1)') 'omg',ifl
+!        do ibe=iso,ieo
+!          do jbe=jso,jeo
+!            wa(ibe,jbe,kso:keo) = (u(iarr_all_my(ifl),ibe,jbe,kso:keo) / u(iarr_all_dn(ifl),ibe,jbe,kso:keo) * x(ibe) &
+!                                 - u(iarr_all_mx(ifl),ibe,jbe,kso:keo) / u(iarr_all_dn(ifl),ibe,jbe,kso:keo) * y(jbe))/(x(ibe)**2+y(jbe)**2)
+!          enddo
+!        enddo
+!        call next_fluid_or_var(ifl,iw,nfluid)
+!
+!      case ('vrot')
+!        write(varname,'(a3,i1)') 'vrt',ifl
+!        do ibe=iso,ieo
+!          do jbe=jso,jeo
+!            wa(ibe,jbe,kso:keo) = (u(iarr_all_my(ifl),ibe,jbe,kso:keo) / u(iarr_all_dn(ifl),ibe,jbe,kso:keo) * x(ibe) &
+!                                 - u(iarr_all_mx(ifl),ibe,jbe,kso:keo) / u(iarr_all_dn(ifl),ibe,jbe,kso:keo) * y(jbe))/sqrt(x(ibe)**2+y(jbe)**2)
+!          enddo
+!        enddo
+!        call next_fluid_or_var(ifl,iw,nfluid)
+!
+!      case ('vout')
+!        write(varname,'(a3,i1)') 'vou',ifl
+!        do ibe=iso,ieo
+!          do jbe=jso,jeo
+!            wa(ibe,jbe,kso:keo) = (u(iarr_all_mx(ifl),ibe,jbe,kso:keo) / u(iarr_all_dn(ifl),ibe,jbe,kso:keo) * x(ibe) &
+!                                 + u(iarr_all_my(ifl),ibe,jbe,kso:keo) / u(iarr_all_dn(ifl),ibe,jbe,kso:keo) * y(jbe))/sqrt(x(ibe)**2+y(jbe)**2)
+!          enddo
+!        enddo
+!        call next_fluid_or_var(ifl,iw,nfluid)
 
       case ('dcol')
         write(varname,'(a3,i1)') 'dcl',ifl

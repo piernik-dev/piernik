@@ -1,12 +1,12 @@
  $DOMAIN_SIZES
-    nxd = 60
-    nyd = 60
-    nzd = 60
+    nxd = 40
+    nyd = 40
+    nzd = 40
  /
  $MPI_BLOCKS
-    pxsize = 2
-    pysize = 3
-    pzsize = 1
+    pxsize = 1
+    pysize = 1
+    pzsize = 1    
  /  
 
  $START_CONTROL
@@ -20,15 +20,12 @@
 
  $END_CONTROL
     tend   = 0.0015
-    nend   = 15
+    nend   = 1000
  /
 
  $OUTPUT_CONTROL
-    ix      = 30
-    iy      = 0
-    iz      = 30
     dt_hdf  = 0.00001
-    dt_res  = 0.01
+    dt_res  = 0.0
     dt_log  = 0.00001
     dt_tsl  = 0.001
     vars(1) = 'dens'
@@ -60,8 +57,16 @@
     zmax   = 1.0
  /
 
- $EQUATION_OF_STATE
+ $FLUID_IONIZED
+    gamma_ion  = 1.666666666
+ /
 
+ $FLUID_NEUTRAL
+    gamma_neut = 1.666666666
+ /
+
+
+ $EQUATION_OF_STATE
  /  
 
  $NUMERICAL_SETUP

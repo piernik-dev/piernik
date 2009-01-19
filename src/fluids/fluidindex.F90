@@ -134,7 +134,9 @@ module fluidindex
       i_cr = ncomponents                
 #endif /* COSM_RAYS */     
 
+#ifdef MAGNETIC
       allocate(iarr_mag_swpx(nmag),iarr_mag_swpy(nmag),iarr_mag_swpz(nmag),iarr_all_mag(nmag))
+#endif /* MAGNETIC */
       allocate(iarr_all_swpx(nvar),iarr_all_swpy(nvar),iarr_all_swpz(nvar))
       allocate(iarr_all_dn(nfluid),iarr_all_mx(nfluid),iarr_all_my(nfluid),iarr_all_mz(nfluid))
 #ifndef ISO      

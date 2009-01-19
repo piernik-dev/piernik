@@ -1,4 +1,3 @@
-#define RNG nb+1:nx-nb, nb+1:ny-nb, nb+1:nz-nb
 module init_problem
   
 ! Initial condition for Sedov-Taylor explosion
@@ -23,9 +22,8 @@ contains
 !-----------------------------------------------------------------------------
 
   subroutine read_problem_par
-    use comp_log
+
     implicit none
-    integer :: i
     
       t_sn = 0.0
   
@@ -53,9 +51,6 @@ contains
       open(3, file='tmp.log', position='append')
         write(3,nml=PROBLEM_CONTROL)
         write(3,*)
-        do i=1,nenv
-           write(3,*) trim(env(i))
-        enddo
       close(3)
     endif
 
@@ -118,10 +113,13 @@ contains
 !-----------------------------------------------------------------------------
 
   subroutine init_prob
+    use initionized, only : idni, imxi,imyi,imzi,ieni, gamma_ion
+
     implicit none
 
     integer i,j,k, n
-
+    
+    
     call read_problem_par
  
 ! Uniform equilibrium state
@@ -129,17 +127,18 @@ contains
     do k = 1,nz
       do j = 1,ny
         do i = 1,nx
-          u(idna,i,j,k)   = d0 
-          u(imxa,i,j,k) = 0.0
-          u(imya,i,j,k) = 0.0
-          u(imza,i,j,k) = 0.0
-          u(iena,i,j,k)   = p0/(gamma-1.0)
-	  u(iena,i,j,k)   = u(iena,i,j,k) + 0.5*(u(imxa,i,j,k)**2 +u(imya,i,j,k)**2 &
-	                                        +u(imza,i,j,k)**2)/u(idna,i,j,k)
+          u(idni,i,j,k)   = d0 
+          u(imxi,i,j,k) = 0.0
+          u(imyi,i,j,k) = 0.0
+          u(imzi,i,j,k) = 0.0
+          u(ieni,i,j,k)   = p0/(gamma_ion-1.0)
+          u(ieni,i,j,k)   = u(ieni,i,j,k) + 0.5*(u(imxi,i,j,k)**2 +u(imyi,i,j,k)**2 &
+                                           +u(imzi,i,j,k)**2)/u(idni,i,j,k)
           b(1,i,j,k)   = bx0
           b(2,i,j,k)   = by0
           b(3,i,j,k)   = bz0
-          u(iena(fmagn),i,j,k)   = u(iena(fmagn),i,j,k) + spread(0.5*sum(b(:,i,j,k)**2,1),1,nfmagn)
+          u(ieni,i,j,k)   = u(ieni,i,j,k) + 0.5*sum(b(:,i,j,k)**2,1)
+!          u(iena(fmagn),i,j,k)   = u(iena(fmagn),i,j,k) + spread(0.5*sum(b(:,i,j,k)**2,1),1,nfmagn)
         enddo
       enddo
     enddo
@@ -152,14 +151,13 @@ contains
       do j = nb+1,ny-nb
         do i = nb+1,nx-nb
           if(((x(i)-x0)**2+(y(j)-y0)**2+(z(k)-z0)**2) .lt. r0**2) then
-            u(iena,i,j,k)   = u(iena,i,j,k) + Eexpl
+            u(ieni,i,j,k)   = u(ieni,i,j,k) + Eexpl
           endif
         enddo
       enddo
     enddo
   else if (n_sn .gt. 1) then
-
-
+  
 !    call random_seed()
   
 !    do n=2,n_sn
@@ -175,6 +173,7 @@ contains
 
 
   subroutine random_explosion
+    use initionized, only : ieni
   
   implicit none
     integer i,j,k, n, nexpl
@@ -190,7 +189,7 @@ contains
       do j = 1,ny
         do i = 1,nx
           if(((x(i)-x0)**2+(y(j)-y0)**2+(z(k)-z0)**2) .lt. r0**2) then
-            u(iena,i,j,k)   = u(iena,i,j,k) + Eexpl
+            u(ieni,i,j,k)   = u(ieni,i,j,k) + Eexpl
           endif
         enddo
       enddo
@@ -198,122 +197,6 @@ contains
 
 
   end subroutine random_explosion
-
-  subroutine user_plt(var,ij,xn,tab)
-    use start, only : nb
-    use arrays, only : u,b,nyb,nzb,nxb,idna,imxa,imya,imza,ibx,iby,ibz
-#ifdef ISO
-    use arrays, only : iena
-#endif
-    implicit none
-    character(LEN=4)     :: var
-    character(LEN=2)     :: ij
-    integer              :: xn
-    real, dimension(:,:) :: tab
-
-    select case(var)
-      case ("dens")
-         if(ij=="yz") tab(:,:) = u(idna,xn,nb+1:nyb+nb,nb+1:nzb+nb)
-         if(ij=="xz") tab(:,:) = u(idna,nb+1:nxb+nb,xn,nb+1:nzb+nb)
-         if(ij=="xy") tab(:,:) = u(idna,nb+1:nxb+nb,nb+1:nyb+nb,xn)
-      case ("velx")
-         if(ij=="yz") tab(:,:) = u(imxa,xn,nb+1:nyb+nb,nb+1:nzb+nb) / &
-                        u(idna,xn,nb+1:nyb+nb,nb+1:nzb+nb)
-         if(ij=="xz") tab(:,:) = u(imxa,nb+1:nxb+nb,xn,nb+1:nzb+nb) / &
-                        u(idna,nb+1:nxb+nb,xn,nb+1:nzb+nb)
-         if(ij=="xy") tab(:,:) = u(imxa,nb+1:nxb+nb,nb+1:nyb+nb,xn) / &
-                        u(idna,nb+1:nxb+nb,nb+1:nyb+nb,xn)
-      case ("vely")
-         if(ij=="yz") tab(:,:) = u(imya,xn,nb+1:nyb+nb,nb+1:nzb+nb) / &
-                        u(idna,xn,nb+1:nyb+nb,nb+1:nzb+nb)
-         if(ij=="xz") tab(:,:) = u(imya,nb+1:nxb+nb,xn,nb+1:nzb+nb) / &
-                        u(idna,nb+1:nxb+nb,xn,nb+1:nzb+nb)
-         if(ij=="xy") tab(:,:) = u(imya,nb+1:nxb+nb,nb+1:nyb+nb,xn) / &
-                        u(idna,nb+1:nxb+nb,nb+1:nyb+nb,xn)
-      case ("velz")
-         if(ij=="yz") tab(:,:) = u(imza,xn,nb+1:nyb+nb,nb+1:nzb+nb) / &
-                        u(idna,xn,nb+1:nyb+nb,nb+1:nzb+nb)
-         if(ij=="xz") tab(:,:) = u(imza,nb+1:nxb+nb,xn,nb+1:nzb+nb) / &
-                        u(idna,nb+1:nxb+nb,xn,nb+1:nzb+nb)
-         if(ij=="xy") tab(:,:) = u(imza,nb+1:nxb+nb,nb+1:nyb+nb,xn) / &
-                        u(idna,nb+1:nxb+nb,nb+1:nyb+nb,xn)
-      case ("ener")
-#ifndef ISO
-         if(ij=="yz") tab(:,:) = u(iena,xn,nb+1:nyb+nb,nb+1:nzb+nb)
-         if(ij=="xz") tab(:,:) = u(iena,nb+1:nxb+nb,xn,nb+1:nzb+nb)
-         if(ij=="xy") tab(:,:) = u(iena,nb+1:nxb+nb,nb+1:nyb+nb,xn)
-#else
-         if(ij=="yz") tab(:,:) = 0.5 * ( 
-                          u(imxa,xn,nb+1:nyb+nb,nb+1:nzb+nb)**2 &
-                        + u(imya,xn,nb+1:nyb+nb,nb+1:nzb+nb)**2 &
-                        + u(imza,xn,nb+1:nyb+nb,nb+1:nzb+nb)**2) / &
-                             u(idna,xn,nb+1:nyb+nb,nb+1:nzb+nb)
-         if(ij=="xz") tab(:,:) = 0.5 * (
-                          u(imxa,nb+1:nxb+nb,xn,nb+1:nzb+nb)**2 &
-                         +u(imya,nb+1:nxb+nb,xn,nb+1:nzb+nb)**2 &
-                         +u(imza,nb+1:nxb+nb,xn,nb+1:nzb+nb)**2) / &
-                             u(idna,nb+1:nxb+nb,xn,nb+1:nzb+nb)
-         if(ij=="xy") tab(:,:) = 0.5 * (
-                          u(imxa,nb+1:nxb+nb,nb+1:nyb+nb,xn)**2 &
-                          u(imya,nb+1:nxb+nb,nb+1:nyb+nb,xn)**2 &
-                          u(imza,nb+1:nxb+nb,nb+1:nyb+nb,xn)**2) / &
-                             u(idna,nb+1:nxb+nb,nb+1:nyb+nb,xn)
-#endif /* ISO */
-      case ("magx")
-         if(ij=="yz") tab(:,:) = b(ibx,xn,nb+1:nyb+nb,nb+1:nzb+nb)
-         if(ij=="xz") tab(:,:) = b(ibx,nb+1:nxb+nb,xn,nb+1:nzb+nb)
-         if(ij=="xy") tab(:,:) = b(ibx,nb+1:nxb+nb,nb+1:nyb+nb,xn)
-      case ("magy")
-         if(ij=="yz") tab(:,:) = b(iby,xn,nb+1:nyb+nb,nb+1:nzb+nb)
-         if(ij=="xz") tab(:,:) = b(iby,nb+1:nxb+nb,xn,nb+1:nzb+nb)
-         if(ij=="xy") tab(:,:) = b(iby,nb+1:nxb+nb,nb+1:nyb+nb,xn)
-      case ("magz")
-         if(ij=="yz") tab(:,:) = b(ibz,xn,nb+1:nyb+nb,nb+1:nzb+nb)
-         if(ij=="xz") tab(:,:) = b(ibz,nb+1:nxb+nb,xn,nb+1:nzb+nb)
-         if(ij=="xy") tab(:,:) = b(ibz,nb+1:nxb+nb,nb+1:nyb+nb,xn)
-
-      case default
-         write(*,*) "Unknonw var = ",var," in user_plt!"
-   end select
- 
-  end subroutine user_plt
-
-  subroutine user_hdf5(var,tab)
-    use arrays, only : u,b,idna,imxa,imya,imza,ibx,iby,ibz
-#ifndef ISO
-    use arrays, only : iena
-#endif
-    implicit none
-    character(LEN=4)     :: var
-    real*4, dimension(:,:,:) :: tab
-
-    select case(var)
-      case("dens")
-         tab(:,:,:) = real(u(idna,RNG),4)
-      case("velx")
-         tab(:,:,:) = real(u(imxa,RNG) / u(idna,RNG),4)
-      case("vely")
-         tab(:,:,:) = real(u(imya,RNG) / u(idna,RNG),4)
-      case("velz")
-         tab(:,:,:) = real(u(imza,RNG) / u(idna,RNG),4)
-      case("ener")
-#ifdef ISO
-         tab(:,:,:) = real(0.5 *( u(imxa,RNG)**2 + u(imya,RNG)**2 + u(imza,RNG)**2 ) &
-            / u(idna,RNG),4)
-#else
-         tab(:,:,:) = real(u(iena,RNG),4)
-#endif
-      case("magx")
-         tab(:,:,:) = real(b(ibx,RNG),4)
-      case("magy")
-         tab(:,:,:) = real(b(iby,RNG),4)
-      case("magz")
-         tab(:,:,:) = real(b(ibz,RNG),4)
-      case default
-         write(*,*) "Error in user_hdf5"
-    end select
-
-  end subroutine user_hdf5
 
 end module init_problem
 
