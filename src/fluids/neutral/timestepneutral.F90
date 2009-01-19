@@ -1,30 +1,41 @@
+! $Id$
+#include "piernik.def"
 
-  subroutine timestep_neutral
+module timestepneutral
+
+  real :: dt_neu,c_neu
+
+contains
+
+  subroutine timestep_neu
+    use mpi_setup
     use grid, only   : dx,dy,dz
-    use start, only  : nb,cfl, gamma,dt_neutal
-    use fluidindex, only : nu, idnn,imxn,imyn,imzn
+    use start, only  : nb,cfl
+    use initneutral, only : gamma_neu, cs_iso_neu2   
+    use initneutral, only : idnn,imxn,imyn,imzn
 #ifndef ISO
-    use fluidindex, only : ienn
-#else /* ISO */
-    use start, only : csi2
+    use initneutral, only : ienn
 #endif /* ISO */
 
     use arrays, only : ks,ke,nyb,nxb,u,b
 
     implicit none
 
-    real dt_neutral_proc, dt_neutral_all, c_max_all
-    real dt_neutral_proc_x, dt_neutral_proc_y, dt_neutral_proc_z
+    real dt_neu_proc, dt_neu_all, c_max_all
+    real dt_neu_proc_x, dt_neu_proc_y, dt_neu_proc_z
     real cx, cy, cz, vx, vy, vz, cf
+    
 
 ! locals
-    real v,ps,p
+
+    real v,p
     integer i,j,k
+
 
     cx    = 0.0
     cy    = 0.0
     cz    = 0.0
-    c_neutral     = 0.0
+    c_neu     = 0.0
 
     do k=ks,ke
       do j=nb+1,nb+nyb
@@ -35,36 +46,42 @@
           vz=abs(u(imzn,i,j,k)/u(idnn,i,j,k))
 
 #ifdef ISO
-            cf = csi
+            p = csi_iso_neu2*u(idnn,i,j,k)
+            cf = sqrt(abs( p/u(idnn,i,j,k)) )
 #else /* ISO */
 	    p=(u(ienn,i,j,k)-sum(u(imxn:imzn,i,j,k)**2,1) &
-	        /u(idnn,i,j,k)/2.)*(gamma(ineutral)-1.)
-            cf = sqrt(abs( (gamma(ineutral)*p)/u(idnn,i,j,k)) )
+	        /u(idnn,i,j,k)/2.)*(gamma_neu-1.)
+
+            cf = sqrt(abs(  (gamma_neu*p)/u(idnn,i,j,k)) )
 #endif /* ISO */
 
           cx=max(cx,vx+cf)
           cy=max(cy,vy+cf)
           cz=max(cz,vz+cf)
-          c_neutral =max(c_neutral,cx,cy,cz)
+          c_neu =max(c_neu,cx,cy,cz)
 
         end do
       end do
     end do
 
-    dt_neutral_proc_x = dx/cx
-    dt_neutral_proc_y = dy/cy
-    dt_neutral_proc_z = dz/cz
-    dt_neutral_proc   = min(dt_neutral_proc_x, dt_neutral_proc_y, dt_neutral_proc_z)
+    dt_neu_proc_x = dx/cx
+    dt_neu_proc_y = dy/cy
+    dt_neu_proc_z = dz/cz
+    dt_neu_proc   = min(dt_neu_proc_x, dt_neu_proc_y, dt_neu_proc_z)
 
-    call MPI_REDUCE(c_ionized, c_max_all, 1, MPI_DOUBLE_PRECISION, MPI_MAX, 0, comm, ierr)
+    call MPI_REDUCE(c_neu, c_max_all, 1, MPI_DOUBLE_PRECISION, MPI_MAX, 0, comm, ierr)
     call MPI_BCAST(c_max_all, 1, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
-    c_ionized = c_max_all
+    c_neu = c_max_all
 
-    call MPI_REDUCE(dt_neutral_proc, dt_neutral_all, 1, MPI_DOUBLE_PRECISION, MPI_MIN, 0, comm, ierr)
-    call MPI_BCAST(dt_neutral_all, 1, MPI_DOUBLE_PRECISION, 0, comm, ierr)
-    dt_neutral = cfl*dt_neutral_all
+    call MPI_REDUCE(dt_neu_proc, dt_neu_all, 1, MPI_DOUBLE_PRECISION, MPI_MIN, 0, comm, ierr)
+    call MPI_BCAST(dt_neu_all, 1, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+    dt_neu = cfl*dt_neu_all
+    
+!    write(*,*) 'timestep_neu:', dt_neu
 
-  end subroutine timestep_neutral
+  end subroutine timestep_neu
 
 !-------------------------------------------------------------------------------
+end module timestepneutral
+
