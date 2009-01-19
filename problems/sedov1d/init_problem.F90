@@ -4,7 +4,13 @@ module init_problem
 ! Written by: M. Hanasz, March 2006
 
   use start
+#ifdef IONIZED  
   use initionized
+#endif /* IONIZED */ 
+#ifdef NEUTRAL 
+  use initneutral
+#endif /* NEUTRAL */  
+  
   use arrays
   use grid
   use mpi_setup
@@ -125,6 +131,49 @@ contains
  
 ! Uniform equilibrium state
 
+
+#ifdef NEUTRAL
+    do k = 1,nz
+      do j = 1,ny
+        do i = 1,nx
+          u(idnn,i,j,k)   = d0 
+          u(imxn,i,j,k) = 0.0
+          u(imyn,i,j,k) = 0.0
+          u(imzn,i,j,k) = 0.0
+          u(ienn,i,j,k)   = p0/(gamma_ion-1.0)
+	  u(ienn,i,j,k)   = u(ienn,i,j,k) + 0.5*(u(imxn,i,j,k)**2 +u(imyn,i,j,k)**2 &
+	                                        +u(imzn,i,j,k)**2)/u(idnn,i,j,k)
+        enddo
+      enddo
+    enddo
+    
+! Explosions
+
+
+  if(n_sn .eq. 1) then
+    do k = ks,ke
+      do j = nb+1,ny-nb
+        do i = nb+1,nx-nb
+          if(((x(i)-x0)**2) .lt. r0**2) then
+            u(ienn,i,j,k)   = u(ienn,i,j,k) + Eexpl
+          endif
+        enddo
+      enddo
+    enddo
+  else if (n_sn .gt. 1) then
+!    call random_seed()
+  
+!    do n=2,n_sn
+!      call random_explosion
+!    enddo
+!  else
+!    write(*,*) 'n_sn =', n_sn
+!    stop
+  endif
+#endif /* NEUTRAL */
+  
+
+#ifdef IONIZED
     do k = 1,nz
       do j = 1,ny
         do i = 1,nx
@@ -157,7 +206,6 @@ contains
       enddo
     enddo
   else if (n_sn .gt. 1) then
-  
 !    call random_seed()
   
 !    do n=2,n_sn
@@ -165,10 +213,10 @@ contains
 !    enddo
 !  else
 !    write(*,*) 'n_sn =', n_sn
+!    write(*,*) u(ieni,:,nb+1,1)
 !    stop
   endif
-  
-!    write(*,*) u(ieni,:,nb+1,1)
+#endif /*ionized */
     
     return
   end subroutine init_prob  
@@ -190,7 +238,11 @@ contains
       do j = 1,ny
         do i = 1,nx
           if(((x(i)-x0)**2+(y(j)-y0)**2+(z(k)-z0)**2) .lt. r0**2) then
+
+#ifdef IONIZED
             u(ieni,i,j,k)   = u(ieni,i,j,k) + Eexpl
+#endif /* IONIZED */
+
           endif
         enddo
       enddo
