@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $Id$
+# $Id: makemake 506 2008-12-22 00:41:56Z olk $
 #
 # Usage: makemake {<program name> {<F90 compiler or fc or f77 or cc or c>}}
 #
@@ -15,86 +15,142 @@
 #
 # Modified by Kacper Kowalik <kowalik@astri.umk.pl> October, 24, 2007
 # Modified by Dominik Woltanski <minikwolt@astri.umk.pl> April-June, 2008
+# Modified by Oskar Karczewski <olk@ncac.torun.pl> December, 2008
+
 use Switch;
 use File::Path;
 use File::Copy;
-my $argc = $#ARGV+1;
+use File::Basename;
+
+# use warnings;
+
+# return status
+my $OK = 0;
+my $FAILED = 1;
+# list of valid command-line options, omit the leading "--"
+# IMPORTANT!
+# because references to these values are hard-coded:
+# * order _is_ important!
+# * ensure that any new options are added to the _end_ of the array
+my @CL_OPTIONS = ( 'copy', 'help', 'problems', 'units', 'dumpenv' );
+# default values go here
+my $CL_VALUES = ( 0, 0, 0, 0, 0 );
+
+my $SELF = fileparse("$0");
+my $argc = @ARGV;
+
 if($argc < 1){
-   print "USAGE: makemake <problem>\n";
-   print "Other options:\n";
-   print " makemake problems   -  available problems names and their descriptions,\n";
-   print " makemake unitsystem -  available unitsystems names and their descriptions,\n";
-   print " makemake setup      -  how to run the code instruction,\n";
-   print " makemake arrays     -  some important arrays descriptions,\n";
-   print " makemake hdf        -  some instruction how to visualize results.\n";
-   print " If you want to use the old version type simly 'do' instead of 'newdo'.\n";
-   print " Enjoy the new version of Multipiernik!\n";
-   print " \n";
-#   die;
+
+$CL_VALUES[1] = 2;
+
 } else {
-if($ARGV[0] eq "problems"){
+
+for ( my $i = 0; $i < @ARGV; $i++ ) {
+#    print "element " . $i . "\n";
+   my $opf = 0;
+   for ( my $opt = 0; $opt < @CL_OPTIONS; $opt++ ) {
+   	if ( $ARGV[$i] =~ /^\-\-$CL_OPTIONS[$opt]$/ ) {
+	   $CL_VALUES[$opt] = 1;
+	   $opf = 1;
+	   if ( $opt == 1 || $opt == 2 || $opt == 3 ) {
+		last;
+	   }
+	   print "TURNING ON " . $CL_OPTIONS[$opt] . "\n";
+	   last;
+	}
+   }
+   # successful or problem name only
+   if ($opf || @ARGV == 1) {
+	next;
+   }
+   if (( $i != 0 ) && ( @ARGV > 1 )) {
+	print "not understood: $ARGV[$i]\n";
+	exit $FAILED;
+   }
+}
+
+print "\n";
+}
+
+if($CL_VALUES[2]){
    print " \n";
    system ( "cat ./problems/*/info");
    print " \n";
-} elsif ($ARGV[0] eq "unitsystem"){
+   exit $OK;
+} elsif ($CL_VALUES[3]){
    print " \n";
    system ( "grep uses ./src/base/constants.F90");
    print " \n";
-} elsif ($ARGV[0] eq "setup"){
-   print " \n";
-   print "> makemake <problem>  - creating obj directory with necessary source linked inside\n";
+   exit $OK;
+} elsif ($CL_VALUES[1]){
+   print "USAGE: " . $SELF . " [PROBLEM] [OPTIONS]\n";
+   print "Available options:\n";
+   print " --help\t\t- print this help message\n";
+   print " --problems\t- print available problems and exit\n";
+   print " --units\t- print available unit systems and exit\n";
+   print " --copy\t\t- hard-copy source files instead of linking them\n";
+   print " --dumpenv\t- do not compile the source but dump the environment to \'obj/env.F90\'\n\n";
+
+   print "all-in-one wrapper for a selected problem:\n";
+   print "> " . $SELF . " <problem>\n";
+   print "this will:\n";
+   print "* create directory \'./obj\' with source files for <problem>\n";
+   print "* compile the source using the default compiler\n";
+   print "* put the executable in \'./runs/<problem>\'\n\n";
+
+   print "to change the compiler settings (after \'" . $SELF . " <problem>\'):\n";
    print "> cd obj\n";
-   print "# choose Fortran compiler settings (if different than default) typing:\n";
-   print "> newcompiler <settingsname>\n";
-   print "# modify piernik.def file with precompiler directives and number of fluids if needed\n";
+   print "> ./newcompiler <settingsname>\n";
    print "> make\n";
-   print "# create run directory where you want\n";
-   print "> cp {piernik,problem.par} /<where-you-want>/<your-run-directory>/.\n";
-   print "> cd /<where-you-want>/<your-run-directory>/\n";
-   print "# specify var names which you want to visualize in problem.par file \n";
-   print "> ./piernik or >mpirun -n <np> ./piernik\n";
-   print "!===================================================================================!\n";
-   print "# there is also one script to do all these things above at once:\n";
-   print "> setup <problem>\n";
-   print " \n";
-} elsif ($ARGV[0] eq "arrays"){
-   print " \n";
-   print "u(nu,nx,ny,nz) - fluid quantity array: nu - number of quantities like density,\n";
-   print "                 momentum, energy; nx,ny,nz - number of cells in each direction;\n";
-   print "idna           - density u-array-position index array of all fluids;\n";
-   print "imxa,imya,imza - x,y,z-component of momentum u-array-position index of all fluids;\n";
-   print "iena,iecr      - energy of adiabatic fluids and CR anargy u-array-position indexes;\n";
-   print "nfluid,nadiab,nmagn - number of all, adiabatic and magnetized fluids;\n";
-   print "fadiab,fmagn   - arrays of numbers of adiabatic and magnetized fluids;\n";
-   print "#ifdef ISO     - all fluids are isothermal, there is no iena position in u array;\n";
-   print "#ifndef ISO    - only DUST fluids are isothermal, other fluids are adiabatic.\n";
-   print " \n";
-} elsif ($ARGV[0] eq "hdf"){
-   print " \n";
-   print " use plot_mhd.pro routines in ./pro directory to visualize results from hdf files:\n";
-   print " use following var's:\n";
-   print " den1,den2... - densities of first and next fluids;\n";
-   print " vlx1,vly2... - x,y,z-components of velocity of different fluids;\n";
-   print " vou1,vrt2... - radial and rotational (azimutal) components of velocity;\n";
-   print " ene1,ein2... - energy and internal energy;\n";
-   print " magx,magy,magz - x,y,z-components of magnetic field.\n";
-   print " Some of them you should insert into problem.par file before runing the simulation.\n";
-   print " In problem.par var names could be a bit different: dens, velx, vely, velz, ener, eint.\n";
-   print " Do not specify names for each fluid.\n";
-   print " \n";
-} else {
+   print "then copy files to your run directory (optional), e.g.\n";
+   print "> cp {piernik,problem.par} ../runs/<problem>\n";
+   print "> cd ../runs/<problem>\n\n";
+
+   print "to run PIERNIK:\n";
+   print "edit problem.par as appropriate, e.g.\n";
+   print "* add var names for visualisation => var(<number>)='<name>'\n";
+   print "* change domain dimensions/resolution => DOMAIN_SIZES\n";
+   print "* change domain divisions for parallel processing => MPI_BLOCKS\n";
+   print "* change frequency of data dumps => dt_* entries\n";
+   print "* etc.\n";
+   print "execute\n";
+   print "> ./piernik\n";
+   print "or for <np> parallel processes\n";
+   print "> mpirun -n <np> ./piernik\n\n";
+
+   print "HEALTH WARNINGS:\n";
+   print "* the contents of \'./obj\' and \'./runs/<problem>\' are overwritten\n";
+   print "  each time \'" . $SELF . " <problem>\' is run\n";
+   print "* the def file \'piernik.def\' is copied only for reference, to change flags\n";
+   print "  with which the source is compiled edit \'./problems/<problem>/piernik.def\'\n";
+   print "* by default PIERNIK will read the configuration file \'problem.par\' from the\n";
+   print "  working directory, to use alternative configurations execute\n";
+   print "  \'./piernik <directory with an alternative problem.par>\'\n";
+#   print "!===================================================================================!\n";
+   print "\nEnjoy your work with piernik!\n";
+   if ( $CL_VALUES[1] == 1 ) {
+	exit $OK;
+   } else {
+	exit $FAILED;
+   }
+}
+
+# default
 open MAKEIN, "< compilers/default.in" or die $!;
 @makein = <MAKEIN>;
 close MAKEIN;
 rmtree(['obj']);
 mkpath(['obj']);
-$probdir = "problems/". $ARGV[0] . "/";
-if(!-r $probdir) { die "Can't open $probdir: $!";}
+$probdir = "problems/" . $ARGV[0] . "/";
+if(!-r $probdir) {
+   print "$probdir: $!\n";
+   print "problem \'" . $ARGV[0] . "\' does not exist\n";
+   exit $FAILED;
+}
 
 @prob = ( "../" . $probdir . "init_problem.F90",
           "../" . $probdir . "problem.par" );
 @base = <src/base/*.F90>;
-@fludef = ();
 for (@base) {
    s/src/\.\.\/src/;
 }
@@ -106,67 +162,85 @@ copy($defs,"obj/piernik.def");
 open (defs) or die "Can't open the file piernik.def!";
 @fdefs = <defs>;
 @d = grep (/define/,@fdefs);
-if( grep { /IONIZED/} @d) {
-   push(@addons, "../src/fluidbase/ionizeds.F90");
-}
-if( grep { /NEUTRAL/} @d) {
-   push(@addons, "../src/fluidbase/neutrals.F90");
-}
-if( grep { /DUST/} @d) {
-   push(@addons, "../src/fluidbase/dusts.F90");
-}
-if( grep { /COSM_RAYS/} @d) {
-   push(@addons, "../src/fluidbase/cosmic_rays.F90");
-   push(@addons, "../src/cosm_rays/cr_diffusion.F90");
-}
-  push(@fludef, "../src/base/datalogshort.def");
-  push(@fludef, "../src/base/dataloglong.def");
 if( grep { /GRAV/ }  @d) {
    push(@addons, "../src/gravity/gravity.F90");
    push(@addons, "../src/gravity/hydrostatic.F90");
-   if( grep { /GRAV_USER/ } @d) {push(@addons, "../" . $probdir . "gravity_user.F90");
-   }
    }
 if( grep { /SELF_GRAV/ }  @d) {push(@addons, "../src/gravity/poisson_solver.F90");}
 if( grep { /RESIST/} @d) {push(@addons, "../src/resist/resistivity.F90");}
 if( grep { /SHEAR/}  @d) {push(@addons, "../src/shear/shear.F90");}
 if( grep { /HDF5/}  @d) {push(@addons, "../src/hdf5/dataio_hdf5.F90");}
+if( grep { /KEPLER_SUPPRESSION/} @d) {push(@addons, "../src/extras/rotsource.F90");}
+
+push(@addons, "../src/fluids/initfluids.F90");
+push(@addons, "../src/fluids/fluidindex.F90");
+push(@addons, "../src/fluids/fluxes.F90");
+#push(@addons, "../src/fluids/allsources.F90");
+
+if( grep { /IONIZED/} @d) {
+   push(@addons, "../src/fluids/ionized/initionized.F90");
+   push(@addons, "../src/fluids/ionized/fluxesionized.F90");
+   push(@addons, "../src/fluids/ionized/timestepionized.F90"); }
+if( grep { /COSM_RAYS/} @d) {
+   push(@addons, "../src/cosm_rays/cr_diffusion.F90");}
+
 if( grep { /SN_SRC/} @d) {
    push(@addons, "../src/supernovae/sn_sources.F90");
 }
 if( grep { /SNE_DISTR/} @d) {
    push(@addons, "../src/supernovae/sn_distr.F90");
 }
-push(@addons, "../src/scheme/both/advects.F90");
-push(@addons, "../src/scheme/both/fluids.F90");
-push(@addons, "../src/scheme/both/tv.F90");
-push(@addons, "../src/fluidbase/allfluxes.F90");
-if( grep { /ANY_SOURCES/} @d) {
-push(@addons, "../src/fluidbase/allsources.F90");
-}
-if( grep { /ANY_LIMITS/} @d) {
-push(@addons, "../src/fluidbase/floor_ceil.F90");
-}
-if( grep { /UNSPLIT_1D/ } @d) {
-   push(@addons, "../src/scheme/unsplit/1D/mhdstep.F90");
-} elsif( grep { /UNSPLIT_3D/ } @d) {
-   push(@addons, "../src/scheme/unsplit/3D/mhdstep.F90");
+if( grep { /ORIG/ } @d) {
+   $solv="orig";
 } else {
-   push(@addons, "../src/scheme/split/mhdstep.F90");
+   $solv="ssp";
 }
-@files = ( @base, @prob, @addons, @fludef );
+
+#if( grep { /UNSPLIT_1D/ } @d) {
+#   push(@addons, "../src/scheme/unsplit/1D/mhdstep.F90");
+#   $sch="unsplit";
+#} elsif( grep { /UNSPLIT_3D/ } @d) {
+#   push(@addons, "../src/scheme/unsplit/3D/mhdstep.F90");
+#   $sch="unsplit";
+#} else {
+#   push(@addons, "../src/scheme/split/mhdstep.F90");
+#   $sch = 'split';
+#}
+#push(@addons, "../src/scheme/".$sch."/advects.F90");
+#push(@addons, "../src/scheme/".$sch."/fluids.F90");
+#push(@addons, "../src/scheme/".$sch."/".$solv."/tv.F90");
+
+push(@addons, "../src/scheme/mhdstep.F90");
+push(@addons, "../src/scheme/advects.F90");
+push(@addons, "../src/scheme/sweeps.F90");
+push(@addons, "../src/scheme/rtvd.F90");
+
+
+push(@addons, "../src/base/datalogshort.def");
+push(@addons, "../src/base/dataloglong.def");
+
+
+@files = ( @base, @prob, @addons );
 @symln = ();
 foreach $file (@files) {
    $pos = rindex($file,"\/")+1;
    $len = length($file);
    push(@symln,"obj/".substr($file,$pos,$len-$pos) );
 }
-chdir 'obj';
-for $i (0 .. $#symln){
-#  symlink($files[$i],$symln[$i]);
-   copy($files[$i],".") or die "$files[$i] cannot be copied";
+
+if ( $CL_VALUES[0] ) {
+   chdir 'obj';
 }
-#chdir 'obj';
+for $i (0 .. $#symln){
+   if ( ! $CL_VALUES[0] ) {
+      symlink($files[$i],$symln[$i]) or die "failed linking $files[$i]: $!";
+   } else {
+      copy($files[$i],".") or die "failed copying $files[$i]: $!";
+   }
+}
+if ( ! $CL_VALUES[0] ) {
+   chdir 'obj';
+}
 open(MAKEFILE, "> Makefile-prep");
 
 # Source listing
@@ -247,10 +321,59 @@ print MAKEFILE "%.o : %.mod\n\n";
 &MakeDepends("*.f *.F *.F90", '^\s*use\s+["\']([^"\']+)["\']');
 &MakeDepends("*.c",     '^\s*#\s*include\s+["\']([^"\']+)["\']');
 
-system("./post","mhd",$ARGV[0]);
+# system("./post","mhd",$ARGV[0]); # !found
 system("./newcompiler Makefile");
+
+# COMPILE NOW
+chdir('..');
+# do checks
+if ( (! -r 'obj') || (! -r 'obj/problem.par') || (! -r 'obj/Makefile') ) {
+   print "problem with directory \'obj\'\n";
+   exit $FAILED;
 }
+
+# compile
+if ( $CL_VALUES[4] ) {
+   system('make -C obj date');
+   print "\ndone\n";
+   exit $OK;
+} else {
+   system('make -C obj');
 }
+
+if ( ! -x 'obj/piernik' ) {
+   print "\nit appears that \'make\' crashed\n";
+   print "cannot continue\n";
+   exit $FAILED;
+}
+
+my $problemname = $ARGV[0];
+if ( -d 'run' ) {
+    print "\ndirectory \'run\' exists but not used anymore\n";
+    print "point your scripts to \'runs/" . $problemname . "\' instead\n";
+}
+if ( ! -d 'runs' ) {
+    mkdir('runs');
+}
+my $problempath = "runs/" . $problemname;
+if ( ! -d $problempath ) {
+    mkdir($problempath);
+} else {
+    rmtree([$problempath]);
+    mkpath([$problempath]);
+}
+
+if ( copy('obj/piernik', $problempath) && \
+	chmod(0755, "$problempath/piernik") && \
+	copy('obj/problem.par', $problempath) && \
+	copy('obj/piernik.def', $problempath) ) {
+   print "\n" . $problemname . " ready in " . $problempath . "\n";
+} else {
+   print "$!\n";
+   exit $FAILED;
+}
+
+exit $OK;
 
 #
 # &PrintWords(current output column, extra tab?, word list); --- print words
