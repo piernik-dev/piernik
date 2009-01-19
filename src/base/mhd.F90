@@ -34,10 +34,14 @@ program mhd
   use mpi_setup
   use mpi_bnd
   use fluid_boundaries, only : compute_u_bnd
+  
+#ifdef MAGNETIC  
   use mag_boundaries, only   : compute_b_bnd
 #ifdef RESIST
   use resistivity
 #endif /* RESIST */
+#endif /* MAGNETIC */
+
 #ifdef SELF_GRAV
   use poisson_solver
 #endif /* SELF_GRAV */
@@ -112,7 +116,10 @@ program mhd
 #endif /* GRAV */
 
     call compute_u_bnd
+    
+#ifdef MAGNETIC    
     call compute_b_bnd
+#endif /* MAGNETIC */
 
 #ifdef MASS_COMPENS
     call save_init_dens
