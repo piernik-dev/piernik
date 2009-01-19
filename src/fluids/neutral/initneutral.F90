@@ -7,7 +7,6 @@ module initneutral
 
     real                  :: gamma_neu, cs_iso_neu,cs_iso_neu2
 
-    integer, parameter    :: ibx=1, iby=2, ibz=3
     integer               :: idnn, imxn, imyn, imzn
 #ifndef ISO
     integer               :: ienn
