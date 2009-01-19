@@ -1,4 +1,10 @@
-    use arrays, only : wa,is,ie,js,je,ks,ke,idna,imxa,imya,imza,u,b,nx,ny,nz,nfluid,ibx,iby,ibz
+    use fluidindex,   only : nfluid
+    use initionized, only : ibx,iby,ibz
+    use fluidindex, only : iarr_all_dn,iarr_all_mx,iarr_all_my,iarr_all_mz
+#ifndef ISO
+    use fluidindex, only : iarr_all_en
+#endif /* ISO */
+    use arrays, only : wa,is,ie,js,je,ks,ke,u,b,nx,ny,nz
     use grid, only   : dx,dy,dz,dxmn
     use constants, only : small, hydro_mass, k_B
     use start, only : t,dt,nstep,sleep_minutes,sleep_seconds, smallei,nb, &
@@ -12,9 +18,6 @@
 #endif /* ISO */
 !    use init_problem
 !   use thermal
-#ifndef ISO
-    use arrays, only : iena
-#endif /* ISO */
 #ifdef RESIST
     use resistivity
 #endif /* RESIST */
@@ -61,32 +64,32 @@
 
 
   do ifl=1,nfluid
-    wa         =  u(idna(ifl),:,:,:)
+    wa         =  u(iarr_all_dn(ifl),:,:,:)
     dens_min      = minval(wa(is:ie,js:je,ks:ke))
     loc_dens_min  = minloc(wa(is:ie,js:je,ks:ke)) &
                   + (/nb,nb,nb/)
     call mpifind(dens_min, 'min', loc_dens_min, proc_dens_min)
 
-    wa         =  u(idna(ifl),:,:,:)
+    wa         =  u(iarr_all_dn(ifl),:,:,:)
     dens_max      = maxval(wa(is:ie,js:je,ks:ke))
     loc_dens_max  = maxloc(wa(is:ie,js:je,ks:ke)) &
                   + (/nb,nb,nb/)
     call mpifind(dens_max, 'max', loc_dens_max, proc_dens_max)
 
 
-    wa         = abs(u(imxa(ifl),:,:,:)/u(idna(ifl),:,:,:))
+    wa         = abs(u(iarr_all_mx(ifl),:,:,:)/u(iarr_all_dn(ifl),:,:,:))
     vx_max      = maxval(wa(is:ie,js:je,ks:ke))
     loc_vx_max  = maxloc(wa(is:ie,js:je,ks:ke)) &
                   + (/nb,nb,nb/)
     call mpifind(vx_max, 'max', loc_vx_max, proc_vx_max)
 
-    wa         = abs(u(imya(ifl),:,:,:)/u(idna(ifl),:,:,:))
+    wa         = abs(u(iarr_all_my(ifl),:,:,:)/u(iarr_all_dn(ifl),:,:,:))
     vy_max      = maxval(wa(is:ie,js:je,ks:ke))
     loc_vy_max  = maxloc(wa(is:ie,js:je,ks:ke)) &
                   + (/nb,nb,nb/)
     call mpifind(vy_max, 'max', loc_vy_max, proc_vy_max)
 
-    wa         = abs(u(imza(ifl),:,:,:)/u(idna(ifl),:,:,:))
+    wa         = abs(u(iarr_all_mz(ifl),:,:,:)/u(iarr_all_dn(ifl),:,:,:))
     vz_max      = maxval(wa(is:ie,js:je,ks:ke))
     loc_vz_max  = maxloc(wa(is:ie,js:je,ks:ke)) &
                   + (/nb,nb,nb/)
@@ -106,9 +109,9 @@
     call mpifind(b_max, 'max', loc_b_max, proc_b_max)
 
     va_max      = sqrt(maxval(wa(is:ie,js:je,ks:ke) &
-                       /u(idna(ifl),is:ie,js:je,ks:ke)))
+                       /u(iarr_all_dn(ifl),is:ie,js:je,ks:ke)))
     loc_va_max  = maxloc(wa(is:ie,js:je,ks:ke) &
-                       /u(idna(ifl),is:ie,js:je,ks:ke)) &
+                       /u(iarr_all_dn(ifl),is:ie,js:je,ks:ke)) &
                   + (/nb,nb,nb/)
     call mpifind(va_max, 'max', loc_va_max, proc_va_max)
 
@@ -130,8 +133,8 @@
     loc_temp_max  = 0
     proc_temp_max = 0
 #else /* ISO */
-    wa            = (u(iena(ifl),:,:,:) &                ! eint
-                  - 0.5*(sum(u(imxa(ifl):imza(ifl),:,:,:)**2,1) /u(idna(ifl),:,:,:) + wa))
+    wa            = (u(iarr_all_en(ifl),:,:,:) &                ! eint
+                  - 0.5*(sum(u(iarr_all_mx(ifl):iarr_all_mz(ifl),:,:,:)**2,1) /u(iarr_all_dn(ifl),:,:,:) + wa))
     wa            = max(wa,smallei)
     wa            = (gamma(ifl)-1)*wa                    ! pres
 
@@ -146,24 +149,24 @@
     call mpifind(pres_max, 'max', loc_pres_max, proc_pres_max)
 
     temp_max      = maxval( hydro_mass / k_B * wa(is:ie,js:je,ks:ke) &
-                                             /u(idna(ifl),is:ie,js:je,ks:ke))
+                                             /u(iarr_all_dn(ifl),is:ie,js:je,ks:ke))
     loc_temp_max  = maxloc(wa(is:ie,js:je,ks:ke)    &
-                         /u(idna(ifl),is:ie,js:je,ks:ke)  ) &
+                         /u(iarr_all_dn(ifl),is:ie,js:je,ks:ke)  ) &
                      + (/nb,nb,nb/)
     call mpifind(temp_max, 'max', loc_temp_max, proc_temp_max)
 
 
     temp_min      = minval( hydro_mass / k_B * wa(is:ie,js:je,ks:ke) &
-                                             /u(idna(ifl),is:ie,js:je,ks:ke))
+                                             /u(iarr_all_dn(ifl),is:ie,js:je,ks:ke))
     loc_temp_min  = minloc(wa(is:ie,js:je,ks:ke)    &
-                         /u(idna(ifl),is:ie,js:je,ks:ke)  ) &
+                         /u(iarr_all_dn(ifl),is:ie,js:je,ks:ke)  ) &
                      + (/nb,nb,nb/)
     call mpifind(temp_min, 'min', loc_temp_min, proc_temp_min)
 
     cs_max        = sqrt(maxval(gamma(ifl)*wa(is:ie,js:je,ks:ke) &
-                            /u(idna(ifl),is:ie,js:je,ks:ke)))
+                            /u(iarr_all_dn(ifl),is:ie,js:je,ks:ke)))
     loc_cs_max    = maxloc(gamma(ifl)*wa(is:ie,js:je,ks:ke) &
-                            /u(idna(ifl),is:ie,js:je,ks:ke)) &
+                            /u(iarr_all_dn(ifl),is:ie,js:je,ks:ke)) &
                      + (/nb,nb,nb/)
     call mpifind(cs_max, 'max', loc_cs_max, proc_cs_max)
 #endif /* ISO */
@@ -198,7 +201,7 @@
     call mpifind(divb_max, 'max', loc_divb_max, proc_divb_max)
 
 #ifdef KEPLER_SUPPRESSION
-      wa            = spread(alfsup,3,nz)/u(idna(ifl),:,:,:)+small
+      wa            = spread(alfsup,3,nz)/u(iarr_all_dn(ifl),:,:,:)+small
       asupp_min     = minval(wa(is:ie,js:je,ks:ke))
       loc_asupp_min = minloc(wa(is:ie,js:je,ks:ke))
       call mpifind(asupp_min, 'min', loc_asupp_min, proc_asupp_min)

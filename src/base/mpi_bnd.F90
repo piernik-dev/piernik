@@ -4,13 +4,16 @@ module mpi_bnd
 contains
    subroutine mpi_bnd_prep
     use mpi_setup
-    use arrays, only : nu,nx,ny,nz,u,nxb,nyb,nzb
-    use start, only  : nb
+    use fluidindex, only  : nvar
+    use arrays, only : nx,ny,nz,u,nxb,nyb,nzb
+    use start, only  : nb,dimensions
 
     implicit none
     integer, dimension(4) :: sizes, subsizes, starts
     integer(kind=4) :: ord
     integer(kind=4) :: old
+    
+    write(*,*) 'nvar=',nvar
 
     ord = MPI_ORDER_FORTRAN
     old = MPI_DOUBLE_PRECISION
@@ -18,8 +21,8 @@ contains
 !------------------------!
 !   X dimension - fluid  !
 !------------------------!
-    sizes    = (/nu,nx,ny,nz/)
-    subsizes = (/nu,nb,ny,nz/)
+    sizes    = (/nvar,nx,ny,nz/)
+    subsizes = (/nvar,nb,ny,nz/)
     starts   = (/0,0,0,0/)
 
     call MPI_TYPE_CREATE_SUBARRAY(4,sizes,subsizes,starts,ord,&
@@ -70,8 +73,8 @@ contains
 !------------------------!
 !   Y dimension - fluid  !
 !------------------------!
-    sizes    = (/nu,nx,ny,nz/)
-    subsizes = (/nu,nx,nb,nz/)
+    sizes    = (/nvar,nx,ny,nz/)
+    subsizes = (/nvar,nx,nb,nz/)
     starts   = (/0,0,0,0/)
 
     call MPI_TYPE_CREATE_SUBARRAY(4,sizes,subsizes,starts,ord,&
@@ -122,8 +125,9 @@ contains
 !------------------------!
 !   Z dimension - fluid  !
 !------------------------!
-    sizes    = (/nu,nx,ny,nz/)
-    subsizes = (/nu,nx,ny,nb/)
+  if(dimensions .eq. '3d') then
+    sizes    = (/nvar,nx,ny,nz/)
+    subsizes = (/nvar,nx,ny,nb/)
     starts   = (/0,0,0,0/)
 
     call MPI_TYPE_CREATE_SUBARRAY(4,sizes,subsizes,starts,ord,&
@@ -170,6 +174,7 @@ contains
     call MPI_TYPE_CREATE_SUBARRAY(4,sizes,subsizes,starts,ord,&
            old,MAG_XY_RIGHT_BND,ierr)
     call MPI_TYPE_COMMIT(MAG_XY_RIGHT_BND,ierr)
+  endif
 
 
   end subroutine mpi_bnd_prep

@@ -12,10 +12,14 @@ program mhd
 
   use start, only: read_params, new_id, restart, dt_hdf, dt_res,dt_log,dt_tsl
   use start, only: t,dt, tend, nstep, nend, nstep_start, nrestart
+
+  use initfluids, only : init_fluids
+  use fluidindex, only : fluid_index
+
   use arrays, only : arrays_deallocate, arrays_allocate
   use grid, only : grid_xyz
   use init_problem, only : problem_name, run_id, init_prob, read_problem_par
-  use mod_mhdstep, only  : mhdstep
+  use mhdstep, only  : mhd_step
   use dataio, only : host, pid
   use dataio, only : msg,step_res,step_hdf,log_file,nres,nhdf, &
       t_start, nres_start, nhdf_start, wait, msg_param
@@ -50,7 +54,7 @@ program mhd
 #endif  /* MASS_COMPENS */
     use types
     use comp_log, only : nenv,env
-
+    
   implicit none
   integer system_status
   character system_command*160
@@ -67,8 +71,12 @@ program mhd
   call mpistart
 
   call read_params
-
+  
+  call init_fluids
+  
   call read_problem_par
+  
+  call fluid_index
 
   call arrays_allocate
 
@@ -100,7 +108,7 @@ program mhd
 
     call init_prob
 #ifdef GRAV
-!    if(gpt_hdf .eq. 'yes') call write_data('gpt')
+    if(gpt_hdf .eq. 'yes') call write_data('gpt')
 #endif /* GRAV */
 
     call compute_u_bnd
@@ -175,7 +183,7 @@ program mhd
       call write_plot(chdf)
 #endif /* HDF5 */
 
-      call mhdstep
+      call mhd_step
 
 #ifdef MASS_COMPENS
       call mass_loss_compensate

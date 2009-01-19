@@ -297,16 +297,21 @@ module dataio
 #ifndef STANDARD
     use constants, only : Gs
 #endif /* STANDARD */
-    use arrays, only : nx,ny,nz,nxb,nyb,nzb,x,y,z,wa,outwa,outwb,outwc,b,u, &
-         idna,imxa,imya,imza,ibx,iby,ibz,nfluid,nadiab
+
+    use fluidindex,   only : nfluid
+    use initionized, only : ibx,iby,ibz
+    use fluidindex, only : nvar, iarr_all_dn,iarr_all_mx,iarr_all_my,iarr_all_mz
+#ifndef ISO
+    use fluidindex, only : iarr_all_en
+    use start, only  : gamma
+#endif /* ISO */
+
+    use arrays, only : nx,ny,nz,nxb,nyb,nzb,x,y,z,wa,outwa,outwb,outwc,b,u
+    
 #ifdef COSM_RAYS
     use arrays, only : iecr
 #endif /* COSM_RAYS */
     use init_problem, only : problem_name, run_id
-#ifndef ISO
-    use arrays, only : iena
-    use start, only  : gamma
-#endif /* ISO */
 #ifndef SPLIT
     use arrays, only : Lu
 #endif /* SPLIT */
@@ -456,45 +461,45 @@ module dataio
       select case(vars(iv))
       case ('dens')
         write(varname,'(a3,i1)') 'den',ifl
-        wa(iso:ieo,jso:jeo,kso:keo) = u(idna(ifl),iso:ieo,jso:jeo,kso:keo)
+        wa(iso:ieo,jso:jeo,kso:keo) = u(iarr_all_dn(ifl),iso:ieo,jso:jeo,kso:keo)
         call next_fluid_or_var(ifl,iw,nfluid)
 
       case ('velx')
         write(varname,'(a3,i1)') 'vlx',ifl
-        wa(iso:ieo,jso:jeo,kso:keo) = u(imxa(ifl),iso:ieo,jso:jeo,kso:keo) / u(idna(ifl),iso:ieo,jso:jeo,kso:keo)
+        wa(iso:ieo,jso:jeo,kso:keo) = u(iarr_all_mx(ifl),iso:ieo,jso:jeo,kso:keo) / u(iarr_all_dn(ifl),iso:ieo,jso:jeo,kso:keo)
         call next_fluid_or_var(ifl,iw,nfluid)
 
       case ('vely')
         write(varname,'(a3,i1)') 'vly',ifl
-        wa(iso:ieo,jso:jeo,kso:keo) = u(imya(ifl),iso:ieo,jso:jeo,kso:keo) / u(idna(ifl),iso:ieo,jso:jeo,kso:keo)
+        wa(iso:ieo,jso:jeo,kso:keo) = u(iarr_all_my(ifl),iso:ieo,jso:jeo,kso:keo) / u(iarr_all_dn(ifl),iso:ieo,jso:jeo,kso:keo)
         call next_fluid_or_var(ifl,iw,nfluid)
 
       case ('velz')
         write(varname,'(a3,i1)') 'vlz',ifl
-        wa(iso:ieo,jso:jeo,kso:keo) = u(imza(ifl),iso:ieo,jso:jeo,kso:keo) / u(idna(ifl),iso:ieo,jso:jeo,kso:keo)
+        wa(iso:ieo,jso:jeo,kso:keo) = u(iarr_all_mz(ifl),iso:ieo,jso:jeo,kso:keo) / u(iarr_all_dn(ifl),iso:ieo,jso:jeo,kso:keo)
         call next_fluid_or_var(ifl,iw,nfluid)
 
 #ifdef ISO
       case ('ener')
         write(varname,'(a3,i1)') 'ene',ifl
-        wa(iso:ieo,jso:jeo,kso:keo) = 0.5*(u(imxa(ifl),iso:ieo,jso:jeo,kso:keo)**2 &
-                                    +u(imya(ifl),iso:ieo,jso:jeo,kso:keo)**2 &
-                                    +u(imza(ifl),iso:ieo,jso:jeo,kso:keo)**2)/u(idna(ifl),iso:ieo,jso:jeo,kso:keo)
-        call next_fluid_or_var(ifl,iw,nfluid-nadiab)
+        wa(iso:ieo,jso:jeo,kso:keo) = 0.5*(u(iarr_all_mx(ifl),iso:ieo,jso:jeo,kso:keo)**2 &
+                                    +u(iarr_all_my(ifl),iso:ieo,jso:jeo,kso:keo)**2 &
+                                    +u(iarr_all_mz(ifl),iso:ieo,jso:jeo,kso:keo)**2)/u(iarr_all_dn(ifl),iso:ieo,jso:jeo,kso:keo)
+        call next_fluid_or_var(ifl,iw,nfluid)
 
 #else /* ISO */
       case ('ener')
         write(varname,'(a3,i1)') 'ene',ifl
-        wa(iso:ieo,jso:jeo,kso:keo) = u(iena(ifl),iso:ieo,jso:jeo,kso:keo)
-        call next_fluid_or_var(ifl,iw,nadiab)
+        wa(iso:ieo,jso:jeo,kso:keo) = u(iarr_all_en(ifl),iso:ieo,jso:jeo,kso:keo)
+        call next_fluid_or_var(ifl,iw,nfluid)
 
       case ('eint')
         write(varname,'(a3,i1)') 'ein',ifl
-        wa(iso:ieo,jso:jeo,kso:keo) = u(iena(ifl),iso:ieo,jso:jeo,kso:keo) &
-                               - 0.5*(u(imxa(ifl),iso:ieo,jso:jeo,kso:keo)**2 &
-                                     +u(imya(ifl),iso:ieo,jso:jeo,kso:keo)**2 &
-                                     +u(imza(ifl),iso:ieo,jso:jeo,kso:keo)**2)/u(idna(ifl),iso:ieo,jso:jeo,kso:keo)
-        call next_fluid_or_var(ifl,iw,nadiab)
+        wa(iso:ieo,jso:jeo,kso:keo) = u(iarr_all_en(ifl),iso:ieo,jso:jeo,kso:keo) &
+                               - 0.5*(u(iarr_all_mx(ifl),iso:ieo,jso:jeo,kso:keo)**2 &
+                                     +u(iarr_all_my(ifl),iso:ieo,jso:jeo,kso:keo)**2 &
+                                     +u(iarr_all_mz(ifl),iso:ieo,jso:jeo,kso:keo)**2)/u(iarr_all_dn(ifl),iso:ieo,jso:jeo,kso:keo)
+        call next_fluid_or_var(ifl,iw,nfluid)
 #endif /* ISO */
 
 #ifdef COSM_RAYS
@@ -509,12 +514,12 @@ module dataio
         write(varname,'(a3,i1)') 'tsx', ifl
         allocate(velx(nx,ny),vely(nx,ny),dvx(nx,ny))
         do k = kso,keo
-          velx=u(imxa(ifl),:,:,k)/u(idna(ifl),:,:,k)
+          velx=u(iarr_all_mx(ifl),:,:,k)/u(iarr_all_dn(ifl),:,:,k)
 #ifdef KEPL_SUPP_SIMX
-          dvx(:,:)=u(imxa(ifl),:,:,k)-omx0(ifl,:,:,k)
+          dvx(:,:)=u(iarr_all_mx(ifl),:,:,k)-omx0(ifl,:,:,k)
           wa(:,:,k) = (abs(velx)+small)/(abs(dvx)+small)/(abs(alfsup)+small)
 #else /* KEPL_SUPP_SIMX */
-          vely=u(imya(ifl),:,:,k)/u(idna(ifl),:,:,k)
+          vely=u(iarr_all_my(ifl),:,:,k)/u(iarr_all_dn(ifl),:,:,k)
           do j=jso,jeo
             dvx(:,j)=(velx(:,j)*y(j)-vely(:,j)*x(:))*y(j)/(x(:)**2+y(j)**2)-omx0(ifl,:,j,k)
           enddo
@@ -529,8 +534,8 @@ module dataio
         write(varname,'(a3,i1)') 'tsy', ifl
         allocate(velx(nx,ny),vely(nx,ny),dvy(nx,ny))
         do k = kso,keo
-          velx=u(imxa(ifl),:,:,k)/u(idna(ifl),:,:,k)
-          vely=u(imya(ifl),:,:,k)/u(idna(ifl),:,:,k)
+          velx=u(iarr_all_mx(ifl),:,:,k)/u(iarr_all_dn(ifl),:,:,k)
+          vely=u(iarr_all_my(ifl),:,:,k)/u(iarr_all_dn(ifl),:,:,k)
           do i=iso,ieo
             dvy(i,:)=(vely(i,:)*x(i)-velx(i,:)*y(:))*x(i)/(y(:)**2+x(i)**2)-omy0(ifl,i,:,k)
           enddo
@@ -551,11 +556,11 @@ module dataio
         write(varname,'(a3,i1)') 'dvx', ifl
         allocate(velx(nx,ny),vely(nx,ny),dvx(nx,ny))
         do k = kso,keo
-          velx=u(imxa(ifl),:,:,k)/u(idna(ifl),:,:,k)
+          velx=u(iarr_all_mx(ifl),:,:,k)/u(iarr_all_dn(ifl),:,:,k)
 #ifdef KEPL_SUPP_SIMX
-          wa(iso:ieo,jso:jeo,k)=u(imxa(ifl),iso:ieo,jso:jeo,k)-omx0(ifl,iso:ieo,jso:jeo,k)
+          wa(iso:ieo,jso:jeo,k)=u(iarr_all_mx(ifl),iso:ieo,jso:jeo,k)-omx0(ifl,iso:ieo,jso:jeo,k)
 #else /* KEPL_SUPP_SIMX */
-          vely=u(imya(ifl),:,:,k)/u(idna(ifl),:,:,k)
+          vely=u(iarr_all_my(ifl),:,:,k)/u(iarr_all_dn(ifl),:,:,k)
           do j=jso,jeo
             wa(iso:ieo,j,k)=(velx(iso:ieo,j)*y(j)-vely(iso:ieo,j)*x(iso:iso))*y(j)/(x(iso:ieo)**2+y(j)**2)-omx0(ifl,iso:ieo,j,k)
           enddo
@@ -568,8 +573,8 @@ module dataio
         write(varname,'(a3,i1)') 'dvy', ifl
         allocate(velx(nx,ny),vely(nx,ny),dvy(nx,ny))
         do k = kso,keo
-          velx=u(imxa(ifl),:,:,k)/u(idna(ifl),:,:,k)
-          vely=u(imya(ifl),:,:,k)/u(idna(ifl),:,:,k)
+          velx=u(iarr_all_mx(ifl),:,:,k)/u(iarr_all_dn(ifl),:,:,k)
+          vely=u(iarr_all_my(ifl),:,:,k)/u(iarr_all_dn(ifl),:,:,k)
           do i=iso,ieo
             wa(i,jso:jeo,k)=(vely(i,jso:jeo)*x(i)-velx(i,jso:jeo)*y(jso:jeo))*x(i)/(y(jso:jeo)**2+x(i)**2)-omy0(ifl,i,jso:jeo,k)
           enddo
@@ -581,8 +586,8 @@ module dataio
 !     write(varname,'(a3,i1)') 'dvr',ifl
 !     do ibe=iso,ieo
 !       do jbe=jso,jeo
-!         wa(ibe,jbe,kso:keo) = (u(imya(ifl),ibe,jbe,kso:keo) / u(idna(ifl),ibe,jbe,kso:keo) * x(ibe) &
-!                              - u(imxa(ifl),ibe,jbe,kso:keo) / u(idna(ifl),ibe,jbe,kso:keo) * y(jbe))/sqrt(x(ibe)**2+y(jbe)**2)
+!         wa(ibe,jbe,kso:keo) = (u(iarr_all_my(ifl),ibe,jbe,kso:keo) / u(iarr_all_dn(ifl),ibe,jbe,kso:keo) * x(ibe) &
+!                              - u(iarr_all_mx(ifl),ibe,jbe,kso:keo) / u(iarr_all_dn(ifl),ibe,jbe,kso:keo) * y(jbe))/sqrt(x(ibe)**2+y(jbe)**2)
 !       enddo
 !     enddo
 !     call next_fluid_or_var(ifl,iw,nfluid)
@@ -601,16 +606,16 @@ module dataio
         write(varname,'(a3,i1)') 'dmx', ifl
         allocate(velx(nx,ny),vely(nx,ny),dvx(nx,ny))
         do k = kso,keo
-          velx=u(imxa(ifl),:,:,k)/u(idna(ifl),:,:,k)
+          velx=u(iarr_all_mx(ifl),:,:,k)/u(iarr_all_dn(ifl),:,:,k)
 #ifdef KEPL_SUPP_SIMX
-          wa(iso:ieo,jso:jeo,k)=u(imxa(ifl),iso:ieo,jso:jeo,k)-omx0(ifl,iso:ieo,jso:jeo,k)
+          wa(iso:ieo,jso:jeo,k)=u(iarr_all_mx(ifl),iso:ieo,jso:jeo,k)-omx0(ifl,iso:ieo,jso:jeo,k)
 #else /* KEPL_SUPP_SIMX */
-          vely=u(imya(ifl),:,:,k)/u(idna(ifl),:,:,k)
+          vely=u(iarr_all_my(ifl),:,:,k)/u(iarr_all_dn(ifl),:,:,k)
           do j=jso,jeo
             wa(iso:ieo,j,k)=(velx(iso:ieo,j)*y(j)-vely(iso:ieo,j)*x(iso:iso))*y(j)/(x(iso:ieo)**2+y(j)**2)-omx0(ifl,iso:ieo,j,k)
           enddo
 #endif /* KEPL_SUPP_SIMX */
-          wa(iso:ieo,jso:jeo,k)=wa(iso:ieo,jso:jeo,k)*u(idna(ifl),iso:ieo,jso:jeo,k)*(-alfsup(iso:ieo,jso:jeo))*dt
+          wa(iso:ieo,jso:jeo,k)=wa(iso:ieo,jso:jeo,k)*u(iarr_all_dn(ifl),iso:ieo,jso:jeo,k)*(-alfsup(iso:ieo,jso:jeo))*dt
         enddo
         deallocate(velx,vely,dvx)
         call next_fluid_or_var(ifl,iw,nfluid)
@@ -619,12 +624,12 @@ module dataio
         write(varname,'(a3,i1)') 'dmy', ifl
         allocate(velx(nx,ny),vely(nx,ny),dvy(nx,ny))
         do k = kso,keo
-          velx=u(imxa(ifl),:,:,k)/u(idna(ifl),:,:,k)
-          vely=u(imya(ifl),:,:,k)/u(idna(ifl),:,:,k)
+          velx=u(iarr_all_mx(ifl),:,:,k)/u(iarr_all_dn(ifl),:,:,k)
+          vely=u(iarr_all_my(ifl),:,:,k)/u(iarr_all_dn(ifl),:,:,k)
           do i=iso,ieo
             wa(i,jso:jeo,k)=(vely(i,jso:jeo)*x(i)-velx(i,jso:jeo)*y(jso:jeo))*x(i)/(y(jso:jeo)**2+x(i)**2)-omy0(ifl,i,jso:jeo,k)
           enddo
-          wa(iso:ieo,jso:jeo,k)=wa(iso:ieo,jso:jeo,k)*u(idna(ifl),iso:ieo,jso:jeo,k)*(-alfsup(iso:ieo,jso:jeo))*dt
+          wa(iso:ieo,jso:jeo,k)=wa(iso:ieo,jso:jeo,k)*u(iarr_all_dn(ifl),iso:ieo,jso:jeo,k)*(-alfsup(iso:ieo,jso:jeo))*dt
         enddo
         deallocate(velx,vely,dvy)
         call next_fluid_or_var(ifl,iw,nfluid)
@@ -644,8 +649,8 @@ module dataio
         write(varname,'(a3,i1)') 'omg',ifl
         do ibe=iso,ieo
           do jbe=jso,jeo
-            wa(ibe,jbe,kso:keo) = (u(imya(ifl),ibe,jbe,kso:keo) / u(idna(ifl),ibe,jbe,kso:keo) * x(ibe) &
-                                 - u(imxa(ifl),ibe,jbe,kso:keo) / u(idna(ifl),ibe,jbe,kso:keo) * y(jbe))/(x(ibe)**2+y(jbe)**2)
+            wa(ibe,jbe,kso:keo) = (u(iarr_all_my(ifl),ibe,jbe,kso:keo) / u(iarr_all_dn(ifl),ibe,jbe,kso:keo) * x(ibe) &
+                                 - u(iarr_all_mx(ifl),ibe,jbe,kso:keo) / u(iarr_all_dn(ifl),ibe,jbe,kso:keo) * y(jbe))/(x(ibe)**2+y(jbe)**2)
           enddo
         enddo
         call next_fluid_or_var(ifl,iw,nfluid)
@@ -654,8 +659,8 @@ module dataio
         write(varname,'(a3,i1)') 'vrt',ifl
         do ibe=iso,ieo
           do jbe=jso,jeo
-            wa(ibe,jbe,kso:keo) = (u(imya(ifl),ibe,jbe,kso:keo) / u(idna(ifl),ibe,jbe,kso:keo) * x(ibe) &
-                                 - u(imxa(ifl),ibe,jbe,kso:keo) / u(idna(ifl),ibe,jbe,kso:keo) * y(jbe))/sqrt(x(ibe)**2+y(jbe)**2)
+            wa(ibe,jbe,kso:keo) = (u(iarr_all_my(ifl),ibe,jbe,kso:keo) / u(iarr_all_dn(ifl),ibe,jbe,kso:keo) * x(ibe) &
+                                 - u(iarr_all_mx(ifl),ibe,jbe,kso:keo) / u(iarr_all_dn(ifl),ibe,jbe,kso:keo) * y(jbe))/sqrt(x(ibe)**2+y(jbe)**2)
           enddo
         enddo
         call next_fluid_or_var(ifl,iw,nfluid)
@@ -664,8 +669,8 @@ module dataio
         write(varname,'(a3,i1)') 'vou',ifl
         do ibe=iso,ieo
           do jbe=jso,jeo
-            wa(ibe,jbe,kso:keo) = (u(imxa(ifl),ibe,jbe,kso:keo) / u(idna(ifl),ibe,jbe,kso:keo) * x(ibe) &
-                                 + u(imya(ifl),ibe,jbe,kso:keo) / u(idna(ifl),ibe,jbe,kso:keo) * y(jbe))/sqrt(x(ibe)**2+y(jbe)**2)
+            wa(ibe,jbe,kso:keo) = (u(iarr_all_mx(ifl),ibe,jbe,kso:keo) / u(iarr_all_dn(ifl),ibe,jbe,kso:keo) * x(ibe) &
+                                 + u(iarr_all_my(ifl),ibe,jbe,kso:keo) / u(iarr_all_dn(ifl),ibe,jbe,kso:keo) * y(jbe))/sqrt(x(ibe)**2+y(jbe)**2)
           enddo
         enddo
         call next_fluid_or_var(ifl,iw,nfluid)
@@ -674,7 +679,7 @@ module dataio
         write(varname,'(a3,i1)') 'dcl',ifl
         do ibe=iso,ieo
           do jbe=jso,jeo
-            wa(ibe,jbe,kso:keo) = sum(u(idna(ifl),ibe,jbe,kso:keo))*(z(kso)-z(kso-1))
+            wa(ibe,jbe,kso:keo) = sum(u(iarr_all_dn(ifl),ibe,jbe,kso:keo))*(z(kso)-z(kso-1))
           enddo
         enddo
         call next_fluid_or_var(ifl,iw,nfluid)
@@ -682,13 +687,13 @@ module dataio
 #ifndef ISO
       case ('csnd')
         write(varname,'(a3,i1)') 'csn',ifl
-        wa(iso:ieo,jso:jeo,kso:keo) = sqrt((u(iena(ifl),iso:ieo,jso:jeo,kso:keo) &
-                                      -0.5*(u(imxa(ifl),iso:ieo,jso:jeo,kso:keo)**2  &
-                                           +u(imya(ifl),iso:ieo,jso:jeo,kso:keo)**2  &
-                                           +u(imza(ifl),iso:ieo,jso:jeo,kso:keo)**2) &
-                                          / u(idna(ifl),iso:ieo,jso:jeo,kso:keo))*(gamma(ifl)-1.) &
-                                *gamma(ifl)/u(idna(ifl),iso:ieo,jso:jeo,kso:keo))
-       call next_fluid_or_var(ifl,iw,nadiab)
+        wa(iso:ieo,jso:jeo,kso:keo) = sqrt((u(iarr_all_en(ifl),iso:ieo,jso:jeo,kso:keo) &
+                                      -0.5*(u(iarr_all_mx(ifl),iso:ieo,jso:jeo,kso:keo)**2  &
+                                           +u(iarr_all_my(ifl),iso:ieo,jso:jeo,kso:keo)**2  &
+                                           +u(iarr_all_mz(ifl),iso:ieo,jso:jeo,kso:keo)**2) &
+                                          / u(iarr_all_dn(ifl),iso:ieo,jso:jeo,kso:keo))*(gamma(ifl)-1.) &
+                                *gamma(ifl)/u(iarr_all_dn(ifl),iso:ieo,jso:jeo,kso:keo))
+       call next_fluid_or_var(ifl,iw,nfluid)
 #endif /* ISO */
 #ifdef GRAV
       case ('gpot')
@@ -1230,7 +1235,8 @@ module dataio
 !
   subroutine write_restart
 
-    use arrays, only : nxb,nyb,nzb,x,y,z,u,b,nx,ny,nz,nm,nu
+    use fluidindex,   only : nvar,nmag
+    use arrays, only : nxb,nyb,nzb,x,y,z,u,b,nx,ny,nz
     use start, only  : xmin,xmax,ymin,ymax,zmin,zmax,nxd,nyd,nzd,t,dt, &
          resdel,nb,nstep,domain
     use init_problem, only : problem_name, run_id
@@ -1272,13 +1278,13 @@ module dataio
 
 
     ranku       = 4
-    dimsu(1)    = nu
+    dimsu(1)    = nvar
     dimsu(2)    = dims(1)
     dimsu(3)    = dims(2)
     dimsu(4)    = dims(3)
 
     rankb       = 4
-    dimsb(1)    = nm
+    dimsb(1)    = nmag
     dimsb(2)    = dims(1)
     dimsb(3)    = dims(2)
     dimsb(4)    = dims(3)
@@ -1322,7 +1328,7 @@ module dataio
     iostatus = sfsnatt( sd_id, 'pcoords2', 23, 1, pcoords(2) )
     iostatus = sfsnatt( sd_id, 'pcoords3', 23, 1, pcoords(3) )
 
-    iostatus = sfsnatt( sd_id, 'dimsu'   , 23, 1, nu )
+    iostatus = sfsnatt( sd_id, 'dimsu'   , 23, 1, nvar )
     iostatus = sfsnatt( sd_id, 'dims1'   , 23, 1, dims(1) )
     iostatus = sfsnatt( sd_id, 'dims2'   , 23, 1, dims(2) )
     iostatus = sfsnatt( sd_id, 'dims3'   , 23, 1, dims(3) )
@@ -1458,8 +1464,8 @@ module dataio
 !---------------------------------------------------------------------
 !
   subroutine read_restart !(all)
-
-    use arrays, only : u,b,nx,ny,nz,nu,nm
+    use fluidindex, only : nvar, nmag
+    use arrays, only : u,b,nx,ny,nz
     use start, only  : t, dt, nstep
     use init_problem, only : problem_name, run_id
 #ifdef GRAV
@@ -1488,13 +1494,13 @@ module dataio
     stride(:) = 1
 
     ranku    = 4
-    dimsu(1) = nu
+    dimsu(1) = nvar
     dimsu(2) = nx
     dimsu(3) = ny
     dimsu(4) = nz
 
     rankb    = 4
-    dimsb(1) = nm
+    dimsb(1) = nmag
     dimsb(2) = nx
     dimsb(3) = ny
     dimsb(4) = nz
@@ -1656,8 +1662,15 @@ module dataio
 !
   subroutine write_timeslice
 
-    use arrays, only : is,ie,js,je,ks,ke,u,b,idna,imxa,imya,imza, wa, &
-         ibx,iby,ibz,x,y,z,wa
+    use fluidindex,   only : nfluid
+#ifdef IONIZED
+    use initionized, only : ibx,iby,ibz
+#endif IONIZED
+    use fluidindex, only : nvar, iarr_all_dn,iarr_all_mx,iarr_all_my,iarr_all_mz
+#ifndef ISO
+    use fluidindex, only : iarr_all_en
+#endif /* ISO */
+    use arrays, only : is,ie,js,je,ks,ke,u,b, wa,x,y,z,wa
 #ifdef COSM_RAYS
     use arrays, only : iecr
 #endif /* COSM_RAYS */
@@ -1679,9 +1692,6 @@ module dataio
 #ifdef RESIST
     use resistivity
 #endif /* RESIST */
-#ifndef ISO
-    use arrays, only : iena
-#endif /* ISO */
 #ifdef COSM_RAYS
     use arrays, only : iecr
 #endif /* COSM_RAYS */
@@ -1756,16 +1766,16 @@ module dataio
       endif
     endif
 
-    mass = sum(u(idna,is:ie,js:je,ks:ke)) * dvol
+    mass = sum(u(iarr_all_dn,is:ie,js:je,ks:ke)) * dvol
     call mpi_allreduce(mass, tot_mass, 1, mpi_real8, mpi_sum, comm3d, ierr)
 
-    momx = sum(u(imxa,is:ie,js:je,ks:ke)) * dvol
+    momx = sum(u(iarr_all_mx,is:ie,js:je,ks:ke)) * dvol
     call mpi_allreduce(momx, tot_momx, 1, mpi_real8, mpi_sum, comm3d, ierr)
 
-    momy = sum(u(imya,is:ie,js:je,ks:ke)) * dvol
+    momy = sum(u(iarr_all_my,is:ie,js:je,ks:ke)) * dvol
     call mpi_allreduce(momy, tot_momy, 1, mpi_real8, mpi_sum, comm3d, ierr)
 
-    momz = sum(u(imza,is:ie,js:je,ks:ke)) * dvol
+    momz = sum(u(iarr_all_mz,is:ie,js:je,ks:ke)) * dvol
     call mpi_allreduce(momz, tot_momz, 1, mpi_real8, mpi_sum, comm3d, ierr)
 
 #ifdef GRAV
@@ -1773,21 +1783,21 @@ module dataio
     amomz = 0.0
     do j=js,je
       do i=is,ie
-         amomz = amomz + (x(i)*sum(u(imya,i,j,ks:ke)) &
-                         -y(j)*sum(u(imxa,i,j,ks:ke)))*dvol
+         amomz = amomz + (x(i)*sum(u(iarr_all_my,i,j,ks:ke)) &
+                         -y(j)*sum(u(iarr_all_mx,i,j,ks:ke)))*dvol
       enddo
     enddo
     call mpi_allreduce(amomz, tot_amomz, 1, mpi_real8, mpi_sum, comm3d, ierr)
 !DW-
-    epot = sum(u(idna(1),is:ie,js:je,ks:ke) *gp(is:ie,js:je,ks:ke)) * dvol
+    epot = sum(u(iarr_all_dn(1),is:ie,js:je,ks:ke) *gp(is:ie,js:je,ks:ke)) * dvol
     call mpi_allreduce(epot, tot_epot, 1, mpi_real8, mpi_sum, comm3d, ierr)
 #endif /* GRAV */
 
     wa(is:ie,js:je,ks:ke) &
-        = 0.5 * (u(imxa(1),is:ie,js:je,ks:ke)**2   &
-               + u(imya(1),is:ie,js:je,ks:ke)**2  &
-               + u(imza(1),is:ie,js:je,ks:ke)**2)/ &
-                 u(idna(1),is:ie,js:je,ks:ke)
+        = 0.5 * (u(iarr_all_mx(1),is:ie,js:je,ks:ke)**2   &
+               + u(iarr_all_my(1),is:ie,js:je,ks:ke)**2  &
+               + u(iarr_all_mz(1),is:ie,js:je,ks:ke)**2)/ &
+                 u(iarr_all_dn(1),is:ie,js:je,ks:ke)
     ekin = sum(wa(is:ie,js:je,ks:ke)) * dvol
     call mpi_allreduce(ekin, tot_ekin, 1, mpi_real8, mpi_sum, comm3d, ierr)
 
@@ -1816,7 +1826,7 @@ module dataio
     tot_eint = csi2*tot_mass
     tot_ener = tot_eint+tot_ekin+tot_emag
 #else /* ISO */
-    ener = sum(u(iena,is:ie,js:je,ks:ke)) * dvol
+    ener = sum(u(iarr_all_en,is:ie,js:je,ks:ke)) * dvol
     call mpi_allreduce(ener, tot_ener, 1, mpi_real8, mpi_sum, comm3d, ierr)
     tot_eint = tot_ener - tot_ekin - tot_emag
 #endif /* ISO */

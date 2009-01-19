@@ -9,8 +9,9 @@ module mag_boundaries
 ! Modified by M. Hanasz - MPI corner-periodic bcs   - December 2006
 ! Modified by M. Hanasz - MPI shearing-periodic in "x" - November 2007
   use mpi_setup
+  use initionized, only : ibx, iby, ibz  
   use start, only  : nb,dimensions
-  use arrays, only : nx,ny,nz,u,b,ibx,iby,ibz,nxb,nyb,nzb
+  use arrays, only : nx,ny,nz,u,b,nxb,nyb,nzb
 
 contains
 

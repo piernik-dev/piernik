@@ -1,31 +1,5 @@
 ! $Id$
 #include "piernik.def"
-#ifdef IONIZED
-#define NUMBION IONIZED
-#else /* IONIZED */
-#define NUMBION 0
-#endif /* IONIZED */
-#ifdef NEUTRAL
-#define NUMBNEUT NEUTRAL
-#else /* NEUTRAL */
-#define NUMBNEUT 0
-#endif /* NEUTRAL */
-#ifdef DUST
-#define NUMBDUST DUST
-#else /* DUST */
-#define NUMBDUST 0
-#endif /* DUST */
-#ifdef COSM_RAYS
-#define NUMBCR COSM_RAYS
-#else /* COSM_RAYS */
-#define NUMBCR 0
-#endif /* COSM_RAYS */
-#define NUMBFLUID NUMBION+NUMBNEUT+NUMBDUST
-#ifdef ISO
-#define NUPF 4
-#else /* ISO */
-#define NUPF 5
-#endif /* ISO */
 
 module arrays
 
@@ -33,30 +7,6 @@ module arrays
    integer :: nx, ny, nz
    integer,parameter  :: xdim=1, ydim=2, zdim=3
    integer,parameter  :: nrlscal=100, nintscal=100
-   integer,allocatable,dimension(:) :: idna, imxa, imya, imza, iena, magn
-   integer,allocatable,dimension(:) :: fmagn, fdust, findex, fadiab
-
-   integer, parameter :: nfi=NUMBION
-   integer, parameter :: nui=nfi*NUPF
-   integer, parameter :: nfn=NUMBNEUT
-   integer, parameter :: nun=nfn*NUPF
-   integer, parameter :: nfd=NUMBDUST
-   integer, parameter :: nud=nfd*4
-   integer, parameter :: nfluid=NUMBFLUID
-   integer, parameter :: nadiab=(NUMBFLUID-NUMBDUST)*(NUPF-4)
-   integer, parameter :: nfion =NUMBION
-   integer, parameter :: nfmagn=NUMBION
-   integer, parameter :: ndust =NUMBDUST
-   integer, parameter :: nuc=NUMBCR
-
-   integer, parameter :: nu=nui+nun+nud+nuc
-   integer, parameter :: nm=3
-
-   integer, dimension(nu) :: iuswpx, iuswpy, iuswpz
-   integer, dimension(nm) :: ibswpx, ibswpy, ibswpz
-
-   integer, parameter  :: ibx=1, iby=2, ibz=3
-   integer, parameter  :: icx=1, icy=2, icz=3
 
    integer nxb, nyb, nzb
    integer nxt, nyt, nzt
@@ -114,86 +64,13 @@ module arrays
 #endif /* KEPLER_SUPPRESSION */
 
    contains
-
+   
    subroutine arrays_allocate
-      use start, only : nxd, nyd, nzd, nb, dimensions, gamma
+
       use mpi_setup
-#ifdef IONIZED
-      use ionizeds, only : add_ion_index, specify_ionized
-#endif /* IONIZED */
-#ifdef NEUTRAL
-      use neutrals, only : add_neut_index, specify_neutral
-#endif /* NEUTRAL */
-#ifdef DUST
-      use dusts, only : add_dust_index, specify_dust
-#endif /* DUST */
-#ifdef COSM_RAYS
-      use cosmic_rays, only : add_cr_index, specify_cosmrays
-#endif /* COSM_RAYS */
-
-      integer ifluid,imagn,iadiab,idust,iter
-#ifdef IONIZED
-      integer nuipf
-#endif /* IONIZED */
-#ifdef NEUTRAL
-      integer nunpf
-#endif /* NEUTRAL */
-#ifdef DUST
-      integer nudpf
-#endif /* DUST */
-      character fluidtype*10
-
-      ifluid = 1
-      imagn  = 1
-      idust  = 1
-      iadiab = 1
-#ifdef IONIZED
-      call add_ion_index
-#endif /* IONIZED */
-#ifdef NEUTRAL
-      call add_neut_index(nui)
-#endif /* NEUTRAL */
-#ifdef DUST
-      call add_dust_index(nui+nun+num)
-#endif /* DUST */
-#ifdef COSM_RAYS
-      call add_cr_index(nui+nun+num+nud)
-#endif /* COSM_RAYS */
-
-
-      allocate(idna(nfluid),imxa(nfluid),imya(nfluid),imza(nfluid))
-      allocate(magn(nfluid),fmagn(nfmagn),fdust(ndust),findex(nfluid),fadiab(nadiab))
-      magn=0
-#ifndef ISO
-      allocate(iena(nadiab))
-#endif /* ISO */
-#ifdef IONIZED
-      call specify_ionized(nfluid,nadiab,ifluid,iadiab,imagn,idna,imxa,imya,imza,iena,findex,magn,fmagn,gamma,fadiab)
-#endif /* IONIZED */
-#ifdef NEUTRAL
-      call specify_neutral(nfluid,nadiab,ifluid,iadiab,idna,imxa,imya,imza,iena,findex,gamma,fadiab)
-#endif /* NEUTRAL */
-#ifdef DUST
-      call specify_dust(nfluid,ifluid,idna,imxa,imya,imza,findex,gamma,fdust,idust)
-#endif /* DUST */
-      iuswpx(idna)=idna ; iuswpx(imxa)=imxa ; iuswpx(imya)=imya ; iuswpx(imza)=imza
-      iuswpy(idna)=idna ; iuswpy(imxa)=imya ; iuswpy(imya)=imxa ; iuswpy(imza)=imza
-      iuswpz(idna)=idna ; iuswpz(imxa)=imza ; iuswpz(imya)=imya ; iuswpz(imza)=imxa
-#ifndef ISO
-      iuswpx(iena) = iena
-      iuswpy(iena) = iena
-      iuswpz(iena) = iena
-#endif /* ISO */
-#ifdef COSM_RAYS
-      iuswpx(iecr) = iecr
-      iuswpy(iecr) = iecr
-      iuswpz(iecr) = iecr
-      call specify_cosmrays
-#endif /* COSM_RAYS */
-
-      ibswpx(ibx:ibz)  =(/ibx,iby,ibz/)
-      ibswpy(ibx:ibz)  =(/iby,ibx,ibz/)
-      ibswpz(ibx:ibz)  =(/ibz,iby,ibx/)
+      use start, only : nxd, nyd, nzd, nb, dimensions, gamma
+      use fluidindex, only : nvar
+      
 
       if((mod(nxd, pxsize) .ne. 0) .or. &
          (mod(nyd, pysize) .ne. 0) .or. &
@@ -247,16 +124,16 @@ module arrays
 
 #ifdef SPLIT
 #ifdef ORIG
-      allocate(u(nu,nx,ny,nz),b(3,nx,ny,nz))
+      allocate(u(nvar,nx,ny,nz),b(3,nx,ny,nz))
 #else /* ~ORIG */
-      allocate(u(nu,nx,ny,nz),b(3,nx,ny,nz),bi(3,nx,ny,nz))
+      allocate(u(nvar,nx,ny,nz),b(3,nx,ny,nz),bi(3,nx,ny,nz))
 #endif /* ~ORIG */
 #else /* ~SPLIT */
-      allocate(u(nu,nx,ny,nz),b(3,nx,ny,nz))
-      allocate(ui(nu,nx,ny,nz),bi(3,nx,ny,nz))
-      allocate(Lu(nu,nx,ny,nz),Lb(3,nx,ny,nz))
+      allocate(u(nvar,nx,ny,nz),b(3,nx,ny,nz))
+      allocate(ui(nvar,nx,ny,nz),bi(3,nx,ny,nz))
+      allocate(Lu(nvar,nx,ny,nz),Lb(3,nx,ny,nz))
 #ifdef FLX_BND
-      allocate(flx(nu,nx,ny,nz))
+      allocate(flx(nvar,nx,ny,nz))
       allocate(cfr(nx,ny,nz))
 #endif /* FLX_BND */
 #endif /* ~SPLIT */

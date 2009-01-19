@@ -132,7 +132,8 @@ implicit none
 
 #if defined COSM_RAYS || defined PRESS_GRAD_EXCH
   subroutine div_v
-    use arrays, only : nx,ny,nz,u,idna,imxa,imya,imza,nfluid,divvel
+    use fluidindex, only : idna,imxa,imya,imza
+    use arrays, only : nx,ny,nz,u,nfluid,divvel
     use grid,   only : dx,dy,dz
     use start,  only : dimensions
     implicit none
@@ -172,7 +173,8 @@ implicit none
     integer j,k
     divv = divvel(:,:,j,k)
 #else /* SPLIT */
-    use arrays, only : u,idna,imxa,imya,imza,nx,ny,nz,nfluid
+    use fluidindex, only : idna,imxa,imya,imza
+    use arrays, only : u,nx,ny,nz,nfluid
     use grid,   only : dx,dy,dz
     use start,  only : dimensions
 
@@ -209,7 +211,8 @@ implicit none
     integer i,k
     divv = divvel(:,i,:,k)
 #else /* SPLIT */
-    use arrays, only : u,idna,imxa,imya,imza,nx,ny,nz,nfluid
+    use fluidindex, only : idna,imxa,imya,imza
+    use arrays, only : u,nx,ny,nz,nfluid
     use grid,   only : dx,dy,dz
     use start,  only : dimensions
 
@@ -246,7 +249,8 @@ implicit none
     integer i,j
     divv = divvel(:,i,j,:)
 #else /* SPLIT */
-    use arrays, only : u,idna,imxa,imya,imza,nx,ny,nz,nfluid
+    use fluidindex, only : idna,imxa,imya,imza
+    use arrays, only : u,nx,ny,nz,nfluid
     use grid,   only : dx,dy,dz
     use start,  only : dimensions
 
@@ -292,3 +296,7 @@ implicit none
 
 
 end module func
+
+!!! MH: procedury "dipol" i "rn_angles"
+!!! zostaly przeniesione (z nieiwlkimi przrzerobkami) do modulu sn_sources.F90
+!!! w katalogu src/supernovae

@@ -1,22 +1,22 @@
 ! $Id$
 #include "piernik.def"
 
-#ifdef IONIZED
-#define NUMBION IONIZED
-#else /* IONIZED */
-#define NUMBION 0
-#endif /* IONIZED */
-#ifdef NEUTRAL
-#define NUMBNEUT NEUTRAL
-#else /* NEUTRAL */
-#define NUMBNEUT 0
-#endif /* NEUTRAL */
-#ifdef DUST
-#define NUMBDUST DUST
-#else /* DUST */
-#define NUMBDUST 0
-#endif /* DUST */
-#define NUMBFLUID NUMBION+NUMBNEUT+NUMBDUST
+!#ifdef IONIZED
+!#define NUMBION IONIZED
+!#else /* IONIZED */
+!#define NUMBION 0
+!#endif /* IONIZED */
+!#ifdef NEUTRAL
+!#define NUMBNEUT NEUTRAL
+!#else /* NEUTRAL */
+!#define NUMBNEUT 0
+!#endif /* NEUTRAL */
+!#ifdef DUST
+!#define NUMBDUST DUST
+!#else /* DUST */
+!#define NUMBDUST 0
+!#endif /* DUST */
+!#define NUMBFLUID NUMBION+NUMBNEUT+NUMBDUST
 
 module start
 
@@ -30,7 +30,7 @@ module start
   integer nxd, nyd, nzd, nb
 
   real t,dt
-  real dt_mhd, dt_coolheat, dt_visc
+!  real dt_ionized, dt_coolheat, dt_visc
   real collfaq, cfl_colls
   integer nstep
   integer nstep_start
@@ -53,7 +53,8 @@ module start
   real xmin, xmax, ymin, ymax, zmin, zmax
 
   real :: c_si, alpha, tauc
-  real, dimension(NUMBFLUID) :: gamma
+!  real, dimension(NUMBFLUID) :: gamma
+  real, dimension(1) :: gamma   !!! do poprawy
 
   real cfl, smalld, smallei, nu_bulk, cfl_visc
 #ifdef VZ_LIMITS
@@ -491,13 +492,13 @@ contains
       rbuff(55) = zmax
 
 !  namelist /EQUATION_OF_STATE/ c_si, gamma, alpha, tauc
-      rbuff(70) = c_si
+!      rbuff(70) = c_si
       rbuff(71) = alpha
       rbuff(72) = tauc
-      do iv = 1, NUMBFLUID
-        rbuff(72+iv) = gamma(iv)
-      enddo
-
+!      do iv = 1, NUMBFLUID
+!        rbuff(72+iv) = gamma(iv)
+!      enddo
+!
 !  namelist /NUMERICAL_SETUP/  cfl, smalld, smallei,
 !                              flux_limiter, freezing_speed,
 !                              integration_order,
@@ -720,12 +721,12 @@ contains
 
 !  namelist /EQUATION_OF_STATE/ c_si, gamma, alpha, tauc
 
-      c_si                = rbuff(70)
+!      c_si                = rbuff(70)
       alpha               = rbuff(71)
       tauc                = rbuff(72)
-      do iv=1,NUMBFLUID
-        gamma(iv)         = rbuff(72+iv)
-      enddo
+!      do iv=1,NUMBFLUID
+!        gamma(iv)         = rbuff(72+iv)
+!      enddo
 
 !  namelist /NUMERICAL_SETUP/  cfl, smalld, smallei,
 !                              flux_limiter, freezing_speed,

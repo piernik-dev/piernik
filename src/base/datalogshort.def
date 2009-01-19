@@ -1,4 +1,8 @@
-    use arrays, only : wa,is,ie,js,je,ks,ke,idna,imxa,imya,imza,u,b,nx,ny,nz,nfluid,ibx,iby,ibz
+    use fluidindex, only : idna,imxa,imya,imza
+#ifndef ISO
+    use fluidindex, only : iena
+#endif /* ISO */
+    use arrays, only : wa,is,ie,js,je,ks,ke,u,b,nx,ny,nz,nfluid,ibx,iby,ibz
     use arrays, only : nfluid,nfmagn,fmagn,nadiab
     use grid, only   : dx,dy,dz,dxmn
     use constants, only : small, hydro_mass, k_B
@@ -13,9 +17,6 @@
 #endif /* ISO */
 !    use init_problem
 !   use thermal
-#ifndef ISO
-    use arrays, only : iena
-#endif /* ISO */
 #ifdef RESIST
     use resistivity
 #endif /* RESIST */
@@ -24,7 +25,8 @@
 #endif /* COLLISIONS */
 #ifdef KEPLER_SUPPRESSION
     use start,  only : cfl_colls, dt_supp
-    use arrays, only : alfsup,nfluid,nz,omx0,omy0,x,y,nx,ny,imxa,imya
+    use fluidindex, only : idna,imxa
+    use arrays, only : alfsup,nfluid,nz,omx0,omy0,x,y,nx,ny
 #endif /* KEPLER_SUPPRESSION */
 
     implicit none

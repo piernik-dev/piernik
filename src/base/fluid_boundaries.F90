@@ -20,14 +20,16 @@ subroutine bnd_u(dim)
     use start, only : smallecr
 #endif /* COSM_RAYS */
 
-
-
-  use arrays, only : x,z,nzb,nyb,nxb,nu,nx,ny,nz, idna, imxa, imya, imza, &
-      u, b, nfluid, bndxrar, bndyrar
+  use fluidindex, only : nvar, iarr_all_dn,iarr_all_mx,iarr_all_my,iarr_all_mz
+#ifndef ISO
+  use fluidindex, only : iarr_all_en
+  use start,  only : gamma
+#endif /* ISO */
+  use fluidindex, only : nvar, nfluid
+  use arrays, only : x,z,nzb,nyb,nxb,nx,ny,nz, & 
+      u, b,  bndxrar, bndyrar
 
 #ifndef ISO
-  use start,  only : gamma
-  use arrays, only : iena
 #endif /* ISO */
 #ifdef ISO
   use start, only : csi2
@@ -63,7 +65,6 @@ subroutine bnd_u(dim)
   real, dimension(nfluid,nsub+1) :: dprofs
   real, dimension(nfluid) :: factor
   real dzs,z1,z2
-  real dzs, factor, z1, z2
 #endif /* GRAV */
   integer i,j
   integer ireq
@@ -83,8 +84,8 @@ subroutine bnd_u(dim)
   select case (dim)
     case ('xdim')
 #ifdef SHEAR_MPI
-        allocate(send_right(nu,nb,ny,nz), send_left(nu,nb,ny,nz), &
-                 recv_left(nu,nb,ny,nz), recv_right(nu,nb,ny,nz) )
+        allocate(send_right(nvar,nb,ny,nz), send_left(nvar,nb,ny,nz), &
+                 recv_left(nvar,nb,ny,nz), recv_right(nvar,nb,ny,nz) )
         send_left(:,:,:,:)          =  u(:,nb+1:2*nb,:,:)
         send_right(:,:,:,:)         =  u(:,nxb+1:nxb+nb,:,:)
 !
@@ -92,11 +93,11 @@ subroutine bnd_u(dim)
 !
         if(bnd_xl == 'she') then
           do i=1,nb
-            send_left (imya,i,:,:) = send_left(imya,i,:,:) &
-                                         +qshear*omega * x(nb+i)     * send_left(idna,i,:,:)
+            send_left (iarr_all_my,i,:,:) = send_left(iarr_all_my,i,:,:) &
+                                         +qshear*omega * x(nb+i)     * send_left(iarr_all_dn,i,:,:)
 #ifndef ISO
-            send_left (iena,i,:,:) = send_left(iena,i,:,:) &
-                                    -0.5*(qshear*omega * x(nb+i))**2 * send_left(idna,i,:,:)
+            send_left (iarr_all_en,i,:,:) = send_left(iarr_all_en,i,:,:) &
+                                    -0.5*(qshear*omega * x(nb+i))**2 * send_left(iarr_all_dn,i,:,:)
 #endif /* ISO */
           enddo
 !
@@ -117,11 +118,11 @@ subroutine bnd_u(dim)
 !
         if(bnd_xr == 'she') then
           do i=1,nb
-            send_right(imya,i,:,:) = send_right(imya,i,:,:) &
-                                         +qshear*omega * x(nxb+i)     * send_right(idna,i,:,:)
+            send_right(iarr_all_my,i,:,:) = send_right(iarr_all_my,i,:,:) &
+                                         +qshear*omega * x(nxb+i)     * send_right(iarr_all_dn,i,:,:)
 #ifndef ISO
-            send_right(iena,i,:,:) = send_right(iena,i,:,:) &
-                                    -0.5*(qshear*omega * x(nxb+i))**2 * send_right(idna,i,:,:)
+            send_right(iarr_all_en,i,:,:) = send_right(iarr_all_en,i,:,:) &
+                                    -0.5*(qshear*omega * x(nxb+i))**2 * send_right(iarr_all_dn,i,:,:)
 
 #endif /* ISO */
           enddo
@@ -141,10 +142,10 @@ subroutine bnd_u(dim)
 !
 ! wysylamy na drugi brzeg
 !
-        CALL MPI_ISEND   (send_left , nu*ny*nz*nb, MPI_DOUBLE_PRECISION, procxl, 10, comm, req(1), ierr)
-        CALL MPI_ISEND   (send_right, nu*ny*nz*nb, MPI_DOUBLE_PRECISION, procxr, 20, comm, req(3), ierr)
-        CALL MPI_IRECV   (recv_left , nu*ny*nz*nb, MPI_DOUBLE_PRECISION, procxl, 20, comm, req(2), ierr)
-        CALL MPI_IRECV   (recv_right, nu*ny*nz*nb, MPI_DOUBLE_PRECISION, procxr, 10, comm, req(4), ierr)
+        CALL MPI_ISEND   (send_left , nvar*ny*nz*nb, MPI_DOUBLE_PRECISION, procxl, 10, comm, req(1), ierr)
+        CALL MPI_ISEND   (send_right, nvar*ny*nz*nb, MPI_DOUBLE_PRECISION, procxr, 20, comm, req(3), ierr)
+        CALL MPI_IRECV   (recv_left , nvar*ny*nz*nb, MPI_DOUBLE_PRECISION, procxl, 20, comm, req(2), ierr)
+        CALL MPI_IRECV   (recv_right, nvar*ny*nz*nb, MPI_DOUBLE_PRECISION, procxr, 10, comm, req(4), ierr)
 
         do ireq = 1,4
           call MPI_WAIT(req(ireq),status(1,ireq),ierr)
@@ -156,11 +157,11 @@ subroutine bnd_u(dim)
         if(bnd_xr == 'she') then
           do i=1,nb
 #ifndef ISO
-             recv_right (iena,i,:,:) = recv_right (iena,i,:,:) &
-                                      +0.5*(qshear*omega * x(nb+nxb+i))**2 * recv_right(idna,i,:,:)
+             recv_right (iarr_all_en,i,:,:) = recv_right (iarr_all_en,i,:,:) &
+                                      +0.5*(qshear*omega * x(nb+nxb+i))**2 * recv_right(iarr_all_dn,i,:,:)
 #endif /* ISO */
-             recv_right (imya,i,:,:) = recv_right (imya,i,:,:) &
-                                           -qshear*omega * x(nb+nxb+i)     * recv_right(idna,i,:,:)
+             recv_right (iarr_all_my,i,:,:) = recv_right (iarr_all_my,i,:,:) &
+                                           -qshear*omega * x(nb+nxb+i)     * recv_right(iarr_all_dn,i,:,:)
           enddo
 
         endif !(bnd_xr == 'she')
@@ -171,19 +172,19 @@ subroutine bnd_u(dim)
 
           do i=1,nb
 #ifndef ISO
-             recv_left(iena,i,:,:) = recv_left(iena,i,:,:) &
-                                    +0.5*(qshear*omega * x(i))**2 * recv_left(idna,i,:,:)
+             recv_left(iarr_all_en,i,:,:) = recv_left(iarr_all_en,i,:,:) &
+                                    +0.5*(qshear*omega * x(i))**2 * recv_left(iarr_all_dn,i,:,:)
 #endif /* ISO */
-             recv_left(imya,i,:,:) = recv_left(imya,i,:,:) &
-                                         -qshear*omega * x(i)     * recv_left(idna,i,:,:)
+             recv_left(iarr_all_my,i,:,:) = recv_left(iarr_all_my,i,:,:) &
+                                         -qshear*omega * x(i)     * recv_left(iarr_all_dn,i,:,:)
           enddo
         endif !(bnd_xl == 'she')
 
         u(:,1:nb,:,:)              = recv_left(:,1:nb,:,:)
         u(:,nxb+nb+1:nxb+2*nb,:,:) = recv_right(:,1:nb,:,:)
 
-        u(idna,1:nb,:,:)              = max(u(idna,1:nb,:,:),smalld)
-        u(idna,nxb+nb+1:nxb+2*nb,:,:) = max(u(idna,nxb+nb+1:nxb+2*nb,:,:),smalld)
+        u(iarr_all_dn,1:nb,:,:)              = max(u(iarr_all_dn,1:nb,:,:),smalld)
+        u(iarr_all_dn,nxb+nb+1:nxb+2*nb,:,:) = max(u(iarr_all_dn,nxb+nb+1:nxb+2*nb,:,:),smalld)
       deallocate(send_left,send_right,recv_left,recv_right)
 #else /* SHEAR_MPI */
       if(pxsize .gt. 1) then
@@ -235,12 +236,12 @@ subroutine bnd_u(dim)
     if(pcoords(1) .eq. 0 .and. pcoords(2) .eq. 0) then
       do i=1,nb
         do j=nb+1,ny
-          u(idna,i,j,:) =  u(idna,j,2*nb+1-i,:)
-          u(imxa,i,j,:) = -u(imya,j,2*nb+1-i,:)
-          u(imya,i,j,:) =  u(imxa,j,2*nb+1-i,:)
-          u(imza,i,j,:) =  u(imza,j,2*nb+1-i,:)
+          u(iarr_all_dn,i,j,:) =  u(iarr_all_dn,j,2*nb+1-i,:)
+          u(iarr_all_mx,i,j,:) = -u(iarr_all_my,j,2*nb+1-i,:)
+          u(iarr_all_my,i,j,:) =  u(iarr_all_mx,j,2*nb+1-i,:)
+          u(iarr_all_mz,i,j,:) =  u(iarr_all_mz,j,2*nb+1-i,:)
 #ifndef ISO
-          u(iena,i,j,:) =  u(iena,j,2*nb+1-i,:)
+          u(iarr_all_en,i,j,:) =  u(iarr_all_en,j,2*nb+1-i,:)
 #endif /* ISO */
 #ifdef COSM_RAYS
           u(iecr,i,j,:) =  u(iecr,j,2*nb+1-i,:)
@@ -250,12 +251,12 @@ subroutine bnd_u(dim)
     endif
 
     if(procxyl .gt. 0) then
-      allocate(send_left(nu,nb,ny,nz), recv_left(nu,nx,nb,nz))
+      allocate(send_left(nvar,nb,ny,nz), recv_left(nvar,nx,nb,nz))
 
       send_left(:,:,:,:) = u(:,nb+1:2*nb,:,:)
 
-      CALL MPI_ISEND   (send_left , nu*nb*ny*nz, MPI_DOUBLE_PRECISION, procxyl, 70, comm, req(1), ierr)
-      CALL MPI_IRECV   (recv_left , nu*nx*nb*nz, MPI_DOUBLE_PRECISION, procxyl, 80, comm, req(2), ierr)
+      CALL MPI_ISEND   (send_left , nvar*nb*ny*nz, MPI_DOUBLE_PRECISION, procxyl, 70, comm, req(1), ierr)
+      CALL MPI_IRECV   (recv_left , nvar*nx*nb*nz, MPI_DOUBLE_PRECISION, procxyl, 80, comm, req(2), ierr)
 
       do ireq=1,2
         call MPI_WAIT(req(ireq),status(1,ireq),ierr)
@@ -263,12 +264,12 @@ subroutine bnd_u(dim)
 
       do i=1,nb
         do j=1,ny
-          u(idna,i,j,:) =  recv_left(idna,j,nb+1-i,:)
-          u(imxa,i,j,:) = -recv_left(imya,j,nb+1-i,:)
-          u(imya,i,j,:) =  recv_left(imxa,j,nb+1-i,:)
-          u(imza,i,j,:) =  recv_left(imza,j,nb+1-i,:)
+          u(iarr_all_dn,i,j,:) =  recv_left(iarr_all_dn,j,nb+1-i,:)
+          u(iarr_all_mx,i,j,:) = -recv_left(iarr_all_my,j,nb+1-i,:)
+          u(iarr_all_my,i,j,:) =  recv_left(iarr_all_mx,j,nb+1-i,:)
+          u(iarr_all_mz,i,j,:) =  recv_left(iarr_all_mz,j,nb+1-i,:)
 #ifndef ISO
-          u(iena,i,j,:) =  recv_left(iena,j,nb+1-i,:)
+          u(iarr_all_en,i,j,:) =  recv_left(iarr_all_en,j,nb+1-i,:)
 #endif /* ISO */
 #ifdef COSM_RAYS
           u(iecr,i,j,:) =  recv_left(iecr,j,nb+1-i,:)
@@ -285,12 +286,12 @@ subroutine bnd_u(dim)
     if(pcoords(2) .eq. 0 .and. pcoords(1) .eq. 0 ) then
       do j=1,nb
         do i=nb+1,nx
-          u(idna,i,j,:) =  u(idna,2*nb+1-j,i,:)
-          u(imxa,i,j,:) =  u(imya,2*nb+1-j,i,:)
-          u(imya,i,j,:) = -u(imxa,2*nb+1-j,i,:)
-          u(imza,i,j,:) =  u(imza,2*nb+1-j,i,:)
+          u(iarr_all_dn,i,j,:) =  u(iarr_all_dn,2*nb+1-j,i,:)
+          u(iarr_all_mx,i,j,:) =  u(iarr_all_my,2*nb+1-j,i,:)
+          u(iarr_all_my,i,j,:) = -u(iarr_all_mx,2*nb+1-j,i,:)
+          u(iarr_all_mz,i,j,:) =  u(iarr_all_mz,2*nb+1-j,i,:)
 #ifndef ISO
-          u(iena,i,j,:) =  u(iena,2*nb+1-j,i,:)
+          u(iarr_all_en,i,j,:) =  u(iarr_all_en,2*nb+1-j,i,:)
 #endif /* ISO */
 #ifdef COSM_RAYS
           u(iecr,i,j,:) =  u(iecr,2*nb+1-j,i,:)
@@ -300,12 +301,12 @@ subroutine bnd_u(dim)
 !   - interior to corner
       do j=1,nb
         do i=1,nb
-          u(idna,i,j,:) =   u(idna,2*nb+1-i,2*nb+1-j,:)
-          u(imxa,i,j,:) =  -u(imxa,2*nb+1-i,2*nb+1-j,:)
-          u(imya,i,j,:) =  -u(imya,2*nb+1-i,2*nb+1-j,:)
-          u(imza,i,j,:) =   u(imza,2*nb+1-i,2*nb+1-j,:)
+          u(iarr_all_dn,i,j,:) =   u(iarr_all_dn,2*nb+1-i,2*nb+1-j,:)
+          u(iarr_all_mx,i,j,:) =  -u(iarr_all_mx,2*nb+1-i,2*nb+1-j,:)
+          u(iarr_all_my,i,j,:) =  -u(iarr_all_my,2*nb+1-i,2*nb+1-j,:)
+          u(iarr_all_mz,i,j,:) =   u(iarr_all_mz,2*nb+1-i,2*nb+1-j,:)
 #ifndef ISO
-          u(iena,i,j,:) =   u(iena,2*nb+1-i,2*nb+1-j,:)
+          u(iarr_all_en,i,j,:) =   u(iarr_all_en,2*nb+1-i,2*nb+1-j,:)
 #endif /* ISO */
 #ifdef COSM_RAYS
           u(iecr,i,j,:) =   u(iecr,2*nb+1-i,2*nb+1-j,:)
@@ -315,12 +316,12 @@ subroutine bnd_u(dim)
     endif
 
     if(procyxl .gt. 0) then
-      allocate(send_left(nu,nx,nb,nz), recv_left(nu,nb,ny,nz))
+      allocate(send_left(nvar,nx,nb,nz), recv_left(nvar,nb,ny,nz))
 
       send_left(:,:,:,:) = u(:,:,nb+1:2*nb,:)
 
-      CALL MPI_ISEND   (send_left , nu*nx*nb*nz, MPI_DOUBLE_PRECISION, procyxl, 80, comm, req(1), ierr)
-      CALL MPI_IRECV   (recv_left , nu*nb*ny*nz, MPI_DOUBLE_PRECISION, procyxl, 70, comm, req(2), ierr)
+      CALL MPI_ISEND   (send_left , nvar*nx*nb*nz, MPI_DOUBLE_PRECISION, procyxl, 80, comm, req(1), ierr)
+      CALL MPI_IRECV   (recv_left , nvar*nb*ny*nz, MPI_DOUBLE_PRECISION, procyxl, 70, comm, req(2), ierr)
 
       do ireq=1,2
         call MPI_WAIT(req(ireq),status(1,ireq),ierr)
@@ -328,12 +329,12 @@ subroutine bnd_u(dim)
 
       do j=1,nb
         do i=1,nx
-          u(idna,i,j,:) =  recv_left(idna,nb+1-j,i,:)
-          u(imxa,i,j,:) =  recv_left(imya,nb+1-j,i,:)
-          u(imya,i,j,:) = -recv_left(imxa,nb+1-j,i,:)
-          u(imza,i,j,:) =  recv_left(imza,nb+1-j,i,:)
+          u(iarr_all_dn,i,j,:) =  recv_left(iarr_all_dn,nb+1-j,i,:)
+          u(iarr_all_mx,i,j,:) =  recv_left(iarr_all_my,nb+1-j,i,:)
+          u(iarr_all_my,i,j,:) = -recv_left(iarr_all_mx,nb+1-j,i,:)
+          u(iarr_all_mz,i,j,:) =  recv_left(iarr_all_mz,nb+1-j,i,:)
 #ifndef ISO
-          u(iena,i,j,:) =  recv_left(iena,nb+1-j,i,:)
+          u(iarr_all_en,i,j,:) =  recv_left(iarr_all_en,nb+1-j,i,:)
 #endif /* ISO */
 #ifdef COSM_RAYS
           u(iecr,i,j,:) =  recv_left(iecr,nb+1-j,i,:)
@@ -354,12 +355,12 @@ subroutine bnd_u(dim)
     if(pcoords(2) .eq. psize(2)-1 .and. pcoords(1) .eq. psize(1)-1) then
       do i=1,nx
 !        do j=ny-1,ny
-          u(idna,i,ny,:) =  u(idna,i,ny-1,:)
-          u(imxa,i,ny,:) =  u(imya,i,ny-1,:)
-          u(imya,i,ny,:) =  u(imxa,i,ny-1,:)
-          u(imza,i,ny,:) =  u(imza,i,ny-1,:)
+          u(iarr_all_dn,i,ny,:) =  u(iarr_all_dn,i,ny-1,:)
+          u(iarr_all_mx,i,ny,:) =  u(iarr_all_my,i,ny-1,:)
+          u(iarr_all_my,i,ny,:) =  u(iarr_all_mx,i,ny-1,:)
+          u(iarr_all_mz,i,ny,:) =  u(iarr_all_mz,i,ny-1,:)
 #ifndef ISO
-          u(iena,i,ny,:) =  u(iena,i,ny-1,:)
+          u(iarr_all_en,i,ny,:) =  u(iarr_all_en,i,ny-1,:)
 #endif /* ISO */
 #ifdef COSM_RAYS
           u(iecr,i,ny,:) =  u(iecr,i,ny-1,:)
@@ -369,16 +370,16 @@ subroutine bnd_u(dim)
     endif
 
     if(procyxr .gt. 0) then
-      allocate(send_left(nu,nx,nb,nz), recv_left(nu,nb,ny,nz))
+      allocate(send_left(nvar,nx,nb,nz), recv_left(nvar,nb,ny,nz))
 
       do j=1,nb
         send_left(:,:,nb+1-j,:)    =  u(:,:,ny+1-min(j,2),:)
-        send_left(imxa,:,nb+1-j,:) = -u(imya,:,nx+1-min(j,2),:)
-        send_left(imya,:,nb+1-j,:) =  u(imxa,:,nx+1-min(j,2),:)
+        send_left(iarr_all_mx,:,nb+1-j,:) = -u(iarr_all_my,:,nx+1-min(j,2),:)
+        send_left(iarr_all_my,:,nb+1-j,:) =  u(iarr_all_mx,:,nx+1-min(j,2),:)
       enddo
 
-      CALL MPI_ISEND   (send_left , nu*nx*nb*nz, MPI_DOUBLE_PRECISION, procyxr, 170, comm, req(1), ierr)
-      CALL MPI_IRECV   (recv_left , nu*nb*ny*nz, MPI_DOUBLE_PRECISION, procyxr, 180, comm, req(2), ierr)
+      CALL MPI_ISEND   (send_left , nvar*nx*nb*nz, MPI_DOUBLE_PRECISION, procyxr, 170, comm, req(1), ierr)
+      CALL MPI_IRECV   (recv_left , nvar*nb*ny*nz, MPI_DOUBLE_PRECISION, procyxr, 180, comm, req(2), ierr)
 
       do ireq=1,2
         call MPI_WAIT(req(ireq),status(1,ireq),ierr)
@@ -387,12 +388,12 @@ subroutine bnd_u(dim)
 !      do i=1,nb
 !        do j=1,ny
 	   u(:,:,ny,:) = u(:,:,ny-1,:)
-!          u(idna,i,j,:) =  recv_left(idna,j,nb+1-i,:)
-!          u(imxa,i,j,:) = -recv_left(imya,j,nb+1-i,:)
-!          u(imya,i,j,:) =  recv_left(imxa,j,nb+1-i,:)
-!          u(imza,i,j,:) =  recv_left(imza,j,nb+1-i,:)
+!          u(iarr_all_dn,i,j,:) =  recv_left(iarr_all_dn,j,nb+1-i,:)
+!          u(iarr_all_mx,i,j,:) = -recv_left(iarr_all_my,j,nb+1-i,:)
+!          u(iarr_all_my,i,j,:) =  recv_left(iarr_all_mx,j,nb+1-i,:)
+!          u(iarr_all_mz,i,j,:) =  recv_left(iarr_all_mz,j,nb+1-i,:)
 #ifndef ISO
-!          u(iena,i,j,:) =  recv_left(iena,j,nb+1-i,:)
+!          u(iarr_all_en,i,j,:) =  recv_left(iarr_all_en,j,nb+1-i,:)
 #endif /* ISO */
 #ifdef COSM_RAYS
 !          u(iecr,i,j,:) =  recv_left(iecr,j,nb+1-i,:)
@@ -409,12 +410,12 @@ subroutine bnd_u(dim)
     if(pcoords(1) .eq. psize(1)-1 .and. pcoords(2) .eq. psize(2)-1 ) then
       do i=nx+1-nb,nx
         do j=1,ny+i-nx-1
-          u(idna,i,j,:) =  u(idna,max(j,ny-1),i,:)
-          u(imxa,i,j,:) = -u(imya,max(j,ny-1),i,:)
-          u(imya,i,j,:) =  u(imxa,max(j,ny-1),i,:)
-          u(imza,i,j,:) =  u(imza,max(j,ny-1),i,:)
+          u(iarr_all_dn,i,j,:) =  u(iarr_all_dn,max(j,ny-1),i,:)
+          u(iarr_all_mx,i,j,:) = -u(iarr_all_my,max(j,ny-1),i,:)
+          u(iarr_all_my,i,j,:) =  u(iarr_all_mx,max(j,ny-1),i,:)
+          u(iarr_all_mz,i,j,:) =  u(iarr_all_mz,max(j,ny-1),i,:)
 #ifndef ISO
-          u(iena,i,j,:) =  u(iena,max(j,ny-1),i,:)
+          u(iarr_all_en,i,j,:) =  u(iarr_all_en,max(j,ny-1),i,:)
 #endif /* ISO */
 #ifdef COSM_RAYS
           u(iecr,i,j,:) =  u(iecr,max(j,ny-1),i,:)
@@ -424,12 +425,12 @@ subroutine bnd_u(dim)
     endif
 
     if(procxyr .gt. 0) then
-      allocate(send_left(nu,nb,ny,nz), recv_left(nu,nx,nb,nz))
+      allocate(send_left(nvar,nb,ny,nz), recv_left(nvar,nx,nb,nz))
 
       send_left(:,:,:,:) = u(:,:,ny-nb+1:ny,:)
 
-      CALL MPI_ISEND   (send_left , nu*nb*ny*nz, MPI_DOUBLE_PRECISION, procxyr, 180, comm, req(1), ierr)
-      CALL MPI_IRECV   (recv_left , nu*nx*nb*nz, MPI_DOUBLE_PRECISION, procxyr, 170, comm, req(2), ierr)
+      CALL MPI_ISEND   (send_left , nvar*nb*ny*nz, MPI_DOUBLE_PRECISION, procxyr, 180, comm, req(1), ierr)
+      CALL MPI_IRECV   (recv_left , nvar*nx*nb*nz, MPI_DOUBLE_PRECISION, procxyr, 170, comm, req(2), ierr)
 
       do ireq=1,2
         call MPI_WAIT(req(ireq),status(1,ireq),ierr)
@@ -437,12 +438,12 @@ subroutine bnd_u(dim)
 
       do j=1,ny
         do i=1,nb
-          u(idna,nx-nb+i,j,:) =  recv_left(idna,j,i,:)
-          u(imxa,nx-nb+i,j,:) =  recv_left(imya,j,i,:)
-          u(imya,nx-nb+i,j,:) =  recv_left(imxa,j,i,:)
-          u(imza,nx-nb+i,j,:) =  recv_left(imza,j,i,:)
+          u(iarr_all_dn,nx-nb+i,j,:) =  recv_left(iarr_all_dn,j,i,:)
+          u(iarr_all_mx,nx-nb+i,j,:) =  recv_left(iarr_all_my,j,i,:)
+          u(iarr_all_my,nx-nb+i,j,:) =  recv_left(iarr_all_mx,j,i,:)
+          u(iarr_all_mz,nx-nb+i,j,:) =  recv_left(iarr_all_mz,j,i,:)
 #ifndef ISO
-          u(iena,nx-nb+i,j,:) =  recv_left(iena,j,i,:)
+          u(iarr_all_en,nx-nb+i,j,:) =  recv_left(iarr_all_en,j,i,:)
 #endif /* ISO */
 #ifdef COSM_RAYS
           u(iecr,nx-nb+i,j,:) =  recv_left(iecr,j,i,:)
@@ -487,14 +488,14 @@ subroutine bnd_u(dim)
    if( (bnd_xl == 'she').and.(bnd_xr == 'she')) then   ! 2d ONLY !!!!!!!
       allocate(temp(nxd,ny,nz))
       allocate(tem2(nxd,ny,nz))
-      do i = 1, nu
-         if( i == imya ) then
+      do i = 1, nvar
+         if( i == iarr_all_my ) then
            do j = 1,nx
              u(i,j,:,:) = u(i,j,:,:) + qshear*omega*x(j)*u(1,j,:,:)
            enddo
          endif
 #ifndef ISO
-         if( i == iena ) then
+         if( i == iarr_all_en ) then
            do j = 1,nx
              u(i,j,:,:) = u(i,j,:,:) - 0.5*(qshear*omega*x(j))**2 * u(1,j,:,:)
            enddo
@@ -505,13 +506,13 @@ subroutine bnd_u(dim)
 
          u(i,1:nb,:,:) = tem2(nxd-nb+1:nxd,:,:)
          u(i,nxd+nb+1:nxd+2*nb,:,:) = tem2(1:nb,:,:)
-         if( i == imya ) then
+         if( i == iarr_all_my ) then
            do j = 1,nx
              u(i,j,:,:) = u(i,j,:,:) - qshear*omega*x(j) * u(1,j,:,:)
            enddo
          endif
 #ifndef ISO
-         if( i == iena ) then
+         if( i == iarr_all_en ) then
            do j = 1,nx
              u(i,j,:,:) = u(i,j,:,:) + 0.5*(qshear*omega*x(j))**2  * u(1,j,:,:)
            enddo
@@ -526,7 +527,7 @@ subroutine bnd_u(dim)
       enddo
       deallocate(temp,tem2)
    endif
-   u(idna,:,:,:) = max(u(idna,:,:,:),smalld)
+   u(iarr_all_dn,:,:,:) = max(u(iarr_all_dn,:,:,:),smalld)
 #endif /* SHEAR_MY */
 
   select case (dim)
@@ -546,10 +547,10 @@ subroutine bnd_u(dim)
         case ('ref')
           do ib=1,nb
 
-            u((/idna,imya,imza/),nb+1-ib,:,:)  = u((/idna,imya,imza/),nb+ib,:,:)
-            u(imxa,nb+1-ib,:,:)                =-u(imxa,nb+ib,:,:)
+            u((/iarr_all_dn,iarr_all_my,iarr_all_mz/),nb+1-ib,:,:)  = u((/iarr_all_dn,iarr_all_my,iarr_all_mz/),nb+ib,:,:)
+            u(iarr_all_mx,nb+1-ib,:,:)                =-u(iarr_all_mx,nb+ib,:,:)
 #ifndef ISO
-            u(iena,nb+1-ib,:,:)                = u(iena,nb+ib,:,:)
+            u(iarr_all_en,nb+1-ib,:,:)                = u(iarr_all_en,nb+ib,:,:)
 #endif /* ISO */
 #ifdef COSM_RAYS
             u(iecr,nb+1-ib,:,:)                = u(iecr,nb+ib,:,:)
@@ -565,10 +566,10 @@ subroutine bnd_u(dim)
         case ('outd')
           do ib=1,nb
 
-            u((/idna,imya,imza/),ib,:,:)       = u((/idna,imya,imza/),nb+1,:,:)
-            u(imxa,ib,:,:)                     = min(u(imxa,nb+1,:,:),0.0)
+            u((/iarr_all_dn,iarr_all_my,iarr_all_mz/),ib,:,:)       = u((/iarr_all_dn,iarr_all_my,iarr_all_mz/),nb+1,:,:)
+            u(iarr_all_mx,ib,:,:)                     = min(u(iarr_all_mx,nb+1,:,:),0.0)
 #ifndef ISO
-            u(iena,ib,:,:)                     = u(iena,nb+1,:,:)
+            u(iarr_all_en,ib,:,:)                     = u(iarr_all_en,nb+1,:,:)
 #endif /* ISO */
 #ifdef COSM_RAYS
             u(iecr,ib,:,:)                     = smallecr
@@ -596,10 +597,10 @@ subroutine bnd_u(dim)
         case ('ref')
           do ib=1,nb
 
-            u((/idna,imya,imza/),nb+nxb+ib,:,:) = u((/idna,imya,imza/),nb+nxb+1-ib,:,:)
-            u(imxa,nb+nxb+ib,:,:)               =-u(imxa,nb+nxb+1-ib,:,:)
+            u((/iarr_all_dn,iarr_all_my,iarr_all_mz/),nb+nxb+ib,:,:) = u((/iarr_all_dn,iarr_all_my,iarr_all_mz/),nb+nxb+1-ib,:,:)
+            u(iarr_all_mx,nb+nxb+ib,:,:)               =-u(iarr_all_mx,nb+nxb+1-ib,:,:)
 #ifndef ISO
-            u(iena,nb+nxb+ib,:,:)               = u(iena,nb+nxb+1-ib,:,:)
+            u(iarr_all_en,nb+nxb+ib,:,:)               = u(iarr_all_en,nb+nxb+1-ib,:,:)
 #endif /* ISO */
 #ifdef COSM_RAYS
             u(iecr,nb+nxb+ib,:,:)               = u(iecr,nb+nxb+1-ib,:,:)
@@ -615,10 +616,10 @@ subroutine bnd_u(dim)
         case ('outd')
           do ib=1,nb
 
-            u((/idna,imya,imza/),nb+nxb+ib,:,:) = u((/idna,imya,imza/),nb+nxb,:,:)
-            u(imxa,nb+nxb+ib,:,:)               = max(u(imxa,nb+nxb,:,:),0.0)
+            u((/iarr_all_dn,iarr_all_my,iarr_all_mz/),nb+nxb+ib,:,:) = u((/iarr_all_dn,iarr_all_my,iarr_all_mz/),nb+nxb,:,:)
+            u(iarr_all_mx,nb+nxb+ib,:,:)               = max(u(iarr_all_mx,nb+nxb,:,:),0.0)
 #ifndef ISO
-            u(iena,nb+nxb+ib,:,:)               = u(iena,nb+nxb,:,:)
+            u(iarr_all_en,nb+nxb+ib,:,:)               = u(iarr_all_en,nb+nxb,:,:)
 #endif /* ISO */
 #ifdef COSM_RAYS
             u(iecr,nb+nxb+ib,:,:)               = smallecr
@@ -643,10 +644,10 @@ subroutine bnd_u(dim)
         case ('ref')
           do ib=1,nb
 
-            u((/idna,imxa,imza/),:,nb+1-ib,:)   = u((/idna,imxa,imza/),:,nb+ib,:)
-            u(imya,:,nb+1-ib,:)                 =-u(imya,:,nb+ib,:)
+            u((/iarr_all_dn,iarr_all_mx,iarr_all_mz/),:,nb+1-ib,:)   = u((/iarr_all_dn,iarr_all_mx,iarr_all_mz/),:,nb+ib,:)
+            u(iarr_all_my,:,nb+1-ib,:)                 =-u(iarr_all_my,:,nb+ib,:)
 #ifndef ISO
-            u(iena,:,nb+1-ib,:)                 = u(iena,:,nb+ib,:)
+            u(iarr_all_en,:,nb+1-ib,:)                 = u(iarr_all_en,:,nb+ib,:)
 #endif /* ISO */
 #ifdef COSM_RAYS
             u(iecr,:,nb+1-ib,:)                 = u(iecr,:,nb+ib,:)
@@ -662,10 +663,10 @@ subroutine bnd_u(dim)
         case ('outd')
           do ib=1,nb
 
-            u((/idna,imxa,imza/),:,ib,:)        = u((/idna,imxa,imza/),:,nb+1,:)
-            u(imya,:,ib,:)                      = min(u(imya,:,nb+1,:),0.0)
+            u((/iarr_all_dn,iarr_all_mx,iarr_all_mz/),:,ib,:)        = u((/iarr_all_dn,iarr_all_mx,iarr_all_mz/),:,nb+1,:)
+            u(iarr_all_my,:,ib,:)                      = min(u(iarr_all_my,:,nb+1,:),0.0)
 #ifndef ISO
-            u(iena,:,ib,:)                      = u(iena,:,nb+1,:)
+            u(iarr_all_en,:,ib,:)                      = u(iarr_all_en,:,nb+1,:)
 #endif /* ISO */
 #ifdef COSM_RAYS
             u(iecr,:,ib,:)                      = smallecr
@@ -687,10 +688,10 @@ subroutine bnd_u(dim)
         case ('ref')
           do ib=1,nb
 
-            u((/idna,imxa,imza/),:,nb+nyb+ib,:) = u((/idna,imxa,imza/),:,nb+nyb+1-ib,:)
-            u(imya,:,nb+nyb+ib,:)               =-u(imya,:,nb+nyb+1-ib,:)
+            u((/iarr_all_dn,iarr_all_mx,iarr_all_mz/),:,nb+nyb+ib,:) = u((/iarr_all_dn,iarr_all_mx,iarr_all_mz/),:,nb+nyb+1-ib,:)
+            u(iarr_all_my,:,nb+nyb+ib,:)               =-u(iarr_all_my,:,nb+nyb+1-ib,:)
 #ifndef ISO
-            u(iena,:,nb+nyb+ib,:)               = u(iena,:,nb+nyb+1-ib,:)
+            u(iarr_all_en,:,nb+nyb+ib,:)               = u(iarr_all_en,:,nb+nyb+1-ib,:)
 #endif /* ISO */
 #ifdef COSM_RAYS
             u(iecr,:,nb+nyb+ib,:)               = u(iecr,:,nb+nyb+1-ib,:)
@@ -706,10 +707,10 @@ subroutine bnd_u(dim)
         case ('outd')
           do ib=1,nb
 
-            u((/idna,imxa,imza/),:,nb+nyb+ib,:) = u((/idna,imxa,imza/),:,nb+nyb,:)
-            u(imya,:,nb+nyb+ib,:)               = max(u(imya,:,nb+nyb,:),0.0)
+            u((/iarr_all_dn,iarr_all_mx,iarr_all_mz/),:,nb+nyb+ib,:) = u((/iarr_all_dn,iarr_all_mx,iarr_all_mz/),:,nb+nyb,:)
+            u(iarr_all_my,:,nb+nyb+ib,:)               = max(u(iarr_all_my,:,nb+nyb,:),0.0)
 #ifndef ISO
-            u(iena,:,nb+nyb+ib,:)               = u(iena,:,nb+nyb,:)
+            u(iarr_all_en,:,nb+nyb+ib,:)               = u(iarr_all_en,:,nb+nyb,:)
 #endif /* ISO */
 #ifdef COSM_RAYS
             u(iecr,:,nb+nyb+ib,:)               = smallecr
@@ -731,10 +732,10 @@ subroutine bnd_u(dim)
         case ('ref')
           do ib=1,nb
 
-            u((/idna,imxa,imya/),:,:,nb+1-ib)   = u((/idna,imxa,imya/),:,:,nb+ib)
-            u(imza,:,:,nb+1-ib)                 =-u(imza,:,:,nb+ib)
+            u((/iarr_all_dn,iarr_all_mx,iarr_all_my/),:,:,nb+1-ib)   = u((/iarr_all_dn,iarr_all_mx,iarr_all_my/),:,:,nb+ib)
+            u(iarr_all_mz,:,:,nb+1-ib)                 =-u(iarr_all_mz,:,:,nb+ib)
 #ifndef ISO
-            u(iena,:,:,nb+1-ib)                 = u(iena,:,:,nb+ib)
+            u(iarr_all_en,:,:,nb+1-ib)                 = u(iarr_all_en,:,:,nb+ib)
 #endif /* ISO */
 #ifdef COSM_RAYS
             u(iecr,:,:,nb+1-ib)                 = u(iecr,:,:,nb+ib)
@@ -750,10 +751,10 @@ subroutine bnd_u(dim)
         case ('outd')
           do ib=1,nb
 
-            u((/idna,imxa,imya/),:,:,ib)        = u((/idna,imxa,imya/),:,:,nb+1)
-            u(imza,:,:,ib)                      = min(u(imza,:,:,nb+1),0.0)
+            u((/iarr_all_dn,iarr_all_mx,iarr_all_my/),:,:,ib)        = u((/iarr_all_dn,iarr_all_mx,iarr_all_my/),:,:,nb+1)
+            u(iarr_all_mz,:,:,ib)                      = min(u(iarr_all_mz,:,:,nb+1),0.0)
 #ifndef ISO
-            u(iena,:,:,ib)                      = u(iena,:,:,nb+1)
+            u(iarr_all_en,:,:,ib)                      = u(iarr_all_en,:,:,nb+1)
 #endif /* ISO */
 #ifdef COSM_RAYS
             u(iecr,:,:,ib)                      = smallecr
@@ -763,13 +764,13 @@ subroutine bnd_u(dim)
         case ('outh')
           do ib=1,nb
             kb = nb+2-ib
-            db = u(idna,:,:,kb)
+            db = u(iarr_all_dn,:,:,kb)
             db = max(db,smalld)
 #ifdef ISO
             csi2b = csi2
 #else /* ISO */
-            ekb= 0.5*(u(imxa,:,:,kb)**2+u(imya,:,:,kb)**2+u(imza,:,:,kb)**2)/db
-            eib = u(iena,:,:,kb) - ekb
+            ekb= 0.5*(u(iarr_all_mx,:,:,kb)**2+u(iarr_all_my,:,:,kb)**2+u(iarr_all_mz,:,:,kb)**2)/db
+            eib = u(iarr_all_en,:,:,kb) - ekb
             eib = max(eib,smallei)
             do ifluid=1,nfluid
                csi2b(ifluid,:,:) = (gamma(ifluid)-1.0)*eib(ifluid,:,:)/db(ifluid,:,:)
@@ -800,16 +801,16 @@ subroutine bnd_u(dim)
                 db(:,i,j)  = dprofs(:,nsub+1)
                 db(:,i,j)  = max(db(:,i,j), smalld)
 
-                u(idna,i,j,kb-1)           =     db(:,i,j)
-                u(imxa,i,j,kb-1)           =     u(imxa,i,j,kb)
-                u(imya,i,j,kb-1)           =     u(imya,i,j,kb)
-                u(imza,i,j,kb-1)           =     u(imza,i,j,kb)
+                u(iarr_all_dn,i,j,kb-1)           =     db(:,i,j)
+                u(iarr_all_mx,i,j,kb-1)           =     u(iarr_all_mx,i,j,kb)
+                u(iarr_all_my,i,j,kb-1)           =     u(iarr_all_my,i,j,kb)
+                u(iarr_all_mz,i,j,kb-1)           =     u(iarr_all_mz,i,j,kb)
 ! zakomentowac nastepna linie jesli warunek diodowy nie ma byc stosowany razem z hydrostatycznym
-!                u(imza,i,j,kb-1)               =     min(u(imza,i,j,kb-1),0.0)
+!                u(iarr_all_mz,i,j,kb-1)               =     min(u(iarr_all_mz,i,j,kb-1),0.0)
 #ifndef ISO
                 eib(:,i,j) = csi2b(:,i,j)*db(:,i,j)/(gamma-1)
                 eib(:,i,j) = max(eib(:,i,j), smallei)
-                u(iena,i,j,kb-1)                =     ekb(:,i,j) + eib(:,i,j)
+                u(iarr_all_en,i,j,kb-1)                =     ekb(:,i,j) + eib(:,i,j)
 #endif /* ISO */
 #ifdef COSM_RAYS
                 u(iecr,i,j,kb-1)                =     smallecr
@@ -830,10 +831,10 @@ subroutine bnd_u(dim)
         case ('ref')
           do ib=1,nb
 
-            u((/idna,imxa,imya/),:,:,nb+nzb+ib) = u((/idna,imxa,imya/),:,:,nb+nzb+1-ib)
-            u(imza,:,:,nb+nzb+ib)               =-u(imza,:,:,nb+nzb+1-ib)
+            u((/iarr_all_dn,iarr_all_mx,iarr_all_my/),:,:,nb+nzb+ib) = u((/iarr_all_dn,iarr_all_mx,iarr_all_my/),:,:,nb+nzb+1-ib)
+            u(iarr_all_mz,:,:,nb+nzb+ib)               =-u(iarr_all_mz,:,:,nb+nzb+1-ib)
 #ifndef ISO
-            u(iena,:,:,nb+nzb+ib)               = u(iena,:,:,nb+nzb+1-ib)
+            u(iarr_all_en,:,:,nb+nzb+ib)               = u(iarr_all_en,:,:,nb+nzb+1-ib)
 #endif /* ISO */
 #ifdef COSM_RAYS
             u(iecr,:,:,nb+nzb+ib)               = u(iecr,:,:,nb+nzb+1-ib)
@@ -849,10 +850,10 @@ subroutine bnd_u(dim)
         case ('outd')
           do ib=1,nb
 
-            u((/idna,imxa,imya/),:,:,nb+nzb+ib) = u((/idna,imxa,imya/),:,:,nb+nzb)
-            u(imza,:,:,nb+nzb+ib)               = max(u(imza,:,:,nb+nzb),0.0)
+            u((/iarr_all_dn,iarr_all_mx,iarr_all_my/),:,:,nb+nzb+ib) = u((/iarr_all_dn,iarr_all_mx,iarr_all_my/),:,:,nb+nzb)
+            u(iarr_all_mz,:,:,nb+nzb+ib)               = max(u(iarr_all_mz,:,:,nb+nzb),0.0)
 #ifndef ISO
-            u(iena,:,:,nb+nzb+ib)               = u(iena,:,:,nb+nzb)
+            u(iarr_all_en,:,:,nb+nzb+ib)               = u(iarr_all_en,:,:,nb+nzb)
 #endif /* ISO */
 #ifdef COSM_RAYS
             u(iecr,:,:,nb+nzb+ib)               = smallecr
@@ -862,13 +863,13 @@ subroutine bnd_u(dim)
         case ('outh')
           do ib=1,nb
             kb = nb+nzb-1+ib
-            db = u(idna,:,:,kb)
+            db = u(iarr_all_dn,:,:,kb)
             db = max(db,smalld)
 #ifdef ISO
             csi2b = csi2
 #else /* ISO */
-            ekb= 0.5*(u(imxa,:,:,kb)**2+u(imya,:,:,kb)**2+u(imza,:,:,kb)**2)/db
-            eib = u(iena,:,:,kb) - ekb
+            ekb= 0.5*(u(iarr_all_mx,:,:,kb)**2+u(iarr_all_my,:,:,kb)**2+u(iarr_all_mz,:,:,kb)**2)/db
+            eib = u(iarr_all_en,:,:,kb) - ekb
             eib = max(eib,smallei)
             do ifluid=1,nfluid
                csi2b(ifluid,:,:) = (gamma(ifluid)-1.0)*eib(ifluid,:,:)/db(ifluid,:,:)
@@ -899,16 +900,16 @@ subroutine bnd_u(dim)
                 db(:,i,j)  = dprofs(:,nsub+1)
                 db(:,i,j)  = max(db(:,i,j), smalld)
 
-                u(idna,i,j,kb+1)      =     db(:,i,j)
-                u(imxa,i,j,kb+1)      =     u(imxa,i,j,kb)
-                u(imya,i,j,kb+1)      =     u(imya,i,j,kb)
-                u(imza,i,j,kb+1)      =     u(imza,i,j,kb)
+                u(iarr_all_dn,i,j,kb+1)      =     db(:,i,j)
+                u(iarr_all_mx,i,j,kb+1)      =     u(iarr_all_mx,i,j,kb)
+                u(iarr_all_my,i,j,kb+1)      =     u(iarr_all_my,i,j,kb)
+                u(iarr_all_mz,i,j,kb+1)      =     u(iarr_all_mz,i,j,kb)
 ! zakomentowac nastepna linie jesli warunek diodowy nie ma byc stosowany razem z hydrostatycznym
-!                u(imza,i,j,kb+1)           =     max(u(imza,i,j,kb+1),0.0)
+!                u(iarr_all_mz,i,j,kb+1)           =     max(u(iarr_all_mz,i,j,kb+1),0.0)
 #ifndef ISO
                 eib(:,i,j) = csi2b(:,i,j)*db(:,i,j)/(gamma-1)
                 eib(:,i,j) = max(eib(:,i,j), smallei)
-                u(iena,i,j,kb+1)           =     ekb(:,i,j) + eib(:,i,j)
+                u(iarr_all_en,i,j,kb+1)           =     ekb(:,i,j) + eib(:,i,j)
 #endif /* ISO */
 #ifdef COSM_RAYS
                 u(iecr,i,j,kb+1)           =     smallecr
