@@ -16,10 +16,11 @@ module fluidindex
 #endif /* COSM_RAYS */ 
    integer, allocatable, dimension(:) :: iarr_all_swpx, iarr_all_swpy, iarr_all_swpz
 
-#ifdef IONIZED
    integer :: nmag
-   integer, allocatable, dimension(:) :: iarr_mag_swpx, iarr_mag_swpy, iarr_mag_swpz, iarr_all_mag
    integer, parameter  :: ibx=1, iby=2, ibz=3
+
+#ifdef IONIZED
+   integer, allocatable, dimension(:) :: iarr_mag_swpx, iarr_mag_swpy, iarr_mag_swpz, iarr_all_mag
 #ifdef RESISTIVE
    integer, parameter  :: icx=1, icy=2, icz=3
 #endif /RESISTIVE */

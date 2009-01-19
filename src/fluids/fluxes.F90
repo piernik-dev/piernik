@@ -12,16 +12,16 @@ module fluxes
   use fluxesionized, only : flux_ion 
 #endif /* IONIZED */
 #ifdef NEUTRAL
-  use initneutral, only : iarr_ion
-  use fluxesneutral, only : flux_neut
+  use initneutral, only : iarr_neu
+  use fluxesneutral, only : flux_neu
 #endif /* NEUTRAL */
 #ifdef DUST
-  use initdust, only : iarr_dust
-  use fluxesdust, only : flux_dust
+  use initdust, only : iarr_dst
+  use fluxesdust, only : flux_dst
 #endif /* DUST */
 #ifdef COSM_RAYS
-  use initcr, only : iarr_cr
-  use fluxescr, only : flux_cr
+  use initcrs, only : iarr_crs
+  use fluxescr, only : flux_crs
 #endif /* COSM_RAYS */
 
 contains
@@ -38,21 +38,22 @@ subroutine all_fluxes(flux,cfr,uu,bb,n)
 
     use fluidindex, only : nvar
 
-#ifdef IONIZED
     use fluidindex, only : nmag
+
+#ifdef IONIZED
     use fluidindex, only : nvar_ion
 #endif /* IONIZED */
 
 #ifdef NEUTRAL
-    use fluidindex, only : nvar_neut
+    use fluidindex, only : nvar_neu
 #endif /NEUTRAL
 
 #ifdef DUST
-    use fluidindex, only : nvar_dust
+    use fluidindex, only : nvar_dst
 #endif /* DUST */
 
 #ifdef COSM_RAYS
-    use cosmic_rays, only : nvar_cr
+    use cosmic_rays, only : nvar_crs
 #endif /* COSM_RAYS */
 
     implicit none
@@ -65,15 +66,15 @@ subroutine all_fluxes(flux,cfr,uu,bb,n)
 #endif /* IONIZED */
 
 #ifdef NEUTRAL
-    real, dimension(nvar_neut,n) :: fluxneut,cfrneut,uuneut
+    real, dimension(nvar_neu,n) :: fluxneu,cfrneu,uuneu
 #endif /* NEUTRAL */
 
 #ifdef DUST
-    real, dimension(nvar_dust,n) :: fluxdust,cfrdust,uudust
+    real, dimension(nvar_dst,n) :: fluxdst,cfrdst,uudst
 #endif /* DUST */
 
 #ifdef COSM_RAYS
-    real, dimension(nvar_cr,n) :: fluxcr,uucr
+    real, dimension(nvar_crs,n) :: fluxcrs,uucrs
 #endif /* COSM_RAYS */
 
 #ifdef IONIZED
@@ -91,26 +92,26 @@ subroutine all_fluxes(flux,cfr,uu,bb,n)
 !   stop
 
 #ifdef NEUTRAL
-   uuneut=uu(iarr_neut,:)
-   call flux_neutral(fluxneut,cfrneut,uuneut,n)
-   flux(iarr_neut,:)=fluxneut
-   cfr(iarr_neut,:)=cfrneut
-   uu(iarr_neut,:)=uuneut
+   uuneu=uu(iarr_neu,:)
+   call flux_neutral(fluxneu,cfrneu,uuneu,n)
+   flux(iarr_neu,:)=fluxneu
+   cfr(iarr_neu,:)=cfrneu
+   uu(iarr_neu,:)=uuneu
 #endif /* NEUTRAL */
 
 #ifdef DUST
-   uudust=uu(iarr_dust,:)
-   call flux_dust(fluxdust,cfrdust,uudust,n)
-   flux(iarr_dust,:)=fluxdust
-   cfr(iarr_dust,:)=cfrdust
-   uu(iarr_dust,:)=uudust
+   uudst=uu(iarr_dst,:)
+   call flux_dst(fluxdst,cfrdst,uudst,n)
+   flux(iarr_dst,:)=fluxdst
+   cfr(iarr_dst,:)=cfrdst
+   uu(iarr_dst,:)=uudst
 #endif /* DUST */
 
 #ifdef COSM_RAYS
-   uucr=uu(iarr_cr,:)
-   call flux_cr(fluxcr,uucr,n)
-   flux(iarr_cr,:)=fluxcr
-   uu(iarr_cr,:)=uucr
+   uucrs=uu(iarr_crs,:)
+   call flux_crs(fluxcrs,uucrs,n)
+   flux(iarr_crs,:)=fluxcrs
+   uu(iarr_crs,:)=uucrs
 #endif /* COSM_RAYS */
 
 end subroutine all_fluxes
