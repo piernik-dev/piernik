@@ -7,7 +7,7 @@ module fluxesneutral
   contains
 !==========================================================================================
 
-  subroutine flux_neu(flux,cfr,uu,bb,n)
+  subroutine flux_neu(flux,cfr,uu,n)
     use initneutral, only : gamma_neu, cs_iso_neu2
     use constants
     use fluidindex,  only : nvar
@@ -17,7 +17,7 @@ module fluxesneutral
     use initneutral, only : ienn
 #endif /* ISO */
 
-    use timestepneut, only : c_neu
+    use timestepneutral, only : c_neu
     implicit none
     integer n
     real, dimension(nvar,n):: flux,uu,cfr
@@ -43,8 +43,7 @@ module fluxesneutral
     flux(imyn,RNG)=uu(imyn,RNG)*vx(RNG)
     flux(imzn,RNG)=uu(imzn,RNG)*vx(RNG)
 #ifndef ISO
-    flux(ienn,RNG)=(uu(ienn,RNG)+p(RNG))*vx(RNG) &
-                )/uu(idnn,RNG)
+    flux(ienn,RNG)=(uu(ienn,RNG)+p(RNG))*vx(RNG) 
 #endif /* ISO */
 
 #ifdef LOCAL_FR_SPEED
