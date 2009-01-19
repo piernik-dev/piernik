@@ -20,7 +20,7 @@ module fluxesionized
 !#ifdef COSM_RAYS
 !    use arrays, only : iecr
 !#endif /* COSM_RAYS */
-    use timestepion, only : c_ion
+    use timestepionized, only : c_ion
     implicit none
     integer n
     real, dimension(nvar,n):: flux,uu,cfr
