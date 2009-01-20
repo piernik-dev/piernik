@@ -1,6 +1,5 @@
 ! $Id$
 #include "piernik.def"
-
 !=====================================================================
 !!
 !!  dataio module responsible for data output
@@ -11,11 +10,8 @@ module dataio
 
 ! Written by G. Kowal
 ! Modified for this code and extended by M.Hanasz
-! modifications and extensions by D.Woltanski in lines: 23, 65, 132, 133, 136-137,
-! 474-476, 478, 527-532, 583, 585, 658-669, 829-830, 932, 936, 967, 971-975
   use types
   use mpi_setup
-!  use utils
 #ifdef RESISTIVITY
 !  use resistivity
 #endif /* RESISTIVITY */
@@ -37,13 +33,10 @@ module dataio
 
   type(hdf) :: chdf
 
-
   integer nchar
   character msg*16
   real msg_param
 
-!  integer ctoi
-!  external ctoi
   character hostfull*(80), host*8, fhost*10, fpid*10
   integer :: pid, uid, ihost, scstatus
   real vx_max, vy_max, vz_max, va2max,va_max, cs2max, cs_max, &
@@ -55,8 +48,6 @@ module dataio
 #ifdef KEPLER_SUPPRESSION
   real asupp_min, asupp_max
 #endif /* KEPLER_SUPPRESSION */
-
-
 
   contains
 
@@ -208,7 +199,6 @@ module dataio
     character :: filename*128
 #endif /* HDF5 */
 
-
 !- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
     if (output .eq. 'log' .or. output .eq. 'end') then
@@ -221,14 +211,6 @@ module dataio
 
 !    CALL checkdf
 
-#ifdef GALACTIC_DISK
-    if(output .eq. 'gpt') then
-      call write_gpot
-    endif
-#endif /* GALACTIC_DISK */
-#ifdef BLOB
-      call write_blob
-#endif /* BLOB */
 #ifdef USER_IO
       call user_io_routine
 #endif /* USER_IO */
@@ -240,6 +222,7 @@ module dataio
 #else /* HDFSWEEP */
     if (dt_hdf .gt. 0.0 .and. nstep .gt. step_hdf .and. output .ne. 'gpt') then
 #endif /* HDFSWEEP */
+
 !      if ((nhdf-nhdf_start) .lt. (int((t-t_start) / dt_hdf) + 1) &
       if ((t-last_hdf_time) .ge. dt_hdf &
                 .or. output .eq. 'hdf' .or. output .eq. 'end') then
@@ -289,41 +272,34 @@ module dataio
 !
 !---------------------------------------------------------------------
 !
-  subroutine write_hdf
-    use mpi_setup, only: cwd
-    use start, only : vars,xmin,xmax,ymin,ymax,zmin,zmax,nstep,t, &
-         domain, nxd,nyd,nzd,nb,mag_center, gamma, dimensions, dt
-    use grid, only : dx,dy,dz
+   subroutine write_hdf
+      use mpi_setup, only: cwd
+      use arrays, only : nx,ny,nz,nxb,nyb,nzb,x,y,z,wa,outwa,outwb,outwc,b,u
+      use start, only : vars,xmin,xmax,ymin,ymax,zmin,zmax,nstep,t, &
+             domain, nxd,nyd,nzd,nb,mag_center, gamma, dimensions, dt
+      use grid, only : dx,dy,dz
+      use init_problem, only : problem_name, run_id
+      use fluidindex,  only : nfluid    
+      use fluidindex,  only : ibx,iby,ibz
+      use fluidindex, only : nvar, iarr_all_dn,iarr_all_mx,iarr_all_my,iarr_all_mz
+
 #ifndef STANDARD
-    use constants, only : Gs
+      use constants, only : Gs
 #endif /* STANDARD */
 
-    use fluidindex,  only : nfluid    
-    use fluidindex,  only : ibx,iby,ibz
-
-    
-    use fluidindex, only : nvar, iarr_all_dn,iarr_all_mx,iarr_all_my,iarr_all_mz
 #ifndef ISO
-    use fluidindex, only : iarr_all_en
-    use start, only  : gamma
+      use fluidindex, only : iarr_all_en
+      use start, only  : gamma
 #endif /* ISO */
 
-    use arrays, only : nx,ny,nz,nxb,nyb,nzb,x,y,z,wa,outwa,outwb,outwc,b,u
-    
 #ifdef COSM_RAYS
-    use arrays, only : iecr
+      use arrays, only : iecr
 #endif /* COSM_RAYS */
-    use init_problem, only : problem_name, run_id
-#ifndef SPLIT
-    use arrays, only : Lu
-#endif /* SPLIT */
+
 #ifdef GRAV
-    use arrays, only : gp
+      use arrays, only : gp
 #endif /* GRAV */
-#ifdef KEPLER_SUPPRESSION
-    use arrays,    only : omx0,omy0,alfsup
-    use constants, only : small
-#endif /* KEPLER_SUPPRESSION */
+
     implicit none
 
     character(len=128) :: file_name_hdf,file_name_disp
@@ -342,10 +318,6 @@ module dataio
                ieo = 1, jeo = 1, keo = 1
     real(kind=4), dimension(:,:,:), allocatable :: temp
     real :: magunit
-#ifdef KEPLER_SUPPRESSION
-    real,allocatable,dimension(:,:) :: velx,vely,dvx,dvy
-    integer :: i, j, k
-#endif /* KEPLER_SUPPRESSION */
 
 !- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -511,132 +483,6 @@ module dataio
         call next_fluid_or_var(ifl,iw,COSM_RAYS)
 #endif /* COSM_RAYS */
 
-#ifdef KEPLER_SUPPRESSION
-      case ('tspx')
-        write(varname,'(a3,i1)') 'tsx', ifl
-        allocate(velx(nx,ny),vely(nx,ny),dvx(nx,ny))
-        do k = kso,keo
-          velx=u(iarr_all_mx(ifl),:,:,k)/u(iarr_all_dn(ifl),:,:,k)
-#ifdef KEPL_SUPP_SIMX
-          dvx(:,:)=u(iarr_all_mx(ifl),:,:,k)-omx0(ifl,:,:,k)
-          wa(:,:,k) = (abs(velx)+small)/(abs(dvx)+small)/(abs(alfsup)+small)
-#else /* KEPL_SUPP_SIMX */
-          vely=u(iarr_all_my(ifl),:,:,k)/u(iarr_all_dn(ifl),:,:,k)
-          do j=jso,jeo
-            dvx(:,j)=(velx(:,j)*y(j)-vely(:,j)*x(:))*y(j)/(x(:)**2+y(j)**2)-omx0(ifl,:,j,k)
-          enddo
-#endif /* KEPL_SUPP_SIMX */
-          wa(iso:ieo,jso:jeo,k) = abs(velx(iso:ieo,jso:jeo)+small)/(abs(dvx(iso:ieo,jso:jeo)+small) &
-                              /(abs(alfsup(iso:ieo,jso:jeo))+small))
-        enddo
-        deallocate(velx,vely,dvx)
-        call next_fluid_or_var(ifl,iw,nfluid)
-
-      case ('tspy')
-        write(varname,'(a3,i1)') 'tsy', ifl
-        allocate(velx(nx,ny),vely(nx,ny),dvy(nx,ny))
-        do k = kso,keo
-          velx=u(iarr_all_mx(ifl),:,:,k)/u(iarr_all_dn(ifl),:,:,k)
-          vely=u(iarr_all_my(ifl),:,:,k)/u(iarr_all_dn(ifl),:,:,k)
-          do i=iso,ieo
-            dvy(i,:)=(vely(i,:)*x(i)-velx(i,:)*y(:))*x(i)/(y(:)**2+x(i)**2)-omy0(ifl,i,:,k)
-          enddo
-          wa(iso:ieo,jso:jeo,k) = abs(vely(iso:ieo,jso:jeo)+small)/((abs(dvy(iso:ieo,jso:jeo))+small) &
-                              /(abs(alfsup(iso:ieo,jso:jeo))+small))
-        enddo
-        deallocate(velx,vely,dvy)
-        call next_fluid_or_var(ifl,iw,nfluid)
-
-      case ('asup')
-        write(varname,'(a3,i1)') 'asp', ifl
-        do k = kso,keo
-          wa(iso:ieo,jso:jeo,k) = alfsup(iso:ieo,jso:jeo)
-        enddo
-        call next_fluid_or_var(ifl,iw,nfluid)
-
-      case ('dvlx')
-        write(varname,'(a3,i1)') 'dvx', ifl
-        allocate(velx(nx,ny),vely(nx,ny),dvx(nx,ny))
-        do k = kso,keo
-          velx=u(iarr_all_mx(ifl),:,:,k)/u(iarr_all_dn(ifl),:,:,k)
-#ifdef KEPL_SUPP_SIMX
-          wa(iso:ieo,jso:jeo,k)=u(iarr_all_mx(ifl),iso:ieo,jso:jeo,k)-omx0(ifl,iso:ieo,jso:jeo,k)
-#else /* KEPL_SUPP_SIMX */
-          vely=u(iarr_all_my(ifl),:,:,k)/u(iarr_all_dn(ifl),:,:,k)
-          do j=jso,jeo
-            wa(iso:ieo,j,k)=(velx(iso:ieo,j)*y(j)-vely(iso:ieo,j)*x(iso:iso))*y(j)/(x(iso:ieo)**2+y(j)**2)-omx0(ifl,iso:ieo,j,k)
-          enddo
-#endif /* KEPL_SUPP_SIMX */
-        enddo
-        deallocate(velx,vely,dvx)
-        call next_fluid_or_var(ifl,iw,nfluid)
-
-      case ('dvly')
-        write(varname,'(a3,i1)') 'dvy', ifl
-        allocate(velx(nx,ny),vely(nx,ny),dvy(nx,ny))
-        do k = kso,keo
-          velx=u(iarr_all_mx(ifl),:,:,k)/u(iarr_all_dn(ifl),:,:,k)
-          vely=u(iarr_all_my(ifl),:,:,k)/u(iarr_all_dn(ifl),:,:,k)
-          do i=iso,ieo
-            wa(i,jso:jeo,k)=(vely(i,jso:jeo)*x(i)-velx(i,jso:jeo)*y(jso:jeo))*x(i)/(y(jso:jeo)**2+x(i)**2)-omy0(ifl,i,jso:jeo,k)
-          enddo
-        enddo
-        deallocate(velx,vely,dvy)
-        call next_fluid_or_var(ifl,iw,nfluid)
-
-!   case ('dvrt')
-!     write(varname,'(a3,i1)') 'dvr',ifl
-!     do ibe=iso,ieo
-!       do jbe=jso,jeo
-!         wa(ibe,jbe,kso:keo) = (u(iarr_all_my(ifl),ibe,jbe,kso:keo) / u(iarr_all_dn(ifl),ibe,jbe,kso:keo) * x(ibe) &
-!                              - u(iarr_all_mx(ifl),ibe,jbe,kso:keo) / u(iarr_all_dn(ifl),ibe,jbe,kso:keo) * y(jbe))/sqrt(x(ibe)**2+y(jbe)**2)
-!       enddo
-!     enddo
-!     call next_fluid_or_var(ifl,iw,nfluid)
-
-      case ('ovrt')
-        write(varname,'(a3,i1)') 'ovr',ifl
-        do ibe=iso,ieo
-          do jbe=jso,jeo
-            wa(ibe,jbe,kso:keo) = (omy0(ifl,ibe,jbe,kso:keo) * x(ibe) &
-                                 - omx0(ifl,ibe,jbe,kso:keo)  * y(jbe))/sqrt(x(ibe)**2+y(jbe)**2)
-          enddo
-        enddo
-        call next_fluid_or_var(ifl,iw,nfluid)
-
-      case ('dumx')
-        write(varname,'(a3,i1)') 'dmx', ifl
-        allocate(velx(nx,ny),vely(nx,ny),dvx(nx,ny))
-        do k = kso,keo
-          velx=u(iarr_all_mx(ifl),:,:,k)/u(iarr_all_dn(ifl),:,:,k)
-#ifdef KEPL_SUPP_SIMX
-          wa(iso:ieo,jso:jeo,k)=u(iarr_all_mx(ifl),iso:ieo,jso:jeo,k)-omx0(ifl,iso:ieo,jso:jeo,k)
-#else /* KEPL_SUPP_SIMX */
-          vely=u(iarr_all_my(ifl),:,:,k)/u(iarr_all_dn(ifl),:,:,k)
-          do j=jso,jeo
-            wa(iso:ieo,j,k)=(velx(iso:ieo,j)*y(j)-vely(iso:ieo,j)*x(iso:iso))*y(j)/(x(iso:ieo)**2+y(j)**2)-omx0(ifl,iso:ieo,j,k)
-          enddo
-#endif /* KEPL_SUPP_SIMX */
-          wa(iso:ieo,jso:jeo,k)=wa(iso:ieo,jso:jeo,k)*u(iarr_all_dn(ifl),iso:ieo,jso:jeo,k)*(-alfsup(iso:ieo,jso:jeo))*dt
-        enddo
-        deallocate(velx,vely,dvx)
-        call next_fluid_or_var(ifl,iw,nfluid)
-
-      case ('dumy')
-        write(varname,'(a3,i1)') 'dmy', ifl
-        allocate(velx(nx,ny),vely(nx,ny),dvy(nx,ny))
-        do k = kso,keo
-          velx=u(iarr_all_mx(ifl),:,:,k)/u(iarr_all_dn(ifl),:,:,k)
-          vely=u(iarr_all_my(ifl),:,:,k)/u(iarr_all_dn(ifl),:,:,k)
-          do i=iso,ieo
-            wa(i,jso:jeo,k)=(vely(i,jso:jeo)*x(i)-velx(i,jso:jeo)*y(jso:jeo))*x(i)/(y(jso:jeo)**2+x(i)**2)-omy0(ifl,i,jso:jeo,k)
-          enddo
-          wa(iso:ieo,jso:jeo,k)=wa(iso:ieo,jso:jeo,k)*u(iarr_all_dn(ifl),iso:ieo,jso:jeo,k)*(-alfsup(iso:ieo,jso:jeo))*dt
-        enddo
-        deallocate(velx,vely,dvy)
-        call next_fluid_or_var(ifl,iw,nfluid)
-#endif /* KEPLER_SUPPRESSION */
-
       case ('divb')
         wa(iso:ieo-1,jso:jeo-1,kso:keo-1) = &
            (b(ibx,iso+1:ieo,jso:jeo-1,kso:keo-1) - b(ibx,iso:ieo-1,jso:jeo-1,kso:keo-1))*dy*dz &
@@ -646,62 +492,12 @@ module dataio
         wa(ieo,:,:) = wa(ieo-1,:,:)
         wa(:,jeo,:) = wa(:,jeo-1,:)
         wa(:,:,keo) = wa(:,:,keo-1)
-
-!      case ('omga')
-!        write(varname,'(a3,i1)') 'omg',ifl
-!        do ibe=iso,ieo
-!          do jbe=jso,jeo
-!            wa(ibe,jbe,kso:keo) = (u(iarr_all_my(ifl),ibe,jbe,kso:keo) / u(iarr_all_dn(ifl),ibe,jbe,kso:keo) * x(ibe) &
-!                                 - u(iarr_all_mx(ifl),ibe,jbe,kso:keo) / u(iarr_all_dn(ifl),ibe,jbe,kso:keo) * y(jbe))/(x(ibe)**2+y(jbe)**2)
-!          enddo
-!        enddo
-!        call next_fluid_or_var(ifl,iw,nfluid)
-!
-!      case ('vrot')
-!        write(varname,'(a3,i1)') 'vrt',ifl
-!        do ibe=iso,ieo
-!          do jbe=jso,jeo
-!            wa(ibe,jbe,kso:keo) = (u(iarr_all_my(ifl),ibe,jbe,kso:keo) / u(iarr_all_dn(ifl),ibe,jbe,kso:keo) * x(ibe) &
-!                                 - u(iarr_all_mx(ifl),ibe,jbe,kso:keo) / u(iarr_all_dn(ifl),ibe,jbe,kso:keo) * y(jbe))/sqrt(x(ibe)**2+y(jbe)**2)
-!          enddo
-!        enddo
-!        call next_fluid_or_var(ifl,iw,nfluid)
-!
-!      case ('vout')
-!        write(varname,'(a3,i1)') 'vou',ifl
-!        do ibe=iso,ieo
-!          do jbe=jso,jeo
-!            wa(ibe,jbe,kso:keo) = (u(iarr_all_mx(ifl),ibe,jbe,kso:keo) / u(iarr_all_dn(ifl),ibe,jbe,kso:keo) * x(ibe) &
-!                                 + u(iarr_all_my(ifl),ibe,jbe,kso:keo) / u(iarr_all_dn(ifl),ibe,jbe,kso:keo) * y(jbe))/sqrt(x(ibe)**2+y(jbe)**2)
-!          enddo
-!        enddo
-!        call next_fluid_or_var(ifl,iw,nfluid)
-
-      case ('dcol')
-        write(varname,'(a3,i1)') 'dcl',ifl
-        do ibe=iso,ieo
-          do jbe=jso,jeo
-            wa(ibe,jbe,kso:keo) = sum(u(iarr_all_dn(ifl),ibe,jbe,kso:keo))*(z(kso)-z(kso-1))
-          enddo
-        enddo
-        call next_fluid_or_var(ifl,iw,nfluid)
-
-#ifndef ISO
-      case ('csnd')
-        write(varname,'(a3,i1)') 'csn',ifl
-        wa(iso:ieo,jso:jeo,kso:keo) = sqrt((u(iarr_all_en(ifl),iso:ieo,jso:jeo,kso:keo) &
-                                      -0.5*(u(iarr_all_mx(ifl),iso:ieo,jso:jeo,kso:keo)**2  &
-                                           +u(iarr_all_my(ifl),iso:ieo,jso:jeo,kso:keo)**2  &
-                                           +u(iarr_all_mz(ifl),iso:ieo,jso:jeo,kso:keo)**2) &
-                                          / u(iarr_all_dn(ifl),iso:ieo,jso:jeo,kso:keo))*(gamma(ifl)-1.) &
-                                *gamma(ifl)/u(iarr_all_dn(ifl),iso:ieo,jso:jeo,kso:keo))
-       call next_fluid_or_var(ifl,iw,nfluid)
-#endif /* ISO */
 #ifdef GRAV
       case ('gpot')
         varname = 'gpot'
         wa(iso:ieo,jso:jeo,kso:keo) = gp(iso:ieo,jso:jeo,kso:keo)
 #endif /* GRAV */
+
       case ('magx')
 #ifdef STANDARD
         magunit = 1.0
@@ -724,6 +520,7 @@ module dataio
             wa(iso:ieo,jso:jeo,kso:keo) = b(ibx,iso:ieo,jso:jeo,kso:keo)/magunit
           endif
         endif
+
       case ('magy')
 #ifdef STANDARD
         magunit = 1.0
@@ -770,94 +567,9 @@ module dataio
           endif
         endif
 
-      case ('curx')
-       varname = 'curx'
-       wa(:,:,:) = (b(ibz,:,:,:)-cshift(b(ibz,:,:,:),shift=-1,dim=2))/dy &
-                 - (b(iby,:,:,:)-cshift(b(iby,:,:,:),shift=-1,dim=3))/dz
-       if(domain .eq. 'full_domain') then
-         if(mag_center .eq. 'yes') then
-           wa(:,:,:) = 0.5*(wa(:,:,:) + cshift(wa(:,:,:),shift=1,dim=1))
-         endif
-       else if(domain .eq. 'phys_domain') then
-         if(mag_center .eq. 'yes') then
-           wa(iso:ieo,jso:jeo,kso:keo) = 0.5*(wa(iso:ieo,jso:jeo,kso:keo)+wa(iso+1:ieo+1,jso:jeo,kso:keo))
-         endif
-       endif
-
-      case ('cury')
-       varname = 'cury'
-       wa(:,:,:) = (b(ibx,:,:,:)-cshift(b(ibx,:,:,:),shift=-1,dim=3))/dz &
-                 - (b(ibz,:,:,:)-cshift(b(ibz,:,:,:),shift=-1,dim=1))/dx
-       if(domain .eq. 'full_domain') then
-         if(mag_center .eq. 'yes') then
-           wa(:,:,:) = 0.5*(wa(:,:,:) + cshift(wa(:,:,:),shift=1,dim=2))
-         endif
-       else if(domain .eq. 'phys_domain') then
-         if(mag_center .eq. 'yes') then
-           wa(iso:ieo,jso:jeo,kso:keo) = 0.5*(wa(iso:ieo,jso:jeo,kso:keo)+wa(iso:ieo,jso+1:jeo+1,kso:keo))
-         endif
-       endif
-
-      case ('curz')
-       varname = 'curz'
-       wa(:,:,:) = (b(iby,:,:,:)-cshift(b(iby,:,:,:),shift=-1,dim=1))/dx &
-                 - (b(ibx,:,:,:)-cshift(b(ibx,:,:,:),shift=-1,dim=2))/dy
-       if(domain .eq. 'full_domain') then
-         if(mag_center .eq. 'yes') then
-           wa(:,:,:) = 0.5*(wa(:,:,:)+ cshift(wa(:,:,:),shift=1,dim=3))
-         endif
-       else if(domain .eq. 'phys_domain') then
-         if(mag_center .eq. 'yes') then
-           wa(iso:ieo,jso:jeo,kso:keo) = 0.5*(wa(iso:ieo,jso:jeo,kso:keo) + wa(iso:ieo,jso:jeo,kso+1:keo+1))
-         endif
-       endif
-#ifndef SPLIT
-      case ('flx1')
-        varname = 'flx1'
-        wa(:,:,:) = Lu(1,:,:,:)
-      case ('flx2')
-        varname = 'flx2'
-        wa(:,:,:) = Lu(2,:,:,:)
-      case ('flx3')
-        varname = 'flx3'
-        wa(:,:,:) = Lu(3,:,:,:)
-      case ('flx4')
-        varname = 'flx4'
-        wa(:,:,:) = Lu(4,:,:,:)
-#ifndef ISO
-      case ('flx5')
-        varname = 'flx5'
-        wa(:,:,:) = Lu(5,:,:,:)
-#endif /* ~ISO */
-#endif /* SPLIT */
-      case ('esrc')
-         varname = 'esrc'
-!        wa(iso:ieo,jso:jeo,kso:keo) = outwa(iso:ieo,jso:jeo,kso:keo)
-
-!      case ('eint')
-!        varname = 'eint'
-!        wa(iso:ieo,jso:jeo,kso:keo) = outwb(iso:ieo,jso:jeo,kso:keo)
-
-      case ('temp')
-         varname = 'temp'
-!        wa(iso:ieo,jso:jeo,kso:keo) = outwc(iso:ieo,jso:jeo,kso:keo)
-!DW+
-      case ('grvx')
-        varname = 'grvx'
-        wa(iso:ieo,jso:jeo,kso:keo) = outwa(iso:ieo,jso:jeo,kso:keo)
-
-      case ('grvy')
-        varname = 'grvy'
-        wa(iso:ieo,jso:jeo,kso:keo) = outwb(iso:ieo,jso:jeo,kso:keo)
-
-      case ('grvz')
-        varname = 'grvz'
-        wa(iso:ieo,jso:jeo,kso:keo) = outwc(iso:ieo,jso:jeo,kso:keo)
-!DW-
       case default
         print *, 'Variable ', vars(iv), ' is not defined! Skipping.'
       end select
-!       print *, vars(iv), minval(wa), maxval(wa)
 
 ! write data
 !
@@ -890,7 +602,6 @@ module dataio
 
     iostatus = sfend(sd_id)
 
-
     if(proc.eq. 0) then
       open(log_lun, file=log_file, position='append')
 
@@ -900,8 +611,6 @@ module dataio
       close(log_lun)
     endif
     deallocate(temp)
-
-
   end subroutine write_hdf
 
   subroutine next_fluid_or_var(ifluid,ivar,nfluids)
@@ -916,318 +625,6 @@ module dataio
     endif
     return
   end subroutine next_fluid_or_var
-
-#ifdef GALACTIC_DISK
-  subroutine write_gpot
-
-    use arrays, only       : wa, gp,nxb,nyb,nzb,nx,ny,nz,x,y,z
-    use init_problem, only : problem_name, run_id
-    use gravity_user, only : gpotdisk,gpothalo,gpotbulge
-    use grid, only         : dx,dy,dz
-    use start, only        : nstep,t,dt,nxd,nyd,nzd,nb,xmin,xmax,ymin,ymax,zmin,zmax,dimensions,gamma,domain
-
-
-    implicit none
-
-    character(len=128) :: file_name_hdf,file_name_disp
-    character, dimension(24) :: gvars*4
-
-    integer :: sd_id, sds_id, dim_id, iostatus
-    integer :: rank, comp_type
-    integer, dimension(3) :: dims, istart, stride
-    integer, dimension(1) :: comp_prm
-    integer :: sfstart, sfend, sfsnatt, sfcreate, sfwdata, sfscompress, sfendacc &
-             , sfdimid, sfsdmname, sfsdscale, sfsdmstr
-
-    integer :: iv, ibe, jbe
-    integer :: nxo = 1, nyo = 1, nzo = 1, &
-                  iso = 1, ieo = 1, jso = 1, jeo = 1, kso = 1, keo = 1
-
-!- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
-    if(domain .eq. 'full_domain') then
-      nxo   = nx
-      nyo   = ny
-      nzo   = nz
-      iso   = 1
-      ieo   = nx
-      jso   = 1
-      jeo   = ny
-      if(dimensions .eq. '3d') then
-      kso   = 1
-      keo   = nz
-      elseif(dimensions .eq. '2dxy') then
-        kso = 1
-        keo = 1
-      endif
-
-    else if(domain .eq. 'phys_domain') then
-      nxo   = nxb
-      nyo   = nyb
-      nzo   = nzb
-      iso    = nb+1
-      ieo    = nb+nxb
-      jso    = nb+1
-      jeo    = nb+nyb
-      if(dimensions .eq. '3d') then
-        kso    = nb+1
-        keo    = nb+nzb
-      elseif(dimensions .eq. '2dxy') then
-        kso = 1
-        keo = 1
-      endif
-    endif
-
-
-    rank = 3
-    comp_type = 4
-    comp_prm(1) = 6
-    dims(1) = nxo
-    dims(2) = nyo
-    dims(3) = nzo
-    istart(:) = 0
-    stride(:) = 1
-
-!  generate filename
-!
-
-    write (file_name_hdf,'(a,a1,a,a5,i2.2,a1,i2.2,a1,i2.2,a1,a8)') &
-              trim(cwd),'/',trim(problem_name),'_gpt_', &
-              pcoords(1),'_',pcoords(2),'_',pcoords(3),'_', '0000.hdf'
-
-    write (file_name_disp,'(a,a1,a,a5,a2,a1,a2,a1,a2,a1,a8)') &
-              trim(cwd),'/',trim(problem_name),'_gpt_',pc1,'_',pc2,'_',pc3,'_', '0000.hdf'
-
-
-    sd_id = sfstart(trim(file_name_hdf), 4)
-
-! write attributes
-!
-    iostatus = sfsnatt( sd_id, 'problem' , 4, 32, problem_name)
-    iostatus = sfsnatt( sd_id, 'run_id'  , 4, 32, run_id      )
-    iostatus = sfsnatt( sd_id, 'domain'  , 4, 32, domain      )
-
-    iostatus = sfsnatt( sd_id, 'psize1'  , 23, 1, psize(1) )
-    iostatus = sfsnatt( sd_id, 'psize2'  , 23, 1, psize(2) )
-    iostatus = sfsnatt( sd_id, 'psize3'  , 23, 1, psize(3) )
-
-    iostatus = sfsnatt( sd_id, 'pcoords1', 23, 1, pcoords(1) )
-    iostatus = sfsnatt( sd_id, 'pcoords2', 23, 1, pcoords(2) )
-    iostatus = sfsnatt( sd_id, 'pcoords3', 23, 1, pcoords(3) )
-
-    iostatus = sfsnatt( sd_id, 'dims1'   , 23, 1, dims(1)    )
-    iostatus = sfsnatt( sd_id, 'dims2'   , 23, 1, dims(2)    )
-    iostatus = sfsnatt( sd_id, 'dims3'   , 23, 1, dims(3)    )
-
-    iostatus = sfsnatt( sd_id, 'nxd'     , 23, 1, nxd     )
-    iostatus = sfsnatt( sd_id, 'nyd'     , 23, 1, nyd     )
-    iostatus = sfsnatt( sd_id, 'nzd'     , 23, 1, nzd     )
-
-    iostatus = sfsnatt( sd_id, 'nxb'     , 23, 1, nxb     )
-    iostatus = sfsnatt( sd_id, 'nyb'     , 23, 1, nyb     )
-    iostatus = sfsnatt( sd_id, 'nzb'     , 23, 1, nzb     )
-    iostatus = sfsnatt( sd_id, 'nb'      , 23, 1, nb      )
-
-    iostatus = sfsnatt( sd_id, 'xmin'    , 6,  1, xmin    )
-    iostatus = sfsnatt( sd_id, 'xmax'    , 6,  1, xmax    )
-    iostatus = sfsnatt( sd_id, 'ymin'    , 6,  1, ymin    )
-    iostatus = sfsnatt( sd_id, 'ymax'    , 6,  1, ymax    )
-    iostatus = sfsnatt( sd_id, 'zmin'    , 6,  1, zmin    )
-    iostatus = sfsnatt( sd_id, 'zmax'    , 6,  1, zmax    )
-
-    iostatus = sfsnatt( sd_id, 'nstep'   , 23, 1, nstep          )
-    iostatus = sfsnatt( sd_id, 'time'    ,  6, 1, t              )
-    iostatus = sfsnatt( sd_id, 'timestep',  6, 1, dt             )
-
-!    iostatus = sfsnatt( sd_id, 'gamma'   ,  6, 1, gamma          )
-
-    do iv=1,24
-
-      select case(iv)
-
-      case (1)
-        gvars(1)='gpot'
-        wa(iso:ieo,jso:jeo,kso:keo) = gp(iso:ieo,jso:jeo,kso:keo)
-
-      case (2)
-        gvars(2)='gdsk'
-        wa(iso:ieo,jso:jeo,kso:keo) = gpotdisk(iso:ieo,jso:jeo,kso:keo)
-
-      case (3)
-        gvars(3)='ghal'
-        wa(iso:ieo,jso:jeo,kso:keo) = gpothalo(iso:ieo,jso:jeo,kso:keo)
-
-      case (4)
-        gvars(4)='gblg'
-        wa(iso:ieo,jso:jeo,kso:keo) = gpotbulge(iso:ieo,jso:jeo,kso:keo)
-
-      case (5)
-        gvars(5)='grxl'
-        wa(iso:ieo,jso:jeo,kso:keo) = (gp(iso:ieo,jso:jeo,kso:keo)-gp(iso-1:ieo-1,jso:jeo,kso:keo))/dx
-
-      case (6)
-        gvars(6)='gryl'
-        wa(iso:ieo,jso:jeo,kso:keo) = (gp(iso:ieo,jso:jeo,kso:keo)-gp(iso:ieo,jso-1:jeo-1,kso:keo))/dy
-
-      case (7)
-        gvars(7)='grzl'
-        wa(iso:ieo,jso:jeo,kso:keo) = (gp(iso:ieo,jso:jeo,kso:keo)-gp(iso:ieo,jso:jeo,kso-1:keo-1))/dz
-
-      case (8)
-        gvars(8)='gdxl'
-        wa(iso:ieo,jso:jeo,kso:keo) = (gpotdisk(iso:ieo,jso:jeo,kso:keo)-gpotdisk(iso-1:ieo-1,jso:jeo,kso:keo))/dx
-
-      case (9)
-        gvars(9)='gdyl'
-        wa(iso:ieo,jso:jeo,kso:keo) = (gpotdisk(iso:ieo,jso:jeo,kso:keo)-gpotdisk(iso:ieo,jso-1:jeo-1,kso:keo))/dy
-
-      case (10)
-        gvars(10)='gdzl'
-        wa(iso:ieo,jso:jeo,kso:keo) = (gpotdisk(iso:ieo,jso:jeo,kso:keo)-gpotdisk(iso:ieo,jso:jeo,kso-1:keo-1))/dz
-
-      case (11)
-        gvars(11)='ghxl'
-        wa(iso:ieo,jso:jeo,kso:keo) = (gpothalo(iso:ieo,jso:jeo,kso:keo)-gpothalo(iso-1:ieo-1,jso:jeo,kso:keo))/dx
-
-      case (12)
-        gvars(12)='ghyl'
-        wa(iso:ieo,jso:jeo,kso:keo) = (gpothalo(iso:ieo,jso:jeo,kso:keo)-gpothalo(iso:ieo,jso-1:jeo-1,kso:keo))/dy
-
-      case (13)
-        gvars(13)='ghzl'
-        wa(iso:ieo,jso:jeo,kso:keo) = (gpothalo(iso:ieo,jso:jeo,kso:keo)-gpothalo(iso:ieo,jso:jeo,kso-1:keo-1))/dz
-
-      case (14)
-        gvars(14)='gbxl'
-        wa(iso:ieo,jso:jeo,kso:keo) = (gpotbulge(iso:ieo,jso:jeo,kso:keo)-gpotbulge(iso-1:ieo-1,jso:jeo,kso:keo))/dx
-
-      case (15)
-        gvars(15)='gbyl'
-        wa(iso:ieo,jso:jeo,kso:keo) = (gpotbulge(iso:ieo,jso:jeo,kso:keo)-gpotbulge(iso:ieo,jso-1:jeo-1,kso:keo))/dy
-
-      case (16)
-        gvars(16)='gbzl'
-        wa(iso:ieo,jso:jeo,kso:keo) = (gpotbulge(iso:ieo,jso:jeo,kso:keo)-gpotbulge(iso:ieo,jso:jeo,kso-1:keo-1))/dz
-
-      case (17)
-        gvars(17)='vrgx'
-        do ibe = iso,ieo
-           do jbe = jso,jeo
-              wa(ibe,jbe,kso:keo) = (gp(ibe+1,jbe,kso:keo)-gp(ibe-1,jbe,kso:keo))/dx/2.0
-              wa(ibe,jbe,kso:keo) = sqrt(abs(wa(ibe,jbe,kso:keo)/x(ibe)))*sqrt(x(ibe)**2+y(jbe)**2)
-           enddo
-        enddo
-
-      case (18)
-        gvars(18)='vrgy'
-        do ibe = iso,ieo
-           do jbe = jso,jeo
-              wa(ibe,jbe,kso:keo) = (gp(ibe,jbe+1,kso:keo)-gp(ibe,jbe-1,kso:keo))/dy/2.0
-              wa(ibe,jbe,kso:keo) = sqrt(abs(wa(ibe,jbe,kso:keo)/y(jbe)))*sqrt(x(ibe)**2+y(jbe)**2)
-           enddo
-        enddo
-
-      case (19)
-        gvars(19)='vrdx'
-        do ibe = iso,ieo
-           do jbe = jso,jeo
-              wa(ibe,jbe,kso:keo) = (gpotdisk(ibe+1,jbe,kso:keo)-gpotdisk(ibe-1,jbe,kso:keo))/dx/2.0
-              wa(ibe,jbe,kso:keo) = sqrt(abs(wa(ibe,jbe,kso:keo)/x(ibe)))*sqrt(x(ibe)**2+y(jbe)**2)
-           enddo
-        enddo
-
-      case (20)
-        gvars(20)='vrdy'
-        do ibe = iso,ieo
-           do jbe = jso,jeo
-              wa(ibe,jbe,kso:keo) = (gpotdisk(ibe,jbe+1,kso:keo)-gpotdisk(ibe,jbe-1,kso:keo))/dy/2.0
-              wa(ibe,jbe,kso:keo) = sqrt(abs(wa(ibe,jbe,kso:keo)/y(jbe)))*sqrt(x(ibe)**2+y(jbe)**2)
-           enddo
-        enddo
-
-      case (21)
-        gvars(21)='vrhx'
-        do ibe = iso,ieo
-           do jbe = jso,jeo
-              wa(ibe,jbe,kso:keo) = (gpothalo(ibe+1,jbe,kso:keo)-gpothalo(ibe-1,jbe,kso:keo))/dx/2.0
-              wa(ibe,jbe,kso:keo) = sqrt(abs(wa(ibe,jbe,kso:keo)/x(ibe)))*sqrt(x(ibe)**2+y(jbe)**2)
-           enddo
-        enddo
-
-      case (22)
-        gvars(22)='vrhy'
-        do ibe = iso,ieo
-           do jbe = jso,jeo
-              wa(ibe,jbe,kso:keo) = (gpothalo(ibe,jbe+1,kso:keo)-gpothalo(ibe,jbe-1,kso:keo))/dy/2.0
-              wa(ibe,jbe,kso:keo) = sqrt(abs(wa(ibe,jbe,kso:keo)/y(jbe)))*sqrt(x(ibe)**2+y(jbe)**2)
-           enddo
-        enddo
-
-      case (23)
-        gvars(23)='vrbx'
-        do ibe = iso,ieo
-           do jbe = jso,jeo
-              wa(ibe,jbe,kso:keo) = (gpotbulge(ibe+1,jbe,kso:keo)-gpotbulge(ibe-1,jbe,kso:keo))/dx/2.0
-              wa(ibe,jbe,kso:keo) = sqrt(abs(wa(ibe,jbe,kso:keo)/x(ibe)))*sqrt(x(ibe)**2+y(jbe)**2)
-           enddo
-        enddo
-
-      case (24)
-        gvars(24)='vrby'
-        do ibe = iso,ieo
-           do jbe = jso,jeo
-              wa(ibe,jbe,kso:keo) = (gpotbulge(ibe,jbe+1,kso:keo)-gpotbulge(ibe,jbe-1,kso:keo))/dy/2.0
-              wa(ibe,jbe,kso:keo) = sqrt(abs(wa(ibe,jbe,kso:keo)/y(jbe)))*sqrt(x(ibe)**2+y(jbe)**2)
-           enddo
-        enddo
-
-      case default
-        print *, 'Variable ', gvars(iv), ' is not defined! Skipping.'
-      end select
-!       print *, gvars(iv), minval(wa), maxval(wa)
-
-! write data
-!
-      sds_id = sfcreate(sd_id, gvars(iv), 5, rank, dims)
-      iostatus = sfscompress(sds_id, comp_type, comp_prm)
-      iostatus = sfwdata(sds_id, istart, stride, dims, real(wa(iso:ieo,jso:jeo,kso:keo),4))
-
-! write coords
-!
-      dim_id = sfdimid( sds_id, 0 )
-      iostatus = sfsdmname( dim_id, 'xc' )
-      iostatus = sfsdscale( dim_id, dims(1), 5, real(x(iso:ieo),4))
-      iostatus = sfsdmstr ( dim_id, 'X', 'pc', '' )
-
-      dim_id = sfdimid( sds_id, 1 )
-      iostatus = sfsdmname( dim_id, 'yc' )
-      iostatus = sfsdscale( dim_id, dims(2), 5, real(y(jso:jeo),4))
-      iostatus = sfsdmstr ( dim_id, 'Y', 'pc', '' )
-
-      dim_id = sfdimid( sds_id, 2 )
-      iostatus = sfsdmname( dim_id, 'zc' )
-      iostatus = sfsdscale( dim_id, dims(3), 5, real(z(kso:keo),4))
-      iostatus = sfsdmstr ( dim_id, 'Z', 'pc', '' )
-
-      iostatus = sfendacc(sds_id)
-
-    end do
-
-    iostatus = sfend(sd_id)
-
-
-    if(proc.eq. 0) then
-!      open(log_lun, file=log_file, position='append')
-
-!      write(log_lun,*) 'Writing output   file: ', trim(file_name_disp)
-      write(*,*)       'Writing output   file: ', trim(file_name_disp)
-
-!      close(log_lun)
-    endif
-
-
-  end subroutine write_gpot
-#endif /* GALACTIC_DISK */
 
 !---------------------------------------------------------------------
 !
@@ -1409,6 +806,7 @@ module dataio
     iostatus = sfscompress(sds_id, comp_type, comp_prm)
     iostatus = sfwdata(sds_id, istart, stride, dims3d, gp)
 #endif /* GRAV */
+
 #ifdef MASS_COMPENS
 ! write initial density distribution
 !
@@ -1455,7 +853,6 @@ module dataio
           write(*,*) trim(file_name_last),' does not exist'
         endif
     endif
-
 
   end subroutine write_restart
 
@@ -1714,7 +1111,7 @@ module dataio
             tot_epot = 0.0, mflx = 0.0, mfly = 0.0, mflz = 0.0, &
             tot_mflx = 0.0, tot_mfly = 0.0, tot_mflz = 0.0
 #ifdef GRAV
-    integer i,j
+    integer :: i,j
     real :: epot =0.0, amomz = 0.0, tot_amomz = 0.0
 #endif /* GRAV */
 #ifdef COSM_RAYS
@@ -2285,205 +1682,4 @@ module dataio
 
     end subroutine rm_file
 
-!
-!=======================================================================
-!
-!     \\\\\\\\\\     B E G I N   S U B R O U T I N E     //////////
-!     //////////                 C T O R                 \\\\\\\\\\
-!
-!=======================================================================
-!
-       subroutine ctor ( cstr, nch, rval, ierr )
-!
-!    dac:zeus3d.ctor <-------------- translates character string to real
-!                                                          january, 1992
-!
-!      Written by: David Clarke
-!      Modified 1:
-!
-!  PURPOSE:  This subroutine translates a character string to a real
-!  constant.
-!
-!  INPUT VARIABLES:
-!    cstr      character representation of real number
-!    nch       number of characters in "cstr"
-!
-!  OUTPUT VARIABLES
-!    rval      floating representation of real number
-!    ierr      0 => floating conversion successful
-!              1 => non-translatable character found in "cstr"
-!
-!  EXTERNALS: [NONE]
-!
-!-----------------------------------------------------------------------
-!
-!*ca imp
-!
-       implicit none
-       character*1   char1
-       character*(*) cstr
-       integer       nch     , ierr    , i       , esign   , ipnt &
-                   , npnt    , more    , iman    , iexp    , j
-       REAL        rval    , msign   , term    , fact
-
-       character*1   ch      (  10)
-       integer       exponent(   4), mantissa(  16)
-!
-!      Data statements
-!
-       data          ch       /'0','1','2','3','4','5','6','7','8','9'/
-!
-!-----------------------------------------------------------------------
-!
-!      Initialise parameters.
-!
-       do 10 i=1,4
-         exponent(i) = 0
-10     continue
-       do 20 i=1,16
-         mantissa(i) = 0
-20     continue
-       rval  = 0.0
-       msign = 1.0
-       esign = 1
-       ipnt  = 0
-       npnt  = 0
-       more  = 1
-       iman  = 0
-       iexp  = 0
-       ierr  = 0
-!
-!      Scan "cstr".
-!
-       do 40 i=1,nch
-         char1 = cstr(i:i)
-         if (char1 .eq. ' ') go to 40
-         if (char1 .eq. '-') then
-           if (more .eq. 1) msign = -1.0
-           if (more .eq. 2) esign = -1
-           go to 40
-         endif
-         if (char1 .eq. '+') go to 40
-         if (char1 .eq. '.') then
-           npnt = 1
-           ipnt = i - 2
-           if (msign .eq. -1.0) ipnt = ipnt - 1
-           go to 40
-         endif
-         if ( (char1 .eq. 'e') .or. (char1 .eq. 'd') ) then
-           more = 2
-           if (npnt .eq. 0) then
-             npnt = 1
-             ipnt = i - 2
-             if (msign .eq. -1.0) ipnt = ipnt - 1
-             if (ipnt .lt. 0) ipnt = 0
-           endif
-           go to 40
-         endif
-         do 30 j=1,10
-           if (char1 .eq. ch(j)) then
-             if (more .eq. 1) then
-               iman = iman + 1
-               mantissa(iman) = j - 1
-             endif
-             if (more .eq. 2) then
-               iexp = iexp + 1
-               exponent(iexp) = j - 1
-             endif
-             go to 40
-           endif
-30       continue
-!
-!      Illegal character found.  Set "ierr" to 1 and return.
-!
-         ierr = 1
-         return
-40     continue
-       if (npnt .eq. 0) ipnt = iman - 1
-!
-!      Evaluate the mantissa.
-!
-       if (iman .gt. 0) then
-         do 50 i=1,iman
-           term =  real(mantissa(i)) * 10.0**ipnt
-           rval = rval + term
-           ipnt = ipnt - 1
-50       continue
-       else
-         rval = 1.0
-       endif
-       rval = rval * msign
-!
-!      Evaluate the exponential factor.
-!
-       fact = 1.0
-       if (iexp .gt. 0) then
-         do 60 i=1,iexp
-           ipnt = iexp - i
-           fact = fact * 10.0 ** (exponent(i) * 10.0**ipnt)
-60       continue
-       endif
-       if (esign .eq. -1) fact = 1.0 / fact
-!
-!      Return real representation of character string.
-!
-       rval = rval * fact
-
-       return
-       end subroutine ctor
-
-!=======================================================================
-!
-!     \\\\\\\\\\       E N D   S U B R O U T I N E       //////////
-!     //////////                 C T O R                 \\\\\\\\\\
-!
-!=======================================================================
-!
-#ifdef BLOB
-!-----------------------------------------------------------------------
-! estimation of the fraction of cloud matter is not destructed
-!-----------------------------------------------------------------------
-
-  subroutine write_blob
-
-    use arrays, only : nxb,nyb,nzb,u
-    use constants, only : pi
-    use grid, only  : dx,dy,dz
-    use start, only : gamma,t,nstep
-    use init_problem, only : chi,denv,tkh,Mext,rblob
-
-    implicit none
-    integer i,j,k
-    real mass, eint, csirel, masssum
-
-
-   if(proc .eq. 0) open(5,file='cloudfrac.out',position='append')
-   mass = 0.0
-   do i=1,nxb
-   do j=1,nyb
-   do k=1,nzb
-     if(u(1,i,j,k) .gt. 0.64*chi*denv) then
-       eint=u(5,i,j,k)-0.5*(u(2,i,j,k)**2+u(3,i,j,k)**2+u(4,i,j,k)**2)/u(1,i,j,k)
-       csirel =sqrt(eint*(gamma(1)-1)*tkh*Mext*gamma(1)/3.2/rblob/sqrt(chi)/u(1,i,j,k))
-       if(csirel .lt. 0.9) then
-         mass = mass + u(1,i,j,k)*dx*dy*dz
-       endif
-     endif
-   enddo
-   enddo
-   enddo
-
-   call MPI_REDUCE(mass,masssum,1,MPI_DOUBLE_PRECISION,MPI_SUM,0,comm,ierr)
-   if(proc .eq. 0) write(5,555) nstep,t,t/tkh,masssum,masssum/(4./3.*pi*rblob**3*chi*denv)
-555 format(i5,4(1x,e20.10))
-   if(proc .eq. 0) close(5)
-
-  end subroutine write_blob
-#endif /* BLOB */
-
-
 end module dataio
-
-
-
-
