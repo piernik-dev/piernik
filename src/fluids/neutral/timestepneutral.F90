@@ -28,7 +28,7 @@ contains
 
 ! locals
 
-    real v,p
+    real p
     integer i,j,k
 
 
@@ -49,8 +49,8 @@ contains
             p = csi_iso_neu2*u(idnn,i,j,k)
             cf = sqrt(abs( p/u(idnn,i,j,k)) )
 #else /* ISO */
-	    p=(u(ienn,i,j,k)-sum(u(imxn:imzn,i,j,k)**2,1) &
-	        /u(idnn,i,j,k)/2.)*(gamma_neu-1.)
+            p=(u(ienn,i,j,k)-sum(u(imxn:imzn,i,j,k)**2,1) &
+              /u(idnn,i,j,k)/2.)*(gamma_neu-1.)
 
             cf = sqrt(abs(  (gamma_neu*p)/u(idnn,i,j,k)) )
 #endif /* ISO */

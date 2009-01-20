@@ -41,9 +41,9 @@ module initneutral
            write(3,nml=FLUID_neutral)
            write(3,*)
          close(3)
-      endif	 
-	 
-	 
+      endif
+
+ 
     if(proc .eq. 0) then
 
       rbuff(1)   = gamma_neu
@@ -71,7 +71,7 @@ module initneutral
   subroutine neutral_index(nvar,nvar_neu)
   
     implicit none
-    integer, nvar, nvar_neu
+    integer :: nvar, nvar_neu
 
    
       idnn = nvar + 1
