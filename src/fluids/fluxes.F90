@@ -46,7 +46,7 @@ subroutine all_fluxes(flux,cfr,uu,bb,n)
 
 #ifdef NEUTRAL
     use fluidindex, only : nvar_neu
-#endif /NEUTRAL
+#endif /* NEUTRAL */
 
 #ifdef DUST
     use fluidindex, only : nvar_dst
@@ -80,8 +80,8 @@ subroutine all_fluxes(flux,cfr,uu,bb,n)
 #ifdef IONIZED
    uuion(:,:)=uu(iarr_ion,:)
    
-   write(*,*) 'ion:',nvar_ion
-   write(*,*) uuion
+!   write(*,*) 'ion:',nvar_ion
+!   write(*,*) uuion
    
    call flux_ion(fluxion,cfrion,uuion,bb,n)
    flux(iarr_ion,:)=fluxion

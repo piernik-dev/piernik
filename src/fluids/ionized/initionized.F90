@@ -71,7 +71,7 @@ module initionized
   subroutine ionized_index(nvar,nvar_ion)
   
     implicit none
-    integer nvar, nvar_ion
+    integer :: nvar, nvar_ion
 
    
       idni = nvar + 1

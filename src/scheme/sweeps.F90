@@ -8,9 +8,8 @@ module sweeps     ! split sweeps
 
     use fluidindex,   only : nvar, iarr_all_swpx
 #ifdef IONIZED
-    use fluidindex,   only : nmag
-    use initionized,  only : ibx,iby,ibz
-#endif IONIZED
+    use fluidindex,   only : nmag, ibx,iby,ibz
+#endif /* IONIZED */
     use start, only  : dimensions, magfield,dt,nb
     use arrays, only : u,b,nx,ny,nz,ks,ke
     use grid, only   : dx
@@ -45,15 +44,8 @@ module sweeps     ! split sweeps
           b_x = 0.0
         endif
 
-!        write(*,*) 'sweepx:'	
-!        write(*,*) iarr_all_swpx	
-
         u_x(iarr_all_swpx,:)=u(:,:,j,k)
 
-!	write(*,*) nvar,nmag
-!	write(*,*) u_x(1,:)
-!	write(*,*) b_x(1,:)
-	
         call relaxing_tvd(u_x,b_x,'xsweep',j,k,dx,nx,dt)
         u(:,:,j,k)=u_x(iarr_all_swpx,:)
       end do
@@ -68,9 +60,8 @@ module sweeps     ! split sweeps
   subroutine sweepy
     use fluidindex, only : nvar, iarr_all_swpy
 #ifdef IONIZED
-    use fluidindex,   only : nmag
-    use initionized, only : ibx,iby,ibz
-#endif IONIZED
+    use fluidindex,   only : nmag,ibx,iby,ibz
+#endif /* IONIZED */
     use start, only  : dimensions, magfield,dt,nb
     use arrays, only : u,b,nx,ny,nz,ks,ke
     use grid, only   : dy
@@ -124,9 +115,8 @@ module sweeps     ! split sweeps
   subroutine sweepz
     use fluidindex, only   : nvar, iarr_all_swpz
 #ifdef IONIZED
-    use fluidindex, only   : nmag
-    use initionized, only : ibx,iby,ibz
-#endif IONIZED
+    use fluidindex, only   : nmag, ibx, iby, ibz
+#endif /* IONIZED */
     use start, only  : dimensions, magfield,dt,nb
     use arrays, only : u,b,nx,ny,nz,ks,ke
     use grid, only   : dz

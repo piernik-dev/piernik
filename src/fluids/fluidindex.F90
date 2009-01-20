@@ -23,7 +23,7 @@ module fluidindex
    integer, allocatable, dimension(:) :: iarr_mag_swpx, iarr_mag_swpy, iarr_mag_swpz, iarr_all_mag
 #ifdef RESISTIVE
    integer, parameter  :: icx=1, icy=2, icz=3
-#endif /RESISTIVE */
+#endif /* RESISTIVE */
 #endif /* IONIZED */
 
 #ifdef IONIZED

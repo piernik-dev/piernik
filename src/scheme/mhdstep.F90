@@ -353,7 +353,7 @@ end subroutine mhd_step
     call compute_b_bnd
 
   end subroutine mag_add
-#endif MAGNETIC
+#endif /* MAGNETIC */
 !------------------------------------------------------------------------------------------
 
 end module mhdstep

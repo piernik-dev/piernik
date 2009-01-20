@@ -25,10 +25,6 @@ module arrays
    real, allocatable, dimension(:)     :: dprof, eprof
 #endif /* GRAV */
 
-#ifdef COOL_HEAT
-   real, allocatable, dimension(:)       :: coolheat_profile
-#endif /* COOL_HEAT */
-
    real(kind=4), allocatable, dimension(:,:,:)  :: outwa, outwb, outwc
 
 #if defined COSM_RAYS || defined PRESS_GRAD_EXCH
@@ -105,9 +101,6 @@ module arrays
 #endif /* GRAV */
       allocate(wa(nx,ny,nz),wcu(nx,ny,nz))
       allocate(outwa(nx,ny,nz),outwb(nx,ny,nz),outwc(nx,ny,nz))
-!#ifdef COOL_HEAT
-      allocate( coolheat_profile(nz))
-!#endif /* COOL_HEAT */
 #if defined COSM_RAYS || defined PRESS_GRAD_EXCH
       allocate(divvel(nfluid,nx,ny,nz))
 #endif /* COSM_RAYS || PRESS_GRAD_EXCH */
@@ -127,9 +120,6 @@ module arrays
       deallocate(gp)
       deallocate(dprof,eprof)
 #endif /* GRAV */
-#ifdef COOL_HEAT
-      deallocate(coolheat_profile)
-#endif /* COOL_HEAT */
 #if defined COSM_RAYS || defined PRESS_GRAD_EXCH
       deallocate(divvel)
 #endif /* COSM_RAYS || PRESS_GRAD_EXCH */

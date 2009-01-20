@@ -348,6 +348,7 @@ module dataio
         write(varname,'(a3,i1)') 'ene',ifl
         wa(iso:ieo,jso:jeo,kso:keo) = u(iarr_all_en(ifl),iso:ieo,jso:jeo,kso:keo)
         call next_fluid_or_var(ifl,iw,nfluid)
+#endif /* ISO */
 
 #ifdef COSM_RAYS
       case ('encr')
@@ -1107,11 +1108,15 @@ module dataio
 !
   subroutine  write_log
 
-    use fluidindex, only : idna,imxa,imya,imza
+#ifdef NOT_WORIKING
+
+#ifdef MAGNETIC
+    use fluidindex, only : ibx, iby, ibz
+#endif /* MAGNETIC */
 #ifndef ISO
     use fluidindex, only : iena
 #endif /* ISO */
-    use arrays, only : wa,is,ie,js,je,ks,ke,u,b,nx,ny,nz,nfluid,ibx,iby,ibz
+    use arrays, only : wa,is,ie,js,je,ks,ke,u,b,nx,ny,nz,nfluid
     use arrays, only : nfluid,nfmagn,fmagn,nadiab
     use grid, only   : dx,dy,dz,dxmn
     use constants, only : small, hydro_mass, k_B
@@ -1124,8 +1129,6 @@ module dataio
 #ifdef ISO
     use start, only : csi2,c_si
 #endif /* ISO */
-!    use init_problem
-!   use thermal
 #ifdef RESIST
     use resistivity
 #endif /* RESIST */
@@ -1166,18 +1169,16 @@ module dataio
 
     allocate(wa4(nfluid,nx,ny,nz))
 
-    wa4         =  u(idna,:,:,:)
+    wa4         =  u(iarr_all_dn(1),:,:,:)
     dens_min      = minval(wa4(1:nfluid,is:ie,js:je,ks:ke))
     loc_dens_min  = minloc(wa4(1:nfluid,is:ie,js:je,ks:ke)) &
                   + (/0,nb,nb,nb/)
     call mpifind(dens_min, 'min', loc_dens_min, proc_dens_min)
 
-    wa4         =  u(idna,:,:,:)
     dens_max      = maxval(wa4(1:nfluid,is:ie,js:je,ks:ke))
     loc_dens_max  = maxloc(wa4(1:nfluid,is:ie,js:je,ks:ke)) &
                   + (/0,nb,nb,nb/)
     call mpifind(dens_max, 'max', loc_dens_max, proc_dens_max)
-
 
     wa4         = abs(u(imxa,:,:,:)/u(idna,:,:,:))
     vx_max      = maxval(wa4(1:nfluid,is:ie,js:je,ks:ke))
@@ -1197,7 +1198,6 @@ module dataio
                   + (/0,nb,nb,nb/)
     call mpifind(vz_max, 'max', loc_vz_max, proc_vz_max)
 
-!    wa         = sum(b(:,:,:,:)**2,1)
     wa(:,:,:)  = b(1,:,:,:)*b(1,:,:,:) + b(2,:,:,:)*b(2,:,:,:) + &
                  b(3,:,:,:)*b(3,:,:,:)
     b_min      = sqrt(minval(wa(is:ie,js:je,ks:ke)))
@@ -1280,14 +1280,7 @@ module dataio
     call mpifind(cs_max, 'max', loc_cs_max, proc_cs_max)
 #endif /* ISO */
 
-#ifdef COOL_HEAT
-      call mpifind(eint_src_min, 'min', loc_dt_cool, proc_dt_cool)
-      call mpifind(eint_src_max, 'max', loc_dt_heat, proc_dt_heat)
-      call mpifind(dt_cool,      'min', loc_dt_cool, proc_dt_cool)
-      call mpifind(dt_heat,      'min', loc_dt_heat, proc_dt_heat)
-#endif /* COOL_HEAT */
 #ifdef RESIST
-! Tu trzba sprawdzic czy poprawnie znajdowane jest max i loc dla wielu procesow
       call mpifind(eta_max,      'max', loc_eta_max, proc_eta_max)
 #endif /* RESIST */
 
@@ -1295,9 +1288,6 @@ module dataio
                  (b(ibx,2:nx,1:ny-1,1:max(nz-1,1)) - b(ibx,1:nx-1,1:ny-1,1:max(nz-1,1)))*dy*dz &
                 +(b(iby,1:nx-1,2:ny,1:max(nz-1,1)) - b(iby,1:nx-1,1:ny-1,1:max(nz-1,1)))*dx*dz &
                 +(b(ibz,1:nx-1,1:ny-1,min(2,nz):nz) - b(ibz,1:nx-1,1:ny-1,1:max(nz-1,1)))*dx*dy
-!    wa = (cshift(b(ibx,:,:,:),dim=1,shift=1) - b(ibx,:,:,:))*dy*dz &
-!        +(cshift(b(iby,:,:,:),dim=2,shift=1) - b(iby,:,:,:))*dx*dz &
-!        +(cshift(b(ibz,:,:,:),dim=3,shift=1) - b(ibz,:,:,:))*dx*dy
     wa = abs(wa)
 
     wa(ie,:,:) = wa(ie-1,:,:)
@@ -1386,6 +1376,8 @@ module dataio
 778 format(2x,a18,(1x,e10.4),2x,a3,(1x,e10.4),4(1x,i4))
 #endif /* COOL_HEAT */
 900 format('   nstep = ',i7,'   dt = ',f22.16,'   t = ',f22.16,2(1x,i4))
+
+#endif /* NOT_WORKING */
 
   end subroutine write_log
 

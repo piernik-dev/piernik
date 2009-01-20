@@ -23,9 +23,9 @@ program mhd
   use dataio, only : host, pid
   use dataio, only : msg,step_res,step_hdf,log_file,nres,nhdf, &
       t_start, nres_start, nhdf_start, wait, msg_param
-  use dataio, only : init_dataio,read_restart,write_data, check_disk, &
+  use dataio, only : init_dataio,read_restart,write_data, &
       read_file_msg, write_timeslice, write_log, write_hdf, write_restart, &
-      find_last_restart, get_container, set_container
+      find_last_restart 
 !  use diagnostics
   use timer, only : timer_start, timer_stop
   use mpi_setup
@@ -177,8 +177,6 @@ program mhd
       call write_data(output='all')
 
 888   continue
-
-!      call check_disk
 
 !--- process 0 checks for messages
 

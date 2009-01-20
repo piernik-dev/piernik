@@ -23,7 +23,7 @@ module advects
     do k=1,nz
       do j=2,ny
         jm=j-1
-	vx=0.0
+        vx=0.0
         vx=(u(imxi,:,jm,k)+u(imxi,:,j,k))/(u(idni,:,jm,k)+u(idni,:,j,k))
         vx(2:nx-1)=(vx(1:nx-2) + vx(3:nx) + 2.0*vx(2:nx-1))*0.25
         vx(1)  = vx(2)
@@ -138,7 +138,7 @@ module advects
       do i=2,nx
         im=i-1
         vy=0.0
-	vy=(u(imyi,im,:,k)+u(imyi,i,:,k))/(u(idni,im,:,k)+u(idni,i,:,k))
+        vy=(u(imyi,im,:,k)+u(imyi,i,:,k))/(u(idni,im,:,k)+u(idni,i,:,k))
         vy(2:ny-1)=(vy(1:ny-2) + vy(3:ny) + 2.0*vy(2:ny-1))*0.25
         vy(1)  = vy(2)
         vy(ny) = vy(ny-1)
@@ -154,15 +154,6 @@ module advects
     if(dimensions .eq. '3d') call bnd_emf(wa, 'vybx', 'zdim')
     call bnd_emf(wa, 'vybx', 'xdim')
 
-#ifndef SPLIT
-    Lb(ibx,:,:,:) = Lb(ibx,:,:,:) - wa/dy
-    wa = cshift(wa,shift=-1,dim=ydim)
-    Lb(ibx,:,:,:) = Lb(ibx,:,:,:) + wa/dy
-    Lb(iby,:,:,:) = Lb(iby,:,:,:) - wa/dx
-    wa = cshift(wa,shift=1,dim=xdim)
-    Lb(iby,:,:,:) = Lb(iby,:,:,:) + wa/dx
-
-#endif /* SPLIT */
   end subroutine advectbx_y
 
   subroutine advectbx_z
@@ -184,7 +175,7 @@ module advects
     do j=1,ny
       do i=2,nx
         im=i-1
-	vz=0.0
+        vz=0.0
         vz=(u(imzi,im,j,:)+u(imzi,i,j,:))/(u(idni,im,j,:)+u(idni,i,j,:))
         vz(2:nz-1)=(vz(1:nz-2) + vz(3:nz) + 2.0*vz(2:nz-1))*0.25
         vz(1)  = vz(2)
