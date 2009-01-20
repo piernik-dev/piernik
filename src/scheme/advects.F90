@@ -16,7 +16,7 @@ module advects
 
     implicit none
     real, dimension(nx) :: vxby,by_x,vx
-    integer                j,k,jm,ifluid
+    integer                j,k,jm
 
     vxby = 0.0
 
@@ -54,7 +54,7 @@ module advects
 
     implicit none
     real, dimension(nx) :: vxbz,bz_x,vx
-    integer                j,k,km,ifluid
+    integer                j,k,km
 
     vxbz = 0.0
 
@@ -92,7 +92,7 @@ module advects
 
     implicit none
     real, dimension(ny)   :: vybz,bz_y,vy
-    integer                  i,k,km,ifluid
+    integer                  i,k,km
 
     vybz = 0.0
 
@@ -130,7 +130,7 @@ module advects
 
     implicit none
     real, dimension(ny) :: vybx,bx_y,vy
-    integer                k,i,im,ifluid
+    integer                k,i,im
 
     vybx = 0.0
 
@@ -168,7 +168,7 @@ module advects
 
     implicit none
     real, dimension(nz)  :: vzbx,bx_z,vz
-    integer                 j,i,im,ifluid
+    integer              :: j,i,im
 
     vzbx = 0.0
 
@@ -206,7 +206,7 @@ module advects
 
     implicit none
     real, dimension(nz)  :: vzby,by_z,vz
-    integer                 i,j,jm,ifluid
+    integer                 i,j,jm
 
     vzby = 0.0
 
@@ -214,7 +214,7 @@ module advects
       jm=j-1
       do i=1,nx
         vz=0.0
-	vz=(u(imzi,i,jm,:)+u(imzi,i,j,:))/(u(idni,i,jm,:)+u(idni,i,j,:))
+        vz=(u(imzi,i,jm,:)+u(imzi,i,j,:))/(u(idni,i,jm,:)+u(idni,i,j,:))
         vz(2:nz-1)=(vz(1:nz-2) + vz(3:nz) + 2.0*vz(2:nz-1))*0.25
         vz(1)  = vz(2)
         vz(nz) = vz(nz-1)

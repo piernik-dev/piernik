@@ -9,7 +9,7 @@ module mag_boundaries
 ! Modified by M. Hanasz - MPI corner-periodic bcs   - December 2006
 ! Modified by M. Hanasz - MPI shearing-periodic in "x" - November 2007
   use mpi_setup
-  use initionized, only : ibx, iby, ibz  
+  use fluidindex, only : ibx, iby, ibz  
   use start, only  : nb,dimensions
   use arrays, only : nx,ny,nz,u,b,nxb,nyb,nzb
 
@@ -886,18 +886,11 @@ subroutine bnd_emf(var, name, dim)
 end subroutine bnd_emf
 
   subroutine compute_b_bnd
-#ifndef SPLIT
-  use arrays, only : Lb
-#endif /* SPLIT */
 
    call bnd_b('xdim')
    call bnd_b('ydim')
    if(dimensions .eq. '3d') call bnd_b('zdim')
 
-#ifndef SPLIT
-   Lb(:,:,:,:) = 0.0
-
-#endif /* SPLIT */
   end subroutine compute_b_bnd
 
 end module mag_boundaries

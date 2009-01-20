@@ -10,7 +10,7 @@ module sweeps     ! split sweeps
     use fluidindex,   only : nmag
     use fluidindex,   only : ibx,iby,ibz
 
-    use start, only  : dimensions, magfield,dt,nb
+    use start, only  : dimensions, dt,nb
     use arrays, only : u,b,nx,ny,nz,ks,ke
     use grid, only   : dx
     use rtvd, only     : relaxing_tvd
@@ -61,7 +61,7 @@ module sweeps     ! split sweeps
     use fluidindex,   only : nmag
     use fluidindex, only : ibx,iby,ibz
     
-    use start, only  : dimensions, magfield,dt,nb
+    use start, only  : dimensions, dt,nb
     use arrays, only : u,b,nx,ny,nz,ks,ke
     use grid, only   : dy
     use rtvd, only     : relaxing_tvd
@@ -115,7 +115,7 @@ module sweeps     ! split sweeps
     use fluidindex, only   : nmag
     use fluidindex, only : ibx,iby,ibz
 
-    use start, only  : dimensions, magfield,dt,nb
+    use start, only  : dimensions, dt,nb
     use arrays, only : u,b,nx,ny,nz,ks,ke
     use grid, only   : dz
     use rtvd, only     : relaxing_tvd
@@ -141,7 +141,6 @@ module sweeps     ! split sweeps
       jp=j+1
       do i=1,nx-1
         
-	
 #ifdef MAGNETIC	
           ip=i+1
           b_z(:,:)=b(:,i,j,:)/2

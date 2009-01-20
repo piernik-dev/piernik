@@ -1214,8 +1214,8 @@ module dataio
                   + (/nb,nb,nb/)
     call mpifind(b_max, 'max', loc_b_max, proc_b_max)
 
-    vai_max     = sqrt(maxval(wa(is:ie,js:je,ks:ke)) &
-                       /u(idni,is:ie,js:je,ks:ke))
+    vai_max     = sqrt(maxval(wa(is:ie,js:je,ks:ke) &
+                       /u(idni,is:ie,js:je,ks:ke)))
     loc_vai_max = maxloc(wa(is:ie,js:je,ks:ke)     &
                        /u(idni,is:ie,js:je,ks:ke)) &
                   + (/nb,nb,nb/)
@@ -1227,7 +1227,7 @@ module dataio
     b_max = 0.0
     loc_b_max = (/-1,-1,-1/)
     proc_b_max = -1
-    va_max = 0.0
+    vai_max = 0.0
     loc_vai_max = (/-1,-1,-1/)
     proc_vai_max = -1
 #endif /* MAGNETIC */
