@@ -9,19 +9,19 @@ module fluxes
 
 #ifdef IONIZED
   use initionized, only : iarr_ion
-  use fluxesionized, only : flux_ion 
+  use fluxionized, only : flux_ion 
 #endif /* IONIZED */
 #ifdef NEUTRAL
   use initneutral, only : iarr_neu
-  use fluxesneutral, only : flux_neu
+  use fluxneutral, only : flux_neu
 #endif /* NEUTRAL */
 #ifdef DUST
   use initdust, only : iarr_dst
-  use fluxesdust, only : flux_dst
+  use fluxdust, only : flux_dst
 #endif /* DUST */
 #ifdef COSM_RAYS
   use initcrs, only : iarr_crs
-  use fluxescr, only : flux_crs
+  use fluxcr, only : flux_crs
 #endif /* COSM_RAYS */
 
 contains
@@ -79,30 +79,19 @@ subroutine all_fluxes(flux,cfr,uu,bb,n)
 
 #ifdef IONIZED
    uuion(:,:)=uu(iarr_ion,:)
-   
-!   write(*,*) 'ion:',nvar_ion
-!   write(*,*) uuion
-   
+
    call flux_ion(fluxion,cfrion,uuion,bb,n)
+
    flux(iarr_ion,:)=fluxion
    cfr(iarr_ion,:) =cfrion
    uu(iarr_ion,:)  =uuion
 #endif /* IONIZED */
 
-!   write(*,*) 'allfluxes:'
-!   write(*,*) fluxion(1,:)
-!   write(*,*) fluxion(2,:)
-!   write(*,*) fluxion(5,:)
-!   stop
-
 #ifdef NEUTRAL
    uuneu(:,:)=uu(iarr_neu,:)
 
-   write(*,*) 'neu:',nvar_neu
-   write(*,*) uuneu
-   stop
-
    call flux_neu(fluxneu,cfrneu,uuneu,n)
+
    flux(iarr_neu,:)=fluxneu
    cfr(iarr_neu,:)=cfrneu
    uu(iarr_neu,:)=uuneu
@@ -122,6 +111,7 @@ subroutine all_fluxes(flux,cfr,uu,bb,n)
    flux(iarr_crs,:)=fluxcrs
    uu(iarr_crs,:)=uucrs
 #endif /* COSM_RAYS */
+
 
 end subroutine all_fluxes
 
