@@ -26,7 +26,7 @@ module initneutral
           
     character par_file*(100), tmp_log_file*(100)
 
-    namelist /FLUID_neutral/ gamma_neu, cs_iso_neu
+    namelist /FLUID_NEUTRAL/ gamma_neu, cs_iso_neu
     
       gamma_neu  = 1.66666666
       cs_iso_neu = 1.0
