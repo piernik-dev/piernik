@@ -1,3 +1,6 @@
+! $Id: 
+#include "piernik.def"
+
 module init_problem
   
 ! Initial condition for Sedov-Taylor explosion
@@ -120,6 +123,13 @@ contains
 !-----------------------------------------------------------------------------
 
   subroutine init_prob
+ 
+#ifdef IONIZED
+    use initionized, only : gamma_ion
+#endif /* IONIZED */ 
+#ifdef NEUTRAL
+    use initneutral, only : gamma_neu
+#endif /* NEUTRAL */ 
   
 
     implicit none
@@ -140,7 +150,7 @@ contains
           u(imxn,i,j,k) = 0.0
           u(imyn,i,j,k) = 0.0
           u(imzn,i,j,k) = 0.0
-          u(ienn,i,j,k)   = p0/(gamma_ion-1.0)
+          u(ienn,i,j,k)   = p0/(gamma_neu-1.0)
 	  u(ienn,i,j,k)   = u(ienn,i,j,k) + 0.5*(u(imxn,i,j,k)**2 +u(imyn,i,j,k)**2 &
 	                                        +u(imzn,i,j,k)**2)/u(idnn,i,j,k)
         enddo
@@ -170,6 +180,11 @@ contains
 !    write(*,*) 'n_sn =', n_sn
 !    stop
   endif
+
+!    write(*,*) 'init_problem:'
+!    write(*,*) u(1,:,nb+1,1)
+!    stop
+
 #endif /* NEUTRAL */
   
 
@@ -213,10 +228,15 @@ contains
 !    enddo
 !  else
 !    write(*,*) 'n_sn =', n_sn
-!    write(*,*) u(ieni,:,nb+1,1)
-!    stop
   endif
-#endif /*ionized */
+  
+!    write(*,*) 'init_problem:'
+!    write(*,*) u(1,:,nb+1,1)
+!    stop
+
+
+#endif /*IONIZED */
+
     
     return
   end subroutine init_prob  

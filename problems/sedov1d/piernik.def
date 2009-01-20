@@ -25,10 +25,15 @@
 /* adiabatic or isothermal */
 #undef ISO
 
-/* number of different fluids */
+/* fluids */
+
+#undef MAGNETIC
+
 #define IONIZED
-#define MAGNETIC
-#undef NEUTRAL
+
+#define NEUTRAL
+
+
 #undef DUST
 #undef COSM_RAYS
 
