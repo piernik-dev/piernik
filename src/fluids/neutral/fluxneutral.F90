@@ -9,6 +9,7 @@ module fluxneutral
 
   subroutine flux_neu(fluxn,cfrn,uun,n)
     
+    use constants,       only : small
     use fluidindex,      only : idn,imx,imy,imz,ien
     use fluidindex,      only : nvar_neu
 
