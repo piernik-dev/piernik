@@ -11,6 +11,7 @@ module fluxionized
 
   subroutine flux_ion(fluxi,cfri,uui,bb,n)
   
+    use constants,       only : small
     use fluidindex,      only : nmag
     use fluidindex,      only : ibx,iby,ibz
     use fluidindex,      only : idn,imx,imy,imz,ien
