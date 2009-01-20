@@ -23,11 +23,6 @@
 #ifdef COLLISIONS
     use start, only : dt_colls
 #endif /* COLLISIONS */
-#ifdef KEPLER_SUPPRESSION
-    use start,  only : cfl_colls, dt_supp
-    use fluidindex, only : idna,imxa
-    use arrays, only : alfsup,nfluid,nz,omx0,omy0,x,y,nx,ny
-#endif /* KEPLER_SUPPRESSION */
 
     implicit none
 
@@ -56,13 +51,6 @@
 #ifdef COSM_RAYS
     integer               :: proc_encr_min, proc_encr_max
 #endif /* COSM_RAYS */
-#ifdef KEPLER_SUPPRESSION
-    integer               :: proc_asupp_min, proc_asupp_max
-    integer, dimension(4) :: loc_asupp_min, loc_asupp_max
-    real,allocatable,dimension(:,:) :: velx,vely,dvx,dvy
-    real wa4_pom
-    integer i,j,k
-#endif /* KEPLER_SUPPRESSION */
 
 ! Timestep diagnostics
 
@@ -212,42 +200,6 @@
                   + (/nb,nb,nb/)
     call mpifind(divb_max, 'max', loc_divb_max, proc_divb_max)
 
-#ifdef KEPLER_SUPPRESSION
-    allocate(velx(nx,ny),vely(nx,ny),dvx(nx,ny),dvy(nx,ny))
-    do ifl = 1,nfluid
-    do k = 1,nz
-    velx=u(imxa(ifl),:,:,k)/u(idna(ifl),:,:,k)
-#ifdef KEPL_SUPP_SIMX
-    dvx(:,:)=u(imxa(ifl),:,:,k)-omx0(ifl,:,:,k)
-    wa4(ifl,:,:,k) = (abs(velx)+small)/(abs(dvx)+small)/(abs(alfsup)+small)
-#else /* KEPL_SUPP_SIMX */
-    vely=u(imya(ifl),:,:,k)/u(idna(ifl),:,:,k)
-    do j=1,ny
-    dvx(:,j)=(velx(:,j)*y(j)-vely(:,j)*x(:))*y(j)/(x(:)**2+y(j)**2)-omx0(ifl,:,j,k)
-    enddo
-    do j=1,nx
-    dvy(j,:)=(vely(j,:)*x(j)-velx(j,:)*y(:))*x(j)/(y(:)**2+x(j)**2)-omy0(ifl,j,:,k)
-    enddo
-    do i=1,nx
-    do j=1,ny
-    wa4_pom        = (abs(vely(i,j))+small)/(abs(dvy(i,j))+small)/(abs(alfsup(i,j))+small)
-    wa4(ifl,i,j,k) = (abs(velx(i,j))+small)/(abs(dvx(i,j))+small)/(abs(alfsup(i,j))+small)
-    wa4(ifl,i,j,k) = min(wa4(ifl,i,j,k),wa4_pom)
-    enddo
-    enddo
-#endif /* KEPL_SUPP_SIMX */
-    enddo
-    enddo
-    deallocate(velx,vely,dvx,dvy)
-!    wa4           = spread(spread(alfsup,3,nz),1,nfluid)/u(idna,:,:,:)+small
-    asupp_min     = minval(wa4(1:nfluid,is:ie,js:je,ks:ke))
-    loc_asupp_min = minloc(wa4(1:nfluid,is:ie,js:je,ks:ke))
-    call mpifind(asupp_min, 'min', loc_asupp_min, proc_asupp_min)
-    asupp_max     = maxval(wa4(1:nfluid,is:ie,js:je,ks:ke))
-    loc_asupp_max = maxloc(wa4(1:nfluid,is:ie,js:je,ks:ke))
-    call mpifind(asupp_max, 'max', loc_asupp_max, proc_asupp_max)
-#endif /* KEPLER_SUPPRESSION */
-
     deallocate(wa4)
 
 #ifdef COSM_RAYS
@@ -300,14 +252,6 @@
 #ifdef COLLISIONS
         write(log_lun,'(2x,a36,e10.4)') 'collisions with fluid ~1/dens, dt = ',dt_colls
 #endif /* COLLISIONS */
-#ifdef KEPLER_SUPPRESSION
-!>
-!! \todo Check and probably change the log of KEPLER_SUPPRESSION
-!<
-        write(log_lun,779) 'min(alfsup*dens) =',asupp_min, 'dt=',cfl_colls*asupp_min, proc_asupp_min, loc_asupp_min
-        write(log_lun,779) 'max(alfsup*dens) =',asupp_max, 'dt=',cfl_colls*asupp_max, proc_asupp_max, loc_asupp_max
-        write(log_lun,'(5x,a10,e10.4)') 'dt_supp = ',dt_supp
-#endif /* KEPLER_SUPPRESSION */
 
       close(log_lun)
 
@@ -332,8 +276,5 @@
 #ifdef COOL_HEAT
 778 format(2x,a18,(1x,e10.4),2x,a3,(1x,e10.4),4(1x,i4))
 #endif /* COOL_HEAT */
-#ifdef KEPLER_SUPPRESSION
-779 format(5x,a18,(1x,e10.4),2x,a3,(1x,e10.4),5(1x,i4))
-#endif /* KEPLER_SUPPRESSION */
 900 format('   nstep = ',i7,'   dt = ',f22.16,'   t = ',f22.16,2(1x,i4))
 
