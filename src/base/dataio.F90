@@ -200,7 +200,6 @@ module dataio
                iso = 1, jso = 1, kso = 1, &
                ieo = 1, jeo = 1, keo = 1
     real(kind=4), dimension(:,:,:), allocatable :: temp
-    real :: magunit
 
 !- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -350,15 +349,6 @@ module dataio
         wa(iso:ieo,jso:jeo,kso:keo) = u(iarr_all_en(ifl),iso:ieo,jso:jeo,kso:keo)
         call next_fluid_or_var(ifl,iw,nfluid)
 
-      case ('eint')
-        write(varname,'(a3,i1)') 'ein',ifl
-        wa(iso:ieo,jso:jeo,kso:keo) = u(iarr_all_en(ifl),iso:ieo,jso:jeo,kso:keo) &
-                               - 0.5*(u(iarr_all_mx(ifl),iso:ieo,jso:jeo,kso:keo)**2 &
-                                     +u(iarr_all_my(ifl),iso:ieo,jso:jeo,kso:keo)**2 &
-                                     +u(iarr_all_mz(ifl),iso:ieo,jso:jeo,kso:keo)**2)/u(iarr_all_dn(ifl),iso:ieo,jso:jeo,kso:keo)
-        call next_fluid_or_var(ifl,iw,nfluid)
-#endif /* ISO */
-
 #ifdef COSM_RAYS
       case ('encr')
         write(varname,'(a3,i1)') 'enc', ifl
@@ -382,71 +372,56 @@ module dataio
 #endif /* GRAV */
 
       case ('magx')
-#ifdef STANDARD
-        magunit = 1.0
-#else /* STANDARD */
-        magunit = Gs
-#endif /* STANDARD */
         varname = 'magx'
         if(domain .eq. 'full_domain') then
           if(mag_center .eq. 'yes') then
-            wa(:,:,:) = 0.5*(b(ibx,:,:,:)/magunit)
+            wa(:,:,:) = 0.5*b(ibx,:,:,:)
             wa(:,:,:) = wa(:,:,:)  + cshift(wa(:,:,:),shift=1,dim=1)
           else
-            wa(:,:,:) = b(ibx,:,:,:)/magunit
+            wa(:,:,:) = b(ibx,:,:,:)
           endif
         else if(domain .eq. 'phys_domain') then
           if(mag_center .eq. 'yes') then
-            wa(iso:ieo,jso:jeo,kso:keo) = 0.5*(b(ibx,iso:ieo,jso:jeo,kso:keo))/magunit
-            wa(iso:ieo,jso:jeo,kso:keo) = wa(iso:ieo,jso:jeo,kso:keo) + 0.5*(b(ibx,iso+1:ieo+1,jso:jeo,kso:keo))/magunit
+            wa(iso:ieo,jso:jeo,kso:keo) = 0.5*(b(ibx,iso:ieo,jso:jeo,kso:keo))
+            wa(iso:ieo,jso:jeo,kso:keo) = wa(iso:ieo,jso:jeo,kso:keo) + 0.5*(b(ibx,iso+1:ieo+1,jso:jeo,kso:keo))
           else
-            wa(iso:ieo,jso:jeo,kso:keo) = b(ibx,iso:ieo,jso:jeo,kso:keo)/magunit
+            wa(iso:ieo,jso:jeo,kso:keo) = b(ibx,iso:ieo,jso:jeo,kso:keo)
           endif
         endif
 
       case ('magy')
-#ifdef STANDARD
-        magunit = 1.0
-#else /* STANDARD */
-        magunit = Gs
-#endif /* STANDARD */
         varname = 'magy'
         if(domain .eq. 'full_domain') then
           if(mag_center .eq. 'yes') then
-            wa(:,:,:) = 0.5*(b(iby,:,:,:)/magunit)
+            wa(:,:,:) = 0.5*b(iby,:,:,:)
             wa(:,:,:) = wa(:,:,:)  + cshift(wa(:,:,:),shift=1,dim=2)
           else
-            wa(:,:,:) = b(iby,:,:,:)/magunit
+            wa(:,:,:) = b(iby,:,:,:)
           endif
         else if(domain .eq. 'phys_domain') then
           if(mag_center .eq. 'yes') then
-            wa(iso:ieo,jso:jeo,kso:keo) = 0.5*(b(iby,iso:ieo,jso:jeo,kso:keo))/magunit
-            wa(iso:ieo,jso:jeo,kso:keo) = wa(iso:ieo,jso:jeo,kso:keo) + 0.5*(b(iby,iso:ieo,jso+1:jeo+1,kso:keo))/magunit
+            wa(iso:ieo,jso:jeo,kso:keo) = 0.5*(b(iby,iso:ieo,jso:jeo,kso:keo))
+            wa(iso:ieo,jso:jeo,kso:keo) = wa(iso:ieo,jso:jeo,kso:keo) + 0.5*(b(iby,iso:ieo,jso+1:jeo+1,kso:keo))
           else
-            wa(iso:ieo,jso:jeo,kso:keo) = b(iby,iso:ieo,jso:jeo,kso:keo)/magunit
+            wa(iso:ieo,jso:jeo,kso:keo) = b(iby,iso:ieo,jso:jeo,kso:keo)
           endif
         endif
 
       case ('magz')
-#ifdef STANDARD
-        magunit = 1.0
-#else /* STANDARD */
-        magunit = Gs
-#endif /* STANDARD */
         varname = 'magz'
         if(domain .eq. 'full_domain') then
           if(mag_center .eq. 'yes') then
-            wa(:,:,:) = 0.5*(b(ibz,:,:,:)/magunit)
+            wa(:,:,:) = 0.5*b(ibz,:,:,:)
             wa(:,:,:) = wa(:,:,:)  + cshift(wa(:,:,:),shift=1,dim=3)
           else
-            wa(:,:,:) = b(ibz,:,:,:)/magunit
+            wa(:,:,:) = b(ibz,:,:,:)
           endif
         else if(domain .eq. 'phys_domain') then
           if(mag_center .eq. 'yes') then
-            wa(iso:ieo,jso:jeo,kso:keo) = 0.5*(b(ibz,iso:ieo,jso:jeo,kso:keo))/magunit
-            wa(iso:ieo,jso:jeo,kso:keo) = wa(iso:ieo,jso:jeo,kso:keo) + 0.5*(b(ibz,iso:ieo,jso:jeo,kso+1:keo+1))/magunit
+            wa(iso:ieo,jso:jeo,kso:keo) = 0.5*(b(ibz,iso:ieo,jso:jeo,kso:keo))
+            wa(iso:ieo,jso:jeo,kso:keo) = wa(iso:ieo,jso:jeo,kso:keo) + 0.5*(b(ibz,iso:ieo,jso:jeo,kso+1:keo+1))
           else
-            wa(iso:ieo,jso:jeo,kso:keo) = b(ibz,iso:ieo,jso:jeo,kso:keo)/magunit
+            wa(iso:ieo,jso:jeo,kso:keo) = b(ibz,iso:ieo,jso:jeo,kso:keo)
           endif
         endif
 
@@ -977,15 +952,9 @@ module dataio
 #ifdef SNE_DISTR
     real :: sum_emagadd = 0.0
 #endif /* SNE_DISTR */
-    real :: magunit
 !- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 !
     if (proc .eq. 0) then
-#ifdef STANDARD
-      magunit = 1.0
-#else /* STANDARD */
-      magunit = Gs
-#endif /* STANDARD */
       write (tsl_file,'(a,a1,a,a1,a3,a1,i3.3,a4)') &
               trim(cwd),'/',trim(problem_name),'_', run_id,'_',nrestart,'.tsl'
 
@@ -1063,15 +1032,15 @@ module dataio
     emag = sum(wa(is:ie,js:je,ks:ke)) * dvol
     call mpi_allreduce(emag, tot_emag, 1, mpi_real8, mpi_sum, comm3d, ierr)
 
-    wa(is:ie,js:je,ks:ke) = b(ibx,is:ie,js:je,ks:ke)/magunit
+    wa(is:ie,js:je,ks:ke) = b(ibx,is:ie,js:je,ks:ke)
     mflx = sum(wa(is:ie,js:je,ks:ke)) * dy*dz/nxd
     call mpi_allreduce(mflx, tot_mflx, 1, mpi_real8, mpi_sum, comm3d, ierr)
 
-    wa(is:ie,js:je,ks:ke) = b(iby,is:ie,js:je,ks:ke)/magunit
+    wa(is:ie,js:je,ks:ke) = b(iby,is:ie,js:je,ks:ke)
     mfly = sum(wa(is:ie,js:je,ks:ke)) * dx*dz/nyd
     call mpi_allreduce(mfly, tot_mfly, 1, mpi_real8, mpi_sum, comm3d, ierr)
 
-    wa(is:ie,js:je,ks:ke) = b(ibz,is:ie,js:je,ks:ke)/magunit
+    wa(is:ie,js:je,ks:ke) = b(ibz,is:ie,js:je,ks:ke)
     mflz = sum(wa(is:ie,js:je,ks:ke)) * dx*dy/nzd
     call mpi_allreduce(mflz, tot_mflz, 1, mpi_real8, mpi_sum, comm3d, ierr)
 
