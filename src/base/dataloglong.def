@@ -24,10 +24,6 @@
 #ifdef COLLISIONS
     use start, only : dt_colls
 #endif /* COLLISIONS */
-#ifdef KEPLER_SUPPRESSION
-    use start,  only : cfl_colls, dt_supp
-    use arrays, only : nz, alfsup
-#endif /* KEPLER_SUPPRESSION */
 
     implicit none
 
@@ -55,10 +51,6 @@
 #ifdef COSM_RAYS
     integer               :: proc_encr_min, proc_encr_max
 #endif /* COSM_RAYS */
-#ifdef KEPLER_SUPPRESSION
-    integer               :: proc_asupp_min, proc_asupp_max
-    integer, dimension(3) :: loc_asupp_min, loc_asupp_max
-#endif /* KEPLER_SUPPRESSION */
 
 ! Timestep diagnostics
 
@@ -200,16 +192,6 @@
                   + (/nb,nb,nb/)
     call mpifind(divb_max, 'max', loc_divb_max, proc_divb_max)
 
-#ifdef KEPLER_SUPPRESSION
-      wa            = spread(alfsup,3,nz)/u(iarr_all_dn(ifl),:,:,:)+small
-      asupp_min     = minval(wa(is:ie,js:je,ks:ke))
-      loc_asupp_min = minloc(wa(is:ie,js:je,ks:ke))
-      call mpifind(asupp_min, 'min', loc_asupp_min, proc_asupp_min)
-      asupp_max     = maxval(wa(is:ie,js:je,ks:ke))
-      loc_asupp_max = maxloc(wa(is:ie,js:je,ks:ke))
-      call mpifind(asupp_max, 'max', loc_asupp_max, proc_asupp_max)
-#endif /* KEPLER_SUPPRESSION */
-
     if(proc .eq. 0)  then
 
       open(log_lun, file=log_file, position='append')
@@ -242,14 +224,6 @@
 #ifdef COLLISIONS
         write(log_lun,'(2x,a22,i2,a15,e10.4)') 'collisions with fluid ',ifl,' ~1/dens, dt = ',dt_colls
 #endif /* COLLISIONS */
-#ifdef KEPLER_SUPPRESSION
-!>
-!! \todo Check and probably change the log of KEPLER_SUPPRESSION
-!<
-        write(log_lun,779) 'min(alfsup*dens',ifl,' ) =',asupp_min, 'dt=',cfl_colls/asupp_min, proc_asupp_min, loc_asupp_min
-        write(log_lun,779) 'max(alfsup*dens',ifl,' ) =',asupp_max, 'dt=',cfl_colls/asupp_max, proc_asupp_max, loc_asupp_max
-        write(log_lun,'(5x,a10,e10.4)') 'dt_supp = ',dt_supp
-#endif /* KEPLER_SUPPRESSION */
 
       close(log_lun)
 
@@ -300,8 +274,5 @@
 #ifdef COOL_HEAT
 778 format(4x,a13,i2,a3,(1x,e10.4),2x,a3,(1x,e10.4),4(1x,i4))
 #endif /* COOL_HEAT */
-#ifdef KEPLER_SUPPRESSION
-779 format(2x,a15,i2,a4,(1x,e10.4),2x,a3,(1x,e10.4),4(1x,i4))
-#endif /* KEPLER_SUPPRESSION */
 900 format('   nstep = ',i7,'   dt = ',f22.16,'   t = ',f22.16,2(1x,i4))
 
