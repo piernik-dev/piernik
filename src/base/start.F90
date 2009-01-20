@@ -54,7 +54,7 @@ module start
 
   real :: c_si, alpha, tauc
 !  real, dimension(NUMBFLUID) :: gamma
-  real, dimension(1) :: gamma   !!! do poprawy
+  real, dimension(2) :: gamma   !!! do poprawy
 
   real cfl, smalld, smallei, nu_bulk, cfl_visc
 #ifdef VZ_LIMITS

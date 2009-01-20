@@ -30,18 +30,18 @@ contains
 #endif /* IONIZED */
 
 #ifdef NEUTRAL
-    use timestepneutral, only : timestep_neut
-    use timestepneutral, only : dt_neut,c_neut
+    use timestepneutral, only : timestep_neu
+    use timestepneutral, only : dt_neu,c_neu
 #endif /* NEUTRAL */
 
 #ifdef DUST
-    use timestepdust, only : timestep_dust
-    use timestepdust, only : dt_dust,c_dust
+    use timestepdust, only : timestep_dst
+    use timestepdust, only : dt_dst,c_dst
 #endif /* DUST */
 
 #ifdef COSM_RAYS
-    use timestepcr, only : timestep_cr
-    use timestepcr, only : dt_cr
+    use timestepcr, only : timestep_crs
+    use timestepcr, only : dt_crs
 #endif COSM_RAYS
     
     
@@ -81,20 +81,20 @@ contains
 #endif /* IONIZED */
 
 #ifdef NEUTRAL
-    call timestep_neut
-    dt=min(dt_neut,(tend-t)/2.)
-    c_all = max(c_all,c_neut)
+    call timestep_neu
+    dt=min(dt_neu,(tend-t)/2.)
+    c_all = max(c_all,c_neu)
 #endif /* NEUTRAL */
 
 #ifdef DUST
-    call timestep_dust
-    dt=min(dt_dust,(tend-t)/2.)
-    c_all = max(c_all,c_dust)
+    call timestep_dst
+    dt=min(dt_dst,(tend-t)/2.)
+    c_all = max(c_all,c_dst)
 #endif /* DUST */
 
 #ifdef COSM_RAYS
-    call timestep_cr
-    dt=min(dt_cr,(tend-t)/2.)
+    call timestep_crs
+    dt=min(dt_crs,(tend-t)/2.)
 #endif /* COSM_RAYS */
 
 #ifdef RESIST
@@ -117,9 +117,9 @@ contains
 !    dt = min(dt,dt_visc)
 !#endif /* VISC */
 
-!#ifdef COSM_RAYS  !!! przeniesc do "timestep_cr"
-!    dt_cr = cfl_cr * 0.5*dxmn**2/(K_cr_paral+K_cr_perp+small)
-!    dt = min(dt,dt_cr)
+!#ifdef COSM_RAYS  !!! przeniesc do "timestep_crs"
+!    dt_crs = cfl_crs * 0.5*dxmn**2/(K_crs_paral+K_crs_perp+small)
+!    dt = min(dt,dt_crs)
 !endif /* COSM_RAYS */
 
 #ifdef SIMPLE_COOL
