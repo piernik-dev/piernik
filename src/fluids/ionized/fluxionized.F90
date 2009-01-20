@@ -18,6 +18,7 @@ module fluxionized
   
     use initionized,     only : gamma_ion, cs_iso_ion2
     use timestepionized, only : c_ion
+    use constants,       only : small
 
 !#ifdef COSM_RAYS
 !    use arrays, only : iecr
