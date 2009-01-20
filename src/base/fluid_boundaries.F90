@@ -380,7 +380,7 @@ subroutine bnd_u(dim)
 
 !      do i=1,nb
 !        do j=1,ny
-	   u(:,:,ny,:) = u(:,:,ny-1,:)
+      u(:,:,ny,:) = u(:,:,ny-1,:)
 !          u(iarr_all_dn,i,j,:) =  recv_left(iarr_all_dn,j,nb+1-i,:)
 !          u(iarr_all_mx,i,j,:) = -recv_left(iarr_all_my,j,nb+1-i,:)
 !          u(iarr_all_my,i,j,:) =  recv_left(iarr_all_mx,j,nb+1-i,:)

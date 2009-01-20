@@ -28,7 +28,7 @@ module timestepionized
 
 ! locals
     real pmag
-    real v,ps,p
+    real ps,p
     integer i,j,k
 
 
@@ -52,8 +52,8 @@ module timestepionized
             ps =p+pmag
             cf = sqrt(abs(  (2.*pmag+p)/u(idni,i,j,k)) )
 #else /* ISO */
-	    ps=(u(ieni,i,j,k)-sum(u(imxi:imzi,i,j,k)**2,1) &
-	        /u(idni,i,j,k)/2.)*(gamma_ion-1.)+(2.-gamma_ion)*pmag
+            ps=(u(ieni,i,j,k)-sum(u(imxi:imzi,i,j,k)**2,1) &
+             /u(idni,i,j,k)/2.)*(gamma_ion-1.)+(2.-gamma_ion)*pmag
             p=ps-pmag
             cf = sqrt(abs(  (2.*pmag+gamma_ion*p)/u(idni,i,j,k)) )
 #endif /* ISO */

@@ -41,9 +41,9 @@ module initionized
            write(3,nml=FLUID_IONIZED)
            write(3,*)
          close(3)
-      endif	 
-	 
-	 
+      endif 
+ 
+ 
     if(proc .eq. 0) then
 
       rbuff(1)   = gamma_ion

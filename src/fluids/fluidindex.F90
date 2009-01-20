@@ -48,33 +48,33 @@ module fluidindex
     subroutine fluid_index
    
 #ifdef IONIZED
-      use initionized, only 	: ionized_index
-      use initionized, only 	: iarr_ion_swpx, iarr_ion_swpy, iarr_ion_swpz
-      use initionized, only 	: idni,imxi,imyi,imzi
+      use initionized, only   : ionized_index
+      use initionized, only   : iarr_ion_swpx, iarr_ion_swpy, iarr_ion_swpz
+      use initionized, only   : idni,imxi,imyi,imzi
 #ifndef ISO
-      use initionized, only 	: ieni
+      use initionized, only   : ieni
 #endif /* ISO */ 
 #endif /* IONIZED */
 
 #ifdef NEUTRAL
-      use initneutral, only 	: neutral_index
-      use initneutral, only 	: iarr_neu_swpx, iarr_neu_swpy, iarr_neu_swpz
-      use initneutral, only 	: idnn,imxn,imyn,imzn
+      use initneutral, only   : neutral_index
+      use initneutral, only   : iarr_neu_swpx, iarr_neu_swpy, iarr_neu_swpz
+      use initneutral, only   : idnn,imxn,imyn,imzn
 #ifndef ISO 
-      use initneutral, only 	: ienn
+      use initneutral, only   : ienn
 #endif /* ISO */      
 #endif /* NEUTRAL */
 
 #ifdef DUST
-      use initdust, only 	: dust_index
-      use initdust, only 	: iarr_dst_swpx, iarr_dst_swpy, iarr_dst_swpz
-      use initdust, only 	: idnd,imxd,imyd,imzd      
+      use initdust, only   : dust_index
+      use initdust, only   : iarr_dst_swpx, iarr_dst_swpy, iarr_dst_swpz
+      use initdust, only   : idnd,imxd,imyd,imzd      
 #endif /* DUST */
 
 #ifdef COSM_RAYS
-      use initcr, only 	: dust_index
-      use initcr, only 	: iarr_crs_swpx, iarr_crs_swpy, iarr_crs_swpz
-      use initcr, only 	: iecr           
+      use initcr, only  : dust_index
+      use initcr, only  : iarr_crs_swpx, iarr_crs_swpy, iarr_crs_swpz
+      use initcr, only  : iecr           
 #endif /* COSM_RAYS */
 
       implicit none

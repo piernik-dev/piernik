@@ -29,8 +29,8 @@
   integer :: pxsize, pysize, pzsize
   namelist /MPI_BLOCKS/ pxsize, pysize, pzsize
 
-  character*4 :: bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr
-  character*4 :: bnd_xl_dom, bnd_xr_dom, bnd_yl_dom, bnd_yr_dom, bnd_zl_dom, bnd_zr_dom
+  character(len=4) :: bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr
+  character(len=4) :: bnd_xl_dom, bnd_xr_dom, bnd_yl_dom, bnd_yr_dom, bnd_zl_dom, bnd_zr_dom
   namelist /BOUNDARIES/ bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr
 
   logical     :: mpi
@@ -146,12 +146,12 @@
       call MPI_BCAST(cbuff, 32*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
       call MPI_BCAST(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
 
-      bnd_xl = cbuff(1)
-      bnd_xr = cbuff(2)
-      bnd_yl = cbuff(3)
-      bnd_yr = cbuff(4)
-      bnd_zl = cbuff(5)
-      bnd_zr = cbuff(6)
+      bnd_xl = cbuff(1)(1:4)
+      bnd_xr = cbuff(2)(1:4)
+      bnd_yl = cbuff(3)(1:4)
+      bnd_yr = cbuff(4)(1:4)
+      bnd_zl = cbuff(5)(1:4)
+      bnd_zr = cbuff(6)(1:4)
 
       pxsize = ibuff(1)
       pysize = ibuff(2)

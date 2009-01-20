@@ -479,8 +479,8 @@ contains
       enddo
 
       cbuff(60) = mag_center
-      cbuff(61) = user_message_file
-      cbuff(62) = system_message_file
+      cbuff(61) = user_message_file(1:32)
+      cbuff(62) = system_message_file(1:32)
 
 !  namelist /DOMAIN_LIMITS/ xmin, xmax, ymin, ymax, zmin, zmax
 
@@ -750,8 +750,8 @@ contains
 
       flux_limiter        = trim(cbuff(80))
       freezing_speed      = trim(cbuff(81))
-      dimensions          = cbuff(82)
-      magnetic            = cbuff(83)
+      dimensions          = cbuff(82)(1:16)
+      magnetic            = cbuff(83)(1:16)
 
       integration_order   = ibuff(80)
 

@@ -195,7 +195,7 @@ module dataio
     integer :: sfstart, sfend, sfsnatt, sfcreate, sfwdata, sfscompress, sfendacc &
              , sfdimid, sfsdmname, sfsdscale, sfsdmstr
 
-    integer :: iv, ibe, jbe, ifl, iw
+    integer :: iv, ifl, iw
     integer :: nxo = 1, nyo = 1, nzo = 1, &
                iso = 1, jso = 1, kso = 1, &
                ieo = 1, jeo = 1, keo = 1
@@ -1219,10 +1219,10 @@ module dataio
 
 
 #ifdef ISO
-    pres_min     = csi2*dens_min
+    pres_min      = csi2*dens_min
     loc_pres_min  = loc_dens_min
     proc_pres_min = proc_dens_min
-    pres_max     = csi2*dens_max
+    pres_max      = csi2*dens_max
     loc_pres_max  = loc_dens_max
     proc_pres_max = proc_dens_max
     cs_max        = c_si
