@@ -228,8 +228,8 @@ push(@addons, "../src/scheme/rtvd.F90");
 
 
 
-push(@addons, "../src/base/datalogshort.def");
-push(@addons, "../src/base/dataloglong.def");
+#push(@addons, "../src/base/datalogshort.def");
+#push(@addons, "../src/base/dataloglong.def");
 
 
 @files = ( @base, @prob, @addons );
