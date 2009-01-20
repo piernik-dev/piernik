@@ -7,9 +7,9 @@ module sweeps     ! split sweeps
   subroutine sweepx
 
     use fluidindex,   only : nvar, iarr_all_swpx
-#ifdef IONIZED
-    use fluidindex,   only : nmag, ibx,iby,ibz
-#endif /* IONIZED */
+    use fluidindex,   only : nmag
+    use fluidindex,   only : ibx,iby,ibz
+
     use start, only  : dimensions, magfield,dt,nb
     use arrays, only : u,b,nx,ny,nz,ks,ke
     use grid, only   : dx
@@ -34,15 +34,14 @@ module sweeps     ! split sweeps
     do k=ks,ke
       kp=k+1
       do j=1,ny-1
-        if(magfield)then
+      
+#ifdef MAGNETIC
           jp=j+1
           b_x=0.5*b(:,:,j,k)
           b_x(ibx,1:nx-1)=b_x(ibx,1:nx-1)+b_x(ibx,2:nx);       b_x(ibx,nx) = b_x(ibx,nx-1)
           b_x(iby,:)=b_x(iby,:)+0.5*b(iby,:,jp,k)
           if(dimensions .eq. '3d')  b_x(ibz,:)=b_x(ibz,:)+0.5*b(ibz,:,j,kp)
-        else  ! tak "just in case"
-          b_x = 0.0
-        endif
+#endif /* MAGNETIC */
 
         u_x(iarr_all_swpx,:)=u(:,:,j,k)
 
@@ -59,9 +58,9 @@ module sweeps     ! split sweeps
 
   subroutine sweepy
     use fluidindex, only : nvar, iarr_all_swpy
-#ifdef IONIZED
-    use fluidindex,   only : nmag,ibx,iby,ibz
-#endif /* IONIZED */
+    use fluidindex,   only : nmag
+    use fluidindex, only : ibx,iby,ibz
+    
     use start, only  : dimensions, magfield,dt,nb
     use arrays, only : u,b,nx,ny,nz,ks,ke
     use grid, only   : dy
@@ -87,16 +86,15 @@ module sweeps     ! split sweeps
     do k=ks,ke
       kp=k+1
       do i=1,nx-1
-        if(magfield)then
+        
+#ifdef MAGNETIC	
           ip=i+1
           b_y(:,:)=b(:,i,:,k)/2
           b_y(ibx,:)=b_y(ibx,:)+b(ibx,ip,:,k)/2
           b_y(iby,1:ny-1)=b_y(iby,1:ny-1)+b_y(iby,2:ny);       b_y(iby,ny) = b_y(iby,ny-1)
           if (dimensions .eq. '3d') b_y(ibz,:)=b_y(ibz,:)+b(ibz,i,:,kp)/2
           b_y((/iby,ibx,ibz/),:)=b_y(:,:)
-        else
-          b_y = 0.0
-        endif
+#endif /* MAGNETIC */
 
         u_y(iarr_all_swpy,:)=u(:,i,:,k) 
 
@@ -114,9 +112,9 @@ module sweeps     ! split sweeps
 
   subroutine sweepz
     use fluidindex, only   : nvar, iarr_all_swpz
-#ifdef IONIZED
-    use fluidindex, only   : nmag, ibx, iby, ibz
-#endif /* IONIZED */
+    use fluidindex, only   : nmag
+    use fluidindex, only : ibx,iby,ibz
+
     use start, only  : dimensions, magfield,dt,nb
     use arrays, only : u,b,nx,ny,nz,ks,ke
     use grid, only   : dz
@@ -142,16 +140,17 @@ module sweeps     ! split sweeps
     do j=1,ny-1
       jp=j+1
       do i=1,nx-1
-        if(magfield)then
+        
+	
+#ifdef MAGNETIC	
           ip=i+1
           b_z(:,:)=b(:,i,j,:)/2
           b_z(ibx,:)=b_z(ibx,:)+b(ibx,ip,j,:)/2
           b_z(iby,:)=b_z(iby,:)+b(iby,i,jp,:)/2
           b_z(ibz,1:nz-1)=b_z(ibz,1:nz-1)+b_z(ibz,2:nz);       b_z(ibz,nz) = b_z(ibz,nz-1)
           b_z((/ibz,iby,ibx/),:)=b_z(:,:)
-        else
-          b_z = 0.0
-        endif
+#endif /* MAGNETIC */
+
         u_z(iarr_all_swpz,:)=u(:,i,j,:)
 
         call relaxing_tvd(u_z,b_z,'zsweep',i,j,dz,nz,dt)

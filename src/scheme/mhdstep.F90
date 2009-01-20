@@ -220,7 +220,7 @@ end subroutine mhd_step
 #ifdef MAGNETIC
   subroutine magfieldbyzx
     use start,   only : dimensions
-    use initionized, only : ibx,iby,ibz
+    use fluidindex, only : ibx,iby,ibz
     use arrays,  only : b,xdim,ydim,zdim
     use advects, only : advectby_x,advectbz_x
 
@@ -255,7 +255,7 @@ end subroutine mhd_step
 
   subroutine magfieldbzxy
     use start,   only : dimensions
-    use initionized, only : ibx,iby,ibz
+    use fluidindex, only : ibx,iby,ibz
     use arrays,  only : b,xdim,ydim,zdim
     use advects, only : advectbx_y,advectbz_y
 
@@ -289,7 +289,7 @@ end subroutine mhd_step
 
   subroutine magfieldbxyz
     use start,   only : dimensions
-    use initionized, only : ibx,iby,ibz
+    use fluidindex, only : ibx,iby,ibz
     use arrays,  only : b,xdim,ydim,zdim
     use advects, only : advectbx_z,advectby_z
 

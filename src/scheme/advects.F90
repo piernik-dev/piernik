@@ -7,7 +7,7 @@ module advects
   subroutine advectby_x
     use start,  only : dimensions,dt
     use fluidindex,   only : nfluid
-    use initionized, only : ibx,iby,ibz
+    use fluidindex, only : ibx,iby,ibz
     use initionized, only : idni,imxi
     use arrays, only : b,u,wa,nx,ny,nz
     use grid,   only : dx
@@ -45,7 +45,7 @@ module advects
   subroutine advectbz_x
     use start,  only : dimensions,dt
     use fluidindex,   only : nfluid
-    use initionized, only : ibx,iby,ibz
+    use fluidindex, only : ibx,iby,ibz
     use initionized, only : idni,imxi
     use arrays, only : b,u,wa,nx,ny,nz
     use grid,   only : dx
@@ -83,7 +83,7 @@ module advects
   subroutine advectbz_y
     use start,  only : dimensions,dt
     use fluidindex,   only : nfluid
-    use initionized, only : ibx,iby,ibz
+    use fluidindex, only : ibx,iby,ibz
     use initionized, only : idni,imyi
     use arrays, only : b,u,wa,nx,ny,nz
     use grid,   only : dy
@@ -121,7 +121,7 @@ module advects
   subroutine advectbx_y
     use start,  only : dimensions,dt
     use fluidindex,   only : nfluid
-    use initionized, only : ibx,iby,ibz
+    use fluidindex, only : ibx,iby,ibz
     use initionized, only : idni,imyi
     use arrays, only : b,u,wa,nx,ny,nz
     use grid,   only : dy
@@ -159,7 +159,7 @@ module advects
   subroutine advectbx_z
     use start,  only : dimensions,dt
     use fluidindex,   only : nfluid
-    use initionized, only : ibx,iby,ibz
+    use fluidindex, only : ibx,iby,ibz
     use initionized, only : idni,imzi
     use arrays, only : b,u,wa,nx,ny,nz
     use grid,   only : dz
@@ -197,7 +197,7 @@ module advects
   subroutine advectby_z
     use start,  only : dimensions,dt
     use fluidindex,   only : nfluid
-    use initionized, only : ibx,iby,ibz
+    use fluidindex, only : ibx,iby,ibz
     use initionized, only : idni,imzi
     use arrays, only : b,u,wa,nx,ny,nz
     use grid,   only : dz

@@ -32,16 +32,22 @@ module rtvd ! split orig
   end subroutine tvdb
 
   subroutine relaxing_tvd(u,bb,sweep,i1,i2,dx,n,dt)
+  
+    use fluidindex, only : i_ion
     use start,  only : smalld, integration_order  !!! ,cn
-    use fluidindex, only : nvar,nmag
-    use initionized, only : idni,imxi,imyi,imzi
-    use fluxes,  only : flimiter,grav_limit,all_fluxes
-!    use fluxes
 #ifndef ISO
     use start,  only : smallei
-    use initionized, only : ieni
-    use fluidindex, only : ibx,iby,ibz
 #endif /* ISO */
+    
+    use fluidindex, only : nvar,nmag,nfluid
+    use fluidindex, only : iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
+#ifndef ISO
+    use fluidindex, only : iarr_all_en
+#endif /* ISO */
+    use fluidindex, only : ibx,iby,ibz
+
+    use fluxes,  only : flimiter,grav_limit,all_fluxes
+
 #ifdef GRAV
     use gravity, only :grav_pot2accel
 #endif /* GRAV */
@@ -90,7 +96,8 @@ module rtvd ! split orig
     real, dimension(nvar,n) :: w,fr,fl,dfrp,dfrm,dflm,dflp,dulf,durf
     real, dimension(nvar,n) :: ul0,ur0,u1,ul1,ur1
 #ifndef ISO
-    real, dimension(n)    :: ekin,eint,emag
+    real, dimension(nfluid,n)    :: ekin,eint
+    real, dimension(n)           :: emag
 #endif /* ISO */
 #ifdef GRAV
     real, dimension(nvar,n) :: duls,durs
@@ -148,12 +155,12 @@ module rtvd ! split orig
     ur1(:,:) = ur0 - cn(istep)*durf
     ul1(:,:) = ul0 + cn(istep)*dulf
 
-    ur1(idni,:) = max(ur1(idni,:), 0.5*smalld)
-    ul1(idni,:) = max(ul1(idni,:), 0.5*smalld)
+    ur1(iarr_all_dn,:) = max(ur1(iarr_all_dn,:), 0.5*smalld)
+    ul1(iarr_all_dn,:) = max(ul1(iarr_all_dn,:), 0.5*smalld)
 
 
 #ifdef SHEAR
-    vxr(1:n-1) = 0.5*(u1(imyi,2:n)/u1(idni,2:n) + u1(imyi,1:n-1)/u1(idni,1:n-1))
+    vxr(1:n-1) = 0.5*(u1(iarr_all_my,2:n)/u1(iarr_all_dn,2:n) + u1(iarr_all_my,1:n-1)/u1(iarr_all_dn,1:n-1))
     if(sweep .eq. 'xsweep') then
       rotfr(:) =   2.0*omega*(vxr(:) + qshear*omega*xr(:))
     else if(sweep .eq. 'ysweep')  then
@@ -184,17 +191,17 @@ module rtvd ! split orig
     endif
 
 #ifndef ISO
-    duls(ieni,:)  = gravr*ul0(imxi,:)*dt
-    durs(ieni,:)  = gravl*ur0(imxi,:)*dt
+    duls(iarr_all_en,:)  = gravr*ul0(iarr_all_mx,:)*dt
+    durs(iarr_all_en,:)  = gravl*ur0(iarr_all_mx,:)*dt
 #endif /* ISO */
-    duls(imxi,:)  = gravr*ul0(idni,:)*dt
-    durs(imxi,:)  = gravl*ur0(idni,:)*dt
+    duls(iarr_all_mx,:)  = gravr*ul0(iarr_all_dn,:)*dt
+    durs(iarr_all_mx,:)  = gravl*ur0(iarr_all_dn,:)*dt
     ur1= ur1 + cn(istep)*durs
     ul1= ul1 + cn(istep)*duls
 #endif /* GRAV */
 
     u1 = ul1 + ur1
-    u1(idni,:) = max(u1(idni,:), smalld)
+    u1(iarr_all_dn,:) = max(u1(iarr_all_dn,:), smalld)
 
 !   write(*,*) 'tv:'
 !   write(*,*) dt, cn
@@ -208,11 +215,11 @@ module rtvd ! split orig
 
 #ifdef VZ_LIMITS
     if(sweep .eq. 'zsweep') then
-      where((z(:) .gt. 0.0) .and. (u1(imxi,:) .lt.  floor_vz*u(idni,:)))
-        u1(imxi,:) =  floor_vz*u(idni,:)
+      where((z(:) .gt. 0.0) .and. (u1(iarr_all_mx,:) .lt.  floor_vz*u(iarr_all_dn,:)))
+        u1(iarr_all_mx,:) =  floor_vz*u(iarr_all_dn,:)
       endwhere
-      where((z(:) .lt. 0.0) .and. (u1(imxi,:) .gt. -floor_vz*u(idni,:)))
-        u1(imxi,:) = -floor_vz*u(idni,:)
+      where((z(:) .lt. 0.0) .and. (u1(iarr_all_mx,:) .gt. -floor_vz*u(iarr_all_dn,:)))
+        u1(iarr_all_mx,:) = -floor_vz*u(iarr_all_dn,:)
       endwhere
     endif
 #endif /* VZ_LIMITS */
@@ -231,34 +238,45 @@ module rtvd ! split orig
     u1(iecr,:) = u1(iecr,:) + cn(istep)*decr(:)
     u1(iecr,:) = max(smallecr,u1(iecr,:))
 
-    vx = u1(imxi,:)/u1(idni,:)
+    vx = u1(iarr_all_mx,:)/u1(iarr_all_dn,:)
     ecr = u1(iecr,:)
 
     gpcr(2:n-1) = cr_active*(gamma_cr -1.)*(ecr(3:n)-ecr(1:n-2))/(2.*dx) ; gpcr(1:2)=0.0 ; gpcr(n-1:n) = 0.0
 
 #ifndef ISO
-    u1(ieni,:) = u1(ieni,:) - cn(istep)*u1(imxi,:)/u1(idni,:)*gpcr*dt
+    u1(iarr_all_en,:) = u1(iarr_all_en,:) - cn(istep)*u1(iarr_all_mx,:)/u1(iarr_all_dn,:)*gpcr*dt
 #endif /* ISO */
-    u1(imxi,:) = u1(imxi,:) - cn(istep)*gpcr*dt
+    u1(iarr_all_mx,:) = u1(iarr_all_mx,:) - cn(istep)*gpcr*dt
 
 #endif /* COSM_RAYS */
 #ifndef ISO
-    ekin = 0.5*(u1(imxi,:)*u1(imxi,:)+u1(imyi,:)*u1(imyi,:)+u1(imzi,:)*u1(imzi,:))/u1(idni,:)
+
+    ekin = 0.5*(u1(iarr_all_mx,:)*u1(iarr_all_mx,:)+u1(iarr_all_my,:)*u1(iarr_all_my,:)+u1(iarr_all_mz,:)*u1(iarr_all_mz,:))/u1(iarr_all_dn,:)
+    eint = u1(iarr_all_en,:)-ekin
+#if defined IONIZED && defined MAGNETIC
     emag = 0.5*(bb(ibx,:)*bb(ibx,:) + bb(iby,:)*bb(iby,:) + bb(ibz,:)*bb(ibz,:))
-    eint = u1(ieni,:)-ekin-emag
+    eint(i_ion,:) = eint(i_ion,:) - emag
+#endif /* IONIZED && MAGNETIC */
+
     eint = max(eint,smallei)
-    u1(ieni,:) = eint+ekin+emag
+
+    u1(iarr_all_en,:) = eint+ekin
+#if defined IONIZED && defined MAGNETIC
+    u1(iarr_all_en(i_ion),:) = u1(iarr_all_en(i_ion),:)+emag
+#endif /* IONIZED && MAGNETIC */
+
+
 #endif /* ISO */
 
 #ifdef VZ_LIMITS
 ! Dwukrotne ograniczanie vz moze byc zbedne (patrz wyzej)
 ! Ten fragment bedzie mozna ewentualnie wykasowac po testach
     if(sweep .eq. 'zsweep') then
-      where((z(:) .gt. 0.0) .and. (u1(imxi,:) .lt.  floor_vz*u(idni,:)))
-        u1(imxi,:) =  floor_vz*u(idni,:)
+      where((z(:) .gt. 0.0) .and. (u1(iarr_all_mx,:) .lt.  floor_vz*u(iarr_all_dn,:)))
+        u1(iarr_all_mx,:) =  floor_vz*u(iarr_all_dn,:)
       endwhere
-      where((z(:) .lt. 0.0) .and. (u1(imxi,:) .gt. -floor_vz*u(idni,:)))
-        u1(imxi,:) = -floor_vz*u(idni,:)
+      where((z(:) .lt. 0.0) .and. (u1(iarr_all_mx,:) .gt. -floor_vz*u(iarr_all_dn,:)))
+        u1(iarr_all_mx,:) = -floor_vz*u(iarr_all_dn,:)
       endwhere
     endif
 #endif /* VZ_LIMITS */
