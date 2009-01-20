@@ -1108,16 +1108,23 @@ module dataio
 !
   subroutine  write_log
 
-#ifdef NOT_WORIKING
+!#ifdef NOT_WORIKING
 
 #ifdef MAGNETIC
     use fluidindex, only : ibx, iby, ibz
 #endif /* MAGNETIC */
+#ifdef IONIZED
+    use initionized, only : idni,imxi,imyi,imzi
 #ifndef ISO
-    use fluidindex, only : iena
+    use initionized, only : ieni, gamma_ion
 #endif /* ISO */
-    use arrays, only : wa,is,ie,js,je,ks,ke,u,b,nx,ny,nz,nfluid
-    use arrays, only : nfluid,nfmagn,fmagn,nadiab
+#endif /* IONIZED */
+#ifndef ISO
+    use fluidindex, only : iarr_all_en
+#endif /* ISO */
+    use arrays, only : wa,is,ie,js,je,ks,ke,u,b,nx,ny,nz
+    use fluidindex, only : nfluid,nadiab
+    use fluidindex, only : iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
     use grid, only   : dx,dy,dz,dxmn
     use constants, only : small, hydro_mass, k_B
     use start, only : t,dt,nstep,sleep_minutes,sleep_seconds, smallei,nb, &
@@ -1138,66 +1145,63 @@ module dataio
 
     implicit none
 
-    real, allocatable, dimension(:,:,:,:) :: wa4
     integer, dimension(3) :: loc_b_min, loc_b_max, loc_divb_max
-    integer, dimension(4) :: loc_vx_max, loc_vy_max, loc_vz_max, loc_va_max, &
-                             loc_cs_max, loc_dens_min, loc_dens_max, loc_pres_min, &
-                             loc_pres_max, loc_temp_min, loc_temp_max
-#ifdef COOL_HEAT
-    integer, dimension(4) :: loc_dt_cool, loc_dt_heat
-#endif /* COOL_HEAT */
+    integer               :: proc_b_min, proc_b_max, proc_divb_max
+
+
+    integer, dimension(3) :: loc_vxi_max, loc_vyi_max, loc_vzi_max, &
+                             loc_csi_max, loc_deni_min, loc_deni_max, &
+                             loc_prei_min, loc_prei_max, loc_temi_min, loc_temi_max, &
+                             loc_vai_max
+    integer               :: proc_vxi_max, proc_vyi_max, proc_vzi_max, &
+                             proc_csi_max, proc_deni_min, proc_deni_max, &
+                             proc_prei_min, proc_prei_max, proc_temi_min, proc_temi_max, &
+                             proc_vai_max
+    real                  :: deni_min, deni_max, vxi_max, vyi_max, vzi_max, &
+                             prei_min, prei_max, temi_min, temi_max, vai_max, csi_min, csi_max
+
 #ifdef COSM_RAYS
-    integer, dimension(4) :: loc_encr_min, loc_encr_max
+    integer, dimension(3) :: loc_encr_min, loc_encr_max
+    integer               :: proc_encr_min, proc_encr_max
 #endif /* COSM_RAYS */
 
-    integer               :: proc_vx_max, proc_vy_max, proc_vz_max, proc_va_max, &
-                             proc_cs_max, proc_dens_min, proc_dens_max, proc_pres_min, &
-                             proc_pres_max, proc_b_min, proc_b_max, &
-                             proc_temp_min, proc_temp_max, proc_divb_max, ifl
-#ifdef COOL_HEAT
-    integer               :: proc_dt_cool, proc_dt_heat
-#endif /* COOL_HEAT */
 #ifdef RESIST
     integer               :: proc_eta_max
 #endif /* RESIST */
-#ifdef COSM_RAYS
-    integer               :: proc_encr_min, proc_encr_max
-#endif /* COSM_RAYS */
 
 ! Timestep diagnostics
 
 
-    allocate(wa4(nfluid,nx,ny,nz))
+    wa            = u(idni,:,:,:)
+    deni_min      = minval(wa(is:ie,js:je,ks:ke))
+    loc_deni_min  = minloc(wa(is:ie,js:je,ks:ke)) &
+                  + (/nb,nb,nb/)
+    call mpifind(deni_min, 'min', loc_deni_min, proc_deni_min)
 
-    wa4         =  u(iarr_all_dn(1),:,:,:)
-    dens_min      = minval(wa4(1:nfluid,is:ie,js:je,ks:ke))
-    loc_dens_min  = minloc(wa4(1:nfluid,is:ie,js:je,ks:ke)) &
-                  + (/0,nb,nb,nb/)
-    call mpifind(dens_min, 'min', loc_dens_min, proc_dens_min)
+    deni_max      = maxval(wa(is:ie,js:je,ks:ke))
+    loc_deni_max  = maxloc(wa(is:ie,js:je,ks:ke)) &
+                  + (/nb,nb,nb/)
+    call mpifind(deni_max, 'max', loc_deni_max, proc_deni_max)
 
-    dens_max      = maxval(wa4(1:nfluid,is:ie,js:je,ks:ke))
-    loc_dens_max  = maxloc(wa4(1:nfluid,is:ie,js:je,ks:ke)) &
-                  + (/0,nb,nb,nb/)
-    call mpifind(dens_max, 'max', loc_dens_max, proc_dens_max)
+    wa          = abs(u(imxi,:,:,:)/u(idni,:,:,:))
+    vxi_max     = maxval(wa(is:ie,js:je,ks:ke))
+    loc_vxi_max = maxloc(wa(is:ie,js:je,ks:ke)) &
+                  + (/nb,nb,nb/)
+    call mpifind(vxi_max, 'max', loc_vxi_max, proc_vxi_max)
 
-    wa4         = abs(u(imxa,:,:,:)/u(idna,:,:,:))
-    vx_max      = maxval(wa4(1:nfluid,is:ie,js:je,ks:ke))
-    loc_vx_max  = maxloc(wa4(1:nfluid,is:ie,js:je,ks:ke)) &
-                  + (/0,nb,nb,nb/)
-    call mpifind(vx_max, 'max', loc_vx_max, proc_vx_max)
+    wa          = abs(u(imyi,:,:,:)/u(idni,:,:,:))
+    vyi_max     = maxval(wa(is:ie,js:je,ks:ke))
+    loc_vyi_max = maxloc(wa(is:ie,js:je,ks:ke)) &
+                  + (/nb,nb,nb/)
+    call mpifind(vyi_max, 'max', loc_vyi_max, proc_vyi_max)
 
-    wa4         = abs(u(imya,:,:,:)/u(idna,:,:,:))
-    vy_max      = maxval(wa4(1:nfluid,is:ie,js:je,ks:ke))
-    loc_vy_max  = maxloc(wa4(1:nfluid,is:ie,js:je,ks:ke)) &
-                  + (/0,nb,nb,nb/)
-    call mpifind(vy_max, 'max', loc_vy_max, proc_vy_max)
+    wa           = abs(u(imzi,:,:,:)/u(idni,:,:,:))
+    vzi_max      = maxval(wa(is:ie,js:je,ks:ke))
+    loc_vzi_max  = maxloc(wa(is:ie,js:je,ks:ke)) &
+                  + (/nb,nb,nb/)
+    call mpifind(vzi_max, 'max', loc_vzi_max, proc_vzi_max)
 
-    wa4         = abs(u(imza,:,:,:)/u(idna,:,:,:))
-    vz_max      = maxval(wa4(1:nfluid,is:ie,js:je,ks:ke))
-    loc_vz_max  = maxloc(wa4(1:nfluid,is:ie,js:je,ks:ke)) &
-                  + (/0,nb,nb,nb/)
-    call mpifind(vz_max, 'max', loc_vz_max, proc_vz_max)
-
+#ifdef MAGNETIC
     wa(:,:,:)  = b(1,:,:,:)*b(1,:,:,:) + b(2,:,:,:)*b(2,:,:,:) + &
                  b(3,:,:,:)*b(3,:,:,:)
     b_min      = sqrt(minval(wa(is:ie,js:je,ks:ke)))
@@ -1210,13 +1214,23 @@ module dataio
                   + (/nb,nb,nb/)
     call mpifind(b_max, 'max', loc_b_max, proc_b_max)
 
-    va_max      = sqrt(maxval(spread(wa(is:ie,js:je,ks:ke),1,nfmagn) &
-                       /u(idna(fmagn),is:ie,js:je,ks:ke)))
-    loc_va_max  = maxloc(spread(wa(is:ie,js:je,ks:ke),1,nfmagn) &
-                       /u(idna(fmagn),is:ie,js:je,ks:ke)) &
-                  + (/0,nb,nb,nb/)
-    call mpifind(va_max, 'max', loc_va_max, proc_va_max)
-
+    vai_max     = sqrt(maxval(wa(is:ie,js:je,ks:ke)) &
+                       /u(idni,is:ie,js:je,ks:ke))
+    loc_vai_max = maxloc(wa(is:ie,js:je,ks:ke)     &
+                       /u(idni,is:ie,js:je,ks:ke)) &
+                  + (/nb,nb,nb/)
+    call mpifind(va_max, 'max', loc_vai_max, proc_vai_max)
+#else /* MAGNETIC */
+    b_min = 0.0
+    loc_b_min = (/-1,-1,-1/)
+    proc_b_min = -1
+    b_max = 0.0
+    loc_b_max = (/-1,-1,-1/)
+    proc_b_max = -1
+    va_max = 0.0
+    loc_vai_max = (/-1,-1,-1/)
+    proc_vai_max = -1
+#endif /* MAGNETIC */
 
 #ifdef ISO
     pres_min      = csi2*dens_min
@@ -1235,55 +1249,51 @@ module dataio
     loc_temp_max  = 0
     proc_temp_max = 0
 #else /* ISO */
-    wa4(1:nadiab,:,:,:) = (u(iena,:,:,:) &                ! eint
-                  - 0.5*((u(imxa(1:nadiab),:,:,:)**2 +u(imya(1:nadiab),:,:,:)**2 &
-                  + u(imza(1:nadiab),:,:,:)**2)/u(idna(1:nadiab),:,:,:)))
-    wa4(fmagn,:,:,:)    = wa4(fmagn,:,:,:) - spread(0.5*wa,1,nfmagn)
-    wa4(1:nadiab,:,:,:) = max(wa4(1:nadiab,:,:,:),smallei)
-    do ifl=1,nadiab
-    wa4(ifl,:,:,:) = (gamma(ifl)-1)*wa4(ifl,:,:,:)           ! pres
-    enddo
+    wa(:,:,:) = (u(ieni,:,:,:) &                ! eint
+                - 0.5*((u(imxi,:,:,:)**2 +u(imyi,:,:,:)**2 &
+                  + u(imzi,:,:,:)**2)/u(idni,:,:,:)))
+#ifdef MAGNETIC
+    wa(:,:,:) = wa(:,:,:) - 0.5*(b(ibx,:,:,:)**2 + b(iby,:,:,:)**2 + &
+                 b(ibz,:,:,:)**2)
+#endif /* MAGNETIC */
+    wa(:,:,:) = max(wa(:,:,:),smallei)
+    wa(:,:,:) = (gamma_ion-1.0)*wa(:,:,:)           ! pres
 
-    pres_min      = minval(wa4(1:nadiab,is:ie,js:je,ks:ke))
-    loc_pres_min  = minloc(wa4(1:nadiab,is:ie,js:je,ks:ke)) &
-                     + (/0,nb,nb,nb/)
-    call mpifind(pres_min, 'min', loc_pres_min, proc_pres_min)
+    prei_min      = minval(wa(is:ie,js:je,ks:ke))
+    loc_prei_min  = minloc(wa(is:ie,js:je,ks:ke)) + (/nb,nb,nb/)
+    call mpifind(prei_min, 'min', loc_prei_min, proc_prei_min)
 
-    pres_max      = maxval(wa4(1:nadiab,is:ie,js:je,ks:ke))
-    loc_pres_max  = maxloc(wa4(1:nadiab,is:ie,js:je,ks:ke)) &
-                     + (/0,nb,nb,nb/)
-    call mpifind(pres_max, 'max', loc_pres_max, proc_pres_max)
+    prei_max      = maxval(wa(is:ie,js:je,ks:ke))
+    loc_prei_max  = maxloc(wa(is:ie,js:je,ks:ke)) + (/nb,nb,nb/)
+    call mpifind(prei_max, 'max', loc_prei_max, proc_prei_max)
 
-    temp_max      = maxval( hydro_mass / k_B * wa4(1:nadiab,is:ie,js:je,ks:ke) &
-                                             /u(idna(1:nadiab),is:ie,js:je,ks:ke))
-    loc_temp_max  = maxloc(wa4(1:nadiab,is:ie,js:je,ks:ke)    &
-                         /u(idna(1:nadiab),is:ie,js:je,ks:ke)  ) &
-                     + (/0,nb,nb,nb/)
-    call mpifind(temp_max, 'max', loc_temp_max, proc_temp_max)
+    temi_max      = maxval( hydro_mass / k_B * wa(is:ie,js:je,ks:ke) &
+                                             /u(idni,is:ie,js:je,ks:ke))
+    loc_temi_max  = maxloc(wa(is:ie,js:je,ks:ke)    &
+                         /u(idni,is:ie,js:je,ks:ke)  ) + (/nb,nb,nb/)
+    call mpifind(temi_max, 'max', loc_temi_max, proc_temi_max)
 
+    temi_min      = minval( hydro_mass / k_B * wa(is:ie,js:je,ks:ke) &
+                                             /u(idni,is:ie,js:je,ks:ke))
+    loc_temi_min  = minloc(wa(is:ie,js:je,ks:ke) &
+                         /u(idni,is:ie,js:je,ks:ke)  ) &
+                     + (/nb,nb,nb/)
+    call mpifind(temi_min, 'min', loc_temi_min, proc_temi_min)
 
-    temp_min      = minval( hydro_mass / k_B * wa4(1:nadiab,is:ie,js:je,ks:ke) &
-                                             /u(idna(1:nadiab),is:ie,js:je,ks:ke))
-    loc_temp_min  = minloc(wa4(1:nadiab,is:ie,js:je,ks:ke)    &
-                         /u(idna(1:nadiab),is:ie,js:je,ks:ke)  ) &
-                     + (/0,nb,nb,nb/)
-    call mpifind(temp_min, 'min', loc_temp_min, proc_temp_min)
-
-    do ifl=1,nadiab
-      wa4(ifl,:,:,:) = gamma(ifl)*wa4(ifl,:,:,:)
-    enddo
-    cs_max        = sqrt(maxval(wa4(1:nadiab,is:ie,js:je,ks:ke) &
-                            /u(idna(1:nadiab),is:ie,js:je,ks:ke)))
-    loc_cs_max    = maxloc(wa4(1:nadiab,is:ie,js:je,ks:ke) &
-                            /u(idna(1:nadiab),is:ie,js:je,ks:ke)) &
-                     + (/0,nb,nb,nb/)
-    call mpifind(cs_max, 'max', loc_cs_max, proc_cs_max)
+    wa(:,:,:) = gamma_ion*wa(:,:,:)
+    csi_max        = sqrt(maxval(wa(is:ie,js:je,ks:ke) &
+                            /u(idni,is:ie,js:je,ks:ke)))
+    loc_csi_max    = maxloc(wa(is:ie,js:je,ks:ke) &
+                            /u(idni,is:ie,js:je,ks:ke)) &
+                     + (/nb,nb,nb/)
+    call mpifind(csi_max, 'max', loc_csi_max, proc_csi_max)
 #endif /* ISO */
 
 #ifdef RESIST
       call mpifind(eta_max,      'max', loc_eta_max, proc_eta_max)
 #endif /* RESIST */
 
+#ifdef MAGNETIC
     wa(1:nx-1,1:ny-1,1:max(nz-1,1)) = &
                  (b(ibx,2:nx,1:ny-1,1:max(nz-1,1)) - b(ibx,1:nx-1,1:ny-1,1:max(nz-1,1)))*dy*dz &
                 +(b(iby,1:nx-1,2:ny,1:max(nz-1,1)) - b(iby,1:nx-1,1:ny-1,1:max(nz-1,1)))*dx*dz &
@@ -1298,53 +1308,51 @@ module dataio
     loc_divb_max  = maxloc(wa(is:ie,js:je,ks:ke)) &
                   + (/nb,nb,nb/)
     call mpifind(divb_max, 'max', loc_divb_max, proc_divb_max)
-
-    deallocate(wa4)
+#else /* MAGNETIC */
+    divb_max      = 0.0
+    loc_divb_max  = (/-1,-1,-1/)
+    proc_divb_max = -1
+#endif /* MAGNETIC */
 
 #ifdef COSM_RAYS
-    allocate(wa4(COSM_RAYS,nx,ny,nz))
-    wa4         =  u(iecr,:,:,:)
-    encr_min      = minval(wa4(:,is:ie,js:je,ks:ke))
-    loc_encr_min  = minloc(wa4(:,is:ie,js:je,ks:ke)) &
-                  + (/0,nb,nb,nb/)
+    wa            = u(iecr,:,:,:)
+    encr_min      = minval(wa(is:ie,js:je,ks:ke))
+    loc_encr_min  = minloc(wa(is:ie,js:je,ks:ke)) &
+                  + (/nb,nb,nb/)
     call mpifind(encr_min, 'min', loc_encr_min, proc_encr_min)
 
-    wa4         =  u(iecr,:,:,:)
-    encr_max      = maxval(wa4(:,is:ie,js:je,ks:ke))
-    loc_encr_max  = maxloc(wa4(:,is:ie,js:je,ks:ke)) &
-                  + (/0,nb,nb,nb/)
+    wa            =  u(iecr,:,:,:)
+    encr_max      = maxval(wa(is:ie,js:je,ks:ke))
+    loc_encr_max  = maxloc(wa(is:ie,js:je,ks:ke)) &
+                  + (/nb,nb,nb/)
     call mpifind(encr_max, 'max', loc_encr_max, proc_encr_max)
-    deallocate(wa4)
 #endif /* COSM_RAYS */
 
     if(proc .eq. 0)  then
 
       open(log_lun, file=log_file, position='append')
 
-        write(log_lun,771) 'min(dens)        =', dens_min,  proc_dens_min,  loc_dens_min
-        write(log_lun,771) 'max(dens)        =', dens_max,  proc_dens_max,  loc_dens_max
-        write(log_lun,771) 'min(temp)        =', temp_min,  proc_temp_min,  loc_temp_min
-        write(log_lun,771) 'max(temp)        =', temp_max,  proc_temp_max,  loc_temp_max
-        write(log_lun,771) 'min(pres)        =', pres_min,  proc_pres_min,  loc_pres_min
-        write(log_lun,771) 'max(pres)        =', pres_max,  proc_pres_max,  loc_pres_max
+        write(log_lun,771) 'min(deni)        =', deni_min,  proc_deni_min,  loc_deni_min
+        write(log_lun,771) 'max(deni)        =', deni_max,  proc_deni_max,  loc_deni_max
+        write(log_lun,771) 'min(temi)        =', temi_min,  proc_temi_min,  loc_temi_min
+        write(log_lun,771) 'max(temi)        =', temi_max,  proc_temi_max,  loc_temi_max
+        write(log_lun,771) 'min(prei)        =', prei_min,  proc_prei_min,  loc_prei_min
+        write(log_lun,771) 'max(prei)        =', prei_max,  proc_prei_max,  loc_prei_max
+        write(log_lun,777) 'max(|vxi|)       =', vxi_max, 'dt=',cfl*dx/(vxi_max+small),   proc_vxi_max, loc_vxi_max
+        write(log_lun,777) 'max(|vyi|)       =', vyi_max, 'dt=',cfl*dy/(vyi_max+small),   proc_vyi_max, loc_vyi_max
+        write(log_lun,777) 'max(|vzi|)       =', vzi_max, 'dt=',cfl*dz/(vzi_max+small),   proc_vzi_max, loc_vzi_max
+        write(log_lun,777) 'max(c_sound )    =', csi_max, 'dt=',cfl*dxmn/(csi_max+small), proc_csi_max, loc_csi_max
+#ifdef MAGNETIC
+        write(log_lun,777) 'max(c_fast  )    =', sqrt(csi_max**2+vai_max**2), 'dt=',cfl*dxmn/sqrt(csi_max**2+vai_max**2)
+        write(log_lun,777) 'max(v_alfven)    =', vai_max, 'dt=',cfl*dxmn/(vai_max+small), proc_vai_max, loc_vai_max
         write(log_lun,770) 'min(|b|)         =', b_min,     proc_b_min,     loc_b_min
         write(log_lun,770) 'max(|b|)         =', b_max,     proc_b_max,     loc_b_max
         write(log_lun,770) 'max(|divb|)      =', divb_max,  proc_divb_max,  loc_divb_max
-
-        write(log_lun,777) 'max(|velx|)      =', vx_max, 'dt=',cfl*dx/(vx_max+small),   proc_vx_max, loc_vx_max
-        write(log_lun,777) 'max(|vely|)      =', vy_max, 'dt=',cfl*dy/(vy_max+small),   proc_vy_max, loc_vy_max
-        write(log_lun,777) 'max(|velz|)      =', vz_max, 'dt=',cfl*dz/(vz_max+small),   proc_vz_max, loc_vz_max
-        write(log_lun,777) 'max(v_alfven)    =', va_max, 'dt=',cfl*dxmn/(va_max+small), proc_va_max, loc_va_max
-        write(log_lun,777) 'max(c_sound )    =', cs_max, 'dt=',cfl*dxmn/(cs_max+small), proc_cs_max, loc_cs_max
-        write(log_lun,777) 'max(c_fast  )    =', sqrt(cs_max**2+va_max**2), 'dt=',cfl*dxmn/sqrt(cs_max**2+va_max**2)
+#endif /* MAGNETIC */
 #ifdef COSM_RAYS
         write(log_lun,777) 'min(encr)        =', encr_min,         '',  0.0,     proc_encr_min, loc_encr_min
         write(log_lun,777) 'max(encr)        =', encr_max,      'dt=',dt_cr,     proc_encr_max, loc_encr_max
 #endif /* COSM_RAYS */
-#ifdef COOL_HEAT
-        write(log_lun,778) 'min(esrc/eint)   =', eint_src_min , 'dt=',dt_cool,   proc_dt_cool,  loc_dt_cool
-        write(log_lun,778) 'max(esrc/eint)   =', eint_src_max , 'dt=',dt_heat,   proc_dt_heat,  loc_dt_heat
-#endif /* COOL_HEAT */
 #ifdef RESIST
         write(log_lun,776) 'max(eta)         =', eta_max ,      'dt=',dt_resist, proc_eta_max,  loc_eta_max
 #endif /* RESIST */
@@ -1372,12 +1380,9 @@ module dataio
 776 format(5x,a18,(1x,e10.4),2x,a3,(1x,e10.4),4(1x,i4))
 #endif /* RESIST */
 777 format(5x,a18,(1x,e10.4),2x,a3,(1x,e10.4),5(1x,i4))
-#ifdef COOL_HEAT
-778 format(2x,a18,(1x,e10.4),2x,a3,(1x,e10.4),4(1x,i4))
-#endif /* COOL_HEAT */
 900 format('   nstep = ',i7,'   dt = ',f22.16,'   t = ',f22.16,2(1x,i4))
 
-#endif /* NOT_WORKING */
+!#endif /* NOT_WORKING */
 
   end subroutine write_log
 
