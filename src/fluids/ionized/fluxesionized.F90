@@ -12,7 +12,7 @@ module fluxesionized
     use constants
     use fluidindex, only  : nvar   
     use fluidindex, only  : nmag
-    use initionized, only : ibx,iby,ibz
+    use fluidindex, only : ibx,iby,ibz
     use initionized, only : idni,imxi,imyi,imzi
 #ifndef ISO
     use initionized, only : ieni
