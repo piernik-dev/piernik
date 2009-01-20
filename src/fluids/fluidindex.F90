@@ -5,7 +5,11 @@ module fluidindex
 
    implicit none
    
-   integer :: nvar,ncomponents,nfluid,nadiab
+   integer             :: nmag
+   integer, parameter  :: ibx=1,iby=2,ibz=3
+   integer, parameter  :: idn = 1,imx=2,imy=3,imz=4,ien=5,icr=1
+   integer             :: nvar,ncomponents,nfluid,nadiab
+
    
    integer,allocatable,  dimension(:) :: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
 #ifndef ISO 
@@ -15,9 +19,6 @@ module fluidindex
    integer,allocatable,  dimension(:) :: iarr_all_cr
 #endif /* COSM_RAYS */ 
    integer, allocatable, dimension(:) :: iarr_all_swpx, iarr_all_swpy, iarr_all_swpz
-
-   integer :: nmag
-   integer, parameter  :: ibx=1, iby=2, ibz=3
 
 #ifdef IONIZED
    integer, allocatable, dimension(:) :: iarr_mag_swpx, iarr_mag_swpy, iarr_mag_swpz, iarr_all_mag
