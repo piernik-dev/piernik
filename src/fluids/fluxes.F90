@@ -78,7 +78,11 @@ subroutine all_fluxes(flux,cfr,uu,bb,n)
 #endif /* COSM_RAYS */
 
 #ifdef IONIZED
-   uuion=uu(iarr_ion,:)
+   uuion(:,:)=uu(iarr_ion,:)
+   
+   write(*,*) 'ion:',nvar_ion
+   write(*,*) uuion
+   
    call flux_ion(fluxion,cfrion,uuion,bb,n)
    flux(iarr_ion,:)=fluxion
    cfr(iarr_ion,:) =cfrion
@@ -92,8 +96,13 @@ subroutine all_fluxes(flux,cfr,uu,bb,n)
 !   stop
 
 #ifdef NEUTRAL
-   uuneu=uu(iarr_neu,:)
-   call flux_neutral(fluxneu,cfrneu,uuneu,n)
+   uuneu(:,:)=uu(iarr_neu,:)
+
+   write(*,*) 'neu:',nvar_neu
+   write(*,*) uuneu
+   stop
+
+   call flux_neu(fluxneu,cfrneu,uuneu,n)
    flux(iarr_neu,:)=fluxneu
    cfr(iarr_neu,:)=cfrneu
    uu(iarr_neu,:)=uuneu
