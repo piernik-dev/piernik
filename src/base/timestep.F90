@@ -42,7 +42,7 @@ contains
 #ifdef COSM_RAYS
     use timestepcr, only : timestep_crs
     use timestepcr, only : dt_crs
-#endif COSM_RAYS
+#endif /* COSM_RAYS */
     
     
 #ifdef SIMPLE_COOL

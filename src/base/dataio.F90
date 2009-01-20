@@ -12,9 +12,6 @@ module dataio
 ! Modified for this code and extended by M.Hanasz
   use types
   use mpi_setup
-#ifdef RESISTIVITY
-!  use resistivity
-#endif /* RESISTIVITY */
 #ifdef SN_SRC
   use sn_sources
 #endif /* SN_SRC */
@@ -31,8 +28,6 @@ module dataio
 
   logical wait
 
-  type(hdf) :: chdf
-
   integer nchar
   character msg*16
   real msg_param
@@ -45,99 +40,9 @@ module dataio
 #ifdef COSM_RAYS
   real encr_min, encr_max
 #endif /* COSM_RAYS */
-#ifdef KEPLER_SUPPRESSION
-  real asupp_min, asupp_max
-#endif /* KEPLER_SUPPRESSION */
 
   contains
 
-     subroutine set_container(chdf)
-       use types
-       implicit none
-       type(hdf), intent(out) :: chdf
-
-       chdf%nhdf = nhdf
-       chdf%ntsl = ntsl
-       chdf%nres = nres
-       chdf%nlog = nlog
-       chdf%step_hdf = step_hdf
-       chdf%log_lun = log_lun
-       chdf%last_hdf_time = last_hdf_time
-       chdf%log_file = log_file
-
-     end subroutine set_container
-
-     subroutine get_container(chdf)
-       use types
-       implicit none
-       type(hdf), intent(in) :: chdf
-
-       nhdf = chdf%nhdf
-       ntsl = chdf%ntsl
-       nres = chdf%nres
-       nlog = chdf%nlog
-       step_hdf =  chdf%step_hdf
-       log_lun = chdf%log_lun
-       last_hdf_time = chdf%last_hdf_time
-       log_file = chdf%log_file
-
-     end subroutine get_container
-
-
-!=======================================================================
-!
-!    \\\\\\\\\\        B E G I N   F U N C T I O N        //////////
-!    //////////                  C T O I                  \\\\\\\\\\
-!
-!=======================================================================
-!
-       function ctoi ( string, istrt, ifin )
-!
-!    jms:zeus3d.ctoi <------------- converts CHAR*8 string to an integer
-!    from jms:zeus2d.strtoi                              ?????????, 19??
-!
-!    written by: Jim Stone
-!    modified 1: January, 1990 by David Clarke; incorporated into ZEUS3D
-!
-!  PURPOSE:  Converts a segment of a character*8 string into an integer.
-!
-!  EXTERNALS: [NONE]
-!
-!-----------------------------------------------------------------------
-!
-!*ca imp
-       implicit none
-
-       character*10   string
-       integer       istrt   , ifin    , ishift  , ival    , i
-       integer       ctoi
-
-       integer       asciic  (48:57)
-!
-!      Data Statements
-!
-       data          asciic  / 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 /
-       save          asciic
-!
-!-----------------------------------------------------------------------
-!
-       ishift = 1
-       ival   = 0
-       do 10 i=ifin,istrt,-1
-         ival   = ival + ishift * asciic ( ichar(string(i:i)) )
-         ishift = ishift * 10
-10     continue
-       ctoi = ival
-
-       return
-       end function ctoi
-!
-!=======================================================================
-!
-!    \\\\\\\\\\          E N D   F U N C T I O N          //////////
-!    //////////                  C T O I                  \\\\\\\\\\
-!
-!=======================================================================
 !---------------------------------------------------------------------
 !
 ! inititalizes dataio parameters
@@ -186,18 +91,11 @@ module dataio
 !
   subroutine write_data(output)
     use start, only:  dt_hdf, dt_res, dt_tsl, dt_log, t, dt, nstep
-#ifdef HDF5
-    use init_problem, only:  problem_name, run_id
-    use dataio_hdf5, only: write_hdf5, write_restart_hdf5
-#endif /* HDF5 */
 #ifdef USER_IO
     use init_problem, only : user_io_routine
 #endif /* USER_IO */
     implicit none
     character  :: output*3
-#ifdef HDF5
-    character :: filename*128
-#endif /* HDF5 */
 
 !- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -226,12 +124,7 @@ module dataio
 !      if ((nhdf-nhdf_start) .lt. (int((t-t_start) / dt_hdf) + 1) &
       if ((t-last_hdf_time) .ge. dt_hdf &
                 .or. output .eq. 'hdf' .or. output .eq. 'end') then
-#ifndef HDF5
         call write_hdf
-#else /* HDF5 */
-     call set_container(chdf)
-     call write_hdf5(chdf)
-#endif /* HDF5 */
         if((t-last_hdf_time) .ge. dt_hdf) last_hdf_time = last_hdf_time + dt_hdf
         if((t-last_hdf_time) .ge. dt_hdf) last_hdf_time = t ! dodatkowa regulacja w przypadku zmiany dt_hdf na mniejsze przez msg
         nhdf = nhdf + 1
@@ -245,17 +138,7 @@ module dataio
       if ((nres-nres_start) .lt. (int((t-t_start) / dt_res) + 1) &
                 .or. output .eq. 'res' .or. output .eq. 'end') then
          if (nres > 0) then
-#ifdef HDF5
-           if(proc==0) then
-              write (filename,'(a,a1,a3,a1,i4.4,a4)') &
-                trim(problem_name),'_', run_id,'_',nres,'.res'
-           endif
-           call MPI_BCAST(filename, 128, MPI_CHARACTER, 0, comm, ierr)
-           call set_container(chdf); chdf%nstep = nstep
-           call write_restart_hdf5(filename,chdf)
-#else /* HDF5 */
            call write_restart
-#endif /* HDF5 */
         endif
         nres = nres + 1
         step_res = nstep
@@ -642,9 +525,6 @@ module dataio
 #ifdef GRAV
     use arrays, only : gp
 #endif /* GRAV */
-#ifdef MASS_COMPENS
-    use arrays, only : dinit
-#endif /*  MASS_COMPENS */
 
     implicit none
 
@@ -807,14 +687,6 @@ module dataio
     iostatus = sfwdata(sds_id, istart, stride, dims3d, gp)
 #endif /* GRAV */
 
-#ifdef MASS_COMPENS
-! write initial density distribution
-!
-    sds_id = sfcreate(sd_id, 'dinit', 6, rank3d, dims3d)
-    iostatus = sfscompress(sds_id, comp_type, comp_prm)
-    iostatus = sfwdata(sds_id, istart, stride, dims3d, dinit)
-#endif /* MASS_COMPENS */
-
 ! write coords
 !
     dim_id = sfdimid( sds_id, 1 )
@@ -870,9 +742,6 @@ module dataio
 #ifdef GRAV
     use arrays, only : gp
 #endif /* GRAV */
-#ifdef MASS_COMPENS
-    use arrays, only : dinit
-#endif /*  MASS_COMPENS */
 
     implicit none
 
@@ -1002,13 +871,6 @@ module dataio
       sds_id = sfselect(sd_id, sds_index)
       iostatus = sfrdata(sds_id, istart, stride, dims3d, gp)
 #endif /* GRAV */
-#ifdef MASS_COMPENS
-! read initial density distribution
-!
-      sds_index = sfn2index(sd_id, 'dinit')
-      sds_id = sfselect(sd_id, sds_index)
-      iostatus = sfrdata(sds_id, istart, stride, dims3d, dinit)
-#endif /* MASS_COMPENS */
 
       iostatus = sfendacc(sds_id)
 
@@ -1036,13 +898,8 @@ module dataio
       call rm_file('restart_list.tmp')
 
       do nres =999,0,-1
-#ifdef HDF5
-        write (file_name,'(a,a1,a,a1,a3,a1,i4.4,a4)') &
-               trim(cwd),'/',trim(problem_name),'_', run_id,'_',nres,'.res'
-#else /* HDF5 */
         write (file_name,'(a,a1,a,a1,a3,a1,3(i2.2,a1),i3.3,a4)') &
                trim(cwd),'/',trim(problem_name),'_', run_id,'_',0,'_',0,'_',0,'_',nres,'.res'
-#endif /* HDF5 */
         inquire(file = file_name, exist = exist)
         if(exist) then
            restart_number = nres
@@ -1280,263 +1137,290 @@ module dataio
 !---------------------------------------------------------------------
 !
   subroutine  write_log
-#ifdef SHORT_LOG
-#include "datalogshort.def"
-#else /* SHORT_LOG */
-#include "dataloglong.def"
-#endif /* SHORT_LOG */
+
+    use fluidindex, only : idna,imxa,imya,imza
+#ifndef ISO
+    use fluidindex, only : iena
+#endif /* ISO */
+    use arrays, only : wa,is,ie,js,je,ks,ke,u,b,nx,ny,nz,nfluid,ibx,iby,ibz
+    use arrays, only : nfluid,nfmagn,fmagn,nadiab
+    use grid, only   : dx,dy,dz,dxmn
+    use constants, only : small, hydro_mass, k_B
+    use start, only : t,dt,nstep,sleep_minutes,sleep_seconds, smallei,nb, &
+         gamma,cfl
+#ifdef COSM_RAYS
+    use start, only  : dt_cr
+    use arrays, only : iecr
+#endif /* COSM_RAYS */
+#ifdef ISO
+    use start, only : csi2,c_si
+#endif /* ISO */
+!    use init_problem
+!   use thermal
+#ifdef RESIST
+    use resistivity
+#endif /* RESIST */
+#ifdef COLLISIONS
+    use start, only : dt_colls
+#endif /* COLLISIONS */
+
+    implicit none
+
+    real, allocatable, dimension(:,:,:,:) :: wa4
+    integer, dimension(3) :: loc_b_min, loc_b_max, loc_divb_max
+    integer, dimension(4) :: loc_vx_max, loc_vy_max, loc_vz_max, loc_va_max, &
+                             loc_cs_max, loc_dens_min, loc_dens_max, loc_pres_min, &
+                             loc_pres_max, loc_temp_min, loc_temp_max
+#ifdef COOL_HEAT
+    integer, dimension(4) :: loc_dt_cool, loc_dt_heat
+#endif /* COOL_HEAT */
+#ifdef COSM_RAYS
+    integer, dimension(4) :: loc_encr_min, loc_encr_max
+#endif /* COSM_RAYS */
+
+    integer               :: proc_vx_max, proc_vy_max, proc_vz_max, proc_va_max, &
+                             proc_cs_max, proc_dens_min, proc_dens_max, proc_pres_min, &
+                             proc_pres_max, proc_b_min, proc_b_max, &
+                             proc_temp_min, proc_temp_max, proc_divb_max, ifl
+#ifdef COOL_HEAT
+    integer               :: proc_dt_cool, proc_dt_heat
+#endif /* COOL_HEAT */
+#ifdef RESIST
+    integer               :: proc_eta_max
+#endif /* RESIST */
+#ifdef COSM_RAYS
+    integer               :: proc_encr_min, proc_encr_max
+#endif /* COSM_RAYS */
+
+! Timestep diagnostics
+
+
+    allocate(wa4(nfluid,nx,ny,nz))
+
+    wa4         =  u(idna,:,:,:)
+    dens_min      = minval(wa4(1:nfluid,is:ie,js:je,ks:ke))
+    loc_dens_min  = minloc(wa4(1:nfluid,is:ie,js:je,ks:ke)) &
+                  + (/0,nb,nb,nb/)
+    call mpifind(dens_min, 'min', loc_dens_min, proc_dens_min)
+
+    wa4         =  u(idna,:,:,:)
+    dens_max      = maxval(wa4(1:nfluid,is:ie,js:je,ks:ke))
+    loc_dens_max  = maxloc(wa4(1:nfluid,is:ie,js:je,ks:ke)) &
+                  + (/0,nb,nb,nb/)
+    call mpifind(dens_max, 'max', loc_dens_max, proc_dens_max)
+
+
+    wa4         = abs(u(imxa,:,:,:)/u(idna,:,:,:))
+    vx_max      = maxval(wa4(1:nfluid,is:ie,js:je,ks:ke))
+    loc_vx_max  = maxloc(wa4(1:nfluid,is:ie,js:je,ks:ke)) &
+                  + (/0,nb,nb,nb/)
+    call mpifind(vx_max, 'max', loc_vx_max, proc_vx_max)
+
+    wa4         = abs(u(imya,:,:,:)/u(idna,:,:,:))
+    vy_max      = maxval(wa4(1:nfluid,is:ie,js:je,ks:ke))
+    loc_vy_max  = maxloc(wa4(1:nfluid,is:ie,js:je,ks:ke)) &
+                  + (/0,nb,nb,nb/)
+    call mpifind(vy_max, 'max', loc_vy_max, proc_vy_max)
+
+    wa4         = abs(u(imza,:,:,:)/u(idna,:,:,:))
+    vz_max      = maxval(wa4(1:nfluid,is:ie,js:je,ks:ke))
+    loc_vz_max  = maxloc(wa4(1:nfluid,is:ie,js:je,ks:ke)) &
+                  + (/0,nb,nb,nb/)
+    call mpifind(vz_max, 'max', loc_vz_max, proc_vz_max)
+
+!    wa         = sum(b(:,:,:,:)**2,1)
+    wa(:,:,:)  = b(1,:,:,:)*b(1,:,:,:) + b(2,:,:,:)*b(2,:,:,:) + &
+                 b(3,:,:,:)*b(3,:,:,:)
+    b_min      = sqrt(minval(wa(is:ie,js:je,ks:ke)))
+    loc_b_min  = minloc(wa(is:ie,js:je,ks:ke)) &
+                  + (/nb,nb,nb/)
+    call mpifind(b_min, 'min', loc_b_min, proc_b_min)
+
+    b_max      = sqrt(maxval(wa(is:ie,js:je,ks:ke)))
+    loc_b_max  = maxloc(wa(is:ie,js:je,ks:ke)) &
+                  + (/nb,nb,nb/)
+    call mpifind(b_max, 'max', loc_b_max, proc_b_max)
+
+    va_max      = sqrt(maxval(spread(wa(is:ie,js:je,ks:ke),1,nfmagn) &
+                       /u(idna(fmagn),is:ie,js:je,ks:ke)))
+    loc_va_max  = maxloc(spread(wa(is:ie,js:je,ks:ke),1,nfmagn) &
+                       /u(idna(fmagn),is:ie,js:je,ks:ke)) &
+                  + (/0,nb,nb,nb/)
+    call mpifind(va_max, 'max', loc_va_max, proc_va_max)
+
+
+#ifdef ISO
+    pres_min     = csi2*dens_min
+    loc_pres_min  = loc_dens_min
+    proc_pres_min = proc_dens_min
+    pres_max     = csi2*dens_max
+    loc_pres_max  = loc_dens_max
+    proc_pres_max = proc_dens_max
+    cs_max        = c_si
+    loc_cs_max    = 0
+    proc_cs_max   = 0
+    temp_min      = hydro_mass / k_B * csi2
+    loc_temp_min  = 0
+    proc_temp_min = 0
+    temp_max      = hydro_mass / k_B * csi2
+    loc_temp_max  = 0
+    proc_temp_max = 0
+#else /* ISO */
+    wa4(1:nadiab,:,:,:) = (u(iena,:,:,:) &                ! eint
+                  - 0.5*((u(imxa(1:nadiab),:,:,:)**2 +u(imya(1:nadiab),:,:,:)**2 &
+                  + u(imza(1:nadiab),:,:,:)**2)/u(idna(1:nadiab),:,:,:)))
+    wa4(fmagn,:,:,:)    = wa4(fmagn,:,:,:) - spread(0.5*wa,1,nfmagn)
+    wa4(1:nadiab,:,:,:) = max(wa4(1:nadiab,:,:,:),smallei)
+    do ifl=1,nadiab
+    wa4(ifl,:,:,:) = (gamma(ifl)-1)*wa4(ifl,:,:,:)           ! pres
+    enddo
+
+    pres_min      = minval(wa4(1:nadiab,is:ie,js:je,ks:ke))
+    loc_pres_min  = minloc(wa4(1:nadiab,is:ie,js:je,ks:ke)) &
+                     + (/0,nb,nb,nb/)
+    call mpifind(pres_min, 'min', loc_pres_min, proc_pres_min)
+
+    pres_max      = maxval(wa4(1:nadiab,is:ie,js:je,ks:ke))
+    loc_pres_max  = maxloc(wa4(1:nadiab,is:ie,js:je,ks:ke)) &
+                     + (/0,nb,nb,nb/)
+    call mpifind(pres_max, 'max', loc_pres_max, proc_pres_max)
+
+    temp_max      = maxval( hydro_mass / k_B * wa4(1:nadiab,is:ie,js:je,ks:ke) &
+                                             /u(idna(1:nadiab),is:ie,js:je,ks:ke))
+    loc_temp_max  = maxloc(wa4(1:nadiab,is:ie,js:je,ks:ke)    &
+                         /u(idna(1:nadiab),is:ie,js:je,ks:ke)  ) &
+                     + (/0,nb,nb,nb/)
+    call mpifind(temp_max, 'max', loc_temp_max, proc_temp_max)
+
+
+    temp_min      = minval( hydro_mass / k_B * wa4(1:nadiab,is:ie,js:je,ks:ke) &
+                                             /u(idna(1:nadiab),is:ie,js:je,ks:ke))
+    loc_temp_min  = minloc(wa4(1:nadiab,is:ie,js:je,ks:ke)    &
+                         /u(idna(1:nadiab),is:ie,js:je,ks:ke)  ) &
+                     + (/0,nb,nb,nb/)
+    call mpifind(temp_min, 'min', loc_temp_min, proc_temp_min)
+
+    do ifl=1,nadiab
+      wa4(ifl,:,:,:) = gamma(ifl)*wa4(ifl,:,:,:)
+    enddo
+    cs_max        = sqrt(maxval(wa4(1:nadiab,is:ie,js:je,ks:ke) &
+                            /u(idna(1:nadiab),is:ie,js:je,ks:ke)))
+    loc_cs_max    = maxloc(wa4(1:nadiab,is:ie,js:je,ks:ke) &
+                            /u(idna(1:nadiab),is:ie,js:je,ks:ke)) &
+                     + (/0,nb,nb,nb/)
+    call mpifind(cs_max, 'max', loc_cs_max, proc_cs_max)
+#endif /* ISO */
+
+#ifdef COOL_HEAT
+      call mpifind(eint_src_min, 'min', loc_dt_cool, proc_dt_cool)
+      call mpifind(eint_src_max, 'max', loc_dt_heat, proc_dt_heat)
+      call mpifind(dt_cool,      'min', loc_dt_cool, proc_dt_cool)
+      call mpifind(dt_heat,      'min', loc_dt_heat, proc_dt_heat)
+#endif /* COOL_HEAT */
+#ifdef RESIST
+! Tu trzba sprawdzic czy poprawnie znajdowane jest max i loc dla wielu procesow
+      call mpifind(eta_max,      'max', loc_eta_max, proc_eta_max)
+#endif /* RESIST */
+
+    wa(1:nx-1,1:ny-1,1:max(nz-1,1)) = &
+                 (b(ibx,2:nx,1:ny-1,1:max(nz-1,1)) - b(ibx,1:nx-1,1:ny-1,1:max(nz-1,1)))*dy*dz &
+                +(b(iby,1:nx-1,2:ny,1:max(nz-1,1)) - b(iby,1:nx-1,1:ny-1,1:max(nz-1,1)))*dx*dz &
+                +(b(ibz,1:nx-1,1:ny-1,min(2,nz):nz) - b(ibz,1:nx-1,1:ny-1,1:max(nz-1,1)))*dx*dy
+!    wa = (cshift(b(ibx,:,:,:),dim=1,shift=1) - b(ibx,:,:,:))*dy*dz &
+!        +(cshift(b(iby,:,:,:),dim=2,shift=1) - b(iby,:,:,:))*dx*dz &
+!        +(cshift(b(ibz,:,:,:),dim=3,shift=1) - b(ibz,:,:,:))*dx*dy
+    wa = abs(wa)
+
+    wa(ie,:,:) = wa(ie-1,:,:)
+    wa(:,je,:) = wa(:,je-1,:)
+    wa(:,:,ke) = wa(:,:,max(ke-1,1))
+
+    divb_max      = maxval(wa(is:ie,js:je,ks:ke))
+    loc_divb_max  = maxloc(wa(is:ie,js:je,ks:ke)) &
+                  + (/nb,nb,nb/)
+    call mpifind(divb_max, 'max', loc_divb_max, proc_divb_max)
+
+    deallocate(wa4)
+
+#ifdef COSM_RAYS
+    allocate(wa4(COSM_RAYS,nx,ny,nz))
+    wa4         =  u(iecr,:,:,:)
+    encr_min      = minval(wa4(:,is:ie,js:je,ks:ke))
+    loc_encr_min  = minloc(wa4(:,is:ie,js:je,ks:ke)) &
+                  + (/0,nb,nb,nb/)
+    call mpifind(encr_min, 'min', loc_encr_min, proc_encr_min)
+
+    wa4         =  u(iecr,:,:,:)
+    encr_max      = maxval(wa4(:,is:ie,js:je,ks:ke))
+    loc_encr_max  = maxloc(wa4(:,is:ie,js:je,ks:ke)) &
+                  + (/0,nb,nb,nb/)
+    call mpifind(encr_max, 'max', loc_encr_max, proc_encr_max)
+    deallocate(wa4)
+#endif /* COSM_RAYS */
+
+    if(proc .eq. 0)  then
+
+      open(log_lun, file=log_file, position='append')
+
+        write(log_lun,771) 'min(dens)        =', dens_min,  proc_dens_min,  loc_dens_min
+        write(log_lun,771) 'max(dens)        =', dens_max,  proc_dens_max,  loc_dens_max
+        write(log_lun,771) 'min(temp)        =', temp_min,  proc_temp_min,  loc_temp_min
+        write(log_lun,771) 'max(temp)        =', temp_max,  proc_temp_max,  loc_temp_max
+        write(log_lun,771) 'min(pres)        =', pres_min,  proc_pres_min,  loc_pres_min
+        write(log_lun,771) 'max(pres)        =', pres_max,  proc_pres_max,  loc_pres_max
+        write(log_lun,770) 'min(|b|)         =', b_min,     proc_b_min,     loc_b_min
+        write(log_lun,770) 'max(|b|)         =', b_max,     proc_b_max,     loc_b_max
+        write(log_lun,770) 'max(|divb|)      =', divb_max,  proc_divb_max,  loc_divb_max
+
+        write(log_lun,777) 'max(|velx|)      =', vx_max, 'dt=',cfl*dx/(vx_max+small),   proc_vx_max, loc_vx_max
+        write(log_lun,777) 'max(|vely|)      =', vy_max, 'dt=',cfl*dy/(vy_max+small),   proc_vy_max, loc_vy_max
+        write(log_lun,777) 'max(|velz|)      =', vz_max, 'dt=',cfl*dz/(vz_max+small),   proc_vz_max, loc_vz_max
+        write(log_lun,777) 'max(v_alfven)    =', va_max, 'dt=',cfl*dxmn/(va_max+small), proc_va_max, loc_va_max
+        write(log_lun,777) 'max(c_sound )    =', cs_max, 'dt=',cfl*dxmn/(cs_max+small), proc_cs_max, loc_cs_max
+        write(log_lun,777) 'max(c_fast  )    =', sqrt(cs_max**2+va_max**2), 'dt=',cfl*dxmn/sqrt(cs_max**2+va_max**2)
+#ifdef COSM_RAYS
+        write(log_lun,777) 'min(encr)        =', encr_min,         '',  0.0,     proc_encr_min, loc_encr_min
+        write(log_lun,777) 'max(encr)        =', encr_max,      'dt=',dt_cr,     proc_encr_max, loc_encr_max
+#endif /* COSM_RAYS */
+#ifdef COOL_HEAT
+        write(log_lun,778) 'min(esrc/eint)   =', eint_src_min , 'dt=',dt_cool,   proc_dt_cool,  loc_dt_cool
+        write(log_lun,778) 'max(esrc/eint)   =', eint_src_max , 'dt=',dt_heat,   proc_dt_heat,  loc_dt_heat
+#endif /* COOL_HEAT */
+#ifdef RESIST
+        write(log_lun,776) 'max(eta)         =', eta_max ,      'dt=',dt_resist, proc_eta_max,  loc_eta_max
+#endif /* RESIST */
+#ifdef COLLISIONS
+        write(log_lun,'(2x,a36,e10.4)') 'collisions with fluid ~1/dens, dt = ',dt_colls
+#endif /* COLLISIONS */
+
+      close(log_lun)
+
+    endif
+
+    if(proc .eq. 0)  then
+      open(log_lun, file=log_file, position='append')
+        write(log_lun,'(a80)') '================================================================================'
+        write(log_lun,900) nstep,dt,t
+        write(log_lun,'(a80)') '================================================================================'
+      close(log_lun)
+    endif
+
+
+
+770 format(5x,a18,(1x,e15.9),4(1x,i4))
+771 format(5x,a18,(1x,e15.9),5(1x,i4))
+#ifdef RESIST
+776 format(5x,a18,(1x,e10.4),2x,a3,(1x,e10.4),4(1x,i4))
+#endif /* RESIST */
+777 format(5x,a18,(1x,e10.4),2x,a3,(1x,e10.4),5(1x,i4))
+#ifdef COOL_HEAT
+778 format(2x,a18,(1x,e10.4),2x,a3,(1x,e10.4),4(1x,i4))
+#endif /* COOL_HEAT */
+900 format('   nstep = ',i7,'   dt = ',f22.16,'   t = ',f22.16,2(1x,i4))
+
   end subroutine write_log
 
 
-!
-!=======================================================================
-!
-!                    B E G I N   S U B R O U T I N E
-!                           C H E C K _ D I S K
-!
-!=======================================================================
-!
-  subroutine check_disk
-
-!     written by: michal hanasz
-!     date:       26. june 2003
-      use start, only : sleep_minutes,sleep_seconds, min_disk_space_MB
-      implicit none
-
-      integer scstatus,ispace,islash,i,i1,ldfout,lcwd
-      logical diskfree,diskaccess
-      integer min_disk_space, darray(3),tarray(3)
-      character df_file*32,cwd_file*32,fsys*30,dfout*80,cspace*10,cpid*10,cproc*2
-      character host_small_space*8, dfout_small_space*80
-      character*160 syscom
-      integer date_time (8) , sleep_time
-      character (len = 10) big_ben (3)
-
-      integer isend(2), irecv(2), loc_proc
-      integer tsleep
-
-      integer(kind=1) :: system
-
-!-------------------------------------------------------------------------
-!     Configurable parameters in problem.par
-!-------------------------------------------------------------------------
-!      min_disk_space_MB     ! Minimum free space on the working directory
-!      sleep_minutes         ! Waiting time in minutes
-!      sleep_seconds         ! Waiting time in minutes
-!-------------------------------------------------------------------------
-      min_disk_space = 1000*min_disk_space_MB
-
-      write (cpid,'(i10)') pid
-      write(cproc,'(i2.2)') proc
-      df_file = trim(cpid)//'_'//trim(host)//'_'//cproc//'_'//'df.tmp'
-      cwd_file= trim(cpid)//'_'//trim(host)//'_'//cproc//'_'//'cwd.tmp'
-
-      diskfree   = .true.
-      diskaccess = .true.
-      sleep_time = 60*sleep_minutes+sleep_seconds
-
-111   continue
-
-      lcwd=LEN_TRIM(cwd)
-      islash = INDEX(cwd(2:lcwd),'/')
-      fsys=cwd(2:islash)
-
-!---  check disk access - writing and deleting cwd_file
-
-      call rm_file(cwd_file)
-      open(99,file=cwd_file,status='new',err=221)
-      close(99)
-      call rm_file(cwd_file)
-
-      goto 222
-221   continue
-        diskaccess=.false.
-222   continue
-
-      if(diskaccess) then
-        tsleep = 0
-      else
-        tsleep = sleep_time
-      endif
-
-!---  broadcasting a message (tsleep) on disk inaccessibility
-
-      isend(1) = tsleep
-      isend(2) = proc
-
-      call MPI_REDUCE(isend, irecv, 1, MPI_2INTEGER, &
-                                       MPI_MINLOC, 0, comm, ierr)
-      if(proc .eq.0) then
-        tsleep   = irecv(1)
-        loc_proc = irecv(2)
-      endif
-
-      call MPI_BCAST(loc_proc, 1, MPI_INTEGER, 0, comm, ierr)
-      call MPI_BCAST(tsleep,   1, MPI_INTEGER, 0, comm, ierr)
-
-      if(tsleep .gt. 0) then
-        if(proc .eq. 0) then
-          write(*,*)
-          write(*,18) (darray(i),i=1,3),(tarray(i),i=1,3)
-          write(*,*) 'WORKING DIRECTORY UNAVAILABLE, proc =', loc_proc
-          write(*,*) 'WAITING ',sleep_minutes,' min', sleep_minutes,' sec'
-        endif
-        call sleep(tsleep)
-        goto 111
-
-      endif
-
-!---  disk access restored
-!------------------------------------------------------------------------
-
-
-!--- check disk space on working partition
-
-!     delete df_file if exists
-      call rm_file(df_file)
-
-      syscom='df /'//fsys// '| grep '//fsys// '> '//df_file
-      scstatus = system(syscom)
-
-
-      open(81,file=df_file,status='old',err=888)
-        read(81,15,err=888,end=888) dfout
-      close(81)
-
-!     delete df_file
-      call rm_file(df_file)
-
-      ldfout = LEN_TRIM(dfout)
-      cspace = dfout(41:50)
-
-      do i=1,10
-        i1 = index(cspace(i:10),' ')
-        if(i1 .eq. 0) then
-          ispace = ctoi(cspace,i,10)
-          goto 777
-        endif
-      enddo
-777   continue
-
-!     find a minimum of disk space, process number, machine and broadcast
-
-      isend(1) = ispace
-      isend(2) = proc
-
-      call MPI_REDUCE(isend, irecv, 1, MPI_2INTEGER, &
-                                       MPI_MINLOC, 0, comm, ierr)
-      if(proc .eq.0) then
-        ispace   = irecv(1)
-        loc_proc = irecv(2)
-      endif
-
-      call MPI_BCAST(loc_proc, 1, MPI_INTEGER, 0, comm, ierr)
-      call MPI_BCAST(ispace, 1, MPI_INTEGER, 0, comm, ierr)
-
-      if(ispace .lt. min_disk_space) then
-
-        diskfree = .false.
-        wait = .true.
-
-        if(loc_proc .ne. 0) then
-          if(proc .eq. loc_proc) then
-            call MPI_SEND  (host,   8, MPI_CHARACTER,        0, 15, comm, ierr)
-          else if(proc .eq. 0) then
-            call MPI_RECV  ( host_small_space,  8, MPI_CHARACTER, loc_proc, 15, comm, status, ierr)
-          endif
-
-          if(proc .eq. loc_proc) then
-            call MPI_SEND  (dfout, 80, MPI_CHARACTER,        0, 16, comm, ierr)
-          else if(proc .eq. 0) then
-            call MPI_RECV  (dfout_small_space, 80, MPI_CHARACTER, loc_proc, 16, comm, status, ierr)
-          endif
-        else
-          host_small_space = host
-          dfout_small_space = dfout
-        endif
-
-        if(proc .eq. 0) then
-
-!--- inform user and write to logfile
-
-          call date_and_time (big_ben (1), big_ben (2), big_ben (3), date_time)
-          darray(1) = date_time(3)
-          darray(2) = date_time(2)
-          darray(3) = date_time(1)
-          tarray(1) = date_time(5)
-          tarray(2) = date_time(6)
-          tarray(3) = date_time(7)
-
-          write(*,*)
-          write(*,18) (darray(i),i=1,3),(tarray(i),i=1,3)
-          write(*,*)'!DISK SPACE TOO SMALL:   ', host_small_space
-          write(*,17) dfout_small_space(1:79)
-          write(*,13)
-          write(*,14) min_disk_space
-          write(*,*) 'WAITING ',sleep_minutes,' min', sleep_seconds,' sec'
-
-          open(log_lun, file=log_file, position='append')
-          write(log_lun,*)
-          write(log_lun,18) (darray(i),i=1,3),(tarray(i),i=1,3)
-          write(log_lun,*) '!DISK SPACE TOO SMALL:   ', host_small_space
-          write(log_lun,17) dfout_small_space(1:79)
-          write(log_lun,13)
-          write(log_lun,14) min_disk_space
-          write(log_lun,*)
-          close(log_lun)
-        endif !(proc .eq. 0)
-
-          call sleep(sleep_time)
-
-!---      go back and check again
-!          goto 111
-
-      else !(ispace .lt. min_disk_space)
-        wait = .false.
-
-! inform if disk space is restored
-
-        if(diskfree .eqv. .false.) then
-          if(proc .eq. 0) then
-            write(*,*)
-            write(*,18) (darray(i),i=1,3),(tarray(i),i=1,3)
-            write(*,*)'!SUFFICIENT DISK SPACE: ', host_small_space
-            write(*,17) dfout(1:79)
-            write(*,13)
-            write(*,*) 'CONTINUING '
-
-            open(log_lun, file=log_file, position='append')
-            write(log_lun,*)
-            write(log_lun,18) (darray(i),i=1,3),(tarray(i),i=1,3)
-            write(log_lun,*)'!SUFFICIENT DISK SPACE: ', host_small_space
-            write(log_lun,17) dfout(1:79)
-            write(log_lun,13)
-            write(log_lun,*) 'CONTINUING '
-            write(log_lun,*)
-            close(log_lun)
-          endif
-          diskfree = .true.
-        endif
-      endif
-
-
-888   continue
-
-13    format(42x,'----------')
-14    format(23x,'SHOULD BE AT LEAST:',i9)
-15    format(a80)
-17    format(1x,a79)
-18    format(i2.2,'.',i2.2,'.',i4.4,', ',i2.2,':',i2.2,':',i2.2)
-
-
-
-    end subroutine check_disk
-!=======================================================================
-!
-!                     E N D   S U B R O U T I N E
-!                             C H E C K D F
-!
-!=======================================================================
 !
 !=======================================================================
 !

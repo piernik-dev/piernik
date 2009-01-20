@@ -19,33 +19,15 @@ module arrays
    real, allocatable, dimension(:)  :: z, zl, zr
 
    real, allocatable, dimension(:,:,:,:) :: u, b
+   real, allocatable, dimension(:,:,:) :: wa, wcu
 #ifdef GRAV
    real, allocatable, dimension(:,:,:) :: gp
    real, allocatable, dimension(:)     :: dprof, eprof
 #endif /* GRAV */
-#ifdef SPLIT
-   real, allocatable, dimension(:,:,:) :: wa, wcu
-#ifdef SSP
-   real, allocatable, dimension(:,:,:,:) :: bi
-#endif /* SSP */
 
-#else /* ~SPLIT */
-   real, allocatable, dimension(:,:,:,:) :: bi
-   real, allocatable, dimension(:,:,:,:) :: ui
-   real, allocatable, dimension(:,:,:,:) :: Lu, Lb
-   real, allocatable, dimension(:,:,:)   :: wa
-#ifdef FLX_BND
-   real, allocatable, dimension(:,:,:,:) :: flx
-   real, allocatable, dimension(:,:,:)   :: cfr
-#endif /* FLX_BND */
-#endif /* ~SPLIT */
-#ifdef MASS_COMPENS
-    real, allocatable, dimension(:,:,:,:)   :: dinit
-#endif /* MASS_COMPENS */
-
-!#ifdef COOL_HEAT
+#ifdef COOL_HEAT
    real, allocatable, dimension(:)       :: coolheat_profile
-!#endif /* COOL_HEAT */
+#endif /* COOL_HEAT */
 
    real(kind=4), allocatable, dimension(:,:,:)  :: outwa, outwb, outwc
 
@@ -57,11 +39,6 @@ module arrays
    integer, allocatable, dimension(:)       :: intscal
    real,    allocatable, dimension(:,:)     :: ul0, ur0
    real,    allocatable, dimension(:,:,:,:) :: bndxrar, bndyrar
-
-#ifdef KEPLER_SUPPRESSION
-   real, allocatable, dimension(:,:,:,:) :: omx0, omy0
-   real, allocatable, dimension(:,:)     :: alfsup
-#endif /* KEPLER_SUPPRESSION */
 
    contains
    
@@ -121,36 +98,13 @@ module arrays
       allocate(x(nx), xl(nx), xr(nx))
       allocate(y(ny), yl(ny), yr(ny))
       allocate(z(nz), zl(nz), zr(nz))
-
-#ifdef SPLIT
-#ifdef ORIG
       allocate(u(nvar,nx,ny,nz),b(3,nx,ny,nz))
-#else /* ~ORIG */
-      allocate(u(nvar,nx,ny,nz),b(3,nx,ny,nz),bi(3,nx,ny,nz))
-#endif /* ~ORIG */
-#else /* ~SPLIT */
-      allocate(u(nvar,nx,ny,nz),b(3,nx,ny,nz))
-      allocate(ui(nvar,nx,ny,nz),bi(3,nx,ny,nz))
-      allocate(Lu(nvar,nx,ny,nz),Lb(3,nx,ny,nz))
-#ifdef FLX_BND
-      allocate(flx(nvar,nx,ny,nz))
-      allocate(cfr(nx,ny,nz))
-#endif /* FLX_BND */
-#endif /* ~SPLIT */
-
 #ifdef GRAV
       allocate(gp(nx,ny,nz))
       allocate(dprof(nz),eprof(nz))
 #endif /* GRAV */
-#ifdef SPLIT
       allocate(wa(nx,ny,nz),wcu(nx,ny,nz))
-#else /* SPLIT */
-      allocate(wa(nx,ny,nz))
-#endif /* SPLIT */
       allocate(outwa(nx,ny,nz),outwb(nx,ny,nz),outwc(nx,ny,nz))
-#ifdef MASS_COMPENS
-      allocate(dinit(nfluid,nx,ny,nz))
-#endif /* MASS_COMPENS */
 !#ifdef COOL_HEAT
       allocate( coolheat_profile(nz))
 !#endif /* COOL_HEAT */
@@ -167,44 +121,18 @@ module arrays
       deallocate(x, xl, xr)
       deallocate(y, yl, yr)
       deallocate(z, zl, zr)
-
-#ifdef SPLIT
-#ifdef ORIG
       deallocate(u,b)
-#else /* ~ORIG */
-      deallocate(u,b,bi)
-#endif /* ~ORIG */
-#else /* ~SPLIT */
-      deallocate(u,b)
-      deallocate(ui,bi)
-      deallocate(Lu,Lb)
-#ifdef FLX_BND
-      deallocate(cfr,flx)
-#endif /* FLX_BND */
-#endif /* ~SPLIT */
+      deallocate(wa,wcu)
 #ifdef GRAV
       deallocate(gp)
       deallocate(dprof,eprof)
 #endif /* GRAV */
-#ifdef SPLIT
-      deallocate(wa,wcu)
-#else /* SPLIT */
-      deallocate(wa)
-#endif /* SPLIT */
-#ifdef MASS_COMPENS
-      deallocate(dinit)
-#endif /* MASS_COMPENS */
-!#ifdef COOL_HEAT
+#ifdef COOL_HEAT
       deallocate(coolheat_profile)
-!#endif /* COOL_HEAT */
+#endif /* COOL_HEAT */
 #if defined COSM_RAYS || defined PRESS_GRAD_EXCH
       deallocate(divvel)
 #endif /* COSM_RAYS || PRESS_GRAD_EXCH */
-#ifdef KEPLER_SUPPRESSION
-      if(allocated(alfsup)) deallocate(alfsup)
-      if(allocated(omx0)) deallocate(omx0)
-      if(allocated(omy0)) deallocate(omy0)
-#endif /* KEPLER_SUPPRESSION */
       if(allocated(bndxrar)) deallocate(bndxrar)
       if(allocated(bndyrar)) deallocate(bndyrar)
       deallocate(outwa,outwb,outwc)

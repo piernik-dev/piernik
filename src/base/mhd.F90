@@ -26,9 +26,6 @@ program mhd
   use dataio, only : init_dataio,read_restart,write_data, check_disk, &
       read_file_msg, write_timeslice, write_log, write_hdf, write_restart, &
       find_last_restart, get_container, set_container
-#ifdef HDF5
-  use dataio_hdf5, only: read_restart_hdf5, write_plot
-#endif /* HDF5 */
 !  use diagnostics
   use timer, only : timer_start, timer_stop
   use mpi_setup
@@ -66,7 +63,6 @@ program mhd
   integer tsleep, i
 
   character tmp_log_file*(100)
-  type(hdf) :: chdf
 
   call getarg(1, cwd)
   if (LEN_TRIM(cwd) == 0) cwd = '.'
@@ -143,7 +139,6 @@ program mhd
       close(3)
     endif
 
-    call set_container(chdf); chdf%nres = nrestart
     call write_data(output='all')
 
   else
@@ -157,14 +152,8 @@ program mhd
     endif
     call init_prob
 
-#ifdef HDF5
-    call set_container(chdf); chdf%nres = nrestart
-    call read_restart_hdf5(chdf)
-    call get_container(chdf); nstep = chdf%nstep
-#else /* HDF5 */
     nres = nrestart
     call read_restart
-#endif /* HDF5 */
 
     nstep_start = nstep
     t_start     = t
@@ -172,10 +161,6 @@ program mhd
     nhdf_start  = nhdf-1
 
     if(new_id .ne. '') run_id=new_id
-
-#ifdef MASS_COMPENS
-    call get_init_mass
-#endif /* MASS_COMPENS */
 
   endif
   call MPI_BARRIER(comm3d,ierr)
@@ -186,15 +171,8 @@ program mhd
     nstep=nstep+1
     if (t>=tend .or. nstep>nend ) exit
 
-#ifdef HDF5
-      call write_plot(chdf)
-#endif /* HDF5 */
-
       call mhd_step
 
-#ifdef MASS_COMPENS
-      call mass_loss_compensate
-#endif /* MASS_COMPENS */
       call MPI_BARRIER(comm3d,ierr)
       call write_data(output='all')
 

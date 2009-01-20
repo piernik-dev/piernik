@@ -42,9 +42,6 @@ subroutine bnd_u(dim)
   use shear, only : eps,delj, unshear_fft_b, unshear_fft, unshear
   use start, only : qshear, omega
 #endif /* SHEAR */
-#ifndef SPLIT
-  use arrays, only : Lu
-#endif /* SPLIT */
 #ifdef COSM_RAYS
     use arrays, only : iecr
 #endif /* COSM_RAYS */
@@ -77,10 +74,6 @@ subroutine bnd_u(dim)
 #endif /* SHEAR_MY */
 ! MPI block comunication
 
-!  write(*,*) '********************************************'
-!  write(*,*) '*        You should not enter bnd_u        *'
-!  write(*,*) '*Boundary conditions are done on fluxes !!!*'
-!  write(*,*) '********************************************'
   select case (dim)
     case ('xdim')
 #ifdef SHEAR_MPI
@@ -930,19 +923,11 @@ end subroutine bnd_u
 
   subroutine compute_u_bnd
    use start,  only : dimensions
-#ifndef SPLIT
-   use arrays, only : Lu
-#endif /* SPLIT */
    implicit none
-#ifndef FLX_BND
    call bnd_u('xdim')
    call bnd_u('ydim')
    if(dimensions .eq. '3d') call bnd_u('zdim')
-#endif /* ~FLX_BND */
 
-#ifndef SPLIT
-   Lu(:,:,:,: ) =  0.0
-#endif /* SPLIT */
   end subroutine compute_u_bnd
 
 end module fluid_boundaries
