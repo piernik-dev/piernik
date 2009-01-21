@@ -194,7 +194,7 @@ if( grep { /DUST/} @d) {
    push(@addons, "../src/fluids/dust/fluxdust.F90");
    push(@addons, "../src/fluids/dust/timestepdust.F90"); }
 if( grep { /COSM_RAYS/} @d) {
-   push(@addons, "../src/cosm_rays/cr_diffusion.F90");}
+   push(@addons, "../src/fluids/cosmicrays/crdiffusion.F90");}
 
 if( grep { /SN_SRC/} @d) {
    push(@addons, "../src/supernovae/sn_sources.F90");
