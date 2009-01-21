@@ -60,6 +60,7 @@ subroutine all_fluxes(flux,cfr,uu,bb,n)
     integer n
     real, dimension(nvar,n)::flux,uu,cfr
     real, dimension(nmag,n)::bb
+    real, dimension(n)     :: vion
 
 #ifdef IONIZED
     real, dimension(nvar_ion,n) :: fluxion,cfrion,uuion
@@ -77,10 +78,12 @@ subroutine all_fluxes(flux,cfr,uu,bb,n)
     real, dimension(nvar_crs,n) :: fluxcrs,uucrs
 #endif /* COSM_RAYS */
 
+   vion(:) = 0.0
+
 #ifdef IONIZED
    uuion(:,:)=uu(iarr_ion,:)
 
-   call flux_ion(fluxion,cfrion,uuion,bb,n)
+   call flux_ion(fluxion,cfrion,vion,uuion,bb,n)
 
    flux(iarr_ion,:)=fluxion
    cfr(iarr_ion,:) =cfrion
@@ -107,7 +110,7 @@ subroutine all_fluxes(flux,cfr,uu,bb,n)
 
 #ifdef COSM_RAYS
    uucrs=uu(iarr_crs,:)
-   call flux_crs(fluxcrs,uucrs,n)
+   call flux_crs(fluxcrs,vion,uucrs,n)
    flux(iarr_crs,:)=fluxcrs
    uu(iarr_crs,:)=uucrs
 #endif /* COSM_RAYS */
