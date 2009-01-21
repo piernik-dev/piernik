@@ -15,7 +15,7 @@ module init_problem
 
   namelist /PROBLEM_CONTROL/  problem_name, run_id, &
                               d0,p0, bx0,by0,bz0, Eexpl,  x0,y0,z0, r0, &
-			      n_sn, dt_sn 
+                              n_sn, dt_sn 
 
 contains
 
@@ -90,7 +90,7 @@ contains
 !			       n_sn, dt_sn 
 
       problem_name = cbuff(1)   
-      run_id       = cbuff(2)   
+      run_id       = cbuff(2)(1:3)
 
       d0           = rbuff(1)  
       p0           = rbuff(2)  
@@ -117,7 +117,7 @@ contains
 
     implicit none
 
-    integer i,j,k, n
+    integer :: i,j,k
     
     
     call read_problem_par
@@ -158,14 +158,6 @@ contains
     enddo
   else if (n_sn .gt. 1) then
   
-!    call random_seed()
-  
-!    do n=2,n_sn
-!      call random_explosion
-!    enddo
-!  else
-!    write(*,*) 'n_sn =', n_sn
-!    stop
   endif
     
     return
@@ -176,11 +168,9 @@ contains
     use initionized, only : ieni
   
   implicit none
-    integer i,j,k, n, nexpl
+    integer i,j,k
     real rand(3)
     
-    call random_number(rand)
-
     x0 = xmin + (xmax-xmin)*rand(1)
     y0 = ymin + (ymax-ymin)*rand(2)
     z0 = zmin + (zmax-zmin)*rand(3)
