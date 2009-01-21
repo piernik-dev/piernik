@@ -226,12 +226,6 @@ push(@addons, "../src/scheme/mhdstep.F90");
 push(@addons, "../src/scheme/sweeps.F90");
 push(@addons, "../src/scheme/rtvd.F90");
 
-
-
-#push(@addons, "../src/base/datalogshort.def");
-#push(@addons, "../src/base/dataloglong.def");
-
-
 @files = ( @base, @prob, @addons );
 @symln = ();
 foreach $file (@files) {
@@ -292,9 +286,9 @@ print MAKEFILE "\trm -f env.*\n";
 print MAKEFILE "\tcp ../src/base/env.F90 .\n";
 print MAKEFILE "\thead -n 1 *.F90 | grep Id > env.dat\n";
 print MAKEFILE "\tcat piernik.def >> env.dat\n";
-print MAKEFILE "\twc -l env.dat | awk '{print \"\tinteger, parameter :: nenv = \"\$\$1\"+1\"}' - >> env.F90\n";
+print MAKEFILE "\twc -l env.dat | awk '{print \"   integer, parameter :: nenv = \"\$\$1\"+1\"}' - >> env.F90\n";
 print MAKEFILE "\techo \"   character*128, dimension(nenv) :: env = (/ &\" >> env.F90\n";
-print MAKEFILE "\tawk '{printf(\"\\t\\t \\\" %s \\\" ,&\\n\",\$\$0)}' env.dat >> env.F90\n";
+print MAKEFILE "\tawk '{printf(\"       \\\" %s \\\" ,&\\n\",\$\$0)}' env.dat >> env.F90\n";
 print MAKEFILE "\techo '      \" \" /)' >> env.F90\n";
 print MAKEFILE "\techo 'end module comp_log' >> env.F90\n\n";
 
