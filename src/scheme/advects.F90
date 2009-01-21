@@ -9,8 +9,8 @@ module advects
     use fluidindex,   only : nfluid
     use fluidindex, only : ibx,iby,ibz
     use initionized, only : idni,imxi
-    use arrays, only : b,u,wa,nx,ny,nz
-    use grid,   only : dx
+    use arrays, only : b,u,wa
+    use grid,   only : dx,nx,ny,nz
     use rtvd,     only : tvdb
     use mag_boundaries, only : bnd_emf
 
@@ -47,8 +47,8 @@ module advects
     use fluidindex,   only : nfluid
     use fluidindex, only : ibx,iby,ibz
     use initionized, only : idni,imxi
-    use arrays, only : b,u,wa,nx,ny,nz
-    use grid,   only : dx
+    use arrays, only : b,u,wa
+    use grid,   only : dx,nx,ny,nz
     use rtvd,   only : tvdb
     use mag_boundaries, only : bnd_emf
 
@@ -85,8 +85,8 @@ module advects
     use fluidindex,   only : nfluid
     use fluidindex, only : ibx,iby,ibz
     use initionized, only : idni,imyi
-    use arrays, only : b,u,wa,nx,ny,nz
-    use grid,   only : dy
+    use arrays, only : b,u,wa
+    use grid,   only : dy,nx,ny,nz
     use rtvd,   only : tvdb
     use mag_boundaries, only : bnd_emf
 
@@ -123,8 +123,8 @@ module advects
     use fluidindex,   only : nfluid
     use fluidindex, only : ibx,iby,ibz
     use initionized, only : idni,imyi
-    use arrays, only : b,u,wa,nx,ny,nz
-    use grid,   only : dy
+    use arrays, only : b,u,wa
+    use grid,   only : dy,nx,ny,nz
     use rtvd,     only : tvdb
     use mag_boundaries, only : bnd_emf
 
@@ -161,8 +161,8 @@ module advects
     use fluidindex,   only : nfluid
     use fluidindex, only : ibx,iby,ibz
     use initionized, only : idni,imzi
-    use arrays, only : b,u,wa,nx,ny,nz
-    use grid,   only : dz
+    use arrays, only : b,u,wa
+    use grid,   only : dz,nx,ny,nz
     use rtvd,     only : tvdb
     use mag_boundaries, only : bnd_emf
 
@@ -199,8 +199,8 @@ module advects
     use fluidindex,   only : nfluid
     use fluidindex, only : ibx,iby,ibz
     use initionized, only : idni,imzi
-    use arrays, only : b,u,wa,nx,ny,nz
-    use grid,   only : dz
+    use arrays, only : b,u,wa
+    use grid,   only : dz,nx,ny,nz
     use rtvd,     only : tvdb
     use mag_boundaries, only : bnd_emf
 

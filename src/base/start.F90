@@ -27,7 +27,6 @@ module start
 
   implicit none
 
-  integer nxd, nyd, nzd, nb
 
   real t,dt
 !  real dt_ionized, dt_coolheat, dt_visc
@@ -49,8 +48,6 @@ module start
   real dt_hdf, dt_res, dt_tsl, dt_log
   integer min_disk_space_MB, sleep_minutes, sleep_seconds
   character*160  user_message_file, system_message_file
-
-  real xmin, xmax, ymin, ymax, zmin, zmax
 
   real :: c_si, alpha, tauc
 !  real, dimension(NUMBFLUID) :: gamma
@@ -121,7 +118,6 @@ contains
 
 
 
-  namelist /DOMAIN_SIZES/ nxd, nyd, nzd, nb
   namelist /START_CONTROL/ nstep, t, dt
   namelist /RESTART_CONTROL/ restart, new_id, nrestart, resdel
   namelist /END_CONTROL/ tend, nend
@@ -129,7 +125,6 @@ contains
                             domain, vars, mag_center, ix, iy, iz,&
                             min_disk_space_MB, sleep_minutes, sleep_seconds, &
                             user_message_file, system_message_file
-  namelist /DOMAIN_LIMITS/ xmin, xmax, ymin, ymax, zmin, zmax
   namelist /EQUATION_OF_STATE/ c_si, gamma, alpha, tauc
   namelist /NUMERICAL_SETUP/  cfl, smalld, smallei, &
 #ifdef VZ_LIMITS
@@ -184,11 +179,6 @@ contains
     par_file = trim(cwd)//'/problem.par'
     tmp_log_file = trim(cwd)//'/tmp.log'
 
-    nxd    = 10
-    nyd    = 10
-    nzd    = 10
-    nb     =  4
-
     nstep  = 0
     t      = 0.0
     dt     = 0.0
@@ -217,13 +207,6 @@ contains
     sleep_seconds   = 0
     user_message_file   = trim(cwd)//'/msg'
     system_message_file = '/tmp/piernik_msg'
-
-    xmin   = 0.0
-    xmax   = 1.0
-    ymin   = 0.0
-    ymax   = 1.0
-    zmin   = 0.0
-    zmax   = 1.0
 
     c_si   = 1.0
     gamma  = 5./3.    ! ignored if ISO
@@ -348,12 +331,10 @@ contains
     if(proc .eq. 0) then
 
       open(1,file=par_file)
-        read(unit=1,nml=DOMAIN_SIZES)
         read(unit=1,nml=START_CONTROL)
         read(unit=1,nml=RESTART_CONTROL)
         read(unit=1,nml=END_CONTROL)
         read(unit=1,nml=OUTPUT_CONTROL)
-        read(unit=1,nml=DOMAIN_LIMITS)
         read(unit=1,nml=EQUATION_OF_STATE)
         read(unit=1,nml=NUMERICAL_SETUP)
 #ifdef GRAV
@@ -384,12 +365,10 @@ contains
       close(1)
 
       open(3, file=tmp_log_file, position='append')
-        write(unit=3,nml=DOMAIN_SIZES)
         write(unit=3,nml=START_CONTROL)
         write(unit=3,nml=RESTART_CONTROL)
         write(unit=3,nml=END_CONTROL)
         write(unit=3,nml=OUTPUT_CONTROL)
-        write(unit=3,nml=DOMAIN_LIMITS)
         write(unit=3,nml=EQUATION_OF_STATE)
         write(unit=3,nml=NUMERICAL_SETUP)
 #ifdef GRAV
@@ -422,13 +401,6 @@ contains
 
 
     if(proc .eq. 0) then
-
-!  namelist /DOMAIN_SIZES/ nxd, nyd, nzd, nb
-
-      ibuff(1)  = nxd
-      ibuff(2)  = nyd
-      ibuff(3)  = nzd
-      ibuff(4)  = nb
 
 !  namelist /START_CONTROL/ nstep, t, dt
 
@@ -476,15 +448,6 @@ contains
       cbuff(60) = mag_center
       cbuff(61) = user_message_file(1:32)
       cbuff(62) = system_message_file(1:32)
-
-!  namelist /DOMAIN_LIMITS/ xmin, xmax, ymin, ymax, zmin, zmax
-
-      rbuff(50) = xmin
-      rbuff(51) = xmax
-      rbuff(52) = ymin
-      rbuff(53) = ymax
-      rbuff(54) = zmin
-      rbuff(55) = zmax
 
 !  namelist /EQUATION_OF_STATE/ c_si, gamma, alpha, tauc
 !      rbuff(70) = c_si
@@ -649,13 +612,6 @@ contains
       call MPI_BCAST(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
       call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
-!  namelist /DOMAIN_SIZES/ nxd, nyd, nzd, nb
-
-      nxd                 = ibuff(1)
-      nyd                 = ibuff(2)
-      nzd                 = ibuff(3)
-      nb                  = ibuff(4)
-
 !  namelist /START_CONTROL/ nstep, t, dt
 
       nstep               = ibuff(10)
@@ -703,15 +659,6 @@ contains
 
       user_message_file   = trim(cbuff(61))
       system_message_file = trim(cbuff(62))
-
-!  namelist /DOMAIN_LIMITS/ xmin, xmax, ymin, ymax, zmin, zmax
-
-      xmin                = rbuff(50)
-      xmax                = rbuff(51)
-      ymin                = rbuff(52)
-      ymax                = rbuff(53)
-      zmin                = rbuff(54)
-      zmax                = rbuff(55)
 
 
 !  namelist /EQUATION_OF_STATE/ c_si, gamma, alpha, tauc

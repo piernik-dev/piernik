@@ -11,7 +11,8 @@ module gravity
 
 !--------------------------------------------------------------------------
    subroutine grav_pot_3d
-      use arrays, only : nx,ny,nz,gp,z
+      use arrays, only : gp
+      use grid, only : nx,ny,nz,z
       implicit none
       integer i, j
       real, allocatable :: gpot(:)
@@ -38,7 +39,7 @@ module gravity
    subroutine grav_pot(sweep, i1,i2, xsw, n, gpot,status,temp_log)
 #if defined GRAV_PTMASS || defined GRAV_PTFLAT || defined GRAV_PTMASSPURE
       use start,  only : r_smooth,csim2,ptm_x,ptm_y,ptm_z,ptmass,n_gravr,h_grav,r_grav,smalld
-      use arrays, only : x,y,z
+      use grid, only : x,y,z
 #endif /* GRAV_PTMASS || GRAV_PTFLAT || GRAV_PTMASSPURE */
 #ifdef GRAV_USER
       use gravity_user, only : grav_pot_user
@@ -152,9 +153,11 @@ module gravity
 !--------------------------------------------------------------------------
 
    subroutine grav_accel(sweep, i1,i2, xsw, n, grav)
-      use start, only  : h_grav, n_gravh,nb, r_gc
-      use arrays, only : gp,x,y,z,dl,xdim,ydim,zdim,nx,ny,nz, &
-                         is,ie,js,je,ks,ke, xr,yr,zr
+      use grid, only : nb
+      use start, only  : h_grav, n_gravh,r_gc
+      use arrays, only : gp
+      use grid, only :   x,y,z,dl,xdim,ydim,zdim,nx,ny,nz
+      use grid, only :   is,ie,js,je,ks,ke, xr,yr,zr
 #ifdef GRAV_GALACTIC
       use start, only : r_gc
 #endif /* GRAV_GALACTIC */
@@ -275,10 +278,8 @@ module gravity
 
 
    subroutine grav_pot2accel(sweep, i1,i2, n, grav)
-      use arrays, only : gp, dl, xdim, ydim, zdim
-#ifdef KEPL_SUPP_TEST_HELP
-      use arrays, only : u,imxa
-#endif /* KEPL_SUPP_TEST_HELP */
+      use arrays, only : gp
+      use grid, only : dl, xdim, ydim, zdim
       implicit none
       character, intent(in)          :: sweep*6
       integer, intent(in)            :: i1, i2
@@ -295,9 +296,6 @@ module gravity
          case('zsweep')
             grav(1:n-1) = (gp(i1,i2,1:n-1) - gp(i1,i2,2:n))/dl(zdim)
       end select
-#ifdef KEPL_SUPP_TEST_HELP
-      grav(1:n-1) = grav(1:n-1)*maxval(abs(u(imxa,:,:,:)))/1.38726
-#endif /* KEPL_SUPP_TEST_HELP */
 
    end subroutine grav_pot2accel
 
@@ -305,9 +303,9 @@ module gravity
 
    subroutine grav_accel2pot
       use mpi_setup
-      use arrays, only : gp,dl,xdim,ydim,zdim,is,ie,js,je,ks,ke,nx,ny,nz, &
-                         zr,yr,xr
-      use start, only  : nb
+      use arrays, only : gp
+      use grid, only  : dl,xdim,ydim,zdim,is,ie,js,je,ks,ke
+      use grid, only  : nb,nx,ny,nz,zr,yr,xr
 
       implicit none
       integer               :: i, j, k, ip, pgpmax

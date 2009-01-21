@@ -1,4 +1,4 @@
-! $Id$
+! $Id: shear.F90 381 2008-10-22 22:57:35Z wolt $
 #include "piernik.def"
 module shear
   real    :: ts, dely, eps
@@ -7,8 +7,8 @@ module shear
   contains
 
   subroutine yshift(ts)
-    use start, only : qshear,omega,xmin,xmax,nyd
-    use grid, only : dy
+    use start, only : qshear,omega
+    use grid, only : dy,xmin,xmax,nyd
     implicit none
     real, intent(in) :: ts
 
@@ -18,8 +18,8 @@ module shear
   end subroutine yshift
 
   subroutine unshear_fft_b(qty,xx,lb,rb,inv)
-    use start, only  : nb,xmax,xmin,nyd,smalld,ymax,ymin,nxd
-    use grid, only   : dy
+    use start, only  : smalld
+    use grid, only   : dy,nb,xmax,xmin,nyd,ymax,ymin,nxd
     use constants, only : dpi
     implicit none
     logical, optional               :: inv
@@ -59,9 +59,9 @@ module shear
     do p = 2, np
       ky(p) = dpi * (p-1) / ny
     enddo
-
+    
     St = -St * dpi / (ymax - ymin) * (nyd / dpi)
-    if (.not.present(inv)) St = -St
+    if (.not.present(inv)) St = -St 
 
 
     call dfftw_plan_dft_r2c_1d(planf, size(rtmp), rtmp, ctmp, FFTW_ESTIMATE)
@@ -75,7 +75,7 @@ module shear
       unshear_fft(p,:,1)  = rtmp(:) / ny
     enddo
 
-    if (present(inv)) then
+    if (present(inv)) then 
     do p = 1,nb
       rtmp(:)  = qty(p,:,1)
       call dfftw_execute(planf)
@@ -116,8 +116,8 @@ module shear
 
   end subroutine unshear_fft_b
   function unshear_fft(qty,x,inv)
-    use start, only  : nb,xmax,xmin,nyd,smalld,ymax,ymin
-    use grid, only   : dy
+    use start, only  : smalld 
+    use grid, only   : dy,nb,xmax,xmin,nyd,ymax,ymin
     use constants, only : dpi
     implicit none
     logical, optional               :: inv
@@ -152,9 +152,9 @@ module shear
     do p = 2, np
       ky(p) = dpi * (p-1) / ny
     enddo
-
+    
     St = -St * dpi / (ymax - ymin) * (nyd / dpi)
-    if (.not.present(inv)) St = -St
+    if (.not.present(inv)) St = -St 
 
 
     call dfftw_plan_dft_r2c_1d(planf, size(rtmp), rtmp, ctmp, FFTW_ESTIMATE)
@@ -179,9 +179,9 @@ module shear
   end function unshear_fft
 
   function unshear(qty,x,inv)
-    use start, only  : nb,xmax,xmin,nyd,smalld
-    use grid, only   : dy
-
+    use grid,  only  : nb,xmax,xmin,nyd,dy
+    use start, only  : smalld
+    
     logical, optional               :: inv
     real, dimension(:,:,:)          :: qty
     real, dimension(:), intent(in)  :: x
@@ -222,7 +222,7 @@ module shear
 
       temp(:,:) = (1.0+ddl)*(1.0-ddl) * temp(:,:) &
             - 0.5*(ddl)*(1.0-ddl) * cshift(temp(:,:),shift= sg,dim=1) &
-            + 0.5*(ddl)*(1.0+ddl) * cshift(temp(:,:),shift=-sg,dim=1)
+            + 0.5*(ddl)*(1.0+ddl) * cshift(temp(:,:),shift=-sg,dim=1) 
 
       unshear(i,nb+1:nb+nyd,:) = temp(nb+nyd+1:nb+2*nyd,:)
 

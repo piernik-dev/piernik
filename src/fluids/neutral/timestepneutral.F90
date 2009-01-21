@@ -9,8 +9,8 @@ contains
 
   subroutine timestep_neu
     use mpi_setup
-    use grid, only   : dx,dy,dz
-    use start, only  : nb,cfl
+    use grid, only   : dx,dy,dz,nb
+    use start, only  : cfl
     use initneutral, only : gamma_neu, cs_iso_neu2   
     use initneutral, only : idnn,imxn,imyn,imzn
 #ifndef ISO

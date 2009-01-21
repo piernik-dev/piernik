@@ -1,4 +1,4 @@
-! $Id$
+! $Id: timer.F90 361 2008-10-16 17:34:10Z wolt $
 #include "piernik.def"
 module timer
 
@@ -37,7 +37,8 @@ contains
 !------------------------------------------------------------------------------------------
 
   subroutine timer_stop
-    use start, only: t,dt, tend, nstep, nend,nxd,nyd,nzd
+    use start, only: t,dt, tend, nstep, nend
+    use grid, only :nxd,nyd,nzd
     use mpi_setup
     use dataio, only : log_file,log_lun
 

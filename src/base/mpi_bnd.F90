@@ -5,8 +5,9 @@ contains
    subroutine mpi_bnd_prep
     use mpi_setup
     use fluidindex, only  : nvar
-    use arrays, only : nx,ny,nz,u,nxb,nyb,nzb
-    use start, only  : nb,dimensions
+    use arrays, only : u
+    use grid, only : nb,nx,ny,nz,nxb,nyb,nzb
+    use start, only  : dimensions
 
     implicit none
     integer, dimension(4) :: sizes, subsizes, starts

@@ -10,9 +10,9 @@ module sweeps     ! split sweeps
     use fluidindex,   only : nmag
     use fluidindex,   only : ibx,iby,ibz
 
-    use start, only  : dimensions, dt,nb
-    use arrays, only : u,b,nx,ny,nz,ks,ke
-    use grid, only   : dx
+    use start, only  : dimensions, dt
+    use arrays, only : u,b
+    use grid, only   : dx,nb,nx,ny,nz,ks,ke
     use rtvd, only     : relaxing_tvd
     use fluid_boundaries, only : compute_u_bnd 
 #ifdef COSM_RAYS
@@ -61,9 +61,9 @@ module sweeps     ! split sweeps
     use fluidindex,   only : nmag
     use fluidindex, only : ibx,iby,ibz
     
-    use start, only  : dimensions, dt,nb
-    use arrays, only : u,b,nx,ny,nz,ks,ke
-    use grid, only   : dy
+    use start, only  : dimensions, dt
+    use arrays, only : u,b
+    use grid, only   : dy,nb,nx,ny,nz,ks,ke
     use rtvd, only     : relaxing_tvd
     use fluid_boundaries, only : compute_u_bnd 
 #ifdef COSM_RAYS
@@ -115,9 +115,9 @@ module sweeps     ! split sweeps
     use fluidindex, only   : nmag
     use fluidindex, only : ibx,iby,ibz
 
-    use start, only  : dimensions, dt,nb
-    use arrays, only : u,b,nx,ny,nz,ks,ke
-    use grid, only   : dz
+    use start, only  : dimensions, dt
+    use arrays, only : u,b
+    use grid, only   : dz,nb,nx,ny,nz,ks,ke
     use rtvd, only     : relaxing_tvd
     use fluid_boundaries, only : compute_u_bnd 
 #ifdef COSM_RAYS

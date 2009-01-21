@@ -98,7 +98,7 @@ contains
 !!
 #ifdef SHEAR
   subroutine poisson_xy2d(den, pot, lpot, rpot, dx)
-    use start, only : xmin,xmax,ymin,ymax,nyd,nb,nxd
+    use grid, only : xmin,xmax,ymin,ymax,nyd,nb,nxd
     use constants, only : newtong,dpi,small
     use arrays, only : x
     use shear,  only : dely

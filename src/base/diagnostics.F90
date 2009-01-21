@@ -14,8 +14,9 @@ contains
 
 
 subroutine maxu(comment)
-  use start, only  : nstep,proc
-  use arrays, only : u,is,ie,js,je,ks,ke
+  use start,   only : nstep,proc
+  use arrays,  only : u
+  use grid,    only : is,ie,js,je,ks,ke
   implicit none
   character comment*(*)
 
@@ -40,8 +41,9 @@ end subroutine maxu
 
 !------------------------------------------------------------------------------------------
 subroutine maxb(comment)
-  use start, only  : nstep,proc
-  use arrays, only : b,is,ie,js,je,ks,ke
+  use start,   only : nstep,proc
+  use arrays,  only : b
+  use grid,    only : is,ie,js,je,ks,ke
   implicit none
   character comment*(*)
 
@@ -61,10 +63,9 @@ end subroutine maxb
 
 
 subroutine test_divb
-  use grid, only   : dx,dy,dz
-  use arrays, only : nx,ny,nz,b,is,ie,js,je,ks,ke
+  use grid,      only : dx,dy,dz,nb,nx,ny,nz,is,ie,js,je,ks,ke
+  use arrays,    only : b
   use constants, only : big
-  use start, only : nb
   implicit none
   real(kind=8), allocatable   :: divb(:,:,:)
   allocate (divb(nx,ny,nz))

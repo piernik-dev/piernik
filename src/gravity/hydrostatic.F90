@@ -10,14 +10,15 @@ module hydrostatic
   contains
 
     subroutine hydrostatic_zeq(iia,jja, d0, dprof)
-      use start, only    : nsub,nb,zmin,zmax,tune_zeq,csim2, col_dens, proc
+      use start, only    : nsub,tune_zeq,csim2, col_dens, proc
       use constants, only : k_B, hydro_mass, small, pc
-      use arrays, only   : nx,ny,nz,dl,zdim,z,zl,zr, nzt
+      use grid, only   : nx,ny,nz,dl,zdim,z,zl,zr, nzt
+      use grid, only : nb,zmin,zmax
 
       use gravity, only  : grav_accel,grav_pot,gp_status
 #ifndef ISO
       use arrays, only   : eprof
-      use start, only    : c_si, gamma
+      use start, only    : c_si
 #endif /* ISO */
       implicit none
       real, intent(inout)              :: d0
@@ -157,7 +158,8 @@ module hydrostatic
 #ifdef NOT_WORKING
     subroutine hydro_thermal_zeq(ia, ja, hfl, T0, dprof,eprof,tprof,bprof)
       use constants, only : k_B, hydro_mass, small
-      use start, only    : nsub,nb,zmin,zmax,tune_zeq,proc,col_dens, &
+      use grid, only : nb,zmin,zmax
+      use start, only    : nsub,tune_zeq,proc,col_dens, &
          G_sup1, G_uv1, gamma, alpha
       use arrays, only   : nx,ny,nz,dl,zdim,z,zl,zr, nzt
       use thermal, only  : d_temp_dz, cool

@@ -10,8 +10,9 @@ module mag_boundaries
 ! Modified by M. Hanasz - MPI shearing-periodic in "x" - November 2007
   use mpi_setup
   use fluidindex, only : ibx, iby, ibz  
-  use start, only  : nb,dimensions
-  use arrays, only : nx,ny,nz,u,b,nxb,nyb,nzb
+  use start, only  : dimensions
+  use grid, only : nb,nx,ny,nz,nxb,nyb,nzb
+  use arrays, only : u,b
 
 contains
 
@@ -416,7 +417,7 @@ end subroutine bnd_b
 !=====================================================================================================
 
 subroutine bnd_emf(var, name, dim)
-  use arrays, only : nx,ny,nz
+  use grid, only : nx,ny,nz
 
   implicit none
   real, dimension(nx,ny,nz) :: var

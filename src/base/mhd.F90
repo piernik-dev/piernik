@@ -14,10 +14,11 @@ program mhd
   use start, only: t,dt, tend, nstep, nend, nstep_start, nrestart
 
   use initfluids, only : init_fluids
-  use fluidindex, only : fluid_index
+  use fluidindex, only : fluid_index,nvar
 
   use arrays, only : arrays_deallocate, arrays_allocate
-  use grid, only : grid_xyz
+  use grid, only : nx,ny,nz
+  use grid, only : init_grid,grid_xyz,cleanup_grid
   use init_problem, only : problem_name, run_id, init_prob, read_problem_par
   use mhdstep, only  : mhd_step
   use dataio, only : host, pid
@@ -71,6 +72,8 @@ program mhd
   call mpistart
 
   call read_params
+ 
+  call init_grid
   
   call init_fluids
   
@@ -78,7 +81,7 @@ program mhd
   
   call fluid_index
 
-  call arrays_allocate
+  call arrays_allocate(nx,ny,nz,nvar)
 
   call grid_xyz
 
@@ -230,6 +233,8 @@ program mhd
 
 
   call MPI_BARRIER(comm,ierr)
+
+  call cleanup_grid
   call arrays_deallocate
 
   call MPI_BARRIER(comm,ierr)

@@ -1,8 +1,8 @@
 
   subroutine timestep_dust
-    use grid, only   : dx,dy,dz
-    use start, only  : nb,cfl, gamma,dt_dust
-    use fluidindex, only : nu, idnd,imxd,imyd,imzd
+    use grid, only   : dx,dy,dz,nb
+    use start, only  : cfl, dt_dust
+    use fluidindex, only : idnd,imxd,imyd,imzd
 
     use arrays, only : ks,ke,nyb,nxb,u,b
 

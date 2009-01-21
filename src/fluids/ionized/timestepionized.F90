@@ -9,15 +9,14 @@ module timestepionized
 
   subroutine timestep_ion
     use mpi_setup
-    use grid, only   : dx,dy,dz
-    use start, only  : nb,cfl
+    use grid, only   : dx,dy,dz,nb,ks,ke,nyb,nxb
+    use arrays, only : u,b
+    use start, only  : cfl
     use initionized, only : gamma_ion, cs_iso_ion2   
     use initionized, only : idni,imxi,imyi,imzi
 #ifndef ISO
     use initionized, only : ieni
 #endif /* ISO */
-
-    use arrays, only : ks,ke,nyb,nxb,u,b
 
     implicit none
 

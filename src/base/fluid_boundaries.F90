@@ -14,38 +14,38 @@ contains
 
 subroutine bnd_u(dim)
   use mpi_setup
-  use start,  only : smalld, smallei, bnd_xl, bnd_xr, bnd_yl, bnd_yr, &
-      bnd_zl, bnd_zr, nb, nxd, nyd, nzd, dimensions
+  use start,  only : smalld, smallei, bnd_xl, bnd_xr, bnd_yl, bnd_yr
+  use start,  only : bnd_zl, bnd_zr, dimensions
+  use grid,   only : nb, nxd, nyd, nzd,x,y,z,nzb,nyb,nxb,nx,ny,nz
+  use fluidindex, only : nvar, iarr_all_dn,iarr_all_mx,iarr_all_my,iarr_all_mz, nfluid
+  use arrays, only : u, b, bndxrar, bndyrar
+
 #ifdef COSM_RAYS
-    use start, only : smallecr
+  use start, only : smallecr
 #endif /* COSM_RAYS */
 
-  use fluidindex, only : nvar, iarr_all_dn,iarr_all_mx,iarr_all_my,iarr_all_mz
 #ifndef ISO
   use fluidindex, only : iarr_all_en
   use start,  only : gamma
 #endif /* ISO */
-  use fluidindex, only : nvar, nfluid
-  use arrays, only : x,z,nzb,nyb,nxb,nx,ny,nz, & 
-      u, b,  bndxrar, bndyrar
 
-#ifndef ISO
-#endif /* ISO */
 #ifdef ISO
   use start, only : csi2
 #endif /* ISO */
+
 #ifdef GRAV
   use gravity, only : grav_accel
   use start, only : nsub, tune_zeq_bnd
 #endif /* GRAV */
+
 #ifdef SHEAR
   use shear, only : eps,delj, unshear_fft_b, unshear_fft, unshear
   use start, only : qshear, omega
 #endif /* SHEAR */
+
 #ifdef COSM_RAYS
     use arrays, only : iecr
 #endif /* COSM_RAYS */
-
 
   implicit none
   character(len=*) :: dim

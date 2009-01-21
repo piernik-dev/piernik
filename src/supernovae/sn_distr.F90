@@ -1,4 +1,4 @@
-! $Id$
+! $Id: sn_distr.F90 383 2008-10-23 07:51:25Z xarth $
 #include "piernik.def"
 
 module sn_distr
@@ -84,9 +84,9 @@ module sn_distr
 !===============================================================================================
    subroutine supernovae_distribution
       use mpi_setup
-      use start, only : dt,smallei,nb
+      use start, only : dt,smallei
       use arrays, only : u,b,nx,ny,nz,ibx,iby,ibz,idna,imxa,imya,imza,iena
-      use grid, only : dx,dy,dz,dvol
+      use grid, only : dx,dy,dz,dvol,nb
       use sn_sources, only : rand_angles
       use mag_boundaries, only : compute_b_bnd, bnd_a
       implicit none
@@ -184,8 +184,8 @@ module sn_distr
 
    subroutine add_explosion(snpos,angles,A)
       use arrays, only: nx,ny,nz,x,y,z,nxb,nyb,nzb,xdim,ydim,zdim,dl,u
-      use grid, only: xminb,xmaxb,yminb,ymaxb,zminb,zmaxb,dx,dy,dz,Lx,Ly,Lz
-      use start, only: r0sn,nb,add_mass,add_ener,add_encr
+      use grid, only: xminb,xmaxb,yminb,ymaxb,zminb,zmaxb,dx,dy,dz,Lx,Ly,Lz,nb
+      use start, only: r0sn,add_mass,add_ener,add_encr
       use constants
 #ifdef COSM_RAYS
       use arrays, only : iecr

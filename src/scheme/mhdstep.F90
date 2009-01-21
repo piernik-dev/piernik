@@ -12,28 +12,36 @@ subroutine mhd_step
   use timestep,   only : time_step
   use sweeps, only : sweepx,sweepy,sweepz
   use mpi_setup, only : proc
+
 #ifdef DEBUG
   use dataio, only : nhdf,write_hdf
 #endif /* DEBUG */
+
 #ifdef COSM_RAYS
   use cr_diffusion
 #endif /* COSM_RAYS */
+
 #ifdef SHEAR
   use shear, only : yshift
   use fluid_boundaries, only : bnd_u
 #endif /* SHEAR */
+
 #ifdef SN_SRC
   use sn_sources
 #endif /* SN_SRC */
+
 #ifdef SNE_DISTR
   use sn_distr
 #endif /* SNE_DISTR */
+
 #ifdef SELF_GRAV
   use poisson_solver, only : poisson
 #endif /* SELF_GRAV */
+
 #ifdef MASS_COMPENS
   use init_problem, only : mass_loss_compensate
 #endif /* MASS_COMPENS */
+
   implicit none
 #ifdef DEBUG
   integer system, syslog
@@ -221,7 +229,8 @@ end subroutine mhd_step
   subroutine magfieldbyzx
     use start,   only : dimensions
     use fluidindex, only : ibx,iby,ibz
-    use arrays,  only : b,xdim,ydim,zdim
+    use arrays,  only : b
+    use grid, only : xdim,ydim,zdim
     use advects, only : advectby_x,advectbz_x
 
 
@@ -256,7 +265,8 @@ end subroutine mhd_step
   subroutine magfieldbzxy
     use start,   only : dimensions
     use fluidindex, only : ibx,iby,ibz
-    use arrays,  only : b,xdim,ydim,zdim
+    use arrays,  only : b
+    use grid, only : xdim,ydim,zdim
     use advects, only : advectbx_y,advectbz_y
 
 #ifdef RESISTIVE
@@ -290,7 +300,8 @@ end subroutine mhd_step
   subroutine magfieldbxyz
     use start,   only : dimensions
     use fluidindex, only : ibx,iby,ibz
-    use arrays,  only : b,xdim,ydim,zdim
+    use arrays,  only : b
+    use grid, only : xdim,ydim,zdim
     use advects, only : advectbx_z,advectby_z
 
 #ifdef RESISTIVE
@@ -317,7 +328,8 @@ end subroutine mhd_step
 
   subroutine mag_add(ib1,dim1,ib2,dim2)
     use func,   only : pshift, mshift
-    use arrays, only : b,dl,wa,wcu
+    use arrays, only : b,wa,wcu
+    use grid, only   : dl
     use mag_boundaries, only : compute_b_bnd
 
 

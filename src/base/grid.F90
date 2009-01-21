@@ -4,61 +4,165 @@ module grid
 
 ! Written by: M. Hanasz, January/February 2006
 
-  implicit none
-  real dx, dy, dz, dxmn, dvol
-
-  real xminb, xmaxb, yminb, ymaxb, zminb, zmaxb
-  real Lx, Ly, Lz
-
    implicit none
-   real :: dx   !< size of one computational cell in x direction
-   real :: dy   !< size of one computational cell in y direction
-   real :: dz   !< size of one computational cell in z direction
-   real :: dxmn !< min(dx,dy,dz)
-   real :: dvol !< volume of one computational cell
-   
-   real :: xminb !< physical coordinate of the left  (in x direction) boundary of given block
-   real :: xmaxb !< physical coordinate of the right (in x direction) boundary of given block
-   real :: yminb !< physical coordinate of the left  (in y direction) boundary of given block
-   real :: ymaxb !< physical coordinate of the right (in y direction) boundary of given block
-   real :: zminb !< physical coordinate of the left  (in z direction) boundary of given block
-   real :: zmaxb !< physical coordinate of the right (in z direction) boundary of given block
-   real :: Lx !< size of the physical domain in x direction
-   real :: Ly !< size of the physical domain in x direction
-   real :: Lz !< size of the physical domain in x direction
+   real    :: dx, dy, dz, dxmn, dvol
+   integer :: nxd, nyd, nzd, nb
+   integer :: nx, ny, nz
+   integer :: nxb, nyb, nzb
+   integer :: nxt, nyt, nzt
+   integer :: is, ie, js, je, ks, ke
+
+   real    :: xmin, xmax, ymin, ymax, zmin, zmax
+   real    :: xminb, xmaxb, yminb, ymaxb, zminb, zmaxb
+   real    :: Lx, Ly, Lz
+   integer,parameter  :: xdim=1, ydim=2, zdim=3
+
+   real, allocatable :: dl(:)
+   real, allocatable, dimension(:)  :: x, xl, xr
+   real, allocatable, dimension(:)  :: y, yl, yr
+   real, allocatable, dimension(:)  :: z, zl, zr
+
 
 contains
 
+   subroutine init_grid
+      use mpi_setup
+      implicit none
+      character(LEN=100) :: par_file, tmp_log_file
+      
+      namelist /DOMAIN_SIZES/ nxd, nyd, nzd, nb
+      namelist /DOMAIN_LIMITS/ xmin, xmax, ymin, ymax, zmin, zmax
+
+      nxd  = 1
+      nyd  = 1
+      nzd  = 1
+      nb   = 4
+
+      if(proc == 0) then
+         par_file = trim(cwd)//'/problem.par'
+         tmp_log_file = trim(cwd)//'/tmp.log'
+         open(1,file=par_file)
+            read(unit=1,nml=DOMAIN_SIZES)
+         close(1)
+         open(1,file=par_file)
+            read(unit=1,nml=DOMAIN_LIMITS)
+         close(1)
+         open(3, file='tmp.log', position='append')
+           write(3,nml=DOMAIN_SIZES)
+           write(3,nml=DOMAIN_LIMITS)
+           write(3,*)
+         close(3)
+      endif
+
+
+      if(proc == 0) then
+
+         ibuff(1)   = nxd
+         ibuff(2)   = nyd
+         ibuff(3)   = nzd
+         ibuff(4)   = nb
+
+         rbuff(1)   = xmin
+         rbuff(2)   = xmax
+         rbuff(3)   = ymin
+         rbuff(4)   = ymax
+         rbuff(5)   = zmin
+         rbuff(6)   = zmax
+
+         call MPI_BCAST(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
+         call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+
+      else
+
+         call MPI_BCAST(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
+         call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+
+         nxd  = ibuff(1)
+         nyd  = ibuff(2)
+         nzd  = ibuff(3)
+         nb   = ibuff(4)
+         
+         xmin = rbuff(1)
+         xmax = rbuff(2)
+         ymin = rbuff(3)
+         ymax = rbuff(4)
+         zmin = rbuff(5)
+         zmax = rbuff(6)
+
+      endif
+
+      if((mod(nxd, pxsize) .ne. 0) .or. &
+         (mod(nyd, pysize) .ne. 0) .or. &
+         (mod(nzd, pzsize) .ne. 0)) then
+         call mpistop
+         if (proc .eq. 0) then
+            write(*,*) 'One of: (mod(nxd,pxsize) .or. mod(nyd,pysize) .or. mod(nzd,pzsize)) .ne. 0'
+         endif
+         stop
+      endif
+
+      nxb = nxd/pxsize     !
+      nyb = nyd/pysize     ! Block 'physical' grid sizes
+      nzb = nzd/pzsize     !
+
+      nx=nxb+2*nb          !
+      ny=nyb+2*nb          ! Block total grid sizes
+      nz=nzb+2*nb          !
+
+      nxt=nxd+2*nb         !
+      nyt=nyd+2*nb         ! Domain total grid sizes
+      nzt=nzd+2*nb         !
+
+
+      is = nb+1
+      ie = nb+nxb
+      js = nb+1
+      je = nb+nyb
+
+      if(nzd == 1) then
+         nz     = 1
+         nzb    = 1
+         pzsize = 1
+         ks     = 1
+         ke     = 1
+      else 
+         ks = nb+1
+         ke = nb+nzb
+      endif
+      allocate(dl(3))
+      allocate(x(nx), xl(nx), xr(nx))
+      allocate(y(ny), yl(ny), yr(ny))
+      allocate(z(nz), zl(nz), zr(nz))
+
+   end subroutine init_grid
+
   subroutine grid_xyz
     use mpi_setup
-    use start, only  : xmin,ymin,zmin,xmax,ymax,zmax, dimensions, nb, maxxyz
-    use arrays, only : dl,xdim,ydim,zdim,xl,yl,zl,x,y,z,xr,yr,zr, &
-       nxb,nyb,nzb,nx,ny,nz
+    use start, only  : dimensions, maxxyz
 
+    implicit none
     integer i,j,k
 
     maxxyz = max(size(x),size(y))
     maxxyz = max(size(z),maxxyz)
 
-    xminb = xmin + real(pcoords(1))*(xmax-xmin)/real(psize(1))
+    xminb = xmin + real(pcoords(1)  )*(xmax-xmin)/real(psize(1))
     xmaxb = xmin + real(pcoords(1)+1)*(xmax-xmin)/real(psize(1))
-    yminb = ymin + real(pcoords(2))*(ymax-ymin)/real(psize(2))
+    yminb = ymin + real(pcoords(2)  )*(ymax-ymin)/real(psize(2))
     ymaxb = ymin + real(pcoords(2)+1)*(ymax-ymin)/real(psize(2))
-    zminb = zmin + real(pcoords(3))*(zmax-zmin)/real(psize(3))
+    zminb = zmin + real(pcoords(3)  )*(zmax-zmin)/real(psize(3))
     zmaxb = zmin + real(pcoords(3)+1)*(zmax-zmin)/real(psize(3))
 
-      maxxyz = max(size(x),size(y))
-      maxxyz = max(size(z),maxxyz)
 
     dx = (xmaxb-xminb)/nxb
     dy = (ymaxb-yminb)/nyb
     dl(xdim) = dx
     dl(ydim) = dy
-    if(dimensions .eq. '3d') then
+    if(nzd /= 1) then
       dz = (zmaxb-zminb)/nzb
       dl(zdim) = dz
       dxmn = min(dx,dy,dz)
-    else if (dimensions .eq. '2dxy') then
+    else 
       dz = 1.0
       dl(zdim) = dz
       dxmn = min(dx,dy)
@@ -66,21 +170,6 @@ contains
 
 !    write(*,*) 'proc=',proc, zminb, zmaxb, dl(zdim)
 
-      dx = (xmaxb-xminb)/nxb
-      dy = (ymaxb-yminb)/nyb
-      dl(xdim) = dx
-      dl(ydim) = dy
-      if(dimensions .eq. '3d') then
-         dz = (zmaxb-zminb)/nzb
-         dl(zdim) = dz
-         dxmn = min(dx,dy,dz)
-      else if (dimensions .eq. '2dxy') then
-         dz = 1.0
-         dl(zdim) = dz
-         dxmn = min(dx,dy)
-      endif
-
-      dvol = dx*dy*dz
 
 !--- Asignments -----------------------------------------------------------
     ! left zone boundaries:  xl, yl, zl
@@ -97,13 +186,8 @@ contains
 
 !--- y-grids --------------------------------------------------------------
 
-      do i= 1, nx
-         x(i)  = xminb + 0.5*dx + (i-nb-1)*dx
-         xl(i) = x(i)  - 0.5*dx
-         xr(i) = x(i)  + 0.5*dx
-      enddo
 
-!--- y-grids --------------------------------------------------------------
+    do j= 1, ny
 
       y(j)  = yminb + 0.5*dy + (j-nb-1)*dy
       yl(j) = y(j)  - 0.5*dy
@@ -113,17 +197,7 @@ contains
 
 !--- z-grids --------------------------------------------------------------
 
-      if(dimensions .eq. '3d') then
-         do k= 1, nz
-            z(k)  = zminb + 0.5*dz + (k-nb-1) * dz
-            zl(k) = z(k)  - 0.5*dz
-            zr(k) = z(k)  + 0.5*dz
-         enddo
-      else if(dimensions .eq. '2dxy') then
-         z  = 0.0
-         zl = -dz/2.
-         zr =  dz/2.
-      endif
+    if(nzd /= 1) then
 
       do k= 1, nz
         z(k)  = zminb + 0.5*dz + (k-nb-1) * dz
@@ -131,15 +205,14 @@ contains
         zr(k) = z(k)  + 0.5*dz
       enddo
 
-!--------------------------------------------------------------------------
-
-    else if(dimensions .eq. '2dxy') then
+    else 
 
       z = 0.0  ! dz =1
       zl = -dz/2.
       zr =  dz/2.
 
     endif
+!--------------------------------------------------------------------------
 
     dvol = dx*dy*dz
 
@@ -148,5 +221,16 @@ contains
     Lz = zmax - zmin
 
   end subroutine grid_xyz
+
+   subroutine cleanup_grid
+      implicit none
+      
+      deallocate(dl)
+      deallocate(x, xl, xr)
+      deallocate(y, yl, yr)
+      deallocate(z, zl, zr)
+
+
+   end subroutine cleanup_grid
 
 end module grid
