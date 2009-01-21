@@ -1,23 +1,6 @@
 ! $Id$
 #include "piernik.def"
 
-!#ifdef IONIZED
-!#define NUMBION IONIZED
-!#else /* IONIZED */
-!#define NUMBION 0
-!#endif /* IONIZED */
-!#ifdef NEUTRAL
-!#define NUMBNEUT NEUTRAL
-!#else /* NEUTRAL */
-!#define NUMBNEUT 0
-!#endif /* NEUTRAL */
-!#ifdef DUST
-!#define NUMBDUST DUST
-!#else /* DUST */
-!#define NUMBDUST 0
-!#endif /* DUST */
-!#define NUMBFLUID NUMBION+NUMBNEUT+NUMBDUST
-
 module start
 
 ! Written by: M. Hanasz, January 2006
@@ -29,22 +12,16 @@ module start
 
 
   real t,dt
-  real collfaq, cfl_colls
   integer nstep
   integer nstep_start
 
   real tend
   integer nend, maxxyz
 
-  real :: omega, qshear
-
-  real cfl, smalld, smallei, nu_bulk, cfl_visc
-#ifdef VZ_LIMITS
-  real   :: floor_vz, ceil_vz
-#endif /* VZ_LIMITS */
+  real cfl, smalld, smallei
 
   real tune_zeq, tune_zeq_bnd
-  character*16 flux_limiter, freezing_speed, dimensions, magnetic
+  character*16 dimensions
   integer integration_order, istep
   real rorder
 
@@ -65,11 +42,7 @@ module start
   real    cfl_resist, eta_0, eta_1, j_crit, deint_max
   integer eta_scale
 
-!  real  cr_active, gamma_cr, cr_eff, beta_cr, K_cr_paral, K_cr_perp, &
-!        cfl_cr, amp_cr, smallecr
-  real  dt_cr, dt_colls, dt_supp
-
-  real t_dw, t_arm, col_dens
+  real  dt_cr
 
   real h_sn, r_sn, f_sn_kpc2, amp_dip_sn, snenerg, snemass, sn1time, sn2time, r0sn
   integer howmulti
@@ -89,24 +62,14 @@ contains
   subroutine read_params
 
     implicit none
+    character par_file*(100), tmp_log_file*(100)
 
+    namelist /END_CONTROL/ nend, tend
 
-  character par_file*(100), tmp_log_file*(100)
-  namelist /END_CONTROL/ nend, tend
-
-  namelist /NUMERICAL_SETUP/  cfl, smalld, smallei, &
-#ifdef VZ_LIMITS
-                              floor_vz, ceil_vz, &
-#endif /* VZ_LIMITS */
-#ifdef COLLISIONS
-                              cfl_colls, &
-#endif /* COLLISIONS */
+    namelist /NUMERICAL_SETUP/  cfl, smalld, smallei, &
                               integration_order, &
                               dimensions
 
-#ifdef SHEAR
-  namelist /SHEARING/ omega, qshear
-#endif /* SHEAR */
 #ifdef GRAV
   namelist /GRAVITY/ gpt_hdf,  &
                      g_z,   &
@@ -117,19 +80,11 @@ contains
                      nsub, tune_zeq, tune_zeq_bnd,      &
                      h_grav, r_grav, n_gravr, n_gravr2, n_gravh
 #endif /* GRAV */
+
 #ifdef RESISTIVE
   namelist /RESISTIVITY/ cfl_resist, eta_0, eta_1, eta_scale, j_crit, deint_max
 #endif /* RESISTIVE */
-!#ifdef COSM_RAYS
-!  namelist /COSMIC_RAYS/ cr_active, gamma_cr, cr_eff, beta_cr, &
-!                         K_cr_paral, K_cr_perp, amp_cr, cfl_cr, smallecr
-!#endif /* COSM_RAYS */
-#ifdef GALAXY
-  namelist /GALACTIC_PARAMS/ t_dw, t_arm,col_dens
-#endif /* GALAXY */
-#ifdef SHEAR
-  namelist /SHEARING/ omega, qshear
-#endif /* SHEAR */
+
 #ifdef SN_SRC
   namelist /SN_PARAMS/ h_sn, r_sn, f_sn_kpc2, amp_dip_sn, howmulti
 #endif /* SN_SRC */
@@ -150,17 +105,8 @@ contains
     cfl     = 0.7
     smalld  = 1.e-10
     smallei = 1.e-10
-    flux_limiter = 'vanleer'
-    freezing_speed = 'local'
     integration_order  = 2
     dimensions = '3d'
-#ifdef VZ_LIMITS
-    floor_vz  = -1.e99
-    ceil_vz   =  1.e99
-#endif /* VZ_LIMITS */
-#if defined COLLISIONS || defined KEPLER_SUPPRESSION
-    cfl_colls = 0.01
-#endif /* COLLISIONS || KEPLER_SUPPRESION */
 
 #ifdef GRAV
     gpt_hdf = 'no'
@@ -205,17 +151,6 @@ contains
     smallecr   = 0.0
 #endif /* COSM_RAYS */
 
-#ifdef GALAXY
-! Default galactic parameters
-    t_dw       = 100.0           ! period of density waves in Myr
-    t_arm      = 100.0           ! period of SFR in arms
-    col_dens    = 0.0            ! gas column density
-#endif /* GALAXY */
-
-#ifdef SHEAR
-    omega  = 0.0
-    qshear = 0.0
-#endif /* SHEAR */
 #ifdef SN_SRC
     h_sn       = 266.0          !  vertical scaleheight of SN from Ferriere 1998
     r_sn       =  10.0          !  "typical" SNR II radius
@@ -246,15 +181,6 @@ contains
 #ifdef RESISTIVE
         read(unit=1,nml=RESISTIVITY)
 #endif /* RESISTIVE */
-!#ifdef COSM_RAYS
-!        read(unit=1,nml=COSMIC_RAYS)
-!#endif /* COSM_RAYS */
-#ifdef GALAXY
-        read(unit=1,nml=GALACTIC_PARAMS)
-#endif /* GALAXY */
-#ifdef SHEAR
-        read(unit=1,nml=SHEARING)
-#endif /* SHEAR */
 #ifdef SN_SRC
         read(unit=1,nml=SN_PARAMS)
 #endif /* SN_SRC */
@@ -273,15 +199,6 @@ contains
 #ifdef RESISTIVE
         write(unit=3,nml=RESISTIVITY)
 #endif /* RESISTIVE */
-!#ifdef COSM_RAYS
-!        write(unit=3,nml=COSMIC_RAYS)
-!#endif /* COSM_RAYS */
-#ifdef GALAXY
-        write(unit=3,nml=GALACTIC_PARAMS)
-#endif /* GALAXY */
-#ifdef SHEAR
-        write(unit=3,nml=SHEARING)
-#endif /* SHEAR */
 #ifdef SN_SRC
         write(unit=3,nml=SN_PARAMS)
 #endif /* SN_SRC */
@@ -313,16 +230,7 @@ contains
       rbuff(80) = cfl
       rbuff(83) = smalld
       rbuff(84) = smallei
-#ifdef VZ_LIMITS
-      rbuff(87) = floor_vz
-      rbuff(88) = ceil_vz
-#endif /* VZ_LIMITS */
-#ifdef COLLISIONS
-      rbuff(89) = cfl_colls
-#endif /* COLLISIONS */
 
-      cbuff(80) = flux_limiter
-      cbuff(81) = freezing_speed
       cbuff(82) = dimensions
 
       ibuff(80) = integration_order
@@ -366,37 +274,6 @@ contains
        rbuff(123) = j_crit
        rbuff(124) = deint_max
 #endif /* RESISTIVE */
-
-!#ifdef COSM_RAYS
-!  namelist /COSMIC_RAYS/ cr_active, gamma_cr, cr_eff, beta_cr, K_cr_paral, K_cr_perp,&
-!                         amp_cr, cfl_cr
-!       rbuff(130) = cr_active
-!       rbuff(131) = gamma_cr
-!       rbuff(132) = cr_eff
-!       rbuff(133) = beta_cr
-!       rbuff(134) = K_cr_paral
-!       rbuff(135) = K_cr_perp
-!       rbuff(136) = amp_cr
-!       rbuff(137) = cfl_cr
-!       rbuff(138) = smallecr
-!#endif /* COSM_RAYS */
-
-#ifdef GALAXY
-!  namelist /GALACTIC_PARAMS/ h_sn, r_sn, f_sn_kpc2, t_dw, t_arm, col_dens
-
-       rbuff(140) = h_sn
-       rbuff(141) = r_sn
-       rbuff(142) = f_sn_kpc2
-       rbuff(143) = t_dw
-       rbuff(144) = t_arm
-       rbuff(145) = col_dens
-#endif /* GALAXY */
-
-#ifdef SHEAR
-!  namelist /SHEARING/ omega, qshear
-       rbuff(160) = omega
-       rbuff(161) = qshear
-#endif /* SHEAR */
 
 #ifdef SN_SRC
 !  namelist /SN_PARAMS/ h_sn, r_sn, f_sn_kpc2, amp_dip_sn, howmulti
@@ -450,17 +327,8 @@ contains
       cfl                 = rbuff(80)
       smalld              = rbuff(83)
       smallei             = rbuff(84)
-#ifdef VZ_LIMITS
-      floor_vz            = rbuff(87)
-      ceil_vz             = rbuff(88)
-#endif /* VZ_LIMITS */
-#ifdef COLLISIONS
-      cfl_colls	          = rbuff(89)
-#endif /* COLLISIONS */
 
 
-      flux_limiter        = trim(cbuff(80))
-      freezing_speed      = trim(cbuff(81))
       dimensions          = cbuff(82)(1:16)
 
       integration_order   = ibuff(80)
@@ -522,22 +390,6 @@ contains
 !#endif /* COSM_RAYS */
 
 
-#ifdef GALAXY
-!  namelist /GALACTIC_PARAMS/ h_sn, r_sn, f_sn_kpc2, t_dw, t_arm
-
-       h_sn 		  = rbuff(140)
-       r_sn 		  = rbuff(141)
-       f_sn_kpc2 	  = rbuff(142)
-       t_dw 		  = rbuff(143)
-       t_arm 		  = rbuff(144)
-       col_dens           = rbuff(145)
-#endif /* GALAXY */
-
-#ifdef SHEAR
-!  namelist /SHEARING/ omega, qshear
-       omega              = rbuff(160)
-       qshear             = rbuff(161)
-#endif /* SHEAR */
     endif  ! (proc .eq. 0)
 
 #ifdef SN_SRC
@@ -573,18 +425,6 @@ contains
    ethu = 7.0**2/(5.0/3.0-1.0) * 1.0    ! thermal energy unit=0.76eV/cm**3
                                         ! for c_si= 7km/s, n=1/cm^3
                                         ! gamma=5/3
-#ifdef GALAXY
-#ifdef COSM_RAYS
-   amp_ecr_sn = 4.96e6*cr_eff/r_sn**3   ! cosmic ray explosion amplitude
-                                        ! in units:
-        				! e_0 = 1/(5/3-1)*rho_0*c_s0**2
-        				! rho_0=1.67e-24g/cm**3,
-        				! c_s0 = 7km/s
-#endif /* COSM_RAYS */
-   f_sn = f_sn_kpc2 * (xmax-xmin)/1000.0 * (ymax-ymin)/1000.0 ! SN frequency per horizontal
-                                                              ! surface area of the comp. box
-#endif /* GALAXY */
-
   cn(1:3,1) = (/ 1. , 0.5 , 0.0 /)
   cn(1:3,2) = (/ 1. , 1.  , 0.0 /)
   if(integration_order .eq. 1) then

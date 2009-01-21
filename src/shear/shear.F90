@@ -1,13 +1,44 @@
 ! $Id$
 #include "piernik.def"
 module shear
-  real    :: ts, dely, eps
+  real    :: ts, dely, eps, omega,qshear
   integer :: delj
 
   contains
 
+  subroutine init_shear
+    use mpi_setup
+    implicit none
+    character(LEN=100) :: par_file, tmp_log_file
+
+    namelist /SHEARING/ omega, qshear
+
+    omega  = 0.0
+    qshear = 0.0
+    if(proc .eq. 0) then
+       open(1,file=par_file)
+          read(unit=1,nml=SHEARING)
+       close(1)
+       open(3, file=tmp_log_file, position='append')
+          write(unit=3,nml=SHEARING)
+       close(3)
+  
+       rbuff(1) = omega
+       rbuff(2) = qshear
+
+       call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+
+    else
+
+       call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+
+       omega  = rbuff(1)
+       qshear = rbuff(2) 
+
+    endif
+  end subroutine init_shear
+
   subroutine yshift(ts)
-    use start, only : qshear,omega
     use grid, only : dy,xmin,xmax,nyd
     implicit none
     real, intent(in) :: ts

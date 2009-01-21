@@ -51,24 +51,7 @@ contains
 #ifdef RESISTIVE
     use resistivity, only : dt_resist, timestep_resist
 #endif /* RESISTIVE */
-#ifdef COLLISIONS
-    use start, only : collfaq, dt_colls
-#endif /* COLLISIONS */
-#if defined COLLISIONS || defined KEPLER_SUPPRESSION
-    use start, only : cfl_colls
-    use fluidindex, only : idna
-    use arrays, only : u
-#endif /* COLLISIONS || KEPLER_SUPPRESSION */
-#ifdef KEPLER_SUPPRESSION
-    use fluidindex, only : idna,imxa,imya,imza
-    use arrays, only : alfsup,nfluid,nz,omx0,omy0,x,y,nx,ny
-    use start,  only : dt_supp
-#endif /* KEPLER_SUPPRESSION */
     implicit none
-#ifdef KEPLER_SUPPRESSION
-    real,allocatable,dimension(:,:) :: velx,vely,dvx,dvy
-    integer j,k,ifl
-#endif /* KEPLER_SUPPRESSION */
 ! Timestep computation
 
 
@@ -110,21 +93,6 @@ contains
 #ifdef SIMPLE_COOL
     dt = min(dt,0.01 * tauc)
 #endif /* SIMPLE_COOL */
-#ifdef COLLISIONS
-    dt_colls = cfl_colls / (collfaq+small) / maxval(u(idna,:,:,:))
-    dt = min(dt,dt_colls)
-#endif /* COLLISIONS */
-#ifdef KEPLER_SUPPRESSION
-
-    dt_supp = big
-
-    do ifl=1,nfluid
-      do k=1,nz
-        dt_supp = min(dt_supp, minval(abs(1./(alfsup+small)/u(idna(ifl),:,:,k))))
-      enddo
-    enddo
-    dt = min(dt,dt_supp)
-#endif /* KEPLER_SUPPRESSION */
   end subroutine time_step
 
 !------------------------------------------------------------------------------------------

@@ -5,12 +5,13 @@ module hydrostatic
 
 ! Written by M. Hanasz March-May 2006
 
+#ifdef NOT_WORKING
 
 #ifdef GRAV
   contains
 
     subroutine hydrostatic_zeq(iia,jja, d0, dprof)
-      use start, only    : nsub,tune_zeq,csim2, col_dens, proc
+      use start, only    : nsub,tune_zeq,csim2, proc
       use constants, only : k_B, hydro_mass, small, pc
       use grid, only   : nx,ny,nz,dl,zdim,z,zl,zr, nzt
       use grid, only : nb,zmin,zmax
@@ -30,9 +31,6 @@ module hydrostatic
       integer ksub, ksmid, k, ia, ja
       real dzs, factor
 
-#if defined GALAXY || defined GALACTIC_DISK
-      real cd, cdold,  dold, a, b
-#endif /* GALAXY || GALACTIC_DISK */
       real dmid, ddmid, dcol_dens
       integer iter, itermx
 
@@ -42,9 +40,6 @@ module hydrostatic
       nstot=nsub*nzt
 
       allocate(zs(nstot), dprofs(nstot), gprofs(nstot), gpots(nstot))
-#ifdef GALACTIC_DISK
-      col_dens = d0
-#endif /* GALACTIC_DISK */
       itermx = 20
       if(col_dens .gt. small) then
         dmid = 1.0
@@ -76,9 +71,6 @@ module hydrostatic
       endif
       gprofs = tune_zeq*gprofs
 
-#if defined GALAXY || defined GALACTIC_DISK
-100   continue
-#endif /* GALAXY || GALACTIC_DISK */
 
       if(ksmid .lt. nstot) then
         dprofs(ksmid+1) = dmid
@@ -108,44 +100,6 @@ module hydrostatic
       enddo
 
 
-#if defined GALAXY || defined GALACTIC_DISK
-
-      cd = sum(dprofs(:)) * dzs * pc
-
-      if(col_dens .ne. 0.0) then
-        dmid = d0
-      else
-        col_dens = cd
-      endif
-
-      if(abs(cd - col_dens) .gt. dcol_dens) then
-        if(iter .eq. 1) then
-          dold = dmid
-          cdold = cd
-          dmid = dmid+ddmid
-        else
-          a = (cd - cdold)/(dmid - dold)
-          b = cd - a*dmid
-          dold = dmid
-          cdold = cd
-          dmid = (col_dens - b)/a
-        endif
-        d0 = dmid
-!       if(proc .eq.0)  write(*,888) d0, cd ,iter
-        iter = iter+1
-        if (iter .gt. itermx) stop
-        goto 100
-      endif
-
-!      if(proc .eq.0)  write(*,888) d0, cd ,iter
-
-#ifndef ISO
-!      eprof(:) = c_si**2/(gamma-1.0) * dprof(:)	! fluid number has to be given to use gamma here
-#endif /* ISO */
-
-!888  format('Midplane density =',f10.4,2x,'Column density =', e10.4,2x,'iter=',i4 )
-#endif /* GALAXY || GALACTIC_DISK */
-
     deallocate(zs,dprofs,gprofs,gpots)
 
 
@@ -155,7 +109,6 @@ module hydrostatic
       end subroutine hydrostatic_zeq
 
 !--------------------------------------------------------------------------
-#ifdef NOT_WORKING
     subroutine hydro_thermal_zeq(ia, ja, hfl, T0, dprof,eprof,tprof,bprof)
       use constants, only : k_B, hydro_mass, small
       use grid, only : nb,zmin,zmax

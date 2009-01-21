@@ -39,8 +39,7 @@ subroutine bnd_u(dim)
 #endif /* GRAV */
 
 #ifdef SHEAR
-  use shear, only : eps,delj, unshear_fft_b, unshear_fft, unshear
-  use start, only : qshear, omega
+  use shear
 #endif /* SHEAR */
 
 #ifdef COSM_RAYS

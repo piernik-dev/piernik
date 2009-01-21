@@ -1283,10 +1283,6 @@ module dataio
     use resistivity
 #endif /* RESISTIVE */
 
-#ifdef COLLISIONS
-    use start, only : dt_colls
-#endif /* COLLISIONS */
-
     implicit none
 
 #ifdef IONIZED 
@@ -1610,9 +1606,6 @@ module dataio
 #ifdef RESISTIVE
         write(log_lun,776) 'max(eta)         =', eta_max ,      'dt=',dt_resist, proc_eta_max,  loc_eta_max
 #endif /* RESISTIVE */
-#ifdef COLLISIONS
-        write(log_lun,'(2x,a36,e10.4)') 'collisions with fluid ~1/dens, dt = ',dt_colls
-#endif /* COLLISIONS */
 
       close(log_lun)
 

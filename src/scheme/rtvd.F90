@@ -53,19 +53,12 @@ module rtvd ! split orig
 #endif /* GRAV */
 #ifdef SHEAR
     use arrays, only : xr
-    use start,  only : qshear, omega
+    use shear,  only : qshear, omega
 #endif /* SHEAR */
 #ifdef COSM_RAYS
     use start,  only : gamma_cr, cr_active, smallecr
     use arrays, only : wa, iecr
 #endif /* COSM_RAYS */
-#ifdef VZ_LIMITS
-    use arrays, only : z
-    use start, only : floor_vz, ceil_vz
-#endif /* VZ_LIMITS */
-#ifdef KEPLER_SUPPRESSION
-    use rotsource, only : kepler_suppression
-#endif /* KEPLER_SUPPRESSION */
 
     implicit none
     
@@ -87,9 +80,6 @@ module rtvd ! split orig
 #ifdef SHEAR
     real, dimension(n)    :: vxr
 #endif /* SHEAR */
-#ifdef KEPLER_SUPPRESSION
-    real, dimension(nvar,n) :: Duus
-#endif /* KEPLER_SUPPRESSION */
     character sweep*6
 
 !locals
@@ -271,26 +261,6 @@ module rtvd ! split orig
 
 
 #endif /* ISO */
-
-#ifdef VZ_LIMITS
-! Dwukrotne ograniczanie vz moze byc zbedne (patrz wyzej)
-! Ten fragment bedzie mozna ewentualnie wykasowac po testach
-    if(sweep .eq. 'zsweep') then
-      where((z(:) .gt. 0.0) .and. (u1(iarr_all_mx,:) .lt.  floor_vz*u(iarr_all_dn,:)))
-        u1(iarr_all_mx,:) =  floor_vz*u(iarr_all_dn,:)
-      endwhere
-      where((z(:) .lt. 0.0) .and. (u1(iarr_all_mx,:) .gt. -floor_vz*u(iarr_all_dn,:)))
-        u1(iarr_all_mx,:) = -floor_vz*u(iarr_all_dn,:)
-      endwhere
-    endif
-#endif /* VZ_LIMITS */
-
-#ifdef KEPLER_SUPPRESSION
-   all kepler_suppression(Duus,u1,sweep,i1,i2,n,dt)
-#ifndef OVERLAP
-   u1 = u1 + Duus
-#endif /* OVERLAP */
-#endif /* KEPLER_SUPPRESSION */
 
       u(:,:) = u1(:,:)
   enddo

@@ -41,6 +41,10 @@ program mhd
 #endif /* RESISTIVE */
 #endif /* MAGNETIC */
 
+#ifdef SHEAR
+  use shear, only : init_shear
+#endif /* SHEAR */
+
 #ifdef SELF_GRAV
   use poisson_solver
 #endif /* SELF_GRAV */
@@ -89,9 +93,15 @@ program mhd
   call mpi_bnd_prep
 
   call init_dataio
+
+#ifdef SHEAR
+  call init_shear
+#endif /* SHEAR */
+
 #ifdef GRAV
   call grav_pot_3d
 #endif /* GRAV */
+
   if(proc .eq. 0) then
     if(restart .eq. 'last') then
       call find_last_restart(nrestart)
