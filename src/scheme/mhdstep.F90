@@ -7,8 +7,8 @@ module mhdstep   ! SPLIT
   contains
 
 subroutine mhd_step
-  use start,  only : dimensions,dt,dt_log,dt_tsl,nstep,t
-  use dataio, only : nlog,ntsl,write_log,write_timeslice
+  use start,  only : dimensions,dt,nstep,t
+  use dataio, only : nlog,ntsl,write_log,write_timeslice, dt_log, dt_tsl
   use timestep,   only : time_step
   use sweeps, only : sweepx,sweepy,sweepz
   use mpi_setup, only : proc

@@ -18,7 +18,7 @@ module hydrostatic
       use gravity, only  : grav_accel,grav_pot,gp_status
 #ifndef ISO
       use arrays, only   : eprof
-      use start, only    : c_si
+!      use start, only    : c_si
 #endif /* ISO */
       implicit none
       real, intent(inout)              :: d0

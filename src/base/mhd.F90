@@ -10,8 +10,9 @@ program mhd
 !             within the "mhdblock.f90"
 ! Modification history: see "changelog"
 
-  use start, only: read_params, new_id, restart, dt_hdf, dt_res,dt_log,dt_tsl
-  use start, only: t,dt, tend, nstep, nend, nstep_start, nrestart
+  use start, only  : read_params
+  use dataio, only : new_id, restart, dt_hdf, dt_res,dt_log,dt_tsl, nrestart 
+  use start, only  : t,dt,nstep, nend, nstep_start, tend
 
   use initfluids, only : init_fluids
   use fluidindex, only : fluid_index,nvar

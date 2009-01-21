@@ -29,7 +29,6 @@ module start
 
 
   real t,dt
-!  real dt_ionized, dt_coolheat, dt_visc
   real collfaq, cfl_colls
   integer nstep
   integer nstep_start
@@ -38,20 +37,6 @@ module start
   integer nend, maxxyz
 
   real :: omega, qshear
-
-  character restart*16, new_id*3
-  integer   nrestart, resdel
-
-  character domain*16,mag_center*16
-  integer, parameter      :: nvarsmx =16
-  character, dimension(nvarsmx):: vars*4
-  real dt_hdf, dt_res, dt_tsl, dt_log
-  integer min_disk_space_MB, sleep_minutes, sleep_seconds
-  character*160  user_message_file, system_message_file
-
-  real :: c_si, alpha, tauc
-!  real, dimension(NUMBFLUID) :: gamma
-  real, dimension(2) :: gamma   !!! do poprawy
 
   real cfl, smalld, smallei, nu_bulk, cfl_visc
 #ifdef VZ_LIMITS
@@ -62,7 +47,8 @@ module start
   character*16 flux_limiter, freezing_speed, dimensions, magnetic
   integer integration_order, istep
   real rorder
-  logical bulk_viscosity
+
+  real, dimension(1) :: gamma   !!! do poprawy
 
   character*3 gpt_hdf
   real :: g_z, g_y
@@ -73,12 +59,8 @@ module start
   real    h_grav,  r_grav
   integer n_gravh, n_gravr, n_gravr2
 
-  character cool_model*16, heat_model*16, coolheat_active*3, substepping*8
   real G_uv1, G_sup1, cfl_coolheat, esrc_lower_lim, esrc_upper_lim
-  real h_coolheat_profile
-  integer n_coolheat_profile
-  real L_C, K_heatcond, C_heatcond, dt_heatcond, cfl_heatcond
-  logical gravaccel, coolheat, heatcond
+  logical gravaccel
 
   logical magfield, resist
   real    cfl_resist, eta_0, eta_1, j_crit, deint_max
@@ -99,8 +81,6 @@ module start
 
   real init_mass, mass_loss, mass_loss_tot
 
-  integer :: ix,iy,iz
-
   real, dimension(3,2)  :: cn
 
 !-------------------------------------------------------------------------------
@@ -111,21 +91,9 @@ contains
 
     implicit none
 
-    integer iv
-
 
   character par_file*(100), tmp_log_file*(100)
 
-
-
-  namelist /START_CONTROL/ nstep, t, dt
-  namelist /RESTART_CONTROL/ restart, new_id, nrestart, resdel
-  namelist /END_CONTROL/ tend, nend
-  namelist /OUTPUT_CONTROL/ dt_hdf, dt_res, dt_tsl, dt_log, &
-                            domain, vars, mag_center, ix, iy, iz,&
-                            min_disk_space_MB, sleep_minutes, sleep_seconds, &
-                            user_message_file, system_message_file
-  namelist /EQUATION_OF_STATE/ c_si, gamma, alpha, tauc
   namelist /NUMERICAL_SETUP/  cfl, smalld, smallei, &
 #ifdef VZ_LIMITS
                               floor_vz, ceil_vz, &
@@ -134,7 +102,7 @@ contains
                               cfl_colls, &
 #endif /* COLLISIONS */
                               integration_order, &
-                              dimensions, magnetic, nu_bulk, cfl_visc
+                              dimensions, magnetic 
 
 #ifdef SHEAR
   namelist /SHEARING/ omega, qshear
@@ -149,13 +117,6 @@ contains
                      nsub, tune_zeq, tune_zeq_bnd,      &
                      h_grav, r_grav, n_gravr, n_gravr2, n_gravh
 #endif /* GRAV */
-#ifdef COOL_HEAT
-  namelist /THERMAL/ cool_model, heat_model, coolheat_active,  &
-                     esrc_lower_lim, esrc_upper_lim, &
-                     h_coolheat_profile, n_coolheat_profile, &
-                     G_uv1, G_sup1, cfl_coolheat, L_C, &
-                     K_heatcond, C_heatcond, cfl_heatcond
-#endif /* COOL_HEAT */
 #ifdef RESISTIVE
   namelist /RESISTIVITY/ cfl_resist, eta_0, eta_1, eta_scale, j_crit, deint_max
 #endif /* RESISTIVE */
@@ -183,38 +144,8 @@ contains
     t      = 0.0
     dt     = 0.0
 
-    restart = 'last'   ! 'last': autom. wybor ostatniego
-                       ! niezaleznie od wartosci "nrestart"
-                       ! cokolwiek innego: decyduje "nrestart"
-    new_id  = ''
-    nrestart=  3
-    resdel  = 0
-
     tend   = 1.0
     nend   = 10
-
-
-
-    dt_hdf = 0.0
-    dt_res = 0.0
-    dt_tsl = 0.0
-    dt_log = 0.0
-    domain = 'phys_domain'
-    vars(:)   = '    '
-    mag_center= 'no'
-    min_disk_space_MB = 100
-    sleep_minutes   = 0
-    sleep_seconds   = 0
-    user_message_file   = trim(cwd)//'/msg'
-    system_message_file = '/tmp/piernik_msg'
-
-    c_si   = 1.0
-    gamma  = 5./3.    ! ignored if ISO
-#ifdef ISO
-!    gamma  = 1.
-#endif /* ISO */
-    alpha  = 1.0
-
 
     cfl     = 0.7
     smalld  = 1.e-10
@@ -224,8 +155,6 @@ contains
     integration_order  = 2
     dimensions = '3d'
     magnetic  = 'yes'
-    nu_bulk   = 0.0
-    cfl_visc  = 0.4
 #ifdef VZ_LIMITS
     floor_vz  = -1.e99
     ceil_vz   =  1.e99
@@ -254,23 +183,6 @@ contains
     n_gravr2= 0
     n_gravh = 0
 #endif /* GRAV */
-
-#ifdef COOL_HEAT
-    cool_model   = 'null'
-    heat_model   = 'null'
-    coolheat_active = 'no'
-    esrc_upper_lim =  1.
-    esrc_lower_lim = -1.
-    h_coolheat_profile = 1.e6
-    n_coolheat_profile = 0
-    G_uv1        = 0.0
-    G_sup1       = 0.0
-    cfl_coolheat = 0.005
-    L_C          = 0.0
-    K_heatcond    = 0.0
-    C_heatcond    = 1.5e-5
-    cfl_heatcond = 0.45
-#endif /* COOL_HEAT */
 
 #ifdef RESISTIVE
     cfl_resist  =  0.4
@@ -323,26 +235,15 @@ contains
     add_encr   = 'yes'          !  permission for inserting CR energy inside randomly selected areas
     add_magn   = 'yes'          !  permission for inserting dipolar magnetic field centered at randomly selected areas
 #endif /* SNE_DISTR */
-    ix = 20
-    iy = 20
-    iz = 20
-
 
     if(proc .eq. 0) then
 
       open(1,file=par_file)
-        read(unit=1,nml=START_CONTROL)
-        read(unit=1,nml=RESTART_CONTROL)
         read(unit=1,nml=END_CONTROL)
-        read(unit=1,nml=OUTPUT_CONTROL)
-        read(unit=1,nml=EQUATION_OF_STATE)
         read(unit=1,nml=NUMERICAL_SETUP)
 #ifdef GRAV
         read(unit=1,nml=GRAVITY)
 #endif /* GRAV */
-#ifdef COOL_HEAT
-        read(unit=1,nml=THERMAL)
-#endif /* COOL_HEAT */
 #ifdef RESISTIVE
         read(unit=1,nml=RESISTIVITY)
 #endif /* RESISTIVE */
@@ -365,18 +266,11 @@ contains
       close(1)
 
       open(3, file=tmp_log_file, position='append')
-        write(unit=3,nml=START_CONTROL)
-        write(unit=3,nml=RESTART_CONTROL)
         write(unit=3,nml=END_CONTROL)
-        write(unit=3,nml=OUTPUT_CONTROL)
-        write(unit=3,nml=EQUATION_OF_STATE)
         write(unit=3,nml=NUMERICAL_SETUP)
 #ifdef GRAV
         write(unit=3,nml=GRAVITY)
 #endif /* GRAV */
-#ifdef COOL_HEAT
-        write(unit=3,nml=THERMAL)
-#endif /* COOL_HEAT */
 #ifdef RESISTIVE
         write(unit=3,nml=RESISTIVITY)
 #endif /* RESISTIVE */
@@ -402,57 +296,12 @@ contains
 
     if(proc .eq. 0) then
 
-!  namelist /START_CONTROL/ nstep, t, dt
-
-      ibuff(10) = nstep
-
-      rbuff(10) = t
-      rbuff(11) = dt
-
-!  namelist /RESTART_CONTROL/ restart, new_id, nrestart, resdel
-
-      cbuff(20) = restart
-      cbuff(21) = new_id
-
-      ibuff(20) = nrestart
-      ibuff(21) = resdel
-
 !  namelist /END_CONTROL/ nend, tend
 
       ibuff(30) = nend
 
       rbuff(30) = tend
 
-!  namelist /OUTPUT_CONTROL/ dt_hdf, dt_res, dt_tsl, domain, vars, mag_center, &
-!                            min_disk_space_MB, sleep_minutes, ix, iy, iz&
-!                            user_message_file, system_message_file
-
-      ibuff(40) = min_disk_space_MB
-      ibuff(41) = sleep_minutes
-      ibuff(42) = sleep_seconds
-      ibuff(43) = ix
-      ibuff(44) = iy
-      ibuff(45) = iz
-
-      rbuff(40) = dt_hdf
-      rbuff(41) = dt_res
-      rbuff(42) = dt_tsl
-      rbuff(43) = dt_log
-
-      cbuff(40) = domain
-
-      do iv = 1, nvarsmx
-        cbuff(40+iv) = vars(iv)
-      enddo
-
-      cbuff(60) = mag_center
-      cbuff(61) = user_message_file(1:32)
-      cbuff(62) = system_message_file(1:32)
-
-!  namelist /EQUATION_OF_STATE/ c_si, gamma, alpha, tauc
-!      rbuff(70) = c_si
-      rbuff(71) = alpha
-      rbuff(72) = tauc
 !      do iv = 1, NUMBFLUID
 !        rbuff(72+iv) = gamma(iv)
 !      enddo
@@ -465,8 +314,6 @@ contains
       rbuff(80) = cfl
       rbuff(83) = smalld
       rbuff(84) = smallei
-      rbuff(85) = nu_bulk
-      rbuff(86) = cfl_visc
 #ifdef VZ_LIMITS
       rbuff(87) = floor_vz
       rbuff(88) = ceil_vz
@@ -509,32 +356,6 @@ contains
       rbuff(100) = h_grav
       rbuff(101) = r_grav
 #endif /* GRAV */
-
-#ifdef COOL_HEAT
-!  namelist /THERMAL/ cool_model, heat_model, coolheat_active, &
-!                     esrc_lower_lim, esrc_upper_lim, &
-!                     h_coolheat_profile, n_coolheat_profile, &
-!                     G_uv1, G_sup1, cfl_coolheat, &
-!                     K_heatcond, C_heatcond, cfl_heatcond
-
-       ibuff(110) = n_coolheat_profile
-
-       cbuff(110) = cool_model
-       cbuff(111) = heat_model
-       cbuff(112) = coolheat_active
-
-       rbuff(110) = cfl_coolheat
-       rbuff(111) = esrc_lower_lim
-       rbuff(112) = esrc_upper_lim
-       rbuff(113) = h_coolheat_profile
-
-       rbuff(114) = G_uv1
-       rbuff(115) = G_sup1
-       rbuff(116) = L_C
-       rbuff(117) = K_heatcond
-       rbuff(118) = C_heatcond
-       rbuff(119) = cfl_heatcond
-#endif /* COOL_HEAT */
 
 #ifdef RESISTIVE
 !   namelist /RESISTIVITY/ cfl_resist, eta_0, eta_1, j_crit
@@ -612,60 +433,12 @@ contains
       call MPI_BCAST(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
       call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
-!  namelist /START_CONTROL/ nstep, t, dt
-
-      nstep               = ibuff(10)
-
-      t                   = rbuff(10)
-      dt                  = rbuff(11)
-
-!  namelist /RESTART_CONTROL/ restart, new_id, nrestart, resdel
-
-      restart             = trim(cbuff(20))
-      new_id              = trim(cbuff(21))
-
-      nrestart            = ibuff(20)
-      resdel              = ibuff(21)
-
 !  namelist /END_CONTROL/ nend, tend
 
       nend                = ibuff(30)
 
       tend                = rbuff(30)
 
-!  namelist /OUTPUT_CONTROL/ dt_hdf, dt_res, dt_tsl, domain, vars, mag_center, &
-!                            min_disk_space_MB, sleep_minutes, ix, iy, iz &
-!                            user_message_file, system_message_file
-
-      min_disk_space_MB   = ibuff(40)
-      sleep_minutes       = ibuff(41)
-      sleep_seconds       = ibuff(42)
-      ix                  = ibuff(43)
-      iy                  = ibuff(44)
-      iz                  = ibuff(45)
-
-
-      dt_hdf              = rbuff(40)
-      dt_res              = rbuff(41)
-      dt_tsl              = rbuff(42)
-      dt_log              = rbuff(43)
-
-      domain              = trim(cbuff(40))
-      do iv=1, nvarsmx
-        vars(iv)          = trim(cbuff(40+iv))
-      enddo
-
-      mag_center          = trim(cbuff(60))
-
-      user_message_file   = trim(cbuff(61))
-      system_message_file = trim(cbuff(62))
-
-
-!  namelist /EQUATION_OF_STATE/ c_si, gamma, alpha, tauc
-
-!      c_si                = rbuff(70)
-      alpha               = rbuff(71)
-      tauc                = rbuff(72)
 !      do iv=1,NUMBFLUID
 !        gamma(iv)         = rbuff(72+iv)
 !      enddo
@@ -679,8 +452,6 @@ contains
       cfl                 = rbuff(80)
       smalld              = rbuff(83)
       smallei             = rbuff(84)
-      nu_bulk             = rbuff(85)
-      cfl_visc            = rbuff(86)
 #ifdef VZ_LIMITS
       floor_vz            = rbuff(87)
       ceil_vz             = rbuff(88)
@@ -725,32 +496,6 @@ contains
       h_grav              = rbuff(100)
       r_grav              = rbuff(101)
 #endif /* GRAV */
-
-#ifdef COOL_HEAT
-!  namelist /THERMAL/ cool_model, heat_model, coolheat_active,  &
-!                     esrc_lower_lim, esrc_upper_lim, &
-!                     h_coolheat_profile, n_coolheat_profile, &
-!                     G_uv1, G_sup1, cfl_coolheat, &
-!                     K_heatcond, C_heatcond, cfl_heatcond
-
-
-      n_coolheat_profile  = ibuff(110)
-
-      cool_model          = cbuff(110)
-      heat_model          = cbuff(111)
-      coolheat_active     = cbuff(112)
-
-      cfl_coolheat        = rbuff(110)
-      esrc_lower_lim      = rbuff(111)
-      esrc_upper_lim      = rbuff(112)
-      h_coolheat_profile  = rbuff(113)
-      G_uv1               = rbuff(114)
-      G_sup1              = rbuff(115)
-      L_C                 = rbuff(116)
-      K_heatcond          = rbuff(117)
-      C_heatcond          = rbuff(118)
-      cfl_heatcond        = rbuff(119)
-#endif /* COOL_HEAT */
 
 #ifdef RESISTIVE
 !   namelist /RESISTIVITY/ cfl_resist, eta_0, eta_1, j_crit
@@ -821,11 +566,11 @@ contains
 
 ! Secondary parameters
 
-   csi2  = c_si**2
-   csim2 = csi2*(1.+alpha)    ! z-equilibrium defined for fixed
+!   csi2  = c_si**2
+!   csim2 = csi2*(1.+alpha)    ! z-equilibrium defined for fixed
                                 ! ratio p_mag/p_gas = alpha = 1/beta
 #ifdef COSM_RAYS
-   csim2 = csim2 +csi2*beta_cr
+!   csim2 = csim2 +csi2*beta_cr
 #endif /* COSM_RAYS */
 
    ethu = 7.0**2/(5.0/3.0-1.0) * 1.0    ! thermal energy unit=0.76eV/cm**3
@@ -869,19 +614,6 @@ contains
       gravaccel = .false.
 #endif /* GRAV */
 
-#ifdef COOL_HEAT
-    if((cool_model .ne. 'null') .or. (heat_model .ne. 'null')) then
-      coolheat = .true.
-#else /* COOL_HEAT */
-      coolheat = .false.
-#endif /* COOL_HEAT */
-
-#ifdef HEAT_COND
-      heatcond = .true.
-#else /* HEAT_COND */
-      heatcond = .false.
-#endif /* HEAT_COND */
-
     if(magnetic .eq. 'yes') then
       magfield = .true.
     else
@@ -897,18 +629,6 @@ contains
 #else /* RESISTIVE */
       resist = .false.
 #endif /* RESISTIVE */
-
-#ifdef VISC
-    if(nu_bulk .ne. 0.0) then
-       bulk_viscosity = .true.
-#else /* VISC */
-       bulk_viscosity = .false.
-#endif /* VISC */
-
-#ifdef MASS_COMPENS
-    mass_loss = 0.0
-    mass_loss_tot = 0.0
-#endif /* MASS_COMPENS */
 
   end subroutine read_params
 

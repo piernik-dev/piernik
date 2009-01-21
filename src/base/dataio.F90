@@ -18,12 +18,22 @@ module dataio
 
   implicit none
 
+  integer, parameter            :: nvarsmx = 16 
+  character(len=3)              :: new_id
+  character(len=16)             :: restart, domain, mag_center
+  integer                       :: nrestart, resdel
+  real                          :: dt_hdf, dt_res, dt_tsl, dt_log
+  integer                       :: min_disk_space_MB, sleep_minutes, sleep_seconds
+  character(len=160)            :: user_message_file, system_message_file
+  character(len=4), dimension(nvarsmx) :: vars
+  integer :: ix,iy,iz, iv
+
   integer :: tsl_lun = 2, log_lun = 3
   integer :: nhdf, nres, ntsl, nlog
   integer :: step_hdf, step_res, nhdf_start, nres_start
   real    :: t_start, last_hdf_time
   character(len=128) :: log_file
-  character:: pc1*2,pc2*2,pc3*2
+  character(len=2)   :: pc1,pc2,pc3
   logical tsl_firstcall
 
   logical wait
@@ -41,6 +51,13 @@ module dataio
   real encr_min, encr_max
 #endif /* COSM_RAYS */
 
+  namelist /RESTART_CONTROL/ restart, new_id, nrestart, resdel
+  namelist /OUTPUT_CONTROL/ dt_hdf, dt_res, dt_tsl, dt_log, &
+                            domain, vars, mag_center, ix, iy, iz,&
+                            min_disk_space_MB, sleep_minutes, sleep_seconds, &
+                            user_message_file, system_message_file
+
+
   contains
 
 !---------------------------------------------------------------------
@@ -50,10 +67,33 @@ module dataio
 !---------------------------------------------------------------------
 !
   subroutine init_dataio
-    use start, only : dt_hdf
     implicit none
     integer(kind=1) :: getpid
     integer(kind=1) :: hostnm
+    character(LEN=100) :: par_file, tmp_log_file
+
+
+
+    restart = 'last'   ! 'last': autom. wybor ostatniego
+                       ! niezaleznie od wartosci "nrestart"
+                       ! cokolwiek innego: decyduje "nrestart"
+    new_id  = ''
+    nrestart=  3
+    resdel  = 0
+
+    dt_hdf = 0.0
+    dt_res = 0.0
+    dt_tsl = 0.0
+    dt_log = 0.0
+    domain = 'phys_domain'
+    vars(:)   = '    '
+    mag_center= 'no'
+    min_disk_space_MB = 100
+    sleep_minutes   = 0
+    sleep_seconds   = 0
+    user_message_file   = trim(cwd)//'/msg'
+    system_message_file = '/tmp/piernik_msg'
+
     wait  = .false.
     tsl_firstcall = .true.
 
@@ -64,7 +104,6 @@ module dataio
 
     step_hdf  = -1
     step_res  = -1
-    last_hdf_time = -dt_hdf
 
     pc1 = '00'
     pc2 = '00'
@@ -81,6 +120,104 @@ module dataio
     if (ihost .eq. 0) ihost = index(hostfull,' ')
     host = hostfull(1:ihost-1)
 
+   if(proc .eq. 0) then
+      par_file = trim(cwd)//'/problem.par'
+      tmp_log_file = trim(cwd)//'/tmp.log'
+      open(1,file=par_file)
+         read(unit=1,nml=OUTPUT_CONTROL)
+      close(1)
+      open(1,file=par_file)
+         read(unit=1,nml=RESTART_CONTROL)
+      close(1)
+      open(3, file=tmp_log_file, position='append')
+         write(unit=3,nml=OUTPUT_CONTROL)
+         write(unit=3,nml=RESTART_CONTROL)
+      close(3)
+
+!  namelist /RESTART_CONTROL/ restart, new_id, nrestart, resdel
+
+      cbuff(20) = restart
+      cbuff(21) = new_id
+
+      ibuff(20) = nrestart
+      ibuff(21) = resdel
+
+!  namelist /OUTPUT_CONTROL/ dt_hdf, dt_res, dt_tsl, domain, vars, mag_center, &
+!                            min_disk_space_MB, sleep_minutes, ix, iy, iz&
+!                            user_message_file, system_message_file
+
+      ibuff(40) = min_disk_space_MB
+      ibuff(41) = sleep_minutes
+      ibuff(42) = sleep_seconds
+      ibuff(43) = ix
+      ibuff(44) = iy
+      ibuff(45) = iz
+
+      rbuff(40) = dt_hdf
+      rbuff(41) = dt_res
+      rbuff(42) = dt_tsl
+      rbuff(43) = dt_log
+
+      cbuff(40) = domain
+
+      do iv = 1, nvarsmx
+        cbuff(40+iv) = vars(iv)
+      enddo
+
+      cbuff(60) = mag_center
+      cbuff(61) = user_message_file(1:32)
+      cbuff(62) = system_message_file(1:32)
+
+      call MPI_BCAST(cbuff, 32*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
+      call MPI_BCAST(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
+      call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+
+    else
+
+      call MPI_BCAST(cbuff, 32*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
+      call MPI_BCAST(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
+      call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+
+!  namelist /RESTART_CONTROL/ restart, new_id, nrestart, resdel
+
+      restart             = trim(cbuff(20))
+      new_id              = trim(cbuff(21))
+
+      nrestart            = ibuff(20)
+      resdel              = ibuff(21)
+
+!  namelist /OUTPUT_CONTROL/ dt_hdf, dt_res, dt_tsl, domain, vars, mag_center, &
+!                            min_disk_space_MB, sleep_minutes, ix, iy, iz &
+!                            user_message_file, system_message_file
+
+      min_disk_space_MB   = ibuff(40)
+      sleep_minutes       = ibuff(41)
+      sleep_seconds       = ibuff(42)
+      ix                  = ibuff(43)
+      iy                  = ibuff(44)
+      iz                  = ibuff(45)
+
+
+      dt_hdf              = rbuff(40)
+      dt_res              = rbuff(41)
+      dt_tsl              = rbuff(42)
+      dt_log              = rbuff(43)
+
+      domain              = trim(cbuff(40))
+      do iv=1, nvarsmx
+        vars(iv)          = trim(cbuff(40+iv))
+      enddo
+
+      mag_center          = trim(cbuff(60))
+
+      user_message_file   = trim(cbuff(61))
+      system_message_file = trim(cbuff(62))
+
+   endif
+
+   last_hdf_time = -dt_hdf
+
+
   end subroutine init_dataio
 
 !---------------------------------------------------------------------
@@ -90,7 +227,7 @@ module dataio
 !---------------------------------------------------------------------
 !
   subroutine write_data(output)
-    use start, only:  dt_hdf, dt_res, dt_tsl, dt_log, t, dt, nstep
+    use start, only:  t, dt, nstep
 #ifdef USER_IO
     use init_problem, only : user_io_routine
 #endif /* USER_IO */
@@ -158,8 +295,7 @@ module dataio
    subroutine write_hdf
       use mpi_setup, only: cwd
       use arrays, only : wa,outwa,outwb,outwc,b,u
-      use start, only : vars,nstep,t, &
-             domain,mag_center, dimensions, dt
+      use start, only : nstep,t,dt
       use grid, only : dx,dy,dz,xmin,xmax,ymin,ymax,zmin,zmax,nxd,nyd,nzd,nb
       use grid, only : nx,ny,nz,nxb,nyb,nzb,x,y,z
       use init_problem, only : problem_name, run_id
@@ -173,7 +309,6 @@ module dataio
 
 #ifndef ISO
       use fluidindex, only : iarr_all_en
-      use start, only  : gamma
 #endif /* ISO */
 
 #ifdef COSM_RAYS
@@ -212,10 +347,10 @@ module dataio
       ieo = nx
       jso = 1
       jeo = ny
-      if(dimensions .eq. '3d') then
+      if(nzd /= 1) then
         kso = 1
         keo = nz
-      elseif(dimensions .eq. '2dxy') then
+      else
         kso = 1
         keo = 1
       endif
@@ -228,10 +363,10 @@ module dataio
       ieo    = nb+nxb
       jso    = nb+1
       jeo    = nb+nyb
-      if(dimensions .eq. '3d') then
+      if(nzd /= 1) then
         kso    = nb+1
         keo    = nb+nzb
-      elseif(dimensions .eq. '2dxy') then
+      else
         kso = 1
         keo = 1
       endif
@@ -298,10 +433,10 @@ module dataio
     iostatus = sfsnatt( sd_id, 'time'    ,  6, 1, t              )
     iostatus = sfsnatt( sd_id, 'timestep',  6, 1, dt             )
 
-    do ifl=1,nfluid
-    write(gammaifl,'(a5,i1)') 'gamma',ifl
-    iostatus = sfsnatt( sd_id, gammaifl   ,  6, 1, gamma(ifl)     )
-    enddo
+!    do ifl=1,nfluid
+!    write(gammaifl,'(a5,i1)') 'gamma',ifl
+!    iostatus = sfsnatt( sd_id, gammaifl   ,  6, 1, gamma(ifl)     )
+!    enddo
 
 
 ! write selected problem dependent parameters
@@ -498,7 +633,7 @@ module dataio
     use arrays,       only : u,b
     use grid,         only : nxb,nyb,nzb,x,y,z,nx,ny,nz
     use grid,         only : xmin,xmax,ymin,ymax,zmin,zmax,nxd,nyd,nzd,nb
-    use start,        only : t,dt, resdel,nstep,domain
+    use start,        only : t,dt,nstep
     use init_problem, only : problem_name, run_id
 #ifdef GRAV
     use arrays, only : gp
@@ -901,7 +1036,7 @@ module dataio
     use fluidindex,   only : ibx,iby,ibz
     use fluidindex, only : nvar, iarr_all_dn,iarr_all_mx,iarr_all_my,iarr_all_mz
     use grid, only  : dvol,dx,dy,dz,is,ie,js,je,ks,ke,x,y,z,nxd,nyd,nzd
-    use start, only : proc, dt, t, nstep, nrestart
+    use start, only : proc, dt, t, nstep
     use arrays, only : u,b,wa
     use init_problem, only : problem_name, run_id
 
@@ -924,10 +1059,6 @@ module dataio
 #ifdef ISO
     use start, only : csi2
 #endif /* ISO */
-
-#ifdef COOL_HEAT
-    use thermal
-#endif /* COOL_HEAT */
 
 #ifdef RESISTIVE
     use resistivity
@@ -1123,8 +1254,7 @@ module dataio
     use arrays, only : wa,u,b
     use grid, only   : dx,dy,dz,dxmn,nb,is,ie,js,je,ks,ke,nx,ny,nz
     use constants, only : small, hydro_mass, k_B
-    use start, only : t,dt,nstep,sleep_minutes,sleep_seconds, smallei, &
-         gamma,cfl
+    use start, only : t,dt,nstep,smallei,cfl
 
 #ifdef IONIZED
     use initionized, only : idni,imxi,imyi,imzi
@@ -1146,7 +1276,7 @@ module dataio
 #endif /* COSM_RAYS */
 
 #ifdef ISO
-    use start, only : csi2,c_si
+!    use start, only : csi2,c_si
 #endif /* ISO */
 
 #ifdef RESISTIVE
@@ -1520,8 +1650,6 @@ module dataio
 !=======================================================================
 !
     subroutine read_file_msg
-
-      use start, only : user_message_file, system_message_file
 
 
 !     written by: michal hanasz
