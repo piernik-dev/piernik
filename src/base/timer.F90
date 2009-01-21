@@ -1,4 +1,4 @@
-! $Id: timer.F90 361 2008-10-16 17:34:10Z wolt $
+! $Id$
 #include "piernik.def"
 module timer
 
