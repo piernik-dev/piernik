@@ -1,4 +1,4 @@
-! $Id: shear.F90 381 2008-10-22 22:57:35Z wolt $
+! $Id$
 #include "piernik.def"
 module shear
   real    :: ts, dely, eps

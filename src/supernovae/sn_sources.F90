@@ -1,4 +1,4 @@
-! $Id: sn_sources.F90 373 2008-10-21 10:48:09Z xarth $
+! $Id$
 #include "piernik.def"
 ! Written by M. Hanasz, 2003, 2007 & K. Kowalik 2007
 ! Adapted for this code by M. Hanasz, November 2007

@@ -1,4 +1,4 @@
-! $Id: fluids.F90 362 2008-10-16 17:51:20Z wolt $
+! $Id$
 #include "piernik.def"
 module sweeps     ! split sweeps
   contains

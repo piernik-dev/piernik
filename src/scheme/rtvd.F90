@@ -1,4 +1,4 @@
-! $Id: tv.F90 438 2008-11-20 23:43:48Z wolt $
+! $Id$
 #include "piernik.def"
 module rtvd ! split orig
   contains

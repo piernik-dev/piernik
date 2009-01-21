@@ -1,4 +1,4 @@
-! $Id: sn_distr.F90 383 2008-10-23 07:51:25Z xarth $
+! $Id$
 #include "piernik.def"
 
 module sn_distr

@@ -1,4 +1,4 @@
-! $Id: fluxes.F90 433 2008-11-20 22:27:57Z wolt $
+! $Id$
 #include "piernik.def"
 #define RNG 2:n-1
 module fluxes
