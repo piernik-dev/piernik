@@ -9,7 +9,7 @@ module fluxionized
   contains 
 !==========================================================================================
 
-  subroutine flux_ion(fluxi,cfri,uui,bb,n)
+  subroutine flux_ion(fluxi,cfri,vx,uui,bb,n)
   
     use constants,       only : small
     use fluidindex,      only : nmag
@@ -20,10 +20,6 @@ module fluxionized
     use initionized,     only : gamma_ion, cs_iso_ion2
     use timestepionized, only : c_ion
     use constants,       only : small
-
-!#ifdef COSM_RAYS
-!    use arrays, only : iecr
-!#endif /* COSM_RAYS */
 
     implicit none
     integer n
@@ -58,10 +54,6 @@ module fluxionized
     fluxi(ien,RNG)=(uui(ien,RNG)+ps(RNG))*vx(RNG)-bb(ibx,RNG)*(bb(ibx,RNG)*uui(imx,RNG) &
                 +bb(iby,RNG)*uui(imy,RNG)+bb(ibz,RNG)*uui(imz,RNG))/uui(idn,RNG)
 #endif /* ISO */
-
-!#ifdef COSM_RAYS
-!    fluxi(iecr,RNG)= uui(iecr,RNG)*vx(RNG)
-!#endif /* COSM_RAYS */
 
 #ifdef LOCAL_FR_SPEED
 
