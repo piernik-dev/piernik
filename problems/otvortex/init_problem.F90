@@ -3,7 +3,8 @@
 
 module init_problem
 
-  use arrays, only : x, u, b,x,y,z,nx,ny,nz, xl, yl
+  use arrays, only : u,b
+  use grid,   only : x,y,z,nx,ny,nz, xl, yl
   use initionized, only : idni,imxi,imyi,imzi
 #ifndef ISO
   use initionized, only : ieni, gamma_ion
@@ -83,8 +84,6 @@ contains
     integer i,j,k
     real :: xi,yj,zk
     real :: vx,vy,vz,rho,pre,bx,by,bz,b0
-    real :: kn,Lx,kJ,Ly,Lz,Ln
-
     real, dimension(:,:,:),allocatable :: A
     
     call read_problem_par

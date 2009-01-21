@@ -81,8 +81,6 @@
     integration_order = 2
     magnetic = 'yes'
     dimensions = '2dxy'
-    nu_bulk    = 0.0001
-    cfl_visc   = 0.4
  /
  
  $GRAVITY
