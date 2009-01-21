@@ -42,9 +42,9 @@ module arrays
       allocate(wa(nx,ny,nz),wcu(nx,ny,nz))
       allocate(outwa(nx,ny,nz),outwb(nx,ny,nz),outwc(nx,ny,nz))
 
-#if defined COSM_RAYS || defined PRESS_GRAD_EXCH
-      allocate(divvel(nfluid,nx,ny,nz))
-#endif /* COSM_RAYS || PRESS_GRAD_EXCH */
+!#if defined COSM_RAYS || defined PRESS_GRAD_EXCH
+!      allocate(divvel(nfluid,nx,ny,nz))
+!#endif /* COSM_RAYS || PRESS_GRAD_EXCH */
 
    end subroutine arrays_allocate
 

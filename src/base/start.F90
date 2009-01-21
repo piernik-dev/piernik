@@ -73,19 +73,6 @@ contains
     smallei = 1.e-10
     integration_order  = 2
 
-#ifdef COSM_RAYS
-    cr_active  = 1.0
-    gamma_cr   = 4./3.
-    beta_cr    = 0.0
-    cr_eff     = 0.1       !  canonical conversion rate of SN en.-> CR
-                           !  we fix E_SN=10**51 erg
-    K_cr_paral = 0.0
-    K_cr_perp  = 0.0
-    amp_cr     = 0.0
-    cfl_cr     = 0.45
-    smallecr   = 0.0
-#endif /* COSM_RAYS */
-
 #ifdef SN_SRC
     h_sn       = 266.0          !  vertical scaleheight of SN from Ferriere 1998
     r_sn       =  10.0          !  "typical" SNR II radius
