@@ -104,12 +104,7 @@ module start
 
   integer :: ix,iy,iz
 
-#ifdef ORIG
   real, dimension(3,2)  :: cn
-#endif /* ORIG */
-#ifdef SSP
-  real, dimension(3,3)  :: cn
-#endif /* SSP */
 
 !-------------------------------------------------------------------------------
 contains
@@ -166,9 +161,9 @@ contains
                      G_uv1, G_sup1, cfl_coolheat, L_C, &
                      K_heatcond, C_heatcond, cfl_heatcond
 #endif /* COOL_HEAT */
-#ifdef RESIST
+#ifdef RESISTIVE
   namelist /RESISTIVITY/ cfl_resist, eta_0, eta_1, eta_scale, j_crit, deint_max
-#endif /* RESIST */
+#endif /* RESISTIVE */
 !#ifdef COSM_RAYS
 !  namelist /COSMIC_RAYS/ cr_active, gamma_cr, cr_eff, beta_cr, &
 !                         K_cr_paral, K_cr_perp, amp_cr, cfl_cr, smallecr
@@ -294,14 +289,14 @@ contains
     cfl_heatcond = 0.45
 #endif /* COOL_HEAT */
 
-#ifdef RESIST
+#ifdef RESISTIVE
     cfl_resist  =  0.4
     eta_0       =  0.0
     eta_1       =  0.0
     eta_scale   =  4
     j_crit      =  1.0e6
     deint_max   = 0.01
-#endif /* RESIST */
+#endif /* RESISTIVE */
 
 #ifdef COSM_RAYS
     cr_active  = 1.0
@@ -367,9 +362,9 @@ contains
 #ifdef COOL_HEAT
         read(unit=1,nml=THERMAL)
 #endif /* COOL_HEAT */
-#ifdef RESIST
+#ifdef RESISTIVE
         read(unit=1,nml=RESISTIVITY)
-#endif /* RESIST */
+#endif /* RESISTIVE */
 !#ifdef COSM_RAYS
 !        read(unit=1,nml=COSMIC_RAYS)
 !#endif /* COSM_RAYS */
@@ -403,9 +398,9 @@ contains
 #ifdef COOL_HEAT
         write(unit=3,nml=THERMAL)
 #endif /* COOL_HEAT */
-#ifdef RESIST
+#ifdef RESISTIVE
         write(unit=3,nml=RESISTIVITY)
-#endif /* RESIST */
+#endif /* RESISTIVE */
 !#ifdef COSM_RAYS
 !        write(unit=3,nml=COSMIC_RAYS)
 !#endif /* COSM_RAYS */
@@ -578,7 +573,7 @@ contains
        rbuff(119) = cfl_heatcond
 #endif /* COOL_HEAT */
 
-#ifdef RESIST
+#ifdef RESISTIVE
 !   namelist /RESISTIVITY/ cfl_resist, eta_0, eta_1, j_crit
 
        ibuff(120) = eta_scale
@@ -588,7 +583,7 @@ contains
        rbuff(122) = eta_1
        rbuff(123) = j_crit
        rbuff(124) = deint_max
-#endif /* RESIST */
+#endif /* RESISTIVE */
 
 !#ifdef COSM_RAYS
 !  namelist /COSMIC_RAYS/ cr_active, gamma_cr, cr_eff, beta_cr, K_cr_paral, K_cr_perp,&
@@ -810,7 +805,7 @@ contains
       cfl_heatcond        = rbuff(119)
 #endif /* COOL_HEAT */
 
-#ifdef RESIST
+#ifdef RESISTIVE
 !   namelist /RESISTIVITY/ cfl_resist, eta_0, eta_1, j_crit
 
        eta_scale          = ibuff(120)
@@ -820,7 +815,7 @@ contains
        eta_1              = rbuff(122)
        j_crit             = rbuff(123)
        deint_max          = rbuff(124)
-#endif /* RESIST */
+#endif /* RESISTIVE */
 
 !#ifdef COSM_RAYS
 !  namelist /COSMIC_RAYS/ cr_active, gamma_cr, cr_eff, beta_cr, K_cr_paral, K_cr_perp,&
@@ -901,35 +896,17 @@ contains
                                                               ! surface area of the comp. box
 #endif /* GALAXY */
 
-#ifdef ORIG
   cn(1:3,1) = (/ 1. , 0.5 , 0.0 /)
   cn(1:3,2) = (/ 1. , 1.  , 0.0 /)
   if(integration_order .eq. 1) then
     cn(2,1) = 1.
   endif
-#endif /* ORIG */
-#ifdef SSP
-  cn(1:3,1) = (/ 0.   , 1.   , 0.0 /)
-  cn(1:3,2) = (/ 0.75 , 0.25 , 1.0 /)
-  cn(1:3,3) = (/ 1./3., 2./3., 1.0 /)
-
-  if(integration_order .eq. 2) then
-    cn(1:3,2) = (/ 0.5 , 0.5 , 1.0 /)
-  endif
-#endif /* SSP */
 
 
 !-------------------------
-#ifdef ORIG
     if(integration_order .gt. 2) then
       stop 'For "ORIG" scheme integration_order must be 1 or 2'
     endif
-#endif /* ORIG */
-#ifdef SSP
-    if(integration_order .gt. 3) then
-      stop 'For "SSP" scheme integration_order can`t be greater than 3'
-    endif
-#endif /* SSP */
 
     select case (dimensions)
       case('3d','2dxy')
@@ -964,15 +941,15 @@ contains
       magfield = .false.
     endif
 
-#ifdef RESIST
+#ifdef RESISTIVE
       resist = .true.
       if(eta_scale .lt. 0) then
         write(*,*) 'eta_scale must be greater or equal 0'
         stop
       endif
-#else /* RESIST */
+#else /* RESISTIVE */
       resist = .false.
-#endif /* RESIST */
+#endif /* RESISTIVE */
 
 #ifdef VISC
     if(nu_bulk .ne. 0.0) then

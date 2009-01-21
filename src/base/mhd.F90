@@ -34,9 +34,9 @@ program mhd
   
 #ifdef MAGNETIC  
   use mag_boundaries, only   : compute_b_bnd
-#ifdef RESIST
+#ifdef RESISTIVE
   use resistivity
-#endif /* RESIST */
+#endif /* RESISTIVE */
 #endif /* MAGNETIC */
 
 #ifdef SELF_GRAV

@@ -69,7 +69,7 @@ module rtvd ! split orig
 
     implicit none
     
-    integer :: i1,i2, n, istep
+    integer :: i1,i2, n, istep, i
     
     real    :: dt,dx,dtx
     real, dimension(nvar,n) :: u,cfr
@@ -190,12 +190,14 @@ module rtvd ! split orig
       call flimiter(gravl,dglp,dglm,1,n)
     endif
 
+    do i=1, size(iarr_all_mx)
 #ifndef ISO
-    duls(iarr_all_en,:)  = gravr*ul0(iarr_all_mx,:)*dt
-    durs(iarr_all_en,:)  = gravl*ur0(iarr_all_mx,:)*dt
-#endif /* ISO */
-    duls(iarr_all_mx,:)  = gravr*ul0(iarr_all_dn,:)*dt
-    durs(iarr_all_mx,:)  = gravl*ur0(iarr_all_dn,:)*dt
+       duls(iarr_all_en(i),:)  = gravr(:)*ul0(iarr_all_mx(i),:)*dt
+       durs(iarr_all_en(i),:)  = gravl(:)*ur0(iarr_all_mx(i),:)*dt
+#endif /* ISO */ 
+       duls(iarr_all_mx(i),:)  = gravr(:)*ul0(iarr_all_dn(i),:)*dt
+       durs(iarr_all_mx(i),:)  = gravl(:)*ur0(iarr_all_dn(i),:)*dt
+    enddo
     ur1= ur1 + cn(istep)*durs
     ul1= ul1 + cn(istep)*duls
 #endif /* GRAV */
@@ -241,7 +243,8 @@ module rtvd ! split orig
     vx = u1(iarr_all_mx,:)/u1(iarr_all_dn,:)
     ecr = u1(iecr,:)
 
-    gpcr(2:n-1) = cr_active*(gamma_cr -1.)*(ecr(3:n)-ecr(1:n-2))/(2.*dx) ; gpcr(1:2)=0.0 ; gpcr(n-1:n) = 0.0
+    gpcr(2:n-1) = cr_active*(gamma_cr -1.)*(ecr(3:n)-ecr(1:n-2))/(2.*dx) 
+    gpcr(1:2)=0.0 ; gpcr(n-1:n) = 0.0
 
 #ifndef ISO
     u1(iarr_all_en,:) = u1(iarr_all_en,:) - cn(istep)*u1(iarr_all_mx,:)/u1(iarr_all_dn,:)*gpcr*dt
@@ -251,7 +254,8 @@ module rtvd ! split orig
 #endif /* COSM_RAYS */
 #ifndef ISO
 
-    ekin = 0.5*(u1(iarr_all_mx,:)*u1(iarr_all_mx,:)+u1(iarr_all_my,:)*u1(iarr_all_my,:)+u1(iarr_all_mz,:)*u1(iarr_all_mz,:))/u1(iarr_all_dn,:)
+    ekin = 0.5*( u1(iarr_all_mx,:)**2 + u1(iarr_all_my,:)**2 &
+                +u1(iarr_all_mz,:)**2) /u1(iarr_all_dn,:)
     eint = u1(iarr_all_en,:)-ekin
 #if defined IONIZED && defined MAGNETIC
     emag = 0.5*(bb(ibx,:)*bb(ibx,:) + bb(iby,:)*bb(iby,:) + bb(ibz,:)*bb(ibz,:))
@@ -282,9 +286,9 @@ module rtvd ! split orig
 #endif /* VZ_LIMITS */
 
 #ifdef KEPLER_SUPPRESSION
-	call kepler_suppression(Duus,u1,sweep,i1,i2,n,dt)
+   all kepler_suppression(Duus,u1,sweep,i1,i2,n,dt)
 #ifndef OVERLAP
-	u1 = u1 + Duus
+   u1 = u1 + Duus
 #endif /* OVERLAP */
 #endif /* KEPLER_SUPPRESSION */
 

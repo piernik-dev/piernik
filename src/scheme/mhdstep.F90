@@ -225,15 +225,15 @@ end subroutine mhd_step
     use advects, only : advectby_x,advectbz_x
 
 
-#ifdef RESIST
+#ifdef RESISTIVE
     use resistivity, only : diffuseby_x,diffusebz_x
-#endif /* RESIST */
+#endif /* RESISTIVE */
 
       call advectby_x
       
-#ifdef RESIST
+#ifdef RESISTIVE
       call diffuseby_x
-#endif /* RESIST */
+#endif /* RESISTIVE */
 
       call mag_add(iby,xdim,ibx,ydim)     
 
@@ -241,9 +241,9 @@ end subroutine mhd_step
 
       call advectbz_x
 
-#ifdef RESIST
+#ifdef RESISTIVE
       call diffusebz_x
-#endif /* RESIST */
+#endif /* RESISTIVE */
 
       call mag_add(ibz,xdim,ibx,zdim)
 
@@ -259,17 +259,17 @@ end subroutine mhd_step
     use arrays,  only : b,xdim,ydim,zdim
     use advects, only : advectbx_y,advectbz_y
 
-#ifdef RESIST
+#ifdef RESISTIVE
     use resistivity, only : diffusebx_y,diffusebz_y
-#endif /* RESIST */
+#endif /* RESISTIVE */
 
     if(dimensions .eq. '3d') then
 
       call advectbz_y
       
-#ifdef RESIST
+#ifdef RESISTIVE
       call diffusebz_y
-#endif /* RESIST */
+#endif /* RESISTIVE */
 
       call mag_add(ibz,ydim,iby,zdim)
 
@@ -277,9 +277,9 @@ end subroutine mhd_step
 
       call advectbx_y
       
-#ifdef RESIST
+#ifdef RESISTIVE
       call diffusebx_y      
-#endif /* RESIST */
+#endif /* RESISTIVE */
 
       call mag_add(ibx,ydim,iby,xdim)
 
@@ -293,21 +293,21 @@ end subroutine mhd_step
     use arrays,  only : b,xdim,ydim,zdim
     use advects, only : advectbx_z,advectby_z
 
-#ifdef RESIST
+#ifdef RESISTIVE
     use resistivity, only : diffusebx_z,diffuseby_z
-#endif /* RESIST */
+#endif /* RESISTIVE */
 
 
       call advectbx_z
-#ifdef RESIST
+#ifdef RESISTIVE
       call diffusebx_z
-#endif /* RESIST */
+#endif /* RESISTIVE */
       call mag_add(ibx,zdim,ibz,xdim)
 
       call advectby_z
-#ifdef RESIST
+#ifdef RESISTIVE
       call diffuseby_z
-#endif /* RESIST */
+#endif /* RESISTIVE */
 
       call mag_add(iby,zdim,ibz,ydim)
 
@@ -324,7 +324,7 @@ end subroutine mhd_step
     implicit none
     integer             :: ib1,ib2,dim1,dim2
 
-#ifdef RESIST
+#ifdef RESISTIVE
 ! DIFFUSION FULL STEP
 
     b(ib1,:,:,:) = b(ib1,:,:,:) - wcu/dl(dim1)
@@ -337,7 +337,7 @@ end subroutine mhd_step
 !   wcu = cshift(wcu,shift= 1,dim=dim2)
     wcu = pshift(wcu,dim2)
     b(ib2,:,:,:) = b(ib2,:,:,:) - wcu/dl(dim2)
-#endif /* RESIST */
+#endif /* RESISTIVE */
 ! ADVECTION FULL STEP
 
     b(ib1,:,:,:) = b(ib1,:,:,:) - wa/dl(dim1)

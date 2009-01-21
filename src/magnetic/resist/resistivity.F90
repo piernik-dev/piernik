@@ -13,6 +13,11 @@ module resistivity
       use constants, only: pi, small, big
       use mag_boundaries
       use mpi_setup
+      use fluidindex, only : ibx,iby,ibz,icx,icy,icz
+      use initionized, only : idni,imxi,imyi,imzi
+#ifndef ISO
+      use initionized, only : ieni
+#endif /* ISO */
 
       real eta_max, dt_resist, dt_eint
       real eta_max_proc, eta_max_all
@@ -65,15 +70,15 @@ contains
 !! shoud that be so? Is there any other solution instead splitting?
 !<
         if(dimensions .eq. '3d') then
-	  etahelp(:,:,:)  =   mshift(eta(:,:,:),xdim)
-	  etahelp = etahelp + pshift(eta(:,:,:),xdim)
+          etahelp(:,:,:)  =   mshift(eta(:,:,:),xdim)
+          etahelp = etahelp + pshift(eta(:,:,:),xdim)
           etahelp = etahelp + mshift(eta(:,:,:),ydim)
-	  etahelp = etahelp + pshift(eta(:,:,:),ydim)
+          etahelp = etahelp + pshift(eta(:,:,:),ydim)
           etahelp = etahelp + mshift(eta(:,:,:),zdim)
-	  etahelp = etahelp + pshift(eta(:,:,:),zdim)
+          etahelp = etahelp + pshift(eta(:,:,:),zdim)
           etahelp = (etahelp+dble(eta_scale)*eta(:,:,:))/(6.+dble(eta_scale))
           where(eta > eta_0)
-	    eta = etahelp
+             eta = etahelp
           endwhere
         else
           where(eta > eta_0)
@@ -95,11 +100,11 @@ contains
 
 #ifndef ISO
         dt_eint = deint_max * abs(minval(               &
-                  ( u(iena,is:ie,js:je,ks:ke)           &
-                  - 0.5*( u(imxa,is:ie,js:je,ks:ke)**2  &
-                        + u(imya,is:ie,js:je,ks:ke)**2  &
-                        + u(imza,is:ie,js:je,ks:ke)**2 )&
-                        /u(idna,is:ie,js:je,ks:ke)      &
+                  ( u(ieni,is:ie,js:je,ks:ke)           &
+                  - 0.5*( u(imxi,is:ie,js:je,ks:ke)**2  &
+                        + u(imyi,is:ie,js:je,ks:ke)**2  &
+                        + u(imzi,is:ie,js:je,ks:ke)**2 )&
+                        /u(idni,is:ie,js:je,ks:ke)      &
                   - 0.5*( b(ibx,is:ie,js:je,ks:ke)**2   &
                         + b(iby,is:ie,js:je,ks:ke)**2   &
                         + b(ibz,is:ie,js:je,ks:ke)**2)) &
@@ -153,11 +158,7 @@ contains
     use func, only : mshift, pshift
 
     implicit none
-#ifdef SPLIT
-#ifdef ORIG
     real,dimension(nx,ny,nz) :: b1
-#endif /* ORIG */
-#endif /* SPLIT */
 
     real                     :: di
     real,dimension(:,:,:), allocatable :: w,wm,wp,dw,eta
@@ -169,8 +170,6 @@ contains
     eta = 0.0
 
     call compute_resist(eta,ici)
-#ifdef SPLIT
-#ifdef ORIG
 
 ! HALF STEP
     w(:,:,:) = (b(ibi,:,:,:)-mshift(b(ibi,:,:,:),n))/di
@@ -185,44 +184,6 @@ contains
     dw = 0.
     where(wm*wp > 0.) dw=2.*wm*wp/(wm+wp)
     wcu = (w+dw)*dt
-#endif /* ORIG */
-#ifdef SSP
-
-    w(:,:,:) = (b(ibi,:,:,:)-mshift(b(ibi,:,:,:),n))/di
-    w  = eta*w
-    wp = 0.5*(pshift(w,n)-w)
-    wm = 0.5*(w-mshift(w,n))
-    dw = 0.
-    where(wm*wp > 0.) dw=2.*wm*wp/(wm+wp)
-    wcu = (w+dw)*dt
-#endif /* SSP */
-#else /* SPLIT */
-
-    w(:,:,:) = (b(ibi,:,:,:)-mshift(b(ibi,:,:,:),n))/di
-    w  = eta*w
-#ifdef ORIG
-
-    if(istep .eq. 1) then
-      wa = w*dt
-    elseif(istep .eq. 2) then
-      wp = 0.5*(pshift(w,n)-w)
-      wm = 0.5*(w-mshift(w,n))
-      dw = 0.
-      where(wm*wp > 0.) dw=2.*wm*wp/(wm+wp)
-      wa = (w+dw)*dt
-    else
-      write(*,*) 'That high integration order not implemented'
-      stop
-    endif
-#endif /* ORIG */
-#ifdef SSP
-    wp = 0.5*(pshift(w,n)-w)
-    wm = 0.5*(w-mshift(w,n))
-    dw = 0.
-    where(wm*wp > 0.) dw=2.*wm*wp/(wm+wp)
-    wa = (w+dw)*dt
-#endif /* SSP */
-#endif /* SPLIT */
     deallocate(w,wm,wp,dw,eta)
   end subroutine tvdd
 
@@ -232,25 +193,9 @@ contains
     use func, only : mshift, pshift
 
     call tvdd(iby,icz,xdim)
-#ifdef SPLIT
-
     call bnd_emf(wcu,'emfz','xdim')
     call bnd_emf(wcu,'emfz','ydim')
     if(dimensions .eq. '3d') call bnd_emf(wcu,'emfz','zdim')
-#else /* SPLIT */
-
-    call bnd_emf(wa,'emfz','xdim')
-    call bnd_emf(wa,'emfz','ydim')
-    if(dimensions .eq. '3d') call bnd_emf(wa,'emfz','zdim')
-
-    Lb(iby,:,:,:) = Lb(iby,:,:,:) - wa/dl(xdim)
-    wa = pshift(wa,xdim)
-    Lb(iby,:,:,:) = Lb(iby,:,:,:) + wa/dl(xdim)
-    wa = mshift(wa,xdim)
-    Lb(ibx,:,:,:) = Lb(ibx,:,:,:) + wa/dl(ydim)
-    wa = pshift(wa,ydim)
-    Lb(ibx,:,:,:) = Lb(ibx,:,:,:) - wa/dl(ydim)
-#endif /* SPLIT */
 
   end subroutine diffuseby_x
 
@@ -258,25 +203,9 @@ contains
     use func, only : mshift, pshift
 
     call tvdd(ibz,icy,xdim)
-#ifdef SPLIT
-
     call bnd_emf(wcu,'emfy','xdim')
     call bnd_emf(wcu,'emfy','ydim')
     if(dimensions .eq. '3d') call bnd_emf(wcu,'emfy','zdim')
-#else /* SPLIT */
-
-    call bnd_emf(wa, 'emfy', 'xdim')
-    call bnd_emf(wa, 'emfy', 'ydim')
-    if(dimensions .eq. '3d') call bnd_emf(wa, 'emfy', 'zdim')
-
-    Lb(ibz,:,:,:) = Lb(ibz,:,:,:) - wa/dl(xdim)
-    wa = pshift(wa,xdim)
-    Lb(ibz,:,:,:) = Lb(ibz,:,:,:) + wa/dl(xdim)
-    wa = mshift(wa,xdim)
-    Lb(ibx,:,:,:) = Lb(ibx,:,:,:) + wa/dl(zdim)
-    wa = pshift(wa,zdim)
-    Lb(ibx,:,:,:) = Lb(ibx,:,:,:) - wa/dl(zdim)
-#endif /* SPLIT */
 
   end subroutine diffusebz_x
 
@@ -284,100 +213,36 @@ contains
     use func, only : mshift, pshift
 
     call tvdd(ibz,icx,ydim)
-#ifdef SPLIT
-
     call bnd_emf(wcu,'emfx','ydim')
     if(dimensions .eq. '3d') call bnd_emf(wcu,'emfx','zdim')
     call bnd_emf(wcu,'emfx','xdim')
-#else /* SPLIT */
-
-    call bnd_emf(wa, 'emfx', 'ydim')
-    if(dimensions .eq. '3d') call bnd_emf(wa, 'emfx', 'zdim')
-    call bnd_emf(wa, 'emfx', 'xdim')
-
-    Lb(ibz,:,:,:) = Lb(ibz,:,:,:) - wa/dl(ydim)
-    wa = pshift(wa,ydim)
-    Lb(ibz,:,:,:) = Lb(ibz,:,:,:) + wa/dl(ydim)
-    wa = mshift(wa,ydim)
-    Lb(iby,:,:,:) = Lb(iby,:,:,:) + wa/dl(zdim)
-    wa = pshift(wa,zdim)
-    Lb(iby,:,:,:) = Lb(iby,:,:,:) - wa/dl(zdim)
-#endif /* SPLIT */
   end subroutine diffusebz_y
 
   subroutine diffusebx_y
     use func, only : mshift, pshift
 
     call tvdd(ibx,icz,ydim)
-#ifdef SPLIT
-
     call bnd_emf(wcu, 'emfz', 'ydim')
     if(dimensions .eq. '3d') call bnd_emf(wcu, 'emfz', 'zdim')
     call bnd_emf(wcu, 'emfz', 'xdim')
-#else /* SPLIT */
-
-    call bnd_emf(wa, 'emfz', 'ydim')
-    if(dimensions .eq. '3d') call bnd_emf(wa, 'emfz', 'zdim')
-    call bnd_emf(wa, 'emfz', 'xdim')
-
-    Lb(ibx,:,:,:) = Lb(ibx,:,:,:) - wa/dl(ydim)
-    wa = pshift(wa,ydim)
-    Lb(ibx,:,:,:) = Lb(ibx,:,:,:) + wa/dl(ydim)
-    wa = mshift(wa,ydim)
-    Lb(iby,:,:,:) = Lb(iby,:,:,:) + wa/dl(xdim)
-    wa = pshift(wa,xdim)
-    Lb(iby,:,:,:) = Lb(iby,:,:,:) - wa/dl(xdim)
-#endif /* SPLIT */
   end subroutine diffusebx_y
 
   subroutine diffusebx_z
     use func, only : mshift, pshift
 
     call tvdd(ibx,icy,zdim)
-#ifdef SPLIT
-
     call bnd_emf(wcu, 'emfy', 'zdim')
     call bnd_emf(wcu, 'emfy', 'xdim')
     call bnd_emf(wcu, 'emfy', 'ydim')
-#else /* SPLIT */
-
-    call bnd_emf(wa, 'emfy', 'zdim')
-    call bnd_emf(wa, 'emfy', 'xdim')
-    call bnd_emf(wa, 'emfy', 'ydim')
-
-    Lb(ibx,:,:,:) = Lb(ibx,:,:,:) - wa/dl(zdim)
-    wa = pshift(wa,zdim)
-    Lb(ibx,:,:,:) = Lb(ibx,:,:,:) + wa/dl(zdim)
-    wa = mshift(wa,zdim)
-    Lb(ibz,:,:,:) = Lb(ibz,:,:,:) + wa/dl(xdim)
-    wa = pshift(wa,xdim)
-    Lb(ibz,:,:,:) = Lb(ibz,:,:,:) - wa/dl(xdim)
-#endif /* SPLIT */
   end subroutine diffusebx_z
 
   subroutine diffuseby_z
     use func, only : mshift, pshift
 
     call tvdd(iby,icx,zdim)
-#ifdef SPLIT
-
     call bnd_emf(wcu, 'emfx', 'zdim')
     call bnd_emf(wcu, 'emfx', 'xdim')
     call bnd_emf(wcu, 'emfx', 'ydim')
-#else /* SPLIT */
-
-    call bnd_emf(wa, 'emfx', 'zdim')
-    call bnd_emf(wa, 'emfx', 'xdim')
-    call bnd_emf(wa, 'emfx', 'ydim')
-
-    Lb(iby,:,:,:) = Lb(iby,:,:,:) - wa/dl(zdim)
-    wa = pshift(wa,zdim)
-    Lb(iby,:,:,:) = Lb(iby,:,:,:) + wa/dl(zdim)
-    wa = mshift(wa,zdim)
-    Lb(ibz,:,:,:) = Lb(ibz,:,:,:) + wa/dl(ydim)
-    wa = pshift(wa,ydim)
-    Lb(ibz,:,:,:) = Lb(ibz,:,:,:) - wa/dl(ydim)
-#endif /* SPLIT */
   end subroutine diffuseby_z
 
 end module resistivity

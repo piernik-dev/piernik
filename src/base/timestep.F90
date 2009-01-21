@@ -48,9 +48,9 @@ contains
 #ifdef SIMPLE_COOL
     use start, only : tauc
 #endif /* SIMPLE_COOL */
-#ifdef RESIST
+#ifdef RESISTIVE
     use resistivity, only : dt_resist, timestep_resist
-#endif /* RESIST */
+#endif /* RESISTIVE */
 #ifdef COLLISIONS
     use start, only : collfaq, dt_colls
 #endif /* COLLISIONS */
@@ -97,10 +97,10 @@ contains
     dt=min(dt_crs,(tend-t)/2.)
 #endif /* COSM_RAYS */
 
-#ifdef RESIST
+#ifdef RESISTIVE
     call timestep_resist
     dt = min(dt,dt_resist)
-#endif /* RESIST */
+#endif /* RESISTIVE */
 
 #ifdef COOL_HEAT
     call timestep_coolheat

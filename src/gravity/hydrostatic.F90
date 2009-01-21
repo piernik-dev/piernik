@@ -7,10 +7,10 @@ module hydrostatic
 
 
 #ifdef GRAV
-   contains
+  contains
 
-   subroutine hydrostatic_zeq(iia,jja, d0, dprof)
-      use start,     only : nsub,nb,zmin,zmax,tune_zeq,csim2, col_dens, proc
+    subroutine hydrostatic_zeq(iia,jja, d0, dprof)
+      use start, only    : nsub,nb,zmin,zmax,tune_zeq,csim2, col_dens, proc
       use constants, only : k_B, hydro_mass, small, pc
       use arrays, only   : nx,ny,nz,dl,zdim,z,zl,zr, nzt
 
@@ -67,7 +67,7 @@ module hydrostatic
       enddo                                  ! ksmid and ksmid+1
 
       if(gp_status .eq. 'undefined') then
-         call grav_accel('zsweep',ia, ja, zs, nstot, gprofs)
+        call grav_accel('zsweep',ia, ja, zs, nstot, gprofs)
       else
         gp_status = 'hydrozeq'
         call grav_pot('zsweep', ia,ja, zs, nstot, gpots,gp_status,.true.)
@@ -99,11 +99,11 @@ module hydrostatic
 
       dprof(:) =0.0
       do k=1,nz
-         do ksub=1, nstot
-            if(zs(ksub) .gt. zl(k) .and. zs(ksub) .lt. zr(k)) then
-               dprof(k) = dprof(k) + dprofs(ksub)/real(nsub)
-            endif
-         enddo
+        do ksub=1, nstot
+          if(zs(ksub) .gt. zl(k) .and. zs(ksub) .lt. zr(k)) then
+            dprof(k) = dprof(k) + dprofs(ksub)/real(nsub)
+          endif
+        enddo
       enddo
 
 
@@ -112,9 +112,9 @@ module hydrostatic
       cd = sum(dprofs(:)) * dzs * pc
 
       if(col_dens .ne. 0.0) then
-         dmid = d0
+        dmid = d0
       else
-         col_dens = cd
+        col_dens = cd
       endif
 
       if(abs(cd - col_dens) .gt. dcol_dens) then
@@ -136,25 +136,6 @@ module hydrostatic
         goto 100
       endif
 
-      if(abs(cd - col_dens) .gt. dcol_dens) then
-         if(iter .eq. 1) then
-            dold = dmid
-            cdold = cd
-            dmid = dmid+ddmid
-         else
-            a = (cd - cdold)/(dmid - dold)
-            b = cd - a*dmid
-            dold = dmid
-            cdold = cd
-            dmid = (col_dens - b)/a
-         endif
-         d0 = dmid
-!         if(proc .eq.0)  write(*,888) d0, cd ,iter
-         iter = iter+1
-         if (iter .gt. itermx) stop
-         goto 100
-      endif
-
 !      if(proc .eq.0)  write(*,888) d0, cd ,iter
 
 #ifndef ISO
@@ -164,17 +145,16 @@ module hydrostatic
 !888  format('Midplane density =',f10.4,2x,'Column density =', e10.4,2x,'iter=',i4 )
 #endif /* GALAXY || GALACTIC_DISK */
 
-      deallocate(zs,dprofs,gprofs,gpots)
+    deallocate(zs,dprofs,gprofs,gpots)
 
-      return
 
-   end subroutine hydrostatic_zeq
+    return
 
 
       end subroutine hydrostatic_zeq
 
 !--------------------------------------------------------------------------
-
+#ifdef NOT_WORKING
     subroutine hydro_thermal_zeq(ia, ja, hfl, T0, dprof,eprof,tprof,bprof)
       use constants, only : k_B, hydro_mass, small
       use start, only    : nsub,nb,zmin,zmax,tune_zeq,proc,col_dens, &
@@ -205,9 +185,6 @@ module hydrostatic
           call grav_accel('zsweep',ia, ja, z, nz, gprof)
 !         write(*,*) gprof
 
-      call grav_accel('zsweep',ia, ja, z, nz, gprof)
-!      write(*,*) gprof
-
       dzs = (zmax-zmin)/real(nstot-2*nb*nsub)
 
 ! Search for the index ksmid of the cell, whose center lies just below the midplane
@@ -224,13 +201,13 @@ module hydrostatic
         tprofs(ksmid+1) = T0
         do ksub=ksmid+1, nstot-1
 
-      if(ksmid .lt. nstot) then
-         tprofs(ksmid+1) = T0
-         do ksub=ksmid+1, nstot-1
+          zz(1) = zs(ksub)
+          call grav_accel('zsweep',ia, ja, zz, 1, gg)
+          gravz = tune_zeq*gg(1)
 
-            zz(1) = zs(ksub)
-            call grav_accel('zsweep',ia, ja, zz, 1, gg)
-            gravz = tune_zeq*gg(1)
+          tmp =  tprofs(ksub)
+          call d_temp_dz(gravz,tmp,dtmpdz)
+          tmp = tmp + dtmpdz*dzs/2.
 
           zz(1) =zs(ksub) + dzs/2.
           call grav_accel('zsweep',ia, ja, zz, 1, gg)
@@ -253,9 +230,9 @@ module hydrostatic
           call grav_accel('zsweep',ia, ja, zz, 1, gg)
           gravz = tune_zeq*gg(1)
 
-            zz(1) = zs(ksub)
-            call grav_accel('zsweep',ia, ja, zz, 1, gg)
-            gravz = tune_zeq*gg(1)
+          tmp =  tprofs(ksub)
+          call d_temp_dz(gravz,tmp,dtmpdz)
+          tmp = tmp - dtmpdz*dzs/2.
 
           zz(1) =zs(ksub) - dzs/2.
           call grav_accel('zsweep',ia, ja, zz, 1, gg)
@@ -264,15 +241,8 @@ module hydrostatic
           call d_temp_dz(gravz,tmp,dtmpdz)
           tprofs(ksub-1) = tprofs(ksub) - dtmpdz*dzs
 
-            zz(1) =zs(ksub) - dzs/2.
-            call grav_accel('zsweep',ia, ja, zz, 1, gg)
-            gravz = tune_zeq*gg(1)
-
-            call d_temp_dz(gravz,tmp,dtmpdz)
-            tprofs(ksub-1) = tprofs(ksub) - dtmpdz*dzs
-
-!            write(*,"(i8,5(1x,e10.4))") ksub, zs(ksub), gravz,dtmpdz, tprofs(ksub)
-         enddo
+!         write(*,"(i8,5(1x,e10.4))") ksub, zs(ksub), gravz,dtmpdz, tprofs(ksub)
+        enddo
       endif
 
 ! Computation of all the relavant quantities on the subgrid
@@ -291,15 +261,16 @@ module hydrostatic
 !     cprof(:) =0.0
       bprof(:) =0.0
       do k=1,nz
-         do ksub=1, nstot
-            if(zs(ksub) .gt. zl(k) .and. zs(ksub) .lt. zr(k)) then
-               dprof(k) = dprof(k) + dprofs(ksub)/real(nsub)
-               eprof(k) = eprof(k) + eprofs(ksub)/real(nsub)
-               tprof(k) = tprof(k) + tprofs(ksub)/real(nsub)
-!               cprof(k) = cprof(k) + cprofs(ksub)/real(nsub)
-               bprof(k) = bprof(k) + bprofs(ksub)/real(nsub)
-            endif
-         enddo
+        do ksub=1, nstot
+          if(zs(ksub) .gt. zl(k) .and. zs(ksub) .lt. zr(k)) then
+            dprof(k) = dprof(k) + dprofs(ksub)/real(nsub)
+            eprof(k) = eprof(k) + eprofs(ksub)/real(nsub)
+            tprof(k) = tprof(k) + tprofs(ksub)/real(nsub)
+!           cprof(k) = cprof(k) + cprofs(ksub)/real(nsub)
+            bprof(k) = bprof(k) + bprofs(ksub)/real(nsub)
+
+          endif
+        enddo
       enddo
 
 !      do k=1, nz
@@ -307,11 +278,12 @@ module hydrostatic
 !      enddo
 !      stop
 
-      deallocate(zs,gprofs,tprofs,dprofs,cfuncs)
+    deallocate(zs,gprofs,tprofs,dprofs,cfuncs)
 
-      return
+    return
 
 
       end subroutine hydro_thermal_zeq
+#endif /* NOT_WORKING */
 #endif /* GRAV */
 end module hydrostatic
