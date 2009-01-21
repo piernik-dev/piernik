@@ -322,7 +322,7 @@ module dataio
     implicit none
 
     character(len=128) :: file_name_hdf,file_name_disp
-    character varname*4, gammaifl*6
+    character(LEN=4)   :: varname
 
     integer :: sd_id, sds_id, dim_id, iostatus
     integer :: rank, comp_type

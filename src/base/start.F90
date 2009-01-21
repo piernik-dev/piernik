@@ -62,7 +62,6 @@ module start
   real G_uv1, G_sup1, cfl_coolheat, esrc_lower_lim, esrc_upper_lim
   logical gravaccel
 
-  logical magfield, resist
   real    cfl_resist, eta_0, eta_1, j_crit, deint_max
   integer eta_scale
 
@@ -103,7 +102,7 @@ contains
                               cfl_colls, &
 #endif /* COLLISIONS */
                               integration_order, &
-                              dimensions, magnetic 
+                              dimensions
 
 #ifdef SHEAR
   namelist /SHEARING/ omega, qshear
@@ -155,7 +154,6 @@ contains
     freezing_speed = 'local'
     integration_order  = 2
     dimensions = '3d'
-    magnetic  = 'yes'
 #ifdef VZ_LIMITS
     floor_vz  = -1.e99
     ceil_vz   =  1.e99
@@ -310,7 +308,7 @@ contains
 !  namelist /NUMERICAL_SETUP/  cfl, smalld, smallei,
 !                              flux_limiter, freezing_speed,
 !                              integration_order,
-!                              dimensions, magnetic, nu_bulk, cfl_visc
+!                              dimensions, nu_bulk, cfl_visc
 !                              floor_vz, ceil_vz, cfl_colls
       rbuff(80) = cfl
       rbuff(83) = smalld
@@ -326,7 +324,6 @@ contains
       cbuff(80) = flux_limiter
       cbuff(81) = freezing_speed
       cbuff(82) = dimensions
-      cbuff(83) = magnetic
 
       ibuff(80) = integration_order
 
@@ -465,7 +462,6 @@ contains
       flux_limiter        = trim(cbuff(80))
       freezing_speed      = trim(cbuff(81))
       dimensions          = cbuff(82)(1:16)
-      magnetic            = cbuff(83)(1:16)
 
       integration_order   = ibuff(80)
 
@@ -615,20 +611,11 @@ contains
       gravaccel = .false.
 #endif /* GRAV */
 
-    if(magnetic .eq. 'yes') then
-      magfield = .true.
-    else
-      magfield = .false.
-    endif
-
 #ifdef RESISTIVE
-      resist = .true.
       if(eta_scale .lt. 0) then
         write(*,*) 'eta_scale must be greater or equal 0'
         stop
       endif
-#else /* RESISTIVE */
-      resist = .false.
 #endif /* RESISTIVE */
 
   end subroutine read_params
