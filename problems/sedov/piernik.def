@@ -46,8 +46,8 @@
 #undef PRESS_GRAD_EXCH
 
 /* gravity type choosing */
-#undef GRAV
-#undef GRAV_NULL
+#define GRAV
+#define GRAV_NULL
 #undef SELF_GRAV
 
 /* structure features including */
