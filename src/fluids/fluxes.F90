@@ -8,20 +8,20 @@
 module fluxes
 
 #ifdef IONIZED
-  use initionized, only : iarr_ion
-  use fluxionized, only : flux_ion 
+  use initionized,    only : iarr_ion
+  use fluxionized,    only : flux_ion 
 #endif /* IONIZED */
 #ifdef NEUTRAL
-  use initneutral, only : iarr_neu
-  use fluxneutral, only : flux_neu
+  use initneutral,    only : iarr_neu
+  use fluxneutral,    only : flux_neu
 #endif /* NEUTRAL */
 #ifdef DUST
-  use initdust, only : iarr_dst
-  use fluxdust, only : flux_dst
+  use initdust,       only : iarr_dst
+  use fluxdust,       only : flux_dst
 #endif /* DUST */
 #ifdef COSM_RAYS
-  use initcrs, only : iarr_crs
-  use fluxcr, only : flux_crs
+  use initcosmicrays, only : iarr_crs
+  use fluxcosmicrays, only : flux_crs
 #endif /* COSM_RAYS */
 
 contains
@@ -53,7 +53,7 @@ subroutine all_fluxes(flux,cfr,uu,bb,n)
 #endif /* DUST */
 
 #ifdef COSM_RAYS
-    use cosmic_rays, only : nvar_crs
+    use fluidindex, only : nvar_crs
 #endif /* COSM_RAYS */
 
     implicit none

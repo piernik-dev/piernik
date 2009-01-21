@@ -16,7 +16,7 @@ module initfluids
 #endif /* DUST */  
 
 #ifdef COSM_RAYS    
-  use initcr, only : init_cr
+  use initcosmicrays, only : init_cosmicrays
 #endif /* COSM_RAYS */  
 
   contains
@@ -37,7 +37,7 @@ module initfluids
 #endif /* DUST */  
 
 #ifdef COSM_RAYS
-  call init_cr
+  call init_cosmicrays
 #endif /* COSM_RAYS */  
 
 

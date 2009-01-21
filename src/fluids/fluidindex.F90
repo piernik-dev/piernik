@@ -7,7 +7,7 @@ module fluidindex
    
    integer             :: nmag
    integer, parameter  :: ibx=1,iby=2,ibz=3
-   integer, parameter  :: idn = 1,imx=2,imy=3,imz=4,ien=5,icr=1
+   integer, parameter  :: idn=1,imx=2,imy=3,imz=4,ien=5,icr=1
    integer             :: nvar,ncomponents,nfluid,nadiab
 
    
@@ -36,11 +36,11 @@ module fluidindex
 #endif /* NEUTRAL */
 
 #ifdef DUST
-   integer :: nvar_dust,beg_dust,end_dust,i_dust
+   integer :: nvar_dst,beg_dst,end_dst,i_dst
 #endif /* DUST */
    
 #ifdef COSM_RAYS
-   integer :: nvar_cr,beg_cr,end_cr,i_cr
+   integer :: nvar_crs,beg_crs,end_crs,i_crs
 #endif /* COSM_RAYS */
 
 
@@ -49,33 +49,33 @@ module fluidindex
     subroutine fluid_index
    
 #ifdef IONIZED
-      use initionized, only   : ionized_index
-      use initionized, only   : iarr_ion_swpx, iarr_ion_swpy, iarr_ion_swpz
-      use initionized, only   : idni,imxi,imyi,imzi
+      use initionized,    only : ionized_index
+      use initionized,    only : iarr_ion_swpx, iarr_ion_swpy, iarr_ion_swpz
+      use initionized,    only : idni,imxi,imyi,imzi
 #ifndef ISO
-      use initionized, only   : ieni
+      use initionized,    only : ieni
 #endif /* ISO */ 
 #endif /* IONIZED */
 
 #ifdef NEUTRAL
-      use initneutral, only   : neutral_index
-      use initneutral, only   : iarr_neu_swpx, iarr_neu_swpy, iarr_neu_swpz
-      use initneutral, only   : idnn,imxn,imyn,imzn
+      use initneutral,    only : neutral_index
+      use initneutral,    only : iarr_neu_swpx, iarr_neu_swpy, iarr_neu_swpz
+      use initneutral,    only : idnn,imxn,imyn,imzn
 #ifndef ISO 
-      use initneutral, only   : ienn
+      use initneutral,    only : ienn
 #endif /* ISO */      
 #endif /* NEUTRAL */
 
 #ifdef DUST
-      use initdust, only   : dust_index
-      use initdust, only   : iarr_dst_swpx, iarr_dst_swpy, iarr_dst_swpz
-      use initdust, only   : idnd,imxd,imyd,imzd      
+      use initdust,       only : dust_index
+      use initdust,       only : iarr_dst_swpx, iarr_dst_swpy, iarr_dst_swpz
+      use initdust,       only : idnd,imxd,imyd,imzd      
 #endif /* DUST */
 
 #ifdef COSM_RAYS
-      use initcr, only  : dust_index
-      use initcr, only  : iarr_crs_swpx, iarr_crs_swpy, iarr_crs_swpz
-      use initcr, only  : iecr           
+      use initcosmicrays, only : cosmicray_index
+      use initcosmicrays, only : iarr_crs_swpx, iarr_crs_swpy, iarr_crs_swpz
+      use initcosmicrays, only : iecr           
 #endif /* COSM_RAYS */
 
       implicit none
@@ -127,7 +127,7 @@ module fluidindex
 #ifdef COSM_RAYS
       nvar_cr   = 0
       beg_cr = nvar + 1
-      call cr_index(nvar,nvar_cr)  
+      call cosmicray_index(nvar,nvar_cr)  
       end_cr = nvar   
       ncomponents  = ncomponents + 1   
       i_cr = ncomponents                
@@ -182,9 +182,9 @@ module fluidindex
 #endif /* NEUTRAL */
       
 #ifdef DUST
-      iarr_all_swpx(beg_dust:end_dust) = iarr_dust_swpx
-      iarr_all_swpy(beg_dust:end_dust) = iarr_dust_swpy
-      iarr_all_swpz(beg_dust:end_dust) = iarr_dust_swpz    
+      iarr_all_swpx(beg_dst:end_dst) = iarr_dst_swpx
+      iarr_all_swpy(beg_dst:end_dst) = iarr_dst_swpy
+      iarr_all_swpz(beg_dst:end_dst) = iarr_dst_swpz    
 
       iarr_all_dn(i_dust)    = idnd
       iarr_all_mx(i_dust)    = imxd
@@ -193,11 +193,11 @@ module fluidindex
 #endif /* DUST */
       
 #ifdef COSM_RAYS      
-      iarr_all_swpx(beg_cr:end_cr) = iarr_cr_swpx
-      iarr_all_swpy(beg_cr:end_cr) = iarr_cr_swpy
-      iarr_all_swpz(beg_cr:end_cr) = iarr_cr_swpz    
+      iarr_all_swpx(beg_crs:end_crs) = iarr_crs_swpx
+      iarr_all_swpy(beg_crs:end_crs) = iarr_crs_swpy
+      iarr_all_swpz(beg_crs:end_crs) = iarr_crs_swpz    
 
-      iarr_all_cr(1:nvar_cr) = iecr 
+      iarr_all_cr(1:nvar_crs) = iecr 
 #endif /* COSM_RAYS */
    
 !      write(*,*) 'fluid_index', iarr_ion_swpx
