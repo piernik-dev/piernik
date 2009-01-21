@@ -37,7 +37,7 @@ program mhd
 #ifdef MAGNETIC  
   use mag_boundaries, only   : compute_b_bnd
 #ifdef RESISTIVE
-  use resistivity
+  use resistivity, only : init_resistivity
 #endif /* RESISTIVE */
 #endif /* MAGNETIC */
 
@@ -92,6 +92,10 @@ program mhd
   call mpi_bnd_prep
 
   call init_dataio
+
+#ifdef RESISTIVE
+  call init_resistivity
+#endif /* RESISTIVE */
 
 #ifdef SHEAR
   call init_shear

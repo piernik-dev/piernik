@@ -26,9 +26,6 @@ module start
 
   real, dimension(1) :: gamma   !!! do poprawy
 
-  real    cfl_resist, eta_0, eta_1, j_crit, deint_max
-  integer eta_scale
-
   real  dt_cr
 
   real h_sn, r_sn, f_sn_kpc2, amp_dip_sn, snenerg, snemass, sn1time, sn2time, r0sn
@@ -57,10 +54,6 @@ contains
                               integration_order, &
                               dimensions
 
-#ifdef RESISTIVE
-  namelist /RESISTIVITY/ cfl_resist, eta_0, eta_1, eta_scale, j_crit, deint_max
-#endif /* RESISTIVE */
-
 #ifdef SN_SRC
   namelist /SN_PARAMS/ h_sn, r_sn, f_sn_kpc2, amp_dip_sn, howmulti
 #endif /* SN_SRC */
@@ -83,15 +76,6 @@ contains
     smallei = 1.e-10
     integration_order  = 2
     dimensions = '3d'
-
-#ifdef RESISTIVE
-    cfl_resist  =  0.4
-    eta_0       =  0.0
-    eta_1       =  0.0
-    eta_scale   =  4
-    j_crit      =  1.0e6
-    deint_max   = 0.01
-#endif /* RESISTIVE */
 
 #ifdef COSM_RAYS
     cr_active  = 1.0
@@ -130,9 +114,6 @@ contains
       open(1,file=par_file)
         read(unit=1,nml=END_CONTROL)
         read(unit=1,nml=NUMERICAL_SETUP)
-#ifdef RESISTIVE
-        read(unit=1,nml=RESISTIVITY)
-#endif /* RESISTIVE */
 #ifdef SN_SRC
         read(unit=1,nml=SN_PARAMS)
 #endif /* SN_SRC */
@@ -145,9 +126,6 @@ contains
       open(3, file=tmp_log_file, position='append')
         write(unit=3,nml=END_CONTROL)
         write(unit=3,nml=NUMERICAL_SETUP)
-#ifdef RESISTIVE
-        write(unit=3,nml=RESISTIVITY)
-#endif /* RESISTIVE */
 #ifdef SN_SRC
         write(unit=3,nml=SN_PARAMS)
 #endif /* SN_SRC */
@@ -183,18 +161,6 @@ contains
       cbuff(82) = dimensions
 
       ibuff(80) = integration_order
-
-#ifdef RESISTIVE
-!   namelist /RESISTIVITY/ cfl_resist, eta_0, eta_1, j_crit
-
-       ibuff(120) = eta_scale
-
-       rbuff(120) = cfl_resist
-       rbuff(121) = eta_0
-       rbuff(122) = eta_1
-       rbuff(123) = j_crit
-       rbuff(124) = deint_max
-#endif /* RESISTIVE */
 
 #ifdef SN_SRC
 !  namelist /SN_PARAMS/ h_sn, r_sn, f_sn_kpc2, amp_dip_sn, howmulti
@@ -253,18 +219,6 @@ contains
       dimensions          = cbuff(82)(1:16)
 
       integration_order   = ibuff(80)
-
-#ifdef RESISTIVE
-!   namelist /RESISTIVITY/ cfl_resist, eta_0, eta_1, j_crit
-
-       eta_scale          = ibuff(120)
-
-       cfl_resist         = rbuff(120)
-       eta_0              = rbuff(121)
-       eta_1              = rbuff(122)
-       j_crit             = rbuff(123)
-       deint_max          = rbuff(124)
-#endif /* RESISTIVE */
 
 !#ifdef COSM_RAYS
 !  namelist /COSMIC_RAYS/ cr_active, gamma_cr, cr_eff, beta_cr, K_cr_paral, K_cr_perp,&
@@ -335,14 +289,6 @@ contains
       case default
         stop '"dimensions" must be one of the following: "3d","2dxy"'
     end select
-
-
-#ifdef RESISTIVE
-      if(eta_scale .lt. 0) then
-        write(*,*) 'eta_scale must be greater or equal 0'
-        stop
-      endif
-#endif /* RESISTIVE */
 
   end subroutine read_params
 
