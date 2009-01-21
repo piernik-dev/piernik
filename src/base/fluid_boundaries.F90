@@ -34,8 +34,7 @@ subroutine bnd_u(dim)
 #endif /* ISO */
 
 #ifdef GRAV
-  use gravity, only : grav_accel
-  use start, only : nsub, tune_zeq_bnd
+  use gravity, only : grav_accel, nsub, tune_zeq_bnd
 #endif /* GRAV */
 
 #ifdef SHEAR

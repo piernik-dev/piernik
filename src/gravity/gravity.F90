@@ -5,9 +5,106 @@ module gravity
 
    use constants
 
-   character gp_status*9
+   character(LEN=9) :: gp_status
+   real    :: g_z, g_y, dg_dz, r_gc
+   real    :: ptmass, ptm_x, ptm_y, ptm_z, r_smooth
+   integer :: nsub
+   real    :: h_grav,  r_grav
+   integer :: n_gravh, n_gravr, n_gravr2
+   real    :: tune_zeq, tune_zeq_bnd
+
 
    contains
+
+   subroutine init_grav
+      use mpi_setup
+      implicit none
+      character(LEN=100) :: par_file, tmp_log_file
+
+      namelist /GRAVITY/ g_z,g_y, dg_dz, r_gc, &
+                     ptmass,ptm_x,ptm_y,ptm_z,r_smooth, &
+                     nsub, tune_zeq, tune_zeq_bnd,      &
+                     h_grav, r_grav, n_gravr, n_gravr2, n_gravh
+
+      par_file = trim(cwd)//'/problem.par'
+      tmp_log_file = trim(cwd)//'/tmp.log'
+
+      g_z     = 0.0
+      g_y     = 0.0
+      dg_dz   = 0.0
+      r_gc    = 8500
+      ptmass  = 0.0
+      ptm_x   = 0.0
+      ptm_y   = 0.0
+      ptm_z   = 0.0
+      r_smooth= 0.0
+      nsub    = 10
+      tune_zeq     = 1.0
+      tune_zeq_bnd = 1.0
+      h_grav = 1.e6
+      r_grav = 1.e6
+      n_gravr = 0
+      n_gravr2= 0
+      n_gravh = 0
+
+      if(proc .eq. 0) then
+         open(1,file=par_file)
+            read(unit=1,nml=GRAVITY)
+         close(1)
+         open(3, file=tmp_log_file, position='append')
+            write(unit=3,nml=GRAVITY)
+         close(3)
+
+         ibuff(1)  = nsub
+         ibuff(2)  = n_gravr
+         ibuff(3)  = n_gravr2
+         ibuff(4)  = n_gravh
+
+         rbuff(1)  = g_z
+         rbuff(2)  = g_y
+         rbuff(3)  = dg_dz
+         rbuff(4)  = r_gc
+         rbuff(5)  = ptmass
+         rbuff(6)  = ptm_x
+         rbuff(7)  = ptm_y
+         rbuff(8)  = ptm_z
+         rbuff(9)  = tune_zeq
+         rbuff(10) = tune_zeq_bnd
+         rbuff(11) = r_smooth
+         rbuff(12) = h_grav
+         rbuff(13) = r_grav
+
+         call MPI_BCAST(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
+         call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+
+     else
+
+         call MPI_BCAST(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
+         call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+
+         nsub                = ibuff(1)
+         n_gravr             = ibuff(2)
+         n_gravr2            = ibuff(3)
+         n_gravh             = ibuff(4)
+
+         g_z                 = rbuff(1)
+         g_y                 = rbuff(2)
+         dg_dz               = rbuff(3)
+         r_gc                = rbuff(4)
+         ptmass              = rbuff(5)
+         ptm_x               = rbuff(6)
+         ptm_y               = rbuff(7)
+         ptm_z               = rbuff(8)
+         tune_zeq            = rbuff(9)
+         tune_zeq_bnd        = rbuff(10)
+         r_smooth            = rbuff(11)
+         h_grav              = rbuff(12)
+         r_grav              = rbuff(13)
+
+      endif
+
+
+   end subroutine init_grav
 
 !--------------------------------------------------------------------------
    subroutine grav_pot_3d
@@ -38,7 +135,7 @@ module gravity
 !--------------------------------------------------------------------------
    subroutine grav_pot(sweep, i1,i2, xsw, n, gpot,status,temp_log)
 #if defined GRAV_PTMASS || defined GRAV_PTFLAT || defined GRAV_PTMASSPURE
-      use start,  only : r_smooth,csim2,ptm_x,ptm_y,ptm_z,ptmass,n_gravr,h_grav,r_grav,smalld
+      use start,  only : csim2,smalld
       use grid, only : x,y,z
 #endif /* GRAV_PTMASS || GRAV_PTFLAT || GRAV_PTMASSPURE */
 #ifdef GRAV_USER
@@ -154,15 +251,11 @@ module gravity
 
    subroutine grav_accel(sweep, i1,i2, xsw, n, grav)
       use grid, only : nb
-      use start, only  : h_grav, n_gravh,r_gc
       use arrays, only : gp
       use grid, only :   x,y,z,dl,xdim,ydim,zdim,nx,ny,nz
       use grid, only :   is,ie,js,je,ks,ke, xr,yr,zr
-#ifdef GRAV_GALACTIC
-      use start, only : r_gc
-#endif /* GRAV_GALACTIC */
 #if defined GRAV_PTMASS || GRAV_PTFLAT
-      use start, only : r_smooth,csim2,ptm_x,ptm_y,ptm_z,ptmass,n_gravr,h_grav,r_grav,smalld
+      use start, only : csim2,smalld
 #endif /* GRAV_PTMASS || GRAV_PTFLAT */
 #if defined GRAV_ACC_USER
       use gravity_user, only : grav_accel_user

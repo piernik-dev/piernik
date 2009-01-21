@@ -20,24 +20,11 @@ module start
 
   real cfl, smalld, smallei
 
-  real tune_zeq, tune_zeq_bnd
   character*16 dimensions
   integer integration_order, istep
   real rorder
 
   real, dimension(1) :: gamma   !!! do poprawy
-
-  character*3 gpt_hdf
-  real :: g_z, g_y
-  real dg_dz
-  real r_gc
-  real ptmass, ptm_x, ptm_y, ptm_z, r_smooth
-  integer nsub
-  real    h_grav,  r_grav
-  integer n_gravh, n_gravr, n_gravr2
-
-  real G_uv1, G_sup1, cfl_coolheat, esrc_lower_lim, esrc_upper_lim
-  logical gravaccel
 
   real    cfl_resist, eta_0, eta_1, j_crit, deint_max
   integer eta_scale
@@ -70,17 +57,6 @@ contains
                               integration_order, &
                               dimensions
 
-#ifdef GRAV
-  namelist /GRAVITY/ gpt_hdf,  &
-                     g_z,   &
-                     g_y,   &
-                     dg_dz, &
-                     r_gc,  &
-                     ptmass,ptm_x,ptm_y,ptm_z,r_smooth, &
-                     nsub, tune_zeq, tune_zeq_bnd,      &
-                     h_grav, r_grav, n_gravr, n_gravr2, n_gravh
-#endif /* GRAV */
-
 #ifdef RESISTIVE
   namelist /RESISTIVITY/ cfl_resist, eta_0, eta_1, eta_scale, j_crit, deint_max
 #endif /* RESISTIVE */
@@ -107,27 +83,6 @@ contains
     smallei = 1.e-10
     integration_order  = 2
     dimensions = '3d'
-
-#ifdef GRAV
-    gpt_hdf = 'no'
-    g_z     = 0.0
-    g_y     = 0.0
-    dg_dz   = 0.0
-    r_gc    = 8500
-    ptmass  = 0.0
-    ptm_x   = 0.0
-    ptm_y   = 0.0
-    ptm_z   = 0.0
-    r_smooth= 0.0
-    nsub    = 10
-    tune_zeq     = 1.0
-    tune_zeq_bnd = 1.0
-    h_grav = 1.e6
-    r_grav = 1.e6
-    n_gravr = 0
-    n_gravr2= 0
-    n_gravh = 0
-#endif /* GRAV */
 
 #ifdef RESISTIVE
     cfl_resist  =  0.4
@@ -175,9 +130,6 @@ contains
       open(1,file=par_file)
         read(unit=1,nml=END_CONTROL)
         read(unit=1,nml=NUMERICAL_SETUP)
-#ifdef GRAV
-        read(unit=1,nml=GRAVITY)
-#endif /* GRAV */
 #ifdef RESISTIVE
         read(unit=1,nml=RESISTIVITY)
 #endif /* RESISTIVE */
@@ -193,9 +145,6 @@ contains
       open(3, file=tmp_log_file, position='append')
         write(unit=3,nml=END_CONTROL)
         write(unit=3,nml=NUMERICAL_SETUP)
-#ifdef GRAV
-        write(unit=3,nml=GRAVITY)
-#endif /* GRAV */
 #ifdef RESISTIVE
         write(unit=3,nml=RESISTIVITY)
 #endif /* RESISTIVE */
@@ -234,34 +183,6 @@ contains
       cbuff(82) = dimensions
 
       ibuff(80) = integration_order
-
-#ifdef GRAV
-!  namelist /GRAVITY/ gpt_hdf, g_z, g_y, dg_dz, r_gc,
-!                     ptmass,ptm_x,ptm_y,ptm_z,r_smooth, nsub,
-!                     tune_zeq, tune_zeq_bnd,
-!                     h_grav, r_grav, n_gravr, n_gravr2, n_gravh
-
-      ibuff(90) = nsub
-      ibuff(91) = n_gravr
-      ibuff(92) = n_gravr2
-      ibuff(93) = n_gravh
-
-      cbuff(90) = gpt_hdf
-
-      rbuff(90)  = g_z
-      rbuff(185) = g_y
-      rbuff(91)  = dg_dz
-      rbuff(92)  = r_gc
-      rbuff(93)  = ptmass
-      rbuff(94)  = ptm_x
-      rbuff(95)  = ptm_y
-      rbuff(96)  = ptm_z
-      rbuff(97)  = tune_zeq
-      rbuff(98)  = tune_zeq_bnd
-      rbuff(99)  = r_smooth
-      rbuff(100) = h_grav
-      rbuff(101) = r_grav
-#endif /* GRAV */
 
 #ifdef RESISTIVE
 !   namelist /RESISTIVITY/ cfl_resist, eta_0, eta_1, j_crit
@@ -332,35 +253,6 @@ contains
       dimensions          = cbuff(82)(1:16)
 
       integration_order   = ibuff(80)
-
-#ifdef GRAV
-!  namelist /GRAVITY/ gpt_hdf,  g_z, g_y, dg_dz, r_gc,
-!                     ptmass,ptm_x,ptm_y,ptm_z,r_smooth
-!                     tune_zeq, tune_zeq_bnd,
-!                     h_gravity_profile, r_gravity_profile, n_gravity_profile
-!                     h_grav, r_grav, n_gravr, n_gravh
-
-      nsub                = ibuff(90)
-      n_gravr             = ibuff(91)
-      n_gravr2            = ibuff(92)
-      n_gravh             = ibuff(93)
-
-      gpt_hdf             = trim(cbuff(90))
-
-      g_z                 = rbuff(90)
-      g_y                 = rbuff(185)
-      dg_dz               = rbuff(91)
-      r_gc                = rbuff(92)
-      ptmass              = rbuff(93)
-      ptm_x               = rbuff(94)
-      ptm_y               = rbuff(95)
-      ptm_z               = rbuff(96)
-      tune_zeq            = rbuff(97)
-      tune_zeq_bnd        = rbuff(98)
-      r_smooth            = rbuff(99)
-      h_grav              = rbuff(100)
-      r_grav              = rbuff(101)
-#endif /* GRAV */
 
 #ifdef RESISTIVE
 !   namelist /RESISTIVITY/ cfl_resist, eta_0, eta_1, j_crit
@@ -444,12 +336,6 @@ contains
         stop '"dimensions" must be one of the following: "3d","2dxy"'
     end select
 
-
-#ifdef GRAV
-      gravaccel = .true.
-#else /* GRAV */
-      gravaccel = .false.
-#endif /* GRAV */
 
 #ifdef RESISTIVE
       if(eta_scale .lt. 0) then

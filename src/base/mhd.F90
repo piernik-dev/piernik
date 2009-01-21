@@ -49,8 +49,7 @@ program mhd
   use poisson_solver
 #endif /* SELF_GRAV */
 #ifdef GRAV
-  use gravity, only : grav_pot_3d
-  use start, only : gpt_hdf
+  use gravity, only : init_grav,grav_pot_3d
 #endif /* GRAV */
 #ifdef SNE_DISTR
     use sn_distr, only  : prepare_SNdistr
@@ -99,6 +98,7 @@ program mhd
 #endif /* SHEAR */
 
 #ifdef GRAV
+  call init_grav
   call grav_pot_3d
 #endif /* GRAV */
 
@@ -121,9 +121,6 @@ program mhd
     t_start     = 0.0
 
     call init_prob
-#ifdef GRAV
-    if(gpt_hdf .eq. 'yes') call write_data('gpt')
-#endif /* GRAV */
 
     call compute_u_bnd
     
