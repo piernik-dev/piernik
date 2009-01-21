@@ -10,9 +10,9 @@ module sweeps     ! split sweeps
     use fluidindex,   only : nmag
     use fluidindex,   only : ibx,iby,ibz
 
-    use start, only  : dimensions, dt
+    use start, only  : dt
     use arrays, only : u,b
-    use grid, only   : dx,nb,nx,ny,nz,ks,ke
+    use grid, only   : dx,nb,nx,ny,nz,ks,ke,nzd
     use rtvd, only     : relaxing_tvd
     use fluid_boundaries, only : compute_u_bnd 
 #ifdef COSM_RAYS
@@ -40,7 +40,7 @@ module sweeps     ! split sweeps
           b_x=0.5*b(:,:,j,k)
           b_x(ibx,1:nx-1)=b_x(ibx,1:nx-1)+b_x(ibx,2:nx);       b_x(ibx,nx) = b_x(ibx,nx-1)
           b_x(iby,:)=b_x(iby,:)+0.5*b(iby,:,jp,k)
-          if(dimensions .eq. '3d')  b_x(ibz,:)=b_x(ibz,:)+0.5*b(ibz,:,j,kp)
+          if(nzd /= 1)  b_x(ibz,:)=b_x(ibz,:)+0.5*b(ibz,:,j,kp)
 #endif /* MAGNETIC */
 
         u_x(iarr_all_swpx,:)=u(:,:,j,k)
@@ -61,9 +61,9 @@ module sweeps     ! split sweeps
     use fluidindex,   only : nmag
     use fluidindex, only : ibx,iby,ibz
     
-    use start, only  : dimensions, dt
+    use start, only  : dt
     use arrays, only : u,b
-    use grid, only   : dy,nb,nx,ny,nz,ks,ke
+    use grid, only   : dy,nb,nx,ny,nz,ks,ke,nzd
     use rtvd, only     : relaxing_tvd
     use fluid_boundaries, only : compute_u_bnd 
 #ifdef COSM_RAYS
@@ -92,7 +92,7 @@ module sweeps     ! split sweeps
           b_y(:,:)=b(:,i,:,k)/2
           b_y(ibx,:)=b_y(ibx,:)+b(ibx,ip,:,k)/2
           b_y(iby,1:ny-1)=b_y(iby,1:ny-1)+b_y(iby,2:ny);       b_y(iby,ny) = b_y(iby,ny-1)
-          if (dimensions .eq. '3d') b_y(ibz,:)=b_y(ibz,:)+b(ibz,i,:,kp)/2
+          if (nzd /= 1) b_y(ibz,:)=b_y(ibz,:)+b(ibz,i,:,kp)/2
           b_y((/iby,ibx,ibz/),:)=b_y(:,:)
 #endif /* MAGNETIC */
 
@@ -115,9 +115,9 @@ module sweeps     ! split sweeps
     use fluidindex, only   : nmag
     use fluidindex, only : ibx,iby,ibz
 
-    use start, only  : dimensions, dt
+    use start, only  : dt
     use arrays, only : u,b
-    use grid, only   : dz,nb,nx,ny,nz,ks,ke
+    use grid, only   : dz,nb,nx,ny,nz,ks,ke,nzd
     use rtvd, only     : relaxing_tvd
     use fluid_boundaries, only : compute_u_bnd 
 #ifdef COSM_RAYS

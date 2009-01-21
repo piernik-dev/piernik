@@ -6,8 +6,7 @@ contains
     use mpi_setup
     use fluidindex, only  : nvar
     use arrays, only : u
-    use grid, only : nb,nx,ny,nz,nxb,nyb,nzb
-    use start, only  : dimensions
+    use grid, only : nb,nx,ny,nz,nxb,nyb,nzb,nzd
 
     implicit none
     integer, dimension(4) :: sizes, subsizes, starts
@@ -126,7 +125,7 @@ contains
 !------------------------!
 !   Z dimension - fluid  !
 !------------------------!
-  if(dimensions .eq. '3d') then
+  if(nzd /= 1) then
     sizes    = (/nvar,nx,ny,nz/)
     subsizes = (/nvar,nx,ny,nb/)
     starts   = (/0,0,0,0/)

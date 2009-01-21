@@ -255,11 +255,11 @@ module sn_sources
 
    subroutine rand_coords(pos)
 ! Written by M. Hanasz
-      use start,  only : h_sn,dimensions
+      use start,  only : h_sn
       use grid,   only : Lx,Ly,xmin,ymin
 #ifdef SHEAR
       use arrays, only : y,js,je
-      use grid,   only : dy,nyd
+      use grid,   only : dy,nyd,nzd
 
       integer :: jsn,jremap
       real :: dysn
@@ -273,7 +273,7 @@ module sn_sources
       xsn = xmin+ Lx*rand(1)
       ysn = ymin+ Ly*rand(2)
 
-      if(dimensions == '3d') then
+      if(nzd /= 1) then
          irand = irand+4
          znorm = gasdev(rand(3), rand(4))
          zsn = h_sn*znorm

@@ -7,11 +7,12 @@ module mhdstep   ! SPLIT
   contains
 
 subroutine mhd_step
-  use start,  only : dimensions,dt,nstep,t
+  use start,  only : dt,nstep,t
   use dataio, only : nlog,ntsl,write_log,write_timeslice, dt_log, dt_tsl
   use timestep,   only : time_step
   use sweeps, only : sweepx,sweepy,sweepz
   use mpi_setup, only : proc
+  use grid, only : nzd
 
 #ifdef DEBUG
   use dataio, only : nhdf,write_hdf
@@ -116,7 +117,7 @@ subroutine mhd_step
 #endif /* DEBUG */
 #endif /* ONLYZSWEEP */
 
-    if(dimensions .eq. '3d') then
+    if(nzd /= 1) then
       call sweepz
       
 #ifdef MAGNETIC            
@@ -158,7 +159,7 @@ subroutine mhd_step
 
 
 !------------------- Z->Y->X ---------------------
-    if(dimensions .eq. '3d') then
+    if(nzd /= 1) then
 #ifdef COSM_RAYS
       call cr_diff_z
 #endif /* COSM_RAYS */
@@ -227,10 +228,9 @@ end subroutine mhd_step
 
 #ifdef MAGNETIC
   subroutine magfieldbyzx
-    use start,   only : dimensions
     use fluidindex, only : ibx,iby,ibz
     use arrays,  only : b
-    use grid, only : xdim,ydim,zdim
+    use grid, only : xdim,ydim,zdim,nzd
     use advects, only : advectby_x,advectbz_x
 
 
@@ -246,7 +246,7 @@ end subroutine mhd_step
 
       call mag_add(iby,xdim,ibx,ydim)     
 
-    if(dimensions .eq. '3d') then
+    if(nzd /= 1) then
 
       call advectbz_x
 
@@ -263,17 +263,16 @@ end subroutine mhd_step
 !------------------------------------------------------------------------------------------
 
   subroutine magfieldbzxy
-    use start,   only : dimensions
     use fluidindex, only : ibx,iby,ibz
     use arrays,  only : b
-    use grid, only : xdim,ydim,zdim
+    use grid, only : xdim,ydim,zdim,nzd
     use advects, only : advectbx_y,advectbz_y
 
 #ifdef RESISTIVE
     use resistivity, only : diffusebx_y,diffusebz_y
 #endif /* RESISTIVE */
 
-    if(dimensions .eq. '3d') then
+    if(nzd /= 1) then
 
       call advectbz_y
       
@@ -298,10 +297,9 @@ end subroutine mhd_step
 !------------------------------------------------------------------------------------------
 
   subroutine magfieldbxyz
-    use start,   only : dimensions
     use fluidindex, only : ibx,iby,ibz
     use arrays,  only : b
-    use grid, only : xdim,ydim,zdim
+    use grid, only : xdim,ydim,zdim,nzd
     use advects, only : advectbx_z,advectby_z
 
 #ifdef RESISTIVE

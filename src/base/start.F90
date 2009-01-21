@@ -10,17 +10,15 @@ module start
 
   implicit none
 
-
   real t,dt
   integer nstep
   integer nstep_start
 
   real tend
-  integer nend, maxxyz
+  integer nend
 
   real cfl, smalld, smallei
 
-  character*16 dimensions
   integer integration_order, istep
   real rorder
 
@@ -51,8 +49,7 @@ contains
     namelist /END_CONTROL/ nend, tend
 
     namelist /NUMERICAL_SETUP/  cfl, smalld, smallei, &
-                              integration_order, &
-                              dimensions
+                              integration_order
 
 #ifdef SN_SRC
   namelist /SN_PARAMS/ h_sn, r_sn, f_sn_kpc2, amp_dip_sn, howmulti
@@ -75,7 +72,6 @@ contains
     smalld  = 1.e-10
     smallei = 1.e-10
     integration_order  = 2
-    dimensions = '3d'
 
 #ifdef COSM_RAYS
     cr_active  = 1.0
@@ -151,14 +147,10 @@ contains
 !
 !  namelist /NUMERICAL_SETUP/  cfl, smalld, smallei,
 !                              flux_limiter, freezing_speed,
-!                              integration_order,
-!                              dimensions, nu_bulk, cfl_visc
-!                              floor_vz, ceil_vz, cfl_colls
+!                              integration_order
       rbuff(80) = cfl
       rbuff(83) = smalld
       rbuff(84) = smallei
-
-      cbuff(82) = dimensions
 
       ibuff(80) = integration_order
 
@@ -208,15 +200,11 @@ contains
 !  namelist /NUMERICAL_SETUP/  cfl, smalld, smallei,
 !                              flux_limiter, freezing_speed,
 !                              integration_order,
-!                              dimensions, magnetic, nu_bulk, cfl_visc
 !                              floor_vz, ceil_vz , cfl_colls
 
       cfl                 = rbuff(80)
       smalld              = rbuff(83)
       smallei             = rbuff(84)
-
-
-      dimensions          = cbuff(82)(1:16)
 
       integration_order   = ibuff(80)
 
@@ -282,13 +270,6 @@ contains
     if(integration_order .gt. 2) then
       stop 'For "ORIG" scheme integration_order must be 1 or 2'
     endif
-
-    select case (dimensions)
-      case('3d','2dxy')
-        !do nothing
-      case default
-        stop '"dimensions" must be one of the following: "3d","2dxy"'
-    end select
 
   end subroutine read_params
 

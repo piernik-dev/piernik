@@ -15,7 +15,7 @@ contains
 subroutine bnd_u(dim)
   use mpi_setup
   use start,  only : smalld, smallei, bnd_xl, bnd_xr, bnd_yl, bnd_yr
-  use start,  only : bnd_zl, bnd_zr, dimensions
+  use start,  only : bnd_zl, bnd_zr
   use grid,   only : nb, nxd, nyd, nzd,x,y,z,nzb,nyb,nxb,nx,ny,nz
   use fluidindex, only : nvar, iarr_all_dn,iarr_all_mx,iarr_all_my,iarr_all_mz, nfluid
   use arrays, only : u, b, bndxrar, bndyrar
@@ -920,11 +920,11 @@ subroutine bnd_u(dim)
 end subroutine bnd_u
 
   subroutine compute_u_bnd
-   use start,  only : dimensions
+   use grid,  only : nzd
    implicit none
    call bnd_u('xdim')
    call bnd_u('ydim')
-   if(dimensions .eq. '3d') call bnd_u('zdim')
+   if(nzd /= 1) call bnd_u('zdim')
 
   end subroutine compute_u_bnd
 

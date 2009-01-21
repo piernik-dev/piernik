@@ -11,6 +11,7 @@ module grid
    integer :: nxb, nyb, nzb
    integer :: nxt, nyt, nzt
    integer :: is, ie, js, je, ks, ke
+   integer :: maxxyz
 
    real    :: xmin, xmax, ymin, ymax, zmin, zmax
    real    :: xminb, xmaxb, yminb, ymaxb, zminb, zmaxb
@@ -138,7 +139,6 @@ contains
 
   subroutine grid_xyz
     use mpi_setup
-    use start, only  : dimensions, maxxyz
 
     implicit none
     integer i,j,k

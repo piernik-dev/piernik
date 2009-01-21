@@ -5,12 +5,12 @@ module advects
   contains
 
   subroutine advectby_x
-    use start,  only : dimensions,dt
+    use start,  only : dt
     use fluidindex,   only : nfluid
     use fluidindex, only : ibx,iby,ibz
     use initionized, only : idni,imxi
     use arrays, only : b,u,wa
-    use grid,   only : dx,nx,ny,nz
+    use grid,   only : dx,nx,ny,nz,nzd
     use rtvd,     only : tvdb
     use mag_boundaries, only : bnd_emf
 
@@ -38,17 +38,17 @@ module advects
 
     call bnd_emf(wa, 'vxby', 'xdim')
     call bnd_emf(wa, 'vxby', 'ydim')
-    if(dimensions .eq. '3d') call bnd_emf(wa, 'vxby', 'zdim')
+    if(nzd /= 1) call bnd_emf(wa, 'vxby', 'zdim')
 
   end subroutine advectby_x
 
   subroutine advectbz_x
-    use start,  only : dimensions,dt
+    use start,  only : dt
     use fluidindex,   only : nfluid
     use fluidindex, only : ibx,iby,ibz
     use initionized, only : idni,imxi
     use arrays, only : b,u,wa
-    use grid,   only : dx,nx,ny,nz
+    use grid,   only : dx,nx,ny,nz,nzd
     use rtvd,   only : tvdb
     use mag_boundaries, only : bnd_emf
 
@@ -76,17 +76,17 @@ module advects
 
     call bnd_emf(wa, 'vxbz', 'xdim')
     call bnd_emf(wa, 'vxbz', 'ydim')
-    if(dimensions .eq. '3d') call bnd_emf(wa, 'vxbz', 'zdim')
+    if(nzd /= 1) call bnd_emf(wa, 'vxbz', 'zdim')
 
   end subroutine advectbz_x
 
   subroutine advectbz_y
-    use start,  only : dimensions,dt
+    use start,  only : dt
     use fluidindex,   only : nfluid
     use fluidindex, only : ibx,iby,ibz
     use initionized, only : idni,imyi
     use arrays, only : b,u,wa
-    use grid,   only : dy,nx,ny,nz
+    use grid,   only : dy,nx,ny,nz,nzd
     use rtvd,   only : tvdb
     use mag_boundaries, only : bnd_emf
 
@@ -113,18 +113,18 @@ module advects
     end do
 
     call bnd_emf(wa, 'vybz', 'ydim')
-    if(dimensions .eq. '3d') call bnd_emf(wa, 'vybz', 'zdim')
+    if(nzd /= 1) call bnd_emf(wa, 'vybz', 'zdim')
     call bnd_emf(wa, 'vybz', 'xdim')
 
   end subroutine advectbz_y
 
   subroutine advectbx_y
-    use start,  only : dimensions,dt
+    use start,  only : dt
     use fluidindex,   only : nfluid
     use fluidindex, only : ibx,iby,ibz
     use initionized, only : idni,imyi
     use arrays, only : b,u,wa
-    use grid,   only : dy,nx,ny,nz
+    use grid,   only : dy,nx,ny,nz,nzd
     use rtvd,     only : tvdb
     use mag_boundaries, only : bnd_emf
 
@@ -151,18 +151,18 @@ module advects
     end do
 
     call bnd_emf(wa, 'vybx', 'ydim')
-    if(dimensions .eq. '3d') call bnd_emf(wa, 'vybx', 'zdim')
+    if(nzd /= 1) call bnd_emf(wa, 'vybx', 'zdim')
     call bnd_emf(wa, 'vybx', 'xdim')
 
   end subroutine advectbx_y
 
   subroutine advectbx_z
-    use start,  only : dimensions,dt
+    use start,  only : dt
     use fluidindex,   only : nfluid
     use fluidindex, only : ibx,iby,ibz
     use initionized, only : idni,imzi
     use arrays, only : b,u,wa
-    use grid,   only : dz,nx,ny,nz
+    use grid,   only : dz,nx,ny,nz,nzd
     use rtvd,     only : tvdb
     use mag_boundaries, only : bnd_emf
 
@@ -188,19 +188,19 @@ module advects
       end do
     end do
 
-    if(dimensions .eq. '3d') call bnd_emf(wa, 'vzbx', 'zdim')
+    if(nzd /= 1) call bnd_emf(wa, 'vzbx', 'zdim')
     call bnd_emf(wa, 'vzbx', 'xdim')
     call bnd_emf(wa, 'vzbx', 'ydim')
 
   end subroutine advectbx_z
 
   subroutine advectby_z
-    use start,  only : dimensions,dt
+    use start,  only : dt
     use fluidindex,   only : nfluid
     use fluidindex, only : ibx,iby,ibz
     use initionized, only : idni,imzi
     use arrays, only : b,u,wa
-    use grid,   only : dz,nx,ny,nz
+    use grid,   only : dz,nx,ny,nz,nzd
     use rtvd,     only : tvdb
     use mag_boundaries, only : bnd_emf
 
@@ -226,7 +226,7 @@ module advects
       end do
     end do
 
-    if(dimensions .eq. '3d') call bnd_emf(wa, 'vzby', 'zdim')
+    if(nzd /= 1) call bnd_emf(wa, 'vzby', 'zdim')
     call bnd_emf(wa, 'vzby', 'xdim')
     call bnd_emf(wa, 'vzby', 'ydim')
 
