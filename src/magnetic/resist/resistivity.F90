@@ -24,11 +24,28 @@ module resistivity
       real :: eta_max, dt_resist, dt_eint
       real :: eta_max_proc, eta_max_all
       integer, dimension(3) :: loc_eta_max
+!!!! temporary solution, one should _NOT_ allocate 7 arrays of size nx*ny*nz !!!!!!
+      real, dimension(:,:,:), allocatable :: w,wm,wp,dw,eta,b1
+      real, dimension(:,:,:), allocatable :: wb,etahelp
 
 contains
+      
+      subroutine cleanup_resistivity
+         implicit none
+         if(allocated(w)  ) deallocate(w)
+         if(allocated(wb) ) deallocate(wb)
+         if(allocated(wm) ) deallocate(wm)
+         if(allocated(wp) ) deallocate(wp)
+         if(allocated(dw) ) deallocate(dw)
+         if(allocated(eta)) deallocate(eta)
+         if(allocated(b1))  deallocate(b1)
+         if(allocated(etahelp)) deallocate(etahelp)
+
+      end subroutine cleanup_resistivity
 
       subroutine init_resistivity
          use mpi_setup
+         use grid, only : nx,ny,nz
          implicit none
          character(LEN=100) :: par_file, tmp_log_file
 
@@ -81,6 +98,14 @@ contains
             call mpistop
          endif
 
+         if(.not.allocated(w)  ) allocate(w(nx,ny,nz)  )
+         if(.not.allocated(wb) ) allocate(wb(nx,ny,nz) )
+         if(.not.allocated(wm) ) allocate(wm(nx,ny,nz) )
+         if(.not.allocated(wp) ) allocate(wp(nx,ny,nz) )
+         if(.not.allocated(dw) ) allocate(dw(nx,ny,nz) )
+         if(.not.allocated(eta)) allocate(eta(nx,ny,nz))
+         if(.not.allocated(etahelp)) allocate(etahelp(nx,ny,nz))
+         if(.not.allocated(b1) ) allocate(b1(nx,ny,nz) )
 
       end subroutine init_resistivity
 
@@ -92,8 +117,6 @@ contains
       implicit none
       integer,intent(in)                    :: ici
       real, dimension(nx,ny,nz), intent(inout) :: eta
-      real, dimension(:,:,:), allocatable   ::  wb,etahelp
-      allocate(wb(nx,ny,nz),etahelp(nx,ny,nz))
 
 !--- square current computing in cell corner step by step
 
@@ -173,8 +196,6 @@ contains
                         *wb(is:ie,js:je,ks:ke)+small) ))
 #endif /* ISO */
 
-      deallocate(wb,etahelp)
-
       if (ici .eq. icz) then
          eta(:,:,:)=0.5*(eta(:,:,:)+pshift(eta(:,:,:),zdim))
       elseif(ici .eq. icy) then
@@ -223,11 +244,8 @@ contains
 
     implicit none
     real                     :: di
-    real,dimension(:,:,:), allocatable :: w,wm,wp,dw,eta,b1
     integer                  :: ibi,ici,n
 
-    allocate(w(nx,ny,nz), wm(nx,ny,nz), wp(nx,ny,nz), dw(nx,ny,nz), eta(nx,ny,nz))
-    allocate(b1(nx,ny,nz))
 
     di = dl(n)
     eta = 0.0
@@ -247,7 +265,6 @@ contains
     dw = 0.
     where(wm*wp > 0.) dw=2.*wm*wp/(wm+wp)
     wcu = (w+dw)*dt
-    deallocate(w,wm,wp,dw,eta,b1)
   end subroutine tvdd
 
 !-------------------------------------------------------------------------------

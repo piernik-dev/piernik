@@ -37,7 +37,7 @@ program mhd
 #ifdef MAGNETIC  
   use mag_boundaries, only   : compute_b_bnd
 #ifdef RESISTIVE
-  use resistivity, only : init_resistivity
+  use resistivity, only : init_resistivity, cleanup_resistivity
 #endif /* RESISTIVE */
 #endif /* MAGNETIC */
 
@@ -247,6 +247,9 @@ program mhd
   call MPI_BARRIER(comm,ierr)
 
   call cleanup_grid
+#ifdef RESISTIVE
+  call cleanup_resistivity
+#endif /* RESISTIVE */
   call arrays_deallocate
 
   call MPI_BARRIER(comm,ierr)
