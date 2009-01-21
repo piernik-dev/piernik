@@ -93,6 +93,7 @@ contains
 
 
   character par_file*(100), tmp_log_file*(100)
+  namelist /END_CONTROL/ nend, tend
 
   namelist /NUMERICAL_SETUP/  cfl, smalld, smallei, &
 #ifdef VZ_LIMITS
