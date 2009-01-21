@@ -2,19 +2,13 @@
 
 
 module init_problem
-! ----------------------------------------- ! 
-! Initial condition for a 1D MHD shock tube !
-! Written by: K. Kowalik, Feb 2008          !
-! See: Stone, Hawley, Evans ApJ 388:415-437 !
-!    and reference therein                  !
-! ----------------------------------------- !
 
-  use arrays, only : x, u, b,x,y,z,nx,ny,nz, &
-      idna,imxa,imya,imza
+  use arrays, only : x, u, b,x,y,z,nx,ny,nz, xl, yl
+  use initionized, only : idni,imxi,imyi,imzi
 #ifndef ISO
-  use arrays, only : iena,xl,yl
+  use initionized, only : ieni, gamma_ion
 #endif /* ISO */
-  use start,  only : qshear, omega, proc, smallei, smalld, gamma, &
+  use start,  only : proc, smallei, smalld, &
       rbuff, cbuff, ibuff
   use mpi_setup
   use grid, only : dx,dy
@@ -126,24 +120,25 @@ contains
           vy  = dsin(dpi*xi)
           bx  = b0*vx
           by  = b0*dsin(fpi*xi)
+          bz  = 0.0
 
           
-          u(idna,i,j,k) = rho
+          u(idni,i,j,k) = rho
                           
-          u(imxa,i,j,k) = vx*u(idna,i,j,k)
-          u(imya,i,j,k) = vy*u(idna,i,j,k)
-          u(imza,i,j,k) = vz*u(idna,i,j,k)
+          u(imxi,i,j,k) = vx*u(idni,i,j,k)
+          u(imyi,i,j,k) = vy*u(idni,i,j,k)
+          u(imzi,i,j,k) = vz*u(idni,i,j,k)
 #ifndef ISO	  
-          u(iena,i,j,k) = pre/(gamma-1.0)
-          u(iena,i,j,k) = max(u(iena,i,j,k), smallei)
-          u(iena,i,j,k) = u(iena,i,j,k) +0.5*(vx**2+vy**2+vz**2)*u(idna,i,j,k)
+          u(ieni,i,j,k) = pre/(gamma_ion-1.0)
+          u(ieni,i,j,k) = max(u(ieni,i,j,k), smallei)
+          u(ieni,i,j,k) = u(ieni,i,j,k) +0.5*(vx**2+vy**2+vz**2)*u(idni,i,j,k)
 #endif /* ISO */
           b(1,i,j,k)  = bx
           b(2,i,j,k)  = by
           b(3,i,j,k)  = bz
 
 #ifndef ISO	  
-          u(iena,i,j,k)   = u(iena,i,j,k) +0.5*sum(b(:,i,j,k)**2,1)
+          u(ieni,i,j,k)   = u(ieni,i,j,k) +0.5*sum(b(:,i,j,k)**2,1)
 #endif /* ISO */
         enddo
       enddo
