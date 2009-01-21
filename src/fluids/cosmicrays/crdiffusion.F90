@@ -1,10 +1,10 @@
-! $Id$
+! $Id: cr_diffusion.F90 594 2009-01-21 12:33:44Z xarth $
 #include "piernik.def"
 
 ! Written by M. Hanasz, 2003
 ! Adapted for this code M. Hanasz, October 2007
 
-module cr_diffusion
+module crdiffusion
 
 
   use arrays
@@ -263,4 +263,4 @@ enddo
   end subroutine div_v
 
 
-end module cr_diffusion
+end module crdiffusion
