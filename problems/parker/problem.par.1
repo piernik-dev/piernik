@@ -1,0 +1,121 @@
+ $DOMAIN_SIZES
+    nxd = 5
+    nyd = 5
+    nzd = 100
+    nb  = 5
+ /  
+
+ $MPI_BLOCKS
+    pxsize = 1
+    pysize = 1
+    pzsize = 1    
+ /  
+
+ $START_CONTROL
+ /
+
+ $RESTART_CONTROL
+    restart  = 'last'
+    nrestart = 0 
+    new_id   = ''
+ /
+
+ $END_CONTROL
+    tend   = 100.0
+    nend   = 100000 
+ /
+
+ $OUTPUT_CONTROL
+    dt_hdf  = 1.0e0
+    dt_res  = 0.0e+2
+    dt_log  = 1.0e-6
+    dt_tsl  = 1.0e-6
+    vars(1) = 'dens'
+    vars(2) = 'velx'
+    vars(3) = 'vely'
+    vars(4) = 'velz'
+    vars(5) = 'magx'
+    vars(6) = 'magy'
+    vars(7) = 'magz'
+    vars(8) = 'encr'
+    domain  = 'full_domain'
+   
+ / 
+
+ $BOUNDARIES
+    bnd_xl = 'per'  
+    bnd_xr = 'per'  
+    bnd_yl = 'per'  
+    bnd_yr = 'per'  
+    bnd_zl = 'outh'  
+    bnd_zr = 'outh'
+ /
+
+ $DOMAIN_LIMITS
+    xmin   =-250.0
+    xmax   = 250.0
+    ymin   =-1000.0
+    ymax   = 1000.0
+    zmin   =-1500.0
+    zmax   = 1500.0
+ /
+
+ $EQUATION_OF_STATE
+    c_si   = 7.0
+    alpha  = 1.0 
+ /  
+
+ $NUMERICAL_SETUP
+    cfl    = 0.9
+    smalld = 1.e-4
+    smallei= 1.e-4
+    integration_order = 2
+  /
+ 
+ $GRAVITY
+    r_gc   = 8500
+    nsub   = 10
+    tune_zeq     = 1.0 !1.0025
+    tune_zeq_bnd = 0.7 !0.9
+    h_grav = 300.
+    n_gravh = 0    
+ /
+ 
+ $THERMAL
+ /
+ 
+ $RESISTIVITY
+    cfl_resist  =   0.9
+    eta_0   	=   0.0
+    eta_1       =   0.0
+    j_crit      = 1000.0
+    deint_max   =  0.01
+ /
+
+  $COSMIC_RAYS
+    cr_active    = 1.0      ! gdy 0 wtedy grad p_cr nie jest brany pod uwage w r.ruchu
+    cfl_cr       = 0.9      ! liczba couranta dla dyfuzji CR (wsp 0.5 w kodzie)
+    cr_eff       = 0.1      ! czesc energii SN (=10^51 erg) zamieniona w CR
+    gamma_cr     = 1.555555 ! wykl. adiabatyczny CR
+    K_cr_paral   = 1000.   ! wsp. dyfuzji CR wzdluz B
+    K_cr_perp    = 100.    ! wsp. dyfuzji CR wpoprzek B
+    beta_cr      = 1.0      ! okresla wklad CR w poczatkowej rownowadze (podobnie jak alfa dla B)
+    amp_cr       = 0.0      ! wybuch w init_problem w x0,y0,z0
+    smallecr     = 1.e-2    ! lower limit & outflow boundary value for ecr
+ /
+ 
+ $GALACTIC_PARAMS 
+ /
+     
+ $SHEARING
+ /
+ 
+ $PROBLEM_CONTROL
+    problem_name ='parker_instability'
+    run_id  =  'ts0'
+    d0      =   1.0
+    nbx0    =   0.
+    nby0    =   1.0
+    nbz0    =   0.
+    a_vp    =   0.0
+ /
