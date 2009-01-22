@@ -1,16 +1,14 @@
  $DOMAIN_SIZES
-    nxd = 50
-    nyd = 50
+    nxd = 20
+    nyd = 5
     nzd = 1
  /
+ 
  $MPI_BLOCKS
     pxsize = 1
     pysize = 1
     pzsize = 1    
  /  
-
- $START_CONTROL
- /
 
  $RESTART_CONTROL
     restart  = 'last'
@@ -19,12 +17,12 @@
  /
 
  $END_CONTROL
-    tend   = 0.04  !0.0015
+    tend   = 10.0 
     nend   = 10000
  /
 
  $OUTPUT_CONTROL
-    dt_hdf  = 0.001
+    dt_hdf  = 1.0
     dt_res  = 0.0
     dt_log  = 0.00001
     dt_tsl  = 0.001
@@ -41,70 +39,57 @@
  / 
 
  $BOUNDARIES
-    bnd_xl = 'out'  
-    bnd_xr = 'out'  
-    bnd_yl = 'out'  
-    bnd_yr = 'out'  
-    bnd_zl = 'out'  
-    bnd_zr = 'out'
+    bnd_xl = 'per'  
+    bnd_xr = 'per'  
+    bnd_yl = 'ref'  
+    bnd_yr = 'ref'  
+    bnd_zl = 'ref'  
+    bnd_zr = 'ref'
  /
 
  $DOMAIN_LIMITS
-    xmin   =-1.0
-    xmax   = 1.0
-    ymin   =-1.0
-    ymax   = 1.0
-    zmin   =-1.0
-    zmax   = 1.0
+    xmin   =-500.0
+    xmax   = 500.0
+    ymin   =-500.0
+    ymax   = 500.0
+    zmin   =-500.0
+    zmax   = 500.0
  /
-
- $EQUATION_OF_STATE
-
- /  
 
  $NUMERICAL_SETUP
     cfl    = 0.5
     smalld = 1.e-3
     smallei= 1.e-5
     integration_order = 2
-    magnetic = 'yes'
-    dimensions = '2dxy'
-    nu_bulk    = 10.0
-    cfl_visc   = 0.4
  /
- 
- $GRAVITY
- /
- 
- $THERMAL
- /
- 
- $RESISTIVITY
- /
- 
+  
+ $FLUID_IONIZED
+    gamma_ion  = 1.666666666
+ /  
+
  $COSMIC_RAYS
-    amp_cr     = 1.0   
-    gamma_cr   = 1.666666
-    K_cr_paral = 10.
-    cfl_cr     = 0.45
+    gamma_cr   = 1.333333
+    K_cr_paral = 1000.0
+    K_cr_perp  =   0.0
+    cfl_cr     = 0.9
  /
  
- $GALACTIC_PARAMS 
- /
  
  $PROBLEM_CONTROL
     problem_name ='cr_test'
-    run_id =  'dxy'
+    run_id =  'b_5'
     d0     = 1.0
     p0     = 1.0
-    Eexpl  = 0.e6
-    bx0    = 1.0
-    by0    = 1.0
+    bx0    = 5.0
+    by0    = 0.0
     bz0    = 0.0
     x0     = 0.0 
     y0     = 0.0 
     z0     = 0.0
-    r0     = 0.25 
-    n_sn   = 1
-    dt_sn  = 0.0
+    r0     = 50.0 
+    beta_cr= 0.0
+    amp_cr = 1.0
  /
+
+
+

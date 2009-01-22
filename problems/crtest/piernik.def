@@ -23,19 +23,19 @@
 /*===================================*/
 
 /* adiabatic or isothermal */
-#define ISO
+#undef ISO
 
 /* number of different fluids */
-#define IONIZED 1
+#define MAGNETIC
+#define IONIZED 
 #undef NEUTRAL
 #undef DUST
-#define COSM_RAYS 2
+#define COSM_RAYS
 
 
 /* choosing freezing speed */
-#undef LOCAL_FR_SPEED
-#define  GLOBAL_FR_SPEED
-#undef OLDLOCALCFR
+#define LOCAL_FR_SPEED
+#undef  GLOBAL_FR_SPEED
 
 /* choosing flux limiter */
 #define VANLEER
@@ -44,10 +44,17 @@
 #undef SUPERBEE
 
 /* physics including */
-/* #define RESIST 		*/
-/* #define VISC			*/
-/* #define HEAT_COND		*/
-/* #define COOL_HEAT		*/
+#undef RESIST 		
+#undef VISC			
+#undef HEAT_COND	
+#undef COOL_HEAT
+#undef SIMPLE_COOL
+#undef ANY_SOURCES
+#undef KEPLER_SUPPRESSION
+#undef COLLISIONS
+#undef COLLS_MODIF
+#undef PRESS_GRAD_EXCH
+
 
 /* gravity type choosing */
 #undef GRAV 		
@@ -66,6 +73,8 @@
 #undef SHEAR
 #undef SHEAR_MPI
 #undef FLX_BND
+#undef ANY_LIMITS
 #undef VZ_LIMITS
+#undef ONLYZSWEEP
 
 /* problem specific directives */
