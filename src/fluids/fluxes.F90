@@ -58,8 +58,8 @@ subroutine all_fluxes(flux,cfr,uu,bb,n)
 
     implicit none
     integer n
-    real, dimension(nvar,n)::flux,uu,cfr
-    real, dimension(nmag,n)::bb
+    real, dimension(nvar,n):: flux,uu,cfr
+    real, dimension(nmag,n):: bb
     real, dimension(n)     :: vion
 
 #ifdef IONIZED
@@ -75,7 +75,7 @@ subroutine all_fluxes(flux,cfr,uu,bb,n)
 #endif /* DUST */
 
 #ifdef COSM_RAYS
-    real, dimension(nvar_crs,n) :: fluxcrs,uucrs
+    real, dimension(nvar_crs,n) :: fluxcrs,cfrcrs,uucrs
 #endif /* COSM_RAYS */
 
    vion(:) = 0.0
@@ -85,9 +85,9 @@ subroutine all_fluxes(flux,cfr,uu,bb,n)
 
    call flux_ion(fluxion,cfrion,vion,uuion,bb,n)
 
-   flux(iarr_ion,:)=fluxion
-   cfr(iarr_ion,:) =cfrion
-   uu(iarr_ion,:)  =uuion
+   flux(iarr_ion,:) = fluxion
+   cfr(iarr_ion,:)  = cfrion
+   uu(iarr_ion,:)   = uuion
 #endif /* IONIZED */
 
 #ifdef NEUTRAL
@@ -95,24 +95,26 @@ subroutine all_fluxes(flux,cfr,uu,bb,n)
 
    call flux_neu(fluxneu,cfrneu,uuneu,n)
 
-   flux(iarr_neu,:)=fluxneu
-   cfr(iarr_neu,:)=cfrneu
-   uu(iarr_neu,:)=uuneu
+   flux(iarr_neu,:) = fluxneu
+   cfr(iarr_neu,:)  = cfrneu
+   uu(iarr_neu,:)   = uuneu
 #endif /* NEUTRAL */
 
 #ifdef DUST
    uudst=uu(iarr_dst,:)
    call flux_dst(fluxdst,cfrdst,uudst,n)
-   flux(iarr_dst,:)=fluxdst
-   cfr(iarr_dst,:)=cfrdst
-   uu(iarr_dst,:)=uudst
+   flux(iarr_dst,:) =fluxdst
+   cfr(iarr_dst,:)  = cfrdst
+   uu(iarr_dst,:)   = uudst
 #endif /* DUST */
 
 #ifdef COSM_RAYS
    uucrs=uu(iarr_crs,:)
    call flux_crs(fluxcrs,vion,uucrs,n)
-   flux(iarr_crs,:)=fluxcrs
-   uu(iarr_crs,:)=uucrs
+   flux(iarr_crs,:) = fluxcrs
+   cfrcrs(1,:)      = cfrion(1,:)
+   cfr(iarr_crs,:)  = cfrcrs
+   uu(iarr_crs,:)   = uucrs
 #endif /* COSM_RAYS */
 
 
