@@ -47,7 +47,7 @@ contains
     namelist /END_CONTROL/ nend, tend
 
     namelist /NUMERICAL_SETUP/  cfl, smalld, smallei, &
-                              integration_order
+                                integration_order
 
 #ifdef SN_SRC
 !  namelist /SN_PARAMS/ h_sn, r_sn, f_sn_kpc2, amp_dip_sn, howmulti

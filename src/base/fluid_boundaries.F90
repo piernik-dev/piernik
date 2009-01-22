@@ -21,7 +21,7 @@ subroutine bnd_u(dim)
   use arrays, only : u, b, bndxrar, bndyrar
 
 #ifdef COSM_RAYS
-  use start, only : smallecr
+  use initcosmicrays, only : smallecr
 #endif /* COSM_RAYS */
 
 #ifndef ISO
@@ -42,7 +42,7 @@ subroutine bnd_u(dim)
 #endif /* SHEAR */
 
 #ifdef COSM_RAYS
-    use arrays, only : iecr
+    use initcosmicrays, only : iecr
 #endif /* COSM_RAYS */
 
   implicit none

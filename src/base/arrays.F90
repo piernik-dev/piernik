@@ -15,9 +15,9 @@ module arrays
 
    real(kind=4), allocatable, dimension(:,:,:)  :: outwa, outwb, outwc
 
-#if defined COSM_RAYS || defined PRESS_GRAD_EXCH
-   real, allocatable, dimension(:,:,:,:) :: divvel
-#endif /* COSM_RAYS || PRESS_GRAD_EXCH */
+#ifdef COSM_RAYS 
+   real, allocatable, dimension(:,:,:) :: divvel
+#endif /* COSM_RAYS  */
 
    real,    allocatable, dimension(:)       :: rlscal
    integer, allocatable, dimension(:)       :: intscal
@@ -42,9 +42,9 @@ module arrays
       allocate(wa(nx,ny,nz),wcu(nx,ny,nz))
       allocate(outwa(nx,ny,nz),outwb(nx,ny,nz),outwc(nx,ny,nz))
 
-!#if defined COSM_RAYS || defined PRESS_GRAD_EXCH
-!      allocate(divvel(nfluid,nx,ny,nz))
-!#endif /* COSM_RAYS || PRESS_GRAD_EXCH */
+#ifdef COSM_RAYS 
+      allocate(divvel(nx,ny,nz))
+#endif /* COSM_RAYS  */
 
    end subroutine arrays_allocate
 

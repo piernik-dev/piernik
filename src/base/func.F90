@@ -124,34 +124,45 @@ implicit none
 
 !-----------------------------------------------------------------------------
 
-#if defined COSM_RAYS || defined PRESS_GRAD_EXCH
-  subroutine div_v
-    use fluidindex, only : idna,imxa,imya,imza
-    use arrays, only : nx,ny,nz,u,nfluid,divvel
-    use grid,   only : dx,dy,dz,nzd
+#ifdef COSM_RAYS !  || defined PRESS_GRAD_EXCH
+  subroutine div_v(ifluid)
+    use initionized, only : idni,imxi,imyi,imzi
+    use fluidindex,  only : nfluid,iarr_all_dn,iarr_all_mx,iarr_all_my,iarr_all_mz
+    use grid,        only : nx,ny,nz
+    use grid,        only : dx,dy,dz,nzd
+    use arrays,      only : u,divvel
     implicit none
 !    real, dimension(nx)  :: dvx,dvy,dvz
-    real, dimension(nfluid,nx) :: tmp
-    integer j,k
+!    real, dimension(nfluid,nx) :: tmp
+    real, dimension(nx) :: tmp
+    integer             :: j,k,ifluid
+    integer             :: idnf,imxf,imyf,imzf 
+    
+    
+    idnf = iarr_all_dn(ifluid) 
+    imxf = iarr_all_mx(ifluid) 
+    imyf = iarr_all_my(ifluid) 
+    imzf = iarr_all_mz(ifluid) 
 
-    divvel(:,:,:,:) = 0.0
+    divvel(:,:,:) = 0.0
+    
     if(nzd == 1) then
       k=1
       do j=2,ny-1
-        tmp=u(imxa,:,j,k)/u(idna,:,j,k)
-        divvel(:,:,j,k) = (eoshift(tmp,1,DIM=2) - eoshift(tmp,-1,DIM=2))/(2.*dx)
-        tmp=(u(imya,:,j+1,k)/u(idna,:,j+1,k)-u(imya,:,j-1,k)/u(idna,:,j-1,k))/(2.*dy)
-        divvel(:,:,j,k) = divvel(:,:,j,k) + tmp
+        tmp=u(imxf,:,j,k)/u(idnf,:,j,k)
+        divvel(:,j,k) = (eoshift(tmp,1,DIM=1) - eoshift(tmp,-1,DIM=1))/(2.*dx)
+        tmp=(u(imyf,:,j+1,k)/u(idnf,:,j+1,k)-u(imyf,:,j-1,k)/u(idnf,:,j-1,k))/(2.*dy)
+        divvel(:,j,k) = divvel(:,j,k) + tmp
       enddo
     else if (nzd /= 1) then
       do k=2,nz-1
         do j=2,ny-1
-          tmp=u(imxa,:,j,k)/u(idna,:,j,k)
-          divvel(:,:,j,k) = (eoshift(tmp,1,DIM=2) - eoshift(tmp,-1,DIM=2))/(2.*dx)
-          tmp=(u(imya,:,j+1,k)/u(idna,:,j+1,k)-u(imya,:,j-1,k)/u(idna,:,j-1,k))/(2.*dy)
-          divvel(:,:,j,k) = divvel(:,:,j,k) + tmp
-          tmp=(u(imza,:,j,k+1)/u(idna,:,j,k+1)-u(imza,:,j,k-1)/u(idna,:,j,k-1))/(2.*dz)
-          divvel(:,:,j,k) = divvel(:,:,j,k) + tmp
+          tmp=u(imxf,:,j,k)/u(idnf,:,j,k)
+          divvel(:,j,k) = (eoshift(tmp,1,DIM=1) - eoshift(tmp,-1,DIM=1))/(2.*dx)
+          tmp=(u(imyf,:,j+1,k)/u(idnf,:,j+1,k)-u(imyf,:,j-1,k)/u(idnf,:,j-1,k))/(2.*dy)
+          divvel(:,j,k) = divvel(:,j,k) + tmp
+          tmp=(u(imzf,:,j,k+1)/u(idnf,:,j,k+1)-u(imzf,:,j,k-1)/u(idnf,:,j,k-1))/(2.*dz)
+          divvel(:,j,k) = divvel(:,j,k) + tmp
         enddo
       enddo
     endif
@@ -160,48 +171,62 @@ implicit none
 
   subroutine div_vx(k,j)
 
-    use arrays, only : divvel,nx,nfluid
-    real,dimension(nfluid,nx) :: divv
+    use grid,        only : nx
+    use fluidindex,  only : nfluid
+    use arrays,      only : divvel
+    
+    real,dimension(nx) :: divv
     integer j,k
-    divv = divvel(:,:,j,k)
+    
+    divv = divvel(:,j,k)
 
   end subroutine div_vx
 
   subroutine div_vy(k,i)
 
-    use arrays, only : divvel,ny,nfluid
-    real,dimension(nfluid,ny) :: divv
+    use grid,        only : ny
+    use fluidindex,  only : nfluid
+    use arrays, only      : divvel
+    
+    real,dimension(ny) :: divv
     integer i,k
-    divv = divvel(:,i,:,k)
+    
+    divv = divvel(i,:,k)
 
   end subroutine div_vy
 
   subroutine  div_vz(j,i)
 
-    use arrays, only : divvel,nz,nfluid
-    real,dimension(nfluid,nz) :: divv
+    use grid,        only : nz
+    use fluidindex,  only : nfluid
+    use arrays, only      : divvel
+    
+    real,dimension(nz) :: divv
     integer i,j
-    divv = divvel(:,i,j,:)
+    
+    divv = divvel(i,j,:)
+    
   end subroutine div_vz
 
   subroutine whichfaq(faq,i,j,n)
-  implicit none
-  real faq
-  integer i,j,n
+  
+    implicit none
+    real faq
+    integer i,j,n
 
-  faq = 0.5
-  if(i .eq. 0) then
-   i=1
-   faq=1.0
-  endif
-  if(j-1 .eq. n) then
-   j=n
-   faq=1.0
-  endif
+    faq = 0.5
+    if(i .eq. 0) then
+      i=1
+      faq=1.0
+    endif
+    if(j-1 .eq. n) then
+      j=n
+      faq=1.0
+    endif
 
   end subroutine whichfaq
 
-#endif /* COSM_RAYS || PRESS_GRAD_EXCH */
+#endif /* COSM_RAYS  */
 
 
 end module func

@@ -10,9 +10,9 @@ module timestep
 
   use mpi_setup
 
-#ifdef COSM_RAYS
-  use cr_diffusion
-#endif /* COSM_RAYS */
+!#ifdef COSM_RAYS
+!  use cr_diffusion
+!#endif /* COSM_RAYS */
 
   implicit none
   real c_all
@@ -40,8 +40,8 @@ contains
 #endif /* DUST */
 
 #ifdef COSM_RAYS
-    use timestepcr, only : timestep_crs
-    use timestepcr, only : dt_crs
+    use timestepcosmicrays, only : timestep_crs
+    use timestepcosmicrays, only : dt_crs
 #endif /* COSM_RAYS */
     
     

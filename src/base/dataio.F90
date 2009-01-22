@@ -313,7 +313,7 @@ module dataio
 #endif /* ISO */
 
 #ifdef COSM_RAYS
-      use arrays, only : iecr
+      use initcosmicrays, only : iecr
 #endif /* COSM_RAYS */
 
 #ifdef GRAV
@@ -489,9 +489,10 @@ module dataio
 
 #ifdef COSM_RAYS
       case ('encr')
-        write(varname,'(a3,i1)') 'enc', ifl
-        wa(iso:ieo,jso:jeo,kso:keo) = u(iecr(ifl), iso:ieo, jso:jeo, kso:keo)
-        call next_fluid_or_var(ifl,iw,COSM_RAYS)
+!        write(varname,'(a3,i1)') 'enc', ifl
+!        wa(iso:ieo,jso:jeo,kso:keo) = u(iecr(ifl), iso:ieo, jso:jeo, kso:keo)
+        wa(iso:ieo,jso:jeo,kso:keo) = u(iecr, iso:ieo, jso:jeo, kso:keo)
+!        call next_fluid_or_var(ifl,iw,ifl)
 #endif /* COSM_RAYS */
 
       case ('divb')
@@ -1046,7 +1047,7 @@ module dataio
 #endif /* ISO */
 
 #ifdef COSM_RAYS
-    use arrays, only : iecr
+    use initcosmicrays, only : iecr
 #endif /* COSM_RAYS */
 
 #ifndef STANDARD
@@ -1066,7 +1067,7 @@ module dataio
 #endif /* RESISTIVE */
 
 #ifdef COSM_RAYS
-    use arrays, only : iecr
+    use initcosmicrays, only : iecr
 #endif /* COSM_RAYS */
 
 #ifdef SNE_DISTR
@@ -1271,9 +1272,13 @@ module dataio
 #endif /* ISO */
 #endif /* NEUTRAL */
 
+#ifdef DUST
+    use initdust, only : idnd,imxd,imyd,imzd
+#endif /* DUST */
+
 #ifdef COSM_RAYS
-    use start, only  : dt_cr
-    use arrays, only : iecr
+    use timestepcosmicrays, only  : dt_crs
+    use initcosmicrays, only : iecr
 #endif /* COSM_RAYS */
 
 #ifdef ISO
@@ -1602,7 +1607,7 @@ module dataio
 #endif /* NEUTRAL */
 #ifdef COSM_RAYS
         write(log_lun,777) 'min(encr)   CRS  =', encr_min,         '',  0.0,     proc_encr_min, loc_encr_min
-        write(log_lun,777) 'max(encr)   CRS  =', encr_max,      'dt=',dt_cr,     proc_encr_max, loc_encr_max
+        write(log_lun,777) 'max(encr)   CRS  =', encr_max,      'dt=',dt_crs,     proc_encr_max, loc_encr_max
 #endif /* COSM_RAYS */
 #ifdef RESISTIVE
         write(log_lun,776) 'max(eta)    RES  =', eta_max ,      'dt=',dt_resist, proc_eta_max,  loc_eta_max
