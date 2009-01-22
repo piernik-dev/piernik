@@ -41,6 +41,10 @@
    
  / 
 
+ $FLUID_IONIZED
+    gamma_ion  = 1.666666666
+ /
+
  $BOUNDARIES
     bnd_xl = 'per'  
     bnd_xr = 'per'  
@@ -59,10 +63,6 @@
     zmax   = 500.0
  /
 
- $EQUATION_OF_STATE
-    c_si   =  7.
-    alpha  = 0.0 
- /  
 
  $NUMERICAL_SETUP
     cfl    = 0.8
@@ -74,8 +74,8 @@
  $GRAVITY
     r_gc   = 8.5
     nsub   = 100
-    tune_zeq     = 1.0  !1.0025
-    tune_zeq_bnd = 1.0  !0.9
+    tune_zeq     = 1.0025
+    tune_zeq_bnd = 0.9
  /
  
  $THERMAL
@@ -89,4 +89,6 @@
     nby0    = 1.0
     nbz0    =  0.
     a_vp    = 0.0
+    c_si   =  7.
+    alpha  = 0.0 
  /
