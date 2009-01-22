@@ -94,10 +94,10 @@ module initcosmicrays
       
       allocate(iarr_crs(nvar_crs),iarr_crs_swpx(nvar_crs), iarr_crs_swpy(nvar_crs), iarr_crs_swpz(nvar_crs))
 
-      iarr_crs      = [icrs] 
-      iarr_crs_swpx = [icrs]
-      iarr_crs_swpy = [icrs]
-      iarr_crs_swpz = [icrs]
+      iarr_crs      = [iecr] 
+      iarr_crs_swpx = [iecr]
+      iarr_crs_swpy = [iecr]
+      iarr_crs_swpz = [iecr]
       
    end subroutine cosmicray_index
 
