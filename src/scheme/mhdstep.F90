@@ -50,6 +50,8 @@ subroutine mhd_step
 
   call time_step
 
+  if(nstep == 1) dt = 0.0
+
   if(dt_log .gt. 0.0) then
     if(nlog .lt. (int(t / dt_log) + 1)) then
       call write_log

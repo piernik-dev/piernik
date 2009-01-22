@@ -155,7 +155,6 @@ end subroutine all_fluxes
     integer             :: m,n
     real,dimension(m,n) :: fr,fl,dfrp,dfrm,dflp,dflm
 
-#ifdef ORIG
     if(istep == 2) then
       dfrp(:,1:n-1) = 0.5*(fr(:,2:n) - fr(:,1:n-1)); dfrp(:,n) = dfrp(:,n-1)
       dfrm(:,2:n)   = dfrp(:,1:n-1);                 dfrm(:,1) = dfrm(:,2)
@@ -165,16 +164,6 @@ end subroutine all_fluxes
       dflm(:,2:n)   = dflp(:,1:n-1);                 dflm(:,1) = dflm(:,2)
       call flimiter(fl,dflm,dflp,m,n)
     endif
-#endif /* ORIG */
-#ifdef SSP
-      dfrp(:,1:n-1) = 0.5*(fr(:,2:n) - fr(:,1:n-1)); dfrp(:,n) = dfrp(:,n-1)
-      dfrm(:,2:n)   = dfrp(:,1:n-1);                 dfrm(:,1) = dfrm(:,2)
-      call flimiter(fr,dfrm,dfrp,m,n)
-
-      dflp(:,1:n-1) = 0.5*(fl(:,1:n-1) - fl(:,2:n)); dflp(:,n) = dflp(:,n-1)
-      dflm(:,2:n)   = dflp(:,1:n-1);                 dflm(:,1) = dflm(:,2)
-      call flimiter(fl,dflm,dflp,m,n)
-#endif /* SSP */
 
   end subroutine flux_limit
 
@@ -185,7 +174,6 @@ end subroutine all_fluxes
    integer             :: n
    real,dimension(n)   :: gravr,gravl,dgrp,dgrm,dglp,dglm
 
-#ifdef ORIG
     if(istep == 2) then
       dgrp(1:n-1) = 0.5*(gravr(1:n-1) - gravr(2:n));  dgrp(n) = dgrp(n-1)
       dgrm(2:n) = dgrp(1:n-1)                      ;  dgrm(1) = dgrm(2)
@@ -195,16 +183,6 @@ end subroutine all_fluxes
       dglm(2:n)   = dglp(1:n-1)                    ;  dglm(1) = dglm(2)
       call flimiter(gravl,dglm,dglp,1,n)
     endif
-#endif /* ORIG */
-#ifdef SSP
-      dgrp(1:n-1) = 0.5*(gravr(1:n-1) - gravr(2:n));  dgrp(n) = dgrp(n-1)
-      dgrm(2:n) = dgrp(1:n-1)                      ;  dgrm(1) = dgrm(2)
-      call flimiter(gravr,dgrm,dgrp,1,n)
-
-      dglp(1:n-1) = 0.5*(gravl(2:n) - gravl(1:n-1));  dglp(n) = dglp(n-1)
-      dglm(2:n)   = dglp(1:n-1)                    ;  dglm(1) = dglm(2)
-      call flimiter(gravl,dglm,dglp,1,n)
-#endif /* SSP */
 
   end subroutine grav_limit
   
