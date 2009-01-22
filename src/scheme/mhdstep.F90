@@ -70,7 +70,7 @@ subroutine mhd_step
       t=t+dt
 
 #ifdef SHEAR
-      call yshift(t,dt)
+      call yshift(t)
       call bnd_u('xdim')
       call bnd_u('ydim')
 #endif /* SHEAR */
@@ -146,7 +146,7 @@ subroutine mhd_step
       t=t+dt
       
 #ifdef SHEAR
-      call yshift(t,dt)
+      call yshift(t)
       call bnd_u('xdim')
       call bnd_u('ydim')
 #endif /* SHEAR */

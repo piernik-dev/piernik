@@ -26,14 +26,12 @@ module start
 
   real  dt_cr
 
-  real h_sn, r_sn, f_sn_kpc2, amp_dip_sn, snenerg, snemass, sn1time, sn2time, r0sn
-  integer howmulti
-  character*3 add_mass, add_ener, add_encr, add_magn
+!  real h_sn, r_sn, f_sn_kpc2, amp_dip_sn, snenerg, snemass, sn1time, sn2time, r0sn
+!  integer howmulti
+!  character*3 add_mass, add_ener, add_encr, add_magn
 ! Secondary parameters
 
   real csi2, csim2, amp_ecr_sn, ethu, f_sn
-
-  real init_mass, mass_loss, mass_loss_tot
 
   real, dimension(3,2)  :: cn
 
@@ -52,10 +50,10 @@ contains
                               integration_order
 
 #ifdef SN_SRC
-  namelist /SN_PARAMS/ h_sn, r_sn, f_sn_kpc2, amp_dip_sn, howmulti
+!  namelist /SN_PARAMS/ h_sn, r_sn, f_sn_kpc2, amp_dip_sn, howmulti
 #endif /* SN_SRC */
 #ifdef SNE_DISTR
-  namelist /SN_DISTR/ snenerg, snemass, sn1time, sn2time, r0sn, add_mass, add_ener, add_encr, add_magn
+!  namelist /SN_DISTR/ snenerg, snemass, sn1time, sn2time, r0sn, add_mass, add_ener, add_encr, add_magn
 #endif /* SNE_DISTR */
 
     par_file = trim(cwd)//'/problem.par'
@@ -74,22 +72,22 @@ contains
     integration_order  = 2
 
 #ifdef SN_SRC
-    h_sn       = 266.0          !  vertical scaleheight of SN from Ferriere 1998
-    r_sn       =  10.0          !  "typical" SNR II radius
-    f_sn_kpc2  =  20.0          !  solar galactic radius SN II freq./kpc**2
-    amp_dip_sn =   1.0e6
-    howmulti   = 2              ! 1 for dipols, 2 for quadrupoles
+!    h_sn       = 266.0          !  vertical scaleheight of SN from Ferriere 1998
+!    r_sn       =  10.0          !  "typical" SNR II radius
+!    f_sn_kpc2  =  20.0          !  solar galactic radius SN II freq./kpc**2
+!    amp_dip_sn =   1.0e6
+!    howmulti   = 2              ! 1 for dipols, 2 for quadrupoles
 #endif /* SN_SRC */
 #ifdef SNE_DISTR
-    snenerg    = 1.e51          !  typical energy of supernova explosion [erg]
-    snemass    =  10.0          !  typical preSN stellar matter mass injection [Msun]
-    sn1time    = 445.0          !  mean time between typ I supernovae explosions [year]
-    sn2time    =  52.0          !  mean time between typ II supernovae explosions [year]
-    r0sn       =  50.0          !  radius of an area, where mass/ener/encr is added [actually used unit of length]
-    add_mass   = 'yes'          !  permission for inserting snemass inside randomly selected areas
-    add_ener   = 'yes'          !  permission for inserting snenerg inside randomly selected areas
-    add_encr   = 'yes'          !  permission for inserting CR energy inside randomly selected areas
-    add_magn   = 'yes'          !  permission for inserting dipolar magnetic field centered at randomly selected areas
+!    snenerg    = 1.e51          !  typical energy of supernova explosion [erg]
+!    snemass    =  10.0          !  typical preSN stellar matter mass injection [Msun]
+!    sn1time    = 445.0          !  mean time between typ I supernovae explosions [year]
+!    sn2time    =  52.0          !  mean time between typ II supernovae explosions [year]
+!    r0sn       =  50.0          !  radius of an area, where mass/ener/encr is added [actually used unit of length]
+!    add_mass   = 'yes'          !  permission for inserting snemass inside randomly selected areas
+!    add_ener   = 'yes'          !  permission for inserting snenerg inside randomly selected areas
+!    add_encr   = 'yes'          !  permission for inserting CR energy inside randomly selected areas
+!    add_magn   = 'yes'          !  permission for inserting dipolar magnetic field centered at randomly selected areas
 #endif /* SNE_DISTR */
 
     if(proc .eq. 0) then
@@ -98,10 +96,10 @@ contains
         read(unit=1,nml=END_CONTROL)
         read(unit=1,nml=NUMERICAL_SETUP)
 #ifdef SN_SRC
-        read(unit=1,nml=SN_PARAMS)
+!        read(unit=1,nml=SN_PARAMS)
 #endif /* SN_SRC */
 #ifdef SNE_DISTR
-        read(unit=1,nml=SN_DISTR)
+!        read(unit=1,nml=SN_DISTR)
 #endif /* SNE_DISTR */
 
       close(1)
@@ -110,10 +108,10 @@ contains
         write(unit=3,nml=END_CONTROL)
         write(unit=3,nml=NUMERICAL_SETUP)
 #ifdef SN_SRC
-        write(unit=3,nml=SN_PARAMS)
+!        write(unit=3,nml=SN_PARAMS)
 #endif /* SN_SRC */
 #ifdef SNE_DISTR
-        write(unit=3,nml=SN_DISTR)
+!        write(unit=3,nml=SN_DISTR)
 #endif /* SNE_DISTR */
       close(3)
 
@@ -143,23 +141,23 @@ contains
 
 #ifdef SN_SRC
 !  namelist /SN_PARAMS/ h_sn, r_sn, f_sn_kpc2, amp_dip_sn, howmulti
-       rbuff(170) = h_sn
-       rbuff(171) = r_sn
-       rbuff(172) = f_sn_kpc2
-       rbuff(173) = amp_dip_sn
-       ibuff(170) = howmulti
+!       rbuff(170) = h_sn
+!       rbuff(171) = r_sn
+!       rbuff(172) = f_sn_kpc2
+!       rbuff(173) = amp_dip_sn
+!       ibuff(170) = howmulti
 #endif /* SN_SRC */
 #ifdef SNE_DISTR
 !  namelist /SN_DISTR/ snenerg, snemass, sn1time, sn2time, r0sn, add_mass, add_ener, add_encr, add_magn
-       rbuff(180) = snenerg
-       rbuff(181) = snemass
-       rbuff(182) = sn1time
-       rbuff(183) = sn2time
-       rbuff(184) = r0sn
-       cbuff(180) = add_mass
-       cbuff(181) = add_ener
-       cbuff(182) = add_encr
-       cbuff(183) = add_magn
+!       rbuff(180) = snenerg
+!       rbuff(181) = snemass
+!       rbuff(182) = sn1time
+!       rbuff(183) = sn2time
+!       rbuff(184) = r0sn
+!       cbuff(180) = add_mass
+!       cbuff(181) = add_ener
+!       cbuff(182) = add_encr
+!       cbuff(183) = add_magn
 #endif /* SNE_DISTR */
 
 ! Boroadcasting parameters
@@ -215,23 +213,23 @@ contains
 
 #ifdef SN_SRC
 !  namelist /SN_PARAMS/ h_sn, r_sn, f_sn_kpc2, amp_dip_sn, howmulti
-       h_sn               = rbuff(170)
-       r_sn               = rbuff(171)
-       f_sn_kpc2          = rbuff(172)
-       amp_dip_sn         = rbuff(173)
-       howmulti           = ibuff(170)
+!       h_sn               = rbuff(170)
+!       r_sn               = rbuff(171)
+!       f_sn_kpc2          = rbuff(172)
+!       amp_dip_sn         = rbuff(173)
+!       howmulti           = ibuff(170)
 #endif /* SN_SRC */
 #ifdef SNE_DISTR
 !  namelist /SN_DISTR/ snenerg, snemass, sn1time, sn2time, r0sn, add_mass, add_ener, add_encr, add_magn
-       snenerg            = rbuff(180)
-       snemass            = rbuff(181)
-       sn1time            = rbuff(182)
-       sn2time            = rbuff(183)
-       r0sn               = rbuff(184)
-       add_mass           = cbuff(180)
-       add_ener           = cbuff(181)
-       add_encr           = cbuff(182)
-       add_magn           = cbuff(183)
+!       snenerg            = rbuff(180)
+!       snemass            = rbuff(181)
+!       sn1time            = rbuff(182)
+!       sn2time            = rbuff(183)
+!       r0sn               = rbuff(184)
+!       add_mass           = cbuff(180)
+!       add_ener           = cbuff(181)
+!       add_encr           = cbuff(182)
+!       add_magn           = cbuff(183)
 #endif /* SNE_DISTR */
 
 ! Secondary parameters
@@ -243,9 +241,9 @@ contains
 !   csim2 = csim2 +csi2*beta_cr
 #endif /* COSM_RAYS */
 
-   ethu = 7.0**2/(5.0/3.0-1.0) * 1.0    ! thermal energy unit=0.76eV/cm**3
-                                        ! for c_si= 7km/s, n=1/cm^3
-                                        ! gamma=5/3
+!   ethu = 7.0**2/(5.0/3.0-1.0) * 1.0    ! thermal energy unit=0.76eV/cm**3
+!                                        ! for c_si= 7km/s, n=1/cm^3
+!                                        ! gamma=5/3
   cn(1:3,1) = (/ 1. , 0.5 , 0.0 /)
   cn(1:3,2) = (/ 1. , 1.  , 0.0 /)
   if(integration_order .eq. 1) then

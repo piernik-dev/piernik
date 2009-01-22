@@ -52,7 +52,7 @@ module rtvd ! split orig
     use gravity, only :grav_pot2accel
 #endif /* GRAV */
 #ifdef SHEAR
-    use arrays, only : xr
+    use grid, only : xr
     use shear,  only : qshear, omega
 #endif /* SHEAR */
 #ifdef COSM_RAYS
@@ -78,7 +78,7 @@ module rtvd ! split orig
     real, dimension(n)    :: rotfr
 #endif /* GRAV || SHEAR */
 #ifdef SHEAR
-    real, dimension(n)    :: vxr
+    real, dimension(size(iarr_all_my),n)    :: vxr
 #endif /* SHEAR */
     character sweep*6
 
@@ -150,11 +150,11 @@ module rtvd ! split orig
 
 
 #ifdef SHEAR
-    vxr(1:n-1) = 0.5*(u1(iarr_all_my,2:n)/u1(iarr_all_dn,2:n) + u1(iarr_all_my,1:n-1)/u1(iarr_all_dn,1:n-1))
+    vxr(:,1:n-1) = 0.5*(u1(iarr_all_my,2:n)/u1(iarr_all_dn,2:n) + u1(iarr_all_my,1:n-1)/u1(iarr_all_dn,1:n-1))
     if(sweep .eq. 'xsweep') then
-      rotfr(:) =   2.0*omega*(vxr(:) + qshear*omega*xr(:))
+      rotfr(:) =   2.0*omega*(vxr(1,:) + qshear*omega*xr(:))            ! it works only for ONE FLUID now
     else if(sweep .eq. 'ysweep')  then
-      rotfr(:) = - 2.0*omega*vxr(:)
+      rotfr(:) = - 2.0*omega*vxr(1,:)
     else
       rotfr(:) = 0.0
     endif

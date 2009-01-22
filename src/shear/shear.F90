@@ -12,6 +12,9 @@ module shear
     character(LEN=100) :: par_file, tmp_log_file
 
     namelist /SHEARING/ omega, qshear
+    
+    par_file = trim(cwd)//'/problem.par'
+    tmp_log_file = trim(cwd)//'/tmp.log'
 
     omega  = 0.0
     qshear = 0.0
