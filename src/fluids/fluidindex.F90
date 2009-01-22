@@ -115,22 +115,22 @@ module fluidindex
 #endif /* NEUTRAL */
 
 #ifdef DUST
-      nvar_dust = 0
-      beg_dust = nvar + 1
-      call dust_index(nvar,nvar_dust) 
-      end_dust = nvar    
+      nvar_dst = 0
+      beg_dst = nvar + 1
+      call dst_index(nvar,nvar_dust) 
+      end_dst = nvar    
       ncomponents  = ncomponents + 1
       nfluid = nfluid + 1   
-      i_dust = ncomponents 
+      i_dst = ncomponents 
 #endif /* DUST */
 
 #ifdef COSM_RAYS
-      nvar_cr   = 0
-      beg_cr = nvar + 1
-      call cosmicray_index(nvar,nvar_cr)  
-      end_cr = nvar   
+      nvar_crs   = 0
+      beg_crs = nvar + 1
+      call cosmicray_index(nvar,nvar_crs)  
+      end_crs = nvar   
       ncomponents  = ncomponents + 1   
-      i_cr = ncomponents                
+      i_crs = ncomponents                
 #endif /* COSM_RAYS */     
 
 #ifdef IONIZED
@@ -142,7 +142,7 @@ module fluidindex
       allocate(iarr_all_en(nadiab))  
 #endif /* ISO */
 #ifdef COSM_RAYS      
-      allocate(iarr_all_cr(nvar_cr))  
+      allocate(iarr_all_cr(nvar_crs))  
 #endif /* COSM_RAYS */
 
 #ifdef IONIZED
@@ -158,12 +158,12 @@ module fluidindex
       iarr_all_swpy(beg_ion:end_ion) = iarr_ion_swpy
       iarr_all_swpz(beg_ion:end_ion) = iarr_ion_swpz    
 
-      iarr_all_dn(i_ion)     = idni
-      iarr_all_mx(i_ion)     = imxi
-      iarr_all_my(i_ion)     = imyi
-      iarr_all_mz(i_ion)     = imzi
+      iarr_all_dn(i_ion)      = idni
+      iarr_all_mx(i_ion)      = imxi
+      iarr_all_my(i_ion)      = imyi
+      iarr_all_mz(i_ion)      = imzi
 #ifndef ISO
-      iarr_all_en(i_ion)     = ieni
+      iarr_all_en(i_ion)      = ieni
 #endif /* ISO */
 #endif /* IONIZED */
       
@@ -172,12 +172,12 @@ module fluidindex
       iarr_all_swpy(beg_neu:end_neu) = iarr_neu_swpy
       iarr_all_swpz(beg_neu:end_neu) = iarr_neu_swpz    
 
-      iarr_all_dn(i_neu)    = idnn
-      iarr_all_mx(i_neu)    = imxn
-      iarr_all_my(i_neu)    = imyn
-      iarr_all_mz(i_neu)    = imzn
+      iarr_all_dn(i_neu)      = idnn
+      iarr_all_mx(i_neu)      = imxn
+      iarr_all_my(i_neu)      = imyn
+      iarr_all_mz(i_neu)      = imzn
 #ifndef ISO
-      iarr_all_en(i_neu)    = ienn
+      iarr_all_en(i_neu)      = ienn
 #endif /* ISO */
 #endif /* NEUTRAL */
       
@@ -186,10 +186,10 @@ module fluidindex
       iarr_all_swpy(beg_dst:end_dst) = iarr_dst_swpy
       iarr_all_swpz(beg_dst:end_dst) = iarr_dst_swpz    
 
-      iarr_all_dn(i_dust)    = idnd
-      iarr_all_mx(i_dust)    = imxd
-      iarr_all_my(i_dust)    = imyd
-      iarr_all_mz(i_dust)    = imzd
+      iarr_all_dn(i_dst)      = idnd
+      iarr_all_mx(i_dst)      = imxd
+      iarr_all_my(i_dst)      = imyd
+      iarr_all_mz(i_dst)      = imzd
 #endif /* DUST */
       
 #ifdef COSM_RAYS      
