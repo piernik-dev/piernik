@@ -35,12 +35,23 @@ module initionized
          par_file = trim(cwd)//'/problem.par'
          tmp_log_file = trim(cwd)//'/tmp.log'
          open(1,file=par_file)
-            read(unit=1,nml=FLUID_IONIZED)
+            read(unit=1,nml=FLUID_IONIZED,end=1234,err=1234)
          close(1)
+
+	 goto 4567	 
+ 1234    write(*,*) 'Check namelist in "problem.par" :'
+  	 write(*,*) ''
+         write(*,nml=FLUID_IONIZED) 
+	 write(*,*) ''
+	 stop	 
+ 4567    continue
+	 	 
          open(3, file='tmp.log', position='append')
            write(3,nml=FLUID_IONIZED)
            write(3,*)
          close(3)
+	 
+	 
       endif 
  
  
