@@ -10,8 +10,6 @@
     pysize = 1
     pzsize = 1    
  /  
- $START_CONTROL
- /
 
  $RESTART_CONTROL
     restart  = 'last'
@@ -25,7 +23,7 @@
  /
 
  $OUTPUT_CONTROL
-    dt_hdf  = 0.5
+    dt_hdf  = 0.1
     dt_res  = 0.0
     dt_log  = 0.00001
     dt_tsl  = 0.00001
@@ -56,9 +54,17 @@
     zmax   = 1.0
  /
 
+ $FLUID_IONIZED
+    gamma_ion  = 1.666666666
+ /
+
+ $FLUID_NEUTRAL
+    gamma_neu = 1.666666666
+ /
+
+
  $EQUATION_OF_STATE
     c_si   = 1.0
-    alpha  = 0.0
  /  
 
  $NUMERICAL_SETUP
@@ -66,24 +72,9 @@
     smalld = 1.e-3
     smallei= 1.e-5
     integration_order = 2
-    magnetic = 'no'
-    dimensions = '2dxy'
-    nu_bulk    = 0.0001
-    cfl_visc   = 0.4
  /
  
  $GRAVITY
-    ptmass  = 0.0
-    ptm_x   = 0.0
-    ptm_y   = 0.0
-    ptm_z   = 0.0
-    r_smooth= 0.2
-    nsub    = 10
-    r_grav  = 0.6
-    n_gravr = 10
- /
- 
- $THERMAL
  /
  
  $RESISTIVITY
@@ -101,5 +92,5 @@
 
  $SHEARING
    qshear = 1.5
-   omega  = 0.1
+   omega  = 0.05
  /

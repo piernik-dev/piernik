@@ -6,15 +6,15 @@ module init_problem
 ! Initial condition for Keplerian disk
 ! Written by: M. Hanasz, March 2006
 
-  use arrays, only : x, u, b,x,y,z,nx,ny,nz, &
-      idna,imxa,imya,imza
+  use arrays, only : u,b
+  use grid, only : x,y,z,nx,ny,nz
+  use initionized, only : idni,imxi,imyi,imzi
 #ifndef ISO
-  use arrays, only : iena
+  use initionized, only : ieni, gamma_ion
 #endif /* ISO */
-  use start,  only : proc, smallei, smalld, gamma, &
-      rbuff, cbuff, ibuff
+  use shear,  only : qshear, omega
+  use start,  only : smallei, smalld
   use mpi_setup
-  use shear, only: qshear, omega
 !  use grid
 
   real :: d0,r0,bx0,by0,bz0
@@ -114,25 +114,25 @@ contains
           vz = 0.0
           
           if(abs(yj) <= r0 ) then
-            u(idna,i,j,k) = d0
+            u(idni,i,j,k) = d0
           else
-            u(idna,i,j,k) = 0.5*d0
+            u(idni,i,j,k) = 0.5*d0
           endif
                           
-          u(imxa,i,j,k) = vx*u(idna,i,j,k)
-          u(imya,i,j,k) = vy*u(idna,i,j,k)
-          u(imza,i,j,k) = vz*u(idna,i,j,k)
+          u(imxi,i,j,k) = vx*u(idni,i,j,k)
+          u(imyi,i,j,k) = vy*u(idni,i,j,k)
+          u(imzi,i,j,k) = vz*u(idni,i,j,k)
 #ifndef ISO	  
-          u(iena,i,j,k) = 1.0/(gamma-1.0)!*u(idna,i,j,k)
-          u(iena,i,j,k) = max(u(iena,i,j,k), smallei)
-          u(iena,i,j,k) = u(iena,i,j,k) +0.5*(vx**2+vy**2+vz**2)*u(idna,i,j,k)
+          u(ieni,i,j,k) = 1.0/(gamma_ion-1.0)!*u(idni,i,j,k)
+          u(ieni,i,j,k) = max(u(ieni,i,j,k), smallei)
+          u(ieni,i,j,k) = u(ieni,i,j,k) +0.5*(vx**2+vy**2+vz**2)*u(idni,i,j,k)
 #endif /* ISO */
           b(1,i,j,k)   =  bx0
           b(2,i,j,k)   =  by0
           b(3,i,j,k)   =  bz0
 
 #ifndef ISO	  
-          u(iena,i,j,k)   = u(iena,i,j,k) +0.5*sum(b(:,i,j,k)**2,1)
+          u(ieni,i,j,k)   = u(ieni,i,j,k) +0.5*sum(b(:,i,j,k)**2,1)
 #endif /* ISO */
         enddo
       enddo
