@@ -299,9 +299,10 @@ module dataio
       use grid, only : dx,dy,dz,xmin,xmax,ymin,ymax,zmin,zmax,nxd,nyd,nzd,nb
       use grid, only : nx,ny,nz,nxb,nyb,nzb,x,y,z
       use init_problem, only : problem_name, run_id
+      
       use fluidindex,  only : nfluid    
       use fluidindex,  only : ibx,iby,ibz
-      use fluidindex, only : nvar, iarr_all_dn,iarr_all_mx,iarr_all_my,iarr_all_mz
+      use fluidindex,  only : nvar, iarr_all_dn,iarr_all_mx,iarr_all_my,iarr_all_mz
 
 #ifndef STANDARD
       use constants, only : Gs
@@ -1580,11 +1581,11 @@ module dataio
         write(log_lun,777) 'max(|vz|)   ION  =', vzi_max, 'dt=',cfl*dz/(vzi_max+small),   proc_vzi_max, loc_vzi_max
         write(log_lun,777) 'max(c_s )   ION  =', csi_max, 'dt=',cfl*dxmn/(csi_max+small), proc_csi_max, loc_csi_max
 #ifdef MAGNETIC
-        write(log_lun,777) 'max(c_fast  )    =', sqrt(csi_max**2+vai_max**2), 'dt=',cfl*dxmn/sqrt(csi_max**2+vai_max**2)
-        write(log_lun,777) 'max(v_alfven)    =', vai_max, 'dt=',cfl*dxmn/(vai_max+small), proc_vai_max, loc_vai_max
-        write(log_lun,770) 'min(|b|)         =', b_min,     proc_b_min,     loc_b_min
-        write(log_lun,770) 'max(|b|)         =', b_max,     proc_b_max,     loc_b_max
-        write(log_lun,770) 'max(|divb|)      =', divb_max,  proc_divb_max,  loc_divb_max
+        write(log_lun,777) 'max(c_f)    ION  =', sqrt(csi_max**2+vai_max**2), 'dt=',cfl*dxmn/sqrt(csi_max**2+vai_max**2)
+        write(log_lun,777) 'max(v_a)    ION  =', vai_max, 'dt=',cfl*dxmn/(vai_max+small), proc_vai_max, loc_vai_max
+        write(log_lun,770) 'min(|b|)    MAG  =', b_min,     proc_b_min,     loc_b_min
+        write(log_lun,770) 'max(|b|)    MAG  =', b_max,     proc_b_max,     loc_b_max
+        write(log_lun,770) 'max(|divb|) MAG  =', divb_max,  proc_divb_max,  loc_divb_max
 #endif /* MAGNETIC */
 #endif /* IONIZED */
 #ifdef NEUTRAL
@@ -1600,11 +1601,11 @@ module dataio
         write(log_lun,777) 'max(c_s )   NEU  =', csn_max, 'dt=',cfl*dxmn/(csn_max+small), proc_csn_max, loc_csn_max
 #endif /* NEUTRAL */
 #ifdef COSM_RAYS
-        write(log_lun,777) 'min(encr)        =', encr_min,         '',  0.0,     proc_encr_min, loc_encr_min
-        write(log_lun,777) 'max(encr)        =', encr_max,      'dt=',dt_cr,     proc_encr_max, loc_encr_max
+        write(log_lun,777) 'min(encr)   CRS  =', encr_min,         '',  0.0,     proc_encr_min, loc_encr_min
+        write(log_lun,777) 'max(encr)   CRS  =', encr_max,      'dt=',dt_cr,     proc_encr_max, loc_encr_max
 #endif /* COSM_RAYS */
 #ifdef RESISTIVE
-        write(log_lun,776) 'max(eta)         =', eta_max ,      'dt=',dt_resist, proc_eta_max,  loc_eta_max
+        write(log_lun,776) 'max(eta)    RES  =', eta_max ,      'dt=',dt_resist, proc_eta_max,  loc_eta_max
 #endif /* RESISTIVE */
 
       close(log_lun)
