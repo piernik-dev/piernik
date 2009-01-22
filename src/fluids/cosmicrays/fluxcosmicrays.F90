@@ -12,18 +12,18 @@ module fluxcosmicrays
   subroutine flux_crs(fluxc,vion,uuc,n)
   
     use constants,       only : small
-    use fluidindex,      only : nvar_crs   
+    use fluidindex,      only : nvar_crs,icr   
   
     implicit none
     integer n
 
 ! locals
     real, dimension(nvar_crs,n):: fluxc,uuc
-    real, dimension(n) :: vx  
+    real, dimension(n) :: vion 
     
     fluxc   = 0.0
 
-    fluxc(icr,RNG)= uui(iecr,RNG)*vion(RNG)
+    fluxc(icr,RNG)= uuc(icr,RNG)*vion(RNG)
 
   end subroutine flux_crs
 

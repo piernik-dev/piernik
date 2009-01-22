@@ -9,6 +9,7 @@ module timestepcosmicrays
 
   subroutine timestep_crs
 
+    use constants, only : small
     use grid,           only : dxmn
     use initcosmicrays, only : cfl_cr,K_cr_paral,K_cr_perp 
 
