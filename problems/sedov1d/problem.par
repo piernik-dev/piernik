@@ -1,7 +1,7 @@
  $DOMAIN_SIZES
     nxd = 20
     nyd = 5
-    nzd = 5
+    nzd = 1
  /
  $MPI_BLOCKS
     pxsize = 1
@@ -74,10 +74,6 @@
     smalld = 1.e-3
     smallei= 1.e-5
     integration_order = 2
-    magnetic = 'no'
-    dimensions = '2dxy'
-    nu_bulk    = 10.0
-    cfl_visc   = 0.4
  /
  
  $GRAVITY
@@ -96,7 +92,7 @@
     p0     = 1.0
     Eexpl  = 1.e5
     bx0    = 0.0
-    by0    = 0.0
+    by0    = 1.0
     bz0    = 0.0
     x0     = -0.0 
     y0     = -0.0 

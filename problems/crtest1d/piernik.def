@@ -1,6 +1,5 @@
 
 #undef DEBUG
-#undef GNU
 #undef VERBOSE
 
 /*======= re-setup needed ==========*/
@@ -25,17 +24,13 @@
 /* adiabatic or isothermal */
 #undef ISO
 
-/* fluids */
-
+/* number of different fluids */
 #define MAGNETIC
-
-#define IONIZED
-
+#define IONIZED 
 #undef NEUTRAL
-
-
 #undef DUST
-#undef COSM_RAYS
+#define COSM_RAYS
+
 
 /* choosing freezing speed */
 #define LOCAL_FR_SPEED
@@ -49,18 +44,10 @@
 
 /* physics including */
 #undef RESIST 		
-#undef VISC			
-#undef HEAT_COND	
-#undef COOL_HEAT
-#undef SIMPLE_COOL
-#define ANY_SOURCES
-#undef KEPLER_SUPPRESSION
-#undef COLLISIONS
-#undef COLLS_MODIF
-#undef PRESS_GRAD_EXCH
+
 
 /* gravity type choosing */
-#undef GRAV
+#undef GRAV 		
 #undef GRAV_NULL
 #undef SELF_GRAV
 
@@ -76,8 +63,5 @@
 #undef SHEAR
 #undef SHEAR_MPI
 #undef FLX_BND
-#define ANY_LIMITS
-#undef VZ_LIMITS
-#undef ONLYZSWEEP
 
 /* problem specific directives */
