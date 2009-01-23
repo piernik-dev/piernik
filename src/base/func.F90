@@ -42,8 +42,8 @@ implicit none
             stop
          case (0)
          case default
-            write(*,*) '!!!!', errh
-            write(*,*) 
+            write(*,*) 'Unknown error (', errh,') in namelist ',trim(nm)
+            stop
       endselect
 
    end subroutine namelist_errh
