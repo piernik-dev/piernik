@@ -8,7 +8,9 @@ module shear
 
   subroutine init_shear
     use mpi_setup
+    use func, only : namelist_errh
     implicit none
+    integer :: errh
     character(LEN=100) :: par_file, tmp_log_file
 
     namelist /SHEARING/ omega, qshear
@@ -20,7 +22,8 @@ module shear
     qshear = 0.0
     if(proc .eq. 0) then
        open(1,file=par_file)
-          read(unit=1,nml=SHEARING)
+          read(unit=1,nml=SHEARING,iostat=errh)
+          call namelist_errh(errh,'SHEARING')
        close(1)
        open(3, file=tmp_log_file, position='append')
           write(unit=3,nml=SHEARING)

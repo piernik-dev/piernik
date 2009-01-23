@@ -13,6 +13,40 @@ module func
 implicit none
 
   contains
+   subroutine namelist_errh(errh,nm)
+      implicit none
+      integer, intent(in) :: errh
+      character(len=*), intent(in) :: nm
+      
+      select case (errh)
+         case (19)
+            write(*,*) "severe (19): Invalid reference to variable in ",trim(nm), " namelist"
+            write(*,*) "One of the following conditions occurred: "
+            write(*,*) "    * The variable was not a member of the namelist group."
+            write(*,*) "    * An attempt was made to subscript a scalar variable."
+            write(*,*) "    * A subscript of the array variable was out-of-bounds."
+            write(*,*) "    * An array variable was specified with too many or too few subscripts for the variable."
+            write(*,*) "    * An attempt was made to specify a substring of a noncharacter variable or array name."
+            write(*,*) "    * A substring specifier of the character variable was out-of-bounds."
+            write(*,*) "    * A subscript or substring specifier of the variable was not an integer constant."
+            write(*,*) "    * An attempt was made to specify a substring by using an unsubscripted array variable."
+            stop
+         case (-1)
+            write(*,*) "Namelist: ",trim(nm)," not found in problem.par"
+            stop
+         case (5010)
+            write(*,*) "One of the variables found in problem.par doesn't belong to ",trim(nm), " namelist"
+            stop
+         case (239)
+            write(*,*) "One of the variables found in problem.par doesn't belong to ",trim(nm), " namelist"
+            stop
+         case (0)
+         case default
+            write(*,*) '!!!!', errh
+            write(*,*) 
+      endselect
+
+   end subroutine namelist_errh
 
 ! Te procedury powinny sie znalezc docelowo w jakims innym module.
 

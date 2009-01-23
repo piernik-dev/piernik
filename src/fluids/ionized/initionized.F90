@@ -5,7 +5,7 @@ module initionized
 
   implicit none
 
-    real                  :: gamma_ion, cs_iso_ion,cs_iso_ion2
+    real                  :: gamma_ion, cs_iso_ion,cs_iso_ion2, cs_ion
 
     integer               :: idni, imxi, imyi, imzi
 #ifndef ISO
@@ -26,7 +26,7 @@ module initionized
           
     character par_file*(100), tmp_log_file*(100)
 
-    namelist /FLUID_IONIZED/ gamma_ion, cs_iso_ion
+    namelist /FLUID_IONIZED/ gamma_ion, cs_iso_ion, cs_ion
     
       gamma_ion  = 1.66666666
       cs_iso_ion = 1.0
@@ -59,6 +59,7 @@ module initionized
 
       rbuff(1)   = gamma_ion
       rbuff(2)   = cs_iso_ion
+      rbuff(3)   = cs_ion
     
       call MPI_BCAST(cbuff, 32*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
       call MPI_BCAST(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
@@ -72,6 +73,7 @@ module initionized
       
       gamma_ion  = rbuff(1)  
       cs_iso_ion = rbuff(2)  
+      cs_ion = rbuff(2)  
 
     endif
 
