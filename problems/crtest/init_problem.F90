@@ -179,7 +179,7 @@ contains
 
 #ifdef COSM_RAYS
             u(iecr,i,j,k)= u(iecr,i,j,k) &
-		  + amp_cr*exp(-((x(i)-x0)**2)/r0**2)
+		  + amp_cr*exp(-((x(i)-x0)**2+(y(j)-y0)**2+(z(k)-z0)**2)/r0**2)
 #endif /* COSM_RAYS */
 
         enddo

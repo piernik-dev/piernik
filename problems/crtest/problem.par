@@ -1,6 +1,6 @@
  $DOMAIN_SIZES
-    nxd = 20
-    nyd = 5
+    nxd = 100
+    nyd = 100
     nzd = 1
  /
  
@@ -17,7 +17,7 @@
  /
 
  $END_CONTROL
-    tend   = 10.0 
+    tend   = 1.0 
     nend   = 10000
  /
 
@@ -71,7 +71,7 @@
     cfl_cr     =   0.9
     gamma_cr   =   1.333333
     cr_active  =   1.0
-    K_cr_paral =   100.0
+    K_cr_paral =   10.0
     K_cr_perp  =   0.0
  /
  
@@ -82,14 +82,14 @@
     d0     = 1.0
     p0     = 1.0
     bx0    = 5.0
-    by0    = 0.0
+    by0    = 5.0
     bz0    = 0.0
     x0     = 0.0 
     y0     = 0.0 
     z0     = 0.0
     r0     = 50.0 
     beta_cr= 0.0
-    amp_cr = 1000.0
+    amp_cr = 100.0
  /
 
 
