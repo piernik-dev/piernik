@@ -489,10 +489,8 @@ module dataio
 
 #ifdef COSM_RAYS
       case ('encr')
-!        write(varname,'(a3,i1)') 'enc', ifl
-!        wa(iso:ieo,jso:jeo,kso:keo) = u(iecr(ifl), iso:ieo, jso:jeo, kso:keo)
+        varname = 'encr'            
         wa(iso:ieo,jso:jeo,kso:keo) = u(iecr, iso:ieo, jso:jeo, kso:keo)
-!        call next_fluid_or_var(ifl,iw,ifl)
 #endif /* COSM_RAYS */
 
       case ('divb')

@@ -51,33 +51,36 @@ contains
 #ifdef RESISTIVE
     use resistivity, only : dt_resist, timestep_resist
 #endif /* RESISTIVE */
+
+
     implicit none
 ! Timestep computation
 
 
     c_all = 0.0
+    dt    = (tend-t)/2.
 
 #ifdef IONIZED
     call timestep_ion
-    dt=min(dt_ion,(tend-t)/2.)
+    dt=min(dt,dt_ion)
     c_all = max(c_all,c_ion)
 #endif /* IONIZED */
 
 #ifdef NEUTRAL
     call timestep_neu
-    dt=min(dt_neu,(tend-t)/2.)
+    dt=min(dt,dt_neu)
     c_all = max(c_all,c_neu)
 #endif /* NEUTRAL */
 
 #ifdef DUST
     call timestep_dst
-    dt=min(dt_dst,(tend-t)/2.)
+    dt=min(dt,dt_dst)
     c_all = max(c_all,c_dst)
 #endif /* DUST */
 
 #ifdef COSM_RAYS
     call timestep_crs
-    dt=min(dt_crs,(tend-t)/2.)
+    dt=min(dt,dt_crs)
 #endif /* COSM_RAYS */
 
 #ifdef RESISTIVE
