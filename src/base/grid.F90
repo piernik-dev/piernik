@@ -161,12 +161,15 @@ contains
     if(nzd /= 1) then
       dz = (zmaxb-zminb)/nzb
       dl(zdim) = dz
-      dxmn = min(dx,dy,dz)
+      dvol = dx*dy*dz
     else 
-      dz = 1.0
+      dz = min(dx,dy)
       dl(zdim) = dz
-      dxmn = min(dx,dy)
+      dvol = dx*dy
     endif
+
+    dxmn = min(dx,dy,dz)
+
 
 !    write(*,*) 'proc=',proc, zminb, zmaxb, dl(zdim)
 
@@ -213,8 +216,6 @@ contains
 
     endif
 !--------------------------------------------------------------------------
-
-    dvol = dx*dy*dz
 
     Lx = xmax - xmin
     Ly = ymax - ymin
