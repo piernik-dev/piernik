@@ -17,7 +17,7 @@
  /
 
  $END_CONTROL
-    tend   = 1.0 
+    tend   = 50.0 
     nend   = 10000
  /
 
@@ -39,12 +39,12 @@
  / 
 
  $BOUNDARIES
-    bnd_xl = 'per'  
-    bnd_xr = 'per'  
-    bnd_yl = 'ref'  
-    bnd_yr = 'ref'  
-    bnd_zl = 'ref'  
-    bnd_zr = 'ref'
+    bnd_xl = 'out'  
+    bnd_xr = 'out'  
+    bnd_yl = 'out'  
+    bnd_yr = 'out'  
+    bnd_zl = 'out'  
+    bnd_zr = 'out'
  /
 
  $DOMAIN_LIMITS
@@ -71,7 +71,7 @@
     cfl_cr     =   0.9
     gamma_cr   =   1.333333
     cr_active  =   1.0
-    K_cr_paral =   10.0
+    K_cr_paral =   1000.0
     K_cr_perp  =   0.0
  /
  
