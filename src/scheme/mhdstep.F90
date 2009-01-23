@@ -19,7 +19,7 @@ subroutine mhd_step
 #endif /* DEBUG */
 
 #ifdef COSM_RAYS
-  use cr_diffusion
+  use crdiffusion, only : cr_diff_x, cr_diff_y, cr_diff_z
 #endif /* COSM_RAYS */
 
 #ifdef SHEAR

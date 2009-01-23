@@ -6,7 +6,7 @@ module sweeps     ! split sweeps
   
   subroutine sweepx
 
-    use fluidindex,   only : nvar, iarr_all_swpx
+    use fluidindex,   only : nvar, iarr_all_swpx,i_ion
     use fluidindex,   only : nmag
     use fluidindex,   only : ibx,iby,ibz
 
@@ -15,8 +15,9 @@ module sweeps     ! split sweeps
     use grid, only   : dx,nb,nx,ny,nz,ks,ke,nzd
     use rtvd, only     : relaxing_tvd
     use fluid_boundaries, only : compute_u_bnd 
+
 #ifdef COSM_RAYS
-    use cr_diffusion        
+    use func,  only : div_v        
 #endif /* COSM_RAYS */
 
     implicit none
@@ -28,7 +29,7 @@ module sweeps     ! split sweeps
     u_x = 0.0
     
 #ifdef COSM_RAYS
-    call div_v         
+    call div_v(i_ion)         
 #endif /* COSM_RAYS */
 
     do k=ks,ke
@@ -57,7 +58,7 @@ module sweeps     ! split sweeps
 !------------------------------------------------------------------------------------------
 
   subroutine sweepy
-    use fluidindex, only : nvar, iarr_all_swpy
+    use fluidindex, only : nvar, iarr_all_swpy,i_ion
     use fluidindex,   only : nmag
     use fluidindex, only : ibx,iby,ibz
     
@@ -66,8 +67,9 @@ module sweeps     ! split sweeps
     use grid, only   : dy,nb,nx,ny,nz,ks,ke,nzd
     use rtvd, only     : relaxing_tvd
     use fluid_boundaries, only : compute_u_bnd 
+    
 #ifdef COSM_RAYS
-    use cr_diffusion        
+    use func, only   : div_v        
 #endif /* COSM_RAYS */
 
     implicit none
@@ -80,7 +82,7 @@ module sweeps     ! split sweeps
     u_y = 0.0
     
 #ifdef COSM_RAYS
-    call div_v         
+    call div_v(i_ion)         
 #endif /* COSM_RAYS */
 
     do k=ks,ke
@@ -111,7 +113,7 @@ module sweeps     ! split sweeps
 !------------------------------------------------------------------------------------------
 
   subroutine sweepz
-    use fluidindex, only   : nvar, iarr_all_swpz
+    use fluidindex, only   : nvar, iarr_all_swpz,i_ion
     use fluidindex, only   : nmag
     use fluidindex, only : ibx,iby,ibz
 
@@ -120,8 +122,9 @@ module sweeps     ! split sweeps
     use grid, only   : dz,nb,nx,ny,nz,ks,ke,nzd
     use rtvd, only     : relaxing_tvd
     use fluid_boundaries, only : compute_u_bnd 
+    
 #ifdef COSM_RAYS
-    use cr_diffusion        
+    use func,  only : div_v       
 #endif /* COSM_RAYS */
 
     implicit none
@@ -134,7 +137,7 @@ module sweeps     ! split sweeps
     u_z = 0.0
     
 #ifdef COSM_RAYS
-    call div_v         
+    call div_v(i_ion)         
 #endif /* COSM_RAYS */
 
     do j=1,ny-1

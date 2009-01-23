@@ -56,8 +56,9 @@ module rtvd ! split orig
     use shear,  only : qshear, omega
 #endif /* SHEAR */
 #ifdef COSM_RAYS
-    use start,  only : gamma_cr, cr_active, smallecr
-    use arrays, only : wa, iecr
+    use initcosmicrays,  only : gamma_cr, cr_active, smallecr
+    use initcosmicrays,  only : iecr
+    use arrays,          only : divvel 
 #endif /* COSM_RAYS */
 
     implicit none
@@ -93,7 +94,7 @@ module rtvd ! split orig
     real, dimension(nvar,n) :: duls,durs
 #endif /* GRAV */
 #ifdef COSM_RAYS
-    real, dimension(n)    :: divv,decr,gpcr,ecr
+    real, dimension(n)    :: divv,decr,grad_pcr,ecr
 #endif /* COSM_RAYS */
 
     real, dimension(2)    :: cn 
@@ -219,29 +220,31 @@ module rtvd ! split orig
 #ifdef COSM_RAYS
     select case (sweep)
       case('xsweep')
-        divv = wa(:,i1,i2)
+        divv = divvel(:,i1,i2)
       case('ysweep')
-        divv = wa(i2,:,i1)
+        divv = divvel(i2,:,i1)
       case('zsweep')
-        divv = wa(i1,i2,:)
+        divv = divvel(i1,i2,:)
     end select
 
-    decr(:)  = -(gamma_cr-1.)*u1(iecr,:)*divv(:)*dt
+    decr(:)    = -(gamma_cr-1.)*u1(iecr,:)*divv(:)*dt
     u1(iecr,:) = u1(iecr,:) + cn(istep)*decr(:)
     u1(iecr,:) = max(smallecr,u1(iecr,:))
 
-    vx = u1(iarr_all_mx,:)/u1(iarr_all_dn,:)
+    vx  = u1(iarr_all_mx(i_ion),:)/u1(iarr_all_dn(i_ion),:)
     ecr = u1(iecr,:)
 
-    gpcr(2:n-1) = cr_active*(gamma_cr -1.)*(ecr(3:n)-ecr(1:n-2))/(2.*dx) 
-    gpcr(1:2)=0.0 ; gpcr(n-1:n) = 0.0
+    grad_pcr(2:n-1) = cr_active*(gamma_cr -1.)*(ecr(3:n)-ecr(1:n-2))/(2.*dx) 
+    grad_pcr(1:2)=0.0 ; grad_pcr(n-1:n) = 0.0
 
 #ifndef ISO
-    u1(iarr_all_en,:) = u1(iarr_all_en,:) - cn(istep)*u1(iarr_all_mx,:)/u1(iarr_all_dn,:)*gpcr*dt
+    u1(iarr_all_en(i_ion),:) = u1(iarr_all_en(i_ion),:) &
+                              - cn(istep)*u1(iarr_all_mx(i_ion),:)/u1(iarr_all_dn(i_ion),:)*grad_pcr*dt
 #endif /* ISO */
-    u1(iarr_all_mx,:) = u1(iarr_all_mx,:) - cn(istep)*gpcr*dt
+    u1(iarr_all_mx(i_ion),:) = u1(iarr_all_mx(i_ion),:) - cn(istep)*grad_pcr*dt
 
 #endif /* COSM_RAYS */
+
 #ifndef ISO
 
     ekin = 0.5*( u1(iarr_all_mx,:)**2 + u1(iarr_all_my,:)**2 &
