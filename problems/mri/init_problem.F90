@@ -5,8 +5,11 @@ module init_problem
 ! Initial condition for Parker instability in realistic galactic gravity 
 ! Written by: M. Hanasz, February 2006
 
+  use mpi_setup
   use arrays
-  use start
+  use fluidindex,  only : ibx,iby,ibz
+  use initionized, only : idni,imxi,imyi,imzi,ieni
+  use shear,       only : qshear,omega
 
   real ::  d0,nbx0,nby0,nbz0,beta,dv
   character problem_name*32,run_id*3
@@ -81,15 +84,17 @@ contains
 !-----------------------------------------------------------------------------
 
   subroutine init_prob
-    use arrays,  only : x
+    use grid,  only : x,nx,ny,nz
     use constants, only : small
+    use initionized,only : cs_ion, gamma_ion
 
     implicit none
 
     integer :: i,j,k
-    real :: b0,p0
+    real :: b0,p0,c_si
     real, dimension(4) :: rand
-
+   
+    c_si = cs_ion
 
     call read_problem_par
 
@@ -101,17 +106,17 @@ contains
     do k = 1,nz
       do j = 1,ny
         do i = 1,nx
-          u(idna,i,j,k) = d0
+          u(idni,i,j,k) = d0
           call random_number(rand)
-          u(imxa:imza,i,j,k) = 0.0
-          u(imya,i,j,k) = -qshear*omega*x(i)*u(idna,i,j,k)
+          u(imxi:imzi,i,j,k) = 0.0
+          u(imyi,i,j,k) = -qshear*omega*x(i)*u(idni,i,j,k)
 
-          u(imxa,i,j,k) = u(imxa,i,j,k) + dv*c_si*(rand(1)-0.5)/sqrt(gamma)
-          u(imya,i,j,k) = u(imya,i,j,k) + dv*c_si*(rand(2)-0.5)/sqrt(gamma)
-          u(imza,i,j,k) = u(imza,i,j,k) + dv*c_si*(rand(3)-0.5)/sqrt(gamma)
+          u(imxi,i,j,k) = u(imxi,i,j,k) + dv*c_si*(rand(1)-0.5)/sqrt(gamma_ion)
+          u(imyi,i,j,k) = u(imyi,i,j,k) + dv*c_si*(rand(2)-0.5)/sqrt(gamma_ion)
+          u(imzi,i,j,k) = u(imzi,i,j,k) + dv*c_si*(rand(3)-0.5)/sqrt(gamma_ion)
 #ifndef ISO
-          u(iena,i,j,k)   = p0/(gamma-1.0)*(1.0 + dp*(rand(4)-0.5)) &
-            + 0.5*sum(u(imxa:imza,i,j,k)**2,1)
+          u(ieni,i,j,k)   = p0/(gamma_ion-1.0)*(1.0 + dp*(rand(4)-0.5)) &
+            + 0.5*sum(u(imxi:imzi,i,j,k)**2,1)
 #endif /* ISO */
         enddo
       enddo
@@ -121,11 +126,11 @@ contains
     do k = 1,nz
       do j = 1,ny
         do i = 1,nx
-          b(ibx,i,j,k)   = b0*sqrt(u(idna,i,j,k)/d0)* nbx0/sqrt(nbx0**2+nby0**2+nbz0**2+small)
-          b(iby,i,j,k)   = b0*sqrt(u(idna,i,j,k)/d0)* nby0/sqrt(nbx0**2+nby0**2+nbz0**2+small)
-          b(ibz,i,j,k)   = b0*sqrt(u(idna,i,j,k)/d0)* nbz0/sqrt(nbx0**2+nby0**2+nbz0**2+small)
+          b(ibx,i,j,k)   = b0*sqrt(u(idni,i,j,k)/d0)* nbx0/sqrt(nbx0**2+nby0**2+nbz0**2+small)
+          b(iby,i,j,k)   = b0*sqrt(u(idni,i,j,k)/d0)* nby0/sqrt(nbx0**2+nby0**2+nbz0**2+small)
+          b(ibz,i,j,k)   = b0*sqrt(u(idni,i,j,k)/d0)* nbz0/sqrt(nbx0**2+nby0**2+nbz0**2+small)
 #ifndef ISO
-          u(iena,i,j,k)   = u(iena,i,j,k) +0.5*sum(b(:,i,j,k)**2,1)
+          u(ieni,i,j,k)   = u(ieni,i,j,k) +0.5*sum(b(:,i,j,k)**2,1)
 #endif /* ISO */
         enddo
       enddo

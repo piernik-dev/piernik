@@ -11,9 +11,6 @@
     pzsize = 1    
  /  
 
- $START_CONTROL
- /
-
  $RESTART_CONTROL
     nrestart = 0 
     new_id   = ''
@@ -23,6 +20,11 @@
     tend   = 2.0e5
     nend   = 100000
  /
+
+ $FLUID_IONIZED
+    cs_ion    = 1.0e-3
+    gamma_ion = 1.6666667
+ / 
 
  $OUTPUT_CONTROL
     dt_hdf  = 1.e2
@@ -59,23 +61,14 @@
     zmax   = 0.5
  /
 
- $EQUATION_OF_STATE
-    c_si   = 1.e-3
- /  
-
  $NUMERICAL_SETUP
     cfl    = 0.7
     smalld = 1.e-5
     smallei= 1.e-12
     integration_order = 2
-    magnetic = 'yes'
-    dimensions = '3d'
   /
  
  $GRAVITY
- /
- 
- $THERMAL
  /
  
  $RESISTIVITY
@@ -99,6 +92,6 @@
  /
 
  $SHEARING
-   omega  = 1.0e-3
+   omega = 1.0e-3
    qshear = 1.5
  /
