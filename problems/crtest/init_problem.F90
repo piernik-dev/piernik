@@ -132,15 +132,18 @@ contains
 
     use fluidindex,     only : ibx,iby,ibz
     use initionized,    only : idni,imxi,imyi,imzi,ieni
-    use initcosmicrays, only : iecr
+    use initcosmicrays, only : gamma_cr,iecr
     use initionized,    only : gamma_ion   
 
     implicit none
 
-    integer i,j,k, n
+    integer :: i,j,k, n
+    real    :: cs_iso 
     
  
 ! Uniform equilibrium state
+
+    cs_iso = sqrt(p0/d0)
 
     do k = 1,nz
       do j = 1,ny
@@ -160,7 +163,7 @@ contains
 #endif /* ISO */
 
 #ifdef COSM_RAYS
-          u(iecr,i,j,k)      =  0 ! beta_cr*c_si**2 * u(idna,i,j,k)/(gamma_cr-1.0)
+          u(iecr,i,j,k)      =  beta_cr*cs_iso**2 * u(idni,i,j,k)/(gamma_cr-1.0)
 #endif /* COSM_RAYS */
 
 
@@ -176,7 +179,7 @@ contains
 
 #ifdef COSM_RAYS
             u(iecr,i,j,k)= u(iecr,i,j,k) &
-		  + amp_cr*exp(-((x(i)-x0)**2+(y(j)-y0)**2+(z(k)-z0)**2)/r0**2)
+		  + amp_cr*exp(-((x(i)-x0)**2)/r0**2)
 #endif /* COSM_RAYS */
 
         enddo

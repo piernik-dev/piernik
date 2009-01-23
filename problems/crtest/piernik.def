@@ -1,6 +1,5 @@
 
 #undef DEBUG
-#undef GNU
 #undef VERBOSE
 
 /*======= re-setup needed ==========*/
@@ -45,15 +44,6 @@
 
 /* physics including */
 #undef RESIST 		
-#undef VISC			
-#undef HEAT_COND	
-#undef COOL_HEAT
-#undef SIMPLE_COOL
-#undef ANY_SOURCES
-#undef KEPLER_SUPPRESSION
-#undef COLLISIONS
-#undef COLLS_MODIF
-#undef PRESS_GRAD_EXCH
 
 
 /* gravity type choosing */
@@ -73,8 +63,5 @@
 #undef SHEAR
 #undef SHEAR_MPI
 #undef FLX_BND
-#undef ANY_LIMITS
-#undef VZ_LIMITS
-#undef ONLYZSWEEP
 
 /* problem specific directives */
