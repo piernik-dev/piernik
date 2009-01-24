@@ -64,6 +64,8 @@ module initneutral
 
     endif
 
+    cs_iso_neu2 = cs_iso_neu**2 
+
   end subroutine init_neutral
 
 

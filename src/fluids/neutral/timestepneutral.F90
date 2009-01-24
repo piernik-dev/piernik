@@ -9,21 +9,21 @@ contains
 
   subroutine timestep_neu
     use mpi_setup
-    use grid, only   : dx,dy,dz,nb
+    use grid, only     : dx,dy,dz,nb,ks,ke,nyb,nxb
+    use arrays, only   : u,b
     use start, only  : cfl
-    use initneutral, only : gamma_neu, cs_iso_neu2   
+    use initneutral, only : gamma_neu, cs_iso_neu,cs_iso_neu2   
     use initneutral, only : idnn,imxn,imyn,imzn
 #ifndef ISO
     use initneutral, only : ienn
 #endif /* ISO */
 
-    use arrays, only : ks,ke,nyb,nxb,u,b
 
     implicit none
 
     real dt_neu_proc, dt_neu_all, c_max_all
     real dt_neu_proc_x, dt_neu_proc_y, dt_neu_proc_z
-    real cx, cy, cz, vx, vy, vz, cf
+    real cx, cy, cz, vx, vy, vz, cs
     
 
 ! locals
@@ -35,7 +35,7 @@ contains
     cx    = 0.0
     cy    = 0.0
     cz    = 0.0
-    c_neu     = 0.0
+    c_neu = 0.0
 
     do k=ks,ke
       do j=nb+1,nb+nyb
@@ -46,18 +46,18 @@ contains
           vz=abs(u(imzn,i,j,k)/u(idnn,i,j,k))
 
 #ifdef ISO
-            p = csi_iso_neu2*u(idnn,i,j,k)
-            cf = sqrt(abs( p/u(idnn,i,j,k)) )
+            p = cs_iso_neu2*u(idnn,i,j,k)
+            cs = sqrt(abs( p/u(idnn,i,j,k)) )
 #else /* ISO */
             p=(u(ienn,i,j,k)-sum(u(imxn:imzn,i,j,k)**2,1) &
               /u(idnn,i,j,k)/2.)*(gamma_neu-1.)
 
-            cf = sqrt(abs(  (gamma_neu*p)/u(idnn,i,j,k)) )
+            cs = sqrt(abs(  (gamma_neu*p)/u(idnn,i,j,k)) )
 #endif /* ISO */
 
-          cx=max(cx,vx+cf)
-          cy=max(cy,vy+cf)
-          cz=max(cz,vz+cf)
+          cx=max(cx,vx+cs)
+          cy=max(cy,vy+cs)
+          cz=max(cz,vz+cs)
           c_neu =max(c_neu,cx,cy,cz)
 
         end do
