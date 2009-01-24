@@ -210,7 +210,7 @@ contains
 
     else 
 
-      z = 0.0  ! dz =1
+      z = 0.0  
       zl = -dz/2.
       zr =  dz/2.
 

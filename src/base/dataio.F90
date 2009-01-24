@@ -18,37 +18,44 @@ module dataio
 
   implicit none
 
-  integer, parameter            :: nvarsmx = 16 
-  character(len=3)              :: new_id
-  character(len=16)             :: restart, domain, mag_center
-  integer                       :: nrestart, resdel
-  real                          :: dt_hdf, dt_res, dt_tsl, dt_log
-  integer                       :: min_disk_space_MB, sleep_minutes, sleep_seconds
-  character(len=160)            :: user_message_file, system_message_file
+  integer, parameter    :: nvarsmx = 16 
+  character(len=3)      :: new_id
+  character(len=16)     :: restart, domain, mag_center
+  integer               :: nrestart, resdel
+  real                  :: dt_hdf, dt_res, dt_tsl, dt_log
+  integer               :: min_disk_space_MB, sleep_minutes, sleep_seconds
+  character(len=160)    :: user_message_file, system_message_file
+  integer               :: ix,iy,iz, iv
   character(len=4), dimension(nvarsmx) :: vars
-  integer :: ix,iy,iz, iv
 
-  integer :: tsl_lun = 2, log_lun = 3
-  integer :: nhdf, nres, ntsl, nlog
-  integer :: step_hdf, step_res, nhdf_start, nres_start
-  real    :: t_start, last_hdf_time
-  character(len=128) :: log_file
-  character(len=2)   :: pc1,pc2,pc3
-  logical tsl_firstcall
+  integer               :: tsl_lun = 2, log_lun = 3
+  integer               :: nhdf, nres, ntsl, nlog
+  integer               :: step_hdf, step_res, nhdf_start, nres_start
+  real                  :: t_start, last_hdf_time
+  character(len=128)    :: log_file
+  character(len=2)      :: pc1,pc2,pc3
+  logical               :: tsl_firstcall
 
-  logical wait
+  logical               :: wait
 
-  integer nchar
-  character msg*16
-  real msg_param
+  integer               :: nchar
+  character             :: msg*16
+  real                  :: msg_param
 
-  character hostfull*(80), host*8, fhost*10, fpid*10
-  integer :: pid, uid, ihost, scstatus
-  real vx_max, vy_max, vz_max, va2max,va_max, cs2max, cs_max, &
-       dens_min, dens_max, pres_min, pres_max, b_min, b_max,  &
-       temp_min, temp_max, divb_max
+  character             :: hostfull*(80), host*8, fhost*10, fpid*10
+  integer               :: pid, uid, ihost, scstatus
+  real                  :: vx_max, vy_max, vz_max, va2max,va_max, &
+                           cs2max, cs_max, &
+                           dens_min, dens_max, pres_min, pres_max
+
+#ifdef MAGNETIC
+  real                  :: divb_max, b_min, b_max
+#endif MAGNETIC
+#ifndef ISO       
+  real                  :: temp_min, temp_max, 
+#endif /* ISO */     
 #ifdef COSM_RAYS
-  real encr_min, encr_max
+  real                  :: encr_min, encr_max
 #endif /* COSM_RAYS */
 
   namelist /RESTART_CONTROL/ restart, new_id, nrestart, resdel
@@ -336,7 +343,9 @@ module dataio
     integer :: nxo = 1, nyo = 1, nzo = 1, &
                iso = 1, jso = 1, kso = 1, &
                ieo = 1, jeo = 1, keo = 1
-    real(kind=4), dimension(:,:,:), allocatable :: temp
+	       
+	       
+    real(kind=4), dimension(:,:,:), allocatable :: tmparr
 
 !- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -373,7 +382,7 @@ module dataio
       endif
     endif
 
-    allocate(temp(iso:ieo,jso:jeo,kso:keo))
+    allocate(tmparr(iso:ieo,jso:jeo,kso:keo))
 
     rank = 3
     comp_type = 4
@@ -570,8 +579,8 @@ module dataio
 !
       sds_id = sfcreate(sd_id, varname, 5, rank, dims)
       iostatus = sfscompress(sds_id, comp_type, comp_prm)
-      temp = real(wa(iso:ieo,jso:jeo,kso:keo),4)
-      iostatus = sfwdata(sds_id, istart, stride, dims, temp)
+      tmparr = real(wa(iso:ieo,jso:jeo,kso:keo),4)
+      iostatus = sfwdata(sds_id, istart, stride, dims, tmparr)
 
 ! write coords
 !
@@ -605,7 +614,9 @@ module dataio
 
       close(log_lun)
     endif
-    deallocate(temp)
+    
+    deallocate(tmparr)
+    
   end subroutine write_hdf
 
   subroutine next_fluid_or_var(ifluid,ivar,nfluids)
@@ -1040,6 +1051,14 @@ module dataio
     use arrays, only : u,b,wa
     use init_problem, only : problem_name, run_id
 
+#ifdef IONIZED
+    use initionized, only : gamma_ion, cs_iso_ion,cs_iso_ion2
+#endif /* IONIZED */
+
+#ifdef NEUTRAL
+    use initneutral, only : gamma_neu, cs_iso_neu,cs_iso_neu2
+#endif /* NEUTRAL */
+
 #ifndef ISO
     use fluidindex, only : iarr_all_en
 #endif /* ISO */
@@ -1106,8 +1125,10 @@ module dataio
 
         write (tsl_lun, '(a1,a8,50a16)') '#','nstep', 'time', 'timestep', 'mass', &
                                            'momx', 'momy', 'momz', 'amomz', &
-                                           'ener', 'epot', 'eint', 'ekin', 'emag', &
-                                           'mflx', 'mfly', 'mflz', &
+                                           'ener', 'epot', 'eint', 'ekin', &
+#ifdef MAGNETIC					   
+                                           'emag', 'mflx', 'mfly', 'mflz', &
+#endif /* MAGNETIC */					   
 #ifdef COSM_RAYS
                                            'encr_tot', 'encr_min',  'encr_max',&
 #endif /* COSM_RAYS */
@@ -1123,8 +1144,10 @@ module dataio
 #ifdef SNE_DISTR
                                            'sum_emagadd', 'tot_emagadd', &
 #endif /* SNE_DISTR */
-                                           'b_min', 'b_max', 'divb_max'
+#ifdef MAGNETIC                            'b_min', 'b_max', 'divb_max', &
 
+#endif /* MAGNETIC */
+                                           '     '
 
         write (tsl_lun, '(a1)') '#'
         tsl_firstcall = .false.
@@ -1223,19 +1246,22 @@ module dataio
 #ifdef COSM_RAYS
                       tot_encr, encr_min, encr_max, &
 #endif /* COSM_RAYS */
+#ifdef MAGNETIC
+                      b_min, b_max, divb_max &
+
 #ifdef RESISTIVE
                       eta_max, &
 #endif /* RESISTIVE */
+#endif /* MAGNETIC */
+
 ! some quantities computed in "write_log".One can add more, or change.
                       vx_max, vy_max, vz_max, va_max, cs_max, &
                       dens_min, dens_max, pres_min, pres_max, &
 #ifndef ISO
-                      temp_min, temp_max,  &
+                      temp_min, temp_max, &
 #endif /* ISO */
-#ifdef SNE_DISTR
-                      sum_emagadd, tot_emagadd, &
-#endif /* SNE_DISTR */
-                      b_min, b_max, divb_max
+                      0.0
+		                           
       close(tsl_lun)
     endif
 
@@ -1257,16 +1283,18 @@ module dataio
     use start, only : t,dt,nstep,smallei,cfl
 
 #ifdef IONIZED
+    use initionized, only : gamma_ion, cs_iso_ion,cs_iso_ion2
     use initionized, only : idni,imxi,imyi,imzi
 #ifndef ISO
-    use initionized, only : ieni, gamma_ion
+    use initionized, only : ieni
 #endif /* ISO */
 #endif /* IONIZED */
 
 #ifdef NEUTRAL
+    use initneutral, only : gamma_neu, cs_iso_neu,cs_iso_neu2
     use initneutral, only : idnn,imxn,imyn,imzn
 #ifndef ISO
-    use initneutral, only : ienn, gamma_neu
+    use initneutral, only : ienn
 #endif /* ISO */
 #endif /* NEUTRAL */
 
@@ -1279,28 +1307,29 @@ module dataio
     use initcosmicrays, only : iecr
 #endif /* COSM_RAYS */
 
-#ifdef ISO
-!    use start, only : csi2,c_si
-#endif /* ISO */
-
 #ifdef RESISTIVE
     use resistivity
 #endif /* RESISTIVE */
 
     implicit none
 
+#ifdef MAGNETIC
+    integer, dimension(3) :: loc_b_min, loc_b_max, loc_divb_max
+    integer               :: proc_b_min, proc_b_max, proc_divb_max    
+    real                  :: b_min, b_max    
+#endif /* MAGNETIC */ 
+
 #ifdef IONIZED 
     integer, dimension(3) :: loc_vxi_max, loc_vyi_max, loc_vzi_max, &
                              loc_csi_max, loc_deni_min, loc_deni_max, &
                              loc_prei_min, loc_prei_max, loc_temi_min, loc_temi_max, &
-                             loc_vai_max, loc_b_min, loc_b_max, loc_divb_max
+                             loc_vai_max 
     integer               :: proc_vxi_max, proc_vyi_max, proc_vzi_max, &
                              proc_csi_max, proc_deni_min, proc_deni_max, &
                              proc_prei_min, proc_prei_max, proc_temi_min, proc_temi_max, &
-                             proc_vai_max, proc_b_min, proc_b_max, proc_divb_max
+                             proc_vai_max, 
     real                  :: deni_min, deni_max, vxi_max, vyi_max, vzi_max, &
-                             prei_min, prei_max, temi_min, temi_max, vai_max, csi_max, &
-                             b_min, b_max
+                             prei_min, prei_max, temi_min, temi_max, vai_max, csi_max                            
 #endif /* IONIZED */
 
 #ifdef NEUTRAL 
@@ -1313,6 +1342,15 @@ module dataio
     real                  :: denn_min, denn_max, vxn_max, vyn_max, vzn_max, &
                              pren_min, pren_max, temn_min, temn_max, csn_max
 #endif /* NEUTRAL */
+
+#ifdef DUST
+    integer, dimension(3) :: loc_dend_min,  loc_dend_max, &
+                             loc_vxd_max, loc_vyd_max, loc_vzd_max
+
+    integer               :: proc_dend_min,  proc_dend_max,  &
+                             proc_vxd_max,   proc_vyd_max,   proc_vzd_max
+    real                  :: dend_min, dend_max, vxd_max, vyd_max, vzd_max
+#endif /* DUST */
 
 #ifdef COSM_RAYS
     integer, dimension(3) :: loc_encr_min, loc_encr_max
@@ -1354,19 +1392,19 @@ module dataio
                   + (/nb,nb,nb/)
     call mpifind(vzn_max, 'max', loc_vzn_max, proc_vzn_max)
 #ifdef ISO
-    pren_min      = csi2*denn_min
+    pren_min      = cs_iso_neu2*denn_min
     loc_pren_min  = loc_denn_min
     proc_pren_min = proc_denn_min
-    pren_max      = csi2*denn_max
+    pren_max      = cs_iso_neu2*denn_max
     loc_pren_max  = loc_denn_max
     proc_pren_max = proc_denn_max
-    csn_max       = c_si
+    csn_max       = cs_iso_neu
     loc_csn_max   = 0
     proc_csn_max  = 0
-    temn_min      = hydro_mass / k_B * csi2
+    temn_min      = hydro_mass / k_B * cs_iso_neu2
     loc_temn_min  = 0
     proc_temn_min = 0
-    temn_max      = hydro_mass / k_B * csi2
+    temn_max      = hydro_mass / k_B * cs_iso_neu2
     loc_temn_max  = 0
     proc_temn_max = 0
 #else /* ISO */
@@ -1458,32 +1496,22 @@ module dataio
                        /u(idni,is:ie,js:je,ks:ke)) &
                   + (/nb,nb,nb/)
     call mpifind(va_max, 'max', loc_vai_max, proc_vai_max)
-#else /* MAGNETIC */
-    b_min = 0.0
-    loc_b_min = (/-1,-1,-1/)
-    proc_b_min = -1
-    b_max = 0.0
-    loc_b_max = (/-1,-1,-1/)
-    proc_b_max = -1
-    vai_max = 0.0
-    loc_vai_max = (/-1,-1,-1/)
-    proc_vai_max = -1
 #endif /* MAGNETIC */
 
 #ifdef ISO
-    prei_min      = csi2*deni_min
+    prei_min      = cs_iso_ion2*deni_min
     loc_prei_min  = loc_deni_min
     proc_prei_min = proc_deni_min
-    prei_max      = csi2*deni_max
+    prei_max      = cs_iso_ion2*deni_max
     loc_prei_max  = loc_deni_max
     proc_prei_max = proc_deni_max
-    csi_max       = c_si
+    csi_max       = cs_iso_ion
     loc_csi_max   = 0
     proc_csi_max  = 0
-    temi_min      = hydro_mass / k_B * csi2
+    temi_min      = hydro_mass / k_B * cs_iso_ion2
     loc_temi_min  = 0
     proc_temi_min = 0
-    temi_max      = hydro_mass / k_B * csi2
+    temi_max      = hydro_mass / k_B * cs_iso_ion2
     loc_temi_max  = 0
     proc_temi_max = 0
 #else /* ISO */
@@ -1529,6 +1557,38 @@ module dataio
 
 #endif /* IONIZED */
 
+#ifdef DUST
+    wa            = u(idnd,:,:,:)
+    dend_min      = minval(wa(is:ie,js:je,ks:ke))
+    loc_dend_min  = minloc(wa(is:ie,js:je,ks:ke)) &
+                  + (/nb,nb,nb/)
+    call mpifind(dend_min, 'min', loc_dend_min, proc_dend_min)
+
+    dend_max      = maxval(wa(is:ie,js:je,ks:ke))
+    loc_dend_max  = maxloc(wa(is:ie,js:je,ks:ke)) &
+                  + (/nb,nb,nb/)
+    call mpifind(dend_max, 'max', loc_dend_max, proc_dend_max)
+
+    wa          = abs(u(imxd,:,:,:)/u(idnd,:,:,:))
+    vxd_max     = maxval(wa(is:ie,js:je,ks:ke))
+    loc_vxd_max = maxloc(wa(is:ie,js:je,ks:ke)) &
+                  + (/nb,nb,nb/)
+    call mpifind(vxd_max, 'max', loc_vxd_max, proc_vxd_max)
+
+    wa          = abs(u(imyd,:,:,:)/u(idnd,:,:,:))
+    vyd_max     = maxval(wa(is:ie,js:je,ks:ke))
+    loc_vyd_max = maxloc(wa(is:ie,js:je,ks:ke)) &
+                  + (/nb,nb,nb/)
+    call mpifind(vyd_max, 'max', loc_vyd_max, proc_vyd_max)
+
+    wa           = abs(u(imzd,:,:,:)/u(idnd,:,:,:))
+    vzd_max      = maxval(wa(is:ie,js:je,ks:ke))
+    loc_vzd_max  = maxloc(wa(is:ie,js:je,ks:ke)) &
+                  + (/nb,nb,nb/)
+    call mpifind(vzd_max, 'max', loc_vzd_max, proc_vzd_max)
+#endif /* DUST */
+
+
 #ifdef RESISTIVE
       call mpifind(eta_max, 'max', loc_eta_max, proc_eta_max)
 #endif /* RESISTIVE */
@@ -1549,10 +1609,6 @@ module dataio
     loc_divb_max  = maxloc(wa(is:ie,js:je,ks:ke)) &
                   + (/nb,nb,nb/)
     call mpifind(divb_max, 'max', loc_divb_max, proc_divb_max)
-#else /* MAGNETIC */
-    divb_max      = 0.0
-    loc_divb_max  = (/-1,-1,-1/)
-    proc_divb_max = -1
 #endif /* MAGNETIC */
 
 #ifdef COSM_RAYS
@@ -1575,8 +1631,10 @@ module dataio
 #ifdef IONIZED
         write(log_lun,771) 'min(dens)   ION  =', deni_min,  proc_deni_min,  loc_deni_min
         write(log_lun,771) 'max(dens)   ION  =', deni_max,  proc_deni_max,  loc_deni_max
+#ifndef ISO
         write(log_lun,771) 'min(temp)   ION  =', temi_min,  proc_temi_min,  loc_temi_min
         write(log_lun,771) 'max(temp)   ION  =', temi_max,  proc_temi_max,  loc_temi_max
+#endif /* ISO */
         write(log_lun,771) 'min(pres)   ION  =', prei_min,  proc_prei_min,  loc_prei_min
         write(log_lun,771) 'max(pres)   ION  =', prei_max,  proc_prei_max,  loc_prei_max
         write(log_lun,777) 'max(|vx|)   ION  =', vxi_max, 'dt=',cfl*dx/(vxi_max+small),   proc_vxi_max, loc_vxi_max
@@ -1589,13 +1647,17 @@ module dataio
         write(log_lun,770) 'min(|b|)    MAG  =', b_min,     proc_b_min,     loc_b_min
         write(log_lun,770) 'max(|b|)    MAG  =', b_max,     proc_b_max,     loc_b_max
         write(log_lun,770) 'max(|divb|) MAG  =', divb_max,  proc_divb_max,  loc_divb_max
+#else /* MAGNETIC */
+        write(log_lun,777) 'max(c_s)    ION  =', sqrt(csi_max**2), 'dt=',cfl*dxmn/sqrt(csi_max**2)
 #endif /* MAGNETIC */
 #endif /* IONIZED */
 #ifdef NEUTRAL
         write(log_lun,771) 'min(dens)   NEU  =', denn_min,  proc_denn_min,  loc_denn_min
         write(log_lun,771) 'max(dens)   NEU  =', denn_max,  proc_denn_max,  loc_denn_max
-        write(log_lun,771) 'min(tems)   NEU  =', temn_min,  proc_temn_min,  loc_temn_min
-        write(log_lun,771) 'max(tems)   NEU  =', temn_max,  proc_temn_max,  loc_temn_max
+#ifndef ISO
+        write(log_lun,771) 'min(temp)   NEU  =', temn_min,  proc_temn_min,  loc_temn_min
+        write(log_lun,771) 'max(temp)   NEU  =', temn_max,  proc_temn_max,  loc_temn_max
+#endif /* ISO */
         write(log_lun,771) 'min(pres)   NEU  =', pren_min,  proc_pren_min,  loc_pren_min
         write(log_lun,771) 'max(pres)   NEU  =', pren_max,  proc_pren_max,  loc_pren_max
         write(log_lun,777) 'max(|vx|)   NEU  =', vxn_max, 'dt=',cfl*dx/(vxn_max+small),   proc_vxn_max, loc_vxn_max
@@ -1603,8 +1665,15 @@ module dataio
         write(log_lun,777) 'max(|vz|)   NEU  =', vzn_max, 'dt=',cfl*dz/(vzn_max+small),   proc_vzn_max, loc_vzn_max
         write(log_lun,777) 'max(c_s )   NEU  =', csn_max, 'dt=',cfl*dxmn/(csn_max+small), proc_csn_max, loc_csn_max
 #endif /* NEUTRAL */
+#ifdef DUST
+        write(log_lun,771) 'min(dens)   DST  =', dend_min,  proc_dend_min,  loc_dend_min
+        write(log_lun,771) 'max(dens)   DST  =', dend_max,  proc_dend_max,  loc_dend_max
+        write(log_lun,777) 'max(|vx|)   DST  =', vxd_max, 'dt=',cfl*dx/(vxd_max+small),   proc_vxd_max, loc_vxd_max
+        write(log_lun,777) 'max(|vy|)   DST  =', vyd_max, 'dt=',cfl*dy/(vyd_max+small),   proc_vyd_max, loc_vyd_max
+        write(log_lun,777) 'max(|vz|)   DST  =', vzd_max, 'dt=',cfl*dz/(vzd_max+small),   proc_vzd_max, loc_vzd_max
+#endif /* DUST */
 #ifdef COSM_RAYS
-        write(log_lun,777) 'min(encr)   CRS  =', encr_min,         '',  0.0,     proc_encr_min, loc_encr_min
+        write(log_lun,771) 'min(encr)   CRS  =', encr_min,        proc_encr_min, loc_encr_min
         write(log_lun,777) 'max(encr)   CRS  =', encr_max,      'dt=',dt_crs,     proc_encr_max, loc_encr_max
 #endif /* COSM_RAYS */
 #ifdef RESISTIVE
@@ -1626,12 +1695,14 @@ module dataio
 
 
 770 format(5x,a18,(1x,e15.9),4(1x,i4))
-771 format(5x,a18,(1x,e15.9),5(1x,i4))
+
+771 format(5x,a18,(1x,e15.9),16x,5(1x,i4))
+777 format(5x,a18,(1x,e15.9),2x,a3,(1x,e10.4),5(1x,i4))
+
+900 format('   nstep = ',i7,'   dt = ',f22.16,'   t = ',f22.16,2(1x,i4))
 #ifdef RESISTIVE
 776 format(5x,a18,(1x,e10.4),2x,a3,(1x,e10.4),4(1x,i4))
 #endif /* RESISTIVE */
-777 format(5x,a18,(1x,e10.4),2x,a3,(1x,e10.4),5(1x,i4))
-900 format('   nstep = ',i7,'   dt = ',f22.16,'   t = ',f22.16,2(1x,i4))
 
 !#endif /* NOT_WORKING */
 
