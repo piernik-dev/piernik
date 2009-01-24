@@ -33,7 +33,11 @@ module rtvd ! split orig
 
   subroutine relaxing_tvd(u,bb,sweep,i1,i2,dx,n,dt)
   
+#ifdef IONIZED
     use fluidindex, only : i_ion
+#endif /* IONIZED */  
+    
+    
     use start,  only : smalld, integration_order  !!! ,cn
 #ifndef ISO
     use start,  only : smallei
@@ -217,7 +221,7 @@ module rtvd ! split orig
     endif
 #endif /* VZ_LIMITS */
 
-#ifdef COSM_RAYS
+#if defined COSM_RAYS && defined IONIZED
     select case (sweep)
       case('xsweep')
         divv = divvel(:,i1,i2)
@@ -243,7 +247,7 @@ module rtvd ! split orig
 #endif /* ISO */
     u1(iarr_all_mx(i_ion),:) = u1(iarr_all_mx(i_ion),:) - cn(istep)*grad_pcr*dt
 
-#endif /* COSM_RAYS */
+#endif /* COSM_RAYS && IONIZED */
 
 #ifndef ISO
 

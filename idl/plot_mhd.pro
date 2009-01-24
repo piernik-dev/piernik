@@ -13,24 +13,34 @@ PRO PLOT_MHD ;,first,last,var
   slices ='y'
   dump   ='n'
 
-  compare = 'y'
+  compare = 'n'
 
-  sf = 10
+  sf = 5
 
-;  dir0 = '../obj.3/'
-;  dir1 = '../obj/'
-  dir0 = '/home/mhanasz/work/public/obj/'
-  dir1 = '/home/mhanasz/work/piernik/trunk/obj/'
-;  dir1 = '../runs/sedov/'
 
-  prefix0 = 'sedov_t_3'
-  prefix1 = 'sedov_t_3'
+;  dir0 = '/home/mhanasz/work/piernik/trunk/obj-sedov1d/'
+;  dir1 = '/home/mhanasz/work/public/obj/'
+;  prefix0 = 'sedov_t_3'
+;  prefix1 = 'sedov_t_3'
   
-;  dir1=dir0
-;  prefix1=prefix0
+  dir0 = '/home/mhanasz/work/piernik/trunk/obj/'
+  dir1 = '/home/mhanasz/work/public/obj/'
+  prefix0 = 'cr_test_b_5'
+  prefix1 = 'cr_test_b_5'
 
-;  dir0=dir1
-;  prefix0=prefix1
+  var0='encr'
+  var1='encr'
+
+  
+;  dir1    = dir0
+;  prefix1 = prefix0
+;  var1    = var0
+
+  dir0    = dir1
+  prefix0 = prefix1
+  var0    = var1
+
+
 ;===============================================================================
 data_files = FINDFILE(dir1+'/'+prefix1+'_00_00_00_*.hdf', Count=n_files)
 IF(n_files EQ 0) THEN GOTO, SKIP
@@ -41,8 +51,6 @@ IF(n_files EQ 0) THEN GOTO, SKIP
   last  = n_files -1
   freq = 1
 
-  var0='ene1'
-  var1='ener'
 
   var = var0
 

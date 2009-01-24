@@ -6,9 +6,12 @@ module sweeps     ! split sweeps
   
   subroutine sweepx
 
-    use fluidindex,   only : nvar, iarr_all_swpx,i_ion
+    use fluidindex,   only : nvar, iarr_all_swpx
     use fluidindex,   only : nmag
     use fluidindex,   only : ibx,iby,ibz
+#ifdef IONIZED
+    use fluidindex,   only : i_ion
+#endif /* IONIZED */  
 
     use start, only  : dt
     use arrays, only : u,b
@@ -58,10 +61,13 @@ module sweeps     ! split sweeps
 !------------------------------------------------------------------------------------------
 
   subroutine sweepy
-    use fluidindex, only : nvar, iarr_all_swpy,i_ion
+    use fluidindex, only : nvar, iarr_all_swpy
     use fluidindex,   only : nmag
     use fluidindex, only : ibx,iby,ibz
-    
+#ifdef IONIZED
+    use fluidindex, only : i_ion
+#endif /* IONIZED */  
+       
     use start, only  : dt
     use arrays, only : u,b
     use grid, only   : dy,nb,nx,ny,nz,ks,ke,nzd
@@ -113,9 +119,13 @@ module sweeps     ! split sweeps
 !------------------------------------------------------------------------------------------
 
   subroutine sweepz
-    use fluidindex, only   : nvar, iarr_all_swpz,i_ion
+    use fluidindex, only   : nvar, iarr_all_swpz
     use fluidindex, only   : nmag
     use fluidindex, only : ibx,iby,ibz
+#ifdef IONIZED
+    use fluidindex, only : i_ion
+#endif /* IONIZED */  
+    
 
     use start, only  : dt
     use arrays, only : u,b

@@ -137,7 +137,7 @@ contains
     integer i,j,k, n
     
     
-    call read_problem_par
+!    call read_problem_par
  
 ! Uniform equilibrium state
 

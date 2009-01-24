@@ -101,13 +101,23 @@ contains
 
   subroutine init_prob
 
+    use initdust,    only : idnd,imxd,imyd,imzd
+
+#ifdef NEUTRAL
+    use initneutral, only : gamma_neu
+    use initneutral, only : idnn,imxn,imyn,imzn
+#ifndef ISO    
+    use initneutral, only : ienn   
+#endif /* ISO */    
+#endif /* NEUTRAL */ 
+
     implicit none
  
     integer i,j,k
     real xi,yj,zk, signmx, signpx
     
     call read_problem_par
-    collfaq = collf
+!    collfaq = collf
 
     
     do i = 1,nx
@@ -120,26 +130,20 @@ contains
         yj = y(j)
         do k = 1,nz
 
-	  u(idna(1),i,j,k) = rhol
-	  u(idna(2),i,j,k) = rhor
-          u(idna,i,j,k) = max(u(idna,i,j,k), smalld)
-          u(imxa(1),i,j,k) =  vxl
-	  u(imxa(2),i,j,k) = -vxr
-          u(imya,i,j,k) = 0.0
-          u(imza,i,j,k) = 0.0
+	  u(idnn,i,j,k)  = rhol
+	  u(idnd,i,j,k)  = rhor
+
+          u(imxn,i,j,k) =  vxl
+	  u(imxd,i,j,k)  = -vxr
+          u(imyn:imzn,i,j,k) = 0.0
+          u(imyd:imzd,i,j,k) = 0.0
 #ifndef ISO
-	  u(iena(1),i,j,k) = c_si**2*u(idna(1),i,j,k)/(gamma(1)-1.0)
-          u(iena(2),i,j,k) = 0.0
-          u(iena,i,j,k) = max(u(iena,i,j,k), smallei)
-	  
-	  u(iena,i,j,k) = u(iena,i,j,k) +0.5*(u(imxa,i,j,k)**2+u(imya,i,j,k)**2+u(imza,i,j,k)**2)/u(idna,i,j,k)
+	  u(ienn,i,j,k) = c_si**2*u(idna(1),i,j,k)/(gamma_neu-1.0)
+	  u(ienn,i,j,k) = u(ienn,i,j,k) &
+	                  +0.5*(u(imxn,i,j,k)**2+u(imyn,i,j,k)**2+u(imzn,i,j,k)**2)/u(idnn,i,j,k)
 #endif /* ISO */
-            b(ibx,i,j,k)   =  0.0
-            b(iby,i,j,k)   =  0.0
-            b(ibz,i,j,k)   =  0.0
-#ifndef ISO
-          u(iena(fmagn),i,j,k)   = u(iena(fmagn),i,j,k) +0.5*sum(b(:,i,j,k)**2,1)
-#endif /* ISO */
+
+
         enddo
       enddo
     enddo

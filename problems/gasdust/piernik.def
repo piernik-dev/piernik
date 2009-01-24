@@ -26,9 +26,10 @@
 #define ISO
 
 /* number of different fluids */
+#undef MAGNETIC 
 #undef IONIZED
-#define NEUTRAL 1
-#define DUST 1
+#define NEUTRAL
+#define DUST
 #undef COSM_RAYS
 
 /* choosing freezing speed */
