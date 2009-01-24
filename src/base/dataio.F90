@@ -52,7 +52,7 @@ module dataio
   real                  :: divb_max, b_min, b_max
 #endif MAGNETIC
 #ifndef ISO       
-  real                  :: temp_min, temp_max, 
+  real                  :: temp_min, temp_max 
 #endif /* ISO */     
 #ifdef COSM_RAYS
   real                  :: encr_min, encr_max
@@ -1247,13 +1247,12 @@ module dataio
                       tot_encr, encr_min, encr_max, &
 #endif /* COSM_RAYS */
 #ifdef MAGNETIC
-                      b_min, b_max, divb_max &
+                      b_min, b_max, divb_max, &
 
 #ifdef RESISTIVE
                       eta_max, &
 #endif /* RESISTIVE */
 #endif /* MAGNETIC */
-
 ! some quantities computed in "write_log".One can add more, or change.
                       vx_max, vy_max, vz_max, va_max, cs_max, &
                       dens_min, dens_max, pres_min, pres_max, &
@@ -1327,7 +1326,7 @@ module dataio
     integer               :: proc_vxi_max, proc_vyi_max, proc_vzi_max, &
                              proc_csi_max, proc_deni_min, proc_deni_max, &
                              proc_prei_min, proc_prei_max, proc_temi_min, proc_temi_max, &
-                             proc_vai_max, 
+                             proc_vai_max 
     real                  :: deni_min, deni_max, vxi_max, vyi_max, vzi_max, &
                              prei_min, prei_max, temi_min, temi_max, vai_max, csi_max                            
 #endif /* IONIZED */
