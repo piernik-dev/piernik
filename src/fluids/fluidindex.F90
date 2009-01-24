@@ -117,7 +117,7 @@ module fluidindex
 #ifdef DUST
       nvar_dst = 0
       beg_dst = nvar + 1
-      call dst_index(nvar,nvar_dust) 
+      call dust_index(nvar,nvar_dst) 
       end_dst = nvar    
       ncomponents  = ncomponents + 1
       nfluid = nfluid + 1   
