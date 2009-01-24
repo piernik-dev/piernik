@@ -73,9 +73,11 @@ module initionized
       
       gamma_ion  = rbuff(1)  
       cs_iso_ion = rbuff(2)  
-      cs_ion = rbuff(2)  
+      cs_ion     = rbuff(3)  
 
     endif
+    
+    cs_iso_ion2  = cs_iso_ion**2
 
   end subroutine init_ionized
 
