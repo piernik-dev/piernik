@@ -1,25 +1,37 @@
+! $Id$
+#include "piernik.def"
 
-  subroutine timestep_dust
-    use grid, only   : dx,dy,dz,nb
-    use start, only  : cfl, dt_dust
-    use fluidindex, only : idnd,imxd,imyd,imzd
+module timestepdust
 
-    use arrays, only : ks,ke,nyb,nxb,u,b
+  real :: dt_dst,c_dst
+
+contains
+
+  subroutine timestep_dst
+    use mpi_setup
+    use grid, only      : dx,dy,dz,nb,ks,ke,nyb,nxb
+    use arrays, only    : u,b
+    use start, only     : cfl  
+    use initdust, only  : idnd,imxd,imyd,imzd
+    use constants, only : small
 
     implicit none
 
-    real dt_dust_proc, dt_dust_all, c_max_all
-    real dt_dust_proc_x, dt_dust_proc_y, dt_dust_proc_z
-    real cx, cy, cz, vx, vy, vz, cf
+    real dt_dst_proc, dt_dst_all, c_max_all
+    real dt_dst_proc_x, dt_dst_proc_y, dt_dst_proc_z
+    real cx, cy, cz, vx, vy, vz
+    
 
 ! locals
-    real v,ps,p
+
+    real p
     integer i,j,k
+
 
     cx    = 0.0
     cy    = 0.0
     cz    = 0.0
-    c_dust     = 0.0
+    c_dst     = 0.0
 
     do k=ks,ke
       do j=nb+1,nb+nyb
@@ -32,26 +44,30 @@
           cx=max(cx,vx)
           cy=max(cy,vy)
           cz=max(cz,vz)
-          c_dust =max(c_dust,cx,cy,cz)
+          c_dst =max(c_dst,cx,cy,cz)
 
         end do
       end do
     end do
 
-    dt_dust_proc_x = dx/cx
-    dt_dust_proc_y = dy/cy
-    dt_dust_proc_z = dz/cz
-    dt_dust_proc   = min(dt_dust_proc_x, dt_dust_proc_y, dt_dust_proc_z)
+    dt_dst_proc_x = dx/max(cx,small)
+    dt_dst_proc_y = dy/max(cy,small)
+    dt_dst_proc_z = dz/max(cz,small)
+    dt_dst_proc   = min(dt_dst_proc_x, dt_dst_proc_y, dt_dst_proc_z)
 
-    call MPI_REDUCE(c_dust, c_max_all, 1, MPI_DOUBLE_PRECISION, MPI_MAX, 0, comm, ierr)
+    call MPI_REDUCE(c_dst, c_max_all, 1, MPI_DOUBLE_PRECISION, MPI_MAX, 0, comm, ierr)
     call MPI_BCAST(c_max_all, 1, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
-    c_dust = c_max_all
+    c_dst = c_max_all
 
-    call MPI_REDUCE(dt_dust_proc, dt_dust_all, 1, MPI_DOUBLE_PRECISION, MPI_MIN, 0, comm, ierr)
-    call MPI_BCAST(dt_dust_all, 1, MPI_DOUBLE_PRECISION, 0, comm, ierr)
-    dt_dust = cfl*dt_dust_all
+    call MPI_REDUCE(dt_dst_proc, dt_dst_all, 1, MPI_DOUBLE_PRECISION, MPI_MIN, 0, comm, ierr)
+    call MPI_BCAST(dt_dst_all, 1, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+    dt_dst = cfl*dt_dst_all
+    
+!    write(*,*) 'timestep_dst:', dt_dst
 
-  end subroutine timestep_dust
+  end subroutine timestep_dst
 
 !-------------------------------------------------------------------------------
+end module timestepdust
+
