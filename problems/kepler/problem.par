@@ -10,8 +10,6 @@
     pysize = 1
     pzsize = 1
  /  
- $START_CONTROL
- /
 
  $RESTART_CONTROL
     restart  = 'last'
@@ -34,9 +32,9 @@
     vars(3) = 'vely'
     vars(4) = 'velz'
     vars(5) = 'ener'
-    vars(6) = 'asup'
-    vars(7) = 'vrot'
-    vars(8) = 'vout'
+    vars(6) = 'magx'
+    vars(7) = 'magy'
+    vars(8) = 'magz'
     domain  = 'phys_domain'
     mag_center = 'no'
  / 
@@ -59,9 +57,8 @@
     zmax   = 1.5
  /
 
- $EQUATION_OF_STATE
-    c_si   = 0.2
-    alpha  = 0.1
+ $FLUID_IONIZED
+    cs_ion = 0.2
  /  
 
  $NUMERICAL_SETUP
@@ -69,10 +66,6 @@
     smalld = 1.e-6
     smallei= 1.e-6
     integration_order = 2
-    magnetic = 'no'
-    dimensions = '3d'
-    nu_bulk    = 0.0001
-    cfl_visc   = 0.4
  /
  
  $GRAVITY
@@ -86,23 +79,15 @@
     n_gravr = 10
  /
  
- $THERMAL
- /
- 
  $RESISTIVITY
  /
 
  $PROBLEM_CONTROL
     problem_name ='kepler'
     run_id  =  'tst'
+    alpha   = 0.1
     d0      = 1.0
     dout    = 1.0e-4
     r_max   = 1.0e-1
-    alfasupp= 1.0e1
-    rsup1   = 0.2e1
-    rsup2   = 0.3e1
-    rsup3   = 0.5e1
-    rsup4   = 0.7e1
-    suppkind= 'smout'
     mag_field_orient = 'none'
 /
