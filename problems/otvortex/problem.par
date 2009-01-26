@@ -79,8 +79,6 @@
     smalld = 1.e-3
     smallei= 1.e-5
     integration_order = 2
-    magnetic = 'yes'
-    dimensions = '2dxy'
  /
  
  $GRAVITY

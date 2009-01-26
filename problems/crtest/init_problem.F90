@@ -50,13 +50,13 @@ contains
     
       open(1,file='problem.par')
         read(unit=1,nml=PROBLEM_CONTROL,end=1234,err=1234)
-	
-	goto 4567	 
+
+        goto 4567
  1234   write(*,*) 'Check namelist in "problem.par":'
-	write(*,*) ''
+        write(*,*) ''
         write(*,nml=PROBLEM_CONTROL) 
-	write(*,*) ''
-	stop	 
+        write(*,*) ''
+        stop
  4567   continue   
    
         write(*,nml=PROBLEM_CONTROL)

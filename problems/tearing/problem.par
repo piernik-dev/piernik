@@ -1,6 +1,6 @@
  $DOMAIN_SIZES
-    nxd = 256
-    nyd = 256
+    nxd = 512
+    nyd = 512
     nzd = 1
  /  
 
@@ -27,7 +27,7 @@
  $OUTPUT_CONTROL
     dt_hdf  = 0.01
     dt_log  = 0.001
-    dt_tsl  = 0.001
+    dt_tsl  = 0.1
     dt_res  = 3.0
     vars(1) = 'dens'
     vars(2) = 'velx'
@@ -37,9 +37,6 @@
     vars(6) = 'magx'
     vars(7) = 'magy'
     vars(8) = 'magz'
-    vars(9) = 'curx'
-    vars(10)= 'cury'
-    vars(11)= 'curz'
     domain  = 'phys_domain'  
  / 
 
@@ -61,6 +58,10 @@
     zmax   = 0.5
  /
 
+ $FLUID_IONIZED
+    gamma_ion  = 1.666666666
+ /
+
  $EQUATION_OF_STATE
     c_si  = 1.0
     alpha = 1.0
@@ -71,10 +72,7 @@
     cfl    = 0.4
     smalld = 1.e-5
     smallei= 1.e-5
-    dimensions = '2dxy'
-    integration_order  = 3
-    magnetic_scheme    = 'ssp'
-    magnetic_order     = 3
+    integration_order  = 2
  /
  
  $GRAVITY
@@ -84,19 +82,18 @@
  /
 
  $RESISTIVITY
+    eta_scale   =  4
     cfl_resist  =  0.4
     eta_0   	=  0.0
-    eta_1       =  0.0
-    j_crit      =  200.0
-    demag_max   =  0.01
+    eta_1       =  1.0e-4
+    j_crit      =  100.0
+    deint_max   =  0.001
  /
  
  $PROBLEM_CONTROL
     problem_name = 'tearing'
     run_id       = 'tst'
-    d0           =  0.5
-    dimdir       = 'x'
-    magdir       = 'y'
+    beta         =  1.0
     v0           =  0.1
  /
 	
