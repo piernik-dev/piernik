@@ -59,17 +59,14 @@
     zmax =  4.0e-1
  /
 
- $EQUATION_OF_STATE
-    c_si  = 0.2
-    alpha = 3.0
+ $FLUID_IONIZED
+    cs_ion  = 0.2
  /
 
  $NUMERICAL_SETUP
     cfl		= 0.8
     smalld	= 1.e-4
     smallei	= 1.e-5
-    dimensions  = '2dxy'
-    magnetic           = 'yes'
  /
 
  $GRAVITY
@@ -82,9 +79,6 @@
     n_gravr    = 10
  /
 
- $THERMAL
- /
-
  $RESISTIVITY
  /
 
@@ -94,4 +88,5 @@
     d0               = 1.0
     v_zab            = 0.1
     mag_field_orient = 'vertical'
+    alpha = 3.0
  /
