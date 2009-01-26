@@ -50,7 +50,7 @@ module dataio
 
 #ifdef MAGNETIC
   real                  :: divb_max, b_min, b_max
-#endif MAGNETIC
+#endif /* MAGNETIC */
 #ifndef ISO       
   real                  :: temp_min, temp_max 
 #endif /* ISO */     
@@ -1144,8 +1144,8 @@ module dataio
 #ifdef SNE_DISTR
                                            'sum_emagadd', 'tot_emagadd', &
 #endif /* SNE_DISTR */
-#ifdef MAGNETIC                            'b_min', 'b_max', 'divb_max', &
-
+#ifdef MAGNETIC
+                                           'b_min', 'b_max', 'divb_max', &
 #endif /* MAGNETIC */
                                            '     '
 

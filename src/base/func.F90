@@ -158,7 +158,7 @@ implicit none
 
 !-----------------------------------------------------------------------------
 
-#ifdef COSM_RAYS !  || defined PRESS_GRAD_EXCH
+#ifdef COSM_RAYS 
   subroutine div_v(ifluid)
     use initionized, only : idni,imxi,imyi,imzi
     use fluidindex,  only : nfluid,iarr_all_dn,iarr_all_mx,iarr_all_my,iarr_all_mz

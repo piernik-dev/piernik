@@ -9,8 +9,8 @@ module constants     ! module containg numerical and physical constants !!!
   real, parameter :: twot = 2./3.
   real, parameter :: oneq = 1./4.
   real, parameter :: thrq = 3./4.
-  real, parameter :: small= 1.e-50
-  real, parameter :: big  = 1.e+50
+  real, parameter :: small= 1.e-29
+  real, parameter :: big  = 1.e+29
 
   real, parameter :: pi = 3.141592653589793238
   real, parameter :: dpi = 2.*pi

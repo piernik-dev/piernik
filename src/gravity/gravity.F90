@@ -254,7 +254,7 @@ module gravity
       use arrays, only : gp
       use grid, only :   x,y,z,dl,xdim,ydim,zdim,nx,ny,nz
       use grid, only :   is,ie,js,je,ks,ke, xr,yr,zr
-#if defined GRAV_PTMASS || GRAV_PTFLAT
+#if defined GRAV_PTMASS || defined GRAV_PTFLAT
       use start, only : csim2,smalld
 #endif /* GRAV_PTMASS || GRAV_PTFLAT */
 #if defined GRAV_ACC_USER
