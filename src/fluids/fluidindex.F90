@@ -5,7 +5,7 @@ module fluidindex
 
    implicit none
    
-   integer             :: nmag
+   integer, parameter  :: nmag=3
    integer, parameter  :: ibx=1,iby=2,ibz=3
    integer, parameter  :: idn=1,imx=2,imy=3,imz=4,ien=5,icr=1
    integer             :: nvar,ncomponents,nfluid,nadiab
@@ -88,7 +88,6 @@ module fluidindex
       
      
 #ifdef IONIZED
-      nmag = 3
       nvar_ion  = 0
       beg_ion   = nvar + 1
       call ionized_index(nvar,nvar_ion) 
