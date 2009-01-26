@@ -158,7 +158,11 @@ for (@base) {
 copy("compilers/newcompiler","obj/newcompiler");
 system("chmod a+x obj/newcompiler");
 $defs = $probdir."piernik.def";
-copy($defs,"obj/piernik.def");
+   if ( ! $CL_VALUES[0] ) {
+      symlink("../".$defs,"obj/piernik.def") or die "failed linking piernik.def";
+   } else {
+      copy($defs,"obj/piernik.def") or die "failed copying piernik.def";
+   }
 open (defs) or die "Can't open the file piernik.def!";
 @fdefs = <defs>;
 @d = grep (/define/,@fdefs);
@@ -168,13 +172,10 @@ if( grep { /GRAV/ }  @d) {
    }
 if( grep { /SELF_GRAV/ }  @d) {push(@addons, "../src/gravity/poisson_solver.F90");}
 if( grep { /SHEAR/}  @d) {push(@addons, "../src/shear/shear.F90");}
-if( grep { /HDF5/}  @d) {push(@addons, "../src/hdf5/dataio_hdf5.F90");}
-if( grep { /KEPLER_SUPPRESSION/} @d) {push(@addons, "../src/extras/rotsource.F90");}
 
 push(@addons, "../src/fluids/initfluids.F90");
 push(@addons, "../src/fluids/fluidindex.F90");
 push(@addons, "../src/fluids/fluxes.F90");
-#push(@addons, "../src/fluids/allsources.F90");
 
 if( grep { /MAGNETIC/} @d) {
    push(@addons, "../src/magnetic/mag_boundaries.F90");
@@ -207,25 +208,6 @@ if( grep { /SN_SRC/} @d) {
 if( grep { /SNE_DISTR/} @d) {
    push(@addons, "../src/supernovae/sn_distr.F90");
 }
-if( grep { /ORIG/ } @d) {
-   $solv="orig";
-} else {
-   $solv="ssp";
-}
-
-#if( grep { /UNSPLIT_1D/ } @d) {
-#   push(@addons, "../src/scheme/unsplit/1D/mhdstep.F90");
-#   $sch="unsplit";
-#} elsif( grep { /UNSPLIT_3D/ } @d) {
-#   push(@addons, "../src/scheme/unsplit/3D/mhdstep.F90");
-#   $sch="unsplit";
-#} else {
-#   push(@addons, "../src/scheme/split/mhdstep.F90");
-#   $sch = 'split';
-#}
-#push(@addons, "../src/scheme/".$sch."/advects.F90");
-#push(@addons, "../src/scheme/".$sch."/fluids.F90");
-#push(@addons, "../src/scheme/".$sch."/".$solv."/tv.F90");
 
 push(@addons, "../src/scheme/mhdstep.F90");
 push(@addons, "../src/scheme/sweeps.F90");
