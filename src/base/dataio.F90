@@ -343,8 +343,7 @@ module dataio
     integer :: nxo = 1, nyo = 1, nzo = 1, &
                iso = 1, jso = 1, kso = 1, &
                ieo = 1, jeo = 1, keo = 1
-	       
-	       
+
     real(kind=4), dimension(:,:,:), allocatable :: tmparr
 
 !- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -1042,7 +1041,7 @@ module dataio
 !---------------------------------------------------------------------
 !
   subroutine write_timeslice
-
+    use types
     use fluidindex,   only : nfluid
     use fluidindex,   only : ibx,iby,ibz
     use fluidindex, only : nvar, iarr_all_dn,iarr_all_mx,iarr_all_my,iarr_all_mz
@@ -1104,16 +1103,16 @@ module dataio
             tot_ener = 0.0, tot_eint = 0.0, tot_ekin = 0.0, tot_emag = 0.0, &
             tot_epot = 0.0, mflx = 0.0, mfly = 0.0, mflz = 0.0, &
             tot_mflx = 0.0, tot_mfly = 0.0, tot_mflz = 0.0
+
+    type(tsl_container) :: tsl
+
 #ifdef GRAV
     integer :: i,j
-    real :: epot =0.0, amomz = 0.0, tot_amomz = 0.0
+    real :: epot =0.0
 #endif /* GRAV */
 #ifdef COSM_RAYS
     real :: encr = 0.0, tot_encr = 0.0
 #endif /* COSM_RAYS */
-#ifdef SNE_DISTR
-    real :: sum_emagadd = 0.0
-#endif /* SNE_DISTR */
 !- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 !
     if (proc .eq. 0) then
@@ -1123,31 +1122,38 @@ module dataio
       if (tsl_firstcall) then
         open(tsl_lun, file=tsl_file)
 
-        write (tsl_lun, '(a1,a8,50a16)') '#','nstep', 'time', 'timestep', 'mass', &
-                                           'momx', 'momy', 'momz', 'amomz', &
+        write (tsl_lun, '(a1,a8,50a16)') '#','nstep', 'time', 'timestep',  &
+                                           'mass', 'momx', 'momy', 'momz', &
                                            'ener', 'epot', 'eint', 'ekin', &
-#ifdef MAGNETIC					   
-                                           'emag', 'mflx', 'mfly', 'mflz', &
-#endif /* MAGNETIC */					   
 #ifdef COSM_RAYS
-                                           'encr_tot', 'encr_min',  'encr_max',&
+                                           'encr_tot', 'encr_min', 'encr_max',&
 #endif /* COSM_RAYS */
+
+#ifdef MAGNETIC					   
+                                           'emag', 'mflx', 'mfly', 'mflz', 'vai_max', &
+                                           'b_min', 'b_max', 'divb_max', &
 #ifdef RESISTIVE
                                            'eta_max', &
 #endif /* RESISTIVE */
+#endif /* MAGNETIC */					   
 ! some quantities computed in "write_log".One can add more, or change.
-                                           'vx_max', 'vy_max', 'vz_max', 'va_max', 'cs_max', &
-                                           'dens_min', 'dens_max', 'pres_min', 'pres_max', &
+#ifdef IONIZED
+                                           'vxi_max', 'vyi_max', 'vzi_max', 'csi_max', &
+                                           'deni_min', 'deni_max', 'prei_min', 'prei_max', &
 #ifndef ISO
-                                           'temp_min', 'temp_max',  &
+                                           'temi_min', 'temi_max', &
 #endif /* ISO */
-#ifdef SNE_DISTR
-                                           'sum_emagadd', 'tot_emagadd', &
-#endif /* SNE_DISTR */
-#ifdef MAGNETIC
-                                           'b_min', 'b_max', 'divb_max', &
-#endif /* MAGNETIC */
-                                           '     '
+#endif /* IONIZED */
+
+#ifdef NEUTRAL
+                                           'denn_min', 'denn_max', 'vxn_max', 'vyn_max', 'vzn_max', &
+                                           'pren_min', 'pren_max', 'temn_min', 'temn_max', 'csn_max', &
+#endif /* NEUTRAL */
+
+#ifdef DUST
+                                           'dend_min', 'dend_max', 'vxd_max', 'vyd_max', 'vzd_max', &
+#endif /* DUST */
+                                           'dummy'
 
         write (tsl_lun, '(a1)') '#'
         tsl_firstcall = .false.
@@ -1169,16 +1175,6 @@ module dataio
     call mpi_allreduce(momz, tot_momz, 1, mpi_real8, mpi_sum, comm3d, ierr)
 
 #ifdef GRAV
-!DW+
-    amomz = 0.0
-    do j=js,je
-      do i=is,ie
-         amomz = amomz + (x(i)*sum(u(iarr_all_my,i,j,ks:ke)) &
-                         -y(j)*sum(u(iarr_all_mx,i,j,ks:ke)))*dvol
-      enddo
-    enddo
-    call mpi_allreduce(amomz, tot_amomz, 1, mpi_real8, mpi_sum, comm3d, ierr)
-!DW-
     epot = sum(u(iarr_all_dn(1),is:ie,js:je,ks:ke) *gp(is:ie,js:je,ks:ke)) * dvol
     call mpi_allreduce(epot, tot_epot, 1, mpi_real8, mpi_sum, comm3d, ierr)
 #endif /* GRAV */
@@ -1209,9 +1205,6 @@ module dataio
     wa(is:ie,js:je,ks:ke) = b(ibz,is:ie,js:je,ks:ke)
     mflz = sum(wa(is:ie,js:je,ks:ke)) * dx*dy/nzd
     call mpi_allreduce(mflz, tot_mflz, 1, mpi_real8, mpi_sum, comm3d, ierr)
-
-
-
 #ifdef ISO
     tot_eint = csi2*tot_mass
     tot_ener = tot_eint+tot_ekin+tot_emag
@@ -1233,34 +1226,45 @@ module dataio
     tot_emagadd = tot_emagadd + sum_emagadd
 #endif /* SNE_DISTR */
 
-    if (proc .eq. 0) then
+    call write_log(tsl)
+
+    if (proc == 0) then
       write (tsl_lun, '(1x,i8,50(1x,1pe15.8))') &
                       nstep, &
                       t, dt, tot_mass, &
                       tot_momx, tot_momy, tot_momz, &
 #ifdef GRAV
-                      tot_amomz, &
 #endif /* GRAV */
-                      tot_ener, tot_epot, tot_eint, tot_ekin, tot_emag, &
-                      tot_mflx, tot_mfly, tot_mflz, &
-#ifdef COSM_RAYS
-                      tot_encr, encr_min, encr_max, &
-#endif /* COSM_RAYS */
+                      tot_ener, tot_epot, tot_eint, tot_ekin,&
 #ifdef MAGNETIC
-                      b_min, b_max, divb_max, &
-
+                      tot_emag, tot_mflx, tot_mfly, tot_mflz, tsl%vai_max, &
+                      tsl%b_min, tsl%b_max, tsl%divb_max, &
 #ifdef RESISTIVE
-                      eta_max, &
+                      tsl%eta_max, &
 #endif /* RESISTIVE */
 #endif /* MAGNETIC */
+#ifdef COSM_RAYS
+                      tot_encr, tsl%encr_min, tsl%encr_max, &
+#endif /* COSM_RAYS */
+
 ! some quantities computed in "write_log".One can add more, or change.
-                      vx_max, vy_max, vz_max, va_max, cs_max, &
-                      dens_min, dens_max, pres_min, pres_max, &
+#ifdef IONIZED
+                      tsl%vxi_max, tsl%vyi_max, tsl%vzi_max, tsl%csi_max, &
+                      tsl%deni_min, tsl%deni_max, tsl%prei_min, tsl%prei_max, &
 #ifndef ISO
-                      temp_min, temp_max, &
+                      tsl%temi_min, tsl%temi_max, &
 #endif /* ISO */
+#endif /* IONIZED */
+
+#ifdef NEUTRAL
+                      tsl%denn_min, tsl%denn_max, tsl%vxn_max, tsl%vyn_max, tsl%vzn_max, &
+                      tsl%pren_min, tsl%pren_max, tsl%temn_min, tsl%temn_max, tsl%csn_max, &
+#endif /* NEUTRAL */
+
+#ifdef DUST
+                      tsl%dend_min, tsl%dend_max, tsl%vxd_max, tsl%vyd_max, tsl%vzd_max, &
+#endif /* DUST */
                       0.0
-		                           
       close(tsl_lun)
     endif
 
@@ -1273,8 +1277,8 @@ module dataio
 !
 !---------------------------------------------------------------------
 !
-  subroutine  write_log
-
+  subroutine  write_log(tsl)
+    use types
     use fluidindex, only : ibx, iby, ibz, nfluid
     use arrays, only : wa,u,b
     use grid, only   : dx,dy,dz,dxmn,nb,is,ie,js,je,ks,ke,nx,ny,nz
@@ -1311,101 +1315,80 @@ module dataio
 #endif /* RESISTIVE */
 
     implicit none
+    type(tsl_container), optional :: tsl
 
 #ifdef MAGNETIC
-    integer, dimension(3) :: loc_b_min, loc_b_max, loc_divb_max
-    integer               :: proc_b_min, proc_b_max, proc_divb_max    
-    real                  :: b_min, b_max    
+    type(value) :: b_min, b_max, divb_max
 #endif /* MAGNETIC */ 
 
 #ifdef IONIZED 
-    integer, dimension(3) :: loc_vxi_max, loc_vyi_max, loc_vzi_max, &
-                             loc_csi_max, loc_deni_min, loc_deni_max, &
-                             loc_prei_min, loc_prei_max, loc_temi_min, loc_temi_max, &
-                             loc_vai_max 
-    integer               :: proc_vxi_max, proc_vyi_max, proc_vzi_max, &
-                             proc_csi_max, proc_deni_min, proc_deni_max, &
-                             proc_prei_min, proc_prei_max, proc_temi_min, proc_temi_max, &
-                             proc_vai_max 
-    real                  :: deni_min, deni_max, vxi_max, vyi_max, vzi_max, &
-                             prei_min, prei_max, temi_min, temi_max, vai_max, csi_max                            
+    type(value) :: deni_min, deni_max, vxi_max, vyi_max, vzi_max, &
+                   prei_min, prei_max, temi_min, temi_max, vai_max, csi_max                            
 #endif /* IONIZED */
 
 #ifdef NEUTRAL 
-    integer, dimension(3) :: loc_vxn_max, loc_vyn_max, loc_vzn_max, &
-                             loc_csn_max, loc_denn_min, loc_denn_max, &
-                             loc_pren_min, loc_pren_max, loc_temn_min, loc_temn_max
-    integer               :: proc_vxn_max, proc_vyn_max, proc_vzn_max, &
-                             proc_csn_max, proc_denn_min, proc_denn_max, &
-                             proc_pren_min, proc_pren_max, proc_temn_min, proc_temn_max
-    real                  :: denn_min, denn_max, vxn_max, vyn_max, vzn_max, &
-                             pren_min, pren_max, temn_min, temn_max, csn_max
+    type(value) :: denn_min, denn_max, vxn_max, vyn_max, vzn_max, &
+                   pren_min, pren_max, temn_min, temn_max, csn_max
 #endif /* NEUTRAL */
 
 #ifdef DUST
-    integer, dimension(3) :: loc_dend_min,  loc_dend_max, &
-                             loc_vxd_max, loc_vyd_max, loc_vzd_max
-
-    integer               :: proc_dend_min,  proc_dend_max,  &
-                             proc_vxd_max,   proc_vyd_max,   proc_vzd_max
-    real                  :: dend_min, dend_max, vxd_max, vyd_max, vzd_max
+    type(value) :: dend_min, dend_max, vxd_max, vyd_max, vzd_max
 #endif /* DUST */
 
 #ifdef COSM_RAYS
-    integer, dimension(3) :: loc_encr_min, loc_encr_max
-    integer               :: proc_encr_min, proc_encr_max
+    type(value) :: encr_min, encr_max
 #endif /* COSM_RAYS */
 
 #ifdef RESISTIVE
-    integer               :: proc_eta_max
+    type(value) :: etamax
 #endif /* RESISTIVE */
 
 ! Timestep diagnostics
 #ifdef NEUTRAL
     wa            = u(idnn,:,:,:)
-    denn_min      = minval(wa(is:ie,js:je,ks:ke))
-    loc_denn_min  = minloc(wa(is:ie,js:je,ks:ke)) &
+    denn_min%val  = minval(wa(is:ie,js:je,ks:ke))
+    denn_min%loc  = minloc(wa(is:ie,js:je,ks:ke)) &
                   + (/nb,nb,nb/)
-    call mpifind(denn_min, 'min', loc_denn_min, proc_denn_min)
+    call mpifind(denn_min%val, 'min', denn_min%loc, denn_min%proc)
 
-    denn_max      = maxval(wa(is:ie,js:je,ks:ke))
-    loc_denn_max  = maxloc(wa(is:ie,js:je,ks:ke)) &
+    denn_max%val  = maxval(wa(is:ie,js:je,ks:ke))
+    denn_max%loc  = maxloc(wa(is:ie,js:je,ks:ke)) &
                   + (/nb,nb,nb/)
-    call mpifind(denn_max, 'max', loc_denn_max, proc_denn_max)
+    call mpifind(denn_max%val, 'max', denn_max%loc, denn_max%proc)
 
     wa          = abs(u(imxn,:,:,:)/u(idnn,:,:,:))
-    vxn_max     = maxval(wa(is:ie,js:je,ks:ke))
-    loc_vxn_max = maxloc(wa(is:ie,js:je,ks:ke)) &
+    vxn_max%val = maxval(wa(is:ie,js:je,ks:ke))
+    vxn_max%loc = maxloc(wa(is:ie,js:je,ks:ke)) &
                   + (/nb,nb,nb/)
-    call mpifind(vxn_max, 'max', loc_vxn_max, proc_vxn_max)
+    call mpifind(vxn_max%val, 'max', vxn_max%loc, vxn_max%proc)
 
     wa          = abs(u(imyn,:,:,:)/u(idnn,:,:,:))
-    vyn_max     = maxval(wa(is:ie,js:je,ks:ke))
-    loc_vyn_max = maxloc(wa(is:ie,js:je,ks:ke)) &
+    vyn_max%val = maxval(wa(is:ie,js:je,ks:ke))
+    vyn_max%loc = maxloc(wa(is:ie,js:je,ks:ke)) &
                   + (/nb,nb,nb/)
-    call mpifind(vyn_max, 'max', loc_vyn_max, proc_vyn_max)
+    call mpifind(vyn_max%val, 'max', vyn_max%loc, vyn_max%proc)
 
     wa           = abs(u(imzn,:,:,:)/u(idnn,:,:,:))
-    vzn_max      = maxval(wa(is:ie,js:je,ks:ke))
-    loc_vzn_max  = maxloc(wa(is:ie,js:je,ks:ke)) &
+    vzn_max%val  = maxval(wa(is:ie,js:je,ks:ke))
+    vzn_max%loc  = maxloc(wa(is:ie,js:je,ks:ke)) &
                   + (/nb,nb,nb/)
-    call mpifind(vzn_max, 'max', loc_vzn_max, proc_vzn_max)
+    call mpifind(vzn_max%val, 'max', vzn_max%loc, vzn_max%proc)
 #ifdef ISO
-    pren_min      = cs_iso_neu2*denn_min
-    loc_pren_min  = loc_denn_min
-    proc_pren_min = proc_denn_min
-    pren_max      = cs_iso_neu2*denn_max
-    loc_pren_max  = loc_denn_max
-    proc_pren_max = proc_denn_max
-    csn_max       = cs_iso_neu
-    loc_csn_max   = 0
-    proc_csn_max  = 0
-    temn_min      = hydro_mass / k_B * cs_iso_neu2
-    loc_temn_min  = 0
-    proc_temn_min = 0
-    temn_max      = hydro_mass / k_B * cs_iso_neu2
-    loc_temn_max  = 0
-    proc_temn_max = 0
+    pren_min%val  = cs_iso_neu2*denn_min%val
+    pren_min%loc  = denn_min%loc
+    pren_min%proc = denn_min%proc
+    pren_max%val  = cs_iso_neu2*denn_max%val
+    pren_max%loc  = denn_max%loc
+    pren_max%proc = denn_max%proc
+    csn_max%val   = cs_iso_neu
+    csn_max%loc   = 0
+    csn_max%proc  = 0
+    temn_min%val  = hydro_mass / k_B * cs_iso_neu2
+    temn_min%loc  = 0
+    temn_min%proc = 0
+    temn_max%val  = hydro_mass / k_B * cs_iso_neu2
+    temn_max%loc  = 0
+    temn_max%proc = 0
 #else /* ISO */
     wa(:,:,:) = (u(ienn,:,:,:) &                ! eint
                 - 0.5*((u(imxn,:,:,:)**2 +u(imyn,:,:,:)**2 &
@@ -1413,34 +1396,34 @@ module dataio
     wa(:,:,:) = max(wa(:,:,:),smallei)
     wa(:,:,:) = (gamma_neu-1.0)*wa(:,:,:)           ! pres
 
-    pren_min      = minval(wa(is:ie,js:je,ks:ke))
-    loc_pren_min  = minloc(wa(is:ie,js:je,ks:ke)) + (/nb,nb,nb/)
-    call mpifind(pren_min, 'min', loc_pren_min, proc_pren_min)
+    pren_min%val  = minval(wa(is:ie,js:je,ks:ke))
+    pren_min%loc  = minloc(wa(is:ie,js:je,ks:ke)) + (/nb,nb,nb/)
+    call mpifind(pren_min%val, 'min', pren_min%loc, pren_min%proc)
 
-    pren_max      = maxval(wa(is:ie,js:je,ks:ke))
-    loc_pren_max  = maxloc(wa(is:ie,js:je,ks:ke)) + (/nb,nb,nb/)
-    call mpifind(pren_max, 'max', loc_pren_max, proc_pren_max)
+    pren_max%val  = maxval(wa(is:ie,js:je,ks:ke))
+    pren_max%loc  = maxloc(wa(is:ie,js:je,ks:ke)) + (/nb,nb,nb/)
+    call mpifind(pren_max%val, 'max', pren_max%loc, pren_max%proc)
 
-    temn_max      = maxval( hydro_mass / k_B * wa(is:ie,js:je,ks:ke) &
+    temn_max%val  = maxval( hydro_mass / k_B * wa(is:ie,js:je,ks:ke) &
                                              /u(idnn,is:ie,js:je,ks:ke))
-    loc_temn_max  = maxloc(wa(is:ie,js:je,ks:ke)    &
+    temn_max%loc  = maxloc(wa(is:ie,js:je,ks:ke)    &
                          /u(idnn,is:ie,js:je,ks:ke)  ) + (/nb,nb,nb/)
-    call mpifind(temn_max, 'max', loc_temn_max, proc_temn_max)
+    call mpifind(temn_max%val, 'max', temn_max%loc, temn_max%proc)
 
-    temn_min      = minval( hydro_mass / k_B * wa(is:ie,js:je,ks:ke) &
+    temn_min%val  = minval( hydro_mass / k_B * wa(is:ie,js:je,ks:ke) &
                                              /u(idnn,is:ie,js:je,ks:ke))
-    loc_temn_min  = minloc(wa(is:ie,js:je,ks:ke) &
+    temn_min%loc  = minloc(wa(is:ie,js:je,ks:ke) &
                          /u(idnn,is:ie,js:je,ks:ke)  ) &
                      + (/nb,nb,nb/)
-    call mpifind(temn_min, 'min', loc_temn_min, proc_temn_min)
+    call mpifind(temn_min%val, 'min', temn_min%loc, temn_min%proc)
 
     wa(:,:,:) = gamma_neu*wa(:,:,:)
-    csn_max        = sqrt(maxval(wa(is:ie,js:je,ks:ke) &
+    csn_max%val    = sqrt(maxval(wa(is:ie,js:je,ks:ke) &
                             /u(idnn,is:ie,js:je,ks:ke)))
-    loc_csn_max    = maxloc(wa(is:ie,js:je,ks:ke) &
+    csn_max%loc    = maxloc(wa(is:ie,js:je,ks:ke) &
                             /u(idnn,is:ie,js:je,ks:ke)) &
                      + (/nb,nb,nb/)
-    call mpifind(csn_max, 'max', loc_csn_max, proc_csn_max)
+    call mpifind(csn_max%val, 'max', csn_max%loc, csn_max%proc)
 #endif /* ISO */
 
 #endif /* NEUTRAL */
@@ -1448,71 +1431,71 @@ module dataio
 
 #ifdef IONIZED
     wa            = u(idni,:,:,:)
-    deni_min      = minval(wa(is:ie,js:je,ks:ke))
-    loc_deni_min  = minloc(wa(is:ie,js:je,ks:ke)) &
+    deni_min%val  = minval(wa(is:ie,js:je,ks:ke))
+    deni_min%loc  = minloc(wa(is:ie,js:je,ks:ke)) &
                   + (/nb,nb,nb/)
-    call mpifind(deni_min, 'min', loc_deni_min, proc_deni_min)
+    call mpifind(deni_min%val, 'min', deni_min%loc, deni_min%proc)
 
-    deni_max      = maxval(wa(is:ie,js:je,ks:ke))
-    loc_deni_max  = maxloc(wa(is:ie,js:je,ks:ke)) &
+    deni_max%val  = maxval(wa(is:ie,js:je,ks:ke))
+    deni_max%loc  = maxloc(wa(is:ie,js:je,ks:ke)) &
                   + (/nb,nb,nb/)
-    call mpifind(deni_max, 'max', loc_deni_max, proc_deni_max)
+    call mpifind(deni_max%val, 'max', deni_max%loc, deni_max%proc)
 
     wa          = abs(u(imxi,:,:,:)/u(idni,:,:,:))
-    vxi_max     = maxval(wa(is:ie,js:je,ks:ke))
-    loc_vxi_max = maxloc(wa(is:ie,js:je,ks:ke)) &
+    vxi_max%val = maxval(wa(is:ie,js:je,ks:ke))
+    vxi_max%loc = maxloc(wa(is:ie,js:je,ks:ke)) &
                   + (/nb,nb,nb/)
-    call mpifind(vxi_max, 'max', loc_vxi_max, proc_vxi_max)
+    call mpifind(vxi_max%val, 'max', vxi_max%loc, vxi_max%proc)
 
     wa          = abs(u(imyi,:,:,:)/u(idni,:,:,:))
-    vyi_max     = maxval(wa(is:ie,js:je,ks:ke))
-    loc_vyi_max = maxloc(wa(is:ie,js:je,ks:ke)) &
+    vyi_max%val = maxval(wa(is:ie,js:je,ks:ke))
+    vyi_max%loc = maxloc(wa(is:ie,js:je,ks:ke)) &
                   + (/nb,nb,nb/)
-    call mpifind(vyi_max, 'max', loc_vyi_max, proc_vyi_max)
+    call mpifind(vyi_max%val, 'max', vyi_max%loc, vyi_max%proc)
 
     wa           = abs(u(imzi,:,:,:)/u(idni,:,:,:))
-    vzi_max      = maxval(wa(is:ie,js:je,ks:ke))
-    loc_vzi_max  = maxloc(wa(is:ie,js:je,ks:ke)) &
+    vzi_max%val  = maxval(wa(is:ie,js:je,ks:ke))
+    vzi_max%loc  = maxloc(wa(is:ie,js:je,ks:ke)) &
                   + (/nb,nb,nb/)
-    call mpifind(vzi_max, 'max', loc_vzi_max, proc_vzi_max)
+    call mpifind(vzi_max%val, 'max', vzi_max%loc, vzi_max%proc)
 
 #ifdef MAGNETIC
     wa(:,:,:)  = b(1,:,:,:)*b(1,:,:,:) + b(2,:,:,:)*b(2,:,:,:) + &
                  b(3,:,:,:)*b(3,:,:,:)
-    b_min      = sqrt(minval(wa(is:ie,js:je,ks:ke)))
-    loc_b_min  = minloc(wa(is:ie,js:je,ks:ke)) &
+    b_min%val  = sqrt(minval(wa(is:ie,js:je,ks:ke)))
+    b_min%loc  = minloc(wa(is:ie,js:je,ks:ke)) &
                   + (/nb,nb,nb/)
-    call mpifind(b_min, 'min', loc_b_min, proc_b_min)
+    call mpifind(b_min%val, 'min', b_min%loc, b_min%proc)
 
-    b_max      = sqrt(maxval(wa(is:ie,js:je,ks:ke)))
-    loc_b_max  = maxloc(wa(is:ie,js:je,ks:ke)) &
+    b_max%val  = sqrt(maxval(wa(is:ie,js:je,ks:ke)))
+    b_max%loc  = maxloc(wa(is:ie,js:je,ks:ke)) &
                   + (/nb,nb,nb/)
-    call mpifind(b_max, 'max', loc_b_max, proc_b_max)
+    call mpifind(b_max%val, 'max', b_max%loc, b_max%proc)
 
-    vai_max     = sqrt(maxval(wa(is:ie,js:je,ks:ke) &
+    vai_max%val = sqrt(maxval(wa(is:ie,js:je,ks:ke) &
                        /u(idni,is:ie,js:je,ks:ke)))
-    loc_vai_max = maxloc(wa(is:ie,js:je,ks:ke)     &
+    vai_max%loc = maxloc(wa(is:ie,js:je,ks:ke)     &
                        /u(idni,is:ie,js:je,ks:ke)) &
                   + (/nb,nb,nb/)
-    call mpifind(va_max, 'max', loc_vai_max, proc_vai_max)
+    call mpifind(vai_max%val, 'max', vai_max%loc, vai_max%proc)
 #endif /* MAGNETIC */
 
 #ifdef ISO
-    prei_min      = cs_iso_ion2*deni_min
-    loc_prei_min  = loc_deni_min
-    proc_prei_min = proc_deni_min
-    prei_max      = cs_iso_ion2*deni_max
-    loc_prei_max  = loc_deni_max
-    proc_prei_max = proc_deni_max
-    csi_max       = cs_iso_ion
-    loc_csi_max   = 0
-    proc_csi_max  = 0
-    temi_min      = hydro_mass / k_B * cs_iso_ion2
-    loc_temi_min  = 0
-    proc_temi_min = 0
-    temi_max      = hydro_mass / k_B * cs_iso_ion2
-    loc_temi_max  = 0
-    proc_temi_max = 0
+    prei_min%val  = cs_iso_ion2*deni_min%val
+    prei_min%loc  = deni_min%loc
+    prei_min%proc = deni_min%proc
+    prei_max%val  = cs_iso_ion2*deni_max%val
+    prei_max%loc  = deni_max%loc
+    prei_max%proc = deni_max%proc
+    csi_max%val   = cs_iso_ion
+    csi_max%loc   = 0
+    csi_max%proc  = 0
+    temi_min%val  = hydro_mass / k_B * cs_iso_ion2
+    temi_min%loc  = 0
+    temi_min%proc = 0
+    temi_max%val  = hydro_mass / k_B * cs_iso_ion2
+    temi_max%loc  = 0
+    temi_max%proc = 0
 #else /* ISO */
     wa(:,:,:) = (u(ieni,:,:,:) &                ! eint
                 - 0.5*((u(imxi,:,:,:)**2 +u(imyi,:,:,:)**2 &
@@ -1524,72 +1507,73 @@ module dataio
     wa(:,:,:) = max(wa(:,:,:),smallei)
     wa(:,:,:) = (gamma_ion-1.0)*wa(:,:,:)           ! pres
 
-    prei_min      = minval(wa(is:ie,js:je,ks:ke))
-    loc_prei_min  = minloc(wa(is:ie,js:je,ks:ke)) + (/nb,nb,nb/)
-    call mpifind(prei_min, 'min', loc_prei_min, proc_prei_min)
+    prei_min%val  = minval(wa(is:ie,js:je,ks:ke))
+    prei_min%loc  = minloc(wa(is:ie,js:je,ks:ke)) + (/nb,nb,nb/)
+    call mpifind(prei_min%val, 'min', prei_min%loc, prei_min%proc)
 
-    prei_max      = maxval(wa(is:ie,js:je,ks:ke))
-    loc_prei_max  = maxloc(wa(is:ie,js:je,ks:ke)) + (/nb,nb,nb/)
-    call mpifind(prei_max, 'max', loc_prei_max, proc_prei_max)
+    prei_max%val  = maxval(wa(is:ie,js:je,ks:ke))
+    prei_max%loc  = maxloc(wa(is:ie,js:je,ks:ke)) + (/nb,nb,nb/)
+    call mpifind(prei_max%val, 'max', prei_max%loc, prei_max%proc)
 
-    temi_max      = maxval( hydro_mass / k_B * wa(is:ie,js:je,ks:ke) &
+    temi_max%val  = maxval( hydro_mass / k_B * wa(is:ie,js:je,ks:ke) &
                                              /u(idni,is:ie,js:je,ks:ke))
-    loc_temi_max  = maxloc(wa(is:ie,js:je,ks:ke)    &
+    temi_max%loc  = maxloc(wa(is:ie,js:je,ks:ke)    &
                          /u(idni,is:ie,js:je,ks:ke)  ) + (/nb,nb,nb/)
-    call mpifind(temi_max, 'max', loc_temi_max, proc_temi_max)
+    call mpifind(temi_max%val, 'max', temi_max%loc, temi_max%proc)
 
-    temi_min      = minval( hydro_mass / k_B * wa(is:ie,js:je,ks:ke) &
+    temi_min%val  = minval( hydro_mass / k_B * wa(is:ie,js:je,ks:ke) &
                                              /u(idni,is:ie,js:je,ks:ke))
-    loc_temi_min  = minloc(wa(is:ie,js:je,ks:ke) &
+    temi_min%loc  = minloc(wa(is:ie,js:je,ks:ke) &
                          /u(idni,is:ie,js:je,ks:ke)  ) &
                      + (/nb,nb,nb/)
-    call mpifind(temi_min, 'min', loc_temi_min, proc_temi_min)
+    call mpifind(temi_min%val, 'min', temi_min%loc, temi_min%proc)
 
     wa(:,:,:) = gamma_ion*wa(:,:,:)
-    csi_max        = sqrt(maxval(wa(is:ie,js:je,ks:ke) &
+    csi_max%val    = sqrt(maxval(wa(is:ie,js:je,ks:ke) &
                             /u(idni,is:ie,js:je,ks:ke)))
-    loc_csi_max    = maxloc(wa(is:ie,js:je,ks:ke) &
+    csi_max%loc    = maxloc(wa(is:ie,js:je,ks:ke) &
                             /u(idni,is:ie,js:je,ks:ke)) &
                      + (/nb,nb,nb/)
-    call mpifind(csi_max, 'max', loc_csi_max, proc_csi_max)
+    call mpifind(csi_max%val, 'max', csi_max%loc, csi_max%proc)
 #endif /* ISO */
 
 #endif /* IONIZED */
 
 #ifdef DUST
     wa            = u(idnd,:,:,:)
-    dend_min      = minval(wa(is:ie,js:je,ks:ke))
-    loc_dend_min  = minloc(wa(is:ie,js:je,ks:ke)) &
+    dend_min%val  = minval(wa(is:ie,js:je,ks:ke))
+    dend_min%loc  = minloc(wa(is:ie,js:je,ks:ke)) &
                   + (/nb,nb,nb/)
-    call mpifind(dend_min, 'min', loc_dend_min, proc_dend_min)
+    call mpifind(dend_min%val, 'min', dend_min%loc, dend_min%proc)
 
-    dend_max      = maxval(wa(is:ie,js:je,ks:ke))
-    loc_dend_max  = maxloc(wa(is:ie,js:je,ks:ke)) &
+    dend_max%val  = maxval(wa(is:ie,js:je,ks:ke))
+    dend_max%loc  = maxloc(wa(is:ie,js:je,ks:ke)) &
                   + (/nb,nb,nb/)
-    call mpifind(dend_max, 'max', loc_dend_max, proc_dend_max)
+    call mpifind(dend_max%val, 'max', dend_max%loc, dend_max%proc)
 
     wa          = abs(u(imxd,:,:,:)/u(idnd,:,:,:))
-    vxd_max     = maxval(wa(is:ie,js:je,ks:ke))
-    loc_vxd_max = maxloc(wa(is:ie,js:je,ks:ke)) &
+    vxd_max%val = maxval(wa(is:ie,js:je,ks:ke))
+    vxd_max%loc = maxloc(wa(is:ie,js:je,ks:ke)) &
                   + (/nb,nb,nb/)
-    call mpifind(vxd_max, 'max', loc_vxd_max, proc_vxd_max)
+    call mpifind(vxd_max%val, 'max', vxd_max%loc, vxd_max%proc)
 
     wa          = abs(u(imyd,:,:,:)/u(idnd,:,:,:))
-    vyd_max     = maxval(wa(is:ie,js:je,ks:ke))
-    loc_vyd_max = maxloc(wa(is:ie,js:je,ks:ke)) &
+    vyd_max%val = maxval(wa(is:ie,js:je,ks:ke))
+    vyd_max%loc = maxloc(wa(is:ie,js:je,ks:ke)) &
                   + (/nb,nb,nb/)
-    call mpifind(vyd_max, 'max', loc_vyd_max, proc_vyd_max)
+    call mpifind(vyd_max%val, 'max', vyd_max%loc, vyd_max%proc)
 
     wa           = abs(u(imzd,:,:,:)/u(idnd,:,:,:))
-    vzd_max      = maxval(wa(is:ie,js:je,ks:ke))
-    loc_vzd_max  = maxloc(wa(is:ie,js:je,ks:ke)) &
+    vzd_max%val  = maxval(wa(is:ie,js:je,ks:ke))
+    vzd_max%loc  = maxloc(wa(is:ie,js:je,ks:ke)) &
                   + (/nb,nb,nb/)
-    call mpifind(vzd_max, 'max', loc_vzd_max, proc_vzd_max)
+    call mpifind(vzd_max%val, 'max', vzd_max%loc, vzd_max%proc)
 #endif /* DUST */
 
 
 #ifdef RESISTIVE
-      call mpifind(eta_max, 'max', loc_eta_max, proc_eta_max)
+      etamax%val = eta_max
+      call mpifind(etamax%val, 'max', etamax%loc, etamax%proc)
 #endif /* RESISTIVE */
 
 
@@ -1604,94 +1588,136 @@ module dataio
     wa(:,je,:) = wa(:,je-1,:)
     wa(:,:,ke) = wa(:,:,max(ke-1,1))
 
-    divb_max      = maxval(wa(is:ie,js:je,ks:ke))
-    loc_divb_max  = maxloc(wa(is:ie,js:je,ks:ke)) &
+    divb_max%val  = maxval(wa(is:ie,js:je,ks:ke))
+    divb_max%loc  = maxloc(wa(is:ie,js:je,ks:ke)) &
                   + (/nb,nb,nb/)
-    call mpifind(divb_max, 'max', loc_divb_max, proc_divb_max)
+    call mpifind(divb_max%val, 'max', divb_max%loc, divb_max%proc)
 #endif /* MAGNETIC */
 
 #ifdef COSM_RAYS
     wa            = u(iecr,:,:,:)
-    encr_min      = minval(wa(is:ie,js:je,ks:ke))
-    loc_encr_min  = minloc(wa(is:ie,js:je,ks:ke)) &
+    encr_min%val  = minval(wa(is:ie,js:je,ks:ke))
+    encr_min%loc  = minloc(wa(is:ie,js:je,ks:ke)) &
                   + (/nb,nb,nb/)
-    call mpifind(encr_min, 'min', loc_encr_min, proc_encr_min)
+    call mpifind(encr_min%val, 'min', encr_min%loc, encr_min%proc)
 
-    wa            =  u(iecr,:,:,:)
-    encr_max      = maxval(wa(is:ie,js:je,ks:ke))
-    loc_encr_max  = maxloc(wa(is:ie,js:je,ks:ke)) &
+    encr_max%val  = maxval(wa(is:ie,js:je,ks:ke))
+    encr_max%loc  = maxloc(wa(is:ie,js:je,ks:ke)) &
                   + (/nb,nb,nb/)
-    call mpifind(encr_max, 'max', loc_encr_max, proc_encr_max)
+    call mpifind(encr_max%val, 'max', encr_max%loc, encr_max%proc)
 #endif /* COSM_RAYS */
 
-    if(proc .eq. 0)  then
-
+    if(proc == 0)  then
+      if(.not.present(tsl)) then
       open(log_lun, file=log_file, position='append')
 #ifdef IONIZED
-        write(log_lun,771) 'min(dens)   ION  =', deni_min,  proc_deni_min,  loc_deni_min
-        write(log_lun,771) 'max(dens)   ION  =', deni_max,  proc_deni_max,  loc_deni_max
+        write(log_lun,771) 'min(dens)   ION  =', deni_min%val,  deni_min%proc,  deni_min%loc
+        write(log_lun,771) 'max(dens)   ION  =', deni_max%val,  deni_max%proc,  deni_max%loc
 #ifndef ISO
-        write(log_lun,771) 'min(temp)   ION  =', temi_min,  proc_temi_min,  loc_temi_min
-        write(log_lun,771) 'max(temp)   ION  =', temi_max,  proc_temi_max,  loc_temi_max
+        write(log_lun,771) 'min(temp)   ION  =', temi_min%val,  temi_min%proc,  temi_min%loc
+        write(log_lun,771) 'max(temp)   ION  =', temi_max%val,  temi_max%proc,  temi_max%loc
 #endif /* ISO */
-        write(log_lun,771) 'min(pres)   ION  =', prei_min,  proc_prei_min,  loc_prei_min
-        write(log_lun,771) 'max(pres)   ION  =', prei_max,  proc_prei_max,  loc_prei_max
-        write(log_lun,777) 'max(|vx|)   ION  =', vxi_max, 'dt=',cfl*dx/(vxi_max+small),   proc_vxi_max, loc_vxi_max
-        write(log_lun,777) 'max(|vy|)   ION  =', vyi_max, 'dt=',cfl*dy/(vyi_max+small),   proc_vyi_max, loc_vyi_max
-        write(log_lun,777) 'max(|vz|)   ION  =', vzi_max, 'dt=',cfl*dz/(vzi_max+small),   proc_vzi_max, loc_vzi_max
-        write(log_lun,777) 'max(c_s )   ION  =', csi_max, 'dt=',cfl*dxmn/(csi_max+small), proc_csi_max, loc_csi_max
+        write(log_lun,771) 'min(pres)   ION  =', prei_min%val,  prei_min%proc,  prei_min%loc
+        write(log_lun,771) 'max(pres)   ION  =', prei_max%val,  prei_max%proc,  prei_max%loc
+        write(log_lun,777) 'max(|vx|)   ION  =', vxi_max%val, 'dt=',cfl*dx/(vxi_max%val+small),   vxi_max%proc, vxi_max%loc
+        write(log_lun,777) 'max(|vy|)   ION  =', vyi_max%val, 'dt=',cfl*dy/(vyi_max%val+small),   vyi_max%proc, vyi_max%loc
+        write(log_lun,777) 'max(|vz|)   ION  =', vzi_max%val, 'dt=',cfl*dz/(vzi_max%val+small),   vzi_max%proc, vzi_max%loc
+        write(log_lun,777) 'max(c_s )   ION  =', csi_max%val, 'dt=',cfl*dxmn/(csi_max%val+small), csi_max%proc, csi_max%loc
 #ifdef MAGNETIC
-        write(log_lun,777) 'max(c_f)    ION  =', sqrt(csi_max**2+vai_max**2), 'dt=',cfl*dxmn/sqrt(csi_max**2+vai_max**2)
-        write(log_lun,777) 'max(v_a)    ION  =', vai_max, 'dt=',cfl*dxmn/(vai_max+small), proc_vai_max, loc_vai_max
-        write(log_lun,770) 'min(|b|)    MAG  =', b_min,     proc_b_min,     loc_b_min
-        write(log_lun,770) 'max(|b|)    MAG  =', b_max,     proc_b_max,     loc_b_max
-        write(log_lun,770) 'max(|divb|) MAG  =', divb_max,  proc_divb_max,  loc_divb_max
+        write(log_lun,777) 'max(c_f)    ION  =', sqrt(csi_max%val**2+vai_max%val**2),&
+                'dt=',cfl*dxmn/sqrt(csi_max%val**2+vai_max%val**2)
+        write(log_lun,777) 'max(v_a)    ION  =', vai_max%val, 'dt=',cfl*dxmn/(vai_max%val+small), vai_max%proc, vai_max%loc
+        write(log_lun,770) 'min(|b|)    MAG  =', b_min%val,     b_min%proc,     b_min%loc
+        write(log_lun,770) 'max(|b|)    MAG  =', b_max%val,     b_max%proc,     b_max%loc
+        write(log_lun,770) 'max(|divb|) MAG  =', divb_max%val,  divb_max%proc,  divb_max%loc
 #else /* MAGNETIC */
-        write(log_lun,777) 'max(c_s)    ION  =', sqrt(csi_max**2), 'dt=',cfl*dxmn/sqrt(csi_max**2)
+        write(log_lun,777) 'max(c_s)    ION  =', sqrt(csi_max%val**2), 'dt=',cfl*dxmn/sqrt(csi_max%val**2)
 #endif /* MAGNETIC */
 #endif /* IONIZED */
+
 #ifdef NEUTRAL
-        write(log_lun,771) 'min(dens)   NEU  =', denn_min,  proc_denn_min,  loc_denn_min
-        write(log_lun,771) 'max(dens)   NEU  =', denn_max,  proc_denn_max,  loc_denn_max
+        write(log_lun,771) 'min(dens)   NEU  =', denn_min%val,  denn_min%proc,  denn_min%loc
+        write(log_lun,771) 'max(dens)   NEU  =', denn_max%val,  denn_max%proc,  denn_max%loc
 #ifndef ISO
-        write(log_lun,771) 'min(temp)   NEU  =', temn_min,  proc_temn_min,  loc_temn_min
-        write(log_lun,771) 'max(temp)   NEU  =', temn_max,  proc_temn_max,  loc_temn_max
+        write(log_lun,771) 'min(temp)   NEU  =', temn_min%val,  temn_min%proc,  temn_min%loc
+        write(log_lun,771) 'max(temp)   NEU  =', temn_max%val,  temn_max%proc,  temn_max%loc
 #endif /* ISO */
-        write(log_lun,771) 'min(pres)   NEU  =', pren_min,  proc_pren_min,  loc_pren_min
-        write(log_lun,771) 'max(pres)   NEU  =', pren_max,  proc_pren_max,  loc_pren_max
-        write(log_lun,777) 'max(|vx|)   NEU  =', vxn_max, 'dt=',cfl*dx/(vxn_max+small),   proc_vxn_max, loc_vxn_max
-        write(log_lun,777) 'max(|vy|)   NEU  =', vyn_max, 'dt=',cfl*dy/(vyn_max+small),   proc_vyn_max, loc_vyn_max
-        write(log_lun,777) 'max(|vz|)   NEU  =', vzn_max, 'dt=',cfl*dz/(vzn_max+small),   proc_vzn_max, loc_vzn_max
-        write(log_lun,777) 'max(c_s )   NEU  =', csn_max, 'dt=',cfl*dxmn/(csn_max+small), proc_csn_max, loc_csn_max
+        write(log_lun,771) 'min(pres)   NEU  =', pren_min%val,  pren_min%proc,  pren_min%loc
+        write(log_lun,771) 'max(pres)   NEU  =', pren_max%val,  pren_max%proc,  pren_max%loc
+        write(log_lun,777) 'max(|vx|)   NEU  =', vxn_max%val, 'dt=',cfl*dx/(vxn_max%val+small),   vxn_max%proc, vxn_max%loc
+        write(log_lun,777) 'max(|vy|)   NEU  =', vyn_max%val, 'dt=',cfl*dy/(vyn_max%val+small),   vyn_max%proc, vyn_max%loc
+        write(log_lun,777) 'max(|vz|)   NEU  =', vzn_max%val, 'dt=',cfl*dz/(vzn_max%val+small),   vzn_max%proc, vzn_max%loc
+        write(log_lun,777) 'max(c_s )   NEU  =', csn_max%val, 'dt=',cfl*dxmn/(csn_max%val+small), csn_max%proc, csn_max%loc
 #endif /* NEUTRAL */
 #ifdef DUST
-        write(log_lun,771) 'min(dens)   DST  =', dend_min,  proc_dend_min,  loc_dend_min
-        write(log_lun,771) 'max(dens)   DST  =', dend_max,  proc_dend_max,  loc_dend_max
-        write(log_lun,777) 'max(|vx|)   DST  =', vxd_max, 'dt=',cfl*dx/(vxd_max+small),   proc_vxd_max, loc_vxd_max
-        write(log_lun,777) 'max(|vy|)   DST  =', vyd_max, 'dt=',cfl*dy/(vyd_max+small),   proc_vyd_max, loc_vyd_max
-        write(log_lun,777) 'max(|vz|)   DST  =', vzd_max, 'dt=',cfl*dz/(vzd_max+small),   proc_vzd_max, loc_vzd_max
+        write(log_lun,771) 'min(dens)   DST  =', dend_min%val,  dend_min%proc,  dend_min%loc
+        write(log_lun,771) 'max(dens)   DST  =', dend_max%val,  dend_max%proc,  dend_max%loc
+        write(log_lun,777) 'max(|vx|)   DST  =', vxd_max%val, 'dt=',cfl*dx/(vxd_max%val+small),   vxd_max%proc, vxd_max%loc
+        write(log_lun,777) 'max(|vy|)   DST  =', vyd_max%val, 'dt=',cfl*dy/(vyd_max%val+small),   vyd_max%proc, vyd_max%loc
+        write(log_lun,777) 'max(|vz|)   DST  =', vzd_max%val, 'dt=',cfl*dz/(vzd_max%val+small),   vzd_max%proc, vzd_max%loc
 #endif /* DUST */
 #ifdef COSM_RAYS
-        write(log_lun,771) 'min(encr)   CRS  =', encr_min,        proc_encr_min, loc_encr_min
-        write(log_lun,777) 'max(encr)   CRS  =', encr_max,      'dt=',dt_crs,     proc_encr_max, loc_encr_max
+        write(log_lun,771) 'min(encr)   CRS  =', encr_min%val,        encr_min%proc, encr_min%loc
+        write(log_lun,777) 'max(encr)   CRS  =', encr_max%val,      'dt=',dt_crs,     encr_max%proc, encr_max%loc
 #endif /* COSM_RAYS */
 #ifdef RESISTIVE
-        write(log_lun,776) 'max(eta)    RES  =', eta_max ,      'dt=',dt_resist, proc_eta_max,  loc_eta_max
+        write(log_lun,776) 'max(eta)    RES  =', etamax%val ,      'dt=',dt_resist, etamax%proc,  etamax%loc
 #endif /* RESISTIVE */
 
-      close(log_lun)
-
-    endif
-
-    if(proc .eq. 0)  then
-      open(log_lun, file=log_file, position='append')
         write(log_lun,'(a80)') '================================================================================'
         write(log_lun,900) nstep,dt,t
         write(log_lun,'(a80)') '================================================================================'
       close(log_lun)
+      else
+#ifdef IONIZED
+        tsl%deni_min = deni_min%val
+        tsl%deni_max = deni_max%val
+        tsl%vxi_max  = vxi_max%val
+        tsl%vyi_max  = vyi_max%val
+        tsl%vzi_max  = vzi_max%val
+        tsl%prei_min = prei_min%val
+        tsl%prei_max = prei_max%val 
+        tsl%temi_min = temi_min%val
+        tsl%temi_max = temi_max%val
+        tsl%vai_max  = vai_max%val
+        tsl%csi_max  = csi_max%val                           
+#endif /* IONIZED */
+#ifdef MAGNETIC
+        tsl%b_min = b_min%val
+        tsl%b_max = b_max%val
+        tsl%divb_max = divb_max%val
+#endif /* MAGNETIC */ 
+#ifdef NEUTRAL
+        tsl%denn_min = denn_min%val
+        tsl%denn_max = denn_max%val
+        tsl%vxn_max  = vxn_max%val
+        tsl%vyn_max  = vyn_max%val
+        tsl%vzn_max  = vzn_max%val
+        tsl%pren_min = pren_min%val
+        tsl%pren_max = pren_max%val
+        tsl%temn_min = temn_min%val
+        tsl%temn_max = temn_max%val
+        tsl%csn_max  = csn_max%val
+#endif /* NEUTRAL */
+
+#ifdef DUST
+        tsl%dend_min = dend_min%val
+        tsl%dend_max = dend_max%val
+        tsl%vxd_max = vxd_max%val
+        tsl%vyd_max = vyd_max%val
+        tsl%vzd_max = vzd_max%val
+#endif /* DUST */
+
+#ifdef COSM_RAYS
+        tsl%encr_min = encr_min%val
+        tsl%encr_max = encr_max%val
+#endif /* COSM_RAYS */
+
+#ifdef RESISTIVE
+        tsl%etamax = etamax%val
+#endif /* RESISTIVE */
+      endif
     endif
-
-
 
 770 format(5x,a18,(1x,e15.9),4(1x,i4))
 
