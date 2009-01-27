@@ -63,7 +63,7 @@ implicit none
     real, intent(in)               :: dt
     real, dimension(size(vh)) :: tvdb_emf
     integer :: i,ip,ipp,im
-    real    :: w,wp,wm,dw,v
+    real    :: w,dwp,dwm,dw,v
 
     tvdb_emf = 0.0
 
@@ -74,15 +74,15 @@ implicit none
        v   = vh(i)
        if (v .gt. 0.) then
          w=vg(i)*b(i)
-         wp=(vg(ip)*b(ip)-w)*0.5
-         wm=(w-vg(im)*b(im))*0.5
+         dwp=(vg(ip)*b(ip)-w)*0.5
+         dwm=(w-vg(im)*b(im))*0.5
        else
          w=vg(ip)*b(ip)
-         wp=(w-vg(ipp)*b(ipp))*0.5
-         wm=(vg(i)*b(i)-w)*0.5
+         dwp=(w-vg(ipp)*b(ipp))*0.5
+         dwm=(vg(i)*b(i)-w)*0.5
        end if
        dw=0.0
-       if(wm*wp > 0.0) dw=2.0*wm*wp/(wm+wp)
+       if(dwm*dwp > 0.0) dw=2.0*dwm*dwp/(dwm+dwp)
        tvdb_emf(i)=(w+dw)*dt
     enddo
     return
