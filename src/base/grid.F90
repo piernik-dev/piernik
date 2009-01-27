@@ -172,19 +172,22 @@ contains
     zminb = zmin + real(pcoords(3)  )*(zmax-zmin)/real(psize(3))
     zmaxb = zmin + real(pcoords(3)+1)*(zmax-zmin)/real(psize(3))
 
-
+    dxmn = 1.e20
     if(nxd /= 1) then
        dx = (xmaxb-xminb)/nxb
+       dxmn = min(dxmn,dx)
     else
        dx = 1.0
     endif
     if(nyd /= 1) then
        dy = (ymaxb-yminb)/nyb
+       dxmn = min(dxmn,dy)
     else
        dy = 1.0
     endif
     if(nzd /= 1) then
        dz = (zmaxb-zminb)/nzb
+       dxmn = min(dxmn,dz)
     else 
        dz = 1.0
     endif
@@ -194,7 +197,7 @@ contains
     dl(zdim) = dz
 
     dvol = dx*dy*dz
-    dxmn = min(dx,dy,dz)
+    
 
 
 !    write(*,*) 'proc=',proc, zminb, zmaxb, dl(zdim)
