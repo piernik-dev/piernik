@@ -114,15 +114,34 @@ contains
       nyt=nyd+2*nb         ! Domain total grid sizes
       nzt=nzd+2*nb         !
 
+      if(nxd == 1) then
+         nx     = 1
+         nxb    = 1
+         nxt    = 1
+         pxsize = 1
+         is     = 1
+         ie     = 1
+      else
+         is = nb+1
+         ie = nb+nxb
+      endif
 
-      is = nb+1
-      ie = nb+nxb
-      js = nb+1
-      je = nb+nyb
+      if(nyd == 1) then
+         ny     = 1
+         nyb    = 1
+         nyt    = 1
+         pysize = 1
+         js     = 1
+         je     = 1
+      else
+         js = nb+1
+         je = nb+nyb
+      endif
 
       if(nzd == 1) then
          nz     = 1
          nzb    = 1
+         nzt    = 1
          pzsize = 1
          ks     = 1
          ke     = 1
@@ -154,20 +173,27 @@ contains
     zmaxb = zmin + real(pcoords(3)+1)*(zmax-zmin)/real(psize(3))
 
 
-    dx = (xmaxb-xminb)/nxb
-    dy = (ymaxb-yminb)/nyb
-    dl(xdim) = dx
-    dl(ydim) = dy
+    if(nxd /= 1) then
+       dx = (xmaxb-xminb)/nxb
+    else
+       dx = 1.0
+    endif
+    if(nyd /= 1) then
+       dy = (ymaxb-yminb)/nyb
+    else
+       dy = 1.0
+    endif
     if(nzd /= 1) then
-      dz = (zmaxb-zminb)/nzb
-      dl(zdim) = dz
-      dvol = dx*dy*dz
+       dz = (zmaxb-zminb)/nzb
     else 
-      dz = min(dx,dy)
-      dl(zdim) = dz
-      dvol = dx*dy
+       dz = 1.0
     endif
 
+    dl(xdim) = dx
+    dl(ydim) = dy
+    dl(zdim) = dz
+
+    dvol = dx*dy*dz
     dxmn = min(dx,dy,dz)
 
 
@@ -181,39 +207,44 @@ contains
 
 !--- x-grids --------------------------------------------------------------
 
-    do i= 1, nx
-      x(i)  = xminb + 0.5*dx + (i-nb-1)*dx
-      xl(i) = x(i)  - 0.5*dx
-      xr(i) = x(i)  + 0.5*dx
-    enddo
+    if(nxd /= 1) then
+       do i= 1, nx
+          x(i)  = xminb + 0.5*dx + (i-nb-1)*dx
+          xl(i) = x(i)  - 0.5*dx
+          xr(i) = x(i)  + 0.5*dx
+       enddo
+    else
+       x  =  0.0
+       xl = -0.5*dx
+       xr =  0.5*dx
+    endif
 
 !--- y-grids --------------------------------------------------------------
 
-
-    do j= 1, ny
-
-      y(j)  = yminb + 0.5*dy + (j-nb-1)*dy
-      yl(j) = y(j)  - 0.5*dy
-      yr(j) = y(j)  + 0.5*dy
-    enddo
-
+    if(nyd /= 1) then
+       do j= 1, ny
+          y(j)  = yminb + 0.5*dy + (j-nb-1)*dy
+          yl(j) = y(j)  - 0.5*dy
+          yr(j) = y(j)  + 0.5*dy
+       enddo
+    else
+       y  =  0.0
+       yl = -0.5*dy
+       yr =  0.5*dy
+    endif
 
 !--- z-grids --------------------------------------------------------------
 
     if(nzd /= 1) then
-
-      do k= 1, nz
-        z(k)  = zminb + 0.5*dz + (k-nb-1) * dz
-        zl(k) = z(k)  - 0.5*dz
-        zr(k) = z(k)  + 0.5*dz
-      enddo
-
+       do k= 1, nz
+          z(k)  = zminb + 0.5*dz + (k-nb-1) * dz
+          zl(k) = z(k)  - 0.5*dz
+          zr(k) = z(k)  + 0.5*dz
+       enddo
     else 
-
-      z = 0.0  
-      zl = -dz/2.
-      zr =  dz/2.
-
+       z  =  0.0  
+       zl = -0.5*dz
+       zr =  0.5*dz
     endif
 !--------------------------------------------------------------------------
 

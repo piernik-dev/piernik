@@ -12,7 +12,7 @@ subroutine mhd_step
   use timestep,   only : time_step
   use sweeps, only : sweepx,sweepy,sweepz
   use mpi_setup, only : proc
-  use grid, only : nzd
+  use grid, only : nxd,nyd,nzd
 
 #ifdef DEBUG
   use dataio, only : nhdf,write_hdf
@@ -75,69 +75,67 @@ subroutine mhd_step
 
 #ifdef SHEAR
       call yshift(t)
-      call bnd_u('xdim')
-      call bnd_u('ydim')
+      if(nxd /= 1) call bnd_u('xdim')
+      if(nyd /= 1) call bnd_u('ydim')
 #endif /* SHEAR */
 #ifdef SELF_GRAV
       call poisson
 #endif /* SELF_GRAV */
 
 !------------------- X->Y->Z ---------------------
-#ifndef ONLYZSWEEP
-
-      call sweepx
+      if(nxd /=1) then
+         call sweepx
       
 #ifdef MAGNETIC      
-      call magfieldbyzx
+         call magfieldbyzx
 #endif /* MAGNETIC */      
       
 #ifdef COSM_RAYS
-      call cr_diff_x
+         call cr_diff_x
 #endif /* COSM_RAYS */
 
 #ifdef DEBUG
-      syslog = system('echo -n sweep x')
-      call write_hdf
-      nhdf = nhdf + 1     
+         syslog = system('echo -n sweep x')
+         call write_hdf
+         nhdf = nhdf + 1     
 #endif /* DEBUG */
-#endif /* ONLYZSWEEP */
+      endif
 
-#ifndef ONLYZSWEEP
-
-      call sweepy
+      if(nyd /= 1) then
+         call sweepy
 
 #ifdef MAGNETIC            
-      call magfieldbzxy
+         call magfieldbzxy
 #endif /* MAGNETIC */      
       
 #ifdef COSM_RAYS
-      call cr_diff_y
+         call cr_diff_y
 #endif /* COSM_RAYS */
 
 #ifdef DEBUG
-      syslog = system('echo -n sweep y')
-      call write_hdf
-      nhdf = nhdf + 1
+         syslog = system('echo -n sweep y')
+         call write_hdf
+         nhdf = nhdf + 1
 #endif /* DEBUG */
-#endif /* ONLYZSWEEP */
+      endif
 
-    if(nzd /= 1) then
-      call sweepz
+      if(nzd /= 1) then
+         call sweepz
       
 #ifdef MAGNETIC            
-      call magfieldbxyz
+         call magfieldbxyz
 #endif /* MAGNETIC */      
       
 #ifdef COSM_RAYS
-      call cr_diff_z
+         call cr_diff_z
 #endif  /* COSM_RAYS */
 
 #ifdef DEBUG
-      syslog = system('echo -n sweep z')
-      call write_hdf
-      nhdf = nhdf + 1
+         syslog = system('echo -n sweep z')
+         call write_hdf
+         nhdf = nhdf + 1
 #endif /* DEBUG */
-    endif
+      endif
 
 ! Sources ----------------------------------------
 
@@ -163,59 +161,59 @@ subroutine mhd_step
 
 
 !------------------- Z->Y->X ---------------------
-    if(nzd /= 1) then
+      if(nzd /= 1) then
 #ifdef COSM_RAYS
-      call cr_diff_z
+         call cr_diff_z
 #endif /* COSM_RAYS */
 
 #ifdef MAGNETIC      
-      call magfieldbxyz
+         call magfieldbxyz
 #endif /* MAGNETIC */      
       
-      call sweepz
+         call sweepz
       
 #ifdef DEBUG
-      syslog = system('echo -n sweep z')
-      call write_hdf
-      nhdf = nhdf + 1
+         syslog = system('echo -n sweep z')
+         call write_hdf
+         nhdf = nhdf + 1
 #endif /* DEBUG */
-    endif
-
-#ifndef ONLYZSWEEP
+      endif
+      
+      if(nyd /= 1) then
 #ifdef COSM_RAYS
-      call cr_diff_y
+         call cr_diff_y
 #endif /* COSM_RAYS */
 
 #ifdef MAGNETIC
-      call magfieldbzxy
+         call magfieldbzxy
 #endif /* MAGNETIC */      
       
-      call sweepy
+         call sweepy
       
 #ifdef DEBUG
-      syslog = system('echo -n sweep y')
-      call write_hdf
-      nhdf = nhdf + 1
+         syslog = system('echo -n sweep y')
+         call write_hdf
+         nhdf = nhdf + 1
 #endif /* DEBUG */
-#endif /* ONLYZSWEEP */
+      endif
 
-#ifndef ONLYZSWEEP
+      if(nxd /= 1) then
 #ifdef COSM_RAYS
-      call cr_diff_x
+         call cr_diff_x
 #endif /* COSM_RAYS */
 
 #ifdef MAGNETIC
-      call magfieldbyzx
+         call magfieldbyzx
 #endif /* MAGNETIC */
       
-      call sweepx
+         call sweepx
       
 #ifdef DEBUG
-      syslog = system('echo -n sweep x')
-      call write_hdf
-      nhdf = nhdf + 1
+         syslog = system('echo -n sweep x')
+         call write_hdf
+         nhdf = nhdf + 1
 #endif /* DEBUG */
-#endif /* ONLYZSWEEP */
+      endif
 
 #ifdef SNE_DISTR
       call supernovae_distribution
@@ -234,14 +232,14 @@ end subroutine mhd_step
   subroutine magfieldbyzx
     use fluidindex, only : ibx,iby,ibz
     use arrays,  only : b
-    use grid, only : xdim,ydim,zdim,nzd
+    use grid, only : xdim,ydim,zdim,nyd,nzd
     use advects, only : advectby_x,advectbz_x
-
 
 #ifdef RESISTIVE
     use resistivity, only : diffuseby_x,diffusebz_x
 #endif /* RESISTIVE */
 
+    if(nyd /= 1) then
       call advectby_x
       
 #ifdef RESISTIVE
@@ -249,9 +247,9 @@ end subroutine mhd_step
 #endif /* RESISTIVE */
 
       call mag_add(iby,xdim,ibx,ydim)     
+    endif
 
     if(nzd /= 1) then
-
       call advectbz_x
 
 #ifdef RESISTIVE
@@ -259,7 +257,6 @@ end subroutine mhd_step
 #endif /* RESISTIVE */
 
       call mag_add(ibz,xdim,ibx,zdim)
-
     endif
 
   end subroutine magfieldbyzx
@@ -269,7 +266,7 @@ end subroutine mhd_step
   subroutine magfieldbzxy
     use fluidindex, only : ibx,iby,ibz
     use arrays,  only : b
-    use grid, only : xdim,ydim,zdim,nzd
+    use grid, only : xdim,ydim,zdim,nzd,nxd
     use advects, only : advectbx_y,advectbz_y
 
 #ifdef RESISTIVE
@@ -277,7 +274,6 @@ end subroutine mhd_step
 #endif /* RESISTIVE */
 
     if(nzd /= 1) then
-
       call advectbz_y
       
 #ifdef RESISTIVE
@@ -285,9 +281,9 @@ end subroutine mhd_step
 #endif /* RESISTIVE */
 
       call mag_add(ibz,ydim,iby,zdim)
-
     endif
 
+    if(nxd /= 1) then
       call advectbx_y
       
 #ifdef RESISTIVE
@@ -295,6 +291,7 @@ end subroutine mhd_step
 #endif /* RESISTIVE */
 
       call mag_add(ibx,ydim,iby,xdim)
+    endif
 
   end subroutine magfieldbzxy
 
@@ -303,27 +300,29 @@ end subroutine mhd_step
   subroutine magfieldbxyz
     use fluidindex, only : ibx,iby,ibz
     use arrays,  only : b
-    use grid, only : xdim,ydim,zdim,nzd
+    use grid, only : xdim,ydim,zdim,nxd,nyd
     use advects, only : advectbx_z,advectby_z
 
 #ifdef RESISTIVE
     use resistivity, only : diffusebx_z,diffuseby_z
 #endif /* RESISTIVE */
 
-
+    if(nxd /= 1) then
       call advectbx_z
 #ifdef RESISTIVE
       call diffusebx_z
 #endif /* RESISTIVE */
       call mag_add(ibx,zdim,ibz,xdim)
+    endif
 
+    if(nyd /= 1) then
       call advectby_z
 #ifdef RESISTIVE
       call diffuseby_z
 #endif /* RESISTIVE */
-
+    
       call mag_add(iby,zdim,ibz,ydim)
-
+    endif
   end subroutine magfieldbxyz
 
 !------------------------------------------------------------------------------------------

@@ -6,7 +6,7 @@ contains
     use mpi_setup
     use fluidindex, only  : nvar
     use arrays, only : u
-    use grid, only : nb,nx,ny,nz,nxb,nyb,nzb,nzd
+    use grid, only : nb,nx,ny,nz,nxb,nyb,nzb,nxd,nyd,nzd
 
     implicit none
     integer, dimension(4) :: sizes, subsizes, starts
@@ -21,6 +21,7 @@ contains
 !------------------------!
 !   X dimension - fluid  !
 !------------------------!
+   if(nxd /= 1) then
     sizes    = (/nvar,nx,ny,nz/)
     subsizes = (/nvar,nb,ny,nz/)
     starts   = (/0,0,0,0/)
@@ -69,10 +70,12 @@ contains
     call MPI_TYPE_CREATE_SUBARRAY(4,sizes,subsizes,starts,ord,&
            old,MAG_YZ_RIGHT_BND,ierr)
     call MPI_TYPE_COMMIT(MAG_YZ_RIGHT_BND,ierr)
+  endif
 
 !------------------------!
 !   Y dimension - fluid  !
 !------------------------!
+  if(nyd /= 1) then
     sizes    = (/nvar,nx,ny,nz/)
     subsizes = (/nvar,nx,nb,nz/)
     starts   = (/0,0,0,0/)
@@ -121,6 +124,7 @@ contains
     call MPI_TYPE_CREATE_SUBARRAY(4,sizes,subsizes,starts,ord,&
            old,MAG_XZ_RIGHT_BND,ierr)
     call MPI_TYPE_COMMIT(MAG_XZ_RIGHT_BND,ierr)
+  endif
 
 !------------------------!
 !   Z dimension - fluid  !

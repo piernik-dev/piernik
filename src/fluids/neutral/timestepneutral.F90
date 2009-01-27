@@ -9,7 +9,7 @@ contains
 
   subroutine timestep_neu
     use mpi_setup
-    use grid, only     : dx,dy,dz,nb,ks,ke,nyb,nxb
+    use grid, only     : dx,dy,dz,nb,ks,ke,is,ie,js,je
     use arrays, only   : u,b
     use start, only  : cfl
     use initneutral, only : gamma_neu, cs_iso_neu,cs_iso_neu2   
@@ -38,8 +38,8 @@ contains
     c_neu = 0.0
 
     do k=ks,ke
-      do j=nb+1,nb+nyb
-        do i=nb+1,nb+nxb
+      do j=js,je
+        do i=is,ie
 
           vx=abs(u(imxn,i,j,k)/u(idnn,i,j,k))
           vy=abs(u(imyn,i,j,k)/u(idnn,i,j,k))

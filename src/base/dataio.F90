@@ -352,10 +352,20 @@ module dataio
       nxo = nx
       nyo = ny
       nzo = nz
-      iso = 1
-      ieo = nx
-      jso = 1
-      jeo = ny
+      if(nxd /= 1) then
+         iso = 1
+         ieo = nx
+      else
+         iso = 1
+         ieo = 1
+      endif
+      if(nyd /= 1) then
+         jso = 1
+         jeo = ny
+      else
+         jso = 1
+         jeo = 1
+      endif
       if(nzd /= 1) then
         kso = 1
         keo = nz
@@ -368,10 +378,20 @@ module dataio
       nxo = nxb
       nyo = nyb
       nzo = nzb
-      iso    = nb+1
-      ieo    = nb+nxb
-      jso    = nb+1
-      jeo    = nb+nyb
+      if(nxd /= 1) then
+         iso    = nb+1
+         ieo    = nb+nxb
+      else
+         iso = 1
+         ieo = 1
+      endif
+      if(nyd /= 1) then
+         jso    = nb+1
+         jeo    = nb+nyb
+      else
+         jso = 1
+         jeo = 1
+      endif
       if(nzd /= 1) then
         kso    = nb+1
         keo    = nb+nzb

@@ -160,10 +160,11 @@ implicit none
 
 #ifdef COSM_RAYS 
   subroutine div_v(ifluid)
+    use mpi_setup
     use initionized, only : idni,imxi,imyi,imzi
     use fluidindex,  only : nfluid,iarr_all_dn,iarr_all_mx,iarr_all_my,iarr_all_mz
     use grid,        only : nx,ny,nz
-    use grid,        only : dx,dy,dz,nzd
+    use grid,        only : dx,dy,dz,nxd,nyd,nzd
     use arrays,      only : u,divvel
     implicit none
 !    real, dimension(nx)  :: dvx,dvy,dvz
@@ -179,7 +180,12 @@ implicit none
     imzf = iarr_all_mz(ifluid) 
 
     divvel(:,:,:) = 0.0
-    
+
+    if(nyd == 1 .or. nxd == 1) then
+         write(*,*) "div_v @ func.F90 does not support 'nyd' and/or 'nxd' == 1"
+         call mpistop
+    endif
+
     if(nzd == 1) then
       k=1
       do j=2,ny-1

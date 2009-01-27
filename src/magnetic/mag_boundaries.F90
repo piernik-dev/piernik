@@ -886,9 +886,11 @@ subroutine bnd_emf(var, name, dim)
 end subroutine bnd_emf
 
   subroutine compute_b_bnd
+   use grid, only : nxd,nyd,nzd
+   implicit none
 
-   call bnd_b('xdim')
-   call bnd_b('ydim')
+   if(nxd /= 1) call bnd_b('xdim')
+   if(nyd /= 1) call bnd_b('ydim')
    if(nzd /= 1) call bnd_b('zdim')
 
   end subroutine compute_b_bnd

@@ -9,7 +9,7 @@ module timestepionized
 
   subroutine timestep_ion
     use mpi_setup
-    use grid, only   : dx,dy,dz,nb,ks,ke,nyb,nxb
+    use grid, only   : dx,dy,dz,nb,ks,ke,is,ie,js,je
     use arrays, only : u,b
     use start, only  : cfl
     use initionized, only : gamma_ion, cs_iso_ion2   
@@ -37,8 +37,8 @@ module timestepionized
     c_ion     = 0.0
 
     do k=ks,ke
-      do j=nb+1,nb+nyb
-        do i=nb+1,nb+nxb
+      do j=js,je
+        do i=is,ie
 
           vx=abs(u(imxi,i,j,k)/u(idni,i,j,k))
           vy=abs(u(imyi,i,j,k)/u(idni,i,j,k))

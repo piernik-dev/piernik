@@ -920,10 +920,10 @@ subroutine bnd_u(dim)
 end subroutine bnd_u
 
   subroutine compute_u_bnd
-   use grid,  only : nzd
+   use grid,  only : nxd,nyd,nzd
    implicit none
-   call bnd_u('xdim')
-   call bnd_u('ydim')
+   if(nxd /= 1) call bnd_u('xdim')
+   if(nyd /= 1) call bnd_u('ydim')
    if(nzd /= 1) call bnd_u('zdim')
 
   end subroutine compute_u_bnd
