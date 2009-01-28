@@ -1,7 +1,7 @@
 ! $Id$
 #include "piernik.def"
 
-module sn_distr
+module sndistr
 
 ! Supernovae distribution and drawing
 ! Written by: D. Woltanski, December 2007
@@ -18,7 +18,7 @@ module sn_distr
 
 !-----------------------------------------------------------------------------
 
-   subroutine prepare_SNdistr
+   subroutine init_sndistr
       use start, only: snemass,snenerg,sn1time,sn2time,r0sn
       use grid, only: dx,dy,dz
       use constants
@@ -79,7 +79,7 @@ module sn_distr
       danta(2,:,1)=danta(2,:,1)/danta(2,imax,1)
       SNnohistory(:)=0
 
-   end subroutine prepare_SNdistr
+   end subroutine init_sndistr
 
 !===============================================================================================
    subroutine supernovae_distribution
@@ -395,5 +395,5 @@ module sn_distr
 !
 !=======================================================================
 
-end module sn_distr
+end module sndistr
 
