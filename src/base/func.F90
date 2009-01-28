@@ -202,7 +202,7 @@ implicit none
        do k = 1, nz
          do i = 1, nx
             vy = u(imxf,i,:,k) / u(idnf,i,:,k)
-            divvel(i,2:ny-1,k) = ( vy(3:ny) - vy(1:ny-2) )  / (2.*dy)
+            divvel(i,2:ny-1,k) = divvel(i,2:ny-1,k)+( vy(3:ny) - vy(1:ny-2) )  / (2.*dy)
          enddo
        enddo
        divvel(:,1,:) = divvel(:,2,:); divvel(:,ny,:) = divvel(:,ny-1,:) ! for sanity
@@ -212,7 +212,7 @@ implicit none
        do j = 1, ny
          do i = 1, nx
             vz = u(imxf,:,j,k) / u(idnf,:,j,k)
-            divvel(i,j,2:nz-1) = ( vz(3:nz) - vz(1:nz-2) )  / (2.*dz)
+            divvel(i,j,2:nz-1) = divvel(i,j,2:nz-1)+( vz(3:nz) - vz(1:nz-2) )  / (2.*dz)
          enddo
        enddo
        divvel(:,:,1) = divvel(:,:,2); divvel(:,:,nz) = divvel(:,:,nz-1) ! for sanity
