@@ -44,6 +44,7 @@ subroutine mhd_step
 #endif /* MASS_COMPENS */
 
   implicit none
+  logical, save :: first_run = .true.
 #ifdef DEBUG
   integer system, syslog
 #endif /* DEBUG */
@@ -51,7 +52,10 @@ subroutine mhd_step
   call time_step
 
 #ifdef RESISTIVE
-  if(nstep == 1) dt = 0.0
+   if(first_run) then 
+      dt = 0.0
+      first_run = .false.
+   endif 
 #endif /* RESISTIVE */
 
   if(dt_log .gt. 0.0) then

@@ -74,9 +74,15 @@ module dataio
 !---------------------------------------------------------------------
 !
   subroutine init_dataio
+    use init_problem, only : problem_name,run_id
+    use comp_log, only : nenv,env
+    use start, only : nstep, t, nstep_start
     implicit none
     integer(kind=1) :: getpid
     integer(kind=1) :: hostnm
+    integer(kind=1) :: system
+    integer :: system_status, i
+    character(LEN=160) :: system_command
     character(LEN=100) :: par_file, tmp_log_file
 
 
@@ -224,8 +230,95 @@ module dataio
 
    last_hdf_time = -dt_hdf
 
+   if(proc == 0 .and. restart .eq. 'last') call find_last_restart(nrestart)
+   call MPI_BARRIER(comm,ierr)
+   call MPI_BCAST(nrestart, 1, MPI_INTEGER, 0, comm, ierr)
+   if (nrestart == 0) then
+      if (proc == 0) then
+         write (log_file,'(a,a1,a3,a1,i3.3,a4)') &
+                 trim(problem_name),'_', run_id,'_',nrestart,'.log'
+         tmp_log_file = trim(cwd)//'/tmp.log'
+         log_file = trim(cwd)//'/'//trim(log_file)
+         system_command = 'mv '//trim(tmp_log_file)//' '//trim(log_file)
+         system_status = SYSTEM(system_command)
+         open(3, file=log_file, position='append')
+            do i=1,nenv
+               write(3,*) trim(env(i))
+            enddo
+         close(3)
+      endif
+
+      call write_data(output='all')
+
+   else
+      if (proc == 0) then
+         write (log_file,'(a,a1,a3,a1,i3.3,a4)') &
+               trim(problem_name),'_', run_id,'_',nrestart,'.log'
+         tmp_log_file = trim(cwd)//'/tmp.log'
+         log_file = trim(cwd)//'/'//log_file
+         system_command = 'mv '//trim(tmp_log_file)//' '//trim(log_file)
+         system_status = SYSTEM(system_command)
+      endif
+      nres = nrestart
+      call read_restart
+
+      nstep_start = nstep
+      t_start     = t
+      nres_start  = nrestart
+      nhdf_start  = nhdf-1
+
+      if(new_id .ne. '') run_id=new_id
+   endif
+
 
   end subroutine init_dataio
+
+   subroutine user_msg_handler(end_sim)
+     use start, only : tend, nend, nstep
+     implicit none
+     logical, intent(inout) :: end_sim
+     integer :: tsleep
+!      do while(disk_full)
+
+!--- process 0 checks for messages
+
+      if(proc == 0) then
+        call read_file_msg
+      endif
+      call MPI_BCAST(msg,       16, MPI_CHARACTER,        0, comm, ierr)
+      call MPI_BCAST(msg_param, 16, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+
+!---  if a user message is received then:
+      if (len_trim(msg) /= 0) then
+        if(trim(msg) == 'res' .or. trim(msg) == 'dump' ) then
+          nres = max(nres,1)
+          call write_restart
+          nres = nres + 1
+          step_res = nstep
+        endif
+        if(trim(msg) .eq. 'hdf') then
+          call write_hdf
+          nhdf = nhdf + 1
+          step_hdf = nstep
+        endif
+        if(trim(msg) .eq. 'log')    call write_log
+        if(trim(msg) .eq. 'tsl')    call write_timeslice
+        if(trim(msg) .eq. 'tend')   tend   = msg_param
+        if(trim(msg) .eq. 'nend')   nend   = msg_param
+        if(trim(msg) .eq. 'dtres')  dt_res = msg_param
+        if(trim(msg) .eq. 'dthdf')  dt_hdf = msg_param
+        if(trim(msg) .eq. 'dtlog')  dt_log = msg_param
+        if(trim(msg) .eq. 'dttsl')  dt_tsl = msg_param
+
+        if(trim(msg) .eq. 'sleep') then
+           tsleep = 60*msg_param
+           call sleep(tsleep)
+        endif
+
+        if(trim(msg) .eq. 'stop') end_sim = .true.
+      endif
+!  enddo ! while disk is full
+   end subroutine user_msg_handler
 
 !---------------------------------------------------------------------
 !
@@ -938,7 +1031,7 @@ module dataio
     endif
   if(proc==0) then
     inquire(file =log_file , exist = log_exist)
-    if(file_exist .eqv. .true.) then
+    if(log_exist .eqv. .true.) then
       open(log_lun, file=log_file, position='append')
         write(log_lun,*) 'Reading restart  file: ', trim(file_name_disp)
       close(log_lun)
