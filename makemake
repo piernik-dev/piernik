@@ -206,7 +206,7 @@ if( grep { /SN_SRC/} @d) {
    push(@addons, "../src/supernovae/sn_sources.F90");
 }
 if( grep { /SNE_DISTR/} @d) {
-   push(@addons, "../src/supernovae/sn_distr.F90");
+   push(@addons, "../src/supernovae/sndistr.F90");
 }
 
 push(@addons, "../src/scheme/mhdstep.F90");
