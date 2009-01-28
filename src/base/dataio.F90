@@ -1260,7 +1260,7 @@ module dataio
                       tot_emag, tot_mflx, tot_mfly, tot_mflz, tsl%vai_max, &
                       tsl%b_min, tsl%b_max, tsl%divb_max, &
 #ifdef RESISTIVE
-                      tsl%eta_max, &
+                      tsl%etamax, &
 #endif /* RESISTIVE */
 #endif /* MAGNETIC */
 #ifdef COSM_RAYS

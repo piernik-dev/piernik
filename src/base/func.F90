@@ -48,46 +48,6 @@ implicit none
 
    end subroutine namelist_errh
 
-! Te procedury powinny sie znalezc docelowo w jakims innym module.
-
-!>
-!! \brief Function that evolves EMFs in time
-!! \param vh velocity perpendicular to #b
-!! \param vg velocity perpendicular to #b
-!! \param b one component of magnetic field
-!! \param dt timestep
-!<
-  function tvdb_emf(vh,vg,b,dt)
-    implicit none
-    real, dimension(:), intent(in) :: vh,vg,b
-    real, intent(in)               :: dt
-    real, dimension(size(vh)) :: tvdb_emf
-    integer :: i,ip,ipp,im
-    real    :: w,dwp,dwm,dw,v
-
-    tvdb_emf = 0.0
-
-    do i = lbound(vh,1)+2, ubound(vh,1)-3
-       ip  = i  + 1
-       ipp = ip + 1
-       im  = i  - 1
-       v   = vh(i)
-       if (v .gt. 0.) then
-         w=vg(i)*b(i)
-         dwp=(vg(ip)*b(ip)-w)*0.5
-         dwm=(w-vg(im)*b(im))*0.5
-       else
-         w=vg(ip)*b(ip)
-         dwp=(w-vg(ipp)*b(ipp))*0.5
-         dwm=(vg(i)*b(i)-w)*0.5
-       end if
-       dw=0.0
-       if(dwm*dwp > 0.0) dw=2.0*dwm*dwp/(dwm+dwp)
-       tvdb_emf(i)=(w+dw)*dt
-    enddo
-    return
-  end function tvdb_emf
-
 !-----------------------------------------------------------------------------
 
 !>

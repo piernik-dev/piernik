@@ -278,7 +278,7 @@ module crdiffusion
       return
       end subroutine cr_diff_z
 
-  subroutine div_v
+  subroutine div_v_old
   
     use initionized, only : idni,imxi,imyi,imzi
   
@@ -307,7 +307,7 @@ module crdiffusion
         enddo
       enddo
     endif
-  end subroutine div_v
+  end subroutine div_v_old
 
 
 end module crdiffusion

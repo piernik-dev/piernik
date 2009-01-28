@@ -5,14 +5,14 @@ module rtvd ! split orig
 
   subroutine tvdb(vibj,b,vg,n,dt,di)
     use constants, only : big
-    use func, only      : tvdb_emf
     implicit none
     integer, intent(in) :: n
     real, intent(in)    :: dt,di
     real, dimension(n)  :: vibj,b,vg
 ! locals
     real, dimension(n)  :: b1,vibj1,vh
-    real :: dti
+    real :: dti, v, w, dw, dwm, dwp
+    integer :: i, ip, ipp, im
 
   ! unlike the B field, the vibj lives on the right cell boundary
     vh = 0.0
@@ -27,7 +27,24 @@ module rtvd ! split orig
     end where
     b1(2:n) = b(2:n) -(vibj1(2:n)-vibj1(1:n-1))*dti*0.5;    b1(1) = b(2)
 
-    vibj = tvdb_emf(vh,vg,b1,dt)
+    do i = 3, n-3
+       ip  = i  + 1
+       ipp = ip + 1
+       im  = i  - 1
+       v   = vh(i)
+       if (v > 0.0) then
+         w=vg(i)*b1(i)
+         dwp=(vg(ip)*b1(ip)-w)*0.5
+         dwm=(w-vg(im)*b1(im))*0.5
+       else
+         w=vg(ip)*b1(ip)
+         dwp=(w-vg(ipp)*b1(ipp))*0.5
+         dwm=(vg(i)*b1(i)-w)*0.5
+       end if
+       dw=0.0
+       if(dwm*dwp > 0.0) dw=2.0*dwm*dwp/(dwm+dwp)
+       vibj(i)=(w+dw)*dt
+    enddo
 
   end subroutine tvdb
 
