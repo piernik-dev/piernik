@@ -26,27 +26,34 @@ module crdiffusion
 !
       implicit none
       integer i,j,k, n
-      real b1b, b2b, b3b, n1b, n2b, n3b
+      real :: b1b, b2b, b3b, n1b, n2b, n3b, bb
       real :: decr1, decr2, decr3, fcrdif1
       real :: dqp2, dqm2, dqp3, dqm3
 
 !=======================================================================
 
-      do 30 k=ks,ke
-        do 20 j=js,je
-          do 10 i=is,ie+1
+      do k=ks,ke
+        do j=js,je
+          do i=2,nx     ! if we are here this implies nxd /= 1
 
              b1b =  b(ibx,i,  j,  k)
-             b2b = (b(iby,i,  j,  k) + b(iby,i-1,j,  k)       &
-                  + b(iby,i-1,j+1,k) + b(iby,i,  j+1,k))/4.
-        if(nzd .gt. 1) then
-             b3b = (b(ibz,i,  j,  k) + b(ibz,i-1,j,  k)       &
-                  + b(ibz,i-1,j,k+1) + b(ibz,i,  j,k+1))/4.
-        endif
+             if(nyd /= 1) then
+                b2b = (b(iby,i,  j,  k) + b(iby,i-1,j,  k)       &
+                     + b(iby,i-1,j+1,k) + b(iby,i,  j+1,k))*0.25
+             else
+                b2b = 0.0
+             endif
+             if(nzd /= 1) then
+                b3b = (b(ibz,i,  j,  k) + b(ibz,i-1,j,  k)       &
+                     + b(ibz,i-1,j,k+1) + b(ibz,i,  j,k+1))*0.25
+             else
+                b3b = 0.0
+             endif
 
-             n1b = b1b/SQRT(b1b**2 + b2b**2 + b3b**2+small)
-             n2b = b2b/SQRT(b1b**2 + b2b**2 + b3b**2+small)
-             n3b = b3b/SQRT(b1b**2 + b2b**2 + b3b**2+small)
+             bb  = sqrt(b1b**2 + b2b**2 + b3b**2 + small)
+             n1b = b1b/bb
+             n2b = b2b/bb
+             n3b = b3b/bb
 
              decr1 =  (u(iecr,i,  j,  k) - u(iecr,i-1,j,  k))/dx
 
@@ -55,36 +62,40 @@ module crdiffusion
              dqp2  = 0.5*((u(iecr,i-1,j+1,k ) + u(iecr,i ,j+1,k ))    &
                          -(u(iecr,i-1,j  ,k ) + u(iecr,i ,j  ,k )))/dy
 
-             decr2 = (dqp2+dqm2)* (1.0 + sign(1.0, dqm2*dqp2))/4.
+             decr2 = (dqp2+dqm2)* (1.0 + sign(1.0, dqm2*dqp2))*0.25
 
-        if(nzd .gt. 1) then
-             dqm3  = 0.5*((u(iecr,i-1,j ,k  ) + u(iecr,i ,j ,k  ))    &
-                         -(u(iecr,i-1,j ,k-1) + u(iecr,i ,j ,k-1)))/dz
-             dqp3  = 0.5*((u(iecr,i-1,j ,k+1) + u(iecr,i ,j ,k+1))    &
-                         -(u(iecr,i-1,j ,k  ) + u(iecr,i ,j ,k  )))/dz
+             if(nzd /= 1) then
+                dqm3  = 0.5*((u(iecr,i-1,j ,k  ) + u(iecr,i ,j ,k  ))    &
+                            -(u(iecr,i-1,j ,k-1) + u(iecr,i ,j ,k-1)))/dz
+                dqp3  = 0.5*((u(iecr,i-1,j ,k+1) + u(iecr,i ,j ,k+1))    &
+                            -(u(iecr,i-1,j ,k  ) + u(iecr,i ,j ,k  )))/dz
 
-              decr3 = (dqp3+dqm3)* (1.0 + sign(1.0, dqm3*dqp3))/4.
-        endif
+                decr3 = (dqp3+dqm3)* (1.0 + sign(1.0, dqm3*dqp3))*0.25
+             else
+                decr3 = 0.0
+             endif
 
-              fcrdif1 = K_cr_paral * n1b *   &
+             fcrdif1 = K_cr_paral * n1b *   &
                    (n1b*decr1 + n2b*decr2 + n3b*decr3)  &
                    + K_cr_perp * decr1
 
 
-             wa(i,j,k) = - fcrdif1 * dt
+             wa(i,j,k) = - fcrdif1 * dt / dx
 
-10          continue
-20        continue
-30      continue
+           enddo
+         enddo
+      enddo
 
-      do 60 k=ks,ke
-        do 50 j=js,je
-          do 40 i=is,ie
-            u(iecr,i,j,k) = u(iecr,i,j,k)  &
-                        -(wa(i+1,j,k)-wa(i,j,k))/dx
-40        continue
-50      continue
-60    continue
+!     do 60 k=ks,ke
+!       do 50 j=js,je
+!         do 40 i=is,ie
+!            u(iecr,i,j,k) = u(iecr,i,j,k)  &
+!                        -(wa(i+1,j,k)-wa(i,j,k))/dx
+!40       continue
+!50      continue
+!60    continue
+      u(iecr,1:nx-1,:,:) = u(iecr,1:nx-1,:,:) - ( wa(2:nx,:,:) - wa(1:nx-1,:,:) )
+      u(iecr,nx,:,:) = u(iecr,nx-1,:,:) ! for sanity
 
       return
       end subroutine cr_diff_x
@@ -100,46 +111,60 @@ module crdiffusion
 !-----------------------------------------------------------------------
       implicit none
       integer i,j,k,n
-      real b1b, b2b, b3b, n1b, n2b, n3b
+      real :: b1b, b2b, b3b, n1b, n2b, n3b, bb
       real :: decr1, decr2, decr3, fcrdif2
       real :: dqp2, dqm1, dqm2, dqp3, dqm3, dqp1
 
 !=======================================================================
 !
 
-      do 30 k=ks,ke
-        do 20 j=js,je+1
-          do 10 i=is,ie
+      do k=ks,ke
+        do j=2,ny ! if we are here nyd /= 1
+          do i=is,ie
 
-             b1b = (b(ibx,i,j,k) + b(ibx,i,j-1,k)   &
-                  + b(ibx,i+1,j-1,k) + b(ibx,i+1,j,k))/4.
-
-             b2b =  b(iby,i,j,k)
-             if(nzd .gt. 1) then
-                b3b = (b(ibz,i,j,k) + b(ibz,i,j-1,k)   &
-                     + b(ibz,i,j-1,k+1) + b(ibz,i,j,k+1))/4.
+             if(nxd /= 1) then
+                b1b = (b(ibx,i,j,k) + b(ibx,i,j-1,k)   &
+                     + b(ibx,i+1,j-1,k) + b(ibx,i+1,j,k))*0.25
+             else
+                b1b = 0.0
              endif
 
-             n1b = b1b/SQRT(b1b**2 + b2b**2 + b3b**2+small)
-             n2b = b2b/SQRT(b1b**2 + b2b**2 + b3b**2+small)
-             n3b = b3b/SQRT(b1b**2 + b2b**2 + b3b**2+small)
+             b2b =  b(iby,i,j,k)
 
-             dqm1  = 0.5*((u(iecr,i  ,j-1,k ) + u(iecr,i  ,j  ,k ))   &
-                         -(u(iecr,i-1,j-1,k ) + u(iecr,i-1,j  ,k )))/dx
-             dqp1  = 0.5*((u(iecr,i+1,j-1,k ) + u(iecr,i+1,j  ,k ))   &
-                         -(u(iecr,i  ,j-1,k ) + u(iecr,i  ,j  ,k )))/dx
+             if(nzd /= 1) then
+                b3b = (b(ibz,i,j,k) + b(ibz,i,j-1,k)   &
+                     + b(ibz,i,j-1,k+1) + b(ibz,i,j,k+1))*0.25
+             else
+                b3b = 0.0
+             endif
+             
+             bb  = sqrt(b1b**2 + b2b**2 + b3b**2 + small)
+             n1b = b1b/bb
+             n2b = b2b/bb
+             n3b = b3b/bb
 
-             decr1 = (dqp1+dqm1)* (1.0 + sign(1.0, dqm1*dqp1))/4.
+             if(nxd /= 1) then
+                dqm1  = 0.5*((u(iecr,i  ,j-1,k ) + u(iecr,i  ,j  ,k ))   &
+                            -(u(iecr,i-1,j-1,k ) + u(iecr,i-1,j  ,k )))/dx
+                dqp1  = 0.5*((u(iecr,i+1,j-1,k ) + u(iecr,i+1,j  ,k ))   &
+                            -(u(iecr,i  ,j-1,k ) + u(iecr,i  ,j  ,k )))/dx
+
+                decr1 = (dqp1+dqm1)* (1.0 + sign(1.0, dqm1*dqp1))*0.25
+             else
+                decr1 = 0.0
+             endif
 
              decr2 = (u(iecr,i,j,k) - u(iecr,i,j-1,k))/dy
 
-             if(nzd .gt. 1) then
+             if(nzd /= 1) then
                 dqm2  = 0.5*((u(iecr,i ,j-1,k  ) + u(iecr,i ,j  ,k  ))   &
                             -(u(iecr,i ,j-1,k-1) + u(iecr,i ,j  ,k-1)))/dz
                 dqp2  = 0.5*((u(iecr,i ,j-1,k+1) + u(iecr,i ,j  ,k+1))   &
                             -(u(iecr,i ,j-1,k  ) + u(iecr,i ,j  ,k  )))/dz
 
-                decr3 = (dqp2+dqm2)* (1.0 + sign(1.0, dqm2*dqp2))/4.
+                decr3 = (dqp2+dqm2)* (1.0 + sign(1.0, dqm2*dqp2))*0.25
+             else
+                decr3 = 0.0
              endif
 
 
@@ -147,20 +172,23 @@ module crdiffusion
                       (n1b*decr1 + n2b*decr2 + n3b*decr3) &
                       + K_cr_perp * decr2
 
-             wa(i,j,k) = - fcrdif2 * dt
+             wa(i,j,k) = - fcrdif2 * dt / dy
 
-10          continue
-20        continue
-30      continue
+            enddo
+         enddo
+      enddo
 
-      do 60 k=ks,ke
-        do 50 j=js,je
-          do 40 i=is,ie
-            u(iecr,i,j,k) = u(iecr,i,j,k)    &
-                      - (wa(i,j+1,k)-wa(i,j,k))/dy
-40        continue
-50      continue
-60    continue
+!      do 60 k=ks,ke
+!        do 50 j=js,je
+!          do 40 i=is,ie
+!            u(iecr,i,j,k) = u(iecr,i,j,k)    &
+!                      - (wa(i,j+1,k)-wa(i,j,k))/dy
+!40        continue
+!50      continue
+!60    continue
+
+      u(iecr,:,1:ny-1,:) = u(iecr,:,1:ny-1,:) - ( wa(:,2:ny,:) - wa(:,1:ny-1,:) )
+      u(iecr,:,ny,:) = u(iecr,:,ny-1,:) ! for sanity
 
       return
       end subroutine cr_diff_y
@@ -173,40 +201,56 @@ module crdiffusion
 !
       implicit none
       integer i,j,k,n
-      real b1b, b2b, b3b, n1b, n2b, n3b
+      real :: b1b, b2b, b3b, n1b, n2b, n3b, bb
       real :: decr1, decr2, decr3, fcrdif3
       real :: dqp2, dqm2, dqp3, dqm3, dqm1, dqp1
 
 !=======================================================================
 !
-   if(nzd .gt. 1) then
-      do 100 k=ks,ke+1
-        do 100 j=js,je
-          do 100 i=is,ie
-
-             b1b = (b(ibx,i,  j,k  ) + b(ibx,i,  j,k-1)  &
-                  + b(ibx,i+1,j,k-1) + b(ibx,i+1,j,k  ))/4.
-             b2b = (b(iby,i,j,  k  ) + b(iby,i,j,  k-1)  &
-                  + b(iby,i,j+1,k-1) + b(iby,i,j+1,k  ))/4.
+      do k=2,nz      ! nzd /= 1
+        do j=js,je
+          do i=is,ie
+             
+             if(nxd /= 1) then
+                b1b = (b(ibx,i,  j,k  ) + b(ibx,i,  j,k-1)  &
+                     + b(ibx,i+1,j,k-1) + b(ibx,i+1,j,k  ))*0.25
+             else
+                b1b = 0.0
+             endif
+             if(nyd /= 1) then
+                b2b = (b(iby,i,j,  k  ) + b(iby,i,j,  k-1)  &
+                     + b(iby,i,j+1,k-1) + b(iby,i,j+1,k  ))*0.25
+             else
+                b2b = 0.0
+             endif
              b3b =  b(ibz,i,j,k)
 
-             n1b = b1b/SQRT(b1b**2 + b2b**2 + b3b**2+small)
-             n2b = b2b/SQRT(b1b**2 + b2b**2 + b3b**2+small)
-             n3b = b3b/SQRT(b1b**2 + b2b**2 + b3b**2+small)
+             bb  = sqrt(b1b**2 + b2b**2 + b3b**2 + small)
+             n1b = b1b/bb
+             n2b = b2b/bb
+             n3b = b3b/bb
 
-             dqm1  = 0.5*((u(iecr,i  ,j ,k-1) + u(iecr,i  ,j  ,k ))   &
-                         -(u(iecr,i-1,j ,k-1) + u(iecr,i-1,j  ,k )))/dx
-             dqp1  = 0.5*((u(iecr,i+1,j ,k-1) + u(iecr,i+1,j  ,k ))   &
-                         -(u(iecr,i  ,j ,k-1) + u(iecr,i  ,j  ,k )))/dx
+             if(nxd /= 1) then
+                dqm1  = 0.5*((u(iecr,i  ,j ,k-1) + u(iecr,i  ,j  ,k ))   &
+                            -(u(iecr,i-1,j ,k-1) + u(iecr,i-1,j  ,k )))/dx
+                dqp1  = 0.5*((u(iecr,i+1,j ,k-1) + u(iecr,i+1,j  ,k ))   &
+                            -(u(iecr,i  ,j ,k-1) + u(iecr,i  ,j  ,k )))/dx
 
-             decr1 = (dqp1+dqm1)* (1.0 + sign(1.0, dqm1*dqp1))/4.
+                decr1 = (dqp1+dqm1)* (1.0 + sign(1.0, dqm1*dqp1))*0.25
+             else
+                decr1 = 0.0
+             endif
+            
+             if(nyd /= 1) then
+                dqm2  = 0.5*((u(iecr,i ,j  ,k-1) + u(iecr,i  ,j  ,k ))   &
+                            -(u(iecr,i ,j-1,k-1) + u(iecr,i  ,j-1,k )))/dy
+                dqp2  = 0.5*((u(iecr,i ,j+1,k-1) + u(iecr,i  ,j+1,k ))   &
+                            -(u(iecr,i ,j  ,k-1) + u(iecr,i  ,j  ,k )))/dy
 
-             dqm2  = 0.5*((u(iecr,i ,j  ,k-1) + u(iecr,i  ,j  ,k ))   &
-                         -(u(iecr,i ,j-1,k-1) + u(iecr,i  ,j-1,k )))/dy
-             dqp2  = 0.5*((u(iecr,i ,j+1,k-1) + u(iecr,i  ,j+1,k ))   &
-                         -(u(iecr,i ,j  ,k-1) + u(iecr,i  ,j  ,k )))/dy
-
-             decr2 = (dqp2+dqm2)* (1.0 + sign(1.0, dqm2*dqp2))/4.
+                decr2 = (dqp2+dqm2)* (1.0 + sign(1.0, dqm2*dqp2))*0.25
+             else
+                decr2 = 0.0
+             endif
 
              decr3 =  (u(iecr,i,j,k    ) - u(iecr,i,j,  k-1))/dz
 
@@ -214,20 +258,22 @@ module crdiffusion
                   (n1b*decr1 + n2b*decr2 + n3b*decr3) &
                    + K_cr_perp * decr3
 
-             wa(i,j,k) = - fcrdif3 * dt
+             wa(i,j,k) = - fcrdif3 * dt / dz
+          enddo
+        enddo
+      enddo
 
-100   continue
+!      do 60 k=ks,ke
+!        do 50 j=js,je
+!          do 40 i=is,ie
+!            u(iecr,i,j,k) = u(iecr,i,j,k)  &
+!                        -(wa(i,j,k+1)-wa(i,j,k))/dz
+!40        continue
+!50      continue
+!60    continue
 
-      do 60 k=ks,ke
-        do 50 j=js,je
-          do 40 i=is,ie
-            u(iecr,i,j,k) = u(iecr,i,j,k)  &
-                        -(wa(i,j,k+1)-wa(i,j,k))/dz
-40        continue
-50      continue
-60    continue
-
-      endif
+      u(iecr,:,:,1:nz-1) = u(iecr,:,:,1:nz-1) - ( wa(:,:,2:nz) - wa(:,:,1:nz-1) )
+      u(iecr,:,:,nz) = u(iecr,:,:,nz-1) ! for sanity
 
       return
       end subroutine cr_diff_z
