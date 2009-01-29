@@ -1,0 +1,9 @@
+Proud members of PIERNIK DEVELOPEMENT TEAM
+
+Active developers:
+Michal Hanasz           mhanasz@astri.uni.torun.pl
+Kacper Kowalik          kowalik@astri.uni.torun.pl
+Dominik Woltanski       minikwolt@astri.uni.torun.pl
+
+Retired developers:
+Rafal Konrad Pawlaszek  pawlaszek@astri.uni.torun.pl
