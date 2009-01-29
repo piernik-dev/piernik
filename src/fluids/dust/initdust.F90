@@ -16,7 +16,7 @@ module initdust
 
   subroutine init_dust
 
-    use mpi_setup
+    use mpisetup
 
     implicit none
           

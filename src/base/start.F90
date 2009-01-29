@@ -5,7 +5,7 @@ module start
 
 ! Written by: M. Hanasz, January 2006
 
-  use mpi_setup
+  use mpisetup
 
 
   implicit none

@@ -83,12 +83,12 @@ module sndistr
 
 !===============================================================================================
    subroutine supernovae_distribution
-      use mpi_setup
+      use mpisetup
       use start, only : dt,smallei
       use arrays, only : u,b,nx,ny,nz,ibx,iby,ibz,idna,imxa,imya,imza,iena
       use grid, only : dx,dy,dz,dvol,nb
-      use sn_sources, only : rand_angles
-      use mag_boundaries, only : compute_b_bnd, bnd_a
+      use snsources, only : rand_angles
+      use magboundaries, only : compute_b_bnd, bnd_a
       implicit none
 
       integer :: isn
@@ -192,7 +192,7 @@ module sndistr
       use start, only  : r_sn, cr_eff
 #endif /* COSM_RAYS */
 #ifdef DIPOLS
-      use sn_sources, only : magn_multipole_sn
+      use snsources, only : magn_multipole_sn
 #endif /* DIPOLS */
       implicit none
       real, dimension(3) :: snpos

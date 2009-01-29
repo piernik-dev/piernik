@@ -17,7 +17,7 @@ module gravity
    contains
 
    subroutine init_grav
-      use mpi_setup
+      use mpisetup
       implicit none
       character(LEN=100) :: par_file, tmp_log_file
 
@@ -395,7 +395,7 @@ module gravity
 !--------------------------------------------------------------------------
 
    subroutine grav_accel2pot
-      use mpi_setup
+      use mpisetup
       use arrays, only : gp
       use grid, only  : dl,xdim,ydim,zdim,is,ie,js,je,ks,ke
       use grid, only  : nb,nx,ny,nz,zr,yr,xr

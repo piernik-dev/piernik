@@ -11,9 +11,9 @@ module dataio
 ! Written by G. Kowal
 ! Modified for this code and extended by M.Hanasz
   use types
-  use mpi_setup
+  use mpisetup
 #ifdef SN_SRC
-  use sn_sources
+  use snsources
 #endif /* SN_SRC */
 
   implicit none
@@ -74,8 +74,8 @@ module dataio
 !---------------------------------------------------------------------
 !
   subroutine init_dataio
-    use init_problem, only : problem_name,run_id
-    use comp_log, only : nenv,env
+    use initproblem, only : problem_name,run_id
+    use version, only : nenv,env
     use start, only : nstep, t, nstep_start
     implicit none
     integer(kind=1) :: getpid
@@ -329,7 +329,7 @@ module dataio
   subroutine write_data(output)
     use start, only:  t, dt, nstep
 #ifdef USER_IO
-    use init_problem, only : user_io_routine
+    use initproblem, only : user_io_routine
 #endif /* USER_IO */
     implicit none
     character  :: output*3
@@ -393,12 +393,12 @@ module dataio
 !---------------------------------------------------------------------
 !
    subroutine write_hdf
-      use mpi_setup, only: cwd
+      use mpisetup, only: cwd
       use arrays, only : wa,outwa,outwb,outwc,b,u
       use start, only : nstep,t,dt
       use grid, only : dx,dy,dz,xmin,xmax,ymin,ymax,zmin,zmax,nxd,nyd,nzd,nb
       use grid, only : nx,ny,nz,nxb,nyb,nzb,x,y,z
-      use init_problem, only : problem_name, run_id
+      use initproblem, only : problem_name, run_id
       
       use fluidindex,  only : nfluid    
       use fluidindex,  only : ibx,iby,ibz
@@ -757,7 +757,7 @@ module dataio
     use grid,         only : nxb,nyb,nzb,x,y,z,nx,ny,nz
     use grid,         only : xmin,xmax,ymin,ymax,zmin,zmax,nxd,nyd,nzd,nb
     use start,        only : t,dt,nstep
-    use init_problem, only : problem_name, run_id
+    use initproblem, only : problem_name, run_id
 #ifdef GRAV
     use arrays, only : gp
 #endif /* GRAV */
@@ -975,7 +975,7 @@ module dataio
     use arrays, only : u,b
     use grid, only : nx,ny,nz
     use start, only  : t, dt, nstep
-    use init_problem, only : problem_name, run_id
+    use initproblem, only : problem_name, run_id
 #ifdef GRAV
     use arrays, only : gp
 #endif /* GRAV */
@@ -1119,7 +1119,7 @@ module dataio
 
     subroutine find_last_restart(restart_number)
 
-      use init_problem, only : problem_name, run_id
+      use initproblem, only : problem_name, run_id
 
       implicit none
 
@@ -1161,7 +1161,7 @@ module dataio
     use grid, only  : dvol,dx,dy,dz,is,ie,js,je,ks,ke,x,y,z,nxd,nyd,nzd
     use start, only : proc, dt, t, nstep
     use arrays, only : u,b,wa
-    use init_problem, only : problem_name, run_id
+    use initproblem, only : problem_name, run_id
 
 #ifdef IONIZED
     use initionized, only : gamma_ion, cs_iso_ion,cs_iso_ion2
@@ -1200,7 +1200,7 @@ module dataio
 #endif /* COSM_RAYS */
 
 #ifdef SNE_DISTR
-    use sn_distr, only : emagadd, tot_emagadd
+    use sndistr, only : emagadd, tot_emagadd
 #endif /* SNE_DISTR */
 
     implicit none

@@ -11,7 +11,7 @@ module hydrostatic
 
     subroutine hydrostatic_zeq(iia,jja, d0, c_si, alpha, dprof)
       use constants
-      use mpi_setup, only : proc
+      use mpisetup, only : proc
       use grid, only : nx,ny,nz,dl,zdim,z,zl,zr,nzt,nb,zmin,zmax
 
       use gravity, only  : grav_accel,grav_pot,gp_status,nsub,tune_zeq

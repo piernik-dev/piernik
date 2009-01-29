@@ -18,7 +18,7 @@ module initcosmicrays
 
   subroutine init_cosmicrays
 
-    use mpi_setup
+    use mpisetup
 
     implicit none
           

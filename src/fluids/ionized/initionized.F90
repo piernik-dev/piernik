@@ -20,7 +20,7 @@ module initionized
 
   subroutine init_ionized
 
-    use mpi_setup
+    use mpisetup
 
     implicit none
           

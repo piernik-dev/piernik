@@ -7,7 +7,7 @@ module shear
   contains
 
   subroutine init_shear
-    use mpi_setup
+    use mpisetup
     use func, only : namelist_errh
     implicit none
     integer :: errh

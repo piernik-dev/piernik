@@ -12,7 +12,7 @@ module advects
     use arrays, only : b,u,wa
     use grid,   only : dx,nx,ny,nz,nxd,nzd,ks,ke
     use rtvd,     only : tvdb
-    use mag_boundaries, only : bnd_emf
+    use magboundaries, only : bnd_emf
 
     implicit none
     real, dimension(nx) :: vxby,by_x,vx
@@ -50,7 +50,7 @@ module advects
     use arrays, only : b,u,wa
     use grid,   only : dx,nx,ny,nz,nxd,nyd,js,je
     use rtvd,   only : tvdb
-    use mag_boundaries, only : bnd_emf
+    use magboundaries, only : bnd_emf
 
     implicit none
     real, dimension(nx) :: vxbz,bz_x,vx
@@ -88,7 +88,7 @@ module advects
     use arrays, only : b,u,wa
     use grid,   only : dy,nx,ny,nz,is,ie,nxd,nyd
     use rtvd,   only : tvdb
-    use mag_boundaries, only : bnd_emf
+    use magboundaries, only : bnd_emf
 
     implicit none
     real, dimension(ny)   :: vybz,bz_y,vy
@@ -126,7 +126,7 @@ module advects
     use arrays, only : b,u,wa
     use grid,   only : dy,nx,ny,nz,nzd,nyd,ks,ke
     use rtvd,     only : tvdb
-    use mag_boundaries, only : bnd_emf
+    use magboundaries, only : bnd_emf
 
     implicit none
     real, dimension(ny) :: vybx,bx_y,vy
@@ -164,7 +164,7 @@ module advects
     use arrays, only : b,u,wa
     use grid,   only : dz,nx,ny,nz,nzd,nyd,js,je
     use rtvd,     only : tvdb
-    use mag_boundaries, only : bnd_emf
+    use magboundaries, only : bnd_emf
 
     implicit none
     real, dimension(nz)  :: vzbx,bx_z,vz
@@ -202,7 +202,7 @@ module advects
     use arrays, only : b,u,wa
     use grid,   only : dz,nx,ny,nz,nzd,nxd,ie,is
     use rtvd,     only : tvdb
-    use mag_boundaries, only : bnd_emf
+    use magboundaries, only : bnd_emf
 
     implicit none
     real, dimension(nz)  :: vzby,by_z,vz

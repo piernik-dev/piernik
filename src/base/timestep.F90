@@ -8,7 +8,7 @@ module timestep
 ! Optimalization of cpu-time efficiency of mhdflux, tvd1 by K. Kowalik
 ! Modification history:  see "changelog"  -- warning: out of date
 
-  use mpi_setup
+  use mpisetup
 
 !#ifdef COSM_RAYS
 !  use cr_diffusion

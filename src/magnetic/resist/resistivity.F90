@@ -10,8 +10,8 @@ module resistivity
 !      use arrays
 !      use grid !, only: dxmn
       use constants, only: pi, small, big
-!      use mag_boundaries
-      use mpi_setup
+!      use magboundaries
+      use mpisetup
       use fluidindex, only : ibx,iby,ibz,icx,icy,icz
       use initionized, only : idni,imxi,imyi,imzi
 #ifndef ISO
@@ -44,7 +44,7 @@ contains
       end subroutine cleanup_resistivity
 
       subroutine init_resistivity
-         use mpi_setup
+         use mpisetup
          use grid, only : nx,ny,nz
          implicit none
          character(LEN=100) :: par_file, tmp_log_file
@@ -274,7 +274,7 @@ contains
     use grid, only : xdim,nzd
     use fluidindex, only : iby,icz
     use arrays, only : wcu
-    use mag_boundaries, only : bnd_emf
+    use magboundaries, only : bnd_emf
     implicit none
 
     call tvdd(iby,icz,xdim)
@@ -289,7 +289,7 @@ contains
     use grid, only : xdim,nzd
     use fluidindex, only : ibz,icy
     use arrays, only : wcu
-    use mag_boundaries, only : bnd_emf
+    use magboundaries, only : bnd_emf
     implicit none
 
     call tvdd(ibz,icy,xdim)
@@ -304,7 +304,7 @@ contains
     use grid, only : ydim,nzd
     use fluidindex, only : ibz,icx
     use arrays, only : wcu
-    use mag_boundaries, only : bnd_emf
+    use magboundaries, only : bnd_emf
     implicit none
 
     call tvdd(ibz,icx,ydim)
@@ -318,7 +318,7 @@ contains
     use grid, only : ydim,nzd
     use fluidindex, only : ibx,icz
     use arrays, only : wcu
-    use mag_boundaries, only : bnd_emf
+    use magboundaries, only : bnd_emf
     implicit none
 
     call tvdd(ibx,icz,ydim)
@@ -332,7 +332,7 @@ contains
     use grid, only : zdim,nzd
     use fluidindex, only : ibx,icy
     use arrays, only : wcu
-    use mag_boundaries, only : bnd_emf
+    use magboundaries, only : bnd_emf
     implicit none
 
     call tvdd(ibx,icy,zdim)
@@ -346,7 +346,7 @@ contains
     use grid, only : zdim,nzd
     use fluidindex, only : iby,icx
     use arrays, only : wcu
-    use mag_boundaries, only : bnd_emf
+    use magboundaries, only : bnd_emf
     implicit none
 
     call tvdd(iby,icx,zdim)

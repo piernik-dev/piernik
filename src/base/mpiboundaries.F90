@@ -1,9 +1,9 @@
 ! $Id$
-module mpi_bnd
+module mpiboundaries
 
 contains
-   subroutine mpi_bnd_prep
-    use mpi_setup
+   subroutine mpi_boundaries_prep
+    use mpisetup
     use fluidindex, only  : nvar
     use arrays, only : u
     use grid, only : nb,nx,ny,nz,nxb,nyb,nzb,nxd,nyd,nzd
@@ -181,5 +181,5 @@ contains
   endif
 
 
-  end subroutine mpi_bnd_prep
-end module mpi_bnd
+  end subroutine mpi_boundaries_prep
+end module mpiboundaries

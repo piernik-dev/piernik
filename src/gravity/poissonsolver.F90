@@ -1,6 +1,6 @@
 ! $Id$
 #include "piernik.def"
-module poisson_solver
+module poissonsolver
 
 ! Written by G. Kowal
 ! Adopted for this code by R. Maliszewski & M. Hanasz, May 2006
@@ -17,7 +17,7 @@ contains
          nb, nxd, nyd, nzd, dimensions
     use arrays, only : idna,u,gp,x,nx,ny,nz,nzb
     use grid, only   : dz,dx
-    use mpi_setup
+    use mpisetup
 #ifdef SHEAR
     use shear, only  : unshear_fft
 #endif /* SHEAR */
@@ -596,4 +596,4 @@ contains
     end subroutine poisson_xyzp
 
 
-end module poisson_solver
+end module poissonsolver

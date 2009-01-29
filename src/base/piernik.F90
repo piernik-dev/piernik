@@ -14,7 +14,7 @@ program piernik
   use timer, only : timer_start, timer_stop
   use dataio, only : write_data, user_msg_handler
   use mhdstep, only  : mhd_step
-  use mpi_setup
+  use mpisetup
     
   implicit none
   logical :: end_sim
@@ -58,13 +58,13 @@ contains
       use arrays, only : arrays_allocate
       use grid, only : nx,ny,nz
       use grid, only : init_grid,grid_xyz
-      use init_problem, only : init_prob, read_problem_par
+      use initproblem, only : init_prob, read_problem_par
       use dataio, only : init_dataio, write_data, user_msg_handler
-      use mpi_setup
-      use mpi_bnd
-      use fluid_boundaries, only : compute_u_bnd
+      use mpisetup
+      use mpiboundaries
+      use fluidboundaries, only : compute_u_bnd
 #ifdef MAGNETIC  
-      use mag_boundaries, only   : compute_b_bnd
+      use magboundaries, only   : compute_b_bnd
 #ifdef RESISTIVE
       use resistivity, only : init_resistivity
 #endif /* RESISTIVE */
@@ -73,7 +73,7 @@ contains
       use shear, only : init_shear
 #endif /* SHEAR */
 #ifdef SELF_GRAV
-      use poisson_solver
+      use poissonsolver
 #endif /* SELF_GRAV */
 #ifdef GRAV
       use gravity, only : init_grav,grav_pot_3d
@@ -101,7 +101,7 @@ contains
 
       call grid_xyz
 
-      call mpi_bnd_prep
+      call mpi_boundaries_prep
 
 #ifdef RESISTIVE
       call init_resistivity

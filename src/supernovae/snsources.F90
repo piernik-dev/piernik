@@ -3,7 +3,7 @@
 ! Written by M. Hanasz, 2003, 2007 & K. Kowalik 2007
 ! Adapted for this code by M. Hanasz, November 2007
 
-module sn_sources
+module snsources
 
 
 #ifdef SHEAR
@@ -382,4 +382,4 @@ module sn_sources
 !      ///////    F R O M   N U M E R I C A L   R E C I P E S   \\\\\\\
 !
 !=======================================================================
-end module sn_sources
+end module snsources

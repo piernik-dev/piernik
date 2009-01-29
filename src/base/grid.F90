@@ -27,7 +27,7 @@ module grid
 contains
 
    subroutine init_grid
-      use mpi_setup
+      use mpisetup
       implicit none
       character(LEN=100) :: par_file, tmp_log_file
       
@@ -157,7 +157,7 @@ contains
    end subroutine init_grid
 
   subroutine grid_xyz
-    use mpi_setup
+    use mpisetup
 
     implicit none
     integer i,j,k

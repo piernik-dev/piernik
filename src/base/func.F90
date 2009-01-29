@@ -120,7 +120,7 @@ implicit none
 
 #ifdef COSM_RAYS 
   subroutine div_v(ifluid)
-    use mpi_setup
+    use mpisetup
     use initionized, only : idni,imxi,imyi,imzi
     use fluidindex,  only : nfluid,iarr_all_dn,iarr_all_mx,iarr_all_my,iarr_all_mz
     use grid,        only : nx,ny,nz

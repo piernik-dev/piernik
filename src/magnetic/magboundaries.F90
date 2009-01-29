@@ -1,14 +1,14 @@
 ! $Id$
 #include "piernik.def"
 
-module mag_boundaries
+module magboundaries
 
 ! Written  by M. Hanasz - January/February 2006
 ! Modified by M. Hanasz - MPI comunication in "z"   - April 2006
 ! Modified by M. Hanasz - MPI comunication in "xyz" - November 2006
 ! Modified by M. Hanasz - MPI corner-periodic bcs   - December 2006
 ! Modified by M. Hanasz - MPI shearing-periodic in "x" - November 2007
-  use mpi_setup
+  use mpisetup
   use fluidindex, only : ibx, iby, ibz  
   use grid, only : nb,nx,ny,nz,nxb,nyb,nzb,nzd
   use arrays, only : u,b
@@ -895,4 +895,4 @@ end subroutine bnd_emf
 
   end subroutine compute_b_bnd
 
-end module mag_boundaries
+end module magboundaries

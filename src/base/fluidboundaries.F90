@@ -1,7 +1,7 @@
 ! $Id$
 #include "piernik.def"
 
-module fluid_boundaries
+module fluidboundaries
 
 ! Written  by M. Hanasz - December 2005 - February 2006
 ! Modified by M. Hanasz - MPI comunication in "z"      - April 2006
@@ -13,7 +13,7 @@ module fluid_boundaries
 contains
 
 subroutine bnd_u(dim)
-  use mpi_setup
+  use mpisetup
   use start,  only : smalld, smallei, bnd_xl, bnd_xr, bnd_yl, bnd_yr
   use start,  only : bnd_zl, bnd_zr
   use grid,   only : nb, nxd, nyd, nzd,x,y,z,nzb,nyb,nxb,nx,ny,nz
@@ -928,4 +928,4 @@ end subroutine bnd_u
 
   end subroutine compute_u_bnd
 
-end module fluid_boundaries
+end module fluidboundaries

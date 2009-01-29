@@ -8,7 +8,7 @@ module timestepneutral
 contains
 
   subroutine timestep_neu
-    use mpi_setup
+    use mpisetup
     use grid, only     : dx,dy,dz,nb,ks,ke,is,ie,js,je
     use arrays, only   : u,b
     use start, only  : cfl

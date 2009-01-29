@@ -1,6 +1,6 @@
 ! $Id$
 #include "piernik.def"
- module mpi_setup
+ module mpisetup
 
 ! Written by M.Hanasz, April 2006    -  MPI comunication in "z"
 ! Modified by M. Hanasz - MPI comunication in "z"   - April 2006
@@ -78,11 +78,11 @@
     pid_proc = getpid()
     status = hostnm(host_proc)
     cwd_status =  getcwd(cwd_proc)
-    if(cwd_status .ne. 0) stop 'mpi_setup: problems accessing working directory'
+    if(cwd_status .ne. 0) stop 'mpisetup: problems accessing working directory'
 #ifdef DEBUG
-    write(*,*) 'pid  in mpi_setup: ',pid_proc
-    write(*,*) 'host in mpi_setup: ',host_proc
-    write(*,*) 'cwd  in mpi_setup: ',cwd_proc
+    write(*,*) 'pid  in mpisetup: ',pid_proc
+    write(*,*) 'host in mpisetup: ',host_proc
+    write(*,*) 'cwd  in mpisetup: ',cwd_proc
 #endif /* DEBUG */
     if(proc .eq. 0) then
       par_file = trim(cwd)//'/problem.par'
@@ -374,6 +374,6 @@
 
 !------------------------------------------------------------------------------------------
 
-end module mpi_setup
+end module mpisetup
 
 
