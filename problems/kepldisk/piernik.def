@@ -3,16 +3,6 @@
 #undef GNU
 #undef VERBOSE
 
-/*======= re-setup needed ==========*/
-/* choosing scheme */
-#undef UNSPLIT_1D      /*scheme*/
-#undef  UNSPLIT_3D      /*scheme*/
-#define  SPLIT           /*scheme*/
-
-/* choosing solver */
-#define  ORIG            /*solver*/
-#undef  SSP            /*solver*/
-
 /* choosing unitsystem */
 #undef STANDARD		/*genuine unitsystem*/
 #undef PSM		/*pc,Msun,Myr unitsystem*/
@@ -27,8 +17,8 @@
 
 /* number of different fluids */
 #undef IONIZED
-#define NEUTRAL 1
-#define DUST 1
+#define NEUTRAL 
+#define DUST 
 #undef COSM_RAYS
 
 /* choosing freezing speed */
