@@ -89,7 +89,7 @@ if($CL_VALUES[2]){
    print " --problems\t- print available problems and exit\n";
    print " --units\t- print available unit systems and exit\n";
    print " --copy\t\t- hard-copy source files instead of linking them\n";
-   print " --dumpenv\t- do not compile the source but dump the environment to \'obj/env.F90\'\n\n";
+   print " --dumpenv\t- do not compile the source but dump the environment to \'obj/version.F90\'\n\n";
 
    print "all-in-one wrapper for a selected problem:\n";
    print "> " . $SELF . " <problem>\n";
@@ -170,7 +170,7 @@ if( grep { /GRAV/ }  @d) {
    push(@addons, "../src/gravity/gravity.F90");
    push(@addons, "../src/gravity/hydrostatic.F90");
    }
-if( grep { /SELF_GRAV/ }  @d) {push(@addons, "../src/gravity/poisson_solver.F90");}
+if( grep { /SELF_GRAV/ }  @d) {push(@addons, "../src/gravity/poissonsolver.F90");}
 if( grep { /SHEAR/}  @d) {push(@addons, "../src/shear/shear.F90");}
 
 push(@addons, "../src/fluids/initfluids.F90");
@@ -178,7 +178,7 @@ push(@addons, "../src/fluids/fluidindex.F90");
 push(@addons, "../src/fluids/fluxes.F90");
 
 if( grep { /MAGNETIC/} @d) {
-   push(@addons, "../src/magnetic/mag_boundaries.F90");
+   push(@addons, "../src/magnetic/magboundaries.F90");
    push(@addons, "../src/scheme/advects.F90");
    if( grep { /RESIST/} @d) {push(@addons, "../src/magnetic/resist/resistivity.F90");} }
 
@@ -203,7 +203,7 @@ if( grep { /COSM_RAYS/} @d) {
    }
 
 if( grep { /SN_SRC/} @d) {
-   push(@addons, "../src/supernovae/sn_sources.F90");
+   push(@addons, "../src/supernovae/snsources.F90");
 }
 if( grep { /SNE_DISTR/} @d) {
    push(@addons, "../src/supernovae/sndistr.F90");
@@ -269,16 +269,16 @@ print MAKEFILE ") \$(LDFLAGS) -o \$@ \$(OBJS) \$(LIBS)\n\n";
 # make date
 #
 print MAKEFILE "date: \n";
-print MAKEFILE "\tif [ -L env.F90 ]; then unlink env.F90; cp ../src/base/env.F90 .; fi; \n";
+print MAKEFILE "\tif [ -L version.F90 ]; then unlink version.F90; cp ../src/base/version.F90 .; fi; \n";
 print MAKEFILE "\tif [ ! -f env.dat ]; \\\n";
 print MAKEFILE "\tthen \\\n";
 print MAKEFILE "\t\thead -n 1 *.F90 | grep Id > env.dat; \\\n";
 print MAKEFILE "\t\tcat piernik.def >> env.dat; \\\n";
-print MAKEFILE "\t\twc -l env.dat | awk '{print \"   integer, parameter :: nenv = \"\$\$1\"+1\"}' - >> env.F90; \\\n";
-print MAKEFILE "\t\techo \"   character*128, dimension(nenv) :: env = (/ &\" >> env.F90; \\\n";
-print MAKEFILE "\t\tawk '{printf(\"       \\\" %s \\\" ,&\\n\",\$\$0)}' env.dat >> env.F90; \\\n";
-print MAKEFILE "\t\techo '      \" \" /)' >> env.F90; \\\n";
-print MAKEFILE "\t\techo 'end module comp_log' >> env.F90; \\\n";
+print MAKEFILE "\t\twc -l env.dat | awk '{print \"   integer, parameter :: nenv = \"\$\$1\"+1\"}' - >> version.F90; \\\n";
+print MAKEFILE "\t\techo \"   character*128, dimension(nenv) :: env = (/ &\" >> version.F90; \\\n";
+print MAKEFILE "\t\tawk '{printf(\"       \\\" %s \\\" ,&\\n\",\$\$0)}' env.dat >> version.F90; \\\n";
+print MAKEFILE "\t\techo '      \" \" /)' >> version.F90; \\\n";
+print MAKEFILE "\t\techo 'end module version' >> version.F90; \\\n";
 print MAKEFILE "\tfi;\n\n";
 #
 # make clean
