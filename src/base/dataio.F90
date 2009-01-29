@@ -77,6 +77,10 @@ module dataio
     use initproblem, only : problem_name,run_id
     use version, only : nenv,env
     use start, only : nstep, t, nstep_start
+    use fluidboundaries, only : all_fluid_boundaries
+#ifdef MAGNETIC
+    use magboundaries, only : all_mag_boundaries
+#endif /* MAGNETIC */
     implicit none
     integer(kind=1) :: getpid
     integer(kind=1) :: hostnm
@@ -270,7 +274,10 @@ module dataio
       if(new_id .ne. '') run_id=new_id
    endif
 
-
+   call all_fluid_boundaries
+#ifdef MAGNETIC
+   call all_mag_boundaries
+#endif /* MAGNETIC */
   end subroutine init_dataio
 
    subroutine user_msg_handler(end_sim)

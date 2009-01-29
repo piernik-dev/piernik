@@ -6,7 +6,7 @@ module mhdstep   ! SPLIT
 
   contains
 
-subroutine mhd_step
+subroutine fluid_update
   use start,  only : dt,nstep,t
   use dataio, only : nlog,ntsl,write_log,write_timeslice, dt_log, dt_tsl
   use timestep,   only : time_step
@@ -224,7 +224,7 @@ subroutine mhd_step
 #endif /* DEBUG */
 #endif /* SNE_DISTR */
 
-end subroutine mhd_step
+end subroutine fluid_update
 
 !------------------------------------------------------------------------------------------
 
@@ -331,7 +331,7 @@ end subroutine mhd_step
     use func,   only : pshift, mshift
     use arrays, only : b,wa,wcu
     use grid, only   : dl
-    use magboundaries, only : compute_b_bnd
+    use magboundaries, only : all_mag_boundaries
 
 
     implicit none
@@ -363,7 +363,7 @@ end subroutine mhd_step
     b(ib2,:,:,:) = b(ib2,:,:,:) + wa/dl(dim2)
 
 
-    call compute_b_bnd
+    call all_mag_boundaries
 
   end subroutine mag_add
 #endif /* MAGNETIC */

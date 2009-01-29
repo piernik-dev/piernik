@@ -88,7 +88,7 @@ module sndistr
       use arrays, only : u,b,nx,ny,nz,ibx,iby,ibz,idna,imxa,imya,imza,iena
       use grid, only : dx,dy,dz,dvol,nb
       use snsources, only : rand_angles
-      use magboundaries, only : compute_b_bnd, bnd_a
+      use magboundaries, only : all_mag_boundaries, bnd_a
       implicit none
 
       integer :: isn
@@ -174,7 +174,7 @@ module sndistr
       emagadd = sum(u(iena,nb+1:nx-nb,nb+1:ny-nb,nb+1:nz-nb))*dvol - emagadd
       deallocate(ekin,eint)
 #endif
-      call compute_b_bnd
+      call all_mag_boundaries
       deallocate(snposarray,snangarray)
       return
 

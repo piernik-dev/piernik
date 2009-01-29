@@ -919,13 +919,13 @@ subroutine bnd_u(dim)
 
 end subroutine bnd_u
 
-  subroutine compute_u_bnd
+  subroutine all_fluid_boundaries
    use grid,  only : nxd,nyd,nzd
    implicit none
    if(nxd /= 1) call bnd_u('xdim')
    if(nyd /= 1) call bnd_u('ydim')
    if(nzd /= 1) call bnd_u('zdim')
 
-  end subroutine compute_u_bnd
+  end subroutine all_fluid_boundaries
 
 end module fluidboundaries

@@ -17,7 +17,7 @@ module sweeps     ! split sweeps
     use arrays, only : u,b
     use grid, only   : dx,nb,nx,ks,ke,js,je,nyd,nzd
     use rtvd, only   : relaxing_tvd
-    use fluidboundaries, only : compute_u_bnd 
+    use fluidboundaries, only : all_fluid_boundaries 
 
 #ifdef COSM_RAYS
     use func,  only : div_v        
@@ -54,7 +54,7 @@ module sweeps     ! split sweeps
       end do
     end do
 
-    call compute_u_bnd
+    call all_fluid_boundaries
 
   end subroutine sweepx
 
@@ -72,7 +72,7 @@ module sweeps     ! split sweeps
     use arrays, only : u,b
     use grid, only   : dy,nb,ny,is,ie,ks,ke,nxd,nzd
     use rtvd, only     : relaxing_tvd
-    use fluidboundaries, only : compute_u_bnd 
+    use fluidboundaries, only : all_fluid_boundaries 
     
 #ifdef COSM_RAYS
     use func, only   : div_v        
@@ -112,7 +112,7 @@ module sweeps     ! split sweeps
       end do
     end do
 
-    call compute_u_bnd
+    call all_fluid_boundaries
 
   end subroutine sweepy
 
@@ -131,7 +131,7 @@ module sweeps     ! split sweeps
     use arrays, only : u,b
     use grid, only   : dz,nb,nz,is,ie,js,je,nxd,nyd
     use rtvd, only     : relaxing_tvd
-    use fluidboundaries, only : compute_u_bnd 
+    use fluidboundaries, only : all_fluid_boundaries 
     
 #ifdef COSM_RAYS
     use func,  only : div_v       
@@ -170,7 +170,7 @@ module sweeps     ! split sweeps
       end do
     end do
     
-    call compute_u_bnd
+    call all_fluid_boundaries
 
   end subroutine sweepz
 end module sweeps

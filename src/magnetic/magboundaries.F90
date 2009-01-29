@@ -885,7 +885,7 @@ subroutine bnd_emf(var, name, dim)
    end select ! (dim)
 end subroutine bnd_emf
 
-  subroutine compute_b_bnd
+  subroutine all_mag_boundaries
    use grid, only : nxd,nyd,nzd
    implicit none
 
@@ -893,6 +893,6 @@ end subroutine bnd_emf
    if(nyd /= 1) call bnd_b('ydim')
    if(nzd /= 1) call bnd_b('zdim')
 
-  end subroutine compute_b_bnd
+  end subroutine all_mag_boundaries
 
 end module magboundaries

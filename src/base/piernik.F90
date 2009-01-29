@@ -13,7 +13,7 @@ program piernik
   use start, only  : t,dt,nstep, nend, nstep_start, tend
   use timer, only : timer_start, timer_stop
   use dataio, only : write_data, user_msg_handler
-  use mhdstep, only  : mhd_step
+  use mhdstep, only  : fluid_update
   use mpisetup
     
   implicit none
@@ -29,7 +29,7 @@ program piernik
   do while(t <= tend .and. nstep < nend .and. .not.(end_sim) )
     nstep=nstep+1
 
-      call mhd_step
+      call fluid_update
 
       call MPI_BARRIER(comm3d,ierr)
       call write_data(output='all')
@@ -62,13 +62,9 @@ contains
       use dataio, only : init_dataio, write_data, user_msg_handler
       use mpisetup
       use mpiboundaries
-      use fluidboundaries, only : compute_u_bnd
-#ifdef MAGNETIC  
-      use magboundaries, only   : compute_b_bnd
-#ifdef RESISTIVE
+#if defined MAGNETIC && defined RESISTIVE
       use resistivity, only : init_resistivity
-#endif /* RESISTIVE */
-#endif /* MAGNETIC */
+#endif /* MAGNETIC && RESISTIVE */
 #ifdef SHEAR
       use shear, only : init_shear
 #endif /* SHEAR */
