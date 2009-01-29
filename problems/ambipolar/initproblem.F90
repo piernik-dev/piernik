@@ -9,7 +9,7 @@ module initproblem
    use arrays
    use start
    use grid
-   use fluid_boundaries
+   use fluidboundaries
    use hydrostatic
 
    real nbx0,nby0,nbz0, collf, n_x

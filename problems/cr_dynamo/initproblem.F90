@@ -10,7 +10,7 @@ module initproblem
   use arrays
   use start
   use grid
-  use fluid_boundaries
+  use fluidboundaries
   use hydrostatic
   
   real d0, bxn,byn,bzn
