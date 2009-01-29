@@ -1,4 +1,30 @@
 ! $Id$
+!
+! PIERNIK Code Copyright (C) 2006 Michal Hanasz
+!
+!    This file is part of PIERNIK code.
+!
+!    PIERNIK is free software: you can redistribute it and/or modify
+!    it under the terms of the GNU General Public License as published by
+!    the Free Software Foundation, either version 3 of the License, or
+!    (at your option) any later version.
+!
+!    PIERNIK is distributed in the hope that it will be useful,
+!    but WITHOUT ANY WARRANTY; without even the implied warranty of
+!    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+!    GNU General Public License for more details.
+!
+!    You should have received a copy of the GNU General Public License
+!    along with PIERNIK.  If not, see <http://www.gnu.org/licenses/>.
+!
+!    Initial implemetation of PIERNIK code was based on TVD split MHD code by
+!    Ue-Li Pen 
+!        see: Pen, Arras & Wong (2003) for algorithm and
+!             http://www.cita.utoronto.ca/~pen/MHD 
+!             for original source code "mhd.f90" 
+!   
+!    For full list of developers see $PIERNIK_HOME/license/pdt.txt
+!
 #include "piernik.def"
 module grid
 
@@ -156,53 +182,48 @@ contains
 
    end subroutine init_grid
 
-  subroutine grid_xyz
-    use mpisetup
+   subroutine grid_xyz
+      use mpisetup
 
-    implicit none
-    integer i,j,k
+      implicit none
+      integer :: i,j,k
 
-    maxxyz = max(size(x),size(y))
-    maxxyz = max(size(z),maxxyz)
+      maxxyz = max(size(x),size(y))
+      maxxyz = max(size(z),maxxyz)
 
-    xminb = xmin + real(pcoords(1)  )*(xmax-xmin)/real(psize(1))
-    xmaxb = xmin + real(pcoords(1)+1)*(xmax-xmin)/real(psize(1))
-    yminb = ymin + real(pcoords(2)  )*(ymax-ymin)/real(psize(2))
-    ymaxb = ymin + real(pcoords(2)+1)*(ymax-ymin)/real(psize(2))
-    zminb = zmin + real(pcoords(3)  )*(zmax-zmin)/real(psize(3))
-    zmaxb = zmin + real(pcoords(3)+1)*(zmax-zmin)/real(psize(3))
+      xminb = xmin + real(pcoords(1)  )*(xmax-xmin)/real(psize(1))
+      xmaxb = xmin + real(pcoords(1)+1)*(xmax-xmin)/real(psize(1))
+      yminb = ymin + real(pcoords(2)  )*(ymax-ymin)/real(psize(2))
+      ymaxb = ymin + real(pcoords(2)+1)*(ymax-ymin)/real(psize(2))
+      zminb = zmin + real(pcoords(3)  )*(zmax-zmin)/real(psize(3))
+      zmaxb = zmin + real(pcoords(3)+1)*(zmax-zmin)/real(psize(3))
 
-    dxmn = 1.e20
-    if(nxd /= 1) then
-       dx = (xmaxb-xminb)/nxb
-       dxmn = min(dxmn,dx)
-    else
-       dx = 1.0
-    endif
-    if(nyd /= 1) then
-       dy = (ymaxb-yminb)/nyb
-       dxmn = min(dxmn,dy)
-    else
-       dy = 1.0
-    endif
-    if(nzd /= 1) then
-       dz = (zmaxb-zminb)/nzb
-       dxmn = min(dxmn,dz)
-    else 
-       dz = 1.0
-    endif
+      dxmn = 1.e20
+      if(nxd /= 1) then
+         dx = (xmaxb-xminb)/nxb
+         dxmn = min(dxmn,dx)
+      else
+         dx = 1.0
+      endif
+      if(nyd /= 1) then
+         dy = (ymaxb-yminb)/nyb
+         dxmn = min(dxmn,dy)
+      else
+         dy = 1.0
+      endif
+      if(nzd /= 1) then
+         dz = (zmaxb-zminb)/nzb
+         dxmn = min(dxmn,dz)
+      else 
+         dz = 1.0
+      endif
 
-    dl(xdim) = dx
-    dl(ydim) = dy
-    dl(zdim) = dz
-
-    dvol = dx*dy*dz
+      dl(xdim) = dx
+      dl(ydim) = dy
+      dl(zdim) = dz
+   
+      dvol = dx*dy*dz
     
-
-
-!    write(*,*) 'proc=',proc, zminb, zmaxb, dl(zdim)
-
-
 !--- Asignments -----------------------------------------------------------
     ! left zone boundaries:  xl, yl, zl
     ! zone centers:          x,  y,  z
@@ -210,52 +231,52 @@ contains
 
 !--- x-grids --------------------------------------------------------------
 
-    if(nxd /= 1) then
-       do i= 1, nx
-          x(i)  = xminb + 0.5*dx + (i-nb-1)*dx
-          xl(i) = x(i)  - 0.5*dx
-          xr(i) = x(i)  + 0.5*dx
-       enddo
-    else
-       x  =  0.0
-       xl = -0.5*dx
-       xr =  0.5*dx
-    endif
+      if(nxd /= 1) then
+         do i= 1, nx
+            x(i)  = xminb + 0.5*dx + (i-nb-1)*dx
+            xl(i) = x(i)  - 0.5*dx
+            xr(i) = x(i)  + 0.5*dx
+         enddo
+      else
+         x  =  0.0
+         xl = -0.5*dx
+         xr =  0.5*dx
+      endif
 
 !--- y-grids --------------------------------------------------------------
 
-    if(nyd /= 1) then
-       do j= 1, ny
-          y(j)  = yminb + 0.5*dy + (j-nb-1)*dy
-          yl(j) = y(j)  - 0.5*dy
-          yr(j) = y(j)  + 0.5*dy
-       enddo
-    else
-       y  =  0.0
-       yl = -0.5*dy
-       yr =  0.5*dy
-    endif
+      if(nyd /= 1) then
+         do j= 1, ny
+            y(j)  = yminb + 0.5*dy + (j-nb-1)*dy
+            yl(j) = y(j)  - 0.5*dy
+            yr(j) = y(j)  + 0.5*dy
+         enddo
+      else
+         y  =  0.0
+         yl = -0.5*dy
+         yr =  0.5*dy
+      endif
 
 !--- z-grids --------------------------------------------------------------
 
-    if(nzd /= 1) then
-       do k= 1, nz
-          z(k)  = zminb + 0.5*dz + (k-nb-1) * dz
-          zl(k) = z(k)  - 0.5*dz
-          zr(k) = z(k)  + 0.5*dz
-       enddo
-    else 
-       z  =  0.0  
-       zl = -0.5*dz
-       zr =  0.5*dz
-    endif
+      if(nzd /= 1) then
+         do k= 1, nz
+            z(k)  = zminb + 0.5*dz + (k-nb-1) * dz
+            zl(k) = z(k)  - 0.5*dz
+            zr(k) = z(k)  + 0.5*dz
+         enddo
+      else 
+         z  =  0.0  
+         zl = -0.5*dz
+         zr =  0.5*dz
+      endif
 !--------------------------------------------------------------------------
 
-    Lx = xmax - xmin
-    Ly = ymax - ymin
-    Lz = zmax - zmin
+      Lx = xmax - xmin
+      Ly = ymax - ymin
+      Lz = zmax - zmin
 
-  end subroutine grid_xyz
+   end subroutine grid_xyz
 
    subroutine cleanup_grid
       implicit none

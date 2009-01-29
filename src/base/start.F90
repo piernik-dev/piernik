@@ -1,262 +1,141 @@
 ! $Id$
+!
+! PIERNIK Code Copyright (C) 2006 Michal Hanasz
+!
+!    This file is part of PIERNIK code.
+!
+!    PIERNIK is free software: you can redistribute it and/or modify
+!    it under the terms of the GNU General Public License as published by
+!    the Free Software Foundation, either version 3 of the License, or
+!    (at your option) any later version.
+!
+!    PIERNIK is distributed in the hope that it will be useful,
+!    but WITHOUT ANY WARRANTY; without even the implied warranty of
+!    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+!    GNU General Public License for more details.
+!
+!    You should have received a copy of the GNU General Public License
+!    along with PIERNIK.  If not, see <http://www.gnu.org/licenses/>.
+!
+!    Initial implemetation of PIERNIK code was based on TVD split MHD code by
+!    Ue-Li Pen 
+!        see: Pen, Arras & Wong (2003) for algorithm and
+!             http://www.cita.utoronto.ca/~pen/MHD 
+!             for original source code "mhd.f90" 
+!   
+!    For full list of developers see $PIERNIK_HOME/license/pdt.txt
+!
 #include "piernik.def"
 
 module start
 
-! Written by: M. Hanasz, January 2006
+   use mpisetup
 
-  use mpisetup
+   implicit none
 
-
-  implicit none
-
-  real t,dt
-  integer nstep
-  integer nstep_start
-
-  real tend
-  integer nend
-
-  real cfl, smalld, smallei
-
-  integer integration_order, istep
-  real rorder
-
-  real, dimension(1) :: gamma   !!! do poprawy
-
-  real  dt_cr
-
-!  real h_sn, r_sn, f_sn_kpc2, amp_dip_sn, snenerg, snemass, sn1time, sn2time, r0sn
-!  integer howmulti
-!  character*3 add_mass, add_ener, add_encr, add_magn
-! Secondary parameters
-
-  real csi2, csim2, amp_ecr_sn, ethu, f_sn
-
-  real, dimension(3,2)  :: cn
+   real    :: t, dt, tend, cfl, smalld, smallei, rorder, dt_cr
+   real    :: csi2, csim2, amp_ecr_sn, ethu, f_sn
+   integer :: nstep, istep, integration_order, nend, nstep_start
+   real, dimension(1) :: gamma   !!! do poprawy
+   real, dimension(3,2)  :: cni
 
 !-------------------------------------------------------------------------------
-contains
+   contains
+
+      subroutine read_params
+
+         implicit none
+         character(len=100) :: par_file, tmp_log_file
+         namelist /END_CONTROL/ nend, tend
+
+         namelist /NUMERICAL_SETUP/  cfl, smalld, smallei, integration_order
+
+         par_file = trim(cwd)//'/problem.par'
+         tmp_log_file = trim(cwd)//'/tmp.log'
+
+         nstep  = 0
+         t      = 0.0
+         dt     = 0.0
+
+         tend   = 1.0
+         nend   = 10
+
+         cfl     = 0.7
+         smalld  = 1.e-10
+         smallei = 1.e-10
+         integration_order  = 2
+
+         if(proc == 0) then
+
+            open(1,file=par_file)
+               read(unit=1,nml=END_CONTROL)
+               read(unit=1,nml=NUMERICAL_SETUP)
+            close(1)
+
+            open(3, file=tmp_log_file, position='append')
+               write(unit=3,nml=END_CONTROL)
+               write(unit=3,nml=NUMERICAL_SETUP)
+            close(3)
+
+         endif
 
 
-  subroutine read_params
-
-    implicit none
-    character par_file*(100), tmp_log_file*(100)
-
-    namelist /END_CONTROL/ nend, tend
-
-    namelist /NUMERICAL_SETUP/  cfl, smalld, smallei, &
-                                integration_order
-
-#ifdef SN_SRC
-!  namelist /SN_PARAMS/ h_sn, r_sn, f_sn_kpc2, amp_dip_sn, howmulti
-#endif /* SN_SRC */
-#ifdef SNE_DISTR
-!  namelist /SN_DISTR/ snenerg, snemass, sn1time, sn2time, r0sn, add_mass, add_ener, add_encr, add_magn
-#endif /* SNE_DISTR */
-
-    par_file = trim(cwd)//'/problem.par'
-    tmp_log_file = trim(cwd)//'/tmp.log'
-
-    nstep  = 0
-    t      = 0.0
-    dt     = 0.0
-
-    tend   = 1.0
-    nend   = 10
-
-    cfl     = 0.7
-    smalld  = 1.e-10
-    smallei = 1.e-10
-    integration_order  = 2
-
-#ifdef SN_SRC
-!    h_sn       = 266.0          !  vertical scaleheight of SN from Ferriere 1998
-!    r_sn       =  10.0          !  "typical" SNR II radius
-!    f_sn_kpc2  =  20.0          !  solar galactic radius SN II freq./kpc**2
-!    amp_dip_sn =   1.0e6
-!    howmulti   = 2              ! 1 for dipols, 2 for quadrupoles
-#endif /* SN_SRC */
-#ifdef SNE_DISTR
-!    snenerg    = 1.e51          !  typical energy of supernova explosion [erg]
-!    snemass    =  10.0          !  typical preSN stellar matter mass injection [Msun]
-!    sn1time    = 445.0          !  mean time between typ I supernovae explosions [year]
-!    sn2time    =  52.0          !  mean time between typ II supernovae explosions [year]
-!    r0sn       =  50.0          !  radius of an area, where mass/ener/encr is added [actually used unit of length]
-!    add_mass   = 'yes'          !  permission for inserting snemass inside randomly selected areas
-!    add_ener   = 'yes'          !  permission for inserting snenerg inside randomly selected areas
-!    add_encr   = 'yes'          !  permission for inserting CR energy inside randomly selected areas
-!    add_magn   = 'yes'          !  permission for inserting dipolar magnetic field centered at randomly selected areas
-#endif /* SNE_DISTR */
-
-    if(proc .eq. 0) then
-
-      open(1,file=par_file)
-        read(unit=1,nml=END_CONTROL)
-        read(unit=1,nml=NUMERICAL_SETUP)
-#ifdef SN_SRC
-!        read(unit=1,nml=SN_PARAMS)
-#endif /* SN_SRC */
-#ifdef SNE_DISTR
-!        read(unit=1,nml=SN_DISTR)
-#endif /* SNE_DISTR */
-
-      close(1)
-
-      open(3, file=tmp_log_file, position='append')
-        write(unit=3,nml=END_CONTROL)
-        write(unit=3,nml=NUMERICAL_SETUP)
-#ifdef SN_SRC
-!        write(unit=3,nml=SN_PARAMS)
-#endif /* SN_SRC */
-#ifdef SNE_DISTR
-!        write(unit=3,nml=SN_DISTR)
-#endif /* SNE_DISTR */
-      close(3)
-
-    endif
-
-
-    if(proc .eq. 0) then
+         if(proc == 0) then
 
 !  namelist /END_CONTROL/ nend, tend
 
-      ibuff(30) = nend
+            ibuff(30) = nend
 
-      rbuff(30) = tend
+            rbuff(30) = tend
 
-!      do iv = 1, NUMBFLUID
-!        rbuff(72+iv) = gamma(iv)
-!      enddo
-!
 !  namelist /NUMERICAL_SETUP/  cfl, smalld, smallei,
-!                              flux_limiter, freezing_speed,
 !                              integration_order
-      rbuff(80) = cfl
-      rbuff(83) = smalld
-      rbuff(84) = smallei
+            rbuff(80) = cfl
+            rbuff(83) = smalld
+            rbuff(84) = smallei
 
-      ibuff(80) = integration_order
+            ibuff(80) = integration_order
 
-#ifdef SN_SRC
-!  namelist /SN_PARAMS/ h_sn, r_sn, f_sn_kpc2, amp_dip_sn, howmulti
-!       rbuff(170) = h_sn
-!       rbuff(171) = r_sn
-!       rbuff(172) = f_sn_kpc2
-!       rbuff(173) = amp_dip_sn
-!       ibuff(170) = howmulti
-#endif /* SN_SRC */
-#ifdef SNE_DISTR
-!  namelist /SN_DISTR/ snenerg, snemass, sn1time, sn2time, r0sn, add_mass, add_ener, add_encr, add_magn
-!       rbuff(180) = snenerg
-!       rbuff(181) = snemass
-!       rbuff(182) = sn1time
-!       rbuff(183) = sn2time
-!       rbuff(184) = r0sn
-!       cbuff(180) = add_mass
-!       cbuff(181) = add_ener
-!       cbuff(182) = add_encr
-!       cbuff(183) = add_magn
-#endif /* SNE_DISTR */
 
-! Boroadcasting parameters
+! Broadcasting parameters
 
-      call MPI_BCAST(cbuff, 32*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
-      call MPI_BCAST(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
-      call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+            call MPI_BCAST(cbuff, 32*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
+            call MPI_BCAST(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
+            call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
-    else
+         else
 
-      call MPI_BCAST(cbuff, 32*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
-      call MPI_BCAST(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
-      call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+            call MPI_BCAST(cbuff, 32*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
+            call MPI_BCAST(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
+            call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
 !  namelist /END_CONTROL/ nend, tend
 
-      nend                = ibuff(30)
+            nend                = ibuff(30)
 
-      tend                = rbuff(30)
-
-!      do iv=1,NUMBFLUID
-!        gamma(iv)         = rbuff(72+iv)
-!      enddo
+            tend                = rbuff(30)
 
 !  namelist /NUMERICAL_SETUP/  cfl, smalld, smallei,
-!                              flux_limiter, freezing_speed,
 !                              integration_order,
-!                              floor_vz, ceil_vz , cfl_colls
 
-      cfl                 = rbuff(80)
-      smalld              = rbuff(83)
-      smallei             = rbuff(84)
+            cfl                 = rbuff(80)
+            smalld              = rbuff(83)
+            smallei             = rbuff(84)
 
-      integration_order   = ibuff(80)
+            integration_order   = ibuff(80)
 
-!#ifdef COSM_RAYS
-!  namelist /COSMIC_RAYS/ cr_active, gamma_cr, cr_eff, beta_cr, K_cr_paral, K_cr_perp,&
-!                         amp_cr, cfl_cr
-!
-!       cr_active          = rbuff(130)
-!       gamma_cr           = rbuff(131)
-!       cr_eff             = rbuff(132)
-!       beta_cr            = rbuff(133)
-!       K_cr_paral         = rbuff(134)
-!       K_cr_perp          = rbuff(135)
-!       amp_cr             = rbuff(136)
-!       cfl_cr             = rbuff(137)
-!       smallecr           = rbuff(138)
-!#endif /* COSM_RAYS */
+         endif  ! (proc .eq. 0)
 
-
-    endif  ! (proc .eq. 0)
-
-#ifdef SN_SRC
-!  namelist /SN_PARAMS/ h_sn, r_sn, f_sn_kpc2, amp_dip_sn, howmulti
-!       h_sn               = rbuff(170)
-!       r_sn               = rbuff(171)
-!       f_sn_kpc2          = rbuff(172)
-!       amp_dip_sn         = rbuff(173)
-!       howmulti           = ibuff(170)
-#endif /* SN_SRC */
-#ifdef SNE_DISTR
-!  namelist /SN_DISTR/ snenerg, snemass, sn1time, sn2time, r0sn, add_mass, add_ener, add_encr, add_magn
-!       snenerg            = rbuff(180)
-!       snemass            = rbuff(181)
-!       sn1time            = rbuff(182)
-!       sn2time            = rbuff(183)
-!       r0sn               = rbuff(184)
-!       add_mass           = cbuff(180)
-!       add_ener           = cbuff(181)
-!       add_encr           = cbuff(182)
-!       add_magn           = cbuff(183)
-#endif /* SNE_DISTR */
-
-! Secondary parameters
-
-!   csi2  = c_si**2
-!   csim2 = csi2*(1.+alpha)    ! z-equilibrium defined for fixed
-                                ! ratio p_mag/p_gas = alpha = 1/beta
-#ifdef COSM_RAYS
-!   csim2 = csim2 +csi2*beta_cr
-#endif /* COSM_RAYS */
-
-!   ethu = 7.0**2/(5.0/3.0-1.0) * 1.0    ! thermal energy unit=0.76eV/cm**3
-!                                        ! for c_si= 7km/s, n=1/cm^3
-!                                        ! gamma=5/3
-  cn(1:3,1) = (/ 1. , 0.5 , 0.0 /)
-  cn(1:3,2) = (/ 1. , 1.  , 0.0 /)
-  if(integration_order .eq. 1) then
-    cn(2,1) = 1.
-  endif
-
+         cn(1:3,1) = (/ 1. , 0.5 , 0.0 /)
+         cn(1:3,2) = (/ 1. , 1.  , 0.0 /)
+         if(integration_order == 1) cn(2,1) = 1.
 
 !-------------------------
-    if(integration_order .gt. 2) then
-      stop 'For "ORIG" scheme integration_order must be 1 or 2'
-    endif
+         if(integration_order > 2) then
+            stop 'For "ORIG" scheme integration_order must be 1 or 2'
+         endif
 
-  end subroutine read_params
+      end subroutine read_params
 
 end module start
 
