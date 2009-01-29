@@ -8,7 +8,7 @@ module init_problem
   use start
   use arrays
   use grid
-  use mpi_setup
+  use mpisetup
 
   real t_sn
   integer n_sn

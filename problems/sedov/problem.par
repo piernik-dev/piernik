@@ -70,11 +70,10 @@
  /  
 
  $NUMERICAL_SETUP
-    cfl    = 0.9
+    cfl    = 0.8
     smalld = 1.e-3
     smallei= 1.e-5
     integration_order = 2
-    dimensions = '3d'
  /
  
  $GRAVITY

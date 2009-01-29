@@ -1,6 +1,6 @@
  $DOMAIN_SIZES
-    nxd = 20
-    nyd = 5
+    nxd = 1
+    nyd = 100
     nzd = 1
  /
  $MPI_BLOCKS
@@ -40,8 +40,8 @@
  / 
 
  $BOUNDARIES
-    bnd_xl = 'out'  
-    bnd_xr = 'out'  
+    bnd_xl = 'ref'  
+    bnd_xr = 'ref'  
     bnd_yl = 'ref'  
     bnd_yr = 'ref'  
     bnd_zl = 'ref'  
@@ -91,8 +91,8 @@
     d0     = 1.0
     p0     = 1.0
     Eexpl  = 1.e5
-    bx0    = 0.0
-    by0    = 1.0
+    bx0    = 1.0
+    by0    = 0.0
     bz0    = 0.0
     x0     = -0.0 
     y0     = -0.0 

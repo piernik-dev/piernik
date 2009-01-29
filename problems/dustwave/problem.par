@@ -8,6 +8,7 @@
     pxsize = 1
     pysize = 1
     pzsize = 1
+ /
 
  $RESTART_CONTROL
     restart  = 'last'
@@ -22,7 +23,7 @@
 
  $OUTPUT_CONTROL
     dt_hdf  = 1.0 
-    dt_res  = 0.0
+    dt_res  = 5.0
     dt_log  = 0.00001
     dt_tsl  = 0.00001
     vars(1) = 'dens'
@@ -69,4 +70,4 @@
     m_x	     = 2
     m_y	     = 1
     m_z	     = 0
-/
+ /

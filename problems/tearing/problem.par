@@ -21,7 +21,7 @@
 
  $END_CONTROL
     tend   = 10.0
-    nend   = 1000000000
+    nend   = 7
  /
 
  $OUTPUT_CONTROL
