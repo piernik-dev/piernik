@@ -299,7 +299,7 @@ module snsources
 
       if(nzd /= 1) then
          irand = irand+4
-         znorm = gasdev(rand(3), rand(4))
+         call rng_sample_gaussian(znorm,1,1.d0)
          zsn = h_sn*znorm
       else
          zsn = 0.0
@@ -360,50 +360,4 @@ module snsources
 
    end function rand_angles
 
-!=======================================================================
-!
-!      \\\\\\\         B E G I N   S U B R O U T I N E S        ///////
-!      ///////    F R O M   N U M E R I C A L   R E C I P E S   \\\\\\\
-!
-!=======================================================================
-! idum and rsq variables were moved out due to being unused
-
-   function gasdev(x,y)
-
-      implicit none
-      real :: x, y, x1, y1,  r
-      real :: gasdev
-      real :: fac
-      real, dimension(2) :: rand
-      real, save :: gset
-      integer, save :: iset, irand
-
-      if (iset.eq.0) then
-1        x1 = 2.0*x - 1.0
-         y1 = 2.0*y - 1.0
-         r  = x1**2 + y1**2
-         if(r.ge.1.) then
-            call random_number(rand)
-            x = rand(1)
-            y = rand(2)
-            irand = irand+2
-            go to 1
-         endif
-         fac=sqrt(-2.*log(r)/r)
-         gset=x1*fac
-         gasdev=y1*fac
-         iset=1
-      else
-         gasdev=gset
-         iset=0
-      endif
-      return
-   end function gasdev
-
-!=======================================================================
-!
-!      \\\\\\\          E N D   S U B R O U T I N E S           ///////
-!      ///////    F R O M   N U M E R I C A L   R E C I P E S   \\\\\\\
-!
-!=======================================================================
 end module snsources

@@ -48,6 +48,7 @@ module sndistr
       use grid, only: dx,dy,dz
       use constants
       implicit none
+      integer :: seed
       real :: RmaxI, RmaxII, rcl, rc
       integer :: i,imax
 
@@ -103,6 +104,9 @@ module sndistr
       enddo
       danta(2,:,1)=danta(2,:,1)/danta(2,imax,1)
       SNnohistory(:)=0
+
+      call system_clock(seed)
+      call rng_initialise(seed)
 
    end subroutine init_sndistr
 
@@ -327,8 +331,8 @@ module sndistr
       real, dimension(4) :: los4
       real :: radius, azym
       integer ii
-!      real rand
-!      external rand
+      integer, parameter :: n=1
+      real, dimension(n) :: x
 
       call random_number(los4)
 
@@ -341,7 +345,8 @@ module sndistr
       azym = 2.*pi*los4(2)
       snpos(1) = radius*cos(azym)
       snpos(2) = radius*sin(azym)
-      snpos(3) = gasdev(los4(3),los4(4))*SNheight(itype)
+      call rng_sample_gaussian(x,n,1d0)
+      snpos(3) = x(1) * SNheight(itype)
 
       return
    end subroutine rand_galcoord
@@ -373,52 +378,6 @@ module sndistr
       endwhere
       return
    end function relato0
-
-!=======================================================================
-!
-!      \\\\\\\         B E G I N   S U B R O U T I N E S        ///////
-!      ///////    F R O M   N U M E R I C A L   R E C I P E S   \\\\\\\
-!
-!=======================================================================
-
-
-   function gasdev(x,y)
-
-      implicit none
-      real x, y, x1, y1,  r
-      real gasdev, rand(2)
-      real fac
-      real, save :: gset
-      integer, save :: iset, irand
-
-      if (iset.eq.0) then
-1        x1=2.*x-1.
-         y1=2.*y-1.
-         r=x1**2+y1**2
-         if(r.ge.1.) then
-            call random_number(rand)
-            x = rand(1)
-            y = rand(2)
-            irand = irand+2
-            go to 1
-         endif
-         fac=sqrt(-2.*log(r)/r)
-         gset=x1*fac
-         gasdev=y1*fac
-         iset=1
-      else
-         gasdev=gset
-         iset=0
-      endif
-      return
-   end function gasdev
-
-!=======================================================================
-!
-!      \\\\\\\          E N D   S U B R O U T I N E S           ///////
-!      ///////    F R O M   N U M E R I C A L   R E C I P E S   \\\\\\\
-!
-!=======================================================================
 
 end module sndistr
 
