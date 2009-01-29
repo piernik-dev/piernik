@@ -9,7 +9,7 @@ PRO PLOT_MHD ;,first,last,var
   COMMON vars, u,b,wa
   ncolors = !D.N_COLORS -1
   white = 255
-  plots  ='x'
+  plots  ='y'
   slices ='y'
   dump   ='n'
 
@@ -17,17 +17,11 @@ PRO PLOT_MHD ;,first,last,var
 
   sf = 5
 
-
 ;  dir0 = '/home/mhanasz/work/piernik/trunk/obj-sedov1d/'
-;  dir1 = '/home/mhanasz/work/public/obj/'
-;  prefix0 = 'sedov_t_3'
-;  prefix1 = 'sedov_t_3'
+   dir1 = '../obj/'
+   prefix0 = 'cr_test_b_5'
+   prefix1 = 'cr_test_b_5'
   
-  dir0 = '/home/mhanasz/work/piernik/trunk/obj/'
-  dir1 = '/home/mhanasz/work/public/obj/'
-  prefix0 = 'cr_test_b_5'
-  prefix1 = 'cr_test_b_5'
-
   var0='encr'
   var1='encr'
 
@@ -50,7 +44,6 @@ IF(n_files EQ 0) THEN GOTO, SKIP
   first = 0
   last  = n_files -1
   freq = 1
-
 
   var = var0
 
@@ -134,9 +127,9 @@ IF(n_files EQ 0) THEN GOTO, SKIP
     nz = dims(2)
   endelse
 
-  ix = nxd/2  
+  ix = 1
 
-  iy = nyd/2  
+  iy = 1
 
 
   if(nz eq 1) then begin 
@@ -229,7 +222,8 @@ IF(plots NE 'n') THEN BEGIN
 
   ENDIF ELSE IF (plots EQ 'z') THEN BEGIN
     pz  =  a(ix-1,iy-1,*)
-    pz = reform(pz, nzd)
+    help, pz
+    pz = reform(pz)
     pzr= rotate(pz,2) 
 
     PLOT,  z, pz, line=0, title=var+timestr, $

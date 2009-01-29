@@ -148,7 +148,7 @@ if(!-r $probdir) {
    exit $FAILED;
 }
 
-@prob = ( "../" . $probdir . "init_problem.F90",
+@prob = ( "../" . $probdir . "initproblem.F90",
           "../" . $probdir . "problem.par" );
 @base = <src/base/*.F90>;
 for (@base) {
