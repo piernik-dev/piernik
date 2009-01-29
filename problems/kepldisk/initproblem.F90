@@ -1,11 +1,11 @@
 #include "piernik.def"
 
-module init_problem
+module initproblem
   
 ! Initial condition for Galactic disk
 ! Written by: D. Wolt, June 2007
 ! Restrictions: using only cor bnd_cond, disk radius must be smaller than xmax and ymax
-  use mpi_setup
+  use mpisetup
 
   real d0, r_max, rhoa, collf
   integer mtr
@@ -420,5 +420,5 @@ contains
   end subroutine total_mass
 !-----------------------------------------------------------------------------------------------------------------------------------
 #endif /* MASS_COMPENS */
-end module init_problem
+end module initproblem
 

@@ -1,7 +1,7 @@
 #include "piernik.def"
 
 
-module init_problem
+module initproblem
 ! ----------------------------------------- ! 
 ! Initial condition for a 1D MHD shock tube !
 ! Written by: K. Kowalik, Mar 2008          !
@@ -16,7 +16,7 @@ module init_problem
 #endif /* ISO */
   use start,  only : qshear, omega, proc, smallei, smalld, gamma, &
       rbuff, cbuff, ibuff
-  use mpi_setup
+  use mpisetup
 
   real :: dl,vxl,vyl,vzl,bxl,byl,bzl,el
   real :: dr,vxr,vyr,vzr,bxr,byr,bzr,er
@@ -172,10 +172,9 @@ contains
         enddo
       enddo
     enddo
-    write(*,*) maxval(b(3,:,:,:)), minval(b(3,:,:,:))
     return
   end subroutine init_prob  
   
 
-end module init_problem
+end module initproblem
 

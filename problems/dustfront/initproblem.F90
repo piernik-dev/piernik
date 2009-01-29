@@ -1,6 +1,6 @@
 #include "piernik.def"
 
-module init_problem
+module initproblem
   
 ! Initial condition for dust fronts
 ! Written by: D. Wolt, June 2007
@@ -148,5 +148,5 @@ contains
   end subroutine init_prob  
   
 
-end module init_problem
+end module initproblem
 

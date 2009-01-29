@@ -1,6 +1,6 @@
 #include "piernik.def"
 
-module init_problem
+module initproblem
   
 ! Initial condition for dust fronts
 ! Written by: D. Wolt, June 2007
@@ -97,7 +97,7 @@ module init_problem
     real    :: xi,yj,zk 
     real    :: k_x,k_y,k_z,k_a
     
-    write(*,*) 'init_problem:', pi
+    write(*,*) 'initproblem:', pi
     
     k_x = 2.*pi/Lx*real(m_x)
     k_y = 2.*pi/Ly*real(m_y)
@@ -121,5 +121,5 @@ module init_problem
   end subroutine init_prob  
   
 
-end module init_problem
+end module initproblem
 

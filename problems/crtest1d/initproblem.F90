@@ -1,6 +1,6 @@
 #include "piernik.def"
 
-module init_problem
+module initproblem
   
 ! Initial condition for Sedov-Taylor explosion
 ! Written by: M. Hanasz, March 2006
@@ -8,7 +8,7 @@ module init_problem
   use start
   use arrays
   use grid
-  use mpi_setup
+  use mpisetup
 
   real t_sn
   integer n_sn
@@ -192,5 +192,5 @@ contains
     return
   end subroutine init_prob  
 
-end module init_problem
+end module initproblem
 

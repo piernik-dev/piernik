@@ -1,6 +1,6 @@
 #include "piernik.def"
 
-module init_problem
+module initproblem
   
 ! Initial condition for tearing instability problem
 ! Written by: R.K. Pawlaszek July 2007
@@ -22,7 +22,7 @@ module init_problem
   use arrays, only : u,b
   use grid
   use constants
-  use mpi_setup
+  use mpisetup
 !  use resistivity
 
   integer   ibi
@@ -139,4 +139,4 @@ contains
     return
   end subroutine init_prob  
 
-end module init_problem
+end module initproblem

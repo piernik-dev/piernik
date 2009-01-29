@@ -1,12 +1,12 @@
 #include "piernik.def"
 
 
-module init_problem
+module initproblem
   
 ! Initial condition for Keplerian disk
 ! Written by: M. Hanasz, March 2006
 
-  use mpi_setup
+  use mpisetup
 
   real :: d0, r_max, dout, alpha
   character(len=32) :: problem_name, mag_field_orient
@@ -160,5 +160,5 @@ contains
   end subroutine init_prob  
   
 
-end module init_problem
+end module initproblem
 

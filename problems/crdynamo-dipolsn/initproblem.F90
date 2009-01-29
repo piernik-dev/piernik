@@ -1,6 +1,6 @@
 #include "piernik.def"
 
-module init_problem
+module initproblem
   
 ! Initial condition for the cosmic ray driven dynamo
 ! Based on Parker instability setup
@@ -227,5 +227,5 @@ contains
 
   end subroutine total_mass
 
-end module init_problem
+end module initproblem
 

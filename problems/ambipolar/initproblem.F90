@@ -1,6 +1,6 @@
 #include "piernik.def"
 
-module init_problem
+module initproblem
 
 ! Initial condition for Parker instability in realistic galactic gravity
 ! Written by: M. Hanasz, February 2006
@@ -190,5 +190,5 @@ module init_problem
 
 
 
-end module init_problem
+end module initproblem
 

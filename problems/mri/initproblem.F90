@@ -1,11 +1,11 @@
 #include "piernik.def"
 
-module init_problem
+module initproblem
   
 ! Initial condition for Parker instability in realistic galactic gravity 
 ! Written by: M. Hanasz, February 2006
 
-  use mpi_setup
+  use mpisetup
   use arrays
   use fluidindex,  only : ibx,iby,ibz
   use initionized, only : idni,imxi,imyi,imzi,ieni
@@ -140,5 +140,5 @@ contains
   end subroutine init_prob
   
 
-end module init_problem
+end module initproblem
 

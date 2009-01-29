@@ -1,11 +1,11 @@
 #include "piernik.def"
 
-module init_problem
+module initproblem
   
 ! Initial condition for Parker instability in realistic galactic gravity 
 ! Written by: M. Hanasz, February 2006
 
-  use mpi_setup 
+  use mpisetup 
   
   real :: d0, nbx0,nby0,nbz0, a_vp, n_x
   real :: x0,y0,z0,r0,alpha, init_mass, c_si
@@ -212,5 +212,5 @@ contains
   
   end subroutine mass_loss_compensate
 
-end module init_problem
+end module initproblem
 

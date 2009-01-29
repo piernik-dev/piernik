@@ -1,11 +1,11 @@
 #include "piernik.def"
 
-module init_problem
+module initproblem
   
 ! Initial condition for blob test
 ! Written by: D. Woltanski, March 2008
 
-  use mpi_setup
+  use mpisetup
   
   character problem_name*32,run_id*3
   real chi, rblob, blobxc, blobyc, blobzc, Mext, denv, tkh, vgal
@@ -23,6 +23,7 @@ contains
   
     
     character par_file*(100), tmp_log_file*(100)
+    integer :: cwd_status 
 
     par_file = trim(cwd)//'/problem.par'
     tmp_log_file = trim(cwd)//'/tmp.log'    
@@ -144,5 +145,5 @@ contains
 
 !-----------------------------------------------------------------------------------------------------------------------------------
 
-end module init_problem
+end module initproblem
 

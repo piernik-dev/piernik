@@ -1,12 +1,22 @@
-module init_problem
+! $Id: 
+#include "piernik.def"
+
+module initproblem
   
 ! Initial condition for Sedov-Taylor explosion
 ! Written by: M. Hanasz, March 2006
 
   use start
+#ifdef IONIZED  
+  use initionized
+#endif /* IONIZED */ 
+#ifdef NEUTRAL 
+  use initneutral
+#endif /* NEUTRAL */  
+  
   use arrays
   use grid
-  use mpi_setup
+  use mpisetup
 
   real t_sn
   integer n_sn
@@ -90,7 +100,7 @@ contains
 !			       n_sn, dt_sn 
 
       problem_name = cbuff(1)   
-      run_id       = cbuff(2)(1:3)
+      run_id       = cbuff(2)   
 
       d0           = rbuff(1)  
       p0           = rbuff(2)  
@@ -113,32 +123,36 @@ contains
 !-----------------------------------------------------------------------------
 
   subroutine init_prob
-    use initionized, only : idni, imxi,imyi,imzi,ieni, gamma_ion
+     
+#ifdef IONIZED
+    use initionized, only : gamma_ion
+#endif /* IONIZED */ 
+#ifdef NEUTRAL
+    use initneutral, only : gamma_neu
+#endif /* NEUTRAL */ 
+  
 
     implicit none
 
-    integer :: i,j,k
+    integer i,j,k, n
     
     
-    call read_problem_par
+!    call read_problem_par
  
 ! Uniform equilibrium state
 
+
+#ifdef NEUTRAL
     do k = 1,nz
       do j = 1,ny
         do i = 1,nx
-          u(idni,i,j,k)   = d0 
-          u(imxi,i,j,k) = 0.0
-          u(imyi,i,j,k) = 0.0
-          u(imzi,i,j,k) = 0.0
-          u(ieni,i,j,k)   = p0/(gamma_ion-1.0)
-          u(ieni,i,j,k)   = u(ieni,i,j,k) + 0.5*(u(imxi,i,j,k)**2 +u(imyi,i,j,k)**2 &
-                                           +u(imzi,i,j,k)**2)/u(idni,i,j,k)
-          b(1,i,j,k)   = bx0
-          b(2,i,j,k)   = by0
-          b(3,i,j,k)   = bz0
-          u(ieni,i,j,k)   = u(ieni,i,j,k) + 0.5*sum(b(:,i,j,k)**2,1)
-!          u(iena(fmagn),i,j,k)   = u(iena(fmagn),i,j,k) + spread(0.5*sum(b(:,i,j,k)**2,1),1,nfmagn)
+          u(idnn,i,j,k) = d0 
+          u(imxn,i,j,k) = 0.0
+          u(imyn,i,j,k) = 0.0
+          u(imzn,i,j,k) = 0.0
+          u(ienn,i,j,k) = p0/(gamma_neu-1.0)
+          u(ienn,i,j,k) = u(ienn,i,j,k) + 0.5*(u(imxn,i,j,k)**2 +u(imyn,i,j,k)**2 &
+                                              +u(imzn,i,j,k)**2)/u(idnn,i,j,k)
         enddo
       enddo
     enddo
@@ -147,30 +161,95 @@ contains
 
 
   if(n_sn .eq. 1) then
-    do k = ks,ke
-      do j = nb+1,ny-nb
-        do i = nb+1,nx-nb
-          if(((x(i)-x0)**2+(y(j)-y0)**2+(z(k)-z0)**2) .lt. r0**2) then
+    do k = 1,nz
+      do j = 1,ny
+        do i = 1,nx
+          if(((y(j)-y0)**2) .lt. r0**2) then
+            u(ienn,i,j,k)   = u(ienn,i,j,k) + Eexpl
+          endif
+        enddo
+      enddo
+    enddo
+  else if (n_sn .gt. 1) then
+!    call random_seed()
+  
+!    do n=2,n_sn
+!      call random_explosion
+!    enddo
+!  else
+!    write(*,*) 'n_sn =', n_sn
+!    stop
+  endif
+
+!    write(*,*) 'initproblem:'
+!    write(*,*) u(1,:,nb+1,1)
+!    stop
+
+#endif /* NEUTRAL */
+  
+ write(*,*) is,ie
+#ifdef IONIZED
+    do k = 1,nz
+      do j = 1,ny
+        do i = 1,nx
+          u(idni,i,j,k) = d0 
+          u(imxi,i,j,k) = 0.0
+          u(imyi,i,j,k) = 0.0
+          u(imzi,i,j,k) = 0.0
+          u(ieni,i,j,k) = p0/(gamma_ion-1.0)
+          u(ieni,i,j,k) = u(ieni,i,j,k) + 0.5*(u(imxi,i,j,k)**2 +u(imyi,i,j,k)**2 &
+                                               +u(imzi,i,j,k)**2)/u(idni,i,j,k)
+          b(1,i,j,k)    = bx0
+          b(2,i,j,k)    = by0
+          b(3,i,j,k)    = bz0
+          u(ieni,i,j,k) = u(ieni,i,j,k) + 0.5*sum(b(:,i,j,k)**2,1)
+        enddo
+      enddo
+    enddo
+    
+! Explosions
+
+
+  if(n_sn .eq. 1) then
+    do k = 1,nz
+      do j = 1,ny
+        do i = 1,nx
+          if(((y(j)-y0)**2) .lt. r0**2) then
             u(ieni,i,j,k)   = u(ieni,i,j,k) + Eexpl
           endif
         enddo
       enddo
     enddo
   else if (n_sn .gt. 1) then
+!    call random_seed()
   
+!    do n=2,n_sn
+!      call random_explosion
+!    enddo
+!  else
+!    write(*,*) 'n_sn =', n_sn
   endif
+  
+!    write(*,*) 'initproblem:'
+!    write(*,*) u(1,:,nb+1,1)
+!    stop
+
+
+#endif /*IONIZED */
+
     
     return
   end subroutine init_prob  
 
 
   subroutine random_explosion
-    use initionized, only : ieni
   
   implicit none
     integer i,j,k
     real rand(3)
     
+    call random_number(rand)
+
     x0 = xmin + (xmax-xmin)*rand(1)
     y0 = ymin + (ymax-ymin)*rand(2)
     z0 = zmin + (zmax-zmin)*rand(3)
@@ -179,7 +258,11 @@ contains
       do j = 1,ny
         do i = 1,nx
           if(((x(i)-x0)**2+(y(j)-y0)**2+(z(k)-z0)**2) .lt. r0**2) then
+
+#ifdef IONIZED
             u(ieni,i,j,k)   = u(ieni,i,j,k) + Eexpl
+#endif /* IONIZED */
+
           endif
         enddo
       enddo
@@ -188,5 +271,5 @@ contains
 
   end subroutine random_explosion
 
-end module init_problem
+end module initproblem
 

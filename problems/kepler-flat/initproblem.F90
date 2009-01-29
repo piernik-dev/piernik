@@ -1,6 +1,6 @@
 #include "piernik.def"
 
-module init_problem
+module initproblem
   
 ! Initial condition for Keplerian disk
 ! Written by: M. Hanasz, March 2006
@@ -17,7 +17,7 @@ contains
 !-----------------------------------------------------------------------------
 
   subroutine read_problem_par
-    use mpi_setup
+    use mpisetup
     use func, only : namelist_errh
     implicit none
     integer :: errh
@@ -146,5 +146,5 @@ contains
   end subroutine init_prob  
   
 
-end module init_problem
+end module initproblem
 

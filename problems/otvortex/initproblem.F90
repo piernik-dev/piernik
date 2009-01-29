@@ -1,21 +1,19 @@
 #include "piernik.def"
 
 
-module init_problem
-  
-! Initial condition for Keplerian disk
-! Written by: M. Hanasz, March 2006
+module initproblem
 
   use arrays, only : u,b
-  use grid, only : x,y,z,nx,ny,nz
+  use grid,   only : x,y,z,nx,ny,nz, xl, yl
   use initionized, only : idni,imxi,imyi,imzi
 #ifndef ISO
   use initionized, only : ieni, gamma_ion
 #endif /* ISO */
-  use shear,  only : qshear, omega
-  use start,  only : smallei, smalld
-  use mpi_setup
-!  use grid
+  use start,  only : proc, smallei, smalld, &
+      rbuff, cbuff, ibuff
+  use mpisetup
+  use grid, only : dx,dy
+  use constants, only : pi,dpi,fpi
 
   real :: d0,r0,bx0,by0,bz0
   character ::  problem_name*32,run_id*3,dir*1
@@ -32,7 +30,7 @@ contains
     implicit none
   
 
-    problem_name = 'slab'
+    problem_name = 'shock'
     run_id  = 'tst'
     d0      = 1.0
     r0      = 0.25
@@ -56,9 +54,6 @@ contains
 
       rbuff(1) = d0
       rbuff(2) = r0
-      rbuff(3) = bx0
-      rbuff(4) = by0
-      rbuff(5) = bz0
     
       call MPI_BCAST(cbuff, 32*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
       call MPI_BCAST(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
@@ -75,9 +70,6 @@ contains
 
       d0           = rbuff(1)  
       r0           = rbuff(2)
-      bx0          = rbuff(3)
-      by0          = rbuff(4)
-      bz0          = rbuff(5)
     
     endif
 
@@ -91,13 +83,30 @@ contains
  
     integer i,j,k
     real :: xi,yj,zk
-    real :: vx,vy,vz
-    real :: kn,Lx,kJ,Ly,Lz,Ln
+    real :: vx,vy,vz,rho,pre,bx,by,bz,b0
+    real, dimension(:,:,:),allocatable :: A
     
     call read_problem_par
 
 !   Secondary parameters
 
+    if (.not.allocated(A)) allocate(A(nx,ny,1))
+
+    rho = 25.0/(36.0*pi)
+    pre =  5.0/(12.0*pi)
+    b0  = 1./sqrt(fpi)
+    vz = 0.0
+    bz0 = 0.0
+
+    do j=1,ny
+       do i = 1,nx
+         A(i,j,1) = b0*(dcos(fpi*xl(i))/fpi + dcos(dpi*yl(j))/dpi)
+       enddo
+    enddo
+
+!    b(1,1:nx,1:ny-1,1)   = (A(1:nx,2:ny,1) - A(1:nx,1:ny-1,1))/dy
+!    b(2,1:nx-1,1:ny,1)   = (A(2:nx,1:ny,1) - A(1:nx-1,1:ny,1))/dx
+!    b(3,:,:,:)           =  0.0
 
     do j = 1,ny
       yj = y(j)
@@ -105,31 +114,27 @@ contains
         xi = x(i)
         do k = 1,nz
           zk = z(k)
-          vx = 0.0
-#ifdef SHEAR_MY
-          vy = 0.0
-#else
-          vy = -qshear*omega*xi
-#endif /* ~SHEAR_MY */
-          vz = 0.0
+
+          vx  = -dsin(dpi*yj)
+          vy  = dsin(dpi*xi)
+          bx  = b0*vx
+          by  = b0*dsin(fpi*xi)
+          bz  = 0.0
+
           
-          if(abs(yj) <= r0 ) then
-            u(idni,i,j,k) = d0
-          else
-            u(idni,i,j,k) = 0.5*d0
-          endif
+          u(idni,i,j,k) = rho
                           
           u(imxi,i,j,k) = vx*u(idni,i,j,k)
           u(imyi,i,j,k) = vy*u(idni,i,j,k)
           u(imzi,i,j,k) = vz*u(idni,i,j,k)
 #ifndef ISO	  
-          u(ieni,i,j,k) = 1.0/(gamma_ion-1.0)!*u(idni,i,j,k)
+          u(ieni,i,j,k) = pre/(gamma_ion-1.0)
           u(ieni,i,j,k) = max(u(ieni,i,j,k), smallei)
           u(ieni,i,j,k) = u(ieni,i,j,k) +0.5*(vx**2+vy**2+vz**2)*u(idni,i,j,k)
 #endif /* ISO */
-          b(1,i,j,k)   =  bx0
-          b(2,i,j,k)   =  by0
-          b(3,i,j,k)   =  bz0
+          b(1,i,j,k)  = bx
+          b(2,i,j,k)  = by
+          b(3,i,j,k)  = bz
 
 #ifndef ISO	  
           u(ieni,i,j,k)   = u(ieni,i,j,k) +0.5*sum(b(:,i,j,k)**2,1)
@@ -137,9 +142,10 @@ contains
         enddo
       enddo
     enddo
+    if (allocated(A)) deallocate(A)
     return
   end subroutine init_prob  
   
 
-end module init_problem
+end module initproblem
 
