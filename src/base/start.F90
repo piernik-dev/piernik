@@ -126,9 +126,9 @@ module start
 
          endif  ! (proc .eq. 0)
 
-         cn(1:3,1) = (/ 1. , 0.5 , 0.0 /)
-         cn(1:3,2) = (/ 1. , 1.  , 0.0 /)
-         if(integration_order == 1) cn(2,1) = 1.
+!         cn(1:3,1) = (/ 1. , 0.5 , 0.0 /)
+!         cn(1:3,2) = (/ 1. , 1.  , 0.0 /)
+!         if(integration_order == 1) cn(2,1) = 1.
 
 !-------------------------
          if(integration_order > 2) then
