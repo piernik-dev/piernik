@@ -39,8 +39,6 @@ contains
       integer(kind=4) :: ord
       integer(kind=4) :: old
     
-      write(*,*) 'nvar=',nvar
-
       ord = MPI_ORDER_FORTRAN
       old = MPI_DOUBLE_PRECISION
 
