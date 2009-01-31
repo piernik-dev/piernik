@@ -17,7 +17,7 @@
 #define ISO
 
 /* number of different fluids */
-#define MAGNETIC
+#undef MAGNETIC
 #define IONIZED
 #undef NEUTRAL
 #undef DUST 
@@ -51,6 +51,6 @@
 
 /* numerical solutions and limitations */
 #define SHEAR
-#undef SHEAR_MPI
+#define SHEAR_MPI
 
 /* problem specific directives */
