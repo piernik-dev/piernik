@@ -73,7 +73,7 @@ module timestepionized
           pmag = sum(b(:,i,j,k)**2,1)/2.
 
 #ifdef ISO
-            p = csi_iso_ion2*u(idni,i,j,k)
+            p = cs_iso_ion2*u(idni,i,j,k)
             ps =p+pmag
             cf = sqrt(abs(  (2.*pmag+p)/u(idni,i,j,k)) )
 #else /* ISO */
