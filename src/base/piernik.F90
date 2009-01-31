@@ -45,7 +45,7 @@ program piernik
   call timer_start
 
   end_sim = .false.
-  do while(t <= tend .and. nstep < nend .and. .not.(end_sim) )
+  do while(t < tend .and. nstep < nend .and. .not.(end_sim) )
     nstep=nstep+1
 
       call fluid_update
