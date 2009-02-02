@@ -1,7 +1,7 @@
  $DOMAIN_SIZES
     nxd = 100
-    nyd = 100
-    nzd = 1
+    nyd = 1
+    nzd = 100
  /  
 
  $MPI_BLOCKS
