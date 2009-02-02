@@ -83,17 +83,14 @@ subroutine bnd_u(dim)
   integer i,j
   integer ireq
   real, allocatable :: send_left(:,:,:,:),recv_left(:,:,:,:)
-#ifdef SHEAR_MPI
+#ifdef SHEAR
   real, allocatable :: send_right(:,:,:,:),recv_right(:,:,:,:)
-#endif /* SHEAR_MPI */
-#ifdef SHEAR_MY
-  real, allocatable, dimension(:,:,:) :: temp,tem2
-#endif /* SHEAR_MY */
+#endif /* SHEAR */
 ! MPI block comunication
 
   select case (dim)
     case ('xdim')
-#ifdef SHEAR_MPI
+#ifdef SHEAR
         allocate(send_right(nvar,nb,ny,nz), send_left(nvar,nb,ny,nz), &
                  recv_left(nvar,nb,ny,nz), recv_right(nvar,nb,ny,nz) )
         send_left(:,:,:,:)          =  u(:,nb+1:2*nb,:,:)
@@ -196,7 +193,7 @@ subroutine bnd_u(dim)
         u(iarr_all_dn,1:nb,:,:)              = max(u(iarr_all_dn,1:nb,:,:),smalld)
         u(iarr_all_dn,nxb+nb+1:nxb+2*nb,:,:) = max(u(iarr_all_dn,nxb+nb+1:nxb+2*nb,:,:),smalld)
       deallocate(send_left,send_right,recv_left,recv_right)
-#else /* SHEAR_MPI */
+#else /* SHEAR */
       if(pxsize .gt. 1) then
 
         CALL MPI_ISEND   (u(1,1,1,1), 1, MPI_YZ_LEFT_DOM,  procxl, 10, comm3d, req(1), ierr)
@@ -209,7 +206,7 @@ subroutine bnd_u(dim)
         enddo
 
       endif
-#endif /* SHEAR_MPI */
+#endif /* SHEAR */
     case ('ydim')
       if(pysize .gt. 1) then
 
@@ -493,52 +490,6 @@ subroutine bnd_u(dim)
 !===============================================================
 
 ! Non-MPI boundary conditions
-
-#ifdef SHEAR_MY
-   if( (bnd_xl == 'she').and.(bnd_xr == 'she')) then   ! 2d ONLY !!!!!!!
-      allocate(temp(nxd,ny,nz))
-      allocate(tem2(nxd,ny,nz))
-      do i = 1, nvar
-         if( i == iarr_all_my ) then
-           do j = 1,nx
-             u(i,j,:,:) = u(i,j,:,:) + qshear*omega*x(j)*u(1,j,:,:)
-           enddo
-         endif
-#ifndef ISO
-         if( i == iarr_all_en ) then
-           do j = 1,nx
-             u(i,j,:,:) = u(i,j,:,:) - 0.5*(qshear*omega*x(j))**2 * u(1,j,:,:)
-           enddo
-         endif
-#endif /* ~ISO */
-         temp(:,:,:) = unshear(u(i,nb+1:nxd+nb,:,:),x(nb+1:nxd+nb),.true.)
-         tem2(:,:,:) = unshear(temp(:,:,:),x(nb+1:nxd+nb),.true.)
-
-         u(i,1:nb,:,:) = tem2(nxd-nb+1:nxd,:,:)
-         u(i,nxd+nb+1:nxd+2*nb,:,:) = tem2(1:nb,:,:)
-         if( i == iarr_all_my ) then
-           do j = 1,nx
-             u(i,j,:,:) = u(i,j,:,:) - qshear*omega*x(j) * u(1,j,:,:)
-           enddo
-         endif
-#ifndef ISO
-         if( i == iarr_all_en ) then
-           do j = 1,nx
-             u(i,j,:,:) = u(i,j,:,:) + 0.5*(qshear*omega*x(j))**2  * u(1,j,:,:)
-           enddo
-         endif
-#endif /* ~ISO */
-!         do k = 1, nz
-!            temp(:,:,k:k) = unshear_fft(u(i,nxd+1:nxd+nb,nb+1:ny-nb,k:k),x(nxd+1:nxd+nb),bdely,.true.)
-!            u(i,1:nb,nb+1:ny-nb,k:k) = unshear_fft(temp(:,:,k:k), x(1:nb),bdely)
-!            temp(:,:,k:k) = unshear_fft(u(i,nb+1:2*nb,nb+1:ny-nb,k:k),x(nb+1:2*nb),bdely,.true.)
-!            u(i,nxd+nb+1:nxd+2*nb,nb+1:ny-nb,k:k) = unshear_fft(temp(:,:,k:k),x(nxd+nb+1:nxd+2*nb),bdely)
-!s         enddo
-      enddo
-      deallocate(temp,tem2)
-   endif
-   u(iarr_all_dn,:,:,:) = max(u(iarr_all_dn,:,:,:),smalld)
-#endif /* SHEAR_MY */
 
   select case (dim)
     case ('xdim')
