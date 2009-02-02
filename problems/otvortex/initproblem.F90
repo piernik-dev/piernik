@@ -86,8 +86,6 @@ contains
     real :: vx,vy,vz,rho,pre,bx,by,bz,b0
     real, dimension(:,:,:),allocatable :: A
     
-    call read_problem_par
-
 !   Secondary parameters
 
     if (.not.allocated(A)) allocate(A(nx,ny,1))
