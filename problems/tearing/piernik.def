@@ -3,13 +3,11 @@
 #undef VERBOSE
 
 /* choosing unitsystem */
-#define STANDARD		/*genuine unitsystem*/
 #undef PSM		/*pc,Msun,Myr unitsystem*/
 #undef PGM		/*pc,G=1,Myr unitsystem*/
 #undef DMY		/*cm^16,Msun,year unitsystem*/
 #undef CGS		/*cm,gram,sek unitsystem*/
 #undef SI		/*metr,kg,sek unitsystem*/
-/*===================================*/
 
 #define IONIZED
 
@@ -38,6 +36,5 @@
 
 /* numerical solutions and limitations */
 #undef SHEAR
-#undef SHEAR_MPI
 
 /* problem specific directives */

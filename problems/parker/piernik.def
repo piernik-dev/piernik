@@ -3,20 +3,18 @@
 #undef VERBOSE
 
 /* choosing unitsystem */
-#define STANDARD		/*genuine unitsystem*/
 #undef PSM		/*pc,Msun,Myr unitsystem*/
 #undef PGM		/*pc,G=1,Myr unitsystem*/
 #undef DMY		/*cm^16,Msun,year unitsystem*/
 #undef CGS		/*cm,gram,sek unitsystem*/
 #undef SI		/*metr,kg,sek unitsystem*/
-/*===================================*/
 
 /* adiabatic or isothermal */
 #undef ISO
 
 /* number of different fluids */
-#define IONIZED 
-#undef NEUTRAL 
+#define IONIZED
+#undef NEUTRAL
 #undef DUST
 #undef COSM_RAYS
 
@@ -31,10 +29,10 @@
 #undef SUPERBEE
 
 /* physics including */
-#undef RESIST 		
+#undef RESIST
 
 /* gravity type choosing */
-#define GRAV 
+#define GRAV
 #define GRAV_GALACTIC
 #undef SELF_GRAV
 
@@ -42,7 +40,5 @@
 
 /* numerical solutions and limitations */
 #undef SHEAR
-#undef SHEAR_MPI
-#define ONLYZSWEEP
 
 /* problem specific directives */
