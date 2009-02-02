@@ -208,7 +208,7 @@ module rtvd ! split orig
 ! Gravity source terms -------------------------------------
 #ifdef GRAV
          call grav_pot2accel(sweep,i1,i2, n, gravaccr)
-#endif GRAV    
+#endif /* GRAV */
     
     
 #if defined GRAV || defined SHEAR

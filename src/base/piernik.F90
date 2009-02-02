@@ -146,7 +146,7 @@ contains
       use arrays, only : arrays_deallocate
 #ifdef RESISTIVE
       use resistivity, only : cleanup_resistivity
-#endif RESISTIVE
+#endif /* RESISTIVE */
 
       call cleanup_grid
 #ifdef RESISTIVE
