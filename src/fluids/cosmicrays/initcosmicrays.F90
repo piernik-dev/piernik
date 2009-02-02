@@ -62,10 +62,6 @@ module initcosmicrays
     K_cr_paral = 0.0
     K_cr_perp  = 0.0
     
-!    beta_cr    = 0.0      przeniesc do PROBLEM_CONTROL dla problemow z CR
-!    amp_cr     = 0.0
-    
-
       if(proc .eq. 0) then
          par_file = trim(cwd)//'/problem.par'
          tmp_log_file = trim(cwd)//'/tmp.log'
