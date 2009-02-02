@@ -18,11 +18,11 @@
 !    along with PIERNIK.  If not, see <http://www.gnu.org/licenses/>.
 !
 !    Initial implemetation of PIERNIK code was based on TVD split MHD code by
-!    Ue-Li Pen 
+!    Ue-Li Pen
 !        see: Pen, Arras & Wong (2003) for algorithm and
-!             http://www.cita.utoronto.ca/~pen/MHD 
-!             for original source code "mhd.f90" 
-!   
+!             http://www.cita.utoronto.ca/~pen/MHD
+!             for original source code "mhd.f90"
+!
 !    For full list of developers see $PIERNIK_HOME/license/pdt.txt
 !
 #include "piernik.def"
@@ -148,10 +148,11 @@ module constants     ! module containg numerical and physical constants !!!
    real, parameter :: gram =       1.0
    real, parameter :: kg =         1.0e3*gram
    real, parameter :: Msun =       1.989e33
-
+#else
+#define SCALED
 #endif /* PSM, VINE, GSM, PGM, DMY, SI, CGS */
 
-#ifndef STANDARD
+#ifndef SCALED
 ! length units:
    real, parameter :: km =         1.0e5*cm
    real, parameter :: au =         1.49597892e13*cm
@@ -203,23 +204,19 @@ module constants     ! module containg numerical and physical constants !!!
    real, parameter :: k_B = 1.38066e-16*erg/kelvin ! ---> kboltz
    real, parameter :: m_H = 1.66053e-24*gram       ! ---> amu
    real, parameter :: hydro_mass = mH
-   real, parameter :: chcf = hydro_mass / myr
    real, parameter :: fpiG = fpi*newtong
    real, parameter :: sekmyr = myr/sek
    real, parameter :: cmps2 = cm/sek**2
 
-#else /* STANDARD */
+#else /* SCALED */
 ! STANDARD uses: scaled units, sometimes incosistent
    real, parameter :: sek =      1.0e-6/365.2652/24.0/3600.0
    real, parameter :: cm =       1.0/3.0856e18
 
-
-   real, parameter :: G_cgs = 6.6725985E-8  ! (cgs)
    real, parameter :: k_B = 1.38066e-16 ! erg/K
    real, parameter :: m_H = 1.66053e-24 ! g
 
    real, parameter :: G_one = 1.0  ! (scaled units)
-
 
    real, parameter :: fpiG  = fpi*G_one
    real, parameter :: newtong = G_one
@@ -229,10 +226,8 @@ module constants     ! module containg numerical and physical constants !!!
    real, parameter :: sekmyr = 3.154e13 ! Myr -> s
    real, parameter :: kpc = 1000.0
    real, parameter :: r_gc_sun = 8500   ! pc
- 
-   real, parameter :: vsun =     220.0
+
    real, parameter :: hydro_mass = m_H * cmkm**2
-   real, parameter :: chcf = hydro_mass / sekmyr
-#endif /* STANDARD */
- 
+#endif /* SCALED */
+
 end module constants
