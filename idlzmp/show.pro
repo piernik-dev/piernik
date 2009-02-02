@@ -1,26 +1,19 @@
 PRO SHOW
 
-data_dir = './'
-;data_dir = '/smp/symulacje/zeusmp/blast_rtp'
-;data_dir = '/smp/symulacje/zeusmp/blast_xyz'
-;data_dir = '/smp/symulacje/zeusmp/jeans/random'
-;data_dir = '/smp/symulacje/zeusmp/jet_khi'
-;data_dir = '/smp/symulacje/zeusmp/kepler'
-
-
-basename = 'hdfaa.*'
+data_dir = '../obj/'
+prefix = 'otvortex_rs4'
 
 png_dir = data_dir+'/frames'
 
 ;===============================================================================
 !PATH = '~/zeusmp/idl:' + !PATH 
 ;===============================================================================
-data_files = FINDFILE(data_dir+'/'+basename, Count=n_files)
+data_files = FINDFILE(data_dir+'/'+prefix+'_00_00_00_*.hdf', Count=n_files)
 IF(n_files EQ 0) THEN GOTO, SKIP
 ;===============================================================================
 
 
-first_frame  	= n_files-1			
+first_frame  	= 0
 last_frame   	= n_files-1	
 freq_frame   	= 1
 
@@ -29,8 +22,8 @@ png_output	= 'y'
 display_frames	= 'y'		; 'y' or 'n'
 
 win_vert_size 	= 400		; Vertical size (in pixels) 'xz' and 'yz' slices
-				; The other sizes are scaled according to the
-				; physical sizes of the computational box
+            				; The other sizes are scaled according to the
+				            ; physical sizes of the computational box
 n_vect_x     	= 16 		; The numbers of points for vector fields
 n_vect_y     	= 16 		; in each direction
 n_vect_z     	= 16		;
@@ -64,18 +57,18 @@ n_slices = n_slices+1
 
 ;-----------------------------------------------------------------------------
 
-s.sw	= 'off'  
+s.sw	= 'on'  
 s.panel_name	= 'b'			; If more slices of the same type 
                                         ; are needed use this index
 
-s.type		= 'xz'			; Chose 'yz', 'xz' or 'xy' plane
+s.type		= 'xy'			; Chose 'yz', 'xz' or 'xy' plane
 s.coord		=  0.0                  ; Position at the complementary coordinate
-s.vect_disp	= 'v'			; Vector field to display: 'b' or 'v'
+s.vect_disp	= 'b'			; Vector field to display: 'b' or 'v'
 s.vect_scaling	= 'free'		; 'fix' or 'free' 
 s.vect_scale	=  1.0
 
 
-s.scal_disp	= 'd'			; Scalar field to display 'd' or 'e'
+s.scal_disp	= 'e'			; Scalar field to display 'd' or 'e'
 s.scal_pert     = ''			; inactive
 s.scal_scaling	= 'free'		; 'fix' or 'free'
 s.scal_scale	= [0.0,4.0]
@@ -92,9 +85,9 @@ s.sw	= 'off'
 s.panel_name	= 'c'			; If more slices of the same type 
                                         ; are needed use this index
 
-s.type		= 'yz'			; Chose 'yz', 'xz' or 'xy' plane
+s.type		= 'xy'			; Chose 'yz', 'xz' or 'xy' plane
 s.coord		=  0.0                  ; Position at the complementary coordinate
-s.vect_disp	= 'v'			; Vector field to display: 'b' or 'v'
+s.vect_disp	= 'b'			; Vector field to display: 'b' or 'v'
 s.vect_scaling	= 'free'		; 'fix' or 'free' 
 s.vect_scale	=  1.0
 
@@ -110,7 +103,7 @@ slice_array = [slice_array,s]
 n_slices = n_slices+1
 
 ;==============================================================================
-vars = ['dd','ee','er','v1','v2','v3','b1','b2','b3']
+vars = ['den1','ene1','vlx1','vly1','vlz1','magx','magy','magz']
 n_vectors = [n_vect_x,n_vect_y,n_vect_z]
 ;==============================================================================
 
@@ -123,7 +116,7 @@ n_vectors = [n_vect_x,n_vect_y,n_vect_z]
   FOR i_frame = first_frame, last_frame, freq_frame DO BEGIN
 
     file = data_files(i_frame)
-    READ_DATA, file, vars, time
+    READ_DATA, data_dir,prefix,i_frame , vars, time
 
     PRINT, FORMAT='(a6,1x,a,2x,a10,e10.3)', $
                 'file =', file, '   time =', time

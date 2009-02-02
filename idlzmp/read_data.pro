@@ -1,4 +1,4 @@
-PRO READ_DATA, file, vars, time
+PRO READ_DATA, dir,prefix,step, vars, time
 
 ; Reads data from user text file and HDF file specified by parameters
 
@@ -23,18 +23,23 @@ COMMON data_min_max, min_dd, max_dd, min_dd0, max_dd0, min_dd1, max_dd1 $
 
   nvar = n_elements(vars)
 
+;print, 'file= ', file
 
 FOR ivar=0, nvar-1 DO BEGIN
   var = vars(ivar)
-  READ_VARIABLE, file, var, data, time, status
+  data = LOAD_DATA_HDF(dir,prefix, step, var, $
+            xcoord=x, ycoord = y, zcoord = z, nxa=nxa,nya=nya,nza=nza, $
+            time = time)
+  status = 0
+;  READ_VARIABLE, file, var, data, time, status
   IF(status NE 0) THEN GOTO, SKIP
 
-  IF(var EQ 'dd') THEN BEGIN
+  IF(var EQ 'den1') THEN BEGIN
     dd = data
     min_dd =MIN(dd)
     max_dd = MAX(dd)
   ENDIF
-  IF(var EQ 'ee') THEN BEGIN
+  IF(var EQ 'ene1') THEN BEGIN
     ee = data
     min_ee = MIN(ee)
     max_ee = MAX(ee)
@@ -44,18 +49,18 @@ FOR ivar=0, nvar-1 DO BEGIN
     min_er = MIN(er)
     max_er = MAX(er)
   ENDIF
-  IF(var EQ 'ec') THEN BEGIN
+  IF(var EQ 'encr') THEN BEGIN
     ec = data
     min_ec = MIN(ec)
     max_ec = MAX(ec)
   ENDIF
 
-  IF(var EQ 'v1') THEN v1 = data
-  IF(var EQ 'v2') THEN v2 = data
-  IF(var EQ 'v3') THEN v3 = data
-  IF(var EQ 'b1') THEN b1 = data
-  IF(var EQ 'b2') THEN b2 = data
-  IF(var EQ 'b3') THEN b3 = data
+  IF(var EQ 'vlx1') THEN v1 = data
+  IF(var EQ 'vly1') THEN v2 = data
+  IF(var EQ 'vlz1') THEN v3 = data
+  IF(var EQ 'magx') THEN b1 = data
+  IF(var EQ 'magy') THEN b2 = data
+  IF(var EQ 'magz') THEN b3 = data
 
   SKIP:
 ENDFOR
