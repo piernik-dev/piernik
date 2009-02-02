@@ -9,9 +9,6 @@
     pzsize = 1    
  /  
 
- $START_CONTROL
- /
-
  $RESTART_CONTROL
     restart  = 'last'
     new_id   = ''
@@ -65,10 +62,6 @@
     gamma_neut = 1.666666666
  /
 
-
- $EQUATION_OF_STATE
- /  
-
  $NUMERICAL_SETUP
     cfl    = 0.8
     smalld = 1.e-3
@@ -76,15 +69,6 @@
     integration_order = 2
  /
  
- $GRAVITY
- /
- 
- $THERMAL
- /
- 
- $RESISTIVITY
- /
-
  $PROBLEM_CONTROL
     problem_name ='sedov'
     run_id =  'tst'
@@ -98,6 +82,4 @@
     y0     = -0.0 
     z0     = -0.0
     r0     = 0.25 
-    n_sn   = 1
-    dt_sn  = 0.0
  /
