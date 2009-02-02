@@ -1773,9 +1773,9 @@ module dataio
         write(log_lun,777) 'max(c_f)    ION  =', sqrt(csi_max%val**2+vai_max%val**2),&
                 'dt=',cfl*dxmn/sqrt(csi_max%val**2+vai_max%val**2)
         write(log_lun,777) 'max(v_a)    ION  =', vai_max%val, 'dt=',cfl*dxmn/(vai_max%val+small), vai_max%proc, vai_max%loc
-        write(log_lun,770) 'min(|b|)    MAG  =', b_min%val,     b_min%proc,     b_min%loc
-        write(log_lun,770) 'max(|b|)    MAG  =', b_max%val,     b_max%proc,     b_max%loc
-        write(log_lun,770) 'max(|divb|) MAG  =', divb_max%val,  divb_max%proc,  divb_max%loc
+        write(log_lun,771) 'min(|b|)    MAG  =', b_min%val,     b_min%proc,     b_min%loc
+        write(log_lun,771) 'max(|b|)    MAG  =', b_max%val,     b_max%proc,     b_max%loc
+        write(log_lun,771) 'max(|divb|) MAG  =', divb_max%val,  divb_max%proc,  divb_max%loc
 #else /* MAGNETIC */
         write(log_lun,777) 'max(c_s)    ION  =', sqrt(csi_max%val**2), 'dt=',cfl*dxmn/sqrt(csi_max%val**2)
 #endif /* MAGNETIC */
@@ -1807,7 +1807,7 @@ module dataio
         write(log_lun,777) 'max(encr)   CRS  =', encr_max%val,      'dt=',dt_crs,     encr_max%proc, encr_max%loc
 #endif /* COSM_RAYS */
 #ifdef RESISTIVE
-        write(log_lun,776) 'max(eta)    RES  =', etamax%val ,      'dt=',dt_resist, etamax%proc,  etamax%loc
+        write(log_lun,777) 'max(eta)    RES  =', etamax%val ,      'dt=',dt_resist, etamax%proc,  etamax%loc
 #endif /* RESISTIVE */
 
         write(log_lun,'(a80)') '================================================================================'
