@@ -2,13 +2,11 @@
 #undef VERBOSE
 
 /* choosing unitsystem */
-#define STANDARD		/*genuine unitsystem*/
 #undef PSM		/*pc,Msun,Myr unitsystem*/
 #undef PGM		/*pc,G=1,Myr unitsystem*/
 #undef DMY		/*cm^16,Msun,year unitsystem*/
 #undef CGS		/*cm,gram,sek unitsystem*/
 #undef SI		/*metr,kg,sek unitsystem*/
-/*===================================*/
 
 #define IONIZED
 #define MAGNETIC
@@ -27,10 +25,7 @@
 #undef SUPERBEE
 
 /* physics including */
-#undef RESIST 		
-#undef VISC			
-#undef HEAT_COND	
-#undef COOL_HEAT
+#undef RESIST
 #undef COSM_RAYS
 
 /* gravity type choosing */
@@ -39,4 +34,3 @@
 #undef SELF_GRAV
 
 #undef SHEAR
-#undef SHEAR_MPI

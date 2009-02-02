@@ -1,20 +1,8 @@
 
 #undef DEBUG
-#undef GNU
 #undef VERBOSE
 
-/*======= re-setup needed ==========*/
-/* choosing scheme */
-#undef UNSPLIT_1D      /*scheme*/
-#undef  UNSPLIT_3D      /*scheme*/
-#define  SPLIT           /*scheme*/
-
-/* choosing solver */
-#define  ORIG            /*solver*/
-#undef  SSP            /*solver*/
-
 /* choosing unitsystem */
-#define STANDARD		/*genuine unitsystem*/
 #undef PSM		/*pc,Msun,Myr unitsystem*/
 #undef PGM		/*pc,G=1,Myr unitsystem*/
 #undef DMY		/*cm^16,Msun,year unitsystem*/
@@ -26,7 +14,7 @@
 #define ISO
 
 /* number of different fluids */
-#undef MAGNETIC 
+#undef MAGNETIC
 #undef IONIZED
 #undef NEUTRAL
 #define DUST
@@ -35,7 +23,6 @@
 /* choosing freezing speed */
 #define LOCAL_FR_SPEED
 #undef  GLOBAL_FR_SPEED
-#define OLDLOCALCFR
 
 /* choosing flux limiter */
 #define VANLEER
@@ -44,16 +31,12 @@
 #undef SUPERBEE
 
 /* physics including */
-#undef RESIST 		
-#undef VISC			
-#undef HEAT_COND	
-#undef COOL_HEAT
+#undef RESIST
 #undef SIMPLE_COOL
 #define ANY_SOURCES
-#undef KEPLER_SUPPRESSION
+#undef BND_MOTION_SUPPORT
 #define COLLISIONS
 #undef COLLS_MODIF
-#undef PRESS_GRAD_EXCH
 
 /* gravity type choosing */
 #undef GRAV
@@ -62,18 +45,12 @@
 
 /* structure features including */
 #undef GALAXY
-#undef GALACTIC_DISK
-#undef ARMS_POTENTIAL
 #undef SNE_DISTR
-#undef MASS_COMPENS
 #undef SN_SRC
 
 /* numerical solutions and limitations */
 #undef SHEAR
-#undef SHEAR_MPI
-#undef FLX_BND
 #define ANY_LIMITS
 #undef VZ_LIMITS
-#undef ONLYZSWEEP
 
 /* problem specific directives */

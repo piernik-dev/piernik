@@ -2,7 +2,6 @@
 #undef VERBOSE
 
 /* choosing unitsystem */
-#define STANDARD		/*genuine unitsystem*/
 #undef PSM		/*pc,Msun,Myr unitsystem*/
 #undef PGM		/*pc,G=1,Myr unitsystem*/
 #undef DMY		/*cm^16,Msun,year unitsystem*/
@@ -25,7 +24,7 @@
 #undef SUPERBEE
 
 /* physics including */
-#undef RESIST 		
+#undef RESIST
 #undef COSM_RAYS
 
 /* gravity type choosing */
@@ -35,6 +34,5 @@
 
 /* numerical solutions and limitations */
 #define SHEAR
-#define SHEAR_MPI
 
 /* problem specific directives */
