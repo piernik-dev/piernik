@@ -248,17 +248,6 @@ module rtvd ! split orig
          u1(iarr_all_dn,:) = max(u1(iarr_all_dn,:), smalld)
 
 
-#ifdef VZ_LIMITS
-         if(sweep .eq. 'zsweep') then
-            where((z(:) .gt. 0.0) .and. (u1(iarr_all_mx,:) .lt.  floor_vz*u(iarr_all_dn,:)))
-               u1(iarr_all_mx,:) =  floor_vz*u(iarr_all_dn,:)
-            endwhere
-            where((z(:) .lt. 0.0) .and. (u1(iarr_all_mx,:) .gt. -floor_vz*u(iarr_all_dn,:)))
-               u1(iarr_all_mx,:) = -floor_vz*u(iarr_all_dn,:)
-            endwhere
-         endif
-#endif /* VZ_LIMITS */
-
 #if defined COSM_RAYS && defined IONIZED
          select case (sweep)
             case('xsweep')
