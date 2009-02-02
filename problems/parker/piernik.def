@@ -10,7 +10,7 @@
 #undef SI		/*metr,kg,sek unitsystem*/
 
 /* adiabatic or isothermal */
-#undef ISO
+#define ISO
 
 /* number of different fluids */
 #define IONIZED
