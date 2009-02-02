@@ -18,11 +18,11 @@
 !    along with PIERNIK.  If not, see <http://www.gnu.org/licenses/>.
 !
 !    Initial implemetation of PIERNIK code was based on TVD split MHD code by
-!    Ue-Li Pen 
+!    Ue-Li Pen
 !        see: Pen, Arras & Wong (2003) for algorithm and
-!             http://www.cita.utoronto.ca/~pen/MHD 
-!             for original source code "mhd.f90" 
-!   
+!             http://www.cita.utoronto.ca/~pen/MHD
+!             for original source code "mhd.f90"
+!
 !    For full list of developers see $PIERNIK_HOME/license/pdt.txt
 !
 #include "piernik.def"
@@ -164,6 +164,9 @@ module gravity
       use start,  only : csim2,smalld
       use grid, only : x,y,z
 #endif /* GRAV_PTMASS || GRAV_PTFLAT || GRAV_PTMASSPURE */
+#ifdef GRAV_GALACTIC
+      use grid, only : z
+#endif /* GRAV_GALACTIC */
 #ifdef GRAV_USER
       use gravity_user, only : grav_pot_user
 #endif /* GRAV_USER */
@@ -179,6 +182,9 @@ module gravity
       real                  :: x1, x2
       real, dimension(n)    :: x3, rc, fr
 #endif /* GRAV_PTMASS || GRAV_PTFLAT || GRAV_PTMASSPURE */
+#ifdef GRAV_GALACTIC
+      real                  :: x1
+#endif /* GRAV_GALACTIC */
       status = ''
 
 #ifdef GRAV_NULL
@@ -260,6 +266,25 @@ module gravity
          fr = 1./cosh(fr)+smalld
          gpot = -newtong*ptmass/dsqrt(x1**2+x2**2+x3**2+r_smooth**2)
          gpot = gpot - csim2*dlog(fr) ! *d0
+#elif defined (GRAV_GALACTIC)
+! simplified, z component only of Galactic gravitational acceleration from Ferriere'98
+         select case (sweep)
+            case('xsweep')
+               x1  = z(i2)
+            case('ysweep')
+               x1  = z(i1)
+         end select
+         if(sweep == 'zsweep') then
+            gpot = cmps2 * (  &
+              (-4.4e-9 * exp(-(r_gc-r_gc_sun)/(4.9*kpc)) * sqrt(xsw**2+(0.2*kpc)**2)) &
+              -( 1.7e-9 * (r_gc_sun**2 + (2.2*kpc)**2)/(r_gc**2 + (2.2*kpc)**2)*0.5*xsw**2/kpc) )
+!          -Om*(Om+G) * Z * (kpc ?) ! in the transition region between rigid
+!                                   ! and flat rotation F'98: eq.(36)
+         else
+            gpot = cmps2 * (  &
+              (-4.4e-9 * exp(-(r_gc-r_gc_sun)/(4.9*kpc)) * sqrt(x1**2+(0.2*kpc)**2)) &
+              -( 1.7e-9 * (r_gc_sun**2 + (2.2*kpc)**2)/(r_gc**2 + (2.2*kpc)**2)*0.5*x1**2/kpc) )
+         endif
 
 #elif defined (GRAV_USER)
          call grav_pot_user(gpot,sweep,i1,i2,xsw,n,status,temp_log)
