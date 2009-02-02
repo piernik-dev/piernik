@@ -30,7 +30,6 @@ nk = nzd
 dx = (xmax - xmin) / nxd
 dy = (ymax - ymin) / nyd
 dz = (zmax - zmin) / nzd
-print, dx,dy,dz
 x1b = findgen(ni)
 x2b = findgen(nj)
 x3b = findgen(nk)
@@ -38,8 +37,6 @@ x3b = findgen(nk)
 for i = 0,ni-1 do  x1b[i] = xmin + 0.5*dx + dx*x1b[i]
 for i = 0,nj-1 do  x2b[i] = ymin + 0.5*dy + dy*x2b[i]
 for i = 0,nk-1 do  x3b[i] = zmin + 0.5*dz + dz*x3b[i]
-
-plot,x1b
 
 IF(nj EQ 1 AND nk EQ 1) THEN dims= '1d' ELSE IF(nk EQ 1) THEN dims= '2d' ELSE dims= '3d' 
 
