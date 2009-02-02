@@ -20,7 +20,7 @@
  /
 
  $END_CONTROL
-    tend   = 50.0  !0.0015
+    tend   = 1.0  !0.0015
     nend   = 10000
  /
 
