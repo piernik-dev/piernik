@@ -34,10 +34,12 @@ module timestepionized
  contains 
 
   subroutine timestep_ion
+
     use mpisetup
-    use grid, only   : dx,dy,dz,nb,ks,ke,is,ie,js,je
-    use arrays, only : u,b
-    use start, only  : cfl
+    use constants,   only : big    
+    use grid,        only : dx,dy,dz,nb,ks,ke,is,ie,js,je,nxd,nyd,nzd
+    use arrays,      only : u,b
+    use start,       only : cfl
     use initionized, only : gamma_ion, cs_iso_ion2   
     use initionized, only : idni,imxi,imyi,imzi
 #ifndef ISO
@@ -92,9 +94,22 @@ module timestepionized
       end do
     end do
 
-    dt_ion_proc_x = dx/cx
-    dt_ion_proc_y = dy/cy
-    dt_ion_proc_z = dz/cz
+    if(nxd /= 1) then
+       dt_ion_proc_x = dx/cx  
+    else 
+       dt_ion_proc_x = big 
+    endif
+    if(nyd /= 1) then 
+       dt_ion_proc_y = dy/cy  
+    else 
+       dt_ion_proc_y = big 
+    endif
+    if(nzd /= 1) then 
+       dt_ion_proc_z = dz/cz  
+    else 
+       dt_ion_proc_z = big 
+    endif
+    
     dt_ion_proc   = min(dt_ion_proc_x, dt_ion_proc_y, dt_ion_proc_z)
 
     call MPI_REDUCE(c_ion, c_max_all, 1, MPI_DOUBLE_PRECISION, MPI_MAX, 0, comm, ierr)
