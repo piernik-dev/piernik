@@ -1,18 +1,4 @@
 
-#undef DEBUG
-#undef VERBOSE
-
-/* choosing unitsystem */
-
-#undef PSM		/*pc,Msun,Myr unitsystem*/
-#undef PGM		/*pc,G=1,Myr unitsystem*/
-#undef DMY		/*cm^16,Msun,year unitsystem*/
-#undef CGS		/*cm,gram,sek unitsystem*/
-#undef SI		/*metr,kg,sek unitsystem*/
-
-/* adiabatic or isothermal */
-#undef ISO
-
 /* number of different fluids */
 #define IONIZED
 #define MAGNETIC
@@ -30,24 +16,5 @@
 #undef MINMOD
 #undef SUPERBEE
 
-/* physics including */
-
-#undef RESIST
-#undef SIMPLE_COOL
-#define ANY_SOURCES
-#undef BND_MOTION_SUPPORT
-#undef COLLISIONS
-#undef COLLS_MODIF
-
-
-/* gravity type choosing */
-#undef GRAV
-
-/* structure features including */
-#undef SN_SRC
-
 /* numerical solutions and limitations */
 #undef SHEAR
-
-
-/* problem specific directives */
