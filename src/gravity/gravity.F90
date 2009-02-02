@@ -266,26 +266,6 @@ module gravity
          fr = 1./cosh(fr)+smalld
          gpot = -newtong*ptmass/dsqrt(x1**2+x2**2+x3**2+r_smooth**2)
          gpot = gpot - csim2*dlog(fr) ! *d0
-#elif defined (GRAV_GALACTIC)
-! simplified, z component only of Galactic gravitational acceleration from Ferriere'98
-         select case (sweep)
-            case('xsweep')
-               x1  = z(i2)
-            case('ysweep')
-               x1  = z(i1)
-         end select
-         if(sweep == 'zsweep') then
-            gpot = cmps2 * (  &
-              (-4.4e-9 * exp(-(r_gc-r_gc_sun)/(4.9*kpc)) * sqrt(xsw**2+(0.2*kpc)**2)) &
-              -( 1.7e-9 * (r_gc_sun**2 + (2.2*kpc)**2)/(r_gc**2 + (2.2*kpc)**2)*0.5*xsw**2/kpc) )
-!          -Om*(Om+G) * Z * (kpc ?) ! in the transition region between rigid
-!                                   ! and flat rotation F'98: eq.(36)
-         else
-            gpot = cmps2 * (  &
-              (-4.4e-9 * exp(-(r_gc-r_gc_sun)/(4.9*kpc)) * sqrt(x1**2+(0.2*kpc)**2)) &
-              -( 1.7e-9 * (r_gc_sun**2 + (2.2*kpc)**2)/(r_gc**2 + (2.2*kpc)**2)*0.5*x1**2/kpc) )
-         endif
-
 #elif defined (GRAV_USER)
          call grav_pot_user(gpot,sweep,i1,i2,xsw,n,status,temp_log)
 
@@ -383,6 +363,12 @@ module gravity
            -( 1.7e-9 * (r_gc_sun**2 + (2.2*kpc)**2)/(r_gc**2 + (2.2*kpc)**2)*xsw/kpc) )
 !          -Om*(Om+G) * Z * (kpc ?) ! in the transition region between rigid
 !                                   ! and flat rotation F'98: eq.(36)
+
+!           write(*,*) cmps2, kpc, r_gc, r_gc_sun
+
+
+!          write(*,*) grav
+!	  stop
       else
          grav=0.0
       endif
