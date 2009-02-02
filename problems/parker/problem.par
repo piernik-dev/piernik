@@ -1,7 +1,7 @@
  $DOMAIN_SIZES
-    nxd = 5
-    nyd = 5
-    nzd = 240
+    nxd = 1
+    nyd = 1
+    nzd = 100
     nb  = 4
  /  
 
@@ -11,22 +11,19 @@
     pzsize = 1    
  /  
 
- $START_CONTROL
- /
-
  $RESTART_CONTROL
     nrestart = 0 
     new_id   = ''
  /
 
  $END_CONTROL
-    tend   = 500.0
+    tend   = 100.0
     nend   = 10000 
  /
 
  $OUTPUT_CONTROL
     dt_hdf  = 1.0
-    dt_res  = 500.0
+    dt_res  = 0.0
     dt_log  = 1.0e-6
     dt_tsl  = 1.0e-6
     vars(1) = 'dens'
@@ -43,6 +40,7 @@
 
  $FLUID_IONIZED
     gamma_ion  = 1.666666666
+    cs_iso_ion = 7.000000000
  /
 
  $BOUNDARIES
@@ -65,14 +63,14 @@
 
 
  $NUMERICAL_SETUP
-    cfl    = 0.8
-    smalld = 1.e-5
+    cfl    = 0.9
+    smalld = 1.e-4
     smallei= 1.e-4
     integration_order  = 2
   /
  
  $GRAVITY
-    r_gc   = 8.5
+    r_gc   = 8500
     nsub   = 100
     tune_zeq     = 1.0025
     tune_zeq_bnd = 0.9
@@ -83,7 +81,7 @@
 
  $PROBLEM_CONTROL
     problem_name ='parker_instability'
-    run_id =  'gpi'
+    run_id =  'tst'
     d0     =  1.
     nbx0    =  0.
     nby0    = 1.0
