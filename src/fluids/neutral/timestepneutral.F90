@@ -35,9 +35,10 @@ contains
 
   subroutine timestep_neu
     use mpisetup
-    use grid, only     : dx,dy,dz,nb,ks,ke,is,ie,js,je
-    use arrays, only   : u,b
-    use start, only  : cfl
+    use constants,   only : big    
+    use grid, only        : dx,dy,dz,nb,ks,ke,is,ie,js,je,nxd,nyd,nzd
+    use arrays, only      : u,b
+    use start, only       : cfl
     use initneutral, only : gamma_neu, cs_iso_neu,cs_iso_neu2   
     use initneutral, only : idnn,imxn,imyn,imzn
 #ifndef ISO
@@ -93,6 +94,22 @@ contains
     dt_neu_proc_x = dx/cx
     dt_neu_proc_y = dy/cy
     dt_neu_proc_z = dz/cz
+    if(nxd /= 1) then
+       dt_neu_proc_x = dx/cx  
+    else 
+       dt_neu_proc_x = big 
+    endif
+    if(nyd /= 1) then 
+       dt_neu_proc_y = dy/cy  
+    else 
+       dt_neu_proc_y = big 
+    endif
+    if(nzd /= 1) then 
+       dt_neu_proc_z = dz/cz  
+    else 
+       dt_neu_proc_z = big 
+    endif
+    
     dt_neu_proc   = min(dt_neu_proc_x, dt_neu_proc_y, dt_neu_proc_z)
 
     call MPI_REDUCE(c_neu, c_max_all, 1, MPI_DOUBLE_PRECISION, MPI_MAX, 0, comm, ierr)
