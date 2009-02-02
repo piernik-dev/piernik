@@ -114,10 +114,10 @@ module rtvd ! split orig
       real, dimension(nvar,n)  :: u,cfr
       real, dimension(nmag,n)  :: bb
       real, dimension(n)       :: accl,accr    
+      real, dimension(n)       :: daccrp,daccrm,dacclp,dacclm
     
 #ifdef GRAV
       real, dimension(n)       :: gravaccr
-      real, dimension(n)       :: daccrp,daccrm,dacclp,dacclm
 #endif /* GRAV */
 
 #ifdef SHEAR
@@ -139,9 +139,7 @@ module rtvd ! split orig
       real, dimension(nfluid,n):: ekin,eint
       real, dimension(n)       :: emag
 #endif /* ISO */
-#ifdef GRAV
       real, dimension(nvar,n)  :: duls,durs
-#endif /* GRAV */
 #ifdef COSM_RAYS
       real, dimension(n)       :: divv,decr,grad_pcr,ecr
 #endif /* COSM_RAYS */
@@ -154,10 +152,8 @@ module rtvd ! split orig
       cfr       = 0.0
       dtx       = dt / dx
 
-#ifdef GRAV
       duls = 0.0
       durs = 0.0
-#endif /* GRAV */
 
       u1 = u
 
