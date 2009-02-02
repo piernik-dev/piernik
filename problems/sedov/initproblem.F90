@@ -118,10 +118,7 @@ contains
     implicit none
 
     integer :: i,j,k
-    
-    
-    call read_problem_par
- 
+     
 ! Uniform equilibrium state
 
     do k = 1,nz
