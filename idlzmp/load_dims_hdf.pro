@@ -11,8 +11,9 @@
 ;    var  - variable to be readed
 ;
 pro load_dims_hdf,  file, pdims=pdims, pcoords=pcoords, dims = dims, $
-                    nxd,nyd,nzd, nxb,nyb,nzb, nb, $
-                    xmin, xmax, ymin, ymax, zmin, zmax 
+                    nxd=nxd,nyd=nyd,nzd=nzd, nxb=nxb,nyb=nyb,nzb=nzb, nb=nb, $
+                    xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, $
+                    zmin=zmin, zmax=zmax 
 
     on_error, 2
 

@@ -25,8 +25,9 @@ function load_data_hdf, dir, prefix, step, var, xcoord = x, ycoord = y, zcoord =
 
   filename= dir+'/'+prefix+'_'+frame+'.hdf'  
   LOAD_DIMS_HDF, filename, pdims=pdims, pcoords=pcoords, dims=dims, $
-                           nxd,nyd,nzd, nxb,nyb,nzb, nb, $
-                           xmin, xmax, ymin, ymax, zmin, zmax 
+                           nxd=nxd,nyd=nyd,nzd=nzd, nxb=nxb,nyb=nyb,$
+                           nzb=nzb, nb=nb, xmin=xmin, xmax=xmax, $
+                           ymin=ymin, ymax=ymax, zmin=zmin, zmax=zmax 
 ;  nproc = pdims(0)*pdims(1)*pdims(2)
   if(nxb eq dims(0)) then begin
     nx=nxb

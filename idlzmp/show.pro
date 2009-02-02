@@ -1,7 +1,7 @@
 PRO SHOW
 
 data_dir = '../obj/'
-prefix = 'otvortex_rs4'
+prefix = 'sedov_tst'
 
 png_dir = data_dir+'/frames'
 
@@ -39,7 +39,7 @@ s.panel_name	= 'a'			; If more slices of the same type
                                         ; are needed use this index
 
 s.type		= 'xy'			; Chose 'yz', 'xz' or 'xy' plane
-s.coord		=  0.0                  ; Position at the complementary coordinate
+s.coord		=  0.0         ; Position at the complementary coordinate
 s.vect_disp	= 'v'			; Vector field to display: 'b' or 'v'
 s.vect_scaling	= 'free'		; 'fix' or 'free' 
 s.vect_scale	=  1.0
@@ -57,12 +57,12 @@ n_slices = n_slices+1
 
 ;-----------------------------------------------------------------------------
 
-s.sw	= 'on'  
+s.sw	= 'off'  
 s.panel_name	= 'b'			; If more slices of the same type 
                                         ; are needed use this index
 
 s.type		= 'xy'			; Chose 'yz', 'xz' or 'xy' plane
-s.coord		=  0.0                  ; Position at the complementary coordinate
+s.coord		=  0.5                  ; Position at the complementary coordinate
 s.vect_disp	= 'b'			; Vector field to display: 'b' or 'v'
 s.vect_scaling	= 'free'		; 'fix' or 'free' 
 s.vect_scale	=  1.0
@@ -86,7 +86,7 @@ s.panel_name	= 'c'			; If more slices of the same type
                                         ; are needed use this index
 
 s.type		= 'xy'			; Chose 'yz', 'xz' or 'xy' plane
-s.coord		=  0.0                  ; Position at the complementary coordinate
+s.coord		=  0.25                  ; Position at the complementary coordinate
 s.vect_disp	= 'b'			; Vector field to display: 'b' or 'v'
 s.vect_scaling	= 'free'		; 'fix' or 'free' 
 s.vect_scale	=  1.0

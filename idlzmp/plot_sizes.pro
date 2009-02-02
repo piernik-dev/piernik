@@ -21,15 +21,16 @@ COMMON plot_coords $
 
 ;READ_DIMS_AXES, file, x1b, x2b, x3b, ni, nj, nk
 LOAD_DIMS_HDF, file, pdims=pdims, pcoords=pcoords, dims=dims, $
-       nxd,nyd,nzd, nxb,nyb,nzb, nb, xmin, xmax, ymin, ymax, zmin, zmax
+       nxd=nxd,nyd=nyd,nzd=nzd, nxb=nxb,nyb=nyb,nzb=nzb, nb=nb,$
+       xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, zmin=zmin, zmax=zmax
 
 ni = nxd
 nj = nyd
 nk = nzd
-dx = xmax - xmin
-dy = ymax - ymin
-dz = zmax - zmin
-
+dx = (xmax - xmin) / nxd
+dy = (ymax - ymin) / nyd
+dz = (zmax - zmin) / nzd
+print, dx,dy,dz
 x1b = findgen(ni)
 x2b = findgen(nj)
 x3b = findgen(nk)
@@ -38,9 +39,7 @@ for i = 0,ni-1 do  x1b[i] = xmin + 0.5*dx + dx*x1b[i]
 for i = 0,nj-1 do  x2b[i] = ymin + 0.5*dy + dy*x2b[i]
 for i = 0,nk-1 do  x3b[i] = zmin + 0.5*dz + dz*x3b[i]
 
-print,x1b
-
-help, x1b,x2b,x3b
+plot,x1b
 
 IF(nj EQ 1 AND nk EQ 1) THEN dims= '1d' ELSE IF(nk EQ 1) THEN dims= '2d' ELSE dims= '3d' 
 
