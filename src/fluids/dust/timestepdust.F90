@@ -35,7 +35,8 @@ contains
 
   subroutine timestep_dst
     use mpisetup
-    use grid, only      : dx,dy,dz,nb,ks,ke,is,ie,js,je
+    use constants,   only : big    
+    use grid, only      : dx,dy,dz,nb,ks,ke,is,ie,js,je,nxd,nyd,nzd
     use arrays, only    : u,b
     use start, only     : cfl  
     use initdust, only  : idnd,imxd,imyd,imzd
@@ -76,9 +77,24 @@ contains
       end do
     end do
 
-    dt_dst_proc_x = dx/max(cx,small)
-    dt_dst_proc_y = dy/max(cy,small)
-    dt_dst_proc_z = dz/max(cz,small)
+    
+    if(nxd /= 1) then
+       dt_dst_proc_x = dx/max(cx,small)  
+    else 
+       dt_dst_proc_x = big 
+    endif
+    if(nyd /= 1) then 
+       dt_dst_proc_y = dy/max(cy,small) 
+    else 
+       dt_dst_proc_y = big 
+    endif
+    if(nzd /= 1) then 
+       dt_dst_proc_z = dz/max(cz,small) 
+    else 
+       dt_dst_proc_z = big 
+    endif
+    
+    
     dt_dst_proc   = min(dt_dst_proc_x, dt_dst_proc_y, dt_dst_proc_z)
 
     call MPI_REDUCE(c_dst, c_max_all, 1, MPI_DOUBLE_PRECISION, MPI_MAX, 0, comm, ierr)
