@@ -29,14 +29,14 @@ FOR ivar=0, nvar-1 DO BEGIN
   var = vars(ivar)
   data = LOAD_DATA_HDF(dir,prefix, step, var, $
             xcoord=x, ycoord = y, zcoord = z, nxa=nxa,nya=nya,nza=nza, $
-            time = time)
+            time = time,allblocks='y')
   status = 0
 ;  READ_VARIABLE, file, var, data, time, status
   IF(status NE 0) THEN GOTO, SKIP
 
   IF(var EQ 'den1') THEN BEGIN
     dd = data
-    min_dd =MIN(dd)
+    min_dd = MIN(dd)
     max_dd = MAX(dd)
   ENDIF
   IF(var EQ 'ene1') THEN BEGIN
@@ -54,7 +54,13 @@ FOR ivar=0, nvar-1 DO BEGIN
     min_ec = MIN(ec)
     max_ec = MAX(ec)
   ENDIF
-
+  
+  IF(var EQ 'curz') THEN BEGIN
+     dd = data
+     min_dd = MIN(dd)
+     max_dd = MAX(dd)
+  endif
+  
   IF(var EQ 'vlx1') THEN v1 = data
   IF(var EQ 'vly1') THEN v2 = data
   IF(var EQ 'vlz1') THEN v3 = data

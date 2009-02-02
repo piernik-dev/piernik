@@ -84,7 +84,7 @@ ENDIF
 ;print, 'Display depth:    ', depth
 ;print, 'Color table size: ', !d.table_size
 
-color_table = 39
+color_table = 1
 ncolors =!d.table_size-1
 LOADCT, color_table
 tvlct,red,green,blue,/get

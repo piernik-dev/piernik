@@ -1,7 +1,7 @@
 PRO SHOW
 
-data_dir = '../obj/'
-prefix = 'sedov_tst'
+data_dir = '../runs/mri/'
+prefix = 'mri_Z3_'
 
 png_dir = data_dir+'/frames'
 
@@ -14,7 +14,7 @@ IF(n_files EQ 0) THEN GOTO, SKIP
 
 
 first_frame  	= 0
-last_frame   	= n_files-1	
+last_frame   	= n_files-1
 freq_frame   	= 1
 
 png_output	= 'y'
@@ -40,7 +40,7 @@ s.panel_name	= 'a'			; If more slices of the same type
 
 s.type		= 'xy'			; Chose 'yz', 'xz' or 'xy' plane
 s.coord		=  0.0         ; Position at the complementary coordinate
-s.vect_disp	= 'v'			; Vector field to display: 'b' or 'v'
+s.vect_disp	= 'b'			; Vector field to display: 'b' or 'v'
 s.vect_scaling	= 'free'		; 'fix' or 'free' 
 s.vect_scale	=  1.0
 
@@ -103,7 +103,7 @@ slice_array = [slice_array,s]
 n_slices = n_slices+1
 
 ;==============================================================================
-vars = ['den1','ene1','vlx1','vly1','vlz1','magx','magy','magz']
+vars = ['den1','vlx1','vly1','vlz1','magx','magy','magz']
 n_vectors = [n_vect_x,n_vect_y,n_vect_z]
 ;==============================================================================
 
