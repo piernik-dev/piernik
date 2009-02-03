@@ -266,7 +266,7 @@ contains
             zr(k) = z(k)  + 0.5*dz
          enddo
       else 
-         z  =  0.5*(yminb + ymaxb)  
+         z  =  0.5*(zminb + zmaxb)  
          zl = -0.5*dz
          zr =  0.5*dz
       endif
