@@ -86,7 +86,6 @@ module hydrostatic
       endif
       gprofs = tune_zeq*gprofs
 
-
       if(ksmid .lt. nstot) then
         dprofs(ksmid+1) = dmid
         do ksub=ksmid+1, nstot-1

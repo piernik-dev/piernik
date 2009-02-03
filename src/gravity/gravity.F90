@@ -267,7 +267,7 @@ module gravity
          end select
          rc = dsqrt(x1**2+x2**2)
          fr(:) = min((rc(:)/r_grav)**n_gravr,100.0)
-         fr = 1./cosh(fr)+smalld
+         fr = max(1./cosh(fr),smalld/100.)
          gpot = -newtong*ptmass/dsqrt(x1**2+x2**2+x3**2+r_smooth**2)
          gpot = gpot - csim2*dlog(fr) ! *d0
 #elif defined (GRAV_USER)

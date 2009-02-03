@@ -128,7 +128,7 @@ contains
 
 #ifdef GRAV
       call init_grav
-      call grav_pot_3d
+!      call grav_pot_3d
 #endif /* GRAV */
 
 #ifdef FLUID_INTERACTIONS
@@ -140,6 +140,10 @@ contains
 #endif /* SNE_DISTR */
 
       call init_prob
+#ifdef GRAV
+      call grav_pot_3d
+! It is only temporary solution, but grav_pot_3d must be called after init_prob due to csim2,c_si,alpha clash!!!
+#endif
 
       call init_dataio
 
