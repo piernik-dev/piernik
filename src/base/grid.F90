@@ -56,7 +56,7 @@ contains
       use errh, only : namelist_errh
       use mpisetup
       implicit none
-      integer :: errh
+      integer :: ierrh
       character(LEN=100) :: par_file, tmp_log_file
       
       namelist /DOMAIN_SIZES/ nxd, nyd, nzd, nb
@@ -71,12 +71,12 @@ contains
          par_file = trim(cwd)//'/problem.par'
          tmp_log_file = trim(cwd)//'/tmp.log'
          open(1,file=par_file)
-            read(unit=1,nml=DOMAIN_SIZES,iostat=errh)
-            call namelist_errh(errh,'DOMAIN_SIZES')
+            read(unit=1,nml=DOMAIN_SIZES,iostat=ierrh)
+            call namelist_errh(ierrh,'DOMAIN_SIZES')
          close(1)
          open(1,file=par_file)
-            read(unit=1,nml=DOMAIN_LIMITS,iostat=errh)
-            call namelist_errh(errh,'DOMAIN_LIMITS')
+            read(unit=1,nml=DOMAIN_LIMITS,iostat=ierrh)
+            call namelist_errh(ierrh,'DOMAIN_LIMITS')
          close(1)
          open(3, file='tmp.log', position='append')
            write(3,nml=DOMAIN_SIZES)

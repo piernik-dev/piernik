@@ -46,7 +46,7 @@ module gravity
       use errh, only : namelist_errh
       use mpisetup
       implicit none
-      integer :: errh
+      integer :: ierrh
       character(LEN=100) :: par_file, tmp_log_file
 
       namelist /GRAVITY/ g_z,g_y, dg_dz, r_gc, &
@@ -77,8 +77,8 @@ module gravity
 
       if(proc .eq. 0) then
          open(1,file=par_file)
-            read(unit=1,nml=GRAVITY,iostat=errh)
-            call namelist_errh(errh,'GRAVITY')
+            read(unit=1,nml=GRAVITY,iostat=ierrh)
+            call namelist_errh(ierrh,'GRAVITY')
          close(1)
          open(3, file=tmp_log_file, position='append')
             write(unit=3,nml=GRAVITY)

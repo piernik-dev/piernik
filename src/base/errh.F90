@@ -39,12 +39,12 @@ module errh
    implicit none
    contains
 
-   subroutine namelist_errh(errh,nm)
+   subroutine namelist_errh(ierrh,nm)
       implicit none
-      integer, intent(in) :: errh
+      integer, intent(in) :: ierrh
       character(len=*), intent(in) :: nm
       
-      select case (errh)
+      select case (ierrh)
          case (19)
             write(*,*) "severe (19): Invalid reference to variable in ",trim(nm), " namelist"
             write(*,*) "One of the following conditions occurred: "
@@ -68,7 +68,7 @@ module errh
             stop
          case (0)
          case default
-            write(*,*) 'Unknown error (', errh,') in namelist ',trim(nm)
+            write(*,*) 'Unknown error (', ierrh,') in namelist ',trim(nm)
             stop
       endselect
 
