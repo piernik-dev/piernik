@@ -31,8 +31,9 @@ module hydrostatic
 #ifdef GRAV
   contains
 
-    subroutine hydrostatic_zeq(iia,jja, d0, c_si, alpha, dprof)
+    subroutine hydrostatic_zeq(iia,jja, d0, dprof)
       use constants
+      use start, only : csim2
       use mpisetup, only : proc
       use grid, only : nx,ny,nz,dl,zdim,z,zl,zr,nzt,nb,zmin,zmax
 
@@ -42,7 +43,6 @@ module hydrostatic
 #endif /* ISO */
       implicit none
       real, intent(inout)              :: d0
-      real, intent(in)                 :: c_si, alpha
       integer, intent(in)              :: iia, jja
       real, dimension(nz), intent(out) :: dprof
 
@@ -51,7 +51,7 @@ module hydrostatic
       integer ksub, ksmid, k, ia, ja
       real dzs, factor
 
-      real dmid, ddmid, csim2
+      real dmid, ddmid
       integer iter, itermx
 
       ia = min(nx,max(1, iia))
@@ -59,8 +59,6 @@ module hydrostatic
 
       nstot=nsub*nzt
    
-      csim2 = c_si**2 * (1.0 + alpha)
-
       allocate(zs(nstot), dprofs(nstot), gprofs(nstot), gpots(nstot))
       itermx = 20
       if(d0 .gt. small) then

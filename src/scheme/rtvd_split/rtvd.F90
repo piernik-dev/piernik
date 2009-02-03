@@ -83,14 +83,14 @@ module rtvd ! split orig
 #endif /* IONIZED */
 
       use constants,       only : small
-      use start,           only : smalld, integration_order 
+      use mpisetup,        only : smalld, integration_order 
       use fluxes,          only : flimiter,all_fluxes
       use fluidindex,      only : nvar,nmag,nfluid
       use fluidindex,      only : ibx,iby,ibz
       use fluidindex,      only : iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
 #ifndef ISO
       use fluidindex,      only : iarr_all_en
-      use start,           only : smallei
+      use mpisetup,        only : smallei
 #endif /* ISO */
 
 #ifdef GRAV

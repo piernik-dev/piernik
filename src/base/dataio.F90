@@ -1438,7 +1438,7 @@ module dataio
     use arrays, only : wa,u,b
     use grid, only   : dx,dy,dz,dxmn,nb,is,ie,js,je,ks,ke,nx,ny,nz
     use constants, only : small, hydro_mass, k_B
-    use start, only : smallei,cfl
+    use mpisetup, only : smallei,cfl
 
 #ifdef IONIZED
     use initionized, only : gamma_ion, cs_iso_ion,cs_iso_ion2

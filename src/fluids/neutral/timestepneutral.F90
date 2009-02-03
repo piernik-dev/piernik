@@ -38,7 +38,6 @@ contains
     use constants,   only : big    
     use grid, only        : dx,dy,dz,nb,ks,ke,is,ie,js,je,nxd,nyd,nzd
     use arrays, only      : u,b
-    use start, only       : cfl
     use initneutral, only : gamma_neu, cs_iso_neu,cs_iso_neu2   
     use initneutral, only : idnn,imxn,imyn,imzn
 #ifndef ISO

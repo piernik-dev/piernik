@@ -32,7 +32,7 @@ module gravity
    use constants
 
    character(LEN=9) :: gp_status
-   real    :: g_z, g_y, dg_dz, r_gc
+   real    :: g_z, g_y, dg_dz, r_gc, csim2
    real    :: ptmass, ptm_x, ptm_y, ptm_z, r_smooth
    integer :: nsub
    real    :: h_grav,  r_grav
@@ -49,7 +49,7 @@ module gravity
       integer :: ierrh
       character(LEN=100) :: par_file, tmp_log_file
 
-      namelist /GRAVITY/ g_z,g_y, dg_dz, r_gc, &
+      namelist /GRAVITY/ g_z,g_y, dg_dz, r_gc,  &
                      ptmass,ptm_x,ptm_y,ptm_z,r_smooth, &
                      nsub, tune_zeq, tune_zeq_bnd,      &
                      h_grav, r_grav, n_gravr, n_gravr2, n_gravh
@@ -164,7 +164,7 @@ module gravity
 !--------------------------------------------------------------------------
    subroutine grav_pot(sweep, i1,i2, xsw, n, gpot,status,temp_log)
 #if defined GRAV_PTMASS || defined GRAV_PTFLAT || defined GRAV_PTMASSPURE
-      use start,  only : csim2,smalld
+      use mpisetup,  only : smalld
       use grid, only : x,y,z
 #endif /* GRAV_PTMASS || GRAV_PTFLAT || GRAV_PTMASSPURE */
 #ifdef GRAV_GALACTIC
@@ -289,7 +289,7 @@ module gravity
       use grid, only :   x,y,z,dl,xdim,ydim,zdim,nx,ny,nz
       use grid, only :   is,ie,js,je,ks,ke, xr,yr,zr
 #if defined GRAV_PTMASS || defined GRAV_PTFLAT
-      use start, only : csim2,smalld
+      use mpisetup, only : smalld
 #endif /* GRAV_PTMASS || GRAV_PTFLAT */
 #if defined GRAV_ACC_USER
       use gravity_user, only : grav_accel_user

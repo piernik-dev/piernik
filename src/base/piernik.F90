@@ -71,7 +71,6 @@ program piernik
 contains
 
    subroutine init_piernik
-      use start, only  : read_params
       use initfluids, only : init_fluids
       use fluidindex, only : fluid_index,nvar
       use arrays, only : arrays_allocate
@@ -104,8 +103,6 @@ contains
       if (LEN_TRIM(cwd) == 0) cwd = '.'
 
       call mpistart
-
-      call read_params
 
       call init_grid
 

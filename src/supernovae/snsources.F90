@@ -129,7 +129,7 @@ module snsources
       use arrays, only : u,b,xl,yl,zl,ibx,iby,ibz,&
                           iena,imxa,imya,imza,idna
       use grid, only   : dx,dy,dz
-      use start, only  : smallei
+      use mpisetup, only  : smallei
 
       implicit none
       real, intent(in), dimension(2) :: orient

@@ -54,6 +54,10 @@ module mpisetup
    character(len=4) :: bnd_xl_dom, bnd_xr_dom, bnd_yl_dom, bnd_yr_dom, bnd_zl_dom, bnd_zr_dom
    namelist /BOUNDARIES/ bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr
 
+   real    :: cfl, smalld, smallei
+   integer :: integration_order
+   namelist /NUMERICAL_SETUP/  cfl, smalld, smallei, integration_order
+
    logical     :: mpi
    character(len=80)   :: cwd
 
@@ -134,12 +138,23 @@ module mpisetup
          bnd_zl = 'per'
          bnd_zr = 'per'
 
+         cfl     = 0.7
+         smalld  = 1.e-10
+         smallei = 1.e-10
+         integration_order  = 2
+
          if(proc == 0) then
             open(1,file=par_file)
                read(unit=1,nml=MPI_BLOCKS,iostat=ierrh)
                call namelist_errh(ierrh,'MPI_BLOCKS')
+            close(1)
+            open(1,file=par_file)
                read(unit=1,nml=BOUNDARIES,iostat=ierrh)
                call namelist_errh(ierrh,'BOUNDARIES')
+            close(1)
+            open(1,file=par_file)
+               read(unit=1,nml=NUMERICAL_SETUP,iostat=ierrh)
+               call namelist_errh(ierrh,'NUMERICAL_SETUP')
             close(1)
          endif
 
@@ -156,6 +171,12 @@ module mpisetup
             ibuff(2) = pysize
             ibuff(3) = pzsize
 
+            ibuff(4) = integration_order
+
+            rbuff(1) = smalld
+            rbuff(2) = smallei
+            rbuff(3) = cfl
+
             call MPI_BCAST(cbuff, 32*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
             call MPI_BCAST(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
 
@@ -163,6 +184,10 @@ module mpisetup
 
             call MPI_BCAST(cbuff, 32*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
             call MPI_BCAST(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
+
+            smalld   = rbuff(1)
+            smallei  = rbuff(2)
+            cfl      = rbuff(3)
 
             bnd_xl = cbuff(1)(1:4)
             bnd_xr = cbuff(2)(1:4)
@@ -175,6 +200,7 @@ module mpisetup
             pysize = ibuff(2)
             pzsize = ibuff(3)
 
+            integration_order = ibuff(4)
          endif
 
          bnd_xl_dom = bnd_xl
@@ -317,6 +343,10 @@ module mpisetup
          write(*,*) 'zdir: ',proczl, proc, proczr
          write(*,*)
 #endif /* DEBUG */
+
+         if(integration_order > 2) then
+            stop 'For "ORIG" scheme integration_order must be 1 or 2'
+         endif
 
       end subroutine mpistart
 

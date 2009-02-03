@@ -38,7 +38,6 @@ contains
     use constants,   only : big    
     use grid, only      : dx,dy,dz,nb,ks,ke,is,ie,js,je,nxd,nyd,nzd
     use arrays, only    : u,b
-    use start, only     : cfl  
     use initdust, only  : idnd,imxd,imyd,imzd
     use constants, only : small
 

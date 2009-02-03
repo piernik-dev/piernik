@@ -29,85 +29,12 @@
 
 module start
 
-   use mpisetup
-
    implicit none
 
-   real    :: cfl, smalld, smallei
-   integer :: integration_order
-   real, dimension(1) :: gamma   !!! do poprawy
+   real :: c_si, alpha, csim2  !!! need fixing
+   real, dimension(1):: gamma  !!! need fixing
 
 !-------------------------------------------------------------------------------
-   contains
-
-      subroutine read_params  
-         use errh, only : namelist_errh
-         implicit none
-         integer :: ierrh
-         character(len=100) :: par_file, tmp_log_file
-
-         namelist /NUMERICAL_SETUP/  cfl, smalld, smallei, integration_order
-
-         par_file = trim(cwd)//'/problem.par'
-         tmp_log_file = trim(cwd)//'/tmp.log'
-
-         cfl     = 0.7
-         smalld  = 1.e-10
-         smallei = 1.e-10
-         integration_order  = 2
-
-         if(proc == 0) then
-
-            open(1,file=par_file)
-               read(unit=1,nml=NUMERICAL_SETUP,iostat=ierrh)
-               call namelist_errh(ierrh,'NUMERICAL_SETUP')
-            close(1)
-
-            open(3, file=tmp_log_file, position='append')
-               write(unit=3,nml=NUMERICAL_SETUP)
-            close(3)
-
-         endif
-
-
-         if(proc == 0) then
-
-!  namelist /NUMERICAL_SETUP/  cfl, smalld, smallei,
-!                              integration_order
-            rbuff(80) = cfl
-            rbuff(83) = smalld
-            rbuff(84) = smallei
-
-            ibuff(80) = integration_order
-
-
-! Broadcasting parameters
-
-            call MPI_BCAST(cbuff, 32*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
-            call MPI_BCAST(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
-            call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
-
-         else
-
-            call MPI_BCAST(cbuff, 32*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
-            call MPI_BCAST(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
-            call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
-
-!  namelist /NUMERICAL_SETUP/  cfl, smalld, smallei,
-!                              integration_order,
-
-            cfl                 = rbuff(80)
-            smalld              = rbuff(83)
-            smallei             = rbuff(84)
-
-            integration_order   = ibuff(80)
-
-         endif  ! (proc .eq. 0)
-         if(integration_order > 2) then
-            stop 'For "ORIG" scheme integration_order must be 1 or 2'
-         endif
-
-      end subroutine read_params
 
 end module start
 

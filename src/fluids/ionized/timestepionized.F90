@@ -39,7 +39,6 @@ module timestepionized
     use constants,   only : big    
     use grid,        only : dx,dy,dz,nb,ks,ke,is,ie,js,je,nxd,nyd,nzd
     use arrays,      only : u,b
-    use start,       only : cfl
     use initionized, only : gamma_ion, cs_iso_ion2   
     use initionized, only : idni,imxi,imyi,imzi
 #ifndef ISO

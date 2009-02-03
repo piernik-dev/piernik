@@ -112,7 +112,6 @@ module sndistr
 !===============================================================================================
    subroutine supernovae_distribution
       use mpisetup
-      use start, only : smallei
       use arrays, only : u,b,nx,ny,nz,ibx,iby,ibz,idna,imxa,imya,imza,iena
       use grid, only : dx,dy,dz,dvol,nb
       use snsources, only : rand_angles

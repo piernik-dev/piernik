@@ -33,7 +33,6 @@ contains
 
 subroutine bnd_u(dim)
   use mpisetup
-  use start,  only : smalld, smallei
   use grid,   only : nb, nxd, nyd, nzd,x,y,z,nzb,nyb,nxb,nx,ny,nz
   use fluidindex, only : nvar, iarr_all_dn,iarr_all_mx,iarr_all_my,iarr_all_mz, nfluid
   use arrays, only : u, b, bndxrar, bndyrar

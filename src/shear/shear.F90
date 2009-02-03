@@ -81,7 +81,7 @@ module shear
   end subroutine yshift
 
   subroutine unshear_fft_b(qty,xx,lb,rb,inv)
-    use start, only  : smalld
+    use mpisetup, only  : smalld
     use grid, only   : dy,nb,xmax,xmin,nyd,ymax,ymin,nxd
     use constants, only : dpi
     implicit none
@@ -179,7 +179,7 @@ module shear
 
   end subroutine unshear_fft_b
   function unshear_fft(qty,x,inv)
-    use start, only  : smalld 
+    use mpisetup, only  : smalld 
     use grid, only   : dy,nb,xmax,xmin,nyd,ymax,ymin
     use constants, only : dpi
     implicit none
@@ -243,7 +243,7 @@ module shear
 
   function unshear(qty,x,inv)
     use grid,  only  : nb,xmax,xmin,nyd,dy
-    use start, only  : smalld
+    use mpisetup, only  : smalld
     
     logical, optional               :: inv
     real, dimension(:,:,:)          :: qty
