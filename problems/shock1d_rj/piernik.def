@@ -1,19 +1,10 @@
 
-#undef DEBUG
-#undef VERBOSE
-
-/* choosing unitsystem */
-#undef PSM		/*pc,Msun,Myr unitsystem*/
-#undef PGM		/*pc,G=1,Myr unitsystem*/
-#undef DMY		/*cm^16,Msun,year unitsystem*/
-#undef CGS		/*cm,gram,sek unitsystem*/
-#undef SI		/*metr,kg,sek unitsystem*/
-
 /* adiabatic or isothermal */
 #undef ISO
 
 /* number of different fluids */
-#define IONIZED 1
+#define IONIZED
+#define MAGNETIC
 #undef NEUTRAL
 #undef DUST
 #undef COSM_RAYS
@@ -30,25 +21,11 @@
 
 /* physics including */
 #undef RESIST
-#undef SIMPLE_COOL
-#define ANY_SOURCES
-#undef BND_MOTION_SUPPORT
-#define COLLISIONS
-#undef COLLS_MODIF
 
 /* gravity type choosing */
 #undef GRAV
 #undef GRAV_NULL
 #undef SELF_GRAV
 
-/* structure features including */
-#undef GALAXY
-#undef SNE_DISTR
-#undef SN_SRC
-
 /* numerical solutions and limitations */
 #undef SHEAR
-#define ANY_LIMITS
-#undef VZ_LIMITS
-
-/* problem specific directives */

@@ -1,18 +1,15 @@
  $DOMAIN_SIZES
     nxd = 512
-    nyd = 4
-    nzd = 4
+    nyd = 1
+    nzd = 1
     nb  = 4
  /  
 
  $MPI_BLOCKS
-    pxsize = 2
+    pxsize = 1
     pysize = 1
     pzsize = 1    
  /  
-
- $START_CONTROL
- /
 
  $RESTART_CONTROL
     restart  = 'last'
@@ -54,37 +51,28 @@
  $DOMAIN_LIMITS
     xmin   = 0.0
     xmax   = 1.0
-    ymin   = 0.0
-    ymax   = 1.0
+    ymin   = -0.5
+    ymax   = 0.5
     zmin   = -0.5
     zmax   = 0.5
  /
 
- $EQUATION_OF_STATE
-    c_si   = 1.0
-    gamma  = 1.6666666666667
-    alpha  = 0.0
+ $FLUID_IONIZED
+    gamma_ion  = 1.6666666666667
  /  
 
  $NUMERICAL_SETUP
     cfl    = 0.8
     smalld = 1.e-3
     smallei= 1.e-5
-    integration_order = 3
-    magnetic = 'yes'
-    dimensions = '3d'
-    nu_bulk    = 0.0001
-    cfl_visc   = 0.4
+    integration_order = 2
  /
- 
- $GRAVITY
- /
- 
- $THERMAL
- /
- 
+
  $RESISTIVITY
-   eta_0 = 1.e-6
+   eta_scale   =  4
+   cfl_resist  =  0.4
+   eta_0      =   1.0e-6
+   deint_max   =  0.001
  /
 
  $PROBLEM_CONTROL
@@ -108,5 +96,3 @@
     er      =  1.0
  /
 
- $SHEARING
- /
