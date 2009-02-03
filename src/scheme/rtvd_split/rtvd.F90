@@ -147,9 +147,10 @@ module rtvd ! split orig
       real, dimension(n)       :: divv,decr,grad_pcr,ecr
 #endif /* COSM_RAYS */
 
-      real, dimension(2)       :: cn 
+      real, dimension(2,2)       :: rk2coef 
 
-      cn = [0.5 , 1.]
+      rk2coef(1,:) = [1.0 , 0.0]
+      rk2coef(2,:) = [0.5 , 1.0]
 
       w         = 0.0
       cfr       = 0.0
@@ -186,8 +187,8 @@ module rtvd ! split orig
          durf(:,2:n) = dtx*(fr(:,2:n) - fr(:,1:n-1));     durf(:,1) = durf(:,2)
          dulf(:,2:n) = dtx*(fl(:,2:n) - fl(:,1:n-1));     dulf(:,1) = dulf(:,2)
 
-         ur1(:,:) = ur0 - cn(istep)*durf
-         ul1(:,:) = ul0 + cn(istep)*dulf
+         ur1(:,:) = ur0 - rk2coef(integration_order,istep)*durf
+         ul1(:,:) = ul0 + rk2coef(integration_order,istep)*dulf
 
          ur1(iarr_all_dn,:) = max(ur1(iarr_all_dn,:), 0.5*smalld)
          ul1(iarr_all_dn,:) = max(ul1(iarr_all_dn,:), 0.5*smalld)
@@ -239,14 +240,14 @@ module rtvd ! split orig
             duls(iarr_all_mx(i),:)  = accr(:)*ul0(iarr_all_dn(i),:)*dt
             durs(iarr_all_mx(i),:)  = accl(:)*ur0(iarr_all_dn(i),:)*dt
          enddo
-         ur1= ur1 + cn(istep)*durs
-         ul1= ul1 + cn(istep)*duls
+         ur1= ur1 + rk2coef(integration_order,istep)*durs
+         ul1= ul1 + rk2coef(integration_order,istep)*duls
 #endif /* defined GRAV || defined SHEAR */
 #ifdef ANY_INTERACTIONS
          call fluid_interactions(sweep,i1,i2, n, durs, ur0)
-         ur1 = ur1 + cn(istep)*durs*dt
+         ur1 = ur1 + rk2coef(integration_order,istep)*durs*dt
          call fluid_interactions(sweep,i1,i2, n, duls, ul0)
-         ul1 = ul1 + cn(istep)*duls*dt
+         ul1 = ul1 + rk2coef(integration_order,istep)*duls*dt
 #endif /* ANY_INTERACTIONS */
 
          u1 = ul1 + ur1
@@ -264,7 +265,7 @@ module rtvd ! split orig
          end select
 
          decr(:)    = -(gamma_cr-1.)*u1(iecr,:)*divv(:)*dt
-         u1(iecr,:) = u1(iecr,:) + cn(istep)*decr(:)
+         u1(iecr,:) = u1(iecr,:) + rk2coef(integration_order,istep)*decr(:)
          u1(iecr,:) = max(smallecr,u1(iecr,:))
 
          vx  = u1(iarr_all_mx(i_ion),:)/u1(iarr_all_dn(i_ion),:)
@@ -275,9 +276,9 @@ module rtvd ! split orig
 
 #ifndef ISO
          u1(iarr_all_en(i_ion),:) = u1(iarr_all_en(i_ion),:) &
-                              - cn(istep)*u1(iarr_all_mx(i_ion),:)/u1(iarr_all_dn(i_ion),:)*grad_pcr*dt
+                              - rk2coef(integration_order,istep)*u1(iarr_all_mx(i_ion),:)/u1(iarr_all_dn(i_ion),:)*grad_pcr*dt
 #endif /* ISO */
-         u1(iarr_all_mx(i_ion),:) = u1(iarr_all_mx(i_ion),:) - cn(istep)*grad_pcr*dt
+         u1(iarr_all_mx(i_ion),:) = u1(iarr_all_mx(i_ion),:) - rk2coef(integration_order,istep)*grad_pcr*dt
 
 #endif /* COSM_RAYS && IONIZED */
 
