@@ -1,15 +1,13 @@
  $DOMAIN_SIZES
     nxd = 256
     nyd = 256
+    nzd = 1
  /  
 
  $MPI_BLOCKS
     pxsize = 1
     pysize = 1
     pzsize = 1
- /
-
- $START_CONTROL
  /
 
  $RESTART_CONTROL
@@ -31,7 +29,8 @@
     vars(1) = 'dens'
     vars(2) = 'velx'
     vars(3) = 'vely'
-    vars(4) = 'ener'
+    vars(4) = 'velz'
+    vars(5) = 'ener'
     domain  = 'phys_domain'
  / 
 
@@ -49,9 +48,8 @@
     ymax   = 1.0
  /
 
- $EQUATION_OF_STATE
-    c_si   = 10.0
-    alpha  = 1.0
+ $FLUID_NEUTRAL
+    gamma_neu = 1.6666666667
  /  
 
  $NUMERICAL_SETUP
@@ -59,28 +57,8 @@
     smalld = 1.e-6
     smallei= 1.e-4
     integration_order = 2
-    magnetic = 'no'
-    dimensions = '2dxy'
  /
  
- $GRAVITY
- /
- 
- $THERMAL
- /
- 
- $RESISTIVITY
- /
- 
-  $COSMIC_RAYS
- /
- 
- $GALACTIC_PARAMS
- /
-
- $SN_DISTR
- /
-
  $PROBLEM_CONTROL
     problem_name ='khi'
     run_id  =  'tst'
