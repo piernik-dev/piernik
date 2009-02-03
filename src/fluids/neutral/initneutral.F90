@@ -47,9 +47,10 @@ module initneutral
   subroutine init_neutral
 
     use mpisetup
+    use func, only : namelist_errh
 
     implicit none
-          
+    integer :: errh
     character par_file*(100), tmp_log_file*(100)
 
     namelist /FLUID_NEUTRAL/ gamma_neu, cs_iso_neu
@@ -61,10 +62,11 @@ module initneutral
          par_file = trim(cwd)//'/problem.par'
          tmp_log_file = trim(cwd)//'/tmp.log'
          open(1,file=par_file)
-            read(unit=1,nml=FLUID_neutral)
+            read(unit=1,nml=FLUID_NEUTRAL,iostat=errh)
+            call namelist_errh(errh,'FLUID_NEUTRAL')
          close(1)
          open(3, file='tmp.log', position='append')
-           write(3,nml=FLUID_neutral)
+           write(3,nml=FLUID_NEUTRAL)
            write(3,*)
          close(3)
       endif

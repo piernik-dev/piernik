@@ -47,8 +47,8 @@ module initcosmicrays
     use mpisetup
 
     implicit none
-          
-    character par_file*(100), tmp_log_file*(100)
+    integer :: errh
+    character(LEN=100) :: par_file, tmp_log_file
 
     namelist /COSMIC_RAYS/ cfl_cr,smallecr,cr_active,gamma_cr,cr_eff,K_cr_paral,K_cr_perp
     
@@ -66,7 +66,8 @@ module initcosmicrays
          par_file = trim(cwd)//'/problem.par'
          tmp_log_file = trim(cwd)//'/tmp.log'
          open(1,file=par_file)
-            read(unit=1,nml=COSMIC_RAYS)
+            read(unit=1,nml=COSMIC_RAYS,iostat=errh)
+            call namelist_errh(errh,'COSMIC_RAYS')
          close(1)
          open(3, file='tmp.log', position='append')
            write(3,nml=COSMIC_RAYS)

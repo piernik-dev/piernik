@@ -43,8 +43,10 @@ module gravity
    contains
 
    subroutine init_grav
+      use func, only : namelist_errh
       use mpisetup
       implicit none
+      integer :: errh
       character(LEN=100) :: par_file, tmp_log_file
 
       namelist /GRAVITY/ g_z,g_y, dg_dz, r_gc, &
@@ -75,7 +77,8 @@ module gravity
 
       if(proc .eq. 0) then
          open(1,file=par_file)
-            read(unit=1,nml=GRAVITY)
+            read(unit=1,nml=GRAVITY,iostat=errh)
+            call namelist_errh(errh,'GRAVITY')
          close(1)
          open(3, file=tmp_log_file, position='append')
             write(unit=3,nml=GRAVITY)

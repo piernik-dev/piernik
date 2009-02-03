@@ -30,6 +30,7 @@
 module resistivity
 
       use constants, only: pi, small, big
+      use func, only : namelist_errh
       use mpisetup
       use fluidindex, only : ibx,iby,ibz,icx,icy,icz
       use initionized, only : idni,imxi,imyi,imzi
@@ -67,6 +68,7 @@ contains
          use grid, only : nx,ny,nz
          implicit none
          character(LEN=100) :: par_file, tmp_log_file
+         integer :: errh
 
          namelist /RESISTIVITY/ cfl_resist, eta_0, eta_1, eta_scale, j_crit, deint_max
          
@@ -80,9 +82,10 @@ contains
          j_crit      =  1.0e6
          deint_max   = 0.01
        
-         if(proc .eq. 0) then
+         if(proc == 0) then
             open(1,file=par_file)
-               read(unit=1,nml=RESISTIVITY)
+               read(unit=1,nml=RESISTIVITY,iostat=errh)
+               call namelist_errh(errh,'RESISTIVITY')
             close(1)
             open(3, file=tmp_log_file, position='append')
                write(unit=3,nml=RESISTIVITY)

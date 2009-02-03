@@ -45,11 +45,11 @@ module initionized
 
 
   subroutine init_ionized
-
+    use func, only : namelist_errh
     use mpisetup
 
     implicit none
-          
+    integer :: errh
     character par_file*(100), tmp_log_file*(100)
 
     namelist /FLUID_IONIZED/ gamma_ion, cs_iso_ion, cs_ion
@@ -61,23 +61,13 @@ module initionized
          par_file = trim(cwd)//'/problem.par'
          tmp_log_file = trim(cwd)//'/tmp.log'
          open(1,file=par_file)
-            read(unit=1,nml=FLUID_IONIZED,end=1234,err=1234)
+            read(unit=1,nml=FLUID_IONIZED,iostat=errh)
+            call namelist_errh(errh,'FLUID_IONIZED')
          close(1)
-
-	 goto 4567	 
- 1234    write(*,*) 'Check namelist in "problem.par" :'
-  	 write(*,*) ''
-         write(*,nml=FLUID_IONIZED) 
-	 write(*,*) ''
-	 stop	 
- 4567    continue
-	 	 
          open(3, file='tmp.log', position='append')
            write(3,nml=FLUID_IONIZED)
            write(3,*)
          close(3)
-	 
-	 
       endif 
  
  

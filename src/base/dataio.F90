@@ -100,6 +100,7 @@ module dataio
 !---------------------------------------------------------------------
 !
   subroutine init_dataio
+    use func, only : namelist_errh
     use initproblem, only : problem_name,run_id
     use version, only : nenv,env
     use start, only : nstep, t, nstep_start
@@ -108,6 +109,7 @@ module dataio
     use magboundaries, only : all_mag_boundaries
 #endif /* MAGNETIC */
     implicit none
+    integer :: errh
     integer(kind=1) :: getpid
     integer(kind=1) :: hostnm
     integer(kind=1) :: system
@@ -167,10 +169,12 @@ module dataio
       par_file = trim(cwd)//'/problem.par'
       tmp_log_file = trim(cwd)//'/tmp.log'
       open(1,file=par_file)
-         read(unit=1,nml=OUTPUT_CONTROL)
+         read(unit=1,nml=OUTPUT_CONTROL,iostat=errh)
+         call namelist_errh(errh,'OUTPUT_CONTROL')
       close(1)
       open(1,file=par_file)
-         read(unit=1,nml=RESTART_CONTROL)
+         read(unit=1,nml=RESTART_CONTROL,iostat=errh)
+         call namelist_errh(errh,'RESTART_CONTROL')
       close(1)
       open(3, file=tmp_log_file, position='append')
          write(unit=3,nml=OUTPUT_CONTROL)

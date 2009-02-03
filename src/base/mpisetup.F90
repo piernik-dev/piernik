@@ -74,9 +74,9 @@ module mpisetup
 
 !-----------------------------------------------------------------------------
       subroutine mpistart
-
+         use func, only : namelist_errh
          implicit none
-         integer :: iproc
+         integer :: iproc, errh
 
          character(LEN=80) :: cwd_proc,  cwd_all (0:4096)
          character(LEN=8)  :: host_proc, host_all(0:4096)
@@ -135,8 +135,10 @@ module mpisetup
 
          if(proc == 0) then
             open(1,file=par_file)
-               read(unit=1,nml=MPI_BLOCKS)
-               read(unit=1,nml=BOUNDARIES)
+               read(unit=1,nml=MPI_BLOCKS,iostat=errh)
+               call namelist_errh(errh,'MPI_BLOCKS')
+               read(unit=1,nml=BOUNDARIES,iostat=errh)
+               call namelist_errh(errh,'BOUNDARIES')
             close(1)
          endif
 

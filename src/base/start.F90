@@ -42,9 +42,10 @@ module start
 !-------------------------------------------------------------------------------
    contains
 
-      subroutine read_params
-
+      subroutine read_params  
+         use func, only : namelist_errh
          implicit none
+         integer :: errh
          character(len=100) :: par_file, tmp_log_file
          namelist /END_CONTROL/ nend, tend
 
@@ -68,8 +69,10 @@ module start
          if(proc == 0) then
 
             open(1,file=par_file)
-               read(unit=1,nml=END_CONTROL)
-               read(unit=1,nml=NUMERICAL_SETUP)
+               read(unit=1,nml=END_CONTROL,iostat=errh)
+               call namelist_errh(errh,'END_CONTROL')
+               read(unit=1,nml=NUMERICAL_SETUP,iostat=errh)
+               call namelist_errh(errh,'NUMERICAL_SETUP')
             close(1)
 
             open(3, file=tmp_log_file, position='append')
