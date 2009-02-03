@@ -1,7 +1,7 @@
 PRO SHOW
 
 data_dir = '../runs/mri/'
-prefix = 'mri_Z3_'
+prefix = 'mri_Z4_'
 
 png_dir = data_dir+'/frames'
 
@@ -21,7 +21,7 @@ png_output	= 'y'
 
 display_frames	= 'y'		; 'y' or 'n'
 
-win_vert_size 	= 400		; Vertical size (in pixels) 'xz' and 'yz' slices
+win_vert_size 	= 200		; Vertical size (in pixels) 'xz' and 'yz' slices
             				; The other sizes are scaled according to the
 				            ; physical sizes of the computational box
 n_vect_x     	= 16 		; The numbers of points for vector fields
