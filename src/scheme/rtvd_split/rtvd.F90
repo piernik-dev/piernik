@@ -105,6 +105,9 @@ module rtvd ! split orig
       use initcosmicrays,  only : iecr
       use arrays,          only : divvel 
 #endif /* COSM_RAYS */
+#ifdef ANY_INTERACTIONS
+      use interactions,    only : fluid_interactions
+#endif /* ANY_INTERACTIONS */
 
       implicit none
     
@@ -239,6 +242,12 @@ module rtvd ! split orig
          ur1= ur1 + cn(istep)*durs
          ul1= ul1 + cn(istep)*duls
 #endif /* defined GRAV || defined SHEAR */
+#ifdef ANY_INTERACTIONS
+         call fluid_interactions(sweep,i1,i2, n, durs, ur0)
+         ur1 = ur1 + cn(istep)*durs*dt
+         call fluid_interactions(sweep,i1,i2, n, duls, ul0)
+         ul1 = ul1 + cn(istep)*duls*dt
+#endif /* ANY_INTERACTIONS */
 
          u1 = ul1 + ur1
          u1(iarr_all_dn,:) = max(u1(iarr_all_dn,:), smalld)
