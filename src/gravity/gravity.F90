@@ -43,7 +43,7 @@ module gravity
    contains
 
    subroutine init_grav
-      use func, only : namelist_errh
+      use errh, only : namelist_errh
       use mpisetup
       implicit none
       integer :: errh

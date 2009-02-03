@@ -30,7 +30,7 @@
 module resistivity
 
       use constants, only: pi, small, big
-      use func, only : namelist_errh
+      use errh, only : namelist_errh
       use mpisetup
       use fluidindex, only : ibx,iby,ibz,icx,icy,icz
       use initionized, only : idni,imxi,imyi,imzi

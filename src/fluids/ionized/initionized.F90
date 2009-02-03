@@ -45,7 +45,7 @@ module initionized
 
 
   subroutine init_ionized
-    use func, only : namelist_errh
+    use errh, only : namelist_errh
     use mpisetup
 
     implicit none

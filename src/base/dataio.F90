@@ -100,7 +100,7 @@ module dataio
 !---------------------------------------------------------------------
 !
   subroutine init_dataio
-    use func, only : namelist_errh
+    use errh, only : namelist_errh
     use initproblem, only : problem_name,run_id
     use version, only : nenv,env
     use start, only : nstep, t, nstep_start

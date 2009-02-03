@@ -43,7 +43,7 @@ module start
    contains
 
       subroutine read_params  
-         use func, only : namelist_errh
+         use errh, only : namelist_errh
          implicit none
          integer :: errh
          character(len=100) :: par_file, tmp_log_file

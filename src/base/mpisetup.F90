@@ -74,7 +74,7 @@ module mpisetup
 
 !-----------------------------------------------------------------------------
       subroutine mpistart
-         use func, only : namelist_errh
+         use errh, only : namelist_errh
          implicit none
          integer :: iproc, errh
 

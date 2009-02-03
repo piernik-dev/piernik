@@ -47,7 +47,7 @@ module initneutral
   subroutine init_neutral
 
     use mpisetup
-    use func, only : namelist_errh
+    use errh, only : namelist_errh
 
     implicit none
     integer :: errh

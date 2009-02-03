@@ -53,7 +53,7 @@ module grid
 contains
 
    subroutine init_grid
-      use func, only : namelist_errh
+      use errh, only : namelist_errh
       use mpisetup
       implicit none
       integer :: errh
