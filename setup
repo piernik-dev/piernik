@@ -209,7 +209,7 @@ if( grep { /SNE_DISTR/} @d) {
    push(@addons, "../src/supernovae/sndistr.F90");
 }
 
-push(@addons, "../src/scheme/rtvd_split/mhdstep.F90");
+push(@addons, "../src/scheme/rtvd_split/fluidupdate.F90");
 push(@addons, "../src/scheme/rtvd_split/sweeps.F90");
 push(@addons, "../src/scheme/rtvd_split/rtvd.F90");
 
