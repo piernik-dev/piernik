@@ -6,10 +6,11 @@ module initproblem
 ! Written by: M. Hanasz, February 2006
 
   use mpisetup 
+  use start, only : alpha,c_si,csim2,gamaa
   
   implicit none
   real :: d0, nbx0,nby0,nbz0, a_vp, n_x
-  real :: x0,y0,z0,r0,alpha, init_mass
+  real :: x0,y0,z0,r0, init_mass
   character(len=32) :: problem_name
   character(len=3)  :: run_id
 
@@ -115,14 +116,14 @@ contains
     real :: b0, vz
     real :: mass
 
-
-    call read_problem_par
-
+    c_si = cs_iso_ion
+    csim2 = c_si**2*(1.0+alpha)
+    gamma(1) = gamma_ion
 !   Secondary parameters
 
     b0 = sqrt(2.*alpha*d0*cs_iso_ion**2) 
     
-    call hydrostatic_zeq(1, 1, d0, cs_iso_ion, alpha, dprof)    
+    call hydrostatic_zeq(1, 1, d0, dprof)    
 
     do k = 1,nz
       do j = 1,ny

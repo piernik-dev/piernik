@@ -4,13 +4,13 @@ module initproblem
   
 ! Initial condition for Keplerian disk
 ! Written by: M. Hanasz, March 2006
-
-  real :: d0, v_zab, alpha
+  use start, only : c_si,gamma,alpha,csim2
+  real :: d0, v_zab
   character(len=32) :: problem_name,mag_field_orient
   character(len=3)  :: run_id
 
   namelist /PROBLEM_CONTROL/  problem_name, run_id, alpha,&
-                              d0, v_zab, mag_field_orient    
+                              d0, v_zab, mag_field_orient, c_si
 
 contains
 
@@ -18,9 +18,9 @@ contains
 
   subroutine read_problem_par
     use mpisetup
-    use func, only : namelist_errh
+    use errh, only : namelist_errh
     implicit none
-    integer :: errh
+    integer :: ierrh
 
     problem_name = 'kepler'
     run_id  = 'flt'
@@ -30,8 +30,8 @@ contains
     
     if(proc == 0) then
       open(1,file='problem.par')
-        read(unit=1,nml=PROBLEM_CONTROL,iostat=errh)
-        call namelist_errh(errh,'PROBLEM_CONTROL')
+        read(unit=1,nml=PROBLEM_CONTROL,iostat=ierrh)
+        call namelist_errh(ierrh,'PROBLEM_CONTROL')
         write(*,nml=PROBLEM_CONTROL)
       close(1)
       open(3, file='tmp.log', position='append')
@@ -48,6 +48,7 @@ contains
       rbuff(1) = d0
       rbuff(2) = v_zab
       rbuff(3) = alpha
+      rbuff(4) = c_si
     
       call MPI_BCAST(cbuff, 32*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
       call MPI_BCAST(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
@@ -66,7 +67,7 @@ contains
       d0           = rbuff(1)  
       v_zab        = rbuff(2)
       alpha        = rbuff(3)
- 
+      c_si         = rbuff(4)
     endif
 
   end subroutine read_problem_par
@@ -87,13 +88,13 @@ contains
     real :: xi,yj,zk, rc, rs, vx, vy, vz, h2, dgdz, csim2, b0, sqr_gm, v_phi
     real :: vzab
     
-    call read_problem_par
-
+    gamma(1) = gamma_ion
+    csim2 = c_si**2 * (1.0 + alpha)
 !   Secondary parameters
 
     sqr_gm = dsqrt(newtong*ptmass)
 
-    b0 = dsqrt(2.*alpha*cs_ion**2)  ! multiplying by d0 is made below <it's in u(1,i,j,k)> )
+    b0 = dsqrt(2.*alpha*c_si**2)  ! multiplying by d0 is made below <it's in u(1,i,j,k)> )
     
     do j = 1,ny
       yj = y(j)
@@ -105,7 +106,7 @@ contains
           zk = z(k)
 
           if (rc .ge. r_smooth .and. rc .le. r_grav) then
-            vzab = v_zab*cs_ion*dsin(pi*(rc-r_smooth)/(r_grav-r_smooth))*dsin(2.*pi*zk/Lz)
+            vzab = v_zab*c_si*dsin(pi*(rc-r_smooth)/(r_grav-r_smooth))*dsin(2.*pi*zk/Lz)
           else
             vzab = 0.0
           endif
@@ -122,7 +123,7 @@ contains
           u(imxi,i,j,k) = vx*u(idni,i,j,k)
           u(imyi,i,j,k) = vy*u(idni,i,j,k)
           u(imzi,i,j,k) = vz*u(idni,i,j,k)      
-          u(ieni,i,j,k) = cs_ion**2/(gamma_ion-1.0)*u(idni,i,j,k)
+          u(ieni,i,j,k) = c_si**2/(gamma_ion-1.0)*u(idni,i,j,k)
           u(ieni,i,j,k) = max(u(ieni,i,j,k), smallei)
           
           u(ieni,i,j,k) = u(ieni,i,j,k) +0.5*(vx**2+vy**2+vz**2)*u(idni,i,j,k)

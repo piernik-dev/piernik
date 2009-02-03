@@ -33,8 +33,9 @@ module initproblem
 ! Written by: M. Hanasz, March 2006
 
   use mpisetup
+  use start, only : gamma,c_si,alpha,csim2
 
-  real :: d0, r_max, dout, alpha
+  real :: d0, r_max, dout 
   character(len=32) :: problem_name, mag_field_orient
   character(len=3)  :: run_id
 
@@ -120,6 +121,10 @@ contains
     real :: xi,yj,zk, rc, rs, vx, vy, vz, h2, dgdz, csim2, b0, sqr_gm, v_phi
     
 !   Secondary parameters
+
+    c_si = cs_ion
+    csim2 = c_si**2*(1.0+alpha)
+    gamma(1) = gamma_ion
 
     sqr_gm = sqrt(newtong*ptmass)
 

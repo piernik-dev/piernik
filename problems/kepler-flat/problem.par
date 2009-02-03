@@ -1,6 +1,6 @@
  $DOMAIN_SIZES
-    nxd = 200
-    nyd = 200
+    nxd = 100
+    nyd = 100
     nzd = 1
  /
 
@@ -8,9 +8,6 @@
     pxsize = 1
     pysize = 1
     pzsize = 1
- /
-
- $START_CONTROL
  /
 
  $RESTART_CONTROL
@@ -37,7 +34,6 @@
     vars(6)  = 'magx'
     vars(7)  = 'magy'
     vars(8)  = 'magz'
-    vars(9)  = 'gpot'
     domain   = 'phys_domain'
  /
 
@@ -60,7 +56,7 @@
  /
 
  $FLUID_IONIZED
-    cs_ion  = 0.2
+    gamma_ion  = 1.66667
  /
 
  $NUMERICAL_SETUP
@@ -89,4 +85,5 @@
     v_zab            = 0.1
     mag_field_orient = 'vertical'
     alpha = 3.0
+    c_si  = 0.2
  /
