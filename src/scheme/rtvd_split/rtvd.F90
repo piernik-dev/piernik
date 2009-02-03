@@ -82,7 +82,7 @@ module rtvd ! split orig
       use fluidindex,      only : i_ion
 #endif /* IONIZED */  
     
-    
+      use constants,       only : small    
       use start,           only : smalld, integration_order  !!! ,cn
       use fluxes,          only : flimiter,grav_limit,all_fluxes
       use fluidindex,      only : nvar,nmag,nfluid
@@ -225,11 +225,12 @@ module rtvd ! split orig
          if(istep == 2) then
             daccrp(1:n-1) = 0.5*(accr(1:n-1) - accr(2:n))    ;  daccrp(n) = daccrp(n-1)
             daccrm(2:n) = daccrp(1:n-1)                      ;  daccrm(1) = daccrm(2)
-            call flimiter(accr,daccrp,daccrm,1,n)
+            accr = accr + 2.0*daccrp*daccrm*(daccrm+daccrp+small)
 
             dacclp(1:n-1) = 0.5*(accl(2:n) - accl(1:n-1))    ;  dacclp(n) = dacclp(n-1)
             dacclm(2:n)   = dacclp(1:n-1)                    ;  dacclm(1) = dacclm(2)
-            call flimiter(accl,dacclp,dacclm,1,n)
+            accl = accl + 2.0*dacclp*dacclm*(dacclm+dacclp+small)
+
          endif
 
          do i=1, size(iarr_all_mx)
