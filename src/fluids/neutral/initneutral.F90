@@ -50,7 +50,7 @@ module initneutral
     use errh, only : namelist_errh
 
     implicit none
-    integer :: errh
+    integer :: ierrh
     character par_file*(100), tmp_log_file*(100)
 
     namelist /FLUID_NEUTRAL/ gamma_neu, cs_iso_neu
@@ -62,8 +62,8 @@ module initneutral
          par_file = trim(cwd)//'/problem.par'
          tmp_log_file = trim(cwd)//'/tmp.log'
          open(1,file=par_file)
-            read(unit=1,nml=FLUID_NEUTRAL,iostat=errh)
-            call namelist_errh(errh,'FLUID_NEUTRAL')
+            read(unit=1,nml=FLUID_NEUTRAL,iostat=ierrh)
+            call namelist_errh(ierrh,'FLUID_NEUTRAL')
          close(1)
          open(3, file='tmp.log', position='append')
            write(3,nml=FLUID_NEUTRAL)

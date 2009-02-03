@@ -68,7 +68,7 @@ contains
          use grid, only : nx,ny,nz
          implicit none
          character(LEN=100) :: par_file, tmp_log_file
-         integer :: errh
+         integer :: ierrh
 
          namelist /RESISTIVITY/ cfl_resist, eta_0, eta_1, eta_scale, j_crit, deint_max
          
@@ -84,8 +84,8 @@ contains
        
          if(proc == 0) then
             open(1,file=par_file)
-               read(unit=1,nml=RESISTIVITY,iostat=errh)
-               call namelist_errh(errh,'RESISTIVITY')
+               read(unit=1,nml=RESISTIVITY,iostat=ierrh)
+               call namelist_errh(ierrh,'RESISTIVITY')
             close(1)
             open(3, file=tmp_log_file, position='append')
                write(unit=3,nml=RESISTIVITY)

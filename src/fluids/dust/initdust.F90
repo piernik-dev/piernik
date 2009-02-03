@@ -43,9 +43,9 @@ module initdust
   subroutine init_dust
 
     use mpisetup
-
+    use errh, only : namelist_errh
     implicit none
-    integer :: errh      
+    integer :: ierrh      
     character(LEN=100) :: par_file, tmp_log_file
 
     namelist /FLUID_DUST/ dragc_gas_dust
@@ -56,8 +56,8 @@ module initdust
          par_file = trim(cwd)//'/problem.par'
          tmp_log_file = trim(cwd)//'/tmp.log'
          open(1,file=par_file)
-            read(unit=1,nml=FLUID_DUST,iostat=errh)
-            call namelist_errh(errh,'FLUID_DUST')
+            read(unit=1,nml=FLUID_DUST,iostat=ierrh)
+            call namelist_errh(ierrh,'FLUID_DUST')
          close(1)
          open(3, file='tmp.log', position='append')
            write(3,nml=FLUID_DUST)
