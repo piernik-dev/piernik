@@ -238,7 +238,7 @@ contains
             xr(i) = x(i)  + 0.5*dx
          enddo
       else
-         x  =  0.0
+         x  =  0.5*(xminb + xmaxb)
          xl = -0.5*dx
          xr =  0.5*dx
       endif
@@ -252,7 +252,7 @@ contains
             yr(j) = y(j)  + 0.5*dy
          enddo
       else
-         y  =  0.0
+         y  =  0.5*(yminb + ymaxb)
          yl = -0.5*dy
          yr =  0.5*dy
       endif
@@ -266,7 +266,7 @@ contains
             zr(k) = z(k)  + 0.5*dz
          enddo
       else 
-         z  =  0.0  
+         z  =  0.5*(yminb + ymaxb)  
          zl = -0.5*dz
          zr =  0.5*dz
       endif

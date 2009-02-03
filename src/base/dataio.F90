@@ -437,10 +437,6 @@ module dataio
       use fluidindex,  only : ibx,iby,ibz
       use fluidindex,  only : nvar, iarr_all_dn,iarr_all_mx,iarr_all_my,iarr_all_mz
 
-#ifndef STANDARD
-      use constants, only : Gs
-#endif /* STANDARD */
-
 #ifndef ISO
       use fluidindex, only : iarr_all_en
 #endif /* ISO */
@@ -1211,10 +1207,6 @@ module dataio
 #ifdef COSM_RAYS
     use initcosmicrays, only : iecr
 #endif /* COSM_RAYS */
-
-#ifndef STANDARD
-    use constants, only : Gs
-#endif /* STANDARD */
 
 #ifdef GRAV
     use arrays, only : gp
