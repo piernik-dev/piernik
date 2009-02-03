@@ -18,11 +18,11 @@
 !    along with PIERNIK.  If not, see <http://www.gnu.org/licenses/>.
 !
 !    Initial implemetation of PIERNIK code was based on TVD split MHD code by
-!    Ue-Li Pen 
+!    Ue-Li Pen
 !        see: Pen, Arras & Wong (2003) for algorithm and
-!             http://www.cita.utoronto.ca/~pen/MHD 
-!             for original source code "mhd.f90" 
-!   
+!             http://www.cita.utoronto.ca/~pen/MHD
+!             for original source code "mhd.f90"
+!
 !    For full list of developers see $PIERNIK_HOME/license/pdt.txt
 !
 #include "piernik.def"
@@ -34,10 +34,10 @@ program piernik
   use dataio, only : write_data, user_msg_handler
   use mhdstep, only  : fluid_update
   use mpisetup
-    
+
   implicit none
   logical :: end_sim
- 
+
   call init_piernik
 
   call MPI_BARRIER(comm3d,ierr)
@@ -93,23 +93,26 @@ contains
 #ifdef GRAV
       use gravity, only : init_grav,grav_pot_3d
 #endif /* GRAV */
+#ifdef ANY_INTERACTIONS
+      use interactions, only : init_interactions
+#endif /* ANY_INTERACTIONS */
 #ifdef SNE_DISTR
       use sndistr, only  : init_sndistr
 #endif /* SNE_DISTR */
       implicit none
       call getarg(1, cwd)
       if (LEN_TRIM(cwd) == 0) cwd = '.'
- 
+
       call mpistart
 
       call read_params
- 
+
       call init_grid
-  
+
       call init_fluids
-  
+
       call read_problem_par
-  
+
       call fluid_index
 
       call arrays_allocate(nx,ny,nz,nvar)
@@ -130,6 +133,10 @@ contains
       call init_grav
       call grav_pot_3d
 #endif /* GRAV */
+
+#ifdef ANY_INTERACTIONS
+      call init_interactions
+#endif /* ANY_INTERACTIONS */
 
 #ifdef SNE_DISTR
       call init_sndistr

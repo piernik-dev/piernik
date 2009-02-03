@@ -18,11 +18,11 @@
 !    along with PIERNIK.  If not, see <http://www.gnu.org/licenses/>.
 !
 !    Initial implemetation of PIERNIK code was based on TVD split MHD code by
-!    Ue-Li Pen 
+!    Ue-Li Pen
 !        see: Pen, Arras & Wong (2003) for algorithm and
-!             http://www.cita.utoronto.ca/~pen/MHD 
-!             for original source code "mhd.f90" 
-!   
+!             http://www.cita.utoronto.ca/~pen/MHD
+!             for original source code "mhd.f90"
+!
 !    For full list of developers see $PIERNIK_HOME/license/pdt.txt
 !
 #include "piernik.def"
@@ -45,7 +45,7 @@ module timestep
       subroutine time_step
          use start, only : dt, tend, t
          use constants, only : small,big
-    
+
 #ifdef IONIZED
          use timestepionized, only : timestep_ion
          use timestepionized, only : dt_ion,c_ion
@@ -65,14 +65,19 @@ module timestep
          use timestepcosmicrays, only : timestep_crs
          use timestepcosmicrays, only : dt_crs
 #endif /* COSM_RAYS */
-    
-    
+
 #ifdef SIMPLE_COOL
          use start, only : tauc
 #endif /* SIMPLE_COOL */
+
 #ifdef RESISTIVE
          use resistivity, only : dt_resist, timestep_resist
 #endif /* RESISTIVE */
+
+#ifdef ANY_INTERACTIONS
+         use timestepinteractions, only : timestep_interactions
+         use timestepinteractions, only : dt_interact
+#endif /* ANY_INTERACTIONS */
 
          implicit none
 ! Timestep computation
@@ -107,6 +112,11 @@ module timestep
          call timestep_resist
          dt = min(dt,dt_resist)
 #endif /* RESISTIVE */
+
+#ifdef ANY_INTERACTIONS
+         call timestep_interactions
+         dt = min(dt,dt_interact)
+#endif /* ANY_INTERACTIONS */
 
 #ifdef SIMPLE_COOL
          dt = min(dt,0.01 * tauc)

@@ -18,11 +18,11 @@
 !    along with PIERNIK.  If not, see <http://www.gnu.org/licenses/>.
 !
 !    Initial implemetation of PIERNIK code was based on TVD split MHD code by
-!    Ue-Li Pen 
+!    Ue-Li Pen
 !        see: Pen, Arras & Wong (2003) for algorithm and
-!             http://www.cita.utoronto.ca/~pen/MHD 
-!             for original source code "mhd.f90" 
-!   
+!             http://www.cita.utoronto.ca/~pen/MHD
+!             for original source code "mhd.f90"
+!
 !    For full list of developers see $PIERNIK_HOME/license/pdt.txt
 !
 #include "piernik.def"
@@ -41,7 +41,7 @@ module arrays
 
    real(kind=4), allocatable, dimension(:,:,:)  :: outwa, outwb, outwc
 
-#ifdef COSM_RAYS 
+#ifdef COSM_RAYS
    real, allocatable, dimension(:,:,:) :: divvel
 #endif /* COSM_RAYS  */
 
@@ -51,7 +51,7 @@ module arrays
    real,    allocatable, dimension(:,:,:,:) :: bndxrar, bndyrar
 
    contains
-   
+
    subroutine arrays_allocate(nx,ny,nz,nvar)
       implicit none
       integer, intent(in) :: nx,ny,nz,nvar
@@ -68,7 +68,7 @@ module arrays
       allocate(wa(nx,ny,nz),wcu(nx,ny,nz))
       allocate(outwa(nx,ny,nz),outwb(nx,ny,nz),outwc(nx,ny,nz))
 
-#ifdef COSM_RAYS 
+#ifdef COSM_RAYS
       allocate(divvel(nx,ny,nz))
 #endif /* COSM_RAYS  */
 
@@ -85,9 +85,9 @@ module arrays
       deallocate(dprof,eprof)
 #endif /* GRAV */
 
-#if defined COSM_RAYS || defined PRESS_GRAD_EXCH
+#ifdef COSM_RAYS
       deallocate(divvel)
-#endif /* COSM_RAYS || PRESS_GRAD_EXCH */
+#endif /* COSM_RAYS */
 
       if(allocated(bndxrar)) deallocate(bndxrar)
       if(allocated(bndyrar)) deallocate(bndyrar)
