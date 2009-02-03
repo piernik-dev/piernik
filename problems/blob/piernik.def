@@ -1,16 +1,8 @@
 
-#undef DEBUG
-#undef VERBOSE
-
-/* choosing unitsystem */
-#undef PSM		/*pc,Msun,Myr unitsystem*/
-#undef PGM		/*pc,G=1,Myr unitsystem*/
-#undef DMY		/*cm^16,Msun,year unitsystem*/
-#undef CGS		/*cm,gram,sek unitsystem*/
-#undef SI		/*metr,kg,sek unitsystem*/
-
 /* adiabatic or isothermal */
 #undef ISO
+
+#define NEUTRAL
 
 /* choosing freezing speed */
 #define LOCAL_FR_SPEED
@@ -31,15 +23,6 @@
 #undef GRAV_NULL
 #undef SELF_GRAV
 
-/* structure features including */
-#undef GALAXY
-#undef SNE_DISTR
-#undef MASS_COMPENS
-#undef SN_SRC
-
 /* numerical solutions and limitations */
 #undef SHEAR
-#undef VZ_LIMITS
 
-/* problem specific directives */
-#define BLOB

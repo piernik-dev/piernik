@@ -18,19 +18,17 @@
 #undef COSM_RAYS
 
 /* choosing freezing speed */
-#define LOCAL_FR_SPEED
-#define  GLOBAL_FR_SPEED
+#undef  LOCAL_FR_SPEED
+#define GLOBAL_FR_SPEED
 
 /* choosing flux limiter */
 #define VANLEER
-#undef MONCEN
-#undef MINMOD
-#undef SUPERBEE
+#undef  MONCEN
+#undef  MINMOD
+#undef  SUPERBEE
 
 /* physics including */
 #undef RESIST
-#undef SIMPLE_COOL
-#undef ANY_SOURCES
 
 /* gravity type choosing */
 #undef GRAV
@@ -40,4 +38,3 @@
 /* numerical solutions and limitations */
 #define SHEAR
 
-/* problem specific directives */

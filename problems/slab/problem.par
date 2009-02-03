@@ -91,6 +91,6 @@
  /
 
  $SHEARING
-   qshear = 1.5
+   qshear = 'dad'
    omega  = 0.05
  /
