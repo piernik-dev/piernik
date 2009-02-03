@@ -30,9 +30,10 @@
 module gravity
 
    use constants
+   use start, only : csim2
 
    character(LEN=9) :: gp_status
-   real    :: g_z, g_y, dg_dz, r_gc, csim2
+   real    :: g_z, g_y, dg_dz, r_gc
    real    :: ptmass, ptm_x, ptm_y, ptm_z, r_smooth
    integer :: nsub
    real    :: h_grav,  r_grav
