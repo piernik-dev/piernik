@@ -85,11 +85,12 @@ contains
     implicit none
  
     integer :: i, j, k, kmid
-    real :: xi,yj,zk, rc, rs, vx, vy, vz, h2, dgdz, csim2, b0, sqr_gm, v_phi
+    real :: xi,yj,zk, rc, rs, vx, vy, vz, h2, dgdz, b0, sqr_gm, v_phi
     real :: vzab
     
     gamma(1) = gamma_ion
     csim2 = c_si**2 * (1.0 + alpha)
+    write(*,*) gamma, csim2, c_si, alpha
 !   Secondary parameters
 
     sqr_gm = dsqrt(newtong*ptmass)
