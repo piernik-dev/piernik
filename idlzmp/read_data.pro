@@ -50,9 +50,9 @@ FOR ivar=0, nvar-1 DO BEGIN
     max_er = MAX(er)
   ENDIF
   IF(var EQ 'encr') THEN BEGIN
-    ec = data
-    min_ec = MIN(ec)
-    max_ec = MAX(ec)
+    ee = data
+    min_ee = MIN(ee)
+    max_ee = MAX(ee)
   ENDIF
   
   IF(var EQ 'curz') THEN BEGIN
