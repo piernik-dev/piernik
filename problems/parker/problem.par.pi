@@ -10,23 +10,21 @@
     pzsize = 1    
  /  
 
- $START_CONTROL
- /
-
  $RESTART_CONTROL
     nrestart = 0 
     new_id   = ''
  /
 
  $END_CONTROL
-    tend   = 10.0
+    tend   = 100.0
     nend   = 10000 
  /
 
  $OUTPUT_CONTROL
     dt_hdf  = 1.0
-    dt_res  = 10.0
-    dt_log  = 1.0
+    dt_res  = 0.0
+    dt_log  = 1.0e-6
+    dt_tsl  = 1.0e-6
     vars(1) = 'dens'
     vars(2) = 'velx'
     vars(3) = 'vely'
@@ -36,8 +34,12 @@
     vars(7) = 'magy'
     vars(8) = 'magz'
     domain  = 'full_domain'
-   
  / 
+
+ $FLUID_IONIZED
+    gamma_ion  = 1.666666666
+    cs_iso_ion = 7.000000000
+ /
 
  $BOUNDARIES
     bnd_xl = 'per'  
@@ -57,11 +59,6 @@
     zmax   = 600.0
  /
 
- $EQUATION_OF_STATE
-    c_si   =  7.
-    alpha  = 1.0 
- /  
-
  $NUMERICAL_SETUP
     cfl    = 0.9
     smalld = 1.e-5
@@ -69,17 +66,12 @@
  /
  
  $GRAVITY
-    r_gc   = 8.5
+    r_gc   = 8500
     nsub   = 10
     tune_zeq     = 1.0025
     tune_zeq_bnd = 0.9
-    h_gravity_profile = 300.
-    n_gravity_profile = 2
  /
  
- $THERMAL
- /
-
  $PROBLEM_CONTROL
     problem_name ='parker_instability'
     run_id =  'tst'
@@ -88,4 +80,5 @@
     nby0    = 1.0
     nbz0    =  0.
     a_vp    = 1.0
+    alpha  = 1.0 
  /

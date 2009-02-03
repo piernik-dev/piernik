@@ -64,7 +64,7 @@
 
  $NUMERICAL_SETUP
     cfl    = 0.9
-    smalld = 1.e-4
+    smalld = 1.e-5
     smallei= 1.e-4
     integration_order  = 2
   /
@@ -81,12 +81,11 @@
 
  $PROBLEM_CONTROL
     problem_name ='parker_instability'
-    run_id =  'tst'
+    run_id =  'ts0'
     d0     =  1.
     nbx0    =  0.
     nby0    = 1.0
     nbz0    =  0.
     a_vp    = 0.0
-    c_si   =  7.
     alpha  = 0.0 
  /

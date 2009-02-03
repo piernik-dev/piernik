@@ -7,8 +7,9 @@ module initproblem
 
   use mpisetup 
   
+  implicit none
   real :: d0, nbx0,nby0,nbz0, a_vp, n_x
-  real :: x0,y0,z0,r0,alpha, init_mass, c_si
+  real :: x0,y0,z0,r0,alpha, init_mass
   character(len=32) :: problem_name
   character(len=3)  :: run_id
 
@@ -16,7 +17,8 @@ module initproblem
                               d0, &
                               nbx0,nby0,nbz0, &
                               a_vp, n_x, &
-                              x0,y0,z0, r0, alpha, c_si
+                              x0,y0,z0, r0, alpha
+			      
 contains
 
 !-----------------------------------------------------------------------------
@@ -37,7 +39,6 @@ contains
       y0      = 0.0 
       z0      = 0.0 
       alpha   = 0.0
-      c_si    = 0.0
     
     if(proc .eq. 0) then    
       open(1,file='problem.par')
@@ -65,7 +66,6 @@ contains
       rbuff(9) = y0
       rbuff(10)= z0
       rbuff(11)= alpha
-      rbuff(12)= c_si
 
       call MPI_BCAST(cbuff, 32*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
       call MPI_BCAST(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
@@ -90,7 +90,6 @@ contains
       y0           = rbuff(9)
       z0           = rbuff(10)
       alpha        = rbuff(11)
-      c_si         = rbuff(12)
 
     endif
 
@@ -105,7 +104,7 @@ contains
     use start, only : smalld, smallei
     use grid, only : nx,ny,nz,dvol,is,ie,js,je,ks,ke,x,y,z,Lx,Ly,Lz
     use fluidindex, only : ibx,iby,ibz
-    use initionized, only : idni,imxi,imyi,imzi
+    use initionized, only : idni,imxi,imyi,imzi,cs_iso_ion
     use hydrostatic, only : hydrostatic_zeq
 #ifndef ISO
     use initionized, only : ieni,gamma_ion
@@ -122,9 +121,9 @@ contains
 
 !   Secondary parameters
 
-    b0 = sqrt(2.*alpha*d0*c_si**2) 
+    b0 = sqrt(2.*alpha*d0*cs_iso_ion**2) 
     
-    call hydrostatic_zeq(1, 1, d0, c_si, alpha, dprof)    
+    call hydrostatic_zeq(1, 1, d0, cs_iso_ion, alpha, dprof)    
 
     do k = 1,nz
       do j = 1,ny
@@ -148,11 +147,11 @@ contains
           u(imzi,i,j,k)   = u(imzi,i,j,k) + u(idni,i,j,k)*vz
 
 #ifndef ISO
-          u(ieni,i,j,k)   = c_si**2/(gamma_ion-1.0) * u(idni,i,j,k) &
+          u(ieni,i,j,k)   = cs_iso_ion**2/(gamma_ion-1.0) * u(idni,i,j,k) &
                             +0.5*sum(u(imxi:imzi,i,j,k)**2,1)
 #endif /* ISO */
 #ifdef COSM_RAYS
-          u(iecr,i,j,k)   =  beta_cr*c_si**2 * u(idni,i,j,k)/(gamma_cr-1.0)
+          u(iecr,i,j,k)   =  beta_cr*cs_iso_ion**2 * u(idni,i,j,k)/(gamma_cr-1.0)
 #endif /* COSM_RAYS */
         enddo
       enddo
