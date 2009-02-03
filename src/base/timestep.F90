@@ -74,10 +74,10 @@ module timestep
          use resistivity, only : dt_resist, timestep_resist
 #endif /* RESISTIVE */
 
-#ifdef ANY_INTERACTIONS
+#ifdef FLUID_INTERACTIONS
          use timestepinteractions, only : timestep_interactions
          use timestepinteractions, only : dt_interact
-#endif /* ANY_INTERACTIONS */
+#endif /* FLUID_INTERACTIONS */
 
          implicit none
 ! Timestep computation
@@ -113,10 +113,10 @@ module timestep
          dt = min(dt,dt_resist)
 #endif /* RESISTIVE */
 
-#ifdef ANY_INTERACTIONS
+#ifdef FLUID_INTERACTIONS
          call timestep_interactions
          dt = min(dt,dt_interact)
-#endif /* ANY_INTERACTIONS */
+#endif /* FLUID_INTERACTIONS */
 
 #ifdef SIMPLE_COOL
          dt = min(dt,0.01 * tauc)

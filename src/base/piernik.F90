@@ -93,9 +93,9 @@ contains
 #ifdef GRAV
       use gravity, only : init_grav,grav_pot_3d
 #endif /* GRAV */
-#ifdef ANY_INTERACTIONS
+#ifdef FLUID_INTERACTIONS
       use interactions, only : init_interactions
-#endif /* ANY_INTERACTIONS */
+#endif /* FLUID_INTERACTIONS */
 #ifdef SNE_DISTR
       use sndistr, only  : init_sndistr
 #endif /* SNE_DISTR */
@@ -134,9 +134,9 @@ contains
       call grav_pot_3d
 #endif /* GRAV */
 
-#ifdef ANY_INTERACTIONS
+#ifdef FLUID_INTERACTIONS
       call init_interactions
-#endif /* ANY_INTERACTIONS */
+#endif /* FLUID_INTERACTIONS */
 
 #ifdef SNE_DISTR
       call init_sndistr

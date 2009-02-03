@@ -34,7 +34,6 @@
 #undef RESIST
 #undef SIMPLE_COOL
 #define ANY_SOURCES
-#undef BND_MOTION_SUPPORT
 #define COLLISIONS
 #undef COLLS_MODIF
 

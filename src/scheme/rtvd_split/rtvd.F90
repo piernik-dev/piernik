@@ -18,11 +18,11 @@
 !    along with PIERNIK.  If not, see <http://www.gnu.org/licenses/>.
 !
 !    Initial implemetation of PIERNIK code was based on TVD split MHD code by
-!    Ue-Li Pen 
+!    Ue-Li Pen
 !        see: Pen, Arras & Wong (2003) for algorithm and
-!             http://www.cita.utoronto.ca/~pen/MHD 
-!             for original source code "mhd.f90" 
-!   
+!             http://www.cita.utoronto.ca/~pen/MHD
+!             for original source code "mhd.f90"
+!
 !    For full list of developers see $PIERNIK_HOME/license/pdt.txt
 !
 #include "piernik.def"
@@ -77,12 +77,12 @@ module rtvd ! split orig
    end subroutine tvdb
 
    subroutine relaxing_tvd(u,bb,sweep,i1,i2,dx,n,dt)
-  
+
 #ifdef IONIZED
       use fluidindex,      only : i_ion
-#endif /* IONIZED */  
-    
-      use constants,       only : small    
+#endif /* IONIZED */
+
+      use constants,       only : small
       use start,           only : smalld, integration_order  !!! ,cn
       use fluxes,          only : flimiter,all_fluxes
       use fluidindex,      only : nvar,nmag,nfluid
@@ -92,7 +92,7 @@ module rtvd ! split orig
       use fluidindex,      only : iarr_all_en
       use start,           only : smallei
 #endif /* ISO */
-    
+
 #ifdef GRAV
       use gravity,         only : grav_pot2accel
 #endif /* GRAV */
@@ -103,22 +103,22 @@ module rtvd ! split orig
 #ifdef COSM_RAYS
       use initcosmicrays,  only : gamma_cr, cr_active, smallecr
       use initcosmicrays,  only : iecr
-      use arrays,          only : divvel 
+      use arrays,          only : divvel
 #endif /* COSM_RAYS */
-#ifdef ANY_INTERACTIONS
+#ifdef FLUID_INTERACTIONS
       use interactions,    only : fluid_interactions
-#endif /* ANY_INTERACTIONS */
+#endif /* FLUID_INTERACTIONS */
 
       implicit none
-    
+
       integer                  :: i1,i2, n, istep, i
-    
+
       real                     :: dt,dx,dtx
       real, dimension(nvar,n)  :: u,cfr
       real, dimension(nmag,n)  :: bb
-      real, dimension(n)       :: accl,accr    
+      real, dimension(n)       :: accl,accr
       real, dimension(n)       :: daccrp,daccrm,dacclp,dacclm
-    
+
 #ifdef GRAV
       real, dimension(n)       :: gravaccr
 #endif /* GRAV */
@@ -146,8 +146,11 @@ module rtvd ! split orig
 #ifdef COSM_RAYS
       real, dimension(n)       :: divv,decr,grad_pcr,ecr
 #endif /* COSM_RAYS */
+#ifdef FLUID_INTERACTIONS
+      real, dimension(nvar,n)  :: dintr
+#endif /* FLUID_INTERACTIONS */
 
-      real, dimension(2,2)       :: rk2coef 
+      real, dimension(2,2)       :: rk2coef
 
       rk2coef(1,:) = [1.0 , 0.0]
       rk2coef(2,:) = [0.5 , 1.0]
@@ -209,8 +212,8 @@ module rtvd ! split orig
 #ifdef GRAV
          call grav_pot2accel(sweep,i1,i2, n, gravaccr)
 #endif /* GRAV */
-    
-    
+
+
 #if defined GRAV || defined SHEAR
          accr     = 0.0
 #ifdef GRAV
@@ -219,7 +222,7 @@ module rtvd ! split orig
 #ifdef SHEAR
          accr     = accr + rotaccr
 #endif /* SHEAR */
-         accr(n)   = accr(n-1)                    
+         accr(n)   = accr(n-1)
          accl(2:n) = accr(1:n-1)                             ;  accl(1)   = accl(2)
 
          if(istep == 2) then
@@ -237,23 +240,21 @@ module rtvd ! split orig
 #ifndef ISO
             duls(iarr_all_en(i),:)  = accr(:)*ul0(iarr_all_mx(i),:)*dt
             durs(iarr_all_en(i),:)  = accl(:)*ur0(iarr_all_mx(i),:)*dt
-#endif /* ISO */ 
+#endif /* ISO */
             duls(iarr_all_mx(i),:)  = accr(:)*ul0(iarr_all_dn(i),:)*dt
             durs(iarr_all_mx(i),:)  = accl(:)*ur0(iarr_all_dn(i),:)*dt
          enddo
          ur1= ur1 + rk2coef(integration_order,istep)*durs
          ul1= ul1 + rk2coef(integration_order,istep)*duls
 #endif /* defined GRAV || defined SHEAR */
-#ifdef ANY_INTERACTIONS
-         call fluid_interactions(sweep,i1,i2, n, durs, ur0)
-         ur1 = ur1 + rk2coef(integration_order,istep)*durs*dt
-         call fluid_interactions(sweep,i1,i2, n, duls, ul0)
-         ul1 = ul1 + rk2coef(integration_order,istep)*duls*dt
-#endif /* ANY_INTERACTIONS */
 
          u1 = ul1 + ur1
          u1(iarr_all_dn,:) = max(u1(iarr_all_dn,:), smalld)
 
+#ifdef FLUID_INTERACTIONS
+         call fluid_interactions(sweep,i1,i2, n, dintr, ur0)
+         u1 = u1 + rk2coef(integration_order,istep)*dintr*dt
+#endif /* FLUID_INTERACTIONS */
 
 #if defined COSM_RAYS && defined IONIZED
          select case (sweep)
@@ -272,7 +273,7 @@ module rtvd ! split orig
          vx  = u1(iarr_all_mx(i_ion),:)/u1(iarr_all_dn(i_ion),:)
          ecr = u1(iecr,:)
 
-         grad_pcr(2:n-1) = cr_active*(gamma_cr -1.)*(ecr(3:n)-ecr(1:n-2))/(2.*dx) 
+         grad_pcr(2:n-1) = cr_active*(gamma_cr -1.)*(ecr(3:n)-ecr(1:n-2))/(2.*dx)
          grad_pcr(1:2)=0.0 ; grad_pcr(n-1:n) = 0.0
 
 #ifndef ISO

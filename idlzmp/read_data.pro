@@ -39,7 +39,17 @@ FOR ivar=0, nvar-1 DO BEGIN
     min_dd = MIN(dd)
     max_dd = MAX(dd)
   ENDIF
+  IF(var EQ 'den2') THEN BEGIN
+    dd = data
+    min_dd = MIN(dd)
+    max_dd = MAX(dd)
+  ENDIF
   IF(var EQ 'ene1') THEN BEGIN
+    ee = data
+    min_ee = MIN(ee)
+    max_ee = MAX(ee)
+  ENDIF
+  IF(var EQ 'ene2') THEN BEGIN
     ee = data
     min_ee = MIN(ee)
     max_ee = MAX(ee)
@@ -64,6 +74,9 @@ FOR ivar=0, nvar-1 DO BEGIN
   IF(var EQ 'vlx1') THEN v1 = data
   IF(var EQ 'vly1') THEN v2 = data
   IF(var EQ 'vlz1') THEN v3 = data
+  IF(var EQ 'vlx2') THEN v1 = data
+  IF(var EQ 'vly2') THEN v2 = data
+  IF(var EQ 'vlz2') THEN v3 = data
   IF(var EQ 'magx') THEN b1 = data
   IF(var EQ 'magy') THEN b2 = data
   IF(var EQ 'magz') THEN b3 = data

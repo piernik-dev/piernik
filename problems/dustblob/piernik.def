@@ -19,6 +19,8 @@
 /* physics including */
 #undef RESIST
 #undef COSM_RAYS
+#define FLUID_INTERACTIONS
+#define COLLISIONS
 
 /* gravity type choosing */
 #undef GRAV

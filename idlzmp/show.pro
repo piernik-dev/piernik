@@ -1,7 +1,7 @@
 PRO SHOW
 
-data_dir = '../runs/mri/'
-prefix = 'mri_Z4_'
+data_dir = '../run/dustblob/'
+prefix = 'blob_tst'
 
 png_dir = data_dir+'/frames'
 
@@ -21,7 +21,7 @@ png_output	= 'y'
 
 display_frames	= 'y'		; 'y' or 'n'
 
-win_vert_size 	= 200		; Vertical size (in pixels) 'xz' and 'yz' slices
+win_vert_size 	= 600		; Vertical size (in pixels) 'xz' and 'yz' slices
             				; The other sizes are scaled according to the
 				            ; physical sizes of the computational box
 n_vect_x     	= 16 		; The numbers of points for vector fields
@@ -40,7 +40,7 @@ s.panel_name	= 'a'			; If more slices of the same type
 
 s.type		= 'xy'			; Chose 'yz', 'xz' or 'xy' plane
 s.coord		=  0.0         ; Position at the complementary coordinate
-s.vect_disp	= 'b'			; Vector field to display: 'b' or 'v'
+s.vect_disp	= 'v'			; Vector field to display: 'b' or 'v'
 s.vect_scaling	= 'free'		; 'fix' or 'free' 
 s.vect_scale	=  1.0
 
@@ -103,7 +103,7 @@ slice_array = [slice_array,s]
 n_slices = n_slices+1
 
 ;==============================================================================
-vars = ['den1','vlx1','vly1','vlz1','magx','magy','magz']
+vars = ['den2','vlx2','vly2']
 n_vectors = [n_vect_x,n_vect_y,n_vect_z]
 ;==============================================================================
 
