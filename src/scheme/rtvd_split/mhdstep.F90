@@ -33,11 +33,10 @@ module mhdstep   ! SPLIT
   contains
 
 subroutine fluid_update
-  use start,  only : dt,nstep,t
-  use dataio, only : nlog,ntsl,write_log,write_timeslice, dt_log, dt_tsl
+  use dataio, only : nlog,ntsl,write_log,write_timeslice, dt_log, dt_tsl, nstep
   use timestep,   only : time_step
   use sweeps, only : sweepx,sweepy,sweepz
-  use mpisetup, only : proc
+  use mpisetup, only : proc,dt,t
   use grid, only : nxd,nyd,nzd
 
 #ifdef DEBUG

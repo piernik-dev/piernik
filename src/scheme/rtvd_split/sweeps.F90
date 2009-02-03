@@ -39,7 +39,7 @@ module sweeps     ! split sweeps
     use fluidindex,   only : i_ion
 #endif /* IONIZED */  
 
-    use start, only  : dt
+    use mpisetup, only  : dt
     use arrays, only : u,b
     use grid, only   : dx,nb,nx,ks,ke,js,je,nyd,nzd
     use rtvd, only   : relaxing_tvd
@@ -94,7 +94,7 @@ module sweeps     ! split sweeps
     use fluidindex, only : i_ion
 #endif /* IONIZED */  
        
-    use start, only  : dt
+    use mpisetup, only  : dt
     use arrays, only : u,b
     use grid, only   : dy,nb,ny,is,ie,ks,ke,nxd,nzd
     use rtvd, only     : relaxing_tvd
@@ -153,7 +153,7 @@ module sweeps     ! split sweeps
 #endif /* IONIZED */  
     
 
-    use start, only  : dt
+    use mpisetup, only  : dt
     use arrays, only : u,b
     use grid, only   : dz,nb,nz,is,ie,js,je,nxd,nyd
     use rtvd, only     : relaxing_tvd

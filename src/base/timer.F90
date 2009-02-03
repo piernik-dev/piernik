@@ -57,10 +57,9 @@ contains
 !------------------------------------------------------------------------------------------
 
    subroutine timer_stop
-      use start, only: t,dt, tend, nstep, nend
-      use grid, only :nxd,nyd,nzd
       use mpisetup
-      use dataio, only : log_file,log_lun
+      use dataio,    only : tend, nstep, nend, log_file, log_lun
+      use grid,      only : nxd,nyd,nzd
 
       implicit none
       real(kind=4) :: dtime

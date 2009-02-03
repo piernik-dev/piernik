@@ -33,11 +33,9 @@ module start
 
    implicit none
 
-   real    :: t, dt, tend, cfl, smalld, smallei, rorder, dt_cr
-   real    :: csi2, csim2, amp_ecr_sn, ethu, f_sn
-   integer :: nstep, istep, integration_order, nend, nstep_start
+   real    :: cfl, smalld, smallei
+   integer :: integration_order
    real, dimension(1) :: gamma   !!! do poprawy
-   real, dimension(3,2)  :: cni
 
 !-------------------------------------------------------------------------------
    contains
@@ -47,19 +45,11 @@ module start
          implicit none
          integer :: ierrh
          character(len=100) :: par_file, tmp_log_file
-         namelist /END_CONTROL/ nend, tend
 
          namelist /NUMERICAL_SETUP/  cfl, smalld, smallei, integration_order
 
          par_file = trim(cwd)//'/problem.par'
          tmp_log_file = trim(cwd)//'/tmp.log'
-
-         nstep  = 0
-         t      = 0.0
-         dt     = 0.0
-
-         tend   = 1.0
-         nend   = 10
 
          cfl     = 0.7
          smalld  = 1.e-10
@@ -69,14 +59,11 @@ module start
          if(proc == 0) then
 
             open(1,file=par_file)
-               read(unit=1,nml=END_CONTROL,iostat=ierrh)
-               call namelist_errh(ierrh,'END_CONTROL')
                read(unit=1,nml=NUMERICAL_SETUP,iostat=ierrh)
                call namelist_errh(ierrh,'NUMERICAL_SETUP')
             close(1)
 
             open(3, file=tmp_log_file, position='append')
-               write(unit=3,nml=END_CONTROL)
                write(unit=3,nml=NUMERICAL_SETUP)
             close(3)
 
@@ -84,12 +71,6 @@ module start
 
 
          if(proc == 0) then
-
-!  namelist /END_CONTROL/ nend, tend
-
-            ibuff(30) = nend
-
-            rbuff(30) = tend
 
 !  namelist /NUMERICAL_SETUP/  cfl, smalld, smallei,
 !                              integration_order
@@ -112,12 +93,6 @@ module start
             call MPI_BCAST(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
             call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
-!  namelist /END_CONTROL/ nend, tend
-
-            nend                = ibuff(30)
-
-            tend                = rbuff(30)
-
 !  namelist /NUMERICAL_SETUP/  cfl, smalld, smallei,
 !                              integration_order,
 
@@ -128,12 +103,6 @@ module start
             integration_order   = ibuff(80)
 
          endif  ! (proc .eq. 0)
-
-!         cn(1:3,1) = (/ 1. , 0.5 , 0.0 /)
-!         cn(1:3,2) = (/ 1. , 1.  , 0.0 /)
-!         if(integration_order == 1) cn(2,1) = 1.
-
-!-------------------------
          if(integration_order > 2) then
             stop 'For "ORIG" scheme integration_order must be 1 or 2'
          endif

@@ -44,6 +44,9 @@ module dataio
 
   implicit none
 
+  integer               :: nend, nstep, istep, nstep_start
+  real                  :: tend
+
   integer, parameter    :: nvarsmx = 16 
   character(len=3)      :: new_id
   character(len=16)     :: restart, domain, mag_center
@@ -84,6 +87,7 @@ module dataio
   real                  :: encr_min, encr_max
 #endif /* COSM_RAYS */
 
+  namelist /END_CONTROL/ nend, tend
   namelist /RESTART_CONTROL/ restart, new_id, nrestart, resdel
   namelist /OUTPUT_CONTROL/ dt_hdf, dt_res, dt_tsl, dt_log, &
                             domain, vars, mag_center, ix, iy, iz,&
@@ -103,7 +107,6 @@ module dataio
     use errh, only : namelist_errh
     use initproblem, only : problem_name,run_id
     use version, only : nenv,env
-    use start, only : nstep, t, nstep_start
     use fluidboundaries, only : all_fluid_boundaries
 #ifdef MAGNETIC
     use magboundaries, only : all_mag_boundaries
@@ -154,6 +157,9 @@ module dataio
     pc2 = '00'
     pc3 = '00'
 
+    nend = 1
+    tend = -1.0
+
     if(psize(1) .gt. 1) pc1 = '0x'
     if(psize(2) .gt. 1) pc2 = '0x'
     if(psize(3) .gt. 1) pc3 = '0x'
@@ -176,10 +182,19 @@ module dataio
          read(unit=1,nml=RESTART_CONTROL,iostat=ierrh)
          call namelist_errh(ierrh,'RESTART_CONTROL')
       close(1)
+      open(1,file=par_file)
+         read(unit=1,nml=END_CONTROL,iostat=ierrh)
+         call namelist_errh(ierrh,'END_CONTROL')
+      close(1)
       open(3, file=tmp_log_file, position='append')
          write(unit=3,nml=OUTPUT_CONTROL)
          write(unit=3,nml=RESTART_CONTROL)
       close(3)
+
+!  namelist /END_CONTROL/ nend, tend
+      ibuff(1)  = nend
+
+      rbuff(1)  = tend
 
 !  namelist /RESTART_CONTROL/ restart, new_id, nrestart, resdel
 
@@ -225,6 +240,10 @@ module dataio
       call MPI_BCAST(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
       call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
+!  namelist /END_CONTROL/ nend, tend
+      nend                = ibuff(1)
+ 
+      tend                = rbuff(1)
 !  namelist /RESTART_CONTROL/ restart, new_id, nrestart, resdel
 
       restart             = trim(cbuff(20))
@@ -311,7 +330,6 @@ module dataio
   end subroutine init_dataio
 
    subroutine user_msg_handler(end_sim)
-     use start, only : tend, nend, nstep
      implicit none
      logical, intent(inout) :: end_sim
      integer :: tsleep
@@ -364,7 +382,6 @@ module dataio
 !---------------------------------------------------------------------
 !
   subroutine write_data(output)
-    use start, only:  t, dt, nstep
 #ifdef USER_IO
     use initproblem, only : user_io_routine
 #endif /* USER_IO */
@@ -432,7 +449,6 @@ module dataio
    subroutine write_hdf
       use mpisetup, only: cwd
       use arrays, only : wa,outwa,outwb,outwc,b,u
-      use start, only : nstep,t,dt
       use grid, only : dx,dy,dz,xmin,xmax,ymin,ymax,zmin,zmax,nxd,nyd,nzd,nb
       use grid, only : nx,ny,nz,nxb,nyb,nzb,x,y,z
       use initproblem, only : problem_name, run_id
@@ -789,8 +805,7 @@ module dataio
     use arrays,       only : u,b
     use grid,         only : nxb,nyb,nzb,x,y,z,nx,ny,nz
     use grid,         only : xmin,xmax,ymin,ymax,zmin,zmax,nxd,nyd,nzd,nb
-    use start,        only : t,dt,nstep
-    use initproblem, only : problem_name, run_id
+    use initproblem,  only : problem_name, run_id
 #ifdef GRAV
     use arrays, only : gp
 #endif /* GRAV */
@@ -1007,7 +1022,6 @@ module dataio
     use fluidindex, only : nvar, nmag
     use arrays, only : u,b
     use grid, only : nx,ny,nz
-    use start, only  : t, dt, nstep
     use initproblem, only : problem_name, run_id
 #ifdef GRAV
     use arrays, only : gp
@@ -1192,7 +1206,6 @@ module dataio
     use fluidindex,   only : ibx,iby,ibz
     use fluidindex, only : nvar, iarr_all_dn,iarr_all_mx,iarr_all_my,iarr_all_mz
     use grid, only  : dvol,dx,dy,dz,is,ie,js,je,ks,ke,x,y,z,nxd,nyd,nzd
-    use start, only : proc, dt, t, nstep
     use arrays, only : u,b,wa
     use initproblem, only : problem_name, run_id
 
@@ -1425,7 +1438,7 @@ module dataio
     use arrays, only : wa,u,b
     use grid, only   : dx,dy,dz,dxmn,nb,is,ie,js,je,ks,ke,nx,ny,nz
     use constants, only : small, hydro_mass, k_B
-    use start, only : t,dt,nstep,smallei,cfl
+    use start, only : smallei,cfl
 
 #ifdef IONIZED
     use initionized, only : gamma_ion, cs_iso_ion,cs_iso_ion2

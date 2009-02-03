@@ -43,7 +43,7 @@ module timestep
 
 
       subroutine time_step
-         use start, only : dt, tend, t
+         use dataio, only : tend 
          use constants, only : small,big
 
 #ifdef IONIZED
@@ -65,10 +65,6 @@ module timestep
          use timestepcosmicrays, only : timestep_crs
          use timestepcosmicrays, only : dt_crs
 #endif /* COSM_RAYS */
-
-#ifdef SIMPLE_COOL
-         use start, only : tauc
-#endif /* SIMPLE_COOL */
 
 #ifdef RESISTIVE
          use resistivity, only : dt_resist, timestep_resist

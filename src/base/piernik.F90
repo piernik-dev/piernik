@@ -29,11 +29,11 @@
 
 program piernik
 
-  use start, only  : t,dt,nstep, nend, nstep_start, tend
+  use mpisetup
+  use dataio, only : nstep, nend, nstep_start, tend
   use timer, only : timer_start, timer_stop
   use dataio, only : write_data, user_msg_handler
   use mhdstep, only  : fluid_update
-  use mpisetup
 
   implicit none
   logical :: end_sim

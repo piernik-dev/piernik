@@ -260,7 +260,7 @@ contains
 
   subroutine tvdd(ibi,ici,n)
     use arrays, only : b,wcu
-    use start,  only : dt
+    use mpisetup,  only : dt
     use func,   only : mshift, pshift
     use grid,   only : nx,ny,nz,dxmn,dl
 

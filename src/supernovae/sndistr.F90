@@ -44,7 +44,6 @@ module sndistr
 !-----------------------------------------------------------------------------
 
    subroutine init_sndistr
-      use start, only: snemass,snenerg,sn1time,sn2time,r0sn
       use grid, only: dx,dy,dz
       use constants
       implicit none
@@ -113,7 +112,7 @@ module sndistr
 !===============================================================================================
    subroutine supernovae_distribution
       use mpisetup
-      use start, only : dt,smallei
+      use start, only : smallei
       use arrays, only : u,b,nx,ny,nz,ibx,iby,ibz,idna,imxa,imya,imza,iena
       use grid, only : dx,dy,dz,dvol,nb
       use snsources, only : rand_angles
@@ -214,11 +213,9 @@ module sndistr
    subroutine add_explosion(snpos,angles,A)
       use arrays, only: nx,ny,nz,x,y,z,nxb,nyb,nzb,xdim,ydim,zdim,dl,u
       use grid, only: xminb,xmaxb,yminb,ymaxb,zminb,zmaxb,dx,dy,dz,Lx,Ly,Lz,nb
-      use start, only: r0sn,add_mass,add_ener,add_encr
       use constants
 #ifdef COSM_RAYS
       use arrays, only : iecr
-      use start, only  : r_sn, cr_eff
 #endif /* COSM_RAYS */
 #ifdef DIPOLS
       use snsources, only : magn_multipole_sn
@@ -354,7 +351,7 @@ module sndistr
 !--------------------------------------------------
 
    subroutine write_sninfo(SNno)
-      use start, only : t,dt
+      use mpisetup, only : t,dt
       implicit none
       integer, dimension(2) :: SNno
 

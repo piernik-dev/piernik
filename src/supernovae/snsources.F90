@@ -47,7 +47,7 @@ module snsources
 
    subroutine random_sn
 ! Written by: M. Hanasz
-      use start, only : f_sn,t
+      use mpisetup, only  : t
       use constants, only : small
 
       implicit none
@@ -82,7 +82,6 @@ module snsources
    subroutine cr_sn(pos)
 ! Written by: M. Hanasz
       use arrays, only : nx,ny,nz,iecr,u,x,y,z
-      use start,  only : amp_ecr_sn,r_sn,ethu
       use grid,   only : Lx,Ly
       implicit none
       real, dimension(3), intent(in) :: pos
@@ -125,7 +124,6 @@ module snsources
 !--------------------------------------------------------------------------
 
    subroutine magn_multipole_sn(orient,pos,A)
-      use start, only  : amp_dip_sn,howmulti,r_sn
       use grid, only   : Lx,Ly
       use constants
       use arrays, only : u,b,xl,yl,zl,ibx,iby,ibz,&
@@ -279,7 +277,6 @@ module snsources
 
    subroutine rand_coords(pos)
 ! Written by M. Hanasz
-      use start,  only : h_sn
       use grid,   only : Lx,Ly,xmin,ymin
 #ifdef SHEAR
       use arrays, only : y,js,je

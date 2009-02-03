@@ -83,7 +83,7 @@ module rtvd ! split orig
 #endif /* IONIZED */
 
       use constants,       only : small
-      use start,           only : smalld, integration_order  !!! ,cn
+      use start,           only : smalld, integration_order 
       use fluxes,          only : flimiter,all_fluxes
       use fluidindex,      only : nvar,nmag,nfluid
       use fluidindex,      only : ibx,iby,ibz

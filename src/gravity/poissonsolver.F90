@@ -37,10 +37,8 @@ contains
 !! SUBROUTINE POISSON: solves Poisson equation
 !!
   subroutine poisson
-    use start, only  : bnd_xl, bnd_xr, bnd_yl, bnd_yr, &
-         nb, nxd, nyd, nzd, dimensions
     use arrays, only : idna,u,gp,x,nx,ny,nz,nzb
-    use grid, only   : dz,dx
+    use grid, only   : dz,dx, nb, nxd, nyd, nzd
     use mpisetup
 #ifdef SHEAR
     use shear, only  : unshear_fft
@@ -538,7 +536,7 @@ contains
 !! bnd conditions in X, Y and Z
 !!
   subroutine poisson_xyzp(den, pot, dz)
-    use start, only : nb
+    use grid, only : nb
     use constants, only : fpiG,dpi
     implicit none
 

@@ -33,10 +33,11 @@ module crdiffusion
   use initcosmicrays, only : K_cr_paral,K_cr_perp 
   
   use fluidindex,     only : ibx,iby,ibz
-  use arrays
-  use constants
-  use grid
-  use start
+  use arrays,         only : b,u,wa
+  use constants,      only : small
+  use grid,           only : dx,dy,dz,nxd,nyd,nzd,nx,ny,nz
+  use grid,           only : is,ie,js,je,ks,ke
+  use mpisetup,       only : dt
 
 
  contains

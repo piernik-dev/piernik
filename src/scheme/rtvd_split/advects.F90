@@ -31,7 +31,7 @@ module advects
   contains
 
   subroutine advectby_x
-    use start,  only : dt
+    use mpisetup,  only : dt
     use fluidindex,   only : nfluid
     use fluidindex, only : ibx,iby,ibz
     use initionized, only : idni,imxi
@@ -69,7 +69,7 @@ module advects
   end subroutine advectby_x
 
   subroutine advectbz_x
-    use start,  only : dt
+    use mpisetup,  only : dt
     use fluidindex,   only : nfluid
     use fluidindex, only : ibx,iby,ibz
     use initionized, only : idni,imxi
@@ -107,7 +107,7 @@ module advects
   end subroutine advectbz_x
 
   subroutine advectbz_y
-    use start,  only : dt
+    use mpisetup,  only : dt
     use fluidindex,   only : nfluid
     use fluidindex, only : ibx,iby,ibz
     use initionized, only : idni,imyi
@@ -145,7 +145,7 @@ module advects
   end subroutine advectbz_y
 
   subroutine advectbx_y
-    use start,  only : dt
+    use mpisetup,  only : dt
     use fluidindex,   only : nfluid
     use fluidindex, only : ibx,iby,ibz
     use initionized, only : idni,imyi
@@ -183,7 +183,7 @@ module advects
   end subroutine advectbx_y
 
   subroutine advectbx_z
-    use start,  only : dt
+    use mpisetup,  only : dt
     use fluidindex,   only : nfluid
     use fluidindex, only : ibx,iby,ibz
     use initionized, only : idni,imzi
@@ -221,7 +221,7 @@ module advects
   end subroutine advectbx_z
 
   subroutine advectby_z
-    use start,  only : dt
+    use mpisetup,  only : dt
     use fluidindex,   only : nfluid
     use fluidindex, only : ibx,iby,ibz
     use initionized, only : idni,imzi

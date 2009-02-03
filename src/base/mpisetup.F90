@@ -33,6 +33,7 @@ module mpisetup
    integer :: status(MPI_STATUS_SIZE,4)
    integer, dimension(4) :: req, err
 
+   real                  :: t,dt
 
    integer, parameter    :: ndims = 3       ! 3D grid
    integer               :: comm, comm3d
