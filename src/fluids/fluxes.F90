@@ -148,7 +148,6 @@ end subroutine all_fluxes
 
 !==========================================================================================
 
-
   subroutine flimiter(f,a,b,m,n)
     implicit none
     integer m,n
@@ -175,44 +174,6 @@ end subroutine all_fluxes
 
     return
   end subroutine flimiter
-  
-  subroutine flux_limit(fr,fl,m,n)
-    use start, only : istep
-
-    implicit none
-    integer             :: m,n
-    real,dimension(m,n) :: fr,fl,dfrp,dfrm,dflp,dflm
-
-    if(istep == 2) then
-      dfrp(:,1:n-1) = 0.5*(fr(:,2:n) - fr(:,1:n-1)); dfrp(:,n) = dfrp(:,n-1)
-      dfrm(:,2:n)   = dfrp(:,1:n-1);                 dfrm(:,1) = dfrm(:,2)
-      call flimiter(fr,dfrm,dfrp,m,n)
-
-      dflp(:,1:n-1) = 0.5*(fl(:,1:n-1) - fl(:,2:n)); dflp(:,n) = dflp(:,n-1)
-      dflm(:,2:n)   = dflp(:,1:n-1);                 dflm(:,1) = dflm(:,2)
-      call flimiter(fl,dflm,dflp,m,n)
-    endif
-
-  end subroutine flux_limit
-
-  subroutine grav_limit(gravr,gravl,n)
-   use start, only : istep
-
-   implicit none
-   integer             :: n
-   real,dimension(n)   :: gravr,gravl,dgrp,dgrm,dglp,dglm
-
-    if(istep == 2) then
-      dgrp(1:n-1) = 0.5*(gravr(1:n-1) - gravr(2:n));  dgrp(n) = dgrp(n-1)
-      dgrm(2:n) = dgrp(1:n-1)                      ;  dgrm(1) = dgrm(2)
-      call flimiter(gravr,dgrm,dgrp,1,n)
-
-      dglp(1:n-1) = 0.5*(gravl(2:n) - gravl(1:n-1));  dglp(n) = dglp(n-1)
-      dglm(2:n)   = dglp(1:n-1)                    ;  dglm(1) = dglm(2)
-      call flimiter(gravl,dglm,dglp,1,n)
-    endif
-
-  end subroutine grav_limit
   
 
 
