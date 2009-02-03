@@ -118,7 +118,6 @@ module timestepionized
 
     call MPI_REDUCE(dt_ion_proc, dt_ion_all, 1, MPI_DOUBLE_PRECISION, MPI_MIN, 0, comm, ierr)
     call MPI_BCAST(dt_ion_all, 1, MPI_DOUBLE_PRECISION, 0, comm, ierr)
-    write(*,*) cfl,t, proc
     dt_ion = cfl*dt_ion_all
     
 !    write(*,*) 'timestep_ion:', dt_ion
