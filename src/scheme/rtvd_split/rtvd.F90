@@ -84,7 +84,7 @@ module rtvd ! split orig
     
       use constants,       only : small    
       use start,           only : smalld, integration_order  !!! ,cn
-      use fluxes,          only : flimiter,grav_limit,all_fluxes
+      use fluxes,          only : flimiter,all_fluxes
       use fluidindex,      only : nvar,nmag,nfluid
       use fluidindex,      only : ibx,iby,ibz
       use fluidindex,      only : iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
