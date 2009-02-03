@@ -1,12 +1,12 @@
  $DOMAIN_SIZES
-    nxd = 100
-    nyd = 100
-    nzd = 1
+    nxd = 64
+    nyd = 64
+    nzd = 64
  /
 
  $MPI_BLOCKS
-    pxsize = 1
-    pysize = 1
+    pxsize = 2
+    pysize = 2
     pzsize = 1
  /
 
@@ -72,7 +72,7 @@
     ptm_z      =  0.0
     r_smooth   =  0.2
     r_grav     =  0.6
-    n_gravr    = 10
+    n_gravr    =  10
  /
 
  $RESISTIVITY
@@ -82,7 +82,7 @@
     problem_name     = 'keplerian_disk'
     run_id           = 'tst'
     d0               = 1.0
-    v_zab            = 0.1
+    v_zab            = 0.2
     mag_field_orient = 'vertical'
     alpha = 3.0
     c_si  = 0.2
