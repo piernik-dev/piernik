@@ -77,8 +77,8 @@
  
  
  $PROBLEM_CONTROL
-    problem_name ='cr_test'
-    run_id =  'b_5'
+    problem_name ='cr'
+    run_id =  'tst'
     d0     = 1.0
     p0     = 1.0
     bx0    = 5.0
