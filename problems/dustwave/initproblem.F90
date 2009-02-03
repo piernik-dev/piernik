@@ -5,8 +5,8 @@ module initproblem
 ! Initial condition for dust fronts
 ! Written by: D. Wolt, June 2007
 
+  use mpisetup
   use arrays
-  use start
   use grid
 
   real      :: d0, v0, v1

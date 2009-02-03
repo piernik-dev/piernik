@@ -101,7 +101,6 @@ contains
     use constants
     use gravity, only : h_grav
     use arrays, only : u,b,dprof
-    use start, only : smalld, smallei
     use grid, only : nx,ny,nz,dvol,is,ie,js,je,ks,ke,x,y,z,Lx,Ly,Lz
     use fluidindex, only : ibx,iby,ibz
     use initionized, only : idni,imxi,imyi,imzi,cs_iso_ion

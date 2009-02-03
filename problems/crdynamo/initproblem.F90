@@ -8,7 +8,7 @@ module initproblem
 ! Modified by M.Hanasz for CR-driven dynamo
 
   use arrays
-  use start
+  use mpisetup
   use grid
   use fluidboundaries
   use hydrostatic

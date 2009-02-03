@@ -74,7 +74,7 @@ contains
 !-----------------------------------------------------------------------------
 
   subroutine init_prob
-    use start, only : smalld, smallei
+    use mpisetup, only : smalld, smallei
     use fluidindex, only : ibx, iby, ibz
     use gravity, only : ptmass, r_grav, r_smooth, n_gravr
     use arrays, only : u, b

@@ -42,7 +42,6 @@ module initproblem
 #ifndef ISO
   use initionized, only : ieni, gamma_ion
 #endif /* ISO */
-  use start,  only : smallei, smalld
   use mpisetup
 
   real :: dl,vxl,vyl,vzl,bxl,byl,bzl,el

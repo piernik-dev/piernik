@@ -7,7 +7,7 @@ module initproblem
 
   use constants
   use arrays
-  use start
+  use mpisetup
   use grid
 
   real rhoa, rhol, rhor, distl, distr, vxl, vxr, collf

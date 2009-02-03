@@ -37,7 +37,6 @@ module initproblem
   use initionized, only : ieni, gamma_ion
 #endif /* ISO */
   use shear,  only : qshear, omega
-  use start,  only : smallei, smalld
   use mpisetup
 
   real :: d0,r0,bx0,by0,bz0

@@ -128,7 +128,6 @@ module initproblem
       use grid,         only : x,y,z,nx,ny,nz,nzd,ymin,ymax
       use initneutral,  only : gamma_neu,idnn,imxn,imyn,imzn
       use initdust,     only : idnd,imxd,imyd,imzd
-      use start,        only : smalld
 #ifndef ISO
       use initneutral,  only : ienn
 #endif /* !ISO */

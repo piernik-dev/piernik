@@ -9,8 +9,6 @@ module initproblem
 #ifndef ISO
   use initionized, only : ieni, gamma_ion
 #endif /* ISO */
-  use start,  only : proc, smallei, smalld, &
-      rbuff, cbuff, ibuff
   use mpisetup
   use grid, only : dx,dy
   use constants, only : pi,dpi,fpi

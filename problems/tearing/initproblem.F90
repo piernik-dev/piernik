@@ -13,7 +13,6 @@ module initproblem
 !
 !       dimdir can't be equal magdir!!
 
-!  use start
   use initionized, only : idni,imxi,imyi,imzi
 #ifndef ISO
   use initionized, only : ieni

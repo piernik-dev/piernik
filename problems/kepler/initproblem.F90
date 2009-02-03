@@ -109,12 +109,10 @@ contains
     use constants,   only : newtong
     use hydrostatic, only : hydrostatic_zeq
     use gravity,     only : r_smooth,r_grav,n_gravr,ptmass
-    use start,       only : smalld
     use initionized, only : idni, imxi, imyi, imzi
     use fluidindex,  only : ibx, iby, ibz
 #ifndef ISO
     use initionized, only : ieni, gamma_ion, cs_ion
-    use start,       only : smallei
 #endif /* !ISO */
     implicit none
  

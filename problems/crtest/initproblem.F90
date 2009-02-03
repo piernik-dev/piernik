@@ -30,7 +30,6 @@
 
 module initproblem
   
-  use start
   use arrays
   use grid
   use mpisetup

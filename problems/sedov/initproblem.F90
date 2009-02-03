@@ -6,7 +6,6 @@ module initproblem
 ! Initial condition for Sedov-Taylor explosion
 ! Written by: M. Hanasz, March 2006
 
-  use start
 #ifdef IONIZED  
   use initionized
 #endif /* IONIZED */ 
