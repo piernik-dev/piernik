@@ -8,7 +8,10 @@ module initproblem
   use mpisetup
   use arrays
   use fluidindex,  only : ibx,iby,ibz
-  use initionized, only : idni,imxi,imyi,imzi,ieni
+  use initionized, only : idni,imxi,imyi,imzi
+#ifndef ISO
+  use initionized, only : ieni
+#endif /* ISO */
   use shear,       only : qshear,omega
 
   real ::  d0,nbx0,nby0,nbz0,beta,dv

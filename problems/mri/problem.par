@@ -81,12 +81,12 @@
 
  $PROBLEM_CONTROL
     problem_name ='mri'
-    run_id =  'Z3_'
+    run_id =  'Z4_'
     d0     =  1.0
     nbx0   = 0.0
     nby0   = 0.0
     nbz0   = 1.0
-    beta   = 100.0 
+    beta   = 400.0 
     dv     = 5.0e-3
     dp     = 2.5e-2
  /
