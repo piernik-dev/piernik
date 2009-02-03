@@ -33,7 +33,7 @@ program piernik
   use dataio, only : nstep, nend, nstep_start, tend
   use timer, only : timer_start, timer_stop
   use dataio, only : write_data, user_msg_handler
-  use mhdstep, only  : fluid_update
+  use fluidupdate, only  : fluid_update
 
   implicit none
   logical :: end_sim

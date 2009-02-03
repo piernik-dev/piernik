@@ -26,7 +26,7 @@
 !    For full list of developers see $PIERNIK_HOME/license/pdt.txt
 !
 #include "piernik.def"
-module mhdstep   ! SPLIT
+module fluidupdate   ! SPLIT
 
   implicit none
 
@@ -394,4 +394,4 @@ end subroutine fluid_update
 #endif /* MAGNETIC */
 !------------------------------------------------------------------------------------------
 
-end module mhdstep
+end module fluidupdate
