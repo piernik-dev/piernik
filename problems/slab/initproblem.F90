@@ -129,11 +129,7 @@ contains
         do k = 1,nz
           zk = z(k)
           vx = 0.0
-#ifdef SHEAR_MY
-          vy = 0.0
-#else
           vy = -qshear*omega*xi
-#endif /* ~SHEAR_MY */
           vz = 0.0
           
           if(abs(yj) <= r0 ) then
