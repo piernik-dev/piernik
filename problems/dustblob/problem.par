@@ -1,6 +1,6 @@
  $DOMAIN_SIZES
     nxd = 128
-    nyd = 256
+    nyd = 128
     nzd = 1
 	 nb = 5
  /  
