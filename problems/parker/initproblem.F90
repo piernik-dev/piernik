@@ -6,7 +6,7 @@ module initproblem
 ! Written by: M. Hanasz, February 2006
 
   use mpisetup 
-  use start, only : alpha,c_si,csim2,gamaa
+  use start, only : alpha,c_si,csim2,gamma
   
   implicit none
   real :: d0, nbx0,nby0,nbz0, a_vp, n_x
@@ -118,7 +118,9 @@ contains
 
     c_si = cs_iso_ion
     csim2 = c_si**2*(1.0+alpha)
+#ifndef ISO
     gamma(1) = gamma_ion
+#endif
 !   Secondary parameters
 
     b0 = sqrt(2.*alpha*d0*cs_iso_ion**2) 
