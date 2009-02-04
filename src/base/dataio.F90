@@ -1230,7 +1230,7 @@ module dataio
 #endif /* GRAV */
 
 #ifdef ISO
-    use start, only : csi2
+    use start, only : c_si
 #endif /* ISO */
 
 #ifdef RESISTIVE
@@ -1361,7 +1361,7 @@ module dataio
     mflz = sum(wa(is:ie,js:je,ks:ke)) * dx*dy/nzd
     call mpi_allreduce(mflz, tot_mflz, 1, mpi_real8, mpi_sum, comm3d, ierr)
 #ifdef ISO
-    tot_eint = csi2*tot_mass
+    tot_eint = c_si**2*tot_mass
     tot_ener = tot_eint+tot_ekin+tot_emag
 #else /* ISO */
     ener = sum(u(iarr_all_en,is:ie,js:je,ks:ke)) * dvol
