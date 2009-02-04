@@ -76,7 +76,7 @@ contains
   subroutine init_prob
     use mpisetup, only : smalld, smallei
     use fluidindex, only : ibx, iby, ibz
-    use gravity, only : ptmass, r_grav, r_smooth, n_gravr
+    use gravity, only : ptmass, r_grav, r_smooth, n_gravr, grav_pot_3d
     use arrays, only : u, b
     use grid, only : x, y, z, Lx, Ly, Lz, nx, ny, nz
     use constants, only   : newtong, pi, big
@@ -89,7 +89,7 @@ contains
     
     gamma(1) = gamma_ion
     csim2 = c_si**2 * (1.0 + alpha)
-    write(*,*) gamma, csim2, c_si, alpha
+    call grav_pot_3d
 !   Secondary parameters
 
     sqr_gm = dsqrt(newtong*ptmass)
