@@ -206,10 +206,9 @@ module constants     ! module containg numerical and physical constants !!!
    real, parameter :: hydro_mass = mH
    real, parameter :: fpiG = fpi*newtong
    real, parameter :: sekmyr = myr/sek
-   real, parameter :: cmps2 = cm/sek**2
 
 #else /* SCALED */
-! STANDARD uses: scaled units, sometimes incosistent
+
    real, parameter :: sek =      1.0e-6/365.2652/24.0/3600.0
    real, parameter :: cm =       1.0/3.0856e18
 
@@ -220,7 +219,6 @@ module constants     ! module containg numerical and physical constants !!!
 
    real, parameter :: fpiG  = fpi*G_one
    real, parameter :: newtong = G_one
-   real, parameter :: cmps2 = 3.23e8
    real, parameter :: pc = 3.086e18
    real, parameter :: cmkm = 1.0e5      ! km -> cm
    real, parameter :: sekmyr = 3.154e13 ! Myr -> s
