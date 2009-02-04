@@ -196,12 +196,14 @@ if( grep { /DUST/} @d) {
    push(@addons, "../src/fluids/dust/timestepdust.F90"); }
 if( grep { /COSM_RAYS/} @d) {
    push(@addons, "../src/fluids/cosmicrays/initcosmicrays.F90");
-   push(@addons, "../src/fluids/cosmicrays/fluxcosmicrays.F90");   
-   push(@addons, "../src/fluids/cosmicrays/timestepcosmicrays.F90");   
-   push(@addons, "../src/fluids/cosmicrays/crdiffusion.F90");   
-   
+   push(@addons, "../src/fluids/cosmicrays/fluxcosmicrays.F90");
+   push(@addons, "../src/fluids/cosmicrays/timestepcosmicrays.F90");
+   push(@addons, "../src/fluids/cosmicrays/crdiffusion.F90");
    }
-
+if( grep { /FLUID_INTERACTIONS/} @d) {
+   push(@addons, "../src/fluids/interactions/interactions.F90");
+   push(@addons, "../src/fluids/interactions/timestepinteractions.F90");
+}
 if( grep { /SN_SRC/} @d) {
    push(@addons, "../src/supernovae/snsources.F90");
 }
