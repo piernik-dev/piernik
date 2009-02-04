@@ -1,8 +1,5 @@
 #!/usr/bin/perl
 # Written by Dominik Woltanski <minikwolt@astri.umk.pl> October 1, 2008
-use Switch;
-use File::Path;
-use File::Copy;
 my $argc = $#ARGV+1;
 if($argc < 1){
    print "USAGE: newcompiler <compset>\n";
@@ -14,19 +11,16 @@ if($argc < 1){
    print " \n";
    system("cd ../compilers && ls *.in && cd ../obj");
    print " \n";
-#   die;
 } else {
 $compdir = "../compilers/". $ARGV[0] . ".in";
 if(!-r $compdir) { 
 print "Available compilers are:\n";
 system("cd ../compilers && ls *.in && cd ../obj");
-die "Can't open $compdir: $!";
+die "\n $compdir does not exist! ";
 }
 open MAKEIN, $compdir or die $!;
 @makein = <MAKEIN>;
 close MAKEIN;
-#rmtree(['obj']);
-#mkpath(['obj']);
 open MAKEPREP, "< Makefile-prep" or die $!;
 @makeprep = <MAKEPREP>;
 close MAKEPREP;
@@ -36,5 +30,4 @@ print MAKEFILE @makein;
 print MAKEFILE @makeprep;
 close MAKEFILE;
 
-#system("./post","mhd",$ARGV[0]);
 }
