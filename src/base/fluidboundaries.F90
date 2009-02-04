@@ -47,7 +47,7 @@ subroutine bnd_u(dim)
 #endif /* ISO */
 
 #ifdef ISO
-  use start, only : csi2
+  use start, only : c_si
 #endif /* ISO */
 
 #ifdef GRAV
@@ -726,7 +726,7 @@ subroutine bnd_u(dim)
             db = u(iarr_all_dn,:,:,kb)
             db = max(db,smalld)
 #ifdef ISO
-            csi2b = csi2
+            csi2b = c_si**2
 #else /* ISO */
             ekb= 0.5*(u(iarr_all_mx,:,:,kb)**2+u(iarr_all_my,:,:,kb)**2+u(iarr_all_mz,:,:,kb)**2)/db
             eib = u(iarr_all_en,:,:,kb) - ekb
@@ -825,7 +825,7 @@ subroutine bnd_u(dim)
             db = u(iarr_all_dn,:,:,kb)
             db = max(db,smalld)
 #ifdef ISO
-            csi2b = csi2
+            csi2b = c_si**2
 #else /* ISO */
             ekb= 0.5*(u(iarr_all_mx,:,:,kb)**2+u(iarr_all_my,:,:,kb)**2+u(iarr_all_mz,:,:,kb)**2)/db
             eib = u(iarr_all_en,:,:,kb) - ekb
