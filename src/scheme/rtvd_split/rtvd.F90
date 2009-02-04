@@ -83,7 +83,7 @@ module rtvd ! split orig
 #endif /* IONIZED */
 
       use constants,       only : small
-      use mpisetup,        only : smalld, integration_order 
+      use mpisetup,        only : smalld, integration_order
       use fluxes,          only : flimiter,all_fluxes
       use fluidindex,      only : nvar,nmag,nfluid
       use fluidindex,      only : ibx,iby,ibz
@@ -252,7 +252,7 @@ module rtvd ! split orig
          u1(iarr_all_dn,:) = max(u1(iarr_all_dn,:), smalld)
 
 #ifdef FLUID_INTERACTIONS
-         call fluid_interactions(sweep,i1,i2, n, dintr, ur0)
+         call fluid_interactions(sweep,i1,i2, n, dintr, u)
          u1 = u1 + rk2coef(integration_order,istep)*dintr*dt
 #endif /* FLUID_INTERACTIONS */
 
