@@ -261,6 +261,7 @@ module mpisetup
 
                write(unit=3,nml=MPI_BLOCKS)
                write(unit=3,nml=BOUNDARIES)
+               write(unit=3,nml=NUMERICAL_SETUP)
 
             close(3)
             write(*,*)
