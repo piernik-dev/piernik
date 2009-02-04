@@ -135,7 +135,7 @@ contains
           else if(trim(mag_field_orient) .eq. 'vertical') then
             b(ibx,i,j,k)   =  0.0
             b(iby,i,j,k)   =  0.0
-            b(ibz,i,j,k)   =  b0*dsqrt(u(idni,i,j,k))
+            b(ibz,i,j,k)   =  b0*dsqrt(abs(u(idni,i,j,k)-smalld))
           endif
 
           u(ieni,i,j,k)   = u(ieni,i,j,k) +0.5*sum(b(:,i,j,k)**2,1)
