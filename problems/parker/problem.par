@@ -82,10 +82,10 @@
  $PROBLEM_CONTROL
     problem_name ='parker_instability'
     run_id =  'ts0'
-    d0     =  1.
-    nbx0    =  0.
+    d0      = 1.
+    nbx0    = 0.
     nby0    = 1.0
-    nbz0    =  0.
+    nbz0    = 0.
     a_vp    = 0.0
-    alpha  = 0.0 
+    alpha   = 0.0 
  /

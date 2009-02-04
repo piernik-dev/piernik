@@ -100,7 +100,7 @@ contains
 
   subroutine init_prob
     use constants
-    use gravity, only : h_grav
+    use gravity, only : h_grav, grav_pot_3d
     use arrays, only : u,b,dprof
     use grid, only : nx,ny,nz,dvol,is,ie,js,je,ks,ke,x,y,z,Lx,Ly,Lz
     use fluidindex, only : ibx,iby,ibz
@@ -121,6 +121,7 @@ contains
 #ifndef ISO
     gamma(1) = gamma_ion
 #endif
+    call grav_pot_3d
 !   Secondary parameters
 
     b0 = sqrt(2.*alpha*d0*cs_iso_ion**2) 

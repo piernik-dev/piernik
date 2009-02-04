@@ -3,7 +3,6 @@
 module initproblem
   
 ! Initial condition for Keplerian disk
-! Written by: M. Hanasz, March 2006
   use start, only : c_si,gamma,alpha,csim2
   real :: d0, v_zab
   character(len=32) :: problem_name,mag_field_orient
