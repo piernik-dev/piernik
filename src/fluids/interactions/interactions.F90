@@ -95,15 +95,15 @@ module interactions
       real, dimension(nvar,n) :: du,ddu,uu
       character sweep*6
 
-      ddu=0.0
+      du=0.0
 #ifdef COLLISIONS
       call dragforce(sweep,i1,i2, n, ddu, uu)
-      ddu = ddu + du
+      du = du + ddu
 #endif /* COLLISIONS */
 
 #ifdef BND_MOTION_SUPPORT
       call support_bnd_rotation(sweep,i1,i2, n, ddu, uu)
-      ddu = ddu + du
+      du = du + ddu
 #endif /* BND_MOTION_SUPPORT */
 
    end subroutine fluid_interactions
@@ -146,25 +146,13 @@ module interactions
             r1(1:rend) = 0.0
             r2(1:rend) = 1.0
       end select
-!!! wazne! czy w sweepach nadal aktualnym jest imxa???
-#ifdef COLLS_MODIF
-      velcoor(:,:) = (uu(iarr_all_mx,:)*a1 - uu(iarr_all_my,:)*spread(r1(:),1,nfluid)) &
-                                            /uu(iarr_all_dn,:)*spread(r2(:),1,nfluid)
-#endif /* COLLS_MODIF */
+
       do ifl=1,nfluid
          do jfl=1,nfluid
             if(ifl .ne. jfl) then
-#ifdef COLLS_PART
-               flch(ifl,jfl,:)= collfaq(ifl,jfl)*uu(iarr_all_dn(2),:) &
-#else /* COLLS_PART */
                flch(ifl,jfl,:)= collfaq(ifl,jfl)*uu(iarr_all_dn(ifl),:) * uu(iarr_all_dn(jfl),:) &
-#endif /* COLLS_PART */
-#ifdef COLLS_MODIF
-                        *( velcoor(jfl,:) - velcoor(ifl,:) )
-#else /* COLLS_MODIF */
                         *( uu(iarr_all_mx(jfl),:)/uu(iarr_all_dn(jfl),:) &
                          - uu(iarr_all_mx(ifl),:)/uu(iarr_all_dn(ifl),:))
-#endif /* COLLS_MODIF */
             else
                flch(ifl,jfl,:)=0.0
             endif

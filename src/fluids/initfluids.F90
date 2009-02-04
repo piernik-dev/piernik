@@ -18,53 +18,53 @@
 !    along with PIERNIK.  If not, see <http://www.gnu.org/licenses/>.
 !
 !    Initial implemetation of PIERNIK code was based on TVD split MHD code by
-!    Ue-Li Pen 
+!    Ue-Li Pen
 !        see: Pen, Arras & Wong (2003) for algorithm and
-!             http://www.cita.utoronto.ca/~pen/MHD 
-!             for original source code "mhd.f90" 
-!   
+!             http://www.cita.utoronto.ca/~pen/MHD
+!             for original source code "mhd.f90"
+!
 !    For full list of developers see $PIERNIK_HOME/license/pdt.txt
 !
 #include "piernik.def"
 
 module initfluids
-  
-#ifdef IONIZED    
+
+#ifdef IONIZED
   use initionized, only : init_ionized
-#endif /* IONIZED */  
+#endif /* IONIZED */
 
-#ifdef NEUTRAL    
+#ifdef NEUTRAL
   use initneutral, only : init_neutral
-#endif /* NEUTRAL */  
+#endif /* NEUTRAL */
 
-#ifdef DUST    
+#ifdef DUST
   use initdust, only : init_dust
-#endif /* DUST */  
+#endif /* DUST */
 
-#ifdef COSM_RAYS    
+#ifdef COSM_RAYS
   use initcosmicrays, only : init_cosmicrays
-#endif /* COSM_RAYS */  
+#endif /* COSM_RAYS */
 
   contains
 
   subroutine init_fluids
-  
+
 
 #ifdef IONIZED
   call init_ionized
-#endif /* IONIZED */  
+#endif /* IONIZED */
 
 #ifdef NEUTRAL
   call init_neutral
-#endif /* NEUTRAL */  
+#endif /* NEUTRAL */
 
 #ifdef DUST
   call init_dust
-#endif /* DUST */  
+#endif /* DUST */
 
 #ifdef COSM_RAYS
   call init_cosmicrays
-#endif /* COSM_RAYS */  
+#endif /* COSM_RAYS */
 
 
   end subroutine init_fluids
