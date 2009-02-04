@@ -169,11 +169,6 @@ module initproblem
             enddo
          enddo
       enddo
-      if(proc == 0) then
-         open(5,file='cloudfrac.out',status='unknown')
-         write(5,*) ' '
-         close(5)
-      endif
 
       return
    end subroutine init_prob
