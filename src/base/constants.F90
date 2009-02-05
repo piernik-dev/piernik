@@ -58,23 +58,8 @@ module constants     ! module containg numerical and physical constants !!!
    real, parameter :: kg =         1.0e3*gram
    real, parameter :: Msun =       1.0
 
-#elif defined VINE
-! VINE uses: length --> 3.5kpc, mass --> 5.6e10*Msun, time --> 13.1Myr,    miu0 --> 4*pi,    temperature --> kelvin
-! length units:
-   real, parameter :: pc =         1.0e-3/3.5
-   real, parameter :: cm =         pc/3.0856e18
-   real, parameter :: metr =       1.0e2*cm
-! time units:
-   real, parameter :: myr =        1.0/13.1
-   real, parameter :: year =       1.0e-6*myr
-   real, parameter :: sek =        year/365.2652/24.0/3600.0
-! mass units:
-   real, parameter :: Msun =       1.0e-10/5.6
-   real, parameter :: gram =       Msun/1.989e33
-   real, parameter :: kg =         1.0e3*gram
-
-#elif defined GSM
-! GSM  uses: length --> kpc,    mass --> 10^6*Msun,   time --> Gyr,        miu0 --> 4*pi,    temperature --> kelvin
+#elif defined (KSG)
+! KSG  uses: length --> kpc,    mass --> 10^6*Msun,   time --> Gyr,        miu0 --> 4*pi,    temperature --> kelvin
 ! length units:
    real, parameter :: cm =         1.0/3.0856e21
    real, parameter :: metr =       1.0e2*cm
@@ -104,8 +89,8 @@ module constants     ! module containg numerical and physical constants !!!
    real, parameter :: kg =         1.0e3*gram
    real, parameter :: Msun =       1.989e33*gram
 
-#elif defined (DMY)
-! DMY  uses: length --> cm^16,  mass --> Msun,        time --> year,       miu0 --> 4*pi,    temperature --> kelvin
+#elif defined (SSY)
+! SSY  uses: length --> cm^16,  mass --> Msun,        time --> year,       miu0 --> 4*pi,    temperature --> kelvin
 ! length units:
    real, parameter :: cm =         1.0e-16
    real, parameter :: metr =       1.0e2*cm
@@ -150,7 +135,7 @@ module constants     ! module containg numerical and physical constants !!!
    real, parameter :: Msun =       1.989e33
 #else
 #define SCALED
-#endif /* PSM, VINE, GSM, PGM, DMY, SI, CGS */
+#endif /* PSM, KSG, PGM, SSY, SI, CGS */
 
 #ifndef SCALED
 ! length units:

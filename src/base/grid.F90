@@ -18,11 +18,11 @@
 !    along with PIERNIK.  If not, see <http://www.gnu.org/licenses/>.
 !
 !    Initial implemetation of PIERNIK code was based on TVD split MHD code by
-!    Ue-Li Pen 
+!    Ue-Li Pen
 !        see: Pen, Arras & Wong (2003) for algorithm and
-!             http://www.cita.utoronto.ca/~pen/MHD 
-!             for original source code "mhd.f90" 
-!   
+!             http://www.cita.utoronto.ca/~pen/MHD
+!             for original source code "mhd.f90"
+!
 !    For full list of developers see $PIERNIK_HOME/license/pdt.txt
 !
 #include "piernik.def"
@@ -50,7 +50,7 @@ module grid
    real, allocatable, dimension(:)  :: z, zl, zr
 
 
-contains
+   contains
 
    subroutine init_grid
       use errh, only : namelist_errh
@@ -58,7 +58,7 @@ contains
       implicit none
       integer :: ierrh
       character(LEN=100) :: par_file, tmp_log_file
-      
+
       namelist /DOMAIN_SIZES/ nxd, nyd, nzd, nb
       namelist /DOMAIN_LIMITS/ xmin, xmax, ymin, ymax, zmin, zmax
 
@@ -112,7 +112,7 @@ contains
          nyd  = ibuff(2)
          nzd  = ibuff(3)
          nb   = ibuff(4)
-         
+
          xmin = rbuff(1)
          xmax = rbuff(2)
          ymin = rbuff(3)
@@ -175,7 +175,7 @@ contains
          pzsize = 1
          ks     = 1
          ke     = 1
-      else 
+      else
          ks = nb+1
          ke = nb+nzb
       endif
@@ -218,16 +218,16 @@ contains
       if(nzd /= 1) then
          dz = (zmaxb-zminb)/nzb
          dxmn = min(dxmn,dz)
-      else 
+      else
          dz = 1.0
       endif
 
       dl(xdim) = dx
       dl(ydim) = dy
       dl(zdim) = dz
-   
+
       dvol = dx*dy*dz
-    
+
 !--- Asignments -----------------------------------------------------------
     ! left zone boundaries:  xl, yl, zl
     ! zone centers:          x,  y,  z
@@ -269,8 +269,8 @@ contains
             zl(k) = z(k)  - 0.5*dz
             zr(k) = z(k)  + 0.5*dz
          enddo
-      else 
-         z  =  0.5*(zminb + zmaxb)  
+      else
+         z  =  0.5*(zminb + zmaxb)
          zl = -0.5*dz
          zr =  0.5*dz
       endif
@@ -284,7 +284,7 @@ contains
 
    subroutine cleanup_grid
       implicit none
-      
+
       deallocate(dl)
       deallocate(x, xl, xr)
       deallocate(y, yl, yr)

@@ -32,23 +32,23 @@ module arrays
    implicit none
    integer,parameter  :: nrlscal=100, nintscal=100
 
-   real, allocatable, dimension(:,:,:,:) :: u, b
-   real, allocatable, dimension(:,:,:) :: wa, wcu
+   real, allocatable, dimension(:,:,:,:)     :: u, b
+   real, allocatable, dimension(:,:,:)       :: wa, wcu
 #ifdef GRAV
-   real, allocatable, dimension(:,:,:) :: gp
-   real, allocatable, dimension(:)     :: dprof, eprof
+   real, allocatable, dimension(:,:,:)       :: gp
+   real, allocatable, dimension(:)           :: dprof, eprof
 #endif /* GRAV */
 
    real(kind=4), allocatable, dimension(:,:,:)  :: outwa, outwb, outwc
 
 #ifdef COSM_RAYS
-   real, allocatable, dimension(:,:,:) :: divvel
+   real, allocatable, dimension(:,:,:)       :: divvel
 #endif /* COSM_RAYS  */
 
-   real,    allocatable, dimension(:)       :: rlscal
-   integer, allocatable, dimension(:)       :: intscal
-   real,    allocatable, dimension(:,:)     :: ul0, ur0
-   real,    allocatable, dimension(:,:,:,:) :: bndxrar, bndyrar
+   real,    allocatable, dimension(:)        :: rlscal
+   integer, allocatable, dimension(:)        :: intscal
+   real,    allocatable, dimension(:,:)      :: ul0, ur0
+   real,    allocatable, dimension(:,:,:,:)  :: bndxrar, bndyrar
 
    contains
 
@@ -96,4 +96,3 @@ module arrays
    end subroutine arrays_deallocate
 
 end module arrays
-
