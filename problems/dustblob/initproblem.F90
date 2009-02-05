@@ -41,7 +41,6 @@ module initproblem
    namelist /PROBLEM_CONTROL/  problem_name, run_id, &
                                chi, rblob, blobxc, blobyc, blobzc, Mext, denv, tkh, vgal
 
-
    contains
 
 !-----------------------------------------------------------------------------
@@ -92,7 +91,6 @@ module initproblem
          rbuff(7) = denv
          rbuff(8) = tkh
          rbuff(9) = vgal
-
 
          call MPI_BCAST(cbuff, 32*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
          call MPI_BCAST(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)

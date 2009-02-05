@@ -3,8 +3,8 @@
     nyd = 128
     nzd = 1
 	 nb = 5
- /  
- 
+ /
+
  $MPI_BLOCKS
     pxsize = 1
     pysize = 1
@@ -19,7 +19,7 @@
 
  $END_CONTROL
     tend   = 12.0
-    nend   = 100000 
+    nend   = 100000
  /
 
  $OUTPUT_CONTROL
@@ -32,32 +32,32 @@
     vars(3) = 'vely'
     vars(4) = 'ener'
     domain  = 'phys_domain'
- / 
+ /
 
  $BOUNDARIES
-    bnd_xl = 'per'  
-    bnd_xr = 'per'  
-    bnd_yl = 'per'  
-    bnd_yr = 'per'  
+    bnd_xl = 'per'
+    bnd_xr = 'per'
+    bnd_yl = 'per'
+    bnd_yr = 'per'
     bnd_zl = 'per'
     bnd_zr = 'per'
  /
 
  $DOMAIN_LIMITS
- 	 xmin	  =  0.0
-	 xmax   = 10.0
+    xmin   =  0.0
+    xmax   = 10.0
     ymin   =  0.0
     ymax   = 10.0
  /
 
  $FLUID_NEUTRAL
     gamma_neu  = 1.666666667
- /  
+ /
 
  $FLUID_DUST
  dragc_gas_dust = 100.0
  /
- 
+
  $INTERACTIONS
  cfl_interact = 0.1
  /
@@ -68,9 +68,9 @@
     smallei= 1.e-4
     integration_order = 2
  /
- 
+
  $PROBLEM_CONTROL
-    problem_name ='blob'
+    problem_name ='dustblob'
     run_id  =  'tst'
     chi     =  1.0e-2
     rblob   =  1.0

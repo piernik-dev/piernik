@@ -1,39 +1,17 @@
-#undef DEBUG
-#undef VERBOSE
-
-/* choosing unitsystem */
-#undef PSM		/*pc,Msun,Myr unitsystem*/
-#undef PGM		/*pc,G=1,Myr unitsystem*/
-#undef DMY		/*cm^16,Msun,year unitsystem*/
-#undef CGS		/*cm,gram,sek unitsystem*/
-#undef SI		/*metr,kg,sek unitsystem*/
+/* number of different fluids */
+#define IONIZED
 
 /* adiabatic or isothermal */
 #undef ISO
 
-/* number of different fluids */
-#define IONIZED
-#undef NEUTRAL
-#undef DUST
-#undef COSM_RAYS
-
 /* choosing freezing speed */
-#undef  LOCAL_FR_SPEED
 #define GLOBAL_FR_SPEED
 
 /* choosing flux limiter */
 #define VANLEER
-#undef  MONCEN
-#undef  MINMOD
-#undef  SUPERBEE
-
-/* physics including */
-#undef RESIST
 
 /* gravity type choosing */
 #undef GRAV
-#undef GRAV_NULL
-#undef SELF_GRAV
 
 /* numerical solutions and limitations */
 #define SHEAR

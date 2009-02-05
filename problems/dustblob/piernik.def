@@ -1,32 +1,19 @@
-
-/* adiabatic or isothermal */
-#define ISO
-
 /* choosing fluids */
 #define NEUTRAL
 #define DUST
 
+/* adiabatic or isothermal */
+#define ISO
+
 /* choosing freezing speed */
 #define LOCAL_FR_SPEED
-#undef  GLOBAL_FR_SPEED
 
 /* choosing flux limiter */
 #define VANLEER
-#undef MONCEN
-#undef MINMOD
-#undef SUPERBEE
 
 /* physics including */
-#undef RESIST
-#undef COSM_RAYS
 #define FLUID_INTERACTIONS
 #define COLLISIONS
 
 /* gravity type choosing */
 #undef GRAV
-#undef GRAV_NULL
-#undef SELF_GRAV
-
-/* numerical solutions and limitations */
-#undef SHEAR
-

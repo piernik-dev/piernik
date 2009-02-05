@@ -1,33 +1,60 @@
+! $Id$
+!
+! PIERNIK Code Copyright (C) 2006 Michal Hanasz
+!
+!    This file is part of PIERNIK code.
+!
+!    PIERNIK is free software: you can redistribute it and/or modify
+!    it under the terms of the GNU General Public License as published by
+!    the Free Software Foundation, either version 3 of the License, or
+!    (at your option) any later version.
+!
+!    PIERNIK is distributed in the hope that it will be useful,
+!    but WITHOUT ANY WARRANTY; without even the implied warranty of
+!    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+!    GNU General Public License for more details.
+!
+!    You should have received a copy of the GNU General Public License
+!    along with PIERNIK.  If not, see <http://www.gnu.org/licenses/>.
+!
+!    Initial implemetation of PIERNIK code was based on TVD split MHD code by
+!    Ue-Li Pen
+!        see: Pen, Arras & Wong (2003) for algorithm and
+!             http://www.cita.utoronto.ca/~pen/MHD
+!             for original source code "mhd.f90"
+!
+!    For full list of developers see $PIERNIK_HOME/license/pdt.txt
+!
 #include "piernik.def"
 
 module initproblem
-  
+
 ! Initial condition for the cosmic ray driven dynamo
 ! Based on Parker instability setup
 ! Written by: M. Hanasz, February 2006
 ! Modified by M.Hanasz for CR-driven dynamo
 
-  use arrays
-  use mpisetup
-  use grid
-  use fluidboundaries
-  use hydrostatic
-  
-  real d0, bxn,byn,bzn
-  character problem_name*32,run_id*3
+   use arrays
+   use mpisetup
+   use grid
+   use fluidboundaries
+   use hydrostatic
 
-  namelist /PROBLEM_CONTROL/  problem_name, run_id, &
-                              d0, &
-                              bxn,byn,bzn, &
-			      x0, y0, z0
-contains
+   real d0, bxn,byn,bzn
+   character problem_name*32,run_id*3
+
+   namelist /PROBLEM_CONTROL/  problem_name, run_id, &
+                               d0, &
+                               bxn,byn,bzn, &
+                               x0, y0, z0
+   contains
 
 !-----------------------------------------------------------------------------
 
-  subroutine read_problem_par
+   subroutine read_problem_par
 
-    implicit none
-   
+      implicit none
+
       problem_name = 'xxx'
       run_id  = 'aaa'
       d0      = 1.0
@@ -37,183 +64,187 @@ contains
       x0     = 0.0
       y0     = 0.0
       z0     = 0.0
-    
-    if(proc .eq. 0) then    
-      open(1,file='problem.par')
-        read(unit=1,nml=PROBLEM_CONTROL)
-        write(*,nml=PROBLEM_CONTROL)
-      close(1)
-      open(3, file='tmp.log', position='append')
-        write(3,nml=PROBLEM_CONTROL)
-        write(3,*)
-      close(3)
-    endif
-    
-    if(proc .eq. 0) then
 
-      cbuff(1) =  problem_name
-      cbuff(2) =  run_id
+      if(proc .eq. 0) then
+         open(1,file='problem.par')
+         read(unit=1,nml=PROBLEM_CONTROL)
+         write(*,nml=PROBLEM_CONTROL)
+         close(1)
+         open(3, file='tmp.log', position='append')
+         write(3,nml=PROBLEM_CONTROL)
+         write(3,*)
+         close(3)
+      endif
 
-      rbuff(1) = d0
-      rbuff(2) = bxn
-      rbuff(3) = byn
-      rbuff(4) = bzn
-      rbuff(5) = x0
-      rbuff(6) = y0
-      rbuff(6) = z0
+      if(proc .eq. 0) then
 
-      call MPI_BCAST(cbuff, 32*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
-      call MPI_BCAST(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
-      call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+         cbuff(1) =  problem_name
+         cbuff(2) =  run_id
 
-    else
-    
-      call MPI_BCAST(cbuff, 32*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
-      call MPI_BCAST(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
-      call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
-      
-      problem_name = cbuff(1)   
-      run_id       = cbuff(2)   
+         rbuff(1) = d0
+         rbuff(2) = bxn
+         rbuff(3) = byn
+         rbuff(4) = bzn
+         rbuff(5) = x0
+         rbuff(6) = y0
+         rbuff(6) = z0
 
-      d0           = rbuff(1)  
-      bxn          = rbuff(2)  
-      byn          = rbuff(3)  
-      bzn          = rbuff(4)  
-      x0           = rbuff(5) 
-      y0           = rbuff(6) 
-      z0           = rbuff(6) 
+         call MPI_BCAST(cbuff, 32*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
+         call MPI_BCAST(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
+         call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
-    endif
+      else
 
-  end subroutine read_problem_par
+         call MPI_BCAST(cbuff, 32*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
+         call MPI_BCAST(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
+         call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+
+         problem_name = cbuff(1)
+         run_id       = cbuff(2)
+
+         d0           = rbuff(1)
+         bxn          = rbuff(2)
+         byn          = rbuff(3)
+         bzn          = rbuff(4)
+         x0           = rbuff(5)
+         y0           = rbuff(6)
+         z0           = rbuff(6)
+
+      endif
+
+   end subroutine read_problem_par
 
 !-----------------------------------------------------------------------------
 
-  subroutine init_prob
+   subroutine init_prob
 
-    implicit none
+      implicit none
 
-    integer i,j,k
-    real b0
+      integer i,j,k
+      real b0
 
 !   Secondary parameters
 
-    b0 = sqrt(2.*alpha*d0*c_si**2) 
-    
-    call hydrostatic_zeq(1, 1, d0, dprof)    
+      b0 = sqrt(2.*alpha*d0*c_si**2)
 
-    do k = 1,nz
-      do j = 1,ny
-        do i = 1,nx
-          u(idna,i,j,k)   = max(smalld,dprof(k)) 
-	  
-          u(imxa:imza,i,j,k) = 0.0
+      call hydrostatic_zeq(1, 1, d0, dprof)
+
+      do k = 1,nz
+         do j = 1,ny
+            do i = 1,nx
+               u(idna,i,j,k)   = max(smalld,dprof(k))
+
+               u(imxa:imza,i,j,k) = 0.0
 #ifdef SHEAR
-          u(imya,i,j,k) = -qshear*omega*x(i)*u(idna,i,j,k)
+               u(imya,i,j,k) = -qshear*omega*x(i)*u(idna,i,j,k)
 #endif /* SHEAR */
 
-
 #ifndef ISO
-          u(iena,i,j,k)   = c_si**2/(gamma-1.0) * u(idna,i,j,k) &
-	                         +0.5*sum(u(imxa:imza,i,j,k)**2,1)/u(idna,i,j,k)
+               u(iena,i,j,k)   = c_si**2/(gamma-1.0) * u(idna,i,j,k) &
+                               +0.5*sum(u(imxa:imza,i,j,k)**2,1)/u(idna,i,j,k)
 #endif /* ISO */
 #ifdef COSM_RAYS
-          u(iecr,i,j,k)   =  beta_cr*c_si**2 * u(idna,i,j,k)/(gamma_cr-1.0)
+               u(iecr,i,j,k)   =  beta_cr*c_si**2 * u(idna,i,j,k)/(gamma_cr-1.0)
 #ifdef GALAXY
 ! Single SN explosion in x0,y0,z0 at t = 0 if amp_cr /= 0
-          u(iecr,i,j,k)= u(iecr,i,j,k) &
-	     + amp_cr*exp(-((x(i)-x0)**2+(y(j)-y0)**2+(z(k)-z0)**2)/r_sn**2)  &
-             + amp_cr*exp(-((x(i)-(x0+Lx))**2+(y(j)-y0)**2+(z(k)-z0)**2)/r_sn**2) &
-             + amp_cr*exp(-((x(i)-x0)**2+(y(j)-(y0+Ly))**2+(z(k)-z0)**2)/r_sn**2) &
-             + amp_cr*exp(-((x(i)-(x0+Lx))**2+(y(j)-(y0+Ly))**2+(z(k)-z0)**2)/r_sn**2)
+               u(iecr,i,j,k)= u(iecr,i,j,k) &
+                     + amp_cr*exp(-((x(i)-x0)**2+(y(j)-y0)**2+(z(k)-z0)**2)/r_sn**2)  &
+                     + amp_cr*exp(-((x(i)-(x0+Lx))**2+(y(j)-y0)**2+(z(k)-z0)**2)/r_sn**2) &
+                     + amp_cr*exp(-((x(i)-x0)**2+(y(j)-(y0+Ly))**2+(z(k)-z0)**2)/r_sn**2) &
+                     + amp_cr*exp(-((x(i)-(x0+Lx))**2+(y(j)-(y0+Ly))**2+(z(k)-z0)**2)/r_sn**2)
 #endif /* GALAXY */
 #endif /* COSM_RAYS */
-        enddo
+            enddo
+         enddo
       enddo
-    enddo
-  
-    do k = 1,nz
-      do j = 1,ny
-        do i = 1,nx
-          b(ibx,i,j,k)   = b0*sqrt(u(idna,i,j,k)/d0)* bxn/sqrt(bxn**2+byn**2+bzn**2)
-          b(iby,i,j,k)   = b0*sqrt(u(idna,i,j,k)/d0)* byn/sqrt(bxn**2+byn**2+bzn**2)
-          b(ibz,i,j,k)   = b0*sqrt(u(idna,i,j,k)/d0)* bzn/sqrt(bxn**2+byn**2+bzn**2)
+
+      do k = 1,nz
+         do j = 1,ny
+            do i = 1,nx
+               b(ibx,i,j,k)   = b0*sqrt(u(idna,i,j,k)/d0)* bxn/sqrt(bxn**2+byn**2+bzn**2)
+               b(iby,i,j,k)   = b0*sqrt(u(idna,i,j,k)/d0)* byn/sqrt(bxn**2+byn**2+bzn**2)
+               b(ibz,i,j,k)   = b0*sqrt(u(idna,i,j,k)/d0)* bzn/sqrt(bxn**2+byn**2+bzn**2)
 #ifndef ISO
-          u(iena,i,j,k)   = u(iena,i,j,k) +0.5*sum(b(:,i,j,k)**2,1)
+               u(iena,i,j,k)   = u(iena,i,j,k) +0.5*sum(b(:,i,j,k)**2,1)
 #endif /* ISO */
-        enddo
+            enddo
+         enddo
       enddo
-    enddo
-              
-    return
-  end subroutine init_prob
-  
+
+      return
+   end subroutine init_prob
+
 !-----------------------------------------------------------------------------
 
-  subroutine mass_loss_compensate
-  
-    implicit none
-    
-    real tot_mass, dmass
-    integer i
-    
+   subroutine mass_loss_compensate
+
+      implicit none
+
+      real tot_mass, dmass
+      integer i
+
       call total_mass(tot_mass)
 
-      mass_loss = max(0.0,init_mass - tot_mass) 
+      mass_loss = max(0.0,init_mass - tot_mass)
 
       dmass = mass_loss/init_mass
 
       do i=1,nx
-        u(idna,:,:,:) = u(idna,:,:,:) + dmass * dinit(:,:,:)
+         u(idna,:,:,:) = u(idna,:,:,:) + dmass * dinit(:,:,:)
 #ifdef SHEAR
-        u(imya,:,:,:) = u(imya,:,:,:) - dmass * qshear*omega*x(i) * dinit(:,:,:)
+         u(imya,:,:,:) = u(imya,:,:,:) - dmass * qshear*omega*x(i) * dinit(:,:,:)
 #endif /* SHEAR */
 #ifndef ISO
-        u(iena,:,:,:) = u(iena,:,:,:) + dmass * (c_si**2/(gamma-1.0) * dinit(:,:,:) 
+         u(iena,:,:,:) = u(iena,:,:,:) + dmass * (c_si**2/(gamma-1.0) * dinit(:,:,:)
 #ifdef SHEAR
-	u(iena,:,:,:) = u(iena,:,:,:) + dmass * 0.5 * (qshear*omega*x(i))**2) * dinit(:,:,:)
+         u(iena,:,:,:) = u(iena,:,:,:) + dmass * 0.5 * (qshear*omega*x(i))**2) * dinit(:,:,:)
 #endif /* SHEAR */
 #endif /* ISO */
       enddo
 
-  end subroutine mass_loss_compensate
-  
+   end subroutine mass_loss_compensate
+
 !=============================================================================
-! Te procedury powinny sie znalezc docelowo w jakims innym module. 
-   
-  subroutine save_init_dens
-    implicit none
-    real mass
-    
+! Te procedury powinny sie znalezc docelowo w jakims innym module.
+
+   subroutine save_init_dens
+
+      implicit none
+
+      real mass
+
       dinit(:,:,:) = u(idna,:,:,:)
       mass = sum(dinit(is:ie,js:je,ks:ke)) * dvol
       call MPI_ALLREDUCE(mass, init_mass, 1, mpi_real8, mpi_sum, comm3d, ierr)
 
-  end subroutine save_init_dens
-  
+   end subroutine save_init_dens
+
 !-----------------------------------------------------------------------------
-   
-  subroutine get_init_mass
-    implicit none
-    real mass
-    
+
+   subroutine get_init_mass
+
+      implicit none
+
+      real mass
+
       mass = sum(dinit(is:ie,js:je,ks:ke)) * dvol
       call MPI_ALLREDUCE(mass, init_mass, 1, mpi_real8, mpi_sum, comm3d, ierr)
 
-  end subroutine get_init_mass
-  
-!-----------------------------------------------------------------------------
-   
-  
-  subroutine total_mass(tmass)
+   end subroutine get_init_mass
 
-    implicit none
-    real mass, tmass
-   
+!-----------------------------------------------------------------------------
+
+
+   subroutine total_mass(tmass)
+
+      implicit none
+
+      real mass, tmass
+
       mass = sum(u(idna,is:ie,js:je,ks:ke)) * dvol
       call MPI_ALLREDUCE(mass, tmass, 1, mpi_real8, mpi_sum, comm3d, ierr)
 
-  end subroutine total_mass
+   end subroutine total_mass
 
 end module initproblem
 

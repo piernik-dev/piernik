@@ -1,5 +1,5 @@
+/* choosing fluids */
 #define IONIZED
-#define MAGNETIC
 
 /* adiabatic or isothermal */
 #undef ISO
@@ -9,18 +9,15 @@
 
 /* choosing flux limiter */
 #define VANLEER
-#undef MONCEN
-#undef MINMOD
-#undef SUPERBEE
 
 /* physics including */
-#undef RESIST
-#undef COSM_RAYS
+#define MAGNETIC
 
 /* gravity type choosing */
 #define GRAV
+#ifdef GRAV /* define external source of gravity */
 #define GRAV_NULL
-#undef SELF_GRAV
+#endif /* GRAV */
 
 /* numerical solutions and limitations */
 #define SHEAR
