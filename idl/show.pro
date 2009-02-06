@@ -1,7 +1,7 @@
 PRO SHOW
 
-data_dir = '../run/dustblob/'
-prefix = 'blob_tst'
+data_dir = '/raid_hum/xarth/manoix/'
+prefix = 'manoix_tst'
 
 png_dir = data_dir+'/frames'
 
@@ -57,18 +57,18 @@ n_slices = n_slices+1
 
 ;-----------------------------------------------------------------------------
 
-s.sw	= 'off'  
+s.sw	= 'off' 
 s.panel_name	= 'b'			; If more slices of the same type 
                                         ; are needed use this index
 
-s.type		= 'xy'			; Chose 'yz', 'xz' or 'xy' plane
-s.coord		=  0.5                  ; Position at the complementary coordinate
-s.vect_disp	= 'b'			; Vector field to display: 'b' or 'v'
+s.type		= 'yz'			; Chose 'yz', 'xz' or 'xy' plane
+s.coord		=  0.0                  ; Position at the complementary coordinate
+s.vect_disp	= 'v'			; Vector field to display: 'b' or 'v'
 s.vect_scaling	= 'free'		; 'fix' or 'free' 
 s.vect_scale	=  1.0
 
 
-s.scal_disp	= 'e'			; Scalar field to display 'd' or 'e'
+s.scal_disp	= 'd'			; Scalar field to display 'd' or 'e'
 s.scal_pert     = ''			; inactive
 s.scal_scaling	= 'free'		; 'fix' or 'free'
 s.scal_scale	= [0.0,4.0]
@@ -87,7 +87,7 @@ s.panel_name	= 'c'			; If more slices of the same type
 
 s.type		= 'xy'			; Chose 'yz', 'xz' or 'xy' plane
 s.coord		=  0.25                  ; Position at the complementary coordinate
-s.vect_disp	= 'b'			; Vector field to display: 'b' or 'v'
+s.vect_disp	= ''			; Vector field to display: 'b' or 'v'
 s.vect_scaling	= 'free'		; 'fix' or 'free' 
 s.vect_scale	=  1.0
 
@@ -103,7 +103,7 @@ slice_array = [slice_array,s]
 n_slices = n_slices+1
 
 ;==============================================================================
-vars = ['den2','vlx2','vly2']
+vars = ['den1','vlx1','vly1']
 n_vectors = [n_vect_x,n_vect_y,n_vect_z]
 ;==============================================================================
 
@@ -126,7 +126,7 @@ n_vectors = [n_vect_x,n_vect_y,n_vect_z]
     hdf_num = file_sep(n_sep-1)
 
     PLOT_SLICES,  slice_array,n_vectors, $
-                  display_frames, hdf_num, png_output, png_dir, time
+                  display_frames, hdf_num, png_output, png_dir, time, i_frame
 
   END
 

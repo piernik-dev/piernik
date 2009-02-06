@@ -1,5 +1,5 @@
 PRO PLOT_SLICES,  slice_array, n_vectors, $
-                  display_frames, hdf_num, png_output, png_dir, time
+                  display_frames, hdf_num, png_output, png_dir, time,step
 
 COMMON coordsys    , coordsys, coordnames $
                    , coord1,coord2,coord3,plane1,plane2,plane3
@@ -46,7 +46,7 @@ COMMON frames, first_frame, i_frame
 
       IF(png_output EQ 'y') THEN BEGIN
         TVLCT,red,green,blue,/GET
-        pngfile = png_dir+'/'+hdf_num+'_'+s.name+'.png'
+        pngfile = png_dir+'/'+hdf_num+'_'+s.name+'_'+string(step,format='(I3.3)')+'.png'
         WRITE_PNG,  pngfile,frame,red,green,blue, /verbose
       ENDIF
      ENDIF

@@ -36,8 +36,13 @@ FOR ivar=0, nvar-1 DO BEGIN
 
   IF(var EQ 'den1') THEN BEGIN
     dd = data
-    min_dd = MIN(dd)
-    max_dd = MAX(dd)
+    min_dd = min(dd)
+    max_dd = max(dd)
+  ENDIF
+  IF(var EQ 'ein1') THEN BEGIN
+    ee = data
+    min_ee = min(ee)
+    max_ee = max(ee)
   ENDIF
   IF(var EQ 'den2') THEN BEGIN
     dd = data
