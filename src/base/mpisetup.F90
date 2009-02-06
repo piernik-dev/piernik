@@ -360,6 +360,7 @@ module mpisetup
       subroutine mpistop
 
          implicit none
+         call MPI_BARRIER(comm,ierr)
 
          call MPI_FINALIZE()
 
