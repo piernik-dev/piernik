@@ -269,7 +269,7 @@ module gravity
          fr(:) = min((rc(:)/r_grav)**n_gravr,100.0)
          fr = max(1./cosh(fr),smalld/100.)
          gpot = -newtong*ptmass/dsqrt(x1**2+x2**2+x3**2+r_smooth**2)
-         gpot = gpot - csim2*dlog(fr) ! *d0
+!         gpot = gpot - csim2*dlog(fr) ! *d0
 #elif defined (GRAV_USER)
          call grav_pot_user(gpot,sweep,i1,i2,xsw,n,status,temp_log)
 
