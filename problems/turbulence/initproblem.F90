@@ -2,7 +2,6 @@
 module initproblem
   
 ! Initial condition for Sedov-Taylor explosion
-! Written by: M. Hanasz, March 2006
 
   use start, only : c_si, gamma
   use arrays
@@ -104,12 +103,18 @@ contains
           do m=-kp,kp
             do n = -kp,kp
                call random_number(mn)
-               somx = dpi*(float(n)*y(j) + float(m)*z(k)) / Lx
-               somy = dpi*(float(n)*x(i) + float(m)*z(k)) / Ly
-               somz = dpi*(float(n)*x(i) + float(m)*y(j)) / Lz
-               deltav(1) = deltav(1) + mn(1)*dsin(somx) + mn(2)*dcos(somx)
-               deltav(2) = deltav(2) + mn(3)*dsin(somy) + mn(4)*dcos(somy)
-               deltav(3) = deltav(3) + mn(5)*dsin(somz) + mn(6)*dcos(somz)
+!               somx = dpi*(float(n)*y(j) + float(m)*z(k)) / Lx
+!               somy = dpi*(float(n)*x(i) + float(m)*z(k)) / Ly
+!               somz = dpi*(float(n)*x(i) + float(m)*y(j)) / Lz
+!               deltav(1) = deltav(1) + mn(1)*dsin(somx) + mn(2)*dcos(somx)
+!               deltav(2) = deltav(2) + mn(3)*dsin(somy) + mn(4)*dcos(somy)
+!               deltav(3) = deltav(3) + mn(5)*dsin(somz) + mn(6)*dcos(somz)
+               deltav(1) = deltav(1) + mn(1)*dsin(float(m)*z(k)) &
+                                     + mn(2)*dcos(float(n)*y(j))
+               deltav(2) = deltav(2) + mn(3)*dsin(float(m)*x(i)) &
+                                     + mn(4)*dcos(float(n)*z(k))
+               deltav(3) = deltav(3) + mn(5)*dsin(float(m)*y(j)) &
+                                     + mn(6)*dcos(float(n)*x(i))
             enddo
           enddo
           dv(:,i,j,k) = deltav(:)
@@ -127,14 +132,12 @@ contains
                cma = rms/c_si
           else
              l=1
-             do while (cma < 0.1) 
+             do while (cma < 0.1 .and. l <= 10) 
                 l=l+1
                 cma = rms /c_si * (0.1)**l
                 if(l > 10) write(*,*) "error"
              enddo
           endif
-
-          
 
           u(idnn,i,j,k) = d0 
           u(imxn,i,j,k) = u(idnn,i,j,k) * dv(1,i,j,k) * cma

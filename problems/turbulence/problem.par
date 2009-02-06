@@ -1,12 +1,12 @@
  $DOMAIN_SIZES
-    nxd = 40
-    nyd = 40
-    nzd = 40
+    nxd = 128
+    nyd = 128
+    nzd = 128
  /
  $MPI_BLOCKS
-    pxsize = 1
-    pysize = 1
-    pzsize = 1    
+    pxsize = 2
+    pysize = 2
+    pzsize = 2    
  /  
 
  $RESTART_CONTROL
@@ -21,7 +21,7 @@
  /
 
  $OUTPUT_CONTROL
-    dt_hdf  = 0.1
+    dt_hdf  = 0.01
     dt_res  = 0.0
     dt_log  = 0.001
     dt_tsl  = 0.001
@@ -49,10 +49,6 @@
     ymax   = 1.0
     zmin   =-1.0
     zmax   = 1.0
- /
-
- $FLUID_IONIZED
-    gamma_ion  = 1.666666666
  /
 
  $FLUID_NEUTRAL
