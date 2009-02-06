@@ -30,8 +30,8 @@ contains
       problem_name = 'aaa'
       run_id  = 'aaa'
       d0      = 1.0
-      Mrms    = 0.1
-      c_si    = 5.0
+      c_si    = 0.1
+      Mrms    = 5.0
          
     if(proc .eq. 0) then
     
@@ -52,7 +52,8 @@ contains
       cbuff(2) =  run_id
 
       rbuff(1) = d0
-      rbuff(2)= Mrms
+      rbuff(2) = Mrms
+      rbuff(3) = c_si
       
       call MPI_BCAST(cbuff, 32*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
       call MPI_BCAST(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
@@ -73,6 +74,7 @@ contains
 
       d0           = rbuff(1)  
       Mrms         = rbuff(2)
+      c_si         = rbuff(3)
       
     endif
 
@@ -124,18 +126,19 @@ contains
    vol = nx*ny*nz
    rms = dsqrt( sum(dv**2) / vol )
           
-   cma = 0.02
+   cma = 1.0
    if( rms/c_si < 0.1) then
       cma = rms/c_si
    else
       l=1
-      do while (cma < 0.1 .and. l <= 10) 
+      do while (cma >= 0.1 .and. l <=10) 
+        cma = rms / c_si * (0.1)**l
         l=l+1
-        cma = rms /c_si * (0.1)**l
-        if(l > 10) write(*,*) "error"
       enddo
    endif
 
+    write(*,*) 'cma = ',cma, ' rms = ',rms, ' on ', proc
+    write(*,*) 'c_si = ',c_si, ' l = ',l, ' on ', proc
     do k = 1,nz
       do j = 1,ny
         do i = 1,nx
