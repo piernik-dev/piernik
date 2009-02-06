@@ -121,24 +121,24 @@ contains
        enddo
      enddo
    enddo
+   vol = nx*ny*nz
+   rms = dsqrt( sum(dv**2) / vol )
+          
+   cma = 0.02
+   if( rms/c_si < 0.1) then
+      cma = rms/c_si
+   else
+      l=1
+      do while (cma < 0.1 .and. l <= 10) 
+        l=l+1
+        cma = rms /c_si * (0.1)**l
+        if(l > 10) write(*,*) "error"
+      enddo
+   endif
+
     do k = 1,nz
       do j = 1,ny
         do i = 1,nx
-          vol = nx*ny*nz
-          rms = dsqrt( sum(dv**2) / vol )
-          
-          cma = 0.02
-          if( rms/c_si < 0.1) then
-               cma = rms/c_si
-          else
-             l=1
-             do while (cma < 0.1 .and. l <= 10) 
-                l=l+1
-                cma = rms /c_si * (0.1)**l
-                if(l > 10) write(*,*) "error"
-             enddo
-          endif
-
           u(idnn,i,j,k) = d0 
           u(imxn,i,j,k) = u(idnn,i,j,k) * dv(1,i,j,k) * cma
           u(imyn,i,j,k) = u(idnn,i,j,k) * dv(2,i,j,k) * cma
