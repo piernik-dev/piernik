@@ -1,0 +1,23 @@
+/* adiabatic or isothermal */
+#undef ISO
+
+#define NEUTRAL
+
+/* choosing freezing speed */
+#define LOCAL_FR_SPEED
+#undef  GLOBAL_FR_SPEED
+
+/* choosing flux limiter */
+#undef VANLEER
+#define MONCEN
+#undef MINMOD
+#undef SUPERBEE
+
+/* physics including */
+#undef RESIST 		
+
+/* gravity type choosing */
+#undef GRAV
+#undef GRAV_NULL
+#undef SELF_GRAV
+

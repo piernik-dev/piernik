@@ -1,0 +1,102 @@
+ $DOMAIN_SIZES
+    nxd = 64
+    nyd = 64
+    nzd = 64
+ /
+ $MPI_BLOCKS
+    pxsize = 1
+    pysize = 1
+    pzsize = 1
+ /  
+
+ $START_CONTROL
+ /
+
+ $RESTART_CONTROL
+    restart  = 'last'
+    new_id   = ''
+    nrestart = 0 
+ /
+
+ $END_CONTROL
+    tend   = 5.0
+    nend   = 10000
+ /
+
+ $OUTPUT_CONTROL
+    ix      = 30
+    iy      = 0
+    iz      = 30
+    dt_hdf  = 0.00001
+    dt_res  = 0.01
+    dt_log  = 0.00001
+    dt_tsl  = 0.001
+    vars(1) = 'dens'
+    vars(2) = 'velx'
+    vars(3) = 'vely'
+    vars(4) = 'velz'
+    vars(5) = 'ener'
+    vars(6) = 'magx'
+    vars(7) = 'magy'
+    vars(8) = 'magz'
+    domain  = 'phys_domain'  
+ / 
+
+ $BOUNDARIES
+    bnd_xl = 'per'  
+    bnd_xr = 'per'  
+    bnd_yl = 'per'  
+    bnd_yr = 'per'  
+    bnd_zl = 'per'  
+    bnd_zr = 'per'
+ /
+
+ $DOMAIN_LIMITS
+    xmin   =-1.0
+    xmax   = 1.0
+    ymin   =-1.0
+    ymax   = 1.0
+    zmin   =-1.0
+    zmax   = 1.0
+ /
+
+ $EQUATION_OF_STATE
+   gamma = 1.01
+   c_si  = 0.1
+   alpha = 0.0
+ /  
+
+ $NUMERICAL_SETUP
+    cfl    = 0.9
+    smalld = 1.e-3
+    smallei= 1.e-5
+    integration_order = 2
+    magnetic = 'no'
+    dimensions = '3d'
+ /
+ 
+ $GRAVITY
+ /
+ 
+ $THERMAL
+ /
+ 
+ $RESISTIVITY
+ /
+
+ $PROBLEM_CONTROL
+    problem_name ='manoix'
+    run_id =  'tst'
+    d0     = 1.0
+    p0     = 1.0
+    Eexpl  = 0.0
+    bx0    = 0.0
+    by0    = 0.0
+    bz0    = 0.0
+    x0     = -0.0 
+    y0     = -0.0 
+    z0     = -0.0
+    r0     = 0.25 
+    n_sn   = 1
+    Mrms  = 5.0
+ /
