@@ -90,6 +90,7 @@ contains
     integer, parameter :: kp = 8
     real, dimension(6) :: mn
     real, dimension(3) :: deltav
+    real, dimension(3,nx,ny,nz) :: dv
     real :: somx,somy,somz,rms,cma, vol
 
 ! Uniform equilibrium state
@@ -111,25 +112,34 @@ contains
                deltav(3) = deltav(3) + mn(5)*dsin(somz) + mn(6)*dcos(somz)
             enddo
           enddo
-          vol = Lx*Ly*Lz
-          rms = dsqrt( sum(deltav**2) / vol )
+          dv(:,i,j,k) = deltav(:)
+       enddo
+     enddo
+   enddo
+    do k = 1,nz
+      do j = 1,ny
+        do i = 1,nx
+          vol = nx*ny*nz
+          rms = dsqrt( sum(dv**2) / vol )
+          
+          cma = 0.02
           if( rms/c_si < 0.1) then
-                cma = rms/c_si
+               cma = rms/c_si
           else
-                cma = 0.02
+             l=1
+             do while (cma < 0.1) 
+                l=l+1
+                cma = rms /c_si * (0.1)**l
+                if(l > 10) write(*,*) "error"
+             enddo
           endif
 
-          l=1
-          do while (cma < 0.1) 
-                l=l+1
-                cma = rms /c_si*(0.1)**l
-          enddo
           
 
           u(idnn,i,j,k) = d0 
-          u(imxn,i,j,k) = u(idnn,i,j,k) * deltav(1) * cma
-          u(imyn,i,j,k) = u(idnn,i,j,k) * deltav(2) * cma
-          u(imzn,i,j,k) = u(idnn,i,j,k) * deltav(3) * cma
+          u(imxn,i,j,k) = u(idnn,i,j,k) * dv(1,i,j,k) * cma
+          u(imyn,i,j,k) = u(idnn,i,j,k) * dv(2,i,j,k) * cma
+          u(imzn,i,j,k) = u(idnn,i,j,k) * dv(3,i,j,k) * cma
           u(ienn,i,j,k) = c_si**2*d0/(gamma_neu*(gamma_neu-1.0))
           u(ienn,i,j,k) = u(ienn,i,j,k) + 0.5*(u(imxn,i,j,k)**2 &
                          + u(imyn,i,j,k)**2 + u(imzn,i,j,k) )/u(idnn,i,j,k)

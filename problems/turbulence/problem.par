@@ -1,7 +1,7 @@
  $DOMAIN_SIZES
-    nxd = 128
-    nyd = 128
-    nzd = 128
+    nxd = 40
+    nyd = 40
+    nzd = 40
  /
  $MPI_BLOCKS
     pxsize = 1
