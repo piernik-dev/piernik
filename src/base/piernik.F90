@@ -31,7 +31,7 @@ program piernik
 
   use mpisetup
   use dataio, only : nstep, nend, nstep_start, tend
-!  use timer, only : timer_start, timer_stop
+  use timer, only : timer_start, timer_stop
   use dataio, only : write_data, user_msg_handler
   use fluidupdate, only  : fluid_update
 
@@ -42,7 +42,7 @@ program piernik
 
   call MPI_BARRIER(comm3d,ierr)
 !-------------------------------- MAIN LOOP ----------------------------------
-!  call timer_start
+  call timer_start
 
   end_sim = .false.
   do while(t < tend .and. nstep < nend .and. .not.(end_sim) )
@@ -58,7 +58,7 @@ program piernik
   end do ! main loop
 
   nstep=nstep-1
-!  call timer_stop
+  call timer_stop
 
   call write_data(output='end')
 !---------------------------- END OF MAIN LOOP ----------------------------------
