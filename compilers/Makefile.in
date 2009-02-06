@@ -2,9 +2,7 @@ PROG		 = piernik
 
 ### GNU  AMD64
 F90		 = mpif90
-F90FLAGS  = -fdefault-real-8 -O3 -funroll-loops -m3dnow -msse2 -mfpmath=sseF90  
-HDF_LIB  = /usr/local/szip/szip.gcc4/lib -lsz -L/usr/local/hdf/hdf4.gcc4/lib
-MHDF_LIB = /usr/local/openmpi/gcc4/lib/ -lc -lgfortran
-
-MHDF_LIB = /opt/pgi/linux86/7.0/hdf4/include
+F90FLAGS  = -fdefault-real-8 -O3 -funroll-loops -m3dnow -msse2 -mfpmath=sse   
+HDF_LIB  = /usr/local/szip/szip.gcc4/lib -lsz -L/usr/local/hdf/hdf4.gcc4/lib 
+MHDF_LIB = /usr/local/openmpi/gcc4/lib/ -lc -lgfortran 
 
