@@ -46,7 +46,7 @@ COMMON frames, first_frame, i_frame
 
       IF(png_output EQ 'y') THEN BEGIN
         TVLCT,red,green,blue,/GET
-        pngfile = png_dir+'/'+hdf_num+'_'+s.name+'_'+string(step,format='(I3.3)')+'.png'
+        pngfile = png_dir+'/'+hdf_num+'_'+s.name+'_'+string(step,format='(I4.4)')+'.png'
         WRITE_PNG,  pngfile,frame,red,green,blue, /verbose
       ENDIF
      ENDIF
