@@ -1,2 +1,0 @@
-Remarks for developers:
-1. Please use INDENTATIONS and set <TAB> to 3 WHITE SPACES
