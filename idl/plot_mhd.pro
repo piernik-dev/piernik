@@ -15,24 +15,20 @@ PRO PLOT_MHD ;,first,last,var
 
   compare = 'n'
 
-  sf = 5
+  sf = 2
 
 ;  dir0 = '/home/mhanasz/work/piernik/trunk/obj-sedov1d/'
+;  var0 = 
+
+   DEVICE,DECOMPOSED=0,RETAIN=2
+
    dir1 = '../obj/'
-   prefix0 = 'cr_test_b_5'
-   prefix1 = 'cr_test_b_5'
-  
-  var0='encr'
-  var1='encr'
+   prefix1 = 'sedov_tst'
+   var1='den1'
 
-  
-;  dir1    = dir0
-;  prefix1 = prefix0
-;  var1    = var0
-
-  dir0    = dir1
-  prefix0 = prefix1
-  var0    = var1
+   dir0    = dir1
+   prefix0 = prefix1
+   var0    = var1
 
 
 ;===============================================================================
@@ -127,9 +123,9 @@ IF(n_files EQ 0) THEN GOTO, SKIP
     nz = dims(2)
   endelse
 
-  ix = 1
+  ix = nxd/2
 
-  iy = 1
+  iy = nyd/2
 
 
   if(nz eq 1) then begin 
