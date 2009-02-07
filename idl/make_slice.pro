@@ -33,8 +33,13 @@ COMMON sldata  $
 
 
 s = slice_array(i_slice)
-hdx = (x1b(1)-x1b(0))/2.
-hdy = (x2b(1)-x2b(0))/2.
+IF(s.type EQ plane1) THEN begin
+   hdx = (x2b(1)-x2b(0))/2.
+   hdy = (x3b(1)-x3b(0))/2.
+endif else begin
+   hdx = (x1b(1)-x1b(0))/2.
+   hdy = (x2b(1)-x2b(0))/2.
+endelse
 IF(dims EQ '3d') THEN hdz = (x3b(1)-x3b(0))/2.
 
 
