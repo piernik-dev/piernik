@@ -79,7 +79,7 @@ module shear
     delj  = mod(int(dely/dy),nyd)
     eps   = mod(dely,dy)/dy
   end subroutine yshift
-
+#ifdef FFTW
   subroutine unshear_fft_b(qty,xx,lb,rb,inv)
     use mpisetup, only  : smalld
     use grid, only   : dy,nb,xmax,xmin,nyd,ymax,ymin,nxd
@@ -240,6 +240,7 @@ module shear
     return
 
   end function unshear_fft
+#endif /* FFTW */
 
   function unshear(qty,x,inv)
     use grid,  only  : nb,xmax,xmin,nyd,dy
