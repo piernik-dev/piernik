@@ -13,7 +13,7 @@ PRO PLOTMHD,ff=first,lf=last,var=var,zoom=sf,log=llog,min=amin,max=amax,fix=run
   white = 255
   plots  ='x'
 
-  dir = '../run/'
+  dir = '../runs/shock1d_rj/'
   prefix = 'shock1d_r' + run
   freq = 1
   step = first
@@ -26,8 +26,8 @@ PRO PLOTMHD,ff=first,lf=last,var=var,zoom=sf,log=llog,min=amin,max=amax,fix=run
   filename= dir+prefix+'_'+frame+'.hdf'  
   
   LOAD_DIMS_HDF, filename, pdims=pdims, pcoords=pcoords, dims=dims, $
-                           nxd,nyd,nzd, nxb,nyb,nzb, nb, $
-                           xmin, xmax, ymin, ymax, zmin, zmax 
+                           nxd=nxd,nyd=nyd,nzd=nzd, nxb=nxb,nyb=nyb,nzb=nzb, nb=nb, $
+                           xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, zmin=zmin, zmax=zmax 
   nproc = pdims(0)*pdims(1)*pdims(2)
 
   if(nxb eq dims(0)) then begin
@@ -41,6 +41,7 @@ PRO PLOTMHD,ff=first,lf=last,var=var,zoom=sf,log=llog,min=amin,max=amax,fix=run
     nz = dims(2)
   endelse
 
+
   ix = nxd/2
   iy = nyd/2
   iz = nzd/2
@@ -51,17 +52,17 @@ PRO PLOTMHD,ff=first,lf=last,var=var,zoom=sf,log=llog,min=amin,max=amax,fix=run
     a = LOAD_DATA_HDF(dir,prefix, step, 'magz', $
             xcoord = x, ycoord = y, zcoord = z, $
             nxa=nxa,nya=nya,nza=nza, $
-            time = t)
+            time = t,allblocks='y')
     b = LOAD_DATA_HDF(dir,prefix, step, 'magy', $
             xcoord = x, ycoord = y, zcoord = z, $
             nxa=nxa,nya=nya,nza=nza, $
-            time = t)
+            time = t, allblocks='y')
     a = atan(a/(b+1.e-5))
   endif else begin
     a = LOAD_DATA_HDF(dir,prefix, step, var, $
             xcoord = x, ycoord = y, zcoord = z, $
             nxa=nxa,nya=nya,nza=nza, $
-            time = t)
+            time = t,allblock='y')
   endelse  
   timestr = '    t='+strtrim(string(t,format='(f7.2)'),0)
   if(llog EQ 1)    then a    = alog10(a)
@@ -72,8 +73,13 @@ PRO PLOTMHD,ff=first,lf=last,var=var,zoom=sf,log=llog,min=amin,max=amax,fix=run
   amin = min(a)
   amax = max(a)
 
-  px  =  a(*,iy-1,iz-1)
-  px = reform(px)
+  ss = size(a)
+  if(ss[0] EQ 1) then begin
+     px = reform(a)
+  endif else begin
+     px  =  a(*,iy-1,iz-1)
+     px = reform(px)
+  endelse
   PLOT,  x, px, line=0, title=var+timestr, $
     xstyle=1,yrange=yrange,PSYM=4, SYMSIZE=0.5
 
@@ -88,14 +94,14 @@ pro shock_rj,f=frm,run=run
 set_plot,'PS'
 device,/ENCAPSULATED, filename='shock1d_r' + run + '.ps', XSIZE=12, YSIZE=9, /INCHES
 !P.MULTI=[0,3,3,0,1]
-plotmhd,zoom=1.0,log=0,ff=frm,lf=frm,var='dens',fix=run,min=0.0,max=0.0
-plotmhd,zoom=1.0,log=0,ff=frm,lf=frm,var='velx',fix=run,min=0.0,max=0.0
+plotmhd,zoom=1.0,log=0,ff=frm,lf=frm,var='den1',fix=run,min=0.0,max=0.0
+plotmhd,zoom=1.0,log=0,ff=frm,lf=frm,var='vlx1',fix=run,min=0.0,max=0.0
 plotmhd,zoom=1.0,log=0,ff=frm,lf=frm,var='magy',fix=run,min=0.0,max=0.0
-plotmhd,zoom=1.0,log=0,ff=frm,lf=frm,var='eint',fix=run,min=0.0,max=0.0
-plotmhd,zoom=1.0,log=0,ff=frm,lf=frm,var='vely',fix=run,min=0.0,max=0.0
+plotmhd,zoom=1.0,log=0,ff=frm,lf=frm,var='ein1',fix=run,min=0.0,max=0.0
+plotmhd,zoom=1.0,log=0,ff=frm,lf=frm,var='vly1',fix=run,min=0.0,max=0.0
 plotmhd,zoom=1.0,log=0,ff=frm,lf=frm,var='magz',fix=run,min=0.0,max=0.0
-plotmhd,zoom=1.0,log=0,ff=frm,lf=frm,var='ener',fix=run,min=0.0,max=0.0
-plotmhd,zoom=1.0,log=0,ff=frm,lf=frm,var='velz',fix=run,min=0.0,max=0.0
+plotmhd,zoom=1.0,log=0,ff=frm,lf=frm,var='ene1',fix=run,min=0.0,max=0.0
+plotmhd,zoom=1.0,log=0,ff=frm,lf=frm,var='vlz1',fix=run,min=0.0,max=0.0
 plotmhd,zoom=1.0,log=0,ff=frm,lf=frm,var='phi', fix=run,min=0.0,max=0.0
 device,/close
 set_plot,'X'
