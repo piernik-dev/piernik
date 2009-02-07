@@ -1,18 +1,19 @@
 /* choosing fluids */
 #define IONIZED
 #define COSM_RAYS
+#define MAGNETIC
 
 /* adiabatic or isothermal */
 #define ISO
 
 /* choosing freezing speed */
-#define LOCAL_FR_SPEED
+#define GLOBAL_FR_SPEED
 
 /* choosing flux limiter */
 #define VANLEER
 
 /* physics including */
-#define RESIST
+#define RESISTIVE
 
 /* gravity type choosing */
 #define GRAV
@@ -22,6 +23,7 @@
 
 /* structure features including */
 #define GALAXY
+#define SN_SRC
 
 /* numerical solutions and limitations */
-#define SHEAR
+#undef SHEAR
