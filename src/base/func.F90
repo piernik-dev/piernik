@@ -152,7 +152,7 @@ module func
       if(nzd /= 1) then
          do j = 1, ny
             do i = 1, nx
-               vz = u(imxf,:,j,k) / u(idnf,:,j,k)
+               vz = u(imxf,i,j,:) / u(idnf,i,j,:)
                divvel(i,j,2:nz-1) = divvel(i,j,2:nz-1)+( vz(3:nz) - vz(1:nz-2) )  / (2.*dz)
             enddo
          enddo
