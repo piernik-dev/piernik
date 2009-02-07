@@ -32,7 +32,7 @@
     vars(3) = 'vely'
     vars(4) = 'velz'
     vars(5) = 'ener'
-    domain  = 'full_domain'
+    domain  = 'phys_domain'
     mag_center = 'no'
  / 
 
