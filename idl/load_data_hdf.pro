@@ -76,12 +76,12 @@ function load_data_hdf, dir, prefix, step, var, xcoord = x, ycoord = y, zcoord =
         filename= dir+'/'+prefix+'_'+frame+'.hdf'  
 
      case var of
-       'eint' : begin
-                  ener = LOAD_BLOCK_HDF(filename, 'ener',  xcoord = x_block, ycoord = y_block, zcoord = z_block, time = t)
-                  dens = LOAD_BLOCK_HDF(filename, 'dens',  xcoord = x_block, ycoord = y_block, zcoord = z_block, time = t)
-                  velx = LOAD_BLOCK_HDF(filename, 'velx',  xcoord = x_block, ycoord = y_block, zcoord = z_block, time = t)
-                  vely = LOAD_BLOCK_HDF(filename, 'vely',  xcoord = x_block, ycoord = y_block, zcoord = z_block, time = t)
-                  velz = LOAD_BLOCK_HDF(filename, 'velz',  xcoord = x_block, ycoord = y_block, zcoord = z_block, time = t)
+       'ein1' : begin
+                  ener = LOAD_BLOCK_HDF(filename, 'ene1',  xcoord = x_block, ycoord = y_block, zcoord = z_block, time = t)
+                  dens = LOAD_BLOCK_HDF(filename, 'den1',  xcoord = x_block, ycoord = y_block, zcoord = z_block, time = t)
+                  velx = LOAD_BLOCK_HDF(filename, 'vlx1',  xcoord = x_block, ycoord = y_block, zcoord = z_block, time = t)
+                  vely = LOAD_BLOCK_HDF(filename, 'vly1',  xcoord = x_block, ycoord = y_block, zcoord = z_block, time = t)
+                  velz = LOAD_BLOCK_HDF(filename, 'vlz1',  xcoord = x_block, ycoord = y_block, zcoord = z_block, time = t)
                   magx = LOAD_BLOCK_HDF(filename, 'magx',  xcoord = x_block, ycoord = y_block, zcoord = z_block, time = t)
                   magy = LOAD_BLOCK_HDF(filename, 'magy',  xcoord = x_block, ycoord = y_block, zcoord = z_block, time = t)
                   magz = LOAD_BLOCK_HDF(filename, 'magz',  xcoord = x_block, ycoord = y_block, zcoord = z_block, time = t)
