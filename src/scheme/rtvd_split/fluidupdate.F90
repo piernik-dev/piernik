@@ -132,7 +132,7 @@ subroutine fluid_update
 #ifdef MAGNETIC            
          call magfieldbzxy
 #endif /* MAGNETIC */      
-      
+
 #ifdef COSM_RAYS
          call cr_diff_y
 #endif /* COSM_RAYS */
@@ -264,7 +264,6 @@ end subroutine fluid_update
     use resistivity, only : diffuseby_x,diffusebz_x
 #endif /* RESISTIVE */
 
-    if(nyd /= 1) then
       call advectby_x
       
 #ifdef RESISTIVE
@@ -272,9 +271,7 @@ end subroutine fluid_update
 #endif /* RESISTIVE */
 
       call mag_add(iby,xdim,ibx,ydim)     
-    endif
 
-    if(nzd /= 1) then
       call advectbz_x
 
 #ifdef RESISTIVE
@@ -282,7 +279,6 @@ end subroutine fluid_update
 #endif /* RESISTIVE */
 
       call mag_add(ibz,xdim,ibx,zdim)
-    endif
 
   end subroutine magfieldbyzx
 

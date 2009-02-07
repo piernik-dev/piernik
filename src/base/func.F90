@@ -59,6 +59,19 @@ module func
       ly = SIZE(tab,2)
       lz = SIZE(tab,3)
 
+      if(d==1 .and. lx==1) then
+        pshift = tab
+        return
+      endif
+      if(d==2 .and. ly==1) then
+        pshift = tab
+        return
+      endif
+      if(d==3 .and. lz==1) then
+        pshift = tab 
+        return
+      endif
+
       if(d==1) then
          pshift(1:lx-1,:,:) = tab(2:lx,:,:); pshift(lx,:,:) = tab(1,:,:)
       else if(d==2) then
@@ -91,6 +104,19 @@ module func
       lx = SIZE(tab,1)
       ly = SIZE(tab,2)
       lz = SIZE(tab,3)
+
+      if(d==1 .and. lx==1) then
+        mshift = tab
+        return
+      endif
+      if(d==2 .and. ly==1) then
+        mshift = tab
+        return
+      endif
+      if(d==3 .and. lz==1) then
+        mshift = tab 
+        return
+      endif
 
       if(d==1) then
          mshift(2:lx,:,:) = tab(1:lx-1,:,:); mshift(1,:,:) = tab(lx,:,:)

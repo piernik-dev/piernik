@@ -36,21 +36,33 @@ module advects
     use fluidindex, only : ibx,iby,ibz
     use initionized, only : idni,imxi
     use arrays, only : b,u,wa
-    use grid,   only : dx,nx,ny,nz,nxd,nzd,ks,ke
+    use grid,   only : dx,nx,ny,nz,nxd,nyd,nzd,ks,ke
     use rtvd,     only : tvdb
     use magboundaries, only : bnd_emf
 
     implicit none
     real, dimension(nx) :: vxby,by_x,vx
-    integer                j,k,jm
+    integer                j,k,jm, j_s,j_e
 
     vxby = 0.0
 
-    do k=ks,ke
-      do j=2,ny         ! nyd is /= 1 in by_x
+    if(nyd /= 1) then
+        j_s = 2
+        j_e = ny
+    else
+        j_s = 1
+        j_e = 1
+    endif
+
+    do k=1,nz
+      do j=j_s,j_e         ! nyd is /= 1 in by_x
         jm=j-1
         vx=0.0
-        vx=(u(imxi,:,jm,k)+u(imxi,:,j,k))/(u(idni,:,jm,k)+u(idni,:,j,k))
+        if(jm == 0) then
+           vx = u(imxi,:,1,k) / u(idni,:,1,k)
+        else
+           vx=(u(imxi,:,jm,k)+u(imxi,:,j,k))/(u(idni,:,jm,k)+u(idni,:,j,k))
+        endif
         vx(2:nx-1)=(vx(1:nx-2) + vx(3:nx) + 2.0*vx(2:nx-1))*0.25
         vx(1)  = vx(2)
         vx(nx) = vx(nx-1)
@@ -63,7 +75,7 @@ module advects
     end do
 
     if(nxd /= 1) call bnd_emf(wa, 'vxby', 'xdim')
-    call bnd_emf(wa, 'vxby', 'ydim')
+    if(nyd /= 1) call bnd_emf(wa, 'vxby', 'ydim')
     if(nzd /= 1) call bnd_emf(wa, 'vxby', 'zdim')
 
   end subroutine advectby_x
@@ -74,21 +86,33 @@ module advects
     use fluidindex, only : ibx,iby,ibz
     use initionized, only : idni,imxi
     use arrays, only : b,u,wa
-    use grid,   only : dx,nx,ny,nz,nxd,nyd,js,je
+    use grid,   only : dx,nx,ny,nz,nxd,nyd,nzd,js,je
     use rtvd,   only : tvdb
     use magboundaries, only : bnd_emf
 
     implicit none
     real, dimension(nx) :: vxbz,bz_x,vx
-    integer                j,k,km
+    integer                j,k,km,k_s,k_e
 
     vxbz = 0.0
 
-    do k=2,nz
+    if(nzd /= 1) then
+        k_s = 2
+        k_e = nz
+    else
+        k_s = 1
+        k_e = 1
+    endif
+
+    do k=k_s,k_e
       km=k-1
       do j=js,je
         vx=0.0
-        vx=(u(imxi,:,j,km)+u(imxi,:,j,k))/(u(idni,:,j,km)+u(idni,:,j,k))
+        if(km == 0) then
+           vx = u(imxi,:,j,1) / u(idni,:,j,1)
+        else
+           vx=(u(imxi,:,j,km)+u(imxi,:,j,k))/(u(idni,:,j,km)+u(idni,:,j,k))
+        endif
         vx(2:nx-1)=(vx(1:nx-2) + vx(3:nx) + 2.0*vx(2:nx-1))*0.25
         vx(1)  = vx(2)
         vx(nx) = vx(nx-1)
@@ -102,7 +126,7 @@ module advects
 
     if(nxd /= 1) call bnd_emf(wa, 'vxbz', 'xdim')
     if(nyd /= 1) call bnd_emf(wa, 'vxbz', 'ydim')
-    call bnd_emf(wa, 'vxbz', 'zdim')
+    if(nzd /= 1) call bnd_emf(wa, 'vxbz', 'zdim')
 
   end subroutine advectbz_x
 
@@ -112,20 +136,32 @@ module advects
     use fluidindex, only : ibx,iby,ibz
     use initionized, only : idni,imyi
     use arrays, only : b,u,wa
-    use grid,   only : dy,nx,ny,nz,is,ie,nxd,nyd
+    use grid,   only : dy,nx,ny,nz,is,ie,nxd,nyd,nzd
     use rtvd,   only : tvdb
     use magboundaries, only : bnd_emf
 
     implicit none
     real, dimension(ny)   :: vybz,bz_y,vy
-    integer                  i,k,km
+    integer                  i,k,km,k_s,k_e
 
     vybz = 0.0
+    if(nzd /= 1) then
+        k_s = 2
+        k_e = nz
+    else
+        k_s = 1
+        k_e = 1
+    endif
 
-    do k=2,nz
+    do k=k_s,k_e
       km=k-1
       do i=is,ie
         vy=0.0
+        if(km == 0) then
+           vy = u(imyi,i,:,1) / u(idni,i,:,1)
+        else
+           vy=vy+(u(imyi,i,:,km)+u(imyi,i,:,k))/(u(idni,i,:,km)+u(idni,i,:,k))
+        endif
         vy=vy+(u(imyi,i,:,km)+u(imyi,i,:,k))/(u(idni,i,:,km)+u(idni,i,:,k))
         vy(2:ny-1)=(vy(1:ny-2) + vy(3:ny) + 2.0*vy(2:ny-1))*0.25
         vy(1)  = vy(2)
@@ -139,7 +175,7 @@ module advects
     end do
 
     if(nyd /= 1) call bnd_emf(wa, 'vybz', 'ydim')
-    call bnd_emf(wa, 'vybz', 'zdim')
+    if(nzd /= 1) call bnd_emf(wa, 'vybz', 'zdim')
     if(nxd /= 1) call bnd_emf(wa, 'vybz', 'xdim')
 
   end subroutine advectbz_y
@@ -150,21 +186,33 @@ module advects
     use fluidindex, only : ibx,iby,ibz
     use initionized, only : idni,imyi
     use arrays, only : b,u,wa
-    use grid,   only : dy,nx,ny,nz,nzd,nyd,ks,ke
+    use grid,   only : dy,nx,ny,nz,nxd,nzd,nyd,ks,ke
     use rtvd,     only : tvdb
     use magboundaries, only : bnd_emf
 
     implicit none
     real, dimension(ny) :: vybx,bx_y,vy
-    integer                k,i,im
+    integer                k,i,im,i_s,i_e
 
     vybx = 0.0
 
+    if(nxd /= 1) then
+        i_s = 2
+        i_e = nx
+    else
+        i_s = 1
+        i_e = 1
+    endif
+
     do k=ks,ke
-      do i=2,nx
+      do i=i_s,i_e
         im=i-1
         vy=0.0
-        vy=(u(imyi,im,:,k)+u(imyi,i,:,k))/(u(idni,im,:,k)+u(idni,i,:,k))
+        if(im == 0) then
+           vy = u(imyi,1,:,k) / u(idni,1,:,k)
+        else
+           vy=(u(imyi,im,:,k)+u(imyi,i,:,k))/(u(idni,im,:,k)+u(idni,i,:,k))
+        endif
         vy(2:ny-1)=(vy(1:ny-2) + vy(3:ny) + 2.0*vy(2:ny-1))*0.25
         vy(1)  = vy(2)
         vy(ny) = vy(ny-1)
@@ -178,7 +226,7 @@ module advects
 
     if(nyd /= 1) call bnd_emf(wa, 'vybx', 'ydim')
     if(nzd /= 1) call bnd_emf(wa, 'vybx', 'zdim')
-    call bnd_emf(wa, 'vybx', 'xdim')
+    if(nxd /= 1) call bnd_emf(wa, 'vybx', 'xdim')
 
   end subroutine advectbx_y
 
@@ -188,21 +236,32 @@ module advects
     use fluidindex, only : ibx,iby,ibz
     use initionized, only : idni,imzi
     use arrays, only : b,u,wa
-    use grid,   only : dz,nx,ny,nz,nzd,nyd,js,je
+    use grid,   only : dz,nx,ny,nz,nxd,nzd,nyd,js,je
     use rtvd,     only : tvdb
     use magboundaries, only : bnd_emf
 
     implicit none
     real, dimension(nz)  :: vzbx,bx_z,vz
-    integer              :: j,i,im
+    integer              :: j,i,im,i_s,i_e
 
     vzbx = 0.0
 
+    if(nxd /= 1) then
+        i_s = 2
+        i_e = nx
+    else
+        i_s = 1
+        i_e = 1
+    endif
     do j=js,je
-      do i=2,nx
+      do i=i_s,i_e
         im=i-1
         vz=0.0
-        vz=(u(imzi,im,j,:)+u(imzi,i,j,:))/(u(idni,im,j,:)+u(idni,i,j,:))
+        if(im == 0) then
+           vz = u(imzi,1,j,:) / u(idni,1,j,:)
+        else
+           vz = (u(imzi,im,j,:)+u(imzi,i,j,:))/(u(idni,im,j,:)+u(idni,i,j,:))
+        endif
         vz(2:nz-1)=(vz(1:nz-2) + vz(3:nz) + 2.0*vz(2:nz-1))*0.25
         vz(1)  = vz(2)
         vz(nz) = vz(nz-1)
@@ -215,7 +274,7 @@ module advects
     end do
 
     if(nzd /= 1) call bnd_emf(wa, 'vzbx', 'zdim')
-    call bnd_emf(wa, 'vzbx', 'xdim')
+    if(nxd /= 1) call bnd_emf(wa, 'vzbx', 'xdim')
     if(nyd /= 1) call bnd_emf(wa, 'vzbx', 'ydim')
 
   end subroutine advectbx_z
@@ -226,21 +285,32 @@ module advects
     use fluidindex, only : ibx,iby,ibz
     use initionized, only : idni,imzi
     use arrays, only : b,u,wa
-    use grid,   only : dz,nx,ny,nz,nzd,nxd,ie,is
+    use grid,   only : dz,nx,ny,nz,nzd,nyd,nxd,ie,is
     use rtvd,     only : tvdb
     use magboundaries, only : bnd_emf
 
     implicit none
     real, dimension(nz)  :: vzby,by_z,vz
-    integer                 i,j,jm
+    integer                 i,j,jm,j_s,j_e
 
     vzby = 0.0
+    if(nyd /= 1) then
+        j_s = 2
+        j_e = ny
+    else
+        j_s = 1
+        j_e = 1
+    endif
 
-    do j=2,ny
+    do j=j_s,j_e
       jm=j-1
       do i=is,ie
         vz=0.0
-        vz=(u(imzi,i,jm,:)+u(imzi,i,j,:))/(u(idni,i,jm,:)+u(idni,i,j,:))
+        if(jm == 0) then
+           vz = u(imzi,i,1,:) / u(idni,i,1,:)
+        else
+           vz=(u(imzi,i,jm,:)+u(imzi,i,j,:))/(u(idni,i,jm,:)+u(idni,i,j,:))
+        endif
         vz(2:nz-1)=(vz(1:nz-2) + vz(3:nz) + 2.0*vz(2:nz-1))*0.25
         vz(1)  = vz(2)
         vz(nz) = vz(nz-1)
@@ -254,7 +324,7 @@ module advects
 
     if(nzd /= 1) call bnd_emf(wa, 'vzby', 'zdim')
     if(nxd /= 1) call bnd_emf(wa, 'vzby', 'xdim')
-    call bnd_emf(wa, 'vzby', 'ydim')
+    if(nyd /= 1) call bnd_emf(wa, 'vzby', 'ydim')
 
   end subroutine advectby_z
 
