@@ -1,12 +1,12 @@
 PRO SHOW
 
-data_dir = '/raid_hum/xarth/manoix/'
-prefix = 'manoix_tst'
+data_dir = '/home/mhanasz/work/evora/piernik/runs/sedov/'
+prefix = 'sedov_tst'
 
 png_dir = data_dir+'/frames'
 
 ;===============================================================================
-!PATH = '~/zeusmp/idl:' + !PATH 
+!PATH = '~/work/evora/piernik/idl:' + !PATH 
 ;===============================================================================
 data_files = FINDFILE(data_dir+'/'+prefix+'_00_00_00_*.hdf', Count=n_files)
 IF(n_files EQ 0) THEN GOTO, SKIP
@@ -81,18 +81,18 @@ n_slices = n_slices+1
 
 ;-----------------------------------------------------------------------------
 
-s.sw	= 'off'  
+s.sw	= 'on'  
 s.panel_name	= 'c'			; If more slices of the same type 
                                         ; are needed use this index
 
 s.type		= 'xy'			; Chose 'yz', 'xz' or 'xy' plane
 s.coord		=  0.25                  ; Position at the complementary coordinate
-s.vect_disp	= ''			; Vector field to display: 'b' or 'v'
+s.vect_disp	= 'b'			; Vector field to display: 'b' or 'v'
 s.vect_scaling	= 'free'		; 'fix' or 'free' 
 s.vect_scale	=  1.0
 
 
-s.scal_disp	= 'd'			; Scalar field to display 'd' or 'e'
+s.scal_disp	= 'e'			; Scalar field to display 'd' or 'e'
 s.scal_pert     = ''			; inactive
 s.scal_scaling	= 'free'		; 'fix' or 'free'
 s.scal_scale	= [0.0,4.0]
@@ -103,7 +103,8 @@ slice_array = [slice_array,s]
 n_slices = n_slices+1
 
 ;==============================================================================
-vars = ['den1','vlx1','vly1']
+;vars = ['den2','vlx2','vly2']
+vars = ['den1','vlx1','vly1','vlz1','ene1','magx','magy','magz']
 n_vectors = [n_vect_x,n_vect_y,n_vect_z]
 ;==============================================================================
 
