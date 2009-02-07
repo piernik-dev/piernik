@@ -1,6 +1,6 @@
 /* number of different fluids */
 #define IONIZED
-
+#define MAGNETIC
 /* adiabatic or isothermal */
 #undef ISO
 

@@ -59,7 +59,7 @@
  /
 
  $FLUID_NEUTRAL
-    gamma_neut = 1.666666666
+    gamma_neu = 1.666666666
  /
 
  $NUMERICAL_SETUP
