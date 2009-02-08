@@ -293,65 +293,65 @@ contains
 
   subroutine diffuseby_x
     use func, only : mshift, pshift
-    use grid, only : xdim,nzd
+    use grid, only : xdim,nxd,nyd,nzd
     use fluidindex, only : iby,icz
     use arrays, only : wcu
     use magboundaries, only : bnd_emf
     implicit none
 
     call tvdd(iby,icz,xdim)
-    call bnd_emf(wcu,'emfz','xdim')
-    call bnd_emf(wcu,'emfz','ydim')
+    if(nxd /= 1) call bnd_emf(wcu,'emfz','xdim')
+    if(nyd /= 1) call bnd_emf(wcu,'emfz','ydim')
     if(nzd /= 1) call bnd_emf(wcu,'emfz','zdim')
 
   end subroutine diffuseby_x
 
   subroutine diffusebz_x
     use func, only : mshift, pshift
-    use grid, only : xdim,nzd
+    use grid, only : xdim,nxd,nyd,nzd
     use fluidindex, only : ibz,icy
     use arrays, only : wcu
     use magboundaries, only : bnd_emf
     implicit none
 
     call tvdd(ibz,icy,xdim)
-    call bnd_emf(wcu,'emfy','xdim')
-    call bnd_emf(wcu,'emfy','ydim')
+    if(nxd /= 1) call bnd_emf(wcu,'emfy','xdim')
+    if(nyd /= 1) call bnd_emf(wcu,'emfy','ydim')
     if(nzd /= 1) call bnd_emf(wcu,'emfy','zdim')
 
   end subroutine diffusebz_x
 
   subroutine diffusebz_y
     use func, only : mshift, pshift
-    use grid, only : ydim,nzd
+    use grid, only : ydim,nzd,nyd,nxd
     use fluidindex, only : ibz,icx
     use arrays, only : wcu
     use magboundaries, only : bnd_emf
     implicit none
 
     call tvdd(ibz,icx,ydim)
-    call bnd_emf(wcu,'emfx','ydim')
+    if(nyd /= 1) call bnd_emf(wcu,'emfx','ydim')
     if(nzd /= 1) call bnd_emf(wcu,'emfx','zdim')
-    call bnd_emf(wcu,'emfx','xdim')
+    if(nxd /= 1) call bnd_emf(wcu,'emfx','xdim')
   end subroutine diffusebz_y
 
   subroutine diffusebx_y
     use func, only : mshift, pshift
-    use grid, only : ydim,nzd
+    use grid, only : ydim,nzd,nyd,nxd
     use fluidindex, only : ibx,icz
     use arrays, only : wcu
     use magboundaries, only : bnd_emf
     implicit none
 
     call tvdd(ibx,icz,ydim)
-    call bnd_emf(wcu, 'emfz', 'ydim')
+    if(nyd /= 1) call bnd_emf(wcu, 'emfz', 'ydim')
     if(nzd /= 1) call bnd_emf(wcu, 'emfz', 'zdim')
-    call bnd_emf(wcu, 'emfz', 'xdim')
+    if(nxd /= 1) call bnd_emf(wcu, 'emfz', 'xdim')
   end subroutine diffusebx_y
 
   subroutine diffusebx_z
     use func, only : mshift, pshift
-    use grid, only : zdim,nzd
+    use grid, only : zdim,nzd,nyd,nxd
     use fluidindex, only : ibx,icy
     use arrays, only : wcu
     use magboundaries, only : bnd_emf
@@ -359,13 +359,13 @@ contains
 
     call tvdd(ibx,icy,zdim)
     if(nzd /= 1) call bnd_emf(wcu, 'emfy', 'zdim')
-    call bnd_emf(wcu, 'emfy', 'xdim')
-    call bnd_emf(wcu, 'emfy', 'ydim')
+    if(nxd /= 1) call bnd_emf(wcu, 'emfy', 'xdim')
+    if(nyd /= 1) call bnd_emf(wcu, 'emfy', 'ydim')
   end subroutine diffusebx_z
 
   subroutine diffuseby_z
     use func, only : mshift, pshift
-    use grid, only : zdim,nzd
+    use grid, only : zdim,nzd,nyd,nxd
     use fluidindex, only : iby,icx
     use arrays, only : wcu
     use magboundaries, only : bnd_emf
@@ -373,8 +373,8 @@ contains
 
     call tvdd(iby,icx,zdim)
     if(nzd /= 1) call bnd_emf(wcu, 'emfx', 'zdim')
-    call bnd_emf(wcu, 'emfx', 'xdim')
-    call bnd_emf(wcu, 'emfx', 'ydim')
+    if(nxd /= 1) call bnd_emf(wcu, 'emfx', 'xdim')
+    if(nyd /= 1) call bnd_emf(wcu, 'emfx', 'ydim')
   end subroutine diffuseby_z
 
 end module resistivity
