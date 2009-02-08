@@ -182,8 +182,8 @@ module initproblem
 
 #ifndef ISO
                u(ieni,i,j,k)   = c_si**2/(gamma_ion-1.0) * u(idni,i,j,k) &
-                               + 0.5*(u(imxa,i,j,k)**2 + u(imya,i,j,k)**2 + &
-                                      u(imza,i,j,k)**2 ) / u(idni,i,j,k)
+                               + 0.5*(u(imxi,i,j,k)**2 + u(imyi,i,j,k)**2 + &
+                                      u(imzi,i,j,k)**2 ) / u(idni,i,j,k)
 #endif /* ISO */
 #ifdef COSM_RAYS
                u(iecr,i,j,k)   =  beta_cr*c_si**2 * u(idni,i,j,k)/( gamma_cr - 1.0 )
