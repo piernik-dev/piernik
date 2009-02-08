@@ -174,8 +174,8 @@ subroutine fluid_update
       
 #ifdef SHEAR
       call yshift(t)
-      call bnd_u('xdim')
-      call bnd_u('ydim')
+      if(nxd /= 1) call bnd_u('xdim')
+      if(nyd /= 1) call bnd_u('ydim')
 #endif /* SHEAR */
 
 #ifdef SELF_GRAV
@@ -294,7 +294,6 @@ end subroutine fluid_update
     use resistivity, only : diffusebx_y,diffusebz_y
 #endif /* RESISTIVE */
 
-    if(nzd /= 1) then
       call advectbz_y
       
 #ifdef RESISTIVE
@@ -302,9 +301,7 @@ end subroutine fluid_update
 #endif /* RESISTIVE */
 
       call mag_add(ibz,ydim,iby,zdim)
-    endif
 
-    if(nxd /= 1) then
       call advectbx_y
       
 #ifdef RESISTIVE
@@ -312,7 +309,6 @@ end subroutine fluid_update
 #endif /* RESISTIVE */
 
       call mag_add(ibx,ydim,iby,xdim)
-    endif
 
   end subroutine magfieldbzxy
 
@@ -328,22 +324,18 @@ end subroutine fluid_update
     use resistivity, only : diffusebx_z,diffuseby_z
 #endif /* RESISTIVE */
 
-    if(nxd /= 1) then
       call advectbx_z
 #ifdef RESISTIVE
       call diffusebx_z
 #endif /* RESISTIVE */
       call mag_add(ibx,zdim,ibz,xdim)
-    endif
 
-    if(nyd /= 1) then
       call advectby_z
 #ifdef RESISTIVE
       call diffuseby_z
 #endif /* RESISTIVE */
     
       call mag_add(iby,zdim,ibz,ydim)
-    endif
   end subroutine magfieldbxyz
 
 !------------------------------------------------------------------------------------------
