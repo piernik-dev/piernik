@@ -162,7 +162,7 @@ module advects
         else
            vy=vy+(u(imyi,i,:,km)+u(imyi,i,:,k))/(u(idni,i,:,km)+u(idni,i,:,k))
         endif
-        vy=vy+(u(imyi,i,:,km)+u(imyi,i,:,k))/(u(idni,i,:,km)+u(idni,i,:,k))
+!        vy=vy+(u(imyi,i,:,km)+u(imyi,i,:,k))/(u(idni,i,:,km)+u(idni,i,:,k))
         vy(2:ny-1)=(vy(1:ny-2) + vy(3:ny) + 2.0*vy(2:ny-1))*0.25
         vy(1)  = vy(2)
         vy(ny) = vy(ny-1)
