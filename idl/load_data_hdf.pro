@@ -50,7 +50,7 @@ function load_data_hdf, dir, prefix, step, var, xcoord = x, ycoord = y, zcoord =
 
   framedisp   = '0x_0x_0x_'+string(step, format = '(i4.4)')
   filenamedisp= prefix+'_'+framedisp+'.hdf'  
-  print, 'direcotry is ', dir
+  print, 'directory is ', dir
   print, 'file(s) = ',filenamedisp
 
 
