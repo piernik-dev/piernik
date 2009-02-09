@@ -62,7 +62,7 @@ module snsources
       nsn_per_timestep = nsn - nsn_last
       nsn_last = nsn
 
-      do isn = 0, nsn_per_timestep
+      do isn = 1, nsn_per_timestep
 
          call rand_coords(snpos)
 
