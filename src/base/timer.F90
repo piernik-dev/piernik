@@ -46,7 +46,9 @@ contains
 !  elapsed wall clock time (in seconds) since the job began.
 !
 
+#ifdef PERFMON
       call itime ( iarray )
+#endif /* PERFMON */
       wctot  = iarray(1) * 3600. + iarray(2) * 60. + iarray(3)
 
       cputot  = dtime ( tarray )
@@ -66,7 +68,9 @@ contains
 
 !      Final wall clock time, expressed in hours, minutes, and seconds.
 !
+#ifdef PERFMON
       call itime ( iarray )
+#endif /* PERFMON */
       wctot  = iarray(1) * 3600. + iarray(2) * 60. + iarray(3) - wctot
       wchours  =  int ( wctot / 3600.0 )
       wcmins   =  int ( wctot / 60.0   ) - 60   * wchours
