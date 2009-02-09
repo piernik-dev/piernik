@@ -117,14 +117,14 @@ module initproblem
       implicit none
 
       integer :: i,j,k,kmid
-      real :: xi,yj,zk, rc, rs, vx, vy, vz, h2, dgdz, csim2, b0, sqr_gm, v_phi
+      real :: xi,yj,zk, rc, rs, vx, vy, vz, h2, dgdz, b0, sqr_gm, v_phi
 
 !   Secondary parameters
 
       c_si = cs_ion
       csim2 = c_si**2*(1.0+alpha)
       gamma(1) = gamma_ion
-
+      write(*,*) csim2
       sqr_gm = sqrt(newtong*ptmass)
 
       b0 = sqrt(2.*alpha*d0*cs_ion**2)
@@ -141,7 +141,7 @@ module initproblem
             rc = sqrt(xi**2+yj**2)
 
             if(nzd /= 1) then
-               call hydrostatic_zeq(i, j, d0, cs_ion, alpha, dprof)
+               call hydrostatic_zeq(i, j, d0, dprof)
             endif
 
             do k = 1,nz
