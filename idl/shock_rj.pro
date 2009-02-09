@@ -77,7 +77,7 @@ PRO PLOTMHD,ff=first,lf=last,var=var,zoom=sf,log=llog,min=amin,max=amax,fix=run
   if(ss[0] EQ 1) then begin
      px = reform(a)
   endif else begin
-     px  =  a(*,iy-1,iz-1)
+     px  =  a(*,iy-1)
      px = reform(px)
   endelse
   PLOT,  x, px, line=0, title=var+timestr, $
@@ -107,5 +107,3 @@ device,/close
 set_plot,'X'
 !P.MULTI = 0
 end
-
-

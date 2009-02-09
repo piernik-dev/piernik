@@ -1,12 +1,13 @@
 PRO SHOW
 
-data_dir = '/home/mhanasz/work/evora/piernik/runs/sedov/'
+data_dir = '/home/MYHOME/piernik/runs/sedov/'
 prefix = 'sedov_tst'
+
 
 png_dir = data_dir+'/frames'
 
 ;===============================================================================
-!PATH = '~/work/evora/piernik/idl:' + !PATH 
+!PATH = '/home/MYHOME/piernik/idl:' + !PATH 
 ;===============================================================================
 data_files = FINDFILE(data_dir+'/'+prefix+'_00_00_00_*.hdf', Count=n_files)
 IF(n_files EQ 0) THEN GOTO, SKIP
@@ -30,6 +31,8 @@ n_vect_z     	= 16		;
 
 coord_sys 	= 'xyz'         ; 'xyz', 'zrp' or 'rtp'
 
+log_scal        = 'n'
+
 ;===============================================================================
 SHOW_INIT, s, slice_array, n_slices
 ;===============================================================================
@@ -48,7 +51,7 @@ s.vect_scale	=  1.0
 s.scal_disp	= 'd'			; Scalar field to display 'd' or 'e'
 s.scal_pert     = ''			; inactive
 s.scal_scaling	= 'free'		; 'fix' or 'free'
-s.scal_scale	= [0.0,4.0]
+s.scal_scale	= [0.0,5.0]
 
 s.name=s.vect_disp+s.scal_disp+'_'+s.type+'_'+s.panel_name
 
@@ -57,36 +60,12 @@ n_slices = n_slices+1
 
 ;-----------------------------------------------------------------------------
 
-s.sw	= 'off' 
+s.sw	= 'on' 
 s.panel_name	= 'b'			; If more slices of the same type 
                                         ; are needed use this index
 
-s.type		= 'yz'			; Chose 'yz', 'xz' or 'xy' plane
-s.coord		=  0.0                  ; Position at the complementary coordinate
-s.vect_disp	= 'v'			; Vector field to display: 'b' or 'v'
-s.vect_scaling	= 'free'		; 'fix' or 'free' 
-s.vect_scale	=  1.0
-
-
-s.scal_disp	= 'd'			; Scalar field to display 'd' or 'e'
-s.scal_pert     = ''			; inactive
-s.scal_scaling	= 'free'		; 'fix' or 'free'
-s.scal_scale	= [0.0,4.0]
-
-s.name=s.vect_disp+s.scal_disp+'_'+s.type+'_'+s.panel_name
-
-
-slice_array = [slice_array,s]
-n_slices = n_slices+1
-
-;-----------------------------------------------------------------------------
-
-s.sw	= 'on'  
-s.panel_name	= 'c'			; If more slices of the same type 
-                                        ; are needed use this index
-
 s.type		= 'xy'			; Chose 'yz', 'xz' or 'xy' plane
-s.coord		=  0.25                  ; Position at the complementary coordinate
+s.coord		=  0.0                  ; Position at the complementary coordinate
 s.vect_disp	= 'b'			; Vector field to display: 'b' or 'v'
 s.vect_scaling	= 'free'		; 'fix' or 'free' 
 s.vect_scale	=  1.0
@@ -95,15 +74,15 @@ s.vect_scale	=  1.0
 s.scal_disp	= 'e'			; Scalar field to display 'd' or 'e'
 s.scal_pert     = ''			; inactive
 s.scal_scaling	= 'free'		; 'fix' or 'free'
-s.scal_scale	= [0.0,4.0]
+s.scal_scale	= [0.0,1.0e3]
 
 s.name=s.vect_disp+s.scal_disp+'_'+s.type+'_'+s.panel_name
+
 
 slice_array = [slice_array,s]
 n_slices = n_slices+1
 
 ;==============================================================================
-;vars = ['den2','vlx2','vly2']
 vars = ['den1','vlx1','vly1','vlz1','ene1','magx','magy','magz']
 n_vectors = [n_vect_x,n_vect_y,n_vect_z]
 ;==============================================================================
@@ -117,7 +96,9 @@ n_vectors = [n_vect_x,n_vect_y,n_vect_z]
   FOR i_frame = first_frame, last_frame, freq_frame DO BEGIN
 
     file = data_files(i_frame)
-    READ_DATA, data_dir,prefix,i_frame , vars, time
+
+
+    READ_DATA, data_dir,prefix,i_frame , vars, time, log_scal
 
     PRINT, FORMAT='(a6,1x,a,2x,a10,e10.3)', $
                 'file =', file, '   time =', time

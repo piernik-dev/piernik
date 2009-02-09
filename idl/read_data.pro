@@ -1,4 +1,4 @@
-PRO READ_DATA, dir,prefix,step, vars, time
+PRO READ_DATA, dir,prefix,step, vars, time, log_scal
 
 ; Reads data from user text file and HDF file specified by parameters
 
@@ -33,9 +33,14 @@ FOR ivar=0, nvar-1 DO BEGIN
   status = 0
 ;  READ_VARIABLE, file, var, data, time, status
   IF(status NE 0) THEN GOTO, SKIP
+  
+    IF(log_scal EQ 'y' AND (var EQ 'den1' OR var EQ 'den2'  OR var EQ 'ene1'  OR var EQ 'ene2' OR var EQ 'encr' )) THEN BEGIN
+      data = alog10(data) 
+    ENDIF 
+  
 
   IF(var EQ 'den1') THEN BEGIN
-    dd = data
+    dd = data 
     min_dd = min(dd)
     max_dd = max(dd)
   ENDIF
@@ -65,9 +70,9 @@ FOR ivar=0, nvar-1 DO BEGIN
     max_er = MAX(er)
   ENDIF
   IF(var EQ 'encr') THEN BEGIN
-    ee = data
-    min_ee = MIN(ee)
-    max_ee = MAX(ee)
+    ecr = data
+    min_ecr = MIN(ecr)
+    max_ecr = MAX(ecr)
   ENDIF
   
   IF(var EQ 'curz') THEN BEGIN

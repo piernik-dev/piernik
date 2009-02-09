@@ -58,7 +58,8 @@ COMMON dumptype, dump
 s = {name:      ' ', sw:       ' ',$
      type:      ' ', coord:        0.0, panel_name: ' ',     $
      vect_disp: ' ', vect_scaling: ' ', vect_scale: 1.0,     $
-     scal_disp: ' ', scal_pert:    ' ',scal_scaling:' ', scal_scale:fltarr(2)}
+     scal_disp: ' ', scal_pert:    ' ',scal_scaling:' ',     $
+     scal_log:  ' ', scal_scale:fltarr(2)}
 slice_array = [s]
 n_slices = 0
 ;------------------------------------------------------------------------------
