@@ -302,36 +302,5 @@ module crdiffusion
       return
       end subroutine cr_diff_z
 
-  subroutine div_v_old
-  
-    use initionized, only : idni,imxi,imyi,imzi
-  
-    implicit none
-    real, dimension(nx)  :: dvx,dvy,dvz, tmp
-    integer i,j,k
-
-    wa(:,:,:) = 0.0
-    if(nzd .eq. 1) then
-      k=1
-      do j=2,ny-1
-        tmp=u(imxi,:,j,k)/u(idni,:,j,k)
-        wa(:,j,k) = (eoshift(tmp,1) - eoshift(tmp,-1))/(2.*dx)
-        tmp=(u(imyi,:,j+1,k)/u(idni,:,j+1,k)-u(imyi,:,j-1,k)/u(idni,:,j-1,k))/(2.*dy)
-        wa(:,j,k) = wa(:,j,k) + tmp
-      enddo
-    else if (nzd .gt. 1) then
-      do k=2,nz-1
-        do j=2,ny-1
-          tmp=u(imxi,:,j,k)/u(idni,:,j,k)
-          wa(:,j,k) = (eoshift(tmp,1) - eoshift(tmp,-1))/(2.*dx)
-          tmp=(u(imyi,:,j+1,k)/u(idni,:,j+1,k)-u(imyi,:,j-1,k)/u(idni,:,j-1,k))/(2.*dy)
-          wa(:,j,k) = wa(:,j,k) + tmp
-          tmp=(u(imzi,:,j,k+1)/u(idni,:,j,k+1)-u(imzi,:,j,k-1)/u(idni,:,j,k-1))/(2.*dz)
-          wa(:,j,k) = wa(:,j,k) + tmp
-        enddo
-      enddo
-    endif
-  end subroutine div_v_old
-
 
 end module crdiffusion
