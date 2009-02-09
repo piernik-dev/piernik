@@ -156,7 +156,22 @@ module initproblem
                                            ! rho_0=1.67e-24g/cm**3,
                                            ! c_s0 = 7km/s
 
-      f_sn = f_sn_kpc2 * (ymax-ymin)/1000.0! SN freq
+      f_sn = f_sn_kpc2                     ! SN freq
+      
+      if(nxd /=1) then 
+         f_sn = f_sn * (xmax-xmin)/1000.0
+      else 
+         f_sn = f_sn * 2.0*r_sn/1000.0
+      endif
+      
+      if(nyd /=1) then 
+         f_sn = f_sn * (ymax-ymin)/1000.0  
+      else 
+         f_sn = f_sn * 2.0*r_sn/1000.0
+      endif
+
+
+
 
       gamma  = gamma_ion
       cs_ion = c_si
