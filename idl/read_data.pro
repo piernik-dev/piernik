@@ -35,7 +35,7 @@ FOR ivar=0, nvar-1 DO BEGIN
   IF(status NE 0) THEN GOTO, SKIP
   
     IF(log_scal EQ 'y' AND (var EQ 'den1' OR var EQ 'den2'  OR var EQ 'ene1'  OR var EQ 'ene2' OR var EQ 'encr' )) THEN BEGIN
-      data = alog10(data) 
+      data = alog10(data+1.e-6) 
     ENDIF 
   
 
