@@ -40,7 +40,8 @@ FOR ivar=0, nvar-1 DO BEGIN
   
 
   IF(var EQ 'den1') THEN BEGIN
-    dd = data 
+;    dd = alog10(data)
+    dd = data
     min_dd = min(dd)
     max_dd = max(dd)
   ENDIF

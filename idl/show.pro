@@ -1,10 +1,12 @@
 PRO SHOW
 
-data_dir = '/home/MYHOME/piernik/runs/sedov/'
-prefix = 'sedov_tst'
+data_dir = '../runs/dustwave/'
+prefix = 'dustwave_tst'
 
 
 png_dir = data_dir+'/frames'
+
+DEVICE,DECOMPOSED=0,RETAIN=1
 
 ;===============================================================================
 !PATH = '/home/MYHOME/piernik/idl:' + !PATH 
@@ -41,7 +43,7 @@ s.sw	= 'on'
 s.panel_name	= 'a'			; If more slices of the same type 
                                         ; are needed use this index
 
-s.type		= 'xy'			; Chose 'yz', 'xz' or 'xy' plane
+s.type		= 'xz'			; Chose 'yz', 'xz' or 'xy' plane
 s.coord		=  0.0         ; Position at the complementary coordinate
 s.vect_disp	= 'v'			; Vector field to display: 'b' or 'v'
 s.vect_scaling	= 'free'		; 'fix' or 'free' 
@@ -60,15 +62,15 @@ n_slices = n_slices+1
 
 ;-----------------------------------------------------------------------------
 
-s.sw	= 'on' 
+s.sw	= 'off' 
 s.panel_name	= 'b'			; If more slices of the same type 
                                         ; are needed use this index
 
-s.type		= 'xy'			; Chose 'yz', 'xz' or 'xy' plane
+s.type		= 'yz'			; Chose 'yz', 'xz' or 'xy' plane
 s.coord		=  0.0                  ; Position at the complementary coordinate
 s.vect_disp	= 'b'			; Vector field to display: 'b' or 'v'
-s.vect_scaling	= 'free'		; 'fix' or 'free' 
-s.vect_scale	=  1.0
+s.vect_scaling	= 'fix'			; 'fix' or 'free' 
+s.vect_scale	=  11.0
 
 
 s.scal_disp	= 'e'			; Scalar field to display 'd' or 'e'
@@ -83,7 +85,7 @@ slice_array = [slice_array,s]
 n_slices = n_slices+1
 
 ;==============================================================================
-vars = ['den1','vlx1','vly1','vlz1','ene1','magx','magy','magz']
+vars = ['den1','vlx1','vly1','vlz1']
 n_vectors = [n_vect_x,n_vect_y,n_vect_z]
 ;==============================================================================
 
@@ -100,7 +102,7 @@ n_vectors = [n_vect_x,n_vect_y,n_vect_z]
 
     READ_DATA, data_dir,prefix,i_frame , vars, time, log_scal
 
-    PRINT, FORMAT='(a6,1x,a,2x,a10,e10.3)', $
+    PRINT, FORMAT='(a6,1x,a,1x,a10,e10.3)', $
                 'file =', file, '   time =', time
 
     file_sep = STR_SEP(file,'.')
