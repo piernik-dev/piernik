@@ -30,16 +30,14 @@
 module initproblem
 
 ! Initial condition for blob test
-! Blob test by Agertz et al., 2007, MNRAS, 380, 963.
-! however, the blob is of dust here.
    use mpisetup
 
    character(len=32) :: problem_name
    character(len=3)  :: run_id
-   real :: chi, rblob, blobxc, blobyc, blobzc, Mext, denv, tkh, vgal
+   real              :: d_gas, p_gas, v_gas, d_dust, v_dust, x0, y0, z0, r0
 
    namelist /PROBLEM_CONTROL/  problem_name, run_id, &
-                               chi, rblob, blobxc, blobyc, blobzc, Mext, denv, tkh, vgal
+                               d_gas, p_gas, v_gas, d_dust, v_dust, x0, y0, z0, r0
 
    contains
 
@@ -55,16 +53,16 @@ module initproblem
       tmp_log_file = trim(cwd)//'/tmp.log'
 
       problem_name = 'aaa'
-      run_id  = 'aa'
-      chi     = 10.0
-      rblob   =  1.0
-      blobxc  =  5.0
-      blobyc  =  5.0
-      blobzc  =  5.0
-      Mext    =  2.7
-      denv    =  1.0
-      tkh     =  1.7
-      vgal    =  0.0
+      run_id  = 'aaa'
+      d_gas   =  1.0
+      p_gas   =  1.0
+      v_gas   =  1.0
+      d_dust  =  1.0
+      v_dust  =  0.0
+      x0      =  0.0
+      y0      =  0.0
+      z0      =  0.0
+      r0      =  1.0
 
       if(proc .eq. 0) then
          open(1,file=par_file)
@@ -79,18 +77,18 @@ module initproblem
 
       if(proc .eq. 0) then
 
-         cbuff(1) =  problem_name
-         cbuff(2) =  run_id
+         cbuff(1)     =  problem_name
+         cbuff(2)     =  run_id
 
-         rbuff(1) = chi
-         rbuff(2) = rblob
-         rbuff(3) = blobxc
-         rbuff(4) = blobyc
-         rbuff(5) = blobzc
-         rbuff(6) = Mext
-         rbuff(7) = denv
-         rbuff(8) = tkh
-         rbuff(9) = vgal
+         rbuff(1)     = d_gas
+         rbuff(2)     = p_gas
+         rbuff(3)     = v_gas
+         rbuff(4)     = d_dust
+         rbuff(5)     = v_dust
+         rbuff(6)     = x0
+         rbuff(7)     = y0
+         rbuff(8)     = z0 
+         rbuff(9)     = r0
 
          call MPI_BCAST(cbuff, 32*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
          call MPI_BCAST(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
@@ -105,15 +103,15 @@ module initproblem
          problem_name = cbuff(1)
          run_id       = cbuff(2)
 
-         chi          = rbuff(1)
-         rblob        = rbuff(2)
-         blobxc       = rbuff(3)
-         blobyc       = rbuff(4)
-         blobzc       = rbuff(5)
-         Mext         = rbuff(6)
-         denv         = rbuff(7)
-         tkh          = rbuff(8)
-         vgal         = rbuff(9)
+         d_gas        = rbuff(1)
+         p_gas        = rbuff(2)
+         v_gas        = rbuff(3)
+         d_dust       = rbuff(4)
+         v_dust       = rbuff(5)
+         x0           = rbuff(6)
+         y0           = rbuff(7)
+         z0           = rbuff(8)
+         r0           = rbuff(9)
 
       endif
 
@@ -128,42 +126,40 @@ module initproblem
       use initdust,     only : idnd,imxd,imyd,imzd
 #ifndef ISO
       use initneutral,  only : ienn
-#endif /* !ISO */
+#endif /* ISO */
       implicit none
 
-      real :: penv, rcx, rcy, rcz, rrel
+      real    :: xi,yj,zk, rc
       integer :: i, j, k
 
-      penv = 3.2*rblob*sqrt(chi)/tkh/(Mext*gamma_neu/denv)
-
       do i = 1,nx
-         rcx = x(i)
+         xi = x(i)
          do j = 1,ny
-            rcy = y(j)
+            yj = y(j)
             do k = 1,nz
                if(nzd /= 1) then
-                  rcz = z(k)
-                  rrel = sqrt((rcx-blobxc)**2+(rcy-blobyc)**2+(rcz-blobzc)**2)
+                  zk = z(k)
+                  rc = sqrt((xi-x0)**2+(yj-y0)**2+(zk-z0)**2)
                else
-                  rrel = sqrt((rcx-blobxc)**2+(rcy-blobyc)**2)
+                  rc = sqrt((xi-x0)**2+(yj-y0)**2)
                endif
 
-               u(idnn,i,j,k) = denv
-               u(imxn,i,j,k) = denv*vgal
-               u(imyn,i,j,k) = Mext*gamma_neu*penv
+               u(idnn,i,j,k) = d_gas
+               u(imxn,i,j,k) = 0.0
+               u(imyn,i,j,k) = d_gas*v_gas
                u(imzn,i,j,k) = 0.0
-               if(rblob >= rrel) then
-                  u(idnd,i,j,k) = chi*denv
-                  u(imxd,i,j,k) = chi*denv*vgal
+               if(rc <= r0) then
+                  u(idnd,i,j,k) = d_dust
+                  u(imyd,i,j,k) = d_dust*v_dust
                else
                   u(idnd,i,j,k) = smalld
-                  u(imxd,i,j,k) = 0.0
+                  u(imyd,i,j,k) = 0.0
                endif
-               u(imyd,i,j,k) = 0.0
+               u(imxd,i,j,k) = 0.0
                u(imzd,i,j,k) = 0.0
 #ifndef ISO
-               u(ienn,i,j,:) = penv/(gamma_neu-1.0)
-#endif /* !ISO */
+               u(ienn,i,j,:) = p_gas/(gamma_neu-1.0) + 0.5*(u(imxn)**2+u(imyn)**2+u(imzn)**2)/u(idnn)
+#endif /* ISO */
             enddo
          enddo
       enddo

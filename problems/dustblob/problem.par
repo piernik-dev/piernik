@@ -1,8 +1,8 @@
  $DOMAIN_SIZES
-    nxd = 128
-    nyd = 128
+    nxd = 40
+    nyd = 40
     nzd = 1
-	 nb = 5
+    nb  = 5
  /
 
  $MPI_BLOCKS
@@ -23,14 +23,15 @@
  /
 
  $OUTPUT_CONTROL
-    dt_hdf  = 0.5666666666667e-1
+    dt_hdf  = 0.05
     dt_res  = 100.0e0
     dt_log  = 0.001
     dt_tsl  = 0.00001
     vars(1) = 'dens'
     vars(2) = 'velx'
     vars(3) = 'vely'
-    vars(4) = 'ener'
+    vars(4) = 'vely'
+    vars(5) = 'ener'
     domain  = 'phys_domain'
  /
 
@@ -44,10 +45,12 @@
  /
 
  $DOMAIN_LIMITS
-    xmin   =  0.0
-    xmax   = 10.0
-    ymin   =  0.0
-    ymax   = 10.0
+    xmin   = -2.0
+    xmax   =  2.0
+    ymin   = -2.0
+    ymax   =  2.0
+    zmin   = -2.0
+    zmax   =  2.0
  /
 
  $FLUID_NEUTRAL
@@ -59,7 +62,7 @@
  /
 
  $INTERACTIONS
- cfl_interact = 0.1
+ cfl_interact = 0.5
  /
 
  $NUMERICAL_SETUP
@@ -72,14 +75,14 @@
  $PROBLEM_CONTROL
     problem_name ='dustblob'
     run_id  =  'tst'
-    chi     =  1.0e-2
-    rblob   =  1.0
-    blobxc  =  5.0
-    blobyc  =  5.0
-    blobzc  =  5.0
-    Mext    =  2.7
-    denv    =  1.0
-    tkh     =  1.7
-    vgal    =  0.0
+    d_gas   =  1.0
+    p_gas   =  1.0
+    v_gas   =  1.0
+    d_dust  =  1.0
+    v_dust  =  0.0
+    x0      =  0.0
+    y0      =  0.0
+    z0      =  0.0
+    r0      =  1.0
  /
 
