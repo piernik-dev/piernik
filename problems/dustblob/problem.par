@@ -30,7 +30,7 @@
     vars(1) = 'dens'
     vars(2) = 'velx'
     vars(3) = 'vely'
-    vars(4) = 'vely'
+    vars(4) = 'velz'
     vars(5) = 'ener'
     domain  = 'phys_domain'
  /
