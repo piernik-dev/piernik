@@ -105,6 +105,8 @@ module initproblem
          rbuff(10) = r_sn
          rbuff(11) = h_sn
          rbuff(12) = f_sn_kpc2
+         rbuff(13) = c_si
+         rbuff(14) = alpha
 
          call MPI_BCAST(cbuff, 32*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
          call MPI_BCAST(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
@@ -131,6 +133,8 @@ module initproblem
          r_sn         = rbuff(10)
          h_sn         = rbuff(11)
          f_sn_kpc2    = rbuff(12)
+         c_si         = rbuff(13)
+         alpha        = rbuff(14)
 
 
       endif
@@ -176,7 +180,7 @@ module initproblem
       gamma  = gamma_ion
       cs_ion = c_si
       csim2  = c_si**2*(1.0+alpha)
-
+      write(*,*) proc, csim2
 !   Secondary parameters
 
       b0 = sqrt(2.*alpha*d0*c_si**2)

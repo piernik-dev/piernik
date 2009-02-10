@@ -1,14 +1,14 @@
  $DOMAIN_SIZES
     nxd          = 1
-    nyd          = 100
-    nzd          = 200
+    nyd          = 50
+    nzd          = 100
     nb           = 4
  /  
 
  $MPI_BLOCKS
     pxsize       = 1
     pysize       = 1
-    pzsize       = 1    
+    pzsize       = 2    
  /  
 
  $RESTART_CONTROL
