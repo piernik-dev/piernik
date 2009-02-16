@@ -61,15 +61,6 @@
     gamma_ion  = 1.666666666
  /
 
- $FLUID_NEUTRAL
-    gamma_neu = 1.666666666
- /
-
-
- $EQUATION_OF_STATE
-    c_si   = 1.0
- /  
-
  $NUMERICAL_SETUP
     cfl    = 0.7
     smalld = 1.e-3
@@ -91,7 +82,7 @@
     d0      = 1.0
     r0      = 0.25
     bx0     = 1.0
-    by0     = 1.0
+    by0     = 0.0
     bz0     = 0.0
  /
 
