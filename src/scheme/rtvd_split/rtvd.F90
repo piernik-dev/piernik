@@ -228,11 +228,11 @@ module rtvd ! split orig
          if(istep == 2) then
             daccrp(1:n-1) = 0.5*(accr(1:n-1) - accr(2:n))    ;  daccrp(n) = daccrp(n-1)
             daccrm(2:n) = daccrp(1:n-1)                      ;  daccrm(1) = daccrm(2)
-            accr = accr + 2.0*daccrp*daccrm*(daccrm+daccrp+small)
+            accr = accr + 2.0*daccrp*daccrm/(daccrm+daccrp+small)
 
             dacclp(1:n-1) = 0.5*(accl(2:n) - accl(1:n-1))    ;  dacclp(n) = dacclp(n-1)
             dacclm(2:n)   = dacclp(1:n-1)                    ;  dacclm(1) = dacclm(2)
-            accl = accl + 2.0*dacclp*dacclm*(dacclm+dacclp+small)
+            accl = accl + 2.0*dacclp*dacclm/(dacclm+dacclp+small)
 
          endif
 
