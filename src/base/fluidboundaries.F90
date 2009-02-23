@@ -102,9 +102,11 @@ module fluidboundaries
 !
 ! przesuwamy o calkowita liczbe komorek + periodyczny wb w kierunku y
 !
-            send_left (:,:,nb+1:nb+nyb,:)        = cshift(send_left (:,:,nb+1:nb+nyb,:),dim=3,shift= delj)
-            send_left (:,:,1:nb,:)               = send_left (:,:,nyb+1:nyb+nb,:)
-            send_left (:,:,nb+nyb+1:nyb+2*nb,:)  = send_left (:,:,nb+1:2*nb,:)
+            if(nyd /= 1) then
+               send_left (:,:,nb+1:nb+nyb,:)        = cshift(send_left (:,:,nb+1:nb+nyb,:),dim=3,shift= delj)
+               send_left (:,:,1:nb,:)               = send_left (:,:,nyb+1:nyb+nb,:)
+               send_left (:,:,nb+nyb+1:nyb+2*nb,:)  = send_left (:,:,nb+1:2*nb,:)
+            endif
 !
 ! remapujemy  - interpolacja kwadratowa
 !
@@ -128,9 +130,11 @@ module fluidboundaries
 !
 ! przesuwamy o calkowita liczbe komorek + periodyczny wb w kierunku y
 !
-            send_right(:,:,nb+1:nb+nyb,:)        = cshift(send_right(:,:,nb+1:nb+nyb,:),dim=3,shift=-delj)
-            send_right (:,:,1:nb,:)              = send_right(:,:,nyb+1:nyb+nb,:)
-            send_right (:,:,nb+nyb+1:nyb+2*nb,:) = send_right(:,:,nb+1:2*nb,:)
+            if(nyd /= 1) then
+               send_right(:,:,nb+1:nb+nyb,:)        = cshift(send_right(:,:,nb+1:nb+nyb,:),dim=3,shift=-delj)
+               send_right (:,:,1:nb,:)              = send_right(:,:,nyb+1:nyb+nb,:)
+               send_right (:,:,nb+nyb+1:nyb+2*nb,:) = send_right(:,:,nb+1:2*nb,:)
+            endif
 !
 ! remapujemy  - interpolacja kwadratowa
 !
