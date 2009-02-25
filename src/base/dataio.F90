@@ -1713,8 +1713,8 @@ module dataio
                 +(b(ibz,1:nx-1,1:ny-1,min(2,nz):nz) - b(ibz,1:nx-1,1:ny-1,1:max(nz-1,1)))*dx*dy
       wa = abs(wa)
 
-      wa(ie,:,:) = wa(max(ie-1),:,:)
-      wa(:,je,:) = wa(:,max(je-1),:)
+      wa(ie,:,:) = wa(max(ie-1,1),:,:)
+      wa(:,je,:) = wa(:,max(je-1,1),:)
       wa(:,:,ke) = wa(:,:,max(ke-1,1))
 
       divb_max%val  = maxval(wa(is:ie,js:je,ks:ke))
