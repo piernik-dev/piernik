@@ -40,7 +40,9 @@ module fluxneutral
     use fluidindex,      only : nvar_neu
 
     use initneutral,     only : gamma_neu, cs_iso_neu2
-    use timestepneutral, only : c_neu
+
+!    use timestepneutral, only : c_neu   ! check which c_xxx is better
+    use timestep, only : c_all
 
     implicit none
     integer n
@@ -92,7 +94,9 @@ module fluxneutral
 #ifdef GLOBAL_FR_SPEED
 !       The freezing speed is now computed globally
 !       (c=const for the whole domain) in sobroutine 'timestep'
-    cfrn(:,:) = c_neu
+
+!    cfrn(:,:) = c_neu       ! check which c_xxx is better
+    cfrn(:,:) = c_all
 #endif /* GLOBAL_FR_SPEED */
 
   end subroutine flux_neu

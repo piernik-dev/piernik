@@ -82,7 +82,12 @@ contains
 #endif /* ISO */
 
           cx=max(cx,vx+cs)
-          cy=max(cy,vy+cs)
+! not sure whether it's good solution but without it I get NaNs
+!          if(nyd/=1) then
+             cy = max(cy,vy+cs)
+!          else
+             cy = 0.0
+!          endif
           cz=max(cz,vz+cs)
           c_neu =max(c_neu,cx,cy,cz)
 
@@ -90,9 +95,6 @@ contains
       end do
     end do
 
-    dt_neu_proc_x = dx/cx
-    dt_neu_proc_y = dy/cy
-    dt_neu_proc_z = dz/cz
     if(nxd /= 1) then
        dt_neu_proc_x = dx/cx  
     else 
@@ -120,7 +122,7 @@ contains
     call MPI_BCAST(dt_neu_all, 1, MPI_DOUBLE_PRECISION, 0, comm, ierr)
     dt_neu = cfl*dt_neu_all
     
-!    write(*,*) 'timestep_neu:', dt_neu
+    !write(*,*) 'timestep_neu:', dt_neu
 
   end subroutine timestep_neu
 
