@@ -31,13 +31,15 @@ module hydrostatic
 #ifdef GRAV
   contains
 
-    subroutine hydrostatic_zeq(iia,jja, d0, dprof)
+    subroutine hydrostatic_zeq(iia,jja, d0, alpha, dprof)
       use constants
-      use start, only : csim2
       use mpisetup, only : proc
       use grid, only : nx,ny,nz,dl,zdim,z,zl,zr,nzt,nb,zmin,zmax
 
       use gravity, only  : grav_accel,grav_pot,gp_status,nsub,tune_zeq
+
+      use initfluids,  only : cs_iso2
+
 #ifndef ISO
       use arrays, only   : eprof
 #endif /* ISO */
@@ -48,11 +50,14 @@ module hydrostatic
 
       integer nstot
       real, allocatable ::  zs(:), dprofs(:), gprofs(:), gpots(:)
-      integer ksub, ksmid, k, ia, ja
-      real dzs, factor
+      integer           ::  ksub, ksmid, k, ia, ja
+      real              ::  dzs, factor
 
-      real dmid, ddmid
-      integer iter, itermx
+      real              ::  dmid, ddmid
+      integer           ::  iter, itermx
+      real              ::  csim2, alpha
+      
+      csim2   = cs_iso2*(1+alpha)      
 
       ia = min(nx,max(1, iia))
       ja = min(ny,max(1, jja))

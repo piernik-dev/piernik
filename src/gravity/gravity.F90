@@ -30,8 +30,7 @@
 module gravity
 
    use constants
-   use start, only : csim2
-
+   
    character(LEN=9) :: gp_status
    real    :: g_z, g_y, dg_dz, r_gc
    real    :: ptmass, ptm_x, ptm_y, ptm_z, r_smooth
@@ -175,6 +174,8 @@ module gravity
       use gravity_user, only : grav_pot_user
 #endif /* GRAV_USER */
 
+      use initfluids,  only : cs_iso2
+
       implicit none
       character, intent(in) :: sweep*6
       integer, intent(in)   :: i1, i2, n
@@ -189,6 +190,7 @@ module gravity
 #ifdef GRAV_GALACTIC
       real                  :: x1
 #endif /* GRAV_GALACTIC */
+
       status = ''
 
 #ifdef GRAV_NULL
@@ -232,7 +234,7 @@ module gravity
          fr = min( (rc/r_grav)**n_gravr , 100.0)
          fr = max(1./cosh(fr),smalld/100.)
          gpot = -newtong*ptmass/dsqrt(x1**2+x2**2+x3**2+r_smooth**2)
-         gpot = gpot - csim2*dlog(fr) ! *d0
+         gpot = gpot - cs_iso2*dlog(fr) ! *d0
 #elif defined (GRAV_PTMASSPURE)
          select case (sweep)
             case('xsweep')
@@ -269,7 +271,7 @@ module gravity
          fr(:) = min((rc(:)/r_grav)**n_gravr,100.0)
          fr = max(1./cosh(fr),smalld/100.)
          gpot = -newtong*ptmass/dsqrt(x1**2+x2**2+x3**2+r_smooth**2)
-!         gpot = gpot - csim2*dlog(fr) ! *d0
+!         gpot = gpot - cs_iso2*dlog(fr) ! *d0
 #elif defined (GRAV_USER)
          call grav_pot_user(gpot,sweep,i1,i2,xsw,n,status,temp_log)
 
