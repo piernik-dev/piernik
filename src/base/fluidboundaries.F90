@@ -41,11 +41,10 @@ module fluidboundaries
 #endif /* COSM_RAYS */
 #ifndef ISO
       use fluidindex,      only : iarr_all_en
-      use start,           only : gamma
 #endif /* ISO */
-#ifdef ISO
-      use start,           only : c_si
-#endif /* ISO */
+
+      use initfluids,      only : gamma, cs_iso2
+
 #ifdef GRAV
       use gravity,         only : grav_accel, nsub, tune_zeq_bnd
 #endif /* GRAV */
@@ -78,8 +77,8 @@ module fluidboundaries
 #ifdef SHEAR
       real, allocatable :: send_right(:,:,:,:),recv_right(:,:,:,:)
 #endif /* SHEAR */
-! MPI block comunication
 
+! MPI block comunication
       select case (dim)
       case ('xdim')
 #ifdef SHEAR
@@ -102,11 +101,11 @@ module fluidboundaries
 !
 ! przesuwamy o calkowita liczbe komorek + periodyczny wb w kierunku y
 !
-            if(nyd /= 1) then
-               send_left (:,:,nb+1:nb+nyb,:)        = cshift(send_left (:,:,nb+1:nb+nyb,:),dim=3,shift= delj)
-               send_left (:,:,1:nb,:)               = send_left (:,:,nyb+1:nyb+nb,:)
-               send_left (:,:,nb+nyb+1:nyb+2*nb,:)  = send_left (:,:,nb+1:2*nb,:)
-            endif
+         if(nyd /= 1) then
+            send_left (:,:,nb+1:nb+nyb,:)        = cshift(send_left (:,:,nb+1:nb+nyb,:),dim=3,shift= delj)
+            send_left (:,:,1:nb,:)               = send_left (:,:,nyb+1:nyb+nb,:)
+            send_left (:,:,nb+nyb+1:nyb+2*nb,:)  = send_left (:,:,nb+1:2*nb,:)
+         endif
 !
 ! remapujemy  - interpolacja kwadratowa
 !
@@ -130,11 +129,11 @@ module fluidboundaries
 !
 ! przesuwamy o calkowita liczbe komorek + periodyczny wb w kierunku y
 !
-            if(nyd /= 1) then
-               send_right(:,:,nb+1:nb+nyb,:)        = cshift(send_right(:,:,nb+1:nb+nyb,:),dim=3,shift=-delj)
-               send_right (:,:,1:nb,:)              = send_right(:,:,nyb+1:nyb+nb,:)
-               send_right (:,:,nb+nyb+1:nyb+2*nb,:) = send_right(:,:,nb+1:2*nb,:)
-            endif
+         if(nyd /= 1) then
+            send_right(:,:,nb+1:nb+nyb,:)        = cshift(send_right(:,:,nb+1:nb+nyb,:),dim=3,shift=-delj)
+            send_right (:,:,1:nb,:)              = send_right(:,:,nyb+1:nyb+nb,:)
+            send_right (:,:,nb+nyb+1:nyb+2*nb,:) = send_right(:,:,nb+1:2*nb,:)
+         endif
 !
 ! remapujemy  - interpolacja kwadratowa
 !
@@ -583,7 +582,7 @@ module fluidboundaries
                db = u(iarr_all_dn,:,:,kb)
                db = max(db,smalld)
 #ifdef ISO
-               csi2b = c_si**2
+               csi2b = cs_iso2
 #else /* ISO */
                ekb= 0.5*(u(iarr_all_mx,:,:,kb)**2+u(iarr_all_my,:,:,kb)**2+u(iarr_all_mz,:,:,kb)**2)/db
                eib = u(iarr_all_en,:,:,kb) - ekb
@@ -682,7 +681,7 @@ module fluidboundaries
                db = u(iarr_all_dn,:,:,kb)
                db = max(db,smalld)
 #ifdef ISO
-               csi2b = c_si**2
+               csi2b = cs_iso2
 #else /* ISO */
                ekb= 0.5*(u(iarr_all_mx,:,:,kb)**2+u(iarr_all_my,:,:,kb)**2+u(iarr_all_mz,:,:,kb)**2)/db
                eib = u(iarr_all_en,:,:,kb) - ekb

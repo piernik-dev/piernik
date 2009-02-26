@@ -1215,7 +1215,12 @@ module dataio
       use arrays,          only : gp
 #endif /* GRAV */
 #ifdef ISO
-      use start,           only : c_si
+#ifdef IONIZED
+      use initionized,  only : cs_iso_ion2
+#endif /* IONIZED */   
+#ifdef NEUTRAL
+      use initneutral,  only : cs_iso_neu2
+#endif /* NEUTRAL */   
 #endif /* ISO */
 #ifdef RESISTIVE
       use resistivity
@@ -1250,8 +1255,18 @@ module dataio
 #ifdef COSM_RAYS
       real     :: encr = 0.0, tot_encr = 0.0
 #endif /* COSM_RAYS */
+      real     :: cs_iso2
 !- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 !
+
+#ifdef IONIZED
+      cs_iso2 = cs_iso_ion2
+#endif /* IONIZED */
+#ifdef NEUTRAL
+      cs_iso2 = cs_iso_neu2
+#endif /* NEUTRAL */
+
+
       if (proc .eq. 0) then
          write (tsl_file,'(a,a1,a,a1,a3,a1,i3.3,a4)') &
               trim(cwd),'/',trim(problem_name),'_', run_id,'_',nrestart,'.tsl'
@@ -1343,7 +1358,7 @@ module dataio
       mflz = sum(wa(is:ie,js:je,ks:ke)) * dx*dy/nzd
       call mpi_allreduce(mflz, tot_mflz, 1, mpi_real8, mpi_sum, comm3d, ierr)
 #ifdef ISO
-      tot_eint = c_si**2*tot_mass
+      tot_eint = cs_iso2*tot_mass
       tot_ener = tot_eint+tot_ekin+tot_emag
 #else /* ISO */
       ener = sum(u(iarr_all_en,is:ie,js:je,ks:ke)) * dvol
