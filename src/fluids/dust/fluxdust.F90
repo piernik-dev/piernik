@@ -40,7 +40,9 @@ module fluxdust
     use fluidindex,      only : idn,imx,imy,imz,ien
     use fluidindex,      only : nvar_dst
 
-    use timestepdust, only : c_dst
+!    use timestepdust, only : c_dst  ! check which  c_xxx is better
+    use timestep, only : c_all
+
 
     implicit none
     integer n
@@ -79,7 +81,8 @@ module fluxdust
 #ifdef GLOBAL_FR_SPEED
 !       The freezing speed is now computed globally
 !       (c=const for the whole domain) in sobroutine 'timestep'
-    cfrd(:,:) = c_dst
+!   cfrd(:,:) = c_all     ! check which  c_xxx is better
+    cfrd(:,:) = c_all
 #endif /* GLOBAL_FR_SPEED */
 
   end subroutine flux_dst
