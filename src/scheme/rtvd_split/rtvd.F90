@@ -193,8 +193,8 @@ module rtvd ! split orig
          ur1(:,:) = ur0 - rk2coef(integration_order,istep)*durf
          ul1(:,:) = ul0 + rk2coef(integration_order,istep)*dulf
 
-         ur1(iarr_all_dn,:) = max(ur1(iarr_all_dn,:), 0.5*smalld)
-         ul1(iarr_all_dn,:) = max(ul1(iarr_all_dn,:), 0.5*smalld)
+!         ur1(iarr_all_dn,:) = max(ur1(iarr_all_dn,:), 0.5*smalld)
+!         ul1(iarr_all_dn,:) = max(ul1(iarr_all_dn,:), 0.5*smalld)
 
 
 #ifdef SHEAR
