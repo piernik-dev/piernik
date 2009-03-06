@@ -30,12 +30,12 @@
 module initfluids
 
 #ifdef IONIZED
-  use initionized, only : init_ionized, gamma_ion, cs_iso_ion2
+  use initionized, only : init_ionized, gamma_ion, cs_iso_ion, cs_iso_ion2
   use fluidindex,  only : i_ion
 #endif /* IONIZED */
 
 #ifdef NEUTRAL
-  use initneutral, only : init_neutral, gamma_neu, cs_iso_neu2
+  use initneutral, only : init_neutral, gamma_neu, cs_iso_neu, cs_iso_neu2
   use fluidindex,  only : i_neu
 #endif /* NEUTRAL */
 
@@ -47,12 +47,12 @@ module initfluids
   use initcosmicrays, only : init_cosmicrays
 #endif /* COSM_RAYS */
 
-  use fluidindex,   only   : nfluid
-  
-  implicit none
-  
-  real, allocatable :: gamma(:)
-  real              :: cs_iso, cs_iso2
+  use fluidindex,   only   : nfluid 
+
+  implicit none 
+
+  real, allocatable :: gamma(:) 
+  real              :: cs_iso, cs_iso2 
 
   contains
 
@@ -75,23 +75,23 @@ module initfluids
   call init_cosmicrays
 #endif /* COSM_RAYS */
 
-  allocate(gamma(nfluid))
-  
-#if defined NEUTRAL && defined IONIZED
-  if(cs_iso_neu /= cs_iso_ion) then
-      write(*,*) "WARNING: 'cs_iso_neu' and 'cs_iso_ion' should be equal"
-#endif /* defined NEUTRAL && defined IONIZED  */
-
-#ifdef IONIZED
-  gamma(i_ion) = gamma_ion
-  cs_iso   = cs_iso_ion
-  cs_iso2  = cs_iso_ion2
-#endif /* IONIZED */
-#ifdef NEUTRAL  
-  gamma(i_neu) = gamma_neu
-  cs_iso  = cs_iso_neu 
-  cs_iso2 = cs_iso_neu2
-#endif /* NEUTRAL  */ 
+  allocate(gamma(nfluid)) 
+     
+#if defined NEUTRAL && defined IONIZED 
+    if(cs_iso_neu /= cs_iso_ion) &
+        write(*,*) "WARNING: 'cs_iso_neu' and 'cs_iso_ion' should be equal" 
+#endif /* defined NEUTRAL && defined IONIZED  */ 
+   
+#ifdef IONIZED 
+    gamma(i_ion) = gamma_ion 
+    cs_iso   = cs_iso_ion 
+    cs_iso2  = cs_iso_ion2 
+#endif /* IONIZED */ 
+#ifdef NEUTRAL   
+    gamma(i_neu) = gamma_neu 
+    cs_iso  = cs_iso_neu  
+    cs_iso2 = cs_iso_neu2 
+#endif /* NEUTRAL  */  
 
   end subroutine init_fluids
 
