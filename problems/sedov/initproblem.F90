@@ -59,9 +59,11 @@ module initproblem
 
    subroutine read_problem_par
       use errh, only : namelist_errh
+      use mpisetup, only : cwd
 
       implicit none
       integer :: ierrh
+      character(LEN=100) :: par_file, tmp_log_file
 
       t_sn = 0.0
 
@@ -80,13 +82,16 @@ module initproblem
       n_sn    = 1
       dt_sn   = 0.0
 
+      
       if(proc .eq. 0) then
-         open(1,file='problem.par')
+         par_file = trim(cwd)//'/problem.par'
+         tmp_log_file = trim(cwd)//'/tmp.log'
+         open(1,file=par_file)
          read(unit=1,nml=PROBLEM_CONTROL,iostat=ierrh)
          call namelist_errh(ierrh,'PROBLEM_CONTROL')
          write(*,nml=PROBLEM_CONTROL)
          close(1)
-         open(3, file='tmp.log', position='append')
+         open(3, file=tmp_log_file, position='append')
          write(3,nml=PROBLEM_CONTROL)
          write(3,*)
          close(3)
