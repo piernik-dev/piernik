@@ -479,6 +479,7 @@ module dataio
                  ieo = 1, jeo = 1, keo = 1
 
       real(kind=4), dimension(:,:,:), allocatable :: tmparr
+      real(kind=4), dimension(:), allocatable     :: temp_scl
 
 !- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -744,20 +745,29 @@ module dataio
 
 ! write coords
 !
+         allocate(temp_scl(iso:ieo))
+         temp_scl(iso:ieo) = real(x(iso:ieo),4)
          dim_id = sfdimid( sds_id, 0 )
          iostatus = sfsdmname( dim_id, 'xc' )
-         iostatus = sfsdscale( dim_id, dims(1), 5, real(x(iso:ieo),4))
+         iostatus = sfsdscale( dim_id, dims(1), 5, temp_scl(:))
          iostatus = sfsdmstr ( dim_id, 'X', 'pc', '' )
+         deallocate(temp_scl)
 
+         allocate(temp_scl(jso:jeo))
+         temp_scl(jso:jeo) = real(y(jso:jeo),4)
          dim_id = sfdimid( sds_id, 1 )
          iostatus = sfsdmname( dim_id, 'yc' )
-         iostatus = sfsdscale( dim_id, dims(2), 5, real(y(jso:jeo),4))
+         iostatus = sfsdscale( dim_id, dims(2), 5, temp_scl(:))
          iostatus = sfsdmstr ( dim_id, 'Y', 'pc', '' )
+         deallocate(temp_scl)
 
+         allocate(temp_scl(kso:keo))
+         temp_scl(kso:keo) = real(z(kso:keo),4)
          dim_id = sfdimid( sds_id, 2 )
          iostatus = sfsdmname( dim_id, 'zc' )
-         iostatus = sfsdscale( dim_id, dims(3), 5, real(z(kso:keo),4))
+         iostatus = sfsdscale( dim_id, dims(3), 5, temp_scl(:))
          iostatus = sfsdmstr ( dim_id, 'Z', 'pc', '' )
+         deallocate(temp_scl)
 
          iostatus = sfendacc(sds_id)
 
@@ -1216,10 +1226,10 @@ module dataio
 #endif /* GRAV */
 #ifdef ISO
 #ifdef IONIZED
-      use initionized,  only : cs_iso_ion2
+      use initionized,     only : cs_iso_ion2
 #endif /* IONIZED */   
 #ifdef NEUTRAL
-      use initneutral,  only : cs_iso_neu2
+      use initneutral,     only : cs_iso_neu2
 #endif /* NEUTRAL */   
 #endif /* ISO */
 #ifdef RESISTIVE
@@ -1258,14 +1268,12 @@ module dataio
       real     :: cs_iso2
 !- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 !
-
 #ifdef IONIZED
       cs_iso2 = cs_iso_ion2
 #endif /* IONIZED */
 #ifdef NEUTRAL
       cs_iso2 = cs_iso_neu2
 #endif /* NEUTRAL */
-
 
       if (proc .eq. 0) then
          write (tsl_file,'(a,a1,a,a1,a3,a1,i3.3,a4)') &
