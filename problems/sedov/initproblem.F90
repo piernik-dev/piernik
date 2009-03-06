@@ -31,6 +31,7 @@ module initproblem
 
 ! Initial condition for Sedov-Taylor explosion
 ! Written by: M. Hanasz, March 2006
+
 #ifdef IONIZED
    use initionized
 #endif /* IONIZED */
