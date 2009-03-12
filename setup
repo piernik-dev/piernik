@@ -21,68 +21,50 @@ use Switch;
 use File::Path;
 use File::Copy;
 use File::Basename;
+use Getopt::Long;
 
 # use warnings;
 
 # return status
+my %moo=();
 my $OK = 0;
 my $FAILED = 1;
-# list of valid command-line options, omit the leading "--"
-# IMPORTANT!
-# because references to these values are hard-coded:
-# * order _is_ important!
-# * ensure that any new options are added to the _end_ of the array
-my @CL_OPTIONS = ( 'copy', 'help', 'problems', 'units', 'dumpenv' );
-# default values go here
-my $CL_VALUES = ( 0, 0, 0, 0, 0 );
+GetOptions("help"=>\$moo{help},
+           "problems"=>\$moo{problems},
+           "units"=>\$moo{units},
+           "dumpenv"=>\$moo{dumpenv},
+           "compiler:s"=>\$moo{compiler});
+
+# DEBUG
+#foreach (keys %moo) {
+# print "$_ = $moo{$_}\n";
+#}
 
 my $SELF = fileparse("$0");
 my $argc = @ARGV;
 
+# DEBUG
+#print "Unprocessed by Getopt::Long\n" if $ARGV[0];
+#foreach (@ARGV) {
+#  print "$_\n";
+#}
+
 if($argc < 1){
+  $moo{help} = 1;
+  $is_prob = 0;
+} 
 
-$CL_VALUES[1] = 2;
-
-} else {
-
-for ( my $i = 0; $i < @ARGV; $i++ ) {
-#    print "element " . $i . "\n";
-   my $opf = 0;
-   for ( my $opt = 0; $opt < @CL_OPTIONS; $opt++ ) {
-   	if ( $ARGV[$i] =~ /^\-\-$CL_OPTIONS[$opt]$/ ) {
-	   $CL_VALUES[$opt] = 1;
-	   $opf = 1;
-	   if ( $opt == 1 || $opt == 2 || $opt == 3 ) {
-		last;
-	   }
-	   print "TURNING ON " . $CL_OPTIONS[$opt] . "\n";
-	   last;
-	}
-   }
-   # successful or problem name only
-   if ($opf || @ARGV == 1) {
-	next;
-   }
-   if (( $i != 0 ) && ( @ARGV > 1 )) {
-	print "not understood: $ARGV[$i]\n";
-	exit $FAILED;
-   }
-}
-
-print "\n";
-}
-
-if($CL_VALUES[2]){
+if($moo{problems}){
    print " \n";
    system ( "cat ./problems/*/info");
    print " \n";
    exit $OK;
-} elsif ($CL_VALUES[3]){
+} elsif ($moo{units}){
    print " \n";
    system ( "grep uses ./src/base/constants.F90");
    print " \n";
    exit $OK;
-} elsif ($CL_VALUES[1]){
+} elsif ($moo{help}){
    print "USAGE: " . $SELF . " [PROBLEM] [OPTIONS]\n";
    print "Available options:\n";
    print " --help\t\t- print this help message\n";
@@ -128,15 +110,15 @@ if($CL_VALUES[2]){
    print "  \'./piernik <directory with an alternative problem.par>\'\n";
 #   print "!===================================================================================!\n";
    print "\nEnjoy your work with piernik!\n";
-   if ( $CL_VALUES[1] == 1 ) {
+   if ( $is_prob == 0 ) {
 	exit $OK;
    } else {
 	exit $FAILED;
    }
 }
-
+if($moo{compiler}) {$compiler = $moo{compiler}.".in"} else {$compiler = 'default.in'};
 # default
-open MAKEIN, "< compilers/default.in" or die $!;
+open MAKEIN, "< compilers/".$compiler or die $!;
 @makein = <MAKEIN>;
 close MAKEIN;
 rmtree(['obj']);
@@ -240,10 +222,7 @@ open(MAKEFILE, "> Makefile-prep");
 
 # Source listing
 #
-#print MAKEFILE @makein;
-#foreach $line (@makein){
-#   print "$line";
-#}
+print MAKEFILE @makein;
 print MAKEFILE "SRCS =\t";
 @srcs = <*.F90>;
 &PrintWords(8, 0, @srcs);
