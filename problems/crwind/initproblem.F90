@@ -40,22 +40,20 @@ module initproblem
    use initionized
    use initcosmicrays
    use fluidindex, only : ibx,iby,ibz
-!   use fluidboundaries
    use hydrostatic, only : hydrostatic_zeq
-   use start, only : c_si, csim2, alpha, gamma
 #ifdef SHEAR
    use shear, only : qshear, omega
 #endif /* SHEAR */
 
    real :: d0, bxn,byn,bzn, h_sn, f_sn_kpc2, amp_cr, beta_cr, r_sn
-   real :: ethu, f_sn, amp_ecr_sn
+   real :: ethu, f_sn, amp_ecr_sn, alpha
    character(len=32) :: problem_name
    character(len=3)  :: run_id
 
    namelist /PROBLEM_CONTROL/  problem_name, run_id, &
                                d0, &
                                bxn,byn,bzn, &
-                               x0, y0, z0, c_si, alpha, &
+                               x0, y0, z0, alpha, &
                                r_sn, h_sn, f_sn_kpc2, amp_cr, beta_cr
    contains
 
@@ -105,8 +103,7 @@ module initproblem
          rbuff(10) = r_sn
          rbuff(11) = h_sn
          rbuff(12) = f_sn_kpc2
-         rbuff(13) = c_si
-         rbuff(14) = alpha
+         rbuff(13) = alpha
 
          call MPI_BCAST(cbuff, 32*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
          call MPI_BCAST(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
@@ -133,8 +130,7 @@ module initproblem
          r_sn         = rbuff(10)
          h_sn         = rbuff(11)
          f_sn_kpc2    = rbuff(12)
-         c_si         = rbuff(13)
-         alpha        = rbuff(14)
+         alpha        = rbuff(13)
 
 
       endif
@@ -144,11 +140,12 @@ module initproblem
 !-----------------------------------------------------------------------------
 
    subroutine init_prob
+      use initfluids, only : cs_iso2
 
       implicit none
 
       integer :: i,j,k
-      real :: b0
+      real :: b0, csim2
 
       ethu = 7.0**2/(5.0/3.0-1.0) * 1.0    ! thermal energy unit=0.76eV/cm**3
                                            ! for c_si= 7km/s, n=1/cm^3
@@ -174,18 +171,14 @@ module initproblem
          f_sn = f_sn * 2.0*r_sn/1000.0
       endif
 
-
-
-
-      gamma  = gamma_ion
-      cs_ion = c_si
-      csim2  = c_si**2*(1.0+alpha)
       write(*,*) proc, csim2
 !   Secondary parameters
 
-      b0 = sqrt(2.*alpha*d0*c_si**2)
+      b0 = sqrt(2.*alpha*d0*cs_iso2)
 
-      call hydrostatic_zeq(1, 1, d0, dprof)
+      csim2 = cs_iso2*(1.0+alpha)
+ 
+      call hydrostatic_zeq(1, 1, csim2, d0, dprof)
 
       do k = 1,nz
          do j = 1,ny
@@ -200,12 +193,12 @@ module initproblem
 #endif /* SHEAR */
 
 #ifndef ISO
-               u(ieni,i,j,k)   = c_si**2/(gamma_ion-1.0) * u(idni,i,j,k) &
+               u(ieni,i,j,k)   = cs_iso2/(gamma_ion-1.0) * u(idni,i,j,k) &
                                + 0.5*(u(imxi,i,j,k)**2 + u(imyi,i,j,k)**2 + &
                                       u(imzi,i,j,k)**2 ) / u(idni,i,j,k)
 #endif /* ISO */
 #ifdef COSM_RAYS
-               u(iecr,i,j,k)   =  beta_cr*c_si**2 * u(idni,i,j,k)/( gamma_cr - 1.0 )
+               u(iecr,i,j,k)   =  beta_cr*cs_iso2 * u(idni,i,j,k)/( gamma_cr - 1.0 )
 #ifdef GALAXY
 ! Single SN explosion in x0,y0,z0 at t = 0 if amp_cr /= 0
                u(iecr,i,j,k)= u(iecr,i,j,k) &

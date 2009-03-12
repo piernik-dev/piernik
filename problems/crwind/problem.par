@@ -111,5 +111,5 @@
     c_si         =  7.0     ! sound speed
     h_sn         = 100.0    ! std. dev. for normal distribution of SN i "z" direction
     f_sn_kpc2    =  0.0    ! surface frequency of SN ( / kpc^2 / Myr )
-    alpha        =  1.0    ! 
+    alpha     =  1.0    
  /
