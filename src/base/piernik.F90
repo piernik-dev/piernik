@@ -112,9 +112,7 @@ contains
 
       call init_fluids
 
-!      call read_problem_par
-
-!      call fluid_index
+      call read_problem_par
 
       call arrays_allocate(nx,ny,nz,nvar)
 

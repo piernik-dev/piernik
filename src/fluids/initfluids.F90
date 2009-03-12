@@ -48,7 +48,6 @@ module initfluids
 #endif /* COSM_RAYS */
 
   use fluidindex,   only   : nfluid, fluid_index
-  use initproblem,  only   : read_problem_par
 
   implicit none 
 
@@ -76,9 +75,7 @@ module initfluids
   call init_cosmicrays
 #endif /* COSM_RAYS */
 
-  call read_problem_par
   call fluid_index
-
 
   allocate(gamma(nfluid)) 
      
