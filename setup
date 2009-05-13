@@ -222,7 +222,7 @@ open(MAKEFILE, "> Makefile-prep");
 
 # Source listing
 #
-print MAKEFILE @makein;
+#print MAKEFILE @makein;
 print MAKEFILE "SRCS =\t";
 @srcs = <*.F90>;
 &PrintWords(8, 0, @srcs);
