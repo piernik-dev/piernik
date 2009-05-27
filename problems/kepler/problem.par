@@ -1,7 +1,7 @@
  $DOMAIN_SIZES
-    nxd = 100
-    nyd = 100
-    nzd = 100
+    nxd = 75
+    nyd = 75
+    nzd = 1
     nb=4
  /  
 
@@ -85,7 +85,7 @@
  $PROBLEM_CONTROL
     problem_name ='kepler'
     run_id  =  'tst'
-    alpha   = 0.1
+    alpha   = 0.0
     d0      = 1.0
     dout    = 1.0e-4
     r_max   = 1.0e-1

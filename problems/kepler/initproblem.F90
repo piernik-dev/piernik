@@ -33,7 +33,6 @@ module initproblem
 ! Written by: M. Hanasz, March 2006
 
    use mpisetup
-   use start, only : gamma,c_si,alpha,csim2
 
    real :: d0, r_max, dout
    character(len=32) :: problem_name, mag_field_orient
@@ -111,6 +110,7 @@ module initproblem
       use gravity,     only : r_smooth,r_grav,n_gravr,ptmass
       use initionized, only : idni, imxi, imyi, imzi
       use fluidindex,  only : ibx, iby, ibz
+      use initfluids,  only : gamma,cs_iso 
 #ifndef ISO
       use initionized, only : ieni, gamma_ion, cs_ion
 #endif /* !ISO */
@@ -118,17 +118,16 @@ module initproblem
 
       integer :: i,j,k,kmid
       real :: xi,yj,zk, rc, rs, vx, vy, vz, h2, dgdz, b0, sqr_gm, v_phi
+      real :: alpha, csim2
 
 !   Secondary parameters
 
-      c_si = cs_ion
-      csim2 = c_si**2*(1.0+alpha)
+      csim2 = cs_ion**2*(1.0+alpha)
       gamma(1) = gamma_ion
-      write(*,*) csim2
+
       sqr_gm = sqrt(newtong*ptmass)
 
       b0 = sqrt(2.*alpha*d0*cs_ion**2)
-      write(*,*) 'b0 = ',b0
 
       do k=1, nz
          if(z(k) .lt. 0.0) kmid = k       ! the midplane is in between
@@ -141,7 +140,7 @@ module initproblem
             rc = sqrt(xi**2+yj**2)
 
             if(nzd /= 1) then
-               call hydrostatic_zeq(i, j, d0, dprof)
+               call hydrostatic_zeq(i, j, d0, csim2, dprof)
             endif
 
             do k = 1,nz
