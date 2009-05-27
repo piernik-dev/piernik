@@ -30,7 +30,7 @@
 module gravity
 
    use constants
-   
+
    character(LEN=9) :: gp_status
    real    :: g_z, g_y, dg_dz, r_gc
    real    :: ptmass, ptm_x, ptm_y, ptm_z, r_smooth
@@ -163,18 +163,17 @@ module gravity
 
 !--------------------------------------------------------------------------
    subroutine grav_pot(sweep, i1,i2, xsw, n, gpot,status,temp_log)
+      use initfluids, only : cs_iso2
 #if defined GRAV_PTMASS || defined GRAV_PTFLAT || defined GRAV_PTMASSPURE
       use mpisetup,  only : smalld
       use grid, only : x,y,z
 #endif /* GRAV_PTMASS || GRAV_PTFLAT || GRAV_PTMASSPURE */
-#ifdef GRAV_GALACTIC
+#if defined GRAV_GALACTIC || defined GRAV_LINEAR
       use grid, only : z
-#endif /* GRAV_GALACTIC */
+#endif /* GRAV_GALACTIC || GRAV_LINEAR */
 #ifdef GRAV_USER
       use gravity_user, only : grav_pot_user
 #endif /* GRAV_USER */
-
-      use initfluids,  only : cs_iso2
 
       implicit none
       character, intent(in) :: sweep*6
@@ -190,7 +189,6 @@ module gravity
 #ifdef GRAV_GALACTIC
       real                  :: x1
 #endif /* GRAV_GALACTIC */
-
       status = ''
 
 #ifdef GRAV_NULL
