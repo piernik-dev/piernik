@@ -1,0 +1,24 @@
+/* choosing fluids */
+#define IONIZED
+#undef MAGNETIC
+
+/* adiabatic or isothermal */
+#define ISO
+
+/* choosing freezing speed */
+#define GLOBAL_FR_SPEED
+
+/* choosing flux limiter */
+#define VANLEER
+
+/* physics including */
+#undef RESISTIVE
+
+/* gravity type choosing */
+#define GRAV
+#ifdef GRAV /* define external source of gravity */
+#define GRAV_LINEAR
+#endif /* GRAV */
+
+/* numerical solutions and limitations */
+#undef SHEAR

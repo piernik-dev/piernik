@@ -1,0 +1,2 @@
+lingrav:	initial configuration for problem with linear gravity
+		gpot = 0.5 * dg_dz * z**2

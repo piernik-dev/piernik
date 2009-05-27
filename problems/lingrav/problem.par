@@ -1,0 +1,96 @@
+ $DOMAIN_SIZES
+    nxd          = 1
+    nyd          = 50
+    nzd          = 100
+    nb           = 4
+ /  
+
+ $MPI_BLOCKS
+    pxsize       = 1
+    pysize       = 1
+    pzsize       = 1    
+ /  
+
+ $RESTART_CONTROL
+    restart      = 'last'
+    nrestart     = 0 
+    new_id       = ''
+ /
+
+ $END_CONTROL
+    tend         = 10.0
+    nend         = 1000000 
+ /
+
+ $OUTPUT_CONTROL
+    dt_hdf       = 0.1
+    dt_res       = 0.0
+    dt_log       = 1.0e-1
+    dt_tsl       = 1.0e-1
+    vars(1)      = 'dens'
+    vars(2)      = 'velx'
+    vars(3)      = 'vely'
+    vars(4)      = 'velz'
+    vars(5)      = 'magx'
+    vars(6)      = 'magy'
+    vars(7)      = 'magz'
+    domain       = 'phys_domain'
+   
+ / 
+
+ $BOUNDARIES
+    bnd_xl       = 'per'  
+    bnd_xr       = 'per'  
+    bnd_yl       = 'per'  
+    bnd_yr       = 'per'  
+    bnd_zl       = 'outd'  
+    bnd_zr       = 'outd'
+ /
+
+ $DOMAIN_LIMITS
+    xmin         =-1.0
+    xmax         = 1.0
+    ymin         =-1.0
+    ymax         = 1.0
+    zmin         =-1.0
+    zmax         = 1.0
+ /
+
+ $FLUID_IONIZED
+    gamma_ion = 1.66666667
+ /
+
+ $NUMERICAL_SETUP
+    cfl          = 0.9
+    smalld       = 1.e-5
+    smallei      = 1.e-4
+    integration_order = 2
+  /
+ 
+ $GRAVITY
+    nsub         =  10
+    dg_dz 	 = -10.0
+ /
+ 
+ $RESISTIVITY
+    cfl_resist   =    0.9   ! Courant's number for resistiwity 
+    eta_0   	 =  100.0   ! uniform resistivity
+    eta_1        =    0.0   ! anomalous resistivity, works above j_crit
+    j_crit       = 1000.0   ! critical value of current
+ /
+
+ 
+ $SHEARING
+    omega        = 0.0      ! angular freq.
+    qshear       = 1.0      ! shearing param. q: vy=q*omega*x
+ /
+ 
+ $PROBLEM_CONTROL
+    problem_name = 'lingrav'
+    run_id       = 'tst'
+    d0           =  1.0     ! density in galactic plane
+    bxn          =  0.0     !
+    byn          =  1.0     ! __direction__ of B field 
+    bzn          =  0.0     !
+    alpha        =  0.0    
+ /
