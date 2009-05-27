@@ -2,7 +2,7 @@
 #define IONIZED
 
 /* adiabatic or isothermal */
-#undef ISO
+#define ISO
 
 /* choosing freezing speed */
 #define LOCAL_FR_SPEED

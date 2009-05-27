@@ -34,7 +34,7 @@ module initproblem
 
    use mpisetup
 
-   real :: d0, r_max, dout
+   real :: d0, r_max, dout, alpha
    character(len=32) :: problem_name, mag_field_orient
    character(len=3)  :: run_id
 
@@ -118,16 +118,18 @@ module initproblem
 
       integer :: i,j,k,kmid
       real :: xi,yj,zk, rc, rs, vx, vy, vz, h2, dgdz, b0, sqr_gm, v_phi
-      real :: alpha, csim2
+      real :: csim2
 
 !   Secondary parameters
 
-      csim2 = cs_ion**2*(1.0+alpha)
+      csim2 = cs_iso**2*(1.0+alpha)
+#ifndef ISO
       gamma(1) = gamma_ion
+#endif /* !ISO */
 
       sqr_gm = sqrt(newtong*ptmass)
 
-      b0 = sqrt(2.*alpha*d0*cs_ion**2)
+      b0 = sqrt(2.*alpha*d0*cs_iso**2)
 
       do k=1, nz
          if(z(k) .lt. 0.0) kmid = k       ! the midplane is in between
@@ -150,6 +152,7 @@ module initproblem
                vz = 0.0
 
                u(idni,i,j,k) = min((rc/r_grav)**n_gravr,100.0)
+	       
                if(nzd /= 1) then
                   u(idni,i,j,k) = dout + (dprof(k)-dout)/cosh(u(idni,i,j,k))
                else

@@ -34,7 +34,7 @@
     vars(3) = 'vely'
     vars(4) = 'velz'
     vars(5) = 'ener'
-    domain  = 'full_domain'
+    domain  = 'phys_domain'
     mag_center = 'no'
  / 
 
@@ -56,18 +56,15 @@
     zmax   = 4.0e-1
  /
 
- $EQUATION_OF_STATE
-    c_si   = 0.2
-    alpha  = 0.0
+ $FLUID_IONIZED
+    cs_ion = 0.2
  /  
 
  $NUMERICAL_SETUP
     cfl    = 0.8
     smalld = 1.e-3
     smallei= 1.e-3
-    integration_order = 3
-    magnetic = 'no'
-    dimensions = '2dxy'
+    integration_order = 2
  /
  
  $GRAVITY
