@@ -8,7 +8,7 @@
  $MPI_BLOCKS
     pxsize       = 1
     pysize       = 1
-    pzsize       = 1    
+    pzsize       = 2    
  /  
 
  $RESTART_CONTROL
@@ -23,7 +23,7 @@
  /
 
  $OUTPUT_CONTROL
-    dt_hdf       = 0.1
+    dt_hdf       = 0.001
     dt_res       = 0.0
     dt_log       = 1.0e-1
     dt_tsl       = 1.0e-1
@@ -31,9 +31,10 @@
     vars(2)      = 'velx'
     vars(3)      = 'vely'
     vars(4)      = 'velz'
-    vars(5)      = 'magx'
-    vars(6)      = 'magy'
-    vars(7)      = 'magz'
+    vars(5)      = 'encr'
+    vars(6)      = 'magx'
+    vars(7)      = 'magy'
+    vars(8)      = 'magz'
     domain       = 'phys_domain'
    
  / 
@@ -48,12 +49,12 @@
  /
 
  $DOMAIN_LIMITS
-    xmin         =-1.0
-    xmax         = 1.0
-    ymin         =-1.0
-    ymax         = 1.0
-    zmin         =-1.0
-    zmax         = 1.0
+    xmin         =-250.0
+    xmax         = 250.0
+    ymin         =-500.0
+    ymax         = 500.0
+    zmin         =-1000.0
+    zmax         = 1000.0
  /
 
  $FLUID_IONIZED
@@ -68,8 +69,8 @@
   /
  
  $GRAVITY
-    nsub         =  10
-    dg_dz 	 = -10.0
+    r_gc         = 5000     ! Galactic radius of coordinate system
+    nsub         = 10
  /
  
  $RESISTIVITY
@@ -79,6 +80,15 @@
     j_crit       = 1000.0   ! critical value of current
  /
 
+  $COSMIC_RAYS
+    cr_active    = 1.0      ! when 0 grad(p_cr) not taken into account in motion eq.
+    cfl_cr       = 0.9      ! Courant's number for CR diffusion 
+    cr_eff       = 0.1      ! part of SN energy (=10^51 erg) converted to CR
+    gamma_cr     = 1.555555 ! adiabatic exp. of CR
+    K_cr_paral   = 1000.   ! CR diffusion coeff parallel to B
+    K_cr_perp    = 100.    ! CR diffusion coeff perp. to B
+    smallecr     = 1.e-2    ! lower limit & outflow boundary value for ecr
+ /
  
  $SHEARING
     omega        = 0.0      ! angular freq.
@@ -86,11 +96,20 @@
  /
  
  $PROBLEM_CONTROL
-    problem_name = 'lingrav'
+    problem_name = 'crwind'
     run_id       = 'tst'
-    d0           =  1.0     ! density in galactic plane
+    d0           =  5.0     ! density in galactic plane
     bxn          =  0.0     !
     byn          =  1.0     ! __direction__ of B field 
     bzn          =  0.0     !
-    alpha        =  0.0    
+    x0           =  0.0     ! coordinates of single expl with amplitude
+    y0           =  0.0     ! that is set in init_prob (testing purpose)
+    z0           =  100.0   !
+    beta_cr      =  1.0     ! participation of CR in initial equil. (similar to alfa for B)
+    amp_cr       = 1000.0  ! amplitude of expl. (init_problem, x0,y0,z0)
+    r_sn         =  50.0    ! radius of explosion (gauss function)
+    c_si         =  7.0     ! sound speed
+    h_sn         = 100.0    ! std. dev. for normal distribution of SN i "z" direction
+    f_sn_kpc2    =  0.0    ! surface frequency of SN ( / kpc^2 / Myr )
+    alpha     =  1.0    
  /
