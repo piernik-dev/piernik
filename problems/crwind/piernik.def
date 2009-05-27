@@ -1,7 +1,6 @@
 /* choosing fluids */
 #define IONIZED
-#define COSM_RAYS
-#define MAGNETIC
+#undef MAGNETIC
 
 /* adiabatic or isothermal */
 #define ISO
@@ -13,17 +12,13 @@
 #define VANLEER
 
 /* physics including */
-#define RESISTIVE
+#undef RESISTIVE
 
 /* gravity type choosing */
 #define GRAV
 #ifdef GRAV /* define external source of gravity */
-#define GRAV_GALACTIC
+#define GRAV_LINEAR
 #endif /* GRAV */
-
-/* structure features including */
-#define GALAXY
-#define SN_SRC
 
 /* numerical solutions and limitations */
 #undef SHEAR

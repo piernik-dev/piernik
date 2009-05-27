@@ -1,1 +1,2 @@
-crdynamo:         cosmic-ray explosions driving wind from galactic disk
+lingrav:	initial configuration for problem with linear gravity
+		gpot = 0.5 * dg_dz * z**2
