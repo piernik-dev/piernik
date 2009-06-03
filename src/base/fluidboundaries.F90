@@ -36,21 +36,19 @@ module fluidboundaries
       use grid,            only : nb, nxd, nyd, nzd,x,y,z,nzb,nyb,nxb,nx,ny,nz
       use fluidindex,      only : nvar, iarr_all_dn,iarr_all_mx,iarr_all_my,iarr_all_mz, nfluid
       use arrays,          only : u, b, bndxrar, bndyrar
+      use initfluids,      only : gamma, cs_iso2
 #ifdef COSM_RAYS
       use initcosmicrays,  only : smallecr
 #endif /* COSM_RAYS */
 #ifndef ISO
       use fluidindex,      only : iarr_all_en
 #endif /* ISO */
-
-      use initfluids,      only : gamma, cs_iso2
-
 #ifdef GRAV
       use gravity,         only : grav_accel, nsub, tune_zeq_bnd
 #endif /* GRAV */
-#ifdef SHEAR
+#ifdef SHEAR_BND
       use shear
-#endif /* SHEAR */
+#endif /* SHEAR_BND */
 #ifdef COSM_RAYS
       use initcosmicrays,  only : iecr
 #endif /* COSM_RAYS */
@@ -74,14 +72,14 @@ module fluidboundaries
       integer i,j
       integer ireq
       real, allocatable :: send_left(:,:,:,:),recv_left(:,:,:,:)
-#ifdef SHEAR
+#ifdef SHEAR_BND
       real, allocatable :: send_right(:,:,:,:),recv_right(:,:,:,:)
-#endif /* SHEAR */
-
+#endif /* SHEAR_BND */
 ! MPI block comunication
+
       select case (dim)
       case ('xdim')
-#ifdef SHEAR
+#ifdef SHEAR_BND
          allocate(send_right(nvar,nb,ny,nz), send_left(nvar,nb,ny,nz), &
                   recv_left(nvar,nb,ny,nz), recv_right(nvar,nb,ny,nz) )
          send_left(:,:,:,:)          =  u(:,nb+1:2*nb,:,:)
@@ -101,11 +99,11 @@ module fluidboundaries
 !
 ! przesuwamy o calkowita liczbe komorek + periodyczny wb w kierunku y
 !
-         if(nyd /= 1) then
-            send_left (:,:,nb+1:nb+nyb,:)        = cshift(send_left (:,:,nb+1:nb+nyb,:),dim=3,shift= delj)
-            send_left (:,:,1:nb,:)               = send_left (:,:,nyb+1:nyb+nb,:)
-            send_left (:,:,nb+nyb+1:nyb+2*nb,:)  = send_left (:,:,nb+1:2*nb,:)
-         endif
+            if(nyd /= 1) then
+               send_left (:,:,nb+1:nb+nyb,:)        = cshift(send_left (:,:,nb+1:nb+nyb,:),dim=3,shift= delj)
+               send_left (:,:,1:nb,:)               = send_left (:,:,nyb+1:nyb+nb,:)
+               send_left (:,:,nb+nyb+1:nyb+2*nb,:)  = send_left (:,:,nb+1:2*nb,:)
+            endif
 !
 ! remapujemy  - interpolacja kwadratowa
 !
@@ -129,11 +127,11 @@ module fluidboundaries
 !
 ! przesuwamy o calkowita liczbe komorek + periodyczny wb w kierunku y
 !
-         if(nyd /= 1) then
-            send_right(:,:,nb+1:nb+nyb,:)        = cshift(send_right(:,:,nb+1:nb+nyb,:),dim=3,shift=-delj)
-            send_right (:,:,1:nb,:)              = send_right(:,:,nyb+1:nyb+nb,:)
-            send_right (:,:,nb+nyb+1:nyb+2*nb,:) = send_right(:,:,nb+1:2*nb,:)
-         endif
+            if(nyd /= 1) then
+               send_right(:,:,nb+1:nb+nyb,:)        = cshift(send_right(:,:,nb+1:nb+nyb,:),dim=3,shift=-delj)
+               send_right (:,:,1:nb,:)              = send_right(:,:,nyb+1:nyb+nb,:)
+               send_right (:,:,nb+nyb+1:nyb+2*nb,:) = send_right(:,:,nb+1:2*nb,:)
+            endif
 !
 ! remapujemy  - interpolacja kwadratowa
 !
@@ -183,10 +181,11 @@ module fluidboundaries
          u(:,1:nb,:,:)              = recv_left(:,1:nb,:,:)
          u(:,nxb+nb+1:nxb+2*nb,:,:) = recv_right(:,1:nb,:,:)
 
-         u(iarr_all_dn,1:nb,:,:)              = max(u(iarr_all_dn,1:nb,:,:),smalld)
-         u(iarr_all_dn,nxb+nb+1:nxb+2*nb,:,:) = max(u(iarr_all_dn,nxb+nb+1:nxb+2*nb,:,:),smalld)
+         !!!! BEWARE: smalld is called only for the first fluid 
+         u(iarr_all_dn(1),1:nb,:,:)              = max(u(iarr_all_dn(1),1:nb,:,:),smalld)
+         u(iarr_all_dn(1),nxb+nb+1:nxb+2*nb,:,:) = max(u(iarr_all_dn(1),nxb+nb+1:nxb+2*nb,:,:),smalld)
          deallocate(send_left,send_right,recv_left,recv_right)
-#else /* SHEAR */
+#else /* SHEAR_BND */
          if(pxsize .gt. 1) then
 
             CALL MPI_ISEND   (u(1,1,1,1), 1, MPI_YZ_LEFT_DOM,  procxl, 10, comm3d, req(1), ierr)
@@ -198,7 +197,7 @@ module fluidboundaries
                call MPI_WAIT(req(ireq),status(1,ireq),ierr)
             enddo
          endif
-#endif /* SHEAR */
+#endif /* SHEAR_BND */
       case ('ydim')
          if(pysize .gt. 1) then
 

@@ -44,8 +44,9 @@ module shear
     par_file = trim(cwd)//'/problem.par'
     tmp_log_file = trim(cwd)//'/tmp.log'
 
-    omega  = 0.0
-    qshear = 0.0
+    omega   = 0.0
+    qshear  = 0.0
+
     if(proc .eq. 0) then
        open(1,file=par_file)
           read(unit=1,nml=SHEARING,iostat=ierrh)
@@ -64,8 +65,8 @@ module shear
 
        call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
-       omega  = rbuff(1)
-       qshear = rbuff(2) 
+       omega   = rbuff(1)
+       qshear  = rbuff(2) 
 
     endif
   end subroutine init_shear
@@ -251,8 +252,8 @@ module shear
     real, dimension(:), intent(in)  :: x
     real, dimension(size(qty,1),size(qty,2),size(qty,3)) :: unshear
     real, dimension(:,:), allocatable:: temp
-    integer :: i,sg,my,nx,ny,nz
-    real    :: fx
+    integer :: i,sg,my,nx,ny,nz,ndl
+    real    :: fx,dl,ddl
 
     nx = size(qty,1)
     ny = size(qty,2)

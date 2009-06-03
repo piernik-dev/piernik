@@ -110,9 +110,15 @@ contains
 
       call init_grid
 
-      call init_fluids
+#ifdef SHEAR
+      call init_shear
+#endif /* SHEAR */
 
       call read_problem_par
+
+      call init_fluids
+
+!      call fluid_index
 
       call arrays_allocate(nx,ny,nz,nvar)
 
@@ -123,10 +129,6 @@ contains
 #ifdef RESISTIVE
       call init_resistivity
 #endif /* RESISTIVE */
-
-#ifdef SHEAR
-      call init_shear
-#endif /* SHEAR */
 
 #ifdef GRAV
       call init_grav

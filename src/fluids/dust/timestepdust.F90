@@ -62,10 +62,15 @@ contains
     do k=ks,ke
       do j=js,je
         do i=is,ie
-
-          vx=abs(u(imxd,i,j,k)/u(idnd,i,j,k))
-          vy=abs(u(imyd,i,j,k)/u(idnd,i,j,k))
-          vz=abs(u(imzd,i,j,k)/u(idnd,i,j,k))
+          if(u(idnd,i,j,k) > 0.0) then
+             vx=abs(u(imxd,i,j,k)/u(idnd,i,j,k))
+             vy=abs(u(imyd,i,j,k)/u(idnd,i,j,k))
+             vz=abs(u(imzd,i,j,k)/u(idnd,i,j,k))
+          else
+             vx = 0.0
+             vy = 0.0
+             vz = 0.0
+          endif
 
           cx=max(cx,vx)
           cy=max(cy,vy)

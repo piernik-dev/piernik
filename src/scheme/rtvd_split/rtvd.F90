@@ -82,7 +82,6 @@ module rtvd ! split orig
       use fluidindex,      only : i_ion
 #endif /* IONIZED */
 
-      use constants,       only : small
       use mpisetup,        only : smalld, integration_order
       use fluxes,          only : flimiter,all_fluxes
       use fluidindex,      only : nvar,nmag,nfluid
@@ -97,8 +96,9 @@ module rtvd ! split orig
       use gravity,         only : grav_pot2accel
 #endif /* GRAV */
 #ifdef SHEAR
-      use grid,            only : xr
+      use grid,            only : x
       use shear,           only : qshear, omega
+      use initneutral,     only : global_gradP_neu
 #endif /* SHEAR */
 #ifdef COSM_RAYS
       use initcosmicrays,  only : gamma_cr, cr_active, smallecr
@@ -106,61 +106,52 @@ module rtvd ! split orig
       use arrays,          only : divvel
 #endif /* COSM_RAYS */
 #ifdef FLUID_INTERACTIONS
-      use interactions,    only : fluid_interactions
+      use initdust,        only : dragc_gas_dust 
+      use interactions
 #endif /* FLUID_INTERACTIONS */
 
       implicit none
 
-      integer                  :: i1,i2, n, istep, i
+      integer                   :: i1,i2, n, istep, i, ind
+      character(len=6)          :: sweep
 
-      real                     :: dt,dx,dtx
-      real, dimension(nvar,n)  :: u,cfr
-      real, dimension(nmag,n)  :: bb
-      real, dimension(n)       :: accl,accr
-      real, dimension(n)       :: daccrp,daccrm,dacclp,dacclm
+      real                      :: dt,dx,dtx
+      real, dimension(nvar,n)   :: u,cfr
+      real, dimension(nmag,n)   :: bb
+      real, dimension(nfluid,n) :: accr
+!locals
+      real, dimension(nvar,n)   :: w,fr,fl,dfrp,dfrm,dflm,dflp,dulf,durf
+      real, dimension(nvar,n)   :: ul0,ur0,u1,ul1,ur1
 
-#ifdef GRAV
-      real, dimension(n)       :: gravaccr
-#endif /* GRAV */
+      real, dimension(nfluid,n) :: rotaccr, fricaccr
+      real, dimension(2)        :: df
+      real, dimension(n)        :: gravaccr
 
 #ifdef SHEAR
-      real, dimension(n)       :: rotaccr
-      real, dimension(size(iarr_all_my),n)    :: vxr
+      real, dimension(nfluid,n) :: vx0
 #endif /* SHEAR */
 
 #ifdef COSM_RAYS
       real, dimension(n)       :: vx
 #endif /* COSM_RAYS */
 
-
-      character sweep*6
-
-!locals
-      real, dimension(nvar,n)  :: w,fr,fl,dfrp,dfrm,dflm,dflp,dulf,durf
-      real, dimension(nvar,n)  :: ul0,ur0,u1,ul1,ur1
 #ifndef ISO
       real, dimension(nfluid,n):: ekin,eint
       real, dimension(n)       :: emag
 #endif /* ISO */
-      real, dimension(nvar,n)  :: duls,durs
 #ifdef COSM_RAYS
       real, dimension(n)       :: divv,decr,grad_pcr,ecr
 #endif /* COSM_RAYS */
 #ifdef FLUID_INTERACTIONS
       real, dimension(nvar,n)  :: dintr
+      real, dimension(nfluid,n):: epsa, vy0
 #endif /* FLUID_INTERACTIONS */
 
-      real, dimension(2,2)       :: rk2coef
-
-      rk2coef(1,:) = [1.0 , 0.0]
-      rk2coef(2,:) = [0.5 , 1.0]
+      real, dimension(2,2), parameter  :: rk2coef = RESHAPE( (/1.0,0.5,0.0,1.0/),(/2,2/)) 
 
       w         = 0.0
       cfr       = 0.0
       dtx       = dt / dx
-
-      duls = 0.0
-      durs = 0.0
 
       u1 = u
 
@@ -193,68 +184,92 @@ module rtvd ! split orig
          ur1(:,:) = ur0 - rk2coef(integration_order,istep)*durf
          ul1(:,:) = ul0 + rk2coef(integration_order,istep)*dulf
 
-!         ur1(iarr_all_dn,:) = max(ur1(iarr_all_dn,:), 0.5*smalld)
-!         ul1(iarr_all_dn,:) = max(ul1(iarr_all_dn,:), 0.5*smalld)
+         u1 = ul1 + ur1
+         u1(iarr_all_dn(1),:) = max(u1(iarr_all_dn(1),:), smalld)
 
+! Source terms -------------------------------------
+#ifdef FLUID_INTERACTIONS
+         df = (/global_gradP_neu,0.0/)
+         epsa(1,:) = dragc_gas_dust * u(iarr_all_dn(2),:)  / u(iarr_all_dn(1),:)
+         epsa(2,:) = dragc_gas_dust
+         where(u(iarr_all_dn,:) > 0.0) 
+            vx0(:,:)  = u(iarr_all_mx,:)/u(iarr_all_dn,:)
+         elsewhere
+            vx0(:,:)  = 0.0
+         endwhere
+
+
+         do ind = 1, nfluid
+            if(ind == 1) then
+               fricaccr(ind,:) = - epsa(ind,:) * (vx0(1,:) - vx0(2,:))
+            else
+               fricaccr(ind,:) = - epsa(ind,:) * (vx0(2,:) - vx0(1,:))
+            endif
+         enddo
+
+#else /* FLUID_INTERACTIONS */
+         fricaccr(:,:) = 0.0
+         df = 0.0
+#endif /* FLUID_INTERACTIONS */
 
 #ifdef SHEAR
-         vxr(:,1:n-1) = 0.5*(u1(iarr_all_my,2:n)/u1(iarr_all_dn,2:n) + u1(iarr_all_my,1:n-1)/u1(iarr_all_dn,1:n-1))
-         if(sweep .eq. 'xsweep') then
-            rotaccr(:) =   2.0*omega*(vxr(1,:) + qshear*omega*xr(:))            ! it works only for ONE FLUID now
-         else if(sweep .eq. 'ysweep')  then
-            rotaccr(:) = - 2.0*omega*vxr(1,:)
-         else
-            rotaccr(:) = 0.0
-         endif
+         where(u(iarr_all_dn,:) > 0.0) 
+            vy0(:,:)  = u(iarr_all_my,:)/u(iarr_all_dn,:)
+         elsewhere
+            vy0(:,:)  = 0.0
+         endwhere
+         do ind = 1, nfluid
+!            if(sweep .eq. 'xsweep') then
+!               rotaccr(ind,:) =  2.0*omega*(vy0(ind,:) + qshear*omega*x(:))
+!            else if(sweep .eq. 'ysweep')  then
+!               rotaccr(ind,:) = - 2.0*omega*vy0(ind,:)          ! with global shear
+!            else
+!               rotaccr(ind,:) = 0.0
+!            endif
+            if(sweep .eq. 'xsweep') then
+               rotaccr(ind,:) =  2.0*omega*vy0(ind,:) + df(ind)  ! global_gradient
+            else if(sweep .eq. 'ysweep')  then
+               rotaccr(ind,:) = - 0.5*omega*vy0(ind,:)           ! with respect to global shear (2.5D)
+            else
+               rotaccr(ind,:) = 0.0
+            endif
+         enddo
+#else  /* SHEAR */
+         rotaccr(:,:) = 0.0
 #endif /* SHEAR */
 
-! Gravity source terms -------------------------------------
 #ifdef GRAV
          call grav_pot2accel(sweep,i1,i2, n, gravaccr)
+#else /* GRAV */
+         gravaccr = 0.0
 #endif /* GRAV */
 
 
-#if defined GRAV || defined SHEAR
-         accr     = 0.0
-#ifdef GRAV
-         accr     = gravaccr
-#endif /* GRAV */
-#ifdef SHEAR
-         accr     = accr + rotaccr
-#endif /* SHEAR */
-         accr(n)   = accr(n-1)
-         accl(2:n) = accr(1:n-1)                             ;  accl(1)   = accl(2)
-
-         if(istep == 2) then
-            daccrp(1:n-1) = 0.5*(accr(1:n-1) - accr(2:n))    ;  daccrp(n) = daccrp(n-1)
-            daccrm(2:n) = daccrp(1:n-1)                      ;  daccrm(1) = daccrm(2)
-            accr = accr + 2.0*daccrp*daccrm/(daccrm+daccrp+small)
-
-            dacclp(1:n-1) = 0.5*(accl(2:n) - accl(1:n-1))    ;  dacclp(n) = dacclp(n-1)
-            dacclm(2:n)   = dacclp(1:n-1)                    ;  dacclm(1) = dacclm(2)
-            accl = accl + 2.0*dacclp*dacclm/(dacclm+dacclp+small)
-
-         endif
-
-         do i=1, size(iarr_all_mx)
-#ifndef ISO
-            duls(iarr_all_en(i),:)  = accr(:)*ul0(iarr_all_mx(i),:)*dt
-            durs(iarr_all_en(i),:)  = accl(:)*ur0(iarr_all_mx(i),:)*dt
-#endif /* ISO */
-            duls(iarr_all_mx(i),:)  = accr(:)*ul0(iarr_all_dn(i),:)*dt
-            durs(iarr_all_mx(i),:)  = accl(:)*ur0(iarr_all_dn(i),:)*dt
+#if defined GRAV || defined SHEAR || defined FLUID_INTERACTIONS
+         accr     =  rotaccr + fricaccr
+         do ind = 1, nfluid
+            accr(ind,:) =  accr(ind,:) + gravaccr(:)
          enddo
-         ur1= ur1 + rk2coef(integration_order,istep)*durs
-         ul1= ul1 + rk2coef(integration_order,istep)*duls
-#endif /* defined GRAV || defined SHEAR */
 
-         u1 = ul1 + ur1
-         u1(iarr_all_dn,:) = max(u1(iarr_all_dn,:), smalld)
+         accr(:,n)   = accr(:,n-1); accr(:,1) = accr(:,2)
 
-#ifdef FLUID_INTERACTIONS
+         !!!! BEWARE: May not be necessary anymore
+         where(u1(iarr_all_dn,:) < 0.0)
+            accr(:,:) = 0.0
+         endwhere
+
+         u1(iarr_all_mx,:) = u1(iarr_all_mx,:) + rk2coef(integration_order,istep)*accr(:,:)*u(iarr_all_dn,:)*dt
+#ifndef ISO
+         u1(iarr_all_en,:) = u1(iarr_all_en,:) + rk2coef(integration_order,istep)*accr(:,:)*u(iarr_all_mx,:)*dt
+#endif /* ISO */
+
+#endif /* defined GRAV || defined SHEAR || defined FLUID_INTERACTIONS */
+
+#ifdef FLUID_INTERACTIONS_DW
+         !!!! old, more general way of adding interactions
          call fluid_interactions(sweep,i1,i2, n, dintr, u)
          u1 = u1 + rk2coef(integration_order,istep)*dintr*dt
-#endif /* FLUID_INTERACTIONS */
+#endif /* FLUID_INTERACTIONS_DW */
 
 #if defined COSM_RAYS && defined IONIZED
          select case (sweep)

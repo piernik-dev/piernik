@@ -38,14 +38,24 @@ module timestepinteractions
     use arrays,         only : u,b
     use constants,      only : small
     use fluidindex,     only : iarr_all_dn
+    use initdust,       only : imxd,imyd,imzd,idnd
+    use initneutral,    only : imxn,imyn,imzn,cs_iso_neu
     use interactions,   only : collfaq, cfl_interact
 
     implicit none
 
-    real dt_interact_proc, dt_interact_all
+    real :: dt_interact_proc, dt_interact_all
+    real :: val
 
 
-    dt_interact_proc = 1.0 / (maxval(collfaq)+small) / maxval(u(iarr_all_dn,:,:,:))
+!    dt_interact_proc = 1.0 / (maxval(collfaq)+small) / maxval(u(iarr_all_dn,:,:,:))
+
+    !!!!BEWARE: works only with neu+dust!!!!
+
+    val = maxval (  sqrt( (u(imxd,:,:,:)-u(imxn,:,:,:))**2 + &
+                    (u(imyd,:,:,:)-u(imyn,:,:,:))**2 + &  
+                    (u(imzd,:,:,:)-u(imzn,:,:,:))**2   ) * u(idnd,:,:,:) )
+    dt_interact_proc = cs_iso_neu / (maxval(collfaq) * val)
 
 
     call MPI_REDUCE(dt_interact_proc, dt_interact_all, 1, MPI_DOUBLE_PRECISION, MPI_MIN, 0, comm, ierr)

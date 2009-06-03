@@ -31,7 +31,7 @@ module initneutral
 
   implicit none
 
-    real                  :: gamma_neu, cs_iso_neu,cs_iso_neu2
+    real                  :: gamma_neu, cs_iso_neu,cs_iso_neu2, global_gradP_neu, eta_gas_neu, csvk
 
     integer               :: idnn, imxn, imyn, imzn
 #ifndef ISO
@@ -48,12 +48,14 @@ module initneutral
 
     use mpisetup
     use errh, only : namelist_errh
-
+#ifdef SHEAR
+    use shear, only : omega
+#endif /* SHEAR */
     implicit none
     integer :: ierrh
     character par_file*(100), tmp_log_file*(100)
 
-    namelist /FLUID_NEUTRAL/ gamma_neu, cs_iso_neu
+    namelist /FLUID_NEUTRAL/ gamma_neu, cs_iso_neu, eta_gas_neu, csvk
     
       gamma_neu  = 1.66666666
       cs_iso_neu = 1.0
@@ -76,6 +78,8 @@ module initneutral
 
       rbuff(1)   = gamma_neu
       rbuff(2)   = cs_iso_neu
+      rbuff(3)   = eta_gas_neu
+      rbuff(4)   = csvk
     
       call MPI_BCAST(cbuff, 32*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
       call MPI_BCAST(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
@@ -87,13 +91,20 @@ module initneutral
       call MPI_BCAST(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
       call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
       
-      gamma_neu  = rbuff(1)  
-      cs_iso_neu = rbuff(2)  
+      gamma_neu   = rbuff(1)  
+      cs_iso_neu  = rbuff(2)  
+      eta_gas_neu = rbuff(3)
+      csvk        = rbuff(4)
 
     endif
 
-    cs_iso_neu2 = cs_iso_neu**2 
-
+    cs_iso_neu2      = cs_iso_neu**2 
+#ifdef SHEAR
+    global_gradP_neu = 2.0*omega*eta_gas_neu * cs_iso_neu / csvk
+#else
+    global_gradP_neu = 0.0
+#endif /* SHEAR */
+   
   end subroutine init_neutral
 
 
@@ -113,6 +124,10 @@ module initneutral
       nvar_neu      = 4
       nvar          = imzn
 
+      write(*,*) 'iarr_neu = ', allocated(iarr_neu)
+      write(*,*) 'iarr_neu_swpx = ', allocated(iarr_neu_swpx)
+      write(*,*) 'iarr_neu_swpy = ', allocated(iarr_neu_swpy)
+      write(*,*) 'iarr_neu_swpz = ', allocated(iarr_neu_swpz)
       allocate(iarr_neu(nvar_neu),iarr_neu_swpx(nvar_neu), iarr_neu_swpy(nvar_neu), iarr_neu_swpz(nvar_neu))
 
       iarr_neu      = [idnn,imxn,imyn,imzn] 

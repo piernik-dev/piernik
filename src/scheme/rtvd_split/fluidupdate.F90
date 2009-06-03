@@ -33,9 +33,13 @@ module fluidupdate   ! SPLIT
   contains
 
 subroutine fluid_update
+  use arrays, only : u
   use dataio, only : nlog,ntsl,write_log,write_timeslice, dt_log, dt_tsl, nstep
   use timestep,   only : time_step
   use sweeps, only : sweepx,sweepy,sweepz
+#ifdef SHEAR
+  use sweeps, only : source_terms_y
+#endif /* SHEAR */
   use mpisetup, only : proc,dt,t
   use grid, only : nxd,nyd,nzd
 
@@ -126,9 +130,10 @@ subroutine fluid_update
 #endif /* DEBUG */
       endif
 
+      
+
       if(nyd /= 1) then
          call sweepy
-
 #ifdef MAGNETIC            
          call magfieldbzxy
 #endif /* MAGNETIC */      
@@ -142,6 +147,10 @@ subroutine fluid_update
          call write_hdf
          nhdf = nhdf + 1
 #endif /* DEBUG */
+      else
+#ifdef SHEAR 
+         call source_terms_y
+#endif /* SHEAR */
       endif
 
       if(nzd /= 1) then
@@ -220,6 +229,10 @@ subroutine fluid_update
          call write_hdf
          nhdf = nhdf + 1
 #endif /* DEBUG */
+      else 
+#ifdef SHEAR
+         call source_terms_y
+#endif /* SHEAR */
       endif
 
       if(nxd /= 1) then

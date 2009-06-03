@@ -419,12 +419,13 @@ module gravity
 
       select case(sweep)
          case('xsweep')
-            grav(1:n-1) = (gp(1:n-1,i1,i2) - gp(2:n,i1,i2))/dl(xdim)
+            grav(2:n-1) = 0.5*(gp(1:n-2,i1,i2) - gp(3:n,i1,i2))/dl(xdim)
          case('ysweep')
-            grav(1:n-1) = (gp(i2,1:n-1,i1) - gp(i2,2:n,i1))/dl(ydim)
+            grav(2:n-1) = 0.5*(gp(i2,1:n-2,i1) - gp(i2,3:n,i1))/dl(ydim)
          case('zsweep')
-            grav(1:n-1) = (gp(i1,i2,1:n-1) - gp(i1,i2,2:n))/dl(zdim)
+            grav(2:n-1) = 0.5*(gp(i1,i2,1:n-2) - gp(i1,i2,3:n))/dl(zdim)
       end select
+      grav(1) = grav(2); grav(n) = grav(n-1)
 
    end subroutine grav_pot2accel
 

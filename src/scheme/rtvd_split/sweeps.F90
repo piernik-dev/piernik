@@ -28,7 +28,55 @@
 #include "piernik.def"
 module sweeps     ! split sweeps
   contains
+
+#ifdef SHEAR
+  subroutine source_terms_y
+    use mpisetup, only  : dt
+    use arrays, only : u
+    use grid, only : nx,nz
+    use shear,           only : omega
+    use initneutral,     only : global_gradP_neu
+    use initdust,        only : dragc_gas_dust
+    use fluidindex,      only : iarr_all_dn, iarr_all_mx, iarr_all_my, nvar
+    use interactions
+
+    implicit none
+    real, dimension(size(iarr_all_my),nx,nz) :: vxr, v_r, rotaccr
+    real, dimension(nx,nz)      :: epsa
+    real, dimension(nvar,nx,nz) :: u1
+    integer :: ind,i
+    real, dimension(2) :: fac = (/0.5,1.0/) 
+
+    u1(:,:,:) = u(:,:,1,:)
+
+    do i = 1,2 
   
+       where(u1(iarr_all_dn,:,:) > 0.0)
+          vxr(:,:,:) = u1(iarr_all_mx,:,:) / u1(iarr_all_dn,:,:)
+          v_r(:,:,:) = u1(iarr_all_my,:,:) / u1(iarr_all_dn,:,:)
+       elsewhere
+          vxr(:,:,:) = 0.0
+          v_r(:,:,:) = 0.0
+       endwhere
+       epsa(:,:) =  u1(iarr_all_dn(2),:,:) / u1(iarr_all_dn(1),:,:)
+
+       do ind=1,size(iarr_all_my)
+          if(ind == 1) then
+            rotaccr(ind,:,:) = - dragc_gas_dust * epsa(:,:) * (v_r(1,:,:) - v_r(2,:,:))
+          else
+            rotaccr(ind,:,:) = - dragc_gas_dust * 1.0    * (v_r(2,:,:) - v_r(1,:,:))
+          endif
+!         rotaccr(ind,:,:) = rotaccr(ind,:,:) - 2.0*omega*vxr(ind,:,:)
+          rotaccr(ind,:,:) = rotaccr(ind,:,:) - 0.5*omega*vxr(ind,:,:)
+       enddo
+   
+       where(u1(iarr_all_dn,:,:) > 0.0)
+          u1(iarr_all_my,:,:) = u1(iarr_all_my,:,:) + fac(i)*dt*rotaccr(:,:,:)*u(iarr_all_dn,:,1,:)
+       endwhere
+       u(iarr_all_my,:,1,:) = u1(iarr_all_my,:,:)
+    enddo
+  end subroutine source_terms_y
+#endif
   
   subroutine sweepx
 
@@ -60,7 +108,6 @@ module sweeps     ! split sweeps
 #ifdef COSM_RAYS
     call div_v(i_ion)         
 #endif /* COSM_RAYS */
-
     do k=ks,ke
       kp=k+1
       do j=js,je

@@ -315,6 +315,11 @@ module dataio
          t_start     = t
          nres_start  = nrestart
          nhdf_start  = nhdf-1
+         open(3, file=log_file, position='append')
+         do i=1,nenv
+            write(3,*) trim(env(i))
+         enddo
+         close(3)
 
          if(new_id .ne. '') run_id=new_id
       endif
@@ -1704,19 +1709,31 @@ module dataio
                   + (/nb,nb,nb/)
       call mpifind(dend_max%val, 'max', dend_max%loc, dend_max%proc)
 
-      wa          = abs(u(imxd,:,:,:)/u(idnd,:,:,:))
+      where(u(idnd,:,:,:) > 0.0) 
+         wa          = abs(u(imxd,:,:,:)/u(idnd,:,:,:))
+      elsewhere
+         wa          = 0.0
+      endwhere
       vxd_max%val = maxval(wa(is:ie,js:je,ks:ke))
       vxd_max%loc = maxloc(wa(is:ie,js:je,ks:ke)) &
                   + (/nb,nb,nb/)
       call mpifind(vxd_max%val, 'max', vxd_max%loc, vxd_max%proc)
 
-      wa          = abs(u(imyd,:,:,:)/u(idnd,:,:,:))
+      where(u(idnd,:,:,:) > 0.0) 
+         wa          = abs(u(imyd,:,:,:)/u(idnd,:,:,:))
+      elsewhere
+         wa          = 0.0
+      endwhere
       vyd_max%val = maxval(wa(is:ie,js:je,ks:ke))
       vyd_max%loc = maxloc(wa(is:ie,js:je,ks:ke)) &
                   + (/nb,nb,nb/)
       call mpifind(vyd_max%val, 'max', vyd_max%loc, vyd_max%proc)
 
-      wa           = abs(u(imzd,:,:,:)/u(idnd,:,:,:))
+      where(u(idnd,:,:,:) > 0.0) 
+         wa           = abs(u(imzd,:,:,:)/u(idnd,:,:,:))
+      elsewhere
+         wa          = 0.0
+      endwhere
       vzd_max%val  = maxval(wa(is:ie,js:je,ks:ke))
       vzd_max%loc  = maxloc(wa(is:ie,js:je,ks:ke)) &
                   + (/nb,nb,nb/)

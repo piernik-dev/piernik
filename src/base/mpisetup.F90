@@ -46,6 +46,7 @@ module mpisetup
    character, dimension(buffer_dim) :: cbuff*32
    integer,   dimension(buffer_dim) :: ibuff
    real,      dimension(buffer_dim) :: rbuff
+   logical,   dimension(buffer_dim) :: lbuff
 
    integer :: pxsize, pysize, pzsize
    namelist /MPI_BLOCKS/ pxsize, pysize, pzsize
@@ -54,9 +55,9 @@ module mpisetup
    character(len=4) :: bnd_xl_dom, bnd_xr_dom, bnd_yl_dom, bnd_yr_dom, bnd_zl_dom, bnd_zr_dom
    namelist /BOUNDARIES/ bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr
 
-   real    :: cfl, smalld, smallei
+   real    :: cfl, smalld, smallei, cfr_smooth
    integer :: integration_order
-   namelist /NUMERICAL_SETUP/  cfl, smalld, smallei, integration_order
+   namelist /NUMERICAL_SETUP/  cfl, smalld, smallei, integration_order, cfr_smooth
 
    logical     :: mpi
    character(len=80)   :: cwd
@@ -138,9 +139,10 @@ module mpisetup
          bnd_zl = 'per'
          bnd_zr = 'per'
 
-         cfl     = 0.7
-         smalld  = 1.e-10
-         smallei = 1.e-10
+         cfl        = 0.7
+         cfr_smooth = 0.0
+         smalld     = 1.e-10
+         smallei    = 1.e-10
          integration_order  = 2
 
          if(proc == 0) then
@@ -176,6 +178,7 @@ module mpisetup
             rbuff(1) = smalld
             rbuff(2) = smallei
             rbuff(3) = cfl
+            rbuff(4) = cfr_smooth
 
             call MPI_BCAST(cbuff, 32*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
             call MPI_BCAST(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
@@ -187,9 +190,10 @@ module mpisetup
             call MPI_BCAST(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
             call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
-            smalld   = rbuff(1)
-            smallei  = rbuff(2)
-            cfl      = rbuff(3)
+            smalld     = rbuff(1)
+            smallei    = rbuff(2)
+            cfl        = rbuff(3)
+            cfr_smooth = rbuff(4)
 
             bnd_xl = cbuff(1)(1:4)
             bnd_xr = cbuff(2)(1:4)
@@ -315,7 +319,7 @@ module mpisetup
          endif
 
 
-#ifdef SHEAR
+#ifdef SHEAR_BND
          if(pysize > 1) stop 'Shear-pediodic boundary conditions do not permit pysize > 1'
 
          if(pcoords(1) == 0) then
@@ -329,10 +333,10 @@ module mpisetup
          else
             bnd_xr = 'mpi'
          endif
-#else /* SHEAR */
+#else /* SHEAR_BND */
          if(procxl /= MPI_PROC_NULL .and. procxl /= proc) bnd_xl = 'mpi'
          if(procxr /= MPI_PROC_NULL .and. procxr /= proc) bnd_xr = 'mpi'
-#endif /* SHEAR */
+#endif /* SHEAR_BND */
 
          if(procyl /= MPI_PROC_NULL .and. procyl /= proc) bnd_yl = 'mpi'
          if(procyr /= MPI_PROC_NULL .and. procyr /= proc) bnd_yr = 'mpi'

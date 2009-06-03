@@ -73,7 +73,7 @@ contains
 
 #ifdef ISO
             p = cs_iso_neu2*u(idnn,i,j,k)
-            cs = sqrt(abs( p/u(idnn,i,j,k)) )
+            cs = sqrt(cs_iso_neu2)           
 #else /* ISO */
             p=(u(ienn,i,j,k)-sum(u(imxn:imzn,i,j,k)**2,1) &
               /u(idnn,i,j,k)/2.)*(gamma_neu-1.)
@@ -82,12 +82,7 @@ contains
 #endif /* ISO */
 
           cx=max(cx,vx+cs)
-! not sure whether it's good solution but without it I get NaNs
-!          if(nyd/=1) then
-             cy = max(cy,vy+cs)
-!          else
-             cy = 0.0
-!          endif
+          cy=max(cy,vy+cs)
           cz=max(cz,vz+cs)
           c_neu =max(c_neu,cx,cy,cz)
 
@@ -95,17 +90,17 @@ contains
       end do
     end do
 
-    if(nxd /= 1) then
-       dt_neu_proc_x = dx/cx  
+    if(nxd /= 1 .and. cx /= 0) then
+       dt_neu_proc_x = dx/cx
     else 
        dt_neu_proc_x = big 
     endif
-    if(nyd /= 1) then 
+    if(nyd /= 1 .and. cy /= 0) then 
        dt_neu_proc_y = dy/cy  
     else 
        dt_neu_proc_y = big 
     endif
-    if(nzd /= 1) then 
+    if(nzd /= 1 .and. cz /= 0) then 
        dt_neu_proc_z = dz/cz  
     else 
        dt_neu_proc_z = big 
@@ -122,7 +117,7 @@ contains
     call MPI_BCAST(dt_neu_all, 1, MPI_DOUBLE_PRECISION, 0, comm, ierr)
     dt_neu = cfl*dt_neu_all
     
-    !write(*,*) 'timestep_neu:', dt_neu
+!    write(*,*) 'timestep_neu:', dt_neu
 
   end subroutine timestep_neu
 

@@ -32,7 +32,7 @@ module initdust
   implicit none
 
     integer               :: idnd, imxd, imyd, imzd
-    real                  :: dragc_gas_dust
+    real                  :: dragc_gas_dust, taus, dalpha
 
     integer, allocatable, dimension(:)  :: iarr_dst 
     integer, allocatable, dimension(:)  :: iarr_dst_swpx, iarr_dst_swpy, iarr_dst_swpz
@@ -48,9 +48,10 @@ module initdust
     integer :: ierrh      
     character(LEN=100) :: par_file, tmp_log_file
 
-    namelist /FLUID_DUST/ dragc_gas_dust
+    namelist /FLUID_DUST/ dragc_gas_dust, dalpha
     
       dragc_gas_dust  = 0.0
+      dalpha = 1.0
 
       if(proc .eq. 0) then
          par_file = trim(cwd)//'/problem.par'
@@ -69,6 +70,7 @@ module initdust
     if(proc .eq. 0) then
 
       rbuff(1)   = dragc_gas_dust
+      rbuff(2)   = dalpha
     
       call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
@@ -77,8 +79,10 @@ module initdust
       call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
       
       dragc_gas_dust  = rbuff(1)  
+      dalpha          = rbuff(2)
 
     endif
+    taus = 1. / dragc_gas_dust
 
   end subroutine init_dust
 

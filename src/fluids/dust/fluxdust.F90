@@ -35,19 +35,19 @@ module fluxdust
 !==========================================================================================
 
   subroutine flux_dst(fluxd,cfrd,uud,n)
-    
+   
+    use mpisetup,        only : cfr_smooth 
     use constants,       only : small
     use fluidindex,      only : idn,imx,imy,imz,ien
     use fluidindex,      only : nvar_dst
 
-!    use timestepdust, only : c_dst  ! check which  c_xxx is better
-    use timestep, only : c_all
-
+    use timestepdust, only : c_dst
 
     implicit none
     integer n
     
 ! locals
+    real :: minvx, maxvx, amp
     real, dimension(nvar_dst,n):: fluxd,uud,cfrd
     real, dimension(n) :: vx,p  
     
@@ -55,7 +55,11 @@ module fluxdust
     cfrd    = 0.0
     vx      = 0.0
 
-    vx(RNG)=uud(imx,RNG)/uud(idn,RNG)
+    where(uud(idn,RNG) > 0.0) 
+       vx(RNG)=uud(imx,RNG)/uud(idn,RNG)
+    elsewhere
+       vx(RNG) = 0.0
+    endwhere
 
     fluxd(idn,RNG)=uud(imx,RNG)
     fluxd(imx,RNG)=uud(imx,RNG)*vx(RNG)
@@ -71,7 +75,10 @@ module fluxdust
 !       as in Trac & Pen (2003). This ensures much sharper shocks,
 !       but sometimes may lead to numerical instabilities
 
-    cfrd(1,RNG) = max(abs(vx(RNG)),small) 
+    minvx = minval(vx(RNG))
+    maxvx = maxval(vx(RNG))
+    amp   = (maxvx-minvx)*0.5
+    cfrd(1,RNG) = max(sqrt(vx(RNG)**2+cfr_smooth*amp),small) 
 
     cfrd(1,1) = cfrd(1,2)
     cfrd(1,n) = cfrd(1,n-1)
@@ -81,8 +88,7 @@ module fluxdust
 #ifdef GLOBAL_FR_SPEED
 !       The freezing speed is now computed globally
 !       (c=const for the whole domain) in sobroutine 'timestep'
-!   cfrd(:,:) = c_all     ! check which  c_xxx is better
-    cfrd(:,:) = c_all
+    cfrd(:,:) = c_dst
 #endif /* GLOBAL_FR_SPEED */
 
   end subroutine flux_dst
