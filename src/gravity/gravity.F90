@@ -137,150 +137,85 @@ module gravity
 
 !--------------------------------------------------------------------------
    subroutine grav_pot_3d
-      use arrays, only : gp
-      use grid, only : nx,ny,nz,z
-      implicit none
-      integer i, j
-      real, allocatable :: gpot(:)
-      allocate(gpot(nz))
-
-      do j = 1,ny
-         do i = 1,nx
-            call grav_pot('zsweep', i,j, z(:), nz, gpot, gp_status)
-            if(gp_status .eq. 'undefined') exit
-            gp(i,j,:) = gpot
-         enddo
-      enddo
-
-      if(gp_status .eq. 'undefined') then
-!         gravpart = 'default'
-         call grav_accel2pot
-      endif
-
-      deallocate(gpot)
-
-   end subroutine grav_pot_3d
-
-!--------------------------------------------------------------------------
-   subroutine grav_pot(sweep, i1,i2, xsw, n, gpot,status,temp_log)
+      use arrays, only     : gp
+      use grid, only       : nx,ny,nz,x,y,z
+      use mpisetup, only   : smalld 
       use initfluids, only : cs_iso2
-#if defined GRAV_PTMASS || defined GRAV_PTFLAT || defined GRAV_PTMASSPURE
-      use mpisetup,  only : smalld
-      use grid, only : x,y,z
-#endif /* GRAV_PTMASS || GRAV_PTFLAT || GRAV_PTMASSPURE */
-#if defined GRAV_GALACTIC || defined GRAV_LINEAR
-      use grid, only : z
-#endif /* GRAV_GALACTIC || GRAV_LINEAR */
 #ifdef GRAV_USER
       use gravity_user, only : grav_pot_user
 #endif /* GRAV_USER */
 
       implicit none
-      character, intent(in) :: sweep*6
-      integer, intent(in)   :: i1, i2, n
-      logical, optional     :: temp_log
-      real, dimension(n)    :: xsw
-      real, dimension(n),intent(out) :: gpot
-      character, intent(inout) :: status*9
-#if defined GRAV_PTMASS || defined GRAV_PTFLAT || defined GRAV_PTMASSPURE
-      real                  :: x1, x2
-      real, dimension(n)    :: x3, rc, fr
-#endif /* GRAV_PTMASS || GRAV_PTFLAT || GRAV_PTMASSPURE */
-#ifdef GRAV_GALACTIC
-      real                  :: x1
-#endif /* GRAV_GALACTIC */
-      status = ''
+      integer :: i, j, k
+      real    :: r2, rc, fr
 
+      gp_status = ''
+     
 #ifdef GRAV_NULL
-      gpot = 0.0
-      ! do nothing
+      gp(:,:,:) = 0.0      ! do nothing
+
 #elif defined (GRAV_UNIFORM)
-      select case (sweep)
-         case('xsweep')
-            gpot = -g_z*z(i2)
-         case('ysweep')
-            gpot = -g_z*z(i1)
-         case('zsweep')
-            gpot = -g_z*xsw
-      end select
+      do i = 1, nz
+         gp(:,:,i) = -g_z*z(i)
+      enddo
+
 #elif defined (GRAV_LINEAR)
-      select case (sweep)
-         case('xsweep')
-            gpot = -0.5*dg_dz*z(i2)**2
-         case('ysweep')
-            gpot = -0.5*dg_dz*z(i1)**2
-         case('zsweep')
-            gpot = -0.5*dg_dz*xsw**2
-      end select
+      do i = 1, nz
+         gp(:,:,i) = -0.5 * dg_dz * z(i)**2
+      enddo
 
 #elif defined (GRAV_PTMASS)
-      select case (sweep)
-         case('xsweep')
-            x1  = y(i1)-ptm_y
-            x2  = z(i2)-ptm_z
-            x3  = xsw - ptm_x
-         case('ysweep')
-            x1  = z(i1)-ptm_z
-            x2  = x(i2)-ptm_x
-            x3  = xsw - ptm_y
-         case('zsweep')
-            x1  = x(i1)-ptm_x
-            x2  = y(i2)-ptm_y
-            x3  = xsw - ptm_z
-         end select
-         rc = dsqrt(x1**2+x2**2)
-         fr = min( (rc/r_grav)**n_gravr , 100.0)
-         fr = max(1./cosh(fr),smalld/100.)
-         gpot = -newtong*ptmass/dsqrt(x1**2+x2**2+x3**2+r_smooth**2)
-         gpot = gpot - cs_iso2*dlog(fr) ! *d0
+       do i = 1, nx
+          do j = 1, ny
+             do k = 1, nz
+               rc = dsqrt(x(i)**2+y(j)**2)
+               r2 = x(i)**2 + y(j)**2 + z(k)**2
+               fr = min( (rc/r_grav)**n_gravr , 100.0)
+               fr = max(1./cosh(fr),smalld/100.)
+               gp(i,j,k) = -newtong*ptmass / dsqrt(r2 + r_smooth**2)
+               gp(i,j,k) = gp(i,j,k) - cs_iso2 * dlog(fr) ! *d0
+             enddo
+          enddo
+       enddo
+
 #elif defined (GRAV_PTMASSPURE)
-         select case (sweep)
-            case('xsweep')
-               x1  = y(i1)-ptm_y
-               x2  = z(i2)-ptm_z
-               x3  = xsw - ptm_x
-            case('ysweep')
-               x1  = z(i1)-ptm_z
-               x2  = x(i2)-ptm_x
-               x3  = xsw - ptm_y
-            case('zsweep')
-               x1  = x(i1)-ptm_x
-               x2  = y(i2)-ptm_y
-               x3  = xsw - ptm_z
-         end select
-         rc = dsqrt(x1**2+x2**2)
-         gpot = -newtong*ptmass/dsqrt(x1**2+x2**2+x3**2+r_smooth**2)
+       do i = 1, nx
+          do j = 1, ny
+             do k = 1, nz
+               rc = dsqrt(x(i)**2+y(j)**2)
+               r2 = x(i)**2 + y(j)**2 + z(k)**2
+               gp(i,j,k) = -newtong*ptmass / dsqrt(r2 + r_smooth**2)
+             enddo
+          enddo
+       enddo
+         
 #elif defined (GRAV_PTFLAT)
-         select case (sweep)
-            case('xsweep')
-               x1  = y(i1)-ptm_y
-               x2  = 0.0
-               x3  = xsw - ptm_x
-            case('ysweep')
-               x1  = 0.0
-               x2  = x(i2)-ptm_x
-               x3  = xsw - ptm_y
-            case('zsweep')
-               x1  = x(i1)-ptm_x
-               x2  = y(i2)-ptm_y
-               x3  = 0.0
-         end select
-         rc = dsqrt(x1**2+x2**2)
-         fr(:) = min((rc(:)/r_grav)**n_gravr,100.0)
-         fr = max(1./cosh(fr),smalld/100.)
-         gpot = -newtong*ptmass/dsqrt(x1**2+x2**2+x3**2+r_smooth**2)
-!         gpot = gpot - cs_iso2*dlog(fr) ! *d0
+       do i = 1, nx
+          do j = 1, ny
+             rc = dsqrt(x(i)**2+y(j)**2)
+             fr = min( (rc/r_grav)**n_gravr , 100.0)
+             fr = max(1./cosh(fr),smalld/100.)
+             gp(i,j,:) = -newtong*ptmass / dsqrt(rc**2 + r_smooth**2)
+             gp(i,j,:) = gp(i,j,:) - cs_iso2 * dlog(fr) ! *d0
+          enddo
+       enddo
+
 #elif defined (GRAV_USER)
-         call grav_pot_user(gpot,sweep,i1,i2,xsw,n,status,temp_log)
+       call grav_pot_user()
 
 #else /* GRAV_(SPECIFIED) */
-            status = 'undefined'
+       gp_status = 'undefined'
 !#warning 'GRAV declared, but gravity model undefined in grav_pot'
 ! niektore modele grawitacji realizowane sa za pomoca przyspieszenia
 ! (np. 'galactic') z ktorego liczony jest potencjal
 #endif /* GRAV_(SPECIFIED) */
+!-----------------------
 
-   end subroutine grav_pot
+      if(gp_status .eq. 'undefined') then
+         call grav_accel2pot
+      endif
+
+   end subroutine grav_pot_3d
 
 !--------------------------------------------------------------------------
 
@@ -318,48 +253,6 @@ module gravity
             x2  = y(i2)
       end select
 
-
-#ifdef GRAV_UNIFORM
-!      case ('uniform')
-      if (sweep == 'zsweep') then
-         grav = g_z
-      else
-         grav = 0.0
-      endif
-#elif defined (GRAV_LINEAR)
-      if (sweep == 'zsweep') then
-         grav = dg_dz*xsw
-      else
-         grav = 0.0
-      endif
-#elif defined (GRAV_PTMASS)
-      if (sweep == 'xsweep') then
-         r  = sqrt((xsw-ptm_x)*(xsw-ptm_x) + (x1-ptm_y)*(x1-ptm_y)  &
-               + (x2-ptm_z)*(x2-ptm_z) + r_smooth*r_smooth)
-      elseif(sweep == 'ysweep') then
-         r  = sqrt((xsw-ptm_y)*(xsw-ptm_y) + (x1-ptm_z)*(x1-ptm_z)  &
-               + (x2-ptm_x)*(x2-ptm_x) + r_smooth*r_smooth)
-      else
-         r  = sqrt((xsw-ptm_z)*(xsw-ptm_z) + (x1-ptm_x)*(x1-ptm_x)  &
-               + (x2-ptm_y)*(x2-ptm_y) + r_smooth*r_smooth)
-      endif
-      r32  = r*r*r
-      grav = -newtong*ptmass*xsw/r32
-#elif defined (GRAV_PTFLAT)
-      if (sweep == 'xsweep') then
-         r  = sqrt((xsw-ptm_x)*(xsw-ptm_x) + (x1-ptm_y)*(x1-ptm_y)  &
-               + r_smooth*r_smooth)
-         r32  = r*r*r
-         grav = -newtong*ptmass*xsw/r32
-      elseif(sweep == 'ysweep') then
-         r  = sqrt((xsw-ptm_y)*(xsw-ptm_y) + (x2-ptm_x)*(x2-ptm_x)  &
-               + r_smooth*r_smooth)
-         r32  = r*r*r
-         grav = -newtong*ptmass*xsw/r32
-      else
-         grav = 0.0
-      endif
-#elif defined (GRAV_GALACTIC)
 ! simplified, z component only of Galactic gravitational acceleration from Ferriere'98
       if (sweep == 'zsweep') then
          grav = 3.23e8 * (  &
@@ -372,39 +265,11 @@ module gravity
          grav=0.0
       endif
 
-#elif defined (GRAV_ACC_USER)
-      call grav_accel_user(grav,sweep,i1,i2,xsw,n)
-
-#elif defined (GRAV_NULL)
-      grav=0.0
-#else /* GRAV_(SPECIFIED) */
-!#error 'GRAV declared, but gravity model undefined'
-#endif /* GRAV_(SPECIFIED) */
-
       if (n_gravh .ne. 0) then
          grav(:)=grav(:)/cosh((xsw(:)/h_grav)**n_gravh )
       endif
 
    end subroutine grav_accel
-
-!--------------------------------------------------------------------------
-
-!  subroutine grav_profile
-!
-!    implicit none
-!
-!        if(n_gravh .ne. 0) then
-!          gravity_profile = 1./cosh((z/(h_grav))**n_gravh)
-!        else
-!         gravity_profile(:) = 1.
-!       endif
-!
-!       write(*,*) gravity_profile
-!
-!  end subroutine  grav_profile
-!
-!*****************************************************************************
-
 
    subroutine grav_pot2accel(sweep, i1,i2, n, grav)
       use arrays, only : gp

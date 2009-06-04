@@ -35,7 +35,8 @@ module hydrostatic
       use constants
       use mpisetup, only : proc
       use grid, only : nx,ny,nz,dl,zdim,z,zl,zr,nzt,nb,zmin,zmax
-      use gravity, only  : grav_accel,grav_pot,gp_status,nsub,tune_zeq
+      use gravity, only  : grav_accel,gp_status,nsub,tune_zeq
+      use arrays, only   : gp
 #ifndef ISO
       use arrays, only   : eprof
 #endif /* ISO */
@@ -77,8 +78,15 @@ module hydrostatic
       if(gp_status .eq. 'undefined') then
         call grav_accel('zsweep',ia, ja, zs, nstot, gprofs)
       else
-        gp_status = 'hydrozeq'
-        call grav_pot('zsweep', ia,ja, zs, nstot, gpots,gp_status,.true.)
+        k = 1; gpots(:) = 0.0
+        do ksub=1, nstot
+           if(zs(ksub) >= z(min(k+1,nz))) k = k + 1
+           if(zs(ksub) >= z(min(k,nz-1)) .and. zs(ksub) < z(min(k+1,nz))) then
+               gpots(ksub) = gp(iia,jja,k) + (zs(ksub) - z(k)) * &
+                (gp(iia,jja,min(k+1,nz)) - gp(iia,jja,k)) / (z(min(k+1,nz)) - z(min(k,nz-1)))
+           endif
+        enddo
+!        call grav_pot('zsweep', ia,ja, zs, nstot, gpots,gp_status,.true.)
         gprofs(1:nstot-1) = (gpots(1:nstot-1) - gpots(2:nstot))/dzs
       endif
       gprofs = tune_zeq*gprofs
