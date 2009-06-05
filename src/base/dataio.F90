@@ -445,7 +445,7 @@ module dataio
 !
    subroutine write_hdf
       use mpisetup, only: cwd
-      use arrays, only : wa,outwa,outwb,outwc,b,u
+      use arrays, only : wa,b,u
       use grid, only : dx,dy,dz,xmin,xmax,ymin,ymax,zmin,zmax,nxd,nyd,nzd,nb
       use grid, only : nx,ny,nz,nxb,nyb,nzb,x,y,z
       use initproblem, only : problem_name, run_id

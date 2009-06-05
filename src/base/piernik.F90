@@ -26,7 +26,9 @@
 !    For full list of developers see $PIERNIK_HOME/license/pdt.txt
 !
 #include "piernik.def"
-
+!>
+!! Main program
+!<
 program piernik
 
   use mpisetup
@@ -38,7 +40,7 @@ program piernik
   use fluidupdate, only  : fluid_update
 
   implicit none
-  logical :: end_sim
+  logical :: end_sim !< Used in main loop, to test whether to stop simulation or not
 
   call init_piernik
 
@@ -73,7 +75,9 @@ program piernik
   call mpistop
 
 contains
-
+!>
+!! Meta subroutine responsible for initializing all piernik modules
+!<
    subroutine init_piernik
       use initfluids, only : init_fluids
       use fluidindex, only : fluid_index,nvar
@@ -149,6 +153,10 @@ contains
       call init_dataio
 
    end subroutine init_piernik
+
+!>
+!! Meta subroutine responsible for cleaning after successful run
+!<
 
    subroutine cleanup_piernik
       use grid, only : cleanup_grid

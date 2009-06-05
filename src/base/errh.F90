@@ -27,12 +27,8 @@
 !
 #include "piernik.def"
 !>
-!! \brief Module that contains unclassified functions
+!! \brief Module responsible for error handling 
 !!
-!! This module should be empty. Every function or subroutine placed here belong
-!! elsewhere. We are yet unsure where to put them.
-!! \todo Move all structures elsewhere
-!! \warning Procedures \a dipol and \a rn_angles were moved to sn_sources.F90
 !<
 module errh
 

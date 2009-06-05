@@ -26,29 +26,31 @@
 !    For full list of developers see $PIERNIK_HOME/license/pdt.txt
 !
 #include "piernik.def"
-
+!>
+!! Module storing all global arrays used in simulation
+!<
 module arrays
 
    implicit none
    integer,parameter  :: nrlscal=100, nintscal=100
 
-   real, allocatable, dimension(:,:,:,:)     :: u, b
-   real, allocatable, dimension(:,:,:)       :: wa, wcu
+   real, allocatable, dimension(:,:,:,:)     :: u        !< Main array of all fluids' componets
+   real, allocatable, dimension(:,:,:,:)     :: b        !< Main array of magnetic field's components
+   real, allocatable, dimension(:,:,:)       :: wa       !< Temporary array used for different purposes, usually has dimension (nx, ny, nz)
+   real, allocatable, dimension(:,:,:)       :: wcu      !< Temporary array used in resistivity module
 #ifdef GRAV
-   real, allocatable, dimension(:,:,:)       :: gp
-   real, allocatable, dimension(:)           :: dprof, eprof
+   real, allocatable, dimension(:,:,:)       :: gp       !< Array for gravitational potential
+   real, allocatable, dimension(:)           :: dprof    !< Array used for storing density during calculation of hydrostatic equilibrium
+   real, allocatable, dimension(:)           :: eprof    !< Array used for storing energy during calculation of hydrostatic equilibrium
 #endif /* GRAV */
 
-   real(kind=4), allocatable, dimension(:,:,:)  :: outwa, outwb, outwc
-
 #ifdef COSM_RAYS
-   real, allocatable, dimension(:,:,:)       :: divvel
+   real, allocatable, dimension(:,:,:)       :: divvel   !< Array storing \f$\nabla\cdot\mathbf{v}\f$, needed in comic ray transport
+
 #endif /* COSM_RAYS  */
 
-   real,    allocatable, dimension(:)        :: rlscal
-   integer, allocatable, dimension(:)        :: intscal
-   real,    allocatable, dimension(:,:)      :: ul0, ur0
-   real,    allocatable, dimension(:,:,:,:)  :: bndxrar, bndyrar
+   real,    allocatable, dimension(:)        :: rlscal   !< Arrays to store additional scalr quantities in hdf4 files (real)
+   integer, allocatable, dimension(:)        :: intscal  !< Arrays to store additional scalr quantities in hdf4 files (int)
 
    contains
 
@@ -66,7 +68,6 @@ module arrays
 #endif /* GRAV */
 
       allocate(wa(nx,ny,nz),wcu(nx,ny,nz))
-      allocate(outwa(nx,ny,nz),outwb(nx,ny,nz),outwc(nx,ny,nz))
 
 #ifdef COSM_RAYS
       allocate(divvel(nx,ny,nz))
@@ -88,10 +89,6 @@ module arrays
 #ifdef COSM_RAYS
       deallocate(divvel)
 #endif /* COSM_RAYS */
-
-      if(allocated(bndxrar)) deallocate(bndxrar)
-      if(allocated(bndyrar)) deallocate(bndyrar)
-      deallocate(outwa,outwb,outwc)
 
    end subroutine arrays_deallocate
 
