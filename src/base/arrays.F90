@@ -32,11 +32,12 @@
 module arrays
 
    implicit none
-   integer,parameter  :: nrlscal=100, nintscal=100
+   integer, parameter  :: nrlscal=100   !< Size of arrays::rlscal array
+   integer, parameter  :: nintscal=100  !< Size of arrays::intscal array
 
    real, allocatable, dimension(:,:,:,:)     :: u        !< Main array of all fluids' componets
    real, allocatable, dimension(:,:,:,:)     :: b        !< Main array of magnetic field's components
-   real, allocatable, dimension(:,:,:)       :: wa       !< Temporary array used for different purposes, usually has dimension (nx, ny, nz)
+   real, allocatable, dimension(:,:,:)       :: wa       !< Temporary array used for different purposes, usually has dimension (grid::nx, grid::ny, grid::nz)
    real, allocatable, dimension(:,:,:)       :: wcu      !< Temporary array used in resistivity module
 #ifdef GRAV
    real, allocatable, dimension(:,:,:)       :: gp       !< Array for gravitational potential
@@ -53,41 +54,58 @@ module arrays
    integer, allocatable, dimension(:)        :: intscal  !< Arrays to store additional scalr quantities in hdf4 files (int)
 
    contains
-
+!>
+!! Routine that allocates all arrays
+!<
    subroutine arrays_allocate(nx,ny,nz,nvar)
       implicit none
       integer, intent(in) :: nx,ny,nz,nvar
 
-      allocate(rlscal(nrlscal),intscal(nintscal)) ! arrays to store additional
-                                                  ! scalar quantities in restart files
-      allocate(u(nvar,nx,ny,nz),b(3,nx,ny,nz))
+      if(.not.allocated(rlscal))  allocate(rlscal(nrlscal))
+      if(.not.allocated(intscal)) allocate(intscal(nintscal)) 
+
+      if(.not.allocated(u))       allocate(u(nvar,nx,ny,nz))
+      if(.not.allocated(b))       allocate(b(3,nx,ny,nz))
 
 #ifdef GRAV
-      allocate(gp(nx,ny,nz))
-      allocate(dprof(nz),eprof(nz))
+      if(.not.allocated(gp))      allocate(gp(nx,ny,nz))
+      if(.not.allocated(dprof))   allocate(dprof(nz))
+      if(.not.allocated(eprof))   allocate(eprof(nz))
 #endif /* GRAV */
 
-      allocate(wa(nx,ny,nz),wcu(nx,ny,nz))
-
+      if(.not.allocated(wa))      allocate(wa(nx,ny,nz))
+#ifdef RESISTIVE
+      if(.not.allocated(wcu))     allocate(wcu(nx,ny,nz))
+#endif /* RESISTIVE */
 #ifdef COSM_RAYS
-      allocate(divvel(nx,ny,nz))
+      if(.not.allocated(divvel)) allocate(divvel(nx,ny,nz))
 #endif /* COSM_RAYS  */
 
    end subroutine arrays_allocate
 
+!>
+!! Routine that deallocates all arrays
+!<
    subroutine arrays_deallocate
 
-      deallocate(rlscal,intscal)
-      deallocate(u,b)
-      deallocate(wa,wcu)
+      if(allocated(rlscal))  deallocate(rlscal)
+      if(allocated(intscal)) deallocate(intscal)
+      if(allocated(u))       deallocate(u)
+      if(allocated(b))       deallocate(b)
+ 
+      if(allocated(wa))      deallocate(wa)
+#ifdef RESISTIVE
+      if(allocated(wcu))     deallocate(wcu)
+#endif /* RESISTIVE */
 
 #ifdef GRAV
-      deallocate(gp)
-      deallocate(dprof,eprof)
+      if(allocated(gp))      deallocate(gp)
+      if(allocated(dprof))   deallocate(dprof)
+      if(allocated(eprof))   deallocate(eprof)
 #endif /* GRAV */
 
 #ifdef COSM_RAYS
-      deallocate(divvel)
+      if(allocated(divvel))  deallocate(divvel)
 #endif /* COSM_RAYS */
 
    end subroutine arrays_deallocate
