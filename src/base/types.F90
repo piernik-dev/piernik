@@ -27,11 +27,23 @@
 !
 #include "piernik.def"
 module types
+   type :: indx
+      integer :: dnd = -1, dnn = -1, dni = -1
+      integer :: mxd = -1, mxn = -1, mxi = -1
+      integer :: myd = -1, myn = -1, myi = -1
+      integer :: mzd = -1, mzn = -1, mzi = -1
+      integer :: enn = -1, eni = -1
+      integer :: ecr = -1
+      integer :: bx = -1, by = -1, bz = -1
+   end type indx
+
    type :: hdf
       integer :: nhdf, ntsl, nres, nlog, step_hdf, step_res, log_lun, &
-         nstep
+         nstep, nrestart
       real    :: last_hdf_time
       character(len=128) :: log_file
+      character(len=16)  :: domain
+      character(len=3)   :: new_id
    end type hdf
 
    type :: value

@@ -38,11 +38,17 @@ module dataio
 ! Modified for this code and extended by M.Hanasz
    use types
    use mpisetup
+   use initproblem
 #ifdef SN_SRC
    use snsources
 #endif /* SN_SRC */
-
+#ifdef HDF5
+   use dataio_hdf5, only : write_hdf5, write_restart_hdf5, read_restart_hdf5, &
+       init_hdf5, cleanup_hdf5
+#endif /* HDF5 */
    implicit none
+
+   type(hdf) :: chdf
 
    integer               :: nend, nstep, istep, nstep_start
    real                  :: tend
@@ -51,7 +57,7 @@ module dataio
    character(len=3)      :: new_id
    character(len=16)     :: restart, domain, mag_center
    integer               :: nrestart, resdel
-   real                  :: dt_hdf, dt_res, dt_tsl, dt_log
+   real                  :: dt_hdf, dt_res, dt_tsl, dt_log, dt_plt
    integer               :: min_disk_space_MB, sleep_minutes, sleep_seconds
    character(len=160)    :: user_message_file, system_message_file
    integer               :: ix,iy,iz, iv
@@ -86,15 +92,55 @@ module dataio
 #ifdef COSM_RAYS
    real                  :: encr_min, encr_max
 #endif /* COSM_RAYS */
+#ifdef HDF5
+    character(len=128) :: filename
+#endif /* HDF5 */
 
    namelist /END_CONTROL/ nend, tend
    namelist /RESTART_CONTROL/ restart, new_id, nrestart, resdel
-   namelist /OUTPUT_CONTROL/ dt_hdf, dt_res, dt_tsl, dt_log, &
-                             domain, vars, mag_center, ix, iy, iz,&
+   namelist /OUTPUT_CONTROL/ dt_hdf, dt_res, dt_tsl, dt_log, dt_plt, ix, iy, iz, &
+                             domain, vars, mag_center, &
                              min_disk_space_MB, sleep_minutes, sleep_seconds, &
                              user_message_file, system_message_file
 
    contains
+
+     subroutine set_container(chdf)
+       use types
+       implicit none
+       type(hdf), intent(out) :: chdf
+
+       chdf%nhdf = nhdf
+       chdf%ntsl = ntsl
+       chdf%nres = nres
+       chdf%nlog = nlog
+       chdf%step_hdf = step_hdf
+       chdf%log_lun = log_lun
+       chdf%last_hdf_time = last_hdf_time
+       chdf%log_file = log_file
+       chdf%nrestart = nrestart
+       chdf%domain  = domain
+
+     end subroutine set_container
+
+     subroutine get_container(chdf)
+       use types
+       implicit none
+       type(hdf), intent(in) :: chdf
+
+       nhdf = chdf%nhdf
+       ntsl = chdf%ntsl
+       nres = chdf%nres
+       nlog = chdf%nlog
+       step_hdf =  chdf%step_hdf
+       log_lun = chdf%log_lun
+       last_hdf_time = chdf%last_hdf_time
+       log_file = chdf%log_file
+       nrestart = chdf%nrestart
+       domain   = chdf%domain
+
+     end subroutine get_container
+
 
 !---------------------------------------------------------------------
 !
@@ -107,6 +153,7 @@ module dataio
       use initproblem,     only : problem_name,run_id
       use version,         only : nenv,env
       use fluidboundaries, only : all_fluid_boundaries
+      use fluidindex
 #ifdef MAGNETIC
       use magboundaries,   only : all_mag_boundaries
 #endif /* MAGNETIC */
@@ -115,7 +162,7 @@ module dataio
       integer(kind=1)      :: getpid
       integer(kind=1)      :: hostnm
       integer(kind=1)      :: system
-      integer              :: system_status, i
+      integer              :: system_status, i, j
       character(LEN=160)   :: system_command
       character(LEN=100)   :: par_file, tmp_log_file
 
@@ -131,7 +178,7 @@ module dataio
       dt_tsl = 0.0
       dt_log = 0.0
       domain = 'phys_domain'
-      vars(:)   = '    '
+      vars(:)   = ''
       mag_center= 'no'
       min_disk_space_MB = 100
       sleep_minutes   = 0
@@ -223,9 +270,9 @@ module dataio
             cbuff(40+iv) = vars(iv)
          enddo
 
-         cbuff(60) = mag_center
-         cbuff(61) = user_message_file(1:32)
-         cbuff(62) = system_message_file(1:32)
+         cbuff(90) = mag_center
+         cbuff(91) = user_message_file(1:32)
+         cbuff(92) = system_message_file(1:32)
 
          call MPI_BCAST(cbuff, 32*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
          call MPI_BCAST(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
@@ -270,14 +317,18 @@ module dataio
             vars(iv)         = trim(cbuff(40+iv))
          enddo
 
-         mag_center          = trim(cbuff(60))
+         mag_center          = trim(cbuff(90))
 
-         user_message_file   = trim(cbuff(61))
-         system_message_file = trim(cbuff(62))
+         user_message_file   = trim(cbuff(91))
+         system_message_file = trim(cbuff(92))
 
       endif
 
       last_hdf_time = -dt_hdf
+
+#ifdef HDF5
+      call init_hdf5(vars,ix,iy,iz,dt_plt)
+#endif /* HDF5 */
 
       if(proc == 0 .and. restart .eq. 'last') call find_last_restart(nrestart)
       call MPI_BARRIER(comm,ierr)
@@ -296,7 +347,7 @@ module dataio
             enddo
             close(3)
          endif
-
+         call set_container(chdf); chdf%nres = nrestart
          call write_data(output='all')
 
       else
@@ -308,27 +359,45 @@ module dataio
             system_command = 'mv '//trim(tmp_log_file)//' '//trim(log_file)
             system_status = SYSTEM(system_command)
          endif
+#ifdef HDF5
+         call set_container(chdf); chdf%nres = nrestart
+         call read_restart_hdf5(chdf)
+         call get_container(chdf); nstep = chdf%nstep
+#else /* HDF5 */
          nres = nrestart
          call read_restart
-
+#endif
          nstep_start = nstep
          t_start     = t
          nres_start  = nrestart
          nhdf_start  = nhdf-1
-         open(3, file=log_file, position='append')
-         do i=1,nenv
-            write(3,*) trim(env(i))
-         enddo
-         close(3)
-
+         if(proc==0) then
+            open(3, file=log_file, position='append')
+            do i=1,nenv
+               write(3,*) trim(env(i))
+            enddo
+            close(3)
+         endif
          if(new_id .ne. '') run_id=new_id
       endif
-
+#ifdef HDF5
+      call MPI_BCAST(log_file, 32, MPI_CHARACTER, 0, comm, ierr)
+      call set_container(chdf)
+#endif /* HDF5 */
       call all_fluid_boundaries
 #ifdef MAGNETIC
       call all_mag_boundaries
 #endif /* MAGNETIC */
+
    end subroutine init_dataio
+
+   subroutine cleanup_dataio
+
+      implicit none
+#ifdef HDF5
+      call cleanup_hdf5      
+#endif 
+   end subroutine cleanup_dataio
 
    subroutine user_msg_handler(end_sim)
       implicit none
@@ -347,13 +416,28 @@ module dataio
 !---  if a user message is received then:
       if (len_trim(msg) /= 0) then
          if(trim(msg) == 'res' .or. trim(msg) == 'dump' ) then
+#ifndef HDF5
             nres = max(nres,1)
             call write_restart
             nres = nres + 1
             step_res = nstep
+#else
+            if(proc==0) then
+              write (filename,'(a,a1,a3,a1,i4.4,a4)') &
+                trim(problem_name),'_', run_id,'_',nres,'.res'
+            endif
+            call MPI_BCAST(filename, 128, MPI_CHARACTER, 0, comm, ierr)
+            call set_container(chdf); chdf%nstep = nstep
+            call write_restart_hdf5(filename,chdf)
+#endif
          endif
          if(trim(msg) .eq. 'hdf') then
+#ifndef HDF5
             call write_hdf
+#else /* HDF5 */
+            call set_container(chdf)
+            call write_hdf5(chdf)
+#endif /* HDF5 */
             nhdf = nhdf + 1
             step_hdf = nstep
          endif
@@ -415,7 +499,13 @@ module dataio
 
          if ((t-last_hdf_time) .ge. dt_hdf &
                 .or. output .eq. 'hdf' .or. output .eq. 'end') then
+#ifndef HDF5
             call write_hdf
+#else /* HDF5 */
+            call set_container(chdf)
+            call write_hdf5(chdf)
+#endif /* HDF5 */
+
             if((t-last_hdf_time) .ge. dt_hdf) last_hdf_time = last_hdf_time + dt_hdf
             if((t-last_hdf_time) .ge. dt_hdf) last_hdf_time = t ! additional control
                           ! in the case of changing dt_hdf into smaller value via msg
@@ -428,7 +518,17 @@ module dataio
          if ((nres-nres_start) .lt. (int((t-t_start) / dt_res) + 1) &
                 .or. output .eq. 'res' .or. output .eq. 'end') then
             if (nres > 0) then
+#ifdef HDF5
+               if(proc==0) then
+                  write (filename,'(a,a1,a3,a1,i4.4,a4)') &
+                    trim(problem_name),'_', run_id,'_',nres,'.res'
+               endif
+               call MPI_BCAST(filename, 128, MPI_CHARACTER, 0, comm, ierr)
+               call set_container(chdf); chdf%nstep = nstep
+               call write_restart_hdf5(filename,chdf)
+#else /* HDF5 */
                call write_restart
+#endif
             endif
             nres = nres + 1
             step_res = nstep
@@ -1189,8 +1289,13 @@ module dataio
       call rm_file('restart_list.tmp')
 
       do nres =999,0,-1
+#ifdef HDF5
+         write (file_name,'(a,a1,a,a1,a3,a1,i4.4,a4)') &
+               trim(cwd),'/',trim(problem_name),'_', run_id,'_',nres,'.res'
+#else /* HDF5 */
          write (file_name,'(a,a1,a,a1,a3,a1,3(i2.2,a1),i3.3,a4)') &
                trim(cwd),'/',trim(problem_name),'_', run_id,'_',0,'_',0,'_',0,'_',nres,'.res'
+#endif /* HDF5 */
          inquire(file = file_name, exist = exist)
          if(exist) then
             restart_number = nres

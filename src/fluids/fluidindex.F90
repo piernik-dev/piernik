@@ -29,7 +29,10 @@
 
 module fluidindex
 
+   use types   
    implicit none
+
+   type(indx),save :: ind
    
    integer, parameter  :: nmag=3
    integer, parameter  :: ibx=1,iby=2,ibz=3
@@ -38,12 +41,8 @@ module fluidindex
 
    
    integer,allocatable,  dimension(:) :: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
-#ifndef ISO 
    integer,allocatable,  dimension(:) :: iarr_all_en
-#endif /* ISO */ 
-#ifdef COSM_RAYS 
    integer,allocatable,  dimension(:) :: iarr_all_cr
-#endif /* COSM_RAYS */ 
    integer, allocatable, dimension(:) :: iarr_all_swpx, iarr_all_swpy, iarr_all_swpz
 
 #ifdef IONIZED
@@ -73,7 +72,6 @@ module fluidindex
   contains
    
     subroutine fluid_index
-   
 #ifdef IONIZED
       use initionized,    only : ionized_index
       use initionized,    only : iarr_ion_swpx, iarr_ion_swpy, iarr_ion_swpz
@@ -165,9 +163,13 @@ module fluidindex
       allocate(iarr_all_dn(nfluid),iarr_all_mx(nfluid),iarr_all_my(nfluid),iarr_all_mz(nfluid))
 #ifndef ISO      
       allocate(iarr_all_en(nadiab))  
+#else
+      allocate(iarr_all_en(0))
 #endif /* ISO */
 #ifdef COSM_RAYS      
       allocate(iarr_all_cr(nvar_crs))  
+#else
+      allocate(iarr_all_cr(0))
 #endif /* COSM_RAYS */
 
 #ifdef IONIZED
@@ -175,6 +177,7 @@ module fluidindex
       iarr_mag_swpy = [iby,ibx,ibz]
       iarr_mag_swpz = [ibz,iby,ibx]
       iarr_all_mag  = [ibx,iby,ibz]
+      ind%bx = ibx; ind%by = iby; ind%bz = ibz
 #endif /* IONIZED */
 
 
@@ -183,12 +186,12 @@ module fluidindex
       iarr_all_swpy(beg_ion:end_ion) = iarr_ion_swpy
       iarr_all_swpz(beg_ion:end_ion) = iarr_ion_swpz    
 
-      iarr_all_dn(i_ion)      = idni
-      iarr_all_mx(i_ion)      = imxi
-      iarr_all_my(i_ion)      = imyi
-      iarr_all_mz(i_ion)      = imzi
+      iarr_all_dn(i_ion)      = idni ; ind%dni = idni
+      iarr_all_mx(i_ion)      = imxi ; ind%mxi = imxi
+      iarr_all_my(i_ion)      = imyi ; ind%myi = imyi
+      iarr_all_mz(i_ion)      = imzi ; ind%mzi = imzi
 #ifndef ISO
-      iarr_all_en(i_ion)      = ieni
+      iarr_all_en(i_ion)      = ieni ; ind%eni = ieni
 #endif /* ISO */
 #endif /* IONIZED */
       
@@ -197,12 +200,12 @@ module fluidindex
       iarr_all_swpy(beg_neu:end_neu) = iarr_neu_swpy
       iarr_all_swpz(beg_neu:end_neu) = iarr_neu_swpz    
 
-      iarr_all_dn(i_neu)      = idnn
-      iarr_all_mx(i_neu)      = imxn
-      iarr_all_my(i_neu)      = imyn
-      iarr_all_mz(i_neu)      = imzn
+      iarr_all_dn(i_neu)      = idnn ; ind%dnn = idnn
+      iarr_all_mx(i_neu)      = imxn ; ind%mxn = imxn
+      iarr_all_my(i_neu)      = imyn ; ind%myn = imyn
+      iarr_all_mz(i_neu)      = imzn ; ind%mzn = imzn
 #ifndef ISO
-      iarr_all_en(i_neu)      = ienn
+      iarr_all_en(i_neu)      = ienn ; ind%enn = ienn
 #endif /* ISO */
 #endif /* NEUTRAL */
       
@@ -211,10 +214,10 @@ module fluidindex
       iarr_all_swpy(beg_dst:end_dst) = iarr_dst_swpy
       iarr_all_swpz(beg_dst:end_dst) = iarr_dst_swpz    
 
-      iarr_all_dn(i_dst)      = idnd
-      iarr_all_mx(i_dst)      = imxd
-      iarr_all_my(i_dst)      = imyd
-      iarr_all_mz(i_dst)      = imzd
+      iarr_all_dn(i_dst)      = idnd ; ind%dnd = idnd
+      iarr_all_mx(i_dst)      = imxd ; ind%mxd = imxd
+      iarr_all_my(i_dst)      = imyd ; ind%myd = imyd
+      iarr_all_mz(i_dst)      = imzd ; ind%mzd = imzd
 #endif /* DUST */
       
 #ifdef COSM_RAYS      
@@ -222,7 +225,7 @@ module fluidindex
       iarr_all_swpy(beg_crs:end_crs) = iarr_crs_swpy
       iarr_all_swpz(beg_crs:end_crs) = iarr_crs_swpz    
 
-      iarr_all_cr(1:nvar_crs) = iecr 
+      iarr_all_cr(1:nvar_crs) = iecr  ; ind%ecr = iecr
 #endif /* COSM_RAYS */
    
 !      write(*,*) 'fluid_index', iarr_ion_swpx

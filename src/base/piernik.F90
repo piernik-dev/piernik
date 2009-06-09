@@ -40,7 +40,7 @@ program piernik
   use fluidupdate, only  : fluid_update
 
   implicit none
-  logical :: end_sim !< Used in main loop, to test whether to stop simulation or not
+  logical   :: end_sim !< Used in main loop, to test whether to stop simulation or not
 
   call init_piernik
 
@@ -160,12 +160,14 @@ contains
 
    subroutine cleanup_piernik
       use grid, only : cleanup_grid
+      use dataio, only : cleanup_dataio
       use arrays, only : arrays_deallocate
 #ifdef RESISTIVE
       use resistivity, only : cleanup_resistivity
 #endif /* RESISTIVE */
 
       call cleanup_grid
+      call cleanup_dataio
 #ifdef RESISTIVE
       call cleanup_resistivity
 #endif /* RESISTIVE */

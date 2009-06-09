@@ -128,7 +128,7 @@ module rtvd ! split orig
       real, dimension(n)        :: gravaccr
 
 #ifdef SHEAR
-      real, dimension(nfluid,n) :: vx0
+      real, dimension(nfluid,n) :: vy0
 #endif /* SHEAR */
 
 #ifdef COSM_RAYS
@@ -144,7 +144,7 @@ module rtvd ! split orig
 #endif /* COSM_RAYS */
 #ifdef FLUID_INTERACTIONS
       real, dimension(nvar,n)  :: dintr
-      real, dimension(nfluid,n):: epsa, vy0
+      real, dimension(nfluid,n):: epsa, vx0
 #endif /* FLUID_INTERACTIONS */
 
       real, dimension(2,2), parameter  :: rk2coef = RESHAPE( (/1.0,0.5,0.0,1.0/),(/2,2/)) 
@@ -189,7 +189,11 @@ module rtvd ! split orig
 
 ! Source terms -------------------------------------
 #ifdef FLUID_INTERACTIONS
+#ifdef SHEAR
          df = (/global_gradP_neu,0.0/)
+#else 
+         df = 0.0
+#endif
          epsa(1,:) = dragc_gas_dust * u(iarr_all_dn(2),:)  / u(iarr_all_dn(1),:)
          epsa(2,:) = dragc_gas_dust
          where(u(iarr_all_dn,:) > 0.0) 
