@@ -1,89 +1,448 @@
-#define RNG nb+1:nx-nb, nb+1:ny-nb, nb+1:nz-nb
+#define RNG is:ie, js:je, ks:ke
+#include "piernik.def"
 module dataio_hdf5
+   use hdf5
    use h5im
    use h5lt
-   use hdf5
 
-   character(LEN=10), dimension(2) :: dname = (/"fluid","mag"/)
+   character(LEN=10), dimension(3) :: dname = (/"fluid","mag","dinit"/)
+   character(len=4), allocatable, dimension(:) :: hdf_vars
+   integer :: nhdf_vars
+   integer :: ix,iy,iz
+   integer :: is,ie,js,je,ks,ke
+   real    :: dt_plt
 
    contains
+
+   subroutine init_hdf5(vars,tix,tiy,tiz,tdt_plt)
+      use fluidindex
+      use grid, only : nx,ny,nz,nxd,nyd,nzd,nb
+      implicit none
+      character(len=4), dimension(:), intent(in) :: vars
+      integer,intent(in) :: tix,tiy,tiz
+      real,intent(in)    :: tdt_plt
+      integer :: nvars,i,j
+
+      ix = tix; iy = tiy; iz = tiz; dt_plt = tdt_plt
+
+      if(nxd == 1) then
+         is = 1; ie = 1
+      else
+         is = nb+1; ie = nx-nb
+      endif
+
+      if(nyd == 1) then
+         js = 1; je = 1
+      else
+         js = nb+1; je = ny-nb
+      endif
+
+      if(nzd == 1) then
+         ks = 1; ke = 1
+      else
+         ks = nb+1; ke = nz-nb
+      endif
+
+      nvars = 1
+      do while( LEN(TRIM(vars(nvars))) > 1)
+        nvars = nvars + 1
+      enddo
+      nvars = nvars - 1
+
+      nhdf_vars = 0
+      do i = 1, nvars
+         select case(vars(i))
+            case ('dens')
+               nhdf_vars = nhdf_vars + SIZE(iarr_all_dn,1)
+            case ('velx')
+               nhdf_vars = nhdf_vars + SIZE(iarr_all_mx,1)
+            case ('vely')
+               nhdf_vars = nhdf_vars + SIZE(iarr_all_my,1)
+            case ('velz')
+               nhdf_vars = nhdf_vars + SIZE(iarr_all_mz,1)
+            case ('ener')
+               nhdf_vars = nhdf_vars + SIZE(iarr_all_mz,1)
+#ifdef DUST
+               nhdf_vars = nhdf_vars - 1
+#endif /* DUST */
+            case ('magx')
+               nhdf_vars = nhdf_vars + 1
+            case ('magy')
+               nhdf_vars = nhdf_vars + 1
+            case ('magz')
+               nhdf_vars = nhdf_vars + 1
+            case ('encr')
+               nhdf_vars = nhdf_vars + SIZE(iarr_all_cr,1)
+         end select
+      enddo
+      allocate(hdf_vars(nhdf_vars)); j = 1
+      do i = 1, nvars
+         select case(vars(i))
+            case ('dens')
+#ifdef DUST
+               hdf_vars(j) = 'dend' ; j = j + 1
+#endif /* DUST */
+#ifdef NEUTRAL
+               hdf_vars(j) = 'denn' ; j = j + 1
+#endif /* NEUTRAL */
+#ifdef IONIZED
+               hdf_vars(j) = 'deni' ; j = j + 1
+#endif /* IONIZED */
+            case ('velx')
+#ifdef DUST
+               hdf_vars(j) = 'vlxd' ; j = j + 1
+#endif /* DUST */
+#ifdef NEUTRAL
+               hdf_vars(j) = 'vlxn' ; j = j + 1
+#endif /* NEUTRAL */
+#ifdef IONIZED
+               hdf_vars(j) = 'vlxi' ; j = j + 1
+#endif /* IONIZED */
+            case ('vely')
+#ifdef DUST
+               hdf_vars(j) = 'vlyd' ; j = j + 1
+#endif /* DUST */
+#ifdef NEUTRAL
+               hdf_vars(j) = 'vlyn' ; j = j + 1
+#endif /* NEUTRAL */
+#ifdef IONIZED
+               hdf_vars(j) = 'vlyi' ; j = j + 1
+#endif /* IONIZED */
+            case ('velz')
+#ifdef DUST
+               hdf_vars(j) = 'vlzd' ; j = j + 1
+#endif /* DUST */
+#ifdef NEUTRAL
+               hdf_vars(j) = 'vlzn' ; j = j + 1
+#endif /* NEUTRAL */
+#ifdef IONIZED
+               hdf_vars(j) = 'vlzi' ; j = j + 1
+#endif /* IONIZED */
+            case ('ener')
+#ifdef NEUTRAL
+               hdf_vars(j) = 'enen' ; j = j + 1
+#endif /* NEUTRAL */
+#ifdef IONIZED
+               hdf_vars(j) = 'enei' ; j = j + 1
+#endif /* IONIZED */
+            case ('magx')
+               hdf_vars(j) = 'magx' ; j = j + 1
+            case ('magy')
+               hdf_vars(j) = 'magy' ; j = j + 1
+            case ('magz')
+               hdf_vars(j) = 'magz' ; j = j + 1
+            case ('encr')
+#ifdef COSM_RAYS
+               hdf_vars(j) = 'encr' ; j = j + 1
+#endif /* COSM_RAYS */
+         end select
+      enddo
+
+   end subroutine init_hdf5
+
+   subroutine cleanup_hdf5
+      implicit none
+
+      if(allocated(hdf_vars)) deallocate(hdf_vars)
+
+   end subroutine cleanup_hdf5
+
+   subroutine common_plt_hdf5(var,ij,xn,tab,ierrh)
+      use grid,   only : nb, nyb, nzb, nxb
+      use arrays, only : u, b
+      use fluidindex, only : ind
+
+      implicit none
+      character(LEN=4)     :: var
+      character(LEN=2)     :: ij
+      integer              :: xn,ierrh
+      real, dimension(:,:) :: tab
+
+      ierrh = 0
+      select case(var)
+         case ("dend")
+            if(ij=="yz") tab(:,:) = u(ind%dnd,xn,nb+1:nyb+nb,nb+1:nzb+nb)
+            if(ij=="xz") tab(:,:) = u(ind%dnd,nb+1:nxb+nb,xn,nb+1:nzb+nb)
+            if(ij=="xy") tab(:,:) = u(ind%dnd,nb+1:nxb+nb,nb+1:nyb+nb,xn)
+         case ("denn")
+            if(ij=="yz") tab(:,:) = u(ind%dnn,xn,nb+1:nyb+nb,nb+1:nzb+nb)
+            if(ij=="xz") tab(:,:) = u(ind%dnn,nb+1:nxb+nb,xn,nb+1:nzb+nb)
+            if(ij=="xy") tab(:,:) = u(ind%dnn,nb+1:nxb+nb,nb+1:nyb+nb,xn)
+         case ("deni")
+            if(ij=="yz") tab(:,:) = u(ind%dni,xn,nb+1:nyb+nb,nb+1:nzb+nb)
+            if(ij=="xz") tab(:,:) = u(ind%dni,nb+1:nxb+nb,xn,nb+1:nzb+nb)
+            if(ij=="xy") tab(:,:) = u(ind%dni,nb+1:nxb+nb,nb+1:nyb+nb,xn)
+         case ("vlxd")
+            if(ij=="yz") tab(:,:) = u(ind%mxd,xn,nb+1:nyb+nb,nb+1:nzb+nb) / &
+                           u(ind%dnd,xn,nb+1:nyb+nb,nb+1:nzb+nb)
+            if(ij=="xz") tab(:,:) = u(ind%mxd,nb+1:nxb+nb,xn,nb+1:nzb+nb) / &
+                           u(ind%dnd,nb+1:nxb+nb,xn,nb+1:nzb+nb)
+            if(ij=="xy") tab(:,:) = u(ind%mxd,nb+1:nxb+nb,nb+1:nyb+nb,xn) / &
+                           u(ind%dnd,nb+1:nxb+nb,nb+1:nyb+nb,xn)
+         case ("vlxn")
+            if(ij=="yz") tab(:,:) = u(ind%mxn,xn,nb+1:nyb+nb,nb+1:nzb+nb) / &
+                           u(ind%dnn,xn,nb+1:nyb+nb,nb+1:nzb+nb)
+            if(ij=="xz") tab(:,:) = u(ind%mxn,nb+1:nxb+nb,xn,nb+1:nzb+nb) / &
+                           u(ind%dnn,nb+1:nxb+nb,xn,nb+1:nzb+nb)
+            if(ij=="xy") tab(:,:) = u(ind%mxn,nb+1:nxb+nb,nb+1:nyb+nb,xn) / &
+                           u(ind%dnn,nb+1:nxb+nb,nb+1:nyb+nb,xn)
+         case ("vlxi")
+            if(ij=="yz") tab(:,:) = u(ind%mxi,xn,nb+1:nyb+nb,nb+1:nzb+nb) / &
+                           u(ind%dni,xn,nb+1:nyb+nb,nb+1:nzb+nb)
+            if(ij=="xz") tab(:,:) = u(ind%mxi,nb+1:nxb+nb,xn,nb+1:nzb+nb) / &
+                           u(ind%dni,nb+1:nxb+nb,xn,nb+1:nzb+nb)
+            if(ij=="xy") tab(:,:) = u(ind%mxi,nb+1:nxb+nb,nb+1:nyb+nb,xn) / &
+                           u(ind%dni,nb+1:nxb+nb,nb+1:nyb+nb,xn)
+         case ("vlyd")
+            if(ij=="yz") tab(:,:) = u(ind%myd,xn,nb+1:nyb+nb,nb+1:nzb+nb) / &
+                           u(ind%dnd,xn,nb+1:nyb+nb,nb+1:nzb+nb)
+            if(ij=="xz") tab(:,:) = u(ind%myd,nb+1:nxb+nb,xn,nb+1:nzb+nb) / &
+                           u(ind%dnd,nb+1:nxb+nb,xn,nb+1:nzb+nb)
+            if(ij=="xy") tab(:,:) = u(ind%myd,nb+1:nxb+nb,nb+1:nyb+nb,xn) / &
+                           u(ind%dnd,nb+1:nxb+nb,nb+1:nyb+nb,xn)
+         case ("vlyn")
+            if(ij=="yz") tab(:,:) = u(ind%myn,xn,nb+1:nyb+nb,nb+1:nzb+nb) / &
+                           u(ind%dnn,xn,nb+1:nyb+nb,nb+1:nzb+nb)
+            if(ij=="xz") tab(:,:) = u(ind%myn,nb+1:nxb+nb,xn,nb+1:nzb+nb) / &
+                           u(ind%dnn,nb+1:nxb+nb,xn,nb+1:nzb+nb)
+            if(ij=="xy") tab(:,:) = u(ind%myn,nb+1:nxb+nb,nb+1:nyb+nb,xn) / &
+                           u(ind%dnn,nb+1:nxb+nb,nb+1:nyb+nb,xn)
+         case ("vlyi")
+            if(ij=="yz") tab(:,:) = u(ind%myi,xn,nb+1:nyb+nb,nb+1:nzb+nb) / &
+                           u(ind%dni,xn,nb+1:nyb+nb,nb+1:nzb+nb)
+            if(ij=="xz") tab(:,:) = u(ind%myi,nb+1:nxb+nb,xn,nb+1:nzb+nb) / &
+                           u(ind%dni,nb+1:nxb+nb,xn,nb+1:nzb+nb)
+            if(ij=="xy") tab(:,:) = u(ind%myi,nb+1:nxb+nb,nb+1:nyb+nb,xn) / &
+                           u(ind%dni,nb+1:nxb+nb,nb+1:nyb+nb,xn)
+         case ("vlzd")
+            if(ij=="yz") tab(:,:) = u(ind%mzd,xn,nb+1:nyb+nb,nb+1:nzb+nb) / &
+                           u(ind%dnd,xn,nb+1:nyb+nb,nb+1:nzb+nb)
+            if(ij=="xz") tab(:,:) = u(ind%mzd,nb+1:nxb+nb,xn,nb+1:nzb+nb) / &
+                           u(ind%dnd,nb+1:nxb+nb,xn,nb+1:nzb+nb)
+            if(ij=="xy") tab(:,:) = u(ind%mzd,nb+1:nxb+nb,nb+1:nyb+nb,xn) / &
+                           u(ind%dnd,nb+1:nxb+nb,nb+1:nyb+nb,xn)
+         case ("vlzn")
+            if(ij=="yz") tab(:,:) = u(ind%mzn,xn,nb+1:nyb+nb,nb+1:nzb+nb) / &
+                           u(ind%dnn,xn,nb+1:nyb+nb,nb+1:nzb+nb)
+            if(ij=="xz") tab(:,:) = u(ind%mzn,nb+1:nxb+nb,xn,nb+1:nzb+nb) / &
+                           u(ind%dnn,nb+1:nxb+nb,xn,nb+1:nzb+nb)
+            if(ij=="xy") tab(:,:) = u(ind%mzn,nb+1:nxb+nb,nb+1:nyb+nb,xn) / &
+                           u(ind%dnn,nb+1:nxb+nb,nb+1:nyb+nb,xn)
+         case ("vlzi")
+            if(ij=="yz") tab(:,:) = u(ind%mzi,xn,nb+1:nyb+nb,nb+1:nzb+nb) / &
+                           u(ind%dni,xn,nb+1:nyb+nb,nb+1:nzb+nb)
+            if(ij=="xz") tab(:,:) = u(ind%mzi,nb+1:nxb+nb,xn,nb+1:nzb+nb) / &
+                           u(ind%dni,nb+1:nxb+nb,xn,nb+1:nzb+nb)
+            if(ij=="xy") tab(:,:) = u(ind%mzi,nb+1:nxb+nb,nb+1:nyb+nb,xn) / &
+                           u(ind%dni,nb+1:nxb+nb,nb+1:nyb+nb,xn)
+         case ("enen")
+#ifndef ISO
+            if(ij=="yz") tab(:,:) = u(ind%enn,xn,nb+1:nyb+nb,nb+1:nzb+nb)
+            if(ij=="xz") tab(:,:) = u(ind%enn,nb+1:nxb+nb,xn,nb+1:nzb+nb)
+            if(ij=="xy") tab(:,:) = u(ind%enn,nb+1:nxb+nb,nb+1:nyb+nb,xn)
+#else
+            if(ij=="yz") tab(:,:) = 0.5 * (                     &
+                          u(ind%mxn,xn,nb+1:nyb+nb,nb+1:nzb+nb)**2 &
+                        + u(ind%myn,xn,nb+1:nyb+nb,nb+1:nzb+nb)**2 &
+                        + u(ind%mzn,xn,nb+1:nyb+nb,nb+1:nzb+nb)**2) / &
+                             u(ind%dnn,xn,nb+1:nyb+nb,nb+1:nzb+nb)
+            if(ij=="xz") tab(:,:) = 0.5 * (                     &
+                          u(ind%mxn,nb+1:nxb+nb,xn,nb+1:nzb+nb)**2 &
+                         +u(ind%myn,nb+1:nxb+nb,xn,nb+1:nzb+nb)**2 &
+                         +u(ind%mzn,nb+1:nxb+nb,xn,nb+1:nzb+nb)**2) / &
+                             u(ind%dnn,nb+1:nxb+nb,xn,nb+1:nzb+nb)
+            if(ij=="xy") tab(:,:) = 0.5 * (                     &
+                          u(ind%mxn,nb+1:nxb+nb,nb+1:nyb+nb,xn)**2 &
+                         +u(ind%myn,nb+1:nxb+nb,nb+1:nyb+nb,xn)**2 &
+                         +u(ind%mzn,nb+1:nxb+nb,nb+1:nyb+nb,xn)**2) / &
+                             u(ind%dnn,nb+1:nxb+nb,nb+1:nyb+nb,xn)
+#endif /* ISO */
+         case ("enei")
+#ifndef ISO
+            if(ij=="yz") tab(:,:) = u(ind%eni,xn,nb+1:nyb+nb,nb+1:nzb+nb)
+            if(ij=="xz") tab(:,:) = u(ind%eni,nb+1:nxb+nb,xn,nb+1:nzb+nb)
+            if(ij=="xy") tab(:,:) = u(ind%eni,nb+1:nxb+nb,nb+1:nyb+nb,xn)
+#else
+            if(ij=="yz") tab(:,:) = 0.5 * (                     &
+                          u(ind%mxi,xn,nb+1:nyb+nb,nb+1:nzb+nb)**2 &
+                        + u(ind%myi,xn,nb+1:nyb+nb,nb+1:nzb+nb)**2 &
+                        + u(ind%mzi,xn,nb+1:nyb+nb,nb+1:nzb+nb)**2) / &
+                             u(ind%dni,xn,nb+1:nyb+nb,nb+1:nzb+nb)
+            if(ij=="xz") tab(:,:) = 0.5 * (                     &
+                          u(ind%mxi,nb+1:nxb+nb,xn,nb+1:nzb+nb)**2 &
+                         +u(ind%myi,nb+1:nxb+nb,xn,nb+1:nzb+nb)**2 &
+                         +u(ind%mzi,nb+1:nxb+nb,xn,nb+1:nzb+nb)**2) / &
+                             u(ind%dni,nb+1:nxb+nb,xn,nb+1:nzb+nb)
+            if(ij=="xy") tab(:,:) = 0.5 * (                     &
+                          u(ind%mxi,nb+1:nxb+nb,nb+1:nyb+nb,xn)**2 &
+                         +u(ind%myi,nb+1:nxb+nb,nb+1:nyb+nb,xn)**2 &
+                         +u(ind%mzi,nb+1:nxb+nb,nb+1:nyb+nb,xn)**2) / &
+                             u(ind%dni,nb+1:nxb+nb,nb+1:nyb+nb,xn)
+#endif /* ISO */
+
+         case ("magx")
+            if(ij=="yz") tab(:,:) = b(ind%bx,xn,nb+1:nyb+nb,nb+1:nzb+nb)
+            if(ij=="xz") tab(:,:) = b(ind%bx,nb+1:nxb+nb,xn,nb+1:nzb+nb)
+            if(ij=="xy") tab(:,:) = b(ind%bx,nb+1:nxb+nb,nb+1:nyb+nb,xn)
+         case ("magy")
+            if(ij=="yz") tab(:,:) = b(ind%by,xn,nb+1:nyb+nb,nb+1:nzb+nb)
+            if(ij=="xz") tab(:,:) = b(ind%by,nb+1:nxb+nb,xn,nb+1:nzb+nb)
+            if(ij=="xy") tab(:,:) = b(ind%by,nb+1:nxb+nb,nb+1:nyb+nb,xn)
+         case ("magz")
+            if(ij=="yz") tab(:,:) = b(ind%bz,xn,nb+1:nyb+nb,nb+1:nzb+nb)
+            if(ij=="xz") tab(:,:) = b(ind%bz,nb+1:nxb+nb,xn,nb+1:nzb+nb)
+            if(ij=="xy") tab(:,:) = b(ind%bz,nb+1:nxb+nb,nb+1:nyb+nb,xn)
+         case default
+            ierrh = -1
+      end select
+
+
+   end subroutine common_plt_hdf5
+
+   subroutine common_vars_hdf5(var,tab, ierrh)
+      use fluidindex, only : ind
+      use grid,   only : nb,nx,ny,nz
+      use arrays, only : u,b
+
+      implicit none
+      character(LEN=4)     :: var
+      real(kind=4), dimension(:,:,:) :: tab
+      integer :: ierrh
+
+      ierrh = 0
+
+      select case(var)
+         case("dend")
+            tab(:,:,:) = real(u(ind%dnd,RNG),4)
+         case("denn")
+            tab(:,:,:) = real(u(ind%dnn,RNG),4)
+         case("deni")
+            tab(:,:,:) = real(u(ind%dni,RNG),4)
+         case("vlxd")
+            tab(:,:,:) = real(u(ind%mxd,RNG) / u(ind%dnd,RNG),4)
+         case("vlxn")
+            tab(:,:,:) = real(u(ind%mxn,RNG) / u(ind%dnn,RNG),4)
+         case("vlxi")
+            tab(:,:,:) = real(u(ind%mxi,RNG) / u(ind%dni,RNG),4)
+         case("vlyd")
+            tab(:,:,:) = real(u(ind%myd,RNG) / u(ind%dnd,RNG),4)
+         case("vlyn")
+            tab(:,:,:) = real(u(ind%myn,RNG) / u(ind%dnn,RNG),4)
+         case("vlyi")
+            tab(:,:,:) = real(u(ind%myi,RNG) / u(ind%dni,RNG),4)
+         case("vlzd")
+            tab(:,:,:) = real(u(ind%mzd,RNG) / u(ind%dnd,RNG),4)
+         case("vlzn")
+            tab(:,:,:) = real(u(ind%mzn,RNG) / u(ind%dnn,RNG),4)
+         case("vlzi")
+            tab(:,:,:) = real(u(ind%mzi,RNG) / u(ind%dni,RNG),4)
+         case("enen")
+#ifdef ISO
+            tab(:,:,:) = real(0.5 *( u(ind%mxn,RNG)**2 + &
+                                     u(ind%myn,RNG)**2 + &
+                                     u(ind%mzn,RNG)**2 ) &
+                              / u(ind%dnn,RNG),4)
+#else
+            tab(:,:,:) = real(u(ind%enn,RNG),4)
+#endif
+         case("enei")
+#ifdef ISO
+            tab(:,:,:) = real(0.5 *( u(ind%mxi,RNG)**2 + &
+                                     u(ind%myi,RNG)**2 + &
+                                     u(ind%mzi,RNG)**2 ) &
+                              / u(ind%dni,RNG),4)
+#else
+            tab(:,:,:) = real(u(ind%eni,RNG),4)
+#endif
+         case("magx")
+            tab(:,:,:) = real(b(ind%bx,RNG),4)
+         case("magy")
+            tab(:,:,:) = real(b(ind%by,RNG),4)
+         case("magz")
+            tab(:,:,:) = real(b(ind%bz,RNG),4)
+         case default
+            ierrh = -1
+      end select
+
+   end subroutine common_vars_hdf5
+
    subroutine write_plot(chdf)
       use types
-      use start, only : ix,iy,iz,vars
-      use mpi_setup, only : proc
+      use mpisetup
       implicit none
       integer, save :: nimg = 0
-      integer, save :: ie = 1
+      real, save    :: last_plt_time = 0.0
       character(LEN=32) ::fname
       type(hdf)     :: chdf
       integer :: i,error,fe
       logical, save :: first_entry = .true.
       integer(HID_T) :: file_id       !> File identifier
       integer(HID_T) :: gr_id,gr2_id  !> Group indentifier
-
-      if(first_entry) then
-         ie = 1
-         do while( LEN(TRIM(vars(ie))) > 1)
-            ie = ie+1
-         enddo
-         ie = ie - 1
-      endif
+      
+      if( ((t-last_plt_time) > dt_plt) .and. dt_plt > 0.0 .or. first_entry) then
+      fe = LEN(trim(chdf%log_file))
+      fname = trim(chdf%log_file(1:fe-3)//"plt")
+      call H5open_f(error)
 
       if(proc==0 .and. first_entry) then
-         fe = LEN(trim(chdf%log_file))
-         fname = trim(chdf%log_file(1:fe-3)//"plt")
-         call H5open_f(error)
          call H5Fcreate_f(fname, H5F_ACC_TRUNC_F, file_id, error)
          call H5Gcreate_f(file_id,"xy",gr_id,error)
-         do i=1,ie
-            call H5Gcreate_f(gr_id,vars(i),gr2_id,error)
+         do i=1,nhdf_vars
+            call H5Gcreate_f(gr_id,hdf_vars(i),gr2_id,error)
             call H5Gclose_f(gr2_id,error)
          enddo
          call H5Gclose_f(gr_id,error)
          call H5Gcreate_f(file_id,"yz",gr_id,error)
-         do i=1,ie
-            call H5Gcreate_f(gr_id,vars(i),gr2_id,error)
+         do i=1,nhdf_vars
+            call H5Gcreate_f(gr_id,hdf_vars(i),gr2_id,error)
             call H5Gclose_f(gr2_id,error)
          enddo
          call H5Gclose_f(gr_id,error)
          call H5Gcreate_f(file_id,"xz",gr_id,error)
-         do i=1,ie
-            call H5Gcreate_f(gr_id,vars(i),gr2_id,error)
+         do i=1,nhdf_vars
+            call H5Gcreate_f(gr_id,hdf_vars(i),gr2_id,error)
             call H5Gclose_f(gr2_id,error)
          enddo
          call H5Gclose_f(gr_id,error)
          call H5Fclose_f(file_id,error)
-         call H5close_f(error)
          first_entry = .false.
       endif
-
-      do i = 1,ie
-        if(ix > 0) call write_plot_hdf5(chdf,vars(i),"yz",nimg)
-        if(iy > 0) call write_plot_hdf5(chdf,vars(i),"xz",nimg)
-        if(iz > 0) call write_plot_hdf5(chdf,vars(i),"xy",nimg)
+      call MPI_BARRIER(comm3d,ierr)
+      do i = 1,nhdf_vars
+        if(ix > 0) call write_plot_hdf5(chdf,hdf_vars(i),"yz",nimg)
+        if(iy > 0) call write_plot_hdf5(chdf,hdf_vars(i),"xz",nimg)
+        if(iz > 0) call write_plot_hdf5(chdf,hdf_vars(i),"xy",nimg)
       enddo
 
       nimg = nimg+1
       first_entry = .false.
+      call H5close_f(error)
+
+      last_plt_time = t
+
+      endif
 
    end subroutine write_plot
 
    subroutine write_plot_hdf5(chdf,var,plane,nimg)
       use types
-      use mpi_setup
-      use arrays, only : nxb,nyb,nzb,u
-      use start, only : ix,iy,iz,nxd,nyd,nzd,nb
-      use init_problem, only : user_plt
+      use mpisetup
+      use arrays, only : u
+      use grid, only   : nxb,nyb,nzb,nxd,nyd,nzd,nb
+!      use initproblem, only : user_plt
 
+      implicit none
       character(LEN=2) :: plane
-      integer, dimension(3) :: remain
+      logical, dimension(3) :: remain
       integer :: comm2d,lp,ls,xn,error
       logical, save :: first_entry = .true.
+      logical :: ok_plt_var
       real, dimension(:,:), allocatable :: send
       real, dimension(:,:,:), allocatable :: temp
-      integer(kind=4), dimension(:,:), allocatable :: img
-      real :: imax,imin
-      integer :: nimg
+      real, dimension(:,:), allocatable :: img
+      real, dimension(:), allocatable :: buff
+      real :: imax,imin,di
+      integer :: nimg, ierrh,i,j
       type(hdf) :: chdf
       character(LEN=3) :: pij
       character(LEN=4) :: var    !> not yet implemented
@@ -94,18 +453,22 @@ module dataio_hdf5
       integer(HID_T) :: file_id       !> File identifier
       integer(HID_T) :: dset_id       !> Dataset identifier
       integer(HID_T) :: gr_id,gr2_id  !> Group indentifier
+      integer(HSIZE_T), dimension(2) :: dims
+      integer :: rank
 
       integer :: nib,nid,njb,njd,nkb,pisize,pjsize, fe
       logical :: fexist
+      integer(SIZE_T) :: bufsize
 
+      rank = 2
       fe = LEN(trim(chdf%log_file))
       fname = trim(chdf%log_file(1:fe-3)//"plt")
-
+      call MPI_BCAST(fname, 32, MPI_CHARACTER, 0, comm3d, ierr)
 
       select case(plane)
          case("yz")
             xn     = ix + nb - pcoords(1)*nxb
-            remain = (/0,1,1/)
+            remain = (/.false.,.true.,.true./)
             pij    = "yz_"
             nib    = nyb
             nid    = nyd
@@ -116,7 +479,7 @@ module dataio_hdf5
             pjsize = pzsize
          case("xz")
             xn     = iy + nb - pcoords(2)*nyb
-            remain = (/1,0,1/)
+            remain = (/.true.,.false.,.true./)
             pij    = "xz_"
             nib    = nxb
             nid    = nxd
@@ -127,7 +490,7 @@ module dataio_hdf5
             pjsize = pzsize
          case("xy")
             xn     = iz + nb - pcoords(3)*nzb
-            remain = (/1,1,0/)
+            remain = (/.true.,.true.,.false./)
             pij    = "xy_"
             nib    = nxb
             nid    = nxd
@@ -140,42 +503,56 @@ module dataio_hdf5
             write(*,*) "error while in write_plot_hdf5"
       end select
 
+      dims(1) = nid
+      dims(2) = njd
       call MPI_BARRIER(comm3d,ierr)
       call MPI_CART_SUB(comm3d,remain,comm2d,ierr)
       call MPI_COMM_SIZE(comm2d, ls, ierr)
       call MPI_COMM_RANK(comm2d, lp, ierr)
       if(xn > nb .and. xn <= nkb+nb) then
-         if(lp == 0) allocate(temp(nib,njb,pisize*pjsize),img(nid,njd))
+         allocate(temp(nib,njb,pisize*pjsize),img(nid,njd))
+         allocate(buff(nid*njd))
          allocate(send(nib,njb))
 !
-         call user_plt(var,plane,xn,send)
+         ok_plt_var = .false.
+         call common_plt_hdf5(var,plane,xn,send,ierrh)
+         if(ierrh==0) ok_plt_var = .true.
+!         call user_plt(var,plane,xn,send,ierrh)
+         if(ierrh==0) ok_plt_var = .true.
+         if(.not.ok_plt_var) then
+            write(*,*) var,' is not defined in common_plt_hdf5, neither in user_plt !!!'
+            call MPI_BARRIER(comm3d,ierr)
+            call mpistop
+            stop
+         endif
 !
-         call MPI_GATHER(send(1,1), nib*njb, MPI_DOUBLE_PRECISION, &
+         temp = -1.0
+         call MPI_GATHER(send, nib*njb, MPI_DOUBLE_PRECISION, &
                          temp, nib*njb, MPI_DOUBLE_PRECISION, &
                          0, comm2d,ierr)
-
+         
          if(lp == 0) then
             imax = maxval(temp); imin = minval(temp)
+            di = imax-imin
             do i = 0, pisize-1
                do j = 0, pjsize-1
                   img(i*nib+1:(i+1)*nib,j*njb+1:(j+1)*njb) = &
-                     int( (255* (temp(:,:,(j+1)+i*pjsize)-imin)) / (imax-imin), 4)
+                    temp(:,:,(j+1)+i*pjsize)
                enddo
             enddo
-            call H5open_f(error)
             call H5Fopen_f(fname, H5F_ACC_RDWR_F, file_id, error)
             call H5Gopen_f(file_id,plane,gr_id,error)
             call H5Gopen_f(gr_id,var,gr2_id,error)
             write(dname,'(a3,a4,a1,i4.4)') pij,var,"_",nimg
-            call H5IMmake_image_8bit_f(gr2_id, dname, int(nid,HSIZE_T), &
-               int(njd,HSIZE_T), img, error)
+            call h5ltmake_dataset_double_f(gr2_id, dname, rank, dims, img, error)
+            bufsize = 1
+            call h5ltset_attribute_double_f(gr2_id,dname,"time",(/t/),bufsize,error)
             call H5Gclose_f(gr2_id,error)
             call H5Gclose_f(gr_id,error)
             call H5Fclose_f(file_id,error)
-            call H5close_f(error)
          endif
          deallocate(send)
-         if(lp == 0) deallocate(temp,img)
+         deallocate(temp,img)
       endif
       call MPI_BARRIER(comm3d,ierr)
 
@@ -183,14 +560,17 @@ module dataio_hdf5
 
    subroutine write_restart_hdf5(filename,chdf)
      use types
-     use mpi_setup
-     use arrays, only : nx,ny,nz,nu, u,b,x,y,z, nxb,nyb,nzb
-     use start, only : t,nxd,nyd,nzd,nb, domain, xmin,xmax, &
-         ymin,ymax, zmin,zmax, nstep,dt
-     use init_problem, only : problem_name, run_id
+     use mpisetup
+     use grid, only : nx,ny,nz, x,y,z, nxb,nyb,nzb
+     use arrays, only : u,b
+     use grid, only : nxd,nyd,nzd,nb, xmin,xmax, &
+         ymin,ymax, zmin,zmax
+!    nstep,dt, domain
+     use initproblem, only : problem_name, run_id
+     use fluidindex, only : nvar
      IMPLICIT NONE
      type(hdf) :: chdf
-     integer   :: llun,fe
+     integer   :: llun,fe,nu
      CHARACTER :: filename*128 !> HDF File name
      character :: lfile*128
 
@@ -212,6 +592,8 @@ module dataio_hdf5
      real, dimension(1) :: rbuf
      integer(SIZE_T) :: bufsize = 1
 
+     nu = nvar
+
      llun  = chdf%log_lun
      lfile = chdf%log_file
 
@@ -226,6 +608,54 @@ module dataio_hdf5
      CALL h5fcreate_f(filename, H5F_ACC_TRUNC_F, file_id, error, access_prp = plist_id)
      CALL h5pclose_f(plist_id, error)
 
+#ifdef MASS_COMPENS
+     rank = 3
+     allocate(dimsf(rank),dimsfi(rank),chunk_dims(rank))
+     allocate(count(rank),offset(rank),stride(rank),block(rank))
+     !----------------------------------------------------------------------------------
+     !  WRITE DINIT 
+     !
+     dimsf = (/nx*pxsize,ny*pysize,nz*pzsize/) ! Dataset dimensions
+     dimsfi = dimsf
+     chunk_dims = (/nx,ny,nz/)                   ! Chunks dimensions
+
+     ! Create the data space for the  dataset.
+     CALL h5screate_simple_f(rank, dimsf, filespace, error)
+     CALL h5screate_simple_f(rank, chunk_dims, memspace, error)
+
+     ! Create chunked dataset.
+     CALL h5pcreate_f(H5P_DATASET_CREATE_F, plist_id, error)
+     CALL h5pset_chunk_f(plist_id, rank, chunk_dims, error)
+     CALL h5dcreate_f(file_id, dname(3), H5T_NATIVE_DOUBLE, filespace, &
+                      dset_id, error, plist_id)
+     CALL h5sclose_f(filespace, error)
+
+     ! Each process defines dataset in memory and writes it to the hyperslab
+     ! in the file.
+     stride(:) = 1
+     count(:)  = 1
+     block(:)  = chunk_dims(:)
+
+     offset(1)   = 0
+     offset(1:3) = pcoords(1:3)*chunk_dims(1:3)
+
+     ! Select hyperslab in the file.
+     CALL h5dget_space_f(dset_id, filespace, error)
+     CALL h5sselect_hyperslab_f (filespace, H5S_SELECT_SET_F, offset, count, error, &
+                                 stride, block)
+     CALL h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error)
+     CALL h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_INDEPENDENT_F, error)
+     CALL h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, dinit(:,:,:), dimsfi, error, &
+                     file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
+
+     CALL h5sclose_f(filespace, error)
+     CALL h5sclose_f(memspace, error)
+     CALL h5dclose_f(dset_id, error)
+
+     deallocate(dimsf,dimsfi,chunk_dims)
+     deallocate(count,offset,stride,block)
+     !----------------------------------------------------------------------------------
+#endif /* MASS_COMPENS */
      rank = 4
      allocate(dimsf(rank),dimsfi(rank),chunk_dims(rank))
      allocate(count(rank),offset(rank),stride(rank),block(rank))
@@ -246,6 +676,7 @@ module dataio_hdf5
      CALL h5dcreate_f(file_id, dname(1), H5T_NATIVE_DOUBLE, filespace, &
                       dset_id, error, plist_id)
      CALL h5sclose_f(filespace, error)
+     CALL h5pclose_f(plist_id, error)
 
      ! Each process defines dataset in memory and writes it to the hyperslab
      ! in the file.
@@ -261,13 +692,14 @@ module dataio_hdf5
      CALL h5sselect_hyperslab_f (filespace, H5S_SELECT_SET_F, offset, count, error, &
                                  stride, block)
      CALL h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error)
-     CALL h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_COLLECTIVE_F, error)
+     CALL h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_INDEPENDENT_F, error)
      CALL h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, u(:,:,:,:), dimsfi, error, &
                      file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
 
      CALL h5sclose_f(filespace, error)
      CALL h5sclose_f(memspace, error)
      CALL h5dclose_f(dset_id, error)
+     CALL h5pclose_f(plist_id, error)
      !----------------------------------------------------------------------------------
 
      !----------------------------------------------------------------------------------
@@ -287,6 +719,7 @@ module dataio_hdf5
      CALL h5dcreate_f(file_id, dname(2), H5T_NATIVE_DOUBLE, filespace, &
                       dset_id, error, plist_id)
      CALL h5sclose_f(filespace, error)
+     CALL h5pclose_f(plist_id, error)
 
      ! Each process defines dataset in memory and writes it to the hyperslab
      ! in the file.
@@ -302,13 +735,14 @@ module dataio_hdf5
      CALL h5sselect_hyperslab_f (filespace, H5S_SELECT_SET_F, offset, count, error, &
                                  stride, block)
      CALL h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error)
-     CALL h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_COLLECTIVE_F, error)
+     CALL h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_INDEPENDENT_F, error)
      CALL h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, b(:,:,:,:), dimsfi, error, &
                      file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
 
      CALL h5sclose_f(filespace, error)
      CALL h5sclose_f(memspace, error)
      CALL h5dclose_f(dset_id, error)
+     CALL h5pclose_f(plist_id, error)
      !----------------------------------------------------------------------------------
      deallocate(dimsf,dimsfi,chunk_dims)
      deallocate(count,offset,stride,block)
@@ -334,6 +768,7 @@ module dataio_hdf5
      CALL h5dcreate_f(file_id, "X axis", H5T_NATIVE_DOUBLE, filespace, &
                       dset_id, error, plist_id)
      CALL h5sclose_f(filespace, error)
+     CALL h5pclose_f(plist_id, error)
 
      ! Each process defines dataset in memory and writes it to the hyperslab
      ! in the file.
@@ -348,13 +783,14 @@ module dataio_hdf5
      CALL h5sselect_hyperslab_f (filespace, H5S_SELECT_SET_F, offset, count, error, &
                                  stride, block)
      CALL h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error)
-     CALL h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_COLLECTIVE_F, error)
+     CALL h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_INDEPENDENT_F, error)
      CALL h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, x(:), dimsfi, error, &
                      file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
 
      CALL h5sclose_f(filespace, error)
      CALL h5sclose_f(memspace, error)
      CALL h5dclose_f(dset_id, error)
+     CALL h5pclose_f(plist_id, error)
      !----------------------------------------------------------------------------------
 
      !----------------------------------------------------------------------------------
@@ -374,6 +810,7 @@ module dataio_hdf5
      CALL h5dcreate_f(file_id, "Y axis", H5T_NATIVE_DOUBLE, filespace, &
                       dset_id, error, plist_id)
      CALL h5sclose_f(filespace, error)
+     CALL h5pclose_f(plist_id, error)
 
      ! Each process defines dataset in memory and writes it to the hyperslab
      ! in the file.
@@ -388,13 +825,14 @@ module dataio_hdf5
      CALL h5sselect_hyperslab_f (filespace, H5S_SELECT_SET_F, offset, count, error, &
                                  stride, block)
      CALL h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error)
-     CALL h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_COLLECTIVE_F, error)
+     CALL h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_INDEPENDENT_F, error)
      CALL h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, y(:), dimsfi, error, &
                      file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
 
      CALL h5sclose_f(filespace, error)
      CALL h5sclose_f(memspace, error)
      CALL h5dclose_f(dset_id, error)
+     CALL h5pclose_f(plist_id, error)
      !----------------------------------------------------------------------------------
 
      !----------------------------------------------------------------------------------
@@ -414,6 +852,7 @@ module dataio_hdf5
      CALL h5dcreate_f(file_id, "Z axis", H5T_NATIVE_DOUBLE, filespace, &
                       dset_id, error, plist_id)
      CALL h5sclose_f(filespace, error)
+     CALL h5pclose_f(plist_id, error)
 
      ! Each process defines dataset in memory and writes it to the hyperslab
      ! in the file.
@@ -428,7 +867,7 @@ module dataio_hdf5
      CALL h5sselect_hyperslab_f (filespace, H5S_SELECT_SET_F, offset, count, error, &
                                  stride, block)
      CALL h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error)
-     CALL h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_COLLECTIVE_F, error)
+     CALL h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_INDEPENDENT_F, error)
      CALL h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, z(:), dimsfi, error, &
                      file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
 
@@ -501,9 +940,9 @@ module dataio_hdf5
         fe = len(trim(problem_name))-1
         call h5ltset_attribute_string_f(file_id,"/","problem name", &
            problem_name(1:fe),error)
-        fe = len(trim(domain))-1
+        fe = len(trim(chdf%domain))-1
         call h5ltset_attribute_string_f(file_id,"/","domain", &
-           trim(domain(1:fe)),error)
+           trim(chdf%domain(1:fe)),error)
         call h5ltset_attribute_string_f(file_id,"/","run id", &
            trim(run_id),error)
 
@@ -520,14 +959,16 @@ module dataio_hdf5
 
    subroutine read_restart_hdf5(chdf)
      use types
-     use mpi_setup
-     use arrays, only : nx,ny,nz,nu, u,b,x,y,z, nxb,nyb,nzb
-     use start, only : t,nxd,nyd,nzd,nb, domain, xmin,xmax, &
-         ymin,ymax, zmin,zmax, nstep,dt, new_id
-     use init_problem, only : problem_name, run_id
+     use mpisetup
+     use fluidindex, only : nvar
+     use grid, only : nx,ny,nz,x,y,z, nxb,nyb,nzb
+     use arrays, only : u,b
+     use grid, only : nxd,nyd,nzd,nb, xmin,xmax, &
+         ymin,ymax, zmin,zmax!, new_id
+     use initproblem, only : problem_name, run_id
      IMPLICIT NONE
      type(hdf) :: chdf
-     integer :: log_lun
+     integer :: log_lun, nu
      CHARACTER(LEN=128) :: log_file  ! File name
      CHARACTER(LEN=128) :: filename  ! File name
 
@@ -544,12 +985,14 @@ module dataio_hdf5
      integer(HSIZE_T),  DIMENSION(:), allocatable :: dimsf, dimsfi, chunk_dims
 
      integer, dimension(3) :: dims
-     integer :: error, rank = 4
+     integer :: error, rank
      logical file_exist, log_exist
 
      real, dimension(1) :: rbuf
      integer, dimension(1) :: ibuf
      integer(SIZE_T) :: bufsize = 1
+
+     nu = nvar
 
      log_lun  = chdf%log_lun
      log_file = chdf%log_file
@@ -584,8 +1027,6 @@ module dataio_hdf5
         stop
      endif
 
-     allocate(dimsf(rank), dimsfi(rank), chunk_dims(rank))
-     allocate(block(rank), offset(rank), count(rank), stride(rank))
      CALL h5open_f(error)
      CALL h5pcreate_f(H5P_FILE_ACCESS_F, plist_id, error)
      CALL h5pset_fapl_mpio_f(plist_id, comm3d, info, error)
@@ -593,9 +1034,55 @@ module dataio_hdf5
      CALL h5fopen_f(trim(filename), H5F_ACC_RDONLY_F, file_id, error, access_prp = plist_id)
      CALL h5pclose_f(plist_id, error)
 
+#ifdef MASS_COMPENS
+     !----------------------------------------------------------------------------------
+     !  READ DINIT
+     !
+     rank = 3
+     allocate(dimsf(rank), dimsfi(rank), chunk_dims(rank))
+     allocate(block(rank), offset(rank), count(rank), stride(rank))
+     dimsf = (/nx*pxsize,ny*pysize,nz*pzsize/) ! Dataset dimensions
+     dimsfi = dimsf
+
+     ! Create chunked dataset.
+     CALL h5dopen_f(file_id, dname(3), dset_id, error)
+
+     call h5dget_space_f(dset_id, filespace, error)
+     call H5sget_simple_extent_ndims_f (filespace,rank,error)
+     call H5dget_create_plist_f (dset_id,plist_id,error)
+     call h5pget_chunk_f(plist_id, rank, chunk_dims, error)
+
+     ! Each process defines dataset in memory and writes it to the hyperslab
+     ! in the file.
+     stride(:) = 1
+     count(:)  = 1
+     block(:)  = chunk_dims(:)
+
+     offset(1:3) = pcoords(1:3)*chunk_dims(1:3)
+
+     ! Select hyperslab in the file.
+     CALL h5sselect_hyperslab_f (filespace, H5S_SELECT_SET_F, offset, count, error, &
+                                 stride, block)
+     CALL h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error)
+     CALL h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_INDEPENDENT_F, error)
+     CALL h5screate_simple_f(rank, chunk_dims, memspace, error)
+     CALL h5dread_f(dset_id, H5T_NATIVE_DOUBLE, dinit, dimsfi, error, &
+                     file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
+
+     CALL h5sclose_f(filespace, error)
+     CALL h5sclose_f(memspace, error)
+     CALL h5pclose_f(plist_id, error)
+     CALL h5dclose_f(dset_id, error)
+     !----------------------------------------------------------------------------------
+     deallocate(chunk_dims,dimsfi,dimsf)
+     deallocate(block, offset, count, stride)
+#endif /* MASS_COMPENS */
      !----------------------------------------------------------------------------------
      !  READ FLUID VARIABLES
      !
+     rank = 4
+     allocate(dimsf(rank), dimsfi(rank), chunk_dims(rank))
+     allocate(block(rank), offset(rank), count(rank), stride(rank))
      dimsf = (/nu,nx*pxsize,ny*pysize,nz*pzsize/) ! Dataset dimensions
      dimsfi = dimsf
 
@@ -620,7 +1107,7 @@ module dataio_hdf5
      CALL h5sselect_hyperslab_f (filespace, H5S_SELECT_SET_F, offset, count, error, &
                                  stride, block)
      CALL h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error)
-     CALL h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_COLLECTIVE_F, error)
+     CALL h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_INDEPENDENT_F, error)
      CALL h5screate_simple_f(rank, chunk_dims, memspace, error)
      CALL h5dread_f(dset_id, H5T_NATIVE_DOUBLE, u, dimsfi, error, &
                      file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
@@ -659,7 +1146,7 @@ module dataio_hdf5
      CALL h5sselect_hyperslab_f (filespace, H5S_SELECT_SET_F, offset, count, error, &
                                  stride, block)
      CALL h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error)
-     CALL h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_COLLECTIVE_F, error)
+     CALL h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_INDEPENDENT_F, error)
      CALL h5screate_simple_f(rank, chunk_dims, memspace, error)
      CALL h5dread_f(dset_id, H5T_NATIVE_DOUBLE, b, dimsfi, error, &
                      file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
@@ -710,9 +1197,9 @@ module dataio_hdf5
         call h5ltget_attribute_string_f(file_id,"/","problem name", &
            problem_name,error)
         call h5ltget_attribute_string_f(file_id,"/","domain", &
-           domain,error)
+          chdf%domain,error)
         call h5ltget_attribute_string_f(file_id,"/","run id", &
-           new_id,error)
+           chdf%new_id,error)
 
         CALL h5fclose_f(file_id, error)
 
@@ -735,8 +1222,8 @@ module dataio_hdf5
      call MPI_BCAST(dt, 1, MPI_DOUBLE_PRECISION, 0, comm3d, ierr)
 
      CALL MPI_BCAST(problem_name, 32, MPI_CHARACTER, 0, comm3d, ierr)
-     CALL MPI_BCAST(domain, 16, MPI_CHARACTER, 0, comm3d, ierr)
-     CALL MPI_BCAST(new_id, 3, MPI_CHARACTER, 0, comm3d, ierr)
+     CALL MPI_BCAST(chdf%domain, 16, MPI_CHARACTER, 0, comm3d, ierr)
+     CALL MPI_BCAST(chdf%new_id, 3, MPI_CHARACTER, 0, comm3d, ierr)
      CALL h5close_f(error)
 
    end subroutine read_restart_hdf5
@@ -746,17 +1233,17 @@ module dataio_hdf5
    subroutine write_hdf5(chdf)
 
      use types
-     use mpi_setup, only: pcoords, comm3d, proc, info, psize,ierr
-     use arrays, only : idna, imxa, imya, imza, iena, nxb,nyb,nzb, u, nx,ny,nz
-     use start, only : t,nxd,nyd,nzd,nb, domain, xmin,xmax, &
-         ymin,ymax, zmin,zmax, nstep,dt, vars
-     use init_problem, only : problem_name, run_id, user_hdf5
+     use mpisetup, only: pcoords, comm3d, proc, info, psize,ierr, mpistop, t, dt
+     use grid, only : nxb,nyb,nzb,nx,ny,nz,nxd,nyd,nzd,nb, xmin,xmax, &
+         ymin,ymax, zmin,zmax
+     use initproblem, only : problem_name, run_id!, user_hdf5
 
      IMPLICIT NONE
      type(hdf) :: chdf
      integer(HID_T) :: file_id       ! File identifier
      integer(HID_T) :: plist_id      ! Property list identifier
-     integer :: llun,fe
+     integer :: llun,fe, ierrh
+     logical :: ok_var
      CHARACTER :: lfile*128, dd*4 ! File name
      CHARACTER(LEN=32) :: fname
 
@@ -776,29 +1263,26 @@ module dataio_hdf5
      ! Setup file access property list with parallel I/O access.
      !
      CALL h5pcreate_f(H5P_FILE_ACCESS_F, plist_id, error)
+     !info = 0
      CALL h5pset_fapl_mpio_f(plist_id, comm3d, info, error)
-
      !
      ! Create the file collectively.
      !
-     CALL h5fcreate_f(fname, H5F_ACC_TRUNC_F, file_id, error, access_prp = plist_id)
+     CALL h5fcreate_f(trim(fname), H5F_ACC_TRUNC_F, file_id, error, creation_prp = H5P_DEFAULT_F, access_prp = plist_id)
      CALL h5pclose_f(plist_id, error)
      ALLOCATE (data(nxb,nyb,nzb))
-     i = 1; do while(LEN(TRIM(vars(i)))>1)
-        call user_hdf5(vars(i),data)
-        call write_arr(data,vars(i),file_id)
-        i = i + 1
+     ierrh = 0; ok_var = .false.
+     do i = 1, nhdf_vars 
+        call common_vars_hdf5(hdf_vars(i),data,ierrh);  if(ierrh == 0) ok_var = .true.
+!        call user_hdf5(hdf_vars(i),data,ierrh);         if(ierrh == 0) ok_var = .true.
+        if(.not.ok_var) then
+           write(*,*) hdf_vars(i),' is not defined in common_vars_hdf5, neither in user_hdf5 !!!'
+           call MPI_BARRIER(comm3d,ierr)
+           call mpistop
+           stop
+        endif
+        call write_arr(data,hdf_vars(i),file_id)
      enddo
-!     data = real(u(idna,RNG))
-!     call write_arr(data,"dens",file_id)
-!     data = real(u(imxa,RNG) / u(idna,RNG))
-!     call write_arr(data,"velx",file_id)
-!     data = real(u(imya,RNG) / u(idna,RNG))
-!     call write_arr(data,"vely",file_id)
-!     data = real(u(imza,RNG) / u(idna,RNG))
-!     call write_arr(data,"velz",file_id)
-!     data = real(u(iena,RNG))
-!     call write_arr(data,"ener",file_id)
 
      DEALLOCATE(data)
      !
@@ -814,7 +1298,7 @@ module dataio_hdf5
         call h5ltset_attribute_double_f(file_id,"/","timestep", &
            (/dt/),bufsize,error)
         call h5ltset_attribute_int_f(file_id,"/","nstep", &
-           (/nstep/),bufsize,error)
+           (/chdf%nstep/),bufsize,error)
 
         call h5ltset_attribute_int_f(file_id,"/","nxd", &
            (/nxd/),bufsize,error)
@@ -851,7 +1335,7 @@ module dataio_hdf5
         call h5ltset_attribute_string_f(file_id,"/","problem name", &
            trim(problem_name),error)
         call h5ltset_attribute_string_f(file_id,"/","domain", &
-           domain(1:11),error)
+           chdf%domain(1:11),error)
         call h5ltset_attribute_string_f(file_id,"/","run id", &
            trim(run_id),error)
 
@@ -868,12 +1352,12 @@ module dataio_hdf5
      end subroutine write_hdf5
 
      subroutine write_arr(data,dsetname,file_id)
-          use start, only : nxd,nyd,nzd,nb
-          use arrays, only : nxb,nyb,nzb
-          use mpi_setup, only: pcoords
+          use grid, only : nxd,nyd,nzd,nb
+          use grid, only : nxb,nyb,nzb
+          use mpisetup, only: pcoords
 
           implicit none
-          real*4, dimension(:,:,:) :: data
+          real(kind=4), dimension(:,:,:) :: data
 
      integer :: rank = 3 ! Dataset rank
 
@@ -933,7 +1417,7 @@ module dataio_hdf5
      ! Create property list for collective dataset write
      !
      CALL h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error)
-     CALL h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_COLLECTIVE_F, error)
+     CALL h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_INDEPENDENT_F, error)
 
      !
      ! Write the dataset collectively.
