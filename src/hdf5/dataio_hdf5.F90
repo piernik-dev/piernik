@@ -4,6 +4,7 @@ module dataio_hdf5
    use hdf5
    use h5im
    use h5lt
+   use func, only : strlen
 
    character(LEN=10), dimension(3) :: dname = (/"fluid","mag","dinit"/)
    character(len=4), allocatable, dimension(:) :: hdf_vars
@@ -937,14 +938,15 @@ module dataio_hdf5
         call h5ltset_attribute_int_f(file_id,"/","psize", &
            psize,bufsize,error)
 
-        fe = len(trim(problem_name))-1
+        fe = strlen(problem_name)
         call h5ltset_attribute_string_f(file_id,"/","problem name", &
            problem_name(1:fe),error)
-        fe = len(trim(chdf%domain))-1
+        fe = strlen(chdf%domain)
         call h5ltset_attribute_string_f(file_id,"/","domain", &
-           trim(chdf%domain(1:fe)),error)
+           chdf%domain(1:fe),error)
+        fe = strlen(run_id)
         call h5ltset_attribute_string_f(file_id,"/","run id", &
-           trim(run_id),error)
+           run_id(1:fe),error)
 
         CALL h5fclose_f(file_id, error)
 
@@ -1331,13 +1333,16 @@ module dataio_hdf5
         bufsize = 3
         call h5ltset_attribute_int_f(file_id,"/","psize", &
            psize,bufsize,error)
-
+        
+        fe = strlen(problem_name)
         call h5ltset_attribute_string_f(file_id,"/","problem name", &
-           trim(problem_name),error)
+           problem_name(1:fe),error)
+        fe = strlen(chdf%domain)
         call h5ltset_attribute_string_f(file_id,"/","domain", &
-           chdf%domain(1:11),error)
+           chdf%domain(1:fe),error)
+        fe = strlen(run_id)
         call h5ltset_attribute_string_f(file_id,"/","run id", &
-           trim(run_id),error)
+           run_id(1:fe),error)
 
 
         CALL h5fclose_f(file_id, error)

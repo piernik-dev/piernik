@@ -110,10 +110,11 @@ module dataio
        implicit none
        type(hdf), intent(out) :: chdf
 
-       chdf%nhdf = nhdf
-       chdf%ntsl = ntsl
-       chdf%nres = nres
-       chdf%nlog = nlog
+       chdf%nstep = nstep
+       chdf%nhdf  = nhdf
+       chdf%ntsl  = ntsl
+       chdf%nres  = nres
+       chdf%nlog  = nlog
        chdf%step_hdf = step_hdf
        chdf%log_lun = log_lun
        chdf%last_hdf_time = last_hdf_time
@@ -128,6 +129,7 @@ module dataio
        implicit none
        type(hdf), intent(in) :: chdf
 
+       nstep = chdf%nstep
        nhdf = chdf%nhdf
        ntsl = chdf%ntsl
        nres = chdf%nres
@@ -362,7 +364,7 @@ module dataio
 #ifdef HDF5
          call set_container(chdf); chdf%nres = nrestart
          call read_restart_hdf5(chdf)
-         call get_container(chdf); nstep = chdf%nstep
+         call get_container(chdf)
 #else /* HDF5 */
          nres = nrestart
          call read_restart
@@ -427,7 +429,7 @@ module dataio
                 trim(problem_name),'_', run_id,'_',nres,'.res'
             endif
             call MPI_BCAST(filename, 128, MPI_CHARACTER, 0, comm, ierr)
-            call set_container(chdf); chdf%nstep = nstep
+            call set_container(chdf)
             call write_restart_hdf5(filename,chdf)
 #endif
          endif
@@ -524,7 +526,7 @@ module dataio
                     trim(problem_name),'_', run_id,'_',nres,'.res'
                endif
                call MPI_BCAST(filename, 128, MPI_CHARACTER, 0, comm, ierr)
-               call set_container(chdf); chdf%nstep = nstep
+               call set_container(chdf)
                call write_restart_hdf5(filename,chdf)
 #else /* HDF5 */
                call write_restart

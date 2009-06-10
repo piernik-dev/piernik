@@ -133,6 +133,15 @@ module func
 
 !-----------------------------------------------------------------------------
 
+   integer function strlen( string )
+      character string(0:*)
+      strlen=0
+      do while (string(strlen).NE.'')
+         strlen=strlen+1
+      enddo
+   end function strlen
+
+!-----------------------------------------------------------------------------
 #ifdef COSM_RAYS 
    subroutine div_v(ifluid)
       use mpisetup
