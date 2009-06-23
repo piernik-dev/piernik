@@ -34,7 +34,7 @@ module sweeps     ! split sweeps
     use mpisetup, only  : dt
     use arrays, only : u
     use grid, only : nx,nz
-    use shear,           only : omega
+    use shear,           only : omega, qshear
 #ifdef NEUTRAL
     use initneutral,     only : global_gradP_neu
 #endif /* NEUTRAL */
