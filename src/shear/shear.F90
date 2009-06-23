@@ -27,7 +27,7 @@
 !
 #include "piernik.def"
 module shear
-  real    :: ts, dely, eps, omega,qshear
+  real    :: ts, dely, eps, omega,qshear, dts, ddly
   integer :: delj
 
   contains
@@ -71,165 +71,77 @@ module shear
     endif
   end subroutine init_shear
 
-  subroutine yshift(ts)
-    use grid, only : dy,xmin,xmax,nyd
+  subroutine yshift(ts,dts)
+    use arrays, only : u
+    use grid, only : dy,Lx,nyd,x,nb,ny
     implicit none
-    real, intent(in) :: ts
+    real, intent(in) :: ts,dts
+    integer :: i
 
-    dely  = ts*qshear*omega*(xmax-xmin)
+    ddly  = dts * qshear*omega*Lx
+    dely  = ts  * qshear*omega*Lx
     delj  = mod(int(dely/dy),nyd)
     eps   = mod(dely,dy)/dy
-  end subroutine yshift
 #ifdef FFTW
-  subroutine unshear_fft_b(qty,xx,lb,rb,inv)
-    use mpisetup, only  : smalld
-    use grid, only   : dy,nb,xmax,xmin,nyd,ymax,ymin,nxd
-    use constants, only : dpi
-    implicit none
-    logical, optional               :: inv
-    real, dimension(:,:,:)          :: qty
-    real, dimension(:), intent(in)  :: xx
-    real ,dimension(size(xx) - 2*nb):: x
-    real, dimension(nb,size(qty,2),size(qty,3)),intent(out)  :: lb,rb
-    real, dimension(size(qty,1),size(qty,2),size(qty,3))     :: unshear_fft
-    integer :: nx,ny,nz,p,np
-    real    :: St
-
-    integer(kind=8) :: planf,planb
-
-    complex*16      , dimension(size(qty,2)/2 +1) :: ctmp
-    real(kind=8)    , dimension(size(qty,2))      :: rtmp
-    real(kind=8)    , dimension(size(qty,2)/2+1)  :: ky
-
-    integer     , parameter :: FFTW_ESTIMATE = 64
-
-    x(:) = xx(nb+1:nxd+nb)
-
-    St = dely / (xmax - xmin)
-!    St = dely
-
-    nx = size(qty,1)
-    ny = size(qty,2)
-    nz = size(qty,3)
-
-    np = ny / 2 + 1
-
-
-!    if(.not.allocated(ctmp)) allocate(ctmp(np))
-!    if(.not.allocated(rtmp)) allocate(rtmp(ny))
-!    if(.not.allocated(ky))   allocate(ky(np))
-
-    ky(1) = 0.0
-    do p = 2, np
-      ky(p) = dpi * (p-1) / ny
+    do i=LBOUND(u,1),UBOUND(u,1)
+       u(i,:,nb+1:ny-nb,:) = unshear_fft( u(i,:,nb+1:ny-nb,:), x(:),ddly)
     enddo
-    
-    St = -St * dpi / (ymax - ymin) * (nyd / dpi)
-    if (.not.present(inv)) St = -St 
+    u(:,:,1:nb,:)       = u(:,:,ny-2*nb:ny-nb,:)
+    u(:,:,ny-nb+1:ny,:) = u(:,:,nb+1:2*nb+1,:)
+#endif /* FFTW */
+  end subroutine yshift
 
 
-    call dfftw_plan_dft_r2c_1d(planf, size(rtmp), rtmp, ctmp, FFTW_ESTIMATE)
-    call dfftw_plan_dft_c2r_1d(planb, size(rtmp), ctmp, rtmp, FFTW_ESTIMATE)
-
-    do p = 1,nx
-      rtmp(:)  = qty(p,:,1)
-      call dfftw_execute(planf)
-      ctmp(:)  = ctmp(:)*exp(cmplx( 0.0, St*ky(:)*x(p) ) )
-      call dfftw_execute(planb)
-      unshear_fft(p,:,1)  = rtmp(:) / ny
-    enddo
-
-    if (present(inv)) then 
-    do p = 1,nb
-      rtmp(:)  = qty(p,:,1)
-      call dfftw_execute(planf)
-      ctmp(:)  = ctmp(:)*exp(cmplx( 0.0, St*ky(:)*x(p) ) )
-      call dfftw_execute(planb)
-      rb(p,:,1)  = rtmp(:) / ny
-
-      rtmp(:)  = qty(nx-nb+p,:,1)
-      call dfftw_execute(planf)
-      ctmp(:)  = ctmp(:)*exp(cmplx( 0.0, St*ky(:)*x(nx-nb+p) ) )
-      call dfftw_execute(planb)
-      lb(p,:,1)  = rtmp(:) / ny
-    enddo
-    else
-    do p = 1,nb
-      rtmp(:)  = qty(p,:,1)
-      call dfftw_execute(planf)
-      ctmp(:)  = ctmp(:)*exp(cmplx( 0.0, St*ky(:)*xx(nxd+nb+p) ) )
-      call dfftw_execute(planb)
-      rb(p,:,1)  = rtmp(:) / ny
-
-      rtmp(:)  = qty(nx-nb+p,:,1)
-      call dfftw_execute(planf)
-      ctmp(:)  = ctmp(:)*exp(cmplx( 0.0, St*ky(:)*xx(p) ) )
-      call dfftw_execute(planb)
-      lb(p,:,1)  = rtmp(:) / ny
-    enddo
-    endif
-
-
-    call dfftw_destroy_plan(planf)
-    call dfftw_destroy_plan(planb)
-
-!    if (allocated(rtmp))   deallocate(rtmp)
-!    if (allocated(ctmp))   deallocate(ctmp)
-!    if (allocated(ky))     deallocate(ky)
-    return
-
-  end subroutine unshear_fft_b
-  function unshear_fft(qty,x,inv)
+#ifdef FFTW
+  function unshear_fft(qty,x,ddy,inv)
     use mpisetup, only  : smalld 
-    use grid, only   : dy,nb,xmax,xmin,nyd,ymax,ymin
+    use grid, only   : dy,nb,Lx
     use constants, only : dpi
     implicit none
+    include "fftw3.f"
+    real, intent(in) :: ddy
     logical, optional               :: inv
     real, dimension(:,:,:)          :: qty
     real, dimension(:), intent(in)  :: x
     real, dimension(size(qty,1),size(qty,2),size(qty,3)) :: unshear_fft
-    integer :: nx,ny,nz,p,np
+    integer :: nx,ny,nz,p,np,q
     real    :: St
 
     integer(kind=8) :: planf,planb
 
-    complex*16      , dimension(:)    , allocatable :: ctmp
-    real(kind=8)    , dimension(:)    , allocatable :: rtmp
-    real(kind=8)    , dimension(:)    , allocatable :: ky
+    complex*16      , dimension(:)   , allocatable :: ctmp
+    real(kind=8)    , dimension(:)   , allocatable :: rtmp
+    real(kind=8)    , dimension(:)     , allocatable :: ky
 
-    integer     , parameter :: FFTW_ESTIMATE = 64
-
-    St = dely / (xmax - xmin)
-!    St = dely
+    St = - ddy / dy / Lx
+    if (.not.present(inv)) St = -St 
 
     nx = size(qty,1)
     ny = size(qty,2)
     nz = size(qty,3)
-
+   
     np = ny / 2 + 1
 
     if(.not.allocated(ctmp)) allocate(ctmp(np))
     if(.not.allocated(rtmp)) allocate(rtmp(ny))
-    if(.not.allocated(ky))   allocate(ky(np))
+    if(.not.allocated(ky)  ) allocate(  ky(np))
 
     ky(1) = 0.0
     do p = 2, np
       ky(p) = dpi * (p-1) / ny
     enddo
-    
-    St = -St * dpi / (ymax - ymin) * (nyd / dpi)
-    if (.not.present(inv)) St = -St 
 
+    call dfftw_plan_dft_r2c_1d(planf, ny, rtmp, ctmp, FFTW_ESTIMATE)
+    call dfftw_plan_dft_c2r_1d(planb, ny, ctmp, rtmp, FFTW_ESTIMATE)
 
-    call dfftw_plan_dft_r2c_1d(planf, size(rtmp), rtmp, ctmp, FFTW_ESTIMATE)
-    call dfftw_plan_dft_c2r_1d(planb, size(rtmp), ctmp, rtmp, FFTW_ESTIMATE)
-
-    do p = 1,nx
-      rtmp(:)  = qty(p,:,1)
-      call dfftw_execute(planf)
-      ctmp(:)  = ctmp(:)*exp(cmplx( 0.0, St*ky(:)*x(p) ) )
-      call dfftw_execute(planb)
-      unshear_fft(p,:,1)  = rtmp(:) / ny
+    do q = 1, nx
+       do p = 1, nz
+         rtmp(:)  = qty(q,:,p)
+         call dfftw_execute(planf)
+         ctmp(:)  = ctmp(:)*exp(cmplx( 0.0, St*ky(:)*x(q) ) )
+         call dfftw_execute(planb)
+         unshear_fft(q,:,p)  = rtmp(:) / (ny)
+       enddo
     enddo
 
     call dfftw_destroy_plan(planf)
@@ -237,7 +149,7 @@ module shear
 
     if (allocated(rtmp))   deallocate(rtmp)
     if (allocated(ctmp))   deallocate(ctmp)
-    if (allocated(ky))     deallocate(ky)
+    if (allocated(ky)  )   deallocate(ky  )
     return
 
   end function unshear_fft

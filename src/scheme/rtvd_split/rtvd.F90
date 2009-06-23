@@ -98,7 +98,9 @@ module rtvd ! split orig
 #ifdef SHEAR
       use grid,            only : x
       use shear,           only : qshear, omega
+#ifdef NEUTRAL
       use initneutral,     only : global_gradP_neu
+#endif /* NEUTRAL */
 #endif /* SHEAR */
 #ifdef COSM_RAYS
       use initcosmicrays,  only : gamma_cr, cr_active, smallecr
@@ -233,7 +235,7 @@ module rtvd ! split orig
             if(sweep .eq. 'xsweep') then
                rotaccr(ind,:) =  2.0*omega*vy0(ind,:) + df(ind)  ! global_gradient
             else if(sweep .eq. 'ysweep')  then
-               rotaccr(ind,:) = - 0.5*omega*vy0(ind,:)           ! with respect to global shear (2.5D)
+               rotaccr(ind,:) = (qshear - 2.0)*omega*vy0(ind,:)  ! with respect to global shear (2.5D)
             else
                rotaccr(ind,:) = 0.0
             endif

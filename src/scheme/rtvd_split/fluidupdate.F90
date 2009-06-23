@@ -37,7 +37,7 @@ subroutine fluid_update
   use dataio, only : nlog,ntsl,write_log,write_timeslice, dt_log, dt_tsl, nstep
   use timestep,   only : time_step
   use sweeps, only : sweepx,sweepy,sweepz
-#ifdef SHEAR
+#if defined SHEAR && defined FLUID_INTERACTIONS
   use sweeps, only : source_terms_y
 #endif /* SHEAR */
   use mpisetup, only : proc,dt,t
@@ -103,7 +103,7 @@ subroutine fluid_update
       t=t+dt
 
 #ifdef SHEAR
-      call yshift(t)
+      call yshift(t,dt)
       if(nxd /= 1) call bnd_u('xdim')
       if(nyd /= 1) call bnd_u('ydim')
 #endif /* SHEAR */
@@ -148,7 +148,7 @@ subroutine fluid_update
          nhdf = nhdf + 1
 #endif /* DEBUG */
       else
-#ifdef SHEAR 
+#if defined SHEAR && defined FLUID_INTERACTIONS
          call source_terms_y
 #endif /* SHEAR */
       endif
@@ -182,7 +182,7 @@ subroutine fluid_update
       t=t+dt
       
 #ifdef SHEAR
-      call yshift(t)
+      call yshift(t,dt)
       if(nxd /= 1) call bnd_u('xdim')
       if(nyd /= 1) call bnd_u('ydim')
 #endif /* SHEAR */
@@ -230,7 +230,7 @@ subroutine fluid_update
          nhdf = nhdf + 1
 #endif /* DEBUG */
       else 
-#ifdef SHEAR
+#if defined SHEAR && defined FLUID_INTERACTIONS
          call source_terms_y
 #endif /* SHEAR */
       endif

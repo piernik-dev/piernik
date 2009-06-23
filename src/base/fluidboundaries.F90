@@ -74,12 +74,16 @@ module fluidboundaries
       real, allocatable :: send_left(:,:,:,:),recv_left(:,:,:,:)
 #ifdef SHEAR_BND
       real, allocatable :: send_right(:,:,:,:),recv_right(:,:,:,:)
+#ifdef FFTW
+      real, allocatable, dimension(:,:,:) :: temp
+#endif /* FFTW */
 #endif /* SHEAR_BND */
 ! MPI block comunication
 
       select case (dim)
       case ('xdim')
 #ifdef SHEAR_BND
+#ifndef FFTW
          allocate(send_right(nvar,nb,ny,nz), send_left(nvar,nb,ny,nz), &
                   recv_left(nvar,nb,ny,nz), recv_right(nvar,nb,ny,nz) )
          send_left(:,:,:,:)          =  u(:,nb+1:2*nb,:,:)
@@ -185,6 +189,21 @@ module fluidboundaries
          u(iarr_all_dn(1),1:nb,:,:)              = max(u(iarr_all_dn(1),1:nb,:,:),smalld)
          u(iarr_all_dn(1),nxb+nb+1:nxb+2*nb,:,:) = max(u(iarr_all_dn(1),nxb+nb+1:nxb+2*nb,:,:),smalld)
          deallocate(send_left,send_right,recv_left,recv_right)
+#else /* FFTW */
+         if( (bnd_xl == 'she').and.(bnd_xr == 'she')) then   ! 2d ONLY !!!!!!!
+            allocate(temp(nb,nyd,nz))
+            do i = LBOUND(u,1), UBOUND(u,1)
+
+               temp(:,:,:) = unshear_fft(u(i,nxd+1:nxd+nb,nb+1:ny-nb,:),x(nxd+1:nxd+nb),dely,.true.)
+               u(i,1:nb,nb+1:ny-nb,:) = unshear_fft(temp(:,:,:), x(1:nb),dely)
+
+               temp(:,:,:) = unshear_fft(u(i,nb+1:2*nb,nb+1:ny-nb,:),x(nb+1:2*nb),dely,.true.)
+               u(i,nxd+nb+1:nxd+2*nb,nb+1:ny-nb,:) = unshear_fft(temp(:,:,:),x(nxd+nb+1:nxd+2*nb),dely)
+
+            enddo
+            deallocate(temp)
+         endif
+#endif /* FFTW */
 #else /* SHEAR_BND */
          if(pxsize .gt. 1) then
 

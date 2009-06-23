@@ -29,14 +29,18 @@
 module sweeps     ! split sweeps
   contains
 
-#ifdef SHEAR
+#if defined SHEAR && defined FLUID_INTERACTIONS
   subroutine source_terms_y
     use mpisetup, only  : dt
     use arrays, only : u
     use grid, only : nx,nz
     use shear,           only : omega
+#ifdef NEUTRAL
     use initneutral,     only : global_gradP_neu
+#endif /* NEUTRAL */
+#ifdef DUST
     use initdust,        only : dragc_gas_dust
+#endif /* DUST */
     use fluidindex,      only : iarr_all_dn, iarr_all_mx, iarr_all_my, nvar
     use interactions
 
@@ -50,7 +54,6 @@ module sweeps     ! split sweeps
     u1(:,:,:) = u(:,:,1,:)
 
     do i = 1,2 
-  
        where(u1(iarr_all_dn,:,:) > 0.0)
           vxr(:,:,:) = u1(iarr_all_mx,:,:) / u1(iarr_all_dn,:,:)
           v_r(:,:,:) = u1(iarr_all_my,:,:) / u1(iarr_all_dn,:,:)
@@ -67,7 +70,7 @@ module sweeps     ! split sweeps
             rotaccr(ind,:,:) = - dragc_gas_dust * 1.0    * (v_r(2,:,:) - v_r(1,:,:))
           endif
 !         rotaccr(ind,:,:) = rotaccr(ind,:,:) - 2.0*omega*vxr(ind,:,:)
-          rotaccr(ind,:,:) = rotaccr(ind,:,:) - 0.5*omega*vxr(ind,:,:)
+          rotaccr(ind,:,:) = rotaccr(ind,:,:) - (qshear-2.0)*omega*vxr(ind,:,:)
        enddo
    
        where(u1(iarr_all_dn,:,:) > 0.0)
