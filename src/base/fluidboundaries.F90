@@ -190,18 +190,45 @@ module fluidboundaries
          u(iarr_all_dn(1),nxb+nb+1:nxb+2*nb,:,:) = max(u(iarr_all_dn(1),nxb+nb+1:nxb+2*nb,:,:),smalld)
          deallocate(send_left,send_right,recv_left,recv_right)
 #else /* FFTW */
-         if( (bnd_xl == 'she').and.(bnd_xr == 'she')) then   ! 2d ONLY !!!!!!!
-            allocate(temp(nb,nyd,nz))
+
+         if( (bnd_xl == 'she').and.(bnd_xr == 'she')) then 
+
+         if(allocated(send_right)) deallocate(send_right)
+         allocate(send_right(nvar,nb,nyd,nz))
+         
+         if(allocated(send_left)) deallocate(send_left)
+         allocate(send_left(nvar,nb,nyd,nz))
+
+         if(allocated(recv_left)) deallocate(recv_left)
+         allocate(recv_left(nvar,nb,nyd,nz))
+
+         if(allocated(recv_right)) deallocate(recv_right)
+         allocate(recv_right(nvar,nb,nyd,nz))
+
             do i = LBOUND(u,1), UBOUND(u,1)
-
-               temp(:,:,:) = unshear_fft(u(i,nxd+1:nxd+nb,nb+1:ny-nb,:),x(nxd+1:nxd+nb),dely,.true.)
-               u(i,1:nb,nb+1:ny-nb,:) = unshear_fft(temp(:,:,:), x(1:nb),dely)
-
-               temp(:,:,:) = unshear_fft(u(i,nb+1:2*nb,nb+1:ny-nb,:),x(nb+1:2*nb),dely,.true.)
-               u(i,nxd+nb+1:nxd+2*nb,nb+1:ny-nb,:) = unshear_fft(temp(:,:,:),x(nxd+nb+1:nxd+2*nb),dely)
-
+               send_left(i,1:nb,:,:)   = unshear_fft(u(i,nb+1:2*nb,nb+1:ny-nb,:),x(nb+1:2*nb),dely,.true.)
+               send_right(i,1:nb,:,:)  = unshear_fft(u(i,nx-2*nb+1:nx-nb,nb+1:ny-nb,:),x(nx-2*nb+1:nx-nb),dely,.true.)
             enddo
-            deallocate(temp)
+
+            CALL MPI_ISEND   (send_left , nvar*nyd*nz*nb, MPI_DOUBLE_PRECISION, procxl, 10, comm, req(1), ierr)
+            CALL MPI_ISEND   (send_right, nvar*nyd*nz*nb, MPI_DOUBLE_PRECISION, procxr, 20, comm, req(3), ierr)
+            CALL MPI_IRECV   (recv_left , nvar*nyd*nz*nb, MPI_DOUBLE_PRECISION, procxl, 20, comm, req(2), ierr)
+            CALL MPI_IRECV   (recv_right, nvar*nyd*nz*nb, MPI_DOUBLE_PRECISION, procxr, 10, comm, req(4), ierr)
+
+            do ireq = 1,4
+               call MPI_WAIT(req(ireq),status(1,ireq),ierr)
+            enddo
+
+            do i = LBOUND(u,1), UBOUND(u,1)
+               u(i,1:nb,nb+1:ny-nb,:) = unshear_fft(recv_left(i,1:nb,:,:), x(1:nb),dely)
+               u(i,nx-nb+1:nx,nb+1:ny-nb,:) = unshear_fft(recv_right(i,1:nb,:,:),x(nx-nb+1:nx),dely)
+            enddo
+
+         deallocate(send_right)
+         deallocate(send_left)
+         deallocate(recv_left)
+         deallocate(recv_right)
+
          endif
 #endif /* FFTW */
 #else /* SHEAR_BND */

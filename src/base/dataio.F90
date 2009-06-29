@@ -845,6 +845,8 @@ module dataio
 
 ! write data
 !
+         where( abs(wa) < 1.e-12 )  wa = sign(1e-12,wa)
+         
          sds_id = sfcreate(sd_id, varname, 5, rank, dims)
          iostatus = sfscompress(sds_id, comp_type, comp_prm)
          tmparr = real(wa(iso:ieo,jso:jeo,kso:keo),4)
@@ -1385,7 +1387,12 @@ module dataio
 #endif /* IONIZED */
 #ifdef NEUTRAL
       cs_iso2 = cs_iso_neu2
+#else
+#ifndef IONIZED
+      cs_iso2 = 0.0
+#endif
 #endif /* NEUTRAL */
+
 
       if (proc .eq. 0) then
          write (tsl_file,'(a,a1,a,a1,a3,a1,i3.3,a4)') &

@@ -86,7 +86,7 @@ module shear
     do i=LBOUND(u,1),UBOUND(u,1)
        u(i,:,nb+1:ny-nb,:) = unshear_fft( u(i,:,nb+1:ny-nb,:), x(:),ddly)
     enddo
-    u(:,:,1:nb,:)       = u(:,:,ny-2*nb:ny-nb,:)
+    u(:,:,1:nb,:)       = u(:,:,ny-2*nb+1:ny-nb,:)
     u(:,:,ny-nb+1:ny,:) = u(:,:,nb+1:2*nb,:)
 #endif /* FFTW */
   end subroutine yshift

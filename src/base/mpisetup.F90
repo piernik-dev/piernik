@@ -322,6 +322,7 @@ module mpisetup
 #ifdef SHEAR_BND
          if(pysize > 1) stop 'Shear-pediodic boundary conditions do not permit pysize > 1'
 
+#ifndef FFTW
          if(pcoords(1) == 0) then
             bnd_xl = 'she'
          else
@@ -333,6 +334,8 @@ module mpisetup
          else
             bnd_xr = 'mpi'
          endif
+#endif
+
 #else /* SHEAR_BND */
          if(procxl /= MPI_PROC_NULL .and. procxl /= proc) bnd_xl = 'mpi'
          if(procxr /= MPI_PROC_NULL .and. procxr /= proc) bnd_xr = 'mpi'

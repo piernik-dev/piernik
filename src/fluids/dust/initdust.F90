@@ -50,7 +50,7 @@ module initdust
 
     namelist /FLUID_DUST/ dragc_gas_dust, dalpha
     
-      dragc_gas_dust  = 0.0
+      dragc_gas_dust  = 1.0
       dalpha = 1.0
 
       if(proc .eq. 0) then
