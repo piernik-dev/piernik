@@ -1,0 +1,27 @@
+/* choosing fluids */
+#define NEUTRAL
+#define DUST
+
+/* adiabatic or isothermal */
+#define ISO
+
+/* choosing freezing speed */
+#undef      GLOBAL_FR_SPEED
+#define     LOCAL_FR_SPEED
+
+/* choosing flux limiter */
+#define VANLEER
+
+/* physics including */
+#define FLUID_INTERACTIONS
+#define COLLISIONS
+
+/* gravity type choosing */
+#define GRAV
+#define GRAV_NULL
+#define SHEAR
+#define FFTW
+#define SHEAR_BND
+
+#define HDF5
+

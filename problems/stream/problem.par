@@ -1,0 +1,94 @@
+ $DOMAIN_SIZES
+    nxd = 128
+    nyd = 128
+    nzd = 128
+    nb = 5
+ /
+
+ $MPI_BLOCKS
+    pxsize = 1
+    pysize = 1
+    pzsize = 1
+ /
+
+ $RESTART_CONTROL
+    restart  = 'last'
+    new_id   = ''
+    nrestart = 0
+ /
+
+ $END_CONTROL
+    tend   = 400.0
+    nend   = 1000000
+ /
+
+ $OUTPUT_CONTROL
+    dt_hdf  = 0.5
+    dt_res  = 50.0
+    dt_log  = 0.5
+    dt_tsl  = 0.1
+    vars(1) = 'dens'
+    vars(2) = 'velx'
+    vars(3) = 'vely'
+    vars(4) = 'velz'
+    vars(5) = 'ener'
+    domain  = 'phys_domain'
+ /
+
+ $BOUNDARIES
+    bnd_xl = 'she'
+    bnd_xr = 'she'
+    bnd_yl = 'per'
+    bnd_yr = 'per'
+    bnd_zl = 'per'
+    bnd_zr = 'per'
+ /
+
+ $DOMAIN_LIMITS
+    xmin   = -0.5
+    xmax   =  0.5
+    ymin   = -0.5
+    ymax   =  0.5
+    zmin   = -0.5
+    zmax   =  0.5
+ /
+
+ $FLUID_NEUTRAL
+    gamma_neu   = 1.0
+    cs_iso_neu  = 1.0
+    eta_gas_neu = 0.005
+    csvk        = 0.1
+ /
+
+ $FLUID_DUST
+    dragc_gas_dust = 1.0
+ /
+
+ $INTERACTIONS
+    cfl_interact = 0.01
+ /
+
+ $NUMERICAL_SETUP
+    cfl    = 0.8
+    cfr_smooth = 0.1
+    smalld = 1.e-4
+    smallei= 1.e-5
+    integration_order = 2
+ /
+
+ $PROBLEM_CONTROL
+    problem_name ='stream'
+    run_id  =  'BB3'
+    rhog    =  1.0
+    eps     =  1.0
+    amp     =  1.e-6
+    linear  = .false.
+ /
+
+ $GRAVITY
+ /
+
+ $SHEARING
+   qshear = 1.5
+   omega  = 1.0
+ /
