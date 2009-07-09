@@ -153,7 +153,8 @@ if( grep { /GRAV/ }  @d) {
    push(@addons, "../src/gravity/hydrostatic.F90");
    }
 if( grep { /SELF_GRAV/ }  @d) {push(@addons, "../src/gravity/poissonsolver.F90");}
-if( grep { /SHEAR/}  @d) {push(@addons, "../src/shear/shear.F90");}
+if( grep { /SHEAR/ }  @d) {push(@addons, "../src/shear/shear.F90");}
+if( grep { /HDF5/ } @d) {push(@addons, "../src/hdf5/dataio_hdf5.F90");}
 
 push(@addons, "../src/fluids/initfluids.F90");
 push(@addons, "../src/fluids/fluidindex.F90");
