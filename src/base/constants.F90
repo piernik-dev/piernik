@@ -58,6 +58,23 @@ module constants     ! module containg numerical and physical constants !!!
    real, parameter :: kg =         1.0e3*gram
    real, parameter :: Msun =       1.0
 
+#elif defined (PLN)
+! PLN  uses: length --> AU,     mass --> Mjup,        time --> yr,        miu0 --> 4*pi,    temperature --> kelvin
+! length units:
+   real, parameter :: cm =         1.0/1.49598e13
+   real, parameter :: metr =       1.0e2*cm
+   real, parameter :: AU =         1.0
+   real, parameter :: pc =         206264.806*AU
+! time units:
+   real, parameter :: sek =        1.0/365.2652/24.0/3600.0
+   real, parameter :: year =       1.0
+   real, parameter :: myr =        1.0e6
+! mass units:
+   real, parameter :: gram =       1.0/1.8986e30
+   real, parameter :: kg =         1.0e3*gram
+   real, parameter :: Msun =       1047.4
+
+
 #elif defined (KSG)
 ! KSG  uses: length --> kpc,    mass --> 10^6*Msun,   time --> Gyr,        miu0 --> 4*pi,    temperature --> kelvin
 ! length units:
@@ -140,7 +157,7 @@ module constants     ! module containg numerical and physical constants !!!
 #ifndef SCALED
 ! length units:
    real, parameter :: km =         1.0e5*cm
-   real, parameter :: au =         1.49597892e13*cm
+!   real, parameter :: au =         1.49597892e13*cm
    real, parameter :: kpc =        1000.0*pc
    real, parameter :: lyr =        9.4605e17*cm
 ! time units:

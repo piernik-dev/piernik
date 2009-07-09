@@ -183,7 +183,7 @@ module gravity
           do j = 1, ny
              do k = 1, nz
                rc = dsqrt(x(i)**2+y(j)**2)
-               r2 = x(i)**2 + y(j)**2 + z(k)**2
+               r2 = (x(i) - ptm_x)**2 + (y(j) - ptm_y)**2 + (z(k) - ptm_z)**2
                gp(i,j,k) = -newtong*ptmass / dsqrt(r2 + r_smooth**2)
              enddo
           enddo
