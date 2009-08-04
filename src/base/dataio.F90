@@ -44,7 +44,7 @@ module dataio
 #endif /* SN_SRC */
 #ifdef HDF5
    use dataio_hdf5, only : write_hdf5, write_restart_hdf5, read_restart_hdf5, &
-       init_hdf5, cleanup_hdf5
+       init_hdf5, cleanup_hdf5, write_plot
 #endif /* HDF5 */
    implicit none
 
@@ -536,6 +536,10 @@ module dataio
             step_res = nstep
          endif
       endif
+#ifdef HDF5
+      call set_container(chdf)
+      call write_plot(chdf)
+#endif /* HDF5 */
 
    end subroutine write_data
 
@@ -1462,7 +1466,7 @@ module dataio
           = 0.5 * (u(iarr_all_mx(1),is:ie,js:je,ks:ke)**2   &
                  + u(iarr_all_my(1),is:ie,js:je,ks:ke)**2   &
                  + u(iarr_all_mz(1),is:ie,js:je,ks:ke)**2)/ &
-                   u(iarr_all_dn(1),is:ie,js:je,ks:ke)
+                   max(u(iarr_all_dn(1),is:ie,js:je,ks:ke),smalld)
       ekin = sum(wa(is:ie,js:je,ks:ke)) * dvol
       call mpi_allreduce(ekin, tot_ekin, 1, mpi_real8, mpi_sum, comm3d, ierr)
 

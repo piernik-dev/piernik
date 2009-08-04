@@ -1340,9 +1340,9 @@ module dataio_hdf5
         fe = strlen(chdf%domain)
         call h5ltset_attribute_string_f(file_id,"/","domain", &
            chdf%domain(1:fe),error)
-        fe = strlen(run_id)
+        !fe = strlen(run_id)
         call h5ltset_attribute_string_f(file_id,"/","run id", &
-           run_id(1:fe),error)
+           run_id(1:3),error)
 
 
         CALL h5fclose_f(file_id, error)
