@@ -1,3 +1,4 @@
+#define HDF5
 /* choosing fluids */
 #define NEUTRAL
 #define DUST

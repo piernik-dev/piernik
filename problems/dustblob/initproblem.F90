@@ -158,7 +158,8 @@ module initproblem
                u(imxd,i,j,k) = 0.0
                u(imzd,i,j,k) = 0.0
 #ifndef ISO
-               u(ienn,i,j,:) = p_gas/(gamma_neu-1.0) + 0.5*(u(imxn)**2+u(imyn)**2+u(imzn)**2)/u(idnn)
+               u(ienn,i,j,:) = p_gas/(gamma_neu-1.0) + 0.5*(u(imxn,i,j,k)**2 + &
+                  u(imyn,i,j,k)**2+u(imzn,i,j,k)**2)/u(idnn,i,j,k)
 #endif /* ISO */
             enddo
          enddo
