@@ -1,7 +1,7 @@
  $DOMAIN_SIZES
     nxd = 64
     nyd = 64
-    nzd = 1
+    nzd = 64
  /
  $MPI_BLOCKS
     pxsize = 1
@@ -17,12 +17,16 @@
 
  $END_CONTROL
     tend   = 0.0015
-    nend   = 5
+    nend   = 10
  /
 
  $OUTPUT_CONTROL
+    ix = 32
+    iy = 32
+    iz = 32
     dt_hdf  = 0.1
     dt_res  = 0.1
+    dt_plt  = 0.0001
     dt_log  = 0.00001
     dt_tsl  = 0.001
     vars(1) = 'dens'

@@ -2,6 +2,7 @@
 #define IONIZED
 #define MAGNETIC
 #undef  NEUTRAL
+#define HDF5
 /* choosing freezing speed */
 #define LOCAL_FR_SPEED
 
