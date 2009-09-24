@@ -124,9 +124,12 @@ module initproblem
             do k = 1,nz
                zk = z(k)
                vx = 0.0
+#ifndef FFTW
                vy = -qshear*omega*xi
+#else  /* FFTW */
+               vy = 0.0
+#endif /* FFTW */
                vz = 0.0
-
                if(abs(yj) <= r0 ) then
                   u(idni,i,j,k) = d0
                else

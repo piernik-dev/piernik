@@ -1,14 +1,13 @@
 /* number of different fluids */
 #define IONIZED
-#define MAGNETIC
-#define MAGNETIC
-#define RESISTIVE
+#undef  MAGNETIC
+#undef  RESISTIVE
 
 /* adiabatic or isothermal */
 #undef ISO
 
 /* choosing freezing speed */
-#define GLOBAL_FR_SPEED
+#define LOCAL_FR_SPEED
 
 /* choosing flux limiter */
 #define VANLEER
@@ -18,4 +17,6 @@
 
 /* numerical solutions and limitations */
 #define SHEAR
+#define SHEAR_BND
+#define FFTW
 
