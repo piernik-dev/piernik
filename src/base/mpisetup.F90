@@ -258,8 +258,9 @@ module mpisetup
                write(3,*)
                write(3,*) 'PROCESSES:'
                do iproc = 0, nproc-1
-                  write(3,"(a6,i2,a7,i6,a1,a,a7,a)") ' proc=',iproc,',  &
-                        pid=',pid_all(iproc), '@',trim(host_all(iproc)), ',  cwd=',trim(cwd)
+                  write(3,"(a6,i4,a7,i7,a1,a,a7,a)") " proc=",iproc, &
+                           ", pid= ",pid_all(iproc), "@",trim(host_all(iproc)), &
+                           ",  cwd=",trim(cwd)
                enddo
                write(3,*)
 

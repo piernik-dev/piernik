@@ -69,10 +69,12 @@ subroutine fluid_update
 #endif /* SELF_GRAV */
 
   implicit none
-  logical, save :: first_run = .true.
 #ifdef DEBUG
   integer system, syslog
 #endif /* DEBUG */
+#ifdef RESISTIVE
+  logical, save :: first_run = .true.
+#endif /* RESISTIVE */
 
   call time_step
 

@@ -436,7 +436,6 @@ module dataio_hdf5
       character(LEN=2) :: plane
       logical, dimension(3) :: remain
       integer :: comm2d,lp,ls,xn,error
-      logical, save :: first_entry = .true.
       logical :: ok_plt_var
       real, dimension(:,:), allocatable :: send
       real, dimension(:,:,:), allocatable :: temp
@@ -450,15 +449,12 @@ module dataio_hdf5
       character(LEN=32) ::fname
       character(LEN=12) :: dname
 
-      integer(HSIZE_T) :: width, height
       integer(HID_T) :: file_id       !> File identifier
-      integer(HID_T) :: dset_id       !> Dataset identifier
       integer(HID_T) :: gr_id,gr2_id  !> Group indentifier
       integer(HSIZE_T), dimension(2) :: dims
       integer :: rank
 
       integer :: nib,nid,njb,njd,nkb,pisize,pjsize, fe
-      logical :: fexist
       integer(SIZE_T) :: bufsize
 
       rank = 2
@@ -590,7 +586,6 @@ module dataio_hdf5
      integer, dimension(3) :: dims
      integer :: error, rank = 4
 
-     real, dimension(1) :: rbuf
      integer(SIZE_T) :: bufsize = 1
 
      nu = nvar
@@ -986,7 +981,6 @@ module dataio_hdf5
      integer(HSIZE_T),  DIMENSION(:), allocatable :: block
      integer(HSIZE_T),  DIMENSION(:), allocatable :: dimsf, dimsfi, chunk_dims
 
-     integer, dimension(3) :: dims
      integer :: error, rank
      logical file_exist, log_exist
 
@@ -1249,8 +1243,8 @@ module dataio_hdf5
      CHARACTER :: lfile*128, dd*4 ! File name
      CHARACTER(LEN=32) :: fname
 
-     REAL*4, ALLOCATABLE :: data (:,:,:)  ! Data to write
-     integer :: error, error_n, i
+     real(kind=4), allocatable :: data (:,:,:)  ! Data to write
+     integer :: error, i
      integer(SIZE_T) :: bufsize = 1
 
      ! Initialize HDF5 library and Fortran interfaces.

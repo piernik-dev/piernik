@@ -1,8 +1,7 @@
 PROG		 = piernik
 
-### INTEL 
-F90		 = /opt/intel/mpich2/bin/mpif90
-F90FLAGS  = -g -fpe0 -check all -traceback -fp-stack-check -heap-arrays -r8
-HDF_LIB  = /opt/intel/hdf4/lib
-MHDF_LIB = /opt/intel/hdf4/include -L/opt/intel/mkl/9.1 -L/opt/intel/fftw -lfftw3
-
+### GNU hydra AMD64
+F90		 = /usr/bin/h5pfc
+F90FLAGS  = -g -fdefault-real-8 -ffpe-trap=zero,overflow,underflow -Wall -W -pedantic-errors -ffree-form -std=gnu -fimplicit-none 
+HDF_LIB  = . -lfftw3 -llapack -lgfortran -lc
+MHDF_LIB = .

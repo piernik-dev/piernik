@@ -114,7 +114,7 @@ module rtvd ! split orig
 
       implicit none
 
-      integer                   :: i1,i2, n, istep, i, ind
+      integer                   :: i1,i2, n, istep, ind
       character(len=6)          :: sweep
 
       real                      :: dt,dx,dtx

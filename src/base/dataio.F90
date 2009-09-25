@@ -164,7 +164,7 @@ module dataio
       integer(kind=1)      :: getpid
       integer(kind=1)      :: hostnm
       integer(kind=1)      :: system
-      integer              :: system_status, i, j
+      integer              :: system_status, i
       character(LEN=160)   :: system_command
       character(LEN=100)   :: par_file, tmp_log_file
 
@@ -2006,8 +2006,6 @@ module dataio
          endif
       endif
 
-770 format(5x,a18,(1x,e15.9),4(1x,i4))
-
 771 format(5x,a18,(1x,e15.9),16x,5(1x,i4))
 777 format(5x,a18,(1x,e15.9),2x,a3,(1x,e10.4),5(1x,i4))
 
@@ -2047,7 +2045,7 @@ module dataio
       character user_msg_time(10)*80,system_msg_time(10)*80
 
       character, save :: user_msg_time_old*80,system_msg_time_old*80
-      character*160 syscom
+      character(len=265) :: syscom
       integer i
       integer(kind=1) :: system
 
@@ -2149,7 +2147,7 @@ module dataio
    subroutine rm_file(file_name)
       implicit none
       character*(*) file_name
-      character*160 syscom
+      character(len=265) syscom
       logical exist
       integer(kind=1) :: system
 
