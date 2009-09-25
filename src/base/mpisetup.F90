@@ -370,7 +370,7 @@ module mpisetup
          implicit none
          call MPI_BARRIER(comm,ierr)
          call sleep(5)
-         call MPI_FINALIZE()
+         call MPI_FINALIZE(ierr)
 
       end subroutine mpistop
 
