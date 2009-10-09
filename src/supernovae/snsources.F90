@@ -18,15 +18,17 @@
 !    along with PIERNIK.  If not, see <http://www.gnu.org/licenses/>.
 !
 !    Initial implemetation of PIERNIK code was based on TVD split MHD code by
-!    Ue-Li Pen 
+!    Ue-Li Pen
 !        see: Pen, Arras & Wong (2003) for algorithm and
-!             http://www.cita.utoronto.ca/~pen/MHD 
-!             for original source code "mhd.f90" 
-!   
+!             http://www.cita.utoronto.ca/~pen/MHD
+!             for original source code "mhd.f90"
+!
 !    For full list of developers see $PIERNIK_HOME/license/pdt.txt
 !
 #include "piernik.def"
-
+!>
+!! \brief Module containing subroutines and functions that govern supernovae insert
+!<
 module snsources
    use initproblem, only : amp_ecr_sn,ethu,f_sn, h_sn, r_sn
 
@@ -44,7 +46,10 @@ module snsources
 
 
    contains
-
+!>
+!! \brief Main routine to insert one supernova event
+!! \author M. Hanasz
+!<
    subroutine random_sn
 ! Written by: M. Hanasz
       use mpisetup, only  : t
@@ -78,7 +83,11 @@ module snsources
    end subroutine random_sn
 
 !--------------------------------------------------------------------------
-
+!>
+!! \brief Routine that inserts an amount of cosmic ray energy around the position of supernova
+!! \param pos real, dimension(3), array of supernova position components
+!! \author M. Hanasz
+!<
    subroutine cr_sn(pos)
 ! Written by: M. Hanasz
       use grid,   only : nx,ny,nz,x,y,z,Lx,Ly
@@ -123,10 +132,14 @@ module snsources
    end subroutine cr_sn
 
 !--------------------------------------------------------------------------
-
+!>
+!! \brief Routine that determines the position of next supernova
+!! \return pos @e real,  @e dimension(3), array of supernova position components
+!! \author M. Hanasz
+!<
    subroutine rand_coords(pos)
 ! Written by M. Hanasz
-      use grid,   only : Lx,Ly,xmin,ymin,nzd 
+      use grid,   only : Lx,Ly,xmin,ymin,nzd
 #ifdef SHEAR
       use grid,   only : dy,nyd,nzd,y,js,je
 
@@ -185,7 +198,7 @@ module snsources
 !-----------------------------------------------------------------------
 
 !>
-!! \brief Function generate point on the surface of unit
+!! \brief Function generates point on the surface of unit
 !! sphere with uniform distribution and returns its latidude and longitude
 !<
    function rand_angles()
@@ -205,16 +218,22 @@ module snsources
 
    end function rand_angles
 
-    
+!>
+!! \brief Function that generates values of normal distribution (from Numerical Recipies)
+!! \return x random value of uniform distribution
+!! \return y random value of uniform distribution
+!! \return @e real, random value of normal distribution
+!! \todo Change function @c gasdev into another one
+!<
        function gasdev(x,y)
-    
+
           implicit none
           real x, y, x1, y1,  r
           real gasdev, rand(2)
           real fac
           real, save :: gset
           integer, save :: iset, irand
-    
+
           if (iset.eq.0) then
 1            x1=2.*x-1.
              y1=2.*y-1.
@@ -236,5 +255,5 @@ module snsources
           endif
           return
        end function gasdev
-    
+
 end module snsources
