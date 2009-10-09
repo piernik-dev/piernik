@@ -27,6 +27,9 @@
 !
 #include "piernik.def"
 
+!>
+!! \brief Module containing all main subroutines and functions that govern gravity force in the code
+!<
 module gravity
 
    use constants
@@ -42,6 +45,9 @@ module gravity
 
    contains
 
+!>
+!! \brief Routine that sets the initial values of gravity parameters from namelist @c GRAVITY
+!<
    subroutine init_grav
       use errh, only : namelist_errh
       use mpisetup
@@ -136,10 +142,13 @@ module gravity
    end subroutine init_grav
 
 !--------------------------------------------------------------------------
+!>
+!! \brief Routine that compute values of gravitational potential filling in gp array and setting gp_status character string
+!<
    subroutine grav_pot_3d
       use arrays, only     : gp
       use grid, only       : nx,ny,nz,x,y,z
-      use mpisetup, only   : smalld 
+      use mpisetup, only   : smalld
       use initfluids, only : cs_iso2
 #ifdef GRAV_USER
       use gravity_user, only : grav_pot_user
@@ -150,7 +159,7 @@ module gravity
       real    :: r2, rc, fr
 
       gp_status = ''
-     
+
 #ifdef GRAV_NULL
       gp(:,:,:) = 0.0      ! do nothing
 
@@ -188,7 +197,7 @@ module gravity
              enddo
           enddo
        enddo
-         
+
 #elif defined (GRAV_PTFLAT)
        do i = 1, nx
           do j = 1, ny
@@ -218,6 +227,15 @@ module gravity
    end subroutine grav_pot_3d
 
 !--------------------------------------------------------------------------
+!>
+!! \brief Routine that compute values of gravitational acceleration
+!! \param sweep string of characters that points out the current sweep direction
+!! |param i1 integer, number of column in the first direction after one pointed out by sweep
+!! \param i2 integer, number of column in the second direction after one pointed out by sweep
+!! \param xsw 1D position array in the direction pointed out by sweep
+!! \param n number of elements of xsw array
+!! \return grav 1D array of gravitational acceleration values computed for positions from xsw
+!<
 
    subroutine grav_accel(sweep, i1,i2, xsw, n, grav)
       use grid, only : nb
@@ -271,6 +289,14 @@ module gravity
 
    end subroutine grav_accel
 
+!>
+!! \brief Routine that compute values of gravitational acceleration using gravitational potential array gp
+!! \param sweep string of characters that points out the current sweep direction
+!! |param i1 integer, number of column in the first direction after one pointed out by sweep
+!! \param i2 integer, number of column in the second direction after one pointed out by sweep
+!! \param n number of elements of returned array grav
+!! \return grav 1D array of gravitational acceleration values computed for positions from xsw
+!<
    subroutine grav_pot2accel(sweep, i1,i2, n, grav)
       use arrays, only : gp
       use grid, only : dl, xdim, ydim, zdim
@@ -295,7 +321,9 @@ module gravity
    end subroutine grav_pot2accel
 
 !--------------------------------------------------------------------------
-
+!>
+!! \brief Routine that uses gravity acceleration given in grav_accel to compute values of gravitational potential filling in gp array
+!<
    subroutine grav_accel2pot
       use mpisetup
       use arrays, only : gp

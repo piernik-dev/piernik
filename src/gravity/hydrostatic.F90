@@ -18,19 +18,29 @@
 !    along with PIERNIK.  If not, see <http://www.gnu.org/licenses/>.
 !
 !    Initial implemetation of PIERNIK code was based on TVD split MHD code by
-!    Ue-Li Pen 
+!    Ue-Li Pen
 !        see: Pen, Arras & Wong (2003) for algorithm and
-!             http://www.cita.utoronto.ca/~pen/MHD 
-!             for original source code "mhd.f90" 
-!   
+!             http://www.cita.utoronto.ca/~pen/MHD
+!             for original source code "mhd.f90"
+!
 !    For full list of developers see $PIERNIK_HOME/license/pdt.txt
 !
 #include "piernik.def"
 
+!>
+!! \brief Module containing a subroutine that arranges hydrostatic equilibrium in the vertical (z) direction
+!<
 module hydrostatic
 #ifdef GRAV
   contains
-
+!>
+!! \brief Routine that arranges hydrostatic equilibrium in the vertical (z) direction
+!! \param iia integer, number of a column in the x direction
+!! \param jja integer, number of a column in the y direction
+!! \param d0 real, density value in the midplane
+!! \param csim2 real, square value of sound speed
+!! \return dprof array of reals, computed density distribution in vertical direction
+!<
     subroutine hydrostatic_zeq(iia,jja, d0, csim2, dprof)
       use constants
       use mpisetup, only : proc
@@ -48,7 +58,7 @@ module hydrostatic
 
       real, allocatable, dimension(:)  :: zs, dprofs, gprofs, gpots
       integer :: ksub, ksmid, k, ia, ja, nstot, iter, itermx
-      real    :: dzs, factor, dmid, ddmid 
+      real    :: dzs, factor, dmid, ddmid
 
 !      csim2 = cs_iso2*(1.0+alpha)
 
@@ -56,7 +66,7 @@ module hydrostatic
       ja = min(ny,max(1, jja))
 
       nstot=nsub*nzt
-   
+
       allocate(zs(nstot), dprofs(nstot), gprofs(nstot), gpots(nstot))
       itermx = 20
       if(d0 .gt. small) then
