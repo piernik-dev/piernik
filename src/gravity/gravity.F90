@@ -230,7 +230,7 @@ module gravity
 !>
 !! \brief Routine that compute values of gravitational acceleration
 !! \param sweep string of characters that points out the current sweep direction
-!! |param i1 integer, number of column in the first direction after one pointed out by sweep
+!! \param i1 integer, number of column in the first direction after one pointed out by sweep
 !! \param i2 integer, number of column in the second direction after one pointed out by sweep
 !! \param xsw 1D position array in the direction pointed out by sweep
 !! \param n number of elements of xsw array
@@ -292,7 +292,7 @@ module gravity
 !>
 !! \brief Routine that compute values of gravitational acceleration using gravitational potential array gp
 !! \param sweep string of characters that points out the current sweep direction
-!! |param i1 integer, number of column in the first direction after one pointed out by sweep
+!! \param i1 integer, number of column in the first direction after one pointed out by sweep
 !! \param i2 integer, number of column in the second direction after one pointed out by sweep
 !! \param n number of elements of returned array grav
 !! \return grav 1D array of gravitational acceleration values computed for positions from xsw
