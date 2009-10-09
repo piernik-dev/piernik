@@ -46,7 +46,7 @@ module arrays
 #endif /* GRAV */
 
 #ifdef COSM_RAYS
-   real, allocatable, dimension(:,:,:)       :: divvel   !< Array storing \f$\nabla\cdot\mathbf{v}\f$, needed in comic ray transport
+   real, allocatable, dimension(:,:,:)       :: divvel   !< Array storing \f$\nabla\cdot\mathbf{v}\f$, needed in cosmic ray transport
 
 #endif /* COSM_RAYS  */
 
