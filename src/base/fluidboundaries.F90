@@ -36,13 +36,15 @@ module fluidboundaries
       use grid,            only : nb, nxd, nyd, nzd,x,y,z,nzb,nyb,nxb,nx,ny,nz
       use fluidindex,      only : nvar, iarr_all_dn,iarr_all_mx,iarr_all_my,iarr_all_mz, nfluid
       use arrays,          only : u, b
-      use initfluids,      only : gamma, cs_iso2
 #ifdef COSM_RAYS
       use initcosmicrays,  only : smallecr
 #endif /* COSM_RAYS */
 #ifndef ISO
       use fluidindex,      only : iarr_all_en
 #endif /* ISO */
+
+      use initfluids,      only : gamma, cs_iso2
+
 #ifdef GRAV
       use gravity,         only : grav_accel, nsub, tune_zeq_bnd
 #endif /* GRAV */
@@ -78,8 +80,8 @@ module fluidboundaries
       real, allocatable, dimension(:,:,:) :: temp
 #endif /* FFTW */
 #endif /* SHEAR_BND */
-! MPI block comunication
 
+! MPI block comunication
       select case (dim)
       case ('xdim')
 #ifdef SHEAR_BND
@@ -103,11 +105,11 @@ module fluidboundaries
 !
 ! przesuwamy o calkowita liczbe komorek + periodyczny wb w kierunku y
 !
-            if(nyd /= 1) then
-               send_left (:,:,nb+1:nb+nyb,:)        = cshift(send_left (:,:,nb+1:nb+nyb,:),dim=3,shift= delj)
-               send_left (:,:,1:nb,:)               = send_left (:,:,nyb+1:nyb+nb,:)
-               send_left (:,:,nb+nyb+1:nyb+2*nb,:)  = send_left (:,:,nb+1:2*nb,:)
-            endif
+         if(nyd /= 1) then
+            send_left (:,:,nb+1:nb+nyb,:)        = cshift(send_left (:,:,nb+1:nb+nyb,:),dim=3,shift= delj)
+            send_left (:,:,1:nb,:)               = send_left (:,:,nyb+1:nyb+nb,:)
+            send_left (:,:,nb+nyb+1:nyb+2*nb,:)  = send_left (:,:,nb+1:2*nb,:)
+         endif
 !
 ! remapujemy  - interpolacja kwadratowa
 !
@@ -131,11 +133,11 @@ module fluidboundaries
 !
 ! przesuwamy o calkowita liczbe komorek + periodyczny wb w kierunku y
 !
-            if(nyd /= 1) then
-               send_right(:,:,nb+1:nb+nyb,:)        = cshift(send_right(:,:,nb+1:nb+nyb,:),dim=3,shift=-delj)
-               send_right (:,:,1:nb,:)              = send_right(:,:,nyb+1:nyb+nb,:)
-               send_right (:,:,nb+nyb+1:nyb+2*nb,:) = send_right(:,:,nb+1:2*nb,:)
-            endif
+         if(nyd /= 1) then
+            send_right(:,:,nb+1:nb+nyb,:)        = cshift(send_right(:,:,nb+1:nb+nyb,:),dim=3,shift=-delj)
+            send_right (:,:,1:nb,:)              = send_right(:,:,nyb+1:nyb+nb,:)
+            send_right (:,:,nb+nyb+1:nyb+2*nb,:) = send_right(:,:,nb+1:2*nb,:)
+         endif
 !
 ! remapujemy  - interpolacja kwadratowa
 !

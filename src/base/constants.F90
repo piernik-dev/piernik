@@ -27,7 +27,10 @@
 !
 #include "piernik.def"
 
-module constants     ! module containg numerical and physical constants !!!
+!>
+!! \brief Module containing numerical and physical constants
+!<
+module constants
 
    real, parameter :: one  = 1.0
    real, parameter :: half = 0.5
@@ -35,18 +38,18 @@ module constants     ! module containg numerical and physical constants !!!
    real, parameter :: twot = 2./3.
    real, parameter :: oneq = 1./4.
    real, parameter :: thrq = 3./4.
-   real, parameter :: small= 1.e-29
-   real, parameter :: big  = 1.e+29
+   real, parameter :: small= 1.e-29                      !< a constant used as the lower limit number
+   real, parameter :: big  = 1.e+29                      !< a constant used as the upper limit number
 
-   real, parameter :: pi = 3.141592653589793238
-   real, parameter :: dpi = 2.*pi
-   real, parameter :: fpi = 4.*pi
-   real, parameter :: e  = 2.718281828459045235
+   real, parameter :: pi = 3.141592653589793238          !< Pi (Archimedes' constant)
+   real, parameter :: dpi = 2.*pi                        !< doubled Pi
+   real, parameter :: fpi = 4.*pi                        !< four Pi
+   real, parameter :: e  = 2.718281828459045235          !< Napier's constant (base of Natural logarithm)
 
 #ifdef PSM
 ! PSM  uses: length --> pc,     mass --> Msun,        time --> myr,        miu0 --> 4*pi,    temperature --> kelvin
 ! length units:
-   real, parameter :: cm =         1.0/3.0856e18
+   real, parameter :: cm =         1.0/3.0856e18         !<
    real, parameter :: metr =       1.0e2*cm
    real, parameter :: pc =         1.0
 ! time units:
@@ -159,75 +162,81 @@ module constants     ! module containg numerical and physical constants !!!
    real, parameter :: km =         1.0e5*cm
 !   real, parameter :: au =         1.49597892e13*cm
    real, parameter :: kpc =        1000.0*pc
-   real, parameter :: lyr =        9.4605e17*cm
+   real, parameter :: lyr =        9.4605e17*cm             !< light year
 ! time units:
    real, parameter :: minute =     60.0*sek
    real, parameter :: hour =       3600.0*sek
    real, parameter :: day =        86400.0*sek
 ! mass units:
-   real, parameter :: gmu =        2.32e7*Msun
-   real, parameter :: me =         9.109558e-28*gram
-   real, parameter :: mp =         1.672614e-24*gram
-   real, parameter :: mH =         1.673559e-24*gram
-   real, parameter :: amu =        1.660531e-24*gram
+   real, parameter :: gmu =        2.32e7*Msun              !< galactic mass unit
+   real, parameter :: me =         9.109558e-28*gram        !< electron mass
+   real, parameter :: mp =         1.672614e-24*gram        !< proton mass
+   real, parameter :: mH =         1.673559e-24*gram        !< hydrogen atom mass
+   real, parameter :: amu =        1.660531e-24*gram        !< atomic mass unit
 ! force units:
-   real, parameter :: newton =     kg*metr/sek**2
-   real, parameter :: dyna =       gram*cm/sek**2
+   real, parameter :: newton =     kg*metr/sek**2           !< 1N (SI force unit)
+   real, parameter :: dyna =       gram*cm/sek**2           !< 1 dyna (cgs force unit)
 ! energy units:
-   real, parameter :: joul =       kg*metr**2/sek**2
-   real, parameter :: erg =        gram*cm**2/sek**2
-   real, parameter :: eV   =       1.6022e-12*erg
+   real, parameter :: joul =       kg*metr**2/sek**2        !< 1J (SI energy unit)
+   real, parameter :: erg =        gram*cm**2/sek**2        !< 1 erg (cgs energy unit)
+   real, parameter :: eV   =       1.6022e-12*erg           !< 1 eV
 ! density units:
    real, parameter :: ppcm3 =      1.36 * mp / cm**3
    real, parameter :: ppcm2 =      1.36 * mp / cm**2
 ! temperature units:
    real, parameter :: kelvin =     1.0
 ! physical constants:
-   real, parameter :: kboltz =     1.380622e-16*erg/kelvin
-   real, parameter :: gasRconst =  8.31434e7*erg/kelvin !/mol
-   real, parameter :: clight =     2.997924562e10*cm/sek
+   real, parameter :: kboltz =     1.380622e-16*erg/kelvin  !< Boltzmann constant
+   real, parameter :: gasRconst =  8.31434e7*erg/kelvin !/mol  !< gas constant
+   real, parameter :: clight =     2.997924562e10*cm/sek    !< speed of light in vacuum
 
-   real, parameter :: Gs     =     sqrt(4.*pi*gram/cm)/sek
-   real, parameter :: mGs    =     Gs*1.e-6
-   real, parameter :: Tesla  =     1.e4*Gs
+   real, parameter :: Gs     =     sqrt(4.*pi*gram/cm)/sek  !< 1 Gs (cgs magnetic induction unit)
+   real, parameter :: mGs    =     Gs*1.e-6                 !< 1 microgauss
+   real, parameter :: Tesla  =     1.e4*Gs                  !< 1 T (SI magnetic induction unit)
 #ifdef PGM
-   real, parameter :: newtong =    G_one              ! pgm
+   real, parameter :: newtong =    G_one        ! pgm       !< Newtonian constant of gravitation
 #else /* PGM */
-   real, parameter :: newtong =    6.6732e-8*cm**3/gram/sek**2
+   real, parameter :: newtong =    6.6732e-8*cm**3/gram/sek**2 !< Newtonian constant of gravitation
 #endif /* PGM */
-   real, parameter :: planck =     6.626196e-27*erg*sek
-   real, parameter :: r_gc_sun =   8.5*kpc
-   real, parameter :: vsun =       220.0*km/sek
-   real, parameter :: sunradius =  6.9598e10*cm
-   real, parameter :: Lsun =       3.826e33*erg/sek
-   real, parameter :: Mearth =     5.977e27*gram
-   real, parameter :: earthradius= 6378.17*km
+   real, parameter :: planck =     6.626196e-27*erg*sek     !< Planck constant
+   real, parameter :: r_gc_sun =   8.5*kpc                  !< Sun distance from the Galaxy Center
+   real, parameter :: vsun =       220.0*km/sek             !< velocity value of Sun in the Galaxy
+   real, parameter :: sunradius =  6.9598e10*cm             !< radius of Sun
+   real, parameter :: Lsun =       3.826e33*erg/sek         !< luminosity of Sun
+   real, parameter :: Mearth =     5.977e27*gram            !< mass of Earth
+   real, parameter :: earthradius= 6378.17*km               !< radius of Earth
 ! utilities (to remove in the future):
-   real, parameter :: k_B = 1.38066e-16*erg/kelvin ! ---> kboltz
-   real, parameter :: m_H = 1.66053e-24*gram       ! ---> amu
-   real, parameter :: hydro_mass = mH
-   real, parameter :: fpiG = fpi*newtong
-   real, parameter :: sekmyr = myr/sek
+!>
+!! \todo to remove constants that are doubled and marked as (old use): k_B, m_H, hydro_mass
+!! \todo to check importance of existing such constants as: fpiG, sekmyr, cmkm
+!<
+   real, parameter :: k_B = 1.38066e-16*erg/kelvin ! ---> kboltz  !< Boltzmann constant (old use)
+   real, parameter :: m_H = 1.66053e-24*gram       ! ---> amu     !< atomic mass unit (old use)
+   real, parameter :: hydro_mass = mH                             !< hydrogen mass (old use)
+   real, parameter :: fpiG = fpi*newtong                          !< four Pi times Newtonian constant of gravitation
+   real, parameter :: sekmyr = myr/sek                            !< conversion unit from megayears into seconds
 
 #else /* SCALED */
+!>
+!! \todo to check validity of declaration in SCALED units following constants: sek, cm, pc, kpc (e.g. to find coincidence with another unit system)
+!<
+   real, parameter :: sek =      1.0e-6/365.2652/24.0/3600.0      !< second expressed in units of megayears
+   real, parameter :: cm =       1.0/3.0856e18                    !< centimeter expressed in units of parsecs
 
-   real, parameter :: sek =      1.0e-6/365.2652/24.0/3600.0
-   real, parameter :: cm =       1.0/3.0856e18
+   real, parameter :: k_B = 1.38066e-16 ! erg/K                   !< Boltzmann constant
+   real, parameter :: m_H = 1.66053e-24 ! g                       !< atomic mass unit
 
-   real, parameter :: k_B = 1.38066e-16 ! erg/K
-   real, parameter :: m_H = 1.66053e-24 ! g
+   real, parameter :: G_one = 1.0  ! (scaled units)               !< Newtonian constant of gravitation in scaled units
 
-   real, parameter :: G_one = 1.0  ! (scaled units)
+   real, parameter :: fpiG  = fpi*G_one                           !< four Pi times Newtonian constant of gravitation
+   real, parameter :: newtong = G_one                             !< Newtonian constant of gravitation
+   real, parameter :: pc = 3.086e18                               !< parsec expressed in units of centimeters
+   real, parameter :: cmkm = 1.0e5      ! km -> cm                !< conversion unit from kilometer into centimeter
+   real, parameter :: sekmyr = 3.154e13 ! Myr -> s                !< conversion unit from megayear into second
+   real, parameter :: kpc = 1000.0                                !< kiloparsec expressed in units of parsec
+   real, parameter :: r_gc_sun = 8500   ! pc                      !< Sun distance from the Galaxy Center expressed in parsecs
 
-   real, parameter :: fpiG  = fpi*G_one
-   real, parameter :: newtong = G_one
-   real, parameter :: pc = 3.086e18
-   real, parameter :: cmkm = 1.0e5      ! km -> cm
-   real, parameter :: sekmyr = 3.154e13 ! Myr -> s
-   real, parameter :: kpc = 1000.0
-   real, parameter :: r_gc_sun = 8500   ! pc
-
-   real, parameter :: hydro_mass = m_H * cmkm**2
+   real, parameter :: hydro_mass = m_H * cmkm**2                  !< hydro_mass (old use)
 #endif /* SCALED */
 
 end module constants
