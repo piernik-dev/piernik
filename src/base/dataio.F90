@@ -397,8 +397,8 @@ module dataio
 
       implicit none
 #ifdef HDF5
-      call cleanup_hdf5      
-#endif 
+      call cleanup_hdf5
+#endif
    end subroutine cleanup_dataio
 
    subroutine user_msg_handler(end_sim)
@@ -590,7 +590,7 @@ module dataio
                  ieo = 1, jeo = 1, keo = 1
 
       real(kind=4), dimension(:,:,:), allocatable :: tmparr
-
+      real(kind=4), dimension(:), allocatable     :: temp_scl
 !- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
       if(domain .eq. 'full_domain') then
@@ -849,7 +849,7 @@ module dataio
 ! write data
 !
          where( abs(wa) < 1.e-12 )  wa = sign(1e-12,wa)
-         
+
          sds_id = sfcreate(sd_id, varname, 5, rank, dims)
          iostatus = sfscompress(sds_id, comp_type, comp_prm)
          tmparr = real(wa(iso:ieo,jso:jeo,kso:keo),4)
@@ -857,20 +857,29 @@ module dataio
 
 ! write coords
 !
+         allocate(temp_scl(iso:ieo))
+         temp_scl(iso:ieo) = real(x(iso:ieo),4)
          dim_id = sfdimid( sds_id, 0 )
          iostatus = sfsdmname( dim_id, 'xc' )
-         iostatus = sfsdscale( dim_id, dims(1), 5, real(x(iso:ieo),4))
+         iostatus = sfsdscale( dim_id, dims(1), 5, temp_scl(:))
          iostatus = sfsdmstr ( dim_id, 'X', 'pc', '' )
+         deallocate(temp_scl)
 
+         allocate(temp_scl(jso:jeo))
+         temp_scl(jso:jeo) = real(y(jso:jeo),4)
          dim_id = sfdimid( sds_id, 1 )
          iostatus = sfsdmname( dim_id, 'yc' )
-         iostatus = sfsdscale( dim_id, dims(2), 5, real(y(jso:jeo),4))
+         iostatus = sfsdscale( dim_id, dims(2), 5, temp_scl(:))
          iostatus = sfsdmstr ( dim_id, 'Y', 'pc', '' )
+         deallocate(temp_scl)
 
+         allocate(temp_scl(kso:keo))
+         temp_scl(kso:keo) = real(z(kso:keo),4)
          dim_id = sfdimid( sds_id, 2 )
          iostatus = sfsdmname( dim_id, 'zc' )
-         iostatus = sfsdscale( dim_id, dims(3), 5, real(z(kso:keo),4))
+         iostatus = sfsdscale( dim_id, dims(3), 5, temp_scl(:))
          iostatus = sfsdmstr ( dim_id, 'Z', 'pc', '' )
+         deallocate(temp_scl)
 
          iostatus = sfendacc(sds_id)
 
@@ -1335,10 +1344,10 @@ module dataio
 #ifdef ISO
 #ifdef IONIZED
       use initionized,     only : cs_iso_ion2
-#endif /* IONIZED */   
+#endif /* IONIZED */
 #ifdef NEUTRAL
       use initneutral,     only : cs_iso_neu2
-#endif /* NEUTRAL */   
+#endif /* NEUTRAL */
 #endif /* ISO */
 #ifdef RESISTIVE
       use resistivity
@@ -1817,7 +1826,7 @@ module dataio
                   + (/nb,nb,nb/)
       call mpifind(dend_max%val, 'max', dend_max%loc, dend_max%proc)
 
-      where(u(idnd,:,:,:) > 0.0) 
+      where(u(idnd,:,:,:) > 0.0)
          wa          = abs(u(imxd,:,:,:)/u(idnd,:,:,:))
       elsewhere
          wa          = 0.0
@@ -1827,7 +1836,7 @@ module dataio
                   + (/nb,nb,nb/)
       call mpifind(vxd_max%val, 'max', vxd_max%loc, vxd_max%proc)
 
-      where(u(idnd,:,:,:) > 0.0) 
+      where(u(idnd,:,:,:) > 0.0)
          wa          = abs(u(imyd,:,:,:)/u(idnd,:,:,:))
       elsewhere
          wa          = 0.0
@@ -1837,7 +1846,7 @@ module dataio
                   + (/nb,nb,nb/)
       call mpifind(vyd_max%val, 'max', vyd_max%loc, vyd_max%proc)
 
-      where(u(idnd,:,:,:) > 0.0) 
+      where(u(idnd,:,:,:) > 0.0)
          wa           = abs(u(imzd,:,:,:)/u(idnd,:,:,:))
       elsewhere
          wa          = 0.0
