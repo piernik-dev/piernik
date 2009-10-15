@@ -49,124 +49,126 @@ module constants
 #ifdef PSM
 ! PSM  uses: length --> pc,     mass --> Msun,        time --> myr,        miu0 --> 4*pi,    temperature --> kelvin
 ! length units:
-   real, parameter :: cm =         1.0/3.0856e18         !<
-   real, parameter :: metr =       1.0e2*cm
-   real, parameter :: pc =         1.0
+   real, parameter :: cm =         1.0/3.0856e18         !< centimetre, length unit
+   real, parameter :: metr =       1.0e2*cm              !< metre, length unit
+   real, parameter :: pc =         1.0                   !< parsec, length unit
 ! time units:
-   real, parameter :: sek =        1.0e-6/365.2652/24.0/3600.0
-   real, parameter :: year =       1.0e-6
-   real, parameter :: myr =        1.0
+   real, parameter :: sek =        1.0e-6/365.2652/24.0/3600.0       !< second, time unit
+   real, parameter :: year =       1.0e-6                !< year, time unit
+   real, parameter :: myr =        1.0                   !< megayear, time unit
 ! mass units:
-   real, parameter :: gram =       1.0/1.989e33
-   real, parameter :: kg =         1.0e3*gram
-   real, parameter :: Msun =       1.0
+   real, parameter :: gram =       1.0/1.989e33          !< gram, mass unit
+   real, parameter :: kg =         1.0e3*gram            !< kilogram, mass unit
+   real, parameter :: Msun =       1.0                   !< mass of Sun
 
 #elif defined (PLN)
 ! PLN  uses: length --> AU,     mass --> Mjup,        time --> yr,        miu0 --> 4*pi,    temperature --> kelvin
 ! length units:
-   real, parameter :: cm =         1.0/1.49598e13
-   real, parameter :: metr =       1.0e2*cm
-   real, parameter :: AU =         1.0
-   real, parameter :: pc =         206264.806*AU
+   real, parameter :: cm =         1.0/1.49598e13        !< centimetre, length unit
+   real, parameter :: metr =       1.0e2*cm              !< metre, length unit
+   real, parameter :: AU =         1.0                   !< astronomical unit
+   real, parameter :: pc =         206264.806*AU         !< parsec, length unit
 ! time units:
-   real, parameter :: sek =        1.0/365.2652/24.0/3600.0
-   real, parameter :: year =       1.0
-   real, parameter :: myr =        1.0e6
+   real, parameter :: sek =        1.0/365.2652/24.0/3600.0       !< second, time unit
+   real, parameter :: year =       1.0                   !< year, time unit
+   real, parameter :: myr =        1.0e6                 !< megayear, time unit
 ! mass units:
-   real, parameter :: gram =       1.0/1.8986e30
-   real, parameter :: kg =         1.0e3*gram
-   real, parameter :: Msun =       1047.4
+   real, parameter :: gram =       1.0/1.8986e30         !< gram, mass unit
+   real, parameter :: kg =         1.0e3*gram            !< kilogram, mass unit
+   real, parameter :: Msun =       1047.4                !< mass of Sun
 
 
 #elif defined (KSG)
 ! KSG  uses: length --> kpc,    mass --> 10^6*Msun,   time --> Gyr,        miu0 --> 4*pi,    temperature --> kelvin
 ! length units:
-   real, parameter :: cm =         1.0/3.0856e21
-   real, parameter :: metr =       1.0e2*cm
-   real, parameter :: pc =         1.0e-3
+   real, parameter :: cm =         1.0/3.0856e21         !< centimetre, length unit
+   real, parameter :: metr =       1.0e2*cm              !< metre, length unit
+   real, parameter :: pc =         1.0e-3                !< parsec, length unit
 ! time units:
-   real, parameter :: sek =        1.0e-9/365.2652/24.0/3600.0
-   real, parameter :: year =       1.0e-9
-   real, parameter :: myr =        1.0e-3
+   real, parameter :: sek =        1.0e-9/365.2652/24.0/3600.0       !< second, time unit
+   real, parameter :: year =       1.0e-9                !< year, time unit
+   real, parameter :: myr =        1.0e-3                !< megayear, time unit
 ! mass units:
-   real, parameter :: gram =       1.0e-6/1.989e33
-   real, parameter :: kg =         1.0e3*gram
-   real, parameter :: Msun =       1.0e-6
+   real, parameter :: gram =       1.0e-6/1.989e33       !< gram, mass unit
+   real, parameter :: kg =         1.0e3*gram            !< kilogram, mass unit
+   real, parameter :: Msun =       1.0e-6                !< mass of Sun
 
 #elif defined (PGM)
 ! PGM  uses: length --> pc,     newtong --> 1.0,      time --> myr,        miu0 --> 4*pi,    temperature --> kelvin
 ! length units:
-   real, parameter :: cm =         1.0/3.0856e18
-   real, parameter :: metr =       1.0e2*cm
-   real, parameter :: pc =         1.0
+   real, parameter :: cm =         1.0/3.0856e18            !< centimetre, length unit
+   real, parameter :: metr =       1.0e2*cm                 !< metre, length unit
+   real, parameter :: pc =         1.0                      !< parsec, length unit
 ! time units:
-   real, parameter :: sek =        1.0e-6/365.2652/24.0/3600.0
-   real, parameter :: year =       1.0e-6
-   real, parameter :: myr =        1.0
+   real, parameter :: sek =        1.0e-6/365.2652/24.0/3600.0    !< second, time unit
+   real, parameter :: year =       1.0e-6                   !< year, time unit
+   real, parameter :: myr =        1.0                      !< megayear, time unit
 ! mass units:
    real, parameter :: G_one =      1.0 !this is not a mass unit, nevertheless it is usefull here
-   real, parameter :: gram =       6.6732e-8*cm**3/G_one/sek**2
-   real, parameter :: kg =         1.0e3*gram
-   real, parameter :: Msun =       1.989e33*gram
+   real, parameter :: gram =       6.6732e-8*cm**3/G_one/sek**2      !< gram, mass unit
+   real, parameter :: kg =         1.0e3*gram               !< kilogram, mass unit
+   real, parameter :: Msun =       1.989e33*gram            !< mass of Sun
 
 #elif defined (SSY)
 ! SSY  uses: length --> cm^16,  mass --> Msun,        time --> year,       miu0 --> 4*pi,    temperature --> kelvin
 ! length units:
-   real, parameter :: cm =         1.0e-16
-   real, parameter :: metr =       1.0e2*cm
-   real, parameter :: pc =         3.0856e18*cm
+   real, parameter :: cm =         1.0e-16                  !< centimetre, length unit
+   real, parameter :: metr =       1.0e2*cm                 !< metre, length unit
+   real, parameter :: pc =         3.0856e18*cm             !< parsec, length unit
 ! time units:
-   real, parameter :: sek =        1.0/365.2652/86400.0
-   real, parameter :: year =       1.0
-   real, parameter :: myr =        1.0e6*year
+   real, parameter :: sek =        1.0/365.2652/86400.0     !< second, time unit
+   real, parameter :: year =       1.0                      !< year, time unit
+   real, parameter :: myr =        1.0e6*year               !< megayear, time unit
 ! mass units:
-   real, parameter :: gram =       1.0/1.989e33
-   real, parameter :: kg =         1.0e3*gram
-   real, parameter :: Msun =       1.0
+   real, parameter :: gram =       1.0/1.989e33             !< gram, mass unit
+   real, parameter :: kg =         1.0e3*gram               !< kilogram, mass unit
+   real, parameter :: Msun =       1.0                      !< mass of Sun
 
 #elif defined(SI)
 ! SI   uses: length --> metr,   mass --> kg,          time --> sek,        miu0 --> 4*pi,    temperature --> kelvin
 ! length units:
-   real, parameter :: cm =         1.0e-2
-   real, parameter :: metr =       1.0
-   real, parameter :: pc =         3.0856e18*cm
+   real, parameter :: cm =         1.0e-2                   !< centimetre, length unit
+   real, parameter :: metr =       1.0                      !< metre, length unit
+   real, parameter :: pc =         3.0856e18*cm             !< parsec, length unit
 ! time units:
-   real, parameter :: sek =        1.0
-   real, parameter :: year =       365.2652*24.*3600.*sek
-   real, parameter :: myr =        1.0e6*year
+   real, parameter :: sek =        1.0                      !< second, time unit
+   real, parameter :: year =       365.2652*24.*3600.*sek   !< year, time unit
+   real, parameter :: myr =        1.0e6*year               !< megayear, time unit
 ! mass units:
-   real, parameter :: gram =       1.0e-3
-   real, parameter :: kg =         1.0
-   real, parameter :: Msun =       1.989e30
+   real, parameter :: gram =       1.0e-3                   !< gram, mass unit
+   real, parameter :: kg =         1.0                      !< kilogram, mass unit
+   real, parameter :: Msun =       1.989e30                 !< mass of Sun
 
 #elif defined(CGS)
 ! CGS  uses: length --> cm,     mass --> gram,        time --> sek,        miu0 --> 4*pi,    temperature --> kelvin
 ! length units:
-   real, parameter :: cm =         1.0
-   real, parameter :: metr =       1.0e2*cm
-   real, parameter :: pc =         3.0856e18*cm
+   real, parameter :: cm =         1.0                      !< centimetre, length unit
+   real, parameter :: metr =       1.0e2*cm                 !< metre, length unit
+   real, parameter :: pc =         3.0856e18*cm             !< parsec, length unit
 ! time units:
-   real, parameter :: sek =        1.0
-   real, parameter :: year =       365.2652*24.*3600.*sek
-   real, parameter :: myr =        1.0e6*year
+   real, parameter :: sek =        1.0                      !< second, time unit
+   real, parameter :: year =       365.2652*24.*3600.*sek   !< year, time unit
+   real, parameter :: myr =        1.0e6*year               !< megayear, time unit
 ! mass units:
-   real, parameter :: gram =       1.0
-   real, parameter :: kg =         1.0e3*gram
-   real, parameter :: Msun =       1.989e33
+   real, parameter :: gram =       1.0                      !< gram, mass unit
+   real, parameter :: kg =         1.0e3*gram               !< kilogram, mass unit
+   real, parameter :: Msun =       1.989e33                 !< mass of Sun
 #else
 #define SCALED
 #endif /* PSM, KSG, PGM, SSY, SI, CGS */
 
 #ifndef SCALED
 ! length units:
-   real, parameter :: km =         1.0e5*cm
-!   real, parameter :: au =         1.49597892e13*cm
-   real, parameter :: kpc =        1000.0*pc
-   real, parameter :: lyr =        9.4605e17*cm             !< light year
+   real, parameter :: km =         1.0e5*cm                 !< kilometer, length unit
+#ifndef PLN
+   real, parameter :: au =         1.49597892e13*cm         !< astronomical unit (length unit)
+#endif /* PLN */
+   real, parameter :: kpc =        1000.0*pc                !< kiloparsec, length unit
+   real, parameter :: lyr =        9.4605e17*cm             !< light year, length unit
 ! time units:
-   real, parameter :: minute =     60.0*sek
-   real, parameter :: hour =       3600.0*sek
-   real, parameter :: day =        86400.0*sek
+   real, parameter :: minute =     60.0*sek                 !< minute, time unit
+   real, parameter :: hour =       3600.0*sek               !< hour, time unit
+   real, parameter :: day =        86400.0*sek              !< day, time unit
 ! mass units:
    real, parameter :: gmu =        2.32e7*Msun              !< galactic mass unit
    real, parameter :: me =         9.109558e-28*gram        !< electron mass
@@ -181,10 +183,10 @@ module constants
    real, parameter :: erg =        gram*cm**2/sek**2        !< 1 erg (cgs energy unit)
    real, parameter :: eV   =       1.6022e-12*erg           !< 1 eV
 ! density units:
-   real, parameter :: ppcm3 =      1.36 * mp / cm**3
-   real, parameter :: ppcm2 =      1.36 * mp / cm**2
+   real, parameter :: ppcm3 =      1.36 * mp / cm**3        !< spatial density unit
+   real, parameter :: ppcm2 =      1.36 * mp / cm**2        !< column density unit
 ! temperature units:
-   real, parameter :: kelvin =     1.0
+   real, parameter :: kelvin =     1.0                      !< kelvin, temperature unit
 ! physical constants:
    real, parameter :: kboltz =     1.380622e-16*erg/kelvin  !< Boltzmann constant
    real, parameter :: gasRconst =  8.31434e7*erg/kelvin !/mol  !< gas constant
@@ -221,7 +223,7 @@ module constants
 !! \todo to check validity of declaration in SCALED units following constants: sek, cm, pc, kpc (e.g. to find coincidence with another unit system)
 !<
    real, parameter :: sek =      1.0e-6/365.2652/24.0/3600.0      !< second expressed in units of megayears
-   real, parameter :: cm =       1.0/3.0856e18                    !< centimeter expressed in units of parsecs
+   real, parameter :: cm =       1.0/3.0856e18                    !< centimetre expressed in units of parsecs
 
    real, parameter :: k_B = 1.38066e-16 ! erg/K                   !< Boltzmann constant
    real, parameter :: m_H = 1.66053e-24 ! g                       !< atomic mass unit
@@ -230,8 +232,8 @@ module constants
 
    real, parameter :: fpiG  = fpi*G_one                           !< four Pi times Newtonian constant of gravitation
    real, parameter :: newtong = G_one                             !< Newtonian constant of gravitation
-   real, parameter :: pc = 3.086e18                               !< parsec expressed in units of centimeters
-   real, parameter :: cmkm = 1.0e5      ! km -> cm                !< conversion unit from kilometer into centimeter
+   real, parameter :: pc = 3.086e18                               !< parsec expressed in units of centimetres
+   real, parameter :: cmkm = 1.0e5      ! km -> cm                !< conversion unit from kilometer into centimetre
    real, parameter :: sekmyr = 3.154e13 ! Myr -> s                !< conversion unit from megayear into second
    real, parameter :: kpc = 1000.0                                !< kiloparsec expressed in units of parsec
    real, parameter :: r_gc_sun = 8500   ! pc                      !< Sun distance from the Galaxy Center expressed in parsecs
