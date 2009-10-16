@@ -28,6 +28,10 @@
 !!is a vector of conservative fluid variables: gas density, three components of momentum and total energy density, respectively, while 
 !!\f$\vec{F}{(\vec{u},\vec{B})}\f$, \f$\vec{G}{(\vec{u},\vec{B})}\f$, \f$\vec{H}{(\vec{u},\vec{B})}\f$ are fluxes of the fluid variables in x, y and z directions, respectively, and \f$\vec{S}(\vec{u})\f$ is a function representing source terms.
 !!The flux functions are given by 
+!!\dontinclude rtvd.F90
+!!Linia 1
+!!\skipline znacznik1
+!!Linia 2
 !!\f[
 !!  \vec{F}{(\vec{u})} = 
 !!  \left(\begin{array}{c}

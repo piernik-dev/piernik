@@ -192,7 +192,7 @@ module rtvd ! split orig
 ! Source terms -------------------------------------
 #ifdef FLUID_INTERACTIONS
 #ifdef SHEAR
-         df = (/global_gradP_neu,0.0/)
+         df = (/global_gradP_neu,0.0/)        ! znacznik1
 #else 
          df = 0.0
 #endif
