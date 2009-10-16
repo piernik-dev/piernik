@@ -143,8 +143,25 @@ module gravity
 
 !--------------------------------------------------------------------------
 !>
-!! \brief Routine that compute values of gravitational potential filling in gp array and setting gp_status character string
+!! \brief Routine that compute values of gravitational potential filling in gp array and setting gp_status character string \n\n
+!! The type of gravity is governed by preprocessor: \n\n
+!! GRAV_NULL - gravitational potential array is set to zero \n\n
+!! GRAV_UNIFORM - uniform type of gravity in z-direction \n
+!! \f$\Phi\left(z\right)=const \cdot z \f$\n\n
+!! GRAV_LINEAR - linear type of gravity growing along z-direction \n
+!! \f$\Phi\left(z\right) = const \cdot z^2\f$ \n\n
+!! GRAV_PTMASS - softened point mass type of gravity \n
+!! \f$\Phi\left(x,y,z\right)= - GM/\sqrt{x^2+y^2+z^2+r_{soft}^2}\f$ \n
+!! where \n\n
+!! GRAV_PTMASSPURE - unsoftened point mass type of gravity \n
+!! \f$\Phi\left(x,y,z\right)= - GM/\sqrt{x^2+y^2+z^2}\f$ \n
+!! where \n\n
+!! GRAV_PTFLAT - planar, softened point mass type of gravity \n
+!! \f$\Phi\left(x,y,z\right)= - GM/\sqrt{x^2+y^2+r_{soft}^2}\f$ \n
+!! where \n\n
+!! GRAV_USER - not a standard type o gravity, implemented by user in the routine grav_pot_user from gravity_user module.\n\n
 !<
+
    subroutine grav_pot_3d
       use arrays, only     : gp
       use grid, only       : nx,ny,nz,x,y,z
