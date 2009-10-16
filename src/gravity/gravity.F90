@@ -252,6 +252,12 @@ module gravity
 !! \param xsw 1D position array in the direction pointed out by sweep
 !! \param n number of elements of xsw array
 !! \return grav 1D array of gravitational acceleration values computed for positions from xsw
+!! \n\n
+!! one type of gravity is implemented here: \n\n
+!! local Galactic gravity only in z-direction \n
+!! \f[
+!! F_z = 3.23 \cdot 10^8 \cdot \left[\left(-4.4 \cdot 10^{-9} \cdot exp\left(-\frac{(r_{gc}-r_{gc_sun})}{(4.9kpc)}\right) * \frac{z}{\sqrt{(z^2+(0.2kpc)^2)}}\right)-\left( 1.7 \cdot 10^{-9} \cdot \frac{(r_{gc_sun}^2 + (2.2kpc)^2)}{(r_{gc}^2 + (2.2kpc)^2)} \cdot \frac{z}{1kpc}\right) \right]
+!! \f]
 !<
 
    subroutine grav_accel(sweep, i1,i2, xsw, n, grav)
