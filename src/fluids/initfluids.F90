@@ -27,6 +27,19 @@
 !
 #include "piernik.def"
 
+!>
+!! \brief Module to organize all fluids, fluid components, traces and other dependent variables into the array of conservative variables \a u(ifl,i,j,k), where \a ifl is the index of fluid variable. 
+!!
+!! The module is organized as follows:
+!! \n (1)  All fluids defined in "piernik.def" are initialized subsequently.
+!! \n (2)  The routine fluidindex is invoked to construct arrays of indexes for each fluid, 
+!!     eg. ionized_index, neutral_index, etc. See fluidindex for more details.
+!! \n (3)  Physical parameters common for all fluids are computed if necessary.
+!!     
+!! \todo Subdivide different fluids into species
+!! \warning check if cs_iso and cs_neu are correctly defined (end of init_fluids subroutine) for your purposes (if used)
+!<
+
 module initfluids
 
 #ifdef IONIZED
@@ -51,8 +64,9 @@ module initfluids
 
   implicit none 
 
-  real, allocatable :: gamma(:) 
-  real              :: cs_iso, cs_iso2 
+  real, allocatable :: gamma(:)          !< array containing adiabatic indices of all fluids, indexed by   ifluid = i_ion, i_neu, etc.
+  real              :: cs_iso,           !< isothermal sound speed for a mixture of fluids
+  real              :: cs_iso2           !< square of isothermal sound speed for a mixture of fluids  
 
   contains
 
