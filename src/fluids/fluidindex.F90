@@ -28,10 +28,25 @@
 #include "piernik.def"
 
 !>
-!! \brief The purpose of this module is to compute: 
+!! \brief In this module fluid variables of individual fluids are indexed to make use of the single array 
+!! \a u(:,:,:,:) containing all fluid variables.
+!!
+!! The purpose of this module is to compute: 
 !! \n (1) positions of all fluid variables to be referenced through the first index of array u(:,:,:,:), 
-!! \n (2) arrays of indexes to make easy reference to all gas densities, x,y,z-components of momenta, energy densities, CR energy densities, transposed components of x,y,z-momenta in directional sweeps, etc ...
+!! \n (2) arrays of indexes to make easy reference to all gas densities, x,y,z-components of momenta, 
+!! energy densities, CR energy densities, transposed components of x,y,z-momenta in directional sweeps, etc ...
 !! 
+!! The Relaxing TVD scheme by Pen, Arras \& Wong (2003) was extended in PIERNIK code to treat multiple fluids, 
+!! by concatenation of the vectors of conservative variables for different fluids
+!!
+!! \f[
+!! \vec{u} =\big( \underbrace{\rho^{i}, m_x^{i}, m_y^{i}, m_z^{i}, e^{i}}_{\textrm{\scriptsize ionized gas}},
+!! \underbrace{\rho^{n}, m_x^{n}, m_y^{n}, m_z^{n}, e^{n}}_{\textrm{\scriptsize neutral gas}},
+!! \underbrace{\rho^{d}, m_x^{d}, m_y^{d}, m_z^{d}}_{\textrm{\scriptsize dust}}  \big)^T,
+!! \f]
+!! representing ionized gas, neutral gas, and dust treated as a pressureless fluid. Cosmic ray gas component, 
+!! in fluid approximation, described by the diffusion--advection equation, is incorporated in the same way.  
+!!
 !<
 
 module fluidindex
@@ -55,7 +70,7 @@ module fluidindex
    integer, parameter  :: imy = 3     !< position of y-mom. in the vector of conserv. variables for single fluid
    integer, parameter  :: imz = 4     !< position of z-mom. in the vector of conserv. variables for single fluid
    integer, parameter  :: ien = 5     !< position of energy density in the vector of conserv. variables for single fluid (only for adiabatic fluids)
-   integer, parameter  :: icr = 1     !< position of CR-energy density in the vector of cons. variables for CR multiple components (may change if future, when multiple CR species will be taken into account)
+   integer, parameter  :: icr = 1     !< position of CR-energy density in the vector of conserv. variables for CR multiple components (may change if future, when multiple CR species will be taken into account)
 
 #ifdef IONIZED
 #ifdef RESISTIVE
@@ -85,36 +100,42 @@ module fluidindex
 
 #ifdef IONIZED
    integer :: nvar_ion                                 !< number of variables for the ion fluid (4 when iso, 5 when adiab)
-   integer :: beg_ion                                  !< index of the first ion component (density) in the full vector of cons. variables
-   integer :: end_ion                                  !< index of the last ion component (z-momentum or en. density) in the full vector of cons. variables
+   integer :: beg_ion                                  !< index of the first ion component (density) in the full vector of conserv. variables
+   integer :: end_ion                                  !< index of the last ion component (z-momentum or en. density) in the full vector of conserv. variables
    integer :: i_ion                                    !< index denoting position of the ion fluid in the row of fluids 
 #endif /* IONIZED */
 
 #ifdef NEUTRAL
    integer :: nvar_neu                                 !< number of variables for the neutral fluid (4 when iso, 5 when adiab)
-   integer :: beg_neu                                  !< index of the first neutral component (density) in the full vector of cons.
-   integer :: end_neu                                  !< index of the last neutral component (z-momentum or en. density) in the full vector of cons. variables
+   integer :: beg_neu                                  !< index of the first neutral component (density) in the full vector of conserv. variables
+   integer :: end_neu                                  !< index of the last neutral component (z-momentum or en. density) in the full vector of conserv. variables
    integer :: i_neu                                    !< index denoting position of the neutral fluid in the row of fluids
 #endif /* NEUTRAL */
 
 #ifdef DUST
    integer :: nvar_dst                                 !< number of variables for the dust fluid (4)
-   integer :: beg_dst                                  !< index of the first dust component (density) in the full vector of cons.
-   integer :: end_dst                                  !< index of the last dust component (z-momentum or en. density) in the full vector of cons. variables
+   integer :: beg_dst                                  !< index of the first dust component (density) in the full vector of conserv. variables
+   integer :: end_dst                                  !< index of the last dust component (z-momentum or en. density) in the full vector of conserv. variables
    integer :: i_dst                                    !< index denoting position of the dust fluid in the row of fluids
 #endif /* DUST */
    
 #ifdef COSM_RAYS
    integer :: nvar_crs                                 !< number of variables for the CR component 
-   integer :: beg_crs                                  !< index of the first CR component (density) in the full vector of cons.
-   integer :: end_crs                                  !< index of the last CR component (z-momentum or en. density) in the full vector of cons. variables
+   integer :: beg_crs                                  !< index of the first CR component (density) in the full vector of conserv. variables
+   integer :: end_crs                                  !< index of the last CR component (z-momentum or en. density) in the full vector of conserv. variables
    integer :: i_crs                                    !< index denoting position of CRs in the row of fluids and components
 #endif /* COSM_RAYS */
 
 
   contains
-   
+
+!!> 
+!! \brief Subroutine fluid_index constructing all multi-fluid indexes used in other parts 
+!! of PIERNIK code
+!! \param none - all arguments are global variables
+!!<  
     subroutine fluid_index
+
 #ifdef IONIZED
       use initionized,    only : ionized_index
       use initionized,    only : iarr_ion_swpx, iarr_ion_swpy, iarr_ion_swpz

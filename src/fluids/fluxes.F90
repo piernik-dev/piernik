@@ -29,7 +29,20 @@
 !>
 !! \brief Module that collects all flux components from each fluid
 !!
-!! This module should not be changed by user.
+!!The fluxes for all fluids are combined in the same order as conservarive variables in the array \a u(:,:,:,:)
+!!\f{equation}
+!!\vec{F}(\vec{u},\vec{B})
+!!  = \big(\vec{F}^i(\vec{u}^i,\vec{B}), \vec{F}^n(\vec{u}^n),
+!!  \vec{F}^d(\vec{u}^d)\big)^T,
+!!\f}
+!!where the elementary flux vectors like \f$\vec{F}^i(\vec{u}^i,\vec{B})$,
+!!$\vec{F}^n(\vec{u}^n)\f$,  \f$\vec{F}^d(\vec{u}^d)\f$ are fluxes computed
+!!independently for each fluid. In multidimensional computations the fluxes
+!!\f$\vec{G}(\vec{u},\vec{B})\f$  and \f$\vec{H}(\vec{u},\vec{B})\f$,
+!!corresponding to the transport of conservative quantities in \f$y\f$ and
+!!\f$z\f$--directions, are constructed in a similar way.
+!!
+!! \warning This module should not be changed by user.
 !<
 module fluxes
 
