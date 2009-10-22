@@ -27,45 +27,88 @@
 !
 #include "piernik.def"
 
+!>
+!! \brief The purpose of this module is to compute: 
+!! \n (1) positions of all fluid variables to be referenced through the first index of array u(:,:,:,:), 
+!! \n (2) arrays of indexes to make easy reference to all gas densities, x,y,z-components of momenta, energy densities, CR energy densities, transposed components of x,y,z-momenta in directional sweeps, etc ...
+!! 
+!<
+
 module fluidindex
 
    use types   
    implicit none
 
-   type(indx),save :: ind
+   type(indx),save     :: ind         !< derived type variable storing all fluid-, component- and magnetic-field-indexes
    
-   integer, parameter  :: nmag=3
-   integer, parameter  :: ibx=1,iby=2,ibz=3
-   integer, parameter  :: idn=1,imx=2,imy=3,imz=4,ien=5,icr=1
-   integer             :: nvar,ncomponents,nfluid,nadiab
+   integer, parameter  :: nmag = 3    !< number of magnetic field components                  
+   integer             :: nvar 	      !< total number of fluid variables = the size of array \a u(:,:,;,:) in the first index
+   integer             :: nfluid      !< number of fluids (ionized gas, neutral gas, dust)
+   integer             :: nadiab      !< number of adiabatic fluids (indicating the presence of energy density in the vector of conservative variables for adiabatic fluids)
+   integer             :: ncomponents !< number of components, such as CRs, tracers, magnetic helicity (in future),  whose formal description does not involve momenta and mass density
 
-   
-   integer,allocatable,  dimension(:) :: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
-   integer,allocatable,  dimension(:) :: iarr_all_en
-   integer,allocatable,  dimension(:) :: iarr_all_cr
-   integer, allocatable, dimension(:) :: iarr_all_swpx, iarr_all_swpy, iarr_all_swpz
+   integer, parameter  :: ibx = 1     !< index of x-component of magnetic field
+   integer, parameter  :: iby = 2     !< index of y-component of magnetic field 
+   integer, parameter  :: ibz = 3     !< index of z-component of magnetic field
+   integer, parameter  :: idn = 1     !< position of density in the vector of conserv. variables for single fluid
+   integer, parameter  :: imx = 2     !< position of x-mom. in the vector of conserv. variables for single fluid
+   integer, parameter  :: imy = 3     !< position of y-mom. in the vector of conserv. variables for single fluid
+   integer, parameter  :: imz = 4     !< position of z-mom. in the vector of conserv. variables for single fluid
+   integer, parameter  :: ien = 5     !< position of energy density in the vector of conserv. variables for single fluid (only for adiabatic fluids)
+   integer, parameter  :: icr = 1     !< position of CR-energy density in the vector of cons. variables for CR multiple components (may change if future, when multiple CR species will be taken into account)
 
 #ifdef IONIZED
-   integer, allocatable, dimension(:) :: iarr_mag_swpx, iarr_mag_swpy, iarr_mag_swpz, iarr_all_mag
 #ifdef RESISTIVE
-   integer, parameter  :: icx=1, icy=2, icz=3
+   integer, parameter  :: icx = 1     !< index of x-component of current density
+   integer, parameter  :: icy = 2     !< index of y-component of current density
+   integer, parameter  :: icz = 3     !< index of z-component of current density
 #endif /* RESISTIVE */
 #endif /* IONIZED */
 
+   
+   integer, allocatable, dimension(:) :: iarr_all_dn   !< array of indexes pointing to mass densities of all fluids 
+   integer, allocatable, dimension(:) :: iarr_all_mx   !< array of indexes pointing to mom. densities of all fluids
+   integer, allocatable, dimension(:) :: iarr_all_my   !< array of indexes pointing to mom. densities of all fluids
+   integer, allocatable, dimension(:) :: iarr_all_mz   !< array of indexes pointing to mom. densities of all fluids
+   integer, allocatable, dimension(:) :: iarr_all_en   !< array of indexes pointing to ener. densities of all fluids
+   integer, allocatable, dimension(:) :: iarr_all_cr   !< array of indexes pointing to ener. densities of all CR-components
+   integer, allocatable, dimension(:) :: iarr_all_swpx !< array (size = nvar) of all fluid indexes in the original order
+   integer, allocatable, dimension(:) :: iarr_all_swpy !< array (size = nvar) of all fluid indexes with \a x and \a y components of mom. interchanged 
+   integer, allocatable, dimension(:) :: iarr_all_swpz !< array (size = nvar) of all fluid indexes with \a x and \a z components of mom. interchanged 
+
 #ifdef IONIZED
-   integer :: nvar_ion,beg_ion,end_ion,i_ion
+   integer, allocatable, dimension(:) :: iarr_all_mag  !< array (size = nmag) of all magnetic field components
+   integer, allocatable, dimension(:) :: iarr_mag_swpx !< array (size = nmag) of all mag. field indexes in the original order (same as iarr_all_mag)
+   integer, allocatable, dimension(:) :: iarr_mag_swpy !< array (size = nmag) of all mag. field indexes \a x and \a z components interchanged
+   integer, allocatable, dimension(:) :: iarr_mag_swpz !< array (size = nmag) of all mag. field indexes \a x and \a z components interchanged
+#endif /* IONIZED */
+
+#ifdef IONIZED
+   integer :: nvar_ion                                 !< number of variables for the ion fluid (4 when iso, 5 when adiab)
+   integer :: beg_ion                                  !< index of the first ion component (density) in the full vector of cons. variables
+   integer :: end_ion                                  !< index of the last ion component (z-momentum or en. density) in the full vector of cons. variables
+   integer :: i_ion                                    !< index denoting position of the ion fluid in the row of fluids 
 #endif /* IONIZED */
 
 #ifdef NEUTRAL
-   integer :: nvar_neu,beg_neu,end_neu,i_neu
+   integer :: nvar_neu                                 !< number of variables for the neutral fluid (4 when iso, 5 when adiab)
+   integer :: beg_neu                                  !< index of the first neutral component (density) in the full vector of cons.
+   integer :: end_neu                                  !< index of the last neutral component (z-momentum or en. density) in the full vector of cons. variables
+   integer :: i_neu                                    !< index denoting position of the neutral fluid in the row of fluids
 #endif /* NEUTRAL */
 
 #ifdef DUST
-   integer :: nvar_dst,beg_dst,end_dst,i_dst
+   integer :: nvar_dst                                 !< number of variables for the dust fluid (4)
+   integer :: beg_dst                                  !< index of the first dust component (density) in the full vector of cons.
+   integer :: end_dst                                  !< index of the last dust component (z-momentum or en. density) in the full vector of cons. variables
+   integer :: i_dst                                    !< index denoting position of the dust fluid in the row of fluids
 #endif /* DUST */
    
 #ifdef COSM_RAYS
-   integer :: nvar_crs,beg_crs,end_crs,i_crs
+   integer :: nvar_crs                                 !< number of variables for the CR component 
+   integer :: beg_crs                                  !< index of the first CR component (density) in the full vector of cons.
+   integer :: end_crs                                  !< index of the last CR component (z-momentum or en. density) in the full vector of cons. variables
+   integer :: i_crs                                    !< index denoting position of CRs in the row of fluids and components
 #endif /* COSM_RAYS */
 
 
