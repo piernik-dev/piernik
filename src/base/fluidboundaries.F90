@@ -190,22 +190,26 @@ module fluidboundaries
          !!!! BEWARE: smalld is called only for the first fluid 
          u(iarr_all_dn(1),1:nb,:,:)              = max(u(iarr_all_dn(1),1:nb,:,:),smalld)
          u(iarr_all_dn(1),nxb+nb+1:nxb+2*nb,:,:) = max(u(iarr_all_dn(1),nxb+nb+1:nxb+2*nb,:,:),smalld)
-         deallocate(send_left,send_right,recv_left,recv_right)
+         if(allocated(send_left))  deallocate(send_left)
+         if(allocated(send_right)) deallocate(send_right)
+         if(allocated(recv_left))  deallocate(recv_left)
+         if(allocated(recv_right)) deallocate(recv_right)
+
 #else /* FFTW */
 
          if( (bnd_xl == 'she').and.(bnd_xr == 'she')) then 
 
          if(allocated(send_right)) deallocate(send_right)
-         allocate(send_right(nvar,nb,nyd,nz))
+         if(.not.allocated(send_right)) allocate(send_right(nvar,nb,nyd,nz))
          
          if(allocated(send_left)) deallocate(send_left)
-         allocate(send_left(nvar,nb,nyd,nz))
+         if(.not.allocated(send_left)) allocate(send_left(nvar,nb,nyd,nz))
 
          if(allocated(recv_left)) deallocate(recv_left)
-         allocate(recv_left(nvar,nb,nyd,nz))
+         if(.not.allocated(recv_left)) allocate(recv_left(nvar,nb,nyd,nz))
 
          if(allocated(recv_right)) deallocate(recv_right)
-         allocate(recv_right(nvar,nb,nyd,nz))
+         if(.not.allocated(recv_right)) allocate(recv_right(nvar,nb,nyd,nz))
 
             do i = LBOUND(u,1), UBOUND(u,1)
                send_left(i,1:nb,:,:)   = unshear_fft(u(i,nb+1:2*nb,nb+1:ny-nb,:),x(nb+1:2*nb),dely,.true.)
@@ -226,10 +230,10 @@ module fluidboundaries
                u(i,nx-nb+1:nx,nb+1:ny-nb,:) = unshear_fft(recv_right(i,1:nb,:,:),x(nx-nb+1:nx),dely)
             enddo
 
-         deallocate(send_right)
-         deallocate(send_left)
-         deallocate(recv_left)
-         deallocate(recv_right)
+         if(allocated(send_left))  deallocate(send_left)
+         if(allocated(send_right)) deallocate(send_right)
+         if(allocated(recv_left))  deallocate(recv_left)
+         if(allocated(recv_right)) deallocate(recv_right)
 
          endif
 #endif /* FFTW */
@@ -321,7 +325,8 @@ module fluidboundaries
                enddo
             enddo
 
-            deallocate(send_left,recv_left)
+            if(allocated(send_left))  deallocate(send_left)
+            if(allocated(recv_left))  deallocate(recv_left)
          endif
       endif
 
@@ -386,7 +391,8 @@ module fluidboundaries
                enddo
             enddo
 
-            deallocate(send_left,recv_left)
+            if(allocated(send_left))  deallocate(send_left)
+            if(allocated(recv_left))  deallocate(recv_left)
          endif
       endif
 

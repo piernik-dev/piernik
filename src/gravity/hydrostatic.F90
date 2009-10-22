@@ -128,9 +128,10 @@ module hydrostatic
         enddo
       enddo
 
-
-    deallocate(zs,dprofs,gprofs,gpots)
-
+    if(allocated(zs)) deallocate(zs)
+    if(allocated(dprofs)) deallocate(dprofs)
+    if(allocated(gprofs)) deallocate(gprofs)
+    if(allocated(gpots)) deallocate(gpots)
 
     return
 

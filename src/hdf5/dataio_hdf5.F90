@@ -584,8 +584,9 @@ module dataio_hdf5
             call H5Gclose_f(gr_id,error)
             call H5Fclose_f(file_id,error)
          endif
-         deallocate(send)
-         deallocate(temp,img)
+         if(allocated(send)) deallocate(send)
+         if(allocated(temp)) deallocate(temp)
+         if(allocated(img))  deallocate(img)
       endif
       call MPI_BARRIER(comm3d,ierr)
 
@@ -684,8 +685,13 @@ module dataio_hdf5
      CALL h5sclose_f(memspace, error)
      CALL h5dclose_f(dset_id, error)
 
-     deallocate(dimsf,dimsfi,chunk_dims)
-     deallocate(count,offset,stride,block)
+     if(allocated(dimsf))      deallocate(dimsf)
+     if(allocated(dimsfi))     deallocate(dimsfi)
+     if(allocated(chunk_dims)) deallocate(chunk_dims)
+     if(allocated(count))      deallocate(count)
+     if(allocated(offset))     deallocate(offset)
+     if(allocated(stride))     deallocate(stride)
+     if(allocated(block))      deallocate(block)
      !----------------------------------------------------------------------------------
 #endif /* MASS_COMPENS */
      rank = 4
@@ -776,8 +782,13 @@ module dataio_hdf5
      CALL h5dclose_f(dset_id, error)
      CALL h5pclose_f(plist_id, error)
      !----------------------------------------------------------------------------------
-     deallocate(dimsf,dimsfi,chunk_dims)
-     deallocate(count,offset,stride,block)
+     if(allocated(dimsf))      deallocate(dimsf)
+     if(allocated(dimsfi))     deallocate(dimsfi)
+     if(allocated(chunk_dims)) deallocate(chunk_dims)
+     if(allocated(count))      deallocate(count)
+     if(allocated(offset))     deallocate(offset)
+     if(allocated(stride))     deallocate(stride)
+     if(allocated(block))      deallocate(block)
 
      rank = 1
      allocate(dimsf(rank),dimsfi(rank),chunk_dims(rank))
@@ -909,8 +920,13 @@ module dataio_hdf5
      !----------------------------------------------------------------------------------
      CALL h5pclose_f(plist_id, error)
      CALL h5fclose_f(file_id, error)
-     deallocate(dimsf,dimsfi,chunk_dims)
-     deallocate(count,offset,stride,block)
+     if(allocated(dimsf))      deallocate(dimsf)
+     if(allocated(dimsfi))     deallocate(dimsfi)
+     if(allocated(chunk_dims)) deallocate(chunk_dims)
+     if(allocated(count))      deallocate(count)
+     if(allocated(offset))     deallocate(offset)
+     if(allocated(stride))     deallocate(stride)
+     if(allocated(block))      deallocate(block)
      if(proc == 0) then
         CALL h5fopen_f (filename, H5F_ACC_RDWR_F, file_id, error)
 
@@ -1106,8 +1122,13 @@ module dataio_hdf5
      CALL h5pclose_f(plist_id, error)
      CALL h5dclose_f(dset_id, error)
      !----------------------------------------------------------------------------------
-     deallocate(chunk_dims,dimsfi,dimsf)
-     deallocate(block, offset, count, stride)
+     if(allocated(dimsf))      deallocate(dimsf)
+     if(allocated(dimsfi))     deallocate(dimsfi)
+     if(allocated(chunk_dims)) deallocate(chunk_dims)
+     if(allocated(count))      deallocate(count)
+     if(allocated(offset))     deallocate(offset)
+     if(allocated(stride))     deallocate(stride)
+     if(allocated(block))      deallocate(block)
 #endif /* MASS_COMPENS */
      !----------------------------------------------------------------------------------
      !  READ FLUID VARIABLES
@@ -1189,8 +1210,13 @@ module dataio_hdf5
      CALL h5dclose_f(dset_id, error)
      !----------------------------------------------------------------------------------
      CALL h5fclose_f(file_id, error)
-     deallocate(chunk_dims,dimsfi,dimsf)
-     deallocate(block, offset, count, stride)
+     if(allocated(dimsf))      deallocate(dimsf)
+     if(allocated(dimsfi))     deallocate(dimsfi)
+     if(allocated(chunk_dims)) deallocate(chunk_dims)
+     if(allocated(count))      deallocate(count)
+     if(allocated(offset))     deallocate(offset)
+     if(allocated(stride))     deallocate(stride)
+     if(allocated(block))      deallocate(block)
      if(proc == 0) then
         CALL h5fopen_f (filename, H5F_ACC_RDONLY_F, file_id, error)
         bufsize = 1
@@ -1302,7 +1328,7 @@ module dataio_hdf5
      !
      CALL h5fcreate_f(trim(fname), H5F_ACC_TRUNC_F, file_id, error, creation_prp = H5P_DEFAULT_F, access_prp = plist_id)
      CALL h5pclose_f(plist_id, error)
-     ALLOCATE (data(nxb,nyb,nzb))
+     if(.not.allocated(data)) allocate(data(nxb,nyb,nzb))
      ierrh = 0; ok_var = .false.
      do i = 1, nhdf_vars 
         call common_vars_hdf5(hdf_vars(i),data,ierrh);  if(ierrh == 0) ok_var = .true.
@@ -1316,7 +1342,7 @@ module dataio_hdf5
         call write_arr(data,hdf_vars(i),file_id)
      enddo
 
-     DEALLOCATE(data)
+     if(allocated(data)) deallocate(data)
      !
      ! Close the property list.
      !

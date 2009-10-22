@@ -470,7 +470,7 @@ module gravity
       gpwork = gpwork - gp_max
 
       gp=gpwork
-      deallocate(gpwork)
+      if(allocated(gpwork)) deallocate(gpwork)
 
    end subroutine grav_accel2pot
 

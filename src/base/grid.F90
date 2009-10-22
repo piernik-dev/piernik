@@ -285,11 +285,16 @@ module grid
    subroutine cleanup_grid
       implicit none
 
-      deallocate(dl)
-      deallocate(x, xl, xr)
-      deallocate(y, yl, yr)
-      deallocate(z, zl, zr)
-
+      if(allocated(dl)) deallocate(dl)
+      if(allocated(x))  deallocate(x)
+      if(allocated(xl)) deallocate(xl)
+      if(allocated(xr)) deallocate(xr)
+      if(allocated(y))  deallocate(y)
+      if(allocated(yl)) deallocate(yl)
+      if(allocated(yr)) deallocate(yr)
+      if(allocated(z))  deallocate(z)
+      if(allocated(zl)) deallocate(zl)
+      if(allocated(zr)) deallocate(zr)
 
    end subroutine cleanup_grid
 

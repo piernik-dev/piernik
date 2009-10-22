@@ -145,7 +145,11 @@ subroutine bnd_b(dim)
         b(:,1:nb-1,:,:)               = recv_left(:,1:nb-1,:,:)
         b(:,nxb+nb+1+1:nxb+2*nb,:,:)  = recv_right(:,1+1:nb,:,:)
 
-      deallocate(send_left,send_right,recv_left,recv_right)
+        if(allocated(send_left))  deallocate(send_left)
+        if(allocated(send_right)) deallocate(send_right)
+        if(allocated(recv_left))  deallocate(recv_left)
+        if(allocated(recv_right)) deallocate(recv_right)
+
 !===============================================================================
 #else /* SHEAR */
 
@@ -198,7 +202,10 @@ subroutine bnd_b(dim)
 !        if(procyl .ne. MPI_PROC_NULL) b(:,:,1:nb,:)               = recv_left(:,:,:,:)
 !        if(procyr .ne. MPI_PROC_NULL) b(:,:,nyb+nb+1:nyb+2*nb,:)  = recv_right(:,:,:,:)
 
-!        deallocate(send_left,send_right,recv_left,recv_right)
+!        if(allocated(send_left))  deallocate(send_left)
+!        if(allocated(send_right)) deallocate(send_right)
+!        if(allocated(recv_left))  deallocate(recv_left)
+!        if(allocated(recv_right)) deallocate(recv_right)
       endif
 
     case ('zdim')
@@ -226,7 +233,10 @@ subroutine bnd_b(dim)
 !        if(proczl .ne. MPI_PROC_NULL) b(:,:,:,1:nb)               = recv_left(:,:,:,:)
 !        if(proczr .ne. MPI_PROC_NULL) b(:,:,:,nzb+nb+1:nzb+2*nb)  = recv_right(:,:,:,:)
 
-!        deallocate(send_left,send_right,recv_left,recv_right)
+!        if(allocated(send_left))  deallocate(send_left)
+!        if(allocated(send_right)) deallocate(send_right)
+!        if(allocated(recv_left))  deallocate(recv_left)
+!        if(allocated(recv_right)) deallocate(recv_right)
       endif
   end select ! (dim)
 
@@ -264,7 +274,8 @@ subroutine bnd_b(dim)
         enddo
       enddo
 
-      deallocate(send_left,recv_left)
+      if(allocated(send_left))  deallocate(send_left)
+      if(allocated(recv_left))  deallocate(recv_left)
     endif
   endif
 
@@ -308,7 +319,8 @@ subroutine bnd_b(dim)
         enddo
       enddo
 
-      deallocate(send_left,recv_left)
+      if(allocated(send_left))  deallocate(send_left)
+      if(allocated(recv_left))  deallocate(recv_left)
     endif
   endif
 
