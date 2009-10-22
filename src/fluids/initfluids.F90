@@ -65,7 +65,7 @@ module initfluids
   implicit none 
 
   real, allocatable :: gamma(:)          !< array containing adiabatic indices of all fluids, indexed by   ifluid = i_ion, i_neu, etc.
-  real              :: cs_iso,           !< isothermal sound speed for a mixture of fluids
+  real              :: cs_iso            !< isothermal sound speed for a mixture of fluids
   real              :: cs_iso2           !< square of isothermal sound speed for a mixture of fluids  
 
   contains
