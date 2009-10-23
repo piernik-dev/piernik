@@ -28,6 +28,11 @@
 #include "piernik.def"
 #define RNG 2:n-1
 
+!>
+!! \brief (MH) Computation of advection fluxes of Cosmic Rays
+!!
+!!
+!<
 
 module fluxcosmicrays
   implicit none

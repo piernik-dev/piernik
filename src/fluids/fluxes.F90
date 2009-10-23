@@ -27,7 +27,7 @@
 !
 #include "piernik.def"
 !>
-!! \brief Module that collects all flux components from each fluid
+!! \brief (MH) Module that collects all flux components from each fluid
 !!
 !!The fluxes for all fluids are combined in the same order as conservarive variables in the array \a u(:,:,:,:)
 !!\f{equation}

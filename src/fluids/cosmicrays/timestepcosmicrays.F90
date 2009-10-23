@@ -27,6 +27,11 @@
 !
 #include "piernik.def"
 
+!>
+!! \brief (MH) Computation of timestep for diffusive Cosmic Ray transport
+!!
+!!
+!<
 module timestepcosmicrays
 
   real :: dt_crs

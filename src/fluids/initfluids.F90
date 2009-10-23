@@ -28,7 +28,7 @@
 #include "piernik.def"
 
 !>
-!! \brief Module to organize all fluids, fluid components, traces and other dependent variables into the array of conservative variables \a u(ifl,i,j,k), where \a ifl is the index of fluid variable. 
+!! \brief (MH) Module to organize all fluids, fluid components, traces and other dependent variables into the array of conservative variables \a u(ifl,i,j,k), where \a ifl is the index of fluid variable. 
 !!
 !! The module is organized as follows:
 !! \n (1)  All fluids defined in "piernik.def" are initialized subsequently.

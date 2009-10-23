@@ -27,6 +27,11 @@
 !
 #include "piernik.def"
 
+!>
+!! \brief (MH) Initialization of Cosmic Ray component
+!!
+!!
+!<
 module initcosmicrays
 
   implicit none

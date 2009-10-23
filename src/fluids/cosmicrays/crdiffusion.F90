@@ -27,6 +27,13 @@
 !
 #include "piernik.def"
 
+
+!>
+!! \brief (MH) Numerical scheme for the diffusive transport of Cosmic Rays
+!!
+!!
+!<
+
 module crdiffusion
 
   use initcosmicrays, only : iecr
