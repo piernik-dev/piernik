@@ -57,7 +57,7 @@ module fluidindex
    type(indx),save     :: ind         !< derived type variable storing all fluid-, component- and magnetic-field-indexes
 
    integer, parameter  :: nmag = 3    !< number of magnetic field components
-   integer             :: nvar 	      !< total number of fluid variables = the size of array \a u(:,:,;,:) in the first index
+   integer             :: nvar        !< total number of fluid variables = the size of array \a u(:,:,;,:) in the first index
    integer             :: nfluid      !< number of fluids (ionized gas, neutral gas, dust)
    integer             :: nadiab      !< number of adiabatic fluids (indicating the presence of energy density in the vector of conservative variables for adiabatic fluids)
    integer             :: ncomponents !< number of components, such as CRs, tracers, magnetic helicity (in future),  whose formal description does not involve momenta and mass density
@@ -129,7 +129,6 @@ module fluidindex
 
   contains
 
-<<<<<<< .mine
 !> 
 !! \brief Subroutine fluid_index constructing all multi-fluid indexes used in other parts 
 !! of PIERNIK code
