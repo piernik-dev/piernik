@@ -18,25 +18,25 @@
 !    along with PIERNIK.  If not, see <http://www.gnu.org/licenses/>.
 !
 !    Initial implemetation of PIERNIK code was based on TVD split MHD code by
-!    Ue-Li Pen 
+!    Ue-Li Pen
 !        see: Pen, Arras & Wong (2003) for algorithm and
-!             http://www.cita.utoronto.ca/~pen/MHD 
-!             for original source code "mhd.f90" 
-!   
+!             http://www.cita.utoronto.ca/~pen/MHD
+!             for original source code "mhd.f90"
+!
 !    For full list of developers see $PIERNIK_HOME/license/pdt.txt
 !
 #include "piernik.def"
 
 !>
-!! \brief In this module fluid variables of individual fluids are indexed to make use of the single array 
+!! \brief In this module fluid variables of individual fluids are indexed to make use of the single array
 !! \a u(:,:,:,:) containing all fluid variables.
 !!
-!! The purpose of this module is to compute: 
-!! \n (1) positions of all fluid variables to be referenced through the first index of array u(:,:,:,:), 
-!! \n (2) arrays of indexes to make easy reference to all gas densities, x,y,z-components of momenta, 
+!! The purpose of this module is to compute:
+!! \n (1) positions of all fluid variables to be referenced through the first index of array u(:,:,:,:),
+!! \n (2) arrays of indexes to make easy reference to all gas densities, x,y,z-components of momenta,
 !! energy densities, CR energy densities, transposed components of x,y,z-momenta in directional sweeps, etc ...
-!! 
-!! The Relaxing TVD scheme by Pen, Arras \& Wong (2003) was extended in PIERNIK code to treat multiple fluids, 
+!!
+!! The Relaxing TVD scheme by Pen, Arras \& Wong (2003) was extended in PIERNIK code to treat multiple fluids,
 !! by concatenation of the vectors of conservative variables for different fluids
 !!
 !! \f[
@@ -44,26 +44,26 @@
 !! \underbrace{\rho^{n}, m_x^{n}, m_y^{n}, m_z^{n}, e^{n}}_{\textrm{\scriptsize neutral gas}},
 !! \underbrace{\rho^{d}, m_x^{d}, m_y^{d}, m_z^{d}}_{\textrm{\scriptsize dust}}  \big)^T,
 !! \f]
-!! representing ionized gas, neutral gas, and dust treated as a pressureless fluid. Cosmic ray gas component, 
-!! in fluid approximation, described by the diffusion--advection equation, is incorporated in the same way.  
+!! representing ionized gas, neutral gas, and dust treated as a pressureless fluid. Cosmic ray gas component,
+!! in fluid approximation, described by the diffusion--advection equation, is incorporated in the same way.
 !!
 !<
 
 module fluidindex
 
-   use types   
+   use types
    implicit none
 
    type(indx),save     :: ind         !< derived type variable storing all fluid-, component- and magnetic-field-indexes
-   
-   integer, parameter  :: nmag = 3    !< number of magnetic field components                  
+
+   integer, parameter  :: nmag = 3    !< number of magnetic field components
    integer             :: nvar 	      !< total number of fluid variables = the size of array \a u(:,:,;,:) in the first index
    integer             :: nfluid      !< number of fluids (ionized gas, neutral gas, dust)
    integer             :: nadiab      !< number of adiabatic fluids (indicating the presence of energy density in the vector of conservative variables for adiabatic fluids)
    integer             :: ncomponents !< number of components, such as CRs, tracers, magnetic helicity (in future),  whose formal description does not involve momenta and mass density
 
    integer, parameter  :: ibx = 1     !< index of x-component of magnetic field
-   integer, parameter  :: iby = 2     !< index of y-component of magnetic field 
+   integer, parameter  :: iby = 2     !< index of y-component of magnetic field
    integer, parameter  :: ibz = 3     !< index of z-component of magnetic field
    integer, parameter  :: idn = 1     !< position of density in the vector of conserv. variables for single fluid
    integer, parameter  :: imx = 2     !< position of x-mom. in the vector of conserv. variables for single fluid
@@ -80,16 +80,16 @@ module fluidindex
 #endif /* RESISTIVE */
 #endif /* IONIZED */
 
-   
-   integer, allocatable, dimension(:) :: iarr_all_dn   !< array of indexes pointing to mass densities of all fluids 
+
+   integer, allocatable, dimension(:) :: iarr_all_dn   !< array of indexes pointing to mass densities of all fluids
    integer, allocatable, dimension(:) :: iarr_all_mx   !< array of indexes pointing to mom. densities of all fluids
    integer, allocatable, dimension(:) :: iarr_all_my   !< array of indexes pointing to mom. densities of all fluids
    integer, allocatable, dimension(:) :: iarr_all_mz   !< array of indexes pointing to mom. densities of all fluids
    integer, allocatable, dimension(:) :: iarr_all_en   !< array of indexes pointing to ener. densities of all fluids
    integer, allocatable, dimension(:) :: iarr_all_cr   !< array of indexes pointing to ener. densities of all CR-components
    integer, allocatable, dimension(:) :: iarr_all_swpx !< array (size = nvar) of all fluid indexes in the original order
-   integer, allocatable, dimension(:) :: iarr_all_swpy !< array (size = nvar) of all fluid indexes with \a x and \a y components of mom. interchanged 
-   integer, allocatable, dimension(:) :: iarr_all_swpz !< array (size = nvar) of all fluid indexes with \a x and \a z components of mom. interchanged 
+   integer, allocatable, dimension(:) :: iarr_all_swpy !< array (size = nvar) of all fluid indexes with \a x and \a y components of mom. interchanged
+   integer, allocatable, dimension(:) :: iarr_all_swpz !< array (size = nvar) of all fluid indexes with \a x and \a z components of mom. interchanged
 
 #ifdef IONIZED
    integer, allocatable, dimension(:) :: iarr_all_mag  !< array (size = nmag) of all magnetic field components
@@ -102,7 +102,7 @@ module fluidindex
    integer :: nvar_ion                                 !< number of variables for the ion fluid (4 when iso, 5 when adiab)
    integer :: beg_ion                                  !< index of the first ion component (density) in the full vector of conserv. variables
    integer :: end_ion                                  !< index of the last ion component (z-momentum or en. density) in the full vector of conserv. variables
-   integer :: i_ion                                    !< index denoting position of the ion fluid in the row of fluids 
+   integer :: i_ion                                    !< index denoting position of the ion fluid in the row of fluids
 #endif /* IONIZED */
 
 #ifdef NEUTRAL
@@ -118,9 +118,9 @@ module fluidindex
    integer :: end_dst                                  !< index of the last dust component (z-momentum or en. density) in the full vector of conserv. variables
    integer :: i_dst                                    !< index denoting position of the dust fluid in the row of fluids
 #endif /* DUST */
-   
+
 #ifdef COSM_RAYS
-   integer :: nvar_crs                                 !< number of variables for the CR component 
+   integer :: nvar_crs                                 !< number of variables for the CR component
    integer :: beg_crs                                  !< index of the first CR component (density) in the full vector of conserv. variables
    integer :: end_crs                                  !< index of the last CR component (z-momentum or en. density) in the full vector of conserv. variables
    integer :: i_crs                                    !< index denoting position of CRs in the row of fluids and components
@@ -129,11 +129,11 @@ module fluidindex
 
   contains
 
-!!> 
-!! \brief Subroutine fluid_index constructing all multi-fluid indexes used in other parts 
+!>
+!! \brief Subroutine fluid_index constructing all multi-fluid indexes used in other parts
 !! of PIERNIK code
 !! \param none - all arguments are global variables
-!!<  
+!<
     subroutine fluid_index
 
 #ifdef IONIZED
@@ -142,28 +142,28 @@ module fluidindex
       use initionized,    only : idni,imxi,imyi,imzi
 #ifndef ISO
       use initionized,    only : ieni
-#endif /* ISO */ 
+#endif /* ISO */
 #endif /* IONIZED */
 
 #ifdef NEUTRAL
       use initneutral,    only : neutral_index
       use initneutral,    only : iarr_neu_swpx, iarr_neu_swpy, iarr_neu_swpz
       use initneutral,    only : idnn,imxn,imyn,imzn
-#ifndef ISO 
+#ifndef ISO
       use initneutral,    only : ienn
-#endif /* ISO */      
+#endif /* ISO */
 #endif /* NEUTRAL */
 
 #ifdef DUST
       use initdust,       only : dust_index
       use initdust,       only : iarr_dst_swpx, iarr_dst_swpy, iarr_dst_swpz
-      use initdust,       only : idnd,imxd,imyd,imzd      
+      use initdust,       only : idnd,imxd,imyd,imzd
 #endif /* DUST */
 
 #ifdef COSM_RAYS
       use initcosmicrays, only : cosmicray_index
       use initcosmicrays, only : iarr_crs_swpx, iarr_crs_swpy, iarr_crs_swpz
-      use initcosmicrays, only : iecr           
+      use initcosmicrays, only : iecr
 #endif /* COSM_RAYS */
 
       implicit none
@@ -173,65 +173,65 @@ module fluidindex
       ncomponents  = 0
       nfluid = 0
       nadiab = 0
-      
-     
+
+
 #ifdef IONIZED
       nvar_ion  = 0
       beg_ion   = nvar + 1
-      call ionized_index(nvar,nvar_ion) 
-      end_ion   = nvar  
+      call ionized_index(nvar,nvar_ion)
+      end_ion   = nvar
       ncomponents  = ncomponents + 1
-      nfluid = nfluid + 1  
-      i_ion = ncomponents 
-#ifndef ISO 
+      nfluid = nfluid + 1
+      i_ion = ncomponents
+#ifndef ISO
       nadiab = nadiab + 1
-#endif /* ISO */      
+#endif /* ISO */
 #endif /* IONIZED */
 
 #ifdef NEUTRAL
       nvar_neu = 0
       beg_neu = nvar + 1
-      call neutral_index(nvar,nvar_neu) 
-      end_neu = nvar    
+      call neutral_index(nvar,nvar_neu)
+      end_neu = nvar
       ncomponents  = ncomponents + 1
-      nfluid = nfluid + 1   
-      i_neu = ncomponents 
-#ifndef ISO 
+      nfluid = nfluid + 1
+      i_neu = ncomponents
+#ifndef ISO
       nadiab = nadiab + 1
-#endif /* ISO */      
+#endif /* ISO */
 #endif /* NEUTRAL */
 
 #ifdef DUST
       nvar_dst = 0
       beg_dst = nvar + 1
-      call dust_index(nvar,nvar_dst) 
-      end_dst = nvar    
+      call dust_index(nvar,nvar_dst)
+      end_dst = nvar
       ncomponents  = ncomponents + 1
-      nfluid = nfluid + 1   
-      i_dst = ncomponents 
+      nfluid = nfluid + 1
+      i_dst = ncomponents
 #endif /* DUST */
 
 #ifdef COSM_RAYS
       nvar_crs   = 0
       beg_crs = nvar + 1
-      call cosmicray_index(nvar,nvar_crs)  
-      end_crs = nvar   
-      ncomponents  = ncomponents + 1   
-      i_crs = ncomponents                
-#endif /* COSM_RAYS */     
+      call cosmicray_index(nvar,nvar_crs)
+      end_crs = nvar
+      ncomponents  = ncomponents + 1
+      i_crs = ncomponents
+#endif /* COSM_RAYS */
 
 #ifdef IONIZED
       allocate(iarr_mag_swpx(nmag),iarr_mag_swpy(nmag),iarr_mag_swpz(nmag),iarr_all_mag(nmag))
 #endif /* IONIZED */
       allocate(iarr_all_swpx(nvar),iarr_all_swpy(nvar),iarr_all_swpz(nvar))
       allocate(iarr_all_dn(nfluid),iarr_all_mx(nfluid),iarr_all_my(nfluid),iarr_all_mz(nfluid))
-#ifndef ISO      
-      allocate(iarr_all_en(nadiab))  
+#ifndef ISO
+      allocate(iarr_all_en(nadiab))
 #else
       allocate(iarr_all_en(0))
 #endif /* ISO */
-#ifdef COSM_RAYS      
-      allocate(iarr_all_cr(nvar_crs))  
+#ifdef COSM_RAYS
+      allocate(iarr_all_cr(nvar_crs))
 #else
       allocate(iarr_all_cr(0))
 #endif /* COSM_RAYS */
@@ -248,7 +248,7 @@ module fluidindex
 #ifdef IONIZED
       iarr_all_swpx(beg_ion:end_ion) = iarr_ion_swpx
       iarr_all_swpy(beg_ion:end_ion) = iarr_ion_swpy
-      iarr_all_swpz(beg_ion:end_ion) = iarr_ion_swpz    
+      iarr_all_swpz(beg_ion:end_ion) = iarr_ion_swpz
 
       iarr_all_dn(i_ion)      = idni ; ind%dni = idni
       iarr_all_mx(i_ion)      = imxi ; ind%mxi = imxi
@@ -258,11 +258,11 @@ module fluidindex
       iarr_all_en(i_ion)      = ieni ; ind%eni = ieni
 #endif /* ISO */
 #endif /* IONIZED */
-      
+
 #ifdef NEUTRAL
       iarr_all_swpx(beg_neu:end_neu) = iarr_neu_swpx
       iarr_all_swpy(beg_neu:end_neu) = iarr_neu_swpy
-      iarr_all_swpz(beg_neu:end_neu) = iarr_neu_swpz    
+      iarr_all_swpz(beg_neu:end_neu) = iarr_neu_swpz
 
       iarr_all_dn(i_neu)      = idnn ; ind%dnn = idnn
       iarr_all_mx(i_neu)      = imxn ; ind%mxn = imxn
@@ -272,26 +272,26 @@ module fluidindex
       iarr_all_en(i_neu)      = ienn ; ind%enn = ienn
 #endif /* ISO */
 #endif /* NEUTRAL */
-      
+
 #ifdef DUST
       iarr_all_swpx(beg_dst:end_dst) = iarr_dst_swpx
       iarr_all_swpy(beg_dst:end_dst) = iarr_dst_swpy
-      iarr_all_swpz(beg_dst:end_dst) = iarr_dst_swpz    
+      iarr_all_swpz(beg_dst:end_dst) = iarr_dst_swpz
 
       iarr_all_dn(i_dst)      = idnd ; ind%dnd = idnd
       iarr_all_mx(i_dst)      = imxd ; ind%mxd = imxd
       iarr_all_my(i_dst)      = imyd ; ind%myd = imyd
       iarr_all_mz(i_dst)      = imzd ; ind%mzd = imzd
 #endif /* DUST */
-      
-#ifdef COSM_RAYS      
+
+#ifdef COSM_RAYS
       iarr_all_swpx(beg_crs:end_crs) = iarr_crs_swpx
       iarr_all_swpy(beg_crs:end_crs) = iarr_crs_swpy
-      iarr_all_swpz(beg_crs:end_crs) = iarr_crs_swpz    
+      iarr_all_swpz(beg_crs:end_crs) = iarr_crs_swpz
 
       iarr_all_cr(1:nvar_crs) = iecr  ; ind%ecr = iecr
 #endif /* COSM_RAYS */
-   
+
 !      write(*,*) 'fluid_index', iarr_ion_swpx
 !      write(*,*) 'fluid_index', iarr_all_swpx
 
