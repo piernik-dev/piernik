@@ -27,7 +27,7 @@
 !
 #include "piernik.def"
 !>
-!! \brief [DW]
+!! \brief [DW] Module that contains all routines related to interactions between fluids
 !<
 module interactions
 
@@ -40,7 +40,9 @@ module interactions
 
 
    contains
-
+!>
+!! \brief Routine that sets the initial values of interactions parameters from namelist @c INTERACTIONS
+!<
    subroutine init_interactions
       use mpisetup
       use fluidindex,   only : nfluid
@@ -88,7 +90,15 @@ module interactions
 #endif /* COLLISIONS */
 
    end subroutine init_interactions
-
+!>
+!! \brief Routine that governs the type of interaction
+!! \param sweep string of characters that points out the current sweep direction
+!! |param i1 integer, number of column in the first direction after one pointed out by sweep
+!! \param i2 integer, number of column in the second direction after one pointed out by sweep
+!! \param n number of elements in the spatial dimension of fluid sweep array
+!! \param du sweep array of fluid corrections
+!! \param uu sweep fluid array
+!<
    subroutine fluid_interactions(sweep,i1,i2, n, du, uu)
       use fluidindex,   only : nvar
       implicit none
@@ -111,6 +121,15 @@ module interactions
    end subroutine fluid_interactions
 
 #ifdef COLLISIONS
+!>
+!! \brief Routine that computes contribution from a drag force
+!! \param sweep string of characters that points out the current sweep direction
+!! |param i1 integer, number of column in the first direction after one pointed out by sweep
+!! \param i2 integer, number of column in the second direction after one pointed out by sweep
+!! \param n number of elements in the spatial dimension of fluid sweep array
+!! \param du sweep array of fluid corrections
+!! \param uu sweep fluid array
+!<
    subroutine dragforce(sweep,i1,i2, n, du, uu)
       use fluidindex,   only : nvar,nfluid,iarr_all_dn,iarr_all_mx,iarr_all_my,nadiab
 #ifndef ISO
@@ -172,6 +191,15 @@ module interactions
 #endif /* COLLISIONS */
 
 #ifdef BND_MOTION_SUPPORT
+!>
+!! \brief Routine that computes a support for fluid rotation in area close to domain boundaries
+!! \param sweep string of characters that points out the current sweep direction
+!! |param i1 integer, number of column in the first direction after one pointed out by sweep
+!! \param i2 integer, number of column in the second direction after one pointed out by sweep
+!! \param n number of elements in the spatial dimension of fluid sweep array
+!! \param du sweep array of fluid corrections
+!! \param uu sweep fluid array
+!<
    subroutine support_bnd_rotation(sweep,i1,i2, n, du, uu)
       use fluidindex,   only : nvar,nfluid,iarr_all_dn,iarr_all_mx,iarr_all_my,nadiab
 #ifndef ISO
