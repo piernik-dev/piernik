@@ -33,7 +33,9 @@
 !=====================================================================
 !
 module dataio
-
+!>
+!! \brief (KK)
+!<
 ! Written by G. Kowal
 ! Modified for this code and extended by M.Hanasz
    use types

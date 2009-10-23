@@ -26,6 +26,9 @@
 !    For full list of developers see $PIERNIK_HOME/license/pdt.txt
 !
 module mpiboundaries
+!>
+!! \brief (KK)
+!<
 
 contains
    subroutine mpi_boundaries_prep

@@ -26,6 +26,9 @@
 !    For full list of developers see $PIERNIK_HOME/license/pdt.txt
 !
 #include "piernik.def"
+!>
+!! \brief (KK)
+!<
 module types
    type :: indx
       integer :: dnd = -1, dnn = -1, dni = -1

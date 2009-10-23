@@ -26,6 +26,9 @@
 !    For full list of developers see $PIERNIK_HOME/license/pdt.txt
 !
 #include "piernik.def"
+!>
+!! \brief (KK)
+!<
 module timer
 
    implicit none

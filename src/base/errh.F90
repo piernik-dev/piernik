@@ -27,7 +27,7 @@
 !
 #include "piernik.def"
 !>
-!! \brief Module responsible for error handling 
+!! \brief (KK) Module responsible for error handling 
 !!
 !<
 module errh

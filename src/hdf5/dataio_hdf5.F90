@@ -30,7 +30,7 @@
 #include "piernik.def"
 
 !>
-!! \brief Module that contains I/O routines using HDF5 library
+!! \brief (KK) Module that contains I/O routines using HDF5 library
 !!
 !! Modules contains routines for creating HDF5 output such as
 !! plots, snapshots, restart files.

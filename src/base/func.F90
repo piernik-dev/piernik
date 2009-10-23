@@ -27,7 +27,7 @@
 !
 #include "piernik.def"
 !>
-!! \brief Module that contains unclassified functions
+!! \brief (KK) Module that contains unclassified functions
 !!
 !! This module should be empty. Every function or subroutine placed here belong
 !! elsewhere. We are yet unsure where to put them.
