@@ -26,7 +26,9 @@
 !    For full list of developers see $PIERNIK_HOME/license/pdt.txt
 !
 #include "piernik.def"
-
+!>
+!! \brief [DW]
+!<
 module timestepinteractions
 
    real :: dt_interact
@@ -53,7 +55,7 @@ module timestepinteractions
     !!!!BEWARE: works only with neu+dust!!!!
 
     val = maxval (  sqrt( (u(imxd,:,:,:)-u(imxn,:,:,:))**2 + &
-                    (u(imyd,:,:,:)-u(imyn,:,:,:))**2 + &  
+                    (u(imyd,:,:,:)-u(imyn,:,:,:))**2 + &
                     (u(imzd,:,:,:)-u(imzn,:,:,:))**2   ) * u(idnd,:,:,:) )
     dt_interact_proc = cs_iso_neu / (maxval(collfaq) * val)
 
