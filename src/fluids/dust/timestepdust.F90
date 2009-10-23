@@ -27,6 +27,12 @@
 !
 #include "piernik.def"
 
+!> 
+!! \brief (MH) Timestep computation for the dust fluid
+!!
+!!
+!<
+
 module timestepdust
 
   real :: dt_dst,c_dst

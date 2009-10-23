@@ -27,6 +27,12 @@
 !
 #include "piernik.def"
 
+!> 
+!! \brief (MH) Timestep computation for the ionized fluid
+!!
+!!
+!<
+
 module timestepionized
 
   real :: dt_ion,c_ion

@@ -27,6 +27,12 @@
 !
 #include "piernik.def"
 
+!> 
+!! \brief (MH) Initialization of the neutral fluid
+!!
+!!
+!<
+
 module initneutral
 
   implicit none

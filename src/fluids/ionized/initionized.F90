@@ -27,6 +27,12 @@
 !
 #include "piernik.def"
 
+!> 
+!! \brief (MH) Initialization of the ionized fluid
+!!
+!!
+!<
+
 module initionized
 
   implicit none

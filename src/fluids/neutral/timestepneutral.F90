@@ -27,6 +27,11 @@
 !
 #include "piernik.def"
 
+!> 
+!! \brief (MH) Timestep computation for the neutral fluid
+!!
+!!
+!<
 module timestepneutral
 
   real :: dt_neu,c_neu

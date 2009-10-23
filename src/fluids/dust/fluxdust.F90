@@ -27,6 +27,12 @@
 !
 #include "piernik.def"
 #define RNG 2:n-1
+!> 
+!! \brief (MH) Computation of fluxes for the dust fluid
+!!
+!!
+!<
+
 
 module fluxdust
   implicit none

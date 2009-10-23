@@ -27,6 +27,14 @@
 !
 #include "piernik.def"
 #define RNG 2:n-1
+
+!> 
+!! \brief (MH) Computation of fluxes for the neutral fluid
+!!
+!!
+!<
+
+
 module fluxneutral
   implicit none
 
