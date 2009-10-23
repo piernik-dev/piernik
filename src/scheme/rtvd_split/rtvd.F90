@@ -87,7 +87,7 @@ module rtvd ! split orig
 !! \brief Subroutine implements the Relaxing TVD scheme for conserved physical quantities
 !!
 !! The main point of the Relaxing TVD scheme is to decompose vectors of conservative variables \f$u\f$ and fluxes \f$F\f$ 
-!! into left–moving and right–moving waves:
+!! into left-moving and right-moving waves:
 !! \f{equation}
 !! u=u^L+u^P,
 !! \f}
