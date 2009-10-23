@@ -28,7 +28,7 @@
 #include "piernik.def"
 
 !>
-!! \brief In this module fluid variables of individual fluids are indexed to make use of the single array
+!! \brief (MH) In this module fluid variables of individual fluids are indexed to make use of the single array 
 !! \a u(:,:,:,:) containing all fluid variables.
 !!
 !! The purpose of this module is to compute:
@@ -129,8 +129,9 @@ module fluidindex
 
   contains
 
-!>
-!! \brief Subroutine fluid_index constructing all multi-fluid indexes used in other parts
+<<<<<<< .mine
+!> 
+!! \brief Subroutine fluid_index constructing all multi-fluid indexes used in other parts 
 !! of PIERNIK code
 !! \param none - all arguments are global variables
 !<
