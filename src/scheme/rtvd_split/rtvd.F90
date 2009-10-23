@@ -26,10 +26,17 @@
 !    For full list of developers see $PIERNIK_HOME/license/pdt.txt
 !
 #include "piernik.def"
+!>
+!! \brief (JD) This module implements relaxing TVD scheme
+!! 
+!! The implementation was based on TVD split MHD code by Pen et al. (2003).
+!<
 module rtvd ! split orig
 
    contains
-
+!>
+!! \brief Subroutine computes magnetic field evolution 
+!<
    subroutine tvdb(vibj,b,vg,n,dt,di)
       use constants, only : big
       implicit none
@@ -76,6 +83,48 @@ module rtvd ! split orig
 
    end subroutine tvdb
 
+!>
+!! \brief Subroutine implements the Relaxing TVD scheme for conserved physical quantities
+!!
+!! The main point of the Relaxing TVD scheme is to decompose vectors of conservative variables \f$u\f$ and fluxes \f$F\f$ 
+!! into left–moving and right–moving waves:
+!! \f{equation}
+!! u=u^L+u^P,
+!! \f}
+!! where
+!! \f{equation}
+!! u^L=\frac{1}{2}\left(U-\frac{F}{c}\right), u^P=\frac{1}{2}\left(U+\frac{F}{c}\right).
+!! \f}
+!! The symbol \f$c\f$ stands for freezing speed - a function that satisfies \f$c\ge \max\left(|v\pm c_f|\right)\f$,
+!! \f$v\f$ is the fluid velocity and \f$c_f\f$ is the fast magnetosonic speed.
+!! The fluxes then can be written as
+!! \f{equation}
+!! F^L=-cu^L, F^P=cu^P,
+!! \f}
+!! and their sum is the flux of \f$u\f$
+!! \f{equation}
+!! F=F^L+F^P.
+!! \f}
+!! 
+!! To make time integration PIERNIK uses Runge-Kutta scheme. We can choose between the first and the second order accuracy.
+!! The second order scheme consists of the following steps:
+!! \n (1) First order fluxes \f$\vec{F}_{i\pm 1/2}^{(1)L,R}\f$   are 
+!!    calculated together with source terms \f$\vec{S}_i(\vec{u})\f$ at \f$t^n\f$.
+!! \n (2) Fluxes and source terms derived in the first step are used to calculate 
+!!    \f$\vec{u}^{n+1/2}\f$ at \f$t^{n+1/2}\f$.
+!! \n (3) Second order fluxes \f$\vec{F}_{i+1/2}^{(2)}\f$, obtained via monotonic, upwind
+!!    interpolation to cell boundaries,  and source terms \f$\vec{S}\f$ are evaluated for 
+!!    \f$\vec{u}^{n+1/2}\f$ at \f$t^{n+1/2}\f$.
+!! \n (4) Update of \f$\Delta\vec{u}\f$, corresponding to the full 
+!!    timestep \f$\Delta t\f$ is done, using fluxes and source terms calculated 
+!!    at the intermediate time step \f$t^{n+1/2}\f$. 
+!!
+!! To achieve second order spatial accuracy, a monotone upwind interpolation of fluxes onto cell boundaries is made, 
+!! with the aid of a flux limiter, to obtain the Monotone Upwind Scheme for Conservation Laws (MUSCL) (step (3) in Runge-Kutta scheme).
+!! The monotone interpolation is used to avoid spurious oscillations in discrete solutions of higher order.
+!! The Total Variation Diminishing property of the numerical scheme is related to the measure of the overall amount
+!! of oscillations, called Total Variation.
+!<
    subroutine relaxing_tvd(u,bb,sweep,i1,i2,dx,n,dt)
 
 #ifdef IONIZED
@@ -114,20 +163,39 @@ module rtvd ! split orig
 
       implicit none
 
-      integer                   :: i1,i2, n, istep, ind
-      character(len=6)          :: sweep
+      integer                   :: i1                 !< coordinate of sweep in the 1st remaining direction
+      integer                   :: i2                 !< coordinate of sweep in the 2nd remaining direction
+      integer                   :: n                  !< array size
+      integer                   :: istep              !< step number in the time integration scheme
+      integer                   :: ind                !< fluid index
+      character(len=6)          :: sweep              !< direction (x, y or z) we are doing calculations for
 
-      real                      :: dt,dx,dtx
-      real, dimension(nvar,n)   :: u,cfr
-      real, dimension(nmag,n)   :: bb
-      real, dimension(nfluid,n) :: accr
+      real                      :: dt                 !< time step
+      real                      :: dx                 !< cell length
+      real                      :: dtx                !< dt/dx
+      real, dimension(nvar,n)   :: u                  !< vector of conservative vatiables
+      real, dimension(nvar,n)   :: cfr                !< freezing speed
+      real, dimension(nmag,n)   :: bb                 !< local copy of magnetic field
+      real, dimension(nfluid,n) :: acc                !< acceleration
 !locals
-      real, dimension(nvar,n)   :: w,fr,fl,dfrp,dfrm,dflm,dflp,dulf,durf
-      real, dimension(nvar,n)   :: ul0,ur0,u1,ul1,ur1
-
-      real, dimension(nfluid,n) :: rotaccr, fricaccr
-      real, dimension(2)        :: df
-      real, dimension(n)        :: gravaccr
+      real, dimension(nvar,n)   :: w                  !< auxiliary vector to calculate fluxes
+      real, dimension(nvar,n)   :: fr                 !< flux of the right-moving waves
+      real, dimension(nvar,n)   :: fl                 !< flux of the left-moving waves
+      real, dimension(nvar,n)   :: dfrp               !< second order correction of right-moving waves flux on the right cell boundary
+      real, dimension(nvar,n)   :: dfrm               !< second order correction of right-moving waves flux on the left cell boundary
+      real, dimension(nvar,n)   :: dflm               !< second order correction of left-moving waves flux on the left cell boundary
+      real, dimension(nvar,n)   :: dflp               !< second order correction of left-moving waves flux on the right cell boundary
+      real, dimension(nvar,n)   :: dulf               !< second order correction of the vector of conservative variables for the left-moving waves
+      real, dimension(nvar,n)   :: durf               !< second order correction of the vector of conservative variables for the right-moving waves
+      real, dimension(nvar,n)   :: ul0                !< left moving wave in first order scheme
+      real, dimension(nvar,n)   :: ur0                !< right moving wave in first order scheme
+      real, dimension(nvar,n)   :: u1                 !< uptaded vector of conservative variables (after one timestep in second order scheme)
+      real, dimension(nvar,n)   :: ul1                !< left moving wave (after one timestep in second order scheme)
+      real, dimension(nvar,n)   :: ur1                !< right moving wave (after one timestep in second order scheme)
+      real, dimension(nfluid,n) :: rotacc             !< acceleration caused by rotation
+      real, dimension(nfluid,n) :: fricacc            !< acceleration caused by friction
+      real, dimension(2)        :: df                 
+      real, dimension(n)        :: gravacc            !< acceleration caused by gravitation
 
 #ifdef SHEAR
       real, dimension(nfluid,n) :: vy0
@@ -207,14 +275,14 @@ module rtvd ! split orig
 
          do ind = 1, nfluid
             if(ind == 1) then
-               fricaccr(ind,:) = - epsa(ind,:) * (vx0(1,:) - vx0(2,:))
+               fricacc(ind,:) = - epsa(ind,:) * (vx0(1,:) - vx0(2,:))
             else
-               fricaccr(ind,:) = - epsa(ind,:) * (vx0(2,:) - vx0(1,:))
+               fricacc(ind,:) = - epsa(ind,:) * (vx0(2,:) - vx0(1,:))
             endif
          enddo
 
 #else /* FLUID_INTERACTIONS */
-         fricaccr(:,:) = 0.0
+         fricacc(:,:) = 0.0
          df = 0.0
 #endif /* FLUID_INTERACTIONS */
 
@@ -226,47 +294,47 @@ module rtvd ! split orig
          endwhere
          do ind = 1, nfluid
 !            if(sweep .eq. 'xsweep') then
-!               rotaccr(ind,:) =  2.0*omega*(vy0(ind,:) + qshear*omega*x(:))
+!               rotacc(ind,:) =  2.0*omega*(vy0(ind,:) + qshear*omega*x(:))
 !            else if(sweep .eq. 'ysweep')  then
-!               rotaccr(ind,:) = - 2.0*omega*vy0(ind,:)          ! with global shear
+!               rotacc(ind,:) = - 2.0*omega*vy0(ind,:)          ! with global shear
 !            else
-!               rotaccr(ind,:) = 0.0
+!               rotacc(ind,:) = 0.0
 !            endif
             if(sweep .eq. 'xsweep') then
-               rotaccr(ind,:) =  2.0*omega*vy0(ind,:) + df(ind)  ! global_gradient
+               rotacc(ind,:) =  2.0*omega*vy0(ind,:) + df(ind)  ! global_gradient
             else if(sweep .eq. 'ysweep')  then
-               rotaccr(ind,:) = (qshear - 2.0)*omega*vy0(ind,:)  ! with respect to global shear (2.5D)
+               rotacc(ind,:) = (qshear - 2.0)*omega*vy0(ind,:)  ! with respect to global shear (2.5D)
             else
-               rotaccr(ind,:) = 0.0
+               rotacc(ind,:) = 0.0
             endif
          enddo
 #else  /* SHEAR */
-         rotaccr(:,:) = 0.0
+         rotacc(:,:) = 0.0
 #endif /* SHEAR */
 
 #ifdef GRAV
-         call grav_pot2accel(sweep,i1,i2, n, gravaccr)
+         call grav_pot2accel(sweep,i1,i2, n, gravacc)
 #else /* GRAV */
-         gravaccr = 0.0
+         gravacc = 0.0
 #endif /* GRAV */
 
 
 #if defined GRAV || defined SHEAR || defined FLUID_INTERACTIONS
-         accr     =  rotaccr + fricaccr
+         acc     =  rotacc + fricacc
          do ind = 1, nfluid
-            accr(ind,:) =  accr(ind,:) + gravaccr(:)
+            acc(ind,:) =  acc(ind,:) + gravacc(:)
          enddo
 
-         accr(:,n)   = accr(:,n-1); accr(:,1) = accr(:,2)
+         acc(:,n)   = acc(:,n-1); acc(:,1) = acc(:,2)
 
          !!!! BEWARE: May not be necessary anymore
          where(u1(iarr_all_dn,:) < 0.0)
-            accr(:,:) = 0.0
+            acc(:,:) = 0.0
          endwhere
 
-         u1(iarr_all_mx,:) = u1(iarr_all_mx,:) + rk2coef(integration_order,istep)*accr(:,:)*u(iarr_all_dn,:)*dt
+         u1(iarr_all_mx,:) = u1(iarr_all_mx,:) + rk2coef(integration_order,istep)*acc(:,:)*u(iarr_all_dn,:)*dt
 #ifndef ISO
-         u1(iarr_all_en,:) = u1(iarr_all_en,:) + rk2coef(integration_order,istep)*accr(:,:)*u(iarr_all_mx,:)*dt
+         u1(iarr_all_en,:) = u1(iarr_all_en,:) + rk2coef(integration_order,istep)*acc(:,:)*u(iarr_all_mx,:)*dt
 #endif /* ISO */
 
 #endif /* defined GRAV || defined SHEAR || defined FLUID_INTERACTIONS */
