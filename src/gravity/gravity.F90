@@ -28,7 +28,7 @@
 #include "piernik.def"
 
 !>
-!! \brief Module containing all main subroutines and functions that govern gravity force in the code
+!! \brief [DW] Module containing all main subroutines and functions that govern gravity force in the code
 !<
 module gravity
 
@@ -147,18 +147,19 @@ module gravity
 !! The type of gravity is governed by preprocessor: \n\n
 !! GRAV_NULL - gravitational potential array is set to zero \n\n
 !! GRAV_UNIFORM - uniform type of gravity in z-direction \n
-!! \f$\Phi\left(z\right)=const \cdot z \f$\n\n
+!! \f$\Phi\left(z\right)= - const \cdot z \f$\n
+!! where \f$ const \f$ is set by parameter @c g_z \n\n
 !! GRAV_LINEAR - linear type of gravity growing along z-direction \n
 !! \f$\Phi\left(z\right) = const \cdot z^2\f$ \n\n
 !! GRAV_PTMASS - softened point mass type of gravity \n
 !! \f$\Phi\left(x,y,z\right)= - GM/\sqrt{x^2+y^2+z^2+r_{soft}^2}\f$ \n
-!! where \n\n
+!! where \f$r_{soft}\f$ is a radius of softenning\n\n
 !! GRAV_PTMASSPURE - unsoftened point mass type of gravity \n
 !! \f$\Phi\left(x,y,z\right)= - GM/\sqrt{x^2+y^2+z^2}\f$ \n
 !! where \n\n
 !! GRAV_PTFLAT - planar, softened point mass type of gravity \n
 !! \f$\Phi\left(x,y,z\right)= - GM/\sqrt{x^2+y^2+r_{soft}^2}\f$ \n
-!! where \n\n
+!! where \f$r_{soft}\f$ is a radius of softenning\n\n
 !! GRAV_USER - not a standard type o gravity, implemented by user in the routine grav_pot_user from gravity_user module.\n\n
 !<
 
@@ -254,10 +255,11 @@ module gravity
 !! \return grav 1D array of gravitational acceleration values computed for positions from xsw
 !! \n\n
 !! one type of gravity is implemented here: \n\n
-!! local Galactic gravity only in z-direction \n
+!! local Galactic gravity only in z-direction (after Ferriere 98)\n
 !! \f[
-!! F_z = 3.23 \cdot 10^8 \cdot \left[\left(-4.4 \cdot 10^{-9} \cdot exp\left(-\frac{(r_{gc}-r_{gc_sun})}{(4.9kpc)}\right) * \frac{z}{\sqrt{(z^2+(0.2kpc)^2)}}\right)-\left( 1.7 \cdot 10^{-9} \cdot \frac{(r_{gc_sun}^2 + (2.2kpc)^2)}{(r_{gc}^2 + (2.2kpc)^2)} \cdot \frac{z}{1kpc}\right) \right]
+!! F_z = 3.23 \cdot 10^8 \cdot \left[\left(-4.4 \cdot 10^{-9} \cdot exp\left(-\frac{(r_{gc}-r_{gc_{}Sun})}{(4.9kpc)}\right) \cdot \frac{z}{\sqrt{(z^2+(0.2kpc)^2)}}\right)-\left( 1.7 \cdot 10^{-9} \cdot \frac{(r_{gc_{}Sun}^2 + (2.2kpc)^2)}{(r_{gc}^2 + (2.2kpc)^2)} \cdot \frac{z}{1kpc}\right) \right]
 !! \f]
+!! where \f$r_{gc}\f$ is galactocentric radius and \f$r_{gcSun}\f$ is the galactocentric radius of Sun.
 !<
 
    subroutine grav_accel(sweep, i1,i2, xsw, n, grav)

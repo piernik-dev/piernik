@@ -27,7 +27,7 @@
 !
 #include "piernik.def"
 !>
-!! \brief Module containing subroutines and functions that govern supernovae insert
+!! \brief [DW] Module containing subroutines and functions that govern supernovae insert
 !<
 module snsources
    use initproblem, only : amp_ecr_sn,ethu,f_sn, h_sn, r_sn

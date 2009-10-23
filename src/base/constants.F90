@@ -28,7 +28,7 @@
 #include "piernik.def"
 
 !>
-!! \brief Module containing numerical and physical constants
+!! \brief [DW] Module containing numerical and physical constants
 !<
 module constants
 
@@ -62,7 +62,7 @@ module constants
    real, parameter :: Msun =       1.0                   !< mass of Sun
 
 #elif defined (PLN)
-! PLN  uses: length --> AU,     mass --> Mjup,        time --> yr,        miu0 --> 4*pi,    temperature --> kelvin
+! PLN  uses: length --> AU,     mass --> Mjup,        time --> yr,         miu0 --> 4*pi,    temperature --> kelvin
 ! length units:
    real, parameter :: cm =         1.0/1.49598e13        !< centimetre, length unit
    real, parameter :: metr =       1.0e2*cm              !< metre, length unit

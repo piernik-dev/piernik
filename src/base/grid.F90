@@ -26,6 +26,9 @@
 !    For full list of developers see $PIERNIK_HOME/license/pdt.txt
 !
 #include "piernik.def"
+!>
+!! \brief [DW]
+!<
 module grid
 
 ! Written by: M. Hanasz, January/February 2006
