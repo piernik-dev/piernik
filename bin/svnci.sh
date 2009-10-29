@@ -17,4 +17,6 @@ if [ $# -lt 1 ] ; then
 	exit 1
 fi
 
-eval "${cmdb}$*${cmde}"
+#eval "${cmdb}$*${cmde}"
+
+echo `eval ${cmdb}*${cmde}`
