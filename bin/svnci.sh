@@ -19,4 +19,4 @@ fi
 
 #eval "${cmdb}$*${cmde}"
 
-echo `eval ${cmdb}*${cmde}`
+echo `${cmdb} ${cmde}`
