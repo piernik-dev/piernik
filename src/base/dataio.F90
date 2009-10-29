@@ -181,6 +181,7 @@ module dataio
       dt_res = 0.0
       dt_tsl = 0.0
       dt_log = 0.0
+      dt_plt = 0.0
       domain = 'phys_domain'
       vars(:)   = ''
       mag_center= 'no'
@@ -267,6 +268,7 @@ module dataio
          rbuff(41) = dt_res
          rbuff(42) = dt_tsl
          rbuff(43) = dt_log
+         rbuff(44) = dt_plt
 
          cbuff(40) = domain
 
@@ -315,6 +317,7 @@ module dataio
          dt_res              = rbuff(41)
          dt_tsl              = rbuff(42)
          dt_log              = rbuff(43)
+         dt_plt              = rbuff(44)
 
          domain              = trim(cbuff(40))
          do iv=1, nvarsmx
