@@ -6,7 +6,9 @@ root=$( LC_ALL=C LANG=C LANGUAGE=C svn info | grep "Repository Root: " | awk '{p
 relpath=$( echo $url | sed "s^$root/^^" )
 last=$( basename $relpath )
 
-#echo $url $root $relpath $last
+if [[ $relpath =~ 'public/trunk' ]]; then
+   last="public"
+fi
 
 cmdb='svn ci -m '"'"'[source:'"$relpath"' '"$last"']: '
 cmde="'"' .'
@@ -17,6 +19,4 @@ if [ $# -lt 1 ] ; then
 	exit 1
 fi
 
-#eval "${cmdb}$*${cmde}"
-
-echo `${cmdb} ${cmde}`
+eval "${cmdb}$*${cmde}"
