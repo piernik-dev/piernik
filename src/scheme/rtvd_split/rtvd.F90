@@ -36,15 +36,67 @@ module rtvd ! split orig
    contains
 !>
 !! \brief Subroutine computes magnetic field evolution 
+!!
+!! The original RTVD MHD scheme incorporates magnetic field evolution via the Constrained transport (CT) 
+!! algorithm by Evans & Hawley (1988). The idea behind the CT scheme is to integrate numerically the induction equation 
+!! \f{equation}
+!! \frac{\partial\vec{B}}{\partial t} = \nabla\times (\vec{v}  \times \vec{B}),
+!! \f}
+!! in a manner ensuring that the condition
+!! \f{equation}
+!! \nabla \cdot \vec{B} = 0,
+!! \f}
+!! is fulfilled to the machine accuracy.
+!!
+!! The divergence-free evolution of magnetic-field on a discrete computational
+!! grid can be realized if the last equation holds for the discrete representation of the initial
+!! condition, and that subsequent updates of \f$B\f$ do not change the total magnetic
+!! flux threading cell faces.
+!! 
+!! Time variations of magnetic flux threading surface \f$S\f$ bounded by contour \f$C\f$, due to Stokes theorem, can be written as 
+!! \f{equation}
+!! \frac{\partial\Phi_S}{\partial t} = \frac{\partial}{\partial t} \int_S \vec{B} \cdot \vec{d\sigma} = \int_S \nabla \times ( \vec{v} \times \vec{B})\cdot \vec{d \sigma} =  \oint_{C} (\vec{v} \times \vec{B}) \cdot \vec{dl},
+!! \f}
+!! where \f$\vec{E}= \vec{v} \times \vec{B}\f$ is electric field, named also electromotive force (EMF).
+!! 
+!! In a discrete representation variations of magnetic fluxes, in timestep \f$\Delta t\f$, threading faces of cell \f$(i,j,k)\f$ are
+!! given by
+!! \f{eqnarray}
+!! \frac{\Phi^{x,n+1}_{i+1/2,j,k} - \Phi^{x,n}_{i+1/2,j,k}}{\Delta t} &=&
+!! {E}^y_{i+1/2,j,k-1/2} \Delta y + {E}^z_{i+1/2,j+1/2,k} \Delta z     \nonumber\\
+!! &-&{E}^y_{i+1/2,j,k+1/2} \Delta y - {E}^z_{i+1/2,j-1/2,k} \Delta z,  \nonumber
+!! \f}
+!! \f{eqnarray}
+!! \frac{\Phi^{y,n+1}_{i,j+1/2,k} - \Phi^{y,n}_{i,j+1/2,k}}{\Delta t} &=&
+!! {E}^x_{i,j+1/2,k+1/2} \Delta x + {E}^z_{i-1/2,j+1/2,k} \Delta z      \nonumber\\
+!! &-&{E}^x_{i,j+1/2,k-1/2} \Delta x - {E}^z_{i+1/2,j+1/2,k} \Delta z,  \nonumber
+!! \f}
+!! \f{eqnarray}
+!! \frac{\Phi^{z,n+1}_{i,j,k+1/2} - \Phi^{z,n}_{i,j,k+1/2}}{\Delta t} &=&
+!! {E}^x_{i,j-1/2,k+1/2} \Delta x + {E}^y_{i+1/2,j,k+1/2} \Delta y      \nonumber\\
+!! &-&{E}^x_{i,j+1/2,k+1/2} \Delta x - {E}^y_{i-1/2,j,k+1/2} \Delta y,  \nonumber
+!! \f}
+!! Variations of magnetic flux threading remaining three faces of cell \f$(i,j,k)\f$ can be written in a similar manner. We note that each EMF 
+!! contribution appears twice with opposite sign. Thus, the total change of magnetic flux, piercing all cell-faces, vanishes to machine accuracy.
+!!
+!! A particular implementation of the CT scheme depends on actual centering of fluid variables. In the RTVD scheme all fluid variables  (\f$\rho\f$, 
+!! \f$m_x\f$, \f$m_y\f$, \f$m_z\f$ and \f$e\f$) are  cell-centered, and  magnetic field components (\f$B_x\f$, \f$B_y\f$, \f$B_z\f$) are 
+!! face-centered. For that reason interpolation is necessary. For the detailed scheme used in our code see sections prepared for Lecture Notes in 
+!! Physics, Springer, that are placed in doc/evora subdirectory. 
 !<
    subroutine tvdb(vibj,b,vg,n,dt,di)
       use constants, only : big
       implicit none
-      integer, intent(in) :: n
-      real, intent(in)    :: dt,di
-      real, dimension(n)  :: vibj,b,vg
+      integer, intent(in) :: n       !< array size
+      real, intent(in)    :: dt      !< time step
+      real, intent(in)    :: di      !< cell length, depends on direction x, y or z
+      real, dimension(n)  :: vibj    !< face-centered electromotive force components (b*vg)
+      real, dimension(n)  :: b       !< magnetic field
+      real, dimension(n)  :: vg      !< velocity in the center of cell boundary
 ! locals
-      real, dimension(n)  :: b1,vibj1,vh
+      real, dimension(n)  :: b1      !< magnetic field
+      real, dimension(n)  :: vibj1   !< face-centered electromotive force components (b*vg)
+      real, dimension(n)  :: vh      !< velocity interpolated to the cell edges 
       real :: dti, v, w, dw, dwm, dwp
       integer :: i, ip, ipp, im
 
