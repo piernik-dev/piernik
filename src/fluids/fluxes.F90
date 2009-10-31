@@ -162,7 +162,7 @@ end subroutine all_fluxes
 !==========================================================================================
 
 !>
-!! \brief This subroutine applies flux limit.
+!! \brief This subroutine applies flux limiter.
 !!
 !! Flux limiter is a function used when interpolation of fluxes onto cell boundaries is made to avoid the spurious oscillations.
 !! 
