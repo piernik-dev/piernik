@@ -27,7 +27,7 @@
 !
 #include "piernik.def"
 !>
-!! \brief (MH) Module that collects all flux components from each fluid
+!! \brief (MH/JD) Module that collects all flux components from each fluid
 !!
 !!The fluxes for all fluids are combined in the same order as conservarive variables in the array \a u(:,:,:,:)
 !!\f{equation}
@@ -161,10 +161,22 @@ end subroutine all_fluxes
 
 !==========================================================================================
 
+!>
+!! \brief This subroutine applies flux limit.
+!!
+!! Flux limiter is a function used when interpolation of fluxes onto cell boundaries is made to avoid the spurious oscillations.
+!! 
+!! You can choose between van Leer's (default), monotonized central, minmod or superbee flux limiters. The chosen flux limiter has to be defined in 
+!! file piernik.def.
+!<
   subroutine flimiter(f,a,b,m,n)
     implicit none
-    integer m,n
-    real, dimension(m,n) :: f,a,b,c
+    integer m                  !< number of conservative variables
+    integer n                  !< array size
+    real, dimension(m,n) :: f  !< second order flux correction for left- or right- moving waves
+    real, dimension(m,n) :: a  !< second order correction of left- or right- moving waves flux on the left cell boundary
+    real, dimension(m,n) :: b  !< second order correction of left- or right- moving waves flux on the right cell boundary
+    real, dimension(m,n) :: c  !< a*b
 #ifdef VANLEER
       c = a*b
       where (c .gt. 0.0)
