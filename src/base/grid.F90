@@ -27,7 +27,9 @@
 !
 #include "piernik.def"
 !>
-!! \brief [DW]
+!! \brief [DW] Module containing routines to specify required computational mesh.
+!! \author M. Hanasz
+!! \date January/February 2006
 !<
 module grid
 
@@ -54,7 +56,9 @@ module grid
 
 
    contains
-
+!>
+!! \brief Routine which sets numbers of cells for the domain, MPI blocks and initializes direction meshes (x,y,z).
+!<
    subroutine init_grid
       use errh, only : namelist_errh
       use mpisetup
@@ -188,7 +192,9 @@ module grid
       allocate(z(nz), zl(nz), zr(nz))
 
    end subroutine init_grid
-
+!>
+!! \brief Routine that computes domain maximum and minimum of coordinates, lengths of cells and coordinates of zone centers and left/right zone boundaries.
+!<
    subroutine grid_xyz
       use mpisetup
 
@@ -284,7 +290,9 @@ module grid
       Lz = zmax - zmin
 
    end subroutine grid_xyz
-
+!>
+!! \brief Routines that deallocates directional meshes.
+!<
    subroutine cleanup_grid
       implicit none
 

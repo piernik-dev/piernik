@@ -27,14 +27,18 @@
 !
 #include "piernik.def"
 !>
-!! \brief [DW]
+!! \brief [DW] Module containing a routine to compute upper limit of timestep due to fluids interactions.
 !<
 module timestepinteractions
 
-   real :: dt_interact
+   real :: dt_interact                    !< value of the upper limit of integration timestep due to fluids interactions.
 
  contains
-
+!>
+!! \brief Routine that computes upper limit of timestep due to fluids interactions.
+!! \warning works only with neutrals and dust case !!!!
+!! \todo check if subtraction of momenta is really the case (i am confused again - DW)
+!<
   subroutine timestep_interactions
     use mpisetup
     use arrays,         only : u,b
@@ -46,8 +50,9 @@ module timestepinteractions
 
     implicit none
 
-    real :: dt_interact_proc, dt_interact_all
-    real :: val
+    real :: dt_interact_proc        !< timestep due to interactions for the current process (MPI block) only
+    real :: dt_interact_all         !< timestep due to interactions for all MPI blocks
+    real :: val                     !< variable used to store the maximum value of relative momentum
 
 
 !    dt_interact_proc = 1.0 / (maxval(collfaq)+small) / maxval(u(iarr_all_dn,:,:,:))

@@ -29,18 +29,30 @@
 
 !>
 !! \brief [DW] Module containing all main subroutines and functions that govern gravity force in the code
+!! \todo to check importance and usefullness of such parameters as g_y and n_gravr2 and tune_zeq_bnd
 !<
 module gravity
 
    use constants
 
-   character(LEN=9) :: gp_status
-   real    :: g_z, g_y, dg_dz, r_gc
-   real    :: ptmass, ptm_x, ptm_y, ptm_z, r_smooth
-   integer :: nsub
-   real    :: h_grav,  r_grav
-   integer :: n_gravh, n_gravr, n_gravr2
-   real    :: tune_zeq, tune_zeq_bnd
+   character(LEN=9) :: gp_status    !< variable set as 'undefined' in grav_pot_3d when grav_accel is supposed to use
+   real    :: g_z                   !< z-component used by GRAV_UNIFORM type of gravity
+   real    :: g_y                   !< y-component of GRAV_UNIFORM constant (currently not used)
+   real    :: dg_dz                 !< constant used by GRAV_LINEAR type of gravity
+   real    :: r_gc                  !< galactocentric radius of the local simulation region used by local Galactic type of gravity in grav_accel
+   real    :: ptmass                !< mass value of point gravity source used by GRAV_PTMASS/GRAV_PTMASSPURE/GRAV_PTFLAT type of gravity
+   real    :: ptm_x                 !< point mass position x-component
+   real    :: ptm_y                 !< point mass position y-component
+   real    :: ptm_z                 !< point mass position z-component
+   real    :: r_smooth              !< smoothing radius in point mass types of gravity
+   integer :: nsub                  !< number of subcells while additionally cell division in z-direction during estabilishment of hydrostatic equilibrium
+   real    :: h_grav                !< altitude of acceleration cut used when n_gravh is set to non-zero
+   real    :: r_grav                !< radius of gravitational potential cut used by GRAV_PTMASS/GRAV_PTFLAT type of gravity
+   integer :: n_gravh               !< index of hiperbolic-cosinusoidal cutting of acceleration; used when set to non-zero
+   integer :: n_gravr               !< index of hiperbolic-cosinusoidal cutting of gravitational potential used by GRAV_PTMASS/GRAV_PTFLAT type of gravity
+   integer :: n_gravr2              !< similar to n_gravr (currently not used)
+   real    :: tune_zeq              !< z-component of gravity tunning factor used by hydrostatic_zeq
+   real    :: tune_zeq_bnd          !< z-component of gravity tunning factor supposed to use in boundaries (currently not used)
 
 
    contains
@@ -150,7 +162,7 @@ module gravity
 !! \f$\Phi\left(z\right)= - const \cdot z \f$\n
 !! where \f$ const \f$ is set by parameter @c g_z \n\n
 !! GRAV_LINEAR - linear type of gravity growing along z-direction \n
-!! \f$\Phi\left(z\right) = const \cdot z^2\f$ \n\n
+!! \f$\Phi\left(z\right) = -1/2 /cdot const \cdot z^2\f$ \n\n
 !! GRAV_PTMASS - softened point mass type of gravity \n
 !! \f$\Phi\left(x,y,z\right)= - GM/\sqrt{x^2+y^2+z^2+r_{soft}^2}\f$ \n
 !! where \f$r_{soft}\f$ is a radius of softenning\n\n
@@ -160,7 +172,7 @@ module gravity
 !! GRAV_PTFLAT - planar, softened point mass type of gravity \n
 !! \f$\Phi\left(x,y,z\right)= - GM/\sqrt{x^2+y^2+r_{soft}^2}\f$ \n
 !! where \f$r_{soft}\f$ is a radius of softenning\n\n
-!! GRAV_USER - not a standard type o gravity, implemented by user in the routine grav_pot_user from gravity_user module.\n\n
+!! GRAV_USER - not a standard type of gravity, implemented by user in the routine grav_pot_user from gravity_user module.\n\n
 !<
 
    subroutine grav_pot_3d
@@ -255,7 +267,7 @@ module gravity
 !! \return grav 1D array of gravitational acceleration values computed for positions from xsw
 !! \n\n
 !! one type of gravity is implemented here: \n\n
-!! local Galactic gravity only in z-direction (after Ferriere 98)\n
+!! local Galactic gravity only in z-direction (see <a href="http://cdsads.u-strasbg.fr/abs/1998ApJ...497..759F">Ferriere K., 1998, Astrophys. Journal, 497, 759</a>)\n
 !! \f[
 !! F_z = 3.23 \cdot 10^8 \cdot \left[\left(-4.4 \cdot 10^{-9} \cdot exp\left(-\frac{(r_{gc}-r_{gc_{}Sun})}{(4.9kpc)}\right) \cdot \frac{z}{\sqrt{(z^2+(0.2kpc)^2)}}\right)-\left( 1.7 \cdot 10^{-9} \cdot \frac{(r_{gc_{}Sun}^2 + (2.2kpc)^2)}{(r_{gc}^2 + (2.2kpc)^2)} \cdot \frac{z}{1kpc}\right) \right]
 !! \f]

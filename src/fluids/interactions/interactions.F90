@@ -33,10 +33,12 @@ module interactions
 
    use constants
 
-   real, allocatable, dimension(:,:,:,:)  :: omx0, omy0
-   real, allocatable, dimension(:,:)      :: alfsup
-   real, allocatable, dimension(:,:)      :: collfaq
-   real :: collision_factor, cfl_interact
+   real, allocatable, dimension(:,:,:,:)  :: omx0        !< array to store x component of initial velocity
+   real, allocatable, dimension(:,:,:,:)  :: omy0        !< array to store y component of initial velocity
+   real, allocatable, dimension(:,:)      :: alfsup      !< xy-array of values between 0 and 1, 1 where boundary support is used
+   real, allocatable, dimension(:,:)      :: collfaq     !< nfluid x nfluid array of collision factors
+   real :: collision_factor                              !< collision factor (to set in problem.par)
+   real :: cfl_interact                                  !< Courant factor for interactions (to set in problem.par)
 
 
    contains
