@@ -42,12 +42,19 @@ module dataio_hdf5
    use h5lt
    use func, only : strlen
 
-   character(LEN=10), dimension(3) :: dname = (/"fluid","mag","dinit"/)
-   character(len=4), allocatable, dimension(:) :: hdf_vars
-   integer :: nhdf_vars
-   integer :: ix,iy,iz
-   integer :: is,ie,js,je,ks,ke
-   real    :: dt_plt
+   character(LEN=10), dimension(3) :: dname = (/"fluid","mag","dinit"/)  !< dataset names for restart files
+   character(len=4), allocatable, dimension(:) :: hdf_vars  !< dataset names for hdf files
+   integer :: nhdf_vars !< number of quantities ploted to hdf files
+   integer :: ix !< no. of cell (1 <= ix < nxd) for YZ slice in plt files
+   integer :: iy !< no. of cell (1 <= iy < nyd) for XZ slice in plt files
+   integer :: iz !< no. of cell (1 <= iz < nzd) for XY slice in plt files
+   integer :: is !< COMMENT ME
+   integer :: ie !< COMMENT ME
+   integer :: js !< COMMENT ME
+   integer :: je !< COMMENT ME
+   integer :: ks !< COMMENT ME
+   integer :: ke !< COMMENT ME
+   real    :: dt_plt !< frequency of plt output
 
    contains
 
@@ -55,9 +62,11 @@ module dataio_hdf5
       use fluidindex
       use grid, only : nx,ny,nz,nxd,nyd,nzd,nb
       implicit none
-      character(len=4), dimension(:), intent(in) :: vars
-      integer,intent(in) :: tix,tiy,tiz
-      real,intent(in)    :: tdt_plt
+      character(len=4), dimension(:), intent(in) :: vars  !< quantities to be plotted, see dataio::vars
+      integer,intent(in) :: tix     !< local copy of dataio::ix
+      integer,intent(in) :: tiy     !< local copy of dataio::iy
+      integer,intent(in) :: tiz     !< local copy of dataio::iz
+      real,intent(in)    :: tdt_plt !< local copy of dataio::dt_plt
       integer :: nvars,i,j
 
       ix = tix; iy = tiy; iz = tiz; dt_plt = tdt_plt
@@ -190,10 +199,11 @@ module dataio_hdf5
       use fluidindex, only : ind
 
       implicit none
-      character(LEN=4)     :: var
-      character(LEN=2)     :: ij
-      integer              :: xn,ierrh
-      real, dimension(:,:) :: tab
+      character(LEN=4)     :: var !< quantity to be plotted
+      character(LEN=2)     :: ij  !< plane of plot
+      integer              :: xn  !< no. of cell at which we are slicing the local block
+      integer              :: ierrh !< error handling
+      real, dimension(:,:) :: tab !< array containing given quantity
 
       ierrh = 0
       select case(var)
