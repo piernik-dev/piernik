@@ -30,29 +30,93 @@
 !! \brief [DW] Module containing routines to specify required computational mesh.
 !! \author M. Hanasz
 !! \date January/February 2006
+!! \htmlonly
+!! <br><br>
+!! In this module two namelists of parameters are specified:
+!! <br><br>
+!! DOMAIN_SIZES
+!! <br><br>
+!! <table border="+1" cellpadding="5">
+!! <tr><td><b>parameter</b> </td><td> <b>default value</b> </td><td> <b>description</b></td></tr>
+!! <tr><td>nxd</td><td>1</td><td>number of grid cells in physical domain (without boundary cells) in x-direction</td></tr>
+!! <tr><td>nyd</td><td>1</td><td>number of grid cells in physical domain (without boundary cells) in y-direction</td></tr>
+!! <tr><td>nzd</td><td>1</td><td>number of grid cells in physical domain (without boundary cells) in z-direction</td></tr>
+!! <tr><td>nb</td><td>4</td><td>number cells in a boundary layer</td></tr>
+!! </table>
+!! <br><br>
+!! DOMAIN_LIMITS
+!! <br><br>
+!! <table border="+1" cellpadding="5">
+!! <tr><td><b>parameter</b> </td><td> <b>default value</b> </td><td> <b>description</b></td></tr>
+!! <tr><td>xmin</td><td></td><td>physical domain left x-boundary position</td></tr>
+!! <tr><td>xmax</td><td></td><td>physical domain right x-boundary position</td></tr>
+!! <tr><td>ymin</td><td></td><td>physical domain left y-boundary position</td></tr>
+!! <tr><td>ymax</td><td></td><td>physical domain right y-boundary position</td></tr>
+!! <tr><td>zmin</td><td></td><td>physical domain left z-boundary position</td></tr>
+!! <tr><td>zmax</td><td></td><td>physical domain right z-boundary position</td></tr>
+!! </table>
+!! \endhtmlonly
 !<
 module grid
 
 ! Written by: M. Hanasz, January/February 2006
 
    implicit none
-   real    :: dx, dy, dz, dxmn, dvol
-   integer :: nxd, nyd, nzd, nb
-   integer :: nx, ny, nz
-   integer :: nxb, nyb, nzb
-   integer :: nxt, nyt, nzt
-   integer :: is, ie, js, je, ks, ke
-   integer :: maxxyz
+   real    :: dx                             !< length of the grid cell in x-direction
+   real    :: dy                             !< length of the grid cell in y-direction
+   real    :: dz                             !< length of the grid cell in z-direction
+   real    :: dxmn                           !< the smallest length of the grid cell (among dx, dy, and dz)
+   real    :: dvol                           !< volume of one grid cell
+   integer :: nxd                            !< number of grid cells in physical domain (without boundary cells) in x-direction
+   integer :: nyd                            !< number of grid cells in physical domain (without boundary cells) in y-direction
+   integer :: nzd                            !< number of grid cells in physical domain (without boundary cells) in z-direction
+   integer :: nb                             !< number cells in a boundary layer
+   integer :: nx                             !< number of grid cells in one block in x-direction
+   integer :: ny                             !< number of grid cells in one block in y-direction
+   integer :: nz                             !< number of grid cells in one block in z-direction
+   integer :: nxb                            !< number of physical domain grid cells in one block (without boundary cells) in x-direction
+   integer :: nyb                            !< number of physical domain grid cells in one block (without boundary cells) in y-direction
+   integer :: nzb                            !< number of physical domain grid cells in one block (without boundary cells) in z-direction
+   integer :: nxt                            !< total number of grid cells in the whole domain in x-direction
+   integer :: nyt                            !< total number of grid cells in the whole domain in y-direction
+   integer :: nzt                            !< total number of grid cells in the whole domain in z-direction
+   integer :: is                             !< index of the first grid cell of physical domain in x-direction
+   integer :: ie                             !< index of the last grid cell of physical domain in x-direction
+   integer :: js                             !< index of the first grid cell of physical domain in y-direction
+   integer :: je                             !< index of the last grid cell of physical domain in y-direction
+   integer :: ks                             !< index of the first grid cell of physical domain in z-direction
+   integer :: ke                             !< index of the last grid cell of physical domain in z-direction
+   integer :: maxxyz                         !< maximum number of grid cells in any direction
 
-   real    :: xmin, xmax, ymin, ymax, zmin, zmax
-   real    :: xminb, xmaxb, yminb, ymaxb, zminb, zmaxb
-   real    :: Lx, Ly, Lz
-   integer,parameter  :: xdim=1, ydim=2, zdim=3
+   real    :: xmin                           !< physical domain left x-boundary position
+   real    :: xmax                           !< physical domain right x-boundary position
+   real    :: ymin                           !< physical domain left y-boundary position
+   real    :: ymax                           !< physical domain right y-boundary position
+   real    :: zmin                           !< physical domain left z-boundary position
+   real    :: zmax                           !< physical domain right z-boundary position
+   real    :: xminb                          !< current block left x-boundary position
+   real    :: xmaxb                          !< current block right x-boundary position
+   real    :: yminb                          !< current block left y-boundary position
+   real    :: ymaxb                          !< current block right y-boundary position
+   real    :: zminb                          !< current block left z-boundary position
+   real    :: zmaxb                          !< current block right z-boundary position
+   real    :: Lx                             !< span of the physical domain in x-direction (xmax-xmin)
+   real    :: Ly                             !< span of the physical domain in y-direction (ymax-ymin)
+   real    :: Lz                             !< span of the physical domain in z-direction (zmax-zmin)
+   integer,parameter  :: xdim=1              !< parameter assigned to x-direction
+   integer,parameter  :: ydim=2              !< parameter assigned to y-direction
+   integer,parameter  :: zdim=3              !< parameter assigned to z-direction
 
-   real, allocatable :: dl(:)
-   real, allocatable, dimension(:)  :: x, xl, xr
-   real, allocatable, dimension(:)  :: y, yl, yr
-   real, allocatable, dimension(:)  :: z, zl, zr
+   real, allocatable :: dl(:)                !< array of grid cell sizes in all directions
+   real, allocatable, dimension(:)  :: x     !< array of x-positions of grid cells centers
+   real, allocatable, dimension(:)  :: y     !< array of y-positions of grid cells centers
+   real, allocatable, dimension(:)  :: z     !< array of z-positions of grid cells centers
+   real, allocatable, dimension(:)  :: xl    !< array of x-positions of grid cells left borders
+   real, allocatable, dimension(:)  :: yl    !< array of y-positions of grid cells left borders
+   real, allocatable, dimension(:)  :: zl    !< array of z-positions of grid cells left borders
+   real, allocatable, dimension(:)  :: xr    !< array of x-positions of grid cells right borders
+   real, allocatable, dimension(:)  :: yr    !< array of y-positions of grid cells right borders
+   real, allocatable, dimension(:)  :: zr    !< array of z-positions of grid cells right borders
 
 
    contains
