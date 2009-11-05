@@ -36,9 +36,9 @@
 !! INTERACTIONS
 !! <br><br>
 !! <table border="+1" cellpadding="5">
-!! <tr><td><b>parameter</b> </td><td> <b>default value</b> </td><td> <b>description</b></td></tr>
-!! <tr><td>collision_factor</td><td>0.0</td><td>collision factor</td></tr>
-!! <tr><td>cfl_interact</td><td>0.8</td><td>Courant factor for interactions</td></tr>
+!! <tr><td><b>parameter</b> </td><td> <b>default value</b> </td><td> <b>possible values</b> </td><td> <b>description</b></td></tr>
+!! <tr><td>collision_factor</td><td>0.0</td><td>real, 0 to 1</td><td>collision factor</td></tr>
+!! <tr><td>cfl_interact</td><td>0.8</td><td>real, 0 to 1</td><td>Courant factor for interactions</td></tr>
 !! </table>
 !! \endhtmlonly
 !<
