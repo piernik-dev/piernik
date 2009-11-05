@@ -40,13 +40,13 @@
 !! <tr><td><b>parameter</b> </td><td> <b>default value</b> </td><td> <b>possible values</b> </td><td> <b>description</b></td></tr>
 !! <tr><td>g_z</td><td>0.0</td><td>real</td><td>z-component used by GRAV_UNIFORM type of gravity</td></tr>
 !! <tr><td>g_y</td><td>0.0</td><td>real</td><td>y-component of GRAV_UNIFORM constant (currently not used)</td></tr>
-!! <tr><td>dg_dz</td><td>0.0</td>real<td></td><td>constant used by GRAV_LINEAR type of gravity</td></tr>
-!! <tr><td>r_gc</td><td>8500</td>real<td></td><td>galactocentric radius of the local simulation region used by local Galactic type of gravity in grav_accel</td></tr>
-!! <tr><td>ptmass</td><td>0.0</td>non-negative real<td></td><td>mass value of point gravity source used by GRAV_PTMASS/GRAV_PTMASSPURE/GRAV_PTFLAT type of gravity</td></tr>
+!! <tr><td>dg_dz</td><td>0.0</td><td>real</td><td>constant used by GRAV_LINEAR type of gravity</td></tr>
+!! <tr><td>r_gc</td><td>8500</td><td>real</td><td>galactocentric radius of the local simulation region used by local Galactic type of gravity in grav_accel</td></tr>
+!! <tr><td>ptmass</td><td>0.0</td><td>non-negative real</td><td>mass value of point gravity source used by GRAV_PTMASS/GRAV_PTMASSPURE/GRAV_PTFLAT type of gravity</td></tr>
 !! <tr><td>ptm_x</td><td>0.0</td><td>real</td><td>point mass position x-component</td></tr>
 !! <tr><td>ptm_y</td><td>0.0</td><td>real</td><td>point mass position y-component</td></tr>
 !! <tr><td>ptm_z</td><td>0.0</td><td>real</td><td>point mass position z-component</td></tr>
-!! <tr><td>r_smooth</td><td>0.0</td>real<td></td><td>smoothing radius in point mass types of gravity</td></tr>
+!! <tr><td>r_smooth</td><td>0.0</td><td>real</td><td>smoothing radius in point mass types of gravity</td></tr>
 !! <tr><td>nsub</td><td>10</td><td>integer > 0</td><td>number of subcells while additionally cell division in z-direction during estabilishment of hydrostatic equilibrium</td></tr>
 !! <tr><td>tune_zeq</td><td>1.0</td><td>real</td><td>z-component of gravity tunning factor used by hydrostatic_zeq</td></tr>
 !! <tr><td>tune_zeq_bnd</td><td>1.0</td><td>real</td><td>z-component of gravity tunning factor supposed to use in boundaries (currently not used)</td></tr>
