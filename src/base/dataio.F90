@@ -43,41 +43,41 @@
 !! END_CONTROL
 !! <br><br>
 !! <table border="+1" cellpadding="5">
-!! <tr><td><b>parameter</b> </td><td> <b>default value</b> </td><td> <b>description</b></td></tr>
-!! <tr><td>nend</td><td>1</td><td></td></tr>
-!! <tr><td>tend</td><td>-1.0</td><td></td></tr>
+!! <tr><td><b>parameter</b> </td><td> <b>default value</b> </td><td> <b>possible values</b> </td><td> <b>description</b></td></tr>
+!! <tr><td>nend</td><td>1</td><td>integer</td><td></td></tr>
+!! <tr><td>tend</td><td>-1.0</td><td>real</td><td></td></tr>
 !! </table>
 !! <br><br>
 !! RESTART_CONTROL
 !! <br><br>
 !! <table border="+1" cellpadding="5">
-!! <tr><td><b>parameter</b> </td><td> <b>default value</b> </td><td> <b>description</b></td></tr>
-!! <tr><td>restart</td><td>'last'</td><td>'last': automatic choise of the last restart file regardless of "nrestart" value; if smth else is set: "nrestart" value is fixing</td></tr>
-!! <tr><td>new_id</td><td>''</td><td></td></tr>
-!! <tr><td>nrestart</td><td>3</td><td></td></tr>
-!! <tr><td>resdel</td><td>0</td><td></td></tr>
+!! <tr><td><b>parameter</b> </td><td> <b>default value</b> </td><td> <b>possible values</b> </td><td> <b>description</b></td></tr>
+!! <tr><td>restart</td><td>'last'</td><td>'last' or another string of characters</td><td>'last': automatic choise of the last restart file regardless of "nrestart" value; if smth else is set: "nrestart" value is fixing</td></tr>
+!! <tr><td>new_id</td><td>''</td><td>string of characters</td><td></td></tr>
+!! <tr><td>nrestart</td><td>3</td><td>integer</td><td></td></tr>
+!! <tr><td>resdel</td><td>0</td><td>integer</td><td>number of recent restart dumps which should be saved; each n-resdel-1 restart file is supposed to be deleted while writing n restart file</td></tr>
 !! </table>
 !! <br><br>
 !! OUTPUT_CONTROL
 !! <br><br>
 !! <table border="+1" cellpadding="5">
-!! <tr><td><b>parameter</b> </td><td> <b>default value</b> </td><td> <b>description</b></td></tr>
-!! <tr><td>dt_hdf</td><td>0.0</td><td></td></tr>
-!! <tr><td>dt_res</td><td>0.0</td><td></td></tr>
-!! <tr><td>dt_tsl</td><td>0.0</td><td></td></tr>
-!! <tr><td>dt_log</td><td>0.0</td><td></td></tr>
-!! <tr><td>dt_plt</td><td>0.0</td><td></td></tr>
-!! <tr><td>ix</td><td></td><td></td></tr>
-!! <tr><td>iy</td><td></td><td></td></tr>
-!! <tr><td>iz</td><td></td><td></td></tr>
-!! <tr><td>domain</td><td>'phys_domain'</td><td></td></tr>
-!! <tr><td>vars</td><td>''</td><td></td></tr>
-!! <tr><td>mag_center</td><td>'no'</td><td></td></tr>
-!! <tr><td>min_disk_space_MB</td><td>100</td><td></td></tr>
-!! <tr><td>sleep_minutes</td><td>0</td><td></td></tr>
-!! <tr><td>sleep_seconds</td><td>0</td><td></td></tr>
-!! <tr><td>user_message_file</td><td>trim(cwd)//'/msg'</td><td></td></tr>
-!! <tr><td>system_message_file</td><td>'/tmp/piernik_msg'</td><td></td></tr>
+!! <tr><td><b>parameter</b> </td><td> <b>default value</b> </td><td> <b>possible values</b> </td><td> <b>description</b></td></tr>
+!! <tr><td>dt_hdf</td><td>0.0</td><td>real</td><td></td></tr>
+!! <tr><td>dt_res</td><td>0.0</td><td>real</td><td></td></tr>
+!! <tr><td>dt_tsl</td><td>0.0</td><td>real</td><td></td></tr>
+!! <tr><td>dt_log</td><td>0.0</td><td>real</td><td></td></tr>
+!! <tr><td>dt_plt</td><td>0.0</td><td>real</td><td></td></tr>
+!! <tr><td>ix</td><td></td><td>integer</td><td></td></tr>
+!! <tr><td>iy</td><td></td><td>integer</td><td></td></tr>
+!! <tr><td>iz</td><td></td><td>integer</td><td></td></tr>
+!! <tr><td>domain</td><td>'phys_domain'</td><td>'phys_domain' or 'full_domain'</td><td></td></tr>
+!! <tr><td>vars</td><td>''</td><td>'dens', 'velx', 'vely', 'velz', 'ener' and some more</td><td></td></tr>
+!! <tr><td>mag_center</td><td>'no'</td><td>'yes'/'no'</td><td></td></tr>
+!! <tr><td>min_disk_space_MB</td><td>100</td><td>integer</td><td></td></tr>
+!! <tr><td>sleep_minutes</td><td>0</td><td>integer</td><td></td></tr>
+!! <tr><td>sleep_seconds</td><td>0</td><td>integer</td><td></td></tr>
+!! <tr><td>user_message_file</td><td>trim(cwd)//'/msg'</td><td>string similar to default value</td><td></td></tr>
+!! <tr><td>system_message_file</td><td>'/tmp/piernik_msg'</td><td>string of characters similar to default value</td><td></td></tr>
 !! </table>
 !! \endhtmlonly
 !<
