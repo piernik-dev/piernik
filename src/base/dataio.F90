@@ -80,10 +80,14 @@
 !! <tr><td>system_message_file</td><td>'/tmp/piernik_msg'</td><td>string of characters similar to default value</td><td></td></tr>
 !! </table>
 !! \endhtmlonly
+!!
+!! \todo check and if necessary bring back usefullness of min_disk_space_MB parameter
 !<
 module dataio
 !>
 !! \brief (KK)
+!!
+!! \todo check the usefullness of wait logical variable
 !<
 ! Written by G. Kowal
 ! Modified for this code and extended by M.Hanasz
@@ -101,50 +105,94 @@ module dataio
 
    type(hdf) :: chdf
 
-   integer               :: nend, nstep, istep, nstep_start
-   real                  :: tend
+   integer               :: nend                   !< number of the step to end simulation
+   integer               :: nstep                  !< current number of simulation timestep
+   integer               :: istep                  !< current number of substep (related to integration order)
+   integer               :: nstep_start            !< number of start timestep
+   real                  :: tend                   !< simulation time to end
 
-   integer, parameter    :: nvarsmx = 16
-   character(len=3)      :: new_id
-   character(len=16)     :: restart, domain, mag_center
-   integer               :: nrestart, resdel
-   real                  :: dt_hdf, dt_res, dt_tsl, dt_log, dt_plt
-   integer               :: min_disk_space_MB, sleep_minutes, sleep_seconds
-   character(len=160)    :: user_message_file, system_message_file
-   integer               :: ix,iy,iz, iv
-   character(len=4), dimension(nvarsmx) :: vars
+   integer, parameter    :: nvarsmx = 16           !< maximum number of variables to dump in hdf files
+   character(len=3)      :: new_id                 !< three character string to replace run_id when restarting simulation (if new_id = '' then run_id is still used)
+   character(len=16)     :: restart                !< choise of restart file: if restart = 'last': automatic choise of the last restart file regardless of "nrestart" value; if smth else is set: "nrestart" value is fixing
+   character(len=16)     :: domain                 !< string to choose if boundaries have to be dumped in hdf files
+   character(len=16)     :: mag_center             !< choise to dump magnetic fields values from cell centers or not (if not then values from cell borders)
+   integer               :: nrestart               !< number of restart file to be read while restart is not set to ''
+   integer               :: resdel                 !< number of recent restart dumps which should be saved; each n-resdel-1 restart file is supposed to be deleted while writing n restart file
+   real                  :: dt_hdf                 !< time between successive hdf dumps
+   real                  :: dt_res                 !< time between successive restart file dumps
+   real                  :: dt_tsl                 !< time between successive timeslice dumps
+   real                  :: dt_log                 !< time between successive log dumps
+   real                  :: dt_plt                 !< time between successive domain slices files dumps
+   integer               :: min_disk_space_MB      !< minimum disk space in MB to continue simulation (currently not used)
+   integer               :: sleep_minutes          !< minutes of sleeping time before continue simulation
+   integer               :: sleep_seconds          !< seconds of sleeping time before continue simulation
+   character(len=160)    :: user_message_file      !< path to possible user message file containing dt_xxx changes or orders to dump/stop/end simulation
+   character(len=160)    :: system_message_file    !< path to possible system (UPS) messege file contaning orders to dump/stop/end simulation
+   integer               :: ix                     !< index in x-direction of slice to dump in plt files
+   integer               :: iy                     !< index in y-direction of slice to dump in plt files
+   integer               :: iz                     !< index in z-direction of slice to dump in plt files
+   integer               :: iv                     !< work index to count successive variables to dump in hdf files
+   character(len=4), dimension(nvarsmx) :: vars    !< array of 4-character strings standing for variables to dump in hdf files
 
-   integer               :: tsl_lun = 2, log_lun = 3
-   integer               :: nhdf, nres, ntsl, nlog
-   integer               :: step_hdf, step_res, nhdf_start, nres_start
-   real                  :: t_start, last_hdf_time
-   character(len=128)    :: log_file
-   character(len=2)      :: pc1,pc2,pc3
-   logical               :: tsl_firstcall
+   integer               :: tsl_lun = 2            !< luncher for timeslice file
+   integer               :: log_lun = 3            !< luncher for log file
+   integer               :: nhdf                   !< current number of hdf file
+   integer               :: nres                   !< current number of restart file
+   integer               :: ntsl                   !< current number of timeslice file
+   integer               :: nlog                   !< current number of log file
+   integer               :: step_hdf               !< number of simulation timestep corresponding to values dumped in hdf file
+   integer               :: step_res               !< number of simulation timestep corresponding to values dumped in restart file
+   integer               :: nhdf_start             !< number of hdf file for the first hdf dump in simulation run
+   integer               :: nres_start             !< number of restart file for the first restart dump in simulation run
+   real                  :: t_start                !< time in simulation of start simulation run
+   real                  :: last_hdf_time          !< time in simulation of the last resent hdf file dump
+   character(len=128)    :: log_file               !< path to the current log file
+   character(len=2)      :: pc1                    !< string of two characters to mark current block in x-direction in hdf4 files
+   character(len=2)      :: pc2                    !< string of two characters to mark current block in y-direction in hdf4 files
+   character(len=2)      :: pc3                    !< string of two characters to mark current block in z-direction in hdf4 files
+   logical               :: tsl_firstcall          !< logical value to start a new timeslice file
 
-   logical               :: wait
+   logical               :: wait                   !< logical value to have a break in simulation (currently not used)
 
-   integer               :: nchar
-   character             :: msg*16
-   real                  :: msg_param
+   integer               :: nchar                  !< number of characters in a user/system message
+   character             :: msg*16                 !< string of characters - content of a user/system message
+   real                  :: msg_param              !< parameter changed by a user/system message
 
-   character             :: hostfull*(80), host*8, fhost*10, fpid*10
-   integer               :: pid, uid, ihost, scstatus
-   real                  :: vx_max, vy_max, vz_max, va2max,va_max, &
-                           cs2max, cs_max, &
-                           dens_min, dens_max, pres_min, pres_max
+   character             :: hostfull*(80)
+   character             :: host*8
+   character             :: fhost*10
+   character             :: fpid*10
+   integer               :: pid
+   integer               :: uid
+   integer               :: ihost
+   integer               :: scstatus
+   real                  :: vx_max                 !< maximum value of velocity x-component
+   real                  :: vy_max                 !< maximum value of velocity y-component
+   real                  :: vz_max                 !< maximum value of velocity z-component
+   real                  :: va2max
+   real                  :: va_max                 !< maximum value of Alfven velocity
+   real                  :: cs2max
+   real                  :: cs_max                 !< maximum value of current sound speed distribution
+   real                  :: dens_min               !< minimum value of current density distribution
+   real                  :: dens_max               !< maximum value of current density distribution
+   real                  :: pres_min               !< minimum value of current pressure distribution
+   real                  :: pres_max               !< maximum value of current pressure distribution
 
 #ifdef MAGNETIC
-   real                  :: divb_max, b_min, b_max
+   real                  :: divb_max               !< maximum value of current divergence of magnetic induction distribution
+   real                  :: b_min                  !< minimum value of current magnetic induction distribution
+   real                  :: b_max                  !< maximum value of current magnetic induction distribution
 #endif /* MAGNETIC */
 #ifndef ISO
-   real                  :: temp_min, temp_max
+   real                  :: temp_min               !< minimum value of current temperature distribution
+   real                  :: temp_max               !< maximum value of current temperature distribution
 #endif /* ISO */
 #ifdef COSM_RAYS
-   real                  :: encr_min, encr_max
+   real                  :: encr_min               !< minimum value of current cosmic ray energy density distribution
+   real                  :: encr_max               !< maximum value of current cosmic ray energy density distribution
 #endif /* COSM_RAYS */
 #ifdef HDF5
-    character(len=128) :: filename
+    character(len=128) :: filename                 !< string of characters indicating currently used file
 #endif /* HDF5 */
 
    namelist /END_CONTROL/ nend, tend
