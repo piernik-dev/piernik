@@ -31,13 +31,25 @@
 !! \brief (MH) In this module fluid variables of individual fluids are indexed to make use of the single array 
 !! \a u(:,:,:,:) containing all fluid variables.
 !!
-!! The purpose of this module is to compute:
-!! \n (1) positions of all fluid variables to be referenced through the first index of array u(:,:,:,:),
+!! The Relaxing TVD scheme by Pen, Arras \& Wong (2003) was extended in PIERNIK code to treat multiple fluids,
+!! by concatenation of the arrays \a u of conservative variables of individual fluids
+!!
+!! \f[
+!! \vec{u} =\big( \underbrace{\rho^{i}, m_x^{i}, m_y^{i}, m_z^{i}, e^{i}}_{\textrm{\scriptsize ionized gas}},
+!! \underbrace{\rho^{n}, m_x^{n}, m_y^{n}, m_z^{n}, e^{n}}_{\textrm{\scriptsize neutral gas}},
+!! \underbrace{\rho^{d}, m_x^{d}, m_y^{d}, m_z^{d}}_{\textrm{\scriptsize dust}}  \big)^T,
+!! \f]
+!! representing ionized gas, neutral gas, and dust treated as a pressureless fluid. Cosmic ray gas component,
+!! in fluid approximation, described by the diffusion--advection equation, is incorporated in the same way.
+!!
+!! \par The purpose of this module is to compute:
+!!
+!! \n (1) positions of all fluid variables referenced through the first index of array u(:,:,:,:),
 !! \n (2) arrays of indexes to make easy reference to all gas densities, x,y,z-components of momenta,
 !! energy densities, CR energy densities, transposed components of x,y,z-momenta in directional sweeps, etc ...
 !!
 !! The Relaxing TVD scheme by Pen, Arras \& Wong (2003) was extended in PIERNIK code to treat multiple fluids,
-!! by concatenation of the vectors of conservative variables for different fluids
+!! by concatenation of the arrays \a u of conservative variables of individual fluids
 !!
 !! \f[
 !! \vec{u} =\big( \underbrace{\rho^{i}, m_x^{i}, m_y^{i}, m_z^{i}, e^{i}}_{\textrm{\scriptsize ionized gas}},

@@ -17,7 +17,7 @@
 !    You should have received a copy of the GNU General Public License
 !    along with PIERNIK.  If not, see <http://www.gnu.org/licenses/>.
 !
-!    Initial implemetation of PIERNIK code was based on TVD split MHD code by
+!    Initial implementation of PIERNIK code was based on TVD split MHD code by
 !    Ue-Li Pen
 !        see: Pen, Arras & Wong (2003) for algorithm and
 !             http://www.cita.utoronto.ca/~pen/MHD
@@ -28,16 +28,52 @@
 #include "piernik.def"
 
 !>
-!! \brief (MH) Module to organize all fluids, fluid components, traces and other dependent variables into the array of conservative variables \a u(ifl,i,j,k), where \a ifl is the index of fluid variable. 
+!! \brief (MH) Module to initialise all fluids, fluid components, tracers 
+!! and other dependent variables which are relevant for the current problem (doxy comments ready).
 !!
-!! The module is organized as follows:
-!! \n (1)  All fluids defined in "piernik.def" are initialized subsequently.
-!! \n (2)  The routine fluidindex is invoked to construct arrays of indexes for each fluid, 
-!!     eg. ionized_index, neutral_index, etc. See fluidindex for more details.
+!! The general purpose of the multi-fluid framework is to simplify all code 
+!! modifications when a new fluid, component or variable is added.
+!! We want to avoid, for example, touching boundary conditions routines, 
+!! when new fluid is added. We formulate boundary conditions in a general manner 
+!! and apply them to all densities in one instant, through the array indexes: 
+!! iarr_all_dn, iarr_all_mx, etc ... (see comments to fluidindex module).
+!!
+!! \par DEFINITIONS
+!!
+!! \n \b Fluid: ingredient characterised by mass density, momenta and optionally 
+!! energy density. Examples: ionised fluid, neutral fluid, dust fluid.
+!! Variable nfluid (in fluidindex) counts fluids. 
+!!
+!! \n \b Non-isothermal \b fluid: the fluid engaging energy equation. 
+!! Variable "nadiab" (defined in fluidindex) counts independent energy equations 
+!! used for fluids description. 
+!! \todo Change variable name "nadiab" to "nenerg". Reason: we are not limited 
+!!       to isothermal and  adiabatic equos. Energy equation will be used 
+!!       for non-adiabatic fluids in presence of cooling and heating. 
+!!
+!! \n \b Variable: Single quantity, such as gas density, momentum component, 
+!!    energy density, CR energy density, etc ...
+!!
+!! \n \b Component: An ingredient which, contrary to fluids, does not't involve momenta. 
+!!               Examples: CR energy density, or a set variables describing 
+!!               several CR energy bins, or CR species.
+!!
+!! \n 
+!! \n All these ingredients are organised in the module fluidindex into 
+!! the array of conservative variables \a u(iflv,i,j,k), where \a iflv is the 
+!! index of fluid variable. 
+!!
+!! \par The module initfluids is organised as follows:
+!! \n (1)  All fluids defined in "piernik.def" are initialised subsequently.
+!! \n (2)  The routine fluidindex is invoked to construct arrays of indexes for 
+!!         each fluid, e.g.. ionised_index, neutral_index, etc. 
+!!         See fluidindex for more details.
 !! \n (3)  Physical parameters common for all fluids are computed if necessary.
 !!     
+!! \todo Change typo in: "ionized_index" to "ionised_index" everywhere in the code.
 !! \todo Subdivide different fluids into species
-!! \warning check if cs_iso and cs_neu are correctly defined (end of init_fluids subroutine) for your purposes (if used)
+!! \warning check if cs_iso and cs_neu are correctly defined (end of init_fluids 
+!!  subroutine) for your purposes (if used).
 !<
 
 module initfluids
