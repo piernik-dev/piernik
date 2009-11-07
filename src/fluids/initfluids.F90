@@ -70,7 +70,6 @@
 !!         See fluidindex for more details.
 !! \n (3)  Physical parameters common for all fluids are computed if necessary.
 !!     
-!! \todo Change typo in: "ionized_index" to "ionised_index" everywhere in the code.
 !! \todo Subdivide different fluids into species
 !! \warning check if cs_iso and cs_neu are correctly defined (end of init_fluids 
 !!  subroutine) for your purposes (if used).
