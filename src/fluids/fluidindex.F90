@@ -17,7 +17,7 @@
 !    You should have received a copy of the GNU General Public License
 !    along with PIERNIK.  If not, see <http://www.gnu.org/licenses/>.
 !
-!    Initial implemetation of PIERNIK code was based on TVD split MHD code by
+!    Initial implementation of PIERNIK code was based on TVD split MHD code by
 !    Ue-Li Pen
 !        see: Pen, Arras & Wong (2003) for algorithm and
 !             http://www.cita.utoronto.ca/~pen/MHD
@@ -29,18 +29,7 @@
 
 !>
 !! \brief (MH) In this module fluid variables of individual fluids are indexed to make use of the single array 
-!! \a u(:,:,:,:) containing all fluid variables.
-!!
-!! The Relaxing TVD scheme by Pen, Arras \& Wong (2003) was extended in PIERNIK code to treat multiple fluids,
-!! by concatenation of the arrays \a u of conservative variables of individual fluids
-!!
-!! \f[
-!! \vec{u} =\big( \underbrace{\rho^{i}, m_x^{i}, m_y^{i}, m_z^{i}, e^{i}}_{\textrm{\scriptsize ionized gas}},
-!! \underbrace{\rho^{n}, m_x^{n}, m_y^{n}, m_z^{n}, e^{n}}_{\textrm{\scriptsize neutral gas}},
-!! \underbrace{\rho^{d}, m_x^{d}, m_y^{d}, m_z^{d}}_{\textrm{\scriptsize dust}}  \big)^T,
-!! \f]
-!! representing ionized gas, neutral gas, and dust treated as a pressureless fluid. Cosmic ray gas component,
-!! in fluid approximation, described by the diffusion--advection equation, is incorporated in the same way.
+!! \a u(:,:,:,:) containing all fluid variables. (doxy comments ready)
 !!
 !! \par The purpose of this module is to compute:
 !!
@@ -48,17 +37,10 @@
 !! \n (2) arrays of indexes to make easy reference to all gas densities, x,y,z-components of momenta,
 !! energy densities, CR energy densities, transposed components of x,y,z-momenta in directional sweeps, etc ...
 !!
-!! The Relaxing TVD scheme by Pen, Arras \& Wong (2003) was extended in PIERNIK code to treat multiple fluids,
-!! by concatenation of the arrays \a u of conservative variables of individual fluids
+!! \n\b Note: Basic definitions and more information in initfluids module. 
 !!
-!! \f[
-!! \vec{u} =\big( \underbrace{\rho^{i}, m_x^{i}, m_y^{i}, m_z^{i}, e^{i}}_{\textrm{\scriptsize ionized gas}},
-!! \underbrace{\rho^{n}, m_x^{n}, m_y^{n}, m_z^{n}, e^{n}}_{\textrm{\scriptsize neutral gas}},
-!! \underbrace{\rho^{d}, m_x^{d}, m_y^{d}, m_z^{d}}_{\textrm{\scriptsize dust}}  \big)^T,
-!! \f]
-!! representing ionized gas, neutral gas, and dust treated as a pressureless fluid. Cosmic ray gas component,
-!! in fluid approximation, described by the diffusion--advection equation, is incorporated in the same way.
-!!
+!! \todo All stuff related specifically to magnetic field should be embraced 
+!! (everywhere in the code) with the precompiler definition "MAGNETIC" instead of "IONIZED"
 !<
 
 module fluidindex
@@ -180,19 +162,21 @@ module fluidindex
 
       implicit none
 
+!  We initialise all counters
 
-      nvar   = 0
-      ncomponents  = 0
       nfluid = 0
       nadiab = 0
+      nvar   = 0
+      ncomponents  = 0
 
 
 #ifdef IONIZED
+!  Compute indexes for the ionized fluid and update counters
       nvar_ion  = 0
       beg_ion   = nvar + 1
-      call ionized_index(nvar,nvar_ion)
+      call ionized_index(nvar,nvar_ion) 
       end_ion   = nvar
-      ncomponents  = ncomponents + 1
+      ncomponents  = ncomponents + 1  
       nfluid = nfluid + 1
       i_ion = ncomponents
 #ifndef ISO
@@ -201,6 +185,7 @@ module fluidindex
 #endif /* IONIZED */
 
 #ifdef NEUTRAL
+!  Compute indexes for the neutral fluid and update counters
       nvar_neu = 0
       beg_neu = nvar + 1
       call neutral_index(nvar,nvar_neu)
@@ -214,6 +199,7 @@ module fluidindex
 #endif /* NEUTRAL */
 
 #ifdef DUST
+!  Compute indexes for the dust fluid and update counters
       nvar_dst = 0
       beg_dst = nvar + 1
       call dust_index(nvar,nvar_dst)
@@ -224,6 +210,7 @@ module fluidindex
 #endif /* DUST */
 
 #ifdef COSM_RAYS
+!  Compute indexes for the CR component and update counters
       nvar_crs   = 0
       beg_crs = nvar + 1
       call cosmicray_index(nvar,nvar_crs)
@@ -232,6 +219,7 @@ module fluidindex
       i_crs = ncomponents
 #endif /* COSM_RAYS */
 
+! Allocate index arrays
 #ifdef IONIZED
       allocate(iarr_mag_swpx(nmag),iarr_mag_swpy(nmag),iarr_mag_swpz(nmag),iarr_all_mag(nmag))
 #endif /* IONIZED */
@@ -248,7 +236,9 @@ module fluidindex
       allocate(iarr_all_cr(0))
 #endif /* COSM_RAYS */
 
+
 #ifdef IONIZED
+! Compute index arrays for magnetic field
       iarr_mag_swpx = [ibx,iby,ibz]
       iarr_mag_swpy = [iby,ibx,ibz]
       iarr_mag_swpz = [ibz,iby,ibx]
@@ -256,8 +246,8 @@ module fluidindex
       ind%bx = ibx; ind%by = iby; ind%bz = ibz
 #endif /* IONIZED */
 
-
 #ifdef IONIZED
+! Compute index arrays for the ionized fluid
       iarr_all_swpx(beg_ion:end_ion) = iarr_ion_swpx
       iarr_all_swpy(beg_ion:end_ion) = iarr_ion_swpy
       iarr_all_swpz(beg_ion:end_ion) = iarr_ion_swpz
@@ -272,6 +262,7 @@ module fluidindex
 #endif /* IONIZED */
 
 #ifdef NEUTRAL
+! Compute index arrays for the neutral fluid
       iarr_all_swpx(beg_neu:end_neu) = iarr_neu_swpx
       iarr_all_swpy(beg_neu:end_neu) = iarr_neu_swpy
       iarr_all_swpz(beg_neu:end_neu) = iarr_neu_swpz
@@ -286,6 +277,7 @@ module fluidindex
 #endif /* NEUTRAL */
 
 #ifdef DUST
+! Compute index arrays for the dust fluid
       iarr_all_swpx(beg_dst:end_dst) = iarr_dst_swpx
       iarr_all_swpy(beg_dst:end_dst) = iarr_dst_swpy
       iarr_all_swpz(beg_dst:end_dst) = iarr_dst_swpz
@@ -297,15 +289,13 @@ module fluidindex
 #endif /* DUST */
 
 #ifdef COSM_RAYS
+! Compute index arrays for the CR component
       iarr_all_swpx(beg_crs:end_crs) = iarr_crs_swpx
       iarr_all_swpy(beg_crs:end_crs) = iarr_crs_swpy
       iarr_all_swpz(beg_crs:end_crs) = iarr_crs_swpz
 
       iarr_all_cr(1:nvar_crs) = iecr  ; ind%ecr = iecr
 #endif /* COSM_RAYS */
-
-!      write(*,*) 'fluid_index', iarr_ion_swpx
-!      write(*,*) 'fluid_index', iarr_all_swpx
 
    end subroutine fluid_index
 
