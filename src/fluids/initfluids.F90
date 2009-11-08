@@ -47,9 +47,10 @@
 !!
 !! The general purpose of the multi-fluid framework is to simplify all code 
 !! modifications when a new fluid, component or variable is added.
-!! We want to avoid, for example, touching boundary conditions routines, 
-!! when new fluid is added. We formulate boundary conditions in a general manner 
-!! and apply them to all densities in one instant, through the array indexes: 
+!! We want to avoid, for example, modifications of boundary conditions routines, 
+!! when a new fluid is added. We formulate boundary condition routines in 
+!! a general manner and apply them to all variables of particular type (such as 
+!! gas density, x-momentum, ...) in one instant, through the array indexes:  
 !! iarr_all_dn, iarr_all_mx, etc ... (see comments to fluidindex module).
 !!
 !! \par DEFINITIONS
