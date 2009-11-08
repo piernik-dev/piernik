@@ -29,18 +29,21 @@
 
 !> 
 !! \brief (MH) Module to initialise all fluids, fluid components, tracers 
-!! and other dependent variables which are relevant for the current problem (doxy comments ready).
+!! and other dependent variables which are relevant for the current problem (doxy 
+!! comments ready).
 !!
-!! The Relaxing TVD scheme by Pen, Arras \& Wong (2003) was extended in PIERNIK code to treat multiple fluids,
-!! by concatenation of the arrays \a u of conservative variables of individual fluids
+!! The Relaxing TVD scheme by Pen, Arras \& Wong (2003) was extended in PIERNIK 
+!! code to treat multiple fluids, by concatenation of the arrays \a u of 
+!! conservative variables of individual fluids
 !!
 !! \f[
 !! \vec{u} =\big( \underbrace{\rho^{i}, m_x^{i}, m_y^{i}, m_z^{i}, e^{i}}_{\textrm{\scriptsize ionized gas}},
 !! \underbrace{\rho^{n}, m_x^{n}, m_y^{n}, m_z^{n}, e^{n}}_{\textrm{\scriptsize neutral gas}},
 !! \underbrace{\rho^{d}, m_x^{d}, m_y^{d}, m_z^{d}}_{\textrm{\scriptsize dust}}  \big)^T,
 !! \f]
-!! representing ionized gas, neutral gas, and dust treated as a pressureless fluid. Cosmic ray gas component,
-!! in fluid approximation, described by the diffusion--advection equation, is incorporated in the same way.
+!! representing ionized gas, neutral gas, and dust treated as a pressureless fluid. 
+!! The Cosmic Ray (CR) gas  component, described by the diffusion--advection equation, 
+!! is incorporated in the same way.
 !!
 !! The general purpose of the multi-fluid framework is to simplify all code 
 !! modifications when a new fluid, component or variable is added.
@@ -61,21 +64,22 @@
 !!	These constituents are named non-fluid components
 !!	Examples: CR energy density, or a set variables describing 
 !!	several CR energy bins, CR nuclear species or tracer or helicity.
-!!	There is no specific counter for non-fluid components
+!!	There is no specific counter for non-fluid components.
 !!
 !! \n\b Components: all fluid and non-fluid components. Variable \b "ncomponents" 
 !!      (in fluidindex) counts components.
 !! 
 !! \n\b Non-isothermal \b fluid: an isothermal fluid does not need energy equation,
-!! 	thus \b non-isothermal fluids are distinguished as those, which do not engage the 
-!! 	energy equation. Variable \b "nadiab" (in fluidindex) counts independent energy equations 
-!! 	used for fluids description. 
+!! 	thus \b non-isothermal fluids are distinguished as those, which do not 
+!!	engage the energy equation. Variable \b "nadiab" (in fluidindex) counts 
+!!      independent energy equations used for fluids. 
 !!
-!! \n\b Fluid \b variable: Single quantity, such as gas density, x,y,z-momentum density, 
-!!    	and energy density.
+!! \n\b Fluid \b variable: Single quantity, such as gas density, x,y,z-momentum 
+!!	density, and energy density.
 !!
 !! \n\b Non-fluid \b variable: Single quantity, such as CR energy density, 
-!!      tracer, etc ... Variable \b "nvar" (in fluidindex) counts all fluid and non-fluid variables.
+!!      tracer, etc ... Variable \b "nvar" (in fluidindex) counts all fluid and 
+!! 	non-fluid variables. There is no specific counter for non-fluid variables.
 !!
 !! \n All these constituents are organised in the module fluidindex into 
 !! the array of conservative variables \a u(ivar,:,:,:), where \a ivar is the 
