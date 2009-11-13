@@ -29,18 +29,19 @@
 !>
 !! \brief [DW] Module that contains all routines related to interactions between fluids
 !!
-!! \htmlonly
-!! <br><br>
+!!
+!!
 !! In this module a namelist of parameters is specified:
-!! <br><br>
-!! INTERACTIONS
-!! <br><br>
-!! <table border="+1" cellpadding="5">
-!! <tr><td><b>parameter</b> </td><td> <b>default value</b> </td><td> <b>possible values</b> </td><td> <b>description</b></td></tr>
-!! <tr><td>collision_factor</td><td>0.0</td><td>real, 0 to 1</td><td>collision factor</td></tr>
-!! <tr><td>cfl_interact</td><td>0.8</td><td>real, 0 to 1</td><td>Courant factor for interactions</td></tr>
-!! </table>
-!! \endhtmlonly
+!!
+!! @b INTERACTIONS
+!!
+!! \f[
+!! \begin{tabular}{ | p{3cm} | p{3cm} | p{4cm} | p{8cm} | } \hline &&&\\
+!! {\bf parameter} & {\bf default value} & {\bf possible values} & {\bf description} \\ &&&\\ \hline \hline &&&\\
+!! collision\_factor & 0.0 & real value, between 0 and 1 & collision factor \\ &&&\\ \hline &&&\\
+!! cfl\_interact & 0.8 & real value, between 0 and 1 & Courant factor for interactions \\ &&&\\ \hline
+!! \end{tabular} \f]
+!!
 !<
 module interactions
 
