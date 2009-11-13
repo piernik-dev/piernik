@@ -18,16 +18,52 @@
 !    along with PIERNIK.  If not, see <http://www.gnu.org/licenses/>.
 !
 !    Initial implemetation of PIERNIK code was based on TVD split MHD code by
-!    Ue-Li Pen 
+!    Ue-Li Pen
 !        see: Pen, Arras & Wong (2003) for algorithm and
-!             http://www.cita.utoronto.ca/~pen/MHD 
-!             for original source code "mhd.f90" 
-!   
+!             http://www.cita.utoronto.ca/~pen/MHD
+!             for original source code "mhd.f90"
+!
 !    For full list of developers see $PIERNIK_HOME/license/pdt.txt
 !
 #include "piernik.def"
 !>
 !! \brief (KK)
+!!
+!!
+!!
+!! In this module following namelists of parameters are specified:
+!!
+!! @b MPI_BLOCKS
+!!
+!! \f[ \begin{tabular}{ | p{3cm} | p{3cm} | p{4cm} | p{8cm} | } \hline &&&\\
+!! {\bf parameter} & {\bf default value} & {\bf possible values} & {\bf description} \\ &&&\\ \hline \hline &&&\\
+!! pxsize & 1 & integer & number of MPI blocks in x-dimension \\ &&&\\ \hline &&&\\
+!! pysize & 1 & integer & number of MPI blocks in y-dimension \\ &&&\\ \hline &&&\\
+!! pzsize & 1 & integer & number of MPI blocks in z-dimension \\ &&&\\ \hline
+!! \end{tabular} \f]
+!!
+!! @b BOUNDARIES
+!!
+!! \f[ \begin{tabular}{ | p{3cm} | p{3cm} | p{4cm} | p{8cm} | } \hline &&&\\
+!! {\bf parameter} & {\bf default value} & {\bf possible values} & {\bf description} \\ &&&\\ \hline \hline &&&\\
+!! bnd\_xl & 'per' & 'per', 'ref', 'out', 'outd', 'outh', 'cor' & type of boundary conditions for the left x-boundary \\ &&&\\ \hline &&&\\
+!! bnd\_xr & 'per' & 'per', 'ref', 'out', 'outd', 'outh' & type of boundary conditions for right the x-boundary \\ &&&\\ \hline &&&\\
+!! bnd\_yl & 'per' & 'per', 'ref', 'out', 'outd', 'outh', 'cor' & type of boundary conditions for the left y-boundary \\ &&&\\ \hline &&&\\
+!! bnd\_yr & 'per' & 'per', 'ref', 'out', 'outd', 'outh' & type of boundary conditions for the right y-boundary \\ &&&\\ \hline &&&\\
+!! bnd\_zl & 'per' & 'per', 'ref', 'out', 'outd', 'outh' & type of boundary conditions for the left z-boundary \\ &&&\\ \hline &&&\\
+!! bnd\_zr & 'per' & 'per', 'ref', 'out', 'outd', 'outh' & type of boundary conditions for the right z-boundary\\ &&&\\ \hline
+!! \end{tabular} \f]
+!!
+!! @b NUMERICAL_SETUP
+!!
+!! \f[ \begin{tabular}{ | p{3cm} | p{3cm} | p{4cm} | p{8cm} | } \hline &&&\\
+!! {\bf parameter} & {\bf default value} & {\bf possible values} & {\bf description} \\ &&&\\ \hline \hline &&&\\
+!! cfl & 0.7 & real value between 0.0 and 1.0 & \\ &&&\\ \hline &&&\\
+!! smalld & 1.e-10 & real value & \\ &&&\\ \hline &&&\\
+!! smallei & 1.e-10 & real value & \\ &&&\\ \hline &&&\\
+!! integration\_order & 2 & 1 or 2 (or 3 - currently unavailable) & \\ &&&\\ \hline &&&\\
+!! cfr\_smooth & 0.0 & real value & \\ &&&\\ \hline
+!! \end{tabular} \f]
 !<
 module mpisetup
    implicit none
