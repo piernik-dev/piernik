@@ -28,9 +28,38 @@
 #include "piernik.def"
 #define RNG 2:n-1
 !> 
-!! \brief (MH) Computation of fluxes for the dust fluid
+!! \brief (MH/JD) Computation of fluxes for the dust fluid
 !!
-!!
+!!The flux functions for dust are given by:
+!!\f[
+!!  \vec{F}{(\vec{u})} = 
+!!  \left(\begin{array}{c}
+!!    \rho v_x \\
+!!    \rho v_x^2\\
+!!    \rho v_x v_y\\
+!!    \rho v_x v_z\\
+!!   e v_x
+!!  \end{array}\right),
+!!  \qquad
+!!  \vec{G}{(\vec{u})} = 
+!!  \left(\begin{array}{c}
+!!    \rho v_y \\
+!!    \rho v_y v_x\\
+!!    \rho v_y^2 \\
+!!    \rho v_y v_z\\
+!!    e v_y
+!!  \end{array}\right),
+!!\qquad
+!!  \vec{H}{(\vec{u})} = 
+!!  \left(\begin{array}{c}
+!!    \rho v_z \\
+!!    \rho v_z v_x\\
+!!    \rho v_z v_y \\
+!!    \rho v_z^2 \\
+!!    e v_z 
+!!  \end{array}\right),
+!!\f]
+!! 
 !<
 
 
@@ -50,12 +79,15 @@ module fluxdust
     use timestepdust, only : c_dst
 
     implicit none
-    integer n
+    integer n                                !< number of cells in the current sweep 
     
 ! locals
     real :: minvx, maxvx, amp
-    real, dimension(nvar_dst,n):: fluxd,uud,cfrd
-    real, dimension(n) :: vx,p  
+    real, dimension(nvar_dst,n):: fluxd      !< flux for dust
+    real, dimension(nvar_dst,n):: uud        !< part of u for dust
+    real, dimension(nvar_dst,n):: cfrd       !< freezing speed for dust
+    real, dimension(n) :: p                  !< pressure
+    real, dimension(n) :: vx                 !< velocity for current sweep 
     
     fluxd   = 0.0
     cfrd    = 0.0
