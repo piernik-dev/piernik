@@ -29,9 +29,39 @@
 #define RNG 2:n-1
 
 !> 
-!! \brief (MH) Computation of fluxes for the ionized fluid
-!!
-!!
+!! \brief (MH/JD) Computation of fluxes for the ionized fluid
+!! 
+!!The flux functions for ionized fluid are given by 
+!!\f[
+!!  \vec{F}{(\vec{u})} = 
+!!  \left(\begin{array}{c}
+!!    \rho v_x \\
+!!    \rho v_x^2 + p_* - B_x^2 \\
+!!    \rho v_x v_y - B_x B_y\\
+!!    \rho v_x v_z - B_x B_z\\
+!!    (e + p)v_x - \vec{B} \cdot \vec{v} \; B_x 
+!!  \end{array}\right),
+!!  \qquad
+!!  \vec{G}{(\vec{u})} = 
+!!  \left(\begin{array}{c}
+!!    \rho v_y \\
+!!    \rho v_y v_x  - B_y B_x\\
+!!    \rho v_y^2 + p_* - B_y^2 \\
+!!    \rho v_y v_z  - B_y B_z\\
+!!    (e + p)v_y - \vec{B} \cdot \vec{v} \; B_y 
+!!  \end{array}\right),
+!!\qquad
+!!  \vec{H}{(\vec{u})} = 
+!!  \left(\begin{array}{c}
+!!    \rho v_z \\
+!!    \rho v_z v_x  - B_z B_x\\
+!!    \rho v_z v_y  - B_z B_y\\
+!!    \rho v_z^2 + p_* - B_z^2 \\
+!!    (e + p)v_z - \vec{B} \cdot \vec{v} \; B_z 
+!!  \end{array}\right),
+!!\f]
+!!where \f$p_* = p + B^2/2\f$, \f$e= e_{th} + \frac{1}{2} \rho v^2 + B^2/2\f$,  are the total pressure and total energy density, 
+!!while \f$e_{th}\f$ is thermal energy density and  \f$e_{mag} = B^2/2\f$ is the magnetic energy density.
 !<
 
 module fluxionized
@@ -53,12 +83,17 @@ module fluxionized
     use constants,       only : small
 
     implicit none
-    integer n
+    integer n                               !< number of cells in the current sweep
 
 ! locals
-    real, dimension(nvar_ion,n):: fluxi,uui,cfri
-    real, dimension(nmag,n):: bb
-    real, dimension(n) :: vx,ps,p,pmag  
+    real, dimension(nvar_ion,n):: fluxi     !< flux of ionized fluid
+    real, dimension(nvar_ion,n):: uui       !< part of u for ionized fluid
+    real, dimension(nvar_ion,n):: cfri      !< freezing speed for ionized fluid
+    real, dimension(nmag,n):: bb            !< magnetic field
+    real, dimension(n) :: vx                !< velocity for current sweep
+    real, dimension(n) :: ps                !< total pressure of ionized fluid
+    real, dimension(n) :: p                 !< thermal pressure of ionized fluid
+    real, dimension(n) :: pmag              !< pressure of magnetic field
     
     fluxi   = 0.0
     cfri    = 0.0

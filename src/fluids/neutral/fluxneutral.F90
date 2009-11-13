@@ -29,9 +29,38 @@
 #define RNG 2:n-1
 
 !> 
-!! \brief (MH) Computation of fluxes for the neutral fluid
+!! \brief (MH/JD) Computation of fluxes for the neutral fluid
 !!
+!!The flux functions for neutral fluid are given by 
 !!
+!!\f[
+!!  \vec{F}{(\vec{u})} = 
+!!  \left(\begin{array}{c}
+!!    \rho v_x \\
+!!    \rho v_x^2 \\
+!!    \rho v_x v_y\\
+!!    \rho v_x v_z\\
+!!    (e + p)v_x 
+!!  \end{array}\right),
+!!  \qquad
+!!  \vec{G}{(\vec{u})} = 
+!!  \left(\begin{array}{c}
+!!    \rho v_y \\
+!!    \rho v_y v_x\\
+!!    \rho v_y^2\\
+!!    \rho v_y v_z\\
+!!    (e + p)v_y 
+!!  \end{array}\right),
+!!\qquad
+!!  \vec{H}{(\vec{u})} = 
+!!  \left(\begin{array}{c}
+!!    \rho v_z \\
+!!    \rho v_z v_x\\
+!!    \rho v_z v_y \\
+!!    \rho v_z^2 \\
+!!    (e + p)v_z 
+!!  \end{array}\right),
+!!\f]
 !<
 
 
@@ -52,12 +81,15 @@ module fluxneutral
     use timestepneutral, only : c_neu
 
     implicit none
-    integer n
+    integer n                               !< number of cells in the current sweep
     
 ! locals
     real :: minvx,maxvx,amp
-    real, dimension(nvar_neu,n):: fluxn,uun,cfrn
-    real, dimension(n) :: vx,p  
+    real, dimension(nvar_neu,n):: fluxn     !< flux for neutral fluid
+    real, dimension(nvar_neu,n):: uun       !< part of u for neutral fluid
+    real, dimension(nvar_neu,n):: cfrn      !< freezing speed for neutral fluid
+    real, dimension(n) :: vx                !< velocity of neutral fluid for current sweep
+    real, dimension(n) :: p                 !< pressure of neutral fluid
     
     fluxn   = 0.0
     cfrn    = 0.0
