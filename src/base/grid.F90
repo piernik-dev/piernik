@@ -30,32 +30,34 @@
 !! \brief [DW] Module containing routines to specify required computational mesh.
 !! \author M. Hanasz
 !! \date January/February 2006
-!! \htmlonly
-!! <br><br>
+!!
+!!
 !! In this module two namelists of parameters are specified:
-!! <br><br>
-!! DOMAIN_SIZES
-!! <br><br>
-!! <table border="+1" cellpadding="5">
-!! <tr><td><b>parameter</b> </td><td> <b>default value</b> </td><td> <b>possible values</b> </td><td> <b>description</b></td></tr>
-!! <tr><td>nxd</td><td>1</td><td>positive integer</td><td>number of grid cells in physical domain (without boundary cells) in x-direction</td></tr>
-!! <tr><td>nyd</td><td>1</td><td>positive integer</td><td>number of grid cells in physical domain (without boundary cells) in y-direction</td></tr>
-!! <tr><td>nzd</td><td>1</td><td>positive integer</td><td>number of grid cells in physical domain (without boundary cells) in z-direction</td></tr>
-!! <tr><td>nb</td><td>4</td><td>non-negative integer</td><td>number cells in a boundary layer</td></tr>
-!! </table>
-!! <br><br>
-!! DOMAIN_LIMITS
-!! <br><br>
-!! <table border="+1" cellpadding="5">
-!! <tr><td><b>parameter</b> </td><td> <b>default value</b> </td><td> <b>possible values</b> </td><td> <b>description</b></td></tr>
-!! <tr><td>xmin</td><td></td><td>real</td><td>physical domain left x-boundary position</td></tr>
-!! <tr><td>xmax</td><td></td><td>real</td><td>physical domain right x-boundary position</td></tr>
-!! <tr><td>ymin</td><td></td><td>real</td><td>physical domain left y-boundary position</td></tr>
-!! <tr><td>ymax</td><td></td><td>real</td><td>physical domain right y-boundary position</td></tr>
-!! <tr><td>zmin</td><td></td><td>real</td><td>physical domain left z-boundary position</td></tr>
-!! <tr><td>zmax</td><td></td><td>real</td><td>physical domain right z-boundary position</td></tr>
-!! </table>
-!! \endhtmlonly
+!!
+!! @b DOMAIN_SIZES
+!!
+!! \f[
+!! \begin{tabular}{ | p{3cm} | p{3cm} | p{4cm} | p{8cm} | } \hline &&&\\
+!! {\bf parameter} & {\bf default value} & {\bf possible values} & {\bf description} \\ &&&\\ \hline \hline &&&\\
+!! nxd & 1 & positive integer & number of grid cells in physical domain (without boundary cells) in x-direction (if equal to 1 then x-dimension is reduced to a point and boundary cells layer is not added) \\ &&&\\ \hline &&&\\
+!! nyd & 1 & positive integer & number of grid cells in physical domain (without boundary cells) in y-direction (if equal to 1 then y-dimension is reduced to a point and boundary cells layer is not added) \\ &&&\\ \hline &&&\\
+!! nzd & 1 & positive integer & number of grid cells in physical domain (without boundary cells) in z-direction (if equal to 1 then z-dimension is reduced to a point and boundary cells layer is not added) \\ &&&\\ \hline &&&\\
+!! nb & 4 & non-negative integer & number of boundary cells surrounding the physical domain, same for all directions \\ &&&\\ \hline
+!! \end{tabular} \f]
+!!
+!! @b DOMAIN_LIMITS
+!!
+!! \f[
+!! \begin{tabular}{ | p{3cm} | p{3cm} | p{4cm} | p{8cm} | } \hline &&&\\
+!! {\bf parameter} & {\bf default value} & {\bf possible values} & {\bf description} \\ &&&\\ \hline \hline &&&\\
+!! xmin &  & real & physical domain left x-boundary position \\ &&&\\ \hline &&&\\
+!! xmax &  & real & physical domain right x-boundary position \\ &&&\\ \hline &&&\\
+!! ymin &  & real & physical domain left y-boundary position \\ &&&\\ \hline &&&\\
+!! ymax &  & real & physical domain right y-boundary position \\ &&&\\ \hline &&&\\
+!! zmin &  & real & physical domain left z-boundary position \\ &&&\\ \hline &&&\\
+!! zmax &  & real & physical domain right z-boundary position \\ &&&\\ \hline
+!! \end{tabular} \f]
+!!
 !<
 module grid
 
