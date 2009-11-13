@@ -36,50 +36,86 @@
 !>
 !! \brief [DW] Module containing all main routines  responsible for data output
 !!
-!! \htmlonly
-!! <br><br>
+!!
 !! In this module following namelists of parameters are specified:
-!! <br><br>
-!! END_CONTROL
-!! <br><br>
-!! <table border="+1" cellpadding="5">
-!! <tr><td><b>parameter</b> </td><td> <b>default value</b> </td><td> <b>possible values</b> </td><td> <b>description</b></td></tr>
-!! <tr><td>nend</td><td>1</td><td>integer</td><td></td></tr>
-!! <tr><td>tend</td><td>-1.0</td><td>real</td><td></td></tr>
-!! </table>
-!! <br><br>
-!! RESTART_CONTROL
-!! <br><br>
-!! <table border="+1" cellpadding="5">
-!! <tr><td><b>parameter</b> </td><td> <b>default value</b> </td><td> <b>possible values</b> </td><td> <b>description</b></td></tr>
-!! <tr><td>restart</td><td>'last'</td><td>'last' or another string of characters</td><td>'last': automatic choise of the last restart file regardless of "nrestart" value; if smth else is set: "nrestart" value is fixing</td></tr>
-!! <tr><td>new_id</td><td>''</td><td>string of characters</td><td></td></tr>
-!! <tr><td>nrestart</td><td>3</td><td>integer</td><td></td></tr>
-!! <tr><td>resdel</td><td>0</td><td>integer</td><td>number of recent restart dumps which should be saved; each n-resdel-1 restart file is supposed to be deleted while writing n restart file</td></tr>
-!! </table>
-!! <br><br>
-!! OUTPUT_CONTROL
-!! <br><br>
-!! <table border="+1" cellpadding="5">
-!! <tr><td><b>parameter</b> </td><td> <b>default value</b> </td><td> <b>possible values</b> </td><td> <b>description</b></td></tr>
-!! <tr><td>dt_hdf</td><td>0.0</td><td>real</td><td></td></tr>
-!! <tr><td>dt_res</td><td>0.0</td><td>real</td><td></td></tr>
-!! <tr><td>dt_tsl</td><td>0.0</td><td>real</td><td></td></tr>
-!! <tr><td>dt_log</td><td>0.0</td><td>real</td><td></td></tr>
-!! <tr><td>dt_plt</td><td>0.0</td><td>real</td><td></td></tr>
-!! <tr><td>ix</td><td></td><td>integer</td><td></td></tr>
-!! <tr><td>iy</td><td></td><td>integer</td><td></td></tr>
-!! <tr><td>iz</td><td></td><td>integer</td><td></td></tr>
-!! <tr><td>domain</td><td>'phys_domain'</td><td>'phys_domain' or 'full_domain'</td><td></td></tr>
-!! <tr><td>vars</td><td>''</td><td>'dens', 'velx', 'vely', 'velz', 'ener' and some more</td><td></td></tr>
-!! <tr><td>mag_center</td><td>'no'</td><td>'yes'/'no'</td><td></td></tr>
-!! <tr><td>min_disk_space_MB</td><td>100</td><td>integer</td><td></td></tr>
-!! <tr><td>sleep_minutes</td><td>0</td><td>integer</td><td></td></tr>
-!! <tr><td>sleep_seconds</td><td>0</td><td>integer</td><td></td></tr>
-!! <tr><td>user_message_file</td><td>trim(cwd)//'/msg'</td><td>string similar to default value</td><td></td></tr>
-!! <tr><td>system_message_file</td><td>'/tmp/piernik_msg'</td><td>string of characters similar to default value</td><td></td></tr>
-!! </table>
-!! \endhtmlonly
+!!
+!! @b END_CONTROL
+!!
+!! \f[
+!! \begin{tabular}{ | l | l | l | l | }
+!! \hline &&&\\
+!! {\bf parameter} & {\bf default value} & {\bf possible values} & {\bf description} \\
+!! &&&\\ \hline \hline &&&\\
+!! nend & 1 & integer & step number to end simulation \\
+!! &&&\\ \hline &&&\\
+!! tend &-1.0 & real & simulation time to end \\
+!! &&&\\ \hline
+!! \end{tabular}
+!! \f]
+!!
+!! @b RESTART_CONTROL
+!!
+!! \f[
+!! \begin{tabular}{ | l | l | l | p{8cm} | }
+!! \hline &&&\\
+!! {\bf parameter} & {\bf default value} & {\bf possible values} & {\bf description} \\
+!! &&&\\ \hline \hline &&&\\
+!! restart & 'last' & 'last' or another string of characters & 'last': automatic choise of the last restart file regardless of "nrestart" value; if smth else is set: "nrestart" value is fixing \\
+!! &&&\\ \hline &&&\\
+!! new\_id & '' & string of characters & three character string to change run\_id when restarting simulation (e.g. to avoid overwriting of the output from the previous (pre-restart) simulation; if new\_id = '' then run\_id is still used) \\
+!! &&&\\ \hline &&&\\
+!! nrestart & 3 & integer & number of restart file to be read while restart is not set to '' \\
+!! &&&\\ \hline &&&\\
+!! resdel & 0 & integer & number of recent restart dumps which should be saved; each n-resdel-1 restart file is supposed to be deleted while writing n restart file \\
+!! &&&\\ \hline
+!! \end{tabular}
+!! \f]
+!!
+!! @b OUTPUT_CONTROL
+!!
+!! \f[
+!! \begin{tabular}{ | p{3cm} | p{3cm} | p{4cm} | p{8cm} | }
+!! \hline &&&\\
+!! {\bf parameter} & {\bf default value} & {\bf possible values} & {\bf description} \\
+!! &&&\\ \hline \hline &&&\\
+!! dt\_hdf & 0.0 & real & time between successive hdf dumps \\
+!! &&&\\ \hline &&&\\
+!! dt\_res & 0.0 & real & time between successive restart file dumps \\
+!! &&&\\ \hline &&&\\
+!! dt\_tsl & 0.0 & real & time between successive timeslice dumps \\
+!! &&&\\ \hline &&&\\
+!! dt\_log & 0.0 & real & time between successive log dumps \\
+!! &&&\\ \hline &&&\\
+!! dt\_plt & 0.0 & real & time between successive domain slices files dumps \\
+!! &&&\\ \hline &&&\\
+!! ix &  & integer & index in x-direction of slice to dump in plt files \\
+!! &&&\\ \hline &&&\\
+!! iy &  & integer & index in y-direction of slice to dump in plt files \\
+!! &&&\\ \hline &&&\\
+!! iz &  & integer & index in z-direction of slice to dump in plt files \\
+!! &&&\\ \hline &&&\\
+!! domain & 'phys\_domain' & 'phys\_domain' or 'full\_domain' & string to choose if boundaries have to be dumped in hdf files \\
+!! &&&\\ \hline &&&\\
+!! vars & '' & 'dens', 'velx', 'vely', 'velz', 'ener' and some more & array of 4-character strings standing for variables to dump in hdf files \\
+!! &&&\\ \hline &&&\\
+!! mag\_center & 'no' & 'yes'/'no' & choise to dump magnetic fields values from cell centers or not (if not then values from cell borders) \\
+!! &&&\\ \hline
+!! \end{tabular}
+!! \f] \f[
+!! \begin{tabular}{ | p{3cm} | p{3cm} | p{4cm} | p{8cm} | }
+!! &&&\\
+!! min\_disk\_space\_MB & 100 & integer & minimum disk space in MB to continue simulation {\bf (currently not used)} \\
+!! &&&\\ \hline &&&\\
+!! sleep\_minutes & 0 & integer & minutes of sleeping time before continue simulation \\
+!! &&&\\ \hline &&&\\
+!! sleep\_seconds & 0 & integer & seconds of sleeping time before continue simulation \\
+!! &&&\\ \hline &&&\\
+!! user\_message\_file & trim(cwd)//'/msg' & string similar to default value & path to possible user message file containing dt\_xxx changes or orders to dump/stop/end simulation \\
+!! &&&\\ \hline &&&\\
+!! system\_message\_file & '/tmp/piernik\_msg' & string of characters similar to default value  & path to possible system (UPS) messege file contaning orders to dump/stop/end simulation \\
+!! &&&\\ \hline
+!! \end{tabular}
+!! \f]
 !!
 !! \todo check and if necessary bring back usefullness of min_disk_space_MB parameter
 !<
