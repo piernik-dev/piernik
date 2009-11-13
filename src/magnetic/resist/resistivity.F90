@@ -18,15 +18,31 @@
 !    along with PIERNIK.  If not, see <http://www.gnu.org/licenses/>.
 !
 !    Initial implemetation of PIERNIK code was based on TVD split MHD code by
-!    Ue-Li Pen 
+!    Ue-Li Pen
 !        see: Pen, Arras & Wong (2003) for algorithm and
-!             http://www.cita.utoronto.ca/~pen/MHD 
-!             for original source code "mhd.f90" 
-!   
+!             http://www.cita.utoronto.ca/~pen/MHD
+!             for original source code "mhd.f90"
+!
 !    For full list of developers see $PIERNIK_HOME/license/pdt.txt
 !
 #include "piernik.def"
-
+!>
+!! \brief ()
+!!
+!! In this module following namelist of parameters is specified:
+!!
+!! @b RESISTIVITY
+!!
+!! \f[ \begin{tabular}{ | p{3cm} | p{3cm} | p{4cm} | p{8cm} | } \hline &&&\\
+!! {\bf parameter} & {\bf default value} & {\bf possible values} & {\bf description} \\ &&&\\ \hline \hline &&&\\
+!! cfl\_resist & 0.4   & real value &  \\ &&&\\ \hline &&&\\
+!! eta\_0      & 0.0   & real value &  \\ &&&\\ \hline &&&\\
+!! eta\_1      & 0.0   & real value &  \\ &&&\\ \hline &&&\\
+!! eta\_scale  & 4     & integer value &  \\ &&&\\ \hline &&&\\
+!! j\_crit     & 1.0e6 & real value &  \\ &&&\\ \hline &&&\\
+!! deint\_max  & 0.01  & real value &  \\ &&&\\ \hline
+!! \end{tabular} \f]
+!<
 module resistivity
 
       use constants, only: pi, small, big
@@ -49,7 +65,7 @@ module resistivity
       real, dimension(:,:,:), allocatable :: wb,etahelp
 
 contains
-      
+
       subroutine cleanup_resistivity
          implicit none
          if(allocated(w)  ) deallocate(w)
@@ -71,7 +87,7 @@ contains
          integer :: ierrh
 
          namelist /RESISTIVITY/ cfl_resist, eta_0, eta_1, eta_scale, j_crit, deint_max
-         
+
          par_file = trim(cwd)//'/problem.par'
          tmp_log_file = trim(cwd)//'/tmp.log'
 
@@ -81,7 +97,7 @@ contains
          eta_scale   =  4
          j_crit      =  1.0e6
          deint_max   = 0.01
-       
+
          if(proc == 0) then
             open(1,file=par_file)
                read(unit=1,nml=RESISTIVITY,iostat=ierrh)
