@@ -1,4 +1,4 @@
-! $Id$ 
+! $Id$
 !
 ! PIERNIK Code Copyright (C) 2006 Michal Hanasz
 !
@@ -18,11 +18,11 @@
 !    along with PIERNIK.  If not, see <http://www.gnu.org/licenses/>.
 !
 !    Initial implemetation of PIERNIK code was based on TVD split MHD code by
-!    Ue-Li Pen 
+!    Ue-Li Pen
 !        see: Pen, Arras & Wong (2003) for algorithm and
-!             http://www.cita.utoronto.ca/~pen/MHD 
-!             for original source code "mhd.f90" 
-!   
+!             http://www.cita.utoronto.ca/~pen/MHD
+!             for original source code "mhd.f90"
+!
 !    For full list of developers see $PIERNIK_HOME/license/pdt.txt
 !
 #include "piernik.def"
@@ -31,17 +31,32 @@
 !! \brief (MH) Initialization of Cosmic Ray component
 !!
 !!
+!!
+!! In this module following namelist of parameters is specified:
+!!
+!! @b COSMIC_RAYS
+!!
+!! \f[ \begin{tabular}{ | p{3cm} | p{3cm} | p{4cm} | p{8cm} | } \hline &&&\\
+!! {\bf parameter} & {\bf default value} & {\bf possible values} & {\bf description} \\ &&&\\ \hline \hline &&&\\
+!! cfl\_cr      & 0.9   & real value &  \\ &&&\\ \hline &&&\\
+!! smallecr     & 0.0   & real value &  \\ &&&\\ \hline &&&\\
+!! cr\_active   & 1.0   & real value &  \\ &&&\\ \hline &&&\\
+!! gamma\_cr    & 4/3   & real value &  \\ &&&\\ \hline &&&\\
+!! cr\_eff      & 0.1   & real value &  \\ &&&\\ \hline &&&\\
+!! K\_cr\_paral & 0.0   & real value &  \\ &&&\\ \hline &&&\\
+!! K\_cr\_perp  & 0.0   & real value &  \\ &&&\\ \hline
+!! \end{tabular} \f]
 !<
 module initcosmicrays
 
   implicit none
 
     real                  :: cfl_cr,smallecr,cr_active
-    real                  :: gamma_cr,cr_eff,K_cr_paral,K_cr_perp 
+    real                  :: gamma_cr,cr_eff,K_cr_paral,K_cr_perp
 
     integer               :: iecr
 
-    integer, allocatable, dimension(:)  :: iarr_crs 
+    integer, allocatable, dimension(:)  :: iarr_crs
     integer, allocatable, dimension(:)  :: iarr_crs_swpx, iarr_crs_swpy, iarr_crs_swpz
 
  contains
@@ -56,7 +71,7 @@ module initcosmicrays
     character(LEN=100) :: par_file, tmp_log_file
 
     namelist /COSMIC_RAYS/ cfl_cr,smallecr,cr_active,gamma_cr,cr_eff,K_cr_paral,K_cr_perp
-    
+
     cfl_cr     = 0.9
     smallecr   = 0.0
     cr_active  = 1.0
@@ -66,7 +81,7 @@ module initcosmicrays
                            !  we fix E_SN=10**51 erg
     K_cr_paral = 0.0
     K_cr_perp  = 0.0
-    
+
       if(proc .eq. 0) then
          par_file = trim(cwd)//'/problem.par'
          tmp_log_file = trim(cwd)//'/tmp.log'
@@ -78,32 +93,32 @@ module initcosmicrays
            write(3,nml=COSMIC_RAYS)
            write(3,*)
          close(3)
-      endif 
- 
- 
+      endif
+
+
     if(proc .eq. 0) then
-      
-      rbuff(1)   = cfl_cr     
-      rbuff(2)   = smallecr  
-      rbuff(3)   = cr_active  
-      rbuff(4)   = gamma_cr  
-      rbuff(5)   = cr_eff           
-      rbuff(6)   = K_cr_paral 
-      rbuff(7)   = K_cr_perp  
-    
+
+      rbuff(1)   = cfl_cr
+      rbuff(2)   = smallecr
+      rbuff(3)   = cr_active
+      rbuff(4)   = gamma_cr
+      rbuff(5)   = cr_eff
+      rbuff(6)   = K_cr_paral
+      rbuff(7)   = K_cr_perp
+
       call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
     else
-    
+
       call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
-      
-      cfl_cr     = rbuff(1)  
-      smallecr   = rbuff(2)  
-      cr_active  = rbuff(3)  
-      gamma_cr   = rbuff(4)  
-      cr_eff     = rbuff(5)        
-      K_cr_paral = rbuff(6)  
-      K_cr_perp  = rbuff(7)  
+
+      cfl_cr     = rbuff(1)
+      smallecr   = rbuff(2)
+      cr_active  = rbuff(3)
+      gamma_cr   = rbuff(4)
+      cr_eff     = rbuff(5)
+      K_cr_paral = rbuff(6)
+      K_cr_perp  = rbuff(7)
 
     endif
 
@@ -112,21 +127,21 @@ module initcosmicrays
 
 
   subroutine cosmicray_index(nvar,nvar_crs)
-  
+
     implicit none
     integer :: nvar, nvar_crs
 
-      iecr          = nvar + 1           
+      iecr          = nvar + 1
       nvar_crs      = 1
       nvar          = iecr
-      
+
       allocate(iarr_crs(nvar_crs),iarr_crs_swpx(nvar_crs), iarr_crs_swpy(nvar_crs), iarr_crs_swpz(nvar_crs))
 
-      iarr_crs      = [iecr] 
+      iarr_crs      = [iecr]
       iarr_crs_swpx = [iecr]
       iarr_crs_swpy = [iecr]
       iarr_crs_swpz = [iecr]
-      
+
    end subroutine cosmicray_index
 
 end module initcosmicrays
