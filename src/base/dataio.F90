@@ -41,81 +41,45 @@
 !!
 !! @b END_CONTROL
 !!
-!! \f[
-!! \begin{tabular}{ | l | l | l | l | }
-!! \hline &&&\\
-!! {\bf parameter} & {\bf default value} & {\bf possible values} & {\bf description} \\
-!! &&&\\ \hline \hline &&&\\
-!! nend & 1 & integer & step number to end simulation \\
-!! &&&\\ \hline &&&\\
-!! tend &-1.0 & real & simulation time to end \\
-!! &&&\\ \hline
-!! \end{tabular}
-!! \f]
+!! \f[ \begin{tabular}{ | p{3cm} | p{3cm} | p{4cm} | p{8cm} | } \hline &&&\\
+!! {\bf parameter} & {\bf default value} & {\bf possible values} & {\bf description} \\ &&&\\ \hline \hline &&&\\
+!! nend & 1   & integer & step number to end simulation \\ &&&\\ \hline &&&\\
+!! tend &-1.0 & real    & simulation time to end        \\ &&&\\ \hline
+!! \end{tabular} \f]
 !!
 !! @b RESTART_CONTROL
 !!
-!! \f[
-!! \begin{tabular}{ | l | l | l | p{8cm} | }
-!! \hline &&&\\
-!! {\bf parameter} & {\bf default value} & {\bf possible values} & {\bf description} \\
-!! &&&\\ \hline \hline &&&\\
-!! restart & 'last' & 'last' or another string of characters & 'last': automatic choise of the last restart file regardless of "nrestart" value; if smth else is set: "nrestart" value is fixing \\
-!! &&&\\ \hline &&&\\
-!! new\_id & '' & string of characters & three character string to change run\_id when restarting simulation (e.g. to avoid overwriting of the output from the previous (pre-restart) simulation; if new\_id = '' then run\_id is still used) \\
-!! &&&\\ \hline &&&\\
-!! nrestart & 3 & integer & number of restart file to be read while restart is not set to '' \\
-!! &&&\\ \hline &&&\\
-!! resdel & 0 & integer & number of recent restart dumps which should be saved; each n-resdel-1 restart file is supposed to be deleted while writing n restart file \\
-!! &&&\\ \hline
-!! \end{tabular}
-!! \f]
+!! \f[ \begin{tabular}{ | p{3cm} | p{3cm} | p{4cm} | p{8cm} | } \hline &&&\\
+!! {\bf parameter} & {\bf default value} & {\bf possible values} & {\bf description} \\ &&&\\ \hline \hline &&&\\
+!! restart  & 'last' & 'last' or another string of characters & 'last': automatic choise of the last restart file regardless of "nrestart" value; if smth else is set: "nrestart" value is fixing \\ &&&\\ \hline &&&\\
+!! new\_id  & ''     & string of characters & three character string to change run\_id when restarting simulation (e.g. to avoid overwriting of the output from the previous (pre-restart) simulation; if new\_id = '' then run\_id is still used) \\ &&&\\ \hline &&&\\
+!! nrestart & 3      & integer & number of restart file to be read while restart is not set to '' \\ &&&\\ \hline &&&\\
+!! resdel   & 0      & integer & number of recent restart dumps which should be saved; each n-resdel-1 restart file is supposed to be deleted while writing n restart file \\ &&&\\ \hline
+!! \end{tabular} \f]
 !!
 !! @b OUTPUT_CONTROL
 !!
-!! \f[
-!! \begin{tabular}{ | p{3cm} | p{3cm} | p{4cm} | p{8cm} | }
-!! \hline &&&\\
-!! {\bf parameter} & {\bf default value} & {\bf possible values} & {\bf description} \\
-!! &&&\\ \hline \hline &&&\\
-!! dt\_hdf & 0.0 & real & time between successive hdf dumps \\
-!! &&&\\ \hline &&&\\
-!! dt\_res & 0.0 & real & time between successive restart file dumps \\
-!! &&&\\ \hline &&&\\
-!! dt\_tsl & 0.0 & real & time between successive timeslice dumps \\
-!! &&&\\ \hline &&&\\
-!! dt\_log & 0.0 & real & time between successive log dumps \\
-!! &&&\\ \hline &&&\\
-!! dt\_plt & 0.0 & real & time between successive domain slices files dumps \\
-!! &&&\\ \hline &&&\\
-!! ix &  & integer & index in x-direction of slice to dump in plt files \\
-!! &&&\\ \hline &&&\\
-!! iy &  & integer & index in y-direction of slice to dump in plt files \\
-!! &&&\\ \hline &&&\\
-!! iz &  & integer & index in z-direction of slice to dump in plt files \\
-!! &&&\\ \hline &&&\\
-!! domain & 'phys\_domain' & 'phys\_domain' or 'full\_domain' & string to choose if boundaries have to be dumped in hdf files \\
-!! &&&\\ \hline &&&\\
-!! vars & '' & 'dens', 'velx', 'vely', 'velz', 'ener' and some more & array of 4-character strings standing for variables to dump in hdf files \\
-!! &&&\\ \hline &&&\\
-!! mag\_center & 'no' & 'yes'/'no' & choise to dump magnetic fields values from cell centers or not (if not then values from cell borders) \\
-!! &&&\\ \hline
-!! \end{tabular}
-!! \f] \f[
-!! \begin{tabular}{ | p{3cm} | p{3cm} | p{4cm} | p{8cm} | }
-!! &&&\\
-!! min\_disk\_space\_MB & 100 & integer & minimum disk space in MB to continue simulation {\bf (currently not used)} \\
-!! &&&\\ \hline &&&\\
-!! sleep\_minutes & 0 & integer & minutes of sleeping time before continue simulation \\
-!! &&&\\ \hline &&&\\
-!! sleep\_seconds & 0 & integer & seconds of sleeping time before continue simulation \\
-!! &&&\\ \hline &&&\\
-!! user\_message\_file & trim(cwd)//'/msg' & string similar to default value & path to possible user message file containing dt\_xxx changes or orders to dump/stop/end simulation \\
-!! &&&\\ \hline &&&\\
-!! system\_message\_file & '/tmp/piernik\_msg' & string of characters similar to default value  & path to possible system (UPS) messege file contaning orders to dump/stop/end simulation \\
-!! &&&\\ \hline
-!! \end{tabular}
-!! \f]
+!! \f[ \begin{tabular}{ | p{3cm} | p{3cm} | p{4cm} | p{8cm} | } \hline &&&\\
+!! {\bf parameter} & {\bf default value} & {\bf possible values} & {\bf description} \\ &&&\\ \hline \hline &&&\\
+!! dt\_hdf & 0.0 & real & time between successive hdf dumps          \\ &&&\\ \hline &&&\\
+!! dt\_res & 0.0 & real & time between successive restart file dumps \\ &&&\\ \hline &&&\\
+!! dt\_tsl & 0.0 & real & time between successive timeslice dumps    \\ &&&\\ \hline &&&\\
+!! dt\_log & 0.0 & real & time between successive log dumps          \\ &&&\\ \hline &&&\\
+!! dt\_plt & 0.0 & real & time between successive domain slices files dumps \\ &&&\\ \hline &&&\\
+!! ix      &     & integer & index in x-direction of slice to dump in plt files \\ &&&\\ \hline &&&\\
+!! iy      &     & integer & index in y-direction of slice to dump in plt files \\ &&&\\ \hline &&&\\
+!! iz      &     & integer & index in z-direction of slice to dump in plt files \\ &&&\\ \hline &&&\\
+!! domain  & 'phys\_domain' & 'phys\_domain' or 'full\_domain' & string to choose if boundaries have to be dumped in hdf files \\ &&&\\ \hline &&&\\
+!! vars    & ''  & 'dens', 'velx', 'vely', 'velz', 'ener' and some more & array of 4-character strings standing for variables to dump in hdf files \\ &&&\\ \hline &&&\\
+!! mag\_center & 'no' & 'yes'/'no' & choise to dump magnetic fields values from cell centers or not (if not then values from cell borders) \\ &&&\\ \hline
+!! \end{tabular} \f] \f[
+!! \begin{tabular}{ | p{3cm} | p{3cm} | p{4cm} | p{8cm} | } &&&\\
+!! min\_disk\_space\_MB  & 100 & integer & minimum disk space in MB to continue simulation {\bf (currently not used)} \\ &&&\\ \hline &&&\\
+!! sleep\_minutes        & 0   & integer & minutes of sleeping time before continue simulation \\ &&&\\ \hline &&&\\
+!! sleep\_seconds        & 0   & integer & seconds of sleeping time before continue simulation \\ &&&\\ \hline &&&\\
+!! user\_message\_file   & trim(cwd)//'/msg' & string similar to default value & path to possible user message file containing dt\_xxx changes or orders to dump/stop/end simulation \\ &&&\\ \hline &&&\\
+!! system\_message\_file & '/tmp/piernik\_msg' & string of characters similar to default value  & path to possible system (UPS) messege file contaning orders to dump/stop/end simulation \\ &&&\\ \hline
+!! \end{tabular} \f]
 !!
 !! \todo check and if necessary bring back usefullness of min_disk_space_MB parameter
 !<
