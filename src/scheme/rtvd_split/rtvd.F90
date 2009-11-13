@@ -95,17 +95,24 @@ module rtvd ! split orig
       real, dimension(n)  :: vg      !< velocity in the center of cell boundary
 ! locals
       real, dimension(n)  :: b1      !< magnetic field
-      real, dimension(n)  :: vibj1   !< face-centered electromotive force components (b*vg)
+      real, dimension(n)  :: vibj1   !< face-centered electromotive force (EMF) components (b*vg)
       real, dimension(n)  :: vh      !< velocity interpolated to the cell edges 
-      real :: dti, v, w, dw, dwm, dwp
-      integer :: i, ip, ipp, im
+      real :: dti		     !< dt/di
+      real :: v			     !< auxiliary variable to compute EMF
+      real :: w			     !< EMF component
+      real :: dw                     !< The second-order correction to EMF component 
+      real :: dwm                    !< face centered EMF interpolated to left cell-edge
+      real :: dwp                    !< face centered EMF interpolated to right cell-edge
+      integer :: i                   !< auxiliary array indicator
+      integer :: ip                  !< i+1
+      integer :: ipp                 !< i+2
+      integer :: im                  !< i-1
 
   ! unlike the B field, the vibj lives on the right cell boundary
       vh = 0.0
       vh(1:n-1) =(vg(1:n-1)+ vg(2:n))*0.5;     vh(n) = vh(n-1)
 
       dti = dt/di
-
       where(vh > 0.)
          vibj1=b*vg
       elsewhere
@@ -246,7 +253,7 @@ module rtvd ! split orig
       real, dimension(nvar,n)   :: ur1                !< right moving wave (after one timestep in second order scheme)
       real, dimension(nfluid,n) :: rotacc             !< acceleration caused by rotation
       real, dimension(nfluid,n) :: fricacc            !< acceleration caused by friction
-      real, dimension(2)        :: df                 
+      real, dimension(2)        :: df                 !< marker                 
       real, dimension(n)        :: gravacc            !< acceleration caused by gravitation
 
 #ifdef SHEAR
