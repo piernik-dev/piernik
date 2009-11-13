@@ -36,25 +36,23 @@
 !!
 !! @b DOMAIN_SIZES
 !!
-!! \f[
-!! \begin{tabular}{ | p{3cm} | p{3cm} | p{4cm} | p{8cm} | } \hline &&&\\
+!! \f[ \begin{tabular}{ | p{3cm} | p{3cm} | p{4cm} | p{8cm} | } \hline &&&\\
 !! {\bf parameter} & {\bf default value} & {\bf possible values} & {\bf description} \\ &&&\\ \hline \hline &&&\\
-!! nxd & 1 & positive integer & number of grid cells in physical domain (without boundary cells) in x-direction (if equal to 1 then x-dimension is reduced to a point and boundary cells layer is not added) \\ &&&\\ \hline &&&\\
-!! nyd & 1 & positive integer & number of grid cells in physical domain (without boundary cells) in y-direction (if equal to 1 then y-dimension is reduced to a point and boundary cells layer is not added) \\ &&&\\ \hline &&&\\
-!! nzd & 1 & positive integer & number of grid cells in physical domain (without boundary cells) in z-direction (if equal to 1 then z-dimension is reduced to a point and boundary cells layer is not added) \\ &&&\\ \hline &&&\\
-!! nb & 4 & non-negative integer & number of boundary cells surrounding the physical domain, same for all directions \\ &&&\\ \hline
+!! nxd & 1 & positive integer     & number of grid cells in physical domain (without boundary cells) in x-direction (if equal to 1 then x-dimension is reduced to a point and boundary cells layer is not added) \\ &&&\\ \hline &&&\\
+!! nyd & 1 & positive integer     & number of grid cells in physical domain (without boundary cells) in y-direction (if equal to 1 then y-dimension is reduced to a point and boundary cells layer is not added) \\ &&&\\ \hline &&&\\
+!! nzd & 1 & positive integer     & number of grid cells in physical domain (without boundary cells) in z-direction (if equal to 1 then z-dimension is reduced to a point and boundary cells layer is not added) \\ &&&\\ \hline &&&\\
+!! nb  & 4 & non-negative integer & number of boundary cells surrounding the physical domain, same for all directions \\ &&&\\ \hline
 !! \end{tabular} \f]
 !!
 !! @b DOMAIN_LIMITS
 !!
-!! \f[
-!! \begin{tabular}{ | p{3cm} | p{3cm} | p{4cm} | p{8cm} | } \hline &&&\\
+!! \f[ \begin{tabular}{ | p{3cm} | p{3cm} | p{4cm} | p{8cm} | } \hline &&&\\
 !! {\bf parameter} & {\bf default value} & {\bf possible values} & {\bf description} \\ &&&\\ \hline \hline &&&\\
-!! xmin &  & real & physical domain left x-boundary position \\ &&&\\ \hline &&&\\
+!! xmin &  & real & physical domain left x-boundary position  \\ &&&\\ \hline &&&\\
 !! xmax &  & real & physical domain right x-boundary position \\ &&&\\ \hline &&&\\
-!! ymin &  & real & physical domain left y-boundary position \\ &&&\\ \hline &&&\\
+!! ymin &  & real & physical domain left y-boundary position  \\ &&&\\ \hline &&&\\
 !! ymax &  & real & physical domain right y-boundary position \\ &&&\\ \hline &&&\\
-!! zmin &  & real & physical domain left z-boundary position \\ &&&\\ \hline &&&\\
+!! zmin &  & real & physical domain left z-boundary position  \\ &&&\\ \hline &&&\\
 !! zmax &  & real & physical domain right z-boundary position \\ &&&\\ \hline
 !! \end{tabular} \f]
 !!
