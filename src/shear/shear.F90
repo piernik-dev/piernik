@@ -18,16 +18,26 @@
 !    along with PIERNIK.  If not, see <http://www.gnu.org/licenses/>.
 !
 !    Initial implemetation of PIERNIK code was based on TVD split MHD code by
-!    Ue-Li Pen 
+!    Ue-Li Pen
 !        see: Pen, Arras & Wong (2003) for algorithm and
-!             http://www.cita.utoronto.ca/~pen/MHD 
-!             for original source code "mhd.f90" 
-!   
+!             http://www.cita.utoronto.ca/~pen/MHD
+!             for original source code "mhd.f90"
+!
 !    For full list of developers see $PIERNIK_HOME/license/pdt.txt
 !
 #include "piernik.def"
 !>
 !! \brief (KK)
+!!
+!! In this module following namelist of parameters is specified:
+!!
+!! @b SHEARING
+!!
+!! \f[ \begin{tabular}{ | p{3cm} | p{3cm} | p{4cm} | p{8cm} | } \hline &&&\\
+!! {\bf parameter} & {\bf default value} & {\bf possible values} & {\bf description} \\ &&&\\ \hline \hline &&&\\
+!! omega  & 0.0   & real value &  \\ &&&\\ \hline &&&\\
+!! qshear & 0.0   & real value &  \\ &&&\\ \hline
+!! \end{tabular} \f]
 !<
 module shear
   real    :: ts, dely, eps, omega,qshear, dts, ddly
@@ -43,7 +53,7 @@ module shear
     character(LEN=100) :: par_file, tmp_log_file
 
     namelist /SHEARING/ omega, qshear
-    
+
     par_file = trim(cwd)//'/problem.par'
     tmp_log_file = trim(cwd)//'/tmp.log'
 
@@ -58,7 +68,7 @@ module shear
        open(3, file=tmp_log_file, position='append')
           write(unit=3,nml=SHEARING)
        close(3)
-  
+
        rbuff(1) = omega
        rbuff(2) = qshear
 
@@ -69,7 +79,7 @@ module shear
        call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
        omega   = rbuff(1)
-       qshear  = rbuff(2) 
+       qshear  = rbuff(2)
 
     endif
   end subroutine init_shear
@@ -97,7 +107,7 @@ module shear
 
 #ifdef FFTW
   function unshear_fft(qty,x,ddy,inv)
-    use mpisetup, only  : smalld 
+    use mpisetup, only  : smalld
     use grid, only   : dy,nb,Lx
     use constants, only : dpi
     implicit none
@@ -117,12 +127,12 @@ module shear
     real(kind=8)    , dimension(:)     , allocatable :: ky
 
     St = - ddy / dy / Lx
-    if (.not.present(inv)) St = -St 
+    if (.not.present(inv)) St = -St
 
     nx = size(qty,1)
     ny = size(qty,2)
     nz = size(qty,3)
-   
+
     np = ny / 2 + 1
 
     if(.not.allocated(ctmp)) allocate(ctmp(np))
@@ -161,7 +171,7 @@ module shear
   function unshear(qty,x,inv)
     use grid,  only  : nb,xmax,xmin,nyd,dy
     use mpisetup, only  : smalld
-    
+
     logical, optional               :: inv
     real, dimension(:,:,:)          :: qty
     real, dimension(:), intent(in)  :: x
@@ -202,7 +212,7 @@ module shear
 
       temp(:,:) = (1.0+ddl)*(1.0-ddl) * temp(:,:) &
             - 0.5*(ddl)*(1.0-ddl) * cshift(temp(:,:),shift= sg,dim=1) &
-            + 0.5*(ddl)*(1.0+ddl) * cshift(temp(:,:),shift=-sg,dim=1) 
+            + 0.5*(ddl)*(1.0+ddl) * cshift(temp(:,:),shift=-sg,dim=1)
 
       unshear(i,nb+1:nb+nyd,:) = temp(nb+nyd+1:nb+2*nyd,:)
 
