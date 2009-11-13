@@ -27,7 +27,7 @@
 !
 #include "piernik.def"
 !>
-!! \brief (JD) This module implements relaxing TVD scheme
+!! \brief (JD) This module implements relaxing TVD scheme (doxy comments ready)
 !! 
 !! The implementation was based on TVD split MHD code by Pen et al. (2003).
 !<
@@ -286,20 +286,37 @@ module rtvd ! split orig
 
       do istep=1,integration_order
 
+! Fluxes calculation for cells centers
+
          call all_fluxes(w,cfr,u1,bb,n)
+
+! Right and left fluxes decoupling
 
          fr = (u1*cfr+w)*0.5
          fl = (u1*cfr-w)*0.5
+
          if(istep == 1) then
+
+! Right moving waves construction for first-order scheme
+
             ur0 = fr/cfr
+
+! Left moving waves construction for first-order scheme
+
             ul0 = fl/cfr
          endif
 
          fl(:,1:n-1) = fl(:,2:n)                         ; fl(:,n)   = fl(:,n-1)
 
          if(istep == 2) then
+
+! Second order flux corrections
+
             dfrp(:,1:n-1) = 0.5*(fr(:,2:n) - fr(:,1:n-1)); dfrp(:,n) = dfrp(:,n-1)
             dfrm(:,2:n)   = dfrp(:,1:n-1);                 dfrm(:,1) = dfrm(:,2)
+
+! Flux limiter application
+
             call flimiter(fr,dfrm,dfrp,nvar,n)
 
             dflp(:,1:n-1) = 0.5*(fl(:,1:n-1) - fl(:,2:n)); dflp(:,n) = dflp(:,n-1)
@@ -307,8 +324,12 @@ module rtvd ! split orig
             call flimiter(fl,dflm,dflp,nvar,n)
          endif
 
+! u corrections
+
          durf(:,2:n) = dtx*(fr(:,2:n) - fr(:,1:n-1));     durf(:,1) = durf(:,2)
          dulf(:,2:n) = dtx*(fl(:,2:n) - fl(:,1:n-1));     dulf(:,1) = dulf(:,2)
+
+! u update
 
          ur1(:,:) = ur0 - rk2coef(integration_order,istep)*durf
          ul1(:,:) = ul0 + rk2coef(integration_order,istep)*dulf
