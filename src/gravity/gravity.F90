@@ -36,34 +36,28 @@
 !!
 !! @b GRAVITY
 !!
-!! \f[
-!! \begin{tabular}{ | p{3cm} | p{3cm} | p{4cm} | p{8cm} | }
-!! \hline &&&\\
-!! {\bf parameter} & {\bf default value} & {\bf possible values} & {\bf description} \\
-!! &&&\\ \hline \hline &&&\\
-!! g\_z & 0.0 & real & z-component used by GRAV\_UNIFORM type of gravity \\ &&&\\ \hline &&&\\
-!! g\_y & 0.0 & real & y-component of GRAV\_UNIFORM constant {\bf {\it (currently not used)}} \\ &&&\\ \hline &&&\\
-!! dg\_dz & 0.0 & real & constant used by GRAV\_LINEAR type of gravity \\ &&&\\ \hline &&&\\
-!! r\_gc & 8500 & real & galactocentric radius of the local simulation region used by local Galactic type of gravity in grav\_accel \\ &&&\\ \hline &&&\\
-!! ptmass & 0.0 & non-negative real & mass value of point gravity source used by GRAV\_PTMASS, GRAV\_PTMASSPURE, GRAV\_PTFLAT type of gravity \\ &&&\\ \hline &&&\\
-!! ptm\_x & 0.0 & real & point mass position x-component \\ &&&\\ \hline &&&\\
-!! ptm\_y & 0.0 & real & point mass position y-component \\ &&&\\ \hline &&&\\
-!! ptm\_z & 0.0 & real & point mass position z-component \\ &&&\\ \hline &&&\\
-!! r\_smooth & 0.0 & real & smoothing radius in point mass types of gravity \\ &&&\\ \hline &&&\\
-!! nsub & 10 & integer $>$ 0 & number of subcells while additionally cell division in z-direction during estabilishment of hydrostatic equilibrium \\ &&&\\ \hline
-!! \end{tabular}
-!! \f]
-!! \f[
-!! \begin{tabular}{ | p{3cm} | p{3cm} | p{4cm} | p{8cm} | } \hline &&&\\
-!! tune\_zeq & 1.0 & real & z-component of gravity tunning factor used by hydrostatic\_zeq \\ &&&\\ \hline &&&\\
-!! tune\_zeq\_bnd & 1.0 & real & z-component of gravity tunning factor supposed to use in boundaries {\bf {\it (currently not used)}} \\ &&&\\ \hline &&&\\
-!! h\_grav & 1.e6 & real & altitude of acceleration cut used when n\_gravh is set to non-zero \\ &&&\\ \hline &&&\\
-!! r\_grav & 1.e6 & real & radius of gravitational potential cut used by GRAV\_PTMASS, GRAV\_PTFLAT type of gravity \\ &&&\\ \hline &&&\\
-!! n\_gravr & 0 & real & index of hiperbolic-cosinusoidal cutting of gravitational potential used by GRAV\_PTMASS, GRAV\_PTFLAT type of gravity \\ &&&\\ \hline &&&\\
-!! n\_gravr2 & 0 & real & similar to n\_gravr {\bf {\it (currently not used)}} \\ &&&\\ \hline &&&\\
-!! n\_gravh & 0 & real & index of hiperbolic-cosinusoidal cutting of acceleration; used when set to non-zero \\ &&&\\ \hline
-!! \end{tabular}
-!! \f]
+!! \f[ \begin{tabular}{ | p{3cm} | p{3cm} | p{4cm} | p{8cm} | } \hline &&&\\
+!! {\bf parameter} & {\bf default value} & {\bf possible values} & {\bf description} \\ &&&\\ \hline \hline &&&\\
+!! g\_z      & 0.0  & real              & z-component used by GRAV\_UNIFORM type of gravity \\ &&&\\ \hline &&&\\
+!! g\_y      & 0.0  & real              & y-component of GRAV\_UNIFORM constant {\bf {\it (currently not used)}} \\ &&&\\ \hline &&&\\
+!! dg\_dz    & 0.0  & real              & constant used by GRAV\_LINEAR type of gravity \\ &&&\\ \hline &&&\\
+!! r\_gc     & 8500 & real              & galactocentric radius of the local simulation region used by local Galactic type of gravity in grav\_accel \\ &&&\\ \hline &&&\\
+!! ptmass    & 0.0  & non-negative real & mass value of point gravity source used by GRAV\_PTMASS, GRAV\_PTMASSPURE, GRAV\_PTFLAT type of gravity \\ &&&\\ \hline &&&\\
+!! ptm\_x    & 0.0  & real              & point mass position x-component \\ &&&\\ \hline &&&\\
+!! ptm\_y    & 0.0  & real              & point mass position y-component \\ &&&\\ \hline &&&\\
+!! ptm\_z    & 0.0  & real              & point mass position z-component \\ &&&\\ \hline &&&\\
+!! r\_smooth & 0.0  & real              & smoothing radius in point mass types of gravity \\ &&&\\ \hline &&&\\
+!! nsub      & 10   & integer $>$ 0     & number of subcells while additionally cell division in z-direction during estabilishment of hydrostatic equilibrium \\ &&&\\ \hline
+!! \end{tabular} \f]
+!! \f[ \begin{tabular}{ | p{3cm} | p{3cm} | p{4cm} | p{8cm} | } \hline &&&\\
+!! tune\_zeq      & 1.0  & real & z-component of gravity tunning factor used by hydrostatic\_zeq \\ &&&\\ \hline &&&\\
+!! tune\_zeq\_bnd & 1.0  & real & z-component of gravity tunning factor supposed to use in boundaries {\bf {\it (currently not used)}} \\ &&&\\ \hline &&&\\
+!! h\_grav        & 1.e6 & real & altitude of acceleration cut used when n\_gravh is set to non-zero \\ &&&\\ \hline &&&\\
+!! r\_grav        & 1.e6 & real & radius of gravitational potential cut used by GRAV\_PTMASS, GRAV\_PTFLAT type of gravity \\ &&&\\ \hline &&&\\
+!! n\_gravr       & 0    & real & index of hiperbolic-cosinusoidal cutting of gravitational potential used by GRAV\_PTMASS, GRAV\_PTFLAT type of gravity \\ &&&\\ \hline &&&\\
+!! n\_gravr2      & 0    & real & similar to n\_gravr {\bf {\it (currently not used)}} \\ &&&\\ \hline &&&\\
+!! n\_gravh       & 0    & real & index of hiperbolic-cosinusoidal cutting of acceleration; used when set to non-zero \\ &&&\\ \hline
+!! \end{tabular} \f]
 !!
 !<
 module gravity
