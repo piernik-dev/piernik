@@ -37,7 +37,7 @@
 !!  \vec{F}{(\vec{u})} = 
 !!  \left(\begin{array}{c}
 !!    \rho v_x \\
-!!    \rho v_x^2 \\
+!!    \rho v_x^2+p \\
 !!    \rho v_x v_y\\
 !!    \rho v_x v_z\\
 !!    (e + p)v_x 
@@ -47,7 +47,7 @@
 !!  \left(\begin{array}{c}
 !!    \rho v_y \\
 !!    \rho v_y v_x\\
-!!    \rho v_y^2\\
+!!    \rho v_y^2+p\\
 !!    \rho v_y v_z\\
 !!    (e + p)v_y 
 !!  \end{array}\right),
@@ -57,7 +57,7 @@
 !!    \rho v_z \\
 !!    \rho v_z v_x\\
 !!    \rho v_z v_y \\
-!!    \rho v_z^2 \\
+!!    \rho v_z^2+p \\
 !!    (e + p)v_z 
 !!  \end{array}\right),
 !!\f]
