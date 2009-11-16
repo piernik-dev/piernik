@@ -35,19 +35,19 @@
 !!  \vec{F}{(\vec{u})} = 
 !!  \left(\begin{array}{c}
 !!    \rho v_x \\
-!!    \rho v_x^2\\
+!!    \rho v_x^2+p\\
 !!    \rho v_x v_y\\
 !!    \rho v_x v_z\\
-!!   e v_x
+!!   0
 !!  \end{array}\right),
 !!  \qquad
 !!  \vec{G}{(\vec{u})} = 
 !!  \left(\begin{array}{c}
 !!    \rho v_y \\
 !!    \rho v_y v_x\\
-!!    \rho v_y^2 \\
+!!    \rho v_y^2+p \\
 !!    \rho v_y v_z\\
-!!    e v_y
+!!    0
 !!  \end{array}\right),
 !!\qquad
 !!  \vec{H}{(\vec{u})} = 
@@ -55,8 +55,8 @@
 !!    \rho v_z \\
 !!    \rho v_z v_x\\
 !!    \rho v_z v_y \\
-!!    \rho v_z^2 \\
-!!    e v_z 
+!!    \rho v_z^2+p \\
+!!    0
 !!  \end{array}\right),
 !!\f]
 !! 
