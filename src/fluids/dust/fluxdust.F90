@@ -105,10 +105,6 @@ module fluxdust
     fluxd(imx,RNG)=uud(imx,RNG)*vx(RNG)
     fluxd(imy,RNG)=uud(imy,RNG)*vx(RNG)
     fluxd(imz,RNG)=uud(imz,RNG)*vx(RNG)
-    
-#ifndef ISO
-    fluxd(ien,RNG)=(uud(ien,RNG))*vx(RNG) 
-#endif /* ISO */
 
 #ifdef LOCAL_FR_SPEED
 !       The freezing speed is now computed locally (in each cell)
