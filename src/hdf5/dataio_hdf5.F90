@@ -177,8 +177,8 @@ module dataio_hdf5
                hdf_vars(j) = 'magy' ; j = j + 1
             case ('magz')
                hdf_vars(j) = 'magz' ; j = j + 1
-            case ('encr')
 #ifdef COSM_RAYS
+            case ('encr')
                hdf_vars(j) = 'encr' ; j = j + 1
 #endif /* COSM_RAYS */
          end select
@@ -401,6 +401,10 @@ module dataio_hdf5
 #else
             tab(:,:,:) = real(u(ind%eni,RNG),4)
 #endif
+#ifdef COSM_RAYS
+         case("encr")
+           tab(:,:,:) = real(u(ind%ecr,RNG),4)
+#endif /* COSM_RAYS */
          case("magx")
             tab(:,:,:) = real(b(ind%bx,RNG),4)
          case("magy")
