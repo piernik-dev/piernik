@@ -30,14 +30,7 @@
 !! \brief (KK)
 !!
 !! In this module following namelist of parameters is specified:
-!!
-!! @b SHEARING
-!!
-!! \f[ \begin{tabular}{ | p{3cm} | p{3cm} | p{4cm} | p{8cm} | } \hline &&&\\
-!! {\bf parameter} & {\bf default value} & {\bf possible values} & {\bf description} \\ &&&\\ \hline \hline &&&\\
-!! omega  & 0.0   & real value &  \\ &&&\\ \hline &&&\\
-!! qshear & 0.0   & real value &  \\ &&&\\ \hline
-!! \end{tabular} \f]
+!! \copydetails shear::init_shear
 !<
 module shear
   real    :: ts, dely, eps, omega,qshear, dts, ddly
@@ -45,6 +38,17 @@ module shear
 
   contains
 
+!>
+!! \brief Routine to set parameter values from namelist SHEARING
+!!
+!! @b SHEARING
+!!
+!! <table border="+1">
+!! <tr><td width="150pt"><b>parameter</b></td><td width="135pt"><b>default value</b></td><td width="200pt"><b>possible values</b></td><td width="315pt"> <b>description</b></td></tr>
+!! <tr><td>omega </td><td>0.0  </td><td>real value</td><td>\copydoc shear::omega </td></tr>
+!! <tr><td>qshear</td><td>0.0  </td><td>real value</td><td>\copydoc shear::qshear</td></tr>
+!! </table>
+!<
   subroutine init_shear
     use mpisetup
     use errh, only : namelist_errh
