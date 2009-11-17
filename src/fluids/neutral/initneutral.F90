@@ -33,16 +33,7 @@
 !!
 !!
 !! In this module following namelist of parameters is specified:
-!!
-!! @b FLUID_NEUTRAL
-!!
-!! \f[ \begin{tabular}{ | p{3cm} | p{3cm} | p{4cm} | p{8cm} | } \hline &&&\\
-!! {\bf parameter} & {\bf default value} & {\bf possible values} & {\bf description} \\ &&&\\ \hline \hline &&&\\
-!! gamma\_neu   & 1.66666666 & real value &  \\ &&&\\ \hline &&&\\
-!! cs\_iso\_neu & 1.0        & real value &  \\ &&&\\ \hline &&&\\
-!! cs\_gas\_neu &            & real value &  \\ &&&\\ \hline &&&\\
-!! csvk         &            & real value &  \\ &&&\\ \hline
-!! \end{tabular} \f]
+!! \copydetails initneutral::init_neutral
 !<
 
 module initneutral
@@ -61,7 +52,19 @@ module initneutral
 
   contains
 
-
+!>
+!! \brief Routine to set parameters values from namelist FLUID_NEUTRAL
+!!
+!! @b FLUID_NEUTRAL
+!!
+!! <table border="+1">
+!! <tr><td width="150pt"><b>parameter</b></td><td width="135pt"><b>default value</b></td><td width="200pt"><b>possible values</b></td><td width="315pt"> <b>description</b></td></tr>
+!! <tr><td>gamma_neu </td><td>1.66666666</td><td>real value</td><td>\copydoc initneutral::gamma_neu </td></tr>
+!! <tr><td>cs_iso_neu</td><td>1.0       </td><td>real value</td><td>\copydoc initneutral::cs_iso_neu</td></tr>
+!! <tr><td>cs_gas_neu</td><td>          </td><td>real value</td><td>\copydoc initneutral::cs_gas_neu</td></tr>
+!! <tr><td>csvk      </td><td>          </td><td>real value</td><td>\copydoc initneutral::csvk      </td></tr>
+!! </table>
+!<
   subroutine init_neutral
 
     use mpisetup
