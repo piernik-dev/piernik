@@ -28,7 +28,6 @@
 #include "piernik.def"
 !>
 !! \brief [DW] Module containing routines to specify required computational mesh.
-!! \author M. Hanasz
 !! \date January/February 2006
 !!
 !!
@@ -101,8 +100,9 @@ module grid
 !>
 !! \brief Routine which sets numbers of cells for the domain, MPI blocks and initializes direction meshes (x,y,z).
 !!
+!! \n \n
 !! @b DOMAIN_SIZES
-!!
+!! \n \n
 !! <table border="+1">
 !! <tr><td width="150pt"><b>parameter</b></td><td width="135pt"><b>default value</b></td><td width="200pt"><b>possible values</b></td><td width="315pt"> <b>description</b></td></tr>
 !! <tr><td>nxd</td><td>1</td><td>positive integer    </td><td>\copydoc grid::nxd</td></tr>
@@ -110,9 +110,9 @@ module grid
 !! <tr><td>nzd</td><td>1</td><td>positive integer    </td><td>\copydoc grid::nzd</td></tr>
 !! <tr><td>nb </td><td>4</td><td>non-negative integer</td><td>\copydoc grid::nb </td></tr>
 !! </table>
-!!
+!! \n \n
 !! @b DOMAIN_LIMITS
-!!
+!! \n \n
 !! <table border="+1">
 !! <tr><td width="150pt"><b>parameter</b></td><td width="135pt"><b>default value</b></td><td width="200pt"><b>possible values</b></td><td width="315pt"> <b>description</b></td></tr>
 !! <tr><td>xmin</td><td></td><td>real</td><td>\copydoc grid::xmin</td></tr>
@@ -122,6 +122,7 @@ module grid
 !! <tr><td>zmin</td><td></td><td>real</td><td>\copydoc grid::zmin</td></tr>
 !! <tr><td>zmax</td><td></td><td>real</td><td>\copydoc grid::zmax</td></tr>
 !!</table>
+!! \n \n
 !<
    subroutine init_grid
       use errh, only : namelist_errh
