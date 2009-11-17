@@ -64,8 +64,9 @@ module gravity
 !>
 !! \brief Routine that sets the initial values of %gravity parameters from namelist @c GRAVITY
 !!
+!! \n \n
 !! @b GRAVITY
-!!
+!! \n \n
 !! <table border="+1">
 !! <tr><td width="150pt"><b>parameter</b></td><td width="135pt"><b>default value</b></td><td width="200pt"><b>possible values</b></td><td width="315pt"> <b>description</b></td></tr>
 !! <tr><td>g_z         </td><td>0.0 </td><td>real             </td><td>\copydoc gravity::g_z          </td></tr>
@@ -86,7 +87,7 @@ module gravity
 !! <tr><td>n_gravr2    </td><td>0   </td><td>real             </td><td>\copydoc gravity::n_gravr2     </td></tr>
 !! <tr><td>n_gravh     </td><td>0   </td><td>real             </td><td>\copydoc gravity::n_gravh      </td></tr>
 !! </table>
-!!
+!! \n \n
 !<
    subroutine init_grav
       use errh, only : namelist_errh
@@ -291,7 +292,7 @@ module gravity
 !! \param i2 integer, number of column in the second direction after one pointed out by sweep
 !! \param xsw 1D position array in the direction pointed out by sweep
 !! \param n number of elements of xsw array
-!! \return grav 1D array of gravitational acceleration values computed for positions from xsw
+!! \param grav 1D array of gravitational acceleration values computed for positions from xsw and returned by the routine
 !! \n\n
 !! one type of %gravity is implemented here: \n\n
 !! local Galactic %gravity only in z-direction (see <a href="http://cdsads.u-strasbg.fr/abs/1998ApJ...497..759F">Ferriere K., 1998, Astrophys. Journal, 497, 759</a>)\n
@@ -359,7 +360,7 @@ module gravity
 !! \param i1 integer, number of column in the first direction after one pointed out by sweep
 !! \param i2 integer, number of column in the second direction after one pointed out by sweep
 !! \param n number of elements of returned array grav
-!! \return grav 1D array of gravitational acceleration values computed for positions from xsw
+!! \param grav 1D array of gravitational acceleration values computed for positions from xsw and returned by the routine
 !<
    subroutine grav_pot2accel(sweep, i1,i2, n, grav)
       use arrays, only : gp
