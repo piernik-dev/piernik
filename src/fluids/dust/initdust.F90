@@ -32,14 +32,7 @@
 !!
 !!
 !! In this module following namelist of parameters is specified:
-!!
-!! @b FLUID_DUST
-!!
-!! \f[ \begin{tabular}{ | p{3cm} | p{3cm} | p{4cm} | p{8cm} | } \hline &&&\\
-!! {\bf parameter} & {\bf default value} & {\bf possible values} & {\bf description} \\ &&&\\ \hline \hline &&&\\
-!! dragc\_gas\_dust & 1.0   & real value &  \\ &&&\\ \hline &&&\\
-!! dalpha           & 1.0   & real value &  \\ &&&\\ \hline
-!! \end{tabular} \f]
+!! \copydetails initdust:init_dust
 !<
 
 module initdust
@@ -54,7 +47,17 @@ module initdust
 
   contains
 
-
+!>
+!! \brief Routine to set parameter values from namelist FLUID_DUST
+!!
+!! @b FLUID_DUST
+!!
+!! <table border="+1">
+!! <tr><td width="150pt"><b>parameter</b></td><td width="135pt"><b>default value</b></td><td width="200pt"><b>possible values</b></td><td width="315pt"> <b>description</b></td></tr>
+!! <tr><td>dragc_gas_dust</td><td>1.0  </td><td>real value</td><td>\copydoc initdust::dragc_gas_dust</td></tr>
+!! <tr><td>dalpha        </td><td>1.0  </td><td>real value</td><td>\copydoc initdust::dalpha        </td></tr>
+!! </table>
+!<
   subroutine init_dust
 
     use mpisetup
