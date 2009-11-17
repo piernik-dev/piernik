@@ -211,16 +211,17 @@ module dataio
 !>
 !! \brief Routine that sets the initial values of data input/output parameters from namelists @c END_CONTROL, @c RESTART_CONTROL and @c OUTPUT_CONTROL
 !!
+!! \n \n
 !! @b END_CONTROL
-!!
+!! \n \n
 !! <table border="+1">
 !! <tr><td width="150pt"><b>parameter</b></td><td width="135pt"><b>default value</b></td><td width="200pt"><b>possible values</b></td><td width="315pt"> <b>description</b></td></tr>
 !! <tr><td>nend</td><td>1    </td><td>integer</td><td>\copydoc dataio::nend</td></tr>
 !! <tr><td>tend</td><td>-1.0 </td><td>real   </td><td>\copydoc dataio::tend</td></tr>
 !! </table>
-!!
+!! \n \n
 !! @b RESTART_CONTROL
-!!
+!! \n \n
 !! <table border="+1">
 !! <tr><td width="150pt"><b>parameter</b></td><td width="135pt"><b>default value</b></td><td width="200pt"><b>possible values</b></td><td width="315pt"> <b>description</b></td></tr>
 !! <tr><td>restart </td><td>'last'</td><td>'last' or another string of characters</td><td>\copydoc dataio::restart </td></tr>
@@ -228,9 +229,9 @@ module dataio
 !! <tr><td>nrestart</td><td>3     </td><td>integer                               </td><td>\copydoc dataio::nrestart</td></tr>
 !! <tr><td>resdel  </td><td>0     </td><td>integer                               </td><td>\copydoc dataio::resdel  </td></tr>
 !! </table>
-!!
+!! \n \n
 !! @b OUTPUT_CONTROL
-!!
+!! \n \n
 !! <table border="+1">
 !! <tr><td width="150pt"><b>parameter</b></td><td width="135pt"><b>default value</b></td><td width="200pt"><b>possible values</b></td><td width="315pt"> <b>description</b></td></tr>
 !! <tr><td>dt_hdf             </td><td>0.0                </td><td>real      </td><td>\copydoc dataio::dt_hdf           </td></tr>
@@ -250,6 +251,7 @@ module dataio
 !! <tr><td>user_message_file  </td><td>trim(cwd)//'/msg'  </td><td>string similar to default value              </td><td>\copydoc dataio::user_message_file  </td></tr>
 !! <tr><td>system_message_file</td><td>'/tmp/piernik_msg'</td><td>string of characters similar to default value</td><td>\copydoc dataio::system_message_file</td></tr>
 !! </table>
+!! \n \n
 !<
    subroutine init_dataio
       use errh,            only : namelist_errh
