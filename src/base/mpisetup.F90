@@ -32,38 +32,7 @@
 !!
 !!
 !! In this module following namelists of parameters are specified:
-!!
-!! @b MPI_BLOCKS
-!!
-!! \f[ \begin{tabular}{ | p{3cm} | p{3cm} | p{4cm} | p{8cm} | } \hline &&&\\
-!! {\bf parameter} & {\bf default value} & {\bf possible values} & {\bf description} \\ &&&\\ \hline \hline &&&\\
-!! pxsize & 1 & integer & number of MPI blocks in x-dimension \\ &&&\\ \hline &&&\\
-!! pysize & 1 & integer & number of MPI blocks in y-dimension \\ &&&\\ \hline &&&\\
-!! pzsize & 1 & integer & number of MPI blocks in z-dimension \\ &&&\\ \hline
-!! \end{tabular} \f]
-!!
-!! @b BOUNDARIES
-!!
-!! \f[ \begin{tabular}{ | p{3cm} | p{3cm} | p{4cm} | p{8cm} | } \hline &&&\\
-!! {\bf parameter} & {\bf default value} & {\bf possible values} & {\bf description} \\ &&&\\ \hline \hline &&&\\
-!! bnd\_xl & 'per' & 'per', 'ref', 'out', 'outd', 'outh', 'cor' & type of boundary conditions for the left x-boundary \\ &&&\\ \hline &&&\\
-!! bnd\_xr & 'per' & 'per', 'ref', 'out', 'outd', 'outh' & type of boundary conditions for right the x-boundary \\ &&&\\ \hline &&&\\
-!! bnd\_yl & 'per' & 'per', 'ref', 'out', 'outd', 'outh', 'cor' & type of boundary conditions for the left y-boundary \\ &&&\\ \hline &&&\\
-!! bnd\_yr & 'per' & 'per', 'ref', 'out', 'outd', 'outh' & type of boundary conditions for the right y-boundary \\ &&&\\ \hline &&&\\
-!! bnd\_zl & 'per' & 'per', 'ref', 'out', 'outd', 'outh' & type of boundary conditions for the left z-boundary \\ &&&\\ \hline &&&\\
-!! bnd\_zr & 'per' & 'per', 'ref', 'out', 'outd', 'outh' & type of boundary conditions for the right z-boundary\\ &&&\\ \hline
-!! \end{tabular} \f]
-!!
-!! @b NUMERICAL_SETUP
-!!
-!! \f[ \begin{tabular}{ | p{3cm} | p{3cm} | p{4cm} | p{8cm} | } \hline &&&\\
-!! {\bf parameter} & {\bf default value} & {\bf possible values} & {\bf description} \\ &&&\\ \hline \hline &&&\\
-!! cfl & 0.7 & real value between 0.0 and 1.0 & \\ &&&\\ \hline &&&\\
-!! smalld & 1.e-10 & real value & \\ &&&\\ \hline &&&\\
-!! smallei & 1.e-10 & real value & \\ &&&\\ \hline &&&\\
-!! integration\_order & 2 & 1 or 2 (or 3 - currently unavailable) & \\ &&&\\ \hline &&&\\
-!! cfr\_smooth & 0.0 & real value & \\ &&&\\ \hline
-!! \end{tabular} \f]
+!! \copydetails mpisetup::mpistart
 !<
 module mpisetup
    implicit none
@@ -87,14 +56,24 @@ module mpisetup
    real,      dimension(buffer_dim) :: rbuff
    logical,   dimension(buffer_dim) :: lbuff
 
-   integer :: pxsize, pysize, pzsize
+   integer :: pxsize    !< number of MPI blocks in x-dimension
+   integer :: pysize    !< number of MPI blocks in y-dimension
+   integer :: pzsize    !< number of MPI blocks in z-dimension
    namelist /MPI_BLOCKS/ pxsize, pysize, pzsize
 
-   character(len=4) :: bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr
+   character(len=4) :: bnd_xl    !< type of boundary conditions for the left x-boundary
+   character(len=4) :: bnd_xr    !< type of boundary conditions for right the x-boundary
+   character(len=4) :: bnd_yl    !< type of boundary conditions for the left y-boundary
+   character(len=4) :: bnd_yr    !< type of boundary conditions for the right y-boundary
+   character(len=4) :: bnd_zl    !< type of boundary conditions for the left z-boundary
+   character(len=4) :: bnd_zr    !< type of boundary conditions for the right z-boundary
    character(len=4) :: bnd_xl_dom, bnd_xr_dom, bnd_yl_dom, bnd_yr_dom, bnd_zl_dom, bnd_zr_dom
    namelist /BOUNDARIES/ bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr
 
-   real    :: cfl, smalld, smallei, cfr_smooth
+   real    :: cfl
+   real    :: smalld
+   real    :: smallei
+   real    :: cfr_smooth
    integer :: integration_order
    namelist /NUMERICAL_SETUP/  cfl, smalld, smallei, integration_order, cfr_smooth
 
@@ -118,6 +97,41 @@ module mpisetup
    contains
 
 !-----------------------------------------------------------------------------
+!>
+!! \brief Routine to start MPI
+!!
+!! @b MPI_BLOCKS
+!!
+!! <table border="+1">
+!! <tr><td width="150pt"><b>parameter</b></td><td width="135pt"><b>default value</b></td><td width="200pt"><b>possible values</b></td><td width="315pt"> <b>description</b></td></tr>
+!! <tr><td>pxsize</td><td>1</td><td>integer</td><td>\copydoc mpisetup::pxsize</td></tr>
+!! <tr><td>pysize</td><td>1</td><td>integer</td><td>\copydoc mpisetup::pysize</td></tr>
+!! <tr><td>pzsize</td><td>1</td><td>integer</td><td>\copydoc mpisetup::pzsize</td></tr>
+!! </table>
+!!
+!! @b BOUNDARIES
+!!
+!! <table border="+1">
+!! <tr><td width="150pt"><b>parameter</b></td><td width="135pt"><b>default value</b></td><td width="200pt"><b>possible values</b></td><td width="315pt"> <b>description</b></td></tr>
+!! <tr><td>bnd_xl</td><td>'per'</td><td>'per', 'ref', 'out', 'outd', 'outh', 'cor'</td><td>\copydoc mpisetup::bnd_xl</td></tr>
+!! <tr><td>bnd_xr</td><td>'per'</td><td>'per', 'ref', 'out', 'outd', 'outh'       </td><td>\copydoc mpisetup::bnd_xr</td></tr>
+!! <tr><td>bnd_yl</td><td>'per'</td><td>'per', 'ref', 'out', 'outd', 'outh', 'cor'</td><td>\copydoc mpisetup::bnd_yl</td></tr>
+!! <tr><td>bnd_yr</td><td>'per'</td><td>'per', 'ref', 'out', 'outd', 'outh'       </td><td>\copydoc mpisetup::bnd_yr</td></tr>
+!! <tr><td>bnd_zl</td><td>'per'</td><td>'per', 'ref', 'out', 'outd', 'outh'       </td><td>\copydoc mpisetup::bnd_zl</td></tr>
+!! <tr><td>bnd_zr</td><td>'per'</td><td>'per', 'ref', 'out', 'outd', 'outh'       </td><td>\copydoc mpisetup::bnd_zr</td></tr>
+!! </table>
+!!
+!! @b NUMERICAL_SETUP
+!!
+!! <table border="+1">
+!! <tr><td width="150pt"><b>parameter</b></td><td width="135pt"><b>default value</b></td><td width="200pt"><b>possible values</b></td><td width="315pt"> <b>description</b></td></tr>
+!! <tr><td>cfl              </td><td>0.7   </td><td>real value between 0.0 and 1.0       </td><td>\copydoc mpisetup::cfl              </td></tr>
+!! <tr><td>smalld           </td><td>1.e-10</td><td>real value                           </td><td>\copydoc mpisetup::smalld           </td></tr>
+!! <tr><td>smallei          </td><td>1.e-10</td><td>real value                           </td><td>\copydoc mpisetup::smallei          </td></tr>
+!! <tr><td>integration_order</td><td>2     </td><td>1 or 2 (or 3 - currently unavailable)</td><td>\copydoc mpisetup::integration_order</td></tr>
+!! <tr><td>cfr_smooth       </td><td>0.0   </td><td>real value                           </td><td>\copydoc mpisetup::cfr_smooth       </td></tr>
+!! </table>
+!<
       subroutine mpistart
          use errh, only : namelist_errh
          implicit none
