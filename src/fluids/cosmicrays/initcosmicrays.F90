@@ -52,8 +52,9 @@ module initcosmicrays
 !>
 !! \brief Routine to set parameters values from namelist COSMIC_RAYS
 !!
+!! \n \n
 !! @b COSMIC_RAYS
-!!
+!! \n \n
 !! <table border="+1">
 !! <tr><td width="150pt"><b>parameter</b></td><td width="135pt"><b>default value</b></td><td width="200pt"><b>possible values</b></td><td width="315pt"> <b>description</b></td></tr>
 !! <tr><td>cfl_cr    </td><td>0.9  </td><td>real value</td><td>\copydoc initcosmicrays::cfl_cr</td></tr>
@@ -64,6 +65,7 @@ module initcosmicrays
 !! <tr><td>K_cr_paral</td><td>0.0  </td><td>real value</td><td>\copydoc initcosmicrays::K_cr_paral</td></tr>
 !! <tr><td>K_cr_perp </td><td>0.0  </td><td>real value</td><td>\copydoc initcosmicrays::K_cr_perp</td></tr>
 !! </table>
+!! \n \n
 !<
   subroutine init_cosmicrays
     use errh, only : namelist_errh
