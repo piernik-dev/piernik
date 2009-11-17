@@ -27,7 +27,7 @@
 !
 #include "piernik.def"
 !>
-!! Module storing all global arrays used in simulation
+!! Module storing all global %arrays used in simulation
 !<
 module arrays
 
@@ -62,7 +62,7 @@ module arrays
       integer, intent(in) :: nx,ny,nz,nvar
 
       if(.not.allocated(rlscal))  allocate(rlscal(nrlscal))
-      if(.not.allocated(intscal)) allocate(intscal(nintscal)) 
+      if(.not.allocated(intscal)) allocate(intscal(nintscal))
 
       if(.not.allocated(u))       allocate(u(nvar,nx,ny,nz))
       if(.not.allocated(b))       allocate(b(3,nx,ny,nz))
@@ -92,7 +92,7 @@ module arrays
       if(allocated(intscal)) deallocate(intscal)
       if(allocated(u))       deallocate(u)
       if(allocated(b))       deallocate(b)
- 
+
       if(allocated(wa))      deallocate(wa)
 #ifdef RESISTIVE
       if(allocated(wcu))     deallocate(wcu)
