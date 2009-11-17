@@ -100,17 +100,18 @@ module mpisetup
 !>
 !! \brief Routine to start MPI
 !!
+!! \n \n
 !! @b MPI_BLOCKS
-!!
+!! \n \n
 !! <table border="+1">
 !! <tr><td width="150pt"><b>parameter</b></td><td width="135pt"><b>default value</b></td><td width="200pt"><b>possible values</b></td><td width="315pt"> <b>description</b></td></tr>
 !! <tr><td>pxsize</td><td>1</td><td>integer</td><td>\copydoc mpisetup::pxsize</td></tr>
 !! <tr><td>pysize</td><td>1</td><td>integer</td><td>\copydoc mpisetup::pysize</td></tr>
 !! <tr><td>pzsize</td><td>1</td><td>integer</td><td>\copydoc mpisetup::pzsize</td></tr>
 !! </table>
-!!
+!! \n \n
 !! @b BOUNDARIES
-!!
+!! \n \n
 !! <table border="+1">
 !! <tr><td width="150pt"><b>parameter</b></td><td width="135pt"><b>default value</b></td><td width="200pt"><b>possible values</b></td><td width="315pt"> <b>description</b></td></tr>
 !! <tr><td>bnd_xl</td><td>'per'</td><td>'per', 'ref', 'out', 'outd', 'outh', 'cor'</td><td>\copydoc mpisetup::bnd_xl</td></tr>
@@ -120,9 +121,9 @@ module mpisetup
 !! <tr><td>bnd_zl</td><td>'per'</td><td>'per', 'ref', 'out', 'outd', 'outh'       </td><td>\copydoc mpisetup::bnd_zl</td></tr>
 !! <tr><td>bnd_zr</td><td>'per'</td><td>'per', 'ref', 'out', 'outd', 'outh'       </td><td>\copydoc mpisetup::bnd_zr</td></tr>
 !! </table>
-!!
+!! \n \n
 !! @b NUMERICAL_SETUP
-!!
+!! \n \n
 !! <table border="+1">
 !! <tr><td width="150pt"><b>parameter</b></td><td width="135pt"><b>default value</b></td><td width="200pt"><b>possible values</b></td><td width="315pt"> <b>description</b></td></tr>
 !! <tr><td>cfl              </td><td>0.7   </td><td>real value between 0.0 and 1.0       </td><td>\copydoc mpisetup::cfl              </td></tr>
@@ -131,6 +132,7 @@ module mpisetup
 !! <tr><td>integration_order</td><td>2     </td><td>1 or 2 (or 3 - currently unavailable)</td><td>\copydoc mpisetup::integration_order</td></tr>
 !! <tr><td>cfr_smooth       </td><td>0.0   </td><td>real value                           </td><td>\copydoc mpisetup::cfr_smooth       </td></tr>
 !! </table>
+!! \n \n
 !<
       subroutine mpistart
          use errh, only : namelist_errh
