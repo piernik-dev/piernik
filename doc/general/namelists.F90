@@ -11,7 +11,7 @@
 !! \copydetails gravity::init_grav
 !! \copydetails grid::init_grid
 !! \copydetails initcosmicrays::init_cosmicrays
-!! \copydetails inidust::init_dust
+!! \copydetails initdust::init_dust
 !! \copydetails initionized::init_ionized
 !! \copydetails initneutral::init_neutral
 !! \copydetails interactions::init_interactions
