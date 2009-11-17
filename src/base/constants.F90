@@ -28,7 +28,7 @@
 #include "piernik.def"
 
 !>
-!! \brief [DW] Module containing numerical and physical constants
+!! \brief [DW] Module containing numerical and physical %constants
 !<
 module constants
 
