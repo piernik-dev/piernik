@@ -28,13 +28,13 @@
 #include "piernik.def"
 
 !>
-!! \brief [DW] Module containing a subroutine that arranges hydrostatic equilibrium in the vertical (z) direction
+!! \brief [DW] Module containing a subroutine that arranges %hydrostatic equilibrium in the vertical (z) direction
 !<
 module hydrostatic
 #ifdef GRAV
   contains
 !>
-!! \brief Routine that arranges hydrostatic equilibrium in the vertical (z) direction
+!! \brief Routine that arranges %hydrostatic equilibrium in the vertical (z) direction
 !! \param iia integer, number of a column in the x direction
 !! \param jja integer, number of a column in the y direction
 !! \param d0 real, density value in the midplane
