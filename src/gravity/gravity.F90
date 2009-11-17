@@ -28,66 +28,65 @@
 #include "piernik.def"
 
 !>
-!! \brief [DW] Module containing all main subroutines and functions that govern gravity force in the code
+!! \brief [DW] Module containing all main subroutines and functions that govern %gravity force in the code
 !! \todo to check importance and usefullness of such parameters as g_y and n_gravr2 and tune_zeq_bnd
 !!
 !!
 !! In this module a namelist of parameters is specified:
-!!
-!! @b GRAVITY
-!!
-!! \f[ \begin{tabular}{ | p{3cm} | p{3cm} | p{4cm} | p{8cm} | } \hline &&&\\
-!! {\bf parameter} & {\bf default value} & {\bf possible values} & {\bf description} \\ &&&\\ \hline \hline &&&\\
-!! g\_z      & 0.0  & real              & z-component used by GRAV\_UNIFORM type of gravity \\ &&&\\ \hline &&&\\
-!! g\_y      & 0.0  & real              & y-component of GRAV\_UNIFORM constant {\bf {\it (currently not used)}} \\ &&&\\ \hline &&&\\
-!! dg\_dz    & 0.0  & real              & constant used by GRAV\_LINEAR type of gravity \\ &&&\\ \hline &&&\\
-!! r\_gc     & 8500 & real              & galactocentric radius of the local simulation region used by local Galactic type of gravity in grav\_accel \\ &&&\\ \hline &&&\\
-!! ptmass    & 0.0  & non-negative real & mass value of point gravity source used by GRAV\_PTMASS, GRAV\_PTMASSPURE, GRAV\_PTFLAT type of gravity \\ &&&\\ \hline &&&\\
-!! ptm\_x    & 0.0  & real              & point mass position x-component \\ &&&\\ \hline &&&\\
-!! ptm\_y    & 0.0  & real              & point mass position y-component \\ &&&\\ \hline &&&\\
-!! ptm\_z    & 0.0  & real              & point mass position z-component \\ &&&\\ \hline &&&\\
-!! r\_smooth & 0.0  & real              & smoothing radius in point mass types of gravity \\ &&&\\ \hline &&&\\
-!! nsub      & 10   & integer $>$ 0     & number of subcells while additionally cell division in z-direction during estabilishment of hydrostatic equilibrium \\ &&&\\ \hline
-!! \end{tabular} \f]
-!! \f[ \begin{tabular}{ | p{3cm} | p{3cm} | p{4cm} | p{8cm} | } \hline &&&\\
-!! tune\_zeq      & 1.0  & real & z-component of gravity tunning factor used by hydrostatic\_zeq \\ &&&\\ \hline &&&\\
-!! tune\_zeq\_bnd & 1.0  & real & z-component of gravity tunning factor supposed to use in boundaries {\bf {\it (currently not used)}} \\ &&&\\ \hline &&&\\
-!! h\_grav        & 1.e6 & real & altitude of acceleration cut used when n\_gravh is set to non-zero \\ &&&\\ \hline &&&\\
-!! r\_grav        & 1.e6 & real & radius of gravitational potential cut used by GRAV\_PTMASS, GRAV\_PTFLAT type of gravity \\ &&&\\ \hline &&&\\
-!! n\_gravr       & 0    & real & index of hiperbolic-cosinusoidal cutting of gravitational potential used by GRAV\_PTMASS, GRAV\_PTFLAT type of gravity \\ &&&\\ \hline &&&\\
-!! n\_gravr2      & 0    & real & similar to n\_gravr {\bf {\it (currently not used)}} \\ &&&\\ \hline &&&\\
-!! n\_gravh       & 0    & real & index of hiperbolic-cosinusoidal cutting of acceleration; used when set to non-zero \\ &&&\\ \hline
-!! \end{tabular} \f]
-!!
+!! \copydetails gravity::init_grav
 !<
 module gravity
 
    use constants
 
    character(LEN=9) :: gp_status    !< variable set as 'undefined' in grav_pot_3d when grav_accel is supposed to use
-   real    :: g_z                   !< z-component used by GRAV_UNIFORM type of gravity
-   real    :: g_y                   !< y-component of GRAV_UNIFORM constant (currently not used)
-   real    :: dg_dz                 !< constant used by GRAV_LINEAR type of gravity
-   real    :: r_gc                  !< galactocentric radius of the local simulation region used by local Galactic type of gravity in grav_accel
-   real    :: ptmass                !< mass value of point gravity source used by GRAV_PTMASS/GRAV_PTMASSPURE/GRAV_PTFLAT type of gravity
+   real    :: g_z                   !< z-component used by GRAV_UNIFORM type of %gravity
+   real    :: g_y                   !< y-component of GRAV_UNIFORM constant <b>(currently not used)</b>
+   real    :: dg_dz                 !< constant used by GRAV_LINEAR type of %gravity
+   real    :: r_gc                  !< galactocentric radius of the local simulation region used by local Galactic type of %gravity in grav_accel
+   real    :: ptmass                !< mass value of point %gravity source used by GRAV_PTMASS, GRAV_PTMASSPURE, GRAV_PTFLAT type of %gravity
    real    :: ptm_x                 !< point mass position x-component
    real    :: ptm_y                 !< point mass position y-component
    real    :: ptm_z                 !< point mass position z-component
-   real    :: r_smooth              !< smoothing radius in point mass types of gravity
-   integer :: nsub                  !< number of subcells while additionally cell division in z-direction during estabilishment of hydrostatic equilibrium
+   real    :: r_smooth              !< smoothing radius in point mass %types of %gravity
+   integer :: nsub                  !< number of subcells while additionally cell division in z-direction is present during estabilishment of hydrostatic equilibrium
    real    :: h_grav                !< altitude of acceleration cut used when n_gravh is set to non-zero
-   real    :: r_grav                !< radius of gravitational potential cut used by GRAV_PTMASS/GRAV_PTFLAT type of gravity
+   real    :: r_grav                !< radius of gravitational potential cut used by GRAV_PTMASS, GRAV_PTFLAT type of %gravity
    integer :: n_gravh               !< index of hiperbolic-cosinusoidal cutting of acceleration; used when set to non-zero
-   integer :: n_gravr               !< index of hiperbolic-cosinusoidal cutting of gravitational potential used by GRAV_PTMASS/GRAV_PTFLAT type of gravity
-   integer :: n_gravr2              !< similar to n_gravr (currently not used)
-   real    :: tune_zeq              !< z-component of gravity tunning factor used by hydrostatic_zeq
-   real    :: tune_zeq_bnd          !< z-component of gravity tunning factor supposed to use in boundaries (currently not used)
+   integer :: n_gravr               !< index of hiperbolic-cosinusoidal cutting of gravitational potential used by GRAV_PTMASS, GRAV_PTFLAT type of %gravity
+   integer :: n_gravr2              !< similar to n_gravr <b>(currently not used)</b>
+   real    :: tune_zeq              !< z-component of %gravity tunning factor used by hydrostatic_zeq
+   real    :: tune_zeq_bnd          !< z-component of %gravity tunning factor supposed to be used in boundaries <b>(currently not used)</b>
 
 
    contains
 
 !>
-!! \brief Routine that sets the initial values of gravity parameters from namelist @c GRAVITY
+!! \brief Routine that sets the initial values of %gravity parameters from namelist @c GRAVITY
+!!
+!! @b GRAVITY
+!!
+!! <table border="+1">
+!! <tr><td width="150pt"><b>parameter</b></td><td width="135pt"><b>default value</b></td><td width="200pt"><b>possible values</b></td><td width="315pt"> <b>description</b></td></tr>
+!! <tr><td>g_z         </td><td>0.0 </td><td>real             </td><td>\copydoc gravity::g_z          </td></tr>
+!! <tr><td>g_y         </td><td>0.0 </td><td>real             </td><td>\copydoc gravity::g_y          </td></tr>
+!! <tr><td>dg_dz       </td><td>0.0 </td><td>real             </td><td>\copydoc gravity::dg_dz        </td></tr>
+!! <tr><td>r_gc        </td><td>8500</td><td>real             </td><td>\copydoc gravity::r_gc         </td></tr>
+!! <tr><td>ptmass      </td><td>0.0 </td><td>non-negative real</td><td>\copydoc gravity::ptmass       </td></tr>
+!! <tr><td>ptm_x       </td><td>0.0 </td><td>real             </td><td>\copydoc gravity::ptm_x        </td></tr>
+!! <tr><td>ptm_y       </td><td>0.0 </td><td>real             </td><td>\copydoc gravity::ptm_y        </td></tr>
+!! <tr><td>ptm_z       </td><td>0.0 </td><td>real             </td><td>\copydoc gravity::ptm_z        </td></tr>
+!! <tr><td>r_smooth    </td><td>0.0 </td><td>real             </td><td>\copydoc gravity::r_smooth     </td></tr>
+!! <tr><td>nsub        </td><td>10  </td><td>integer > 0      </td><td>\copydoc gravity::nsub         </td></tr>
+!! <tr><td>tune_zeq    </td><td>1.0 </td><td>real             </td><td>\copydoc gravity::tune_zeq     </td></tr>
+!! <tr><td>tune_zeq_bnd</td><td>1.0 </td><td>real             </td><td>\copydoc gravity::tune_zeq_bnd </td></tr>
+!! <tr><td>h_grav      </td><td>1.e6</td><td>real             </td><td>\copydoc gravity::h_grav       </td></tr>
+!! <tr><td>r_grav      </td><td>1.e6</td><td>real             </td><td>\copydoc gravity::r_grav       </td></tr>
+!! <tr><td>n_gravr     </td><td>0   </td><td>real             </td><td>\copydoc gravity::n_gravr      </td></tr>
+!! <tr><td>n_gravr2    </td><td>0   </td><td>real             </td><td>\copydoc gravity::n_gravr2     </td></tr>
+!! <tr><td>n_gravh     </td><td>0   </td><td>real             </td><td>\copydoc gravity::n_gravh      </td></tr>
+!! </table>
+!!
 !<
    subroutine init_grav
       use errh, only : namelist_errh
@@ -185,22 +184,22 @@ module gravity
 !--------------------------------------------------------------------------
 !>
 !! \brief Routine that compute values of gravitational potential filling in gp array and setting gp_status character string \n\n
-!! The type of gravity is governed by preprocessor: \n\n
+!! The type of %gravity is governed by preprocessor: \n\n
 !! GRAV_NULL - gravitational potential array is set to zero \n\n
-!! GRAV_UNIFORM - uniform type of gravity in z-direction \n
+!! GRAV_UNIFORM - uniform type of %gravity in z-direction \n
 !! \f$\Phi\left(z\right)= - const \cdot z \f$\n
 !! where \f$ const \f$ is set by parameter @c g_z \n\n
-!! GRAV_LINEAR - linear type of gravity growing along z-direction \n
+!! GRAV_LINEAR - linear type of %gravity growing along z-direction \n
 !! \f$\Phi\left(z\right) = -1/2 \cdot const \cdot z^2\f$ \n\n
-!! GRAV_PTMASS - softened point mass type of gravity \n
+!! GRAV_PTMASS - softened point mass type of %gravity \n
 !! \f$\Phi\left(x,y,z\right)= - GM/\sqrt{x^2+y^2+z^2+r_{soft}^2}\f$ \n
 !! where \f$r_{soft}\f$ is a radius of softenning\n\n
-!! GRAV_PTMASSPURE - unsoftened point mass type of gravity \n
+!! GRAV_PTMASSPURE - unsoftened point mass type of %gravity \n
 !! \f$\Phi\left(x,y,z\right)= - GM/\sqrt{x^2+y^2+z^2}\f$ \n\n
-!! GRAV_PTFLAT - planar, softened point mass type of gravity \n
+!! GRAV_PTFLAT - planar, softened point mass type of %gravity \n
 !! \f$\Phi\left(x,y,z\right)= - GM/\sqrt{x^2+y^2+r_{soft}^2}\f$ \n
 !! where \f$r_{soft}\f$ is a radius of softenning\n\n
-!! GRAV_USER - not a standard type of gravity, implemented by user in the routine grav_pot_user from gravity_user module.\n\n
+!! GRAV_USER - not a standard type of %gravity, implemented by user in the routine grav_pot_user from gravity_user module.\n\n
 !<
 
    subroutine grav_pot_3d
@@ -294,8 +293,8 @@ module gravity
 !! \param n number of elements of xsw array
 !! \return grav 1D array of gravitational acceleration values computed for positions from xsw
 !! \n\n
-!! one type of gravity is implemented here: \n\n
-!! local Galactic gravity only in z-direction (see <a href="http://cdsads.u-strasbg.fr/abs/1998ApJ...497..759F">Ferriere K., 1998, Astrophys. Journal, 497, 759</a>)\n
+!! one type of %gravity is implemented here: \n\n
+!! local Galactic %gravity only in z-direction (see <a href="http://cdsads.u-strasbg.fr/abs/1998ApJ...497..759F">Ferriere K., 1998, Astrophys. Journal, 497, 759</a>)\n
 !! \f[
 !! F_z = 3.23 \cdot 10^8 \cdot \left[\left(-4.4 \cdot 10^{-9} \cdot exp\left(-\frac{(r_{gc}-r_{gc_{}Sun})}{(4.9kpc)}\right) \cdot \frac{z}{\sqrt{(z^2+(0.2kpc)^2)}}\right)-\left( 1.7 \cdot 10^{-9} \cdot \frac{(r_{gc_{}Sun}^2 + (2.2kpc)^2)}{(r_{gc}^2 + (2.2kpc)^2)} \cdot \frac{z}{1kpc}\right) \right]
 !! \f]
@@ -387,7 +386,7 @@ module gravity
 
 !--------------------------------------------------------------------------
 !>
-!! \brief Routine that uses gravity acceleration given in grav_accel to compute values of gravitational potential filling in gp array
+!! \brief Routine that uses %gravity acceleration given in grav_accel to compute values of gravitational potential filling in gp array
 !<
    subroutine grav_accel2pot
       use mpisetup
