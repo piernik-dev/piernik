@@ -32,7 +32,7 @@
 !!
 !!
 !! In this module following namelist of parameters is specified:
-!! \copydetails initdust:init_dust
+!! \copydetails initdust::init_dust
 !<
 
 module initdust
@@ -50,13 +50,15 @@ module initdust
 !>
 !! \brief Routine to set parameter values from namelist FLUID_DUST
 !!
+!! \n \n
 !! @b FLUID_DUST
-!!
+!! \n \n
 !! <table border="+1">
 !! <tr><td width="150pt"><b>parameter</b></td><td width="135pt"><b>default value</b></td><td width="200pt"><b>possible values</b></td><td width="315pt"> <b>description</b></td></tr>
 !! <tr><td>dragc_gas_dust</td><td>1.0  </td><td>real value</td><td>\copydoc initdust::dragc_gas_dust</td></tr>
 !! <tr><td>dalpha        </td><td>1.0  </td><td>real value</td><td>\copydoc initdust::dalpha        </td></tr>
 !! </table>
+!! \n \n
 !<
   subroutine init_dust
 
