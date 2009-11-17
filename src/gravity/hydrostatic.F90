@@ -39,7 +39,7 @@ module hydrostatic
 !! \param jja integer, number of a column in the y direction
 !! \param d0 real, density value in the midplane
 !! \param csim2 real, square value of sound speed
-!! \return dprof array of reals, computed density distribution in vertical direction
+!! \param dprof array of reals, computed density distribution in vertical direction returned by the routine
 !<
     subroutine hydrostatic_zeq(iia,jja, d0, csim2, dprof)
       use constants
