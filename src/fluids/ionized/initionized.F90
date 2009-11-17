@@ -33,15 +33,7 @@
 !!
 !!
 !! In this module following namelist of parameters is specified:
-!!
-!! @b FLUID_IONIZED
-!!
-!! \f[ \begin{tabular}{ | p{3cm} | p{3cm} | p{4cm} | p{8cm} | } \hline &&&\\
-!! {\bf parameter} & {\bf default value} & {\bf possible values} & {\bf description} \\ &&&\\ \hline \hline &&&\\
-!! gamma\_ion   & 1.66666666 & real value &  \\ &&&\\ \hline &&&\\
-!! cs\_iso\_ion & 1.0        & real value &  \\ &&&\\ \hline &&&\\
-!! cs\_ion      &            & real value &  \\ &&&\\ \hline
-!! \end{tabular} \f]
+!! \copydetails initionized::init_ionized
 !<
 
 module initionized
@@ -60,7 +52,18 @@ module initionized
 
  contains
 
-
+!>
+!! \brief Routine to set parameters values from namelist FLUID_IONIZED
+!!
+!! @b FLUID_IONIZED
+!!
+!! <table border="+1">
+!! <tr><td width="150pt"><b>parameter</b></td><td width="135pt"><b>default value</b></td><td width="200pt"><b>possible values</b></td><td width="315pt"> <b>description</b></td></tr>
+!! <tr><td>gamma_ion  </td><td>1.66666666</td><td>real value</td><td>\copydoc initionized::gamma_ion </td></tr>
+!! <tr><td>cs_iso_ion</td><td>1.0        </td><td>real value</td><td>\copydoc initionized::cs_iso_ion</td></tr>
+!! <tr><td>cs_ion     </td><td>          </td><td>real value</td><td>\copydoc initionized::cs_ion    </td></tr>
+!! </table>
+!<
   subroutine init_ionized
     use errh, only : namelist_errh
     use mpisetup
