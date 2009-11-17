@@ -30,18 +30,7 @@
 !! \brief ()
 !!
 !! In this module following namelist of parameters is specified:
-!!
-!! @b RESISTIVITY
-!!
-!! \f[ \begin{tabular}{ | p{3cm} | p{3cm} | p{4cm} | p{8cm} | } \hline &&&\\
-!! {\bf parameter} & {\bf default value} & {\bf possible values} & {\bf description} \\ &&&\\ \hline \hline &&&\\
-!! cfl\_resist & 0.4   & real value &  \\ &&&\\ \hline &&&\\
-!! eta\_0      & 0.0   & real value &  \\ &&&\\ \hline &&&\\
-!! eta\_1      & 0.0   & real value &  \\ &&&\\ \hline &&&\\
-!! eta\_scale  & 4     & integer value &  \\ &&&\\ \hline &&&\\
-!! j\_crit     & 1.0e6 & real value &  \\ &&&\\ \hline &&&\\
-!! deint\_max  & 0.01  & real value &  \\ &&&\\ \hline
-!! \end{tabular} \f]
+!! \copydetails resistivity::init_resistivity
 !<
 module resistivity
 
@@ -79,6 +68,21 @@ contains
 
       end subroutine cleanup_resistivity
 
+!>
+!! \brief Routine to set parameters values from namelist RESISTIVITY
+!!
+!! @b RESISTIVITY
+!!
+!! <table border="+1">
+!! <tr><td width="150pt"><b>parameter</b></td><td width="135pt"><b>default value</b></td><td width="200pt"><b>possible values</b></td><td width="315pt"> <b>description</b></td></tr>
+!! <tr><td>cfl_resist</td><td>0.4  </td><td>real value   </td><td>\copydoc resistivity::cfl_resist</td></tr>
+!! <tr><td>eta_0     </td><td>0.0  </td><td>real value   </td><td>\copydoc resistivity::eta_0    </td></tr>
+!! <tr><td>eta_1     </td><td>0.0  </td><td>real value   </td><td>\copydoc resistivity::eta_1    </td></tr>
+!! <tr><td>eta_scale </td><td>4    </td><td>integer value</td><td>\copydoc resistivity::eta_scale</td></tr>
+!! <tr><td>j_crit    </td><td>1.0e6</td><td>real value   </td><td>\copydoc resistivity::j_crit   </td></tr>
+!! <tr><td>deint_max </td><td>0.01 </td><td>real value   </td><td>\copydoc resistivity::deint_max</td></tr>
+!! </table>
+!<
       subroutine init_resistivity
          use mpisetup
          use grid, only : nx,ny,nz
