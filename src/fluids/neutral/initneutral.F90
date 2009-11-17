@@ -55,15 +55,17 @@ module initneutral
 !>
 !! \brief Routine to set parameters values from namelist FLUID_NEUTRAL
 !!
+!! \n \n
 !! @b FLUID_NEUTRAL
-!!
+!! \n \n
 !! <table border="+1">
 !! <tr><td width="150pt"><b>parameter</b></td><td width="135pt"><b>default value</b></td><td width="200pt"><b>possible values</b></td><td width="315pt"> <b>description</b></td></tr>
-!! <tr><td>gamma_neu </td><td>1.66666666</td><td>real value</td><td>\copydoc initneutral::gamma_neu </td></tr>
-!! <tr><td>cs_iso_neu</td><td>1.0       </td><td>real value</td><td>\copydoc initneutral::cs_iso_neu</td></tr>
-!! <tr><td>cs_gas_neu</td><td>          </td><td>real value</td><td>\copydoc initneutral::cs_gas_neu</td></tr>
-!! <tr><td>csvk      </td><td>          </td><td>real value</td><td>\copydoc initneutral::csvk      </td></tr>
+!! <tr><td>gamma_neu  </td><td>1.66666666</td><td>real value</td><td>\copydoc initneutral::gamma_neu  </td></tr>
+!! <tr><td>cs_iso_neu </td><td>1.0       </td><td>real value</td><td>\copydoc initneutral::cs_iso_neu </td></tr>
+!! <tr><td>eta_gas_neu</td><td>          </td><td>real value</td><td>\copydoc initneutral::eta_gas_neu</td></tr>
+!! <tr><td>csvk       </td><td>          </td><td>real value</td><td>\copydoc initneutral::csvk       </td></tr>
 !! </table>
+!! \n \n
 !<
   subroutine init_neutral
 
