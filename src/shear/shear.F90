@@ -41,13 +41,15 @@ module shear
 !>
 !! \brief Routine to set parameter values from namelist SHEARING
 !!
+!! \n \n
 !! @b SHEARING
-!!
+!! \n \n
 !! <table border="+1">
 !! <tr><td width="150pt"><b>parameter</b></td><td width="135pt"><b>default value</b></td><td width="200pt"><b>possible values</b></td><td width="315pt"> <b>description</b></td></tr>
 !! <tr><td>omega </td><td>0.0  </td><td>real value</td><td>\copydoc shear::omega </td></tr>
 !! <tr><td>qshear</td><td>0.0  </td><td>real value</td><td>\copydoc shear::qshear</td></tr>
 !! </table>
+!! \n \n
 !<
   subroutine init_shear
     use mpisetup
