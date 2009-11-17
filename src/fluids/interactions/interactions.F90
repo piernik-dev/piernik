@@ -27,21 +27,13 @@
 !
 #include "piernik.def"
 !>
-!! \brief [DW] Module that contains all routines related to interactions between fluids
+!! \brief [DW] Module that contains all routines related to %interactions between fluids
 !!
 !!
 !!
 !! In this module a namelist of parameters is specified:
 !!
-!! @b INTERACTIONS
-!!
-!! \f[
-!! \begin{tabular}{ | p{3cm} | p{3cm} | p{4cm} | p{8cm} | } \hline &&&\\
-!! {\bf parameter} & {\bf default value} & {\bf possible values} & {\bf description} \\ &&&\\ \hline \hline &&&\\
-!! collision\_factor & 0.0 & real value, between 0 and 1 & collision factor \\ &&&\\ \hline &&&\\
-!! cfl\_interact & 0.8 & real value, between 0 and 1 & Courant factor for interactions \\ &&&\\ \hline
-!! \end{tabular} \f]
-!!
+!! \copydetails interactions::init_interactions
 !<
 module interactions
 
@@ -51,13 +43,23 @@ module interactions
    real, allocatable, dimension(:,:,:,:)  :: omy0        !< array to store y component of initial velocity
    real, allocatable, dimension(:,:)      :: alfsup      !< xy-array of values between 0 and 1, 1 where boundary support is used
    real, allocatable, dimension(:,:)      :: collfaq     !< nfluid x nfluid array of collision factors
-   real :: collision_factor                              !< collision factor (to set in problem.par)
-   real :: cfl_interact                                  !< Courant factor for interactions (to set in problem.par)
+   real :: collision_factor                              !< collision factor
+   real :: cfl_interact                                  !< Courant factor for %interactions
 
 
    contains
 !>
-!! \brief Routine that sets the initial values of interactions parameters from namelist @c INTERACTIONS
+!! \brief Routine that sets the initial values of %interactions parameters from namelist @c INTERACTIONS
+!>
+!!
+!! @b INTERACTIONS
+!!
+!! <table border="+1">
+!! <tr><td width="150pt"><b>parameter</b></td><td width="135pt"><b>default value</b></td><td width="200pt"><b>possible values</b></td><td width="315pt"> <b>description</b></td></tr>
+!! <tr><td>collision_factor</td><td>0.0</td><td>real value, between 0 and 1</td><td>\copydoc interactions::collision_factor</td></tr>
+!! <tr><td>cfl_interact    </td><td>0.8</td><td>real value, between 0 and 1</td><td>\copydoc interactions::cfl_interact    </td></tr>
+!! </table>
+!!
 !<
    subroutine init_interactions
       use mpisetup
