@@ -71,8 +71,9 @@ contains
 !>
 !! \brief Routine to set parameters values from namelist RESISTIVITY
 !!
+!! \n \n
 !! @b RESISTIVITY
-!!
+!! \n \n
 !! <table border="+1">
 !! <tr><td width="150pt"><b>parameter</b></td><td width="135pt"><b>default value</b></td><td width="200pt"><b>possible values</b></td><td width="315pt"> <b>description</b></td></tr>
 !! <tr><td>cfl_resist</td><td>0.4  </td><td>real value   </td><td>\copydoc resistivity::cfl_resist</td></tr>
@@ -82,6 +83,7 @@ contains
 !! <tr><td>j_crit    </td><td>1.0e6</td><td>real value   </td><td>\copydoc resistivity::j_crit   </td></tr>
 !! <tr><td>deint_max </td><td>0.01 </td><td>real value   </td><td>\copydoc resistivity::deint_max</td></tr>
 !! </table>
+!! \n \n
 !<
       subroutine init_resistivity
          use mpisetup
