@@ -33,19 +33,7 @@
 !!
 !!
 !! In this module following namelist of parameters is specified:
-!!
-!! @b COSMIC_RAYS
-!!
-!! \f[ \begin{tabular}{ | p{3cm} | p{3cm} | p{4cm} | p{8cm} | } \hline &&&\\
-!! {\bf parameter} & {\bf default value} & {\bf possible values} & {\bf description} \\ &&&\\ \hline \hline &&&\\
-!! cfl\_cr      & 0.9   & real value &  \\ &&&\\ \hline &&&\\
-!! smallecr     & 0.0   & real value &  \\ &&&\\ \hline &&&\\
-!! cr\_active   & 1.0   & real value &  \\ &&&\\ \hline &&&\\
-!! gamma\_cr    & 4/3   & real value &  \\ &&&\\ \hline &&&\\
-!! cr\_eff      & 0.1   & real value &  \\ &&&\\ \hline &&&\\
-!! K\_cr\_paral & 0.0   & real value &  \\ &&&\\ \hline &&&\\
-!! K\_cr\_perp  & 0.0   & real value &  \\ &&&\\ \hline
-!! \end{tabular} \f]
+!! \copydetails initcosmicrays::init_cosmicrays
 !<
 module initcosmicrays
 
@@ -61,7 +49,22 @@ module initcosmicrays
 
  contains
 
-
+!>
+!! \brief Routine to set parameters values from namelist COSMIC_RAYS
+!!
+!! @b COSMIC_RAYS
+!!
+!! <table border="+1">
+!! <tr><td width="150pt"><b>parameter</b></td><td width="135pt"><b>default value</b></td><td width="200pt"><b>possible values</b></td><td width="315pt"> <b>description</b></td></tr>
+!! <tr><td>cfl_cr    </td><td>0.9  </td><td>real value</td><td>\copydoc initcosmicrays::cfl_cr</td></tr>
+!! <tr><td>smallecr  </td><td>0.0  </td><td>real value</td><td>\copydoc initcosmicrays::smallecr</td></tr>
+!! <tr><td>cr_active </td><td>1.0  </td><td>real value</td><td>\copydoc initcosmicrays::cr_active</td></tr>
+!! <tr><td>gamma_cr  </td><td>4/3  </td><td>real value</td><td>\copydoc initcosmicrays::gamma_cr</td></tr>
+!! <tr><td>cr_eff    </td><td>0.1  </td><td>real value</td><td>\copydoc initcosmicrays::cr_eff</td></tr>
+!! <tr><td>K_cr_paral</td><td>0.0  </td><td>real value</td><td>\copydoc initcosmicrays::K_cr_paral</td></tr>
+!! <tr><td>K_cr_perp </td><td>0.0  </td><td>real value</td><td>\copydoc initcosmicrays::K_cr_perp</td></tr>
+!! </table>
+!<
   subroutine init_cosmicrays
     use errh, only : namelist_errh
     use mpisetup
