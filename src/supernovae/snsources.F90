@@ -48,7 +48,6 @@ module snsources
    contains
 !>
 !! \brief Main routine to insert one supernova event
-!! \author M. Hanasz
 !<
    subroutine random_sn
 ! Written by: M. Hanasz
@@ -86,7 +85,6 @@ module snsources
 !>
 !! \brief Routine that inserts an amount of cosmic ray energy around the position of supernova
 !! \param pos real, dimension(3), array of supernova position components
-!! \author M. Hanasz
 !<
    subroutine cr_sn(pos)
 ! Written by: M. Hanasz
@@ -135,7 +133,6 @@ module snsources
 !>
 !! \brief Routine that determines the position of next supernova
 !! \return pos @e real,  @e dimension(3), array of supernova position components
-!! \author M. Hanasz
 !<
    subroutine rand_coords(pos)
 ! Written by M. Hanasz
