@@ -2,9 +2,8 @@ PROG		 = piernik
 
 ### GNU hydra AMD_MP (e.g. hydra4)
 F90		 = mpif90
-#F90		 = h5fc
 #F90FLAGS  = -fdefault-real-8
-F90FLAGS  = -fdefault-real-8 -O3 -funroll-loops -m3dnow -msse -mfpmath=sse
-HDF_LIB  = . -lfftw3 -llapack -lgfortran -lc
-MHDF_LIB = /opt/pgi/linux86/7.0/hdf4/include
+F90FLAGS  = -fdefault-real-8 -O3 -funroll-loops -m3dnow -msse -mfpmath=sse -ffree-line-length-none
+HDF_LIB  = . -lfftw3 -llapack -lgfortran -lc -lhdf5_fortran -lhdf5hl_fortran -lhdf5
+MHDF_LIB = 
 

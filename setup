@@ -26,6 +26,9 @@ use Getopt::Long;
 # use warnings;
 
 # return status
+
+print "Called 'setup " . "@ARGV" . "'\n";
+
 my %moo=();
 my $OK = 0;
 my $FAILED = 1;
@@ -33,6 +36,7 @@ GetOptions("help"=>\$moo{help},
            "problems"=>\$moo{problems},
            "units"=>\$moo{units},
            "dumpenv"=>\$moo{dumpenv},
+           "define=s@"=>\@define,
            "compiler:s"=>\$moo{compiler});
 
 # DEBUG
@@ -71,7 +75,9 @@ if($moo{problems}){
    print " --problems\t- print available problems and exit\n";
    print " --units\t- print available unit systems and exit\n";
    print " --copy\t\t- hard-copy source files instead of linking them\n";
-   print " --dumpenv\t- do not compile the source but dump the environment to \'obj/version.F90\'\n\n";
+   print " --dumpenv\t- do not compile the source but dump the environment to \'obj/version.F90\'\n";
+   print " --compiler <configuration>\t - choose specified config from compilers directory\n";
+   print " --define <flag> \t - inject precompiler directive to piernik.def\n\n";
 
    print "all-in-one wrapper for a selected problem:\n";
    print "> " . $SELF . " <problem>\n";
@@ -148,11 +154,18 @@ $defs = $probdir."piernik.def";
 open (defs) or die "Can't open the file piernik.def!";
 @fdefs = <defs>;
 @d = grep (/define/,@fdefs);
+if(@define) {
+   foreach $inc (@define) {
+      push(@d, "#define ".$inc."\n");
+      $cppflags = $cppflags . " -D" . $inc;
+   }
+}
 if( grep { /GRAV/ }  @d) {
    push(@addons, "../src/gravity/gravity.F90");
    push(@addons, "../src/gravity/hydrostatic.F90");
    }
 if( grep { /SELF_GRAV/ }  @d) {push(@addons, "../src/gravity/poissonsolver.F90");}
+if( grep { /MULTIGRID/ } @d) {push(@addons, "../src/gravity/multigrid.F90");}
 if( grep { /SHEAR/ }  @d) {push(@addons, "../src/shear/shear.F90");}
 if( grep { /HDF5/ } @d) {push(@addons, "../src/hdf5/dataio_hdf5.F90");}
 
@@ -239,7 +252,10 @@ print MAKEFILE "\n\n";
 #
 # Define common macros
 #
-print MAKEFILE "LIBS = -L\$(HDF_LIB) -L\${MHDF_LIB} -lmfhdf -ldf -ljpeg -lz\n\n";
+print MAKEFILE "LIBS = -lmfhdf -ldf -ljpeg -lz\n";
+print MAKEFILE "CPPFLAGS = " . $cppflags . "\n";
+print MAKEFILE "ifdef HDF_LIB\nLIBS += -L\$(HDF_LIB)\nendif\n";
+print MAKEFILE "ifdef MHDF_LIB\nLIBS += -L\${MHDF_LIB}\nendif\n";
 #
 # make
 #
@@ -257,9 +273,12 @@ print MAKEFILE "\tthen \\\n";
 print MAKEFILE "\t\thead -n 1 *.F90 | grep Id > env.dat; \\\n";
 print MAKEFILE "\t\tcat piernik.def >> env.dat; \\\n";
 print MAKEFILE "\t\twc -l env.dat | awk '{print \"   integer, parameter :: nenv = \"\$\$1\"+1\"}' - >> version.F90; \\\n";
-print MAKEFILE "\t\techo \"   character*128, dimension(nenv) :: env = (/ &\" >> version.F90; \\\n";
-print MAKEFILE "\t\tawk '{printf(\"       \\\" %s \\\" ,&\\n\",\$\$0)}' env.dat >> version.F90; \\\n";
-print MAKEFILE "\t\techo '      \" \" /)' >> version.F90; \\\n";
+print MAKEFILE "\t\techo \"   character*128, dimension(nenv) :: env\" >> version.F90; \\\n";
+print MAKEFILE "\t\techo 'contains' >> version.F90; \\\n";
+print MAKEFILE "\t\techo '   subroutine init_version' >> version.F90; \\\n";
+print MAKEFILE "\t\techo '      implicit none' >> version.F90; \\\n";
+print MAKEFILE "\t\tawk '{printf(\"       env(%i) = \\\" %s \\\"\\n\",NR,\$\$0)}' env.dat >> version.F90; \\\n";
+print MAKEFILE "\t\techo '    end subroutine init_version' >> version.F90; \\\n";
 print MAKEFILE "\t\techo 'end module version' >> version.F90; \\\n";
 print MAKEFILE "\tfi;\n\n";
 #
@@ -285,7 +304,7 @@ print MAKEFILE ".SUFFIXES: \$(SUFFIXES) .F90\n\n";
 # .F90 -> .o
 #
 print MAKEFILE ".F90.o:\n";
-print MAKEFILE "\t\$(F90) \$(F90FLAGS) -c \$<\n\n";
+print MAKEFILE "\t\$(F90) \$(CPPFLAGS) \$(F90FLAGS) -c \$<\n\n";
 #
 # override the built-in rule for .mod (Modula-2 source code files)
 #
@@ -298,7 +317,9 @@ print MAKEFILE "%.o : %.mod\n\n";
 &MakeDepends("*.c",     '^\s*#\s*include\s+["\']([^"\']+)["\']');
 
 # system("./post","mhd",$ARGV[0]); # !found
-system("./newcompiler Makefile");
+#system("./newcompiler Makefile");
+print "Setting the '" . $compiler . "' configuration\n";
+system("./newcompiler " . substr($compiler, 0, -3) );
 
 # COMPILE NOW
 chdir('..');
