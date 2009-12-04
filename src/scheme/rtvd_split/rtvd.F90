@@ -79,10 +79,25 @@ module rtvd ! split orig
 !! Variations of magnetic flux threading remaining three faces of cell \f$(i,j,k)\f$ can be written in a similar manner. We note that each EMF 
 !! contribution appears twice with opposite sign. Thus, the total change of magnetic flux, piercing all cell-faces, vanishes to machine accuracy.
 !!
-!! A particular implementation of the CT scheme depends on actual centering of fluid variables. In the RTVD scheme all fluid variables  (\f$\rho\f$, 
-!! \f$m_x\f$, \f$m_y\f$, \f$m_z\f$ and \f$e\f$) are  cell-centered, and  magnetic field components (\f$B_x\f$, \f$B_y\f$, \f$B_z\f$) are 
-!! face-centered. For that reason interpolation is necessary. For the detailed scheme used in our code see sections prepared for Lecture Notes in 
-!! Physics, Springer, that are placed in doc/evora subdirectory. 
+!! To present the idea in a slightly different way, following Pen et al. (2003),  we consider the three components of the induction 
+!! equation written in the explicit form:
+!! \f{eqnarray}
+!! \partial_t B_x &=& \partial_y (\mathrm{v_x B_y}) + \partial_z (v_x B_z) - \partial_y (v_y B_x) - \partial_z (v_z B_x),\\
+!! \partial_t B_y &=& \partial_x (v_y B_x) + \partial_z (v_y B_z) - \partial_x (\mathrm{v_x B_y}) - \partial_z (v_z B_y),\\		  
+!! \partial_t B_z &=& \partial_x (v_z B_x) + \partial_y (v_z B_y) - \partial_x (v_x B_z) - \partial_y (v_y B_z).
+!! \f}
+!!
+!!We note that each combination of \f$v_a B_b\f$ appears twice in these equations. Let us consider \f$v_x B_y\f$.
+!!Once  \f$v_x B_y\f$ is computed for numerical integration of the second equation, it should be also used for
+!!integration of the first equation, to ensure cancellation of electromotive forces contributing to the total change of magnetic flux threading 
+!!cell faces.
+!!
+!!The scheme proposed by Pen et al. (2003), consists of the following steps:
+!!\n (1) Computation of the edge--centered EMF component \f$ v_x B_y\f$. 
+!!\n (2) Update of $B_y$, according to the equation \f$\partial_t B_y = \partial_x (v_x B_y)\f$.
+!!\n (3) Update of $B_x$, according to the equation \f$\partial_t B_x = \partial_y (v_x B_y)\f$.
+!!
+!!Analogous procedure applies to remaining EMF components. 
 !<
    subroutine tvdb(vibj,b,vg,n,dt,di)
       use constants, only : big
@@ -110,14 +125,22 @@ module rtvd ! split orig
 
   ! unlike the B field, the vibj lives on the right cell boundary
       vh = 0.0
+
+! velocity interpolation to the cell boundaries
+
       vh(1:n-1) =(vg(1:n-1)+ vg(2:n))*0.5;     vh(n) = vh(n-1)
 
       dti = dt/di
+
+! face-centered EMF components computation, depending on the sign of vh, the components are upwinded  to cell edges, leading to 1st order EMF
+
       where(vh > 0.)
          vibj1=b*vg
       elsewhere
          vibj1=eoshift(b*vg,1,boundary=big)
       end where
+
+! values of magnetic field computation in Runge-Kutta half step
 
       b1(2:n) = b(2:n) -(vibj1(2:n)-vibj1(1:n-1))*dti*0.5;    b1(1) = b(2)
 
@@ -126,6 +149,9 @@ module rtvd ! split orig
          ipp = ip + 1
          im  = i  - 1
          v   = vh(i)
+
+! recomputation of EMF components (w) with b1 and face centered EMF interpolation to cell-edges (dwp, dwm), depending on the sign of v.
+
          if (v > 0.0) then
             w=vg(i)*b1(i)
             dwp=(vg(ip)*b1(ip)-w)*0.5
@@ -135,6 +161,9 @@ module rtvd ! split orig
             dwp=(w-vg(ipp)*b1(ipp))*0.5
             dwm=(vg(i)*b1(i)-w)*0.5
          end if
+
+! the second-order corrections to the EMF components computation with the aid of the van Leer monotonic interpolation and 2nd order EMF computation
+
          dw=0.0
          if(dwm*dwp > 0.0) dw=2.0*dwm*dwp/(dwm+dwp)
          vibj(i)=(w+dw)*dt
