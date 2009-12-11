@@ -40,7 +40,10 @@ module initionized
 
   implicit none
 
-    real                  :: gamma_ion, cs_iso_ion,cs_iso_ion2, cs_ion
+    real                  :: gamma_ion       !< adiabatic index for the ionized gas component
+    real                  :: cs_iso_ion      !< isothermal sound speed (p = cs_iso_ion<sup>2</sup>\f$\rho\f$), active only if ionized gas is \ref isothermal
+    real                  :: cs_iso_ion2
+    real                  :: cs_ion
 
     integer               :: idni, imxi, imyi, imzi
 #ifndef ISO
