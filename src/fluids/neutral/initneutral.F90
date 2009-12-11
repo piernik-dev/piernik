@@ -40,7 +40,12 @@ module initneutral
 
   implicit none
 
-    real                  :: gamma_neu, cs_iso_neu,cs_iso_neu2, global_gradP_neu, eta_gas_neu, csvk
+    real                  :: gamma_neu             !< adiabatic index for the neutral gas
+    real                  :: cs_iso_neu            !< isothermal sound speed (p = cs_iso_neu<sup>2</sup>\f$\rho\f$), active only if neutral gas is \ref isothermal
+    real                  :: cs_iso_neu2
+    real                  :: global_gradP_neu
+    real                  :: eta_gas_neu
+    real                  :: csvk
 
     integer               :: idnn, imxn, imyn, imzn
 #ifndef ISO
