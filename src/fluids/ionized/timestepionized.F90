@@ -28,14 +28,31 @@
 #include "piernik.def"
 
 !> 
-!! \brief (MH) Timestep computation for the ionized fluid
+!! \brief (MH/JD) %Timestep computation for the ionized fluid
 !!
+!! %Timestep for the ionized fluid is set as the minimum %timestep for all of the MPI blocks times the Courant number.
+!! To compute the %timestep in each MPI block, the fastest speed at which information travels in the x, y or z directions is computed as
+!! \f{equation}
+!! c_i=\max\limits_{j}{\left(v_i^j+c_f^j\right)},
+!! \f}
+!! where \f$v_i^j\f$ is the maximum speed in i direction for j cell and \f$c_f^j\f$ is the speed of sound for ionized
+!! fluid computed as \f$c_f=\sqrt{\left|\frac{2p_{mag}+\gamma p}{\rho^j}\right|}\f$, where \f$p\f$ stands for pressure, 
+!! \f$p_{mag}\f$ is pressure of magnetic field, \f$\gamma\f$ is adiabatic index for ionized fluid and \f$\rho^j\f$ is fluid density in the cell j.
 !!
+!! %Timestep for each MPI block is then computed as
+!! \f{equation}
+!! dt=\min{\left(\left|\frac{dx}{c_x}\right|,\left|\frac{dy}{c_y}\right|,\left|\frac{dz}{c_z}\right|\right)},
+!! \f}
+!! where \f$dx\f$, \f$dy\f$ and \f$dz\f$ are the cell lengths in each direction.
+!!
+!! Information about the computed %timesteps is exchanged between MPI blocks in order to choose the minimum %timestep for the fluid.    
+!! The final %timestep is multiplied by the Courant number specified in parameters of each task.
 !<
 
 module timestepionized
 
-  real :: dt_ion,c_ion
+  real :: dt_ion             !< final timestep for ionized fluids
+  real :: c_ion              !< maximum speed at which information travels in the ionized fluid
 
  contains 
 
@@ -53,10 +70,19 @@ module timestepionized
 
     implicit none
 
-    real dt_ion_proc, dt_ion_all, c_max_all
-    real dt_ion_proc_x, dt_ion_proc_y, dt_ion_proc_z
-    real cx, cy, cz, vx, vy, vz, cf
-    
+    real dt_ion_proc         !< minimum timestep for the ionized fluid for the current processor
+    real dt_ion_all          !< minimum timestep for the ionized fluid for all the processors
+    real c_max_all           !< maximum speed for the ionized fluid for all the processors
+    real dt_ion_proc_x       !< timestep computed for X direction for the current processor
+    real dt_ion_proc_y       !< timestep computed for Y direction for the current processor
+    real dt_ion_proc_z       !< timestep computed for Z direction for the current processor
+    real cx                  !< maximum velocity for X direction
+    real cy                  !< maximum velocity for Y direction
+    real cz                  !< maximum velocity for Z direction
+    real vx                  !< velocity in X direction computed for current cell
+    real vy                  !< velocity in Y direction computed for current cell
+    real vz                  !< velocity in Z direction computed for current cell
+    real cf                  !< speed of sound for the ionized fluid
 
 ! locals
     real pmag
