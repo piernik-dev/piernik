@@ -186,6 +186,7 @@ module gravity
 !>
 !! \brief Routine that compute values of gravitational potential filling in gp array and setting gp_status character string \n\n
 !! The type of %gravity is governed by preprocessor: \n\n
+!! \details
 !! GRAV_NULL - gravitational potential array is set to zero \n\n
 !! GRAV_UNIFORM - uniform type of %gravity in z-direction \n
 !! \f$\Phi\left(z\right)= - const \cdot z \f$\n
