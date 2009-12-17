@@ -153,21 +153,21 @@ module initproblem
 
       amp_ecr_sn = 4.96e6*cr_eff/r_sn**3   ! cosmic ray explosion amplitude
                                            ! in units:
-                                           ! e_0 = 1/(5/3-1)*rho_0*c_s0**2                                           
+                                           ! e_0 = 1/(5/3-1)*rho_0*c_s0**2
                                            ! rho_0=1.67e-24g/cm**3,
                                            ! c_s0 = 7km/s
 
       f_sn = f_sn_kpc2                     ! SN freq
-      
-      if(nxd /=1) then 
+
+      if(nxd /=1) then
          f_sn = f_sn * (xmax-xmin)/1000.0
-      else 
+      else
          f_sn = f_sn * 2.0*r_sn/1000.0
       endif
-      
-      if(nyd /=1) then 
-         f_sn = f_sn * (ymax-ymin)/1000.0  
-      else 
+
+      if(nyd /=1) then
+         f_sn = f_sn * (ymax-ymin)/1000.0
+      else
          f_sn = f_sn * 2.0*r_sn/1000.0
       endif
 
@@ -177,8 +177,8 @@ module initproblem
       b0 = sqrt(2.*alpha*d0*cs_iso2)
 
       csim2 = cs_iso2*(1.0+alpha)
- 
-      call hydrostatic_zeq(1, 1, csim2, d0, dprof)
+
+      call hydrostatic_zeq(1, 1, d0, csim2, dprof)
 
       do k = 1,nz
          do j = 1,ny
