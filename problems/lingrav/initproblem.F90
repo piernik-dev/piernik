@@ -127,9 +127,9 @@ module initproblem
       b0 = sqrt(2.*alpha*d0*cs_iso2)
 
       csim2 = cs_iso2*(1.0+alpha)
- 
-      call hydrostatic_zeq(1, 1, csim2, d0, dprof)
-      
+
+      call hydrostatic_zeq(1, 1, d0, csim2, dprof)
+
 
       do k = 1,nz
          do j = 1,ny
