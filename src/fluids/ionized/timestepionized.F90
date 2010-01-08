@@ -38,7 +38,7 @@
 !! where \f$v_x^{i,j,k}\f$ is the maximum speed in \f$x\f$ direction for the cell \f$(i,j,k)\f$ and \f$c_f^{i,j,k}\f$ is the speed of sound for 
 !! ionized fluid computed as \f$c_f^{i,j,k}=\sqrt{\left|\frac{2p_{mag}+\gamma p}{\rho^{i,j,k}}\right|}\f$, where \f$p\f$ stands for pressure, 
 !! \f$p_{mag}\f$ is pressure of magnetic field, \f$\gamma\f$ is adiabatic index for ionized fluid and \f$\rho^{i,j,k}\f$ is fluid density in the cell 
-!! \f$(i,j,k)\f$. For directions $y, z$ the computations are made in similar way.
+!! \f$(i,j,k)\f$. For directions \f$y, z\f$ the computations are made in similar way.
 !!
 !! %Timestep for each MPI block is then computed as
 !! \f{equation}
