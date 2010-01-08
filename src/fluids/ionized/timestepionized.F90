@@ -31,13 +31,14 @@
 !! \brief (MH/JD) %Timestep computation for the ionized fluid
 !!
 !! %Timestep for the ionized fluid is set as the minimum %timestep for all of the MPI blocks times the Courant number.
-!! To compute the %timestep in each MPI block, the fastest speed at which information travels in the x, y or z directions is computed as
+!! To compute the %timestep in each MPI block, the fastest speed at which information travels in each direction is computed as
 !! \f{equation}
-!! c_i=\max\limits_{j}{\left(v_i^j+c_f^j\right)},
+!! c_x=\max\limits_{i,j,k}{\left(v_x^{i,j,k}+c_f^{i,j,k}\right)},
 !! \f}
-!! where \f$v_i^j\f$ is the maximum speed in i direction for j cell and \f$c_f^j\f$ is the speed of sound for ionized
-!! fluid computed as \f$c_f=\sqrt{\left|\frac{2p_{mag}+\gamma p}{\rho^j}\right|}\f$, where \f$p\f$ stands for pressure, 
-!! \f$p_{mag}\f$ is pressure of magnetic field, \f$\gamma\f$ is adiabatic index for ionized fluid and \f$\rho^j\f$ is fluid density in the cell j.
+!! where \f$v_^{i,j,k}\f$ is the maximum speed in \f$x\f$ direction for the cell \f$(i,j,k)\f$ and \f$c_f^{i,j,k}\f$ is the speed of sound for 
+!! ionized fluid computed as \f$c_f^{i,j,k}=\sqrt{\left|\frac{2p_{mag}+\gamma p}{\rho^{i,j,k}}\right|}\f$, where \f$p\f$ stands for pressure, 
+!! \f$p_{mag}\f$ is pressure of magnetic field, \f$\gamma\f$ is adiabatic index for ionized fluid and \f$\rho^{i,j,k}\f$ is fluid density in the cell 
+!! \f$(i,j,k)\f$. For directions $y, z$ the computations are made in similar way.
 !!
 !! %Timestep for each MPI block is then computed as
 !! \f{equation}
