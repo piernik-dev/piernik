@@ -28,13 +28,31 @@
 #include "piernik.def"
 
 !> 
-!! \brief (MH) Timestep computation for the neutral fluid
+!! \brief (MH/JD) Timestep computation for the neutral fluid (doxy comments ready)
 !!
+!! %Timestep for the neutral fluid is set as the minimum %timestep for all of the MPI blocks times the Courant number.
+!! To compute the %timestep in each MPI block, the fastest speed at which information travels in each direction is computed as
+!! \f{equation}
+!! c_x=\max\limits_{i,j,k}{\left(v_x^{i,j,k}+c_s^{i,j,k}\right)},
+!! \f}
+!! where \f$v_x^{i,j,k}\f$ is the maximum speed in \f$x\f$ direction for the cell \f$(i,j,k)\f$ and \f$c_s^{i,j,k}\f$ is the speed of sound for
+!! neutral fluid computed as \f$c_s^{i,j,k}=\sqrt{\left|\frac{\gamma p}{\rho^{i,j,k}}\right|}\f$, where \f$p\f$ stands for pressure,
+!! \f$\gamma\f$ is adiabatic index for neutral fluid and \f$\rho^{i,j,k}\f$ is the neutral fluid density in the cell
+!! \f$(i,j,k)\f$. For directions \f$y, z\f$ the computations are made in similar way.
 !!
+!! %Timestep for each MPI block is then computed as
+!! \f{equation}
+!! dt=\min{\left(\left|\frac{dx}{c_x}\right|,\left|\frac{dy}{c_y}\right|,\left|\frac{dz}{c_z}\right|\right)},
+!! \f}
+!! where \f$dx\f$, \f$dy\f$ and \f$dz\f$ are the cell lengths in each direction.
+!!
+!! Information about the computed %timesteps is exchanged between MPI blocks in order to choose the minimum %timestep for the fluid.
+!! The final %timestep is multiplied by the Courant number specified in parameters of each task.
 !<
 module timestepneutral
 
-  real :: dt_neu,c_neu
+  real :: dt_neu                                                        !< final timestep for neutral fluid
+  real :: c_neu                                                         !< maximum speed at which information travels in the neutral fluid
 
 contains
 
@@ -52,10 +70,20 @@ contains
 
     implicit none
 
-    real dt_neu_proc, dt_neu_all, c_max_all
-    real dt_neu_proc_x, dt_neu_proc_y, dt_neu_proc_z
-    real cx, cy, cz, vx, vy, vz, cs
-    
+    real dt_neu_proc                   !< minimum timestep for the neutral fluid for the current processor
+    real dt_neu_all                    !< minimum timestep for the neutral fluid for all the processors
+    real c_max_all                     !< maximum speed for the neutral fluid for all the processors
+    real dt_neu_proc_x                 !< timestep computed for X direction for the current processor
+    real dt_neu_proc_y                 !< timestep computed for Y direction for the current processor
+    real dt_neu_proc_z                 !< timestep computed for Z direction for the current processor
+    real cx                            !< maximum velocity for X direction
+    real cy                            !< maximum velocity for Y direction
+    real cz                            !< maximum velocity for Z direction
+    real vx                            !< velocity in X direction computed for current cell
+    real vy                            !< velocity in Y direction computed for current cell
+    real vz                            !< velocity in Z direction computed for current cell
+    real cs                            !< speed of sound for the neutral fluid
+
 
 ! locals
 
