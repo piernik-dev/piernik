@@ -54,6 +54,11 @@ module dataio_hdf5
 
    contains
 
+!>
+!! \brief Procedure initializing HDF5 module
+!!
+!<
+
    subroutine init_hdf5(vars,tix,tiy,tiz,tdt_plt)
       use fluidindex
       use grid, only : nx,ny,nz,nxd,nyd,nzd,nb
@@ -182,6 +187,9 @@ module dataio_hdf5
 
    end subroutine init_hdf5
 
+!>
+!! \brief Procedure finalizing HDF5 module
+!<
    subroutine cleanup_hdf5
       implicit none
 
@@ -189,6 +197,9 @@ module dataio_hdf5
 
    end subroutine cleanup_hdf5
 
+!<
+!! \brief Routine calculating quantities for plot files
+!<
    subroutine common_plt_hdf5(var,ij,xn,tab,ierrh)
       use grid,   only : nb, nyb, nzb, nxb
       use arrays, only : u, b
@@ -342,6 +353,9 @@ module dataio_hdf5
 
    end subroutine common_plt_hdf5
 
+!<
+!! \brief Routine calculating quantities for .hdf files
+!<
    subroutine common_vars_hdf5(var,tab, ierrh)
       use fluidindex, only : ind
       use grid,   only : nb,nx,ny,nz
@@ -419,10 +433,10 @@ module dataio_hdf5
       use types, only : hdf
       use mpisetup, only : t, comm3d, ierr, proc
       implicit none
+      type(hdf)     :: chdf !< Container for all necessary variables from dataio
       integer, save :: nimg = 0
       real, save    :: last_plt_time = 0.0
       character(LEN=32) ::fname
-      type(hdf)     :: chdf
       integer :: i,error,fe
       logical, save :: first_entry = .true.
       integer(HID_T) :: file_id       !> File identifier
@@ -494,7 +508,7 @@ module dataio_hdf5
       real, dimension(:), allocatable :: buff
       real :: imax,imin,di
       integer :: nimg, ierrh,i,j
-      type(hdf) :: chdf
+      type(hdf) :: chdf !< Container for all necessary variables from dataio
       character(LEN=3) :: pij
       character(LEN=4) :: var    !> not yet implemented
       character(LEN=32) ::fname
