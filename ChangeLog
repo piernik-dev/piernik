@@ -1,0 +1,580 @@
+2010-01-16  Kacper Kowalik <kowalik@astri.uni.torun.pl>
+
+	* [source:public/trunk public]: Cleaning AUTHORS. Utf8 still is not
+	  the best idea...
+	* [source:public/trunk public]: Adding stub files (GNU standard)
+	* [source:public/trunk public]: Adjusting files to GNU standard.
+	  Updating authors list.
+	* [source:public/trunk public]: doxy comments
+
+2010-01-15  Joanna Drazkowska <drazkowska@astri.uni.torun.pl>
+
+	* [source:public/trunk public]: doxy comments in
+	  timestepneutral.F90
+
+2010-01-08  Joanna Drazkowska <drazkowska@astri.uni.torun.pl>
+
+	* [source:public/trunk public]: doxy comments in
+	  timestepionized.f90
+	* [source:public/trunk public]: doxy comments in
+	  timestepionized.f90
+	* [source:public/trunk public]: doxy comments in
+	  timestepionized.f90
+
+2009-12-17  Dominik Woltanski <minikwolt@astri.uni.torun.pl>
+
+	* [source:public/trunk public]: correction in calling
+	  hydrostatic_zeq in
+	  [source:pubclic/trunk/problems/lingrav/initproblem.F90 lingrav]
+	  problem
+	* [source:public/trunk public]: correction in calling
+	  hydrostatic_zeq in
+	  [source:public/trunk/problems/crwind/initproblem.F90 crwind]
+	  problem
+
+2009-12-15  Dominik Woltanski <minikwolt@astri.uni.torun.pl>
+
+	* [source:public/trunk public]: doxygen comment correction in
+	  [source:public/trunk/src/gravity/gravity.F90 gravity] module
+
+2009-12-11  Joanna Drazkowska <drazkowska@astri.uni.torun.pl>
+
+	* [source:public/trunk public]: doxy comments in
+	  timestepionized.f90
+
+2009-12-11  Dominik Woltanski <minikwolt@astri.uni.torun.pl>
+
+	* [source:public/trunk public]: adding special page
+	  [source:public/trunk/doc/general/precompiler.F90 precompiler.F90]
+	  for precompiler directives descriptions
+	* [source:public/trunk public]: doxygen comments for namelists in
+	  [source:public/trunk/src/fluids/neutral/initneutral.F90
+	  initneutral]
+	* [source:public/trunk public]: doxygen comments for namelists in
+	  [source:public/trunk/src/fluids/ionized/initionized.F90
+	  initionized]
+
+2009-12-04  Joanna Drazkowska <drazkowska@astri.uni.torun.pl>
+
+	* [source:public/trunk public]: doxy comments
+
+2009-11-23  Dominik Woltanski <minikwolt@astri.uni.torun.pl>
+
+	* [source:public/trunk public]: html superscript in
+	  [source:public/trunk/doc/general/main.F90 main] module
+
+2009-11-19  Kacper Kowalik <kowalik@astri.uni.torun.pl>
+
+	* [source:public/trunk public]: cleaning dataio_hdf5
+
+2009-11-17  Dominik Woltanski <minikwolt@astri.uni.torun.pl>
+
+	* [source:public/trunk public]: doxy cosmetics in
+	  [source:public/trunk/src/base/dataio.F90 dataio] module
+	* [source:public/trunk public]: doxy cosmetics in
+	  [source:public/trunk/src/base/mpisetup.F90 mpisetup] module
+	* [source:public/trunk public]: doxy cosmetics in
+	  [source:public/trunk/src/base/grid.F90 grid] module
+	* [source:public/trunk public]: doxy cosmetics in
+	  [source:public/trunk/src/supernovae/snsources.F90 snsources]
+	  module
+	* [source:public/trunk public]: doxy cosmetics in
+	  [source:public/trunk/src/magnetic/resist/resistivity.F90
+	  resistivity] module
+	* [source:public/trunk public]: doxy cosmetics in
+	  [source:public/trunk/src/fluids/cosmicrays/initcosmicrays.F90
+	  initcosmicrays] module
+	* [source:public/trunk public]: doxy cosmetics in
+	  [source:public/trunk/src/fluids/interactions/interactions.F90
+	  interactions] module
+	* [source:public/trunk public]: doxy cosmetics in
+	  [source:public/trunk/src/fluids/ionized/initionized.F90
+	  initionized] module
+	* [source:public/trunk public]: doxy cosmetics in
+	  [source:public/trunk/src/gravity/hydrostatic.F90 hydrostatic]
+	  module
+	* [source:public/trunk public]: doxy cosmetics in
+	  [source:public/trunk/src/gravity/gravity.F90 gravity] module
+	* [source:public/trunk public]: doxy cosmetics in
+	  [source:public/trunk/src/shear/shear.F90 shear] module
+	* [source:public/trunk public]: correction in doxy link in
+	  [source:public/trunk/doc/general/namelists.F90 namelists] module
+	* [source:public/trunk public]: throwing out unknown doxy command
+	  \url from [source:public/trunk/doc/general/main.F90 main] module
+	* [source:public/trunk public]: doxy comment correction in
+	  [source:public/trunk/src/fluids/dust/initneutral.F90 initneutral]
+	  module
+	* [source:public/trunk public]: doxy comment correction in
+	  [source:public/trunk/src/fluids/dust/initdust.F90 initdust]
+	  module
+	* [source:public/trunk public]: adding new doxy page with all
+	  namelists parameters description
+	* [source:public/trunk public]: neglecting a doxy link to itself in
+	  [source:public/trunk/src/base/arrays.F90 arrays] module
+	* [source:public/trunk public]: neglecting a doxy link to itself in
+	  [source:public/trunk/src/base/constatns.F90 constants] module
+	* [source:public/trunk public]: neglecting worthless doxy links in
+	  [source:public/trunk/src/fluids/interactions/timestepinteractions.F90
+	  timestepinteractions] module
+	* [source:public/trunk public]: neglecting doxy links to itself in
+	  [source:public/trunk/src/gravity/hydrostatic.F90 hydrostatic]
+	  module
+	* [source:public/trunk public]: doxy html tables in
+	  [source:public/trunk/src/base/dataio.F90 dataio] module.
+	* [source:public/trunk public]: doxy html tables in
+	  [source:public/trunk/src/base/mpisetup.F90 mpisetup] module.
+	* [source:public/trunk public]: doxy html table in
+	  [source:public/trunk/src/base/grid.F90 grid] module.
+	* [source:public/trunk public]: doxy html table in
+	  [source:public/trunk/src/magnetic/resistivity/resistivity.F90
+	  resistivity] module.
+	* [source:public/trunk public]: doxy html table in
+	  [source:public/trunk/src/fluids/cosmicrays/initcosmicrays.F90
+	  initcosmicrays] module.
+	* [source:public/trunk public]: doxy html table in
+	  [source:public/trunk/src/fluids/neutral/initneutral.F90
+	  initneutral] module.
+	* [source:public/trunk public]: doxy html table in
+	  [source:public/trunk/src/fluids/interactions/interactions.F90
+	  interactions] module.
+	* [source:public/trunk public]: doxy html table in
+	  [source:public/trunk/src/fluids/ionized/initionized.F90
+	  initionized] module.
+	* [source:public/trunk public]: doxy html table in
+	  [source:public/trunk/src/fluids/dust/initdust.F90 initdust]
+	  module.
+	* [source:public/trunk public]: doxy html table in
+	  [source:public/trunk/src/gravity/gravity.F90 gravity] module.
+	* [source:public/trunk public]: doxy html table in
+	  [source:public/trunk/src/shear/shear.F90 shear] module.
+
+2009-11-17  Kacper Kowalik <kowalik@astri.uni.torun.pl>
+
+	* [source:public/trunk public]: adding svnci.py
+	* [source:public/trunk public]: adding new compiler set
+
+2009-11-16  Kacper Kowalik <kowalik@astri.uni.torun.pl>
+
+	* [source:public/trunk public]: Merging r1300 from
+	  [source:public/branches/multicr mutlicr]
+	* [source:public/trunk public]: Doxygen corrections in fluxdust.F90
+
+2009-11-16  Joanna Drazkowska <drazkowska@astri.uni.torun.pl>
+
+	* [source:public/trunk public]: doxy comments corrections
+	* [source:public/trunk public]: doxy comments corrections
+
+2009-11-16  Kacper Kowalik <kowalik@astri.uni.torun.pl>
+
+	* [source:public/trunk public]: There is no energy flux for dust
+
+2009-11-16  Joanna Drazkowska <drazkowska@astri.uni.torun.pl>
+
+	* [source:public/trunk public]: doxy comments corrections
+
+2009-11-13  Joanna Drazkowska <drazkowska@astri.uni.torun.pl>
+
+	* [source:public/trunk public]: doxy comments
+
+2009-11-13  Dominik Woltanski <minikwolt@astri.uni.torun.pl>
+
+	* [source:public/trunk public]: doxy table in
+	  [source:public/trunk/src/base/grid.F90 grid] module
+	* [source:public/trunk public]: doxy table in
+	  [source:public/trunk/src/gravity/gravity.F90 gravity] module
+	* [source:public/trunk public]: doxy table in
+	  [source:public/trunk/src/base/dataio.F90 dataio] module
+	* [source:public/trunk public]: doxy table in
+	  [source:public/trunk/src/base/dataio.F90 dataio] module
+	* [source:public/trunk public]: doxy table in
+	  [source:public/trunk/src/base/mpisetup.F90 mpisetup] module
+	* [source:public/trunk public]: doxy table in
+	  [source:public/trunk/src/base/grid.F90 grid] module
+	* [source:public/trunk public]: doxy table in
+	  [source:public/trunk/src/magnetic/resist/resistivity.F90
+	  resistivity] module
+	* [source:public/trunk public]: doxy table in
+	  [source:public/trunk/src/fluids/cosmicrays/initcosmicrays.F90
+	  initcosmicrays] module
+	* [source:public/trunk public]: doxy table in
+	  [source:public/trunk/src/fluids/neutral/initneutral.F90
+	  initneutral] module
+	* [source:public/trunk public]: doxy table in
+	  [source:public/trunk/src/fluids/interactions/interactions.F90
+	  interactions] module
+	* [source:public/trunk public]: doxy table in
+	  [source:public/trunk/src/fluids/ionized/initionized.F90
+	  initionized] module
+	* [source:public/trunk public]: doxy table in
+	  [source:public/trunk/src/fluids/dust/initdust.F90 initdust]
+	  module
+	* [source:public/trunk public]: doxy table in
+	  [source:public/trunk/src/gravity/gravity.F90 gravity] module
+	* [source:public/trunk public]: doxy table in
+	  [source:public/trunk/src/shear/shear.F90 shear] module
+
+2009-11-13  Joanna Drazkowska <drazkowska@astri.uni.torun.pl>
+
+	* [source:public/trunk public]: doxy comments
+	* [source:public/trunk public]: doxy comments
+	* [source:public/trunk public]: doxy comments
+
+2009-11-08  Michał Hanasz <mhanasz@astri.uni.torun.pl>
+
+	* [source:public/trunk/src/fluids public]: 3-rd order comments
+	  correction
+	* [source:public/trunk/src/fluids public]: 2-nd order doxy comments
+	  correction
+	* [source:public/trunk/src/fluids public]: Doxy comments update
+
+2009-11-07  Kacper Kowalik <kowalik@astri.uni.torun.pl>
+
+	* [source:public/trunk public]: doxygen - both forms: ionised and
+	  ionized
+	  are valid. See
+	  http://dictionary.cambridge.org/define.asp?key=41927&dict=CALD
+	  for reference.
+
+2009-11-07  Michał Hanasz <mhanasz@astri.uni.torun.pl>
+
+	* [source:public/trunk/src/fluids public]: Doxy comments
+
+2009-11-06  Dominik Woltanski <minikwolt@astri.uni.torun.pl>
+
+	* [source:public/trunk public]: doxygen syntax in
+	  [source:public/trunk/src/gravity/gravity.F90 gravity.F90] and
+	  [source:public/trunk/source/base/dataio.F90 dataio.F90]
+
+2009-11-05  Kacper Kowalik <kowalik@astri.uni.torun.pl>
+
+	* [source:public/trunk public]: doxygen comments
+
+2009-11-05  Dominik Woltanski <minikwolt@astri.uni.torun.pl>
+
+	* [source:public/trunk public]: doxygen syntax with html tables of
+	  namelists parameters in
+	  [source:public/trunk/src/gravity/gravity.F90 gravity.F90]
+	* [source:public/trunk public]: doxygen syntax with html tables of
+	  namelists parameters in
+	  [source:public/trunk/src/gravity/gravity.F90 gravity.F90],
+	  [source:public/trunk/src/base/grid.F90 grid.F90],
+	  [source:public/trunk/src/fluids/interactions/interactions.F90
+	  interactions.F90]
+	* [source:public/trunk public]: doxygen syntax with html tables of
+	  namelists parameters in [source:public/trunk/src/base/dataio.F90
+	  dataio.F90]
+	* [source:public/trunk public]: doxygen syntax with html tables of
+	  namelists parameters in [source:public/trunk/src/base/dataio.F90
+	  dataio.F90]
+	* [source:public/trunk public]: doxygen syntax with html tables of
+	  namelists parameters in
+	  [source:public/trunk/src/gravity/gravity.F90 gravity.F90],
+	  [source:public/trunk/src/base/grid.F90 grid.F90],
+	  [source:public/trunk/src/fluids/interactions/interactions.F90
+	  interactions.F90]
+
+2009-11-04  Dominik Woltanski <minikwolt@astri.uni.torun.pl>
+
+	* [source:public/trunk public]: doxygen syntax in
+	  [source:public/trunk/src/gravity/gravity.F90 gravity.F90],
+	  [source:public/trunk/src/fluids/interactions/interactions.F90
+	  interactions.F90],
+	  [source:public/trunk/src/fluids/interactions/timestepinteractions.F90
+	  timestepinteractions.F90], [source:public/trunk/src/base/grid.F90
+	  grid.F90]
+
+2009-10-31  Joanna Drazkowska <drazkowska@astri.uni.torun.pl>
+
+	* [source:public/trunk public]: doxy comments
+	* [source:public/trunk public]: doxy comments
+	* [source:public/trunk public]: doxy comments
+
+2009-10-29  Kacper Kowalik <kowalik@astri.uni.torun.pl>
+
+	* [source:public/trunk public]: fixing svnci.sh
+	* 
+	* 
+	* [source:public/trunk public]: adding tool for automated commit
+	  taging
+
+2009-10-29  Michał Hanasz <mhanasz@astri.uni.torun.pl>
+
+	* [source:public/trunk public]: Doxy "main" page updated
+	* [source:public/trunk public]: doc/evora slides renamed and
+	  Springer Lecture Notes added
+
+2009-10-29  Kacper Kowalik <kowalik@astri.uni.torun.pl>
+
+	* [source:public/trunk public]: dt_plt in dataio.F90 was not
+	  broadcasted leading to MPI lockdown. Fixing #31
+
+2009-10-29  Michał Hanasz <mhanasz@astri.uni.torun.pl>
+
+	* [source:public/trunk public]:Doxy comment correction
+
+2009-10-23  Kacper Kowalik <kowalik@astri.uni.torun.pl>
+
+	* [source:public/trunk public]: fixing r1169 - please use ASCII...
+
+2009-10-23  Joanna Drazkowska <drazkowska@astri.uni.torun.pl>
+
+	* [source:public/trunk public]
+
+2009-10-23  Michał Hanasz <mhanasz@astri.uni.torun.pl>
+
+	* [source:public/trunk public]: Doxy comment
+
+2009-10-23  Kacper Kowalik <kowalik@astri.uni.torun.pl>
+
+	* [source:public/trunk public]: claiming modules for doxygen docs
+
+2009-10-23  Dominik Woltanski <minikwolt@astri.uni.torun.pl>
+
+	* [source:public/trunk public]: start of doxygen syntax in
+	  [source:public/trunk/src/fluids/interactions/timestepinteractions.F90
+	  timestepinteractions.F90]
+
+2009-10-23  Michał Hanasz <mhanasz@astri.uni.torun.pl>
+
+	* [source:public/trunk public]: Doxy comments
+
+2009-10-23  Kacper Kowalik <kowalik@astri.uni.torun.pl>
+
+	* [source:public/trunk public]: fixing typo
+
+2009-10-23  Dominik Woltanski <minikwolt@astri.uni.torun.pl>
+
+	* [source:public/trunk public]: doxygen syntax in
+	  [source:public/trunk/src/fluids/interactions/interactions.F90
+	  interactions.F90]
+	* [source:public/trunk public]: doxygen syntax
+
+2009-10-23  Michał Hanasz <mhanasz@astri.uni.torun.pl>
+
+	* [source:public/trunk public]: Doxy comments update
+
+2009-10-23  Dominik Woltanski <minikwolt@astri.uni.torun.pl>
+
+	* [source:public/trunk public]: small correction in doxygen syntax
+	  in [source:public/trunk/src/fluids/fluidindex.F90 fluidindex.F90]
+
+2009-10-22  Michał Hanasz <mhanasz@astri.uni.torun.pl>
+
+	* [source:public/trunk public]: Doxygen
+
+2009-10-22  Kacper Kowalik <kowalik@astri.uni.torun.pl>
+
+	* MERGE [source:public/branches/multigrid multigrid] rev r1152 -
+	  r1154 to [source:public/trunk public]
+	* [source:public/trunk public]: fixing typo in r1148
+
+2009-10-22  Michał Hanasz <mhanasz@astri.uni.torun.pl>
+
+	* [source:public/trunk public]: Doxygen comments added
+	* [source:public/trunk public]: Doxygen comments added
+
+2009-10-16  Kacper Kowalik <kowalik@astri.uni.torun.pl>
+
+	* [source:public/trunk public]: doxygen
+	* [source:public/trunk public]: doxygen example main page
+
+2009-10-16  Dominik Woltanski <minikwolt@astri.uni.torun.pl>
+
+	* [source:public/trunk public]: doxygen syntax formulas in
+	  [source:public/trunk/src/gravity/gravity.F90 gravity.F90]
+
+2009-10-16  Kacper Kowalik <kowalik@astri.uni.torun.pl>
+
+	* [source:public/trunk public]: doxygen
+	* [source:public/trunk public]: doxygen
+
+2009-10-16  Dominik Woltanski <minikwolt@astri.uni.torun.pl>
+
+	* [source:public/trunk public]: doxygen syntax formulas in
+	  [source:public/trunk/src/gravity/gravity.F90 gravity.F90]
+
+2009-10-15  Dominik Woltanski <minikwolt@astri.uni.torun.pl>
+
+	* [source:public/trunk public]: more description in
+	  [source:public/trunk/src/base/constants.F90 constants.F90]
+	* [source:public/trunk public]: reverting bad changes in
+	  [source:public/trunk/src/base/dataio.F90 dataio.F90]
+	* [source:public/trunk public]: doxygen syntax in
+	  [source:public/trunk/src/base/constants.F90 constants.F90]
+
+2009-10-09  Dominik Woltanski <minikwolt@astri.uni.torun.pl>
+
+	* [source:public/trunk public]: base doxygen type description in
+	  [source:public/trunk/src/gravity/gravity.F90 gravity] module
+	* [source:public/trunk public]:base doxygen type description in
+	  [source:public/trunk/src/supernovae/snsources.F90 snsources]
+	  module
+	* [source:public/trunk public]: base doxygen type description in
+	  [source:public/trunk/src/gravity/gravity.F90 gravity] and
+	  [source:public/trunk/src/gravity/hydrostatic.F90 hydrostatic]
+	  modules
+	* [source:public/trunk public]: some corrections of problems infos
+
+2009-10-09  Michał Hanasz <mhanasz@astri.uni.torun.pl>
+
+	* [source:public/trunk public]: Typo corrected
+
+2009-09-29  Kacper Kowalik <kowalik@astri.uni.torun.pl>
+
+	* [source:public/trunk public]: Removing strict debug flags from
+	  default
+
+2009-09-25  Kacper Kowalik <kowalik@astri.uni.torun.pl>
+
+	* [source:public/trunk public]: Fixing annoying SegFault in
+	  mpi_finalize
+	* [source:public/trunk public]: Cleaning
+
+2009-09-24  Kacper Kowalik <kowalik@astri.uni.torun.pl>
+
+	* [source:public/trunk public]: seting svn:ignore for obj, runs,
+	  idl_h5
+	* [source:public/trunk public]: Problem update
+	* [source:public/trunk public]: Problem update
+	* [source:public/trunk public]: Introducing fast shearing box
+	  (FFTW)
+
+2009-08-04  Kacper Kowalik <kowalik@astri.uni.torun.pl>
+
+	* [source:public/trunk public]: adding write_plot
+
+2009-07-09  Kacper Kowalik <kowalik@astri.uni.torun.pl>
+
+	* [source:public/trunk public]: hdf5 support for setup
+	* [source:public/trunk public]: planetary units & PTMASS fix
+	* [source:public/trunk public]: stream3D
+
+2009-07-07  Kacper Kowalik <kowalik@astri.uni.torun.pl>
+
+	* [source:public/trunk public]: copying problem stream to trunk
+
+2009-06-29  Kacper Kowalik <kowalik@astri.uni.torun.pl>
+
+	* [source:public/trunk public]: fftw shear boundaries
+
+2009-06-23  Kacper Kowalik <kowalik@astri.uni.torun.pl>
+
+	* [source:public/trunk public]: fixing error in
+	  [source:public/trunk/src/shear/shear.F90 shear.F90]
+	* [source:public/trunk public]: Masset's shearing box
+
+2009-06-10  Kacper Kowalik <kowalik@astri.uni.torun.pl>
+
+	* [source:public/trunk public]: HDF5 cleaning
+
+2009-06-09  Kacper Kowalik <kowalik@astri.uni.torun.pl>
+
+	* [source:public/trunk public]: initial HDF5 support. Tested on:
+	  dustblob (2D,xy,multifluid), sedov (3D,MPI-IO, restarts)
+
+2009-06-05  Kacper Kowalik <kowalik@astri.uni.torun.pl>
+
+	* [source:public/trunk public]: Documentation
+	* [source:public/trunk public]: Cleaning & Documenting
+
+2009-06-04  Kacper Kowalik <kowalik@astri.uni.torun.pl>
+
+	* [source:public/trunk public]: cleaning
+	* [source:public/trunk public]: ''grav_pot'' was removed. Gravity
+	  potential is now calculated for whole 3D array gp at once in
+	  ''grav_pot_3d''. Hydrostatic eq is calculated via linear
+	  interpolation of gp
+
+2009-06-03  Kacper Kowalik <kowalik@astri.uni.torun.pl>
+
+	* [source:public/trunk public]: '''BEWARE''' Merging branch
+	  [source:public/branches/stream stream]. Various regressions were
+	  introduced. Use: ''grep -i -r beware'' in
+	  [source:public/trunk/src src] to get list of potential problems.
+
+2009-05-27  Michał Hanasz <mhanasz@astri.uni.torun.pl>
+
+	* [source:public/trunk public]: cleaning problem
+	  [source:public/trunk/problems/kepler kepler]
+	* [source:public/trunk public]: cleaning problem
+	  [public/trunk/problems/kepler kepler]
+	* [source:public/trunk public]: adjusting
+	  [source:public/trunk/src/gravity/gravity.F90 gravity.F90] for
+	  problem [source:public/trunk/problems/lingrav lingrav]
+
+2009-05-27  Kacper Kowalik <kowalik@astri.uni.torun.pl>
+
+	* [source:public/trunk public]: reverting changes to
+	  [source:public/trunk/problems/crwind crwind] problem
+
+2009-05-27  Michał Hanasz <mhanasz@astri.uni.torun.pl>
+
+	* [source:public/trunk public]: New problem
+	  [source:public/trunk/problems/lingrav lingrav]
+	* 
+
+2009-05-13  Dominik Woltanski <minikwolt@astri.uni.torun.pl>
+
+	* removing compiler settings from Makefile-prep
+
+2009-04-01  Kacper Kowalik <kowalik@astri.uni.torun.pl>
+
+	* 
+
+2009-03-12  Kacper Kowalik <kowalik@astri.uni.torun.pl>
+
+	* Small adjustments
+	* Resolving #26 in crwind
+	* Resolving #26
+
+2009-03-11  Kacper Kowalik <kowalik@astri.uni.torun.pl>
+
+	* 
+	* 
+
+2009-03-11  Michał Hanasz <mhanasz@astri.uni.torun.pl>
+
+	* 
+	* 
+
+2009-03-06  Kacper Kowalik <kowalik@astri.uni.torun.pl>
+
+	* removing segfault after cleanup
+	* 
+	* 
+	* ::
+	* 
+	* Fixing dependencies bugs, gamma was allocated before nvars was
+	  initialized
+	* 
+	* 
+	* 
+
+2009-02-27  Kacper Kowalik <kowalik@astri.uni.torun.pl>
+
+	* 
+
+2009-02-26  Kacper Kowalik <kowalik@astri.uni.torun.pl>
+
+	* Merging r917 - r922
+
+2009-02-25  Kacper Kowalik <kowalik@astri.uni.torun.pl>
+
+	* Fixing computation of divB in dataio
+	* Changing default compilers flags
+
+2009-02-23  Kacper Kowalik <kowalik@astri.uni.torun.pl>
+
+	* minor fixes
+	* Major bug fix
+	* Initial commit of public/trunk/setup
+	* Initial commit of public/trunk/src
+	* Initial commit of public/trunk/problems
+	* Initial commit of public/trunk/license
+	* Initial commit of public/trunk/idl
+	* Initial commit of public/trunk/doc
+	* Initial commit of public/trunk/compilers
+	* Removing erroneus copy made in r889
+	* Initial commit of public
+	* Restructuring code directories: adding public/trunk
+
