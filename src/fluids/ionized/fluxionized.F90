@@ -18,66 +18,66 @@
 !    along with PIERNIK.  If not, see <http://www.gnu.org/licenses/>.
 !
 !    Initial implemetation of PIERNIK code was based on TVD split MHD code by
-!    Ue-Li Pen 
+!    Ue-Li Pen
 !        see: Pen, Arras & Wong (2003) for algorithm and
-!             http://www.cita.utoronto.ca/~pen/MHD 
-!             for original source code "mhd.f90" 
-!   
+!             http://www.cita.utoronto.ca/~pen/MHD
+!             for original source code "mhd.f90"
+!
 !    For full list of developers see $PIERNIK_HOME/license/pdt.txt
 !
 #include "piernik.def"
 #define RNG 2:n-1
 
-!> 
-!! \brief (MH/JD) Computation of fluxes for the ionized fluid
-!! 
-!!The flux functions for ionized fluid are given by 
+!>
+!! \brief (MH/JD) Computation of %fluxes for the ionized fluid
+!!
+!!The flux functions for ionized fluid are given by
 !!\f[
-!!  \vec{F}{(\vec{u})} = 
+!!  \vec{F}{(\vec{u})} =
 !!  \left(\begin{array}{c}
 !!    \rho v_x \\
 !!    \rho v_x^2 + p_* - B_x^2 \\
 !!    \rho v_x v_y - B_x B_y\\
 !!    \rho v_x v_z - B_x B_z\\
-!!    (e + p)v_x - \vec{B} \cdot \vec{v} \; B_x 
+!!    (e + p)v_x - \vec{B} \cdot \vec{v} \; B_x
 !!  \end{array}\right),
 !!  \qquad
-!!  \vec{G}{(\vec{u})} = 
+!!  \vec{G}{(\vec{u})} =
 !!  \left(\begin{array}{c}
 !!    \rho v_y \\
 !!    \rho v_y v_x  - B_y B_x\\
 !!    \rho v_y^2 + p_* - B_y^2 \\
 !!    \rho v_y v_z  - B_y B_z\\
-!!    (e + p)v_y - \vec{B} \cdot \vec{v} \; B_y 
+!!    (e + p)v_y - \vec{B} \cdot \vec{v} \; B_y
 !!  \end{array}\right),
 !!\qquad
-!!  \vec{H}{(\vec{u})} = 
+!!  \vec{H}{(\vec{u})} =
 !!  \left(\begin{array}{c}
 !!    \rho v_z \\
 !!    \rho v_z v_x  - B_z B_x\\
 !!    \rho v_z v_y  - B_z B_y\\
 !!    \rho v_z^2 + p_* - B_z^2 \\
-!!    (e + p)v_z - \vec{B} \cdot \vec{v} \; B_z 
+!!    (e + p)v_z - \vec{B} \cdot \vec{v} \; B_z
 !!  \end{array}\right),
 !!\f]
-!!where \f$p_* = p + B^2/2\f$, \f$e= e_{th} + \frac{1}{2} \rho v^2 + B^2/2\f$,  are the total pressure and total energy density, 
+!!where \f$p_* = p + B^2/2\f$, \f$e= e_{th} + \frac{1}{2} \rho v^2 + B^2/2\f$,  are the total pressure and total energy density,
 !!while \f$e_{th}\f$ is thermal energy density and  \f$e_{mag} = B^2/2\f$ is the magnetic energy density.
 !<
 
 module fluxionized
   implicit none
 
-  contains 
+  contains
 !==========================================================================================
 
   subroutine flux_ion(fluxi,cfri,vx,uui,bb,n)
-  
+
     use constants,       only : small
     use fluidindex,      only : nmag
     use fluidindex,      only : ibx,iby,ibz
     use fluidindex,      only : idn,imx,imy,imz,ien
-    use fluidindex,      only : nvar_ion   
-  
+    use fluidindex,      only : nvar_ion
+
     use initionized,     only : gamma_ion, cs_iso_ion2
     use timestepionized, only : c_ion
     use constants,       only : small
@@ -94,7 +94,7 @@ module fluxionized
     real, dimension(n) :: ps                !< total pressure of ionized fluid
     real, dimension(n) :: p                 !< thermal pressure of ionized fluid
     real, dimension(n) :: pmag              !< pressure of magnetic field
-    
+
     fluxi   = 0.0
     cfri    = 0.0
     vx      = 0.0
