@@ -18,17 +18,17 @@
 !    along with PIERNIK.  If not, see <http://www.gnu.org/licenses/>.
 !
 !    Initial implemetation of PIERNIK code was based on TVD split MHD code by
-!    Ue-Li Pen 
+!    Ue-Li Pen
 !        see: Pen, Arras & Wong (2003) for algorithm and
-!             http://www.cita.utoronto.ca/~pen/MHD 
-!             for original source code "mhd.f90" 
-!   
+!             http://www.cita.utoronto.ca/~pen/MHD
+!             for original source code "mhd.f90"
+!
 !    For full list of developers see $PIERNIK_HOME/license/pdt.txt
 !
 #include "piernik.def"
 
 !>
-!! \brief (MH) Computation of timestep for diffusive Cosmic Ray transport
+!! \brief (MH) Computation of %timestep for diffusive Cosmic Ray transport
 !!
 !!
 !<
@@ -36,18 +36,18 @@ module timestepcosmicrays
 
   real :: dt_crs
 
- contains 
+ contains
 
   subroutine timestep_crs
 
     use constants, only : small
     use grid,           only : dxmn
-    use initcosmicrays, only : cfl_cr,K_cr_paral,K_cr_perp 
+    use initcosmicrays, only : cfl_cr,K_cr_paral,K_cr_perp
 
     implicit none
 
     real dt_crs_proc, dt_crs_all
-    
+
       dt_crs = cfl_cr * 0.5*dxmn**2/(K_cr_paral+K_cr_perp+small)
 
   end subroutine timestep_crs

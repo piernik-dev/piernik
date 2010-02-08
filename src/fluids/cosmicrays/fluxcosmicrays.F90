@@ -1,4 +1,4 @@
-! $Id$ 
+! $Id$
 !
 ! PIERNIK Code Copyright (C) 2006 Michal Hanasz
 !
@@ -18,18 +18,18 @@
 !    along with PIERNIK.  If not, see <http://www.gnu.org/licenses/>.
 !
 !    Initial implemetation of PIERNIK code was based on TVD split MHD code by
-!    Ue-Li Pen 
+!    Ue-Li Pen
 !        see: Pen, Arras & Wong (2003) for algorithm and
-!             http://www.cita.utoronto.ca/~pen/MHD 
-!             for original source code "mhd.f90" 
-!   
+!             http://www.cita.utoronto.ca/~pen/MHD
+!             for original source code "mhd.f90"
+!
 !    For full list of developers see $PIERNIK_HOME/license/pdt.txt
 !
 #include "piernik.def"
 #define RNG 2:n-1
 
 !>
-!! \brief (MH) Computation of advection fluxes of Cosmic Rays
+!! \brief (MH) Computation of advection %fluxes of Cosmic Rays
 !!
 !!
 !<
@@ -37,21 +37,21 @@
 module fluxcosmicrays
   implicit none
 
-  contains 
+  contains
 !==========================================================================================
 
   subroutine flux_crs(fluxc,vion,uuc,n)
-  
+
     use constants,       only : small
-    use fluidindex,      only : nvar_crs,icr   
-  
+    use fluidindex,      only : nvar_crs,icr
+
     implicit none
     integer n
 
 ! locals
     real, dimension(nvar_crs,n):: fluxc,uuc
-    real, dimension(n) :: vion 
-    
+    real, dimension(n) :: vion
+
     fluxc   = 0.0
 
     fluxc(icr,RNG)= uuc(icr,RNG)*vion(RNG)
