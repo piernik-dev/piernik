@@ -28,18 +28,18 @@
 #include "piernik.def"
 
 !>
-!! \brief (MH) In this module fluid variables of individual fluids are indexed to make use of the single array 
+!! \brief (MH) In this module fluid variables of individual fluids are indexed to make use of the single array
 !! \a u(:,:,:,:) containing all fluid variables. (doxy comments ready)
 !!
 !! \par The purpose of this module is to compute:
 !!
 !! \n (1) positions of all fluid variables referenced through the first index of array u(:,:,:,:),
-!! \n (2) arrays of indexes to make easy reference to all gas densities, x,y,z-components of momenta,
-!! energy densities, CR energy densities, transposed components of x,y,z-momenta in directional sweeps, etc ...
+!! \n (2) %arrays of indexes to make easy reference to all gas densities, x,y,z-components of momenta,
+!! energy densities, CR energy densities, transposed components of x,y,z-momenta in directional %sweeps, etc ...
 !!
-!! \n\b Note: Basic definitions and more information in initfluids module. 
+!! \n\b Note: Basic definitions and more information in initfluids module.
 !!
-!! \todo All stuff related specifically to magnetic field should be embraced 
+!! \todo All stuff related specifically to magnetic field should be embraced
 !! (everywhere in the code) with the precompiler definition "MAGNETIC" instead of "IONIZED"
 !<
 
@@ -123,8 +123,8 @@ module fluidindex
 
   contains
 
-!> 
-!! \brief Subroutine fluid_index constructing all multi-fluid indexes used in other parts 
+!>
+!! \brief Subroutine fluid_index constructing all multi-fluid indexes used in other parts
 !! of PIERNIK code
 !! \param none - all arguments are global variables
 !<
@@ -174,9 +174,9 @@ module fluidindex
 !  Compute indexes for the ionized fluid and update counters
       nvar_ion  = 0
       beg_ion   = nvar + 1
-      call ionized_index(nvar,nvar_ion) 
+      call ionized_index(nvar,nvar_ion)
       end_ion   = nvar
-      ncomponents  = ncomponents + 1  
+      ncomponents  = ncomponents + 1
       nfluid = nfluid + 1
       i_ion = ncomponents
 #ifndef ISO

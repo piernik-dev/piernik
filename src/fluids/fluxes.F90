@@ -18,26 +18,26 @@
 !    along with PIERNIK.  If not, see <http://www.gnu.org/licenses/>.
 !
 !    Initial implemetation of PIERNIK code was based on TVD split MHD code by
-!    Ue-Li Pen 
+!    Ue-Li Pen
 !        see: Pen, Arras & Wong (2003) for algorithm and
-!             http://www.cita.utoronto.ca/~pen/MHD 
-!             for original source code "mhd.f90" 
-!   
+!             http://www.cita.utoronto.ca/~pen/MHD
+!             for original source code "mhd.f90"
+!
 !    For full list of developers see $PIERNIK_HOME/license/pdt.txt
 !
 #include "piernik.def"
 !>
 !! \brief (MH/JD) Module that collects all flux components from each fluid (doxy comments ready)
 !!
-!!The fluxes for all fluids are combined in the same order as conservarive variables in the array \a u(:,:,:,:)
+!!The %fluxes for all fluids are combined in the same order as conservarive variables in the array \a u(:,:,:,:)
 !!\f{equation}
 !!\vec{F}(\vec{u},\vec{B})
 !!  = \big(\vec{F}^i(\vec{u}^i,\vec{B}), \vec{F}^n(\vec{u}^n),
 !!  \vec{F}^d(\vec{u}^d)\big)^T,
 !!\f}
 !!where the elementary flux vectors like \f$\vec{F}^i(\vec{u}^i,\vec{B})$,
-!!$\vec{F}^n(\vec{u}^n)\f$,  \f$\vec{F}^d(\vec{u}^d)\f$ are fluxes computed
-!!independently for each fluid. In multidimensional computations the fluxes
+!!$\vec{F}^n(\vec{u}^n)\f$,  \f$\vec{F}^d(\vec{u}^d)\f$ are %fluxes computed
+!!independently for each fluid. In multidimensional computations the %fluxes
 !!\f$\vec{G}(\vec{u},\vec{B})\f$  and \f$\vec{H}(\vec{u},\vec{B})\f$,
 !!corresponding to the transport of conservative quantities in \f$y\f$ and
 !!\f$z\f$--directions, are constructed in a similar way.
@@ -48,7 +48,7 @@ module fluxes
 
 #ifdef IONIZED
   use initionized,    only : iarr_ion
-  use fluxionized,    only : flux_ion 
+  use fluxionized,    only : flux_ion
 #endif /* IONIZED */
 #ifdef NEUTRAL
   use initneutral,    only : iarr_neu
@@ -164,36 +164,36 @@ end subroutine all_fluxes
 !>
 !! \brief This subroutine applies flux limiter.
 !!
-!! Flux limiter is a function used when interpolation of fluxes onto cell boundaries is made to avoid the spurious oscillations.
-!! 
-!! You can choose between van Leer's (default), monotonized central, minmod or superbee flux limiters. The chosen flux limiter has to be defined in 
+!! Flux limiter is a function used when interpolation of %fluxes onto cell boundaries is made to avoid the spurious oscillations.
+!!
+!! You can choose between van Leer's (default), monotonized central, minmod or superbee flux limiters. The chosen flux limiter has to be defined in
 !! file piernik.def.
 !!
-!! The van Leer flux limiter can be noted as: 
+!! The van Leer flux limiter can be noted as:
 !! \f{equation}
-!! \Delta \vec{F}_{i+1/2}^{(2)L} = 
+!! \Delta \vec{F}_{i+1/2}^{(2)L} =
 !! \left\{\begin{array}{lll}
-!! \frac{2\Delta \vec{F}_{i+1/2}^{L-} \Delta \vec{F}_{i+1/2}^{L+}}{\Delta \vec{F}_{i+1/2}^{L-} + \Delta \vec{F}_{i+1/2}^{L+}} 
+!! \frac{2\Delta \vec{F}_{i+1/2}^{L-} \Delta \vec{F}_{i+1/2}^{L+}}{\Delta \vec{F}_{i+1/2}^{L-} + \Delta \vec{F}_{i+1/2}^{L+}}
 !! &\textrm{ if } &\Delta \vec{F}_{i+1/2}^{L-} \Delta \vec{F}_{i+1/2}^{L+} > 0, \\
 !! 0 & \textrm{ if } &\Delta \vec{F}_{i+1/2}^{L-} \Delta \vec{F}_{i+1/2}^{L+} < 0,
-!! \end{array}\right. 
+!! \end{array}\right.
 !! \f}
 !! \f{equation}
-!! \Delta \vec{F}_{i+1/2}^{(2)R} = 
+!! \Delta \vec{F}_{i+1/2}^{(2)R} =
 !! \left\{\begin{array}{lll}
-!! \frac{2\Delta \vec{F}_{i+1/2}^{R-} \Delta \vec{F}_{i+1/2}^{R+}}{\Delta \vec{F}_{i+1/2}^{R-} + \Delta \vec{F}_{i+1/2}^{R+}} 
+!! \frac{2\Delta \vec{F}_{i+1/2}^{R-} \Delta \vec{F}_{i+1/2}^{R+}}{\Delta \vec{F}_{i+1/2}^{R-} + \Delta \vec{F}_{i+1/2}^{R+}}
 !!  &\textrm{ if } &\Delta \vec{F}_{i+1/2}^{R-} \Delta \vec{F}_{i+1/2}^{R+} > 0, \\
 !! 0 & \textrm{ if } &\Delta \vec{F}_{i-1/2}^{R-} \Delta \vec{F}_{i+1/2}^{R+} < 0,
-!! \end{array}\right. 
+!! \end{array}\right.
 !! \f}
 !! where
 !! \f{eqnarray}
-!! \Delta \vec{F}_{i+1/2}^{L-} = \frac{1}{2} (\vec{F}_{i+1}^L-\vec{F}_{i}^L), &\qquad & 
+!! \Delta \vec{F}_{i+1/2}^{L-} = \frac{1}{2} (\vec{F}_{i+1}^L-\vec{F}_{i}^L), &\qquad &
 !! \Delta \vec{F}_{i+1/2}^{L+} = \frac{1}{2} (\vec{F}_{i+2}^L-\vec{F}_{i+1}^L), \\
 !! \Delta \vec{F}_{i+1/2}^{R-} = \frac{1}{2} (\vec{F}_{i}^R-\vec{F}_{i-1}^R), &\qquad &
 !! \Delta \vec{F}_{i+1/2}^{R+} = \frac{1}{2} (\vec{F}_{i+1}^R-\vec{F}_{i}^R),
 !! \f}
-!! are fluxes of left- and right-moving waves interpolated to cell boundaries.
+!! are %fluxes of left- and right-moving waves interpolated to cell boundaries.
 !<
   subroutine flimiter(f,a,b,m,n)
     implicit none
@@ -225,7 +225,7 @@ end subroutine all_fluxes
 
     return
   end subroutine flimiter
-  
+
 
 
 end module fluxes
