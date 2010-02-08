@@ -28,17 +28,17 @@
 #include "piernik.def"
 !>
 !! \brief (JD) This module implements relaxing TVD scheme (doxy comments ready)
-!! 
+!!
 !! The implementation was based on TVD split MHD code by Pen et al. (2003).
 !<
 module rtvd ! split orig
 
    contains
 !>
-!! \brief Subroutine computes magnetic field evolution 
+!! \brief Subroutine computes magnetic field evolution
 !!
-!! The original RTVD MHD scheme incorporates magnetic field evolution via the Constrained transport (CT) 
-!! algorithm by Evans & Hawley (1988). The idea behind the CT scheme is to integrate numerically the induction equation 
+!! The original RTVD MHD scheme incorporates magnetic field evolution via the Constrained transport (CT)
+!! algorithm by Evans & Hawley (1988). The idea behind the CT scheme is to integrate numerically the induction equation
 !! \f{equation}
 !! \frac{\partial\vec{B}}{\partial t} = \nabla\times (\vec{v}  \times \vec{B}),
 !! \f}
@@ -52,14 +52,14 @@ module rtvd ! split orig
 !! grid can be realized if the last equation holds for the discrete representation of the initial
 !! condition, and that subsequent updates of \f$B\f$ do not change the total magnetic
 !! flux threading cell faces.
-!! 
-!! Time variations of magnetic flux threading surface \f$S\f$ bounded by contour \f$C\f$, due to Stokes theorem, can be written as 
+!!
+!! Time variations of magnetic flux threading surface \f$S\f$ bounded by contour \f$C\f$, due to Stokes theorem, can be written as
 !! \f{equation}
 !! \frac{\partial\Phi_S}{\partial t} = \frac{\partial}{\partial t} \int_S \vec{B} \cdot \vec{d\sigma} = \int_S \nabla \times ( \vec{v} \times \vec{B})\cdot \vec{d \sigma} =  \oint_{C} (\vec{v} \times \vec{B}) \cdot \vec{dl},
 !! \f}
 !! where \f$\vec{E}= \vec{v} \times \vec{B}\f$ is electric field, named also electromotive force (EMF).
-!! 
-!! In a discrete representation variations of magnetic fluxes, in timestep \f$\Delta t\f$, threading faces of cell \f$(i,j,k)\f$ are
+!!
+!! In a discrete representation variations of magnetic %fluxes, in %timestep \f$\Delta t\f$, threading faces of cell \f$(i,j,k)\f$ are
 !! given by
 !! \f{eqnarray}
 !! \frac{\Phi^{x,n+1}_{i+1/2,j,k} - \Phi^{x,n}_{i+1/2,j,k}}{\Delta t} &=&
@@ -76,28 +76,28 @@ module rtvd ! split orig
 !! {E}^x_{i,j-1/2,k+1/2} \Delta x + {E}^y_{i+1/2,j,k+1/2} \Delta y      \nonumber\\
 !! &-&{E}^x_{i,j+1/2,k+1/2} \Delta x - {E}^y_{i-1/2,j,k+1/2} \Delta y,  \nonumber
 !! \f}
-!! Variations of magnetic flux threading remaining three faces of cell \f$(i,j,k)\f$ can be written in a similar manner. We note that each EMF 
+!! Variations of magnetic flux threading remaining three faces of cell \f$(i,j,k)\f$ can be written in a similar manner. We note that each EMF
 !! contribution appears twice with opposite sign. Thus, the total change of magnetic flux, piercing all cell-faces, vanishes to machine accuracy.
 !!
-!! To present the idea in a slightly different way, following Pen et al. (2003),  we consider the three components of the induction 
+!! To present the idea in a slightly different way, following Pen et al. (2003),  we consider the three components of the induction
 !! equation written in the explicit form:
 !! \f{eqnarray}
 !! \partial_t B_x &=& \partial_y (\mathrm{v_x B_y}) + \partial_z (v_x B_z) - \partial_y (v_y B_x) - \partial_z (v_z B_x),\\
-!! \partial_t B_y &=& \partial_x (v_y B_x) + \partial_z (v_y B_z) - \partial_x (\mathrm{v_x B_y}) - \partial_z (v_z B_y),\\		  
+!! \partial_t B_y &=& \partial_x (v_y B_x) + \partial_z (v_y B_z) - \partial_x (\mathrm{v_x B_y}) - \partial_z (v_z B_y),\\
 !! \partial_t B_z &=& \partial_x (v_z B_x) + \partial_y (v_z B_y) - \partial_x (v_x B_z) - \partial_y (v_y B_z).
 !! \f}
 !!
 !!We note that each combination of \f$v_a B_b\f$ appears twice in these equations. Let us consider \f$v_x B_y\f$.
 !!Once  \f$v_x B_y\f$ is computed for numerical integration of the second equation, it should be also used for
-!!integration of the first equation, to ensure cancellation of electromotive forces contributing to the total change of magnetic flux threading 
+!!integration of the first equation, to ensure cancellation of electromotive forces contributing to the total change of magnetic flux threading
 !!cell faces.
 !!
 !!The scheme proposed by Pen et al. (2003), consists of the following steps:
-!!\n (1) Computation of the edge--centered EMF component \f$ v_x B_y\f$. 
+!!\n (1) Computation of the edge--centered EMF component \f$ v_x B_y\f$.
 !!\n (2) Update of $B_y$, according to the equation \f$\partial_t B_y = \partial_x (v_x B_y)\f$.
 !!\n (3) Update of $B_x$, according to the equation \f$\partial_t B_x = \partial_y (v_x B_y)\f$.
 !!
-!!Analogous procedure applies to remaining EMF components. 
+!!Analogous procedure applies to remaining EMF components.
 !<
    subroutine tvdb(vibj,b,vg,n,dt,di)
       use constants, only : big
@@ -111,11 +111,11 @@ module rtvd ! split orig
 ! locals
       real, dimension(n)  :: b1      !< magnetic field
       real, dimension(n)  :: vibj1   !< face-centered electromotive force (EMF) components (b*vg)
-      real, dimension(n)  :: vh      !< velocity interpolated to the cell edges 
+      real, dimension(n)  :: vh      !< velocity interpolated to the cell edges
       real :: dti		     !< dt/di
       real :: v			     !< auxiliary variable to compute EMF
       real :: w			     !< EMF component
-      real :: dw                     !< The second-order correction to EMF component 
+      real :: dw                     !< The second-order correction to EMF component
       real :: dwm                    !< face centered EMF interpolated to left cell-edge
       real :: dwp                    !< face centered EMF interpolated to right cell-edge
       integer :: i                   !< auxiliary array indicator
@@ -174,7 +174,7 @@ module rtvd ! split orig
 !>
 !! \brief Subroutine implements the Relaxing TVD scheme for conserved physical quantities
 !!
-!! The main point of the Relaxing TVD scheme is to decompose vectors of conservative variables \f$u\f$ and fluxes \f$F\f$ 
+!! The main point of the Relaxing TVD scheme is to decompose vectors of conservative variables \f$u\f$ and %fluxes \f$F\f$
 !! into left-moving and right-moving waves:
 !! \f{equation}
 !! u=u^L+u^P,
@@ -185,7 +185,7 @@ module rtvd ! split orig
 !! \f}
 !! The symbol \f$c\f$ stands for freezing speed - a function that satisfies \f$c\ge \max\left(|v\pm c_f|\right)\f$,
 !! \f$v\f$ is the fluid velocity and \f$c_f\f$ is the fast magnetosonic speed.
-!! The fluxes then can be written as
+!! The %fluxes then can be written as
 !! \f{equation}
 !! F^L=-cu^L, F^P=cu^P,
 !! \f}
@@ -193,21 +193,21 @@ module rtvd ! split orig
 !! \f{equation}
 !! F=F^L+F^P.
 !! \f}
-!! 
+!!
 !! To make time integration PIERNIK uses Runge-Kutta scheme. We can choose between the first and the second order accuracy.
 !! The second order scheme consists of the following steps:
-!! \n (1) First order fluxes \f$\vec{F}_{i\pm 1/2}^{(1)L,R}\f$   are 
+!! \n (1) First order %fluxes \f$\vec{F}_{i\pm 1/2}^{(1)L,R}\f$   are
 !!    calculated together with source terms \f$\vec{S}_i(\vec{u})\f$ at \f$t^n\f$.
-!! \n (2) Fluxes and source terms derived in the first step are used to calculate 
+!! \n (2) Fluxes and source terms derived in the first step are used to calculate
 !!    \f$\vec{u}^{n+1/2}\f$ at \f$t^{n+1/2}\f$.
-!! \n (3) Second order fluxes \f$\vec{F}_{i+1/2}^{(2)}\f$, obtained via monotonic, upwind
-!!    interpolation to cell boundaries,  and source terms \f$\vec{S}\f$ are evaluated for 
+!! \n (3) Second order %fluxes \f$\vec{F}_{i+1/2}^{(2)}\f$, obtained via monotonic, upwind
+!!    interpolation to cell boundaries,  and source terms \f$\vec{S}\f$ are evaluated for
 !!    \f$\vec{u}^{n+1/2}\f$ at \f$t^{n+1/2}\f$.
-!! \n (4) Update of \f$\Delta\vec{u}\f$, corresponding to the full 
-!!    timestep \f$\Delta t\f$ is done, using fluxes and source terms calculated 
-!!    at the intermediate time step \f$t^{n+1/2}\f$. 
+!! \n (4) Update of \f$\Delta\vec{u}\f$, corresponding to the full
+!!    %timestep \f$\Delta t\f$ is done, using %fluxes and source terms calculated
+!!    at the intermediate time step \f$t^{n+1/2}\f$.
 !!
-!! To achieve second order spatial accuracy, a monotone upwind interpolation of fluxes onto cell boundaries is made, 
+!! To achieve second order spatial accuracy, a monotone upwind interpolation of %fluxes onto cell boundaries is made,
 !! with the aid of a flux limiter, to obtain the Monotone Upwind Scheme for Conservation Laws (MUSCL) (step (3) in Runge-Kutta scheme).
 !! The monotone interpolation is used to avoid spurious oscillations in discrete solutions of higher order.
 !! The Total Variation Diminishing property of the numerical scheme is related to the measure of the overall amount
@@ -245,7 +245,7 @@ module rtvd ! split orig
       use arrays,          only : divvel
 #endif /* COSM_RAYS */
 #ifdef FLUID_INTERACTIONS
-      use initdust,        only : dragc_gas_dust 
+      use initdust,        only : dragc_gas_dust
       use interactions
 #endif /* FLUID_INTERACTIONS */
 
@@ -282,7 +282,7 @@ module rtvd ! split orig
       real, dimension(nvar,n)   :: ur1                !< right moving wave (after one timestep in second order scheme)
       real, dimension(nfluid,n) :: rotacc             !< acceleration caused by rotation
       real, dimension(nfluid,n) :: fricacc            !< acceleration caused by friction
-      real, dimension(2)        :: df                 !< marker                 
+      real, dimension(2)        :: df                 !< marker
       real, dimension(n)        :: gravacc            !< acceleration caused by gravitation
 
 #ifdef SHEAR
@@ -305,7 +305,7 @@ module rtvd ! split orig
       real, dimension(nfluid,n):: epsa, vx0
 #endif /* FLUID_INTERACTIONS */
 
-      real, dimension(2,2), parameter  :: rk2coef = RESHAPE( (/1.0,0.5,0.0,1.0/),(/2,2/)) 
+      real, dimension(2,2), parameter  :: rk2coef = RESHAPE( (/1.0,0.5,0.0,1.0/),(/2,2/))
 
       w         = 0.0
       cfr       = 0.0
@@ -370,12 +370,12 @@ module rtvd ! split orig
 #ifdef FLUID_INTERACTIONS
 #ifdef SHEAR
          df = (/global_gradP_neu,0.0/)        ! znacznik1
-#else 
+#else
          df = 0.0
 #endif
          epsa(1,:) = dragc_gas_dust * u(iarr_all_dn(2),:)  / u(iarr_all_dn(1),:)
          epsa(2,:) = dragc_gas_dust
-         where(u(iarr_all_dn,:) > 0.0) 
+         where(u(iarr_all_dn,:) > 0.0)
             vx0(:,:)  = u(iarr_all_mx,:)/u(iarr_all_dn,:)
          elsewhere
             vx0(:,:)  = 0.0
@@ -396,7 +396,7 @@ module rtvd ! split orig
 #endif /* FLUID_INTERACTIONS */
 
 #ifdef SHEAR
-         where(u(iarr_all_dn,:) > 0.0) 
+         where(u(iarr_all_dn,:) > 0.0)
             vy0(:,:)  = u(iarr_all_my,:)/u(iarr_all_dn,:)
          elsewhere
             vy0(:,:)  = 0.0
