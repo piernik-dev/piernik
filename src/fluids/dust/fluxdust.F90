@@ -18,21 +18,21 @@
 !    along with PIERNIK.  If not, see <http://www.gnu.org/licenses/>.
 !
 !    Initial implemetation of PIERNIK code was based on TVD split MHD code by
-!    Ue-Li Pen 
+!    Ue-Li Pen
 !        see: Pen, Arras & Wong (2003) for algorithm and
-!             http://www.cita.utoronto.ca/~pen/MHD 
-!             for original source code "mhd.f90" 
-!   
+!             http://www.cita.utoronto.ca/~pen/MHD
+!             for original source code "mhd.f90"
+!
 !    For full list of developers see $PIERNIK_HOME/license/pdt.txt
 !
 #include "piernik.def"
 #define RNG 2:n-1
-!> 
-!! \brief (MH/JD) Computation of fluxes for the dust fluid
+!>
+!! \brief (MH/JD) Computation of %fluxes for the dust fluid
 !!
 !!The flux functions for dust are given by:
 !!\f[
-!!  \vec{F}{(\vec{u})} = 
+!!  \vec{F}{(\vec{u})} =
 !!  \left(\begin{array}{c}
 !!    \rho v_x \\
 !!    (\rho v_x) v_x\\
@@ -40,7 +40,7 @@
 !!    (\rho v_z) v_x
 !!  \end{array}\right),
 !!  \qquad
-!!  \vec{G}{(\vec{u})} = 
+!!  \vec{G}{(\vec{u})} =
 !!  \left(\begin{array}{c}
 !!    \rho v_y \\
 !!    (\rho v_x) v_y \\
@@ -48,7 +48,7 @@
 !!    (\rho v_z) v_y
 !!  \end{array}\right),
 !!\qquad
-!!  \vec{H}{(\vec{u})} = 
+!!  \vec{H}{(\vec{u})} =
 !!  \left(\begin{array}{c}
 !!    \rho v_z \\
 !!    (\rho v_x) v_z\\
@@ -56,7 +56,7 @@
 !!    (\rho v_z) v_z
 !!  \end{array}\right),
 !!\f]
-!! 
+!!
 !<
 
 
@@ -67,30 +67,32 @@ module fluxdust
 !==========================================================================================
 
   subroutine flux_dst(fluxd,cfrd,uud,n)
-   
-    use mpisetup,        only : cfr_smooth 
+
+    use mpisetup,        only : cfr_smooth
     use constants,       only : small
     use fluidindex,      only : idn,imx,imy,imz,ien
     use fluidindex,      only : nvar_dst
 
-    use timestepdust, only : c_dst
+!    use timestepdust, only : c_dst
+    use timestep, only : c_all
+
 
     implicit none
-    integer n                                !< number of cells in the current sweep 
-    
+    integer n                                !< number of cells in the current sweep
+
 ! locals
     real :: minvx, maxvx, amp
     real, dimension(nvar_dst,n):: fluxd      !< flux for dust
     real, dimension(nvar_dst,n):: uud        !< part of u for dust
     real, dimension(nvar_dst,n):: cfrd       !< freezing speed for dust
     real, dimension(n) :: p                  !< pressure
-    real, dimension(n) :: vx                 !< velocity for current sweep 
-    
+    real, dimension(n) :: vx                 !< velocity for current sweep
+
     fluxd   = 0.0
     cfrd    = 0.0
     vx      = 0.0
 
-    where(uud(idn,RNG) > 0.0) 
+    where(uud(idn,RNG) > 0.0)
        vx(RNG)=uud(imx,RNG)/uud(idn,RNG)
     elsewhere
        vx(RNG) = 0.0
@@ -111,7 +113,7 @@ module fluxdust
     minvx = minval(vx(RNG))
     maxvx = maxval(vx(RNG))
     amp   = (maxvx-minvx)*0.5
-    cfrd(1,RNG) = max(sqrt(vx(RNG)**2+cfr_smooth*amp),small) 
+    cfrd(1,RNG) = max(sqrt(vx(RNG)**2+cfr_smooth*amp),small)
 
     cfrd(1,1) = cfrd(1,2)
     cfrd(1,n) = cfrd(1,n-1)
