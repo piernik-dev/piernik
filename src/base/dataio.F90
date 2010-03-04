@@ -557,6 +557,7 @@ module dataio
          if(trim(msg) .eq. 'dthdf')  dt_hdf = msg_param
          if(trim(msg) .eq. 'dtlog')  dt_log = msg_param
          if(trim(msg) .eq. 'dttsl')  dt_tsl = msg_param
+         if(trim(msg) .eq. 'dtplt')  dt_plt = msg_param
 
          if(trim(msg) .eq. 'sleep') then
             tsleep = 60*msg_param
