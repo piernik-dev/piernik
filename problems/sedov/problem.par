@@ -17,7 +17,7 @@
 
  $END_CONTROL
     tend   = 0.0015
-    nend   = 10
+    nend   = 4
  /
 
  $OUTPUT_CONTROL
