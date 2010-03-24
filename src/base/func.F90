@@ -18,11 +18,11 @@
 !    along with PIERNIK.  If not, see <http://www.gnu.org/licenses/>.
 !
 !    Initial implemetation of PIERNIK code was based on TVD split MHD code by
-!    Ue-Li Pen 
+!    Ue-Li Pen
 !        see: Pen, Arras & Wong (2003) for algorithm and
-!             http://www.cita.utoronto.ca/~pen/MHD 
-!             for original source code "mhd.f90" 
-!   
+!             http://www.cita.utoronto.ca/~pen/MHD
+!             for original source code "mhd.f90"
+!
 !    For full list of developers see $PIERNIK_HOME/license/pdt.txt
 !
 #include "piernik.def"
@@ -68,7 +68,7 @@ module func
         return
       endif
       if(d==3 .and. lz==1) then
-        pshift = tab 
+        pshift = tab
         return
       endif
 
@@ -114,7 +114,7 @@ module func
         return
       endif
       if(d==3 .and. lz==1) then
-        mshift = tab 
+        mshift = tab
         return
       endif
 
@@ -142,7 +142,7 @@ module func
    end function strlen
 
 !-----------------------------------------------------------------------------
-#ifdef COSM_RAYS 
+#ifdef COSM_RAYS
    subroutine div_v(ifluid)
       use mpisetup
       use initionized, only : idni,imxi,imyi,imzi
@@ -155,12 +155,12 @@ module func
       real, dimension(ny) :: vy
       real, dimension(nz) :: vz
       integer             :: i,j,k,ifluid
-      integer             :: idnf,imxf,imyf,imzf 
-    
-      idnf = iarr_all_dn(ifluid) 
-      imxf = iarr_all_mx(ifluid) 
-      imyf = iarr_all_my(ifluid) 
-      imzf = iarr_all_mz(ifluid) 
+      integer             :: idnf,imxf,imyf,imzf
+
+      idnf = iarr_all_dn(ifluid)
+      imxf = iarr_all_mx(ifluid)
+      imyf = iarr_all_my(ifluid)
+      imzf = iarr_all_mz(ifluid)
 
       divvel(:,:,:) = 0.0
 
@@ -173,21 +173,21 @@ module func
          enddo
          divvel(1,:,:) = divvel(2,:,:); divvel(nx,:,:) = divvel(nx-1,:,:) ! for sanity
       endif
-           
+
       if(nyd /= 1) then
          do k = 1, nz
             do i = 1, nx
-               vy = u(imxf,i,:,k) / u(idnf,i,:,k)
+               vy = u(imyf,i,:,k) / u(idnf,i,:,k)
                divvel(i,2:ny-1,k) = divvel(i,2:ny-1,k)+( vy(3:ny) - vy(1:ny-2) )  / (2.*dy)
             enddo
          enddo
          divvel(:,1,:) = divvel(:,2,:); divvel(:,ny,:) = divvel(:,ny-1,:) ! for sanity
       endif
-           
+
       if(nzd /= 1) then
          do j = 1, ny
             do i = 1, nx
-               vz = u(imxf,i,j,:) / u(idnf,i,j,:)
+               vz = u(imzf,i,j,:) / u(idnf,i,j,:)
                divvel(i,j,2:nz-1) = divvel(i,j,2:nz-1)+( vz(3:nz) - vz(1:nz-2) )  / (2.*dz)
             enddo
          enddo
@@ -204,7 +204,7 @@ module func
       implicit none
       real,dimension(nx) :: divv
       integer :: j,k
-    
+
       divv = divvel(:,j,k)
 
    end subroutine div_vx
@@ -216,7 +216,7 @@ module func
       implicit none
       real,dimension(ny) :: divv
       integer :: i,k
-    
+
       divv = divvel(i,:,k)
 
    end subroutine div_vy
@@ -228,9 +228,9 @@ module func
       implicit none
       real,dimension(nz) :: divv
       integer :: i,j
-    
+
       divv = divvel(i,j,:)
-    
+
    end subroutine div_vz
 
    subroutine whichfaq(faq,i,j,n)
