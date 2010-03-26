@@ -18,11 +18,11 @@
 !    along with PIERNIK.  If not, see <http://www.gnu.org/licenses/>.
 !
 !    Initial implemetation of PIERNIK code was based on TVD split MHD code by
-!    Ue-Li Pen 
+!    Ue-Li Pen
 !        see: Pen, Arras & Wong (2003) for algorithm and
-!             http://www.cita.utoronto.ca/~pen/MHD 
-!             for original source code "mhd.f90" 
-!   
+!             http://www.cita.utoronto.ca/~pen/MHD
+!             for original source code "mhd.f90"
+!
 !    For full list of developers see $PIERNIK_HOME/license/pdt.txt
 !
 #include "piernik.def"
@@ -56,7 +56,7 @@ module types
    end type value
 
    type :: tsl_container
-#ifdef NEUTRAL 
+#ifdef NEUTRAL
       real :: denn_min, denn_max, vxn_max, vyn_max, vzn_max, &
               pren_min, pren_max, temn_min, temn_max, csn_max
 #endif /* NEUTRAL */
@@ -75,11 +75,11 @@ module types
 
 #ifdef MAGNETIC
       real :: b_min, b_max, divb_max
-#endif /* MAGNETIC */ 
+#endif /* MAGNETIC */
 
-#ifdef IONIZED 
+#ifdef IONIZED
       real :: deni_min, deni_max, vxi_max, vyi_max, vzi_max, &
-              prei_min, prei_max, temi_min, temi_max, vai_max, csi_max      
+              prei_min, prei_max, temi_min, temi_max, vai_max, csi_max
 #endif /* IONIZED */
    end type tsl_container
 

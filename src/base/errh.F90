@@ -18,16 +18,16 @@
 !    along with PIERNIK.  If not, see <http://www.gnu.org/licenses/>.
 !
 !    Initial implemetation of PIERNIK code was based on TVD split MHD code by
-!    Ue-Li Pen 
+!    Ue-Li Pen
 !        see: Pen, Arras & Wong (2003) for algorithm and
-!             http://www.cita.utoronto.ca/~pen/MHD 
-!             for original source code "mhd.f90" 
-!   
+!             http://www.cita.utoronto.ca/~pen/MHD
+!             for original source code "mhd.f90"
+!
 !    For full list of developers see $PIERNIK_HOME/license/pdt.txt
 !
 #include "piernik.def"
 !>
-!! \brief (KK) Module responsible for error handling 
+!! \brief (KK) Module responsible for error handling
 !!
 !<
 module errh
@@ -39,7 +39,7 @@ module errh
       implicit none
       integer, intent(in) :: ierrh
       character(len=*), intent(in) :: nm
-      
+
       select case (ierrh)
          case (19)
             write(*,*) "severe (19): Invalid reference to variable in ",trim(nm), " namelist"

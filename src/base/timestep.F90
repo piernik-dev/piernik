@@ -43,7 +43,7 @@ module timestep
 
 
       subroutine time_step
-         use dataio, only : tend 
+         use dataio, only : tend
          use constants, only : small,big
 
 #ifdef IONIZED

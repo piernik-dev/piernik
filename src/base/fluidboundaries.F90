@@ -187,7 +187,7 @@ module fluidboundaries
          u(:,1:nb,:,:)              = recv_left(:,1:nb,:,:)
          u(:,nxb+nb+1:nxb+2*nb,:,:) = recv_right(:,1:nb,:,:)
 
-         !!!! BEWARE: smalld is called only for the first fluid 
+         !!!! BEWARE: smalld is called only for the first fluid
          u(iarr_all_dn(1),1:nb,:,:)              = max(u(iarr_all_dn(1),1:nb,:,:),smalld)
          u(iarr_all_dn(1),nxb+nb+1:nxb+2*nb,:,:) = max(u(iarr_all_dn(1),nxb+nb+1:nxb+2*nb,:,:),smalld)
          if(allocated(send_left))  deallocate(send_left)
@@ -197,11 +197,11 @@ module fluidboundaries
 
 #else /* FFTW */
 
-         if( (bnd_xl == 'she').and.(bnd_xr == 'she')) then 
+         if( (bnd_xl == 'she').and.(bnd_xr == 'she')) then
 
          if(allocated(send_right)) deallocate(send_right)
          if(.not.allocated(send_right)) allocate(send_right(nvar,nb,nyd,nz))
-         
+
          if(allocated(send_left)) deallocate(send_left)
          if(.not.allocated(send_left)) allocate(send_left(nvar,nb,nyd,nz))
 
