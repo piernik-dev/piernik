@@ -14,7 +14,7 @@
 #undef SUPERBEE
 
 /* physics including */
-#undef RESIST 		
+#undef RESIST
 
 /* gravity type choosing */
 #undef GRAV

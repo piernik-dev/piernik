@@ -3,23 +3,23 @@
     nyd = 100
     nzd = 20
     nb  = 4
- /  
+ /
 
  $MPI_BLOCKS
     pxsize = 2
     pysize = 1
     pzsize = 2
- /  
+ /
 
  $RESTART_CONTROL
     restart  = 'last'
     new_id   = ''
-    nrestart = 0 
+    nrestart = 0
  /
 
  $END_CONTROL
     tend   = 1.0
-    nend   = 90000 
+    nend   = 90000
  /
 
  $OUTPUT_CONTROL
@@ -34,17 +34,17 @@
     vars(5) = 'ener'
     vars(6) = 'magx'
     vars(7) = 'magy'
-    vars(8) = 'magz'   
+    vars(8) = 'magz'
     domain  = 'phys_domain'
     mag_center = 'no'
- / 
+ /
 
  $BOUNDARIES
-    bnd_xl = 'she'  
-    bnd_xr = 'she'  
-    bnd_yl = 'per'  
-    bnd_yr = 'per'  
-    bnd_zl = 'per'  
+    bnd_xl = 'she'
+    bnd_xr = 'she'
+    bnd_yl = 'per'
+    bnd_yr = 'per'
+    bnd_zl = 'per'
     bnd_zr = 'per'
  /
 
@@ -67,7 +67,7 @@
     smallei= 1.e-5
     integration_order = 2
  /
- 
+
  $RESISTIVITY
    eta_0      = 1.0e-3
    cfl_resist = 0.5

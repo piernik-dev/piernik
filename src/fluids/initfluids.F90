@@ -56,31 +56,31 @@
 !! \par DEFINITIONS
 !!
 !! \n\b Fluid \b component: an ingredient characterised by mass density, momenta,
-!! 	and optionally energy density.
-!! 	Examples: ionized fluid, neutral fluid, dust fluid.
-!! 	Variable \b "nfluid" (in fluidindex) counts fluids.
+!!    and optionally energy density.
+!!    Examples: ionized fluid, neutral fluid, dust fluid.
+!!    Variable \b "nfluid" (in fluidindex) counts fluids.
 !!
 !! \n\b Non-fluid \b component: Some constituents of the system are described by
 !!      a system of equations, which does not involve momentum equation.
-!!	These constituents are named non-fluid components
-!!	Examples: CR energy density, or a set variables describing
-!!	several CR energy bins, CR nuclear species or tracer or helicity.
-!!	There is no specific counter for non-fluid components.
+!!   These constituents are named non-fluid components
+!!   Examples: CR energy density, or a set variables describing
+!!   several CR energy bins, CR nuclear species or tracer or helicity.
+!!   There is no specific counter for non-fluid components.
 !!
 !! \n\b Components: all fluid and non-fluid components. Variable \b "ncomponents"
 !!      (in fluidindex) counts components.
 !!
 !! \n\b Non-isothermal \b fluid: an isothermal fluid does not need energy equation,
-!! 	thus \b non-isothermal fluids are distinguished as those, which do not
-!!	engage the energy equation. Variable \b "nadiab" (in fluidindex) counts
+!!    thus \b non-isothermal fluids are distinguished as those, which do not
+!!   engage the energy equation. Variable \b "nadiab" (in fluidindex) counts
 !!      independent energy equations used for fluids.
 !!
 !! \n\b Fluid \b variable: Single quantity, such as gas density, x,y,z-momentum
-!!	density, and energy density.
+!!   density, and energy density.
 !!
 !! \n\b Non-fluid \b variable: Single quantity, such as CR energy density,
 !!      tracer, etc ... Variable \b "nvar" (in fluidindex) counts all fluid and
-!! 	non-fluid variables. There is no specific counter for non-fluid variables.
+!!    non-fluid variables. There is no specific counter for non-fluid variables.
 !!
 !! \n All these constituents are organised in the module fluidindex into
 !! the array of conservative variables \a u(ivar,:,:,:), where \a ivar is the

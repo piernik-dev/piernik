@@ -3,13 +3,13 @@
     nyd = 512
     nzd = 1
     nb  = 4
- /  
+ /
 
  $MPI_BLOCKS
     pxsize = 1
     pysize = 1
-    pzsize = 1    
- /  
+    pzsize = 1
+ /
 
  $START_CONTROL
  /
@@ -17,12 +17,12 @@
  $RESTART_CONTROL
     restart  = 'last'
     new_id   = ''
-    nrestart = 0 
+    nrestart = 0
  /
 
  $END_CONTROL
     tend   = 0.5
-    nend   = 90000 
+    nend   = 90000
  /
 
  $OUTPUT_CONTROL
@@ -40,14 +40,14 @@
     vars(8) = 'ener'
     domain  = 'phys_domain'
     mag_center = 'no'
- / 
+ /
 
  $BOUNDARIES
-    bnd_xl = 'per'  
-    bnd_xr = 'per'  
-    bnd_yl = 'per'  
-    bnd_yr = 'per'  
-    bnd_zl = 'per'  
+    bnd_xl = 'per'
+    bnd_xr = 'per'
+    bnd_yl = 'per'
+    bnd_yr = 'per'
+    bnd_zl = 'per'
     bnd_zr = 'per'
  /
 
@@ -72,7 +72,7 @@
  $EQUATION_OF_STATE
     c_si   = 1.0
     alpha  = 0.0
- /  
+ /
 
  $NUMERICAL_SETUP
     cfl    = 0.7
@@ -80,13 +80,13 @@
     smallei= 1.e-5
     integration_order = 2
  /
- 
+
  $GRAVITY
  /
- 
+
  $THERMAL
  /
- 
+
  $RESISTIVITY
    eta_0      = 1.0e-4
    cfl_resist = 0.5

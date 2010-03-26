@@ -6,13 +6,13 @@
  $MPI_BLOCKS
     pxsize = 2
     pysize = 2
-    pzsize = 2    
- /  
+    pzsize = 2
+ /
 
  $RESTART_CONTROL
     restart  = 'last'
     new_id   = ''
-    nrestart = 0 
+    nrestart = 0
  /
 
  $END_CONTROL
@@ -30,15 +30,15 @@
     vars(3) = 'vely'
     vars(4) = 'velz'
     vars(5) = 'ener'
-    domain  = 'phys_domain'  
- / 
+    domain  = 'phys_domain'
+ /
 
  $BOUNDARIES
-    bnd_xl = 'per'  
-    bnd_xr = 'per'  
-    bnd_yl = 'per'  
-    bnd_yr = 'per'  
-    bnd_zl = 'per'  
+    bnd_xl = 'per'
+    bnd_xr = 'per'
+    bnd_yl = 'per'
+    bnd_yr = 'per'
+    bnd_zl = 'per'
     bnd_zr = 'per'
  /
 
@@ -61,7 +61,7 @@
     smallei= 1.e-5
     integration_order = 2
  /
- 
+
  $PROBLEM_CONTROL
     problem_name ='sedov'
     run_id =  'tst'

@@ -18,11 +18,11 @@
 !    along with PIERNIK.  If not, see <http://www.gnu.org/licenses/>.
 !
 !    Initial implemetation of PIERNIK code was based on TVD split MHD code by
-!    Ue-Li Pen 
+!    Ue-Li Pen
 !        see: Pen, Arras & Wong (2003) for algorithm and
-!             http://www.cita.utoronto.ca/~pen/MHD 
-!             for original source code "mhd.f90" 
-!   
+!             http://www.cita.utoronto.ca/~pen/MHD
+!             for original source code "mhd.f90"
+!
 !    For full list of developers see $PIERNIK_HOME/license/pdt.txt
 !
 #include "piernik.def"
@@ -79,10 +79,10 @@ subroutine fluid_update
   call time_step
 
 #ifdef RESISTIVE
-   if(first_run) then 
+   if(first_run) then
       dt = 0.0
       first_run = .false.
-   endif 
+   endif
 #endif /* RESISTIVE */
 
   if(dt_log .gt. 0.0) then
@@ -116,11 +116,11 @@ subroutine fluid_update
 !------------------- X->Y->Z ---------------------
       if(nxd /=1) then
          call sweepx
-      
-#ifdef MAGNETIC      
+
+#ifdef MAGNETIC
          call magfieldbyzx
-#endif /* MAGNETIC */      
-      
+#endif /* MAGNETIC */
+
 #ifdef COSM_RAYS
          call cr_diff_x
 #endif /* COSM_RAYS */
@@ -128,17 +128,17 @@ subroutine fluid_update
 #ifdef DEBUG
          syslog = system('echo -n sweep x')
          call write_hdf
-         nhdf = nhdf + 1     
+         nhdf = nhdf + 1
 #endif /* DEBUG */
       endif
 
-      
+
 
       if(nyd /= 1) then
          call sweepy
-#ifdef MAGNETIC            
+#ifdef MAGNETIC
          call magfieldbzxy
-#endif /* MAGNETIC */      
+#endif /* MAGNETIC */
 
 #ifdef COSM_RAYS
          call cr_diff_y
@@ -157,11 +157,11 @@ subroutine fluid_update
 
       if(nzd /= 1) then
          call sweepz
-      
-#ifdef MAGNETIC            
+
+#ifdef MAGNETIC
          call magfieldbxyz
-#endif /* MAGNETIC */      
-      
+#endif /* MAGNETIC */
+
 #ifdef COSM_RAYS
          call cr_diff_z
 #endif  /* COSM_RAYS */
@@ -182,7 +182,7 @@ subroutine fluid_update
 #endif /* SN_SRC */
 
       t=t+dt
-      
+
 #ifdef SHEAR
       call yshift(t,dt)
       if(nxd /= 1) call bnd_u('xdim')
@@ -202,19 +202,19 @@ subroutine fluid_update
          call cr_diff_z
 #endif /* COSM_RAYS */
 
-#ifdef MAGNETIC      
+#ifdef MAGNETIC
          call magfieldbxyz
-#endif /* MAGNETIC */      
-      
+#endif /* MAGNETIC */
+
          call sweepz
-      
+
 #ifdef DEBUG
          syslog = system('echo -n sweep z')
          call write_hdf
          nhdf = nhdf + 1
 #endif /* DEBUG */
       endif
-      
+
       if(nyd /= 1) then
 #ifdef COSM_RAYS
          call cr_diff_y
@@ -222,16 +222,16 @@ subroutine fluid_update
 
 #ifdef MAGNETIC
          call magfieldbzxy
-#endif /* MAGNETIC */      
-      
+#endif /* MAGNETIC */
+
          call sweepy
-      
+
 #ifdef DEBUG
          syslog = system('echo -n sweep y')
          call write_hdf
          nhdf = nhdf + 1
 #endif /* DEBUG */
-      else 
+      else
 #if defined SHEAR && defined FLUID_INTERACTIONS
          call source_terms_y
 #endif /* SHEAR */
@@ -245,9 +245,9 @@ subroutine fluid_update
 #ifdef MAGNETIC
          call magfieldbyzx
 #endif /* MAGNETIC */
-      
+
          call sweepx
-      
+
 #ifdef DEBUG
          syslog = system('echo -n sweep x')
          call write_hdf
@@ -280,12 +280,12 @@ end subroutine fluid_update
 #endif /* RESISTIVE */
 
       call advectby_x
-      
+
 #ifdef RESISTIVE
       call diffuseby_x
 #endif /* RESISTIVE */
 
-      call mag_add(iby,xdim,ibx,ydim)     
+      call mag_add(iby,xdim,ibx,ydim)
 
       call advectbz_x
 
@@ -310,7 +310,7 @@ end subroutine fluid_update
 #endif /* RESISTIVE */
 
       call advectbz_y
-      
+
 #ifdef RESISTIVE
       call diffusebz_y
 #endif /* RESISTIVE */
@@ -318,9 +318,9 @@ end subroutine fluid_update
       call mag_add(ibz,ydim,iby,zdim)
 
       call advectbx_y
-      
+
 #ifdef RESISTIVE
-      call diffusebx_y      
+      call diffusebx_y
 #endif /* RESISTIVE */
 
       call mag_add(ibx,ydim,iby,xdim)
@@ -349,7 +349,7 @@ end subroutine fluid_update
 #ifdef RESISTIVE
       call diffuseby_z
 #endif /* RESISTIVE */
-    
+
       call mag_add(iby,zdim,ibz,ydim)
   end subroutine magfieldbxyz
 

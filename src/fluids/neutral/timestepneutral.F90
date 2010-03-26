@@ -18,16 +18,16 @@
 !    along with PIERNIK.  If not, see <http://www.gnu.org/licenses/>.
 !
 !    Initial implemetation of PIERNIK code was based on TVD split MHD code by
-!    Ue-Li Pen 
+!    Ue-Li Pen
 !        see: Pen, Arras & Wong (2003) for algorithm and
-!             http://www.cita.utoronto.ca/~pen/MHD 
-!             for original source code "mhd.f90" 
-!   
+!             http://www.cita.utoronto.ca/~pen/MHD
+!             for original source code "mhd.f90"
+!
 !    For full list of developers see $PIERNIK_HOME/license/pdt.txt
 !
 #include "piernik.def"
 
-!> 
+!>
 !! \brief (MH/JD) Timestep computation for the neutral fluid (doxy comments ready)
 !!
 !! %Timestep for the neutral fluid is set as the minimum %timestep for all of the MPI blocks times the Courant number.
@@ -58,10 +58,10 @@ contains
 
   subroutine timestep_neu
     use mpisetup
-    use constants,   only : big    
+    use constants,   only : big
     use grid, only        : dx,dy,dz,nb,ks,ke,is,ie,js,je,nxd,nyd,nzd
     use arrays, only      : u,b
-    use initneutral, only : gamma_neu, cs_iso_neu,cs_iso_neu2   
+    use initneutral, only : gamma_neu, cs_iso_neu,cs_iso_neu2
     use initneutral, only : idnn,imxn,imyn,imzn
 #ifndef ISO
     use initneutral, only : ienn
@@ -106,7 +106,7 @@ contains
 
 #ifdef ISO
             p = cs_iso_neu2*u(idnn,i,j,k)
-            cs = sqrt(cs_iso_neu2)           
+            cs = sqrt(cs_iso_neu2)
 #else /* ISO */
             p=(u(ienn,i,j,k)-sum(u(imxn:imzn,i,j,k)**2,1) &
               /u(idnn,i,j,k)/2.)*(gamma_neu-1.)
@@ -125,20 +125,20 @@ contains
 
     if(nxd /= 1 .and. cx /= 0) then
        dt_neu_proc_x = dx/cx
-    else 
-       dt_neu_proc_x = big 
+    else
+       dt_neu_proc_x = big
     endif
-    if(nyd /= 1 .and. cy /= 0) then 
-       dt_neu_proc_y = dy/cy  
-    else 
-       dt_neu_proc_y = big 
+    if(nyd /= 1 .and. cy /= 0) then
+       dt_neu_proc_y = dy/cy
+    else
+       dt_neu_proc_y = big
     endif
-    if(nzd /= 1 .and. cz /= 0) then 
-       dt_neu_proc_z = dz/cz  
-    else 
-       dt_neu_proc_z = big 
+    if(nzd /= 1 .and. cz /= 0) then
+       dt_neu_proc_z = dz/cz
+    else
+       dt_neu_proc_z = big
     endif
-    
+
     dt_neu_proc   = min(dt_neu_proc_x, dt_neu_proc_y, dt_neu_proc_z)
 
     call MPI_REDUCE(c_neu, c_max_all, 1, MPI_DOUBLE_PRECISION, MPI_MAX, 0, comm, ierr)
@@ -149,7 +149,7 @@ contains
     call MPI_REDUCE(dt_neu_proc, dt_neu_all, 1, MPI_DOUBLE_PRECISION, MPI_MIN, 0, comm, ierr)
     call MPI_BCAST(dt_neu_all, 1, MPI_DOUBLE_PRECISION, 0, comm, ierr)
     dt_neu = cfl*dt_neu_all
-    
+
 !    write(*,*) 'timestep_neu:', dt_neu
 
   end subroutine timestep_neu

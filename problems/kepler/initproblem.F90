@@ -110,7 +110,7 @@ module initproblem
       use gravity,     only : r_smooth,r_grav,n_gravr,ptmass
       use initionized, only : idni, imxi, imyi, imzi
       use fluidindex,  only : ibx, iby, ibz
-      use initfluids,  only : gamma,cs_iso 
+      use initfluids,  only : gamma,cs_iso
 #ifndef ISO
       use initionized, only : ieni, gamma_ion, cs_ion
 #endif /* !ISO */
@@ -152,7 +152,7 @@ module initproblem
                vz = 0.0
 
                u(idni,i,j,k) = min((rc/r_grav)**n_gravr,100.0)
-	       
+
                if(nzd /= 1) then
                   u(idni,i,j,k) = dout + (dprof(k)-dout)/cosh(u(idni,i,j,k))
                else

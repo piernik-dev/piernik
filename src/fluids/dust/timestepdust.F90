@@ -18,16 +18,16 @@
 !    along with PIERNIK.  If not, see <http://www.gnu.org/licenses/>.
 !
 !    Initial implemetation of PIERNIK code was based on TVD split MHD code by
-!    Ue-Li Pen 
+!    Ue-Li Pen
 !        see: Pen, Arras & Wong (2003) for algorithm and
-!             http://www.cita.utoronto.ca/~pen/MHD 
-!             for original source code "mhd.f90" 
-!   
+!             http://www.cita.utoronto.ca/~pen/MHD
+!             for original source code "mhd.f90"
+!
 !    For full list of developers see $PIERNIK_HOME/license/pdt.txt
 !
 #include "piernik.def"
 
-!> 
+!>
 !! \brief (MH) Timestep computation for the dust fluid
 !!
 !!
@@ -41,7 +41,7 @@ contains
 
   subroutine timestep_dst
     use mpisetup
-    use constants,   only : big    
+    use constants,   only : big
     use grid, only      : dx,dy,dz,nb,ks,ke,is,ie,js,je,nxd,nyd,nzd
     use arrays, only    : u,b
     use initdust, only  : idnd,imxd,imyd,imzd
@@ -52,7 +52,7 @@ contains
     real dt_dst_proc, dt_dst_all, c_max_all
     real dt_dst_proc_x, dt_dst_proc_y, dt_dst_proc_z
     real cx, cy, cz, vx, vy, vz
-    
+
 
 ! locals
 
@@ -87,24 +87,24 @@ contains
       end do
     end do
 
-    
+
     if(nxd /= 1) then
-       dt_dst_proc_x = dx/max(cx,small)  
-    else 
-       dt_dst_proc_x = big 
+       dt_dst_proc_x = dx/max(cx,small)
+    else
+       dt_dst_proc_x = big
     endif
-    if(nyd /= 1) then 
-       dt_dst_proc_y = dy/max(cy,small) 
-    else 
-       dt_dst_proc_y = big 
+    if(nyd /= 1) then
+       dt_dst_proc_y = dy/max(cy,small)
+    else
+       dt_dst_proc_y = big
     endif
-    if(nzd /= 1) then 
-       dt_dst_proc_z = dz/max(cz,small) 
-    else 
-       dt_dst_proc_z = big 
+    if(nzd /= 1) then
+       dt_dst_proc_z = dz/max(cz,small)
+    else
+       dt_dst_proc_z = big
     endif
-    
-    
+
+
     dt_dst_proc   = min(dt_dst_proc_x, dt_dst_proc_y, dt_dst_proc_z)
 
     call MPI_REDUCE(c_dst, c_max_all, 1, MPI_DOUBLE_PRECISION, MPI_MAX, 0, comm, ierr)
@@ -115,7 +115,7 @@ contains
     call MPI_REDUCE(dt_dst_proc, dt_dst_all, 1, MPI_DOUBLE_PRECISION, MPI_MIN, 0, comm, ierr)
     call MPI_BCAST(dt_dst_all, 1, MPI_DOUBLE_PRECISION, 0, comm, ierr)
     dt_dst = cfl*dt_dst_all
-    
+
 !    write(*,*) 'timestep_dst:', dt_dst
 
   end subroutine timestep_dst

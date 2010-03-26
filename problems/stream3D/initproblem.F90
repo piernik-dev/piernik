@@ -179,8 +179,8 @@ module initproblem
          omega(i)  = sqrt( abs( (gradgp-gradp)/rc ) )
          omegad(i) = sqrt( abs(    gradgp/rc      ) )
       enddo
-      omega(1)  = omega(2);  omega(nx)  = omega(nx-1) 
-      omegad(1) = omegad(2); omegad(nx) = omegad(nx-1) 
+      omega(1)  = omega(2);  omega(nx)  = omega(nx-1)
+      omegad(1) = omegad(2); omegad(nx) = omegad(nx-1)
 
       call random_seed()
 
@@ -190,7 +190,7 @@ module initproblem
             xi = x(i)
             rc = sqrt(xi**2+yj**2)
             call random_number(noise)
-            
+
             ilook = (rc-xmin)/dx/sqrt(2.) + 0.5 + nb
             iOmega = omega(int(ilook))+(rc-x(int(ilook))*sqrt(2.))*(omega(int(ilook)+1)-omega(int(ilook))) &
                          /(x(int(ilook)+1)-x(int(ilook)))/sqrt(2.)
@@ -210,7 +210,7 @@ module initproblem
             u(imxd,i,j,:) = -yj*iOmega*u(idnd,i,j,:) + amp*(noise(1,:)-0.5)
             u(imyd,i,j,:) =  xi*iOmega*u(idnd,i,j,:) + amp*(noise(2,:)-0.5)
             u(imzd,i,j,:) = 0.0 + amp*(noise(3,:)-0.5)
-            
+
          enddo
       enddo
       write(*,*) maxval(u(idnn,:,:,:)), minval(u(idnn,:,:,:))

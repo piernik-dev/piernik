@@ -18,11 +18,11 @@
 !    along with PIERNIK.  If not, see <http://www.gnu.org/licenses/>.
 !
 !    Initial implemetation of PIERNIK code was based on TVD split MHD code by
-!    Ue-Li Pen 
+!    Ue-Li Pen
 !        see: Pen, Arras & Wong (2003) for algorithm and
-!             http://www.cita.utoronto.ca/~pen/MHD 
-!             for original source code "mhd.f90" 
-!   
+!             http://www.cita.utoronto.ca/~pen/MHD
+!             for original source code "mhd.f90"
+!
 !    For full list of developers see $PIERNIK_HOME/license/pdt.txt
 !
 
@@ -441,7 +441,7 @@ module dataio_hdf5
       logical, save :: first_entry = .true.
       integer(HID_T) :: file_id       !> File identifier
       integer(HID_T) :: gr_id,gr2_id  !> Group indentifier
-      
+
       if( ((t-last_plt_time) > dt_plt) .and. dt_plt > 0.0 .or. first_entry) then
       fe = LEN(trim(chdf%log_file))
       fname = trim(chdf%log_file(1:fe-3)//"plt")
@@ -591,7 +591,7 @@ module dataio_hdf5
          call MPI_GATHER(send, nib*njb, MPI_DOUBLE_PRECISION, &
                          temp, nib*njb, MPI_DOUBLE_PRECISION, &
                          0, comm2d,ierr)
-         
+
          if(lp == 0) then
             imax = maxval(temp); imin = minval(temp)
             di = imax-imin
@@ -622,7 +622,7 @@ module dataio_hdf5
 
    subroutine write_restart_hdf5(filename,chdf)
       use hdf5, only : HID_T, HSIZE_T, HSSIZE_T, SIZE_T, H5F_ACC_TRUNC_F, h5open_f, h5pcreate_f, H5P_FILE_ACCESS_F, &
-         h5pset_fapl_mpio_f, h5fcreate_f, h5pclose_f, H5P_DATASET_XFER_F, H5F_ACC_RDWR_F, H5S_SELECT_SET_F, & 
+         h5pset_fapl_mpio_f, h5fcreate_f, h5pclose_f, H5P_DATASET_XFER_F, H5F_ACC_RDWR_F, H5S_SELECT_SET_F, &
          H5FD_MPIO_INDEPENDENT_F, H5T_NATIVE_DOUBLE, H5P_DATASET_CREATE_F, h5screate_simple_f, h5pset_chunk_f, &
          h5dcreate_f, h5sclose_f, h5dget_space_f, h5sselect_hyperslab_f, h5pset_dxpl_mpio_f, h5dwrite_f, &
          h5pset_chunk_f, h5dclose_f, h5fclose_f, h5close_f, h5fopen_f
@@ -680,7 +680,7 @@ module dataio_hdf5
       allocate(dimsf(rank),dimsfi(rank),chunk_dims(rank))
       allocate(count(rank),offset(rank),stride(rank),block(rank))
       !----------------------------------------------------------------------------------
-      !  WRITE DINIT 
+      !  WRITE DINIT
       !
       dimsf = (/nx*pxsize,ny*pysize,nz*pzsize/) ! Dataset dimensions
       dimsfi = dimsf
@@ -930,7 +930,7 @@ module dataio_hdf5
                        dset_id, error, plist_id)
       CALL h5sclose_f(filespace, error)
       CALL h5pclose_f(plist_id, error)
- 
+
       ! Each process defines dataset in memory and writes it to the hyperslab
       ! in the file.
       stride(:) = 1
@@ -1359,7 +1359,7 @@ module dataio_hdf5
       CALL h5pclose_f(plist_id, error)
       if(.not.allocated(data)) allocate(data(nxb,nyb,nzb))
       ierrh = 0; ok_var = .false.
-      do i = 1, nhdf_vars 
+      do i = 1, nhdf_vars
          call common_vars_hdf5(hdf_vars(i),data,ierrh);  if(ierrh == 0) ok_var = .true.
          if(.not.ok_var) then
             write(*,*) hdf_vars(i),' is not defined in common_vars_hdf5, neither in user_hdf5 !!!'
@@ -1377,7 +1377,7 @@ module dataio_hdf5
       CALL h5fclose_f(file_id, error)
       if(proc == 0) then
          CALL h5fopen_f (fname, H5F_ACC_RDWR_F, file_id, error)
- 
+
          bufsize = 1
          call h5ltset_attribute_double_f(file_id,"/","time",     (/t/),bufsize,error)
          call h5ltset_attribute_double_f(file_id,"/","timestep", (/dt/),bufsize,error)
@@ -1400,7 +1400,7 @@ module dataio_hdf5
 
          bufsize = 3
          call h5ltset_attribute_int_f(file_id,"/","psize", psize,bufsize,error)
-        
+
          fe = strlen(problem_name)
          call h5ltset_attribute_string_f(file_id,"/","problem name", problem_name(1:fe),error)
          fe = strlen(chdf%domain)

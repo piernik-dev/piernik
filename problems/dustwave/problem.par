@@ -2,7 +2,7 @@
     nxd = 100
     nyd = 1
     nzd = 100
- /  
+ /
 
  $MPI_BLOCKS
     pxsize = 1
@@ -17,12 +17,12 @@
  /
 
  $END_CONTROL
-    tend   = 100.0 
-    nend   = 100000 
+    tend   = 100.0
+    nend   = 100000
  /
 
  $OUTPUT_CONTROL
-    dt_hdf  = 1.0 
+    dt_hdf  = 1.0
     dt_res  = 5.0
     dt_log  = 0.00001
     dt_tsl  = 0.00001
@@ -31,14 +31,14 @@
     vars(3) = 'vely'
     vars(4) = 'velz'
     domain  = 'full_domain'
- / 
+ /
 
  $BOUNDARIES
-    bnd_xl = 'per'  
-    bnd_xr = 'per'  
-    bnd_yl = 'per'  
-    bnd_yr = 'per'  
-    bnd_zl = 'per'  
+    bnd_xl = 'per'
+    bnd_xr = 'per'
+    bnd_yl = 'per'
+    bnd_yr = 'per'
+    bnd_zl = 'per'
     bnd_zr = 'per'
  /
 
@@ -57,7 +57,7 @@
     smallei= 1.e-8
     integration_order = 2
  /
- 
+
  $FLUID_DUST
  /
 

@@ -82,7 +82,7 @@ module initproblem
       n_sn    = 1
       dt_sn   = 0.0
 
-      
+
       if(proc .eq. 0) then
          par_file = trim(cwd)//'/problem.par'
          tmp_log_file = trim(cwd)//'/tmp.log'

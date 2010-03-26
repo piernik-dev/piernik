@@ -3,23 +3,23 @@
     nyd          = 50
     nzd          = 100
     nb           = 4
- /  
+ /
 
  $MPI_BLOCKS
     pxsize       = 1
     pysize       = 1
-    pzsize       = 2    
- /  
+    pzsize       = 2
+ /
 
  $RESTART_CONTROL
     restart      = 'last'
-    nrestart     = 0 
+    nrestart     = 0
     new_id       = ''
  /
 
  $END_CONTROL
     tend         = 10.0
-    nend         = 1000000 
+    nend         = 1000000
  /
 
  $OUTPUT_CONTROL
@@ -36,15 +36,15 @@
     vars(7)      = 'magy'
     vars(8)      = 'magz'
     domain       = 'phys_domain'
-   
- / 
+
+ /
 
  $BOUNDARIES
-    bnd_xl       = 'per'  
-    bnd_xr       = 'per'  
-    bnd_yl       = 'per'  
-    bnd_yr       = 'per'  
-    bnd_zl       = 'outd'  
+    bnd_xl       = 'per'
+    bnd_xr       = 'per'
+    bnd_yl       = 'per'
+    bnd_yr       = 'per'
+    bnd_zl       = 'outd'
     bnd_zr       = 'outd'
  /
 
@@ -67,14 +67,14 @@
     smallei      = 1.e-4
     integration_order = 2
   /
- 
+
  $GRAVITY
     r_gc         = 5000     ! Galactic radius of coordinate system
     nsub         = 10
  /
- 
+
  $RESISTIVITY
-    cfl_resist   =    0.9   ! Courant's number for resistiwity 
+    cfl_resist   =    0.9   ! Courant's number for resistiwity
     eta_0   	 =  100.0   ! uniform resistivity
     eta_1        =    0.0   ! anomalous resistivity, works above j_crit
     j_crit       = 1000.0   ! critical value of current
@@ -82,25 +82,25 @@
 
   $COSMIC_RAYS
     cr_active    = 1.0      ! when 0 grad(p_cr) not taken into account in motion eq.
-    cfl_cr       = 0.9      ! Courant's number for CR diffusion 
+    cfl_cr       = 0.9      ! Courant's number for CR diffusion
     cr_eff       = 0.1      ! part of SN energy (=10^51 erg) converted to CR
     gamma_cr     = 1.555555 ! adiabatic exp. of CR
     K_cr_paral   = 1000.   ! CR diffusion coeff parallel to B
     K_cr_perp    = 100.    ! CR diffusion coeff perp. to B
     smallecr     = 1.e-2    ! lower limit & outflow boundary value for ecr
  /
- 
+
  $SHEARING
     omega        = 0.0      ! angular freq.
     qshear       = 1.0      ! shearing param. q: vy=q*omega*x
  /
- 
+
  $PROBLEM_CONTROL
     problem_name = 'crwind'
     run_id       = 'tst'
     d0           =  5.0     ! density in galactic plane
     bxn          =  0.0     !
-    byn          =  1.0     ! __direction__ of B field 
+    byn          =  1.0     ! __direction__ of B field
     bzn          =  0.0     !
     x0           =  0.0     ! coordinates of single expl with amplitude
     y0           =  0.0     ! that is set in init_prob (testing purpose)
@@ -111,5 +111,5 @@
     c_si         =  7.0     ! sound speed
     h_sn         = 100.0    ! std. dev. for normal distribution of SN i "z" direction
     f_sn_kpc2    =  0.0    ! surface frequency of SN ( / kpc^2 / Myr )
-    alpha     =  1.0    
+    alpha     =  1.0
  /

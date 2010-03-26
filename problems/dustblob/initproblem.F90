@@ -87,7 +87,7 @@ module initproblem
          rbuff(5)     = v_dust
          rbuff(6)     = x0
          rbuff(7)     = y0
-         rbuff(8)     = z0 
+         rbuff(8)     = z0
          rbuff(9)     = r0
 
          call MPI_BCAST(cbuff, 32*buffer_dim, MPI_CHARACTER,        0, comm, ierr)

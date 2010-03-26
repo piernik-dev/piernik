@@ -18,11 +18,11 @@
 !    along with PIERNIK.  If not, see <http://www.gnu.org/licenses/>.
 !
 !    Initial implemetation of PIERNIK code was based on TVD split MHD code by
-!    Ue-Li Pen 
+!    Ue-Li Pen
 !        see: Pen, Arras & Wong (2003) for algorithm and
-!             http://www.cita.utoronto.ca/~pen/MHD 
-!             for original source code "mhd.f90" 
-!   
+!             http://www.cita.utoronto.ca/~pen/MHD
+!             for original source code "mhd.f90"
+!
 !    For full list of developers see $PIERNIK_HOME/license/pdt.txt
 !
 #include "piernik.def"
@@ -30,7 +30,7 @@
 module magboundaries
 
   use mpisetup
-  use fluidindex, only : ibx, iby, ibz  
+  use fluidindex, only : ibx, iby, ibz
   use grid, only : nb,nx,ny,nz,nxb,nyb,nzb,nzd
   use arrays, only : u,b
 

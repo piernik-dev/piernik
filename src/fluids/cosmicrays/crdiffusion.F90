@@ -18,11 +18,11 @@
 !    along with PIERNIK.  If not, see <http://www.gnu.org/licenses/>.
 !
 !    Initial implemetation of PIERNIK code was based on TVD split MHD code by
-!    Ue-Li Pen 
+!    Ue-Li Pen
 !        see: Pen, Arras & Wong (2003) for algorithm and
-!             http://www.cita.utoronto.ca/~pen/MHD 
-!             for original source code "mhd.f90" 
-!   
+!             http://www.cita.utoronto.ca/~pen/MHD
+!             for original source code "mhd.f90"
+!
 !    For full list of developers see $PIERNIK_HOME/license/pdt.txt
 !
 #include "piernik.def"
@@ -37,8 +37,8 @@
 module crdiffusion
 
   use initcosmicrays, only : iecr
-  use initcosmicrays, only : K_cr_paral,K_cr_perp 
-  
+  use initcosmicrays, only : K_cr_paral,K_cr_perp
+
   use fluidindex,     only : ibx,iby,ibz
   use arrays,         only : b,u,wa
   use constants,      only : small
@@ -168,7 +168,7 @@ module crdiffusion
              else
                 b3b = 0.0
              endif
-             
+
              bb  = sqrt(b1b**2 + b2b**2 + b3b**2 + small)
              n1b = b1b/bb
              n2b = b2b/bb
@@ -241,7 +241,7 @@ module crdiffusion
       do k=2,nz      ! nzd /= 1
         do j=js,je
           do i=is,ie
-             
+
              if(nxd /= 1) then
                 b1b = (b(ibx,i,  j,k  ) + b(ibx,i,  j,k-1)  &
                      + b(ibx,i+1,j,k-1) + b(ibx,i+1,j,k  ))*0.25
@@ -271,7 +271,7 @@ module crdiffusion
              else
                 decr1 = 0.0
              endif
-            
+
              if(nyd /= 1) then
                 dqm2  = 0.5*((u(iecr,i ,j  ,k-1) + u(iecr,i  ,j  ,k ))   &
                             -(u(iecr,i ,j-1,k-1) + u(iecr,i  ,j-1,k )))/dy

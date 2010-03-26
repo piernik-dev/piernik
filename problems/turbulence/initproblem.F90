@@ -1,6 +1,6 @@
 #define RNG nb+1:nx-nb, nb+1:ny-nb, nb+1:nz-nb
 module initproblem
-  
+
 ! Initial condition for Sedov-Taylor explosion
 
   use start, only : c_si, gamma
@@ -14,7 +14,7 @@ module initproblem
   character problem_name*32,run_id*3
 
   namelist /PROBLEM_CONTROL/  problem_name, run_id, &
-                              d0, c_si, Mrms 
+                              d0, c_si, Mrms
 
 contains
 
@@ -24,17 +24,17 @@ contains
     use version
     implicit none
     integer :: i
-    
+
       t_sn = 0.0
-  
+
       problem_name = 'aaa'
       run_id  = 'aaa'
       d0      = 1.0
       c_si    = 0.1
       Mrms    = 5.0
-         
+
     if(proc .eq. 0) then
-    
+
       open(1,file='problem.par')
         read(unit=1,nml=PROBLEM_CONTROL)
         write(*,nml=PROBLEM_CONTROL)
@@ -54,28 +54,28 @@ contains
       rbuff(1) = d0
       rbuff(2) = Mrms
       rbuff(3) = c_si
-      
+
       call MPI_BCAST(cbuff, 32*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
       call MPI_BCAST(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
       call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
     else
-    
+
       call MPI_BCAST(cbuff, 32*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
       call MPI_BCAST(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
       call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
-      
+
 !  namelist /PROBLEM_CONTROL/  problem_name, run_id, &
 !                              d0,p0, bx0,by0,bz0, Eexpl,  x0,y0,z0, r0 &
-!			       n_sn, dt_sn 
+!                n_sn, dt_sn
 
-      problem_name = cbuff(1)   
-      run_id       = cbuff(2)   
+      problem_name = cbuff(1)
+      run_id       = cbuff(2)
 
-      d0           = rbuff(1)  
+      d0           = rbuff(1)
       Mrms         = rbuff(2)
       c_si         = rbuff(3)
-      
+
     endif
 
   end subroutine read_problem_par
@@ -125,13 +125,13 @@ contains
    enddo
    vol = nx*ny*nz
    rms = dsqrt( sum(dv**2) / vol )
-          
+
    cma = 1.0
    if( rms/c_si < 0.1) then
       cma = rms/c_si
    else
       l=1
-      do while (cma >= 0.1 .and. l <=10) 
+      do while (cma >= 0.1 .and. l <=10)
         cma = rms / c_si * (0.1)**l
         l=l+1
       enddo
@@ -142,7 +142,7 @@ contains
     do k = 1,nz
       do j = 1,ny
         do i = 1,nx
-          u(idnn,i,j,k) = d0 
+          u(idnn,i,j,k) = d0
           u(imxn,i,j,k) = u(idnn,i,j,k) * dv(1,i,j,k) * cma
           u(imyn,i,j,k) = u(idnn,i,j,k) * dv(2,i,j,k) * cma
           u(imzn,i,j,k) = u(idnn,i,j,k) * dv(3,i,j,k) * cma
@@ -154,11 +154,11 @@ contains
         enddo
       enddo
     enddo
-    
+
 ! Explosions
 
     return
-  end subroutine init_prob  
+  end subroutine init_prob
 
 end module initproblem
 

@@ -154,8 +154,8 @@ module initproblem
          coeff(1) = (-0.1398623, 0.0372951 ) ! w_x
          coeff(2) = ( 0.1305628, 0.0640574 ) ! w_y
          coeff(3) = ( 0.1639549,-0.0233277 ) ! w_z
-         kx = dpi/Lx 
-         kz = dpi/Lz 
+         kx = dpi/Lx
+         kz = dpi/Lz
       else if(run_id == 'lnB') then
          write(*,*) 'Lin B'
          coeff(4) = (-0.0174121,-0.2770347 ) ! u_x
@@ -189,7 +189,7 @@ module initproblem
 
       taus = 1./dragc_gas_dust
       vk   = cs_iso_neu/csvk
-      eta  = eta_gas_neu 
+      eta  = eta_gas_neu
 !      beta = 2.0*omega*eta*vk
 !      inv  = 1./(4.0*omega**2*taus**2 + (eps+1.0)**2)
 !      ux =  beta*eps*taus * inv
@@ -217,7 +217,7 @@ module initproblem
                u(idnn,i,j,k) = rhog
                u(imxn,i,j,k) = ux * rhog
                u(imyn,i,j,k) = uy * rhog
-               u(imzn,i,j,k) = 0.0 
+               u(imzn,i,j,k) = 0.0
 #ifndef ISO
                u(ienn,i,j,:) = 1.0/(gamma_neu-1.0)
 #endif /* !ISO */
@@ -263,7 +263,7 @@ module initproblem
              endif
 !-------
 
-#endif 
+#endif
             enddo
          enddo
       enddo
@@ -298,7 +298,7 @@ module initproblem
          coeff(1) = (-0.1398623, 0.0372951 ) ! w_x
          coeff(2) = ( 0.1305628, 0.0640574 ) ! w_y
          coeff(3) = ( 0.1639549,-0.0233277 ) ! w_z
-         
+
          coeff(8) = (-0.3480127, 0.4190204 ) ! omega
       else if(run_id == 'lnB') then
          write(*,*) 'Lin B'

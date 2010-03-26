@@ -18,11 +18,11 @@
 !    along with PIERNIK.  If not, see <http://www.gnu.org/licenses/>.
 !
 !    Initial implemetation of PIERNIK code was based on TVD split MHD code by
-!    Ue-Li Pen 
+!    Ue-Li Pen
 !        see: Pen, Arras & Wong (2003) for algorithm and
-!             http://www.cita.utoronto.ca/~pen/MHD 
-!             for original source code "mhd.f90" 
-!   
+!             http://www.cita.utoronto.ca/~pen/MHD
+!             for original source code "mhd.f90"
+!
 !    For full list of developers see $PIERNIK_HOME/license/pdt.txt
 !
 #include "piernik.def"
@@ -49,11 +49,11 @@ module sweeps     ! split sweeps
     real, dimension(nx,nz)      :: epsa
     real, dimension(nvar,nx,nz) :: u1
     integer :: ind,i
-    real, dimension(2) :: fac = (/0.5,1.0/) 
+    real, dimension(2) :: fac = (/0.5,1.0/)
 
     u1(:,:,:) = u(:,:,1,:)
 
-    do i = 1,2 
+    do i = 1,2
        where(u1(iarr_all_dn,:,:) > 0.0)
           vxr(:,:,:) = u1(iarr_all_mx,:,:) / u1(iarr_all_dn,:,:)
           v_r(:,:,:) = u1(iarr_all_my,:,:) / u1(iarr_all_dn,:,:)
@@ -72,7 +72,7 @@ module sweeps     ! split sweeps
 !         rotaccr(ind,:,:) = rotaccr(ind,:,:) - 2.0*omega*vxr(ind,:,:)
           rotaccr(ind,:,:) = rotaccr(ind,:,:) - (qshear-2.0)*omega*vxr(ind,:,:)
        enddo
-   
+
        where(u1(iarr_all_dn,:,:) > 0.0)
           u1(iarr_all_my,:,:) = u1(iarr_all_my,:,:) + fac(i)*dt*rotaccr(:,:,:)*u(iarr_all_dn,:,1,:)
        endwhere
@@ -80,7 +80,7 @@ module sweeps     ! split sweeps
     enddo
   end subroutine source_terms_y
 #endif
-  
+
   subroutine sweepx
 
     use fluidindex,   only : nvar, iarr_all_swpx
@@ -88,34 +88,34 @@ module sweeps     ! split sweeps
     use fluidindex,   only : ibx,iby,ibz
 #ifdef IONIZED
     use fluidindex,   only : i_ion
-#endif /* IONIZED */  
+#endif /* IONIZED */
 
     use mpisetup, only  : dt
     use arrays, only : u,b
     use grid, only   : dx,nb,nx,ks,ke,js,je,nyd,nzd
     use rtvd, only   : relaxing_tvd
-    use fluidboundaries, only : all_fluid_boundaries 
+    use fluidboundaries, only : all_fluid_boundaries
 
 #ifdef COSM_RAYS
-    use func,  only : div_v        
+    use func,  only : div_v
 #endif /* COSM_RAYS */
 
     implicit none
     real, dimension(nmag,nx)  :: b_x
     real, dimension(nvar,nx)  :: u_x
     integer :: j,k,jp,kp
-  
+
     b_x = 0.0
     u_x = 0.0
-    
+
 #ifdef COSM_RAYS
-    call div_v(i_ion)         
+    call div_v(i_ion)
 #endif /* COSM_RAYS */
     do k=ks,ke
       kp=k+1
       do j=js,je
           jp=j+1
-      
+
 #ifdef MAGNETIC
           b_x=0.5*b(:,:,j,k)
           b_x(ibx,1:nx-1)=b_x(ibx,1:nx-1)+b_x(ibx,2:nx);       b_x(ibx,nx) = b_x(ibx,nx-1)
@@ -142,37 +142,37 @@ module sweeps     ! split sweeps
     use fluidindex, only : ibx,iby,ibz
 #ifdef IONIZED
     use fluidindex, only : i_ion
-#endif /* IONIZED */  
-       
+#endif /* IONIZED */
+
     use mpisetup, only  : dt
     use arrays, only : u,b
     use grid, only   : dy,nb,ny,is,ie,ks,ke,nxd,nzd
     use rtvd, only     : relaxing_tvd
-    use fluidboundaries, only : all_fluid_boundaries 
-    
+    use fluidboundaries, only : all_fluid_boundaries
+
 #ifdef COSM_RAYS
-    use func, only   : div_v        
+    use func, only   : div_v
 #endif /* COSM_RAYS */
 
     implicit none
     real, dimension(nmag,ny)  :: b_y
     real, dimension(nvar,ny)  :: u_y
-    
+
     integer :: i,k,ip,kp
- 
+
     b_y = 0.0
     u_y = 0.0
-    
+
 #ifdef COSM_RAYS
-    call div_v(i_ion)         
+    call div_v(i_ion)
 #endif /* COSM_RAYS */
 
     do k=ks,ke
       kp=k+1
       do i=is,ie
           ip=i+1
-        
-#ifdef MAGNETIC	
+
+#ifdef MAGNETIC
           b_y(:,:) = 0.5*b(:,i,:,k)
           b_y(iby,1:ny-1)=b_y(iby,1:ny-1)+b_y(iby,2:ny);       b_y(iby,ny) = b_y(iby,ny-1)
           if(nxd /= 1 .and. i < ie) b_y(ibx,:)=b_y(ibx,:)+0.5*b(ibx,ip,:,k)
@@ -180,7 +180,7 @@ module sweeps     ! split sweeps
           b_y((/iby,ibx,ibz/),:)=b_y(:,:)
 #endif /* MAGNETIC */
 
-        u_y(iarr_all_swpy,:)=u(:,i,:,k) 
+        u_y(iarr_all_swpy,:)=u(:,i,:,k)
 
         call relaxing_tvd(u_y,b_y,'ysweep',k,i,dy,ny,dt)
         u(:,i,:,k)=u_y(iarr_all_swpy,:)
@@ -200,38 +200,38 @@ module sweeps     ! split sweeps
     use fluidindex, only : ibx,iby,ibz
 #ifdef IONIZED
     use fluidindex, only : i_ion
-#endif /* IONIZED */  
-    
+#endif /* IONIZED */
+
 
     use mpisetup, only  : dt
     use arrays, only : u,b
     use grid, only   : dz,nb,nz,is,ie,js,je,nxd,nyd
     use rtvd, only     : relaxing_tvd
-    use fluidboundaries, only : all_fluid_boundaries 
-    
+    use fluidboundaries, only : all_fluid_boundaries
+
 #ifdef COSM_RAYS
-    use func,  only : div_v       
+    use func,  only : div_v
 #endif /* COSM_RAYS */
 
     implicit none
     real, dimension(nmag,nz)  :: b_z
     real, dimension(nvar,nz)  :: u_z
-    
+
     integer :: i,j,ip,jp
 
     b_z = 0.0
     u_z = 0.0
-    
+
 #ifdef COSM_RAYS
-    call div_v(i_ion)         
+    call div_v(i_ion)
 #endif /* COSM_RAYS */
 
     do j=js,je
       jp=j+1
       do i=is,ie
           ip=i+1
-        
-#ifdef MAGNETIC	
+
+#ifdef MAGNETIC
           b_z(:,:) = 0.5*b(:,i,j,:)
           b_z(ibz,1:nz-1) = b_z(ibz,1:nz-1) + b_z(ibz,2:nz);   b_z(ibz,nz) = b_z(ibz,nz-1)
           if(nxd /= 1 .and. i < ie) b_z(ibx,:) = b_z(ibx,:) + 0.5*b(ibx,ip,j,:)
@@ -245,7 +245,7 @@ module sweeps     ! split sweeps
         u(:,i,j,:)=u_z(iarr_all_swpz,:)
       end do
     end do
-    
+
     call all_fluid_boundaries
 
   end subroutine sweepz

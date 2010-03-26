@@ -18,16 +18,16 @@
 !    along with PIERNIK.  If not, see <http://www.gnu.org/licenses/>.
 !
 !    Initial implemetation of PIERNIK code was based on TVD split MHD code by
-!    Ue-Li Pen 
+!    Ue-Li Pen
 !        see: Pen, Arras & Wong (2003) for algorithm and
-!             http://www.cita.utoronto.ca/~pen/MHD 
-!             for original source code "mhd.f90" 
-!   
+!             http://www.cita.utoronto.ca/~pen/MHD
+!             for original source code "mhd.f90"
+!
 !    For full list of developers see $PIERNIK_HOME/license/pdt.txt
 !
 #include "piernik.def"
 
-!> 
+!>
 !! \brief (MH/JD) %Timestep computation for the ionized fluid (doxy comments ready)
 !!
 !! %Timestep for the ionized fluid is set as the minimum %timestep for all of the MPI blocks times the Courant number.
@@ -35,9 +35,9 @@
 !! \f{equation}
 !! c_x=\max\limits_{i,j,k}{\left(v_x^{i,j,k}+c_f^{i,j,k}\right)},
 !! \f}
-!! where \f$v_x^{i,j,k}\f$ is the maximum speed in \f$x\f$ direction for the cell \f$(i,j,k)\f$ and \f$c_f^{i,j,k}\f$ is the speed of sound for 
-!! ionized fluid computed as \f$c_f^{i,j,k}=\sqrt{\left|\frac{2p_{mag}+\gamma p}{\rho^{i,j,k}}\right|}\f$, where \f$p\f$ stands for pressure, 
-!! \f$p_{mag}\f$ is pressure of magnetic field, \f$\gamma\f$ is adiabatic index for ionized fluid and \f$\rho^{i,j,k}\f$ is fluid density in the cell 
+!! where \f$v_x^{i,j,k}\f$ is the maximum speed in \f$x\f$ direction for the cell \f$(i,j,k)\f$ and \f$c_f^{i,j,k}\f$ is the speed of sound for
+!! ionized fluid computed as \f$c_f^{i,j,k}=\sqrt{\left|\frac{2p_{mag}+\gamma p}{\rho^{i,j,k}}\right|}\f$, where \f$p\f$ stands for pressure,
+!! \f$p_{mag}\f$ is pressure of magnetic field, \f$\gamma\f$ is adiabatic index for ionized fluid and \f$\rho^{i,j,k}\f$ is fluid density in the cell
 !! \f$(i,j,k)\f$. For directions \f$y, z\f$ the computations are made in similar way.
 !!
 !! %Timestep for each MPI block is then computed as
@@ -46,7 +46,7 @@
 !! \f}
 !! where \f$dx\f$, \f$dy\f$ and \f$dz\f$ are the cell lengths in each direction.
 !!
-!! Information about the computed %timesteps is exchanged between MPI blocks in order to choose the minimum %timestep for the fluid.    
+!! Information about the computed %timesteps is exchanged between MPI blocks in order to choose the minimum %timestep for the fluid.
 !! The final %timestep is multiplied by the Courant number specified in parameters of each task.
 !<
 
@@ -55,15 +55,15 @@ module timestepionized
   real :: dt_ion             !< final timestep for ionized fluids
   real :: c_ion              !< maximum speed at which information travels in the ionized fluid
 
- contains 
+ contains
 
   subroutine timestep_ion
 
     use mpisetup
-    use constants,   only : big    
+    use constants,   only : big
     use grid,        only : dx,dy,dz,nb,ks,ke,is,ie,js,je,nxd,nyd,nzd
     use arrays,      only : u,b
-    use initionized, only : gamma_ion, cs_iso_ion2   
+    use initionized, only : gamma_ion, cs_iso_ion2
     use initionized, only : idni,imxi,imyi,imzi
 #ifndef ISO
     use initionized, only : ieni
@@ -127,21 +127,21 @@ module timestepionized
     end do
 
     if(nxd /= 1) then
-       dt_ion_proc_x = dx/cx  
-    else 
-       dt_ion_proc_x = big 
+       dt_ion_proc_x = dx/cx
+    else
+       dt_ion_proc_x = big
     endif
-    if(nyd /= 1) then 
-       dt_ion_proc_y = dy/cy  
-    else 
-       dt_ion_proc_y = big 
+    if(nyd /= 1) then
+       dt_ion_proc_y = dy/cy
+    else
+       dt_ion_proc_y = big
     endif
-    if(nzd /= 1) then 
-       dt_ion_proc_z = dz/cz  
-    else 
-       dt_ion_proc_z = big 
+    if(nzd /= 1) then
+       dt_ion_proc_z = dz/cz
+    else
+       dt_ion_proc_z = big
     endif
-    
+
     dt_ion_proc   = min(dt_ion_proc_x, dt_ion_proc_y, dt_ion_proc_z)
 
     call MPI_REDUCE(c_ion, c_max_all, 1, MPI_DOUBLE_PRECISION, MPI_MAX, 0, comm, ierr)
@@ -152,7 +152,7 @@ module timestepionized
     call MPI_REDUCE(dt_ion_proc, dt_ion_all, 1, MPI_DOUBLE_PRECISION, MPI_MIN, 0, comm, ierr)
     call MPI_BCAST(dt_ion_all, 1, MPI_DOUBLE_PRECISION, 0, comm, ierr)
     dt_ion = cfl*dt_ion_all
-    
+
 !    write(*,*) 'timestep_ion:', dt_ion
 
   end subroutine timestep_ion
