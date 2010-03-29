@@ -54,6 +54,19 @@ def qa_trailing_spaces(files):
       print b.OKGREEN + "QA: " + b.ENDC + " done cleansing in " + file.rstrip('\n')
 
 if __name__ == "__main__":
-   print b.OKBLUE + '"I am the purifier, the light that clears all shadows." - seal of cleansing inscription' + b.ENDC
-   list = ["ala","ala2","ala.pdf"]
-   qa_checks(list)
+   from optparse import OptionParser
+   usage = "usage: %prog [options] FILES"
+   parser = OptionParser(usage=usage)
+   parser.add_option("-v", "--verbose",
+                  action="store_true", dest="verbose", default=True,
+                  help="make lots of noise [default]")
+   parser.add_option("-q", "--quiet",
+                  action="store_false", dest="verbose",
+                  help="be vewwy quiet (I'm hunting wabbits)")
+   parser.add_option("-f", "--force",
+                  action="store_true", dest="force",
+                  help="commit despite errors (It will be logged)")
+   (options, args) = parser.parse_args()
+   if len(args) < 1:
+      parser.error("incorrect number of arguments")
+   qa_checks(args,options)
