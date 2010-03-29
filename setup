@@ -56,7 +56,7 @@ my $argc = @ARGV;
 if($argc < 1){
   $moo{help} = 1;
   $is_prob = 0;
-} 
+}
 
 if($moo{problems}){
    print " \n";
@@ -272,7 +272,7 @@ print MAKEFILE "\tif [ ! -f env.dat ]; \\\n";
 print MAKEFILE "\tthen \\\n";
 print MAKEFILE "\t\thead -n 1 *.F90 | grep Id > env.dat; \\\n";
 print MAKEFILE "\t\tcat piernik.def >> env.dat; \\\n";
-print MAKEFILE "\t\twc -l env.dat | awk '{print \"   integer, parameter :: nenv = \"\$\$1\"+1\"}' - >> version.F90; \\\n";
+print MAKEFILE "\t\twc -l env.dat | awk '{print \"   integer, parameter :: nenv = \"\$\$1\"+0\"}' - >> version.F90; \\\n";
 print MAKEFILE "\t\techo \"   character*128, dimension(nenv) :: env\" >> version.F90; \\\n";
 print MAKEFILE "\t\techo 'contains' >> version.F90; \\\n";
 print MAKEFILE "\t\techo '   subroutine init_version' >> version.F90; \\\n";

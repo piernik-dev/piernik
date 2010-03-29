@@ -3,25 +3,25 @@
     nyd = 120
     nzd = 1
     nb  = 4
- /  
+ /
 
  $MPI_BLOCKS
     pxsize = 1
     pysize = 1
-    pzsize = 1    
- /  
+    pzsize = 1
+ /
  $START_CONTROL
  /
 
  $RESTART_CONTROL
     restart  = 'last'
     new_id   = ''
-    nrestart = 0 
+    nrestart = 0
  /
 
  $END_CONTROL
     tend   = 1.0
-    nend   = 90000 
+    nend   = 90000
  /
 
  $OUTPUT_CONTROL
@@ -41,14 +41,14 @@
     vars(10) = 'flx5'
     domain  = 'full_domain'
     mag_center = 'no'
- / 
+ /
 
  $BOUNDARIES
-    bnd_xl = 'she'  
-    bnd_xr = 'she'  
-    bnd_yl = 'per'  
-    bnd_yr = 'per'  
-    bnd_zl = 'per'  
+    bnd_xl = 'she'
+    bnd_xr = 'she'
+    bnd_yl = 'per'
+    bnd_yr = 'per'
+    bnd_zl = 'per'
     bnd_zr = 'per'
  /
 
@@ -64,7 +64,7 @@
  $EQUATION_OF_STATE
     c_si   = 1.0
     alpha  = 0.0
- /  
+ /
 
  $NUMERICAL_SETUP
     cfl    = 0.7
@@ -76,7 +76,7 @@
     nu_bulk    = 0.0001
     cfl_visc   = 0.4
  /
- 
+
  $GRAVITY
     ptmass  = 0.0
     ptm_x   = 0.0
@@ -87,10 +87,10 @@
     r_grav  = 0.6
     n_gravr = 10
  /
- 
+
  $THERMAL
  /
- 
+
  $RESISTIVITY
  /
 

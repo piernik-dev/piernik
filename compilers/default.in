@@ -4,5 +4,5 @@ PROG		 = piernik
 F90		 = mpif90
 F90FLAGS  = -fdefault-real-8 -O2 -funroll-loops -m3dnow -msse -mfpmath=sse -ffree-line-length-none
 HDF_LIB  = . -lgfortran -lc -lhdf5_fortran -lhdf5hl_fortran -lhdf5
-MHDF_LIB = 
+MHDF_LIB =
 

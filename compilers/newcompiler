@@ -13,7 +13,7 @@ if($argc < 1){
    print " \n";
 } else {
 $compdir = "../compilers/". $ARGV[0] . ".in";
-if(!-r $compdir) { 
+if(!-r $compdir) {
 print "Available compilers are:\n";
 system("cd ../compilers && ls *.in && cd ../obj");
 die "\n $compdir does not exist! ";

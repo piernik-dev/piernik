@@ -4,5 +4,5 @@ PROG		 = piernik
 F90 	 = mpif90
 F90FLAGS = -r8 -fast -heap-arrays
 HDF_LIB  = /usr/local/share/hdf4/lib
-MHDF_LIB = . 
+MHDF_LIB = .
 

@@ -4,5 +4,5 @@ PROG		 = piernik
 F90		 = /opt/gcc-4.5/openmpi/bin/mpif90
 F90FLAGS  = -I/opt/gcc-4.5/hdf5/include/ -fdefault-real-8 -O3 -funroll-loops -m3dnow -msse -mfpmath=sse -ffree-line-length-none
 HDF_LIB  = . -lfftw3 -llapack -lgfortran -lc -L/opt/gcc-4.5/hdf5/lib -lhdf5_fortran -lhdf5hl_fortran -lhdf5
-MHDF_LIB = 
+MHDF_LIB =
 

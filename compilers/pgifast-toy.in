@@ -3,6 +3,6 @@ PROG		 = piernik
 ### PGI toy
 F90		 = /opt/mpich2-1.0.3-pgi/bin/mpif90
 F90FLAGS  = -fastsse -O3 -r8
-HDF_LIB  = /opt/hdf4-pgi/lib -L/opt/fftw-3.1.2-pgi/lib -lfftw3 
+HDF_LIB  = /opt/hdf4-pgi/lib -L/opt/fftw-3.1.2-pgi/lib -lfftw3
 MHDF_LIB = /opt/hdf4-pgi/include
 

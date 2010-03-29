@@ -8,7 +8,7 @@ MHDF_LIB = /usr/local/openmpi/gcc4/lib/ -lc -lgfortran
 
 
 #
-#  make sure to do 
+#  make sure to do
 #
 #  module load comp/mpich2/gcc4 libraries/hdf/hdf4/hdf4.gcc4 libraries/szip/szip.gcc4
 #

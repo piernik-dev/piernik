@@ -3,26 +3,26 @@
     nyd          = 50
     nzd          = 60
     nb           = 4
- /  
+ /
 
  $MPI_BLOCKS
     pxsize       = 1
     pysize       = 1
-    pzsize       = 1    
- /  
+    pzsize       = 1
+ /
 
  $START_CONTROL
  /
 
  $RESTART_CONTROL
     restart      = 'last'
-    nrestart     = 0 
+    nrestart     = 0
     new_id       = ''
  /
 
  $END_CONTROL
     tend         = 20.0
-    nend         = 100000 
+    nend         = 100000
  /
 
  $OUTPUT_CONTROL
@@ -39,15 +39,15 @@
     vars(7)      = 'magy'
     vars(8)      = 'magz'
     domain       = 'phys_domain'
-   
- / 
+
+ /
 
  $BOUNDARIES
-    bnd_xl       = 'she'  
-    bnd_xr       = 'she'  
-    bnd_yl       = 'per'  
-    bnd_yr       = 'per'  
-    bnd_zl       = 'outd'  
+    bnd_xl       = 'she'
+    bnd_xr       = 'she'
+    bnd_yl       = 'per'
+    bnd_yr       = 'per'
+    bnd_zl       = 'outd'
     bnd_zr       = 'outd'
  /
 
@@ -62,8 +62,8 @@
 
  $EQUATION_OF_STATE
     c_si         = 7.0
-    alpha        = 0.1 
- /  
+    alpha        = 0.1
+ /
 
  $NUMERICAL_SETUP
     cfl          = 0.9
@@ -71,17 +71,17 @@
     smallei      = 1.e-4
     integration_order = 2
   /
- 
+
  $GRAVITY
     r_gc         = 5000
     nsub         = 10
  /
- 
+
  $THERMAL
  /
- 
+
  $RESISTIVITY
-    cfl_resist   =    0.9   ! liczba Couranta dla opornosci, (wsp. 0.5) w kodzie 
+    cfl_resist   =    0.9   ! liczba Couranta dla opornosci, (wsp. 0.5) w kodzie
     eta_0   	 =  100.0   ! opornosc jednorodna
     eta_1        =    0.0   ! opornosc zlokalizowana, dziala powyzej j_crit
     j_crit       = 1000.0   ! prad krytyczny
@@ -98,8 +98,8 @@
     amp_cr       = 0.0      ! wybuch w init_problem w x0,y0,z0
     smallecr     = 1.e-2    ! lower limit & outflow boundary value for ecr
  /
- 
- $GALACTIC_PARAMS 
+
+ $GALACTIC_PARAMS
     h_sn         = 100.0    ! polowkowa szerokosc rozkladu gauss. wybuchow w "z"
     r_sn         =  50.0    ! promien pojedyncz. wybuchu (f. gaussa)
     t_dw         = 100.0    ! okres ramion spiralych  ! bez znaczenia
@@ -107,17 +107,17 @@
     f_sn_kpc2    = 130.0    ! powierzchniowa czestosc wybuchow na kpc^2 na Myr
     col_dens     = 27.e20   ! gestosc kolumnowa gazu. jesli 0 to uzyte jest d0
 /
-    
+
  $SHEARING
     omega        = 0.05     ! predkosc katowa rotacji
     qshear       = 1.0      ! parametr scinania q: vy=q*omega*x
  /
- 
+
  $PROBLEM_CONTROL
     problem_name ='crdynamo'
     run_id       = 'tst'
     d0           =  1.0     ! gestosc na pl.symetrii dysku, brana pod uwage gdy col_dns = 0.0
-    bxn          =  0.0	    ! 
+    bxn          =  0.0	    !
     byn          =  1.0     ! wspolczynniki okreslajace kierunek B
     bzn          =  0.0     !
     x0           =  0.0     !

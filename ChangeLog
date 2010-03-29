@@ -292,8 +292,8 @@
 2009-10-29  Kacper Kowalik <kowalik@astri.uni.torun.pl>
 
 	* [source:public/trunk public]: fixing svnci.sh
-	* 
-	* 
+	*
+	*
 	* [source:public/trunk public]: adding tool for automated commit
 	  taging
 
@@ -511,7 +511,7 @@
 
 	* [source:public/trunk public]: New problem
 	  [source:public/trunk/problems/lingrav lingrav]
-	* 
+	*
 
 2009-05-13  Dominik Woltanski <minikwolt@astri.uni.torun.pl>
 
@@ -519,7 +519,7 @@
 
 2009-04-01  Kacper Kowalik <kowalik@astri.uni.torun.pl>
 
-	* 
+	*
 
 2009-03-12  Kacper Kowalik <kowalik@astri.uni.torun.pl>
 
@@ -529,30 +529,30 @@
 
 2009-03-11  Kacper Kowalik <kowalik@astri.uni.torun.pl>
 
-	* 
-	* 
+	*
+	*
 
 2009-03-11  Michał Hanasz <mhanasz@astri.uni.torun.pl>
 
-	* 
-	* 
+	*
+	*
 
 2009-03-06  Kacper Kowalik <kowalik@astri.uni.torun.pl>
 
 	* removing segfault after cleanup
-	* 
-	* 
+	*
+	*
 	* ::
-	* 
+	*
 	* Fixing dependencies bugs, gamma was allocated before nvars was
 	  initialized
-	* 
-	* 
-	* 
+	*
+	*
+	*
 
 2009-02-27  Kacper Kowalik <kowalik@astri.uni.torun.pl>
 
-	* 
+	*
 
 2009-02-26  Kacper Kowalik <kowalik@astri.uni.torun.pl>
 

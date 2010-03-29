@@ -1,6 +1,6 @@
 PROG		 = piernik
 
-### INTEL 
+### INTEL
 F90		 = /opt/intel/mpich2/bin/mpif90
 F90FLAGS  = -O3 -r8 -ipo -heap-arrays -tcollect
 HDF_LIB  = /opt/intel/hdf4/lib -tcollect

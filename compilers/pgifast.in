@@ -3,7 +3,7 @@ PROG		 = piernik
 ### PGI hydra AMD64
 F90		 = /opt/pgi/linux86-64/6.0/mpich2/bin/mpif90
 F90FLAGS  = -fastsse -O3 -r8
-#HDF_LIB  = /opt/pgi/linux86-64/6.0/hdf4/lib -L/opt/pgi/linux86-64/6.0/fftw/lib 
-HDF_LIB  = /opt/pgi/linux86-64/6.0/hdf4/lib -L/opt/pgi/linux86-64/6.0/fftw/lib -lfftw3 
+#HDF_LIB  = /opt/pgi/linux86-64/6.0/hdf4/lib -L/opt/pgi/linux86-64/6.0/fftw/lib
+HDF_LIB  = /opt/pgi/linux86-64/6.0/hdf4/lib -L/opt/pgi/linux86-64/6.0/fftw/lib -lfftw3
 MHDF_LIB = /opt/pgi/linux86-64/6.0/hdf4/include
 
