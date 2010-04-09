@@ -56,10 +56,8 @@ module dataio
 #ifdef SN_SRC
    use snsources
 #endif /* SN_SRC */
-#ifdef HDF5
    use dataio_hdf5, only : write_hdf5, write_restart_hdf5, read_restart_hdf5, &
        init_hdf5, cleanup_hdf5, write_plot
-#endif /* HDF5 */
    implicit none
 
    type(hdf) :: chdf
@@ -150,9 +148,7 @@ module dataio
    real                  :: encr_min               !< minimum value of current cosmic ray energy density distribution
    real                  :: encr_max               !< maximum value of current cosmic ray energy density distribution
 #endif /* COSM_RAYS */
-#ifdef HDF5
     character(len=128) :: filename                 !< string of characters indicating currently used file
-#endif /* HDF5 */
 
    namelist /END_CONTROL/ nend, tend
    namelist /RESTART_CONTROL/ restart, new_id, nrestart, resdel
@@ -434,9 +430,7 @@ module dataio
 
       last_hdf_time = -dt_hdf
 
-#ifdef HDF5
       call init_hdf5(vars,ix,iy,iz,dt_plt)
-#endif /* HDF5 */
 
       if(proc == 0 .and. restart .eq. 'last') call find_last_restart(nrestart)
       call MPI_BARRIER(comm,ierr)
@@ -467,14 +461,9 @@ module dataio
             system_command = 'mv '//trim(tmp_log_file)//' '//trim(log_file)
             system_status = SYSTEM(system_command)
          endif
-#ifdef HDF5
          call set_container(chdf); chdf%nres = nrestart
          call read_restart_hdf5(chdf)
          call get_container(chdf)
-#else /* HDF5 */
-         nres = nrestart
-         call read_restart
-#endif
          nstep_start = nstep
          t_start     = t
          nres_start  = nrestart
@@ -488,10 +477,8 @@ module dataio
          endif
          if(new_id .ne. '') run_id=new_id
       endif
-#ifdef HDF5
       call MPI_BCAST(log_file, 32, MPI_CHARACTER, 0, comm, ierr)
       call set_container(chdf)
-#endif /* HDF5 */
       call all_fluid_boundaries
 #ifdef MAGNETIC
       call all_mag_boundaries
@@ -502,9 +489,8 @@ module dataio
    subroutine cleanup_dataio
 
       implicit none
-#ifdef HDF5
+
       call cleanup_hdf5
-#endif
    end subroutine cleanup_dataio
 
    subroutine user_msg_handler(end_sim)
@@ -524,12 +510,6 @@ module dataio
 !---  if a user message is received then:
       if (len_trim(msg) /= 0) then
          if(trim(msg) == 'res' .or. trim(msg) == 'dump' ) then
-#ifndef HDF5
-            nres = max(nres,1)
-            call write_restart
-            nres = nres + 1
-            step_res = nstep
-#else
             if(proc==0) then
               write (filename,'(a,a1,a3,a1,i4.4,a4)') &
                 trim(problem_name),'_', run_id,'_',nres,'.res'
@@ -537,15 +517,10 @@ module dataio
             call MPI_BCAST(filename, 128, MPI_CHARACTER, 0, comm, ierr)
             call set_container(chdf)
             call write_restart_hdf5(filename,chdf)
-#endif
          endif
          if(trim(msg) .eq. 'hdf') then
-#ifndef HDF5
-            call write_hdf
-#else /* HDF5 */
             call set_container(chdf)
             call write_hdf5(chdf)
-#endif /* HDF5 */
             nhdf = nhdf + 1
             step_hdf = nstep
          endif
@@ -608,12 +583,8 @@ module dataio
 
          if ((t-last_hdf_time) .ge. dt_hdf &
                 .or. output .eq. 'hdf' .or. output .eq. 'end') then
-#ifndef HDF5
-            call write_hdf
-#else /* HDF5 */
             call set_container(chdf)
             call write_hdf5(chdf)
-#endif /* HDF5 */
 
             if((t-last_hdf_time) .ge. dt_hdf) last_hdf_time = last_hdf_time + dt_hdf
             if((t-last_hdf_time) .ge. dt_hdf) last_hdf_time = t ! additional control
@@ -627,7 +598,6 @@ module dataio
          if ((nres-nres_start) .lt. (int((t-t_start) / dt_res) + 1) &
                 .or. output .eq. 'res' .or. output .eq. 'end') then
             if (nres > 0) then
-#ifdef HDF5
                if(proc==0) then
                   write (filename,'(a,a1,a3,a1,i4.4,a4)') &
                     trim(problem_name),'_', run_id,'_',nres,'.res'
@@ -635,753 +605,15 @@ module dataio
                call MPI_BCAST(filename, 128, MPI_CHARACTER, 0, comm, ierr)
                call set_container(chdf)
                call write_restart_hdf5(filename,chdf)
-#else /* HDF5 */
-               call write_restart
-#endif
             endif
             nres = nres + 1
             step_res = nstep
          endif
       endif
-#ifdef HDF5
       call set_container(chdf)
       call write_plot(chdf)
-#endif /* HDF5 */
 
    end subroutine write_data
-
-!---------------------------------------------------------------------
-!
-! dumps data to hdf file
-!
-!---------------------------------------------------------------------
-!
-   subroutine write_hdf
-      use mpisetup, only: cwd
-      use arrays, only : wa,b,u
-      use grid, only : dx,dy,dz,xmin,xmax,ymin,ymax,zmin,zmax,nxd,nyd,nzd,nb
-      use grid, only : nx,ny,nz,nxb,nyb,nzb,x,y,z
-      use initproblem, only : problem_name, run_id
-
-      use fluidindex,  only : nfluid
-      use fluidindex,  only : ibx,iby,ibz
-      use fluidindex,  only : nvar, iarr_all_dn,iarr_all_mx,iarr_all_my,iarr_all_mz
-
-#ifndef ISO
-      use fluidindex, only : iarr_all_en
-#endif /* ISO */
-
-#ifdef COSM_RAYS
-      use initcosmicrays, only : iecr
-#endif /* COSM_RAYS */
-
-#ifdef GRAV
-      use arrays, only : gp
-#endif /* GRAV */
-
-      implicit none
-
-      character(len=128) :: file_name_hdf,file_name_disp
-      character(LEN=4)   :: varname
-
-      integer :: sd_id, sds_id, dim_id, iostatus
-      integer :: rank, comp_type
-      integer, dimension(3) :: dims, istart, stride
-      integer, dimension(1) :: comp_prm
-      integer :: sfstart, sfend, sfsnatt, sfcreate, sfwdata, sfscompress, sfendacc &
-               , sfdimid, sfsdmname, sfsdscale, sfsdmstr
-
-      integer :: iv, ifl, iw
-      integer :: nxo = 1, nyo = 1, nzo = 1, &
-                 iso = 1, jso = 1, kso = 1, &
-                 ieo = 1, jeo = 1, keo = 1
-
-      real(kind=4), dimension(:,:,:), allocatable :: tmparr
-      real(kind=4), dimension(:), allocatable     :: temp_scl
-!- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
-      if(domain .eq. 'full_domain') then
-         nxo = nx
-         nyo = ny
-         nzo = nz
-         if(nxd /= 1) then
-            iso = 1
-            ieo = nx
-         else
-            iso = 1
-            ieo = 1
-         endif
-         if(nyd /= 1) then
-            jso = 1
-            jeo = ny
-         else
-            jso = 1
-            jeo = 1
-         endif
-         if(nzd /= 1) then
-            kso = 1
-            keo = nz
-         else
-            kso = 1
-            keo = 1
-         endif
-
-      else if(domain .eq. 'phys_domain') then
-         nxo = nxb
-         nyo = nyb
-         nzo = nzb
-         if(nxd /= 1) then
-            iso = nb+1
-            ieo = nb+nxb
-         else
-            iso = 1
-            ieo = 1
-         endif
-         if(nyd /= 1) then
-            jso = nb+1
-            jeo = nb+nyb
-         else
-            jso = 1
-            jeo = 1
-         endif
-         if(nzd /= 1) then
-            kso = nb+1
-            keo = nb+nzb
-         else
-            kso = 1
-            keo = 1
-         endif
-      endif
-
-      allocate(tmparr(iso:ieo,jso:jeo,kso:keo))
-
-      rank = 3
-      comp_type = 4
-      comp_prm(1) = 6
-      dims(1) = nxo
-      dims(2) = nyo
-      dims(3) = nzo
-      istart(:) = 0
-      stride(:) = 1
-
-!  generate filename
-!
-
-      write (file_name_hdf,'(a,a1,a,a1,a3,a1,i2.2,a1,i2.2,a1,i2.2,a1,i4.4,a4)') &
-               trim(cwd),'/',trim(problem_name),'_', run_id, &
-               '_',pcoords(1),'_',pcoords(2),'_',pcoords(3),'_',nhdf, '.hdf'
-
-      write (file_name_disp,'(a,a1,a3,a1,a2,a1,a2,a1,a2,a1,i4.4,a4)') &
-               trim(problem_name),'_', run_id,'_',pc1,'_',pc2,'_',pc3,'_',nhdf, '.hdf'
-
-      sd_id = sfstart(trim(file_name_hdf), 4)
-
-! write attributes
-!
-      iostatus = sfsnatt( sd_id, 'problem' , 4, 32, problem_name)
-      iostatus = sfsnatt( sd_id, 'run_id'  , 4, 32, run_id      )
-      iostatus = sfsnatt( sd_id, 'domain'  , 4, 32, domain      )
-
-      iostatus = sfsnatt( sd_id, 'psize1'  , 23, 1, psize(1) )
-      iostatus = sfsnatt( sd_id, 'psize2'  , 23, 1, psize(2) )
-      iostatus = sfsnatt( sd_id, 'psize3'  , 23, 1, psize(3) )
-
-      iostatus = sfsnatt( sd_id, 'pcoords1', 23, 1, pcoords(1) )
-      iostatus = sfsnatt( sd_id, 'pcoords2', 23, 1, pcoords(2) )
-      iostatus = sfsnatt( sd_id, 'pcoords3', 23, 1, pcoords(3) )
-
-      iostatus = sfsnatt( sd_id, 'dims1'   , 23, 1, dims(1)    )
-      iostatus = sfsnatt( sd_id, 'dims2'   , 23, 1, dims(2)    )
-      iostatus = sfsnatt( sd_id, 'dims3'   , 23, 1, dims(3)    )
-
-      iostatus = sfsnatt( sd_id, 'nxd'     , 23, 1, nxd     )
-      iostatus = sfsnatt( sd_id, 'nyd'     , 23, 1, nyd     )
-      iostatus = sfsnatt( sd_id, 'nzd'     , 23, 1, nzd     )
-
-      iostatus = sfsnatt( sd_id, 'nxb'     , 23, 1, nxb     )
-      iostatus = sfsnatt( sd_id, 'nyb'     , 23, 1, nyb     )
-      iostatus = sfsnatt( sd_id, 'nzb'     , 23, 1, nzb     )
-      iostatus = sfsnatt( sd_id, 'nb'      , 23, 1, nb      )
-
-      iostatus = sfsnatt( sd_id, 'xmin'    , 6,  1, xmin    )
-      iostatus = sfsnatt( sd_id, 'xmax'    , 6,  1, xmax    )
-      iostatus = sfsnatt( sd_id, 'ymin'    , 6,  1, ymin    )
-      iostatus = sfsnatt( sd_id, 'ymax'    , 6,  1, ymax    )
-      iostatus = sfsnatt( sd_id, 'zmin'    , 6,  1, zmin    )
-      iostatus = sfsnatt( sd_id, 'zmax'    , 6,  1, zmax    )
-
-      iostatus = sfsnatt( sd_id, 'nstep'   , 23, 1, nstep          )
-      iostatus = sfsnatt( sd_id, 'time'    ,  6, 1, t              )
-      iostatus = sfsnatt( sd_id, 'timestep',  6, 1, dt             )
-
-!    do ifl=1,nfluid
-!    write(gammaifl,'(a5,i1)') 'gamma',ifl
-!    iostatus = sfsnatt( sd_id, gammaifl   ,  6, 1, gamma(ifl)     )
-!    enddo
-
-
-! write selected problem dependent parameters
-#ifdef SN_SRC
-      iostatus = sfsnatt( sd_id, 'nsn'      , 24, 1, nsn     )
-#endif /* SN_SRC */
-
-      iv = 1
-      iw = 0
-      ifl = 1
-
-      do while (len_trim(vars(iv)) .ne. 0)
-
-         select case(vars(iv))
-         case ('dens')
-            write(varname,'(a3,i1)') 'den',ifl
-            wa(iso:ieo,jso:jeo,kso:keo) = u(iarr_all_dn(ifl),iso:ieo,jso:jeo,kso:keo)
-            call next_fluid_or_var(ifl,iw,nfluid)
-
-         case ('velx')
-            write(varname,'(a3,i1)') 'vlx',ifl
-            wa(iso:ieo,jso:jeo,kso:keo) = u(iarr_all_mx(ifl),iso:ieo,jso:jeo,kso:keo) &
-                                        / u(iarr_all_dn(ifl),iso:ieo,jso:jeo,kso:keo)
-            call next_fluid_or_var(ifl,iw,nfluid)
-
-         case ('vely')
-            write(varname,'(a3,i1)') 'vly',ifl
-            wa(iso:ieo,jso:jeo,kso:keo) = u(iarr_all_my(ifl),iso:ieo,jso:jeo,kso:keo) &
-                                        / u(iarr_all_dn(ifl),iso:ieo,jso:jeo,kso:keo)
-            call next_fluid_or_var(ifl,iw,nfluid)
-
-         case ('velz')
-            write(varname,'(a3,i1)') 'vlz',ifl
-            wa(iso:ieo,jso:jeo,kso:keo) = u(iarr_all_mz(ifl),iso:ieo,jso:jeo,kso:keo) &
-                                        / u(iarr_all_dn(ifl),iso:ieo,jso:jeo,kso:keo)
-            call next_fluid_or_var(ifl,iw,nfluid)
-
-#ifdef ISO
-         case ('ener')
-            write(varname,'(a3,i1)') 'ene',ifl
-            wa(iso:ieo,jso:jeo,kso:keo) = 0.5*(u(iarr_all_mx(ifl),iso:ieo,jso:jeo,kso:keo)**2 &
-                                              +u(iarr_all_my(ifl),iso:ieo,jso:jeo,kso:keo)**2 &
-                                              +u(iarr_all_mz(ifl),iso:ieo,jso:jeo,kso:keo)**2)&
-                                              /u(iarr_all_dn(ifl),iso:ieo,jso:jeo,kso:keo)
-            call next_fluid_or_var(ifl,iw,nfluid)
-
-#else /* ISO */
-         case ('ener')
-            write(varname,'(a3,i1)') 'ene',ifl
-            wa(iso:ieo,jso:jeo,kso:keo) = u(iarr_all_en(ifl),iso:ieo,jso:jeo,kso:keo)
-            call next_fluid_or_var(ifl,iw,nfluid)
-#endif /* ISO */
-
-#ifdef COSM_RAYS
-         case ('encr')
-            varname = 'encr'
-            wa(iso:ieo,jso:jeo,kso:keo) = u(iecr, iso:ieo, jso:jeo, kso:keo)
-#endif /* COSM_RAYS */
-
-         case ('divb')
-            wa(iso:ieo-1,jso:jeo-1,kso:keo-1) = &
-             (b(ibx,iso+1:ieo,jso:jeo-1,kso:keo-1) - b(ibx,iso:ieo-1,jso:jeo-1,kso:keo-1))*dy*dz &
-            +(b(iby,iso:ieo-1,jso+1:jeo,kso:keo-1) - b(iby,iso:ieo-1,jso:jeo-1,kso:keo-1))*dx*dz &
-            +(b(ibz,iso:ieo-1,jso:jeo-1,kso+1:keo) - b(ibz,iso:ieo-1,jso:jeo-1,kso:keo-1))*dx*dy
-            wa = abs(wa)
-            wa(ieo,:,:) = wa(ieo-1,:,:)
-            wa(:,jeo,:) = wa(:,jeo-1,:)
-            wa(:,:,keo) = wa(:,:,keo-1)
-#ifdef GRAV
-         case ('gpot')
-            varname = 'gpot'
-            wa(iso:ieo,jso:jeo,kso:keo) = gp(iso:ieo,jso:jeo,kso:keo)
-#endif /* GRAV */
-
-         case ('magx')
-            varname = 'magx'
-            if(domain .eq. 'full_domain') then
-               if(mag_center .eq. 'yes') then
-                  wa(:,:,:) = 0.5*b(ibx,:,:,:)
-                  wa(:,:,:) = wa(:,:,:)  + cshift(wa(:,:,:),shift=1,dim=1)
-               else
-                  wa(:,:,:) = b(ibx,:,:,:)
-               endif
-            else if(domain .eq. 'phys_domain') then
-               if(mag_center .eq. 'yes') then
-                  wa(iso:ieo,jso:jeo,kso:keo) = 0.5*(b(ibx,iso:ieo,jso:jeo,kso:keo))
-                  wa(iso:ieo,jso:jeo,kso:keo) = wa(iso:ieo,jso:jeo,kso:keo) &
-                                              + 0.5*(b(ibx,iso+1:ieo+1,jso:jeo,kso:keo))
-               else
-                  wa(iso:ieo,jso:jeo,kso:keo) = b(ibx,iso:ieo,jso:jeo,kso:keo)
-               endif
-            endif
-
-         case ('magy')
-            varname = 'magy'
-            if(domain .eq. 'full_domain') then
-               if(mag_center .eq. 'yes') then
-                  wa(:,:,:) = 0.5*b(iby,:,:,:)
-                  wa(:,:,:) = wa(:,:,:)  + cshift(wa(:,:,:),shift=1,dim=2)
-               else
-                  wa(:,:,:) = b(iby,:,:,:)
-               endif
-            else if(domain .eq. 'phys_domain') then
-               if(mag_center .eq. 'yes') then
-                  wa(iso:ieo,jso:jeo,kso:keo) = 0.5*(b(iby,iso:ieo,jso:jeo,kso:keo))
-                  wa(iso:ieo,jso:jeo,kso:keo) = wa(iso:ieo,jso:jeo,kso:keo) &
-                                              + 0.5*(b(iby,iso:ieo,jso+1:jeo+1,kso:keo))
-               else
-                  wa(iso:ieo,jso:jeo,kso:keo) = b(iby,iso:ieo,jso:jeo,kso:keo)
-               endif
-            endif
-
-         case ('magz')
-            varname = 'magz'
-            if(domain .eq. 'full_domain') then
-               if(mag_center .eq. 'yes') then
-                  wa(:,:,:) = 0.5*b(ibz,:,:,:)
-                  wa(:,:,:) = wa(:,:,:)  + cshift(wa(:,:,:),shift=1,dim=3)
-               else
-                  wa(:,:,:) = b(ibz,:,:,:)
-               endif
-            else if(domain .eq. 'phys_domain') then
-               if(mag_center .eq. 'yes') then
-                  wa(iso:ieo,jso:jeo,kso:keo) = 0.5*(b(ibz,iso:ieo,jso:jeo,kso:keo))
-                  wa(iso:ieo,jso:jeo,kso:keo) = wa(iso:ieo,jso:jeo,kso:keo) &
-                                              + 0.5*(b(ibz,iso:ieo,jso:jeo,kso+1:keo+1))
-               else
-                  wa(iso:ieo,jso:jeo,kso:keo) = b(ibz,iso:ieo,jso:jeo,kso:keo)
-               endif
-            endif
-
-         case default
-            print *, 'Variable ', vars(iv), ' is not defined! Skipping.'
-         end select
-
-! write data
-!
-         where( abs(wa) < 1.e-12 )  wa = sign(1e-12,wa)
-
-         sds_id = sfcreate(sd_id, varname, 5, rank, dims)
-         iostatus = sfscompress(sds_id, comp_type, comp_prm)
-         tmparr = real(wa(iso:ieo,jso:jeo,kso:keo),4)
-         iostatus = sfwdata(sds_id, istart, stride, dims, tmparr)
-
-! write coords
-!
-         if(.not.allocated(temp_scl)) allocate(temp_scl(iso:ieo))
-         temp_scl(iso:ieo) = real(x(iso:ieo),4)
-         dim_id = sfdimid( sds_id, 0 )
-         iostatus = sfsdmname( dim_id, 'xc' )
-         iostatus = sfsdscale( dim_id, dims(1), 5, temp_scl(:))
-         iostatus = sfsdmstr ( dim_id, 'X', 'pc', '' )
-         if(allocated(temp_scl)) deallocate(temp_scl)
-
-         if(.not.allocated(temp_scl)) allocate(temp_scl(jso:jeo))
-         temp_scl(jso:jeo) = real(y(jso:jeo),4)
-         dim_id = sfdimid( sds_id, 1 )
-         iostatus = sfsdmname( dim_id, 'yc' )
-         iostatus = sfsdscale( dim_id, dims(2), 5, temp_scl(:))
-         iostatus = sfsdmstr ( dim_id, 'Y', 'pc', '' )
-         if(allocated(temp_scl)) deallocate(temp_scl)
-
-         if(.not.allocated(temp_scl)) allocate(temp_scl(kso:keo))
-         temp_scl(kso:keo) = real(z(kso:keo),4)
-         dim_id = sfdimid( sds_id, 2 )
-         iostatus = sfsdmname( dim_id, 'zc' )
-         iostatus = sfsdscale( dim_id, dims(3), 5, temp_scl(:))
-         iostatus = sfsdmstr ( dim_id, 'Z', 'pc', '' )
-         if(allocated(temp_scl)) deallocate(temp_scl)
-
-         iostatus = sfendacc(sds_id)
-
-         if(iw .eq. 0) iv = iv + 1
-      end do
-
-      iostatus = sfend(sd_id)
-
-      if(proc.eq. 0) then
-         open(log_lun, file=log_file, position='append')
-         write(log_lun,*) 'Writing output   file: ', trim(file_name_disp)
-         write(*,*)       'Writing output   file: ', trim(file_name_disp)
-         close(log_lun)
-      endif
-
-      if(allocated(tmparr)) deallocate(tmparr)
-
-   end subroutine write_hdf
-
-   subroutine next_fluid_or_var(ifluid,ivar,nfluids)
-      implicit none
-      integer ifluid,ivar,nfluids
-      if(ifluid .lt. nfluids) then
-         ifluid=ifluid+1
-         ivar=1
-      else
-         ivar=0
-         ifluid=1
-      endif
-      return
-   end subroutine next_fluid_or_var
-
-!---------------------------------------------------------------------
-!
-! writes restart file
-!
-!---------------------------------------------------------------------
-!
-   subroutine write_restart
-
-      use fluidindex,   only : nvar,nmag
-      use arrays,       only : u,b
-      use grid,         only : nxb,nyb,nzb,x,y,z,nx,ny,nz
-      use grid,         only : xmin,xmax,ymin,ymax,zmin,zmax,nxd,nyd,nzd,nb
-      use initproblem,  only : problem_name, run_id
-#ifdef GRAV
-      use arrays,       only : gp
-#endif /* GRAV */
-
-      implicit none
-
-      character(len=128) :: file_name_res,file_name_disp,file_name_last
-      character*160 syscom
-      logical lastres_exist
-
-      integer :: sd_id, sds_id, dim_id, scstatus
-      integer :: iostatus, ranku, rankb, rank3d, comp_type
-      integer, dimension(4) :: dimsu, dimsb, istart, stride
-      integer, dimension(3) :: dims, dims3d
-      integer, dimension(1) :: comp_prm
-      integer :: sfstart, sfend, sfsnatt, sfcreate, sfwdata, sfscompress, sfendacc &
-               , sfdimid, sfsdmname, sfsdscale
-
-      integer(kind=1) :: system
-
-!- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
-!  prepare data dimensions
-!
-      comp_type   = 4
-      comp_prm(1) = 6
-      istart(:)   = 0
-      stride(:)   = 1
-
-      dims(1)     = nx
-      dims(2)     = ny
-      dims(3)     = nz
-
-      ranku       = 4
-      dimsu(1)    = nvar
-      dimsu(2)    = dims(1)
-      dimsu(3)    = dims(2)
-      dimsu(4)    = dims(3)
-
-      rankb       = 4
-      dimsb(1)    = nmag
-      dimsb(2)    = dims(1)
-      dimsb(3)    = dims(2)
-      dimsb(4)    = dims(3)
-
-      rank3d      = 3
-      dims3d(1)    = dims(1)
-      dims3d(2)    = dims(2)
-      dims3d(3)    = dims(3)
-
-!  generate filename
-!
-      write (file_name_res,'(a,a1,a,a1,a3,a1,3(i2.2,a1),i3.3,a4)') &
-                    trim(cwd),'/',trim(problem_name),'_', run_id,  &
-               '_',pcoords(1),'_',pcoords(2),'_',pcoords(3),'_',nres, '.res'
-
-      write (file_name_disp,'(a,a1,a3,a1,3(a2,a1),i3.3,a4)') &
-                    trim(problem_name),'_', run_id, &
-               '_',pc1,'_',pc2,'_',pc3,'_',nres, '.res'
-
-      if((resdel .ne. 0) .and. (nres .gt. resdel)) then
-         write (file_name_last,'(a,a1,a,a1,a3,a1,3(i2.2,a1),i3.3,a4)') &
-                        trim(cwd),'/',trim(problem_name),'_', run_id,  &
-              '_',pcoords(1),'_',pcoords(2),'_',pcoords(3),'_',nres-resdel, '.res'
-      endif
-
-      sd_id = sfstart(file_name_res, 4)
-
-!!  ATTRIBUTES
-!!
-! write config attributes
-!
-      iostatus = sfsnatt( sd_id, 'problem' , 4, 32, problem_name)
-      iostatus = sfsnatt( sd_id, 'run_id'  , 4, 32, run_id      )
-      iostatus = sfsnatt( sd_id, 'domain'  , 4, 32, domain      )
-
-      iostatus = sfsnatt( sd_id, 'psize1'  , 23, 1, psize(1) )
-      iostatus = sfsnatt( sd_id, 'psize2'  , 23, 1, psize(2) )
-      iostatus = sfsnatt( sd_id, 'psize3'  , 23, 1, psize(3) )
-
-      iostatus = sfsnatt( sd_id, 'pcoords1', 23, 1, pcoords(1) )
-      iostatus = sfsnatt( sd_id, 'pcoords2', 23, 1, pcoords(2) )
-      iostatus = sfsnatt( sd_id, 'pcoords3', 23, 1, pcoords(3) )
-
-      iostatus = sfsnatt( sd_id, 'dimsu'   , 23, 1, nvar )
-      iostatus = sfsnatt( sd_id, 'dims1'   , 23, 1, dims(1) )
-      iostatus = sfsnatt( sd_id, 'dims2'   , 23, 1, dims(2) )
-      iostatus = sfsnatt( sd_id, 'dims3'   , 23, 1, dims(3) )
-
-      iostatus = sfsnatt( sd_id, 'nxd'     , 23,  1, nxd     )
-      iostatus = sfsnatt( sd_id, 'nyd'     , 23,  1, nyd     )
-      iostatus = sfsnatt( sd_id, 'nzd'     , 23,  1, nzd     )
-
-      iostatus = sfsnatt( sd_id, 'nxb'     , 23,  1, nxb     )
-      iostatus = sfsnatt( sd_id, 'nyb'     , 23,  1, nyb     )
-      iostatus = sfsnatt( sd_id, 'nzb'     , 23,  1, nzb     )
-      iostatus = sfsnatt( sd_id, 'nb'      , 23,  1, nb      )
-
-      iostatus = sfsnatt( sd_id, 'xmin'    ,  6,  1, xmin   )
-      iostatus = sfsnatt( sd_id, 'xmax'    ,  6,  1, xmax   )
-      iostatus = sfsnatt( sd_id, 'ymin'    ,  6,  1, ymin   )
-      iostatus = sfsnatt( sd_id, 'ymax'    ,  6,  1, ymax   )
-      iostatus = sfsnatt( sd_id, 'zmin'    ,  6,  1, zmin   )
-      iostatus = sfsnatt( sd_id, 'zmax'    ,  6,  1, zmax   )
-
-! write evolution attributes
-!
-      iostatus = sfsnatt( sd_id, 'nstep'   , 24,  1, nstep   )
-      iostatus = sfsnatt( sd_id, 'time'    ,  6,  1, t       )
-      iostatus = sfsnatt( sd_id, 'timestep',  6,  1, dt      )
-
-! write dataio attributes
-!
-      iostatus = sfsnatt( sd_id, 'nres'     , 24, 1, nres + 1 )
-      iostatus = sfsnatt( sd_id, 'nhdf'     , 24, 1, nhdf     )
-      iostatus = sfsnatt( sd_id, 'ntsl'     , 24, 1, ntsl     )
-      iostatus = sfsnatt( sd_id, 'nlog'     , 24, 1, nlog     )
-      iostatus = sfsnatt( sd_id, 'step_res' , 24, 1, nstep     )
-      iostatus = sfsnatt( sd_id, 'step_hdf' , 24, 1, step_hdf )
-      iostatus = sfsnatt( sd_id, 'last_hdf_time', 6, 1, last_hdf_time)
-
-! write selected problem dependent parameters
-#ifdef SN_SRC
-      iostatus = sfsnatt( sd_id, 'nsn'      , 24, 1, nsn     )
-#endif /* SN_SRC */
-
-! write array of integer scalars
-!
-!    sds_id   = sfcreate(sd_id, 'intscal', 23, 1, nintscal)
-!    iostatus = sfscompress(sds_id, comp_type, comp_prm)
-!    iostatus = sfwdata(sds_id, istart, stride, nintscal, intscal)
-
-! write array of real scalars
-!
-!    sds_id   = sfcreate(sd_id, 'rlscal', 6, 1, nrlscal)
-!    iostatus = sfscompress(sds_id, comp_type, comp_prm)
-!    iostatus = sfwdata(sds_id, istart, stride, nrlscal, rlscal)
-
-! write initial vertical density profile
-!
-!    sds_id   = sfcreate(sd_id, 'dprof', 6, 1, nz)
-!    iostatus = sfscompress(sds_id, comp_type, comp_prm)
-!    iostatus = sfwdata(sds_id, istart, stride, nz, dprof)
-
-! write fluid variables array
-!
-      sds_id = sfcreate(sd_id, 'fluid_vars', 6, ranku, dimsu)
-      iostatus = sfscompress(sds_id, comp_type, comp_prm)
-      iostatus = sfwdata(sds_id, istart, stride, dimsu, u)
-
-! write magnetic field array
-!
-      sds_id = sfcreate(sd_id, 'mag_field', 6, rankb, dimsb)
-      iostatus = sfscompress(sds_id, comp_type, comp_prm)
-      iostatus = sfwdata(sds_id, istart, stride, dimsb, b)
-
-#ifdef GRAV
-! write gravitational potential
-!
-      sds_id = sfcreate(sd_id, 'grav_pot', 6, rank3d, dims3d)
-      iostatus = sfscompress(sds_id, comp_type, comp_prm)
-      iostatus = sfwdata(sds_id, istart, stride, dims3d, gp)
-#endif /* GRAV */
-
-! write coords
-!
-      dim_id = sfdimid( sds_id, 1 )
-      iostatus = sfsdmname( dim_id, 'x' )
-      iostatus = sfsdscale( dim_id, dimsu(2), 6, x)
-
-      dim_id = sfdimid( sds_id, 2 )
-      iostatus = sfsdmname( dim_id, 'y' )
-      iostatus = sfsdscale( dim_id, dimsu(3), 6, y)
-
-      dim_id = sfdimid( sds_id, 3 )
-      iostatus = sfsdmname( dim_id, 'z' )
-      iostatus = sfsdscale( dim_id, dimsu(4), 6, z)
-
-      iostatus = sfendacc(sds_id)
-
-      iostatus = sfend(sd_id)
-
-      if(proc.eq. 0) then
-         open(log_lun, file=log_file, position='append')
-         write(log_lun,*) 'Writing restart  file: ', trim(file_name_disp)
-         write(*,*)       'Writing restart  file: ', trim(file_name_disp)
-         close(log_lun)
-      endif
-
-      if((resdel .ne. 0) .and. (nres .gt. resdel)) then
-         inquire(file=file_name_last, exist=lastres_exist)
-         if(lastres_exist) then
-            syscom='rm -f'//file_name_last
-            scstatus = system(syscom)
-            write(*,*) trim(file_name_last),' removed'
-         else
-            write(*,*) trim(file_name_last),' does not exist'
-         endif
-      endif
-
-   end subroutine write_restart
-
-!---------------------------------------------------------------------
-!
-! read restart file
-!
-!---------------------------------------------------------------------
-!
-   subroutine read_restart !(all)
-      use fluidindex,   only : nvar, nmag
-      use arrays,       only : u,b
-      use grid,         only : nx,ny,nz
-      use initproblem,  only : problem_name, run_id
-#ifdef GRAV
-      use arrays,       only : gp
-#endif /* GRAV */
-
-      implicit none
-
-      character(len=128) :: file_name_res,file_name_disp
-      logical file_exist, log_exist
-
-      integer :: sd_id, sds_id, attr_index, sds_index
-      integer :: iostatus, ranku, rankb, rank3d
-      integer, dimension(4) :: dimsu, dimsb, istart, stride
-      integer, dimension(3) :: dims3d
-      integer :: sfstart, sfend, sffattr, sfrnatt, sfn2index, sfselect, sfrdata, sfendacc
-
-!- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
-!  prepare data dimensions
-!
-      istart(:) = 0
-      stride(:) = 1
-
-      ranku    = 4
-      dimsu(1) = nvar
-      dimsu(2) = nx
-      dimsu(3) = ny
-      dimsu(4) = nz
-
-      rankb    = 4
-      dimsb(1) = nmag
-      dimsb(2) = nx
-      dimsb(3) = ny
-      dimsb(4) = nz
-
-      rank3d   = 3
-      dims3d(1) = nx
-      dims3d(2) = ny
-      dims3d(3) = nz
-
-!  generate filename
-!
-      write (file_name_res,'(a,a1,a,a1,a3,a1,3(i2.2,a1),i3.3,a4)') &
-              trim(cwd),'/',trim(problem_name),'_', run_id,  &
-              '_',pcoords(1),'_',pcoords(2),'_',pcoords(3),'_',nres, '.res'
-
-      write (file_name_disp,'(a,a1,a3,a1,3(a2,a1),i3.3,a4)') &
-              trim(problem_name),'_', run_id, &
-              '_',pc1,'_',pc2,'_',pc3,'_',nres, '.res'
-
-      if(proc.eq. 0) then
-         write(*,*)       'Reading restart  file: ', trim(file_name_disp)
-      endif
-      if(proc==0) then
-         inquire(file =log_file , exist = log_exist)
-         if(log_exist .eqv. .true.) then
-            open(log_lun, file=log_file, position='append')
-            write(log_lun,*) 'Reading restart  file: ', trim(file_name_disp)
-            close(log_lun)
-         endif
-      endif
-
-      inquire(file = file_name_res, exist = file_exist)
-      if(file_exist .eqv. .false.) then
-         if(log_exist) then
-            open(log_lun, file=log_file, position='append')
-            write(log_lun,*) 'Restart  file: ', trim(file_name_res), &
-                         '               does not exist.  ABORTING !!! '
-            close(log_lun)
-         endif
-
-         write(*,*)       'Restart  file: ', trim(file_name_res), &
-                         '               does not exist.  ABORTING !!! '
-         call MPI_BARRIER(comm,ierr)
-         call mpistop
-         stop
-      endif
-
-
-      sd_id = sfstart(file_name_res, 1)
-
-! read evolution attributes
-!
-      attr_index = sffattr( sd_id, 'nstep'     )
-      iostatus = sfrnatt( sd_id, attr_index, nstep   )
-      attr_index = sffattr( sd_id, 'time'     )
-      iostatus = sfrnatt( sd_id, attr_index, t   )
-      attr_index = sffattr( sd_id, 'timestep' )
-      iostatus = sfrnatt( sd_id, attr_index, dt     )
-
-! read dataio attributes
-!
-      attr_index = sffattr( sd_id, 'nres'      )
-      iostatus = sfrnatt( sd_id, attr_index, nres     )
-      attr_index = sffattr( sd_id, 'nhdf'      )
-      iostatus = sfrnatt( sd_id, attr_index, nhdf     )
-      attr_index = sffattr( sd_id, 'ntsl'      )
-      iostatus = sfrnatt( sd_id, attr_index, ntsl     )
-      attr_index = sffattr( sd_id, 'nlog'      )
-      iostatus = sfrnatt( sd_id, attr_index, nlog     )
-      attr_index = sffattr( sd_id, 'step_res'  )
-      iostatus = sfrnatt( sd_id, attr_index, step_res )
-      attr_index = sffattr( sd_id, 'step_hdf'  )
-      iostatus = sfrnatt( sd_id, attr_index, step_hdf )
-      attr_index = sffattr( sd_id, 'last_hdf_time' )
-      iostatus = sfrnatt( sd_id, attr_index, last_hdf_time )
-
-! read selected problem dependent parameters
-#ifdef SN_SRC
-      attr_index = sffattr( sd_id, 'nsn'       )
-      iostatus = sfrnatt( sd_id, attr_index, nsn_last    )
-#endif /* SN_SRC */
-
-! read variables array
-!
-      sds_index = sfn2index(sd_id, 'fluid_vars')
-      sds_id = sfselect(sd_id, sds_index)
-      iostatus = sfrdata(sds_id, istart, stride, dimsu, u)
-
-! read magnetic field
-!
-      sds_index = sfn2index(sd_id, 'mag_field')
-      sds_id = sfselect(sd_id, sds_index)
-      iostatus = sfrdata(sds_id, istart, stride, dimsb, b)
-
-#ifdef GRAV
-! read gravitational potential
-!
-      sds_index = sfn2index(sd_id, 'grav_pot')
-      sds_id = sfselect(sd_id, sds_index)
-      iostatus = sfrdata(sds_id, istart, stride, dims3d, gp)
-#endif /* GRAV */
-
-      iostatus = sfendacc(sds_id)
-
-      iostatus = sfend(sd_id)
-
-   end subroutine read_restart
 
 !------------------------------------------------------------------------
 
@@ -1403,13 +635,8 @@ module dataio
       call rm_file('restart_list.tmp')
 
       do nres =999,0,-1
-#ifdef HDF5
          write (file_name,'(a,a1,a,a1,a3,a1,i4.4,a4)') &
                trim(cwd),'/',trim(problem_name),'_', run_id,'_',nres,'.res'
-#else /* HDF5 */
-         write (file_name,'(a,a1,a,a1,a3,a1,3(i2.2,a1),i3.3,a4)') &
-               trim(cwd),'/',trim(problem_name),'_', run_id,'_',0,'_',0,'_',0,'_',nres,'.res'
-#endif /* HDF5 */
          inquire(file = file_name, exist = exist)
          if(exist) then
             restart_number = nres
@@ -2124,15 +1351,8 @@ module dataio
 
    end subroutine write_log
 
+!------------------------------------------------------------------------
 
-!
-!=======================================================================
-!
-!                    B E G I N   S U B R O U T I N E
-!                             R E A D F M S G
-!
-!=======================================================================
-!
    subroutine read_file_msg
 
 !     written by: michal hanasz

@@ -22,6 +22,3 @@
 #define SHEAR
 #define FFTW
 #define SHEAR_BND
-
-#define HDF5
-

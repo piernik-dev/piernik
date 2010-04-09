@@ -117,9 +117,9 @@ if($moo{problems}){
 #   print "!===================================================================================!\n";
    print "\nEnjoy your work with piernik!\n";
    if ( $is_prob == 0 ) {
-	exit $OK;
+   exit $OK;
    } else {
-	exit $FAILED;
+   exit $FAILED;
    }
 }
 if($moo{compiler}) {$compiler = $moo{compiler}.".in"} else {$compiler = 'default.in'};
@@ -167,7 +167,7 @@ if( grep { /GRAV/ }  @d) {
 if( grep { /SELF_GRAV/ }  @d) {push(@addons, "../src/gravity/poissonsolver.F90");}
 if( grep { /MULTIGRID/ } @d) {push(@addons, "../src/gravity/multigrid.F90");}
 if( grep { /SHEAR/ }  @d) {push(@addons, "../src/shear/shear.F90");}
-if( grep { /HDF5/ } @d) {push(@addons, "../src/hdf5/dataio_hdf5.F90");}
+push(@addons, "../src/hdf5/dataio_hdf5.F90");
 
 push(@addons, "../src/fluids/initfluids.F90");
 push(@addons, "../src/fluids/fluidindex.F90");
@@ -252,10 +252,8 @@ print MAKEFILE "\n\n";
 #
 # Define common macros
 #
-print MAKEFILE "LIBS = -lmfhdf -ldf -ljpeg -lz\n";
-print MAKEFILE "CPPFLAGS = " . $cppflags . "\n";
-print MAKEFILE "ifdef HDF_LIB\nLIBS += -L\$(HDF_LIB)\nendif\n";
-print MAKEFILE "ifdef MHDF_LIB\nLIBS += -L\${MHDF_LIB}\nendif\n";
+print MAKEFILE "LIBS += -lhdf5_fortran -lhdf5hl_fortran -lhdf5_hl -lhdf5\n";
+print MAKEFILE "CPPFLAGS += " . $cppflags . "\n";
 #
 # make
 #
@@ -361,9 +359,9 @@ if ( ! -d $problempath ) {
 }
 
 if ( copy('obj/piernik', $problempath) && \
-	chmod(0755, "$problempath/piernik") && \
-	copy('obj/problem.par', $problempath) && \
-	copy('obj/piernik.def', $problempath) ) {
+   chmod(0755, "$problempath/piernik") && \
+   copy('obj/problem.par', $problempath) && \
+   copy('obj/piernik.def', $problempath) ) {
    print "\n" . $problemname . " ready in " . $problempath . "\n";
 } else {
    print "$!\n";
