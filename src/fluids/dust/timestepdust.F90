@@ -35,7 +35,8 @@
 
 module timestepdust
 
-  real :: dt_dst,c_dst
+  real :: dt_dst                !< final timestep for dust
+  real :: c_dst                 !< maximum speed at which information travels in dust
 
 contains
 

@@ -13,4 +13,5 @@
 #define MAGNETIC
 
 /* gravity type choosing */
-#undef GRAV
+#define GRAV
+#define GRAV_RT

@@ -1,7 +1,7 @@
 PRO SHOW
 
-data_dir = '../runs/sedov/'
-prefix = 'sedov_tst'
+data_dir = '../runs/RT/'
+prefix = 'rt_tst'
 
 
 png_dir = data_dir+'/frames'
@@ -9,7 +9,7 @@ png_dir = data_dir+'/frames'
 DEVICE,DECOMPOSED=0,RETAIN=2
 
 ;===============================================================================
-!PATH = '/home/MYHOME/piernik/idl:' + !PATH 
+!PATH = '/home/MYHOME/piernik_trunk/idl:' + !PATH 
 ;===============================================================================
 data_files = FINDFILE(data_dir+'/'+prefix+'_00_00_00_*.hdf', Count=n_files)
 IF(n_files EQ 0) THEN GOTO, SKIP
@@ -43,14 +43,14 @@ s.sw	= 'on'
 s.panel_name	= 'a'			; If more slices of the same type 
                                         ; are needed use this index
 
-s.type		= 'xy'			; Chose 'yz', 'xz' or 'xy' plane
+s.type		= 'xz'			; Chose 'yz', 'xz' or 'xy' plane
 s.coord		=  0.0         ; Position at the complementary coordinate
 s.vect_disp	= 'v'			; Vector field to display: 'b' or 'v'
 s.vect_scaling	= 'free'		; 'fix' or 'free' 
 s.vect_scale	=  1.0
 
 
-s.scal_disp	= 'd'			; Scalar field to display 'd' or 'e'
+s.scal_disp	= 'e'			; Scalar field to display 'd' or 'e'
 s.scal_pert     = ''			; inactive
 s.scal_scaling	= 'free'		; 'fix' or 'free'
 s.scal_scale	= [0.0,5.0]
@@ -62,7 +62,7 @@ n_slices = n_slices+1
 
 ;-----------------------------------------------------------------------------
 
-s.sw	= 'on' 
+s.sw	= 'off' 
 s.panel_name	= 'b'			; If more slices of the same type 
                                         ; are needed use this index
 
@@ -85,7 +85,7 @@ slice_array = [slice_array,s]
 n_slices = n_slices+1
 
 ;==============================================================================
-vars = ['den1','vlx1','vly1','vlz1','ene1','magx','magy','magz']
+vars = ['den1', 'ene1' ,'vlx1','vlz1']
 n_vectors = [n_vect_x,n_vect_y,n_vect_z]
 ;==============================================================================
 

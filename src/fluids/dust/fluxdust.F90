@@ -28,7 +28,7 @@
 #include "piernik.def"
 #define RNG 2:n-1
 !>
-!! \brief (MH/JD) Computation of %fluxes for the dust fluid
+!! \brief (MH/JD) (doxy comments ready) Computation of %fluxes for the dust fluid
 !!
 !!The flux functions for dust are given by:
 !!\f[

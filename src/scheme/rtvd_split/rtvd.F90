@@ -27,7 +27,7 @@
 !
 #include "piernik.def"
 !>
-!! \brief (JD) This module implements relaxing TVD scheme (doxy comments ready)
+!! \brief (JD) (doxy comments ready) This module implements relaxing TVD scheme
 !!
 !! The implementation was based on TVD split MHD code by Pen et al. (2003).
 !<

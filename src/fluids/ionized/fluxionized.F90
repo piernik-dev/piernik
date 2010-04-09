@@ -29,7 +29,7 @@
 #define RNG 2:n-1
 
 !>
-!! \brief (MH/JD) Computation of %fluxes for the ionized fluid
+!! \brief (MH/JD) (doxy comments ready) Computation of %fluxes for the ionized fluid 
 !!
 !!The flux functions for ionized fluid are given by
 !!\f[

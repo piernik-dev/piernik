@@ -29,7 +29,7 @@
 #define RNG 2:n-1
 
 !>
-!! \brief (MH/JD) Computation of %fluxes for the neutral fluid
+!! \brief (MH/JD) (doxy comments ready) Computation of %fluxes for the neutral fluid
 !!
 !!The flux functions for neutral fluid are given by
 !!
@@ -86,7 +86,9 @@ module fluxneutral
     integer n                               !< number of cells in the current sweep
 
 ! locals
-    real :: minvx,maxvx,amp
+    real :: minvx                           !< 
+    real :: maxvx                           !< 
+    real :: amp                             !< 
     real, dimension(nvar_neu,n):: fluxn     !< flux for neutral fluid
     real, dimension(nvar_neu,n):: uun       !< part of u for neutral fluid
     real, dimension(nvar_neu,n):: cfrn      !< freezing speed for neutral fluid
