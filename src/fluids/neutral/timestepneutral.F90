@@ -28,7 +28,7 @@
 #include "piernik.def"
 
 !>
-!! \brief (MH/JD) (doxy comments ready) Timestep computation for the neutral fluid 
+!! \brief (MH/JD) (doxy comments ready) Timestep computation for the neutral fluid
 !!
 !! %Timestep for the neutral fluid is set as the minimum %timestep for all of the MPI blocks times the Courant number.
 !! To compute the %timestep in each MPI block, the fastest speed at which information travels in each direction is computed as
@@ -57,7 +57,7 @@ module timestepneutral
 contains
 
   subroutine timestep_neu
-    use mpisetup
+    use mpisetup,    only : MPI_DOUBLE_PRECISION, MPI_MIN, MPI_MAX, comm, ierr, cfl
     use constants,   only : big
     use grid, only        : dx,dy,dz,nb,ks,ke,is,ie,js,je,nxd,nyd,nzd
     use arrays, only      : u,b
@@ -67,28 +67,26 @@ contains
     use initneutral, only : ienn
 #endif /* ISO */
 
-
     implicit none
 
-    real dt_neu_proc                   !< minimum timestep for the neutral fluid for the current processor
-    real dt_neu_all                    !< minimum timestep for the neutral fluid for all the processors
-    real c_max_all                     !< maximum speed for the neutral fluid for all the processors
-    real dt_neu_proc_x                 !< timestep computed for X direction for the current processor
-    real dt_neu_proc_y                 !< timestep computed for Y direction for the current processor
-    real dt_neu_proc_z                 !< timestep computed for Z direction for the current processor
-    real cx                            !< maximum velocity for X direction
-    real cy                            !< maximum velocity for Y direction
-    real cz                            !< maximum velocity for Z direction
-    real vx                            !< velocity in X direction computed for current cell
-    real vy                            !< velocity in Y direction computed for current cell
-    real vz                            !< velocity in Z direction computed for current cell
-    real cs                            !< speed of sound for the neutral fluid
-
+    real :: dt_neu_proc                   !< minimum timestep for the neutral fluid for the current processor
+    real :: dt_neu_all                    !< minimum timestep for the neutral fluid for all the processors
+    real :: c_max_all                     !< maximum speed for the neutral fluid for all the processors
+    real :: dt_neu_proc_x                 !< timestep computed for X direction for the current processor
+    real :: dt_neu_proc_y                 !< timestep computed for Y direction for the current processor
+    real :: dt_neu_proc_z                 !< timestep computed for Z direction for the current processor
+    real :: cx                            !< maximum velocity for X direction
+    real :: cy                            !< maximum velocity for Y direction
+    real :: cz                            !< maximum velocity for Z direction
+    real :: vx                            !< velocity in X direction computed for current cell
+    real :: vy                            !< velocity in Y direction computed for current cell
+    real :: vz                            !< velocity in Z direction computed for current cell
+    real :: cs                            !< speed of sound for the neutral fluid
 
 ! locals
 
-    real p
-    integer i,j,k
+    real    :: p
+    integer :: i,j,k
 
 
     cx    = 0.0
@@ -156,4 +154,3 @@ contains
 
 !-------------------------------------------------------------------------------
 end module timestepneutral
-

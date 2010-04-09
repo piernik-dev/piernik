@@ -73,6 +73,9 @@
     integration_order = 2
  /
 
+ $GRAVITY
+ /
+
  $PROBLEM_CONTROL
     problem_name ='sedov'
     run_id =  'tst'

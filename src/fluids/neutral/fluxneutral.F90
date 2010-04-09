@@ -83,12 +83,12 @@ module fluxneutral
     use timestep, only : c_all
 
     implicit none
-    integer n                               !< number of cells in the current sweep
+    integer :: n                            !< number of cells in the current sweep
 
 ! locals
-    real :: minvx                           !< 
-    real :: maxvx                           !< 
-    real :: amp                             !< 
+    real :: minvx                           !<
+    real :: maxvx                           !<
+    real :: amp                             !<
     real, dimension(nvar_neu,n):: fluxn     !< flux for neutral fluid
     real, dimension(nvar_neu,n):: uun       !< part of u for neutral fluid
     real, dimension(nvar_neu,n):: cfrn      !< freezing speed for neutral fluid

@@ -60,7 +60,7 @@ module dataio_hdf5
 !<
 
    subroutine init_hdf5(vars,tix,tiy,tiz,tdt_plt)
-      use fluidindex
+      use fluidindex, only : iarr_all_cr, iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
       use grid, only : nx,ny,nz,nxd,nyd,nzd,nb
       implicit none
       character(len=4), dimension(:), intent(in) :: vars  !< quantities to be plotted, see dataio::vars
@@ -639,8 +639,8 @@ module dataio_hdf5
       IMPLICIT NONE
       type(hdf) :: chdf
       integer   :: llun,fe,nu
-      CHARACTER :: filename*128 !> HDF File name
-      character :: lfile*128
+      CHARACTER(len=128) :: filename !> HDF File name
+      character(len=128) :: lfile
 
       integer(HID_T) :: file_id       !> File identifier
       integer(HID_T) :: dset_id       !> Dataset identifier
@@ -1077,7 +1077,7 @@ module dataio_hdf5
       integer(HSIZE_T),  DIMENSION(:), allocatable :: dimsf, dimsfi, chunk_dims
 
       integer :: error, rank
-      logical file_exist, log_exist
+      logical :: file_exist, log_exist
 
       real, dimension(1) :: rbuf
       integer, dimension(1) :: ibuf
@@ -1332,8 +1332,9 @@ module dataio_hdf5
       integer(HID_T) :: plist_id      ! Property list identifier
       integer :: llun,fe, ierrh
       logical :: ok_var
-      CHARACTER :: lfile*128, dd*4 ! File name
-      CHARACTER(LEN=32) :: fname
+      CHARACTER(len=128) :: lfile     ! File name
+      character(len=4)   :: dd
+      CHARACTER(LEN=32)  :: fname
 
       real(kind=4), allocatable :: data (:,:,:)  ! Data to write
       integer :: error, i
@@ -1490,7 +1491,7 @@ module dataio_hdf5
       !
       ! Write the dataset collectively.
       !
-      CALL h5dwrite_f(dset_id, H5T_NATIVE_real, data, dimsfi, error, &
+      CALL h5dwrite_f(dset_id, H5T_NATIVE_REAL, data, dimsfi, error, &
                       file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
 
       !

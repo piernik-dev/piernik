@@ -28,7 +28,7 @@
 #include "piernik.def"
 
 !>
-!! \brief (MH/JD) (doxy comments ready) %Timestep computation for the ionized fluid 
+!! \brief (MH/JD) (doxy comments ready) %Timestep computation for the ionized fluid
 !!
 !! %Timestep for the ionized fluid is set as the minimum %timestep for all of the MPI blocks times the Courant number.
 !! To compute the %timestep in each MPI block, the fastest speed at which information travels in each direction is computed as
@@ -52,111 +52,108 @@
 
 module timestepionized
 
-  real :: dt_ion             !< final timestep for ionized fluids
-  real :: c_ion              !< maximum speed at which information travels in the ionized fluid
+   real :: dt_ion             !< final timestep for ionized fluids
+   real :: c_ion              !< maximum speed at which information travels in the ionized fluid
 
- contains
+contains
 
-  subroutine timestep_ion
+   subroutine timestep_ion
 
-    use mpisetup
-    use constants,   only : big
-    use grid,        only : dx,dy,dz,nb,ks,ke,is,ie,js,je,nxd,nyd,nzd
-    use arrays,      only : u,b
-    use initionized, only : gamma_ion, cs_iso_ion2
-    use initionized, only : idni,imxi,imyi,imzi
+      use mpisetup,    only : MPI_DOUBLE_PRECISION, MPI_MIN, MPI_MAX, comm, ierr, cfl
+      use constants,   only : big
+      use grid,        only : dx,dy,dz,nb,ks,ke,is,ie,js,je,nxd,nyd,nzd
+      use arrays,      only : u,b
+      use initionized, only : gamma_ion, cs_iso_ion2
+      use initionized, only : idni,imxi,imyi,imzi
 #ifndef ISO
-    use initionized, only : ieni
+      use initionized, only : ieni
 #endif /* ISO */
 
-    implicit none
+      implicit none
 
-    real dt_ion_proc         !< minimum timestep for the ionized fluid for the current processor
-    real dt_ion_all          !< minimum timestep for the ionized fluid for all the processors
-    real c_max_all           !< maximum speed for the ionized fluid for all the processors
-    real dt_ion_proc_x       !< timestep computed for X direction for the current processor
-    real dt_ion_proc_y       !< timestep computed for Y direction for the current processor
-    real dt_ion_proc_z       !< timestep computed for Z direction for the current processor
-    real cx                  !< maximum velocity for X direction
-    real cy                  !< maximum velocity for Y direction
-    real cz                  !< maximum velocity for Z direction
-    real vx                  !< velocity in X direction computed for current cell
-    real vy                  !< velocity in Y direction computed for current cell
-    real vz                  !< velocity in Z direction computed for current cell
-    real cf                  !< speed of sound for the ionized fluid
+      real :: dt_ion_proc         !< minimum timestep for the ionized fluid for the current processor
+      real :: dt_ion_all          !< minimum timestep for the ionized fluid for all the processors
+      real :: c_max_all           !< maximum speed for the ionized fluid for all the processors
+      real :: dt_ion_proc_x       !< timestep computed for X direction for the current processor
+      real :: dt_ion_proc_y       !< timestep computed for Y direction for the current processor
+      real :: dt_ion_proc_z       !< timestep computed for Z direction for the current processor
+      real :: cx                  !< maximum velocity for X direction
+      real :: cy                  !< maximum velocity for Y direction
+      real :: cz                  !< maximum velocity for Z direction
+      real :: vx                  !< velocity in X direction computed for current cell
+      real :: vy                  !< velocity in Y direction computed for current cell
+      real :: vz                  !< velocity in Z direction computed for current cell
+      real :: cf                  !< speed of sound for the ionized fluid
 
 ! locals
-    real pmag
-    real ps,p
-    integer i,j,k
+      real :: pmag
+      real :: ps,p
+      integer :: i,j,k
 
 
-    cx    = 0.0
-    cy    = 0.0
-    cz    = 0.0
-    c_ion     = 0.0
+      cx    = 0.0
+      cy    = 0.0
+      cz    = 0.0
+      c_ion     = 0.0
 
-    do k=ks,ke
-      do j=js,je
-        do i=is,ie
+      do k=ks,ke
+         do j=js,je
+            do i=is,ie
 
-          vx=abs(u(imxi,i,j,k)/u(idni,i,j,k))
-          vy=abs(u(imyi,i,j,k)/u(idni,i,j,k))
-          vz=abs(u(imzi,i,j,k)/u(idni,i,j,k))
+               vx=abs(u(imxi,i,j,k)/u(idni,i,j,k))
+               vy=abs(u(imyi,i,j,k)/u(idni,i,j,k))
+               vz=abs(u(imzi,i,j,k)/u(idni,i,j,k))
 
-          pmag = sum(b(:,i,j,k)**2,1)/2.
+               pmag = sum(b(:,i,j,k)**2,1)/2.
 
 #ifdef ISO
-            p = cs_iso_ion2*u(idni,i,j,k)
-            ps =p+pmag
-            cf = sqrt(abs(  (2.*pmag+p)/u(idni,i,j,k)) )
+               p = cs_iso_ion2*u(idni,i,j,k)
+               ps =p+pmag
+               cf = sqrt(abs(  (2.*pmag+p)/u(idni,i,j,k)) )
 #else /* ISO */
-            ps=(u(ieni,i,j,k)-sum(u(imxi:imzi,i,j,k)**2,1) &
-             /u(idni,i,j,k)/2.)*(gamma_ion-1.)+(2.-gamma_ion)*pmag
-            p=ps-pmag
-            cf = sqrt(abs(  (2.*pmag+gamma_ion*p)/u(idni,i,j,k)) )
+               ps=(u(ieni,i,j,k)-sum(u(imxi:imzi,i,j,k)**2,1) &
+               /u(idni,i,j,k)/2.)*(gamma_ion-1.)+(2.-gamma_ion)*pmag
+               p=ps-pmag
+               cf = sqrt(abs(  (2.*pmag+gamma_ion*p)/u(idni,i,j,k)) )
 #endif /* ISO */
 
-          cx=max(cx,vx+cf)
-          cy=max(cy,vy+cf)
-          cz=max(cz,vz+cf)
-          c_ion =max(c_ion,cx,cy,cz)
+               cx=max(cx,vx+cf)
+               cy=max(cy,vy+cf)
+               cz=max(cz,vz+cf)
+               c_ion =max(c_ion,cx,cy,cz)
 
-        end do
+            end do
+         end do
       end do
-    end do
 
-    if(nxd /= 1) then
-       dt_ion_proc_x = dx/cx
-    else
-       dt_ion_proc_x = big
-    endif
-    if(nyd /= 1) then
-       dt_ion_proc_y = dy/cy
-    else
-       dt_ion_proc_y = big
-    endif
-    if(nzd /= 1) then
-       dt_ion_proc_z = dz/cz
-    else
-       dt_ion_proc_z = big
-    endif
+      if(nxd /= 1) then
+         dt_ion_proc_x = dx/cx
+      else
+         dt_ion_proc_x = big
+      endif
+      if(nyd /= 1) then
+         dt_ion_proc_y = dy/cy
+      else
+         dt_ion_proc_y = big
+      endif
+      if(nzd /= 1) then
+         dt_ion_proc_z = dz/cz
+      else
+         dt_ion_proc_z = big
+      endif
 
-    dt_ion_proc   = min(dt_ion_proc_x, dt_ion_proc_y, dt_ion_proc_z)
+      dt_ion_proc   = min(dt_ion_proc_x, dt_ion_proc_y, dt_ion_proc_z)
 
-    call MPI_REDUCE(c_ion, c_max_all, 1, MPI_DOUBLE_PRECISION, MPI_MAX, 0, comm, ierr)
-    call MPI_BCAST(c_max_all, 1, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+      call MPI_REDUCE(c_ion, c_max_all, 1, MPI_DOUBLE_PRECISION, MPI_MAX, 0, comm, ierr)
+      call MPI_BCAST(c_max_all, 1, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
-    c_ion = c_max_all
+      c_ion = c_max_all
 
-    call MPI_REDUCE(dt_ion_proc, dt_ion_all, 1, MPI_DOUBLE_PRECISION, MPI_MIN, 0, comm, ierr)
-    call MPI_BCAST(dt_ion_all, 1, MPI_DOUBLE_PRECISION, 0, comm, ierr)
-    dt_ion = cfl*dt_ion_all
+      call MPI_REDUCE(dt_ion_proc, dt_ion_all, 1, MPI_DOUBLE_PRECISION, MPI_MIN, 0, comm, ierr)
+      call MPI_BCAST(dt_ion_all, 1, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+      dt_ion = cfl*dt_ion_all
 
-!    write(*,*) 'timestep_ion:', dt_ion
-
-  end subroutine timestep_ion
+   end subroutine timestep_ion
 
 !-------------------------------------------------------------------------------
 end module timestepionized
-

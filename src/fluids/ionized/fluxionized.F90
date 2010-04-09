@@ -29,7 +29,7 @@
 #define RNG 2:n-1
 
 !>
-!! \brief (MH/JD) (doxy comments ready) Computation of %fluxes for the ionized fluid 
+!! \brief (MH/JD) (doxy comments ready) Computation of %fluxes for the ionized fluid
 !!
 !!The flux functions for ionized fluid are given by
 !!\f[
@@ -83,7 +83,7 @@ module fluxionized
     use constants,       only : small
 
     implicit none
-    integer n                               !< number of cells in the current sweep
+    integer :: n                            !< number of cells in the current sweep
 
 ! locals
     real, dimension(nvar_ion,n):: fluxi     !< flux of ionized fluid
