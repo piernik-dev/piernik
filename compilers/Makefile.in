@@ -1,7 +1,8 @@
 PROG		 = piernik
 
 ### GNU hydra AMD64
-F90		 = /usr/bin/h5pfc
+F90		 = /opt/gcc-4.3/hdf5/bin/h5pfc
 F90FLAGS  = -g -fdefault-real-8 -Wall -W -pedantic-errors -ffree-form -std=gnu -fimplicit-none
-HDF_LIB  = . -lfftw3 -llapack -lgfortran -lc
+#HDF_LIB  = . -lfftw3 -llapack -lgfortran -lc
+HDF_LIB  = . -L/opt/gcc-4.3/hdf5/lib -lgfortran -lc
 MHDF_LIB = .
