@@ -32,33 +32,36 @@ def remove_binaries(files):
 def qa_checks(files,options):
    print b.OKBLUE + '"I am the purifier, the light that clears all shadows." - seal of cleansing inscription' + b.ENDC
    files = remove_binaries(files)
-   qa_trailing_spaces(files)
+   qa_trailing_spaces(files,options)
    qa_nonconforming_tabs(files,options)
 
 def qa_nonconforming_tabs(files,options):
    print b.OKGREEN + "QA: " + b.ENDC + "Checking for tabs"
+   wrong_files = []
    for file in files:
       if (len(sp.Popen('grep "	" '+file, shell=True, executable="/bin/bash",stdout=sp.PIPE).communicate()[0])):
          print b.FAIL + "QA:  " + b.ENDC + "non conforming tab detected in " + file
-         print b.FAIL + "QA:  " + b.ENDC + "I could fix it for you, but your mileage may vary. Please do it yourself."
-         print b.FAIL + "Error detected! " + b.ENDC + "I will not let you commit unless you force me!!!"
-         if options.force:
-            print "Damn! You are determined to make low quality commit :-("
-         else:
-            exit()
+         wrong_files.append(file)
+   if (len(wrong_files)):
+      print b.FAIL + "Error detected! " + b.ENDC + "I will not let you commit unless you force me!!!"
+      if options.force:
+         print "Damn! You are determined to make low quality commit :-("
+      else:
+         exit()
 
-def qa_trailing_spaces(files):
+def qa_trailing_spaces(files,options):
    print b.OKGREEN + "QA: " + b.ENDC + "Removing trailing whitespaces"
    for file in files:
       sp.Popen('sed -i -e "s/\s\+$//" '+file, shell=True, executable="/bin/bash")
-      print b.OKGREEN + "QA: " + b.ENDC + " done cleansing in " + file.rstrip('\n')
+      if options.verbose:
+         print b.OKGREEN + "QA: " + b.ENDC + " done cleansing in " + file.rstrip('\n')
 
 if __name__ == "__main__":
    from optparse import OptionParser
    usage = "usage: %prog [options] FILES"
    parser = OptionParser(usage=usage)
    parser.add_option("-v", "--verbose",
-                  action="store_true", dest="verbose", default=True,
+                  action="store_true", dest="verbose", default=False,
                   help="make lots of noise [default]")
    parser.add_option("-q", "--quiet",
                   action="store_false", dest="verbose",
