@@ -30,6 +30,8 @@
 !!
 !! \b \#define \b GRAV_\<TYPE\> - to choose other type %gravity
 !!
+!! <table border="0">
+!! <tr><td width="40pt"><b></b></td><td width="760pt">
 !! \copydetails gravity::grav_pot_3d
 !!
 !! If no %gravity type is defined then vertical component of galactic %gravity is used:
@@ -39,8 +41,18 @@
 !! F_z = 3.23 \cdot 10^8 \cdot \left[\left(-4.4 \cdot 10^{-9} \cdot exp\left(-\frac{(r_{gc}-r_{gc_{}Sun})}{(4.9kpc)}\right) \cdot \frac{z}{\sqrt{(z^2+(0.2kpc)^2)}}\right)-\left( 1.7 \cdot 10^{-9} \cdot \frac{(r_{gc_{}Sun}^2 + (2.2kpc)^2)}{(r_{gc}^2 + (2.2kpc)^2)} \cdot \frac{z}{1kpc}\right) \right]
 !! \f]
 !! where \f$r_{gc}\f$ is galactocentric radius and \f$r_{gcSun}\f$ is the galactocentric radius of Sun.
+!! </td></tr></table>
+!! \n \n
 !!
 !! \b \#define \b SELF_GRAV - to include self–gravity
 !!
 !! \b \#define \b SHEAR - to include Coriolis and tidal forces in gas equation of motion and use  <a href="http://cdsads.u-strasbg.fr/abs/1995ApJ...440..742H">Hawley, Gammie and Balbus (1995)</a> type approach for shearing BCS
+!!
+!! There is a list of precompiler directives to choose unit system used in simulation:
+!!
+!! <table border="0">
+!! <tr><td width="40pt"><b></b></td><td width="760pt">
+!! \copydetails constants
+!! </td></tr></table>
+!! \n \n
 !<
