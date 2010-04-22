@@ -897,7 +897,7 @@ module dataio
       use fluidindex,         only : ibx, iby, ibz, nfluid
       use arrays,             only : wa,u,b
       use grid,               only   : dx,dy,dz,dxmn,nb,is,ie,js,je,ks,ke,nx,ny,nz
-      use constants,          only : small, hydro_mass, k_B
+      use constants,          only : small, mH, kboltz, gasRconst
       use mpisetup,           only : smallei,cfl
 #ifdef IONIZED
       use initionized,        only : gamma_ion, cs_iso_ion,cs_iso_ion2
@@ -993,10 +993,10 @@ module dataio
       csn_max%val   = cs_iso_neu
       csn_max%loc   = 0
       csn_max%proc  = 0
-      temn_min%val  = hydro_mass / k_B * cs_iso_neu2
+      temn_min%val  = mH / kboltz * gasRconst/gamma_neu * cs_iso_neu2
       temn_min%loc  = 0
       temn_min%proc = 0
-      temn_max%val  = hydro_mass / k_B * cs_iso_neu2
+      temn_max%val  = mH / kboltz * gasRconst/gamma_neu * cs_iso_neu2
       temn_max%loc  = 0
       temn_max%proc = 0
 #else /* ISO */
@@ -1014,14 +1014,14 @@ module dataio
       pren_max%loc  = maxloc(wa(is:ie,js:je,ks:ke)) + (/nb,nb,nb/)
       call mpifind(pren_max%val, 'max', pren_max%loc, pren_max%proc)
 
-      temn_max%val  = maxval( hydro_mass / k_B * wa(is:ie,js:je,ks:ke) &
-                                             /u(idnn,is:ie,js:je,ks:ke))
+      temn_max%val  = maxval( mH / kboltz * wa(is:ie,js:je,ks:ke) &
+                            * gasRconst/u(idnn,is:ie,js:je,ks:ke))
       temn_max%loc  = maxloc(wa(is:ie,js:je,ks:ke)    &
                         /u(idnn,is:ie,js:je,ks:ke)  ) + (/nb,nb,nb/)
       call mpifind(temn_max%val, 'max', temn_max%loc, temn_max%proc)
 
-      temn_min%val  = minval( hydro_mass / k_B * wa(is:ie,js:je,ks:ke) &
-                                            /u(idnn,is:ie,js:je,ks:ke))
+      temn_min%val  = minval( mH / kboltz * wa(is:ie,js:je,ks:ke) &
+                            * gasRconst/u(idnn,is:ie,js:je,ks:ke))
       temn_min%loc  = minloc(wa(is:ie,js:je,ks:ke) &
                         /u(idnn,is:ie,js:je,ks:ke)  ) &
                      + (/nb,nb,nb/)
@@ -1099,10 +1099,10 @@ module dataio
       csi_max%val   = cs_iso_ion
       csi_max%loc   = 0
       csi_max%proc  = 0
-      temi_min%val  = hydro_mass / k_B * cs_iso_ion2
+      temi_min%val  = mH / kboltz * gasRconst/gamma_ion * cs_iso_ion2
       temi_min%loc  = 0
       temi_min%proc = 0
-      temi_max%val  = hydro_mass / k_B * cs_iso_ion2
+      temi_max%val  = mH / kboltz * gasRconst/gamma_ion * cs_iso_ion2
       temi_max%loc  = 0
       temi_max%proc = 0
 #else /* ISO */
@@ -1124,14 +1124,14 @@ module dataio
       prei_max%loc  = maxloc(wa(is:ie,js:je,ks:ke)) + (/nb,nb,nb/)
       call mpifind(prei_max%val, 'max', prei_max%loc, prei_max%proc)
 
-      temi_max%val  = maxval( hydro_mass / k_B * wa(is:ie,js:je,ks:ke) &
-                                            /u(idni,is:ie,js:je,ks:ke))
+      temi_max%val  = maxval( mH / kboltz * wa(is:ie,js:je,ks:ke) &
+                            * gasRconst/u(idni,is:ie,js:je,ks:ke))
       temi_max%loc  = maxloc(wa(is:ie,js:je,ks:ke)    &
                         /u(idni,is:ie,js:je,ks:ke)  ) + (/nb,nb,nb/)
       call mpifind(temi_max%val, 'max', temi_max%loc, temi_max%proc)
 
-      temi_min%val  = minval( hydro_mass / k_B * wa(is:ie,js:je,ks:ke) &
-                                            /u(idni,is:ie,js:je,ks:ke))
+      temi_min%val  = minval( mH / kboltz * wa(is:ie,js:je,ks:ke) &
+                            * gasRconst/u(idni,is:ie,js:je,ks:ke))
       temi_min%loc  = minloc(wa(is:ie,js:je,ks:ke) &
                         /u(idni,is:ie,js:je,ks:ke)  ) &
                      + (/nb,nb,nb/)
