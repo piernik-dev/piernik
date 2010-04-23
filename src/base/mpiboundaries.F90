@@ -49,8 +49,8 @@ contains
 !   X dimension - fluid  !
 !------------------------!
       if(nxd /= 1) then
-         sizes    = (/nvar,nx,ny,nz/)
-         subsizes = (/nvar,nb,ny,nz/)
+         sizes    = (/nvar%all,nx,ny,nz/)
+         subsizes = (/nvar%all,nb,ny,nz/)
          starts   = (/0,0,0,0/)
 
          call MPI_TYPE_CREATE_SUBARRAY(4,sizes,subsizes,starts,ord,&
@@ -103,8 +103,8 @@ contains
 !   Y dimension - fluid  !
 !------------------------!
       if(nyd /= 1) then
-         sizes    = (/nvar,nx,ny,nz/)
-         subsizes = (/nvar,nx,nb,nz/)
+         sizes    = (/nvar%all,nx,ny,nz/)
+         subsizes = (/nvar%all,nx,nb,nz/)
          starts   = (/0,0,0,0/)
 
          call MPI_TYPE_CREATE_SUBARRAY(4,sizes,subsizes,starts,ord,&
@@ -157,8 +157,8 @@ contains
 !   Z dimension - fluid  !
 !------------------------!
       if(nzd /= 1) then
-         sizes    = (/nvar,nx,ny,nz/)
-         subsizes = (/nvar,nx,ny,nb/)
+         sizes    = (/nvar%all,nx,ny,nz/)
+         subsizes = (/nvar%all,nx,ny,nb/)
          starts   = (/0,0,0,0/)
 
          call MPI_TYPE_CREATE_SUBARRAY(4,sizes,subsizes,starts,ord,&

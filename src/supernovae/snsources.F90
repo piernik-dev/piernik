@@ -90,10 +90,13 @@ module snsources
 ! Written by: M. Hanasz
       use grid,   only : nx,ny,nz,x,y,z,Lx,Ly
       use arrays, only : u
-      use initcosmicrays, only : iecr
+      use initcosmicrays, only : iarr_crn
+      use fluidindex, only :  nvar
+      use crcomposition
+
       implicit none
       real, dimension(3), intent(in) :: pos
-      integer i,j,k, ipm, jpm
+      integer i,j,k, ipm, jpm, icr
       real decr, xsn,ysn,zsn
       xsn = pos(1)
       ysn = pos(2)
@@ -116,7 +119,12 @@ module snsources
                            + (y(j)-ysna+real(jpm)*Ly)**2  &
                            + (z(k)-zsn)**2)/r_sn**2)
 
-                     u(iecr,i,j,k) = u(iecr,i,j,k) + decr
+                     do icr=1,nvar%crn%all
+                        if(icr == icr_H1) u(iarr_crn(icr),i,j,k) = u(iarr_crn(icr),i,j,k) + decr
+                        if(icr == icr_C12) u(iarr_crn(icr),i,j,k) = u(iarr_crn(icr),i,j,k) + primary_C12*12*decr
+                        if(icr == icr_N14) u(iarr_crn(icr),i,j,k) = u(iarr_crn(icr),i,j,k) + primary_N14*14*decr
+                        if(icr == icr_O16) u(iarr_crn(icr),i,j,k) = u(iarr_crn(icr),i,j,k) + primary_O16*16*decr
+                     enddo
 
                   enddo ! jpm
                enddo ! ipm

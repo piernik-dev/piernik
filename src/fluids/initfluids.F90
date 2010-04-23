@@ -108,12 +108,10 @@ module initfluids
 
 #ifdef IONIZED
   use initionized, only : init_ionized, gamma_ion, cs_iso_ion, cs_iso_ion2
-  use fluidindex,  only : i_ion
 #endif /* IONIZED */
 
 #ifdef NEUTRAL
   use initneutral, only : init_neutral, gamma_neu, cs_iso_neu, cs_iso_neu2
-  use fluidindex,  only : i_neu
 #endif /* NEUTRAL */
 
 #ifdef DUST
@@ -124,7 +122,8 @@ module initfluids
   use initcosmicrays, only : init_cosmicrays
 #endif /* COSM_RAYS */
 
-  use fluidindex,   only   : nfluid, fluid_index
+  use fluidindex,   only   : fluid_index
+  use fluidindex,   only   : nvar
 
   implicit none
 
@@ -155,7 +154,7 @@ module initfluids
 
   call fluid_index
 
-  allocate(gamma(nfluid))
+  allocate(gamma(nvar%fluids))
 
 #if defined NEUTRAL && defined IONIZED
     if(cs_iso_neu /= cs_iso_ion) &
@@ -163,12 +162,12 @@ module initfluids
 #endif /* defined NEUTRAL && defined IONIZED  */
 
 #ifdef IONIZED
-    gamma(i_ion) = gamma_ion
+    gamma(nvar%ion%pos) = gamma_ion
     cs_iso   = cs_iso_ion
     cs_iso2  = cs_iso_ion2
 #endif /* IONIZED */
 #ifdef NEUTRAL
-    gamma(i_neu) = gamma_neu
+    gamma(nvar%neu%pos) = gamma_neu
     cs_iso  = cs_iso_neu
     cs_iso2 = cs_iso_neu2
 #endif /* NEUTRAL  */

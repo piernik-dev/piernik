@@ -146,7 +146,8 @@ module func
    subroutine div_v(ifluid)
       use mpisetup
       use initionized, only : idni,imxi,imyi,imzi
-      use fluidindex,  only : nfluid,iarr_all_dn,iarr_all_mx,iarr_all_my,iarr_all_mz
+      use fluidindex,  only : nvar
+      use fluidindex,  only : iarr_all_dn,iarr_all_mx,iarr_all_my,iarr_all_mz
       use grid,        only : nx,ny,nz
       use grid,        only : dx,dy,dz,nxd,nyd,nzd
       use arrays,      only : u,divvel
@@ -199,7 +200,6 @@ module func
 
    subroutine div_vx(k,j)
       use grid,        only : nx
-      use fluidindex,  only : nfluid
       use arrays,      only : divvel
       implicit none
       real,dimension(nx) :: divv
@@ -211,7 +211,6 @@ module func
 
    subroutine div_vy(k,i)
       use grid,        only : ny
-      use fluidindex,  only : nfluid
       use arrays, only      : divvel
       implicit none
       real,dimension(ny) :: divv
@@ -223,7 +222,6 @@ module func
 
    subroutine  div_vz(j,i)
       use grid,        only : nz
-      use fluidindex,  only : nfluid
       use arrays, only      : divvel
       implicit none
       real,dimension(nz) :: divv

@@ -37,9 +37,15 @@
 !!
 !<
 module dataio_hdf5
+   use list_hdf5, only : S_LEN
+
+   implicit none
+
+   private
+   public :: init_hdf5, read_restart_hdf5, cleanup_hdf5, write_hdf5, write_restart_hdf5, write_plot
 
    character(LEN=10), dimension(3) :: dname = (/"fluid     ","mag       ","dinit     "/)  !< dataset names for restart files
-   character(len=4), allocatable, dimension(:) :: hdf_vars  !< dataset names for hdf files
+   character(len=S_LEN), allocatable, dimension(:) :: hdf_vars  !< dataset names for hdf files
    integer :: nhdf_vars !< number of quantities ploted to hdf files
    integer :: ix !< no. of cell (1 <= ix < nxd) for YZ slice in plt files
    integer :: iy !< no. of cell (1 <= iy < nyd) for XZ slice in plt files
@@ -60,7 +66,7 @@ module dataio_hdf5
 !<
 
    subroutine init_hdf5(vars,tix,tiy,tiz,tdt_plt)
-      use fluidindex, only : iarr_all_cr, iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
+      use fluidindex, only : iarr_all_crs, iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
       use grid, only : nx,ny,nz,nxd,nyd,nzd,nb
       implicit none
       character(len=4), dimension(:), intent(in) :: vars  !< quantities to be plotted, see dataio::vars
@@ -68,7 +74,12 @@ module dataio_hdf5
       integer,intent(in) :: tiy     !< local copy of dataio::iy
       integer,intent(in) :: tiz     !< local copy of dataio::iz
       real,intent(in)    :: tdt_plt !< local copy of dataio::dt_plt
-      integer :: nvars,i,j
+      integer :: nvars,i,j,k
+      character(len=4) :: aux
+
+      dname(1) = "fluid"
+      dname(2) = "mag"
+      dname(3) = "dinit"
 
       ix = tix; iy = tiy; iz = tiz; dt_plt = tdt_plt
 
@@ -118,8 +129,10 @@ module dataio_hdf5
                nhdf_vars = nhdf_vars + 1
             case ('magz')
                nhdf_vars = nhdf_vars + 1
+#ifdef COSM_RAYS
             case ('encr')
-               nhdf_vars = nhdf_vars + SIZE(iarr_all_cr,1)
+               nhdf_vars = nhdf_vars + SIZE(iarr_all_crs,1)
+#endif /* COSM_RAYS */
          end select
       enddo
       allocate(hdf_vars(nhdf_vars)); j = 1
@@ -180,7 +193,10 @@ module dataio_hdf5
                hdf_vars(j) = 'magz' ; j = j + 1
 #ifdef COSM_RAYS
             case ('encr')
-               hdf_vars(j) = 'encr' ; j = j + 1
+               do k = 1, size(iarr_all_crs,1)
+                  write(aux,'(A3,I1)') 'ecr',k
+                  hdf_vars(j) = aux ; j = j + 1
+               enddo
 #endif /* COSM_RAYS */
          end select
       enddo
@@ -364,10 +380,18 @@ module dataio_hdf5
       implicit none
       character(LEN=4)     :: var
       real(kind=4), dimension(:,:,:) :: tab
-      integer :: ierrh
+      integer :: ierrh, i
+      character(len=3) :: aux
 
       ierrh = 0
 
+#ifdef COSM_RAYS
+      select case(var(1:3))
+         case("ecr")
+           read(var,'(A3,I1)') aux,i
+           tab(:,:,:) = real(u(ind%arr_crs(i),RNG),4)
+      end select
+#endif /* COSM_RAYS */
       select case(var)
          case("dend")
             tab(:,:,:) = real(u(ind%dnd,RNG),4)
@@ -411,10 +435,6 @@ module dataio_hdf5
 #else
             tab(:,:,:) = real(u(ind%eni,RNG),4)
 #endif
-#ifdef COSM_RAYS
-         case("encr")
-           tab(:,:,:) = real(u(ind%ecr,RNG),4)
-#endif /* COSM_RAYS */
          case("magx")
             tab(:,:,:) = real(b(ind%bx,RNG),4)
          case("magy")
@@ -496,6 +516,7 @@ module dataio_hdf5
       use h5lt,     only : h5ltmake_dataset_double_f, h5ltset_attribute_double_f
       use arrays,   only : u
       use grid,     only : nxb,nyb,nzb,nxd,nyd,nzd,nb
+      use errh,     only : die
 
       implicit none
       character(LEN=2) :: plane
@@ -527,6 +548,7 @@ module dataio_hdf5
       fname = trim(chdf%log_file(1:fe-3)//"plt")
       call MPI_BCAST(fname, 32, MPI_CHARACTER, 0, comm3d, ierr)
 
+      nib = 0; nid = 0; njb = 0; njd = 0; nkb = 0; pisize = 0; pjsize = 0
       select case(plane)
          case("yz")
             xn     = ix + nb - pcoords(1)*nxb
@@ -562,7 +584,7 @@ module dataio_hdf5
             pisize = pxsize
             pjsize = pysize
          case default
-            write(*,*) "error while in write_plot_hdf5"
+            call die("[dataio_hdf5:write_plot_hdf5] nonrecognized plane")
       end select
 
       dims(1) = nid
@@ -580,12 +602,7 @@ module dataio_hdf5
          call common_plt_hdf5(var,plane,xn,send,ierrh)
          if(ierrh==0) ok_plt_var = .true.
          if(ierrh==0) ok_plt_var = .true.
-         if(.not.ok_plt_var) then
-            write(*,*) var,' is not defined in common_plt_hdf5, neither in user_plt !!!'
-            call MPI_BARRIER(comm3d,ierr)
-            call mpistop
-            stop
-         endif
+         if(.not.ok_plt_var) call die(var//" is not defined in common_plt_hdf5, neither in user_plt !!!")
 
          temp = -1.0
          call MPI_GATHER(send, nib*njb, MPI_DOUBLE_PRECISION, &
@@ -635,7 +652,6 @@ module dataio_hdf5
           ymin,ymax, zmin,zmax
       use initproblem, only : problem_name, run_id
       use fluidindex, only : nvar
-      use func, only : strlen
       IMPLICIT NONE
       type(hdf) :: chdf
       integer   :: llun,fe,nu
@@ -659,7 +675,7 @@ module dataio_hdf5
 
       integer(SIZE_T) :: bufsize = 1
 
-      nu = nvar
+      nu = nvar%all
 
       llun  = chdf%log_lun
       lfile = chdf%log_file
@@ -1019,13 +1035,13 @@ module dataio_hdf5
          call h5ltset_attribute_int_f(file_id,"/","psize", &
             psize,bufsize,error)
 
-         fe = strlen(problem_name)
+         fe = len(problem_name)
          call h5ltset_attribute_string_f(file_id,"/","problem name", &
             problem_name(1:fe),error)
-         fe = strlen(chdf%domain)
+         fe = len(chdf%domain)
          call h5ltset_attribute_string_f(file_id,"/","domain", &
             chdf%domain(1:fe),error)
-         fe = strlen(run_id)
+         fe = len(run_id)
          call h5ltset_attribute_string_f(file_id,"/","run id", &
             run_id(1:fe),error)
 
@@ -1083,7 +1099,7 @@ module dataio_hdf5
       integer, dimension(1) :: ibuf
       integer(SIZE_T) :: bufsize = 1
 
-      nu = nvar
+      nu = nvar%all
 
       log_lun  = chdf%log_lun
       log_file = chdf%log_file
@@ -1323,8 +1339,11 @@ module dataio_hdf5
       use mpisetup, only: pcoords, comm3d, proc, info, psize,ierr, mpistop, t, dt
       use grid, only : nxb,nyb,nzb,nx,ny,nz,nxd,nyd,nzd,nb, xmin,xmax, &
          ymin,ymax, zmin,zmax
-      use initproblem, only : problem_name, run_id!, user_hdf5
-      use func, only : strlen
+     use initproblem, only : problem_name, run_id
+     use list_hdf5, only : write_arr
+#ifdef NEW_HDF5
+     use list_hdf5, only : iterate_lhdf5
+#endif /* NEW_HDF5 */
 
       IMPLICIT NONE
       type(hdf) :: chdf
@@ -1370,13 +1389,15 @@ module dataio_hdf5
          endif
          call write_arr(data,hdf_vars(i),file_id)
       enddo
-
-      if(allocated(data)) deallocate(data)
-      !
-      ! Close the property list.
-      !
-      CALL h5fclose_f(file_id, error)
-      if(proc == 0) then
+     if(allocated(data)) deallocate(data)
+#ifdef NEW_HDF5
+     call iterate_lhdf5(file_id)
+#endif /* NEW_HDF5 */
+     !
+     ! Close the property list.
+     !
+     CALL h5fclose_f(file_id, error)
+     if(proc == 0) then
          CALL h5fopen_f (fname, H5F_ACC_RDWR_F, file_id, error)
 
          bufsize = 1
@@ -1402,9 +1423,9 @@ module dataio_hdf5
          bufsize = 3
          call h5ltset_attribute_int_f(file_id,"/","psize", psize,bufsize,error)
 
-         fe = strlen(problem_name)
+         fe = len(problem_name)
          call h5ltset_attribute_string_f(file_id,"/","problem name", problem_name(1:fe),error)
-         fe = strlen(chdf%domain)
+         fe = len(chdf%domain)
          call h5ltset_attribute_string_f(file_id,"/","domain", chdf%domain(1:fe),error)
          call h5ltset_attribute_string_f(file_id,"/","run id", run_id(1:3),error)
 
@@ -1507,3 +1528,4 @@ module dataio_hdf5
    end subroutine write_arr
 
 end module dataio_hdf5
+

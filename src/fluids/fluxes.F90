@@ -79,42 +79,26 @@ subroutine all_fluxes(flux,cfr,uu,bb,n)
 
     use fluidindex, only : nmag
 
-#ifdef IONIZED
-    use fluidindex, only : nvar_ion
-#endif /* IONIZED */
-
-#ifdef NEUTRAL
-    use fluidindex, only : nvar_neu
-#endif /* NEUTRAL */
-
-#ifdef DUST
-    use fluidindex, only : nvar_dst
-#endif /* DUST */
-
-#ifdef COSM_RAYS
-    use fluidindex, only : nvar_crs
-#endif /* COSM_RAYS */
-
     implicit none
     integer n
-    real, dimension(nvar,n):: flux,uu,cfr
+    real, dimension(nvar%all,n):: flux,uu,cfr
     real, dimension(nmag,n):: bb
     real, dimension(n)     :: vion
 
 #ifdef IONIZED
-    real, dimension(nvar_ion,n) :: fluxion,cfrion,uuion
+    real, dimension(nvar%ion%all,n) :: fluxion,cfrion,uuion
 #endif /* IONIZED */
 
 #ifdef NEUTRAL
-    real, dimension(nvar_neu,n) :: fluxneu,cfrneu,uuneu
+    real, dimension(nvar%neu%all,n) :: fluxneu,cfrneu,uuneu
 #endif /* NEUTRAL */
 
 #ifdef DUST
-    real, dimension(nvar_dst,n) :: fluxdst,cfrdst,uudst
+    real, dimension(nvar%dst%all,n) :: fluxdst,cfrdst,uudst
 #endif /* DUST */
 
 #ifdef COSM_RAYS
-    real, dimension(nvar_crs,n) :: fluxcrs,cfrcrs,uucrs
+    real, dimension(nvar%crs%all,n) :: fluxcrs,uucrs
 #endif /* COSM_RAYS */
 
    vion(:) = 0.0
@@ -142,7 +126,7 @@ subroutine all_fluxes(flux,cfr,uu,bb,n)
 #ifdef DUST
    uudst=uu(iarr_dst,:)
    call flux_dst(fluxdst,cfrdst,uudst,n)
-   flux(iarr_dst,:) =fluxdst
+   flux(iarr_dst,:) = fluxdst
    cfr(iarr_dst,:)  = cfrdst
    uu(iarr_dst,:)   = uudst
 #endif /* DUST */
@@ -151,8 +135,7 @@ subroutine all_fluxes(flux,cfr,uu,bb,n)
    uucrs=uu(iarr_crs,:)
    call flux_crs(fluxcrs,vion,uucrs,n)
    flux(iarr_crs,:) = fluxcrs
-   cfrcrs(1,:)      = cfrion(1,:)
-   cfr(iarr_crs,:)  = cfrcrs
+   cfr(iarr_crs,:)  = spread(cfrion(1,:),1,nvar%crs%all)
    uu(iarr_crs,:)   = uucrs
 #endif /* COSM_RAYS */
 

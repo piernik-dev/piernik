@@ -34,13 +34,13 @@ module fluidupdate   ! SPLIT
 
 subroutine fluid_update
   use arrays, only : u
-  use dataio, only : nlog,ntsl,write_log,write_timeslice, dt_log, dt_tsl, nstep
+  use dataio, only : check_log, check_tsl
   use timestep,   only : time_step
   use sweeps, only : sweepx,sweepy,sweepz
 #if defined SHEAR && defined FLUID_INTERACTIONS
   use sweeps, only : source_terms_y
 #endif /* SHEAR */
-  use mpisetup, only : proc,dt,t
+  use mpisetup, only : proc,dt,dtm,t, nstep
   use grid, only : nxd,nyd,nzd
 
 #ifdef DEBUG
@@ -64,40 +64,33 @@ subroutine fluid_update
   use sndistr
 #endif /* SNE_DISTR */
 
-#ifdef SELF_GRAV
-  use poissonsolver, only : poisson
-#endif /* SELF_GRAV */
+#ifdef GRAV
+   use gravity, only: source_terms_grav
+#endif /* GRAV */
 
   implicit none
 #ifdef DEBUG
   integer system, syslog
 #endif /* DEBUG */
-#ifdef RESISTIVE
   logical, save :: first_run = .true.
-#endif /* RESISTIVE */
 
+  if(first_run) then
+    dtm = 0.0
+  else
+    dtm = dt
+  endif
   call time_step
 
 #ifdef RESISTIVE
    if(first_run) then
-      dt = 0.0
-      first_run = .false.
+      dtm = 0.0
+      dt  = 0.0
    endif
 #endif /* RESISTIVE */
 
-  if(dt_log .gt. 0.0) then
-    if(nlog .lt. (int(t / dt_log) + 1)) then
-      call write_log
-      nlog = nlog + 1
-    endif
-  endif
+  call check_log
 
-  if(dt_tsl .gt. 0.0) then
-    if(ntsl .lt. (int(t / dt_tsl) + 1)) then
-      call write_timeslice
-      ntsl = ntsl + 1
-    endif
-  endif
+  call check_tsl
 
   if(proc.eq.0) write(*,900) nstep,dt,t
 900      format('   nstep = ',i7,'   dt = ',e22.16,'   t = ',e22.16)
@@ -109,10 +102,10 @@ subroutine fluid_update
       if(nxd /= 1) call bnd_u('xdim')
       if(nyd /= 1) call bnd_u('ydim')
 #endif /* SHEAR */
-#ifdef SELF_GRAV
-      call poisson
-#endif /* SELF_GRAV */
 
+#ifdef GRAV
+      call source_terms_grav
+#endif /* GRAV */
 !------------------- X->Y->Z ---------------------
       if(nxd /=1) then
          call sweepx
@@ -181,17 +174,19 @@ subroutine fluid_update
 #endif /* SNE_DISTR */
 #endif /* SN_SRC */
 
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
       t=t+dt
-
+      dtm = dt
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 #ifdef SHEAR
       call yshift(t,dt)
       if(nxd /= 1) call bnd_u('xdim')
       if(nyd /= 1) call bnd_u('ydim')
 #endif /* SHEAR */
 
-#ifdef SELF_GRAV
-      call poisson
-#endif /* SELF_GRAV */
+#ifdef GRAV
+      call source_terms_grav
+#endif /* GRAV */
 !-------------------------------------------------
 
 
@@ -263,6 +258,8 @@ subroutine fluid_update
       nhdf = nhdf + 1
 #endif /* DEBUG */
 #endif /* SNE_DISTR */
+
+      if(first_run) first_run = .false.
 
 end subroutine fluid_update
 

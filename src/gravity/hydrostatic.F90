@@ -42,7 +42,9 @@ module hydrostatic
 !! \param dprof array of reals, computed density distribution in vertical direction returned by the routine
 !<
     subroutine hydrostatic_zeq(iia,jja, d0, csim2, dprof)
-      use constants
+
+      use errh, only: die
+      use constants, only: small
       use mpisetup, only : proc
       use grid, only : nx,ny,nz,dl,zdim,z,zl,zr,nzt,nb,zmin,zmax
       use gravity, only  : grav_accel,gp_status,nsub,tune_zeq
@@ -58,7 +60,7 @@ module hydrostatic
 
       real, allocatable, dimension(:)  :: zs, dprofs, gprofs, gpots
       integer :: ksub, ksmid, k, ia, ja, nstot, iter, itermx
-      real    :: dzs, factor, dmid, ddmid
+      real    :: dzs, factor, dmid
 
 !      csim2 = cs_iso2*(1.0+alpha)
 
@@ -77,13 +79,14 @@ module hydrostatic
          stop
       endif
 
-
       dzs = (zmax-zmin)/real(nstot-2*nb*nsub)
 
+      ksmid = 0
       do ksub=1, nstot
         zs(ksub) = zmin-nb*dl(zdim) + dzs/2 + (ksub-1)*dzs  !
         if(zs(ksub) .lt. 0.0) ksmid = ksub      ! the midplane is in between
       enddo                                  ! ksmid and ksmid+1
+      if (ksmid == 0) call die("[hydrostatic:hydrostatic_zeq] ksmid not set")
 
       if(gp_status .eq. 'undefined') then
         call grav_accel('zsweep',ia, ja, zs, nstot, gprofs)

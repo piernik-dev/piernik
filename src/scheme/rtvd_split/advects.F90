@@ -32,7 +32,6 @@ module advects
 
   subroutine advectby_x
     use mpisetup,  only : dt
-    use fluidindex,   only : nfluid
     use fluidindex, only : ibx,iby,ibz
     use initionized, only : idni,imxi
     use arrays, only : b,u,wa
@@ -82,7 +81,6 @@ module advects
 
   subroutine advectbz_x
     use mpisetup,  only : dt
-    use fluidindex,   only : nfluid
     use fluidindex, only : ibx,iby,ibz
     use initionized, only : idni,imxi
     use arrays, only : b,u,wa
@@ -132,7 +130,6 @@ module advects
 
   subroutine advectbz_y
     use mpisetup,  only : dt
-    use fluidindex,   only : nfluid
     use fluidindex, only : ibx,iby,ibz
     use initionized, only : idni,imyi
     use arrays, only : b,u,wa
@@ -181,7 +178,6 @@ module advects
 
   subroutine advectbx_y
     use mpisetup,  only : dt
-    use fluidindex,   only : nfluid
     use fluidindex, only : ibx,iby,ibz
     use initionized, only : idni,imyi
     use arrays, only : b,u,wa
@@ -231,7 +227,6 @@ module advects
 
   subroutine advectbx_z
     use mpisetup,  only : dt
-    use fluidindex,   only : nfluid
     use fluidindex, only : ibx,iby,ibz
     use initionized, only : idni,imzi
     use arrays, only : b,u,wa
@@ -280,7 +275,6 @@ module advects
 
   subroutine advectby_z
     use mpisetup,  only : dt
-    use fluidindex,   only : nfluid
     use fluidindex, only : ibx,iby,ibz
     use initionized, only : idni,imzi
     use arrays, only : b,u,wa

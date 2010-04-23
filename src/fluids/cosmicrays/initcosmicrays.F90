@@ -39,13 +39,29 @@ module initcosmicrays
 
   implicit none
 
-    real                  :: cfl_cr,smallecr,cr_active
-    real                  :: gamma_cr,cr_eff,K_cr_paral,K_cr_perp
+    integer,parameter                   :: ncr_max = 9 !< maximum number of CR nuclear and electron components
+    integer                             :: ncrn         !< number of CR nuclear  components
+    integer                             :: ncre         !< number of CR electron components
 
-    integer               :: iecr
+    real                                :: cfl_cr       !< CFL number for diffusive CR transport
+    real                                :: smallecr     !< floor value for CR energy density
+    real                                :: cr_active    !< parameter specifying whether CR pressure gradient is (when =1.) or isn't (when =0.) included in the gas equation of motion
+    real                                :: cr_eff       !< conversion rate of SN explosion energy to CR energy (default = 0.1)
 
-    integer, allocatable, dimension(:)  :: iarr_crs
-    integer, allocatable, dimension(:)  :: iarr_crs_swpx, iarr_crs_swpy, iarr_crs_swpz
+    real, dimension(ncr_max)            :: gamma_crn    !< array containing adiabatic indexes of all CR nuclear components
+    real, dimension(ncr_max)            :: K_crn_paral  !< array containing parallel diffusion coefficients of all CR nuclear components
+    real, dimension(ncr_max)            :: K_crn_perp   !< array containing perpendicular diffusion coefficients of all CR nuclear components
+    real, dimension(ncr_max)            :: gamma_cre    !< array containing adiabatic indexes of all CR nuclear components
+    real, dimension(ncr_max)            :: K_cre_paral  !< array containing parallel diffusion coefficients of all CR electron components
+    real, dimension(ncr_max)            :: K_cre_perp   !< array containing perpendicular diffusion coefficients of all CR electron components
+
+    integer, allocatable, dimension(:)  :: iarr_crn     !< array of indexes pointing to all CR nuclear components
+    integer, allocatable, dimension(:)  :: iarr_cre     !< array of indexes pointing to all CR electron components
+    integer, allocatable, dimension(:)  :: iarr_crs     !< array of indexes pointing to all CR components
+
+    real,    allocatable, dimension(:)  :: gamma_crs    !< array containing adiabatic indexes of all CR components
+    real,    allocatable, dimension(:)  :: K_crs_paral  !< array containing parallel diffusion coefficients of all CR components
+    real,    allocatable, dimension(:)  :: K_crs_perp   !< array containing perpendicular diffusion coefficients of all CR components
 
  contains
 
@@ -67,25 +83,36 @@ module initcosmicrays
 !! </table>
 !! \n \n
 !<
-  subroutine init_cosmicrays
+ subroutine init_cosmicrays
     use errh, only : namelist_errh
     use mpisetup
 
     implicit none
-    integer :: ierrh
-    character(LEN=100) :: par_file, tmp_log_file
+    integer            :: ierrh
+    integer            :: nn
+    integer            :: ne
+    character(LEN=100) :: par_file
+    character(LEN=100) :: tmp_log_file
 
-    namelist /COSMIC_RAYS/ cfl_cr,smallecr,cr_active,gamma_cr,cr_eff,K_cr_paral,K_cr_perp
+
+    namelist /COSMIC_RAYS/ cfl_cr, smallecr, cr_active, cr_eff &
+                         , ncrn, gamma_crn, K_crn_paral, K_crn_perp &
+                         , ncre, gamma_cre, K_cre_paral, K_cre_perp
 
     cfl_cr     = 0.9
     smallecr   = 0.0
     cr_active  = 1.0
-
-    gamma_cr   = 4./3.
     cr_eff     = 0.1       !  canonical conversion rate of SN en.-> CR
                            !  we fix E_SN=10**51 erg
-    K_cr_paral = 0.0
-    K_cr_perp  = 0.0
+    ncrn       = 0
+    ncre       = 0
+
+    gamma_crn(:)   = 4./3.
+    K_crn_paral(:) = 0.0
+    K_crn_perp(:)  = 0.0
+    gamma_cre(:)   = 4./3.
+    K_cre_paral(:) = 0.0
+    K_cre_perp(:)  = 0.0
 
       if(proc .eq. 0) then
          par_file = trim(cwd)//'/problem.par'
@@ -100,54 +127,160 @@ module initcosmicrays
          close(3)
       endif
 
+      nn          = 10
 
     if(proc .eq. 0) then
 
-      rbuff(1)   = cfl_cr
-      rbuff(2)   = smallecr
-      rbuff(3)   = cr_active
-      rbuff(4)   = gamma_cr
-      rbuff(5)   = cr_eff
-      rbuff(6)   = K_cr_paral
-      rbuff(7)   = K_cr_perp
+       ibuff(1)   = ncrn
+       ibuff(2)   = ncre
 
-      call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+       rbuff(1)   = cfl_cr
+       rbuff(2)   = smallecr
+       rbuff(3)   = cr_active
+       rbuff(4)   = cr_eff
+
+
+       if(ncrn > 0) then
+          rbuff(nn+1:nn+ncrn)          = gamma_crn(1:ncrn)
+          rbuff(nn+1+ncrn:nn+2*ncrn)   = K_crn_paral(1:ncrn)
+          rbuff(nn+1+2*ncrn:nn+3*ncrn) = K_crn_perp(1:ncrn)
+       endif
+
+       if(ncre > 0) then
+          rbuff(ne+1:ne+ncre)          = gamma_cre(1:ncre)
+          rbuff(ne+1+ncre:ne+2*ncre)   = K_cre_paral(1:ncre)
+          rbuff(ne+1+2*ncre:ne+3*ncre) = K_cre_perp(1:ncre)
+       endif
+
+       call MPI_BCAST(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
+       call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
     else
 
-      call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+       call MPI_BCAST(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
+       call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
-      cfl_cr     = rbuff(1)
-      smallecr   = rbuff(2)
-      cr_active  = rbuff(3)
-      gamma_cr   = rbuff(4)
-      cr_eff     = rbuff(5)
-      K_cr_paral = rbuff(6)
-      K_cr_perp  = rbuff(7)
+       ncrn       = ibuff(1)
+       ncre       = ibuff(2)
+
+       cfl_cr     = rbuff(1)
+       smallecr   = rbuff(2)
+       cr_active  = rbuff(3)
+       cr_eff     = rbuff(4)
+
+       ne         = nn + 3*ncrn
+
+       if(ncrn > 0) then
+          gamma_crn(1:ncrn)  = rbuff(nn+1:nn+ncrn)
+          K_crn_paral(1:ncrn)= rbuff(nn+1+ncrn:nn+2*ncrn)
+          K_crn_perp(1:ncrn) = rbuff(nn+1+2*ncrn:nn+3*ncrn)
+       endif
+
+       if(ncre > 0) then
+          gamma_cre(1:ncre)  = rbuff(ne+1:ne+ncre)
+          K_cre_paral(1:ncre)= rbuff(ne+1+ncre:ne+2*ncre)
+          K_cre_perp(1:ncre) = rbuff(ne+1+2*ncre:ne+3*ncre)
+       endif
 
     endif
 
-  end subroutine init_cosmicrays
+!    if(ncrn > ncr_max) call die("ncrn > ncr_max")
+!    if(ncre > ncr_max) call die("ncre > ncr_max")
+
+    allocate(gamma_crs(ncrn+ncre),K_crs_paral(ncrn+ncre),K_crs_perp(ncrn+ncre))
+
+    if(ncrn > 0) then
+       gamma_crs(1:ncrn)   = gamma_crn(1:ncrn)
+       K_crs_paral(1:ncrn) = K_crn_paral(1:ncrn)
+       K_crs_perp(1:ncrn)  = K_crn_perp(1:ncrn)
+    endif
+
+    if(ncre > 0) then
+       gamma_crs(ncrn+1:ncrn+ncre)   = gamma_cre(1:ncre)
+       K_crs_paral(ncrn+1:ncrn+ncre) = K_crs_paral(1:ncre)
+       K_crs_perp(ncrn+1:ncrn+ncre)  = K_crs_perp(1:ncre)
+    endif
+
+#ifdef NEW_HDF5
+    call cr_add_hdf5(ncrn+ncre)
+#endif /* NEW_HDF5 */
+
+ end subroutine init_cosmicrays
+
+ subroutine cosmicray_species
 
 
 
-  subroutine cosmicray_index(nvar,nvar_crs)
 
-    implicit none
-    integer :: nvar, nvar_crs
+ end subroutine cosmicray_species
 
-      iecr          = nvar + 1
-      nvar_crs      = 1
-      nvar          = iecr
+ subroutine cosmicray_index(nvar, nvar_crn, nvar_cre, nvar_crs)
 
-      allocate(iarr_crs(nvar_crs),iarr_crs_swpx(nvar_crs), iarr_crs_swpy(nvar_crs), iarr_crs_swpz(nvar_crs))
+      implicit none
+      integer :: nvar
+      integer :: nvar_crn
+      integer :: nvar_cre
+      integer :: nvar_crs
+      integer :: icr
 
-      iarr_crs      = [iecr]
-      iarr_crs_swpx = [iecr]
-      iarr_crs_swpy = [iecr]
-      iarr_crs_swpz = [iecr]
+      nvar_crn      = ncrn
+      nvar_cre      = ncre
+      nvar_crs      = ncrn + ncre
 
-   end subroutine cosmicray_index
+      allocate(iarr_crn(ncrn))
+      allocate(iarr_cre(ncre))
+      allocate(iarr_crs(nvar_crs))
+
+      do icr = 1, ncrn
+         iarr_crn(icr)      =nvar+icr
+         iarr_crs(icr)      =nvar+icr
+      enddo
+      nvar = nvar + nvar_crn
+
+      do icr = 1, ncre
+         iarr_cre(icr)      =nvar+icr
+         iarr_crs(nvar+icr) =nvar+icr
+      enddo
+      nvar = nvar + nvar_cre
+
+  end subroutine cosmicray_index
+
+#ifdef NEW_HDF5
+   subroutine cr_add_hdf5(nvar_crs)
+      use arrays, only : u
+      use grid, only : nxb,nyb,nzb,is,ie,js,je,ks,ke
+      use list_hdf5, only : add_lhdf5, lhdf5_info
+      implicit none
+      integer, intent(in) :: nvar_crs
+      type(lhdf5_info) :: item
+      integer :: i
+
+      item%p    => get_cr
+      item%sz   = (/nxb,nyb,nzb/)
+      item%ind  = (/is, ie, js, je, ks, ke/)
+
+      do i = 1, nvar_crs
+
+         write(item%key,'(A,I1)')  "ecr",i
+         item%opti = (/iarr_crs(i),0,0,0,0/)       !< optional integer passed to func
+         call add_lhdf5(item)
+
+      enddo
+
+      contains
+         function get_cr(i,sz,opti) result (outtab)
+            implicit none
+            integer, dimension(6), intent(in)    :: i
+            integer, dimension(3), intent(in)    :: sz
+            integer, dimension(5), intent(in)    :: opti
+            real, dimension(sz(1),sz(2),sz(3))   :: outtab
+            outtab(:,:,:) =  &
+               u(opti(1),i(1):i(2),i(3):i(4),i(5):i(6))
+         end function get_cr
+
+   end subroutine cr_add_hdf5
+#endif /* NEW_HDF5 */
+
 
 end module initcosmicrays
 

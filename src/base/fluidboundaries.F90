@@ -34,7 +34,7 @@ module fluidboundaries
    subroutine bnd_u(dim)
       use mpisetup
       use grid,            only : nb, nxd, nyd, nzd,x,y,z,nzb,nyb,nxb,nx,ny,nz
-      use fluidindex,      only : nvar, iarr_all_dn,iarr_all_mx,iarr_all_my,iarr_all_mz, nfluid
+      use fluidindex,      only : nvar, iarr_all_dn,iarr_all_mx,iarr_all_my,iarr_all_mz
       use arrays,          only : u, b
 #ifdef COSM_RAYS
       use initcosmicrays,  only : smallecr
@@ -52,7 +52,7 @@ module fluidboundaries
       use shear
 #endif /* SHEAR_BND */
 #ifdef COSM_RAYS
-      use initcosmicrays,  only : iecr
+      use fluidindex,  only : iarr_all_crs
 #endif /* COSM_RAYS */
 
       implicit none
@@ -61,14 +61,14 @@ module fluidboundaries
 
 #ifdef GRAV
       integer kb, ksub
-      real, dimension(nfluid,nx,ny) :: db, csi2b
+      real, dimension(nvar%fluids,nx,ny) :: db, csi2b
 #ifndef ISO
-      real, dimension(nfluid,nx,ny) :: ekb, eib
+      real, dimension(nvar%fluids,nx,ny) :: ekb, eib
       integer ifluid
 #endif /* ISO */
       real, dimension(nsub+1):: zs, gprofs
-      real, dimension(nfluid,nsub+1) :: dprofs
-      real, dimension(nfluid) :: factor
+      real, dimension(nvar%fluids,nsub+1) :: dprofs
+      real, dimension(nvar%fluids) :: factor
       real dzs,z1,z2
 #endif /* GRAV */
       integer i,j
@@ -86,8 +86,8 @@ module fluidboundaries
       case ('xdim')
 #ifdef SHEAR_BND
 #ifndef FFTW
-         allocate(send_right(nvar,nb,ny,nz), send_left(nvar,nb,ny,nz), &
-                  recv_left(nvar,nb,ny,nz), recv_right(nvar,nb,ny,nz) )
+         allocate(send_right(nvar%all,nb,ny,nz), send_left(nvar%all,nb,ny,nz), &
+                  recv_left(nvar%all,nb,ny,nz), recv_right(nvar%all,nb,ny,nz) )
          send_left(:,:,:,:)          =  u(:,nb+1:2*nb,:,:)
          send_right(:,:,:,:)         =  u(:,nxb+1:nxb+nb,:,:)
 !
@@ -148,10 +148,10 @@ module fluidboundaries
 !
 ! wysylamy na drugi brzeg
 !
-         CALL MPI_ISEND   (send_left , nvar*ny*nz*nb, MPI_DOUBLE_PRECISION, procxl, 10, comm, req(1), ierr)
-         CALL MPI_ISEND   (send_right, nvar*ny*nz*nb, MPI_DOUBLE_PRECISION, procxr, 20, comm, req(3), ierr)
-         CALL MPI_IRECV   (recv_left , nvar*ny*nz*nb, MPI_DOUBLE_PRECISION, procxl, 20, comm, req(2), ierr)
-         CALL MPI_IRECV   (recv_right, nvar*ny*nz*nb, MPI_DOUBLE_PRECISION, procxr, 10, comm, req(4), ierr)
+         CALL MPI_ISEND   (send_left , nvar%all*ny*nz*nb, MPI_DOUBLE_PRECISION, procxl, 10, comm, req(1), ierr)
+         CALL MPI_ISEND   (send_right, nvar%all*ny*nz*nb, MPI_DOUBLE_PRECISION, procxr, 20, comm, req(3), ierr)
+         CALL MPI_IRECV   (recv_left , nvar%all*ny*nz*nb, MPI_DOUBLE_PRECISION, procxl, 20, comm, req(2), ierr)
+         CALL MPI_IRECV   (recv_right, nvar%all*ny*nz*nb, MPI_DOUBLE_PRECISION, procxr, 10, comm, req(4), ierr)
 
          do ireq = 1,4
             call MPI_WAIT(req(ireq),status(1,ireq),ierr)
@@ -200,26 +200,26 @@ module fluidboundaries
          if( (bnd_xl == 'she').and.(bnd_xr == 'she')) then
 
          if(allocated(send_right)) deallocate(send_right)
-         if(.not.allocated(send_right)) allocate(send_right(nvar,nb,nyd,nz))
+         if(.not.allocated(send_right)) allocate(send_right(nvar%all,nb,nyd,nz))
 
          if(allocated(send_left)) deallocate(send_left)
-         if(.not.allocated(send_left)) allocate(send_left(nvar,nb,nyd,nz))
+         if(.not.allocated(send_left)) allocate(send_left(nvar%all,nb,nyd,nz))
 
          if(allocated(recv_left)) deallocate(recv_left)
-         if(.not.allocated(recv_left)) allocate(recv_left(nvar,nb,nyd,nz))
+         if(.not.allocated(recv_left)) allocate(recv_left(nvar%all,nb,nyd,nz))
 
          if(allocated(recv_right)) deallocate(recv_right)
-         if(.not.allocated(recv_right)) allocate(recv_right(nvar,nb,nyd,nz))
+         if(.not.allocated(recv_right)) allocate(recv_right(nvar%all,nb,nyd,nz))
 
             do i = LBOUND(u,1), UBOUND(u,1)
                send_left(i,1:nb,:,:)   = unshear_fft(u(i,nb+1:2*nb,nb+1:ny-nb,:),x(nb+1:2*nb),dely,.true.)
                send_right(i,1:nb,:,:)  = unshear_fft(u(i,nx-2*nb+1:nx-nb,nb+1:ny-nb,:),x(nx-2*nb+1:nx-nb),dely,.true.)
             enddo
 
-            CALL MPI_ISEND   (send_left , nvar*nyd*nz*nb, MPI_DOUBLE_PRECISION, procxl, 10, comm, req(1), ierr)
-            CALL MPI_ISEND   (send_right, nvar*nyd*nz*nb, MPI_DOUBLE_PRECISION, procxr, 20, comm, req(3), ierr)
-            CALL MPI_IRECV   (recv_left , nvar*nyd*nz*nb, MPI_DOUBLE_PRECISION, procxl, 20, comm, req(2), ierr)
-            CALL MPI_IRECV   (recv_right, nvar*nyd*nz*nb, MPI_DOUBLE_PRECISION, procxr, 10, comm, req(4), ierr)
+            CALL MPI_ISEND   (send_left , nvar%all*nyd*nz*nb, MPI_DOUBLE_PRECISION, procxl, 10, comm, req(1), ierr)
+            CALL MPI_ISEND   (send_right, nvar%all*nyd*nz*nb, MPI_DOUBLE_PRECISION, procxr, 20, comm, req(3), ierr)
+            CALL MPI_IRECV   (recv_left , nvar%all*nyd*nz*nb, MPI_DOUBLE_PRECISION, procxl, 20, comm, req(2), ierr)
+            CALL MPI_IRECV   (recv_right, nvar%all*nyd*nz*nb, MPI_DOUBLE_PRECISION, procxr, 10, comm, req(4), ierr)
 
             do ireq = 1,4
                call MPI_WAIT(req(ireq),status(1,ireq),ierr)
@@ -292,19 +292,19 @@ module fluidboundaries
                   u(iarr_all_en,i,j,:) =  u(iarr_all_en,j,2*nb+1-i,:)
 #endif /* ISO */
 #ifdef COSM_RAYS
-                  u(iecr,i,j,:) =  u(iecr,j,2*nb+1-i,:)
+                  u(iarr_all_crs,i,j,:) =  u(iarr_all_crs,j,2*nb+1-i,:)
 #endif /* COSM_RAYS */
                enddo
             enddo
          endif
 
          if(procxyl .gt. 0) then
-            allocate(send_left(nvar,nb,ny,nz), recv_left(nvar,nx,nb,nz))
+            allocate(send_left(nvar%all,nb,ny,nz), recv_left(nvar%all,nx,nb,nz))
 
             send_left(:,:,:,:) = u(:,nb+1:2*nb,:,:)
 
-            CALL MPI_ISEND   (send_left , nvar*nb*ny*nz, MPI_DOUBLE_PRECISION, procxyl, 70, comm, req(1), ierr)
-            CALL MPI_IRECV   (recv_left , nvar*nx*nb*nz, MPI_DOUBLE_PRECISION, procxyl, 80, comm, req(2), ierr)
+            CALL MPI_ISEND   (send_left , nvar%all*nb*ny*nz, MPI_DOUBLE_PRECISION, procxyl, 70, comm, req(1), ierr)
+            CALL MPI_IRECV   (recv_left , nvar%all*nx*nb*nz, MPI_DOUBLE_PRECISION, procxyl, 80, comm, req(2), ierr)
 
             do ireq=1,2
                call MPI_WAIT(req(ireq),status(1,ireq),ierr)
@@ -320,7 +320,7 @@ module fluidboundaries
                   u(iarr_all_en,i,j,:) =  recv_left(iarr_all_en,j,nb+1-i,:)
 #endif /* ISO */
 #ifdef COSM_RAYS
-                  u(iecr,i,j,:) =  recv_left(iecr,j,nb+1-i,:)
+                  u(iarr_all_crs,i,j,:) =  recv_left(iarr_all_crs,j,nb+1-i,:)
 #endif /* COSM_RAYS */
                enddo
             enddo
@@ -343,7 +343,7 @@ module fluidboundaries
                   u(iarr_all_en,i,j,:) =  u(iarr_all_en,2*nb+1-j,i,:)
 #endif /* ISO */
 #ifdef COSM_RAYS
-                  u(iecr,i,j,:) =  u(iecr,2*nb+1-j,i,:)
+                  u(iarr_all_crs,i,j,:) =  u(iarr_all_crs,2*nb+1-j,i,:)
 #endif /* COSM_RAYS */
                enddo
             enddo
@@ -358,19 +358,19 @@ module fluidboundaries
                   u(iarr_all_en,i,j,:) =   u(iarr_all_en,2*nb+1-i,2*nb+1-j,:)
 #endif /* ISO */
 #ifdef COSM_RAYS
-                  u(iecr,i,j,:) =   u(iecr,2*nb+1-i,2*nb+1-j,:)
+                  u(iarr_all_crs,i,j,:) =   u(iarr_all_crs,2*nb+1-i,2*nb+1-j,:)
 #endif /* COSM_RAYS */
                enddo
             enddo
          endif
 
          if(procyxl .gt. 0) then
-            allocate(send_left(nvar,nx,nb,nz), recv_left(nvar,nb,ny,nz))
+            allocate(send_left(nvar%all,nx,nb,nz), recv_left(nvar%all,nb,ny,nz))
 
             send_left(:,:,:,:) = u(:,:,nb+1:2*nb,:)
 
-            CALL MPI_ISEND   (send_left , nvar*nx*nb*nz, MPI_DOUBLE_PRECISION, procyxl, 80, comm, req(1), ierr)
-            CALL MPI_IRECV   (recv_left , nvar*nb*ny*nz, MPI_DOUBLE_PRECISION, procyxl, 70, comm, req(2), ierr)
+            CALL MPI_ISEND   (send_left , nvar%all*nx*nb*nz, MPI_DOUBLE_PRECISION, procyxl, 80, comm, req(1), ierr)
+            CALL MPI_IRECV   (recv_left , nvar%all*nb*ny*nz, MPI_DOUBLE_PRECISION, procyxl, 70, comm, req(2), ierr)
 
             do ireq=1,2
                call MPI_WAIT(req(ireq),status(1,ireq),ierr)
@@ -386,7 +386,7 @@ module fluidboundaries
                   u(iarr_all_en,i,j,:) =  recv_left(iarr_all_en,nb+1-j,i,:)
 #endif /* ISO */
 #ifdef COSM_RAYS
-                  u(iecr,i,j,:) =  recv_left(iecr,nb+1-j,i,:)
+                  u(iarr_all_crs,i,j,:) =  recv_left(iarr_all_crs,nb+1-j,i,:)
 #endif /* COSM_RAYS */
                enddo
             enddo
@@ -423,14 +423,14 @@ module fluidboundaries
                u(iarr_all_en,nb+1-ib,:,:)                = u(iarr_all_en,nb+ib,:,:)
 #endif /* ISO */
 #ifdef COSM_RAYS
-               u(iecr,nb+1-ib,:,:)                = u(iecr,nb+ib,:,:)
+               u(iarr_all_crs,nb+1-ib,:,:)                = u(iarr_all_crs,nb+ib,:,:)
 #endif /* COSM_RAYS */
             enddo
          case ('out')
             do ib=1,nb
                u(:,ib,:,:)                        = u(:,nb+1,:,:)
 #ifdef COSM_RAYS
-               u(iecr,ib,:,:)                     = smallecr
+               u(iarr_all_crs,ib,:,:)                     = smallecr
 #endif /* COSM_RAYS */
             enddo
          case ('outd')
@@ -442,7 +442,7 @@ module fluidboundaries
                u(iarr_all_en,ib,:,:)                     = u(iarr_all_en,nb+1,:,:)
 #endif /* ISO */
 #ifdef COSM_RAYS
-               u(iecr,ib,:,:)                     = smallecr
+               u(iarr_all_crs,ib,:,:)                     = smallecr
 #endif /* COSM_RAYS */
             enddo
          case ('shef')
@@ -473,14 +473,14 @@ module fluidboundaries
                u(iarr_all_en,nb+nxb+ib,:,:)               = u(iarr_all_en,nb+nxb+1-ib,:,:)
 #endif /* ISO */
 #ifdef COSM_RAYS
-               u(iecr,nb+nxb+ib,:,:)               = u(iecr,nb+nxb+1-ib,:,:)
+               u(iarr_all_crs,nb+nxb+ib,:,:)               = u(iarr_all_crs,nb+nxb+1-ib,:,:)
 #endif /* COSM_RAYS */
             enddo
          case ('out')
             do ib=1,nb
                u(:,nb+nxb+ib,:,:)                  = u(:,nb+nxb,:,:)
 #ifdef COSM_RAYS
-               u(iecr,nb+nxb+ib,:,:)               = smallecr
+               u(iarr_all_crs,nb+nxb+ib,:,:)               = smallecr
 #endif /* COSM_RAYS */
             enddo
          case ('outd')
@@ -492,7 +492,7 @@ module fluidboundaries
                u(iarr_all_en,nb+nxb+ib,:,:)               = u(iarr_all_en,nb+nxb,:,:)
 #endif /* ISO */
 #ifdef COSM_RAYS
-               u(iecr,nb+nxb+ib,:,:)               = smallecr
+               u(iarr_all_crs,nb+nxb+ib,:,:)               = smallecr
 #endif /* COSM_RAYS */
             enddo
          case default
@@ -519,14 +519,14 @@ module fluidboundaries
                u(iarr_all_en,:,nb+1-ib,:)                 = u(iarr_all_en,:,nb+ib,:)
 #endif /* ISO */
 #ifdef COSM_RAYS
-               u(iecr,:,nb+1-ib,:)                 = u(iecr,:,nb+ib,:)
+               u(iarr_all_crs,:,nb+1-ib,:)                 = u(iarr_all_crs,:,nb+ib,:)
 #endif /* COSM_RAYS */
             enddo
          case ('out')
             do ib=1,nb
                u(:,:,ib,:)                         = u(:,:,nb+1,:)
 #ifdef COSM_RAYS
-               u(iecr,:,ib,:)                      = smallecr
+               u(iarr_all_crs,:,ib,:)                      = smallecr
 #endif /* COSM_RAYS */
             enddo
          case ('outd')
@@ -538,7 +538,7 @@ module fluidboundaries
                u(iarr_all_en,:,ib,:)                      = u(iarr_all_en,:,nb+1,:)
 #endif /* ISO */
 #ifdef COSM_RAYS
-               u(iecr,:,ib,:)                      = smallecr
+               u(iarr_all_crs,:,ib,:)                      = smallecr
 #endif /* COSM_RAYS */
             enddo
          case default
@@ -563,14 +563,14 @@ module fluidboundaries
                u(iarr_all_en,:,nb+nyb+ib,:)               = u(iarr_all_en,:,nb+nyb+1-ib,:)
 #endif /* ISO */
 #ifdef COSM_RAYS
-               u(iecr,:,nb+nyb+ib,:)               = u(iecr,:,nb+nyb+1-ib,:)
+               u(iarr_all_crs,:,nb+nyb+ib,:)               = u(iarr_all_crs,:,nb+nyb+1-ib,:)
 #endif /* COSM_RAYS */
             enddo
          case ('out')
             do ib=1,nb
                u(:,:,nb+nyb+ib,:)                  = u(:,:,nb+nyb,:)
 #ifdef COSM_RAYS
-               u(iecr,:,nb+nyb+ib,:)               = smallecr
+               u(iarr_all_crs,:,nb+nyb+ib,:)               = smallecr
 #endif /* COSM_RAYS */
             enddo
          case ('outd')
@@ -582,7 +582,7 @@ module fluidboundaries
                u(iarr_all_en,:,nb+nyb+ib,:)               = u(iarr_all_en,:,nb+nyb,:)
 #endif /* ISO */
 #ifdef COSM_RAYS
-               u(iecr,:,nb+nyb+ib,:)               = smallecr
+               u(iarr_all_crs,:,nb+nyb+ib,:)               = smallecr
 #endif /* COSM_RAYS */
             enddo
          case default
@@ -606,14 +606,14 @@ module fluidboundaries
                u(iarr_all_en,:,:,nb+1-ib)                 = u(iarr_all_en,:,:,nb+ib)
 #endif /* ISO */
 #ifdef COSM_RAYS
-               u(iecr,:,:,nb+1-ib)                 = u(iecr,:,:,nb+ib)
+               u(iarr_all_crs,:,:,nb+1-ib)                 = u(iarr_all_crs,:,:,nb+ib)
 #endif /* COSM_RAYS */
             enddo
          case ('out')
             do ib=1,nb
                u(:,:,:,ib)                         = u(:,:,:,nb+1)
 #ifdef COSM_RAYS
-               u(iecr,:,:,ib)                      = smallecr
+               u(iarr_all_crs,:,:,ib)                      = smallecr
 #endif /* COSM_RAYS */
             enddo
          case ('outd')
@@ -625,7 +625,7 @@ module fluidboundaries
                u(iarr_all_en,:,:,ib)                      = u(iarr_all_en,:,:,nb+1)
 #endif /* ISO */
 #ifdef COSM_RAYS
-               u(iecr,:,:,ib)                      = smallecr
+               u(iarr_all_crs,:,:,ib)                      = smallecr
 #endif /* COSM_RAYS */
             enddo
 #ifdef GRAV
@@ -640,7 +640,7 @@ module fluidboundaries
                ekb= 0.5*(u(iarr_all_mx,:,:,kb)**2+u(iarr_all_my,:,:,kb)**2+u(iarr_all_mz,:,:,kb)**2)/db
                eib = u(iarr_all_en,:,:,kb) - ekb
                eib = max(eib,smallei)
-               do ifluid=1,nfluid
+               do ifluid=1,nvar%fluids
                   csi2b(ifluid,:,:) = (gamma(ifluid)-1.0)*eib(ifluid,:,:)/db(ifluid,:,:)
                enddo
 #endif /* ISO */
@@ -681,7 +681,7 @@ module fluidboundaries
                      u(iarr_all_en,i,j,kb-1)                =     ekb(:,i,j) + eib(:,i,j)
 #endif /* ISO */
 #ifdef COSM_RAYS
-                     u(iecr,i,j,kb-1)                =     smallecr
+                     u(iarr_all_crs,i,j,kb-1)                =     smallecr
 #endif /* COSM_RAYS */
                   enddo ! i
                enddo ! j
@@ -705,14 +705,14 @@ module fluidboundaries
                u(iarr_all_en,:,:,nb+nzb+ib)               = u(iarr_all_en,:,:,nb+nzb+1-ib)
 #endif /* ISO */
 #ifdef COSM_RAYS
-               u(iecr,:,:,nb+nzb+ib)               = u(iecr,:,:,nb+nzb+1-ib)
+               u(iarr_all_crs,:,:,nb+nzb+ib)               = u(iarr_all_crs,:,:,nb+nzb+1-ib)
 #endif /* COSM_RAYS */
             enddo
          case ('out')
             do ib=1,nb
                u(:,:,:,nb+nzb+ib)                  = u(:,:,:,nb+nzb)
 #ifdef COSM_RAYS
-               u(iecr,:,:,nb+nzb+ib)               = smallecr
+               u(iarr_all_crs,:,:,nb+nzb+ib)               = smallecr
 #endif /* COSM_RAYS */
             enddo
          case ('outd')
@@ -724,7 +724,7 @@ module fluidboundaries
                u(iarr_all_en,:,:,nb+nzb+ib)               = u(iarr_all_en,:,:,nb+nzb)
 #endif /* ISO */
 #ifdef COSM_RAYS
-               u(iecr,:,:,nb+nzb+ib)               = smallecr
+               u(iarr_all_crs,:,:,nb+nzb+ib)               = smallecr
 #endif /* COSM_RAYS */
             enddo
 #ifdef GRAV
@@ -739,7 +739,7 @@ module fluidboundaries
                ekb= 0.5*(u(iarr_all_mx,:,:,kb)**2+u(iarr_all_my,:,:,kb)**2+u(iarr_all_mz,:,:,kb)**2)/db
                eib = u(iarr_all_en,:,:,kb) - ekb
                eib = max(eib,smallei)
-               do ifluid=1,nfluid
+               do ifluid=1,nvar%fluids
                   csi2b(ifluid,:,:) = (gamma(ifluid)-1.0)*eib(ifluid,:,:)/db(ifluid,:,:)
                enddo
 #endif /* ISO */
@@ -780,7 +780,7 @@ module fluidboundaries
                      u(iarr_all_en,i,j,kb+1)    =     ekb(:,i,j) + eib(:,i,j)
 #endif /* ISO */
 #ifdef COSM_RAYS
-                     u(iecr,i,j,kb+1)           =     smallecr
+                     u(iarr_all_crs,i,j,kb+1)           =     smallecr
 #endif /* COSM_RAYS */
                   enddo ! i
                enddo ! j

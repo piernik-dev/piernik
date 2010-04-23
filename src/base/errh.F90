@@ -35,6 +35,17 @@ module errh
    implicit none
    contains
 
+   subroutine die(nm)
+      !! BEWARE: routine is not finished, it should kill PIERNIK gracefully
+      implicit none
+      character(len=*), intent(in) :: nm
+
+       write(*,*) nm
+!      call mpistop
+      stop
+
+   end subroutine die
+
    subroutine namelist_errh(ierrh,nm)
       implicit none
       integer, intent(in) :: ierrh

@@ -168,7 +168,8 @@ if( grep { /SELF_GRAV/ }  @d) {push(@addons, "../src/gravity/poissonsolver.F90")
 if( grep { /MULTIGRID/ } @d) {push(@addons, "../src/gravity/multigrid.F90");}
 if( grep { /SHEAR/ }  @d) {push(@addons, "../src/shear/shear.F90");}
 push(@addons, "../src/hdf5/dataio_hdf5.F90");
-
+push(@addons, "../src/hdf5/list_hdf5.F90");
+push(@addons, "../src/fluids/fluidtypes.F90");
 push(@addons, "../src/fluids/initfluids.F90");
 push(@addons, "../src/fluids/fluidindex.F90");
 push(@addons, "../src/fluids/fluxes.F90");
@@ -195,6 +196,10 @@ if( grep { /COSM_RAYS/} @d) {
    push(@addons, "../src/fluids/cosmicrays/fluxcosmicrays.F90");
    push(@addons, "../src/fluids/cosmicrays/timestepcosmicrays.F90");
    push(@addons, "../src/fluids/cosmicrays/crdiffusion.F90");
+   }
+if( grep { /COSM_RAYS_SOURCES/} @d) {
+   push(@addons, "../src/fluids/cosmicrays/sourcecosmicrays.F90");
+   push(@addons, "../src/fluids/cosmicrays/crcomposition.F90");
    }
 if( grep { /FLUID_INTERACTIONS/} @d) {
    push(@addons, "../src/fluids/interactions/interactions.F90");
@@ -288,12 +293,12 @@ print MAKEFILE "\trm -f \$(PROG) \$(OBJS) *.mod\n\n";
 # make clean-run
 #
 print MAKEFILE "clean-run:\n";
-print MAKEFILE "\trm -f *.bck *~ *.hdf *.res *.log *.tsl *.out *.tmp core*\n\n";
+print MAKEFILE "\trm -f *.bck *~ *.h5 *.res *.log *.tsl *.out *.tmp core*\n\n";
 #
 # make clean-all
 #
 print MAKEFILE "clean-all:\n";
-print MAKEFILE "\trm -f \$(PROG) \$(OBJS) *.mod *.bck *~ *.hdf *.res *.log *.tsl *.out *.tmp core* *.f *.dbg \n\n";
+print MAKEFILE "\trm -f \$(PROG) \$(OBJS) *.mod *.bck *~ *.h5 *.res *.log *.tsl *.out *.tmp core* *.f *.dbg \n\n";
 #
 # Make .F90 a valid suffix
 #

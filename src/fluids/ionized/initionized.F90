@@ -44,6 +44,7 @@ module initionized
     real                  :: cs_iso_ion      !< isothermal sound speed (p = cs_iso_ion<sup>2</sup>\f$\rho\f$), active only if ionized gas is \ref isothermal
     real                  :: cs_iso_ion2
     real                  :: cs_ion
+    logical               :: selfgrav_ion
 
     integer               :: idni, imxi, imyi, imzi
 #ifndef ISO
@@ -77,10 +78,11 @@ module initionized
     integer :: ierrh
     character par_file*(100), tmp_log_file*(100)
 
-    namelist /FLUID_IONIZED/ gamma_ion, cs_iso_ion, cs_ion
+    namelist /FLUID_IONIZED/ gamma_ion, cs_iso_ion, cs_ion, selfgrav_ion
 
-      gamma_ion  = 1.66666666
-      cs_iso_ion = 1.0
+      gamma_ion     = 1.66666666
+      cs_iso_ion    = 1.0
+      selfgrav_ion  = .false.
 
       if(proc .eq. 0) then
          par_file = trim(cwd)//'/problem.par'
@@ -98,6 +100,8 @@ module initionized
 
     if(proc .eq. 0) then
 
+      lbuff(1)   = selfgrav_ion
+
       rbuff(1)   = gamma_ion
       rbuff(2)   = cs_iso_ion
       rbuff(3)   = cs_ion
@@ -105,16 +109,20 @@ module initionized
       call MPI_BCAST(cbuff, 32*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
       call MPI_BCAST(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
       call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+      call MPI_BCAST(lbuff,    buffer_dim, MPI_LOGICAL,          0, comm, ierr)
 
     else
 
       call MPI_BCAST(cbuff, 32*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
       call MPI_BCAST(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
       call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+      call MPI_BCAST(lbuff,    buffer_dim, MPI_LOGICAL,          0, comm, ierr)
 
-      gamma_ion  = rbuff(1)
-      cs_iso_ion = rbuff(2)
-      cs_ion     = rbuff(3)
+      selfgrav_ion = lbuff(1)
+
+      gamma_ion    = rbuff(1)
+      cs_iso_ion   = rbuff(2)
+      cs_ion       = rbuff(3)
 
     endif
 

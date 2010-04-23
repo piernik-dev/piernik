@@ -47,7 +47,7 @@ module sweeps     ! split sweeps
     implicit none
     real, dimension(size(iarr_all_my),nx,nz) :: vxr, v_r, rotaccr
     real, dimension(nx,nz)      :: epsa
-    real, dimension(nvar,nx,nz) :: u1
+    real, dimension(nvar%all,nx,nz) :: u1
     integer :: ind,i
     real, dimension(2) :: fac = (/0.5,1.0/)
 
@@ -86,9 +86,6 @@ module sweeps     ! split sweeps
     use fluidindex,   only : nvar, iarr_all_swpx
     use fluidindex,   only : nmag
     use fluidindex,   only : ibx,iby,ibz
-#ifdef IONIZED
-    use fluidindex,   only : i_ion
-#endif /* IONIZED */
 
     use mpisetup, only  : dt
     use arrays, only : u,b
@@ -102,14 +99,14 @@ module sweeps     ! split sweeps
 
     implicit none
     real, dimension(nmag,nx)  :: b_x
-    real, dimension(nvar,nx)  :: u_x
+    real, dimension(nvar%all,nx)  :: u_x
     integer :: j,k,jp,kp
 
     b_x = 0.0
     u_x = 0.0
 
 #ifdef COSM_RAYS
-    call div_v(i_ion)
+    call div_v(nvar%ion%pos)
 #endif /* COSM_RAYS */
     do k=ks,ke
       kp=k+1
@@ -132,6 +129,7 @@ module sweeps     ! split sweeps
 
     call all_fluid_boundaries
 
+
   end subroutine sweepx
 
 !------------------------------------------------------------------------------------------
@@ -140,10 +138,6 @@ module sweeps     ! split sweeps
     use fluidindex, only : nvar, iarr_all_swpy
     use fluidindex,   only : nmag
     use fluidindex, only : ibx,iby,ibz
-#ifdef IONIZED
-    use fluidindex, only : i_ion
-#endif /* IONIZED */
-
     use mpisetup, only  : dt
     use arrays, only : u,b
     use grid, only   : dy,nb,ny,is,ie,ks,ke,nxd,nzd
@@ -156,7 +150,7 @@ module sweeps     ! split sweeps
 
     implicit none
     real, dimension(nmag,ny)  :: b_y
-    real, dimension(nvar,ny)  :: u_y
+    real, dimension(nvar%all,ny)  :: u_y
 
     integer :: i,k,ip,kp
 
@@ -164,7 +158,7 @@ module sweeps     ! split sweeps
     u_y = 0.0
 
 #ifdef COSM_RAYS
-    call div_v(i_ion)
+    call div_v(nvar%ion%pos)
 #endif /* COSM_RAYS */
 
     do k=ks,ke
@@ -198,10 +192,6 @@ module sweeps     ! split sweeps
     use fluidindex, only   : nvar, iarr_all_swpz
     use fluidindex, only   : nmag
     use fluidindex, only : ibx,iby,ibz
-#ifdef IONIZED
-    use fluidindex, only : i_ion
-#endif /* IONIZED */
-
 
     use mpisetup, only  : dt
     use arrays, only : u,b
@@ -215,7 +205,7 @@ module sweeps     ! split sweeps
 
     implicit none
     real, dimension(nmag,nz)  :: b_z
-    real, dimension(nvar,nz)  :: u_z
+    real, dimension(nvar%all,nz)  :: u_z
 
     integer :: i,j,ip,jp
 
@@ -223,7 +213,7 @@ module sweeps     ! split sweeps
     u_z = 0.0
 
 #ifdef COSM_RAYS
-    call div_v(i_ion)
+    call div_v(nvar%ion%pos)
 #endif /* COSM_RAYS */
 
     do j=js,je

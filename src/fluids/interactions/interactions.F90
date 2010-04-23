@@ -42,7 +42,7 @@ module interactions
    real, allocatable, dimension(:,:,:,:)  :: omx0        !< array to store x component of initial velocity
    real, allocatable, dimension(:,:,:,:)  :: omy0        !< array to store y component of initial velocity
    real, allocatable, dimension(:,:)      :: alfsup      !< xy-array of values between 0 and 1, 1 where boundary support is used
-   real, allocatable, dimension(:,:)      :: collfaq     !< nfluid x nfluid array of collision factors
+   real, allocatable, dimension(:,:)      :: collfaq     !< nvar%fluids x nvar%fluids array of collision factors
    real :: collision_factor                              !< collision factor
    real :: cfl_interact                                  !< Courant factor for %interactions
 
@@ -64,9 +64,8 @@ module interactions
 !<
    subroutine init_interactions
       use mpisetup
-      use fluidindex,   only : nfluid
+      use fluidindex,   only : nvar
 #ifdef DUST
-      use fluidindex,   only : i_dst
       use initdust,     only : dragc_gas_dust
 #endif /* DUST */
       implicit none
@@ -102,10 +101,10 @@ module interactions
 
       endif
 #ifdef COLLISIONS
-      allocate(collfaq(nfluid,nfluid))
+      allocate(collfaq(nvar%fluids,nvar%fluids))
       collfaq = collision_factor
-      collfaq(i_dst,:) = dragc_gas_dust
-      collfaq(:,i_dst) = dragc_gas_dust
+      collfaq(nvar%dst%pos,:) = dragc_gas_dust
+      collfaq(:,nvar%dst%pos) = dragc_gas_dust
 #endif /* COLLISIONS */
 
    end subroutine init_interactions
@@ -131,7 +130,7 @@ module interactions
       implicit none
       integer               :: i1,i2,n
       real                  :: dt
-      real, dimension(nvar,n) :: du,ddu,uu
+      real, dimension(nvar%all,n) :: du,ddu,uu
       character sweep*6
 
       du=0.0
@@ -153,7 +152,7 @@ module interactions
 !! \param uu sweep fluid array
 !<
    subroutine dragforce(sweep, i1, i2, n, du, uu)
-      use fluidindex,   only : nvar,nfluid,iarr_all_dn,iarr_all_mx,iarr_all_my,nadiab
+      use fluidindex,   only : nvar,iarr_all_dn,iarr_all_mx,iarr_all_my
 #ifndef ISO
       use fluidindex,   only : iarr_all_en
 #endif /* !ISO */
@@ -161,12 +160,12 @@ module interactions
       implicit none
       integer               :: i1,i2,n
       real                  :: dt
-      real, dimension(nvar,n) :: du,ddu,uu
+      real, dimension(nvar%all,n) :: du,ddu,uu
       character sweep*6
       integer ifl,jfl
-      real, dimension(nfluid,nfluid,n) :: flch
-      real, dimension(nfluid,n)        :: colls,velcoor
-      real, dimension(maxxyz)          :: r1,r2
+      real, dimension(nvar%fluids,nvar%fluids,n) :: flch
+      real, dimension(nvar%fluids,n)             :: colls,velcoor
+      real, dimension(maxxyz)                    :: r1,r2
       real    :: a1
       integer :: rend
 
@@ -190,8 +189,8 @@ module interactions
             r2(1:rend) = 1.0
       end select
 
-      do ifl=1,nfluid
-         do jfl=1,nfluid
+      do ifl=1,nvar%fluids
+         do jfl=1,nvar%fluids
             if(ifl .ne. jfl) then
                flch(ifl,jfl,:)= collfaq(ifl,jfl)*uu(iarr_all_dn(ifl),:) * uu(iarr_all_dn(jfl),:) &
                         *( uu(iarr_all_mx(jfl),:)/uu(iarr_all_dn(jfl),:) &
@@ -201,11 +200,11 @@ module interactions
             endif
          enddo
       enddo
-      do ifl=1,nfluid
+      do ifl=1,nvar%fluids
          colls(ifl,:)=sum(flch(ifl,:,:),1)
       enddo
 #ifndef ISO
-      du(iarr_all_en(1:nadiab),:)=uu(iarr_all_mx(1:nadiab),:)*colls(1:nadiab,:)
+      du(iarr_all_en(1:nvar%adiab),:)=uu(iarr_all_mx(1:nvar%adiab),:)*colls(1:nvar%adiab,:)
 #endif /* ISO */
       du(iarr_all_mx,:)=colls
 

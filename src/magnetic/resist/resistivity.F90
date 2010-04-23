@@ -36,6 +36,7 @@ module resistivity
 
       use constants, only: pi, small, big
       use errh, only : namelist_errh
+      use errh, only : die
       use mpisetup
       use fluidindex, only : ibx,iby,ibz,icx,icy,icz
       use initionized, only : idni,imxi,imyi,imzi
@@ -137,10 +138,7 @@ contains
             j_crit             = rbuff(4)
             deint_max          = rbuff(5)
          endif
-         if(eta_scale < 0) then
-            write(*,*) 'eta_scale must be greater or equal 0'
-            call mpistop
-         endif
+         if(eta_scale < 0) call die("eta_scale must be greater or equal 0")
 
          if(.not.allocated(w)  ) allocate(w(nx,ny,nz)  )
          if(.not.allocated(wb) ) allocate(wb(nx,ny,nz) )

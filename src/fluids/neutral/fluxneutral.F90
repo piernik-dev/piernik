@@ -63,7 +63,6 @@
 !!\f]
 !<
 
-
 module fluxneutral
   implicit none
 
@@ -75,7 +74,7 @@ module fluxneutral
     use mpisetup,        only : cfr_smooth
     use constants,       only : small
     use fluidindex,      only : idn,imx,imy,imz,ien
-    use fluidindex,      only : nvar_neu
+    use fluidindex,      only : nvar
 
     use initneutral,     only : gamma_neu, cs_iso_neu2
 
@@ -89,9 +88,9 @@ module fluxneutral
     real :: minvx                           !<
     real :: maxvx                           !<
     real :: amp                             !<
-    real, dimension(nvar_neu,n):: fluxn     !< flux for neutral fluid
-    real, dimension(nvar_neu,n):: uun       !< part of u for neutral fluid
-    real, dimension(nvar_neu,n):: cfrn      !< freezing speed for neutral fluid
+    real, dimension(nvar%neu%all,n):: fluxn     !< flux for neutral fluid
+    real, dimension(nvar%neu%all,n):: uun       !< part of u for neutral fluid
+    real, dimension(nvar%neu%all,n):: cfrn      !< freezing speed for neutral fluid
     real, dimension(n) :: vx                !< velocity of neutral fluid for current sweep
     real, dimension(n) :: p                 !< pressure of neutral fluid
 
@@ -137,7 +136,7 @@ module fluxneutral
 #endif /* ISO */
     cfrn(1,1) = cfrn(1,2)
     cfrn(1,n) = cfrn(1,n-1)
-    cfrn = spread(cfrn(1,:),1,nvar_neu)
+    cfrn = spread(cfrn(1,:),1,nvar%neu%all)
 #endif /* LOCAL_FR_SPEED */
 
 #ifdef GLOBAL_FR_SPEED

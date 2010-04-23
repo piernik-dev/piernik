@@ -32,7 +32,7 @@
 program piernik
 
   use mpisetup
-  use dataio, only : nstep, nend, nstep_start, tend
+  use dataio, only : nend, nstep_start, tend
 #ifdef PERFMON
   use timer, only : timer_start, timer_stop
 #endif
@@ -79,9 +79,10 @@ contains
 !! Meta subroutine responsible for initializing all piernik modules
 !<
    subroutine init_piernik
+      use types
       use initfluids, only : init_fluids
-      use fluidindex, only : fluid_index,nvar
-      use arrays, only : arrays_allocate
+      use fluidindex, only : nvar
+      use arrays, only : init_arrays
       use grid, only : nx,ny,nz
       use grid, only : init_grid,grid_xyz
       use initproblem, only : init_prob, read_problem_par
@@ -107,12 +108,13 @@ contains
       use sndistr, only  : init_sndistr
 #endif /* SNE_DISTR */
       implicit none
+      type(grid_container) :: cgrid
       call getarg(1, cwd)
       if (LEN_TRIM(cwd) == 0) cwd = '.'
 
       call mpistart
 
-      call init_grid
+      call init_grid(cgrid)
 
 #ifdef SHEAR
       call init_shear
@@ -122,11 +124,7 @@ contains
 
       call init_fluids
 
-!      call fluid_index
-
-      call arrays_allocate(nx,ny,nz,nvar)
-
-      call grid_xyz
+      call init_arrays(nx,ny,nz,nvar)
 
       call mpi_boundaries_prep
 
@@ -161,7 +159,7 @@ contains
    subroutine cleanup_piernik
       use grid, only : cleanup_grid
       use dataio, only : cleanup_dataio
-      use arrays, only : arrays_deallocate
+      use arrays, only : cleanup_arrays
 #ifdef RESISTIVE
       use resistivity, only : cleanup_resistivity
 #endif /* RESISTIVE */
@@ -171,7 +169,7 @@ contains
 #ifdef RESISTIVE
       call cleanup_resistivity
 #endif /* RESISTIVE */
-      call arrays_deallocate
+      call cleanup_arrays
    end subroutine cleanup_piernik
 end program piernik
 

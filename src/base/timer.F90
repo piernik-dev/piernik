@@ -32,6 +32,26 @@
 module timer
 
    implicit none
+   integer, parameter, private :: S_LEN = 30
+
+   private :: search_timer, delete_timer
+
+   type, private :: timer_info
+      character(len=S_LEN) :: key
+      logical :: reset
+      real :: time
+   end type timer_info
+
+   type, private :: timer_list
+      type(timer_node), pointer :: next => Null()
+   end type timer_list
+
+   type, private :: timer_node
+      type(timer_info) :: info
+      type(timer_list) :: node
+   end type timer_node
+
+   type(timer_list), target, private, save :: timer_root
 
    integer :: nzones, cpuhours, cpumins, cpusecs , wchours , wcmins  , wcsecs
    real    :: zcps,  cputot, cpuallp, wctot, cpu_start, cpu_stop
@@ -39,6 +59,95 @@ module timer
    real(kind=4), dimension(2) ::  tarray
 
 contains
+
+   !>
+   !! \brief Wrapper for timer handling.
+   !! Only this routine should be used outside timer module.
+   !! USAGE: call timer(name,reset)
+   !!    1) if first called with "name", create timer "name" and set it with current cpu_time(), no output
+   !!    2) if timer "name" exists, print "name" - current time, set "name" with current cpu_time()
+   !!    (optional) if reset is true suppress output, set "name" with current cpu_time
+   !<
+   subroutine timer_(str,reset)
+      implicit none
+      character(len=*), intent(in) :: str    !< name of the timer
+      logical, intent(in), optional :: reset !< if true all output is suppressed, use for resetting timers
+      type(timer_info) :: temp
+      temp%key = trim(str)
+      if(present(reset)) then
+         temp%reset = .true.
+      else
+         temp%reset = .false.
+      endif
+      call search_timer(temp)
+
+   end subroutine timer_
+
+   function delete_timer(tp) result (item)
+      implicit none
+      type(timer_node), pointer :: tp
+      type(timer_info) :: item
+      type(timer_node), pointer :: temp
+
+      temp => tp
+      item = tp%info
+      tp => tp%node%next
+      deallocate(temp)
+      return
+   end function delete_timer
+
+   subroutine search_timer(item)
+      implicit none
+      type(timer_info), intent(in) :: item
+      type(timer_list), pointer :: tp
+      tp => timer_root
+
+      do
+         if( associated(tp%next)) then
+            if( item%key == tp%next%info%key ) then
+               call modify_timer(tp%next, item%reset)
+            else if( item%key < tp%next%info%key) then
+               call insert_timer(tp%next, item)
+            else
+               tp => tp%next%node
+               cycle ! keep looking
+            endif
+         else
+            call insert_timer(tp%next,item)
+         endif
+         return
+      enddo
+   contains
+
+      subroutine modify_timer(tp,reset)
+         implicit none
+         type(timer_node), pointer :: tp
+         logical, intent(in) :: reset
+
+         real :: time_old
+
+         time_old = tp%info%time
+         call cpu_time(tp%info%time)
+         if(.not.reset) write(*,'(A,F7.3,A)') "Timer ["//trim(tp%info%key)//"] = ", tp%info%time - time_old, " s"
+         return
+      end subroutine modify_timer
+
+      subroutine insert_timer(tp, item)
+         implicit none
+         type(timer_node), pointer :: tp
+         type(timer_info), intent(in) :: item
+         type(timer_node), pointer :: temp
+
+         allocate(temp)
+         temp%info = item
+         call cpu_time(temp%info%time)
+         temp%node%next => tp
+         tp => temp
+
+         return
+      end subroutine insert_timer
+
+   end subroutine search_timer
 
    subroutine timer_start
       implicit none
@@ -63,7 +172,7 @@ contains
 
    subroutine timer_stop
       use mpisetup
-      use dataio,    only : tend, nstep, nend, log_file, log_lun
+      use dataio,    only : log_file, log_lun
       use grid,      only : nxd,nyd,nzd
 
       implicit none

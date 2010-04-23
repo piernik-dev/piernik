@@ -59,7 +59,6 @@
 !!
 !<
 
-
 module fluxdust
   implicit none
 
@@ -71,7 +70,7 @@ module fluxdust
     use mpisetup,        only : cfr_smooth
     use constants,       only : small
     use fluidindex,      only : idn,imx,imy,imz,ien
-    use fluidindex,      only : nvar_dst
+    use fluidindex,      only : nvar
 
 !    use timestepdust, only : c_dst
     use timestep, only : c_all
@@ -82,9 +81,9 @@ module fluxdust
 
 ! locals
     real :: minvx, maxvx, amp
-    real, dimension(nvar_dst,n):: fluxd      !< flux for dust
-    real, dimension(nvar_dst,n):: uud        !< part of u for dust
-    real, dimension(nvar_dst,n):: cfrd       !< freezing speed for dust
+    real, dimension(nvar%dst%all,n):: fluxd      !< flux for dust
+    real, dimension(nvar%dst%all,n):: uud        !< part of u for dust
+    real, dimension(nvar%dst%all,n):: cfrd       !< freezing speed for dust
     real, dimension(n) :: p                  !< pressure
     real, dimension(n) :: vx                 !< velocity for current sweep
 
@@ -117,7 +116,7 @@ module fluxdust
 
     cfrd(1,1) = cfrd(1,2)
     cfrd(1,n) = cfrd(1,n-1)
-    cfrd = spread(cfrd(1,:),1,nvar_dst)
+    cfrd = spread(cfrd(1,:),1,nvar%dst%all)
 #endif /* LOCAL_FR_SPEED */
 
 #ifdef GLOBAL_FR_SPEED

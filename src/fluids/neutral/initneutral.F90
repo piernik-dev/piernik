@@ -46,6 +46,7 @@ module initneutral
     real                  :: global_gradP_neu
     real                  :: eta_gas_neu
     real                  :: csvk
+    logical               :: selfgrav_neu
 
     integer               :: idnn, imxn, imyn, imzn
 #ifndef ISO
@@ -83,10 +84,11 @@ module initneutral
     integer :: ierrh
     character par_file*(100), tmp_log_file*(100)
 
-    namelist /FLUID_NEUTRAL/ gamma_neu, cs_iso_neu, eta_gas_neu, csvk
+    namelist /FLUID_NEUTRAL/ gamma_neu, cs_iso_neu, eta_gas_neu, csvk, selfgrav_neu
 
-      gamma_neu  = 1.66666666
-      cs_iso_neu = 1.0
+      gamma_neu    = 1.66666666
+      cs_iso_neu   = 1.0
+      selfgrav_neu = .false.
 
       if(proc .eq. 0) then
          par_file = trim(cwd)//'/problem.par'
@@ -104,6 +106,8 @@ module initneutral
 
     if(proc .eq. 0) then
 
+      lbuff(1)   = selfgrav_neu
+
       rbuff(1)   = gamma_neu
       rbuff(2)   = cs_iso_neu
       rbuff(3)   = eta_gas_neu
@@ -112,12 +116,16 @@ module initneutral
       call MPI_BCAST(cbuff, 32*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
       call MPI_BCAST(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
       call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+      call MPI_BCAST(lbuff,    buffer_dim, MPI_LOGICAL,          0, comm, ierr)
 
     else
 
       call MPI_BCAST(cbuff, 32*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
       call MPI_BCAST(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
       call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+      call MPI_BCAST(lbuff,    buffer_dim, MPI_LOGICAL,          0, comm, ierr)
+
+      selfgrav_neu = lbuff(1)
 
       gamma_neu   = rbuff(1)
       cs_iso_neu  = rbuff(2)

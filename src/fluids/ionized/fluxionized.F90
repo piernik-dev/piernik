@@ -76,7 +76,7 @@ module fluxionized
     use fluidindex,      only : nmag
     use fluidindex,      only : ibx,iby,ibz
     use fluidindex,      only : idn,imx,imy,imz,ien
-    use fluidindex,      only : nvar_ion
+    use fluidindex,      only : nvar
 
     use initionized,     only : gamma_ion, cs_iso_ion2
     use timestepionized, only : c_ion
@@ -86,9 +86,9 @@ module fluxionized
     integer :: n                            !< number of cells in the current sweep
 
 ! locals
-    real, dimension(nvar_ion,n):: fluxi     !< flux of ionized fluid
-    real, dimension(nvar_ion,n):: uui       !< part of u for ionized fluid
-    real, dimension(nvar_ion,n):: cfri      !< freezing speed for ionized fluid
+    real, dimension(nvar%ion%all,n):: fluxi     !< flux of ionized fluid
+    real, dimension(nvar%ion%all,n):: uui       !< part of u for ionized fluid
+    real, dimension(nvar%ion%all,n):: cfri      !< freezing speed for ionized fluid
     real, dimension(nmag,n):: bb            !< magnetic field
     real, dimension(n) :: vx                !< velocity for current sweep
     real, dimension(n) :: ps                !< total pressure of ionized fluid
@@ -136,7 +136,7 @@ module fluxionized
 #endif /* ISO */
     cfri(1,1) = cfri(1,2)
     cfri(1,n) = cfri(1,n-1)
-    cfri = spread(cfri(1,:),1,nvar_ion)
+    cfri = spread(cfri(1,:),1,nvar%ion%all)
 #endif /* LOCAL_FR_SPEED */
 
 #ifdef GLOBAL_FR_SPEED

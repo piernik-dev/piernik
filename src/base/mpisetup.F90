@@ -41,7 +41,8 @@ module mpisetup
    integer :: status(MPI_STATUS_SIZE,4)
    integer, dimension(4) :: req, err
 
-   real                  :: t,dt
+   real                  :: t,dt,dtm
+   integer               :: nstep
 
    integer, parameter    :: ndims = 3       ! 3D grid
    integer               :: comm, comm3d
@@ -51,7 +52,8 @@ module mpisetup
    integer ::   pxleft, pxright, pyleft, pyright, pzleft, pzright
 
    integer,   parameter             :: buffer_dim=200
-   character, dimension(buffer_dim) :: cbuff*32
+   integer, parameter               :: cbuff_len=32
+   character(len=cbuff_len), dimension(buffer_dim) :: cbuff
    integer,   dimension(buffer_dim) :: ibuff
    real,      dimension(buffer_dim) :: rbuff
    logical,   dimension(buffer_dim) :: lbuff
@@ -235,15 +237,15 @@ module mpisetup
             rbuff(3) = cfl
             rbuff(4) = cfr_smooth
 
-            call MPI_BCAST(cbuff, 32*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
-            call MPI_BCAST(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
-            call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+            call MPI_BCAST(cbuff, cbuff_len*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
+            call MPI_BCAST(ibuff,           buffer_dim, MPI_INTEGER,          0, comm, ierr)
+            call MPI_BCAST(rbuff,           buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
          else
 
-            call MPI_BCAST(cbuff, 32*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
-            call MPI_BCAST(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
-            call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+            call MPI_BCAST(cbuff, cbuff_len*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
+            call MPI_BCAST(ibuff,           buffer_dim, MPI_INTEGER,          0, comm, ierr)
+            call MPI_BCAST(rbuff,           buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
             smalld     = rbuff(1)
             smallei    = rbuff(2)
@@ -313,7 +315,7 @@ module mpisetup
                write(3,*)
                write(3,*) 'PROCESSES:'
                do iproc = 0, nproc-1
-                  write(3,"(a6,i4,a7,i7,a1,a,a7,a)") " proc=",iproc, &
+                  write(3,"(a6,i2,a7,i6,a1,a,a7,a)") " proc=",iproc, &
                            ", pid= ",pid_all(iproc), "@",trim(host_all(iproc)), &
                            ",  cwd=",trim(cwd)
                enddo

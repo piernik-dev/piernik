@@ -36,45 +36,55 @@ contains
 !!
 !! SUBROUTINE POISSON: solves Poisson equation
 !!
-  subroutine poisson
-    use arrays, only : idna,u,gp,x,nx,ny,nz,nzb
+  subroutine poisson_solve(dens)
+    use errh, only : die
+    use arrays, only : u,fgp,fgpm
+    use grid, only   : x,nx,ny,nz,nzb
     use grid, only   : dz,dx, nb, nxd, nyd, nzd
-    use mpisetup
+    use mpisetup, only : bnd_xl, bnd_xr, bnd_yl, &
+      bnd_yr, bnd_zl, bnd_zr
 #ifdef SHEAR
     use shear, only  : unshear_fft
 #endif /* SHEAR */
+#ifdef IONIZED
+    use initionized, only : idni
+#endif
 
     implicit none
+    real, dimension(:,:,:), intent(in)  :: dens
     real, dimension(:,:,:), allocatable :: ala
+    logical,save :: frun = .true.
+
+    fgpm = fgp
 
     if( bnd_xl .eq. 'per' .and. bnd_xr .eq. 'per' .and. &
         bnd_yl .eq. 'per' .and. bnd_yr .eq. 'per' .and. &
         bnd_zl .ne. 'per' .and. bnd_zr .ne. 'per'        ) then
 
-         call poisson_xyp(u(idna,nb+1:nb+nxd,nb+1:nb+nyd,:), &
-                           gp(nb+1:nb+nxd,nb+1:nb+nyd,:),dz)
+         call poisson_xyp(dens(nb+1:nb+nxd,nb+1:nb+nyd,:), &
+                           fgp(nb+1:nb+nxd,nb+1:nb+nyd,:),dz)
 
 ! Boundary conditions
 
-         gp(1:nb,:,:)              = gp(nxd+1:nxd+nb,:,:)
-         gp(nxd+nb+1:nxd+2*nb,:,:) = gp(nb+1:2*nb,:,:)
-         gp(:,1:nb,:)              = gp(:,nyd+1:nyd+nb,:)
-         gp(:,nyd+nb+1:nyd+2*nb,:) = gp(:,nb+1:2*nb,:)
+         fgp(1:nb,:,:)              = fgp(nxd+1:nxd+nb,:,:)
+         fgp(nxd+nb+1:nxd+2*nb,:,:) = fgp(nb+1:2*nb,:,:)
+         fgp(:,1:nb,:)              = fgp(:,nyd+1:nyd+nb,:)
+         fgp(:,nyd+nb+1:nyd+2*nb,:) = fgp(:,nb+1:2*nb,:)
+      call die("poisson_solve: poisson_xyp called")
 
     elseif( bnd_xl .eq. 'per' .and. bnd_xr .eq. 'per' .and. &
             bnd_yl .eq. 'per' .and. bnd_yr .eq. 'per' .and. &
             bnd_zl .eq. 'per' .and. bnd_zr .eq. 'per'        ) then
-
-        call poisson_xyzp(u(idna,nb+1:nb+nxd,nb+1:nb+nyd,nb+1:nb+nzd),&
-                gp(nb+1:nb+nxd,nb+1:nb+nyd,nb+1:nb+nzd),dz)
+        call poisson_xyzp(dens(nb+1:nb+nxd,nb+1:nb+nyd,nb+1:nb+nzd),&
+                fgp(nb+1:nb+nxd,nb+1:nb+nyd,nb+1:nb+nzd),dz)
 
 ! Boundary conditions
-         gp(1:nb,:,:)              = gp(nxd+1:nxd+nb,:,:)
-         gp(nxd+nb+1:nxd+2*nb,:,:) = gp(nb+1:2*nb,:,:)
-         gp(:,1:nb,:)              = gp(:,nyd+1:nyd+nb,:)
-         gp(:,nyd+nb+1:nyd+2*nb,:) = gp(:,nb+1:2*nb,:)
-         gp(:,:,1:nb)              = gp(:,:,nzd+1:nzd+nb)
-         gp(:,:,nzd+nb+1:nzd+2*nb) = gp(:,:,nb+1:2*nb)
+         fgp(1:nb,:,:)              = fgp(nxd+1:nxd+nb,:,:)
+         fgp(nxd+nb+1:nxd+2*nb,:,:) = fgp(nb+1:2*nb,:,:)
+         fgp(:,1:nb,:)              = fgp(:,nyd+1:nyd+nb,:)
+         fgp(:,nyd+nb+1:nyd+2*nb,:) = fgp(:,nb+1:2*nb,:)
+         fgp(:,:,1:nb)              = fgp(:,:,nzd+1:nzd+nb)
+         fgp(:,:,nzd+nb+1:nzd+2*nb) = fgp(:,:,nb+1:2*nb)
 
 #ifdef SHEAR
     elseif ( bnd_xl .eq. 'she' .and. bnd_xr .eq. 'she' .and. &
@@ -82,24 +92,24 @@ contains
 
          if(dimensions=='3d') then
            if(.not.allocated(ala)) allocate(ala(nx-2*nb,ny-2*nb,nz-2*nb))
-           ala = u(idna,nb+1:nb+nxd,nb+1:nb+nyd,nb+1:nb+nzd)
+           ala = dens(nb+1:nb+nxd,nb+1:nb+nyd,nb+1:nb+nzd)
            call poisson_xyzp(ala(:,:,:), &
-                gp(nb+1:nb+nxd,nb+1:nb+nyd,nb+1:nb+nzd),dz)
+                fgp(nb+1:nb+nxd,nb+1:nb+nyd,nb+1:nb+nzd),dz)
 
-           gp(:,:,1:nb)              = gp(:,:,nzd+1:nzd+nb)
-           gp(:,:,nzd+nb+1:nzd+2*nb) = gp(:,:,nb+1:2*nb)
+           fgp(:,:,1:nb)              = fgp(:,:,nzd+1:nzd+nb)
+           fgp(:,:,nzd+nb+1:nzd+2*nb) = fgp(:,:,nb+1:2*nb)
 
          else
-            call poisson_xy2d(u(idna,nb+1:nb+nxd,nb+1:nb+nyd,1), &
-                            gp(nb+1:nb+nxd,      nb+1:nb+nyd,1), &
-                            gp(1:nb,             nb+1:nb+nyd,1), &
-                            gp(nxd+nb+1:nxd+2*nb,nb+1:nb+nyd,1), &
+            call poisson_xy2d(dens(nb+1:nb+nxd,nb+1:nb+nyd,1), &
+                            fgp(nb+1:nb+nxd,      nb+1:nb+nyd,1), &
+                            fgp(1:nb,             nb+1:nb+nyd,1), &
+                            fgp(nxd+nb+1:nxd+2*nb,nb+1:nb+nyd,1), &
                             dx)
 
 
          endif
-         gp(:,1:nb,:)              = gp(:,nyd+1:nyd+nb,:)
-         gp(:,nyd+nb+1:nyd+2*nb,:) = gp(:,nb+1:2*nb,:)
+         fgp(:,1:nb,:)              = fgp(:,nyd+1:nyd+nb,:)
+         fgp(:,nyd+nb+1:nyd+2*nb,:) = fgp(:,nb+1:2*nb,:)
 
          if (allocated(ala)) deallocate(ala)
 #endif /* SHEAR */
@@ -110,7 +120,11 @@ contains
       stop
     endif
 
-  end subroutine poisson
+    if(frun) then
+      fgpm = fgp
+      frun = .false.
+    endif
+  end subroutine poisson_solve
 
 !!=====================================================================
 !!

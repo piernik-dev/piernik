@@ -90,9 +90,14 @@ module gravity
 !! \n \n
 !<
    subroutine init_grav
+
       use errh, only : namelist_errh
-      use mpisetup
+      use mpisetup, only: ibuff, rbuff, buffer_dim, comm, ierr, proc, cwd, &
+           MPI_DOUBLE_PRECISION, MPI_INTEGER
+      use arrays, only: gpot
+
       implicit none
+
       integer :: ierrh
       character(LEN=100) :: par_file, tmp_log_file
 
@@ -179,9 +184,50 @@ module gravity
 
       endif
 
+      gpot(:,:,:) = 0.0
 
    end subroutine init_grav
 
+   subroutine source_terms_grav
+      use fluidindex, only : iarr_all_sg
+#ifdef SELF_GRAV
+      use poissonsolver, only : poisson_solve
+#endif /* SELF_GRAV */
+      use arrays, only : wa,u
+
+      implicit none
+
+#ifdef SELF_GRAV
+      call poisson_solve( sum(u(iarr_all_sg,:,:,:),1) )
+#endif /* SELF_GRAV */
+      call sum_potential
+
+   end subroutine source_terms_grav
+
+   subroutine sum_potential
+      use mpisetup, only : dt,dtm
+      use arrays, only: gpot, gp, hgpot
+#ifdef SELF_GRAV /* <- name should be changed */
+      use arrays, only:  fgp, fgpm
+#endif /* SELF_GRAV */
+      implicit none
+      real :: h
+
+      if(dtm/=0) then
+         h = dt/dtm
+      else
+         h = 0.0
+      endif
+
+      gpot = gp
+      hgpot = gp
+#ifdef SELF_GRAV /* <- name should be changed */
+      gpot = gpot + (1.+h)*fgp - h*fgpm
+#endif /* SELF_GRAV */
+#ifdef SELF_GRAV /* <- name should be changed */
+      hgpot = hgpot + (1.+0.5*h)*fgp - 0.5*h*fgpm
+#endif /* SELF_GRAV */
+   end subroutine sum_potential
 !--------------------------------------------------------------------------
 !>
 !! \brief Routine that compute values of gravitational potential filling in gp array and setting gp_status character string \n\n
@@ -214,8 +260,17 @@ module gravity
 #endif /* GRAV_USER */
 
       implicit none
+
+#if defined (GRAV_PTMASSPURE) || defined (GRAV_PTMASS) || defined (GRAV_PTFLAT)
       integer :: i, j, k
-      real    :: r2, rc, fr
+      real    :: rc
+#endif
+#if defined (GRAV_PTMASSPURE) || defined (GRAV_PTMASS)
+      real    :: r2
+#endif
+#if defined (GRAV_PTFLAT) || (GRAV_PTMASS)
+      real    :: fr
+#endif
 
       gp_status = ''
 
@@ -298,7 +353,8 @@ module gravity
 !! one type of %gravity is implemented here: \n\n
 !! local Galactic %gravity only in z-direction (see <a href="http://cdsads.u-strasbg.fr/abs/1998ApJ...497..759F">Ferriere K., 1998, Astrophys. Journal, 497, 759</a>)\n
 !! \f[
-!! F_z = 3.23 \cdot 10^8 \cdot \left[\left(-4.4 \cdot 10^{-9} \cdot exp\left(-\frac{(r_{gc}-r_{gc_{}Sun})}{(4.9kpc)}\right) \cdot \frac{z}{\sqrt{(z^2+(0.2kpc)^2)}}\right)-\left( 1.7 \cdot 10^{-9} \cdot \frac{(r_{gc_{}Sun}^2 + (2.2kpc)^2)}{(r_{gc}^2 + (2.2kpc)^2)} \cdot \frac{z}{1kpc}\right) \right]
+!! F_z = 3.23 \cdot 10^8 \cdot \left[\left(-4.4 \cdot 10^{-9} \cdot exp\left(-\frac{(r_{gc}-r_{gc_{}Sun})}{(4.9kpc)}\right) \cdot \frac{z}{\sqrt{(z^2+(0.2kpc)^2)}}\right)
+!! -\left( 1.7 \cdot 10^{-9} \cdot \frac{(r_{gc_{}Sun}^2 + (2.2kpc)^2)}{(r_{gc}^2 + (2.2kpc)^2)} \cdot \frac{z}{1kpc}\right) \right]
 !! \f]
 !! where \f$r_{gc}\f$ is galactocentric radius and \f$r_{gcSun}\f$ is the galactocentric radius of Sun.
 !<
@@ -339,7 +395,7 @@ module gravity
 
       if (sweep == 'zsweep') then
 !         grav = 0.1*(tanh(abs((2.0*xsw)**10.0)-30.0)+1.0)*0.5
-	  grav = - 0.1
+         grav = - 0.1
       else
          grav=0.0
       endif
@@ -354,27 +410,63 @@ module gravity
 !! \param n number of elements of returned array grav
 !! \param grav 1D array of gravitational acceleration values computed for positions from xsw and returned by the routine
 !<
-   subroutine grav_pot2accel(sweep, i1,i2, n, grav)
-      use arrays, only : gp
-      use grid, only : dl, xdim, ydim, zdim
+   subroutine grav_pot2accel(sweep, i1,i2, n, grav,istep)
+      use arrays, only : gpot, hgpot
+      use grid, only   : dl, xdim, ydim, zdim
       implicit none
       character, intent(in)          :: sweep*6
       integer, intent(in)            :: i1, i2
       integer, intent(in)            :: n
       real, dimension(n),intent(out) :: grav
+      integer, intent(in)            :: istep
+!\todo offer high order gradient as an option in parameter file
+!      real, parameter :: onetw = 1./12.
 
 ! Gravitational accelleration is computed on right cell boundaries
 
-      select case(sweep)
-         case('xsweep')
-            grav(2:n-1) = 0.5*(gp(1:n-2,i1,i2) - gp(3:n,i1,i2))/dl(xdim)
-         case('ysweep')
-            grav(2:n-1) = 0.5*(gp(i2,1:n-2,i1) - gp(i2,3:n,i1))/dl(ydim)
-         case('zsweep')
-            grav(2:n-1) = 0.5*(gp(i1,i2,1:n-2) - gp(i1,i2,3:n))/dl(zdim)
-      end select
-      grav(1) = grav(2); grav(n) = grav(n-1)
+!      if(istep==1) then
+!         select case(sweep)
+!            case('xsweep')
+!               grav(3:n-2) = onetw*(hgpot(5:n,i1,i2) - 8.*hgpot(4:n-1,i1,i2) + 8.*hgpot(2:n-3,i1,i2) - hgpot(1:n-4,i1,i2) )/dl(xdim)
+!            case('ysweep')
+!               grav(3:n-2) = onetw*(hgpot(i2,5:n,i1) - 8.*hgpot(i2,4:n-1,i1) + 8.*hgpot(i2,2:n-3,i1) - hgpot(i2,1:n-4,i1) )/dl(xdim)
+!            case('zsweep')
+!               grav(3:n-2) = onetw*(hgpot(i1,i2,5:n) - 8.*hgpot(i1,i2,4:n-1) + 8.*hgpot(i1,i2,2:n-3) - hgpot(i1,i2,1:n-4) )/dl(xdim)
+!         end select
+!      else
+!         select case(sweep)
+!            case('xsweep')
+!               grav(3:n-2) = onetw*(gpot(5:n,i1,i2) - 8.*gpot(4:n-1,i1,i2) + 8.*gpot(2:n-3,i1,i2) - gpot(1:n-4,i1,i2) )/dl(xdim)
+!            case('ysweep')
+!               grav(3:n-2) = onetw*(gpot(i2,5:n,i1) - 8.*gpot(i2,4:n-1,i1) + 8.*gpot(i2,2:n-3,i1) - gpot(i2,1:n-4,i1) )/dl(xdim)
+!            case('zsweep')
+!               grav(3:n-2) = onetw*(gpot(i1,i2,5:n) - 8.*gpot(i1,i2,4:n-1) + 8.*gpot(i1,i2,2:n-3) - gpot(i1,i2,1:n-4) )/dl(xdim)
+!         end select
+!      endif
+!      grav(2) = grav(3); grav(n-1) = grav(n-2)
+!      grav(1) = grav(2); grav(n) = grav(n-1)
+      if(istep==1) then
+         select case(sweep)
+            case('xsweep')
+               grav(2:n-1) = 0.5*(hgpot(1:n-2,i1,i2) - hgpot(3:n,i1,i2))/dl(xdim)
+            case('ysweep')
+               grav(2:n-1) = 0.5*(hgpot(i2,1:n-2,i1) - hgpot(i2,3:n,i1))/dl(ydim)
+            case('zsweep')
+               grav(2:n-1) = 0.5*(hgpot(i1,i2,1:n-2) - hgpot(i1,i2,3:n))/dl(zdim)
+         end select
 
+      else
+         select case(sweep)
+            case('xsweep')
+               grav(2:n-1) = 0.5*(gpot(1:n-2,i1,i2) - gpot(3:n,i1,i2))/dl(xdim)
+            case('ysweep')
+               grav(2:n-1) = 0.5*(gpot(i2,1:n-2,i1) - gpot(i2,3:n,i1))/dl(ydim)
+            case('zsweep')
+               grav(2:n-1) = 0.5*(gpot(i1,i2,1:n-2) - gpot(i1,i2,3:n))/dl(zdim)
+         end select
+      endif
+
+      grav(1) = grav(2); grav(n) = grav(n-1)
    end subroutine grav_pot2accel
 
 !--------------------------------------------------------------------------

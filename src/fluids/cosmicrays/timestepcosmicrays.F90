@@ -26,7 +26,6 @@
 !    For full list of developers see $PIERNIK_HOME/license/pdt.txt
 !
 #include "piernik.def"
-
 !>
 !! \brief (MH) Computation of %timestep for diffusive Cosmic Ray transport
 !!
@@ -42,16 +41,15 @@ module timestepcosmicrays
 
     use constants, only : small
     use grid,           only : dxmn
-    use initcosmicrays, only : cfl_cr,K_cr_paral,K_cr_perp
+    use initcosmicrays, only : cfl_cr,K_crs_paral,K_crs_perp
 
     implicit none
 
-    real dt_crs_proc, dt_crs_all
+!    real dt_crs_proc, dt_crs_all
 
-      dt_crs = cfl_cr * 0.5*dxmn**2/(K_cr_paral+K_cr_perp+small)
+      dt_crs = cfl_cr * 0.5*dxmn**2/(maxval(K_crs_paral+K_crs_perp)+small)
 
   end subroutine timestep_crs
 
 !-------------------------------------------------------------------------------
 end module timestepcosmicrays
-

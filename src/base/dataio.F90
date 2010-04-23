@@ -42,6 +42,7 @@
 !!
 !! \todo check and if necessary bring back usefullness of min_disk_space_MB parameter
 !<
+
 module dataio
 !>
 !! \brief (KK)
@@ -51,19 +52,17 @@ module dataio
 ! Written by G. Kowal
 ! Modified for this code and extended by M.Hanasz
    use types
-   use mpisetup
-   use initproblem
-#ifdef SN_SRC
-   use snsources
-#endif /* SN_SRC */
-   use dataio_hdf5, only : write_hdf5, write_restart_hdf5, read_restart_hdf5, &
-       init_hdf5, cleanup_hdf5, write_plot
+
    implicit none
+
+   private
+   public :: check_log, check_tsl, tend, log_file, log_lun, nhdf, &
+      nend, write_data, cleanup_dataio, init_dataio, user_msg_handler, &
+      nstep_start
 
    type(hdf) :: chdf
 
    integer               :: nend                   !< step number to end simulation
-   integer               :: nstep                  !< current number of simulation timestep
    integer               :: istep                  !< current number of substep (related to integration order)
    integer               :: nstep_start            !< number of start timestep
    real                  :: tend                   !< simulation time to end
@@ -159,7 +158,33 @@ module dataio
 
    contains
 
-     subroutine set_container(chdf)
+      subroutine check_log
+         use mpisetup, only : t
+         implicit none
+
+         if(dt_log > 0.0) then
+            if(nlog < (int(t / dt_log) + 1)) then
+               call write_log
+               nlog = nlog + 1
+            endif
+         endif
+
+      end subroutine check_log
+
+      subroutine check_tsl
+         use mpisetup, only : t
+         implicit none
+
+         if(dt_tsl .gt. 0.0) then
+            if(ntsl .lt. (int(t / dt_tsl) + 1)) then
+               call write_timeslice
+               ntsl = ntsl + 1
+             endif
+         endif
+      end subroutine check_tsl
+
+     subroutine set_container_chdf(chdf)
+       use mpisetup, only : nstep
        use types
        implicit none
        type(hdf), intent(out) :: chdf
@@ -176,9 +201,10 @@ module dataio
        chdf%nrestart = nrestart
        chdf%domain  = domain
 
-     end subroutine set_container
+     end subroutine set_container_chdf
 
      subroutine get_container(chdf)
+       use mpisetup, only : nstep
        use types
        implicit none
        type(hdf), intent(in) :: chdf
@@ -250,14 +276,18 @@ module dataio
 !! \n \n
 !<
    subroutine init_dataio
+      use mpisetup, only : ibuff, rbuff, cbuff, proc, MPI_CHARACTER, &
+         MPI_DOUBLE_PRECISION, MPI_INTEGER, comm, ierr, buffer_dim, cwd, &
+         psize, t, nstep
       use errh,            only : namelist_errh
       use initproblem,     only : problem_name,run_id
-      use version,         only : nenv,env
+      use version,         only : nenv,env, init_version
       use fluidboundaries, only : all_fluid_boundaries
       use fluidindex
 #ifdef MAGNETIC
       use magboundaries,   only : all_mag_boundaries
 #endif /* MAGNETIC */
+      use dataio_hdf5,     only : init_hdf5, read_restart_hdf5
       implicit none
       integer              :: ierrh
       integer(kind=1)      :: getpid
@@ -443,13 +473,14 @@ module dataio
             log_file = trim(cwd)//'/'//trim(log_file)
             system_command = 'mv '//trim(tmp_log_file)//' '//trim(log_file)
             system_status = SYSTEM(system_command)
+            call init_version
             open(3, file=log_file, position='append')
             do i=1,nenv
                write(3,*) trim(env(i))
             enddo
             close(3)
          endif
-         call set_container(chdf); chdf%nres = nrestart
+         call set_container_chdf(chdf); chdf%nres = nrestart
          call write_data(output='all')
 
       else
@@ -461,7 +492,7 @@ module dataio
             system_command = 'mv '//trim(tmp_log_file)//' '//trim(log_file)
             system_status = SYSTEM(system_command)
          endif
-         call set_container(chdf); chdf%nres = nrestart
+         call set_container_chdf(chdf); chdf%nres = nrestart
          call read_restart_hdf5(chdf)
          call get_container(chdf)
          nstep_start = nstep
@@ -469,6 +500,7 @@ module dataio
          nres_start  = nrestart
          nhdf_start  = nhdf-1
          if(proc==0) then
+            call init_version
             open(3, file=log_file, position='append')
             do i=1,nenv
                write(3,*) trim(env(i))
@@ -478,7 +510,7 @@ module dataio
          if(new_id .ne. '') run_id=new_id
       endif
       call MPI_BCAST(log_file, 32, MPI_CHARACTER, 0, comm, ierr)
-      call set_container(chdf)
+      call set_container_chdf(chdf)
       call all_fluid_boundaries
 #ifdef MAGNETIC
       call all_mag_boundaries
@@ -488,12 +520,16 @@ module dataio
 
    subroutine cleanup_dataio
 
+      use dataio_hdf5,     only : cleanup_hdf5
       implicit none
 
       call cleanup_hdf5
    end subroutine cleanup_dataio
 
    subroutine user_msg_handler(end_sim)
+      use initproblem, only : problem_name, run_id
+      use mpisetup, only : MPI_CHARACTER, MPI_DOUBLE_PRECISION, comm, ierr, proc, nstep
+      use dataio_hdf5,     only : write_hdf5, write_restart_hdf5
       implicit none
       logical, intent(inout) :: end_sim
       integer :: tsleep
@@ -515,11 +551,11 @@ module dataio
                 trim(problem_name),'_', run_id,'_',nres,'.res'
             endif
             call MPI_BCAST(filename, 128, MPI_CHARACTER, 0, comm, ierr)
-            call set_container(chdf)
+            call set_container_chdf(chdf)
             call write_restart_hdf5(filename,chdf)
          endif
          if(trim(msg) .eq. 'hdf') then
-            call set_container(chdf)
+            call set_container_chdf(chdf)
             call write_hdf5(chdf)
             nhdf = nhdf + 1
             step_hdf = nstep
@@ -551,9 +587,13 @@ module dataio
 !---------------------------------------------------------------------
 !
    subroutine write_data(output)
+      use mpisetup, only : t, MPI_CHARACTER, comm, ierr, proc, nstep
+      use initproblem, only : run_id, problem_name
 #ifdef USER_IO
       use initproblem, only : user_io_routine
 #endif /* USER_IO */
+      use dataio_hdf5,     only : write_hdf5, write_restart_hdf5, write_plot
+
       implicit none
       character  :: output*3
 
@@ -583,7 +623,7 @@ module dataio
 
          if ((t-last_hdf_time) .ge. dt_hdf &
                 .or. output .eq. 'hdf' .or. output .eq. 'end') then
-            call set_container(chdf)
+            call set_container_chdf(chdf)
             call write_hdf5(chdf)
 
             if((t-last_hdf_time) .ge. dt_hdf) last_hdf_time = last_hdf_time + dt_hdf
@@ -603,22 +643,36 @@ module dataio
                     trim(problem_name),'_', run_id,'_',nres,'.res'
                endif
                call MPI_BCAST(filename, 128, MPI_CHARACTER, 0, comm, ierr)
-               call set_container(chdf)
+               call set_container_chdf(chdf)
                call write_restart_hdf5(filename,chdf)
             endif
             nres = nres + 1
             step_res = nstep
          endif
       endif
-      call set_container(chdf)
+      call set_container_chdf(chdf)
       call write_plot(chdf)
 
    end subroutine write_data
 
+
+   subroutine next_fluid_or_var(ifluid,ivar,nvar)
+      implicit none
+      integer ifluid,ivar,nvar
+      if(ifluid .lt. nvar) then
+         ifluid=ifluid+1
+         ivar=1
+      else
+         ivar=0
+         ifluid=1
+      endif
+      return
+   end subroutine next_fluid_or_var
+
 !------------------------------------------------------------------------
 
    subroutine find_last_restart(restart_number)
-
+      use mpisetup, only : cwd
       use initproblem, only : problem_name, run_id
 
       implicit none
@@ -653,10 +707,10 @@ module dataio
 !---------------------------------------------------------------------
 !
    subroutine write_timeslice
+      use mpisetup, only : proc, comm3d, cwd, t, dt, ierr, mpi_real8, mpi_sum, smalld, nstep
       use types
-      use fluidindex,      only : nfluid
       use fluidindex,      only : ibx,iby,ibz
-      use fluidindex,      only : nvar, iarr_all_dn,iarr_all_mx,iarr_all_my,iarr_all_mz
+      use fluidindex,      only : nvar,iarr_all_dn,iarr_all_mx,iarr_all_my,iarr_all_mz
       use grid,            only : dvol,dx,dy,dz,is,ie,js,je,ks,ke,x,y,z,nxd,nyd,nzd
       use arrays,          only : u,b,wa
       use initproblem,     only : problem_name, run_id
@@ -670,10 +724,10 @@ module dataio
       use fluidindex,      only : iarr_all_en
 #endif /* ISO */
 #ifdef COSM_RAYS
-      use initcosmicrays,  only : iecr
+      use fluidindex, only : iarr_all_crs
 #endif /* COSM_RAYS */
 #ifdef GRAV
-      use arrays,          only : gp
+      use arrays,          only : gpot
 #endif /* GRAV */
 #ifdef ISO
 #ifdef IONIZED
@@ -686,9 +740,6 @@ module dataio
 #ifdef RESISTIVE
       use resistivity
 #endif /* RESISTIVE */
-#ifdef COSM_RAYS
-      use initcosmicrays,  only : iecr
-#endif /* COSM_RAYS */
 #ifdef SNE_DISTR
       use sndistr,         only : emagadd, tot_emagadd
 #endif /* SNE_DISTR */
@@ -710,7 +761,6 @@ module dataio
       type(tsl_container) :: tsl
 
 #ifdef GRAV
-      integer  :: i,j
       real     :: epot =0.0
 #endif /* GRAV */
 #ifdef COSM_RAYS
@@ -791,7 +841,7 @@ module dataio
       call mpi_allreduce(momz, tot_momz, 1, mpi_real8, mpi_sum, comm3d, ierr)
 
 #ifdef GRAV
-      epot = sum(u(iarr_all_dn(1),is:ie,js:je,ks:ke) *gp(is:ie,js:je,ks:ke)) * dvol
+      epot = sum(u(iarr_all_dn(1),is:ie,js:je,ks:ke) *gpot(is:ie,js:je,ks:ke)) * dvol
       call mpi_allreduce(epot, tot_epot, 1, mpi_real8, mpi_sum, comm3d, ierr)
 #endif /* GRAV */
 
@@ -834,7 +884,7 @@ module dataio
 #endif /* GRAV */
 
 #ifdef COSM_RAYS
-      encr = sum(u(iecr,is:ie,js:je,ks:ke)) * dvol
+      encr = sum(u(iarr_all_crs,is:ie,js:je,ks:ke)) * dvol
       call mpi_allreduce(encr, tot_encr, 1, mpi_real8, mpi_sum, comm3d, ierr)
 #endif /* COSM_RAYS */
 #ifdef SNE_DISTR
@@ -894,11 +944,11 @@ module dataio
 !
    subroutine  write_log(tsl)
       use types
-      use fluidindex,         only : ibx, iby, ibz, nfluid
+      use fluidindex,         only : ibx, iby, ibz, nvar
       use arrays,             only : wa,u,b
       use grid,               only   : dx,dy,dz,dxmn,nb,is,ie,js,je,ks,ke,nx,ny,nz
       use constants,          only : small, mH, kboltz, gasRconst
-      use mpisetup,           only : smallei,cfl
+      use mpisetup,           only : smallei,cfl,t,dt, proc, mpifind, nstep
 #ifdef IONIZED
       use initionized,        only : gamma_ion, cs_iso_ion,cs_iso_ion2
       use initionized,        only : idni,imxi,imyi,imzi
@@ -918,7 +968,7 @@ module dataio
 #endif /* DUST */
 #ifdef COSM_RAYS
       use timestepcosmicrays, only : dt_crs
-      use initcosmicrays,     only : iecr
+      use fluidindex, only : iarr_all_crs
 #endif /* COSM_RAYS */
 #ifdef RESISTIVE
       use resistivity
@@ -928,12 +978,12 @@ module dataio
       type(tsl_container), optional :: tsl
 
 #ifdef MAGNETIC
-      type(value) :: b_min, b_max, divb_max
+      type(value) :: b_min, b_max, divb_max, vai_max
 #endif /* MAGNETIC */
 
 #ifdef IONIZED
       type(value) :: deni_min, deni_max, vxi_max, vyi_max, vzi_max, &
-                     prei_min, prei_max, temi_min, temi_max, vai_max, csi_max
+                     prei_min, prei_max, temi_min, temi_max, csi_max
 #endif /* IONIZED */
 
 #ifdef NEUTRAL
@@ -1215,7 +1265,7 @@ module dataio
 #endif /* MAGNETIC */
 
 #ifdef COSM_RAYS
-      wa            = u(iecr,:,:,:)
+      wa            = sum(u(iarr_all_crs,:,:,:),1)
       encr_min%val  = minval(wa(is:ie,js:je,ks:ke))
       encr_min%loc  = minloc(wa(is:ie,js:je,ks:ke)) &
                   + (/nb,nb,nb/)
@@ -1299,13 +1349,13 @@ module dataio
             tsl%prei_max = prei_max%val
             tsl%temi_min = temi_min%val
             tsl%temi_max = temi_max%val
-            tsl%vai_max  = vai_max%val
             tsl%csi_max  = csi_max%val
 #endif /* IONIZED */
 #ifdef MAGNETIC
             tsl%b_min = b_min%val
             tsl%b_max = b_max%val
             tsl%divb_max = divb_max%val
+            tsl%vai_max  = vai_max%val
 #endif /* MAGNETIC */
 #ifdef NEUTRAL
             tsl%denn_min = denn_min%val
@@ -1347,8 +1397,6 @@ module dataio
 776 format(5x,a18,(1x,e10.4),2x,a3,(1x,e10.4),4(1x,i4))
 #endif /* RESISTIVE */
 
-!#endif /* NOT_WORKING */
-
    end subroutine write_log
 
 !------------------------------------------------------------------------
@@ -1365,14 +1413,13 @@ module dataio
 !      system_message_file         ! 2nd (ups)  message file (eg.'/etc/ups/user/msg')
 !-------------------------------------------------------------------------
       implicit none
-      character user_last_msg_file*80
-      character system_last_msg_file*80
+      character(len=80) :: user_last_msg_file, system_last_msg_file
 
-      character user_msg_time(10)*80,system_msg_time(10)*80
+      character(len=80), dimension(10) :: user_msg_time, system_msg_time
 
-      character, save :: user_msg_time_old*80,system_msg_time_old*80
+      character(len=80), save :: user_msg_time_old, system_msg_time_old
       character(len=265) :: syscom
-      integer i
+      integer :: i
       integer(kind=1) :: system
 
       msg=''

@@ -35,18 +35,25 @@ module arrays
    integer, parameter  :: nrlscal=100   !< Size of arrays::rlscal array
    integer, parameter  :: nintscal=100  !< Size of arrays::intscal array
 
-   real, allocatable, dimension(:,:,:,:)     :: u        !< Main array of all fluids' componets
-   real, allocatable, dimension(:,:,:,:)     :: b        !< Main array of magnetic field's components
-   real, allocatable, dimension(:,:,:)       :: wa       !< Temporary array used for different purposes, usually has dimension (grid::nx, grid::ny, grid::nz)
+   real, allocatable, dimension(:,:,:,:), target :: u    !< Main array of all fluids' componets
+   real, allocatable, dimension(:,:,:,:), target :: b    !< Main array of magnetic field's components
+   real, allocatable, dimension(:,:,:)           :: wa   !< Temporary array used for different purposes, usually has dimension (grid::nx, grid::ny, grid::nz)
    real, allocatable, dimension(:,:,:)       :: wcu      !< Temporary array used in resistivity module
 #ifdef GRAV
-   real, allocatable, dimension(:,:,:)       :: gp       !< Array for gravitational potential
+   real, allocatable, dimension(:,:,:)       :: gpot     !< Array for sum of gravitational potential at t += dt
+   real, allocatable, dimension(:,:,:)       :: hgpot    !< Array for sum of gravitational potential at t += 0.5*dt
+   real, allocatable, dimension(:,:,:)       :: gp       !< Array for gravitational potential from external fields
    real, allocatable, dimension(:)           :: dprof    !< Array used for storing density during calculation of hydrostatic equilibrium
    real, allocatable, dimension(:)           :: eprof    !< Array used for storing energy during calculation of hydrostatic equilibrium
+#ifdef SELF_GRAV
+   real, allocatable, dimension(:,:,:)       :: fgp      !< Array for fourier gravitational potential
+   real, allocatable, dimension(:,:,:)       :: fgpm     !< Array for fourier gravitational potential at previous timestep
+#endif /* SELF_GRAV */
 #endif /* GRAV */
 
 #ifdef COSM_RAYS
    real, allocatable, dimension(:,:,:)       :: divvel   !< Array storing \f$\nabla\cdot\mathbf{v}\f$, needed in cosmic ray transport
+   real, allocatable, dimension(:,:,:,:)     :: wcr      !< Temporary array used in crdiffusion module
 
 #endif /* COSM_RAYS  */
 
@@ -57,18 +64,31 @@ module arrays
 !>
 !! Routine that allocates all arrays
 !<
-   subroutine arrays_allocate(nx,ny,nz,nvar)
+
+   subroutine init_arrays(nx,ny,nz,nvar)
+
+      use types
+      use fluidtypes
+
       implicit none
-      integer, intent(in) :: nx,ny,nz,nvar
+      type(var_numbers) :: nvar
+
+      integer, intent(in) :: nx,ny,nz
 
       if(.not.allocated(rlscal))  allocate(rlscal(nrlscal))
       if(.not.allocated(intscal)) allocate(intscal(nintscal))
 
-      if(.not.allocated(u))       allocate(u(nvar,nx,ny,nz))
+      if(.not.allocated(u))       allocate(u(nvar%all,nx,ny,nz))
       if(.not.allocated(b))       allocate(b(3,nx,ny,nz))
 
 #ifdef GRAV
       if(.not.allocated(gp))      allocate(gp(nx,ny,nz))
+      if(.not.allocated(gpot))    allocate(gpot(nx,ny,nz))
+      if(.not.allocated(hgpot))   allocate(hgpot(nx,ny,nz))
+#ifdef SELF_GRAV
+      if(.not.allocated(fgp))     allocate(fgp(nx,ny,nz))
+      if(.not.allocated(fgpm))    allocate(fgpm(nx,ny,nz))
+#endif /* SELF_GRAV */
       if(.not.allocated(dprof))   allocate(dprof(nz))
       if(.not.allocated(eprof))   allocate(eprof(nz))
 #endif /* GRAV */
@@ -79,14 +99,15 @@ module arrays
 #endif /* RESISTIVE */
 #ifdef COSM_RAYS
       if(.not.allocated(divvel)) allocate(divvel(nx,ny,nz))
+      if(.not.allocated(wcr))    allocate(wcr(nvar%crs%all,nx,ny,nz))
 #endif /* COSM_RAYS  */
 
-   end subroutine arrays_allocate
+   end subroutine init_arrays
 
 !>
 !! Routine that deallocates all arrays
 !<
-   subroutine arrays_deallocate
+   subroutine cleanup_arrays
 
       if(allocated(rlscal))  deallocate(rlscal)
       if(allocated(intscal)) deallocate(intscal)
@@ -100,14 +121,21 @@ module arrays
 
 #ifdef GRAV
       if(allocated(gp))      deallocate(gp)
+      if(allocated(gpot))    deallocate(gpot)
+      if(allocated(hgpot))   deallocate(hgpot)
+#ifdef SELF_GRAV
+      if(allocated(fgp))     deallocate(fgp)
+      if(allocated(fgpm))    deallocate(fgpm)
+#endif /* SELF_GRAV */
       if(allocated(dprof))   deallocate(dprof)
       if(allocated(eprof))   deallocate(eprof)
 #endif /* GRAV */
 
 #ifdef COSM_RAYS
       if(allocated(divvel))  deallocate(divvel)
+      if(allocated(wcr))     deallocate(wcr)
 #endif /* COSM_RAYS */
 
-   end subroutine arrays_deallocate
+   end subroutine cleanup_arrays
 
 end module arrays

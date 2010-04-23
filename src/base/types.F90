@@ -1,4 +1,4 @@
-!$Id$
+! $Id$
 !
 ! PIERNIK Code Copyright (C) 2006 Michal Hanasz
 !
@@ -36,8 +36,8 @@ module types
       integer :: myd = -1, myn = -1, myi = -1
       integer :: mzd = -1, mzn = -1, mzi = -1
       integer :: enn = -1, eni = -1
-      integer :: ecr = -1
       integer :: bx = -1, by = -1, bz = -1
+      integer, dimension(:), pointer :: arr_crs
    end type indx
 
    type :: hdf
@@ -54,6 +54,27 @@ module types
       integer, dimension(3) :: loc
       integer :: proc
    end type value
+
+
+   type :: grid_container
+      real    :: dx, dy, dz, dxmn, dvol
+      integer :: nxd, nyd, nzd, nb
+      integer :: nx, ny, nz
+      integer :: nxb, nyb, nzb
+      integer :: nxt, nyt, nzt
+      integer :: is, ie, js, je, ks, ke
+      integer :: maxxyz
+
+      real    :: xmin, xmax, ymin, ymax, zmin, zmax
+      real    :: xminb, xmaxb, yminb, ymaxb, zminb, zmaxb
+      real    :: Lx, Ly, Lz
+      integer, pointer  :: xdim, ydim, zdim
+
+      real, dimension(:), pointer :: dl
+      real, dimension(:), pointer  :: x, xl, xr
+      real, dimension(:), pointer  :: y, yl, yr
+      real, dimension(:), pointer  :: z, zl, zr
+   end type grid_container
 
    type :: tsl_container
 #ifdef NEUTRAL

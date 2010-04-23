@@ -35,9 +35,7 @@
 !! \copydetails grid::init_grid
 !<
 module grid
-
-! Written by: M. Hanasz, January/February 2006
-
+   use types, only : grid_container
    implicit none
    real    :: dx                             !< length of the %grid cell in x-direction
    real    :: dy                             !< length of the %grid cell in y-direction
@@ -84,17 +82,16 @@ module grid
    integer,parameter  :: ydim=2              !< parameter assigned to y-direction
    integer,parameter  :: zdim=3              !< parameter assigned to z-direction
 
-   real, allocatable :: dl(:)                !< array of %grid cell sizes in all directions
-   real, allocatable, dimension(:)  :: x     !< array of x-positions of %grid cells centers
-   real, allocatable, dimension(:)  :: y     !< array of y-positions of %grid cells centers
-   real, allocatable, dimension(:)  :: z     !< array of z-positions of %grid cells centers
-   real, allocatable, dimension(:)  :: xl    !< array of x-positions of %grid cells left borders
-   real, allocatable, dimension(:)  :: yl    !< array of y-positions of %grid cells left borders
-   real, allocatable, dimension(:)  :: zl    !< array of z-positions of %grid cells left borders
-   real, allocatable, dimension(:)  :: xr    !< array of x-positions of %grid cells right borders
-   real, allocatable, dimension(:)  :: yr    !< array of y-positions of %grid cells right borders
-   real, allocatable, dimension(:)  :: zr    !< array of z-positions of %grid cells right borders
-
+   real, allocatable, target :: dl(:)               !< array of grid cell sizes in all directions
+   real, allocatable, dimension(:), target :: x     !< array of x-positions of grid cells centers
+   real, allocatable, dimension(:), target :: y     !< array of y-positions of grid cells centers
+   real, allocatable, dimension(:), target :: z     !< array of z-positions of grid cells centers
+   real, allocatable, dimension(:), target :: xl    !< array of x-positions of grid cells left borders
+   real, allocatable, dimension(:), target :: yl    !< array of y-positions of grid cells left borders
+   real, allocatable, dimension(:), target :: zl    !< array of z-positions of grid cells left borders
+   real, allocatable, dimension(:), target :: xr    !< array of x-positions of grid cells right borders
+   real, allocatable, dimension(:), target :: yr    !< array of y-positions of grid cells right borders
+   real, allocatable, dimension(:), target :: zr    !< array of z-positions of grid cells right borders
 
    contains
 !>
@@ -124,10 +121,46 @@ module grid
 !!</table>
 !! \n \n
 !<
-   subroutine init_grid
-      use errh, only : namelist_errh
-      use mpisetup
+   subroutine set_container_grid(cgrid)
+      use types
       implicit none
+      type(grid_container), intent(out) :: cgrid
+
+      cgrid%dx = dx; cgrid%dy = dy; cgrid%dz = dz
+      cgrid%nb = nb
+      cgrid%nxd = nxd; cgrid%nyd = nyd; cgrid%nzd = nzd
+      cgrid%nx = nx; cgrid%ny = ny; cgrid%nz = nz
+      cgrid%nxb = nxb; cgrid%nyb = nyb; cgrid%nzb = nzb
+      cgrid%nxt = nxt; cgrid%nyt = nyt; cgrid%nzt = nzt
+      cgrid%is = is; cgrid%js = js; cgrid%ks = ks
+      cgrid%ie = ie; cgrid%je = je; cgrid%ks = ke
+
+      cgrid%xmin = xmin; cgrid%ymin = ymin; cgrid%zmin = zmin
+      cgrid%xmax = xmax; cgrid%ymax = ymax; cgrid%zmax = zmax
+      cgrid%xminb = xminb; cgrid%yminb = yminb; cgrid%zminb = zminb
+      cgrid%xmaxb = xmaxb; cgrid%ymaxb = ymaxb; cgrid%zmaxb = zmaxb
+      cgrid%Lx = Lx; cgrid%Ly = Ly; cgrid%Lz = Lz
+
+      !Association check is not required for uninitialized variables.
+      cgrid%dl=>dl
+      cgrid%x=>x
+      cgrid%y=>y
+      cgrid%z=>z
+      cgrid%xl=>xl
+      cgrid%yl=>yl
+      cgrid%zl=>zl
+      cgrid%xr=>xr
+      cgrid%yr=>yr
+      cgrid%zr=>zr
+
+   end subroutine set_container_grid
+
+   subroutine init_grid(cgrid)
+      use types
+      use mpisetup
+      use errh, only : namelist_errh, die
+      implicit none
+      type(grid_container), intent(out) :: cgrid
       integer :: ierrh
       character(LEN=100) :: par_file, tmp_log_file
 
@@ -197,11 +230,7 @@ module grid
       if((mod(nxd, pxsize) .ne. 0) .or. &
          (mod(nyd, pysize) .ne. 0) .or. &
          (mod(nzd, pzsize) .ne. 0)) then
-         call mpistop
-         if (proc .eq. 0) then
-            write(*,*) 'One of: (mod(nxd,pxsize) .or. mod(nyd,pysize) .or. mod(nzd,pzsize)) .ne. 0'
-         endif
-         stop
+            call die("One of: (mod(n_d,p_size) /= 0")
       endif
 
       nxb = nxd/pxsize     !
@@ -256,6 +285,9 @@ module grid
       allocate(y(ny), yl(ny), yr(ny))
       allocate(z(nz), zl(nz), zr(nz))
 
+      call grid_xyz
+
+      call set_container_grid(cgrid)
    end subroutine init_grid
 !>
 !! \brief Routine that computes domain maximum and minimum of coordinates, lengths of cells and coordinates of zone centers and left/right zone boundaries.
