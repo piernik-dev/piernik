@@ -250,6 +250,9 @@ module gravity
 
    subroutine grav_pot_3d
       use arrays, only     : gp
+#if defined GRAV_PTMASS || defined GRAV_PTMASSPURE || defined GRAV_PTFLAT
+      use constants, only  : newtong
+#endif /* GRAV_PTMASS || GRAV_PTMASSPURE || GRAV_PTFLAT */
       use grid, only       : nx,ny,nz,x,y,z
       use mpisetup, only   : smalld
       use initfluids, only : cs_iso2
