@@ -268,7 +268,7 @@ module gravity
 #if defined (GRAV_PTMASSPURE) || defined (GRAV_PTMASS)
       real    :: r2
 #endif
-#if defined (GRAV_PTFLAT) || (GRAV_PTMASS)
+#if defined (GRAV_PTFLAT) || defined (GRAV_PTMASS)
       real    :: fr
 #endif
 
