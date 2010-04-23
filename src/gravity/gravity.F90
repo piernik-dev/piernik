@@ -187,21 +187,21 @@ module gravity
 !! \brief Routine that compute values of gravitational potential filling in gp array and setting gp_status character string \n\n
 !! The type of %gravity is governed by preprocessor: \n\n
 !! \details
-!! GRAV_NULL - gravitational potential array is set to zero \n\n
-!! GRAV_UNIFORM - uniform type of %gravity in z-direction \n
+!! @b GRAV_NULL - gravitational potential array is set to zero \n\n
+!! @b GRAV_UNIFORM - uniform type of %gravity in z-direction \n
 !! \f$\Phi\left(z\right)= - const \cdot z \f$\n
 !! where \f$ const \f$ is set by parameter @c g_z \n\n
-!! GRAV_LINEAR - linear type of %gravity growing along z-direction \n
+!! @b GRAV_LINEAR - linear type of %gravity growing along z-direction \n
 !! \f$\Phi\left(z\right) = -1/2 \cdot const \cdot z^2\f$ \n\n
-!! GRAV_PTMASS - softened point mass type of %gravity \n
+!! @b GRAV_PTMASS - softened point mass type of %gravity \n
 !! \f$\Phi\left(x,y,z\right)= - GM/\sqrt{x^2+y^2+z^2+r_{soft}^2}\f$ \n
 !! where \f$r_{soft}\f$ is a radius of softenning\n\n
-!! GRAV_PTMASSPURE - unsoftened point mass type of %gravity \n
+!! @b GRAV_PTMASSPURE - unsoftened point mass type of %gravity \n
 !! \f$\Phi\left(x,y,z\right)= - GM/\sqrt{x^2+y^2+z^2}\f$ \n\n
-!! GRAV_PTFLAT - planar, softened point mass type of %gravity \n
+!! @b GRAV_PTFLAT - planar, softened point mass type of %gravity \n
 !! \f$\Phi\left(x,y,z\right)= - GM/\sqrt{x^2+y^2+r_{soft}^2}\f$ \n
 !! where \f$r_{soft}\f$ is a radius of softenning\n\n
-!! GRAV_USER - not a standard type of %gravity, implemented by user in the routine grav_pot_user from gravity_user module.\n\n
+!! @b GRAV_USER - not a standard type of %gravity, implemented by user in the routine grav_pot_user from gravity_user module.\n\n
 !<
 
    subroutine grav_pot_3d
