@@ -3,15 +3,10 @@ module initproblem
 
 ! Initial condition for Sedov-Taylor explosion
 
-  use start, only : c_si, gamma
-  use arrays
-  use grid
-  use mpisetup
-
-  real t_sn
-  integer n_sn
-  real d0, Mrms
-  character problem_name*32,run_id*3
+  integer           :: n_sn
+  real              :: d0, Mrms, t_sn
+  character(len=32) :: problem_name
+  character(len=3)  :: run_id
 
   namelist /PROBLEM_CONTROL/  problem_name, run_id, &
                               d0, c_si, Mrms
@@ -21,7 +16,8 @@ contains
 !-----------------------------------------------------------------------------
 
   subroutine read_problem_par
-    use version
+    use mpisetup, only : cbuff,rbuff,ibuff,buffer_dim,proc,comm,ierr
+    use mpisetup, only : mpi_double_precision,mpi_integer,mpi_character
     implicit none
     integer :: i
 
@@ -83,11 +79,15 @@ contains
 !-----------------------------------------------------------------------------
 
   subroutine init_prob
+    use arrays, only      : u,b
+    use constants, only   : dpi
+    use grid, only        : x,y,z,nx,ny,nz
+    use initfluids, only  : gamma
     use initneutral, only : idnn,imxn,imyn,imzn,ienn, gamma_neu
-    use constants, only : dpi
+    use mpisetup, only    : proc
     implicit none
 
-    integer i,j,k,m, n,l
+    integer            :: i,j,k,m,n,l
     integer, parameter :: kp = 8
     real, dimension(6) :: mn
     real, dimension(3) :: deltav
