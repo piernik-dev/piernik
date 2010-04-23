@@ -32,29 +32,29 @@
 !! \details Module constants contains numerical and physical %constatns for several units systems.
 !! To use one system a proper precompiler directive should be defined.
 !! Available units systems:
-!!
-!! @b PSM (Parsec - Solar_mass - Megayear) - good for global galactic simulations
+!! @n
+!! @n @b PSM (Parsec - Solar_mass - Megayear) - good for global galactic simulations
 !! @n length --> pc,     mass --> Msun,        time --> myr,        miu0 --> 4*pi,    temperature --> kelvin
-!!
-!! @b PLN (PLaNetary) - good for planetary nebulae
+!! @n
+!! @n @b PLN (PLaNetary) - good for planetary nebulae
 !! @n length --> AU,     mass --> Mjup,        time --> yr,         miu0 --> 4*pi,    temperature --> kelvin
-!!
-!! @b KSG (Kiloparsec - Solar_mass - Gigayear) - good for galactic and intergalactic simulations
+!! @n
+!! @n @b KSG (Kiloparsec - Solar_mass - Gigayear) - good for galactic and intergalactic simulations
 !! @n length --> kpc,    mass --> 10^6*Msun,   time --> Gyr,        miu0 --> 4*pi,    temperature --> kelvin
-!!
-!! @b PGM (Parsec - Gravity=1 - Megayear) - modification of PSM system, where %gravity constant is one
+!! @n
+!! @n @b PGM (Parsec - Gravity=1 - Megayear) - modification of PSM system, where %gravity constant is one
 !! @n length --> pc,     newtong --> 1.0,      time --> myr,        miu0 --> 4*pi,    temperature --> kelvin
-!!
-!! @b SSY (10^Sixteenth cm - Solar_mass - Year) - good for circumstellar simulations (planetaries etc.)
+!! @n
+!! @n @b SSY (10^Sixteenth cm - Solar_mass - Year) - good for circumstellar simulations (planetaries etc.)
 !! @n length --> 10^16 cm,  mass --> Msun,     time --> year,       miu0 --> 4*pi,    temperature --> kelvin
-!!
-!! @b SI - (franc. Système International d'Unités)
+!! @n
+!! @n @b SI - (franc. Système International d'Unités)
 !! @n length --> metr,   mass --> kg,          time --> sek,        miu0 --> 4*pi,    temperature --> kelvin
-!!
-!! @b CGS - (Centimetre - Gram - Second)
+!! @n
+!! @n @b CGS - (Centimetre - Gram - Second)
 !! @n length --> cm,     mass --> gram,        time --> sek,        miu0 --> 4*pi,    temperature --> kelvin
-!!
-!! @b SCALED - a suit of %constants without physical units. This is automatically set while neither of the former systems is chosen.
+!! @n
+!! @n @b SCALED - a suit of %constants without physical units. This is automatically set while neither of the former systems is chosen.
 !<
 module constants
 
