@@ -37,8 +37,6 @@
 !<
 module gravity
 
-   use constants
-
    character(LEN=9) :: gp_status    !< variable set as 'undefined' in grav_pot_3d when grav_accel is supposed to use
    real    :: g_z                   !< z-component used by GRAV_UNIFORM type of %gravity
    real    :: g_y                   !< y-component of GRAV_UNIFORM constant <b>(currently not used)</b>
@@ -264,13 +262,16 @@ module gravity
 #if defined (GRAV_PTMASSPURE) || defined (GRAV_PTMASS) || defined (GRAV_PTFLAT)
       integer :: i, j, k
       real    :: rc
-#endif
+#endif /* GRAV_PTMASSPURE || GRAV_PTMASS || GRAV_PTFLAT */
 #if defined (GRAV_PTMASSPURE) || defined (GRAV_PTMASS)
       real    :: r2
-#endif
+#endif /* GRAV_PTMASSPURE || GRAV_PTMASS */
 #if defined (GRAV_PTFLAT) || defined (GRAV_PTMASS)
       real    :: fr
-#endif
+#endif /* GRAV_PTFLAT || GRAV_PTMASS */
+#ifdef GRAV_LINEAR
+      integer :: i
+#endif /* GRAV_LINEAR */
 
       gp_status = ''
 
@@ -360,10 +361,10 @@ module gravity
 !<
 
    subroutine grav_accel(sweep, i1,i2, xsw, n, grav)
-      use grid, only : nb
-      use arrays, only : gp
-      use grid, only :   x,y,z,dl,xdim,ydim,zdim,nx,ny,nz
-      use grid, only :   is,ie,js,je,ks,ke, xr,yr,zr
+      use grid, only     : nb
+      use arrays, only   : gp
+      use grid, only     : x,y,z,dl,xdim,ydim,zdim,nx,ny,nz
+      use grid, only     : is,ie,js,je,ks,ke, xr,yr,zr
 #if defined GRAV_PTMASS || defined GRAV_PTFLAT
       use mpisetup, only : smalld
 #endif /* GRAV_PTMASS || GRAV_PTFLAT */
@@ -371,14 +372,14 @@ module gravity
       use gravity_user, only : grav_accel_user
 #endif /* GRAV_ACC_USER  */
       implicit none
-      character, intent(in) :: sweep*6
-      integer, intent(in)   :: i1, i2
-      integer, intent(in)   :: n
-      real, dimension(:)    :: xsw
+      character(len=6), intent(in)   :: sweep
+      integer, intent(in)            :: i1, i2
+      integer, intent(in)            :: n
+      real, dimension(:)             :: xsw
       real, dimension(n),intent(out) :: grav
-      real                  :: x1, x2
+      real                           :: x1, x2
 #if defined GRAV_PTMASS || defined GRAV_PTFLAT
-      real, dimension(n)    :: r, r32
+      real, dimension(n)             :: r, r32
 #endif /* GRAV_PTMASS || GRAV_PTFLAT */
 
       select case (sweep)
@@ -414,7 +415,7 @@ module gravity
       use arrays, only : gpot, hgpot
       use grid, only   : dl, xdim, ydim, zdim
       implicit none
-      character, intent(in)          :: sweep*6
+      character(len=6), intent(in)   :: sweep
       integer, intent(in)            :: i1, i2
       integer, intent(in)            :: n
       real, dimension(n),intent(out) :: grav
@@ -474,10 +475,12 @@ module gravity
 !! \brief Routine that uses %gravity acceleration given in grav_accel to compute values of gravitational potential filling in gp array
 !<
    subroutine grav_accel2pot
-      use mpisetup
-      use arrays, only : gp
-      use grid, only  : dl,xdim,ydim,zdim,is,ie,js,je,ks,ke
-      use grid, only  : nb,nx,ny,nz,zr,yr,xr
+      use mpisetup, only : pxsize,pysize,pzsize,pcoords,proc,nproc,ndims
+      use mpisetup, only : comm,comm3d,err,ierr,mpi_double_precision
+      use mpisetup, only : mpifind
+      use arrays, only   : gp
+      use grid, only     : dl,xdim,ydim,zdim,is,ie,js,je,ks,ke
+      use grid, only     : nb,nx,ny,nz,zr,yr,xr
 
       implicit none
       integer               :: i, j, k, ip, pgpmax
