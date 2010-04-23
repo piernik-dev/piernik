@@ -42,6 +42,11 @@
 !! @n @b KSG (Kiloparsec - Solar_mass - Gigayear) - good for galactic and intergalactic simulations
 !! @n length --> kpc,    mass --> 10^6*Msun,   time --> Gyr,        miu0 --> 4*pi,    temperature --> kelvin
 !! @n
+!! @n @b KSM (Kiloparsec - Solar_mass - Megayear)
+!! @n length --> kpc,    mass --> Msun,        time --> myr,        miu0 --> 4*pi,    temperature --> kelvin
+!! @n
+!! @n length --> kpc,    mass --> 10^6*Msun,   time --> Gyr,        miu0 --> 4*pi,    temperature --> kelvin
+!! @n
 !! @n @b PGM (Parsec - Gravity=1 - Megayear) - modification of PSM system, where %gravity constant is one
 !! @n length --> pc,     newtong --> 1.0,      time --> myr,        miu0 --> 4*pi,    temperature --> kelvin
 !! @n
@@ -118,6 +123,21 @@ module constants
    real, parameter :: gram       = 1.0e-6/1.989e33       !< gram, mass unit
    real, parameter :: kg         = 1.0e3*gram            !< kilogram, mass unit
    real, parameter :: Msun       = 1.0e-6                !< mass of Sun
+
+#elif defined (KSM)
+! KSM  uses: length --> kpc,     mass --> Msun,        time --> myr,        miu0 --> 4*pi,    temperature --> kelvin
+! length units:
+   real, parameter :: cm =         1.0/3.0856e18/1.e3    !< centimetre, length unit
+   real, parameter :: metr =       1.0e2*cm              !< metre, length unit
+   real, parameter :: pc =         1.0e-3                !< parsec, length unit
+! time units:
+   real, parameter :: sek =        1.0e-6/365.2652/24.0/3600.0       !< second, time unit
+   real, parameter :: year =       1.0e-6                !< year, time unit
+   real, parameter :: myr =        1.0                   !< megayear, time unit
+! mass units:
+   real, parameter :: gram =       1.0/1.989e33          !< gram, mass unit
+   real, parameter :: kg =         1.0e3*gram            !< kilogram, mass unit
+   real, parameter :: Msun =       1.0                   !< mass of Sun
 
 #elif defined (PGM)
 ! PGM  uses: length --> pc,     newtong --> 1.0,      time --> myr,        miu0 --> 4*pi,    temperature --> kelvin
