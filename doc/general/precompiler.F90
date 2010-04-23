@@ -43,10 +43,10 @@
 !! where \f$r_{gc}\f$ is galactocentric radius and \f$r_{gcSun}\f$ is the galactocentric radius of Sun.
 !! </td></tr></table>
 !! \n \n
-!!
 !! \b \#define \b SELF_GRAV - to include self–gravity
 !!
 !! \b \#define \b SHEAR - to include Coriolis and tidal forces in gas equation of motion and use  <a href="http://cdsads.u-strasbg.fr/abs/1995ApJ...440..742H">Hawley, Gammie and Balbus (1995)</a> type approach for shearing BCS
+!! @n @n
 !!
 !! There is a list of precompiler directives to choose unit system used in simulation:
 !!
