@@ -1,0 +1,126 @@
+ $DOMAIN_SIZES
+    nxd          = 50
+    nyd          = 100
+    nzd          = 400
+    nb           = 4
+ /
+
+ $MPI_BLOCKS
+    pxsize       = 1
+    pysize       = 1
+    pzsize       = 4
+ /
+
+ $START_CONTROL
+ /
+
+ $RESTART_CONTROL
+    restart      = 'last'
+    nrestart     = 0
+    new_id       = ''
+ /
+
+ $END_CONTROL
+    tend         = 1000.0
+    nend         = 1000000
+ /
+
+ $OUTPUT_CONTROL
+    dt_hdf       = 1.0
+    dt_res       = 100.0
+    dt_log       = 1.0e-1
+    dt_tsl       = 1.0e-1
+    vars(1)      = 'dens'
+    vars(2)      = 'velx'
+    vars(3)      = 'vely'
+    vars(4)      = 'velz'
+    vars(5)      = 'encr'
+    vars(6)      = 'magx'
+    vars(7)      = 'magy'
+    vars(8)      = 'magz'
+    domain       = 'phys_domain'
+
+ /
+
+ $BOUNDARIES
+    bnd_xl       = 'she'
+    bnd_xr       = 'she'
+    bnd_yl       = 'per'
+    bnd_yr       = 'per'
+    bnd_zl       = 'outd'
+    bnd_zr       = 'outd'
+ /
+
+ $DOMAIN_LIMITS
+    xmin         =-250.0
+    xmax         = 250.0
+    ymin         =-500.0
+    ymax         = 500.0
+    zmin         =-2000.0
+    zmax         = 2000.0
+ /
+
+ $EQUATION_OF_STATE
+    c_si         = 7.0
+    alpha        = 0.01
+ /
+
+ $NUMERICAL_SETUP
+    cfl          = 0.9
+    smalld       = 1.e-5
+    smallei      = 1.e-4
+    integration_order = 2
+  /
+
+ $GRAVITY
+    r_gc         = 5000
+    nsub         = 10
+ /
+
+ $THERMAL
+ /
+
+ $RESISTIVITY
+    cfl_resist   =    0.9   ! liczba Couranta dla opornosci, (wsp. 0.5) w kodzie
+    eta_0   	 =  100.0   ! opornosc jednorodna
+    eta_1        =    0.0   ! opornosc zlokalizowana, dziala powyzej j_crit
+    j_crit       = 1000.0   ! prad krytyczny
+ /
+
+  $COSMIC_RAYS
+    cr_active    = 1.0      ! gdy 0 wtedy grad p_cr nie jest brany pod uwage w r.ruchu
+    cfl_cr       = 0.9      ! liczba couranta dla dyfuzji CR (wsp 0.5 w kodzie)
+    cr_eff       = 0.1      ! czesc energii SN (=10^51 erg) zamieniona w CR
+    gamma_cr     = 1.555555 ! wykl. adiabatyczny CR
+    K_cr_paral   = 10000.   ! wsp. dyfuzji CR wzdluz B
+    K_cr_perp    = 1000.    ! wsp. dyfuzji CR wpoprzek B
+    beta_cr      = 1.0      ! okresla wklad CR w poczatkowej rownowadze (podobnie jak alfa dla B)
+    amp_cr       = 0.0      ! wybuch w init_problem w x0,y0,z0
+    smallecr     = 1.e-2    ! lower limit & outflow boundary value for ecr
+ /
+
+ $GALACTIC_PARAMS
+    h_sn         = 100.0    ! polowkowa szerokosc rozkladu gauss. wybuchow w "z"
+    r_sn         =  50.0    ! promien pojedyncz. wybuchu (f. gaussa)
+    t_dw         = 100.0    ! okres ramion spiralych  ! bez znaczenia
+    t_arm        = 100.0    ! czas przejscia ramienia ! jesli t_dw = t_arm
+    f_sn_kpc2    = 130.0    ! powierzchniowa czestosc wybuchow na kpc^2 na Myr
+    col_dens     = 27.e20   ! gestosc kolumnowa gazu. jesli 0 brana jest d0
+/
+
+ $SHEARING
+    omega        = 0.05     ! predkosc katowa rotacji
+    qshear       = 1.0      ! parametr scinania q: vy=q*omega*x
+ /
+
+ $PROBLEM_CONTROL
+    problem_name ='crdynamo'
+    run_id       = 'tst'
+    d0           =  5.0     ! gestosc na pl.symetrii dysku, brana pod uwage gdy col_dns = 0.0
+    bxn          =  0.0     !
+    byn          =  1.0     ! wspolczynniki okreslajace kierunek B
+    bzn          =  0.0     !
+    x0           =  0.0     ! wspolrzedne pojedynczego wybuchu o ampl amp_cr
+    y0           =  0.0     ! zadawanego w init_prob (do celow testowych)
+    z0           =  0.0     !
+ /

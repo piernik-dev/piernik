@@ -1,0 +1,44 @@
+#define HDF5
+
+#ifdef HDF5
+
+#if __GNUC__ >=4 && __GNUC_MINOR__ >=5
+#define NEW_HDF5
+#else
+#undef NEW_HDF5
+#endif
+
+#endif
+
+/* choosing fluids */
+#define IONIZED
+#define COSM_RAYS
+#define COSM_RAYS_SOURCES
+
+#define MAGNETIC
+
+/* adiabatic or isothermal */
+#define ISO
+
+/* choosing freezing speed */
+#define GLOBAL_FR_SPEED
+
+/* choosing flux limiter */
+#define VANLEER
+
+/* physics including */
+#define RESISTIVE
+
+/* gravity type choosing */
+#define GRAV
+#ifdef GRAV /* define external source of gravity */
+#define GRAV_GALACTIC
+#endif /* GRAV */
+
+/* structure features including */
+#define GALAXY
+#define SN_SRC
+#undef SNE_DISTR
+
+/* numerical solutions and limitations */
+#undef SHEAR
