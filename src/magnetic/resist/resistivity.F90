@@ -87,8 +87,10 @@ contains
 !! \n \n
 !<
       subroutine init_resistivity
-         use mpisetup
+         use mpisetup, only : rbuff, ibuff, ierr, MPI_INTEGER, MPI_DOUBLE_PRECISION, buffer_dim, comm, &
+            cwd, proc
          use grid, only : nx,ny,nz
+         use errh, only : die
          implicit none
          character(LEN=100) :: par_file, tmp_log_file
          integer :: ierrh
@@ -152,9 +154,10 @@ contains
       end subroutine init_resistivity
 
       subroutine compute_resist(eta,ici)
-       use arrays, only : b,u
-       use grid,   only : dl,xdim,ydim,zdim,nx,ny,nz,is,ie,js,je,ks,ke,nzd
-       use func,   only : mshift, pshift
+         use arrays, only : b,u
+         use grid,   only : dl,xdim,ydim,zdim,nx,ny,nz,is,ie,js,je,ks,ke,nzd
+         use func,   only : mshift, pshift
+         use mpisetup, only : MPI_DOUBLE_PRECISION, MPI_MAX, comm, ierr
 
       implicit none
       integer,intent(in)                    :: ici
@@ -253,26 +256,27 @@ contains
 !-----------------------------------------------------------------------
 
       subroutine timestep_resist
-        use grid, only : dxmn
-        use constants, only : big
+         use grid,      only : dxmn
+         use constants, only : big
+         use mpisetup,  only : MPI_DOUBLE_PRECISION, MPI_MIN, comm, ierr
 
-        implicit none
-        real dx2,dt_resist_min
+         implicit none
+         real :: dx2,dt_resist_min
 
-        if(eta_max .ne. 0.) then
-          dx2 = dxmn**2
-          dt_resist = cfl_resist*dx2/(2.*eta_max)
+         if(eta_max .ne. 0.) then
+            dx2 = dxmn**2
+            dt_resist = cfl_resist*dx2/(2.*eta_max)
 #ifndef ISO
-          dt_resist = min(dt_resist,dt_eint)
+            dt_resist = min(dt_resist,dt_eint)
 #endif /* ISO */
-        else
-          dt_resist = big
-        endif
+         else
+            dt_resist = big
+         endif
 
-        call MPI_REDUCE(dt_resist, dt_resist_min, 1, MPI_DOUBLE_PRECISION, MPI_MIN, 0, comm, ierr)
-        call MPI_BCAST (dt_resist_min, 1, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+         call MPI_REDUCE(dt_resist, dt_resist_min, 1, MPI_DOUBLE_PRECISION, MPI_MIN, 0, comm, ierr)
+         call MPI_BCAST (dt_resist_min, 1, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
-        dt_resist = dt_resist_min
+         dt_resist = dt_resist_min
 
       end subroutine timestep_resist
 

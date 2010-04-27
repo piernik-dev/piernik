@@ -29,16 +29,15 @@
 
 module magboundaries
 
-  use mpisetup
-  use fluidindex, only : ibx, iby, ibz
-  use grid, only : nb,nx,ny,nz,nxb,nyb,nzb,nzd
-  use arrays, only : u,b
-
 contains
 
 subroutine bnd_a(A)
+   use mpisetup, only : MAG_YZ_LEFT_DOM, MAG_YZ_RIGHT_DOM, MAG_YZ_LEFT_BND, MAG_YZ_RIGHT_BND, &
+      MAG_XY_LEFT_DOM, MAG_XY_RIGHT_DOM, MAG_XY_LEFT_BND, MAG_XY_RIGHT_BND, &
+      MAG_XZ_LEFT_DOM, MAG_XZ_RIGHT_DOM, MAG_XZ_LEFT_BND, MAG_XZ_RIGHT_BND, &
+      ierr, req, comm3d, procxl, procxr, procyl, procyr, proczl, proczr, status, &
+      pxsize, pysize, pzsize
    implicit none
-   integer :: ireq
    real, dimension(:,:,:,:) :: A
 
    if(pxsize .gt. 1) then
@@ -48,9 +47,7 @@ subroutine bnd_a(A)
       CALL MPI_IRECV  (A(1,1,1,1), 1, MAG_YZ_LEFT_BND,  procxl, 20, comm3d, req(2), ierr)
       CALL MPI_IRECV  (A(1,1,1,1), 1, MAG_YZ_RIGHT_BND, procxr, 10, comm3d, req(4), ierr)
 
-      do ireq=1,4
-         call MPI_WAIT(req(ireq),status(1,ireq),ierr)
-      enddo
+      call MPI_WAITALL(4,req(:),status(:,:),ierr)
    endif
 
    if(pysize .gt. 1) then
@@ -59,9 +56,7 @@ subroutine bnd_a(A)
       CALL MPI_IRECV  (A(1,1,1,1), 1, MAG_XZ_LEFT_BND,  procyl, 40, comm3d, req(2), ierr)
       CALL MPI_IRECV  (A(1,1,1,1), 1, MAG_XZ_RIGHT_BND, procyr, 30, comm3d, req(4), ierr)
 
-      do ireq=1,4
-         call MPI_WAIT(req(ireq),status(1,ireq),ierr)
-      enddo
+      call MPI_WAITALL(4,req(:),status(:,:),ierr)
    endif
 
    if(pzsize .gt. 1) then
@@ -70,21 +65,27 @@ subroutine bnd_a(A)
       CALL MPI_IRECV  (A(1,1,1,1), 1, MAG_XY_LEFT_BND,  proczl, 60, comm3d, req(2), ierr)
       CALL MPI_IRECV  (A(1,1,1,1), 1, MAG_XY_RIGHT_BND, proczr, 50, comm3d, req(4), ierr)
 
-      do ireq=1,4
-         call MPI_WAIT(req(ireq),status(1,ireq),ierr)
-      enddo
+      call MPI_WAITALL(4,req(:),status(:,:),ierr)
    endif
 end subroutine bnd_a
 
 subroutine bnd_b(dim)
+   use mpisetup,  only : MPI_DOUBLE_PRECISION, bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr, &
+      ierr, req, comm3d, procxl, procxr, procyl, procyr, proczl, proczr, status, &
+      pxsize, pysize, pzsize, procxyl, procyxl, pcoords, comm, &
+      MAG_YZ_LEFT_DOM, MAG_YZ_RIGHT_DOM, MAG_YZ_LEFT_BND, MAG_YZ_RIGHT_BND, &
+      MAG_XY_LEFT_DOM, MAG_XY_RIGHT_DOM, MAG_XY_LEFT_BND, MAG_XY_RIGHT_BND, &
+      MAG_XZ_LEFT_DOM, MAG_XZ_RIGHT_DOM, MAG_XZ_LEFT_BND, MAG_XZ_RIGHT_BND
+  use arrays,     only : b
+  use fluidindex, only : ibx, iby, ibz
+  use grid,       only : nb, nx, ny, nz, nxb, nyb, nzb
 #ifdef SHEAR
-  use shear, only : eps,delj
+  use shear,      only : eps,delj
 #endif /* SHEAR */
 
   implicit none
-  character(len=*) :: dim
-  integer i, j
-  integer ireq
+  character(len=*)  :: dim
+  integer           :: i, j
   real, allocatable :: send_left(:,:,:,:),recv_left(:,:,:,:)
 #ifdef SHEAR
   real, allocatable :: send_right(:,:,:,:),recv_right(:,:,:,:)
@@ -138,9 +139,7 @@ subroutine bnd_b(dim)
         CALL MPI_IRECV   (recv_left , 3*ny*nz*nb, MPI_DOUBLE_PRECISION, procxl, 20, comm, req(2), ierr)
         CALL MPI_IRECV   (recv_right, 3*ny*nz*nb, MPI_DOUBLE_PRECISION, procxr, 10, comm, req(4), ierr)
 
-        do ireq=1,4
-           call MPI_WAIT(req(ireq),status(1,ireq),ierr)
-        enddo
+        call MPI_WAITALL(4,req(:),status(:,:),ierr)
 
         b(:,1:nb-1,:,:)               = recv_left(:,1:nb-1,:,:)
         b(:,nxb+nb+1+1:nxb+2*nb,:,:)  = recv_right(:,1+1:nb,:,:)
@@ -155,24 +154,12 @@ subroutine bnd_b(dim)
 
       if(pxsize .gt. 1) then
 
-!        if(procxl .ne. MPI_PROC_NULL) send_left(:,:,:,:)          =  b(:,nb+1:2*nb,:,:)
-!        if(procxr .ne. MPI_PROC_NULL) send_right(:,:,:,:)         =  b(:,nxb+1:nxb+nb,:,:)
-
-!        CALL MPI_ISEND   (send_left , 3*ny*nz*nb, MPI_DOUBLE_PRECISION, procxl, 10, comm, req(1), ierr)
-!        CALL MPI_ISEND   (send_right, 3*ny*nz*nb, MPI_DOUBLE_PRECISION, procxr, 20, comm, req(3), ierr)
-!        CALL MPI_IRECV   (recv_left , 3*ny*nz*nb, MPI_DOUBLE_PRECISION, procxl, 20, comm, req(2), ierr)
-!        CALL MPI_IRECV   (recv_right, 3*ny*nz*nb, MPI_DOUBLE_PRECISION, procxr, 10, comm, req(4), ierr)
         CALL MPI_ISEND  (b(1,1,1,1), 1, MAG_YZ_LEFT_DOM,  procxl, 10, comm3d, req(1), ierr)
         CALL MPI_ISEND  (b(1,1,1,1), 1, MAG_YZ_RIGHT_DOM, procxr, 20, comm3d, req(3), ierr)
         CALL MPI_IRECV  (b(1,1,1,1), 1, MAG_YZ_LEFT_BND,  procxl, 20, comm3d, req(2), ierr)
         CALL MPI_IRECV  (b(1,1,1,1), 1, MAG_YZ_RIGHT_BND, procxr, 10, comm3d, req(4), ierr)
 
-        do ireq=1,4
-          call MPI_WAIT(req(ireq),status(1,ireq),ierr)
-        enddo
-
-!        if(procxl .ne. MPI_PROC_NULL) b(:,1:nb,:,:)               = recv_left(:,:,:,:)
-!        if(procxr .ne. MPI_PROC_NULL) b(:,nxb+nb+1:nxb+2*nb,:,:)  = recv_right(:,:,:,:)
+        call MPI_WAITALL(4,req(:),status(:,:),ierr)
 
       endif
 #endif /* SHEAR */
@@ -180,63 +167,23 @@ subroutine bnd_b(dim)
 
     case ('ydim')
       if(pysize .gt. 1) then
-!        allocate(send_left(3,nx,nb,nz),send_right(3,nx,nb,nz), &
-!                 recv_left(3,nx,nb,nz),recv_right(3,nx,nb,nz))
 
-!        if(procyl .ne. MPI_PROC_NULL) send_left(:,:,:,:)          =  b(:,:,nb+1:2*nb,:)
-!        if(procyr .ne. MPI_PROC_NULL) send_right(:,:,:,:)         =  b(:,:,nyb+1:nyb+nb,:)
-
-!        CALL MPI_ISEND   (send_left , 3*nx*nb*nz, MPI_DOUBLE_PRECISION, procyl, 30, comm, req(1), ierr)
-!        CALL MPI_ISEND   (send_right, 3*nx*nb*nz, MPI_DOUBLE_PRECISION, procyr, 40, comm, req(3), ierr)
-!        CALL MPI_IRECV   (recv_left , 3*nx*nb*nz, MPI_DOUBLE_PRECISION, procyl, 40, comm, req(2), ierr)
-!        CALL MPI_IRECV   (recv_right, 3*nx*nb*nz, MPI_DOUBLE_PRECISION, procyr, 30, comm, req(4), ierr)
         CALL MPI_ISEND  (b(1,1,1,1), 1, MAG_XZ_LEFT_DOM,  procyl, 30, comm3d, req(1), ierr)
         CALL MPI_ISEND  (b(1,1,1,1), 1, MAG_XZ_RIGHT_DOM, procyr, 40, comm3d, req(3), ierr)
         CALL MPI_IRECV  (b(1,1,1,1), 1, MAG_XZ_LEFT_BND,  procyl, 40, comm3d, req(2), ierr)
         CALL MPI_IRECV  (b(1,1,1,1), 1, MAG_XZ_RIGHT_BND, procyr, 30, comm3d, req(4), ierr)
 
-        do ireq=1,4
-          call MPI_WAIT(req(ireq),status(1,ireq),ierr)
-        enddo
-
-!        if(procyl .ne. MPI_PROC_NULL) b(:,:,1:nb,:)               = recv_left(:,:,:,:)
-!        if(procyr .ne. MPI_PROC_NULL) b(:,:,nyb+nb+1:nyb+2*nb,:)  = recv_right(:,:,:,:)
-
-!        if(allocated(send_left))  deallocate(send_left)
-!        if(allocated(send_right)) deallocate(send_right)
-!        if(allocated(recv_left))  deallocate(recv_left)
-!        if(allocated(recv_right)) deallocate(recv_right)
+        call MPI_WAITALL(4,req(:),status(:,:),ierr)
       endif
 
     case ('zdim')
       if(pzsize .gt. 1) then
-!        allocate(send_left(3,nx,ny,nb),send_right(3,nx,ny,nb), &
-!                 recv_left(3,nx,ny,nb),recv_right(3,nx,ny,nb))
-
-!        if(proczl .ne. MPI_PROC_NULL) send_left(:,:,:,:)          =  b(:,:,:,nb+1:2*nb)
-!        if(proczr .ne. MPI_PROC_NULL) send_right(:,:,:,:)         =  b(:,:,:,nzb+1:nzb+nb)
-
-!        CALL MPI_ISEND   (send_left , 3*nx*ny*nb, MPI_DOUBLE_PRECISION, proczl, 50, comm, req(1), ierr)
-!        CALL MPI_ISEND   (send_right, 3*nx*ny*nb, MPI_DOUBLE_PRECISION, proczr, 60, comm, req(3), ierr)
-!        CALL MPI_IRECV   (recv_left , 3*nx*ny*nb, MPI_DOUBLE_PRECISION, proczl, 60, comm, req(2), ierr)
-!        CALL MPI_IRECV   (recv_right, 3*nx*ny*nb, MPI_DOUBLE_PRECISION, proczr, 50, comm, req(4), ierr)
         CALL MPI_ISEND  (b(1,1,1,1), 1, MAG_XY_LEFT_DOM,  proczl, 50, comm3d, req(1), ierr)
         CALL MPI_ISEND  (b(1,1,1,1), 1, MAG_XY_RIGHT_DOM, proczr, 60, comm3d, req(3), ierr)
         CALL MPI_IRECV  (b(1,1,1,1), 1, MAG_XY_LEFT_BND,  proczl, 60, comm3d, req(2), ierr)
         CALL MPI_IRECV  (b(1,1,1,1), 1, MAG_XY_RIGHT_BND, proczr, 50, comm3d, req(4), ierr)
 
-
-        do ireq=1,4
-          call MPI_WAIT(req(ireq),status(1,ireq),ierr)
-        enddo
-
-!        if(proczl .ne. MPI_PROC_NULL) b(:,:,:,1:nb)               = recv_left(:,:,:,:)
-!        if(proczr .ne. MPI_PROC_NULL) b(:,:,:,nzb+nb+1:nzb+2*nb)  = recv_right(:,:,:,:)
-
-!        if(allocated(send_left))  deallocate(send_left)
-!        if(allocated(send_right)) deallocate(send_right)
-!        if(allocated(recv_left))  deallocate(recv_left)
-!        if(allocated(recv_right)) deallocate(recv_right)
+        call MPI_WAITALL(4,req(:),status(:,:),ierr)
       endif
   end select ! (dim)
 
@@ -262,9 +209,7 @@ subroutine bnd_b(dim)
       CALL MPI_ISEND   (send_left , 3*nb*ny*nz, MPI_DOUBLE_PRECISION, procxyl, 70, comm, req(1), ierr)
       CALL MPI_IRECV   (recv_left , 3*nx*nb*nz, MPI_DOUBLE_PRECISION, procxyl, 80, comm, req(2), ierr)
 
-      do ireq=1,2
-        call MPI_WAIT(req(ireq),status(1,ireq),ierr)
-      enddo
+      call MPI_WAITALL(2,req(:),status(:,:),ierr)
 
       do i=1,nb
         do j=1,ny
@@ -307,9 +252,7 @@ subroutine bnd_b(dim)
       CALL MPI_ISEND   (send_left , 3*nx*nb*nz, MPI_DOUBLE_PRECISION, procyxl, 80, comm, req(1), ierr)
       CALL MPI_IRECV   (recv_left , 3*nb*ny*nz, MPI_DOUBLE_PRECISION, procyxl, 70, comm, req(2), ierr)
 
-      do ireq=1,2
-        call MPI_WAIT(req(ireq),status(1,ireq),ierr)
-      enddo
+      call MPI_WAITALL(2,req(:),status(:,:),ierr)
 
       do j=1,nb
         do i=1,nx
@@ -449,13 +392,16 @@ end subroutine bnd_b
 !=====================================================================================================
 
 subroutine bnd_emf(var, name, dim)
-  use grid, only : nx,ny,nz
+   use mpisetup, only : bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr
+  use grid, only : nx, ny, nz, nb, nxb, nyb, nzb
 
   implicit none
   real, dimension(nx,ny,nz) :: var
-  real dvarx(ny,nz),  dvary(nx,nz), dvarz(nx,ny)
-  character name*4, dim*4
-  integer ib
+  real, dimension(ny,nz)    :: dvarx
+  real, dimension(nx,nz)    :: dvary
+  real, dimension(nx,ny)    :: dvarz
+  character(len=4)          :: name, dim
+  integer                   :: ib
 
 
   select case (dim)
