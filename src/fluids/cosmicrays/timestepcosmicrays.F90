@@ -29,7 +29,6 @@
 !>
 !! \brief (MH) Computation of %timestep for diffusive Cosmic Ray transport
 !!
-!!
 !<
 module timestepcosmicrays
 
