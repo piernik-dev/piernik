@@ -84,8 +84,8 @@ module initcosmicrays
 !! \n \n
 !<
  subroutine init_cosmicrays
-    use errh, only : namelist_errh
-    use mpisetup
+    use errh,     only: namelist_errh
+    use mpisetup, only: proc, ibuff, rbuff, comm, ierr, MPI_DOUBLE_PRECISION, MPI_INTEGER, cwd, buffer_dim
 
     implicit none
     integer            :: ierrh

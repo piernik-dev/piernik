@@ -56,8 +56,8 @@ module crdiffusion
 !  PURPOSE:  Diffusive transport of ecr in 1-direction
 !
       implicit none
-      integer i,j,k
-      real :: b1b, b2b, b3b, n1b, n2b, n3b, bb
+      integer :: i,j,k
+      real    :: b1b, b2b, b3b, n1b, n2b, n3b, bb
       real, dimension(nvar%crs%all) :: decr1, decr2, decr3, fcrdif1
       real, dimension(nvar%crs%all) :: dqp2, dqm2, dqp3, dqm3
 
@@ -141,8 +141,8 @@ module crdiffusion
 !
 !-----------------------------------------------------------------------
       implicit none
-      integer i,j,k
-      real :: b1b, b2b, b3b, n1b, n2b, n3b, bb
+      integer :: i,j,k
+      real    :: b1b, b2b, b3b, n1b, n2b, n3b, bb
       real, dimension(nvar%crs%all) :: decr1, decr2, decr3, fcrdif2
       real, dimension(nvar%crs%all) :: dqp2, dqm1, dqm2, dqp1
 
@@ -231,8 +231,8 @@ module crdiffusion
 !  PURPOSE:   Diffusive transport of ecr in 3-direction
 !
       implicit none
-      integer i,j,k
-      real :: b1b, b2b, b3b, n1b, n2b, n3b, bb
+      integer :: i,j,k
+      real    :: b1b, b2b, b3b, n1b, n2b, n3b, bb
       real, dimension(nvar%crs%all) :: decr1, decr2, decr3, fcrdif3
       real, dimension(nvar%crs%all) :: dqp2, dqm2, dqm1, dqp1
 

@@ -47,11 +47,11 @@ module fluxcosmicrays
     use fluidindex,      only : nvar
 
     implicit none
-    integer n
+    integer, intent(in) :: n
+    real, dimension(n), intent(in)  :: vion
+    real, dimension(nvar%crs%all,n), intent(in) :: uuc
 
-! locals
-    real, dimension(nvar%crs%all,n):: fluxc,uuc
-    real, dimension(n) :: vion
+    real, dimension(nvar%crs%all,n) :: fluxc
 
     fluxc   = 0.0
 
