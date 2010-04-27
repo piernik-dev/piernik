@@ -33,6 +33,7 @@ module fluidupdate   ! SPLIT
   contains
 
 subroutine fluid_update
+  use timer,  only : timer_
   use arrays, only : u
   use dataio, only : check_log, check_tsl
   use timestep,   only : time_step
@@ -42,9 +43,11 @@ subroutine fluid_update
 #endif /* SHEAR */
   use mpisetup, only : proc,dt,dtm,t, nstep
   use grid, only : nxd,nyd,nzd
+  use dataio_public, only: halfstep
 
 #ifdef DEBUG
-  use dataio, only : nhdf,write_hdf
+  use dataio_public, only : nhdf
+  use dataio, only : write_hdf
 #endif /* DEBUG */
 
 #ifdef COSM_RAYS
@@ -57,27 +60,35 @@ subroutine fluid_update
 #endif /* SHEAR */
 
 #ifdef SN_SRC
-  use snsources
+  use snsources, only : random_sn
 #endif /* SN_SRC */
 
 #ifdef SNE_DISTR
-  use sndistr
+  use sndistr, only : supernovae_distribution
 #endif /* SNE_DISTR */
 
 #ifdef GRAV
-   use gravity, only: source_terms_grav
+  use gravity, only: source_terms_grav
 #endif /* GRAV */
+  use types, only: problem_customize_solution
 
   implicit none
 #ifdef DEBUG
-  integer system, syslog
+  integer       :: system, syslog
 #endif /* DEBUG */
   logical, save :: first_run = .true.
 
+  real          :: ts   ! Timestep wallclock
+
+  halfstep = .false.
+
   if(first_run) then
-    dtm = 0.0
+     dtm = 0.0
+     ts=timer_("fluid_update",.true.)
+     ts = 0.0
   else
-    dtm = dt
+     dtm = dt
+     ts=timer_("fluid_update")
   endif
   call time_step
 
@@ -92,8 +103,8 @@ subroutine fluid_update
 
   call check_tsl
 
-  if(proc.eq.0) write(*,900) nstep,dt,t
-900      format('   nstep = ',i7,'   dt = ',e22.16,'   t = ',e22.16)
+  if(proc.eq.0) write(*,900) nstep,dt,t,ts
+900      format('   nstep = ',i7,'   dt = ',es22.16,'   t = ',es22.16,'   dWallClock = ',f7.2,' s')
 
       t=t+dt
 
@@ -107,6 +118,7 @@ subroutine fluid_update
       call source_terms_grav
 #endif /* GRAV */
 !------------------- X->Y->Z ---------------------
+#ifndef __NO_FLUID_STEP
       if(nxd /=1) then
          call sweepx
 
@@ -166,6 +178,9 @@ subroutine fluid_update
 #endif /* DEBUG */
       endif
 
+      if(associated(problem_customize_solution)) call problem_customize_solution
+
+#endif /* __NO_FLUID_STEP */
 ! Sources ----------------------------------------
 
 #ifdef SN_SRC
@@ -177,6 +192,7 @@ subroutine fluid_update
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
       t=t+dt
       dtm = dt
+      halfstep = .true.
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 #ifdef SHEAR
       call yshift(t,dt)
@@ -192,6 +208,7 @@ subroutine fluid_update
 
 
 !------------------- Z->Y->X ---------------------
+#ifndef __NO_FLUID_STEP
       if(nzd /= 1) then
 #ifdef COSM_RAYS
          call cr_diff_z
@@ -202,7 +219,6 @@ subroutine fluid_update
 #endif /* MAGNETIC */
 
          call sweepz
-
 #ifdef DEBUG
          syslog = system('echo -n sweep z')
          call write_hdf
@@ -249,6 +265,10 @@ subroutine fluid_update
          nhdf = nhdf + 1
 #endif /* DEBUG */
       endif
+
+      if(associated(problem_customize_solution)) call problem_customize_solution
+
+#endif /* __NO_FLUID_STEP */
 
 #ifdef SNE_DISTR
       call supernovae_distribution

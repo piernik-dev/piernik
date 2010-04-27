@@ -241,13 +241,16 @@ module rtvd ! split orig
       use initcosmicrays,  only : iarr_crs, iarr_crn, iarr_cre
       use arrays,          only : divvel
 #ifdef COSM_RAYS_SOURCES
-      use sourcecosmicrays
+      use sourcecosmicrays,only : src_crn
 #endif /* COSM_RAYS_SOURCES */
 #endif /* COSM_RAYS */
 #ifdef FLUID_INTERACTIONS
       use initdust,        only : dragc_gas_dust
-      use interactions
+      use interactions,    only : fluid_interactions
 #endif /* FLUID_INTERACTIONS */
+#ifdef ISO_LOCAL
+      use arrays,          only : cs_iso2_arr
+#endif /* ISO_LOCAL */
 
       implicit none
 
@@ -288,6 +291,9 @@ module rtvd ! split orig
       real, dimension(nvar%fluids,n) :: fricacc            !< acceleration caused by friction
       real, dimension(2)             :: df                 !< marker
       real, dimension(n)             :: gravacc            !< acceleration caused by gravitation
+#ifdef ISO_LOCAL
+      real, dimension(n)             :: cs_iso2            !< square of local isothermal sound speed (optional for ISO_LOCAL)
+#endif
 
 #ifdef SHEAR
       real, dimension(nvar%fluids,n) :: vy0
@@ -302,7 +308,9 @@ module rtvd ! split orig
 
 #ifndef ISO
       real, dimension(nvar%fluids,n) :: ekin,eint
+#if defined IONIZED && defined MAGNETIC
       real, dimension(n)             :: emag
+#endif
 #endif /* ISO */
 #ifdef COSM_RAYS
       real, dimension(n)             :: divv,grad_pcr,ecr
@@ -321,12 +329,24 @@ module rtvd ! split orig
 
       u1 = u
 
+#ifdef ISO_LOCAL
+      if(sweep .eq. 'xsweep') then
+         cs_iso2(:) =  cs_iso2_arr(:,i1,i2)
+      else if(sweep .eq. 'ysweep')  then
+         cs_iso2(:) =  cs_iso2_arr(i2,:,i1)
+      else
+         cs_iso2(:) =  cs_iso2_arr(i1,i2,:)
+      endif
+#endif /* ISO_LOCAL */
+
       do istep=1,integration_order
 
 ! Fluxes calculation for cells centers
-
+#ifndef ISO_LOCAL
          call all_fluxes(w,cfr,u1,bb,n)
-
+#else /* ISO_LOCAL */
+         call all_fluxes(w,cfr,u1,bb,n,cs_iso2)
+#endif /* ISO_LOCAL */
 ! Right and left fluxes decoupling
 
          fr = (u1*cfr+w)*0.5
@@ -372,6 +392,8 @@ module rtvd ! split orig
          ul1(:,:) = ul0 + rk2coef(integration_order,istep)*dulf
 
          u1 = ul1 + ur1
+
+         ! BEWARE: This is ordinary cheating. If negative density is patched here with smalld, the code will most likely crash in next timestep (FPE or sudden drop of timestep).
          u1(iarr_all_dn(1),:) = max(u1(iarr_all_dn(1),:), smalld)
 
 ! Source terms -------------------------------------
@@ -444,7 +466,7 @@ module rtvd ! split orig
 
          acc(:,n)   = acc(:,n-1); acc(:,1) = acc(:,2)
 
-         !!!! BEWARE: May not be necessary anymore
+         !!!! BEWARE: May not be necessary anymore. Another dirty cheat?
          where(u1(iarr_all_dn,:) < 0.0)
             acc(:,:) = 0.0
          endwhere

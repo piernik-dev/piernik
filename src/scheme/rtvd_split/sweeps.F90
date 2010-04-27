@@ -42,7 +42,6 @@ module sweeps     ! split sweeps
     use initdust,        only : dragc_gas_dust
 #endif /* DUST */
     use fluidindex,      only : iarr_all_dn, iarr_all_mx, iarr_all_my, nvar
-    use interactions
 
     implicit none
     real, dimension(size(iarr_all_my),nx,nz) :: vxr, v_r, rotaccr
@@ -192,6 +191,7 @@ module sweeps     ! split sweeps
     use fluidindex, only   : nvar, iarr_all_swpz
     use fluidindex, only   : nmag
     use fluidindex, only : ibx,iby,ibz
+
 
     use mpisetup, only  : dt
     use arrays, only : u,b
