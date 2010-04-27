@@ -7,12 +7,17 @@
 #define ISO
 #define ISO_LOCAL
 
+#if 0
+  UMUSCL is not yet available in the trunk
+#define UMUSCL
+#endif
+
 #define GLOBAL_FR_SPEED
 
 #define VANLEER
 
 #define GRAV
-#define GRAV_PTMASSPURE
+#define GRAV_PTMASSSTIFF
 #define MULTIGRID
 
 #if __GNUC__ >=4 && __GNUC_MINOR__ >=5
@@ -26,9 +31,3 @@
   It is useful for solving static problems (mostly testcases).
 #endif
 #undef  __NO_FLUID_STEP
-
-#if 0
-  USERCALL_FINALIZE allows for callin an user-supplied subroutine named finalize_problem at the end of simulation.
-  May be useful to output a summary of the run or some problem-specific data that is not handled by other means.
-#endif
-#undef USERCALL_FINALIZE

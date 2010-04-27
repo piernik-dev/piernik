@@ -10,27 +10,31 @@
  /
 
  $RESTART_CONTROL
-    restart  = 'none'
+    restart  = 'last'
     new_id   = ''
     nrestart = 0
  /
 
  $END_CONTROL
     tend   = 10.0
-    nend   = 1
+    nend   = 99999
  /
 
  $OUTPUT_CONTROL
     ix      = 0
     iy      = 0
     iz      = 0
-    dt_hdf  = 0.5
-    dt_res  = 2.0
+    dt_hdf  = 0.1
+    dt_res  = 1.0
     dt_plt  = 0.0
-    dt_log  = 0.001
-    dt_tsl  = 0.001
+    dt_log  = 0.01
+    dt_tsl  = 0.01
     vars(1) = 'dens'
     vars(2) = 'gpot'
+    vars(3) = 'velx'
+    vars(4) = 'vely'
+    vars(5) = 'velz'
+    vars(6) = 'mgso'
     domain  = 'phys_domain'
  /
 
@@ -39,8 +43,8 @@
     bnd_xr = 'out'
     bnd_yl = 'out'
     bnd_yr = 'out'
-    bnd_zl = 'out'
-    bnd_zr = 'out'
+    bnd_zl = 'outd'
+    bnd_zr = 'outd'
  /
 
  $DOMAIN_LIMITS
@@ -63,14 +67,17 @@
  /
 
  $NUMERICAL_SETUP
-    cfl    = 0.7
-    smalld = 1.e-9
+    cfl    = 0.4
+    smalld = 1.e-7
     smallei= 1.e-10
+    dt_initial = 5e-4
+    dt_min = 1e-5
+    dt_max_grow = 1.25
  /
 
  $GRAVITY
     ptmass = 10.0
-    r_smooth = 0.0025   ! 0.01 * 0.25
+    r_smooth = 0.5
     ptm_x  = 0.0
     ptm_y  = 0.0
     ptm_z  = 0.0
@@ -83,18 +90,24 @@
  /
 
  $PROBLEM_CONTROL
-    problem_name ='wengen4'
-    run_id =  'tst'
+    problem_name = 'wengen4'
+    run_id       = 'tst'
+    input_file   = 'test4-512.alt'
+    mincs2       = 8.725322e-4
+    maxcs2       = 5.8168972e-3
+    r_in         = 0.7
+    r_out        = 3.0
+    f_in         = 4.0
+    f_out        = 50.0
+    alfasupp     = 1.0
+    divine_intervention_type = 3
  /
 
  $MULTIGRID_SOLVER
-    level_max = 3
-    stdout    = .true.
-    norm_tol  = 1.e-6
-    nsmool    = 4
-    ord_prolong   = -2
-    grav_bnd_str  = "isolated"
-    dirty_debug = .false.
+    grav_bnd_str = "isolated"
+    level_max    = 3
+    stdout       = .true.
+    norm_tol     = 1.e-6
  /
 
 
