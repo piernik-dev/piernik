@@ -67,7 +67,7 @@ module dataio
 
    integer, parameter    :: nvarsmx = 16           !< maximum number of variables to dump in hdf files
    character(len=3)      :: new_id                 !< three character string to change run_id when restarting simulation (e.g. to avoid overwriting of the output from the previous (pre-restart) simulation; if new_id = '' then run_id is still used)
-   character(len=16)     :: restart                !< choise of restart file: if restart = 'last': automatic choise of the last restart file regardless of "nrestart" value; if smth else is set: "nrestart" value is fixing
+   character(len=16)     :: restart                !< choice of restart file: if restart = 'last': automatic choice of the last restart file regardless of "nrestart" value; if smth else is set: "nrestart" value is fixing
    character(len=16)     :: domain                 !< string to choose if boundaries have to be dumped in hdf files
    character(len=16)     :: mag_center             !< choice to dump magnetic fields values from cell centers or not (if not then values from cell borders)
    integer               :: nrestart               !< number of restart file to be read while restart is not set to ''
