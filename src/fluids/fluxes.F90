@@ -73,17 +73,18 @@ contains
 !! \param bb magnetic field x,y,z-components table
 !! \param n number of cells in the current sweep
 !<
-subroutine all_fluxes(flux,cfr,uu,bb,n)
+subroutine all_fluxes(flux,cfr,uu,bb,n,cs_iso2)
 
     use fluidindex, only : nvar
 
     use fluidindex, only : nmag
 
     implicit none
-    integer n
-    real, dimension(nvar%all,n):: flux,uu,cfr
-    real, dimension(nmag,n):: bb
-    real, dimension(n)     :: vion
+    integer                      :: n
+    real, dimension(nvar%all,n)  :: flux,uu,cfr
+    real, dimension(nmag,n)      :: bb
+    real, dimension(n)           :: vion
+    real, dimension(n), optional :: cs_iso2
 
 #ifdef IONIZED
     real, dimension(nvar%ion%all,n) :: fluxion,cfrion,uuion
@@ -106,7 +107,7 @@ subroutine all_fluxes(flux,cfr,uu,bb,n)
 #ifdef IONIZED
    uuion(:,:)=uu(iarr_ion,:)
 
-   call flux_ion(fluxion,cfrion,vion,uuion,bb,n)
+   call flux_ion(fluxion,cfrion,vion,uuion,bb,n,cs_iso2)
 
    flux(iarr_ion,:) = fluxion
    cfr(iarr_ion,:)  = cfrion
@@ -180,8 +181,8 @@ end subroutine all_fluxes
 !<
   subroutine flimiter(f,a,b,m,n)
     implicit none
-    integer m                  !< number of conservative variables
-    integer n                  !< array size
+    integer, intent(in)  :: m  !< number of conservative variables
+    integer, intent(in)  :: n  !< array size
     real, dimension(m,n) :: f  !< second order flux correction for left- or right- moving waves
     real, dimension(m,n) :: a  !< second order correction of left- or right- moving waves flux on the left cell boundary
     real, dimension(m,n) :: b  !< second order correction of left- or right- moving waves flux on the right cell boundary

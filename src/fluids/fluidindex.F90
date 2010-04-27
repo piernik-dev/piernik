@@ -45,8 +45,8 @@
 
 module fluidindex
 
-   use types
-   use fluidtypes
+   use types,      only: indx
+   use fluidtypes, only: var_numbers
    implicit none
 
    type(var_numbers),save :: nvar
@@ -54,6 +54,7 @@ module fluidindex
    type(indx),save     :: ind         !< derived type variable storing all fluid-, component- and magnetic-field-indexes
 
    integer, parameter  :: nmag = 3    !< number of magnetic field components
+
    integer, parameter  :: ibx = 1     !< index of x-component of magnetic field
    integer, parameter  :: iby = 2     !< index of y-component of magnetic field
    integer, parameter  :: ibz = 3     !< index of z-component of magnetic field
@@ -101,6 +102,7 @@ module fluidindex
 !! \param none - all arguments are global variables
 !<
     subroutine fluid_index
+
 
 #ifdef IONIZED
       use initionized,    only : ionized_index, selfgrav_ion
