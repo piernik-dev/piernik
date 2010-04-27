@@ -29,19 +29,22 @@
 !>
 !! \brief (KK)
 !!
-!!
-!!
 !! In this module following namelists of parameters are specified:
 !! \copydetails mpisetup::mpistart
 !<
 module mpisetup
+
    implicit none
+
    include 'mpif.h'
+
    integer :: nproc, proc, ierr , rc, info
    integer :: status(MPI_STATUS_SIZE,4)
    integer, dimension(4) :: req, err
 
-   real                  :: t,dt,dtm
+   real, parameter       :: dt_default_grow = 2.
+
+   real                  :: t, dt, dt_old, dtm
    integer               :: nstep
 
    integer, parameter    :: ndims = 3       ! 3D grid
@@ -51,17 +54,19 @@ module mpisetup
    integer ::   procxl, procxr, procyl, procyr, proczl, proczr, procxyl, procyxl, procxyr, procyxr
    integer ::   pxleft, pxright, pyleft, pyright, pzleft, pzright
 
-   integer,   parameter             :: buffer_dim=200
+   integer, parameter               :: buffer_dim=200
    integer, parameter               :: cbuff_len=32
    character(len=cbuff_len), dimension(buffer_dim) :: cbuff
    integer,   dimension(buffer_dim) :: ibuff
    real,      dimension(buffer_dim) :: rbuff
    logical,   dimension(buffer_dim) :: lbuff
 
+   logical :: mpi_magic
    integer :: pxsize    !< number of MPI blocks in x-dimension
    integer :: pysize    !< number of MPI blocks in y-dimension
    integer :: pzsize    !< number of MPI blocks in z-dimension
-   namelist /MPI_BLOCKS/ pxsize, pysize, pzsize
+
+   namelist /MPI_BLOCKS/ pxsize, pysize, pzsize, mpi_magic
 
    character(len=4) :: bnd_xl    !< type of boundary conditions for the left x-boundary
    character(len=4) :: bnd_xr    !< type of boundary conditions for right the x-boundary
@@ -69,15 +74,23 @@ module mpisetup
    character(len=4) :: bnd_yr    !< type of boundary conditions for the right y-boundary
    character(len=4) :: bnd_zl    !< type of boundary conditions for the left z-boundary
    character(len=4) :: bnd_zr    !< type of boundary conditions for the right z-boundary
-   character(len=4) :: bnd_xl_dom, bnd_xr_dom, bnd_yl_dom, bnd_yr_dom, bnd_zl_dom, bnd_zr_dom
+   character(len=4) :: bnd_xl_dom, bnd_xr_dom, bnd_yl_dom, bnd_yr_dom, bnd_zl_dom, bnd_zr_dom !< computational domain boundaries
+
    namelist /BOUNDARIES/ bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr
 
+   real    :: dt_initial
+   real    :: dt_max_grow
+   real    :: dt_min
    real    :: cfl
    real    :: smalld
+   real    :: smallc
    real    :: smallei
    real    :: cfr_smooth
    integer :: integration_order
-   namelist /NUMERICAL_SETUP/  cfl, smalld, smallei, integration_order, cfr_smooth
+
+   namelist /NUMERICAL_SETUP/  cfl, smalld, smallei, integration_order, cfr_smooth, dt_initial, dt_max_grow, dt_min, smallc
+
+   integer, dimension(3) :: domsize  !< local copy of nxd, nyd, nzd which can be used before init_grid()
 
    logical     :: mpi
    character(len=80)   :: cwd
@@ -133,21 +146,36 @@ module mpisetup
 !! <tr><td>smallei          </td><td>1.e-10</td><td>real value                           </td><td>\copydoc mpisetup::smallei          </td></tr>
 !! <tr><td>integration_order</td><td>2     </td><td>1 or 2 (or 3 - currently unavailable)</td><td>\copydoc mpisetup::integration_order</td></tr>
 !! <tr><td>cfr_smooth       </td><td>0.0   </td><td>real value                           </td><td>\copydoc mpisetup::cfr_smooth       </td></tr>
+!! <tr><td>dt_initial       </td><td>-1.   </td><td>positive real value or -1.           </td><td>\copydoc mpisetup::dt_initial       </td></tr>
+!! <tr><td>dt_max_grow      </td><td>2.    </td><td>real value > 1.1                     </td><td>\copydoc mpisetup::dt_max_grow      </td></tr>
+!! <tr><td>dt_min           </td><td>0.    </td><td>positive real value                  </td><td>\copydoc mpisetup::dt_min           </td></tr>
 !! </table>
 !! \n \n
 !<
       subroutine mpistart
-         use errh, only : namelist_errh
+
+         use errh, only : die, namelist_errh
+
          implicit none
+
+         namelist /DOMAIN_SIZES/ nxd, nyd, nzd
+
          integer :: iproc, ierrh
+         integer :: nxd, nyd, nzd
 
-         character(LEN=80) :: cwd_proc,  cwd_all (0:4096)
-         character(LEN=8)  :: host_proc, host_all(0:4096)
-         integer           :: pid_proc,  pid_all (0:4096)
+         integer, parameter    :: cwdlen = 512 ! allow for moderately long CWD
+         integer, parameter    :: hnlen = 32   ! hostname length limit
+         character(LEN=cwdlen) :: cwd_proc
+         character(LEN=hnlen)  :: host_proc
+         integer               :: pid_proc
 
-         integer(kind=1)    :: getcwd, hostnm
-         integer(kind=4)    :: getpid
-         character(LEN=100) :: par_file, tmp_log_file
+         character(LEN=cwdlen), allocatable, dimension(:) :: cwd_all
+         character(LEN=hnlen) , allocatable, dimension(:) :: host_all
+         integer              , allocatable, dimension(:) :: pid_all
+
+         integer(kind=1)       :: getcwd, hostnm
+         integer(kind=4)       :: getpid
+         character(LEN=cwdlen) :: par_file, tmp_log_file
          integer :: cwd_status
          logical :: par_file_exist
 
@@ -157,37 +185,38 @@ module mpisetup
          info = MPI_INFO_NULL
          call MPI_COMM_SIZE(comm, nproc, ierr)
 
-         pid_proc = getpid()
-         status = hostnm(host_proc)
-         cwd_status =  getcwd(cwd_proc)
-         if(cwd_status /= 0) stop 'mpisetup: problems accessing working directory'
+         if (allocated(cwd_all) .or. allocated(host_all) .or. allocated(pid_all)) call die("[mpisetup:mpistart] cwd_all, host_all or pid_all already allocated")
+
+         ! BEWARE if proc /= 0 it is probably enough to allocate only one element or none at all (may depend on MPI implementation)
+         allocate(cwd_all(0:nproc))
+         allocate(host_all(0:nproc))
+         allocate(pid_all(0:nproc))
+
+         pid_proc   = getpid()
+         status     = hostnm(host_proc)
+         cwd_status = getcwd(cwd_proc)
+
+         if (cwd_status /= 0) call die("[mpisetup:mpistart] problems accessing current working directory.")
 #ifdef DEBUG
-         write(*,*) 'pid  in mpisetup: ',pid_proc
-         write(*,*) 'host in mpisetup: ',host_proc
-         write(*,*) 'cwd  in mpisetup: ',cwd_proc
+         write(*,'(3a,i6,3a)') 'mpisetup: host="',trim(host_proc),'", PID=',pid_proc,' CWD="',trim(cwd_proc),'"'
 #endif /* DEBUG */
+
          if(proc == 0) then
             par_file = trim(cwd)//'/problem.par'
             inquire(file=par_file, exist=par_file_exist)
-            if(.not. par_file_exist) stop '"problem.par" does not exist in the working directory'
+            if(.not. par_file_exist) call die('[mpisetup:mpistart] Cannot find "problem.par" in the working directory')
             tmp_log_file = trim(cwd)//'/tmp.log'
          endif
 
-         call MPI_GATHER ( cwd_proc, 80, MPI_CHARACTER, &
-                           cwd_all,  80, MPI_CHARACTER, &
-                           0, comm,err )
-
-         call MPI_GATHER ( host_proc, 8, MPI_CHARACTER, &
-                           host_all,  8, MPI_CHARACTER, &
-                           0, comm,err )
-
-         call MPI_GATHER ( pid_proc, 1, MPI_INTEGER, &
-                           pid_all,  1, MPI_INTEGER, &
-                           0, comm,err )
+         call MPI_Gather(cwd_proc,  cwdlen, MPI_CHARACTER, cwd_all,  cwdlen, MPI_CHARACTER, 0, comm, err)
+         call MPI_Gather(host_proc, hnlen,  MPI_CHARACTER, host_all, hnlen,  MPI_CHARACTER, 0, comm, err)
+         call MPI_Gather(pid_proc,  1,      MPI_INTEGER,   pid_all,  1,      MPI_INTEGER,   0, comm, err)
 
          pxsize = 1
          pysize = 1
          pzsize = 1
+
+         mpi_magic = .true.
 
          bnd_xl = 'per'
          bnd_xr = 'per'
@@ -196,10 +225,15 @@ module mpisetup
          bnd_zl = 'per'
          bnd_zr = 'per'
 
-         cfl        = 0.7
-         cfr_smooth = 0.0
-         smalld     = 1.e-10
-         smallei    = 1.e-10
+         cfl         = 0.7
+         cfr_smooth  = 0.0
+         smalld      = 1.e-10
+         smallc      = 1.e-10
+         smallei     = 1.e-10
+         dt_initial  = -1.              !< negative value indicates automatic choice of initial timestep
+         dt_max_grow = dt_default_grow !< for sensitive setups consider setting this as low as 1.1
+         dt_min      = 0.
+
          integration_order  = 2
 
          if(proc == 0) then
@@ -214,6 +248,10 @@ module mpisetup
             open(1,file=par_file)
                read(unit=1,nml=NUMERICAL_SETUP,iostat=ierrh)
                call namelist_errh(ierrh,'NUMERICAL_SETUP')
+            close(1)
+            open(1,file=par_file)
+               read(unit=1,nml=DOMAIN_SIZES,iostat=ierrh)
+               call namelist_errh(ierrh,'DOMAIN_SIZES')
             close(1)
          endif
 
@@ -232,25 +270,43 @@ module mpisetup
 
             ibuff(4) = integration_order
 
+            ibuff(5) = nxd
+            ibuff(6) = nyd
+            ibuff(7) = nzd
+
             rbuff(1) = smalld
+            rbuff(10)= smallc
             rbuff(2) = smallei
             rbuff(3) = cfl
             rbuff(4) = cfr_smooth
+            rbuff(5) = dt_initial
+            rbuff(6) = dt_max_grow
+            rbuff(7) = dt_min
+
+            lbuff(1) = mpi_magic
 
             call MPI_BCAST(cbuff, cbuff_len*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
             call MPI_BCAST(ibuff,           buffer_dim, MPI_INTEGER,          0, comm, ierr)
             call MPI_BCAST(rbuff,           buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+            call MPI_BCAST(lbuff,           buffer_dim, MPI_LOGICAL,          0, comm, ierr)
 
          else
 
             call MPI_BCAST(cbuff, cbuff_len*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
             call MPI_BCAST(ibuff,           buffer_dim, MPI_INTEGER,          0, comm, ierr)
             call MPI_BCAST(rbuff,           buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+            call MPI_BCAST(lbuff,           buffer_dim, MPI_LOGICAL,          0, comm, ierr)
 
-            smalld     = rbuff(1)
-            smallei    = rbuff(2)
-            cfl        = rbuff(3)
-            cfr_smooth = rbuff(4)
+            mpi_magic   = lbuff(1)
+
+            smalld      = rbuff(1)
+            smallc      = rbuff(10)
+            smallei     = rbuff(2)
+            cfl         = rbuff(3)
+            cfr_smooth  = rbuff(4)
+            dt_initial  = rbuff(5)
+            dt_max_grow = rbuff(6)
+            dt_min      = rbuff(7)
 
             bnd_xl = cbuff(1)(1:4)
             bnd_xr = cbuff(2)(1:4)
@@ -264,7 +320,14 @@ module mpisetup
             pzsize = ibuff(3)
 
             integration_order = ibuff(4)
+
+            nxd = ibuff(5)
+            nyd = ibuff(6)
+            nzd = ibuff(7)
+
          endif
+
+         domsize(:) = [nxd, nyd, nzd]
 
          bnd_xl_dom = bnd_xl
          bnd_xr_dom = bnd_xr
@@ -277,31 +340,34 @@ module mpisetup
          psize(2)   = pysize
          psize(3)   = pzsize
 
-         if(pxsize*pysize*pzsize /= nproc) then
-            if(proc == 0)  write(*,*) &
-               'nproc =',nproc,' MUST BE EQUAL TO   pxsize*pysize*pzsize =',pxsize*pysize*pzsize
-            call MPI_Barrier(MPI_COMM_WORLD, ierr)
-            call MPI_Finalize(ierr)
-            stop
+         if (pxsize*pysize*pzsize /= nproc) then
+            if(mpi_magic) then
+               call divide_domain_voodoo(nproc)
+            else
+               if(proc == 0)  write(*,*)'nproc =',nproc,' MUST BE EQUAL TO   pxsize*pysize*pzsize =',pxsize*pysize*pzsize
+               call MPI_Barrier(MPI_COMM_WORLD, ierr)
+               call MPI_Finalize(ierr)
+               stop
+            endif
          endif
 
-         if(pxsize*pysize*pzsize /= 1) mpi = .true.
+         if (pxsize*pysize*pzsize /= 1) mpi = .true.
 
+         periods(:) = .false.
 
-         if(bnd_xl(1:3) == 'per' .or. bnd_xl(1:3) == 'she') then
+         if (bnd_xl(1:3) == 'per' .or. bnd_xl(1:3) == 'she') then
             periods(1) = .true.  ! x periodic
-         else
-            periods(1) = .false.
+            if (bnd_xr(1:3) /= bnd_xl(1:3)) call die("[mpisetup:mpistart] Periodic or shear BC do not match in X-direction")
          endif
-         if(bnd_yl(1:3) == 'per') then
+
+         if (bnd_yl(1:3) == 'per') then
             periods(2) = .true.  ! y periodic
-         else
-            periods(2) = .false.
+            if (bnd_yr(1:3) /= bnd_yl(1:3)) call die("[mpisetup:mpistart] Periodic BC do not match in Y-direction")
          endif
-         if(bnd_zl(1:3) == 'per') then
+
+         if (bnd_zl(1:3) == 'per') then
             periods(3) = .true.  ! z periodic
-         else
-            periods(3) = .false.
+            if (bnd_zr(1:3) /= bnd_zl(1:3)) call die("[mpisetup:mpistart] Periodic BC do not match in Z-direction")
          endif
 
          reorder = .false.     ! allows processes reordered for efficiency
@@ -310,7 +376,9 @@ module mpisetup
          call MPI_CART_COORDS(comm3d, proc, ndims, pcoords, ierr)
 
          if(proc == 0) then
+            write(*, '("------------------------------------------------------------------------------------------------------")')
             open(3, file=tmp_log_file, status='unknown')
+               write(3,'(a,/)')"###############     Initialization     ###############"
                write(3,"(a35,i2)") 'START OF MHD CODE,  No. of procs = ', nproc
                write(3,*)
                write(3,*) 'PROCESSES:'
@@ -326,12 +394,13 @@ module mpisetup
                write(unit=3,nml=NUMERICAL_SETUP)
 
             close(3)
-            write(*,*)
-            write(*,"(a35,i2)") 'START OF MHD CODE,  No. of procs = ', nproc
-            write(*,*)
-            write(*,nml=MPI_BLOCKS)
-            write(*,*)
+            write(*,"(a35,i5)") 'START OF MHD CODE,  No. of procs = ', nproc
+!            write(*,nml=MPI_BLOCKS)
          endif
+
+         deallocate(host_all)
+         deallocate(pid_all)
+         deallocate(cwd_all)
 
 ! Compute neighbors
 
@@ -416,11 +485,15 @@ module mpisetup
             stop 'For "ORIG" scheme integration_order must be 1 or 2'
          endif
 
+         dt_old = -1.
+         if (dt_max_grow < 1.01) then
+            if (proc == 0) write(*,'(2(a,g10.3))')"[mpisetup:mpistart] dt_max_grow = ",dt_max_grow," is way too low. Resetting to ",dt_default_grow
+            dt_max_grow = dt_default_grow
+         end if
+
       end subroutine mpistart
 
-
 !-----------------------------------------------------------------------------
-
 
       subroutine mpistop
 
@@ -433,11 +506,11 @@ module mpisetup
 
 !-----------------------------------------------------------------------------
 
-
       subroutine mpifind(var, what, loc_arr, loc_proc)
 
          implicit none
-         character what*(*)
+
+         character(len=3), intent(in) :: what
          real       :: var
          real, dimension(2)    :: rsend, rrecv
          integer, dimension(3) :: loc_arr
@@ -446,7 +519,7 @@ module mpisetup
          rsend(1) = var
          rsend(2) = proc
 
-         select case (trim(what))
+         select case (what(1:3))
             case('min')
                CALL MPI_REDUCE(rsend, rrecv, 1, MPI_2DOUBLE_PRECISION, &
                                          MPI_MINLOC, 0, comm, ierr)
@@ -475,7 +548,68 @@ module mpisetup
       end subroutine mpifind
 
 !------------------------------------------------------------------------------------------
+! Must be called by all procs to avoid communication and ensure that every proc has
+! proper psize, pxsize, pysize, pzsize
+!
+! This routine tries to divide the computational domain into local domains.
+! The goal is to minimize the ratio of longest to shortest edge to minimize the amount of inter-process communication.
+! If the benchmarks show that some direction should be partitioned in more pieces than other directions, implement appropriate weighting in j1, j2 and j3 calculations.
+!
+! For some weird domains and PE counts this routine may find tiling that does not satisfy multigrid restrictions even if there is some. In such case divide domain manually.
+!
+
+      subroutine divide_domain_voodoo(np)
+
+         use errh,      only: die
+         use constants, only: some_primes
+
+         implicit none
+
+         integer, intent(in) :: np
+
+         integer :: j1, j2, j3, jj, n, p
+         integer, dimension(3) :: ldom
+
+         ldom(1:3) = domsize(3:1:-1) ! Maxloc returns first occurrence of max, reversing direction order (to ZYX)  gives better cache utilisation.
+         n = np
+         psize(:) = 1
+
+         do p = size(some_primes), 1, -1 ! start from largest defined primes, continue down to 2
+            do while (mod(n, some_primes(p))==0)
+
+               jj = 0
+               j1 = sum(maxloc(ldom), 1) ! First try the longest edge; note the trick to make a scalar from 1-element vector without assigment to another variable
+               if (mod(ldom(j1), some_primes(p))==0) then
+                  jj = j1
+               else
+                  j2 = 1 + mod(j1 + 0, ndims)
+                  j3 = 1 + mod(j1 + ndims -2, ndims)
+                  if (ldom(j2) > ldom(j3) .and. mod(ldom(j2), some_primes(p))==0) jj = j2 ! middle edge ...
+                  if (jj == 0 .and. mod(ldom(j3), some_primes(p))==0) jj = j3 ! try the shortest edge on last resort
+               end if
+
+               if (jj == 0) then
+                  call die("[divide_domain_voodoo]: Can't find divisible edge")
+               else
+                  psize(jj) = psize(jj) * some_primes(p)
+                  n         = n         / some_primes(p)
+                  ldom(jj)  = ldom(jj)  / some_primes(p)
+               end if
+
+            end do
+         end do
+
+         if (n /= 1) call die("[divide_domain_voodoo]: I am not that intelligent") ! np has too big prime factors
+
+         pxsize = psize(3) ! directions were reverted at ldom assigment
+         pysize = psize(2)
+         pzsize = psize(1)
+
+         psize = [ pxsize, pysize, pzsize ]
+
+         if (proc == 0 .and. np > 1) &
+              write(*,'(a,3i4,a,3i6,a)')"[mpisetup:divide_domain_voodoo] Domain divided to [",psize(:)," ] pieces, each of [",ldom(3:1:-1)," ] cells."
+
+      end subroutine divide_domain_voodoo
 
 end module mpisetup
-
-
