@@ -37,10 +37,10 @@ module snsources
 #endif /* SHEAR */
 
    implicit none
-   real epsi, epso
-   real ysna, ysni, ysno
+   real          :: epsi, epso
+   real          :: ysna, ysni, ysno
    integer, save :: nsn, nsn_last
-   real, save    :: dt_sn_prev, ecr_supl, decr_supl
+   real,    save :: dt_sn_prev, ecr_supl, decr_supl
    real,    save :: gset
    integer, save :: irand, iset
 
@@ -96,8 +96,8 @@ module snsources
 
       implicit none
       real, dimension(3), intent(in) :: pos
-      integer i,j,k, ipm, jpm, icr
-      real decr, xsn,ysn,zsn
+      integer  :: i,j,k, ipm, jpm, icr
+      real     :: decr, xsn,ysn,zsn
       xsn = pos(1)
       ysn = pos(2)
       zsn = pos(3)
@@ -233,11 +233,10 @@ module snsources
        function gasdev(x,y)
 
           implicit none
-          real x, y, x1, y1,  r
-          real gasdev, rand(2)
-          real fac
-          real, save :: gset
+          real :: x, y, x1, y1, r, fac, gasdev
+          real,    save :: gset
           integer, save :: iset, irand
+          real, dimension(2) :: rand
 
           if (iset.eq.0) then
 1            x1=2.*x-1.
