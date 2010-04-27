@@ -33,7 +33,7 @@
 !! \copydetails shear::init_shear
 !<
 module shear
-  real    :: ts, dely, eps, omega,qshear, dts, ddly
+  real    :: ts, dely, eps, omega, qshear, dts, ddly
   integer :: delj
 
   contains
