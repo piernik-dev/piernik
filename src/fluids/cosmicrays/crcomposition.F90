@@ -32,7 +32,7 @@
 module crcomposition
 
    type cr_component
-      character (len=8) :: isotope     !< isotope name, eg. Be10
+      character(len=8)  :: isotope     !< isotope name, eg. Be10
       integer  :: index=-1             !< relative index (with respect to crn_beg)
       real     :: abund=0.0            !< initial abundance relative to H
    end type cr_component

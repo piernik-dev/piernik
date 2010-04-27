@@ -44,9 +44,9 @@ module multigridhelpers
    integer            :: aux_par_I0, aux_par_I1, aux_par_I2           !< auxiliary integer parameters
    real               :: aux_par_R0, aux_par_R1, aux_par_R2           !< auxiliary real parameters
 
-   real, parameter     :: dirtyH = 1e200, dirtyL = 1e50    !< If dirty_debug, initialize arrays with dirtyH and check if the solution contains anything above dirtyL
+   real, parameter    :: dirtyH = 1e200, dirtyL = 1e50    !< If dirty_debug, initialize arrays with dirtyH and check if the solution contains anything above dirtyL
 
-   character (len=256) :: str                              !< private string for messages, filenames, etc.
+   character(len=256) :: str                              !< private string for messages, filenames, etc.
 
 contains
 
@@ -191,7 +191,7 @@ contains
 
       implicit none
 
-      character (len=*), intent(in) :: msg          !< message to be logged
+      character(len=*), intent(in)  :: msg          !< message to be logged
       logical, optional, intent(in) :: stdout_cntrl !< flag to supress printing to stdout
 
       logical            :: log_exist
@@ -274,7 +274,7 @@ contains
 
       implicit none
 
-      character (len=*), intent(in) :: basename !< first part of the filename
+      character(len=*), intent(in)  :: basename !< first part of the filename
       integer, optional, intent(in) :: a        !< additional number
 
       integer             :: l, n
