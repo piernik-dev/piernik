@@ -1,0 +1,14 @@
+#define HDF5
+#define IONIZED
+#undef  MAGNETIC
+
+#define CGS       /*cm,gram,sek unitsystem*/
+
+#undef ISO
+
+#define GLOBAL_FR_SPEED
+
+#define VANLEER
+
+#define GRAV
+#define GRAV_NULL
