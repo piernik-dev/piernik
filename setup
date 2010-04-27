@@ -27,17 +27,34 @@ use Getopt::Long;
 
 # return status
 
-print "Called 'setup " . "@ARGV" . "'\n";
+my $setup_line = "./setup";
 
 my %moo=();
 my $OK = 0;
 my $FAILED = 1;
-GetOptions("help"=>\$moo{help},
-           "problems"=>\$moo{problems},
-           "units"=>\$moo{units},
-           "dumpenv"=>\$moo{dumpenv},
-           "define=s@"=>\@define,
-           "compiler:s"=>\$moo{compiler});
+my @ARGV_SAVED = @ARGV;
+
+# .setuprc may contain preferred options to be included everytime, usually "-compiler <preferred_compiler_configuration>"
+open DEF_CONF, "< ./.setuprc";
+do {
+  $_ = <DEF_CONF>;
+  s/\n//;
+  if ($_) { @ARGV = split(/ /); }
+  else    { @ARGV = @ARGV_SAVED; }
+  $setup_line .= " @ARGV";
+  GetOptions("help"=>\$moo{help},
+             "problems"=>\$moo{problems},
+             "units"=>\$moo{units},
+             "dumpenv"=>\$moo{dumpenv},
+             "define=s@"=>\@define,
+             "param:s"=>\$moo{param},
+             "compiler:s"=>\$moo{compiler},
+             "obj:s"=>\$moo{obj},
+             "linkexe"=>\$moo{linkexe});
+} while ($_);
+close DEF_CONF;
+
+print "Called '$setup_line'\n";
 
 # DEBUG
 #foreach (keys %moo) {
@@ -53,31 +70,35 @@ my $argc = @ARGV;
 #  print "$_\n";
 #}
 
-if($argc < 1){
+if ($argc < 1) {
   $moo{help} = 1;
   $is_prob = 0;
 }
 
-if($moo{problems}){
+if ($moo{problems}) {
    print " \n";
    system ( "cat ./problems/*/info");
    print " \n";
    exit $OK;
-} elsif ($moo{units}){
+} elsif ($moo{units}) {
    print " \n";
    system ( "grep uses ./src/base/constants.F90");
    print " \n";
    exit $OK;
-} elsif ($moo{help}){
+} elsif ($moo{help}) {
    print "USAGE: " . $SELF . " [PROBLEM] [OPTIONS]\n";
    print "Available options:\n";
    print " --help\t\t- print this help message\n";
    print " --problems\t- print available problems and exit\n";
    print " --units\t- print available unit systems and exit\n";
    print " --copy\t\t- hard-copy source files instead of linking them\n";
+   print " --linkexe\t- do not copy obj/piernik to runs/<problem> but link it instead\n";
    print " --dumpenv\t- do not compile the source but dump the environment to \'obj/version.F90\'\n";
+   print " --param <file>\t- use <file> instead problem.par\n";
+   print " --define <flag>\t- inject precompiler directive to piernik.def\n";
+   print " --obj <postfix>\t- use obj_<postfix> directory instead of obj/ and runs/<problem>_<postfix>/ rather than runs/<problem>/\n";
    print " --compiler <configuration>\t - choose specified config from compilers directory\n";
-   print " --define <flag> \t - inject precompiler directive to piernik.def\n\n";
+   print "\n";
 
    print "all-in-one wrapper for a selected problem:\n";
    print "> " . $SELF . " <problem>\n";
@@ -108,7 +129,8 @@ if($moo{problems}){
 
    print "HEALTH WARNINGS:\n";
    print "* the contents of \'./obj\' and \'./runs/<problem>\' are overwritten\n";
-   print "  each time \'" . $SELF . " <problem>\' is run\n";
+   print "  each time \'" . $SELF . " <problem>\' is run, unless you specify -obj <postfix>\n";
+   print "  in which case the contents of runs/<problem>_<postfix> will be only updated\n";
    print "* the def file \'piernik.def\' is copied only for reference, to change flags\n";
    print "  with which the source is compiled edit \'./problems/<problem>/piernik.def\'\n";
    print "* by default PIERNIK will read the configuration file \'problem.par\' from the\n";
@@ -122,13 +144,23 @@ if($moo{problems}){
    exit $FAILED;
    }
 }
-if($moo{compiler}) {$compiler = $moo{compiler}.".in"} else {$compiler = 'default.in'};
-# default
+
+# defaults
+if ($moo{compiler}) { $compiler = $moo{compiler}.".in"; }
+else                { $compiler = 'default.in'; }
+
+if ($moo{param}) { $param_file = $moo{param}; }
+else             { $param_file = 'problem.par'; }
+
+if ($moo{obj}) { $objdir = "obj_$moo{obj}"; }
+else           { $objdir = "obj"; }
+
 open MAKEIN, "< compilers/".$compiler or die $!;
 @makein = <MAKEIN>;
 close MAKEIN;
-rmtree(['obj']);
-mkpath(['obj']);
+
+rmtree( $objdir );
+mkpath( $objdir );
 $probdir = "problems/" . $ARGV[0] . "/";
 if(!-r $probdir) {
    print "$probdir: $!\n";
@@ -137,19 +169,20 @@ if(!-r $probdir) {
 }
 
 @prob = ( "../" . $probdir . "initproblem.F90",
-          "../" . $probdir . "problem.par" );
+          "../" . $probdir . $param_file );
+
 @base = <src/base/*.F90>;
 for (@base) {
    s/src/\.\.\/src/;
 }
 @addons = ();
-copy("compilers/newcompiler","obj/newcompiler");
-system("chmod a+x obj/newcompiler");
+copy("compilers/newcompiler", "$objdir/newcompiler");
+system("chmod a+x $objdir/newcompiler");
 $defs = $probdir."piernik.def";
    if ( ! $CL_VALUES[0] ) {
-      symlink("../".$defs,"obj/piernik.def") or die "failed linking piernik.def";
+      symlink("../".$defs, "$objdir/piernik.def") or die "failed linking piernik.def";
    } else {
-      copy($defs,"obj/piernik.def") or die "failed copying piernik.def";
+      copy($defs, "$objdir/piernik.def") or die "failed copying piernik.def";
    }
 open (defs) or die "Can't open the file piernik.def!";
 @fdefs = <defs>;
@@ -165,7 +198,11 @@ if( grep { /GRAV/ }  @d) {
    push(@addons, "../src/gravity/hydrostatic.F90");
    }
 if( grep { /SELF_GRAV/ }  @d) {push(@addons, "../src/gravity/poissonsolver.F90");}
-if( grep { /MULTIGRID/ } @d) {push(@addons, "../src/gravity/multigrid.F90");}
+if( grep { /MULTIGRID/ } @d) {
+   @temp=<src/gravity/multigrid*.F90>;
+   for (@temp) { s/src/\.\.\/src/;}
+   push(@addons, @temp);
+}
 if( grep { /SHEAR/ }  @d) {push(@addons, "../src/shear/shear.F90");}
 push(@addons, "../src/hdf5/dataio_hdf5.F90");
 push(@addons, "../src/hdf5/list_hdf5.F90");
@@ -176,7 +213,9 @@ push(@addons, "../src/fluids/fluxes.F90");
 
 if( grep { /MAGNETIC/} @d) {
    push(@addons, "../src/magnetic/magboundaries.F90");
-   push(@addons, "../src/scheme/rtvd_split/advects.F90");
+   if ( grep { /UMUSCL/} @d) {} else {
+      push(@addons, "../src/scheme/rtvd_split/advects.F90");
+   }
    if( grep { /RESIST/} @d) {push(@addons, "../src/magnetic/resist/resistivity.F90");} }
 
 if( grep { /IONIZED/} @d) {
@@ -212,20 +251,24 @@ if( grep { /SNE_DISTR/} @d) {
    push(@addons, "../src/supernovae/sndistr.F90");
 }
 
-push(@addons, "../src/scheme/rtvd_split/fluidupdate.F90");
-push(@addons, "../src/scheme/rtvd_split/sweeps.F90");
-push(@addons, "../src/scheme/rtvd_split/rtvd.F90");
+if( grep { /UMUSCL/} @d) {
+   push(@addons, "../src/scheme/unsplit_muscl_hancock/fluidupdate.F90");
+} else {
+   push(@addons, "../src/scheme/rtvd_split/fluidupdate.F90");
+   push(@addons, "../src/scheme/rtvd_split/sweeps.F90");
+   push(@addons, "../src/scheme/rtvd_split/rtvd.F90");
+}
 
 @files = ( @base, @prob, @addons );
 @symln = ();
 foreach $file (@files) {
    $pos = rindex($file,"\/")+1;
    $len = length($file);
-   push(@symln,"obj/".substr($file,$pos,$len-$pos) );
+   push(@symln, "$objdir/".substr($file,$pos,$len-$pos) );
 }
 
 if ( $CL_VALUES[0] ) {
-   chdir 'obj';
+   chdir $objdir;
 }
 for $i (0 .. $#symln){
    if ( ! $CL_VALUES[0] ) {
@@ -235,7 +278,7 @@ for $i (0 .. $#symln){
    }
 }
 if ( ! $CL_VALUES[0] ) {
-   chdir 'obj';
+   chdir $objdir;
 }
 open(MAKEFILE, "> Makefile-prep");
 
@@ -270,19 +313,20 @@ print MAKEFILE ") \$(LDFLAGS) -o \$@ \$(OBJS) \$(LIBS)\n\n";
 # make date
 #
 print MAKEFILE "date: \n";
-print MAKEFILE "\tif [ -L version.F90 ]; then unlink version.F90; cp ../src/base/version.F90 .; fi; \n";
-print MAKEFILE "\tif [ ! -f env.dat ]; \\\n";
-print MAKEFILE "\tthen \\\n";
-print MAKEFILE "\t\thead -n 1 *.F90 | grep Id > env.dat; \\\n";
+print MAKEFILE "\t\@if [ -L version.F90 ]; then unlink version.F90; cp ../src/base/version.F90 .; fi; \n";
+print MAKEFILE "\t\@if [ ! -f env.dat ]; then\\\n";
+print MAKEFILE "\t\techo \"". $setup_line . "\" > env.dat; \\\n";
+print MAKEFILE "\t\thead -n 1 *.F90 | grep Id >> env.dat; \\\n";
 print MAKEFILE "\t\tcat piernik.def >> env.dat; \\\n";
 print MAKEFILE "\t\twc -l env.dat | awk '{print \"   integer, parameter :: nenv = \"\$\$1\"+0\"}' - >> version.F90; \\\n";
-print MAKEFILE "\t\techo \"   character*128, dimension(nenv) :: env\" >> version.F90; \\\n";
+print MAKEFILE "\t\techo \"   character(len=128), dimension(nenv) :: env\" >> version.F90; \\\n";
 print MAKEFILE "\t\techo 'contains' >> version.F90; \\\n";
 print MAKEFILE "\t\techo '   subroutine init_version' >> version.F90; \\\n";
 print MAKEFILE "\t\techo '      implicit none' >> version.F90; \\\n";
-print MAKEFILE "\t\tawk '{printf(\"       env(%i) = \\\" %s \\\"\\n\",NR,\$\$0)}' env.dat >> version.F90; \\\n";
+print MAKEFILE "\t\tawk '{printf(\"       env(%i) = \\\"%s\\\"\\n\",NR,\$\$0)}' env.dat >> version.F90; \\\n";
 print MAKEFILE "\t\techo '    end subroutine init_version' >> version.F90; \\\n";
 print MAKEFILE "\t\techo 'end module version' >> version.F90; \\\n";
+print MAKEFILE "\t\techo 'generated version.F90'; \\\n";
 print MAKEFILE "\tfi;\n\n";
 #
 # make clean
@@ -327,21 +371,21 @@ system("./newcompiler " . substr($compiler, 0, -3) );
 # COMPILE NOW
 chdir('..');
 # do checks
-if ( (! -r 'obj') || (! -r 'obj/problem.par') || (! -r 'obj/Makefile') ) {
-   print "problem with directory \'obj\'\n";
+if ( (! -r $objdir) || (! -r "$objdir/".$param_file) || (! -r "$objdir/Makefile") ) {
+   print "problem with directory \'$objdir\'\n";
    exit $FAILED;
 }
 
 # compile
 if ( $CL_VALUES[4] ) {
-   system('make -C obj date');
+   system("make -C $objdir date");
    print "\ndone\n";
    exit $OK;
 } else {
-   system('make -C obj');
+   system("make -C $objdir");
 }
 
-if ( ! -x 'obj/piernik' ) {
+if ( ! -x "$objdir/piernik" ) {
    print "\nit appears that \'make\' crashed\n";
    print "cannot continue\n";
    exit $FAILED;
@@ -356,19 +400,27 @@ if ( ! -d 'runs' ) {
     mkdir('runs');
 }
 my $problempath = "runs/" . $problemname;
+if ($moo{obj}) { $problempath .= "_$moo{obj}"; }
 if ( ! -d $problempath ) {
     mkdir($problempath);
 } else {
+  if ($moo{obj}) {
+    unlink "$problempath/piernik", "$problempath/piernik.def";
+    rename "$problempath/problem.par", "$problempath/problem.par.old";
+  } else {
     rmtree([$problempath]);
     mkpath([$problempath]);
+  }
 }
 
-if ( copy('obj/piernik', $problempath) && \
-   chmod(0755, "$problempath/piernik") && \
-   copy('obj/problem.par', $problempath) && \
-   copy('obj/piernik.def', $problempath) ) {
-   print "\n" . $problemname . " ready in " . $problempath . "\n";
-} else {
+my $runOK;
+if (copy("$objdir/$param_file", "$problempath/problem.par") && \
+    copy("$objdir/piernik.def", $problempath) ) {
+  if ($moo{linkexe}) { $runOK = symlink("../../$objdir/piernik", "$problempath/piernik"); }
+  else               { $runOK = copy("$objdir/piernik", $problempath) && chmod(0755, "$problempath/piernik"); }
+}
+if ($runOK) { print "\n $problemname ready in $problempath\n"; }
+else {
    print "$!\n";
    exit $FAILED;
 }
