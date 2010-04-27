@@ -41,7 +41,7 @@ module advects
 
     implicit none
     real, dimension(nx) :: vxby,by_x,vx
-    integer                j,k,jm, j_s,j_e
+    integer             :: j,k,jm, j_s,j_e
 
     vxby = 0.0
 
@@ -90,7 +90,7 @@ module advects
 
     implicit none
     real, dimension(nx) :: vxbz,bz_x,vx
-    integer                j,k,km,k_s,k_e
+    integer             :: j,k,km,k_s,k_e
 
     vxbz = 0.0
 
@@ -139,7 +139,7 @@ module advects
 
     implicit none
     real, dimension(ny)   :: vybz,bz_y,vy
-    integer                  i,k,km,k_s,k_e
+    integer               :: i,k,km,k_s,k_e
 
     vybz = 0.0
     if(nzd /= 1) then
@@ -187,7 +187,7 @@ module advects
 
     implicit none
     real, dimension(ny) :: vybx,bx_y,vy
-    integer                k,i,im,i_s,i_e
+    integer             :: k,i,im,i_s,i_e
 
     vybx = 0.0
 
@@ -284,7 +284,7 @@ module advects
 
     implicit none
     real, dimension(nz)  :: vzby,by_z,vz
-    integer                 i,j,jm,j_s,j_e
+    integer              :: i,j,jm,j_s,j_e
 
     vzby = 0.0
     if(nyd /= 1) then
