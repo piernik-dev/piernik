@@ -33,12 +33,22 @@ module list_hdf5
    use hdf5, only: HID_T
 #endif /* NEW_HDF5 */
    private
-   public :: write_arr, S_LEN
+   public :: write_arr, S_LEN, additional_attrs
 #ifdef NEW_HDF5
    public :: add_lhdf5, lhdf5_info, iterate_lhdf5
 #endif
 
    integer, parameter :: S_LEN = 30
+
+   interface
+      subroutine add_attr(file_id)
+         use hdf5, only : HID_T
+         implicit none
+         integer(HID_T), intent(in) :: file_id
+      end subroutine add_attr
+   end interface
+
+   procedure(add_attr), pointer :: additional_attrs
 
 #ifdef NEW_HDF5
    type :: lhdf5_info
