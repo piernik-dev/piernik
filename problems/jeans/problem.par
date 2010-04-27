@@ -87,9 +87,10 @@
     d0     = 1.5e7
     p0     = 1.5e7
     amp    = 0.01
-    lamx     = 0.572055
-    lamy     = 1.0e10
-    lamz     = 1.0e10
+    ix     = 2
+    iy     = 0
+    iz     = 0
+    mode   = 0
  /
 
  $MULTIGRID_SOLVER

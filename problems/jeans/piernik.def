@@ -12,3 +12,14 @@
 
 #define GRAV
 #define GRAV_NULL
+
+#if __GNUC__ >=4 && __GNUC_MINOR__ >=5
+#define NEW_HDF5
+#else
+#undef NEW_HDF5
+#endif
+
+#if 0
+  The following declaration is used in multigrid.F90 to remove density bias for some test cases
+#endif
+#define JEANS_PROBLEM

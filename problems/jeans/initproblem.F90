@@ -29,35 +29,40 @@
 
 module initproblem
 
-  real :: d0,p0,bx0,by0,bz0,Eexpl, x0,y0,z0,r0, lamx,lamy,lamz,amp
+  real              :: d0, p0, amp, kx, ky, kz
+  integer           :: ix, iy, iz, mode
   character(len=32) :: problem_name
   character(len=3)  :: run_id
 
-  namelist /PROBLEM_CONTROL/  problem_name, run_id, &
-                              d0,p0,lamx,lamy,lamz,amp
+  namelist /PROBLEM_CONTROL/  problem_name, run_id, d0, p0, ix, iy, iz, amp, mode
 
 contains
 
 !-----------------------------------------------------------------------------
 
    subroutine read_problem_par
-      use errh, only : namelist_errh
+      use grid, only : xmin, xmax, ymin, ymax, zmin, zmax
+      use errh, only : namelist_errh, die
       use mpisetup, only : cwd, ierr, rbuff, cbuff, ibuff, proc, &
          MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, &
          buffer_dim, comm
+      use constants, only: pi
 
       implicit none
+
       integer :: ierrh
       character(LEN=100) :: par_file, tmp_log_file
 
-      problem_name = 'aaa'
-      run_id  = 'aaa'
-      d0      = 1.0
-      p0      = 1.e-3
-      lamx    = 0.0
-      lamy    = 0.0
-      lamz    = 0.0
-      amp     = 0.0
+      ! namelist default parameter values
+      problem_name = 'Jeans oscillations'  !< The default problem name
+      run_id       = '_'                   !< Auxiliary run identifier
+      d0           = 1.0                   !< Average density of the medium (density bias required for correct EOS evaluation)
+      p0           = 1.e-3                 !< Average pressure of the medium (for calculating sound speed ot temperature)
+      ix           = 2                     !< Number of perturbation waves in the x direction
+      iy           = 0                     !< Number of perturbation waves in the y direction
+      iz           = 0                     !< Number of perturbation waves in the z direction
+      amp          = 0.0                   !< Perturbation relative amplitude
+      mode         = 0                     !< Variant of the test. 0: cos(kx *x + ky*y + kz*z), 1: cos(kx *x) * cos(ky*y) * cos(kz*z)
 
       if(proc == 0) then
          par_file = trim(cwd)//'/problem.par'
@@ -73,7 +78,6 @@ contains
          close(3)
       endif
 
-
       if(proc == 0) then
 
          cbuff(1) =  problem_name
@@ -81,11 +85,12 @@ contains
 
          rbuff(1) = d0
          rbuff(2) = p0
-         rbuff(3) = lamx
-         rbuff(4) = lamy
-         rbuff(5) = lamz
-         rbuff(6) = amp
+         rbuff(3) = amp
 
+         ibuff(1) = ix
+         ibuff(2) = iy
+         ibuff(3) = iz
+         ibuff(4) = mode
 
          call MPI_BCAST(cbuff, 32*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
          call MPI_BCAST(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
@@ -102,32 +107,57 @@ contains
 
          d0           = rbuff(1)
          p0           = rbuff(2)
-         lamx         = rbuff(3)
-         lamy         = rbuff(4)
-         lamz         = rbuff(5)
-         amp          = rbuff(6)
+         amp          = rbuff(3)
+
+         ix           = ibuff(1)
+         iy           = ibuff(2)
+         iz           = ibuff(3)
+         mode         = ibuff(4)
 
       endif
+
+      if (mode < 0 .or. mode > 1)     call die("[initproblem:read_problem_par] Invalid mode.")
+      if (d0 < 0. .or. abs(amp) > 1.) call die("[initproblem:read_problem_par] Negative average density or amplitude too high.")
+      if (p0 < 0.)                    call die("[initproblem:read_problem_par] Negative average pressure.")
+      if (ix<0 .or. iy<0 .or. iz<0 .or. amp<0) &
+           write(*,'(a,g12.4,a,3i6,a)')        "[initproblem:read_problem_par] Warning: suspicious values for some parameters were detected: amp=", &
+           amp," (ix iy iz) = (", ix, iy, iz, ")."
+
+      kx = 2. * pi * ix / (xmax - xmin)
+      ky = 2. * pi * iy / (ymax - ymin)
+      kz = 2. * pi * iz / (zmax - zmin)
+      if (mode == 1) then
+         kx = kx / 2.
+         ky = ky / 2.
+         kz = kz / 2.
+      end if
 
    end subroutine read_problem_par
 
 !-----------------------------------------------------------------------------
 
    subroutine init_prob
+
       use mpisetup, only : proc
-      use arrays, only : u,b
-      use constants, only: fpiG,dpi,pi,newtong
-      use grid, only : x,y,z,nx,ny,nz
-      use initionized, only : gamma_ion, idni, imxi, imyi, imzi, ieni
+      use arrays, only : u, b
+      use constants, only: fpiG, pi, newtong
+      use grid, only : x, y, z, nx, ny, nz, xmin, ymin, zmin
+      use initionized, only : gamma_ion, idni, imxi, imzi, ieni
+
       implicit none
 
-      integer :: i,j,k
-      real :: xi,yj,zk,kn,kx,ky,kz,Lbox,Tamp,pres,Tamp_rounded, Tamp_aux
-      real :: cs0,omg,kJ
+      integer :: i, j, k
+      real    :: xi, yj, zk, kn, Lbox, Tamp, pres, Tamp_rounded, Tamp_aux
+      real    :: cs0, omg, omg2, kJ
 
-      kx = dpi/lamx
-      ky = dpi/lamy
-      kz = dpi/lamz
+      cs0  = sqrt(gamma_ion * p0 / d0)
+      kn   = sqrt(kx**2 + ky**2 + kz**2)
+      omg2 = cs0**2 * kn**2 - fpiG * d0
+      omg  = sqrt(abs(omg2))
+      kJ   = sqrt(fpiG * d0) / cs0
+      Lbox = 0.5 * sqrt(pi * gamma_ion * p0 / newtong / d0**2)
+      Tamp = (d0 * amp**2 * omg2 * Lbox**2)/(8.0 * kn**2)
+      if (mode == 1) Tamp = Tamp / 4.
 
       if (proc == 0) then
          write(*,*) 'Unperturbed adiabatic sound speed = ', cs0
@@ -149,20 +179,29 @@ contains
 ! Uniform equilibrium state
 
       do k = 1,nz
-         zk = z(k)
+         zk = z(k)-zmin
          do j = 1,ny
-            yj = y(j)
+            yj = y(j)-ymin
             do i = 1,nx
-               xi = x(i)
-               u(idni,i,j,k)   = d0 * (1.d0 + amp* dcos(kx*xi+ky*yj+kz*zk))
-               pres            = p0 * (1.d0 + gamma_ion*amp*dcos(kx*xi+ky*yj+kz*zk))
+               xi = x(i)-xmin
+               select case (mode)
+               case (0)
+                  u(idni,i,j,k)   = d0 * (1.d0 +             amp * dsin(kx*xi + ky*yj + kz*zk))
+                  pres            = p0 * (1.d0 + gamma_ion * amp * dsin(kx*xi + ky*yj + kz*zk))
+               case (1)
+                  u(idni,i,j,k)   = d0 * (1.d0 +             amp * dsin(kx*xi) * dsin(ky*yj) * dsin(kz*zk))
+                  pres            = p0 * (1.d0 + gamma_ion * amp * dsin(kx*xi) * dsin(ky*yj) * dsin(kz*zk))
+               case default ! should not happen
+                  u(idni,i,j,k)   = d0
+                  pres            = p0
+               end select
 
                u(imxi:imzi,i,j,k) = 0.0
 #ifndef ISO
                u(ieni,i,j,k)      = pres/(gamma_ion-1.0) + 0.5*sum(u(imxi:imzi,i,j,k)**2,1) / u(idni,i,j,k)
 
-               b(:,i,j,k)      = 0.0
-               u(ieni,i,j,k)   = u(ieni,i,j,k) + 0.5*sum(b(:,i,j,k)**2,1)
+               b(:,i,j,k)         = 0.0
+               u(ieni,i,j,k)      = u(ieni,i,j,k) + 0.5*sum(b(:,i,j,k)**2,1)
 #endif /* ISO */
         enddo
       enddo
@@ -176,28 +215,27 @@ contains
       write(*,'(a,/)') 'to verify results'
 
       open(137,file="verify.gpl",status="unknown")
-         write(137,*) "set sample 1000"
-         write(137,*) "set term png #font luximr"
-#ifdef SELF_GRAV
-         write(137,*) "set output 'jeans-fft.png'"
-         write(137,*) 'se tit "Jeans oscillations (FFT)"'
+         write(137,'(a)') "set sample 1000"
+         write(137,'(a)') "set term png #font luximr"
+#ifdef MULTIGRID
+         write(137,'(a)') "set output 'jeans-mg.png'"
+         write(137,'(a)') 'set title "Jeans oscillations (multigrid)"'
 #else
-         write(137,*) "set output 'jeans-mg.png'"
-         write(137,*) 'se tit "Jeans oscillations (multigrid)"'
+         write(137,'(a)') "set output 'jeans-fft.png'"
+         write(137,'(a)') 'set title "Jeans oscillations (FFT)"'
 #endif
-         write(137,*) "a = ", Tamp
-         write(137,*) "b = ", 2.0*omg
-         write(137,*) "L = ", Lbox
-         write(137,*) "T = 2*pi/b"
-         write(137,*) "y(x) = a *(1-cos(b*x))"
-         write(137,'(2(a,/))') 'se xla "time [periods]"', 'se yla "E_int"'
-         write(137,*) 'se ytics ',Tamp_rounded
-         write(137,'(3(a,/))') 'se mytics 2', 'se xtics 1', 'se mxtics 2'
-         write(137,*) 'plot [0:int(1./T)][0:',2*Tamp_rounded,'] "jeans_ts1_000.tsl" u ($2/T):($11/L) w p t "calculated", "" u ($2/T):($11/L) smoo cspl t "" w l 1, y(x*T) t "analytical"'
+         write(137,'(a,g13.5)') "a = ", Tamp
+         write(137,'(a,g13.5)') "b = ", 2.0*omg
+         write(137,'(a,g13.5)') "L = ", Lbox
+         write(137,'(a,g13.5)') "T = 2*pi/b"
+         write(137,'(a,g13.5)') "y(x) = a *(1-cos(b*x))"
+         write(137,'(a,/,a)') 'set xlabel "time [periods]"', 'set ylabel "E_int"'
+         write(137,'(a)') "set key left Left reverse bottom"
+         write(137,'(3(a,/),a,g10.2)') 'set xtics 1', 'set mxtics 2', 'set mytics 2', 'set ytics ',Tamp_rounded
+         write(137,'(2(a,g10.2),a)') 'plot [0:int(1./T)][',Tamp_rounded/(-2.),':',2*Tamp_rounded,'] "jeans_ts1_000.tsl" u ($2/T):($11/L) w p t "calculated", "" u ($2/T):($11/L) smoo cspl t "" w l 1, y(x*T) t "analytical", "" u ($2/T):(10*(y($2)-$11/L)) t "10 * difference" w lp, 0 t "" w l 0'
       close(137)
     endif
     return
   end subroutine init_prob
 
 end module initproblem
-
