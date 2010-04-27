@@ -42,20 +42,20 @@ module sourcecosmicrays
 
   subroutine src_crn(uu,n, decrn)
 
-    use constants,       only : small
-    use fluidindex,      only : nvar, iarr_all_crn
+    use constants,     only: small
+    use fluidindex,    only: nvar, iarr_all_crn
 #ifdef IONIZED
-    use initionized,     only : idni
+    use initionized,   only: idni
 #endif /* IONIZED */
 #ifdef NEUTRAL
-    use initneutral,     only : idnn
+    use initneutral,   only: idnn
 #endif /* NEUTRAL */
-
-    use crcomposition,   only : icr_Be10, icr_Be9, icr_C12, icr_Li7, icr_N14, icr_O16, &
-      sigma_c12_be10, sigma_c12_be9, sigma_c12_li7, sigma_n14_li7, sigma_o16_be10, sigma_o16_be9, sigma_o16_li7, &
-      tau_Be10
+    use crcomposition, only: icr_Be10, icr_Be9, icr_C12, icr_Li7, icr_N14, icr_O16, &
+         &                   sigma_c12_be10, sigma_c12_be9, sigma_c12_li7, sigma_n14_li7, &
+         &                   sigma_o16_be10, sigma_o16_be9, sigma_o16_li7, tau_Be10
 
     implicit none
+
     integer, intent(in) :: n
 
 ! locals

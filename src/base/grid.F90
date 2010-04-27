@@ -35,8 +35,9 @@
 !! \copydetails grid::init_grid
 !<
 module grid
-   use types, only : grid_container
+
    implicit none
+
    real    :: dx                             !< length of the %grid cell in x-direction
    real    :: dy                             !< length of the %grid cell in y-direction
    real    :: dz                             !< length of the %grid cell in z-direction
@@ -122,9 +123,12 @@ module grid
 !! \n \n
 !<
    subroutine set_container_grid(cgrid)
+
       use types, only : grid_container
-      use errh, only : namelist_errh, die
+      use errh, only  : namelist_errh, die
+
       implicit none
+
       type(grid_container), intent(out) :: cgrid
 
       cgrid%dx = dx; cgrid%dy = dy; cgrid%dz = dz
@@ -157,11 +161,14 @@ module grid
    end subroutine set_container_grid
 
    subroutine init_grid(cgrid)
+
       use types,     only : grid_container
       use mpisetup,  only : ierr, ibuff, rbuff, MPI_INTEGER, MPI_DOUBLE_PRECISION, proc, cwd, &
-         buffer_dim, pxsize, pysize, pzsize, comm
+           &                buffer_dim, pxsize, pysize, pzsize, comm
       use errh,      only : namelist_errh, die
+
       implicit none
+
       type(grid_container), intent(out) :: cgrid
       integer :: ierrh
       character(LEN=100) :: par_file, tmp_log_file
@@ -295,9 +302,11 @@ module grid
 !! \brief Routine that computes domain maximum and minimum of coordinates, lengths of cells and coordinates of zone centers and left/right zone boundaries.
 !<
    subroutine grid_xyz
+
       use mpisetup, only : psize, pcoords
 
       implicit none
+
       integer :: i,j,k
 
       maxxyz = max(size(x),size(y))
@@ -393,6 +402,7 @@ module grid
 !! \brief Routines that deallocates directional meshes.
 !<
    subroutine cleanup_grid
+
       implicit none
 
       if(allocated(dl)) deallocate(dl)

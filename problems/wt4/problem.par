@@ -109,5 +109,3 @@
     stdout       = .true.
     norm_tol     = 1.e-6
  /
-
-

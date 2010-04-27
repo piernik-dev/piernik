@@ -72,6 +72,7 @@ module arrays
 !<
 
    subroutine init_arrays(nx,ny,nz,nvar)
+
       use fluidtypes, only: var_numbers
 
       implicit none

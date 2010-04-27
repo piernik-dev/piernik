@@ -103,7 +103,6 @@ module fluidindex
 !<
     subroutine fluid_index
 
-
 #ifdef IONIZED
       use initionized,    only : ionized_index, selfgrav_ion
       use initionized,    only : iarr_ion_swpx, iarr_ion_swpy, iarr_ion_swpz

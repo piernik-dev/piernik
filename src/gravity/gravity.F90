@@ -291,10 +291,10 @@ module gravity
 #if defined (GRAV_PTMASSPURE) || defined (GRAV_PTMASS) || defined (GRAV_PTFLAT) || defined (GRAV_PTMASSSTIFF)
       integer :: i, j, k
       real    :: r_smooth2, gm, gmr, z2, yz2
-#endif /* GRAV_PTMASSPURE || GRAV_PTMASS || GRAV_PTFLAT */
+#endif /* GRAV_PTMASSPURE || GRAV_PTMASS || GRAV_PTFLAT || GRAV_PTMASSSTIFF */
 #if defined (GRAV_PTMASSPURE) || defined (GRAV_PTMASS) || defined (GRAV_PTMASSSTIFF)
       real    :: r2
-#endif /* GRAV_PTMASSPURE || GRAV_PTMASS */
+#endif /* GRAV_PTMASSPURE || GRAV_PTMASS || GRAV_PTMASSSTIFF */
 #if defined (GRAV_PTFLAT) || defined (GRAV_PTMASS)
       real    :: rc, fr
 #endif /* GRAV_PTFLAT || GRAV_PTMASS */
@@ -525,12 +525,11 @@ module gravity
 !! \brief Routine that uses %gravity acceleration given in grav_accel to compute values of gravitational potential filling in gp array
 !<
    subroutine grav_accel2pot
-      use mpisetup, only : pxsize,pysize,pzsize,pcoords,proc,nproc,ndims
-      use mpisetup, only : comm,comm3d,err,ierr,mpi_double_precision
-      use mpisetup, only : mpifind
-      use arrays, only   : gp
-      use grid, only     : dl,xdim,ydim,zdim,is,ie,js,je,ks,ke
-      use grid, only     : nb,nx,ny,nz,zr,yr,xr
+
+      use mpisetup, only : pxsize, pysize, pzsize, pcoords, proc, nproc, ndims &
+           &               comm, comm3d, err, ierr, MPI_DOUBLE_PRECISION, mpifind
+      use arrays,   only : gp
+      use grid,     only : dl, xdim, ydim, zdim, is, ie, js, je, ks, ke, nb, nx, ny, nz, zr, yr, xr
 
       implicit none
       integer               :: i, j, k, ip, pgpmax

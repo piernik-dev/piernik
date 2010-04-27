@@ -59,7 +59,6 @@ module types
       integer :: proc
    end type value
 
-
    type :: grid_container
       real    :: dx, dy, dz, dxmn, dvol
       integer :: nxd, nyd, nzd, nb

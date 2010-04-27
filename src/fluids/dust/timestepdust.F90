@@ -41,7 +41,8 @@ module timestepdust
 contains
 
   subroutine timestep_dst
-   use mpisetup,    only : ierr, comm, cfl, MPI_MAX, MPI_MIN, MPI_DOUBLE_PRECISION
+
+    use mpisetup,    only : ierr, comm, cfl, MPI_MAX, MPI_MIN, MPI_DOUBLE_PRECISION
     use constants,   only : big
     use grid,        only : dx,dy,dz,nb,ks,ke,is,ie,js,je,nxd,nyd,nzd
     use arrays,      only : u,b

@@ -74,10 +74,9 @@ module fluxionized
 
     use constants,       only : small
     use fluidindex,      only : nmag
-    use fluidindex,      only : ibx,iby,ibz
-    use fluidindex,      only : idn,imx,imy,imz,ien
+    use fluidindex,      only : ibx, iby, ibz
+    use fluidindex,      only : idn, imx, imy, imz, ien
     use fluidindex,      only : nvar
-
     use initionized,     only : gamma_ion, cs_iso_ion2
     use timestepionized, only : c_ion
     use errh,            only : die

@@ -32,9 +32,7 @@
 !!
 !=====================================================================
 !
-!>
-!! \brief (KK)
-!<
+
 !>
 !! \brief [DW] Module containing all main routines  responsible for data output
 !!
