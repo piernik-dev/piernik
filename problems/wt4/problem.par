@@ -1,0 +1,100 @@
+ $DOMAIN_SIZES
+    nxd = 512
+    nyd = 512
+    nzd = 52
+ /
+ $MPI_BLOCKS
+    pxsize = 1
+    pysize = 1
+    pzsize = 1
+ /
+
+ $RESTART_CONTROL
+    restart  = 'none'
+    new_id   = ''
+    nrestart = 0
+ /
+
+ $END_CONTROL
+    tend   = 10.0
+    nend   = 1
+ /
+
+ $OUTPUT_CONTROL
+    ix      = 0
+    iy      = 0
+    iz      = 0
+    dt_hdf  = 0.5
+    dt_res  = 2.0
+    dt_plt  = 0.0
+    dt_log  = 0.001
+    dt_tsl  = 0.001
+    vars(1) = 'dens'
+    vars(2) = 'gpot'
+    domain  = 'phys_domain'
+ /
+
+ $BOUNDARIES
+    bnd_xl = 'out'
+    bnd_xr = 'out'
+    bnd_yl = 'out'
+    bnd_yr = 'out'
+    bnd_zl = 'out'
+    bnd_zr = 'out'
+ /
+
+ $DOMAIN_LIMITS
+    xmin   = -4.
+    xmax   =  4.
+    ymin   = -4.
+    ymax   =  4.
+    zmin   = -0.4
+    zmax   =  0.4
+ /
+
+ $FLUID_IONIZED
+    gamma_ion  = 1.0
+    selfgrav_ion = .true.
+ /
+
+ $FLUID_NEUTRAL
+    gamma_neu = 1.67
+    selfgrav_neu = .false.
+ /
+
+ $NUMERICAL_SETUP
+    cfl    = 0.7
+    smalld = 1.e-9
+    smallei= 1.e-10
+ /
+
+ $GRAVITY
+    ptmass = 10.0
+    r_smooth = 0.0025   ! 0.01 * 0.25
+    ptm_x  = 0.0
+    ptm_y  = 0.0
+    ptm_z  = 0.0
+ /
+
+ $THERMAL
+ /
+
+ $RESISTIVITY
+ /
+
+ $PROBLEM_CONTROL
+    problem_name ='wengen4'
+    run_id =  'tst'
+ /
+
+ $MULTIGRID_SOLVER
+    level_max = 3
+    stdout    = .true.
+    norm_tol  = 1.e-6
+    nsmool    = 4
+    ord_prolong   = -2
+    grav_bnd_str  = "isolated"
+    dirty_debug = .false.
+ /
+
+
