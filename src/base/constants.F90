@@ -77,6 +77,25 @@ module constants
    real, parameter :: fpi        = 4.*pi                 !< four Pi
    real, parameter :: e          = 2.718281828459045235  !< Napier's constant (base of Natural logarithm)
 
+   !< First twenty six primes should be enough for everyone ;-)
+   integer, parameter, dimension(26) :: some_primes = [ 2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97, 101 ]
+
+#define AU_CM      1.49597870e13
+! 1 pc/1 AU = 1./atan(pi/180. * 1./3600.)
+#define PC_AU      206264.806248712
+#define PC_CM      ((AU_CM)*(PC_AU))
+
+#define MSUN_G     1.9891e33
+#define MJUP_G     1.8986e30
+
+#define DAY_S      24.0*3600.0
+! sidereal year:
+#define YR_DAY     365.256363051
+#define YR_S       ((YR_DAY)*(DAY_S))
+
+#define NEWTON_CGS 6.67428e-8
+#define kB_CGS     1.38065e-16
+
 #ifdef PSM
 ! PSM  uses: length --> pc,     mass --> Msun,        time --> myr,        miu0 --> 4*pi,    temperature --> kelvin
 ! length units:
@@ -127,15 +146,15 @@ module constants
 #elif defined (KSM)
 ! KSM  uses: length --> kpc,     mass --> Msun,        time --> myr,        miu0 --> 4*pi,    temperature --> kelvin
 ! length units:
-   real, parameter :: cm =         1.0/3.0856e18/1.e3    !< centimetre, length unit
-   real, parameter :: metr =       1.0e2*cm              !< metre, length unit
    real, parameter :: pc =         1.0e-3                !< parsec, length unit
+   real, parameter :: cm =         pc/PC_CM              !< centimetre, length unit
+   real, parameter :: metr =       1.0e2*cm              !< metre, length unit
 ! time units:
-   real, parameter :: sek =        1.0e-6/365.2652/24.0/3600.0       !< second, time unit
    real, parameter :: year =       1.0e-6                !< year, time unit
+   real, parameter :: sek =        year/YR_S             !< second, time unit
    real, parameter :: myr =        1.0                   !< megayear, time unit
 ! mass units:
-   real, parameter :: gram =       1.0/1.989e33          !< gram, mass unit
+   real, parameter :: gram =       1.0/MSUN_G            !< gram, mass unit
    real, parameter :: kg =         1.0e3*gram            !< kilogram, mass unit
    real, parameter :: Msun =       1.0                   !< mass of Sun
 
@@ -237,10 +256,14 @@ module constants
    real, parameter :: kboltz     = 1.3806504e-16*erg/kelvin !< Boltzmann constant
    real, parameter :: gasRconst  = 8.314472e7*erg/kelvin    !< gas constant R =  8.314472e7*erg/kelvin/mol
    real, parameter :: clight     = 2.997924562e10*cm/sek    !< speed of light in vacuum
-
+#ifdef __PGI__
+ ! BEWARE: pgf95 does not accept sqrt intrinsic here. The __PGI__ macro has to be defined manually, e.g. in appropriate compiler.in file
+ !   real :: Gs, mGs, Tesla
+#else
    real, parameter :: Gs         = sqrt(4.*pi*gram/cm)/sek  !< 1 Gs (cgs magnetic induction unit)
    real, parameter :: mGs        = Gs*1.e-6                 !< 1 microgauss
    real, parameter :: Tesla      = 1.e4*Gs                  !< 1 T (SI magnetic induction unit)
+#endif
 #ifdef PGM
    real, parameter :: newtong    = G_one                    !< Newtonian constant of gravitation (equal to G_one while PGM defined)
 #else /* PGM */

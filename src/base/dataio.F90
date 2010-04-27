@@ -32,7 +32,9 @@
 !!
 !=====================================================================
 !
-
+!>
+!! \brief (KK)
+!<
 !>
 !! \brief [DW] Module containing all main routines  responsible for data output
 !!
@@ -51,27 +53,23 @@ module dataio
 !<
 ! Written by G. Kowal
 ! Modified for this code and extended by M.Hanasz
-   use types
+   use types,         only : hdf
+   use dataio_public, only : tend, nend, wend, log_file, log_lun, nhdf, nstep_start
 
    implicit none
 
    private
-   public :: check_log, check_tsl, tend, log_file, log_lun, nhdf, &
-      nend, write_data, cleanup_dataio, init_dataio, user_msg_handler, &
-      nstep_start
+   public :: check_log, check_tsl, write_data, write_crashed, cleanup_dataio, init_dataio, user_msg_handler, nrestart
 
    type(hdf) :: chdf
 
-   integer               :: nend                   !< step number to end simulation
    integer               :: istep                  !< current number of substep (related to integration order)
-   integer               :: nstep_start            !< number of start timestep
-   real                  :: tend                   !< simulation time to end
 
    integer, parameter    :: nvarsmx = 16           !< maximum number of variables to dump in hdf files
    character(len=3)      :: new_id                 !< three character string to change run_id when restarting simulation (e.g. to avoid overwriting of the output from the previous (pre-restart) simulation; if new_id = '' then run_id is still used)
    character(len=16)     :: restart                !< choise of restart file: if restart = 'last': automatic choise of the last restart file regardless of "nrestart" value; if smth else is set: "nrestart" value is fixing
    character(len=16)     :: domain                 !< string to choose if boundaries have to be dumped in hdf files
-   character(len=16)     :: mag_center             !< choise to dump magnetic fields values from cell centers or not (if not then values from cell borders)
+   character(len=16)     :: mag_center             !< choice to dump magnetic fields values from cell centers or not (if not then values from cell borders)
    integer               :: nrestart               !< number of restart file to be read while restart is not set to ''
    integer               :: resdel                 !< number of recent restart dumps which should be saved; each n-resdel-1 restart file is supposed to be deleted while writing n restart file
    real                  :: dt_hdf                 !< time between successive hdf dumps
@@ -91,8 +89,6 @@ module dataio
    character(len=4), dimension(nvarsmx) :: vars    !< array of 4-character strings standing for variables to dump in hdf files
 
    integer               :: tsl_lun = 2            !< luncher for timeslice file
-   integer               :: log_lun = 3            !< luncher for log file
-   integer               :: nhdf                   !< current number of hdf file
    integer               :: nres                   !< current number of restart file
    integer               :: ntsl                   !< current number of timeslice file
    integer               :: nlog                   !< current number of log file
@@ -102,7 +98,6 @@ module dataio
    integer               :: nres_start             !< number of restart file for the first restart dump in simulation run
    real                  :: t_start                !< time in simulation of start simulation run
    real                  :: last_hdf_time          !< time in simulation of the last resent hdf file dump
-   character(len=128)    :: log_file               !< path to the current log file
    character(len=2)      :: pc1                    !< string of two characters to mark current block in x-direction in hdf4 files
    character(len=2)      :: pc2                    !< string of two characters to mark current block in y-direction in hdf4 files
    character(len=2)      :: pc3                    !< string of two characters to mark current block in z-direction in hdf4 files
@@ -111,13 +106,13 @@ module dataio
    logical               :: wait                   !< logical value to have a break in simulation (currently not used)
 
    integer               :: nchar                  !< number of characters in a user/system message
-   character             :: msg*16                 !< string of characters - content of a user/system message
+   character(len=16)     :: msg                    !< string of characters - content of a user/system message
    real                  :: msg_param              !< parameter changed by a user/system message
 
-   character             :: hostfull*(80)
-   character             :: host*8
-   character             :: fhost*10
-   character             :: fpid*10
+   character(len=80)     :: hostfull
+   character(len=8)      :: host
+   character(len=10)     :: fhost
+   character(len=10)     :: fpid
    integer               :: pid
    integer               :: uid
    integer               :: ihost
@@ -147,9 +142,9 @@ module dataio
    real                  :: encr_min               !< minimum value of current cosmic ray energy density distribution
    real                  :: encr_max               !< maximum value of current cosmic ray energy density distribution
 #endif /* COSM_RAYS */
-    character(len=128) :: filename                 !< string of characters indicating currently used file
+   character(len=128)    :: filename               !< string of characters indicating currently used file
 
-   namelist /END_CONTROL/ nend, tend
+   namelist /END_CONTROL/ nend, tend, wend
    namelist /RESTART_CONTROL/ restart, new_id, nrestart, resdel
    namelist /OUTPUT_CONTROL/ dt_hdf, dt_res, dt_tsl, dt_log, dt_plt, ix, iy, iz, &
                              domain, vars, mag_center, &
@@ -184,28 +179,28 @@ module dataio
       end subroutine check_tsl
 
      subroutine set_container_chdf(chdf)
-       use mpisetup, only : nstep
-       use types
+       use mpisetup,    only: nstep
+       use types,       only: hdf
        implicit none
        type(hdf), intent(out) :: chdf
 
-       chdf%nstep = nstep
-       chdf%nhdf  = nhdf
-       chdf%ntsl  = ntsl
-       chdf%nres  = nres
-       chdf%nlog  = nlog
-       chdf%step_hdf = step_hdf
-       chdf%log_lun = log_lun
-       chdf%last_hdf_time = last_hdf_time
-       chdf%log_file = log_file
-       chdf%nrestart = nrestart
-       chdf%domain  = domain
+       chdf%nstep          = nstep
+       chdf%nhdf           = nhdf
+       chdf%ntsl           = ntsl
+       chdf%nres           = nres
+       chdf%nlog           = nlog
+       chdf%step_hdf       = step_hdf
+       chdf%log_lun        = log_lun
+       chdf%last_hdf_time  = last_hdf_time
+       chdf%log_file       = log_file
+       chdf%nrestart       = nrestart
+       chdf%domain         = domain
 
      end subroutine set_container_chdf
 
      subroutine get_container(chdf)
        use mpisetup, only : nstep
-       use types
+       use types, only : hdf
        implicit none
        type(hdf), intent(in) :: chdf
 
@@ -278,17 +273,18 @@ module dataio
    subroutine init_dataio
       use mpisetup, only : ibuff, rbuff, cbuff, proc, MPI_CHARACTER, &
          MPI_DOUBLE_PRECISION, MPI_INTEGER, comm, ierr, buffer_dim, cwd, &
-         psize, t, nstep
+         psize, t, nstep, cbuff_len
       use errh,            only : namelist_errh
       use initproblem,     only : problem_name,run_id
       use version,         only : nenv,env, init_version
       use fluidboundaries, only : all_fluid_boundaries
-      use fluidindex
+      use timer,           only : time_left
 #ifdef MAGNETIC
       use magboundaries,   only : all_mag_boundaries
 #endif /* MAGNETIC */
-      use dataio_hdf5,     only : init_hdf5, read_restart_hdf5
+      use dataio_hdf5,     only : init_hdf5, read_restart_hdf5, maxparfilelines, parfile, parfilelines
       implicit none
+      logical              :: tn
       integer              :: ierrh
       integer(kind=1)      :: getpid
       integer(kind=1)      :: hostnm
@@ -297,7 +293,7 @@ module dataio
       character(LEN=160)   :: system_command
       character(LEN=100)   :: par_file, tmp_log_file
 
-      restart = 'last'   ! 'last': automatic choise of the last restart file
+      restart = 'last'   ! 'last': automatic choice of the last restart file
                          ! regardless of "nrestart" value;
                          ! if smth else is set: "nrestart" value is fixing
       new_id  = ''
@@ -335,6 +331,7 @@ module dataio
 
       nend = 1
       tend = -1.0
+      wend = 99999999999.0
 
       if(psize(1) .gt. 1) pc1 = '0x'
       if(psize(2) .gt. 1) pc2 = '0x'
@@ -350,6 +347,19 @@ module dataio
       if(proc .eq. 0) then
          par_file = trim(cwd)//'/problem.par'
          tmp_log_file = trim(cwd)//'/tmp.log'
+
+         open(1,file=par_file)
+         ierrh = 0
+         do while (ierrh == 0 .and. parfilelines<maxparfilelines)
+            read (unit=1, fmt='(a)', iostat=ierrh) parfile(parfilelines+1)
+            if (ierrh == 0) then
+               parfilelines = parfilelines + 1
+               i = len_trim(parfile(parfilelines))
+               if (i < len(parfile(parfilelines))) parfile(parfilelines)(i+1:i+1) = achar(0)
+            end if
+         end do
+         close(1)
+
          open(1,file=par_file)
          read(unit=1,nml=OUTPUT_CONTROL,iostat=ierrh)
          call namelist_errh(ierrh,'OUTPUT_CONTROL')
@@ -367,10 +377,11 @@ module dataio
          write(unit=3,nml=RESTART_CONTROL)
          close(3)
 
-!  namelist /END_CONTROL/ nend, tend
+!  namelist /END_CONTROL/ nend, tend, wend
          ibuff(1)  = nend
 
          rbuff(1)  = tend
+         rbuff(2)  = wend
 
 !  namelist /RESTART_CONTROL/ restart, new_id, nrestart, resdel
 
@@ -404,23 +415,24 @@ module dataio
          enddo
 
          cbuff(90) = mag_center
-         cbuff(91) = user_message_file(1:32)
-         cbuff(92) = system_message_file(1:32)
+         cbuff(91) = user_message_file(1:cbuff_len)
+         cbuff(92) = system_message_file(1:cbuff_len)
 
-         call MPI_BCAST(cbuff, 32*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
+         call MPI_BCAST(cbuff, cbuff_len*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
          call MPI_BCAST(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
          call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
       else
 
-         call MPI_BCAST(cbuff, 32*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
+         call MPI_BCAST(cbuff, cbuff_len*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
          call MPI_BCAST(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
          call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
-!  namelist /END_CONTROL/ nend, tend
+!  namelist /END_CONTROL/ nend, tend, wend
          nend                = ibuff(1)
 
          tend                = rbuff(1)
+         wend                = rbuff(2)
 !  namelist /RESTART_CONTROL/ restart, new_id, nrestart, resdel
 
          restart             = trim(cbuff(20))
@@ -458,6 +470,8 @@ module dataio
 
       endif
 
+      tn = time_left(wend)
+
       last_hdf_time = -dt_hdf
 
       call init_hdf5(vars,ix,iy,iz,dt_plt)
@@ -465,48 +479,31 @@ module dataio
       if(proc == 0 .and. restart .eq. 'last') call find_last_restart(nrestart)
       call MPI_BARRIER(comm,ierr)
       call MPI_BCAST(nrestart, 1, MPI_INTEGER, 0, comm, ierr)
-      if (nrestart == 0) then
-         if (proc == 0) then
-            write (log_file,'(a,a1,a3,a1,i3.3,a4)') &
-                 trim(problem_name),'_', run_id,'_',nrestart,'.log'
-            tmp_log_file = trim(cwd)//'/tmp.log'
-            log_file = trim(cwd)//'/'//trim(log_file)
-            system_command = 'mv '//trim(tmp_log_file)//' '//trim(log_file)
-            system_status = SYSTEM(system_command)
-            call init_version
-            open(3, file=log_file, position='append')
+
+      call init_version
+      if (proc == 0) then
+         write (log_file,'(a,a1,a3,a1,i3.3,a4)') &
+            trim(problem_name),'_', run_id,'_',nrestart,'.log'
+         tmp_log_file = trim(cwd)//'/tmp.log'
+         log_file = trim(cwd)//'/'//log_file
+         system_command = 'mv '//trim(tmp_log_file)//' '//trim(log_file)
+         system_status = SYSTEM(system_command)
+         open(3, file=log_file, position='append')
+         write(3,'(a,/)')"###############     Source Configuration     ###############"
             do i=1,nenv
                write(3,*) trim(env(i))
             enddo
-            close(3)
-         endif
-         call set_container_chdf(chdf); chdf%nres = nrestart
-         call write_data(output='all')
+         close(3)
+      endif
+      call set_container_chdf(chdf); chdf%nres = nrestart
 
-      else
-         if (proc == 0) then
-            write (log_file,'(a,a1,a3,a1,i3.3,a4)') &
-               trim(problem_name),'_', run_id,'_',nrestart,'.log'
-            tmp_log_file = trim(cwd)//'/tmp.log'
-            log_file = trim(cwd)//'/'//log_file
-            system_command = 'mv '//trim(tmp_log_file)//' '//trim(log_file)
-            system_status = SYSTEM(system_command)
-         endif
-         call set_container_chdf(chdf); chdf%nres = nrestart
+      if (nrestart /= 0) then
          call read_restart_hdf5(chdf)
          call get_container(chdf)
          nstep_start = nstep
          t_start     = t
          nres_start  = nrestart
          nhdf_start  = nhdf-1
-         if(proc==0) then
-            call init_version
-            open(3, file=log_file, position='append')
-            do i=1,nenv
-               write(3,*) trim(env(i))
-            enddo
-            close(3)
-         endif
          if(new_id .ne. '') run_id=new_id
       endif
       call MPI_BCAST(log_file, 32, MPI_CHARACTER, 0, comm, ierr)
@@ -519,7 +516,6 @@ module dataio
    end subroutine init_dataio
 
    subroutine cleanup_dataio
-
       use dataio_hdf5,     only : cleanup_hdf5
       implicit none
 
@@ -582,6 +578,31 @@ module dataio
 
 !---------------------------------------------------------------------
 !
+! Makes data dump on abnormal Piernik termination
+!
+!---------------------------------------------------------------------
+!
+   subroutine write_crashed(msg)
+
+      use errh,        only : die
+      use initproblem, only : problem_name
+
+      implicit none
+
+      character(len=*), intent(in) :: msg
+
+      ! force output for diagnostics
+      problem_name = "crash"
+      dt_hdf = tiny(1.0)
+      nres = 1
+      call write_data(output='end')
+
+      call die(msg)
+
+   end subroutine write_crashed
+
+!---------------------------------------------------------------------
+!
 ! controls data dumping
 !
 !---------------------------------------------------------------------
@@ -593,9 +614,8 @@ module dataio
       use initproblem, only : user_io_routine
 #endif /* USER_IO */
       use dataio_hdf5,     only : write_hdf5, write_restart_hdf5, write_plot
-
       implicit none
-      character  :: output*3
+      character(len=3)  :: output
 
 !- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -657,8 +677,12 @@ module dataio
 
 
    subroutine next_fluid_or_var(ifluid,ivar,nvar)
+#ifdef SN_SRC
+      use snsources, only : nsn
+#endif /* SN_SRC */
+
       implicit none
-      integer ifluid,ivar,nvar
+      integer :: ifluid,ivar,nvar
       if(ifluid .lt. nvar) then
          ifluid=ifluid+1
          ivar=1
@@ -677,9 +701,11 @@ module dataio
 
       implicit none
 
-      character*120 file_name
-      integer restart_number,nres
-      logical exist
+      integer, intent(out) :: restart_number
+
+      character(len=120) :: file_name
+      integer            :: nres
+      logical            :: exist
       character(len=128) :: file_name_base
 
       restart_number = 0
@@ -707,8 +733,8 @@ module dataio
 !---------------------------------------------------------------------
 !
    subroutine write_timeslice
-      use mpisetup, only : proc, comm3d, cwd, t, dt, ierr, mpi_real8, mpi_sum, smalld, nstep
-      use types
+      use types,           only : tsl_container
+      use mpisetup,        only : proc, comm3d, cwd, t, dt, ierr, mpi_real8, mpi_sum, smalld, nstep
       use fluidindex,      only : ibx,iby,ibz
       use fluidindex,      only : nvar,iarr_all_dn,iarr_all_mx,iarr_all_my,iarr_all_mz
       use grid,            only : dvol,dx,dy,dz,is,ie,js,je,ks,ke,x,y,z,nxd,nyd,nzd
@@ -723,6 +749,7 @@ module dataio
 #ifndef ISO
       use fluidindex,      only : iarr_all_en
 #endif /* ISO */
+
 #ifdef COSM_RAYS
       use fluidindex, only : iarr_all_crs
 #endif /* COSM_RAYS */
@@ -895,7 +922,7 @@ module dataio
       call write_log(tsl)
 
       if (proc == 0) then
-         write (tsl_lun, '(1x,i8,50(1x,1pe15.8))') &
+         write (tsl_lun, '(1x,i8,50(1x,es15.8))') &
                       nstep, &
                       t, dt, tot_mass, &
                       tot_momx, tot_momy, tot_momz, &
@@ -940,15 +967,17 @@ module dataio
 !
 ! writes timestep diagnostics to the logfile
 !
+! Quite costly routine due to extensive array searches
+!
 !---------------------------------------------------------------------
 !
    subroutine  write_log(tsl)
-      use types
       use fluidindex,         only : ibx, iby, ibz, nvar
       use arrays,             only : wa,u,b
-      use grid,               only   : dx,dy,dz,dxmn,nb,is,ie,js,je,ks,ke,nx,ny,nz
+      use grid,               only : dx,dy,dz,dxmn,nb,is,ie,js,je,ks,ke,nx,ny,nz
       use constants,          only : small, mH, kboltz, gasRconst
       use mpisetup,           only : smallei,cfl,t,dt, proc, mpifind, nstep
+      use types,              only : tsl_container, value
 #ifdef IONIZED
       use initionized,        only : gamma_ion, cs_iso_ion,cs_iso_ion2
       use initionized,        only : idni,imxi,imyi,imzi
@@ -971,8 +1000,11 @@ module dataio
       use fluidindex, only : iarr_all_crs
 #endif /* COSM_RAYS */
 #ifdef RESISTIVE
-      use resistivity
+      use resistivity,        only : dt_resist, eta_max
 #endif /* RESISTIVE */
+#ifdef ISO_LOCAL
+      use arrays,             only : cs_iso2_arr
+#endif /* ISO_LOCAL */
 
       implicit none
       type(tsl_container), optional :: tsl
@@ -1002,6 +1034,10 @@ module dataio
 #ifdef RESISTIVE
       type(value) :: etamax
 #endif /* RESISTIVE */
+
+#ifdef ISO_LOCAL
+ !      type(value) :: cs_iso2_max, cs_iso2_min
+#endif /* ISO_LOCAL */
 
 ! Timestep diagnostics
 #ifdef NEUTRAL
@@ -1140,6 +1176,30 @@ module dataio
 #endif /* MAGNETIC */
 
 #ifdef ISO
+#ifdef ISO_LOCAL
+      wa            = cs_iso2_arr(:,:,:)*u(idni,:,:,:)
+      prei_min%val  = minval(wa(is:ie,js:je,ks:ke))
+      prei_min%loc  = minloc(wa(is:ie,js:je,ks:ke)) + [nb, nb, nb]
+      call mpifind(prei_min%val, 'min', prei_min%loc, prei_min%proc)
+
+      prei_max%val  = maxval(wa(is:ie,js:je,ks:ke))
+      prei_max%loc  = maxloc(wa(is:ie,js:je,ks:ke)) + [nb, nb, nb]
+      call mpifind(prei_max%val, 'max', prei_max%loc, prei_max%proc)
+
+      csi_max%val   = maxval(cs_iso2_arr(is:ie,js:je,ks:ke))
+      csi_max%loc   = maxloc(cs_iso2_arr(is:ie,js:je,ks:ke)) + [nb, nb, nb]
+      call mpifind(csi_max%val, 'max', csi_max%loc, csi_max%proc)
+
+      wa            = hydro_mass / kboltz * cs_iso2_arr(:,:,:)
+      temi_min%val  = minval(wa(is:ie,js:je,ks:ke))
+      temi_min%loc  = minloc(wa(is:ie,js:je,ks:ke)) + [nb, nb, nb]
+      call mpifind(temi_min%val, 'min', temi_min%loc, temi_min%proc)
+
+      temi_max%val  = maxval(wa(is:ie,js:je,ks:ke))
+      temi_max%loc  = maxloc(wa(is:ie,js:je,ks:ke)) + [nb, nb, nb]
+      call mpifind(temi_max%val, 'max', temi_max%loc, temi_max%proc)
+
+#else /* ISO_LOCAL */
       prei_min%val  = cs_iso_ion2*deni_min%val
       prei_min%loc  = deni_min%loc
       prei_min%proc = deni_min%proc
@@ -1155,6 +1215,7 @@ module dataio
       temi_max%val  = mH / kboltz * gasRconst/gamma_ion * cs_iso_ion2
       temi_max%loc  = 0
       temi_max%proc = 0
+#endif /* ISO_LOCAL */
 #else /* ISO */
       wa(:,:,:) = (u(ieni,:,:,:) &                ! eint
                 - 0.5*((u(imxi,:,:,:)**2 +u(imyi,:,:,:)**2 &
@@ -1280,19 +1341,18 @@ module dataio
       if(proc == 0)  then
          if(.not.present(tsl)) then
             open(log_lun, file=log_file, position='append')
+            write(log_lun,'(a80)') '================================================================================'
 #ifdef IONIZED
             write(log_lun,771) 'min(dens)   ION  =', deni_min%val,  deni_min%proc,  deni_min%loc
             write(log_lun,771) 'max(dens)   ION  =', deni_max%val,  deni_max%proc,  deni_max%loc
-#ifndef ISO
             write(log_lun,771) 'min(temp)   ION  =', temi_min%val,  temi_min%proc,  temi_min%loc
             write(log_lun,771) 'max(temp)   ION  =', temi_max%val,  temi_max%proc,  temi_max%loc
-#endif /* ISO */
             write(log_lun,771) 'min(pres)   ION  =', prei_min%val,  prei_min%proc,  prei_min%loc
             write(log_lun,771) 'max(pres)   ION  =', prei_max%val,  prei_max%proc,  prei_max%loc
             write(log_lun,777) 'max(|vx|)   ION  =', vxi_max%val, 'dt=',cfl*dx/(vxi_max%val+small),   vxi_max%proc, vxi_max%loc
             write(log_lun,777) 'max(|vy|)   ION  =', vyi_max%val, 'dt=',cfl*dy/(vyi_max%val+small),   vyi_max%proc, vyi_max%loc
             write(log_lun,777) 'max(|vz|)   ION  =', vzi_max%val, 'dt=',cfl*dz/(vzi_max%val+small),   vzi_max%proc, vzi_max%loc
-            write(log_lun,777) 'max(c_s )   ION  =', csi_max%val, 'dt=',cfl*dxmn/(csi_max%val+small), csi_max%proc, csi_max%loc
+            write(log_lun,777) 'max(c_si)   ION  =', csi_max%val, 'dt=',cfl*dxmn/(csi_max%val+small), csi_max%proc, csi_max%loc
 #ifdef MAGNETIC
             write(log_lun,777) 'max(c_f)    ION  =', sqrt(csi_max%val**2+vai_max%val**2),&
                                       'dt=',cfl*dxmn/sqrt(csi_max%val**2+vai_max%val**2)
@@ -1301,7 +1361,7 @@ module dataio
             write(log_lun,771) 'max(|b|)    MAG  =', b_max%val,     b_max%proc,     b_max%loc
             write(log_lun,771) 'max(|divb|) MAG  =', divb_max%val,  divb_max%proc,  divb_max%loc
 #else /* MAGNETIC */
-            write(log_lun,777) 'max(c_s)    ION  =', sqrt(csi_max%val**2), 'dt=',cfl*dxmn/sqrt(csi_max%val**2)
+            if (csi_max%val > 0.) write(log_lun,777) 'max(c_s )   ION  =', sqrt(csi_max%val**2), 'dt=',cfl*dxmn/sqrt(csi_max%val**2)
 #endif /* MAGNETIC */
 #endif /* IONIZED */
 
@@ -1333,9 +1393,6 @@ module dataio
 #ifdef RESISTIVE
             write(log_lun,777) 'max(eta)    RES  =', etamax%val ,      'dt=',dt_resist, etamax%proc,  etamax%loc
 #endif /* RESISTIVE */
-
-            write(log_lun,'(a80)') '================================================================================'
-            write(log_lun,900) nstep,dt,t
             write(log_lun,'(a80)') '================================================================================'
             close(log_lun)
          else
@@ -1389,12 +1446,11 @@ module dataio
          endif
       endif
 
-771 format(5x,a18,(1x,e15.9),16x,5(1x,i4))
-777 format(5x,a18,(1x,e15.9),2x,a3,(1x,e10.4),5(1x,i4))
+771 format(5x,a18,(1x,es15.9),16x,5(1x,i4))
+777 format(5x,a18,(1x,es15.9),2x,a3,(1x,es10.4),5(1x,i4))
 
-900 format('   nstep = ',i7,'   dt = ',f22.16,'   t = ',f22.16,2(1x,i4))
 #ifdef RESISTIVE
-776 format(5x,a18,(1x,e10.4),2x,a3,(1x,e10.4),4(1x,i4))
+776 format(5x,a18,(1x,es10.4),2x,a3,(1x,es10.4),4(1x,i4))
 #endif /* RESISTIVE */
 
    end subroutine write_log
@@ -1519,10 +1575,10 @@ module dataio
 
    subroutine rm_file(file_name)
       implicit none
-      character*(*) file_name
-      character(len=265) syscom
-      logical exist
-      integer(kind=1) :: system
+      character(len=*), intent(in)   :: file_name
+      character(len=265)   :: syscom
+      logical              :: exist
+      integer(kind=1)      :: system
 
 !     delete file if exists
       inquire(file = file_name, exist = exist)
