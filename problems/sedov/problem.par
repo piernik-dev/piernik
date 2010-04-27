@@ -25,7 +25,7 @@
     iy = 32
     iz = 32
     dt_hdf  = 0.1
-    dt_res  = 0.1
+    dt_res  = 0.0
     dt_plt  = 0.0001
     dt_log  = 0.00001
     dt_tsl  = 0.001
@@ -41,12 +41,12 @@
  /
 
  $BOUNDARIES
-    bnd_xl = 'out'
-    bnd_xr = 'out'
-    bnd_yl = 'out'
-    bnd_yr = 'out'
-    bnd_zl = 'out'
-    bnd_zr = 'out'
+    bnd_xl = 'per'
+    bnd_xr = 'per'
+    bnd_yl = 'per'
+    bnd_yr = 'per'
+    bnd_zl = 'per'
+    bnd_zr = 'per'
  /
 
  $DOMAIN_LIMITS
@@ -89,4 +89,12 @@
     y0     = -0.0
     z0     = -0.0
     r0     = 0.25
+ /
+
+ $GRAVITY
+
+ /
+
+ $MULTIGRID_SOLVER
+    level_max = 3
  /

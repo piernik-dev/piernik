@@ -10,7 +10,3 @@
 
 /* physics including */
 #define MAGNETIC
-
-/* gravity type choosing */
-#define GRAV
-#define GRAV_RT
