@@ -33,15 +33,30 @@
 module errh
 
    implicit none
+   include 'mpif.h'
    contains
 
    subroutine die(nm)
       !! BEWARE: routine is not finished, it should kill PIERNIK gracefully
+
+      use dataio_public, only : log_file, log_lun
+
       implicit none
+
       character(len=*), intent(in) :: nm
 
-       write(*,*) nm
+      integer :: proc, ierr
+
+      call MPI_comm_rank(MPI_COMM_WORLD, proc, ierr)
+
+      write(*,'(a,i4,3a)')"Error @", proc, ': "', nm, '"'
+      open(log_lun, file=log_file, position='append')
+      if (proc == 0) write(log_lun,'(/,a,/)')"###############     Crashing     ###############"
+      write(log_lun,'(a,i4,3a)')"Error @", proc, ': "', nm, '"'
+      close(log_lun)
+
 !      call mpistop
+
       stop
 
    end subroutine die
