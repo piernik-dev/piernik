@@ -1,0 +1,107 @@
+ $DOMAIN_SIZES
+    nxd = 64
+    nyd = 32
+    nzd = 16
+ /
+ $MPI_BLOCKS
+    pxsize = 2
+    pysize = 2
+    pzsize = 2
+ /
+
+ $RESTART_CONTROL
+    restart  = 'none'
+    new_id   = ''
+    nrestart = 0
+ /
+
+ $END_CONTROL
+    tend   = 1.0
+    nend   = 1
+ /
+
+ $OUTPUT_CONTROL
+    ix      = 0
+    iy      = 0
+    iz      = 0
+    dt_hdf  = 10.0
+    dt_res  = 0.0
+    dt_plt  = 0.0
+    dt_log  = 0.001
+    dt_tsl  = 0.001
+    vars(1) = 'dens'
+    vars(2) = 'gpot'
+    domain  = 'phys_domain'
+ /
+
+ $BOUNDARIES
+    bnd_xl = 'per'
+    bnd_xr = 'per'
+    bnd_yl = 'per'
+    bnd_yr = 'per'
+    bnd_zl = 'per'
+    bnd_zr = 'per'
+ /
+
+ $DOMAIN_LIMITS
+    xmin   = -2.
+    xmax   =  2.
+    ymin   = -2.
+    ymax   =  2.
+    zmin   = -2.
+    zmax   =  2.
+ /
+
+ $FLUID_IONIZED
+    gamma_ion  = 1.67
+	 selfgrav_ion = .true.
+ /
+
+ $FLUID_NEUTRAL
+    gamma_neu = 1.67
+	 selfgrav_neu = .false.
+ /
+
+ $NUMERICAL_SETUP
+    cfl    = 0.7
+    smalld = 1.e-20
+    smallei= 1.e-20
+ /
+
+ $GRAVITY
+ /
+
+ $THERMAL
+ /
+
+ $RESISTIVITY
+ /
+
+ $PROBLEM_CONTROL
+    problem_name ='maclaurin'
+    run_id =  'sph'
+    x0     = 1.
+    y0     = 1.
+    z0     = 1.
+    d0     = 1.
+    a1     = 0.75
+    e      = 0.
+    nsub   = 3
+ /
+
+ $MULTIGRID_SOLVER
+    level_max = 3
+    stdout    = .true.
+    norm_tol  = 1.e-6
+    nsmool    = 8
+    grav_bnd_str  = "isolated"
+    max_cycles = 100
+    vcycle_abort  = 100.
+    dirty_debug = .true.
+    nsmoof = 2
+    fft_full_relax = .true.
+    lmax = 16
+!    use_point_monopole = .true.
+ /
+
+

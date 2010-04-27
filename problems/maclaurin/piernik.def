@@ -1,0 +1,27 @@
+#define HDF5
+#define IONIZED
+#undef  MAGNETIC
+
+#define CGS		/*cm,gram,sek unitsystem*/
+
+#undef ISO
+
+#define GLOBAL_FR_SPEED
+
+#define VANLEER
+
+#define GRAV
+#define GRAV_NULL
+#define MULTIGRID
+
+#if __GNUC__ >=4 && __GNUC_MINOR__ >=5
+#define NEW_HDF5
+#else
+#undef NEW_HDF5
+#endif
+
+#if 0
+  __NO_FLUID_STEP is a special flag that switches off fluid evolution.
+  It is useful for solving static problems (mostly testcases).
+#endif
+#define __NO_FLUID_STEP

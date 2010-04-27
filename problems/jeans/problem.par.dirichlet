@@ -1,0 +1,105 @@
+ $DOMAIN_SIZES
+    nxd = 64
+    nyd = 64
+    nzd = 64
+ /
+ $MPI_BLOCKS
+    pxsize = 1
+    pysize = 1
+    pzsize = 1
+ /
+
+ $RESTART_CONTROL
+    restart  = 'last'
+    new_id   = ''
+    nrestart = 0
+ /
+
+ $END_CONTROL
+    tend   = 1.0
+    nend   = 200
+ /
+
+ $OUTPUT_CONTROL
+    ix      = 0
+    iy      = 0
+    iz      = 0
+    dt_hdf  = 0.0
+    dt_res  = 0.0
+    dt_plt  = 0.0
+    dt_log  = 0.001
+    dt_tsl  = 0.001
+    vars(1) = 'dens'
+    vars(2) = 'velx'
+    vars(3) = 'vely'
+    vars(4) = 'velz'
+    vars(5) = 'ener'
+    vars(6) = 'gpot'
+    domain  = 'phys_domain'
+ /
+
+ $BOUNDARIES
+    bnd_xl = 'per'
+    bnd_xr = 'per'
+    bnd_yl = 'per'
+    bnd_yr = 'per'
+    bnd_zl = 'per'
+    bnd_zr = 'per'
+ /
+
+ $DOMAIN_LIMITS
+    xmin   = 0.0
+    xmax   = 1.1446968195470935
+    ymin   = 0.0
+    ymax   = 1.1446968195470935
+    zmin   = 0.0
+    zmax   = 1.1446968195470935
+ /
+
+ $FLUID_IONIZED
+    gamma_ion  = 1.67
+    selfgrav_ion = .true.
+ /
+
+ $FLUID_NEUTRAL
+    gamma_neu = 1.67
+    selfgrav_neu = .false.
+ /
+
+ $NUMERICAL_SETUP
+    cfl    = 0.7
+    smalld = 1.e-5
+    smallei= 1.e-8
+ /
+
+ $GRAVITY
+ /
+
+ $THERMAL
+ /
+
+ $RESISTIVITY
+ /
+
+ $PROBLEM_CONTROL
+    problem_name ='jeans'
+    run_id =  'ts1'
+    d0     = 1.5e7
+    p0     = 1.5e7
+    amp    = 0.01
+    ix     = 2
+    iy     = 2
+    iz     = 2
+    mode   = 1
+ /
+
+ $MULTIGRID_SOLVER
+    level_max = 3
+    nsmool = 8
+    stdout = .true.
+    gb_no_fft = .true.
+    aux_par_I0 = 0
+    grav_bnd_str = "dir"
+ /
+
+
