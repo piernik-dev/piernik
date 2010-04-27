@@ -526,7 +526,7 @@ module gravity
 !<
    subroutine grav_accel2pot
 
-      use mpisetup, only : pxsize, pysize, pzsize, pcoords, proc, nproc, ndims &
+      use mpisetup, only : pxsize, pysize, pzsize, pcoords, proc, nproc, ndims, &
            &               comm, comm3d, err, ierr, MPI_DOUBLE_PRECISION, mpifind
       use arrays,   only : gp
       use grid,     only : dl, xdim, ydim, zdim, is, ie, js, je, ks, ke, nb, nx, ny, nz, zr, yr, xr
