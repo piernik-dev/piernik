@@ -764,9 +764,6 @@ module dataio
       use initneutral,     only : cs_iso_neu2
 #endif /* NEUTRAL */
 #endif /* ISO */
-#ifdef RESISTIVE
-      use resistivity
-#endif /* RESISTIVE */
 #ifdef SNE_DISTR
       use sndistr,         only : emagadd, tot_emagadd
 #endif /* SNE_DISTR */

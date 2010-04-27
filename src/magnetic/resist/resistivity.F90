@@ -34,15 +34,6 @@
 !<
 module resistivity
 
-      use constants, only: pi, small, big
-      use errh, only : namelist_errh
-      use errh, only : die
-      use mpisetup
-      use fluidindex, only : ibx,iby,ibz,icx,icy,icz
-      use initionized, only : idni,imxi,imyi,imzi
-#ifndef ISO
-      use initionized, only : ieni
-#endif /* ISO */
       implicit none
       real    :: cfl_resist, eta_0, eta_1, j_crit, deint_max
       integer :: eta_scale
@@ -90,7 +81,10 @@ contains
          use mpisetup, only : rbuff, ibuff, ierr, MPI_INTEGER, MPI_DOUBLE_PRECISION, buffer_dim, comm, &
             cwd, proc
          use grid, only : nx,ny,nz
-         use errh, only : die
+         use errh, only : die, namelist_errh
+#ifndef ISO
+         use initionized, only : ieni
+#endif /* ISO */
          implicit none
          character(LEN=100) :: par_file, tmp_log_file
          integer :: ierrh
@@ -154,10 +148,16 @@ contains
       end subroutine init_resistivity
 
       subroutine compute_resist(eta,ici)
-         use arrays, only : b,u
-         use grid,   only : dl,xdim,ydim,zdim,nx,ny,nz,is,ie,js,je,ks,ke,nzd
-         use func,   only : mshift, pshift
-         use mpisetup, only : MPI_DOUBLE_PRECISION, MPI_MAX, comm, ierr
+         use arrays,       only : b,u
+         use constants,    only : small
+         use grid,         only : dl,xdim,ydim,zdim,nx,ny,nz,is,ie,js,je,ks,ke,nzd
+         use func,         only : mshift, pshift
+         use mpisetup,     only : MPI_DOUBLE_PRECISION, MPI_MAX, comm, ierr
+         use fluidindex,   only : ibx, iby, ibz, icx, icy, icz
+         use initionized,  only : idni, imxi, imyi, imzi
+#ifndef ISO
+         use initionized,  only : ieni
+#endif /* ISO */
 
       implicit none
       integer,intent(in)                    :: ici
