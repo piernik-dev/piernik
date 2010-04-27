@@ -75,14 +75,15 @@ module initneutral
 !<
   subroutine init_neutral
 
-    use mpisetup
-    use errh, only : namelist_errh
+    use mpisetup, only: proc, cwd, ierr, comm, cbuff, ibuff, rbuff, lbuff, buffer_dim, MPI_LOGICAL, MPI_INTEGER, &
+                        MPI_DOUBLE_PRECISION, MPI_CHARACTER
+    use errh,     only: namelist_errh
 #ifdef SHEAR
-    use shear, only : omega
+    use shear,    only: omega
 #endif /* SHEAR */
     implicit none
     integer :: ierrh
-    character par_file*(100), tmp_log_file*(100)
+    character(len=100) :: par_file, tmp_log_file
 
     namelist /FLUID_NEUTRAL/ gamma_neu, cs_iso_neu, eta_gas_neu, csvk, selfgrav_neu
 

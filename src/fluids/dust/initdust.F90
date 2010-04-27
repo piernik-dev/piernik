@@ -63,8 +63,8 @@ module initdust
 !<
   subroutine init_dust
 
-    use mpisetup
-    use errh, only : namelist_errh
+    use mpisetup, only: proc, cwd, rbuff, lbuff, MPI_LOGICAL, MPI_DOUBLE_PRECISION, buffer_dim, comm, ierr
+    use errh,     only: namelist_errh
     implicit none
     integer :: ierrh
     character(LEN=100) :: par_file, tmp_log_file

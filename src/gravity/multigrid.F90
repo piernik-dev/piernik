@@ -34,7 +34,7 @@
 !<
 
 module multigrid
-   use multigridvars    ! IGNORE greedy
+   use multigridvars    ! QA: ignoring only check
    implicit none
 
    private

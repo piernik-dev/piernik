@@ -40,7 +40,7 @@ module timestepinteractions
 !! \todo check if subtraction of momenta is really the case (i am confused again - DW)
 !<
   subroutine timestep_interactions
-    use mpisetup
+    use mpisetup,       only : comm, ierr, MPI_MIN, MPI_DOUBLE_PRECISION
     use arrays,         only : u,b
     use constants,      only : small
     use fluidindex,     only : iarr_all_dn

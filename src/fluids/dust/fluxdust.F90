@@ -77,7 +77,7 @@ module fluxdust
 
 
     implicit none
-    integer n                                !< number of cells in the current sweep
+    integer, intent(in) :: n                     !< number of cells in the current sweep
 
 ! locals
     real :: minvx, maxvx, amp

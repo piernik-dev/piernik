@@ -37,8 +37,6 @@
 !<
 module interactions
 
-   use constants
-
    real, allocatable, dimension(:,:,:,:)  :: omx0        !< array to store x component of initial velocity
    real, allocatable, dimension(:,:,:,:)  :: omy0        !< array to store y component of initial velocity
    real, allocatable, dimension(:,:)      :: alfsup      !< xy-array of values between 0 and 1, 1 where boundary support is used
@@ -63,7 +61,7 @@ module interactions
 !! \n \n
 !<
    subroutine init_interactions
-      use mpisetup
+      use mpisetup,     only : proc, cwd, rbuff, MPI_DOUBLE_PRECISION, buffer_dim, ierr, comm
       use fluidindex,   only : nvar
 #ifdef DUST
       use initdust,     only : dragc_gas_dust
@@ -128,10 +126,9 @@ module interactions
    subroutine fluid_interactions(sweep, i1, i2, n, du, uu)
       use fluidindex,   only : nvar
       implicit none
-      integer               :: i1,i2,n
-      real                  :: dt
-      real, dimension(nvar%all,n) :: du,ddu,uu
-      character sweep*6
+      integer, intent(in)   :: i1,i2,n
+      real, dimension(nvar%all,n)  :: du,ddu,uu
+      character(len=6), intent(in) :: sweep
 
       du=0.0
 #ifdef COLLISIONS
@@ -158,11 +155,10 @@ module interactions
 #endif /* !ISO */
       use grid,         only : maxxyz,x,y,z
       implicit none
-      integer               :: i1,i2,n
-      real                  :: dt
-      real, dimension(nvar%all,n) :: du,ddu,uu
-      character sweep*6
-      integer ifl,jfl
+      integer, intent(in)   :: i1,i2,n
+      real, dimension(nvar%all,n)  :: du,ddu,uu
+      character(len=6), intent(in) :: sweep
+      integer  :: ifl,jfl
       real, dimension(nvar%fluids,nvar%fluids,n) :: flch
       real, dimension(nvar%fluids,n)             :: colls,velcoor
       real, dimension(maxxyz)                    :: r1,r2
