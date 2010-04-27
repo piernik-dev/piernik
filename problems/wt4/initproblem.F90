@@ -364,6 +364,10 @@ contains
 
       problem_customize_solution => problem_customize_solution_wt4
 
+#ifndef UMUSCL
+      if (proc == 0 ) write(*,'(a)') "[initproblem:init_problem]: Warning: without UMUSCL you'll likely get Monet-like density maps."
+#endif
+
       return
    end subroutine init_prob
 
