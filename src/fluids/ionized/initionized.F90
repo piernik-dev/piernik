@@ -71,12 +71,13 @@ module initionized
 !! \n \n
 !<
   subroutine init_ionized
-    use errh, only : namelist_errh
-    use mpisetup
+    use errh,     only : namelist_errh
+    use mpisetup, only : rbuff, cbuff, lbuff, ibuff, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL, &
+         MPI_CHARACTER, comm, ierr, buffer_dim, cwd, proc
 
     implicit none
     integer :: ierrh
-    character par_file*(100), tmp_log_file*(100)
+    character(len=100) :: par_file, tmp_log_file
 
     namelist /FLUID_IONIZED/ gamma_ion, cs_iso_ion, cs_ion, selfgrav_ion
 

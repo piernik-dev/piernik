@@ -70,7 +70,7 @@ module fluxionized
   contains
 !==========================================================================================
 
-  subroutine flux_ion(fluxi,cfri,vx,uui,bb,n)
+  subroutine flux_ion(fluxi,cfri,vx,uui,bb,n,cs_iso2)
 
     use constants,       only : small
     use fluidindex,      only : nmag
@@ -80,30 +80,41 @@ module fluxionized
 
     use initionized,     only : gamma_ion, cs_iso_ion2
     use timestepionized, only : c_ion
-    use constants,       only : small
+    use errh,            only : die
 
     implicit none
-    integer :: n                            !< number of cells in the current sweep
-
-! locals
-    real, dimension(nvar%ion%all,n):: fluxi     !< flux of ionized fluid
-    real, dimension(nvar%ion%all,n):: uui       !< part of u for ionized fluid
-    real, dimension(nvar%ion%all,n):: cfri      !< freezing speed for ionized fluid
+    integer,intent(in) :: n                 !< number of cells in the current sweep
+    real, dimension(nvar%ion%all,n):: fluxi !< flux of ionized fluid
+    real, dimension(nvar%ion%all,n):: uui   !< part of u for ionized fluid
+    real, dimension(nvar%ion%all,n):: cfri  !< freezing speed for ionized fluid
     real, dimension(nmag,n):: bb            !< magnetic field
     real, dimension(n) :: vx                !< velocity for current sweep
     real, dimension(n) :: ps                !< total pressure of ionized fluid
     real, dimension(n) :: p                 !< thermal pressure of ionized fluid
     real, dimension(n) :: pmag              !< pressure of magnetic field
+    real, dimension(n), optional :: cs_iso2 !< local isothermal sound speed (optional)
 
     fluxi   = 0.0
     cfri    = 0.0
     vx      = 0.0
 
+#ifdef MAGNETIC
     pmag(RNG)=0.5*( bb(ibx,RNG)**2 + bb(iby,RNG)**2 +bb(ibz,RNG)**2 )
+#else
+    pmag(:) = 0.0
+#endif
     vx(RNG)=uui(imx,RNG)/uui(idn,RNG)
 
+#ifndef ISO_LOCAL
+    if (present(cs_iso2)) call die("[fluxionized:flux_ion] cs_iso2 should not be present")
+#endif
+
 #ifdef ISO
+#ifdef ISO_LOCAL
+    p(RNG) = cs_iso2(RNG) * uui(idn,RNG)
+#else /* ISO_LOCAL */
     p(RNG) = cs_iso_ion2*uui(idn,RNG)
+#endif /* ISO_LOCAL */
     ps(RNG)= p(RNG) + pmag(RNG)
 #else /* ISO */
     ps(RNG)=(uui(ien,RNG) - &
