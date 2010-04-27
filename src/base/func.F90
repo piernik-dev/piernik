@@ -132,19 +132,8 @@ module func
    end function mshift
 
 !-----------------------------------------------------------------------------
-
-   integer function strlen( string )
-      character string(0:*)
-      strlen=0
-      do while (string(strlen).NE.'')
-         strlen=strlen+1
-      enddo
-   end function strlen
-
-!-----------------------------------------------------------------------------
 #ifdef COSM_RAYS
    subroutine div_v(ifluid)
-      use mpisetup
       use initionized, only : idni,imxi,imyi,imzi
       use fluidindex,  only : nvar
       use fluidindex,  only : iarr_all_dn,iarr_all_mx,iarr_all_my,iarr_all_mz
@@ -249,4 +238,37 @@ module func
    end subroutine whichfaq
 
 #endif /* COSM_RAYS  */
+
+   subroutine compare_namelist(nml_bef, nml_aft, output)
+      implicit none
+      character(len=*), intent(in)     :: nml_bef, nml_aft, output
+      integer                          :: io
+      character(len=256)               :: sa, sb
+
+      open(501,file=nml_bef, status='old')
+      open(502,file=nml_aft, status='old')
+      open(503,file="temp3.dat", status='unknown')
+      io = 0
+      do
+         read(501,'(a)', iostat=io) sa
+         read(502,'(a)', iostat=io) sb
+         if(io/=0) exit
+         if((sa/=sb)) then
+            write(503,'(a1,a)') '*',trim(sb)
+         else
+            write(503,'(a1,a)') ' ',trim(sb)
+         endif
+      enddo
+      close(502,status="delete")
+      close(501,status="delete")
+      io = 0
+      rewind(503)
+      open(3, file=output, position='append')
+         do while(io == 0)
+            read(503,'(a)',iostat=io) sb
+            write(3,'(a)') trim(sb)
+         enddo
+      close(3)
+      close(503,status="delete")
+   end subroutine compare_namelist
 end module func

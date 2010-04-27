@@ -45,6 +45,10 @@ module arrays
    real, allocatable, dimension(:,:,:)       :: gp       !< Array for gravitational potential from external fields
    real, allocatable, dimension(:)           :: dprof    !< Array used for storing density during calculation of hydrostatic equilibrium
    real, allocatable, dimension(:)           :: eprof    !< Array used for storing energy during calculation of hydrostatic equilibrium
+#ifdef MULTIGRID
+   real, allocatable, dimension(:,:,:)       :: mgp      !< Array for multigrid gravitational potential
+   real, allocatable, dimension(:,:,:)       :: mgpm     !< Array for multigrid gravitational potential at previous timestep
+#endif /* MULTIGRID */
 #ifdef SELF_GRAV
    real, allocatable, dimension(:,:,:)       :: fgp      !< Array for fourier gravitational potential
    real, allocatable, dimension(:,:,:)       :: fgpm     !< Array for fourier gravitational potential at previous timestep
@@ -54,8 +58,10 @@ module arrays
 #ifdef COSM_RAYS
    real, allocatable, dimension(:,:,:)       :: divvel   !< Array storing \f$\nabla\cdot\mathbf{v}\f$, needed in cosmic ray transport
    real, allocatable, dimension(:,:,:,:)     :: wcr      !< Temporary array used in crdiffusion module
-
 #endif /* COSM_RAYS  */
+#ifdef ISO_LOCAL
+   real, allocatable, dimension(:,:,:),target:: cs_iso2_arr !< Array storing squared local isothermal sound speed
+#endif /* ISO_LOCAL */
 
    real,    allocatable, dimension(:)        :: rlscal   !< Arrays to store additional scalr quantities in hdf4 files (real)
    integer, allocatable, dimension(:)        :: intscal  !< Arrays to store additional scalr quantities in hdf4 files (int)
@@ -66,13 +72,11 @@ module arrays
 !<
 
    subroutine init_arrays(nx,ny,nz,nvar)
-
-      use types
-      use fluidtypes
+      use fluidtypes, only: var_numbers
 
       implicit none
-      type(var_numbers) :: nvar
 
+      type(var_numbers), intent(in) :: nvar
       integer, intent(in) :: nx,ny,nz
 
       if(.not.allocated(rlscal))  allocate(rlscal(nrlscal))
@@ -85,6 +89,10 @@ module arrays
       if(.not.allocated(gp))      allocate(gp(nx,ny,nz))
       if(.not.allocated(gpot))    allocate(gpot(nx,ny,nz))
       if(.not.allocated(hgpot))   allocate(hgpot(nx,ny,nz))
+#ifdef MULTIGRID
+      if(.not.allocated(mgp))     allocate(mgp(nx,ny,nz))
+      if(.not.allocated(mgpm))    allocate(mgpm(nx,ny,nz))
+#endif /* MULTIGRID */
 #ifdef SELF_GRAV
       if(.not.allocated(fgp))     allocate(fgp(nx,ny,nz))
       if(.not.allocated(fgpm))    allocate(fgpm(nx,ny,nz))
@@ -101,7 +109,9 @@ module arrays
       if(.not.allocated(divvel)) allocate(divvel(nx,ny,nz))
       if(.not.allocated(wcr))    allocate(wcr(nvar%crs%all,nx,ny,nz))
 #endif /* COSM_RAYS  */
-
+#ifdef ISO_LOCAL
+      if(.not.allocated(cs_iso2_arr)) allocate(cs_iso2_arr(nx,ny,nz))
+#endif /* ISO_LOCAL */
    end subroutine init_arrays
 
 !>
@@ -123,6 +133,10 @@ module arrays
       if(allocated(gp))      deallocate(gp)
       if(allocated(gpot))    deallocate(gpot)
       if(allocated(hgpot))   deallocate(hgpot)
+#ifdef MULTIGRID
+      if(allocated(mgp))     deallocate(mgp)
+      if(allocated(mgpm))    deallocate(mgpm)
+#endif /* MULTIGRID */
 #ifdef SELF_GRAV
       if(allocated(fgp))     deallocate(fgp)
       if(allocated(fgpm))    deallocate(fgpm)
@@ -135,6 +149,9 @@ module arrays
       if(allocated(divvel))  deallocate(divvel)
       if(allocated(wcr))     deallocate(wcr)
 #endif /* COSM_RAYS */
+#ifdef ISO_LOCAL
+      if(allocated(cs_iso2_arr)) deallocate(cs_iso2_arr)
+#endif /* ISO_LOCAL */
 
    end subroutine cleanup_arrays
 

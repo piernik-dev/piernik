@@ -29,22 +29,16 @@
 
 module timestep
 
-! Based on: Pen Arras & Wong (2003)
-! Modified extensively by M. Hanasz November 2005 - May 2006
-! Optimalization of cpu-time efficiency of mhdflux, tvd1 by K. Kowalik
-! Modification history:  see "changelog"  -- warning: out of date
-
-   use mpisetup
-
    implicit none
-   real :: c_all
+   real :: c_all ! BEWARE: assigned but unused
 
    contains
 
-
       subroutine time_step
-         use dataio, only : tend
-         use constants, only : small,big
+         use mpisetup,      only : t, dt, dt_old, dt_max_grow, dt_initial, dt_min, nstep, proc
+         use dataio_public, only : tend
+         use constants,     only : small,big
+         use dataio,        only : write_crashed
 
 #ifdef IONIZED
          use timestepionized, only : timestep_ion
@@ -78,8 +72,10 @@ module timestep
          implicit none
 ! Timestep computation
 
+         dt_old = dt
+
          c_all = 0.0
-         dt    = (tend-t)/2.
+         dt    = (tend-t)/2.*(1+2.*epsilon(1.))
 
 #ifdef IONIZED
          call timestep_ion
@@ -117,6 +113,19 @@ module timestep
 #ifdef SIMPLE_COOL
          dt = min(dt,0.01 * tauc)
 #endif /* SIMPLE_COOL */
+
+         ! finally apply some sanity factors
+         if (nstep <=1) then
+            if (dt_initial > 0.) dt = min(dt, dt_initial)
+         else
+            dt = min(dt, dt_old*dt_max_grow)
+         end if
+
+         if (dt < dt_min) then ! something nasty had happened
+            if (proc == 0) write(*,'(2(a,es12.4))')"[timestep:time_step] dt = ",dt,", less than allowed minimum = ",dt_min
+            call write_crashed("[timestep:time_step] dt < dt_min")
+         end if
+
       end subroutine time_step
 !------------------------------------------------------------------------------------------
 
