@@ -82,7 +82,7 @@
 
  $RESISTIVITY
     cfl_resist   =    0.9   ! liczba Couranta dla opornosci, (wsp. 0.5) w kodzie
-    eta_0   	 =  100.0   ! opornosc jednorodna
+    eta_0        =  100.0   ! opornosc jednorodna
     eta_1        =    0.0   ! opornosc zlokalizowana, dziala powyzej j_crit
     j_crit       = 1000.0   ! prad krytyczny
  /
@@ -117,7 +117,7 @@
     problem_name ='crdynamo'
     run_id       = 'tst'
     d0           =  1.0     ! gestosc na pl.symetrii dysku, brana pod uwage gdy col_dns = 0.0
-    bxn          =  0.0	    !
+    bxn          =  0.0     !
     byn          =  1.0     ! wspolczynniki okreslajace kierunek B
     bzn          =  0.0     !
     x0           =  0.0     !

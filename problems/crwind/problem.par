@@ -75,7 +75,7 @@
 
  $RESISTIVITY
     cfl_resist   =    0.9   ! Courant's number for resistiwity
-    eta_0   	 =  100.0   ! uniform resistivity
+    eta_0        =  100.0   ! uniform resistivity
     eta_1        =    0.0   ! anomalous resistivity, works above j_crit
     j_crit       = 1000.0   ! critical value of current
  /
