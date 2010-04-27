@@ -52,7 +52,7 @@ module shear
 !! \n \n
 !<
   subroutine init_shear
-    use mpisetup
+    use mpisetup, only : cwd, ierr, MPI_DOUBLE_PRECISION, proc, rbuff, buffer_dim, comm
     use errh, only : namelist_errh
     implicit none
     integer :: ierrh
