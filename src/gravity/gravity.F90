@@ -42,7 +42,7 @@ module gravity
    real    :: g_y                   !< y-component of GRAV_UNIFORM constant <b>(currently not used)</b>
    real    :: dg_dz                 !< constant used by GRAV_LINEAR type of %gravity
    real    :: r_gc                  !< galactocentric radius of the local simulation region used by local Galactic type of %gravity in grav_accel
-   real    :: ptmass                !< mass value of point %gravity source used by GRAV_PTMASS, GRAV_PTMASSPURE, GRAV_PTFLAT type of %gravity
+   real    :: ptmass                !< mass value of point %gravity source used by GRAV_PTMASS, GRAV_PTMASSSTIFF, GRAV_PTMASSPURE, GRAV_PTFLAT type of %gravity
    real    :: ptm_x                 !< point mass position x-component
    real    :: ptm_y                 !< point mass position y-component
    real    :: ptm_z                 !< point mass position z-component
@@ -191,6 +191,9 @@ module gravity
 #ifdef SELF_GRAV
       use poissonsolver, only : poisson_solve
 #endif /* SELF_GRAV */
+#ifdef MULTIGRID
+      use multigrid, only : multigrid_solve
+#endif /* MULTIGRID */
       use arrays, only : wa,u
 
       implicit none
@@ -198,6 +201,15 @@ module gravity
 #ifdef SELF_GRAV
       call poisson_solve( sum(u(iarr_all_sg,:,:,:),1) )
 #endif /* SELF_GRAV */
+#ifdef MULTIGRID
+      if (size(iarr_all_sg) == 1) then
+         call multigrid_solve(u(iarr_all_sg(1),:,:,:))
+      else
+         call multigrid_solve( sum(u(iarr_all_sg,:,:,:),1) )
+         ! BEWARE Here a lot of heap space is required and some compilers may generate code that do segfaults for big enough domains.
+         ! It is the weakest point of this type in Maclaurin test. Next one (in fluidboundaries.F90) is 8 times less sensitive.
+      end if
+#endif /* MULTIGRID */
       call sum_potential
 
    end subroutine source_terms_grav
@@ -205,6 +217,9 @@ module gravity
    subroutine sum_potential
       use mpisetup, only : dt,dtm
       use arrays, only: gpot, gp, hgpot
+#ifdef MULTIGRID
+      use arrays, only: mgp, mgpm
+#endif /* MULTIGRID */
 #ifdef SELF_GRAV /* <- name should be changed */
       use arrays, only:  fgp, fgpm
 #endif /* SELF_GRAV */
@@ -219,13 +234,20 @@ module gravity
 
       gpot = gp
       hgpot = gp
+#ifdef MULTIGRID
+      gpot = gpot + (1.+h)*mgp - h*mgpm
+#endif /* MULTIGRID */
 #ifdef SELF_GRAV /* <- name should be changed */
       gpot = gpot + (1.+h)*fgp - h*fgpm
 #endif /* SELF_GRAV */
+#ifdef MULTIGRID
+      hgpot = hgpot + (1.+0.5*h)*mgp - 0.5*h*mgpm
+#endif /* MULTIGRID */
 #ifdef SELF_GRAV /* <- name should be changed */
       hgpot = hgpot + (1.+0.5*h)*fgp - 0.5*h*fgpm
 #endif /* SELF_GRAV */
    end subroutine sum_potential
+
 !--------------------------------------------------------------------------
 !>
 !! \brief Routine that compute values of gravitational potential filling in gp array and setting gp_status character string \n\n
@@ -242,6 +264,8 @@ module gravity
 !! where \f$r_{soft}\f$ is a radius of softenning\n\n
 !! @b GRAV_PTMASSPURE - unsoftened point mass type of %gravity \n
 !! \f$\Phi\left(x,y,z\right)= - GM/\sqrt{x^2+y^2+z^2}\f$ \n\n
+!! @b GRAV_PTMASSSTIFF - softened point mass type of %gravity with stiff-body rotation inside softening radius\n
+!! \f$\Phi\left(x,y,z\right)= - GM/\sqrt{x^2+y^2+z^2}\f$ for \f$r \gt r_{soft}\f$ and \f$ GM/r_{soft} \left( - 3/2 + 1/2 {x^2+y^2+z^2}/r_{soft}^2 \right)\f$ inside \f$r_{soft}\f$ \n\n
 !! @b GRAV_PTFLAT - planar, softened point mass type of %gravity \n
 !! \f$\Phi\left(x,y,z\right)= - GM/\sqrt{x^2+y^2+r_{soft}^2}\f$ \n
 !! where \f$r_{soft}\f$ is a radius of softenning\n\n
@@ -259,22 +283,21 @@ module gravity
 #ifdef GRAV_USER
       use gravity_user, only : grav_pot_user
 #endif /* GRAV_USER */
-
+#if defined (GRAV_PTMASSPURE) || defined (GRAV_PTMASS) || defined (GRAV_PTFLAT) || defined (GRAV_PTMASSSTIFF)
+      use constants, only : newtong
+#endif
       implicit none
 
-#if defined (GRAV_PTMASSPURE) || defined (GRAV_PTMASS) || defined (GRAV_PTFLAT)
+#if defined (GRAV_PTMASSPURE) || defined (GRAV_PTMASS) || defined (GRAV_PTFLAT) || defined (GRAV_PTMASSSTIFF)
       integer :: i, j, k
-      real    :: rc
+      real    :: r_smooth2, gm, gmr, z2, yz2
 #endif /* GRAV_PTMASSPURE || GRAV_PTMASS || GRAV_PTFLAT */
-#if defined (GRAV_PTMASSPURE) || defined (GRAV_PTMASS)
+#if defined (GRAV_PTMASSPURE) || defined (GRAV_PTMASS) || defined (GRAV_PTMASSSTIFF)
       real    :: r2
 #endif /* GRAV_PTMASSPURE || GRAV_PTMASS */
 #if defined (GRAV_PTFLAT) || defined (GRAV_PTMASS)
-      real    :: fr
+      real    :: rc, fr
 #endif /* GRAV_PTFLAT || GRAV_PTMASS */
-#ifdef GRAV_LINEAR
-      integer :: i
-#endif /* GRAV_LINEAR */
 
       gp_status = ''
 
@@ -305,11 +328,33 @@ module gravity
           enddo
        enddo
 
+#elif defined (GRAV_PTMASSSTIFF)
+
+       ! promote stiff-body rotation inside smoothing length, don't affect the global potential outside
+
+       r_smooth2 = r_smooth**2 ! can be used also i other GRAV_PTMASS* clauses
+       gm =  - newtong * ptmass
+       gmr = 0.5 * gm / r_smooth
+
+       do k = 1, nz
+          z2 = (z(k) - ptm_z)**2
+          do j = 1, ny
+             yz2 = z2 + (y(j) - ptm_y)**2
+             do i = 1, nx
+               r2 = yz2 + (x(i) - ptm_x)**2
+               if (r2 < r_smooth2) then
+                  gp(i,j,k) = gmr * (3. - r2/r_smooth2)
+               else
+                  gp(i,j,k) = gm / dsqrt(r2)
+               end if
+             enddo
+          enddo
+       enddo
+
 #elif defined (GRAV_PTMASSPURE)
        do i = 1, nx
           do j = 1, ny
              do k = 1, nz
-               rc = dsqrt(x(i)**2+y(j)**2)
                r2 = (x(i) - ptm_x)**2 + (y(j) - ptm_y)**2 + (z(k) - ptm_z)**2
                gp(i,j,k) = -newtong*ptmass / dsqrt(r2 + r_smooth**2)
              enddo
@@ -395,6 +440,8 @@ module gravity
          case('zsweep')
             x1  = x(i1)
             x2  = y(i2)
+         case default ! just for suppressing compiler warning
+            x1 = xsw(1)
       end select
 
       if (sweep == 'zsweep') then
@@ -538,13 +585,13 @@ module gravity
 
       call MPI_GATHER ( dgpx_proc, 1, MPI_DOUBLE_PRECISION, &
                         dgpx_all,  1, MPI_DOUBLE_PRECISION, &
-                        0, comm3d,err )
+                        0, comm3d, ierr )
       call MPI_GATHER ( dgpy_proc, 1, MPI_DOUBLE_PRECISION, &
                         dgpy_all,  1, MPI_DOUBLE_PRECISION, &
-                       0, comm3d,err )
+                        0, comm3d, ierr )
       call MPI_GATHER ( dgpz_proc, 1, MPI_DOUBLE_PRECISION, &
                         dgpz_all,  1, MPI_DOUBLE_PRECISION, &
-                        0, comm3d,err )
+                        0, comm3d, ierr )
 
 
       if(proc .eq. 0) then

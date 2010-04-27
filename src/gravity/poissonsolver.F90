@@ -52,14 +52,16 @@ contains
 
     implicit none
     real, dimension(:,:,:), intent(in)  :: dens
+#ifdef SHEAR
     real, dimension(:,:,:), allocatable :: ala
+#endif /* SHEAR */
     logical,save :: frun = .true.
 
     fgpm = fgp
 
     if( bnd_xl .eq. 'per' .and. bnd_xr .eq. 'per' .and. &
         bnd_yl .eq. 'per' .and. bnd_yr .eq. 'per' .and. &
-        bnd_zl .ne. 'per' .and. bnd_zr .ne. 'per'        ) then
+        bnd_zl .ne. 'per' .and. bnd_zr .ne. 'per'        ) then ! Periodic in X and Y, nonperiodic in Z
 
          call poisson_xyp(dens(nb+1:nb+nxd,nb+1:nb+nyd,:), &
                            fgp(nb+1:nb+nxd,nb+1:nb+nyd,:),dz)
@@ -74,7 +76,7 @@ contains
 
     elseif( bnd_xl .eq. 'per' .and. bnd_xr .eq. 'per' .and. &
             bnd_yl .eq. 'per' .and. bnd_yr .eq. 'per' .and. &
-            bnd_zl .eq. 'per' .and. bnd_zr .eq. 'per'        ) then
+            bnd_zl .eq. 'per' .and. bnd_zr .eq. 'per'        ) then ! Fully 3D periodic
         call poisson_xyzp(dens(nb+1:nb+nxd,nb+1:nb+nyd,nb+1:nb+nzd),&
                 fgp(nb+1:nb+nxd,nb+1:nb+nyd,nb+1:nb+nzd),dz)
 
@@ -88,7 +90,7 @@ contains
 
 #ifdef SHEAR
     elseif ( bnd_xl .eq. 'she' .and. bnd_xr .eq. 'she' .and. &
-             bnd_yl .eq. 'per' .and. bnd_yr .eq. 'per' ) then
+             bnd_yl .eq. 'per' .and. bnd_yr .eq. 'per' ) then ! 2D shearing box
 
          if(dimensions=='3d') then
            if(.not.allocated(ala)) allocate(ala(nx-2*nb,ny-2*nb,nz-2*nb))
@@ -163,7 +165,7 @@ contains
 
     complex(kind=8), parameter :: j = (0, 1)
 
-    integer*8      :: n,np, p, q, i, info
+    integer*8      :: n,np, p, q, i
 
     integer*8     , parameter :: FFTW_ESTIMATE = 64
     integer*8     , parameter :: FFTW_FORWARD  = 1
@@ -296,11 +298,11 @@ contains
     real(kind=8)   , dimension(:,:)  , allocatable :: rtmp
     real(kind=8)   , dimension(:)    , allocatable :: kx, ky
 
-    real(kind=8)    :: lambda, factor
+    real(kind=8)    :: factor
 
     integer(kind=8) :: planf, planb
 
-    integer         :: nx, ny, np, p, q, k, info
+    integer         :: nx, ny, np, p, q
 
     integer     , parameter :: FFTW_ESTIMATE = 64
 !
@@ -558,13 +560,13 @@ contains
     real, dimension(:,:,:), intent(out) :: pot
     real, optional,  intent(in)  :: dz
 
-    complex(kind=8), dimension(:,:,:), allocatable :: fft
-    complex(kind=8), dimension(:,:,:), allocatable :: ctmp
-    real(kind=8)   , dimension(:,:,:)  , allocatable :: rtmp
-    real(kind=8)   , dimension(:)    , allocatable    :: kx, ky, kz
-    real(kind=8)    :: norm
-    integer(kind=8) :: planf, plani
-    integer         :: nx, ny, nz, np, i, j, k
+    complex, dimension(:,:,:), allocatable :: fft
+    complex, dimension(:,:,:), allocatable :: ctmp
+    real   , dimension(:,:,:)  , allocatable :: rtmp
+    real   , dimension(:)    , allocatable    :: kx, ky, kz
+    real    :: norm
+    integer(kind=selected_int_kind(16)) :: planf, plani
+    integer         :: nx, ny, nz, np, i, j=0, k
     integer     , parameter :: FFTW_ESTIMATE = 64
 !
 !----------------------------------------------------------------------
@@ -591,17 +593,22 @@ contains
 
     norm = 1.0 / real( nx * ny * nz )
 
+! BEWARE: the plans can probably be reused and it might be more efficient to create them with FFTW_MEASURE
 ! create plan for the forward FFT
     call dfftw_plan_dft_r2c_3d(planf, nx, ny, nz, den, ctmp, FFTW_ESTIMATE)
 ! perform forward FFT 3D
-    call dfftw_execute(planf)
+!    call dfftw_execute(planf) ! Some fortran compilers make segfaulting code with simple dfftw_execute(plan)
+    call dfftw_execute_dft_r2c(planf, den, ctmp)
 ! destroy plan for the forward FFT
     call dfftw_destroy_plan(planf)
 
+    ! BEWARE: there is no reason to prefer dz over dx and dy here. This routine will work incorrectly if dx /= dz or dy /= dz.
+    ! The k[xyz] factors may contain the d[xyz] cell sizes (as it was implemented in multigrid)
+    ! The same bug is possibly implemented in other routines
     fft(:,:,:) = ctmp(:,:,:)*dz*dz
 
 ! compute eigenvalues for each p, q and r and solve linear system
-!
+! ToDo: this can be done only once if we do not change arrays
 
     kx(:) = cos(dpi/nx*(/(j,j=0,np-1)/))
     ky(:) = cos(dpi/ny*(/(j,j=0,ny-1)/))
@@ -630,6 +637,5 @@ contains
 
 !------------------------------------------
     end subroutine poisson_xyzp
-
 
 end module poissonsolver
