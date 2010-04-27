@@ -34,7 +34,7 @@ module timer
    implicit none
    integer, parameter, private :: S_LEN = 30
 
-   private :: search_timer, delete_timer
+   private :: search_timer, delete_timer, clock_start, clock_end
 
    type, private :: timer_info
       character(len=S_LEN) :: key
@@ -56,7 +56,8 @@ module timer
    integer :: nzones, cpuhours, cpumins, cpusecs , wchours , wcmins  , wcsecs
    real    :: zcps,  cputot, cpuallp, wctot, cpu_start, cpu_stop
    integer :: iarray(3)
-   real(kind=4), dimension(2) ::  tarray
+   real(kind=4), dimension(2) :: tarray
+   integer :: clock_start, clock_end
 
 contains
 
@@ -68,7 +69,7 @@ contains
    !!    2) if timer "name" exists, print "name" - current time, set "name" with current cpu_time()
    !!    (optional) if reset is true suppress output, set "name" with current cpu_time
    !<
-   subroutine timer_(str,reset)
+   real function timer_(str,reset)
       implicit none
       character(len=*), intent(in) :: str    !< name of the timer
       logical, intent(in), optional :: reset !< if true all output is suppressed, use for resetting timers
@@ -80,8 +81,9 @@ contains
          temp%reset = .false.
       endif
       call search_timer(temp)
+      timer_ = temp%time
 
-   end subroutine timer_
+   end function timer_
 
    function delete_timer(tp) result (item)
       implicit none
@@ -98,14 +100,14 @@ contains
 
    subroutine search_timer(item)
       implicit none
-      type(timer_info), intent(in) :: item
+      type(timer_info), intent(inout) :: item
       type(timer_list), pointer :: tp
       tp => timer_root
 
       do
          if( associated(tp%next)) then
             if( item%key == tp%next%info%key ) then
-               call modify_timer(tp%next, item%reset)
+               item%time = modify_timer(tp%next, item%reset)
             else if( item%key < tp%next%info%key) then
                call insert_timer(tp%next, item)
             else
@@ -119,7 +121,7 @@ contains
       enddo
    contains
 
-      subroutine modify_timer(tp,reset)
+      real function modify_timer(tp,reset)
          implicit none
          type(timer_node), pointer :: tp
          logical, intent(in) :: reset
@@ -128,9 +130,13 @@ contains
 
          time_old = tp%info%time
          call cpu_time(tp%info%time)
-         if(.not.reset) write(*,'(A,F7.3,A)') "Timer ["//trim(tp%info%key)//"] = ", tp%info%time - time_old, " s"
-         return
-      end subroutine modify_timer
+         !if(.not.reset) write(*,'(A,F7.3,A)') "Timer ["//trim(tp%info%key)//"] = ", tp%info%time - time_old, " s"
+         if(.not.reset) then
+            modify_timer = tp%info%time - time_old
+         else
+            modify_timer = tp%info%time
+         endif
+      end function modify_timer
 
       subroutine insert_timer(tp, item)
          implicit none
@@ -170,10 +176,37 @@ contains
 
 !------------------------------------------------------------------------------------------
 
+   function time_left(wend) result (tf)
+      implicit none
+      real, intent(in), optional :: wend
+      logical :: tf
+      integer :: clock, cnt_rate, cnt_max
+      real    :: r_clk_end
+
+      if(present(wend)) then
+         call system_clock(clock_start, cnt_rate, cnt_max)
+ !         clock_end = clock_start + int(wend*3600.*cnt_rate)
+         r_clk_end = clock_start + wend*3600.*cnt_rate
+         if (r_clk_end < cnt_max) then
+            clock_end = int(r_clk_end)
+         else
+            clock_end = -cnt_max
+         endif
+      endif
+ ! BEWARE: gfortran gives 1ms resolution, but ifort can offer 0.1ms, which will result in an integer overflow in less than 5 days
+ ! Probably it is better to call date_and_time(VALUES) here
+      call system_clock(clock, cnt_rate, cnt_max)
+      tf = .true.
+      if (clock_end /= -cnt_max) then
+         if( clock_end - clock < 0 ) tf = .false.
+      end if
+
+   end function time_left
+
    subroutine timer_stop
-      use mpisetup
-      use dataio,    only : log_file, log_lun
-      use grid,      only : nxd,nyd,nzd
+      use mpisetup,      only : MPI_DOUBLE_PRECISION, MPI_SUM, comm, ierr, nstep, proc
+      use dataio_public, only : log_file, log_lun
+      use grid,          only : nxd,nyd,nzd
 
       implicit none
       real(kind=4) :: dtime
@@ -225,10 +258,8 @@ contains
 
 10    format('CPU time        = ', f12.2,' s')
 20    format('Wall clock time = ', f12.2,' s')
-30    format('Zone-cycles / s = ',1pe12.5)
+30    format('Zone-cycles / s = ',es12.5)
 
    end subroutine timer_stop
 
 end module timer
-
-

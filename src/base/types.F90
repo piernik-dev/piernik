@@ -30,6 +30,10 @@
 !! \brief (KK)
 !<
 module types
+   private
+   public :: indx, hdf, value, grid_container, tsl_container, &
+   & problem_customize_solution, finalize_problem
+
    type :: indx
       integer :: dnd = -1, dnn = -1, dni = -1
       integer :: mxd = -1, mxn = -1, mxi = -1
@@ -103,5 +107,14 @@ module types
               prei_min, prei_max, temi_min, temi_max, vai_max, csi_max
 #endif /* IONIZED */
    end type tsl_container
+
+   interface
+      subroutine no_args
+         implicit none
+      end subroutine no_args
+   end interface
+
+   procedure(no_args), pointer :: problem_customize_solution => NULL()
+   procedure(no_args), pointer :: finalize_problem           => NULL()
 
 end module types
