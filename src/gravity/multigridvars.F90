@@ -74,7 +74,7 @@ module multigridvars
    logical            :: gb_solve_gather                              !< Prefer MPI_Gather over Send/Recv when solving global base level (looks a bit faster on small domains)
    logical            :: fft_patient                                  !< Spend more time in init_multigrid to find faster fft plan
    logical            :: hdf5levels                                   !< Dump mgvar to the HDF5 file?
-   character (len=20) :: grav_bnd_str                                 !< Type of gravitational boundary conditions.
+   character(len=20)  :: grav_bnd_str                                 !< Type of gravitational boundary conditions.
 
    ! single level container
    type :: plvl

@@ -34,7 +34,7 @@
 !<
 
 module multigrid
-   use multigridvars
+   use multigridvars    ! IGNORE greedy
    implicit none
 
    private
@@ -1015,8 +1015,8 @@ contains
       integer            :: l, v
       real               :: norm_rhs, norm_lhs, norm_old, norm_lowest
       logical            :: dump_every_step, dump_result
-      character (len=32) :: fmt
-      character (len=16) :: dname
+      character(len=32)  :: fmt
+      character(len=16)  :: dname
 
       inquire(file = "_dump_every_step_", EXIST=dump_every_step) ! use for debug only
       inquire(file = "_dump_result_", EXIST=dump_result)
