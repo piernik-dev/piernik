@@ -137,12 +137,10 @@ if ($moo{problems}) {
    print "  working directory, to use alternative configurations execute\n";
    print "  \'./piernik <directory with an alternative problem.par>\'\n";
 #   print "!===================================================================================!\n";
-   print "\nEnjoy your work with piernik!\n";
-   if ( $is_prob == 0 ) {
-   exit $OK;
-   } else {
-   exit $FAILED;
-   }
+   print "\nEnjoy your work with the Piernik Code!\n";
+
+   if ( $is_prob == 0 ) { exit $OK; }
+   else                 { exit $FAILED; }
 }
 
 # defaults
