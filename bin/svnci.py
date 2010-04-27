@@ -21,7 +21,7 @@ def print_files(list,action):
          print "  "+file
 
 def main():
-   usage = "usage: %prog [options] PATH COMMENT"
+   usage = "usage: %prog [-vqpf] PATH -m COMMENT"
    parser = OptionParser(usage=usage)
    parser.add_option("-v", "--verbose",
                   action="store_true", dest="verbose", default=True,
