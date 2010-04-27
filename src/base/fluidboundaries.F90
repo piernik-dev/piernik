@@ -32,7 +32,12 @@ module fluidboundaries
    contains
 
    subroutine bnd_u(dim)
-      use mpisetup
+      use mpisetup,        only : ierr, MPI_XY_RIGHT_DOM, MPI_XY_RIGHT_BND, MPI_XY_LEFT_DOM, MPI_XY_LEFT_BND, &
+         MPI_XZ_RIGHT_DOM, MPI_XZ_RIGHT_BND, MPI_XZ_LEFT_DOM, MPI_XZ_LEFT_BND, &
+         MPI_YZ_RIGHT_DOM, MPI_YZ_RIGHT_BND, MPI_YZ_LEFT_DOM, MPI_YZ_LEFT_BND, &
+         pxsize, pysize, pzsize, proczl, proczr, procyl, procyr, procxl, procxr, &
+         pcoords, bnd_xr, bnd_xl, bnd_yl, bnd_yr, bnd_zl, bnd_zr, req, status, comm, comm3d, &
+         MPI_DOUBLE_PRECISION, procxyl, procyxl, smalld, smallei
       use grid,            only : nb, nxd, nyd, nzd,x,y,z,nzb,nyb,nxb,nx,ny,nz
       use fluidindex,      only : nvar, iarr_all_dn,iarr_all_mx,iarr_all_my,iarr_all_mz
       use arrays,          only : u, b
@@ -49,7 +54,7 @@ module fluidboundaries
       use gravity,         only : grav_accel, nsub, tune_zeq_bnd
 #endif /* GRAV */
 #ifdef SHEAR_BND
-      use shear
+      use shear,           only : qshear, omega, delj, eps, dely, unshear_fft
 #endif /* SHEAR_BND */
 #ifdef COSM_RAYS
       use fluidindex,  only : iarr_all_crs
@@ -57,22 +62,21 @@ module fluidboundaries
 
       implicit none
       character(len=*) :: dim
-      integer ib
+      integer          :: ib
 
 #ifdef GRAV
-      integer kb, ksub
+      integer          :: kb, ksub
       real, dimension(nvar%fluids,nx,ny) :: db, csi2b
 #ifndef ISO
       real, dimension(nvar%fluids,nx,ny) :: ekb, eib
-      integer ifluid
+      integer :: ifluid
 #endif /* ISO */
       real, dimension(nsub+1):: zs, gprofs
       real, dimension(nvar%fluids,nsub+1) :: dprofs
       real, dimension(nvar%fluids) :: factor
-      real dzs,z1,z2
+      real :: dzs,z1,z2
 #endif /* GRAV */
-      integer i,j
-      integer ireq
+      integer :: i,j
       real, allocatable :: send_left(:,:,:,:),recv_left(:,:,:,:)
 #ifdef SHEAR_BND
       real, allocatable :: send_right(:,:,:,:),recv_right(:,:,:,:)
@@ -153,9 +157,7 @@ module fluidboundaries
          CALL MPI_IRECV   (recv_left , nvar%all*ny*nz*nb, MPI_DOUBLE_PRECISION, procxl, 20, comm, req(2), ierr)
          CALL MPI_IRECV   (recv_right, nvar%all*ny*nz*nb, MPI_DOUBLE_PRECISION, procxr, 10, comm, req(4), ierr)
 
-         do ireq = 1,4
-            call MPI_WAIT(req(ireq),status(1,ireq),ierr)
-         enddo
+         call MPI_WAITALL(4,req(:),status(:,:),ierr)
 
 !
 ! dodajemy ped_y i energie odpowiadajace niezaburzonej rozniczkowej rotacji na prawym brzegu
@@ -221,9 +223,7 @@ module fluidboundaries
             CALL MPI_IRECV   (recv_left , nvar%all*nyd*nz*nb, MPI_DOUBLE_PRECISION, procxl, 20, comm, req(2), ierr)
             CALL MPI_IRECV   (recv_right, nvar%all*nyd*nz*nb, MPI_DOUBLE_PRECISION, procxr, 10, comm, req(4), ierr)
 
-            do ireq = 1,4
-               call MPI_WAIT(req(ireq),status(1,ireq),ierr)
-            enddo
+            call MPI_WAITALL(4,req(:),status(:,:),ierr)
 
             do i = LBOUND(u,1), UBOUND(u,1)
                u(i,1:nb,nb+1:ny-nb,:) = unshear_fft(recv_left(i,1:nb,:,:), x(1:nb),dely)
@@ -245,9 +245,7 @@ module fluidboundaries
             CALL MPI_IRECV   (u(1,1,1,1), 1, MPI_YZ_LEFT_BND,  procxl, 20, comm3d, req(2), ierr)
             CALL MPI_IRECV   (u(1,1,1,1), 1, MPI_YZ_RIGHT_BND, procxr, 10, comm3d, req(4), ierr)
 
-            do ireq=1,4
-               call MPI_WAIT(req(ireq),status(1,ireq),ierr)
-            enddo
+            call MPI_WAITALL(4,req(:),status(:,:),ierr)
          endif
 #endif /* SHEAR_BND */
       case ('ydim')
@@ -258,9 +256,7 @@ module fluidboundaries
             CALL MPI_IRECV   (u(1,1,1,1), 1, MPI_XZ_LEFT_BND,  procyl, 40, comm3d, req(2), ierr)
             CALL MPI_IRECV   (u(1,1,1,1), 1, MPI_XZ_RIGHT_BND, procyr, 30, comm3d, req(4), ierr)
 
-            do ireq=1,4
-               call MPI_WAIT(req(ireq),status(1,ireq),ierr)
-            enddo
+            call MPI_WAITALL(4,req(:),status(:,:),ierr)
          endif
 
       case ('zdim')
@@ -271,9 +267,7 @@ module fluidboundaries
             CALL MPI_IRECV   (u(1,1,1,1), 1, MPI_XY_LEFT_BND,  proczl, 60, comm3d, req(2), ierr)
             CALL MPI_IRECV   (u(1,1,1,1), 1, MPI_XY_RIGHT_BND, proczr, 50, comm3d, req(4), ierr)
 
-            do ireq=1,4
-               call MPI_WAIT(req(ireq),status(1,ireq),ierr)
-            enddo
+            call MPI_WAITALL(4,req(:),status(:,:),ierr)
          endif
       end select ! (dim)
 
@@ -306,9 +300,7 @@ module fluidboundaries
             CALL MPI_ISEND   (send_left , nvar%all*nb*ny*nz, MPI_DOUBLE_PRECISION, procxyl, 70, comm, req(1), ierr)
             CALL MPI_IRECV   (recv_left , nvar%all*nx*nb*nz, MPI_DOUBLE_PRECISION, procxyl, 80, comm, req(2), ierr)
 
-            do ireq=1,2
-               call MPI_WAIT(req(ireq),status(1,ireq),ierr)
-            enddo
+            call MPI_WAITALL(2,req(:),status(:,:),ierr)
 
             do i=1,nb
                do j=1,ny
@@ -372,9 +364,7 @@ module fluidboundaries
             CALL MPI_ISEND   (send_left , nvar%all*nx*nb*nz, MPI_DOUBLE_PRECISION, procyxl, 80, comm, req(1), ierr)
             CALL MPI_IRECV   (recv_left , nvar%all*nb*ny*nz, MPI_DOUBLE_PRECISION, procyxl, 70, comm, req(2), ierr)
 
-            do ireq=1,2
-               call MPI_WAIT(req(ireq),status(1,ireq),ierr)
-            enddo
+            call MPI_WAITALL(2,req(:),status(:,:),ierr)
 
             do j=1,nb
                do i=1,nx
@@ -620,6 +610,7 @@ module fluidboundaries
             do ib=1,nb
 
                u((/iarr_all_dn,iarr_all_mx,iarr_all_my/),:,:,ib)        = u((/iarr_all_dn,iarr_all_mx,iarr_all_my/),:,:,nb+1)
+ ! BEWARE: use of uninitialized value on first call (a side effect of r1726)
                u(iarr_all_mz,:,:,ib)                      = min(u(iarr_all_mz,:,:,nb+1),0.0)
 #ifndef ISO
                u(iarr_all_en,:,:,ib)                      = u(iarr_all_en,:,:,nb+1)
@@ -719,6 +710,7 @@ module fluidboundaries
             do ib=1,nb
 
                u((/iarr_all_dn,iarr_all_mx,iarr_all_my/),:,:,nb+nzb+ib) = u((/iarr_all_dn,iarr_all_mx,iarr_all_my/),:,:,nb+nzb)
+ ! BEWARE: use of uninitialized value on first call (a side effect of r1726)
                u(iarr_all_mz,:,:,nb+nzb+ib)               = max(u(iarr_all_mz,:,:,nb+nzb),0.0)
 #ifndef ISO
                u(iarr_all_en,:,:,nb+nzb+ib)               = u(iarr_all_en,:,:,nb+nzb)
