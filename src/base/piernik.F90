@@ -31,16 +31,20 @@
 !<
 program piernik
 
-  use mpisetup
-  use dataio, only : nend, nstep_start, tend
+  use mpisetup,      only : comm, comm3d, ierr, proc, t, dt, nstep, mpistop
+  use dataio_public, only : nend, nstep_start, tend, log_file, log_lun
+  use timer,         only : time_left
 #ifdef PERFMON
-  use timer, only : timer_start, timer_stop
+  use timer,         only : timer_start, timer_stop
 #endif
-  use dataio, only : write_data, user_msg_handler
-  use fluidupdate, only  : fluid_update
+  use dataio,        only : write_data, user_msg_handler
+  use fluidupdate,   only : fluid_update
+  use types,         only : finalize_problem
 
   implicit none
-  logical   :: end_sim !< Used in main loop, to test whether to stop simulation or not
+
+  logical            :: end_sim !< Used in main loop, to test whether to stop simulation or not
+  character(len=256) :: msg
 
   call init_piernik
 
@@ -49,20 +53,65 @@ program piernik
 #ifdef PERFMON
   call timer_start
 #endif
+
   end_sim = .false.
-  do while(t < tend .and. nstep < nend .and. .not.(end_sim) )
-    nstep=nstep+1
 
-      call fluid_update
+  if (proc == 0) then
+     write(*, '("======================================================================================================")')
+     open(log_lun, file=log_file, position='append')
+     write(log_lun, '(/,a,/)') "###############     Simulation     ###############"
+     close(log_lun)
+  end if
 
-      call MPI_BARRIER(comm3d,ierr)
-      call write_data(output='all')
+  do while(t < tend .and. nstep < nend .and. .not.(end_sim) .and. time_left() )
 
-      call user_msg_handler(end_sim)
+     nstep=nstep+1
+
+     if (proc == 0) then
+        open(log_lun, file=log_file, position='append')
+        write(log_lun, '("   nstep = ",i7,"   dt = ",es22.16,"   t = ",es22.16)') nstep, dt, t
+        close(log_lun)
+     end if
+
+     call fluid_update
+
+     call MPI_BARRIER(comm3d,ierr)
+     call write_data(output='all')
+
+     call user_msg_handler(end_sim)
 
   end do ! main loop
 
-  nstep=nstep-1
+  if (proc == 0) then
+     write(*, '("======================================================================================================")')
+     open(log_lun, file=log_file, position='append')
+     write(log_lun, '(/,a,/)') "###############     Finishing     ###############"
+     if (t >= tend) then
+        write(msg, '(a,g14.6)')        "Simulation has reached final time t = ",t
+        write(*, '(a)') trim(msg)
+        write(log_lun, '(a)') trim(msg)
+     end if
+     if (nstep >= nend) then
+        write(msg, '(a,i7,a,g14.6,a)') "Maximum step count (",nstep,") exceeded (at  t = ",t,")."
+        write(*, '(a)') trim(msg)
+        write(log_lun, '(a)') trim(msg)
+     end if
+     if (end_sim) then
+        write(msg, '(a,i7,a,g14.6)')   "Enforced stop at step ",nstep,", t = ", t
+        write(*, '(a)') trim(msg)
+        write(log_lun, '(a)') trim(msg)
+     end if
+     if(.not.time_left()) then
+        write(msg, '(a,i7,a,g14.6)')   "Wall time limit exceeded at step ",nstep,", t = ", t
+        write(*, '(a)') trim(msg)
+        write(log_lun, '(a)') trim(msg)
+     end if
+     close(log_lun)
+  end if
+
+  if(associated(finalize_problem)) call finalize_problem
+
+!  nstep=nstep+1
 #ifdef PERFMON
   call timer_stop
 #endif
@@ -70,7 +119,9 @@ program piernik
 !---------------------------- END OF MAIN LOOP ----------------------------------
 
   call MPI_BARRIER(comm,ierr)
+  if (proc == 0) write(*, '(a)', advance='no') "Finishing "
   call cleanup_piernik
+  if (proc == 0) write(*, '("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")')
 
   call mpistop
 
@@ -79,36 +130,39 @@ contains
 !! Meta subroutine responsible for initializing all piernik modules
 !<
    subroutine init_piernik
-      use types
-      use initfluids, only : init_fluids
-      use fluidindex, only : nvar
-      use arrays, only : init_arrays
-      use grid, only : nx,ny,nz
-      use grid, only : init_grid,grid_xyz
-      use initproblem, only : init_prob, read_problem_par
-      use dataio, only : init_dataio, write_data, user_msg_handler
-      use mpisetup
-      use mpiboundaries
+      use types,         only : grid_container
+      use initfluids,    only : init_fluids
+      use fluidindex,    only : nvar
+      use arrays,        only : init_arrays
+      use grid,          only : nx,ny,nz
+      use grid,          only : init_grid,grid_xyz
+      use initproblem,   only : init_prob, read_problem_par, problem_name, run_id
+      use dataio,        only : init_dataio, write_data, nrestart
+      use mpisetup,      only : cwd, mpistart
+      use mpiboundaries, only : mpi_boundaries_prep
 #if defined MAGNETIC && defined RESISTIVE
-      use resistivity, only : init_resistivity
+      use resistivity,   only : init_resistivity
 #endif /* MAGNETIC && RESISTIVE */
 #ifdef SHEAR
-      use shear, only : init_shear
+      use shear,         only : init_shear
 #endif /* SHEAR */
-#ifdef SELF_GRAV
-      use poissonsolver
-#endif /* SELF_GRAV */
 #ifdef GRAV
-      use gravity, only : init_grav,grav_pot_3d
+      use gravity,       only : init_grav,grav_pot_3d
 #endif /* GRAV */
 #ifdef FLUID_INTERACTIONS
-      use interactions, only : init_interactions
+      use interactions,  only : init_interactions
 #endif /* FLUID_INTERACTIONS */
 #ifdef SNE_DISTR
-      use sndistr, only  : init_sndistr
+      use sndistr,       only : init_sndistr
 #endif /* SNE_DISTR */
+#ifdef MULTIGRID
+      use multigrid,     only : init_multigrid
+#endif /* MULTIGRID */
+
       implicit none
+
       type(grid_container) :: cgrid
+
       call getarg(1, cwd)
       if (LEN_TRIM(cwd) == 0) cwd = '.'
 
@@ -121,6 +175,7 @@ contains
 #endif /* SHEAR */
 
       call read_problem_par
+      if (proc == 0) write(*,'(/,2a,/)')"   Starting problem : ",trim(problem_name)
 
       call init_fluids
 
@@ -145,10 +200,21 @@ contains
 #ifdef SNE_DISTR
       call init_sndistr
 #endif /* SNE_DISTR */
-
-      call init_prob
+#ifdef MULTIGRID
+      call init_multigrid(cgrid)
+#endif /* MULTIGRID */
 
       call init_dataio
+
+      ! It makes no sense to call (sometimes expensive) init_prob before reading restart file.
+      ! BEWARE: Current change may break some problems that depend on other things set in init_prob.
+      ! Move everything that is not regenerated by restart file to read_problem_par or create separate post-restart initialization
+      if (nrestart>0) then
+         if (proc == 0) write(*,'(a,i4,a)')"[piernik:init_piernik] Restart file #",nrestart," read. Warning: skipping init_prob."
+      else
+         call init_prob
+         call write_data(output='all') ! moved from dataio::init_dataio
+      end if
 
    end subroutine init_piernik
 
@@ -157,19 +223,30 @@ contains
 !<
 
    subroutine cleanup_piernik
-      use grid, only : cleanup_grid
-      use dataio, only : cleanup_dataio
-      use arrays, only : cleanup_arrays
+      use grid,        only : cleanup_grid
+      use dataio,      only : cleanup_dataio
+      use arrays,      only : cleanup_arrays
 #ifdef RESISTIVE
       use resistivity, only : cleanup_resistivity
 #endif /* RESISTIVE */
+#ifdef MULTIGRID
+      use multigrid,   only : cleanup_multigrid
+#endif /* MULTIGRID */
 
       call cleanup_grid
+      if (proc == 0) write(*,'(a)',advance='no')"."
       call cleanup_dataio
+      if (proc == 0) write(*,'(a)',advance='no')"."
 #ifdef RESISTIVE
       call cleanup_resistivity
+      if (proc == 0) write(*,'(a)',advance='no')"."
 #endif /* RESISTIVE */
+#ifdef MULTIGRID
+      call cleanup_multigrid
+      if (proc == 0) write(*,'(a)',advance='no')"."
+#endif /* MULTIGRID */
       call cleanup_arrays
+      if (proc == 0) write(*,'(a)')"."
+
    end subroutine cleanup_piernik
 end program piernik
-
