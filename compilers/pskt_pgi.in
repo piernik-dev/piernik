@@ -1,0 +1,16 @@
+###############################################################################
+#
+# Make definitions for pskt
+#
+# User-compiled:
+#   hdf5-1.8.3 (h5pfc uses pgi 8.0-6)
+#     CC=mpicc FC=mpif90 ./configure --prefix=/work/apus/opt/psk/pgi/mvapich2-1.2p1/ --enable-production --enable-fortran --enable-parallel
+#
+
+PROG     = piernik
+F90      = h5pfc
+F90FLAGS = -O3 -fast -r8 -gopt -traceback -Mfree -D__PGI__
+# -C -Ktrap=fp,divz,denorm,ovf -Minfo=all -Mneginfo=all -Mchkptr -Mchkstk -Mlarge_arrays -Mstandard -Mallocatable=03
+HDF_LIB  = . -L /usr/lib64/hdf -lfftw3 -llapack
+MHDF_LIB =
+

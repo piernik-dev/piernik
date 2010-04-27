@@ -15,6 +15,6 @@
 
 PROG     = piernik
 F90      = h5pfc
-F90FLAGS = -O3 -funroll-loops -fdefault-real-8 -Wall -W -pedantic-errors -std=gnu -fimplicit-none -ffree-line-length-none -fbacktrace -ggdb
+F90FLAGS = -I. -I/usr/include -I/home/gawrysz/usr/include -O3 -funroll-loops -fdefault-real-8 -Wall -W -pedantic-errors -std=gnu -fimplicit-none -ffree-line-length-none -fbacktrace -ggdb
 # -fbounds-check -Wsurprising -Wcharacter-truncation -Wnonstd-intrinsics  -ffpe-trap=invalid,zero,overflow,denormal
-LIBS    += -lfftw3 -llapack
+LIBW    += -L/home/gawrysz/usr//lib /home/gawrysz/usr/lib/libhdf5hl_fortran.a /home/gawrysz/usr/lib/libhdf5_hl.a /home/gawrysz/usr/lib/libhdf5_fortran.a /home/gawrysz/usr/lib/libhdf5.a -lmpi -lz -lm -Wl,-rpath -Wl,/home/gawrysz/usr/lib -lfftw3 -llapack

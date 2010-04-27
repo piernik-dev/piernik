@@ -1,0 +1,25 @@
+###############################################################################
+#
+# Make definitions for phoenix (Fedora 8, x86)
+#
+# System packages:
+#   lapack-devel, hdf-devel, intel-ifort101015-10.1.015-1
+#
+# User-compiled:
+#   szip-2.1
+#     ./configure --prefix=/opt/szip-2.1 --enable-production
+#   mpich2-1.0.7 (uses ifort 10.1)
+#     F77=ifort F90=ifort CC=icc ./configure --prefix=/opt/mpich2-1.0.7 --enable-f90 --with-device=ch3:ssm --with-pm=mpd --enable-fast --enable-compiler-optimizations
+#   hdf5-1.8.4 (h5pfc uses ifort 10.1)
+#     CC=mpicc FC=mpif90 ./configure --prefix=/opt/phdf5-1.8.4 --enable-fortran --enable-parallel --with-szlib=/opt/szip/ --with-zlib --enable-hl --disable-sharedlib-rpath
+#     Required manual removal of -rpath options from /work/phoenix/opt/Build/phdf5-1.8.4/libtool
+#
+
+PROG     = piernik
+F90      = h5pfc
+F90FLAGS = -O3 -r8 -implicitnone -g -traceback -fpe0 -heap-arrays -D__IFORT__
+# -ftrapuv -check all -check noarg_temp_created -debug all -WB
+HDF_LIB  = . -L /usr/lib/hdf -lfftw3 -llapack
+#-lgfortran -lc -I/usr/lib -lhdf5_fortran -lhdf5hl_fortran -lhdf5
+MHDF_LIB =
+
