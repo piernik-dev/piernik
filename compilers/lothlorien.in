@@ -1,0 +1,20 @@
+###############################################################################
+#
+# Make definitions for lothlorien (Mandriva 2009.1, x86)
+#
+# System packages:
+#   gcc, gcc-gfortran, gcc-cpp
+#   openmpi, libopenmpi-devel
+#   HDF4, hdf5, libhdf5-devel, liblapack-devel, libfftw-devel
+#
+# User-compiled:
+#   HDF5:
+#     FC=mpif90 FCFLAGS=-I/usr/include ./configure --prefix=${HOME}/usr/ --enable-fortran --enable-parallel --with-szlib --with-zlib --enable-hl
+#     make ;make install
+#
+
+PROG     = piernik
+F90      = $(HOME)/usr/bin/h5pfc
+F90FLAGS = -O2 -fdefault-real-8 -Wall -W -pedantic-errors -std=gnu -fimplicit-none -ffree-line-length-none -fbacktrace -ggdb
+# -fbounds-check -Wsurprising -Wcharacter-truncation -Wnonstd-intrinsics  -ffpe-trap=invalid,zero,overflow,denormal
+HDF_LIB  = . -lfftw3 -llapack
