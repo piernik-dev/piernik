@@ -2,7 +2,6 @@
     nxd = 128
     nyd = 128
     nzd = 128
-    nb = 5
  /
 
  $MPI_BLOCKS

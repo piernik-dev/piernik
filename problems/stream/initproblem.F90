@@ -29,11 +29,6 @@
 
 module initproblem
 
-! Initial condition for blob test
-! Blob test by Agertz et al., 2007, MNRAS, 380, 963.
-! however, the blob is of dust here.
-   use mpisetup
-
    character(len=32) :: problem_name
    character(len=32) :: fnoise
    character(len=3)  :: run_id
@@ -49,7 +44,8 @@ module initproblem
 !-----------------------------------------------------------------------------
 
    subroutine read_problem_par
-      use errh, only : namelist_errh
+      use mpisetup,  only: cwd, cbuff, rbuff, MPI_CHARACTER, ibuff, MPI_INTEGER, MPI_DOUBLE_PRECISION, comm, ierr, lbuff, MPI_LOGICAL, buffer_dim, proc
+      use errh,      only: namelist_errh
       implicit none
       character(len=100) :: par_file, tmp_log_file
       integer :: cwd_status, ierrh
@@ -318,4 +314,3 @@ module initproblem
    end subroutine compare
 
 end module initproblem
-
