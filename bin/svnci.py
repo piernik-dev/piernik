@@ -50,12 +50,10 @@ def main():
    url = entry.url.replace(entry.repos+'/','')
 
    if(url.find('branches') == -1):
-      rel_path = "public/trunk"
-      comment =  "[source:"+rel_path+" public]: " + options.message
+      prefix = "trunk"
    else:
-      branch = url.partition("branches/")[2].partition("/")[0]
-      rel_path = "public/branches/"+branch
-      comment = "[source:"+rel_path+" "+branch+"]: " + options.message
+      prefix = url.partition("branches/")[2].partition("/")[0]
+   comment = prefix+": " + options.message
 
    all_changes = [client.status(f) for f in args]
    changes     = [change for dir_change in all_changes for change in dir_change]
