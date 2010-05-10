@@ -1,8 +1,12 @@
  $DOMAIN_SIZES
     nxd = 64
-    nyd = 64
-    nzd = 64
+    nyd = 8
+    nzd = 8
+    ! set nyd and nzd to 64 if you want to have iy or iz /=0,
+    ! when prefer_rbgs_relaxation is .true.
+    ! or when parallel execution leads to nonconvergence
  /
+
  $MPI_BLOCKS
     pxsize = 1
     pysize = 1
@@ -94,16 +98,11 @@
  /
 
  $MULTIGRID_SOLVER
-    level_max = 4
+    level_max = 2
     nsmool    = 4
     stdout    = .true.
-    norm_tol  = 1.e-6
-    nsmool    = 4
-    ord_laplacian = 2
-    ord_prolong   = 0
-    overrelax     =  1
     grav_bnd_str  = "periodic"
-    prefer_rbgs_relaxation = .true.
+!    prefer_rbgs_relaxation = .true.
     dirty_debug = .true.
  /
 

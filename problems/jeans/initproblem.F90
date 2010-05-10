@@ -175,6 +175,9 @@ contains
             !write(*,*) 'Something like T(t) = ',Tamp,'* exp(',omg,'t)]' !BEWARE the formula is not completed
          end if
          write(*,'(/,a)') 'Divide T(t) for .tsl by L to get proper amplitude !'
+#ifndef MULTIGRID
+         write(*,'(/,a)') '[initproblem:init_prob] Without multigrid the results looks wrong - probably due to some bug.'
+#endif
       end if
 ! Uniform equilibrium state
 
@@ -211,7 +214,11 @@ contains
     Tamp_rounded = (int(Tamp/Tamp_aux)+1)*Tamp_aux
     if (proc == 0) then
       write(*,'(/,a)') 'Run:'
-      write(*,'(a)')   ' % gnuplot verify.gpl; display jeans-*.png'
+#ifdef MULTIGRID
+      write(*,'(a)')   ' % gnuplot verify.gpl; display jeans-mg.png'
+#else
+      write(*,'(a)')   ' % gnuplot verify.gpl; display jeans-fft.png'
+#endif
       write(*,'(a,/)') 'to verify results'
 
       open(137,file="verify.gpl",status="unknown")
