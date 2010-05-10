@@ -3,22 +3,17 @@
 # Make definitions for phoenix (Fedora 8, x86)
 #
 # System packages:
-#   lapack-devel, hdf-devel, intel-ifort101015-10.1.015-1
+#   fftw-devel-3.1.2
 #
 # User-compiled:
-#   szip-2.1
-#     ./configure --prefix=/opt/szip-2.1 --enable-production
-#   mpich2-1.0.7 (uses ifort 10.1)
-#     F77=ifort F90=ifort CC=icc ./configure --prefix=/opt/mpich2-1.0.7 --enable-f90 --with-device=ch3:ssm --with-pm=mpd --enable-fast --enable-compiler-optimizations
-#   hdf5-1.8.4 (h5pfc uses ifort 10.1)
-#     CC=mpicc FC=mpif90 ./configure --prefix=/opt/phdf5-1.8.4 --enable-fortran --enable-parallel --with-szlib=/opt/szip/ --with-zlib --enable-hl --disable-sharedlib-rpath
-#     Required manual removal of -rpath options from /work/phoenix/opt/Build/phdf5-1.8.4/libtool
+#   gcc-4.4.3    (required for some language constructs)
+#   szip-2.1     (optional)
+#   mpich2-1.0.7 (CC=gcc F77=gfortran F90=gfortran, --enable-f90 --with-pm=mpd --with-device=ch3:sock)
+#   hdf5-1.8.4   (CC=mpicc FC=mpif90, --enable-fortran --enable-parallel)
 #
 
 PROG     = piernik
 F90      = h5pfc
 F90FLAGS = -O3 -funroll-loops -fdefault-real-8 -Wall -W -pedantic-errors -std=gnu -fimplicit-none -ffree-line-length-none -fbacktrace -ggdb
 # -fbounds-check -Wsurprising -Wcharacter-truncation -ffpe-trap=invalid,zero,overflow,denormal
-HDF_LIB  = . -L /usr/lib/hdf -lfftw3 -llapack
-MHDF_LIB =
-
+LIBS    += -lfftw3
