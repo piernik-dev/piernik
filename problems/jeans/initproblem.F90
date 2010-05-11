@@ -138,11 +138,12 @@ contains
 
    subroutine init_prob
 
-      use mpisetup, only : proc
-      use arrays, only : u, b
-      use constants, only: fpiG, pi, newtong
-      use grid, only : x, y, z, nx, ny, nz, xmin, ymin, zmin
-      use initionized, only : gamma_ion, idni, imxi, imzi, ieni
+      use errh,         only: die
+      use mpisetup,     only: proc
+      use arrays,       only: u, b
+      use constants,    only: fpiG, pi, newtong
+      use grid,         only: x, y, z, nx, ny, nz, xmin, ymin, zmin, dx, dy, dz
+      use initionized,  only: gamma_ion, idni, imxi, imzi, ieni
 
       implicit none
 
@@ -176,7 +177,8 @@ contains
          end if
          write(*,'(/,a)') 'Divide T(t) for .tsl by L to get proper amplitude !'
 #ifndef MULTIGRID
-         write(*,'(/,a)') '[initproblem:init_prob] Without multigrid the results looks wrong - probably due to some bug.'
+         if( any([dx/=dy,dx/=dz,dy/=dz]) ) &
+            call die('[initproblem:init_prob] FFT solver requires dx == dy == dz')
 #endif
       end if
 ! Uniform equilibrium state
