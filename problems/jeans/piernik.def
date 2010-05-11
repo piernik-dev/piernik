@@ -13,6 +13,11 @@
 #define GRAV
 #define GRAV_NULL
 
+#if !(defined(MULTIGRID) || defined(SELF_GRAV))
+#error "You must define either MULTIGRID or SELF_GRAV for this problem"
+Why #error doesn't immediately stop the compilation?
+#endif
+
 #if __GNUC__ >=4 && __GNUC_MINOR__ >=5
 #define NEW_HDF5
 #else

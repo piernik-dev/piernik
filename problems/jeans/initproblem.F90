@@ -41,11 +41,10 @@ contains
 !-----------------------------------------------------------------------------
 
    subroutine read_problem_par
-      use grid, only : xmin, xmax, ymin, ymax, zmin, zmax
-      use errh, only : namelist_errh, die
-      use mpisetup, only : cwd, ierr, rbuff, cbuff, ibuff, proc, &
-         MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, &
-         buffer_dim, comm
+      use grid,     only : xmin, xmax, ymin, ymax, zmin, zmax
+      use errh,     only : namelist_errh, die
+      use mpisetup, only : cwd, ierr, rbuff, cbuff, ibuff, proc, buffer_dim, comm, &
+           &               MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER
       use constants, only: pi
 
       implicit none
@@ -78,7 +77,7 @@ contains
          close(3)
       endif
 
-      if(proc == 0) then
+      if (proc == 0) then
 
          cbuff(1) =  problem_name
          cbuff(2) =  run_id
@@ -92,15 +91,13 @@ contains
          ibuff(3) = iz
          ibuff(4) = mode
 
-         call MPI_BCAST(cbuff, 32*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
-         call MPI_BCAST(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
-         call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+      end if
 
-      else
+      call MPI_BCAST(cbuff, 32*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
+      call MPI_BCAST(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
+      call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
-         call MPI_BCAST(cbuff, 32*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
-         call MPI_BCAST(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
-         call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+      if (proc /= 0) then
 
          problem_name = cbuff(1)
          run_id       = cbuff(2)(1:3)
@@ -115,6 +112,10 @@ contains
          mode         = ibuff(4)
 
       endif
+
+#if !(defined(MULTIGRID) || defined(SELF_GRAV))
+      call die("You must define either MULTIGRID or SELF_GRAV for this problem")
+#endif
 
       if (mode < 0 .or. mode > 1)     call die("[initproblem:read_problem_par] Invalid mode.")
       if (d0 < 0. .or. abs(amp) > 1.) call die("[initproblem:read_problem_par] Negative average density or amplitude too high.")
@@ -138,7 +139,6 @@ contains
 
    subroutine init_prob
 
-      use errh,         only: die
       use mpisetup,     only: proc
       use arrays,       only: u, b
       use constants,    only: fpiG, pi, newtong
@@ -176,10 +176,6 @@ contains
             !write(*,*) 'Something like T(t) = ',Tamp,'* exp(',omg,'t)]' !BEWARE the formula is not completed
          end if
          write(*,'(/,a)') 'Divide T(t) for .tsl by L to get proper amplitude !'
-#ifndef MULTIGRID
-         if( any([dx/=dy,dx/=dz,dy/=dz]) ) &
-            call die('[initproblem:init_prob] FFT solver requires dx == dy == dz')
-#endif
       end if
 ! Uniform equilibrium state
 

@@ -77,8 +77,7 @@ contains
     elseif( bnd_xl .eq. 'per' .and. bnd_xr .eq. 'per' .and. &
             bnd_yl .eq. 'per' .and. bnd_yr .eq. 'per' .and. &
             bnd_zl .eq. 'per' .and. bnd_zr .eq. 'per'        ) then ! Fully 3D periodic
-        call poisson_xyzp(dens(nb+1:nb+nxd,nb+1:nb+nyd,nb+1:nb+nzd),&
-                fgp(nb+1:nb+nxd,nb+1:nb+nyd,nb+1:nb+nzd),dz)
+        call poisson_xyzp(dens(nb+1:nb+nxd,nb+1:nb+nyd,nb+1:nb+nzd), fgp(nb+1:nb+nxd,nb+1:nb+nyd,nb+1:nb+nzd))
 
 ! Boundary conditions
          fgp(1:nb,:,:)              = fgp(nxd+1:nxd+nb,:,:)
@@ -95,8 +94,7 @@ contains
          if(dimensions=='3d') then
            if(.not.allocated(ala)) allocate(ala(nx-2*nb,ny-2*nb,nz-2*nb))
            ala = dens(nb+1:nb+nxd,nb+1:nb+nyd,nb+1:nb+nzd)
-           call poisson_xyzp(ala(:,:,:), &
-                fgp(nb+1:nb+nxd,nb+1:nb+nyd,nb+1:nb+nzd),dz)
+           call poisson_xyzp(ala(:,:,:), fgp(nb+1:nb+nxd,nb+1:nb+nyd,nb+1:nb+nzd))
 
            fgp(:,:,1:nb)              = fgp(:,:,nzd+1:nzd+nb)
            fgp(:,:,nzd+nb+1:nzd+2*nb) = fgp(:,:,nb+1:2*nb)
@@ -462,6 +460,7 @@ contains
 !
     factor = 1.0
 
+    !BEWARE: This routine will work incorrectly if dx /= dz or dy /= dz (poisson_xyzp was corrected in r2124)
     if (present(dz) .eqv. .true.) factor = dz * dz
 
     do k = 1, nz
@@ -551,14 +550,13 @@ contains
 !! SUBROUTINE POISSON_XYZP: solves Poisson equation for periodic
 !! bnd conditions in X, Y and Z
 !!
-  subroutine poisson_xyzp(den, pot, dz)
-    use grid, only : nb
-    use constants, only : fpiG,dpi
+  subroutine poisson_xyzp(den, pot)
+    use grid,      only: nb, dx, dy, dz
+    use constants, only: fpiG, dpi
     implicit none
 
     real, dimension(:,:,:), intent(in)  :: den
     real, dimension(:,:,:), intent(out) :: pot
-    real, optional,  intent(in)  :: dz
 
     complex, dimension(:,:,:), allocatable :: fft
     complex, dimension(:,:,:), allocatable :: ctmp
@@ -602,19 +600,20 @@ contains
 ! destroy plan for the forward FFT
     call dfftw_destroy_plan(planf)
 
-    ! BEWARE: there is no reason to prefer dz over dx and dy here. This routine will work incorrectly if dx /= dz or dy /= dz.
-    ! The k[xyz] factors may contain the d[xyz] cell sizes (as it was implemented in multigrid)
-    ! The same bug is possibly implemented in other routines
-    fft(:,:,:) = ctmp(:,:,:)*dz*dz
-
 ! compute eigenvalues for each p, q and r and solve linear system
 ! ToDo: this can be done only once if we do not change arrays
 
-    kx(:) = cos(dpi/nx*(/(j,j=0,np-1)/))
-    ky(:) = cos(dpi/ny*(/(j,j=0,ny-1)/))
-    kz(:) = cos(dpi/nz*(/(j,j=0,nz-1)/))
+    kx(:) = (cos(dpi/nx*(/(j,j=0,np-1)/))-1.)/dx**2
+    ky(:) = (cos(dpi/ny*(/(j,j=0,ny-1)/))-1.)/dy**2
+    kz(:) = (cos(dpi/nz*(/(j,j=0,nz-1)/))-1.)/dz**2
+
+! Correction for 4-th order (5-point) Laplacian - seems not to be important, at least in Jeans test.
+! For integral approximation of the 4-th order Laplacian replace (7.-cos(x))/6. by (13.-cos(x))/12.
+!    kx(:) = kx(:) * (7.-cos(dpi/nx*(/(j,j=0,np-1)/)))/6.
+!    ky(:) = ky(:) * (7.-cos(dpi/ny*(/(j,j=0,ny-1)/)))/6.
+!    kz(:) = kz(:) * (7.-cos(dpi/nz*(/(j,j=0,nz-1)/)))/6.
     forall (i=1:np,j=1:ny,k=1:nz, (kx(i)+ky(j)+kz(k) - 3.0) /= 0.0)
-       fft(i,j,k) = 0.5 * fft(i,j,k) / (kx(i)+ky(j)+kz(k) - 3.0)
+       fft(i,j,k) = 0.5 * ctmp(i,j,k) / (kx(i)+ky(j)+kz(k) - 3.0)
     endforall
 
 ! create plan for the inverse FFT3D
