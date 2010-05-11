@@ -34,7 +34,6 @@ my $OK = 0;
 my $FAILED = 1;
 my @ARGV_SAVED = @ARGV;
 
-# .setuprc may contain preferred options to be included everytime, usually "-compiler <preferred_compiler_configuration>"
 open DEF_CONF, "< ./.setuprc";
 do {
   $_ = <DEF_CONF>;
@@ -97,7 +96,8 @@ if ($moo{problems}) {
    print " --param <file>\t- use <file> instead problem.par\n";
    print " --define <flag>\t- inject precompiler directive to piernik.def\n";
    print " --obj <postfix>\t- use obj_<postfix> directory instead of obj/ and runs/<problem>_<postfix>/ rather than runs/<problem>/\n";
-   print " --compiler <configuration>\t - choose specified config from compilers directory\n";
+   print " --compiler <configuration>\t- choose specified config from compilers directory\n\n";
+   print "The file .setuprc may contain some preferred options to be included everytime, for example '--linkexe --compiler <local_configuration>'\n";
    print "\n";
 
    print "all-in-one wrapper for a selected problem:\n";
