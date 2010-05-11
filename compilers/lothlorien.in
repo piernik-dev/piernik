@@ -3,9 +3,9 @@
 # Make definitions for lothlorien (Mandriva 2009.1, x86)
 #
 # System packages:
-#   gcc, gcc-gfortran, gcc-cpp
+#   gcc 4.4.1, gcc-gfortran, gcc-cpp (from Mandriva 2010.0, with dependencies)
 #   openmpi, libopenmpi-devel
-#   HDF4, hdf5, libhdf5-devel, liblapack-devel, libfftw-devel
+#   hdf5, libhdf5-devel, liblapack-devel, libfftw-devel
 #
 # User-compiled:
 #   HDF5:
@@ -17,4 +17,3 @@ PROG     = piernik
 F90      = h5pfc
 F90FLAGS = -O3 -funroll-loops -fdefault-real-8 -Wall -W -pedantic-errors -std=gnu -fimplicit-none -ffree-line-length-none -fbacktrace -ggdb
 # -fbounds-check -Wsurprising -Wcharacter-truncation -Wnonstd-intrinsics  -ffpe-trap=invalid,zero,overflow,denormal
-LIBS    += -lfftw3 -llapack
