@@ -3,14 +3,14 @@
 # Make definitions for lothlorien (Mandriva 2009.1, x86)
 #
 # System packages:
-#   gcc 4.4.1, gcc-gfortran, gcc-cpp (from Mandriva 2010.0, with dependencies)
+#   gcc 4.4.1, gcc-gfortran, gcc-cpp (from Mandriva 2010.0, with minimal set of dependencies)
 #   openmpi, libopenmpi-devel
 #   hdf5, libhdf5-devel, liblapack-devel, libfftw-devel
 #
 # User-compiled:
 #   HDF5:
-#     FC=mpif90 FCFLAGS=-I/usr/include ./configure --prefix=${HOME}/usr/ --enable-fortran --enable-parallel --with-szlib --with-zlib --enable-hl
-#     make ;make install
+#     FC=mpif90 FCFLAGS=-I/usr/include CC=mpicc ./configure --prefix=${HOME}/usr2009.1/ --enable-fortran --enable-parallel --with-szlib
+#     make && make install
 #
 
 PROG     = piernik
