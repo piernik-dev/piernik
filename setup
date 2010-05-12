@@ -189,8 +189,6 @@ if(@define) {
    }
 }
 @d = grep (/define/, `echo \'#include \"$defs\"\' > foo.f90 && gfortran $cppflags -E -cpp -dM foo.f90 && rm foo.*`);
-print @d;
-exit();
 if( grep { /GRAV/ }  @d) {
    push(@addons, "../src/gravity/gravity.F90");
    push(@addons, "../src/gravity/hydrostatic.F90");
