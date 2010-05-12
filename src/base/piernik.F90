@@ -45,6 +45,7 @@ program piernik
 
   logical            :: end_sim !< Used in main loop, to test whether to stop simulation or not
   character(len=256) :: msg
+  character(len=32)  :: nstr, tstr
 
   call init_piernik
 
@@ -83,26 +84,30 @@ program piernik
   end do ! main loop
 
   if (proc == 0) then
+     write(tstr, '(g14.6)') t
+     write(nstr, '(i7)') nstep
+     tstr = adjustl(tstr)
+     nstr = adjustl(nstr)
      write(*, '("======================================================================================================")')
      open(log_lun, file=log_file, position='append')
      write(log_lun, '(/,a,/)') "###############     Finishing     ###############"
      if (t >= tend) then
-        write(msg, '(a,g14.6)')        "Simulation has reached final time t = ",t
+        write(msg, '(2a)') "Simulation has reached final time t = ",trim(tstr)
         write(*, '(a)') trim(msg)
         write(log_lun, '(a)') trim(msg)
      end if
      if (nstep >= nend) then
-        write(msg, '(a,i7,a,g14.6,a)') "Maximum step count (",nstep,") exceeded (at  t = ",t,")."
+        write(msg, '(4a)') "Maximum step count (",trim(nstr),") exceeded at t = ",trim(tstr)
         write(*, '(a)') trim(msg)
         write(log_lun, '(a)') trim(msg)
      end if
      if (end_sim) then
-        write(msg, '(a,i7,a,g14.6)')   "Enforced stop at step ",nstep,", t = ", t
+        write(msg, '(4a)') "Enforced stop at step ",trim(nstr),", t = ", trim(tstr)
         write(*, '(a)') trim(msg)
         write(log_lun, '(a)') trim(msg)
      end if
      if(.not.time_left()) then
-        write(msg, '(a,i7,a,g14.6)')   "Wall time limit exceeded at step ",nstep,", t = ", t
+        write(msg, '(4a)') "Wall time limit exceeded at step ",trim(nstr),", t = ", trim(tstr)
         write(*, '(a)') trim(msg)
         write(log_lun, '(a)') trim(msg)
      end if
