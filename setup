@@ -182,26 +182,26 @@ $defs = $probdir."piernik.def";
    } else {
       copy($defs, "$objdir/piernik.def") or die "failed copying piernik.def";
    }
-open (defs) or die "Can't open the file piernik.def!";
-@fdefs = <defs>;
-@d = grep (/define/,@fdefs);
 if(@define) {
    foreach $inc (@define) {
-      push(@d, "#define ".$inc."\n");
+      push(@d, "".$inc."\n");
       $cppflags = $cppflags . " -D" . $inc;
    }
 }
-if( grep { /#define GRAV/ }  @d) {
+@d = grep (/define/, `echo \'#include \"$defs\"\' > foo.f90 && gfortran $cppflags -E -cpp -dM foo.f90 && rm foo.*`);
+print @d;
+exit();
+if( grep { /GRAV/ }  @d) {
    push(@addons, "../src/gravity/gravity.F90");
    push(@addons, "../src/gravity/hydrostatic.F90");
    }
-if( grep { /#define POISSON_FFT/ }  @d) {push(@addons, "../src/gravity/poissonsolver.F90");}
-if( grep { /#define MULTIGRID/ } @d) {
+if( grep { /POISSON_FFT/ }  @d) {push(@addons, "../src/gravity/poissonsolver.F90");}
+if( grep { /MULTIGRID/ } @d) {
    @temp=<src/gravity/multigrid*.F90>;
    for (@temp) { s/src/\.\.\/src/;}
    push(@addons, @temp);
 }
-if( grep { /#define SHEAR/ }  @d) {push(@addons, "../src/shear/shear.F90");}
+if( grep { /SHEAR/ }  @d) {push(@addons, "../src/shear/shear.F90");}
 push(@addons, "../src/hdf5/dataio_hdf5.F90");
 push(@addons, "../src/hdf5/list_hdf5.F90");
 push(@addons, "../src/fluids/fluidtypes.F90");
@@ -209,47 +209,47 @@ push(@addons, "../src/fluids/initfluids.F90");
 push(@addons, "../src/fluids/fluidindex.F90");
 push(@addons, "../src/fluids/fluxes.F90");
 
-if( grep { /#define MAGNETIC/} @d) {
+if( grep { /MAGNETIC/} @d) {
    push(@addons, "../src/magnetic/magboundaries.F90");
-   if ( grep { /#define UMUSCL/} @d) {} else {
+   if ( grep { /UMUSCL/} @d) {} else {
       push(@addons, "../src/scheme/rtvd_split/advects.F90");
    }
-   if( grep { /#define RESIST/} @d) {push(@addons, "../src/magnetic/resist/resistivity.F90");} }
+   if( grep { /RESIST/} @d) {push(@addons, "../src/magnetic/resist/resistivity.F90");} }
 
-if( grep { /#define IONIZED/} @d) {
+if( grep { /IONIZED/} @d) {
    push(@addons, "../src/fluids/ionized/initionized.F90");
    push(@addons, "../src/fluids/ionized/fluxionized.F90");
    push(@addons, "../src/fluids/ionized/timestepionized.F90"); }
-if( grep { /#define NEUTRAL/} @d) {
+if( grep { /NEUTRAL/} @d) {
    push(@addons, "../src/fluids/neutral/initneutral.F90");
    push(@addons, "../src/fluids/neutral/fluxneutral.F90");
    push(@addons, "../src/fluids/neutral/timestepneutral.F90"); }
-if( grep { /#define DUST/} @d) {
+if( grep { /DUST/} @d) {
    push(@addons, "../src/fluids/dust/initdust.F90");
    push(@addons, "../src/fluids/dust/fluxdust.F90");
    push(@addons, "../src/fluids/dust/timestepdust.F90"); }
-if( grep { /#define COSM_RAYS/} @d) {
+if( grep { /COSM_RAYS/} @d) {
    push(@addons, "../src/fluids/cosmicrays/initcosmicrays.F90");
    push(@addons, "../src/fluids/cosmicrays/fluxcosmicrays.F90");
    push(@addons, "../src/fluids/cosmicrays/timestepcosmicrays.F90");
    push(@addons, "../src/fluids/cosmicrays/crdiffusion.F90");
    }
-if( grep { /#define COSM_RAYS_SOURCES/} @d) {
+if( grep { /COSM_RAYS_SOURCES/} @d) {
    push(@addons, "../src/fluids/cosmicrays/sourcecosmicrays.F90");
    push(@addons, "../src/fluids/cosmicrays/crcomposition.F90");
    }
-if( grep { /#define FLUID_INTERACTIONS/} @d) {
+if( grep { /FLUID_INTERACTIONS/} @d) {
    push(@addons, "../src/fluids/interactions/interactions.F90");
    push(@addons, "../src/fluids/interactions/timestepinteractions.F90");
 }
-if( grep { /#define SN_SRC/} @d) {
+if( grep { /SN_SRC/} @d) {
    push(@addons, "../src/supernovae/snsources.F90");
 }
-if( grep { /#define SNE_DISTR/} @d) {
+if( grep { /SNE_DISTR/} @d) {
    push(@addons, "../src/supernovae/sndistr.F90");
 }
 
-if( grep { /#define UMUSCL/} @d) {
+if( grep { /UMUSCL/} @d) {
    push(@addons, "../src/scheme/unsplit_muscl_hancock/fluidupdate.F90");
 } else {
    push(@addons, "../src/scheme/rtvd_split/fluidupdate.F90");
@@ -299,8 +299,8 @@ print MAKEFILE "\n\n";
 # Define common macros
 #
 print MAKEFILE "LIBS += -lhdf5_fortran -lhdf5hl_fortran -lhdf5_hl -lhdf5\n";
-if( grep { /#define SHEAR/ || /#define MULTIGRID/ } @d ) {print MAKEFILE "LIBS += `pkg-config --libs fftw3`\n";}
-if( grep { /#define POISSON_FFT/ }  @d) {print MAKEFILE "LIBS += `pkg-config --libs fftw3` `pkg-config --libs lapack`\n";}
+if( grep { /SHEAR/ || /MULTIGRID/ } @d ) {print MAKEFILE "LIBS += `pkg-config --libs fftw3`\n";}
+if( grep { /POISSON_FFT/ }  @d) {print MAKEFILE "LIBS += `pkg-config --libs fftw3` `pkg-config --libs lapack`\n";}
 print MAKEFILE "CPPFLAGS += " . $cppflags . "\n";
 #
 # make
