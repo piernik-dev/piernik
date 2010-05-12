@@ -49,16 +49,18 @@ do {
              "param:s"=>\$moo{param},
              "compiler:s"=>\$moo{compiler},
              "obj:s"=>\$moo{obj},
-             "linkexe"=>\$moo{linkexe});
+             "linkexe"=>\$moo{linkexe},
+             "verbose"=>\$moo{verbose});
 } while ($_);
 close DEF_CONF;
 
-print "Called '$setup_line'\n";
+print "Called '$setup_line'\n\n";
 
-# DEBUG
-#foreach (keys %moo) {
-# print "$_ = $moo{$_}\n";
-#}
+if ($moo{verbose}) {
+  print "Setup options:\n";
+  foreach (keys %moo) { print "$_ = $moo{$_}\n"; }
+  print "\n";
+}
 
 my $SELF = fileparse("$0");
 my $argc = @ARGV;
@@ -93,6 +95,7 @@ if ($moo{problems}) {
    print " --copy\t\t- hard-copy source files instead of linking them\n";
    print " --linkexe\t- do not copy obj/piernik to runs/<problem> but link it instead\n";
    print " --dumpenv\t- do not compile the source but dump the environment to \'obj/version.F90\'\n";
+   print " --verbose\t- try to confuse the user with some diagnostics ;-)\n";
    print " --param <file>\t- use <file> instead problem.par\n";
    print " --define <flag>\t- inject precompiler directive to piernik.def\n";
    print " --obj <postfix>\t- use obj_<postfix> directory instead of obj/ and runs/<problem>_<postfix>/ rather than runs/<problem>/\n";
@@ -189,10 +192,12 @@ if(@define) {
    }
 }
 @d = grep (/define/, `echo \'#include \"$defs\"\' > foo.f90 && gfortran $cppflags -E -cpp -dM foo.f90 && rm foo.*`);
+if ($moo{verbose}) { print "Defined symbols:\n", @d, "\n"; }
+
 if( grep { /GRAV/ }  @d) {
    push(@addons, "../src/gravity/gravity.F90");
    push(@addons, "../src/gravity/hydrostatic.F90");
-   }
+}
 if( grep { /POISSON_FFT/ }  @d) {push(@addons, "../src/gravity/poissonsolver.F90");}
 if( grep { /MULTIGRID/ } @d) {
    @temp=<src/gravity/multigrid*.F90>;
@@ -363,7 +368,7 @@ print MAKEFILE "%.o : %.mod\n\n";
 
 # system("./post","mhd",$ARGV[0]); # !found
 #system("./newcompiler Makefile");
-print "Setting the '" . $compiler . "' configuration\n";
+print "Setting the '" . $compiler . "' configuration.\n\n";
 system("./newcompiler " . substr($compiler, 0, -3) );
 
 # COMPILE NOW
