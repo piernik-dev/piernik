@@ -188,9 +188,9 @@ module gravity
 
    subroutine source_terms_grav
       use fluidindex, only : iarr_all_sg
-#ifdef SELF_GRAV
+#ifdef POISSON_FFT
       use poissonsolver, only : poisson_solve
-#endif /* SELF_GRAV */
+#endif /* POISSON_FFT */
 #ifdef MULTIGRID
       use multigrid, only : multigrid_solve
 #endif /* MULTIGRID */
@@ -198,9 +198,9 @@ module gravity
 
       implicit none
 
-#ifdef SELF_GRAV
+#ifdef POISSON_FFT
       call poisson_solve( sum(u(iarr_all_sg,:,:,:),1) )
-#endif /* SELF_GRAV */
+#endif /* POISSON_FFT */
 #ifdef MULTIGRID
       if (size(iarr_all_sg) == 1) then
          call multigrid_solve(u(iarr_all_sg(1),:,:,:))
@@ -220,9 +220,9 @@ module gravity
 #ifdef MULTIGRID
       use arrays, only: mgp, mgpm
 #endif /* MULTIGRID */
-#ifdef SELF_GRAV /* <- name should be changed */
+#ifdef POISSON_FFT
       use arrays, only:  fgp, fgpm
-#endif /* SELF_GRAV */
+#endif /* POISSON_FFT */
       implicit none
       real :: h
 
@@ -237,15 +237,15 @@ module gravity
 #ifdef MULTIGRID
       gpot = gpot + (1.+h)*mgp - h*mgpm
 #endif /* MULTIGRID */
-#ifdef SELF_GRAV /* <- name should be changed */
+#ifdef POISSON_FFT
       gpot = gpot + (1.+h)*fgp - h*fgpm
-#endif /* SELF_GRAV */
+#endif /* POISSON_FFT */
 #ifdef MULTIGRID
       hgpot = hgpot + (1.+0.5*h)*mgp - 0.5*h*mgpm
 #endif /* MULTIGRID */
-#ifdef SELF_GRAV /* <- name should be changed */
+#ifdef POISSON_FFT
       hgpot = hgpot + (1.+0.5*h)*fgp - 0.5*h*fgpm
-#endif /* SELF_GRAV */
+#endif /* POISSON_FFT */
    end subroutine sum_potential
 
 !--------------------------------------------------------------------------

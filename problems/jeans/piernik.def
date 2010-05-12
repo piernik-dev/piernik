@@ -13,8 +13,8 @@
 #define GRAV
 #define GRAV_NULL
 
-#if !(defined(MULTIGRID) || defined(SELF_GRAV))
-#error "You must define either MULTIGRID or SELF_GRAV for this problem"
+#if !(defined(MULTIGRID) || defined(POISSON_FFT))
+#error "You must define either MULTIGRID or POISSON_FFT for this problem"
 Why #error doesn't immediately stop the compilation?
 #endif
 

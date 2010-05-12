@@ -49,10 +49,10 @@ module arrays
    real, allocatable, dimension(:,:,:)       :: mgp      !< Array for multigrid gravitational potential
    real, allocatable, dimension(:,:,:)       :: mgpm     !< Array for multigrid gravitational potential at previous timestep
 #endif /* MULTIGRID */
-#ifdef SELF_GRAV
+#ifdef POISSON_FFT
    real, allocatable, dimension(:,:,:)       :: fgp      !< Array for fourier gravitational potential
    real, allocatable, dimension(:,:,:)       :: fgpm     !< Array for fourier gravitational potential at previous timestep
-#endif /* SELF_GRAV */
+#endif /* POISSON_FFT */
 #endif /* GRAV */
 
 #ifdef COSM_RAYS
@@ -94,10 +94,10 @@ module arrays
       if(.not.allocated(mgp))     allocate(mgp(nx,ny,nz))
       if(.not.allocated(mgpm))    allocate(mgpm(nx,ny,nz))
 #endif /* MULTIGRID */
-#ifdef SELF_GRAV
+#ifdef POISSON_FFT
       if(.not.allocated(fgp))     allocate(fgp(nx,ny,nz))
       if(.not.allocated(fgpm))    allocate(fgpm(nx,ny,nz))
-#endif /* SELF_GRAV */
+#endif /* POISSON_FFT */
       if(.not.allocated(dprof))   allocate(dprof(nz))
       if(.not.allocated(eprof))   allocate(eprof(nz))
 #endif /* GRAV */
@@ -138,10 +138,10 @@ module arrays
       if(allocated(mgp))     deallocate(mgp)
       if(allocated(mgpm))    deallocate(mgpm)
 #endif /* MULTIGRID */
-#ifdef SELF_GRAV
+#ifdef POISSON_FFT
       if(allocated(fgp))     deallocate(fgp)
       if(allocated(fgpm))    deallocate(fgpm)
-#endif /* SELF_GRAV */
+#endif /* POISSON_FFT */
       if(allocated(dprof))   deallocate(dprof)
       if(allocated(eprof))   deallocate(eprof)
 #endif /* GRAV */

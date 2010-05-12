@@ -195,7 +195,7 @@ if( grep { /GRAV/ }  @d) {
    push(@addons, "../src/gravity/gravity.F90");
    push(@addons, "../src/gravity/hydrostatic.F90");
    }
-if( grep { /SELF_GRAV/ }  @d) {push(@addons, "../src/gravity/poissonsolver.F90");}
+if( grep { /POISSON_FFT/ }  @d) {push(@addons, "../src/gravity/poissonsolver.F90");}
 if( grep { /MULTIGRID/ } @d) {
    @temp=<src/gravity/multigrid*.F90>;
    for (@temp) { s/src/\.\.\/src/;}
@@ -300,7 +300,7 @@ print MAKEFILE "\n\n";
 #
 print MAKEFILE "LIBS += -lhdf5_fortran -lhdf5hl_fortran -lhdf5_hl -lhdf5\n";
 if( grep { /SHEAR/ || /MULTIGRID/ } @d ) {print MAKEFILE "LIBS += `pkg-config --libs fftw3`\n";}
-if( grep { /SELF_GRAV/ }  @d) {print MAKEFILE "LIBS += `pkg-config --libs fftw3` `pkg-config --libs lapack`\n";}
+if( grep { /POISSON_FFT/ }  @d) {print MAKEFILE "LIBS += `pkg-config --libs fftw3` `pkg-config --libs lapack`\n";}
 print MAKEFILE "CPPFLAGS += " . $cppflags . "\n";
 #
 # make

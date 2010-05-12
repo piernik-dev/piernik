@@ -113,8 +113,8 @@ contains
 
       endif
 
-#if !(defined(MULTIGRID) || defined(SELF_GRAV))
-      call die("You must define either MULTIGRID or SELF_GRAV for this problem")
+#if !(defined(MULTIGRID) || defined(POISSON_FFT))
+      call die("You must define either MULTIGRID or POISSON_FFT for this problem")
 #endif
 
       if (mode < 0 .or. mode > 1)     call die("[initproblem:read_problem_par] Invalid mode.")

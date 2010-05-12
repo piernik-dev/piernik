@@ -19,5 +19,5 @@
 /* gravity type choosing */
 #undef GRAV
 #undef GRAV_NULL
-#undef SELF_GRAV
+#undef POISSON_FFT
 
