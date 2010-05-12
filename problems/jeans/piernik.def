@@ -14,8 +14,8 @@
 #define GRAV_NULL
 
 #if !(defined(MULTIGRID) || defined(POISSON_FFT))
-#error "You must define either MULTIGRID or POISSON_FFT for this problem"
-Why #error doesn't immediately stop the compilation?
+#define MULTIGRID
+#warning You have not defined neither MULTIGRID nor POISSON_FFT gravity. Assuming MULTIGRID.
 #endif
 
 #if __GNUC__ >=4 && __GNUC_MINOR__ >=5
@@ -25,6 +25,7 @@ Why #error doesn't immediately stop the compilation?
 #endif
 
 #if 0
+#define POISSON_FFT
   Dirty trick!
   The following declaration is used in multigrid.F90 to remove density bias for some test cases
 #endif
