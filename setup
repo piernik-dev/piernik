@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $Id: makemake 506 2008-12-22 00:41:56Z olk $
+# $Id$
 #
 # Usage: makemake {<program name> {<F90 compiler or fc or f77 or cc or c>}}
 #
@@ -50,7 +50,9 @@ do {
              "compiler:s"=>\$moo{compiler},
              "obj:s"=>\$moo{obj},
              "linkexe"=>\$moo{linkexe},
-             "verbose"=>\$moo{verbose});
+             "verbose"=>\$moo{verbose},
+             "copy"=>\$moo{copy},
+             "nocompile"=>\$moo{nocompile});
 } while ($_);
 close DEF_CONF;
 
@@ -96,6 +98,7 @@ if ($moo{problems}) {
    print " --linkexe\t- do not copy obj/piernik to runs/<problem> but link it instead\n";
    print " --dumpenv\t- do not compile the source but dump the environment to \'obj/version.F90\'\n";
    print " --verbose\t- try to confuse the user with some diagnostics ;-)\n";
+   print " --nocompile\t- Create object directory but do not compile or prepare run directory. In combination with -copy will prepare portable object directory.\n";
    print " --param <file>\t- use <file> instead problem.par\n";
    print " --define <flag>\t- inject precompiler directive to piernik.def\n";
    print " --obj <postfix>\t- use obj_<postfix> directory instead of obj/ and runs/<problem>_<postfix>/ rather than runs/<problem>/\n";
@@ -181,7 +184,8 @@ copy("compilers/newcompiler", "$objdir/newcompiler");
 system("chmod a+x $objdir/newcompiler");
 $defs = $probdir."piernik.def";
    if ( ! $CL_VALUES[0] ) {
-      symlink("../".$defs, "$objdir/piernik.def") or die "failed linking piernik.def";
+      if ($moo{copy}) { copy   (      $defs, "$objdir/piernik.def") or die "failed copying piernik.def"; }
+      else            { symlink("../".$defs, "$objdir/piernik.def") or die "failed linking piernik.def"; }
    } else {
       copy($defs, "$objdir/piernik.def") or die "failed copying piernik.def";
    }
@@ -273,7 +277,8 @@ if ( $CL_VALUES[0] ) {
 }
 for $i (0 .. $#symln){
    if ( ! $CL_VALUES[0] ) {
-      symlink($files[$i],$symln[$i]) or die "failed linking $files[$i]: $!";
+      if ($moo{copy}) { copy   ("$objdir/".$files[$i], $objdir) or die "failed copying $files[$i]: $!"; }
+      else            { symlink($files[$i], $symln[$i]) or die "failed linking $files[$i]: $!"; }
    } else {
       copy($files[$i],".") or die "failed copying $files[$i]: $!";
    }
@@ -377,6 +382,11 @@ chdir('..');
 if ( (! -r $objdir) || (! -r "$objdir/".$param_file) || (! -r "$objdir/Makefile") ) {
    print "problem with directory \'$objdir\'\n";
    exit $FAILED;
+}
+
+if ($moo{nocompile}) {
+  print "Compilation skipped on request. You may want to run 'make -C $objdir' to compile the Piernik code.\n\n";
+  exit $OK;
 }
 
 # compile
