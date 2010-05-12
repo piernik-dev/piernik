@@ -503,9 +503,8 @@ module dataio
 
 !--- process 0 checks for messages
 
-      if(proc == 0) then
-         call read_file_msg
-      endif
+      if (proc == 0) call read_file_msg
+
       call MPI_BCAST(msg,       16, MPI_CHARACTER,        0, comm, ierr)
       call MPI_BCAST(msg_param, 16, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
@@ -542,6 +541,20 @@ module dataio
          endif
 
          if(trim(msg) .eq. 'stop') end_sim = .true.
+
+         if (trim(msg) .eq. 'help' .and. proc == 0) then
+            write(*,'(/,a)')"[dataio:user_msg_handler] Recognized messages:"
+            write(*,'(a)')"  help     - prints this information"
+            write(*,'(a)')"  stop     - finish the simulation"
+            write(*,'(a)')"  res|dump - immediately dumps a restart file"
+            write(*,'(a)')"  hdf      - dumps a plotfile"
+            write(*,'(a)')"  log      - update logfile"
+            write(*,'(a)')"  tsl      - write a timeslice"
+            write(*,'(a)')"  sleep <number> - wait <number> seconds"
+            write(*,'(a)')"  tend|nend|dtres|dthdf|dtlog|dttsl|dtplt <value> - update specified parameter with <value>"
+            write(*,'(a,/)')"Note that only one line at a time is read."
+         end if
+
       endif
 !  enddo ! while disk is full
    end subroutine user_msg_handler
@@ -1444,16 +1457,20 @@ module dataio
       character(len=265) :: syscom
       integer :: i
       integer(kind=1) :: system
+      logical :: msg_param_read
 
       msg=''
       user_msg_time(9)=''
       nchar=0
+      msg_param_read = .false.
 
       open(91,file=user_message_file,status='old',err=224)
       read(91,fmt=*,err=224,end=224) msg, msg_param
+      msg_param_read = .true.
 
       close(91)
-      goto 225
+! Wow, last 6 goto's in the Piernik code ... \todo rewrite this routine 
+      goto 225 
 224   continue
       close(91)
 
@@ -1467,6 +1484,14 @@ module dataio
 
 225   continue
       nchar=len_trim(msg)
+
+      if (nchar > 0) then
+         if (msg_param_read) then
+            write(*, '(3a,g15.7)')"[dataio:read_file_msg] User message: '",trim(msg),"', with parameter = ", msg_param
+         else
+            write(*, '(3a)'      )"[dataio:read_file_msg] User message: '",trim(msg),"'"
+         end if
+      end if
 
       user_last_msg_file='./user_last_msg.tmp'
       call rm_file(user_last_msg_file)
@@ -1497,6 +1522,7 @@ module dataio
       open(96,file=system_message_file,status='old',err=424)
       read(96,fmt=*,err=424,end=424) msg, msg_param
       close(96)
+      msg_param_read = .true.
       goto 425
 424   continue
       close(96)
@@ -1511,6 +1537,14 @@ module dataio
 
 425   continue
       nchar=len_trim(msg)
+
+      if (nchar > 0) then
+         if (msg_param_read) then
+            write(*, '(3a,g15.7)')"[dataio:read_file_msg] System message: '",trim(msg),"', with parameter = ", msg_param
+         else
+            write(*, '(3a)'      )"[dataio:read_file_msg] System message: '",trim(msg),"'"
+         end if
+      end if
 
       system_last_msg_file='./system_last_msg.tmp'
       call rm_file(system_last_msg_file)

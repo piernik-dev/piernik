@@ -97,7 +97,7 @@ program piernik
         write(log_lun, '(a)') trim(msg)
      end if
      if (nstep >= nend) then
-        write(msg, '(4a)') "Maximum step count (",trim(nstr),") exceeded at t = ",trim(tstr)
+        write(msg, '(4a)') "Maximum step count exceeded (",trim(nstr),") at t = ",trim(tstr)
         write(*, '(a)') trim(msg)
         write(log_lun, '(a)') trim(msg)
      end if
