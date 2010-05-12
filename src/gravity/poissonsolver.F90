@@ -28,6 +28,8 @@
 #include "piernik.def"
 module poissonsolver
 
+#ifdef POISSON_FFT
+
   implicit none
 
 contains
@@ -636,5 +638,9 @@ contains
 
 !------------------------------------------
     end subroutine poisson_xyzp
+
+#else
+#warning This should not happen. Probably the poissonsolver.F90 file is included in object directory by mistake.
+#endif /* POISSON_FFT */
 
 end module poissonsolver

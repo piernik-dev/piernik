@@ -35,6 +35,8 @@
 
 module multigrid
 
+#ifdef MULTIGRID
+
    use multigridvars    ! QA: ignoring only check
 
    implicit none
@@ -1669,6 +1671,10 @@ contains
       call dfftw_execute(lvl(level)%plani) ! lvl(level)%fft{r}(:,:,:) -> lvl(level)%src(:,:,:)
 
     end subroutine fft_convolve
+
+#else
+#warning This should not happen. Probably the multigrid.F90 file is included in object directory by mistake.
+#endif /* MULTIGRID */
 
 end module multigrid
 
