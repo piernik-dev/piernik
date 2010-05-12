@@ -49,8 +49,6 @@ module dataio
 !!
 !! \todo check the usefullness of wait logical variable
 !<
-! Written by G. Kowal
-! Modified for this code and extended by M.Hanasz
    use types,         only : hdf
    use dataio_public, only : tend, nend, wend, log_file, log_lun, nhdf, nstep_start
 
@@ -109,37 +107,11 @@ module dataio
 
    character(len=80)     :: hostfull
    character(len=8)      :: host
-   character(len=10)     :: fhost
-   character(len=10)     :: fpid
    integer               :: pid
    integer               :: uid
    integer               :: ihost
    integer               :: scstatus
-   real                  :: vx_max                 !< maximum value of velocity x-component
-   real                  :: vy_max                 !< maximum value of velocity y-component
-   real                  :: vz_max                 !< maximum value of velocity z-component
-   real                  :: va2max
-   real                  :: va_max                 !< maximum value of Alfven velocity
-   real                  :: cs2max
-   real                  :: cs_max                 !< maximum value of current sound speed distribution
-   real                  :: dens_min               !< minimum value of current density distribution
-   real                  :: dens_max               !< maximum value of current density distribution
-   real                  :: pres_min               !< minimum value of current pressure distribution
-   real                  :: pres_max               !< maximum value of current pressure distribution
 
-#ifdef MAGNETIC
-   real                  :: divb_max               !< maximum value of current divergence of magnetic induction distribution
-   real                  :: b_min                  !< minimum value of current magnetic induction distribution
-   real                  :: b_max                  !< maximum value of current magnetic induction distribution
-#endif /* MAGNETIC */
-#ifndef ISO
-   real                  :: temp_min               !< minimum value of current temperature distribution
-   real                  :: temp_max               !< maximum value of current temperature distribution
-#endif /* ISO */
-#ifdef COSM_RAYS
-   real                  :: encr_min               !< minimum value of current cosmic ray energy density distribution
-   real                  :: encr_max               !< maximum value of current cosmic ray energy density distribution
-#endif /* COSM_RAYS */
    character(len=128)    :: filename               !< string of characters indicating currently used file
 
    namelist /END_CONTROL/ nend, tend, wend
