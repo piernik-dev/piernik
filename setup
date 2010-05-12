@@ -183,12 +183,8 @@ for (@base) {
 copy("compilers/newcompiler", "$objdir/newcompiler");
 system("chmod a+x $objdir/newcompiler");
 $defs = $probdir."piernik.def";
-   if ( ! $CL_VALUES[0] ) {
-      if ($moo{copy}) { copy   (      $defs, "$objdir/piernik.def") or die "failed copying piernik.def"; }
-      else            { symlink("../".$defs, "$objdir/piernik.def") or die "failed linking piernik.def"; }
-   } else {
-      copy($defs, "$objdir/piernik.def") or die "failed copying piernik.def";
-   }
+if ($moo{copy}) { copy   (      $defs, "$objdir/piernik.def") or die "failed copying piernik.def"; }
+else            { symlink("../".$defs, "$objdir/piernik.def") or die "failed linking piernik.def"; }
 if(@define) {
    foreach $inc (@define) {
       push(@d, "".$inc."\n");
@@ -272,20 +268,11 @@ foreach $file (@files) {
    push(@symln, "$objdir/".substr($file,$pos,$len-$pos) );
 }
 
-if ( $CL_VALUES[0] ) {
-   chdir $objdir;
-}
 for $i (0 .. $#symln){
-   if ( ! $CL_VALUES[0] ) {
-      if ($moo{copy}) { copy   ("$objdir/".$files[$i], $objdir) or die "failed copying $files[$i]: $!"; }
-      else            { symlink($files[$i], $symln[$i]) or die "failed linking $files[$i]: $!"; }
-   } else {
-      copy($files[$i],".") or die "failed copying $files[$i]: $!";
-   }
+  if ($moo{copy}) { copy   ("$objdir/".$files[$i], $objdir) or die "failed copying $files[$i]: $!"; }
+  else            { symlink($files[$i], $symln[$i]) or die "failed linking $files[$i]: $!"; }
 }
-if ( ! $CL_VALUES[0] ) {
-   chdir $objdir;
-}
+chdir $objdir;
 open(MAKEFILE, "> Makefile-prep");
 
 # Source listing
@@ -390,13 +377,7 @@ if ($moo{nocompile}) {
 }
 
 # compile
-if ( $CL_VALUES[4] ) {
-   system("make -C $objdir date");
-   print "\ndone\n";
-   exit $OK;
-} else {
-   system("make -C $objdir");
-}
+system("make -C $objdir");
 
 if ( ! -x "$objdir/piernik" ) {
    print "\nit appears that \'make\' crashed\n";
