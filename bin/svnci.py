@@ -68,8 +68,11 @@ def main():
       fadd.append(item)
    qa.qa_checks(fadd,options)
    print "Commiting..."
+   if options.force:
+      comment += " (forced commit)"
    if (options.pretend):
       print "Just kiddin', you used pretend option!"
+      print comment
    else:
       client.checkin(args,comment)
 
