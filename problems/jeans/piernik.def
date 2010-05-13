@@ -25,7 +25,6 @@
 #endif
 
 #if 0
-#define POISSON_FFT
   Dirty trick!
   The following declaration is used in multigrid.F90 to remove density bias for some test cases
 #endif
