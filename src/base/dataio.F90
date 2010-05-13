@@ -1449,131 +1449,45 @@ module dataio
 !      system_message_file         ! 2nd (ups)  message file (eg.'/etc/ups/user/msg')
 !-------------------------------------------------------------------------
 #if defined(__INTEL_COMPILER)
-      use ifport, only: unlink
+      use ifport, only: unlink, stat
 #endif /* __INTEL_COMPILER */
       implicit none
 #if defined(__PGI)
       include "lib3f.h"
 #endif /* __PGI */
 
-      character(len=80) :: user_last_msg_file, system_last_msg_file
-      character(len=80), dimension(10) :: user_msg_time, system_msg_time
-      character(len=80), save :: user_msg_time_old, system_msg_time_old
-      character(len=265) :: syscom
-      integer :: i, unlink_stat
-      integer(kind=1) :: system
-      logical :: msg_param_read
+      character(len=160),dimension(2) :: fname
+      integer ::  unlink_stat = -99, io = -99, sz = -99, sts = -99, i
+      integer, dimension(13) :: stat_buff
+      logical :: msg_param_read = .false.
+
+      integer, dimension(2), save :: last_msg_stamp
 
       msg=''
-      user_msg_time(9)=''
-      nchar=0
-      msg_param_read = .false.
+      msg_param = 0.0
 
-      open(91,file=user_message_file,status='old',err=224)
-      read(91,fmt=*,err=224,end=224) msg, msg_param
-      msg_param_read = .true.
+      fname = [ user_message_file, system_message_file ]
 
-      close(91)
-! Wow, last 6 goto's in the Piernik code ... \todo rewrite this routine
-      goto 225
-224   continue
-      close(91)
-
-      open(92,file=user_message_file,status='old',err=333)
-      read(92,fmt=*,err=333,end=333) msg
-      close(92)
-      goto 225
-333   continue
-      close(92)
-      goto 888
-
-225   continue
-      nchar=len_trim(msg)
-
-      if (nchar > 0) then
-         if (msg_param_read) then
-            write(*, '(3a,g15.7)')"[dataio:read_file_msg] User message: '",trim(msg),"', with parameter = ", msg_param
-         else
-            write(*, '(3a)'      )"[dataio:read_file_msg] User message: '",trim(msg),"'"
-         end if
-      end if
-
-      user_last_msg_file='./user_last_msg.tmp'
-      unlink_stat = unlink(user_last_msg_file)
-
-      syscom='ls -l --full-time msg >'//user_last_msg_file
-      scstatus = system(syscom)
-      open(93,file=user_last_msg_file,status='old',err=888)
-        read(93,fmt=*,err=888,end=888) (user_msg_time(i), i=1,10)
-      close(93)
-
-!---  do the requested action only once for a given user message file
-
-      if(user_msg_time(7) .eq. user_msg_time_old) then
-         msg=''
-         nchar=0
-      else
-         system_msg_time_old= user_msg_time(7)
-         return
-      endif
-
-888   continue
-
-      unlink_stat = unlink(user_message_file)
-
-!------------------------------------------------------------------------
-
-
-      open(96,file=system_message_file,status='old',err=424)
-      read(96,fmt=*,err=424,end=424) msg, msg_param
-      close(96)
-      msg_param_read = .true.
-      goto 425
-424   continue
-      close(96)
-
-      open(97,file=system_message_file,status='old',err=533)
-      read(97,fmt=*,err=533,end=533) msg
-      close(97)
-      goto 425
-533   continue
-      close(97)
-      goto 999
-
-425   continue
-      nchar=len_trim(msg)
-
-      if (nchar > 0) then
-         if (msg_param_read) then
-            write(*, '(3a,g15.7)')"[dataio:read_file_msg] System message: '",trim(msg),"', with parameter = ", msg_param
-         else
-            write(*, '(3a)'      )"[dataio:read_file_msg] System message: '",trim(msg),"'"
-         end if
-      end if
-
-      system_last_msg_file='./system_last_msg.tmp'
-      unlink_stat = unlink(system_last_msg_file)
-
-      syscom='ls -l --full-time '//system_message_file//' > '//system_last_msg_file
-      scstatus = system(syscom)
-
-      open(98,file=system_last_msg_file,status='old',err=999)
-        read(98,fmt=*,err=999,end=999) (system_msg_time(i), i=1,10)
-      close(98)
-
-!---  do the requested action only once for a given system message file
-
-      if(system_msg_time(7) .eq. system_msg_time_old) then
-         msg=''
-         nchar=0
-      else
-         system_msg_time_old= system_msg_time(7)
-         return
-      endif
-
-999   continue
-
-
+      do i = 1, 2
+         inquire(FILE=fname(i), SIZE=sz)
+         if(sz>0) then
+            sts = stat(fname(i), stat_buff)
+            if(last_msg_stamp(i) == stat_buff(10)) exit
+            last_msg_stamp(i) = stat_buff(10)
+            open(91,file=fname(i),status='old')
+            read(91,*,iostat=io) msg, msg_param
+            if(io/=0) then
+               rewind(91)
+               read(91,*,iostat=io) msg
+               write(*, '(3a)'      )"[dataio:read_file_msg] User message: '",trim(msg),"'"
+            else
+               msg_param_read = .true.
+               write(*, '(3a,g15.7)')"[dataio:read_file_msg] User message: '",trim(msg),"', with parameter = ", msg_param
+            endif
+            close(91)
+            if(fname(i) == user_message_file) unlink_stat = unlink(user_message_file)
+         endif
+      enddo
       return
    end subroutine read_file_msg
 
