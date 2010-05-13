@@ -679,15 +679,19 @@ module dataio
 !------------------------------------------------------------------------
 
    subroutine find_last_restart(restart_number)
-      use mpisetup, only : cwd
-      use initproblem, only : problem_name, run_id
-
+      use mpisetup,     only: cwd
+      use initproblem,  only: problem_name, run_id
+#if defined(__INTEL_COMPILER)
+      use ifport,       only: unlink
+#endif /* __INTEL_COMPILER */
       implicit none
-
+#if defined(__PGI)
+      include "lib3f.h"
+#endif /* __PGI */
       integer, intent(out) :: restart_number
 
       character(len=120) :: file_name
-      integer            :: nres
+      integer            :: nres, unlink_stat
       logical            :: exist
       character(len=128) :: file_name_base
 
@@ -695,7 +699,7 @@ module dataio
 
       write (file_name_base,'(a,a1,a3,a1)') trim(problem_name),'_',run_id,'_'
 
-      call rm_file('restart_list.tmp')
+      unlink_stat = unlink('restart_list.tmp')
 
       do nres =999,0,-1
          write (file_name,'(a,a1,a,a1,a3,a1,i4.4,a4)') &
@@ -1438,24 +1442,25 @@ module dataio
 !------------------------------------------------------------------------
 
    subroutine read_file_msg
-
-!     written by: michal hanasz
-!     date:       26. june 2003
-!
 !-------------------------------------------------------------------------
 !     configurable parameters: problem.par
 !-------------------------------------------------------------------------
 !      user_message_file           ! 1st (user) message file (eg.'./msg')
 !      system_message_file         ! 2nd (ups)  message file (eg.'/etc/ups/user/msg')
 !-------------------------------------------------------------------------
+#if defined(__INTEL_COMPILER)
+      use ifport, only: unlink
+#endif /* __INTEL_COMPILER */
       implicit none
+#if defined(__PGI)
+      include "lib3f.h"
+#endif /* __PGI */
+
       character(len=80) :: user_last_msg_file, system_last_msg_file
-
       character(len=80), dimension(10) :: user_msg_time, system_msg_time
-
       character(len=80), save :: user_msg_time_old, system_msg_time_old
       character(len=265) :: syscom
-      integer :: i
+      integer :: i, unlink_stat
       integer(kind=1) :: system
       logical :: msg_param_read
 
@@ -1469,8 +1474,8 @@ module dataio
       msg_param_read = .true.
 
       close(91)
-! Wow, last 6 goto's in the Piernik code ... \todo rewrite this routine 
-      goto 225 
+! Wow, last 6 goto's in the Piernik code ... \todo rewrite this routine
+      goto 225
 224   continue
       close(91)
 
@@ -1494,7 +1499,7 @@ module dataio
       end if
 
       user_last_msg_file='./user_last_msg.tmp'
-      call rm_file(user_last_msg_file)
+      unlink_stat = unlink(user_last_msg_file)
 
       syscom='ls -l --full-time msg >'//user_last_msg_file
       scstatus = system(syscom)
@@ -1514,7 +1519,7 @@ module dataio
 
 888   continue
 
-      call rm_file(user_message_file)
+      unlink_stat = unlink(user_message_file)
 
 !------------------------------------------------------------------------
 
@@ -1547,7 +1552,7 @@ module dataio
       end if
 
       system_last_msg_file='./system_last_msg.tmp'
-      call rm_file(system_last_msg_file)
+      unlink_stat = unlink(system_last_msg_file)
 
       syscom='ls -l --full-time '//system_message_file//' > '//system_last_msg_file
       scstatus = system(syscom)
@@ -1573,21 +1578,5 @@ module dataio
    end subroutine read_file_msg
 
 !------------------------------------------------------------------------
-
-   subroutine rm_file(file_name)
-      implicit none
-      character(len=*), intent(in)   :: file_name
-      character(len=265)   :: syscom
-      logical              :: exist
-      integer(kind=1)      :: system
-
-!     delete file if exists
-      inquire(file = file_name, exist = exist)
-      if(exist) then
-         syscom='rm -f '//trim(file_name)
-         scstatus = system(syscom)
-      endif
-
-   end subroutine rm_file
 
 end module dataio
