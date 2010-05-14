@@ -1,4 +1,4 @@
-!$Id$
+! $Id$
 !
 ! PIERNIK Code Copyright (C) 2006 Michal Hanasz
 !
@@ -35,21 +35,24 @@ module initproblem
 #ifndef ISO
    use initionized,  only : ieni, gamma_ion
 #endif /* ISO */
-   use mpisetup
    use grid,         only : dx,dy
    use constants,    only : pi,dpi,fpi
 
-   real :: d0,r0,bx0,by0,bz0
-   character ::  problem_name*32,run_id*3,dir*1
+   real              :: d0,r0,bx0,by0,bz0
+   character(len=32) :: problem_name
+   character(len=3)  :: run_id
+   character(len=1)  :: dir
 
    namelist /PROBLEM_CONTROL/  problem_name, run_id, d0, r0,bx0,by0,bz0
-
 
    contains
 
 !-----------------------------------------------------------------------------
 
    subroutine read_problem_par
+
+      use mpisetup, only: MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION, &
+           &              cbuff, ibuff, rbuff, comm, ierr, buffer_dim, proc
 
       implicit none
 
@@ -88,7 +91,7 @@ module initproblem
          call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
          problem_name = cbuff(1)
-         run_id       = cbuff(2)
+         run_id       = cbuff(2)(1:3)
 
          d0           = rbuff(1)
          r0           = rbuff(2)
@@ -101,9 +104,11 @@ module initproblem
 
    subroutine init_prob
 
+      use mpisetup, only: smallei
+
       implicit none
 
-      integer i,j,k
+      integer :: i,j,k
       real :: xi,yj,zk
       real :: vx,vy,vz,rho,pre,bx,by,bz,b0
       real, dimension(:,:,:),allocatable :: A

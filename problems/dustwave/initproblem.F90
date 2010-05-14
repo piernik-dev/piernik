@@ -1,4 +1,4 @@
-!$Id$
+! $Id$
 !
 ! PIERNIK Code Copyright (C) 2006 Michal Hanasz
 !
@@ -32,13 +32,11 @@ module initproblem
 ! Initial condition for dust fronts
 ! Written by: M. Hanasz, January 2009
 
-   use mpisetup
-   use arrays
-   use grid
-
    real      :: d0, v0, v1
    integer   :: m_x, m_y, m_z
-   character :: problem_name*32,run_id*3
+
+   character(len=32) :: problem_name
+   character(len=3)  :: run_id
 
    namelist /PROBLEM_CONTROL/  problem_name, run_id, &
                                d0, v0, v1, m_x, m_y, m_z
@@ -50,8 +48,10 @@ module initproblem
 
    subroutine read_problem_par
 
-      implicit none
+      use mpisetup, only: MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION, &
+           &              cbuff, ibuff, rbuff, comm, ierr, buffer_dim, proc
 
+      implicit none
 
       problem_name = 'aaa'
       run_id       = 'aaa'
@@ -96,7 +96,7 @@ module initproblem
          call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
          problem_name = cbuff(1)
-         run_id       = cbuff(2)
+         run_id       = cbuff(2)(1:3)
 
          d0           = rbuff(1)
          v0           = rbuff(2)
@@ -114,13 +114,15 @@ module initproblem
 
    subroutine init_prob
 
-      use constants,   only : pi
-      use initdust,    only : idnd,imxd,imyd,imzd
+      use arrays,    only : u
+      use constants, only : pi
+      use initdust,  only : idnd,imxd,imyd,imzd
+      use grid,      only : Lx, Ly, Lz, nx, ny, nz, x, y, z
+
 
       implicit none
 
       integer :: i,j,k
-      real    :: xi,yj,zk
       real    :: k_x,k_y,k_z,k_a
 
       write(*,*) 'initproblem:', pi
