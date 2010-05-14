@@ -218,9 +218,9 @@ push(@addons, "../src/fluids/fluxes.F90");
 
 if( grep { /MAGNETIC/} @d) {
    push(@addons, "../src/magnetic/magboundaries.F90");
-   if ( grep { /UMUSCL/} @d) {} else {
+#   if ( grep { /UMUSCL/} @d) {} else {
       push(@addons, "../src/scheme/rtvd_split/advects.F90");
-   }
+#   }
    if( grep { /RESIST/} @d) {push(@addons, "../src/magnetic/resist/resistivity.F90");} }
 
 if( grep { /IONIZED/} @d) {
@@ -256,13 +256,13 @@ if( grep { /SNE_DISTR/} @d) {
    push(@addons, "../src/supernovae/sndistr.F90");
 }
 
-if( grep { /UMUSCL/} @d) {
-   push(@addons, "../src/scheme/unsplit_muscl_hancock/fluidupdate.F90");
-} else {
+#if( grep { /UMUSCL/} @d) {
+#   push(@addons, "../src/scheme/unsplit_muscl_hancock/fluidupdate.F90");
+#} else {
    push(@addons, "../src/scheme/rtvd_split/fluidupdate.F90");
    push(@addons, "../src/scheme/rtvd_split/sweeps.F90");
    push(@addons, "../src/scheme/rtvd_split/rtvd.F90");
-}
+#}
 
 @files = ( @base, @prob, @addons );
 @symln = ();

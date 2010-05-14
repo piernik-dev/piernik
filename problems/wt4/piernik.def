@@ -7,9 +7,9 @@
 #define ISO
 #define ISO_LOCAL
 
-#if 0
-  UMUSCL is not yet available in the trunk
-#define UMUSCL
+# define UMUSCL
+#ifdef UMUSCL
+#warning UMUSCL is not yet available in the trunk
 #endif
 
 #define GLOBAL_FR_SPEED
