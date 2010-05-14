@@ -1433,10 +1433,6 @@ module dataio
 771 format(5x,a18,(1x,es15.9),16x,5(1x,i4))
 777 format(5x,a18,(1x,es15.9),2x,a3,(1x,es10.4),5(1x,i4))
 
-#ifdef RESISTIVE
-776 format(5x,a18,(1x,es10.4),2x,a3,(1x,es10.4),4(1x,i4))
-#endif /* RESISTIVE */
-
    end subroutine write_log
 
 !------------------------------------------------------------------------
