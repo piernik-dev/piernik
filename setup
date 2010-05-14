@@ -183,8 +183,12 @@ for (@base) {
 copy("compilers/newcompiler", "$objdir/newcompiler");
 system("chmod a+x $objdir/newcompiler");
 $defs = $probdir."piernik.def";
-if ($moo{copy}) { copy   (      $defs, "$objdir/piernik.def") or die "failed copying piernik.def"; }
-else            { symlink("../".$defs, "$objdir/piernik.def") or die "failed linking piernik.def"; }
+$odefs = "$objdir/piernik.def";
+if ($moo{copy}) { copy($defs, $odefs) or die "failed copying piernik.def"; }
+else {
+  symlink("../".$defs, $odefs) or die "failed linking piernik.def";
+  unless ( -e $odefs ) { die "$odefs: $!"; }
+}
 if(@define) {
    foreach $inc (@define) {
       push(@d, "".$inc."\n");
@@ -270,7 +274,10 @@ foreach $file (@files) {
 
 for $i (0 .. $#symln){
   if ($moo{copy}) { copy   ("$objdir/".$files[$i], $objdir) or die "failed copying $files[$i]: $!"; }
-  else            { symlink($files[$i], $symln[$i]) or die "failed linking $files[$i]: $!"; }
+  else {
+    symlink($files[$i], $symln[$i]) or die "failed linking $files[$i]: $!";
+    unless ( -e $symln[$i] ) { die "$symln[$i]: $!"; }
+  }
 }
 chdir $objdir;
 open(MAKEFILE, "> Makefile-prep");
