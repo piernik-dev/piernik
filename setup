@@ -195,7 +195,7 @@ if(@define) {
       $cppflags = $cppflags . " -D" . $inc;
    }
 }
-@d = grep (/define/, `echo \'#include \"$defs\"\' > foo.f90 && gfortran $cppflags -E -cpp -dM foo.f90 && rm foo.*`);
+@d = grep (/define/, `echo \'#include \"$defs\"\' > foo.f90 && cpp $cppflags -dM foo.f90 && rm foo.*`);
 if ($moo{verbose}) { print "Defined symbols:\n", @d, "\n"; }
 
 if( grep { /GRAV/ }  @d) {
