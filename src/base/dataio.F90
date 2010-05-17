@@ -510,51 +510,59 @@ module dataio
 
 !---  if a user message is received then:
       if (len_trim(msg) /= 0) then
-         if(trim(msg) == 'res' .or. trim(msg) == 'dump' ) then
-            if(proc==0) then
-              write (filename,'(a,a1,a3,a1,i4.4,a4)') &
-                trim(problem_name),'_', run_id,'_',nres,'.res'
-            endif
-            call MPI_BCAST(filename, 128, MPI_CHARACTER, 0, comm, ierr)
-            call set_container_chdf(chdf)
-            call write_restart_hdf5(filename,chdf)
-         endif
-         if(trim(msg) .eq. 'hdf') then
-            call set_container_chdf(chdf)
-            call write_hdf5(chdf)
-            nhdf = nhdf + 1
-            step_hdf = nstep
-         endif
-         if(trim(msg) .eq. 'log')    call write_log
-         if(trim(msg) .eq. 'tsl')    call write_timeslice
-         if(trim(msg) .eq. 'tend')   tend   = msg_param
-         if(trim(msg) .eq. 'nend')   nend   = msg_param
-         if(trim(msg) .eq. 'dtres')  dt_res = msg_param
-         if(trim(msg) .eq. 'dthdf')  dt_hdf = msg_param
-         if(trim(msg) .eq. 'dtlog')  dt_log = msg_param
-         if(trim(msg) .eq. 'dttsl')  dt_tsl = msg_param
-         if(trim(msg) .eq. 'dtplt')  dt_plt = msg_param
-
-         if(trim(msg) .eq. 'sleep') then
-            tsleep = 60*msg_param
-            call sleep(tsleep)
-         endif
-
-         if(trim(msg) .eq. 'stop') end_sim = .true.
-
-         if (trim(msg) .eq. 'help' .and. proc == 0) then
-            write(*,'(/,a)')"[dataio:user_msg_handler] Recognized messages:"
-            write(*,'(a)')"  help     - prints this information"
-            write(*,'(a)')"  stop     - finish the simulation"
-            write(*,'(a)')"  res|dump - immediately dumps a restart file"
-            write(*,'(a)')"  hdf      - dumps a plotfile"
-            write(*,'(a)')"  log      - update logfile"
-            write(*,'(a)')"  tsl      - write a timeslice"
-            write(*,'(a)')"  sleep <number> - wait <number> seconds"
-            write(*,'(a)')"  tend|nend|dtres|dthdf|dtlog|dttsl|dtplt <value> - update specified parameter with <value>"
-            write(*,'(a,/)')"Note that only one line at a time is read."
-         end if
-
+         select case (trim(msg))
+            case ('res','dump')
+               if(proc==0) then
+                  write (filename,'(a,a1,a3,a1,i4.4,a4)') &
+                       trim(problem_name),'_', run_id,'_',nres,'.res'
+               endif
+               call MPI_BCAST(filename, 128, MPI_CHARACTER, 0, comm, ierr)
+               call set_container_chdf(chdf)
+               call write_restart_hdf5(filename,chdf)
+            case ('hdf')
+               call set_container_chdf(chdf)
+               call write_hdf5(chdf)
+               nhdf = nhdf + 1
+               step_hdf = nstep
+            case('log')
+               call write_log
+            case('tsl')
+               call write_timeslice
+            case('tend')
+               tend   = msg_param
+            case('nend')
+               nend   = msg_param
+            case('dtres')
+               dt_res = msg_param
+            case('dthdf')
+               dt_hdf = msg_param
+            case('dtlog')
+               dt_log = msg_param
+            case('dttsl')
+               dt_tsl = msg_param
+            case('dtplt')
+               dt_plt = msg_param
+            case('sleep')
+               tsleep = 60*msg_param
+               call sleep(tsleep)
+            case('stop')
+               end_sim = .true.
+            case('help')
+               if (proc == 0) then
+                  write(*,'(/,a)')"[dataio:user_msg_handler] Recognized messages:"
+                  write(*,'(a)')"  help     - prints this information"
+                  write(*,'(a)')"  stop     - finish the simulation"
+                  write(*,'(a)')"  res|dump - immediately dumps a restart file"
+                  write(*,'(a)')"  hdf      - dumps a plotfile"
+                  write(*,'(a)')"  log      - update logfile"
+                  write(*,'(a)')"  tsl      - write a timeslice"
+                  write(*,'(a)')"  sleep <number> - wait <number> seconds"
+                  write(*,'(a)')"  tend|nend|dtres|dthdf|dtlog|dttsl|dtplt <value> - update specified parameter with <value>"
+                  write(*,'(a,/)')"Note that only one line at a time is read."
+               end if
+            case default
+               if (proc == 0) write(*,'(/,3a,/)')"[dataio:user_msg_handler] Warning: non-recognized message '",trim(msg),"'. Use message 'help' for list of valid keys."
+         end select
       endif
 !  enddo ! while disk is full
    end subroutine user_msg_handler
@@ -1444,6 +1452,10 @@ module dataio
 !      user_message_file           ! 1st (user) message file (eg.'./msg')
 !      system_message_file         ! 2nd (ups)  message file (eg.'/etc/ups/user/msg')
 !-------------------------------------------------------------------------
+
+!\todo: process multiple commands at once
+
+      use mpisetup, only: cwd, proc
 #if defined(__INTEL_COMPILER)
       use ifport, only: unlink, stat
 #endif /* __INTEL_COMPILER */
@@ -1452,39 +1464,58 @@ module dataio
       include "lib3f.h"
 #endif /* __PGI */
 
-      character(len=160),dimension(2) :: fname
-      integer ::  unlink_stat = -99, io = -99, sz = -99, sts = -99, i
-      integer, dimension(13) :: stat_buff
-      logical :: msg_param_read = .false.
+      integer, parameter :: n_msg_origin = 2, u_msg=91
+      character(len=*), parameter, dimension(n_msg_origin) :: msg_origin = [ "user  ", "system" ]
 
-      integer, dimension(2), save :: last_msg_stamp
+      character(len=160), dimension(n_msg_origin), save :: fname
+      character(len=160) :: buf
+      integer ::  unlink_stat = -99, io = -99, sz, sts = -99, i
+      integer, dimension(13) :: stat_buff
+      logical :: msg_param_read = .false., ex
+      integer, dimension(n_msg_origin), save :: last_msg_stamp
 
       msg=''
       msg_param = 0.0
-
+      sz = -1
       fname = [ user_message_file, system_message_file ]
 
-      do i = 1, 2
-         inquire(FILE=fname(i), SIZE=sz)
-         if(sz>0) then
+      do i = 1, n_msg_origin
+         inquire(FILE=fname(i), EXIST=ex)
+         if (ex .and. sz<=0) then ! process only one message file at a time, user_message_file first
+            ! I think system file is more important, but current logic prevents reading user_message_file when system_message_file is present
+
             sts = stat(fname(i), stat_buff)
-            if(last_msg_stamp(i) == stat_buff(10)) exit
+            if (last_msg_stamp(i) == stat_buff(10)) exit
             last_msg_stamp(i) = stat_buff(10)
-            open(91,file=fname(i),status='old')
-            read(91,*,iostat=io) msg, msg_param
+
+            open(u_msg, file=fname(i), status='old')
+            read(u_msg, *, iostat=io) msg, msg_param
             if(io/=0) then
-               rewind(91)
-               read(91,*,iostat=io) msg
-               write(*, '(3a)'      )"[dataio:read_file_msg] User message: '",trim(msg),"'"
+               rewind(u_msg)
+               read(u_msg, *, iostat=io) msg
+               write(buf, '(5a)'      )"[dataio:read_file_msg] ",trim(msg_origin(i))," message: '",trim(msg),"'"
             else
                msg_param_read = .true.
-               write(*, '(3a,g15.7)')"[dataio:read_file_msg] User message: '",trim(msg),"', with parameter = ", msg_param
+               write(buf, '(5a,g15.7)')"[dataio:read_file_msg] ",trim(msg_origin(i))," message: '",trim(msg),"', with parameter = ", msg_param
             endif
-            close(91)
+            close(u_msg)
+
+            if (len_trim(buf) > 0 .and. proc==0) then ! leave information on stdout and logfile
+               write(*, '(a)') trim(buf)
+               inquire(file=log_file, exist=ex)
+               if (ex) then
+                  open(log_lun, file=log_file, position='append')
+                  write(log_lun, '(a)') trim(buf)
+                  close(log_lun)
+               end if
+            end if
+
+            sz = len_trim(msg)
             if(fname(i) == user_message_file) unlink_stat = unlink(user_message_file)
+
          endif
       enddo
-      return
+
    end subroutine read_file_msg
 
 !------------------------------------------------------------------------
