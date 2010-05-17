@@ -28,18 +28,24 @@
 #include "piernik.def"
 
 module dataio_public
+
+   use types, only : hdf
+
    implicit none
 
-   real                  :: tend                   !< simulation time to end
-   real                  :: wend                   !< wall clock time to end (in hours)
+   real               :: tend                   !< simulation time to end
+   real               :: wend                   !< wall clock time to end (in hours)
 
-   integer               :: nend                   !< number of the step to end simulation
-   integer               :: nstep_start            !< number of start timestep
-   integer               :: nhdf                   !< current number of hdf file
+   integer            :: nend                   !< number of the step to end simulation
+   integer            :: nstep_start            !< number of start timestep
+   integer            :: nhdf                   !< current number of hdf file
+   integer            :: nres                   !< current number of restart file
 
-   character(len=128)    :: log_file               !< path to the current log file
-   integer               :: log_lun = 3            !< luncher for log file
+   character(len=128) :: log_file               !< path to the current log file
+   integer            :: log_lun = 3            !< luncher for log file
 
-   logical               :: halfstep = .false.     !< true when X-Y-Z sweeps are done and Z-Y-X are not
+   logical            :: halfstep = .false.     !< true when X-Y-Z sweeps are done and Z-Y-X are not
+
+   type(hdf)          :: chdf                   !< container for some vital simulation parameters (see subroutine set_container_chdf)
 
 end module dataio_public

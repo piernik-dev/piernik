@@ -55,9 +55,7 @@ module dataio
    implicit none
 
    private
-   public :: check_log, check_tsl, write_data, write_crashed, cleanup_dataio, init_dataio, user_msg_handler, nrestart
-
-   type(hdf) :: chdf
+   public :: check_log, check_tsl, set_container_chdf, write_data, write_crashed, cleanup_dataio, init_dataio, user_msg_handler, nrestart
 
    integer               :: istep                  !< current number of substep (related to integration order)
 
@@ -85,7 +83,6 @@ module dataio
    character(len=4), dimension(nvarsmx) :: vars    !< array of 4-character strings standing for variables to dump in hdf files
 
    integer               :: tsl_lun = 2            !< luncher for timeslice file
-   integer               :: nres                   !< current number of restart file
    integer               :: ntsl                   !< current number of timeslice file
    integer               :: nlog                   !< current number of log file
    integer               :: step_hdf               !< number of simulation timestep corresponding to values dumped in hdf file
@@ -149,9 +146,13 @@ module dataio
       end subroutine check_tsl
 
      subroutine set_container_chdf(chdf)
-       use mpisetup,    only: nstep
-       use types,       only: hdf
+
+       use mpisetup,      only : nstep
+       use types,         only : hdf
+       use dataio_public, only : nres
+
        implicit none
+
        type(hdf), intent(out) :: chdf
 
        chdf%nstep          = nstep
@@ -169,22 +170,26 @@ module dataio
      end subroutine set_container_chdf
 
      subroutine get_container(chdf)
-       use mpisetup, only : nstep
-       use types, only : hdf
+
+       use mpisetup,      only : nstep
+       use types,         only : hdf
+       use dataio_public, only : nres
+
        implicit none
+
        type(hdf), intent(in) :: chdf
 
-       nstep = chdf%nstep
-       nhdf = chdf%nhdf
-       ntsl = chdf%ntsl
-       nres = chdf%nres
-       nlog = chdf%nlog
-       step_hdf =  chdf%step_hdf
-       log_lun = chdf%log_lun
+       nstep         = chdf%nstep
+       nhdf          = chdf%nhdf
+       ntsl          = chdf%ntsl
+       nres          = chdf%nres
+       nlog          = chdf%nlog
+       step_hdf      = chdf%step_hdf
+       log_lun       = chdf%log_lun
        last_hdf_time = chdf%last_hdf_time
-       log_file = chdf%log_file
-       nrestart = chdf%nrestart
-       domain   = chdf%domain
+       log_file      = chdf%log_file
+       nrestart      = chdf%nrestart
+       domain        = chdf%domain
 
      end subroutine get_container
 
@@ -241,9 +246,10 @@ module dataio
 !! \n \n
 !<
    subroutine init_dataio
-      use mpisetup, only : ibuff, rbuff, cbuff, proc, MPI_CHARACTER, &
-         MPI_DOUBLE_PRECISION, MPI_INTEGER, comm, ierr, buffer_dim, cwd, &
-         psize, t, nstep, cbuff_len
+
+      use mpisetup,        only : ibuff, rbuff, cbuff, proc, MPI_CHARACTER, &
+           &                      MPI_DOUBLE_PRECISION, MPI_INTEGER, comm, ierr, buffer_dim, cwd, &
+           &                      psize, t, nstep, cbuff_len
       use errh,            only : namelist_errh
       use initproblem,     only : problem_name,run_id
       use version,         only : nenv,env, init_version
@@ -253,7 +259,10 @@ module dataio
       use magboundaries,   only : all_mag_boundaries
 #endif /* MAGNETIC */
       use dataio_hdf5,     only : init_hdf5, read_restart_hdf5, maxparfilelines, parfile, parfilelines
+      use dataio_public,   only : chdf, nres
+
       implicit none
+
       logical              :: tn
       integer              :: ierrh
       integer(kind=1)      :: getpid
@@ -493,13 +502,17 @@ module dataio
    end subroutine cleanup_dataio
 
    subroutine user_msg_handler(end_sim)
-      use initproblem, only : problem_name, run_id
-      use mpisetup, only : MPI_CHARACTER, MPI_DOUBLE_PRECISION, comm, ierr, proc, nstep
-      use dataio_hdf5,     only : write_hdf5, write_restart_hdf5
+
+      use initproblem,   only : problem_name, run_id
+      use mpisetup,      only : MPI_CHARACTER, MPI_DOUBLE_PRECISION, comm, ierr, proc, nstep
+      use dataio_hdf5,   only : write_hdf5, write_restart_hdf5
+      use dataio_public, only : chdf
+
       implicit none
+
       logical, intent(inout) :: end_sim
+
       integer :: tsleep
-!      do while(disk_full)
 
 !--- process 0 checks for messages
 
@@ -512,13 +525,7 @@ module dataio
       if (len_trim(msg) /= 0) then
          select case (trim(msg))
             case ('res','dump')
-               if(proc==0) then
-                  write (filename,'(a,a1,a3,a1,i4.4,a4)') &
-                       trim(problem_name),'_', run_id,'_',nres,'.res'
-               endif
-               call MPI_BCAST(filename, 128, MPI_CHARACTER, 0, comm, ierr)
-               call set_container_chdf(chdf)
-               call write_restart_hdf5(filename,chdf)
+               call write_restart_hdf5
             case ('hdf')
                call set_container_chdf(chdf)
                call write_hdf5(chdf)
@@ -564,7 +571,7 @@ module dataio
                if (proc == 0) write(*,'(/,3a,/)')"[dataio:user_msg_handler] Warning: non-recognized message '",trim(msg),"'. Use message 'help' for list of valid keys."
          end select
       endif
-!  enddo ! while disk is full
+
    end subroutine user_msg_handler
 
 !---------------------------------------------------------------------
@@ -575,8 +582,9 @@ module dataio
 !
    subroutine write_crashed(msg)
 
-      use errh,        only : die
-      use initproblem, only : problem_name
+      use errh,          only : die
+      use initproblem,   only : problem_name
+      use dataio_public, only : nres
 
       implicit none
 
@@ -599,13 +607,17 @@ module dataio
 !---------------------------------------------------------------------
 !
    subroutine write_data(output)
-      use mpisetup, only : t, MPI_CHARACTER, comm, ierr, proc, nstep
-      use initproblem, only : run_id, problem_name
+
+      use mpisetup,      only : t, MPI_CHARACTER, comm, ierr, proc, nstep
+      use initproblem,   only : run_id, problem_name
 #ifdef USER_IO
-      use initproblem, only : user_io_routine
+      use initproblem,   only : user_io_routine
 #endif /* USER_IO */
-      use dataio_hdf5,     only : write_hdf5, write_restart_hdf5, write_plot
+      use dataio_hdf5,   only : write_hdf5, write_restart_hdf5, write_plot
+      use dataio_public, only : chdf, nres
+
       implicit none
+
       character(len=3)  :: output
 
 !- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -648,16 +660,7 @@ module dataio
       if (dt_res .gt. 0.0 .and. nstep .gt. step_res) then
          if ((nres-nres_start) .lt. (int((t-t_start) / dt_res) + 1) &
                 .or. output .eq. 'res' .or. output .eq. 'end') then
-            if (nres > 0) then
-               if(proc==0) then
-                  write (filename,'(a,a1,a3,a1,i4.4,a4)') &
-                    trim(problem_name),'_', run_id,'_',nres,'.res'
-               endif
-               call MPI_BCAST(filename, 128, MPI_CHARACTER, 0, comm, ierr)
-               call set_container_chdf(chdf)
-               call write_restart_hdf5(filename,chdf)
-            endif
-            nres = nres + 1
+            if (nres > 0) call write_restart_hdf5
             step_res = nstep
          endif
       endif

@@ -522,14 +522,18 @@ module dataio_hdf5
    end subroutine common_vars_hdf5
 
    subroutine write_plot(chdf)
+
       use hdf5,      only: HID_T, H5open_f, H5Fcreate_f, H5Gcreate_f, H5F_ACC_TRUNC_F, H5Gclose_f, H5close_f, h5fclose_f
       use types,     only: hdf
       use mpisetup,  only: t, comm3d, ierr, proc
+
       implicit none
+
+      type(hdf), intent(in) :: chdf
+
       integer, save     :: nimg = 0
       real, save        :: last_plt_time = 0.0
       character(LEN=32) :: fname
-      type(hdf)         :: chdf
       integer           :: i, error=0, fe
       logical, save     :: first_entry = .true.
       integer(HID_T)    :: file_id                 !> File identifier
@@ -709,29 +713,35 @@ module dataio_hdf5
 
    end subroutine write_plot_hdf5
 
-   subroutine write_restart_hdf5(filename,chdf)
-      use hdf5,        only: HID_T, HSIZE_T, HSSIZE_T, H5P_FILE_ACCESS_F, H5F_ACC_TRUNC_F, H5P_DATASET_CREATE_F, H5S_SELECT_SET_F, &
-           &                 H5P_DATASET_XFER_F, H5FD_MPIO_INDEPENDENT_F, H5T_NATIVE_DOUBLE, &
-           &                 h5open_f, h5close_f, h5fcreate_f, h5fclose_f, &
-           &                 h5dcreate_f, h5dwrite_f, h5dclose_f, h5dget_space_f, &
-           &                 h5pcreate_f, h5pclose_f, h5pset_fapl_mpio_f, h5pset_chunk_f, h5pset_dxpl_mpio_f, &
-           &                 h5screate_simple_f, h5sclose_f, h5sselect_hyperslab_f
+!<
+!! \brief This routine writes restart dump and updates restart counter
+!<
 
-      use types,       only: hdf
-      use mpisetup,    only: pcoords, pxsize, pysize, pzsize, comm3d, info
-      use arrays,      only: u,b
+   subroutine write_restart_hdf5
+
+      use hdf5,          only: HID_T, HSIZE_T, HSSIZE_T, H5P_FILE_ACCESS_F, H5F_ACC_TRUNC_F, H5P_DATASET_CREATE_F, H5S_SELECT_SET_F, &
+           &                   H5P_DATASET_XFER_F, H5FD_MPIO_INDEPENDENT_F, H5T_NATIVE_DOUBLE, &
+           &                   h5open_f, h5close_f, h5fcreate_f, h5fclose_f, &
+           &                   h5dcreate_f, h5dwrite_f, h5dclose_f, h5dget_space_f, &
+           &                   h5pcreate_f, h5pclose_f, h5pset_fapl_mpio_f, h5pset_chunk_f, h5pset_dxpl_mpio_f, &
+           &                   h5screate_simple_f, h5sclose_f, h5sselect_hyperslab_f
+      use types,         only: hdf
+      use mpisetup,      only: pcoords, pxsize, pysize, pzsize, comm3d, comm, info, ierr, MPI_CHARACTER, proc
+      use arrays,        only: u,b
 #ifdef ISO_LOCAL
-      use arrays,      only: cs_iso2_arr
+      use arrays,        only: cs_iso2_arr
 #endif /* ISO_LOCAL */
-      use grid,        only: nxb, nyb, nzb, x, y, z, nx, ny, nz
-      use initproblem, only: problem_name, run_id
+      use grid,          only: nxb, nyb, nzb, x, y, z, nx, ny, nz
+      use initproblem,   only: problem_name, run_id
 #ifdef WT4 /* BEWARE: such dependencies are in general very bad idea.... */
-      use initproblem, only: den0, vlx0, vly0, divine_intervention_type
+      use initproblem,   only: den0, vlx0, vly0, divine_intervention_type
 #endif /* WT4 */
-      use fluidindex,  only: nvar
+      use fluidindex,    only: nvar
+      use dataio_public, only: chdf, nres
+      use dataio,        only: set_container_chdf
 
       implicit none
-      type(hdf)          :: chdf
+
       integer            :: nu
       CHARACTER(len=128) :: filename  !> HDF File name
 
@@ -748,6 +758,10 @@ module dataio_hdf5
       integer(HSIZE_T),  DIMENSION(:), allocatable :: dimsf, dimsfi, chunk_dims
 
       integer :: error, rank = 4
+
+      if (proc==0) write (filename, '(a,a1,a3,a1,i4.4,a4)') trim(problem_name), '_', run_id, '_', nres, '.res'
+      call MPI_BCAST(filename, 128, MPI_CHARACTER, 0, comm, ierr)
+      call set_container_chdf(chdf)
 
       nu = nvar%all
 
@@ -1010,6 +1024,8 @@ module dataio_hdf5
       call set_common_attributes(filename, chdf, "restart")
 
       CALL h5close_f(error)
+
+      nres = nres + 1
 
    end subroutine write_restart_hdf5
 
