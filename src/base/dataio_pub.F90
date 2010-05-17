@@ -33,6 +33,8 @@ module dataio_public
 
    implicit none
 
+   public
+
    real               :: tend                   !< simulation time to end
    real               :: wend                   !< wall clock time to end (in hours)
 
@@ -40,12 +42,60 @@ module dataio_public
    integer            :: nstep_start            !< number of start timestep
    integer            :: nhdf                   !< current number of hdf file
    integer            :: nres                   !< current number of restart file
+   integer            :: nlog                   !< current number of log file
+   integer            :: ntsl                   !< current number of timeslice file
+   integer            :: nrestart               !< number of restart file to be read while restart is not set to ''
+   integer            :: step_hdf               !< number of simulation timestep corresponding to values dumped in hdf file
 
    character(len=128) :: log_file               !< path to the current log file
    integer            :: log_lun = 3            !< luncher for log file
 
    logical            :: halfstep = .false.     !< true when X-Y-Z sweeps are done and Z-Y-X are not
 
-   type(hdf)          :: chdf                   !< container for some vital simulation parameters (see subroutine set_container_chdf)
+   type(hdf)          :: chdf                   !< container for some vital simulation parameters
+   character(len=16)  :: domain                 !< string to choose if boundaries have to be dumped in hdf files
+   real               :: last_hdf_time          !< time in simulation of the last resent hdf file dump
+
+contains
+
+   subroutine get_container(nstep)
+
+      implicit none
+
+      integer, intent(out) :: nstep
+
+      nstep         = chdf%nstep
+      nhdf          = chdf%nhdf
+      ntsl          = chdf%ntsl
+      nres          = chdf%nres
+      nlog          = chdf%nlog
+      step_hdf      = chdf%step_hdf
+      log_lun       = chdf%log_lun
+      last_hdf_time = chdf%last_hdf_time
+      log_file      = chdf%log_file
+      nrestart      = chdf%nrestart
+      domain        = chdf%domain
+
+   end subroutine get_container
+
+   subroutine set_container_chdf(nstep)
+
+      implicit none
+
+      integer, intent(in) ::  nstep
+
+      chdf%nstep          = nstep
+      chdf%nhdf           = nhdf
+      chdf%ntsl           = ntsl
+      chdf%nres           = nres
+      chdf%nlog           = nlog
+      chdf%step_hdf       = step_hdf
+      chdf%log_lun        = log_lun
+      chdf%last_hdf_time  = last_hdf_time
+      chdf%log_file       = log_file
+      chdf%nrestart       = nrestart
+      chdf%domain         = domain
+
+   end subroutine set_container_chdf
 
 end module dataio_public

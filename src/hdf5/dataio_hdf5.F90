@@ -726,7 +726,7 @@ module dataio_hdf5
            &                   h5pcreate_f, h5pclose_f, h5pset_fapl_mpio_f, h5pset_chunk_f, h5pset_dxpl_mpio_f, &
            &                   h5screate_simple_f, h5sclose_f, h5sselect_hyperslab_f
       use types,         only: hdf
-      use mpisetup,      only: pcoords, pxsize, pysize, pzsize, comm3d, comm, info, ierr, MPI_CHARACTER, proc
+      use mpisetup,      only: pcoords, pxsize, pysize, pzsize, comm3d, comm, info, ierr, MPI_CHARACTER, proc, nstep
       use arrays,        only: u,b
 #ifdef ISO_LOCAL
       use arrays,        only: cs_iso2_arr
@@ -737,8 +737,7 @@ module dataio_hdf5
       use initproblem,   only: den0, vlx0, vly0, divine_intervention_type
 #endif /* WT4 */
       use fluidindex,    only: nvar
-      use dataio_public, only: chdf, nres
-      use dataio,        only: set_container_chdf
+      use dataio_public, only: chdf, nres, set_container_chdf
 
       implicit none
 
@@ -761,7 +760,7 @@ module dataio_hdf5
 
       if (proc==0) write (filename, '(a,a1,a3,a1,i4.4,a4)') trim(problem_name), '_', run_id, '_', nres, '.res'
       call MPI_BCAST(filename, 128, MPI_CHARACTER, 0, comm, ierr)
-      call set_container_chdf(chdf)
+      call set_container_chdf(nstep)
 
       nu = nvar%all
 

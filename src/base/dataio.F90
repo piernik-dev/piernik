@@ -50,21 +50,19 @@ module dataio
 !! \todo check the usefullness of wait logical variable
 !<
    use types,         only : hdf
-   use dataio_public, only : tend, nend, wend, log_file, log_lun, nhdf, nstep_start
+   use dataio_public, only : tend, nend, wend, log_file, log_lun, nhdf, nstep_start, domain, nrestart, get_container, set_container_chdf
 
    implicit none
 
    private
-   public :: check_log, check_tsl, set_container_chdf, write_data, write_crashed, cleanup_dataio, init_dataio, user_msg_handler, nrestart
+   public :: check_log, check_tsl, write_data, write_crashed, cleanup_dataio, init_dataio, user_msg_handler
 
    integer               :: istep                  !< current number of substep (related to integration order)
 
    integer, parameter    :: nvarsmx = 16           !< maximum number of variables to dump in hdf files
    character(len=3)      :: new_id                 !< three character string to change run_id when restarting simulation (e.g. to avoid overwriting of the output from the previous (pre-restart) simulation; if new_id = '' then run_id is still used)
    character(len=16)     :: restart                !< choice of restart file: if restart = 'last': automatic choice of the last restart file regardless of "nrestart" value; if smth else is set: "nrestart" value is fixing
-   character(len=16)     :: domain                 !< string to choose if boundaries have to be dumped in hdf files
    character(len=16)     :: mag_center             !< choice to dump magnetic fields values from cell centers or not (if not then values from cell borders)
-   integer               :: nrestart               !< number of restart file to be read while restart is not set to ''
    integer               :: resdel                 !< number of recent restart dumps which should be saved; each n-resdel-1 restart file is supposed to be deleted while writing n restart file
    real                  :: dt_hdf                 !< time between successive hdf dumps
    real                  :: dt_res                 !< time between successive restart file dumps
@@ -83,14 +81,10 @@ module dataio
    character(len=4), dimension(nvarsmx) :: vars    !< array of 4-character strings standing for variables to dump in hdf files
 
    integer               :: tsl_lun = 2            !< luncher for timeslice file
-   integer               :: ntsl                   !< current number of timeslice file
-   integer               :: nlog                   !< current number of log file
-   integer               :: step_hdf               !< number of simulation timestep corresponding to values dumped in hdf file
    integer               :: step_res               !< number of simulation timestep corresponding to values dumped in restart file
    integer               :: nhdf_start             !< number of hdf file for the first hdf dump in simulation run
    integer               :: nres_start             !< number of restart file for the first restart dump in simulation run
    real                  :: t_start                !< time in simulation of start simulation run
-   real                  :: last_hdf_time          !< time in simulation of the last resent hdf file dump
    character(len=2)      :: pc1                    !< string of two characters to mark current block in x-direction in hdf4 files
    character(len=2)      :: pc2                    !< string of two characters to mark current block in y-direction in hdf4 files
    character(len=2)      :: pc3                    !< string of two characters to mark current block in z-direction in hdf4 files
@@ -121,7 +115,10 @@ module dataio
    contains
 
       subroutine check_log
-         use mpisetup, only : t
+
+         use mpisetup,      only : t
+         use dataio_public, only : nlog
+
          implicit none
 
          if(dt_log > 0.0) then
@@ -134,7 +131,10 @@ module dataio
       end subroutine check_log
 
       subroutine check_tsl
-         use mpisetup, only : t
+
+         use mpisetup,      only : t
+         use dataio_public, only : ntsl
+
          implicit none
 
          if(dt_tsl .gt. 0.0) then
@@ -144,55 +144,6 @@ module dataio
              endif
          endif
       end subroutine check_tsl
-
-     subroutine set_container_chdf(chdf)
-
-       use mpisetup,      only : nstep
-       use types,         only : hdf
-       use dataio_public, only : nres
-
-       implicit none
-
-       type(hdf), intent(out) :: chdf
-
-       chdf%nstep          = nstep
-       chdf%nhdf           = nhdf
-       chdf%ntsl           = ntsl
-       chdf%nres           = nres
-       chdf%nlog           = nlog
-       chdf%step_hdf       = step_hdf
-       chdf%log_lun        = log_lun
-       chdf%last_hdf_time  = last_hdf_time
-       chdf%log_file       = log_file
-       chdf%nrestart       = nrestart
-       chdf%domain         = domain
-
-     end subroutine set_container_chdf
-
-     subroutine get_container(chdf)
-
-       use mpisetup,      only : nstep
-       use types,         only : hdf
-       use dataio_public, only : nres
-
-       implicit none
-
-       type(hdf), intent(in) :: chdf
-
-       nstep         = chdf%nstep
-       nhdf          = chdf%nhdf
-       ntsl          = chdf%ntsl
-       nres          = chdf%nres
-       nlog          = chdf%nlog
-       step_hdf      = chdf%step_hdf
-       log_lun       = chdf%log_lun
-       last_hdf_time = chdf%last_hdf_time
-       log_file      = chdf%log_file
-       nrestart      = chdf%nrestart
-       domain        = chdf%domain
-
-     end subroutine get_container
-
 
 !---------------------------------------------------------------------
 !
@@ -259,7 +210,7 @@ module dataio
       use magboundaries,   only : all_mag_boundaries
 #endif /* MAGNETIC */
       use dataio_hdf5,     only : init_hdf5, read_restart_hdf5, maxparfilelines, parfile, parfilelines
-      use dataio_public,   only : chdf, nres
+      use dataio_public,   only : chdf, nres, last_hdf_time, step_hdf, nlog, ntsl
 
       implicit none
 
@@ -474,11 +425,11 @@ module dataio
             enddo
          close(3)
       endif
-      call set_container_chdf(chdf); chdf%nres = nrestart
+      call set_container_chdf(nstep); chdf%nres = nrestart
 
       if (nrestart /= 0) then
          call read_restart_hdf5(chdf)
-         call get_container(chdf)
+         call get_container(nstep)
          nstep_start = nstep
          t_start     = t
          nres_start  = nrestart
@@ -486,7 +437,7 @@ module dataio
          if(new_id .ne. '') run_id=new_id
       endif
       call MPI_BCAST(log_file, 32, MPI_CHARACTER, 0, comm, ierr)
-      call set_container_chdf(chdf)
+      call set_container_chdf(nstep)
       call all_fluid_boundaries
 #ifdef MAGNETIC
       call all_mag_boundaries
@@ -506,7 +457,7 @@ module dataio
       use initproblem,   only : problem_name, run_id
       use mpisetup,      only : MPI_CHARACTER, MPI_DOUBLE_PRECISION, comm, ierr, proc, nstep
       use dataio_hdf5,   only : write_hdf5, write_restart_hdf5
-      use dataio_public, only : chdf
+      use dataio_public, only : chdf, step_hdf
 
       implicit none
 
@@ -527,7 +478,7 @@ module dataio
             case ('res','dump')
                call write_restart_hdf5
             case ('hdf')
-               call set_container_chdf(chdf)
+               call set_container_chdf(nstep)
                call write_hdf5(chdf)
                nhdf = nhdf + 1
                step_hdf = nstep
@@ -614,7 +565,7 @@ module dataio
       use initproblem,   only : user_io_routine
 #endif /* USER_IO */
       use dataio_hdf5,   only : write_hdf5, write_restart_hdf5, write_plot
-      use dataio_public, only : chdf, nres
+      use dataio_public, only : chdf, nres, last_hdf_time, step_hdf
 
       implicit none
 
@@ -646,7 +597,7 @@ module dataio
 
          if ((t-last_hdf_time) .ge. dt_hdf &
                 .or. output .eq. 'hdf' .or. output .eq. 'end') then
-            call set_container_chdf(chdf)
+            call set_container_chdf(nstep)
             call write_hdf5(chdf)
 
             if((t-last_hdf_time) .ge. dt_hdf) last_hdf_time = last_hdf_time + dt_hdf
@@ -664,11 +615,10 @@ module dataio
             step_res = nstep
          endif
       endif
-      call set_container_chdf(chdf)
+      call set_container_chdf(nstep)
       call write_plot(chdf)
 
    end subroutine write_data
-
 
    subroutine next_fluid_or_var(ifluid,ivar,nvar)
 #ifdef SN_SRC

@@ -142,7 +142,8 @@ contains
       use grid,          only : nx,ny,nz
       use grid,          only : init_grid,grid_xyz
       use initproblem,   only : init_prob, read_problem_par, problem_name, run_id
-      use dataio,        only : init_dataio, write_data, nrestart
+      use dataio,        only : init_dataio, write_data
+      use dataio_public, only : nrestart
       use mpisetup,      only : cwd, mpistart
       use mpiboundaries, only : mpi_boundaries_prep
 #if defined MAGNETIC && defined RESISTIVE
