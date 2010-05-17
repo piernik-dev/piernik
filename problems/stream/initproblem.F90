@@ -29,9 +29,9 @@
 
 module initproblem
 
-   character(len=32) :: problem_name
+   use problem_pub, only: problem_name, run_id
+
    character(len=32) :: fnoise
-   character(len=3)  :: run_id
    real :: rhog, eps, amp, kx, kz
    real, dimension(8), save :: vec
    logical :: linear

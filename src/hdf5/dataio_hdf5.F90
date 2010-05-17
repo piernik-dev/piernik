@@ -41,7 +41,7 @@ module dataio_hdf5
 
    implicit none
    private
-   public :: init_hdf5, read_restart_hdf5, cleanup_hdf5, write_hdf5, write_restart_hdf5, write_plot
+   public :: init_hdf5, read_restart_hdf5, cleanup_hdf5, write_hdf5, write_restart_hdf5, write_plot, write_3darr_to_restart, read_3darr_from_restart
    public :: parfile, parfilelines, maxparfilelines
 
    character(LEN=10), dimension(3) :: dname = (/"fluid     ","mag       ","dinit     "/)  !< dataset names for restart files
@@ -90,7 +90,7 @@ module dataio_hdf5
 
    subroutine init_hdf5(vars,tix,tiy,tiz,tdt_plt)
 
-      use list_hdf5,  only: additional_attrs
+      use list_hdf5,  only: additional_attrs, problem_write_restart, problem_read_restart
       use fluidindex, only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
 #ifdef COSM_RAYS
       use fluidindex, only: iarr_all_crs
@@ -248,7 +248,9 @@ module dataio_hdf5
          end select
       enddo
 
-      if(.not.associated(additional_attrs)) additional_attrs => null_attrs
+      if ( .not. associated(additional_attrs))      additional_attrs      => null_attrs
+      if ( .not. associated(problem_write_restart)) problem_write_restart => null_attrs
+      if ( .not. associated(problem_read_restart))  problem_read_restart  => null_attrs
 
    end subroutine init_hdf5
 
@@ -732,12 +734,10 @@ module dataio_hdf5
       use arrays,        only: cs_iso2_arr
 #endif /* ISO_LOCAL */
       use grid,          only: nxb, nyb, nzb, x, y, z, nx, ny, nz
-      use initproblem,   only: problem_name, run_id
-#ifdef WT4 /* BEWARE: such dependencies are in general very bad idea.... */
-      use initproblem,   only: den0, vlx0, vly0, divine_intervention_type
-#endif /* WT4 */
+      use problem_pub,   only: problem_name, run_id
       use fluidindex,    only: nvar
       use dataio_public, only: chdf, nres, set_container_chdf
+      use list_hdf5,     only: problem_write_restart
 
       implicit none
 
@@ -771,14 +771,8 @@ module dataio_hdf5
       CALL h5fcreate_f(filename, H5F_ACC_TRUNC_F, file_id, error, access_prp = plist_id)
       CALL h5pclose_f(plist_id, error)
 
+      if (associated(problem_write_restart)) call problem_write_restart(file_id)
 
-#ifdef WT4 /* BEWARE: such dependencies are in general very bad idea.... */
-      if( divine_intervention_type == 3) then
-        if (allocated(den0)) call write_3darr_to_restart(den0(:,:,:),file_id,"den0",nx,ny,nz)
-        if (allocated(vlx0)) call write_3darr_to_restart(vlx0(:,:,:),file_id,"vlx0",nx,ny,nz)
-        if (allocated(vly0)) call write_3darr_to_restart(vly0(:,:,:),file_id,"vly0",nx,ny,nz)
-      endif
-#endif /* WT4 */
 #ifdef MASS_COMPENS
       call write_3darr_to_restart(dinit(is:ie,js:je,ks:ke),file_id,dname(3),nxb,nyb,nzb)
 #endif /* MASS_COMPENS */
@@ -1203,14 +1197,12 @@ module dataio_hdf5
       use grid,         only: nx, ny, nz, x, y, z, nxb, nyb, nzb, nxd, nyd, nzd, nb, xmin, xmax, &
           ymin, ymax, zmin, zmax
       use arrays,       only: u,b
-#ifdef WT4 /* BEWARE: such dependencies are in general very bad idea.... */
-      use initproblem, only: den0, vlx0, vly0, divine_intervention_type
-#endif /* WT4 */
 #ifdef ISO_LOCAL
       use arrays,       only: cs_iso2_arr
 #endif
-      use initproblem,  only: problem_name, run_id
+      use problem_pub,  only: problem_name, run_id
       use errh,         only: die
+      use list_hdf5,    only: problem_read_restart
 
       IMPLICIT NONE
       type(hdf)             :: chdf
@@ -1238,8 +1230,8 @@ module dataio_hdf5
       integer, dimension(1) :: ibuf
 
       real, dimension(:,:,:,:), pointer :: p4d
-#ifdef WT4
-      real, dimension(:,:,:),   pointer :: p3d
+#ifdef ISO_LOCAL
+      real, dimension(:,:,:), pointer :: p3d
 #endif
 
       nu = nvar%all
@@ -1283,24 +1275,8 @@ module dataio_hdf5
       CALL h5fopen_f(trim(filename), H5F_ACC_RDONLY_F, file_id, error, access_prp = plist_id)
       CALL h5pclose_f(plist_id, error)
 
-#ifdef WT4 /* BEWARE: such dependencies are in general very bad idea.... */
-      ! /todo First query for existence of den0, vlx0 and vly0, then allocate
-      if(divine_intervention_type == 3) then
-         if (.not.allocated(den0)) allocate(den0(nx,ny,nz))
-         if (.not.allocated(vlx0)) allocate(vlx0(nx,ny,nz))
-         if (.not.allocated(vly0)) allocate(vly0(nx,ny,nz))
+      if (associated(problem_read_restart)) call problem_read_restart(file_id)
 
-         if(.not.associated(p3d)) p3d => den0(:,:,:)
-         call read_3darr_from_restart(file_id,"den0",p3d,nx,ny,nz)
-         if(associated(p3d)) nullify(p3d)
-         if(.not.associated(p3d)) p3d => vlx0(:,:,:)
-         call read_3darr_from_restart(file_id,"vlx0",p3d,nx,ny,nz)
-         if(associated(p3d)) nullify(p3d)
-         if(.not.associated(p3d)) p3d => vly0(:,:,:)
-         call read_3darr_from_restart(file_id,"vly0",p3d,nx,ny,nz)
-         if(associated(p3d)) nullify(p3d)
-      endif
-#endif /* WT4 */
 #ifdef MASS_COMPENS
       if(.not.associated(p3d)) p3d => dinit(is:ie,js:je,ks:ke)
       call read_3darr_from_restart(file_id,dname(3),p3d,nxb,nyb,nzb)
@@ -1469,7 +1445,7 @@ module dataio_hdf5
       use types,       only: hdf
       use mpisetup,    only: comm3d, ierr, info, mpistop
       use grid,        only: nxb, nyb, nzb
-      use initproblem, only: problem_name, run_id
+      use problem_pub, only: problem_name, run_id
 #ifdef NEW_HDF5
       use list_hdf5,   only: iterate_lhdf5
 #endif /* NEW_HDF5 */
@@ -1638,7 +1614,7 @@ module dataio_hdf5
       use types,        only: hdf
       use grid,         only: nxb, nyb, nzb, nxd, nyd, nzd, nb, xmin, xmax, ymin, ymax, zmin, zmax
       use version,      only: env, nenv
-      use initproblem,  only: problem_name, run_id
+      use problem_pub,  only: problem_name, run_id
       use list_hdf5,    only: additional_attrs
 
       implicit none

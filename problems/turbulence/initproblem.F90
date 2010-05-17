@@ -4,11 +4,10 @@
 module initproblem
 
 ! Initial condition for Sedov-Taylor explosion
+  use problem_pub, only: problem_name, run_id
 
   integer           :: n_sn
   real              :: d0, Mrms, t_sn
-  character(len=32) :: problem_name
-  character(len=3)  :: run_id
 
   namelist /PROBLEM_CONTROL/  problem_name, run_id, &
                               d0, c_si, Mrms

@@ -37,9 +37,10 @@ module initproblem
 #endif /* ISO */
    use shear,        only : qshear, omega
    use mpisetup
+   use problem_pub, only: problem_name, run_id
 
    real :: d0,r0,bx0,by0,bz0
-   character ::  problem_name*32,run_id*3,dir*1
+   character(len=1) :: dir
 
    namelist /PROBLEM_CONTROL/  problem_name, run_id, d0, r0,bx0,by0,bz0
 

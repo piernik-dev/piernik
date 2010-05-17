@@ -37,10 +37,9 @@ module initproblem
 #endif /* ISO */
    use grid,         only : dx,dy
    use constants,    only : pi,dpi,fpi
+   use problem_pub, only: problem_name, run_id
 
    real              :: d0,r0,bx0,by0,bz0
-   character(len=32) :: problem_name
-   character(len=3)  :: run_id
    character(len=1)  :: dir
 
    namelist /PROBLEM_CONTROL/  problem_name, run_id, d0, r0,bx0,by0,bz0

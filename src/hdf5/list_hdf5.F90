@@ -33,7 +33,7 @@ module list_hdf5
    use hdf5, only: HID_T
 #endif /* NEW_HDF5 */
    private
-   public :: write_arr, S_LEN, additional_attrs
+   public :: write_arr, S_LEN, additional_attrs, problem_write_restart, problem_read_restart
 #ifdef NEW_HDF5
    public :: add_lhdf5, lhdf5_info, iterate_lhdf5
 #endif
@@ -49,6 +49,8 @@ module list_hdf5
    end interface
 
    procedure(add_attr), pointer :: additional_attrs
+   procedure(add_attr), pointer :: problem_write_restart
+   procedure(add_attr), pointer :: problem_read_restart
 
 #ifdef NEW_HDF5
    type :: lhdf5_info

@@ -34,13 +34,12 @@ module initproblem
    use grid
    use mpisetup
    use errh
+   use problem_pub, only: problem_name, run_id
 
-   real t_sn
-   integer n_sn, ierrh
-   real d0,p0,bx0,by0,bz0,x0,y0,z0,r0,beta_cr, amp_cr
-   character(LEN=32)    :: problem_name
-   character(LEN=3)     :: run_id
-   character(LEN=100)   :: par_file, tmp_file
+   real               :: t_sn
+   integer            :: n_sn, ierrh
+   real               :: d0,p0,bx0,by0,bz0,x0,y0,z0,r0,beta_cr, amp_cr
+   character(LEN=100) :: par_file, tmp_file
 
    namelist /PROBLEM_CONTROL/  problem_name, run_id,      &
                                d0,p0, bx0,by0,bz0, &

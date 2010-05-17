@@ -41,14 +41,13 @@ module initproblem
    use initcosmicrays
    use fluidindex, only : ibx,iby,ibz
    use hydrostatic, only : hydrostatic_zeq
+   use problem_pub, only: problem_name, run_id
 #ifdef SHEAR
    use shear, only : qshear, omega
 #endif /* SHEAR */
 
    real :: d0, bxn,byn,bzn, x0, y0, z0, r_sn, h_sn, f_sn_kpc2, amp_cr, beta_cr
    real :: ethu, f_sn, amp_ecr_sn, alpha
-   character(len=32) :: problem_name
-   character(len=3)  :: run_id
 
    namelist /PROBLEM_CONTROL/  problem_name, run_id, &
                                d0, &
@@ -340,10 +339,13 @@ module initproblem
       use crcomposition
 
       implicit none
+
       real, dimension(3), intent(in) :: pos
-      integer i,j,k, ipm, jpm, icr
-      real decr, xsn,ysn,zsn
-      real ysna, ysni, ysno
+
+      integer :: i, j, k, ipm, jpm, icr
+      real    :: decr, xsn, ysn, zsn
+      real    :: ysna, ysni, ysno
+
       xsn = pos(1)
       ysn = pos(2)
       zsn = pos(3)

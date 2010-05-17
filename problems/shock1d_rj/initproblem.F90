@@ -43,10 +43,11 @@ module initproblem
    use initionized,  only : ieni, gamma_ion
 #endif /* ISO */
    use mpisetup
+   use problem_pub, only: problem_name, run_id
 
-   real        :: dl,vxl,vyl,vzl,bxl,byl,bzl,el
-   real        :: dr,vxr,vyr,vzr,bxr,byr,bzr,er
-   character   ::  problem_name*32,run_id*3,dir*1
+   real             :: dl,vxl,vyl,vzl,bxl,byl,bzl,el
+   real             :: dr,vxr,vyr,vzr,bxr,byr,bzr,er
+   character(len=1) :: dir
 
    namelist /PROBLEM_CONTROL/  problem_name, &
       run_id,dl,vxl,vyl,vzl,bxl,byl,bzl,el,  &

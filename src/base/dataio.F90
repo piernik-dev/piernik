@@ -202,7 +202,7 @@ module dataio
            &                      MPI_DOUBLE_PRECISION, MPI_INTEGER, comm, ierr, buffer_dim, cwd, &
            &                      psize, t, nstep, cbuff_len
       use errh,            only : namelist_errh
-      use initproblem,     only : problem_name,run_id
+      use problem_pub,     only : problem_name,run_id
       use version,         only : nenv,env, init_version
       use fluidboundaries, only : all_fluid_boundaries
       use timer,           only : time_left
@@ -454,7 +454,7 @@ module dataio
 
    subroutine user_msg_handler(end_sim)
 
-      use initproblem,   only : problem_name, run_id
+      use problem_pub,   only : problem_name, run_id
       use mpisetup,      only : MPI_CHARACTER, MPI_DOUBLE_PRECISION, comm, ierr, proc, nstep
       use dataio_hdf5,   only : write_hdf5, write_restart_hdf5
       use dataio_public, only : chdf, step_hdf
@@ -534,7 +534,7 @@ module dataio
    subroutine write_crashed(msg)
 
       use errh,          only : die
-      use initproblem,   only : problem_name
+      use problem_pub,   only : problem_name
       use dataio_public, only : nres
 
       implicit none
@@ -560,10 +560,7 @@ module dataio
    subroutine write_data(output)
 
       use mpisetup,      only : t, MPI_CHARACTER, comm, ierr, proc, nstep
-      use initproblem,   only : run_id, problem_name
-#ifdef USER_IO
-      use initproblem,   only : user_io_routine
-#endif /* USER_IO */
+      use problem_pub,   only : run_id, problem_name
       use dataio_hdf5,   only : write_hdf5, write_restart_hdf5, write_plot
       use dataio_public, only : chdf, nres, last_hdf_time, step_hdf
 
@@ -582,10 +579,6 @@ module dataio
       endif
 
 !    CALL checkdf
-
-#ifdef USER_IO
-      call user_io_routine
-#endif /* USER_IO */
 
 #ifdef HDFSWEEP
       if (output .ne. 'gpt') then
@@ -641,7 +634,7 @@ module dataio
 
    subroutine find_last_restart(restart_number)
       use mpisetup,     only: cwd
-      use initproblem,  only: problem_name, run_id
+      use problem_pub,  only: problem_name, run_id
 #if defined(__INTEL_COMPILER)
       use ifport,       only: unlink
 #endif /* __INTEL_COMPILER */
@@ -687,7 +680,7 @@ module dataio
       use fluidindex,      only : nvar,iarr_all_dn,iarr_all_mx,iarr_all_my,iarr_all_mz
       use grid,            only : dvol,dx,dy,dz,is,ie,js,je,ks,ke,x,y,z,nxd,nyd,nzd
       use arrays,          only : u,b,wa
-      use initproblem,     only : problem_name, run_id
+      use problem_pub,     only : problem_name, run_id
 #ifdef IONIZED
       use initionized,     only : gamma_ion, cs_iso_ion,cs_iso_ion2
 #endif /* IONIZED */

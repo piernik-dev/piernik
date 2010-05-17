@@ -41,14 +41,13 @@ module initproblem
    use initcosmicrays
    use fluidindex, only : ibx,iby,ibz
    use hydrostatic, only : hydrostatic_zeq
+   use problem_pub, only: problem_name, run_id
 #ifdef SHEAR
    use shear, only : qshear, omega
 #endif /* SHEAR */
 
    real :: d0, bxn,byn,bzn, h_sn, f_sn_kpc2, amp_cr, beta_cr, r_sn
    real :: ethu, f_sn, amp_ecr_sn, alpha
-   character(len=32) :: problem_name
-   character(len=3)  :: run_id
 
    namelist /PROBLEM_CONTROL/  problem_name, run_id, &
                                d0, &

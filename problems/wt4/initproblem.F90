@@ -29,7 +29,8 @@
 
 module initproblem
 
-   use mpisetup, only: cbuff_len
+   use mpisetup,    only: cbuff_len
+   use problem_pub, only: problem_name, run_id
 
    integer, parameter :: ic_nx = 512, ic_ny = 512, ic_nz = 52 !< initial conditions size
    integer, parameter :: ic_vars = 5                          !< number of quantities in the IC
@@ -46,8 +47,6 @@ module initproblem
    integer            :: divine_intervention_type             !< select type of every-step solution alteration
    logical            :: fake_ic                              !< Skip reading the IC file (useful only for debugging, or running under valgrind)
    character(len=cbuff_len) :: input_file                     !< File with initial conditions
-   character(len=cbuff_len) :: problem_name                   !< The default problem name
-   character(len=3)         :: run_id                         !< Auxiliary run identifier
 
    real, allocatable, dimension(:, :, :, :) :: ic_data        !< Storage for local part of the IC file
    integer :: ic_is, ic_ie, ic_js, ic_je, ic_ks, ic_ke        !< range  of IC file covering local domain
@@ -276,7 +275,7 @@ contains
       use arrays,      only: u, b, cs_iso2_arr
       use grid,        only: is, ie, js, je, ks, ke, nx, ny, nz, nb, x, y, z, dx, dy, dz
       use initionized, only: idni, imxi, imyi, imzi
-      use list_hdf5,   only: additional_attrs
+      use list_hdf5,   only: additional_attrs, problem_write_restart, problem_read_restart
       use constants,   only: small
       use errh,        only: die
       use types,       only: problem_customize_solution
@@ -349,7 +348,9 @@ contains
       end if
 
       b(:, 1:nx, 1:ny, 1:nz) = 0.0
-      additional_attrs => init_prob_attrs
+      additional_attrs      => init_prob_attrs
+      problem_write_restart => write_initial_fld_to_restart
+      problem_read_restart  => read_initial_fld_from_restart
 
       ! BEWARE: den0, vlx0 and vly0 are used only with divine_intervention_type = 3
       if (.not.allocated(den0)) allocate(den0(nx,ny,nz))
@@ -389,7 +390,62 @@ contains
 
    end subroutine init_prob_attrs
 
-  subroutine problem_customize_solution_wt4
+!-----------------------------------------------------------------------------
+
+   subroutine write_initial_fld_to_restart(file_id)
+
+      use hdf5,        only : HID_T
+      use grid,        only : nx, ny, nz
+      use dataio_hdf5, only : write_3darr_to_restart
+
+      implicit none
+
+      integer(HID_T),intent(in)  :: file_id
+
+      if( divine_intervention_type == 3) then
+        if (allocated(den0)) call write_3darr_to_restart(den0(:,:,:), file_id, "den0", nx, ny, nz)
+        if (allocated(vlx0)) call write_3darr_to_restart(vlx0(:,:,:), file_id, "vlx0", nx, ny, nz)
+        if (allocated(vly0)) call write_3darr_to_restart(vly0(:,:,:), file_id, "vly0", nx, ny, nz)
+      endif
+
+   end subroutine write_initial_fld_to_restart
+
+!-----------------------------------------------------------------------------
+
+   subroutine read_initial_fld_from_restart(file_id)
+
+      use hdf5,        only : HID_T
+      use grid,        only : nx, ny, nz
+      use dataio_hdf5, only : read_3darr_from_restart
+
+      implicit none
+
+      integer(HID_T),intent(in) :: file_id
+
+      real, dimension(:,:,:), pointer :: p3d
+
+      ! /todo First query for existence of den0, vlx0 and vly0, then allocate
+      if (divine_intervention_type == 3) then
+         if (.not.allocated(den0)) allocate(den0(nx,ny,nz))
+         if (.not.allocated(vlx0)) allocate(vlx0(nx,ny,nz))
+         if (.not.allocated(vly0)) allocate(vly0(nx,ny,nz))
+
+         if(.not.associated(p3d)) p3d => den0(:,:,:)
+         call read_3darr_from_restart(file_id,"den0",p3d,nx,ny,nz)
+         if(associated(p3d)) nullify(p3d)
+         if(.not.associated(p3d)) p3d => vlx0(:,:,:)
+         call read_3darr_from_restart(file_id,"vlx0",p3d,nx,ny,nz)
+         if(associated(p3d)) nullify(p3d)
+         if(.not.associated(p3d)) p3d => vly0(:,:,:)
+         call read_3darr_from_restart(file_id,"vly0",p3d,nx,ny,nz)
+         if(associated(p3d)) nullify(p3d)
+      endif
+
+   end subroutine read_initial_fld_from_restart
+
+!-----------------------------------------------------------------------------
+
+   subroutine problem_customize_solution_wt4
 
      use mpisetup,    only: proc
      use arrays,      only: u, cs_iso2_arr

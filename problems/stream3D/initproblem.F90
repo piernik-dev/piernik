@@ -33,10 +33,10 @@ module initproblem
 ! Written by: M. Hanasz, March 2006
 
    use mpisetup
+   use problem_pub, only: problem_name, run_id
 
    real    :: sigma0, Rin, R0, HtoR, eps, amp
-   character(len=32) :: problem_name, sigma_model
-   character(len=3)  :: run_id
+   character(len=32) :: sigma_model
 
    namelist /PROBLEM_CONTROL/  problem_name, run_id, sigma0, amp, &
                                Rin, R0, HtoR, sigma_model, eps

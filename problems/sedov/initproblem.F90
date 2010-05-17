@@ -38,16 +38,14 @@ module initproblem
 #ifdef NEUTRAL
    use initneutral
 #endif /* NEUTRAL */
-
    use arrays
    use grid
    use mpisetup
+   use problem_pub, only: problem_name, run_id
 
    real :: t_sn
    integer :: n_sn
    real :: d0,p0,bx0,by0,bz0,Eexpl, x0,y0,z0,r0, dt_sn,r
-   character(len=32) :: problem_name
-   character(len=3)  :: run_id
 
    namelist /PROBLEM_CONTROL/  problem_name, run_id, &
                                d0,p0, bx0,by0,bz0, Eexpl,  x0,y0,z0, r0, &

@@ -31,12 +31,10 @@ module initproblem
 
 ! Initial condition for dust fronts
 ! Written by: M. Hanasz, January 2009
+   use problem_pub, only: problem_name, run_id
 
    real      :: d0, v0, v1
    integer   :: m_x, m_y, m_z
-
-   character(len=32) :: problem_name
-   character(len=3)  :: run_id
 
    namelist /PROBLEM_CONTROL/  problem_name, run_id, &
                                d0, v0, v1, m_x, m_y, m_z

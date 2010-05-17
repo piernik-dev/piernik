@@ -31,9 +31,8 @@ module initproblem
 
 ! Initial condition for blob test
    use mpisetup
+   use problem_pub, only: problem_name, run_id
 
-   character(len=32) :: problem_name
-   character(len=3)  :: run_id
    real              :: d_gas, p_gas, v_gas, d_dust, v_dust, x0, y0, z0, r0
 
    namelist /PROBLEM_CONTROL/  problem_name, run_id, &

@@ -33,10 +33,10 @@ module initproblem
 ! Written by: M. Hanasz, March 2006
 
    use mpisetup
+   use problem_pub, only: problem_name, run_id
 
    real :: d0, r_max, dout, alpha
-   character(len=32) :: problem_name, mag_field_orient
-   character(len=3)  :: run_id
+   character(len=32) :: mag_field_orient
 
    namelist /PROBLEM_CONTROL/  problem_name, run_id, alpha, &
                                d0,dout,r_max,mag_field_orient

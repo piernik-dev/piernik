@@ -29,10 +29,10 @@
 
 module initproblem
 
+  use problem_pub, only: problem_name, run_id
+
   real              :: d0, p0, amp, kx, ky, kz
   integer           :: ix, iy, iz, mode
-  character(len=32) :: problem_name
-  character(len=3)  :: run_id
 
   namelist /PROBLEM_CONTROL/  problem_name, run_id, d0, p0, ix, iy, iz, amp, mode
 

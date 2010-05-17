@@ -43,10 +43,9 @@ module initproblem
 #ifdef SHEAR
    use shear, only : qshear, omega
 #endif /* SHEAR */
+   use problem_pub, only: problem_name, run_id
 
    real :: d0, bxn,byn,bzn, alpha
-   character(len=32) :: problem_name
-   character(len=3)  :: run_id
 
    namelist /PROBLEM_CONTROL/  problem_name, run_id, &
                                d0, bxn,byn,bzn, alpha
