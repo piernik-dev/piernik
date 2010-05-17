@@ -1135,7 +1135,7 @@ module dataio
       csi_max%loc   = maxloc(cs_iso2_arr(is:ie,js:je,ks:ke)) + [nb, nb, nb]
       call mpifind(csi_max%val, 'max', csi_max%loc, csi_max%proc)
 
-      wa            = hydro_mass / kboltz * cs_iso2_arr(:,:,:)
+      wa            = mH / kboltz * cs_iso2_arr(:,:,:)
       temi_min%val  = minval(wa(is:ie,js:je,ks:ke))
       temi_min%loc  = minloc(wa(is:ie,js:je,ks:ke)) + [nb, nb, nb]
       call mpifind(temi_min%val, 'min', temi_min%loc, temi_min%proc)
