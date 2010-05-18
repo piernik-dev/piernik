@@ -52,7 +52,8 @@ do {
              "linkexe"=>\$moo{linkexe},
              "verbose"=>\$moo{verbose},
              "copy"=>\$moo{copy},
-             "nocompile"=>\$moo{nocompile});
+             "nocompile"=>\$moo{nocompile},
+             "laconic"=>\$moo{laconic});
 } while ($_);
 close DEF_CONF;
 
@@ -99,11 +100,12 @@ if ($moo{problems}) {
    print " --dumpenv\t- do not compile the source but dump the environment to \'obj/version.F90\'\n";
    print " --verbose\t- try to confuse the user with some diagnostics ;-)\n";
    print " --nocompile\t- Create object directory but do not compile or prepare run directory. In combination with -copy will prepare portable object directory.\n";
+   print " --laconic\t- Compress stdout from make process.\n";
    print " --param <file>\t- use <file> instead problem.par\n";
    print " --define <flag>\t- inject precompiler directive to piernik.def\n";
    print " --obj <postfix>\t- use obj_<postfix> directory instead of obj/ and runs/<problem>_<postfix>/ rather than runs/<problem>/\n";
    print " --compiler <configuration>\t- choose specified config from compilers directory\n\n";
-   print "The file .setuprc may contain some preferred options to be included everytime, for example '--linkexe --compiler <local_configuration>'\n";
+   print "The file .setuprc may contain some preferred options to be included everytime, for example '--linkexe --compiler <local_configuration> --laconic'\n";
    print "\n";
 
    print "all-in-one wrapper for a selected problem:\n";
@@ -307,10 +309,36 @@ print MAKEFILE "CPPFLAGS += " . $cppflags . "\n";
 #
 # make
 #
-print MAKEFILE "all: date \$(PROG) \n\n";
+if ($moo{laconic}) { print MAKEFILE "SILENT = 1\n\n"; }
+else               { print MAKEFILE "SILENT = 0\n\n"; }
+print MAKEFILE "ifeq (\"\$(SILENT)\",\"1\")\n";
+print MAKEFILE "MAKEFLAGS += -s\n";
+print MAKEFILE "define ECHO_CC\n";
+print MAKEFILE "\@echo [FC] \$<\n";
+print MAKEFILE "endef\n";
+print MAKEFILE "else\n";
+print MAKEFILE "define ECHO_CC\n";
+print MAKEFILE "endef\n";
+print MAKEFILE "endif\n\n";
+print MAKEFILE ".PHONY: print_fc\n\n";
+print MAKEFILE "all: date print_fc \$(PROG) \n\n";
+print MAKEFILE "print_fc:\n";
+print MAKEFILE "ifeq (\"\$(SILENT)\",\"1\")\n";
+print MAKEFILE "\t\@echo FC = \$(F90) \$(CPPFLAGS) \$(F90FLAGS) -c\n";
+print MAKEFILE "endif\n\n";
 print MAKEFILE "\$(PROG): \$(OBJS)\n";
-print MAKEFILE "\t\$(", &LanguageCompiler($ARGV[1], @srcs);
-print MAKEFILE ") \$(LDFLAGS) -o \$@ \$(OBJS) \$(LIBS)\n\n";
+print MAKEFILE "\t\@echo \$(", &LanguageCompiler($ARGV[1], @srcs),") \$(LDFLAGS) -o \$@ '*.o' \$(LIBS)\n";
+print MAKEFILE "\t\@\$(", &LanguageCompiler($ARGV[1], @srcs),") \$(LDFLAGS) -o \$@ \$(OBJS) \$(LIBS)\n";
+print MAKEFILE "\t\@AO1=`mktemp _ao_XXXXXX`;\\\n";
+print MAKEFILE "\tAO2=`mktemp _ao_XXXXXX`;\\\n";
+print MAKEFILE "\techo \$(OBJS) | tr ' ' '\\n' | sort > \$AO1;\\\n";
+print MAKEFILE "\techo *.o     | tr ' ' '\\n' | sort > \$AO2;\\\n";
+print MAKEFILE "\tif [ `join -v 2 \$AO1 \$AO2 | wc -l` -gt 0 ] ; then\\\n";
+print MAKEFILE "\t\techo -n \"WARNING: unused object files: \";\\\n";
+print MAKEFILE "\t\tjoin -v 2 \$AO1 \$AO2 | tr '\\n' ' ';\\\n";
+print MAKEFILE "\t\techo;\\\n";
+print MAKEFILE "\tfi;\\\n";
+print MAKEFILE "\trm \$AO1 \$AO2\n\n";
 #
 # make date
 #
@@ -353,6 +381,7 @@ print MAKEFILE ".SUFFIXES: \$(SUFFIXES) .F90\n\n";
 # .F90 -> .o
 #
 print MAKEFILE ".F90.o:\n";
+print MAKEFILE "\t\$(ECHO_CC)\n";
 print MAKEFILE "\t\$(F90) \$(CPPFLAGS) \$(F90FLAGS) -c \$<\n\n";
 #
 # override the built-in rule for .mod (Modula-2 source code files)
