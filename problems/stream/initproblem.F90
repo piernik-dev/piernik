@@ -44,9 +44,13 @@ module initproblem
 !-----------------------------------------------------------------------------
 
    subroutine read_problem_par
-      use mpisetup,  only: cwd, cbuff, rbuff, MPI_CHARACTER, ibuff, MPI_INTEGER, MPI_DOUBLE_PRECISION, comm, ierr, lbuff, MPI_LOGICAL, buffer_dim, proc
-      use errh,      only: namelist_errh
+
+      use errh,     only : namelist_errh
+      use mpisetup, only : cwd, ierr, rbuff, cbuff, ibuff, lbuff, proc, buffer_dim, comm, &
+           &               MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL
+
       implicit none
+
       character(len=100) :: par_file, tmp_log_file
       integer :: cwd_status, ierrh
 
@@ -100,7 +104,7 @@ module initproblem
          call MPI_BCAST(lbuff,    buffer_dim, MPI_LOGICAL,          0, comm, ierr)
 
          problem_name = cbuff(1)
-         run_id       = cbuff(2)
+         run_id       = cbuff(2)(1:3)
          fnoise       = cbuff(3)
 
          rhog         = rbuff(1)
