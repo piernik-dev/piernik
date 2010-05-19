@@ -209,9 +209,6 @@ module initcosmicrays
 
  subroutine cosmicray_species
 
-
-
-
  end subroutine cosmicray_species
 
  subroutine cosmicray_index(nvar, nvar_crn, nvar_cre, nvar_crs)
