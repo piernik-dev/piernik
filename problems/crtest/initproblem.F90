@@ -32,9 +32,10 @@ module initproblem
 
    use problem_pub, only: problem_name, run_id
 
-   real    :: t_sn
-   integer :: n_sn, ierrh
-   real    :: d0, p0, bx0, by0, bz0, x0, y0, z0, r0, beta_cr, amp_cr
+   real               :: t_sn
+   integer            :: n_sn, ierrh
+   real               :: d0, p0, bx0, by0, bz0, x0, y0, z0, r0, beta_cr, amp_cr
+   character(LEN=100) :: par_file, tmp_file
 
    namelist /PROBLEM_CONTROL/  problem_name, run_id,      &
                                d0, p0, bx0, by0, bz0, &
@@ -48,11 +49,14 @@ module initproblem
    subroutine read_problem_par
 
       use mpisetup, only: MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION, &
-           &              cbuff, ibuff, rbuff, buffer_dim, comm, ierr, proc
+           &              cbuff, ibuff, rbuff, buffer_dim, comm, ierr, proc, cwd
       use grid,     only: dxmn
       use errh,     only: namelist_errh
 
       implicit none
+
+      par_file = trim(cwd)//'/problem.par'
+      tmp_file = trim(cwd)//'/tmp.log'
 
       t_sn = 0.0
 
@@ -72,13 +76,13 @@ module initproblem
       amp_cr     = 1.0
 
       if(proc .eq. 0) then
-         open(1,file='problem.par')
+         open(1,file=par_file)
          read(unit=1,nml=PROBLEM_CONTROL,iostat=ierrh)
          call namelist_errh(ierrh,'PROBLEM_CONTROL')
          write(*,nml=PROBLEM_CONTROL)
          close(1)
 
-         open(3, file='tmp.log', position='append')
+         open(3, file=tmp_file, position='append')
          write(3,nml=PROBLEM_CONTROL)
          write(3,*)
          close(3)
@@ -173,7 +177,7 @@ module initproblem
 #ifndef ISO
                u(ieni,i,j,k)      = p0/(gamma_ion-1.0)
                u(ieni,i,j,k)      = u(ieni,i,j,k) &
-                           + 0.5*sum(u(imxi:imzi,i,j,k)**2,1)/u(idni,i,j,k)
+                                    + 0.5*sum(u(imxi:imzi,i,j,k)**2,1)/u(idni,i,j,k)
                u(ieni,i,j,k)      = u(ieni,i,j,k) + 0.5*sum(b(:,i,j,k)**2,1)
 #endif /* ISO */
 
@@ -196,10 +200,11 @@ module initproblem
             enddo
          enddo
       enddo
-#endif /* COSM_RAYS */
 
       write(*,*) 'maxecr =',maxval(u(iecr,:,:,:))
       write(*,*) amp_cr
+
+#endif /* COSM_RAYS */
 
       return
    end subroutine init_prob

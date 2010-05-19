@@ -30,20 +30,16 @@
 
 module initproblem
 
-   use arrays
-   use grid
-   use mpisetup
-   use errh
    use problem_pub, only: problem_name, run_id
 
    real               :: t_sn
    integer            :: n_sn, ierrh
-   real               :: d0,p0,bx0,by0,bz0,x0,y0,z0,r0,beta_cr, amp_cr
+   real               :: d0, p0, bx0, by0, bz0, x0, y0, z0, r0, beta_cr, amp_cr
    character(LEN=100) :: par_file, tmp_file
 
    namelist /PROBLEM_CONTROL/  problem_name, run_id,      &
-                               d0,p0, bx0,by0,bz0, &
-                               x0,y0,z0, r0, &
+                               d0, p0, bx0, by0, bz0, &
+                               x0, y0, z0, r0, &
                                beta_cr, amp_cr
 
    contains
@@ -52,7 +48,13 @@ module initproblem
 
    subroutine read_problem_par
 
+      use mpisetup, only: MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION, &
+           &              cbuff, ibuff, rbuff, buffer_dim, comm, ierr, proc, cwd
+      use grid,     only: dxmn
+      use errh,     only: namelist_errh
+
       implicit none
+
       par_file = trim(cwd)//'/problem.par'
       tmp_file = trim(cwd)//'/tmp.log'
 
@@ -73,7 +75,6 @@ module initproblem
       beta_cr    = 0.0
       amp_cr     = 1.0
 
-
       if(proc .eq. 0) then
          open(1,file=par_file)
          read(unit=1,nml=PROBLEM_CONTROL,iostat=ierrh)
@@ -88,7 +89,7 @@ module initproblem
       endif
 
 
-      if(proc .eq. 0) then
+      if (proc == 0) then
 
          cbuff(1) =  problem_name
          cbuff(2) =  run_id
@@ -106,19 +107,13 @@ module initproblem
          rbuff(10)= beta_cr
          rbuff(11)= amp_cr
 
-         call MPI_BCAST(cbuff, 32*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
-         call MPI_BCAST(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
-         call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+      end if
 
-      else
+      call MPI_BCAST(cbuff, 32*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
+      call MPI_BCAST(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
+      call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
-         call MPI_BCAST(cbuff, 32*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
-         call MPI_BCAST(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
-         call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
-
-!  namelist /PROBLEM_CONTROL/  problem_name, run_id, &
-!                              d0,p0, bx0,by0,bz0, x0,y0,z0, r0 &
-!
+      if (proc /= 0) then
 
          problem_name = cbuff(1)
          run_id       = cbuff(2)(1:3)
@@ -151,7 +146,10 @@ module initproblem
       use initcosmicrays, only : iarr_crn, iarr_cre, iarr_crs
       use initcosmicrays, only : gamma_crn, gamma_cre, gamma_crs
       use initionized,    only : gamma_ion
-      use crcomposition
+      use arrays,         only : b, u
+      use grid,           only : nx, ny, nz, nb, ks, ke, x, y, z
+      use errh,           only : die
+      use crcomposition,  only : icr_H1, icr_C12
 
       implicit none
 
@@ -195,8 +193,6 @@ module initproblem
       enddo
 
 ! Explosions
-
-
 
 #ifdef COSM_RAYS
 
