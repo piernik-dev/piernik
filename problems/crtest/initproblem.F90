@@ -50,6 +50,7 @@ module initproblem
       use mpisetup, only: MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION, &
            &              cbuff, ibuff, rbuff, buffer_dim, comm, ierr, proc
       use grid,     only: dxmn
+      use errh,     only: namelist_errh
 
       implicit none
 
@@ -136,15 +137,24 @@ module initproblem
 
       use fluidindex,     only : ibx,iby,ibz
       use initionized,    only : idni,imxi,imyi,imzi,ieni
-      use initcosmicrays, only : gamma_cr,iecr
+      use initcosmicrays, only : gamma_crs, iarr_crs, ncrn, ncre
       use initionized,    only : gamma_ion
       use arrays,         only : b, u
       use grid,           only : nx, ny, nz, nb, ks, ke, x, y, z
+      use errh,           only : die
 
       implicit none
 
-      integer :: i, j, k, n
+      integer :: i, j, k
       real    :: cs_iso, r2
+      integer :: iecr = -1
+      integer, parameter :: icr = 1 !< Only first CR component
+
+      if (ncrn+ncre >= icr) then
+         iecr = iarr_crs(icr)
+      else
+         call die("[initproblem:init_prob] No CR components defined.")
+      end if
 
 ! Uniform equilibrium state
 
@@ -168,7 +178,7 @@ module initproblem
 #endif /* ISO */
 
 #ifdef COSM_RAYS
-               u(iecr,i,j,k)      =  beta_cr*cs_iso**2 * u(idni,i,j,k)/(gamma_cr-1.0)
+               u(iecr,i,j,k)      =  beta_cr*cs_iso**2 * u(idni,i,j,k)/(gamma_crs(icr)-1.0)
 #endif /* COSM_RAYS */
 
             enddo
