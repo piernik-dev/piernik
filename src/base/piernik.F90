@@ -32,7 +32,8 @@
 program piernik
 
   use mpisetup,      only : comm, comm3d, ierr, proc, t, dt, nstep, mpistop
-  use dataio_public, only : nend, nstep_start, tend, log_file, log_lun
+  use dataio_public, only : nend, nstep_start, tend, log_file, log_lun, &
+       &                    code_progress, PIERNIK_START, PIERNIK_INITIALIZED, PIERNIK_FINISHED, PIERNIK_CLEANUP
   use timer,         only : time_left
 #ifdef PERFMON
   use timer,         only : timer_start, timer_stop
@@ -47,6 +48,8 @@ program piernik
   character(len=256) :: msg
   character(len=32)  :: nstr, tstr
 
+  code_progress = PIERNIK_START
+
   call init_piernik
 
   call MPI_BARRIER(comm3d,ierr)
@@ -54,6 +57,8 @@ program piernik
 #ifdef PERFMON
   call timer_start
 #endif
+
+  code_progress = PIERNIK_INITIALIZED
 
   end_sim = .false.
 
@@ -82,6 +87,8 @@ program piernik
      call user_msg_handler(end_sim)
 
   end do ! main loop
+
+  code_progress = PIERNIK_FINISHED
 
   if (proc == 0) then
      write(tstr, '(g14.6)') t
@@ -124,6 +131,9 @@ program piernik
 !---------------------------- END OF MAIN LOOP ----------------------------------
 
   call MPI_BARRIER(comm,ierr)
+
+  code_progress = 4 ! cleanup
+
   if (proc == 0) write(*, '(a)', advance='no') "Finishing "
   call cleanup_piernik
   if (proc == 0) write(*, '("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")')

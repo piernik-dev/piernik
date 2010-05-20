@@ -56,6 +56,12 @@ module dataio_public
    character(len=16)  :: domain                 !< string to choose if boundaries have to be dumped in hdf files
    real               :: last_hdf_time          !< time in simulation of the last resent hdf file dump
 
+   integer, parameter :: PIERNIK_START       = 1                       ! before initialization
+   integer, parameter :: PIERNIK_INITIALIZED = PIERNIK_START       + 1 ! initialized, running
+   integer, parameter :: PIERNIK_FINISHED    = PIERNIK_INITIALIZED + 1
+   integer, parameter :: PIERNIK_CLEANUP     = PIERNIK_FINISHED    + 1
+   integer            :: code_progress          !< rough estimate of code execution progress
+
 contains
 
    subroutine get_container(nstep)
