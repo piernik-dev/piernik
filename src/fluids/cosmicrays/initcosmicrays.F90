@@ -63,6 +63,8 @@ module initcosmicrays
    real,    allocatable, dimension(:)  :: K_crs_paral  !< array containing parallel diffusion coefficients of all CR components
    real,    allocatable, dimension(:)  :: K_crs_perp   !< array containing perpendicular diffusion coefficients of all CR components
 
+   !BEWARE Possible confusion: *_perp coefficients are not "perpendicular" but rather isotropic
+
 contains
 
    !>

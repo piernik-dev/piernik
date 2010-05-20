@@ -194,9 +194,8 @@ contains
       endif
 
       additional_attrs => init_prob_attrs
-
       finalize_problem => finalize_problem_maclaurin
-      return
+
    end subroutine init_prob
 
 !-----------------------------------------------------------------------------
