@@ -32,15 +32,14 @@ module initproblem
 
    use problem_pub, only: problem_name, run_id
 
-   real               :: t_sn
-   integer            :: n_sn, ierrh
+   integer            :: norm_step
    real               :: d0, p0, bx0, by0, bz0, x0, y0, z0, r0, beta_cr, amp_cr
-   character(LEN=100) :: par_file, tmp_file
 
    namelist /PROBLEM_CONTROL/  problem_name, run_id,      &
                                d0, p0, bx0, by0, bz0, &
                                x0, y0, z0, r0, &
-                               beta_cr, amp_cr
+                               beta_cr, amp_cr, &
+                               norm_step
 
    contains
 
@@ -55,25 +54,28 @@ module initproblem
 
       implicit none
 
+      integer            :: ierrh
+      character(LEN=100) :: par_file, tmp_file
+
       par_file = trim(cwd)//'/problem.par'
       tmp_file = trim(cwd)//'/tmp.log'
 
-      t_sn = 0.0
-
       problem_name = 'aaa'
-      run_id  = 'aaa'
-      d0      = 1.0
-      p0      = 1.0
-      bx0     =   0.
-      by0     =   0.
-      bz0     =   0.
-      x0      = 0.0
-      y0      = 0.0
-      z0      = 0.0
-      r0      = dxmn/2.
+      run_id       = 'aaa'
+      d0           = 1.0       !< density
+      p0           = 1.0       !< pressure
+      bx0          =   0.      !< Magnetic field component x
+      by0          =   0.      !< Magnetic field component y
+      bz0          =   0.      !< Magnetic field component z
+      x0           = 0.0       !< x-position of the blob
+      y0           = 0.0       !< y-position of the blob
+      z0           = 0.0       !< z-position of the blob
+      r0           = dxmn/2.   !< radius of the blob
 
-      beta_cr    = 0.0
-      amp_cr     = 1.0
+      beta_cr      = 0.0       !< ambient level
+      amp_cr       = 1.0       !< amplitude of the blob
+
+      norm_step    = 10        !< how often to compute the norm (in steps)
 
       if(proc .eq. 0) then
          open(1,file=par_file)
@@ -88,11 +90,10 @@ module initproblem
          close(3)
       endif
 
-
       if (proc == 0) then
 
-         cbuff(1) =  problem_name
-         cbuff(2) =  run_id
+         cbuff(1) = problem_name
+         cbuff(2) = run_id
 
          rbuff(1) = d0
          rbuff(2) = p0
@@ -103,9 +104,10 @@ module initproblem
          rbuff(7) = y0
          rbuff(8) = z0
          rbuff(9) = r0
-
          rbuff(10)= beta_cr
          rbuff(11)= amp_cr
+
+         ibuff(1) = norm_step
 
       end if
 
@@ -127,9 +129,10 @@ module initproblem
          y0           = rbuff(7)
          z0           = rbuff(8)
          r0           = rbuff(9)
-
          beta_cr      = rbuff(10)
          amp_cr       = rbuff(11)
+
+         norm_step    = ibuff(1)
 
       endif
 
@@ -146,6 +149,7 @@ module initproblem
       use arrays,         only : b, u
       use grid,           only : nx, ny, nz, nb, ks, ke, x, y, z
       use errh,           only : die
+      use types,          only : problem_customize_solution, finalize_problem
 
       implicit none
 
@@ -164,34 +168,29 @@ module initproblem
 
       cs_iso = sqrt(p0/d0)
 
+
+      b(ibx, 1:nx, 1:ny, 1:nz) = bx0
+      b(iby, 1:nx, 1:ny, 1:nz) = by0
+      b(ibz, 1:nx, 1:ny, 1:nz) = bz0
+      u(idni, 1:nx, 1:ny, 1:nz) = d0
+      u(imxi:imzi, 1:nx, 1:ny, 1:nz) = 0.0
+
+#ifndef ISO
       do k = 1,nz
          do j = 1,ny
             do i = 1,nx
-
-               b(ibx,i,j,k)       = bx0
-               b(iby,i,j,k)       = by0
-               b(ibz,i,j,k)       = bz0
-
-               u(idni,i,j,k)      = d0
-               u(imxi:imzi,i,j,k) = 0.0
-#ifndef ISO
-               u(ieni,i,j,k)      = p0/(gamma_ion-1.0)
-               u(ieni,i,j,k)      = u(ieni,i,j,k) &
-                                    + 0.5*sum(u(imxi:imzi,i,j,k)**2,1)/u(idni,i,j,k)
-               u(ieni,i,j,k)      = u(ieni,i,j,k) + 0.5*sum(b(:,i,j,k)**2,1)
-#endif /* ISO */
-
-#ifdef COSM_RAYS
-               u(iecr,i,j,k)      =  beta_cr*cs_iso**2 * u(idni,i,j,k)/(gamma_crs(icr)-1.0)
-#endif /* COSM_RAYS */
-
+               u(ieni,i,j,k)      = p0/(gamma_ion-1.0) + &
+                    &               0.5*sum(u(imxi:imzi,i,j,k)**2,1)/u(idni,i,j,k) + &
+                    &               0.5*sum(b(:,i,j,k)**2,1)
             enddo
          enddo
       enddo
+#endif /* ISO */
 
 ! Explosions
 
 #ifdef COSM_RAYS
+      u(iecr, 1:nx, 1:ny, 1:nz)      =  beta_cr*cs_iso**2 * u(idni, 1:nx, 1:ny, 1:nz)/(gamma_crs(icr)-1.0)
       do k = ks,ke
          do j = nb+1,ny-nb
             do i = nb+1,nx-nb
@@ -201,12 +200,87 @@ module initproblem
          enddo
       enddo
 
-      write(*,*) 'maxecr =',maxval(u(iecr,:,:,:))
-      write(*,*) amp_cr
+      write(*,*) 'maxecr =',maxval(u(iecr,:,:,:)), amp_cr
 
 #endif /* COSM_RAYS */
 
+      problem_customize_solution => check_norm
+      finalize_problem           => check_norm
+
       return
    end subroutine init_prob
+
+!-----------------------------------------------------------------------------
+
+   subroutine check_norm
+
+      use mpisetup,       only : proc, comm3d, ierr, MPI_DOUBLE_PRECISION, MPI_SUM, MPI_MIN, MPI_MAX, MPI_IN_PLACE, t, nstep
+      use grid,           only : x, y, z, is, ie, js, je, ks, ke
+      use arrays,         only : b, u
+      use initcosmicrays, only : iarr_crs, ncrn, ncre, K_crn_paral, K_crn_perp
+      use errh,           only : die
+      use dataio_public,  only : code_progress, PIERNIK_FINISHED
+
+      implicit none
+
+      integer :: i, j, k
+      real    :: r_par2, r_perp2, delx, dely, delz, magb2, ampt, r0_par2, r0_perp2, crt
+      integer :: iecr = -1
+      integer, parameter :: icr = 1 !< Only first CR component
+      real, dimension(2) :: norm, dev
+
+      integer, save :: nn = 0
+
+      if ((code_progress < PIERNIK_FINISHED) .and. mod(nstep, norm_step) /=0) return
+
+      if (ncrn+ncre >= icr) then
+         iecr = iarr_crs(icr)
+      else
+         call die("[initproblem:init_prob] No CR components defined.")
+      end if
+
+      norm(:) = 0.
+      dev(1) = huge(1.0)
+      dev(2) = -dev(1)
+
+      magb2 = bx0**2 + by0**2 + bz0**2
+
+      r0_par2  = r0**2 + 4 * (K_crn_paral(icr) + K_crn_perp(icr)) * t
+      r0_perp2 = r0**2 + 4 * K_crn_perp(icr) * t
+      ampt     = amp_cr * r0**2 / sqrt(r0_par2 * r0_perp2)
+
+      !write(*,'(a,5g15.6)')"[i:cn] tBrrA:",t,magb2,r0_par2,r0_perp2,ampt
+
+      do k = ks, ke
+         delz = z(k) - z0
+         do j = js, je
+            dely = y(j) - y0
+            do i = is, ie
+               delx = x(i) - x0
+
+               r_par2 = (bx0*delx + by0*dely + bz0*delz)**2/magb2 ! square of the distance form the center of the bump in direction parallel to the magnetic field
+               r_perp2 = delx**2 + dely**2 + delz**2 - r_par2
+               crt = ampt * exp( - r_par2/r0_par2 - r_perp2/r0_perp2)
+
+               !if (nn==400) write(*,'(a,2i4,a,2f10.3,a,2f10.3,a,2f17.10)')"icn ",i,j," Dxy= ",delx,dely," r= ",sqrt(r_par2),sqrt(r_perp2)," crt= ",crt, u(iecr, i, j, k)
+
+               norm(1) = norm(1) + (crt - u(iecr, i, j, k))**2
+               norm(2) = norm(2) + crt**2
+               dev(1) = min(dev(1), (crt - u(iecr, i, j, k)))
+               dev(2) = max(dev(2), (crt - u(iecr, i, j, k)))
+
+            end do
+         end do
+      end do
+
+      call MPI_Allreduce(MPI_IN_PLACE, norm,   2, MPI_DOUBLE_PRECISION, MPI_SUM, comm3d, ierr)
+      call MPI_Allreduce(MPI_IN_PLACE, dev(1), 1, MPI_DOUBLE_PRECISION, MPI_MIN, comm3d, ierr)
+      call MPI_Allreduce(MPI_IN_PLACE, dev(2), 1, MPI_DOUBLE_PRECISION, MPI_MAX, comm3d, ierr)
+
+      if (proc == 0) write(*,'(a,f12.5,a,2f12.5)')"[initproblem:check_norm] L2 error norm = ", sqrt(norm(1)/norm(2)), " min and max error = ", dev(1:2)
+
+      nn = nn + 1
+
+   end subroutine check_norm
 
 end module initproblem
