@@ -44,7 +44,7 @@ do {
   GetOptions("help"=>\$moo{help},
              "problems"=>\$moo{problems},
              "units"=>\$moo{units},
-             "dumpenv"=>\$moo{dumpenv},
+#             "dumpenv"=>\$moo{dumpenv},
              "define=s@"=>\@define,
              "param:s"=>\$moo{param},
              "compiler:s"=>\$moo{compiler},
@@ -80,24 +80,22 @@ if ($argc < 1) {
 }
 
 if ($moo{problems}) {
-   print " \n";
    system ( "cat ./problems/*/info");
    print " \n";
    exit $OK;
 } elsif ($moo{units}) {
-   print " \n";
    system ( "grep uses ./src/base/constants.F90");
    print " \n";
    exit $OK;
 } elsif ($moo{help}) {
    print "USAGE: " . $SELF . " [PROBLEM] [OPTIONS]\n";
    print "Available options:\n";
-   print " --help\t\t- print this help message\n";
+   print " --help\t\t- print this help message and exit\n";
    print " --problems\t- print available problems and exit\n";
    print " --units\t- print available unit systems and exit\n";
    print " --copy\t\t- hard-copy source files instead of linking them\n";
    print " --linkexe\t- do not copy obj/piernik to runs/<problem> but link it instead\n";
-   print " --dumpenv\t- do not compile the source but dump the environment to \'obj/version.F90\'\n";
+#   print " --dumpenv\t- do not compile the source but dump the environment to \'obj/version.F90\'\n";
    print " --verbose\t- try to confuse the user with some diagnostics ;-)\n";
    print " --nocompile\t- Create object directory but do not compile or prepare run directory. In combination with -copy will prepare portable object directory.\n";
    print " --laconic\t- Compress stdout from make process.\n";
