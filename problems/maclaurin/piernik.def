@@ -2,7 +2,7 @@
 #define IONIZED
 #undef  MAGNETIC
 
-#define CGS		/*cm,gram,sek unitsystem*/
+#define CGS               /*cm,gram,sek unitsystem*/
 
 #undef ISO
 
@@ -19,9 +19,3 @@
 #else
 #undef NEW_HDF5
 #endif
-
-#if 0
-  __NO_FLUID_STEP is a special flag that switches off fluid evolution.
-  It is useful for solving static problems (mostly testcases).
-#endif
-#define __NO_FLUID_STEP

@@ -126,6 +126,7 @@ contains
    subroutine make_3sweeps(forward)
 
       use types,           only : problem_customize_solution
+      use dataio_public,   only : skip_advection
 #ifdef SHEAR
       use shear,           only : yshift
       use fluidboundaries, only : bnd_u
@@ -152,21 +153,18 @@ contains
       call source_terms_grav
 #endif /* GRAV */
 
-#ifndef __NO_FLUID_STEP
-
-      if (forward) then
-         do s = DIR_X, DIR_Z
-            call make_sweep(s, forward)
-         end do
-      else
-         do s = DIR_Z, DIR_X, -1
-            call make_sweep(s, forward)
-         end do
+      if (.not. skip_advection) then
+         if (forward) then
+            do s = DIR_X, DIR_Z
+               call make_sweep(s, forward)
+            end do
+         else
+            do s = DIR_Z, DIR_X, -1
+               call make_sweep(s, forward)
+            end do
+         end if
+         if (associated(problem_customize_solution)) call problem_customize_solution
       end if
-
-      if (associated(problem_customize_solution)) call problem_customize_solution
-
-#endif /* __NO_FLUID_STEP */
 
    end subroutine make_3sweeps
 

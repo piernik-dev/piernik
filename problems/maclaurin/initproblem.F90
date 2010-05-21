@@ -29,12 +29,12 @@
 
 module initproblem
 
-   use problem_pub, only: problem_name, run_id
+   use problem_pub, only : problem_name, run_id
 
    real              :: x0, y0, z0, d0, a1, e, d1, p0, a3
    integer           :: nsub
 
-   namelist /PROBLEM_CONTROL/  problem_name, run_id, x0, y0, z0, d0, a1, e, nsub
+   namelist /PROBLEM_CONTROL/ problem_name, run_id, x0, y0, z0, d0, a1, e, nsub
 
 contains
 
@@ -42,12 +42,12 @@ contains
 
    subroutine read_problem_par
 
-      use grid, only : xmin, xmax, ymin, ymax, zmin, zmax
-      use errh, only : namelist_errh, die
-      use mpisetup, only : cwd, ierr, rbuff, cbuff, ibuff, proc, &
-         MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, &
-         buffer_dim, comm, smalld
-      use constants, only: pi
+      use grid,          only : xmin, xmax, ymin, ymax, zmin, zmax
+      use errh,          only : namelist_errh, die
+      use mpisetup,      only : cwd, ierr, rbuff, cbuff, ibuff, proc, buffer_dim, comm, smalld, &
+           &                    MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER
+      use constants,     only : pi
+      use dataio_public, only : skip_advection
 
       implicit none
 
@@ -55,6 +55,8 @@ contains
 
       integer :: ierrh
       character(LEN=100) :: par_file, tmp_log_file
+
+      skip_advection = .true. ! skip sweeps in fluidupdate
 
       ! namelist default parameter values
       problem_name = 'Maclaurin sphere'  !< The default problem name
@@ -67,7 +69,7 @@ contains
       e            = 0.0                 !< Eccentricity
       nsub         = 3                   !< Subsampling factor
 
-      if(proc == 0) then
+      if (proc == 0) then
          par_file = trim(cwd)//'/problem.par'
          tmp_log_file = trim(cwd)//'/tmp.log'
 
@@ -81,7 +83,7 @@ contains
          close(3)
       endif
 
-      if(proc == 0) then
+      if (proc == 0) then
 
          cbuff(1) =  problem_name
          cbuff(2) =  run_id
@@ -95,15 +97,13 @@ contains
 
          ibuff(1) = nsub
 
-         call MPI_BCAST(cbuff, 32*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
-         call MPI_BCAST(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
-         call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+      end if
 
-      else
+      call MPI_BCAST(cbuff, 32*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
+      call MPI_BCAST(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
+      call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
-         call MPI_BCAST(cbuff, 32*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
-         call MPI_BCAST(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
-         call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+      if (proc /= 0) then
 
          problem_name = cbuff(1)
          run_id       = cbuff(2)(1:3)
@@ -115,7 +115,7 @@ contains
          a1           = rbuff(5)
          e            = rbuff(6)
 
-         nsub         = ibuff(1) ! unused yet
+         nsub         = ibuff(1)
 
       endif
 
@@ -141,13 +141,13 @@ contains
 
    subroutine init_prob
 
-      use mpisetup,     only: proc
-      use arrays,       only: u, b
-      use constants,    only: pi
-      use grid,         only: x, y, z, dx, dy, dz, nx, ny, nz, xmin, ymin, zmin
-      use initionized,  only: gamma_ion, idni, imxi, imzi, ieni
-      use list_hdf5,    only: additional_attrs
-      use types,        only: finalize_problem
+      use mpisetup,    only: proc
+      use arrays,      only: u, b
+      use constants,   only: pi
+      use grid,        only: x, y, z, dx, dy, dz, nx, ny, nz, xmin, ymin, zmin
+      use initionized, only: gamma_ion, idni, imxi, imzi, ieni
+      use list_hdf5,   only: additional_attrs
+      use types,       only: finalize_problem
 
       implicit none
 
@@ -201,13 +201,17 @@ contains
 !-----------------------------------------------------------------------------
 
    subroutine init_prob_attrs(file_id)
-      use hdf5, only : HID_T, SIZE_T
-      use h5lt, only : h5ltset_attribute_double_f
+
+      use hdf5,      only : HID_T, SIZE_T
+      use h5lt,      only : h5ltset_attribute_double_f
       use constants, only : fpiG
+
       implicit none
+
       integer(HID_T),intent(in)  :: file_id
+
       integer(SIZE_T) :: bufsize = 1
-      integer :: error
+      integer         :: error
 
       call h5ltset_attribute_double_f(file_id, "/", "rho0", [d0],   bufsize,error)
       call h5ltset_attribute_double_f(file_id, "/", "fpiG", [fpiG], bufsize,error)
@@ -222,15 +226,16 @@ contains
 
    subroutine finalize_problem_maclaurin
 
-      use mpisetup,    only: proc, comm3d, ierr, MPI_DOUBLE_PRECISION, MPI_SUM, MPI_MIN, MPI_MAX, MPI_IN_PLACE
-      use constants,   only: pi, newtong
-      use grid,        only: x, y, z, is, ie, js, je, ks, ke
-      use arrays,      only: mgp
+      use mpisetup,  only: proc, comm3d, ierr, MPI_DOUBLE_PRECISION, MPI_SUM, MPI_MIN, MPI_MAX, MPI_IN_PLACE
+      use constants, only: pi, newtong
+      use grid,      only: x, y, z, is, ie, js, je, ks, ke
+      use arrays,    only: mgp
 
       implicit none
 
       integer :: i, j, k
-      real    :: potential, r2, rr, norm(2), dev(2)
+      real    :: potential, r2, rr
+      real, dimension(2) :: norm, dev
 
       norm(:) = 0.
       dev(1) = huge(1.0)
