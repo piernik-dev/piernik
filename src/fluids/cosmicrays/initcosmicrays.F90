@@ -241,7 +241,7 @@ contains
 
       do icr = 1, ncre
          iarr_cre(icr)      =nvar+icr
-         iarr_crs(nvar+icr) =nvar+icr
+         iarr_crs(ncrn+icr) =nvar+icr
       enddo
       nvar = nvar + nvar_cre
 
