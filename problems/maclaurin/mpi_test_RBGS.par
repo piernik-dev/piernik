@@ -54,12 +54,12 @@
 
  $FLUID_IONIZED
     gamma_ion  = 1.67
-	 selfgrav_ion = .true.
+    selfgrav_ion = .true.
  /
 
  $FLUID_NEUTRAL
     gamma_neu = 1.67
-	 selfgrav_neu = .false.
+    selfgrav_neu = .false.
  /
 
  $NUMERICAL_SETUP
