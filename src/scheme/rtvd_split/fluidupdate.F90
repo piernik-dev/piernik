@@ -28,159 +28,67 @@
 #include "piernik.def"
 module fluidupdate   ! SPLIT
 
-  implicit none
+   implicit none
 
-  contains
+   integer, parameter :: DIR_X = 1, DIR_Y = DIR_X + 1, DIR_Z = DIR_Y + 1
 
-subroutine fluid_update
-  use timer,  only : timer_
-  use arrays, only : u
-  use dataio, only : check_log, check_tsl
-  use timestep,   only : time_step
-  use sweeps, only : sweepx,sweepy,sweepz
-#if defined SHEAR && defined FLUID_INTERACTIONS
-  use sweeps, only : source_terms_y
-#endif /* SHEAR */
-  use mpisetup, only : proc,dt,dtm,t, nstep
-  use grid, only : nxd,nyd,nzd
-  use dataio_public, only: halfstep
+contains
 
-#ifdef DEBUG
-  use dataio_public, only : nhdf
-  use dataio, only : write_hdf
-#endif /* DEBUG */
+   subroutine fluid_update
 
-#ifdef COSM_RAYS
-  use crdiffusion, only : cr_diff_x, cr_diff_y, cr_diff_z
-#endif /* COSM_RAYS */
-
-#ifdef SHEAR
-  use shear, only : yshift
-  use fluidboundaries, only : bnd_u
-#endif /* SHEAR */
-
+      use timer,         only : timer_
+      use dataio,        only : check_log, check_tsl
+      use timestep,      only : time_step
+      use mpisetup,      only : proc, dt, dtm, t, nstep
+      use dataio_public, only : halfstep
 #ifdef SN_SRC
-  use snsources, only : random_sn
+      use snsources,     only : random_sn
 #endif /* SN_SRC */
-
 #ifdef SNE_DISTR
-  use sndistr, only : supernovae_distribution
+      use sndistr,       only : supernovae_distribution
 #endif /* SNE_DISTR */
-
-#ifdef GRAV
-  use gravity, only: source_terms_grav
-#endif /* GRAV */
-  use types, only: problem_customize_solution
-
-  implicit none
 #ifdef DEBUG
-  integer       :: system, syslog
+      use dataio_public, only : nhdf
+      use dataio,        only : write_hdf
 #endif /* DEBUG */
-  logical, save :: first_run = .true.
 
-  real          :: ts   ! Timestep wallclock
+      implicit none
 
-  halfstep = .false.
+      logical, save :: first_run = .true.
+      real          :: ts   ! Timestep wallclock
+#ifdef DEBUG
+      integer       :: system, syslog
+#endif /* DEBUG */
 
-  if(first_run) then
-     dtm = 0.0
-     ts=timer_("fluid_update",.true.)
-     ts = 0.0
-  else
-     dtm = dt
-     ts=timer_("fluid_update")
-  endif
-  call time_step
+      halfstep = .false.
+
+      if (first_run) then
+         dtm = 0.0
+         ts=timer_("fluid_update",.true.)
+         ts = 0.0
+      else
+         dtm = dt
+         ts=timer_("fluid_update")
+      endif
+      call time_step
 
 #ifdef RESISTIVE
-   if(first_run) then
-      dtm = 0.0
-      dt  = 0.0
-   endif
+      if (first_run) then
+         dtm = 0.0
+         dt  = 0.0
+      endif
 #endif /* RESISTIVE */
 
-  call check_log
+      call check_log
+      call check_tsl
 
-  call check_tsl
-
-  if(proc.eq.0) write(*,900) nstep,dt,t,ts
-900      format('   nstep = ',i7,'   dt = ',es22.16,'   t = ',es22.16,'   dWallClock = ',f7.2,' s')
+      if(proc.eq.0) write(*,900) nstep,dt,t,ts
+900   format('   nstep = ',i7,'   dt = ',es22.16,'   t = ',es22.16,'   dWallClock = ',f7.2,' s')
 
       t=t+dt
 
-#ifdef SHEAR
-      call yshift(t,dt)
-      if(nxd /= 1) call bnd_u('xdim')
-      if(nyd /= 1) call bnd_u('ydim')
-#endif /* SHEAR */
+      call make_3sweeps(.true.) ! X -> Y -> Z
 
-#ifdef GRAV
-      call source_terms_grav
-#endif /* GRAV */
-!------------------- X->Y->Z ---------------------
-#ifndef __NO_FLUID_STEP
-      if(nxd /=1) then
-         call sweepx
-
-#ifdef MAGNETIC
-         call magfieldbyzx
-#endif /* MAGNETIC */
-
-#ifdef COSM_RAYS
-         call cr_diff_x
-#endif /* COSM_RAYS */
-
-#ifdef DEBUG
-         syslog = system('echo -n sweep x')
-         call write_hdf
-         nhdf = nhdf + 1
-#endif /* DEBUG */
-      endif
-
-
-
-      if(nyd /= 1) then
-         call sweepy
-#ifdef MAGNETIC
-         call magfieldbzxy
-#endif /* MAGNETIC */
-
-#ifdef COSM_RAYS
-         call cr_diff_y
-#endif /* COSM_RAYS */
-
-#ifdef DEBUG
-         syslog = system('echo -n sweep y')
-         call write_hdf
-         nhdf = nhdf + 1
-#endif /* DEBUG */
-      else
-#if defined SHEAR && defined FLUID_INTERACTIONS
-         call source_terms_y
-#endif /* SHEAR */
-      endif
-
-      if(nzd /= 1) then
-         call sweepz
-
-#ifdef MAGNETIC
-         call magfieldbxyz
-#endif /* MAGNETIC */
-
-#ifdef COSM_RAYS
-         call cr_diff_z
-#endif  /* COSM_RAYS */
-
-#ifdef DEBUG
-         syslog = system('echo -n sweep z')
-         call write_hdf
-         nhdf = nhdf + 1
-#endif /* DEBUG */
-      endif
-
-      if(associated(problem_customize_solution)) call problem_customize_solution
-
-#endif /* __NO_FLUID_STEP */
 ! Sources ----------------------------------------
 
 #ifdef SN_SRC
@@ -194,81 +102,8 @@ subroutine fluid_update
       dtm = dt
       halfstep = .true.
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-#ifdef SHEAR
-      call yshift(t,dt)
-      if(nxd /= 1) call bnd_u('xdim')
-      if(nyd /= 1) call bnd_u('ydim')
-#endif /* SHEAR */
 
-#ifdef GRAV
-      call source_terms_grav
-#endif /* GRAV */
-!-------------------------------------------------
-
-
-
-!------------------- Z->Y->X ---------------------
-#ifndef __NO_FLUID_STEP
-      if(nzd /= 1) then
-#ifdef COSM_RAYS
-         call cr_diff_z
-#endif /* COSM_RAYS */
-
-#ifdef MAGNETIC
-         call magfieldbxyz
-#endif /* MAGNETIC */
-
-         call sweepz
-#ifdef DEBUG
-         syslog = system('echo -n sweep z')
-         call write_hdf
-         nhdf = nhdf + 1
-#endif /* DEBUG */
-      endif
-
-      if(nyd /= 1) then
-#ifdef COSM_RAYS
-         call cr_diff_y
-#endif /* COSM_RAYS */
-
-#ifdef MAGNETIC
-         call magfieldbzxy
-#endif /* MAGNETIC */
-
-         call sweepy
-
-#ifdef DEBUG
-         syslog = system('echo -n sweep y')
-         call write_hdf
-         nhdf = nhdf + 1
-#endif /* DEBUG */
-      else
-#if defined SHEAR && defined FLUID_INTERACTIONS
-         call source_terms_y
-#endif /* SHEAR */
-      endif
-
-      if(nxd /= 1) then
-#ifdef COSM_RAYS
-         call cr_diff_x
-#endif /* COSM_RAYS */
-
-#ifdef MAGNETIC
-         call magfieldbyzx
-#endif /* MAGNETIC */
-
-         call sweepx
-
-#ifdef DEBUG
-         syslog = system('echo -n sweep x')
-         call write_hdf
-         nhdf = nhdf + 1
-#endif /* DEBUG */
-      endif
-
-      if(associated(problem_customize_solution)) call problem_customize_solution
-
-#endif /* __NO_FLUID_STEP */
+      call make_3sweeps(.false.) ! Z -> Y -> X
 
 #ifdef SNE_DISTR
       call supernovae_distribution
@@ -279,22 +114,188 @@ subroutine fluid_update
 #endif /* DEBUG */
 #endif /* SNE_DISTR */
 
-      if(first_run) first_run = .false.
+      if (first_run) first_run = .false.
 
-end subroutine fluid_update
+   end subroutine fluid_update
 
 !------------------------------------------------------------------------------------------
+!
+! Perform sweeps in all three directions plus sources that are calculated every timestep
+!
+
+   subroutine make_3sweeps(forward)
+
+      use types,           only : problem_customize_solution
+#ifdef SHEAR
+      use shear,           only : yshift
+      use fluidboundaries, only : bnd_u
+      use mpisetup,        only : t, dt
+      use grid,            only : nxd, nyd, nzd
+#endif /* SHEAR */
+#ifdef GRAV
+      use gravity,         only : source_terms_grav
+#endif /* GRAV */
+
+      implicit none
+
+      logical, intent(in) :: forward  !< If .true. then do X->Y->Z sweeps, if .false. then reverse that order
+
+      integer :: s
+
+#ifdef SHEAR
+      call yshift(t, dt)
+      if(nxd /= 1) call bnd_u('xdim')
+      if(nyd /= 1) call bnd_u('ydim')
+#endif /* SHEAR */
+
+#ifdef GRAV
+      call source_terms_grav
+#endif /* GRAV */
+
+#ifndef __NO_FLUID_STEP
+
+      if (forward) then
+         do s = DIR_X, DIR_Z
+            call make_sweep(s, forward)
+         end do
+      else
+         do s = DIR_Z, DIR_X, -1
+            call make_sweep(s, forward)
+         end do
+      end if
+
+      if (associated(problem_customize_solution)) call problem_customize_solution
+
+#endif /* __NO_FLUID_STEP */
+
+   end subroutine make_3sweeps
+
+!------------------------------------------------------------------------------------------
+!
+! Perform single sweep in forward or backward direction
+!
+
+   subroutine make_sweep(dir, forward)
+
+      use sweeps,        only : sweepx, sweepy, sweepz
+      use grid,          only : nxd, nyd, nzd
+      use errh,          only : die
+#if defined SHEAR && defined FLUID_INTERACTIONS
+      use sweeps,        only : source_terms_y
+#endif /* SHEAR */
+#ifdef COSM_RAYS
+      use crdiffusion,   only : cr_diff_x, cr_diff_y, cr_diff_z
+#endif /* COSM_RAYS */
+#ifdef DEBUG
+      use dataio_public, only : nhdf
+      use dataio,        only : write_hdf
+#endif /* DEBUG */
+
+      implicit none
+
+      integer, intent(in) :: dir      !< direction, one of DIR_X, DIR_Y, DIR_Z
+      logical, intent(in) :: forward  !< if .false. then reverse operation order in the sweep
+
+      select case (dir)
+
+         case(DIR_X)
+            if (nxd /= 1) then
+               if (.not. forward) then
+#ifdef COSM_RAYS
+                  call cr_diff_x
+#endif /* COSM_RAYS */
+#ifdef MAGNETIC
+                  call magfieldbyzx
+#endif /* MAGNETIC */
+               end if
+
+               call sweepx
+
+               if (forward) then
+#ifdef MAGNETIC
+                  call magfieldbyzx
+#endif /* MAGNETIC */
+#ifdef COSM_RAYS
+                  call cr_diff_x
+#endif /* COSM_RAYS */
+               end if
+            endif
+
+         case(DIR_Y)
+            if (nyd /= 1) then
+               if (.not. forward) then
+#ifdef COSM_RAYS
+                  call cr_diff_y
+#endif /* COSM_RAYS */
+#ifdef MAGNETIC
+                  call magfieldbzxy
+#endif /* MAGNETIC */
+               end if
+               call sweepy
+
+               if (forward) then
+#ifdef MAGNETIC
+                  call magfieldbzxy
+#endif /* MAGNETIC */
+#ifdef COSM_RAYS
+                  call cr_diff_y
+#endif /* COSM_RAYS */
+               end if
+            else
+#if defined SHEAR && defined FLUID_INTERACTIONS
+               call source_terms_y
+#endif /* SHEAR */
+            endif
+
+         case(DIR_Z)
+            if (nzd /= 1) then
+               if (.not. forward) then
+#ifdef COSM_RAYS
+                  call cr_diff_z
+#endif /* COSM_RAYS */
+#ifdef MAGNETIC
+                  call magfieldbxyz
+#endif /* MAGNETIC */
+               end if
+
+               call sweepz
+
+               if (forward) then
+#ifdef MAGNETIC
+                  call magfieldbxyz
+#endif /* MAGNETIC */
+#ifdef COSM_RAYS
+                  call cr_diff_z
+#endif  /* COSM_RAYS */
+               end if
+            endif
+
+         case default
+            write(*,'(a,i10)')"[fluidupdate:make_sweep] Illegal direction ",dir
+            call die("[fluidupdate:make_sweep] Illegal direction.")
+
+      end select
+
+#ifdef DEBUG
+      ! syslog = system('echo -n sweep z')
+      call write_hdf
+      nhdf = nhdf + 1 !\todo should go inside write_hdf
+#endif /* DEBUG */
+
+   end subroutine make_sweep
 
 #ifdef MAGNETIC
-  subroutine magfieldbyzx
-    use fluidindex, only : ibx,iby,ibz
-    use arrays,  only : b
-    use grid, only : xdim,ydim,zdim,nyd,nzd
-    use advects, only : advectby_x,advectbz_x
+   subroutine magfieldbyzx
 
+      use fluidindex,  only : ibx,iby,ibz
+      use arrays,      only : b
+      use grid,        only : xdim,ydim,zdim,nyd,nzd
+      use advects,     only : advectby_x,advectbz_x
 #ifdef RESISTIVE
-    use resistivity, only : diffuseby_x,diffusebz_x
+      use resistivity, only : diffuseby_x,diffusebz_x
 #endif /* RESISTIVE */
+
+      implicit none
 
       call advectby_x
 
@@ -312,19 +313,21 @@ end subroutine fluid_update
 
       call mag_add(ibz,xdim,ibx,zdim)
 
-  end subroutine magfieldbyzx
+   end subroutine magfieldbyzx
 
 !------------------------------------------------------------------------------------------
 
-  subroutine magfieldbzxy
-    use fluidindex, only : ibx,iby,ibz
-    use arrays,  only : b
-    use grid, only : xdim,ydim,zdim,nzd,nxd
-    use advects, only : advectbx_y,advectbz_y
+   subroutine magfieldbzxy
 
+      use fluidindex,  only : ibx,iby,ibz
+      use arrays,      only : b
+      use grid,        only : xdim,ydim,zdim,nzd,nxd
+      use advects,     only : advectbx_y,advectbz_y
 #ifdef RESISTIVE
-    use resistivity, only : diffusebx_y,diffusebz_y
+      use resistivity, only : diffusebx_y,diffusebz_y
 #endif /* RESISTIVE */
+
+      implicit none
 
       call advectbz_y
 
@@ -342,19 +345,21 @@ end subroutine fluid_update
 
       call mag_add(ibx,ydim,iby,xdim)
 
-  end subroutine magfieldbzxy
+   end subroutine magfieldbzxy
 
 !------------------------------------------------------------------------------------------
 
-  subroutine magfieldbxyz
-    use fluidindex, only : ibx,iby,ibz
-    use arrays,  only : b
-    use grid, only : xdim,ydim,zdim,nxd,nyd
-    use advects, only : advectbx_z,advectby_z
+   subroutine magfieldbxyz
 
+      use fluidindex,  only : ibx,iby,ibz
+      use arrays,      only : b
+      use grid,        only : xdim,ydim,zdim,nxd,nyd
+      use advects,     only : advectbx_z,advectby_z
 #ifdef RESISTIVE
-    use resistivity, only : diffusebx_z,diffuseby_z
+      use resistivity, only : diffusebx_z,diffuseby_z
 #endif /* RESISTIVE */
+
+      implicit none
 
       call advectbx_z
 #ifdef RESISTIVE
@@ -368,49 +373,49 @@ end subroutine fluid_update
 #endif /* RESISTIVE */
 
       call mag_add(iby,zdim,ibz,ydim)
-  end subroutine magfieldbxyz
+   end subroutine magfieldbxyz
 
 !------------------------------------------------------------------------------------------
 
-  subroutine mag_add(ib1,dim1,ib2,dim2)
-    use func,   only : pshift, mshift
-    use arrays, only : b,wa,wcu
-    use grid, only   : dl
-    use magboundaries, only : all_mag_boundaries
+   subroutine mag_add(ib1,dim1,ib2,dim2)
 
+      use func,          only : pshift, mshift
+      use arrays,        only : b, wa, wcu
+      use grid,          only : dl
+      use magboundaries, only : all_mag_boundaries
 
-    implicit none
-    integer             :: ib1,ib2,dim1,dim2
+      implicit none
+
+      integer             :: ib1,ib2,dim1,dim2
 
 #ifdef RESISTIVE
 ! DIFFUSION FULL STEP
 
-    b(ib1,:,:,:) = b(ib1,:,:,:) - wcu/dl(dim1)
+      b(ib1,:,:,:) = b(ib1,:,:,:) - wcu/dl(dim1)
 !   wcu = cshift(wcu,shift= 1,dim=dim1)
-    wcu = pshift(wcu,dim1)
-    b(ib1,:,:,:) = b(ib1,:,:,:) + wcu/dl(dim1)
+      wcu = pshift(wcu,dim1)
+      b(ib1,:,:,:) = b(ib1,:,:,:) + wcu/dl(dim1)
 !   wcu = cshift(wcu,shift=-1,dim=dim1)
-    wcu = mshift(wcu,dim1)
-    b(ib2,:,:,:) = b(ib2,:,:,:) + wcu/dl(dim2)
+      wcu = mshift(wcu,dim1)
+      b(ib2,:,:,:) = b(ib2,:,:,:) + wcu/dl(dim2)
 !   wcu = cshift(wcu,shift= 1,dim=dim2)
-    wcu = pshift(wcu,dim2)
-    b(ib2,:,:,:) = b(ib2,:,:,:) - wcu/dl(dim2)
+      wcu = pshift(wcu,dim2)
+      b(ib2,:,:,:) = b(ib2,:,:,:) - wcu/dl(dim2)
 #endif /* RESISTIVE */
 ! ADVECTION FULL STEP
 
-    b(ib1,:,:,:) = b(ib1,:,:,:) - wa/dl(dim1)
+      b(ib1,:,:,:) = b(ib1,:,:,:) - wa/dl(dim1)
 !   wa = cshift(wa,shift=-1,dim=dim1)
-    wa = mshift(wa,dim1)
-    b(ib1,:,:,:) = b(ib1,:,:,:) + wa/dl(dim1)
-    b(ib2,:,:,:) = b(ib2,:,:,:) - wa/dl(dim2)
+      wa = mshift(wa,dim1)
+      b(ib1,:,:,:) = b(ib1,:,:,:) + wa/dl(dim1)
+      b(ib2,:,:,:) = b(ib2,:,:,:) - wa/dl(dim2)
 !   wa = cshift(wa,shift=1,dim=dim2)
-    wa = pshift(wa,dim2)
-    b(ib2,:,:,:) = b(ib2,:,:,:) + wa/dl(dim2)
+      wa = pshift(wa,dim2)
+      b(ib2,:,:,:) = b(ib2,:,:,:) + wa/dl(dim2)
 
+      call all_mag_boundaries
 
-    call all_mag_boundaries
-
-  end subroutine mag_add
+   end subroutine mag_add
 #endif /* MAGNETIC */
 !------------------------------------------------------------------------------------------
 
