@@ -132,7 +132,7 @@ program piernik
 
   call MPI_BARRIER(comm,ierr)
 
-  code_progress = 4 ! cleanup
+  code_progress = PIERNIK_CLEANUP
 
   if (proc == 0) write(*, '(a)', advance='no') "Finishing "
   call cleanup_piernik
