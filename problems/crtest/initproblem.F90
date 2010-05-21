@@ -219,7 +219,7 @@ module initproblem
       use arrays,         only : b, u
       use initcosmicrays, only : iarr_crs, ncrn, ncre, K_crn_paral, K_crn_perp
       use errh,           only : die
-      use dataio_public,  only : code_progress, PIERNIK_FINISHED
+      use dataio_public,  only : code_progress, PIERNIK_FINISHED, halfstep
 
       implicit none
 
@@ -231,7 +231,7 @@ module initproblem
 
       integer, save :: nn = 0
 
-      if ((code_progress < PIERNIK_FINISHED) .and. mod(nstep, norm_step) /=0) return
+      if (code_progress < PIERNIK_FINISHED .and. (mod(nstep, norm_step) /=0 .or. halfstep)) return
 
       if (ncrn+ncre >= icr) then
          iecr = iarr_crs(icr)
