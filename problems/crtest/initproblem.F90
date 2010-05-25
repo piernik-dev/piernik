@@ -147,7 +147,7 @@ module initproblem
       use initcosmicrays, only : gamma_crs, iarr_crs, ncrn, ncre
       use initionized,    only : gamma_ion
       use arrays,         only : b, u
-      use grid,           only : nx, ny, nz, nb, ks, ke, x, y, z
+      use grid,           only : nx, ny, nz, nb, x, y, z, is, ie, js, je, ks, ke, nxd, nyd, nzd
       use errh,           only : die
       use types,          only : problem_customize_solution, finalize_problem
 
@@ -168,6 +168,9 @@ module initproblem
 
       cs_iso = sqrt(p0/d0)
 
+      if (nxd <= 1) bx0 = 0. ! ignore B field in nonexistent direction to match the analytical solution
+      if (nyd <= 1) by0 = 0.
+      if (nzd <= 1) bz0 = 0.
 
       b(ibx, 1:nx, 1:ny, 1:nz) = bx0
       b(iby, 1:nx, 1:ny, 1:nz) = by0
@@ -179,9 +182,9 @@ module initproblem
       do k = 1,nz
          do j = 1,ny
             do i = 1,nx
-               u(ieni,i,j,k)      = p0/(gamma_ion-1.0) + &
-                    &               0.5*sum(u(imxi:imzi,i,j,k)**2,1)/u(idni,i,j,k) + &
-                    &               0.5*sum(b(:,i,j,k)**2,1)
+               u(ieni,i,j,k) = p0/(gamma_ion-1.0) + &
+                    &          0.5*sum(u(imxi:imzi,i,j,k)**2,1)/u(idni,i,j,k) + &
+                    &          0.5*sum(b(:,i,j,k)**2,1)
             enddo
          enddo
       enddo
@@ -191,9 +194,9 @@ module initproblem
 
 #ifdef COSM_RAYS
       u(iecr, 1:nx, 1:ny, 1:nz)      =  beta_cr*cs_iso**2 * u(idni, 1:nx, 1:ny, 1:nz)/(gamma_crs(icr)-1.0)
-      do k = ks,ke
-         do j = nb+1,ny-nb
-            do i = nb+1,nx-nb
+      do k = ks, ke
+         do j = js, je
+            do i = is, ie
                r2 = (x(i)-x0)**2+(y(j)-y0)**2+(z(k)-z0)**2
                u(iecr,i,j,k)= u(iecr,i,j,k) + amp_cr*exp(-r2/r0**2)
             enddo
@@ -206,6 +209,8 @@ module initproblem
 
       problem_customize_solution => check_norm
       finalize_problem           => check_norm
+
+      call check_norm
 
       return
    end subroutine init_prob
