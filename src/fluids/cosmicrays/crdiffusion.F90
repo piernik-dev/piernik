@@ -49,7 +49,6 @@ module crdiffusion
 
  contains
 
-
 !
       subroutine cr_diff_x
 !
@@ -88,12 +87,16 @@ module crdiffusion
 
              decr1 =  (u(iarr_crs,i,  j,  k) - u(iarr_crs,i-1,j,  k))/dx
 
-             dqm2  = 0.5*((u(iarr_crs,i-1,j  ,k ) + u(iarr_crs,i ,j  ,k ))    &
-                         -(u(iarr_crs,i-1,j-1,k ) + u(iarr_crs,i ,j-1,k )))/dy
-             dqp2  = 0.5*((u(iarr_crs,i-1,j+1,k ) + u(iarr_crs,i ,j+1,k ))    &
-                         -(u(iarr_crs,i-1,j  ,k ) + u(iarr_crs,i ,j  ,k )))/dy
+             if (nyd /= 1) then
+                dqm2  = 0.5*((u(iarr_crs,i-1,j  ,k ) + u(iarr_crs,i ,j  ,k ))    &
+                     &      -(u(iarr_crs,i-1,j-1,k ) + u(iarr_crs,i ,j-1,k )))/dy
+                dqp2  = 0.5*((u(iarr_crs,i-1,j+1,k ) + u(iarr_crs,i ,j+1,k ))    &
+                     &      -(u(iarr_crs,i-1,j  ,k ) + u(iarr_crs,i ,j  ,k )))/dy
 
-             decr2 = (dqp2+dqm2)* (1.0 + sign(1.0, dqm2*dqp2))*0.25
+                decr2 = (dqp2+dqm2)* (1.0 + sign(1.0, dqm2*dqp2))*0.25
+             else
+                decr2 = 0.0
+             end if
 
              if(nzd /= 1) then
                 dqm3  = 0.5*((u(iarr_crs,i-1,j ,k  ) + u(iarr_crs,i ,j ,k  ))    &
