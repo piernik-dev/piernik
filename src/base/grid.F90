@@ -319,7 +319,7 @@ module grid
       zminb = zmin + real(pcoords(3)  )*(zmax-zmin)/real(psize(3))
       zmaxb = zmin + real(pcoords(3)+1)*(zmax-zmin)/real(psize(3))
 
-      dxmn = 1.e20
+      dxmn = huge(1.0)
       if(nxd /= 1) then
          dx = (xmaxb-xminb)/nxb
          dxmn = min(dxmn,dx)

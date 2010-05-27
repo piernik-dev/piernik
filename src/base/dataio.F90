@@ -261,7 +261,7 @@ module dataio
 
       nend = 1
       tend = -1.0
-      wend = 99999999999.0
+      wend = huge(1.0)
 
       if(psize(1) .gt. 1) pc1 = '0x'
       if(psize(2) .gt. 1) pc2 = '0x'
