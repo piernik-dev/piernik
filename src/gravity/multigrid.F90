@@ -77,7 +77,7 @@ contains
 
       type(grid_container), intent(in) :: cgrid                  !< copy of grid variables
 
-      integer                          :: ierrh, div, idx, i, j
+      integer                          :: ierrh, div, idx, i, j, nxc=1, nx
       character(LEN=100)               :: par_file, tmp_log_file
       logical, save                    :: frun = .true.          !< First run flag
       character(len=160)               :: errstr
@@ -135,7 +135,11 @@ contains
       dirty_debug            = .false.
       hdf5levels             = .false.
 
-      grav_bnd_str  = "periodic"
+      if (bnd_xl_dom /= 'per' .or. bnd_xr_dom /= 'per' .or. bnd_yl_dom /= 'per' .or. bnd_yr_dom /= 'per' .or. bnd_zl_dom /= 'per' .or. bnd_zr_dom /= 'per') then
+         grav_bnd_str = "isolated" ! /todo make this a default, correct default problem.par where necessary
+      else
+         grav_bnd_str = "periodic"
+      end if
 
       aux_par_I0 = 0 ; aux_par_I1 = 0 ; aux_par_I2 = 0
       aux_par_R0 = 0.; aux_par_R1 = 0.; aux_par_R2 = 0.
@@ -317,21 +321,42 @@ contains
          lvl(idx)%level = idx                                      ! level number
 
          div = 2**(level_max -idx)                                 ! derefinement factor with respect to the top level
-         lvl(idx)%nxb   = cgrid%nxb/div                            ! number of interior cells in x, y and z directions
-         lvl(idx)%nyb   = cgrid%nyb/div
-         lvl(idx)%nzb   = cgrid%nzb/div
          lvl(idx)%nb    = mg_nb                                    ! number of guardcells
 
-         if (lvl(idx)%nxb * div /= cgrid%nxb .or. (lvl(idx)%nyb * div /= cgrid%nyb) .or. (lvl(idx)%nzb * div /= cgrid%nzb)) then
-            write(errstr, '(a,3f6.1,2(a,i2))')"[multigrid:init_multigrid] Fractional number of cells [ ", &
-                 cgrid%nxb/real(div), cgrid%nyb/real(div), cgrid%nzb/real(div), " ] at level ", idx, ". You may try to set level_max <=", level_max-idx
-            call die(errstr)
-         end if
-         if (min(lvl(idx)%nxb, lvl(idx)%nyb, lvl(idx)%nzb) < lvl(idx)%nb) then
-            write(errstr, '(a,i1,a,3i4,2(a,i2))')"[multigrid:init_multigrid] Number of guardcells exceeds number of interior cells, ", &
-                 lvl(idx)%nb, " > min( ", lvl(idx)%nxb, lvl(idx)%nyb, lvl(idx)%nzb, " ) at level ", idx, ". You may try to set level_max <=", level_max-idx
-            call die(errstr)
-         end if
+         do i = XDIR, ZDIR ! this can be rewritten as a three subroutine/function calls
+            select case(i)
+               case (XDIR)
+                  nxc = cgrid%nxb
+               case (YDIR)
+                  nxc = cgrid%nyb
+               case (ZDIR)
+                  nxc = cgrid%nzb
+            end select
+
+            nx = 1
+            if (nxc > 1) then
+               nx = nxc / div ! number of interior cells in direction i
+               if (nx < lvl(idx)%nb) then
+                  write(errstr, '(2(a,i1),a,i4,2(a,i2))')"[multigrid:init_multigrid] Number of guardcells exceeds number of interior cells in the ",i," direction, ", &
+                       lvl(idx)%nb, " > ", nx, " at level ", idx, ". You may try to set level_max <=", level_max-idx
+                  call die(errstr)
+               end if
+               if (nx * div /= nxc) then
+                  write(errstr, '(a,i1,a,3f6.1,2(a,i2))')"[multigrid:init_multigrid] Fractional number of cells in ",i," direction ", &
+                       nxc/real(div), " at level ", idx, ". You may try to set level_max <=", level_max-idx
+                  call die(errstr)
+               end if
+            end if
+
+            select case(i)
+               case (XDIR)
+                  lvl(idx)%nxb = nx
+               case (YDIR)
+                  lvl(idx)%nyb = nx
+               case (ZDIR)
+                  lvl(idx)%nzb = nx
+            end select
+         end do
 
          lvl(idx)%nx    = lvl(idx)%nxb + 2*lvl(idx)%nb             ! total number of cells in x, y and z directions
          lvl(idx)%ny    = lvl(idx)%nyb + 2*lvl(idx)%nb
