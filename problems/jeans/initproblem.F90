@@ -139,12 +139,12 @@ contains
 
    subroutine init_prob
 
-      use mpisetup,     only: proc
-      use arrays,       only: u, b
-      use constants,    only: fpiG, pi, newtong
-      use grid,         only: x, y, z, nx, ny, nz, xmin, ymin, zmin, dx, dy, dz
-      use initionized,  only: gamma_ion, idni, imxi, imzi, ieni
-
+      use mpisetup,      only : proc
+      use arrays,        only : u, b
+      use constants,     only : fpiG, pi, newtong
+      use grid,          only : x, y, z, nx, ny, nz, xmin, ymin, zmin, dx, dy, dz
+      use initionized,   only : gamma_ion, idni, imxi, imzi, ieni
+      use dataio_public, only : tend
       implicit none
 
       integer :: i, j, k
@@ -237,7 +237,7 @@ contains
          write(137,'(a,/,a)') 'set xlabel "time [periods]"', 'set ylabel "E_int"'
          write(137,'(a)') "set key left Left reverse bottom"
          write(137,'(3(a,/),a,g10.2)') 'set xtics 1', 'set mxtics 2', 'set mytics 2', 'set ytics ',Tamp_rounded
-         write(137,'(2(a,g10.2),a)') 'plot [0:int(1./T)][',Tamp_rounded/(-2.),':',2*Tamp_rounded,'] "jeans_ts1_000.tsl" u ($2/T):($11/L) w p t "calculated", "" u ($2/T):($11/L) smoo cspl t "" w l 1, y(x*T) t "analytical", "" u ($2/T):(10*(y($2)-$11/L)) t "10 * difference" w lp, 0 t "" w l 0'
+         write(137,'(3(a,g10.2),a)') 'plot [0:int(',tend,'/T)][',Tamp_rounded/(-2.),':',2*Tamp_rounded,'] "jeans_ts1_000.tsl" u ($2/T):($11/L) w p t "calculated", "" u ($2/T):($11/L) smoo cspl t "" w l 1, y(x*T) t "analytical", "" u ($2/T):(10*(y($2)-$11/L)) t "10 * difference" w lp, 0 t "" w l 0'
       close(137)
     endif
     return
