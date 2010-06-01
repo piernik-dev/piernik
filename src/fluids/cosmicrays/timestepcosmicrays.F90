@@ -38,7 +38,6 @@ module timestepcosmicrays
 
   subroutine timestep_crs
 
-    use constants, only : small
     use grid,           only : dxmn
     use initcosmicrays, only : cfl_cr,K_crs_paral,K_crs_perp
 
@@ -46,7 +45,16 @@ module timestepcosmicrays
 
 !    real dt_crs_proc, dt_crs_all
 
-      dt_crs = cfl_cr * 0.5*dxmn**2/(maxval(K_crs_paral+K_crs_perp)+small)
+    if (maxval(K_crs_paral+K_crs_perp) <= 0) then
+       dt_crs = huge(1.0)
+    else
+       dt_crs = cfl_cr * 0.5/maxval(K_crs_paral+K_crs_perp)
+       if (dxmn < sqrt(huge(1.0))/dt_crs) then
+          dt_crs = dt_crs * dxmn**2
+       else
+          dt_crs = huge(1.0)
+       end if
+    end if
 
   end subroutine timestep_crs
 

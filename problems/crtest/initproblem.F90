@@ -50,7 +50,7 @@ module initproblem
       use mpisetup, only: MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION, &
            &              cbuff, ibuff, rbuff, buffer_dim, comm, ierr, proc, cwd
       use grid,     only: dxmn
-      use errh,     only: namelist_errh
+      use errh,     only: namelist_errh, die
 
       implicit none
 
@@ -135,6 +135,8 @@ module initproblem
          norm_step    = ibuff(1)
 
       endif
+
+      if (r0 == 0.) call die("[initproblem:read_problem_par] r0 == 0")
 
    end subroutine read_problem_par
 
@@ -248,13 +250,14 @@ module initproblem
       dev(1) = huge(1.0)
       dev(2) = -dev(1)
 
-      magb2 = bx0**2 + by0**2 + bz0**2
+      magb2 = bx0**2 + by0**2 + bz0**2 + 100*tiny(1.0)
 
       r0_par2  = r0**2 + 4 * (K_crn_paral(icr) + K_crn_perp(icr)) * t
       r0_perp2 = r0**2 + 4 * K_crn_perp(icr) * t
-      ampt     = amp_cr * r0**2 / sqrt(r0_par2 * r0_perp2)
 
-      !write(*,'(a,5g15.6)')"[i:cn] tBrrA:",t,magb2,r0_par2,r0_perp2,ampt
+      if (r0_par2 == 0. .or. r0_perp2 == 0.) call die("[initproblem:check_norm] r0_par2 == 0. .or. r0_perp2 == 0.")
+
+      ampt     = amp_cr * r0**2 / sqrt(r0_par2 * r0_perp2)
 
       do k = ks, ke
          delz = z(k) - z0
@@ -282,7 +285,13 @@ module initproblem
       call MPI_Allreduce(MPI_IN_PLACE, dev(1), 1, MPI_DOUBLE_PRECISION, MPI_MIN, comm3d, ierr)
       call MPI_Allreduce(MPI_IN_PLACE, dev(2), 1, MPI_DOUBLE_PRECISION, MPI_MAX, comm3d, ierr)
 
-      if (proc == 0) write(*,'(a,f12.5,a,2f12.5)')"[initproblem:check_norm] L2 error norm = ", sqrt(norm(1)/norm(2)), " min and max error = ", dev(1:2)
+      if (proc == 0) then
+         if (norm(2) /= 0) then
+            write(*,'(a,f12.5,a,2f12.5)')"[initproblem:check_norm] L2 error norm = ", sqrt(norm(1)/norm(2)), " min and max error = ", dev(1:2)
+         else
+            write(*,'(a,2f12.5)')"[initproblem:check_norm] Cannot compute L2 error norm, min and max error = ", dev(1:2)
+         end if
+      end if
 
       nn = nn + 1
 

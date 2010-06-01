@@ -945,7 +945,9 @@ module dataio
 #endif /* ISO_LOCAL */
 
       implicit none
+
       type(tsl_container), optional :: tsl
+      real :: dxmn_safe
 
 #ifdef MAGNETIC
       type(value) :: b_min, b_max, divb_max, vai_max
@@ -976,6 +978,12 @@ module dataio
 #ifdef ISO_LOCAL
  !      type(value) :: cs_iso2_max, cs_iso2_min
 #endif /* ISO_LOCAL */
+
+      if (dxmn >= sqrt(huge(1.0))) then
+         dxmn_safe = sqrt(huge(1.0))
+      else
+         dxmn_safe = dxmn
+      end if
 
 ! Timestep diagnostics
 #ifdef NEUTRAL
@@ -1290,16 +1298,16 @@ module dataio
             write(log_lun,777) 'max(|vx|)   ION  =', vxi_max%val, 'dt=',cfl*dx/(vxi_max%val+small),   vxi_max%proc, vxi_max%loc
             write(log_lun,777) 'max(|vy|)   ION  =', vyi_max%val, 'dt=',cfl*dy/(vyi_max%val+small),   vyi_max%proc, vyi_max%loc
             write(log_lun,777) 'max(|vz|)   ION  =', vzi_max%val, 'dt=',cfl*dz/(vzi_max%val+small),   vzi_max%proc, vzi_max%loc
-            write(log_lun,777) 'max(c_si)   ION  =', csi_max%val, 'dt=',cfl*dxmn/(csi_max%val+small), csi_max%proc, csi_max%loc
+            write(log_lun,777) 'max(c_si)   ION  =', csi_max%val, 'dt=',cfl*dxmn_safe/(csi_max%val+small), csi_max%proc, csi_max%loc
 #ifdef MAGNETIC
             write(log_lun,777) 'max(c_f)    ION  =', sqrt(csi_max%val**2+vai_max%val**2),&
-                                      'dt=',cfl*dxmn/sqrt(csi_max%val**2+vai_max%val**2)
-            write(log_lun,777) 'max(v_a)    ION  =', vai_max%val, 'dt=',cfl*dxmn/(vai_max%val+small), vai_max%proc, vai_max%loc
+                                      'dt=',cfl*dxmn_safe/sqrt(csi_max%val**2+vai_max%val**2)
+            write(log_lun,777) 'max(v_a)    ION  =', vai_max%val, 'dt=',cfl*dxmn_safe/(vai_max%val+small), vai_max%proc, vai_max%loc
             write(log_lun,771) 'min(|b|)    MAG  =', b_min%val,     b_min%proc,     b_min%loc
             write(log_lun,771) 'max(|b|)    MAG  =', b_max%val,     b_max%proc,     b_max%loc
             write(log_lun,771) 'max(|divb|) MAG  =', divb_max%val,  divb_max%proc,  divb_max%loc
 #else /* MAGNETIC */
-            if (csi_max%val > 0.) write(log_lun,777) 'max(c_s )   ION  =', sqrt(csi_max%val**2), 'dt=',cfl*dxmn/sqrt(csi_max%val**2)
+            if (csi_max%val > 0.) write(log_lun,777) 'max(c_s )   ION  =', sqrt(csi_max%val**2), 'dt=',cfl*dxmn_safe/sqrt(csi_max%val**2)
 #endif /* MAGNETIC */
 #endif /* IONIZED */
 
@@ -1315,7 +1323,7 @@ module dataio
             write(log_lun,777) 'max(|vx|)   NEU  =', vxn_max%val, 'dt=',cfl*dx/(vxn_max%val+small),   vxn_max%proc, vxn_max%loc
             write(log_lun,777) 'max(|vy|)   NEU  =', vyn_max%val, 'dt=',cfl*dy/(vyn_max%val+small),   vyn_max%proc, vyn_max%loc
             write(log_lun,777) 'max(|vz|)   NEU  =', vzn_max%val, 'dt=',cfl*dz/(vzn_max%val+small),   vzn_max%proc, vzn_max%loc
-            write(log_lun,777) 'max(c_s )   NEU  =', csn_max%val, 'dt=',cfl*dxmn/(csn_max%val+small), csn_max%proc, csn_max%loc
+            write(log_lun,777) 'max(c_s )   NEU  =', csn_max%val, 'dt=',cfl*dxmn_safe/(csn_max%val+small), csn_max%proc, csn_max%loc
 #endif /* NEUTRAL */
 #ifdef DUST
             write(log_lun,771) 'min(dens)   DST  =', dend_min%val,  dend_min%proc,  dend_min%loc
