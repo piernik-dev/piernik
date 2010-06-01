@@ -27,7 +27,6 @@
 !
 #include "piernik.def"
 
-
 !>
 !! \brief (MH) Numerical scheme for the diffusive transport of Cosmic Rays
 !!
@@ -46,7 +45,6 @@ module crdiffusion
   use grid,           only : is,ie,js,je,ks,ke
   use mpisetup,       only : dt
 
-
  contains
 
 !
@@ -61,6 +59,12 @@ module crdiffusion
       real, dimension(nvar%crs%all) :: dqp2, dqm2, dqp3, dqm3
 
 !=======================================================================
+
+      wcr(:, 1, :, :) = 0.
+      wcr(:, :, :, :ks-1) = 0.
+      wcr(:, :, :, ke+1:) = 0.
+      wcr(:, :, :js-1, :) = 0.
+      wcr(:, :, je+1:, :) = 0.
 
       do k=ks,ke
         do j=js,je
@@ -152,6 +156,12 @@ module crdiffusion
 !=======================================================================
 !
 
+      wcr(:, :, 1, :) = 0.
+      wcr(:, :is-1, :, :) = 0.
+      wcr(:, ie+1:, :, :) = 0.
+      wcr(:, :, :, :ks-1) = 0.
+      wcr(:, :, :, ke+1:) = 0.
+
       do k=ks,ke
         do j=2,ny ! if we are here nyd /= 1
           do i=is,ie
@@ -241,6 +251,13 @@ module crdiffusion
 
 !=======================================================================
 !
+
+      wcr(:, :, :, 1) = 0.
+      wcr(:, :is-1, :, :) = 0.
+      wcr(:, ie+1:, :, :) = 0.
+      wcr(:, :, :js-1, :) = 0.
+      wcr(:, :, je+1:, :) = 0.
+
       do k=2,nz      ! nzd /= 1
         do j=js,je
           do i=is,ie

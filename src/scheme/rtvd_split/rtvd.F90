@@ -284,7 +284,7 @@ module rtvd ! split orig
       real, dimension(nvar%all,n)    :: durf               !< second order correction of the vector of conservative variables for the right-moving waves
       real, dimension(nvar%all,n)    :: ul0                !< left moving wave in first order scheme
       real, dimension(nvar%all,n)    :: ur0                !< right moving wave in first order scheme
-      real, dimension(nvar%all,n)    :: u1                 !< uptaded vector of conservative variables (after one timestep in second order scheme)
+      real, dimension(nvar%all,n)    :: u1                 !< updated vector of conservative variables (after one timestep in second order scheme)
       real, dimension(nvar%all,n)    :: ul1                !< left moving wave (after one timestep in second order scheme)
       real, dimension(nvar%all,n)    :: ur1                !< right moving wave (after one timestep in second order scheme)
       real, dimension(nvar%fluids,n) :: rotacc             !< acceleration caused by rotation
