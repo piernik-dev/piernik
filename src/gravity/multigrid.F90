@@ -309,6 +309,12 @@ contains
       if (aerr(1) /= 0) call die("[multigrid:init_multigrid] Allocation error: lvl")
       mb_alloc = size(lvl)
 
+      has_dir(XDIR) = (cgrid%nxb > 1)
+      has_dir(YDIR) = (cgrid%nyb > 1)
+      has_dir(ZDIR) = (cgrid%nzb > 1)
+      eff_dim = count(has_dir(:))
+      if (eff_dim < 1 .or. eff_dim > 3) call die("[multigrid:init_multigrid] Unsupported number of dimensions.")
+
       !! Initialization of all regular levels (all but global base)
       !! Following loop gives us:
       !!    * SHAPE (lvl(level_max  )) = (nxb  , nyb  , nzd  ) + (2*nb, 2*nb, 2*nb)
@@ -334,7 +340,7 @@ contains
             end select
 
             nx = 1
-            if (nxc > 1) then
+            if (has_dir(i)) then
                nx = nxc / div ! number of interior cells in direction i
                if (nx < lvl(idx)%nb) then
                   write(errstr, '(2(a,i1),a,i4,2(a,i2))')"[multigrid:init_multigrid] Number of guardcells exceeds number of interior cells in the ",i," direction, ", &
@@ -358,46 +364,83 @@ contains
             end select
          end do
 
-         lvl(idx)%nx    = lvl(idx)%nxb + 2*lvl(idx)%nb             ! total number of cells in x, y and z directions
-         lvl(idx)%ny    = lvl(idx)%nyb + 2*lvl(idx)%nb
-         lvl(idx)%nz    = lvl(idx)%nzb + 2*lvl(idx)%nb
+         lvl(idx)%dvol = 1.
+         lvl(idx)%vol  = 1.
 
-         lvl(idx)%dx    = (cgrid%xmaxb-cgrid%xminb) / lvl(idx)%nxb ! cell size in x, y and z directions
-         lvl(idx)%dy    = (cgrid%ymaxb-cgrid%yminb) / lvl(idx)%nyb
-         lvl(idx)%dz    = (cgrid%zmaxb-cgrid%zminb) / lvl(idx)%nzb
-         lvl(idx)%dvol  = lvl(idx)%dx * lvl(idx)%dy * lvl(idx)%dz  ! cell volume
+         ! /todo: check if these are correctly defined for multipole solver
+         lvl(idx)%dxy = 1.
+         lvl(idx)%dxz = 1.
+         lvl(idx)%dyz = 1.
 
-         lvl(idx)%is    = lvl(idx)%nb + 1                          ! lowest and highest indices for interior cells
-         lvl(idx)%js    = lvl(idx)%nb + 1
-         lvl(idx)%ks    = lvl(idx)%nb + 1
-         lvl(idx)%ie    = lvl(idx)%nb + lvl(idx)%nxb
-         lvl(idx)%je    = lvl(idx)%nb + lvl(idx)%nyb
-         lvl(idx)%ke    = lvl(idx)%nb + lvl(idx)%nzb
+         if (has_dir(XDIR)) then
+            lvl(idx)%nx    = lvl(idx)%nxb + 2*lvl(idx)%nb             ! total number of cells in x, y and z directions
+            lvl(idx)%dx    = (cgrid%xmaxb-cgrid%xminb) / lvl(idx)%nxb ! cell size in x, y and z directions
+            lvl(idx)%is    = lvl(idx)%nb + 1                          ! lowest and highest indices for interior cells
+            lvl(idx)%ie    = lvl(idx)%nb + lvl(idx)%nxb
+            lvl(idx)%idx2  = 1. / lvl(idx)%dx**2                      ! auxiliary invariants
+            lvl(idx)%dvol  = lvl(idx)%dvol * lvl(idx)%dx              ! cell volume
+            lvl(idx)%vol   = lvl(idx)%vol * (cgrid%xmaxb-cgrid%xminb)
+            lvl(idx)%dxy   = lvl(idx)%dxy * lvl(idx)%dx
+            lvl(idx)%dxz   = lvl(idx)%dxz * lvl(idx)%dx
+         else
+            lvl(idx)%nx    = 1
+            lvl(idx)%dx    = huge(1.0)
+            lvl(idx)%is    = 1
+            lvl(idx)%ie    = 1
+            lvl(idx)%idx2  = 0.
+         end if
 
-         lvl(idx)%idx2  = 1. / lvl(idx)%dx**2                      ! auxiliary invariants
-         lvl(idx)%idy2  = 1. / lvl(idx)%dy**2
-         lvl(idx)%idz2  = 1. / lvl(idx)%dz**2
+         if (has_dir(YDIR)) then
+            lvl(idx)%ny    = lvl(idx)%nyb + 2*lvl(idx)%nb
+            lvl(idx)%dy    = (cgrid%ymaxb-cgrid%yminb) / lvl(idx)%nyb
+            lvl(idx)%js    = lvl(idx)%nb + 1
+            lvl(idx)%je    = lvl(idx)%nb + lvl(idx)%nyb
+            lvl(idx)%idy2  = 1. / lvl(idx)%dy**2
+            lvl(idx)%dvol  = lvl(idx)%dvol * lvl(idx)%dy
+            lvl(idx)%vol   = lvl(idx)%vol * (cgrid%ymaxb-cgrid%yminb)
+            lvl(idx)%dxy   = lvl(idx)%dxy * lvl(idx)%dy
+            lvl(idx)%dyz   = lvl(idx)%dyz * lvl(idx)%dy
+         else
+            lvl(idx)%ny    = 1
+            lvl(idx)%dy    = huge(1.0)
+            lvl(idx)%js    = 1
+            lvl(idx)%je    = 1
+            lvl(idx)%idy2  = 0.
+         end if
 
-         lvl(idx)%dxy  = lvl(idx)%dx * lvl(idx)%dy
-         lvl(idx)%dxz  = lvl(idx)%dx * lvl(idx)%dz
-         lvl(idx)%dyz  = lvl(idx)%dy * lvl(idx)%dz
-
-         lvl(idx)%dxy2  = lvl(idx)%dxy ** 2
-         lvl(idx)%dxz2  = lvl(idx)%dxz ** 2
-         lvl(idx)%dyz2  = lvl(idx)%dyz ** 2
+         if (has_dir(ZDIR)) then
+            lvl(idx)%nz    = lvl(idx)%nzb + 2*lvl(idx)%nb
+            lvl(idx)%dz    = (cgrid%zmaxb-cgrid%zminb) / lvl(idx)%nzb
+            lvl(idx)%ks    = lvl(idx)%nb + 1
+            lvl(idx)%ke    = lvl(idx)%nb + lvl(idx)%nzb
+            lvl(idx)%idz2  = 1. / lvl(idx)%dz**2
+            lvl(idx)%dvol  = lvl(idx)%dvol * lvl(idx)%dz
+            lvl(idx)%vol   = lvl(idx)%vol * (cgrid%zmaxb-cgrid%zminb)
+            lvl(idx)%dxz   = lvl(idx)%dxz * lvl(idx)%dz
+            lvl(idx)%dyz   = lvl(idx)%dyz * lvl(idx)%dz
+         else
+            lvl(idx)%nz    = 1
+            lvl(idx)%dz    = huge(1.0)
+            lvl(idx)%ks    = 1
+            lvl(idx)%ke    = 1
+            lvl(idx)%idz2  = 0.
+         end if
 
          lvl(idx)%dvol2 = lvl(idx)%dvol**2
 
-         lvl(idx)%r     = overrelax / 2. / (overrelax_x * lvl(idx)%dyz2 + overrelax_y * lvl(idx)%dxz2 + overrelax_z * lvl(idx)%dxy2)
-         lvl(idx)%rx    = lvl(idx)%dyz2   * lvl(idx)%r
-         lvl(idx)%ry    = lvl(idx)%dxz2   * lvl(idx)%r
-         lvl(idx)%rz    = lvl(idx)%dxy2   * lvl(idx)%r
-         lvl(idx)%r     = lvl(idx)%dvol2  * lvl(idx)%r
+         ! this should work correctly also when eff_dim < 3
+         lvl(idx)%r = overrelax / 2.
+         lvl(idx)%rx = lvl(idx)%dvol2 * lvl(idx)%idx2
+         lvl(idx)%ry = lvl(idx)%dvol2 * lvl(idx)%idy2
+         lvl(idx)%rz = lvl(idx)%dvol2 * lvl(idx)%idz2
+         lvl(idx)%r = lvl(idx)%r / (overrelax_x * lvl(idx)%rx + overrelax_y * lvl(idx)%ry + overrelax_z * lvl(idx)%rz)
+         lvl(idx)%rx = lvl(idx)%rx * lvl(idx)%r
+         lvl(idx)%ry = lvl(idx)%ry * lvl(idx)%r
+         lvl(idx)%rz = lvl(idx)%rz * lvl(idx)%r
+         lvl(idx)%r = lvl(idx)%dvol2 * lvl(idx)%r
 
          ! BEWARE: some of the above invariants may be not optimally defined - the convergence ratio drops when dx /= dy or dy /= dz or dx /= dz
          ! and overrelaxation factors are required to get any convergence (often poor)
-
-         lvl(idx)%vol   = (cgrid%xmaxb-cgrid%xminb) * (cgrid%ymaxb-cgrid%yminb) * (cgrid%zmaxb-cgrid%zminb) ! local domain volume
 
          ! data storage
          ! BEWARE prolong_x and %prolong_xy are used only with RBGS relaxation when ord_prolong /= 0

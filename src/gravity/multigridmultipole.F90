@@ -97,7 +97,7 @@ contains
       use errh,          only: die
       use types,         only: grid_container
       use mpisetup,      only: proc
-      use multigridvars, only: level_min, level_max, lvl
+      use multigridvars, only: level_min, level_max, lvl, eff_dim
 
       implicit none
 
@@ -117,6 +117,8 @@ contains
       CoM(1) = (cgrid%xmax + cgrid%xmin)/2.
       CoM(2) = (cgrid%ymax + cgrid%ymin)/2.
       CoM(3) = (cgrid%zmax + cgrid%zmin)/2.
+
+      if (eff_dim /= 3) call die("[multipole:init_multipole] Only 3D is supported")
 
       !multipole moments
       if (mmax > lmax) then

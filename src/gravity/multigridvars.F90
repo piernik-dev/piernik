@@ -92,7 +92,6 @@ module multigridvars
       integer :: is, ie, js, je, ks, ke                               !< lowest and highest active cell indices
       real    :: dx, dy, dz, dvol, vol                                !< physical cell sizes, cell volume, processor domain volume
       real    :: dxy, dxz, dyz                                        !< cell surface area
-      real    :: dxy2, dxz2, dyz2                                     !< square of cell surfaces
       real    :: idx2, idy2, idz2                                     !< inverse of d{x,y,z} square
       real    :: dvol2                                                !< square of cell volume
       real    :: r, rx, ry, rz                                        !< geometric factors for relaxation (diffusion) used in approximate_solution_rbgs
@@ -119,6 +118,10 @@ module multigridvars
 
    type(plvl), dimension(:), allocatable, target :: lvl               !< a stack of multigrid arrays
    type(plvl), pointer                           :: base, roof, gb    !< pointers to coarsest, finest and global-base levels, respectively
+
+   ! dimensions
+   integer                                 :: eff_dim=0               !< count number of dimensions (>1 cell in a direction)
+   logical, dimension(NDIM)                :: has_dir                 !< Set to .true. when there is more than one cell on base level in particular direction
 
    ! global base-level FFT solver
    type cart   ! auxiliary type for rank-to-coordinates array
