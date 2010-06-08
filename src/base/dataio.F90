@@ -604,7 +604,11 @@ module dataio
       if (dt_res .gt. 0.0 .and. nstep .gt. step_res) then
          if ((nres-nres_start) .lt. (int((t-t_start) / dt_res) + 1) &
                 .or. output .eq. 'res' .or. output .eq. 'end') then
-            if (nres > 0) call write_restart_hdf5
+            if (nres > 0) then
+               call write_restart_hdf5
+            else
+               nres = 1
+            end if
             step_res = nstep
          endif
       endif
