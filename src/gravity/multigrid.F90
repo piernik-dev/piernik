@@ -429,15 +429,15 @@ contains
          lvl(idx)%dvol2 = lvl(idx)%dvol**2
 
          ! this should work correctly also when eff_dim < 3
-         lvl(idx)%r = overrelax / 2.
+         lvl(idx)%r  = overrelax   / 2.
          lvl(idx)%rx = lvl(idx)%dvol2 * lvl(idx)%idx2
          lvl(idx)%ry = lvl(idx)%dvol2 * lvl(idx)%idy2
          lvl(idx)%rz = lvl(idx)%dvol2 * lvl(idx)%idz2
-         lvl(idx)%r = lvl(idx)%r / (overrelax_x * lvl(idx)%rx + overrelax_y * lvl(idx)%ry + overrelax_z * lvl(idx)%rz)
-         lvl(idx)%rx = lvl(idx)%rx * lvl(idx)%r
-         lvl(idx)%ry = lvl(idx)%ry * lvl(idx)%r
-         lvl(idx)%rz = lvl(idx)%rz * lvl(idx)%r
-         lvl(idx)%r = lvl(idx)%dvol2 * lvl(idx)%r
+         lvl(idx)%r  = lvl(idx)%r  / (lvl(idx)%rx + lvl(idx)%ry + lvl(idx)%rz)
+         lvl(idx)%rx = overrelax_x * lvl(idx)%rx * lvl(idx)%r
+         lvl(idx)%ry = overrelax_y * lvl(idx)%ry * lvl(idx)%r
+         lvl(idx)%rz = overrelax_z * lvl(idx)%rz * lvl(idx)%r
+         lvl(idx)%r  = lvl(idx)%r  * lvl(idx)%dvol2
 
          ! BEWARE: some of the above invariants may be not optimally defined - the convergence ratio drops when dx /= dy or dy /= dz or dx /= dz
          ! and overrelaxation factors are required to get any convergence (often poor)
@@ -1036,7 +1036,10 @@ contains
       integer :: isb, ieb, jsb, jeb, ksb, keb
 
       ts =  timer_("multigrid", .true.)
-      if (is-mg_nb <= 0) call die("[multigrid:multigrid_solve] Current implementation requires at least 2 guardcells in the hydro part")
+      if ( (has_dir(XDIR) .and. is-mg_nb <= 0) .or. &
+           (has_dir(YDIR) .and. js-mg_nb <= 0) .or. &
+           (has_dir(ZDIR) .and. ks-mg_nb <= 0) )    &
+           call die("[multigrid:multigrid_solve] Current implementation requires at least 2 guardcells in the hydro part")
 
       isolated = (grav_bnd == bnd_isolated) ! BEWARE: not elegant; probably there should be two global grav_bnd variables
 
@@ -1613,11 +1616,9 @@ contains
 
       integer, parameter :: nsmoob = 100 !< smoothing cycles per call on base level (a convergence check would be much better than a magic number)
 
-      integer :: n, i, j, k
+      integer :: n, i, j, k, i1, j1, k1, id, jd, kd
       integer :: nsmoo
       character(len=40) :: dirty_msg
-
-      if (eff_dim<NDIM) call die("[multigrid:approximate_solution_rbgs] 1D and 2D not finished")
 
       if (lev == level_min) then
          nsmoo = nsmoob
@@ -1643,17 +1644,54 @@ contains
          ! end do
 
          ! with explicit loops it is easier to describe a 3-D checkerboard :-)
-         do k = lvl(lev)%ks, lvl(lev)%ke
-            do j = lvl(lev)%js, lvl(lev)%je
-               do i = lvl(lev)%is + mod(n+j+k, 2), lvl(lev)%ie, 2
-                  lvl(          lev          )%mgvar(i,   j,   k,   soln) = &
-                       lvl(lev)%rx * (lvl(lev)%mgvar(i-1, j,   k,   soln) + lvl(lev)%mgvar(i+1, j,   k,   soln)) + &
-                       lvl(lev)%ry * (lvl(lev)%mgvar(i,   j-1, k,   soln) + lvl(lev)%mgvar(i,   j+1, k,   soln)) + &
-                       lvl(lev)%rz * (lvl(lev)%mgvar(i,   j,   k-1, soln) + lvl(lev)%mgvar(i,   j,   k+1, soln)) - &
-                       lvl(lev)%r  *  lvl(lev)%mgvar(i,   j,   k,   src)
+
+         if (eff_dim==NDIM) then
+            do k = lvl(lev)%ks, lvl(lev)%ke
+               do j = lvl(lev)%js, lvl(lev)%je
+                  do i = lvl(lev)%is + mod(n+j+k, 2), lvl(lev)%ie, 2
+                     lvl(          lev          )%mgvar(i,   j,   k,   soln) = &
+                          lvl(lev)%rx * (lvl(lev)%mgvar(i-1, j,   k,   soln) + lvl(lev)%mgvar(i+1, j,   k,   soln)) + &
+                          lvl(lev)%ry * (lvl(lev)%mgvar(i,   j-1, k,   soln) + lvl(lev)%mgvar(i,   j+1, k,   soln)) + &
+                          lvl(lev)%rz * (lvl(lev)%mgvar(i,   j,   k-1, soln) + lvl(lev)%mgvar(i,   j,   k+1, soln)) - &
+                          lvl(lev)%r  *  lvl(lev)%mgvar(i,   j,   k,   src)
+                  end do
                end do
             end do
-         end do
+         else
+            i1 = lvl(lev)%is; id = 1 ! mv to multigridvars, init_multigrid
+            j1 = lvl(lev)%js; jd = 1
+            k1 = lvl(lev)%ks; kd = 1
+
+            if (has_dir(XDIR)) then
+               id = 2
+            else if (has_dir(YDIR)) then
+               jd = 2
+            else if (has_dir(ZDIR)) then
+               kd = 2
+            end if
+
+            if ((.not. has_dir(XDIR)) .and. (.not. has_dir(YDIR)) .and. has_dir(ZDIR)) k1 = lvl(lev)%ks + mod(n, 2)
+            do k = k1, lvl(lev)%ke, kd
+               if ((.not. has_dir(XDIR)) .and. has_dir(YDIR))                          j1 = lvl(lev)%js + mod(n+k, 2)
+               do j = j1, lvl(lev)%je, jd
+                  if (has_dir(XDIR))                                                   i1 = lvl(lev)%is + mod(n+j+k, 2)
+                  do i = i1, lvl(lev)%ie, id
+                     lvl(      lev)%mgvar(i,   j,   k,   soln) = &
+                          -lvl(lev)%mgvar(i,   j,   k,   src)  * lvl(lev)%r
+                     if (has_dir(XDIR)) &
+                          lvl (lev)%mgvar(i,   j,   k,   soln) = lvl(lev)%mgvar(i,   j,   k,   soln)  + &
+                          (lvl(lev)%mgvar(i-1, j,   k,   soln) + lvl(lev)%mgvar(i+1, j,   k,   soln)) * lvl(lev)%rx
+                     if (has_dir(YDIR)) &
+                          lvl (lev)%mgvar(i,   j,   k,   soln) = lvl(lev)%mgvar(i,   j,   k,   soln)  + &
+                          (lvl(lev)%mgvar(i,   j-1, k,   soln) + lvl(lev)%mgvar(i,   j+1, k,   soln)) * lvl(lev)%ry
+                     if (has_dir(ZDIR)) &
+                          lvl (lev)%mgvar(i,   j,   k,   soln) = lvl(lev)%mgvar(i,   j,   k,   soln)  + &
+                          (lvl(lev)%mgvar(i,   j,   k-1, soln) + lvl(lev)%mgvar(i,   j,   k+1, soln)) * lvl(lev)%rz
+                  end do
+               end do
+            end do
+            ! \todo benchmark against 3D version
+         end if
 
          if (dirty_debug) then
             write(dirty_msg, '(a,i5)')"relax soln+ smoo=", n
