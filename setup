@@ -90,20 +90,22 @@ if ($moo{problems}) {
 } elsif ($moo{help}) {
    print "USAGE: " . $SELF . " [PROBLEM] [OPTIONS]\n";
    print "Available options:\n";
-   print " --help\t\t- print this help message and exit\n";
-   print " --problems\t- print available problems and exit\n";
-   print " --units\t- print available unit systems and exit\n";
-   print " --copy\t\t- hard-copy source files instead of linking them\n";
-   print " --linkexe\t- do not copy obj/piernik to runs/<problem> but link it instead\n";
+   print " --help            - print this help message and exit\n";
+   print " --problems        - print available problems and exit\n";
+   print " --units           - print available unit systems and exit\n";
+   print " --copy            - hard-copy source files instead of linking them\n";
+   print " --linkexe         - do not copy obj/piernik to runs/<problem> but link it instead\n";
 #   print " --dumpenv\t- do not compile the source but dump the environment to \'obj/version.F90\'\n";
-   print " --verbose\t- try to confuse the user with some diagnostics ;-)\n";
-   print " --nocompile\t- Create object directory but do not compile or prepare run directory. In combination with -copy will prepare portable object directory.\n";
-   print " --laconic\t- Compress stdout from make process.\n";
-   print " --param <file>\t- use <file> instead problem.par\n";
-   print " --define <flag>\t- inject precompiler directive to piernik.def\n";
-   print " --obj <postfix>\t- use obj_<postfix> directory instead of obj/ and runs/<problem>_<postfix>/ rather than runs/<problem>/\n";
-   print " --compiler <configuration>\t- choose specified config from compilers directory\n\n";
-   print "The file .setuprc may contain some preferred options to be included everytime, for example '--linkexe --compiler <local_configuration> --laconic'\n";
+   print " --verbose         - try to confuse the user with some diagnostics ;-)\n";
+   print " --nocompile       - Create object directory but do not compile or prepare run directory.
+                     In combination with --copy will prepare portable object directory.\n";
+   print " --laconic         - Compress stdout from make process.\n";
+   print " --param <file>    - use <file> instead problem.par\n";
+   print " --define <flag>   - inject precompiler directive to piernik.def\n";
+   print " --obj <postfix>   - use obj_<postfix> directory instead of obj/ and runs/<problem>_<postfix>/
+                     rather than runs/<problem>/\n";
+   print " --compiler <*.in> - choose specified config from compilers directory\n\n";
+   print "The file .setuprc may contain some preferred options to be included everytime,\nfor example '--linkexe --compiler <local_configuration> --laconic'\n";
    print "\n";
 
    print "all-in-one wrapper for a selected problem:\n";
