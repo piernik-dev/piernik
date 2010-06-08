@@ -719,6 +719,10 @@ contains
          if (gb_cartmap(proc)%proc(ZDIR) == pzsize-1) is_external(ZHI) = .true.
       end if
 
+      if (.not. has_dir(XDIR)) is_external(XLO:XHI) = .false.
+      if (.not. has_dir(YDIR)) is_external(YLO:YHI) = .false.
+      if (.not. has_dir(ZDIR)) is_external(ZLO:ZHI) = .false.
+
       if (grav_bnd == bnd_isolated) call init_multipole(mb_alloc,cgrid)
 
       tot_ts = 0.
