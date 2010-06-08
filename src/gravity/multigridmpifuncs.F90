@@ -88,7 +88,7 @@ contains
                call MPI_TYPE_COMMIT(lvl(i)%MPI_YZ_RIGHT_BND(ib), ierr)
             end if
 
-            if (has_dir(ZDIR)) then         !! Y Direction
+            if (has_dir(YDIR)) then         !! Y Direction
                sizes    = [ lvl(i)%nx, lvl(i)%ny, lvl(i)%nz ]
                subsizes = [ lvl(i)%nx,     ib,    lvl(i)%nz ]
                starts   = [     0,      lnb-ib,       0     ]
@@ -219,6 +219,8 @@ contains
 !!
 !! Set external boundary (not required for periodic box) on domain faces.
 !! In multigrid typically mirror boundaries are in use. Extrapolate isolated boundaries at exit.
+!!
+!! has_dir() is not checked here because is_external() should be set to .false. on nonexisting directions in 1D and 2D setups
 !!
 
    subroutine mpi_multigrid_ext_bnd(lev, iv, ng, extrapolate_bnd)
