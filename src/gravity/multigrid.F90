@@ -147,7 +147,7 @@ contains
       par_file = trim(cwd)//'/problem.par'
       tmp_log_file = trim(cwd)//'/tmp.log'
 
-      if(proc == 0) then
+      if (proc == 0) then
 
 ! -----------------------------------------------------
 ! DIRTY HACK
@@ -214,17 +214,14 @@ contains
          ibuff(buffer_dim-1) = aux_par_I1
          ibuff(buffer_dim-2) = aux_par_I2
 
-         call MPI_BCAST(cbuff, 32*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
-         call MPI_BCAST(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
-         call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
-         call MPI_BCAST(lbuff,    buffer_dim, MPI_LOGICAL,          0, comm, ierr)
+      end if
 
-      else
+      call MPI_BCAST(cbuff, 32*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
+      call MPI_BCAST(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
+      call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+      call MPI_BCAST(lbuff,    buffer_dim, MPI_LOGICAL,          0, comm, ierr)
 
-         call MPI_BCAST(cbuff, 32*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
-         call MPI_BCAST(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
-         call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
-         call MPI_BCAST(lbuff,    buffer_dim, MPI_LOGICAL,          0, comm, ierr)
+      if (proc /= 0) then
 
          norm_tol       = rbuff(1)
          overrelax      = rbuff(2)
@@ -314,6 +311,7 @@ contains
       has_dir(ZDIR) = (cgrid%nzb > 1)
       eff_dim = count(has_dir(:))
       if (eff_dim < 1 .or. eff_dim > 3) call die("[multigrid:init_multigrid] Unsupported number of dimensions.")
+      if (.not. prefer_rbgs_relaxation .and. nproc > 1 .and. eff_dim < NDIM) write(*,'(a)')"[multigrid:init_multigrid] FFT block solver does not support 1D or 2D setups on more than one CPU. Set prefer_rbgs_relaxation to .true. in problem.par" ! temporary warning
 
       !! Initialization of all regular levels (all but global base)
       !! Following loop gives us:
