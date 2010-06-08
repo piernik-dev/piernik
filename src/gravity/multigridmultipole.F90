@@ -449,7 +449,8 @@ contains
 
    subroutine prolong_ext_bnd0(lev)
 
-      use multigridvars,   only: lvl, is_external, level_max, XLO, XHI, YLO, YHI, ZLO, ZHI, HIGH, LOW
+      use multigridvars,   only: lvl, is_external, level_max, XLO, XHI, YLO, YHI, ZLO, ZHI, HIGH, LOW, eff_dim, NDIM
+      use errh,            only: die
 
       implicit none
 
@@ -458,6 +459,8 @@ contains
       type(plvl), pointer :: coarse, fine
 
       if (lev >= level_max) return
+
+      if (eff_dim<NDIM) call die("[multigridmultipole:prolong_ext_bnd0] 1D and 2D not finished")
 
       coarse => lvl(lev)
       fine   => lvl(lev + 1)
@@ -510,7 +513,8 @@ contains
 
    subroutine prolong_ext_bnd2(lev)
 
-      use multigridvars,   only: lvl, is_external, level_max, XLO, XHI, YLO, YHI, ZLO, ZHI, HIGH, LOW
+      use multigridvars,   only: lvl, is_external, level_max, XLO, XHI, YLO, YHI, ZLO, ZHI, HIGH, LOW, eff_dim, NDIM
+      use errh,            only: die
 
       implicit none
 
@@ -527,6 +531,8 @@ contains
       real, dimension(-1:1,-1:1,2,2):: pp   ! 2D prolongation stencil
 
       if (lev >= level_max) return
+
+      if (eff_dim<NDIM) call die("[multigridmultipole:prolong_ext_bnd2] 1D and 2D not finished")
 
       select case(ord_prolong_mpole)
          case(0)

@@ -89,7 +89,7 @@ contains
 
       use errh,          only: die
       use mpisetup,      only: proc
-      use multigridvars, only: ngridvars, lvl, level_min, level_max, mg_nb
+      use multigridvars, only: ngridvars, lvl, level_min, level_max, mg_nb, eff_dim, NDIM
 
       implicit none
 
@@ -112,7 +112,7 @@ contains
          l2 = lev
       end if
 
-      if (present(expand)) then
+      if (present(expand) .and. eff_dim==NDIM) then ! for 1D and 2D one should define ng_x,ng_y and ng_z
          if (expand > mg_nb) then
             ng = mg_nb
          else

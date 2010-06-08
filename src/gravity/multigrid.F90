@@ -1033,6 +1033,7 @@ contains
       real, dimension(:,:,:), intent(in) :: dens !< input source field
 
       logical :: isolated
+      integer :: isb, ieb, jsb, jeb, ksb, keb
 
       ts =  timer_("multigrid", .true.)
       if (is-mg_nb <= 0) call die("[multigrid:multigrid_solve] Current implementation requires at least 2 guardcells in the hydro part")
@@ -1048,7 +1049,33 @@ contains
 
       mgpm(:, :, :)  = mgp(:, :, :) !store previous solutions
       call vcycle(inner)
-      mgp(is-mg_nb:ie+mg_nb, js-mg_nb:je+mg_nb, ks-mg_nb:ke+mg_nb) = roof%mgvar(:, :, :, solution)
+
+      ! /todo: move to multigridvars and init_multigrid
+      if (has_dir(XDIR)) then
+         isb = is-mg_nb
+         ieb = ie+mg_nb
+      else
+         isb = 1
+         ieb = 1
+      end if
+
+      if (has_dir(YDIR)) then
+         jsb = js-mg_nb
+         jeb = je+mg_nb
+      else
+         jsb = 1
+         jeb = 1
+      end if
+
+      if (has_dir(ZDIR)) then
+         ksb = ks-mg_nb
+         keb = ke+mg_nb
+      else
+         ksb = 1
+         keb = 1
+      end if
+
+      mgp(isb:ieb, jsb:jeb, ksb:keb) = roof%mgvar(:, :, :, solution)
 
       if (isolated) then
          grav_bnd = bnd_givenval
@@ -1058,8 +1085,7 @@ contains
          call init_source
 
          call vcycle(outer)
-         mgp     (is-mg_nb:ie+mg_nb, js-mg_nb:je+mg_nb, ks-mg_nb:ke+mg_nb) = &
-              mgp(is-mg_nb:ie+mg_nb, js-mg_nb:je+mg_nb, ks-mg_nb:ke+mg_nb) + roof%mgvar(:, :, :, solution)
+         mgp(isb:ieb, jsb:jeb, ksb:keb) = mgp(isb:ieb, jsb:jeb, ksb:keb) + roof%mgvar(:, :, :, solution)
 
          grav_bnd = bnd_isolated ! restore
       end if
@@ -1287,12 +1313,18 @@ contains
                call make_face_boundaries(lev, soln)
             else
                call mpi_multigrid_bnd(lev, soln, 1, .false.)
-               lvl(lev)%bnd_x(:, :, LOW)  = 0.5* sum (lvl(lev)%mgvar(lvl(lev)%is-1:lvl(lev)%is, lvl(lev)%js:lvl(lev)%je, lvl(lev)%ks:lvl(lev)%ke, soln), 1)
-               lvl(lev)%bnd_x(:, :, HIGH) = 0.5* sum (lvl(lev)%mgvar(lvl(lev)%ie:lvl(lev)%ie+1, lvl(lev)%js:lvl(lev)%je, lvl(lev)%ks:lvl(lev)%ke, soln), 1)
-               lvl(lev)%bnd_y(:, :, LOW)  = 0.5* sum (lvl(lev)%mgvar(lvl(lev)%is:lvl(lev)%ie, lvl(lev)%js-1:lvl(lev)%js, lvl(lev)%ks:lvl(lev)%ke, soln), 2)
-               lvl(lev)%bnd_y(:, :, HIGH) = 0.5* sum (lvl(lev)%mgvar(lvl(lev)%is:lvl(lev)%ie, lvl(lev)%je:lvl(lev)%je+1, lvl(lev)%ks:lvl(lev)%ke, soln), 2)
-               lvl(lev)%bnd_z(:, :, LOW)  = 0.5* sum (lvl(lev)%mgvar(lvl(lev)%is:lvl(lev)%ie, lvl(lev)%js:lvl(lev)%je, lvl(lev)%ks-1:lvl(lev)%ks, soln), 3)
-               lvl(lev)%bnd_z(:, :, HIGH) = 0.5* sum (lvl(lev)%mgvar(lvl(lev)%is:lvl(lev)%ie, lvl(lev)%js:lvl(lev)%je, lvl(lev)%ke:lvl(lev)%ke+1, soln), 3)
+               if (has_dir(XDIR)) then
+                  lvl(lev)%bnd_x(:, :, LOW)  = 0.5* sum (lvl(lev)%mgvar(lvl(lev)%is-1:lvl(lev)%is, lvl(lev)%js:lvl(lev)%je, lvl(lev)%ks:lvl(lev)%ke, soln), 1)
+                  lvl(lev)%bnd_x(:, :, HIGH) = 0.5* sum (lvl(lev)%mgvar(lvl(lev)%ie:lvl(lev)%ie+1, lvl(lev)%js:lvl(lev)%je, lvl(lev)%ks:lvl(lev)%ke, soln), 1)
+               end if
+               if (has_dir(YDIR)) then
+                  lvl(lev)%bnd_y(:, :, LOW)  = 0.5* sum (lvl(lev)%mgvar(lvl(lev)%is:lvl(lev)%ie, lvl(lev)%js-1:lvl(lev)%js, lvl(lev)%ks:lvl(lev)%ke, soln), 2)
+                  lvl(lev)%bnd_y(:, :, HIGH) = 0.5* sum (lvl(lev)%mgvar(lvl(lev)%is:lvl(lev)%ie, lvl(lev)%je:lvl(lev)%je+1, lvl(lev)%ks:lvl(lev)%ke, soln), 2)
+               end if
+               if (has_dir(ZDIR)) then
+                  lvl(lev)%bnd_z(:, :, LOW)  = 0.5* sum (lvl(lev)%mgvar(lvl(lev)%is:lvl(lev)%ie, lvl(lev)%js:lvl(lev)%je, lvl(lev)%ks-1:lvl(lev)%ks, soln), 3)
+                  lvl(lev)%bnd_z(:, :, HIGH) = 0.5* sum (lvl(lev)%mgvar(lvl(lev)%is:lvl(lev)%ie, lvl(lev)%js:lvl(lev)%je, lvl(lev)%ke:lvl(lev)%ke+1, soln), 3)
+               end if
             end if
             if (dirty_debug) then
                if (any(abs(lvl(lev)%bnd_x(:, :, :)) > dirtyL)) write(*,'(a)')"approximate_solution_fft dirty bnd_x"
@@ -1313,22 +1345,46 @@ contains
 
          call check_dirty(lev, soln, "approx_soln fft+")
 
+         !BEWARE use has_dir() here in a way that does not degrade performance
+
          !relax the boundaries
          do n = 1, nsmool
             call mpi_multigrid_bnd(lev, soln, 1, .false.)
             ! Possible optimization: This is a quite costly part of the local FFT solver
             if (fft_full_relax) then
-               lvl                    (lev)%mgvar(lvl(lev)%is:lvl(lev)%ie,     lvl(lev)%js:lvl(lev)%je,     lvl(lev)%ks:lvl(lev)%ke,     soln)  = &
-                    lvl(lev)%rx * (lvl(lev)%mgvar(lvl(lev)%is-1:lvl(lev)%ie-1, lvl(lev)%js:lvl(lev)%je,     lvl(lev)%ks:lvl(lev)%ke,     soln)  + &
-                    &              lvl(lev)%mgvar(lvl(lev)%is+1:lvl(lev)%ie+1, lvl(lev)%js:lvl(lev)%je,     lvl(lev)%ks:lvl(lev)%ke,     soln)) + &
-                    lvl(lev)%ry * (lvl(lev)%mgvar(lvl(lev)%is:lvl(lev)%ie,     lvl(lev)%js-1:lvl(lev)%je-1, lvl(lev)%ks:lvl(lev)%ke,     soln)  + &
-                    &              lvl(lev)%mgvar(lvl(lev)%is:lvl(lev)%ie,     lvl(lev)%js+1:lvl(lev)%je+1, lvl(lev)%ks:lvl(lev)%ke,     soln)) + &
-                    lvl(lev)%rz * (lvl(lev)%mgvar(lvl(lev)%is:lvl(lev)%ie,     lvl(lev)%js:lvl(lev)%je,     lvl(lev)%ks-1:lvl(lev)%ke-1, soln)  + &
-                    &              lvl(lev)%mgvar(lvl(lev)%is:lvl(lev)%ie,     lvl(lev)%js:lvl(lev)%je,     lvl(lev)%ks+1:lvl(lev)%ke+1, soln)) - &
-                    lvl(lev)%r  *  lvl(lev)%mgvar(lvl(lev)%is:lvl(lev)%ie,     lvl(lev)%js:lvl(lev)%je,     lvl(lev)%ks:lvl(lev)%ke,     src)
+               if (eff_dim == NDIM) then
+                  lvl                    (lev)%mgvar(lvl(lev)%is:lvl(lev)%ie,     lvl(lev)%js:lvl(lev)%je,     lvl(lev)%ks:lvl(lev)%ke,     soln)  = &
+                       lvl(lev)%rx * (lvl(lev)%mgvar(lvl(lev)%is-1:lvl(lev)%ie-1, lvl(lev)%js:lvl(lev)%je,     lvl(lev)%ks:lvl(lev)%ke,     soln)  + &
+                       &              lvl(lev)%mgvar(lvl(lev)%is+1:lvl(lev)%ie+1, lvl(lev)%js:lvl(lev)%je,     lvl(lev)%ks:lvl(lev)%ke,     soln)) + &
+                       lvl(lev)%ry * (lvl(lev)%mgvar(lvl(lev)%is:lvl(lev)%ie,     lvl(lev)%js-1:lvl(lev)%je-1, lvl(lev)%ks:lvl(lev)%ke,     soln)  + &
+                       &              lvl(lev)%mgvar(lvl(lev)%is:lvl(lev)%ie,     lvl(lev)%js+1:lvl(lev)%je+1, lvl(lev)%ks:lvl(lev)%ke,     soln)) + &
+                       lvl(lev)%rz * (lvl(lev)%mgvar(lvl(lev)%is:lvl(lev)%ie,     lvl(lev)%js:lvl(lev)%je,     lvl(lev)%ks-1:lvl(lev)%ke-1, soln)  + &
+                       &              lvl(lev)%mgvar(lvl(lev)%is:lvl(lev)%ie,     lvl(lev)%js:lvl(lev)%je,     lvl(lev)%ks+1:lvl(lev)%ke+1, soln)) - &
+                       lvl(lev)%r  *  lvl(lev)%mgvar(lvl(lev)%is:lvl(lev)%ie,     lvl(lev)%js:lvl(lev)%je,     lvl(lev)%ks:lvl(lev)%ke,     src)
+               else
+                  lvl                    (lev)%mgvar(lvl(lev)%is:lvl(lev)%ie,     lvl(lev)%js:lvl(lev)%je,     lvl(lev)%ks:lvl(lev)%ke,     soln)  = &
+                       - lvl(lev)%r * lvl(lev)%mgvar(lvl(lev)%is:lvl(lev)%ie,     lvl(lev)%js:lvl(lev)%je,     lvl(lev)%ks:lvl(lev)%ke,     src)
+                  if (has_dir(XDIR)) &
+                       lvl               (lev)%mgvar(lvl(lev)%is:lvl(lev)%ie,     lvl(lev)%js:lvl(lev)%je,     lvl(lev)%ks:lvl(lev)%ke,     soln)  = &
+                       lvl               (lev)%mgvar(lvl(lev)%is:lvl(lev)%ie,     lvl(lev)%js:lvl(lev)%je,     lvl(lev)%ks:lvl(lev)%ke,     soln)  + &
+                       lvl(lev)%rx * (lvl(lev)%mgvar(lvl(lev)%is-1:lvl(lev)%ie-1, lvl(lev)%js:lvl(lev)%je,     lvl(lev)%ks:lvl(lev)%ke,     soln)  + &
+                       &              lvl(lev)%mgvar(lvl(lev)%is+1:lvl(lev)%ie+1, lvl(lev)%js:lvl(lev)%je,     lvl(lev)%ks:lvl(lev)%ke,     soln))
+                  if (has_dir(YDIR)) &
+                       lvl               (lev)%mgvar(lvl(lev)%is:lvl(lev)%ie,     lvl(lev)%js:lvl(lev)%je,     lvl(lev)%ks:lvl(lev)%ke,     soln)  = &
+                       lvl               (lev)%mgvar(lvl(lev)%is:lvl(lev)%ie,     lvl(lev)%js:lvl(lev)%je,     lvl(lev)%ks:lvl(lev)%ke,     soln)  + &
+                       lvl(lev)%ry * (lvl(lev)%mgvar(lvl(lev)%is:lvl(lev)%ie,     lvl(lev)%js-1:lvl(lev)%je-1, lvl(lev)%ks:lvl(lev)%ke,     soln)  + &
+                       &              lvl(lev)%mgvar(lvl(lev)%is:lvl(lev)%ie,     lvl(lev)%js+1:lvl(lev)%je+1, lvl(lev)%ks:lvl(lev)%ke,     soln))
+                  if (has_dir(ZDIR)) &
+                       lvl               (lev)%mgvar(lvl(lev)%is:lvl(lev)%ie,     lvl(lev)%js:lvl(lev)%je,     lvl(lev)%ks:lvl(lev)%ke,     soln)  = &
+                       lvl               (lev)%mgvar(lvl(lev)%is:lvl(lev)%ie,     lvl(lev)%js:lvl(lev)%je,     lvl(lev)%ks:lvl(lev)%ke,     soln)  + &
+                       lvl(lev)%rz * (lvl(lev)%mgvar(lvl(lev)%is:lvl(lev)%ie,     lvl(lev)%js:lvl(lev)%je,     lvl(lev)%ks-1:lvl(lev)%ke-1, soln)  + &
+                       &              lvl(lev)%mgvar(lvl(lev)%is:lvl(lev)%ie,     lvl(lev)%js:lvl(lev)%je,     lvl(lev)%ks+1:lvl(lev)%ke+1, soln))
+               end if
             else
                ! relax only two layers of cells (1 is  significantly worse, 3 does not improve much)
                ! edges are relaxed twice, corners are relaxed three times which seems to be good
+
+               if (eff_dim /= NDIM) call die("[multigrid:approximate_solution_fft] fft_full_relax == .false. is allowed only for 3D at the moment")
 
                lvl                    (lev)%mgvar(lvl(lev)%is:lvl(lev)%is+1,   lvl(lev)%js:lvl(lev)%je,     lvl(lev)%ks:lvl(lev)%ke,     soln)  = & ! -X
                     lvl(lev)%rx * (lvl(lev)%mgvar(lvl(lev)%is-1:lvl(lev)%is,   lvl(lev)%js:lvl(lev)%je,     lvl(lev)%ks:lvl(lev)%ke,     soln)  + &
@@ -1446,6 +1502,9 @@ contains
       real, parameter, dimension(3) :: p2d = [ -3./32., 30./32., 5./32. ] ! 1D direct cubic prolongation stencil
       real, dimension(-1:1)         :: p
       real, dimension(-1:1,-1:1,2,2):: pp   ! 2D prolongation stencil
+      integer                       :: D1=0, D2=0, D3=0 ! /todo move to multigridvars, init_multigrid
+
+      if (eff_dim<NDIM) call die("[multigrid:prolong_faces] 1D and 2D not finished")
 
       if (lev < level_min .or. lev > level_max) call die("[multigrid:prolong_faces] Invalid level")
 
@@ -1472,7 +1531,6 @@ contains
          pp(i,:,1,2) = 0.5*p( i)*p(1:-1:-1) ! or use matmul()
          pp(i,:,2,1) = 0.5*p(-i)*p(:)
          pp(i,:,2,2) = 0.5*p(-i)*p(1:-1:-1)
-!         write(*,'(a,i3,a,3f10.5)')"pp(",i,":,1,1) = ",pp(i,:,1,1)
       end do
 
       call mpi_multigrid_bnd(lev-1, soln, 1, .false.) !BEWARE for higher prolongation order more guardcell will be required
@@ -1481,44 +1539,54 @@ contains
       coarse => lvl(lev - 1)
       fine   => lvl(lev)
 
-      do j = coarse%js, coarse%je
-         do k = coarse%ks, coarse%ke
-            fine%bnd_x(-fine%js+2*j,  -fine%ks+2*k,  LOW) =sum(pp(:,:,1,1) * (coarse%mgvar(coarse%is,j-1:j+1,k-1:k+1,soln) + coarse%mgvar(coarse%is-1,j-1:j+1,k-1:k+1,soln)))
-            fine%bnd_x(-fine%js+2*j+1,-fine%ks+2*k,  LOW) =sum(pp(:,:,2,1) * (coarse%mgvar(coarse%is,j-1:j+1,k-1:k+1,soln) + coarse%mgvar(coarse%is-1,j-1:j+1,k-1:k+1,soln)))
-            fine%bnd_x(-fine%js+2*j,  -fine%ks+2*k+1,LOW) =sum(pp(:,:,1,2) * (coarse%mgvar(coarse%is,j-1:j+1,k-1:k+1,soln) + coarse%mgvar(coarse%is-1,j-1:j+1,k-1:k+1,soln)))
-            fine%bnd_x(-fine%js+2*j+1,-fine%ks+2*k+1,LOW) =sum(pp(:,:,2,2) * (coarse%mgvar(coarse%is,j-1:j+1,k-1:k+1,soln) + coarse%mgvar(coarse%is-1,j-1:j+1,k-1:k+1,soln)))
-            fine%bnd_x(-fine%js+2*j,  -fine%ks+2*k,  HIGH)=sum(pp(:,:,1,1) * (coarse%mgvar(coarse%ie,j-1:j+1,k-1:k+1,soln) + coarse%mgvar(coarse%ie+1,j-1:j+1,k-1:k+1,soln)))
-            fine%bnd_x(-fine%js+2*j+1,-fine%ks+2*k,  HIGH)=sum(pp(:,:,2,1) * (coarse%mgvar(coarse%ie,j-1:j+1,k-1:k+1,soln) + coarse%mgvar(coarse%ie+1,j-1:j+1,k-1:k+1,soln)))
-            fine%bnd_x(-fine%js+2*j,  -fine%ks+2*k+1,HIGH)=sum(pp(:,:,1,2) * (coarse%mgvar(coarse%ie,j-1:j+1,k-1:k+1,soln) + coarse%mgvar(coarse%ie+1,j-1:j+1,k-1:k+1,soln)))
-            fine%bnd_x(-fine%js+2*j+1,-fine%ks+2*k+1,HIGH)=sum(pp(:,:,2,2) * (coarse%mgvar(coarse%ie,j-1:j+1,k-1:k+1,soln) + coarse%mgvar(coarse%ie+1,j-1:j+1,k-1:k+1,soln)))
-         end do
-      end do
+      if (has_dir(XDIR)) D1 = 1
+      if (has_dir(YDIR)) D2 = 1
+      if (has_dir(ZDIR)) D3 = 1
 
-      do i = coarse%is, coarse%ie
-         do k = coarse%ks, coarse%ke
-            fine%bnd_y(-fine%is+2*i,  -fine%ks+2*k,  LOW) =sum(pp(:,:,1,1) * (coarse%mgvar(i-1:i+1,coarse%js,k-1:k+1,soln) + coarse%mgvar(i-1:i+1,coarse%js-1,k-1:k+1,soln)))
-            fine%bnd_y(-fine%is+2*i+1,-fine%ks+2*k,  LOW) =sum(pp(:,:,2,1) * (coarse%mgvar(i-1:i+1,coarse%js,k-1:k+1,soln) + coarse%mgvar(i-1:i+1,coarse%js-1,k-1:k+1,soln)))
-            fine%bnd_y(-fine%is+2*i,  -fine%ks+2*k+1,LOW) =sum(pp(:,:,1,2) * (coarse%mgvar(i-1:i+1,coarse%js,k-1:k+1,soln) + coarse%mgvar(i-1:i+1,coarse%js-1,k-1:k+1,soln)))
-            fine%bnd_y(-fine%is+2*i+1,-fine%ks+2*k+1,LOW) =sum(pp(:,:,2,2) * (coarse%mgvar(i-1:i+1,coarse%js,k-1:k+1,soln) + coarse%mgvar(i-1:i+1,coarse%js-1,k-1:k+1,soln)))
-            fine%bnd_y(-fine%is+2*i,  -fine%ks+2*k,  HIGH)=sum(pp(:,:,1,1) * (coarse%mgvar(i-1:i+1,coarse%je,k-1:k+1,soln) + coarse%mgvar(i-1:i+1,coarse%je+1,k-1:k+1,soln)))
-            fine%bnd_y(-fine%is+2*i+1,-fine%ks+2*k,  HIGH)=sum(pp(:,:,2,1) * (coarse%mgvar(i-1:i+1,coarse%je,k-1:k+1,soln) + coarse%mgvar(i-1:i+1,coarse%je+1,k-1:k+1,soln)))
-            fine%bnd_y(-fine%is+2*i,  -fine%ks+2*k+1,HIGH)=sum(pp(:,:,1,2) * (coarse%mgvar(i-1:i+1,coarse%je,k-1:k+1,soln) + coarse%mgvar(i-1:i+1,coarse%je+1,k-1:k+1,soln)))
-            fine%bnd_y(-fine%is+2*i+1,-fine%ks+2*k+1,HIGH)=sum(pp(:,:,2,2) * (coarse%mgvar(i-1:i+1,coarse%je,k-1:k+1,soln) + coarse%mgvar(i-1:i+1,coarse%je+1,k-1:k+1,soln)))
-         end do
-      end do
-
-      do i = coarse%is, coarse%ie
+      if (has_dir(XDIR)) then
          do j = coarse%js, coarse%je
-            fine%bnd_z(-fine%is+2*i,  -fine%js+2*j,  LOW) =sum(pp(:,:,1,1) * (coarse%mgvar(i-1:i+1,j-1:j+1,coarse%ks,soln) + coarse%mgvar(i-1:i+1,j-1:j+1,coarse%ks-1,soln)))
-            fine%bnd_z(-fine%is+2*i+1,-fine%js+2*j,  LOW) =sum(pp(:,:,2,1) * (coarse%mgvar(i-1:i+1,j-1:j+1,coarse%ks,soln) + coarse%mgvar(i-1:i+1,j-1:j+1,coarse%ks-1,soln)))
-            fine%bnd_z(-fine%is+2*i,  -fine%js+2*j+1,LOW) =sum(pp(:,:,1,2) * (coarse%mgvar(i-1:i+1,j-1:j+1,coarse%ks,soln) + coarse%mgvar(i-1:i+1,j-1:j+1,coarse%ks-1,soln)))
-            fine%bnd_z(-fine%is+2*i+1,-fine%js+2*j+1,LOW) =sum(pp(:,:,2,2) * (coarse%mgvar(i-1:i+1,j-1:j+1,coarse%ks,soln) + coarse%mgvar(i-1:i+1,j-1:j+1,coarse%ks-1,soln)))
-            fine%bnd_z(-fine%is+2*i,  -fine%js+2*j,  HIGH)=sum(pp(:,:,1,1) * (coarse%mgvar(i-1:i+1,j-1:j+1,coarse%ke,soln) + coarse%mgvar(i-1:i+1,j-1:j+1,coarse%ke+1,soln)))
-            fine%bnd_z(-fine%is+2*i+1,-fine%js+2*j,  HIGH)=sum(pp(:,:,2,1) * (coarse%mgvar(i-1:i+1,j-1:j+1,coarse%ke,soln) + coarse%mgvar(i-1:i+1,j-1:j+1,coarse%ke+1,soln)))
-            fine%bnd_z(-fine%is+2*i,  -fine%js+2*j+1,HIGH)=sum(pp(:,:,1,2) * (coarse%mgvar(i-1:i+1,j-1:j+1,coarse%ke,soln) + coarse%mgvar(i-1:i+1,j-1:j+1,coarse%ke+1,soln)))
-            fine%bnd_z(-fine%is+2*i+1,-fine%js+2*j+1,HIGH)=sum(pp(:,:,2,2) * (coarse%mgvar(i-1:i+1,j-1:j+1,coarse%ke,soln) + coarse%mgvar(i-1:i+1,j-1:j+1,coarse%ke+1,soln)))
+            do k = coarse%ks, coarse%ke
+               fine%bnd_x(-fine%js+2*j,  -fine%ks+2*k,  LOW) =sum(pp(:,:,1,1) * (coarse%mgvar(coarse%is,j-D2:j+D2,k-D3:k+D3,soln) + coarse%mgvar(coarse%is-1,j-D2:j+D2,k-D3:k+D3,soln)))
+               fine%bnd_x(-fine%js+2*j+D2,-fine%ks+2*k,  LOW) =sum(pp(:,:,2,1) * (coarse%mgvar(coarse%is,j-D2:j+D2,k-D3:k+D3,soln) + coarse%mgvar(coarse%is-1,j-D2:j+D2,k-D3:k+D3,soln)))
+               fine%bnd_x(-fine%js+2*j,  -fine%ks+2*k+D3,LOW) =sum(pp(:,:,1,2) * (coarse%mgvar(coarse%is,j-D2:j+D2,k-D3:k+D3,soln) + coarse%mgvar(coarse%is-1,j-D2:j+D2,k-D3:k+D3,soln)))
+               fine%bnd_x(-fine%js+2*j+D2,-fine%ks+2*k+D3,LOW) =sum(pp(:,:,2,2) * (coarse%mgvar(coarse%is,j-D2:j+D2,k-D3:k+D3,soln) + coarse%mgvar(coarse%is-1,j-D2:j+D2,k-D3:k+D3,soln)))
+               fine%bnd_x(-fine%js+2*j,  -fine%ks+2*k,  HIGH)=sum(pp(:,:,1,1) * (coarse%mgvar(coarse%ie,j-D2:j+D2,k-D3:k+D3,soln) + coarse%mgvar(coarse%ie+1,j-D2:j+D2,k-D3:k+D3,soln)))
+               fine%bnd_x(-fine%js+2*j+D2,-fine%ks+2*k,  HIGH)=sum(pp(:,:,2,1) * (coarse%mgvar(coarse%ie,j-D2:j+D2,k-D3:k+D3,soln) + coarse%mgvar(coarse%ie+1,j-D2:j+D2,k-D3:k+D3,soln)))
+               fine%bnd_x(-fine%js+2*j,  -fine%ks+2*k+D3,HIGH)=sum(pp(:,:,1,2) * (coarse%mgvar(coarse%ie,j-D2:j+D2,k-D3:k+D3,soln) + coarse%mgvar(coarse%ie+1,j-D2:j+D2,k-D3:k+D3,soln)))
+               fine%bnd_x(-fine%js+2*j+D2,-fine%ks+2*k+D3,HIGH)=sum(pp(:,:,2,2) * (coarse%mgvar(coarse%ie,j-D2:j+D2,k-D3:k+D3,soln) + coarse%mgvar(coarse%ie+1,j-D2:j+D2,k-D3:k+D3,soln)))
+            end do
          end do
-      end do
+      end if
+
+      if (has_dir(YDIR)) then
+         do i = coarse%is, coarse%ie
+            do k = coarse%ks, coarse%ke
+               fine%bnd_y(-fine%is+2*i,  -fine%ks+2*k,  LOW) =sum(pp(:,:,1,1) * (coarse%mgvar(i-D1:i+D1,coarse%js,k-D3:k+D3,soln) + coarse%mgvar(i-D1:i+D1,coarse%js-1,k-D3:k+D3,soln)))
+               fine%bnd_y(-fine%is+2*i+D1,-fine%ks+2*k,  LOW) =sum(pp(:,:,2,1) * (coarse%mgvar(i-D1:i+D1,coarse%js,k-D3:k+D3,soln) + coarse%mgvar(i-D1:i+D1,coarse%js-1,k-D3:k+D3,soln)))
+               fine%bnd_y(-fine%is+2*i,  -fine%ks+2*k+D3,LOW) =sum(pp(:,:,1,2) * (coarse%mgvar(i-D1:i+D1,coarse%js,k-D3:k+D3,soln) + coarse%mgvar(i-D1:i+D1,coarse%js-1,k-D3:k+D3,soln)))
+               fine%bnd_y(-fine%is+2*i+D1,-fine%ks+2*k+D3,LOW) =sum(pp(:,:,2,2) * (coarse%mgvar(i-D1:i+D1,coarse%js,k-D3:k+D3,soln) + coarse%mgvar(i-D1:i+D1,coarse%js-1,k-D3:k+D3,soln)))
+               fine%bnd_y(-fine%is+2*i,  -fine%ks+2*k,  HIGH)=sum(pp(:,:,1,1) * (coarse%mgvar(i-D1:i+D1,coarse%je,k-D3:k+D3,soln) + coarse%mgvar(i-D1:i+D1,coarse%je+1,k-D3:k+D3,soln)))
+               fine%bnd_y(-fine%is+2*i+D1,-fine%ks+2*k,  HIGH)=sum(pp(:,:,2,1) * (coarse%mgvar(i-D1:i+D1,coarse%je,k-D3:k+D3,soln) + coarse%mgvar(i-D1:i+D1,coarse%je+1,k-D3:k+D3,soln)))
+               fine%bnd_y(-fine%is+2*i,  -fine%ks+2*k+D3,HIGH)=sum(pp(:,:,1,2) * (coarse%mgvar(i-D1:i+D1,coarse%je,k-D3:k+D3,soln) + coarse%mgvar(i-D1:i+D1,coarse%je+1,k-D3:k+D3,soln)))
+               fine%bnd_y(-fine%is+2*i+D1,-fine%ks+2*k+D3,HIGH)=sum(pp(:,:,2,2) * (coarse%mgvar(i-D1:i+D1,coarse%je,k-D3:k+D3,soln) + coarse%mgvar(i-D1:i+D1,coarse%je+1,k-D3:k+D3,soln)))
+            end do
+         end do
+      end if
+
+      if (has_dir(ZDIR)) then
+         do i = coarse%is, coarse%ie
+            do j = coarse%js, coarse%je
+               fine%bnd_z(-fine%is+2*i,  -fine%js+2*j,  LOW) =sum(pp(:,:,1,1) * (coarse%mgvar(i-D1:i+D1,j-D2:j+D2,coarse%ks,soln) + coarse%mgvar(i-D1:i+D1,j-D2:j+D2,coarse%ks-1,soln)))
+               fine%bnd_z(-fine%is+2*i+D1,-fine%js+2*j,  LOW) =sum(pp(:,:,2,1) * (coarse%mgvar(i-D1:i+D1,j-D2:j+D2,coarse%ks,soln) + coarse%mgvar(i-D1:i+D1,j-D2:j+D2,coarse%ks-1,soln)))
+               fine%bnd_z(-fine%is+2*i,  -fine%js+2*j+D2,LOW) =sum(pp(:,:,1,2) * (coarse%mgvar(i-D1:i+D1,j-D2:j+D2,coarse%ks,soln) + coarse%mgvar(i-D1:i+D1,j-D2:j+D2,coarse%ks-1,soln)))
+               fine%bnd_z(-fine%is+2*i+D1,-fine%js+2*j+D2,LOW) =sum(pp(:,:,2,2) * (coarse%mgvar(i-D1:i+D1,j-D2:j+D2,coarse%ks,soln) + coarse%mgvar(i-D1:i+D1,j-D2:j+D2,coarse%ks-1,soln)))
+               fine%bnd_z(-fine%is+2*i,  -fine%js+2*j,  HIGH)=sum(pp(:,:,1,1) * (coarse%mgvar(i-D1:i+D1,j-D2:j+D2,coarse%ke,soln) + coarse%mgvar(i-D1:i+D1,j-D2:j+D2,coarse%ke+1,soln)))
+               fine%bnd_z(-fine%is+2*i+D1,-fine%js+2*j,  HIGH)=sum(pp(:,:,2,1) * (coarse%mgvar(i-D1:i+D1,j-D2:j+D2,coarse%ke,soln) + coarse%mgvar(i-D1:i+D1,j-D2:j+D2,coarse%ke+1,soln)))
+               fine%bnd_z(-fine%is+2*i,  -fine%js+2*j+D2,HIGH)=sum(pp(:,:,1,2) * (coarse%mgvar(i-D1:i+D1,j-D2:j+D2,coarse%ke,soln) + coarse%mgvar(i-D1:i+D1,j-D2:j+D2,coarse%ke+1,soln)))
+               fine%bnd_z(-fine%is+2*i+D1,-fine%js+2*j+D2,HIGH)=sum(pp(:,:,2,2) * (coarse%mgvar(i-D1:i+D1,j-D2:j+D2,coarse%ke,soln) + coarse%mgvar(i-D1:i+D1,j-D2:j+D2,coarse%ke+1,soln)))
+            end do
+         end do
+      end if
 
    end subroutine prolong_faces
 
@@ -1535,6 +1603,7 @@ contains
 
       use multigridhelpers,   only: dirty_debug, check_dirty
       use multigridmpifuncs,  only: mpi_multigrid_bnd
+      use errh,               only: die
 
       implicit none
 
@@ -1547,6 +1616,8 @@ contains
       integer :: n, i, j, k
       integer :: nsmoo
       character(len=40) :: dirty_msg
+
+      if (eff_dim<NDIM) call die("[multigrid:approximate_solution_rbgs] 1D and 2D not finished")
 
       if (lev == level_min) then
          nsmoo = nsmoob

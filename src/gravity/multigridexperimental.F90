@@ -131,7 +131,8 @@
 
    subroutine prolong_level2I(lev, iv)
 
-      use multigridvars, only: plvl, lvl
+      use multigridvars, only: plvl, lvl, eff_dim, NDIM
+      use errh,          only: die
 
       implicit none
 
@@ -141,6 +142,8 @@
       type(plvl), pointer :: coarse, fine
 
       real, parameter :: P0 = 1., P1 = 1./8.
+
+      if (eff_dim<NDIM) call die("[multigrid:prolong_level2I] 1D and 2D not finished")
 
       coarse => lvl(lev)
       fine   => lvl(lev + 1)
@@ -182,7 +185,8 @@
 
    subroutine prolong_level2D(lev, iv)
 
-      use multigridvars, only: plvl, lvl
+      use multigridvars, only: plvl, lvl, eff_dim, NDIM
+      use errh,          only: die
 
       implicit none
 
@@ -191,6 +195,8 @@
 
       type(plvl), pointer :: coarse, fine
       real, parameter :: P_1 = -3./32., P0 = 30./32., P1 = 5./32.
+
+      if (eff_dim<NDIM) call die("[multigrid:prolong_level2D] 1D and 2D not finished")
 
       coarse => lvl(lev)
       fine   => lvl(lev + 1)
@@ -232,7 +238,8 @@
 
    subroutine prolong_level4I(lev, iv)
 
-      use multigridvars, only: plvl, lvl
+      use multigridvars, only: plvl, lvl, eff_dim, NDIM
+      use errh,          only: die
 
       implicit none
 
@@ -242,6 +249,8 @@
       type(plvl), pointer :: coarse, fine
 
       real, parameter :: P0 = 1., P1 = 11./64., P2 = 3./128.
+
+      if (eff_dim<NDIM) call die("[multigrid:prolong_level4I] 1D and 2D not finished")
 
       coarse => lvl(lev)
       fine   => lvl(lev + 1)
@@ -295,7 +304,8 @@
 
    subroutine prolong_level4D(lev, iv)
 
-      use multigridvars, only: plvl, lvl
+      use multigridvars, only: plvl, lvl, eff_dim, NDIM
+      use errh,          only: die
 
       implicit none
 
@@ -305,6 +315,8 @@
       type(plvl), pointer :: coarse, fine
 
       real, parameter :: P_2 = 35./2048., P_1 = -252./2048., P0 = 1890./2048., P1 = 420./2048., P2 = -45./2048.
+
+      if (eff_dim<NDIM) call die("[multigrid:prolong_level4D] 1D and 2D not finished")
 
       coarse => lvl(lev)
       fine   => lvl(lev + 1)
@@ -365,8 +377,9 @@
    subroutine residual4(lev, src, soln, def)
 
       use mpisetup,           only: proc
-      use multigridvars,      only: lvl
+      use multigridvars,      only: lvl, eff_dim, NDIM
       use multigridmpifuncs,  only: mpi_multigrid_bnd
+      use errh,               only: die
 
       implicit none
 
@@ -379,6 +392,8 @@
       real                :: L0, Lx1, Lx2, Ly1, Ly2, Lz1, Lz2
 
       logical, save       :: firstcall = .true.
+
+      if (eff_dim<NDIM) call die("[multigrid:residual4] 1D and 2D not finished")
 
       if (firstcall) then
          if (proc == 0) write(*,'(a)')"[multigridexperimental:residual4] Warning: residual order 4 is experimental."
