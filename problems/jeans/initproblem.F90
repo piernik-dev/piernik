@@ -150,14 +150,18 @@ contains
       integer :: i, j, k
       real    :: xi, yj, zk, kn, Lbox, Tamp, pres, Tamp_rounded, Tamp_aux
       real    :: cs0, omg, omg2, kJ
+      integer :: ndim = 0
 
+      if (nx>1) ndim = ndim + 1
+      if (ny>1) ndim = ndim + 1
+      if (nz>1) ndim = ndim + 1
       cs0  = sqrt(gamma_ion * p0 / d0)
       kn   = sqrt(kx**2 + ky**2 + kz**2)
       omg2 = cs0**2 * kn**2 - fpiG * d0
       omg  = sqrt(abs(omg2))
       kJ   = sqrt(fpiG * d0) / cs0
       Lbox = 0.5 * sqrt(pi * gamma_ion * p0 / newtong / d0**2)
-      Tamp = (d0 * amp**2 * omg2 * Lbox**2)/(8.0 * kn**2)
+      Tamp = (d0 * amp**2 * omg2 * Lbox**(ndim - 1))/(8.0 * kn**2) !BEWARE Lbox assumed to be equal in all existing dimensions
       if (mode == 1) Tamp = Tamp / 4.
 
       if (proc == 0) then
