@@ -97,7 +97,7 @@ contains
       use errh,          only: die
       use types,         only: grid_container
       use mpisetup,      only: proc
-      use multigridvars, only: level_min, level_max, lvl, eff_dim
+      use multigridvars, only: level_min, level_max, lvl, eff_dim, XDIR, YDIR, ZDIR
 
       implicit none
 
