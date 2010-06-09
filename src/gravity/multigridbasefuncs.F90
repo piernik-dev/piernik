@@ -124,28 +124,17 @@ contains
 
 
       ! Possible optimization candidate: reduce L1 and L2 cache misses on both read and write (RBGS only, secondary importance)
-      if (eff_dim == NDIM) then
-         fine%mgvar       (fine%is:fine%ie-1:2, fine%js:fine%je-1:2, fine%ks:fine%ke-1:2, iv) = &
-              coarse%mgvar(coarse%is:coarse%ie, coarse%js:coarse%je, coarse%ks:coarse%ke, iv)
-         fine%mgvar       (fine%is+1:fine%ie:2, fine%js:fine%je-1:2, fine%ks:fine%ke-1:2, iv) = &
-              fine%mgvar  (fine%is:fine%ie-1:2, fine%js:fine%je-1:2, fine%ks:fine%ke-1:2, iv)
-         fine%mgvar       (fine%is:fine%ie,     fine%js+1:fine%je:2, fine%ks:fine%ke-1:2, iv) = &
-              fine%mgvar  (fine%is:fine%ie,     fine%js:fine%je-1:2, fine%ks:fine%ke-1:2, iv)
-         fine%mgvar       (fine%is:fine%ie,     fine%js:fine%je,     fine%ks+1:fine%ke:2, iv) = &
-              fine%mgvar  (fine%is:fine%ie,     fine%js:fine%je,     fine%ks:fine%ke-1:2, iv)
-      else
-         if (has_dir(XDIR)) D1 = 1 ! \todo mv to multigridvars, init_multigrid
-         if (has_dir(YDIR)) D2 = 1
-         if (has_dir(ZDIR)) D3 = 1
-         fine%mgvar       (fine%is   :fine%ie-D1:(1+D1), fine%js   :fine%je-D2:(1+D2), fine%ks   :fine%ke-D3:(1+D3), iv) = &
-              coarse%mgvar(coarse%is :coarse%ie,         coarse%js :coarse%je,         coarse%ks :coarse%ke,         iv)
-         fine%mgvar       (fine%is+D1:fine%ie   :(1+D1), fine%js   :fine%je-D2:(1+D2), fine%ks   :fine%ke-D3:(1+D3), iv) = &
-              fine%mgvar  (fine%is   :fine%ie-D1:(1+D1), fine%js   :fine%je-D2:(1+D2), fine%ks   :fine%ke-D3:(1+D3), iv)
-         fine%mgvar       (fine%is   :fine%ie,           fine%js+D2:fine%je   :(1+D2), fine%ks   :fine%ke-D3:(1+D3), iv) = &
-              fine%mgvar  (fine%is   :fine%ie,           fine%js   :fine%je-D2:(1+D2), fine%ks   :fine%ke-D3:(1+D3), iv)
-         fine%mgvar       (fine%is   :fine%ie,           fine%js   :fine%je,           fine%ks+D3:fine%ke   :(1+D3), iv) = &
-              fine%mgvar  (fine%is   :fine%ie,           fine%js   :fine%je,           fine%ks   :fine%ke-D3:(1+D3), iv)
-      end if
+      if (has_dir(XDIR)) D1 = 1 ! \todo mv to multigridvars, init_multigrid
+      if (has_dir(YDIR)) D2 = 1
+      if (has_dir(ZDIR)) D3 = 1
+      fine%mgvar       (fine%is   :fine%ie-D1:(1+D1), fine%js   :fine%je-D2:(1+D2), fine%ks   :fine%ke-D3:(1+D3), iv) = &
+           coarse%mgvar(coarse%is :coarse%ie,         coarse%js :coarse%je,         coarse%ks :coarse%ke,         iv)
+      fine%mgvar       (fine%is+D1:fine%ie   :(1+D1), fine%js   :fine%je-D2:(1+D2), fine%ks   :fine%ke-D3:(1+D3), iv) = &
+           fine%mgvar  (fine%is   :fine%ie-D1:(1+D1), fine%js   :fine%je-D2:(1+D2), fine%ks   :fine%ke-D3:(1+D3), iv)
+      fine%mgvar       (fine%is   :fine%ie,           fine%js+D2:fine%je   :(1+D2), fine%ks   :fine%ke-D3:(1+D3), iv) = &
+           fine%mgvar  (fine%is   :fine%ie,           fine%js   :fine%je-D2:(1+D2), fine%ks   :fine%ke-D3:(1+D3), iv)
+      fine%mgvar       (fine%is   :fine%ie,           fine%js   :fine%je,           fine%ks+D3:fine%ke   :(1+D3), iv) = &
+           fine%mgvar  (fine%is   :fine%ie,           fine%js   :fine%je,           fine%ks   :fine%ke-D3:(1+D3), iv)
 
    end subroutine prolong_level0
 
@@ -207,32 +196,19 @@ contains
 
       call check_dirty(fine%level, iv, "restrict_level-")
 
-      if (eff_dim == NDIM) then
-         coarse%mgvar(      coarse%is:coarse%ie,   coarse%js:coarse%je,   coarse%ks:coarse%ke,   iv) = &
-              ( fine%mgvar( fine%is  :fine%ie-1:2, fine%js  :fine%je-1:2, fine%ks  :fine%ke-1:2, iv) + &
-              & fine%mgvar( fine%is+1:fine%ie  :2, fine%js  :fine%je-1:2, fine%ks  :fine%ke-1:2, iv) + &
-              & fine%mgvar( fine%is  :fine%ie-1:2, fine%js+1:fine%je  :2, fine%ks  :fine%ke-1:2, iv) + &
-              & fine%mgvar( fine%is+1:fine%ie  :2, fine%js+1:fine%je  :2, fine%ks  :fine%ke-1:2, iv) + &
-              & fine%mgvar( fine%is  :fine%ie-1:2, fine%js  :fine%je-1:2, fine%ks+1:fine%ke  :2, iv) + &
-              & fine%mgvar( fine%is+1:fine%ie  :2, fine%js  :fine%je-1:2, fine%ks+1:fine%ke  :2, iv) + &
-              & fine%mgvar( fine%is  :fine%ie-1:2, fine%js+1:fine%je  :2, fine%ks+1:fine%ke  :2, iv) + &
-              & fine%mgvar( fine%is+1:fine%ie  :2, fine%js+1:fine%je  :2, fine%ks+1:fine%ke  :2, iv) ) * 0.125
-         !! \todo Implement directionally split restriction (use prolong_x and prolong_xy arrays in 3D) and compare execution time.
-      else
-         ! BEWARE: unoptimized: some cells are used multiple times
-         if (has_dir(XDIR)) D1 = 1 ! \todo mv to multigridvars, init_multigrid
-         if (has_dir(YDIR)) D2 = 1
-         if (has_dir(ZDIR)) D3 = 1
-         coarse%mgvar(      coarse%is:coarse%ie,   coarse%js:coarse%je,   coarse%ks:coarse%ke,   iv) = &
-              ( fine%mgvar( fine%is   :fine%ie-D1:(1+D1), fine%js   :fine%je-D2:(1+D2), fine%ks   :fine%ke-D3:(1+D3), iv) + &
-              & fine%mgvar( fine%is+D1:fine%ie   :(1+D1), fine%js   :fine%je-D2:(1+D2), fine%ks   :fine%ke-D3:(1+D3), iv) + &
-              & fine%mgvar( fine%is   :fine%ie-D1:(1+D1), fine%js+D2:fine%je   :(1+D2), fine%ks   :fine%ke-D3:(1+D3), iv) + &
-              & fine%mgvar( fine%is+D1:fine%ie   :(1+D1), fine%js+D2:fine%je   :(1+D2), fine%ks   :fine%ke-D3:(1+D3), iv) + &
-              & fine%mgvar( fine%is   :fine%ie-D1:(1+D1), fine%js   :fine%je-D2:(1+D2), fine%ks+D3:fine%ke   :(1+D3), iv) + &
-              & fine%mgvar( fine%is+D1:fine%ie   :(1+D1), fine%js   :fine%je-D2:(1+D2), fine%ks+D3:fine%ke   :(1+D3), iv) + &
-              & fine%mgvar( fine%is   :fine%ie-D1:(1+D1), fine%js+D2:fine%je   :(1+D2), fine%ks+D3:fine%ke   :(1+D3), iv) + &
-              & fine%mgvar( fine%is+D1:fine%ie   :(1+D1), fine%js+D2:fine%je   :(1+D2), fine%ks+D3:fine%ke   :(1+D3), iv) ) *0.125  !/ ((1.+D1)*(1.+D2)*(1.+D3))
-      end if
+      ! BEWARE: unoptimized: some cells are used multiple times (1D and 2D speed-ups possible)
+      if (has_dir(XDIR)) D1 = 1 ! \todo mv to multigridvars, init_multigrid
+      if (has_dir(YDIR)) D2 = 1
+      if (has_dir(ZDIR)) D3 = 1
+      coarse%mgvar(      coarse%is:coarse%ie,   coarse%js:coarse%je,   coarse%ks:coarse%ke,   iv) = &
+           ( fine%mgvar( fine%is   :fine%ie-D1:(1+D1), fine%js   :fine%je-D2:(1+D2), fine%ks   :fine%ke-D3:(1+D3), iv) + &
+           & fine%mgvar( fine%is+D1:fine%ie   :(1+D1), fine%js   :fine%je-D2:(1+D2), fine%ks   :fine%ke-D3:(1+D3), iv) + &
+           & fine%mgvar( fine%is   :fine%ie-D1:(1+D1), fine%js+D2:fine%je   :(1+D2), fine%ks   :fine%ke-D3:(1+D3), iv) + &
+           & fine%mgvar( fine%is+D1:fine%ie   :(1+D1), fine%js+D2:fine%je   :(1+D2), fine%ks   :fine%ke-D3:(1+D3), iv) + &
+           & fine%mgvar( fine%is   :fine%ie-D1:(1+D1), fine%js   :fine%je-D2:(1+D2), fine%ks+D3:fine%ke   :(1+D3), iv) + &
+           & fine%mgvar( fine%is+D1:fine%ie   :(1+D1), fine%js   :fine%je-D2:(1+D2), fine%ks+D3:fine%ke   :(1+D3), iv) + &
+           & fine%mgvar( fine%is   :fine%ie-D1:(1+D1), fine%js+D2:fine%je   :(1+D2), fine%ks+D3:fine%ke   :(1+D3), iv) + &
+           & fine%mgvar( fine%is+D1:fine%ie   :(1+D1), fine%js+D2:fine%je   :(1+D2), fine%ks+D3:fine%ke   :(1+D3), iv) ) *0.125  !/ ((1.+D1)*(1.+D2)*(1.+D3))
 
       call check_dirty(coarse%level, iv, "restrict_level+")
 
@@ -298,6 +274,7 @@ contains
       integer, intent(in) :: def  !< index of defect in lvl()%mgvar
 
       real                :: L0, Lx, Ly, Lz
+      integer :: k
 
       call mpi_multigrid_bnd(lev, soln, 1, .false.) ! no corners required
 
@@ -308,37 +285,42 @@ contains
       Lz = lvl(lev)%idz2
       L0 = -2. * (Lx + Ly + Lz)
 
-      ! Possible optimization candidate: reduce L1 cache miss on read (secondary importance)
+      ! Possible optimization candidate: reduce cache misses (secondary importance, cache-aware implementation required)
+      ! Explicit loop over k gives here better performance than array operation due to less cache misses (at least on 32^3 and 64^3 arrays)
       if (eff_dim == NDIM) then
-         lvl(     lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   lvl(lev)%ks  :lvl(lev)%ke,   def)       = &
-              lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   lvl(lev)%ks  :lvl(lev)%ke,   src)       - &
-              lvl(lev)%mgvar(lvl(lev)%is-1:lvl(lev)%ie-1, lvl(lev)%js  :lvl(lev)%je,   lvl(lev)%ks  :lvl(lev)%ke,   soln) * Lx - &
-              lvl(lev)%mgvar(lvl(lev)%is+1:lvl(lev)%ie+1, lvl(lev)%js  :lvl(lev)%je,   lvl(lev)%ks  :lvl(lev)%ke,   soln) * Lx - &
-              lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js-1:lvl(lev)%je-1, lvl(lev)%ks  :lvl(lev)%ke,   soln) * Ly - &
-              lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js+1:lvl(lev)%je+1, lvl(lev)%ks  :lvl(lev)%ke,   soln) * Ly - &
-              lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   lvl(lev)%ks-1:lvl(lev)%ke-1, soln) * Lz - &
-              lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   lvl(lev)%ks+1:lvl(lev)%ke+1, soln) * Lz - &
-              lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   lvl(lev)%ks  :lvl(lev)%ke,   soln) * L0
+         do k = lvl(lev)%ks, lvl(lev)%ke
+            lvl(       lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k,   def)        = &
+                 & lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k,   src)        - &
+                 ( lvl(lev)%mgvar(lvl(lev)%is-1:lvl(lev)%ie-1, lvl(lev)%js  :lvl(lev)%je,   k,   soln)       + &
+                 & lvl(lev)%mgvar(lvl(lev)%is+1:lvl(lev)%ie+1, lvl(lev)%js  :lvl(lev)%je,   k,   soln)) * Lx - &
+                 ( lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js-1:lvl(lev)%je-1, k,   soln)       + &
+                 & lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js+1:lvl(lev)%je+1, k,   soln)) * Ly - &
+                 ( lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k-1, soln)       + &
+                 & lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k+1, soln)) * Lz - &
+                 & lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k,   soln)  * L0
+         end do
       else
-         ! /todo: benchmark against fully 3D implementation above
-         lvl(     lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   lvl(lev)%ks  :lvl(lev)%ke,   def)       = &
-              lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   lvl(lev)%ks  :lvl(lev)%ke,   src)       - &
-              lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   lvl(lev)%ks  :lvl(lev)%ke,   soln) * L0
-         if (has_dir(XDIR)) &
-              lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   lvl(lev)%ks  :lvl(lev)%ke,   def)       = &
-              lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   lvl(lev)%ks  :lvl(lev)%ke,   def)       - &
-              lvl(lev)%mgvar(lvl(lev)%is-1:lvl(lev)%ie-1, lvl(lev)%js  :lvl(lev)%je,   lvl(lev)%ks  :lvl(lev)%ke,   soln) * Lx - &
-              lvl(lev)%mgvar(lvl(lev)%is+1:lvl(lev)%ie+1, lvl(lev)%js  :lvl(lev)%je,   lvl(lev)%ks  :lvl(lev)%ke,   soln) * Lx
-         if (has_dir(YDIR)) &
-              lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   lvl(lev)%ks  :lvl(lev)%ke,   def)       = &
-              lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   lvl(lev)%ks  :lvl(lev)%ke,   def)       - &
-              lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js-1:lvl(lev)%je-1, lvl(lev)%ks  :lvl(lev)%ke,   soln) * Ly - &
-              lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js+1:lvl(lev)%je+1, lvl(lev)%ks  :lvl(lev)%ke,   soln) * Ly
-         if (has_dir(ZDIR)) &
-              lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   lvl(lev)%ks  :lvl(lev)%ke,   def)       = &
-              lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   lvl(lev)%ks  :lvl(lev)%ke,   def)       - &
-              lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   lvl(lev)%ks-1:lvl(lev)%ke-1, soln) * Lz - &
-              lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   lvl(lev)%ks+1:lvl(lev)%ke+1, soln) * Lz
+         ! In 3D this implementation can give a bit more cache misses, few times more writes and significantly more instructions executed than monolithic 3D above
+         do k = lvl(lev)%ks, lvl(lev)%ke
+            lvl(       lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k,   def)   = &
+                 & lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k,   src)   - &
+                 & lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k,   soln)  * L0
+            if (has_dir(XDIR)) &
+                 & lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k,   def)   = &
+                 & lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k,   def)   - &
+                 ( lvl(lev)%mgvar(lvl(lev)%is-1:lvl(lev)%ie-1, lvl(lev)%js  :lvl(lev)%je,   k,   soln)  + &
+                 & lvl(lev)%mgvar(lvl(lev)%is+1:lvl(lev)%ie+1, lvl(lev)%js  :lvl(lev)%je,   k,   soln)) * Lx
+            if (has_dir(YDIR)) &
+                 & lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k,   def)   = &
+                 & lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k,   def)   - &
+                 ( lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js-1:lvl(lev)%je-1, k,   soln)  + &
+                 & lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js+1:lvl(lev)%je+1, k,   soln)) * Ly
+            if (has_dir(ZDIR)) &
+                 & lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k,   def)   = &
+                 & lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k,   def)   - &
+                 ( lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k-1, soln)  + &
+                 & lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k+1, soln)) * Lz
+         end do
       end if
 
    end subroutine residual2

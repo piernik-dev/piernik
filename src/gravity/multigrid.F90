@@ -1614,7 +1614,7 @@ contains
 
       integer, parameter :: nsmoob = 100 !< smoothing cycles per call on base level (a convergence check would be much better than a magic number)
 
-      integer :: n, i, j, k, i1, j1, k1, id, jd, kd
+      integer :: n, j, k, i1, j1, k1, id, jd, kd
       integer :: nsmoo
       character(len=40) :: dirty_msg
 
@@ -1641,25 +1641,24 @@ contains
          !    relax single layer of black cells at all faces
          ! end do
 
-         ! with explicit loops it is easier to describe a 3-D checkerboard :-)
+         ! with explicit outer loops it is easier to describe a 3-D checkerboard :-)
 
          if (eff_dim==NDIM) then
             do k = lvl(lev)%ks, lvl(lev)%ke
                do j = lvl(lev)%js, lvl(lev)%je
-                  do i = lvl(lev)%is + mod(n+j+k, 2), lvl(lev)%ie, 2
-                     lvl(          lev          )%mgvar(i,   j,   k,   soln) = &
-                          lvl(lev)%rx * (lvl(lev)%mgvar(i-1, j,   k,   soln) + lvl(lev)%mgvar(i+1, j,   k,   soln)) + &
-                          lvl(lev)%ry * (lvl(lev)%mgvar(i,   j-1, k,   soln) + lvl(lev)%mgvar(i,   j+1, k,   soln)) + &
-                          lvl(lev)%rz * (lvl(lev)%mgvar(i,   j,   k-1, soln) + lvl(lev)%mgvar(i,   j,   k+1, soln)) - &
-                          lvl(lev)%r  *  lvl(lev)%mgvar(i,   j,   k,   src)
-                  end do
+                  i1 = lvl(lev)%is + mod(n+j+k, 2)
+                  lvl(          lev          )%mgvar(i1  :lvl(lev)%ie  :2, j,   k,   soln) = &
+                       lvl(lev)%rx * (lvl(lev)%mgvar(i1-1:lvl(lev)%ie-1:2, j,   k,   soln) + lvl(lev)%mgvar(i1+1:lvl(lev)%ie+1:2, j,   k,   soln)) + &
+                       lvl(lev)%ry * (lvl(lev)%mgvar(i1  :lvl(lev)%ie  :2, j-1, k,   soln) + lvl(lev)%mgvar(i1:  lvl(lev)%ie:  2, j+1, k,   soln)) + &
+                       lvl(lev)%rz * (lvl(lev)%mgvar(i1  :lvl(lev)%ie  :2, j,   k-1, soln) + lvl(lev)%mgvar(i1:  lvl(lev)%ie:  2, j,   k+1, soln)) - &
+                       lvl(lev)%r  *  lvl(lev)%mgvar(i1  :lvl(lev)%ie  :2, j,   k,   src)
                end do
             end do
          else
+            ! In 3D this variant significantly increases instruction count and also some data read
             i1 = lvl(lev)%is; id = 1 ! mv to multigridvars, init_multigrid
             j1 = lvl(lev)%js; jd = 1
             k1 = lvl(lev)%ks; kd = 1
-
             if (has_dir(XDIR)) then
                id = 2
             else if (has_dir(YDIR)) then
@@ -1673,22 +1672,19 @@ contains
                if ((.not. has_dir(XDIR)) .and. has_dir(YDIR))                          j1 = lvl(lev)%js + mod(n+k, 2)
                do j = j1, lvl(lev)%je, jd
                   if (has_dir(XDIR))                                                   i1 = lvl(lev)%is + mod(n+j+k, 2)
-                  do i = i1, lvl(lev)%ie, id
-                     lvl(      lev)%mgvar(i,   j,   k,   soln) = &
-                          -lvl(lev)%mgvar(i,   j,   k,   src)  * lvl(lev)%r
-                     if (has_dir(XDIR)) &
-                          lvl (lev)%mgvar(i,   j,   k,   soln) = lvl(lev)%mgvar(i,   j,   k,   soln)  + &
-                          (lvl(lev)%mgvar(i-1, j,   k,   soln) + lvl(lev)%mgvar(i+1, j,   k,   soln)) * lvl(lev)%rx
-                     if (has_dir(YDIR)) &
-                          lvl (lev)%mgvar(i,   j,   k,   soln) = lvl(lev)%mgvar(i,   j,   k,   soln)  + &
-                          (lvl(lev)%mgvar(i,   j-1, k,   soln) + lvl(lev)%mgvar(i,   j+1, k,   soln)) * lvl(lev)%ry
-                     if (has_dir(ZDIR)) &
-                          lvl (lev)%mgvar(i,   j,   k,   soln) = lvl(lev)%mgvar(i,   j,   k,   soln)  + &
-                          (lvl(lev)%mgvar(i,   j,   k-1, soln) + lvl(lev)%mgvar(i,   j,   k+1, soln)) * lvl(lev)%rz
-                  end do
+                  lvl(      lev)%mgvar(i1  :lvl(lev)%ie  :id, j,   k,   soln) = &
+                       -lvl(lev)%mgvar(i1  :lvl(lev)%ie  :id, j,   k,   src)  * lvl(lev)%r
+                  if (has_dir(XDIR)) &
+                       lvl (lev)%mgvar(i1  :lvl(lev)%ie  :id, j,   k,   soln) = lvl(lev)%mgvar(i1:  lvl(lev)%ie:  id, j,   k,   soln)  + &
+                       (lvl(lev)%mgvar(i1-1:lvl(lev)%ie-1:id, j,   k,   soln) + lvl(lev)%mgvar(i1+1:lvl(lev)%ie+1:id, j,   k,   soln)) * lvl(lev)%rx
+                  if (has_dir(YDIR)) &
+                       lvl (lev)%mgvar(i1  :lvl(lev)%ie  :id, j,   k,   soln) = lvl(lev)%mgvar(i1:  lvl(lev)%ie:  id, j,   k,   soln)  + &
+                       (lvl(lev)%mgvar(i1  :lvl(lev)%ie  :id, j-1, k,   soln) + lvl(lev)%mgvar(i1:  lvl(lev)%ie:  id, j+1, k,   soln)) * lvl(lev)%ry
+                  if (has_dir(ZDIR)) &
+                       lvl (lev)%mgvar(i1  :lvl(lev)%ie  :id, j,   k,   soln) = lvl(lev)%mgvar(i1:  lvl(lev)%ie:  id, j,   k,   soln)  + &
+                       (lvl(lev)%mgvar(i1  :lvl(lev)%ie  :id, j,   k-1, soln) + lvl(lev)%mgvar(i1:  lvl(lev)%ie:  id, j,   k+1, soln)) * lvl(lev)%rz
                end do
             end do
-            ! \todo benchmark against 3D version
          end if
 
          if (dirty_debug) then
