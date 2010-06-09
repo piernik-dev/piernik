@@ -114,11 +114,11 @@ contains
 
       ! assume that Center of Mass is approximately in the center of computational domain by default
       CoM(0) = 1.
-      CoM(1) = (cgrid%xmax + cgrid%xmin)/2.
-      CoM(2) = (cgrid%ymax + cgrid%ymin)/2.
-      CoM(3) = (cgrid%zmax + cgrid%zmin)/2.
+      CoM(XDIR) = (cgrid%xmax + cgrid%xmin)/2.
+      CoM(YDIR) = (cgrid%ymax + cgrid%ymin)/2.
+      CoM(ZDIR) = (cgrid%zmax + cgrid%zmin)/2.
 
-      if (eff_dim /= 3) call die("[multipole:init_multipole] Only 3D is supported")
+      if (eff_dim /= NDIM) call die("[multipole:init_multipole] Only 3D is supported")
 
       !multipole moments
       if (mmax > lmax) then
