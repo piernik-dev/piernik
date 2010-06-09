@@ -12,17 +12,27 @@ class MakeTest(object):
 
       self.initpath = os.getcwd()
       self.runpath  = os.path.join(self.initpath,'runs',test)
+      self.test     = test
       os.chdir(self.runpath)
       sp.call(["./piernik"])
       self.runtest(test)
       os.chdir(self.initpath)
 
-   def testJeans (self):
-      sp.call(["gnuplot","verify.gpl"])
+   def put_png(self):
       server = xmlrpclib.ServerProxy("http://piernik:p1ern1k@hum/piernik/login/xmlrpc")
       for file in os.listdir(self.runpath):
          if file.find('png') != -1:
-            server.wiki.putAttachment('jeans/'+file, xmlrpclib.Binary(open(file).read()))
+            server.wiki.putAttachment(self.test+'/'+file, xmlrpclib.Binary(open(self.runpath+'/'+file).read()))
+
+   def testJeans (self):
+      sp.call(["gnuplot","verify.gpl"])
+      self.put_png()
+
+   def testMaclaurin (self):
+      from maclaurin import Maclaurin_test
+      Maclaurin_test(self.runpath+'/maclaurin_sph_0001.h5')
+      self.put_png()
+
    def testSedov (self):
       print "test not implemented"
 
@@ -32,6 +42,7 @@ class MakeTest(object):
 
    def runtest(self,test):
       tests = { "jeans": self.testJeans,
+                "maclaurin": self.testMaclaurin,
                 "sedov": self.testSedov}[test]()
       #tests.get(test)
 
@@ -51,6 +62,8 @@ def main(argv):
       elif opt in ("-t", "--test"):
          test=arg
 
+   # add piernik modules
+   sys.path.append(sys.path[0]+'/python')
    t = MakeTest(test)
    t.output()
 
