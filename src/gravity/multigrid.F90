@@ -58,14 +58,15 @@ contains
       use arrays,             only: mgp
       use constants,          only: pi, dpi
       use mpisetup,           only: buffer_dim, comm, comm3d, cwd, ierr, proc, nproc, ndims, &
-                 &               bnd_xl_dom, bnd_xr_dom, bnd_yl_dom, bnd_yr_dom, bnd_zl_dom, bnd_zr_dom, &
-                 &               bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr, &
-                 &               ibuff, cbuff, rbuff, lbuff, &
-                 &               pxsize, pysize, pzsize, &
-                 &               MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL
+           &                        bnd_xl_dom, bnd_xr_dom, bnd_yl_dom, bnd_yr_dom, bnd_zl_dom, bnd_zr_dom, &
+           &                        bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr, &
+           &                        ibuff, cbuff, rbuff, lbuff, &
+           &                        pxsize, pysize, pzsize, &
+           &                        MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL
       use grid,               only: xmin, xmax, ymin, ymax, zmin, zmax
       use func,               only: compare_namelist
-      use multigridhelpers,   only: mg_write_log, dirtyH, do_ascii_dump, dirty_debug, aux_par_I0, aux_par_I1, aux_par_I2, aux_par_R0, aux_par_R1, aux_par_R2
+      use multigridhelpers,   only: mg_write_log, dirtyH, do_ascii_dump, dirty_debug, multidim_code_3D, &
+           &                        aux_par_I0, aux_par_I1, aux_par_I2, aux_par_R0, aux_par_R1, aux_par_R2
 #ifdef NEW_HDF5
       use multigridio,        only: multigrid_add_hdf5
 #endif /* NEW_HDF5 */
@@ -90,7 +91,7 @@ contains
            &                      level_max, coarsen_multipole, lmax, mmax, max_cycles, nsmool, nsmoof, &
            &                      ord_laplacian, ord_prolong, ord_prolong_face, ord_prolong_mpole, ord_time_extrap, &
            &                      use_point_monopole, trust_fft_solution, stdout, verbose_vcycle, gb_no_fft, prefer_rbgs_relaxation, &
-           &                      fft_full_relax, prefer_modified_norm, gb_solve_gather, fft_patient, do_ascii_dump, dirty_debug, hdf5levels, &
+           &                      fft_full_relax, prefer_modified_norm, gb_solve_gather, fft_patient, do_ascii_dump, dirty_debug, hdf5levels, multidim_code_3D, &
            &                      grav_bnd_str, &
            &                      aux_par_I0, aux_par_I1, aux_par_I2, aux_par_R0, aux_par_R1, aux_par_R2
 
@@ -134,6 +135,7 @@ contains
       do_ascii_dump          = .false.
       dirty_debug            = .false.
       hdf5levels             = .false.
+      multidim_code_3D       = .false.
 
       if (bnd_xl_dom /= 'per' .or. bnd_xr_dom /= 'per' .or. bnd_yl_dom /= 'per' .or. bnd_yr_dom /= 'per' .or. bnd_zl_dom /= 'per' .or. bnd_zr_dom /= 'per') then
          grav_bnd_str = "isolated" ! /todo make this a default, correct default problem.par where necessary
@@ -203,6 +205,7 @@ contains
          lbuff(11) = do_ascii_dump
          lbuff(12) = dirty_debug
          lbuff(13) = hdf5levels
+         lbuff(14) = multidim_code_3D
 
          cbuff(1) = grav_bnd_str
 
@@ -256,6 +259,7 @@ contains
          do_ascii_dump           = lbuff(11)
          dirty_debug             = lbuff(12)
          hdf5levels              = lbuff(13)
+         multidim_code_3D        = lbuff(14)
 
          grav_bnd_str   = cbuff(1)(1:len(grav_bnd_str))
 
@@ -1295,7 +1299,7 @@ contains
 
       use errh,               only: die
       use mpisetup,           only: nproc
-      use multigridhelpers,   only: dirty_debug, check_dirty, dirtyL
+      use multigridhelpers,   only: dirty_debug, check_dirty, dirtyL, multidim_code_3D
       use multigridmpifuncs,  only: mpi_multigrid_bnd
 
       implicit none
@@ -1327,11 +1331,13 @@ contains
                   lvl(lev)%bnd_z(:, :, HIGH) = 0.5* sum (lvl(lev)%mgvar(lvl(lev)%is:lvl(lev)%ie, lvl(lev)%js:lvl(lev)%je, lvl(lev)%ke:lvl(lev)%ke+1, soln), 3)
                end if
             end if
+
             if (dirty_debug) then
                if (any(abs(lvl(lev)%bnd_x(:, :, :)) > dirtyL)) write(*,'(a)')"approximate_solution_fft dirty bnd_x"
                if (any(abs(lvl(lev)%bnd_y(:, :, :)) > dirtyL)) write(*,'(a)')"approximate_solution_fft dirty bnd_y"
                if (any(abs(lvl(lev)%bnd_z(:, :, :)) > dirtyL)) write(*,'(a)')"approximate_solution_fft dirty bnd_z"
             end if
+
             lvl(lev)%src(1,            :, :) = lvl(lev)%src(1,            :, :) - lvl(lev)%bnd_x(:, :, LOW)  * 2. * lvl(lev)%idx2
             lvl(lev)%src(lvl(lev)%nxb, :, :) = lvl(lev)%src(lvl(lev)%nxb, :, :) - lvl(lev)%bnd_x(:, :, HIGH) * 2. * lvl(lev)%idx2
             lvl(lev)%src(:, 1,            :) = lvl(lev)%src(:, 1,            :) - lvl(lev)%bnd_y(:, :, LOW)  * 2. * lvl(lev)%idy2
@@ -1353,7 +1359,7 @@ contains
             call mpi_multigrid_bnd(lev, soln, 1, .false.)
             ! Possible optimization: This is a quite costly part of the local FFT solver
             if (fft_full_relax) then
-               if (eff_dim == NDIM) then
+               if (eff_dim == NDIM .and. .not. multidim_code_3D) then
                   lvl                    (lev)%mgvar(lvl(lev)%is:lvl(lev)%ie,     lvl(lev)%js:lvl(lev)%je,     lvl(lev)%ks:lvl(lev)%ke,     soln)  = &
                        lvl(lev)%rx * (lvl(lev)%mgvar(lvl(lev)%is-1:lvl(lev)%ie-1, lvl(lev)%js:lvl(lev)%je,     lvl(lev)%ks:lvl(lev)%ke,     soln)  + &
                        &              lvl(lev)%mgvar(lvl(lev)%is+1:lvl(lev)%ie+1, lvl(lev)%js:lvl(lev)%je,     lvl(lev)%ks:lvl(lev)%ke,     soln)) + &
@@ -1602,7 +1608,7 @@ contains
 
    subroutine approximate_solution_rbgs(lev, src, soln)
 
-      use multigridhelpers,   only: dirty_debug, check_dirty
+      use multigridhelpers,   only: dirty_debug, check_dirty, multidim_code_3D
       use multigridmpifuncs,  only: mpi_multigrid_bnd
       use errh,               only: die
 
@@ -1643,7 +1649,7 @@ contains
 
          ! with explicit outer loops it is easier to describe a 3-D checkerboard :-)
 
-         if (eff_dim==NDIM) then
+         if (eff_dim==NDIM .and. .not. multidim_code_3D) then
             do k = lvl(lev)%ks, lvl(lev)%ke
                do j = lvl(lev)%js, lvl(lev)%je
                   i1 = lvl(lev)%is + mod(n+j+k, 2)

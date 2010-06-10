@@ -265,6 +265,7 @@ contains
 
       use multigridvars,      only: lvl, eff_dim, NDIM, XDIR, YDIR, ZDIR, has_dir
       use multigridmpifuncs,  only: mpi_multigrid_bnd
+      use multigridhelpers,   only: multidim_code_3D
 
       implicit none
 
@@ -287,7 +288,7 @@ contains
 
       ! Possible optimization candidate: reduce cache misses (secondary importance, cache-aware implementation required)
       ! Explicit loop over k gives here better performance than array operation due to less cache misses (at least on 32^3 and 64^3 arrays)
-      if (eff_dim == NDIM) then
+      if (eff_dim == NDIM .and. .not. multidim_code_3D) then
          do k = lvl(lev)%ks, lvl(lev)%ke
             lvl(       lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k,   def)        = &
                  & lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k,   src)        - &
