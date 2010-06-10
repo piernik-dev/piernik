@@ -693,11 +693,6 @@ contains
          gb_cartmap(j)%up(XDIR) = gb_cartmap(j)%lo(XDIR)   + base%nxb - 1 ! ending indices
          gb_cartmap(j)%up(YDIR) = gb_cartmap(j)%lo(YDIR)   + base%nyb - 1
          gb_cartmap(j)%up(ZDIR) = gb_cartmap(j)%lo(ZDIR)   + base%nzb - 1
-         !if (proc == 0) then
-         !   write(*, '(a,i5,a,3i4,a)')"cart(", j, ")%_pr = [", gb_cartmap(j)%proc, "]"
-         !   write(*, '(a,i5,a,3i4,a)')"cart(", j, ")%_lo = [", gb_cartmap(j)%lo, "]"
-         !   write(*, '(a,i5,a,3i4,a)')"cart(", j, ")%_up = [", gb_cartmap(j)%up, "]"
-         !endif
       end do
 
       ! mark external faces
@@ -1378,7 +1373,7 @@ contains
 
                   call die("[multigrid:approximate_solution_fft] fft_full_relax is allowed only for 3D at the moment")
 
-                  ! An additional array is required here to assemble partial results or use red-black passes
+                  ! An additional array (lvl(lev)%src would be good enough) is required here to assemble partial results or use red-black passes
                   lvl                    (lev)%mgvar(lvl(lev)%is:lvl(lev)%ie,     lvl(lev)%js:lvl(lev)%je,     lvl(lev)%ks:lvl(lev)%ke,     soln)  = &
                        - lvl(lev)%r * lvl(lev)%mgvar(lvl(lev)%is:lvl(lev)%ie,     lvl(lev)%js:lvl(lev)%je,     lvl(lev)%ks:lvl(lev)%ke,     src)
                   if (has_dir(XDIR)) &
@@ -1425,43 +1420,43 @@ contains
                end if
 
                if (has_dir(YDIR)) then
-                  lvl                    (lev)%mgvar(lvl(lev)%is:lvl(lev)%ie,     lvl(lev)%js:lvl(lev)%js+D2,   lvl(lev)%ks:lvl(lev)%ke,     soln)  = & ! -Y
-                       lvl(lev)%rx * (lvl(lev)%mgvar(lvl(lev)%is-D1:lvl(lev)%ie-D1, lvl(lev)%js:lvl(lev)%js+D2,   lvl(lev)%ks:lvl(lev)%ke,     soln)  + &
-                       &              lvl(lev)%mgvar(lvl(lev)%is+D1:lvl(lev)%ie+D1, lvl(lev)%js:lvl(lev)%js+D2,   lvl(lev)%ks:lvl(lev)%ke,     soln)) + &
-                       lvl(lev)%ry * (lvl(lev)%mgvar(lvl(lev)%is:lvl(lev)%ie,     lvl(lev)%js-D2:lvl(lev)%js,   lvl(lev)%ks:lvl(lev)%ke,     soln)  + &
-                       &              lvl(lev)%mgvar(lvl(lev)%is:lvl(lev)%ie,     lvl(lev)%js+D2:lvl(lev)%js+2*D2, lvl(lev)%ks:lvl(lev)%ke,     soln)) + &
-                       lvl(lev)%rz * (lvl(lev)%mgvar(lvl(lev)%is:lvl(lev)%ie,     lvl(lev)%js:lvl(lev)%js+D2,   lvl(lev)%ks-D3:lvl(lev)%ke-D3, soln)  + &
-                       &              lvl(lev)%mgvar(lvl(lev)%is:lvl(lev)%ie,     lvl(lev)%js:lvl(lev)%js+D2,   lvl(lev)%ks+D3:lvl(lev)%ke+D3, soln)) - &
-                       lvl(lev)%r  *  lvl(lev)%mgvar(lvl(lev)%is:lvl(lev)%ie,     lvl(lev)%js:lvl(lev)%js+D2,   lvl(lev)%ks:lvl(lev)%ke,     src)
+                  lvl                    (lev)%mgvar(lvl(lev)%is   :lvl(lev)%ie,    lvl(lev)%js   :lvl(lev)%js+D2,   lvl(lev)%ks   :lvl(lev)%ke,    soln)  = & ! -Y
+                       lvl(lev)%rx * (lvl(lev)%mgvar(lvl(lev)%is-D1:lvl(lev)%ie-D1, lvl(lev)%js   :lvl(lev)%js+D2,   lvl(lev)%ks   :lvl(lev)%ke,    soln)  + &
+                       &              lvl(lev)%mgvar(lvl(lev)%is+D1:lvl(lev)%ie+D1, lvl(lev)%js   :lvl(lev)%js+D2,   lvl(lev)%ks   :lvl(lev)%ke,    soln)) + &
+                       lvl(lev)%ry * (lvl(lev)%mgvar(lvl(lev)%is   :lvl(lev)%ie,    lvl(lev)%js-D2:lvl(lev)%js,      lvl(lev)%ks   :lvl(lev)%ke,    soln)  + &
+                       &              lvl(lev)%mgvar(lvl(lev)%is   :lvl(lev)%ie,    lvl(lev)%js+D2:lvl(lev)%js+2*D2, lvl(lev)%ks   :lvl(lev)%ke,    soln)) + &
+                       lvl(lev)%rz * (lvl(lev)%mgvar(lvl(lev)%is   :lvl(lev)%ie,    lvl(lev)%js   :lvl(lev)%js+D2,   lvl(lev)%ks-D3:lvl(lev)%ke-D3, soln)  + &
+                       &              lvl(lev)%mgvar(lvl(lev)%is   :lvl(lev)%ie,    lvl(lev)%js   :lvl(lev)%js+D2,   lvl(lev)%ks+D3:lvl(lev)%ke+D3, soln)) - &
+                       lvl(lev)%r  *  lvl(lev)%mgvar(lvl(lev)%is   :lvl(lev)%ie,    lvl(lev)%js   :lvl(lev)%js+D2,   lvl(lev)%ks   :lvl(lev)%ke,    src)
 
-                  lvl                    (lev)%mgvar(lvl(lev)%is:lvl(lev)%ie,     lvl(lev)%je-D2:lvl(lev)%je,   lvl(lev)%ks:lvl(lev)%ke,     soln)  = & ! +Y
-                       lvl(lev)%rx * (lvl(lev)%mgvar(lvl(lev)%is-D1:lvl(lev)%ie-D1, lvl(lev)%je-D2:lvl(lev)%je,   lvl(lev)%ks:lvl(lev)%ke,     soln)  + &
-                       &              lvl(lev)%mgvar(lvl(lev)%is+D1:lvl(lev)%ie+D1, lvl(lev)%je-D2:lvl(lev)%je,   lvl(lev)%ks:lvl(lev)%ke,     soln)) + &
-                       lvl(lev)%ry * (lvl(lev)%mgvar(lvl(lev)%is:lvl(lev)%ie,     lvl(lev)%je-2*D2:lvl(lev)%je-D2, lvl(lev)%ks:lvl(lev)%ke,     soln)  + &
-                       &              lvl(lev)%mgvar(lvl(lev)%is:lvl(lev)%ie,     lvl(lev)%je:lvl(lev)%je+D2,   lvl(lev)%ks:lvl(lev)%ke,     soln)) + &
-                       lvl(lev)%rz * (lvl(lev)%mgvar(lvl(lev)%is:lvl(lev)%ie,     lvl(lev)%je-D2:lvl(lev)%je,   lvl(lev)%ks-D3:lvl(lev)%ke-D3, soln)  + &
-                       &              lvl(lev)%mgvar(lvl(lev)%is:lvl(lev)%ie,     lvl(lev)%je-D2:lvl(lev)%je,   lvl(lev)%ks+D3:lvl(lev)%ke+D3, soln)) - &
-                       lvl(lev)%r  *  lvl(lev)%mgvar(lvl(lev)%is:lvl(lev)%ie,     lvl(lev)%je-D2:lvl(lev)%je,   lvl(lev)%ks:lvl(lev)%ke,     src)
+                  lvl                    (lev)%mgvar(lvl(lev)%is   :lvl(lev)%ie,    lvl(lev)%je-D2  :lvl(lev)%je,    lvl(lev)%ks   :lvl(lev)%ke,    soln)  = & ! +Y
+                       lvl(lev)%rx * (lvl(lev)%mgvar(lvl(lev)%is-D1:lvl(lev)%ie-D1, lvl(lev)%je-D2  :lvl(lev)%je,    lvl(lev)%ks   :lvl(lev)%ke,    soln)  + &
+                       &              lvl(lev)%mgvar(lvl(lev)%is+D1:lvl(lev)%ie+D1, lvl(lev)%je-D2  :lvl(lev)%je,    lvl(lev)%ks   :lvl(lev)%ke,    soln)) + &
+                       lvl(lev)%ry * (lvl(lev)%mgvar(lvl(lev)%is   :lvl(lev)%ie,    lvl(lev)%je-2*D2:lvl(lev)%je-D2, lvl(lev)%ks   :lvl(lev)%ke,    soln)  + &
+                       &              lvl(lev)%mgvar(lvl(lev)%is   :lvl(lev)%ie,    lvl(lev)%je     :lvl(lev)%je+D2, lvl(lev)%ks   :lvl(lev)%ke,    soln)) + &
+                       lvl(lev)%rz * (lvl(lev)%mgvar(lvl(lev)%is   :lvl(lev)%ie,    lvl(lev)%je-D2  :lvl(lev)%je,    lvl(lev)%ks-D3:lvl(lev)%ke-D3, soln)  + &
+                       &              lvl(lev)%mgvar(lvl(lev)%is   :lvl(lev)%ie,    lvl(lev)%je-D2  :lvl(lev)%je,    lvl(lev)%ks+D3:lvl(lev)%ke+D3, soln)) - &
+                       lvl(lev)%r  *  lvl(lev)%mgvar(lvl(lev)%is   :lvl(lev)%ie,    lvl(lev)%je-D2  :lvl(lev)%je,    lvl(lev)%ks   :lvl(lev)%ke,    src)
                end if
 
                if (has_dir(ZDIR)) then
-                  lvl                    (lev)%mgvar(lvl(lev)%is:lvl(lev)%ie,     lvl(lev)%js:lvl(lev)%je,     lvl(lev)%ks:lvl(lev)%ks+D3,   soln)  = & ! -Z
-                       lvl(lev)%rx * (lvl(lev)%mgvar(lvl(lev)%is-D1:lvl(lev)%ie-D1, lvl(lev)%js:lvl(lev)%je,     lvl(lev)%ks:lvl(lev)%ks+D3,   soln)  + &
-                       &              lvl(lev)%mgvar(lvl(lev)%is+D1:lvl(lev)%ie+D1, lvl(lev)%js:lvl(lev)%je,     lvl(lev)%ks:lvl(lev)%ks+D3,   soln)) + &
-                       lvl(lev)%ry * (lvl(lev)%mgvar(lvl(lev)%is:lvl(lev)%ie,     lvl(lev)%js-D2:lvl(lev)%je-D2, lvl(lev)%ks:lvl(lev)%ks+D3,   soln)  + &
-                       &              lvl(lev)%mgvar(lvl(lev)%is:lvl(lev)%ie,     lvl(lev)%js+D2:lvl(lev)%je+D2, lvl(lev)%ks:lvl(lev)%ks+D3,   soln)) + &
-                       lvl(lev)%rz * (lvl(lev)%mgvar(lvl(lev)%is:lvl(lev)%ie,     lvl(lev)%js:lvl(lev)%je,     lvl(lev)%ks-D3:lvl(lev)%ks,   soln)  + &
-                       &              lvl(lev)%mgvar(lvl(lev)%is:lvl(lev)%ie,     lvl(lev)%js:lvl(lev)%je,     lvl(lev)%ks+D3:lvl(lev)%ks+2*D3, soln)) - &
-                       lvl(lev)%r  *  lvl(lev)%mgvar(lvl(lev)%is:lvl(lev)%ie,     lvl(lev)%js:lvl(lev)%je,     lvl(lev)%ks:lvl(lev)%ks+D3,   src)
+                  lvl                    (lev)%mgvar(lvl(lev)%is   :lvl(lev)%ie,    lvl(lev)%js   :lvl(lev)%je,    lvl(lev)%ks   :lvl(lev)%ks+D3,   soln)  = & ! -Z
+                       lvl(lev)%rx * (lvl(lev)%mgvar(lvl(lev)%is-D1:lvl(lev)%ie-D1, lvl(lev)%js   :lvl(lev)%je,    lvl(lev)%ks   :lvl(lev)%ks+D3,   soln)  + &
+                       &              lvl(lev)%mgvar(lvl(lev)%is+D1:lvl(lev)%ie+D1, lvl(lev)%js   :lvl(lev)%je,    lvl(lev)%ks   :lvl(lev)%ks+D3,   soln)) + &
+                       lvl(lev)%ry * (lvl(lev)%mgvar(lvl(lev)%is   :lvl(lev)%ie,    lvl(lev)%js-D2:lvl(lev)%je-D2, lvl(lev)%ks   :lvl(lev)%ks+D3,   soln)  + &
+                       &              lvl(lev)%mgvar(lvl(lev)%is   :lvl(lev)%ie,    lvl(lev)%js+D2:lvl(lev)%je+D2, lvl(lev)%ks   :lvl(lev)%ks+D3,   soln)) + &
+                       lvl(lev)%rz * (lvl(lev)%mgvar(lvl(lev)%is   :lvl(lev)%ie,    lvl(lev)%js   :lvl(lev)%je,    lvl(lev)%ks-D3:lvl(lev)%ks,      soln)  + &
+                       &              lvl(lev)%mgvar(lvl(lev)%is   :lvl(lev)%ie,    lvl(lev)%js   :lvl(lev)%je,    lvl(lev)%ks+D3:lvl(lev)%ks+2*D3, soln)) - &
+                       lvl(lev)%r  *  lvl(lev)%mgvar(lvl(lev)%is   :lvl(lev)%ie,    lvl(lev)%js   :lvl(lev)%je,    lvl(lev)%ks   :lvl(lev)%ks+D3,   src)
 
-                  lvl                    (lev)%mgvar(lvl(lev)%is:lvl(lev)%ie,     lvl(lev)%js:lvl(lev)%je,     lvl(lev)%ke-D3:lvl(lev)%ke,   soln)  = & ! +Z
-                       lvl(lev)%rx * (lvl(lev)%mgvar(lvl(lev)%is-D1:lvl(lev)%ie-D1, lvl(lev)%js:lvl(lev)%je,     lvl(lev)%ke-D3:lvl(lev)%ke,   soln)  + &
-                       &              lvl(lev)%mgvar(lvl(lev)%is+D1:lvl(lev)%ie+D1, lvl(lev)%js:lvl(lev)%je,     lvl(lev)%ke-D3:lvl(lev)%ke,   soln)) + &
-                       lvl(lev)%ry * (lvl(lev)%mgvar(lvl(lev)%is:lvl(lev)%ie,     lvl(lev)%js-D2:lvl(lev)%je-D2, lvl(lev)%ke-D3:lvl(lev)%ke,   soln)  + &
-                       &              lvl(lev)%mgvar(lvl(lev)%is:lvl(lev)%ie,     lvl(lev)%js+D2:lvl(lev)%je+D2, lvl(lev)%ke-D3:lvl(lev)%ke,   soln)) + &
-                       lvl(lev)%rz * (lvl(lev)%mgvar(lvl(lev)%is:lvl(lev)%ie,     lvl(lev)%js:lvl(lev)%je,     lvl(lev)%ke-2*D3:lvl(lev)%ke-D3, soln)  + &
-                       &              lvl(lev)%mgvar(lvl(lev)%is:lvl(lev)%ie,     lvl(lev)%js:lvl(lev)%je,     lvl(lev)%ke:lvl(lev)%ke+D3,   soln)) - &
-                       lvl(lev)%r  *  lvl(lev)%mgvar(lvl(lev)%is:lvl(lev)%ie,     lvl(lev)%js:lvl(lev)%je,     lvl(lev)%ke-D3:lvl(lev)%ke,   src)
+                  lvl                    (lev)%mgvar(lvl(lev)%is   :lvl(lev)%ie,    lvl(lev)%js   :lvl(lev)%je,    lvl(lev)%ke-D3  :lvl(lev)%ke,    soln)  = & ! +Z
+                       lvl(lev)%rx * (lvl(lev)%mgvar(lvl(lev)%is-D1:lvl(lev)%ie-D1, lvl(lev)%js   :lvl(lev)%je,    lvl(lev)%ke-D3  :lvl(lev)%ke,    soln)  + &
+                       &              lvl(lev)%mgvar(lvl(lev)%is+D1:lvl(lev)%ie+D1, lvl(lev)%js   :lvl(lev)%je,    lvl(lev)%ke-D3  :lvl(lev)%ke,    soln)) + &
+                       lvl(lev)%ry * (lvl(lev)%mgvar(lvl(lev)%is   :lvl(lev)%ie,    lvl(lev)%js-D2:lvl(lev)%je-D2, lvl(lev)%ke-D3  :lvl(lev)%ke,    soln)  + &
+                       &              lvl(lev)%mgvar(lvl(lev)%is   :lvl(lev)%ie,    lvl(lev)%js+D2:lvl(lev)%je+D2, lvl(lev)%ke-D3  :lvl(lev)%ke,    soln)) + &
+                       lvl(lev)%rz * (lvl(lev)%mgvar(lvl(lev)%is   :lvl(lev)%ie,    lvl(lev)%js   :lvl(lev)%je,    lvl(lev)%ke-2*D3:lvl(lev)%ke-D3, soln)  + &
+                       &              lvl(lev)%mgvar(lvl(lev)%is   :lvl(lev)%ie,    lvl(lev)%js   :lvl(lev)%je,    lvl(lev)%ke     :lvl(lev)%ke+D3, soln)) - &
+                       lvl(lev)%r  *  lvl(lev)%mgvar(lvl(lev)%is   :lvl(lev)%ie,    lvl(lev)%js   :lvl(lev)%je,    lvl(lev)%ke-D3  :lvl(lev)%ke,    src)
                end if
 
             end if
