@@ -122,6 +122,7 @@ module multigridvars
    ! dimensions
    integer                                 :: eff_dim=0               !< count number of dimensions (>1 cell in a direction)
    logical, dimension(NDIM)                :: has_dir                 !< Set to .true. when there is more than one cell on base level in particular direction
+   integer                                 :: D_x, D_y, D_z              !< set to 1 when diven direction exists and use to construct dimensionally-safe indices for arrays
 
    ! global base-level FFT solver
    type cart   ! auxiliary type for rank-to-coordinates array

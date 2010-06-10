@@ -106,7 +106,7 @@ contains
 
    subroutine prolong_level0(lev, iv)
 
-      use multigridvars, only: plvl, lvl, eff_dim, NDIM, XDIR, YDIR, ZDIR, has_dir
+      use multigridvars, only: plvl, lvl, eff_dim, NDIM, XDIR, YDIR, ZDIR, has_dir, D_x, D_y, D_z
       use errh,          only: die
 
       implicit none
@@ -115,7 +115,6 @@ contains
       integer, intent(in)      :: iv    !< variable to be prolonged
 
       type(plvl), pointer :: coarse, fine
-      integer             :: D1=0, D2=0, D3=0
 
       coarse => lvl(lev)
       fine   => lvl(lev + 1)
@@ -124,17 +123,14 @@ contains
 
 
       ! Possible optimization candidate: reduce L1 and L2 cache misses on both read and write (RBGS only, secondary importance)
-      if (has_dir(XDIR)) D1 = 1 ! \todo mv to multigridvars, init_multigrid
-      if (has_dir(YDIR)) D2 = 1
-      if (has_dir(ZDIR)) D3 = 1
-      fine%mgvar       (fine%is   :fine%ie-D1:(1+D1), fine%js   :fine%je-D2:(1+D2), fine%ks   :fine%ke-D3:(1+D3), iv) = &
-           coarse%mgvar(coarse%is :coarse%ie,         coarse%js :coarse%je,         coarse%ks :coarse%ke,         iv)
-      fine%mgvar       (fine%is+D1:fine%ie   :(1+D1), fine%js   :fine%je-D2:(1+D2), fine%ks   :fine%ke-D3:(1+D3), iv) = &
-           fine%mgvar  (fine%is   :fine%ie-D1:(1+D1), fine%js   :fine%je-D2:(1+D2), fine%ks   :fine%ke-D3:(1+D3), iv)
-      fine%mgvar       (fine%is   :fine%ie,           fine%js+D2:fine%je   :(1+D2), fine%ks   :fine%ke-D3:(1+D3), iv) = &
-           fine%mgvar  (fine%is   :fine%ie,           fine%js   :fine%je-D2:(1+D2), fine%ks   :fine%ke-D3:(1+D3), iv)
-      fine%mgvar       (fine%is   :fine%ie,           fine%js   :fine%je,           fine%ks+D3:fine%ke   :(1+D3), iv) = &
-           fine%mgvar  (fine%is   :fine%ie,           fine%js   :fine%je,           fine%ks   :fine%ke-D3:(1+D3), iv)
+      fine%mgvar       (fine%is    :fine%ie-D_x:(1+D_x), fine%js    :fine%je-D_y:(1+D_y), fine%ks    :fine%ke-D_z:(1+D_z), iv) = &
+           coarse%mgvar(coarse%is  :coarse%ie,           coarse%js  :coarse%je,           coarse%ks  :coarse%ke,           iv)
+      fine%mgvar       (fine%is+D_x:fine%ie    :(1+D_x), fine%js    :fine%je-D_y:(1+D_y), fine%ks    :fine%ke-D_z:(1+D_z), iv) = &
+           fine%mgvar  (fine%is    :fine%ie-D_x:(1+D_x), fine%js    :fine%je-D_y:(1+D_y), fine%ks    :fine%ke-D_z:(1+D_z), iv)
+      fine%mgvar       (fine%is    :fine%ie,             fine%js+D_y:fine%je    :(1+D_y), fine%ks    :fine%ke-D_z:(1+D_z), iv) = &
+           fine%mgvar  (fine%is    :fine%ie,             fine%js    :fine%je-D_y:(1+D_y), fine%ks    :fine%ke-D_z:(1+D_z), iv)
+      fine%mgvar       (fine%is    :fine%ie,             fine%js    :fine%je,             fine%ks+D_z:fine%ke    :(1+D_z), iv) = &
+           fine%mgvar  (fine%is    :fine%ie,             fine%js    :fine%je,             fine%ks    :fine%ke-D_z:(1+D_z), iv)
 
    end subroutine prolong_level0
 
@@ -177,7 +173,7 @@ contains
 
       use errh,               only: die
       use multigridhelpers,   only: check_dirty
-      use multigridvars,      only: plvl, lvl, level_min, level_max, ngridvars, eff_dim, NDIM, XDIR, YDIR, ZDIR, has_dir
+      use multigridvars,      only: plvl, lvl, level_min, level_max, ngridvars, eff_dim, NDIM, XDIR, YDIR, ZDIR, has_dir, D_x, D_y, D_z
 
       implicit none
 
@@ -185,7 +181,6 @@ contains
       integer, intent(in)      :: iv    !< variable to be restricted
 
       type(plvl), pointer :: coarse, fine
-      integer             :: D1=0, D2=0, D3=0
 
       if (lev <= level_min) return ! can't restrict base level
       if (lev >  level_max) call die("[multigridbasefuncs:restrict_level] level>max.")
@@ -197,18 +192,15 @@ contains
       call check_dirty(fine%level, iv, "restrict_level-")
 
       ! BEWARE: unoptimized: some cells are used multiple times (1D and 2D speed-ups possible)
-      if (has_dir(XDIR)) D1 = 1 ! \todo mv to multigridvars, init_multigrid
-      if (has_dir(YDIR)) D2 = 1
-      if (has_dir(ZDIR)) D3 = 1
       coarse%mgvar(      coarse%is:coarse%ie,   coarse%js:coarse%je,   coarse%ks:coarse%ke,   iv) = &
-           ( fine%mgvar( fine%is   :fine%ie-D1:(1+D1), fine%js   :fine%je-D2:(1+D2), fine%ks   :fine%ke-D3:(1+D3), iv) + &
-           & fine%mgvar( fine%is+D1:fine%ie   :(1+D1), fine%js   :fine%je-D2:(1+D2), fine%ks   :fine%ke-D3:(1+D3), iv) + &
-           & fine%mgvar( fine%is   :fine%ie-D1:(1+D1), fine%js+D2:fine%je   :(1+D2), fine%ks   :fine%ke-D3:(1+D3), iv) + &
-           & fine%mgvar( fine%is+D1:fine%ie   :(1+D1), fine%js+D2:fine%je   :(1+D2), fine%ks   :fine%ke-D3:(1+D3), iv) + &
-           & fine%mgvar( fine%is   :fine%ie-D1:(1+D1), fine%js   :fine%je-D2:(1+D2), fine%ks+D3:fine%ke   :(1+D3), iv) + &
-           & fine%mgvar( fine%is+D1:fine%ie   :(1+D1), fine%js   :fine%je-D2:(1+D2), fine%ks+D3:fine%ke   :(1+D3), iv) + &
-           & fine%mgvar( fine%is   :fine%ie-D1:(1+D1), fine%js+D2:fine%je   :(1+D2), fine%ks+D3:fine%ke   :(1+D3), iv) + &
-           & fine%mgvar( fine%is+D1:fine%ie   :(1+D1), fine%js+D2:fine%je   :(1+D2), fine%ks+D3:fine%ke   :(1+D3), iv) ) *0.125  !/ ((1.+D1)*(1.+D2)*(1.+D3))
+           ( fine%mgvar( fine%is    :fine%ie-D_x:(1+D_x), fine%js    :fine%je-D_y:(1+D_y), fine%ks    :fine%ke-D_z:(1+D_z), iv) + &
+           & fine%mgvar( fine%is+D_x:fine%ie    :(1+D_x), fine%js    :fine%je-D_y:(1+D_y), fine%ks    :fine%ke-D_z:(1+D_z), iv) + &
+           & fine%mgvar( fine%is    :fine%ie-D_x:(1+D_x), fine%js+D_y:fine%je    :(1+D_y), fine%ks    :fine%ke-D_z:(1+D_z), iv) + &
+           & fine%mgvar( fine%is+D_x:fine%ie    :(1+D_x), fine%js+D_y:fine%je    :(1+D_y), fine%ks    :fine%ke-D_z:(1+D_z), iv) + &
+           & fine%mgvar( fine%is    :fine%ie-D_x:(1+D_x), fine%js    :fine%je-D_y:(1+D_y), fine%ks+D_z:fine%ke    :(1+D_z), iv) + &
+           & fine%mgvar( fine%is+D_x:fine%ie    :(1+D_x), fine%js    :fine%je-D_y:(1+D_y), fine%ks+D_z:fine%ke    :(1+D_z), iv) + &
+           & fine%mgvar( fine%is    :fine%ie-D_x:(1+D_x), fine%js+D_y:fine%je    :(1+D_y), fine%ks+D_z:fine%ke    :(1+D_z), iv) + &
+           & fine%mgvar( fine%is+D_x:fine%ie    :(1+D_x), fine%js+D_y:fine%je    :(1+D_y), fine%ks+D_z:fine%ke    :(1+D_z), iv) ) *0.125  !/ ((1.+D_x)*(1.+D_y)*(1.+D_z))
 
       call check_dirty(coarse%level, iv, "restrict_level+")
 

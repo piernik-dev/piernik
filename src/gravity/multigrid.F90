@@ -315,6 +315,9 @@ contains
       has_dir(ZDIR) = (cgrid%nzb > 1)
       eff_dim = count(has_dir(:))
       if (eff_dim < 1 .or. eff_dim > 3) call die("[multigrid:init_multigrid] Unsupported number of dimensions.")
+      if (has_dir(XDIR)) D_x = 1
+      if (has_dir(YDIR)) D_y = 1
+      if (has_dir(ZDIR)) D_z = 1
 
       !! Initialization of all regular levels (all but global base)
       !! Following loop gives us:
@@ -1303,7 +1306,6 @@ contains
       integer, intent(in) :: soln !< index of solution in lvl()%mgvar
 
       integer :: nf, n
-      integer :: D1=0, D2=0, D3=0 ! /todo move to multigridvars, init_multigrid
 
       do nf = 1, nsmoof
          lvl(lev)%src(:, :, :) = lvl(lev)%mgvar(lvl(lev)%is:lvl(lev)%ie, lvl(lev)%js:lvl(lev)%je, lvl(lev)%ks:lvl(lev)%ke, src)
@@ -1396,67 +1398,64 @@ contains
                ! relax only two layers of cells (1 is  significantly worse, 3 does not improve much)
                ! edges are relaxed twice, corners are relaxed three times which seems to be good
 
-               if (has_dir(XDIR)) D1 = 1
-               if (has_dir(YDIR)) D2 = 1
-               if (has_dir(ZDIR)) D3 = 1
                if (has_dir(XDIR)) then
-                  lvl                    (lev)%mgvar(lvl(lev)%is   :lvl(lev)%is+D1,   lvl(lev)%js   :lvl(lev)%je,    lvl(lev)%ks   :lvl(lev)%ke,    soln)  = & ! -X
-                       lvl(lev)%rx * (lvl(lev)%mgvar(lvl(lev)%is-D1:lvl(lev)%is,      lvl(lev)%js   :lvl(lev)%je,    lvl(lev)%ks   :lvl(lev)%ke,    soln)  + &
-                       &              lvl(lev)%mgvar(lvl(lev)%is+D1:lvl(lev)%is+2*D1, lvl(lev)%js   :lvl(lev)%je,    lvl(lev)%ks   :lvl(lev)%ke,    soln)) + &
-                       lvl(lev)%ry * (lvl(lev)%mgvar(lvl(lev)%is   :lvl(lev)%is+D1,   lvl(lev)%js-D2:lvl(lev)%je-D2, lvl(lev)%ks   :lvl(lev)%ke,    soln)  + &
-                       &              lvl(lev)%mgvar(lvl(lev)%is   :lvl(lev)%is+D1,   lvl(lev)%js+D2:lvl(lev)%je+D2, lvl(lev)%ks   :lvl(lev)%ke,    soln)) + &
-                       lvl(lev)%rz * (lvl(lev)%mgvar(lvl(lev)%is   :lvl(lev)%is+D1,   lvl(lev)%js   :lvl(lev)%je,    lvl(lev)%ks-D3:lvl(lev)%ke-D3, soln)  + &
-                       &              lvl(lev)%mgvar(lvl(lev)%is   :lvl(lev)%is+D1,   lvl(lev)%js   :lvl(lev)%je,    lvl(lev)%ks+D3:lvl(lev)%ke+D3, soln)) - &
-                       lvl(lev)%r  *  lvl(lev)%mgvar(lvl(lev)%is   :lvl(lev)%is+D1,   lvl(lev)%js   :lvl(lev)%je,    lvl(lev)%ks   :lvl(lev)%ke,    src)
+                  lvl                    (lev)%mgvar(lvl(lev)%is    :lvl(lev)%is+D_x,   lvl(lev)%js    :lvl(lev)%je,     lvl(lev)%ks    :lvl(lev)%ke,     soln)  = & ! -X
+                       lvl(lev)%rx * (lvl(lev)%mgvar(lvl(lev)%is-D_x:lvl(lev)%is,       lvl(lev)%js    :lvl(lev)%je,     lvl(lev)%ks    :lvl(lev)%ke,     soln)  + &
+                       &              lvl(lev)%mgvar(lvl(lev)%is+D_x:lvl(lev)%is+2*D_x, lvl(lev)%js    :lvl(lev)%je,     lvl(lev)%ks    :lvl(lev)%ke,     soln)) + &
+                       lvl(lev)%ry * (lvl(lev)%mgvar(lvl(lev)%is    :lvl(lev)%is+D_x,   lvl(lev)%js-D_y:lvl(lev)%je-D_y, lvl(lev)%ks    :lvl(lev)%ke,     soln)  + &
+                       &              lvl(lev)%mgvar(lvl(lev)%is    :lvl(lev)%is+D_x,   lvl(lev)%js+D_y:lvl(lev)%je+D_y, lvl(lev)%ks    :lvl(lev)%ke,     soln)) + &
+                       lvl(lev)%rz * (lvl(lev)%mgvar(lvl(lev)%is    :lvl(lev)%is+D_x,   lvl(lev)%js    :lvl(lev)%je,     lvl(lev)%ks-D_z:lvl(lev)%ke-D_z, soln)  + &
+                       &              lvl(lev)%mgvar(lvl(lev)%is    :lvl(lev)%is+D_x,   lvl(lev)%js    :lvl(lev)%je,     lvl(lev)%ks+D_z:lvl(lev)%ke+D_z, soln)) - &
+                       lvl(lev)%r  *  lvl(lev)%mgvar(lvl(lev)%is    :lvl(lev)%is+D_x,   lvl(lev)%js    :lvl(lev)%je,     lvl(lev)%ks    :lvl(lev)%ke,     src)
 
-                  lvl                    (lev)%mgvar(lvl(lev)%ie-D1  :lvl(lev)%ie,    lvl(lev)%js   :lvl(lev)%je,    lvl(lev)%ks   :lvl(lev)%ke,    soln)  = & ! +X
-                       lvl(lev)%rx * (lvl(lev)%mgvar(lvl(lev)%ie-2*D1:lvl(lev)%ie-D1, lvl(lev)%js   :lvl(lev)%je,    lvl(lev)%ks   :lvl(lev)%ke,    soln)  + &
-                       &              lvl(lev)%mgvar(lvl(lev)%ie     :lvl(lev)%ie+D1, lvl(lev)%js   :lvl(lev)%je,    lvl(lev)%ks   :lvl(lev)%ke,    soln)) + &
-                       lvl(lev)%ry * (lvl(lev)%mgvar(lvl(lev)%ie-D1  :lvl(lev)%ie,    lvl(lev)%js-D2:lvl(lev)%je-D2, lvl(lev)%ks   :lvl(lev)%ke,    soln)  + &
-                       &              lvl(lev)%mgvar(lvl(lev)%ie-D1  :lvl(lev)%ie,    lvl(lev)%js+D2:lvl(lev)%je+D2, lvl(lev)%ks   :lvl(lev)%ke,    soln)) + &
-                       lvl(lev)%rz * (lvl(lev)%mgvar(lvl(lev)%ie-D1  :lvl(lev)%ie,    lvl(lev)%js   :lvl(lev)%je,    lvl(lev)%ks-D3:lvl(lev)%ke-D3, soln)  + &
-                       &              lvl(lev)%mgvar(lvl(lev)%ie-D1  :lvl(lev)%ie,    lvl(lev)%js   :lvl(lev)%je,    lvl(lev)%ks+D3:lvl(lev)%ke+D3, soln)) - &
-                       lvl(lev)%r  *  lvl(lev)%mgvar(lvl(lev)%ie-D1  :lvl(lev)%ie,    lvl(lev)%js   :lvl(lev)%je,    lvl(lev)%ks   :lvl(lev)%ke,    src)
+                  lvl                    (lev)%mgvar(lvl(lev)%ie-D_x  :lvl(lev)%ie,     lvl(lev)%js    :lvl(lev)%je,     lvl(lev)%ks    :lvl(lev)%ke,     soln)  = & ! +X
+                       lvl(lev)%rx * (lvl(lev)%mgvar(lvl(lev)%ie-2*D_x:lvl(lev)%ie-D_x, lvl(lev)%js    :lvl(lev)%je,     lvl(lev)%ks    :lvl(lev)%ke,     soln)  + &
+                       &              lvl(lev)%mgvar(lvl(lev)%ie      :lvl(lev)%ie+D_x, lvl(lev)%js    :lvl(lev)%je,     lvl(lev)%ks    :lvl(lev)%ke,     soln)) + &
+                       lvl(lev)%ry * (lvl(lev)%mgvar(lvl(lev)%ie-D_x  :lvl(lev)%ie,     lvl(lev)%js-D_y:lvl(lev)%je-D_y, lvl(lev)%ks    :lvl(lev)%ke,     soln)  + &
+                       &              lvl(lev)%mgvar(lvl(lev)%ie-D_x  :lvl(lev)%ie,     lvl(lev)%js+D_y:lvl(lev)%je+D_y, lvl(lev)%ks    :lvl(lev)%ke,     soln)) + &
+                       lvl(lev)%rz * (lvl(lev)%mgvar(lvl(lev)%ie-D_x  :lvl(lev)%ie,     lvl(lev)%js    :lvl(lev)%je,     lvl(lev)%ks-D_z:lvl(lev)%ke-D_z, soln)  + &
+                       &              lvl(lev)%mgvar(lvl(lev)%ie-D_x  :lvl(lev)%ie,     lvl(lev)%js    :lvl(lev)%je,     lvl(lev)%ks+D_z:lvl(lev)%ke+D_z, soln)) - &
+                       lvl(lev)%r  *  lvl(lev)%mgvar(lvl(lev)%ie-D_x  :lvl(lev)%ie,     lvl(lev)%js    :lvl(lev)%je,     lvl(lev)%ks    :lvl(lev)%ke,     src)
                end if
 
                if (has_dir(YDIR)) then
-                  lvl                    (lev)%mgvar(lvl(lev)%is   :lvl(lev)%ie,    lvl(lev)%js   :lvl(lev)%js+D2,   lvl(lev)%ks   :lvl(lev)%ke,    soln)  = & ! -Y
-                       lvl(lev)%rx * (lvl(lev)%mgvar(lvl(lev)%is-D1:lvl(lev)%ie-D1, lvl(lev)%js   :lvl(lev)%js+D2,   lvl(lev)%ks   :lvl(lev)%ke,    soln)  + &
-                       &              lvl(lev)%mgvar(lvl(lev)%is+D1:lvl(lev)%ie+D1, lvl(lev)%js   :lvl(lev)%js+D2,   lvl(lev)%ks   :lvl(lev)%ke,    soln)) + &
-                       lvl(lev)%ry * (lvl(lev)%mgvar(lvl(lev)%is   :lvl(lev)%ie,    lvl(lev)%js-D2:lvl(lev)%js,      lvl(lev)%ks   :lvl(lev)%ke,    soln)  + &
-                       &              lvl(lev)%mgvar(lvl(lev)%is   :lvl(lev)%ie,    lvl(lev)%js+D2:lvl(lev)%js+2*D2, lvl(lev)%ks   :lvl(lev)%ke,    soln)) + &
-                       lvl(lev)%rz * (lvl(lev)%mgvar(lvl(lev)%is   :lvl(lev)%ie,    lvl(lev)%js   :lvl(lev)%js+D2,   lvl(lev)%ks-D3:lvl(lev)%ke-D3, soln)  + &
-                       &              lvl(lev)%mgvar(lvl(lev)%is   :lvl(lev)%ie,    lvl(lev)%js   :lvl(lev)%js+D2,   lvl(lev)%ks+D3:lvl(lev)%ke+D3, soln)) - &
-                       lvl(lev)%r  *  lvl(lev)%mgvar(lvl(lev)%is   :lvl(lev)%ie,    lvl(lev)%js   :lvl(lev)%js+D2,   lvl(lev)%ks   :lvl(lev)%ke,    src)
+                  lvl                    (lev)%mgvar(lvl(lev)%is    :lvl(lev)%ie,     lvl(lev)%js    :lvl(lev)%js+D_y,   lvl(lev)%ks    :lvl(lev)%ke,     soln)  = & ! -Y
+                       lvl(lev)%rx * (lvl(lev)%mgvar(lvl(lev)%is-D_x:lvl(lev)%ie-D_x, lvl(lev)%js    :lvl(lev)%js+D_y,   lvl(lev)%ks    :lvl(lev)%ke,     soln)  + &
+                       &              lvl(lev)%mgvar(lvl(lev)%is+D_x:lvl(lev)%ie+D_x, lvl(lev)%js    :lvl(lev)%js+D_y,   lvl(lev)%ks    :lvl(lev)%ke,     soln)) + &
+                       lvl(lev)%ry * (lvl(lev)%mgvar(lvl(lev)%is    :lvl(lev)%ie,     lvl(lev)%js-D_y:lvl(lev)%js,       lvl(lev)%ks    :lvl(lev)%ke,     soln)  + &
+                       &              lvl(lev)%mgvar(lvl(lev)%is    :lvl(lev)%ie,     lvl(lev)%js+D_y:lvl(lev)%js+2*D_y, lvl(lev)%ks    :lvl(lev)%ke,     soln)) + &
+                       lvl(lev)%rz * (lvl(lev)%mgvar(lvl(lev)%is    :lvl(lev)%ie,     lvl(lev)%js    :lvl(lev)%js+D_y,   lvl(lev)%ks-D_z:lvl(lev)%ke-D_z, soln)  + &
+                       &              lvl(lev)%mgvar(lvl(lev)%is    :lvl(lev)%ie,     lvl(lev)%js    :lvl(lev)%js+D_y,   lvl(lev)%ks+D_z:lvl(lev)%ke+D_z, soln)) - &
+                       lvl(lev)%r  *  lvl(lev)%mgvar(lvl(lev)%is    :lvl(lev)%ie,     lvl(lev)%js    :lvl(lev)%js+D_y,   lvl(lev)%ks    :lvl(lev)%ke,     src)
 
-                  lvl                    (lev)%mgvar(lvl(lev)%is   :lvl(lev)%ie,    lvl(lev)%je-D2  :lvl(lev)%je,    lvl(lev)%ks   :lvl(lev)%ke,    soln)  = & ! +Y
-                       lvl(lev)%rx * (lvl(lev)%mgvar(lvl(lev)%is-D1:lvl(lev)%ie-D1, lvl(lev)%je-D2  :lvl(lev)%je,    lvl(lev)%ks   :lvl(lev)%ke,    soln)  + &
-                       &              lvl(lev)%mgvar(lvl(lev)%is+D1:lvl(lev)%ie+D1, lvl(lev)%je-D2  :lvl(lev)%je,    lvl(lev)%ks   :lvl(lev)%ke,    soln)) + &
-                       lvl(lev)%ry * (lvl(lev)%mgvar(lvl(lev)%is   :lvl(lev)%ie,    lvl(lev)%je-2*D2:lvl(lev)%je-D2, lvl(lev)%ks   :lvl(lev)%ke,    soln)  + &
-                       &              lvl(lev)%mgvar(lvl(lev)%is   :lvl(lev)%ie,    lvl(lev)%je     :lvl(lev)%je+D2, lvl(lev)%ks   :lvl(lev)%ke,    soln)) + &
-                       lvl(lev)%rz * (lvl(lev)%mgvar(lvl(lev)%is   :lvl(lev)%ie,    lvl(lev)%je-D2  :lvl(lev)%je,    lvl(lev)%ks-D3:lvl(lev)%ke-D3, soln)  + &
-                       &              lvl(lev)%mgvar(lvl(lev)%is   :lvl(lev)%ie,    lvl(lev)%je-D2  :lvl(lev)%je,    lvl(lev)%ks+D3:lvl(lev)%ke+D3, soln)) - &
-                       lvl(lev)%r  *  lvl(lev)%mgvar(lvl(lev)%is   :lvl(lev)%ie,    lvl(lev)%je-D2  :lvl(lev)%je,    lvl(lev)%ks   :lvl(lev)%ke,    src)
+                  lvl                    (lev)%mgvar(lvl(lev)%is    :lvl(lev)%ie,     lvl(lev)%je-D_y  :lvl(lev)%je,     lvl(lev)%ks    :lvl(lev)%ke,     soln)  = & ! +Y
+                       lvl(lev)%rx * (lvl(lev)%mgvar(lvl(lev)%is-D_x:lvl(lev)%ie-D_x, lvl(lev)%je-D_y  :lvl(lev)%je,     lvl(lev)%ks    :lvl(lev)%ke,     soln)  + &
+                       &              lvl(lev)%mgvar(lvl(lev)%is+D_x:lvl(lev)%ie+D_x, lvl(lev)%je-D_y  :lvl(lev)%je,     lvl(lev)%ks    :lvl(lev)%ke,     soln)) + &
+                       lvl(lev)%ry * (lvl(lev)%mgvar(lvl(lev)%is    :lvl(lev)%ie,     lvl(lev)%je-2*D_y:lvl(lev)%je-D_y, lvl(lev)%ks    :lvl(lev)%ke,     soln)  + &
+                       &              lvl(lev)%mgvar(lvl(lev)%is    :lvl(lev)%ie,     lvl(lev)%je      :lvl(lev)%je+D_y, lvl(lev)%ks    :lvl(lev)%ke,     soln)) + &
+                       lvl(lev)%rz * (lvl(lev)%mgvar(lvl(lev)%is    :lvl(lev)%ie,     lvl(lev)%je-D_y  :lvl(lev)%je,     lvl(lev)%ks-D_z:lvl(lev)%ke-D_z, soln)  + &
+                       &              lvl(lev)%mgvar(lvl(lev)%is    :lvl(lev)%ie,     lvl(lev)%je-D_y  :lvl(lev)%je,     lvl(lev)%ks+D_z:lvl(lev)%ke+D_z, soln)) - &
+                       lvl(lev)%r  *  lvl(lev)%mgvar(lvl(lev)%is    :lvl(lev)%ie,     lvl(lev)%je-D_y  :lvl(lev)%je,     lvl(lev)%ks    :lvl(lev)%ke,     src)
                end if
 
                if (has_dir(ZDIR)) then
-                  lvl                    (lev)%mgvar(lvl(lev)%is   :lvl(lev)%ie,    lvl(lev)%js   :lvl(lev)%je,    lvl(lev)%ks   :lvl(lev)%ks+D3,   soln)  = & ! -Z
-                       lvl(lev)%rx * (lvl(lev)%mgvar(lvl(lev)%is-D1:lvl(lev)%ie-D1, lvl(lev)%js   :lvl(lev)%je,    lvl(lev)%ks   :lvl(lev)%ks+D3,   soln)  + &
-                       &              lvl(lev)%mgvar(lvl(lev)%is+D1:lvl(lev)%ie+D1, lvl(lev)%js   :lvl(lev)%je,    lvl(lev)%ks   :lvl(lev)%ks+D3,   soln)) + &
-                       lvl(lev)%ry * (lvl(lev)%mgvar(lvl(lev)%is   :lvl(lev)%ie,    lvl(lev)%js-D2:lvl(lev)%je-D2, lvl(lev)%ks   :lvl(lev)%ks+D3,   soln)  + &
-                       &              lvl(lev)%mgvar(lvl(lev)%is   :lvl(lev)%ie,    lvl(lev)%js+D2:lvl(lev)%je+D2, lvl(lev)%ks   :lvl(lev)%ks+D3,   soln)) + &
-                       lvl(lev)%rz * (lvl(lev)%mgvar(lvl(lev)%is   :lvl(lev)%ie,    lvl(lev)%js   :lvl(lev)%je,    lvl(lev)%ks-D3:lvl(lev)%ks,      soln)  + &
-                       &              lvl(lev)%mgvar(lvl(lev)%is   :lvl(lev)%ie,    lvl(lev)%js   :lvl(lev)%je,    lvl(lev)%ks+D3:lvl(lev)%ks+2*D3, soln)) - &
-                       lvl(lev)%r  *  lvl(lev)%mgvar(lvl(lev)%is   :lvl(lev)%ie,    lvl(lev)%js   :lvl(lev)%je,    lvl(lev)%ks   :lvl(lev)%ks+D3,   src)
+                  lvl                    (lev)%mgvar(lvl(lev)%is    :lvl(lev)%ie,     lvl(lev)%js    :lvl(lev)%je,     lvl(lev)%ks    :lvl(lev)%ks+D_z,   soln)  = & ! -Z
+                       lvl(lev)%rx * (lvl(lev)%mgvar(lvl(lev)%is-D_x:lvl(lev)%ie-D_x, lvl(lev)%js    :lvl(lev)%je,     lvl(lev)%ks    :lvl(lev)%ks+D_z,   soln)  + &
+                       &              lvl(lev)%mgvar(lvl(lev)%is+D_x:lvl(lev)%ie+D_x, lvl(lev)%js    :lvl(lev)%je,     lvl(lev)%ks    :lvl(lev)%ks+D_z,   soln)) + &
+                       lvl(lev)%ry * (lvl(lev)%mgvar(lvl(lev)%is    :lvl(lev)%ie,     lvl(lev)%js-D_y:lvl(lev)%je-D_y, lvl(lev)%ks    :lvl(lev)%ks+D_z,   soln)  + &
+                       &              lvl(lev)%mgvar(lvl(lev)%is    :lvl(lev)%ie,     lvl(lev)%js+D_y:lvl(lev)%je+D_y, lvl(lev)%ks    :lvl(lev)%ks+D_z,   soln)) + &
+                       lvl(lev)%rz * (lvl(lev)%mgvar(lvl(lev)%is    :lvl(lev)%ie,     lvl(lev)%js    :lvl(lev)%je,     lvl(lev)%ks-D_z:lvl(lev)%ks,       soln)  + &
+                       &              lvl(lev)%mgvar(lvl(lev)%is    :lvl(lev)%ie,     lvl(lev)%js    :lvl(lev)%je,     lvl(lev)%ks+D_z:lvl(lev)%ks+2*D_z, soln)) - &
+                       lvl(lev)%r  *  lvl(lev)%mgvar(lvl(lev)%is    :lvl(lev)%ie,     lvl(lev)%js    :lvl(lev)%je,     lvl(lev)%ks    :lvl(lev)%ks+D_z,   src)
 
-                  lvl                    (lev)%mgvar(lvl(lev)%is   :lvl(lev)%ie,    lvl(lev)%js   :lvl(lev)%je,    lvl(lev)%ke-D3  :lvl(lev)%ke,    soln)  = & ! +Z
-                       lvl(lev)%rx * (lvl(lev)%mgvar(lvl(lev)%is-D1:lvl(lev)%ie-D1, lvl(lev)%js   :lvl(lev)%je,    lvl(lev)%ke-D3  :lvl(lev)%ke,    soln)  + &
-                       &              lvl(lev)%mgvar(lvl(lev)%is+D1:lvl(lev)%ie+D1, lvl(lev)%js   :lvl(lev)%je,    lvl(lev)%ke-D3  :lvl(lev)%ke,    soln)) + &
-                       lvl(lev)%ry * (lvl(lev)%mgvar(lvl(lev)%is   :lvl(lev)%ie,    lvl(lev)%js-D2:lvl(lev)%je-D2, lvl(lev)%ke-D3  :lvl(lev)%ke,    soln)  + &
-                       &              lvl(lev)%mgvar(lvl(lev)%is   :lvl(lev)%ie,    lvl(lev)%js+D2:lvl(lev)%je+D2, lvl(lev)%ke-D3  :lvl(lev)%ke,    soln)) + &
-                       lvl(lev)%rz * (lvl(lev)%mgvar(lvl(lev)%is   :lvl(lev)%ie,    lvl(lev)%js   :lvl(lev)%je,    lvl(lev)%ke-2*D3:lvl(lev)%ke-D3, soln)  + &
-                       &              lvl(lev)%mgvar(lvl(lev)%is   :lvl(lev)%ie,    lvl(lev)%js   :lvl(lev)%je,    lvl(lev)%ke     :lvl(lev)%ke+D3, soln)) - &
-                       lvl(lev)%r  *  lvl(lev)%mgvar(lvl(lev)%is   :lvl(lev)%ie,    lvl(lev)%js   :lvl(lev)%je,    lvl(lev)%ke-D3  :lvl(lev)%ke,    src)
+                  lvl                    (lev)%mgvar(lvl(lev)%is    :lvl(lev)%ie,     lvl(lev)%js    :lvl(lev)%je,     lvl(lev)%ke-D_z  :lvl(lev)%ke ,    soln)  = & ! +Z
+                       lvl(lev)%rx * (lvl(lev)%mgvar(lvl(lev)%is-D_x:lvl(lev)%ie-D_x, lvl(lev)%js    :lvl(lev)%je,     lvl(lev)%ke-D_z  :lvl(lev)%ke,     soln)  + &
+                       &              lvl(lev)%mgvar(lvl(lev)%is+D_x:lvl(lev)%ie+D_x, lvl(lev)%js    :lvl(lev)%je,     lvl(lev)%ke-D_z  :lvl(lev)%ke,     soln)) + &
+                       lvl(lev)%ry * (lvl(lev)%mgvar(lvl(lev)%is    :lvl(lev)%ie,     lvl(lev)%js-D_y:lvl(lev)%je-D_y, lvl(lev)%ke-D_z  :lvl(lev)%ke,     soln)  + &
+                       &              lvl(lev)%mgvar(lvl(lev)%is    :lvl(lev)%ie,     lvl(lev)%js+D_y:lvl(lev)%je+D_y, lvl(lev)%ke-D_z  :lvl(lev)%ke,     soln)) + &
+                       lvl(lev)%rz * (lvl(lev)%mgvar(lvl(lev)%is    :lvl(lev)%ie,     lvl(lev)%js    :lvl(lev)%je,     lvl(lev)%ke-2*D_z:lvl(lev)%ke-D_z, soln)  + &
+                       &              lvl(lev)%mgvar(lvl(lev)%is    :lvl(lev)%ie,     lvl(lev)%js    :lvl(lev)%je,     lvl(lev)%ke      :lvl(lev)%ke+D_z, soln)) - &
+                       lvl(lev)%r  *  lvl(lev)%mgvar(lvl(lev)%is    :lvl(lev)%ie,     lvl(lev)%js    :lvl(lev)%je,     lvl(lev)%ke-D_z  :lvl(lev)%ke,     src)
                end if
 
             end if
@@ -1522,7 +1521,6 @@ contains
       real, dimension(-1:1)         :: p
       real, dimension(-1:1,-1:1,2,2):: pp   ! 2D prolongation stencil
       real                          :: pp_norm
-      integer                       :: D1=0, D2=0, D3=0 ! /todo move to multigridvars, init_multigrid
 
       if (lev < level_min .or. lev > level_max) call die("[multigrid:prolong_faces] Invalid level")
 
@@ -1557,54 +1555,50 @@ contains
       coarse => lvl(lev - 1)
       fine   => lvl(lev)
 
-      if (has_dir(XDIR)) D1 = 1
-      if (has_dir(YDIR)) D2 = 1
-      if (has_dir(ZDIR)) D3 = 1
-
       if (has_dir(XDIR)) then
-         pp_norm = 2.*sum(pp(-D2:D2, -D3:D3, 1, 1)) ! normalization is required for ord_prolong_face == 1 and -2
+         pp_norm = 2.*sum(pp(-D_y:D_y, -D_z:D_z, 1, 1)) ! normalization is required for ord_prolong_face == 1 and -2
          do j = coarse%js, coarse%je
             do k = coarse%ks, coarse%ke
-               fine%bnd_x(-fine%js+2*j,   -fine%ks+2*k,   LOW) =sum(pp(-D2:D2, -D3:D3, 1, 1) * (coarse%mgvar(coarse%is,j-D2:j+D2,k-D3:k+D3,soln) + coarse%mgvar(coarse%is-1,j-D2:j+D2,k-D3:k+D3,soln))) / pp_norm
-               fine%bnd_x(-fine%js+2*j+D2,-fine%ks+2*k,   LOW) =sum(pp(-D2:D2, -D3:D3, 2, 1) * (coarse%mgvar(coarse%is,j-D2:j+D2,k-D3:k+D3,soln) + coarse%mgvar(coarse%is-1,j-D2:j+D2,k-D3:k+D3,soln))) / pp_norm
-               fine%bnd_x(-fine%js+2*j,   -fine%ks+2*k+D3,LOW) =sum(pp(-D2:D2, -D3:D3, 1, 2) * (coarse%mgvar(coarse%is,j-D2:j+D2,k-D3:k+D3,soln) + coarse%mgvar(coarse%is-1,j-D2:j+D2,k-D3:k+D3,soln))) / pp_norm
-               fine%bnd_x(-fine%js+2*j+D2,-fine%ks+2*k+D3,LOW) =sum(pp(-D2:D2, -D3:D3, 2, 2) * (coarse%mgvar(coarse%is,j-D2:j+D2,k-D3:k+D3,soln) + coarse%mgvar(coarse%is-1,j-D2:j+D2,k-D3:k+D3,soln))) / pp_norm
-               fine%bnd_x(-fine%js+2*j,   -fine%ks+2*k ,  HIGH)=sum(pp(-D2:D2, -D3:D3, 1, 1) * (coarse%mgvar(coarse%ie,j-D2:j+D2,k-D3:k+D3,soln) + coarse%mgvar(coarse%ie+1,j-D2:j+D2,k-D3:k+D3,soln))) / pp_norm
-               fine%bnd_x(-fine%js+2*j+D2,-fine%ks+2*k,   HIGH)=sum(pp(-D2:D2, -D3:D3, 2, 1) * (coarse%mgvar(coarse%ie,j-D2:j+D2,k-D3:k+D3,soln) + coarse%mgvar(coarse%ie+1,j-D2:j+D2,k-D3:k+D3,soln))) / pp_norm
-               fine%bnd_x(-fine%js+2*j,   -fine%ks+2*k+D3,HIGH)=sum(pp(-D2:D2, -D3:D3, 1, 2) * (coarse%mgvar(coarse%ie,j-D2:j+D2,k-D3:k+D3,soln) + coarse%mgvar(coarse%ie+1,j-D2:j+D2,k-D3:k+D3,soln))) / pp_norm
-               fine%bnd_x(-fine%js+2*j+D2,-fine%ks+2*k+D3,HIGH)=sum(pp(-D2:D2, -D3:D3, 2, 2) * (coarse%mgvar(coarse%ie,j-D2:j+D2,k-D3:k+D3,soln) + coarse%mgvar(coarse%ie+1,j-D2:j+D2,k-D3:k+D3,soln))) / pp_norm
+               fine%bnd_x(-fine%js+2*j,    -fine%ks+2*k,    LOW) =sum(pp(-D_y:D_y, -D_z:D_z, 1, 1) * (coarse%mgvar(coarse%is,j-D_y:j+D_y,k-D_z:k+D_z,soln) + coarse%mgvar(coarse%is-1,j-D_y:j+D_y,k-D_z:k+D_z,soln))) / pp_norm
+               fine%bnd_x(-fine%js+2*j+D_y,-fine%ks+2*k,    LOW) =sum(pp(-D_y:D_y, -D_z:D_z, 2, 1) * (coarse%mgvar(coarse%is,j-D_y:j+D_y,k-D_z:k+D_z,soln) + coarse%mgvar(coarse%is-1,j-D_y:j+D_y,k-D_z:k+D_z,soln))) / pp_norm
+               fine%bnd_x(-fine%js+2*j,    -fine%ks+2*k+D_z,LOW) =sum(pp(-D_y:D_y, -D_z:D_z, 1, 2) * (coarse%mgvar(coarse%is,j-D_y:j+D_y,k-D_z:k+D_z,soln) + coarse%mgvar(coarse%is-1,j-D_y:j+D_y,k-D_z:k+D_z,soln))) / pp_norm
+               fine%bnd_x(-fine%js+2*j+D_y,-fine%ks+2*k+D_z,LOW) =sum(pp(-D_y:D_y, -D_z:D_z, 2, 2) * (coarse%mgvar(coarse%is,j-D_y:j+D_y,k-D_z:k+D_z,soln) + coarse%mgvar(coarse%is-1,j-D_y:j+D_y,k-D_z:k+D_z,soln))) / pp_norm
+               fine%bnd_x(-fine%js+2*j,    -fine%ks+2*k,    HIGH)=sum(pp(-D_y:D_y, -D_z:D_z, 1, 1) * (coarse%mgvar(coarse%ie,j-D_y:j+D_y,k-D_z:k+D_z,soln) + coarse%mgvar(coarse%ie+1,j-D_y:j+D_y,k-D_z:k+D_z,soln))) / pp_norm
+               fine%bnd_x(-fine%js+2*j+D_y,-fine%ks+2*k,    HIGH)=sum(pp(-D_y:D_y, -D_z:D_z, 2, 1) * (coarse%mgvar(coarse%ie,j-D_y:j+D_y,k-D_z:k+D_z,soln) + coarse%mgvar(coarse%ie+1,j-D_y:j+D_y,k-D_z:k+D_z,soln))) / pp_norm
+               fine%bnd_x(-fine%js+2*j,    -fine%ks+2*k+D_z,HIGH)=sum(pp(-D_y:D_y, -D_z:D_z, 1, 2) * (coarse%mgvar(coarse%ie,j-D_y:j+D_y,k-D_z:k+D_z,soln) + coarse%mgvar(coarse%ie+1,j-D_y:j+D_y,k-D_z:k+D_z,soln))) / pp_norm
+               fine%bnd_x(-fine%js+2*j+D_y,-fine%ks+2*k+D_z,HIGH)=sum(pp(-D_y:D_y, -D_z:D_z, 2, 2) * (coarse%mgvar(coarse%ie,j-D_y:j+D_y,k-D_z:k+D_z,soln) + coarse%mgvar(coarse%ie+1,j-D_y:j+D_y,k-D_z:k+D_z,soln))) / pp_norm
             end do
          end do
       end if
 
       if (has_dir(YDIR)) then
-         pp_norm = 2.*sum(pp(-D1:D1, -D3:D3, 1, 1))
+         pp_norm = 2.*sum(pp(-D_x:D_x, -D_z:D_z, 1, 1))
          do i = coarse%is, coarse%ie
             do k = coarse%ks, coarse%ke
-               fine%bnd_y(-fine%is+2*i,   -fine%ks+2*k,   LOW) =sum(pp(-D1:D1, -D3:D3, 1, 1) * (coarse%mgvar(i-D1:i+D1,coarse%js,k-D3:k+D3,soln) + coarse%mgvar(i-D1:i+D1,coarse%js-1,k-D3:k+D3,soln))) / pp_norm
-               fine%bnd_y(-fine%is+2*i+D1,-fine%ks+2*k,   LOW) =sum(pp(-D1:D1, -D3:D3, 2, 1) * (coarse%mgvar(i-D1:i+D1,coarse%js,k-D3:k+D3,soln) + coarse%mgvar(i-D1:i+D1,coarse%js-1,k-D3:k+D3,soln))) / pp_norm
-               fine%bnd_y(-fine%is+2*i,   -fine%ks+2*k+D3,LOW) =sum(pp(-D1:D1, -D3:D3, 1, 2) * (coarse%mgvar(i-D1:i+D1,coarse%js,k-D3:k+D3,soln) + coarse%mgvar(i-D1:i+D1,coarse%js-1,k-D3:k+D3,soln))) / pp_norm
-               fine%bnd_y(-fine%is+2*i+D1,-fine%ks+2*k+D3,LOW) =sum(pp(-D1:D1, -D3:D3, 2, 2) * (coarse%mgvar(i-D1:i+D1,coarse%js,k-D3:k+D3,soln) + coarse%mgvar(i-D1:i+D1,coarse%js-1,k-D3:k+D3,soln))) / pp_norm
-               fine%bnd_y(-fine%is+2*i,   -fine%ks+2*k,   HIGH)=sum(pp(-D1:D1, -D3:D3, 1, 1) * (coarse%mgvar(i-D1:i+D1,coarse%je,k-D3:k+D3,soln) + coarse%mgvar(i-D1:i+D1,coarse%je+1,k-D3:k+D3,soln))) / pp_norm
-               fine%bnd_y(-fine%is+2*i+D1,-fine%ks+2*k,   HIGH)=sum(pp(-D1:D1, -D3:D3, 2, 1) * (coarse%mgvar(i-D1:i+D1,coarse%je,k-D3:k+D3,soln) + coarse%mgvar(i-D1:i+D1,coarse%je+1,k-D3:k+D3,soln))) / pp_norm
-               fine%bnd_y(-fine%is+2*i,   -fine%ks+2*k+D3,HIGH)=sum(pp(-D1:D1, -D3:D3, 1, 2) * (coarse%mgvar(i-D1:i+D1,coarse%je,k-D3:k+D3,soln) + coarse%mgvar(i-D1:i+D1,coarse%je+1,k-D3:k+D3,soln))) / pp_norm
-               fine%bnd_y(-fine%is+2*i+D1,-fine%ks+2*k+D3,HIGH)=sum(pp(-D1:D1, -D3:D3, 2, 2) * (coarse%mgvar(i-D1:i+D1,coarse%je,k-D3:k+D3,soln) + coarse%mgvar(i-D1:i+D1,coarse%je+1,k-D3:k+D3,soln))) / pp_norm
+               fine%bnd_y(-fine%is+2*i,    -fine%ks+2*k,    LOW) =sum(pp(-D_x:D_x, -D_z:D_z, 1, 1) * (coarse%mgvar(i-D_x:i+D_x,coarse%js,k-D_z:k+D_z,soln) + coarse%mgvar(i-D_x:i+D_x,coarse%js-1,k-D_z:k+D_z,soln))) / pp_norm
+               fine%bnd_y(-fine%is+2*i+D_x,-fine%ks+2*k,    LOW) =sum(pp(-D_x:D_x, -D_z:D_z, 2, 1) * (coarse%mgvar(i-D_x:i+D_x,coarse%js,k-D_z:k+D_z,soln) + coarse%mgvar(i-D_x:i+D_x,coarse%js-1,k-D_z:k+D_z,soln))) / pp_norm
+               fine%bnd_y(-fine%is+2*i,    -fine%ks+2*k+D_z,LOW) =sum(pp(-D_x:D_x, -D_z:D_z, 1, 2) * (coarse%mgvar(i-D_x:i+D_x,coarse%js,k-D_z:k+D_z,soln) + coarse%mgvar(i-D_x:i+D_x,coarse%js-1,k-D_z:k+D_z,soln))) / pp_norm
+               fine%bnd_y(-fine%is+2*i+D_x,-fine%ks+2*k+D_z,LOW) =sum(pp(-D_x:D_x, -D_z:D_z, 2, 2) * (coarse%mgvar(i-D_x:i+D_x,coarse%js,k-D_z:k+D_z,soln) + coarse%mgvar(i-D_x:i+D_x,coarse%js-1,k-D_z:k+D_z,soln))) / pp_norm
+               fine%bnd_y(-fine%is+2*i,    -fine%ks+2*k,    HIGH)=sum(pp(-D_x:D_x, -D_z:D_z, 1, 1) * (coarse%mgvar(i-D_x:i+D_x,coarse%je,k-D_z:k+D_z,soln) + coarse%mgvar(i-D_x:i+D_x,coarse%je+1,k-D_z:k+D_z,soln))) / pp_norm
+               fine%bnd_y(-fine%is+2*i+D_x,-fine%ks+2*k,    HIGH)=sum(pp(-D_x:D_x, -D_z:D_z, 2, 1) * (coarse%mgvar(i-D_x:i+D_x,coarse%je,k-D_z:k+D_z,soln) + coarse%mgvar(i-D_x:i+D_x,coarse%je+1,k-D_z:k+D_z,soln))) / pp_norm
+               fine%bnd_y(-fine%is+2*i,    -fine%ks+2*k+D_z,HIGH)=sum(pp(-D_x:D_x, -D_z:D_z, 1, 2) * (coarse%mgvar(i-D_x:i+D_x,coarse%je,k-D_z:k+D_z,soln) + coarse%mgvar(i-D_x:i+D_x,coarse%je+1,k-D_z:k+D_z,soln))) / pp_norm
+               fine%bnd_y(-fine%is+2*i+D_x,-fine%ks+2*k+D_z,HIGH)=sum(pp(-D_x:D_x, -D_z:D_z, 2, 2) * (coarse%mgvar(i-D_x:i+D_x,coarse%je,k-D_z:k+D_z,soln) + coarse%mgvar(i-D_x:i+D_x,coarse%je+1,k-D_z:k+D_z,soln))) / pp_norm
             end do
          end do
       end if
 
       if (has_dir(ZDIR)) then
-         pp_norm = 2.*sum(pp(-D1:D1, -D2:D2, 1, 1))
+         pp_norm = 2.*sum(pp(-D_x:D_x, -D_y:D_y, 1, 1))
          do i = coarse%is, coarse%ie
             do j = coarse%js, coarse%je
-               fine%bnd_z(-fine%is+2*i,   -fine%js+2*j,   LOW) =sum(pp(-D1:D1, -D2:D2, 1, 1) * (coarse%mgvar(i-D1:i+D1,j-D2:j+D2,coarse%ks,soln) + coarse%mgvar(i-D1:i+D1,j-D2:j+D2,coarse%ks-1,soln))) / pp_norm
-               fine%bnd_z(-fine%is+2*i+D1,-fine%js+2*j,   LOW) =sum(pp(-D1:D1, -D2:D2, 2, 1) * (coarse%mgvar(i-D1:i+D1,j-D2:j+D2,coarse%ks,soln) + coarse%mgvar(i-D1:i+D1,j-D2:j+D2,coarse%ks-1,soln))) / pp_norm
-               fine%bnd_z(-fine%is+2*i,   -fine%js+2*j+D2,LOW) =sum(pp(-D1:D1, -D2:D2, 1, 2) * (coarse%mgvar(i-D1:i+D1,j-D2:j+D2,coarse%ks,soln) + coarse%mgvar(i-D1:i+D1,j-D2:j+D2,coarse%ks-1,soln))) / pp_norm
-               fine%bnd_z(-fine%is+2*i+D1,-fine%js+2*j+D2,LOW) =sum(pp(-D1:D1, -D2:D2, 2, 2) * (coarse%mgvar(i-D1:i+D1,j-D2:j+D2,coarse%ks,soln) + coarse%mgvar(i-D1:i+D1,j-D2:j+D2,coarse%ks-1,soln))) / pp_norm
-               fine%bnd_z(-fine%is+2*i,   -fine%js+2*j,   HIGH)=sum(pp(-D1:D1, -D2:D2, 1, 1) * (coarse%mgvar(i-D1:i+D1,j-D2:j+D2,coarse%ke,soln) + coarse%mgvar(i-D1:i+D1,j-D2:j+D2,coarse%ke+1,soln))) / pp_norm
-               fine%bnd_z(-fine%is+2*i+D1,-fine%js+2*j,   HIGH)=sum(pp(-D1:D1, -D2:D2, 2, 1) * (coarse%mgvar(i-D1:i+D1,j-D2:j+D2,coarse%ke,soln) + coarse%mgvar(i-D1:i+D1,j-D2:j+D2,coarse%ke+1,soln))) / pp_norm
-               fine%bnd_z(-fine%is+2*i,   -fine%js+2*j+D2,HIGH)=sum(pp(-D1:D1, -D2:D2, 1, 2) * (coarse%mgvar(i-D1:i+D1,j-D2:j+D2,coarse%ke,soln) + coarse%mgvar(i-D1:i+D1,j-D2:j+D2,coarse%ke+1,soln))) / pp_norm
-               fine%bnd_z(-fine%is+2*i+D1,-fine%js+2*j+D2,HIGH)=sum(pp(-D1:D1, -D2:D2, 2, 2) * (coarse%mgvar(i-D1:i+D1,j-D2:j+D2,coarse%ke,soln) + coarse%mgvar(i-D1:i+D1,j-D2:j+D2,coarse%ke+1,soln))) / pp_norm
+               fine%bnd_z(-fine%is+2*i,    -fine%js+2*j,    LOW) =sum(pp(-D_x:D_x, -D_y:D_y, 1, 1) * (coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ks,soln) + coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ks-1,soln))) / pp_norm
+               fine%bnd_z(-fine%is+2*i+D_x,-fine%js+2*j,    LOW) =sum(pp(-D_x:D_x, -D_y:D_y, 2, 1) * (coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ks,soln) + coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ks-1,soln))) / pp_norm
+               fine%bnd_z(-fine%is+2*i,    -fine%js+2*j+D_y,LOW) =sum(pp(-D_x:D_x, -D_y:D_y, 1, 2) * (coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ks,soln) + coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ks-1,soln))) / pp_norm
+               fine%bnd_z(-fine%is+2*i+D_x,-fine%js+2*j+D_y,LOW) =sum(pp(-D_x:D_x, -D_y:D_y, 2, 2) * (coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ks,soln) + coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ks-1,soln))) / pp_norm
+               fine%bnd_z(-fine%is+2*i,    -fine%js+2*j,    HIGH)=sum(pp(-D_x:D_x, -D_y:D_y, 1, 1) * (coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ke,soln) + coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ke+1,soln))) / pp_norm
+               fine%bnd_z(-fine%is+2*i+D_x,-fine%js+2*j,    HIGH)=sum(pp(-D_x:D_x, -D_y:D_y, 2, 1) * (coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ke,soln) + coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ke+1,soln))) / pp_norm
+               fine%bnd_z(-fine%is+2*i,    -fine%js+2*j+D_y,HIGH)=sum(pp(-D_x:D_x, -D_y:D_y, 1, 2) * (coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ke,soln) + coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ke+1,soln))) / pp_norm
+               fine%bnd_z(-fine%is+2*i+D_x,-fine%js+2*j+D_y,HIGH)=sum(pp(-D_x:D_x, -D_y:D_y, 2, 2) * (coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ke,soln) + coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ke+1,soln))) / pp_norm
             end do
          end do
       end if
