@@ -1460,7 +1460,7 @@ module dataio_hdf5
       integer                 :: ierrh, error, i
       logical                 :: ok_var
       character(len=4)        :: dd
-      CHARACTER(LEN=32)       :: fname
+      CHARACTER(LEN=64)       :: fname
 
       real(kind=4), allocatable :: data (:,:,:)  ! Data to write
 
