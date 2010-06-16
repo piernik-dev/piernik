@@ -1635,6 +1635,8 @@ module dataio_hdf5
          call h5fopen_f (filename, H5F_ACC_RDWR_F, file_id, error)
 
          bufsize = 1
+
+         !BEWARE: A memory leak was detected here. h5lt calls use HD5f2cstring and probably sometimes don't free the allocated buffer
          call h5ltset_attribute_double_f(file_id, "/","time",     [t],           bufsize, error)
          call h5ltset_attribute_double_f(file_id, "/","timestep", [dt],          bufsize, error)
          call h5ltset_attribute_int_f(file_id, "/","nstep",       [chdf%nstep],  bufsize, error)
@@ -1672,7 +1674,7 @@ module dataio_hdf5
             trim_env=trim(env(i))
             if (len_trim(trim_env) < len(trim_env)) trim_env(len_trim(trim_env)+1:len_trim(trim_env)+1) = achar(0)
             !I don't understand why passing trim(env(i)) or trim(trim_env) to h5ltmake_dataset_string_f sometimes results in improper detection of the string length.
-            call h5ltmake_dataset_string_f (gr_id, trim(dset_name), trim_env, error)
+            call h5ltmake_dataset_string_f (gr_id, dset_name, trim_env, error)
          enddo
          call H5Gclose_f(gr_id, error)
 

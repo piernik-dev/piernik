@@ -99,39 +99,34 @@ module initionized
       endif
 
 
-    if(proc .eq. 0) then
+    if (proc == 0) then
 
-      lbuff(1)   = selfgrav_ion
+       lbuff(1)   = selfgrav_ion
 
-      rbuff(1)   = gamma_ion
-      rbuff(2)   = cs_iso_ion
-      rbuff(3)   = cs_ion
+       rbuff(1)   = gamma_ion
+       rbuff(2)   = cs_iso_ion
+       rbuff(3)   = cs_ion
 
-      call MPI_BCAST(cbuff, 32*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
-      call MPI_BCAST(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
-      call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
-      call MPI_BCAST(lbuff,    buffer_dim, MPI_LOGICAL,          0, comm, ierr)
+    end if
 
-    else
+    call MPI_BCAST(cbuff, 32*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
+    call MPI_BCAST(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
+    call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+    call MPI_BCAST(lbuff,    buffer_dim, MPI_LOGICAL,          0, comm, ierr)
 
-      call MPI_BCAST(cbuff, 32*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
-      call MPI_BCAST(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
-      call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
-      call MPI_BCAST(lbuff,    buffer_dim, MPI_LOGICAL,          0, comm, ierr)
+    if (proc /= 0) then
 
-      selfgrav_ion = lbuff(1)
+       selfgrav_ion = lbuff(1)
 
-      gamma_ion    = rbuff(1)
-      cs_iso_ion   = rbuff(2)
-      cs_ion       = rbuff(3)
+       gamma_ion    = rbuff(1)
+       cs_iso_ion   = rbuff(2)
+       cs_ion       = rbuff(3)
 
     endif
 
     cs_iso_ion2  = cs_iso_ion**2
 
   end subroutine init_ionized
-
-
 
   subroutine ionized_index(nvar,nvar_ion)
 
@@ -170,5 +165,13 @@ module initionized
 !      write(*,*) 'ionized_index', iarr_ion_swpx
 
    end subroutine ionized_index
+
+   subroutine cleanup_ionized
+
+      implicit none
+
+      if (allocated(iarr_ion)) deallocate(iarr_ion, iarr_ion_swpx, iarr_ion_swpy, iarr_ion_swpz) ! BEWARE: simplified allocated() check
+
+   end subroutine cleanup_ionized
 
 end module initionized

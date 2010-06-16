@@ -174,4 +174,15 @@ module initfluids
 
   end subroutine init_fluids
 
+  subroutine cleanup_fluids
+
+     use fluidindex, only : cleanup_fluid_index
+
+     implicit none
+
+     if (allocated(gamma)) deallocate(gamma)
+     call cleanup_fluid_index
+
+  end subroutine cleanup_fluids
+
 end module initfluids

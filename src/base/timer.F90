@@ -98,6 +98,33 @@ contains
       return
    end function delete_timer
 
+   subroutine cleanup_timers
+
+      implicit none
+
+      type(timer_list), pointer :: tp!, tn
+
+      tp => timer_root
+
+      do
+         if (associated(tp%next)) then
+!!$            tn => tp%next%node
+!!$            deallocate(tp%next)
+!!$            if (associated(tn)) then
+!!$               tp = tn
+!!$            else
+!!$               tp => Null()
+!!$            end if
+! Things aren't that easy in Fortran.
+! It looks that tn => tp%next%node doesn't assign a real memory address of tp%next%node to tn. tp = tn results in an access to memory freed by deallocate(tp%next)
+            return
+         else
+            return
+         end if
+      end do
+
+   end subroutine cleanup_timers
+
    subroutine search_timer(item)
       implicit none
       type(timer_info), intent(inout) :: item

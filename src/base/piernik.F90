@@ -240,9 +240,12 @@ contains
 !<
 
    subroutine cleanup_piernik
+
       use grid,        only : cleanup_grid
       use dataio,      only : cleanup_dataio
       use arrays,      only : cleanup_arrays
+      use initfluids,  only : cleanup_fluids
+      use timer,       only : cleanup_timers
 #ifdef RESISTIVE
       use resistivity, only : cleanup_resistivity
 #endif /* RESISTIVE */
@@ -250,20 +253,18 @@ contains
       use multigrid,   only : cleanup_multigrid
 #endif /* MULTIGRID */
 
-      call cleanup_grid
-      if (proc == 0) write(*,'(a)',advance='no')"."
-      call cleanup_dataio
-      if (proc == 0) write(*,'(a)',advance='no')"."
+      call cleanup_grid;        if (proc == 0) write(*,'(a)',advance='no')"."
+      call cleanup_dataio;      if (proc == 0) write(*,'(a)',advance='no')"."
 #ifdef RESISTIVE
-      call cleanup_resistivity
-      if (proc == 0) write(*,'(a)',advance='no')"."
+      call cleanup_resistivity; if (proc == 0) write(*,'(a)',advance='no')"."
 #endif /* RESISTIVE */
 #ifdef MULTIGRID
-      call cleanup_multigrid
-      if (proc == 0) write(*,'(a)',advance='no')"."
+      call cleanup_multigrid;   if (proc == 0) write(*,'(a)',advance='no')"."
 #endif /* MULTIGRID */
-      call cleanup_arrays
-      if (proc == 0) write(*,'(a)')"."
+      call cleanup_arrays;      if (proc == 0) write(*,'(a)',advance='no')"."
+      call cleanup_fluids;      if (proc == 0) write(*,'(a)',advance='no')"."
+      call cleanup_timers;      if (proc == 0) write(*,'(a)')"."
 
    end subroutine cleanup_piernik
+
 end program piernik

@@ -247,6 +247,17 @@ contains
 
    end subroutine cosmicray_index
 
+   subroutine cleanup_cosmicrays
+
+      implicit none
+
+      if (allocated(iarr_crn)) deallocate(iarr_crn)
+      if (allocated(iarr_cre)) deallocate(iarr_cre)
+      if (allocated(iarr_crs)) deallocate(iarr_crs)
+      if (allocated(gamma_crs)) deallocate(gamma_crs, K_crs_paral, K_crs_perp) !BEWARE: simplified allocated() check
+
+   end subroutine cleanup_cosmicrays
+
 #ifdef NEW_HDF5
    subroutine cr_add_hdf5(nvar_crs)
 

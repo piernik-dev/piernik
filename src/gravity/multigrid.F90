@@ -759,7 +759,7 @@ contains
 
       implicit none
 
-      integer :: i
+      integer :: i, ib
       real, allocatable, dimension(:) :: all_ts
 
       if(allocated(lvl)) then
@@ -780,9 +780,38 @@ contains
 
             if (lvl(i)%planf /= 0) call dfftw_destroy_plan(lvl(i)%planf)
             if (lvl(i)%plani /= 0) call dfftw_destroy_plan(lvl(i)%plani)
+
+            if (i >= level_min) then
+               do ib = 1, lvl(i)%nb
+                  if (has_dir(XDIR)) then
+                     call MPI_Type_free(lvl(i)%MPI_YZ_LEFT_BND(ib), ierr)
+                     call MPI_Type_free(lvl(i)%MPI_YZ_LEFT_DOM(ib), ierr)
+                     call MPI_Type_free(lvl(i)%MPI_YZ_RIGHT_DOM(ib), ierr)
+                     call MPI_Type_free(lvl(i)%MPI_YZ_RIGHT_BND(ib), ierr)
+                  end if
+
+                  if (has_dir(YDIR)) then
+                     call MPI_Type_free(lvl(i)%MPI_XZ_LEFT_BND(ib), ierr)
+                     call MPI_Type_free(lvl(i)%MPI_XZ_LEFT_DOM(ib), ierr)
+                     call MPI_Type_free(lvl(i)%MPI_XZ_RIGHT_DOM(ib), ierr)
+                     call MPI_Type_free(lvl(i)%MPI_XZ_RIGHT_BND(ib), ierr)
+                  end if
+
+                  if (has_dir(ZDIR)) then
+                     call MPI_Type_free(lvl(i)%MPI_XY_LEFT_BND(ib), ierr)
+                     call MPI_Type_free(lvl(i)%MPI_XY_LEFT_DOM(ib), ierr)
+                     call MPI_Type_free(lvl(i)%MPI_XY_RIGHT_DOM(ib), ierr)
+                     call MPI_Type_free(lvl(i)%MPI_XY_RIGHT_BND(ib), ierr)
+                  end if
+
+               end do
+            end if
+
          enddo
          deallocate(lvl)
       endif
+
+      call dfftw_cleanup
 
       do i = 1, nold
          if (allocated(inner%old(i)%soln)) deallocate(inner%old(i)%soln)
