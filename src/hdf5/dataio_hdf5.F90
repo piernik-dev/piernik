@@ -1260,12 +1260,7 @@ module dataio_hdf5
                ' does not exist.  ABORTING !!! '
             close(log_lun)
          endif
-
-         write(*,*)       'Restart  file: ', trim(filename), &
-            ' does not exist.  ABORTING !!! '
-         call MPI_BARRIER(comm3d,ierr)
-         call mpistop
-         stop
+         call die('[dataio_hdf5:read_restart_hdf5]: Restart file: '//trim(filename)//' does not exist')
       endif
 
       CALL h5open_f(error)
