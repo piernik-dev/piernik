@@ -505,7 +505,7 @@ module mpisetup
          call MPI_Comm_free(comm3d, ierr)
 
 !         if (nxd /= 1) then
-         if (MPI_YZ_LEFT_BND > 0) then ! BEWARE: Trick. Assume that MPI_Type_commit will not generate negative integer
+         if (MPI_YZ_LEFT_BND /= -1) then ! BEWARE: Trick. Assume that MPI_Type_commit will not generate -1
             call MPI_Type_free(MPI_YZ_LEFT_BND, ierr)
             call MPI_Type_free(MPI_YZ_LEFT_DOM, ierr)
             call MPI_Type_free(MPI_YZ_RIGHT_DOM, ierr)
@@ -517,7 +517,7 @@ module mpisetup
          end if
 
 !         if (nyd /= 1) then
-         if (MPI_XZ_LEFT_BND > 0) then
+         if (MPI_XZ_LEFT_BND /= -1) then
             call MPI_Type_free(MPI_XZ_LEFT_BND, ierr)
             call MPI_Type_free(MPI_XZ_LEFT_DOM, ierr)
             call MPI_Type_free(MPI_XZ_RIGHT_DOM, ierr)
@@ -529,7 +529,7 @@ module mpisetup
          end if
 
 !         if (nzd /= 1) then
-         if (MPI_XY_LEFT_BND > 0) then
+         if (MPI_XY_LEFT_BND /= -1) then
             call MPI_Type_free(MPI_XY_LEFT_BND, ierr)
             call MPI_Type_free(MPI_XY_LEFT_DOM, ierr)
             call MPI_Type_free(MPI_XY_RIGHT_DOM, ierr)
