@@ -73,7 +73,6 @@ contains
       use multipole,          only: init_multipole, use_point_monopole, lmax, mmax, ord_prolong_mpole, coarsen_multipole
       use multigridmpifuncs,  only: mpi_multigrid_prep
 
-
       implicit none
 
       type(grid_container), intent(in) :: cgrid                  !< copy of grid variables

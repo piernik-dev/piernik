@@ -95,19 +95,19 @@ module mpisetup
    logical     :: mpi
    character(len=80)   :: cwd
 
-   integer :: MPI_XZ_LEFT_BND, MPI_XZ_RIGHT_BND
-   integer :: MPI_XZ_LEFT_DOM, MPI_XZ_RIGHT_DOM
-   integer :: MPI_XY_LEFT_BND, MPI_XY_RIGHT_BND
-   integer :: MPI_XY_LEFT_DOM, MPI_XY_RIGHT_DOM
-   integer :: MPI_YZ_LEFT_BND, MPI_YZ_RIGHT_BND
-   integer :: MPI_YZ_LEFT_DOM, MPI_YZ_RIGHT_DOM
+   integer :: MPI_XZ_LEFT_BND=-1, MPI_XZ_RIGHT_BND=-1
+   integer :: MPI_XZ_LEFT_DOM=-1, MPI_XZ_RIGHT_DOM=-1
+   integer :: MPI_XY_LEFT_BND=-1, MPI_XY_RIGHT_BND=-1
+   integer :: MPI_XY_LEFT_DOM=-1, MPI_XY_RIGHT_DOM=-1
+   integer :: MPI_YZ_LEFT_BND=-1, MPI_YZ_RIGHT_BND=-1
+   integer :: MPI_YZ_LEFT_DOM=-1, MPI_YZ_RIGHT_DOM=-1
 
-   integer :: MAG_XZ_LEFT_BND, MAG_XZ_RIGHT_BND
-   integer :: MAG_XZ_LEFT_DOM, MAG_XZ_RIGHT_DOM
-   integer :: MAG_XY_LEFT_BND, MAG_XY_RIGHT_BND
-   integer :: MAG_XY_LEFT_DOM, MAG_XY_RIGHT_DOM
-   integer :: MAG_YZ_LEFT_BND, MAG_YZ_RIGHT_BND
-   integer :: MAG_YZ_LEFT_DOM, MAG_YZ_RIGHT_DOM
+   integer :: MAG_XZ_LEFT_BND=-1, MAG_XZ_RIGHT_BND=-1
+   integer :: MAG_XZ_LEFT_DOM=-1, MAG_XZ_RIGHT_DOM=-1
+   integer :: MAG_XY_LEFT_BND=-1, MAG_XY_RIGHT_BND=-1
+   integer :: MAG_XY_LEFT_DOM=-1, MAG_XY_RIGHT_DOM=-1
+   integer :: MAG_YZ_LEFT_BND=-1, MAG_YZ_RIGHT_BND=-1
+   integer :: MAG_YZ_LEFT_DOM=-1, MAG_YZ_RIGHT_DOM=-1
 
    contains
 
@@ -497,7 +497,7 @@ module mpisetup
 
       subroutine mpistop
 
-! BEWARE: use of grid here will make cyclic dependency, calling MPI_Type_free() with uninitialized identifier did not raise valgrind alarms, but cannot be considered safe
+! BEWARE: use of grid here will make cyclic dependency
 !         use grid, only :  nxd, nyd, nzd
 
          implicit none
@@ -505,6 +505,7 @@ module mpisetup
          call MPI_Comm_free(comm3d, ierr)
 
 !         if (nxd /= 1) then
+         if (MPI_YZ_LEFT_BND > 0) then ! BEWARE: Trick. Assume that MPI_Type_commit will not generate negative integer
             call MPI_Type_free(MPI_YZ_LEFT_BND, ierr)
             call MPI_Type_free(MPI_YZ_LEFT_DOM, ierr)
             call MPI_Type_free(MPI_YZ_RIGHT_DOM, ierr)
@@ -513,9 +514,10 @@ module mpisetup
             call MPI_Type_free(MAG_YZ_LEFT_DOM, ierr)
             call MPI_Type_free(MAG_YZ_RIGHT_DOM, ierr)
             call MPI_Type_free(MAG_YZ_RIGHT_BND, ierr)
-!         end if
+         end if
 
 !         if (nyd /= 1) then
+         if (MPI_XZ_LEFT_BND > 0) then
             call MPI_Type_free(MPI_XZ_LEFT_BND, ierr)
             call MPI_Type_free(MPI_XZ_LEFT_DOM, ierr)
             call MPI_Type_free(MPI_XZ_RIGHT_DOM, ierr)
@@ -524,9 +526,10 @@ module mpisetup
             call MPI_Type_free(MAG_XZ_LEFT_DOM, ierr)
             call MPI_Type_free(MAG_XZ_RIGHT_DOM, ierr)
             call MPI_Type_free(MAG_XZ_RIGHT_BND, ierr)
-!         end if
+         end if
 
 !         if (nzd /= 1) then
+         if (MPI_XY_LEFT_BND > 0) then
             call MPI_Type_free(MPI_XY_LEFT_BND, ierr)
             call MPI_Type_free(MPI_XY_LEFT_DOM, ierr)
             call MPI_Type_free(MPI_XY_RIGHT_DOM, ierr)
@@ -535,7 +538,7 @@ module mpisetup
             call MPI_Type_free(MAG_XY_LEFT_DOM, ierr)
             call MPI_Type_free(MAG_XY_RIGHT_DOM, ierr)
             call MPI_Type_free(MAG_XY_RIGHT_BND, ierr)
-!         end if
+         end if
 
          call MPI_BARRIER(comm,ierr)
          call sleep(5)
