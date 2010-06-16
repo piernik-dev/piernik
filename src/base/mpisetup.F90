@@ -497,13 +497,14 @@ module mpisetup
 
       subroutine mpistop
 
-         use grid, only :  nxd, nyd, nzd
+! BEWARE: use of grid here will make cyclic dependency, calling MPI_Type_free() with uninitialized identifier did not raise valgrind alarms, but cannot be considered safe
+!         use grid, only :  nxd, nyd, nzd
 
          implicit none
 
          call MPI_Comm_free(comm3d, ierr)
 
-         if (nxd /= 1) then
+!         if (nxd /= 1) then
             call MPI_Type_free(MPI_YZ_LEFT_BND, ierr)
             call MPI_Type_free(MPI_YZ_LEFT_DOM, ierr)
             call MPI_Type_free(MPI_YZ_RIGHT_DOM, ierr)
@@ -512,9 +513,9 @@ module mpisetup
             call MPI_Type_free(MAG_YZ_LEFT_DOM, ierr)
             call MPI_Type_free(MAG_YZ_RIGHT_DOM, ierr)
             call MPI_Type_free(MAG_YZ_RIGHT_BND, ierr)
-         end if
+!         end if
 
-         if (nyd /= 1) then
+!         if (nyd /= 1) then
             call MPI_Type_free(MPI_XZ_LEFT_BND, ierr)
             call MPI_Type_free(MPI_XZ_LEFT_DOM, ierr)
             call MPI_Type_free(MPI_XZ_RIGHT_DOM, ierr)
@@ -523,9 +524,9 @@ module mpisetup
             call MPI_Type_free(MAG_XZ_LEFT_DOM, ierr)
             call MPI_Type_free(MAG_XZ_RIGHT_DOM, ierr)
             call MPI_Type_free(MAG_XZ_RIGHT_BND, ierr)
-         end if
+!         end if
 
-         if (nzd /= 1) then
+!         if (nzd /= 1) then
             call MPI_Type_free(MPI_XY_LEFT_BND, ierr)
             call MPI_Type_free(MPI_XY_LEFT_DOM, ierr)
             call MPI_Type_free(MPI_XY_RIGHT_DOM, ierr)
@@ -534,7 +535,7 @@ module mpisetup
             call MPI_Type_free(MAG_XY_LEFT_DOM, ierr)
             call MPI_Type_free(MAG_XY_RIGHT_DOM, ierr)
             call MPI_Type_free(MAG_XY_RIGHT_BND, ierr)
-         end if
+!         end if
 
          call MPI_BARRIER(comm,ierr)
          call sleep(5)
