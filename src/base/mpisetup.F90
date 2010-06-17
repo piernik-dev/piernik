@@ -90,7 +90,7 @@ module mpisetup
 
    namelist /NUMERICAL_SETUP/  cfl, smalld, smallei, integration_order, cfr_smooth, dt_initial, dt_max_grow, dt_min, smallc
 
-   integer, dimension(3) :: domsize  !< local copy of nxd, nyd, nzd which can be used before init_grid()
+   integer, dimension(3) :: domsize   !< local copy of nxd, nyd, nzd which can be used before init_grid()
 
    logical     :: mpi
    character(len=80)   :: cwd
@@ -497,15 +497,11 @@ module mpisetup
 
       subroutine mpistop
 
-! BEWARE: use of grid here will make cyclic dependency
-!         use grid, only :  nxd, nyd, nzd
-
          implicit none
 
          call MPI_Comm_free(comm3d, ierr)
 
-!         if (nxd /= 1) then
-         if (MPI_YZ_LEFT_BND /= -1) then ! BEWARE: Trick. Assume that MPI_Type_commit will not generate -1
+         if (domsize(1) /= 1) then
             call MPI_Type_free(MPI_YZ_LEFT_BND, ierr)
             call MPI_Type_free(MPI_YZ_LEFT_DOM, ierr)
             call MPI_Type_free(MPI_YZ_RIGHT_DOM, ierr)
@@ -516,8 +512,7 @@ module mpisetup
             call MPI_Type_free(MAG_YZ_RIGHT_BND, ierr)
          end if
 
-!         if (nyd /= 1) then
-         if (MPI_XZ_LEFT_BND /= -1) then
+         if (domsize(2) /= 1) then
             call MPI_Type_free(MPI_XZ_LEFT_BND, ierr)
             call MPI_Type_free(MPI_XZ_LEFT_DOM, ierr)
             call MPI_Type_free(MPI_XZ_RIGHT_DOM, ierr)
@@ -528,8 +523,7 @@ module mpisetup
             call MPI_Type_free(MAG_XZ_RIGHT_BND, ierr)
          end if
 
-!         if (nzd /= 1) then
-         if (MPI_XY_LEFT_BND /= -1) then
+         if (domsize(3) /= 1) then
             call MPI_Type_free(MPI_XY_LEFT_BND, ierr)
             call MPI_Type_free(MPI_XY_LEFT_DOM, ierr)
             call MPI_Type_free(MPI_XY_RIGHT_DOM, ierr)
