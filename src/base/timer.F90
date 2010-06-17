@@ -102,26 +102,20 @@ contains
 
       implicit none
 
-      type(timer_list), pointer :: tp!, tn
+      type(timer_list), pointer :: tp
+      type(timer_info) :: item
 
       tp => timer_root
-
-      do
-         if (associated(tp%next)) then
-!!$            tn => tp%next%node
-!!$            deallocate(tp%next)
-!!$            if (associated(tn)) then
-!!$               tp = tn
-!!$            else
-!!$               tp => Null()
-!!$            end if
-! Things aren't that easy in Fortran.
-! It looks that tn => tp%next%node doesn't assign a real memory address of tp%next%node to tn. tp = tn results in an access to memory freed by deallocate(tp%next)
-            return
-         else
-            return
-         end if
-      end do
+#ifdef VERBOSE
+      write(*,*)
+#endif /* VERBOSE */
+      do while (associated(tp%next))
+         item = delete_timer(tp%next)
+#ifdef VERBOSE
+         write(*,*) "[timer:cleanup_timers]: Timer ",item%key," deleted"
+#endif /* VERBOSE */
+      enddo
+      return
 
    end subroutine cleanup_timers
 
