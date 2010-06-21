@@ -35,6 +35,10 @@ module multipole
 
    implicit none
 
+   private
+   public :: init_multipole, cleanup_multipole, multipole_solver
+   public :: lmax, mmax, ord_prolong_mpole, coarsen_multipole, use_point_monopole
+
    integer, parameter        :: INSIDE = 1, OUTSIDE = INSIDE + 1 !< distinction between interior and exterior multipole expansion
 
    ! namelist parameters

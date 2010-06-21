@@ -37,7 +37,6 @@ module multigridhelpers
 
    implicit none
 
-
    ! namelist parameters
    logical            :: do_ascii_dump                                !< to dump, or not to dump: that is a question (ascii)
    logical            :: multidim_code_3D                             !< prefer code written for any 1D and 2D configuration even in 3D for benchmarking and debugging
