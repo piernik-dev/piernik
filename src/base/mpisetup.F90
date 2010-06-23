@@ -215,6 +215,9 @@ module mpisetup
          pxsize = 1
          pysize = 1
          pzsize = 1
+         nxd    = 1
+         nyd    = 1
+         nzd    = 1
 
          mpi_magic = .true.
 
