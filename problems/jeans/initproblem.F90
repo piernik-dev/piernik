@@ -153,7 +153,7 @@ contains
       implicit none
 
       integer :: i, j, k
-      real    :: xi, yj, zk, kn, Lbox, Vbox, Tamp, pres, Tamp_rounded, Tamp_aux
+      real    :: xi, yj, zk, kn, Vbox, Tamp, pres, Tamp_rounded, Tamp_aux
       real    :: cs0, omg, omg2, kJ
 
       Vbox = 1.
@@ -165,7 +165,6 @@ contains
       omg2 = cs0**2 * kn**2 - fpiG * d0
       omg  = sqrt(abs(omg2))
       kJ   = sqrt(fpiG * d0) / cs0
-      Lbox = 1. !0.5 * sqrt(pi * gamma_ion * p0 / newtong / d0**2)
       if (kn > 0) then
          Tamp = (d0 * amp**2 * omg2 * Vbox)/(8.0 * kn**2) !BEWARE Lbox assumed to be equal in all existing dimensions
       else
@@ -177,7 +176,7 @@ contains
       if (proc == 0) then
          write(*,*) 'Unperturbed adiabatic sound speed = ', cs0
          write(*,*) 'Gravitational constant * 4pi      = ', fpiG
-         write(*,*) 'Lbox                              = ', Lbox
+         write(*,*) 'L_critical                        = ', sqrt(pi * gamma_ion * p0 / newtong / d0**2)
          write(*,*) 'gamma                             = ', gamma_ion
          write(*,*) 'Perturbation wavenumber           = ', kn
          write(*,*) 'Jeans wavenumber                  = ', kJ
@@ -261,7 +260,11 @@ contains
             write(137,'(a,g13.5)') "T = 2*pi/b"
             write(137,'(a,g13.5)') "y(x) = a *(1-cos(b*x))"
             write(137,'(a)') 'set xlabel "time [periods]"'
-            write(137,'(a,g11.3,a)')'set xrange [ 0 : int(',tend,'/T)]'
+            if (tend > pi/omg) then
+               write(137,'(a,g11.3,a)')'set xrange [ 0 : int(',tend,'/T)]'
+            else
+               write(137,'(a)')'set xrange [ * : * ]'
+            end if
             write(137,'(a)') 'plot "jeans_ts1_000.tsl" u ($2/T):($11) w p t "calculated", "" u ($2/T):($11) smoo cspl t "" w l 1, y(x*T) t "analytical", "" u ($2/T):(10*(y($2)-$11)) t "10 * difference" w lp, 0 t "" w l 0'
          else
 
