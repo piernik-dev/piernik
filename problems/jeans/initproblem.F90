@@ -41,7 +41,7 @@ contains
 !-----------------------------------------------------------------------------
 
    subroutine read_problem_par
-      use grid,     only : xmin, xmax, ymin, ymax, zmin, zmax
+      use grid,     only : xmin, xmax, ymin, ymax, zmin, zmax, nx, ny, nz
       use errh,     only : namelist_errh, die
       use mpisetup, only : cwd, ierr, rbuff, cbuff, ibuff, proc, buffer_dim, comm, &
            &               MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER
@@ -124,6 +124,11 @@ contains
            write(*,'(a,g12.4,a,3i6,a)')        "[initproblem:read_problem_par] Warning: suspicious values for some parameters were detected: amp=", &
            amp," (ix iy iz) = (", ix, iy, iz, ")."
 
+      ! suppress waves in nonexistent directions
+      if (nx <= 1) ix = 0
+      if (ny <= 1) iy = 0
+      if (nz <= 1) iz = 0
+
       kx = 2. * pi * ix / (xmax - xmin)
       ky = 2. * pi * iy / (ymax - ymin)
       kz = 2. * pi * iz / (zmax - zmin)
@@ -142,26 +147,31 @@ contains
       use mpisetup,      only : proc
       use arrays,        only : u, b
       use constants,     only : fpiG, pi, newtong
-      use grid,          only : x, y, z, nx, ny, nz, xmin, ymin, zmin, dx, dy, dz
+      use grid,          only : xmin, xmax, ymin, ymax, zmin, zmax, x, y, z, nx, ny, nz, xmin, ymin, zmin, dx, dy, dz
       use initionized,   only : gamma_ion, idni, imxi, imzi, ieni
       use dataio_public, only : tend
       implicit none
 
       integer :: i, j, k
-      real    :: xi, yj, zk, kn, Lbox, Tamp, pres, Tamp_rounded, Tamp_aux
+      real    :: xi, yj, zk, kn, Lbox, Vbox, Tamp, pres, Tamp_rounded, Tamp_aux
       real    :: cs0, omg, omg2, kJ
-      integer :: ndim = 0
 
-      if (nx>1) ndim = ndim + 1
-      if (ny>1) ndim = ndim + 1
-      if (nz>1) ndim = ndim + 1
+      Vbox = 1.
+      if (nx>1) Vbox = Vbox * (xmax - xmin)
+      if (ny>1) Vbox = Vbox * (ymax - ymin)
+      if (nz>1) Vbox = Vbox * (zmax - zmin)
       cs0  = sqrt(gamma_ion * p0 / d0)
       kn   = sqrt(kx**2 + ky**2 + kz**2)
       omg2 = cs0**2 * kn**2 - fpiG * d0
       omg  = sqrt(abs(omg2))
       kJ   = sqrt(fpiG * d0) / cs0
-      Lbox = 0.5 * sqrt(pi * gamma_ion * p0 / newtong / d0**2)
-      Tamp = (d0 * amp**2 * omg2 * Lbox**(ndim - 1))/(8.0 * kn**2) !BEWARE Lbox assumed to be equal in all existing dimensions
+      Lbox = 1. !0.5 * sqrt(pi * gamma_ion * p0 / newtong / d0**2)
+      if (kn > 0) then
+         Tamp = (d0 * amp**2 * omg2 * Vbox)/(8.0 * kn**2) !BEWARE Lbox assumed to be equal in all existing dimensions
+      else
+         Tamp = 0.
+         if (proc == 0) write(*,'(a)')"[initproblem:init_prob] Warning: no waves (kn == 0)"
+      end if
       if (mode == 1) Tamp = Tamp / 4.
 
       if (proc == 0) then
@@ -212,8 +222,12 @@ contains
       enddo
     enddo
 
-    Tamp_aux = 10**int(log(Tamp)/log(10.))
-    Tamp_rounded = (int(Tamp/Tamp_aux)+1)*Tamp_aux
+    if (Tamp > 0) then
+       Tamp_aux = 10**int(log(Tamp)/log(10.))
+       Tamp_rounded = (int(2.05*Tamp/Tamp_aux)+1)*Tamp_aux
+    else
+       Tamp_rounded = 0.
+    end if
     if (proc == 0) then
       write(*,'(/,a)') 'Run:'
 #ifdef MULTIGRID
@@ -233,15 +247,31 @@ contains
          write(137,'(a)') "set output 'jeans-fft.png'"
          write(137,'(a)') 'set title "Jeans oscillations (FFT)"'
 #endif
-         write(137,'(a,g13.5)') "a = ", Tamp
-         write(137,'(a,g13.5)') "b = ", 2.0*omg
-         write(137,'(a,g13.5)') "L = ", Lbox
-         write(137,'(a,g13.5)') "T = 2*pi/b"
-         write(137,'(a,g13.5)') "y(x) = a *(1-cos(b*x))"
-         write(137,'(a,/,a)') 'set xlabel "time [periods]"', 'set ylabel "E_int"'
-         write(137,'(a)') "set key left Left reverse bottom"
-         write(137,'(3(a,/),a,g10.2)') 'set xtics 1', 'set mxtics 2', 'set mytics 2', 'set ytics ',Tamp_rounded
-         write(137,'(3(a,g10.2),a)') 'plot [0:int(',tend,'/T)][',Tamp_rounded/(-2.),':',2*Tamp_rounded,'] "jeans_ts1_000.tsl" u ($2/T):($11/L) w p t "calculated", "" u ($2/T):($11/L) smoo cspl t "" w l 1, y(x*T) t "analytical", "" u ($2/T):(10*(y($2)-$11/L)) t "10 * difference" w lp, 0 t "" w l 0'
+         write(137,'(3(a,/),a)') 'set ylabel "E_int"', 'set xtics 1', 'set mxtics 2', 'set mytics 2'
+         if (Tamp_rounded /= 0 .and. Tamp >0) then
+            write(137,'(a,g11.3)')'set ytics ',Tamp_rounded/2.
+            write(137,'(2(a,g11.3),a)')'set yrange [ ',Tamp_rounded/(-4.),':',Tamp_rounded,']'
+         else
+            write(137,'(a)')'set yrange [ * : * ]'
+         end if
+         if (Tamp >0) then
+            write(137,'(a)') "set key left Left reverse bottom"
+            write(137,'(a,g13.5)') "a = ", Tamp
+            write(137,'(a,g13.5)') "b = ", 2.0*omg
+            write(137,'(a,g13.5)') "T = 2*pi/b"
+            write(137,'(a,g13.5)') "y(x) = a *(1-cos(b*x))"
+            write(137,'(a)') 'set xlabel "time [periods]"'
+            write(137,'(a,g11.3,a)')'set xrange [ 0 : int(',tend,'/T)]'
+            write(137,'(a)') 'plot "jeans_ts1_000.tsl" u ($2/T):($11) w p t "calculated", "" u ($2/T):($11) smoo cspl t "" w l 1, y(x*T) t "analytical", "" u ($2/T):(10*(y($2)-$11)) t "10 * difference" w lp, 0 t "" w l 0'
+         else
+
+            write(137,'(a,g13.5)') "a = ", amp**2 * omg**2 * 800000. !BEWARE: stronger dependence on omg, magic number 800000
+            write(137,'(a,g13.5)') "b = ", 2.0*omg
+            write(137,'(a,g13.5)') "T = 2*pi/b"
+            write(137,'(a,g13.5)') "y(x) = a * exp(b*x)"
+            write(137,'(3(a,/),a)') 'set key left Left reverse top', 'set log y', 'set xlabel "time"', 'set xrange [ * : * ]'
+            write(137,'(a)') 'plot "jeans_ts1_000.tsl" u ($2):($11) w p t "calculated", y(x) t "exp(2 om T)"'
+         end if
       close(137)
     endif
     return
