@@ -479,15 +479,30 @@ contains
          else
             lvl(idx)%mgvar     (:, :, :, :) = 0.0 ! should not be necessary if dirty_debug shows nothing suspicious
          end if
-         do j = 1, lvl(idx)%nx
-            lvl(idx)%x(j)  = cgrid%xminb + 0.5*lvl(idx)%dx + (j-lvl(idx)%nb-1)*lvl(idx)%dx
-         enddo
-         do j = 1, lvl(idx)%ny
-            lvl(idx)%y(j)  = cgrid%yminb + 0.5*lvl(idx)%dy + (j-lvl(idx)%nb-1)*lvl(idx)%dy
-         enddo
-         do j = 1, lvl(idx)%nz
-            lvl(idx)%z(j)  = cgrid%zminb + 0.5*lvl(idx)%dz + (j-lvl(idx)%nb-1)*lvl(idx)%dz
-         enddo
+
+         if (has_dir(XDIR)) then
+            do j = 1, lvl(idx)%nx
+               lvl(idx)%x(j)  = cgrid%xminb + 0.5*lvl(idx)%dx + (j-lvl(idx)%nb-1)*lvl(idx)%dx
+            enddo
+         else
+            lvl(idx)%x(:) = (cgrid%xminb + cgrid%xmaxb) / 2.
+         end if
+
+         if (has_dir(YDIR)) then
+            do j = 1, lvl(idx)%ny
+               lvl(idx)%y(j)  = cgrid%yminb + 0.5*lvl(idx)%dy + (j-lvl(idx)%nb-1)*lvl(idx)%dy
+            enddo
+         else
+            lvl(idx)%y(:) = (cgrid%yminb + cgrid%ymaxb) / 2.
+         end if
+
+         if (has_dir(ZDIR)) then
+            do j = 1, lvl(idx)%nz
+               lvl(idx)%z(j)  = cgrid%zminb + 0.5*lvl(idx)%dz + (j-lvl(idx)%nb-1)*lvl(idx)%dz
+            enddo
+         else
+            lvl(idx)%z(:) = (cgrid%zminb + cgrid%zmaxb) / 2.
+         end if
 
          if (prefer_rbgs_relaxation) then
             lvl(idx)%fft_type = fft_none
