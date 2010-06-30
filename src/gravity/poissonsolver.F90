@@ -57,7 +57,10 @@ contains
 #ifdef SHEAR
     real, dimension(:,:,:), allocatable :: ala
 #endif /* SHEAR */
-    logical,save :: frun = .true.
+    logical, save :: frun = .true.
+    integer       :: i
+
+    if (any([nx, ny, nz] <= 1)) call die("[poissonsolver:poisson_solve] Only 3D setups are supported") !BEWARE 2D and 1D probably need small fixes
 
     fgpm = fgp
 
@@ -70,10 +73,14 @@ contains
 
 ! Boundary conditions
 
-         fgp(1:nb,:,:)              = fgp(nxd+1:nxd+nb,:,:)
-         fgp(nxd+nb+1:nxd+2*nb,:,:) = fgp(nb+1:2*nb,:,:)
-         fgp(:,1:nb,:)              = fgp(:,nyd+1:nyd+nb,:)
-         fgp(:,nyd+nb+1:nyd+2*nb,:) = fgp(:,nb+1:2*nb,:)
+         do i = 1, ceiling(nb/real(nxd))
+            fgp(1:nb,:,:)              = fgp(nxd+1:nxd+nb,:,:)
+            fgp(nxd+nb+1:nxd+2*nb,:,:) = fgp(nb+1:2*nb,:,:)
+         end do
+         do i = 1, ceiling(nb/real(nyd))
+            fgp(:,1:nb,:)              = fgp(:,nyd+1:nyd+nb,:)
+            fgp(:,nyd+nb+1:nyd+2*nb,:) = fgp(:,nb+1:2*nb,:)
+         end do
       call die("poisson_solve: poisson_xyp called")
 
     elseif( bnd_xl .eq. 'per' .and. bnd_xr .eq. 'per' .and. &
@@ -82,12 +89,18 @@ contains
         call poisson_xyzp(dens(nb+1:nb+nxd,nb+1:nb+nyd,nb+1:nb+nzd), fgp(nb+1:nb+nxd,nb+1:nb+nyd,nb+1:nb+nzd))
 
 ! Boundary conditions
-         fgp(1:nb,:,:)              = fgp(nxd+1:nxd+nb,:,:)
-         fgp(nxd+nb+1:nxd+2*nb,:,:) = fgp(nb+1:2*nb,:,:)
-         fgp(:,1:nb,:)              = fgp(:,nyd+1:nyd+nb,:)
-         fgp(:,nyd+nb+1:nyd+2*nb,:) = fgp(:,nb+1:2*nb,:)
-         fgp(:,:,1:nb)              = fgp(:,:,nzd+1:nzd+nb)
-         fgp(:,:,nzd+nb+1:nzd+2*nb) = fgp(:,:,nb+1:2*nb)
+        do i = 1, ceiling(nb/real(nxd))
+           fgp(1:nb,:,:)              = fgp(nxd+1:nxd+nb,:,:)
+           fgp(nxd+nb+1:nxd+2*nb,:,:) = fgp(nb+1:2*nb,:,:)
+        end do
+        do i = 1, ceiling(nb/real(nyd))
+           fgp(:,1:nb,:)              = fgp(:,nyd+1:nyd+nb,:)
+           fgp(:,nyd+nb+1:nyd+2*nb,:) = fgp(:,nb+1:2*nb,:)
+        end do
+        do i = 1, ceiling(nb/real(nzd))
+           fgp(:,:,1:nb)              = fgp(:,:,nzd+1:nzd+nb)
+           fgp(:,:,nzd+nb+1:nzd+2*nb) = fgp(:,:,nb+1:2*nb)
+        end do
 
 #ifdef SHEAR
     elseif ( bnd_xl .eq. 'she' .and. bnd_xr .eq. 'she' .and. &
