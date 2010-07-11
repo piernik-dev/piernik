@@ -258,6 +258,10 @@ module mpisetup
             close(1)
          endif
 
+         nxd = max(1, nxd)
+         nyd = max(1, nyd)
+         nzd = max(1, nzd)
+
          if(proc == 0) then
 
             cbuff(1) = bnd_xl
@@ -273,9 +277,9 @@ module mpisetup
 
             ibuff(4) = integration_order
 
-            ibuff(5) = max(1, nxd)
-            ibuff(6) = max(1, nyd)
-            ibuff(7) = max(1, nzd)
+            ibuff(5) = nxd
+            ibuff(6) = nyd
+            ibuff(7) = nzd
 
             rbuff(1) = smalld
             rbuff(10)= smallc

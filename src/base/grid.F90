@@ -199,12 +199,15 @@ module grid
          close(3)
       endif
 
+      nxd = max(1, nxd)
+      nyd = max(1, nyd)
+      nzd = max(1, nzd)
 
       if(proc == 0) then
 
-         ibuff(1)   = max(1, nxd)
-         ibuff(2)   = max(1, nyd)
-         ibuff(3)   = max(1, nzd)
+         ibuff(1)   = nxd
+         ibuff(2)   = nyd
+         ibuff(3)   = nzd
          ibuff(4)   = nb
 
          rbuff(1)   = xmin
