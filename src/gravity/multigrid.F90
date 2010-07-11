@@ -86,7 +86,7 @@ contains
       real, allocatable, dimension(:)  :: kx, ky, kz             !< FFT kernel directional components for convolution
       type(soln_history), pointer      :: os
 
-      namelist /MULTIGRID_SOLVER/ norm_tol, overrelax, overrelax_x, overrelax_y, overrelax_z, vcycle_abort, &
+      namelist /MULTIGRID_SOLVER/ norm_tol, overrelax, overrelax_x, overrelax_y, overrelax_z, Jacobi_damp, vcycle_abort, &
            &                      level_max, coarsen_multipole, lmax, mmax, max_cycles, nsmool, nsmoof, &
            &                      ord_laplacian, ord_prolong, ord_prolong_face, ord_prolong_mpole, ord_time_extrap, &
            &                      use_point_monopole, trust_fft_solution, stdout, verbose_vcycle, gb_no_fft, prefer_rbgs_relaxation, &
@@ -105,6 +105,7 @@ contains
       overrelax_x   = 1.
       overrelax_y   = 1.
       overrelax_z   = 1.
+      Jacobi_damp   = 1.
       vcycle_abort  = 2.
 
       level_max         = 1
@@ -176,7 +177,8 @@ contains
          rbuff(3) = overrelax_x
          rbuff(4) = overrelax_y
          rbuff(5) = overrelax_z
-         rbuff(6) = vcycle_abort
+         rbuff(6) = Jacobi_damp
+         rbuff(7) = vcycle_abort
 
          ibuff( 1) = level_max
          ibuff( 2) = coarsen_multipole
@@ -230,7 +232,8 @@ contains
          overrelax_x    = rbuff(3)
          overrelax_y    = rbuff(4)
          overrelax_z    = rbuff(5)
-         vcycle_abort   = rbuff(6)
+         Jacobi_damp    = rbuff(6)
+         vcycle_abort   = rbuff(7)
 
          level_max         = ibuff( 1)
          coarsen_multipole = ibuff( 2)
@@ -299,6 +302,8 @@ contains
          overrelax_y   = 1.
          overrelax_z   = 1.
       end if
+
+      if ((Jacobi_damp <= 0. .or. Jacobi_damp>1.) .and. proc == 0) write(*,'(a,g12.5,a)')"[multigrid:init_multigrid] Jacobi_damp = ",Jacobi_damp," is outside (0, 1] interval."
 
       if (fft_patient) fftw_flags = FFTW_PATIENT
 
@@ -1730,16 +1735,17 @@ contains
                do j = j1, lvl(lev)%je, jd
                   if (has_dir(XDIR))                                                   i1 = lvl(lev)%is + mod(n+j+k, 2)
                   lvl(      lev)%mgvar(i1  :lvl(lev)%ie  :id, j,   k,   soln) = &
-                       -lvl(lev)%mgvar(i1  :lvl(lev)%ie  :id, j,   k,   src)  * lvl(lev)%r
+                       & (1. - Jacobi_damp)* lvl(lev)%mgvar(i1  :lvl(lev)%ie  :id, j,   k,   soln) &
+                       &     - Jacobi_damp * lvl(lev)%mgvar(i1  :lvl(lev)%ie  :id, j,   k,   src)  * lvl(lev)%r
                   if (has_dir(XDIR)) &
                        lvl (lev)%mgvar(i1  :lvl(lev)%ie  :id, j,   k,   soln) = lvl(lev)%mgvar(i1:  lvl(lev)%ie:  id, j,   k,   soln)  + &
-                       (lvl(lev)%mgvar(i1-1:lvl(lev)%ie-1:id, j,   k,   soln) + lvl(lev)%mgvar(i1+1:lvl(lev)%ie+1:id, j,   k,   soln)) * lvl(lev)%rx
+                       &       Jacobi_damp *(lvl(lev)%mgvar(i1-1:lvl(lev)%ie-1:id, j,   k,   soln) + lvl(lev)%mgvar(i1+1:lvl(lev)%ie+1:id, j,   k,   soln)) * lvl(lev)%rx
                   if (has_dir(YDIR)) &
                        lvl (lev)%mgvar(i1  :lvl(lev)%ie  :id, j,   k,   soln) = lvl(lev)%mgvar(i1:  lvl(lev)%ie:  id, j,   k,   soln)  + &
-                       (lvl(lev)%mgvar(i1  :lvl(lev)%ie  :id, j-1, k,   soln) + lvl(lev)%mgvar(i1:  lvl(lev)%ie:  id, j+1, k,   soln)) * lvl(lev)%ry
+                       &       Jacobi_damp *(lvl(lev)%mgvar(i1  :lvl(lev)%ie  :id, j-1, k,   soln) + lvl(lev)%mgvar(i1:  lvl(lev)%ie:  id, j+1, k,   soln)) * lvl(lev)%ry
                   if (has_dir(ZDIR)) &
                        lvl (lev)%mgvar(i1  :lvl(lev)%ie  :id, j,   k,   soln) = lvl(lev)%mgvar(i1:  lvl(lev)%ie:  id, j,   k,   soln)  + &
-                       (lvl(lev)%mgvar(i1  :lvl(lev)%ie  :id, j,   k-1, soln) + lvl(lev)%mgvar(i1:  lvl(lev)%ie:  id, j,   k+1, soln)) * lvl(lev)%rz
+                       &       Jacobi_damp *(lvl(lev)%mgvar(i1  :lvl(lev)%ie  :id, j,   k-1, soln) + lvl(lev)%mgvar(i1:  lvl(lev)%ie:  id, j,   k+1, soln)) * lvl(lev)%rz
                end do
             end do
          end if
