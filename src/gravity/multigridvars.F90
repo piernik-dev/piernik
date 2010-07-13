@@ -59,6 +59,7 @@ module multigridvars
    integer            :: level_max                                    !< Levels of multigrid refinement
    integer            :: max_cycles                                   !< Maximum allowed number ov V-cycles
    integer            :: nsmool                                       !< smoothing cycles per call
+   integer            :: nsmoob                                       !< smoothing cycles on base level when gb_no_fft = .true. (a convergence check would be much better)
    integer            :: nsmoof                                       !< FFT iterations per call
    integer            :: ord_laplacian                                !< Laplace operator order; allowed values are 2 (default) and 4 (experimental, not fully implemented)
    integer            :: ord_prolong                                  !< Prolongation operator order; allowed values are -4 -2, 0 (default), 2 and 4; -2 is often fast

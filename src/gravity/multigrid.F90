@@ -87,7 +87,7 @@ contains
       type(soln_history), pointer      :: os
 
       namelist /MULTIGRID_SOLVER/ norm_tol, overrelax, overrelax_x, overrelax_y, overrelax_z, Jacobi_damp, vcycle_abort, &
-           &                      level_max, coarsen_multipole, lmax, mmax, max_cycles, nsmool, nsmoof, &
+           &                      level_max, coarsen_multipole, lmax, mmax, max_cycles, nsmool, nsmoob, nsmoof, &
            &                      ord_laplacian, ord_prolong, ord_prolong_face, ord_prolong_mpole, ord_time_extrap, &
            &                      use_point_monopole, trust_fft_solution, stdout, verbose_vcycle, gb_no_fft, prefer_rbgs_relaxation, &
            &                      fft_full_relax, prefer_modified_norm, gb_solve_gather, fft_patient, do_ascii_dump, dirty_debug, hdf5levels, multidim_code_3D, &
@@ -114,6 +114,7 @@ contains
       mmax              = -1 ! will be automatically set to lmax unless explicitly limited in problem.par
       max_cycles        = 20
       nsmool            = 4
+      nsmoob            = 100
       nsmoof            = 1
       ord_laplacian     = 2
       ord_prolong       = 0
@@ -186,12 +187,13 @@ contains
          ibuff( 4) = mmax
          ibuff( 5) = max_cycles
          ibuff( 6) = nsmool
-         ibuff( 7) = nsmoof
-         ibuff( 8) = ord_laplacian
-         ibuff( 9) = ord_prolong
-         ibuff(10) = ord_prolong_face
-         ibuff(11) = ord_prolong_mpole
-         ibuff(12) = ord_time_extrap
+         ibuff( 7) = nsmoob
+         ibuff( 8) = nsmoof
+         ibuff( 9) = ord_laplacian
+         ibuff(10) = ord_prolong
+         ibuff(11) = ord_prolong_face
+         ibuff(12) = ord_prolong_mpole
+         ibuff(13) = ord_time_extrap
 
          lbuff( 1) = use_point_monopole
          lbuff( 2) = trust_fft_solution
@@ -241,12 +243,13 @@ contains
          mmax              = ibuff( 4)
          max_cycles        = ibuff( 5)
          nsmool            = ibuff( 6)
-         nsmoof            = ibuff( 7)
-         ord_laplacian     = ibuff( 8)
-         ord_prolong       = ibuff( 9)
-         ord_prolong_face  = ibuff(10)
-         ord_prolong_mpole = ibuff(11)
-         ord_time_extrap   = ibuff(12)
+         nsmoob            = ibuff( 7)
+         nsmoof            = ibuff( 8)
+         ord_laplacian     = ibuff( 9)
+         ord_prolong       = ibuff(10)
+         ord_prolong_face  = ibuff(11)
+         ord_prolong_mpole = ibuff(12)
+         ord_time_extrap   = ibuff(13)
 
          use_point_monopole      = lbuff( 1)
          trust_fft_solution      = lbuff( 2)
@@ -1673,8 +1676,6 @@ contains
       integer, intent(in) :: lev  !< level for which approximate the solution
       integer, intent(in) :: src  !< index of source in lvl()%mgvar
       integer, intent(in) :: soln !< index of solution in lvl()%mgvar
-
-      integer, parameter :: nsmoob = 100 !< smoothing cycles per call on base level (a convergence check would be much better than a magic number)
 
       integer :: n, j, k, i1, j1, k1, id, jd, kd
       integer :: nsmoo
