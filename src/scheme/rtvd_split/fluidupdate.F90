@@ -82,7 +82,7 @@ contains
       call check_log
       call check_tsl
 
-      if(proc.eq.0) write(*,900) nstep,dt,t,ts
+      if (first_run .and. proc == 0) write(*,900) 0,dt,t,ts
 900   format('   nstep = ',i7,'   dt = ',es22.16,'   t = ',es22.16,'   dWallClock = ',f7.2,' s')
 
       t=t+dt
@@ -115,6 +115,9 @@ contains
 #endif /* SNE_DISTR */
 
       if (first_run) first_run = .false.
+
+      ts=timer_("fluid_update")
+      if (proc == 0) write(*,900) nstep,dt,t,ts
 
    end subroutine fluid_update
 
