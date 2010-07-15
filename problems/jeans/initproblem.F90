@@ -166,7 +166,7 @@ contains
       omg  = sqrt(abs(omg2))
       kJ   = sqrt(fpiG * d0) / cs0
       if (kn > 0) then
-         Tamp = (d0 * amp**2 * omg2 * Vbox)/(8.0 * kn**2)
+         Tamp = (d0 * amp**2 * omg2 * Vbox)/(4.0 * kn**2)
       else
          Tamp = 0.
          if (proc == 0) write(*,'(a)')"[initproblem:init_prob] Warning: no waves (kn == 0)"
@@ -183,7 +183,7 @@ contains
          if (omg2>0) then
             write(*,*) 'characteristic frequency          = ', omg
             write(*,*)
-            write(*,*) 'T(t) = ',Tamp,'*[1 - cos(',2.0*omg,'t)]'
+            write(*,*) 'T(t) = ',Tamp,'*[1 - cos(',omg,'t)]'
          else
             write(*,*) 'characteristic timescale          = ', omg
             !write(*,*) 'Something like T(t) = ',Tamp,'* exp(',omg,'t)]' !BEWARE the formula is not completed
@@ -223,7 +223,7 @@ contains
 
     if (Tamp > 0) then
        Tamp_aux = 10**int(log(Tamp)/log(10.))
-       Tamp_rounded = (int(2.05*Tamp/Tamp_aux)+1)*Tamp_aux
+       Tamp_rounded = (int(1.05*Tamp/Tamp_aux)+1)*Tamp_aux
     else
        Tamp_rounded = 0.
     end if
@@ -256,9 +256,9 @@ contains
          if (Tamp >0) then
             write(137,'(a)') "set key left Left reverse bottom"
             write(137,'(a,g13.5)') "a = ", Tamp
-            write(137,'(a,g13.5)') "b = ", 2.0*omg
-            write(137,'(a,g13.5)') "T = 4*pi/b"
-            write(137,'(a,g13.5)') "y(x) = a *(1-cos(b*x))"
+            write(137,'(a,g13.5)') "b = ", omg
+            write(137,'(a,g13.5)') "T = 2*pi/b"
+            write(137,'(a,g13.5)') "y(x) = a * sin(b*x)**2"
             write(137,'(a)') 'set xlabel "time [periods]"'
             if (tend > pi/omg) then
                write(137,'(a,g11.3,a)')'set xrange [ 0 : int(',tend,'/T)]'
