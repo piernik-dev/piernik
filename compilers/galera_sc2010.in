@@ -1,0 +1,8 @@
+PROG     = piernik
+
+LOCAL    = /users/kdm/xarth/sc2010
+F90      = ${LOCAL}/bin/mpif90
+F90FLAGS = -fast -r8 -heap-arrays
+STATIC   = -Bstatic
+DYNAMIC  = -Bdynamic
+

@@ -302,7 +302,7 @@ print MAKEFILE "\n\n";
 #
 # Define common macros
 #
-print MAKEFILE "LIBS += -lhdf5_fortran -lhdf5hl_fortran -lhdf5_hl -lhdf5\n";
+print MAKEFILE "LIBS +=\${STATIC} -lhdf5_fortran -lhdf5hl_fortran -lhdf5_hl -lhdf5 -lsz -lz \${DYNAMIC}\n";
 if( grep { /SHEAR/ || /MULTIGRID/ } @d ) {print MAKEFILE "LIBS += `pkg-config --libs fftw3`\n";}
 if( grep { /POISSON_FFT/ }  @d) {print MAKEFILE "LIBS += `pkg-config --libs fftw3` `pkg-config --libs lapack`\n";}
 print MAKEFILE "CPPFLAGS += " . $cppflags . "\n";
