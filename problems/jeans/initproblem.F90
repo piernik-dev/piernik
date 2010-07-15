@@ -166,7 +166,7 @@ contains
       omg  = sqrt(abs(omg2))
       kJ   = sqrt(fpiG * d0) / cs0
       if (kn > 0) then
-         Tamp = (d0 * amp**2 * omg2 * Vbox)/(8.0 * kn**2) !BEWARE Lbox assumed to be equal in all existing dimensions
+         Tamp = (d0 * amp**2 * omg2 * Vbox)/(8.0 * kn**2)
       else
          Tamp = 0.
          if (proc == 0) write(*,'(a)')"[initproblem:init_prob] Warning: no waves (kn == 0)"
@@ -257,7 +257,7 @@ contains
             write(137,'(a)') "set key left Left reverse bottom"
             write(137,'(a,g13.5)') "a = ", Tamp
             write(137,'(a,g13.5)') "b = ", 2.0*omg
-            write(137,'(a,g13.5)') "T = 2*pi/b"
+            write(137,'(a,g13.5)') "T = 4*pi/b"
             write(137,'(a,g13.5)') "y(x) = a *(1-cos(b*x))"
             write(137,'(a)') 'set xlabel "time [periods]"'
             if (tend > pi/omg) then
