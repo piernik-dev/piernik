@@ -61,9 +61,11 @@ module initproblem
    real                 :: f_in                               !< smoothing factor for cutoff at r_in
    real                 :: f_out                              !< smoothing factor for cutoff at r_out
    real                 :: alfasupp                           !< scaling factor for d_i_t = 3, in most cases should be = 1
+   real                 :: T_disk                             !< temperature of the disk
+   real                 :: mean_mol_weight                    !< mean molecular weight
 
    namelist /PROBLEM_CONTROL/  problem_name, run_id, input_file, gamma_loc, mass_mul, ambient_density, cs_mul, damp_factor, divine_intervention_type, mincs2, maxcs2, &
-      &                        r_in, r_out, f_in, f_out, alfasupp, fake_ic
+      &                        r_in, r_out, f_in, f_out, alfasupp, fake_ic, T_disk, mean_mol_weight
 
 contains
 
@@ -103,6 +105,8 @@ contains
       f_in            = 10.0
       f_out           = 50.0
       alfasupp        = 1.0
+      T_disk          = 20.0
+      mean_mol_weight = 2.0
 
       divine_intervention_type = 2
 
@@ -143,6 +147,8 @@ contains
          rbuff(10) = f_in
          rbuff(11) = f_out
          rbuff(12) = alfasupp
+         rbuff(13) = T_disk
+         rbuff(14) = mean_mol_weight
 
          ibuff(1) = divine_intervention_type
 
@@ -173,6 +179,8 @@ contains
          f_in            = rbuff(10)
          f_out           = rbuff(11)
          alfasupp        = rbuff(12)
+         T_disk          = rbuff(13)
+         mean_mol_weight = rbuff(14)
 
          divine_intervention_type = ibuff(1)
 
@@ -276,7 +284,7 @@ contains
       use grid,        only: is, ie, js, je, ks, ke, nx, ny, nz, nb, x, y, z, dx, dy, dz
       use initionized, only: idni, imxi, imyi, imzi
       use list_hdf5,   only: additional_attrs, problem_write_restart, problem_read_restart
-      use constants,   only: small
+      use constants,   only: small, kboltz, mH
       use errh,        only: die
       use types,       only: problem_customize_solution
 
@@ -311,7 +319,8 @@ contains
                      u(imxi, i, j, k)     = ic_data(iic, jic, kic, 2)
                      u(imyi, i, j, k)     = ic_data(iic, jic, kic, 3)
                      u(imzi, i, j, k)     = ic_data(iic, jic, kic, 4)
-                     cs_iso2_arr(i, j, k) = ic_data(iic, jic, kic, 5)
+      !               cs_iso2_arr(i, j, k) = ic_data(iic, jic, kic, 5)
+                     cs_iso2_arr(i, j, k) = (gamma_loc) * kboltz * T_disk / mean_mol_weight / mH
                   else
                      u(idni, i, j, k)     = smalld
                      u(imxi, i, j, k)     = small
@@ -341,7 +350,6 @@ contains
          cs_iso2_arr(:,:,i)       = cs_iso2_arr(:,:,nb+1)
          cs_iso2_arr(:,:,nz-nb+i) = cs_iso2_arr(:,:,nz-nb)
       enddo
-
       if (proc == 0 ) then
          write(*,'(2(a,g15.7))') '[initproblem:init_problem]: minval(dens)    = ', minval(u(idni,:,:,:)),      ' maxval(dens)    = ', maxval(u(idni,:,:,:))
          write(*,'(2(a,g15.7))') '[initproblem:init_problem]: minval(cs_iso2) = ', minval(cs_iso2_arr(:,:,:)), ' maxval(cs_iso2) = ', maxval(cs_iso2_arr(:,:,:))

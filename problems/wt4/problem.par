@@ -3,6 +3,7 @@
     nyd = 512
     nzd = 52
  /
+
  $MPI_BLOCKS
     pxsize = 1
     pysize = 1
@@ -95,11 +96,12 @@
     input_file   = 'test4-512.alt'
     mincs2       = 8.725322e-4
     maxcs2       = 5.8168972e-3
-    r_in         = 0.7
+    r_in         = 0.55
     r_out        = 3.0
     f_in         = 4.0
     f_out        = 50.0
     alfasupp     = 1.0
+    fake_ic      = .false.
     divine_intervention_type = 3
  /
 
