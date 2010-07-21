@@ -37,7 +37,7 @@ module multipole
 
    private
    public :: init_multipole, cleanup_multipole, multipole_solver
-   public :: lmax, mmax, ord_prolong_mpole, coarsen_multipole, use_point_monopole
+   public :: lmax, mmax, ord_prolong_mpole, coarsen_multipole, use_point_monopole, interp_pt2mom, interp_mom2pot
 
    integer, parameter        :: INSIDE = 1, OUTSIDE = INSIDE + 1 !< distinction between interior and exterior multipole expansion
 
@@ -47,6 +47,8 @@ module multipole
    integer                   :: ord_prolong_mpole                !< boundary prolongation operator order; allowed values are -2 .. 2
    integer                   :: coarsen_multipole                !< If > 0 then evaluate multipoles at level_max-coarsen_multipole level
    logical                   :: use_point_monopole               !< Don't evaluate multipole moments, use point-like mass approximation (crudest possible)
+   logical                   :: interp_pt2mom                    !< Distribute contribution from a cell between two adjacent radial bins (linear interpolation in radius)
+   logical                   :: interp_mom2pot                   !< Compute the potential from moments from two adjacent radial bins (linear interpolation in radius)
 
    ! radial discredization
    integer                   :: rqbin                            !< number of radial samples of multipoles
@@ -137,6 +139,16 @@ contains
          coarsen_multipole = level_max - level_min
       end if
       lmpole => lvl(level_max - coarsen_multipole)
+      if (coarsen_multipole > 0) then
+         if (interp_pt2mom) then
+            write(*,'(a)')"[multipole:init_multipole] Warning: coarsen_multipole > 0 disables interp_pt2mom"
+            interp_pt2mom = .false.
+         end if
+         if (interp_mom2pot) then
+            write(*,'(a)')"[multipole:init_multipole] Warning: coarsen_multipole > 0 disables interp_mom2pot"
+            interp_mom2pot = .false.
+         end if
+      end if
 
       if (.not. use_point_monopole) then
          if (allocated(rn) .or. allocated(irn) .or. allocated(sfac) .or. allocated(cfac)) call die("[multipole:init_multipole] rn, irn, sfac or cfac already allocated")
@@ -715,15 +727,21 @@ contains
       real, intent(in) :: mass    !< mass of the contributing point
       real, intent(in) :: x, y, z !< coordinates of the contributing point
 
-      real    :: sin_th, cos_th
+      real    :: sin_th, cos_th, del
       real    :: Ql, Ql1, Ql2
       integer :: l, m, ir, m2s, m2c
 
-      call geomfac4moments(mass, x, y, z, sin_th, cos_th, ir)
+      call geomfac4moments(mass, x, y, z, sin_th, cos_th, ir, del)
+
+      if (.not. interp_pt2mom) del = 0.
 
       ! monopole, the (0,0) moment; P_0 = 1.
-      Q(0, INSIDE,  ir) = Q(0, INSIDE,  ir) +  rn(0)
-      Q(0, OUTSIDE, ir) = Q(0, OUTSIDE, ir) + irn(0)
+      Q(0, INSIDE,  ir)   = Q(0, INSIDE,  ir)   +  rn(0) * (1.-del)
+      Q(0, OUTSIDE, ir)   = Q(0, OUTSIDE, ir)   + irn(0) * (1.-del)
+      if (del /= 0.) then
+         Q(0, INSIDE,  ir+1) = Q(0, INSIDE,  ir+1) +  rn(0) * del
+         Q(0, OUTSIDE, ir+1) = Q(0, OUTSIDE, ir+1) + irn(0) * del
+      end if
 
       ! axisymmetric (l,0) moments
       ! Legendre polynomial recurrence: l P_l = x (2l-1) P_{l-1} - (l-1) P_{l-2}, x \eqiv \cos(\theta)
@@ -731,8 +749,12 @@ contains
       Ql1 = 1.
       do l = 1, lmax
          Ql = cos_th * k12(1, l, 0) * Ql1 - k12(2, l, 0) * Ql2
-         Q(l, INSIDE,  ir) = Q(l, INSIDE,  ir) +  rn(l) * Ql
-         Q(l, OUTSIDE, ir) = Q(l, OUTSIDE, ir) + irn(l) * Ql
+         Q(l, INSIDE,  ir)   = Q(l, INSIDE,  ir)   +  rn(l) * Ql * (1.-del)
+         Q(l, OUTSIDE, ir)   = Q(l, OUTSIDE, ir)   + irn(l) * Ql * (1.-del)
+         if (del /= 0.) then
+            Q(l, INSIDE,  ir+1) = Q(l, INSIDE,  ir+1) +  rn(l) * Ql * del
+            Q(l, OUTSIDE, ir+1) = Q(l, OUTSIDE, ir+1) + irn(l) * Ql * del
+         end if
          Ql2 = Ql1
          Ql1 = Ql
       end do
@@ -746,10 +768,16 @@ contains
          ! Associated Legendre polynomial: P_m^m = (-1)^m (2m-1)!! (1-x^2)^{m/2}
          ! The (2m-1)!! factor is integrated in ofact(:) array, where it mostly cancels out, note that (2m-1)!! \simeq m! exp(m/sqrt(2)) so it grows pretty fast with m
          Ql1 = sin_th ** m
-         Q(m2s+m, INSIDE,  ir) = Q(m2s+m, INSIDE,  ir) +  rn(m) * Ql1 * sfac(m)
-         Q(m2c+m, INSIDE,  ir) = Q(m2c+m, INSIDE,  ir) +  rn(m) * Ql1 * cfac(m)
-         Q(m2s+m, OUTSIDE, ir) = Q(m2s+m, OUTSIDE, ir) + irn(m) * Ql1 * sfac(m)
-         Q(m2c+m, OUTSIDE, ir) = Q(m2c+m, OUTSIDE, ir) + irn(m) * Ql1 * cfac(m)
+         Q(m2s+m, INSIDE,  ir)   = Q(m2s+m, INSIDE,  ir)   +  rn(m) * Ql1 * sfac(m) * (1.-del)
+         Q(m2c+m, INSIDE,  ir)   = Q(m2c+m, INSIDE,  ir)   +  rn(m) * Ql1 * cfac(m) * (1.-del)
+         Q(m2s+m, OUTSIDE, ir)   = Q(m2s+m, OUTSIDE, ir)   + irn(m) * Ql1 * sfac(m) * (1.-del)
+         Q(m2c+m, OUTSIDE, ir)   = Q(m2c+m, OUTSIDE, ir)   + irn(m) * Ql1 * cfac(m) * (1.-del)
+         if (del /= 0.) then
+            Q(m2s+m, INSIDE,  ir+1) = Q(m2s+m, INSIDE,  ir+1) +  rn(m) * Ql1 * sfac(m) * del
+            Q(m2c+m, INSIDE,  ir+1) = Q(m2c+m, INSIDE,  ir+1) +  rn(m) * Ql1 * cfac(m) * del
+            Q(m2s+m, OUTSIDE, ir+1) = Q(m2s+m, OUTSIDE, ir+1) + irn(m) * Ql1 * sfac(m) * del
+            Q(m2c+m, OUTSIDE, ir+1) = Q(m2c+m, OUTSIDE, ir+1) + irn(m) * Ql1 * cfac(m) * del
+         end if
 
          ! BEWARE: most of computational cost of multipoles is here
          ! from (m+1,m) to (lmax,m)
@@ -758,10 +786,16 @@ contains
          Ql2 = 0.
          do l = m + 1, lmax
             Ql = cos_th * k12(1, l, m) * Ql1 - k12(2, l, m) * Ql2
-            Q(m2s+l, INSIDE,  ir) = Q(m2s+l, INSIDE,  ir) +  rn(l) * Ql * sfac(m)
-            Q(m2c+l, INSIDE,  ir) = Q(m2c+l, INSIDE,  ir) +  rn(l) * Ql * cfac(m)
-            Q(m2s+l, OUTSIDE, ir) = Q(m2s+l, OUTSIDE, ir) + irn(l) * Ql * sfac(m)
-            Q(m2c+l, OUTSIDE, ir) = Q(m2c+l, OUTSIDE, ir) + irn(l) * Ql * cfac(m)
+            Q(m2s+l, INSIDE,  ir)   = Q(m2s+l, INSIDE,  ir)   +  rn(l) * Ql * sfac(m) * (1.-del)
+            Q(m2c+l, INSIDE,  ir)   = Q(m2c+l, INSIDE,  ir)   +  rn(l) * Ql * cfac(m) * (1.-del)
+            Q(m2s+l, OUTSIDE, ir)   = Q(m2s+l, OUTSIDE, ir)   + irn(l) * Ql * sfac(m) * (1.-del)
+            Q(m2c+l, OUTSIDE, ir)   = Q(m2c+l, OUTSIDE, ir)   + irn(l) * Ql * cfac(m) * (1.-del)
+            if (del /= 0.) then
+               Q(m2s+l, INSIDE,  ir+1) = Q(m2s+l, INSIDE,  ir+1) +  rn(l) * Ql * sfac(m) * del
+               Q(m2c+l, INSIDE,  ir+1) = Q(m2c+l, INSIDE,  ir+1) +  rn(l) * Ql * cfac(m) * del
+               Q(m2s+l, OUTSIDE, ir+1) = Q(m2s+l, OUTSIDE, ir+1) + irn(l) * Ql * sfac(m) * del
+               Q(m2c+l, OUTSIDE, ir+1) = Q(m2c+l, OUTSIDE, ir+1) + irn(l) * Ql * cfac(m) * del
+            end if
             Ql2 = Ql1
             Ql1 = Ql
          end do
@@ -830,16 +864,21 @@ contains
       real, intent(in)  :: x, y, z   !< coordinates of the point
       real, intent(out) :: potential !< calculated potential at given point
 
-      real :: sin_th, cos_th
+      real :: sin_th, cos_th, del
       real :: Ql, Ql1, Ql2
       integer :: l, m, ir, m2s, m2c
 
-      call geomfac4moments(-newtong, x, y, z, sin_th, cos_th, ir)
+      call geomfac4moments(-newtong, x, y, z, sin_th, cos_th, ir, del)
+
+      if (.not. interp_mom2pot) del = 0.
 
       ! monopole, the (0,0) moment; P_0 = 1.
-      potential = &
+      potential = (1.-del) * ( &
            Q(0, INSIDE,  ir)   * irn(0) + &
-           Q(0, OUTSIDE, ir+1) *  rn(0)
+           Q(0, OUTSIDE, ir+1) *  rn(0) )
+      if (del /= 0.) potential = potential + del * ( &
+           Q(0, INSIDE,  ir-1) * irn(0) + &
+           Q(0, OUTSIDE, ir)   *  rn(0) )
       ! ir+1 to prevent duplicate accounting contributions from ir bin; alternatively one can modify radial integration
 
       ! axisymmetric (l,0) moments
@@ -847,9 +886,12 @@ contains
       Ql1 = 1.
       do l = 1, lmax
          Ql = cos_th * k12(1, l, 0) * Ql1 - k12(2, l, 0) * Ql2
-         potential = potential + Ql * ( &
+         potential = potential + Ql * (1.-del) * ( &
               &      Q(l, INSIDE,  ir)   * irn(l) + &
               &      Q(l, OUTSIDE, ir+1) *  rn(l) )
+         if (del /= 0.) potential = potential + Ql  * del * ( &
+              &      Q(l, INSIDE,  ir-1) * irn(l) + &
+              &      Q(l, OUTSIDE, ir)   *  rn(l) )
          Ql2 = Ql1
          Ql1 = Ql
       end do
@@ -860,22 +902,32 @@ contains
          m2c = lm(0, 2*m)
          ! The (m,m) moment
          Ql1 = sin_th ** m
-         potential = potential + Ql1 * ( &
-              &      (Q(m2c+m,   INSIDE,  ir)   * irn(m)             + &
-              &       Q(m2c+m,   OUTSIDE, ir+1) *  rn(m) ) * cfac(m) + &
-              &      (Q(m2s+m, INSIDE,  ir)   * irn(m)             + &
+         potential = potential + Ql1 * (1.-del) * ( &
+              &      (Q(m2c+m, INSIDE,  ir)   * irn(m) + &
+              &       Q(m2c+m, OUTSIDE, ir+1) *  rn(m) ) * cfac(m) + &
+              &      (Q(m2s+m, INSIDE,  ir)   * irn(m) + &
               &       Q(m2s+m, OUTSIDE, ir+1) *  rn(m) ) * sfac(m) )
+         if (del /= 0.) potential = potential + Ql1 * del * ( &
+              &      (Q(m2c+m, INSIDE,  ir-1) * irn(m) + &
+              &       Q(m2c+m, OUTSIDE, ir)   *  rn(m) ) * cfac(m) + &
+              &      (Q(m2s+m, INSIDE,  ir-1) * irn(m) + &
+              &       Q(m2s+m, OUTSIDE, ir)   *  rn(m) ) * sfac(m) )
 
          ! BEWARE: lots of computational cost of multipoles is here
          ! from (m+1,m) to (lmax,m)
          Ql2 = 0.
          do l = m+1, lmax
             Ql = cos_th * k12(1, l, m) * Ql1 - k12(2, l, m) * Ql2
-            potential = potential + Ql * ( &
-                 &      (Q(m2c+l, INSIDE,  ir)   * irn(l)             + &
+            potential = potential + Ql * (1.-del) * ( &
+                 &      (Q(m2c+l, INSIDE,  ir)   * irn(l) + &
                  &       Q(m2c+l, OUTSIDE, ir+1) *  rn(l) ) * cfac(m) + &
-                 &      (Q(m2s+l, INSIDE,  ir)   * irn(l)             + &
+                 &      (Q(m2s+l, INSIDE,  ir)   * irn(l) + &
                  &       Q(m2s+l, OUTSIDE, ir+1) *  rn(l) ) * sfac(m) )
+            if (del /= 0.) potential = potential + Ql * del * ( &
+                 &      (Q(m2c+l, INSIDE,  ir-1) * irn(l) + &
+                 &       Q(m2c+l, OUTSIDE, ir)   *  rn(l) ) * cfac(m) + &
+                 &      (Q(m2s+l, INSIDE,  ir-1) * irn(l) + &
+                 &       Q(m2s+l, OUTSIDE, ir)   *  rn(l) ) * sfac(m) )
             Ql2 = Ql1
             Ql1 = Ql
          end do
@@ -891,7 +943,7 @@ contains
 !! \todo return also fraction of the radial bin, (r/drq - ir) for radial interpolation
 !!
 
-   subroutine geomfac4moments(factor, x, y, z, sin_th, cos_th, ir)
+   subroutine geomfac4moments(factor, x, y, z, sin_th, cos_th, ir, delta)
 
       use errh, only: die
 
@@ -901,6 +953,7 @@ contains
       real,    intent(in)  :: x, y, z        !< coordinates of the contributing point
       real,    intent(out) :: sin_th, cos_th !< sine and cosine of the theta angle
       integer, intent(out) :: ir             !< radial index for the Q(:, :, r) array
+      real,    intent(out) :: delta          !< fraction of the radial cell for interpolation between ir and ir+1
 
       real    :: rxy, r, rinv
       real    :: sin_ph, cos_ph
@@ -918,6 +971,11 @@ contains
 
       !radial index for the Q(:, :, r) array
       ir = int(r / drq)
+      if (ir < rqbin) then
+         delta = r/drq - ir
+      else
+         delta = 0
+      end if
       if (ir > rqbin .or. ir < 0) call die("[multipole:geomfac4moments] radial index outside Q(:, :, r) range")
       irmax = max(irmax, ir)
       irmin = min(irmin, ir)

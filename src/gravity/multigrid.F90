@@ -70,7 +70,7 @@ contains
 #ifdef NEW_HDF5
       use multigridio,        only: multigrid_add_hdf5
 #endif /* NEW_HDF5 */
-      use multipole,          only: init_multipole, use_point_monopole, lmax, mmax, ord_prolong_mpole, coarsen_multipole
+      use multipole,          only: init_multipole, use_point_monopole, lmax, mmax, ord_prolong_mpole, coarsen_multipole, interp_pt2mom, interp_mom2pot
       use multigridmpifuncs,  only: mpi_multigrid_prep
 
       implicit none
@@ -91,6 +91,7 @@ contains
            &                      ord_laplacian, ord_prolong, ord_prolong_face, ord_prolong_mpole, ord_time_extrap, &
            &                      use_point_monopole, trust_fft_solution, stdout, verbose_vcycle, gb_no_fft, prefer_rbgs_relaxation, &
            &                      fft_full_relax, prefer_modified_norm, gb_solve_gather, fft_patient, do_ascii_dump, dirty_debug, hdf5levels, multidim_code_3D, &
+           &                      interp_pt2mom, interp_mom2pot, &
            &                      grav_bnd_str, &
            &                      aux_par_I0, aux_par_I1, aux_par_I2, aux_par_R0, aux_par_R1, aux_par_R2
 
@@ -137,6 +138,8 @@ contains
       dirty_debug            = .false.
       hdf5levels             = .false.
       multidim_code_3D       = .false.
+      interp_pt2mom          = .false.
+      interp_mom2pot         = .false.
 
       if (bnd_xl_dom /= 'per' .or. bnd_xr_dom /= 'per' .or. bnd_yl_dom /= 'per' .or. bnd_yr_dom /= 'per' .or. bnd_zl_dom /= 'per' .or. bnd_zr_dom /= 'per') then
          grav_bnd_str = "isolated" ! /todo make this a default, correct default problem.par where necessary
@@ -209,6 +212,8 @@ contains
          lbuff(12) = dirty_debug
          lbuff(13) = hdf5levels
          lbuff(14) = multidim_code_3D
+         lbuff(15) = interp_pt2mom
+         lbuff(16) = interp_mom2pot
 
          cbuff(1) = grav_bnd_str
 
@@ -265,6 +270,8 @@ contains
          dirty_debug             = lbuff(12)
          hdf5levels              = lbuff(13)
          multidim_code_3D        = lbuff(14)
+         interp_pt2mom           = lbuff(15)
+         interp_mom2pot          = lbuff(16)
 
          grav_bnd_str   = cbuff(1)(1:len(grav_bnd_str))
 
