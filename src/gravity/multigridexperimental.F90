@@ -388,7 +388,7 @@
       integer, intent(in) :: soln !< index of solution in lvl()%mgvar
       integer, intent(in) :: def  !< index of defect in lvl()%mgvar
 
-      real, parameter     :: c5ov2  = 5./2., c4ov3  = 4./3., c1ov12 = 1./12.
+      real, parameter     :: c4ov3  = 4./3., c1ov12 = 1./12.!, c5ov2  = 5./2.
       real                :: L0, Lx1, Lx2, Ly1, Ly2, Lz1, Lz2
 
       logical, save       :: firstcall = .true.
@@ -402,13 +402,14 @@
 
       call mpi_multigrid_bnd(lev, soln, 2, .false.) ! no corners required
 
-      L0  = -(c5ov2)  * (lvl(lev)%idx2 + lvl(lev)%idy2 + lvl(lev)%idz2 )
       Lx1 =  (c4ov3)  * lvl(lev)%idx2
       Ly1 =  (c4ov3)  * lvl(lev)%idy2
       Lz1 =  (c4ov3)  * lvl(lev)%idz2
       Lx2 = -(c1ov12) * lvl(lev)%idx2
       Ly2 = -(c1ov12) * lvl(lev)%idy2
       Lz2 = -(c1ov12) * lvl(lev)%idz2
+!      L0  = -(c5ov2)  * (lvl(lev)%idx2 + lvl(lev)%idy2 + lvl(lev)%idz2 )
+      L0 = -2. * (Lx1 + Lx2 + Ly1 + Ly2 + Lz1 + Lz2)
 
       lvl(     lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   lvl(lev)%ks  :lvl(lev)%ke,   def)        = &
            lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   lvl(lev)%ks  :lvl(lev)%ke,   src)        - &
