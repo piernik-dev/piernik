@@ -86,7 +86,7 @@ contains
       real, allocatable, dimension(:)  :: kx, ky, kz             !< FFT kernel directional components for convolution
       type(soln_history), pointer      :: os
 
-      namelist /MULTIGRID_SOLVER/ norm_tol, overrelax, overrelax_x, overrelax_y, overrelax_z, Jacobi_damp, vcycle_abort, &
+      namelist /MULTIGRID_SOLVER/ norm_tol, overrelax, overrelax_x, overrelax_y, overrelax_z, Jacobi_damp, vcycle_abort, L4_strength, &
            &                      level_max, coarsen_multipole, lmax, mmax, max_cycles, nsmool, nsmoob, nsmoof, &
            &                      ord_laplacian, ord_prolong, ord_prolong_face, ord_prolong_mpole, ord_time_extrap, &
            &                      use_point_monopole, trust_fft_solution, stdout, verbose_vcycle, gb_no_fft, prefer_rbgs_relaxation, &
@@ -108,6 +108,7 @@ contains
       overrelax_z   = 1.
       Jacobi_damp   = 1.
       vcycle_abort  = 2.
+      L4_strength   = 1.0
 
       level_max         = 1
       coarsen_multipole = 1
@@ -183,6 +184,7 @@ contains
          rbuff(5) = overrelax_z
          rbuff(6) = Jacobi_damp
          rbuff(7) = vcycle_abort
+         rbuff(8) = L4_strength
 
          ibuff( 1) = level_max
          ibuff( 2) = coarsen_multipole
@@ -241,6 +243,7 @@ contains
          overrelax_z    = rbuff(5)
          Jacobi_damp    = rbuff(6)
          vcycle_abort   = rbuff(7)
+         L4_strength    = rbuff(8)
 
          level_max         = ibuff( 1)
          coarsen_multipole = ibuff( 2)

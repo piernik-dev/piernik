@@ -56,6 +56,7 @@ module multigridvars
    real               :: overrelax_x, overrelax_y, overrelax_z        !< overrealaxation factors for fine tuning convergence ratio when cell spacing is not equal in all 3 directions. Use with care, parience and lots of hope.
    real               :: Jacobi_damp                                  !< omega factor for damped Jacobi relaxation. Jacobi_damp == 1 gives undamped method. Try 0.5 in 1D.
    real               :: vcycle_abort                                 !< abort the V-cycle when lhs norm raises by this factor
+   real               :: L4_strength                                  !< strength of the 4th order terms in the Laplace operator; 0.: 2nd, 1.: 4th direct, 0.5: 4th integral
    integer            :: level_max                                    !< Levels of multigrid refinement
    integer            :: max_cycles                                   !< Maximum allowed number ov V-cycles
    integer            :: nsmool                                       !< smoothing cycles per call
