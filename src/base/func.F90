@@ -271,4 +271,56 @@ module func
       close(3)
       close(503,status="delete")
    end subroutine compare_namelist
+
+   function fix_string(str) result (outstr)
+      implicit none
+      character(len=*), intent(in)  :: str
+      character(len=len(str)) :: outstr
+
+      integer          :: i
+      character(len=1) :: c
+
+      do i=1, len(str)
+         outstr(i:i) = " "
+      enddo
+
+      do i=1, len(str)
+         c = str(i:i)
+         outstr(i:i) = ''
+         if( is_lowercase(c) .or. is_uppercase(c) .or. is_digit(c) .or. c=='_' .or. c=='-' ) then
+            outstr(i:i) = c
+         else
+            return
+         endif
+      enddo
+      return
+   end function fix_string
+
+   logical function is_lowercase(c)
+      implicit none
+      character(len=1), intent(in) :: c
+
+      is_lowercase = .false.
+
+      if(ichar(c) >= 97 .and. ichar(c) <= 122) is_lowercase=.true.
+   end function is_lowercase
+
+   logical function is_uppercase(c)
+      implicit none
+      character(len=1), intent(in) :: c
+
+      is_uppercase = .false.
+
+      if(ichar(c) >= 65 .and. ichar(c) <= 90) is_uppercase=.true.
+   end function is_uppercase
+
+   logical function is_digit(c)
+      implicit none
+      character(len=1), intent(in) :: c
+
+      is_digit = .false.
+
+      if(ichar(c) >= 48 .and. ichar(c) <= 57) is_digit=.true.
+   end function is_digit
+
 end module func

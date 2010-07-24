@@ -542,7 +542,7 @@ module dataio_hdf5
       integer(HID_T)    :: gr_id, gr2_id           !> Groups indentifier
 
       if( ((t-last_plt_time) > dt_plt) .and. dt_plt > 0.0 .or. first_entry) then
-         fe = LEN(trim(chdf%log_file))
+         fe = len_trim(chdf%log_file)
          fname = trim(chdf%log_file(1:fe-3)//"plt")
          call H5open_f(error)
 
@@ -622,7 +622,7 @@ module dataio_hdf5
       integer                             :: pisize=0, pjsize=0, fe
 
       rank = 2
-      fe = LEN(trim(chdf%log_file))
+      fe = len_trim(chdf%log_file)
       fname = trim(chdf%log_file(1:fe-3)//"plt")
       call MPI_BCAST(fname, 32, MPI_CHARACTER, 0, comm3d, ierr)
 
@@ -1202,6 +1202,7 @@ module dataio_hdf5
 #endif
       use problem_pub,  only: problem_name, run_id
       use errh,         only: die
+      use func,         only: fix_string
       use list_hdf5,    only: problem_read_restart
 
       IMPLICIT NONE
@@ -1401,9 +1402,13 @@ module dataio_hdf5
          call h5ltget_attribute_double_f(file_id,"/","last_hdf_time", rbuf,error)
          chdf%last_hdf_time = rbuf(1)
 
-         call h5ltget_attribute_string_f(file_id,"/","problem name", problem_name,error)
+         call h5ltget_attribute_string_f(file_id,"/","problem_name", problem_name,error)
          call h5ltget_attribute_string_f(file_id,"/","domain", chdf%domain,error)
-         call h5ltget_attribute_string_f(file_id,"/","run id", chdf%new_id,error)
+         call h5ltget_attribute_string_f(file_id,"/","run_id", chdf%new_id,error)
+
+         problem_name = fix_string(problem_name)   ! BEWARE: >=HDF5-1.8.4 has weird issues with strings
+         chdf%new_id  = fix_string(chdf%new_id)    !   this bit hacks it around
+         chdf%domain  = fix_string(chdf%domain)
 
          CALL h5fclose_f(file_id, error)
 
@@ -1688,12 +1693,12 @@ module dataio_hdf5
          bufsize = 3
          call h5ltset_attribute_int_f(file_id, "/", "psize", psize, bufsize, error)
 
-         fe = len(problem_name)
-         call h5ltset_attribute_string_f(file_id, "/", "problem name", problem_name(1:fe), error)
-         fe = len(chdf%domain)
+         fe = len_trim(problem_name)
+         call h5ltset_attribute_string_f(file_id, "/", "problem_name", problem_name(1:fe), error)
+         fe = len_trim(chdf%domain)
          call h5ltset_attribute_string_f(file_id, "/", "domain", chdf%domain(1:fe), error)
-         fe = len(run_id)
-         call h5ltset_attribute_string_f(file_id, "/", "run id", run_id(1:fe), error)
+         fe = len_trim(run_id)
+         call h5ltset_attribute_string_f(file_id, "/", "run_id", run_id(1:fe), error)
 
          call additional_attrs(file_id)
 
