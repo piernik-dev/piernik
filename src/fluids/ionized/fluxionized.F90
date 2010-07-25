@@ -91,7 +91,9 @@ module fluxionized
     real, dimension(n) :: ps                !< total pressure of ionized fluid
     real, dimension(n) :: p                 !< thermal pressure of ionized fluid
     real, dimension(n) :: pmag              !< pressure of magnetic field
+    real, dimension(n) :: c_fr              !< temporary array for freezing speed
     real, dimension(n), optional :: cs_iso2 !< local isothermal sound speed (optional)
+    integer :: i
 
     fluxi   = 0.0
     cfri    = 0.0
@@ -136,14 +138,19 @@ module fluxionized
 !       The freezing speed is now computed locally (in each cell)
 !       as in Trac & Pen (2003). This ensures much sharper shocks,
 !       but sometimes may lead to numerical instabilities
+    c_fr = 0.0
 #ifdef ISO
-    cfri(1,RNG) = abs(vx(RNG)) &
+    c_fr(RNG) = abs(vx(RNG)) &
                + max(sqrt( abs(2.0*pmag(RNG) + p(RNG))/uui(idn,RNG)),small)
 #else /* ISO */
-    cfri(1,RNG) = abs(vx(RNG)) &
+    c_fr(RNG) = abs(vx(RNG)) &
                + max(sqrt( abs(2.0*pmag(RNG) + gamma_ion*p(RNG) &
                 )/uui(idn,RNG)),small)
 #endif /* ISO */
+    do i = 2,n-1
+       cfri(1,i) = maxval( [c_fr(i-1), c_fr(i), c_fr(i+1)] )
+    enddo
+
     cfri(1,1) = cfri(1,2)
     cfri(1,n) = cfri(1,n-1)
     cfri = spread(cfri(1,:),1,nvar%ion%all)

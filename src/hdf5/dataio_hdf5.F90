@@ -171,6 +171,8 @@ module dataio_hdf5
             case ('encr')
                nhdf_vars = nhdf_vars + SIZE(iarr_all_crs,1)
 #endif /* COSM_RAYS */
+            case ('pres')
+               nhdf_vars = nhdf_vars + 1
          end select
       enddo
       allocate(hdf_vars(nhdf_vars)); j = 1
@@ -244,7 +246,13 @@ module dataio_hdf5
             case ('mgso')
                hdf_vars(j) = 'mgso' ; j = j + 1
 #endif /* MULTIGRID */
-
+            case ('pres')
+#ifdef NEUTRAL
+               hdf_vars(j) = 'pren' ; j = j + 1
+#endif
+#ifdef IONIZED
+               hdf_vars(j) = 'prei' ; j = j + 1
+#endif
          end select
       enddo
 
@@ -381,6 +389,12 @@ module dataio_hdf5
                          +u(ind%mzn,nb+1:nxb+nb,nb+1:nyb+nb,xn)**2) / &
                              u(ind%dnn,nb+1:nxb+nb,nb+1:nyb+nb,xn)
 #endif /* ISO */
+         case ('prei')
+#ifndef ISO
+            tab(:,:) = 0.0
+#else
+            tab(:,:) = 0.0
+#endif
          case ("enei")
 #ifndef ISO
             if(ij=="yz") tab(:,:) = u(ind%eni,xn,nb+1:nyb+nb,nb+1:nzb+nb)
@@ -441,6 +455,9 @@ module dataio_hdf5
 #ifdef MULTIGRID
       use arrays,       only: mgp
 #endif /* MULTIGRID */
+#ifdef IONIZED
+      use initionized,  only: gamma_ion
+#endif /* IONIZED */
 
       implicit none
       character(LEN=4), intent(in)   :: var
@@ -501,6 +518,15 @@ module dataio_hdf5
                               / u(ind%dni,RNG),4)
 #else
             tab(:,:,:) = real(u(ind%eni,RNG),4)
+#endif
+         case("prei")
+#ifndef ISO
+            tab(:,:,:) = real( u(ind%eni,RNG) - &
+              0.5 *( u(ind%mxi,RNG)**2 + u(ind%myi,RNG)**2 + u(ind%mzi,RNG)**2 ) / u(ind%dni,RNG),4)*(gamma_ion-1.0)
+            tab(:,:,:) = tab(:,:,:) - real( 0.5*(gamma_ion-1.0)*(b(ind%bx,RNG)**2 + &
+               b(ind%by,RNG)**2 + b(ind%bz,RNG)**2),4)
+#else
+            tab = 0.0
 #endif
          case("magx")
             tab(:,:,:) = real(b(ind%bx,RNG),4)

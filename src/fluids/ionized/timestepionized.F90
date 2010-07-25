@@ -89,9 +89,10 @@ contains
       real :: cf                  !< speed of sound for the ionized fluid
 
 ! locals
-      real :: pmag
+      real :: pmag, bx, by, bz
       real :: ps,p
       integer :: i,j,k
+      integer :: kp,jp,ip
 
 
       cx    = 0.0
@@ -100,14 +101,21 @@ contains
       c_ion     = 0.0
 
       do k=ks,ke
+         kp = mod(k,ke)+1
          do j=js,je
+            jp = mod(j,je)+1
             do i=is,ie
+               ip = mod(i,ie)+1
 
                vx=abs(u(imxi,i,j,k)/u(idni,i,j,k))
                vy=abs(u(imyi,i,j,k)/u(idni,i,j,k))
                vz=abs(u(imzi,i,j,k)/u(idni,i,j,k))
 
-               pmag = sum(b(:,i,j,k)**2,1)/2.
+               bx = 0.5*(b(1,i,j,k) + b(1,ip,j,k))
+               by = 0.5*(b(2,i,j,k) + b(2,i,jp,k))
+               bz = 0.5*(b(3,i,j,k) + b(3,i,j,kp))
+
+               pmag = 0.5*(bx*bx + by*by + bz*bz)
 
 #ifdef ISO
                p = cs_iso_ion2*u(idni,i,j,k)
@@ -115,7 +123,7 @@ contains
                cf = sqrt(abs(  (2.*pmag+p)/u(idni,i,j,k)) )
 #else /* ISO */
                ps=(u(ieni,i,j,k)-sum(u(imxi:imzi,i,j,k)**2,1) &
-               /u(idni,i,j,k)/2.)*(gamma_ion-1.)+(2.-gamma_ion)*pmag
+               /u(idni,i,j,k)*0.5)*(gamma_ion-1.)+(2.-gamma_ion)*pmag
                p=ps-pmag
                cf = sqrt(abs(  (2.*pmag+gamma_ion*p)/u(idni,i,j,k)) )
 #endif /* ISO */
