@@ -91,9 +91,12 @@ module fluxionized
     real, dimension(n) :: ps                !< total pressure of ionized fluid
     real, dimension(n) :: p                 !< thermal pressure of ionized fluid
     real, dimension(n) :: pmag              !< pressure of magnetic field
-    real, dimension(n) :: c_fr              !< temporary array for freezing speed
     real, dimension(n), optional :: cs_iso2 !< local isothermal sound speed (optional)
+
+#ifdef LOCAL_FR_SPEED
+    real, dimension(n) :: c_fr              !< temporary array for freezing speed
     integer :: i
+#endif
 
     fluxi   = 0.0
     cfri    = 0.0
