@@ -42,7 +42,6 @@ contains
 
    subroutine read_problem_par
 
-      use grid,          only : xmin, xmax, ymin, ymax, zmin, zmax
       use errh,          only : namelist_errh, die
       use mpisetup,      only : cwd, ierr, rbuff, cbuff, ibuff, proc, buffer_dim, comm, smalld, &
            &                    MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER
@@ -66,7 +65,7 @@ contains
       z0           = 0.0                 !< z-coordinate of the spheroid center
       d0           = 1.0                 !< Density inside the sphere
       a1           = 1.0                 !< Equatorial semimajor axis
-      e            = 0.0                 !< Eccentricity
+      e            = 0.0                 !< Eccentricity; e>0 for flattened spheroids, e<0 for elongated spheroids
       nsub         = 3                   !< Subsampling factor
 
       if (proc == 0) then
@@ -119,13 +118,16 @@ contains
 
       endif
 
-      a3 = a1 * sqrt(1. - e**2) ! vertical axis
-      d1 = smalld               ! ambient density
-      p0 = 100.*tiny(d1)        ! pressure
+      if (abs(e) >= 1.) call die("[initproblem:read_problem_par] |e|>=1.")
+      if (e >= 0.) then            ! vertical axis
+         a3 = a1 * sqrt(1. - e**2) ! oblate, Maclaurin spheroid
+      else
+         a3 = a1 / sqrt(1. - e**2) ! prolate spheroid
+      end if
+      d1 = smalld                  ! ambient density
+      p0 = 100.*tiny(d1)           ! pressure
 
       if (d0 < 0.) call die("[initproblem:read_problem_par] Negative average density.")
-      if (x0-a1<xmin .or. x0+a1>xmax .or. y0-a1<ymin .or. y0+a1>ymax .or. z0-a3<zmin .or. z0+a3>zmax) &
-           write(*,'(a)')"[initproblem:read_problem_par] Warning: part of the spheroid is outside the domain"
 
       if (nsub < 1) then
          if (proc == 0) write(*,'(a)')"[initproblem:read_problem_par] subsampling disabled"
@@ -144,7 +146,7 @@ contains
       use mpisetup,    only: proc
       use arrays,      only: u, b
       use constants,   only: pi
-      use grid,        only: x, y, z, dx, dy, dz, nx, ny, nz, xmin, ymin, zmin
+      use grid,        only: x, y, z, dx, dy, dz, nx, ny, nz, xmin, xmax, ymin, ymax, zmin, zmax
       use initionized, only: gamma_ion, idni, imxi, imzi, ieni
       use list_hdf5,   only: additional_attrs
       use types,       only: finalize_problem
@@ -190,7 +192,9 @@ contains
 
       if (proc == 0) then
          write(*,'(3(a,g12.5),a)')"[initproblem:init_prob] Set up spheroid with a1 and a3 axes = ", a1, ", ", a3, " (eccentricity = ", e, ")"
-         write(*,'(2(a,g12.5))')  "[initproblem:init_prob] Density = ", d0, " mass = ", 4./3.*pi*a1**2*a3*d0
+         if (x0-a1<xmin .or. x0+a1>xmax .or. y0-a1<ymin .or. y0+a1>ymax .or. z0-a3<zmin .or. z0+a3>zmax) &
+              write(*,'(a)')"[initproblem:init_prob] WARNING: part of the spheroid is outside the domain"
+         write(*,'(2(a,g12.5))')  "[initproblem:init_prob] Density = ", d0, " mass = ", 4./3.*pi * a1**2 * a3 * d0
       endif
 
       additional_attrs => init_prob_attrs
@@ -216,6 +220,7 @@ contains
       call h5ltset_attribute_double_f(file_id, "/", "rho0", [d0],   bufsize,error)
       call h5ltset_attribute_double_f(file_id, "/", "fpiG", [fpiG], bufsize,error)
       call h5ltset_attribute_double_f(file_id, "/", "a1",   [a1],   bufsize,error)
+      call h5ltset_attribute_double_f(file_id, "/", "e",    [e],    bufsize,error)
       call h5ltset_attribute_double_f(file_id, "/", "x0",   [x0],   bufsize,error)
       call h5ltset_attribute_double_f(file_id, "/", "y0",   [y0],   bufsize,error)
       call h5ltset_attribute_double_f(file_id, "/", "z0",   [z0],   bufsize,error)
@@ -233,28 +238,51 @@ contains
 
       implicit none
 
-      integer :: i, j, k
-      real    :: potential, r2, rr
+      integer            :: i, j, k
+      real               :: potential, r2, rr
       real, dimension(2) :: norm, dev
-
+      real               :: AA1, AA3, a12, a32, x02, y02, z02, lam, h
+      real, parameter    :: small_e = 1e-3
       norm(:) = 0.
       dev(1) = huge(1.0)
       dev(2) = -dev(1)
 
-      if (e> tiny(0.)) then
-         if (proc == 0) write (*,'(a)')"[initproblem:finalize_problem] e>0 not implemented yet"
-         return
+      if (e < 0. .and. proc == 0) write (*,'(a)')"[initproblem:finalize_problem] e<0. not implemented yet"
+
+      if (e > small_e) then
+         AA1 = ( sqrt(1. - e**2) * asin(e) - e * (1. - e**2) ) / e**3
+         AA3 = 2. * ( e - sqrt(1. - e**2) * asin(e) ) / e**3
+      else ! Taylor expansions
+         AA1 = 2./3. - 2./15. * e**2
+         AA3 = 2./3. + 4./15. * e**2
       end if
+
+      a12 = a1**2
+      a32 = a3**2
       do k = ks, ke
+         z02 = (z(k)-z0)**2
          do j = js, je
+            y02 = (y(j)-y0)**2
             do i = is, ie
-               !if (e == 0)
-               r2 = ((x(i)-x0)/a1)**2 + ((y(j)-y0)/a1)**2 + ((z(k)-z0)/a3)**2
-               rr = r2 * a1**2
+               x02 = (x(i)-x0)**2
+               r2 = (x02+y02)/a12 + z02/a32
+               rr = r2 * a12
                if (r2 > 1.) then
-                  potential = - 4./3. * pi * newtong * d0 * a1**3 / sqrt(rr)
+                  if (e > small_e) then
+                     lam = 0.5 * (a12 + a32 - (x02 + y02 + z02))
+                     lam = -lam + sqrt(lam**2 + a12 * z02 + a32 * (x02 + y02 - a12))
+                     h = a1 * e / sqrt(a32 + lam)
+                     ! for e < small_e the expressions (atan(h) - h / (1. + h**2)) and (h - atan(h)) should be replaced with Taylor expansions
+                     potential = - 2. * pi * newtong * d0 * a1 * a3 / e * (atan(h) - ((x02 + y02) * (atan(h) - h / (1. + h**2)) + 2. * z02 * (h - atan(h)))/(2. * a12 * e**2))
+                  else
+                     potential = - 4./3. * pi * newtong * d0 * a1**3 / sqrt(rr)
+                  end if
                else
-                  potential = - 2./3. * pi * newtong * d0 * (3*a1**2 - rr)
+                  if (e > small_e) then
+                     potential = - pi * newtong * d0 * (AA1*(2*a12 - x02 - y02) + AA3 * (a32 - z02))
+                  else
+                     potential = - 2./3. * pi * newtong * d0 * (3*a12 - rr)
+                  end if
                end if
                norm(1) = norm(1) + (potential - mgp(i, j, k))**2
                norm(2) = norm(2) + potential**2
@@ -268,7 +296,7 @@ contains
       call MPI_Allreduce(MPI_IN_PLACE, dev(1), 1, MPI_DOUBLE_PRECISION, MPI_MIN, comm3d, ierr)
       call MPI_Allreduce(MPI_IN_PLACE, dev(2), 1, MPI_DOUBLE_PRECISION, MPI_MAX, comm3d, ierr)
 
-      if (proc == 0) write(*,'(a,f12.5,a,2f12.5)')"[initproblem:finalize_problem] L2 error norm = ", sqrt(norm(1)/norm(2)), " min and max error = ", dev(1:2)
+      if (proc == 0) write(*,'(a,f12.6,a,2f12.6)')"[initproblem:finalize_problem] L2 error norm = ", sqrt(norm(1)/norm(2)), " min and max error = ", dev(1:2)
 
    end subroutine finalize_problem_maclaurin
 
