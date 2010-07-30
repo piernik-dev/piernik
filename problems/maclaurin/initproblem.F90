@@ -228,7 +228,12 @@ contains
    end subroutine init_prob_attrs
 
 !-----------------------------------------------------------------------------
-
+!
+! Oblate potential formula from Ricker_2008ApJS..176..293R
+! Prolate potential formula from http://scienceworld.wolfram.com/physics/ProlateSpheroidGravitationalPotential.html
+!
+! ToDo: save the analytical potential in the restart file
+!
    subroutine finalize_problem_maclaurin
 
       use mpisetup,  only: proc, comm3d, ierr, MPI_DOUBLE_PRECISION, MPI_SUM, MPI_MIN, MPI_MAX, MPI_IN_PLACE
@@ -241,20 +246,23 @@ contains
       integer            :: i, j, k
       real               :: potential, r2, rr
       real, dimension(2) :: norm, dev
-      real               :: AA1, AA3, a12, a32, x02, y02, z02, lam, h
+      real               :: AA1 = 2./3., AA3 = 2./3., a12, a32, x02, y02, z02, lam, h
       real, parameter    :: small_e = 1e-3
       norm(:) = 0.
       dev(1) = huge(1.0)
       dev(2) = -dev(1)
 
-      if (e < 0. .and. proc == 0) write (*,'(a)')"[initproblem:finalize_problem] e<0. not implemented yet"
+      if (e < 0. .and. proc == 0) write (*,'(a)')"[initproblem:finalize_problem] WARNING: e<0. not fully implemented yet"
 
       if (e > small_e) then
          AA1 = ( sqrt(1. - e**2) * asin(e) - e * (1. - e**2) ) / e**3
          AA3 = 2. * ( e - sqrt(1. - e**2) * asin(e) ) / e**3
-      else ! Taylor expansions
+      else if (e>0.) then            ! Taylor expansions
          AA1 = 2./3. - 2./15. * e**2
          AA3 = 2./3. + 4./15. * e**2
+      else if (e<0.) then            ! ToDo: find analytical expressions for -e > small_e
+         AA1 = 2./3. + 2./15. * e**2
+         AA3 = 2./3. - 4./15. * e**2
       end if
 
       a12 = a1**2
@@ -273,17 +281,25 @@ contains
                      lam = -lam + sqrt(lam**2 + a12 * z02 + a32 * (x02 + y02 - a12))
                      h = a1 * e / sqrt(a32 + lam)
                      ! for e < small_e the expressions (atan(h) - h / (1. + h**2)) and (h - atan(h)) should be replaced with Taylor expansions
-                     potential = - 2. * pi * newtong * d0 * a1 * a3 / e * (atan(h) - ((x02 + y02) * (atan(h) - h / (1. + h**2)) + 2. * z02 * (h - atan(h)))/(2. * a12 * e**2))
+                     potential = - 2. * a1 * a3 / e * (atan(h) - ((x02 + y02) * (atan(h) - h / (1. + h**2)) + 2. * z02 * (h - atan(h)))/(2. * a12 * e**2))
+                  else if (e < -small_e) then
+                     lam = 0.5 * (a12 + a32 - (x02 + y02 + z02))
+                     lam = - lam + sqrt(lam**2 + a12 * z02 + a32 * (x02 + y02 - a12))
+                     h = sqrt((a32 - a12)/(a12 + lam))
+                     potential = - a12 * a3 / (a32 - a12) * ( &
+                          (2.*(a32 - a12) + x02 + y02 - 2.*z02)/sqrt(a32 - a12) * log(h + sqrt(1. + h**2)) - &
+                          (x02 + y02) * sqrt(a32 + lam)/(a12 + lam) + 2.*z02 / sqrt(a32 + lam) )
                   else
-                     potential = - 4./3. * pi * newtong * d0 * a1**3 / sqrt(rr)
+                     potential = - 4./3. * a1**3 / sqrt(rr)
                   end if
                else
-                  if (e > small_e) then
-                     potential = - pi * newtong * d0 * (AA1*(2*a12 - x02 - y02) + AA3 * (a32 - z02))
+                  if (abs(e) > small_e) then
+                     potential = - (AA1*(2*a12 - x02 - y02) + AA3 * (a32 - z02))
                   else
-                     potential = - 2./3. * pi * newtong * d0 * (3*a12 - rr)
+                     potential = - 2./3. * (3*a12 - rr)
                   end if
                end if
+               potential = potential * pi * newtong * d0
                norm(1) = norm(1) + (potential - mgp(i, j, k))**2
                norm(2) = norm(2) + potential**2
                dev(1) = min(dev(1), (potential - mgp(i, j, k))/potential)
