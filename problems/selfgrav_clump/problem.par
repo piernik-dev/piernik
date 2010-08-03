@@ -28,7 +28,7 @@
     ix      = 0
     iy      = 0
     iz      = 0
-    dt_hdf  = 1e-20
+    dt_hdf  = 0.1
     dt_res  = 0.0
     dt_plt  = 0.0
     dt_log  = 0.001
@@ -72,8 +72,8 @@
 
  $NUMERICAL_SETUP
     cfl    = 0.7
-    smalld = 1.e-5
-    smallei= 1.e-8
+    smalld = 1.e3
+    smallei= 1.e10
  /
 
  $GRAVITY
@@ -98,7 +98,7 @@
     stdout    = .true.
     grav_bnd_str  = "isolated"
 !    grav_bnd_str = "periodic"
-    prefer_rbgs_relaxation = .true.
+!    prefer_rbgs_relaxation = .true.
     dirty_debug = .true.
  /
 

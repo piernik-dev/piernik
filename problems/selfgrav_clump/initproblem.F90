@@ -31,11 +31,13 @@ module initproblem
 
   use problem_pub, only: problem_name, run_id
 
-  real              :: clump_mass, clump_vel_x, clump_vel_y, clump_vel_z, clump_K
+  real               :: clump_mass, clump_pos_x, clump_pos_y, clump_pos_z, clump_vel_x, clump_vel_y, clump_vel_z, clump_K, epsC, epsM
+  logical            :: crashNotConv
+  integer            :: maxitC, maxitM
 
   integer, parameter :: REL_CALC = 1, REL_SET = REL_CALC + 1
 
-  namelist /PROBLEM_CONTROL/  problem_name, run_id, clump_mass, clump_vel_x, clump_vel_y, clump_vel_z, clump_K
+  namelist /PROBLEM_CONTROL/  problem_name, run_id, clump_mass, clump_vel_x, clump_vel_y, clump_vel_z, clump_K, epsC, epsM, maxitC, maxitM, crashNotConv
 
 contains
 
@@ -43,15 +45,14 @@ contains
 
    subroutine read_problem_par
 
-!      use grid,     only : xmin, xmax, ymin, ymax, zmin, zmax, nx, ny, nz
+      use grid,     only : xmin, xmax, ymin, ymax, zmin, zmax
       use errh,     only : namelist_errh, die
-      use mpisetup, only : cwd, ierr, rbuff, cbuff, ibuff, proc, buffer_dim, comm, &
-           &               MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER
-      use constants, only: pi
+      use mpisetup, only : cwd, ierr, rbuff, cbuff, ibuff, lbuff, proc, buffer_dim, comm, &
+           &               MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL
 
       implicit none
 
-      integer :: ierrh
+      integer            :: ierrh
       character(LEN=100) :: par_file, tmp_log_file
 
       ! namelist default parameter values
@@ -62,7 +63,11 @@ contains
       clump_vel_y  = 0.                    !< Y-velocity in the domain
       clump_vel_z  = 0.                    !< Z-velocity in the domain
       clump_K      = 1.                    !< polytropic constant K for p = K rho**gamma formula
-
+      epsC         = 1.e-5                 !< tolerance limit for energy level change
+      epsM         = 1.e-10                !< tolerance limit for clump mass change
+      maxitC       = 100                   !< iteration limit for energy level
+      maxitM       = 100                   !< iteration limit for clump mass
+      crashNotConv = .true.                !< Crash if unable to converge initial conditions
       !\todo add rotation
 
       if(proc == 0) then
@@ -89,12 +94,20 @@ contains
          rbuff(3) = clump_vel_y
          rbuff(4) = clump_vel_z
          rbuff(5) = clump_K
+         rbuff(6) = epsC
+         rbuff(7) = epsM
+
+         ibuff(1) = maxitC
+         ibuff(2) = maxitM
+
+         lbuff(1) = crashNotConv
 
       end if
 
       call MPI_BCAST(cbuff, 32*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
-!      call MPI_BCAST(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
+      call MPI_BCAST(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
       call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+      call MPI_BCAST(lbuff,    buffer_dim, MPI_LOGICAL,          0, comm, ierr)
 
       if (proc /= 0) then
 
@@ -106,6 +119,13 @@ contains
          clump_vel_y  = rbuff(3)
          clump_vel_z  = rbuff(4)
          clump_K      = rbuff(5)
+         epsC         = rbuff(6)
+         epsM         = rbuff(7)
+
+         maxitC       = ibuff(1)
+         maxitM       = ibuff(2)
+
+         crashNotConv = lbuff(1)
 
       endif
 
@@ -116,27 +136,31 @@ contains
       call die("[initproblem:read_problem_par] Isothermal EOS not supported.")
 #endif
 
+      clump_pos_x = (xmax+xmin)/2.
+      clump_pos_y = (ymax+ymin)/2.
+      clump_pos_z = (zmax+zmin)/2.
+
    end subroutine read_problem_par
 
 !-----------------------------------------------------------------------------
 !  Iterate density field to get it self-consistent with potential, rotation etc.
 !  Based on: Hachisu, ApJS, 61, 479
-
+!
+! BEWARE: hardcoded numbers
+!
    subroutine init_prob
 
       use mpisetup,      only : proc, smalld, smallei
-      use arrays,        only : u, b, mgp
+      use arrays,        only : u, b, mgp, gpot
       use constants,     only : fpiG, pi, newtong
-      use grid,          only : xmin, xmax, ymin, ymax, zmin, zmax, x, y, z, nx, ny, nz, dx, dy, dz
+      use grid,          only : xmin, xmax, ymin, ymax, zmin, zmax, x, y, z, nx, ny, nz, dx, dy, dz, is, ie, js, je, ks, ke
       use initionized,   only : gamma_ion, idni, imxi, imyi, imzi, ieni
       use dataio_public, only : tend
       use multigrid,     only : multigrid_solve
+      use errh,          only : die
 
       implicit none
 
-      logical, parameter :: crashNotConv = .false.
-      real, parameter    :: epsC = 1.e-5, epsM = 1.e-10
-      integer, parameter :: maxitC=100, maxitM = 100
       integer :: i, j, k, iC, iM
       logical :: doneC, doneM
       real    :: Cint, Cint_aux, Cint_old, totME, totME_aux, dC, dM, dMdC, cfac
@@ -149,10 +173,17 @@ contains
       u(idni, :, :, :) = smalld
       u(ieni, :, :, :) = smallei
 
-      ! Start with a single-cell clump
-      u(idni, nx/2, ny/2, nz/2) = (clump_mass - smalld*((xmax-xmin)*(ymax-ymin)*(zmax-zmin) - (dx * dy * dz)))/(dx * dy * dz)
+      ! Initialize with point source
+      if ( x(is) <= clump_pos_x .and. x(ie) >= clump_pos_x .and. &
+           y(js) <= clump_pos_y .and. y(je) >= clump_pos_y .and. &
+           z(ks) <= clump_pos_z .and. z(ke) >= clump_pos_z) then
+         i = is + (ie-is)*(clump_pos_x-x(is))/(x(ie)-x(is))
+         j = js + (je-js)*(clump_pos_y-y(js))/(y(je)-y(js))
+         k = ks + (ke-ks)*(clump_pos_z-z(ks))/(z(ke)-z(ks))
+         u(idni, i, j, k) = (clump_mass - smalld*((xmax-xmin)*(ymax-ymin)*(zmax-zmin) - (dx * dy * dz)))/(dx * dy * dz)
+      end if
 
-      Cint = - newtong * clump_mass / (sqrt(dx**2 + dy**2 + dz**2)/2.)
+      Cint = - newtong * clump_mass / sqrt(dx**2 + dy**2 + dz**2)
 
       iC = 1
       doneC = .false.
@@ -162,7 +193,6 @@ contains
          call multigrid_solve(u(idni,:,:,:))
 
          Cint_old = Cint
-!AJG WARNING: hardcoded numbers go to cfac
          cfac = -1e-5
          iM = 1
          doneM = .false.
@@ -170,31 +200,21 @@ contains
          do while (.not. doneM)
 
             Cint_aux = (1+cfac)*Cint
-            call sim_totalMEnthalpic(Cint, Cint_aux, totME, totME_aux, REL_CALC)
+            call totalMEnthalpic(Cint, Cint_aux, totME, totME_aux, REL_CALC)
             dMdC = (totME_aux - totME)/(Cint_aux - Cint)
-
-!            write(*,'(a,5g20.10)')"ii stmE ",dMdC,totME_aux,totME,Cint_aux,Cint
 
             if (proc == 0) write(*,'(2(a,i3),3(a,es15.7))')"[initproblem:init_prob] iter = ",iC,"/",iM," M= ",totME, " C= ", Cint, " dM/dC= ", dMdC
 
             if (dMdC == 0.) then
                dC = -0.1 * Cint
             else
-               if (totME/clump_mass > 2.) then
-                  dM = -0.5*totME
-               else if (totME/clump_mass > 0.1) then
-                  dC = totME/clump_mass
-                  dM = (clump_mass - totME)* ( 3. * dC / ( dC**3 + 2 ) ) ! crude safety factor
-                  cfac = max(-0.01, -0.001 * abs(1. - totME/clump_mass))
-               else
-                  dM = 0.1*clump_mass
-                  cfac = min(-1e-10, cfac / 2.)
-               end if
+               dC = totME/clump_mass
+               dM = (clump_mass - totME) * ( 0.9 + 0.2 * dC / ( dC**2 + 1 ) ) ! safety factor
+               cfac = max(-0.01, -0.001 * abs(1. - totME/clump_mass))
                dC = dM / dMdC
             end if
             if (abs(dC/Cint) < epsM .and. abs(1. - totME/clump_mass) < epsM) doneM = .true.
             Cint = Cint + dC
-!            write(*,'(a,6g20.10)')"ii d ",Cint,dC,dM,dMdC,totME/clump_mass,cfac
 
             iM = iM + 1
             if (iM > maxitM .and. .not. doneM) then
@@ -207,8 +227,8 @@ contains
             end if
 
          end do
-         call sim_totalMEnthalpic(Cint, Cint_aux, totME, totME_aux, REL_SET)
-         call sim_virialCheck
+         call totalMEnthalpic(Cint, Cint_aux, totME, totME_aux, REL_SET)
+         call virialCheck(huge(1.0))
 
          if (proc == 0) write(*,'(a,i3,2(a,es15.7))')"[initproblem:init_prob] iter = ",iC,"     M=",totME, " C=", Cint
 
@@ -225,50 +245,56 @@ contains
          end if
 
       end do
-      call multigrid_solve(u(idni,:,:,:))
-      if (proc == 0) write(*,'(a)')"[initproblem:init_prob] Relaxation finished."
+
+      if (crashNotConv) call virialCheck(0.01)
 
       ! final touch
+      call multigrid_solve(u(idni,:,:,:))
+      gpot = mgp
       do k = 1,nz
          do j = 1,ny
             do i = 1,nx
-               if (u(idni,i,j,k) < smalld) u(idni,i,j,k) = smalld
-               u(ieni,i,j,k) = sim_presrho(u(idni, i, j, k)) / (gamma_ion-1.0) + &
+               u(idni,i,j,k) = max(u(idni,i,j,k), smalld)
+               u(ieni,i,j,k) = presrho(u(idni, i, j, k)) / (gamma_ion-1.0) + &
                     &          0.5 * sum(u(imxi:imzi,i,j,k)**2,1) / u(idni,i,j,k)      + &
                     &          0.5 * sum(b(:,i,j,k)**2,1)
-!               write(*,'(a,3i3,4g20.10)')"ii ",i,j,k,u(idni,i,j,k),sim_presrho(u(idni, i, j, k)),u(ieni,i,j,k),mgp(i,j,k)
+               u(ieni,i,j,k) = max(u(ieni,i,j,k), smallei)
             enddo
          enddo
       enddo
 
+      if (proc == 0) write(*,'(a,g13.7)')"[initproblem:init_prob] Relaxation finished. Largest orbital period: ",2.*pi*sqrt( (min(xmax-xmin, ymax-ymin, zmax-zmin)/2.)**3/(newtong * clump_mass) )
 
    end subroutine init_prob
 
 !-------------------------------------------------------------------------------
 ! check the value of | 2T + W + 3P | / | W |. Should be small
 
-   subroutine sim_virialCheck
+   subroutine virialCheck(tol)
 
-      use grid,        only: is, ie, js, je, ks, ke, dx, dy, dz
-      use arrays,      only: u, mgp
-      use mpisetup,    only: proc, comm, ierr, MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_SUM
-      use initionized, only: idni
+      use grid,        only : is, ie, js, je, ks, ke, dx, dy, dz
+      use arrays,      only : u, mgp
+      use mpisetup,    only : proc, comm, ierr, MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_SUM
+      use initionized, only : idni
+      use errh,        only : die
 
       implicit none
 
-      integer                           :: i, j, k
+      real, intent(in)      :: tol
 
-      integer, parameter :: nTWP = 3
+      integer               :: i, j, k
+      integer, parameter    :: nTWP = 3
       real, dimension(nTWP) :: TWP
+      real                  :: vc
 
       TWP(:) = 0.
 
       do k = ks, ke
          do j = js, je
             do i = is, ie
-!               TWP(1) = TWP(1) + u(idni, i, j, k) * 0.                !T
+!               TWP(1) = TWP(1) + u(idni, i, j, k) * 0.                !T, will be /= 0. for rotating clump
                TWP(2) = TWP(2) + u(idni, i, j, k) * mgp(i, j, k) * 0.5 !W
-               TWP(3) = TWP(3) + sim_presrho(u(idni, i, j, k))         !P
+               TWP(3) = TWP(3) + presrho(u(idni, i, j, k))         !P
             end do
          end do
       end do
@@ -276,20 +302,22 @@ contains
       call MPI_AllReduce (MPI_IN_PLACE, TWP, nTWP, MPI_DOUBLE_PRECISION, MPI_SUM, comm, ierr)
 
       TWP = TWP * dx * dy * dz
+      vc = abs(2.*TWP(1) + TWP(2) + 3*TWP(3))/abs(TWP(2))
+      if (proc == 0) write(*,'(a,es15.7,a,3es15.7,a)')"[initproblem:virialCheck] VC=",vc, " TWP=(",TWP(:),")"
 
-      if (proc == 0) write(*,'(a,2(es15.7,a),3es15.7,a)')"[sim_virialCheck] VC=",abs(2.*TWP(1) + TWP(2) + 3*TWP(3))/abs(TWP(2)), " T/|W|=", TWP(1)/abs(TWP(2))," TWP=(",TWP(:),")"
+      if (vc > tol) call die("[initproblem:virialCheck] Virial defect too high.")
 
-   end subroutine sim_virialCheck
+   end subroutine virialCheck
 
 !-------------------------------------------------------------------------------
 ! Try two values of integral constant C and return corresponding masses
 
-   subroutine sim_totalMEnthalpic(C, C_aux, totME, totME_aux, mode)
+   subroutine totalMEnthalpic(C, C_aux, totME, totME_aux, mode)
 
-      use mpisetup,    only: smalld, comm, ierr, MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_SUM
-      use arrays,      only: mgp, u
-      use grid,        only: is, ie, js, je, ks, ke, dx, dy, dz
-      use initionized, only: idni
+      use mpisetup,    only : smalld, comm, ierr, MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_SUM
+      use arrays,      only : mgp, u
+      use grid,        only : is, ie, js, je, ks, ke, dx, dy, dz
+      use initionized, only : idni
 
       implicit none
 
@@ -308,14 +336,13 @@ contains
             do i = is, ie
                select case (mode)
                case (REL_CALC)
-                  totME     = totME     + sim_rhoH(sim_h(C,     mgp(i,j,k)))
-                  totME_aux = totME_aux + sim_rhoH(sim_h(C_aux, mgp(i,j,k)))
+                  totME     = totME     + rhoH(h(C,     mgp(i,j,k)))
+                  totME_aux = totME_aux + rhoH(h(C_aux, mgp(i,j,k)))
                case (REL_SET)
-                  rho = sim_rhoH(sim_h(C, mgp(i,j,k)))
+                  rho = rhoH(h(C, mgp(i,j,k)))
                   u(idni, i, j, k) = max(smalld, rho)
                   totME = totME + rho
                end select
-!               write(*,'(a,3i3,5g15.7)')"i:stME ",i,j,k,totME,C,mgp(i,j,k),sim_h(C,     mgp(i,j,k)),sim_rhoH(sim_h(C,     mgp(i,j,k)))
             end do
          end do
       end do
@@ -326,40 +353,40 @@ contains
       totME     = totME     * dx * dy * dz
       totME_aux = totME_aux * dx * dy * dz
 
-   end subroutine sim_totalMEnthalpic
+   end subroutine totalMEnthalpic
 
 !-------------------------------------------------------------------------------
 ! calculate enthalpy
 
-   real function sim_h(C, Phi)
+   real function h(C, Phi)
 
       implicit none
 
       real, intent(in) :: C, Phi
 
-      sim_h = C - Phi ! rotation will be included here
+      h = C - Phi ! rotation will be included here
 
-   end function sim_h
+   end function h
 
 !-------------------------------------------------------------------------------
 ! find pressure corresponding to given density (EOS dependent)
 
-   real function sim_presrho(rho)
+   real function presrho(rho)
 
-      use initionized,   only : gamma_ion
+      use initionized, only : gamma_ion
 
       implicit none
 
       real, intent(in) :: rho
 
-      sim_presrho = clump_K *  rho ** gamma_ion
+      presrho = clump_K *  rho ** gamma_ion
 
-   end function sim_presrho
+   end function presrho
 
 !-------------------------------------------------------------------------------
 ! find density corresponding to given enthalpy (EOS dependent)
 
-   real function sim_rhoH(H)
+   real function rhoH(H)
 
       use initionized, only : gamma_ion
       use mpisetup,    only : smalld
@@ -369,17 +396,17 @@ contains
       real, intent(in) :: H
 
       if (H > 0.) then
-         sim_rhoH = ( (1. - 1./gamma_ion) * H / clump_K)**(1./(gamma_ion - 1.))
+         rhoH = ( (1. - 1./gamma_ion) * H / clump_K)**(1./(gamma_ion - 1.))
       else
-         sim_rhoH = smalld
+         rhoH = smalld
       end if
 
-   end function sim_rhoH
+   end function rhoH
 
 !-------------------------------------------------------------------------------
 ! find enthalpy corresponding to given density (EOS dependent)
 
-   real function sim_hRho(rho)
+   real function hRho(rho)
 
       use initionized,   only : gamma_ion
 
@@ -387,8 +414,8 @@ contains
 
       real, intent(in) :: rho
 
-      sim_hRho = clump_K * gamma_ion / (gamma_ion - 1.) * rho ** (gamma_ion - 1.)
+      hRho = clump_K * gamma_ion / (gamma_ion - 1.) * rho ** (gamma_ion - 1.)
 
-   end function sim_hRho
+   end function hRho
 
 end module initproblem
