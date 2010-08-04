@@ -179,6 +179,8 @@ contains
       u(ieni, :, :, :) = smallei
 
       ! Initialize with point source
+      ! /todo use polytrope here to improve convergence for gamma_ion <= 1.4
+      ! awk 'BEGIN {n=0; f=0.; t=1.; dx=1e-3; print 0., t, f; for (x=0.; x<=10. && t>0.; x+=dx) {if (x==0) f-=t**n*dx; else f-=(t**n + 2.*f/x)*dx; t+=f*dx; if (t>0) print x, t, f}}'
       if ( x(is) <= clump_pos_x .and. x(ie) >= clump_pos_x .and. &
            y(js) <= clump_pos_y .and. y(je) >= clump_pos_y .and. &
            z(ks) <= clump_pos_z .and. z(ke) >= clump_pos_z) then
@@ -220,6 +222,12 @@ contains
                   ind(LOW)    = i_try(t)
                end if
             end do
+            if (Cint(LOW) > Cint(HIGH)) then
+               Cint_try(LOW:HIGH) = Cint(LOW:HIGH)
+               Cint(LOW:HIGH) = Cint_try(HIGH:LOW:-1)
+               totME_try(LOW:HIGH) = totME(LOW:HIGH)
+               totME(LOW:HIGH) = totME_try(HIGH:LOW:-1)
+            end if
          end if
 
          if (proc == 0) write(*,'(2(a,i4),2(a,2es15.7),3a)')"[initproblem:init_prob] iter = ",iC,"/",0," dM= ",totME-clump_mass, " C= ", Cint, " ind = ",ind
@@ -266,6 +274,8 @@ contains
                end do
             end if
 
+            if (proc == 0) write(*,'(2(a,i4),2(a,2es15.7),3a)')"[initproblem:init_prob] iter = ",iC,"/",iM," dM= ",totME-clump_mass, " C= ", Cint, " ind = ",ind
+
             t = LOW
             if (abs(1. - totME(LOW)/clump_mass) > abs(1. - totME(HIGH)/clump_mass)) t = HIGH
             if (abs(1. - totME(t)/clump_mass) < epsM) doneM = .true.
@@ -280,13 +290,11 @@ contains
                end if
             end if
 
-            if (proc == 0) write(*,'(2(a,i4),2(a,2es15.7),3a)')"[initproblem:init_prob] iter = ",iC,"/",iM," dM= ",totME-clump_mass, " C= ", Cint, " ind = ",ind
-
          end do
          call totalMEnthalpic(Cint(t), totME(t), REL_SET)
          call virialCheck(huge(1.0))
 
-         if (proc == 0) write(*,'(a,i3,2(a,es15.7))')"[initproblem:init_prob] iter = ",iC,"     M=",totME(t), " C=", Cint(t)
+         if (proc == 0) write(*,'(a,i4,2(a,es15.7))')"[initproblem:init_prob] iter = ",iC,"     M=",totME(t), " C=", Cint(t)
 
          if (abs(1. - Cint(t)/Cint_old) < epsC) doneC = .true.
          Cint_old = Cint(t)
@@ -304,7 +312,7 @@ contains
 
       end do
 
-      if (crashNotConv) call virialCheck(0.01)
+      call virialCheck(0.01)
 
       ! final touch
       call multigrid_solve(u(idni,:,:,:))
@@ -363,7 +371,14 @@ contains
       vc = abs(2.*TWP(1) + TWP(2) + 3*TWP(3))/abs(TWP(2))
       if (proc == 0) write(*,'(a,es15.7,a,3es15.7,a)')"[initproblem:virialCheck] VC=",vc, " TWP=(",TWP(:),")"
 
-      if (vc > tol) call die("[initproblem:virialCheck] Virial defect too high.")
+      if (vc > tol) then
+         if (3*abs(TWP(3)) < abs(TWP(2))) then
+            write(*,'(a)')"[initproblem:virialCheck] Virial imbalance occured because the clump is not resolved"
+         else
+            write(*,'(a)')"[initproblem:virialCheck] Virial imbalance occured because the clump overfills the domain"
+         end if
+         if (crashNotConv) call die("[initproblem:virialCheck] Virial defect too high.")
+      end if
 
    end subroutine virialCheck
 
