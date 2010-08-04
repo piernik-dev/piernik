@@ -150,7 +150,7 @@ contains
 !
    subroutine init_prob
 
-      use mpisetup,      only : proc, smalld, smallei
+      use mpisetup,      only : proc, smalld, smallei, MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_MIN, MPI_MAX, comm, ierr
       use arrays,        only : u, b, mgp, gpot
       use constants,     only : fpiG, pi, newtong
       use grid,          only : xmin, xmax, ymin, ymax, zmin, zmax, x, y, z, nx, ny, nz, dx, dy, dz, is, ie, js, je, ks, ke
@@ -161,9 +161,14 @@ contains
 
       implicit none
 
-      integer :: i, j, k, iC, iM
-      logical :: doneC, doneM
-      real    :: Cint, Cint_aux, Cint_old, totME, totME_aux, dC, dM, dMdC, cfac
+      integer, parameter             :: LOW=1, HIGH=LOW+1, TRY=3
+      integer                        :: i, j, k, t, tmax, iC, iM
+      logical                        :: doneC, doneM
+      real, dimension(LOW:HIGH)      :: Cint, totME
+      character, dimension(LOW:HIGH) :: ind
+      real, dimension(TRY)           :: Cint_try, totME_try
+      character, dimension(TRY)      :: i_try
+      real                           :: Cint_old = HUGE(1.)!, Cint_min
 
       u(imxi, :, :, :) = clump_vel_x
       u(imyi, :, :, :) = clump_vel_y
@@ -183,8 +188,6 @@ contains
          u(idni, i, j, k) = (clump_mass - smalld*((xmax-xmin)*(ymax-ymin)*(zmax-zmin) - (dx * dy * dz)))/(dx * dy * dz)
       end if
 
-      Cint = - newtong * clump_mass / sqrt(dx**2 + dy**2 + dz**2)
-
       iC = 1
       doneC = .false.
 
@@ -192,29 +195,80 @@ contains
 
          call multigrid_solve(u(idni,:,:,:))
 
-         Cint_old = Cint
-         cfac = -1e-5
+         Cint = [ minval(mgp(is:ie,js:je,ks:ke)), maxval(mgp(is:ie,js:je,ks:ke)) ] ! rotation will modify this
+
+         call MPI_AllReduce (MPI_IN_PLACE, Cint(LOW),  1, MPI_DOUBLE_PRECISION, MPI_MIN, comm, ierr)
+         call MPI_AllReduce (MPI_IN_PLACE, Cint(HIGH), 1, MPI_DOUBLE_PRECISION, MPI_MAX, comm, ierr)
+         !Cint_min = Cint(LOW)
+
+         call totalMEnthalpic(Cint(LOW),  totME(LOW),  REL_CALC)
+         call totalMEnthalpic(Cint(HIGH), totME(HIGH), REL_CALC)
+         ind = [ '-', '+' ]
+
+         if (iC > 1) then ! try previous C
+            tmax = HIGH
+            i_try(1:tmax) = [ '1', '2' ]
+            do t = 1, tmax ! replicated code
+               call totalMEnthalpic(Cint_try(t), totME_try(t), REL_CALC)
+               if (totME_try(t) > clump_mass .and. totME_try(t) < totME(HIGH)) then
+                  Cint(HIGH)  = Cint_try(t)
+                  totME(HIGH) = totME_try(t)
+                  ind(HIGH)   = i_try(t)
+               else if (totME_try(t) < clump_mass .and. totME_try(t) > totME(LOW)) then
+                  Cint(LOW)   = Cint_try(t)
+                  totME(LOW)  = totME_try(t)
+                  ind(LOW)    = i_try(t)
+               end if
+            end do
+         end if
+
+         if (proc == 0) write(*,'(2(a,i4),2(a,2es15.7),3a)')"[initproblem:init_prob] iter = ",iC,"/",0," dM= ",totME-clump_mass, " C= ", Cint, " ind = ",ind
+
          iM = 1
          doneM = .false.
 
          do while (.not. doneM)
 
-            Cint_aux = (1+cfac)*Cint
-            call totalMEnthalpic(Cint, Cint_aux, totME, totME_aux, REL_CALC)
-            dMdC = (totME_aux - totME)/(Cint_aux - Cint)
-
-            if (proc == 0) write(*,'(2(a,i3),3(a,es15.7))')"[initproblem:init_prob] iter = ",iC,"/",iM," M= ",totME, " C= ", Cint, " dM/dC= ", dMdC
-
-            if (dMdC == 0.) then
-               dC = -0.1 * Cint
+            if (clump_mass > totME(LOW) .and. clump_mass < totME(HIGH)) then
+               ind = [ '<', '>' ]
+               tmax = TRY
+               Cint_try(LOW)  = Cint(LOW) + (Cint(HIGH) - Cint(LOW))*(clump_mass - totME(LOW))/(totME(HIGH) - totME(LOW) ) ! secant
+               Cint_try(HIGH) = (Cint(LOW) + Cint(HIGH))/2.                                                                ! bisection
+               Cint_try(TRY)  = 2*Cint_try(1) - Cint(LOW)                                                                  ! 2*overshoot secant
+               i_try = [ 's', 'b', 'S' ]
+               do t = 1, tmax
+                  call totalMEnthalpic(Cint_try(t), totME_try(t), REL_CALC)
+                  if (totME_try(t) > clump_mass .and. totME_try(t) < totME(HIGH)) then
+                     Cint(HIGH)  = Cint_try(t)
+                     totME(HIGH) = totME_try(t)
+                     ind(HIGH)   = i_try(t)
+                  else if (totME_try(t) < clump_mass .and. totME_try(t) > totME(LOW)) then
+                     Cint(LOW)  = Cint_try(t)
+                     totME(LOW) = totME_try(t)
+                     ind(LOW)   = i_try(t)
+                  end if
+               end do
             else
-               dC = totME/clump_mass
-               dM = (clump_mass - totME) * ( 0.9 + 0.2 * dC / ( dC**2 + 1 ) ) ! safety factor
-               cfac = max(-0.01, -0.001 * abs(1. - totME/clump_mass))
-               dC = dM / dMdC
+               tmax = HIGH
+               if (clump_mass > totME(HIGH)) then     ! amoeba crawls up
+                  Cint_try(1)   = Cint(HIGH)
+                  Cint_try(2)   = 3*Cint(HIGH) - 2*Cint(LOW)
+                  i_try(1:tmax) = [ '+', 'u' ]
+               else if (clump_mass < totME(LOW)) then ! amoeba crawls down
+                  Cint_try(2)   = Cint(LOW)
+                  Cint_try(1)   = 3*Cint(LOW) - 2*Cint(HIGH)
+                  i_try(1:tmax) = [ 'd', '-' ]
+               end if
+               do t = LOW, HIGH
+                  Cint(t) = Cint_try(t)
+                  call totalMEnthalpic(Cint(t), totME(t), REL_CALC)
+                  ind(t) = i_try(t)
+               end do
             end if
-            if (abs(dC/Cint) < epsM .and. abs(1. - totME/clump_mass) < epsM) doneM = .true.
-            Cint = Cint + dC
+
+            t = LOW
+            if (abs(1. - totME(LOW)/clump_mass) > abs(1. - totME(HIGH)/clump_mass)) t = HIGH
+            if (abs(1. - totME(t)/clump_mass) < epsM) doneM = .true.
 
             iM = iM + 1
             if (iM > maxitM .and. .not. doneM) then
@@ -226,13 +280,17 @@ contains
                end if
             end if
 
+            if (proc == 0) write(*,'(2(a,i4),2(a,2es15.7),3a)')"[initproblem:init_prob] iter = ",iC,"/",iM," dM= ",totME-clump_mass, " C= ", Cint, " ind = ",ind
+
          end do
-         call totalMEnthalpic(Cint, Cint_aux, totME, totME_aux, REL_SET)
+         call totalMEnthalpic(Cint(t), totME(t), REL_SET)
          call virialCheck(huge(1.0))
 
-         if (proc == 0) write(*,'(a,i3,2(a,es15.7))')"[initproblem:init_prob] iter = ",iC,"     M=",totME, " C=", Cint
+         if (proc == 0) write(*,'(a,i3,2(a,es15.7))')"[initproblem:init_prob] iter = ",iC,"     M=",totME(t), " C=", Cint(t)
 
-         if (abs(1. - Cint/Cint_old) < epsC) doneC = .true.
+         if (abs(1. - Cint(t)/Cint_old) < epsC) doneC = .true.
+         Cint_old = Cint(t)
+         Cint_try(1:2) = Cint ! try them as first guesses in next iteration
 
          iC = iC + 1
          if (iC > maxitC .and. .not. doneC) then
@@ -312,7 +370,7 @@ contains
 !-------------------------------------------------------------------------------
 ! Try two values of integral constant C and return corresponding masses
 
-   subroutine totalMEnthalpic(C, C_aux, totME, totME_aux, mode)
+   subroutine totalMEnthalpic(C, totME, mode)
 
       use mpisetup,    only : smalld, comm, ierr, MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_SUM
       use arrays,      only : mgp, u
@@ -321,15 +379,14 @@ contains
 
       implicit none
 
-      real,    intent(in)  :: C, C_aux
-      real,    intent(out) :: totME, totME_aux
+      real,    intent(in)  :: C
+      real,    intent(out) :: totME
       integer, intent(in)  :: mode
 
       integer              :: i, j, k
       real                 :: rho
 
       totME = 0.
-      totME_aux = 0.
 
       do k = ks, ke
          do j = js, je
@@ -337,21 +394,18 @@ contains
                select case (mode)
                case (REL_CALC)
                   totME     = totME     + rhoH(h(C,     mgp(i,j,k)))
-                  totME_aux = totME_aux + rhoH(h(C_aux, mgp(i,j,k)))
                case (REL_SET)
                   rho = rhoH(h(C, mgp(i,j,k)))
-                  u(idni, i, j, k) = max(smalld, rho)
+                  u(idni, i, j, k) = rho
                   totME = totME + rho
                end select
             end do
          end do
       end do
 
-      call MPI_AllReduce (MPI_IN_PLACE, totME,     1, MPI_DOUBLE_PRECISION, MPI_SUM, comm, ierr)
-      call MPI_AllReduce (MPI_IN_PLACE, totME_aux, 1, MPI_DOUBLE_PRECISION, MPI_SUM, comm, ierr)
+      call MPI_AllReduce (MPI_IN_PLACE, totME, 1, MPI_DOUBLE_PRECISION, MPI_SUM, comm, ierr)
 
       totME     = totME     * dx * dy * dz
-      totME_aux = totME_aux * dx * dy * dz
 
    end subroutine totalMEnthalpic
 
@@ -395,11 +449,11 @@ contains
 
       real, intent(in) :: H
 
-      if (H > 0.) then
-         rhoH = ( (1. - 1./gamma_ion) * H / clump_K)**(1./(gamma_ion - 1.))
-      else
-         rhoH = smalld
-      end if
+      rhoH = smalld
+
+      if (H > 0.) rhoH = ( (1. - 1./gamma_ion) * H / clump_K)**(1./(gamma_ion - 1.))
+
+      rhoH = max(smalld, rhoH)
 
    end function rhoH
 

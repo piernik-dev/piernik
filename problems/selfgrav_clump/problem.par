@@ -28,7 +28,7 @@
     ix      = 0
     iy      = 0
     iz      = 0
-    dt_hdf  = 0.1
+    dt_hdf  = 0.5
     dt_res  = 0.0
     dt_plt  = 0.0
     dt_log  = 0.001
