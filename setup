@@ -589,7 +589,8 @@ sub MakeDependsf90 {
    # references one or more modules
    #
    foreach $file (<*.F90>) {
-      open(FILE, $file);
+      `cpp -w $file > $file"_"`;
+      open(FILE, $file."_");
       while (<FILE>) {
 #         /^\s*include\s+["\']([^"\']+)["\']/i && push(@incs, $1);
          /^\s*use\s+([^\s,!]+)/i && push(@modules, &toLower($1));
@@ -635,5 +636,6 @@ sub MakeDependsf90 {
             undef @modules;
             }
          }
+      unlink $file."_";
       }
    }
