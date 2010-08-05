@@ -285,11 +285,11 @@ contains
                i_try = [ 's', 'b', 'S' ]
                do t = 1, tmax
                   call totalMEnthalpic(Cint_try(t), totME_try(t), REL_CALC)
-                  if (totME_try(t) > clump_mass .and. totME_try(t) < totME(HIGH)) then
+                  if (totME_try(t) >= clump_mass .and. totME_try(t) < totME(HIGH)) then
                      Cint(HIGH)  = Cint_try(t)
                      totME(HIGH) = totME_try(t)
                      ind(HIGH)   = i_try(t)
-                  else if (totME_try(t) < clump_mass .and. totME_try(t) > totME(LOW)) then
+                  else if (totME_try(t) <= clump_mass .and. totME_try(t) > totME(LOW)) then
                      Cint(LOW)  = Cint_try(t)
                      totME(LOW) = totME_try(t)
                      ind(LOW)   = i_try(t)
@@ -399,7 +399,7 @@ contains
             do i = is, ie
 !               TWP(1) = TWP(1) + u(idni, i, j, k) * 0.                !T, will be /= 0. for rotating clump
                TWP(2) = TWP(2) + u(idni, i, j, k) * mgp(i, j, k) * 0.5 !W
-               TWP(3) = TWP(3) + presrho(u(idni, i, j, k))         !P
+               TWP(3) = TWP(3) + presrho(u(idni, i, j, k))             !P
             end do
          end do
       end do
@@ -411,10 +411,12 @@ contains
       if (proc == 0) write(*,'(a,es15.7,a,3es15.7,a)')"[initproblem:virialCheck] VC=",vc, " TWP=(",TWP(:),")"
 
       if (vc > tol) then
-         if (3*abs(TWP(3)) < abs(TWP(2))) then
-            write(*,'(a)')"[initproblem:virialCheck] Virial imbalance occured because the clump is not resolved"
-         else
-            write(*,'(a)')"[initproblem:virialCheck] Virial imbalance occured because the clump overfills the domain"
+         if (proc == 0) then
+            if (3*abs(TWP(3)) < abs(TWP(2))) then
+               write(*,'(a)')"[initproblem:virialCheck] Virial imbalance occured because the clump is not resolved"
+            else
+               write(*,'(a)')"[initproblem:virialCheck] Virial imbalance occured because the clump overfills the domain"
+            end if
          end if
          if (crashNotConv) call die("[initproblem:virialCheck] Virial defect too high.")
       end if
@@ -459,7 +461,7 @@ contains
 
       call MPI_AllReduce (MPI_IN_PLACE, totME, 1, MPI_DOUBLE_PRECISION, MPI_SUM, comm, ierr)
 
-      totME     = totME     * dx * dy * dz
+      totME = totME * dx * dy * dz
 
    end subroutine totalMEnthalpic
 
