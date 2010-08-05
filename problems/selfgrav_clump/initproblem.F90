@@ -31,13 +31,13 @@ module initproblem
 
   use problem_pub, only: problem_name, run_id
 
-  real               :: clump_mass, clump_pos_x, clump_pos_y, clump_pos_z, clump_vel_x, clump_vel_y, clump_vel_z, clump_K, epsC, epsM
+  real               :: clump_mass, clump_pos_x, clump_pos_y, clump_pos_z, clump_vel_x, clump_vel_y, clump_vel_z, clump_K, clump_r, epsC, epsM
   logical            :: crashNotConv
   integer            :: maxitC, maxitM
 
   integer, parameter :: REL_CALC = 1, REL_SET = REL_CALC + 1
 
-  namelist /PROBLEM_CONTROL/  problem_name, run_id, clump_mass, clump_vel_x, clump_vel_y, clump_vel_z, clump_K, epsC, epsM, maxitC, maxitM, crashNotConv
+  namelist /PROBLEM_CONTROL/  problem_name, run_id, clump_mass, clump_vel_x, clump_vel_y, clump_vel_z, clump_K, clump_r, epsC, epsM, maxitC, maxitM, crashNotConv
 
 contains
 
@@ -45,7 +45,7 @@ contains
 
    subroutine read_problem_par
 
-      use grid,     only : xmin, xmax, ymin, ymax, zmin, zmax
+      use grid,     only : xmin, xmax, ymin, ymax, zmin, zmax, dx, dy, dz
       use errh,     only : namelist_errh, die
       use mpisetup, only : cwd, ierr, rbuff, cbuff, ibuff, lbuff, proc, buffer_dim, comm, &
            &               MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL
@@ -63,6 +63,7 @@ contains
       clump_vel_y  = 0.                    !< Y-velocity in the domain
       clump_vel_z  = 0.                    !< Z-velocity in the domain
       clump_K      = 1.                    !< polytropic constant K for p = K rho**gamma formula
+      clump_r      = 0.                    !< initial radius of the clump
       epsC         = 1.e-5                 !< tolerance limit for energy level change
       epsM         = 1.e-10                !< tolerance limit for clump mass change
       maxitC       = 100                   !< iteration limit for energy level
@@ -94,8 +95,9 @@ contains
          rbuff(3) = clump_vel_y
          rbuff(4) = clump_vel_z
          rbuff(5) = clump_K
-         rbuff(6) = epsC
-         rbuff(7) = epsM
+         rbuff(6) = clump_r
+         rbuff(7) = epsC
+         rbuff(8) = epsM
 
          ibuff(1) = maxitC
          ibuff(2) = maxitM
@@ -119,8 +121,9 @@ contains
          clump_vel_y  = rbuff(3)
          clump_vel_z  = rbuff(4)
          clump_K      = rbuff(5)
-         epsC         = rbuff(6)
-         epsM         = rbuff(7)
+         clump_r      = rbuff(6)
+         epsC         = rbuff(7)
+         epsM         = rbuff(8)
 
          maxitC       = ibuff(1)
          maxitM       = ibuff(2)
@@ -139,6 +142,7 @@ contains
       clump_pos_x = (xmax+xmin)/2.
       clump_pos_y = (ymax+ymin)/2.
       clump_pos_z = (zmax+zmin)/2.
+      clump_r = max(clump_r, dx, dy, dz)
 
    end subroutine read_problem_par
 
@@ -150,7 +154,7 @@ contains
 !
    subroutine init_prob
 
-      use mpisetup,      only : proc, smalld, smallei, MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_MIN, MPI_MAX, comm, ierr
+      use mpisetup,      only : proc, smalld, smallei, MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_MIN, MPI_MAX, MPI_SUM, comm, ierr
       use arrays,        only : u, b, mgp, gpot
       use constants,     only : fpiG, pi, newtong
       use grid,          only : xmin, xmax, ymin, ymax, zmin, zmax, x, y, z, nx, ny, nz, dx, dy, dz, is, ie, js, je, ks, ke
@@ -162,7 +166,7 @@ contains
       implicit none
 
       integer, parameter             :: LOW=1, HIGH=LOW+1, TRY=3
-      integer                        :: i, j, k, t, tmax, iC, iM
+      integer                        :: i, j, k, t, tmax, iC, iM, il, ih, jl, jh, kl, kh
       logical                        :: doneC, doneM
       real, dimension(LOW:HIGH)      :: Cint, totME
       character, dimension(LOW:HIGH) :: ind
@@ -181,14 +185,49 @@ contains
       ! Initialize with point source
       ! /todo use polytrope here to improve convergence for gamma_ion <= 1.4
       ! awk 'BEGIN {n=0; f=0.; t=1.; dx=1e-3; print 0., t, f; for (x=0.; x<=10. && t>0.; x+=dx) {if (x==0) f-=t**n*dx; else f-=(t**n + 2.*f/x)*dx; t+=f*dx; if (t>0) print x, t, f}}'
-      if ( x(is) <= clump_pos_x .and. x(ie) >= clump_pos_x .and. &
-           y(js) <= clump_pos_y .and. y(je) >= clump_pos_y .and. &
-           z(ks) <= clump_pos_z .and. z(ke) >= clump_pos_z) then
-         i = is + (ie-is)*(clump_pos_x-x(is))/(x(ie)-x(is))
-         j = js + (je-js)*(clump_pos_y-y(js))/(y(je)-y(js))
-         k = ks + (ke-ks)*(clump_pos_z-z(ks))/(z(ke)-z(ks))
-         u(idni, i, j, k) = (clump_mass - smalld*((xmax-xmin)*(ymax-ymin)*(zmax-zmin) - (dx * dy * dz)))/(dx * dy * dz)
-      end if
+      ! rho = rho_c * theta**n
+      ! x = sqrt(4 * pi * newtong / (K * (n + 1)) * rho_c**(1-1./n)) *r
+      ! gamma = 1 + 1./n
+      il = ie+1
+      ih = is-1
+      do i = is, ie
+         if (abs(x(i) - clump_pos_x) <= clump_r) then
+            il = min(i, il)
+            ih = max(i, ih)
+         end if
+      end do
+      jl = je+1
+      jh = js-1
+      do j = js, je
+         if (abs(y(j) - clump_pos_y) <= clump_r) then
+            jl = min(j, jl)
+            jh = max(j, jh)
+         end if
+      end do
+      kl = ke+1
+      kh = ks-1
+      do k = ks, ke
+         if (abs(z(k) - clump_pos_z) <= clump_r) then
+            kl = min(k, kl)
+            kh = max(k, kh)
+         end if
+      end do
+
+      iC = 0
+      totME(1) = clump_mass / (4./3. * pi * clump_r**3)
+      do k = kl, kh
+         do j = jl, jh
+            do i = il, ih
+               if ((x(i)-clump_pos_x)**2 + (y(j)-clump_pos_y)**2 + (z(k)-clump_pos_z)**2 < clump_r**2) then
+                  u(idni, i, j, k) = totME(1)
+                  iC =iC + 1
+               end if
+            end do
+         end do
+      end do
+
+      call MPI_AllReduce (MPI_IN_PLACE, iC, 1, MPI_INTEGER, MPI_SUM, comm, ierr)
+      if (proc == 0) write(*,'(a,es13.7,a,i7,a)')"[initproblem:init_prob] Starting with uniform sphere with M = ", iC*totME(1) * dx * dy * dz, " (", iC, " cells)"
 
       iC = 1
       doneC = .false.
