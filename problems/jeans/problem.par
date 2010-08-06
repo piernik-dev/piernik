@@ -90,7 +90,7 @@
     run_id =  'ts1'
     d0     = 1.5e7
     p0     = 1.5e7
-    amp    = 0.01
+    amp    = 0.001
     ix     = 2
     iy     = 0
     iz     = 0
@@ -104,6 +104,7 @@
     grav_bnd_str  = "periodic"
 !    prefer_rbgs_relaxation = .true.
     dirty_debug = .true.
+    prefer_modified_norm = .true. ! when amp <= norm_tol this may prevent degradation of solution accuracy
  /
 
 
