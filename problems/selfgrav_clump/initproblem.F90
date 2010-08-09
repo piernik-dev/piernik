@@ -32,12 +32,12 @@ module initproblem
   use problem_pub, only: problem_name, run_id
 
   real               :: clump_mass, clump_pos_x, clump_pos_y, clump_pos_z, clump_vel_x, clump_vel_y, clump_vel_z, clump_K, clump_r, epsC, epsM
-  logical            :: crashNotConv
+  logical            :: crashNotConv, verbose
   integer            :: maxitC, maxitM
 
   integer, parameter :: REL_CALC = 1, REL_SET = REL_CALC + 1
 
-  namelist /PROBLEM_CONTROL/  problem_name, run_id, clump_mass, clump_vel_x, clump_vel_y, clump_vel_z, clump_K, clump_r, epsC, epsM, maxitC, maxitM, crashNotConv
+  namelist /PROBLEM_CONTROL/  problem_name, run_id, clump_mass, clump_vel_x, clump_vel_y, clump_vel_z, clump_K, clump_r, epsC, epsM, maxitC, maxitM, crashNotConv, verbose
 
 contains
 
@@ -45,7 +45,7 @@ contains
 
    subroutine read_problem_par
 
-      use grid,     only : xmin, xmax, ymin, ymax, zmin, zmax, dx, dy, dz
+      use grid,     only : xmin, xmax, ymin, ymax, zmin, zmax, dx, dy, dz, nxd, nyd, nzd
       use errh,     only : namelist_errh, die
       use mpisetup, only : cwd, ierr, rbuff, cbuff, ibuff, lbuff, proc, buffer_dim, comm, &
            &               MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL
@@ -69,6 +69,7 @@ contains
       maxitC       = 100                   !< iteration limit for energy level
       maxitM       = 100                   !< iteration limit for clump mass
       crashNotConv = .true.                !< Crash if unable to converge initial conditions
+      verbose      = .false.               !< Turn on some extra messages
       !\todo add rotation
 
       if(proc == 0) then
@@ -103,6 +104,7 @@ contains
          ibuff(2) = maxitM
 
          lbuff(1) = crashNotConv
+         lbuff(2) = verbose
 
       end if
 
@@ -129,12 +131,13 @@ contains
          maxitM       = ibuff(2)
 
          crashNotConv = lbuff(1)
+         verbose      = lbuff(2)
 
       endif
 
-      if (clump_mass <= 0.) call die("[initproblem:read_problem_par] Negative mass of the clump.")
-      if (clump_K <= 0.) call die("[initproblem:read_problem_par] Negative polytropic constant.")
-
+      if (clump_mass <= 0.)          call die("[initproblem:read_problem_par] Negative mass of the clump.")
+      if (clump_K <= 0.)             call die("[initproblem:read_problem_par] Negative polytropic constant.")
+      if (any([nxd, nyd, nzd] == 1)) call die("[initproblem:read_problem_par] Only 3D is supported.")
 #ifdef ISO
       call die("[initproblem:read_problem_par] Isothermal EOS not supported.")
 #endif
@@ -174,9 +177,6 @@ contains
       character, dimension(TRY)      :: i_try
       real                           :: Cint_old = HUGE(1.)!, Cint_min
 
-      u(imxi, :, :, :) = clump_vel_x
-      u(imyi, :, :, :) = clump_vel_y
-      u(imzi, :, :, :) = clump_vel_z
       b(:,    :, :, :) = 0.
 
       u(idni, :, :, :) = smalld
@@ -269,7 +269,7 @@ contains
             end if
          end if
 
-         if (proc == 0) write(*,'(2(a,i4),2(a,2es15.7),3a)')"[initproblem:init_prob] iter = ",iC,"/",0," dM= ",totME-clump_mass, " C= ", Cint, " ind = ",ind
+         if (proc == 0 .and. verbose) write(*,'(2(a,i4),2(a,2es15.7),3a)')"[initproblem:init_prob] iter = ",iC,"/",0," dM= ",totME-clump_mass, " C= ", Cint, " ind = ",ind
 
          iM = 1
          doneM = .false.
@@ -313,7 +313,7 @@ contains
                end do
             end if
 
-            if (proc == 0) write(*,'(2(a,i4),2(a,2es15.7),3a)')"[initproblem:init_prob] iter = ",iC,"/",iM," dM= ",totME-clump_mass, " C= ", Cint, " ind = ",ind
+            if (proc == 0 .and. verbose) write(*,'(2(a,i4),2(a,2es15.7),3a)')"[initproblem:init_prob] iter = ",iC,"/",iM," dM= ",totME-clump_mass, " C= ", Cint, " ind = ",ind
 
             t = LOW
             if (abs(1. - totME(LOW)/clump_mass) > abs(1. - totME(HIGH)/clump_mass)) t = HIGH
@@ -356,10 +356,13 @@ contains
       ! final touch
       call multigrid_solve(u(idni,:,:,:))
       gpot = mgp
+      where (u(idni, :, :, :) < smalld) u(idni, :, :, :) = smalld
+      u(imxi, :, :, :) = clump_vel_x * u(idni,:,:,:)
+      u(imyi, :, :, :) = clump_vel_y * u(idni,:,:,:)
+      u(imzi, :, :, :) = clump_vel_z * u(idni,:,:,:)
       do k = 1,nz
          do j = 1,ny
             do i = 1,nx
-               u(idni,i,j,k) = max(u(idni,i,j,k), smalld)
                u(ieni,i,j,k) = presrho(u(idni, i, j, k)) / (gamma_ion-1.0) + &
                     &          0.5 * sum(u(imxi:imzi,i,j,k)**2,1) / u(idni,i,j,k)      + &
                     &          0.5 * sum(b(:,i,j,k)**2,1)
@@ -377,12 +380,12 @@ contains
 
    subroutine virialCheck(tol)
 
-      use grid,        only : is, ie, js, je, ks, ke, dx, dy, dz
-      use arrays,      only : u, mgp
-      use mpisetup,    only : proc, comm, ierr, MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_SUM
-      use initionized, only : idni
-      use errh,        only : die
-
+      use grid,          only : is, ie, js, je, ks, ke, dx, dy, dz
+      use arrays,        only : u, mgp
+      use mpisetup,      only : proc, comm, ierr, MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_SUM
+      use initionized,   only : idni
+      use errh,          only : die
+      use multigridvars, only : grav_bnd, bnd_isolated
       implicit none
 
       real, intent(in)      :: tol
@@ -408,9 +411,9 @@ contains
 
       TWP = TWP * dx * dy * dz
       vc = abs(2.*TWP(1) + TWP(2) + 3*TWP(3))/abs(TWP(2))
-      if (proc == 0) write(*,'(a,es15.7,a,3es15.7,a)')"[initproblem:virialCheck] VC=",vc, " TWP=(",TWP(:),")"
+      if (proc == 0 .and. (verbose .or. tol < 1.0)) write(*,'(a,es15.7,a,3es15.7,a)')"[initproblem:virialCheck] VC=",vc, " TWP=(",TWP(:),")"
 
-      if (vc > tol) then
+      if (vc > tol .and. grav_bnd == bnd_isolated) then
          if (proc == 0) then
             if (3*abs(TWP(3)) < abs(TWP(2))) then
                write(*,'(a)')"[initproblem:virialCheck] Virial imbalance occured because the clump is not resolved"
