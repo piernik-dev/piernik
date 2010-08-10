@@ -32,12 +32,12 @@ module initproblem
   use problem_pub, only: problem_name, run_id
 
   real               :: clump_mass, clump_pos_x, clump_pos_y, clump_pos_z, clump_vel_x, clump_vel_y, clump_vel_z, clump_K, clump_r, epsC, epsM
-  logical            :: crashNotConv, verbose
+  logical            :: crashNotConv, exp_speedup, verbose
   integer            :: maxitC, maxitM
 
   integer, parameter :: REL_CALC = 1, REL_SET = REL_CALC + 1
 
-  namelist /PROBLEM_CONTROL/  problem_name, run_id, clump_mass, clump_vel_x, clump_vel_y, clump_vel_z, clump_K, clump_r, epsC, epsM, maxitC, maxitM, crashNotConv, verbose
+  namelist /PROBLEM_CONTROL/  problem_name, run_id, clump_mass, clump_vel_x, clump_vel_y, clump_vel_z, clump_K, clump_r, epsC, epsM, maxitC, maxitM, crashNotConv, exp_speedup, verbose
 
 contains
 
@@ -69,6 +69,7 @@ contains
       maxitC       = 100                   !< iteration limit for energy level
       maxitM       = 100                   !< iteration limit for clump mass
       crashNotConv = .true.                !< Crash if unable to converge initial conditions
+      exp_speedup  = .false.               !< Use exponential fit to speed up convergence
       verbose      = .false.               !< Turn on some extra messages
       !\todo add rotation
 
@@ -104,7 +105,8 @@ contains
          ibuff(2) = maxitM
 
          lbuff(1) = crashNotConv
-         lbuff(2) = verbose
+         lbuff(2) = exp_speedup
+         lbuff(3) = verbose
 
       end if
 
@@ -131,7 +133,8 @@ contains
          maxitM       = ibuff(2)
 
          crashNotConv = lbuff(1)
-         verbose      = lbuff(2)
+         exp_speedup  = lbuff(2)
+         verbose      = lbuff(3)
 
       endif
 
@@ -158,7 +161,7 @@ contains
    subroutine init_prob
 
       use mpisetup,      only : proc, smalld, smallei, MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_MIN, MPI_MAX, MPI_SUM, comm, ierr
-      use arrays,        only : u, b, mgp, gpot
+      use arrays,        only : u, b, mgp, gpot, hgpot
       use constants,     only : fpiG, pi, newtong
       use grid,          only : xmin, xmax, ymin, ymax, zmin, zmax, x, y, z, nx, ny, nz, dx, dy, dz, is, ie, js, je, ks, ke
       use initionized,   only : gamma_ion, idni, imxi, imyi, imzi, ieni
@@ -175,11 +178,11 @@ contains
       character(len=HIGH)       :: ind
       real, dimension(TRY)      :: Cint_try, totME_try
       character(len=TRY)        :: i_try
-      real                      :: Cint_old = HUGE(1.)!, Cint_min
-      real, dimension(NLIM)     :: Clim
+      real                      :: Cint_old = HUGE(1.), Clim, Clim_old
+      real, dimension(NLIM)     :: Clast
+      character(len=16)         :: Ccomment
 
       b(:,    :, :, :) = 0.
-
       u(idni, :, :, :) = smalld
       u(ieni, :, :, :) = smallei
 
@@ -228,21 +231,32 @@ contains
       end do
 
       call MPI_AllReduce (MPI_IN_PLACE, iC, 1, MPI_INTEGER, MPI_SUM, comm, ierr)
-      if (proc == 0) write(*,'(a,es13.7,a,i7,a)')"[initproblem:init_prob] Starting with uniform sphere with M = ", iC*totME(1) * dx * dy * dz, " (", iC, " cells)"
+      if (proc == 0 .and. verbose) write(*,'(a,es13.7,a,i7,a)')"[initproblem:init_prob] Starting with uniform sphere with M = ", iC*totME(1) * dx * dy * dz, " (", iC, " cells)"
 
       iC = 1
       doneC = .false.
-      Clim(:) = 0.
+      Clast(:) = 0. ; Clim = 0. ; Clim_old = 0.
+      Ccomment = ""
 
       do while (.not. doneC)
 
          call multigrid_solve(u(idni,:,:,:))
+         if (exp_speedup .and. Clim_old /= 0.) then
+            if (abs(1. - Clim/Clim_old) < 1e-3) then
+               mgp = (mgp*hgpot - gpot**2)/(mgp + hgpot - 2.*gpot) !(gpot*hgpot - gp**2)/(gpot + hgpot - 2.*gp)
+               Ccomment = " Exp warp"
+               Clast(:) = 0. ; Clim = 0.
+            else
+               Ccomment = ""
+            end if
+         end if
+         hgpot = gpot
+         gpot = mgp
 
          Cint = [ minval(mgp(is:ie,js:je,ks:ke)), maxval(mgp(is:ie,js:je,ks:ke)) ] ! rotation will modify this
 
          call MPI_AllReduce (MPI_IN_PLACE, Cint(LOW),  1, MPI_DOUBLE_PRECISION, MPI_MIN, comm, ierr)
          call MPI_AllReduce (MPI_IN_PLACE, Cint(HIGH), 1, MPI_DOUBLE_PRECISION, MPI_MAX, comm, ierr)
-         !Cint_min = Cint(LOW)
 
          call totalMEnthalpic(Cint(LOW),  totME(LOW),  REL_CALC)
          call totalMEnthalpic(Cint(HIGH), totME(HIGH), REL_CALC)
@@ -335,16 +349,15 @@ contains
          call totalMEnthalpic(Cint(t), totME(t), REL_SET)
          call virialCheck(huge(1.0))
 
-         Clim(1:NLIM-1) = Clim(2:NLIM)
-         Clim(NLIM) = Cint(t)
-         if (proc == 0) then
-            if (any(Clim(:) == 0.)) then
-               write(*,'(a,i4,2(a,es15.7))')"[initproblem:init_prob] iter = ",iC,"     M=",totME(t), " C=", Cint(t)
-            else
-               write(*,'(a,i4,3(a,es15.7))')"[initproblem:init_prob] iter = ",iC,"     M=",totME(t), " C=", Cint(t), &
-                    " Clim=", (Clim(NLIM)*Clim(NLIM-2) - Clim(NLIM-1)**2)/(Clim(NLIM) - 2.*Clim(NLIM-1) + Clim(NLIM-2))
-               ! exponential estimate: \lim C \simeq \frac{C_{t} C_{t-2} - C_{t-1}^2}{C_{t} - 2 C_{t-1} + C{t-2}}
-            end if
+         Clast(1:NLIM-1) = Clast(2:NLIM)
+         Clast(NLIM) = Cint(t)
+         if (any(Clast(:) == 0.)) then
+            if (proc == 0) write(*,'(a,i4,2(a,es15.7),a)')"[initproblem:init_prob] iter = ",iC,"     M=",totME(t), " C=", Cint(t), Ccomment
+         else
+            if (Clim /= 0.) Clim_old = Clim
+            ! exponential estimate: \lim C \simeq \frac{C_{t} C_{t-2} - C_{t-1}^2}{C_{t} - 2 C_{t-1} + C{t-2}}
+            Clim = (Clast(NLIM)*Clast(NLIM-2) - Clast(NLIM-1)**2)/(Clast(NLIM) - 2.*Clast(NLIM-1) + Clast(NLIM-2))
+            if (proc == 0) write(*,'(a,i4,3(a,es15.7))')"[initproblem:init_prob] iter = ",iC,"     M=",totME(t), " C=", Cint(t), " Clim=", Clim
          end if
 
          if (abs(1. - Cint(t)/Cint_old) < epsC) doneC = .true.
@@ -368,6 +381,7 @@ contains
       ! final touch
       call multigrid_solve(u(idni,:,:,:))
       gpot = mgp
+
       where (u(idni, :, :, :) < smalld) u(idni, :, :, :) = smalld
       u(imxi, :, :, :) = clump_vel_x * u(idni,:,:,:)
       u(imyi, :, :, :) = clump_vel_y * u(idni,:,:,:)

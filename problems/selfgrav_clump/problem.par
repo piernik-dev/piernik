@@ -95,6 +95,7 @@
     clump_r = 1.0e5
     maxitC = 1000
 !    verbose = .true.
+    exp_speedup = .true.
  /
 
  $MULTIGRID_SOLVER
