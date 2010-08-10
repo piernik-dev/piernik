@@ -168,15 +168,15 @@ contains
 
       implicit none
 
-      integer, parameter             :: LOW=1, HIGH=LOW+1, TRY=3, NLIM=3
-      integer                        :: i, j, k, t, tmax, iC, iM, il, ih, jl, jh, kl, kh
-      logical                        :: doneC, doneM
-      real, dimension(LOW:HIGH)      :: Cint, totME
-      character, dimension(LOW:HIGH) :: ind
-      real, dimension(TRY)           :: Cint_try, totME_try
-      character, dimension(TRY)      :: i_try
-      real                           :: Cint_old = HUGE(1.)!, Cint_min
-      real, dimension(NLIM)          :: Clim
+      integer, parameter        :: LOW=1, HIGH=LOW+1, TRY=3, NLIM=3
+      integer                   :: i, j, k, t, tmax, iC, iM, il, ih, jl, jh, kl, kh
+      logical                   :: doneC, doneM
+      real, dimension(LOW:HIGH) :: Cint, totME
+      character(len=HIGH)       :: ind
+      real, dimension(TRY)      :: Cint_try, totME_try
+      character(len=TRY)        :: i_try
+      real                      :: Cint_old = HUGE(1.)!, Cint_min
+      real, dimension(NLIM)     :: Clim
 
       b(:,    :, :, :) = 0.
 
@@ -246,21 +246,21 @@ contains
 
          call totalMEnthalpic(Cint(LOW),  totME(LOW),  REL_CALC)
          call totalMEnthalpic(Cint(HIGH), totME(HIGH), REL_CALC)
-         ind = [ '-', '+' ]
+         ind = '-+'
 
          if (iC > 1) then ! try previous C
             tmax = HIGH
-            i_try(1:tmax) = [ '1', '2' ]
+            i_try(1:tmax) = '12'
             do t = 1, tmax ! replicated code
                call totalMEnthalpic(Cint_try(t), totME_try(t), REL_CALC)
                if (totME_try(t) > clump_mass .and. totME_try(t) < totME(HIGH)) then
                   Cint(HIGH)  = Cint_try(t)
                   totME(HIGH) = totME_try(t)
-                  ind(HIGH)   = i_try(t)
+                  ind(HIGH:HIGH)   = i_try(t:t)
                else if (totME_try(t) < clump_mass .and. totME_try(t) > totME(LOW)) then
                   Cint(LOW)   = Cint_try(t)
                   totME(LOW)  = totME_try(t)
-                  ind(LOW)    = i_try(t)
+                  ind(LOW:LOW)    = i_try(t:t)
                end if
             end do
             if (Cint(LOW) > Cint(HIGH)) then
@@ -271,7 +271,7 @@ contains
             end if
          end if
 
-         if (proc == 0 .and. verbose) write(*,'(2(a,i4),2(a,2es15.7),3a)')"[initproblem:init_prob] iter = ",iC,"/",0," dM= ",totME-clump_mass, " C= ", Cint, " ind = ",ind
+         if (proc == 0 .and. verbose) write(*,'(2(a,i4),2(a,2es15.7),2a)')"[initproblem:init_prob] iter = ",iC,"/",0," dM= ",totME-clump_mass, " C= ", Cint, " ind = ",ind
 
          iM = 1
          doneM = .false.
@@ -279,22 +279,22 @@ contains
          do while (.not. doneM)
 
             if (clump_mass > totME(LOW) .and. clump_mass < totME(HIGH)) then
-               ind = [ '<', '>' ]
+               ind = '<>'
                tmax = TRY
                Cint_try(LOW)  = Cint(LOW) + (Cint(HIGH) - Cint(LOW))*(clump_mass - totME(LOW))/(totME(HIGH) - totME(LOW) ) ! secant
                Cint_try(HIGH) = (Cint(LOW) + Cint(HIGH))/2.                                                                ! bisection
                Cint_try(TRY)  = 2*Cint_try(1) - Cint(LOW)                                                                  ! 2*overshoot secant
-               i_try = [ 's', 'b', 'S' ]
+               i_try = 'sbS'
                do t = 1, tmax
                   call totalMEnthalpic(Cint_try(t), totME_try(t), REL_CALC)
                   if (totME_try(t) >= clump_mass .and. totME_try(t) < totME(HIGH)) then
                      Cint(HIGH)  = Cint_try(t)
                      totME(HIGH) = totME_try(t)
-                     ind(HIGH)   = i_try(t)
+                     ind(HIGH:HIGH)   = i_try(t:t)
                   else if (totME_try(t) <= clump_mass .and. totME_try(t) > totME(LOW)) then
                      Cint(LOW)  = Cint_try(t)
                      totME(LOW) = totME_try(t)
-                     ind(LOW)   = i_try(t)
+                     ind(LOW:LOW)   = i_try(t:t)
                   end if
                end do
             else
@@ -302,20 +302,20 @@ contains
                if (clump_mass > totME(HIGH)) then     ! amoeba crawls up
                   Cint_try(1)   = Cint(HIGH)
                   Cint_try(2)   = 3*Cint(HIGH) - 2*Cint(LOW)
-                  i_try(1:tmax) = [ '+', 'u' ]
+                  i_try(1:tmax) = '+u'
                else if (clump_mass < totME(LOW)) then ! amoeba crawls down
                   Cint_try(2)   = Cint(LOW)
                   Cint_try(1)   = 3*Cint(LOW) - 2*Cint(HIGH)
-                  i_try(1:tmax) = [ 'd', '-' ]
+                  i_try(1:tmax) = 'd-'
                end if
                do t = LOW, HIGH
                   Cint(t) = Cint_try(t)
                   call totalMEnthalpic(Cint(t), totME(t), REL_CALC)
-                  ind(t) = i_try(t)
+                  ind(t:t) = i_try(t:t)
                end do
             end if
 
-            if (proc == 0 .and. verbose) write(*,'(2(a,i4),2(a,2es15.7),3a)')"[initproblem:init_prob] iter = ",iC,"/",iM," dM= ",totME-clump_mass, " C= ", Cint, " ind = ",ind
+            if (proc == 0 .and. verbose) write(*,'(2(a,i4),2(a,2es15.7),2a)')"[initproblem:init_prob] iter = ",iC,"/",iM," dM= ",totME-clump_mass, " C= ", Cint, " ind = ",ind
 
             t = LOW
             if (abs(1. - totME(LOW)/clump_mass) > abs(1. - totME(HIGH)/clump_mass)) t = HIGH
