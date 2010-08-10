@@ -168,7 +168,7 @@ contains
 
       implicit none
 
-      integer, parameter             :: LOW=1, HIGH=LOW+1, TRY=3
+      integer, parameter             :: LOW=1, HIGH=LOW+1, TRY=3, NLIM=3
       integer                        :: i, j, k, t, tmax, iC, iM, il, ih, jl, jh, kl, kh
       logical                        :: doneC, doneM
       real, dimension(LOW:HIGH)      :: Cint, totME
@@ -176,6 +176,7 @@ contains
       real, dimension(TRY)           :: Cint_try, totME_try
       character, dimension(TRY)      :: i_try
       real                           :: Cint_old = HUGE(1.)!, Cint_min
+      real, dimension(NLIM)          :: Clim
 
       b(:,    :, :, :) = 0.
 
@@ -231,6 +232,7 @@ contains
 
       iC = 1
       doneC = .false.
+      Clim(:) = 0.
 
       do while (.not. doneC)
 
@@ -333,7 +335,17 @@ contains
          call totalMEnthalpic(Cint(t), totME(t), REL_SET)
          call virialCheck(huge(1.0))
 
-         if (proc == 0) write(*,'(a,i4,2(a,es15.7))')"[initproblem:init_prob] iter = ",iC,"     M=",totME(t), " C=", Cint(t)
+         Clim(1:NLIM-1) = Clim(2:NLIM)
+         Clim(NLIM) = Cint(t)
+         if (proc == 0) then
+            if (any(Clim(:) == 0.)) then
+               write(*,'(a,i4,2(a,es15.7))')"[initproblem:init_prob] iter = ",iC,"     M=",totME(t), " C=", Cint(t)
+            else
+               write(*,'(a,i4,3(a,es15.7))')"[initproblem:init_prob] iter = ",iC,"     M=",totME(t), " C=", Cint(t), &
+                    " Clim=", (Clim(NLIM)*Clim(NLIM-2) - Clim(NLIM-1)**2)/(Clim(NLIM) - 2.*Clim(NLIM-1) + Clim(NLIM-2))
+               ! exponential estimate: \lim C \simeq \frac{C_{t} C_{t-2} - C_{t-1}^2}{C_{t} - 2 C_{t-1} + C{t-2}}
+            end if
+         end if
 
          if (abs(1. - Cint(t)/Cint_old) < epsC) doneC = .true.
          Cint_old = Cint(t)
