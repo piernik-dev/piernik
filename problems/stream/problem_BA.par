@@ -1,7 +1,7 @@
  $DOMAIN_SIZES
-    nxd = 128
-    nyd = 128
-    nzd = 128
+    nxd = 256
+    nyd = 1
+    nzd = 256
  /
 
  $MPI_BLOCKS
@@ -22,10 +22,10 @@
  /
 
  $OUTPUT_CONTROL
-    dt_hdf  = 0.5
+    dt_hdf  = 1.0
     dt_res  = 50.0
-    dt_log  = 0.5
-    dt_tsl  = 0.1
+    dt_log  = 0.1
+    dt_tsl  = 0.5
     vars(1) = 'dens'
     vars(2) = 'velx'
     vars(3) = 'vely'
@@ -35,8 +35,8 @@
  /
 
  $BOUNDARIES
-    bnd_xl = 'she'
-    bnd_xr = 'she'
+    bnd_xl = 'per'
+    bnd_xr = 'per'
     bnd_yl = 'per'
     bnd_yr = 'per'
     bnd_zl = 'per'
@@ -44,12 +44,12 @@
  /
 
  $DOMAIN_LIMITS
-    xmin   = -0.5
-    xmax   =  0.5
-    ymin   = -0.5
-    ymax   =  0.5
-    zmin   = -0.5
-    zmax   =  0.5
+    xmin   = -1.0
+    xmax   =  1.0
+    ymin   = -1.0
+    ymax   =  1.0
+    zmin   = -1.0
+    zmax   =  1.0
  /
 
  $FLUID_NEUTRAL
@@ -77,9 +77,9 @@
 
  $PROBLEM_CONTROL
     problem_name ='stream'
-    run_id  =  'BB3'
+    run_id  =  'BA'
     rhog    =  1.0
-    eps     =  1.0
+    eps     =  0.2
     amp     =  1.e-6
     linear  = .false.
  /
