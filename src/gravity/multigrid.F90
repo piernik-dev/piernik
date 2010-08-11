@@ -924,7 +924,7 @@ contains
          case (:-1)
             if (proc == 0 .and. ord_time_extrap > -1) then
                write(msg, '(3a)')"[multigrid:init_solution] Clearing ",trim(cprefix),"solution."
-               call mg_write_log(msg)
+               call mg_write_log(msg, stdout)
             endif
             do l = level_min, level_max
                lvl(l)%mgvar(:, :, :, solution) = 0.
@@ -934,14 +934,14 @@ contains
             roof%mgvar(:, :, :, solution) = history%old(p0)%soln(:, :, :)
             if (proc == 0 .and. ord_time_extrap > 0) then
                write(msg, '(3a)')"[multigrid:init_solution] No extrapolation of ",trim(cprefix),"solution."
-               call mg_write_log(msg)
+               call mg_write_log(msg, stdout)
             endif
          case (1)
             dt_fac(1) = (t - history%old(p0)%time) / (history%old(p0)%time - history%old(p1)%time)
             roof%mgvar(:, :, :, solution) = (1. + dt_fac(1)) * history%old(p0)%soln(:, :, :) - dt_fac(1) *  history%old(p1)%soln(:, :, :)
             if (proc == 0 .and. ord_time_extrap > 1) then
                write(msg, '(3a)')"[multigrid:init_solution] Linear extrapolation of ",trim(cprefix),"solution."
-               call mg_write_log(msg)
+               call mg_write_log(msg, stdout)
             end if
          case (2)
             dt_fac(1) = (t - history%old(p0)%time) / (history%old(p1)%time - history%old(p2)%time)
@@ -1194,7 +1194,7 @@ contains
          call fft_solve_roof
          if (trust_fft_solution) then
             write(msg, '(3a)')"[multigrid:multigrid_solve] FFT solution trusted, skipping ", trim(cprefix), "cycle."
-            call mg_write_log(msg)
+            call mg_write_log(msg, stdout)
             return
          end if
       else
@@ -1207,7 +1207,7 @@ contains
          call norm_sq(source, norm_rhs)
          if (proc == 0 .and. norm_rhs<(1.-1e-6)*norm_rhs_orig) then
             write(msg, '(a,f8.5)')"[multigrid:multigrid_solve] norm_rhs/norm_rhs_orig = ", norm_rhs/norm_rhs_orig
-            call mg_write_log(msg)
+            call mg_write_log(msg, stdout)
          endif
       end if
       norm_old = norm_rhs
