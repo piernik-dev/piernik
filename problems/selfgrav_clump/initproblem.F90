@@ -163,7 +163,7 @@ contains
       use mpisetup,      only : proc, smalld, smallei, MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_MIN, MPI_MAX, MPI_SUM, comm, ierr
       use arrays,        only : u, b, mgp, gpot, hgpot
       use constants,     only : fpiG, pi, newtong
-      use grid,          only : xmin, xmax, ymin, ymax, zmin, zmax, x, y, z, nx, ny, nz, dx, dy, dz, is, ie, js, je, ks, ke
+      use grid,          only : xmin, xmax, ymin, ymax, zmin, zmax, x, y, z, dx, dy, dz, is, ie, js, je, ks, ke
       use initionized,   only : gamma_ion, idni, imxi, imyi, imzi, ieni
       use dataio_public, only : tend
       use multigrid,     only : multigrid_solve
@@ -171,6 +171,7 @@ contains
 
       implicit none
 
+      real, parameter           :: virial_tol = 0.01
       integer, parameter        :: LOW=1, HIGH=LOW+1, TRY=3, NLIM=3
       integer                   :: i, j, k, t, tmax, iC, iM, il, ih, jl, jh, kl, kh
       logical                   :: doneC, doneM
@@ -186,12 +187,7 @@ contains
       u(idni, :, :, :) = smalld
       u(ieni, :, :, :) = smallei
 
-      ! Initialize with point source
-      ! /todo use polytrope here to improve convergence for gamma_ion <= 1.4
-      ! awk 'BEGIN {n=0; f=0.; t=1.; dx=1e-3; print 0., t, f; for (x=0.; x<=10. && t>0.; x+=dx) {if (x==0) f-=t**n*dx; else f-=(t**n + 2.*f/x)*dx; t+=f*dx; if (t>0) print x, t, f}}'
-      ! rho = rho_c * theta**n
-      ! x = sqrt(4 * pi * newtong / (K * (n + 1)) * rho_c**(1-1./n)) *r
-      ! gamma = 1 + 1./n
+      ! Initialize density with uniform sphere
       il = ie+1
       ih = is-1
       do i = is, ie
@@ -233,6 +229,7 @@ contains
       call MPI_AllReduce (MPI_IN_PLACE, iC, 1, MPI_INTEGER, MPI_SUM, comm, ierr)
       if (proc == 0 .and. verbose) write(*,'(a,es13.7,a,i7,a)')"[initproblem:init_prob] Starting with uniform sphere with M = ", iC*totME(1) * dx * dy * dz, " (", iC, " cells)"
 
+      ! Find C - the level of enthalpy at which density vanishes
       iC = 1
       doneC = .false.
       Clast(:) = 0. ; Clim = 0. ; Clim_old = 0.
@@ -241,9 +238,9 @@ contains
       do while (.not. doneC)
 
          call multigrid_solve(u(idni,:,:,:))
-         if (exp_speedup .and. Clim_old /= 0.) then
-            if (abs(1. - Clim/Clim_old) < 1e-3) then
-               mgp = (mgp*hgpot - gpot**2)/(mgp + hgpot - 2.*gpot) !(gpot*hgpot - gp**2)/(gpot + hgpot - 2.*gp)
+         if (exp_speedup .and. Clim_old /= 0.) then ! extrapolate potential assuming exponential convergence
+            if (abs(1. - Clim/Clim_old) < min(sqrt(epsC), 100.*epsC, 0.01)) then
+               mgp = (mgp*hgpot - gpot**2)/(mgp + hgpot - 2.*gpot)
                Ccomment = " Exp warp"
                Clast(:) = 0. ; Clim = 0.
             else
@@ -268,13 +265,13 @@ contains
             do t = 1, tmax ! replicated code
                call totalMEnthalpic(Cint_try(t), totME_try(t), REL_CALC)
                if (totME_try(t) > clump_mass .and. totME_try(t) < totME(HIGH)) then
-                  Cint(HIGH)  = Cint_try(t)
-                  totME(HIGH) = totME_try(t)
-                  ind(HIGH:HIGH)   = i_try(t:t)
+                  Cint(HIGH)     = Cint_try(t)
+                  totME(HIGH)    = totME_try(t)
+                  ind(HIGH:HIGH) = i_try(t:t)
                else if (totME_try(t) < clump_mass .and. totME_try(t) > totME(LOW)) then
-                  Cint(LOW)   = Cint_try(t)
-                  totME(LOW)  = totME_try(t)
-                  ind(LOW:LOW)    = i_try(t:t)
+                  Cint(LOW)    = Cint_try(t)
+                  totME(LOW)   = totME_try(t)
+                  ind(LOW:LOW) = i_try(t:t)
                end if
             end do
             if (Cint(LOW) > Cint(HIGH)) then
@@ -287,6 +284,7 @@ contains
 
          if (proc == 0 .and. verbose) write(*,'(2(a,i4),2(a,2es15.7),2a)')"[initproblem:init_prob] iter = ",iC,"/",0," dM= ",totME-clump_mass, " C= ", Cint, " ind = ",ind
 
+         ! Find what C corresponds to mass M in current potential well
          iM = 1
          doneM = .false.
 
@@ -302,25 +300,25 @@ contains
                do t = 1, tmax
                   call totalMEnthalpic(Cint_try(t), totME_try(t), REL_CALC)
                   if (totME_try(t) >= clump_mass .and. totME_try(t) < totME(HIGH)) then
-                     Cint(HIGH)  = Cint_try(t)
-                     totME(HIGH) = totME_try(t)
-                     ind(HIGH:HIGH)   = i_try(t:t)
+                     Cint(HIGH)     = Cint_try(t)
+                     totME(HIGH)    = totME_try(t)
+                     ind(HIGH:HIGH) = i_try(t:t)
                   else if (totME_try(t) <= clump_mass .and. totME_try(t) > totME(LOW)) then
-                     Cint(LOW)  = Cint_try(t)
-                     totME(LOW) = totME_try(t)
-                     ind(LOW:LOW)   = i_try(t:t)
+                     Cint(LOW)    = Cint_try(t)
+                     totME(LOW)   = totME_try(t)
+                     ind(LOW:LOW) = i_try(t:t)
                   end if
                end do
-            else
+            else ! the interval does not contain target mass M
                tmax = HIGH
                if (clump_mass > totME(HIGH)) then     ! amoeba crawls up
-                  Cint_try(1)   = Cint(HIGH)
-                  Cint_try(2)   = 3*Cint(HIGH) - 2*Cint(LOW)
-                  i_try(1:tmax) = '+u'
+                  Cint_try(LOW)  = Cint(HIGH)
+                  Cint_try(HIGH) = 3*Cint(HIGH) - 2*Cint(LOW)
+                  i_try(1:tmax)  = '+u'
                else if (clump_mass < totME(LOW)) then ! amoeba crawls down
-                  Cint_try(2)   = Cint(LOW)
-                  Cint_try(1)   = 3*Cint(LOW) - 2*Cint(HIGH)
-                  i_try(1:tmax) = 'd-'
+                  Cint_try(HIGH) = Cint(LOW)
+                  Cint_try(LOW)  = 3*Cint(LOW) - 2*Cint(HIGH)
+                  i_try(1:tmax)  = 'd-'
                end if
                do t = LOW, HIGH
                   Cint(t) = Cint_try(t)
@@ -338,7 +336,7 @@ contains
             iM = iM + 1
             if (iM > maxitM .and. .not. doneM) then
                if (crashNotConv) then
-                  call die("[initproblem:init_prob] M-iterations not converged")
+                  call die("[initproblem:init_prob] M-iterations not converged.")
                else
                   write(*,'(a)')"[initproblem:init_prob] M-iterations not converged. Continue anyway."
                   doneM = .true.
@@ -362,12 +360,12 @@ contains
 
          if (abs(1. - Cint(t)/Cint_old) < epsC) doneC = .true.
          Cint_old = Cint(t)
-         Cint_try(1:2) = Cint ! try them as first guesses in next iteration
+         Cint_try(LOW:HIGH) = Cint ! try them as first guesses in next iteration
 
          iC = iC + 1
          if (iC > maxitC .and. .not. doneC) then
             if (crashNotConv) then
-               call die("[initproblem:init_prob] C-iterations not converged")
+               call die("[initproblem:init_prob] C-iterations not converged.")
             else
                write(*,'(a)')"[initproblem:init_prob] C-iterations not converged. Continue anyway."
                doneC = .true.
@@ -376,7 +374,7 @@ contains
 
       end do
 
-      call virialCheck(0.01)
+      call virialCheck(virial_tol)
 
       ! final touch
       call multigrid_solve(u(idni,:,:,:))
@@ -386,13 +384,13 @@ contains
       u(imxi, :, :, :) = clump_vel_x * u(idni,:,:,:)
       u(imyi, :, :, :) = clump_vel_y * u(idni,:,:,:)
       u(imzi, :, :, :) = clump_vel_z * u(idni,:,:,:)
-      do k = 1,nz
-         do j = 1,ny
-            do i = 1,nx
-               u(ieni,i,j,k) = presrho(u(idni, i, j, k)) / (gamma_ion-1.0) + &
-                    &          0.5 * sum(u(imxi:imzi,i,j,k)**2,1) / u(idni,i,j,k)      + &
-                    &          0.5 * sum(b(:,i,j,k)**2,1)
-               u(ieni,i,j,k) = max(u(ieni,i,j,k), smallei)
+      do k = ks, ke
+         do j = js, je
+            do i = is, ie
+               u(ieni,i,j,k) = max(smallei,                                             &
+                    &              presrho(u(idni, i, j, k)) / (gamma_ion-1.0)        + &
+                    &              0.5 * sum(u(imxi:imzi,i,j,k)**2,1) / u(idni,i,j,k) + &
+                    &              0.5 * sum(b(:,i,j,k)**2,1))
             enddo
          enddo
       enddo
