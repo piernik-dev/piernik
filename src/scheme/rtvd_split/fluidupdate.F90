@@ -147,7 +147,7 @@ contains
       integer :: s
 
 #ifdef SHEAR
-      call yshift(t, dt)
+      if(nyd /= 1) call yshift(t, dt)
       if(nxd /= 1) call bnd_u('xdim')
       if(nyd /= 1) call bnd_u('ydim')
 #endif /* SHEAR */
