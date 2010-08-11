@@ -157,6 +157,10 @@ contains
       use dataio_public, only : nrestart
       use mpisetup,      only : cwd, mpistart
       use mpiboundaries, only : mpi_boundaries_prep
+      use fluidboundaries, only : all_fluid_boundaries
+#ifdef MAGNETIC
+      use magboundaries, only : all_mag_boundaries
+#endif /* MAGNETIC */
 #if defined MAGNETIC && defined RESISTIVE
       use resistivity,   only : init_resistivity
 #endif /* MAGNETIC && RESISTIVE */
@@ -164,7 +168,7 @@ contains
       use shear,         only : init_shear
 #endif /* SHEAR */
 #ifdef GRAV
-      use gravity,       only : init_grav,grav_pot_3d
+      use gravity,       only : init_grav, grav_pot_3d
 #endif /* GRAV */
 #ifdef FLUID_INTERACTIONS
       use interactions,  only : init_interactions
@@ -230,6 +234,10 @@ contains
          if (proc == 0) write(*,'(a,i4,a)')"[piernik:init_piernik] Restart file #",nrestart," read. Warning: skipping init_prob."
       else
          call init_prob
+         call all_fluid_boundaries ! Never assume that init_prob set guardcells correctly
+#ifdef MAGNETIC
+         call all_mag_boundaries
+#endif /* MAGNETIC */
          call write_data(output='all') ! moved from dataio::init_dataio
       end if
 
