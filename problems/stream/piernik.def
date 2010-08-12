@@ -20,5 +20,3 @@
 #define GRAV
 #define GRAV_NULL
 #define SHEAR
-#define FFTW
-#define SHEAR_BND

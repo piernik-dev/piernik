@@ -1,13 +1,13 @@
  $DOMAIN_SIZES
-    nxd = 256
+    nxd = 512
     nyd = 1
-    nzd = 256
+    nzd = 512
  /
 
  $MPI_BLOCKS
-    pxsize = 1
+    pxsize = 2
     pysize = 1
-    pzsize = 1
+    pzsize = 2
  /
 
  $RESTART_CONTROL
@@ -17,7 +17,7 @@
  /
 
  $END_CONTROL
-    tend   = 400.0
+    tend   = 500.0
     nend   = 1000000
  /
 
@@ -64,7 +64,7 @@
  /
 
  $INTERACTIONS
-    cfl_interact = 0.01
+    cfl_interact = 0.1
  /
 
  $NUMERICAL_SETUP
@@ -77,10 +77,10 @@
 
  $PROBLEM_CONTROL
     problem_name ='stream'
-    run_id  =  'BA'
+    run_id  =  'BA_'
     rhog    =  1.0
     eps     =  0.2
-    amp     =  1.e-6
+    amp     =  1.e-4
     linear  = .false.
  /
 
