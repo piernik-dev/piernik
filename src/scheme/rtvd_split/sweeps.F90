@@ -70,7 +70,7 @@ module sweeps     ! split sweeps
             rotaccr(ind,:,:) = - dragc_gas_dust * 1.0    * (v_r(2,:,:) - v_r(1,:,:))
           endif
 !         rotaccr(ind,:,:) = rotaccr(ind,:,:) - 2.0*omega*vxr(ind,:,:)
-          rotaccr(ind,:,:) = rotaccr(ind,:,:) - (qshear-2.0)*omega*vxr(ind,:,:)
+          rotaccr(ind,:,:) = rotaccr(ind,:,:) + (qshear-2.0)*omega*vxr(ind,:,:)
        enddo
 
        where(u1(iarr_all_dn,:,:) > 0.0)
