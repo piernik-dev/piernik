@@ -158,10 +158,10 @@ module mpisetup
 
          implicit none
 
-         namelist /DOMAIN_SIZES/ nxd, nyd, nzd
+         namelist /DOMAIN_SIZES/ nxd, nyd, nzd, nb
 
          integer :: iproc, ierrh
-         integer :: nxd, nyd, nzd
+         integer :: nxd, nyd, nzd, nb
 
          integer, parameter    :: cwdlen = 512 ! allow for moderately long CWD
          integer, parameter    :: hnlen = 32   ! hostname length limit
