@@ -42,6 +42,7 @@ module sweeps     ! split sweeps
     use initdust,        only : dragc_gas_dust
 #endif /* DUST */
     use fluidindex,      only : iarr_all_dn, iarr_all_mx, iarr_all_my, nvar
+    use fluidboundaries, only : all_fluid_boundaries
 
     implicit none
     real, dimension(size(iarr_all_my),nx,nz) :: vxr, v_r, rotaccr
@@ -77,6 +78,9 @@ module sweeps     ! split sweeps
        endwhere
        u(iarr_all_my,:,1,:) = u1(iarr_all_my,:,:)
     enddo
+
+    call all_fluid_boundaries
+
   end subroutine source_terms_y
 #endif
 
