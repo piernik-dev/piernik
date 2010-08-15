@@ -2,5 +2,5 @@ PROG      = piernik
 
 ### GNU hydra AMD64
 F90       = mpif90
-F90FLAGS  = -I/usr/include -g3 -fdefault-real-8 -ffpe-trap=zero,overflow,underflow -Wall -W -pedantic-errors -ffree-form -std=gnu -fimplicit-none
+F90FLAGS  = -I/usr/include -g3 -fdefault-real-8 -ffpe-trap=zero,overflow,underflow -Wall -W -pedantic-errors -ffree-form -std=gnu -fimplicit-none -ffree-line-length-none
 LDFLAGS   = -L/usr/lib
