@@ -52,7 +52,6 @@ module mpisetup
    integer, dimension(3) :: psize, pcoords, coords
    logical               :: periods(3), reorder
    integer ::   procxl, procxr, procyl, procyr, proczl, proczr, procxyl, procyxl, procxyr, procyxr
-   integer ::   pxleft, pxright, pyleft, pyright, pzleft, pzright
 
    integer, parameter               :: buffer_dim=200
    integer, parameter               :: cbuff_len=32
@@ -218,6 +217,7 @@ module mpisetup
          nxd    = 1
          nyd    = 1
          nzd    = 1
+         nb     = 4
 
          mpi_magic = .true.
 
@@ -280,6 +280,7 @@ module mpisetup
             ibuff(5) = nxd
             ibuff(6) = nyd
             ibuff(7) = nzd
+            ibuff(8) = nb
 
             rbuff(1) = smalld
             rbuff(10)= smallc
@@ -331,6 +332,7 @@ module mpisetup
             nxd = ibuff(5)
             nyd = ibuff(6)
             nzd = ibuff(7)
+            nb  = ibuff(8)
 
          endif
 
@@ -410,13 +412,6 @@ module mpisetup
          deallocate(cwd_all)
 
 ! Compute neighbors
-
-         pxleft  = pcoords(1) - 1
-         pxright = pcoords(1) + 1
-         pyleft  = pcoords(2) - 1
-         pyright = pcoords(2) + 1
-         pzleft  = pcoords(3) - 1
-         pzright = pcoords(3) + 1
 
          call MPI_CART_SHIFT(comm3d,0,1,procxl,procxr,ierr)   ! x dim
          call MPI_CART_SHIFT(comm3d,1,1,procyl,procyr,ierr)   ! y dim
