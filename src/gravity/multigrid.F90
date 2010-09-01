@@ -767,7 +767,7 @@ contains
 
       ! summary
       if (proc == 0) then
-         write(msg, '(a,i2,a,3(i3,a),f6.1,a)')"[multigrid:init_multigrid] Initialized ", level_max, " levels, coarsest resolution [ ", &
+         write(msg, '(a,i2,a,3(i4,a),f6.1,a)')"[multigrid:init_multigrid] Initialized ", level_max, " levels, coarsest resolution [ ", &
             lvl(1)%nxb, ",", lvl(1)%nyb, ",", lvl(1)%nzb, " ] per processor, allocated", mb_alloc*8./1048576., "MiB" ! sizeof(double)/2.**20
          call mg_write_log(msg)
          if (overrelax /= 1. .or. overrelax_x /= 1. .or. overrelax_y /= 1. .or. overrelax_z /= 1.) then
@@ -1193,7 +1193,7 @@ contains
          call set_dirty(solution)
          call fft_solve_roof
          if (trust_fft_solution) then
-            write(msg, '(3a)')"[multigrid:multigrid_solve] FFT solution trusted, skipping ", trim(cprefix), "cycle."
+            write(msg, '(3a)')"[multigrid:vcycle] FFT solution trusted, skipping ", trim(cprefix), "cycle."
             call mg_write_log(msg, stdout)
             return
          end if
@@ -1206,7 +1206,7 @@ contains
       else
          call norm_sq(source, norm_rhs)
          if (proc == 0 .and. norm_rhs<(1.-1e-6)*norm_rhs_orig) then
-            write(msg, '(a,f8.5)')"[multigrid:multigrid_solve] norm_rhs/norm_rhs_orig = ", norm_rhs/norm_rhs_orig
+            write(msg, '(a,f8.5)')"[multigrid:vcycle] norm_rhs/norm_rhs_orig = ", norm_rhs/norm_rhs_orig
             call mg_write_log(msg, stdout)
          endif
       end if
@@ -1215,7 +1215,7 @@ contains
 
       if (norm_rhs == 0.) then ! empty domain => potential == 0.
          if (proc == 0) then
-            write(msg, '(a)')"[multigrid:multigrid_solve] source == 0"
+            write(msg, '(a)')"[multigrid:vcycle] source == 0"
             call mg_write_log(msg)
          endif
          return
@@ -1292,7 +1292,7 @@ contains
 
       if (v == max_cycles + 1) then
          if (proc == 0 .and. norm_lhs/norm_rhs > norm_tol) then
-            write(msg, '(a)')"[multigrid:multigrid_solve] WARNING: Not enough V-cycles to achieve convergence."
+            write(msg, '(a)')"[multigrid:vcycle] WARNING: Not enough V-cycles to achieve convergence."
             call mg_write_log(msg)
          endif
          v = max_cycles
@@ -1687,6 +1687,8 @@ contains
       integer, intent(in) :: src  !< index of source in lvl()%mgvar
       integer, intent(in) :: soln !< index of solution in lvl()%mgvar
 
+      integer, parameter :: RED_BLACK = 2 !< the checkerboard requires two sweeps
+
       integer :: n, j, k, i1, j1, k1, id, jd, kd
       integer :: nsmoo
       character(len=40) :: dirty_msg
@@ -1697,7 +1699,7 @@ contains
          nsmoo = nsmool
       end if
 
-      do n = 1, 2*nsmoo
+      do n = 1, RED_BLACK*nsmoo
          call mpi_multigrid_bnd(lev, soln, 1, .false.) ! no corners are required here
 
          if (dirty_debug) then
@@ -1719,7 +1721,7 @@ contains
          if (eff_dim==NDIM .and. .not. multidim_code_3D) then
             do k = lvl(lev)%ks, lvl(lev)%ke
                do j = lvl(lev)%js, lvl(lev)%je
-                  i1 = lvl(lev)%is + mod(n+j+k, 2)
+                  i1 = lvl(lev)%is + mod(n+j+k, RED_BLACK)
                   lvl(          lev          )%mgvar(i1  :lvl(lev)%ie  :2, j,   k,   soln) = &
                        lvl(lev)%rx * (lvl(lev)%mgvar(i1-1:lvl(lev)%ie-1:2, j,   k,   soln) + lvl(lev)%mgvar(i1+1:lvl(lev)%ie+1:2, j,   k,   soln)) + &
                        lvl(lev)%ry * (lvl(lev)%mgvar(i1  :lvl(lev)%ie  :2, j-1, k,   soln) + lvl(lev)%mgvar(i1:  lvl(lev)%ie:  2, j+1, k,   soln)) + &
@@ -1733,18 +1735,18 @@ contains
             j1 = lvl(lev)%js; jd = 1
             k1 = lvl(lev)%ks; kd = 1
             if (has_dir(XDIR)) then
-               id = 2
+               id = RED_BLACK
             else if (has_dir(YDIR)) then
-               jd = 2
+               jd = RED_BLACK
             else if (has_dir(ZDIR)) then
-               kd = 2
+               kd = RED_BLACK
             end if
 
-            if ((.not. has_dir(XDIR)) .and. (.not. has_dir(YDIR)) .and. has_dir(ZDIR)) k1 = lvl(lev)%ks + mod(n, 2)
+            if (kd == RED_BLACK) k1 = lvl(lev)%ks + mod(n, RED_BLACK)
             do k = k1, lvl(lev)%ke, kd
-               if ((.not. has_dir(XDIR)) .and. has_dir(YDIR))                          j1 = lvl(lev)%js + mod(n+k, 2)
+               if (jd == RED_BLACK) j1 = lvl(lev)%js + mod(n+k, RED_BLACK)
                do j = j1, lvl(lev)%je, jd
-                  if (has_dir(XDIR))                                                   i1 = lvl(lev)%is + mod(n+j+k, 2)
+                  if (id == RED_BLACK) i1 = lvl(lev)%is + mod(n+j+k, RED_BLACK)
                   lvl(      lev)%mgvar(i1  :lvl(lev)%ie  :id, j,   k,   soln) = &
                        & (1. - Jacobi_damp)* lvl(lev)%mgvar(i1  :lvl(lev)%ie  :id, j,   k,   soln) &
                        &     - Jacobi_damp * lvl(lev)%mgvar(i1  :lvl(lev)%ie  :id, j,   k,   src)  * lvl(lev)%r

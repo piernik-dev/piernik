@@ -45,7 +45,7 @@ contains
 
       implicit none
 
-      integer, intent(in) :: lev  !< level for which approximate the solution
+      integer, intent(in) :: lev  !< level for which clear the boundary values
 
       lvl(lev)%bnd_x(:,:,:) = 0.
       lvl(lev)%bnd_y(:,:,:) = 0.

@@ -156,11 +156,11 @@ module dataio_hdf5
 #ifdef GRAV
             case ('gpot')
                nhdf_vars = nhdf_vars + 1
-#endif /* GRAV */
 #ifdef MULTIGRID
             case ('mgso') ! multigrid solution
                nhdf_vars = nhdf_vars + 1
 #endif /* MULTIGRID */
+#endif /* GRAV */
             case ('magx')
                nhdf_vars = nhdf_vars + 1
             case ('magy')
@@ -241,11 +241,11 @@ module dataio_hdf5
 #ifdef GRAV
             case ('gpot')
                hdf_vars(j) = 'gpot' ; j = j + 1
-#endif /* GRAV */
 #ifdef MULTIGRID
             case ('mgso')
                hdf_vars(j) = 'mgso' ; j = j + 1
 #endif /* MULTIGRID */
+#endif /* GRAV */
             case ('pres')
 #ifdef NEUTRAL
                hdf_vars(j) = 'pren' ; j = j + 1
@@ -451,10 +451,10 @@ module dataio_hdf5
       use arrays,       only: u, b
 #ifdef GRAV
       use arrays,       only: gpot
-#endif /* GRAV */
 #ifdef MULTIGRID
       use arrays,       only: mgp
 #endif /* MULTIGRID */
+#endif /* GRAV */
 #ifdef IONIZED
       use initionized,  only: gamma_ion
 #endif /* IONIZED */
@@ -537,11 +537,11 @@ module dataio_hdf5
 #ifdef GRAV
          case("gpot")
             tab(:,:,:) = real(gpot(RNG),4)
-#endif /* GRAV */
 #ifdef MULTIGRID
          case ("mgso")
             tab(:,:,:) = real(mgp(RNG),4)
 #endif /* MULTIGRID */
+#endif /* GRAV */
 
          case default
             ierrh = -1

@@ -178,18 +178,18 @@ contains
 
    subroutine make_sweep(dir, forward)
 
-      use sweeps,        only : sweepx, sweepy, sweepz
-      use grid,          only : nxd, nyd, nzd
-      use errh,          only : die
+      use sweeps,         only : sweepx, sweepy, sweepz
+      use grid,           only : nxd, nyd, nzd
+      use errh,           only : die
 #if defined SHEAR && defined FLUID_INTERACTIONS
-      use sweeps,        only : source_terms_y
+      use sweeps,         only : source_terms_y
 #endif /* SHEAR */
 #ifdef COSM_RAYS
-      use crdiffusion,   only : cr_diff_x, cr_diff_y, cr_diff_z
+      use crdiffusion,    only : cr_diff_x, cr_diff_y, cr_diff_z
 #endif /* COSM_RAYS */
 #ifdef DEBUG
-      use dataio_public, only : nhdf
-      use dataio,        only : write_hdf
+      use dataio_public,  only : nhdf
+      use dataio,         only : write_hdf
 #endif /* DEBUG */
 
       implicit none
