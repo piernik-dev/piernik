@@ -1,0 +1,95 @@
+ $DOMAIN_SIZES
+    nxd = 64
+    nyd = 1
+    nzd = 1
+    ! set nyd and nzd to 64 if you want to have iy or iz /=0,
+    ! when prefer_rbgs_relaxation is .true.
+    ! or when parallel execution leads to nonconvergence
+ /
+
+ $MPI_BLOCKS
+    pxsize = 1
+    pysize = 1
+    pzsize = 1
+ /
+
+ $RESTART_CONTROL
+    restart  = 'last'
+    new_id   = ''
+    nrestart = 0
+ /
+
+ $END_CONTROL
+    tend   = 1.0
+    nend   = 1000
+ /
+
+ $OUTPUT_CONTROL
+    ix      = 0
+    iy      = 0
+    iz      = 0
+    dt_hdf  = 1.0
+    dt_res  = 0.0
+    dt_plt  = 0.0
+    dt_log  = 0.001
+    dt_tsl  = 0.001
+    vars(1) = 'dens'
+    vars(2) = 'velx'
+    vars(3) = 'vely'
+    vars(4) = 'velz'
+    vars(5) = 'ener'
+    vars(6) = 'gpot'
+    domain  = 'phys_domain'
+ /
+
+ $BOUNDARIES
+    bnd_xl = 'per'
+    bnd_xr = 'per'
+    bnd_yl = 'per'
+    bnd_yr = 'per'
+    bnd_zl = 'per'
+    bnd_zr = 'per'
+ /
+
+ $DOMAIN_LIMITS
+    xmin   = -1.
+    xmax   =  1.
+    ymin   = -1.
+    ymax   =  1.
+    zmin   = -1.
+    zmax   =  1.
+ /
+
+ $FLUID_IONIZED
+    gamma_ion  = 1.67
+    selfgrav_ion = .true.
+ /
+
+ $FLUID_NEUTRAL
+    gamma_neu = 1.67
+    selfgrav_neu = .false.
+ /
+
+ $NUMERICAL_SETUP
+    cfl    = 0.7
+    smalld = 1.e-5
+    smallei= 1.e-5
+ /
+
+ $GRAVITY
+ /
+
+ $THERMAL
+ /
+
+ $RESISTIVITY
+ /
+
+ $PROBLEM_CONTROL
+    problem_name ='moving_pulse'
+    run_id =  'ts1'
+    pulse_vel_x = 2.
+ /
+
+
+
