@@ -150,8 +150,10 @@ end subroutine all_fluxes
 !!
 !! Flux limiter is a function used when interpolation of %fluxes onto cell boundaries is made to avoid the spurious oscillations.
 !!
-!! You can choose between van Leer's (default), monotonized central, minmod or superbee flux limiters. The chosen flux limiter has to be defined in
+!! You can choose between van Leer's, monotonized central, minmod or superbee flux limiters. The chosen flux limiter has to be defined in
 !! file piernik.def.
+!!
+!! BEWARE: There is no default choice. If one forgets to define a flux limiter, none will be applied and error will be reported.
 !!
 !! The van Leer flux limiter can be noted as:
 !! \f{equation}
@@ -207,9 +209,15 @@ end subroutine all_fluxes
       endwhere
 #endif /* SUPERBEE */
 
+#if !defined(VANLEER) && !defined(MONCEN) && !defined(MINMOD) && !defined(SUPERBEE)
+Error: No flux limiters have been defined.
+Add one of VANLEER, MONCEN, MINMOD or SUPERBEE to the piernik.def file.
+#endif
+#if (defined(VANLEER) && (defined(MONCEN) || defined(MINMOD) || defined(SUPERBEE))) || (defined(MONCEN) && (defined(MINMOD) || defined(SUPERBEE))) || (defined(MINMOD) && defined(SUPERBEE))
+Error: Too many flux limiters have been defined. Only one is allowed.
+#endif
+
     return
   end subroutine flimiter
-
-
 
 end module fluxes
