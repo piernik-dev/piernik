@@ -38,7 +38,6 @@
     vars(3) = 'vely'
     vars(4) = 'velz'
     vars(5) = 'ener'
-    vars(6) = 'gpot'
     domain  = 'phys_domain'
  /
 
@@ -60,11 +59,6 @@
     zmax   =  1.
  /
 
- $FLUID_IONIZED
-    gamma_ion  = 1.67
-    selfgrav_ion = .true.
- /
-
  $FLUID_NEUTRAL
     gamma_neu = 1.67
     selfgrav_neu = .false.
@@ -74,15 +68,6 @@
     cfl    = 0.7
     smalld = 1.e-5
     smallei= 1.e-5
- /
-
- $GRAVITY
- /
-
- $THERMAL
- /
-
- $RESISTIVITY
  /
 
  $PROBLEM_CONTROL

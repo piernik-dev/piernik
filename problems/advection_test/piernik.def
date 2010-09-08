@@ -1,6 +1,8 @@
 #define HDF5
-#define IONIZED
-#undef  MAGNETIC
+#undef IONIZED
+#undef MAGNETIC
+#define NEUTRAL
+#define LOCAL_FR_SPEED
 
 #define CGS       /*cm,gram,sek unitsystem*/
 

@@ -46,7 +46,7 @@ contains
       use errh,        only : namelist_errh, die
       use mpisetup,    only : cwd, ierr, rbuff, cbuff, proc, buffer_dim, comm, smalld, smallei, &
            &                  MPI_CHARACTER, MPI_DOUBLE_PRECISION!, MPI_INTEGER, MPI_LOGICAL, ibuff, lbuff
-      use initionized, only : gamma_ion
+      use initneutral, only : gamma_neu
 
       implicit none
 
@@ -118,7 +118,7 @@ contains
 
       !BEWARE: hardcoded values
       pulse_low_density = smalld * 1e5
-      pulse_pressure = smallei * (gamma_ion-1.0) * 1e5
+      pulse_pressure = smallei * (gamma_neu-1.0) * 1e5
 
    end subroutine read_problem_par
 
@@ -128,7 +128,7 @@ contains
 
       use arrays,        only : u, b
       use grid,          only : x, y, z, is, ie, js, je, ks, ke
-      use initionized,   only : gamma_ion, idni, imxi, imyi, imzi, ieni
+      use initneutral,   only : gamma_neu, idnn, imxn, imyn, imzn, ienn
       use mpisetup,      only : smalld, smallei
 
       implicit none
@@ -136,7 +136,7 @@ contains
       integer                   :: i, j, k
 
       b(:,    :, :, :) = 0.
-      u(idni, :, :, :) = pulse_low_density
+      u(idnn, :, :, :) = pulse_low_density
 
       ! Initialize density with uniform sphere
       do i = is, ie
@@ -145,7 +145,7 @@ contains
                if (y(j) > pulse_y_min .and. y(j) < pulse_y_max) then
                   do k = ks, ke
                      if (z(k) > pulse_z_min .and. z(k) < pulse_z_max) then
-                        u(idni, i, j, k) = pulse_low_density * pulse_amp
+                        u(idnn, i, j, k) = pulse_low_density * pulse_amp
                      end if
                   end do
                end if
@@ -153,17 +153,17 @@ contains
          end if
       end do
 
-      where (u(idni, :, :, :) < smalld) u(idni, :, :, :) = smalld
+      where (u(idnn, :, :, :) < smalld) u(idnn, :, :, :) = smalld
 
-      u(imxi, :, :, :) = pulse_vel_x * u(idni,:,:,:)
-      u(imyi, :, :, :) = pulse_vel_y * u(idni,:,:,:)
-      u(imzi, :, :, :) = pulse_vel_z * u(idni,:,:,:)
+      u(imxn, :, :, :) = pulse_vel_x * u(idnn,:,:,:)
+      u(imyn, :, :, :) = pulse_vel_y * u(idnn,:,:,:)
+      u(imzn, :, :, :) = pulse_vel_z * u(idnn,:,:,:)
       do k = ks, ke
          do j = js, je
             do i = is, ie
-               u(ieni,i,j,k) = max(smallei,                                             &
-                    &              pulse_pressure / (gamma_ion-1.0)        + &
-                    &              0.5 * sum(u(imxi:imzi,i,j,k)**2,1) / u(idni,i,j,k) + &
+               u(ienn,i,j,k) = max(smallei,                                             &
+                    &              pulse_pressure / (gamma_neu-1.0)        + &
+                    &              0.5 * sum(u(imxn:imzn,i,j,k)**2,1) / u(idnn,i,j,k) + &
                     &              0.5 * sum(b(:,i,j,k)**2,1))
             enddo
          enddo
