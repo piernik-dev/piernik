@@ -207,12 +207,16 @@ contains
       if(present(wend)) then
          call system_clock(clock_start, cnt_rate, cnt_max)
  !         clock_end = clock_start + int(wend*3600.*cnt_rate)
-         r_clk_end = clock_start + wend*3600.*cnt_rate
-         if (r_clk_end < cnt_max) then
-            clock_end = int(r_clk_end)
+         if (wend < 1e-4*huge(1.0)) then
+            r_clk_end = clock_start + wend*3600.*cnt_rate
+            if (r_clk_end < cnt_max) then
+               clock_end = int(r_clk_end)
+            else
+               clock_end = -cnt_max
+            endif
          else
             clock_end = -cnt_max
-         endif
+         end if
       endif
  ! BEWARE: gfortran gives 1ms resolution, but ifort can offer 0.1ms, which will result in an integer overflow in less than 5 days
  ! Probably it is better to call date_and_time(VALUES) here
