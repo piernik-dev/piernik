@@ -392,6 +392,7 @@ print MAKEFILE "%.o : %.mod\n\n";
 #
 &MakeDependsf90($ARGV[1]);
 &MakeDepends("*.f *.F *.F90", '^\s*use\s+["\']([^"\']+)["\']');
+&MakeDepends("*.f *.F *.F90", '^\s*#\s*include\s+["\']([^"\']+)["\']');
 &MakeDepends("*.c",     '^\s*#\s*include\s+["\']([^"\']+)["\']');
 
 # system("./post","mhd",$ARGV[0]); # !found
