@@ -85,9 +85,11 @@ module fluxneutral
     integer :: n                            !< number of cells in the current sweep
 
 ! locals
+#ifdef LOCAL_FR_SPEED
     real :: minvx                           !<
     real :: maxvx                           !<
     real :: amp                             !<
+#endif
     real, dimension(nvar%neu%all,n):: fluxn     !< flux for neutral fluid
     real, dimension(nvar%neu%all,n):: uun       !< part of u for neutral fluid
     real, dimension(nvar%neu%all,n):: cfrn      !< freezing speed for neutral fluid
@@ -148,6 +150,5 @@ module fluxneutral
 #endif /* GLOBAL_FR_SPEED */
 
   end subroutine flux_neu
-
 
 end module fluxneutral

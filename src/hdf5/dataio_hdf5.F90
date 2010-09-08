@@ -509,7 +509,7 @@ module dataio_hdf5
                               / u(ind%dnn,RNG),4)
 #else
             tab(:,:,:) = real(u(ind%enn,RNG),4)
-#endif
+#endif /* ISO */
          case("enei")
 #ifdef ISO
             tab(:,:,:) = real(0.5 *( u(ind%mxi,RNG)**2 + &
@@ -518,7 +518,8 @@ module dataio_hdf5
                               / u(ind%dni,RNG),4)
 #else
             tab(:,:,:) = real(u(ind%eni,RNG),4)
-#endif
+#endif /* ISO */
+#ifdef IONIZED
          case("prei")
 #ifndef ISO
             tab(:,:,:) = real( u(ind%eni,RNG) - &
@@ -527,7 +528,8 @@ module dataio_hdf5
                b(ind%by,RNG)**2 + b(ind%bz,RNG)**2),4)
 #else
             tab = 0.0
-#endif
+#endif /* ISO */
+#endif /* IONIZED */
          case("magx")
             tab(:,:,:) = real(b(ind%bx,RNG),4)
          case("magy")
