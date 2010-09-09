@@ -183,15 +183,19 @@
 #endif
 
 #ifndef UNIT
-#error None of { PGM SSY SI CGS WT4 PSM PLN KSG KSM } were defined.
+#warning None of { PGM SSY SI CGS WT4 PSM PLN KSG KSM } were defined.
+#warning Assuming SCALED
 #endif
 
 /* basic sanity check for isothermal fluid */
 
 #ifdef ISO_LOCAL
-#ifndef ISO
-#error ISO must be defined with ISO_LOCAL
-#endif
+#  ifndef ISO
+#     error ISO must be defined with ISO_LOCAL
+#  endif
+#  ifndef IONIZED
+#     error ISO_LOCAL currently works only with ionized fluid
+#  endif
 #endif
 
 /* at least one of { ionized, neutral, dust } must be defined */
