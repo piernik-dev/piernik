@@ -8,9 +8,8 @@
    Flux limiters
 
    Exclusive: VANLEER, MONCEN, MINMOD, SUPERBEE
-   Default: VANLEER
 
-   Used by src/fluids/fluxes.F90
+   Used by: src/fluids/fluxes.F90
 */
 
 #include "piernik.def"
@@ -47,9 +46,150 @@
 #endif
 
 #ifdef FLIM2
-#error Too many flux limiters have been defined. Only one is  allowed.
+#error Too many flux limiters have been defined. Only one is allowed.
 #endif
 
 #ifndef FLIM
-#error: No flux limiters have been defined
+#error No flux limiters have been defined.
 #endif
+
+/*
+  Freezing speed
+
+  Exclusive: LOCAL_FR_SPEED, GLOBAL_FR_SPEED
+
+  Used by: src/fluids/ionized/fluxionized.F90, src/fluids/neutral/fluxneutral.F90, src/fluids/dust/fluxdust.F90
+*/
+
+#undef FR_SPEED
+#undef FR_SPEED2
+
+#ifdef LOCAL_FR_SPEED
+#define FR_SPEED
+#endif
+
+#ifdef GLOBAL_FR_SPEED
+#ifdef FR_SPEED
+#define FR_SPEED2
+#else
+#define FR_SPEED
+#endif
+#endif
+
+#ifdef FR_SPEED2
+#error Both freezing speeds defined
+#endif
+
+#ifndef FR_SPEED
+#error No freezing speed defined.
+#endif
+
+/*
+  Units
+
+  Exclusive: PGM, SSY, SI, CGS, WT4, PSM, PLN, KSG, KSM
+
+  Code generated automatically by:
+  ./setup -units | grep "\!" | awk '{print $2}' |\
+  awk 'BEGIN {\
+    def="UNIT";\
+    n=0;\
+  } {\
+    print "#ifdef", $1;\
+    if (n>0) print "#ifdef",def,"\n#define",def"2\n#else";\
+    print "#define",def;\
+    if (n>0) print "#endif";\
+    print "#endif\n";\
+    a[n++]=$1;\
+  } END {\
+    printf "%s %s", "#ifdef",def"2\n#error Only one of { ";\
+    for (b in a) printf "%s ", a[b];\
+    printf "%s %s %s","} is allowed\n#endif\n\n#ifndef",def,"\n#error None of { ";\
+    for (b in a) printf "%s ", a[b];\
+    printf "%s\n","} were defined.\n#endif";\
+  }'
+*/
+
+#ifdef PSM
+#define UNIT
+#endif
+
+#ifdef PLN
+#ifdef UNIT
+#define UNIT2
+#else
+#define UNIT
+#endif
+#endif
+
+#ifdef KSG
+#ifdef UNIT
+#define UNIT2
+#else
+#define UNIT
+#endif
+#endif
+
+#ifdef KSM
+#ifdef UNIT
+#define UNIT2
+#else
+#define UNIT
+#endif
+#endif
+
+#ifdef PGM
+#ifdef UNIT
+#define UNIT2
+#else
+#define UNIT
+#endif
+#endif
+
+#ifdef SSY
+#ifdef UNIT
+#define UNIT2
+#else
+#define UNIT
+#endif
+#endif
+
+#ifdef SI
+#ifdef UNIT
+#define UNIT2
+#else
+#define UNIT
+#endif
+#endif
+
+#ifdef CGS
+#ifdef UNIT
+#define UNIT2
+#else
+#define UNIT
+#endif
+#endif
+
+#ifdef WT4
+#ifdef UNIT
+#define UNIT2
+#else
+#define UNIT
+#endif
+#endif
+
+#ifdef UNIT2
+#error Only one of { PGM SSY SI CGS WT4 PSM PLN KSG KSM } is allowed
+#endif
+
+#ifndef UNIT
+#error None of { PGM SSY SI CGS WT4 PSM PLN KSG KSM } were defined.
+#endif
+
+/*
+  ToDo:
+    IONIZED and NEUTRAL ?
+    GRAV & co ?
+    ISO, ISO_LOCAL ?
+    __INTEL_COMPILER, __PGI, __PGI__ ?
+*/
