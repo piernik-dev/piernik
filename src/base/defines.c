@@ -104,7 +104,7 @@
   } END {\
     printf "%s %s", "#ifdef",def"2\n#error Only one of { ";\
     for (b in a) printf "%s ", a[b];\
-    printf "%s %s %s","} is allowed\n#endif\n\n#ifndef",def,"\n#error None of { ";\
+    printf "%s %s %s","} is allowed.\n#endif\n\n#ifndef",def,"\n#error None of { ";\
     for (b in a) printf "%s ", a[b];\
     printf "%s\n","} were defined.\n#endif";\
   }'
