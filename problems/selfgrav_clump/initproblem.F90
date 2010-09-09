@@ -161,7 +161,7 @@ contains
    subroutine init_prob
 
       use mpisetup,      only : proc, smalld, smallei, MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_MIN, MPI_MAX, MPI_SUM, comm, ierr
-      use arrays,        only : u, b, mgp, gpot, hgpot
+      use arrays,        only : u, b, sgp, gpot, hgpot
       use constants,     only : fpiG, pi, newtong
       use grid,          only : xmin, xmax, ymin, ymax, zmin, zmax, x, y, z, dx, dy, dz, is, ie, js, je, ks, ke
       use initionized,   only : gamma_ion, idni, imxi, imyi, imzi, ieni
@@ -240,7 +240,7 @@ contains
          call multigrid_solve(u(idni,:,:,:))
          if (exp_speedup .and. Clim_old /= 0.) then ! extrapolate potential assuming exponential convergence
             if (abs(1. - Clim/Clim_old) < min(sqrt(epsC), 100.*epsC, 0.01)) then
-               mgp = (mgp*hgpot - gpot**2)/(mgp + hgpot - 2.*gpot)
+               sgp = (sgp*hgpot - gpot**2)/(sgp + hgpot - 2.*gpot)
                Ccomment = " Exp warp"
                Clast(:) = 0. ; Clim = 0.
             else
@@ -248,9 +248,9 @@ contains
             end if
          end if
          hgpot = gpot
-         gpot = mgp
+         gpot = sgp
 
-         Cint = [ minval(mgp(is:ie,js:je,ks:ke)), maxval(mgp(is:ie,js:je,ks:ke)) ] ! rotation will modify this
+         Cint = [ minval(sgp(is:ie,js:je,ks:ke)), maxval(sgp(is:ie,js:je,ks:ke)) ] ! rotation will modify this
 
          call MPI_AllReduce (MPI_IN_PLACE, Cint(LOW),  1, MPI_DOUBLE_PRECISION, MPI_MIN, comm, ierr)
          call MPI_AllReduce (MPI_IN_PLACE, Cint(HIGH), 1, MPI_DOUBLE_PRECISION, MPI_MAX, comm, ierr)
@@ -378,7 +378,7 @@ contains
 
       ! final touch
       call multigrid_solve(u(idni,:,:,:))
-      gpot = mgp
+      gpot = sgp
 
       where (u(idni, :, :, :) < smalld) u(idni, :, :, :) = smalld
       u(imxi, :, :, :) = clump_vel_x * u(idni,:,:,:)
@@ -405,7 +405,7 @@ contains
    subroutine virialCheck(tol)
 
       use grid,          only : is, ie, js, je, ks, ke, dx, dy, dz
-      use arrays,        only : u, mgp
+      use arrays,        only : u, sgp
       use mpisetup,      only : proc, comm, ierr, MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_SUM
       use initionized,   only : idni
       use errh,          only : die
@@ -425,7 +425,7 @@ contains
          do j = js, je
             do i = is, ie
 !               TWP(1) = TWP(1) + u(idni, i, j, k) * 0.                !T, will be /= 0. for rotating clump
-               TWP(2) = TWP(2) + u(idni, i, j, k) * mgp(i, j, k) * 0.5 !W
+               TWP(2) = TWP(2) + u(idni, i, j, k) * sgp(i, j, k) * 0.5 !W
                TWP(3) = TWP(3) + presrho(u(idni, i, j, k))             !P
             end do
          end do
@@ -456,7 +456,7 @@ contains
    subroutine totalMEnthalpic(C, totME, mode)
 
       use mpisetup,    only : smalld, comm, ierr, MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_SUM
-      use arrays,      only : mgp, u
+      use arrays,      only : sgp, u
       use grid,        only : is, ie, js, je, ks, ke, dx, dy, dz
       use initionized, only : idni
 
@@ -476,9 +476,9 @@ contains
             do i = is, ie
                select case (mode)
                case (REL_CALC)
-                  totME     = totME     + rhoH(h(C,     mgp(i,j,k)))
+                  totME     = totME     + rhoH(h(C,     sgp(i,j,k)))
                case (REL_SET)
-                  rho = rhoH(h(C, mgp(i,j,k)))
+                  rho = rhoH(h(C, sgp(i,j,k)))
                   u(idni, i, j, k) = rho
                   totME = totME + rho
                end select

@@ -452,7 +452,7 @@ module dataio_hdf5
 #ifdef GRAV
       use arrays,       only: gpot
 #ifdef MULTIGRID
-      use arrays,       only: mgp
+      use arrays,       only: sgp
 #endif /* MULTIGRID */
 #endif /* GRAV */
 #ifdef IONIZED
@@ -541,7 +541,7 @@ module dataio_hdf5
             tab(:,:,:) = real(gpot(RNG),4)
 #ifdef MULTIGRID
          case ("mgso")
-            tab(:,:,:) = real(mgp(RNG),4)
+            tab(:,:,:) = real(sgp(RNG),4)
 #endif /* MULTIGRID */
 #endif /* GRAV */
 

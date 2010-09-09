@@ -239,7 +239,7 @@ contains
       use mpisetup,  only: proc, comm3d, ierr, MPI_DOUBLE_PRECISION, MPI_SUM, MPI_MIN, MPI_MAX, MPI_IN_PLACE
       use constants, only: pi, newtong
       use grid,      only: x, y, z, is, ie, js, je, ks, ke
-      use arrays,    only: mgp
+      use arrays,    only: sgp
 
       implicit none
 
@@ -300,10 +300,10 @@ contains
                   end if
                end if
                potential = potential * pi * newtong * d0
-               norm(1) = norm(1) + (potential - mgp(i, j, k))**2
+               norm(1) = norm(1) + (potential - sgp(i, j, k))**2
                norm(2) = norm(2) + potential**2
-               dev(1) = min(dev(1), (potential - mgp(i, j, k))/potential)
-               dev(2) = max(dev(2), (potential - mgp(i, j, k))/potential)
+               dev(1) = min(dev(1), (potential - sgp(i, j, k))/potential)
+               dev(2) = max(dev(2), (potential - sgp(i, j, k))/potential)
             end do
          end do
       end do

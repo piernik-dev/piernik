@@ -40,7 +40,7 @@ contains
 !!
   subroutine poisson_solve(dens)
     use errh, only : die
-    use arrays, only : u,fgp,fgpm
+    use arrays, only : u,sgp,sgpm
     use grid, only   : x,nx,ny,nz,nzb
     use grid, only   : dz,dx, nb, nxd, nyd, nzd
     use mpisetup, only : bnd_xl, bnd_xr, bnd_yl, &
@@ -62,44 +62,44 @@ contains
 
     if (any([nx, ny, nz] <= 1)) call die("[poissonsolver:poisson_solve] Only 3D setups are supported") !BEWARE 2D and 1D probably need small fixes
 
-    fgpm = fgp
+    sgpm = sgp
 
     if( bnd_xl .eq. 'per' .and. bnd_xr .eq. 'per' .and. &
         bnd_yl .eq. 'per' .and. bnd_yr .eq. 'per' .and. &
         bnd_zl .ne. 'per' .and. bnd_zr .ne. 'per'        ) then ! Periodic in X and Y, nonperiodic in Z
 
          call poisson_xyp(dens(nb+1:nb+nxd,nb+1:nb+nyd,:), &
-                           fgp(nb+1:nb+nxd,nb+1:nb+nyd,:),dz)
+                           sgp(nb+1:nb+nxd,nb+1:nb+nyd,:),dz)
 
 ! Boundary conditions
 
          do i = 1, ceiling(nb/real(nxd))
-            fgp(1:nb,:,:)              = fgp(nxd+1:nxd+nb,:,:)
-            fgp(nxd+nb+1:nxd+2*nb,:,:) = fgp(nb+1:2*nb,:,:)
+            sgp(1:nb,:,:)              = sgp(nxd+1:nxd+nb,:,:)
+            sgp(nxd+nb+1:nxd+2*nb,:,:) = sgp(nb+1:2*nb,:,:)
          end do
          do i = 1, ceiling(nb/real(nyd))
-            fgp(:,1:nb,:)              = fgp(:,nyd+1:nyd+nb,:)
-            fgp(:,nyd+nb+1:nyd+2*nb,:) = fgp(:,nb+1:2*nb,:)
+            sgp(:,1:nb,:)              = sgp(:,nyd+1:nyd+nb,:)
+            sgp(:,nyd+nb+1:nyd+2*nb,:) = sgp(:,nb+1:2*nb,:)
          end do
       call die("poisson_solve: poisson_xyp called")
 
     elseif( bnd_xl .eq. 'per' .and. bnd_xr .eq. 'per' .and. &
             bnd_yl .eq. 'per' .and. bnd_yr .eq. 'per' .and. &
             bnd_zl .eq. 'per' .and. bnd_zr .eq. 'per'        ) then ! Fully 3D periodic
-        call poisson_xyzp(dens(nb+1:nb+nxd,nb+1:nb+nyd,nb+1:nb+nzd), fgp(nb+1:nb+nxd,nb+1:nb+nyd,nb+1:nb+nzd))
+        call poisson_xyzp(dens(nb+1:nb+nxd,nb+1:nb+nyd,nb+1:nb+nzd), sgp(nb+1:nb+nxd,nb+1:nb+nyd,nb+1:nb+nzd))
 
 ! Boundary conditions
         do i = 1, ceiling(nb/real(nxd))
-           fgp(1:nb,:,:)              = fgp(nxd+1:nxd+nb,:,:)
-           fgp(nxd+nb+1:nxd+2*nb,:,:) = fgp(nb+1:2*nb,:,:)
+           sgp(1:nb,:,:)              = sgp(nxd+1:nxd+nb,:,:)
+           sgp(nxd+nb+1:nxd+2*nb,:,:) = sgp(nb+1:2*nb,:,:)
         end do
         do i = 1, ceiling(nb/real(nyd))
-           fgp(:,1:nb,:)              = fgp(:,nyd+1:nyd+nb,:)
-           fgp(:,nyd+nb+1:nyd+2*nb,:) = fgp(:,nb+1:2*nb,:)
+           sgp(:,1:nb,:)              = sgp(:,nyd+1:nyd+nb,:)
+           sgp(:,nyd+nb+1:nyd+2*nb,:) = sgp(:,nb+1:2*nb,:)
         end do
         do i = 1, ceiling(nb/real(nzd))
-           fgp(:,:,1:nb)              = fgp(:,:,nzd+1:nzd+nb)
-           fgp(:,:,nzd+nb+1:nzd+2*nb) = fgp(:,:,nb+1:2*nb)
+           sgp(:,:,1:nb)              = sgp(:,:,nzd+1:nzd+nb)
+           sgp(:,:,nzd+nb+1:nzd+2*nb) = sgp(:,:,nb+1:2*nb)
         end do
 
 #ifdef SHEAR
@@ -109,22 +109,22 @@ contains
          if(dimensions=='3d') then
            if(.not.allocated(ala)) allocate(ala(nx-2*nb,ny-2*nb,nz-2*nb))
            ala = dens(nb+1:nb+nxd,nb+1:nb+nyd,nb+1:nb+nzd)
-           call poisson_xyzp(ala(:,:,:), fgp(nb+1:nb+nxd,nb+1:nb+nyd,nb+1:nb+nzd))
+           call poisson_xyzp(ala(:,:,:), sgp(nb+1:nb+nxd,nb+1:nb+nyd,nb+1:nb+nzd))
 
-           fgp(:,:,1:nb)              = fgp(:,:,nzd+1:nzd+nb)
-           fgp(:,:,nzd+nb+1:nzd+2*nb) = fgp(:,:,nb+1:2*nb)
+           sgp(:,:,1:nb)              = sgp(:,:,nzd+1:nzd+nb)
+           sgp(:,:,nzd+nb+1:nzd+2*nb) = sgp(:,:,nb+1:2*nb)
 
          else
             call poisson_xy2d(dens(nb+1:nb+nxd,nb+1:nb+nyd,1), &
-                            fgp(nb+1:nb+nxd,      nb+1:nb+nyd,1), &
-                            fgp(1:nb,             nb+1:nb+nyd,1), &
-                            fgp(nxd+nb+1:nxd+2*nb,nb+1:nb+nyd,1), &
+                            sgp(nb+1:nb+nxd,      nb+1:nb+nyd,1), &
+                            sgp(1:nb,             nb+1:nb+nyd,1), &
+                            sgp(nxd+nb+1:nxd+2*nb,nb+1:nb+nyd,1), &
                             dx)
 
 
          endif
-         fgp(:,1:nb,:)              = fgp(:,nyd+1:nyd+nb,:)
-         fgp(:,nyd+nb+1:nyd+2*nb,:) = fgp(:,nb+1:2*nb,:)
+         sgp(:,1:nb,:)              = sgp(:,nyd+1:nyd+nb,:)
+         sgp(:,nyd+nb+1:nyd+2*nb,:) = sgp(:,nb+1:2*nb,:)
 
          if (allocated(ala)) deallocate(ala)
 #endif /* SHEAR */
@@ -136,7 +136,7 @@ contains
     endif
 
     if(frun) then
-      fgpm = fgp
+      sgpm = sgp
       frun = .false.
     endif
   end subroutine poisson_solve

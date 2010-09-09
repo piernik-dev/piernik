@@ -45,14 +45,10 @@ module arrays
    real, allocatable, dimension(:,:,:)       :: gp       !< Array for gravitational potential from external fields
    real, allocatable, dimension(:)           :: dprof    !< Array used for storing density during calculation of hydrostatic equilibrium
    real, allocatable, dimension(:)           :: eprof    !< Array used for storing energy during calculation of hydrostatic equilibrium
-#ifdef MULTIGRID
-   real, allocatable, dimension(:,:,:)       :: mgp      !< Array for multigrid gravitational potential
-   real, allocatable, dimension(:,:,:)       :: mgpm     !< Array for multigrid gravitational potential at previous timestep
-#endif /* MULTIGRID */
-#ifdef POISSON_FFT
-   real, allocatable, dimension(:,:,:)       :: fgp      !< Array for fourier gravitational potential
-   real, allocatable, dimension(:,:,:)       :: fgpm     !< Array for fourier gravitational potential at previous timestep
-#endif /* POISSON_FFT */
+#if defined(MULTIGRID) || defined(POISSON_FFT)
+   real, allocatable, dimension(:,:,:)       :: sgp      !< Array for gravitational potential from multigrid or FFT solver
+   real, allocatable, dimension(:,:,:)       :: sgpm     !< Array for gravitational potential from multigrid or FFT solver at previous timestep
+#endif
 #endif /* GRAV */
 
 #ifdef COSM_RAYS
@@ -90,14 +86,10 @@ module arrays
       if(.not.allocated(gp))      allocate(gp(nx,ny,nz))
       if(.not.allocated(gpot))    allocate(gpot(nx,ny,nz))
       if(.not.allocated(hgpot))   allocate(hgpot(nx,ny,nz))
-#ifdef MULTIGRID
-      if(.not.allocated(mgp))     allocate(mgp(nx,ny,nz))
-      if(.not.allocated(mgpm))    allocate(mgpm(nx,ny,nz))
-#endif /* MULTIGRID */
-#ifdef POISSON_FFT
-      if(.not.allocated(fgp))     allocate(fgp(nx,ny,nz))
-      if(.not.allocated(fgpm))    allocate(fgpm(nx,ny,nz))
-#endif /* POISSON_FFT */
+#if defined(MULTIGRID) || defined(POISSON_FFT)
+      if(.not.allocated(sgp))     allocate(sgp(nx,ny,nz))
+      if(.not.allocated(sgpm))    allocate(sgpm(nx,ny,nz))
+#endif
       if(.not.allocated(dprof))   allocate(dprof(nz))
       if(.not.allocated(eprof))   allocate(eprof(nz))
 #endif /* GRAV */
@@ -134,14 +126,10 @@ module arrays
       if(allocated(gp))      deallocate(gp)
       if(allocated(gpot))    deallocate(gpot)
       if(allocated(hgpot))   deallocate(hgpot)
-#ifdef MULTIGRID
-      if(allocated(mgp))     deallocate(mgp)
-      if(allocated(mgpm))    deallocate(mgpm)
-#endif /* MULTIGRID */
-#ifdef POISSON_FFT
-      if(allocated(fgp))     deallocate(fgp)
-      if(allocated(fgpm))    deallocate(fgpm)
-#endif /* POISSON_FFT */
+#if defined(MULTIGRID) || defined(POISSON_FFT)
+      if(allocated(sgp))     deallocate(sgp)
+      if(allocated(sgpm))    deallocate(sgpm)
+#endif
       if(allocated(dprof))   deallocate(dprof)
       if(allocated(eprof))   deallocate(eprof)
 #endif /* GRAV */

@@ -55,7 +55,7 @@ contains
 
       use types,              only: grid_container
       use errh,               only: namelist_errh, die
-      use arrays,             only: mgp
+      use arrays,             only: sgp
       use constants,          only: pi, dpi
       use mpisetup,           only: buffer_dim, comm, comm3d, cwd, ierr, proc, nproc, ndims, &
            &                        bnd_xl_dom, bnd_xr_dom, bnd_yl_dom, bnd_yr_dom, bnd_zl_dom, bnd_zr_dom, &
@@ -567,7 +567,7 @@ contains
          end do
       end if
 
-      mgp(:,:,:) = 0. !Initialize all the guardcells, even those which does not impact the solution
+      sgp(:,:,:) = 0. !Initialize all the guardcells, even those which does not impact the solution
 
       call mpi_multigrid_prep
 
@@ -1077,13 +1077,13 @@ contains
 !!$ ============================================================================
 !!
 !! Multigrid driver. This is the only multigrid routine intended to be called from the gravity module.
-!! This routine is also responsible for communicating the solution to the rest of world via mgp and mgpm arrays.
+!! This routine is also responsible for communicating the solution to the rest of world via sgp and sgpm arrays.
 !!
 
    subroutine multigrid_solve(dens)
 
       use timer,     only: timer_
-      use arrays,    only: mgp, mgpm
+      use arrays,    only: sgp, sgpm
       use grid,      only: is, ie, js, je, ks, ke
       use errh,      only: die
       use multipole, only: multipole_solver
@@ -1110,7 +1110,7 @@ contains
 
       call init_source(dens)
 
-      mgpm(:, :, :)  = mgp(:, :, :) !store previous solutions
+      sgpm(:, :, :)  = sgp(:, :, :) !store previous solutions
       call vcycle(inner)
 
       ! /todo: move to multigridvars and init_multigrid
@@ -1138,7 +1138,7 @@ contains
          keb = 1
       end if
 
-      mgp(isb:ieb, jsb:jeb, ksb:keb) = roof%mgvar(:, :, :, solution)
+      sgp(isb:ieb, jsb:jeb, ksb:keb) = roof%mgvar(:, :, :, solution)
 
       if (isolated) then
          grav_bnd = bnd_givenval
@@ -1148,7 +1148,7 @@ contains
          call init_source
 
          call vcycle(outer)
-         mgp(isb:ieb, jsb:jeb, ksb:keb) = mgp(isb:ieb, jsb:jeb, ksb:keb) + roof%mgvar(:, :, :, solution)
+         sgp(isb:ieb, jsb:jeb, ksb:keb) = sgp(isb:ieb, jsb:jeb, ksb:keb) + roof%mgvar(:, :, :, solution)
 
          grav_bnd = bnd_isolated ! restore
       end if

@@ -217,12 +217,9 @@ module gravity
    subroutine sum_potential
       use mpisetup, only : dt,dtm
       use arrays, only: gpot, gp, hgpot
-#ifdef MULTIGRID
-      use arrays, only: mgp, mgpm
-#endif /* MULTIGRID */
-#ifdef POISSON_FFT
-      use arrays, only:  fgp, fgpm
-#endif /* POISSON_FFT */
+#if defined(MULTIGRID) || defined(POISSON_FFT)
+      use arrays, only: sgp, sgpm
+#endif
       implicit none
       real :: h
 
@@ -232,20 +229,14 @@ module gravity
          h = 0.0
       endif
 
-      gpot = gp
+#if defined(MULTIGRID) || defined(POISSON_FFT)
+      gpot  = gp + (1.+h)    *sgp -     h*sgpm
+      hgpot = gp + (1.+0.5*h)*sgp - 0.5*h*sgpm
+#else
+      gpot  = gp
       hgpot = gp
-#ifdef MULTIGRID
-      gpot = gpot + (1.+h)*mgp - h*mgpm
-#endif /* MULTIGRID */
-#ifdef POISSON_FFT
-      gpot = gpot + (1.+h)*fgp - h*fgpm
-#endif /* POISSON_FFT */
-#ifdef MULTIGRID
-      hgpot = hgpot + (1.+0.5*h)*mgp - 0.5*h*mgpm
-#endif /* MULTIGRID */
-#ifdef POISSON_FFT
-      hgpot = hgpot + (1.+0.5*h)*fgp - 0.5*h*fgpm
-#endif /* POISSON_FFT */
+#endif
+
    end subroutine sum_potential
 
 !--------------------------------------------------------------------------
