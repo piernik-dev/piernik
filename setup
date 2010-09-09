@@ -177,7 +177,7 @@ if(!-r $probdir) {
 @prob = ( "../" . $probdir . "initproblem.F90",
           "../" . $probdir . $param_file );
 
-@base = <src/base/*.F90>;
+@base = <src/base/*.F90 src/base/*.c>;
 for (@base) {
    s/src/\.\.\/src/;
 }
@@ -288,7 +288,7 @@ open(MAKEFILE, "> Makefile-prep");
 #
 #print MAKEFILE @makein;
 print MAKEFILE "SRCS =\t";
-@srcs = <*.F90>;
+@srcs = <*.F90 *.c>;
 &PrintWords(8, 0, @srcs);
 print MAKEFILE "\n\n";
 #
@@ -313,10 +313,15 @@ if ($moo{laconic}) { print MAKEFILE "SILENT = 1\n\n"; }
 else               { print MAKEFILE "SILENT = 0\n\n"; }
 print MAKEFILE "ifeq (\"\$(SILENT)\",\"1\")\n";
 print MAKEFILE "MAKEFLAGS += -s\n";
-print MAKEFILE "define ECHO_CC\n";
+print MAKEFILE "define ECHO_FC\n";
 print MAKEFILE "\@echo [FC] \$<\n";
 print MAKEFILE "endef\n";
+print MAKEFILE "define ECHO_CC\n";
+print MAKEFILE "\@echo [CC] \$<\n";
+print MAKEFILE "endef\n";
 print MAKEFILE "else\n";
+print MAKEFILE "define ECHO_FC\n";
+print MAKEFILE "endef\n";
 print MAKEFILE "define ECHO_CC\n";
 print MAKEFILE "endef\n";
 print MAKEFILE "endif\n\n";
@@ -325,6 +330,7 @@ print MAKEFILE "all: date print_fc \$(PROG) \n\n";
 print MAKEFILE "print_fc:\n";
 print MAKEFILE "ifeq (\"\$(SILENT)\",\"1\")\n";
 print MAKEFILE "\t\@echo FC = \$(F90) \$(CPPFLAGS) \$(F90FLAGS) -c\n";
+print MAKEFILE "\t\@echo CC = \$(CC) \$(CPPFLAGS) \$(CFLAGS) -c\n";
 print MAKEFILE "endif\n\n";
 print MAKEFILE "\$(PROG): \$(OBJS)\n";
 print MAKEFILE "\t\@echo \$(", &LanguageCompiler($ARGV[1], @srcs),") \$(LDFLAGS) -o \$@ '*.o' \$(LIBS)\n";
@@ -381,8 +387,14 @@ print MAKEFILE ".SUFFIXES: \$(SUFFIXES) .F90\n\n";
 # .F90 -> .o
 #
 print MAKEFILE ".F90.o:\n";
-print MAKEFILE "\t\$(ECHO_CC)\n";
+print MAKEFILE "\t\$(ECHO_FC)\n";
 print MAKEFILE "\t\$(F90) \$(CPPFLAGS) \$(F90FLAGS) -c \$<\n\n";
+#
+# .c -> .o
+#
+print MAKEFILE ".c.o:\n";
+print MAKEFILE "\t\$(ECHO_CC)\n";
+print MAKEFILE "\t\$(CC) \$(CPPFLAGS) \$(CFLAGS) -c \$<\n\n";
 #
 # override the built-in rule for .mod (Modula-2 source code files)
 #

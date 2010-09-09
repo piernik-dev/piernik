@@ -209,14 +209,6 @@ end subroutine all_fluxes
       endwhere
 #endif /* SUPERBEE */
 
-#if !defined(VANLEER) && !defined(MONCEN) && !defined(MINMOD) && !defined(SUPERBEE)
-Error: No flux limiters have been defined.
-Add one of VANLEER, MONCEN, MINMOD or SUPERBEE to the piernik.def file.
-#endif
-#if (defined(VANLEER) && (defined(MONCEN) || defined(MINMOD) || defined(SUPERBEE))) || (defined(MONCEN) && (defined(MINMOD) || defined(SUPERBEE))) || (defined(MINMOD) && defined(SUPERBEE))
-Error: Too many flux limiters have been defined. Only one is allowed.
-#endif
-
     return
   end subroutine flimiter
 
