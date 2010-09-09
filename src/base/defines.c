@@ -186,10 +186,35 @@
 #error None of { PGM SSY SI CGS WT4 PSM PLN KSG KSM } were defined.
 #endif
 
+/* basic sanity check for isothermal fluid */
+
+#ifdef ISO_LOCAL
+#ifndef ISO
+#error ISO must be defined with ISO_LOCAL
+#endif
+#endif
+
+/* at least one of { ionized, neutral, dust } must be defined */
+
+#undef FLUID
+
+#ifdef IONIZED
+#define FLUID
+#endif
+
+#ifdef DUST
+#define FLUID
+#endif
+
+#ifdef NEUTRAL
+#define FLUID
+#endif
+
+#ifndef FLUID
+#error None of { IONIZED DUST NEUTRAL } were defined.
+#endif
+
 /*
   ToDo:
-    IONIZED and NEUTRAL ?
     GRAV & co ?
-    ISO, ISO_LOCAL ?
-    __INTEL_COMPILER, __PGI, __PGI__ ?
 */
