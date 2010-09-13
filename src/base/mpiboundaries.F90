@@ -58,7 +58,9 @@ contains
 !   X dimension - fluid  !
 !------------------------!
       if(nxd /= 1) then
+
          allocate(sizes(4), subsizes(4), starts(4))
+
          sizes    = (/nvar%all,nx,ny,nz/)
          subsizes = (/nvar%all,nb,ny,nz/)
          starts   = (/0,0,0,0/)
@@ -107,42 +109,44 @@ contains
          call MPI_TYPE_CREATE_SUBARRAY(4,sizes,subsizes,starts,ord,&
             old,MAG_YZ_RIGHT_BND,ierr)
          call MPI_TYPE_COMMIT(MAG_YZ_RIGHT_BND,ierr)
+
          deallocate(sizes,subsizes,starts)
 
-!--------------------------------!
-!   X dimension - nx*ny*nz array !
-!--------------------------------!
+!---------------------------------------!
+!   X dimension - nx*ny*nz array (grav) !
+!---------------------------------------!
          allocate(sizes(3), subsizes(3), starts(3))
-         sizes    = (/nx,ny,nz/)
-         subsizes = (/nb,ny,nz/)
-         starts   = (/0,0,0/)
 
-         call MPI_TYPE_CREATE_SUBARRAY(3,sizes,subsizes,starts,ord,&
-            old,ARR_YZ_LEFT_BND,ierr)
-         call MPI_TYPE_COMMIT(ARR_YZ_LEFT_BND,ierr)
+         sizes    = [ nx, ny, nz ]
+         subsizes = [ nb, ny, nz ]
+         starts   = [ 0,  0,  0  ]
+
+         call MPI_TYPE_CREATE_SUBARRAY(3, sizes, subsizes, starts, ord, old, ARR_YZ_LEFT_BND,  ierr)
+         call MPI_TYPE_COMMIT(ARR_YZ_LEFT_BND,  ierr)
 
          starts(1) = nb
-         call MPI_TYPE_CREATE_SUBARRAY(3,sizes,subsizes,starts,ord,&
-            old,ARR_YZ_LEFT_DOM,ierr)
-         call MPI_TYPE_COMMIT(ARR_YZ_LEFT_DOM,ierr)
+         call MPI_TYPE_CREATE_SUBARRAY(3, sizes, subsizes, starts, ord, old, ARR_YZ_LEFT_DOM,  ierr)
+         call MPI_TYPE_COMMIT(ARR_YZ_LEFT_DOM,  ierr)
 
          starts(1) = nxb
-         call MPI_TYPE_CREATE_SUBARRAY(3,sizes,subsizes,starts,ord,&
-            old,ARR_YZ_RIGHT_DOM,ierr)
-         call MPI_TYPE_COMMIT(ARR_YZ_RIGHT_DOM,ierr)
+         call MPI_TYPE_CREATE_SUBARRAY(3, sizes, subsizes, starts, ord, old, ARR_YZ_RIGHT_DOM, ierr)
+         call MPI_TYPE_COMMIT(ARR_YZ_RIGHT_DOM, ierr)
 
          starts(1) = nxb+nb
-         call MPI_TYPE_CREATE_SUBARRAY(3,sizes,subsizes,starts,ord,&
-            old,ARR_YZ_RIGHT_BND,ierr)
-         call MPI_TYPE_COMMIT(ARR_YZ_RIGHT_BND,ierr)
+         call MPI_TYPE_CREATE_SUBARRAY(3, sizes, subsizes, starts, ord, old, ARR_YZ_RIGHT_BND, ierr)
+         call MPI_TYPE_COMMIT(ARR_YZ_RIGHT_BND, ierr)
+
          deallocate(sizes,subsizes,starts)
+
       endif
 
 !------------------------!
 !   Y dimension - fluid  !
 !------------------------!
       if(nyd /= 1) then
+
          allocate(sizes(4), subsizes(4), starts(4))
+
          sizes    = (/nvar%all,nx,ny,nz/)
          subsizes = (/nvar%all,nx,nb,nz/)
          starts   = (/0,0,0,0/)
@@ -191,42 +195,44 @@ contains
          call MPI_TYPE_CREATE_SUBARRAY(4,sizes,subsizes,starts,ord,&
             old,MAG_XZ_RIGHT_BND,ierr)
          call MPI_TYPE_COMMIT(MAG_XZ_RIGHT_BND,ierr)
+
          deallocate(sizes,subsizes,starts)
 
-!--------------------------------!
-!   Y dimension - nx*ny*nz array !
-!--------------------------------!
+!---------------------------------------!
+!   Y dimension - nx*ny*nz array (grav) !
+!---------------------------------------!
          allocate(sizes(3), subsizes(3), starts(3))
-         sizes    = (/nx,ny,nz/)
-         subsizes = (/nx,nb,nz/)
-         starts   = (/0,0,0/)
 
-         call MPI_TYPE_CREATE_SUBARRAY(3,sizes,subsizes,starts,ord,&
-            old,ARR_XZ_LEFT_BND,ierr)
-         call MPI_TYPE_COMMIT(ARR_XZ_LEFT_BND,ierr)
+         sizes    = [ nx, ny, nz ]
+         subsizes = [ nx, nb, nz ]
+         starts   = [ 0,  0,  0  ]
+
+         call MPI_TYPE_CREATE_SUBARRAY(3, sizes, subsizes, starts, ord, old, ARR_XZ_LEFT_BND,  ierr)
+         call MPI_TYPE_COMMIT(ARR_XZ_LEFT_BND,  ierr)
 
          starts(2) = nb
-         call MPI_TYPE_CREATE_SUBARRAY(3,sizes,subsizes,starts,ord,&
-            old,ARR_XZ_LEFT_DOM,ierr)
-         call MPI_TYPE_COMMIT(ARR_XZ_LEFT_DOM,ierr)
+         call MPI_TYPE_CREATE_SUBARRAY(3, sizes, subsizes, starts, ord, old, ARR_XZ_LEFT_DOM,  ierr)
+         call MPI_TYPE_COMMIT(ARR_XZ_LEFT_DOM,  ierr)
 
          starts(2) = nyb
-         call MPI_TYPE_CREATE_SUBARRAY(3,sizes,subsizes,starts,ord,&
-            old,ARR_XZ_RIGHT_DOM,ierr)
-         call MPI_TYPE_COMMIT(ARR_XZ_RIGHT_DOM,ierr)
+         call MPI_TYPE_CREATE_SUBARRAY(3, sizes, subsizes, starts, ord, old, ARR_XZ_RIGHT_DOM, ierr)
+         call MPI_TYPE_COMMIT(ARR_XZ_RIGHT_DOM, ierr)
 
          starts(2) = nyb+nb
-         call MPI_TYPE_CREATE_SUBARRAY(3,sizes,subsizes,starts,ord,&
-            old,ARR_XZ_RIGHT_BND,ierr)
-         call MPI_TYPE_COMMIT(ARR_XZ_RIGHT_BND,ierr)
+         call MPI_TYPE_CREATE_SUBARRAY(3, sizes, subsizes, starts, ord, old, ARR_XZ_RIGHT_BND, ierr)
+         call MPI_TYPE_COMMIT(ARR_XZ_RIGHT_BND, ierr)
+
          deallocate(sizes,subsizes,starts)
+
       endif
 
 !------------------------!
 !   Z dimension - fluid  !
 !------------------------!
       if(nzd /= 1) then
+
          allocate(sizes(4), subsizes(4), starts(4))
+
          sizes    = (/nvar%all,nx,ny,nz/)
          subsizes = (/nvar%all,nx,ny,nb/)
          starts   = (/0,0,0,0/)
@@ -275,36 +281,37 @@ contains
          call MPI_TYPE_CREATE_SUBARRAY(4,sizes,subsizes,starts,ord,&
             old,MAG_XY_RIGHT_BND,ierr)
          call MPI_TYPE_COMMIT(MAG_XY_RIGHT_BND,ierr)
+
          deallocate(sizes,subsizes,starts)
 
-!--------------------------------!
-!   Z dimension - nx*ny*nz array !
-!--------------------------------!
+!---------------------------------------!
+!   Z dimension - nx*ny*nz array (grav) !
+!---------------------------------------!
          allocate(sizes(3), subsizes(3), starts(3))
-         sizes    = (/nx,ny,nz/)
-         subsizes = (/nx,ny,nb/)
-         starts   = (/0,0,0/)
 
-         call MPI_TYPE_CREATE_SUBARRAY(3,sizes,subsizes,starts,ord,&
-            old,ARR_XY_LEFT_BND,ierr)
-         call MPI_TYPE_COMMIT(ARR_XY_LEFT_BND,ierr)
+         sizes    = [ nx, ny, nz ]
+         subsizes = [ nx, ny, nb ]
+         starts   = [ 0,  0,  0  ]
+
+         call MPI_TYPE_CREATE_SUBARRAY(3, sizes, subsizes, starts, ord, old, ARR_XY_LEFT_BND,  ierr)
+         call MPI_TYPE_COMMIT(ARR_XY_LEFT_BND,  ierr)
 
          starts(3) = nb
-         call MPI_TYPE_CREATE_SUBARRAY(3,sizes,subsizes,starts,ord,&
-            old,ARR_XY_LEFT_DOM,ierr)
-         call MPI_TYPE_COMMIT(ARR_XY_LEFT_DOM,ierr)
+         call MPI_TYPE_CREATE_SUBARRAY(3, sizes, subsizes, starts, ord, old, ARR_XY_LEFT_DOM,  ierr)
+         call MPI_TYPE_COMMIT(ARR_XY_LEFT_DOM,  ierr)
 
          starts(3) = nzb
-         call MPI_TYPE_CREATE_SUBARRAY(3,sizes,subsizes,starts,ord,&
-            old,ARR_XY_RIGHT_DOM,ierr)
-         call MPI_TYPE_COMMIT(ARR_XY_RIGHT_DOM,ierr)
+         call MPI_TYPE_CREATE_SUBARRAY(3, sizes, subsizes, starts, ord, old, ARR_XY_RIGHT_DOM, ierr)
+         call MPI_TYPE_COMMIT(ARR_XY_RIGHT_DOM, ierr)
 
          starts(3) = nzb+nb
-         call MPI_TYPE_CREATE_SUBARRAY(3,sizes,subsizes,starts,ord,&
-            old,ARR_XY_RIGHT_BND,ierr)
-         call MPI_TYPE_COMMIT(ARR_XY_RIGHT_BND,ierr)
+         call MPI_TYPE_CREATE_SUBARRAY(3, sizes, subsizes, starts, ord, old, ARR_XY_RIGHT_BND, ierr)
+         call MPI_TYPE_COMMIT(ARR_XY_RIGHT_BND, ierr)
+
          deallocate(sizes,subsizes,starts)
+
       endif
+
    end subroutine mpi_boundaries_prep
 
 end module mpiboundaries

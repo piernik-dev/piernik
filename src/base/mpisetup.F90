@@ -519,6 +519,10 @@ module mpisetup
             call MPI_Type_free(MAG_YZ_LEFT_DOM, ierr)
             call MPI_Type_free(MAG_YZ_RIGHT_DOM, ierr)
             call MPI_Type_free(MAG_YZ_RIGHT_BND, ierr)
+            call MPI_Type_free(ARR_YZ_LEFT_BND, ierr)
+            call MPI_Type_free(ARR_YZ_LEFT_DOM, ierr)
+            call MPI_Type_free(ARR_YZ_RIGHT_DOM, ierr)
+            call MPI_Type_free(ARR_YZ_RIGHT_BND, ierr)
          end if
 
          if (domsize(2) /= 1) then
@@ -530,6 +534,10 @@ module mpisetup
             call MPI_Type_free(MAG_XZ_LEFT_DOM, ierr)
             call MPI_Type_free(MAG_XZ_RIGHT_DOM, ierr)
             call MPI_Type_free(MAG_XZ_RIGHT_BND, ierr)
+            call MPI_Type_free(ARR_XZ_LEFT_BND, ierr)
+            call MPI_Type_free(ARR_XZ_LEFT_DOM, ierr)
+            call MPI_Type_free(ARR_XZ_RIGHT_DOM, ierr)
+            call MPI_Type_free(ARR_XZ_RIGHT_BND, ierr)
          end if
 
          if (domsize(3) /= 1) then
@@ -541,6 +549,10 @@ module mpisetup
             call MPI_Type_free(MAG_XY_LEFT_DOM, ierr)
             call MPI_Type_free(MAG_XY_RIGHT_DOM, ierr)
             call MPI_Type_free(MAG_XY_RIGHT_BND, ierr)
+            call MPI_Type_free(ARR_XY_LEFT_BND, ierr)
+            call MPI_Type_free(ARR_XY_LEFT_DOM, ierr)
+            call MPI_Type_free(ARR_XY_RIGHT_DOM, ierr)
+            call MPI_Type_free(ARR_XY_RIGHT_BND, ierr)
          end if
 
          call MPI_BARRIER(comm,ierr)

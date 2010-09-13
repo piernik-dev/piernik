@@ -67,36 +67,12 @@ contains
          call poisson_xyp(dens(nb+1:nb+nxd,nb+1:nb+nyd,:), &
                            sgp(nb+1:nb+nxd,nb+1:nb+nyd,:),dz)
 
-! Boundary conditions
-
-         do i = 1, ceiling(nb/real(nxd))
-            sgp(1:nb,:,:)              = sgp(nxd+1:nxd+nb,:,:)
-            sgp(nxd+nb+1:nxd+2*nb,:,:) = sgp(nb+1:2*nb,:,:)
-         end do
-         do i = 1, ceiling(nb/real(nyd))
-            sgp(:,1:nb,:)              = sgp(:,nyd+1:nyd+nb,:)
-            sgp(:,nyd+nb+1:nyd+2*nb,:) = sgp(:,nb+1:2*nb,:)
-         end do
       call die("poisson_solve: poisson_xyp called")
 
     elseif( bnd_xl .eq. 'per' .and. bnd_xr .eq. 'per' .and. &
             bnd_yl .eq. 'per' .and. bnd_yr .eq. 'per' .and. &
             bnd_zl .eq. 'per' .and. bnd_zr .eq. 'per'        ) then ! Fully 3D periodic
         call poisson_xyzp(dens(nb+1:nb+nxd,nb+1:nb+nyd,nb+1:nb+nzd), sgp(nb+1:nb+nxd,nb+1:nb+nyd,nb+1:nb+nzd))
-
-! Boundary conditions
-        do i = 1, ceiling(nb/real(nxd))
-           sgp(1:nb,:,:)              = sgp(nxd+1:nxd+nb,:,:)
-           sgp(nxd+nb+1:nxd+2*nb,:,:) = sgp(nb+1:2*nb,:,:)
-        end do
-        do i = 1, ceiling(nb/real(nyd))
-           sgp(:,1:nb,:)              = sgp(:,nyd+1:nyd+nb,:)
-           sgp(:,nyd+nb+1:nyd+2*nb,:) = sgp(:,nb+1:2*nb,:)
-        end do
-        do i = 1, ceiling(nb/real(nzd))
-           sgp(:,:,1:nb)              = sgp(:,:,nzd+1:nzd+nb)
-           sgp(:,:,nzd+nb+1:nzd+2*nb) = sgp(:,:,nb+1:2*nb)
-        end do
 
 #ifdef SHEAR
     elseif ( bnd_xl .eq. 'she' .and. bnd_xr .eq. 'she' .and. &

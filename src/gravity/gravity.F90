@@ -188,20 +188,20 @@ module gravity
 
    subroutine source_terms_grav
 
-      use fluidindex,    only : iarr_all_sg
-      use arrays,        only : wa, u
 #if defined(MULTIGRID) || defined(POISSON_FFT)
-      use arrays,        only : sgp, sgpm
-#endif
+      use fluidindex,    only : iarr_all_sg
+      use arrays,        only : u, sgp, sgpm
 #ifdef POISSON_FFT
       use poissonsolver, only : poisson_solve
 #endif /* POISSON_FFT */
 #ifdef MULTIGRID
       use multigrid,     only : multigrid_solve
 #endif /* MULTIGRID */
+#endif /* defined(MULTIGRID) || defined(POISSON_FFT) */
 
       implicit none
 
+#if defined(MULTIGRID) || defined(POISSON_FFT)
       logical, save :: frun = .true.
 
       sgpm = sgp
@@ -220,13 +220,12 @@ module gravity
 #endif /* MULTIGRID */
 
       ! communicate boundary values for sgp(:, :, :) because multtigrid solver gives at most 2 guardcells, while for hydro solver typically 4 is required.
-      ! This should solve problem reported in the ticket #66
-      call all_grav_boundaries
-
+      call all_sgp_boundaries
       if(frun) then
          sgpm = sgp
          frun = .false.
       endif
+#endif /* defined(MULTIGRID) || defined(POISSON_FFT) */
 
       call sum_potential
 
@@ -234,16 +233,16 @@ module gravity
 
    subroutine sum_potential
 
-      use mpisetup, only : dt,dtm
-      use arrays, only: gpot, gp, hgpot
+      use mpisetup, only : dt, dtm
+      use arrays,   only : gpot, gp, hgpot
 #if defined(MULTIGRID) || defined(POISSON_FFT)
-      use arrays, only: sgp, sgpm
+      use arrays,   only : sgp, sgpm
 #endif
 
       implicit none
       real :: h
 
-      if(dtm/=0) then
+      if (dtm /= 0) then
          h = dt/dtm
       else
          h = 0.0
@@ -253,11 +252,167 @@ module gravity
       gpot  = gp + (1.+h)    *sgp -     h*sgpm
       hgpot = gp + (1.+0.5*h)*sgp - 0.5*h*sgpm
 #else
+      !BEWARE: as long as grav_pot_3d is called only in init_piernik this assignment probably don't need to be repeated more than once
       gpot  = gp
       hgpot = gp
 #endif
 
    end subroutine sum_potential
+
+#if defined(MULTIGRID) || defined(POISSON_FFT)
+
+! An improper evaluation of guardcell potential may occur when the multigrid boundary conditions doesn't match /BOUNDARIES/ namelist (e.g. isolated on periodic domain).
+
+   subroutine all_sgp_boundaries
+
+      use mpisetup,   only : comm3d, ierr, MPI_STATUS_SIZE, MPI_REQUEST_NULL, &
+           &                 procxl, procxr, procyl, procyr, proczl, proczr, proc, pxsize, pysize, pzsize, &
+           &                 bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr, &
+           &                 ARR_YZ_LEFT_BND, ARR_YZ_RIGHT_BND, ARR_YZ_LEFT_DOM, ARR_YZ_RIGHT_DOM, &
+           &                 ARR_XZ_LEFT_BND, ARR_XZ_RIGHT_BND, ARR_XZ_LEFT_DOM, ARR_XZ_RIGHT_DOM, &
+           &                 ARR_XY_LEFT_BND, ARR_XY_RIGHT_BND, ARR_XY_LEFT_DOM, ARR_XY_RIGHT_DOM
+      use arrays,     only : sgp
+      use grid,       only : nb, nxd, nyd, nzd
+      use errh,       only : die
+
+      implicit none
+
+      integer, parameter                        :: nreq = 3 * 4
+      integer, dimension(nreq)                  :: req3d
+      integer, dimension(MPI_STATUS_SIZE, nreq) :: status3d
+      integer                                   :: i
+
+      req3d(:) = MPI_REQUEST_NULL
+
+      if (nxd /= 1) then
+
+         select case (bnd_xl)
+            case ('per')
+               do i = 1, ceiling(nb/real(nxd)) ! Repeating is important for domains that are narrower than their guardcells (e.g. nxd = 2)
+                  sgp(1:nb, :, :) = sgp(nxd+1:nxd+nb, :, :)
+               end do
+            case ('mpi')
+               if (pxsize > 1) then
+                  call MPI_Isend(sgp(1, 1, 1), 1, ARR_YZ_LEFT_DOM,  procxl, 12, comm3d, req3d(1), ierr)
+                  call MPI_Irecv(sgp(1, 1, 1), 1, ARR_YZ_LEFT_BND,  procxl, 22, comm3d, req3d(2), ierr)
+               else
+                  call die("[gravity:all_grav_boundaries] bnd_xl == 'mpi' && pxsize <= 1")
+               end if
+            case ('she') ! move appropriate code from poissonsolver::poisson_solve or do nothing. Or die until someone really needs SHEAR.
+                call die("[gravity:all_grav_boundaries] bnd_xl == 'she' not implemented")
+            case default ! Set gradient == 0 on the boundaries
+               do i = 1, nb
+                  sgp(i, :, :) = sgp(nb+1, :, :)
+               end do
+         end select
+
+         select case (bnd_xr)
+            case ('per')
+               do i = 1, ceiling(nb/real(nxd))
+                  sgp(nxd+nb+1:nxd+2*nb, :, :) = sgp(nb+1:2*nb, :, :)
+               end do
+            case ('mpi')
+               if (pxsize > 1) then
+                  call MPI_Isend(sgp(1, 1, 1), 1, ARR_YZ_RIGHT_DOM, procxr, 22, comm3d, req3d(3), ierr)
+                  call MPI_Irecv(sgp(1, 1, 1), 1, ARR_YZ_RIGHT_BND, procxr, 12, comm3d, req3d(4), ierr)
+               else
+                  call die("[gravity:all_grav_boundaries] bnd_xr == 'mpi' && pxsize <= 1")
+               end if
+            case ('she')
+                call die("[gravity:all_grav_boundaries] bnd_xl == 'she' not implemented")
+            case default
+               do i = 1, nb
+                  sgp(nb+nxd+i, :, :) = sgp(nb+nxd, :, :)
+               end do
+         end select
+
+      end if
+
+      if (nyd /= 1) then
+
+         select case (bnd_yl)
+            case ('per')
+               do i = 1, ceiling(nb/real(nyd))
+                  sgp(:, 1:nb, :) = sgp(:, nyd+1:nyd+nb, :)
+               end do
+            case ('mpi')
+               if (pysize > 1) then
+                  call MPI_Isend(sgp(1, 1, 1), 1, ARR_XZ_LEFT_DOM,  procyl, 32, comm3d, req3d(5), ierr)
+                  call MPI_Irecv(sgp(1, 1, 1), 1, ARR_XZ_LEFT_BND,  procyl, 42, comm3d, req3d(6), ierr)
+               else
+                  call die("[gravity:all_grav_boundaries] bnd_yl == 'mpi' && pysize <= 1")
+               end if
+            case default
+               do i = 1, nb
+                  sgp(:, i, :) = sgp(:, nb+1, :)
+               end do
+         end select
+
+         select case (bnd_yr)
+            case ('per')
+               do i = 1, ceiling(nb/real(nyd))
+                  sgp(:, nyd+nb+1:nyd+2*nb, :) = sgp(:, nb+1:2*nb, :)
+               end do
+            case ('mpi')
+               if (pysize > 1) then
+                  call MPI_Isend(sgp(1, 1, 1), 1, ARR_XZ_RIGHT_DOM, procyr, 42, comm3d, req3d(7), ierr)
+                  call MPI_Irecv(sgp(1, 1, 1), 1, ARR_XZ_RIGHT_BND, procyr, 32, comm3d, req3d(8), ierr)
+               else
+                  call die("[gravity:all_grav_boundaries] bnd_yr == 'mpi' && pysize <= 1")
+               end if
+            case default
+               do i = 1, nb
+                  sgp(:, nb+nyd+i, :) = sgp(:, nb+nyd, :)
+               end do
+         end select
+
+      end if
+
+      if (nzd /= 1) then
+
+         select case (bnd_zl)
+            case ('per')
+               do i = 1, ceiling(nb/real(nzd))
+                  sgp(:, :, 1:nb) = sgp(:, :, nzd+1:nzd+nb)
+               end do
+            case ('mpi')
+               if (pzsize > 1) then
+                  call MPI_Isend(sgp(1, 1, 1), 1, ARR_XY_LEFT_DOM,  proczl, 52, comm3d, req3d(9), ierr)
+                  call MPI_Irecv(sgp(1, 1, 1), 1, ARR_XY_LEFT_BND,  proczl, 62, comm3d, req3d(10), ierr)
+               else
+                  call die("[gravity:all_grav_boundaries] bnd_zl == 'mpi' && pzsize <= 1")
+               end if
+            case default
+               do i = 1, nb
+                  sgp(:, :, i) = sgp(:, :, nb+1)
+               end do
+         end select
+
+         select case (bnd_zr)
+            case ('per')
+               do i = 1, ceiling(nb/real(nzd))
+                  sgp(:, :, nzd+nb+1:nzd+2*nb) = sgp(:, :, nb+1:2*nb)
+               end do
+            case ('mpi')
+               if (pzsize > 1) then
+                  call MPI_Isend(sgp(1, 1, 1), 1, ARR_XY_RIGHT_DOM, proczr, 62, comm3d, req3d(11), ierr)
+                  call MPI_Irecv(sgp(1, 1, 1), 1, ARR_XY_RIGHT_BND, proczr, 52, comm3d, req3d(12), ierr)
+               else
+                  call die("[gravity:all_grav_boundaries] bnd_zr == 'mpi' && pzsize <= 1")
+               end if
+            case default
+               do i = 1, nb
+                  sgp(:, :, nb+nzd+i) = sgp(:, :, nb+nzd)
+               end do
+         end select
+
+      end if
+
+      call MPI_WAITALL(nreq, req3d(:), status3d(:,:), ierr)
+
+   end subroutine all_sgp_boundaries
+
+#endif /* defined(MULTIGRID) || defined(POISSON_FFT) */
 
 !--------------------------------------------------------------------------
 !>
@@ -663,71 +818,5 @@ module gravity
 
    end subroutine grav_accel2pot
 
-!--------------------------------------------------------------------------
-!>
-!! \brief Routine for %gravity boundary conditions
-!<
-   subroutine all_grav_boundaries
-      use grid,   only: nxd, nyd, nzd
-      implicit none
-      if(nxd /= 1) call bnd_grav('xdim')
-      if(nyd /= 1) call bnd_grav('ydim')
-      if(nzd /= 1) call bnd_grav('zdim')
-
-   end subroutine all_grav_boundaries
-
-   subroutine bnd_grav(swp)
-      use arrays,    only: sgp
-      use errh,      only: die
-      use mpisetup,  only: ARR_YZ_LEFT_DOM, ARR_YZ_RIGHT_DOM, ARR_YZ_LEFT_BND, ARR_YZ_RIGHT_BND, &
-                           ARR_XZ_LEFT_DOM, ARR_XZ_RIGHT_DOM, ARR_XZ_LEFT_BND, ARR_XZ_RIGHT_BND, &
-                           ARR_XY_LEFT_DOM, ARR_XY_RIGHT_DOM, ARR_XY_LEFT_BND, ARR_XY_RIGHT_BND, &
-                           procxl, procxr, procxl, procxr, procyl, procyr, procyl, procyr, comm3d, &
-                           proczl, proczr, proczl, proczr, req, ierr, status, pxsize, pysize, pzsize
-      implicit none
-      character(len=*), intent(in) :: swp
-
-      select case (swp)
-         case('xdim')
-            if(pxsize > 1) then
-
-               call MPI_ISEND   (sgp(1,1,1), 1, ARR_YZ_LEFT_DOM,  procxl, 110, comm3d, req(1), ierr)
-               call MPI_ISEND   (sgp(1,1,1), 1, ARR_YZ_RIGHT_DOM, procxr, 120, comm3d, req(3), ierr)
-               call MPI_IRECV   (sgp(1,1,1), 1, ARR_YZ_LEFT_BND,  procxl, 120, comm3d, req(2), ierr)
-               call MPI_IRECV   (sgp(1,1,1), 1, ARR_YZ_RIGHT_BND, procxr, 110, comm3d, req(4), ierr)
-
-               call MPI_WAITALL(4,req(:),status(:,:),ierr)
-            else
-               ! ToDo: Do non mpi boundaries here
-            endif
-         case('ydim')
-            if(pysize > 1) then
-
-               call MPI_ISEND   (sgp(1,1,1), 1, ARR_XZ_LEFT_DOM,  procyl, 130, comm3d, req(1), ierr)
-               call MPI_ISEND   (sgp(1,1,1), 1, ARR_XZ_RIGHT_DOM, procyr, 140, comm3d, req(3), ierr)
-               call MPI_IRECV   (sgp(1,1,1), 1, ARR_XZ_LEFT_BND,  procyl, 140, comm3d, req(2), ierr)
-               call MPI_IRECV   (sgp(1,1,1), 1, ARR_XZ_RIGHT_BND, procyr, 130, comm3d, req(4), ierr)
-
-               call MPI_WAITALL(4,req(:),status(:,:),ierr)
-            else
-               ! ToDo: Do non mpi boundaries here
-            endif
-         case('zdim')
-            if(pzsize > 1) then
-
-               call MPI_ISEND   (sgp(1,1,1), 1, ARR_XY_LEFT_DOM,  proczl, 150, comm3d, req(1), ierr)
-               call MPI_ISEND   (sgp(1,1,1), 1, ARR_XY_RIGHT_DOM, proczr, 160, comm3d, req(3), ierr)
-               call MPI_IRECV   (sgp(1,1,1), 1, ARR_XY_LEFT_BND,  proczl, 160, comm3d, req(2), ierr)
-               call MPI_IRECV   (sgp(1,1,1), 1, ARR_XY_RIGHT_BND, proczr, 150, comm3d, req(4), ierr)
-
-               call MPI_WAITALL(4,req(:),status(:,:),ierr)
-            else
-               ! ToDo: Do non mpi boundaries here
-            endif
-         case default
-            call die("[gravity:bnd_grav] Unknown sweep "//swp)
-      end select
-
-   end subroutine bnd_grav
 
 end module gravity
