@@ -1077,13 +1077,13 @@ contains
 !!$ ============================================================================
 !!
 !! Multigrid driver. This is the only multigrid routine intended to be called from the gravity module.
-!! This routine is also responsible for communicating the solution to the rest of world via sgp and sgpm arrays.
+!! This routine is also responsible for communicating the solution to the rest of world via sgp array.
 !!
 
    subroutine multigrid_solve(dens)
 
       use timer,     only: timer_
-      use arrays,    only: sgp, sgpm
+      use arrays,    only: sgp
       use grid,      only: is, ie, js, je, ks, ke
       use errh,      only: die
       use multipole, only: multipole_solver
@@ -1110,7 +1110,6 @@ contains
 
       call init_source(dens)
 
-      sgpm(:, :, :)  = sgp(:, :, :) !store previous solutions
       call vcycle(inner)
 
       ! /todo: move to multigridvars and init_multigrid

@@ -39,14 +39,13 @@ contains
 !! SUBROUTINE POISSON: solves Poisson equation
 !!
   subroutine poisson_solve(dens)
-    use errh, only : die
-    use arrays, only : u,sgp,sgpm
-    use grid, only   : x,nx,ny,nz,nzb
-    use grid, only   : dz,dx, nb, nxd, nyd, nzd
-    use mpisetup, only : bnd_xl, bnd_xr, bnd_yl, &
-      bnd_yr, bnd_zl, bnd_zr
+
+    use errh,        only : die
+    use arrays,      only : u,sgp
+    use grid,        only : x, nx, ny, nz, nzb, dz, dx, nb, nxd, nyd, nzd
+    use mpisetup,    only : bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr
 #ifdef SHEAR
-    use shear, only  : unshear_fft
+    use shear,       only : unshear_fft
 #endif /* SHEAR */
 #ifdef IONIZED
     use initionized, only : idni
@@ -57,12 +56,9 @@ contains
 #ifdef SHEAR
     real, dimension(:,:,:), allocatable :: ala
 #endif /* SHEAR */
-    logical, save :: frun = .true.
     integer       :: i
 
     if (any([nx, ny, nz] <= 1)) call die("[poissonsolver:poisson_solve] Only 3D setups are supported") !BEWARE 2D and 1D probably need small fixes
-
-    sgpm = sgp
 
     if( bnd_xl .eq. 'per' .and. bnd_xr .eq. 'per' .and. &
         bnd_yl .eq. 'per' .and. bnd_yr .eq. 'per' .and. &
@@ -135,10 +131,6 @@ contains
       stop
     endif
 
-    if(frun) then
-      sgpm = sgp
-      frun = .false.
-    endif
   end subroutine poisson_solve
 
 !!=====================================================================

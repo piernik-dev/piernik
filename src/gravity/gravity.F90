@@ -125,7 +125,8 @@ module gravity
       n_gravr2= 0
       n_gravh = 0
 
-      if(proc .eq. 0) then
+      if (proc == 0) then
+
          open(1,file=par_file)
             read(unit=1,nml=GRAVITY,iostat=ierrh)
             call namelist_errh(ierrh,'GRAVITY')
@@ -153,13 +154,12 @@ module gravity
          rbuff(12) = h_grav
          rbuff(13) = r_grav
 
-         call MPI_BCAST(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
-         call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+      end if
 
-     else
+      call MPI_BCAST(ibuff, buffer_dim, MPI_INTEGER,          0, comm, ierr)
+      call MPI_BCAST(rbuff, buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
-         call MPI_BCAST(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
-         call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+      if (proc /= 0) then
 
          nsub                = ibuff(1)
          n_gravr             = ibuff(2)
@@ -187,16 +187,24 @@ module gravity
    end subroutine init_grav
 
    subroutine source_terms_grav
-      use fluidindex, only : iarr_all_sg
+
+      use fluidindex,    only : iarr_all_sg
+      use arrays,        only : wa, u
+#if defined(MULTIGRID) || defined(POISSON_FFT)
+      use arrays,        only : sgp, sgpm
+#endif
 #ifdef POISSON_FFT
       use poissonsolver, only : poisson_solve
 #endif /* POISSON_FFT */
 #ifdef MULTIGRID
-      use multigrid, only : multigrid_solve
+      use multigrid,     only : multigrid_solve
 #endif /* MULTIGRID */
-      use arrays, only : wa,u
 
       implicit none
+
+      logical, save :: frun = .true.
+
+      sgpm = sgp
 
 #ifdef POISSON_FFT
       call poisson_solve( sum(u(iarr_all_sg,:,:,:),1) )
@@ -210,16 +218,28 @@ module gravity
          ! It is the weakest point of this type in Maclaurin test. Next one (in fluidboundaries.F90) is 8 times less sensitive.
       end if
 #endif /* MULTIGRID */
+
+      ! ToDo: communicate boundary values for sgp(:, :, :) because multtigrid solver gives at most 2 guardcells, while for hydro solver typically 4 is required.
+      ! This should solve problem reported in the ticket #66
+      ! call all_grav_boundaries
+
+      if(frun) then
+         sgpm = sgp
+         frun = .false.
+      endif
+
       call sum_potential
 
    end subroutine source_terms_grav
 
    subroutine sum_potential
+
       use mpisetup, only : dt,dtm
       use arrays, only: gpot, gp, hgpot
 #if defined(MULTIGRID) || defined(POISSON_FFT)
       use arrays, only: sgp, sgpm
 #endif
+
       implicit none
       real :: h
 
