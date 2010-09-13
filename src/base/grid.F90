@@ -132,6 +132,8 @@ module grid
       type(grid_container), intent(out) :: cgrid
 
       cgrid%dx = dx; cgrid%dy = dy; cgrid%dz = dz
+      cgrid%dxmn = minval([dx,dy,dz])
+      cgrid%dvol = dx*dy*dz
       cgrid%nb = nb
       cgrid%nxd = nxd; cgrid%nyd = nyd; cgrid%nzd = nzd
       cgrid%nx = nx; cgrid%ny = ny; cgrid%nz = nz

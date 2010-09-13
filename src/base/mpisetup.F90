@@ -108,6 +108,13 @@ module mpisetup
    integer :: MAG_YZ_LEFT_BND=-1, MAG_YZ_RIGHT_BND=-1
    integer :: MAG_YZ_LEFT_DOM=-1, MAG_YZ_RIGHT_DOM=-1
 
+   integer :: ARR_XZ_LEFT_BND=-1, ARR_XZ_RIGHT_BND=-1
+   integer :: ARR_XZ_LEFT_DOM=-1, ARR_XZ_RIGHT_DOM=-1
+   integer :: ARR_XY_LEFT_BND=-1, ARR_XY_RIGHT_BND=-1
+   integer :: ARR_XY_LEFT_DOM=-1, ARR_XY_RIGHT_DOM=-1
+   integer :: ARR_YZ_LEFT_BND=-1, ARR_YZ_RIGHT_BND=-1
+   integer :: ARR_YZ_LEFT_DOM=-1, ARR_YZ_RIGHT_DOM=-1
+
    contains
 
 !-----------------------------------------------------------------------------
