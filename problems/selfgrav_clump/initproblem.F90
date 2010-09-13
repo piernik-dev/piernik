@@ -140,7 +140,6 @@ contains
 
       if (clump_mass <= 0.)          call die("[initproblem:read_problem_par] Negative mass of the clump.")
       if (clump_K <= 0.)             call die("[initproblem:read_problem_par] Negative polytropic constant.")
-!      if (any([nxd, nyd, nzd] == 1)) call die("[initproblem:read_problem_par] Only 3D is supported.")
 #ifdef ISO
       call die("[initproblem:read_problem_par] Isothermal EOS not supported.")
 #endif
@@ -338,7 +337,7 @@ contains
                if (crashNotConv) then
                   call die("[initproblem:init_prob] M-iterations not converged.")
                else
-                  write(*,'(a)')"[initproblem:init_prob] M-iterations not converged. Continue anyway."
+                  if (proc == 0) write(*,'(a)')"[initproblem:init_prob] M-iterations not converged. Continue anyway."
                   doneM = .true.
                end if
             end if
@@ -367,7 +366,7 @@ contains
             if (crashNotConv) then
                call die("[initproblem:init_prob] C-iterations not converged.")
             else
-               write(*,'(a)')"[initproblem:init_prob] C-iterations not converged. Continue anyway."
+               if (proc == 0) write(*,'(a)')"[initproblem:init_prob] C-iterations not converged. Continue anyway."
                doneC = .true.
             end if
          end if
