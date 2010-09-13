@@ -1,0 +1,110 @@
+ $DOMAIN_SIZES
+    nxd = 64
+    nyd = 1
+    nzd = 1
+    ! set nyd and nzd to 64 if you want to have iy or iz /=0,
+    ! when prefer_rbgs_relaxation is .true.
+    ! or when parallel execution leads to nonconvergence
+ /
+
+ $MPI_BLOCKS
+    pxsize = 1
+    pysize = 1
+    pzsize = 1
+ /
+
+ $RESTART_CONTROL
+    restart  = 'last'
+    new_id   = ''
+    nrestart = 0
+ /
+
+ $END_CONTROL
+    tend   = 0.001
+    nend   = 1000
+ /
+
+ $OUTPUT_CONTROL
+    ix      = 0
+    iy      = 0
+    iz      = 0
+    dt_hdf  = 0.0002
+    dt_res  = 0.0
+    dt_plt  = 0.0
+    dt_log  = 0.0001
+    dt_tsl  = 0.0001
+    vars(1) = 'dens'
+    vars(2) = 'velx'
+    vars(3) = 'vely'
+    vars(4) = 'velz'
+    vars(5) = 'ener'
+    vars(6) = 'gpot'
+    domain  = 'phys_domain'
+ /
+
+ $BOUNDARIES
+    bnd_xl = 'per'
+    bnd_xr = 'per'
+    bnd_yl = 'per'
+    bnd_yr = 'per'
+    bnd_zl = 'per'
+    bnd_zr = 'per'
+ /
+
+ $DOMAIN_LIMITS
+    xmin   = -1.e5
+    xmax   =  1.e5
+    ymin   = -1.e5
+    ymax   =  1.e5
+    zmin   = -1.e5
+    zmax   =  1.e5
+ /
+
+ $FLUID_IONIZED
+    gamma_ion  = 10.0
+    selfgrav_ion = .true.
+ /
+
+ $FLUID_NEUTRAL
+ /
+
+ $NUMERICAL_SETUP
+    cfl    = 0.7
+    smalld = 1.e-3
+    smallei= 1.e13
+ /
+
+ $GRAVITY
+ /
+
+ $THERMAL
+ /
+
+ $RESISTIVITY
+ /
+
+ $PROBLEM_CONTROL
+    problem_name ='sg_clump_moving_1D'
+    run_id =  'ts1'
+    clump_mass = 1e6
+    clump_K = 2.0e-4
+    crashNotConv = .false.
+    clump_vel_x = 2e8
+    clump_r = 1.
+    verbose = .true.
+!    exp_speedup = .true.
+    epsC = 1e-15
+    epsM = 1e-15
+ /
+
+ $MULTIGRID_SOLVER
+    level_max = 3
+    nsmool    = 4
+!    stdout    = .true.
+!    grav_bnd_str  = "isolated"
+    grav_bnd_str = "periodic"
+!    prefer_rbgs_relaxation = .true.
+    dirty_debug = .true.
+ /
+
+
