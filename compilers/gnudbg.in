@@ -1,6 +1,6 @@
 PROG      = piernik
 
-### GNU hydra AMD64
+### gcc-4.5 debug
 F90       = mpif90
-F90FLAGS  = -I/usr/include -g3 -fdefault-real-8 -ffpe-trap=zero,overflow,underflow -Wall -W -pedantic-errors -ffree-form -std=gnu -fimplicit-none -ffree-line-length-none
+F90FLAGS  = -I/usr/include -g -ggdb -O0 -fdefault-real-8 -ffpe-trap=zero,overflow,invalid -Wall -W -pedantic-errors -ffree-form -std=gnu -fimplicit-none -ffree-line-length-none -fcheck=all
 LDFLAGS   = -L/usr/lib
