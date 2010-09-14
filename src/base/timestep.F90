@@ -118,7 +118,7 @@ module timestep
          if (nstep <=1) then
             if (dt_initial > 0.) dt = min(dt, dt_initial)
          else
-            dt = min(dt, dt_old*dt_max_grow)
+            if (dt_old > 0.) dt = min(dt, dt_old*dt_max_grow)
          end if
 
          if (dt < dt_min) then ! something nasty had happened
