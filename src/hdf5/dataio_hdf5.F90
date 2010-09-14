@@ -168,8 +168,10 @@ module dataio_hdf5
             case ('magz')
                nhdf_vars = nhdf_vars + 1
 #ifdef COSM_RAYS
+#ifndef NEW_HDF5
             case ('encr')
                nhdf_vars = nhdf_vars + SIZE(iarr_all_crs,1)
+#endif /* NEW_HDF5 */
 #endif /* COSM_RAYS */
             case ('pres')
                nhdf_vars = nhdf_vars + 1
@@ -232,11 +234,13 @@ module dataio_hdf5
             case ('magz')
                hdf_vars(j) = 'magz' ; j = j + 1
 #ifdef COSM_RAYS
+#ifndef NEW_HDF5
             case ('encr')
                do k = 1, size(iarr_all_crs,1)
                   write(aux,'(A3,I1)') 'ecr',k
                   hdf_vars(j) = aux ; j = j + 1
                enddo
+#endif /* NEW_HDF5 */
 #endif /* COSM_RAYS */
 #ifdef GRAV
             case ('gpot')
