@@ -205,10 +205,6 @@ contains
          K_crs_perp (ncrn+1:ncrn+ncre) = K_crs_perp (1:ncre)
       endif
 
-#ifdef NEW_HDF5
-      call cr_add_hdf5(ncrn+ncre)
-#endif /* NEW_HDF5 */
-
    end subroutine init_cosmicrays
 
    subroutine cosmicray_species
@@ -244,6 +240,10 @@ contains
          iarr_crs(ncrn+icr) =nvar+icr
       enddo
       nvar = nvar + nvar_cre
+
+#ifdef NEW_HDF5
+      call cr_add_hdf5(ncrn+ncre)
+#endif /* NEW_HDF5 */
 
    end subroutine cosmicray_index
 
