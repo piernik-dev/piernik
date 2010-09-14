@@ -2,7 +2,6 @@
     nxd = 512
     nyd = 512
     nzd = 1
-    nb  = 4
  /
 
  $MPI_BLOCKS
@@ -21,12 +20,12 @@
  /
 
  $END_CONTROL
-    tend   = 0.5
+    tend   = 0.60
     nend   = 90000
  /
 
  $OUTPUT_CONTROL
-    dt_hdf  = 0.01
+    dt_hdf  = 0.12
     dt_res  = 0.0
     dt_log  = 0.00001
     dt_tsl  = 0.00001
@@ -37,7 +36,7 @@
     vars(5) = 'magx'
     vars(6) = 'magy'
     vars(7) = 'magz'
-    vars(8) = 'ener'
+    vars(8) = 'pres'
     domain  = 'phys_domain'
     mag_center = 'no'
  /
@@ -75,7 +74,7 @@
  /
 
  $NUMERICAL_SETUP
-    cfl    = 0.7
+    cfl    = 0.8
     smalld = 1.e-3
     smallei= 1.e-5
     integration_order = 2
