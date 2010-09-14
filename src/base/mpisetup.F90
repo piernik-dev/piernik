@@ -211,8 +211,9 @@ module mpisetup
          call MPI_Gather(host_proc, hnlen,  MPI_CHARACTER, host_all, hnlen,  MPI_CHARACTER, 0, comm, err)
          call MPI_Gather(pid_proc,  1,      MPI_INTEGER,   pid_all,  1,      MPI_INTEGER,   0, comm, err)
 
-         cwd = trim(cwd_proc)
-
+         ! cwd = trim(cwd_proc)  BEWARE: It's redundant, we get cwd for command
+         !                               line 
+      
          if(proc == 0) then
             par_file = trim(cwd)//'/problem.par'
             inquire(file=par_file, exist=par_file_exist)
