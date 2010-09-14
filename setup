@@ -602,7 +602,7 @@ sub MakeDependsf90 {
    # references one or more modules
    #
    foreach $file (<*.F90>) {
-      `cpp -w $file > $file"_"`;
+      `cpp -w $cppflags $file > $file"_"`;
       open(FILE, $file."_");
       while (<FILE>) {
 #         /^\s*include\s+["\']([^"\']+)["\']/i && push(@incs, $1);
