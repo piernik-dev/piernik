@@ -207,16 +207,18 @@ module mpisetup
          write(*,'(3a,i6,3a)') 'mpisetup: host="',trim(host_proc),'", PID=',pid_proc,' CWD="',trim(cwd_proc),'"'
 #endif /* DEBUG */
 
+         call MPI_Gather(cwd_proc,  cwdlen, MPI_CHARACTER, cwd_all,  cwdlen, MPI_CHARACTER, 0, comm, err)
+         call MPI_Gather(host_proc, hnlen,  MPI_CHARACTER, host_all, hnlen,  MPI_CHARACTER, 0, comm, err)
+         call MPI_Gather(pid_proc,  1,      MPI_INTEGER,   pid_all,  1,      MPI_INTEGER,   0, comm, err)
+
+         cwd = trim(cwd_proc)
+
          if(proc == 0) then
             par_file = trim(cwd)//'/problem.par'
             inquire(file=par_file, exist=par_file_exist)
             if(.not. par_file_exist) call die('[mpisetup:mpistart] Cannot find "problem.par" in the working directory')
             tmp_log_file = trim(cwd)//'/tmp.log'
          endif
-
-         call MPI_Gather(cwd_proc,  cwdlen, MPI_CHARACTER, cwd_all,  cwdlen, MPI_CHARACTER, 0, comm, err)
-         call MPI_Gather(host_proc, hnlen,  MPI_CHARACTER, host_all, hnlen,  MPI_CHARACTER, 0, comm, err)
-         call MPI_Gather(pid_proc,  1,      MPI_INTEGER,   pid_all,  1,      MPI_INTEGER,   0, comm, err)
 
          pxsize = 1
          pysize = 1
