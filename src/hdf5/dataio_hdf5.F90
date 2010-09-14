@@ -510,6 +510,7 @@ module dataio_hdf5
 #else
             tab(:,:,:) = real(u(ind%enn,RNG),4)
 #endif /* ISO */
+#ifdef IONIZED
          case("enei")
 #ifdef ISO
             tab(:,:,:) = real(0.5 *( u(ind%mxi,RNG)**2 + &
@@ -529,6 +530,7 @@ module dataio_hdf5
 #else
             tab = 0.0
 #endif /* ISO */
+#endif /* IONIZED */
 #endif /* IONIZED */
          case("magx")
             tab(:,:,:) = real(b(ind%bx,RNG),4)
@@ -1741,4 +1743,3 @@ module dataio_hdf5
    end subroutine set_common_attributes
 
 end module dataio_hdf5
-
