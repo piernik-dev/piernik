@@ -1706,7 +1706,7 @@ module dataio_hdf5
 
          call H5Gcreate_f(file_id,"file_versions",gr_id,error)
          do i = 1, nenv
-            write(dset_name,'(A4,I2.2)') "env_",i
+            write(dset_name,'(A4,I3.3)') "env_",i
             trim_env=trim(env(i))
             if (len_trim(trim_env) < len(trim_env)) trim_env(len_trim(trim_env)+1:len_trim(trim_env)+1) = achar(0)
             !I don't understand why passing trim(env(i)) or trim(trim_env) to h5ltmake_dataset_string_f sometimes results in improper detection of the string length.
