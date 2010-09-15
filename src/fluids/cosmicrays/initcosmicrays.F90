@@ -201,8 +201,8 @@ contains
 
       if(ncre > 0) then
          gamma_crs  (ncrn+1:ncrn+ncre) = gamma_cre  (1:ncre)
-         K_crs_paral(ncrn+1:ncrn+ncre) = K_crs_paral(1:ncre)
-         K_crs_perp (ncrn+1:ncrn+ncre) = K_crs_perp (1:ncre)
+         K_crs_paral(ncrn+1:ncrn+ncre) = K_cre_paral(1:ncre)
+         K_crs_perp (ncrn+1:ncrn+ncre) = K_cre_perp (1:ncre)
       endif
 
    end subroutine init_cosmicrays
