@@ -711,7 +711,6 @@ module dataio_hdf5
          ok_plt_var = .false.
          call common_plt_hdf5(var,plane,xn,send,ierrh)
          if(ierrh==0) ok_plt_var = .true.
-         if(ierrh==0) ok_plt_var = .true.
          if(.not.ok_plt_var) call die(var//" is not defined in common_plt_hdf5, neither in user_plt !!!")
 
          temp = -1.0
