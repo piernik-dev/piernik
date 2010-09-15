@@ -1,8 +1,6 @@
-PROG		 = piernik
+PROG      = piernik
 
 ### INTEL
-F90		 = /opt/intel/mpich2/bin/mpif90
-F90FLAGS  = -g -fpe0 -check all -traceback -fp-stack-check -heap-arrays -r8
-HDF_LIB  = /opt/intel/hdf4/lib
-MHDF_LIB = /opt/intel/hdf4/include -L/opt/intel/mkl/9.1 -L/opt/intel/fftw -lfftw3
-
+F90       = /opt/intel/openmpi/bin/mpif90
+F90FLAGS  = -g -fpe0 -check all -traceback -fp-stack-check -heap-arrays -r8 -I/opt/intel/hdf5/include
+LDFLAGS   = -L/opt/intel/hdf5/lib
