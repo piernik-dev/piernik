@@ -34,17 +34,7 @@ module initproblem
 ! Written by: M. Hanasz, February 2006
 ! Modified by M.Hanasz for CR-driven dynamo
 
-   use arrays
-   use mpisetup
-   use grid
-   use initionized
-   use initcosmicrays
-   use fluidindex, only : ibx,iby,ibz
-   use hydrostatic, only : hydrostatic_zeq
    use problem_pub, only: problem_name, run_id
-#ifdef SHEAR
-   use shear, only : qshear, omega
-#endif /* SHEAR */
 
    real :: d0, bxn,byn,bzn, x0, y0, z0, r_sn, h_sn, f_sn_kpc2, amp_cr, beta_cr
    real :: ethu, f_sn, amp_ecr_sn, alpha
@@ -59,8 +49,9 @@ module initproblem
 !-----------------------------------------------------------------------------
 
    subroutine read_problem_par
-      use mpisetup
-      use errh, only : namelist_errh
+      use errh,     only : namelist_errh
+      use mpisetup, only : cbuff, ibuff, rbuff, buffer_dim, comm, ierr, proc, &
+                           mpi_character, mpi_double_precision, mpi_integer
       implicit none
       integer :: ierrh
 
@@ -139,9 +130,17 @@ module initproblem
 !-----------------------------------------------------------------------------
 
    subroutine init_prob
-      use initfluids, only : cs_iso2
-      use initcosmicrays, only : iarr_crn
-      use crcomposition
+      use arrays,         only : u, b, dprof
+      use fluidindex,     only : ibx,iby,ibz
+      use grid,           only : x, y, z, nx, ny, nz, nxd, nyd, xmin, xmax, ymin, ymax, lx, ly
+      use hydrostatic,    only : hydrostatic_zeq
+      use initcosmicrays, only : gamma_crs, iarr_crs, cr_eff
+      use initfluids,     only : cs_iso2
+      use initionized,    only : idni, imxi, imyi, imzi
+      use mpisetup,       only : proc, smalld
+#ifdef SHEAR
+      use shear,          only : qshear, omega
+#endif /* SHEAR */
 
       implicit none
 
@@ -251,77 +250,6 @@ module initproblem
       return
    end subroutine init_prob
 
-!-----------------------------------------------------------------------------
-!
-!   subroutine mass_loss_compensate
-!
-!      implicit none
-!
-!      real tot_mass, dmass
-!      integer i
-!
-!      call total_mass(tot_mass)
-!
-!      mass_loss = max(0.0,init_mass - tot_mass)
-!
-!      dmass = mass_loss/init_mass
-
-!      do i=1,nx
-!         u(idni,:,:,:) = u(idni,:,:,:) + dmass * dinit(:,:,:)
-#ifdef SHEAR
-!         u(imyi,:,:,:) = u(imyi,:,:,:) - dmass * qshear*omega*x(i) * dinit(:,:,:)
-#endif /* SHEAR */
-#ifndef ISO
-!         u(ieni,:,:,:) = u(ieni,:,:,:) + dmass * (c_si**2/(gamma_ion-1.0) * dinit(:,:,:)
-#ifdef SHEAR
-!         u(ieni,:,:,:) = u(ieni,:,:,:) + dmass * 0.5 * (qshear*omega*x(i))**2) * dinit(:,:,:)
-#endif /* SHEAR */
-#endif /* ISO */
-!      enddo
-!
-!   end subroutine mass_loss_compensate
-!
-!=============================================================================
-! Te procedury powinny sie znalezc docelowo w jakims innym module.
-
-!   subroutine save_init_dens
-!
-!      implicit none
-!
-!      real mass
-!
-!      dinit(:,:,:) = u(idni,:,:,:)
-!      mass = sum(dinit(is:ie,js:je,ks:ke)) * dvol
-!      call MPI_ALLREDUCE(mass, init_mass, 1, mpi_real8, mpi_sum, comm3d, ierr)
-!
-!   end subroutine save_init_dens
-
-!-----------------------------------------------------------------------------
-
-!   subroutine get_init_mass
-!
-!      implicit none
-!
-!      real mass
-!
-!      mass = sum(dinit(is:ie,js:je,ks:ke)) * dvol
-!      call MPI_ALLREDUCE(mass, init_mass, 1, mpi_real8, mpi_sum, comm3d, ierr)
-!
-!   end subroutine get_init_mass
-
-!-----------------------------------------------------------------------------
-
-
-!   subroutine total_mass(tmass)
-!
-!      implicit none
-!
-!      real mass, tmass
-!
-!      mass = sum(u(idni,is:ie,js:je,ks:ke)) * dvol
-!      call MPI_ALLREDUCE(mass, tmass, 1, mpi_real8, mpi_sum, comm3d, ierr)
-!
-!   end subroutine total_mass
 
 !------------------------------------------------------------------------------
 !BEWARE!
@@ -331,12 +259,11 @@ module initproblem
 !! \author M. Hanasz
 !<
    subroutine cr_sn_beware(pos)
-! Written by: M. Hanasz
-      use grid,   only : nx,ny,nz,x,y,z,Lx,Ly
-      use arrays, only : u
+      use arrays,         only : u
+      use crcomposition,  only : icr_H1, icr_Be10, icr_C12, icr_N14, icr_O16, primary_C12, primary_N14, primary_O16
+      use fluidindex,     only :  nvar
+      use grid,           only : nx,ny,nz,x,y,z,Lx,Ly
       use initcosmicrays, only : iarr_crn
-      use fluidindex, only :  nvar
-      use crcomposition
 
       implicit none
 

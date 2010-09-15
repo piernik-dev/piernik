@@ -33,7 +33,7 @@ module snsources
    use initproblem, only : amp_ecr_sn,ethu,f_sn, h_sn, r_sn
 
 #ifdef SHEAR
-   use shear
+   use shear, only : delj,eps
 #endif /* SHEAR */
 
    implicit none
@@ -50,7 +50,6 @@ module snsources
 !! \brief Main routine to insert one supernova event
 !<
    subroutine random_sn
-! Written by: M. Hanasz
       use mpisetup, only  : t
       use constants, only : small
 
@@ -87,16 +86,20 @@ module snsources
 !! \param pos real, dimension(3), array of supernova position components
 !<
    subroutine cr_sn(pos)
-! Written by: M. Hanasz
       use grid,   only : nx,ny,nz,x,y,z,Lx,Ly
       use arrays, only : u
       use initcosmicrays, only : iarr_crn
       use fluidindex, only :  nvar
-      use crcomposition
+#ifdef COSM_RAYS_SOURCES
+      use crcomposition,  only : icr_H1, icr_C12, icr_N14, icr_O16, primary_C12, primary_N14, primary_O16
+#endif /* COSM_RAYS_SOURCES */
 
       implicit none
       real, dimension(3), intent(in) :: pos
-      integer  :: i,j,k, ipm, jpm, icr
+      integer  :: i,j,k, ipm, jpm
+#ifdef COSM_RAYS_SOURCES
+      integer  :: icr
+#endif /* COSM_RAYS_SOURCES */
       real     :: decr, xsn,ysn,zsn
       xsn = pos(1)
       ysn = pos(2)
@@ -119,12 +122,14 @@ module snsources
                            + (y(j)-ysna+real(jpm)*Ly)**2  &
                            + (z(k)-zsn)**2)/r_sn**2)
 
+#ifdef COSM_RAYS_SOURCES
                      do icr=1,nvar%crn%all
                         if(icr == icr_H1) u(iarr_crn(icr),i,j,k) = u(iarr_crn(icr),i,j,k) + decr
                         if(icr == icr_C12) u(iarr_crn(icr),i,j,k) = u(iarr_crn(icr),i,j,k) + primary_C12*12*decr
                         if(icr == icr_N14) u(iarr_crn(icr),i,j,k) = u(iarr_crn(icr),i,j,k) + primary_N14*14*decr
                         if(icr == icr_O16) u(iarr_crn(icr),i,j,k) = u(iarr_crn(icr),i,j,k) + primary_O16*16*decr
                      enddo
+#endif /* COSM_RAYS_SOURCES */
 
                   enddo ! jpm
                enddo ! ipm
@@ -143,7 +148,6 @@ module snsources
 !! \return pos @e real,  @e dimension(3), array of supernova position components
 !<
    subroutine rand_coords(pos)
-! Written by M. Hanasz
       use grid,   only : Lx,Ly,xmin,ymin,nzd
 #ifdef SHEAR
       use grid,   only : dy,nyd,nzd,y,js,je
@@ -154,7 +158,7 @@ module snsources
 
       real, dimension(3), intent(out) :: pos
       real, dimension(4) :: rand
-      real :: xsn,ysn,zsn,znorm,znorm2
+      real :: xsn,ysn,zsn,znorm
 
       call random_number(rand)
       xsn = xmin+ Lx*rand(1)
