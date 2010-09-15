@@ -1,28 +1,28 @@
 function read_attr_h5, file
 
-   a = {time: 		0.0, 		$
-        timestep:	0.0,		$
-	nstep:		0l, 		$
-	nxd:		0l,		$
-	nyd:		0l,		$
-	nzd:		0l,		$
-	nxb:		0l,		$
-	nyb:		0l,		$
-	nzb:		0l,		$
-	nb:		0l,		$
-        crdsys:        'xyz',           $
-	xmin:		0.0,		$
-	xmax:		0.0,		$
-	ymin:		0.0,		$
-	ymax:		0.0,		$
-	zmin:		0.0,		$
-	zmax:		0.0,		$
-        pxsize:		0l,		$
-        pysize:		0l,		$
-        pzsize:		0l,		$
-	domain:		'',		$
-        problem_name:	'',		$
-	run_id:		''		}
+   a = { time:          0.0,  $
+         timestep:      0.0,  $
+         nstep:         0l,   $
+         nxd:           0l,   $
+         nyd:           0l,   $
+         nzd:           0l,   $
+         nxb:           0l,   $
+         nyb:           0l,   $
+         nzb:           0l,   $
+         nb:            0l,   $
+         crdsys:        'xyz',$
+         xmin:          0.0,  $
+         xmax:          0.0,  $
+         ymin:          0.0,  $
+         ymax:          0.0,  $
+         zmin:          0.0,  $
+         zmax:          0.0,  $
+         pxsize:        0l,   $
+         pysize:        0l,   $
+         pzsize:        0l,   $
+         domain:        '',   $
+         problem_name:  '',   $
+         run_id:        ''      }
 
    file_id = H5F_OPEN(file)
 
@@ -120,12 +120,12 @@ function read_attr_h5, file
    H5A_CLOSE,attr
 
    problem_name = ''
-   attr = H5A_OPEN_NAME(file_id, "problem name")
+   attr = H5A_OPEN_NAME(file_id, "problem_name")
    a.problem_name = H5A_READ(attr)
    H5A_CLOSE,attr
 
    run_id = ''
-   attr = H5A_OPEN_NAME(file_id, "run id")
+   attr = H5A_OPEN_NAME(file_id, "run_id")
    a.run_id = H5A_READ(attr)
    H5A_CLOSE,attr
 
