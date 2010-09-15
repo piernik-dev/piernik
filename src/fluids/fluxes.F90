@@ -73,21 +73,23 @@ contains
 !! \param bb magnetic field x,y,z-components table
 !! \param n number of cells in the current sweep
 !<
-subroutine all_fluxes(flux,cfr,uu,bb,n,cs_iso2)
+subroutine all_fluxes(n, flux, cfr, uu, bb, cs_iso2)
 
-    use fluidindex, only : nvar
-
-    use fluidindex, only : nmag
+    use fluidindex, only : nvar, nmag
 
     implicit none
-    integer                      :: n
-    real, dimension(nvar%all,n)  :: flux,uu,cfr
-    real, dimension(nmag,n)      :: bb
-    real, dimension(n)           :: vion
-    real, dimension(n), optional :: cs_iso2
+
+    integer,                      intent(in)  :: n
+    real, dimension(nvar%all,n),  intent(out) :: flux, cfr, uu
+    real, dimension(nmag,n),      intent(in)  :: bb
+    real, dimension(n), optional, intent(in)  :: cs_iso2
+
+    real, dimension(n)              :: vion
 
 #ifdef IONIZED
     real, dimension(nvar%ion%all,n) :: fluxion,cfrion,uuion
+#else
+    integer :: dummy
 #endif /* IONIZED */
 
 #ifdef NEUTRAL
@@ -112,6 +114,8 @@ subroutine all_fluxes(flux,cfr,uu,bb,n,cs_iso2)
    flux(iarr_ion,:) = fluxion
    cfr(iarr_ion,:)  = cfrion
    uu(iarr_ion,:)   = uuion
+#else
+   if (.false.) dummy = size(bb)*size(cs_iso2) ! suppress compiler warnings on unused arguments
 #endif /* IONIZED */
 
 #ifdef NEUTRAL

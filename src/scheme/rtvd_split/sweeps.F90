@@ -125,7 +125,7 @@ module sweeps     ! split sweeps
 
         u_x(iarr_all_swpx,:)=u(:,:,j,k)
 
-        call relaxing_tvd(u_x,b_x,'xsweep',j,k,dx,nx,dt)
+        call relaxing_tvd(nx, u_x, b_x, 'xsweep', j, k, dx, dt)
         u(:,:,j,k)=u_x(iarr_all_swpx,:)
       end do
     end do
@@ -179,7 +179,7 @@ module sweeps     ! split sweeps
 
         u_y(iarr_all_swpy,:)=u(:,i,:,k)
 
-        call relaxing_tvd(u_y,b_y,'ysweep',k,i,dy,ny,dt)
+        call relaxing_tvd(ny, u_y, b_y, 'ysweep', k, i, dy, dt)
         u(:,i,:,k)=u_y(iarr_all_swpy,:)
 
       end do
@@ -235,7 +235,7 @@ module sweeps     ! split sweeps
 
         u_z(iarr_all_swpz,:)=u(:,i,j,:)
 
-        call relaxing_tvd(u_z,b_z,'zsweep',i,j,dz,nz,dt)
+        call relaxing_tvd(nz, u_z, b_z, 'zsweep', i, j, dz, dt)
         u(:,i,j,:)=u_z(iarr_all_swpz,:)
       end do
     end do

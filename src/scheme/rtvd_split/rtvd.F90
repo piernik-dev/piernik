@@ -213,7 +213,7 @@ module rtvd ! split orig
 !! The Total Variation Diminishing property of the numerical scheme is related to the measure of the overall amount
 !! of oscillations, called Total Variation.
 !<
-   subroutine relaxing_tvd(u,bb,sweep,i1,i2,dx,n,dt)
+   subroutine relaxing_tvd(n, u, bb, sweep, i1, i2, dx, dt)
 
       use mpisetup,        only : smalld, integration_order
       use fluxes,          only : flimiter,all_fluxes
@@ -254,21 +254,22 @@ module rtvd ! split orig
 
       implicit none
 
-      integer                        :: i1                 !< coordinate of sweep in the 1st remaining direction
-      integer                        :: i2                 !< coordinate of sweep in the 2nd remaining direction
-      integer                        :: n                  !< array size
+      integer,                     intent(in)  :: n                  !< array size
+      real, dimension(nvar%all,n), intent(out) :: u                  !< vector of conservative vatiables
+      real, dimension(nmag,n),     intent(in)  :: bb                 !< local copy of magnetic field
+      character(len=6),            intent(in)  :: sweep              !< direction (x, y or z) we are doing calculations for
+      integer,                     intent(in)  :: i1                 !< coordinate of sweep in the 1st remaining direction
+      integer,                     intent(in)  :: i2                 !< coordinate of sweep in the 2nd remaining direction
+      real,                        intent(in)  :: dx                 !< cell length
+      real,                        intent(in)  :: dt                 !< time step
+
       integer                        :: istep              !< step number in the time integration scheme
 #if defined GRAV || defined SHEAR || defined FLUID_INTERACTIONS
       integer                        :: ind                !< fluid index
 #endif /* defined GRAV || defined SHEAR || defined FLUID_INTERACTIONS */
-      character(len=6)               :: sweep              !< direction (x, y or z) we are doing calculations for
 
-      real                           :: dt                 !< time step
-      real                           :: dx                 !< cell length
       real                           :: dtx                !< dt/dx
-      real, dimension(nvar%all,n)    :: u                  !< vector of conservative vatiables
       real, dimension(nvar%all,n)    :: cfr                !< freezing speed
-      real, dimension(nmag,n)        :: bb                 !< local copy of magnetic field
 #if defined GRAV || defined SHEAR || defined FLUID_INTERACTIONS
       real, dimension(nvar%fluids,n) :: acc                !< acceleration
 #endif /* defined GRAV || defined SHEAR || defined FLUID_INTERACTIONS */
@@ -323,6 +324,14 @@ module rtvd ! split orig
 
       real, dimension(2,2), parameter:: rk2coef = RESHAPE( (/1.0,0.5,0.0,1.0/),(/2,2/))
 
+#if !defined(ISO_LOCAL) && !defined(GRAV) && ! defined(FLUID_INTERACTIONS_DW) && !(defined COSM_RAYS && defined IONIZED)
+      integer                        :: dummy
+      if (.false.) dummy = i1 + i2 ! suppress compiler warnings on unused arguments
+#endif
+#if !defined(ISO_LOCAL) && !defined(SHEAR) && !defined(GRAV) && ! defined(FLUID_INTERACTIONS_DW) && !(defined COSM_RAYS && defined IONIZED)
+      if (.false.) dummy = len(sweep)
+#endif
+
       w         = 0.0
       cfr       = 0.0
       dtx       = dt / dx
@@ -343,9 +352,9 @@ module rtvd ! split orig
 
 ! Fluxes calculation for cells centers
 #ifndef ISO_LOCAL
-         call all_fluxes(w,cfr,u1,bb,n)
+         call all_fluxes(n, w, cfr, u1, bb)
 #else /* ISO_LOCAL */
-         call all_fluxes(w,cfr,u1,bb,n,cs_iso2)
+         call all_fluxes(n, w, cfr, u1, bb, cs_iso2)
 #endif /* ISO_LOCAL */
 ! Right and left fluxes decoupling
 
