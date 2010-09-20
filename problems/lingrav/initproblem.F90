@@ -34,15 +34,6 @@ module initproblem
 ! Written by: M. Hanasz, February 2006
 ! Modified by M.Hanasz for CR-driven dynamo
 
-   use arrays
-   use mpisetup
-   use grid
-   use initionized
-   use fluidindex, only : ibx,iby,ibz
-   use hydrostatic, only : hydrostatic_zeq
-#ifdef SHEAR
-   use shear, only : qshear, omega
-#endif /* SHEAR */
    use problem_pub, only: problem_name, run_id
 
    real :: d0, bxn,byn,bzn, alpha
@@ -54,10 +45,16 @@ module initproblem
 !-----------------------------------------------------------------------------
 
    subroutine read_problem_par
-      use mpisetup
-      use errh, only : namelist_errh
+      use errh,     only : namelist_errh
+      use mpisetup, only : cbuff, ibuff, rbuff, buffer_dim, proc, comm, ierr, &
+                           mpi_character, mpi_double_precision, mpi_integer, cwd
+
       implicit none
       integer :: ierrh
+      character(LEN=100) :: par_file, tmp_log_file
+
+      par_file = trim(cwd)//'/problem.par'
+      tmp_log_file = trim(cwd)//'/tmp.log'
 
       problem_name = 'xxx'
       run_id  = 'aaa'
@@ -67,11 +64,11 @@ module initproblem
       bzn    = 0.0
 
       if(proc == 0) then
-         open(1,file='problem.par')
-            read(unit=1,nml=PROBLEM_CONTROL,iostat=ierrh)
-            call namelist_errh(ierrh,'PROBLEM_CONTROL')
+         open(1,file=par_file)
+         read(unit=1,nml=PROBLEM_CONTROL,iostat=ierrh)
+         call namelist_errh(ierrh,'PROBLEM_CONTROL')
          close(1)
-         open(3, file='tmp.log', position='append')
+         open(3, file=tmp_log_file, position='append')
          write(3,nml=PROBLEM_CONTROL)
          write(3,*)
          close(3)
@@ -99,7 +96,7 @@ module initproblem
          call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
          problem_name = cbuff(1)
-         run_id       = cbuff(2)
+         run_id       = cbuff(2)(1:3)
 
          d0           = rbuff(1)
          bxn          = rbuff(2)
@@ -115,7 +112,16 @@ module initproblem
 !-----------------------------------------------------------------------------
 
    subroutine init_prob
-      use initfluids, only : cs_iso2
+      use arrays,      only : u, b, dprof
+      use grid,        only : nx, ny, nz
+      use initfluids,  only : cs_iso2
+      use initionized, only : idni, imxi, imyi, imzi
+      use fluidindex,  only : ibx, iby, ibz
+      use hydrostatic, only : hydrostatic_zeq
+      use mpisetup,    only : smalld
+#ifdef SHEAR
+      use shear,       only : qshear, omega
+#endif /* SHEAR */
 
       implicit none
 

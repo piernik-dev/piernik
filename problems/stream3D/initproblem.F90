@@ -32,7 +32,6 @@ module initproblem
 ! Initial condition for Keplerian disk
 ! Written by: M. Hanasz, March 2006
 
-   use mpisetup
    use problem_pub, only: problem_name, run_id
 
    real    :: sigma0, Rin, R0, HtoR, eps, amp
@@ -47,7 +46,15 @@ module initproblem
 
    subroutine read_problem_par
 
+      use errh,     only : namelist_errh
+      use mpisetup, only : cbuff, ibuff, rbuff, buffer_dim, proc, comm, ierr, &
+                           mpi_character, mpi_double_precision, mpi_integer
       implicit none
+      integer :: ierrh
+      character(LEN=100) :: par_file, tmp_log_file
+
+      par_file = trim(cwd)//'/problem.par'
+      tmp_log_file = trim(cwd)//'/tmp.log'
 
       problem_name = 'stream_3D'
       run_id  = 'ts1'
@@ -60,11 +67,11 @@ module initproblem
       amp     = 1.e-5
 
       if(proc .eq. 0) then
-         open(1,file='problem.par')
-         read(unit=1,nml=PROBLEM_CONTROL)
+         open(1,file=par_file)
+         read(unit=1,nml=PROBLEM_CONTROL,iostat=ierrh)
          write(*,nml=PROBLEM_CONTROL)
          close(1)
-         open(3, file='tmp.log', position='append')
+         open(3, file=tmp_log_file, position='append')
          write(3,nml=PROBLEM_CONTROL)
          write(3,*)
          close(3)
@@ -94,7 +101,7 @@ module initproblem
          call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
          problem_name = cbuff(1)
-         run_id       = cbuff(2)
+         run_id       = cbuff(2)(1:3)
          sigma_model  = cbuff(3)
 
          sigma0       = rbuff(1)
@@ -125,8 +132,10 @@ module initproblem
       use initneutral, only : idnn, imxn, imyn, imzn
       use initdust,    only : idnd, imxd, imyd, imzd
       use initfluids,  only : cs_iso_neu, cs_iso_neu2
+      use mpisetup,    only : smalld
 #ifndef ISO
       use initneutral, only : ienn, gamma_neu
+      use mpisetup,    only : smallei
 #endif /* !ISO */
       implicit none
 

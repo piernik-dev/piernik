@@ -67,7 +67,7 @@ contains
 !                n_sn, dt_sn
 
       problem_name = cbuff(1)
-      run_id       = cbuff(2)
+      run_id       = cbuff(2)(1:3)
 
       d0           = rbuff(1)
       Mrms         = rbuff(2)

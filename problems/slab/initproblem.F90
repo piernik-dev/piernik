@@ -29,14 +29,6 @@
 
 module initproblem
 
-   use arrays,       only : u,b
-   use grid,         only : x,y,z,nx,ny,nz
-   use initionized,  only : idni,imxi,imyi,imzi
-#ifndef ISO
-   use initionized,  only : ieni, gamma_ion
-#endif /* ISO */
-   use shear,        only : qshear, omega
-   use mpisetup
    use problem_pub, only: problem_name, run_id
 
    real :: d0,r0,bx0,by0,bz0
@@ -51,7 +43,15 @@ module initproblem
 
    subroutine read_problem_par
 
+      use errh,     only : namelist_errh
+      use mpisetup, only : cbuff, ibuff, rbuff, buffer_dim, proc, comm, ierr, cwd, &
+                           mpi_character, mpi_double_precision, mpi_integer
       implicit none
+      integer :: ierrh
+      character(LEN=100) :: par_file, tmp_log_file
+
+      par_file = trim(cwd)//'/problem.par'
+      tmp_log_file = trim(cwd)//'/tmp.log'
 
       problem_name = 'slab'
       run_id  = 'tst'
@@ -59,11 +59,11 @@ module initproblem
       r0      = 0.25
 
       if(proc .eq. 0) then
-         open(1,file='problem.par')
-         read(unit=1,nml=PROBLEM_CONTROL)
+         open(1,file=par_file)
+         read(unit=1,nml=PROBLEM_CONTROL,iostat=ierrh)
          write(*,nml=PROBLEM_CONTROL)
          close(1)
-         open(3, file='tmp.log', position='append')
+         open(3, file=tmp_log_file, position='append')
          write(3,nml=PROBLEM_CONTROL)
          write(3,*)
          close(3)
@@ -91,7 +91,7 @@ module initproblem
          call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
          problem_name = cbuff(1)
-         run_id       = cbuff(2)
+         run_id       = cbuff(2)(1:3)
 
          d0           = rbuff(1)
          r0           = rbuff(2)
@@ -107,6 +107,14 @@ module initproblem
 
    subroutine init_prob
 
+      use arrays,       only : u,b
+      use grid,         only : x,y,z,nx,ny,nz
+      use initionized,  only : idni,imxi,imyi,imzi
+#ifndef ISO
+      use initionized,  only : ieni, gamma_ion
+      use mpisetup,     only : smallei
+#endif /* ISO */
+      use shear,        only : qshear, omega
       implicit none
 
       integer  :: i,j,k

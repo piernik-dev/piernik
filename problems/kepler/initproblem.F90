@@ -32,7 +32,6 @@ module initproblem
 ! Initial condition for Keplerian disk
 ! Written by: M. Hanasz, March 2006
 
-   use mpisetup
    use problem_pub, only: problem_name, run_id
 
    real :: d0, r_max, dout, alpha
@@ -46,8 +45,15 @@ module initproblem
 !-----------------------------------------------------------------------------
 
    subroutine read_problem_par
-
+      use errh,     only : namelist_errh
+      use mpisetup, only : cbuff, ibuff, rbuff, buffer_dim, proc, comm, ierr, &
+                           mpi_character, mpi_double_precision, mpi_integer, cwd
       implicit none
+      integer            :: ierrh
+      character(len=100) :: par_file, tmp_file
+
+      par_file = trim(cwd)//'/problem.par'
+      tmp_file = trim(cwd)//'/tmp.log'
 
       problem_name = 'aaa'
       run_id  = 'aa'
@@ -58,11 +64,12 @@ module initproblem
       alpha   = 1.0
 
       if(proc .eq. 0) then
-         open(1,file='problem.par')
-         read(unit=1,nml=PROBLEM_CONTROL)
+         open(1,file=par_file)
+         read(unit=1,nml=PROBLEM_CONTROL,iostat=ierrh)
+         call namelist_errh(ierrh,'PROBLEM_CONTROL')
          write(*,nml=PROBLEM_CONTROL)
          close(1)
-         open(3, file='tmp.log', position='append')
+         open(3, file=tmp_file, position='append')
          write(3,nml=PROBLEM_CONTROL)
          write(3,*)
          close(3)
@@ -89,7 +96,7 @@ module initproblem
          call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
          problem_name = cbuff(1)
-         run_id       = cbuff(2)
+         run_id       = cbuff(2)(1:3)
 
          d0           = rbuff(1)
          dout         = rbuff(2)
@@ -114,6 +121,7 @@ module initproblem
 #ifndef ISO
       use initionized, only : ieni, gamma_ion, cs_ion
 #endif /* !ISO */
+      use mpisetup,    only : smalld
       implicit none
 
       integer :: i,j,k,kmid

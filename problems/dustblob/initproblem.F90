@@ -30,7 +30,6 @@
 module initproblem
 
 ! Initial condition for blob test
-   use mpisetup
    use problem_pub, only: problem_name, run_id
 
    real              :: d_gas, p_gas, v_gas, d_dust, v_dust, x0, y0, z0, r0
@@ -43,10 +42,13 @@ module initproblem
 !-----------------------------------------------------------------------------
 
    subroutine read_problem_par
-      use errh, only : namelist_errh
+      use errh,     only : namelist_errh
+      use mpisetup, only : cbuff, ibuff, rbuff, buffer_dim, proc, comm, ierr, &
+                           mpi_character, mpi_double_precision, mpi_integer, cwd
+
       implicit none
-      character(len=100) :: par_file, tmp_log_file
-      integer :: cwd_status, ierrh
+      integer :: ierrh
+      character(LEN=100) :: par_file, tmp_log_file
 
       par_file = trim(cwd)//'/problem.par'
       tmp_log_file = trim(cwd)//'/tmp.log'
@@ -100,7 +102,7 @@ module initproblem
          call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
          problem_name = cbuff(1)
-         run_id       = cbuff(2)
+         run_id       = cbuff(2)(1:3)
 
          d_gas        = rbuff(1)
          p_gas        = rbuff(2)
@@ -123,6 +125,7 @@ module initproblem
       use grid,         only : x,y,z,nx,ny,nz,nzd,ymin,ymax
       use initneutral,  only : gamma_neu,idnn,imxn,imyn,imzn
       use initdust,     only : idnd,imxd,imyd,imzd
+      use mpisetup,     only : smalld
 #ifndef ISO
       use initneutral,  only : ienn
 #endif /* ISO */
