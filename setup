@@ -288,7 +288,7 @@ open(MAKEFILE, "> Makefile-prep");
 #
 #print MAKEFILE @makein;
 print MAKEFILE "SRCS =\t";
-@srcs = <*.F90 *.c>;
+@srcs = <*.c *.F90>;
 &PrintWords(8, 0, @srcs);
 print MAKEFILE "\n\n";
 #
