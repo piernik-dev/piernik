@@ -653,6 +653,8 @@ module dataio_hdf5
       integer                             :: nib=0, nid=0, njb=0, njd=0, nkb=0
       integer                             :: pisize=0, pjsize=0, fe
 
+      real, dimension(1)                  :: timebuffer
+
       rank = 2
       fe = len_trim(chdf%log_file)
       fname = trim(chdf%log_file(1:fe-3)//"plt")
@@ -733,7 +735,8 @@ module dataio_hdf5
             write(dname,'(a3,a4,a1,i4.4)') pij,var,"_",nimg
             call h5ltmake_dataset_double_f(gr2_id, dname, rank, dims, img, error)
             bufsize = 1
-            call h5ltset_attribute_double_f(gr2_id,dname,"time",(/t/),bufsize,error)
+            timebuffer = (/t/)
+            call h5ltset_attribute_double_f(gr2_id,dname,"time",timebuffer,bufsize,error)
             call H5Gclose_f(gr2_id,error)
             call H5Gclose_f(gr_id,error)
             call H5Fclose_f(file_id,error)
@@ -1662,6 +1665,8 @@ module dataio_hdf5
       integer            :: llun, fe, i
       integer(SIZE_T) :: bufsize = 1
       integer :: error
+      integer, allocatable, dimension(:) :: ibuffer
+      real,    allocatable, dimension(:) :: rbuffer
 
       if (proc == 0) then
 
@@ -1671,38 +1676,67 @@ module dataio_hdf5
          call h5fopen_f (filename, H5F_ACC_RDWR_F, file_id, error)
 
          bufsize = 1
+         allocate(ibuffer(14),rbuffer(10))
+         ibuffer = (/chdf%nstep,chdf%nres+1,chdf%nhdf,chdf%ntsl,chdf%nlog,chdf%nstep,chdf%step_hdf,nxd,nyd,nzd,nxb,nyb,nzb,nb/)
+         rbuffer = (/t,dt,chdf%last_hdf_time,xmin,xmax,ymin,ymax,zmin,zmax,piernik_hdf5_version/)
 
          !BEWARE: A memory leak was detected here. h5lt calls use HD5f2cstring and probably sometimes don't free the allocated buffer
-         call h5ltset_attribute_double_f(file_id, "/","time",     [t],           bufsize, error)
-         call h5ltset_attribute_double_f(file_id, "/","timestep", [dt],          bufsize, error)
-         call h5ltset_attribute_int_f(file_id, "/","nstep",       [chdf%nstep],  bufsize, error)
+!         call h5ltset_attribute_double_f(file_id, "/","time",     [t],           bufsize, error)
+!         call h5ltset_attribute_double_f(file_id, "/","timestep", [dt],          bufsize, error)
+!         call h5ltset_attribute_int_f(file_id, "/","nstep",       [chdf%nstep],  bufsize, error)
+         call h5ltset_attribute_double_f(file_id, "/","time",     rbuffer(1),    bufsize, error)
+         call h5ltset_attribute_double_f(file_id, "/","timestep", rbuffer(2),    bufsize, error)
+         call h5ltset_attribute_int_f(file_id, "/","nstep",       ibuffer(1),    bufsize, error)
 
          ! BEWARE: originally the attributes below (from "nres" to "last_hdf_time") did not appear in the restart file
-         call h5ltset_attribute_int_f(file_id, "/", "nres",     [chdf%nres+1],   bufsize, error)
-         call h5ltset_attribute_int_f(file_id, "/", "nhdf",     [chdf%nhdf],     bufsize, error)
-         call h5ltset_attribute_int_f(file_id, "/", "ntsl",     [chdf%ntsl],     bufsize, error)
-         call h5ltset_attribute_int_f(file_id, "/", "nlog",     [chdf%nlog],     bufsize, error)
-         call h5ltset_attribute_int_f(file_id, "/", "step_res", [chdf%nstep],    bufsize, error)
-         call h5ltset_attribute_int_f(file_id, "/", "step_hdf", [chdf%step_hdf], bufsize, error)
+!         call h5ltset_attribute_int_f(file_id, "/", "nres",     [chdf%nres+1],   bufsize, error)
+!         call h5ltset_attribute_int_f(file_id, "/", "nhdf",     [chdf%nhdf],     bufsize, error)
+!         call h5ltset_attribute_int_f(file_id, "/", "ntsl",     [chdf%ntsl],     bufsize, error)
+!         call h5ltset_attribute_int_f(file_id, "/", "nlog",     [chdf%nlog],     bufsize, error)
+!         call h5ltset_attribute_int_f(file_id, "/", "step_res", [chdf%nstep],    bufsize, error)
+!         call h5ltset_attribute_int_f(file_id, "/", "step_hdf", [chdf%step_hdf], bufsize, error)
+         call h5ltset_attribute_int_f(file_id, "/", "nres",     ibuffer(2),      bufsize, error)
+         call h5ltset_attribute_int_f(file_id, "/", "nhdf",     ibuffer(3),      bufsize, error)
+         call h5ltset_attribute_int_f(file_id, "/", "ntsl",     ibuffer(4),      bufsize, error)
+         call h5ltset_attribute_int_f(file_id, "/", "nlog",     ibuffer(5),      bufsize, error)
+         call h5ltset_attribute_int_f(file_id, "/", "step_res", ibuffer(6),      bufsize, error)
+         call h5ltset_attribute_int_f(file_id, "/", "step_hdf", ibuffer(7),      bufsize, error)
 
-         call h5ltset_attribute_double_f(file_id, "/", "last_hdf_time", [chdf%last_hdf_time], bufsize, error)
+!         call h5ltset_attribute_double_f(file_id, "/", "last_hdf_time", [chdf%last_hdf_time], bufsize, error)
+         call h5ltset_attribute_double_f(file_id, "/", "last_hdf_time", rbuffer(3),           bufsize, error)
 
-         call h5ltset_attribute_int_f(file_id, "/", "nxd", [nxd], bufsize, error)
-         call h5ltset_attribute_int_f(file_id, "/", "nyd", [nyd], bufsize, error)
-         call h5ltset_attribute_int_f(file_id, "/", "nzd", [nzd], bufsize, error)
-         call h5ltset_attribute_int_f(file_id, "/", "nxb", [nxb], bufsize, error)
-         call h5ltset_attribute_int_f(file_id, "/", "nyb", [nyb], bufsize, error)
-         call h5ltset_attribute_int_f(file_id, "/", "nzb", [nzb], bufsize, error)
-         call h5ltset_attribute_int_f(file_id, "/", "nb",  [nb],  bufsize, error)
+!         call h5ltset_attribute_int_f(file_id, "/", "nxd", [nxd], bufsize, error)
+!         call h5ltset_attribute_int_f(file_id, "/", "nyd", [nyd], bufsize, error)
+!         call h5ltset_attribute_int_f(file_id, "/", "nzd", [nzd], bufsize, error)
+!         call h5ltset_attribute_int_f(file_id, "/", "nxb", [nxb], bufsize, error)
+!         call h5ltset_attribute_int_f(file_id, "/", "nyb", [nyb], bufsize, error)
+!         call h5ltset_attribute_int_f(file_id, "/", "nzb", [nzb], bufsize, error)
+!         call h5ltset_attribute_int_f(file_id, "/", "nb",  [nb],  bufsize, error)
+         call h5ltset_attribute_int_f(file_id, "/", "nxd", ibuffer(8),  bufsize, error)
+         call h5ltset_attribute_int_f(file_id, "/", "nyd", ibuffer(9),  bufsize, error)
+         call h5ltset_attribute_int_f(file_id, "/", "nzd", ibuffer(10), bufsize, error)
+         call h5ltset_attribute_int_f(file_id, "/", "nxb", ibuffer(11), bufsize, error)
+         call h5ltset_attribute_int_f(file_id, "/", "nyb", ibuffer(12), bufsize, error)
+         call h5ltset_attribute_int_f(file_id, "/", "nzb", ibuffer(13), bufsize, error)
+         call h5ltset_attribute_int_f(file_id, "/", "nb",  ibuffer(14), bufsize, error)
 
-         call h5ltset_attribute_double_f(file_id, "/", "xmin", [xmin], bufsize, error)
-         call h5ltset_attribute_double_f(file_id, "/", "xmax", [xmax], bufsize, error)
-         call h5ltset_attribute_double_f(file_id, "/", "ymin", [ymin], bufsize, error)
-         call h5ltset_attribute_double_f(file_id, "/", "ymax", [ymax], bufsize, error)
-         call h5ltset_attribute_double_f(file_id, "/", "zmin", [zmin], bufsize, error)
-         call h5ltset_attribute_double_f(file_id, "/", "zmax", [zmax], bufsize, error)
+!         call h5ltset_attribute_double_f(file_id, "/", "xmin", [xmin], bufsize, error)
+!         call h5ltset_attribute_double_f(file_id, "/", "xmax", [xmax], bufsize, error)
+!         call h5ltset_attribute_double_f(file_id, "/", "ymin", [ymin], bufsize, error)
+!         call h5ltset_attribute_double_f(file_id, "/", "ymax", [ymax], bufsize, error)
+!         call h5ltset_attribute_double_f(file_id, "/", "zmin", [zmin], bufsize, error)
+!         call h5ltset_attribute_double_f(file_id, "/", "zmax", [zmax], bufsize, error)
+         call h5ltset_attribute_double_f(file_id, "/", "xmin", rbuffer(4), bufsize, error)
+         call h5ltset_attribute_double_f(file_id, "/", "xmax", rbuffer(5), bufsize, error)
+         call h5ltset_attribute_double_f(file_id, "/", "ymin", rbuffer(6), bufsize, error)
+         call h5ltset_attribute_double_f(file_id, "/", "ymax", rbuffer(7), bufsize, error)
+         call h5ltset_attribute_double_f(file_id, "/", "zmin", rbuffer(8), bufsize, error)
+         call h5ltset_attribute_double_f(file_id, "/", "zmax", rbuffer(9), bufsize, error)
 
-         call h5ltset_attribute_double_f(file_id, "/", "piernik", [piernik_hdf5_version], bufsize, error)
+!         call h5ltset_attribute_double_f(file_id, "/", "piernik", [piernik_hdf5_version], bufsize, error)
+         call h5ltset_attribute_double_f(file_id, "/", "piernik", rbuffer(10), bufsize, error)
+
+         deallocate(ibuffer,rbuffer)
 
          call H5Gcreate_f(file_id,"file_versions",gr_id,error)
          do i = 1, nenv
