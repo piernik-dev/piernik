@@ -78,6 +78,7 @@ module fluxionized
     use fluidindex,      only : idn, imx, imy, imz, ien
     use fluidindex,      only : nvar
     use initionized,     only : gamma_ion, cs_iso_ion2
+    use mpisetup,        only : cfr_smooth
     use timestepionized, only : c_ion
     use errh,            only : die
 
@@ -96,6 +97,9 @@ module fluxionized
     real, dimension(n), optional :: cs_iso2     !< local isothermal sound speed (optional)
 
 #ifdef LOCAL_FR_SPEED
+    real :: minvx                               !<
+    real :: maxvx                               !<
+    real :: amp                                 !<
     real, dimension(n) :: c_fr                  !< temporary array for freezing speed
     integer :: i
 #endif /* LOCAL_FR_SPEED */
@@ -143,15 +147,21 @@ module fluxionized
 !       The freezing speed is now computed locally (in each cell)
 !       as in Trac & Pen (2003). This ensures much sharper shocks,
 !       but sometimes may lead to numerical instabilities
-    c_fr = 0.0
+    minvx = minval(vx(RNG))
+    maxvx = maxval(vx(RNG))
+    amp   = 0.5*(maxvx-minvx)
+    c_fr  = 0.0
 #ifdef ISO
-    c_fr(RNG) = abs(vx(RNG)) + max(sqrt( abs(2.0*pmag(RNG) +           p(RNG))/uui(idn,RNG)),small)
+    cfri(1,RNG) = sqrt(vx(RNG)**2+cfr_smooth*amp) + max(sqrt( abs(2.0*pmag(RNG) +           p(RNG))/uui(idn,RNG)),small)
 #else /* ISO */
-    c_fr(RNG) = abs(vx(RNG)) + max(sqrt( abs(2.0*pmag(RNG) + gamma_ion*p(RNG))/uui(idn,RNG)),small)
+    cfri(1,RNG) = sqrt(vx(RNG)**2+cfr_smooth*amp) + max(sqrt( abs(2.0*pmag(RNG) + gamma_ion*p(RNG))/uui(idn,RNG)),small)
 #endif /* ISO */
-    do i = 2,n-1
-       cfri(1,i) = maxval( [c_fr(i-1), c_fr(i), c_fr(i+1)] )
-    enddo
+!BEWARE: that is the cause of fast decreasing of timestep in galactic disk problem
+!TODO: find why is it so
+!if such a treatment is OK then should be applied also in both cases of neutral and ionized gas
+!    do i = 2,n-1
+!       cfri(1,i) = maxval( [c_fr(i-1), c_fr(i), c_fr(i+1)] )
+!    enddo
 
     cfri(1,1) = cfri(1,2)
     cfri(1,n) = cfri(1,n-1)

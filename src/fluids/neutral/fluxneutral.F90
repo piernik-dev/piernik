@@ -92,6 +92,8 @@ module fluxneutral
     real :: minvx                               !<
     real :: maxvx                               !<
     real :: amp                                 !<
+    real, dimension(n) :: c_fr                  !< temporary array for freezing speed
+    integer :: i
 #endif /* LOCAL_FR_SPEED */
 
     fluxn   = 0.0
@@ -126,11 +128,19 @@ module fluxneutral
     minvx = minval(vx(RNG))
     maxvx = maxval(vx(RNG))
     amp   = 0.5*(maxvx-minvx)
+    c_fr  = 0.0
 #ifdef ISO
     cfrn(1,RNG) = sqrt(vx(RNG)**2+cfr_smooth*amp) + max(sqrt( abs(          p(RNG))/uun(idn,RNG)),small)
 #else /* ISO */
     cfrn(1,RNG) = sqrt(vx(RNG)**2+cfr_smooth*amp) + max(sqrt( abs(gamma_neu*p(RNG))/uun(idn,RNG)),small)
 #endif /* ISO */
+!BEWARE: that is the cause of fast decreasing of timestep in galactic disk problem
+!TODO: find why is it so
+!if such a treatment is OK then should be applied also in both cases of neutral and ionized gas
+!    do i = 2,n-1
+!       cfrn(1,i) = maxval( [c_fr(i-1), c_fr(i), c_fr(i+1)] )
+!    enddo
+
     cfrn(1,1) = cfrn(1,2)
     cfrn(1,n) = cfrn(1,n-1)
     cfrn = spread(cfrn(1,:),1,nvar%neu%all)
