@@ -182,7 +182,7 @@ module initproblem
                u(ieni,i,j,k)      = u(ieni,i,j,k) &
                                     + 0.5*sum(u(imxi:imzi,i,j,k)**2,1)/u(idni,i,j,k)
                u(ieni,i,j,k)      = u(ieni,i,j,k) + 0.5*sum(b(:,i,j,k)**2,1)
-#endif /* ISO */
+#endif /* !ISO */
 
 #ifdef COSM_RAYS
                u(iarr_crn(:),i,j,k) =  beta_cr*cs_iso**2 * u(idni,i,j,k)/(gamma_crn(1)-1.0)

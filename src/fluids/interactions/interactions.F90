@@ -201,7 +201,7 @@ module interactions
       enddo
 #ifndef ISO
       du(iarr_all_en(1:nvar%adiab),:)=uu(iarr_all_mx(1:nvar%adiab),:)*colls(1:nvar%adiab,:)
-#endif /* ISO */
+#endif /* !ISO */
       du(iarr_all_mx,:)=colls
 
    end subroutine dragforce

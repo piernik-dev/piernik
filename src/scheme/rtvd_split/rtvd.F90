@@ -223,7 +223,7 @@ module rtvd ! split orig
 #ifndef ISO
       use fluidindex,      only : iarr_all_en
       use mpisetup,        only : smallei
-#endif /* ISO */
+#endif /* !ISO */
 
 #ifdef GRAV
       use gravity,         only : grav_pot2accel
@@ -294,7 +294,7 @@ module rtvd ! split orig
       real, dimension(n)             :: gravacc            !< acceleration caused by gravitation
 #ifdef ISO_LOCAL
       real, dimension(n)             :: cs_iso2            !< square of local isothermal sound speed (optional for ISO_LOCAL)
-#endif
+#endif /* ISO_LOCAL */
 
 #ifdef SHEAR
       real, dimension(nvar%fluids,n) :: vy0
@@ -311,8 +311,8 @@ module rtvd ! split orig
       real, dimension(nvar%fluids,n) :: ekin,eint
 #if defined IONIZED && defined MAGNETIC
       real, dimension(n)             :: emag
-#endif
-#endif /* ISO */
+#endif /* IONIZED && MAGNETIC */
+#endif /* !ISO */
 #ifdef COSM_RAYS
       real, dimension(n)             :: divv,grad_pcr,ecr
       real, dimension(n)             :: decr
@@ -327,10 +327,10 @@ module rtvd ! split orig
 #if !defined(ISO_LOCAL) && !defined(GRAV) && ! defined(FLUID_INTERACTIONS_DW) && !(defined COSM_RAYS && defined IONIZED)
       integer                        :: dummy
       if (.false.) dummy = i1 + i2 ! suppress compiler warnings on unused arguments
-#endif
+#endif /* !ISO_LOCAL && !GRAV && !FLUID_INTERACTIONS_DW && !(COSM_RAYS && IONIZED) */
 #if !defined(ISO_LOCAL) && !defined(SHEAR) && !defined(GRAV) && ! defined(FLUID_INTERACTIONS_DW) && !(defined COSM_RAYS && defined IONIZED)
       if (.false.) dummy = len(sweep)
-#endif
+#endif /* !ISO_LOCAL && !SHEAR && !GRAV && !FLUID_INTERACTIONS_DW && !(COSM_RAYS && IONIZED) */
 
       w         = 0.0
       cfr       = 0.0
@@ -353,9 +353,9 @@ module rtvd ! split orig
 ! Fluxes calculation for cells centers
 #ifndef ISO_LOCAL
          call all_fluxes(n, w, cfr, u1, bb)
-#else /* ISO_LOCAL */
+#else /* !ISO_LOCAL */
          call all_fluxes(n, w, cfr, u1, bb, cs_iso2)
-#endif /* ISO_LOCAL */
+#endif /* !ISO_LOCAL */
 ! Right and left fluxes decoupling
 
          fr = (u1*cfr+w)*0.5
@@ -409,9 +409,9 @@ module rtvd ! split orig
 #ifdef FLUID_INTERACTIONS
 #ifdef SHEAR
          df = (/global_gradP_neu,0.0/)        ! znacznik1
-#else
+#else /* SHEAR */
          df = 0.0
-#endif
+#endif /* SHEAR */
          epsa(1,:) = dragc_gas_dust * u(iarr_all_dn(2),:)  / u(iarr_all_dn(1),:)
          epsa(2,:) = dragc_gas_dust
          where(u(iarr_all_dn,:) > 0.0)
@@ -456,7 +456,7 @@ module rtvd ! split orig
                rotacc(ind,:) = 0.0
             endif
          enddo
-#else  /* SHEAR */
+#else /* SHEAR */
          rotacc(:,:) = 0.0
 #endif /* SHEAR */
 
@@ -483,7 +483,7 @@ module rtvd ! split orig
          u1(iarr_all_mx,:) = u1(iarr_all_mx,:) + rk2coef(integration_order,istep)*acc(:,:)*u(iarr_all_dn,:)*dt
 #ifndef ISO
          u1(iarr_all_en,:) = u1(iarr_all_en,:) + rk2coef(integration_order,istep)*acc(:,:)*u(iarr_all_mx,:)*dt
-#endif /* ISO */
+#endif /* !ISO */
 
 #endif /* defined GRAV || defined SHEAR || defined FLUID_INTERACTIONS */
 
@@ -518,7 +518,7 @@ module rtvd ! split orig
 #ifndef ISO
          u1(iarr_all_en(nvar%ion%pos),:) = u1(iarr_all_en(nvar%ion%pos),:) &
                               - rk2coef(integration_order,istep)*u1(iarr_all_mx(nvar%ion%pos),:)/u1(iarr_all_dn(nvar%ion%pos),:)*grad_pcr*dt
-#endif /* ISO */
+#endif /* !ISO */
          u1(iarr_all_mx(nvar%ion%pos),:) = u1(iarr_all_mx(nvar%ion%pos),:) - rk2coef(integration_order,istep)*grad_pcr*dt
 
 
@@ -546,7 +546,7 @@ module rtvd ! split orig
 #if defined IONIZED && defined MAGNETIC
          u1(iarr_all_en(nvar%ion%pos),:) = u1(iarr_all_en(nvar%ion%pos),:)+emag
 #endif /* IONIZED && MAGNETIC */
-#endif /* ISO */
+#endif /* !ISO */
 #endif /*  defined IONIZED || defined NEUTRAL  */
 
          u(:,:) = u1(:,:)

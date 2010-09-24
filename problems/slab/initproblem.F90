@@ -113,7 +113,7 @@ module initproblem
 #ifndef ISO
       use initionized,  only : ieni, gamma_ion
       use mpisetup,     only : smallei
-#endif /* ISO */
+#endif /* !ISO */
       use shear,        only : qshear, omega
       implicit none
 
@@ -135,9 +135,9 @@ module initproblem
                vx = 0.0
 #ifndef FFTW
                vy = -qshear*omega*xi
-#else  /* FFTW */
+#else /* !FFTW */
                vy = 0.0
-#endif /* FFTW */
+#endif /* !FFTW */
                vz = 0.0
                if(abs(yj) <= r0 ) then
                   u(idni,i,j,k) = d0
@@ -152,14 +152,14 @@ module initproblem
                u(ieni,i,j,k) = 1.0/(gamma_ion-1.0)!*u(idni,i,j,k)
                u(ieni,i,j,k) = max(u(ieni,i,j,k), smallei)
                u(ieni,i,j,k) = u(ieni,i,j,k) +0.5*(vx**2+vy**2+vz**2)*u(idni,i,j,k)
-#endif /* ISO */
+#endif /* !ISO */
                b(1,i,j,k)   =  bx0
                b(2,i,j,k)   =  by0
                b(3,i,j,k)   =  bz0
 
 #ifndef ISO
                u(ieni,i,j,k)   = u(ieni,i,j,k) +0.5*sum(b(:,i,j,k)**2,1)
-#endif /* ISO */
+#endif /* !ISO */
             enddo
          enddo
       enddo

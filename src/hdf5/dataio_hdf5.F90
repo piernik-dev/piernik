@@ -106,10 +106,10 @@ module dataio_hdf5
       real, intent(in)    :: tdt_plt !< local copy of dataio::dt_plt
 
       integer :: nvars, i, j
-#ifdef COSM_RAYS
+#if defined COSM_RAYS && !defined NEW_HDF5
       integer :: k
       character(len=4) :: aux
-#endif
+#endif /* COSM_RAYS && !NEW_HDF5 */
 
       ix = tix; iy = tiy; iz = tiz; dt_plt = tdt_plt
 
@@ -171,7 +171,7 @@ module dataio_hdf5
 #ifndef NEW_HDF5
             case ('encr')
                nhdf_vars = nhdf_vars + SIZE(iarr_all_crs,1)
-#endif /* NEW_HDF5 */
+#endif /* !NEW_HDF5 */
 #endif /* COSM_RAYS */
             case ('pres')
                nhdf_vars = nhdf_vars + 1
@@ -240,7 +240,7 @@ module dataio_hdf5
                   write(aux,'(A3,I1)') 'ecr',k
                   hdf_vars(j) = aux ; j = j + 1
                enddo
-#endif /* NEW_HDF5 */
+#endif /* !NEW_HDF5 */
 #endif /* COSM_RAYS */
 #ifdef GRAV
             case ('gpot')
@@ -253,10 +253,10 @@ module dataio_hdf5
             case ('pres')
 #ifdef NEUTRAL
                hdf_vars(j) = 'pren' ; j = j + 1
-#endif
+#endif /* NEUTRAL */
 #ifdef IONIZED
                hdf_vars(j) = 'prei' ; j = j + 1
-#endif
+#endif /* IONIZED */
          end select
       enddo
 
@@ -284,7 +284,7 @@ module dataio_hdf5
       use arrays,       only: u, b
 #ifdef GRAV
       use arrays,       only: gpot
-#endif
+#endif /* GRAV */
       use fluidindex,   only: ind
 
       implicit none
@@ -376,7 +376,7 @@ module dataio_hdf5
             if(ij=="yz") tab(:,:) = u(ind%enn,xn,nb+1:nyb+nb,nb+1:nzb+nb)
             if(ij=="xz") tab(:,:) = u(ind%enn,nb+1:nxb+nb,xn,nb+1:nzb+nb)
             if(ij=="xy") tab(:,:) = u(ind%enn,nb+1:nxb+nb,nb+1:nyb+nb,xn)
-#else
+#else /* !ISO */
             if(ij=="yz") tab(:,:) = 0.5 * (                     &
                           u(ind%mxn,xn,nb+1:nyb+nb,nb+1:nzb+nb)**2 &
                         + u(ind%myn,xn,nb+1:nyb+nb,nb+1:nzb+nb)**2 &
@@ -392,19 +392,19 @@ module dataio_hdf5
                          +u(ind%myn,nb+1:nxb+nb,nb+1:nyb+nb,xn)**2 &
                          +u(ind%mzn,nb+1:nxb+nb,nb+1:nyb+nb,xn)**2) / &
                              u(ind%dnn,nb+1:nxb+nb,nb+1:nyb+nb,xn)
-#endif /* ISO */
+#endif /* !ISO */
          case ('prei')
 #ifndef ISO
             tab(:,:) = 0.0
-#else
+#else /* !ISO */
             tab(:,:) = 0.0
-#endif
+#endif /* !ISO */
          case ("enei")
 #ifndef ISO
             if(ij=="yz") tab(:,:) = u(ind%eni,xn,nb+1:nyb+nb,nb+1:nzb+nb)
             if(ij=="xz") tab(:,:) = u(ind%eni,nb+1:nxb+nb,xn,nb+1:nzb+nb)
             if(ij=="xy") tab(:,:) = u(ind%eni,nb+1:nxb+nb,nb+1:nyb+nb,xn)
-#else
+#else /* !ISO */
             if(ij=="yz") tab(:,:) = 0.5 * (                     &
                           u(ind%mxi,xn,nb+1:nyb+nb,nb+1:nzb+nb)**2 &
                         + u(ind%myi,xn,nb+1:nyb+nb,nb+1:nzb+nb)**2 &
@@ -420,7 +420,7 @@ module dataio_hdf5
                          +u(ind%myi,nb+1:nxb+nb,nb+1:nyb+nb,xn)**2 &
                          +u(ind%mzi,nb+1:nxb+nb,nb+1:nyb+nb,xn)**2) / &
                              u(ind%dni,nb+1:nxb+nb,nb+1:nyb+nb,xn)
-#endif /* ISO */
+#endif /* !ISO */
 
          case ("magx")
             if(ij=="yz") tab(:,:) = b(ind%bx,xn,nb+1:nyb+nb,nb+1:nzb+nb)
@@ -470,7 +470,7 @@ module dataio_hdf5
 #ifdef COSM_RAYS
       integer :: i
       character(len=3) :: aux
-#endif
+#endif /* COSM_RAYS */
 
       ierrh = 0
 #ifdef COSM_RAYS
@@ -511,7 +511,7 @@ module dataio_hdf5
                                      u(ind%myn,RNG)**2 + &
                                      u(ind%mzn,RNG)**2 ) &
                               / u(ind%dnn,RNG),4)
-#else
+#else /* ISO */
             tab(:,:,:) = real(u(ind%enn,RNG),4)
 #endif /* ISO */
 #ifdef IONIZED
@@ -521,7 +521,7 @@ module dataio_hdf5
                                      u(ind%myi,RNG)**2 + &
                                      u(ind%mzi,RNG)**2 ) &
                               / u(ind%dni,RNG),4)
-#else
+#else /* ISO */
             tab(:,:,:) = real(u(ind%eni,RNG),4)
 #endif /* ISO */
          case("prei")
@@ -530,9 +530,9 @@ module dataio_hdf5
               0.5 *( u(ind%mxi,RNG)**2 + u(ind%myi,RNG)**2 + u(ind%mzi,RNG)**2 ) / u(ind%dni,RNG),4)*(gamma_ion-1.0)
             tab(:,:,:) = tab(:,:,:) - real( 0.5*(gamma_ion-1.0)*(b(ind%bx,RNG)**2 + &
                b(ind%by,RNG)**2 + b(ind%bz,RNG)**2),4)
-#else
+#else /* !ISO */
             tab = 0.0
-#endif /* ISO */
+#endif /* !ISO */
 #endif /* IONIZED */
          case("magx")
             tab(:,:,:) = real(b(ind%bx,RNG),4)
@@ -1531,7 +1531,7 @@ module dataio_hdf5
 #ifdef MULTIGRID
       call multigrid_write_hdf5(file_id)
 #endif /* MULTIGRID */
-#endif /* NEW_HDF5 */
+#endif /* !NEW_HDF5 */
 #ifdef NEW_HDF5
       call iterate_lhdf5(file_id)
 #endif /* NEW_HDF5 */

@@ -190,7 +190,7 @@ module initproblem
             enddo
          enddo
       enddo
-#endif /* ISO */
+#endif /* !ISO */
 
 ! Explosions
 

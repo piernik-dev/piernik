@@ -127,10 +127,10 @@ module initproblem
       use grid,         only : x,y,z,nx,ny,nz,nzd,ymin,ymax,Lx,Lz
 #ifdef NEUTRAL
       use initneutral,  only : gamma_neu,idnn,imxn,imyn,imzn, cs_iso_neu, eta_gas_neu, csvk
-#endif
+#endif /* NEUTRAL */
 #ifdef DUST
       use initdust,     only : idnd,imxd,imyd,imzd, dragc_gas_dust
-#endif
+#endif /* DUST */
       use constants,    only : pi,dpi
       use shear,        only : omega, qshear
 #ifndef ISO
@@ -221,7 +221,7 @@ module initproblem
 #ifndef ISO
                u(ienn,i,j,:) = 1.0/(gamma_neu-1.0)
 #endif /* !ISO */
-#endif
+#endif /* NEUTRAL */
 #ifdef DUST
                u(idnd,i,j,k) = eps*rhog
                u(imxd,i,j,k) = wx * eps*rhog
@@ -263,7 +263,7 @@ module initproblem
              endif
 !-------
 
-#endif
+#endif /* DUST */
             enddo
          enddo
       enddo

@@ -233,7 +233,7 @@ module constants
    real, parameter :: Msun        = 10.                      !< mass of Sun
    real, parameter :: gram        = Msun/MSUN_G              !< gram, mass unit
    real, parameter :: kg          = 1.0e3*gram               !< kilogram, mass unit
-#else
+#else /* PSM, KSG, PGM, SSY, SI, CGS */
 #define SCALED
 #endif /* PSM, KSG, PGM, SSY, SI, CGS */
 
@@ -242,7 +242,7 @@ module constants
    real, parameter :: km         = 1.0e5*cm                 !< kilometer, length unit
 #ifndef PLN
    real, parameter :: au         = AU_CM*cm                 !< astronomical unit (length unit)
-#endif /* PLN */
+#endif /* !PLN */
    real, parameter :: kpc        = 1000.0*pc                !< kiloparsec, length unit
    real, parameter :: lyr        = 9.4605e17*cm             !< light year, length unit
 ! time units:
@@ -274,11 +274,11 @@ module constants
 #ifdef __PGI__
  ! BEWARE: pgf95 does not accept sqrt intrinsic here. The __PGI__ macro has to be defined manually, e.g. in appropriate compiler.in file
  !   real :: Gs, mGs, Tesla
-#else
+#else /* __PGI__ */
    real, parameter :: Gs         = sqrt(4.*pi*gram/cm)/sek  !< 1 Gs (cgs magnetic induction unit)
    real, parameter :: mGs        = Gs*1.e-6                 !< 1 microgauss
    real, parameter :: Tesla      = 1.e4*Gs                  !< 1 T (SI magnetic induction unit)
-#endif
+#endif /* __PGI__ */
 #ifdef PGM
    real, parameter :: newtong    = G_one                    !< Newtonian constant of gravitation (equal to G_one while PGM defined)
 #else /* PGM */
@@ -293,7 +293,7 @@ module constants
    real, parameter :: Mearth     = 5.977e27*gram            !< mass of Earth
    real, parameter :: earthradius= 6378.17*km               !< radius of Earth
 
-#else /* SCALED */
+#else /* !SCALED */
 !>
 !! \todo to check validity of declaration in SCALED units following constants: sek, cm, pc, kpc (e.g. to find coincidence with another unit system)
 !<
@@ -313,6 +313,6 @@ module constants
    real, parameter :: kpc        = 1000.0                   !< kiloparsec expressed in units of parsec
    real, parameter :: r_gc_sun   = 8500                     !< Sun distance from the Galaxy Center expressed in parsecs
 
-#endif /* SCALED */
+#endif /* !SCALED */
 
 end module constants

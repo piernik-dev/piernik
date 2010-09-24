@@ -142,7 +142,7 @@ module initproblem
 #ifndef ISO
       use initionized,  only : ieni, gamma_ion
       use mpisetup,     only : smallei
-#endif /* ISO */
+#endif /* !ISO */
       implicit none
 
       integer  :: i,j,k
@@ -189,14 +189,14 @@ module initproblem
                u(ieni,i,j,k) = pre ! pre here means eint
                u(ieni,i,j,k) = max(u(ieni,i,j,k), smallei)
                u(ieni,i,j,k) = u(ieni,i,j,k) +0.5*(vx**2+vy**2+vz**2)*u(idni,i,j,k)
-#endif /* ISO */
+#endif /* !ISO */
                b(1,i,j,k)   =  bx
                b(2,i,j,k)   =  by
                b(3,i,j,k)   =  bz
 
 #ifndef ISO
                u(ieni,i,j,k)   = u(ieni,i,j,k) +0.5*sum(b(:,i,j,k)**2,1)
-#endif /* ISO */
+#endif /* !ISO */
             enddo
          enddo
       enddo

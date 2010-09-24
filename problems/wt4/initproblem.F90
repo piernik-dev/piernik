@@ -375,7 +375,7 @@ contains
 
 #ifndef UMUSCL
       if (proc == 0 ) write(*,'(a)') "[initproblem:init_problem]: Warning: without UMUSCL you'll likely get Monet-like density maps."
-#endif
+#endif /* !UMUSCL */
 
       return
    end subroutine init_prob
@@ -495,7 +495,7 @@ contains
                     u(imzi,     is:ie, j, k) = u(imzi, is:ie, j, k) * (1. - damp_factor   * mod_str(is:ie))
                     cs_iso2_arr(is:ie, j, k) = maxcs2               -  (maxcs2-mincs2)    * mod_str(is:ie)
                  end where
-#else
+#else /* !__IFORT__ */
                  do i = is, ie
                     if (mod_str(i) > max_ambient**(-2)) then
                        u(idni,     i, j, k) = u(idni, i, j, k) + ambient_density_min * mod_str(i)
@@ -505,7 +505,7 @@ contains
                        cs_iso2_arr(i, j, k) = maxcs2           -  (maxcs2-mincs2)    * mod_str(i)
                     end if
                  end do
-#endif
+#endif /* !__IFORT__ */
               end do
            end do
         case(3)

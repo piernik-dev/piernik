@@ -49,7 +49,7 @@ module initionized
     integer               :: idni, imxi, imyi, imzi
 #ifndef ISO
     integer               :: ieni
-#endif /* ISO */
+#endif /* !ISO */
 
     integer, allocatable, dimension(:)  :: iarr_ion
     integer, allocatable, dimension(:)  :: iarr_ion_swpx, iarr_ion_swpy, iarr_ion_swpz
@@ -149,7 +149,7 @@ module initionized
       iarr_ion_swpx = [idni,imxi,imyi,imzi]
       iarr_ion_swpy = [idni,imyi,imxi,imzi]
       iarr_ion_swpz = [idni,imzi,imyi,imxi]
-#else
+#else /* ISO */
       ieni          = nvar + 5
       nvar_ion      = 5
       nvar          = ieni

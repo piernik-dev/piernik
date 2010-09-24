@@ -174,7 +174,7 @@ module initproblem
                u(ieni,i,j,k) = cs_ion**2/(gamma_ion-1.0)*u(idni,i,j,k)
                u(ieni,i,j,k) = max(u(ieni,i,j,k), smallei)
                u(ieni,i,j,k) = u(ieni,i,j,k) +0.5*(vx**2+vy**2+vz**2)*u(idni,i,j,k)
-#endif /* ISO */
+#endif /* !ISO */
                if(trim(mag_field_orient) .eq. 'toroidal') then
                   b(ibx,i,j,k)   = -b0*sqrt(u(idni,i,j,k)/d0)*yj/rc
                   b(iby,i,j,k)   =  b0*sqrt(u(idni,i,j,k)/d0)*xi/rc
@@ -189,7 +189,7 @@ module initproblem
 
 #ifndef ISO
                u(ieni,i,j,k)   = u(ieni,i,j,k) +0.5*sum(b(:,i,j,k)**2,1)
-#endif /* ISO */
+#endif /* !ISO */
             enddo
          enddo
       enddo

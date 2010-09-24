@@ -128,7 +128,7 @@ module initproblem
       use mpisetup,     only : smalld
 #ifndef ISO
       use initneutral,  only : ienn
-#endif /* ISO */
+#endif /* !ISO */
       implicit none
 
       real    :: xi,yj,zk, rc
@@ -162,7 +162,7 @@ module initproblem
 #ifndef ISO
                u(ienn,i,j,:) = p_gas/(gamma_neu-1.0) + 0.5*(u(imxn,i,j,k)**2 + &
                   u(imyn,i,j,k)**2+u(imzn,i,j,k)**2)/u(idnn,i,j,k)
-#endif /* ISO */
+#endif /* !ISO */
             enddo
          enddo
       enddo

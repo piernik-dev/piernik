@@ -94,7 +94,7 @@ contains
 #ifdef SN_SRC
 #ifndef SNE_DISTR
       call random_sn
-#endif /* SNE_DISTR */
+#endif /* !SNE_DISTR */
 #endif /* SN_SRC */
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -267,7 +267,7 @@ contains
 #endif /* MAGNETIC */
 #ifdef COSM_RAYS
                   call cr_diff_z
-#endif  /* COSM_RAYS */
+#endif /* COSM_RAYS */
                end if
             endif
 

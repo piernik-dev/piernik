@@ -212,7 +212,7 @@ module initproblem
             u(ienn,i,j,:) = cs_iso_neu2/(gamma_ion-1.0)*u(idnn,i,j,:)
             u(ienn,i,j,:) = max(u(ienn,i,j,:), smallei)
             u(ienn,i,j,:) = u(ienn,i,j,:) +0.5*(vx**2+vy**2+vz**2)*u(idnn,i,j,:)
-#endif /* ISO */
+#endif /* !ISO */
 
             iOmega = omegad(int(ilook))+(rc-x(int(ilook))*sqrt(2.))*(omegad(int(ilook)+1)-omegad(int(ilook))) &
                          /(x(int(ilook)+1)-x(int(ilook)))/sqrt(2.)

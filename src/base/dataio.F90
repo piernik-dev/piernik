@@ -693,7 +693,7 @@ module dataio
 #endif /* NEUTRAL */
 #ifndef ISO
       use fluidindex,      only : iarr_all_en
-#endif /* ISO */
+#endif /* !ISO */
 
 #ifdef COSM_RAYS
       use fluidindex, only : iarr_all_crs
@@ -720,7 +720,7 @@ module dataio
       real :: mass = 0.0, momx = 0.0, momy = 0.0,  momz = 0.0, &
 #ifndef ISO
               ener = 0.0, &
-#endif /* ISO */
+#endif /* !ISO */
               ekin = 0.0,  emag = 0.0, &
               tot_mass = 0.0, tot_momx = 0.0, tot_momy = 0.0, tot_momz = 0.0, &
               tot_ener = 0.0, tot_eint = 0.0, tot_ekin = 0.0, tot_emag = 0.0, &
@@ -743,10 +743,10 @@ module dataio
 #endif /* IONIZED */
 #ifdef NEUTRAL
       cs_iso2 = cs_iso_neu2
-#else
+#else /* NEUTRAL */
 #ifndef IONIZED
       cs_iso2 = 0.0
-#endif
+#endif /* !IONIZED */
 #endif /* NEUTRAL */
 
 
@@ -777,7 +777,7 @@ module dataio
                                                'deni_min', 'deni_max', 'prei_min', 'prei_max', &
 #ifndef ISO
                                                'temi_min', 'temi_max', &
-#endif /* ISO */
+#endif /* !ISO */
 #endif /* IONIZED */
 
 #ifdef NEUTRAL
@@ -888,7 +888,7 @@ module dataio
                       tsl%deni_min, tsl%deni_max, tsl%prei_min, tsl%prei_max, &
 #ifndef ISO
                       tsl%temi_min, tsl%temi_max, &
-#endif /* ISO */
+#endif /* !ISO */
 #endif /* IONIZED */
 
 #ifdef NEUTRAL
@@ -925,14 +925,14 @@ module dataio
       use initionized,        only : idni,imxi,imyi,imzi
 #ifndef ISO
       use initionized,        only : ieni
-#endif /* ISO */
+#endif /* !ISO */
 #endif /* IONIZED */
 #ifdef NEUTRAL
       use initneutral,        only : gamma_neu, cs_iso_neu,cs_iso_neu2
       use initneutral,        only : idnn,imxn,imyn,imzn
 #ifndef ISO
       use initneutral,        only : ienn
-#endif /* ISO */
+#endif /* !ISO */
 #endif /* NEUTRAL */
 #ifdef DUST
       use initdust,           only : idnd,imxd,imyd,imzd
@@ -1321,7 +1321,7 @@ module dataio
 #ifndef ISO
             write(log_lun,771) 'min(temp)   NEU  =', temn_min%val,  temn_min%proc,  temn_min%loc
             write(log_lun,771) 'max(temp)   NEU  =', temn_max%val,  temn_max%proc,  temn_max%loc
-#endif /* ISO */
+#endif /* !ISO */
             write(log_lun,771) 'min(pres)   NEU  =', pren_min%val,  pren_min%proc,  pren_min%loc
             write(log_lun,771) 'max(pres)   NEU  =', pren_max%val,  pren_max%proc,  pren_max%loc
             write(log_lun,777) 'max(|vx|)   NEU  =', vxn_max%val, 'dt=',cfl*dx/(vxn_max%val+small),   vxn_max%proc, vxn_max%loc

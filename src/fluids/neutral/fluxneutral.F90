@@ -71,30 +71,28 @@ module fluxneutral
 
   subroutine flux_neu(fluxn,cfrn,uun,n)
 
-    use mpisetup,        only : cfr_smooth
     use constants,       only : small
     use fluidindex,      only : idn,imx,imy,imz,ien
     use fluidindex,      only : nvar
-
     use initneutral,     only : gamma_neu, cs_iso_neu2
-
+    use mpisetup,        only : cfr_smooth
 !    use timestepneutral, only : c_neu   ! check which c_xxx is better
     use timestep, only : c_all
 
     implicit none
-    integer :: n                            !< number of cells in the current sweep
+    integer,intent(in) :: n                     !< number of cells in the current sweep
 
 ! locals
-#ifdef LOCAL_FR_SPEED
-    real :: minvx                           !<
-    real :: maxvx                           !<
-    real :: amp                             !<
-#endif
-    real, dimension(nvar%neu%all,n):: fluxn     !< flux for neutral fluid
+    real, dimension(nvar%neu%all,n):: fluxn     !< flux of neutral fluid
     real, dimension(nvar%neu%all,n):: uun       !< part of u for neutral fluid
     real, dimension(nvar%neu%all,n):: cfrn      !< freezing speed for neutral fluid
-    real, dimension(n) :: vx                !< velocity of neutral fluid for current sweep
-    real, dimension(n) :: p                 !< pressure of neutral fluid
+    real, dimension(n) :: vx                    !< velocity of neutral fluid for current sweep
+    real, dimension(n) :: p                     !< pressure of neutral fluid
+#ifdef LOCAL_FR_SPEED
+    real :: minvx                               !<
+    real :: maxvx                               !<
+    real :: amp                                 !<
+#endif /* LOCAL_FR_SPEED */
 
     fluxn   = 0.0
     cfrn    = 0.0
@@ -118,7 +116,7 @@ module fluxneutral
     fluxn(imz,RNG)=uun(imz,RNG)*vx(RNG)
 #ifndef ISO
     fluxn(ien,RNG)=(uun(ien,RNG)+p(RNG))*vx(RNG)
-#endif /* ISO */
+#endif /* !ISO */
 
 #ifdef LOCAL_FR_SPEED
 
@@ -129,12 +127,9 @@ module fluxneutral
     maxvx = maxval(vx(RNG))
     amp   = 0.5*(maxvx-minvx)
 #ifdef ISO
-    cfrn(1,RNG) = sqrt(vx(RNG)**2+cfr_smooth*amp) &
-               + max(sqrt( abs(p(RNG))/uun(idn,RNG)),small)
+    cfrn(1,RNG) = sqrt(vx(RNG)**2+cfr_smooth*amp) + max(sqrt( abs(          p(RNG))/uun(idn,RNG)),small)
 #else /* ISO */
-    cfrn(1,RNG) = sqrt(vx(RNG)**2+cfr_smooth*amp)  &
-               + max(sqrt( abs(gamma_neu*p(RNG) &
-                )/uun(idn,RNG)),small)
+    cfrn(1,RNG) = sqrt(vx(RNG)**2+cfr_smooth*amp) + max(sqrt( abs(gamma_neu*p(RNG))/uun(idn,RNG)),small)
 #endif /* ISO */
     cfrn(1,1) = cfrn(1,2)
     cfrn(1,n) = cfrn(1,n-1)

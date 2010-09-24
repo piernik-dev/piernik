@@ -67,7 +67,7 @@ contains
       use initionized, only : idni,imxi,imyi,imzi
 #ifndef ISO
       use initionized, only : ieni
-#endif /* ISO */
+#endif /* !ISO */
 #ifdef ISO_LOCAL
       use arrays,      only : cs_iso2_arr
 #endif /* ISO_LOCAL */

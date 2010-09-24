@@ -142,7 +142,7 @@ contains
       if (clump_K <= 0.)             call die("[initproblem:read_problem_par] Negative polytropic constant.")
 #ifdef ISO
       call die("[initproblem:read_problem_par] Isothermal EOS not supported.")
-#endif
+#endif /* ISO */
 
       clump_pos_x = (xmax+xmin)/2.
       clump_pos_y = (ymax+ymin)/2.

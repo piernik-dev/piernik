@@ -188,7 +188,7 @@ contains
 #ifndef ISO
       b(:, 1:nx, 1:ny, 1:nz) = 0.0
       u(ieni, 1:nx, 1:ny, 1:nz) = p0/(gamma_ion - 1.0)
-#endif /* ISO */
+#endif /* !ISO */
 
       if (proc == 0) then
          write(*,'(3(a,g12.5),a)')"[initproblem:init_prob] Set up spheroid with a1 and a3 axes = ", a1, ", ", a3, " (eccentricity = ", e, ")"

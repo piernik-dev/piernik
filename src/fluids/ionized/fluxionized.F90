@@ -82,21 +82,23 @@ module fluxionized
     use errh,            only : die
 
     implicit none
-    integer,intent(in) :: n                 !< number of cells in the current sweep
-    real, dimension(nvar%ion%all,n):: fluxi !< flux of ionized fluid
-    real, dimension(nvar%ion%all,n):: uui   !< part of u for ionized fluid
-    real, dimension(nvar%ion%all,n):: cfri  !< freezing speed for ionized fluid
-    real, dimension(nmag,n):: bb            !< magnetic field
-    real, dimension(n) :: vx                !< velocity for current sweep
-    real, dimension(n) :: ps                !< total pressure of ionized fluid
-    real, dimension(n) :: p                 !< thermal pressure of ionized fluid
-    real, dimension(n) :: pmag              !< pressure of magnetic field
-    real, dimension(n), optional :: cs_iso2 !< local isothermal sound speed (optional)
+    integer,intent(in) :: n                     !< number of cells in the current sweep
+
+! locals
+    real, dimension(nvar%ion%all,n):: fluxi     !< flux of ionized fluid
+    real, dimension(nvar%ion%all,n):: uui       !< part of u for ionized fluid
+    real, dimension(nvar%ion%all,n):: cfri      !< freezing speed for ionized fluid
+    real, dimension(nmag,n):: bb                !< magnetic field
+    real, dimension(n) :: vx                    !< velocity of ionized fluid for current sweep
+    real, dimension(n) :: ps                    !< total pressure of ionized fluid
+    real, dimension(n) :: p                     !< thermal pressure of ionized fluid
+    real, dimension(n) :: pmag                  !< pressure of magnetic field
+    real, dimension(n), optional :: cs_iso2     !< local isothermal sound speed (optional)
 
 #ifdef LOCAL_FR_SPEED
-    real, dimension(n) :: c_fr              !< temporary array for freezing speed
+    real, dimension(n) :: c_fr                  !< temporary array for freezing speed
     integer :: i
-#endif
+#endif /* LOCAL_FR_SPEED */
 
     fluxi   = 0.0
     cfri    = 0.0
@@ -104,14 +106,14 @@ module fluxionized
 
 #ifdef MAGNETIC
     pmag(RNG)=0.5*( bb(ibx,RNG)**2 + bb(iby,RNG)**2 +bb(ibz,RNG)**2 )
-#else
+#else /* MAGNETIC */
     pmag(:) = 0.0
-#endif
+#endif /* MAGNETIC */
     vx(RNG)=uui(imx,RNG)/uui(idn,RNG)
 
 #ifndef ISO_LOCAL
     if (present(cs_iso2)) call die("[fluxionized:flux_ion] cs_iso2 should not be present")
-#endif
+#endif /* !ISO_LOCAL */
 
 #ifdef ISO
 #ifdef ISO_LOCAL
@@ -134,7 +136,7 @@ module fluxionized
 #ifndef ISO
     fluxi(ien,RNG)=(uui(ien,RNG)+ps(RNG))*vx(RNG)-bb(ibx,RNG)*(bb(ibx,RNG)*uui(imx,RNG) &
                 +bb(iby,RNG)*uui(imy,RNG)+bb(ibz,RNG)*uui(imz,RNG))/uui(idn,RNG)
-#endif /* ISO */
+#endif /* !ISO */
 
 #ifdef LOCAL_FR_SPEED
 
@@ -143,12 +145,9 @@ module fluxionized
 !       but sometimes may lead to numerical instabilities
     c_fr = 0.0
 #ifdef ISO
-    c_fr(RNG) = abs(vx(RNG)) &
-               + max(sqrt( abs(2.0*pmag(RNG) + p(RNG))/uui(idn,RNG)),small)
+    c_fr(RNG) = abs(vx(RNG)) + max(sqrt( abs(2.0*pmag(RNG) +           p(RNG))/uui(idn,RNG)),small)
 #else /* ISO */
-    c_fr(RNG) = abs(vx(RNG)) &
-               + max(sqrt( abs(2.0*pmag(RNG) + gamma_ion*p(RNG) &
-                )/uui(idn,RNG)),small)
+    c_fr(RNG) = abs(vx(RNG)) + max(sqrt( abs(2.0*pmag(RNG) + gamma_ion*p(RNG))/uui(idn,RNG)),small)
 #endif /* ISO */
     do i = 2,n-1
        cfri(1,i) = maxval( [c_fr(i-1), c_fr(i), c_fr(i+1)] )
@@ -166,6 +165,5 @@ module fluxionized
 #endif /* GLOBAL_FR_SPEED */
 
   end subroutine flux_ion
-
 
 end module fluxionized

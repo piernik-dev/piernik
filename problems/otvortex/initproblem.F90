@@ -34,7 +34,7 @@ module initproblem
    use initionized,  only : idni,imxi,imyi,imzi
 #ifndef ISO
    use initionized,  only : ieni, gamma_ion
-#endif /* ISO */
+#endif /* !ISO */
    use grid,         only : dx,dy
    use constants,    only : pi,dpi,fpi
    use problem_pub, only: problem_name, run_id
@@ -149,14 +149,14 @@ module initproblem
                u(ieni,i,j,k) = pre/(gamma_ion-1.0)
                u(ieni,i,j,k) = max(u(ieni,i,j,k), smallei)
                u(ieni,i,j,k) = u(ieni,i,j,k) +0.5*(vx**2+vy**2+vz**2)*u(idni,i,j,k)
-#endif /* ISO */
+#endif /* !ISO */
                b(1,i,j,k)  = bx
                b(2,i,j,k)  = by
                b(3,i,j,k)  = bz
 
 #ifndef ISO
                u(ieni,i,j,k)   = u(ieni,i,j,k) +0.5*sum(b(:,i,j,k)**2,1)
-#endif /* ISO */
+#endif /* !ISO */
             enddo
          enddo
       enddo

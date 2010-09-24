@@ -65,7 +65,7 @@ contains
     use initneutral, only : idnn,imxn,imyn,imzn
 #ifndef ISO
     use initneutral, only : ienn
-#endif /* ISO */
+#endif /* !ISO */
 
     implicit none
 

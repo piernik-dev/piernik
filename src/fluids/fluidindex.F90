@@ -109,7 +109,7 @@ module fluidindex
       use initionized,    only : idni,imxi,imyi,imzi
 #ifndef ISO
       use initionized,    only : ieni
-#endif /* ISO */
+#endif /* !ISO */
 #endif /* IONIZED */
 
 #ifdef NEUTRAL
@@ -118,7 +118,7 @@ module fluidindex
       use initneutral,    only : idnn,imxn,imyn,imzn
 #ifndef ISO
       use initneutral,    only : ienn
-#endif /* ISO */
+#endif /* !ISO */
 #endif /* NEUTRAL */
 
 #ifdef DUST
@@ -150,7 +150,7 @@ module fluidindex
       if(selfgrav_ion)  nvar%fluids_sg = nvar%fluids_sg + 1
 #ifndef ISO
       nvar%adiab = nvar%adiab + 1
-#endif /* ISO */
+#endif /* !ISO */
 #endif /* IONIZED */
 
 #ifdef NEUTRAL
@@ -164,7 +164,7 @@ module fluidindex
       if(selfgrav_neu)  nvar%fluids_sg = nvar%fluids_sg + 1
 #ifndef ISO
       nvar%adiab = nvar%adiab + 1
-#endif /* ISO */
+#endif /* !ISO */
 #endif /* NEUTRAL */
 
 #ifdef DUST
@@ -202,15 +202,15 @@ module fluidindex
       allocate(iarr_all_sg(nvar%fluids_sg))
 #ifndef ISO
       allocate(iarr_all_en(nvar%adiab))
-#else
+#else /* !ISO */
       allocate(iarr_all_en(0))
-#endif /* ISO */
+#endif /* !ISO */
 
 #ifdef COSM_RAYS
       allocate(iarr_all_crn(nvar%crn%all))
       allocate(iarr_all_cre(nvar%cre%all))
       allocate(iarr_all_crs(nvar%crs%all))
-#else
+#else /* COSM_RAYS */
       allocate(iarr_all_crn(0))
       allocate(iarr_all_cre(0))
       allocate(iarr_all_crs(0))
@@ -241,7 +241,7 @@ module fluidindex
       iarr_all_mz(nvar%ion%pos)      = imzi ; ind%mzi = imzi
 #ifndef ISO
       iarr_all_en(nvar%ion%pos)      = ieni ; ind%eni = ieni
-#endif /* ISO */
+#endif /* !ISO */
 #endif /* IONIZED */
 
 #ifdef NEUTRAL
@@ -260,7 +260,7 @@ module fluidindex
       iarr_all_mz(nvar%neu%pos)      = imzn ; ind%mzn = imzn
 #ifndef ISO
       iarr_all_en(nvar%neu%pos)      = ienn ; ind%enn = ienn
-#endif /* ISO */
+#endif /* !ISO */
 #endif /* NEUTRAL */
 
 #ifdef DUST
@@ -301,10 +301,10 @@ module fluidindex
 
 #ifdef IONIZED
       use initionized,    only : cleanup_ionized
-#endif
+#endif /* IONIZED */
 #ifdef COSM_RAYS
       use initcosmicrays, only : cleanup_cosmicrays
-#endif
+#endif /* COSM_RAYS */
       implicit none
 
 #ifdef IONIZED
@@ -316,16 +316,16 @@ module fluidindex
       deallocate(iarr_all_sg)
 #ifndef ISO
       deallocate(iarr_all_en)
-#else
+#else /* !ISO */
       deallocate(iarr_all_en)
-#endif /* ISO */
+#endif /* !ISO */
 
 #ifdef COSM_RAYS
       deallocate(iarr_all_crn)
       deallocate(iarr_all_cre)
       deallocate(iarr_all_crs)
       call cleanup_cosmicrays
-#else
+#else /* COSM_RAYS */
       deallocate(iarr_all_crn)
       deallocate(iarr_all_cre)
       deallocate(iarr_all_crs)

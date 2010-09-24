@@ -51,7 +51,7 @@ module initneutral
     integer               :: idnn, imxn, imyn, imzn
 #ifndef ISO
     integer               :: ienn
-#endif /* ISO */
+#endif /* !ISO */
 
     integer, allocatable, dimension(:)  :: iarr_neu
     integer, allocatable, dimension(:)  :: iarr_neu_swpx, iarr_neu_swpy, iarr_neu_swpz
@@ -138,7 +138,7 @@ module initneutral
     cs_iso_neu2      = cs_iso_neu**2
 #ifdef SHEAR
     global_gradP_neu = 2.0*omega*eta_gas_neu * cs_iso_neu / csvk
-#else
+#else /* SHEAR */
     global_gradP_neu = 0.0
 #endif /* SHEAR */
 
@@ -171,7 +171,7 @@ module initneutral
       iarr_neu_swpx = [idnn,imxn,imyn,imzn]
       iarr_neu_swpy = [idnn,imyn,imxn,imzn]
       iarr_neu_swpz = [idnn,imzn,imyn,imxn]
-#else
+#else /* ISO */
       ienn          = nvar + 5
       nvar_neu      = 5
       nvar          = ienn

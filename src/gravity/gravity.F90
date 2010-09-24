@@ -237,7 +237,7 @@ module gravity
       use arrays,   only : gpot, gp, hgpot
 #if defined(MULTIGRID) || defined(POISSON_FFT)
       use arrays,   only : sgp, sgpm
-#endif
+#endif /* MULTIGRID || POISSON_FFT */
 
       implicit none
       real :: h
@@ -251,11 +251,11 @@ module gravity
 #if defined(MULTIGRID) || defined(POISSON_FFT)
       gpot  = gp + (1.+h)    *sgp -     h*sgpm
       hgpot = gp + (1.+0.5*h)*sgp - 0.5*h*sgpm
-#else
+#else /* MULTIGRID || POISSON_FFT */
       !BEWARE: as long as grav_pot_3d is called only in init_piernik this assignment probably don't need to be repeated more than once
       gpot  = gp
       hgpot = gp
-#endif
+#endif /* MULTIGRID || POISSON_FFT */
 
    end subroutine sum_potential
 
@@ -451,7 +451,7 @@ module gravity
 #endif /* GRAV_USER */
 #if defined (GRAV_PTMASSPURE) || defined (GRAV_PTMASS) || defined (GRAV_PTFLAT) || defined (GRAV_PTMASSSTIFF)
       use constants, only : newtong
-#endif
+#endif /* GRAV_PTMASSPURE || GRAV_PTMASS || GRAV_PTFLAT || GRAV_PTMASSSTIFF */
       implicit none
 
 #if defined (GRAV_PTMASSPURE) || defined (GRAV_PTMASS) || defined (GRAV_PTFLAT) || defined (GRAV_PTMASSSTIFF)

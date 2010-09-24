@@ -46,7 +46,7 @@ module fluidboundaries
 #endif /* COSM_RAYS */
 #ifndef ISO
       use fluidindex,      only : iarr_all_en
-#endif /* ISO */
+#endif /* !ISO */
 
       use initfluids,      only : gamma, cs_iso2
 
@@ -70,7 +70,7 @@ module fluidboundaries
 #ifndef ISO
       real, dimension(nvar%fluids,nx,ny) :: ekb, eib
       integer :: ifluid
-#endif /* ISO */
+#endif /* !ISO */
       real, dimension(nsub+1):: zs, gprofs
       real, dimension(nvar%fluids,nsub+1) :: dprofs
       real, dimension(nvar%fluids) :: factor
@@ -104,7 +104,7 @@ module fluidboundaries
 #ifndef ISO
                send_left (iarr_all_en,i,:,:) = send_left(iarr_all_en,i,:,:) &
                                     -0.5*(qshear*omega * x(nb+i))**2 * send_left(iarr_all_dn,i,:,:)
-#endif /* ISO */
+#endif /* !ISO */
             enddo
 !
 ! przesuwamy o calkowita liczbe komorek + periodyczny wb w kierunku y
@@ -132,7 +132,7 @@ module fluidboundaries
                send_right(iarr_all_en,i,:,:) = send_right(iarr_all_en,i,:,:) &
                                     -0.5*(qshear*omega * x(nxb+i))**2 * send_right(iarr_all_dn,i,:,:)
 
-#endif /* ISO */
+#endif /* !ISO */
             enddo
 !
 ! przesuwamy o calkowita liczbe komorek + periodyczny wb w kierunku y
@@ -167,7 +167,7 @@ module fluidboundaries
 #ifndef ISO
                recv_right (iarr_all_en,i,:,:) = recv_right (iarr_all_en,i,:,:) &
                                       +0.5*(qshear*omega * x(nb+nxb+i))**2 * recv_right(iarr_all_dn,i,:,:)
-#endif /* ISO */
+#endif /* !ISO */
                recv_right (iarr_all_my,i,:,:) = recv_right (iarr_all_my,i,:,:) &
                                            -qshear*omega * x(nb+nxb+i)     * recv_right(iarr_all_dn,i,:,:)
             enddo
@@ -180,7 +180,7 @@ module fluidboundaries
 #ifndef ISO
                recv_left(iarr_all_en,i,:,:) = recv_left(iarr_all_en,i,:,:) &
                                     +0.5*(qshear*omega * x(i))**2 * recv_left(iarr_all_dn,i,:,:)
-#endif /* ISO */
+#endif /* !ISO */
                recv_left(iarr_all_my,i,:,:) = recv_left(iarr_all_my,i,:,:) &
                                          -qshear*omega * x(i)     * recv_left(iarr_all_dn,i,:,:)
             enddo
@@ -197,7 +197,7 @@ module fluidboundaries
          if(allocated(recv_left))  deallocate(recv_left)
          if(allocated(recv_right)) deallocate(recv_right)
 
-#else /* FFTW */
+#else /* !FFTW */
 
          if( (bnd_xl == 'she').and.(bnd_xr == 'she')) then
 
@@ -236,7 +236,7 @@ module fluidboundaries
          if(allocated(recv_right)) deallocate(recv_right)
 
          endif
-#endif /* FFTW */
+#endif /* !FFTW */
 #else /* SHEAR_BND */
          if(pxsize .gt. 1) then
 
@@ -284,7 +284,7 @@ module fluidboundaries
                   u(iarr_all_mz,i,j,:) =  u(iarr_all_mz,j,2*nb+1-i,:)
 #ifndef ISO
                   u(iarr_all_en,i,j,:) =  u(iarr_all_en,j,2*nb+1-i,:)
-#endif /* ISO */
+#endif /* !ISO */
 #ifdef COSM_RAYS
                   u(iarr_all_crs,i,j,:) =  u(iarr_all_crs,j,2*nb+1-i,:)
 #endif /* COSM_RAYS */
@@ -310,7 +310,7 @@ module fluidboundaries
                   u(iarr_all_mz,i,j,:) =  recv_left(iarr_all_mz,j,nb+1-i,:)
 #ifndef ISO
                   u(iarr_all_en,i,j,:) =  recv_left(iarr_all_en,j,nb+1-i,:)
-#endif /* ISO */
+#endif /* !ISO */
 #ifdef COSM_RAYS
                   u(iarr_all_crs,i,j,:) =  recv_left(iarr_all_crs,j,nb+1-i,:)
 #endif /* COSM_RAYS */
@@ -333,7 +333,7 @@ module fluidboundaries
                   u(iarr_all_mz,i,j,:) =  u(iarr_all_mz,2*nb+1-j,i,:)
 #ifndef ISO
                   u(iarr_all_en,i,j,:) =  u(iarr_all_en,2*nb+1-j,i,:)
-#endif /* ISO */
+#endif /* !ISO */
 #ifdef COSM_RAYS
                   u(iarr_all_crs,i,j,:) =  u(iarr_all_crs,2*nb+1-j,i,:)
 #endif /* COSM_RAYS */
@@ -348,7 +348,7 @@ module fluidboundaries
                   u(iarr_all_mz,i,j,:) =   u(iarr_all_mz,2*nb+1-i,2*nb+1-j,:)
 #ifndef ISO
                   u(iarr_all_en,i,j,:) =   u(iarr_all_en,2*nb+1-i,2*nb+1-j,:)
-#endif /* ISO */
+#endif /* !ISO */
 #ifdef COSM_RAYS
                   u(iarr_all_crs,i,j,:) =   u(iarr_all_crs,2*nb+1-i,2*nb+1-j,:)
 #endif /* COSM_RAYS */
@@ -374,7 +374,7 @@ module fluidboundaries
                   u(iarr_all_mz,i,j,:) =  recv_left(iarr_all_mz,nb+1-j,i,:)
 #ifndef ISO
                   u(iarr_all_en,i,j,:) =  recv_left(iarr_all_en,nb+1-j,i,:)
-#endif /* ISO */
+#endif /* !ISO */
 #ifdef COSM_RAYS
                   u(iarr_all_crs,i,j,:) =  recv_left(iarr_all_crs,nb+1-j,i,:)
 #endif /* COSM_RAYS */
@@ -411,7 +411,7 @@ module fluidboundaries
                u(iarr_all_mx,nb+1-ib,:,:)                =-u(iarr_all_mx,nb+ib,:,:)
 #ifndef ISO
                u(iarr_all_en,nb+1-ib,:,:)                = u(iarr_all_en,nb+ib,:,:)
-#endif /* ISO */
+#endif /* !ISO */
 #ifdef COSM_RAYS
                u(iarr_all_crs,nb+1-ib,:,:)                = u(iarr_all_crs,nb+ib,:,:)
 #endif /* COSM_RAYS */
@@ -430,7 +430,7 @@ module fluidboundaries
                u(iarr_all_mx,ib,:,:)                     = min(u(iarr_all_mx,nb+1,:,:),0.0)
 #ifndef ISO
                u(iarr_all_en,ib,:,:)                     = u(iarr_all_en,nb+1,:,:)
-#endif /* ISO */
+#endif /* !ISO */
 #ifdef COSM_RAYS
                u(iarr_all_crs,ib,:,:)                     = smallecr
 #endif /* COSM_RAYS */
@@ -461,7 +461,7 @@ module fluidboundaries
                u(iarr_all_mx,nb+nxb+ib,:,:)               =-u(iarr_all_mx,nb+nxb+1-ib,:,:)
 #ifndef ISO
                u(iarr_all_en,nb+nxb+ib,:,:)               = u(iarr_all_en,nb+nxb+1-ib,:,:)
-#endif /* ISO */
+#endif /* !ISO */
 #ifdef COSM_RAYS
                u(iarr_all_crs,nb+nxb+ib,:,:)               = u(iarr_all_crs,nb+nxb+1-ib,:,:)
 #endif /* COSM_RAYS */
@@ -480,7 +480,7 @@ module fluidboundaries
                u(iarr_all_mx,nb+nxb+ib,:,:)               = max(u(iarr_all_mx,nb+nxb,:,:),0.0)
 #ifndef ISO
                u(iarr_all_en,nb+nxb+ib,:,:)               = u(iarr_all_en,nb+nxb,:,:)
-#endif /* ISO */
+#endif /* !ISO */
 #ifdef COSM_RAYS
                u(iarr_all_crs,nb+nxb+ib,:,:)               = smallecr
 #endif /* COSM_RAYS */
@@ -507,7 +507,7 @@ module fluidboundaries
                u(iarr_all_my,:,nb+1-ib,:)                 =-u(iarr_all_my,:,nb+ib,:)
 #ifndef ISO
                u(iarr_all_en,:,nb+1-ib,:)                 = u(iarr_all_en,:,nb+ib,:)
-#endif /* ISO */
+#endif /* !ISO */
 #ifdef COSM_RAYS
                u(iarr_all_crs,:,nb+1-ib,:)                 = u(iarr_all_crs,:,nb+ib,:)
 #endif /* COSM_RAYS */
@@ -526,7 +526,7 @@ module fluidboundaries
                u(iarr_all_my,:,ib,:)                      = min(u(iarr_all_my,:,nb+1,:),0.0)
 #ifndef ISO
                u(iarr_all_en,:,ib,:)                      = u(iarr_all_en,:,nb+1,:)
-#endif /* ISO */
+#endif /* !ISO */
 #ifdef COSM_RAYS
                u(iarr_all_crs,:,ib,:)                      = smallecr
 #endif /* COSM_RAYS */
@@ -551,7 +551,7 @@ module fluidboundaries
                u(iarr_all_my,:,nb+nyb+ib,:)               =-u(iarr_all_my,:,nb+nyb+1-ib,:)
 #ifndef ISO
                u(iarr_all_en,:,nb+nyb+ib,:)               = u(iarr_all_en,:,nb+nyb+1-ib,:)
-#endif /* ISO */
+#endif /* !ISO */
 #ifdef COSM_RAYS
                u(iarr_all_crs,:,nb+nyb+ib,:)               = u(iarr_all_crs,:,nb+nyb+1-ib,:)
 #endif /* COSM_RAYS */
@@ -570,7 +570,7 @@ module fluidboundaries
                u(iarr_all_my,:,nb+nyb+ib,:)               = max(u(iarr_all_my,:,nb+nyb,:),0.0)
 #ifndef ISO
                u(iarr_all_en,:,nb+nyb+ib,:)               = u(iarr_all_en,:,nb+nyb,:)
-#endif /* ISO */
+#endif /* !ISO */
 #ifdef COSM_RAYS
                u(iarr_all_crs,:,nb+nyb+ib,:)               = smallecr
 #endif /* COSM_RAYS */
@@ -594,7 +594,7 @@ module fluidboundaries
                u(iarr_all_mz,:,:,nb+1-ib)                 =-u(iarr_all_mz,:,:,nb+ib)
 #ifndef ISO
                u(iarr_all_en,:,:,nb+1-ib)                 = u(iarr_all_en,:,:,nb+ib)
-#endif /* ISO */
+#endif /* !ISO */
 #ifdef COSM_RAYS
                u(iarr_all_crs,:,:,nb+1-ib)                 = u(iarr_all_crs,:,:,nb+ib)
 #endif /* COSM_RAYS */
@@ -614,7 +614,7 @@ module fluidboundaries
                u(iarr_all_mz,:,:,ib)                      = min(u(iarr_all_mz,:,:,nb+1),0.0)
 #ifndef ISO
                u(iarr_all_en,:,:,ib)                      = u(iarr_all_en,:,:,nb+1)
-#endif /* ISO */
+#endif /* !ISO */
 #ifdef COSM_RAYS
                u(iarr_all_crs,:,:,ib)                      = smallecr
 #endif /* COSM_RAYS */
@@ -670,7 +670,7 @@ module fluidboundaries
                      eib(:,i,j) = csi2b(:,i,j)*db(:,i,j)/(gamma-1)
                      eib(:,i,j) = max(eib(:,i,j), smallei)
                      u(iarr_all_en,i,j,kb-1)                =     ekb(:,i,j) + eib(:,i,j)
-#endif /* ISO */
+#endif /* !ISO */
 #ifdef COSM_RAYS
                      u(iarr_all_crs,i,j,kb-1)                =     smallecr
 #endif /* COSM_RAYS */
@@ -694,7 +694,7 @@ module fluidboundaries
                u(iarr_all_mz,:,:,nb+nzb+ib)               =-u(iarr_all_mz,:,:,nb+nzb+1-ib)
 #ifndef ISO
                u(iarr_all_en,:,:,nb+nzb+ib)               = u(iarr_all_en,:,:,nb+nzb+1-ib)
-#endif /* ISO */
+#endif /* !ISO */
 #ifdef COSM_RAYS
                u(iarr_all_crs,:,:,nb+nzb+ib)               = u(iarr_all_crs,:,:,nb+nzb+1-ib)
 #endif /* COSM_RAYS */
@@ -714,7 +714,7 @@ module fluidboundaries
                u(iarr_all_mz,:,:,nb+nzb+ib)               = max(u(iarr_all_mz,:,:,nb+nzb),0.0)
 #ifndef ISO
                u(iarr_all_en,:,:,nb+nzb+ib)               = u(iarr_all_en,:,:,nb+nzb)
-#endif /* ISO */
+#endif /* !ISO */
 #ifdef COSM_RAYS
                u(iarr_all_crs,:,:,nb+nzb+ib)               = smallecr
 #endif /* COSM_RAYS */
@@ -770,7 +770,7 @@ module fluidboundaries
                      eib(:,i,j) = csi2b(:,i,j)*db(:,i,j)/(gamma-1)
                      eib(:,i,j) = max(eib(:,i,j), smallei)
                      u(iarr_all_en,i,j,kb+1)    =     ekb(:,i,j) + eib(:,i,j)
-#endif /* ISO */
+#endif /* !ISO */
 #ifdef COSM_RAYS
                      u(iarr_all_crs,i,j,kb+1)           =     smallecr
 #endif /* COSM_RAYS */

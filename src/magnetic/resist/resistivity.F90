@@ -84,7 +84,7 @@ contains
          use errh, only : die, namelist_errh
 #ifndef ISO
          use initionized, only : ieni
-#endif /* ISO */
+#endif /* !ISO */
          implicit none
          character(LEN=100) :: par_file, tmp_log_file
          integer :: ierrh
@@ -157,7 +157,7 @@ contains
          use initionized,  only : idni, imxi, imyi, imzi
 #ifndef ISO
          use initionized,  only : ieni
-#endif /* ISO */
+#endif /* !ISO */
 
       implicit none
       integer,intent(in)                    :: ici
@@ -239,7 +239,7 @@ contains
                         + b(ibz,is:ie,js:je,ks:ke)**2)) &
                         /( eta(is:ie,js:je,ks:ke)       &
                         *wb(is:ie,js:je,ks:ke)+small) ))
-#endif /* ISO */
+#endif /* !ISO */
 
       if (ici .eq. icz) then
          eta(:,:,:)=0.5*(eta(:,:,:)+pshift(eta(:,:,:),zdim))
@@ -268,7 +268,7 @@ contains
             dt_resist = cfl_resist*dx2/(2.*eta_max)
 #ifndef ISO
             dt_resist = min(dt_resist,dt_eint)
-#endif /* ISO */
+#endif /* !ISO */
          else
             dt_resist = big
          endif

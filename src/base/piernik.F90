@@ -126,7 +126,7 @@ program piernik
 !  nstep=nstep+1
 #ifdef PERFMON
   call timer_stop
-#endif
+#endif /* PERFMON */
   call write_data(output='end')
 !---------------------------- END OF MAIN LOOP ----------------------------------
 

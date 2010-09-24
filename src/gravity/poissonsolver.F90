@@ -49,7 +49,7 @@ contains
 #endif /* SHEAR */
 #ifdef IONIZED
     use initionized, only : idni
-#endif
+#endif /* IONIZED */
 
     implicit none
     real, dimension(:,:,:), intent(in)  :: dens
@@ -620,7 +620,7 @@ contains
 !------------------------------------------
     end subroutine poisson_xyzp
 
-#else
+#else /* POISSON_FFT */
 #warning This should not happen. Probably the poissonsolver.F90 file is included in object directory by mistake.
 #endif /* POISSON_FFT */
 

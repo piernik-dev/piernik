@@ -983,7 +983,7 @@ contains
 
 #ifdef JEANS_PROBLEM
       use initproblem,        only: d0, mode ! hack for tests
-#endif
+#endif /* JEANS_PROBLEM */
       use constants,          only: fpiG
       use grid,               only: is, ie, js, je, ks, ke
       use errh,               only: die
@@ -1012,7 +1012,7 @@ contains
 #ifdef JEANS_PROBLEM
             if (mode == 1) roof%mgvar(roof%is:roof%ie, roof%js:roof%je, roof%ks:roof%ke, source) = &
                  &         roof%mgvar(roof%is:roof%ie, roof%js:roof%je, roof%ks:roof%ke, source) - fpiG * d0 ! remove density bias
-#endif
+#endif /* JEANS_PROBLEM */
          case (bnd_givenval) ! convert potential into a layer of imaginary mass (substract second derivative normal to computational domain boundary)
             if (is_external(XLO)) roof%mgvar(roof%is,         roof%js:roof%je, roof%ks:roof%ke, source) = &
                  &                roof%mgvar(roof%is,         roof%js:roof%je, roof%ks:roof%ke, source) - &
@@ -1922,7 +1922,7 @@ contains
 
     end subroutine fft_convolve
 
-#else
+#else /* MULTIGRID */
 #warning This should not happen. Probably the multigrid.F90 file is included in object directory by mistake.
 #endif /* MULTIGRID */
 

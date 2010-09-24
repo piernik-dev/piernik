@@ -115,7 +115,7 @@ contains
 
 #if !(defined(MULTIGRID) || defined(POISSON_FFT))
       call die("You must define either MULTIGRID or POISSON_FFT for this problem")
-#endif
+#endif /* !(MULTIGRID || POISSON_FFT) */
 
       if (mode < 0 .or. mode > 1)     call die("[initproblem:read_problem_par] Invalid mode.")
       if (d0 < 0. .or. abs(amp) > 1.) call die("[initproblem:read_problem_par] Negative average density or amplitude too high.")
@@ -216,7 +216,7 @@ contains
 
                b(:,i,j,k)         = 0.0
                u(ieni,i,j,k)      = u(ieni,i,j,k) + 0.5*sum(b(:,i,j,k)**2,1)
-#endif /* ISO */
+#endif /* !ISO */
         enddo
       enddo
     enddo
@@ -231,9 +231,9 @@ contains
       write(*,'(/,a)') 'Run:'
 #ifdef MULTIGRID
       write(*,'(a)')   ' % gnuplot verify.gpl; display jeans-mg.png'
-#else
+#else /* MULTIGRID */
       write(*,'(a)')   ' % gnuplot verify.gpl; display jeans-fft.png'
-#endif
+#endif /* MULTIGRID */
       write(*,'(a,/)') 'to verify results'
 
       open(137,file="verify.gpl",status="unknown")
@@ -242,10 +242,10 @@ contains
 #ifdef MULTIGRID
          write(137,'(a)') "set output 'jeans-mg.png'"
          write(137,'(a)') 'set title "Jeans oscillations (multigrid)"'
-#else
+#else /* MULTIGRID */
          write(137,'(a)') "set output 'jeans-fft.png'"
          write(137,'(a)') 'set title "Jeans oscillations (FFT)"'
-#endif
+#endif /* MULTIGRID */
          write(137,'(3(a,/),a)') 'set ylabel "E_int"', 'set xtics 1', 'set mxtics 2', 'set mytics 2'
          if (Tamp_rounded /= 0 .and. Tamp >0) then
             write(137,'(a,g11.3)')'set ytics ',Tamp_rounded/2.

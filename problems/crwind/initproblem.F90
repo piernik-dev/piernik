@@ -196,7 +196,7 @@ module initproblem
                u(ieni,i,j,k)   = cs_iso2/(gamma_ion-1.0) * u(idni,i,j,k) &
                                + 0.5*(u(imxi,i,j,k)**2 + u(imyi,i,j,k)**2 + &
                                       u(imzi,i,j,k)**2 ) / u(idni,i,j,k)
-#endif /* ISO */
+#endif /* !ISO */
 #ifdef COSM_RAYS
                u(iarr_crs,i,j,k)   =  beta_cr*cs_iso2 * u(idni,i,j,k)/( gamma_crs - 1.0 )
 #ifdef GALAXY
@@ -220,7 +220,7 @@ module initproblem
                b(ibz,i,j,k)   = b0*sqrt(u(idni,i,j,k)/d0)* bzn/sqrt(bxn**2+byn**2+bzn**2)
 #ifndef ISO
                u(ieni,i,j,k)   = u(ieni,i,j,k) +0.5*sum(b(:,i,j,k)**2,1)
-#endif /* ISO */
+#endif /* !ISO */
             enddo
          enddo
       enddo

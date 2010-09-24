@@ -36,7 +36,7 @@ module list_hdf5
    public :: write_arr, S_LEN, additional_attrs, problem_write_restart, problem_read_restart
 #ifdef NEW_HDF5
    public :: add_lhdf5, lhdf5_info, iterate_lhdf5
-#endif
+#endif /* NEW_HDF5 */
 
    integer, parameter :: S_LEN = 30
 
@@ -80,7 +80,7 @@ module list_hdf5
    end type lhdf5_node
 
    type(lhdf5_list), target, save :: lhdf5_root
-#endif
+#endif /* NEW_HDF5 */
 
    contains
 #ifdef NEW_HDF5
