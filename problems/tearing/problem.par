@@ -1,0 +1,99 @@
+ $DOMAIN_SIZES
+    nxd = 512
+    nyd = 512
+    nzd = 1
+ /  
+
+ $MPI_BLOCKS
+    pxsize = 1
+    pysize = 1
+    pzsize = 1
+ /
+ 
+ $START_CONTROL
+ /
+
+ $RESTART_CONTROL
+    restart  = 'last'
+    new_id   = 'new'
+    nrestart = 0
+ /
+
+ $END_CONTROL
+    tend   = 10.0
+    nend   = 7
+ /
+
+ $OUTPUT_CONTROL
+    dt_hdf  = 0.01
+    dt_log  = 0.001
+    dt_tsl  = 0.1
+    dt_res  = 3.0
+    vars(1) = 'dens'
+    vars(2) = 'velx'
+    vars(3) = 'vely'
+    vars(4) = 'velz'
+    vars(5) = 'ener'
+    vars(6) = 'magx'
+    vars(7) = 'magy'
+    vars(8) = 'magz'
+    domain  = 'phys_domain'  
+ / 
+
+ $BOUNDARIES
+    bnd_xl = 'per'  
+    bnd_xr = 'per'  
+    bnd_yl = 'per'  
+    bnd_yr = 'per'  
+    bnd_zl = 'per'  
+    bnd_zr = 'per'
+ /
+
+ $DOMAIN_LIMITS
+    xmin   =-0.5
+    xmax   = 0.5
+    ymin   =-0.5
+    ymax   = 0.5
+    zmin   =-0.5
+    zmax   = 0.5
+ /
+
+ $FLUID_IONIZED
+    gamma_ion  = 1.666666666
+ /
+
+ $EQUATION_OF_STATE
+    c_si  = 1.0
+    alpha = 1.0
+
+ /  
+
+ $NUMERICAL_SETUP
+    cfl    = 0.4
+    smalld = 1.e-5
+    smallei= 1.e-5
+    integration_order  = 2
+ /
+ 
+ $GRAVITY
+ /
+ 
+ $THERMAL
+ /
+
+ $RESISTIVITY
+    eta_scale   =  4
+    cfl_resist  =  0.4
+    eta_0   	=  0.0
+    eta_1       =  1.0e-4
+    j_crit      =  100.0
+    deint_max   =  0.001
+ /
+ 
+ $PROBLEM_CONTROL
+    problem_name = 'tearing'
+    run_id       = 'tst'
+    beta         =  1.0
+    v0           =  0.1
+ /
+	

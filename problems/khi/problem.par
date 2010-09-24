@@ -1,0 +1,73 @@
+ $DOMAIN_SIZES
+    nxd = 256
+    nyd = 256
+    nzd = 1
+ /  
+
+ $MPI_BLOCKS
+    pxsize = 1
+    pysize = 1
+    pzsize = 1
+ /
+
+ $RESTART_CONTROL
+    restart  = 'last'
+    new_id   = ''
+    nrestart = 0
+ /
+
+ $END_CONTROL
+    tend   = 6.0
+    nend   = 100000 
+ /
+
+ $OUTPUT_CONTROL
+    dt_hdf  = 0.5666666666667e0
+    dt_res  = 100.0e0
+    dt_log  = 0.001
+    dt_tsl  = 0.00001
+    vars(1) = 'dens'
+    vars(2) = 'velx'
+    vars(3) = 'vely'
+    vars(4) = 'velz'
+    vars(5) = 'ener'
+    domain  = 'phys_domain'
+ / 
+
+ $BOUNDARIES
+    bnd_xl = 'per'  
+    bnd_xr = 'per'  
+    bnd_yl = 'ref'  
+    bnd_yr = 'ref'  
+ /
+
+ $DOMAIN_LIMITS
+    xmin   = 0.0
+    xmax   = 1.0
+    ymin   = 0.0
+    ymax   = 1.0
+ /
+
+ $FLUID_NEUTRAL
+    gamma_neu = 1.6666666667
+ /  
+
+ $NUMERICAL_SETUP
+    cfl    = 0.9
+    smalld = 1.e-6
+    smallei= 1.e-4
+    integration_order = 2
+ /
+ 
+ $PROBLEM_CONTROL
+    problem_name ='khi'
+    run_id  =  'tst'
+    chi     = 8.0
+    dbot    = 1.0
+    lpert   = 0.05
+    Mtop    = 0.11
+    Mbot    = 0.34
+    dpert   = 80.0
+    tkh     = 1.70
+ /
+
