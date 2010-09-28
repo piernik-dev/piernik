@@ -100,8 +100,8 @@ module fluxionized
     real :: minvx                               !<
     real :: maxvx                               !<
     real :: amp                                 !<
-    real, dimension(n) :: c_fr                  !< temporary array for freezing speed
-    integer :: i
+!    real, dimension(n) :: c_fr                  !< temporary array for freezing speed
+!    integer :: i
 #endif /* LOCAL_FR_SPEED */
 
     fluxi   = 0.0
@@ -150,7 +150,7 @@ module fluxionized
     minvx = minval(vx(RNG))
     maxvx = maxval(vx(RNG))
     amp   = 0.5*(maxvx-minvx)
-    c_fr  = 0.0
+!    c_fr  = 0.0
 #ifdef ISO
     cfri(1,RNG) = sqrt(vx(RNG)**2+cfr_smooth*amp) + max(sqrt( abs(2.0*pmag(RNG) +           p(RNG))/uui(idn,RNG)),small)
 #else /* ISO */

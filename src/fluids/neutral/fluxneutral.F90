@@ -92,7 +92,7 @@ module fluxneutral
     real :: minvx                               !<
     real :: maxvx                               !<
     real :: amp                                 !<
-    real, dimension(n) :: c_fr                  !< temporary array for freezing speed
+!    real, dimension(n) :: c_fr                  !< temporary array for freezing speed
 !    integer :: i
 #endif /* LOCAL_FR_SPEED */
 
@@ -128,7 +128,7 @@ module fluxneutral
     minvx = minval(vx(RNG))
     maxvx = maxval(vx(RNG))
     amp   = 0.5*(maxvx-minvx)
-    c_fr  = 0.0
+!    c_fr  = 0.0
 #ifdef ISO
     cfrn(1,RNG) = sqrt(vx(RNG)**2+cfr_smooth*amp) + max(sqrt( abs(          p(RNG))/uun(idn,RNG)),small)
 #else /* ISO */
