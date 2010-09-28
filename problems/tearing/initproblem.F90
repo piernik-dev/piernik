@@ -40,23 +40,11 @@ module initproblem
 !
 !       dimdir can't be equal magdir!!
 
-   use initionized,  only : idni,imxi,imyi,imzi
-#ifndef ISO
-   use initionized,  only : ieni
-#endif
-   use fluidindex,   only : ibx,iby,ibz
-   use arrays,       only : u,b
-   use grid
-   use constants
-   use mpisetup
-!  use resistivity
+   character(len=32) :: problem_name
+   character(len=3)  :: run_id
+   real              :: beta, v0
 
-   integer     :: ibi
-   real        :: beta,v0
-   character   :: problem_name*32,run_id*3
-
-   namelist /PROBLEM_CONTROL/  problem_name, run_id, &
-                               beta,v0
+   namelist /PROBLEM_CONTROL/ problem_name, run_id, beta, v0
 
    contains
 
@@ -64,14 +52,17 @@ module initproblem
 
    subroutine read_problem_par
 
+      use mpisetup, only : MPI_CHARACTER, MPI_DOUBLE_PRECISION, &
+           &               cbuff, rbuff, buffer_dim, comm, ierr, cwd, proc
+
       implicit none
 
-      problem_name =  'tearing'
-      run_id       =  'tst'
-      beta         =   1.0
-      v0           =   0.1
+      problem_name = 'tearing'
+      run_id       = 'tst'
+      beta         =  1.0
+      v0           =  0.1
 
-      if(proc .eq. 0) then
+      if(proc == 0) then
          open(1,file='problem.par')
          read(unit=1,nml=PROBLEM_CONTROL)
          write(*,nml=PROBLEM_CONTROL)
@@ -82,8 +73,7 @@ module initproblem
          close(3)
       endif
 
-
-      if(proc .eq. 0) then
+      if (proc .eq. 0) then
 
          cbuff(1) =  problem_name
          cbuff(2) =  run_id
@@ -91,18 +81,15 @@ module initproblem
          rbuff(1) = beta
          rbuff(2) = v0
 
-         call MPI_BCAST(cbuff, 32*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
-         call MPI_BCAST(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
-         call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+      end if
 
-      else
+      call MPI_BCAST(cbuff, 32*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
+      call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
-         call MPI_BCAST(cbuff, 32*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
-         call MPI_BCAST(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
-         call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+      if (proc /= 0) then
 
          problem_name = cbuff(1)
-         run_id       = cbuff(2)
+         run_id       = cbuff(2)(1:3)
 
          beta         = rbuff(1)
          v0           = rbuff(2)
@@ -114,6 +101,16 @@ module initproblem
 !-----------------------------------------------------------------------------
 
    subroutine init_prob
+
+      use initionized,  only : idni, imxi, imyi, imzi
+#ifndef ISO
+      use initionized,  only : ieni
+#endif
+      use fluidindex,   only : ibx, iby, ibz
+      use arrays,       only : u, b
+      use grid,         only : nx, ny, nz, xmax, ymax, zmax, x, y
+      use constants,    only : pi
+      !  use resistivity
 
       implicit none
 
