@@ -7,7 +7,7 @@ module initproblem
   use problem_pub, only: problem_name, run_id
 
   integer           :: n_sn
-  real              :: d0, Mrms, t_sn
+  real              :: d0, Mrms, t_sn, c_si
 
   namelist /PROBLEM_CONTROL/  problem_name, run_id, &
                               d0, c_si, Mrms
@@ -17,10 +17,15 @@ contains
 !-----------------------------------------------------------------------------
 
   subroutine read_problem_par
-    use mpisetup, only : cbuff,rbuff,ibuff,buffer_dim,proc,comm,ierr
-    use mpisetup, only : mpi_double_precision,mpi_integer,mpi_character
-    implicit none
-    integer :: i
+      use errh,     only : namelist_errh
+      use mpisetup, only : cbuff, ibuff, rbuff, buffer_dim, comm, ierr, proc, &
+                           mpi_character, mpi_double_precision, mpi_integer, cwd
+      implicit none
+      character(len=100) :: par_file, tmp_log_file
+      integer :: ierrh
+
+      par_file = trim(cwd)//'/problem.par'
+      tmp_log_file = trim(cwd)//'/tmp.log'
 
       t_sn = 0.0
 
@@ -30,16 +35,16 @@ contains
       c_si    = 0.1
       Mrms    = 5.0
 
-    if(proc .eq. 0) then
-
-      open(1,file='problem.par')
-        read(unit=1,nml=PROBLEM_CONTROL)
-        write(*,nml=PROBLEM_CONTROL)
-      close(1)
-      open(3, file='tmp.log', position='append')
-        write(3,nml=PROBLEM_CONTROL)
-      close(3)
-    endif
+      if(proc == 0) then
+         open(1,file=par_file)
+            read(unit=1,nml=PROBLEM_CONTROL,iostat=ierrh)
+            call namelist_errh(ierrh,'PROBLEM_CONTROL')
+         close(1)
+         open(3, file=tmp_log_file, position='append')
+            write(3,nml=PROBLEM_CONTROL)
+            write(3,*)
+         close(3)
+      endif
 
 
     if(proc .eq. 0) then
@@ -93,7 +98,8 @@ contains
     real, dimension(6) :: mn
     real, dimension(3) :: deltav
     real, dimension(3,nx,ny,nz) :: dv
-    real :: somx,somy,somz,rms,cma, vol
+    real ::rms,cma, vol
+!    real :: somx,somy,somz
 
 ! Uniform equilibrium state
     gamma = gamma_neu

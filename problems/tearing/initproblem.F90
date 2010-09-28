@@ -40,8 +40,8 @@ module initproblem
 !
 !       dimdir can't be equal magdir!!
 
-   character(len=32) :: problem_name
-   character(len=3)  :: run_id
+   use problem_pub, only: problem_name, run_id
+
    real              :: beta, v0
 
    namelist /PROBLEM_CONTROL/ problem_name, run_id, beta, v0
@@ -52,10 +52,16 @@ module initproblem
 
    subroutine read_problem_par
 
+      use errh,     only : namelist_errh
       use mpisetup, only : MPI_CHARACTER, MPI_DOUBLE_PRECISION, &
            &               cbuff, rbuff, buffer_dim, comm, ierr, cwd, proc
 
       implicit none
+      character(len=100) :: par_file, tmp_log_file
+      integer :: ierrh
+
+      par_file = trim(cwd)//'/problem.par'
+      tmp_log_file = trim(cwd)//'/tmp.log'
 
       problem_name = 'tearing'
       run_id       = 'tst'
@@ -63,11 +69,11 @@ module initproblem
       v0           =  0.1
 
       if(proc == 0) then
-         open(1,file='problem.par')
-         read(unit=1,nml=PROBLEM_CONTROL)
-         write(*,nml=PROBLEM_CONTROL)
+         open(1,file=par_file)
+            read(unit=1,nml=PROBLEM_CONTROL,iostat=ierrh)
+            call namelist_errh(ierrh,'PROBLEM_CONTROL')
          close(1)
-         open(3, file='tmp.log', position='append')
+         open(3, file=tmp_log_file, position='append')
          write(3,nml=PROBLEM_CONTROL)
          write(3,*)
          close(3)
@@ -101,20 +107,19 @@ module initproblem
 !-----------------------------------------------------------------------------
 
    subroutine init_prob
-
+      use arrays,       only : u, b
+      use constants,    only : pi
+      use fluidindex,   only : ibx, iby, ibz
+      use grid,         only : x, y, nx, ny, nz, xmax, ymax, zmax
       use initionized,  only : idni, imxi, imyi, imzi
 #ifndef ISO
       use initionized,  only : ieni
-#endif
-      use fluidindex,   only : ibx, iby, ibz
-      use arrays,       only : u, b
-      use grid,         only : nx, ny, nz, xmax, ymax, zmax, x, y
-      use constants,    only : pi
-      !  use resistivity
+#endif /* !ISO */
+
 
       implicit none
 
-      integer  :: i,j,k
+      integer  :: i, j, k
       real     :: xmid, ymid, zmid, vzab, b0
 
       xmid = 0.5*xmax
@@ -154,7 +159,7 @@ module initproblem
                            + u(imzi,:,:,:)**2) / u(idni,:,:,:)
 
       u(ieni,:,:,:)   = u(ieni,:,:,:) + 0.5*sum(b(:,:,:,:)**2,1)
-#endif /* ISO */
+#endif /* !ISO */
 
       return
    end subroutine init_prob

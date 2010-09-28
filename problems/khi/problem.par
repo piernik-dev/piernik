@@ -2,7 +2,7 @@
     nxd = 256
     nyd = 256
     nzd = 1
- /  
+ /
 
  $MPI_BLOCKS
     pxsize = 1
@@ -18,7 +18,7 @@
 
  $END_CONTROL
     tend   = 6.0
-    nend   = 100000 
+    nend   = 100000
  /
 
  $OUTPUT_CONTROL
@@ -32,13 +32,13 @@
     vars(4) = 'velz'
     vars(5) = 'ener'
     domain  = 'phys_domain'
- / 
+ /
 
  $BOUNDARIES
-    bnd_xl = 'per'  
-    bnd_xr = 'per'  
-    bnd_yl = 'ref'  
-    bnd_yr = 'ref'  
+    bnd_xl = 'per'
+    bnd_xr = 'per'
+    bnd_yl = 'ref'
+    bnd_yr = 'ref'
  /
 
  $DOMAIN_LIMITS
@@ -50,7 +50,7 @@
 
  $FLUID_NEUTRAL
     gamma_neu = 1.6666666667
- /  
+ /
 
  $NUMERICAL_SETUP
     cfl    = 0.9
@@ -58,7 +58,7 @@
     smallei= 1.e-4
     integration_order = 2
  /
- 
+
  $PROBLEM_CONTROL
     problem_name ='khi'
     run_id  =  'tst'

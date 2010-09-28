@@ -148,7 +148,6 @@ module initproblem
       integer  :: i,j,k
       real     :: xi,yj,zk
       real     :: vx,vy,vz,rho,pre,bx,by,bz
-      real     :: kn,Lx,kJ,Ly,Lz,Ln
 
       call read_problem_par
 

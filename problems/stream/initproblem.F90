@@ -52,7 +52,7 @@ module initproblem
       implicit none
 
       character(len=100) :: par_file, tmp_log_file
-      integer :: cwd_status, ierrh
+      integer :: ierrh
 
       par_file = trim(cwd)//'/problem.par'
       tmp_log_file = trim(cwd)//'/tmp.log'
@@ -138,13 +138,13 @@ module initproblem
 #endif /* !ISO */
       implicit none
 
-      real :: penv, rcx, rcy, rcz, rrel
-      real :: ux,uy,wx,wy,taus,eta,vk,beta, inv
+      real :: rcx, rcy
+      real :: ux,uy,wx,wy,taus,eta,vk,beta !, inv
       integer :: i, j, k,n, clock
       real(kind=4), dimension(3,nx,ny,nz) :: noise
       integer, dimension(:), allocatable :: seed
       complex(kind=8), dimension(7) :: coeff
-      character(len=32) :: ala
+!      character(len=32) :: ala
 
       if(run_id == 'lnA') then
          coeff(4) = (-0.1691398, 0.0361553 ) ! u_x
@@ -288,7 +288,6 @@ module initproblem
       implicit none
       real, intent(in) :: t
       complex(kind=8), dimension(8) :: coeff
-      real :: omg, s
 
       if(run_id == 'lnA') then
          coeff(4) = (-0.1691398, 0.0361553 ) ! u_x

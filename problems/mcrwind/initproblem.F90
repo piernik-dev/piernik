@@ -51,12 +51,13 @@ module initproblem
    subroutine read_problem_par
       use errh,     only : namelist_errh
       use mpisetup, only : cbuff, ibuff, rbuff, buffer_dim, comm, ierr, proc, &
-                           mpi_character, mpi_double_precision, mpi_integer
+                           mpi_character, mpi_double_precision, mpi_integer, cwd
       implicit none
       integer :: ierrh
+      character(len=100) :: par_file, tmp_log_file
 
-      par_file = trim(cwd)//'/problem.par'
-      tmp_file = trim(cwd)//'/tmp.log'
+      par_file     = trim(cwd)//'/problem.par'
+      tmp_log_file = trim(cwd)//'/tmp.log'
 
       problem_name = 'xxx'
       run_id  = 'aaa'
@@ -73,7 +74,7 @@ module initproblem
             read(unit=1,nml=PROBLEM_CONTROL,iostat=ierrh)
             call namelist_errh(ierrh,'PROBLEM_CONTROL')
          close(1)
-         open(3, file=tmp_file, position='append')
+         open(3, file=tmp_log_file, position='append')
          write(3,nml=PROBLEM_CONTROL)
          write(3,*)
          close(3)

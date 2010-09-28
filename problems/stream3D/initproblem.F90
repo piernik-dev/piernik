@@ -48,7 +48,7 @@ module initproblem
 
       use errh,     only : namelist_errh
       use mpisetup, only : cbuff, ibuff, rbuff, buffer_dim, proc, comm, ierr, &
-                           mpi_character, mpi_double_precision, mpi_integer
+                           mpi_character, mpi_double_precision, mpi_integer, cwd
       implicit none
       integer :: ierrh
       character(LEN=100) :: par_file, tmp_log_file
@@ -140,11 +140,14 @@ module initproblem
       implicit none
 
       integer :: i,j,k
-      real :: xi,yj,zk, rc, rs, vx, vy, vz, H0, sqr_gm, v_phi, rho0
-      real :: n,norm, H, ninv, vphi, fact
-      real :: grav, gradP, iOmega, ilook, gradgp
+      real :: xi,yj,zk, rc, H0, sqr_gm, rho0
+      real :: n,norm, H, ninv
+      real :: gradP, iOmega, ilook, gradgp
       real, dimension(3,nz) :: noise
       real, dimension(:), allocatable :: omega,omegad
+#ifndef ISO
+      real :: vx, vy, vz
+#endif /* !ISO */
 
       allocate(omega(nx),omegad(nx))
 !   Secondary parameters

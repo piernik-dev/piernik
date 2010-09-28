@@ -55,13 +55,13 @@ module initproblem
       par_file = trim(cwd)//'/problem.par'
       tmp_file = trim(cwd)//'/tmp.log'
 
-      problem_name = 'aaa'
-      run_id  = 'aa'
-      d0      = 1.0
-      dout    = 1.0e-4
-      r_max   = 1.0
+      problem_name     = 'aaa'
+      run_id           = 'aa'
+      d0               = 1.0
+      dout             = 1.0e-4
+      r_max            = 1.0
       mag_field_orient = 'none'
-      alpha   = 1.0
+      alpha            = 1.0
 
       if(proc .eq. 0) then
          open(1,file=par_file)
@@ -77,8 +77,9 @@ module initproblem
 
       if(proc .eq. 0) then
 
-         cbuff(1) =  problem_name
-         cbuff(2) =  run_id
+         cbuff(1) = problem_name
+         cbuff(2) = run_id
+         cbuff(3) = mag_field_orient
 
          rbuff(1) = d0
          rbuff(2) = dout
@@ -95,13 +96,14 @@ module initproblem
          call MPI_BCAST(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
          call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
-         problem_name = cbuff(1)
-         run_id       = cbuff(2)(1:3)
+         problem_name     = cbuff(1)
+         run_id           = cbuff(2)(1:3)
+         mag_field_orient = cbuff(3)
 
-         d0           = rbuff(1)
-         dout         = rbuff(2)
-         r_max        = rbuff(3)
-         alpha        = rbuff(4)
+         d0               = rbuff(1)
+         dout             = rbuff(2)
+         r_max            = rbuff(3)
+         alpha            = rbuff(4)
 
       endif
 
@@ -110,23 +112,23 @@ module initproblem
 !-----------------------------------------------------------------------------
 
    subroutine init_prob
-      use arrays,      only : u,b, dprof
-      use grid,        only : x,y,z,nx,ny,nz,nzd
+      use arrays,      only : u, b, dprof
       use constants,   only : newtong
-      use hydrostatic, only : hydrostatic_zeq
-      use gravity,     only : r_smooth,r_grav,n_gravr,ptmass
-      use initionized, only : idni, imxi, imyi, imzi
       use fluidindex,  only : ibx, iby, ibz
-      use initfluids,  only : gamma,cs_iso
+      use gravity,     only : r_smooth, r_grav, n_gravr, ptmass
+      use grid,        only : x, y, z, nx, ny, nz, nzd
+      use hydrostatic, only : hydrostatic_zeq
+      use initfluids,  only : gamma, cs_iso
+      use initionized, only : idni, imxi, imyi, imzi
 #ifndef ISO
       use initionized, only : ieni, gamma_ion, cs_ion
 #endif /* !ISO */
       use mpisetup,    only : smalld
       implicit none
 
-      integer :: i,j,k,kmid
-      real :: xi,yj,zk, rc, rs, vx, vy, vz, h2, dgdz, b0, sqr_gm, v_phi
-      real :: csim2
+      integer :: i, j, k, kmid
+      real    :: xi, yj, rc, vx, vy, vz, b0, sqr_gm
+      real    :: csim2
 
 !   Secondary parameters
 
@@ -184,7 +186,7 @@ module initproblem
                   b(iby,i,j,k)   =  0.0
                   b(ibz,i,j,k)   =  b0
                else if(trim(mag_field_orient) .eq. 'none') then
-                  b(:,i,j,k)   =  0.0
+                  b(:,i,j,k)     =  0.0
                endif
 
 #ifndef ISO

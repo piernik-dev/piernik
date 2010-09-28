@@ -120,7 +120,6 @@ module initproblem
       integer  :: i,j,k
       real     :: xi,yj,zk
       real     :: vx,vy,vz
-      real     :: kn,Lx,kJ,Ly,Lz,Ln
 
       call read_problem_par
 

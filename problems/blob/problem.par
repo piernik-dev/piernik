@@ -2,7 +2,7 @@
     nxd = 128
     nyd = 512
     nzd = 1
- /  
+ /
 
  $MPI_BLOCKS
     pxsize = 1
@@ -18,7 +18,7 @@
 
  $END_CONTROL
     tend   = 6.0
-    nend   = 100000 
+    nend   = 100000
  /
 
  $OUTPUT_CONTROL
@@ -31,13 +31,13 @@
     vars(3) = 'vely'
     vars(4) = 'ener'
     domain  = 'phys_domain'
- / 
+ /
 
  $BOUNDARIES
-    bnd_xl = 'per'  
-    bnd_xr = 'per'  
-    bnd_yl = 'per'  
-    bnd_yr = 'per'  
+    bnd_xl = 'per'
+    bnd_xr = 'per'
+    bnd_yl = 'per'
+    bnd_yr = 'per'
     bnd_zl = 'per'
     bnd_zr = 'per'
  /
@@ -53,7 +53,7 @@
 
  $FLUID_NEUTRAL
     gamma_neu  = 1.666666667
- /  
+ /
 
  $NUMERICAL_SETUP
     cfl    = 0.9
@@ -61,7 +61,7 @@
     smallei= 1.e-4
     integration_order = 2
  /
- 
+
  $PROBLEM_CONTROL
     problem_name ='blob'
     run_id  =  'tst'

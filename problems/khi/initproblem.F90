@@ -34,8 +34,8 @@ module initproblem
 ! based on Agertz et al. 2008
 ! Written by: D. Woltanski, February 2008
 
-   character(len=32) :: problem_name
-   character(len=3)  :: run_id
+   use problem_pub, only: problem_name, run_id
+
    real              :: chi, dbot, lpert, Mtop, Mbot, dpert, tkh, vtransf
 
    namelist /PROBLEM_CONTROL/  problem_name, run_id, chi, dbot, lpert, Mtop, Mbot, dpert, tkh, vtransf
@@ -51,7 +51,6 @@ module initproblem
            &               cbuff, rbuff, buffer_dim, comm, ierr, cwd, proc
 
       implicit none
-
       character(len=100) :: par_file, tmp_log_file
       integer            :: ierrh
 
@@ -71,12 +70,12 @@ module initproblem
 
       if(proc == 0) then
          open(1,file=par_file)
-         read(unit=1,nml=PROBLEM_CONTROL,iostat=ierrh)
-         call namelist_errh(ierrh,'PROBLEM_CONTROL')
+            read(unit=1,nml=PROBLEM_CONTROL,iostat=ierrh)
+            call namelist_errh(ierrh,'PROBLEM_CONTROL')
          close(1)
          open(3, file=tmp_log_file, position='append')
-         write(3,nml=PROBLEM_CONTROL)
-         write(3,*)
+            write(3,nml=PROBLEM_CONTROL)
+            write(3,*)
          close(3)
       endif
 
@@ -122,8 +121,8 @@ module initproblem
    subroutine init_prob
 
       use arrays,      only : u
-      use grid,        only : ymin, ymax, x, y, nx, ny, nzd
       use constants,   only : dpi
+      use grid,        only : ymin, ymax, x, y, nx, ny, nzd
       use initneutral, only : idnn, imxn, imyn, imzn, ienn, gamma_neu
 
       implicit none

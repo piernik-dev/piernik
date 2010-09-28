@@ -31,11 +31,10 @@ module initproblem
 
 ! Initial condition for blob test
 ! Blob test by Agertz et al., 2007, MNRAS, 380, 963.
+   use problem_pub, only: problem_name, run_id
 
 ! ToDo: write support for original, SPH-noisy, initial conditions
 
-   character(len=32) :: problem_name
-   character(len=3)  :: run_id
    real              :: chi, rblob, blobxc, blobyc, blobzc, Mext, denv, tkh, vgal
 
    namelist /PROBLEM_CONTROL/  problem_name, run_id, chi, rblob, blobxc, blobyc, blobzc, Mext, denv, tkh, vgal
@@ -72,12 +71,12 @@ module initproblem
 
       if (proc == 0) then
          open(1,file=par_file)
-         read(unit=1,nml=PROBLEM_CONTROL,iostat=ierrh)
-         call namelist_errh(ierrh,'PROBLEM_CONTROL')
+            read(unit=1,nml=PROBLEM_CONTROL,iostat=ierrh)
+            call namelist_errh(ierrh,'PROBLEM_CONTROL')
          close(1)
          open(3, file=tmp_log_file, position='append')
-         write(3,nml=PROBLEM_CONTROL)
-         write(3,*)
+            write(3,nml=PROBLEM_CONTROL)
+            write(3,*)
          close(3)
       endif
 
