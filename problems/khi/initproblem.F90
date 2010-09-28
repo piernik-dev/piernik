@@ -34,24 +34,26 @@ module initproblem
 ! based on Agertz et al. 2008
 ! Written by: D. Woltanski, February 2008
 
-   use mpisetup
+   character(len=32) :: problem_name
+   character(len=3)  :: run_id
+   real              :: chi, dbot, lpert, Mtop, Mbot, dpert, tkh, vtransf
 
-   character :: problem_name*32,run_id*3
-   real :: chi,dbot,lpert,Mtop,Mbot,dpert,tkh,vtransf
-
-   namelist /PROBLEM_CONTROL/  problem_name, run_id, &
-                               chi,dbot,lpert,Mtop,Mbot,dpert,tkh,vtransf
+   namelist /PROBLEM_CONTROL/  problem_name, run_id, chi, dbot, lpert, Mtop, Mbot, dpert, tkh, vtransf
 
    contains
 
 !-----------------------------------------------------------------------------
 
    subroutine read_problem_par
-      use errh
+
+      use errh,     only : namelist_errh
+      use mpisetup, only : MPI_CHARACTER, MPI_DOUBLE_PRECISION, &
+           &               cbuff, rbuff, buffer_dim, comm, ierr, cwd, proc
+
       implicit none
 
       character(len=100) :: par_file, tmp_log_file
-      integer :: cwd_status, ierrh
+      integer            :: ierrh
 
       par_file = trim(cwd)//'/problem.par'
       tmp_log_file = trim(cwd)//'/tmp.log'
@@ -67,7 +69,7 @@ module initproblem
       tkh     = 1.70
       vtransf = 0.0
 
-      if(proc .eq. 0) then
+      if(proc == 0) then
          open(1,file=par_file)
          read(unit=1,nml=PROBLEM_CONTROL,iostat=ierrh)
          call namelist_errh(ierrh,'PROBLEM_CONTROL')
@@ -78,7 +80,7 @@ module initproblem
          close(3)
       endif
 
-      if(proc .eq. 0) then
+      if (proc == 0) then
 
          cbuff(1) =  problem_name
          cbuff(2) =  run_id
@@ -92,18 +94,15 @@ module initproblem
          rbuff(7) = tkh
          rbuff(8) = vtransf
 
-         call MPI_BCAST(cbuff, 32*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
-         call MPI_BCAST(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
-         call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+      end if
 
-      else
+      call MPI_BCAST(cbuff, 32*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
+      call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
-         call MPI_BCAST(cbuff, 32*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
-         call MPI_BCAST(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
-         call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+      if (proc /= 0) then
 
          problem_name = cbuff(1)
-         run_id       = cbuff(2)
+         run_id       = cbuff(2)(1:3)
 
          chi          = rbuff(1)
          dbot         = rbuff(2)
@@ -121,13 +120,15 @@ module initproblem
 !-----------------------------------------------------------------------------
 
    subroutine init_prob
-      use arrays,    only  : u
-      use grid,      only  : ymin,ymax,x,y,nx,ny,nzd
-      use constants, only  : dpi
-      use initneutral
+
+      use arrays,      only : u
+      use grid,        only : ymin, ymax, x, y, nx, ny, nzd
+      use constants,   only : dpi
+      use initneutral, only : idnn, imxn, imyn, imzn, ienn, gamma_neu
+
       implicit none
 
-      real :: dtop,lambda,boxlen,p0,vtop,vbot,k0,vp,rcx,rcy,rc
+      real :: dtop, lambda, boxlen, p0, vtop, vbot, k0, vp, rcx, rcy, rc
       integer :: i,j
 
       dtop = dbot/chi
