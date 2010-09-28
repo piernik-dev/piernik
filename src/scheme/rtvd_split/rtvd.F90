@@ -318,9 +318,11 @@ module rtvd ! split orig
       real, dimension(n)             :: decr
 #endif /* COSM_RAYS */
 #ifdef FLUID_INTERACTIONS
-      real, dimension(nvar%all,n)    :: dintr
       real, dimension(nvar%fluids,n) :: epsa, vx0
 #endif /* FLUID_INTERACTIONS */
+#ifdef FLUID_INTERACTIONS_DW
+      real, dimension(nvar%all,n)    :: dintr
+#endif /* FLUID_INTERACTIONS_DW */
 
       real, dimension(2,2), parameter:: rk2coef = RESHAPE( (/1.0,0.5,0.0,1.0/),(/2,2/))
 
