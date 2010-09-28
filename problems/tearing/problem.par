@@ -2,14 +2,14 @@
     nxd = 512
     nyd = 512
     nzd = 1
- /  
+ /
 
  $MPI_BLOCKS
     pxsize = 1
     pysize = 1
     pzsize = 1
  /
- 
+
  $START_CONTROL
  /
 
@@ -37,15 +37,15 @@
     vars(6) = 'magx'
     vars(7) = 'magy'
     vars(8) = 'magz'
-    domain  = 'phys_domain'  
- / 
+    domain  = 'phys_domain'
+ /
 
  $BOUNDARIES
-    bnd_xl = 'per'  
-    bnd_xr = 'per'  
-    bnd_yl = 'per'  
-    bnd_yr = 'per'  
-    bnd_zl = 'per'  
+    bnd_xl = 'per'
+    bnd_xr = 'per'
+    bnd_yl = 'per'
+    bnd_yr = 'per'
+    bnd_zl = 'per'
     bnd_zr = 'per'
  /
 
@@ -66,7 +66,7 @@
     c_si  = 1.0
     alpha = 1.0
 
- /  
+ /
 
  $NUMERICAL_SETUP
     cfl    = 0.4
@@ -74,26 +74,26 @@
     smallei= 1.e-5
     integration_order  = 2
  /
- 
+
  $GRAVITY
  /
- 
+
  $THERMAL
  /
 
  $RESISTIVITY
     eta_scale   =  4
     cfl_resist  =  0.4
-    eta_0   	=  0.0
+    eta_0       =  0.0
     eta_1       =  1.0e-4
     j_crit      =  100.0
     deint_max   =  0.001
  /
- 
+
  $PROBLEM_CONTROL
     problem_name = 'tearing'
     run_id       = 'tst'
     beta         =  1.0
     v0           =  0.1
  /
-	
+
