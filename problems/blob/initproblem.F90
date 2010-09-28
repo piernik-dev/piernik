@@ -31,25 +31,29 @@ module initproblem
 
 ! Initial condition for blob test
 ! Blob test by Agertz et al., 2007, MNRAS, 380, 963.
-   use mpisetup
+
+! ToDo: write support for original, SPH-noisy, initial conditions
 
    character(len=32) :: problem_name
    character(len=3)  :: run_id
-   real :: chi, rblob, blobxc, blobyc, blobzc, Mext, denv, tkh, vgal
+   real              :: chi, rblob, blobxc, blobyc, blobzc, Mext, denv, tkh, vgal
 
-   namelist /PROBLEM_CONTROL/  problem_name, run_id, &
-                               chi, rblob, blobxc, blobyc, blobzc, Mext, denv, tkh, vgal
-
+   namelist /PROBLEM_CONTROL/  problem_name, run_id, chi, rblob, blobxc, blobyc, blobzc, Mext, denv, tkh, vgal
 
    contains
 
 !-----------------------------------------------------------------------------
 
    subroutine read_problem_par
-      use errh,   only  : namelist_errh
+
+      use errh,     only : namelist_errh
+      use mpisetup, only : MPI_CHARACTER, MPI_DOUBLE_PRECISION, &
+           &               cbuff, rbuff, buffer_dim, comm, ierr, cwd, proc
+
       implicit none
+
       character(len=100) :: par_file, tmp_log_file
-      integer :: cwd_status, ierrh
+      integer :: ierrh
 
       par_file = trim(cwd)//'/problem.par'
       tmp_log_file = trim(cwd)//'/tmp.log'
@@ -66,7 +70,7 @@ module initproblem
       tkh     =  1.7
       vgal    =  0.0
 
-      if(proc .eq. 0) then
+      if (proc == 0) then
          open(1,file=par_file)
          read(unit=1,nml=PROBLEM_CONTROL,iostat=ierrh)
          call namelist_errh(ierrh,'PROBLEM_CONTROL')
@@ -77,7 +81,7 @@ module initproblem
          close(3)
       endif
 
-      if(proc .eq. 0) then
+      if (proc == 0) then
 
          cbuff(1) =  problem_name
          cbuff(2) =  run_id
@@ -92,18 +96,15 @@ module initproblem
          rbuff(8) = tkh
          rbuff(9) = vgal
 
-         call MPI_BCAST(cbuff, 32*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
-         call MPI_BCAST(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
-         call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+      end if
 
-      else
+      call MPI_BCAST(cbuff, 32*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
+      call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
-         call MPI_BCAST(cbuff, 32*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
-         call MPI_BCAST(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
-         call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+      if (proc /= 0) then
 
          problem_name = cbuff(1)
-         run_id       = cbuff(2)
+         run_id       = cbuff(2)(1:3)
 
          chi          = rbuff(1)
          rblob        = rbuff(2)
@@ -122,45 +123,45 @@ module initproblem
 !-----------------------------------------------------------------------------
 
    subroutine init_prob
-      use arrays,       only  : u
-      use grid,         only  : x,y,z,nx,ny,nz,nzd,ymin,ymax
-      use initneutral,  only  : gamma_neu, idnn,imxn,imyn,imzn,ienn
+
+      use arrays,       only : u
+      use grid,         only : x, y, z, nx, ny, nz, nzd, ymin, ymax
+      use initneutral,  only : gamma_neu, idnn, imxn, imyn, imzn, ienn
+
       implicit none
 
-      real :: penv, rcx, rcy, rcz, rrel
+      real    :: penv, rcx, rcy, rrel
       integer :: i, j, k
 
       penv = 3.2*rblob*sqrt(chi)/tkh/(Mext*gamma_neu/denv)
 
+      u(imzn, :, :, :) = 0.0
+      u(ienn, :, :, :) = penv/(gamma_neu-1.0)
+
       do i = 1,nx
-         rcx = x(i)
+         rcx = (x(i)-blobxc)**2
          do j = 1,ny
-            rcy = y(j)
+            rcy = (y(j)-blobyc)**2
             do k = 1,nz
                if(nzd /= 1) then
-                  rcz = z(k)
-                  rrel = sqrt((rcx-blobxc)**2+(rcy-blobyc)**2+(rcz-blobzc)**2)
+                  rrel = sqrt(rcx + rcy + (z(k)-blobzc)**2)
                else
-                  rrel = sqrt((rcx-blobxc)**2+(rcy-blobyc)**2)
+                  rrel = sqrt(rcx + rcy)
                endif
 
-               if(rblob >= rrel) then
+               if (rblob >= rrel) then
                   u(idnn,i,j,k) = chi*denv
                   u(imxn,i,j,k) = chi*denv*vgal
                   u(imyn,i,j,k) = 0.0
-                  u(imzn,i,j,k) = 0.0
                else
                   u(idnn,i,j,k) = denv
                   u(imxn,i,j,k) = denv*vgal
                   u(imyn,i,j,k) = Mext*gamma_neu*penv
-                  u(imzn,i,j,k) = 0.0
                endif
-               u(ienn,i,j,:) = penv/(gamma_neu-1.0)
             enddo
          enddo
       enddo
 
-      return
    end subroutine init_prob
 
 !------------------------------------------------------------------------------------------
