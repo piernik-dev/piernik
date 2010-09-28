@@ -93,7 +93,7 @@ module fluxneutral
     real :: maxvx                               !<
     real :: amp                                 !<
     real, dimension(n) :: c_fr                  !< temporary array for freezing speed
-    integer :: i
+!    integer :: i
 #endif /* LOCAL_FR_SPEED */
 
     fluxn   = 0.0
