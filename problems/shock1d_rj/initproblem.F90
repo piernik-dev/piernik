@@ -142,7 +142,7 @@ module initproblem
 #ifndef ISO
       use initionized,  only : ieni, gamma_ion
       use mpisetup,     only : smallei
-#endif /* !ISO */
+#endif /* ISO */
       implicit none
 
       integer  :: i,j,k
@@ -203,5 +203,38 @@ module initproblem
       write(*,*) maxval(b(3,:,:,:)), minval(b(3,:,:,:))
       return
    end subroutine init_prob
+
+   subroutine user_plt(var,ij,xn,tab,ierrh)
+      use arrays,         only : u,b
+      use grid,           only : nb,nxb,nyb,nzb
+      implicit none
+      character(LEN=4)     :: var
+      character(LEN=2)     :: ij
+      integer              :: xn,ierrh
+      real, dimension(:,:) :: tab
+
+      ierrh = 0
+      select case(var)
+         case default
+            ierrh = -1
+      end select
+
+   end subroutine user_plt
+
+   subroutine user_hdf5(var,tab,ierrh)
+!      use arrays,          only : u,b
+!      use grid,            only : nb,nx,ny,nz
+      implicit none
+      character(LEN=4)     :: var
+      real(kind=4), dimension(:,:,:) :: tab
+      integer :: ierrh
+
+      ierrh = 0
+      select case(var)
+         case default
+            ierrh = -1
+      end select
+
+   end subroutine user_hdf5
 
 end module initproblem

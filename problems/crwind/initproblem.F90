@@ -55,6 +55,9 @@ module initproblem
       implicit none
       integer :: ierrh
 
+      par_file = trim(cwd)//'/problem.par'
+      tmp_file = trim(cwd)//'/tmp.log'
+
       problem_name = 'xxx'
       run_id  = 'aaa'
       d0     = 1.0
@@ -66,11 +69,11 @@ module initproblem
       z0     = 0.0
 
       if(proc == 0) then
-         open(1,file='problem.par')
+         open(1,file=par_file)
             read(unit=1,nml=PROBLEM_CONTROL,iostat=ierrh)
             call namelist_errh(ierrh,'PROBLEM_CONTROL')
          close(1)
-         open(3, file='tmp.log', position='append')
+         open(3, file=tmp_file, position='append')
          write(3,nml=PROBLEM_CONTROL)
          write(3,*)
          close(3)
@@ -145,7 +148,7 @@ module initproblem
       implicit none
 
       integer :: i,j,k
-      real :: b0, csim2
+      real    :: b0, csim2
 
       ethu = 7.0**2/(5.0/3.0-1.0) * 1.0    ! thermal energy unit=0.76eV/cm**3
                                            ! for c_si= 7km/s, n=1/cm^3

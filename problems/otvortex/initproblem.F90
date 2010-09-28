@@ -51,9 +51,14 @@ module initproblem
    subroutine read_problem_par
 
       use mpisetup, only: MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION, &
-           &              cbuff, ibuff, rbuff, comm, ierr, buffer_dim, proc
-
+           &              cbuff, ibuff, rbuff, comm, ierr, buffer_dim, proc, cwd
+      use errh, only: namelist_errh
       implicit none
+      integer            :: ierrh
+      character(len=100) :: par_file, tmp_file
+
+      par_file = trim(cwd)//'/problem.par'
+      tmp_file = trim(cwd)//'/tmp.log'
 
       problem_name = 'shock'
       run_id  = 'tst'
@@ -61,11 +66,12 @@ module initproblem
       r0      = 0.25
 
       if(proc .eq. 0) then
-         open(1,file='problem.par')
-         read(unit=1,nml=PROBLEM_CONTROL)
+         open(1,file=par_file)
+         read(unit=1,nml=PROBLEM_CONTROL,iostat=ierrh)
+         call namelist_errh(ierrh,'PROBLEM_CONTROL')
          write(*,nml=PROBLEM_CONTROL)
          close(1)
-         open(3, file='tmp.log', position='append')
+         open(3, file=tmp_file, position='append')
          write(3,nml=PROBLEM_CONTROL)
          write(3,*)
          close(3)
