@@ -58,7 +58,6 @@ contains
 
 ! locals
 
-    real    :: p
     integer :: i,j,k
 
 

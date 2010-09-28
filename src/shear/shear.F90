@@ -95,7 +95,9 @@ module shear
     use grid, only : dy,Lx,nyd,x,nb,ny
     implicit none
     real, intent(in) :: ts,dts
+#ifdef FFTW
     integer :: i
+#endif /* FFTW */
 
     ddly  = dts * qshear*omega*Lx
     dely  = ts  * qshear*omega*Lx

@@ -84,7 +84,7 @@ module fluxdust
     real, dimension(nvar%dst%all,n):: fluxd      !< flux for dust
     real, dimension(nvar%dst%all,n):: uud        !< part of u for dust
     real, dimension(nvar%dst%all,n):: cfrd       !< freezing speed for dust
-    real, dimension(n) :: p                  !< pressure
+!    real, dimension(n) :: p                  !< pressure
     real, dimension(n) :: vx                 !< velocity for current sweep
 
     fluxd   = 0.0

@@ -127,8 +127,11 @@ module interactions
       use fluidindex,   only : nvar
       implicit none
       integer, intent(in)   :: i1,i2,n
-      real, dimension(nvar%all,n)  :: du,ddu,uu
+      real, dimension(nvar%all,n)  :: du,uu
       character(len=6), intent(in) :: sweep
+#ifdef COLLISIONS
+      real, dimension(nvar%all,n)  :: ddu
+#endif /* COLLISIONS */
 
       du=0.0
 #ifdef COLLISIONS
@@ -156,11 +159,11 @@ module interactions
       use grid,         only : maxxyz,x,y,z
       implicit none
       integer, intent(in)   :: i1,i2,n
-      real, dimension(nvar%all,n)  :: du,ddu,uu
+      real, dimension(nvar%all,n)  :: du,uu
       character(len=6), intent(in) :: sweep
       integer  :: ifl,jfl
       real, dimension(nvar%fluids,nvar%fluids,n) :: flch
-      real, dimension(nvar%fluids,n)             :: colls,velcoor
+      real, dimension(nvar%fluids,n)             :: colls
       real, dimension(maxxyz)                    :: r1,r2
       real    :: a1
       integer :: rend
