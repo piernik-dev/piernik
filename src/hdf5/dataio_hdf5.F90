@@ -286,6 +286,9 @@ module dataio_hdf5
       use arrays,       only: gpot
 #endif /* GRAV */
       use fluidindex,   only: ind
+#ifdef COSM_RAYS
+      use fluidindex,   only : iarr_all_crs
+#endif /* COSM_RAYS */
 
       implicit none
       character(LEN=4)     :: var !< quantity to be plotted
@@ -293,6 +296,9 @@ module dataio_hdf5
       integer              :: xn  !< no. of cell at which we are slicing the local block
       integer              :: ierrh !< error handling
       real, dimension(:,:) :: tab !< array containing given quantity
+#ifdef COSM_RAYS
+      integer              :: i
+#endif /* COSM_RAYS */
 
       ierrh = 0
       select case(var)
@@ -439,9 +445,20 @@ module dataio_hdf5
             if(ij=="yz") tab(:,:) = gpot(xn,nb+1:nyb+nb,nb+1:nzb+nb)
             if(ij=="xz") tab(:,:) = gpot(nb+1:nxb+nb,xn,nb+1:nzb+nb)
             if(ij=="xy") tab(:,:) = gpot(nb+1:nxb+nb,nb+1:nyb+nb,xn)
-#endif
+#endif /* GRAV */
          case default
+#ifdef COSM_RAYS
+            if(var(1:3) == 'ecr') then
+               i = iarr_all_crs(ichar(var(4:4))-48)
+               if(ij=="yz") tab(:,:) = u(i,xn,nb+1:nyb+nb,nb+1:nzb+nb)
+               if(ij=="xz") tab(:,:) = u(i,nb+1:nxb+nb,xn,nb+1:nzb+nb)
+               if(ij=="xy") tab(:,:) = u(i,nb+1:nxb+nb,nb+1:nyb+nb,xn)
+            else
+#endif /* COSM_RAYS */
             ierrh = -1
+#ifdef COSM_RAYS
+            endif
+#endif /* COSM_RAYS */
       end select
 
    end subroutine common_plt_hdf5
@@ -767,6 +784,9 @@ module dataio_hdf5
 #ifdef ISO_LOCAL
       use arrays,        only: cs_iso2_arr
 #endif /* ISO_LOCAL */
+#ifdef MASS_COMPENS
+      use arrays,        only: dinit
+#endif /* MASS_COMPENS */
       use grid,          only: nxb, nyb, nzb, x, y, z, nx, ny, nz
       use problem_pub,   only: problem_name, run_id
       use fluidindex,    only: nvar
@@ -1233,7 +1253,10 @@ module dataio_hdf5
       use arrays,       only: u,b
 #ifdef ISO_LOCAL
       use arrays,       only: cs_iso2_arr
-#endif
+#endif /* ISO_LOCAL */
+#ifdef MASS_COMPENS
+      use arrays,       only: dinit
+#endif /* MASS_COMPENS */
       use problem_pub,  only: problem_name, run_id
       use errh,         only: die
       use func,         only: fix_string
@@ -1265,9 +1288,9 @@ module dataio_hdf5
       integer, dimension(1) :: ibuf
 
       real, dimension(:,:,:,:), pointer :: p4d
-#ifdef ISO_LOCAL
+#if defined ISO_LOCAL || defined MASS_COMPENS
       real, dimension(:,:,:), pointer :: p3d
-#endif
+#endif /* ISO_LOCAL || MASS_COMPENS */
 
       nu = nvar%all
 
