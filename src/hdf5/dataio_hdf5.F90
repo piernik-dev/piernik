@@ -1685,7 +1685,7 @@ module dataio_hdf5
       character(len=32)  :: dset_name
       character(len=128) :: trim_env
       integer            :: fe, i
-      integer(SIZE_T) :: bufsize = 1
+      integer(SIZE_T) :: bufsize
       integer :: error
       integer, parameter          :: buf_len = 50
       integer, dimension(buf_len) :: ibuffer
@@ -1721,9 +1721,11 @@ module dataio_hdf5
          ibuffer(11) = nxb                      ; ibuffer_name(11) = "nxb"
          ibuffer(12) = nyb                      ; ibuffer_name(12) = "nyb"
          ibuffer(13) = nzb                      ; ibuffer_name(13) = "nzb"
-         ibuffer(14) = nb                       ; ibuffer_name(13) = "nb"
+         ibuffer(14) = nb                       ; ibuffer_name(14) = "nb"
 
          !BEWARE: A memory leak was detected here. h5lt calls use HD5f2cstring and probably sometimes don't free the allocated buffer
+
+         bufsize = 1
 
          i = 1
          do while (rbuffer_name(i) /= "")
