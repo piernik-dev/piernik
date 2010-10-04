@@ -69,13 +69,13 @@ module errh
       select case(mode)
          case (T_ERR)
             ansicolor = ansi_red
-            msg_type_str = "Error"
+            msg_type_str = "Error  "
          case (T_WARN)
             ansicolor = ansi_yellow
             msg_type_str = "Warning"
          case (T_INFO)
             ansicolor = ansi_green
-            msg_type_str = "Info"
+            msg_type_str = "Info   "
          case default
             ansicolor = ansi_black
             msg_type_str = ""
@@ -83,7 +83,7 @@ module errh
 
       call MPI_comm_rank(MPI_COMM_WORLD, proc, ierr)
 
-      write(*,'(a,i5,3a)') trim(ansicolor)//trim(msg_type_str)//" @"//ansi_black, proc, ': "', trim(nm), '"'       ! QA_WARN
+      write(*,'(a,i5,3a)') trim(ansicolor)//msg_type_str//" @"//ansi_black, proc, ': "', trim(nm), '"'       ! QA_WARN
 
       if (dataio_initialized) then
          open(log_lun, file=log_file, position='append')
