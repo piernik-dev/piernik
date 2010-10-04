@@ -250,19 +250,18 @@ contains
 #ifdef MAGNETIC
          call all_mag_boundaries
 #endif /* MAGNETIC */
+#ifdef GRAV
+         if(.not.grav_pot_3d_called) then
+            if(associated(grav_pot_3d)) then
+               call grav_pot_3d
+               grav_pot_3d_called = .true.
+            else
+               call die("[piernik:init_piernik] grav_pot_3d failed for the 2nd time!")
+            endif
+         endif
+#endif /* GRAV */
          call write_data(output='all') ! moved from dataio::init_dataio
       end if
-
-#ifdef GRAV
-      if(.not.grav_pot_3d_called) then
-         if(associated(grav_pot_3d)) then
-            call grav_pot_3d
-            grav_pot_3d_called = .true.
-         else
-            call die("[piernik:init_piernik] grav_pot_3d failed for the 2nd time!")
-         endif
-      endif
-#endif /* GRAV */
 
    end subroutine init_piernik
 
