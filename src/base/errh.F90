@@ -40,7 +40,11 @@ module errh
    public :: die, warn, printinfo, namelist_errh, msg
 
    character(len=512) :: msg
-   integer, parameter :: T_ERR = 1, T_WARN = T_ERR + 1, T_INFO = T_WARN + 1
+   integer, parameter :: T_PLAIN  = 0, &
+        &                T_ERR    = T_PLAIN + 1, &
+        &                T_WARN   = T_ERR   + 1, &
+        &                T_INFO   = T_WARN  + 1, &
+        &                T_SILENT = T_INFO  + 1
 
    include 'mpif.h'
 
@@ -63,7 +67,7 @@ module errh
       character(len=7), parameter :: ansi_yellow = char(27)//'[1;33m'
 
       character(len=7)  :: ansicolor
-      character(len=8) :: msg_type_str
+      character(len=7) :: msg_type_str
       integer :: proc, ierr
 
       select case(mode)
@@ -76,14 +80,23 @@ module errh
          case (T_INFO)
             ansicolor = ansi_green
             msg_type_str = "Info   "
-         case default
+         case (T_SILENT)
+            ansicolor = ansi_black
+            msg_type_str = ""
+         case default ! T_PLAIN
             ansicolor = ansi_black
             msg_type_str = ""
       end select
 
       call MPI_comm_rank(MPI_COMM_WORLD, proc, ierr)
 
-      write(*,'(a,i5,3a)') trim(ansicolor)//msg_type_str//" @"//ansi_black, proc, ': "', trim(nm), '"'       ! QA_WARN
+      if (mode /= T_SILENT) then
+         if (mode == T_PLAIN) then
+            write(*,'(a)') trim(nm)                                                                                  ! QA_WARN
+         else
+            write(*,'(a,i5,3a)') trim(ansicolor)//msg_type_str//" @"//ansi_black, proc, ': "', trim(nm), '"'         ! QA_WARN
+         end if
+      end if
 
       if (dataio_initialized) then
          open(log_lun, file=log_file, position='append')
@@ -91,20 +104,29 @@ module errh
          write(log_lun,'(2a,i5,3a)')trim(msg_type_str)," @", proc, ': "', trim(nm), '"'
          close(log_lun)
       else
-         write(*,'(a,i5,a)') ansi_yellow//"[errh:colormessage] dataio_initialized == .false. @", proc, ansi_black  ! QA_WARN
+         write(*,'(a,i5,a)') ansi_yellow//"[errh:colormessage] dataio_initialized == .false. @", proc, ansi_black ! QA_WARN
       endif
 
    end subroutine colormessage
 
 !-----------------------------------------------------------------------------
 
-   subroutine printinfo(nm)
+   subroutine printinfo(nm, to_stdout)
 
       implicit none
 
       character(len=*), intent(in) :: nm
+      logical, optional, intent(in) :: to_stdout
 
-      call colormessage(nm, T_INFO)
+      if (present(to_stdout)) then
+         if (to_stdout) then
+            call colormessage(nm, T_PLAIN)
+         else
+            call colormessage(nm, T_SILENT)
+         end if
+      else
+         call colormessage(nm, T_INFO)
+      end if
 
    end subroutine printinfo
 

@@ -187,30 +187,18 @@ contains
    subroutine mg_write_log(msg, stdout_cntrl)
 
       use errh,          only: printinfo
-      use dataio_public, only: log_file, log_lun
-      use mpisetup,      only: cwd, proc
+      use mpisetup,      only: proc
 
       implicit none
 
       character(len=*), intent(in)  :: msg          !< message to be logged
       logical, optional, intent(in) :: stdout_cntrl !< flag to supress printing to stdout
 
-      logical            :: log_exist
       logical            :: to_stdout
-
-      inquire(file=log_file, exist=log_exist)
-      if(.not.log_exist) then
-         str = trim(cwd)//'/tmp.log'
-         open(log_lun, file=str,      position='append')
-      else
-         open(log_lun, file=log_file, position='append')
-      endif
-      write(log_lun, '(a)') trim(msg)
-      close(log_lun)
 
       to_stdout = (proc == 0)
       if (present(stdout_cntrl)) to_stdout = to_stdout .and. stdout_cntrl
-      if (to_stdout) call printinfo(msg)
+      call printinfo(msg, to_stdout)
 
    end subroutine mg_write_log
 
