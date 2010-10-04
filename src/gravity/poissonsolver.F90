@@ -67,7 +67,7 @@ contains
          call poisson_xyp(dens(nb+1:nb+nxd,nb+1:nb+nyd,:), &
                            sgp(nb+1:nb+nxd,nb+1:nb+nyd,:),dz)
 
-      call die("poisson_solve: poisson_xyp called")
+        call die("[poissonsolver:poisson_solve] poisson_xyp called")
 
     elseif( bnd_xl .eq. 'per' .and. bnd_xr .eq. 'per' .and. &
             bnd_yl .eq. 'per' .and. bnd_yr .eq. 'per' .and. &
@@ -101,10 +101,7 @@ contains
          if (allocated(ala)) deallocate(ala)
 #endif /* SHEAR */
     else
-      write(*,*) 'POISSON SOLVER: not implemented for boundary conditions'
-      write(*,*) '                xdim: ',bnd_xl,',  ', bnd_xr
-      write(*,*) '                ydim: ',bnd_yl,',  ', bnd_yr
-      stop
+       call die("[poissonsolver:poisson_solve not implemented for current boundary conditions")
     endif
 
   end subroutine poisson_solve

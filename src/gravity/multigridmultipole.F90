@@ -1083,7 +1083,7 @@ contains
 !!$            cphi = - p(0)*newtong / sqrt(1e-290+sum((p(1:3)-x(1:3))**2))
 !!$
 !!$            call moments2pot(phi, x(1), x(2), x(3))
-!!$            write(*,'(a,3f7.2,2(a,g15.5))')" xyz= ",x(1:3)," phi = ",phi," calc= ",cphi
+!!$            write(*,'(a,3f7.2,2(a,g15.5))')" xyz= ",x(1:3)," phi = ",phi," calc= ",cphi ! QA_WARN
 !!$         end do
 !!$      end do
 !!$

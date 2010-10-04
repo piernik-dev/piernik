@@ -75,8 +75,7 @@ module hydrostatic
         dmid = d0
         iter = 0
       else
-        if(proc .eq.0)  write(*,*) '"d0" must be /= 0'
-         stop
+         call die("[hydrostatic:hydrostatic_zeq] d0 must be /= 0")
       endif
 
       dzs = (zmax-zmin)/real(nstot-2*nb*nsub)
