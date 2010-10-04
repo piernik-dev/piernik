@@ -162,8 +162,6 @@ module initionized
       iarr_ion_swpz = [idni,imzi,imyi,imxi,ieni]
 #endif /* ISO */
 
-!      write(*,*) 'ionized_index', iarr_ion_swpx
-
    end subroutine ionized_index
 
    subroutine cleanup_ionized
