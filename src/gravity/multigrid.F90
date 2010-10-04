@@ -1552,7 +1552,7 @@ contains
             call prolong_faces(lev, soln)
          else
             if (grav_bnd /= bnd_givenval) call zero_boundaries(lev)
-            write(*,'(a,2i3)')"m:mfb WTF?",grav_bnd,lev
+            write(*,'(a,2i3)')"m:mfb WTF?",grav_bnd,lev  ! QA_WARN
          end if
       end if
 

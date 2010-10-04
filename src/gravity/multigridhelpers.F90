@@ -186,6 +186,7 @@ contains
 
    subroutine mg_write_log(msg, stdout_cntrl)
 
+      use errh,          only: printinfo
       use dataio_public, only: log_file, log_lun
       use mpisetup,      only: cwd, proc
 
@@ -209,7 +210,7 @@ contains
 
       to_stdout = (proc == 0)
       if (present(stdout_cntrl)) to_stdout = to_stdout .and. stdout_cntrl
-      if (to_stdout) write(*, '(a)') trim(msg)
+      if (to_stdout) call printinfo(msg)
 
    end subroutine mg_write_log
 

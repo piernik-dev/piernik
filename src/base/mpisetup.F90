@@ -415,7 +415,7 @@ module mpisetup
                write(unit=3,nml=NUMERICAL_SETUP)
 
             close(3)
-            write(*,"(a35,i5)") 'START OF MHD CODE,  No. of procs = ', nproc
+            write(*,"(a35,i5)") 'START OF MHD CODE,  No. of procs = ', nproc   ! QA_WARN
          endif
 
          deallocate(host_all)
