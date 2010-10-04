@@ -1300,7 +1300,7 @@ module dataio_hdf5
       if(proc==0) then
          write (filename,'(a,a1,a3,a1,i4.4,a4)') &
             trim(problem_name),'_', run_id,'_',chdf%nres,'.res'
-         write(*,*) 'Reading restart  file: ', trim(filename)
+         write(*,*) 'Reading restart  file: ', trim(filename)  ! QA_WARN
          inquire(file=log_file , exist = log_exist)
          if(log_exist .eqv. .true.) then
             open(log_lun, file=log_file, position='append')
@@ -1471,7 +1471,7 @@ module dataio_hdf5
 
          open(log_lun, file=log_file, position='append')
          write(log_lun,*) 'Done reading restart file: ',trim(filename)
-         write(*,*)    'Done reading restart file: ',trim(filename)
+         write(*,*)    'Done reading restart file: ',trim(filename)  ! QA_WARN
          close(log_lun)
       endif
 
@@ -1497,6 +1497,7 @@ module dataio_hdf5
 ! ------------------------------------------------------------------------------------
 !
    subroutine write_hdf5(chdf)
+      use errh,        only: die
       use hdf5,        only: HID_T, H5F_ACC_TRUNC_F, H5P_FILE_ACCESS_F, H5P_DEFAULT_F, &
            &                 h5open_f, h5close_f, h5fcreate_f, h5fclose_f, h5pcreate_f, h5pclose_f, h5pset_fapl_mpio_f
       use types,       only: hdf
@@ -1541,12 +1542,8 @@ module dataio_hdf5
       ierrh = 0; ok_var = .false.
       do i = 1, nhdf_vars
          call common_vars_hdf5(hdf_vars(i),data,ierrh);  if(ierrh == 0) ok_var = .true.
-         if(.not.ok_var) then
-            write(*,*) hdf_vars(i),' is not defined in common_vars_hdf5, neither in user_hdf5 !!!'
-            call MPI_BARRIER(comm3d,ierr)
-            call mpistop
-            stop
-         endif
+         if(.not.ok_var) &
+            call die("[dataio_hdf5:write_hdf5]: "//hdf_vars(i)//" is not defined in common_vars_hdf5, neither in user_hdf5.")
          call write_arr(data,hdf_vars(i),file_id)
       enddo
      if(allocated(data)) deallocate(data)
@@ -1772,7 +1769,7 @@ module dataio_hdf5
 
          open(chdf%log_lun, file=chdf%log_file, position='append')
          write(chdf%log_lun,*) 'Writing ', stype, ' file: ', trim(filename)
-         write(*,*)    'Writing ', stype, ' file: ', trim(filename)
+         write(*,*)    'Writing ', stype, ' file: ', trim(filename)  ! QA_WARN
          close(chdf%log_lun)
       endif
 

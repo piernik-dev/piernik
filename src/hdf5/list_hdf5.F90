@@ -111,6 +111,7 @@ module list_hdf5
       end subroutine iterate_lhdf5
 
       subroutine add_lhdf5(item)
+         use errh, only: warn
          implicit none
          type(lhdf5_info), intent(in) :: item
          type(lhdf5_list), pointer :: tp
@@ -118,7 +119,7 @@ module list_hdf5
          do
             if( associated(tp%next)) then
                if( item%key == tp%next%info%key ) then
-                  write(*,*) trim(item%key)//' exists in the list'
+                  call warn("[list_hdf5:add_lhdf5]: "//trim(item%key)//" exists in the list")
                   return
                else if( item%key < tp%next%info%key) then
                   call insert_lhdf5(tp%next, item)
