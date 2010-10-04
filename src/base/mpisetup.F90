@@ -622,7 +622,7 @@ module mpisetup
 
       subroutine divide_domain_voodoo(np)
 
-         use errh,      only: die, warn, msg
+         use errh,      only: die, warn, msg, printinfo
          use constants, only: some_primes
 
          implicit none
@@ -671,7 +671,7 @@ module mpisetup
 
          if (proc == 0 .and. np > 1) then
             write(msg,'(a,3i4,a,3i6,a)')"[mpisetup:divide_domain_voodoo] Domain divided to [",psize(:)," ] pieces, each of [",ldom(3:1:-1)," ] cells."
-            call warn(msg)
+            call printinfo(msg)
          endif
 
       end subroutine divide_domain_voodoo

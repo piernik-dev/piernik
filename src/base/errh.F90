@@ -33,15 +33,40 @@
 module errh
    implicit none
    private
-   public :: die, warn, namelist_errh, msg
+   public :: die, warn, printinfo, namelist_errh, msg
    character(len=512) :: msg
    character(len=4), parameter :: set_black  = char(27)//"[0m"
-   character(len=5), parameter :: set_red    = char(27)//'[31m'
-   character(len=5), parameter :: set_green  = char(27)//'[32m'
-   character(len=5), parameter :: set_yellow = char(27)//'[33m'
+   character(len=7), parameter :: set_red    = char(27)//'[1;31m'
+   character(len=7), parameter :: set_green  = char(27)//'[1;32m'
+   character(len=7), parameter :: set_yellow = char(27)//'[1;33m'
 
    include 'mpif.h'
    contains
+
+!-----------------------------------------------------------------------------
+
+   subroutine printinfo(nm)
+
+      use dataio_public, only : log_file, log_lun, dataio_initialized
+
+      implicit none
+
+      character(len=*), intent(in) :: nm
+
+      integer :: proc, ierr
+
+      call MPI_comm_rank(MPI_COMM_WORLD, proc, ierr)
+
+      write(*,'(a,i4,3a)') set_green//"Info @"//set_black, proc, ': "', nm, '"'
+      if(dataio_initialized) then
+        open(log_lun, file=log_file, position='append')
+        write(log_lun,'(a,i4,3a)')"Info @", proc, ': "', nm, '"'
+        close(log_lun)
+      endif
+
+   end subroutine printinfo
+
+!-----------------------------------------------------------------------------
 
    subroutine warn(nm)
       use dataio_public, only : log_file, log_lun, dataio_initialized
@@ -52,15 +77,16 @@ module errh
 
       call MPI_comm_rank(MPI_COMM_WORLD, proc, ierr)
 
-      write(*,'(a,i4,3a)') set_yellow//"Warning @"//set_black, proc, ': "', nm, '"'
+      write(*,'(a,i4,3a)') set_yellow//"Warning @"//set_black, proc, ': "', trim(nm), '"'
       if(dataio_initialized) then
         open(log_lun, file=log_file, position='append')
-        write(log_lun,'(a,i4,3a)')"Warning @", proc, ': "', nm, '"'
+        write(log_lun,'(a,i4,3a)')"Warning @", proc, ': "', trim(nm), '"'
         close(log_lun)
       endif
 
    end subroutine warn
 
+!-----------------------------------------------------------------------------
    !! BEWARE: routine is not finished, it should kill PIERNIK gracefully
    subroutine die(nm,allprocs)
       use dataio_public, only : log_file, log_lun, dataio_initialized
@@ -91,6 +117,8 @@ module errh
       endif
 
    end subroutine die
+
+!-----------------------------------------------------------------------------
 
    subroutine namelist_errh(ierrh,nm)
       implicit none
