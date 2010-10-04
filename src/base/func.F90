@@ -49,6 +49,7 @@ module func
 !! the performance at the cost of the flexibility of original \p CSHIFT.
 !<
    function pshift(tab,d)
+      use errh, only: warn
       implicit none
       real, dimension(:,:,:) :: tab
       integer :: d
@@ -79,7 +80,7 @@ module func
       else if(d==3) then
          pshift(:,:,1:lz-1) = tab(:,:,2:lz); pshift(:,:,lz) = tab(:,:,1)
       else
-         write(*,*) 'Dim ill defined in pshift!'
+         call warn('[func:pshift]: Dim ill defined in pshift!')
       endif
 
       return
@@ -95,6 +96,7 @@ module func
 !! the performance at the cost of the flexibility of original \p CSHIFT.
 !<
    function mshift(tab,d)
+      use errh, only: warn
       implicit none
       real, dimension(:,:,:) :: tab
       integer :: d
@@ -125,7 +127,7 @@ module func
       else if(d==3) then
          mshift(:,:,2:lz) = tab(:,:,1:lz-1); mshift(:,:,1) = tab(:,:,lz)
       else
-         write(*,*) 'Dim ill defined in mshift!'
+         call warn('[func:mshift]: Dim ill defined in mshift!')
       endif
 
       return

@@ -33,7 +33,8 @@
 module errh
    implicit none
    private
-   public :: die, warn, namelist_errh
+   public :: die, warn, namelist_errh, msg
+   character(len=512) :: msg
    character(len=4), parameter :: set_black  = char(27)//"[0m"
    character(len=5), parameter :: set_red    = char(27)//'[31m'
    character(len=5), parameter :: set_green  = char(27)//'[32m'
@@ -61,11 +62,12 @@ module errh
    end subroutine warn
 
    !! BEWARE: routine is not finished, it should kill PIERNIK gracefully
-   subroutine die(nm)
+   subroutine die(nm,allprocs)
       use dataio_public, only : log_file, log_lun, dataio_initialized
 
       implicit none
       character(len=*), intent(in) :: nm
+      integer, optional            :: allprocs
       integer :: proc, ierr
 
       call MPI_comm_rank(MPI_COMM_WORLD, proc, ierr)
@@ -78,9 +80,15 @@ module errh
          close(log_lun)
       endif
 
-!      call mpistop
-
-      stop
+      if(present(allprocs)) then
+         if(allprocs /= 0) then
+            call MPI_Barrier(MPI_COMM_WORLD, ierr)
+            call MPI_Finalize(ierr)
+         endif
+         stop
+      else
+         stop
+      endif
 
    end subroutine die
 

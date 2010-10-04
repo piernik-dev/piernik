@@ -70,6 +70,7 @@ subroutine bnd_a(A)
 end subroutine bnd_a
 
 subroutine bnd_b(dim)
+   use errh,      only : warn
    use mpisetup,  only : MPI_DOUBLE_PRECISION, bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr, &
       ierr, req, comm3d, procxl, procxr, procyl, procyr, proczl, proczr, status, &
       pxsize, pysize, pzsize, procxyl, procyxl, pcoords, comm, &
@@ -290,7 +291,7 @@ subroutine bnd_b(dim)
           b(:,1,:,:) = b(:,2,:,:)
 !         Do nothing if 'out'
         case default
-          write(*,*) 'Boundary condition ',bnd_xl,' not implemented in ',dim
+          call warn('[magboundaries:bnd_b]: Boundary condition '//bnd_xl//' not implemented in '//dim)
       end select  ! (bnd_xl)
 
       select case (bnd_xr(1:3))
@@ -310,7 +311,7 @@ subroutine bnd_b(dim)
 !         Do nothing if 'out'
           b(:,nx,:,:) = b(:,nx-1,:,:)
         case default
-          write(*,*) 'Boundary condition ',bnd_xr,' not implemented in ',dim
+          call warn('[magboundaries:bnd_b]: Boundary condition '//bnd_xr//' not implemented in '//dim)
       end select  ! (bnd_xr)
 
 
@@ -331,7 +332,7 @@ subroutine bnd_b(dim)
           b(:,:,1,:) = b(:,:,2,:)
 !         Do nothing if 'out'
         case default
-          write(*,*) 'Boundary condition ',bnd_yl,' not implemented in ',dim
+          call warn('[magboundaries:bnd_b]: Boundary condition '//bnd_yl//' not implemented in '//dim)
       end select  ! (bnd_yl)
 
       select case (bnd_yr(1:3))
@@ -349,7 +350,7 @@ subroutine bnd_b(dim)
 !         Do nothing if 'out'
           b(:,:,ny,:) = b(:,:,ny-1,:)
         case default
-          write(*,*) 'Boundary condition ',bnd_yr,' not implemented in ',dim
+          call warn('[magboundaries:bnd_b]: Boundary condition '//bnd_yr//' not implemented in '//dim)
 
       end select  ! (bnd_yr)
 
@@ -367,7 +368,7 @@ subroutine bnd_b(dim)
           b(:,:,:,1) = b(:,:,:,2)
 !         Do nothing if 'out'
         case default
-          write(*,*) 'Boundary condition ',bnd_zl,' not implemented in ',dim
+          call warn('[magboundaries:bnd_b]: Boundary condition '//bnd_zl//' not implemented in '//dim)
       end select  ! (bnd_zl)
 
       select case (bnd_zr(1:3))
@@ -381,7 +382,7 @@ subroutine bnd_b(dim)
 !         Do nothing if 'out'
           b(:,:,:,nz) = b(:,:,:,nz-1)
         case default
-          write(*,*) 'Boundary condition ',bnd_zr,' not implemented in ',dim
+          call warn('[magboundaries:bnd_b]: Boundary condition '//bnd_zr//' not implemented in '//dim)
       end select  ! (bnd_zr)
 
     end select  ! (dim)
@@ -392,8 +393,9 @@ end subroutine bnd_b
 !=====================================================================================================
 
 subroutine bnd_emf(var, name, dim)
-   use mpisetup, only : bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr
-  use grid, only : nx, ny, nz, nb, nxb, nyb, nzb
+   use errh,      only: warn
+   use mpisetup,  only: bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr
+   use grid,      only: nx, ny, nz, nb, nxb, nyb, nzb
 
   implicit none
   real, dimension(nx,ny,nz) :: var
@@ -432,7 +434,7 @@ subroutine bnd_emf(var, name, dim)
                 var(ib,:,:)               = var(nb+1,:,:)  - real(nb+1-ib)*dvarx
               enddo
             case default
-              write(*,*) 'Boundary condition ', bnd_xl, ' not implemented for ',name,' in ',dim
+              call warn('[magboundaries:bnd_emf]: Boundary condition '//bnd_xl//' not implemented for '//name//' in '//dim)
           end select  ! (bnd_xl)
 
           select case (bnd_xr(1:3))
@@ -457,7 +459,7 @@ subroutine bnd_emf(var, name, dim)
                 var(nb+nxb+ib,:,:)        = var(nb+nxb,:,:) + real(ib)*dvarx
               enddo
             case default
-              write(*,*) 'Boundary condition ', bnd_xr, ' not implemented for ',name,' in ',dim
+              call warn('[magboundaries:bnd_emf]: Boundary condition '//bnd_xr//' not implemented for '//name//' in '//dim)
           end select ! (bnd_xr)
 
         case ('vybx','vzbx','emfy','emfz')
@@ -484,7 +486,7 @@ subroutine bnd_emf(var, name, dim)
                 var(ib,:,:)               = var(nb+1,:,:)  - real(nb+1-ib)*dvarx
               enddo
             case default
-              write(*,*) 'Boundary condition ', bnd_xl, ' not implemented for ',name,' in ',dim
+              call warn('[magboundaries:bnd_emf]: Boundary condition '//bnd_xl//' not implemented for '//name//' in '//dim)
           end select   ! (bnd_xl)
 
           select case (bnd_xr(1:3))
@@ -509,7 +511,7 @@ subroutine bnd_emf(var, name, dim)
                 var(nb+nxb+1+ib,:,:)      =  var(nb+nxb+1,:,:) + real(ib)*dvarx
               enddo
             case default
-              write(*,*) 'Boundary condition ', bnd_xr, ' not implemented for ',name,' in ',dim
+              call warn('[magboundaries:bnd_emf]: Boundary condition '//bnd_xr//' not implemented for '//name//' in '//dim)
           end select  ! (bnd_xr)
 
         case ('vybz','vzby','emfx')
@@ -535,7 +537,7 @@ subroutine bnd_emf(var, name, dim)
                 var(ib,:,:)               = var(nb+1,:,:)  - real(nb+1-ib)*dvarx
               enddo
             case default
-              write(*,*) 'Boundary condition ', bnd_xl, ' not implemented for ',name,' in ',dim
+              call warn('[magboundaries:bnd_emf]: Boundary condition '//bnd_xl//' not implemented for '//name//' in '//dim)
           end select   ! (bnd_xl)
 
           select case (bnd_xr(1:3))
@@ -559,7 +561,7 @@ subroutine bnd_emf(var, name, dim)
                 var(nb+nxb+ib,:,:)        = var(nb+nxb,:,:) + real(ib)*dvarx
               enddo
             case default
-              write(*,*) 'Boundary condition ', bnd_xr, ' not implemented for ',name,' in ',dim
+              call warn('[magboundaries:bnd_emf]: Boundary condition '//bnd_xr//' not implemented for '//name//' in '//dim)
           end select   ! (bnd_xr)
 
        end select  ! (name)
@@ -589,7 +591,7 @@ subroutine bnd_emf(var, name, dim)
                 var(:,ib,:)               = var(:,nb+1,:) - real(nb+1-ib)*dvary
               enddo
             case default
-              write(*,*) 'Boundary condition ', bnd_yl, ' not implemented for ',name,' in ',dim
+              call warn('[magboundaries:bnd_emf]: Boundary condition '//bnd_yl//' not implemented for '//name//' in '//dim)
           end select  ! (bnd_yl)
 
           select case (bnd_yr(1:3))
@@ -612,7 +614,7 @@ subroutine bnd_emf(var, name, dim)
                 var(:,nb+nyb+ib,:)        = var(:,nb+nyb,:) + real(ib)*dvary
               enddo
             case default
-              write(*,*) 'Boundary condition ', bnd_yr, ' not implemented for ',name,' in ',dim
+              call warn('[magboundaries:bnd_emf]: Boundary condition '//bnd_yr//' not implemented for '//name//' in '//dim)
           end select ! (bnd_yr)
 
         case ('vzby','vxby','emfz','emfx')
@@ -637,7 +639,7 @@ subroutine bnd_emf(var, name, dim)
                 var(:,ib,:)               = var(:,nb+1,:) - real(nb+1-ib)*dvary
               enddo
             case default
-              write(*,*) 'Boundary condition ', bnd_yl, ' not implemented for ',name,' in ',dim
+              call warn('[magboundaries:bnd_emf]: Boundary condition '//bnd_yl//' not implemented for '//name//' in '//dim)
           end select   ! (bnd_yl)
 
           select case (bnd_yr(1:3))
@@ -660,7 +662,7 @@ subroutine bnd_emf(var, name, dim)
                 var(:,nb+nyb+1+ib,:)      =  var(:,nb+nyb+1,:) + real(ib)*dvary
               enddo
             case default
-              write(*,*) 'Boundary condition ', bnd_yr, ' not implemented for ',name,' in ',dim
+              call warn('[magboundaries:bnd_emf]: Boundary condition '//bnd_yr//' not implemented for '//name//' in '//dim)
           end select  ! (bnd_yr)
 
         case ('vzbx','vxbz','emfy')
@@ -684,7 +686,7 @@ subroutine bnd_emf(var, name, dim)
                 var(:,ib,:)               = var(:,nb+1,:) - real(nb+1-ib)*dvary
               enddo
             case default
-              write(*,*) 'Boundary condition ', bnd_yl, ' not implemented for ',name,' in ',dim
+              call warn('[magboundaries:bnd_emf]: Boundary condition '//bnd_yl//' not implemented for '//name//' in '//dim)
           end select   ! (bnd_yl)
 
           select case (bnd_yr(1:3))
@@ -706,7 +708,7 @@ subroutine bnd_emf(var, name, dim)
                 var(:,nb+nyb+ib,:)        = var(:,nb+nyb,:) + real(ib)*dvary
               enddo
             case default
-              write(*,*) 'Boundary condition ', bnd_yr, ' not implemented for ',name,' in ',dim
+              call warn('[magboundaries:bnd_emf]: Boundary condition '//bnd_yr//' not implemented for '//name//' in '//dim)
           end select   ! (bnd_yr)
 
        end select  ! (name)
@@ -738,7 +740,7 @@ subroutine bnd_emf(var, name, dim)
                 var(:,:,ib)               = var(:,:,nb+1) - real(nb+1-ib)*dvarz
               enddo
             case default
-              write(*,*) 'Boundary condition ', bnd_zl, ' not implemented for ',name,' in ',dim
+              call warn('[magboundaries:bnd_emf]: Boundary condition '//bnd_zl//' not implemented for '//name//' in '//dim)
           end select  ! (bnd_zl)
 
          select case (bnd_zr(1:3))
@@ -761,7 +763,7 @@ subroutine bnd_emf(var, name, dim)
                var(:,:,nb+nzb+ib)        = var(:,:,nb+nzb) + real(ib)*dvarz
              enddo
             case default
-              write(*,*) 'Boundary condition ', bnd_zr, ' not implemented for ',name,' in ',dim
+              call warn('[magboundaries:bnd_emf]: Boundary condition '//bnd_zr//' not implemented for '//name//' in '//dim)
           end select ! (bnd_zr)
 
 
@@ -787,7 +789,7 @@ subroutine bnd_emf(var, name, dim)
                 var(:,:,ib)               = var(:,:,nb+1) - real(nb+1-ib)*dvarz
               enddo
             case default
-              write(*,*) 'Boundary condition ', bnd_zl, ' not implemented for ',name,' in ',dim
+              call warn('[magboundaries:bnd_emf]: Boundary condition '//bnd_zl//' not implemented for '//name//' in '//dim)
           end select   ! (bnd_zl)
 
           select case (bnd_zr(1:3))
@@ -810,7 +812,7 @@ subroutine bnd_emf(var, name, dim)
                var(:,:,nb+nzb+1+ib)      =  var(:,:,nb+nzb+1) + real(ib)*dvarz
              enddo
            case default
-             write(*,*) 'Boundary condition ', bnd_zr, ' not implemented for ',name,' in ',dim
+              call warn('[magboundaries:bnd_emf]: Boundary condition '//bnd_zr//' not implemented for '//name//' in '//dim)
           end select   ! (bnd_zr)
 
         case ('vxby','vybx','emfz')
@@ -834,7 +836,7 @@ subroutine bnd_emf(var, name, dim)
                 var(:,:,ib)               = var(:,:,nb+1) - real(nb+1-ib)*dvarz
               enddo
             case default
-              write(*,*) 'Boundary condition ', bnd_zl, ' not implemented for ',name,' in ',dim
+              call warn('[magboundaries:bnd_emf]: Boundary condition '//bnd_zl//' not implemented for '//name//' in '//dim)
           end select   ! (bnd_zl)
 
           select case (bnd_zr(1:3))
@@ -856,7 +858,7 @@ subroutine bnd_emf(var, name, dim)
                 var(:,:,nb+nzb+ib)        = var(:,:,nb+nzb) + real(ib)*dvarz
               enddo
             case default
-              write(*,*) 'Boundary condition ', bnd_zr, ' not implemented for ',name,' in ',dim
+              call warn('[magboundaries:bnd_emf]: Boundary condition '//bnd_zr//' not implemented for '//name//' in '//dim)
           end select ! (bnd_zr)
 
         end select  ! (name)

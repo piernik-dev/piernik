@@ -160,7 +160,7 @@ module mpisetup
 !<
       subroutine mpistart
 
-         use errh, only : die, namelist_errh
+         use errh, only : die, namelist_errh, msg, warn
 
          implicit none
 
@@ -204,7 +204,7 @@ module mpisetup
 
          if (cwd_status /= 0) call die("[mpisetup:mpistart] problems accessing current working directory.")
 #ifdef DEBUG
-         write(*,'(3a,i6,3a)') 'mpisetup: host="',trim(host_proc),'", PID=',pid_proc,' CWD="',trim(cwd_proc),'"'
+         write(*,'(3a,i6,3a)') 'mpisetup: host="',trim(host_proc),'", PID=',pid_proc,' CWD="',trim(cwd_proc),'"'     ! QA_WARN
 #endif /* DEBUG */
 
          call MPI_Gather(cwd_proc,  cwdlen, MPI_CHARACTER, cwd_all,  cwdlen, MPI_CHARACTER, 0, comm, err)
@@ -217,7 +217,7 @@ module mpisetup
          if(proc == 0) then
             par_file = trim(cwd)//'/problem.par'
             inquire(file=par_file, exist=par_file_exist)
-            if(.not. par_file_exist) call die('[mpisetup:mpistart] Cannot find "problem.par" in the working directory')
+            if(.not. par_file_exist) call die('[mpisetup:mpistart] Cannot find "problem.par" in the working directory',0)
             tmp_log_file = trim(cwd)//'/tmp.log'
          endif
 
@@ -363,10 +363,12 @@ module mpisetup
             if(mpi_magic) then
                call divide_domain_voodoo(nproc)
             else
-               if(proc == 0)  write(*,*)'nproc =',nproc,' MUST BE EQUAL TO   pxsize*pysize*pzsize =',pxsize*pysize*pzsize
+               if(proc == 0) then
+                  write(msg,'(A,I,A,I)') 'nproc =',nproc,' MUST BE EQUAL TO   pxsize*pysize*pzsize =',pxsize*pysize*pzsize
+                  call die(msg,0)
+               endif
                call MPI_Barrier(MPI_COMM_WORLD, ierr)
                call MPI_Finalize(ierr)
-               stop
             endif
          endif
 
@@ -395,7 +397,7 @@ module mpisetup
          call MPI_CART_COORDS(comm3d, proc, ndims, pcoords, ierr)
 
          if(proc == 0) then
-            write(*, '("------------------------------------------------------------------------------------------------------")')
+            write(*, '("------------------------------------------------------------------------------------------------------")')  ! QA_WARN
             open(3, file=tmp_log_file, status='unknown')
                write(3,'(a,/)')"###############     Initialization     ###############"
                write(3,"(a35,i2)") 'START OF MHD CODE,  No. of procs = ', nproc
@@ -414,7 +416,6 @@ module mpisetup
 
             close(3)
             write(*,"(a35,i5)") 'START OF MHD CODE,  No. of procs = ', nproc
-!            write(*,nml=MPI_BLOCKS)
          endif
 
          deallocate(host_all)
@@ -487,19 +488,20 @@ module mpisetup
          if(proczr /= MPI_PROC_NULL .and. proczr /= proc) bnd_zr = 'mpi'
 
 #ifdef DEBUG
-         write(*,*) 'xdir: ',procxl, proc, procxr
-         write(*,*) 'ydir: ',procyl, proc, procyr
-         write(*,*) 'zdir: ',proczl, proc, proczr
-         write(*,*)
+         write(*,*) 'xdir: ',procxl, proc, procxr                       ! QA_WARN
+         write(*,*) 'ydir: ',procyl, proc, procyr                       ! QA_WARN
+         write(*,*) 'zdir: ',proczl, proc, proczr                       ! QA_WARN
+         write(*,*)                                                     ! QA_WARN
 #endif /* DEBUG */
 
-         if(integration_order > 2) then
-            stop 'For "ORIG" scheme integration_order must be 1 or 2'
-         endif
+         if(integration_order > 2) call die ('[mpisetup:mpistart]: "ORIG" scheme integration_order must be 1 or 2')
 
          dt_old = -1.
          if (dt_max_grow < 1.01) then
-            if (proc == 0) write(*,'(2(a,g10.3))')"[mpisetup:mpistart] dt_max_grow = ",dt_max_grow," is way too low. Resetting to ",dt_default_grow
+            if (proc == 0) then
+               write(msg,'(2(a,g10.3))')"[mpisetup:mpistart] dt_max_grow = ",dt_max_grow," is way too low. Resetting to ",dt_default_grow
+               call warn(msg)
+            endif
             dt_max_grow = dt_default_grow
          end if
 
@@ -620,7 +622,7 @@ module mpisetup
 
       subroutine divide_domain_voodoo(np)
 
-         use errh,      only: die
+         use errh,      only: die, warn, msg
          use constants, only: some_primes
 
          implicit none
@@ -667,8 +669,10 @@ module mpisetup
 
          psize = [ pxsize, pysize, pzsize ]
 
-         if (proc == 0 .and. np > 1) &
-              write(*,'(a,3i4,a,3i6,a)')"[mpisetup:divide_domain_voodoo] Domain divided to [",psize(:)," ] pieces, each of [",ldom(3:1:-1)," ] cells."
+         if (proc == 0 .and. np > 1) then
+            write(msg,'(a,3i4,a,3i6,a)')"[mpisetup:divide_domain_voodoo] Domain divided to [",psize(:)," ] pieces, each of [",ldom(3:1:-1)," ] cells."
+            call warn(msg)
+         endif
 
       end subroutine divide_domain_voodoo
 

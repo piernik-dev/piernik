@@ -107,12 +107,12 @@ contains
 
       tp => timer_root
 #ifdef VERBOSE
-      write(*,*)
+      call warn("")
 #endif /* VERBOSE */
       do while (associated(tp%next))
          item = delete_timer(tp%next)
 #ifdef VERBOSE
-         write(*,*) "[timer:cleanup_timers]: Timer ",item%key," deleted"
+         call warn("[timer:cleanup_timers]: Timer "//item%key//" deleted")
 #endif /* VERBOSE */
       enddo
       return
@@ -151,7 +151,7 @@ contains
 
          time_old = tp%info%time
          call cpu_time(tp%info%time)
-         !if(.not.reset) write(*,'(A,F7.3,A)') "Timer ["//trim(tp%info%key)//"] = ", tp%info%time - time_old, " s"
+         !if(.not.reset) write(*,'(A,F7.3,A)') "Timer ["//trim(tp%info%key)//"] = ", tp%info%time - time_old, " s"  ! QA_WARN
          if(.not.reset) then
             modify_timer = tp%info%time - time_old
          else
@@ -266,18 +266,18 @@ contains
 
          zcps  = real(nstep) * real(nzones) / cpuallp
 
-         write(*,*)
-         write (*, 10) cpuallp
-         write (*, 20) wctot
-         write (*, 30) zcps
-         write(*,*)
+         write(*,*)                                            ! QA_WARN
+         write (*, 10) cpuallp                                 ! QA_WARN
+         write (*, 20) wctot                                   ! QA_WARN
+         write (*, 30) zcps                                    ! QA_WARN
+         write(*,*)                                            ! QA_WARN
 
          open(log_lun, file=log_file, position='append')
-            write(log_lun,*)
-            write (log_lun, 10) cpuallp
-            write (log_lun, 20) wctot
-            write (log_lun, 30) zcps
-            write(log_lun,*)
+            write(log_lun,*)                                   ! QA_WARN
+            write (log_lun, 10) cpuallp                        ! QA_WARN
+            write (log_lun, 20) wctot                          ! QA_WARN
+            write (log_lun, 30) zcps                           ! QA_WARN
+            write(log_lun,*)                                   ! QA_WARN
          close(log_lun)
       endif
 

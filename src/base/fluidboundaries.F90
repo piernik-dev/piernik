@@ -32,6 +32,7 @@ module fluidboundaries
    contains
 
    subroutine bnd_u(dim)
+      use errh,            only : warn
       use fluidboundaries_pub, only: user_bnd_xl, user_bnd_xr, user_bnd_yl, user_bnd_yr, user_bnd_zl, user_bnd_zr
       use mpisetup,        only : ierr, MPI_XY_RIGHT_DOM, MPI_XY_RIGHT_BND, MPI_XY_LEFT_DOM, MPI_XY_LEFT_BND, &
          MPI_XZ_RIGHT_DOM, MPI_XZ_RIGHT_BND, MPI_XZ_LEFT_DOM, MPI_XZ_LEFT_BND, &
@@ -441,7 +442,7 @@ module fluidboundaries
          case ('shef')
 !         Do nothing if 'mpi'
          case default
-            write(*,*) '[bnd_u]: Boundary condition ',bnd_xl,' not implemented in ',dim
+            call warn('[fluid_boundaries:bnd_u]: Boundary condition '//bnd_xl//' not implemented in '//dim)
          end select  ! (bnd_xl)
 
          select case (bnd_xr)
@@ -491,7 +492,7 @@ module fluidboundaries
 #endif /* COSM_RAYS */
             enddo
          case default
-            write(*,*) '[bnd_u] Boundary condition ',bnd_xr,' not implemented in ',dim
+            call warn('[fluid_boundaries:bnd_u]: Boundary condition '//bnd_xr//' not implemented in '//dim)
          end select  ! (bnd_xr)
 
       case ('ydim')
@@ -539,7 +540,7 @@ module fluidboundaries
 #endif /* COSM_RAYS */
             enddo
          case default
-            write(*,*) 'Boundary condition ',bnd_yl,' not implemented in ',dim
+            call warn('[fluid_boundaries:bnd_u]: Boundary condition '//bnd_yl//' not implemented in '//dim)
          end select  ! (bnd_yl)
 
          select case (bnd_yr)
@@ -585,8 +586,7 @@ module fluidboundaries
 #endif /* COSM_RAYS */
             enddo
          case default
-            write(*,*) 'Boundary condition ',bnd_yr,' not implemented in ',dim
-
+            call warn('[fluid_boundaries:bnd_u]: Boundary condition '//bnd_yr//' not implemented in '//dim)
          end select  ! (bnd_yr)
 
       case ('zdim')
@@ -665,7 +665,6 @@ module fluidboundaries
                         factor = (1.0 + 0.5*dzs*gprofs(ksub)/csi2b(:,i,j))  &
                                 /(1.0 - 0.5*dzs*gprofs(ksub)/csi2b(:,i,j))
                         dprofs(:,ksub+1) = factor * dprofs(:,ksub)
-!                 if(i.eq.7 .and. j.eq.7) write(*,999) ksub, zs(ksub), dprofs(ksub)
                      enddo
 
                      db(:,i,j)  = dprofs(:,nsub+1)
@@ -690,7 +689,7 @@ module fluidboundaries
             enddo ! ib
 #endif /* GRAV */
          case default
-            write(*,*) 'Boundary condition ',bnd_zl,' not implemented in ',dim
+            call warn('[fluid_boundaries:bnd_u]: Boundary condition '//bnd_zl//' not implemented in '//dim)
          end select  ! (bnd_zl)
 
          select case (bnd_zr)
@@ -767,7 +766,6 @@ module fluidboundaries
                         factor = (1.0 + 0.5*dzs*gprofs(ksub)/csi2b(:,i,j))  &
                                 /(1.0 - 0.5*dzs*gprofs(ksub)/csi2b(:,i,j))
                         dprofs(:,ksub+1) = factor * dprofs(:,ksub)
-!                 if(i.eq.7 .and. j.eq.7) write(*,999) ksub, zs(ksub), dprofs(ksub)
                      enddo
 
                      db(:,i,j)  = dprofs(:,nsub+1)
@@ -792,7 +790,7 @@ module fluidboundaries
             enddo ! ib
 #endif /* GRAV */
          case default
-            write(*,*) 'Boundary condition ',bnd_zr,' not implemented in ',dim
+            call warn('[fluid_boundaries:bnd_u]: Boundary condition '//bnd_zr//' not implemented in '//dim)
          end select  ! (bnd_zr)
 
       end select  ! (dim)

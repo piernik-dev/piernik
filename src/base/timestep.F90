@@ -37,6 +37,7 @@ module timestep
       subroutine time_step
          use mpisetup,      only : t, dt, dt_old, dt_max_grow, dt_initial, dt_min, nstep, proc
          use dataio_public, only : tend
+         use errh,          only : warn, msg
          use constants,     only : small,big
          use dataio,        only : write_crashed
 
@@ -122,7 +123,10 @@ module timestep
          end if
 
          if (dt < dt_min) then ! something nasty had happened
-            if (proc == 0) write(*,'(2(a,es12.4))')"[timestep:time_step] dt = ",dt,", less than allowed minimum = ",dt_min
+            if (proc == 0) then
+               write(msg,'(2(a,es12.4))')"[timestep:time_step] dt = ",dt,", less than allowed minimum = ",dt_min
+               call warn(msg)
+            endif
             call write_crashed("[timestep:time_step] dt < dt_min")
          end if
 
