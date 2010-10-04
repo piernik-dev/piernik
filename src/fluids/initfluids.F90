@@ -105,7 +105,9 @@
 !<
 
 module initfluids
-
+#if defined NEUTRAL && defined IONIZED
+   use errh,         only: warn
+#endif /* defined NEUTRAL && defined IONIZED  */
 #ifdef IONIZED
   use initionized, only : init_ionized, gamma_ion, cs_iso_ion, cs_iso_ion2
 #endif /* IONIZED */
@@ -158,7 +160,7 @@ module initfluids
 
 #if defined NEUTRAL && defined IONIZED
     if(cs_iso_neu /= cs_iso_ion) &
-        write(*,*) "WARNING: 'cs_iso_neu' and 'cs_iso_ion' should be equal"
+        call warn("[initfluids:init_fluids]: 'cs_iso_neu' and 'cs_iso_ion' should be equal")
 #endif /* defined NEUTRAL && defined IONIZED  */
 
 #ifdef IONIZED
