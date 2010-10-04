@@ -462,11 +462,12 @@ module dataio
       use mpisetup,      only : MPI_CHARACTER, MPI_DOUBLE_PRECISION, comm, ierr, proc, nstep
       use dataio_hdf5,   only : write_hdf5, write_restart_hdf5
       use dataio_public, only : chdf, step_hdf
+      use errh,          only : printinfo, warn
 
       implicit none
 
       logical, intent(inout) :: end_sim
-
+      character(len=1024)    :: lmsg
       integer :: tsleep
 
 !--- process 0 checks for messages
@@ -511,19 +512,21 @@ module dataio
                end_sim = .true.
             case('help')
                if (proc == 0) then
-                  write(*,'(/,a)')"[dataio:user_msg_handler] Recognized messages:"
-                  write(*,'(a)')"  help     - prints this information"
-                  write(*,'(a)')"  stop     - finish the simulation"
-                  write(*,'(a)')"  res|dump - immediately dumps a restart file"
-                  write(*,'(a)')"  hdf      - dumps a plotfile"
-                  write(*,'(a)')"  log      - update logfile"
-                  write(*,'(a)')"  tsl      - write a timeslice"
-                  write(*,'(a)')"  sleep <number> - wait <number> seconds"
-                  write(*,'(a)')"  tend|nend|dtres|dthdf|dtlog|dttsl|dtplt <value> - update specified parameter with <value>"
-                  write(*,'(a,/)')"Note that only one line at a time is read."
+                  write(lmsg,'(a)') "[dataio:user_msg_handler] Recognized messages:"//char(10)//&
+                  &"  help     - prints this information"//char(10)//&
+                  &"  stop     - finish the simulation"//char(10)//&
+                  &"  res|dump - immediately dumps a restart file"//char(10)//&
+                  &"  hdf      - dumps a plotfile"//char(10)//&
+                  &"  log      - update logfile"//char(10)//&
+                  &"  tsl      - write a timeslice"//char(10)//&
+                  &"  sleep <number> - wait <number> seconds"//char(10)//&
+                  &"  tend|nend|dtres|dthdf|dtlog|dttsl|dtplt <value> - update specified parameter with <value>"//char(10)//&
+                  &"Note that only one line at a time is read."
+                  call printinfo(lmsg)
                end if
             case default
-               if (proc == 0) write(*,'(/,3a,/)')"[dataio:user_msg_handler] Warning: non-recognized message '",trim(msg),"'. Use message 'help' for list of valid keys."
+               if (proc == 0) &
+                  call warn("[dataio:user_msg_handler]: non-recognized message '"//trim(msg)//"'. Use message 'help' for list of valid keys.")
          end select
       endif
 
@@ -1416,10 +1419,10 @@ module dataio
 !-------------------------------------------------------------------------
 
 !\todo: process multiple commands at once
-
-      use mpisetup, only: cwd, proc
+      use errh,      only: printinfo
+      use mpisetup,  only: cwd, proc
 #if defined(__INTEL_COMPILER)
-      use ifport, only: unlink, stat
+      use ifport,    only: unlink, stat
 #endif /* __INTEL_COMPILER */
       implicit none
 #if defined(__PGI)
@@ -1463,7 +1466,7 @@ module dataio
             close(u_msg)
 
             if (len_trim(buf) > 0 .and. proc==0) then ! leave information on stdout and logfile
-               write(*, '(a)') trim(buf)
+               call printinfo(buf)
                inquire(file=log_file, exist=ex)
                if (ex) then
                   open(log_lun, file=log_file, position='append')
