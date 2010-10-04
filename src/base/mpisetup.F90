@@ -364,7 +364,7 @@ module mpisetup
                call divide_domain_voodoo(nproc)
             else
                if(proc == 0) then
-                  write(msg,'(A,I,A,I)') 'nproc =',nproc,' MUST BE EQUAL TO   pxsize*pysize*pzsize =',pxsize*pysize*pzsize
+                  write(msg,'(A,I5,A,I10)') 'nproc =',nproc,' MUST BE EQUAL TO   pxsize*pysize*pzsize =',pxsize*pysize*pzsize
                   call die(msg,0)
                endif
                call MPI_Barrier(MPI_COMM_WORLD, ierr)
