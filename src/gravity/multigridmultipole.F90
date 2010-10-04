@@ -100,7 +100,7 @@ contains
 
    subroutine init_multipole(mb_alloc, cgrid)
 
-      use errh,          only: die
+      use errh,          only: die, warn
       use types,         only: grid_container
       use mpisetup,      only: proc
       use multigridvars, only: level_min, level_max, lvl, eff_dim, XDIR, YDIR, ZDIR
@@ -128,24 +128,24 @@ contains
 
       !multipole moments
       if (mmax > lmax) then
-         if (proc == 0) write(*,'(a)')"[multipole:init_multipole] Warning: mmax reduced to lmax"
+         if (proc == 0) call warn("[multipole:init_multipole] mmax reduced to lmax")
          mmax = lmax
       end if
       if (mmax < 0) mmax = lmax
 
       if (coarsen_multipole < 0) coarsen_multipole = 0
       if (level_max - coarsen_multipole < level_min) then
-         if (proc == 0) write(*,'(a)')"[multipole:init_multipole] Warning: too deep multipole coarsening, setting level_min."
+         if (proc == 0) call warn("[multipole:init_multipole] too deep multipole coarsening, setting level_min.")
          coarsen_multipole = level_max - level_min
       end if
       lmpole => lvl(level_max - coarsen_multipole)
       if (coarsen_multipole > 0) then
          if (interp_pt2mom) then
-            write(*,'(a)')"[multipole:init_multipole] Warning: coarsen_multipole > 0 disables interp_pt2mom"
+            call warn("[multipole:init_multipole] coarsen_multipole > 0 disables interp_pt2mom.")
             interp_pt2mom = .false.
          end if
          if (interp_mom2pot) then
-            write(*,'(a)')"[multipole:init_multipole] Warning: coarsen_multipole > 0 disables interp_mom2pot"
+            call warn("[multipole:init_multipole] coarsen_multipole > 0 disables interp_mom2pot.")
             interp_mom2pot = .false.
          end if
       end if

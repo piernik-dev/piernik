@@ -38,15 +38,15 @@ module multigridhelpers
    implicit none
 
    ! namelist parameters
-   logical            :: do_ascii_dump                                !< to dump, or not to dump: that is a question (ascii)
-   logical            :: multidim_code_3D                             !< prefer code written for any 1D and 2D configuration even in 3D for benchmarking and debugging
-   logical            :: dirty_debug                                  !< Initialize everything with some insane values (dirtyH, defined below) and check if they can propagate
-   integer            :: aux_par_I0, aux_par_I1, aux_par_I2           !< auxiliary integer parameters
-   real               :: aux_par_R0, aux_par_R1, aux_par_R2           !< auxiliary real parameters
+   logical            :: do_ascii_dump                      !< to dump, or not to dump: that is a question (ascii)
+   logical            :: multidim_code_3D                   !< prefer code written for any 1D and 2D configuration even in 3D for benchmarking and debugging
+   logical            :: dirty_debug                        !< Initialize everything with some insane values (dirtyH, defined below) and check if they can propagate
+   integer            :: aux_par_I0, aux_par_I1, aux_par_I2 !< auxiliary integer parameters
+   real               :: aux_par_R0, aux_par_R1, aux_par_R2 !< auxiliary real parameters
 
-   real, parameter    :: dirtyH = 1e200, dirtyL = 1e50    !< If dirty_debug, initialize arrays with dirtyH and check if the solution contains anything above dirtyL
+   real, parameter    :: dirtyH = 1e200, dirtyL = 1e50      !< If dirty_debug, initialize arrays with dirtyH and check if the solution contains anything above dirtyL
 
-   character(len=256) :: str                              !< private string for messages, filenames, etc.
+   character(len=256) :: str                                !< string for messages, filenames, etc.
 
 contains
 

@@ -166,7 +166,7 @@ contains
       use initionized,   only : gamma_ion, idni, imxi, imyi, imzi, ieni
       use dataio_public, only : tend
       use multigrid,     only : multigrid_solve
-      use errh,          only : die
+      use errh,          only : die, warn
 
       implicit none
 
@@ -337,7 +337,7 @@ contains
                if (crashNotConv) then
                   call die("[initproblem:init_prob] M-iterations not converged.")
                else
-                  if (proc == 0) write(*,'(a)')"[initproblem:init_prob] M-iterations not converged. Continue anyway."
+                  if (proc == 0) call warn("[initproblem:init_prob] M-iterations not converged. Continue anyway.")
                   doneM = .true.
                end if
             end if
@@ -366,7 +366,7 @@ contains
             if (crashNotConv) then
                call die("[initproblem:init_prob] C-iterations not converged.")
             else
-               if (proc == 0) write(*,'(a)')"[initproblem:init_prob] C-iterations not converged. Continue anyway."
+               if (proc == 0) call warn("[initproblem:init_prob] C-iterations not converged. Continue anyway.")
                doneC = .true.
             end if
          end if
@@ -407,7 +407,7 @@ contains
       use arrays,        only : u, sgp
       use mpisetup,      only : proc, comm, ierr, MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_SUM
       use initionized,   only : idni
-      use errh,          only : die
+      use errh,          only : die, warn
       use multigridvars, only : grav_bnd, bnd_isolated
       implicit none
 
@@ -439,9 +439,9 @@ contains
       if (vc > tol .and. grav_bnd == bnd_isolated) then
          if (proc == 0) then
             if (3*abs(TWP(3)) < abs(TWP(2))) then
-               write(*,'(a)')"[initproblem:virialCheck] Virial imbalance occured because the clump is not resolved"
+               call warn("[initproblem:virialCheck] Virial imbalance occured because the clump is not resolved.")
             else
-               write(*,'(a)')"[initproblem:virialCheck] Virial imbalance occured because the clump overfills the domain"
+               call warn("[initproblem:virialCheck] Virial imbalance occured because the clump overfills the domain.")
             end if
          end if
          if (crashNotConv) call die("[initproblem:virialCheck] Virial defect too high.")

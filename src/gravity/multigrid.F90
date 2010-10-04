@@ -54,7 +54,7 @@ contains
    subroutine init_multigrid(cgrid)
 
       use types,              only: grid_container
-      use errh,               only: namelist_errh, die
+      use errh,               only: namelist_errh, die, warn
       use arrays,             only: sgp
       use constants,          only: pi, dpi
       use mpisetup,           only: buffer_dim, comm, comm3d, cwd, ierr, proc, nproc, ndims, &
@@ -305,18 +305,21 @@ contains
 
       if (.not. (grav_bnd == bnd_periodic .or. grav_bnd == bnd_dirichlet .or. grav_bnd == bnd_isolated) .and. .not. gb_no_fft) then
          gb_no_fft = .true.
-         if (proc == 0) write(*,'(a)')"[multigrid:init_multigrid] Use of FFT not allowed by current boundary type/combination."
+         if (proc == 0) call warn("[multigrid:init_multigrid] Use of FFT not allowed by current boundary type/combination.")
       end if
 
       if (.not. prefer_rbgs_relaxation .and. any([ overrelax, overrelax_x, overrelax_y, overrelax_z ] /= 1.)) then
-         if (proc == 0) write(*,'(a)')"[multigrid:init_multigrid] Overrelaxation is disabled for FFT local solver"
+         if (proc == 0) call warn("[multigrid:init_multigrid] Overrelaxation is disabled for FFT local solver.")
          overrelax = 1.
          overrelax_x   = 1.
          overrelax_y   = 1.
          overrelax_z   = 1.
       end if
 
-      if ((Jacobi_damp <= 0. .or. Jacobi_damp>1.) .and. proc == 0) write(*,'(a,g12.5,a)')"[multigrid:init_multigrid] Jacobi_damp = ",Jacobi_damp," is outside (0, 1] interval."
+      if ((Jacobi_damp <= 0. .or. Jacobi_damp>1.) .and. proc == 0) then
+         write(errstr, '(a,g12.5,a)')"[multigrid:init_multigrid] Jacobi_damp = ",Jacobi_damp," is outside (0, 1] interval."
+         call warn(errstr)
+      end if
 
       if (fft_patient) fftw_flags = FFTW_PATIENT
 
@@ -586,7 +589,7 @@ contains
                gb%fft_type = fft_dst
             case default
                gb%fft_type = fft_none
-               if (proc == 1) write(*,'(a)')"[multigrid:init_multigrid] gb_no_fft set but no suitable boundary conditions found. Reverting to RBGS relaxation."
+               if (proc == 0) call warn("[multigrid:init_multigrid] gb_no_fft set but no suitable boundary conditions found. Reverting to RBGS relaxation.")
          end select
       end if
 
@@ -707,7 +710,7 @@ contains
       end do
 
       if (roof%fft_type == fft_none .and. trust_fft_solution) then
-         if (proc == 0) write(*,'(a)')"[multigrid:init_multigrid] Warning: cannot trust FFT solution on the roof."
+         if (proc == 0) call warn("[multigrid:init_multigrid] cannot trust FFT solution on the roof.")
          trust_fft_solution = .false.
       end if
 
@@ -1354,7 +1357,7 @@ contains
 
    subroutine approximate_solution_fft(lev, src, soln)
 
-      use errh,               only: die
+      use errh,               only: die, warn
       use mpisetup,           only: nproc
       use multigridhelpers,   only: dirty_debug, check_dirty, dirtyL, multidim_code_3D
       use multigridmpifuncs,  only: mpi_multigrid_bnd
@@ -1390,9 +1393,9 @@ contains
             end if
 
             if (dirty_debug) then
-               if (has_dir(XDIR) .and. any(abs(lvl(lev)%bnd_x(:, :, :)) > dirtyL)) write(*,'(a)')"approximate_solution_fft dirty bnd_x"
-               if (has_dir(YDIR) .and. any(abs(lvl(lev)%bnd_y(:, :, :)) > dirtyL)) write(*,'(a)')"approximate_solution_fft dirty bnd_y"
-               if (has_dir(ZDIR) .and. any(abs(lvl(lev)%bnd_z(:, :, :)) > dirtyL)) write(*,'(a)')"approximate_solution_fft dirty bnd_z"
+               if (has_dir(XDIR) .and. any(abs(lvl(lev)%bnd_x(:, :, :)) > dirtyL)) call warn("approximate_solution_fft dirty bnd_x")
+               if (has_dir(YDIR) .and. any(abs(lvl(lev)%bnd_y(:, :, :)) > dirtyL)) call warn("approximate_solution_fft dirty bnd_y")
+               if (has_dir(ZDIR) .and. any(abs(lvl(lev)%bnd_z(:, :, :)) > dirtyL)) call warn("approximate_solution_fft dirty bnd_z")
             end if
 
             if (has_dir(XDIR)) then
@@ -1563,7 +1566,7 @@ contains
    subroutine prolong_faces(lev, soln)
 
       use mpisetup,           only: proc
-      use errh,               only: die
+      use errh,               only: die, warn
       use multigridhelpers,   only: check_dirty
       use multigridmpifuncs,  only: mpi_multigrid_bnd
 
@@ -1585,7 +1588,7 @@ contains
       if (lev < level_min .or. lev > level_max) call die("[multigrid:prolong_faces] Invalid level")
 
       if (lev == level_min) then
-         write(*,'(a)')"[multigrid:prolong_faces] Cannot prolong anything to base level"
+         call warn("[multigrid:prolong_faces] Cannot prolong anything to base level")
          return
       end if
 

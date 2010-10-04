@@ -91,9 +91,10 @@
    subroutine prolong_level_hord(lev, iv)
 
       use mpisetup,           only: proc
-      use errh,               only: die
+      use errh,               only: die, warn
       use multigridvars,      only: ord_prolong
       use multigridmpifuncs,  only: mpi_multigrid_bnd
+      use multigridhelpers,   only: str
 
       implicit none
 
@@ -103,7 +104,10 @@
       logical, save :: firstcall = .true.
 
       if (firstcall) then
-         if (proc == 0) write(*,'(a,i3,a)')"[multigridexperimental:prolong_level_hord] Warning: prolongation order ",ord_prolong," is experimental"
+         if (proc == 0) then
+            write(str,'(a,i3,a)')"[multigridexperimental:prolong_level_hord] prolongation order ",ord_prolong," is experimental"
+            call warn(str)
+         end if
          firstcall = .false.
       end if
 
@@ -381,7 +385,7 @@
       use mpisetup,           only: proc
       use multigridvars,      only: lvl, eff_dim, NDIM, L4_strength, grav_bnd, bnd_givenval
       use multigridmpifuncs,  only: mpi_multigrid_bnd
-      use errh,               only: die
+      use errh,               only: die, warn
 
       implicit none
 
@@ -402,7 +406,7 @@
       if (eff_dim<NDIM) call die("[multigrid:residual4] Only 3D is implemented")
 
       if (firstcall) then
-         if (proc == 0) write(*,'(a)')"[multigridexperimental:residual4] Warning: residual order 4 is experimental."
+         if (proc == 0) call warn("[multigridexperimental:residual4] residual order 4 is experimental.")
          firstcall = .false.
       end if
 
