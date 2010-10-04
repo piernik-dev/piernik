@@ -161,10 +161,6 @@ module initneutral
       nvar_neu      = 4
       nvar          = imzn
 
-      write(*,*) 'iarr_neu = ', allocated(iarr_neu)
-      write(*,*) 'iarr_neu_swpx = ', allocated(iarr_neu_swpx)
-      write(*,*) 'iarr_neu_swpy = ', allocated(iarr_neu_swpy)
-      write(*,*) 'iarr_neu_swpz = ', allocated(iarr_neu_swpz)
       allocate(iarr_neu(nvar_neu),iarr_neu_swpx(nvar_neu), iarr_neu_swpy(nvar_neu), iarr_neu_swpz(nvar_neu))
 
       iarr_neu      = [idnn,imxn,imyn,imzn]
@@ -183,8 +179,6 @@ module initneutral
       iarr_neu_swpy = [idnn,imyn,imxn,imzn,ienn]
       iarr_neu_swpz = [idnn,imzn,imyn,imxn,ienn]
 #endif /* ISO */
-
-!      write(*,*) 'neutral_index', iarr_neu_swpx
 
    end subroutine neutral_index
 

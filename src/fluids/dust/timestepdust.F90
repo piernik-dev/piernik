@@ -117,8 +117,6 @@ contains
     call MPI_BCAST(dt_dst_all, 1, MPI_DOUBLE_PRECISION, 0, comm, ierr)
     dt_dst = cfl*dt_dst_all
 
-!    write(*,*) 'timestep_dst:', dt_dst
-
   end subroutine timestep_dst
 
 !-------------------------------------------------------------------------------

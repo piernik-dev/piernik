@@ -148,8 +148,6 @@ contains
     call MPI_BCAST(dt_neu_all, 1, MPI_DOUBLE_PRECISION, 0, comm, ierr)
     dt_neu = cfl*dt_neu_all
 
-!    write(*,*) 'timestep_neu:', dt_neu
-
   end subroutine timestep_neu
 
 !-------------------------------------------------------------------------------
