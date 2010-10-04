@@ -44,6 +44,7 @@ def qa_checks(files,options):
    qa_trailing_spaces(files,options)
    nt = qa_nonconforming_tabs(files,options)
    wc = qa_depreciated_syntax(f90files,options)
+   wc += qa_crude_write(f90files,options)
    if (wc):
       s =  b.WARNING + "%i warnings detected. " % wc + b.ENDC + "Do you wish to proceed? (y/N) "
       if( raw_input(s) != 'y' ):
@@ -59,6 +60,20 @@ def qa_checks(files,options):
          exit()
    else:
       print b.OKGREEN + "Yay! No errors!!! " + b.ENDC
+
+def qa_crude_write(files,options):
+   print b.OKGREEN + "QA: " + b.ENDC + "Checking for crude writes to stdout (suppress this by appending QA_WARN at the eol)"
+   warning = 0
+   for name in files:
+      file = open(name)
+      n = 1
+      for line in file.readlines():
+         if( re.search("write\(\*",line) and not re.search("QA_WARN",line)):
+            print b.WARNING + "!! crude write  " + b.ENDC + name + " @ L%i => " % n + line.strip()
+            warning += 1
+         n += 1
+      file.close()
+   return warning
 
 def qa_nonconforming_tabs(files,options):
    print b.OKGREEN + "QA: " + b.ENDC + "Checking for tabs"
