@@ -198,9 +198,9 @@ module dataio
 !<
    subroutine init_dataio
 
-      use mpisetup,        only : ibuff, rbuff, cbuff, proc, MPI_CHARACTER, &
+      use mpisetup,        only : ibuff, rbuff, cbuff, proc, MPI_CHARACTER, cbuff_len, &
            &                      MPI_DOUBLE_PRECISION, MPI_INTEGER, comm, ierr, buffer_dim, cwd, &
-           &                      psize, t, nstep, cbuff_len
+           &                      psize, t, nstep, bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr
       use errh,            only : namelist_errh
       use problem_pub,     only : problem_name,run_id
       use version,         only : nenv,env, init_version
@@ -210,7 +210,7 @@ module dataio
       use magboundaries,   only : all_mag_boundaries
 #endif /* MAGNETIC */
       use dataio_hdf5,     only : init_hdf5, read_restart_hdf5, maxparfilelines, parfile, parfilelines
-      use dataio_public,   only : chdf, nres, last_hdf_time, step_hdf, nlog, ntsl
+      use dataio_public,   only : chdf, nres, last_hdf_time, step_hdf, nlog, ntsl, dataio_initialized
 
       implicit none
 
@@ -438,10 +438,14 @@ module dataio
       endif
       call MPI_BCAST(log_file, 32, MPI_CHARACTER, 0, comm, ierr)
       call set_container_chdf(nstep)
-      call all_fluid_boundaries
+      if(all([bnd_xl,bnd_xr,bnd_yl,bnd_yr,bnd_zl,bnd_zr] /= "user")) then
+         call all_fluid_boundaries
 #ifdef MAGNETIC
-      call all_mag_boundaries
+         call all_mag_boundaries
 #endif /* MAGNETIC */
+      endif
+
+      dataio_initialized = .true.
 
    end subroutine init_dataio
 

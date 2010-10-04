@@ -31,29 +31,52 @@
 !!
 !<
 module errh
-
    implicit none
+   private
+   public :: die, warn, namelist_errh
+   character(len=4), parameter :: set_black  = char(27)//"[0m"
+   character(len=5), parameter :: set_red    = char(27)//'[31m'
+   character(len=5), parameter :: set_green  = char(27)//'[32m'
+   character(len=5), parameter :: set_yellow = char(27)//'[33m'
+
    include 'mpif.h'
    contains
 
-   subroutine die(nm)
-      !! BEWARE: routine is not finished, it should kill PIERNIK gracefully
-
-      use dataio_public, only : log_file, log_lun
+   subroutine warn(nm)
+      use dataio_public, only : log_file, log_lun, dataio_initialized
 
       implicit none
-
       character(len=*), intent(in) :: nm
-
       integer :: proc, ierr
 
       call MPI_comm_rank(MPI_COMM_WORLD, proc, ierr)
 
-      write(*,'(a,i4,3a)')"Error @", proc, ': "', nm, '"'
-      open(log_lun, file=log_file, position='append')
-      if (proc == 0) write(log_lun,'(/,a,/)')"###############     Crashing     ###############"
-      write(log_lun,'(a,i4,3a)')"Error @", proc, ': "', nm, '"'
-      close(log_lun)
+      write(*,'(a,i4,3a)') set_yellow//"Warning @"//set_black, proc, ': "', nm, '"'
+      if(dataio_initialized) then
+        open(log_lun, file=log_file, position='append')
+        write(log_lun,'(a,i4,3a)')"Warning @", proc, ': "', nm, '"'
+        close(log_lun)
+      endif
+
+   end subroutine warn
+
+   !! BEWARE: routine is not finished, it should kill PIERNIK gracefully
+   subroutine die(nm)
+      use dataio_public, only : log_file, log_lun, dataio_initialized
+
+      implicit none
+      character(len=*), intent(in) :: nm
+      integer :: proc, ierr
+
+      call MPI_comm_rank(MPI_COMM_WORLD, proc, ierr)
+
+      write(*,'(a,i4,3a)') set_red//"Error @"//set_black, proc, ': "', nm, '"'
+      if(dataio_initialized) then
+         open(log_lun, file=log_file, position='append')
+         if (proc == 0) write(log_lun,'(/,a,/)')"###############     Crashing     ###############"
+         write(log_lun,'(a,i4,3a)')"Error @", proc, ': "', nm, '"'
+         close(log_lun)
+      endif
 
 !      call mpistop
 

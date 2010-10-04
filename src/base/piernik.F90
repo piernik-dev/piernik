@@ -145,44 +145,47 @@ contains
 !! Meta subroutine responsible for initializing all piernik modules
 !<
    subroutine init_piernik
-      use types,         only : grid_container
-      use initfluids,    only : init_fluids
-      use fluidindex,    only : nvar
-      use arrays,        only : init_arrays
-      use grid,          only : nx,ny,nz
-      use grid,          only : init_grid,grid_xyz
-      use initproblem,   only : init_prob, read_problem_par
-      use problem_pub,   only : problem_name, run_id
-      use dataio,        only : init_dataio, write_data
-      use dataio_public, only : nrestart
-      use mpisetup,      only : cwd, mpistart
-      use mpiboundaries, only : mpi_boundaries_prep
-      use fluidboundaries, only : all_fluid_boundaries
+      use errh,                  only: die, warn
+      use types,                 only: grid_container
+      use initfluids,            only: init_fluids
+      use fluidindex,            only: nvar
+      use arrays,                only: init_arrays
+      use grid,                  only: nx,ny,nz
+      use grid,                  only: init_grid,grid_xyz
+      use initproblem,           only: init_prob, read_problem_par
+      use problem_pub,           only: problem_name, run_id
+      use dataio,                only: init_dataio, write_data
+      use dataio_public,         only: nrestart
+      use mpisetup,              only: cwd, mpistart
+      use mpiboundaries,         only: mpi_boundaries_prep
+      use fluidboundaries_pub,   only: init_fluidboundaries
+      use fluidboundaries,       only: all_fluid_boundaries
 #ifdef MAGNETIC
-      use magboundaries, only : all_mag_boundaries
+      use magboundaries,         only: all_mag_boundaries
 #endif /* MAGNETIC */
 #if defined MAGNETIC && defined RESISTIVE
-      use resistivity,   only : init_resistivity
+      use resistivity,           only: init_resistivity
 #endif /* MAGNETIC && RESISTIVE */
 #ifdef SHEAR
-      use shear,         only : init_shear
+      use shear,                 only: init_shear
 #endif /* SHEAR */
 #ifdef GRAV
-      use gravity,       only : init_grav, grav_pot_3d
+      use gravity,               only: init_grav, grav_pot_3d
 #endif /* GRAV */
 #ifdef FLUID_INTERACTIONS
-      use interactions,  only : init_interactions
+      use interactions,          only: init_interactions
 #endif /* FLUID_INTERACTIONS */
 #ifdef SNE_DISTR
-      use sndistr,       only : init_sndistr
+      use sndistr,               only: init_sndistr
 #endif /* SNE_DISTR */
 #ifdef MULTIGRID
-      use multigrid,     only : init_multigrid
+      use multigrid,             only: init_multigrid
 #endif /* MULTIGRID */
 
       implicit none
 
       type(grid_container) :: cgrid
+      logical              :: grav_pot_3d_called = .false.
 
       call getarg(1, cwd)
       if (LEN_TRIM(cwd) == 0) cwd = '.'
@@ -190,6 +193,8 @@ contains
       call mpistart
 
       call init_grid(cgrid)
+
+      call init_fluidboundaries
 
 #ifdef SHEAR
       call init_shear
@@ -211,7 +216,14 @@ contains
 #ifdef GRAV
       call init_grav
 ! It is only temporary solution, but grav_pot_3d must be called after init_prob due to csim2,c_si,alpha clash!!!
-      call grav_pot_3d
+      if(associated(grav_pot_3d)) then
+         call grav_pot_3d
+         grav_pot_3d_called = .true.
+      else
+#ifdef VERBOSE
+         call warn("[piernik:init_piernik] grav_pot_3d is not associated! Will try to call it once more after init_problem.")
+#endif /* VERBOSE */
+      endif
 #endif /* GRAV */
 
 #ifdef FLUID_INTERACTIONS
@@ -240,6 +252,17 @@ contains
 #endif /* MAGNETIC */
          call write_data(output='all') ! moved from dataio::init_dataio
       end if
+
+#ifdef GRAV
+      if(.not.grav_pot_3d_called) then
+         if(associated(grav_pot_3d)) then
+            call grav_pot_3d
+            grav_pot_3d_called = .true.
+         else
+            call die("[piernik:init_piernik] grav_pot_3d failed for the 2nd time!")
+         endif
+      endif
+#endif /* GRAV */
 
    end subroutine init_piernik
 

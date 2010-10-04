@@ -56,6 +56,14 @@ module gravity
    real    :: tune_zeq              !< z-component of %gravity tunning factor used by hydrostatic_zeq
    real    :: tune_zeq_bnd          !< z-component of %gravity tunning factor supposed to be used in boundaries <b>(currently not used)</b>
 
+   logical :: user_grav             !< use user defined grav_pot_3d
+
+   interface
+      subroutine user_grav_pot_3d
+      end subroutine user_grav_pot_3d
+   end interface
+
+   procedure(user_grav_pot_3d), pointer :: grav_pot_3d => NULL()
 
    contains
 
@@ -89,9 +97,9 @@ module gravity
 !<
    subroutine init_grav
 
-      use errh, only : namelist_errh
+      use errh, only : namelist_errh, warn
       use mpisetup, only: ibuff, rbuff, buffer_dim, comm, ierr, proc, cwd, &
-           MPI_DOUBLE_PRECISION, MPI_INTEGER
+           MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL, lbuff
       use arrays, only: gpot
 
       implicit none
@@ -99,10 +107,12 @@ module gravity
       integer :: ierrh
       character(LEN=100) :: par_file, tmp_log_file
 
-      namelist /GRAVITY/ g_z,g_y, dg_dz, r_gc,  &
-                     ptmass,ptm_x,ptm_y,ptm_z,r_smooth, &
-                     nsub, tune_zeq, tune_zeq_bnd,      &
-                     h_grav, r_grav, n_gravr, n_gravr2, n_gravh
+      namelist /GRAVITY/ g_z,g_y, dg_dz, r_gc, ptmass, ptm_x, ptm_y, ptm_z, r_smooth, &
+                nsub, tune_zeq, tune_zeq_bnd, h_grav, r_grav, n_gravr, n_gravr2, n_gravh, user_grav
+
+#ifdef VERBOSE
+      call warn("[gravity:init_grav] Commencing gravity module initialization")
+#endif /* VERBOSE */
 
       par_file = trim(cwd)//'/problem.par'
       tmp_log_file = trim(cwd)//'/tmp.log'
@@ -124,6 +134,8 @@ module gravity
       n_gravr = 0
       n_gravr2= 0
       n_gravh = 0
+
+      user_grav = .false.
 
       if (proc == 0) then
 
@@ -154,9 +166,12 @@ module gravity
          rbuff(12) = h_grav
          rbuff(13) = r_grav
 
+         lbuff(1)  = user_grav
+
       end if
 
       call MPI_BCAST(ibuff, buffer_dim, MPI_INTEGER,          0, comm, ierr)
+      call MPI_BCAST(lbuff, buffer_dim, MPI_LOGICAL,          0, comm, ierr)
       call MPI_BCAST(rbuff, buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
       if (proc /= 0) then
@@ -180,9 +195,18 @@ module gravity
          h_grav              = rbuff(12)
          r_grav              = rbuff(13)
 
+         user_grav           = lbuff(1)
+
       endif
 
       gpot(:,:,:) = 0.0
+
+      if(.not.user_grav) then
+         grav_pot_3d => default_grav_pot_3d
+#ifdef VERBOSE
+         call warn("[gravity:init_grav] user_grav is set to false. Using default grav_pot_3d.")
+#endif /* VERBOSE */
+      endif
 
    end subroutine init_grav
 
@@ -438,7 +462,7 @@ module gravity
 !! @b GRAV_USER - not a standard type of %gravity, implemented by user in the routine grav_pot_user from gravity_user module.\n\n
 !<
 
-   subroutine grav_pot_3d
+   subroutine default_grav_pot_3d
       use arrays, only     : gp
 #if defined GRAV_PTMASS || defined GRAV_PTMASSPURE || defined GRAV_PTFLAT
       use constants, only  : newtong
@@ -556,7 +580,7 @@ module gravity
          call grav_accel2pot
       endif
 
-   end subroutine grav_pot_3d
+   end subroutine default_grav_pot_3d
 
 !--------------------------------------------------------------------------
 !>

@@ -32,6 +32,7 @@ module fluidboundaries
    contains
 
    subroutine bnd_u(dim)
+      use fluidboundaries_pub, only: user_bnd_xl, user_bnd_xr, user_bnd_yl, user_bnd_yr, user_bnd_zl, user_bnd_zr
       use mpisetup,        only : ierr, MPI_XY_RIGHT_DOM, MPI_XY_RIGHT_BND, MPI_XY_LEFT_DOM, MPI_XY_LEFT_BND, &
          MPI_XZ_RIGHT_DOM, MPI_XZ_RIGHT_BND, MPI_XZ_LEFT_DOM, MPI_XZ_LEFT_BND, &
          MPI_YZ_RIGHT_DOM, MPI_YZ_RIGHT_BND, MPI_YZ_LEFT_DOM, MPI_YZ_LEFT_BND, &
@@ -404,6 +405,8 @@ module fluidboundaries
 !         Do nothing if 'cor'
          case ('inf')
 !         Do nothing if 'inf'
+         case ('user')
+            call user_bnd_xl
          case ('ref')
             do ib=1,nb
 
@@ -438,7 +441,7 @@ module fluidboundaries
          case ('shef')
 !         Do nothing if 'mpi'
          case default
-            write(*,*) 'Boundary condition ',bnd_xl,' not implemented in ',dim
+            write(*,*) '[bnd_u]: Boundary condition ',bnd_xl,' not implemented in ',dim
          end select  ! (bnd_xl)
 
          select case (bnd_xr)
@@ -454,6 +457,8 @@ module fluidboundaries
 !         Do nothing if 'cor'
          case ('inf')
 !         Do nothing if 'inf'
+         case ('user')
+            call user_bnd_xr
          case ('ref')
             do ib=1,nb
 
@@ -486,7 +491,7 @@ module fluidboundaries
 #endif /* COSM_RAYS */
             enddo
          case default
-            write(*,*) 'Boundary condition ',bnd_xr,' not implemented in ',dim
+            write(*,*) '[bnd_u] Boundary condition ',bnd_xr,' not implemented in ',dim
          end select  ! (bnd_xr)
 
       case ('ydim')
@@ -500,6 +505,8 @@ module fluidboundaries
 !         Do nothing if 'cor'
          case ('inf')
 !         Do nothing if 'inf'
+         case ('user')
+            call user_bnd_yl
          case ('ref')
             do ib=1,nb
 
@@ -544,6 +551,8 @@ module fluidboundaries
 !         Do nothing if 'cor'
          case ('inf')
 !         Do nothing if 'inf'
+         case ('user')
+            call user_bnd_yr
          case ('ref')
             do ib=1,nb
 
@@ -585,6 +594,8 @@ module fluidboundaries
          select case (bnd_zl)
          case ('mpi')
 !         Do nothing if mpi
+         case ('user')
+            call user_bnd_zl
          case ('per')
             u(:,:,:,1:nb)                         = u(:,:,:,nzb+1:nzb+nb)
          case ('ref')
@@ -685,6 +696,8 @@ module fluidboundaries
          select case (bnd_zr)
          case ('mpi')
 !         Do nothing if mpi
+         case ('user')
+            call user_bnd_zr
          case ('per')
             u(:,:,:,nzb+nb+1:nzb+2*nb)            = u(:,:,:,nb+1:2*nb)
          case ('ref')

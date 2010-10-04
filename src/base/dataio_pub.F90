@@ -63,6 +63,7 @@ module dataio_public
    integer            :: code_progress          !< rough estimate of code execution progress
 
    logical            :: skip_advection = .false. !< .true. will instruct fluidupdate:make_3sweeps to skip sweeps (used by maclaurin problem, replaces precompiler symbol __NO_FLUID_STEP)
+   logical, save      :: dataio_initialized = .false.
 
 contains
 

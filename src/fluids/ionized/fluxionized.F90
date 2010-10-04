@@ -107,6 +107,7 @@ module fluxionized
     fluxi   = 0.0
     cfri    = 0.0
     vx      = 0.0
+    ps      = 0.0
 
 #ifdef MAGNETIC
     pmag(RNG)=0.5*( bb(ibx,RNG)**2 + bb(iby,RNG)**2 +bb(ibz,RNG)**2 )
