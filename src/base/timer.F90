@@ -229,12 +229,15 @@ contains
    end function time_left
 
    subroutine timer_stop
+
       use mpisetup,      only : MPI_DOUBLE_PRECISION, MPI_SUM, comm, ierr, nstep, proc
-      use dataio_public, only : log_file, log_lun
       use grid,          only : nxd,nyd,nzd
+      use errh,          only : printinfo
 
       implicit none
-      real(kind=4) :: dtime
+
+      real(kind=4)       :: dtime
+      character(len=255) :: msg
 
 !      Final wall clock time, expressed in hours, minutes, and seconds.
 !
@@ -266,19 +269,15 @@ contains
 
          zcps  = real(nstep) * real(nzones) / cpuallp
 
-         write(*,*)                                            ! QA_WARN
-         write (*, 10) cpuallp                                 ! QA_WARN
-         write (*, 20) wctot                                   ! QA_WARN
-         write (*, 30) zcps                                    ! QA_WARN
-         write(*,*)                                            ! QA_WARN
+         call printinfo("", .true.)
+         write (msg, 10) cpuallp
+         call printinfo(msg)
+         write (msg, 20) wctot
+         call printinfo(msg)
+         write (msg, 30) zcps
+         call printinfo(msg)
+         call printinfo("", .true.)
 
-         open(log_lun, file=log_file, position='append')
-            write(log_lun,*)                                   ! QA_WARN
-            write (log_lun, 10) cpuallp                        ! QA_WARN
-            write (log_lun, 20) wctot                          ! QA_WARN
-            write (log_lun, 30) zcps                           ! QA_WARN
-            write(log_lun,*)                                   ! QA_WARN
-         close(log_lun)
       endif
 
 10    format('CPU time        = ', f12.2,' s')
