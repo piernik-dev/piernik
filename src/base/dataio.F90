@@ -50,7 +50,7 @@ module dataio
 !! \todo check the usefullness of wait logical variable
 !<
    use types,         only : hdf
-   use dataio_public, only : tend, nend, wend, log_file, log_lun, nhdf, nstep_start, domain, nrestart, get_container, set_container_chdf, &
+   use dataio_public, only : tend, nend, wend, nhdf, nstep_start, domain, nrestart, get_container, set_container_chdf, &
       vizit, fmin, fmax
 
    implicit none
@@ -203,8 +203,8 @@ module dataio
            &                      MPI_DOUBLE_PRECISION, MPI_INTEGER, comm, ierr, buffer_dim, cwd, &
            &                      psize, t, nstep, bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr, &
            &                      lbuff, MPI_LOGICAL
-      use errh,            only : namelist_errh
-      use problem_pub,     only : problem_name,run_id
+      use errh,            only : namelist_errh, printinfo
+      use problem_pub,     only : problem_name, run_id
       use version,         only : nenv,env, init_version
       use fluidboundaries, only : all_fluid_boundaries
       use timer,           only : time_left
@@ -212,7 +212,7 @@ module dataio
       use magboundaries,   only : all_mag_boundaries
 #endif /* MAGNETIC */
       use dataio_hdf5,     only : init_hdf5, read_restart_hdf5, maxparfilelines, parfile, parfilelines
-      use dataio_public,   only : chdf, nres, last_hdf_time, step_hdf, nlog, ntsl, dataio_initialized
+      use dataio_public,   only : chdf, nres, last_hdf_time, step_hdf, nlog, ntsl, dataio_initialized, log_file
 
       implicit none
 
@@ -424,8 +424,7 @@ module dataio
 
       call init_version
       if (proc == 0) then
-         write (log_file,'(a,a1,a3,a1,i3.3,a4)') &
-            trim(problem_name),'_', run_id,'_',nrestart,'.log'
+         write (log_file,'(a,a1,a3,a1,i3.3,a4)') trim(problem_name),'_', run_id,'_',nrestart,'.log'
          tmp_log_file = trim(cwd)//'/tmp.log'
          log_file = trim(cwd)//'/'//log_file
          system_command = 'mv '//trim(tmp_log_file)//' '//trim(log_file)
@@ -933,12 +932,14 @@ module dataio
 !---------------------------------------------------------------------
 !
    subroutine  write_log(tsl)
+
       use fluidindex,         only : ibx, iby, ibz, nvar
       use arrays,             only : wa,u,b
       use grid,               only : dx,dy,dz,dxmn,nb,is,ie,js,je,ks,ke,nx,ny,nz
       use constants,          only : small, mH, kboltz, gasRconst
       use mpisetup,           only : smallei,cfl,t,dt, proc, mpifind, nstep
       use types,              only : tsl_container, value
+      use errh,               only : printinfo
 #ifdef IONIZED
       use initionized,        only : gamma_ion, cs_iso_ion,cs_iso_ion2
       use initionized,        only : idni,imxi,imyi,imzi
@@ -971,6 +972,7 @@ module dataio
 
       type(tsl_container), optional :: tsl
       real :: dxmn_safe
+      character(len=256) :: msg
 
 #ifdef MAGNETIC
       type(value) :: b_min, b_max, divb_max, vai_max
@@ -1309,61 +1311,92 @@ module dataio
 
       if(proc == 0)  then
          if(.not.present(tsl)) then
-            open(log_lun, file=log_file, position='append')
-            write(log_lun,'(a80)') '================================================================================'
+            call printinfo('================================================================================', .false.)
 #ifdef IONIZED
-            write(log_lun,771) 'min(dens)   ION  =', deni_min%val,  deni_min%proc,  deni_min%loc
-            write(log_lun,771) 'max(dens)   ION  =', deni_max%val,  deni_max%proc,  deni_max%loc
-            write(log_lun,771) 'min(temp)   ION  =', temi_min%val,  temi_min%proc,  temi_min%loc
-            write(log_lun,771) 'max(temp)   ION  =', temi_max%val,  temi_max%proc,  temi_max%loc
-            write(log_lun,771) 'min(pres)   ION  =', prei_min%val,  prei_min%proc,  prei_min%loc
-            write(log_lun,771) 'max(pres)   ION  =', prei_max%val,  prei_max%proc,  prei_max%loc
-            write(log_lun,777) 'max(|vx|)   ION  =', vxi_max%val, 'dt=',cfl*dx/(vxi_max%val+small),   vxi_max%proc, vxi_max%loc
-            write(log_lun,777) 'max(|vy|)   ION  =', vyi_max%val, 'dt=',cfl*dy/(vyi_max%val+small),   vyi_max%proc, vyi_max%loc
-            write(log_lun,777) 'max(|vz|)   ION  =', vzi_max%val, 'dt=',cfl*dz/(vzi_max%val+small),   vzi_max%proc, vzi_max%loc
-            write(log_lun,777) 'max(c_si)   ION  =', csi_max%val, 'dt=',cfl*dxmn_safe/(csi_max%val+small), csi_max%proc, csi_max%loc
+            write(msg, 771) 'min(dens)   ION  =', deni_min%val,  deni_min%proc,  deni_min%loc
+            call printinfo(msg, .false.)
+            write(msg, 771) 'max(dens)   ION  =', deni_max%val,  deni_max%proc,  deni_max%loc
+            call printinfo(msg, .false.)
+            write(msg, 771) 'min(temp)   ION  =', temi_min%val,  temi_min%proc,  temi_min%loc
+            call printinfo(msg, .false.)
+            write(msg, 771) 'max(temp)   ION  =', temi_max%val,  temi_max%proc,  temi_max%loc
+            call printinfo(msg, .false.)
+            write(msg, 771) 'min(pres)   ION  =', prei_min%val,  prei_min%proc,  prei_min%loc
+            call printinfo(msg, .false.)
+            write(msg, 771) 'max(pres)   ION  =', prei_max%val,  prei_max%proc,  prei_max%loc
+            call printinfo(msg, .false.)
+            write(msg, 777) 'max(|vx|)   ION  =', vxi_max%val, 'dt=',cfl*dx/(vxi_max%val+small),   vxi_max%proc, vxi_max%loc
+            call printinfo(msg, .false.)
+            write(msg, 777) 'max(|vy|)   ION  =', vyi_max%val, 'dt=',cfl*dy/(vyi_max%val+small),   vyi_max%proc, vyi_max%loc
+            call printinfo(msg, .false.)
+            write(msg, 777) 'max(|vz|)   ION  =', vzi_max%val, 'dt=',cfl*dz/(vzi_max%val+small),   vzi_max%proc, vzi_max%loc
+            call printinfo(msg, .false.)
+            write(msg, 777) 'max(c_si)   ION  =', csi_max%val, 'dt=',cfl*dxmn_safe/(csi_max%val+small), csi_max%proc, csi_max%loc
+            call printinfo(msg, .false.)
 #ifdef MAGNETIC
-            write(log_lun,777) 'max(c_f)    ION  =', sqrt(csi_max%val**2+vai_max%val**2),&
-                                      'dt=',cfl*dxmn_safe/sqrt(csi_max%val**2+vai_max%val**2)
-            write(log_lun,777) 'max(v_a)    ION  =', vai_max%val, 'dt=',cfl*dxmn_safe/(vai_max%val+small), vai_max%proc, vai_max%loc
-            write(log_lun,771) 'min(|b|)    MAG  =', b_min%val,     b_min%proc,     b_min%loc
-            write(log_lun,771) 'max(|b|)    MAG  =', b_max%val,     b_max%proc,     b_max%loc
-            write(log_lun,771) 'max(|divb|) MAG  =', divb_max%val,  divb_max%proc,  divb_max%loc
+            write(msg, 777) 'max(c_f)    ION  =', sqrt(csi_max%val**2+vai_max%val**2), 'dt=',cfl*dxmn_safe/sqrt(csi_max%val**2+vai_max%val**2)
+            call printinfo(msg, .false.)
+            write(msg, 777) 'max(v_a)    ION  =', vai_max%val, 'dt=',cfl*dxmn_safe/(vai_max%val+small), vai_max%proc, vai_max%loc
+            call printinfo(msg, .false.)
+            write(msg, 771) 'min(|b|)    MAG  =', b_min%val,     b_min%proc,     b_min%loc
+            call printinfo(msg, .false.)
+            write(msg, 771) 'max(|b|)    MAG  =', b_max%val,     b_max%proc,     b_max%loc
+            call printinfo(msg, .false.)
+            write(msg, 771) 'max(|divb|) MAG  =', divb_max%val,  divb_max%proc,  divb_max%loc
+            call printinfo(msg, .false.)
 #else /* MAGNETIC */
-            if (csi_max%val > 0.) write(log_lun,777) 'max(c_s )   ION  =', sqrt(csi_max%val**2), 'dt=',cfl*dxmn_safe/sqrt(csi_max%val**2)
+            if (csi_max%val > 0.) write(msg, 777) 'max(c_s )   ION  =', sqrt(csi_max%val**2), 'dt=',cfl*dxmn_safe/sqrt(csi_max%val**2)
+            call printinfo(msg, .false.)
 #endif /* MAGNETIC */
 #endif /* IONIZED */
 
 #ifdef NEUTRAL
-            write(log_lun,771) 'min(dens)   NEU  =', denn_min%val,  denn_min%proc,  denn_min%loc
-            write(log_lun,771) 'max(dens)   NEU  =', denn_max%val,  denn_max%proc,  denn_max%loc
+            write(msg, 771) 'min(dens)   NEU  =', denn_min%val,  denn_min%proc,  denn_min%loc
+            call printinfo(msg, .false.)
+            write(msg, 771) 'max(dens)   NEU  =', denn_max%val,  denn_max%proc,  denn_max%loc
+            call printinfo(msg, .false.)
 #ifndef ISO
-            write(log_lun,771) 'min(temp)   NEU  =', temn_min%val,  temn_min%proc,  temn_min%loc
-            write(log_lun,771) 'max(temp)   NEU  =', temn_max%val,  temn_max%proc,  temn_max%loc
+            write(msg, 771) 'min(temp)   NEU  =', temn_min%val,  temn_min%proc,  temn_min%loc
+            call printinfo(msg, .false.)
+            write(msg, 771) 'max(temp)   NEU  =', temn_max%val,  temn_max%proc,  temn_max%loc
+            call printinfo(msg, .false.)
 #endif /* !ISO */
-            write(log_lun,771) 'min(pres)   NEU  =', pren_min%val,  pren_min%proc,  pren_min%loc
-            write(log_lun,771) 'max(pres)   NEU  =', pren_max%val,  pren_max%proc,  pren_max%loc
-            write(log_lun,777) 'max(|vx|)   NEU  =', vxn_max%val, 'dt=',cfl*dx/(vxn_max%val+small),   vxn_max%proc, vxn_max%loc
-            write(log_lun,777) 'max(|vy|)   NEU  =', vyn_max%val, 'dt=',cfl*dy/(vyn_max%val+small),   vyn_max%proc, vyn_max%loc
-            write(log_lun,777) 'max(|vz|)   NEU  =', vzn_max%val, 'dt=',cfl*dz/(vzn_max%val+small),   vzn_max%proc, vzn_max%loc
-            write(log_lun,777) 'max(c_s )   NEU  =', csn_max%val, 'dt=',cfl*dxmn_safe/(csn_max%val+small), csn_max%proc, csn_max%loc
+            write(msg, 771) 'min(pres)   NEU  =', pren_min%val,  pren_min%proc,  pren_min%loc
+            call printinfo(msg, .false.)
+            write(msg, 771) 'max(pres)   NEU  =', pren_max%val,  pren_max%proc,  pren_max%loc
+            call printinfo(msg, .false.)
+            write(msg, 777) 'max(|vx|)   NEU  =', vxn_max%val, 'dt=',cfl*dx/(vxn_max%val+small),   vxn_max%proc, vxn_max%loc
+            call printinfo(msg, .false.)
+            write(msg, 777) 'max(|vy|)   NEU  =', vyn_max%val, 'dt=',cfl*dy/(vyn_max%val+small),   vyn_max%proc, vyn_max%loc
+            call printinfo(msg, .false.)
+            write(msg, 777) 'max(|vz|)   NEU  =', vzn_max%val, 'dt=',cfl*dz/(vzn_max%val+small),   vzn_max%proc, vzn_max%loc
+            call printinfo(msg, .false.)
+            write(msg, 777) 'max(c_s )   NEU  =', csn_max%val, 'dt=',cfl*dxmn_safe/(csn_max%val+small), csn_max%proc, csn_max%loc
+            call printinfo(msg, .false.)
 #endif /* NEUTRAL */
 #ifdef DUST
-            write(log_lun,771) 'min(dens)   DST  =', dend_min%val,  dend_min%proc,  dend_min%loc
-            write(log_lun,771) 'max(dens)   DST  =', dend_max%val,  dend_max%proc,  dend_max%loc
-            write(log_lun,777) 'max(|vx|)   DST  =', vxd_max%val, 'dt=',cfl*dx/(vxd_max%val+small),   vxd_max%proc, vxd_max%loc
-            write(log_lun,777) 'max(|vy|)   DST  =', vyd_max%val, 'dt=',cfl*dy/(vyd_max%val+small),   vyd_max%proc, vyd_max%loc
-            write(log_lun,777) 'max(|vz|)   DST  =', vzd_max%val, 'dt=',cfl*dz/(vzd_max%val+small),   vzd_max%proc, vzd_max%loc
+            write(msg, 771) 'min(dens)   DST  =', dend_min%val,  dend_min%proc,  dend_min%loc
+            call printinfo(msg, .false.)
+            write(msg, 771) 'max(dens)   DST  =', dend_max%val,  dend_max%proc,  dend_max%loc
+            call printinfo(msg, .false.)
+            write(msg, 777) 'max(|vx|)   DST  =', vxd_max%val, 'dt=',cfl*dx/(vxd_max%val+small),   vxd_max%proc, vxd_max%loc
+            call printinfo(msg, .false.)
+            write(msg, 777) 'max(|vy|)   DST  =', vyd_max%val, 'dt=',cfl*dy/(vyd_max%val+small),   vyd_max%proc, vyd_max%loc
+            call printinfo(msg, .false.)
+            write(msg, 777) 'max(|vz|)   DST  =', vzd_max%val, 'dt=',cfl*dz/(vzd_max%val+small),   vzd_max%proc, vzd_max%loc
+            call printinfo(msg, .false.)
 #endif /* DUST */
 #ifdef COSM_RAYS
-            write(log_lun,771) 'min(encr)   CRS  =', encr_min%val,        encr_min%proc, encr_min%loc
-            write(log_lun,777) 'max(encr)   CRS  =', encr_max%val,      'dt=',dt_crs,     encr_max%proc, encr_max%loc
+            write(msg, 771) 'min(encr)   CRS  =', encr_min%val,        encr_min%proc, encr_min%loc
+            call printinfo(msg, .false.)
+            write(msg, 777) 'max(encr)   CRS  =', encr_max%val,      'dt=',dt_crs,     encr_max%proc, encr_max%loc
+            call printinfo(msg, .false.)
 #endif /* COSM_RAYS */
 #ifdef RESISTIVE
-            write(log_lun,777) 'max(eta)    RES  =', etamax%val ,      'dt=',dt_resist, etamax%proc,  etamax%loc
+            write(msg, 777) 'max(eta)    RES  =', etamax%val ,      'dt=',dt_resist, etamax%proc,  etamax%loc
+            call printinfo(msg, .false.)
 #endif /* RESISTIVE */
-            write(log_lun,'(a80)') '================================================================================'
-            close(log_lun)
+            call printinfo('================================================================================', .false.)
          else
 #ifdef IONIZED
             tsl%deni_min = deni_min%val
@@ -1477,15 +1510,7 @@ module dataio
             endif
             close(u_msg)
 
-            if (len_trim(buf) > 0 .and. proc==0) then ! leave information on stdout and logfile
-               call printinfo(buf)
-               inquire(file=log_file, exist=ex)
-               if (ex) then
-                  open(log_lun, file=log_file, position='append')
-                  write(log_lun, '(a)') trim(buf)
-                  close(log_lun)
-               end if
-            end if
+            if (len_trim(buf) > 0 .and. proc==0) call printinfo(buf) ! leave information on stdout and logfile
 
             sz = len_trim(msg)
             if(fname(i) == user_message_file) unlink_stat = unlink(user_message_file)

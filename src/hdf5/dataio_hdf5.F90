@@ -1261,6 +1261,7 @@ module dataio_hdf5
    end subroutine read_3darr_from_restart
 
    subroutine read_restart_hdf5(chdf)
+
       use types,        only: hdf
       use hdf5,         only: HID_T, HSIZE_T, HSSIZE_T, SIZE_T, H5P_FILE_ACCESS_F, H5T_NATIVE_DOUBLE, &
           H5S_SELECT_SET_F, H5F_ACC_RDONLY_F, H5FD_MPIO_INDEPENDENT_F, H5P_DATASET_XFER_F, &
@@ -1282,13 +1283,13 @@ module dataio_hdf5
       use arrays,       only: dinit
 #endif /* MASS_COMPENS */
       use problem_pub,  only: problem_name, run_id
-      use errh,         only: die
+      use errh,         only: die, printinfo
       use func,         only: fix_string
       use list_hdf5,    only: problem_read_restart
 
       IMPLICIT NONE
       type(hdf)             :: chdf
-      integer               :: log_lun, nu
+      integer               :: nu
       CHARACTER(LEN=128)    :: log_file  ! File name
       CHARACTER(LEN=128)    :: filename  ! File name
 
@@ -1306,7 +1307,7 @@ module dataio_hdf5
       integer(HSIZE_T),  DIMENSION(:), allocatable :: dimsf, dimsfi, chunk_dims, old_chunk
 
       integer               :: error, rank
-      logical               :: file_exist, log_exist
+      logical               :: file_exist
 
       real, dimension(1)    :: rbuf
       integer, dimension(1) :: ibuf
@@ -1318,32 +1319,16 @@ module dataio_hdf5
 
       nu = nvar%all
 
-      log_lun  = chdf%log_lun
       log_file = chdf%log_file
 
       if(proc==0) then
-         write (filename,'(a,a1,a3,a1,i4.4,a4)') &
-            trim(problem_name),'_', run_id,'_',chdf%nres,'.res'
-         write(*,*) 'Reading restart  file: ', trim(filename)  ! QA_WARN
-         inquire(file=log_file , exist = log_exist)
-         if(log_exist .eqv. .true.) then
-            open(log_lun, file=log_file, position='append')
-            write(log_lun,*) 'Reading restart  file: ',trim(filename)
-            close(log_lun)
-         endif
+         write (filename,'(a,a1,a3,a1,i4.4,a4)') trim(problem_name),'_', run_id,'_',chdf%nres,'.res'
+         call printinfo('Reading restart  file: '//trim(filename))
       endif
       call MPI_BCAST(filename, 128,MPI_CHARACTER, 0, comm, ierr)
 
       inquire(file = filename, exist = file_exist)
-      if(file_exist .eqv. .false.) then
-         if(log_exist) then
-            open(log_lun, file=log_file, position='append')
-            write(log_lun,*) 'Restart  file: ', trim(filename), &
-               ' does not exist.  ABORTING !!! '
-            close(log_lun)
-         endif
-         call die('[dataio_hdf5:read_restart_hdf5]: Restart file: '//trim(filename)//' does not exist')
-      endif
+      if(file_exist .eqv. .false.) call die('[dataio_hdf5:read_restart_hdf5]: Restart file: '//trim(filename)//' does not exist')
 
       CALL h5open_f(error)
       CALL h5pcreate_f(H5P_FILE_ACCESS_F, plist_id, error)
@@ -1493,10 +1478,7 @@ module dataio_hdf5
 
          CALL h5fclose_f(file_id, error)
 
-         open(log_lun, file=log_file, position='append')
-         write(log_lun,*) 'Done reading restart file: ',trim(filename)
-         write(*,*)    'Done reading restart file: ',trim(filename)  ! QA_WARN
-         close(log_lun)
+         call printinfo('Done reading restart file: '//trim(filename), .false.)
       endif
 
       call MPI_BCAST(chdf%nstep, 1, MPI_INTEGER, 0, comm3d, ierr)
@@ -1694,6 +1676,7 @@ module dataio_hdf5
       use version,      only: env, nenv
       use problem_pub,  only: problem_name, run_id
       use list_hdf5,    only: additional_attrs
+      use errh,         only: printinfo
 
       implicit none
 
@@ -1791,10 +1774,7 @@ module dataio_hdf5
 
          call h5fclose_f(file_id, error)
 
-         open(chdf%log_lun, file=chdf%log_file, position='append')
-         write(chdf%log_lun,*) 'Writing ', stype, ' file: ', trim(filename)
-         write(*,*)    'Writing ', stype, ' file: ', trim(filename)  ! QA_WARN
-         close(chdf%log_lun)
+         call printinfo('Writing '//stype//' file: '//trim(filename))
       endif
 
    end subroutine set_common_attributes

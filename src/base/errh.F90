@@ -32,7 +32,6 @@
 !<
 module errh
 
-
    implicit none
 
    private
@@ -40,11 +39,6 @@ module errh
    public :: die, warn, printinfo, namelist_errh, msg
 
    character(len=512) :: msg
-   integer, parameter :: T_PLAIN  = 0, &
-        &                T_ERR    = T_PLAIN + 1, &
-        &                T_WARN   = T_ERR   + 1, &
-        &                T_INFO   = T_WARN  + 1, &
-        &                T_SILENT = T_INFO  + 1
 
    include 'mpif.h'
 
@@ -52,66 +46,9 @@ module errh
 
 !-----------------------------------------------------------------------------
 
-   subroutine colormessage(nm, mode)
-
-      use dataio_public, only : log_file, log_lun, dataio_initialized
-
-      implicit none
-
-      character(len=*), intent(in) :: nm
-      integer, intent(in) :: mode
-
-      character(len=4), parameter :: ansi_black  = char(27)//"[0m"
-      character(len=7), parameter :: ansi_red    = char(27)//'[1;31m'
-      character(len=7), parameter :: ansi_green  = char(27)//'[1;32m'
-      character(len=7), parameter :: ansi_yellow = char(27)//'[1;33m'
-
-      character(len=7)  :: ansicolor
-      character(len=7) :: msg_type_str
-      integer :: proc, ierr
-
-      select case(mode)
-         case (T_ERR)
-            ansicolor = ansi_red
-            msg_type_str = "Error  "
-         case (T_WARN)
-            ansicolor = ansi_yellow
-            msg_type_str = "Warning"
-         case (T_INFO)
-            ansicolor = ansi_green
-            msg_type_str = "Info   "
-         case (T_SILENT)
-            ansicolor = ansi_black
-            msg_type_str = ""
-         case default ! T_PLAIN
-            ansicolor = ansi_black
-            msg_type_str = ""
-      end select
-
-      call MPI_comm_rank(MPI_COMM_WORLD, proc, ierr)
-
-      if (mode /= T_SILENT) then
-         if (mode == T_PLAIN) then
-            write(*,'(a)') trim(nm)                                                                               ! QA_WARN
-         else
-            write(*,'(a,i5,2a)') trim(ansicolor)//msg_type_str//" @"//ansi_black, proc, ': ', trim(nm)            ! QA_WARN
-         end if
-      end if
-
-      if (dataio_initialized) then
-         open(log_lun, file=log_file, position='append')
-         if (proc == 0 .and. mode == T_ERR) write(log_lun,'(/,a,/)')"###############     Crashing     ###############"
-         write(log_lun,'(a,i5,2a)') msg_type_str//" @", proc, ': ', trim(nm)
-         close(log_lun)
-      else
-         write(*,'(a,i5,a)') ansi_yellow//"[errh:colormessage] dataio_initialized == .false. @", proc, ansi_black ! QA_WARN
-      endif
-
-   end subroutine colormessage
-
-!-----------------------------------------------------------------------------
-
    subroutine printinfo(nm, to_stdout)
+
+      use dataio_public, only : colormessage, T_PLAIN, T_SILENT, T_INFO
 
       implicit none
 
@@ -134,6 +71,8 @@ module errh
 
    subroutine warn(nm)
 
+      use dataio_public, only : colormessage, T_WARN
+
       implicit none
 
       character(len=*), intent(in) :: nm
@@ -146,6 +85,8 @@ module errh
    !! BEWARE: routine is not finished, it should kill PIERNIK gracefully
 
    subroutine die(nm, allprocs)
+
+      use dataio_public, only : colormessage, T_ERR
 
       implicit none
 
@@ -170,7 +111,9 @@ module errh
 !-----------------------------------------------------------------------------
 
    subroutine namelist_errh(ierrh,nm)
+
       implicit none
+
       integer, intent(in) :: ierrh
       character(len=*), intent(in) :: nm
 
