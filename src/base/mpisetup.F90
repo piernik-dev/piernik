@@ -509,7 +509,7 @@ module mpisetup
 
 !-----------------------------------------------------------------------------
 
-      subroutine mpistop
+      subroutine cleanup_mpi
 
          implicit none
 
@@ -564,7 +564,7 @@ module mpisetup
          call sleep(5)
          call MPI_FINALIZE(ierr)
 
-      end subroutine mpistop
+      end subroutine cleanup_mpi
 
 !-----------------------------------------------------------------------------
 

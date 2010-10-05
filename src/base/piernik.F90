@@ -31,7 +31,7 @@
 !<
 program piernik
 
-  use mpisetup,      only : comm, comm3d, ierr, proc, t, dt, nstep, mpistop
+  use mpisetup,      only : comm, comm3d, ierr, proc, t, dt, nstep, cleanup_mpi
   use dataio_public, only : nend, nstep_start, tend, log_file, log_lun, &
        &                    code_progress, PIERNIK_START, PIERNIK_INITIALIZED, PIERNIK_FINISHED, PIERNIK_CLEANUP
   use timer,         only : time_left
@@ -137,8 +137,6 @@ program piernik
   if (proc == 0) write(*, '(a)', advance='no') "Finishing "       ! QA_WARN
   call cleanup_piernik
   if (proc == 0) write(*, '("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")')       ! QA_WARN
-
-  call mpistop
 
 contains
 !>
@@ -275,6 +273,7 @@ contains
 
    subroutine cleanup_piernik
 
+      use mpisetup,    only : cleanup_mpi
       use grid,        only : cleanup_grid
       use dataio,      only : cleanup_dataio
       use arrays,      only : cleanup_arrays
@@ -297,7 +296,8 @@ contains
 #endif /* MULTIGRID */
       call cleanup_arrays;      if (proc == 0) write(*,'(a)',advance='no')"." ! QA_WARN
       call cleanup_fluids;      if (proc == 0) write(*,'(a)',advance='no')"." ! QA_WARN
-      call cleanup_timers;      if (proc == 0) write(*,'(a)')"."              ! QA_WARN
+      call cleanup_timers;      if (proc == 0) write(*,'(a)',advance='no')"." ! QA_WARN
+      call cleanup_mpi;         if (proc == 0) write(*,'(a)')"."              ! QA_WARN
 
    end subroutine cleanup_piernik
 
