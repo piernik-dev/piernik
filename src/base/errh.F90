@@ -92,16 +92,16 @@ module errh
 
       if (mode /= T_SILENT) then
          if (mode == T_PLAIN) then
-            write(*,'(a)') trim(nm)                                                                                  ! QA_WARN
+            write(*,'(a)') trim(nm)                                                                                ! QA_WARN
          else
-            write(*,'(a,i5,3a)') trim(ansicolor)//msg_type_str//" @"//ansi_black, proc, ': "', trim(nm), '"'         ! QA_WARN
+            write(*,'(a,i5,2a)') trim(ansicolor)//msg_type_str//" @"//ansi_black, proc, ': ', trim(nm)             ! QA_WARN
          end if
       end if
 
       if (dataio_initialized) then
          open(log_lun, file=log_file, position='append')
          if (proc == 0 .and. mode == T_ERR) write(log_lun,'(/,a,/)')"###############     Crashing     ###############"
-         write(log_lun,'(2a,i5,3a)')trim(msg_type_str)," @", proc, ': "', trim(nm), '"'
+         write(log_lun,'(a,i5,2a)') msg_type_str//" @", proc, ': ', trim(nm)
          close(log_lun)
       else
          write(*,'(a,i5,a)') ansi_yellow//"[errh:colormessage] dataio_initialized == .false. @", proc, ansi_black ! QA_WARN

@@ -32,7 +32,7 @@
 program piernik
 
   use mpisetup,      only : comm, comm3d, ierr, proc, t, dt, nstep, cleanup_mpi
-  use dataio_public, only : nend, nstep_start, tend, log_file, log_lun, &
+  use dataio_public, only : nend, nstep_start, tend, &
        &                    code_progress, PIERNIK_START, PIERNIK_INITIALIZED, PIERNIK_FINISHED, PIERNIK_CLEANUP
   use timer,         only : time_left
 #ifdef PERFMON
@@ -41,6 +41,7 @@ program piernik
   use dataio,        only : write_data, user_msg_handler
   use fluidupdate,   only : fluid_update
   use types,         only : finalize_problem
+  use errh,          only : printinfo, warn
 
   implicit none
 
@@ -63,21 +64,13 @@ program piernik
   end_sim = .false.
 
   if (proc == 0) then
-     write(*, '("======================================================================================================")')  ! QA_WARN
-     open(log_lun, file=log_file, position='append')
-     write(log_lun, '(/,a,/)') "###############     Simulation     ###############"
-     close(log_lun)
+     call printinfo("======================================================================================================", .false.)
+     call printinfo("###############     Simulation     ###############", .false.)
   end if
 
   do while(t < tend .and. nstep < nend .and. .not.(end_sim) .and. time_left() )
 
      nstep=nstep+1
-
-     if (proc == 0) then
-        open(log_lun, file=log_file, position='append')
-        write(log_lun, '("   nstep = ",i7,"   dt = ",es22.16,"   t = ",es22.16)') nstep, dt, t
-        close(log_lun)
-     end if
 
      call fluid_update
 
@@ -95,30 +88,24 @@ program piernik
      write(nstr, '(i7)') nstep
      tstr = adjustl(tstr)
      nstr = adjustl(nstr)
-     write(*, '("======================================================================================================")') ! QA_WARN
-     open(log_lun, file=log_file, position='append')
-     write(log_lun, '(/,a,/)') "###############     Finishing     ###############"
+     call printinfo("======================================================================================================", .false.)
+     call printinfo("###############     Finishing     ###############", .false.)
      if (t >= tend) then
         write(msg, '(2a)') "Simulation has reached final time t = ",trim(tstr)
-        write(*, '(a)') trim(msg)       ! QA_WARN
-        write(log_lun, '(a)') trim(msg)
+        call printinfo(msg)
      end if
      if (nstep >= nend) then
         write(msg, '(4a)') "Maximum step count exceeded (",trim(nstr),") at t = ",trim(tstr)
-        write(*, '(a)') trim(msg)       ! QA_WARN
-        write(log_lun, '(a)') trim(msg)
+        call warn(msg)
      end if
      if (end_sim) then
         write(msg, '(4a)') "Enforced stop at step ",trim(nstr),", t = ", trim(tstr)
-        write(*, '(a)') trim(msg)       ! QA_WARN
-        write(log_lun, '(a)') trim(msg)
+        call warn(msg)
      end if
      if(.not.time_left()) then
         write(msg, '(4a)') "Wall time limit exceeded at step ",trim(nstr),", t = ", trim(tstr)
-        write(*, '(a)') trim(msg)       ! QA_WARN
-        write(log_lun, '(a)') trim(msg)
+        call warn(msg)
      end if
-     close(log_lun)
   end if
 
   if(associated(finalize_problem)) call finalize_problem
@@ -136,7 +123,7 @@ program piernik
 
   if (proc == 0) write(*, '(a)', advance='no') "Finishing "       ! QA_WARN
   call cleanup_piernik
-  if (proc == 0) write(*, '("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")')       ! QA_WARN
+  call printinfo("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++", .false.)
 
 contains
 !>

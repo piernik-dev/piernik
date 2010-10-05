@@ -36,6 +36,7 @@ contains
 
    subroutine fluid_update
 
+      use errh,          only : printinfo
       use timer,         only : timer_
       use dataio,        only : check_log, check_tsl
       use timestep,      only : time_step
@@ -54,10 +55,11 @@ contains
 
       implicit none
 
-      logical, save :: first_run = .true.
-      real          :: ts   ! Timestep wallclock
+      logical, save      :: first_run = .true.
+      real               :: ts   ! Timestep wallclock
+      character(len=256) :: msg
 #ifdef DEBUG
-      integer       :: system, syslog
+      integer            :: system, syslog
 #endif /* DEBUG */
 
       halfstep = .false.
@@ -82,8 +84,11 @@ contains
       call check_log
       call check_tsl
 
-      if (first_run .and. proc == 0) write(*,900) 0,dt,t,ts                                        ! QA_WARN
 900   format('   nstep = ',i7,'   dt = ',es22.16,'   t = ',es22.16,'   dWallClock = ',f7.2,' s')
+      if (first_run .and. proc == 0) then
+         write(msg, 900) 0,dt,t,ts
+         call printinfo(msg, .true.)
+      end if
 
       t=t+dt
 
@@ -117,7 +122,10 @@ contains
       if (first_run) first_run = .false.
 
       ts=timer_("fluid_update")
-      if (proc == 0) write(*,900) nstep,dt,t,ts                                                    ! QA_WARN
+      if (proc == 0) then
+         write(msg, 900) nstep,dt,t,ts
+         call printinfo(msg, .true.)
+      end if
 
    end subroutine fluid_update
 
