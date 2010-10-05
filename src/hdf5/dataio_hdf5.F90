@@ -636,13 +636,17 @@ module dataio_hdf5
    end subroutine write_plot
 
    subroutine write_plot_hdf5(chdf,var,plane,nimg)
+#ifdef PGPLOT
+      use viz,           only: draw_me
+#endif /* PGPLOT */
+      use dataio_public, only: vizit, fmin, fmax
       use types,    only : hdf
       use mpisetup, only : MPI_CHARACTER, comm3d, ierr, pxsize, pysize, pzsize, MPI_DOUBLE_PRECISION, t, pcoords
       use hdf5,     only : HID_T, HSIZE_T, SIZE_T, H5F_ACC_RDWR_F, h5fopen_f, h5gopen_f, h5gclose_f, h5fclose_f
       use h5lt,     only : h5ltmake_dataset_double_f, h5ltset_attribute_double_f
       use arrays,   only : u
       use grid,     only : nxb,nyb,nzb,nxd,nyd,nzd,nb
-      use errh,     only : die
+      use errh,     only : die, warn
 
       implicit none
       type(hdf), intent(in)               :: chdf
@@ -680,7 +684,11 @@ module dataio_hdf5
       nib = 0; nid = 0; njb = 0; njd = 0; nkb = 0; pisize = 0; pjsize = 0
       select case(plane)
          case("yz")
-            xn     = ix + nb - pcoords(1)*nxb
+            if(nxd > 1) then
+               xn     = ix + nb - pcoords(1)*nxb
+            else
+               xn     = 1
+            endif
             remain = (/.false.,.true.,.true./)
             pij    = "yz_"
             nib    = nyb
@@ -691,7 +699,11 @@ module dataio_hdf5
             pisize = pysize
             pjsize = pzsize
          case("xz")
-            xn     = iy + nb - pcoords(2)*nyb
+            if(nyd > 1) then
+               xn     = iy + nb - pcoords(2)*nyb
+            else
+               xn     = 1
+            endif
             remain = (/.true.,.false.,.true./)
             pij    = "xz_"
             nib    = nxb
@@ -702,7 +714,11 @@ module dataio_hdf5
             pisize = pxsize
             pjsize = pzsize
          case("xy")
-            xn     = iz + nb - pcoords(3)*nzb
+            if(nzd > 1) then
+               xn = iz + nb - pcoords(3)*nzb
+            else
+               xn = 1
+            endif
             remain = (/.true.,.true.,.false./)
             pij    = "xy_"
             nib    = nxb
@@ -722,7 +738,7 @@ module dataio_hdf5
       call MPI_CART_SUB(comm3d,remain,comm2d,ierr)
       call MPI_COMM_SIZE(comm2d, ls, ierr)
       call MPI_COMM_RANK(comm2d, lp, ierr)
-      if(xn > nb .and. xn <= nkb+nb) then
+      if((xn > nb .and. xn <= nkb+nb).or.xn == 1) then
          allocate(temp(nib,njb,pisize*pjsize),img(nid,njd))
          allocate(buff(nid*njd))
          allocate(send(nib,njb))
@@ -746,17 +762,25 @@ module dataio_hdf5
                     temp(:,:,(j+1)+i*pjsize)
                enddo
             enddo
-            call H5Fopen_f(fname, H5F_ACC_RDWR_F, file_id, error)
-            call H5Gopen_f(file_id,plane,gr_id,error)
-            call H5Gopen_f(gr_id,var,gr2_id,error)
-            write(dname,'(a3,a4,a1,i4.4)') pij,var,"_",nimg
-            call h5ltmake_dataset_double_f(gr2_id, dname, rank, dims, img, error)
-            bufsize = 1
-            timebuffer = (/t/)
-            call h5ltset_attribute_double_f(gr2_id,dname,"time",timebuffer,bufsize,error)
-            call H5Gclose_f(gr2_id,error)
-            call H5Gclose_f(gr_id,error)
-            call H5Fclose_f(file_id,error)
+            if(vizit) then
+#ifdef PGPLOT
+               call draw_me(real(img,4), real(fmin,4), real(fmax,4))
+#else /* PGPLOT */
+               call warn("[dataio_hdf5:write_plot_hdf5] vizit used without PGPLOT")
+#endif /* PGPLOT */
+            else
+               call H5Fopen_f(fname, H5F_ACC_RDWR_F, file_id, error)
+               call H5Gopen_f(file_id,plane,gr_id,error)
+               call H5Gopen_f(gr_id,var,gr2_id,error)
+               write(dname,'(a3,a4,a1,i4.4)') pij,var,"_",nimg
+               call h5ltmake_dataset_double_f(gr2_id, dname, rank, dims, img, error)
+               bufsize = 1
+               timebuffer = (/t/)
+               call h5ltset_attribute_double_f(gr2_id,dname,"time",timebuffer,bufsize,error)
+               call H5Gclose_f(gr2_id,error)
+               call H5Gclose_f(gr_id,error)
+               call H5Fclose_f(file_id,error)
+            endif
          endif
          if(allocated(send)) deallocate(send)
          if(allocated(temp)) deallocate(temp)

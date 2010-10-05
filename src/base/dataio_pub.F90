@@ -52,6 +52,15 @@ module dataio_public
 
    logical            :: halfstep = .false.     !< true when X-Y-Z sweeps are done and Z-Y-X are not
 
+   !! ToDo:
+   !!  Currently to use PGPLOT you need to:
+   !!   1. set one of i{x,y,z} to positive value and zero to the others
+   !!   2. use only one-element vars array in problem.par
+   !!
+   logical            :: vizit = .false.        !< performe "live" vizualization using pgplot (BEWARE: highly experimental)
+   real               :: fmin                   !< minimum on pgplot scale
+   real               :: fmax                   !< maximum on pgplot scale
+
    type(hdf)          :: chdf                   !< container for some vital simulation parameters
    character(len=16)  :: domain                 !< string to choose if boundaries have to be dumped in hdf files
    real               :: last_hdf_time          !< time in simulation of the last resent hdf file dump

@@ -50,7 +50,8 @@ module dataio
 !! \todo check the usefullness of wait logical variable
 !<
    use types,         only : hdf
-   use dataio_public, only : tend, nend, wend, log_file, log_lun, nhdf, nstep_start, domain, nrestart, get_container, set_container_chdf
+   use dataio_public, only : tend, nend, wend, log_file, log_lun, nhdf, nstep_start, domain, nrestart, get_container, set_container_chdf, &
+      vizit, fmin, fmax
 
    implicit none
 
@@ -108,7 +109,7 @@ module dataio
    namelist /END_CONTROL/ nend, tend, wend
    namelist /RESTART_CONTROL/ restart, new_id, nrestart, resdel
    namelist /OUTPUT_CONTROL/ dt_hdf, dt_res, dt_tsl, dt_log, dt_plt, ix, iy, iz, &
-                             domain, vars, mag_center, &
+                             domain, vars, mag_center, vizit, fmin, fmax, &
                              min_disk_space_MB, sleep_minutes, sleep_seconds, &
                              user_message_file, system_message_file
 
@@ -200,7 +201,8 @@ module dataio
 
       use mpisetup,        only : ibuff, rbuff, cbuff, proc, MPI_CHARACTER, cbuff_len, &
            &                      MPI_DOUBLE_PRECISION, MPI_INTEGER, comm, ierr, buffer_dim, cwd, &
-           &                      psize, t, nstep, bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr
+           &                      psize, t, nstep, bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr, &
+           &                      lbuff, MPI_LOGICAL
       use errh,            only : namelist_errh
       use problem_pub,     only : problem_name,run_id
       use version,         only : nenv,env, init_version
@@ -337,6 +339,10 @@ module dataio
          rbuff(42) = dt_tsl
          rbuff(43) = dt_log
          rbuff(44) = dt_plt
+         rbuff(45) = fmin
+         rbuff(46) = fmax
+
+         lbuff(1)  = vizit
 
          cbuff(40) = domain
 
@@ -349,12 +355,14 @@ module dataio
          cbuff(92) = system_message_file(1:cbuff_len)
 
          call MPI_BCAST(cbuff, cbuff_len*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
+         call MPI_BCAST(lbuff,    buffer_dim, MPI_LOGICAL,          0, comm, ierr)
          call MPI_BCAST(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
          call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
       else
 
          call MPI_BCAST(cbuff, cbuff_len*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
+         call MPI_BCAST(lbuff,    buffer_dim, MPI_LOGICAL,          0, comm, ierr)
          call MPI_BCAST(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
          call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
@@ -387,6 +395,10 @@ module dataio
          dt_tsl              = rbuff(42)
          dt_log              = rbuff(43)
          dt_plt              = rbuff(44)
+         fmin                = rbuff(45)
+         fmax                = rbuff(46)
+
+         vizit               = lbuff(1)
 
          domain              = trim(cbuff(40))
          do iv=1, nvarsmx
