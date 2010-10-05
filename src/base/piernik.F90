@@ -169,7 +169,9 @@ contains
       implicit none
 
       type(grid_container) :: cgrid
+#ifdef GRAV
       logical              :: grav_pot_3d_called = .false.
+#endif /* GRAV */
 
       call getarg(1, cwd)
       if (LEN_TRIM(cwd) == 0) cwd = '.'
