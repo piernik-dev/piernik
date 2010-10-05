@@ -45,7 +45,7 @@ module types
    end type indx
 
    type :: hdf
-      integer :: nhdf, ntsl, nres, nlog, step_hdf, step_res, nstep, nrestart
+      integer :: nhdf, ntsl, nres, nlog, step_hdf, step_res, log_lun, nstep, nrestart
       real    :: last_hdf_time
       character(len=128) :: log_file
       character(len=16)  :: domain
