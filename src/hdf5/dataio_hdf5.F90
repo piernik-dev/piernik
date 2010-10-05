@@ -637,7 +637,7 @@ module dataio_hdf5
 
    subroutine write_plot_hdf5(chdf,var,plane,nimg)
       use types,    only : hdf
-      use mpisetup, only : MPI_CHARACTER, comm3d, ierr, pxsize, pysize, pzsize, MPI_DOUBLE_PRECISION, t, pcoords, mpistop
+      use mpisetup, only : MPI_CHARACTER, comm3d, ierr, pxsize, pysize, pzsize, MPI_DOUBLE_PRECISION, t, pcoords
       use hdf5,     only : HID_T, HSIZE_T, SIZE_T, H5F_ACC_RDWR_F, h5fopen_f, h5gopen_f, h5gclose_f, h5fclose_f
       use h5lt,     only : h5ltmake_dataset_double_f, h5ltset_attribute_double_f
       use arrays,   only : u
@@ -1246,7 +1246,7 @@ module dataio_hdf5
           h5screate_simple_f, h5fclose_f, h5close_f
       use h5lt,         only: h5ltget_attribute_double_f, h5ltget_attribute_int_f, h5ltget_attribute_string_f
       use mpisetup,     only: MPI_CHARACTER, comm, ierr, pcoords, pxsize, pysize, pzsize, &
-          MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION, proc, t, info, comm3d, dt, mpistop
+          MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION, proc, t, info, comm3d, dt
       use fluidindex,   only: nvar
       use grid,         only: nx, ny, nz, x, y, z, nxb, nyb, nzb, nxd, nyd, nzd, nb, xmin, xmax, &
           ymin, ymax, zmin, zmax
@@ -1501,7 +1501,7 @@ module dataio_hdf5
       use hdf5,        only: HID_T, H5F_ACC_TRUNC_F, H5P_FILE_ACCESS_F, H5P_DEFAULT_F, &
            &                 h5open_f, h5close_f, h5fcreate_f, h5fclose_f, h5pcreate_f, h5pclose_f, h5pset_fapl_mpio_f
       use types,       only: hdf
-      use mpisetup,    only: comm3d, ierr, info, mpistop
+      use mpisetup,    only: comm3d, ierr, info
       use grid,        only: nxb, nyb, nzb
       use problem_pub, only: problem_name, run_id
 #ifdef NEW_HDF5
