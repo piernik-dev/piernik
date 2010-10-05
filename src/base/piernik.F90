@@ -123,7 +123,6 @@ program piernik
 
   if (proc == 0) write(*, '(a)', advance='no') "Finishing "       ! QA_WARN
   call cleanup_piernik
-  call printinfo("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++", .false.)
 
 contains
 !>

@@ -511,6 +511,8 @@ module mpisetup
 
       subroutine cleanup_mpi
 
+         use errh, only : printinfo
+
          implicit none
 
          call MPI_Comm_free(comm3d, ierr)
@@ -560,6 +562,7 @@ module mpisetup
             call MPI_Type_free(ARR_XY_RIGHT_BND, ierr)
          end if
 
+         if (proc == 0) call printinfo("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++", .false.)
          call MPI_BARRIER(comm,ierr)
          call sleep(5)
          call MPI_FINALIZE(ierr)

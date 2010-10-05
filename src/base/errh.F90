@@ -92,9 +92,9 @@ module errh
 
       if (mode /= T_SILENT) then
          if (mode == T_PLAIN) then
-            write(*,'(a)') trim(nm)                                                                                ! QA_WARN
+            write(*,'(a)') trim(nm)                                                                               ! QA_WARN
          else
-            write(*,'(a,i5,2a)') trim(ansicolor)//msg_type_str//" @"//ansi_black, proc, ': ', trim(nm)             ! QA_WARN
+            write(*,'(a,i5,2a)') trim(ansicolor)//msg_type_str//" @"//ansi_black, proc, ': ', trim(nm)            ! QA_WARN
          end if
       end if
 
