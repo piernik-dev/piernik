@@ -30,7 +30,7 @@
 !! \brief (KK)
 !!
 !! In this module following namelists of parameters are specified:
-!! \copydetails mpisetup::mpistart
+!! \copydetails mpisetup::init_mpi
 !<
 module mpisetup
 
@@ -158,7 +158,7 @@ module mpisetup
 !! </table>
 !! \n \n
 !<
-      subroutine mpistart
+      subroutine init_mpi
 
          use errh, only : die, namelist_errh, msg, warn
 
@@ -191,7 +191,7 @@ module mpisetup
          info = MPI_INFO_NULL
          call MPI_COMM_SIZE(comm, nproc, ierr)
 
-         if (allocated(cwd_all) .or. allocated(host_all) .or. allocated(pid_all)) call die("[mpisetup:mpistart] cwd_all, host_all or pid_all already allocated")
+         if (allocated(cwd_all) .or. allocated(host_all) .or. allocated(pid_all)) call die("[mpisetup:init_mpi] cwd_all, host_all or pid_all already allocated")
 
          ! BEWARE if proc /= 0 it is probably enough to allocate only one element or none at all (may depend on MPI implementation)
          allocate(cwd_all(0:nproc))
@@ -202,7 +202,7 @@ module mpisetup
          status     = hostnm(host_proc)
          cwd_status = getcwd(cwd_proc)
 
-         if (cwd_status /= 0) call die("[mpisetup:mpistart] problems accessing current working directory.")
+         if (cwd_status /= 0) call die("[mpisetup:init_mpi] problems accessing current working directory.")
 #ifdef DEBUG
          write(*,'(3a,i6,3a)') 'mpisetup: host="',trim(host_proc),'", PID=',pid_proc,' CWD="',trim(cwd_proc),'"'     ! QA_WARN
 #endif /* DEBUG */
@@ -217,7 +217,7 @@ module mpisetup
          if(proc == 0) then
             par_file = trim(cwd)//'/problem.par'
             inquire(file=par_file, exist=par_file_exist)
-            if(.not. par_file_exist) call die('[mpisetup:mpistart] Cannot find "problem.par" in the working directory',0)
+            if(.not. par_file_exist) call die('[mpisetup:init_mpi] Cannot find "problem.par" in the working directory',0)
             tmp_log_file = trim(cwd)//'/tmp.log'
          endif
 
@@ -378,17 +378,17 @@ module mpisetup
 
          if (bnd_xl(1:3) == 'per' .or. bnd_xl(1:3) == 'she') then
             periods(1) = .true.  ! x periodic
-            if (bnd_xr(1:3) /= bnd_xl(1:3)) call die("[mpisetup:mpistart] Periodic or shear BC do not match in X-direction")
+            if (bnd_xr(1:3) /= bnd_xl(1:3)) call die("[mpisetup:init_mpi] Periodic or shear BC do not match in X-direction")
          endif
 
          if (bnd_yl(1:3) == 'per') then
             periods(2) = .true.  ! y periodic
-            if (bnd_yr(1:3) /= bnd_yl(1:3)) call die("[mpisetup:mpistart] Periodic BC do not match in Y-direction")
+            if (bnd_yr(1:3) /= bnd_yl(1:3)) call die("[mpisetup:init_mpi] Periodic BC do not match in Y-direction")
          endif
 
          if (bnd_zl(1:3) == 'per') then
             periods(3) = .true.  ! z periodic
-            if (bnd_zr(1:3) /= bnd_zl(1:3)) call die("[mpisetup:mpistart] Periodic BC do not match in Z-direction")
+            if (bnd_zr(1:3) /= bnd_zl(1:3)) call die("[mpisetup:init_mpi] Periodic BC do not match in Z-direction")
          endif
 
          reorder = .false.     ! allows processes reordered for efficiency
@@ -494,18 +494,18 @@ module mpisetup
          write(*,*)                                                     ! QA_WARN
 #endif /* DEBUG */
 
-         if(integration_order > 2) call die ('[mpisetup:mpistart]: "ORIG" scheme integration_order must be 1 or 2')
+         if(integration_order > 2) call die ('[mpisetup:init_mpi]: "ORIG" scheme integration_order must be 1 or 2')
 
          dt_old = -1.
          if (dt_max_grow < 1.01) then
             if (proc == 0) then
-               write(msg,'(2(a,g10.3))')"[mpisetup:mpistart] dt_max_grow = ",dt_max_grow," is way too low. Resetting to ",dt_default_grow
+               write(msg,'(2(a,g10.3))')"[mpisetup:init_mpi] dt_max_grow = ",dt_max_grow," is way too low. Resetting to ",dt_default_grow
                call warn(msg)
             endif
             dt_max_grow = dt_default_grow
          end if
 
-      end subroutine mpistart
+      end subroutine init_mpi
 
 !-----------------------------------------------------------------------------
 

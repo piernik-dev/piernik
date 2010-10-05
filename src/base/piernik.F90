@@ -156,7 +156,7 @@ contains
       use problem_pub,           only: problem_name, run_id
       use dataio,                only: init_dataio, write_data
       use dataio_public,         only: nrestart
-      use mpisetup,              only: cwd, mpistart
+      use mpisetup,              only: cwd, init_mpi
       use mpiboundaries,         only: mpi_boundaries_prep
       use fluidboundaries_pub,   only: init_fluidboundaries
       use fluidboundaries,       only: all_fluid_boundaries
@@ -190,7 +190,7 @@ contains
       call getarg(1, cwd)
       if (LEN_TRIM(cwd) == 0) cwd = '.'
 
-      call mpistart
+      call init_mpi
 
       call init_grid(cgrid)
 
