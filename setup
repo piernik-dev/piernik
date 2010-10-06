@@ -177,7 +177,7 @@ if(!-r $probdir) {
 @prob = ( "../" . $probdir . "initproblem.F90",
           "../" . $probdir . $param_file );
 
-@base = <src/base/*.F90 src/base/*.c>;
+@base = <src/base/*.F90 src/base/*.c src/base/*.h>;
 for (@base) {
    s/src/\.\.\/src/;
 }
