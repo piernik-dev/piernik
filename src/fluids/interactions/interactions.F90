@@ -25,7 +25,8 @@
 !
 !    For full list of developers see $PIERNIK_HOME/license/pdt.txt
 !
-#include "piernik.def"
+!#include "piernik.def"
+#include "defines.c"
 !>
 !! \brief [DW] Module that contains all routines related to %interactions between fluids
 !!
@@ -61,43 +62,38 @@ module interactions
 !! \n \n
 !<
    subroutine init_interactions
-      use mpisetup,     only : proc, cwd, rbuff, MPI_DOUBLE_PRECISION, buffer_dim, ierr, comm
+      use mpisetup,     only : proc, rbuff, MPI_DOUBLE_PRECISION, buffer_dim, ierr, comm
       use fluidindex,   only : nvar
+      use dataio_public, only: par_file, cwd
 #ifdef DUST
       use initdust,     only : dragc_gas_dust
 #endif /* DUST */
+
       implicit none
-      character(LEN=100) :: par_file, tmp_log_file
 
       namelist /INTERACTIONS/ collision_factor, cfl_interact
-
-      par_file = trim(cwd)//'/problem.par'
-      tmp_log_file = trim(cwd)//'/tmp.log'
 
       collision_factor  = 0.0
       cfl_interact      = 0.8
 
       if(proc .eq. 0) then
-         open(1,file=par_file)
-            read(unit=1,nml=INTERACTIONS)
-         close(1)
-         open(3, file=tmp_log_file, position='append')
-            write(unit=3,nml=INTERACTIONS)
-         close(3)
+
+         diff_nml(INTERACTIONS)
 
          rbuff(1)  = collision_factor
          rbuff(2)  = cfl_interact
 
-         call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+      end if
 
-     else
+      call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
-         call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+      if (proc /= 0) then
 
          collision_factor     = rbuff(1)
          cfl_interact         = rbuff(2)
 
       endif
+
 #ifdef COLLISIONS
       allocate(collfaq(nvar%fluids,nvar%fluids))
       collfaq = collision_factor

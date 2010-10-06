@@ -25,7 +25,8 @@
 !
 !    For full list of developers see $PIERNIK_HOME/license/pdt.txt
 !
-#include "piernik.def"
+!#include "piernik.def"
+#include "defines.c"
 
 !>
 !! \brief (MH) Initialization of Cosmic Ray component
@@ -88,15 +89,14 @@ contains
    subroutine init_cosmicrays
 
       use errh,     only: namelist_errh, die
-      use mpisetup, only: proc, ibuff, rbuff, comm, ierr, MPI_DOUBLE_PRECISION, MPI_INTEGER, cwd, buffer_dim
+      use mpisetup, only: proc, ibuff, rbuff, comm, ierr, MPI_DOUBLE_PRECISION, MPI_INTEGER, buffer_dim
+      use dataio_public, only: par_file, cwd
 
       implicit none
 
       integer            :: ierrh
       integer            :: nn
       integer            :: ne
-      character(LEN=100) :: par_file
-      character(LEN=100) :: tmp_log_file
 
       namelist /COSMIC_RAYS/ cfl_cr, smallecr, cr_active, cr_eff, &
            &                 ncrn, gamma_crn, K_crn_paral, K_crn_perp, &
@@ -118,19 +118,8 @@ contains
       K_cre_perp(:)  = 0.0
 
       if (proc == 0) then
-         par_file = trim(cwd)//'/problem.par'
-         tmp_log_file = trim(cwd)//'/tmp.log'
-         open(1,file=par_file)
-         read(unit=1,nml=COSMIC_RAYS,iostat=ierrh)
-         call namelist_errh(ierrh,'COSMIC_RAYS')
-         close(1)
-         open(3, file='tmp.log', position='append')
-         write(3,nml=COSMIC_RAYS)
-         write(3,*)
-         close(3)
-      endif
 
-      if (proc == 0) then
+         diff_nml(COSMIC_RAYS)
 
          ibuff(1)   = ncrn
          ibuff(2)   = ncre

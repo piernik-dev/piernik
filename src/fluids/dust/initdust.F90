@@ -25,7 +25,8 @@
 !
 !    For full list of developers see $PIERNIK_HOME/license/pdt.txt
 !
-#include "piernik.def"
+!#include "piernik.def"
+#include "defines.c"
 !>
 !! \brief (MH) Initialization of the dust fluid
 !!
@@ -63,46 +64,33 @@ module initdust
 !<
   subroutine init_dust
 
-    use mpisetup, only: proc, cwd, rbuff, lbuff, MPI_LOGICAL, MPI_DOUBLE_PRECISION, buffer_dim, comm, ierr
+    use mpisetup, only: proc, rbuff, lbuff, MPI_LOGICAL, MPI_DOUBLE_PRECISION, buffer_dim, comm, ierr
     use errh,     only: namelist_errh
+    use dataio_public, only: par_file, cwd
+
     implicit none
+
     integer :: ierrh
-    character(LEN=100) :: par_file, tmp_log_file
 
     namelist /FLUID_DUST/ dragc_gas_dust, dalpha, selfgrav_dst
 
-      dragc_gas_dust  = 1.0
-      dalpha = 1.0
-      selfgrav_dst = .false.
+    dragc_gas_dust  = 1.0
+    dalpha = 1.0
+    selfgrav_dst = .false.
 
-      if(proc .eq. 0) then
-         par_file = trim(cwd)//'/problem.par'
-         tmp_log_file = trim(cwd)//'/tmp.log'
-         open(1,file=par_file)
-            read(unit=1,nml=FLUID_DUST,iostat=ierrh)
-            call namelist_errh(ierrh,'FLUID_DUST')
-         close(1)
-         open(3, file='tmp.log', position='append')
-           write(3,nml=FLUID_DUST)
-           write(3,*)
-         close(3)
-      endif
+    if (proc == 0) then
+       diff_nml(FLUID_DUST)
 
+       rbuff(1)   = dragc_gas_dust
+       rbuff(2)   = dalpha
 
-    if(proc .eq. 0) then
+       lbuff(1)   = selfgrav_dst
+    end if
 
-      rbuff(1)   = dragc_gas_dust
-      rbuff(2)   = dalpha
+    call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+    call MPI_BCAST(lbuff,    buffer_dim, MPI_LOGICAL,          0, comm, ierr)
 
-      lbuff(1)   = selfgrav_dst
-
-      call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
-      call MPI_BCAST(lbuff,    buffer_dim, MPI_LOGICAL,          0, comm, ierr)
-
-    else
-
-      call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
-      call MPI_BCAST(lbuff,    buffer_dim, MPI_LOGICAL,          0, comm, ierr)
+    if (proc /= 0) then
 
       selfgrav_dst    = lbuff(1)
 
@@ -113,7 +101,6 @@ module initdust
     taus = 1. / dragc_gas_dust
 
   end subroutine init_dust
-
 
 
   subroutine dust_index(nvar,nvar_dst)

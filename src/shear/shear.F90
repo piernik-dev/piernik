@@ -25,7 +25,8 @@
 !
 !    For full list of developers see $PIERNIK_HOME/license/pdt.txt
 !
-#include "piernik.def"
+!#include "piernik.def"
+#include "defines.c"
 !>
 !! \brief (KK)
 !!
@@ -52,42 +53,35 @@ module shear
 !! \n \n
 !<
   subroutine init_shear
-    use mpisetup, only : cwd, ierr, MPI_DOUBLE_PRECISION, proc, rbuff, buffer_dim, comm
+
+    use mpisetup, only : ierr, MPI_DOUBLE_PRECISION, proc, rbuff, buffer_dim, comm
     use errh, only : namelist_errh
+    use dataio_public, only: par_file, cwd
+
     implicit none
+
     integer :: ierrh
-    character(LEN=100) :: par_file, tmp_log_file
 
     namelist /SHEARING/ omega, qshear
-
-    par_file = trim(cwd)//'/problem.par'
-    tmp_log_file = trim(cwd)//'/tmp.log'
 
     omega   = 0.0
     qshear  = 0.0
 
-    if(proc .eq. 0) then
-       open(1,file=par_file)
-          read(unit=1,nml=SHEARING,iostat=ierrh)
-          call namelist_errh(ierrh,'SHEARING')
-       close(1)
-       open(3, file=tmp_log_file, position='append')
-          write(unit=3,nml=SHEARING)
-       close(3)
+    if (proc == 0) then
+       diff_nml(SHEARING)
 
        rbuff(1) = omega
        rbuff(2) = qshear
 
-       call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+    end if
 
-    else
+    call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
-       call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
-
+    if (proc /= 0) then
        omega   = rbuff(1)
        qshear  = rbuff(2)
-
     endif
+
   end subroutine init_shear
 
   subroutine yshift(ts,dts)

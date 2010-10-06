@@ -25,7 +25,8 @@
 !
 !    For full list of developers see $PIERNIK_HOME/license/pdt.txt
 !
-#include "piernik.def"
+!#include "piernik.def"
+#include "defines.c"
 
 !>
 !! \brief (MH) Initialization of the neutral fluid
@@ -75,56 +76,40 @@ module initneutral
 !<
   subroutine init_neutral
 
-    use mpisetup, only: proc, cwd, ierr, comm, cbuff, ibuff, rbuff, lbuff, buffer_dim, MPI_LOGICAL, MPI_INTEGER, &
-                        MPI_DOUBLE_PRECISION, MPI_CHARACTER
+    use mpisetup, only: proc, ierr, comm, rbuff, lbuff, buffer_dim, MPI_LOGICAL, MPI_DOUBLE_PRECISION
     use errh,     only: namelist_errh
+    use dataio_public, only: par_file, cwd
 #ifdef SHEAR
     use shear,    only: omega
 #endif /* SHEAR */
+
     implicit none
+
     integer :: ierrh
-    character(len=100) :: par_file, tmp_log_file
 
     namelist /FLUID_NEUTRAL/ gamma_neu, cs_iso_neu, eta_gas_neu, csvk, selfgrav_neu
 
-      gamma_neu    = 1.66666666
-      cs_iso_neu   = 1.0
-      selfgrav_neu = .false.
+    gamma_neu    = 1.66666666
+    cs_iso_neu   = 1.0
+    selfgrav_neu = .false.
 
-      if(proc .eq. 0) then
-         par_file = trim(cwd)//'/problem.par'
-         tmp_log_file = trim(cwd)//'/tmp.log'
-         open(1,file=par_file)
-            read(unit=1,nml=FLUID_NEUTRAL,iostat=ierrh)
-            call namelist_errh(ierrh,'FLUID_NEUTRAL')
-         close(1)
-         open(3, file='tmp.log', position='append')
-           write(3,nml=FLUID_NEUTRAL)
-           write(3,*)
-         close(3)
-      endif
+    if (proc == 0) then
 
+       diff_nml(FLUID_NEUTRAL)
 
-    if(proc .eq. 0) then
+       lbuff(1)   = selfgrav_neu
 
-      lbuff(1)   = selfgrav_neu
+       rbuff(1)   = gamma_neu
+       rbuff(2)   = cs_iso_neu
+       rbuff(3)   = eta_gas_neu
+       rbuff(4)   = csvk
 
-      rbuff(1)   = gamma_neu
-      rbuff(2)   = cs_iso_neu
-      rbuff(3)   = eta_gas_neu
-      rbuff(4)   = csvk
+    end if
 
-      call MPI_BCAST(cbuff, 32*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
-      call MPI_BCAST(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
-      call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
-      call MPI_BCAST(lbuff,    buffer_dim, MPI_LOGICAL,          0, comm, ierr)
+    call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+    call MPI_BCAST(lbuff,    buffer_dim, MPI_LOGICAL,          0, comm, ierr)
 
-    else
-
-      call MPI_BCAST(cbuff, 32*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
-      call MPI_BCAST(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
-      call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
-      call MPI_BCAST(lbuff,    buffer_dim, MPI_LOGICAL,          0, comm, ierr)
+    if (proc == 0) then
 
       selfgrav_neu = lbuff(1)
 

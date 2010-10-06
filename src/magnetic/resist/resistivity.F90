@@ -25,7 +25,8 @@
 !
 !    For full list of developers see $PIERNIK_HOME/license/pdt.txt
 !
-#include "piernik.def"
+!#include "piernik.def"
+#include "defines.c"
 !>
 !! \brief ()
 !!
@@ -78,37 +79,30 @@ contains
 !! \n \n
 !<
       subroutine init_resistivity
-         use mpisetup, only : rbuff, ibuff, ierr, MPI_INTEGER, MPI_DOUBLE_PRECISION, buffer_dim, comm, &
-            cwd, proc
+         use mpisetup, only : rbuff, ibuff, ierr, MPI_INTEGER, MPI_DOUBLE_PRECISION, buffer_dim, comm, proc
          use grid, only : nx,ny,nz
          use errh, only : die, namelist_errh
+         use dataio_public, only: par_file, cwd
 #ifndef ISO
          use initionized, only : ieni
 #endif /* !ISO */
+
          implicit none
-         character(LEN=100) :: par_file, tmp_log_file
+
          integer :: ierrh
 
          namelist /RESISTIVITY/ cfl_resist, eta_0, eta_1, eta_scale, j_crit, deint_max
-
-         par_file = trim(cwd)//'/problem.par'
-         tmp_log_file = trim(cwd)//'/tmp.log'
 
          cfl_resist  =  0.4
          eta_0       =  0.0
          eta_1       =  0.0
          eta_scale   =  4
          j_crit      =  1.0e6
-         deint_max   = 0.01
+         deint_max   =  0.01
 
-         if(proc == 0) then
-            open(1,file=par_file)
-               read(unit=1,nml=RESISTIVITY,iostat=ierrh)
-               call namelist_errh(ierrh,'RESISTIVITY')
-            close(1)
-            open(3, file=tmp_log_file, position='append')
-               write(unit=3,nml=RESISTIVITY)
-            close(3)
+         if (proc == 0) then
+
+            diff_nml(RESISTIVITY)
 
             ibuff(1) = eta_scale
 
@@ -118,13 +112,12 @@ contains
             rbuff(4) = j_crit
             rbuff(5) = deint_max
 
-            call MPI_BCAST(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
-            call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+         end if
 
-         else
+         call MPI_BCAST(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
+         call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
-            call MPI_BCAST(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
-            call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+         if (proc /= 0) then
 
             eta_scale          = ibuff(1)
 
@@ -133,7 +126,9 @@ contains
             eta_1              = rbuff(3)
             j_crit             = rbuff(4)
             deint_max          = rbuff(5)
+
          endif
+
          if(eta_scale < 0) call die("eta_scale must be greater or equal 0")
 
          if(.not.allocated(w)  ) allocate(w(nx,ny,nz)  )
