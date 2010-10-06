@@ -27,6 +27,7 @@
 !
 
 #include "piernik.def"
+#include "macros.h"
 
 module initproblem
 
@@ -35,7 +36,6 @@ module initproblem
    real               :: t_sn
    integer            :: n_sn, ierrh
    real               :: d0, p0, bx0, by0, bz0, x0, y0, z0, r0, beta_cr, amp_cr
-   character(LEN=100) :: par_file, tmp_file
 
    namelist /PROBLEM_CONTROL/  problem_name, run_id,      &
                                d0, p0, bx0, by0, bz0, &
@@ -52,11 +52,10 @@ module initproblem
            &              cbuff, ibuff, rbuff, buffer_dim, comm, ierr, proc, cwd
       use grid,     only: dxmn
       use errh,     only: namelist_errh
+      use dataio_public, only : cwd, msg, par_file
+      use func,          only : compare_namelist
 
       implicit none
-
-      par_file = trim(cwd)//'/problem.par'
-      tmp_file = trim(cwd)//'/tmp.log'
 
       t_sn = 0.0
 
@@ -75,21 +74,9 @@ module initproblem
       beta_cr    = 0.0
       amp_cr     = 1.0
 
-      if(proc .eq. 0) then
-         open(1,file=par_file)
-         read(unit=1,nml=PROBLEM_CONTROL,iostat=ierrh)
-         call namelist_errh(ierrh,'PROBLEM_CONTROL')
-         write(*,nml=PROBLEM_CONTROL)
-         close(1)
-
-         open(3, file=tmp_file, position='append')
-         write(3,nml=PROBLEM_CONTROL)
-         write(3,*)
-         close(3)
-      endif
-
-
       if (proc == 0) then
+
+         diff_nml(PROBLEM_CONTROL)
 
          cbuff(1) =  problem_name
          cbuff(2) =  run_id

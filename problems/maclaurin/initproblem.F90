@@ -26,6 +26,7 @@
 !    For full list of developers see $PIERNIK_HOME/license/pdt.txt
 !
 #include "piernik.def"
+#include "macros.h"
 
 module initproblem
 
@@ -46,14 +47,14 @@ contains
       use mpisetup,      only : cwd, ierr, rbuff, cbuff, ibuff, proc, buffer_dim, comm, smalld, &
            &                    MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER
       use constants,     only : pi
-      use dataio_public, only : skip_advection
+      use dataio_public, only : skip_advection, cwd, msg, par_file
+      use func,          only : compare_namelist
 
       implicit none
 
       integer, parameter :: maxsub = 10  !< upper limit for subsampling
 
       integer :: ierrh
-      character(LEN=100) :: par_file, tmp_log_file
 
       skip_advection = .true. ! skip sweeps in fluidupdate
 
@@ -69,20 +70,8 @@ contains
       nsub         = 3                   !< Subsampling factor
 
       if (proc == 0) then
-         par_file = trim(cwd)//'/problem.par'
-         tmp_log_file = trim(cwd)//'/tmp.log'
 
-         open(1,file=par_file)
-            read(unit=1,nml=PROBLEM_CONTROL,iostat=ierrh)
-            call namelist_errh(ierrh,'PROBLEM_CONTROL')
-         close(1)
-         open(3, file=tmp_log_file, position='append')
-            write(3,nml=PROBLEM_CONTROL)
-            write(3,*)
-         close(3)
-      endif
-
-      if (proc == 0) then
+         diff_nml(PROBLEM_CONTROL)
 
          cbuff(1) =  problem_name
          cbuff(2) =  run_id

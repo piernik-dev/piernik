@@ -26,6 +26,7 @@
 !    For full list of developers see $PIERNIK_HOME/license/pdt.txt
 !
 #include "piernik.def"
+#include "macros.h"
 
 module initproblem
 
@@ -46,16 +47,13 @@ module initproblem
    subroutine read_problem_par
 
       use errh,     only : namelist_errh
-      use mpisetup, only : MPI_CHARACTER, MPI_DOUBLE_PRECISION, &
-           &               cbuff, rbuff, buffer_dim, comm, ierr, cwd, proc
+      use mpisetup, only : MPI_CHARACTER, MPI_DOUBLE_PRECISION, cbuff, rbuff, buffer_dim, comm, ierr, proc
+      use dataio_public, only : cwd, msg, par_file
+      use func,          only : compare_namelist
 
       implicit none
 
-      character(len=100) :: par_file, tmp_log_file
       integer :: ierrh
-
-      par_file = trim(cwd)//'/problem.par'
-      tmp_log_file = trim(cwd)//'/tmp.log'
 
       problem_name = 'aaa'
       run_id  = 'aa'
@@ -70,17 +68,8 @@ module initproblem
       vgal    =  0.0
 
       if (proc == 0) then
-         open(1,file=par_file)
-            read(unit=1,nml=PROBLEM_CONTROL,iostat=ierrh)
-            call namelist_errh(ierrh,'PROBLEM_CONTROL')
-         close(1)
-         open(3, file=tmp_log_file, position='append')
-            write(3,nml=PROBLEM_CONTROL)
-            write(3,*)
-         close(3)
-      endif
 
-      if (proc == 0) then
+         diff_nml(PROBLEM_CONTROL)
 
          cbuff(1) =  problem_name
          cbuff(2) =  run_id

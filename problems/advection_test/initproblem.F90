@@ -25,7 +25,8 @@
 !
 !    For full list of developers see $PIERNIK_HOME/license/pdt.txt
 !
-#include "piernik.def"
+!#include "piernik.def"
+#include "defines.c"
 
 module initproblem
 
@@ -44,14 +45,14 @@ contains
 
       use grid,        only : xmin, xmax, ymin, ymax, zmin, zmax, dx, dy, dz, nxd, nyd, nzd
       use errh,        only : namelist_errh, die
-      use mpisetup,    only : cwd, ierr, rbuff, cbuff, proc, buffer_dim, comm, smalld, smallei, &
-           &                  MPI_CHARACTER, MPI_DOUBLE_PRECISION!, MPI_INTEGER, MPI_LOGICAL, ibuff, lbuff
+      use mpisetup,    only : ierr, rbuff, cbuff, proc, buffer_dim, comm, smalld, smallei, MPI_CHARACTER, MPI_DOUBLE_PRECISION
       use initneutral, only : gamma_neu
+      use dataio_public, only : cwd, msg, par_file
+      use func,        only : compare_namelist
 
       implicit none
 
       integer            :: ierrh
-      character(LEN=100) :: par_file, tmp_log_file
 
       ! namelist default parameter values
       problem_name = 'selfgrav_clump'      !< The default problem name
@@ -62,21 +63,9 @@ contains
       pulse_vel_z  = 0.0                   !< pulse velocity in z-direction
       pulse_amp    = 2.0                   !< pulse relative amplitude
 
-      if(proc == 0) then
-         par_file = trim(cwd)//'/problem.par'
-         tmp_log_file = trim(cwd)//'/tmp.log'
-
-         open(1,file=par_file)
-            read(unit=1,nml=PROBLEM_CONTROL,iostat=ierrh)
-            call namelist_errh(ierrh,'PROBLEM_CONTROL')
-         close(1)
-         open(3, file=tmp_log_file, position='append')
-            write(3,nml=PROBLEM_CONTROL)
-            write(3,*)
-         close(3)
-      endif
-
       if (proc == 0) then
+
+         diff_nml(PROBLEM_CONTROL)
 
          cbuff(1) = problem_name
          cbuff(2) = run_id
@@ -90,9 +79,7 @@ contains
       end if
 
       call MPI_BCAST(cbuff, 32*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
-!      call MPI_BCAST(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
       call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
-!      call MPI_BCAST(lbuff,    buffer_dim, MPI_LOGICAL,          0, comm, ierr)
 
       if (proc /= 0) then
 

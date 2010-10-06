@@ -26,6 +26,7 @@
 !    For full list of developers see $PIERNIK_HOME/license/pdt.txt
 !
 #include "piernik.def"
+#include "macros.h"
 
 module initproblem
 
@@ -48,6 +49,8 @@ module initproblem
 
       use mpisetup, only: MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION, &
            &              cbuff, ibuff, rbuff, comm, ierr, buffer_dim, proc
+      use dataio_public, only : cwd, msg, par_file
+      use func,          only : compare_namelist
 
       implicit none
 
@@ -61,16 +64,9 @@ module initproblem
       m_z          = 0
 
       if(proc .eq. 0) then
-         open(1,file='problem.par')
-         read(unit=1,nml=PROBLEM_CONTROL)
-         close(1)
-         open(3, file='tmp.log', position='append')
-         write(3,nml=PROBLEM_CONTROL)
-         write(3,*)
-         close(3)
-      endif
 
-      if(proc .eq. 0) then
+         diff_nml(PROBLEM_CONTROL)
+
 
          cbuff(1) =  problem_name
          cbuff(2) =  run_id
