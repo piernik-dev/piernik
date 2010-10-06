@@ -77,10 +77,9 @@ module initionized
     use mpisetup, only : rbuff, lbuff, MPI_DOUBLE_PRECISION, MPI_LOGICAL, &
          &               comm, ierr, buffer_dim, proc
     use func,     only : compare_namelist
-    use dataio_public, only: par_file, cwd
+    use dataio_public, only: par_file, ierrh
 
     implicit none
-    integer :: ierrh
 
     namelist /FLUID_IONIZED/ gamma_ion, cs_iso_ion, cs_ion, selfgrav_ion
 

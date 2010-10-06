@@ -25,8 +25,8 @@
 !
 !    For full list of developers see $PIERNIK_HOME/license/pdt.txt
 !
-!#include "piernik.def"
-#include "defines.c"
+#include "piernik.def"
+#include "macros.h"
 
 module initproblem
 
@@ -47,12 +47,11 @@ contains
       use errh,        only : namelist_errh, die
       use mpisetup,    only : ierr, rbuff, cbuff, proc, buffer_dim, comm, smalld, smallei, MPI_CHARACTER, MPI_DOUBLE_PRECISION
       use initneutral, only : gamma_neu
-      use dataio_public, only : cwd, msg, par_file
+      use dataio_public, only : ierrh, msg, par_file
       use func,        only : compare_namelist
 
       implicit none
 
-      integer            :: ierrh
 
       ! namelist default parameter values
       problem_name = 'selfgrav_clump'      !< The default problem name

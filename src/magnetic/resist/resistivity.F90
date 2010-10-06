@@ -82,7 +82,7 @@ contains
          use mpisetup, only : rbuff, ibuff, ierr, MPI_INTEGER, MPI_DOUBLE_PRECISION, buffer_dim, comm, proc
          use grid, only : nx,ny,nz
          use errh, only : die, namelist_errh
-         use dataio_public, only: par_file, cwd
+         use dataio_public, only: par_file, ierrh
          use func,        only : compare_namelist
 
 #ifndef ISO
@@ -91,7 +91,6 @@ contains
 
          implicit none
 
-         integer :: ierrh
 
          namelist /RESISTIVITY/ cfl_resist, eta_0, eta_1, eta_scale, j_crit, deint_max
 

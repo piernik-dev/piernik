@@ -25,8 +25,8 @@
 !
 !    For full list of developers see $PIERNIK_HOME/license/pdt.txt
 !
-!#include "piernik.def"
-#include "defines.c"
+#include "piernik.def"
+#include "macros.h"
 
 module initproblem
 
@@ -48,12 +48,11 @@ contains
       use mpisetup,      only : ierr, rbuff, cbuff, ibuff, proc, buffer_dim, comm, &
            &                    MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER
       use constants,     only : pi
-      use dataio_public, only : cwd, msg, par_file
+      use dataio_public, only : ierrh, msg, par_file
       use func,          only : compare_namelist
 
       implicit none
 
-      integer :: ierrh
 
       ! namelist default parameter values
       problem_name = 'Jeans oscillations'  !< The default problem name

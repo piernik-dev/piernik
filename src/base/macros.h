@@ -6,9 +6,8 @@
 
 
   Requires:
-    use dtaio_public, only : cwd, par_file
-    use func,     only : compare_namelist
-    integer :: ierrh
+    use dataio_public, only : par_file, ierrh
+    use func,          only : compare_namelist
 
 
   Potential problem: for gnu cpp I'd write:
@@ -31,4 +30,4 @@ namelist\
   open(502, file="temp2.dat", status="unknown");\
   write(502,nml=namelist);\
   close(502);\
-  call compare_namelist("temp1.dat", "temp2.dat", cwd)
+  call compare_namelist("temp1.dat", "temp2.dat")

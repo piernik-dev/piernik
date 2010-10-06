@@ -170,12 +170,11 @@ module grid
            &                buffer_dim, pxsize, pysize, pzsize, comm
       use errh,      only : namelist_errh, die
       use func,      only : compare_namelist
-      use dataio_public, only : par_file, cwd
+      use dataio_public, only : par_file, ierrh
 
       implicit none
 
       type(grid_container), intent(out) :: cgrid
-      integer :: ierrh
 
       namelist /DOMAIN_SIZES/ nxd, nyd, nzd, nb
       namelist /DOMAIN_LIMITS/ xmin, xmax, ymin, ymax, zmin, zmax

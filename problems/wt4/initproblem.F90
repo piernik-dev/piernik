@@ -81,14 +81,13 @@ contains
            &               buffer_dim, comm, smalld
       use constants, only: pi
       use errh,      only: die
-      use dataio_public, only : cwd, msg, par_file
+      use dataio_public, only : ierrh, msg, par_file
       use func,          only : compare_namelist
 
       implicit none
 
 !      integer, parameter :: maxsub = 10  !< upper limit for subsampling
 
-      integer :: ierrh
 
       ! namelist default parameter values
       problem_name    = 'wengen4'

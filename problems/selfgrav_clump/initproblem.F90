@@ -50,12 +50,11 @@ contains
       use errh,     only : namelist_errh, die
       use mpisetup, only : ierr, rbuff, cbuff, ibuff, lbuff, proc, buffer_dim, comm, &
            &               MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL
-      use dataio_public, only: par_file, cwd
+      use dataio_public, only: par_file, ierrh
       use func,     only : compare_namelist
 
       implicit none
 
-      integer            :: ierrh
 
       ! namelist default parameter values
       problem_name = 'selfgrav_clump'      !< The default problem name

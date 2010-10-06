@@ -54,12 +54,11 @@ module initproblem
       use mpisetup, only: MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION, &
            &              cbuff, ibuff, rbuff, comm, ierr, buffer_dim, proc
       use errh, only: namelist_errh
-      use dataio_public, only : cwd, msg, par_file
+      use dataio_public, only : ierrh, msg, par_file
       use func,          only : compare_namelist
 
       implicit none
 
-      integer            :: ierrh
       problem_name = 'shock'
       run_id  = 'tst'
       d0      = 1.0

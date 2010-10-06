@@ -78,7 +78,7 @@ module initneutral
 
     use mpisetup, only: proc, ierr, comm, rbuff, lbuff, buffer_dim, MPI_LOGICAL, MPI_DOUBLE_PRECISION
     use errh,     only: namelist_errh
-    use dataio_public, only: par_file, cwd
+    use dataio_public, only: par_file, ierrh
     use func,        only : compare_namelist
 
 #ifdef SHEAR
@@ -87,7 +87,6 @@ module initneutral
 
     implicit none
 
-    integer :: ierrh
 
     namelist /FLUID_NEUTRAL/ gamma_neu, cs_iso_neu, eta_gas_neu, csvk, selfgrav_neu
 

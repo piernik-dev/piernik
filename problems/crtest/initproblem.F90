@@ -52,12 +52,11 @@ module initproblem
            &              cbuff, ibuff, rbuff, buffer_dim, comm, ierr, proc
       use grid,     only: dxmn
       use errh,     only: namelist_errh, die
-      use dataio_public, only : cwd, msg, par_file
+      use dataio_public, only : ierrh, msg, par_file
       use func,          only : compare_namelist
 
       implicit none
 
-      integer            :: ierrh
 
       problem_name = 'aaa'
       run_id       = 'aaa'

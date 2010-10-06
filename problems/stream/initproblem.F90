@@ -49,12 +49,11 @@ module initproblem
       use errh,     only : namelist_errh
       use mpisetup, only : ierr, rbuff, cbuff, ibuff, lbuff, proc, buffer_dim, comm, &
            &               MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL
-      use dataio_public, only : cwd, msg, par_file
+      use dataio_public, only : ierrh, msg, par_file
       use func,          only : compare_namelist
 
       implicit none
 
-      integer :: ierrh
 
       linear = .false.
       problem_name = 'aaa'

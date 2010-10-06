@@ -47,14 +47,13 @@ contains
       use mpisetup,      only : ierr, rbuff, cbuff, ibuff, proc, buffer_dim, comm, smalld, &
            &                    MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER
       use constants,     only : pi
-      use dataio_public, only : skip_advection, cwd, msg, par_file
+      use dataio_public, only : skip_advection, ierrh, msg, par_file
       use func,          only : compare_namelist
 
       implicit none
 
       integer, parameter :: maxsub = 10  !< upper limit for subsampling
 
-      integer :: ierrh
 
       skip_advection = .true. ! skip sweeps in fluidupdate
 

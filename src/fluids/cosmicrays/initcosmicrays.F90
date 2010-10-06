@@ -90,12 +90,11 @@ contains
 
       use errh,     only: namelist_errh, die
       use mpisetup, only: proc, ibuff, rbuff, comm, ierr, MPI_DOUBLE_PRECISION, MPI_INTEGER, buffer_dim
-      use dataio_public, only: par_file, cwd
+      use dataio_public, only: par_file, ierrh
       use func,        only : compare_namelist
 
       implicit none
 
-      integer            :: ierrh
       integer            :: nn
       integer            :: ne
 

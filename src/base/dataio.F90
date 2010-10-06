@@ -210,7 +210,7 @@ module dataio
       use fluidboundaries, only : all_fluid_boundaries
       use timer,           only : time_left
       use dataio_hdf5,     only : init_hdf5, read_restart_hdf5, maxparfilelines, parfile, parfilelines
-      use dataio_public,   only : chdf, nres, last_hdf_time, step_hdf, nlog, ntsl, dataio_initialized, log_file, cwdlen, par_file, cwd
+      use dataio_public,   only : chdf, nres, last_hdf_time, step_hdf, nlog, ntsl, dataio_initialized, log_file, cwdlen, par_file, cwd, ierrh
       use func,            only : compare_namelist
 #ifdef MAGNETIC
       use magboundaries,   only : all_mag_boundaries
@@ -219,7 +219,6 @@ module dataio
       implicit none
 
       logical              :: tn
-      integer              :: ierrh
       integer(kind=1)      :: getpid
       integer(kind=1)      :: hostnm
       integer(kind=1)      :: system
@@ -1458,7 +1457,7 @@ module dataio
 !\todo: process multiple commands at once
       use errh,       only : printinfo
       use mpisetup,   only : proc
-      use dataio_public, only : cwd, cwdlen
+      use dataio_public, only : ierrh, cwdlen
 #if defined(__INTEL_COMPILER)
       use ifport,     only : unlink, stat
 #endif /* __INTEL_COMPILER */

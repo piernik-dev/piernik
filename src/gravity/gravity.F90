@@ -103,11 +103,10 @@ module gravity
            &               MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL, lbuff
       use arrays,   only : gpot
       use func,     only : compare_namelist
-      use dataio_public, only : cwd, par_file
+      use dataio_public, only : ierrh, par_file
 
       implicit none
 
-      integer :: ierrh
 
       namelist /GRAVITY/ g_z,g_y, dg_dz, r_gc, ptmass, ptm_x, ptm_y, ptm_z, r_smooth, &
                 nsub, tune_zeq, tune_zeq_bnd, h_grav, r_grav, n_gravr, n_gravr2, n_gravh, user_grav
