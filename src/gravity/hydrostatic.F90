@@ -72,10 +72,11 @@ module hydrostatic
       allocate(zs(nstot), dprofs(nstot), gprofs(nstot), gpots(nstot))
       itermx = 20
       if(d0 .gt. small) then
-        dmid = d0
-        iter = 0
+         dmid = d0
+         iter = 0
       else
          call die("[hydrostatic:hydrostatic_zeq] d0 must be /= 0")
+         dmid = 0. ! just for suppressing compiler warning
       endif
 
       dzs = (zmax-zmin)/real(nstot-2*nb*nsub)
