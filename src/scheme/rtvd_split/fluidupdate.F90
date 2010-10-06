@@ -41,7 +41,7 @@ contains
       use dataio,        only : check_log, check_tsl
       use timestep,      only : time_step
       use mpisetup,      only : proc, dt, dtm, t, nstep
-      use dataio_public, only : halfstep
+      use dataio_public, only : halfstep, msg
 #ifdef SN_SRC
       use snsources,     only : random_sn
 #endif /* SN_SRC */
@@ -57,7 +57,6 @@ contains
 
       logical, save      :: first_run = .true.
       real               :: ts   ! Timestep wallclock
-      character(len=256) :: msg
 #ifdef DEBUG
       integer            :: system, syslog
 #endif /* DEBUG */
@@ -188,7 +187,8 @@ contains
 
       use sweeps,         only : sweepx, sweepy, sweepz
       use grid,           only : nxd, nyd, nzd
-      use errh,           only : die, msg
+      use errh,           only : die
+      use dataio_public,  only : msg
 #if defined SHEAR && defined FLUID_INTERACTIONS
       use sweeps,         only : source_terms_y
 #endif /* SHEAR */

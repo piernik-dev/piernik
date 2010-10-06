@@ -36,8 +36,8 @@ module timestep
 
       subroutine time_step
          use mpisetup,      only : t, dt, dt_old, dt_max_grow, dt_initial, dt_min, nstep, proc
-         use dataio_public, only : tend
-         use errh,          only : warn, msg
+         use dataio_public, only : tend, msg
+         use errh,          only : warn
          use constants,     only : small,big
          use dataio,        only : write_crashed
 

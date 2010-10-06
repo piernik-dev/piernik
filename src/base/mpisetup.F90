@@ -160,7 +160,8 @@ module mpisetup
 !<
       subroutine init_mpi
 
-         use errh, only : die, namelist_errh, msg, warn
+         use errh,          only : die, namelist_errh, warn
+         use dataio_public, only : msg
 
          implicit none
 
@@ -625,8 +626,9 @@ module mpisetup
 
       subroutine divide_domain_voodoo(np)
 
-         use errh,      only: die, warn, msg, printinfo
-         use constants, only: some_primes
+         use errh,          only : die, warn, printinfo
+         use constants,     only : some_primes
+         use dataio_public, only : msg
 
          implicit none
 

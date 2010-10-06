@@ -940,6 +940,7 @@ module dataio
       use mpisetup,           only : smallei,cfl,t,dt, proc, mpifind, nstep
       use types,              only : tsl_container, value
       use errh,               only : printinfo
+      use dataio_public,      only : msg
 #ifdef IONIZED
       use initionized,        only : gamma_ion, cs_iso_ion,cs_iso_ion2
       use initionized,        only : idni,imxi,imyi,imzi
@@ -972,7 +973,6 @@ module dataio
 
       type(tsl_container), optional :: tsl
       real :: dxmn_safe
-      character(len=256) :: msg
 
 #ifdef MAGNETIC
       type(value) :: b_min, b_max, divb_max, vai_max

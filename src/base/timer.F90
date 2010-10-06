@@ -233,11 +233,11 @@ contains
       use mpisetup,      only : MPI_DOUBLE_PRECISION, MPI_SUM, comm, ierr, nstep, proc
       use grid,          only : nxd,nyd,nzd
       use errh,          only : printinfo
+      use dataio_public, only : msg
 
       implicit none
 
       real(kind=4)       :: dtime
-      character(len=255) :: msg
 
 !      Final wall clock time, expressed in hours, minutes, and seconds.
 !

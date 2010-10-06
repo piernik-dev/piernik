@@ -36,9 +36,7 @@ module errh
 
    private
 
-   public :: die, warn, printinfo, namelist_errh, msg
-
-   character(len=512) :: msg
+   public :: die, warn, printinfo, namelist_errh
 
    include 'mpif.h'
 
