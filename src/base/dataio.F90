@@ -52,7 +52,7 @@ module dataio
 !<
    use types,         only : hdf
    use dataio_public, only : tend, nend, wend, nhdf, nstep_start, domain, nrestart, get_container, set_container_chdf, &
-      vizit, fmin, fmax
+      vizit, fmin, fmax, hnlen, cwdlen
 
    implicit none
 
@@ -98,14 +98,14 @@ module dataio
    character(len=16)     :: msg                    !< string of characters - content of a user/system message
    real                  :: msg_param              !< parameter changed by a user/system message
 
-   character(len=80)     :: hostfull
+   character(len=hnlen)  :: hostfull
    character(len=8)      :: host
    integer               :: pid
    integer               :: uid
    integer               :: ihost
    integer               :: scstatus
 
-   character(len=128)    :: filename               !< string of characters indicating currently used file
+   character(len=cwdlen) :: filename               !< string of characters indicating currently used file
 
    namelist /END_CONTROL/ nend, tend, wend
    namelist /RESTART_CONTROL/ restart, new_id, nrestart, resdel
@@ -201,7 +201,7 @@ module dataio
    subroutine init_dataio
 
       use mpisetup,        only : ibuff, rbuff, cbuff, proc, MPI_CHARACTER, cbuff_len, &
-           &                      MPI_DOUBLE_PRECISION, MPI_INTEGER, comm, ierr, buffer_dim, cwd, &
+           &                      MPI_DOUBLE_PRECISION, MPI_INTEGER, comm, ierr, buffer_dim, &
            &                      psize, t, nstep, bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr, &
            &                      lbuff, MPI_LOGICAL
       use errh,            only : namelist_errh, printinfo
@@ -210,7 +210,7 @@ module dataio
       use fluidboundaries, only : all_fluid_boundaries
       use timer,           only : time_left
       use dataio_hdf5,     only : init_hdf5, read_restart_hdf5, maxparfilelines, parfile, parfilelines
-      use dataio_public,   only : chdf, nres, last_hdf_time, step_hdf, nlog, ntsl, dataio_initialized, log_file
+      use dataio_public,   only : chdf, nres, last_hdf_time, step_hdf, nlog, ntsl, dataio_initialized, log_file, cwdlen, par_file, cwd
       use func,            only : compare_namelist
 #ifdef MAGNETIC
       use magboundaries,   only : all_mag_boundaries
@@ -225,7 +225,7 @@ module dataio
       integer(kind=1)      :: system
       integer              :: system_status, i
       character(LEN=160)   :: system_command
-      character(LEN=100)   :: par_file, tmp_log_file
+      character(LEN=cwdlen) :: tmp_log_file
 
       restart = 'last'   ! 'last': automatic choice of the last restart file
                          ! regardless of "nrestart" value;
@@ -278,8 +278,7 @@ module dataio
       if (ihost .eq. 0) ihost = index(hostfull,' ')
       host = hostfull(1:ihost-1)
 
-      if(proc .eq. 0) then
-         par_file = trim(cwd)//'/problem.par'
+      if (proc == 0) then
 
          open(1,file=par_file)
          ierrh = 0
@@ -643,21 +642,25 @@ module dataio
 !------------------------------------------------------------------------
 
    subroutine find_last_restart(restart_number)
-      use mpisetup,     only: cwd
-      use problem_pub,  only: problem_name, run_id
+
+      use problem_pub,  only : problem_name, run_id
+      use dataio_public, only : cwdlen, cwd
 #if defined(__INTEL_COMPILER)
-      use ifport,       only: unlink
+      use ifport,       only : unlink
 #endif /* __INTEL_COMPILER */
+
       implicit none
+
 #if defined(__PGI)
       include "lib3f.h"
 #endif /* __PGI */
+
       integer, intent(out) :: restart_number
 
-      character(len=120) :: file_name
-      integer            :: nres, unlink_stat
-      logical            :: exist
-      character(len=128) :: file_name_base
+      character(len=cwdlen) :: file_name
+      integer               :: nres, unlink_stat
+      logical               :: exist
+      character(len=cwdlen) :: file_name_base
 
       restart_number = 0
 
@@ -684,13 +687,15 @@ module dataio
 !---------------------------------------------------------------------
 !
    subroutine write_timeslice
+
       use types,           only : tsl_container
-      use mpisetup,        only : proc, comm3d, cwd, t, dt, ierr, mpi_real8, mpi_sum, smalld, nstep
+      use mpisetup,        only : proc, comm3d, t, dt, ierr, mpi_real8, mpi_sum, smalld, nstep
       use fluidindex,      only : ibx,iby,ibz
       use fluidindex,      only : nvar,iarr_all_dn,iarr_all_mx,iarr_all_my,iarr_all_mz
       use grid,            only : dvol,dx,dy,dz,is,ie,js,je,ks,ke,x,y,z,nxd,nyd,nzd
       use arrays,          only : u,b,wa
       use problem_pub,     only : problem_name, run_id
+      use dataio_public,   only : cwdlen, cwd
 #ifdef IONIZED
       use initionized,     only : gamma_ion, cs_iso_ion,cs_iso_ion2
 #endif /* IONIZED */
@@ -700,9 +705,8 @@ module dataio
 #ifndef ISO
       use fluidindex,      only : iarr_all_en
 #endif /* !ISO */
-
 #ifdef COSM_RAYS
-      use fluidindex, only : iarr_all_crs
+      use fluidindex,      only : iarr_all_crs
 #endif /* COSM_RAYS */
 #ifdef GRAV
       use arrays,          only : gpot
@@ -721,7 +725,7 @@ module dataio
 
       implicit none
 
-      character(len=128) :: tsl_file
+      character(len=cwdlen) :: tsl_file
 
       real :: mass = 0.0, momx = 0.0, momy = 0.0,  momz = 0.0, &
 #ifndef ISO
@@ -1452,12 +1456,15 @@ module dataio
 !-------------------------------------------------------------------------
 
 !\todo: process multiple commands at once
-      use errh,      only: printinfo
-      use mpisetup,  only: cwd, proc
+      use errh,       only : printinfo
+      use mpisetup,   only : proc
+      use dataio_public, only : cwd, cwdlen
 #if defined(__INTEL_COMPILER)
-      use ifport,    only: unlink, stat
+      use ifport,     only : unlink, stat
 #endif /* __INTEL_COMPILER */
+
       implicit none
+
 #if defined(__PGI)
       include "lib3f.h"
 #endif /* __PGI */
@@ -1465,7 +1472,7 @@ module dataio
       integer, parameter :: n_msg_origin = 2, u_msg=91
       character(len=*), parameter, dimension(n_msg_origin) :: msg_origin = [ "user  ", "system" ]
 
-      character(len=160), dimension(n_msg_origin), save :: fname
+      character(len=cwdlen), dimension(n_msg_origin), save :: fname
       character(len=160) :: buf
       integer ::  unlink_stat = -99, io = -99, sz, sts = -99, i
       integer, dimension(13) :: stat_buff

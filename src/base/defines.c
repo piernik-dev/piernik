@@ -5,10 +5,9 @@
 
 
   Requires:
-    use mpisetup, only : cwd
+    use dtaio_public, only : cwd, par_file
     use func,     only : compare_namelist
     integer :: ierrh
-    par_file = trim(cwd)//'/problem.par'
 
 
   Potential problem: for gnu cpp I'd write:

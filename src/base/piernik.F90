@@ -138,8 +138,8 @@ contains
       use initproblem,           only: init_prob, read_problem_par
       use problem_pub,           only: problem_name, run_id
       use dataio,                only: init_dataio, write_data
-      use dataio_public,         only: nrestart
-      use mpisetup,              only: cwd, init_mpi
+      use dataio_public,         only: nrestart, cwd, par_file, par_default_file
+      use mpisetup,              only: init_mpi
       use mpiboundaries,         only: mpi_boundaries_prep
       use fluidboundaries_pub,   only: init_fluidboundaries
       use fluidboundaries,       only: all_fluid_boundaries
@@ -174,6 +174,7 @@ contains
 
       call getarg(1, cwd)
       if (LEN_TRIM(cwd) == 0) cwd = '.'
+      par_file = trim(cwd)//'/'//par_default_file
 
       call init_mpi
 

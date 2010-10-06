@@ -75,12 +75,12 @@ module initionized
 
     use errh,     only : namelist_errh
     use mpisetup, only : rbuff, lbuff, MPI_DOUBLE_PRECISION, MPI_LOGICAL, &
-         &               comm, ierr, buffer_dim, cwd, proc
+         &               comm, ierr, buffer_dim, proc
     use func,     only : compare_namelist
+    use dataio_public, only: par_file, cwd
 
     implicit none
     integer :: ierrh
-    character(len=100) :: par_file
 
     namelist /FLUID_IONIZED/ gamma_ion, cs_iso_ion, cs_ion, selfgrav_ion
 
@@ -90,7 +90,6 @@ module initionized
 
     if(proc == 0) then
 
-       par_file = trim(cwd)//'/problem.par'
        diff_nml(FLUID_IONIZED)
 
        lbuff(1)   = selfgrav_ion

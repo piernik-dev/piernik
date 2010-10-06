@@ -34,6 +34,8 @@ module types
    public :: indx, hdf, value, grid_container, tsl_container, &
    & problem_customize_solution, finalize_problem
 
+   integer, parameter :: cwdlen = 512           !BEWARE: cannot use primary definition from dataio_pub because of loop dependency
+
    type :: indx
       integer :: dnd = -1, dnn = -1, dni = -1
       integer :: mxd = -1, mxn = -1, mxi = -1
@@ -47,7 +49,7 @@ module types
    type :: hdf
       integer :: nhdf, ntsl, nres, nlog, step_hdf, step_res, nstep, nrestart
       real    :: last_hdf_time
-      character(len=128) :: log_file
+      character(len=cwdlen) :: log_file
       character(len=16)  :: domain
       character(len=3)   :: new_id
    end type hdf

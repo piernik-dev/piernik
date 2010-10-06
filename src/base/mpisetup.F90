@@ -93,7 +93,6 @@ module mpisetup
    integer, dimension(3) :: domsize   !< local copy of nxd, nyd, nzd which can be used before init_grid()
 
    logical     :: mpi
-   character(len=80)   :: cwd
 
    integer :: MPI_XZ_LEFT_BND=-1, MPI_XZ_RIGHT_BND=-1
    integer :: MPI_XZ_LEFT_DOM=-1, MPI_XZ_RIGHT_DOM=-1
@@ -162,7 +161,7 @@ module mpisetup
       subroutine init_mpi
 
          use errh,          only : die, namelist_errh, warn
-         use dataio_public, only : msg
+         use dataio_public, only : msg, cwdlen, hnlen, cwd, par_file
          use func,          only : compare_namelist
 
          implicit none
@@ -172,8 +171,6 @@ module mpisetup
          integer :: iproc, ierrh
          integer :: nxd, nyd, nzd, nb
 
-         integer, parameter    :: cwdlen = 512 ! allow for moderately long CWD
-         integer, parameter    :: hnlen = 32   ! hostname length limit
          character(LEN=cwdlen) :: cwd_proc
          character(LEN=hnlen)  :: host_proc
          integer               :: pid_proc
@@ -184,7 +181,7 @@ module mpisetup
 
          integer(kind=1)       :: getcwd, hostnm
          integer(kind=4)       :: getpid
-         character(LEN=cwdlen) :: par_file, tmp_log_file
+         character(LEN=cwdlen) :: tmp_log_file
          integer :: cwd_status
          logical :: par_file_exist
 
@@ -214,11 +211,9 @@ module mpisetup
          call MPI_Gather(host_proc, hnlen,  MPI_CHARACTER, host_all, hnlen,  MPI_CHARACTER, 0, comm, err)
          call MPI_Gather(pid_proc,  1,      MPI_INTEGER,   pid_all,  1,      MPI_INTEGER,   0, comm, err)
 
-         ! cwd = trim(cwd_proc)  BEWARE: It's redundant, we get cwd for command
-         !                               line
+         ! cwd = trim(cwd_proc)  BEWARE: It's redundant, we get cwd for command line in init_piernik subroutine
 
-         if(proc == 0) then
-            par_file = trim(cwd)//'/problem.par'
+         if (proc == 0) then
             inquire(file=par_file, exist=par_file_exist)
             if(.not. par_file_exist) call die('[mpisetup:init_mpi] Cannot find "problem.par" in the working directory',0)
          endif

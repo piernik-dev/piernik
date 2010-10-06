@@ -99,15 +99,15 @@ module gravity
    subroutine init_grav
 
       use errh,     only : namelist_errh, warn
-      use mpisetup, only : ibuff, rbuff, buffer_dim, comm, ierr, proc, cwd, &
+      use mpisetup, only : ibuff, rbuff, buffer_dim, comm, ierr, proc, &
            &               MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL, lbuff
       use arrays,   only : gpot
       use func,     only : compare_namelist
+      use dataio_public, only : cwd, par_file
 
       implicit none
 
       integer :: ierrh
-      character(LEN=100) :: par_file
 
       namelist /GRAVITY/ g_z,g_y, dg_dz, r_gc, ptmass, ptm_x, ptm_y, ptm_z, r_smooth, &
                 nsub, tune_zeq, tune_zeq_bnd, h_grav, r_grav, n_gravr, n_gravr2, n_gravh, user_grav
@@ -138,7 +138,6 @@ module gravity
 
       if (proc == 0) then
 
-         par_file = trim(cwd)//'/problem.par'
          diff_nml(GRAVITY)
 
          ibuff(1)  = nsub

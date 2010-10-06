@@ -45,16 +45,15 @@ contains
 
       use grid,          only : xmin, xmax, ymin, ymax, zmin, zmax, nx, ny, nz
       use errh,          only : namelist_errh, die, warn
-      use mpisetup,      only : cwd, ierr, rbuff, cbuff, ibuff, proc, buffer_dim, comm, &
+      use mpisetup,      only : ierr, rbuff, cbuff, ibuff, proc, buffer_dim, comm, &
            &                    MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER
       use constants,     only : pi
-      use dataio_public, only : msg
+      use dataio_public, only : cwd, msg, par_file
       use func,          only : compare_namelist
 
       implicit none
 
       integer :: ierrh
-      character(LEN=100) :: par_file
 
       ! namelist default parameter values
       problem_name = 'Jeans oscillations'  !< The default problem name
@@ -67,8 +66,8 @@ contains
       amp          = 0.0                   !< Perturbation relative amplitude
       mode         = 0                     !< Variant of the test. 0: cos(kx *x + ky*y + kz*z), 1: cos(kx *x) * cos(ky*y) * cos(kz*z)
 
-      if(proc == 0) then
-         par_file = trim(cwd)//'/problem.par'
+      if (proc == 0) then
+
          diff_nml(PROBLEM_CONTROL)
 
          cbuff(1) =  problem_name

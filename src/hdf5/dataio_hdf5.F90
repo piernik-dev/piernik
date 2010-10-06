@@ -574,9 +574,10 @@ module dataio_hdf5
 
    subroutine write_plot(chdf)
 
-      use hdf5,      only: HID_T, H5open_f, H5Fcreate_f, H5Gcreate_f, H5F_ACC_TRUNC_F, H5Gclose_f, H5close_f, h5fclose_f
-      use types,     only: hdf
-      use mpisetup,  only: t, comm3d, ierr, proc
+      use hdf5,       only : HID_T, H5open_f, H5Fcreate_f, H5Gcreate_f, H5F_ACC_TRUNC_F, H5Gclose_f, H5close_f, h5fclose_f
+      use types,      only : hdf
+      use mpisetup,   only : t, comm3d, ierr, proc
+      use dataio_public, only : cwdlen
 
       implicit none
 
@@ -584,7 +585,7 @@ module dataio_hdf5
 
       integer, save     :: nimg = 0
       real, save        :: last_plt_time = 0.0
-      character(LEN=32) :: fname
+      character(LEN=cwdlen) :: fname
       integer           :: i, error=0, fe
       logical, save     :: first_entry = .true.
       integer(HID_T)    :: file_id                 !> File identifier
@@ -639,7 +640,7 @@ module dataio_hdf5
 #ifdef PGPLOT
       use viz,           only: draw_me
 #endif /* PGPLOT */
-      use dataio_public, only: vizit, fmin, fmax
+      use dataio_public, only: vizit, fmin, fmax, cwdlen
       use types,    only : hdf
       use mpisetup, only : MPI_CHARACTER, comm3d, ierr, pxsize, pysize, pzsize, MPI_DOUBLE_PRECISION, t, pcoords
       use hdf5,     only : HID_T, HSIZE_T, SIZE_T, H5F_ACC_RDWR_F, h5fopen_f, h5gopen_f, h5gclose_f, h5fclose_f
@@ -662,7 +663,7 @@ module dataio_hdf5
       integer                             :: ierrh, i, j
       integer                             :: comm2d, lp, ls, xn, error
       character(LEN=3)                    :: pij
-      character(LEN=32)                   :: fname
+      character(LEN=cwdlen)               :: fname
       character(LEN=12)                   :: dname
 
       integer(HID_T)                      :: file_id                       !> File identifier
@@ -814,13 +815,13 @@ module dataio_hdf5
       use grid,          only: nxb, nyb, nzb, x, y, z, nx, ny, nz
       use problem_pub,   only: problem_name, run_id
       use fluidindex,    only: nvar
-      use dataio_public, only: chdf, nres, set_container_chdf
+      use dataio_public, only: chdf, nres, set_container_chdf, cwdlen
       use list_hdf5,     only: problem_write_restart
 
       implicit none
 
       integer            :: nu
-      CHARACTER(len=128) :: filename  !> HDF File name
+      CHARACTER(len=cwdlen) :: filename  !> HDF File name
 
       integer(HID_T) :: file_id       !> File identifier
       integer(HID_T) :: dset_id       !> Dataset identifier
@@ -1286,12 +1287,14 @@ module dataio_hdf5
       use errh,         only: die, printinfo
       use func,         only: fix_string
       use list_hdf5,    only: problem_read_restart
+      use dataio_public, only: cwdlen
 
       IMPLICIT NONE
+
       type(hdf)             :: chdf
       integer               :: nu
-      CHARACTER(LEN=128)    :: log_file  ! File name
-      CHARACTER(LEN=128)    :: filename  ! File name
+      CHARACTER(LEN=cwdlen) :: log_file  ! File name
+      CHARACTER(LEN=cwdlen) :: filename  ! File name
 
       integer(HID_T)        :: file_id       ! File identifier
       integer(HID_T)        :: dset_id       ! Dataset identifier
@@ -1516,15 +1519,17 @@ module dataio_hdf5
 #ifdef MULTIGRID
       use multigridio, only: multigrid_write_hdf5
 #endif /* MULTIGRID */
+      use dataio_public, only: cwdlen
 
       implicit none
+
       type(hdf), intent(in)   :: chdf
       integer(HID_T)          :: file_id       ! File identifier
       integer(HID_T)          :: plist_id      ! Property list identifier
       integer                 :: ierrh, error, i
       logical                 :: ok_var
       character(len=4)        :: dd
-      CHARACTER(LEN=64)       :: fname
+      CHARACTER(LEN=cwdlen)   :: fname
 
       real(kind=4), allocatable :: data (:,:,:)  ! Data to write
 

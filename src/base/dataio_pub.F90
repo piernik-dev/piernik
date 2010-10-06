@@ -47,7 +47,12 @@ module dataio_public
    integer            :: nrestart               !< number of restart file to be read while restart is not set to ''
    integer            :: step_hdf               !< number of simulation timestep corresponding to values dumped in hdf file
 
-   character(len=128) :: log_file               !< path to the current log file
+   integer, parameter :: hnlen = 32             !< hostname length limit
+   integer, parameter :: cwdlen = 512           !< allow for moderately long CWD
+   character(len=cwdlen) :: cwd                 !< path to the current working directory
+   character(len=cwdlen) :: log_file            !< path to the current log file
+   character(len=cwdlen) :: par_file            !< path to the parameter file
+   character(len=11)  :: par_default_file = "problem.par"
 
    logical            :: halfstep = .false.     !< true when X-Y-Z sweeps are done and Z-Y-X are not
 

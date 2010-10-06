@@ -58,7 +58,7 @@ contains
       use errh,               only: namelist_errh, die, warn
       use arrays,             only: sgp
       use constants,          only: pi, dpi
-      use mpisetup,           only: buffer_dim, comm, comm3d, cwd, ierr, proc, nproc, ndims, &
+      use mpisetup,           only: buffer_dim, comm, comm3d, ierr, proc, nproc, ndims, &
            &                        bnd_xl_dom, bnd_xr_dom, bnd_yl_dom, bnd_yr_dom, bnd_zl_dom, bnd_zr_dom, &
            &                        bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr, &
            &                        ibuff, cbuff, rbuff, lbuff, &
@@ -73,14 +73,13 @@ contains
 #endif /* NEW_HDF5 */
       use multipole,          only: init_multipole, use_point_monopole, lmax, mmax, ord_prolong_mpole, coarsen_multipole, interp_pt2mom, interp_mom2pot
       use multigridmpifuncs,  only: mpi_multigrid_prep
-      use dataio_public,      only: msg
+      use dataio_public,      only: msg, par_file, cwd
 
       implicit none
 
       type(grid_container), intent(in) :: cgrid                  !< copy of grid variables
 
       integer                          :: ierrh, div, idx, i, j, nxc=1, nx
-      character(LEN=100)               :: par_file
       logical, save                    :: frun = .true.          !< First run flag
       real                             :: mb_alloc               !< Allocation counter
       integer, dimension(6)            :: aerr                   !BEWARE: hardcoded magic integer. Update when you change number of simultaneous error checks
@@ -154,7 +153,6 @@ contains
 
       if (proc == 0) then
 
-         par_file = trim(cwd)//'/problem.par'
          diff_nml(MULTIGRID_SOLVER)
 
          rbuff(1) = norm_tol

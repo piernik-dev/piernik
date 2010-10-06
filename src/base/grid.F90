@@ -166,16 +166,16 @@ module grid
    subroutine init_grid(cgrid)
 
       use types,     only : grid_container
-      use mpisetup,  only : ierr, ibuff, rbuff, MPI_INTEGER, MPI_DOUBLE_PRECISION, proc, cwd, &
+      use mpisetup,  only : ierr, ibuff, rbuff, MPI_INTEGER, MPI_DOUBLE_PRECISION, proc, &
            &                buffer_dim, pxsize, pysize, pzsize, comm
       use errh,      only : namelist_errh, die
       use func,      only : compare_namelist
+      use dataio_public, only : par_file, cwd
 
       implicit none
 
       type(grid_container), intent(out) :: cgrid
       integer :: ierrh
-      character(LEN=100) :: par_file
 
       namelist /DOMAIN_SIZES/ nxd, nyd, nzd, nb
       namelist /DOMAIN_LIMITS/ xmin, xmax, ymin, ymax, zmin, zmax
@@ -185,8 +185,7 @@ module grid
       nzd  = 1
       nb   = 4
 
-      if(proc == 0) then
-         par_file = trim(cwd)//'/problem.par'
+      if (proc == 0) then
          diff_nml(DOMAIN_SIZES)
          diff_nml(DOMAIN_LIMITS)
       endif
