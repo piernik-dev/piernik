@@ -83,6 +83,8 @@ contains
          use grid, only : nx,ny,nz
          use errh, only : die, namelist_errh
          use dataio_public, only: par_file, cwd
+         use func,        only : compare_namelist
+
 #ifndef ISO
          use initionized, only : ieni
 #endif /* !ISO */

@@ -65,6 +65,8 @@ module interactions
       use mpisetup,     only : proc, rbuff, MPI_DOUBLE_PRECISION, buffer_dim, ierr, comm
       use fluidindex,   only : nvar
       use dataio_public, only: par_file, cwd
+      use func,        only : compare_namelist
+
 #ifdef DUST
       use initdust,     only : dragc_gas_dust
 #endif /* DUST */

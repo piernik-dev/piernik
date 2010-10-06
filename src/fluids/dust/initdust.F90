@@ -67,6 +67,7 @@ module initdust
     use mpisetup, only: proc, rbuff, lbuff, MPI_LOGICAL, MPI_DOUBLE_PRECISION, buffer_dim, comm, ierr
     use errh,     only: namelist_errh
     use dataio_public, only: par_file, cwd
+    use func,        only : compare_namelist
 
     implicit none
 

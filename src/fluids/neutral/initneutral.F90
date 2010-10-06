@@ -79,6 +79,8 @@ module initneutral
     use mpisetup, only: proc, ierr, comm, rbuff, lbuff, buffer_dim, MPI_LOGICAL, MPI_DOUBLE_PRECISION
     use errh,     only: namelist_errh
     use dataio_public, only: par_file, cwd
+    use func,        only : compare_namelist
+
 #ifdef SHEAR
     use shear,    only: omega
 #endif /* SHEAR */
