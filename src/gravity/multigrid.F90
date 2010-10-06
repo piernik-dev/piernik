@@ -26,7 +26,8 @@
 !    For full list of developers see $PIERNIK_HOME/license/pdt.txt
 !
 
-#include "piernik.def"
+!#include "piernik.def"
+#include "defines.c"
 
 !!$ ============================================================================
 !>
@@ -79,7 +80,7 @@ contains
       type(grid_container), intent(in) :: cgrid                  !< copy of grid variables
 
       integer                          :: ierrh, div, idx, i, j, nxc=1, nx
-      character(LEN=100)               :: par_file, tmp_log_file
+      character(LEN=100)               :: par_file
       logical, save                    :: frun = .true.          !< First run flag
       real                             :: mb_alloc               !< Allocation counter
       integer, dimension(6)            :: aerr                   !BEWARE: hardcoded magic integer. Update when you change number of simultaneous error checks
@@ -151,31 +152,10 @@ contains
       aux_par_I0 = 0 ; aux_par_I1 = 0 ; aux_par_I2 = 0
       aux_par_R0 = 0.; aux_par_R1 = 0.; aux_par_R2 = 0.
 
-      par_file = trim(cwd)//'/problem.par'
-      tmp_log_file = trim(cwd)//'/tmp.log'
-
       if (proc == 0) then
 
-! -----------------------------------------------------
-! DIRTY HACK
-!  save default NAMELIST for reference
-         open(501, file="temp1.dat", status='unknown')
-            write(501,nml=MULTIGRID_SOLVER)
-         close(501)
-! -----------------------------------------------------
-         open(1, file=par_file)
-            read(unit=1, nml=MULTIGRID_SOLVER, iostat=ierrh)
-            call namelist_errh(ierrh, 'MULTIGRID_SOLVER')
-         close(1)
-! -----------------------------------------------------
-! DIRTY HACK
-!  compare NAMELISTS
-         open(502, file="temp2.dat", status='unknown')
-            write(502,nml=MULTIGRID_SOLVER)
-         close(502)
-
-         call compare_namelist("temp1.dat","temp2.dat",tmp_log_file)
-! -----------------------------------------------------
+         par_file = trim(cwd)//'/problem.par'
+         diff_nml(MULTIGRID_SOLVER)
 
          rbuff(1) = norm_tol
          rbuff(2) = overrelax

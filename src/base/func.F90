@@ -241,18 +241,18 @@ module func
 
 #endif /* COSM_RAYS  */
 
-   subroutine compare_namelist(nml_bef, nml_aft, output)
+   subroutine compare_namelist(nml_bef, nml_aft, cwd)
 
       implicit none
 
-      character(len=*), intent(in)     :: nml_bef, nml_aft, output
+      character(len=*), intent(in)     :: nml_bef, nml_aft, cwd
       integer                          :: io
       character(len=256)               :: sa, sb
       integer, parameter               :: lun_bef=501, lun_aft=502, lun_out=3
 
       open(lun_bef, file=nml_bef, status='old')
       open(lun_aft, file=nml_aft, status='old')
-      open(lun_out, file=output, position='append')
+      open(lun_out, file=trim(cwd)//'/tmp.log', position='append')
       io = 0
       do
          read(lun_bef,'(a)', iostat=io) sa

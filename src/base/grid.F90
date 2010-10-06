@@ -25,7 +25,8 @@
 !
 !    For full list of developers see $PIERNIK_HOME/license/pdt.txt
 !
-#include "piernik.def"
+!#include "piernik.def"
+#include "defines.c"
 !>
 !! \brief [DW] Module containing routines to specify required computational mesh.
 !! \date January/February 2006
@@ -168,12 +169,13 @@ module grid
       use mpisetup,  only : ierr, ibuff, rbuff, MPI_INTEGER, MPI_DOUBLE_PRECISION, proc, cwd, &
            &                buffer_dim, pxsize, pysize, pzsize, comm
       use errh,      only : namelist_errh, die
+      use func,      only : compare_namelist
 
       implicit none
 
       type(grid_container), intent(out) :: cgrid
       integer :: ierrh
-      character(LEN=100) :: par_file, tmp_log_file
+      character(LEN=100) :: par_file
 
       namelist /DOMAIN_SIZES/ nxd, nyd, nzd, nb
       namelist /DOMAIN_LIMITS/ xmin, xmax, ymin, ymax, zmin, zmax
@@ -185,20 +187,8 @@ module grid
 
       if(proc == 0) then
          par_file = trim(cwd)//'/problem.par'
-         tmp_log_file = trim(cwd)//'/tmp.log'
-         open(1,file=par_file)
-            read(unit=1,nml=DOMAIN_SIZES,iostat=ierrh)
-            call namelist_errh(ierrh,'DOMAIN_SIZES')
-         close(1)
-         open(1,file=par_file)
-            read(unit=1,nml=DOMAIN_LIMITS,iostat=ierrh)
-            call namelist_errh(ierrh,'DOMAIN_LIMITS')
-         close(1)
-         open(3, file='tmp.log', position='append')
-           write(3,nml=DOMAIN_SIZES)
-           write(3,nml=DOMAIN_LIMITS)
-           write(3,*)
-         close(3)
+         diff_nml(DOMAIN_SIZES)
+         diff_nml(DOMAIN_LIMITS)
       endif
 
       nxd = max(1, nxd)
@@ -219,13 +209,12 @@ module grid
          rbuff(5)   = zmin
          rbuff(6)   = zmax
 
-         call MPI_BCAST(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
-         call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+      end if
 
-      else
+      call MPI_BCAST(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
+      call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
-         call MPI_BCAST(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
-         call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+      if (proc /= 0) then
 
          nxd  = ibuff(1)
          nyd  = ibuff(2)

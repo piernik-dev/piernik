@@ -25,7 +25,8 @@
 !
 !    For full list of developers see $PIERNIK_HOME/license/pdt.txt
 !
-#include "piernik.def"
+!#include "piernik.def"
+#include "defines.c"
 !>
 !! \brief (KK)
 !!
@@ -162,6 +163,7 @@ module mpisetup
 
          use errh,          only : die, namelist_errh, warn
          use dataio_public, only : msg
+         use func,          only : compare_namelist
 
          implicit none
 
@@ -219,7 +221,6 @@ module mpisetup
             par_file = trim(cwd)//'/problem.par'
             inquire(file=par_file, exist=par_file_exist)
             if(.not. par_file_exist) call die('[mpisetup:init_mpi] Cannot find "problem.par" in the working directory',0)
-            tmp_log_file = trim(cwd)//'/tmp.log'
          endif
 
          pxsize = 1
@@ -250,23 +251,11 @@ module mpisetup
 
          integration_order  = 2
 
-         if(proc == 0) then
-            open(1,file=par_file)
-               read(unit=1,nml=MPI_BLOCKS,iostat=ierrh)
-               call namelist_errh(ierrh,'MPI_BLOCKS')
-            close(1)
-            open(1,file=par_file)
-               read(unit=1,nml=BOUNDARIES,iostat=ierrh)
-               call namelist_errh(ierrh,'BOUNDARIES')
-            close(1)
-            open(1,file=par_file)
-               read(unit=1,nml=NUMERICAL_SETUP,iostat=ierrh)
-               call namelist_errh(ierrh,'NUMERICAL_SETUP')
-            close(1)
-            open(1,file=par_file)
-               read(unit=1,nml=DOMAIN_SIZES,iostat=ierrh)
-               call namelist_errh(ierrh,'DOMAIN_SIZES')
-            close(1)
+         if (proc == 0) then
+            diff_nml(MPI_BLOCKS)
+            diff_nml(BOUNDARIES)
+            diff_nml(NUMERICAL_SETUP)
+            diff_nml(DOMAIN_SIZES)
          endif
 
          nxd = max(1, nxd)
@@ -285,9 +274,7 @@ module mpisetup
             ibuff(1) = pxsize
             ibuff(2) = pysize
             ibuff(3) = pzsize
-
             ibuff(4) = integration_order
-
             ibuff(5) = nxd
             ibuff(6) = nyd
             ibuff(7) = nzd
@@ -304,17 +291,14 @@ module mpisetup
 
             lbuff(1) = mpi_magic
 
-            call MPI_BCAST(cbuff, cbuff_len*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
-            call MPI_BCAST(ibuff,           buffer_dim, MPI_INTEGER,          0, comm, ierr)
-            call MPI_BCAST(rbuff,           buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
-            call MPI_BCAST(lbuff,           buffer_dim, MPI_LOGICAL,          0, comm, ierr)
+         end if
 
-         else
+         call MPI_BCAST(cbuff, cbuff_len*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
+         call MPI_BCAST(ibuff,           buffer_dim, MPI_INTEGER,          0, comm, ierr)
+         call MPI_BCAST(rbuff,           buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+         call MPI_BCAST(lbuff,           buffer_dim, MPI_LOGICAL,          0, comm, ierr)
 
-            call MPI_BCAST(cbuff, cbuff_len*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
-            call MPI_BCAST(ibuff,           buffer_dim, MPI_INTEGER,          0, comm, ierr)
-            call MPI_BCAST(rbuff,           buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
-            call MPI_BCAST(lbuff,           buffer_dim, MPI_LOGICAL,          0, comm, ierr)
+         if (proc /= 0) then
 
             mpi_magic   = lbuff(1)
 
@@ -398,6 +382,7 @@ module mpisetup
          call MPI_CART_COORDS(comm3d, proc, ndims, pcoords, ierr)
 
          if(proc == 0) then
+            tmp_log_file = trim(cwd)//'/tmp.log'
             write(*, '("------------------------------------------------------------------------------------------------------")')  ! QA_WARN
             open(3, file=tmp_log_file, status='unknown')
                write(3,'(a,/)')"###############     Initialization     ###############"
@@ -410,10 +395,6 @@ module mpisetup
                            ",  cwd=",trim(cwd)
                enddo
                write(3,*)
-
-               write(unit=3,nml=MPI_BLOCKS)
-               write(unit=3,nml=BOUNDARIES)
-               write(unit=3,nml=NUMERICAL_SETUP)
 
             close(3)
             write(*,"(a35,i5)") 'START OF MHD CODE,  No. of procs = ', nproc   ! QA_WARN

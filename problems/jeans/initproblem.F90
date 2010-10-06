@@ -25,7 +25,8 @@
 !
 !    For full list of developers see $PIERNIK_HOME/license/pdt.txt
 !
-#include "piernik.def"
+!#include "piernik.def"
+#include "defines.c"
 
 module initproblem
 
@@ -48,11 +49,12 @@ contains
            &                    MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER
       use constants,     only : pi
       use dataio_public, only : msg
+      use func,          only : compare_namelist
 
       implicit none
 
       integer :: ierrh
-      character(LEN=100) :: par_file, tmp_log_file
+      character(LEN=100) :: par_file
 
       ! namelist default parameter values
       problem_name = 'Jeans oscillations'  !< The default problem name
@@ -67,19 +69,7 @@ contains
 
       if(proc == 0) then
          par_file = trim(cwd)//'/problem.par'
-         tmp_log_file = trim(cwd)//'/tmp.log'
-
-         open(1,file=par_file)
-            read(unit=1,nml=PROBLEM_CONTROL,iostat=ierrh)
-            call namelist_errh(ierrh,'PROBLEM_CONTROL')
-         close(1)
-         open(3, file=tmp_log_file, position='append')
-            write(3,nml=PROBLEM_CONTROL)
-            write(3,*)
-         close(3)
-      endif
-
-      if (proc == 0) then
+         diff_nml(PROBLEM_CONTROL)
 
          cbuff(1) =  problem_name
          cbuff(2) =  run_id

@@ -25,7 +25,8 @@
 !
 !    For full list of developers see $PIERNIK_HOME/license/pdt.txt
 !
-#include "piernik.def"
+!#include "piernik.def"
+#include "defines.c"
 
 !>
 !! \brief (MH) Initialization of the ionized fluid
@@ -71,35 +72,26 @@ module initionized
 !! \n \n
 !<
   subroutine init_ionized
+
     use errh,     only : namelist_errh
-    use mpisetup, only : rbuff, cbuff, lbuff, ibuff, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL, &
-         MPI_CHARACTER, comm, ierr, buffer_dim, cwd, proc
+    use mpisetup, only : rbuff, lbuff, MPI_DOUBLE_PRECISION, MPI_LOGICAL, &
+         &               comm, ierr, buffer_dim, cwd, proc
+    use func,     only : compare_namelist
 
     implicit none
     integer :: ierrh
-    character(len=100) :: par_file, tmp_log_file
+    character(len=100) :: par_file
 
     namelist /FLUID_IONIZED/ gamma_ion, cs_iso_ion, cs_ion, selfgrav_ion
 
-      gamma_ion     = 1.66666666
-      cs_iso_ion    = 1.0
-      selfgrav_ion  = .false.
+    gamma_ion     = 1.66666666
+    cs_iso_ion    = 1.0
+    selfgrav_ion  = .false.
 
-      if(proc .eq. 0) then
-         par_file = trim(cwd)//'/problem.par'
-         tmp_log_file = trim(cwd)//'/tmp.log'
-         open(1,file=par_file)
-            read(unit=1,nml=FLUID_IONIZED,iostat=ierrh)
-            call namelist_errh(ierrh,'FLUID_IONIZED')
-         close(1)
-         open(3, file='tmp.log', position='append')
-           write(3,nml=FLUID_IONIZED)
-           write(3,*)
-         close(3)
-      endif
+    if(proc == 0) then
 
-
-    if (proc == 0) then
+       par_file = trim(cwd)//'/problem.par'
+       diff_nml(FLUID_IONIZED)
 
        lbuff(1)   = selfgrav_ion
 
@@ -109,8 +101,6 @@ module initionized
 
     end if
 
-    call MPI_BCAST(cbuff, 32*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
-    call MPI_BCAST(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
     call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
     call MPI_BCAST(lbuff,    buffer_dim, MPI_LOGICAL,          0, comm, ierr)
 

@@ -25,7 +25,8 @@
 !
 !    For full list of developers see $PIERNIK_HOME/license/pdt.txt
 !
-#include "piernik.def"
+!#include "piernik.def"
+#include "defines.c"
 
 !>
 !! \brief [DW] Module containing all main subroutines and functions that govern %gravity force in the code
@@ -97,15 +98,16 @@ module gravity
 !<
    subroutine init_grav
 
-      use errh, only : namelist_errh, warn
-      use mpisetup, only: ibuff, rbuff, buffer_dim, comm, ierr, proc, cwd, &
-           MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL, lbuff
-      use arrays, only: gpot
+      use errh,     only : namelist_errh, warn
+      use mpisetup, only : ibuff, rbuff, buffer_dim, comm, ierr, proc, cwd, &
+           &               MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL, lbuff
+      use arrays,   only : gpot
+      use func,     only : compare_namelist
 
       implicit none
 
       integer :: ierrh
-      character(LEN=100) :: par_file, tmp_log_file
+      character(LEN=100) :: par_file
 
       namelist /GRAVITY/ g_z,g_y, dg_dz, r_gc, ptmass, ptm_x, ptm_y, ptm_z, r_smooth, &
                 nsub, tune_zeq, tune_zeq_bnd, h_grav, r_grav, n_gravr, n_gravr2, n_gravh, user_grav
@@ -113,9 +115,6 @@ module gravity
 #ifdef VERBOSE
       call warn("[gravity:init_grav] Commencing gravity module initialization")
 #endif /* VERBOSE */
-
-      par_file = trim(cwd)//'/problem.par'
-      tmp_log_file = trim(cwd)//'/tmp.log'
 
       g_z     = 0.0
       g_y     = 0.0
@@ -139,13 +138,8 @@ module gravity
 
       if (proc == 0) then
 
-         open(1,file=par_file)
-            read(unit=1,nml=GRAVITY,iostat=ierrh)
-            call namelist_errh(ierrh,'GRAVITY')
-         close(1)
-         open(3, file=tmp_log_file, position='append')
-            write(unit=3,nml=GRAVITY)
-         close(3)
+         par_file = trim(cwd)//'/problem.par'
+         diff_nml(GRAVITY)
 
          ibuff(1)  = nsub
          ibuff(2)  = n_gravr

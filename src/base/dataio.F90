@@ -25,7 +25,8 @@
 !
 !    For full list of developers see $PIERNIK_HOME/license/pdt.txt
 !
-#include "piernik.def"
+!#include "piernik.def"
+#include "defines.c"
 !=====================================================================
 !!
 !!  dataio module responsible for data output
@@ -208,11 +209,12 @@ module dataio
       use version,         only : nenv,env, init_version
       use fluidboundaries, only : all_fluid_boundaries
       use timer,           only : time_left
+      use dataio_hdf5,     only : init_hdf5, read_restart_hdf5, maxparfilelines, parfile, parfilelines
+      use dataio_public,   only : chdf, nres, last_hdf_time, step_hdf, nlog, ntsl, dataio_initialized, log_file
+      use func,            only : compare_namelist
 #ifdef MAGNETIC
       use magboundaries,   only : all_mag_boundaries
 #endif /* MAGNETIC */
-      use dataio_hdf5,     only : init_hdf5, read_restart_hdf5, maxparfilelines, parfile, parfilelines
-      use dataio_public,   only : chdf, nres, last_hdf_time, step_hdf, nlog, ntsl, dataio_initialized, log_file
 
       implicit none
 
@@ -278,7 +280,6 @@ module dataio
 
       if(proc .eq. 0) then
          par_file = trim(cwd)//'/problem.par'
-         tmp_log_file = trim(cwd)//'/tmp.log'
 
          open(1,file=par_file)
          ierrh = 0
@@ -292,22 +293,9 @@ module dataio
          end do
          close(1)
 
-         open(1,file=par_file)
-         read(unit=1,nml=OUTPUT_CONTROL,iostat=ierrh)
-         call namelist_errh(ierrh,'OUTPUT_CONTROL')
-         close(1)
-         open(1,file=par_file)
-         read(unit=1,nml=RESTART_CONTROL,iostat=ierrh)
-         call namelist_errh(ierrh,'RESTART_CONTROL')
-         close(1)
-         open(1,file=par_file)
-         read(unit=1,nml=END_CONTROL,iostat=ierrh)
-         call namelist_errh(ierrh,'END_CONTROL')
-         close(1)
-         open(3, file=tmp_log_file, position='append')
-         write(unit=3,nml=OUTPUT_CONTROL)
-         write(unit=3,nml=RESTART_CONTROL)
-         close(3)
+         diff_nml(OUTPUT_CONTROL)
+         diff_nml(RESTART_CONTROL)
+         diff_nml(END_CONTROL)
 
 !  namelist /END_CONTROL/ nend, tend, wend
          ibuff(1)  = nend
