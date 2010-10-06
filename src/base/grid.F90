@@ -25,8 +25,8 @@
 !
 !    For full list of developers see $PIERNIK_HOME/license/pdt.txt
 !
-!#include "piernik.def"
-#include "defines.c"
+#include "piernik.def"
+#include "macros.h"
 !>
 !! \brief [DW] Module containing routines to specify required computational mesh.
 !! \date January/February 2006

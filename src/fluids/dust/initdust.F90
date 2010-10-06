@@ -25,8 +25,8 @@
 !
 !    For full list of developers see $PIERNIK_HOME/license/pdt.txt
 !
-!#include "piernik.def"
-#include "defines.c"
+#include "piernik.def"
+#include "macros.h"
 !>
 !! \brief (MH) Initialization of the dust fluid
 !!

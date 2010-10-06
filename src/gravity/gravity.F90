@@ -25,8 +25,8 @@
 !
 !    For full list of developers see $PIERNIK_HOME/license/pdt.txt
 !
-!#include "piernik.def"
-#include "defines.c"
+#include "piernik.def"
+#include "macros.h"
 
 !>
 !! \brief [DW] Module containing all main subroutines and functions that govern %gravity force in the code
