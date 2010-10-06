@@ -41,11 +41,13 @@ contains
 !-----------------------------------------------------------------------------
 
    subroutine read_problem_par
-      use grid,     only : xmin, xmax, ymin, ymax, zmin, zmax, nx, ny, nz
-      use errh,     only : namelist_errh, die
-      use mpisetup, only : cwd, ierr, rbuff, cbuff, ibuff, proc, buffer_dim, comm, &
-           &               MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER
-      use constants, only: pi
+
+      use grid,          only : xmin, xmax, ymin, ymax, zmin, zmax, nx, ny, nz
+      use errh,          only : namelist_errh, die, warn
+      use mpisetup,      only : cwd, ierr, rbuff, cbuff, ibuff, proc, buffer_dim, comm, &
+           &                    MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER
+      use constants,     only : pi
+      use dataio_public, only : msg
 
       implicit none
 
@@ -120,9 +122,11 @@ contains
       if (mode < 0 .or. mode > 1)     call die("[initproblem:read_problem_par] Invalid mode.")
       if (d0 < 0. .or. abs(amp) > 1.) call die("[initproblem:read_problem_par] Negative average density or amplitude too high.")
       if (p0 < 0.)                    call die("[initproblem:read_problem_par] Negative average pressure.")
-      if (ix<0 .or. iy<0 .or. iz<0 .or. amp<0) &
-           write(*,'(a,g12.4,a,3i6,a)')        "[initproblem:read_problem_par] Warning: suspicious values for some parameters were detected: amp=", &
-           amp," (ix iy iz) = (", ix, iy, iz, ")."
+      if (ix<0 .or. iy<0 .or. iz<0 .or. amp<0) then
+         write(msg, '(a,g12.4,a,3i6,a)')     "[initproblem:read_problem_par] Suspicious values for some parameters were detected: amp=", &
+              &                               amp," (ix iy iz) = (", ix, iy, iz, ")."
+         call warn(msg)
+      end if
 
       ! suppress waves in nonexistent directions
       if (nx <= 1) ix = 0
@@ -149,7 +153,9 @@ contains
       use constants,     only : fpiG, pi, newtong
       use grid,          only : xmin, xmax, ymin, ymax, zmin, zmax, x, y, z, nx, ny, nz, xmin, ymin, zmin, dx, dy, dz
       use initionized,   only : gamma_ion, idni, imxi, imzi, ieni
-      use dataio_public, only : tend
+      use dataio_public, only : tend, msg
+      use errh,          only : printinfo, warn
+
       implicit none
 
       integer :: i, j, k
@@ -169,26 +175,36 @@ contains
          Tamp = (d0 * amp**2 * omg2 * Vbox)/(4.0 * kn**2)
       else
          Tamp = 0.
-         if (proc == 0) write(*,'(a)')"[initproblem:init_prob] Warning: no waves (kn == 0)"
+         if (proc == 0) call warn("[initproblem:init_prob] No waves (kn == 0)")
       end if
       if (mode == 1) Tamp = Tamp / 4.
 
       if (proc == 0) then
-         write(*,*) 'Unperturbed adiabatic sound speed = ', cs0
-         write(*,*) 'Gravitational constant * 4pi      = ', fpiG
-         write(*,*) 'L_critical                        = ', sqrt(pi * gamma_ion * p0 / newtong / d0**2)
-         write(*,*) 'gamma                             = ', gamma_ion
-         write(*,*) 'Perturbation wavenumber           = ', kn
-         write(*,*) 'Jeans wavenumber                  = ', kJ
+         write(msg, *) 'Unperturbed adiabatic sound speed = ', cs0
+         call printinfo(msg, .true.)
+         write(msg, *) 'Gravitational constant * 4pi      = ', fpiG
+         call printinfo(msg, .true.)
+         write(msg, *) 'L_critical                        = ', sqrt(pi * gamma_ion * p0 / newtong / d0**2)
+         call printinfo(msg, .true.)
+         write(msg, *) 'gamma                             = ', gamma_ion
+         call printinfo(msg, .true.)
+         write(msg, *) 'Perturbation wavenumber           = ', kn
+         call printinfo(msg, .true.)
+         write(msg, *) 'Jeans wavenumber                  = ', kJ
+         call printinfo(msg, .true.)
          if (omg2>0) then
-            write(*,*) 'characteristic frequency          = ', omg
-            write(*,*)
-            write(*,*) 'T(t) = ',Tamp,'*[1 - cos(',omg,'t)]'
+            write(msg, *) 'characteristic frequency          = ', omg
+            call printinfo(msg, .true.)
+            call printinfo("", .true.)
+            write(msg, *) 'T(t) = ',Tamp,'*[1 - cos(',omg,'t)]'
+            call printinfo(msg, .true.)
          else
-            write(*,*) 'characteristic timescale          = ', omg
-            !write(*,*) 'Something like T(t) = ',Tamp,'* exp(',omg,'t)]' !BEWARE the formula is not completed
+            write(msg, *) 'characteristic timescale          = ', omg
+            call printinfo(msg, .true.)
+            !write(msg, *) 'Something like T(t) = ',Tamp,'* exp(',omg,'t)]' !BEWARE the formula is not completed
+            !call printinfo(msg, .true.)
          end if
-         write(*,'(/,a)') 'Divide T(t) for .tsl by L to get proper amplitude !'
+         call printinfo('Divide T(t) for .tsl by L to get proper amplitude !', .true.)
       end if
 ! Uniform equilibrium state
 
@@ -228,13 +244,15 @@ contains
        Tamp_rounded = 0.
     end if
     if (proc == 0) then
-      write(*,'(/,a)') 'Run:'
+      call printinfo('', .true.)
+      call printinfo('To verify results, run:', .true.)
+
 #ifdef MULTIGRID
-      write(*,'(a)')   ' % gnuplot verify.gpl; display jeans-mg.png'
+      call printinfo(' % gnuplot verify.gpl; display jeans-mg.png', .true.)
 #else /* MULTIGRID */
-      write(*,'(a)')   ' % gnuplot verify.gpl; display jeans-fft.png'
+      call printinfo(' % gnuplot verify.gpl; display jeans-fft.png', .true.)
 #endif /* MULTIGRID */
-      write(*,'(a,/)') 'to verify results'
+      call printinfo('', .true.)
 
       open(137,file="verify.gpl",status="unknown")
          write(137,'(a)') "set sample 1000"

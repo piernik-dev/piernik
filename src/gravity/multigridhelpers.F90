@@ -46,8 +46,6 @@ module multigridhelpers
 
    real, parameter    :: dirtyH = 1e200, dirtyL = 1e50      !< If dirty_debug, initialize arrays with dirtyH and check if the solution contains anything above dirtyL
 
-   character(len=256) :: str                                !< string for messages, filenames, etc.
-
 contains
 
 !/todo write also general set_dirty_array and check_dirty_array routines so there will be no need to use dirtyH and dirtyL outside multigridhelpers module.
@@ -145,6 +143,7 @@ contains
 
       use multigridvars, only: vcycle_factors, cprefix, stdout
       use mpisetup,      only: proc
+      use dataio_public, only: msg
 
       implicit none
 
@@ -160,7 +159,7 @@ contains
       at = 0.
       if (v>0) at = sum(vcycle_factors(1:v,2))/v
 
-      write(str, '(a,i3,1x,2a,f7.3,a,i3,a,f7.3,a,f11.9,a)') &
+      write(msg, '(a,i3,1x,2a,f7.3,a,i3,a,f7.3,a,f11.9,a)') &
            "[multigrid] ", v, trim(cprefix), "Cycles, dt_wall=", vcycle_factors(0,2), " +", v, "*", at, ", norm/rhs= ", norm, " : "
 
       do i = 0, v
@@ -171,11 +170,11 @@ contains
          else
             write(normred, '(es8.2)') vcycle_factors(i,1)
          end if
-         lm = len_trim(str)
-         if (len(str) >= lm + 9) str(lm+2:lm+9) = normred(1:8)
+         lm = len_trim(msg)
+         if (len(msg) >= lm + 9) msg(lm+2:lm+9) = normred(1:8)
       end do
 
-      call mg_write_log(str, stdout)
+      call mg_write_log(msg, stdout)
 
    end subroutine brief_v_log
 
@@ -244,10 +243,7 @@ contains
 
       close(fu)
 
-      if (proc == 0) then
-         write(str, '(3a)')"[multigridhelpers:ascii_dump] Wrote dump '", filename, "'"
-         call mg_write_log(str)
-      endif
+      if (proc == 0) call mg_write_log("[multigridhelpers:ascii_dump] Wrote dump '"//filename//"'")
 
    end subroutine ascii_dump
 
@@ -259,7 +255,7 @@ contains
    subroutine numbered_ascii_dump(basename, a)
 
       use mpisetup,      only: proc, nstep
-      use dataio_public, only: halfstep
+      use dataio_public, only: halfstep, msg
 
       implicit none
 
@@ -274,14 +270,14 @@ contains
       if (halfstep) n = n + 1
 
       if (present(a)) then
-         write(str, '(a,i4,i6,i3)') trim(basename), proc, n, a
+         write(msg, '(a,i4,i6,i3)') trim(basename), proc, n, a
       else
-         write(str, '(a,i4,i6)')    trim(basename), proc, n
+         write(msg, '(a,i4,i6)')    trim(basename), proc, n
       end if
-      do l = 1, len_trim(str)
-         if (str(l:l) == " ") str(l:l) = "_"
+      do l = 1, len_trim(msg)
+         if (msg(l:l) == " ") msg(l:l) = "_"
       end do
-      call ascii_dump(trim(str))
+      call ascii_dump(trim(msg))
 
    end subroutine numbered_ascii_dump
 

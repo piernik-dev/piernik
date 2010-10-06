@@ -94,7 +94,7 @@
       use errh,               only: die, warn
       use multigridvars,      only: ord_prolong
       use multigridmpifuncs,  only: mpi_multigrid_bnd
-      use multigridhelpers,   only: str
+      use dataio_public,      only: msg
 
       implicit none
 
@@ -105,8 +105,8 @@
 
       if (firstcall) then
          if (proc == 0) then
-            write(str,'(a,i3,a)')"[multigridexperimental:prolong_level_hord] prolongation order ",ord_prolong," is experimental"
-            call warn(str)
+            write(msg,'(a,i3,a)')"[multigridexperimental:prolong_level_hord] prolongation order ",ord_prolong," is experimental"
+            call warn(msg)
          end if
          firstcall = .false.
       end if

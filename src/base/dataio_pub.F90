@@ -64,7 +64,7 @@ module dataio_public
    character(len=16)  :: domain                 !< string to choose if boundaries have to be dumped in hdf files
    real               :: last_hdf_time          !< time in simulation of the last resent hdf file dump
 
-   integer, parameter :: T_PLAIN  = 0, &           !< enum for message types
+   integer, parameter :: T_PLAIN  = 0, &        !< enum for message types
         &                T_ERR    = T_PLAIN + 1, &
         &                T_WARN   = T_ERR   + 1, &
         &                T_INFO   = T_WARN  + 1, &
@@ -78,6 +78,8 @@ module dataio_public
 
    logical            :: skip_advection = .false. !< .true. will instruct fluidupdate:make_3sweeps to skip sweeps (used by maclaurin problem, replaces precompiler symbol __NO_FLUID_STEP)
    logical, save      :: dataio_initialized = .false.
+
+   character(LEN=1024) :: msg                   !< buffer for messages
 
    include 'mpif.h'
 

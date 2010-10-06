@@ -72,6 +72,7 @@ contains
 #endif /* NEW_HDF5 */
       use multipole,          only: init_multipole, use_point_monopole, lmax, mmax, ord_prolong_mpole, coarsen_multipole, interp_pt2mom, interp_mom2pot
       use multigridmpifuncs,  only: mpi_multigrid_prep
+      use dataio_public,      only: msg
 
       implicit none
 
@@ -80,7 +81,6 @@ contains
       integer                          :: ierrh, div, idx, i, j, nxc=1, nx
       character(LEN=100)               :: par_file, tmp_log_file
       logical, save                    :: frun = .true.          !< First run flag
-      character(len=160)               :: errstr
       real                             :: mb_alloc               !< Allocation counter
       integer, dimension(6)            :: aerr                   !BEWARE: hardcoded magic integer. Update when you change number of simultaneous error checks
       real, allocatable, dimension(:)  :: kx, ky, kz             !< FFT kernel directional components for convolution
@@ -317,8 +317,8 @@ contains
       end if
 
       if ((Jacobi_damp <= 0. .or. Jacobi_damp>1.) .and. proc == 0) then
-         write(errstr, '(a,g12.5,a)')"[multigrid:init_multigrid] Jacobi_damp = ",Jacobi_damp," is outside (0, 1] interval."
-         call warn(errstr)
+         write(msg, '(a,g12.5,a)')"[multigrid:init_multigrid] Jacobi_damp = ",Jacobi_damp," is outside (0, 1] interval."
+         call warn(msg)
       end if
 
       if (fft_patient) fftw_flags = FFTW_PATIENT
@@ -367,14 +367,14 @@ contains
             if (has_dir(i)) then
                nx = nxc / div ! number of interior cells in direction i
                if (nx < lvl(idx)%nb) then
-                  write(errstr, '(2(a,i1),a,i4,2(a,i2))')"[multigrid:init_multigrid] Number of guardcells exceeds number of interior cells in the ",i," direction, ", &
+                  write(msg, '(2(a,i1),a,i4,2(a,i2))')"[multigrid:init_multigrid] Number of guardcells exceeds number of interior cells in the ",i," direction, ", &
                        lvl(idx)%nb, " > ", nx, " at level ", idx, ". You may try to set level_max <=", level_max-idx
-                  call die(errstr)
+                  call die(msg)
                end if
                if (nx * div /= nxc) then
-                  write(errstr, '(a,i1,a,3f6.1,2(a,i2))')"[multigrid:init_multigrid] Fractional number of cells in ",i," direction ", &
+                  write(msg, '(a,i1,a,3f6.1,2(a,i2))')"[multigrid:init_multigrid] Fractional number of cells in ",i," direction ", &
                        nxc/real(div), " at level ", idx, ". You may try to set level_max <=", level_max-idx
-                  call die(errstr)
+                  call die(msg)
                end if
             end if
 
@@ -791,6 +791,7 @@ contains
       use mpisetup,           only: proc, nproc, MPI_DOUBLE_PRECISION, comm3d, ierr
       use multigridhelpers,   only: mg_write_log
       use multipole,          only: cleanup_multipole
+      use dataio_public,      only: msg
 
       implicit none
 
@@ -889,6 +890,7 @@ contains
       use errh,             only: die
       use mpisetup,         only: proc, t
       use multigridhelpers, only: set_dirty, check_dirty, mg_write_log
+      use dataio_public,    only: msg
 
       implicit none
 
@@ -1168,11 +1170,12 @@ contains
 
    subroutine vcycle(history)
 
-      use errh,               only: die
+      use errh,               only: die, warn
       use mpisetup,           only: proc, nproc
       use timer,              only: timer_
       use multigridhelpers,   only: set_dirty, check_dirty, mg_write_log, brief_v_log, do_ascii_dump, numbered_ascii_dump
       use multigridbasefuncs, only: norm_sq, residual, restrict_all, substract_average
+      use dataio_public,      only: msg
 
       implicit none
 
@@ -1293,10 +1296,7 @@ contains
       end do
 
       if (v == max_cycles + 1) then
-         if (proc == 0 .and. norm_lhs/norm_rhs > norm_tol) then
-            write(msg, '(a)')"[multigrid:vcycle] WARNING: Not enough V-cycles to achieve convergence."
-            call mg_write_log(msg)
-         endif
+         if (proc == 0 .and. norm_lhs/norm_rhs > norm_tol) call warn("[multigrid:vcycle] Not enough V-cycles to achieve convergence.")
          v = max_cycles
       end if
 
@@ -1539,6 +1539,7 @@ contains
 
       use mpisetup,           only: nproc
       use multigridbasefuncs, only: zero_boundaries
+      use errh,               only: warn
 
       implicit none
 
@@ -1552,7 +1553,7 @@ contains
             call prolong_faces(lev, soln)
          else
             if (grav_bnd /= bnd_givenval) call zero_boundaries(lev)
-            write(*,'(a,2i3)')"m:mfb WTF?",grav_bnd,lev  ! QA_WARN
+            call warn("m:mfb WTF?")
          end if
       end if
 

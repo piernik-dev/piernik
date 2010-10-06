@@ -159,7 +159,6 @@ module multigridvars
    logical, dimension(XLO:ZHI) :: is_external                         !< .true. for non-"mpi" local domain boundaries when gravity boundary is nonperiodic (even if the global domain is periodic)
 
    ! miscellaneous
-   character(len=256)      :: msg                                     !< message buffer
    real                    :: ts, tot_ts                              !< time for runtime profiling, total multigrid time
    real                    :: norm_rhs_orig                           !< Norm of the unmodified source
    character(len=2)        :: cprefix                                 !< optional prefix for distinguishing inner and outer potential V-cycles in the log

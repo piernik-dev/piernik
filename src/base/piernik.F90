@@ -232,7 +232,7 @@ contains
          if (proc == 0) then
             write(msg,'(a,i4,a)') "[piernik:init_piernik] Restart file #",nrestart," read."
             call printinfo(msg)
-            call warn("Warning: skipping init_prob.")
+            call warn("skipping init_prob.")
          endif
       else
          call init_prob
