@@ -79,7 +79,7 @@ def qa_nonconforming_tabs(files,options):
    print b.OKGREEN + "QA: " + b.ENDC + "Checking for tabs"
    wrong_files = []
    for file in files:
-      if (len(sp.Popen('grep "	" '+file, shell=True, executable="/bin/bash",stdout=sp.PIPE).communicate()[0])):
+      if (len(sp.Popen('grep "\t" '+file, shell=True, executable="/bin/bash",stdout=sp.PIPE).communicate()[0])):
          print b.FAIL + "QA:  " + b.ENDC + "non conforming tab detected in " + file
          wrong_files.append(file)
    return wrong_files
