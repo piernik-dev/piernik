@@ -97,7 +97,7 @@ module sweeps     ! split sweeps
     use fluidboundaries, only : all_fluid_boundaries
 
 #ifdef COSM_RAYS
-    use func,  only : div_v
+    use crhelpers,  only : div_v
 #endif /* COSM_RAYS */
 
     implicit none
@@ -148,7 +148,7 @@ module sweeps     ! split sweeps
     use fluidboundaries, only : all_fluid_boundaries
 
 #ifdef COSM_RAYS
-    use func, only   : div_v
+    use crhelpers, only   : div_v
 #endif /* COSM_RAYS */
 
     implicit none
@@ -204,7 +204,7 @@ module sweeps     ! split sweeps
     use fluidboundaries, only : all_fluid_boundaries
 
 #ifdef COSM_RAYS
-    use func,  only : div_v
+    use crhelpers,  only : div_v
 #endif /* COSM_RAYS */
 
     implicit none
