@@ -242,36 +242,32 @@ module func
 #endif /* COSM_RAYS  */
 
    subroutine compare_namelist(nml_bef, nml_aft, output)
+
       implicit none
+
       character(len=*), intent(in)     :: nml_bef, nml_aft, output
       integer                          :: io
       character(len=256)               :: sa, sb
+      integer, parameter               :: lun_bef=501, lun_aft=502, lun_out=3
 
-      open(501,file=nml_bef, status='old')
-      open(502,file=nml_aft, status='old')
-      open(503,file="temp3.dat", status='unknown')
+      open(lun_bef, file=nml_bef, status='old')
+      open(lun_aft, file=nml_aft, status='old')
+      open(lun_out, file=output, position='append')
       io = 0
       do
-         read(501,'(a)', iostat=io) sa
-         read(502,'(a)', iostat=io) sb
+         read(lun_bef,'(a)', iostat=io) sa
+         read(lun_aft,'(a)', iostat=io) sb
          if(io/=0) exit
          if((sa/=sb)) then
-            write(503,'(a1,a)') '*',trim(sb)
+            write(lun_out,'(a1,a)') '*',trim(sb)
          else
-            write(503,'(a1,a)') ' ',trim(sb)
+            write(lun_out,'(a1,a)') ' ',trim(sb)
          endif
       enddo
-      close(502,status="delete")
-      close(501,status="delete")
-      io = 0
-      rewind(503)
-      open(3, file=output, position='append')
-         do while(io == 0)
-            read(503,'(a)',iostat=io) sb
-            write(3,'(a)') trim(sb)
-         enddo
-      close(3)
-      close(503,status="delete")
+      close(lun_aft, status="delete")
+      close(lun_bef, status="delete")
+      close(lun_out)
+
    end subroutine compare_namelist
 
    function fix_string(str) result (outstr)
