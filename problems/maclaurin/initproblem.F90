@@ -44,7 +44,7 @@ contains
    subroutine read_problem_par
 
       use errh,          only : namelist_errh, die
-      use mpisetup,      only : cwd, ierr, rbuff, cbuff, ibuff, proc, buffer_dim, comm, smalld, &
+      use mpisetup,      only : ierr, rbuff, cbuff, ibuff, proc, buffer_dim, comm, smalld, &
            &                    MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER
       use constants,     only : pi
       use dataio_public, only : skip_advection, cwd, msg, par_file

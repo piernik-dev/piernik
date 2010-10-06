@@ -49,7 +49,7 @@ module initproblem
 
       use errh,     only : namelist_errh
       use mpisetup, only : cbuff, ibuff, rbuff, buffer_dim, proc, comm, ierr, &
-                           mpi_character, mpi_double_precision, mpi_integer, cwd
+                           mpi_character, mpi_double_precision, mpi_integer
       use dataio_public, only : cwd, msg, par_file
       use func,          only : compare_namelist
 

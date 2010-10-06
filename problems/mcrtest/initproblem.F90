@@ -49,7 +49,7 @@ module initproblem
    subroutine read_problem_par
 
       use mpisetup, only: MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION, &
-           &              cbuff, ibuff, rbuff, buffer_dim, comm, ierr, proc, cwd
+           &              cbuff, ibuff, rbuff, buffer_dim, comm, ierr, proc
       use grid,     only: dxmn
       use errh,     only: namelist_errh
       use dataio_public, only : cwd, msg, par_file
