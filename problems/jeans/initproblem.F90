@@ -45,7 +45,7 @@ contains
 
       use grid,          only : xmin, xmax, ymin, ymax, zmin, zmax, nx, ny, nz
       use errh,          only : namelist_errh, die, warn
-      use mpisetup,      only : ierr, rbuff, cbuff, ibuff, proc, buffer_dim, comm, &
+      use mpisetup,      only : ierr, rbuff, cbuff_len, cbuff, ibuff, proc, buffer_dim, comm, &
            &                    MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER
       use constants,     only : pi
       use dataio_public, only : ierrh, msg, par_file
@@ -83,7 +83,7 @@ contains
 
       end if
 
-      call MPI_BCAST(cbuff, 32*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
+      call MPI_BCAST(cbuff, cbuff_len*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
       call MPI_BCAST(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
       call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 

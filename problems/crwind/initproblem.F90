@@ -51,13 +51,12 @@ module initproblem
 
    subroutine read_problem_par
       use errh,     only : namelist_errh
-      use mpisetup, only : cbuff, ibuff, rbuff, buffer_dim, comm, ierr, proc, &
-                           mpi_character, mpi_double_precision, mpi_integer
+      use mpisetup, only : cbuff_len, cbuff, rbuff, buffer_dim, comm, ierr, proc, &
+                           mpi_character, mpi_double_precision
       use dataio_public, only : ierrh, msg, par_file
       use func,          only : compare_namelist
 
       implicit none
-
 
       problem_name = 'xxx'
       run_id  = 'aaa'
@@ -90,15 +89,12 @@ module initproblem
          rbuff(12) = f_sn_kpc2
          rbuff(13) = alpha
 
-         call MPI_BCAST(cbuff, 32*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
-         call MPI_BCAST(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
-         call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+      end if
 
-      else
+      call MPI_BCAST(cbuff, cbuff_len*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
+      call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
-         call MPI_BCAST(cbuff, 32*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
-         call MPI_BCAST(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
-         call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+      if (proc /= 0) then
 
          problem_name = cbuff(1)
          run_id       = cbuff(2)(1:3)
@@ -116,7 +112,6 @@ module initproblem
          h_sn         = rbuff(11)
          f_sn_kpc2    = rbuff(12)
          alpha        = rbuff(13)
-
 
       endif
 

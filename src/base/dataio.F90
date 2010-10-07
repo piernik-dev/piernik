@@ -433,7 +433,7 @@ module dataio
          nhdf_start  = nhdf-1
          if(new_id .ne. '') run_id=new_id
       endif
-      call MPI_BCAST(log_file, 32, MPI_CHARACTER, 0, comm, ierr)
+      call MPI_BCAST(log_file, len(log_file), MPI_CHARACTER, 0, comm, ierr)
       call set_container_chdf(nstep)
       if(all([bnd_xl,bnd_xr,bnd_yl,bnd_yr,bnd_zl,bnd_zr] /= "user")) then
          call all_fluid_boundaries

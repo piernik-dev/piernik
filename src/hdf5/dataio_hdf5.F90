@@ -680,7 +680,7 @@ module dataio_hdf5
       rank = 2
       fe = len_trim(chdf%log_file)
       fname = trim(chdf%log_file(1:fe-3)//"plt")
-      call MPI_BCAST(fname, 32, MPI_CHARACTER, 0, comm3d, ierr)
+      call MPI_BCAST(fname, cwdlen, MPI_CHARACTER, 0, comm3d, ierr)
 
       nib = 0; nid = 0; njb = 0; njd = 0; nkb = 0; pisize = 0; pjsize = 0
       select case(plane)
@@ -1272,7 +1272,7 @@ module dataio_hdf5
           h5screate_simple_f, h5fclose_f, h5close_f
       use h5lt,         only: h5ltget_attribute_double_f, h5ltget_attribute_int_f, h5ltget_attribute_string_f
       use mpisetup,     only: MPI_CHARACTER, comm, ierr, pcoords, pxsize, pysize, pzsize, &
-          MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION, proc, t, info, comm3d, dt
+          MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION, proc, t, info, comm3d, dt, cbuff_len
       use fluidindex,   only: nvar
       use grid,         only: nx, ny, nz, x, y, z, nxb, nyb, nzb, nxd, nyd, nzd, nb, xmin, xmax, &
           ymin, ymax, zmin, zmax
@@ -1484,21 +1484,21 @@ module dataio_hdf5
          call printinfo('Done reading restart file: '//trim(filename), .false.)
       endif
 
-      call MPI_BCAST(chdf%nstep, 1, MPI_INTEGER, 0, comm3d, ierr)
-      call MPI_BCAST(chdf%nres, 1, MPI_INTEGER, 0, comm3d, ierr)
-      call MPI_BCAST(chdf%nhdf, 1, MPI_INTEGER, 0, comm3d, ierr)
-      call MPI_BCAST(chdf%ntsl, 1, MPI_INTEGER, 0, comm3d, ierr)
-      call MPI_BCAST(chdf%nlog, 1, MPI_INTEGER, 0, comm3d, ierr)
+      call MPI_BCAST(chdf%nstep,    1, MPI_INTEGER, 0, comm3d, ierr)
+      call MPI_BCAST(chdf%nres,     1, MPI_INTEGER, 0, comm3d, ierr)
+      call MPI_BCAST(chdf%nhdf,     1, MPI_INTEGER, 0, comm3d, ierr)
+      call MPI_BCAST(chdf%ntsl,     1, MPI_INTEGER, 0, comm3d, ierr)
+      call MPI_BCAST(chdf%nlog,     1, MPI_INTEGER, 0, comm3d, ierr)
       call MPI_BCAST(chdf%step_res, 1, MPI_INTEGER, 0, comm3d, ierr)
       call MPI_BCAST(chdf%step_hdf, 1, MPI_INTEGER, 0, comm3d, ierr)
 
       call MPI_BCAST(chdf%last_hdf_time, 1, MPI_DOUBLE_PRECISION, 0, comm3d, ierr)
-      call MPI_BCAST(t, 1, MPI_DOUBLE_PRECISION, 0, comm3d, ierr)
-      call MPI_BCAST(dt, 1, MPI_DOUBLE_PRECISION, 0, comm3d, ierr)
+      call MPI_BCAST(t,                  1, MPI_DOUBLE_PRECISION, 0, comm3d, ierr)
+      call MPI_BCAST(dt,                 1, MPI_DOUBLE_PRECISION, 0, comm3d, ierr)
 
-      CALL MPI_BCAST(problem_name, 32, MPI_CHARACTER, 0, comm3d, ierr)
-      CALL MPI_BCAST(chdf%domain, 16, MPI_CHARACTER, 0, comm3d, ierr)
-      CALL MPI_BCAST(chdf%new_id, 3, MPI_CHARACTER, 0, comm3d, ierr)
+      CALL MPI_BCAST(problem_name, cbuff_len, MPI_CHARACTER, 0, comm3d, ierr)
+      CALL MPI_BCAST(chdf%domain,  16,        MPI_CHARACTER, 0, comm3d, ierr)
+      CALL MPI_BCAST(chdf%new_id,  3,         MPI_CHARACTER, 0, comm3d, ierr)
       CALL h5close_f(error)
 
    end subroutine read_restart_hdf5

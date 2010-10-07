@@ -40,7 +40,6 @@ module initproblem
    namelist /PROBLEM_CONTROL/  problem_name, run_id, &
                                d0, v0, v1, m_x, m_y, m_z
 
-
    contains
 
 !-----------------------------------------------------------------------------
@@ -48,7 +47,7 @@ module initproblem
    subroutine read_problem_par
 
       use mpisetup, only: MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION, &
-           &              cbuff, ibuff, rbuff, comm, ierr, buffer_dim, proc
+           &              cbuff_len, cbuff, ibuff, rbuff, comm, ierr, buffer_dim, proc
       use dataio_public, only : cwd, msg, par_file
       use func,          only : compare_namelist
 
@@ -79,15 +78,13 @@ module initproblem
          ibuff(2) = m_y
          ibuff(3) = m_z
 
-         call MPI_BCAST(cbuff, 32*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
-         call MPI_BCAST(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
-         call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+      end if
 
-      else
+      call MPI_BCAST(cbuff, cbuff_len*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
+      call MPI_BCAST(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
+      call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
-         call MPI_BCAST(cbuff, 32*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
-         call MPI_BCAST(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
-         call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+      if (proc /= 0) then
 
          problem_name = cbuff(1)
          run_id       = cbuff(2)(1:3)

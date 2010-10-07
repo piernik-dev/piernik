@@ -22,8 +22,8 @@ contains
   subroutine read_problem_par
 
      use errh,     only : namelist_errh
-     use mpisetup, only : cbuff, ibuff, rbuff, buffer_dim, comm, ierr, proc, &
-                           mpi_character, mpi_double_precision, mpi_integer
+     use mpisetup, only : cbuff_len, cbuff, rbuff, buffer_dim, comm, ierr, proc, &
+                           mpi_character, mpi_double_precision
      use dataio_public, only : ierrh, msg, par_file
      use func,          only : compare_namelist
 
@@ -49,16 +49,12 @@ contains
       rbuff(2) = Mrms
       rbuff(3) = c_si
 
-      call MPI_BCAST(cbuff, 32*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
-      call MPI_BCAST(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
-      call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+    end if
 
-    else
+    call MPI_BCAST(cbuff, cbuff_len*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
+    call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
-      call MPI_BCAST(cbuff, 32*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
-      call MPI_BCAST(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
-      call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
-
+    if (proc /= 0) then
 !  namelist /PROBLEM_CONTROL/  problem_name, run_id, &
 !                              d0,p0, bx0,by0,bz0, Eexpl,  x0,y0,z0, r0 &
 !                n_sn, dt_sn

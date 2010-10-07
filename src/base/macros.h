@@ -7,6 +7,7 @@
 
   Requires:
     use dataio_public, only : par_file, ierrh
+    use errh,          only : namelist_errh
     use func,          only : compare_namelist
 
 

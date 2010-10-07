@@ -47,8 +47,8 @@ module initproblem
 
    subroutine read_problem_par
       use errh,     only : namelist_errh
-      use mpisetup, only : cbuff, ibuff, rbuff, buffer_dim, proc, comm, ierr, &
-                           mpi_character, mpi_double_precision, mpi_integer
+      use mpisetup, only : cbuff_len, cbuff, rbuff, buffer_dim, proc, comm, ierr, &
+                           mpi_character, mpi_double_precision
       use dataio_public, only : ierrh, msg, par_file
       use func,          only : compare_namelist
 
@@ -64,7 +64,6 @@ module initproblem
 
          diff_nml(PROBLEM_CONTROL)
 
-
          cbuff(1) =  problem_name
          cbuff(2) =  run_id
 
@@ -72,17 +71,14 @@ module initproblem
          rbuff(2)  = bxn
          rbuff(3)  = byn
          rbuff(4)  = bzn
-         rbuff(13) = alpha
+         rbuff(5)  = alpha
 
-         call MPI_BCAST(cbuff, 32*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
-         call MPI_BCAST(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
-         call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+      end if
 
-      else
+      call MPI_BCAST(cbuff, cbuff_len*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
+      call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
-         call MPI_BCAST(cbuff, 32*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
-         call MPI_BCAST(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
-         call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+      if (proc /= 0) then
 
          problem_name = cbuff(1)
          run_id       = cbuff(2)(1:3)
@@ -91,8 +87,7 @@ module initproblem
          bxn          = rbuff(2)
          byn          = rbuff(3)
          bzn          = rbuff(4)
-         alpha        = rbuff(13)
-
+         alpha        = rbuff(5)
 
       endif
 

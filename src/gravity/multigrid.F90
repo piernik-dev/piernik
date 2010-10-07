@@ -58,7 +58,7 @@ contains
       use errh,               only: namelist_errh, die, warn
       use arrays,             only: sgp
       use constants,          only: pi, dpi
-      use mpisetup,           only: buffer_dim, comm, comm3d, ierr, proc, nproc, ndims, &
+      use mpisetup,           only: buffer_dim, comm, comm3d, ierr, proc, nproc, ndims, cbuff_len, &
            &                        bnd_xl_dom, bnd_xr_dom, bnd_yl_dom, bnd_yr_dom, bnd_zl_dom, bnd_zr_dom, &
            &                        bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr, &
            &                        ibuff, cbuff, rbuff, lbuff, &
@@ -207,10 +207,10 @@ contains
 
       end if
 
-      call MPI_BCAST(cbuff, 32*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
-      call MPI_BCAST(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
-      call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
-      call MPI_BCAST(lbuff,    buffer_dim, MPI_LOGICAL,          0, comm, ierr)
+      call MPI_BCAST(cbuff, cbuff_len*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
+      call MPI_BCAST(ibuff,           buffer_dim, MPI_INTEGER,          0, comm, ierr)
+      call MPI_BCAST(rbuff,           buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+      call MPI_BCAST(lbuff,           buffer_dim, MPI_LOGICAL,          0, comm, ierr)
 
       if (proc /= 0) then
 

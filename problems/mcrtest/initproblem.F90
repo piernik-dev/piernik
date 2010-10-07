@@ -49,7 +49,7 @@ module initproblem
    subroutine read_problem_par
 
       use mpisetup, only: MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION, &
-           &              cbuff, ibuff, rbuff, buffer_dim, comm, ierr, proc
+           &              cbuff_len, cbuff, ibuff, rbuff, buffer_dim, comm, ierr, proc
       use grid,     only: dxmn
       use errh,     only: namelist_errh
       use dataio_public, only : cwd, msg, par_file
@@ -96,7 +96,7 @@ module initproblem
 
       end if
 
-      call MPI_BCAST(cbuff, 32*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
+      call MPI_BCAST(cbuff, cbuff_len*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
       call MPI_BCAST(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
       call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 

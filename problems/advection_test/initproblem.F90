@@ -45,7 +45,7 @@ contains
 
       use grid,        only : xmin, xmax, ymin, ymax, zmin, zmax, dx, dy, dz, nxd, nyd, nzd
       use errh,        only : namelist_errh, die
-      use mpisetup,    only : ierr, rbuff, cbuff, proc, buffer_dim, comm, smalld, smallei, MPI_CHARACTER, MPI_DOUBLE_PRECISION
+      use mpisetup,    only : ierr, rbuff, cbuff_len, cbuff, proc, buffer_dim, comm, smalld, smallei, MPI_CHARACTER, MPI_DOUBLE_PRECISION
       use initneutral, only : gamma_neu
       use dataio_public, only : ierrh, msg, par_file
       use func,        only : compare_namelist
@@ -77,7 +77,7 @@ contains
 
       end if
 
-      call MPI_BCAST(cbuff, 32*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
+      call MPI_BCAST(cbuff, cbuff_len*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
       call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
       if (proc /= 0) then

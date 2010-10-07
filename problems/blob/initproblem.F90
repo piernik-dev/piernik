@@ -47,7 +47,7 @@ module initproblem
    subroutine read_problem_par
 
       use errh,     only : namelist_errh
-      use mpisetup, only : MPI_CHARACTER, MPI_DOUBLE_PRECISION, cbuff, rbuff, buffer_dim, comm, ierr, proc
+      use mpisetup, only : MPI_CHARACTER, MPI_DOUBLE_PRECISION, cbuff_len, cbuff, rbuff, buffer_dim, comm, ierr, proc
       use dataio_public, only : ierrh, msg, par_file
       use func,          only : compare_namelist
 
@@ -85,7 +85,7 @@ module initproblem
 
       end if
 
-      call MPI_BCAST(cbuff, 32*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
+      call MPI_BCAST(cbuff, cbuff_len*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
       call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
       if (proc /= 0) then
