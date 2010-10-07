@@ -23,10 +23,6 @@ use File::Copy;
 use File::Basename;
 use Getopt::Long;
 
-# use warnings;
-
-# return status
-
 my $setup_line = "./setup";
 
 my %moo=();
