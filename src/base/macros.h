@@ -24,9 +24,7 @@
   close(501);\
   open(1, file=par_file);\
   read(unit=1, nml=namelist, iostat=ierrh);\
-  call namelist_errh(ierrh, "\
-namelist\
-");\
+  call namelist_errh(ierrh, #namelist);\
   close(1);\
   open(502, file="temp2.dat", status="unknown");\
   write(502,nml=namelist);\
