@@ -128,11 +128,14 @@ module errh
             call warn("    * A substring specifier of the character variable was out-of-bounds.")
             call warn("    * A subscript or substring specifier of the variable was not an integer constant.")
             call warn("    * An attempt was made to specify a substring by using an unsubscripted array variable.")
-            call die("severe (19): Invalid reference to variable in the "//trim(nm)//" namelist")
+            write(msg,'(3a)') "severe (19): Invalid reference to variable in the ",trim(nm)," namelist"
+            call die(msg)
          case (-1)
-            call die("Namelist: "//trim(nm)//" not found in problem.par")
+            write(msg,'(3a)') "Namelist: ",trim(nm)," not found in problem.par"
+            call die(msg)
          case (239, 5010)
-            call die("One of the variables found in problem.par doesn't belong to the "//trim(nm)//" namelist")
+            write(msg,'(3a)') "One of the variables found in problem.par doesn't belong to the ",trim(nm)," namelist"
+            call die(msg)
          case (0)
          case default
             write(msg, *)'Unknown error (', ierrh,') in namelist ',trim(nm)
