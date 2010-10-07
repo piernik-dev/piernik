@@ -168,6 +168,7 @@ contains
       implicit none
 
       type(grid_container) :: cgrid
+      logical :: tmp_log_exist
 #ifdef GRAV
       logical              :: grav_pot_3d_called = .false.
 #endif /* GRAV */
@@ -176,6 +177,11 @@ contains
       if (LEN_TRIM(cwd) == 0) cwd = '.'
       par_file = trim(cwd)//'/'//par_default_file
       tmp_log_file = trim(cwd)//'/tmp.log'
+      inquire(file = tmp_log_file, exist = tmp_log_exist)
+      if (tmp_log_exist) then
+         open(3, file=tmp_log_file)
+         close(3, status="delete")
+      end if
 
       call init_mpi
 
