@@ -32,9 +32,10 @@
 module types
    private
    public :: indx, hdf, value, grid_container, tsl_container, &
-   & problem_customize_solution, finalize_problem
+   & problem_customize_solution, finalize_problem, domlen, idlen
 
-   integer, parameter :: cwdlen = 512           !BEWARE: cannot use primary definition from dataio_pub because of loop dependency
+   integer, parameter :: domlen = 16
+   integer, parameter :: idlen  = 3
 
    type :: indx
       integer :: dnd = -1, dnn = -1, dni = -1
@@ -49,13 +50,13 @@ module types
    type :: hdf
       integer :: nhdf, ntsl, nres, nlog, step_hdf, step_res, nstep, nrestart
       real    :: last_hdf_time
-      character(len=16)  :: domain
-      character(len=3)   :: new_id
+      character(len=domlen)  :: domain
+      character(len=idlen)   :: new_id
    end type hdf
 
    type :: value
       real    :: val
-      integer, dimension(3) :: loc
+      integer, dimension(3) :: loc ! BEWARE: magic number
       integer :: proc
    end type value
 

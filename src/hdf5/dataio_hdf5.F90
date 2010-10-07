@@ -1259,7 +1259,7 @@ module dataio_hdf5
 
    subroutine read_restart_hdf5(chdf)
 
-      use types,        only: hdf
+      use types,        only: hdf, domlen, idlen
       use hdf5,         only: HID_T, HSIZE_T, HSSIZE_T, SIZE_T, H5P_FILE_ACCESS_F, H5T_NATIVE_DOUBLE, &
           H5S_SELECT_SET_F, H5F_ACC_RDONLY_F, H5FD_MPIO_INDEPENDENT_F, H5P_DATASET_XFER_F, &
           h5open_f, h5pcreate_f, h5pset_fapl_mpio_f, h5fopen_f, h5pclose_f, h5dopen_f, &
@@ -1267,7 +1267,7 @@ module dataio_hdf5
           h5sselect_hyperslab_f, h5dread_f, h5sclose_f, h5pset_dxpl_mpio_f, h5dclose_f, &
           h5screate_simple_f, h5fclose_f, h5close_f
       use h5lt,         only: h5ltget_attribute_double_f, h5ltget_attribute_int_f, h5ltget_attribute_string_f
-      use mpisetup,     only: MPI_CHARACTER, comm, ierr, pcoords, pxsize, pysize, pzsize, &
+      use mpisetup,     only: comm, ierr, pcoords, pxsize, pysize, pzsize, &
           MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION, proc, t, info, comm3d, dt, cbuff_len
       use fluidindex,   only: nvar
       use grid,         only: nx, ny, nz, x, y, z, nxb, nyb, nzb, nxd, nyd, nzd, nb, xmin, xmax, &
@@ -1321,7 +1321,7 @@ module dataio_hdf5
          write (filename,'(a,a1,a3,a1,i4.4,a4)') trim(problem_name),'_', run_id,'_',chdf%nres,'.res'
          call printinfo('Reading restart  file: '//trim(filename))
       endif
-      call MPI_BCAST(filename, 128,MPI_CHARACTER, 0, comm, ierr)
+      call MPI_BCAST(filename, cwdlen, MPI_CHARACTER, 0, comm, ierr)
 
       inquire(file = filename, exist = file_exist)
       if(file_exist .eqv. .false.) call die('[dataio_hdf5:read_restart_hdf5]: Restart file: '//trim(filename)//' does not exist')
@@ -1490,8 +1490,8 @@ module dataio_hdf5
       call MPI_BCAST(dt,                 1, MPI_DOUBLE_PRECISION, 0, comm3d, ierr)
 
       CALL MPI_BCAST(problem_name, cbuff_len, MPI_CHARACTER, 0, comm3d, ierr)
-      CALL MPI_BCAST(chdf%domain,  16,        MPI_CHARACTER, 0, comm3d, ierr)
-      CALL MPI_BCAST(chdf%new_id,  3,         MPI_CHARACTER, 0, comm3d, ierr)
+      CALL MPI_BCAST(chdf%domain,  domlen,    MPI_CHARACTER, 0, comm3d, ierr)
+      CALL MPI_BCAST(chdf%new_id,  idlen,     MPI_CHARACTER, 0, comm3d, ierr)
       CALL h5close_f(error)
 
    end subroutine read_restart_hdf5

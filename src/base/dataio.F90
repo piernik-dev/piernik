@@ -95,7 +95,8 @@ module dataio
    logical               :: wait                   !< logical value to have a break in simulation (currently not used)
 
    integer               :: nchar                  !< number of characters in a user/system message
-   character(len=16)     :: msg                    !< string of characters - content of a user/system message
+   integer, parameter    :: msg_len = 16
+   character(len=msg_len) :: msg                    !< string of characters - content of a user/system message
    real                  :: msg_param              !< parameter changed by a user/system message
 
    character(len=hnlen)  :: hostfull
@@ -468,8 +469,8 @@ module dataio
 
       if (proc == 0) call read_file_msg
 
-      call MPI_BCAST(msg,       16, MPI_CHARACTER,        0, comm, ierr)
-      call MPI_BCAST(msg_param, 16, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+      call MPI_BCAST(msg,       msg_len, MPI_CHARACTER,        0, comm, ierr)
+      call MPI_BCAST(msg_param, 1,       MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
 !---  if a user message is received then:
       if (len_trim(msg) /= 0) then
