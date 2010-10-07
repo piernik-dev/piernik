@@ -45,6 +45,7 @@ def qa_checks(files,options):
    nt = qa_nonconforming_tabs(files,options)
    wc = qa_depreciated_syntax(f90files,options)
    wc += qa_crude_write(f90files,options)
+   wc += qa_magic_integers(f90files,options)
    if (wc):
       s =  b.WARNING + "%i warnings detected. " % wc + b.ENDC + "Do you wish to proceed? (y/N) "
       if( raw_input(s) != 'y' ):
@@ -70,6 +71,20 @@ def qa_crude_write(files,options):
       for line in file.readlines():
          if( re.search("write\(\*",line) and not re.search("QA_WARN",line)):
             print b.WARNING + "!! crude write  " + b.ENDC + name + " @ L%i => " % n + line.strip()
+            warning += 1
+         n += 1
+      file.close()
+   return warning
+
+def qa_magic_integers(files,options):
+   print b.OKGREEN + "QA: " + b.ENDC + "Checking for hardcoded integers"
+   warning = 0
+   for name in files:
+      file = open(name)
+      n = 1
+      for line in file.readlines():
+         if( re.search("\(len=[1-9][0-9]",line) and not re.search("QA_WARN",line)):
+            print b.WARNING + "!! magic integer  " + b.ENDC + name + " @ L%i => " % n + line.strip()
             warning += 1
          n += 1
       file.close()
