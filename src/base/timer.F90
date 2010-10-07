@@ -103,7 +103,8 @@ contains
       implicit none
 
       type(timer_list), pointer :: tp
-      type(timer_info) :: item
+      type(timer_info)          :: item
+      character(len=256)        :: lmsg
 
       tp => timer_root
 #ifdef VERBOSE
@@ -112,7 +113,8 @@ contains
       do while (associated(tp%next))
          item = delete_timer(tp%next)
 #ifdef VERBOSE
-         call warn("[timer:cleanup_timers]: Timer "//item%key//" deleted")
+         write(lmsg,'(3a)') "[timer:cleanup_timers]: Timer ",item%key," deleted"
+         call warn(lmsg)
 #endif /* VERBOSE */
       enddo
       return

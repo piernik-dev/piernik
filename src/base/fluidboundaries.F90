@@ -32,6 +32,7 @@ module fluidboundaries
    contains
 
    subroutine bnd_u(dim)
+      use dataio_public,   only : msg
       use errh,            only : warn
       use fluidboundaries_pub, only: user_bnd_xl, user_bnd_xr, user_bnd_yl, user_bnd_yr, user_bnd_zl, user_bnd_zr
       use mpisetup,        only : ierr, MPI_XY_RIGHT_DOM, MPI_XY_RIGHT_BND, MPI_XY_LEFT_DOM, MPI_XY_LEFT_BND, &
@@ -442,7 +443,8 @@ module fluidboundaries
          case ('shef')
 !         Do nothing if 'mpi'
          case default
-            call warn('[fluid_boundaries:bnd_u]: Boundary condition '//bnd_xl//' not implemented in '//dim)
+            write(msg,'("[fluid_boundaries:bnd_u]: Boundary condition ",a," not implemented in ",a)') trim(bnd_xl), trim(dim)
+            call warn(msg)
          end select  ! (bnd_xl)
 
          select case (bnd_xr)
@@ -492,7 +494,8 @@ module fluidboundaries
 #endif /* COSM_RAYS */
             enddo
          case default
-            call warn('[fluid_boundaries:bnd_u]: Boundary condition '//bnd_xr//' not implemented in '//dim)
+            write(msg,'("[fluid_boundaries:bnd_u]: Boundary condition ",a," not implemented in ",a)') trim(bnd_xr), trim(dim)
+            call warn(msg)
          end select  ! (bnd_xr)
 
       case ('ydim')
@@ -540,7 +543,8 @@ module fluidboundaries
 #endif /* COSM_RAYS */
             enddo
          case default
-            call warn('[fluid_boundaries:bnd_u]: Boundary condition '//bnd_yl//' not implemented in '//dim)
+            write(msg,'("[fluid_boundaries:bnd_u]: Boundary condition ",a," not implemented in ",a)') trim(bnd_yl), trim(dim)
+            call warn(msg)
          end select  ! (bnd_yl)
 
          select case (bnd_yr)
@@ -586,7 +590,8 @@ module fluidboundaries
 #endif /* COSM_RAYS */
             enddo
          case default
-            call warn('[fluid_boundaries:bnd_u]: Boundary condition '//bnd_yr//' not implemented in '//dim)
+            write(msg,'("[fluid_boundaries:bnd_u]: Boundary condition ",a," not implemented in ",a)') trim(bnd_yr), trim(dim)
+            call warn(msg)
          end select  ! (bnd_yr)
 
       case ('zdim')
@@ -689,7 +694,8 @@ module fluidboundaries
             enddo ! ib
 #endif /* GRAV */
          case default
-            call warn('[fluid_boundaries:bnd_u]: Boundary condition '//bnd_zl//' not implemented in '//dim)
+            write(msg,'("[fluid_boundaries:bnd_u]: Boundary condition ",a," not implemented in ",a)') trim(bnd_zl), trim(dim)
+            call warn(msg)
          end select  ! (bnd_zl)
 
          select case (bnd_zr)
@@ -790,7 +796,8 @@ module fluidboundaries
             enddo ! ib
 #endif /* GRAV */
          case default
-            call warn('[fluid_boundaries:bnd_u]: Boundary condition '//bnd_zr//' not implemented in '//dim)
+            write(msg,'("[fluid_boundaries:bnd_u]: Boundary condition ",a," not implemented in ",a)') trim(bnd_zr), trim(dim)
+            call warn(msg)
          end select  ! (bnd_zr)
 
       end select  ! (dim)

@@ -230,7 +230,7 @@ module mpisetup
                call printinfo(msg, .false.)
             enddo
             call printinfo("", .true.)
-            write(msg,"(a,i5)") 'Start of the'//ansi_white//' PIERNIK '//ansi_black//'code. No. of procs = ', nproc
+            write(msg,"(5a,i5)") 'Start of the',ansi_white,' PIERNIK ',ansi_black,'code. No. of procs = ', nproc
             call printinfo(msg, .true.)
             call printinfo("", .true.)
             call printinfo("###############     Namelist parameters     ###############", .false.)
