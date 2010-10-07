@@ -474,9 +474,9 @@ module gravity
       integer :: i, j, k
       real    :: r_smooth2, gm, gmr, z2, yz2
 #endif /* GRAV_PTMASSPURE || GRAV_PTMASS || GRAV_PTFLAT || GRAV_PTMASSSTIFF */
-#ifdef GRAV_LINEAR
+#if defined GRAV_UNIFORM || defined GRAV_LINEAR
       integer :: i
-#endif /* GRAV_LINEAR */
+#endif /* GRAV_UNIFORM || GRAV_LINEAR */
 #if defined (GRAV_PTMASSPURE) || defined (GRAV_PTMASS) || defined (GRAV_PTMASSSTIFF)
       real    :: r2
 #endif /* GRAV_PTMASSPURE || GRAV_PTMASS || GRAV_PTMASSSTIFF */
