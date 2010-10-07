@@ -289,6 +289,9 @@ module dataio_hdf5
 #ifdef COSM_RAYS
       use fluidindex,   only : iarr_all_crs
 #endif /* COSM_RAYS */
+#ifdef NEUTRAL
+      use initneutral,  only: gamma_neu
+#endif /* NEUTRAL */
 
       implicit none
       character(LEN=4)     :: var !< quantity to be plotted
@@ -405,6 +408,18 @@ module dataio_hdf5
 #else /* !ISO */
             tab(:,:) = 0.0
 #endif /* !ISO */
+#ifdef NEUTRAL
+         case("pren")
+#ifndef ISO
+            if(ij=="xy") then
+               tab(:,:) = real( u(ind%enn,nb+1:nxb+nb,nb+1:nyb+nb,xn) - &
+                 0.5 *( u(ind%mxn,nb+1:nxb+nb,nb+1:nyb+nb,xn)**2 + u(ind%myn,nb+1:nxb+nb,nb+1:nyb+nb,xn)**2 + &
+                        u(ind%mzn,nb+1:nxb+nb,nb+1:nyb+nb,xn)**2 ) / u(ind%dnn,nb+1:nxb+nb,nb+1:nyb+nb,xn),4)*(gamma_neu-1.0)
+            endif
+#else /* !ISO */
+            tab = 0.0
+#endif /* !ISO */
+#endif /* NEUTRAL */
          case ("enei")
 #ifndef ISO
             if(ij=="yz") tab(:,:) = u(ind%eni,xn,nb+1:nyb+nb,nb+1:nzb+nb)
@@ -479,6 +494,9 @@ module dataio_hdf5
 #ifdef IONIZED
       use initionized,  only: gamma_ion
 #endif /* IONIZED */
+#ifdef NEUTRAL
+      use initneutral,  only: gamma_neu
+#endif /* NEUTRAL */
 
       implicit none
       character(LEN=4), intent(in)   :: var
@@ -522,6 +540,15 @@ module dataio_hdf5
             tab(:,:,:) = real(u(ind%mzn,RNG) / u(ind%dnn,RNG),4)
          case("vlzi")
             tab(:,:,:) = real(u(ind%mzi,RNG) / u(ind%dni,RNG),4)
+#ifdef NEUTRAL
+         case("pren")
+#ifndef ISO
+            tab(:,:,:) = real( u(ind%enn,RNG) - &
+              0.5 *( u(ind%mxn,RNG)**2 + u(ind%myn,RNG)**2 + u(ind%mzn,RNG)**2 ) / u(ind%dnn,RNG),4)*(gamma_neu-1.0)
+#else /* !ISO */
+            tab = 0.0
+#endif /* !ISO */
+#endif /* NEUTRAL */
          case("enen")
 #ifdef ISO
             tab(:,:,:) = real(0.5 *( u(ind%mxn,RNG)**2 + &
@@ -590,7 +617,7 @@ module dataio_hdf5
 
       if( ((t-last_plt_time) > dt_plt) .and. dt_plt > 0.0 .or. first_entry) then
          fe = len_trim(log_file)
-         fname = trim(log_file(1:fe-3)//"plt")
+         write(fname,'(2a)') trim(log_file(1:fe-3)),"plt"
          call H5open_f(error)
 
          if(proc==0 .and. first_entry) then
@@ -637,7 +664,7 @@ module dataio_hdf5
 #ifdef PGPLOT
       use viz,           only: draw_me
 #endif /* PGPLOT */
-      use dataio_public, only: vizit, fmin, fmax, cwdlen, log_file
+      use dataio_public, only: vizit, fmin, fmax, cwdlen, log_file, msg
       use mpisetup, only : MPI_CHARACTER, comm3d, ierr, pxsize, pysize, pzsize, MPI_DOUBLE_PRECISION, t, pcoords
       use hdf5,     only : HID_T, HSIZE_T, SIZE_T, H5F_ACC_RDWR_F, h5fopen_f, h5gopen_f, h5gclose_f, h5fclose_f
       use h5lt,     only : h5ltmake_dataset_double_f, h5ltset_attribute_double_f
@@ -675,7 +702,7 @@ module dataio_hdf5
 
       rank = 2
       fe = len_trim(log_file)
-      fname = trim(log_file(1:fe-3)//"plt")
+      write(fname,'(2a)') trim(log_file(1:fe-3)),"plt"
       call MPI_BCAST(fname, cwdlen, MPI_CHARACTER, 0, comm3d, ierr)
 
       nib = 0; nid = 0; njb = 0; njd = 0; nkb = 0; pisize = 0; pjsize = 0
@@ -743,7 +770,10 @@ module dataio_hdf5
          ok_plt_var = .false.
          call common_plt_hdf5(var,plane,xn,send,ierrh)
          if(ierrh==0) ok_plt_var = .true.
-         if(.not.ok_plt_var) call die(var//" is not defined in common_plt_hdf5, neither in user_plt !!!")
+         if(.not.ok_plt_var) then
+            write(msg,'(2a)') var, " is not defined in common_plt_hdf5, neither in user_plt !!!"
+            call die(msg)
+         endif
 
          temp = -1.0
          call MPI_GATHER(send, nib*njb, MPI_DOUBLE_PRECISION, &
@@ -1283,7 +1313,7 @@ module dataio_hdf5
       use errh,         only: die, printinfo
       use func,         only: fix_string
       use list_hdf5,    only: problem_read_restart
-      use dataio_public, only: cwdlen
+      use dataio_public, only: cwdlen, msg
 
       IMPLICIT NONE
 
@@ -1319,12 +1349,16 @@ module dataio_hdf5
 
       if(proc==0) then
          write (filename,'(a,a1,a3,a1,i4.4,a4)') trim(problem_name),'_', run_id,'_',chdf%nres,'.res'
-         call printinfo('Reading restart  file: '//trim(filename))
+         write (msg, '(2a)') 'Reading restart  file: ',trim(filename)
+         call printinfo(msg)
       endif
       call MPI_BCAST(filename, cwdlen, MPI_CHARACTER, 0, comm, ierr)
 
       inquire(file = filename, exist = file_exist)
-      if(file_exist .eqv. .false.) call die('[dataio_hdf5:read_restart_hdf5]: Restart file: '//trim(filename)//' does not exist')
+      if(file_exist .eqv. .false.) then
+         write(msg,'(3a)') '[dataio_hdf5:read_restart_hdf5]: Restart file: ',trim(filename),' does not exist'
+         call die(msg)
+      endif
 
       CALL h5open_f(error)
       CALL h5pcreate_f(H5P_FILE_ACCESS_F, plist_id, error)
@@ -1474,7 +1508,8 @@ module dataio_hdf5
 
          CALL h5fclose_f(file_id, error)
 
-         call printinfo('Done reading restart file: '//trim(filename), .false.)
+         write(msg,'(2a)') 'Done reading restart file: ',trim(filename)
+         call printinfo(msg, .false.)
       endif
 
       call MPI_BCAST(chdf%nstep,    1, MPI_INTEGER, 0, comm3d, ierr)
@@ -1512,7 +1547,7 @@ module dataio_hdf5
 #ifdef MULTIGRID
       use multigridio, only: multigrid_write_hdf5
 #endif /* MULTIGRID */
-      use dataio_public, only: cwdlen
+      use dataio_public, only: cwdlen, msg
 
       implicit none
 
@@ -1529,7 +1564,7 @@ module dataio_hdf5
       ! Initialize HDF5 library and Fortran interfaces.
       !
       write(dd,'(i4.4)') chdf%nhdf
-      fname = trim(problem_name)//"_"//trim(run_id)//"_"//dd//".h5"
+      write(fname, '(6a)') trim(problem_name),"_",trim(run_id),"_",dd,".h5"
 
       CALL h5open_f(error)
       !
@@ -1546,8 +1581,10 @@ module dataio_hdf5
       ierrh = 0; ok_var = .false.
       do i = 1, nhdf_vars
          call common_vars_hdf5(hdf_vars(i),data,ierrh);  if(ierrh == 0) ok_var = .true.
-         if(.not.ok_var) &
-            call die("[dataio_hdf5:write_hdf5]: "//hdf_vars(i)//" is not defined in common_vars_hdf5, neither in user_hdf5.")
+         if(.not.ok_var) then
+            write(msg,'(3a)') "[dataio_hdf5:write_hdf5]: ",hdf_vars(i)," is not defined in common_vars_hdf5, neither in user_hdf5."
+            call die(msg)
+         endif
          call write_arr(data,hdf_vars(i),file_id)
       enddo
      if(allocated(data)) deallocate(data)
@@ -1666,6 +1703,7 @@ module dataio_hdf5
 
    subroutine set_common_attributes(filename, chdf, stype)
 
+      use dataio_public, only: msg
       use mpisetup,     only: proc, t, dt, psize
       use h5lt,         only: h5ltset_attribute_double_f, h5ltset_attribute_int_f, h5ltmake_dataset_string_f, h5ltset_attribute_string_f
       use hdf5,         only: HID_T, SIZE_T, H5F_ACC_RDWR_F, h5fopen_f, h5fclose_f, h5gcreate_f, h5gclose_f
@@ -1772,7 +1810,8 @@ module dataio_hdf5
 
          call h5fclose_f(file_id, error)
 
-         call printinfo('Writing '//stype//' file: '//trim(filename))
+         write(msg,'(4a)') 'Writing ',stype,' file: ',trim(filename)
+         call printinfo(msg)
       endif
 
    end subroutine set_common_attributes
