@@ -244,8 +244,8 @@ module dataio
       min_disk_space_MB = 100
       sleep_minutes   = 0
       sleep_seconds   = 0
-      user_message_file   = trim(cwd)//'/msg'
-      system_message_file = '/tmp/piernik_msg'
+      write(user_message_file,'(a,"/msg")') trim(cwd)
+      write(system_message_file, '(a)') "/tmp/piernik_msg"
 
       wait  = .false.
       tsl_firstcall = .true.
@@ -415,9 +415,9 @@ module dataio
             call printinfo(env(i), .false.)
          enddo
          write (log_file,'(a,a1,a3,a1,i3.3,a4)') trim(problem_name),'_', run_id,'_',nrestart,'.log'
-         log_file = trim(cwd)//'/'//log_file
+         write (log_file,'(a,"/",a)') trim(cwd),trim(log_file)
          ! ToDo: if the simulation is restarted then save previous log_file (if exists) under a different, unique name
-         system_command = 'mv '//trim(tmp_log_file)//' '//trim(log_file)
+         write(system_command, '("mv ",a," ",a)') trim(tmp_log_file), trim(log_file)
          system_status = SYSTEM(system_command)
       endif
       call set_container_chdf(nstep); chdf%nres = nrestart
@@ -507,21 +507,23 @@ module dataio
                end_sim = .true.
             case('help')
                if (proc == 0) then
-                  write(lmsg,'(a)') "[dataio:user_msg_handler] Recognized messages:"//char(10)//&
-                  &"  help     - prints this information"//char(10)//&
-                  &"  stop     - finish the simulation"//char(10)//&
-                  &"  res|dump - immediately dumps a restart file"//char(10)//&
-                  &"  hdf      - dumps a plotfile"//char(10)//&
-                  &"  log      - update logfile"//char(10)//&
-                  &"  tsl      - write a timeslice"//char(10)//&
-                  &"  sleep <number> - wait <number> seconds"//char(10)//&
-                  &"  tend|nend|dtres|dthdf|dtlog|dttsl|dtplt <value> - update specified parameter with <value>"//char(10)//&
+                  write(lmsg,*) "[dataio:user_msg_handler] Recognized messages:",char(10),&
+                  &"  help     - prints this information",char(10),&
+                  &"  stop     - finish the simulation",char(10),&
+                  &"  res|dump - immediately dumps a restart file",char(10),&
+                  &"  hdf      - dumps a plotfile",char(10),&
+                  &"  log      - update logfile",char(10),&
+                  &"  tsl      - write a timeslice",char(10),&
+                  &"  sleep <number> - wait <number> seconds",char(10),&
+                  &"  tend|nend|dtres|dthdf|dtlog|dttsl|dtplt <value> - update specified parameter with <value>",char(10),&
                   &"Note that only one line at a time is read."
                   call printinfo(lmsg)
                end if
             case default
-               if (proc == 0) &
-                  call warn("[dataio:user_msg_handler]: non-recognized message '"//trim(msg)//"'. Use message 'help' for list of valid keys.")
+               if (proc == 0) then
+                  write(lmsg,*) "[dataio:user_msg_handler]: non-recognized message '",trim(msg),"'. Use message 'help' for list of valid keys."
+                  call warn(lmsg)
+               endif
          end select
       endif
 

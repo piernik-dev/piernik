@@ -87,14 +87,8 @@ module dataio_public
 
    character(LEN=1024) :: msg                   !< buffer for messages
 
-      character(len=4), parameter :: ansi_black   = char(27)//"[0m"
-      character(len=7), parameter :: ansi_red     = char(27)//'[1;31m'
-      character(len=7), parameter :: ansi_green   = char(27)//'[1;32m'
-      character(len=7), parameter :: ansi_yellow  = char(27)//'[1;33m'
-      character(len=7), parameter :: ansi_blue    = char(27)//'[1;34m'
-      character(len=7), parameter :: ansi_magenta = char(27)//'[1;35m'
-      character(len=7), parameter :: ansi_cyan    = char(27)//'[1;36m'
-      character(len=7), parameter :: ansi_white   = char(27)//'[1;37m'
+   character(len=4) :: ansi_black
+   character(len=7) :: ansi_red, ansi_green, ansi_yellow, ansi_blue, ansi_magenta, ansi_cyan, ansi_white
 
    include 'mpif.h'
 
@@ -114,6 +108,19 @@ contains
       character(len=7)  :: ansicolor
       character(len=7) :: msg_type_str
       integer :: proc, ierr
+      logical, save :: frun = .true.
+
+      if(frun) then
+         write(ansi_black,  '(A1,A3)') char(27),"[0m"
+         write(ansi_red,    '(A1,A6)') char(27),"[1;31m"
+         write(ansi_green,  '(A1,A6)') char(27),"[1;32m"
+         write(ansi_yellow, '(A1,A6)') char(27),"[1;33m"
+         write(ansi_blue,   '(A1,A6)') char(27),"[1;34m"
+         write(ansi_magenta,'(A1,A6)') char(27),"[1;35m"
+         write(ansi_cyan,   '(A1,A6)') char(27),"[1;36m"
+         write(ansi_white,  '(A1,A6)') char(27),"[1;37m"
+         frun = .false.
+      endif
 
 !      write(*,*) ansi_red//"Red "//ansi_green//"Green "//ansi_yellow//"Yellow "//ansi_blue//"Blue "//ansi_magenta//"Magenta "//ansi_cyan//"Cyan "//ansi_white//"White "//ansi_black ! QA_WARN
 
@@ -141,7 +148,7 @@ contains
          if (mode == T_PLAIN) then
             write(*,'(a)') trim(nm)                                                                               ! QA_WARN
          else
-            write(*,'(a,i5,2a)') trim(ansicolor)//msg_type_str//" @"//ansi_black, proc, ': ', trim(nm)            ! QA_WARN
+            write(*,'(a,a," @",a,i5,2a)') trim(ansicolor),msg_type_str,ansi_black, proc, ': ', trim(nm)           ! QA_WARN
          end if
       end if
 
@@ -151,7 +158,7 @@ contains
          open(log_lun, file=tmp_log_file, status='unknown', position='append')
       end if
       if (proc == 0 .and. mode == T_ERR) write(log_lun,'(/,a,/)')"###############     Crashing     ###############"
-      write(log_lun,'(a,i5,2a)') msg_type_str//" @", proc, ': ', trim(nm)
+      write(log_lun,'(2a,i5,2a)') msg_type_str," @", proc, ': ', trim(nm)
       close(log_lun)
 
    end subroutine colormessage

@@ -154,9 +154,9 @@ module func
          read(lun_aft,'(a)', iostat=io) sb
          if(io/=0) exit
          if((sa/=sb)) then
-            msg='*'//trim(sb)
+            write(msg,'(a1,a)') '*',trim(sb)
          else
-            msg=' '//trim(sb)
+            write(msg,'(a1,a)') ' ',trim(sb)
          endif
          call printinfo(msg, .false.)
       enddo
