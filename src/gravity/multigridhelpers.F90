@@ -210,6 +210,7 @@ contains
 
    subroutine ascii_dump(filename)
 
+      use dataio_public, only: msg
       use mpisetup,      only: proc
       use multigridvars, only: level_min, level_max, lvl, gb_cartmap, ngridvars, XDIR, YDIR, ZDIR
 
@@ -243,7 +244,9 @@ contains
 
       close(fu)
 
-      if (proc == 0) call mg_write_log("[multigridhelpers:ascii_dump] Wrote dump '"//filename//"'")
+      if (proc == 0) then
+         write(msg,'(3a)') "[multigridhelpers:ascii_dump] Wrote dump '",filename,"'"
+         call mg_write_log(msg)
 
    end subroutine ascii_dump
 
