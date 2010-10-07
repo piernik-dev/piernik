@@ -541,7 +541,7 @@ module mpisetup
 
          if (proc == 0) call printinfo("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++", .false.)
          call MPI_BARRIER(comm,ierr)
-         call sleep(5)
+         if (nproc > 1) call sleep(5) ! Why we need to sleep here?
          call MPI_FINALIZE(ierr)
 
       end subroutine cleanup_mpi
