@@ -99,8 +99,10 @@ contains
    end function delete_timer
 
    subroutine cleanup_timers
-
-      use dataio_public, only : msg
+#ifdef VERBOSE
+      use dataio_public, only: msg
+      use errh,          only: warn
+#endif /* VERBOSE */
 
       implicit none
 
