@@ -34,6 +34,7 @@
 module rtvd ! split orig
 
    contains
+!/*
 !>
 !! \brief Subroutine computes magnetic field evolution
 !!
@@ -99,6 +100,7 @@ module rtvd ! split orig
 !!
 !!Analogous procedure applies to remaining EMF components.
 !<
+!*/
    subroutine tvdb(vibj,b,vg,n,dt,di)
       use constants, only : big
       implicit none
@@ -170,7 +172,7 @@ module rtvd ! split orig
       enddo
 
    end subroutine tvdb
-
+!/*
 !>
 !! \brief Subroutine implements the Relaxing TVD scheme for conserved physical quantities
 !!
@@ -213,6 +215,7 @@ module rtvd ! split orig
 !! The Total Variation Diminishing property of the numerical scheme is related to the measure of the overall amount
 !! of oscillations, called Total Variation.
 !<
+!*/
    subroutine relaxing_tvd(n, u, bb, sweep, i1, i2, dx, dt)
 
       use mpisetup,        only : smalld, integration_order
