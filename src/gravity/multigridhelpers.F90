@@ -247,6 +247,7 @@ contains
       if (proc == 0) then
          write(msg,'(3a)') "[multigridhelpers:ascii_dump] Wrote dump '",filename,"'"
          call mg_write_log(msg)
+      endif
 
    end subroutine ascii_dump
 
