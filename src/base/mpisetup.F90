@@ -185,6 +185,9 @@ module mpisetup
          logical :: par_file_exist
 
          call MPI_INIT( ierr )
+#ifdef VERBOSE
+         call printinfo("[mpisetup:init_mpi]: commencing...")
+#endif /* VERBOSE */
          call MPI_COMM_RANK(MPI_COMM_WORLD, proc, ierr)
          comm = MPI_COMM_WORLD
          info = MPI_INFO_NULL
@@ -483,6 +486,9 @@ module mpisetup
             endif
             dt_max_grow = dt_default_grow
          end if
+#ifdef VERBOSE
+         call printinfo("[mpisetup:init_mpi]: finished. \o/")
+#endif /* VERBOSE */
 
       end subroutine init_mpi
 

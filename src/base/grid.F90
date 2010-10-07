@@ -168,7 +168,7 @@ module grid
       use types,     only : grid_container
       use mpisetup,  only : ierr, ibuff, rbuff, MPI_INTEGER, MPI_DOUBLE_PRECISION, proc, &
            &                buffer_dim, pxsize, pysize, pzsize, comm
-      use errh,      only : namelist_errh, die
+      use errh,      only : namelist_errh, die, printinfo
       use func,      only : compare_namelist
       use dataio_public, only : par_file, ierrh
 
@@ -178,6 +178,10 @@ module grid
 
       namelist /DOMAIN_SIZES/ nxd, nyd, nzd, nb
       namelist /DOMAIN_LIMITS/ xmin, xmax, ymin, ymax, zmin, zmax
+
+#ifdef VERBOSE
+      call printinfo("[grid:init_grid]: commencing...")
+#endif /* VERBOSE */
 
       nxd  = 1
       nyd  = 1
@@ -289,6 +293,9 @@ module grid
       call grid_xyz
 
       call set_container_grid(cgrid)
+#ifdef VERBOSE
+      call printinfo("[grid:init_grid]: finished. \o/")
+#endif /* VERBOSE */
    end subroutine init_grid
 !>
 !! \brief Routine that computes domain maximum and minimum of coordinates, lengths of cells and coordinates of zone centers and left/right zone boundaries.
