@@ -87,6 +87,15 @@ module dataio_public
 
    character(LEN=1024) :: msg                   !< buffer for messages
 
+      character(len=4), parameter :: ansi_black   = char(27)//"[0m"
+      character(len=7), parameter :: ansi_red     = char(27)//'[1;31m'
+      character(len=7), parameter :: ansi_green   = char(27)//'[1;32m'
+      character(len=7), parameter :: ansi_yellow  = char(27)//'[1;33m'
+      character(len=7), parameter :: ansi_blue    = char(27)//'[1;34m'
+      character(len=7), parameter :: ansi_magenta = char(27)//'[1;35m'
+      character(len=7), parameter :: ansi_cyan    = char(27)//'[1;36m'
+      character(len=7), parameter :: ansi_white   = char(27)//'[1;37m'
+
    include 'mpif.h'
 
 contains
@@ -102,14 +111,11 @@ contains
 
       integer, parameter  :: log_lun = 3            !< luncher for log file
 
-      character(len=4), parameter :: ansi_black  = char(27)//"[0m"
-      character(len=7), parameter :: ansi_red    = char(27)//'[1;31m'
-      character(len=7), parameter :: ansi_green  = char(27)//'[1;32m'
-      character(len=7), parameter :: ansi_yellow = char(27)//'[1;33m'
-
       character(len=7)  :: ansicolor
       character(len=7) :: msg_type_str
       integer :: proc, ierr
+
+!      write(*,*) ansi_red//"Red "//ansi_green//"Green "//ansi_yellow//"Yellow "//ansi_blue//"Blue "//ansi_magenta//"Magenta "//ansi_cyan//"Cyan "//ansi_white//"White "//ansi_black ! QA_WARN
 
       select case(mode)
          case (T_ERR)

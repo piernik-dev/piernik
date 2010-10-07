@@ -161,7 +161,7 @@ module mpisetup
       subroutine init_mpi
 
          use errh,          only : die, namelist_errh, warn, printinfo
-         use dataio_public, only : msg, cwdlen, hnlen, cwd, par_file, ierrh
+         use dataio_public, only : msg, cwdlen, hnlen, cwd, par_file, ierrh, ansi_white, ansi_black
          use func,          only : compare_namelist
 
          implicit none
@@ -219,7 +219,7 @@ module mpisetup
          endif
 
          if(proc == 0) then
-            call printinfo("------------------------------------------------------------------------------------------------------", .true.)
+            call printinfo("------------------------------------------------------------------------------------------------------", .false.)
             call printinfo("###############     Environment     ###############", .false.)
             call printinfo("", .false.)
             call printinfo("PROCESSES:", .false.)
@@ -230,7 +230,7 @@ module mpisetup
                call printinfo(msg, .false.)
             enddo
             call printinfo("", .true.)
-            write(msg,"(a,i5)") 'Start of the PIERNIK code. No. of procs = ', nproc
+            write(msg,"(a,i5)") 'Start of the'//ansi_white//' PIERNIK '//ansi_black//'code. No. of procs = ', nproc
             call printinfo(msg, .true.)
             call printinfo("", .true.)
             call printinfo("###############     Namelist parameters     ###############", .false.)
