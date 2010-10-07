@@ -70,6 +70,7 @@ subroutine bnd_a(A)
 end subroutine bnd_a
 
 subroutine bnd_b(dim)
+   use dataio_public, only : msg
    use errh,      only : warn
    use mpisetup,  only : MPI_DOUBLE_PRECISION, bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr, &
       ierr, req, comm3d, procxl, procxr, procyl, procyr, proczl, proczr, status, &
@@ -94,7 +95,7 @@ subroutine bnd_b(dim)
 ! MPI block comunication
 
   select case (dim)
-    case ('xdim')
+    case ("xdim")
 #ifdef SHEAR
       allocate(send_left(3,nb,ny,nz),send_right(3,nb,ny,nz), &
                recv_left(3,nb,ny,nz),recv_right(3,nb,ny,nz))
@@ -102,7 +103,7 @@ subroutine bnd_b(dim)
       send_left (:,:,:,:)  = b(:,nb+1:2*nb,:,:)
       send_right(:,:,:,:)  = b(:,nxb+1:nxb+nb,:,:)
 
-      if(bnd_xl == 'she') then
+      if(bnd_xl == "she") then
 !
 ! przesuwamy o calkowita liczbe komorek + periodyczny wb w kierunku y
 !
@@ -115,10 +116,10 @@ subroutine bnd_b(dim)
         send_left (:,:,:,:)  = (1.+eps)*(1.-eps) * send_left (:,:,:,:) &
                                -0.5*eps*(1.-eps) * cshift(send_left (:,:,:,:),shift=-1,dim=3) &
                                +0.5*eps*(1.+eps) * cshift(send_left (:,:,:,:),shift=1,dim=3)
-      endif ! (bnd_xl == 'she')
+      endif ! (bnd_xl == "she")
 
 
-      if(bnd_xr == 'she') then
+      if(bnd_xr == "she") then
 !
 ! przesuwamy o calkowita liczbe komorek + periodyczny wb w kierunku y
 !
@@ -131,7 +132,7 @@ subroutine bnd_b(dim)
         send_right (:,:,:,:) = (1.+eps)*(1.-eps) * send_right (:,:,:,:) &
                                -0.5*eps*(1.-eps) * cshift(send_right (:,:,:,:),shift=1,dim=3) &
                                +0.5*eps*(1.+eps) * cshift(send_right (:,:,:,:),shift=-1,dim=3)
-      endif ! (bnd_xr == 'she')
+      endif ! (bnd_xr == "she")
 !
 ! wysylamy na drugi brzeg
 !
@@ -166,7 +167,7 @@ subroutine bnd_b(dim)
 #endif /* SHEAR */
 
 
-    case ('ydim')
+    case ("ydim")
       if(pysize .gt. 1) then
 
         CALL MPI_ISEND  (b(1,1,1,1), 1, MAG_XZ_LEFT_DOM,  procyl, 30, comm3d, req(1), ierr)
@@ -177,7 +178,7 @@ subroutine bnd_b(dim)
         call MPI_WAITALL(4,req(:),status(:,:),ierr)
       endif
 
-    case ('zdim')
+    case ("zdim")
       if(pzsize .gt. 1) then
         CALL MPI_ISEND  (b(1,1,1,1), 1, MAG_XY_LEFT_DOM,  proczl, 50, comm3d, req(1), ierr)
         CALL MPI_ISEND  (b(1,1,1,1), 1, MAG_XY_RIGHT_DOM, proczr, 60, comm3d, req(3), ierr)
@@ -190,7 +191,7 @@ subroutine bnd_b(dim)
 
 ! MPI + non-MPI corner-periodic boundary condition
 
-  if(bnd_xl .eq. 'cor') then
+  if(bnd_xl .eq. "cor") then
 !   - lower to left
     if(pcoords(1) .eq. 0 .and. pcoords(2) .eq. 0) then
       do i=1,nb
@@ -225,7 +226,7 @@ subroutine bnd_b(dim)
     endif
   endif
 
-  if(bnd_yl .eq. 'cor') then
+  if(bnd_yl .eq. "cor") then
 !   - left to lower
     if(pcoords(2) .eq. 0 .and. pcoords(1) .eq. 0 ) then
       do j=1,nb
@@ -272,117 +273,123 @@ subroutine bnd_b(dim)
 ! Non-MPI boundary conditions
 
   select case (dim)
-    case ('xdim')
+    case ("xdim")
 
       select case (bnd_xl(1:3))
-        case ('she')
-!         Do nothing if 'she'
-        case ('mpi')
-!         Do nothing if 'mpi'
-        case ('per')
+        case ("she")
+!         Do nothing if "she"
+        case ("mpi")
+!         Do nothing if "mpi"
+        case ("per")
           b(:,1:nb,:,:)                  = b(:,nxb+1:nxb+nb,:,:)
-        case ('cor')
-!         Do nothing if 'cor'
-        case ('inf')
-!         Do nothing if 'inf'
-        case ('ref')
-!         Do nothing if 'ref'
-        case ('out')
+        case ("cor")
+!         Do nothing if "cor"
+        case ("inf")
+!         Do nothing if "inf"
+        case ("ref")
+!         Do nothing if "ref"
+        case ("out")
           b(:,1,:,:) = b(:,2,:,:)
-!         Do nothing if 'out'
+!         Do nothing if "out"
         case default
-          call warn('[magboundaries:bnd_b]: Boundary condition '//bnd_xl//' not implemented in '//dim)
+          write(msg,'(4a)') "[magboundaries:bnd_b]: Boundary condition ",bnd_xl," not implemented in ",dim
+          call warn(msg)
       end select  ! (bnd_xl)
 
       select case (bnd_xr(1:3))
-        case ('she')
-!         Do nothing if 'she'
-        case ('mpi')
-!         Do nothing if 'mpi'
-        case ('per')
+        case ("she")
+!         Do nothing if "she"
+        case ("mpi")
+!         Do nothing if "mpi"
+        case ("per")
           b(:,nxb+nb+1:nxb+2*nb,:,:)     = b(:,nb+1:2*nb,:,:)
-        case ('cor')
-!         Do nothing if 'cor'
-        case ('inf')
-!         Do nothing if 'inf'
-        case ('ref')
-!         Do nothing if 'ref'
-        case ('out')
-!         Do nothing if 'out'
+        case ("cor")
+!         Do nothing if "cor"
+        case ("inf")
+!         Do nothing if "inf"
+        case ("ref")
+!         Do nothing if "ref"
+        case ("out")
+!         Do nothing if "out"
           b(:,nx,:,:) = b(:,nx-1,:,:)
         case default
-          call warn('[magboundaries:bnd_b]: Boundary condition '//bnd_xr//' not implemented in '//dim)
+          write(msg,'(4a)') "[magboundaries:bnd_b]: Boundary condition ",bnd_xr," not implemented in ",dim
+          call warn(msg)
       end select  ! (bnd_xr)
 
 
-    case ('ydim')
+    case ("ydim")
 
       select case (bnd_yl(1:3))
-        case ('mpi')
-!         Do nothing if 'mpi'
-        case ('per')
+        case ("mpi")
+!         Do nothing if "mpi"
+        case ("per")
           b(:,:,1:nb,:)                  = b(:,:,nyb+1:nyb+nb,:)
-        case ('cor')
-!         Do nothing if 'cor'
-        case ('inf')
-!         Do nothing if 'inf'
-        case ('ref')
-!         Do nothing if 'ref'
-        case ('out')
+        case ("cor")
+!         Do nothing if "cor"
+        case ("inf")
+!         Do nothing if "inf"
+        case ("ref")
+!         Do nothing if "ref"
+        case ("out")
           b(:,:,1,:) = b(:,:,2,:)
-!         Do nothing if 'out'
+!         Do nothing if "out"
         case default
-          call warn('[magboundaries:bnd_b]: Boundary condition '//bnd_yl//' not implemented in '//dim)
+          write(msg,'(4a)') "[magboundaries:bnd_b]: Boundary condition ",bnd_yl," not implemented in ",dim
+          call warn(msg)
       end select  ! (bnd_yl)
 
       select case (bnd_yr(1:3))
-        case ('mpi')
-!         Do nothing if 'mpi'
-        case ('per')
+        case ("mpi")
+!         Do nothing if "mpi"
+        case ("per")
           b(:,:,nyb+nb+1:nyb+2*nb,:)     = b(:,:,nb+1:2*nb,:)
-        case ('cor')
-!         Do nothing if 'cor'
-        case ('inf')
-!         Do nothing if 'inf'
-        case ('ref')
-!         Do nothing if 'ref'
-        case ('out')
-!         Do nothing if 'out'
+        case ("cor")
+!         Do nothing if "cor"
+        case ("inf")
+!         Do nothing if "inf"
+        case ("ref")
+!         Do nothing if "ref"
+        case ("out")
+!         Do nothing if "out"
           b(:,:,ny,:) = b(:,:,ny-1,:)
         case default
-          call warn('[magboundaries:bnd_b]: Boundary condition '//bnd_yr//' not implemented in '//dim)
+          write(msg,'(4a)') "[magboundaries:bnd_b]: Boundary condition ",bnd_yr," not implemented in ",dim
+          call warn(msg)
 
       end select  ! (bnd_yr)
 
 
-    case ('zdim')
+    case ("zdim")
 
       select case (bnd_zl(1:3))
-        case ('mpi')
-!         Do nothing if 'mpi'
-        case ('per')
+        case ("mpi")
+!         Do nothing if "mpi"
+        case ("per")
           b(:,:,:,1:nb)                  = b(:,:,:,nzb+1:nzb+nb)
-        case ('ref')
-!         Do nothing if 'ref'
-        case ('out')
+        case ("ref")
+!         Do nothing if "ref"
+        case ("out")
           b(:,:,:,1) = b(:,:,:,2)
-!         Do nothing if 'out'
+!         Do nothing if "out"
         case default
-          call warn('[magboundaries:bnd_b]: Boundary condition '//bnd_zl//' not implemented in '//dim)
+          write(msg,'(4a)') "[magboundaries:bnd_b]: Boundary condition ",bnd_zl," not implemented in ",dim
+          call warn(msg)
       end select  ! (bnd_zl)
 
       select case (bnd_zr(1:3))
-        case ('mpi')
-!         Do nothing if 'mpi'
-        case ('per')
+        case ("mpi")
+!         Do nothing if "mpi"
+        case ("per")
           b(:,:,:,nzb+nb+1:nzb+2*nb)     = b(:,:,:,nb+1:2*nb)
-        case ('ref')
-!         Do nothing if 'ref'
-        case ('out')
-!         Do nothing if 'out'
+        case ("ref")
+!         Do nothing if "ref"
+        case ("out")
+!         Do nothing if "out"
           b(:,:,:,nz) = b(:,:,:,nz-1)
         case default
-          call warn('[magboundaries:bnd_b]: Boundary condition '//bnd_zr//' not implemented in '//dim)
+          write(msg,'(4a)') "[magboundaries:bnd_b]: Boundary condition ",bnd_zr," not implemented in ",dim
+          call warn(msg)
       end select  ! (bnd_zr)
 
     end select  ! (dim)
@@ -393,6 +400,7 @@ end subroutine bnd_b
 !=====================================================================================================
 
 subroutine bnd_emf(var, name, dim)
+   use dataio_public, only: msg
    use errh,      only: warn
    use mpisetup,  only: bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr
    use grid,      only: nx, ny, nz, nb, nxb, nyb, nzb
@@ -407,458 +415,476 @@ subroutine bnd_emf(var, name, dim)
 
 
   select case (dim)
-    case ('xdim')
+    case ("xdim")
 
       select case (name)
-        case ('vxby','vxbz')
+        case ("vxby","vxbz")
 
           select case (bnd_xl(1:3))
-            case ('she')
-!             Do nothing if 'she'
-            case ('mpi')
-!             Do nothing if 'mpi'
-            case ('per')
-!             Do nothing if 'per'
-            case ('cor')
-!             Do nothing if 'cor'
-            case ('inf')
-!             Do nothing if 'inf'
-            case ('ref')
+            case ("she")
+!             Do nothing if "she"
+            case ("mpi")
+!             Do nothing if "mpi"
+            case ("per")
+!             Do nothing if "per"
+            case ("cor")
+!             Do nothing if "cor"
+            case ("inf")
+!             Do nothing if "inf"
+            case ("ref")
               var(nb,:,:)                 = 0.0
               do ib=1,nb-1
                 var(nb-ib,:,:)            = -var(nb+ib,:,:)
               enddo
-            case ('out')
+            case ("out")
               dvarx = var(nb+1,:,:)-var(nb,:,:)
               do ib=1,nb-1
                 var(ib,:,:)               = var(nb+1,:,:)  - real(nb+1-ib)*dvarx
               enddo
             case default
-              call warn('[magboundaries:bnd_emf]: Boundary condition '//bnd_xl//' not implemented for '//name//' in '//dim)
+               write(msg,'(6a)') "[magboundaries:bnd_emf]: Boundary condition ",bnd_xl," not implemented for ",name, " in ", dim
+               call warn(msg)
           end select  ! (bnd_xl)
 
           select case (bnd_xr(1:3))
-            case ('she')
-!             Do nothing if 'she'
-            case ('mpi')
-!             Do nothing if 'mpi'
-            case ('per')
-!             Do nothing if 'per'
-            case ('cor')
-!             Do nothing if 'cor'
-            case ('inf')
-!             Do nothing if 'inf'
-            case ('ref')
+            case ("she")
+!             Do nothing if "she"
+            case ("mpi")
+!             Do nothing if "mpi"
+            case ("per")
+!             Do nothing if "per"
+            case ("cor")
+!             Do nothing if "cor"
+            case ("inf")
+!             Do nothing if "inf"
+            case ("ref")
               var(nb+nxb,:,:)             = 0.0
               do ib=1,nb-1
                 var(nb+nxb+ib,:,:)        = -var(nb+nxb-ib,:,:)
               enddo
-            case ('out')
+            case ("out")
               dvarx = var(nb+nxb,:,:)-var(nb+nxb-1,:,:)
               do ib=1,nb-1
                 var(nb+nxb+ib,:,:)        = var(nb+nxb,:,:) + real(ib)*dvarx
               enddo
             case default
-              call warn('[magboundaries:bnd_emf]: Boundary condition '//bnd_xr//' not implemented for '//name//' in '//dim)
+               write(msg,'(6a)') "[magboundaries:bnd_emf]: Boundary condition ",bnd_xr," not implemented for ",name, " in ", dim
+               call warn(msg)
           end select ! (bnd_xr)
 
-        case ('vybx','vzbx','emfy','emfz')
+        case ("vybx","vzbx","emfy","emfz")
 
           select case (bnd_xl(1:3))
-            case ('she')
-!             Do nothing if 'she'
-            case ('mpi')
-!             Do nothing if 'mpi'
-            case ('per')
-!             Do nothing if 'per'
-            case ('cor')
-!             Do nothing if 'cor'
-            case ('inf')
-!             Do nothing if 'inf'
-            case ('ref')
+            case ("she")
+!             Do nothing if "she"
+            case ("mpi")
+!             Do nothing if "mpi"
+            case ("per")
+!             Do nothing if "per"
+            case ("cor")
+!             Do nothing if "cor"
+            case ("inf")
+!             Do nothing if "inf"
+            case ("ref")
               var(nb+1,:,:)               = 0.0
               do ib=1,nb
                 var(nb+1-ib,:,:)          = -var(nb+1+ib,:,:)
               enddo
-            case ('out')
+            case ("out")
               dvarx = var(nb+2,:,:)-var(nb+1,:,:)
               do ib=1,nb
                 var(ib,:,:)               = var(nb+1,:,:)  - real(nb+1-ib)*dvarx
               enddo
             case default
-              call warn('[magboundaries:bnd_emf]: Boundary condition '//bnd_xl//' not implemented for '//name//' in '//dim)
+               write(msg,'(6a)') "[magboundaries:bnd_emf]: Boundary condition ",bnd_xl," not implemented for ",name, " in ", dim
+               call warn(msg)
           end select   ! (bnd_xl)
 
           select case (bnd_xr(1:3))
-            case ('she')
-!             Do nothing if 'she'
-            case ('mpi')
-!             Do nothing if 'mpi'
-            case ('per')
-!             Do nothing if 'per'
-            case ('cor')
-!             Do nothing if 'cor'
-            case ('inf')
-!             Do nothing if 'inf'
-            case ('ref')
+            case ("she")
+!             Do nothing if "she"
+            case ("mpi")
+!             Do nothing if "mpi"
+            case ("per")
+!             Do nothing if "per"
+            case ("cor")
+!             Do nothing if "cor"
+            case ("inf")
+!             Do nothing if "inf"
+            case ("ref")
               var(nb+nxb+1,:,:)           = 0.0
               do ib=1,nb-1
                 var(nb+nxb+1+ib,:,:)      = -var(nb+nxb+1-ib,:,:)
               enddo
-            case ('out')
+            case ("out")
               dvarx = var(nb+nxb+1,:,:)-var(nb+nxb,:,:)
               do ib=1,nb-1
                 var(nb+nxb+1+ib,:,:)      =  var(nb+nxb+1,:,:) + real(ib)*dvarx
               enddo
             case default
-              call warn('[magboundaries:bnd_emf]: Boundary condition '//bnd_xr//' not implemented for '//name//' in '//dim)
+               write(msg,'(6a)') "[magboundaries:bnd_emf]: Boundary condition ",bnd_xr," not implemented for ",name, " in ", dim
+               call warn(msg)
           end select  ! (bnd_xr)
 
-        case ('vybz','vzby','emfx')
+        case ("vybz","vzby","emfx")
 
           select case (bnd_xl(1:3))
-            case ('she')
-!             Do nothing if 'she'
-            case ('mpi')
-!             Do nothing if 'mpi'
-            case ('per')
-!             Do nothing if 'per'
-            case ('cor')
-!             Do nothing if 'cor'
-            case ('inf')
-!             Do nothing if 'inf'
-            case ('ref')
+            case ("she")
+!             Do nothing if "she"
+            case ("mpi")
+!             Do nothing if "mpi"
+            case ("per")
+!             Do nothing if "per"
+            case ("cor")
+!             Do nothing if "cor"
+            case ("inf")
+!             Do nothing if "inf"
+            case ("ref")
               do ib=1,nb
                 var(nb+1-ib,:,:)          = var(nb+ib,:,:)
               enddo
-            case ('out')
+            case ("out")
               dvarx = var(nb+1,:,:)-var(nb,:,:)
               do ib=1,nb
                 var(ib,:,:)               = var(nb+1,:,:)  - real(nb+1-ib)*dvarx
               enddo
             case default
-              call warn('[magboundaries:bnd_emf]: Boundary condition '//bnd_xl//' not implemented for '//name//' in '//dim)
+               write(msg,'(6a)') "[magboundaries:bnd_emf]: Boundary condition ",bnd_xl," not implemented for ",name, " in ", dim
+               call warn(msg)
           end select   ! (bnd_xl)
 
           select case (bnd_xr(1:3))
-            case ('she')
-!             Do nothing if 'she'
-            case ('mpi')
-!             Do nothing if 'mpi'
-            case ('per')
-!             Do nothing if 'per'
-            case ('cor')
-!             Do nothing if 'cor'
-            case ('inf')
-!             Do nothing if 'inf'
-            case ('ref')
+            case ("she")
+!             Do nothing if "she"
+            case ("mpi")
+!             Do nothing if "mpi"
+            case ("per")
+!             Do nothing if "per"
+            case ("cor")
+!             Do nothing if "cor"
+            case ("inf")
+!             Do nothing if "inf"
+            case ("ref")
               do ib=1,nb
                 var(nb+nxb+ib,:,:)        = var(nb+nxb+1-ib,:,:)
               enddo
-            case ('out')
+            case ("out")
               dvarx = var(nb+nxb+1,:,:)-var(nb+nxb,:,:)
               do ib=1,nb
                 var(nb+nxb+ib,:,:)        = var(nb+nxb,:,:) + real(ib)*dvarx
               enddo
             case default
-              call warn('[magboundaries:bnd_emf]: Boundary condition '//bnd_xr//' not implemented for '//name//' in '//dim)
+               write(msg,'(6a)') "[magboundaries:bnd_emf]: Boundary condition ",bnd_xr," not implemented for ",name, " in ", dim
+               call warn(msg)
           end select   ! (bnd_xr)
 
        end select  ! (name)
 
-    case ('ydim')
+    case ("ydim")
 
       select case (name)
-        case ('vybz','vybx')
+        case ("vybz","vybx")
 
           select case (bnd_yl(1:3))
-            case ('mpi')
-!             Do nothing if 'mpi'
-            case ('per')
-!             Do nothing if 'per'
-            case ('cor')
-!             Do nothing if 'cor'
-            case ('inf')
-!             Do nothing if 'inf'
-            case ('ref')
+            case ("mpi")
+!             Do nothing if "mpi"
+            case ("per")
+!             Do nothing if "per"
+            case ("cor")
+!             Do nothing if "cor"
+            case ("inf")
+!             Do nothing if "inf"
+            case ("ref")
               var(:,nb,:)                 = 0.0
               do ib=1,nb-1
                 var(:,nb-ib,:)            =-var(:,nb+ib,:)
               enddo
-            case ('out')
+            case ("out")
               dvary = var(:,nb+1,:)-var(:,nb,:)
               do ib=1,nb-1
                 var(:,ib,:)               = var(:,nb+1,:) - real(nb+1-ib)*dvary
               enddo
             case default
-              call warn('[magboundaries:bnd_emf]: Boundary condition '//bnd_yl//' not implemented for '//name//' in '//dim)
+               write(msg,'(6a)') "[magboundaries:bnd_emf]: Boundary condition ",bnd_yl," not implemented for ",name, " in ", dim
+               call warn(msg)
           end select  ! (bnd_yl)
 
           select case (bnd_yr(1:3))
-            case ('mpi')
-!             Do nothing if 'mpi'
-            case ('per')
-!             Do nothing if 'per'
-            case ('cor')
-!             Do nothing if 'cor'
-            case ('inf')
-!             Do nothing if 'inf'
-            case ('ref')
+            case ("mpi")
+!             Do nothing if "mpi"
+            case ("per")
+!             Do nothing if "per"
+            case ("cor")
+!             Do nothing if "cor"
+            case ("inf")
+!             Do nothing if "inf"
+            case ("ref")
               var(:,nb+nyb,:)             = 0.0
               do ib=1,nb-1
                 var(:,nb+nyb+ib,:)        =-var(:,nb+nyb-ib,:)
               enddo
-            case ('out')
+            case ("out")
               dvary = var(:,nb+nyb,:)-var(:,nb+nyb-1,:)
               do ib=1,nb-1
                 var(:,nb+nyb+ib,:)        = var(:,nb+nyb,:) + real(ib)*dvary
               enddo
             case default
-              call warn('[magboundaries:bnd_emf]: Boundary condition '//bnd_yr//' not implemented for '//name//' in '//dim)
+               write(msg,'(6a)') "[magboundaries:bnd_emf]: Boundary condition ",bnd_yr," not implemented for ",name, " in ", dim
+               call warn(msg)
           end select ! (bnd_yr)
 
-        case ('vzby','vxby','emfz','emfx')
+        case ("vzby","vxby","emfz","emfx")
 
           select case (bnd_yl(1:3))
-            case ('mpi')
-!             Do nothing if 'mpi'
-            case ('per')
-!             Do nothing if 'per'
-            case ('cor')
-!             Do nothing if 'cor'
-            case ('inf')
-!             Do nothing if 'inf'
-            case ('ref')
+            case ("mpi")
+!             Do nothing if "mpi"
+            case ("per")
+!             Do nothing if "per"
+            case ("cor")
+!             Do nothing if "cor"
+            case ("inf")
+!             Do nothing if "inf"
+            case ("ref")
               var(:,nb+1,:)               = 0.0
               do ib=1,nb
                 var(:,nb+1-ib,:)          = -var(:,nb+1+ib,:)
               enddo
-            case ('out')
+            case ("out")
               dvary = var(:,nb+2,:)-var(:,nb+1,:)
               do ib=1,nb
                 var(:,ib,:)               = var(:,nb+1,:) - real(nb+1-ib)*dvary
               enddo
             case default
-              call warn('[magboundaries:bnd_emf]: Boundary condition '//bnd_yl//' not implemented for '//name//' in '//dim)
+               write(msg,'(6a)') "[magboundaries:bnd_emf]: Boundary condition ",bnd_yl," not implemented for ",name, " in ", dim
+               call warn(msg)
           end select   ! (bnd_yl)
 
           select case (bnd_yr(1:3))
-            case ('mpi')
-!             Do nothing if 'mpi'
-            case ('per')
-!             Do nothing if 'per'
-            case ('cor')
-!             Do nothing if 'cor'
-            case ('inf')
-!             Do nothing if 'inf'
-            case ('ref')
+            case ("mpi")
+!             Do nothing if "mpi"
+            case ("per")
+!             Do nothing if "per"
+            case ("cor")
+!             Do nothing if "cor"
+            case ("inf")
+!             Do nothing if "inf"
+            case ("ref")
               var(:,nb+nyb+1,:)           = 0.0
               do ib=1,nb-1
                 var(:,nb+nyb+1+ib,:)      = -var(:,nb+nyb+1-ib,:)
               enddo
-            case ('out')
+            case ("out")
               dvary = var(:,nb+nyb+1,:)-var(:,nb+nyb,:)
               do ib=1,nb-1
                 var(:,nb+nyb+1+ib,:)      =  var(:,nb+nyb+1,:) + real(ib)*dvary
               enddo
             case default
-              call warn('[magboundaries:bnd_emf]: Boundary condition '//bnd_yr//' not implemented for '//name//' in '//dim)
+               write(msg,'(6a)') "[magboundaries:bnd_emf]: Boundary condition ",bnd_yr," not implemented for ",name, " in ", dim
+               call warn(msg)
           end select  ! (bnd_yr)
 
-        case ('vzbx','vxbz','emfy')
+        case ("vzbx","vxbz","emfy")
 
           select case (bnd_yl(1:3))
-            case ('mpi')
-!             Do nothing if 'mpi'
-            case ('per')
-!             Do nothing if 'per'
-            case ('cor')
-!             Do nothing if 'cor'
-            case ('inf')
-!             Do nothing if 'inf'
-            case ('ref')
+            case ("mpi")
+!             Do nothing if "mpi"
+            case ("per")
+!             Do nothing if "per"
+            case ("cor")
+!             Do nothing if "cor"
+            case ("inf")
+!             Do nothing if "inf"
+            case ("ref")
               do ib=1,nb
                 var(:,nb+1-ib,:)          = var(:,nb+ib,:)
               enddo
-            case ('out')
+            case ("out")
               dvary = var(:,nb+1,:)-var(:,nb,:)
               do ib=1,nb
                 var(:,ib,:)               = var(:,nb+1,:) - real(nb+1-ib)*dvary
               enddo
             case default
-              call warn('[magboundaries:bnd_emf]: Boundary condition '//bnd_yl//' not implemented for '//name//' in '//dim)
+               write(msg,'(6a)') "[magboundaries:bnd_emf]: Boundary condition ",bnd_yl," not implemented for ",name, " in ", dim
+               call warn(msg)
           end select   ! (bnd_yl)
 
           select case (bnd_yr(1:3))
-            case ('mpi')
-!             Do nothing if 'mpi'
-            case ('per')
-!             Do nothing if 'per'
-            case ('cor')
-!             Do nothing if 'cor'
-            case ('inf')
-!             Do nothing if 'inf'
-            case ('ref')
+            case ("mpi")
+!             Do nothing if "mpi"
+            case ("per")
+!             Do nothing if "per"
+            case ("cor")
+!             Do nothing if "cor"
+            case ("inf")
+!             Do nothing if "inf"
+            case ("ref")
               do ib=1,nb
                 var(:,nb+nyb+ib,:)        = var(:,nb+nyb+1-ib,:)
               enddo
-            case ('out')
+            case ("out")
               dvary = var(:,nb+nyb+1,:)-var(:,nb+nyb,:)
               do ib=1,nb
                 var(:,nb+nyb+ib,:)        = var(:,nb+nyb,:) + real(ib)*dvary
               enddo
             case default
-              call warn('[magboundaries:bnd_emf]: Boundary condition '//bnd_yr//' not implemented for '//name//' in '//dim)
+               write(msg,'(6a)') "[magboundaries:bnd_emf]: Boundary condition ",bnd_yr," not implemented for ",name, " in ", dim
+               call warn(msg)
           end select   ! (bnd_yr)
 
        end select  ! (name)
 
 
-    case ('zdim')
+    case ("zdim")
 
       select case (name)
 
-        case ('vzbx','vzby')
+        case ("vzbx","vzby")
 
           select case (bnd_zl(1:3))
-            case ('mpi')
-!             Do nothing if 'mpi'
-            case ('per')
-!             Do nothing if 'per'
-            case ('cor')
-!             Do nothing if 'cor'
-            case ('inf')
-!             Do nothing if 'inf'
-            case ('ref')
+            case ("mpi")
+!             Do nothing if "mpi"
+            case ("per")
+!             Do nothing if "per"
+            case ("cor")
+!             Do nothing if "cor"
+            case ("inf")
+!             Do nothing if "inf"
+            case ("ref")
               var(:,:,nb)                 = 0.0
               do ib=1,nb-1
                 var(:,:,nb-ib)            =-var(:,:,nb+ib)
               enddo
-            case ('out')
+            case ("out")
               dvarz = var(:,:,nb+1)-var(:,:,nb)
               do ib=1,nb-1
                 var(:,:,ib)               = var(:,:,nb+1) - real(nb+1-ib)*dvarz
               enddo
             case default
-              call warn('[magboundaries:bnd_emf]: Boundary condition '//bnd_zl//' not implemented for '//name//' in '//dim)
+               write(msg,'(6a)') "[magboundaries:bnd_emf]: Boundary condition ",bnd_zl," not implemented for ",name, " in ", dim
+               call warn(msg)
           end select  ! (bnd_zl)
 
          select case (bnd_zr(1:3))
-           case ('mpi')
-!             Do nothing if 'mpi'
-           case ('per')
-!             Do nothing if 'per'
-            case ('cor')
-!             Do nothing if 'cor'
-            case ('inf')
-!             Do nothing if 'inf'
-           case ('ref')
+           case ("mpi")
+!             Do nothing if "mpi"
+           case ("per")
+!             Do nothing if "per"
+            case ("cor")
+!             Do nothing if "cor"
+            case ("inf")
+!             Do nothing if "inf"
+           case ("ref")
              var(:,:,nb+nzb)             = 0.0
              do ib=1,nb-1
                var(:,:,nb+nzb+ib)        =-var(:,:,nb+nzb-ib)
              enddo
-           case ('out')
+           case ("out")
              dvarz = var(:,:,nb+nzb)-var(:,:,nb+nzb-1)
              do ib=1,nb-1
                var(:,:,nb+nzb+ib)        = var(:,:,nb+nzb) + real(ib)*dvarz
              enddo
             case default
-              call warn('[magboundaries:bnd_emf]: Boundary condition '//bnd_zr//' not implemented for '//name//' in '//dim)
+               write(msg,'(6a)') "[magboundaries:bnd_emf]: Boundary condition ",bnd_zr," not implemented for ",name, " in ", dim
+               call warn(msg)
           end select ! (bnd_zr)
 
 
-        case ('vxbz','vybz','emfy','emfx')
+        case ("vxbz","vybz","emfy","emfx")
 
           select case (bnd_zl(1:3))
-            case ('mpi')
-!             Do nothing if 'mpi'
-            case ('per')
-!             Do nothing if 'per'
-            case ('cor')
-!             Do nothing if 'cor'
-            case ('inf')
-!             Do nothing if 'inf'
-            case ('ref')
+            case ("mpi")
+!             Do nothing if "mpi"
+            case ("per")
+!             Do nothing if "per"
+            case ("cor")
+!             Do nothing if "cor"
+            case ("inf")
+!             Do nothing if "inf"
+            case ("ref")
               var(:,:,nb+1)               = 0.0
               do ib=1,nb
                 var(:,:,nb+1-ib)          = -var(:,:,nb+1+ib)
               enddo
-            case ('out')
+            case ("out")
               dvarz = var(:,:,nb+2)-var(:,:,nb+1)
               do ib=1,nb
                 var(:,:,ib)               = var(:,:,nb+1) - real(nb+1-ib)*dvarz
               enddo
             case default
-              call warn('[magboundaries:bnd_emf]: Boundary condition '//bnd_zl//' not implemented for '//name//' in '//dim)
+               write(msg,'(6a)') "[magboundaries:bnd_emf]: Boundary condition ",bnd_zl," not implemented for ",name, " in ", dim
+               call warn(msg)
           end select   ! (bnd_zl)
 
           select case (bnd_zr(1:3))
-           case ('mpi')
-!             Do nothing if 'mpi'
-           case ('per')
-!             Do nothing if 'per'
-            case ('cor')
-!             Do nothing if 'cor'
-            case ('inf')
-!             Do nothing if 'inf'
-           case ('ref')
+           case ("mpi")
+!             Do nothing if "mpi"
+           case ("per")
+!             Do nothing if "per"
+            case ("cor")
+!             Do nothing if "cor"
+            case ("inf")
+!             Do nothing if "inf"
+           case ("ref")
              var(:,:,nb+nzb+1)           = 0.0
              do ib=1,nb-1
                var(:,:,nb+nzb+1+ib)      = -var(:,:,nb+nzb+1-ib)
              enddo
-           case ('out')
+           case ("out")
              dvarz = var(:,:,nb+nzb+1)-var(:,:,nb+nzb)
              do ib=1,nb-1
                var(:,:,nb+nzb+1+ib)      =  var(:,:,nb+nzb+1) + real(ib)*dvarz
              enddo
            case default
-              call warn('[magboundaries:bnd_emf]: Boundary condition '//bnd_zr//' not implemented for '//name//' in '//dim)
+               write(msg,'(6a)') "[magboundaries:bnd_emf]: Boundary condition ",bnd_zr," not implemented for ",name, " in ", dim
+               call warn(msg)
           end select   ! (bnd_zr)
 
-        case ('vxby','vybx','emfz')
+        case ("vxby","vybx","emfz")
 
           select case (bnd_zl(1:3))
-            case ('mpi')
-!             Do nothing if 'mpi'
-            case ('per')
-!             Do nothing if 'per'
-            case ('cor')
-!             Do nothing if 'cor'
-            case ('inf')
-!             Do nothing if 'inf'
-            case ('ref')
+            case ("mpi")
+!             Do nothing if "mpi"
+            case ("per")
+!             Do nothing if "per"
+            case ("cor")
+!             Do nothing if "cor"
+            case ("inf")
+!             Do nothing if "inf"
+            case ("ref")
               do ib=1,nb
                 var(:,:,nb+1-ib)          = var(:,:,nb+ib)
               enddo
-            case ('out')
+            case ("out")
               dvarz = var(:,:,nb+1)-var(:,:,nb)
               do ib=1,nb
                 var(:,:,ib)               = var(:,:,nb+1) - real(nb+1-ib)*dvarz
               enddo
             case default
-              call warn('[magboundaries:bnd_emf]: Boundary condition '//bnd_zl//' not implemented for '//name//' in '//dim)
+               write(msg,'(6a)') "[magboundaries:bnd_emf]: Boundary condition ",bnd_zl," not implemented for ",name, " in ", dim
+               call warn(msg)
           end select   ! (bnd_zl)
 
           select case (bnd_zr(1:3))
-            case ('mpi')
-!             Do nothing if 'mpi'
-            case ('per')
-!             Do nothing if 'per'
-            case ('cor')
-!             Do nothing if 'cor'
-            case ('inf')
-!             Do nothing if 'inf'
-            case ('ref')
+            case ("mpi")
+!             Do nothing if "mpi"
+            case ("per")
+!             Do nothing if "per"
+            case ("cor")
+!             Do nothing if "cor"
+            case ("inf")
+!             Do nothing if "inf"
+            case ("ref")
               do ib=1,nb
                 var(:,:,nb+nzb+ib)        = var(:,:,nb+nzb+1-ib)
               enddo
-            case ('out')
+            case ("out")
              dvarz = var(:,:,nb+nzb+1)-var(:,:,nb+nzb)
               do ib=1,nb
                 var(:,:,nb+nzb+ib)        = var(:,:,nb+nzb) + real(ib)*dvarz
               enddo
             case default
-              call warn('[magboundaries:bnd_emf]: Boundary condition '//bnd_zr//' not implemented for '//name//' in '//dim)
+               write(msg,'(6a)') "[magboundaries:bnd_emf]: Boundary condition ",bnd_zr," not implemented for ",name, " in ", dim
+               call warn(msg)
           end select ! (bnd_zr)
 
         end select  ! (name)
@@ -870,9 +896,9 @@ end subroutine bnd_emf
    use grid, only : nxd,nyd,nzd
    implicit none
 
-   if(nxd /= 1) call bnd_b('xdim')
-   if(nyd /= 1) call bnd_b('ydim')
-   if(nzd /= 1) call bnd_b('zdim')
+   if(nxd /= 1) call bnd_b("xdim")
+   if(nyd /= 1) call bnd_b("ydim")
+   if(nzd /= 1) call bnd_b("zdim")
 
   end subroutine all_mag_boundaries
 
