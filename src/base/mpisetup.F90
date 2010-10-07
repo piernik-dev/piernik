@@ -541,7 +541,7 @@ module mpisetup
 
          if (proc == 0) call printinfo("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++", .false.)
          call MPI_BARRIER(comm,ierr)
-         if (nproc > 1) call sleep(5) ! Why we need to sleep here?
+         if (nproc > 1) call sleep(1) ! Prevent random SIGSEGVs in openmpi's mpi_finalize
          call MPI_FINALIZE(ierr)
 
       end subroutine cleanup_mpi
