@@ -35,8 +35,8 @@ module arrays
    integer, parameter  :: nrlscal=100   !< Size of arrays::rlscal array
    integer, parameter  :: nintscal=100  !< Size of arrays::intscal array
 
-   real, allocatable, dimension(:,:,:,:), target :: u    !< Main array of all fluids' componets
-   real, allocatable, dimension(:,:,:,:), target :: b    !< Main array of magnetic field's components
+   real, allocatable, dimension(:,:,:,:), target :: u    !< //Main array of all fluids' componets
+   real, allocatable, dimension(:,:,:,:), target :: b    !< //Main array of magnetic field's components
    real, allocatable, dimension(:,:,:)           :: wa   !< Temporary array used for different purposes, usually has dimension (grid::nx, grid::ny, grid::nz)
    real, allocatable, dimension(:,:,:)       :: wcu      !< Temporary array used in resistivity module
 #ifdef GRAV

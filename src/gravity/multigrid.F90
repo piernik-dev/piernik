@@ -673,7 +673,7 @@ contains
                   call die("[multigrid:init_multigrid] Unknown FFT type.")
             end select
 
-            ! compute Green's function for 7-point 3D discrete laplacian
+            !// compute Green's function for 7-point 3D discrete laplacian
             do i = 1, lvl(idx)%nxc
                do j = 1, lvl(idx)%nyb
                   where( (kx(i) + ky(j) + kz(:)) /= 0 )

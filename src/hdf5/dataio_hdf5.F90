@@ -1763,7 +1763,7 @@ module dataio_hdf5
          ibuffer(13) = nzb                      ; ibuffer_name(13) = "nzb"
          ibuffer(14) = nb                       ; ibuffer_name(14) = "nb"
 
-         !BEWARE: A memory leak was detected here. h5lt calls use HD5f2cstring and probably sometimes don't free the allocated buffer
+         !//BEWARE: A memory leak was detected here. h5lt calls use HD5f2cstring and probably sometimes don't free the allocated buffer
 
          bufsize = 1
 
@@ -1784,7 +1784,7 @@ module dataio_hdf5
             write(dset_name,'(A4,I3.3)') "env_",i
             trim_env=trim(env(i))
             if (len_trim(trim_env) < len(trim_env)) trim_env(len_trim(trim_env)+1:len_trim(trim_env)+1) = achar(0)
-            !I don't understand why passing trim(env(i)) or trim(trim_env) to h5ltmake_dataset_string_f sometimes results in improper detection of the string length.
+            !//I don't understand why passing trim(env(i)) or trim(trim_env) to h5ltmake_dataset_string_f sometimes results in improper detection of the string length.
             call h5ltmake_dataset_string_f (gr_id, dset_name, trim_env, error)
          enddo
          call H5Gclose_f(gr_id, error)

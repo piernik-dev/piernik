@@ -46,7 +46,7 @@ module multipole
    integer                   :: mmax                             !< Maximum m-order of multipole moments. Equal to lmax by default.
    integer                   :: ord_prolong_mpole                !< boundary prolongation operator order; allowed values are -2 .. 2
    integer                   :: coarsen_multipole                !< If > 0 then evaluate multipoles at level_max-coarsen_multipole level
-   logical                   :: use_point_monopole               !< Don't evaluate multipole moments, use point-like mass approximation (crudest possible)
+   logical                   :: use_point_monopole               !< //Don't evaluate multipole moments, use point-like mass approximation (crudest possible)
    logical                   :: interp_pt2mom                    !< Distribute contribution from a cell between two adjacent radial bins (linear interpolation in radius)
    logical                   :: interp_mom2pot                   !< Compute the potential from moments from two adjacent radial bins (linear interpolation in radius)
 
@@ -217,8 +217,8 @@ contains
 !!
 !! Multipole solver
 !!
-!! \todo impmprove multipole expansion on coarser grids (see. "A Scalable Parallel Poisson Solver
-!! in Three Dimensions with Infinite-Domain Boundary Conditions" by McCorquodale, Colella, Balls and Baden).
+!! \todo impmprove multipole expansion on coarser grids
+!! (see. "A Scalable Parallel Poisson Solver in Three Dimensions with Infinite-Domain Boundary Conditions" by McCorquodale, Colella, Balls and Baden).
 !! Coarsening by one level would reduce the multipole costs by a factor of 4.
 !!
 

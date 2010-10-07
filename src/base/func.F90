@@ -42,7 +42,7 @@ module func
 !>
 !! \brief Function pshift makes one-cell,foreward circular shift of 3D array in any direction
 !! \param tab input array
-!! \param d shift's direction, where 1,2,3 corresponds to \a x,\a y,\a z respectively
+!! \param d direction of the shift, where 1,2,3 corresponds to \a x,\a y,\a z respectively
 !! \return real, dimension(SIZE(tab,1),SIZE(tab,2),SIZE(tab,3))
 !!
 !! The function was written in order to significantly improve
@@ -89,7 +89,7 @@ module func
 !>
 !! \brief Function mshift makes one-cell, backward circular shift of 3D array in any direction
 !! \param tab input array
-!! \param d shift's direction, where 1,2,3 corresponds to \a x,\a y,\a z respectively
+!! \param d direction of the shift, where 1,2,3 corresponds to \a x,\a y,\a z respectively
 !! \return real, dimension(SIZE(tab,1),SIZE(tab,2),SIZE(tab,3))
 !!
 !! The function was written in order to significantly improve

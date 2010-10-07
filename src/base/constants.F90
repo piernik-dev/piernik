@@ -53,7 +53,7 @@
 !! @n @b SSY (10^Sixteenth cm - Solar_mass - Year) - good for circumstellar simulations (planetaries etc.)
 !! @n length --> 10^16 cm,  mass --> Msun,     time --> year,       miu0 --> 4*pi,    temperature --> kelvin
 !! @n
-!! @n @b SI - (franc. Système International d'Unités)
+!! @n @b SI - (franc. Système International d'Unités) '
 !! @n length --> metr,   mass --> kg,          time --> sek,        miu0 --> 4*pi,    temperature --> kelvin
 !! @n
 !! @n @b CGS - (Centimetre - Gram - Second)
@@ -72,10 +72,10 @@ module constants
    real, parameter :: small      = 1.e-29                !< a constant used as the lower limit number
    real, parameter :: big        = 1.e+29                !< a constant used as the upper limit number
 
-   real, parameter :: pi         = 3.141592653589793238  !< Pi (Archimedes' constant)
+   real, parameter :: pi         = 3.141592653589793238  !< //Pi (Archimedes' constant)
    real, parameter :: dpi        = 2.*pi                 !< doubled Pi
    real, parameter :: fpi        = 4.*pi                 !< four Pi
-   real, parameter :: e          = 2.718281828459045235  !< Napier's constant (base of Natural logarithm)
+   real, parameter :: e          = 2.718281828459045235  !< //Napier's constant (base of Natural logarithm)
 
    !< First twenty six primes should be enough for everyone ;-)
    integer, parameter, dimension(26) :: some_primes = [ 2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97, 101 ]
@@ -226,7 +226,7 @@ module constants
    real, parameter :: pc          = PC_CM*cm                 !< parsec, length unit
 ! time units:
    real, parameter :: year        = 1./(24.7052942200655/pi) !< year, time unit; 24.7052942200655 = 2.5**3.5;
-   ! It's really weird that use of 2.5**3.5 here can cause Internal Compiler Error at multigridmultipole.F90:827
+   !// It's really weird that use of 2.5**3.5 here can cause Internal Compiler Error at multigridmultipole.F90:827
    real, parameter :: sek         = year/YR_S                !< second, time unit
    real, parameter :: myr         = 1.0e6*year               !< megayear, time unit
 ! mass units:
