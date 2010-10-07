@@ -152,7 +152,8 @@ contains
 
       real              :: at
       integer           :: i, lm
-      character(len=64) :: normred
+      integer, parameter :: fp_len = 24 !< length of printed FP number
+      character(len=fp_len) :: normred
 
       if (proc /= 0) return
 
