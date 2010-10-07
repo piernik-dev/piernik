@@ -1,5 +1,5 @@
 PROG             = piernik
-
+USE_GNUCPP = yes
 ### GNU  AMD64
 F90              = mpif90
 F90FLAGS  = -fdefault-real-8 -O3 -funroll-loops -m3dnow -msse2 -mfpmath=sse

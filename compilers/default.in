@@ -1,5 +1,5 @@
 PROG      = piernik
-
+USE_GNUCPP = yes
 ### GNU hydra AMD_MP (e.g. hydra4)
 F90       = mpif90
 F90FLAGS  = -I/usr/include -fdefault-real-8 -O2 -funroll-loops -m3dnow -msse -mfpmath=sse -ffree-line-length-none

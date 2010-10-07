@@ -1,7 +1,7 @@
-PROG		 = piernik
-
+PROG       = piernik
+USE_GNUCPP = yes
 ### GNU tres AMD64
-F90		 = /usr/bin/mpif90
+F90       = /usr/bin/mpif90
 F90FLAGS  = -g -fdefault-real-8 -ffpe-trap=invalid,zero,overflow,underflow,precision
 HDF_LIB  = . -lfftw3 -llapack -lgfortran -lc
 MHDF_LIB = /usr/include

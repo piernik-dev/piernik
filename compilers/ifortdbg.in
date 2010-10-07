@@ -1,6 +1,6 @@
 PROG      = piernik
 
 ### INTEL
-F90       = /opt/intel/openmpi/bin/mpif90
+F90       = /opt/intel/hdf5/bin/h5pfc
 F90FLAGS  = -g -fpe0 -check all -traceback -fp-stack-check -heap-arrays -r8 -I/opt/intel/hdf5/include
 LDFLAGS   = -L/opt/intel/hdf5/lib

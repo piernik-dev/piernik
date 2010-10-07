@@ -19,3 +19,4 @@ F90FLAGS = -O3 -funroll-loops -fdefault-real-8 -Wall -W -pedantic-errors -std=gn
 LIBS    += -lfftw3
 
 MAKEFLAGS += -j2
+USE_GNUCPP = yes
