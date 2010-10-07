@@ -572,16 +572,13 @@ module dataio_hdf5
 
    end subroutine common_vars_hdf5
 
-   subroutine write_plot(chdf)
+   subroutine write_plot
 
       use hdf5,       only : HID_T, H5open_f, H5Fcreate_f, H5Gcreate_f, H5F_ACC_TRUNC_F, H5Gclose_f, H5close_f, h5fclose_f
-      use types,      only : hdf
       use mpisetup,   only : t, comm3d, ierr, proc
-      use dataio_public, only : cwdlen
+      use dataio_public, only : cwdlen, log_file
 
       implicit none
-
-      type(hdf), intent(in) :: chdf
 
       integer, save     :: nimg = 0
       real, save        :: last_plt_time = 0.0
@@ -592,8 +589,8 @@ module dataio_hdf5
       integer(HID_T)    :: gr_id, gr2_id           !> Groups indentifier
 
       if( ((t-last_plt_time) > dt_plt) .and. dt_plt > 0.0 .or. first_entry) then
-         fe = len_trim(chdf%log_file)
-         fname = trim(chdf%log_file(1:fe-3)//"plt")
+         fe = len_trim(log_file)
+         fname = trim(log_file(1:fe-3)//"plt")
          call H5open_f(error)
 
          if(proc==0 .and. first_entry) then
@@ -621,9 +618,9 @@ module dataio_hdf5
          endif
          call MPI_BARRIER(comm3d,ierr)
          do i = 1,nhdf_vars
-            if(ix > 0) call write_plot_hdf5(chdf,hdf_vars(i),"yz",nimg)
-            if(iy > 0) call write_plot_hdf5(chdf,hdf_vars(i),"xz",nimg)
-            if(iz > 0) call write_plot_hdf5(chdf,hdf_vars(i),"xy",nimg)
+            if(ix > 0) call write_plot_hdf5(hdf_vars(i),"yz",nimg)
+            if(iy > 0) call write_plot_hdf5(hdf_vars(i),"xz",nimg)
+            if(iz > 0) call write_plot_hdf5(hdf_vars(i),"xy",nimg)
          enddo
 
          nimg = nimg+1
@@ -636,12 +633,11 @@ module dataio_hdf5
 
    end subroutine write_plot
 
-   subroutine write_plot_hdf5(chdf,var,plane,nimg)
+   subroutine write_plot_hdf5(var,plane,nimg)
 #ifdef PGPLOT
       use viz,           only: draw_me
 #endif /* PGPLOT */
-      use dataio_public, only: vizit, fmin, fmax, cwdlen
-      use types,    only : hdf
+      use dataio_public, only: vizit, fmin, fmax, cwdlen, log_file
       use mpisetup, only : MPI_CHARACTER, comm3d, ierr, pxsize, pysize, pzsize, MPI_DOUBLE_PRECISION, t, pcoords
       use hdf5,     only : HID_T, HSIZE_T, SIZE_T, H5F_ACC_RDWR_F, h5fopen_f, h5gopen_f, h5gclose_f, h5fclose_f
       use h5lt,     only : h5ltmake_dataset_double_f, h5ltset_attribute_double_f
@@ -650,7 +646,7 @@ module dataio_hdf5
       use errh,     only : die, warn
 
       implicit none
-      type(hdf), intent(in)               :: chdf
+
       character(LEN=2), intent(in)        :: plane
       character(LEN=4), intent(in)        :: var                           !> not yet implemented
       integer, intent(in)                 :: nimg
@@ -678,8 +674,8 @@ module dataio_hdf5
       real, dimension(1)                  :: timebuffer
 
       rank = 2
-      fe = len_trim(chdf%log_file)
-      fname = trim(chdf%log_file(1:fe-3)//"plt")
+      fe = len_trim(log_file)
+      fname = trim(log_file(1:fe-3)//"plt")
       call MPI_BCAST(fname, cwdlen, MPI_CHARACTER, 0, comm3d, ierr)
 
       nib = 0; nid = 0; njb = 0; njd = 0; nkb = 0; pisize = 0; pjsize = 0
@@ -838,7 +834,7 @@ module dataio_hdf5
       integer :: error, rank = 4
 
       if (proc==0) write (filename, '(a,a1,a3,a1,i4.4,a4)') trim(problem_name), '_', run_id, '_', nres, '.res'
-      call MPI_BCAST(filename, 128, MPI_CHARACTER, 0, comm, ierr)
+      call MPI_BCAST(filename, cwdlen, MPI_CHARACTER, 0, comm, ierr)
       call set_container_chdf(nstep)
 
       nu = nvar%all
@@ -1293,7 +1289,6 @@ module dataio_hdf5
 
       type(hdf)             :: chdf
       integer               :: nu
-      CHARACTER(LEN=cwdlen) :: log_file  ! File name
       CHARACTER(LEN=cwdlen) :: filename  ! File name
 
       integer(HID_T)        :: file_id       ! File identifier
@@ -1321,8 +1316,6 @@ module dataio_hdf5
 #endif /* ISO_LOCAL || MASS_COMPENS */
 
       nu = nvar%all
-
-      log_file = chdf%log_file
 
       if(proc==0) then
          write (filename,'(a,a1,a3,a1,i4.4,a4)') trim(problem_name),'_', run_id,'_',chdf%nres,'.res'

@@ -169,7 +169,6 @@ contains
       nlog          = chdf%nlog
       step_hdf      = chdf%step_hdf
       last_hdf_time = chdf%last_hdf_time
-      log_file      = chdf%log_file
       nrestart      = chdf%nrestart
       domain        = chdf%domain
 
@@ -188,7 +187,6 @@ contains
       chdf%nlog           = nlog
       chdf%step_hdf       = step_hdf
       chdf%last_hdf_time  = last_hdf_time
-      chdf%log_file       = log_file
       chdf%nrestart       = nrestart
       chdf%domain         = domain
 

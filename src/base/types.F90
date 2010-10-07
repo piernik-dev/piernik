@@ -49,7 +49,6 @@ module types
    type :: hdf
       integer :: nhdf, ntsl, nres, nlog, step_hdf, step_res, nstep, nrestart
       real    :: last_hdf_time
-      character(len=cwdlen) :: log_file
       character(len=16)  :: domain
       character(len=3)   :: new_id
    end type hdf

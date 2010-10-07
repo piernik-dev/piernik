@@ -415,6 +415,7 @@ module dataio
          enddo
          write (log_file,'(a,a1,a3,a1,i3.3,a4)') trim(problem_name),'_', run_id,'_',nrestart,'.log'
          log_file = trim(cwd)//'/'//log_file
+         ! ToDo: if the simulation is restarted then save previous log_file (if exists) under a different, unique name
          system_command = 'mv '//trim(tmp_log_file)//' '//trim(log_file)
          system_status = SYSTEM(system_command)
       endif
@@ -429,7 +430,7 @@ module dataio
          nhdf_start  = nhdf-1
          if(new_id .ne. '') run_id=new_id
       endif
-      call MPI_BCAST(log_file, len(log_file), MPI_CHARACTER, 0, comm, ierr)
+      call MPI_BCAST(log_file, cwdlen, MPI_CHARACTER, 0, comm, ierr)
       call set_container_chdf(nstep)
       if(all([bnd_xl,bnd_xr,bnd_yl,bnd_yr,bnd_zl,bnd_zr] /= "user")) then
          call all_fluid_boundaries
@@ -613,7 +614,7 @@ module dataio
          endif
       endif
       call set_container_chdf(nstep)
-      call write_plot(chdf)
+      call write_plot
 
    end subroutine write_data
 
