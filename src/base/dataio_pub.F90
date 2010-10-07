@@ -51,10 +51,10 @@ module dataio_public
    integer, parameter :: cwdlen = 512           !< allow for moderately long CWD
    character(len=cwdlen) :: cwd                 !< path to the current working directory
    character(len=cwdlen) :: log_file            !< path to the current log file
+   character(len=cwdlen) :: tmp_log_file        !< path to the temporary log file
    character(len=cwdlen) :: par_file            !< path to the parameter file
    character(len=11)  :: par_default_file = "problem.par" !<
    integer            :: ierrh                  !< variable for iostat
-
    logical            :: halfstep = .false.     !< true when X-Y-Z sweeps are done and Z-Y-X are not
 
    !! ToDo:
@@ -141,12 +141,12 @@ contains
 
       if (dataio_initialized) then
          open(log_lun, file=log_file, position='append')
-         if (proc == 0 .and. mode == T_ERR) write(log_lun,'(/,a,/)')"###############     Crashing     ###############"
-         write(log_lun,'(a,i5,2a)') msg_type_str//" @", proc, ': ', trim(nm)
-         close(log_lun)
       else
-         write(*,'(a,i5,a)') ansi_yellow//"[errh:colormessage] dataio_initialized == .false. @", proc, ansi_black ! QA_WARN
-      endif
+         open(log_lun, file=tmp_log_file, status='unknown', position='append')
+      end if
+      if (proc == 0 .and. mode == T_ERR) write(log_lun,'(/,a,/)')"###############     Crashing     ###############"
+      write(log_lun,'(a,i5,2a)') msg_type_str//" @", proc, ': ', trim(nm)
+      close(log_lun)
 
    end subroutine colormessage
 

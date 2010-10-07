@@ -210,7 +210,7 @@ module dataio
       use fluidboundaries, only : all_fluid_boundaries
       use timer,           only : time_left
       use dataio_hdf5,     only : init_hdf5, read_restart_hdf5, maxparfilelines, parfile, parfilelines
-      use dataio_public,   only : chdf, nres, last_hdf_time, step_hdf, nlog, ntsl, dataio_initialized, log_file, cwdlen, par_file, cwd, ierrh
+      use dataio_public,   only : chdf, nres, last_hdf_time, step_hdf, nlog, ntsl, dataio_initialized, log_file, cwdlen, par_file, cwd, ierrh, tmp_log_file
       use func,            only : compare_namelist
 #ifdef MAGNETIC
       use magboundaries,   only : all_mag_boundaries
@@ -224,7 +224,6 @@ module dataio
       integer(kind=1)      :: system
       integer              :: system_status, i
       character(LEN=160)   :: system_command
-      character(LEN=cwdlen) :: tmp_log_file
 
       restart = 'last'   ! 'last': automatic choice of the last restart file
                          ! regardless of "nrestart" value;
@@ -410,17 +409,14 @@ module dataio
 
       call init_version
       if (proc == 0) then
+         call printinfo("###############     Source configuration     ###############", .false.)
+         do i=1,nenv
+            call printinfo(env(i), .false.)
+         enddo
          write (log_file,'(a,a1,a3,a1,i3.3,a4)') trim(problem_name),'_', run_id,'_',nrestart,'.log'
-         tmp_log_file = trim(cwd)//'/tmp.log'
          log_file = trim(cwd)//'/'//log_file
          system_command = 'mv '//trim(tmp_log_file)//' '//trim(log_file)
          system_status = SYSTEM(system_command)
-         open(3, file=log_file, position='append')
-         write(3,'(a,/)')"###############     Source Configuration     ###############"
-            do i=1,nenv
-               write(3,*) trim(env(i))
-            enddo
-         close(3)
       endif
       call set_container_chdf(nstep); chdf%nres = nrestart
 

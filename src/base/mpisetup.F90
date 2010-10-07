@@ -160,15 +160,15 @@ module mpisetup
 !<
       subroutine init_mpi
 
-         use errh,          only : die, namelist_errh, warn
-         use dataio_public, only : msg, cwdlen, hnlen, cwd, par_file
+         use errh,          only : die, namelist_errh, warn, printinfo
+         use dataio_public, only : msg, cwdlen, hnlen, cwd, par_file, ierrh
          use func,          only : compare_namelist
 
          implicit none
 
-         namelist /DOMAIN_SIZES/ nxd, nyd, nzd, nb
+         namelist /DOMAIN_SIZES/ nxd, nyd, nzd, nb ! BEWARE: another definition of DOMAIN_SIZES is in grid.F90
 
-         integer :: iproc, ierrh
+         integer :: iproc
          integer :: nxd, nyd, nzd, nb
 
          character(LEN=cwdlen) :: cwd_proc
@@ -181,7 +181,6 @@ module mpisetup
 
          integer(kind=1)       :: getcwd, hostnm
          integer(kind=4)       :: getpid
-         character(LEN=cwdlen) :: tmp_log_file
          integer :: cwd_status
          logical :: par_file_exist
 
@@ -204,7 +203,8 @@ module mpisetup
 
          if (cwd_status /= 0) call die("[mpisetup:init_mpi] problems accessing current working directory.")
 #ifdef DEBUG
-         write(*,'(3a,i6,3a)') 'mpisetup: host="',trim(host_proc),'", PID=',pid_proc,' CWD="',trim(cwd_proc),'"'     ! QA_WARN
+         write(msg,'(3a,i6,3a)') 'mpisetup: host="',trim(host_proc),'", PID=',pid_proc,' CWD="',trim(cwd_proc),'"'
+         call printinfo(msg)
 #endif /* DEBUG */
 
          call MPI_Gather(cwd_proc,  cwdlen, MPI_CHARACTER, cwd_all,  cwdlen, MPI_CHARACTER, 0, comm, err)
@@ -217,6 +217,25 @@ module mpisetup
             inquire(file=par_file, exist=par_file_exist)
             if(.not. par_file_exist) call die('[mpisetup:init_mpi] Cannot find "problem.par" in the working directory',0)
          endif
+
+         if(proc == 0) then
+            call printinfo("------------------------------------------------------------------------------------------------------", .true.)
+            call printinfo("###############     Environment     ###############", .false.)
+            call printinfo("", .false.)
+            call printinfo("PROCESSES:", .false.)
+            do iproc = 0, nproc-1
+               write(msg,"(a6,i2,a7,i6,a1,a,a7,a)") " proc=",iproc, &
+                    ", pid= ",pid_all(iproc), "@",trim(host_all(iproc)), &
+                    ", cwd=",trim(cwd)
+               call printinfo(msg, .false.)
+            enddo
+            call printinfo("", .true.)
+            write(msg,"(a,i5)") 'Start of the PIERNIK code. No. of procs = ', nproc
+            call printinfo(msg, .true.)
+            call printinfo("", .true.)
+            call printinfo("###############     Namelist parameters     ###############", .false.)
+         endif
+
 
          pxsize = 1
          pysize = 1
@@ -376,25 +395,6 @@ module mpisetup
          call MPI_CART_CREATE(comm, ndims, psize, periods, reorder, comm3d, ierr)
          call MPI_CART_COORDS(comm3d, proc, ndims, pcoords, ierr)
 
-         if(proc == 0) then
-            tmp_log_file = trim(cwd)//'/tmp.log'
-            write(*, '("------------------------------------------------------------------------------------------------------")')  ! QA_WARN
-            open(3, file=tmp_log_file, status='unknown')
-               write(3,'(a,/)')"###############     Initialization     ###############"
-               write(3,"(a35,i2)") 'START OF MHD CODE,  No. of procs = ', nproc
-               write(3,*)
-               write(3,*) 'PROCESSES:'
-               do iproc = 0, nproc-1
-                  write(3,"(a6,i2,a7,i6,a1,a,a7,a)") " proc=",iproc, &
-                           ", pid= ",pid_all(iproc), "@",trim(host_all(iproc)), &
-                           ",  cwd=",trim(cwd)
-               enddo
-               write(3,*)
-
-            close(3)
-            write(*,"(a35,i5)") 'START OF MHD CODE,  No. of procs = ', nproc   ! QA_WARN
-         endif
-
          deallocate(host_all)
          deallocate(pid_all)
          deallocate(cwd_all)
@@ -465,10 +465,12 @@ module mpisetup
          if(proczr /= MPI_PROC_NULL .and. proczr /= proc) bnd_zr = 'mpi'
 
 #ifdef DEBUG
-         write(*,*) 'xdir: ',procxl, proc, procxr                       ! QA_WARN
-         write(*,*) 'ydir: ',procyl, proc, procyr                       ! QA_WARN
-         write(*,*) 'zdir: ',proczl, proc, proczr                       ! QA_WARN
-         write(*,*)                                                     ! QA_WARN
+         write(msg,*) 'xdir: ',procxl, proc, procxr
+         call printinfo(msg)
+         write(msg,*) 'ydir: ',procyl, proc, procyr
+         call printinfo(msg)
+         write(msg,*) 'zdir: ',proczl, proc, proczr
+         call printinfo(msg)
 #endif /* DEBUG */
 
          if(integration_order > 2) call die ('[mpisetup:init_mpi]: "ORIG" scheme integration_order must be 1 or 2')

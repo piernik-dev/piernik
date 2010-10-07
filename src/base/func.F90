@@ -136,32 +136,32 @@ module func
 !-----------------------------------------------------------------------------
    subroutine compare_namelist(nml_bef, nml_aft)
 
-      use dataio_public, only : cwd
+      use dataio_public, only : cwd, msg
+      use errh,          only : printinfo
 
       implicit none
 
       character(len=*), intent(in)     :: nml_bef, nml_aft
       integer                          :: io
       character(len=256)               :: sa, sb
-      integer, parameter               :: lun_bef=501, lun_aft=502, lun_out=3
+      integer, parameter               :: lun_bef=501, lun_aft=502
 
       open(lun_bef, file=nml_bef, status='old')
       open(lun_aft, file=nml_aft, status='old')
-      open(lun_out, file=trim(cwd)//'/tmp.log', position='append')
       io = 0
       do
          read(lun_bef,'(a)', iostat=io) sa
          read(lun_aft,'(a)', iostat=io) sb
          if(io/=0) exit
          if((sa/=sb)) then
-            write(lun_out,'(a1,a)') '*',trim(sb)
+            msg='*'//trim(sb)
          else
-            write(lun_out,'(a1,a)') ' ',trim(sb)
+            msg=' '//trim(sb)
          endif
+         call printinfo(msg, .false.)
       enddo
       close(lun_aft, status="delete")
       close(lun_bef, status="delete")
-      close(lun_out)
 
    end subroutine compare_namelist
 
