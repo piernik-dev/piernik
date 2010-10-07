@@ -48,7 +48,7 @@ contains
 
       use grid,     only : xmin, xmax, ymin, ymax, zmin, zmax, dx, dy, dz, nxd, nyd, nzd
       use errh,     only : namelist_errh, die
-      use mpisetup, only : ierr, rbuff, cbuff, ibuff, lbuff, proc, buffer_dim, comm, &
+      use mpisetup, only : ierr, rbuff, cbuff_len, cbuff, ibuff, lbuff, proc, buffer_dim, comm, &
            &               MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL
       use dataio_public, only: par_file, ierrh
       use func,     only : compare_namelist
@@ -99,7 +99,7 @@ contains
 
       end if
 
-      call MPI_BCAST(cbuff, 32*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
+      call MPI_BCAST(cbuff, cbuff_len*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
       call MPI_BCAST(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
       call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
       call MPI_BCAST(lbuff,    buffer_dim, MPI_LOGICAL,          0, comm, ierr)
@@ -127,8 +127,8 @@ contains
 
       endif
 
-      if (clump_mass <= 0.)          call die("[initproblem:read_problem_par] Negative mass of the clump.")
-      if (clump_K <= 0.)             call die("[initproblem:read_problem_par] Negative polytropic constant.")
+      if (clump_mass <= 0.) call die("[initproblem:read_problem_par] Negative mass of the clump.")
+      if (clump_K <= 0.)    call die("[initproblem:read_problem_par] Negative polytropic constant.")
 #ifdef ISO
       call die("[initproblem:read_problem_par] Isothermal EOS not supported.")
 #endif /* ISO */
@@ -153,9 +153,9 @@ contains
       use constants,     only : fpiG, pi, newtong
       use grid,          only : xmin, xmax, ymin, ymax, zmin, zmax, x, y, z, dx, dy, dz, is, ie, js, je, ks, ke
       use initionized,   only : gamma_ion, idni, imxi, imyi, imzi, ieni
-      use dataio_public, only : tend
+      use dataio_public, only : tend, msg
       use multigrid,     only : multigrid_solve
-      use errh,          only : die, warn
+      use errh,          only : die, warn, printinfo
 
       implicit none
 
@@ -215,7 +215,10 @@ contains
       end do
 
       call MPI_AllReduce (MPI_IN_PLACE, iC, 1, MPI_INTEGER, MPI_SUM, comm, ierr)
-      if (proc == 0 .and. verbose) write(*,'(a,es13.7,a,i7,a)')"[initproblem:init_prob] Starting with uniform sphere with M = ", iC*totME(1) * dx * dy * dz, " (", iC, " cells)"
+      if (proc == 0 .and. verbose) then
+         write(msg,'(a,es13.7,a,i7,a)')"[initproblem:init_prob] Starting with uniform sphere with M = ", iC*totME(1) * dx * dy * dz, " (", iC, " cells)"
+         call printinfo(msg, .true.)
+      end if
 
       ! Find C - the level of enthalpy at which density vanishes
       iC = 1
@@ -226,7 +229,7 @@ contains
       do while (.not. doneC)
 
          call multigrid_solve(u(idni,:,:,:))
-         if (exp_speedup .and. Clim_old /= 0.) then ! extrapolate potential assuming exponential convergence
+         if (exp_speedup .and. Clim_old /= 0.) then ! extrapolate potential assuming exponential convergence (extremely risky)
             if (abs(1. - Clim/Clim_old) < min(sqrt(epsC), 100.*epsC, 0.01)) then
                sgp = (sgp*hgpot - gpot**2)/(sgp + hgpot - 2.*gpot)
                Ccomment = " Exp warp"
@@ -270,7 +273,10 @@ contains
             end if
          end if
 
-         if (proc == 0 .and. verbose) write(*,'(2(a,i4),2(a,2es15.7),2a)')"[initproblem:init_prob] iter = ",iC,"/",0," dM= ",totME-clump_mass, " C= ", Cint, " ind = ",ind
+         if (proc == 0 .and. verbose) then
+            write(msg,'(2(a,i4),2(a,2es15.7),2a)')"[initproblem:init_prob] iter = ",iC,"/",0," dM= ",totME-clump_mass, " C= ", Cint, " ind = ",ind
+            call printinfo(msg, .true.)
+         end if
 
          ! Find what C corresponds to mass M in current potential well
          iM = 1
@@ -315,8 +321,10 @@ contains
                end do
             end if
 
-            if (proc == 0 .and. verbose) write(*,'(2(a,i4),2(a,2es15.7),2a)')"[initproblem:init_prob] iter = ",iC,"/",iM," dM= ",totME-clump_mass, " C= ", Cint, " ind = ",ind
-
+            if (proc == 0 .and. verbose) then
+               write(msg,'(2(a,i4),2(a,2es15.7),2a)')"[initproblem:init_prob] iter = ",iC,"/",iM," dM= ",totME-clump_mass, " C= ", Cint, " ind = ",ind
+               call printinfo(msg, .true.)
+            end if
             t = LOW
             if (abs(1. - totME(LOW)/clump_mass) > abs(1. - totME(HIGH)/clump_mass)) t = HIGH
             if (abs(1. - totME(t)/clump_mass) < epsM) doneM = .true.
@@ -338,12 +346,18 @@ contains
          Clast(1:NLIM-1) = Clast(2:NLIM)
          Clast(NLIM) = Cint(t)
          if (any(Clast(:) == 0.)) then
-            if (proc == 0) write(*,'(a,i4,2(a,es15.7),a)')"[initproblem:init_prob] iter = ",iC,"     M=",totME(t), " C=", Cint(t), Ccomment
+            if (proc == 0) then
+               write(msg,'(a,i4,2(a,es15.7),a)')"[initproblem:init_prob] iter = ",iC,"     M=",totME(t), " C=", Cint(t), Ccomment
+               call printinfo(msg, .true.)
+            end if
          else
             if (Clim /= 0.) Clim_old = Clim
             ! exponential estimate: \lim C \simeq \frac{C_{t} C_{t-2} - C_{t-1}^2}{C_{t} - 2 C_{t-1} + C{t-2}}
             Clim = (Clast(NLIM)*Clast(NLIM-2) - Clast(NLIM-1)**2)/(Clast(NLIM) - 2.*Clast(NLIM-1) + Clast(NLIM-2))
-            if (proc == 0) write(*,'(a,i4,3(a,es15.7))')"[initproblem:init_prob] iter = ",iC,"     M=",totME(t), " C=", Cint(t), " Clim=", Clim
+            if (proc == 0) then
+               write(msg, '(a,i4,3(a,es15.7))')"[initproblem:init_prob] iter = ",iC,"     M=",totME(t), " C=", Cint(t), " Clim=", Clim
+               call printinfo(msg, .true.)
+            end if
          end if
 
          if (abs(1. - Cint(t)/Cint_old) < epsC) doneC = .true.
@@ -383,7 +397,10 @@ contains
          enddo
       enddo
 
-      if (proc == 0) write(*,'(a,g13.7)')"[initproblem:init_prob] Relaxation finished. Largest orbital period: ",2.*pi*sqrt( (min(xmax-xmin, ymax-ymin, zmax-zmin)/2.)**3/(newtong * clump_mass) )
+      if (proc == 0) then
+         write(msg, '(a,g13.7)')"[initproblem:init_prob] Relaxation finished. Largest orbital period: ",2.*pi*sqrt( (min(xmax-xmin, ymax-ymin, zmax-zmin)/2.)**3/(newtong * clump_mass) )
+         call printinfo(msg, .true.)
+      end if
 
    end subroutine init_prob
 
@@ -396,8 +413,10 @@ contains
       use arrays,        only : u, sgp
       use mpisetup,      only : proc, comm, ierr, MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_SUM
       use initionized,   only : idni
-      use errh,          only : die, warn
+      use errh,          only : die, warn, printinfo
       use multigridvars, only : grav_bnd, bnd_isolated
+      use dataio_public, only : msg
+
       implicit none
 
       real, intent(in)      :: tol
@@ -423,7 +442,10 @@ contains
 
       TWP = TWP * dx * dy * dz
       vc = abs(2.*TWP(1) + TWP(2) + 3*TWP(3))/abs(TWP(2))
-      if (proc == 0 .and. (verbose .or. tol < 1.0)) write(*,'(a,es15.7,a,3es15.7,a)')"[initproblem:virialCheck] VC=",vc, " TWP=(",TWP(:),")"
+      if (proc == 0 .and. (verbose .or. tol < 1.0)) then
+         write(msg,'(a,es15.7,a,3es15.7,a)')"[initproblem:virialCheck] VC=",vc, " TWP=(",TWP(:),")"
+         call printinfo(msg, .true.)
+      end if
 
       if (vc > tol .and. grav_bnd == bnd_isolated) then
          if (proc == 0) then

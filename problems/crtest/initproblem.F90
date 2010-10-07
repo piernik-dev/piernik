@@ -49,7 +49,7 @@ module initproblem
    subroutine read_problem_par
 
       use mpisetup, only: MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION, &
-           &              cbuff, ibuff, rbuff, buffer_dim, comm, ierr, proc
+           &              cbuff_len, cbuff, ibuff, rbuff, buffer_dim, comm, ierr, proc
       use grid,     only: dxmn
       use errh,     only: namelist_errh, die
       use dataio_public, only : ierrh, msg, par_file
@@ -99,9 +99,9 @@ module initproblem
 
       end if
 
-      call MPI_BCAST(cbuff, 32*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
-      call MPI_BCAST(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
-      call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+      call MPI_BCAST(cbuff, cbuff_len*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
+      call MPI_BCAST(ibuff,           buffer_dim, MPI_INTEGER,          0, comm, ierr)
+      call MPI_BCAST(rbuff,           buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
       if (proc /= 0) then
 
@@ -138,7 +138,8 @@ module initproblem
       use initionized,    only : gamma_ion
       use arrays,         only : b, u
       use grid,           only : nx, ny, nz, nb, x, y, z, is, ie, js, je, ks, ke, nxd, nyd, nzd
-      use errh,           only : die
+      use errh,           only : die, printinfo
+      use dataio_public,  only : msg
       use types,          only : problem_customize_solution, finalize_problem
 
       implicit none
@@ -193,7 +194,8 @@ module initproblem
          enddo
       enddo
 
-      write(*,*) 'maxecr =',maxval(u(iecr,:,:,:)), amp_cr
+      write(msg,*) 'maxecr =',maxval(u(iecr,:,:,:)), amp_cr
+      call printinfo(msg, .true.)
 
 #endif /* COSM_RAYS */
 
@@ -213,8 +215,8 @@ module initproblem
       use grid,           only : x, y, z, is, ie, js, je, ks, ke
       use arrays,         only : b, u
       use initcosmicrays, only : iarr_crs, ncrn, ncre, K_crn_paral, K_crn_perp
-      use errh,           only : die
-      use dataio_public,  only : code_progress, PIERNIK_FINISHED, halfstep
+      use errh,           only : die, printinfo
+      use dataio_public,  only : code_progress, PIERNIK_FINISHED, halfstep, msg
 
       implicit none
 
@@ -258,8 +260,6 @@ module initproblem
                r_perp2 = delx**2 + dely**2 + delz**2 - r_par2
                crt = ampt * exp( - r_par2/r0_par2 - r_perp2/r0_perp2)
 
-               !if (nn==400) write(*,'(a,2i4,a,2f10.3,a,2f10.3,a,2f17.10)')"icn ",i,j," Dxy= ",delx,dely," r= ",sqrt(r_par2),sqrt(r_perp2)," crt= ",crt, u(iecr, i, j, k)
-
                norm(1) = norm(1) + (crt - u(iecr, i, j, k))**2
                norm(2) = norm(2) + crt**2
                dev(1) = min(dev(1), (crt - u(iecr, i, j, k)))
@@ -275,10 +275,11 @@ module initproblem
 
       if (proc == 0) then
          if (norm(2) /= 0) then
-            write(*,'(a,f12.5,a,2f12.5)')"[initproblem:check_norm] L2 error norm = ", sqrt(norm(1)/norm(2)), " min and max error = ", dev(1:2)
+            write(msg,'(a,f12.5,a,2f12.5)')"[initproblem:check_norm] L2 error norm = ", sqrt(norm(1)/norm(2)), " min and max error = ", dev(1:2)
          else
-            write(*,'(a,2f12.5)')"[initproblem:check_norm] Cannot compute L2 error norm, min and max error = ", dev(1:2)
+            write(msg,'(a,2f12.5)')"[initproblem:check_norm] Cannot compute L2 error norm, min and max error = ", dev(1:2)
          end if
+         call printinfo(msg)
       end if
 
       nn = nn + 1

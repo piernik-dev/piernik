@@ -43,8 +43,8 @@ contains
 
    subroutine read_problem_par
 
-      use errh,          only : namelist_errh, die
-      use mpisetup,      only : ierr, rbuff, cbuff, ibuff, proc, buffer_dim, comm, smalld, &
+      use errh,          only : namelist_errh, die, warn
+      use mpisetup,      only : ierr, rbuff, cbuff, ibuff, proc, buffer_dim, comm, smalld, cbuff_len, &
            &                    MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER
       use constants,     only : pi
       use dataio_public, only : skip_advection, ierrh, msg, par_file
@@ -86,9 +86,9 @@ contains
 
       end if
 
-      call MPI_BCAST(cbuff, 32*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
-      call MPI_BCAST(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
-      call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+      call MPI_BCAST(cbuff, cbuff_len*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
+      call MPI_BCAST(ibuff,           buffer_dim, MPI_INTEGER,          0, comm, ierr)
+      call MPI_BCAST(rbuff,           buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
       if (proc /= 0) then
 
@@ -118,10 +118,10 @@ contains
       if (d0 < 0.) call die("[initproblem:read_problem_par] Negative average density.")
 
       if (nsub < 1) then
-         if (proc == 0) write(*,'(a)')"[initproblem:read_problem_par] subsampling disabled"
+         if (proc == 0) call warn("[initproblem:read_problem_par] subsampling disabled.")
          nsub = 1
       else if (nsub > maxsub) then
-         if (proc == 0) write(*,'(a)')"[initproblem:read_problem_par] too much subsampling"
+         if (proc == 0)call warn("[initproblem:read_problem_par] too much subsampling.")
          nsub = maxsub
       end if
 
@@ -131,13 +131,15 @@ contains
 
    subroutine init_prob
 
-      use mpisetup,    only: proc
-      use arrays,      only: u, b
-      use constants,   only: pi
-      use grid,        only: x, y, z, dx, dy, dz, nx, ny, nz, xmin, xmax, ymin, ymax, zmin, zmax
-      use initionized, only: gamma_ion, idni, imxi, imzi, ieni
-      use list_hdf5,   only: additional_attrs
-      use types,       only: finalize_problem
+      use mpisetup,      only : proc
+      use arrays,        only : u, b
+      use constants,     only : pi
+      use grid,          only : x, y, z, dx, dy, dz, nx, ny, nz, xmin, xmax, ymin, ymax, zmin, zmax
+      use initionized,   only : gamma_ion, idni, imxi, imzi, ieni
+      use list_hdf5,     only : additional_attrs
+      use types,         only : finalize_problem
+      use dataio_public, only : msg
+      use errh,          only : printinfo, warn
 
       implicit none
 
@@ -179,10 +181,12 @@ contains
 #endif /* !ISO */
 
       if (proc == 0) then
-         write(*,'(3(a,g12.5),a)')"[initproblem:init_prob] Set up spheroid with a1 and a3 axes = ", a1, ", ", a3, " (eccentricity = ", e, ")"
+         write(msg, '(3(a,g12.5),a)')"[initproblem:init_prob] Set up spheroid with a1 and a3 axes = ", a1, ", ", a3, " (eccentricity = ", e, ")"
+         call printinfo(msg, .true.)
          if (x0-a1<xmin .or. x0+a1>xmax .or. y0-a1<ymin .or. y0+a1>ymax .or. z0-a3<zmin .or. z0+a3>zmax) &
-              write(*,'(a)')"[initproblem:init_prob] WARNING: part of the spheroid is outside the domain"
-         write(*,'(2(a,g12.5))')  "[initproblem:init_prob] Density = ", d0, " mass = ", 4./3.*pi * a1**2 * a3 * d0
+              call warn("[initproblem:init_prob] Part of the spheroid is outside the domain")
+         write(msg,'(2(a,g12.5))')   "[initproblem:init_prob] Density = ", d0, " mass = ", 4./3.*pi * a1**2 * a3 * d0
+         call printinfo(msg, .true.)
       endif
 
       additional_attrs => init_prob_attrs
@@ -224,10 +228,12 @@ contains
 !
    subroutine finalize_problem_maclaurin
 
-      use mpisetup,  only: proc, comm3d, ierr, MPI_DOUBLE_PRECISION, MPI_SUM, MPI_MIN, MPI_MAX, MPI_IN_PLACE
-      use constants, only: pi, newtong
-      use grid,      only: x, y, z, is, ie, js, je, ks, ke
-      use arrays,    only: sgp
+      use mpisetup,      only : proc, comm3d, ierr, MPI_DOUBLE_PRECISION, MPI_SUM, MPI_MIN, MPI_MAX, MPI_IN_PLACE
+      use constants,     only : pi, newtong
+      use grid,          only : x, y, z, is, ie, js, je, ks, ke
+      use arrays,        only : sgp
+      use errh,          only : printinfo, warn
+      use dataio_public, only : msg
 
       implicit none
 
@@ -240,7 +246,7 @@ contains
       dev(1) = huge(1.0)
       dev(2) = -dev(1)
 
-      if (e < 0. .and. proc == 0) write (*,'(a)')"[initproblem:finalize_problem] WARNING: e<0. not fully implemented yet"
+      if (e < 0. .and. proc == 0) call warn("[initproblem:finalize_problem] e<0. not fully implemented yet!")
 
       if (e > small_e) then
          AA1 = ( sqrt(1. - e**2) * asin(e) - e * (1. - e**2) ) / e**3
@@ -300,7 +306,10 @@ contains
       call MPI_Allreduce(MPI_IN_PLACE, dev(1), 1, MPI_DOUBLE_PRECISION, MPI_MIN, comm3d, ierr)
       call MPI_Allreduce(MPI_IN_PLACE, dev(2), 1, MPI_DOUBLE_PRECISION, MPI_MAX, comm3d, ierr)
 
-      if (proc == 0) write(*,'(a,f12.6,a,2f12.6)')"[initproblem:finalize_problem] L2 error norm = ", sqrt(norm(1)/norm(2)), " min and max error = ", dev(1:2)
+      if (proc == 0) then
+         write(msg,'(a,f12.6,a,2f12.6)')"[initproblem:finalize_problem] L2 error norm = ", sqrt(norm(1)/norm(2)), ", min and max error = ", dev(1:2)
+         call printinfo(msg)
+      end if
 
    end subroutine finalize_problem_maclaurin
 
