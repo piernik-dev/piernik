@@ -110,7 +110,7 @@ module initneutral
     call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
     call MPI_BCAST(lbuff,    buffer_dim, MPI_LOGICAL,          0, comm, ierr)
 
-    if (proc == 0) then
+    if (proc /= 0) then
 
       selfgrav_neu = lbuff(1)
 
