@@ -414,8 +414,7 @@ module dataio
          do i=1,nenv
             call printinfo(env(i), .false.)
          enddo
-         write (log_file,'(a,a1,a3,a1,i3.3,a4)') trim(problem_name),'_', run_id,'_',nrestart,'.log'
-         write (log_file,'(a,"/",a)') trim(cwd),trim(log_file)
+         write (log_file,'(6a,i3.3,a)') trim(cwd),'/',trim(problem_name),'_',trim(run_id),'_',nrestart,'.log'
          ! ToDo: if the simulation is restarted then save previous log_file (if exists) under a different, unique name
          write(system_command, '("mv ",a," ",a)') trim(tmp_log_file), trim(log_file)
          system_status = SYSTEM(system_command)
