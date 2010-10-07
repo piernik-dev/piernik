@@ -110,6 +110,8 @@ module errh
 
    subroutine namelist_errh(ierrh,nm)
 
+      use dataio_public, only : msg
+
       implicit none
 
       integer, intent(in) :: ierrh
@@ -117,30 +119,24 @@ module errh
 
       select case (ierrh)
          case (19)
-            write(*,*) "severe (19): Invalid reference to variable in ",trim(nm), " namelist"                        ! QA_WARN
-            write(*,*) "One of the following conditions occurred: "                                                  ! QA_WARN
-            write(*,*) "    * The variable was not a member of the namelist group."                                  ! QA_WARN
-            write(*,*) "    * An attempt was made to subscript a scalar variable."                                   ! QA_WARN
-            write(*,*) "    * A subscript of the array variable was out-of-bounds."                                  ! QA_WARN
-            write(*,*) "    * An array variable was specified with too many or too few subscripts for the variable." ! QA_WARN
-            write(*,*) "    * An attempt was made to specify a substring of a noncharacter variable or array name."  ! QA_WARN
-            write(*,*) "    * A substring specifier of the character variable was out-of-bounds."                    ! QA_WARN
-            write(*,*) "    * A subscript or substring specifier of the variable was not an integer constant."       ! QA_WARN
-            write(*,*) "    * An attempt was made to specify a substring by using an unsubscripted array variable."  ! QA_WARN
-            stop
+            call warn("One of the following conditions occurred: ")
+            call warn("    * The variable was not a member of the namelist group.")
+            call warn("    * An attempt was made to subscript a scalar variable.")
+            call warn("    * A subscript of the array variable was out-of-bounds.")
+            call warn("    * An array variable was specified with too many or too few subscripts for the variable.")
+            call warn("    * An attempt was made to specify a substring of a noncharacter variable or array name.")
+            call warn("    * A substring specifier of the character variable was out-of-bounds.")
+            call warn("    * A subscript or substring specifier of the variable was not an integer constant.")
+            call warn("    * An attempt was made to specify a substring by using an unsubscripted array variable.")
+            call die("severe (19): Invalid reference to variable in the "//trim(nm)//" namelist")
          case (-1)
-            write(*,*) "Namelist: ",trim(nm)," not found in problem.par"                                             ! QA_WARN
-            stop
-         case (5010)
-            write(*,*) "One of the variables found in problem.par doesn't belong to ",trim(nm), " namelist"          ! QA_WARN
-            stop
-         case (239)
-            write(*,*) "One of the variables found in problem.par doesn't belong to ",trim(nm), " namelist"          ! QA_WARN
-            stop
+            call die("Namelist: "//trim(nm)//" not found in problem.par")
+         case (239, 5010)
+            call die("One of the variables found in problem.par doesn't belong to the "//trim(nm)//" namelist")
          case (0)
          case default
-            write(*,*) 'Unknown error (', ierrh,') in namelist ',trim(nm)                                            ! QA_WARN
-            stop
+            write(msg, *)'Unknown error (', ierrh,') in namelist ',trim(nm)
+            call die(msg)
       endselect
 
    end subroutine namelist_errh

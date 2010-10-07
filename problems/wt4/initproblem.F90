@@ -261,7 +261,7 @@ contains
       ! that must be present in problem.par
       !mincs2 = minval(ic_data(:, :, :, 5))
       !maxcs2 = maxval(ic_data(:, :, :, 5))
-      !write(*,*) mincs2, maxcs2
+
    end subroutine read_IC_file
 
 !-----------------------------------------------------------------------------
@@ -274,7 +274,8 @@ contains
       use initionized, only: idni, imxi, imyi, imzi
       use list_hdf5,   only: additional_attrs, problem_write_restart, problem_read_restart
       use constants,   only: small, kboltz, mH
-      use errh,        only: die
+      use errh,        only: die, warn, printinfo
+      use dataio_public, only : msg
       use types,       only: problem_customize_solution
 
       implicit none
@@ -283,10 +284,22 @@ contains
       integer :: i, j, k, iic, jic, kic
 
       if (proc == 0) then
-         if (max(dx, dy, dz) > ic_dx)                 write(*,'(a)')     "[initproblem:init_prob] Warning: too low resolution" ! call die
-         if (abs(ic_dx/dx-anint(ic_dx/dx)) > beat_dx) write(*,'(a,f8.4)')"[initproblem:init_prob] Warning: x-direction requires interpolation ic_dx/dx= ", ic_dx/dx
-         if (abs(ic_dx/dy-anint(ic_dx/dy)) > beat_dx) write(*,'(a,f8.4)')"[initproblem:init_prob] Warning: y-direction requires interpolation ic_dx/dy= ", ic_dx/dy
-         if (abs(ic_dx/dz-anint(ic_dx/dz)) > beat_dx) write(*,'(a,f8.4)')"[initproblem:init_prob] Warning: z-direction requires interpolation ic_dx/dz= ", ic_dx/dz
+         if (max(dx, dy, dz) > ic_dx) then
+            write(msg,'(a)')     "[initproblem:init_prob] Too low resolution" ! call die
+            call warn(msg)
+         end if
+         if (abs(ic_dx/dx-anint(ic_dx/dx)) > beat_dx) then
+            write(msg,'(a,f8.4)')"[initproblem:init_prob] X-direction requires interpolation ic_dx/dx= ", ic_dx/dx
+            call warn(msg)
+         end if
+         if (abs(ic_dx/dy-anint(ic_dx/dy)) > beat_dx) then
+            write(msg,'(a,f8.4)')"[initproblem:init_prob] Y-direction requires interpolation ic_dx/dy= ", ic_dx/dy
+            call warn(msg)
+         end if
+         if (abs(ic_dx/dz-anint(ic_dx/dz)) > beat_dx) then
+            write(msg,'(a,f8.4)')"[initproblem:init_prob] Z-direction requires interpolation ic_dx/dz= ", ic_dx/dz
+            call warn(msg)
+         end if
       end if
 
       if (fake_ic) then
@@ -340,8 +353,10 @@ contains
          cs_iso2_arr(:,:,nz-nb+i) = cs_iso2_arr(:,:,nz-nb)
       enddo
       if (proc == 0 ) then
-         write(*,'(2(a,g15.7))') '[initproblem:init_problem]: minval(dens)    = ', minval(u(idni,:,:,:)),      ' maxval(dens)    = ', maxval(u(idni,:,:,:))
-         write(*,'(2(a,g15.7))') '[initproblem:init_problem]: minval(cs_iso2) = ', minval(cs_iso2_arr(:,:,:)), ' maxval(cs_iso2) = ', maxval(cs_iso2_arr(:,:,:))
+         write(msg,'(2(a,g15.7))') '[initproblem:init_problem]: minval(dens)    = ', minval(u(idni,:,:,:)),      ' maxval(dens)    = ', maxval(u(idni,:,:,:))
+         call printinfo(msg, .true.)
+         write(msg,'(2(a,g15.7))') '[initproblem:init_problem]: minval(cs_iso2) = ', minval(cs_iso2_arr(:,:,:)), ' maxval(cs_iso2) = ', maxval(cs_iso2_arr(:,:,:))
+         call printinfo(msg, .true.)
       end if
 
       b(:, 1:nx, 1:ny, 1:nz) = 0.0
@@ -363,7 +378,7 @@ contains
       problem_customize_solution => problem_customize_solution_wt4
 
 #ifndef UMUSCL
-      if (proc == 0 ) write(*,'(a)') "[initproblem:init_problem]: Warning: without UMUSCL you'll likely get Monet-like density maps."
+      if (proc == 0 ) call warn("[initproblem:init_problem]: Without UMUSCL you'll likely get Monet-like density maps.")
 #endif /* !UMUSCL */
 
       return
