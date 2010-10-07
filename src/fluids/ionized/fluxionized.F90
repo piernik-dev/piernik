@@ -27,7 +27,7 @@
 !
 #include "piernik.def"
 #define RNG 2:n-1
-
+!/*
 !>
 !! \brief (MH/JD) (doxy comments ready) Computation of %fluxes for the ionized fluid
 !!
@@ -63,7 +63,7 @@
 !!where \f$p_* = p + B^2/2\f$, \f$e= e_{th} + \frac{1}{2} \rho v^2 + B^2/2\f$,  are the total pressure and total energy density,
 !!while \f$e_{th}\f$ is thermal energy density and  \f$e_{mag} = B^2/2\f$ is the magnetic energy density.
 !<
-
+!*/
 module fluxionized
   implicit none
 

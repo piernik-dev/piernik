@@ -148,7 +148,7 @@ subroutine all_fluxes(n, flux, cfr, uu, bb, cs_iso2)
 end subroutine all_fluxes
 
 !==========================================================================================
-
+!/*
 !>
 !! \brief This subroutine applies flux limiter.
 !!
@@ -185,6 +185,7 @@ end subroutine all_fluxes
 !! \f}
 !! are %fluxes of left- and right-moving waves interpolated to cell boundaries.
 !<
+!*/
   subroutine flimiter(f,a,b,m,n)
     implicit none
     integer, intent(in)  :: m  !< number of conservative variables
