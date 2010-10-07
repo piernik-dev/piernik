@@ -100,11 +100,12 @@ contains
 
    subroutine cleanup_timers
 
+      use dataio_public, only : msg
+
       implicit none
 
       type(timer_list), pointer :: tp
       type(timer_info)          :: item
-      character(len=256)        :: lmsg
 
       tp => timer_root
 #ifdef VERBOSE
@@ -113,8 +114,8 @@ contains
       do while (associated(tp%next))
          item = delete_timer(tp%next)
 #ifdef VERBOSE
-         write(lmsg,'(3a)') "[timer:cleanup_timers]: Timer ",item%key," deleted"
-         call warn(lmsg)
+         write(msg,'(3a)') "[timer:cleanup_timers]: Timer ",item%key," deleted"
+         call warn(msg)
 #endif /* VERBOSE */
       enddo
       return
