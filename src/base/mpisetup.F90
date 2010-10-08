@@ -558,6 +558,9 @@ module mpisetup
 
       subroutine mpifind(var, what, loc_arr, loc_proc)
 
+         use errh,          only : warn
+         use dataio_public, only : msg
+
          implicit none
 
          character(len=3), intent(in) :: what
@@ -571,13 +574,12 @@ module mpisetup
 
          select case (what(1:3))
             case('min')
-               CALL MPI_REDUCE(rsend, rrecv, 1, MPI_2DOUBLE_PRECISION, &
-                                         MPI_MINLOC, 0, comm, ierr)
+               CALL MPI_REDUCE(rsend, rrecv, 1, MPI_2DOUBLE_PRECISION, MPI_MINLOC, 0, comm, ierr)
             case('max')
-               CALL MPI_REDUCE(rsend, rrecv, 1, MPI_2DOUBLE_PRECISION, &
-                                         MPI_MAXLOC, 0, comm, ierr)
+               CALL MPI_REDUCE(rsend, rrecv, 1, MPI_2DOUBLE_PRECISION, MPI_MAXLOC, 0, comm, ierr)
             case default
-               Write(*,*) 'mpifind: actual parameter "', what, '"is not allowed'
+               write(msg,*) '[mpisetup:mpifind] actual parameter "', what, '"is not allowed'
+               call warn(msg)
          end select
 
          if(proc == 0) then

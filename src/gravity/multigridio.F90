@@ -151,7 +151,8 @@ contains
 
       integer :: nxd, nyd, nzd
       integer :: v
-      character(len=32) :: dname
+      integer, parameter :: dnamelen = 32
+      character(len=dnamelen) :: dname
 
       if (.not. hdf5levels) return
 

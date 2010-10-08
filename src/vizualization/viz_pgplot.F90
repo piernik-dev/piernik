@@ -45,7 +45,6 @@ module viz
          real(kind=4)                     :: contra, bright, angle, c, s
          real(kind=4), dimension(6)       :: tr
          real(kind=4), dimension(1)       :: alev
-         character(len=16)  :: val
          logical,save       :: frun = .true.
 
          mxi = size(f,1)
