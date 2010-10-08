@@ -53,7 +53,6 @@ module dataio_public
    character(len=cwdlen) :: log_file            !< path to the current log file
    character(len=cwdlen) :: tmp_log_file        !< path to the temporary log file
    character(len=cwdlen) :: par_file            !< path to the parameter file
-   character(len=11)  :: par_default_file = "problem.par" !<
    integer            :: ierrh                  !< variable for iostat
    logical            :: halfstep = .false.     !< true when X-Y-Z sweeps are done and Z-Y-X are not
 

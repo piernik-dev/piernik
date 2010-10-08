@@ -138,7 +138,7 @@ contains
       use initproblem,           only: init_prob, read_problem_par
       use problem_pub,           only: problem_name, run_id
       use dataio,                only: init_dataio, write_data
-      use dataio_public,         only: nrestart, cwd, par_file, par_default_file, tmp_log_file, msg
+      use dataio_public,         only: nrestart, cwd, par_file, tmp_log_file, msg
       use mpisetup,              only: init_mpi
       use mpiboundaries,         only: mpi_boundaries_prep
       use fluidboundaries_pub,   only: init_fluidboundaries
@@ -175,7 +175,7 @@ contains
 
       call getarg(1, cwd)
       if (LEN_TRIM(cwd) == 0) cwd = '.'
-      write(par_file,'(3a)') trim(cwd),'/',trim(par_default_file)
+      write(par_file,'(3a)') trim(cwd),'/problem.par'
       write(tmp_log_file,'(2a)') trim(cwd),'/tmp.log'
       inquire(file = tmp_log_file, exist = tmp_log_exist)
       if (tmp_log_exist) then
