@@ -57,7 +57,7 @@ contains
 !------------------------!
 !   X dimension - fluid  !
 !------------------------!
-      if(nxd /= 1) then
+      if (nxd /= 1) then
 
          allocate(sizes(4), subsizes(4), starts(4))
 
@@ -143,7 +143,7 @@ contains
 !------------------------!
 !   Y dimension - fluid  !
 !------------------------!
-      if(nyd /= 1) then
+      if (nyd /= 1) then
 
          allocate(sizes(4), subsizes(4), starts(4))
 
@@ -229,7 +229,7 @@ contains
 !------------------------!
 !   Z dimension - fluid  !
 !------------------------!
-      if(nzd /= 1) then
+      if (nzd /= 1) then
 
          allocate(sizes(4), subsizes(4), starts(4))
 

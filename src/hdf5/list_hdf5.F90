@@ -89,7 +89,7 @@ module list_hdf5
          integer(HID_T) :: file_id       !> File identifier
          type(lhdf5_list), pointer :: tp
          tp => lhdf5_root
-         do while(associated(tp%next))
+         do while (associated(tp%next))
             call get_lhdf5(tp%next,file_id)
             tp => tp%next%node
          enddo
@@ -122,12 +122,12 @@ module list_hdf5
 
          tp => lhdf5_root
          do
-            if( associated(tp%next)) then
-               if( item%key == tp%next%info%key ) then
+            if ( associated(tp%next)) then
+               if ( item%key == tp%next%info%key ) then
                   write(msg,'(3a)') "[list_hdf5:add_lhdf5]: ",trim(item%key)," exists in the list"
                   call warn(msg)
                   return
-               else if( item%key < tp%next%info%key) then
+               else if ( item%key < tp%next%info%key) then
                   call insert_lhdf5(tp%next, item)
                else
                   tp => tp%next%node

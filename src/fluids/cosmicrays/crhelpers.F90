@@ -54,7 +54,7 @@ module crhelpers
 
       divvel(:,:,:) = 0.0
 
-      if(nxd /= 1) then
+      if (nxd /= 1) then
          do k = 1, nz
             do j = 1, ny
                vx = u(imxf,:,j,k) / u(idnf,:,j,k)
@@ -64,7 +64,7 @@ module crhelpers
          divvel(1,:,:) = divvel(2,:,:); divvel(nx,:,:) = divvel(nx-1,:,:) ! for sanity
       endif
 
-      if(nyd /= 1) then
+      if (nyd /= 1) then
          do k = 1, nz
             do i = 1, nx
                vy = u(imyf,i,:,k) / u(idnf,i,:,k)
@@ -74,7 +74,7 @@ module crhelpers
          divvel(:,1,:) = divvel(:,2,:); divvel(:,ny,:) = divvel(:,ny-1,:) ! for sanity
       endif
 
-      if(nzd /= 1) then
+      if (nzd /= 1) then
          do j = 1, ny
             do i = 1, nx
                vz = u(imzf,i,j,:) / u(idnf,i,j,:)
@@ -125,11 +125,11 @@ module crhelpers
       integer :: i,j,n
 
       faq = 0.5
-      if(i == 0) then
+      if (i == 0) then
          i   = 1
          faq = 1.0
       endif
-      if(j-1 == n) then
+      if (j-1 == n) then
          j   = n
          faq = 1.0
       endif

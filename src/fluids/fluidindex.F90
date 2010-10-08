@@ -147,7 +147,7 @@ module fluidindex
       nvar%components = nvar%components + 1
       nvar%fluids     = nvar%fluids + 1
       nvar%ion%pos    = nvar%components
-      if(selfgrav_ion)  nvar%fluids_sg = nvar%fluids_sg + 1
+      if (selfgrav_ion)  nvar%fluids_sg = nvar%fluids_sg + 1
 #ifndef ISO
       nvar%adiab = nvar%adiab + 1
 #endif /* !ISO */
@@ -161,7 +161,7 @@ module fluidindex
       nvar%components = nvar%components + 1
       nvar%fluids     = nvar%fluids + 1
       nvar%neu%pos    = nvar%components
-      if(selfgrav_neu)  nvar%fluids_sg = nvar%fluids_sg + 1
+      if (selfgrav_neu)  nvar%fluids_sg = nvar%fluids_sg + 1
 #ifndef ISO
       nvar%adiab = nvar%adiab + 1
 #endif /* !ISO */
@@ -175,7 +175,7 @@ module fluidindex
       nvar%components = nvar%components + 1
       nvar%fluids     = nvar%fluids + 1
       nvar%dst%pos    = nvar%components
-      if(selfgrav_dst)  nvar%fluids_sg = nvar%fluids_sg + 1
+      if (selfgrav_dst)  nvar%fluids_sg = nvar%fluids_sg + 1
 #endif /* DUST */
 
 #ifdef COSM_RAYS
@@ -187,9 +187,9 @@ module fluidindex
       nvar%cre%beg    = nvar%crn%end + 1
       nvar%cre%end    = nvar%all
       nvar%crs%end    = nvar%cre%end
-      if(nvar%crn%all  /= 0) nvar%components = nvar%components + 1
+      if (nvar%crn%all  /= 0) nvar%components = nvar%components + 1
       nvar%crn%pos = nvar%components
-      if(nvar%cre%all  /= 0) nvar%components = nvar%components + 1
+      if (nvar%cre%all  /= 0) nvar%components = nvar%components + 1
       nvar%cre%pos = nvar%components
 #endif /* COSM_RAYS */
 
@@ -231,7 +231,7 @@ module fluidindex
       iarr_all_swpy(nvar%ion%beg:nvar%ion%end) = iarr_ion_swpy
       iarr_all_swpz(nvar%ion%beg:nvar%ion%end) = iarr_ion_swpz
 
-      if(selfgrav_ion) then
+      if (selfgrav_ion) then
          i_sg = i_sg + 1
          iarr_all_sg(i_sg) = idni
       endif
@@ -250,7 +250,7 @@ module fluidindex
       iarr_all_swpy(nvar%neu%beg:nvar%neu%end) = iarr_neu_swpy
       iarr_all_swpz(nvar%neu%beg:nvar%neu%end) = iarr_neu_swpz
 
-      if(selfgrav_neu) then
+      if (selfgrav_neu) then
          i_sg = i_sg + 1
          iarr_all_sg(i_sg) = idnn
       endif
@@ -269,7 +269,7 @@ module fluidindex
       iarr_all_swpy(nvar%dst%beg:nvar%dst%end) = iarr_dst_swpy
       iarr_all_swpz(nvar%dst%beg:nvar%dst%end) = iarr_dst_swpz
 
-      if(selfgrav_dst) then
+      if (selfgrav_dst) then
          i_sg = i_sg + 1
          iarr_all_sg(i_sg) = idnd
       endif

@@ -414,7 +414,7 @@ contains
 
       integer(HID_T),intent(in)  :: file_id
 
-      if( divine_intervention_type == 3) then
+      if ( divine_intervention_type == 3) then
         if (allocated(den0)) call write_3darr_to_restart(den0(:,:,:), file_id, "den0", nx, ny, nz)
         if (allocated(vlx0)) call write_3darr_to_restart(vlx0(:,:,:), file_id, "vlx0", nx, ny, nz)
         if (allocated(vly0)) call write_3darr_to_restart(vly0(:,:,:), file_id, "vly0", nx, ny, nz)
@@ -442,15 +442,15 @@ contains
          if (.not.allocated(vlx0)) allocate(vlx0(nx,ny,nz))
          if (.not.allocated(vly0)) allocate(vly0(nx,ny,nz))
 
-         if(.not.associated(p3d)) p3d => den0(:,:,:)
+         if (.not.associated(p3d)) p3d => den0(:,:,:)
          call read_3darr_from_restart(file_id,"den0",p3d,nx,ny,nz)
-         if(associated(p3d)) nullify(p3d)
-         if(.not.associated(p3d)) p3d => vlx0(:,:,:)
+         if (associated(p3d)) nullify(p3d)
+         if (.not.associated(p3d)) p3d => vlx0(:,:,:)
          call read_3darr_from_restart(file_id,"vlx0",p3d,nx,ny,nz)
-         if(associated(p3d)) nullify(p3d)
-         if(.not.associated(p3d)) p3d => vly0(:,:,:)
+         if (associated(p3d)) nullify(p3d)
+         if (.not.associated(p3d)) p3d => vly0(:,:,:)
          call read_3darr_from_restart(file_id,"vly0",p3d,nx,ny,nz)
-         if(associated(p3d)) nullify(p3d)
+         if (associated(p3d)) nullify(p3d)
       endif
 
    end subroutine read_initial_fld_from_restart
@@ -513,7 +513,7 @@ contains
               enddo
            enddo
         case(3)
-          if(.not. allocated(alf)) then
+          if (.not. allocated(alf)) then
              allocate(alf(nx,ny))
              do i = 1,nx
                 do j = 1,ny

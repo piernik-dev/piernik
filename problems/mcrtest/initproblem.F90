@@ -186,9 +186,9 @@ module initproblem
             do j = nb+1,ny-nb
                do i = nb+1,nx-nb
                   r2 = (x(i)-xsn)**2+(y(j)-ysn)**2+(z(k)-zsn)**2
-                  if(icr == icr_H1) then
+                  if (icr == icr_H1) then
                      u(iarr_crn(icr),i,j,k) = u(iarr_crn(icr),i,j,k) + amp_cr*exp(-r2/r0**2)
-                  elseif(icr == icr_C12) then
+                  elseif (icr == icr_C12) then
                      u(iarr_crn(icr),i,j,k) = u(iarr_crn(icr),i,j,k) + amp_cr*0.1*exp(-r2/r0**2)
                   else
                      u(iarr_crn(icr),i,j,k) = 0.0

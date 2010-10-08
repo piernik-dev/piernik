@@ -159,7 +159,7 @@ module initfluids
       allocate(gamma(nvar%fluids))
 
 #if defined NEUTRAL && defined IONIZED
-      if(cs_iso_neu /= cs_iso_ion) &
+      if (cs_iso_neu /= cs_iso_ion) &
          call warn("[initfluids:init_fluids]: 'cs_iso_neu' and 'cs_iso_ion' should be equal")
 #endif /* defined NEUTRAL && defined IONIZED  */
 

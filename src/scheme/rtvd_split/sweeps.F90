@@ -54,7 +54,7 @@ module sweeps     ! split sweeps
     u1(:,:,:) = u(:,:,1,:)
 
     do i = 1,2
-       where(u1(iarr_all_dn,:,:) > 0.0)
+       where (u1(iarr_all_dn,:,:) > 0.0)
           vxr(:,:,:) = u1(iarr_all_mx,:,:) / u1(iarr_all_dn,:,:)
           v_r(:,:,:) = u1(iarr_all_my,:,:) / u1(iarr_all_dn,:,:)
        elsewhere
@@ -64,7 +64,7 @@ module sweeps     ! split sweeps
        epsa(:,:) =  u1(iarr_all_dn(2),:,:) / u1(iarr_all_dn(1),:,:)
 
        do ind=1,size(iarr_all_my)
-          if(ind == 1) then
+          if (ind == 1) then
             rotaccr(ind,:,:) = - dragc_gas_dust * epsa(:,:) * (v_r(1,:,:) - v_r(2,:,:))
           else
             rotaccr(ind,:,:) = - dragc_gas_dust * 1.0    * (v_r(2,:,:) - v_r(1,:,:))
@@ -73,7 +73,7 @@ module sweeps     ! split sweeps
           rotaccr(ind,:,:) = rotaccr(ind,:,:) + (qshear-2.0)*omega*vxr(ind,:,:)
        enddo
 
-       where(u1(iarr_all_dn,:,:) > 0.0)
+       where (u1(iarr_all_dn,:,:) > 0.0)
           u1(iarr_all_my,:,:) = u1(iarr_all_my,:,:) + fac(i)*dt*rotaccr(:,:,:)*u(iarr_all_dn,:,1,:)
        endwhere
        u(iarr_all_my,:,1,:) = u1(iarr_all_my,:,:)
@@ -119,8 +119,8 @@ module sweeps     ! split sweeps
 #ifdef MAGNETIC
           b_x=0.5*b(:,:,j,k)
           b_x(ibx,1:nx-1)=b_x(ibx,1:nx-1)+b_x(ibx,2:nx);       b_x(ibx,nx) = b_x(ibx,nx-1)
-          if(nyd /= 1 .and. j < je)  b_x(iby,:)=b_x(iby,:)+0.5*b(iby,:,jp,k)
-          if(nzd /= 1 .and. k < ke)  b_x(ibz,:)=b_x(ibz,:)+0.5*b(ibz,:,j,kp)
+          if (nyd /= 1 .and. j < je)  b_x(iby,:)=b_x(iby,:)+0.5*b(iby,:,jp,k)
+          if (nzd /= 1 .and. k < ke)  b_x(ibz,:)=b_x(ibz,:)+0.5*b(ibz,:,j,kp)
 #endif /* MAGNETIC */
 
         u_x(iarr_all_swpx,:)=u(:,:,j,k)
@@ -172,8 +172,8 @@ module sweeps     ! split sweeps
 #ifdef MAGNETIC
           b_y(:,:) = 0.5*b(:,i,:,k)
           b_y(iby,1:ny-1)=b_y(iby,1:ny-1)+b_y(iby,2:ny);       b_y(iby,ny) = b_y(iby,ny-1)
-          if(nxd /= 1 .and. i < ie) b_y(ibx,:)=b_y(ibx,:)+0.5*b(ibx,ip,:,k)
-          if(nzd /= 1 .and. k < ke) b_y(ibz,:)=b_y(ibz,:)+0.5*b(ibz,i,:,kp)
+          if (nxd /= 1 .and. i < ie) b_y(ibx,:)=b_y(ibx,:)+0.5*b(ibx,ip,:,k)
+          if (nzd /= 1 .and. k < ke) b_y(ibz,:)=b_y(ibz,:)+0.5*b(ibz,i,:,kp)
           b_y((/iby,ibx,ibz/),:)=b_y(:,:)
 #endif /* MAGNETIC */
 
@@ -228,8 +228,8 @@ module sweeps     ! split sweeps
 #ifdef MAGNETIC
           b_z(:,:) = 0.5*b(:,i,j,:)
           b_z(ibz,1:nz-1) = b_z(ibz,1:nz-1) + b_z(ibz,2:nz);   b_z(ibz,nz) = b_z(ibz,nz-1)
-          if(nxd /= 1 .and. i < ie) b_z(ibx,:) = b_z(ibx,:) + 0.5*b(ibx,ip,j,:)
-          if(nyd /= 1 .and. j < je) b_z(iby,:) = b_z(iby,:) + 0.5*b(iby,i,jp,:)
+          if (nxd /= 1 .and. i < ie) b_z(ibx,:) = b_z(ibx,:) + 0.5*b(ibx,ip,j,:)
+          if (nyd /= 1 .and. j < je) b_z(iby,:) = b_z(iby,:) + 0.5*b(iby,i,jp,:)
           b_z((/ibz,iby,ibx/),:)=b_z(:,:)
 #endif /* MAGNETIC */
 

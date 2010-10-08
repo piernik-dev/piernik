@@ -136,7 +136,7 @@ module rtvd ! split orig
 
 ! face-centered EMF components computation, depending on the sign of vh, the components are upwinded  to cell edges, leading to 1st order EMF
 
-      where(vh > 0.)
+      where (vh > 0.)
          vibj1=b*vg
       elsewhere
          vibj1=eoshift(b*vg,1,boundary=big)
@@ -167,7 +167,7 @@ module rtvd ! split orig
 ! the second-order corrections to the EMF components computation with the aid of the van Leer monotonic interpolation and 2nd order EMF computation
 
          dw=0.0
-         if(dwm*dwp > 0.0) dw=2.0*dwm*dwp/(dwm+dwp)
+         if (dwm*dwp > 0.0) dw=2.0*dwm*dwp/(dwm+dwp)
          vibj(i)=(w+dw)*dt
       enddo
 
@@ -344,9 +344,9 @@ module rtvd ! split orig
       u1 = u
 
 #ifdef ISO_LOCAL
-      if(sweep .eq. 'xsweep') then
+      if (sweep .eq. 'xsweep') then
          cs_iso2(:) =  cs_iso2_arr(:,i1,i2)
-      else if(sweep .eq. 'ysweep')  then
+      else if (sweep .eq. 'ysweep')  then
          cs_iso2(:) =  cs_iso2_arr(i2,:,i1)
       else
          cs_iso2(:) =  cs_iso2_arr(i1,i2,:)
@@ -366,7 +366,7 @@ module rtvd ! split orig
          fr = (u1*cfr+w)*0.5
          fl = (u1*cfr-w)*0.5
 
-         if(istep == 1) then
+         if (istep == 1) then
 
 ! Right moving waves construction for first-order scheme
 
@@ -379,7 +379,7 @@ module rtvd ! split orig
 
          fl(:,1:n-1) = fl(:,2:n)                         ; fl(:,n)   = fl(:,n-1)
 
-         if(istep == 2) then
+         if (istep == 2) then
 
 ! Second order flux corrections
 
@@ -419,7 +419,7 @@ module rtvd ! split orig
 #endif /* SHEAR */
          epsa(1,:) = dragc_gas_dust * u(iarr_all_dn(2),:)  / u(iarr_all_dn(1),:)
          epsa(2,:) = dragc_gas_dust
-         where(u(iarr_all_dn,:) > 0.0)
+         where (u(iarr_all_dn,:) > 0.0)
             vx0(:,:)  = u(iarr_all_mx,:)/u(iarr_all_dn,:)
          elsewhere
             vx0(:,:)  = 0.0
@@ -427,7 +427,7 @@ module rtvd ! split orig
 
 
          do ind = 1, nvar%fluids
-            if(ind == 1) then
+            if (ind == 1) then
                fricacc(ind,:) = - epsa(ind,:) * (vx0(1,:) - vx0(2,:))
             else
                fricacc(ind,:) = - epsa(ind,:) * (vx0(2,:) - vx0(1,:))
@@ -440,22 +440,22 @@ module rtvd ! split orig
 #endif /* FLUID_INTERACTIONS */
 
 #ifdef SHEAR
-         where(u(iarr_all_dn,:) > 0.0)
+         where (u(iarr_all_dn,:) > 0.0)
             vy0(:,:)  = u(iarr_all_my,:)/u(iarr_all_dn,:)
          elsewhere
             vy0(:,:)  = 0.0
          endwhere
          do ind = 1, nvar%fluids
-!            if(sweep .eq. 'xsweep') then
+!            if (sweep .eq. 'xsweep') then
 !               rotacc(ind,:) =  2.0*omega*(vy0(ind,:) + qshear*omega*x(:))
-!            else if(sweep .eq. 'ysweep')  then
+!            else if (sweep .eq. 'ysweep')  then
 !               rotacc(ind,:) = - 2.0*omega*vy0(ind,:)          ! with global shear
 !            else
 !               rotacc(ind,:) = 0.0
 !            endif
-            if(sweep .eq. 'xsweep') then
+            if (sweep .eq. 'xsweep') then
                rotacc(ind,:) =  2.0*omega*vy0(ind,:) + df(ind)  ! global_gradient
-            else if(sweep .eq. 'ysweep')  then
+            else if (sweep .eq. 'ysweep')  then
                rotacc(ind,:) = (qshear - 2.0)*omega*vy0(ind,:)  ! with respect to global shear (2.5D)
             else
                rotacc(ind,:) = 0.0
@@ -481,7 +481,7 @@ module rtvd ! split orig
          acc(:,n)   = acc(:,n-1); acc(:,1) = acc(:,2)
 
          !!!! BEWARE: May not be necessary anymore. Another dirty cheat?
-         where(u1(iarr_all_dn,:) < 0.0)
+         where (u1(iarr_all_dn,:) < 0.0)
             acc(:,:) = 0.0
          endwhere
 

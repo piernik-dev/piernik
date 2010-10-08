@@ -95,8 +95,8 @@ module errh
 
       call colormessage(nm, T_ERR)
 
-      if(present(allprocs)) then
-         if(allprocs /= 0) then
+      if (present(allprocs)) then
+         if (allprocs /= 0) then
             call MPI_Barrier(MPI_COMM_WORLD, ierr)
             call MPI_Finalize(ierr)
          endif

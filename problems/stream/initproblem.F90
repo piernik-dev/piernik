@@ -65,7 +65,7 @@ module initproblem
       kx     =  30.0
       kz     =  30.0
 
-      if(proc .eq. 0) then
+      if (proc .eq. 0) then
 
          diff_nml(PROBLEM_CONTROL)
 
@@ -132,7 +132,7 @@ module initproblem
       complex(kind=8), dimension(7) :: coeff
 !      character(len=cbuff_len) :: ala
 
-      if(run_id == 'lnA') then
+      if (run_id == 'lnA') then
          coeff(4) = (-0.1691398, 0.0361553 ) ! u_x
          coeff(5) = ( 0.1336704, 0.0591695 ) ! u_y
          coeff(6) = ( 0.1691389,-0.0361555 ) ! u_z
@@ -142,7 +142,7 @@ module initproblem
          coeff(3) = ( 0.1639549,-0.0233277 ) ! w_z
          kx = dpi/Lx
          kz = dpi/Lz
-      else if(run_id == 'lnB') then
+      else if (run_id == 'lnB') then
          write(*,*) 'Lin B'
          coeff(4) = (-0.0174121,-0.2770347 ) ! u_x
          coeff(5) = ( 0.2767976,-0.0187568 ) ! u_y
@@ -215,7 +215,7 @@ module initproblem
                u(imzd,i,j,k) = 0.0
 
 ! Linear test
-            if(linear) then
+            if (linear) then
 !               u(idnd,i,j,k) =  u(idnd,i,j,k) + amp*eps*dsin(kz*z(k))*dcos(kx*x(i))
                u(idnd,i,j,k) =  u(idnd,i,j,k) + amp*eps*dcos(kz*z(k))*dcos(kx*x(i))
 ! ...                u(idnd,i,j,k) =  u(idnd,i,j,k) + amp*eps*dcos(kx*x(i))*dcos(kz*z(k))
@@ -253,7 +253,7 @@ module initproblem
             enddo
          enddo
       enddo
-      if(.not.linear) then
+      if (.not.linear) then
         call random_number(noise)
         u(imxd,:,:,:) = u(imxd,:,:,:) +amp -2.0*amp*noise(1,:,:,:) * u(idnd,:,:,:)
         u(imyd,:,:,:) = u(imyd,:,:,:) +amp -2.0*amp*noise(2,:,:,:) * u(idnd,:,:,:)
@@ -275,7 +275,7 @@ module initproblem
       real, intent(in) :: t
       complex(kind=8), dimension(8) :: coeff
 
-      if(run_id == 'lnA') then
+      if (run_id == 'lnA') then
          coeff(4) = (-0.1691398, 0.0361553 ) ! u_x
          coeff(5) = ( 0.1336704, 0.0591695 ) ! u_y
          coeff(6) = ( 0.1691389,-0.0361555 ) ! u_z
@@ -285,7 +285,7 @@ module initproblem
          coeff(3) = ( 0.1639549,-0.0233277 ) ! w_z
 
          coeff(8) = (-0.3480127, 0.4190204 ) ! omega
-      else if(run_id == 'lnB') then
+      else if (run_id == 'lnB') then
          write(*,*) 'Lin B'
          coeff(4) = (-0.0174121,-0.2770347 ) ! u_x
          coeff(5) = ( 0.2767976,-0.0187568 ) ! u_y

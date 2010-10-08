@@ -146,9 +146,9 @@ module shear
 
     np = ny / 2 + 1
 
-    if(.not.allocated(ctmp)) allocate(ctmp(np))
-    if(.not.allocated(rtmp)) allocate(rtmp(ny))
-    if(.not.allocated(ky)  ) allocate(  ky(np))
+    if (.not.allocated(ctmp)) allocate(ctmp(np))
+    if (.not.allocated(rtmp)) allocate(rtmp(ny))
+    if (.not.allocated(ky)  ) allocate(  ky(np))
 
     ky(1) = 0.0
     do p = 2, np
@@ -200,11 +200,11 @@ module shear
     fx = dely / (xmax - xmin)
     sg = -1
 
-    if(.not.allocated(temp)) allocate(temp(my,nz))
+    if (.not.allocated(temp)) allocate(temp(my,nz))
 
     unshear = 0.0
 
-    if(present(inv)) then
+    if (present(inv)) then
        fx = - fx
     endif
     do i = 1, nx

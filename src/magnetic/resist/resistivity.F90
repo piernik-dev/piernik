@@ -50,14 +50,14 @@ contains
 
       subroutine cleanup_resistivity
          implicit none
-         if(allocated(w)  ) deallocate(w)
-         if(allocated(wb) ) deallocate(wb)
-         if(allocated(wm) ) deallocate(wm)
-         if(allocated(wp) ) deallocate(wp)
-         if(allocated(dw) ) deallocate(dw)
-         if(allocated(eta)) deallocate(eta)
-         if(allocated(b1))  deallocate(b1)
-         if(allocated(etahelp)) deallocate(etahelp)
+         if (allocated(w)  ) deallocate(w)
+         if (allocated(wb) ) deallocate(wb)
+         if (allocated(wm) ) deallocate(wm)
+         if (allocated(wp) ) deallocate(wp)
+         if (allocated(dw) ) deallocate(dw)
+         if (allocated(eta)) deallocate(eta)
+         if (allocated(b1))  deallocate(b1)
+         if (allocated(etahelp)) deallocate(etahelp)
 
       end subroutine cleanup_resistivity
 
@@ -130,16 +130,16 @@ contains
 
          endif
 
-         if(eta_scale < 0) call die("eta_scale must be greater or equal 0")
+         if (eta_scale < 0) call die("eta_scale must be greater or equal 0")
 
-         if(.not.allocated(w)  ) allocate(w(nx,ny,nz)  )
-         if(.not.allocated(wb) ) allocate(wb(nx,ny,nz) )
-         if(.not.allocated(wm) ) allocate(wm(nx,ny,nz) )
-         if(.not.allocated(wp) ) allocate(wp(nx,ny,nz) )
-         if(.not.allocated(dw) ) allocate(dw(nx,ny,nz) )
-         if(.not.allocated(eta)) allocate(eta(nx,ny,nz))
-         if(.not.allocated(etahelp)) allocate(etahelp(nx,ny,nz))
-         if(.not.allocated(b1) ) allocate(b1(nx,ny,nz) )
+         if (.not.allocated(w)  ) allocate(w(nx,ny,nz)  )
+         if (.not.allocated(wb) ) allocate(wb(nx,ny,nz) )
+         if (.not.allocated(wm) ) allocate(wm(nx,ny,nz) )
+         if (.not.allocated(wp) ) allocate(wp(nx,ny,nz) )
+         if (.not.allocated(dw) ) allocate(dw(nx,ny,nz) )
+         if (.not.allocated(eta)) allocate(eta(nx,ny,nz))
+         if (.not.allocated(etahelp)) allocate(etahelp(nx,ny,nz))
+         if (.not.allocated(b1) ) allocate(b1(nx,ny,nz) )
 
       end subroutine init_resistivity
 
@@ -169,7 +169,7 @@ contains
 
        eta(:,:,:) = 0.25*( wb(:,:,:) + mshift(wb(:,:,:),zdim) )**2
 
-     if(nzd /=1) then
+     if (nzd /=1) then
 !--- current_x
 !       wb(:,:,:) = (b(ibz,:,:,:)-mshift(b(ibz,:,:,:),ydim))/dl(ydim) &
 !                   -(b(iby,:,:,:)-mshift(b(iby,:,:,:),zdim))/dl(zdim)
@@ -194,7 +194,7 @@ contains
 !! \todo Following lines are splitted into separate lines because of intel and gnu dbgs
 !! shoud that be so? Is there any other solution instead splitting?
 !<
-        if(nzd /= 1) then
+        if (nzd /= 1) then
           etahelp(:,:,:)  =   mshift(eta(:,:,:),xdim)
           etahelp = etahelp + pshift(eta(:,:,:),xdim)
           etahelp = etahelp + mshift(eta(:,:,:),ydim)
@@ -202,11 +202,11 @@ contains
           etahelp = etahelp + mshift(eta(:,:,:),zdim)
           etahelp = etahelp + pshift(eta(:,:,:),zdim)
           etahelp = (etahelp+dble(eta_scale)*eta(:,:,:))/(6.+dble(eta_scale))
-          where(eta > eta_0)
+          where (eta > eta_0)
              eta = etahelp
           endwhere
         else
-          where(eta > eta_0)
+          where (eta > eta_0)
             eta(:,:,:) = (mshift(eta(:,:,:),xdim) + pshift(eta(:,:,:),xdim) &
                          +mshift(eta(:,:,:),ydim) + pshift(eta(:,:,:),ydim) &
                          +dble(eta_scale)*eta(:,:,:))/(4.+dble(eta_scale))
@@ -239,9 +239,9 @@ contains
 
       if (ici .eq. icz) then
          eta(:,:,:)=0.5*(eta(:,:,:)+pshift(eta(:,:,:),zdim))
-      elseif(ici .eq. icy) then
+      elseif (ici .eq. icy) then
          eta(:,:,:)=0.5*(eta(:,:,:)+pshift(eta(:,:,:),ydim))
-      elseif(ici .eq. icx) then
+      elseif (ici .eq. icx) then
          eta(:,:,:)=0.5*(eta(:,:,:)+pshift(eta(:,:,:),xdim))
       endif
 
@@ -259,7 +259,7 @@ contains
          implicit none
          real :: dx2,dt_resist_min
 
-         if(eta_max .ne. 0.) then
+         if (eta_max .ne. 0.) then
             dx2 = dxmn**2
             dt_resist = cfl_resist*dx2/(2.*eta_max)
 #ifndef ISO
@@ -305,7 +305,7 @@ contains
     wp = 0.5*(pshift(w,n)-w)
     wm = 0.5*(w-mshift(w,n))
     dw = 0.
-    where(wm*wp > 0.) dw=2.*wm*wp/(wm+wp)
+    where (wm*wp > 0.) dw=2.*wm*wp/(wm+wp)
     wcu = (w+dw)*dt
   end subroutine tvdd
 
@@ -320,9 +320,9 @@ contains
     implicit none
 
     call tvdd(iby,icz,xdim)
-    if(nxd /= 1) call bnd_emf(wcu,'emfz','xdim')
-    if(nyd /= 1) call bnd_emf(wcu,'emfz','ydim')
-    if(nzd /= 1) call bnd_emf(wcu,'emfz','zdim')
+    if (nxd /= 1) call bnd_emf(wcu,'emfz','xdim')
+    if (nyd /= 1) call bnd_emf(wcu,'emfz','ydim')
+    if (nzd /= 1) call bnd_emf(wcu,'emfz','zdim')
 
   end subroutine diffuseby_x
 
@@ -335,9 +335,9 @@ contains
     implicit none
 
     call tvdd(ibz,icy,xdim)
-    if(nxd /= 1) call bnd_emf(wcu,'emfy','xdim')
-    if(nyd /= 1) call bnd_emf(wcu,'emfy','ydim')
-    if(nzd /= 1) call bnd_emf(wcu,'emfy','zdim')
+    if (nxd /= 1) call bnd_emf(wcu,'emfy','xdim')
+    if (nyd /= 1) call bnd_emf(wcu,'emfy','ydim')
+    if (nzd /= 1) call bnd_emf(wcu,'emfy','zdim')
 
   end subroutine diffusebz_x
 
@@ -350,9 +350,9 @@ contains
     implicit none
 
     call tvdd(ibz,icx,ydim)
-    if(nyd /= 1) call bnd_emf(wcu,'emfx','ydim')
-    if(nzd /= 1) call bnd_emf(wcu,'emfx','zdim')
-    if(nxd /= 1) call bnd_emf(wcu,'emfx','xdim')
+    if (nyd /= 1) call bnd_emf(wcu,'emfx','ydim')
+    if (nzd /= 1) call bnd_emf(wcu,'emfx','zdim')
+    if (nxd /= 1) call bnd_emf(wcu,'emfx','xdim')
   end subroutine diffusebz_y
 
   subroutine diffusebx_y
@@ -364,9 +364,9 @@ contains
     implicit none
 
     call tvdd(ibx,icz,ydim)
-    if(nyd /= 1) call bnd_emf(wcu, 'emfz', 'ydim')
-    if(nzd /= 1) call bnd_emf(wcu, 'emfz', 'zdim')
-    if(nxd /= 1) call bnd_emf(wcu, 'emfz', 'xdim')
+    if (nyd /= 1) call bnd_emf(wcu, 'emfz', 'ydim')
+    if (nzd /= 1) call bnd_emf(wcu, 'emfz', 'zdim')
+    if (nxd /= 1) call bnd_emf(wcu, 'emfz', 'xdim')
   end subroutine diffusebx_y
 
   subroutine diffusebx_z
@@ -378,9 +378,9 @@ contains
     implicit none
 
     call tvdd(ibx,icy,zdim)
-    if(nzd /= 1) call bnd_emf(wcu, 'emfy', 'zdim')
-    if(nxd /= 1) call bnd_emf(wcu, 'emfy', 'xdim')
-    if(nyd /= 1) call bnd_emf(wcu, 'emfy', 'ydim')
+    if (nzd /= 1) call bnd_emf(wcu, 'emfy', 'zdim')
+    if (nxd /= 1) call bnd_emf(wcu, 'emfy', 'xdim')
+    if (nyd /= 1) call bnd_emf(wcu, 'emfy', 'ydim')
   end subroutine diffusebx_z
 
   subroutine diffuseby_z
@@ -392,9 +392,9 @@ contains
     implicit none
 
     call tvdd(iby,icx,zdim)
-    if(nzd /= 1) call bnd_emf(wcu, 'emfx', 'zdim')
-    if(nxd /= 1) call bnd_emf(wcu, 'emfx', 'xdim')
-    if(nyd /= 1) call bnd_emf(wcu, 'emfx', 'ydim')
+    if (nzd /= 1) call bnd_emf(wcu, 'emfx', 'zdim')
+    if (nxd /= 1) call bnd_emf(wcu, 'emfx', 'xdim')
+    if (nyd /= 1) call bnd_emf(wcu, 'emfx', 'ydim')
   end subroutine diffuseby_z
 
 end module resistivity

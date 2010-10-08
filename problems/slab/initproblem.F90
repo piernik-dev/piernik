@@ -56,7 +56,7 @@ module initproblem
       d0      = 1.0
       r0      = 0.25
 
-      if(proc .eq. 0) then
+      if (proc .eq. 0) then
 
          diff_nml(PROBLEM_CONTROL)
 
@@ -124,7 +124,7 @@ module initproblem
                vy = 0.0
 #endif /* !FFTW */
                vz = 0.0
-               if(abs(yj) <= r0 ) then
+               if (abs(yj) <= r0 ) then
                   u(idni,i,j,k) = d0
                else
                   u(idni,i,j,k) = 0.5*d0

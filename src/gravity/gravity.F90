@@ -193,7 +193,7 @@ module gravity
 
       gpot(:,:,:) = 0.0
 
-      if(.not.user_grav) then
+      if (.not.user_grav) then
          grav_pot_3d => default_grav_pot_3d
 #ifdef VERBOSE
          call warn("[gravity:init_grav] user_grav is set to false. Using default grav_pot_3d.")
@@ -237,7 +237,7 @@ module gravity
 
       ! communicate boundary values for sgp(:, :, :) because multtigrid solver gives at most 2 guardcells, while for hydro solver typically 4 is required.
       call all_sgp_boundaries
-      if(frun) then
+      if (frun) then
          sgpm = sgp
          frun = .false.
       endif
@@ -568,7 +568,7 @@ module gravity
 #endif /* GRAV_(SPECIFIED) */
 !-----------------------
 
-      if(gp_status .eq. 'undefined') then
+      if (gp_status .eq. 'undefined') then
          call grav_accel2pot
       endif
 
@@ -660,7 +660,7 @@ module gravity
 
 ! Gravitational accelleration is computed on right cell boundaries
 
-!      if(istep==1) then
+!      if (istep==1) then
 !         select case(sweep)
 !            case('xsweep')
 !               grav(3:n-2) = onetw*(hgpot(5:n,i1,i2) - 8.*hgpot(4:n-1,i1,i2) + 8.*hgpot(2:n-3,i1,i2) - hgpot(1:n-4,i1,i2) )/dl(xdim)
@@ -681,7 +681,7 @@ module gravity
 !      endif
 !      grav(2) = grav(3); grav(n-1) = grav(n-2)
 !      grav(1) = grav(2); grav(n) = grav(n-1)
-      if(istep==1) then
+      if (istep==1) then
          select case(sweep)
             case('xsweep')
                grav(2:n-1) = 0.5*(hgpot(1:n-2,i1,i2) - hgpot(3:n,i1,i2))/dl(xdim)
@@ -778,7 +778,7 @@ module gravity
                         0, comm3d, ierr )
 
 
-      if(proc .eq. 0) then
+      if (proc .eq. 0) then
 
          do ip = 0, nproc-1
             call MPI_Cart_coords(comm3d, ip, ndims, pc, ierr)
@@ -833,7 +833,7 @@ module gravity
       gpwork = gpwork - gp_max
 
       gp=gpwork
-      if(allocated(gpwork)) deallocate(gpwork)
+      if (allocated(gpwork)) deallocate(gpwork)
 
    end subroutine grav_accel2pot
 

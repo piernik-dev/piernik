@@ -75,7 +75,7 @@ module initproblem
       n_sn    = 1
       dt_sn   = 0.0
 
-      if(proc .eq. 0) then
+      if (proc .eq. 0) then
 
          diff_nml(PROBLEM_CONTROL)
 
@@ -165,7 +165,7 @@ module initproblem
          do j = 1,ny
             do i = 1,nx
                r = dsqrt( (x(i)-x0)**2 + (y(j)-y0)**2 + (z(k)-z0)**2 )
-               if( r**2 < r0**2) then
+               if ( r**2 < r0**2) then
                   u(ienn,i,j,k)   = u(ienn,i,j,k) + Eexpl
                endif
             enddo
@@ -199,7 +199,7 @@ module initproblem
          do j = 1,ny
             do i = 1,nx
                r = dsqrt( (x(i)-x0)**2 + (y(j)-y0)**2 + (z(k)-z0)**2 )
-               if( r**2 < r0**2) then
+               if ( r**2 < r0**2) then
                   u(ieni,i,j,k)   = u(ieni,i,j,k) + Eexpl
                endif
             enddo

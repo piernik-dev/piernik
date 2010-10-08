@@ -60,24 +60,24 @@ module func
       ly = SIZE(tab,2)
       lz = SIZE(tab,3)
 
-      if(d==1 .and. lx==1) then
+      if (d==1 .and. lx==1) then
         pshift = tab
         return
       endif
-      if(d==2 .and. ly==1) then
+      if (d==2 .and. ly==1) then
         pshift = tab
         return
       endif
-      if(d==3 .and. lz==1) then
+      if (d==3 .and. lz==1) then
         pshift = tab
         return
       endif
 
-      if(d==1) then
+      if (d==1) then
          pshift(1:lx-1,:,:) = tab(2:lx,:,:); pshift(lx,:,:) = tab(1,:,:)
-      else if(d==2) then
+      else if (d==2) then
          pshift(:,1:ly-1,:) = tab(:,2:ly,:); pshift(:,ly,:) = tab(:,1,:)
-      else if(d==3) then
+      else if (d==3) then
          pshift(:,:,1:lz-1) = tab(:,:,2:lz); pshift(:,:,lz) = tab(:,:,1)
       else
          call warn('[func:pshift]: Dim ill defined in pshift!')
@@ -107,24 +107,24 @@ module func
       ly = SIZE(tab,2)
       lz = SIZE(tab,3)
 
-      if(d==1 .and. lx==1) then
+      if (d==1 .and. lx==1) then
         mshift = tab
         return
       endif
-      if(d==2 .and. ly==1) then
+      if (d==2 .and. ly==1) then
         mshift = tab
         return
       endif
-      if(d==3 .and. lz==1) then
+      if (d==3 .and. lz==1) then
         mshift = tab
         return
       endif
 
-      if(d==1) then
+      if (d==1) then
          mshift(2:lx,:,:) = tab(1:lx-1,:,:); mshift(1,:,:) = tab(lx,:,:)
-      else if(d==2) then
+      else if (d==2) then
          mshift(:,2:ly,:) = tab(:,1:ly-1,:); mshift(:,1,:) = tab(:,ly,:)
-      else if(d==3) then
+      else if (d==3) then
          mshift(:,:,2:lz) = tab(:,:,1:lz-1); mshift(:,:,1) = tab(:,:,lz)
       else
          call warn('[func:mshift]: Dim ill defined in mshift!')
@@ -152,8 +152,8 @@ module func
       do
          read(lun_bef,'(a)', iostat=io) sa
          read(lun_aft,'(a)', iostat=io) sb
-         if(io/=0) exit
-         if((sa/=sb)) then
+         if (io/=0) exit
+         if ((sa/=sb)) then
             write(msg,'(a1,a)') '*',trim(sb)
          else
             write(msg,'(a1,a)') ' ',trim(sb)
@@ -180,7 +180,7 @@ module func
       do i=1, len(str)
          c = str(i:i)
          outstr(i:i) = ''
-         if( is_lowercase(c) .or. is_uppercase(c) .or. is_digit(c) .or. c=='_' .or. c=='-' ) then
+         if ( is_lowercase(c) .or. is_uppercase(c) .or. is_digit(c) .or. c=='_' .or. c=='-' ) then
             outstr(i:i) = c
          else
             return
@@ -195,7 +195,7 @@ module func
 
       is_lowercase = .false.
 
-      if(ichar(c) >= 97 .and. ichar(c) <= 122) is_lowercase=.true.
+      if (ichar(c) >= 97 .and. ichar(c) <= 122) is_lowercase=.true.
    end function is_lowercase
 
    logical function is_uppercase(c)
@@ -204,7 +204,7 @@ module func
 
       is_uppercase = .false.
 
-      if(ichar(c) >= 65 .and. ichar(c) <= 90) is_uppercase=.true.
+      if (ichar(c) >= 65 .and. ichar(c) <= 90) is_uppercase=.true.
    end function is_uppercase
 
    logical function is_digit(c)
@@ -213,7 +213,7 @@ module func
 
       is_digit = .false.
 
-      if(ichar(c) >= 48 .and. ichar(c) <= 57) is_digit=.true.
+      if (ichar(c) >= 48 .and. ichar(c) <= 57) is_digit=.true.
    end function is_digit
 
 end module func

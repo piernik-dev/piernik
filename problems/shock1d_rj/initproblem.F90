@@ -62,7 +62,7 @@ module initproblem
       problem_name = 'shock'
       run_id  = 'tst'
 
-      if(proc .eq. 0) then
+      if (proc .eq. 0) then
 
          diff_nml(PROBLEM_CONTROL)
 

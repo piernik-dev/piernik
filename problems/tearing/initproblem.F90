@@ -67,7 +67,7 @@ module initproblem
       beta         =  1.0
       v0           =  0.1
 
-      if(proc == 0) then
+      if (proc == 0) then
 
          diff_nml(PROBLEM_CONTROL)
 

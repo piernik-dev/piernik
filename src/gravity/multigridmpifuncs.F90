@@ -176,7 +176,7 @@ contains
       req3d(:) = MPI_REQUEST_NULL
 
       if (has_dir(XDIR)) then
-         if(pxsize > 1) then
+         if (pxsize > 1) then
             if (.not. is_external(XLO)) CALL MPI_Isend (lvl(lev)%mgvar(1, 1, 1, iv), 1, lvl(lev)%MPI_YZ_LEFT_DOM(ng),  procxl, 15, comm3d, req3d(1),  ierr)
             if (.not. is_external(XHI)) CALL MPI_Isend (lvl(lev)%mgvar(1, 1, 1, iv), 1, lvl(lev)%MPI_YZ_RIGHT_DOM(ng), procxr, 25, comm3d, req3d(3),  ierr)
             if (.not. is_external(XLO)) CALL MPI_Irecv (lvl(lev)%mgvar(1, 1, 1, iv), 1, lvl(lev)%MPI_YZ_LEFT_BND(ng),  procxl, 25, comm3d, req3d(2),  ierr)
@@ -188,7 +188,7 @@ contains
       endif
 
       if (has_dir(YDIR)) then
-         if(pysize > 1) then
+         if (pysize > 1) then
             if (.not. is_external(YLO)) CALL MPI_Isend (lvl(lev)%mgvar(1, 1, 1, iv), 1, lvl(lev)%MPI_XZ_LEFT_DOM(ng),  procyl, 35, comm3d, req3d(5),  ierr)
             if (.not. is_external(YHI)) CALL MPI_Isend (lvl(lev)%mgvar(1, 1, 1, iv), 1, lvl(lev)%MPI_XZ_RIGHT_DOM(ng), procyr, 45, comm3d, req3d(6),  ierr)
             if (.not. is_external(YLO)) CALL MPI_Irecv (lvl(lev)%mgvar(1, 1, 1, iv), 1, lvl(lev)%MPI_XZ_LEFT_BND(ng),  procyl, 45, comm3d, req3d(7),  ierr)
@@ -200,7 +200,7 @@ contains
       endif
 
       if (has_dir(ZDIR)) then
-         if(pzsize > 1) then
+         if (pzsize > 1) then
             if (.not. is_external(ZLO)) CALL MPI_Isend (lvl(lev)%mgvar(1, 1, 1, iv), 1, lvl(lev)%MPI_XY_LEFT_DOM(ng),  proczl, 55, comm3d, req3d(9),  ierr)
             if (.not. is_external(ZHI)) CALL MPI_Isend (lvl(lev)%mgvar(1, 1, 1, iv), 1, lvl(lev)%MPI_XY_RIGHT_DOM(ng), proczr, 65, comm3d, req3d(10), ierr)
             if (.not. is_external(ZLO)) CALL MPI_Irecv (lvl(lev)%mgvar(1, 1, 1, iv), 1, lvl(lev)%MPI_XY_LEFT_BND(ng),  proczl, 65, comm3d, req3d(11), ierr)

@@ -79,7 +79,7 @@ module interactions
       collision_factor  = 0.0
       cfl_interact      = 0.8
 
-      if(proc .eq. 0) then
+      if (proc .eq. 0) then
 
          diff_nml(INTERACTIONS)
 
@@ -189,7 +189,7 @@ module interactions
 
       do ifl=1,nvar%fluids
          do jfl=1,nvar%fluids
-            if(ifl .ne. jfl) then
+            if (ifl .ne. jfl) then
                flch(ifl,jfl,:)= collfaq(ifl,jfl)*uu(iarr_all_dn(ifl),:) * uu(iarr_all_dn(jfl),:) &
                         *( uu(iarr_all_mx(jfl),:)/uu(iarr_all_dn(jfl),:) &
                          - uu(iarr_all_mx(ifl),:)/uu(iarr_all_dn(ifl),:))

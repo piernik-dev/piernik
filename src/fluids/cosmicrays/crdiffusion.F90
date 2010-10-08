@@ -71,13 +71,13 @@ module crdiffusion
           do i=2,nx     ! if we are here this implies nxd /= 1
 
              b1b =  b(ibx,i,  j,  k)
-             if(nyd /= 1) then
+             if (nyd /= 1) then
                 b2b = (b(iby,i,  j,  k) + b(iby,i-1,j,  k)       &
                      + b(iby,i-1,j+1,k) + b(iby,i,  j+1,k))*0.25
              else
                 b2b = 0.0
              endif
-             if(nzd /= 1) then
+             if (nzd /= 1) then
                 b3b = (b(ibz,i,  j,  k) + b(ibz,i-1,j,  k)       &
                      + b(ibz,i-1,j,k+1) + b(ibz,i,  j,k+1))*0.25
              else
@@ -102,7 +102,7 @@ module crdiffusion
                 decr2 = 0.0
              endif
 
-             if(nzd /= 1) then
+             if (nzd /= 1) then
                 dqm3  = 0.5*((u(iarr_crs,i-1,j ,k  ) + u(iarr_crs,i ,j ,k  ))    &
                             -(u(iarr_crs,i-1,j ,k-1) + u(iarr_crs,i ,j ,k-1)))/dz
                 dqp3  = 0.5*((u(iarr_crs,i-1,j ,k+1) + u(iarr_crs,i ,j ,k+1))    &
@@ -166,7 +166,7 @@ module crdiffusion
         do j=2,ny ! if we are here nyd /= 1
           do i=is,ie
 
-             if(nxd /= 1) then
+             if (nxd /= 1) then
                 b1b = (b(ibx,i,j,k) + b(ibx,i,j-1,k)   &
                      + b(ibx,i+1,j-1,k) + b(ibx,i+1,j,k))*0.25
              else
@@ -175,7 +175,7 @@ module crdiffusion
 
              b2b =  b(iby,i,j,k)
 
-             if(nzd /= 1) then
+             if (nzd /= 1) then
                 b3b = (b(ibz,i,j,k) + b(ibz,i,j-1,k)   &
                      + b(ibz,i,j-1,k+1) + b(ibz,i,j,k+1))*0.25
              else
@@ -187,7 +187,7 @@ module crdiffusion
              n2b = b2b/bb
              n3b = b3b/bb
 
-             if(nxd /= 1) then
+             if (nxd /= 1) then
                 dqm1  = 0.5*((u(iarr_crs,i  ,j-1,k ) + u(iarr_crs,i  ,j  ,k ))   &
                             -(u(iarr_crs,i-1,j-1,k ) + u(iarr_crs,i-1,j  ,k )))/dx
                 dqp1  = 0.5*((u(iarr_crs,i+1,j-1,k ) + u(iarr_crs,i+1,j  ,k ))   &
@@ -200,7 +200,7 @@ module crdiffusion
 
              decr2 = (u(iarr_crs,i,j,k) - u(iarr_crs,i,j-1,k))/dy
 
-             if(nzd /= 1) then
+             if (nzd /= 1) then
                 dqm2  = 0.5*((u(iarr_crs,i ,j-1,k  ) + u(iarr_crs,i ,j  ,k  ))   &
                             -(u(iarr_crs,i ,j-1,k-1) + u(iarr_crs,i ,j  ,k-1)))/dz
                 dqp2  = 0.5*((u(iarr_crs,i ,j-1,k+1) + u(iarr_crs,i ,j  ,k+1))   &
@@ -262,13 +262,13 @@ module crdiffusion
         do j=js,je
           do i=is,ie
 
-             if(nxd /= 1) then
+             if (nxd /= 1) then
                 b1b = (b(ibx,i,  j,k  ) + b(ibx,i,  j,k-1)  &
                      + b(ibx,i+1,j,k-1) + b(ibx,i+1,j,k  ))*0.25
              else
                 b1b = 0.0
              endif
-             if(nyd /= 1) then
+             if (nyd /= 1) then
                 b2b = (b(iby,i,j,  k  ) + b(iby,i,j,  k-1)  &
                      + b(iby,i,j+1,k-1) + b(iby,i,j+1,k  ))*0.25
              else
@@ -281,7 +281,7 @@ module crdiffusion
              n2b = b2b/bb
              n3b = b3b/bb
 
-             if(nxd /= 1) then
+             if (nxd /= 1) then
                 dqm1  = 0.5*((u(iarr_crs,i  ,j ,k-1) + u(iarr_crs,i  ,j  ,k ))   &
                             -(u(iarr_crs,i-1,j ,k-1) + u(iarr_crs,i-1,j  ,k )))/dx
                 dqp1  = 0.5*((u(iarr_crs,i+1,j ,k-1) + u(iarr_crs,i+1,j  ,k ))   &
@@ -292,7 +292,7 @@ module crdiffusion
                 decr1 = 0.0
              endif
 
-             if(nyd /= 1) then
+             if (nyd /= 1) then
                 dqm2  = 0.5*((u(iarr_crs,i ,j  ,k-1) + u(iarr_crs,i  ,j  ,k ))   &
                             -(u(iarr_crs,i ,j-1,k-1) + u(iarr_crs,i  ,j-1,k )))/dy
                 dqp2  = 0.5*((u(iarr_crs,i ,j+1,k-1) + u(iarr_crs,i  ,j+1,k ))   &

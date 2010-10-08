@@ -121,17 +121,17 @@ contains
       enddo
     enddo
 
-    if(nxd /= 1 .and. cx /= 0) then
+    if (nxd /= 1 .and. cx /= 0) then
        dt_neu_proc_x = dx/cx
     else
        dt_neu_proc_x = big
     endif
-    if(nyd /= 1 .and. cy /= 0) then
+    if (nyd /= 1 .and. cy /= 0) then
        dt_neu_proc_y = dy/cy
     else
        dt_neu_proc_y = big
     endif
-    if(nzd /= 1 .and. cz /= 0) then
+    if (nzd /= 1 .and. cz /= 0) then
        dt_neu_proc_z = dz/cz
     else
        dt_neu_proc_z = big

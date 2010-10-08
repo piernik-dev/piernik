@@ -63,7 +63,7 @@ module initproblem
       mag_field_orient = 'none'
       alpha            = 1.0
 
-      if(proc .eq. 0) then
+      if (proc .eq. 0) then
 
          diff_nml(PROBLEM_CONTROL)
 
@@ -130,7 +130,7 @@ module initproblem
       b0 = sqrt(2.*alpha*d0*cs_iso**2)
 
       do k=1, nz
-         if(z(k) .lt. 0.0) kmid = k       ! the midplane is in between
+         if (z(k) .lt. 0.0) kmid = k       ! the midplane is in between
       enddo                                  ! ksmid and ksmid+1
 
       do j = 1,ny
@@ -139,7 +139,7 @@ module initproblem
             xi = x(i)
             rc = sqrt(xi**2+yj**2)
 
-            if(nzd /= 1) then
+            if (nzd /= 1) then
                call hydrostatic_zeq(i, j, d0, csim2, dprof)
             endif
 
@@ -151,7 +151,7 @@ module initproblem
 
                u(idni,i,j,k) = min((rc/r_grav)**n_gravr,100.0)
 
-               if(nzd /= 1) then
+               if (nzd /= 1) then
                   u(idni,i,j,k) = dout + (dprof(k)-dout)/cosh(u(idni,i,j,k))
                else
                   u(idni,i,j,k) = dout + (d0 - dout)/cosh(u(idni,i,j,k))
@@ -165,15 +165,15 @@ module initproblem
                u(ieni,i,j,k) = max(u(ieni,i,j,k), smallei)
                u(ieni,i,j,k) = u(ieni,i,j,k) +0.5*(vx**2+vy**2+vz**2)*u(idni,i,j,k)
 #endif /* !ISO */
-               if(trim(mag_field_orient) .eq. 'toroidal') then
+               if (trim(mag_field_orient) .eq. 'toroidal') then
                   b(ibx,i,j,k)   = -b0*sqrt(u(idni,i,j,k)/d0)*yj/rc
                   b(iby,i,j,k)   =  b0*sqrt(u(idni,i,j,k)/d0)*xi/rc
                   b(ibz,i,j,k)   =  0.0
-               else if(trim(mag_field_orient) .eq. 'vertical') then
+               else if (trim(mag_field_orient) .eq. 'vertical') then
                   b(ibx,i,j,k)   =  0.0
                   b(iby,i,j,k)   =  0.0
                   b(ibz,i,j,k)   =  b0
-               else if(trim(mag_field_orient) .eq. 'none') then
+               else if (trim(mag_field_orient) .eq. 'none') then
                   b(:,i,j,k)     =  0.0
                endif
 

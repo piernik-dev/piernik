@@ -63,7 +63,7 @@ module initproblem
       z0      =  0.0
       r0      =  1.0
 
-      if(proc .eq. 0) then
+      if (proc .eq. 0) then
 
          diff_nml(PROBLEM_CONTROL)
 
@@ -125,7 +125,7 @@ module initproblem
          do j = 1,ny
             yj = y(j)
             do k = 1,nz
-               if(nzd /= 1) then
+               if (nzd /= 1) then
                   zk = z(k)
                   rc = sqrt((xi-x0)**2+(yj-y0)**2+(zk-z0)**2)
                else
@@ -136,7 +136,7 @@ module initproblem
                u(imxn,i,j,k) = 0.0
                u(imyn,i,j,k) = d_gas*v_gas
                u(imzn,i,j,k) = 0.0
-               if(rc <= r0) then
+               if (rc <= r0) then
                   u(idnd,i,j,k) = d_dust
                   u(imyd,i,j,k) = d_dust*v_dust
                else

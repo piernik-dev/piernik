@@ -77,34 +77,34 @@ module arrays
       type(var_numbers), intent(in) :: nvar
       integer, intent(in) :: nx,ny,nz
 
-      if(.not.allocated(rlscal))  allocate(rlscal(nrlscal))
-      if(.not.allocated(intscal)) allocate(intscal(nintscal))
+      if (.not.allocated(rlscal))  allocate(rlscal(nrlscal))
+      if (.not.allocated(intscal)) allocate(intscal(nintscal))
 
       call my_allocate(u, [nvar%all,nx,ny,nz],"u")
       call my_allocate(b, [3,nx,ny,nz], "b")
 
 #ifdef GRAV
-      if(.not.allocated(gp))      allocate(gp(nx,ny,nz))
-      if(.not.allocated(gpot))    allocate(gpot(nx,ny,nz))
-      if(.not.allocated(hgpot))   allocate(hgpot(nx,ny,nz))
+      if (.not.allocated(gp))      allocate(gp(nx,ny,nz))
+      if (.not.allocated(gpot))    allocate(gpot(nx,ny,nz))
+      if (.not.allocated(hgpot))   allocate(hgpot(nx,ny,nz))
 #if defined(MULTIGRID) || defined(POISSON_FFT)
-      if(.not.allocated(sgp))     allocate(sgp(nx,ny,nz))
-      if(.not.allocated(sgpm))    allocate(sgpm(nx,ny,nz))
+      if (.not.allocated(sgp))     allocate(sgp(nx,ny,nz))
+      if (.not.allocated(sgpm))    allocate(sgpm(nx,ny,nz))
 #endif
-      if(.not.allocated(dprof))   allocate(dprof(nz))
-      if(.not.allocated(eprof))   allocate(eprof(nz))
+      if (.not.allocated(dprof))   allocate(dprof(nz))
+      if (.not.allocated(eprof))   allocate(eprof(nz))
 #endif /* GRAV */
 
-      if(.not.allocated(wa))      allocate(wa(nx,ny,nz))
+      if (.not.allocated(wa))      allocate(wa(nx,ny,nz))
 #ifdef RESISTIVE
-      if(.not.allocated(wcu))     allocate(wcu(nx,ny,nz))
+      if (.not.allocated(wcu))     allocate(wcu(nx,ny,nz))
 #endif /* RESISTIVE */
 #ifdef COSM_RAYS
-      if(.not.allocated(divvel)) allocate(divvel(nx,ny,nz))
-      if(.not.allocated(wcr))    allocate(wcr(nvar%crs%all,nx,ny,nz))
+      if (.not.allocated(divvel)) allocate(divvel(nx,ny,nz))
+      if (.not.allocated(wcr))    allocate(wcr(nvar%crs%all,nx,ny,nz))
 #endif /* COSM_RAYS  */
 #ifdef ISO_LOCAL
-      if(.not.allocated(cs_iso2_arr)) allocate(cs_iso2_arr(nx,ny,nz))
+      if (.not.allocated(cs_iso2_arr)) allocate(cs_iso2_arr(nx,ny,nz))
 #endif /* ISO_LOCAL */
    end subroutine init_arrays
 
@@ -113,34 +113,34 @@ module arrays
 !<
    subroutine cleanup_arrays
 
-      if(allocated(rlscal))  deallocate(rlscal)
-      if(allocated(intscal)) deallocate(intscal)
-      if(allocated(u))       deallocate(u)
-      if(allocated(b))       deallocate(b)
+      if (allocated(rlscal))  deallocate(rlscal)
+      if (allocated(intscal)) deallocate(intscal)
+      if (allocated(u))       deallocate(u)
+      if (allocated(b))       deallocate(b)
 
-      if(allocated(wa))      deallocate(wa)
+      if (allocated(wa))      deallocate(wa)
 #ifdef RESISTIVE
-      if(allocated(wcu))     deallocate(wcu)
+      if (allocated(wcu))     deallocate(wcu)
 #endif /* RESISTIVE */
 
 #ifdef GRAV
-      if(allocated(gp))      deallocate(gp)
-      if(allocated(gpot))    deallocate(gpot)
-      if(allocated(hgpot))   deallocate(hgpot)
+      if (allocated(gp))      deallocate(gp)
+      if (allocated(gpot))    deallocate(gpot)
+      if (allocated(hgpot))   deallocate(hgpot)
 #if defined(MULTIGRID) || defined(POISSON_FFT)
-      if(allocated(sgp))     deallocate(sgp)
-      if(allocated(sgpm))    deallocate(sgpm)
+      if (allocated(sgp))     deallocate(sgp)
+      if (allocated(sgpm))    deallocate(sgpm)
 #endif
-      if(allocated(dprof))   deallocate(dprof)
-      if(allocated(eprof))   deallocate(eprof)
+      if (allocated(dprof))   deallocate(dprof)
+      if (allocated(eprof))   deallocate(eprof)
 #endif /* GRAV */
 
 #ifdef COSM_RAYS
-      if(allocated(divvel))  deallocate(divvel)
-      if(allocated(wcr))     deallocate(wcr)
+      if (allocated(divvel))  deallocate(divvel)
+      if (allocated(wcr))     deallocate(wcr)
 #endif /* COSM_RAYS */
 #ifdef ISO_LOCAL
-      if(allocated(cs_iso2_arr)) deallocate(cs_iso2_arr)
+      if (allocated(cs_iso2_arr)) deallocate(cs_iso2_arr)
 #endif /* ISO_LOCAL */
 
    end subroutine cleanup_arrays

@@ -50,8 +50,8 @@ module viz
          mxi = size(f,1)
          mxj = size(f,2)
 
-         if(frun) then
-            if(pgopen('/XS') < 1) stop
+         if (frun) then
+            if (pgopen('/XS') < 1) stop
             call pgpage
          endif
 
@@ -67,7 +67,7 @@ module viz
          call palett(2, contra, bright)
 
          ! Annotate the plot.
-         if(frun) then
+         if (frun) then
             call pgsch(real(0.6,4))
             call pgbox('bcntsi',nul,0,'bcntsiv',nul,0)
             call pgmtxt('b',real(3.0,4),one,one,'pixel number')
@@ -77,7 +77,7 @@ module viz
          call pgimag(f,mxi,mxj,1,mxi,1,mxj,fmin,fmax,tr)
 
          ! Draw a wedge.
-         if(frun) then
+         if (frun) then
             call pgwedg('bi', real(4.0,4), real(5.0,4), fmin, fmax, 'pixel value')
             call pgsch(one)
          endif

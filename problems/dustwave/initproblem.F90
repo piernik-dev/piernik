@@ -62,7 +62,7 @@ module initproblem
       m_y          = 0
       m_z          = 0
 
-      if(proc .eq. 0) then
+      if (proc .eq. 0) then
 
          diff_nml(PROBLEM_CONTROL)
 

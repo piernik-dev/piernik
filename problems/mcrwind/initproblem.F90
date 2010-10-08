@@ -68,7 +68,7 @@ module initproblem
       y0     = 0.0
       z0     = 0.0
 
-      if(proc == 0) then
+      if (proc == 0) then
 
          cbuff(1) =  problem_name
          cbuff(2) =  run_id
@@ -150,13 +150,13 @@ module initproblem
       f_sn   = f_sn_kpc2                     ! SN freq
       sn_pos = [x0,y0,z0]
 
-      if(nxd /=1) then
+      if (nxd /=1) then
          f_sn = f_sn * (xmax-xmin)/1000.0
       else
          f_sn = f_sn * 2.0*r_sn/1000.0
       endif
 
-      if(nyd /=1) then
+      if (nyd /=1) then
          f_sn = f_sn * (ymax-ymin)/1000.0
       else
          f_sn = f_sn * 2.0*r_sn/1000.0
@@ -272,9 +272,9 @@ module initproblem
 
                do ipm=-1,1
 
-                  if(ipm .eq. -1) ysna = ysno
-                  if(ipm .eq.  0) ysna = ysn
-                  if(ipm .eq.  1) ysna = ysni
+                  if (ipm .eq. -1) ysna = ysno
+                  if (ipm .eq.  0) ysna = ysn
+                  if (ipm .eq.  1) ysna = ysni
 
                   do jpm=-1,1
 
@@ -284,10 +284,10 @@ module initproblem
                            + (z(k)-zsn)**2)/r_sn**2)
 
                      do icr=1,nvar%crn%all
-                        if(icr == icr_H1) u(iarr_crn(icr),i,j,k) = u(iarr_crn(icr),i,j,k) + decr
-                        if(icr == icr_C12) u(iarr_crn(icr),i,j,k) = u(iarr_crn(icr),i,j,k) + primary_C12*12*decr
-                        if(icr == icr_N14) u(iarr_crn(icr),i,j,k) = u(iarr_crn(icr),i,j,k) + primary_N14*14*decr
-                        if(icr == icr_O16) u(iarr_crn(icr),i,j,k) = u(iarr_crn(icr),i,j,k) + primary_O16*16*decr
+                        if (icr == icr_H1) u(iarr_crn(icr),i,j,k) = u(iarr_crn(icr),i,j,k) + decr
+                        if (icr == icr_C12) u(iarr_crn(icr),i,j,k) = u(iarr_crn(icr),i,j,k) + primary_C12*12*decr
+                        if (icr == icr_N14) u(iarr_crn(icr),i,j,k) = u(iarr_crn(icr),i,j,k) + primary_N14*14*decr
+                        if (icr == icr_O16) u(iarr_crn(icr),i,j,k) = u(iarr_crn(icr),i,j,k) + primary_O16*16*decr
                      enddo
 
                   enddo ! jpm

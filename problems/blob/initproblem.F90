@@ -130,7 +130,7 @@ module initproblem
          do j = 1,ny
             rcy = (y(j)-blobyc)**2
             do k = 1,nz
-               if(nzd /= 1) then
+               if (nzd /= 1) then
                   rrel = sqrt(rcx + rcy + (z(k)-blobzc)**2)
                else
                   rrel = sqrt(rcx + rcy)

@@ -121,8 +121,8 @@ module dataio
 
          implicit none
 
-         if(dt_log > 0.0) then
-            if(nlog < (int(t / dt_log) + 1)) then
+         if (dt_log > 0.0) then
+            if (nlog < (int(t / dt_log) + 1)) then
                call write_log
                nlog = nlog + 1
             endif
@@ -137,8 +137,8 @@ module dataio
 
          implicit none
 
-         if(dt_tsl .gt. 0.0) then
-            if(ntsl .lt. (int(t / dt_tsl) + 1)) then
+         if (dt_tsl .gt. 0.0) then
+            if (ntsl .lt. (int(t / dt_tsl) + 1)) then
                call write_timeslice
                ntsl = ntsl + 1
              endif
@@ -398,7 +398,7 @@ module dataio
 
       call init_hdf5(vars,ix,iy,iz,dt_plt)
 
-      if(proc == 0 .and. restart .eq. 'last') call find_last_restart(nrestart)
+      if (proc == 0 .and. restart .eq. 'last') call find_last_restart(nrestart)
       call MPI_Barrier(comm,ierr)
       call MPI_Bcast(nrestart, 1, MPI_INTEGER, 0, comm, ierr)
 
@@ -422,11 +422,11 @@ module dataio
          t_start     = t
          nres_start  = nrestart
          nhdf_start  = nhdf-1
-         if(new_id .ne. '') run_id=new_id
+         if (new_id .ne. '') run_id=new_id
       endif
       call MPI_Bcast(log_file, cwdlen, MPI_CHARACTER, 0, comm, ierr)
       call set_container_chdf(nstep)
-      if(all([bnd_xl,bnd_xr,bnd_yl,bnd_yr,bnd_zl,bnd_zr] /= "user")) then
+      if (all([bnd_xl,bnd_xr,bnd_yl,bnd_yr,bnd_zl,bnd_zr] /= "user")) then
          call all_fluid_boundaries
 #ifdef MAGNETIC
          call all_mag_boundaries
@@ -589,8 +589,8 @@ module dataio
             call set_container_chdf(nstep)
             call write_hdf5(chdf)
 
-            if((t-last_hdf_time) .ge. dt_hdf) last_hdf_time = last_hdf_time + dt_hdf
-            if((t-last_hdf_time) .ge. dt_hdf) last_hdf_time = t ! additional control
+            if ((t-last_hdf_time) .ge. dt_hdf) last_hdf_time = last_hdf_time + dt_hdf
+            if ((t-last_hdf_time) .ge. dt_hdf) last_hdf_time = t ! additional control
                           ! in the case of changing dt_hdf into smaller value via msg
             nhdf = nhdf + 1
             step_hdf = nstep
@@ -620,7 +620,7 @@ module dataio
 
       implicit none
       integer :: ifluid,ivar,nvar
-      if(ifluid .lt. nvar) then
+      if (ifluid .lt. nvar) then
          ifluid=ifluid+1
          ivar=1
       else
@@ -663,7 +663,7 @@ module dataio
          write (file_name,'(a,a1,a,a1,a3,a1,i4.4,a4)') &
                trim(cwd),'/',trim(problem_name),'_', run_id,'_',nres,'.res'
          inquire(file = file_name, exist = exist)
-         if(exist) then
+         if (exist) then
             restart_number = nres
          return
          endif
@@ -1225,7 +1225,7 @@ module dataio
                   + (/nb,nb,nb/)
       call mpifind(dend_max%val, 'max', dend_max%loc, dend_max%proc)
 
-      where(u(idnd,:,:,:) > 0.0)
+      where (u(idnd,:,:,:) > 0.0)
          wa          = abs(u(imxd,:,:,:)/u(idnd,:,:,:))
       elsewhere
          wa          = 0.0
@@ -1235,7 +1235,7 @@ module dataio
                   + (/nb,nb,nb/)
       call mpifind(vxd_max%val, 'max', vxd_max%loc, vxd_max%proc)
 
-      where(u(idnd,:,:,:) > 0.0)
+      where (u(idnd,:,:,:) > 0.0)
          wa          = abs(u(imyd,:,:,:)/u(idnd,:,:,:))
       elsewhere
          wa          = 0.0
@@ -1245,7 +1245,7 @@ module dataio
                   + (/nb,nb,nb/)
       call mpifind(vyd_max%val, 'max', vyd_max%loc, vyd_max%proc)
 
-      where(u(idnd,:,:,:) > 0.0)
+      where (u(idnd,:,:,:) > 0.0)
          wa           = abs(u(imzd,:,:,:)/u(idnd,:,:,:))
       elsewhere
          wa          = 0.0
@@ -1292,8 +1292,8 @@ module dataio
       call mpifind(encr_max%val, 'max', encr_max%loc, encr_max%proc)
 #endif /* COSM_RAYS */
 
-      if(proc == 0)  then
-         if(.not.present(tsl)) then
+      if (proc == 0)  then
+         if (.not.present(tsl)) then
             call printinfo('================================================================================', .false.)
 #ifdef IONIZED
             write(msg, 771) 'min(dens)   ION  =', deni_min%val,  deni_min%proc,  deni_min%loc
@@ -1504,7 +1504,7 @@ module dataio
             if (len_trim(msg) > 0 .and. proc==0) call printinfo(msg)
 
             sz = len_trim(msg)
-            if(fname(i) == user_message_file) unlink_stat = unlink(user_message_file)
+            if (fname(i) == user_message_file) unlink_stat = unlink(user_message_file)
 
          endif
       enddo

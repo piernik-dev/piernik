@@ -197,7 +197,7 @@ module grid
       nyd = max(1, nyd)
       nzd = max(1, nzd)
 
-      if(proc == 0) then
+      if (proc == 0) then
 
          ibuff(1)   = nxd
          ibuff(2)   = nyd
@@ -232,7 +232,7 @@ module grid
 
       endif
 
-      if((mod(nxd, pxsize) .ne. 0) .or. &
+      if ((mod(nxd, pxsize) .ne. 0) .or. &
          (mod(nyd, pysize) .ne. 0) .or. &
          (mod(nzd, pzsize) .ne. 0)) then
             call die("One of: (mod(n_d,p_size) /= 0")
@@ -250,7 +250,7 @@ module grid
       nyt=nyd+2*nb         ! Domain total grid sizes
       nzt=nzd+2*nb         !
 
-      if(nxd == 1) then
+      if (nxd == 1) then
          nx     = 1
          nxb    = 1
          nxt    = 1
@@ -262,7 +262,7 @@ module grid
          ie = nb+nxb
       endif
 
-      if(nyd == 1) then
+      if (nyd == 1) then
          ny     = 1
          nyb    = 1
          nyt    = 1
@@ -274,7 +274,7 @@ module grid
          je = nb+nyb
       endif
 
-      if(nzd == 1) then
+      if (nzd == 1) then
          nz     = 1
          nzb    = 1
          nzt    = 1
@@ -319,19 +319,19 @@ module grid
       zmaxb = zmin + real(pcoords(3)+1)*(zmax-zmin)/real(psize(3))
 
       dxmn = huge(1.0)
-      if(nxd /= 1) then
+      if (nxd /= 1) then
          dx = (xmaxb-xminb)/nxb
          dxmn = min(dxmn,dx)
       else
          dx = 1.0
       endif
-      if(nyd /= 1) then
+      if (nyd /= 1) then
          dy = (ymaxb-yminb)/nyb
          dxmn = min(dxmn,dy)
       else
          dy = 1.0
       endif
-      if(nzd /= 1) then
+      if (nzd /= 1) then
          dz = (zmaxb-zminb)/nzb
          dxmn = min(dxmn,dz)
       else
@@ -351,7 +351,7 @@ module grid
 
 !--- x-grids --------------------------------------------------------------
 
-      if(nxd /= 1) then
+      if (nxd /= 1) then
          do i= 1, nx
             x(i)  = xminb + 0.5*dx + (i-nb-1)*dx
             xl(i) = x(i)  - 0.5*dx
@@ -365,7 +365,7 @@ module grid
 
 !--- y-grids --------------------------------------------------------------
 
-      if(nyd /= 1) then
+      if (nyd /= 1) then
          do j= 1, ny
             y(j)  = yminb + 0.5*dy + (j-nb-1)*dy
             yl(j) = y(j)  - 0.5*dy
@@ -379,7 +379,7 @@ module grid
 
 !--- z-grids --------------------------------------------------------------
 
-      if(nzd /= 1) then
+      if (nzd /= 1) then
          do k= 1, nz
             z(k)  = zminb + 0.5*dz + (k-nb-1) * dz
             zl(k) = z(k)  - 0.5*dz
@@ -404,16 +404,16 @@ module grid
 
       implicit none
 
-      if(allocated(dl)) deallocate(dl)
-      if(allocated(x))  deallocate(x)
-      if(allocated(xl)) deallocate(xl)
-      if(allocated(xr)) deallocate(xr)
-      if(allocated(y))  deallocate(y)
-      if(allocated(yl)) deallocate(yl)
-      if(allocated(yr)) deallocate(yr)
-      if(allocated(z))  deallocate(z)
-      if(allocated(zl)) deallocate(zl)
-      if(allocated(zr)) deallocate(zr)
+      if (allocated(dl)) deallocate(dl)
+      if (allocated(x))  deallocate(x)
+      if (allocated(xl)) deallocate(xl)
+      if (allocated(xr)) deallocate(xr)
+      if (allocated(y))  deallocate(y)
+      if (allocated(yl)) deallocate(yl)
+      if (allocated(yr)) deallocate(yr)
+      if (allocated(z))  deallocate(z)
+      if (allocated(zl)) deallocate(zl)
+      if (allocated(zr)) deallocate(zr)
 
    end subroutine cleanup_grid
 

@@ -67,7 +67,7 @@ module initproblem
       eps     = 1.0
       amp     = 1.e-5
 
-      if(proc .eq. 0) then
+      if (proc .eq. 0) then
 
          diff_nml(PROBLEM_CONTROL)
 
@@ -147,7 +147,7 @@ module initproblem
 
       n = 0.5*Rin / (R0 - Rin)
       ninv = 1./n
-      if(sigma_model == 'hayashi') then
+      if (sigma_model == 'hayashi') then
          sigma0 = 0.2* R0**(-1.5)
       endif
       H0 = R0 * HtoR

@@ -38,7 +38,7 @@ contains
      c_si    = 0.1
      Mrms    = 5.0
 
-     if(proc .eq. 0) then
+     if (proc .eq. 0) then
 
        diff_nml(PROBLEM_CONTROL)
 
@@ -122,7 +122,7 @@ contains
    rms = dsqrt( sum(dv**2) / vol )
 
    cma = 1.0
-   if( rms/c_si < 0.1) then
+   if ( rms/c_si < 0.1) then
       cma = rms/c_si
    else
       l=1

@@ -74,7 +74,7 @@ contains
       verbose      = .false.               !< Turn on some extra messages
       !\todo add rotation
 
-      if(proc == 0) then
+      if (proc == 0) then
 
          diff_nml(PROBLEM_CONTROL)
 

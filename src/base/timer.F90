@@ -75,7 +75,7 @@ contains
       logical, intent(in), optional :: reset !< if true all output is suppressed, use for resetting timers
       type(timer_info) :: temp
       temp%key = trim(str)
-      if(present(reset)) then
+      if (present(reset)) then
          temp%reset = .true.
       else
          temp%reset = .false.
@@ -131,10 +131,10 @@ contains
       tp => timer_root
 
       do
-         if( associated(tp%next)) then
-            if( item%key == tp%next%info%key ) then
+         if ( associated(tp%next)) then
+            if ( item%key == tp%next%info%key ) then
                item%time = modify_timer(tp%next, item%reset)
-            else if( item%key < tp%next%info%key) then
+            else if ( item%key < tp%next%info%key) then
                call insert_timer(tp%next, item)
             else
                tp => tp%next%node
@@ -156,8 +156,8 @@ contains
 
          time_old = tp%info%time
          call cpu_time(tp%info%time)
-         !if(.not.reset) write(*,'(A,F7.3,A)') "Timer ["//trim(tp%info%key)//"] = ", tp%info%time - time_old, " s"  ! QA_WARN
-         if(.not.reset) then
+         !if (.not.reset) write(*,'(A,F7.3,A)') "Timer ["//trim(tp%info%key)//"] = ", tp%info%time - time_old, " s"  ! QA_WARN
+         if (.not.reset) then
             modify_timer = tp%info%time - time_old
          else
             modify_timer = tp%info%time
@@ -209,7 +209,7 @@ contains
       integer :: clock, cnt_rate, cnt_max
       real    :: r_clk_end
 
-      if(present(wend)) then
+      if (present(wend)) then
          call system_clock(clock_start, cnt_rate, cnt_max)
  !         clock_end = clock_start + int(wend*3600.*cnt_rate)
          if (wend < 1e-4*huge(1.0)) then
@@ -228,7 +228,7 @@ contains
       call system_clock(clock, cnt_rate, cnt_max)
       tf = .true.
       if (clock_end /= -cnt_max) then
-         if( clock_end - clock < 0 ) tf = .false.
+         if ( clock_end - clock < 0 ) tf = .false.
       endif
 
    end function time_left
@@ -270,7 +270,7 @@ contains
 
       call MPI_Reduce(cputot, cpuallp, 1, MPI_DOUBLE_PRECISION, MPI_SUM, 0, comm, ierr)
 
-      if(proc == 0) then
+      if (proc == 0) then
 
          zcps  = real(nstep) * real(nzones) / cpuallp
 

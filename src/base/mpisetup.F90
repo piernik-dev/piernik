@@ -218,10 +218,10 @@ module mpisetup
 
          if (proc == 0) then
             inquire(file=par_file, exist=par_file_exist)
-            if(.not. par_file_exist) call die('[mpisetup:init_mpi] Cannot find "problem.par" in the working directory',0)
+            if (.not. par_file_exist) call die('[mpisetup:init_mpi] Cannot find "problem.par" in the working directory',0)
          endif
 
-         if(proc == 0) then
+         if (proc == 0) then
             call printinfo("------------------------------------------------------------------------------------------------------", .false.)
             call printinfo("###############     Environment     ###############", .false.)
             call printinfo("", .false.)
@@ -279,7 +279,7 @@ module mpisetup
          nyd = max(1, nyd)
          nzd = max(1, nzd)
 
-         if(proc == 0) then
+         if (proc == 0) then
 
             cbuff(1) = bnd_xl
             cbuff(2) = bnd_xr
@@ -362,10 +362,10 @@ module mpisetup
          psize(3)   = pzsize
 
          if (pxsize*pysize*pzsize /= nproc) then
-            if(mpi_magic) then
+            if (mpi_magic) then
                call divide_domain_voodoo(nproc)
             else
-               if(proc == 0) then
+               if (proc == 0) then
                   write(msg,'(A,I5,A,I10)') 'nproc =',nproc,' MUST BE EQUAL TO   pxsize*pysize*pzsize =',pxsize*pysize*pzsize
                   call die(msg,0)
                endif
@@ -408,14 +408,14 @@ module mpisetup
          call MPI_Cart_shift(comm3d,1,1,procyl,procyr,ierr)   ! y dim
          call MPI_Cart_shift(comm3d,2,1,proczl,proczr,ierr)   ! z dim
 
-         if(bnd_xl(1:3) == 'cor' .and. bnd_yl(1:3) == 'cor' ) then
-            if(pcoords(1) == 0 .and. pcoords(2) > 0) then
+         if (bnd_xl(1:3) == 'cor' .and. bnd_yl(1:3) == 'cor' ) then
+            if (pcoords(1) == 0 .and. pcoords(2) > 0) then
                coords = (/pcoords(2),pcoords(1),pcoords(3)/)
                call MPI_Cart_rank(comm3d,coords,procxyl,ierr)
             else
                procxyl = MPI_PROC_NULL
             endif
-            if(pcoords(2) == 0 .and. pcoords(1) > 0 ) then
+            if (pcoords(2) == 0 .and. pcoords(1) > 0 ) then
                coords = (/pcoords(2),pcoords(1),pcoords(3)/)
                call MPI_Cart_rank(comm3d,coords,procyxl,ierr)
             else
@@ -423,14 +423,14 @@ module mpisetup
             endif
          endif
 
-         if(bnd_xr(1:3) == 'cor' .and. bnd_yr(1:3) == 'cor' ) then
-            if(pcoords(1) == psize(1)-1 .and. pcoords(2) < psize(2)-1) then
+         if (bnd_xr(1:3) == 'cor' .and. bnd_yr(1:3) == 'cor' ) then
+            if (pcoords(1) == psize(1)-1 .and. pcoords(2) < psize(2)-1) then
                coords = (/pcoords(2),pcoords(1),pcoords(3)/)
                call MPI_Cart_rank(comm3d,coords,procxyr,ierr)
             else
                procxyr = MPI_PROC_NULL
             endif
-            if(pcoords(2) == psize(2)-1 .and. pcoords(1) < psize(2)-1 ) then
+            if (pcoords(2) == psize(2)-1 .and. pcoords(1) < psize(2)-1 ) then
                coords = (/pcoords(2),pcoords(1),pcoords(3)/)
                call MPI_Cart_rank(comm3d,coords,procyxr,ierr)
             else
@@ -440,16 +440,16 @@ module mpisetup
 
 
 #ifdef SHEAR_BND
-         if(pysize > 1) stop 'Shear-pediodic boundary conditions do not permit pysize > 1'
+         if (pysize > 1) stop 'Shear-pediodic boundary conditions do not permit pysize > 1'
 
 #ifndef FFTW
-         if(pcoords(1) == 0) then
+         if (pcoords(1) == 0) then
             bnd_xl = 'she'
          else
             bnd_xl = 'mpi'
          endif
 
-         if(pcoords(1) == pxsize-1) then
+         if (pcoords(1) == pxsize-1) then
             bnd_xr = 'she'
          else
             bnd_xr = 'mpi'
@@ -457,15 +457,15 @@ module mpisetup
 #endif /* !FFTW */
 
 #else /* SHEAR_BND */
-         if(procxl /= MPI_PROC_NULL .and. procxl /= proc) bnd_xl = 'mpi'
-         if(procxr /= MPI_PROC_NULL .and. procxr /= proc) bnd_xr = 'mpi'
+         if (procxl /= MPI_PROC_NULL .and. procxl /= proc) bnd_xl = 'mpi'
+         if (procxr /= MPI_PROC_NULL .and. procxr /= proc) bnd_xr = 'mpi'
 #endif /* SHEAR_BND */
 
-         if(procyl /= MPI_PROC_NULL .and. procyl /= proc) bnd_yl = 'mpi'
-         if(procyr /= MPI_PROC_NULL .and. procyr /= proc) bnd_yr = 'mpi'
+         if (procyl /= MPI_PROC_NULL .and. procyl /= proc) bnd_yl = 'mpi'
+         if (procyr /= MPI_PROC_NULL .and. procyr /= proc) bnd_yr = 'mpi'
 
-         if(proczl /= MPI_PROC_NULL .and. proczl /= proc) bnd_zl = 'mpi'
-         if(proczr /= MPI_PROC_NULL .and. proczr /= proc) bnd_zr = 'mpi'
+         if (proczl /= MPI_PROC_NULL .and. proczl /= proc) bnd_zl = 'mpi'
+         if (proczr /= MPI_PROC_NULL .and. proczr /= proc) bnd_zr = 'mpi'
 
 #ifdef DEBUG
          write(msg,*) 'xdir: ',procxl, proc, procxr
@@ -476,7 +476,7 @@ module mpisetup
          call printinfo(msg)
 #endif /* DEBUG */
 
-         if(integration_order > 2) call die ('[mpisetup:init_mpi]: "ORIG" scheme integration_order must be 1 or 2')
+         if (integration_order > 2) call die ('[mpisetup:init_mpi]: "ORIG" scheme integration_order must be 1 or 2')
 
          dt_old = -1.
          if (dt_max_grow < 1.01) then
@@ -582,17 +582,17 @@ module mpisetup
                call warn(msg)
          end select
 
-         if(proc == 0) then
+         if (proc == 0) then
             var = rrecv(1)
             loc_proc = rrecv(2)
          endif
 
          call MPI_Bcast(loc_proc, 1, MPI_INTEGER, 0, comm, ierr)
 
-         if(loc_proc /= 0) then
-            if(proc == loc_proc) then
+         if (loc_proc /= 0) then
+            if (proc == loc_proc) then
                CALL MPI_Send  (loc_arr, 3, MPI_INTEGER,     0, 11, comm, ierr)
-            else if(proc == 0) then
+            else if (proc == 0) then
                CALL MPI_Recv  (loc_arr, 3, MPI_INTEGER, loc_proc, 11, comm, status, ierr)
             endif
          endif

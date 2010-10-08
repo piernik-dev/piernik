@@ -133,13 +133,13 @@ contains
          ne         = nn + 3 * ncrn
          if (ne + 3 * ncre > ubound(rbuff, 1)) call die("[initcosmicrays:init_cosmicrays] rbuff size exceeded.")
 
-         if(ncrn > 0) then
+         if (ncrn > 0) then
             rbuff(nn+1       :nn+  ncrn) = gamma_crn  (1:ncrn)
             rbuff(nn+1+  ncrn:nn+2*ncrn) = K_crn_paral(1:ncrn)
             rbuff(nn+1+2*ncrn:nn+3*ncrn) = K_crn_perp (1:ncrn)
          endif
 
-         if(ncre > 0) then
+         if (ncre > 0) then
             rbuff(ne+1       :ne+  ncre) = gamma_cre  (1:ncre)
             rbuff(ne+1+  ncre:ne+2*ncre) = K_cre_paral(1:ncre)
             rbuff(ne+1+2*ncre:ne+3*ncre) = K_cre_perp (1:ncre)
@@ -163,13 +163,13 @@ contains
          nn         = 4         ! WARNING: this must match the last rbuff() index above
          ne         = nn + 3 * ncrn
 
-         if(ncrn > 0) then
+         if (ncrn > 0) then
             gamma_crn  (1:ncrn) = rbuff(nn+1       :nn+  ncrn)
             K_crn_paral(1:ncrn) = rbuff(nn+1+  ncrn:nn+2*ncrn)
             K_crn_perp (1:ncrn) = rbuff(nn+1+2*ncrn:nn+3*ncrn)
          endif
 
-         if(ncre > 0) then
+         if (ncre > 0) then
             gamma_cre  (1:ncre) = rbuff(ne+1       :ne+  ncre)
             K_cre_paral(1:ncre) = rbuff(ne+1+  ncre:ne+2*ncre)
             K_cre_perp (1:ncre) = rbuff(ne+1+2*ncre:ne+3*ncre)
@@ -182,13 +182,13 @@ contains
 
       allocate(gamma_crs(ncrn+ncre),K_crs_paral(ncrn+ncre),K_crs_perp(ncrn+ncre))
 
-      if(ncrn > 0) then
+      if (ncrn > 0) then
          gamma_crs  (1:ncrn) = gamma_crn  (1:ncrn)
          K_crs_paral(1:ncrn) = K_crn_paral(1:ncrn)
          K_crs_perp (1:ncrn) = K_crn_perp (1:ncrn)
       endif
 
-      if(ncre > 0) then
+      if (ncre > 0) then
          gamma_crs  (ncrn+1:ncrn+ncre) = gamma_cre  (1:ncre)
          K_crs_paral(ncrn+1:ncrn+ncre) = K_cre_paral(1:ncre)
          K_crs_perp (ncrn+1:ncrn+ncre) = K_cre_perp (1:ncre)

@@ -60,7 +60,7 @@ contains
 
     if (any([nx, ny, nz] <= 1)) call die("[poissonsolver:poisson_solve] Only 3D setups are supported") !BEWARE 2D and 1D probably need small fixes
 
-    if( bnd_xl .eq. 'per' .and. bnd_xr .eq. 'per' .and. &
+    if ( bnd_xl .eq. 'per' .and. bnd_xr .eq. 'per' .and. &
         bnd_yl .eq. 'per' .and. bnd_yr .eq. 'per' .and. &
         bnd_zl .ne. 'per' .and. bnd_zr .ne. 'per'        ) then ! Periodic in X and Y, nonperiodic in Z
 
@@ -69,7 +69,7 @@ contains
 
         call die("[poissonsolver:poisson_solve] poisson_xyp called")
 
-    elseif( bnd_xl .eq. 'per' .and. bnd_xr .eq. 'per' .and. &
+    elseif ( bnd_xl .eq. 'per' .and. bnd_xr .eq. 'per' .and. &
             bnd_yl .eq. 'per' .and. bnd_yr .eq. 'per' .and. &
             bnd_zl .eq. 'per' .and. bnd_zr .eq. 'per'        ) then ! Fully 3D periodic
         call poisson_xyzp(dens(nb+1:nb+nxd,nb+1:nb+nyd,nb+1:nb+nzd), sgp(nb+1:nb+nxd,nb+1:nb+nyd,nb+1:nb+nzd))
@@ -78,8 +78,8 @@ contains
     elseif ( bnd_xl .eq. 'she' .and. bnd_xr .eq. 'she' .and. &
              bnd_yl .eq. 'per' .and. bnd_yr .eq. 'per' ) then ! 2D shearing box
 
-         if(dimensions=='3d') then
-           if(.not.allocated(ala)) allocate(ala(nx-2*nb,ny-2*nb,nz-2*nb))
+         if (dimensions=='3d') then
+           if (.not.allocated(ala)) allocate(ala(nx-2*nb,ny-2*nb,nz-2*nb))
            ala = dens(nb+1:nb+nxd,nb+1:nb+nyd,nb+1:nb+nzd)
            call poisson_xyzp(ala(:,:,:), sgp(nb+1:nb+nxd,nb+1:nb+nyd,nb+1:nb+nzd))
 
@@ -210,7 +210,7 @@ contains
     do q = 1, np
       do p = 1, n
         factor = cos(kx(p)) + cos(ky(q)) - 2.0
-        if(factor == 0) then
+        if (factor == 0) then
            fft2(p,q) = cmplx(0.0,0.0)
         else
            fft2(p,q) = fft2(p,q) / factor

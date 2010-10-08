@@ -100,7 +100,7 @@ module fluidboundaries
 !
 ! odejmujemy ped_y i energie odpowiadajace niezaburzonej rozniczkowej rotacji na lewym brzegu
 !
-         if(bnd_xl == 'she') then
+         if (bnd_xl == 'she') then
             do i=1,nb
                send_left (iarr_all_my,i,:,:) = send_left(iarr_all_my,i,:,:) &
                                          +qshear*omega * x(nb+i)     * send_left(iarr_all_dn,i,:,:)
@@ -112,7 +112,7 @@ module fluidboundaries
 !
 ! przesuwamy o calkowita liczbe komorek + periodyczny wb w kierunku y
 !
-         if(nyd /= 1) then
+         if (nyd /= 1) then
             send_left (:,:,nb+1:nb+nyb,:)        = cshift(send_left (:,:,nb+1:nb+nyb,:),dim=3,shift= delj)
             send_left (:,:,1:nb,:)               = send_left (:,:,nyb+1:nyb+nb,:)
             send_left (:,:,nb+nyb+1:nyb+2*nb,:)  = send_left (:,:,nb+1:2*nb,:)
@@ -127,7 +127,7 @@ module fluidboundaries
 !
 ! odejmujemy ped_y i energie odpowiadajace niezaburzonej rozniczkowej rotacji na prawym brzegu
 !
-         if(bnd_xr == 'she') then
+         if (bnd_xr == 'she') then
             do i=1,nb
                send_right(iarr_all_my,i,:,:) = send_right(iarr_all_my,i,:,:) &
                                          +qshear*omega * x(nxb+i)     * send_right(iarr_all_dn,i,:,:)
@@ -140,7 +140,7 @@ module fluidboundaries
 !
 ! przesuwamy o calkowita liczbe komorek + periodyczny wb w kierunku y
 !
-         if(nyd /= 1) then
+         if (nyd /= 1) then
             send_right(:,:,nb+1:nb+nyb,:)        = cshift(send_right(:,:,nb+1:nb+nyb,:),dim=3,shift=-delj)
             send_right (:,:,1:nb,:)              = send_right(:,:,nyb+1:nyb+nb,:)
             send_right (:,:,nb+nyb+1:nyb+2*nb,:) = send_right(:,:,nb+1:2*nb,:)
@@ -165,7 +165,7 @@ module fluidboundaries
 !
 ! dodajemy ped_y i energie odpowiadajace niezaburzonej rozniczkowej rotacji na prawym brzegu
 !
-         if(bnd_xr == 'she') then
+         if (bnd_xr == 'she') then
             do i=1,nb
 #ifndef ISO
                recv_right (iarr_all_en,i,:,:) = recv_right (iarr_all_en,i,:,:) &
@@ -178,7 +178,7 @@ module fluidboundaries
 !
 ! dodajemy ped_y i energie odpowiadajace niezaburzonej rozniczkowej rotacji na lewym brzegu
 !
-         if(bnd_xl == 'she') then
+         if (bnd_xl == 'she') then
             do i=1,nb
 #ifndef ISO
                recv_left(iarr_all_en,i,:,:) = recv_left(iarr_all_en,i,:,:) &
@@ -195,26 +195,26 @@ module fluidboundaries
          !!!! BEWARE: smalld is called only for the first fluid
          u(iarr_all_dn(1),1:nb,:,:)              = max(u(iarr_all_dn(1),1:nb,:,:),smalld)
          u(iarr_all_dn(1),nxb+nb+1:nxb+2*nb,:,:) = max(u(iarr_all_dn(1),nxb+nb+1:nxb+2*nb,:,:),smalld)
-         if(allocated(send_left))  deallocate(send_left)
-         if(allocated(send_right)) deallocate(send_right)
-         if(allocated(recv_left))  deallocate(recv_left)
-         if(allocated(recv_right)) deallocate(recv_right)
+         if (allocated(send_left))  deallocate(send_left)
+         if (allocated(send_right)) deallocate(send_right)
+         if (allocated(recv_left))  deallocate(recv_left)
+         if (allocated(recv_right)) deallocate(recv_right)
 
 #else /* !FFTW */
 
-         if( (bnd_xl == 'she').and.(bnd_xr == 'she')) then
+         if ( (bnd_xl == 'she').and.(bnd_xr == 'she')) then
 
-         if(allocated(send_right)) deallocate(send_right)
-         if(.not.allocated(send_right)) allocate(send_right(nvar%all,nb,nyd,nz))
+         if (allocated(send_right)) deallocate(send_right)
+         if (.not.allocated(send_right)) allocate(send_right(nvar%all,nb,nyd,nz))
 
-         if(allocated(send_left)) deallocate(send_left)
-         if(.not.allocated(send_left)) allocate(send_left(nvar%all,nb,nyd,nz))
+         if (allocated(send_left)) deallocate(send_left)
+         if (.not.allocated(send_left)) allocate(send_left(nvar%all,nb,nyd,nz))
 
-         if(allocated(recv_left)) deallocate(recv_left)
-         if(.not.allocated(recv_left)) allocate(recv_left(nvar%all,nb,nyd,nz))
+         if (allocated(recv_left)) deallocate(recv_left)
+         if (.not.allocated(recv_left)) allocate(recv_left(nvar%all,nb,nyd,nz))
 
-         if(allocated(recv_right)) deallocate(recv_right)
-         if(.not.allocated(recv_right)) allocate(recv_right(nvar%all,nb,nyd,nz))
+         if (allocated(recv_right)) deallocate(recv_right)
+         if (.not.allocated(recv_right)) allocate(recv_right(nvar%all,nb,nyd,nz))
 
             do i = LBOUND(u,1), UBOUND(u,1)
                send_left(i,1:nb,:,:)   = unshear_fft(u(i,nb+1:2*nb,nb+1:ny-nb,:),x(nb+1:2*nb),dely,.true.)
@@ -233,15 +233,15 @@ module fluidboundaries
                u(i,nx-nb+1:nx,nb+1:ny-nb,:) = unshear_fft(recv_right(i,1:nb,:,:),x(nx-nb+1:nx),dely)
             enddo
 
-         if(allocated(send_left))  deallocate(send_left)
-         if(allocated(send_right)) deallocate(send_right)
-         if(allocated(recv_left))  deallocate(recv_left)
-         if(allocated(recv_right)) deallocate(recv_right)
+         if (allocated(send_left))  deallocate(send_left)
+         if (allocated(send_right)) deallocate(send_right)
+         if (allocated(recv_left))  deallocate(recv_left)
+         if (allocated(recv_right)) deallocate(recv_right)
 
          endif
 #endif /* !FFTW */
 #else /* SHEAR_BND */
-         if(pxsize .gt. 1) then
+         if (pxsize .gt. 1) then
 
             CALL MPI_Isend   (u(1,1,1,1), 1, MPI_YZ_LEFT_DOM,  procxl, 10, comm3d, req(1), ierr)
             CALL MPI_Isend   (u(1,1,1,1), 1, MPI_YZ_RIGHT_DOM, procxr, 20, comm3d, req(3), ierr)
@@ -252,7 +252,7 @@ module fluidboundaries
          endif
 #endif /* SHEAR_BND */
       case ('ydim')
-         if(pysize .gt. 1) then
+         if (pysize .gt. 1) then
 
             CALL MPI_Isend   (u(1,1,1,1), 1, MPI_XZ_LEFT_DOM,  procyl, 30, comm3d, req(1), ierr)
             CALL MPI_Isend   (u(1,1,1,1), 1, MPI_XZ_RIGHT_DOM, procyr, 40, comm3d, req(3), ierr)
@@ -263,7 +263,7 @@ module fluidboundaries
          endif
 
       case ('zdim')
-         if(pzsize .gt. 1) then
+         if (pzsize .gt. 1) then
 
             CALL MPI_Isend   (u(1,1,1,1), 1, MPI_XY_LEFT_DOM,  proczl, 50, comm3d, req(1), ierr)
             CALL MPI_Isend   (u(1,1,1,1), 1, MPI_XY_RIGHT_DOM, proczr, 60, comm3d, req(3), ierr)
@@ -276,9 +276,9 @@ module fluidboundaries
 
 ! MPI + non-MPI corner-periodic boundary condition
 
-      if(bnd_xl .eq. 'cor') then
+      if (bnd_xl .eq. 'cor') then
 !   - lower to left
-         if(pcoords(1) .eq. 0 .and. pcoords(2) .eq. 0) then
+         if (pcoords(1) .eq. 0 .and. pcoords(2) .eq. 0) then
             do i=1,nb
                do j=nb+1,ny
                   u(iarr_all_dn,i,j,:) =  u(iarr_all_dn,j,2*nb+1-i,:)
@@ -295,7 +295,7 @@ module fluidboundaries
             enddo
          endif
 
-         if(procxyl .gt. 0) then
+         if (procxyl .gt. 0) then
             allocate(send_left(nvar%all,nb,ny,nz), recv_left(nvar%all,nx,nb,nz))
 
             send_left(:,:,:,:) = u(:,nb+1:2*nb,:,:)
@@ -320,14 +320,14 @@ module fluidboundaries
                enddo
             enddo
 
-            if(allocated(send_left))  deallocate(send_left)
-            if(allocated(recv_left))  deallocate(recv_left)
+            if (allocated(send_left))  deallocate(send_left)
+            if (allocated(recv_left))  deallocate(recv_left)
          endif
       endif
 
-      if(bnd_yl .eq. 'cor') then
+      if (bnd_yl .eq. 'cor') then
 !   - left to lower
-         if(pcoords(2) .eq. 0 .and. pcoords(1) .eq. 0 ) then
+         if (pcoords(2) .eq. 0 .and. pcoords(1) .eq. 0 ) then
             do j=1,nb
                do i=nb+1,nx
                   u(iarr_all_dn,i,j,:) =  u(iarr_all_dn,2*nb+1-j,i,:)
@@ -359,7 +359,7 @@ module fluidboundaries
             enddo
          endif
 
-         if(procyxl .gt. 0) then
+         if (procyxl .gt. 0) then
             allocate(send_left(nvar%all,nx,nb,nz), recv_left(nvar%all,nb,ny,nz))
 
             send_left(:,:,:,:) = u(:,:,nb+1:2*nb,:)
@@ -384,8 +384,8 @@ module fluidboundaries
                enddo
             enddo
 
-            if(allocated(send_left))  deallocate(send_left)
-            if(allocated(recv_left))  deallocate(recv_left)
+            if (allocated(send_left))  deallocate(send_left)
+            if (allocated(recv_left))  deallocate(recv_left)
          endif
       endif
 
@@ -807,9 +807,9 @@ module fluidboundaries
    subroutine all_fluid_boundaries
       use grid,  only: nxd,nyd,nzd
       implicit none
-      if(nxd /= 1) call bnd_u('xdim')
-      if(nyd /= 1) call bnd_u('ydim')
-      if(nzd /= 1) call bnd_u('zdim')
+      if (nxd /= 1) call bnd_u('xdim')
+      if (nyd /= 1) call bnd_u('ydim')
+      if (nzd /= 1) call bnd_u('zdim')
 
    end subroutine all_fluid_boundaries
 

@@ -137,17 +137,17 @@ contains
          enddo
       enddo
 
-      if(nxd /= 1) then
+      if (nxd /= 1) then
          dt_ion_proc_x = dx/cx
       else
          dt_ion_proc_x = big
       endif
-      if(nyd /= 1) then
+      if (nyd /= 1) then
          dt_ion_proc_y = dy/cy
       else
          dt_ion_proc_y = big
       endif
-      if(nzd /= 1) then
+      if (nzd /= 1) then
          dt_ion_proc_z = dz/cz
       else
          dt_ion_proc_z = big

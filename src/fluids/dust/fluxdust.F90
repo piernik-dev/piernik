@@ -91,13 +91,13 @@ module fluxdust
     cfrd    = 0.0
     vx      = 0.0
 
-    where(uud(idn,RNG) > 0.0)
+    where (uud(idn,RNG) > 0.0)
        vx(RNG)=uud(imx,RNG)/uud(idn,RNG)
     elsewhere
        vx(RNG) = 0.0
     endwhere
 
-    where(abs(vx) < 1.e-20 .and. vx /= 0.0) vx = sign(1.e-20,vx)
+    where (abs(vx) < 1.e-20 .and. vx /= 0.0) vx = sign(1.e-20,vx)
 
     fluxd(idn,RNG)=uud(imx,RNG)
     fluxd(imx,RNG)=uud(imx,RNG)*vx(RNG)

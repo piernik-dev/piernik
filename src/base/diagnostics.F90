@@ -59,7 +59,7 @@ contains
       implicit none
       integer :: i
 
-      if(allocated(array_names)) then
+      if (allocated(array_names)) then
          write(msg,'(a,I3,a)') "I am aware of ",size(array_names)," arrays..."
          call printinfo(msg)
 
@@ -94,7 +94,7 @@ contains
       character(len=lensize), dimension(:), allocatable :: temp
       integer :: old_size
 
-      if(.not.allocated(vec)) then
+      if (.not.allocated(vec)) then
          allocate(vec(addlen))
          vec = ''
       else
@@ -116,7 +116,7 @@ contains
       real, dimension(:), allocatable :: temp
       integer :: old_size
 
-      if(.not.allocated(vec)) then
+      if (.not.allocated(vec)) then
          allocate(vec(addlen))
          vec = 0.0
       else
@@ -137,9 +137,9 @@ contains
       integer, dimension(1), intent(in)               :: as
       character(len=*), intent(in), optional          :: aname
 
-      if(.not.allocated(array)) allocate( array(as(1)) )
+      if (.not.allocated(array)) allocate( array(as(1)) )
       used_memory = used_memory + size(array)*MiB
-      if(present(aname)) call keep_track_of_arrays(size(array)*MiB,aname)
+      if (present(aname)) call keep_track_of_arrays(size(array)*MiB,aname)
 
    end subroutine allocate_array_1D
 
@@ -149,9 +149,9 @@ contains
       integer, dimension(2), intent(in)                 :: as
       character(len=*), intent(in), optional            :: aname
 
-      if(.not.allocated(array)) allocate( array(as(1),as(2)) )
+      if (.not.allocated(array)) allocate( array(as(1),as(2)) )
       used_memory = used_memory + size(array)*MiB
-      if(present(aname)) call keep_track_of_arrays(size(array)*MiB,aname)
+      if (present(aname)) call keep_track_of_arrays(size(array)*MiB,aname)
 
    end subroutine allocate_array_2D
 
@@ -161,9 +161,9 @@ contains
       integer, dimension(3), intent(in)                   :: as
       character(len=*), intent(in), optional              :: aname
 
-      if(.not.allocated(array)) allocate( array(as(1),as(2),as(3)) )
+      if (.not.allocated(array)) allocate( array(as(1),as(2),as(3)) )
       used_memory = used_memory + size(array)*MiB
-      if(present(aname)) call keep_track_of_arrays(size(array)*MiB,aname)
+      if (present(aname)) call keep_track_of_arrays(size(array)*MiB,aname)
 
    end subroutine allocate_array_3D
 
@@ -173,9 +173,9 @@ contains
       integer, dimension(4), intent(in)                     :: as
       character(len=*), intent(in), optional                :: aname
 
-      if(.not.allocated(array)) allocate( array(as(1),as(2),as(3),as(4)) )
+      if (.not.allocated(array)) allocate( array(as(1),as(2),as(3),as(4)) )
       used_memory = used_memory + size(array)*MiB
-      if(present(aname)) call keep_track_of_arrays(size(array)*MiB,aname)
+      if (present(aname)) call keep_track_of_arrays(size(array)*MiB,aname)
 
    end subroutine allocate_array_4D
 
@@ -185,9 +185,9 @@ contains
       integer, dimension(5), intent(in)                       :: as
       character(len=*), intent(in), optional                  :: aname
 
-      if(.not.allocated(array)) allocate( array(as(1),as(2),as(3),as(4),as(5)) )
+      if (.not.allocated(array)) allocate( array(as(1),as(2),as(3),as(4),as(5)) )
       used_memory = used_memory + size(array)*MiB
-      if(present(aname)) call keep_track_of_arrays(size(array)*MiB,aname)
+      if (present(aname)) call keep_track_of_arrays(size(array)*MiB,aname)
 
    end subroutine allocate_array_5D
 

@@ -56,7 +56,7 @@ module initproblem
       d0      = 1.0
       r0      = 0.25
 
-      if(proc .eq. 0) then
+      if (proc .eq. 0) then
 
          diff_nml(PROBLEM_CONTROL)
 

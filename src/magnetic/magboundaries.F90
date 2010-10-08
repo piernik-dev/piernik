@@ -40,7 +40,7 @@ subroutine bnd_a(A)
    implicit none
    real, dimension(:,:,:,:) :: A
 
-   if(pxsize .gt. 1) then
+   if (pxsize .gt. 1) then
 
       CALL MPI_Isend  (A(1,1,1,1), 1, MAG_YZ_LEFT_DOM,  procxl, 10, comm3d, req(1), ierr)
       CALL MPI_Isend  (A(1,1,1,1), 1, MAG_YZ_RIGHT_DOM, procxr, 20, comm3d, req(3), ierr)
@@ -50,7 +50,7 @@ subroutine bnd_a(A)
       call MPI_Waitall(4,req(:),status(:,:),ierr)
    endif
 
-   if(pysize .gt. 1) then
+   if (pysize .gt. 1) then
       CALL MPI_Isend  (A(1,1,1,1), 1, MAG_XZ_LEFT_DOM,  procyl, 30, comm3d, req(1), ierr)
       CALL MPI_Isend  (A(1,1,1,1), 1, MAG_XZ_RIGHT_DOM, procyr, 40, comm3d, req(3), ierr)
       CALL MPI_Irecv  (A(1,1,1,1), 1, MAG_XZ_LEFT_BND,  procyl, 40, comm3d, req(2), ierr)
@@ -59,7 +59,7 @@ subroutine bnd_a(A)
       call MPI_Waitall(4,req(:),status(:,:),ierr)
    endif
 
-   if(pzsize .gt. 1) then
+   if (pzsize .gt. 1) then
       CALL MPI_Isend  (A(1,1,1,1), 1, MAG_XY_LEFT_DOM,  proczl, 50, comm3d, req(1), ierr)
       CALL MPI_Isend  (A(1,1,1,1), 1, MAG_XY_RIGHT_DOM, proczr, 60, comm3d, req(3), ierr)
       CALL MPI_Irecv  (A(1,1,1,1), 1, MAG_XY_LEFT_BND,  proczl, 60, comm3d, req(2), ierr)
@@ -103,7 +103,7 @@ subroutine bnd_b(dim)
       send_left (:,:,:,:)  = b(:,nb+1:2*nb,:,:)
       send_right(:,:,:,:)  = b(:,nxb+1:nxb+nb,:,:)
 
-      if(bnd_xl == "she") then
+      if (bnd_xl == "she") then
 !
 ! przesuwamy o calkowita liczbe komorek + periodyczny wb w kierunku y
 !
@@ -119,7 +119,7 @@ subroutine bnd_b(dim)
       endif ! (bnd_xl == "she")
 
 
-      if(bnd_xr == "she") then
+      if (bnd_xr == "she") then
 !
 ! przesuwamy o calkowita liczbe komorek + periodyczny wb w kierunku y
 !
@@ -146,15 +146,15 @@ subroutine bnd_b(dim)
         b(:,1:nb-1,:,:)               = recv_left(:,1:nb-1,:,:)
         b(:,nxb+nb+1+1:nxb+2*nb,:,:)  = recv_right(:,1+1:nb,:,:)
 
-        if(allocated(send_left))  deallocate(send_left)
-        if(allocated(send_right)) deallocate(send_right)
-        if(allocated(recv_left))  deallocate(recv_left)
-        if(allocated(recv_right)) deallocate(recv_right)
+        if (allocated(send_left))  deallocate(send_left)
+        if (allocated(send_right)) deallocate(send_right)
+        if (allocated(recv_left))  deallocate(recv_left)
+        if (allocated(recv_right)) deallocate(recv_right)
 
 !===============================================================================
 #else /* SHEAR */
 
-      if(pxsize .gt. 1) then
+      if (pxsize .gt. 1) then
 
         CALL MPI_Isend  (b(1,1,1,1), 1, MAG_YZ_LEFT_DOM,  procxl, 10, comm3d, req(1), ierr)
         CALL MPI_Isend  (b(1,1,1,1), 1, MAG_YZ_RIGHT_DOM, procxr, 20, comm3d, req(3), ierr)
@@ -168,7 +168,7 @@ subroutine bnd_b(dim)
 
 
     case ("ydim")
-      if(pysize .gt. 1) then
+      if (pysize .gt. 1) then
 
         CALL MPI_Isend  (b(1,1,1,1), 1, MAG_XZ_LEFT_DOM,  procyl, 30, comm3d, req(1), ierr)
         CALL MPI_Isend  (b(1,1,1,1), 1, MAG_XZ_RIGHT_DOM, procyr, 40, comm3d, req(3), ierr)
@@ -179,7 +179,7 @@ subroutine bnd_b(dim)
       endif
 
     case ("zdim")
-      if(pzsize .gt. 1) then
+      if (pzsize .gt. 1) then
         CALL MPI_Isend  (b(1,1,1,1), 1, MAG_XY_LEFT_DOM,  proczl, 50, comm3d, req(1), ierr)
         CALL MPI_Isend  (b(1,1,1,1), 1, MAG_XY_RIGHT_DOM, proczr, 60, comm3d, req(3), ierr)
         CALL MPI_Irecv  (b(1,1,1,1), 1, MAG_XY_LEFT_BND,  proczl, 60, comm3d, req(2), ierr)
@@ -191,9 +191,9 @@ subroutine bnd_b(dim)
 
 ! MPI + non-MPI corner-periodic boundary condition
 
-  if(bnd_xl .eq. "cor") then
+  if (bnd_xl .eq. "cor") then
 !   - lower to left
-    if(pcoords(1) .eq. 0 .and. pcoords(2) .eq. 0) then
+    if (pcoords(1) .eq. 0 .and. pcoords(2) .eq. 0) then
       do i=1,nb
         do j=nb+1,ny
           b(ibx,i,j,:) = -b(iby,j,2*nb+1-i,:)
@@ -203,7 +203,7 @@ subroutine bnd_b(dim)
       enddo
     endif
 
-    if(procxyl .gt. 0) then
+    if (procxyl .gt. 0) then
       allocate(send_left(3,nb,ny,nz), recv_left(3,nx,nb,nz))
 
       send_left(:,:,:,:) = b(:,nb+1:2*nb,:,:)
@@ -221,14 +221,14 @@ subroutine bnd_b(dim)
         enddo
       enddo
 
-      if(allocated(send_left))  deallocate(send_left)
-      if(allocated(recv_left))  deallocate(recv_left)
+      if (allocated(send_left))  deallocate(send_left)
+      if (allocated(recv_left))  deallocate(recv_left)
     endif
   endif
 
-  if(bnd_yl .eq. "cor") then
+  if (bnd_yl .eq. "cor") then
 !   - left to lower
-    if(pcoords(2) .eq. 0 .and. pcoords(1) .eq. 0 ) then
+    if (pcoords(2) .eq. 0 .and. pcoords(1) .eq. 0 ) then
       do j=1,nb
         do i=nb+1,nx
           b(ibx,i,j,:) =  b(iby,2*nb+1-j,i,:)
@@ -246,7 +246,7 @@ subroutine bnd_b(dim)
       enddo
     endif
 
-    if(procyxl .gt. 0) then
+    if (procyxl .gt. 0) then
       allocate(send_left(3,nx,nb,nz), recv_left(3,nb,ny,nz))
 
       send_left(:,:,:,:) = b(:,:,nb+1:2*nb,:)
@@ -264,8 +264,8 @@ subroutine bnd_b(dim)
         enddo
       enddo
 
-      if(allocated(send_left))  deallocate(send_left)
-      if(allocated(recv_left))  deallocate(recv_left)
+      if (allocated(send_left))  deallocate(send_left)
+      if (allocated(recv_left))  deallocate(recv_left)
     endif
   endif
 
@@ -896,9 +896,9 @@ end subroutine bnd_emf
    use grid, only: nxd,nyd,nzd
    implicit none
 
-   if(nxd /= 1) call bnd_b("xdim")
-   if(nyd /= 1) call bnd_b("ydim")
-   if(nzd /= 1) call bnd_b("zdim")
+   if (nxd /= 1) call bnd_b("xdim")
+   if (nyd /= 1) call bnd_b("ydim")
+   if (nzd /= 1) call bnd_b("zdim")
 
   end subroutine all_mag_boundaries
 

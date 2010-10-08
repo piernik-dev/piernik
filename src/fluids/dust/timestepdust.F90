@@ -69,7 +69,7 @@ contains
     do k=ks,ke
       do j=js,je
         do i=is,ie
-          if(u(idnd,i,j,k) > 0.0) then
+          if (u(idnd,i,j,k) > 0.0) then
              vx=abs(u(imxd,i,j,k)/u(idnd,i,j,k))
              vy=abs(u(imyd,i,j,k)/u(idnd,i,j,k))
              vz=abs(u(imzd,i,j,k)/u(idnd,i,j,k))
@@ -89,17 +89,17 @@ contains
     enddo
 
 
-    if(nxd /= 1) then
+    if (nxd /= 1) then
        dt_dst_proc_x = dx/max(cx,small)
     else
        dt_dst_proc_x = big
     endif
-    if(nyd /= 1) then
+    if (nyd /= 1) then
        dt_dst_proc_y = dy/max(cy,small)
     else
        dt_dst_proc_y = big
     endif
-    if(nzd /= 1) then
+    if (nzd /= 1) then
        dt_dst_proc_z = dz/max(cz,small)
     else
        dt_dst_proc_z = big

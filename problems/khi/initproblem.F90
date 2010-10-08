@@ -137,18 +137,18 @@ module initproblem
          do j = 1,ny
             rcy = y(j)
             rc=rcy-0.5*boxlen
-            if(rc .gt. 0.0) then
+            if (rc .gt. 0.0) then
                u(idnn,i,j,:) = dtop
                u(imxn,i,j,:) = vtop*dtop
             endif
-            if(rc .le. 0.0) then
+            if (rc .le. 0.0) then
                u(idnn,i,j,:) = dbot
                u(imxn,i,j,:) = vbot*dbot
             endif
-            if(abs(rc) .lt. lpert) then
+            if (abs(rc) .lt. lpert) then
                u(imyn,i,j,:) = vp*sin(k0*rcx)*u(idnn,i,j,:)
             endif
-            if(nzd /= 1) then
+            if (nzd /= 1) then
                u(imzn,i,j,:) = vtransf*u(1,i,j,:)
             else
                u(imzn,i,j,:) = 0.0

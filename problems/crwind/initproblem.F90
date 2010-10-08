@@ -68,7 +68,7 @@ module initproblem
       y0     = 0.0
       z0     = 0.0
 
-      if(proc == 0) then
+      if (proc == 0) then
 
          diff_nml(PROBLEM_CONTROL)
 
@@ -149,13 +149,13 @@ module initproblem
 
       f_sn = f_sn_kpc2                     ! SN freq
 
-      if(nxd /=1) then
+      if (nxd /=1) then
          f_sn = f_sn * (xmax-xmin)/1000.0
       else
          f_sn = f_sn * 2.0*r_sn/1000.0
       endif
 
-      if(nyd /=1) then
+      if (nyd /=1) then
          f_sn = f_sn * (ymax-ymin)/1000.0
       else
          f_sn = f_sn * 2.0*r_sn/1000.0

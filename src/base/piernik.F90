@@ -67,7 +67,7 @@ program piernik
      call printinfo("###############     Simulation     ###############", .false.)
   endif
 
-  do while(t < tend .and. nstep < nend .and. .not.(end_sim) .and. time_left() )
+  do while (t < tend .and. nstep < nend .and. .not.(end_sim) .and. time_left() )
 
      nstep=nstep+1
 
@@ -101,13 +101,13 @@ program piernik
         write(msg, '(4a)') "Enforced stop at step ",trim(nstr),", t = ", trim(tstr)
         call warn(msg)
      endif
-     if(.not.time_left()) then
+     if (.not.time_left()) then
         write(msg, '(4a)') "Wall time limit exceeded at step ",trim(nstr),", t = ", trim(tstr)
         call warn(msg)
      endif
   endif
 
-  if(associated(finalize_problem)) call finalize_problem
+  if (associated(finalize_problem)) call finalize_problem
 
 !  nstep=nstep+1
 #ifdef PERFMON
@@ -214,7 +214,7 @@ contains
 #ifdef GRAV
       call init_grav
 ! It is only temporary solution, but grav_pot_3d must be called after init_prob due to csim2,c_si,alpha clash!!!
-      if(associated(grav_pot_3d)) then
+      if (associated(grav_pot_3d)) then
          call grav_pot_3d
          grav_pot_3d_called = .true.
       else
@@ -253,8 +253,8 @@ contains
          call all_mag_boundaries
 #endif /* MAGNETIC */
 #ifdef GRAV
-         if(.not.grav_pot_3d_called) then
-            if(associated(grav_pot_3d)) then
+         if (.not.grav_pot_3d_called) then
+            if (associated(grav_pot_3d)) then
                call grav_pot_3d
                grav_pot_3d_called = .true.
             else

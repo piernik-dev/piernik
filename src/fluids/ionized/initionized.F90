@@ -87,7 +87,7 @@ module initionized
     cs_iso_ion    = 1.0
     selfgrav_ion  = .false.
 
-    if(proc == 0) then
+    if (proc == 0) then
 
        diff_nml(FLUID_IONIZED)
 

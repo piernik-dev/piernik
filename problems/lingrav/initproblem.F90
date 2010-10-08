@@ -60,7 +60,7 @@ module initproblem
       byn    = 1.0
       bzn    = 0.0
 
-      if(proc == 0) then
+      if (proc == 0) then
 
          diff_nml(PROBLEM_CONTROL)
 

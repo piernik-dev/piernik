@@ -589,7 +589,7 @@ contains
          if (gb_solve_gather) then
             if (allocated(gb_src_temp)) call die("[multigrid:init_multigrid] gb_src_temp already allocated")
             allocate(gb_src_temp(base%nxb, base%nyb, base%nzb, 0:nproc-1), stat=aerr(1))
-            if(aerr(1) /= 0) call die("[multigrid:init_multigrid] Allocation error: gb_src_temp")
+            if (aerr(1) /= 0) call die("[multigrid:init_multigrid] Allocation error: gb_src_temp")
             mb_alloc = mb_alloc + size(gb_src_temp)
          endif
 
@@ -676,7 +676,7 @@ contains
             !// compute Green's function for 7-point 3D discrete laplacian
             do i = 1, lvl(idx)%nxc
                do j = 1, lvl(idx)%nyb
-                  where( (kx(i) + ky(j) + kz(:)) /= 0 )
+                  where ( (kx(i) + ky(j) + kz(:)) /= 0 )
                      lvl(idx)%Green3D(i,j,:) = 0.5 * lvl(idx)%fft_norm / (kx(i) + ky(j) + kz(:))
                   elsewhere
                      lvl(idx)%Green3D(i,j,:) = 0.0
@@ -776,7 +776,7 @@ contains
       integer :: i, ib
       real, allocatable, dimension(:) :: all_ts
 
-      if(allocated(lvl)) then
+      if (allocated(lvl)) then
          do i=level_gb, level_max
             if (allocated(lvl(i)%prolong_xy)) deallocate(lvl(i)%prolong_xy)
             if (allocated(lvl(i)%prolong_x))  deallocate(lvl(i)%prolong_x)

@@ -118,7 +118,7 @@ contains
       integer                :: proc
       logical, save          :: frun = .true.
 
-      if(frun) then
+      if (frun) then
          write(ansi_black,  '(A1,A3)') char(27),"[0m"
          write(ansi_red,    '(A1,A6)') char(27),"[1;31m"
          write(ansi_green,  '(A1,A6)') char(27),"[1;32m"
