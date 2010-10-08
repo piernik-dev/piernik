@@ -43,11 +43,11 @@ module initproblem
 
    subroutine read_problem_par
 
-      use errh,     only : namelist_errh
-      use mpisetup, only : cbuff_len, cbuff, rbuff, buffer_dim, proc, comm, ierr, &
+      use errh,     only: namelist_errh
+      use mpisetup, only: cbuff_len, cbuff, rbuff, buffer_dim, proc, comm, ierr, &
                            MPI_CHARACTER, MPI_DOUBLE_PRECISION
-      use dataio_public, only : ierrh, msg, par_file
-      use func,          only : compare_namelist
+      use dataio_public, only: ierrh, msg, par_file
+      use func,          only: compare_namelist
 
       implicit none
 
@@ -93,14 +93,14 @@ module initproblem
 
    subroutine init_prob
 
-      use arrays,       only : u,b
-      use grid,         only : x,y,z,nx,ny,nz
-      use initionized,  only : idni,imxi,imyi,imzi
+      use arrays,       only: u,b
+      use grid,         only: x,y,z,nx,ny,nz
+      use initionized,  only: idni,imxi,imyi,imzi
 #ifndef ISO
-      use initionized,  only : ieni, gamma_ion
-      use mpisetup,     only : smallei
+      use initionized,  only: ieni, gamma_ion
+      use mpisetup,     only: smallei
 #endif /* ISO */
-      use shear,        only : qshear, omega
+      use shear,        only: qshear, omega
       implicit none
 
       integer  :: i,j,k
@@ -152,8 +152,8 @@ module initproblem
    end subroutine init_prob
 
    subroutine user_plt(var,ij,xn,tab,ierrh)
-      use arrays,         only : u,b
-      use grid,           only : nb,nxb,nyb,nzb
+      use arrays,         only: u,b
+      use grid,           only: nb,nxb,nyb,nzb
       implicit none
       character(LEN=4)     :: var
       character(LEN=2)     :: ij
@@ -169,8 +169,8 @@ module initproblem
    end subroutine user_plt
 
    subroutine user_hdf5(var,tab,ierrh)
-!      use arrays,          only : u,b
-!      use grid,            only : nb,nx,ny,nz
+!      use arrays,          only: u,b
+!      use grid,            only: nb,nx,ny,nz
       implicit none
       character(LEN=4)     :: var
       real(kind=4), dimension(:,:,:) :: tab

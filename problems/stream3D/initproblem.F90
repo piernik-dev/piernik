@@ -33,8 +33,8 @@ module initproblem
 ! Initial condition for Keplerian disk
 ! Written by: M. Hanasz, March 2006
 
-   use problem_pub, only : problem_name, run_id
-   use mpisetup,    only : cbuff_len
+   use problem_pub, only: problem_name, run_id
+   use mpisetup,    only: cbuff_len
 
    real    :: sigma0, Rin, R0, HtoR, eps, amp
    character(len=cbuff_len) :: sigma_model
@@ -48,11 +48,11 @@ module initproblem
 
    subroutine read_problem_par
 
-      use errh,     only : namelist_errh
-      use mpisetup, only : cbuff_len, cbuff, rbuff, buffer_dim, proc, comm, ierr, &
+      use errh,     only: namelist_errh
+      use mpisetup, only: cbuff_len, cbuff, rbuff, buffer_dim, proc, comm, ierr, &
                            MPI_CHARACTER, MPI_DOUBLE_PRECISION
-      use dataio_public, only : ierrh, msg, par_file
-      use func,          only : compare_namelist
+      use dataio_public, only: ierrh, msg, par_file
+      use func,          only: compare_namelist
 
       implicit none
 
@@ -114,17 +114,17 @@ module initproblem
    end function dens_Rdistr
 
    subroutine init_prob
-      use arrays,      only : u,gp
-      use grid,        only : x,y,z,nx,ny,nz,nzd,dx,dy,dz,xmin,nb
-      use constants,   only : newtong,pi,dpi
-      use gravity,     only : ptmass, r_smooth, grav_pot2accel
-      use initneutral, only : idnn, imxn, imyn, imzn
-      use initdust,    only : idnd, imxd, imyd, imzd
-      use initfluids,  only : cs_iso_neu, cs_iso_neu2
-      use mpisetup,    only : smalld
+      use arrays,      only: u,gp
+      use grid,        only: x,y,z,nx,ny,nz,nzd,dx,dy,dz,xmin,nb
+      use constants,   only: newtong,pi,dpi
+      use gravity,     only: ptmass, r_smooth, grav_pot2accel
+      use initneutral, only: idnn, imxn, imyn, imzn
+      use initdust,    only: idnd, imxd, imyd, imzd
+      use initfluids,  only: cs_iso_neu, cs_iso_neu2
+      use mpisetup,    only: smalld
 #ifndef ISO
-      use initneutral, only : ienn, gamma_neu
-      use mpisetup,    only : smallei
+      use initneutral, only: ienn, gamma_neu
+      use mpisetup,    only: smallei
 #endif /* !ISO */
       implicit none
 
@@ -222,8 +222,8 @@ module initproblem
    end subroutine init_prob
 
    subroutine user_plt(var,ij,xn,tab,ierrh)
-      use arrays,         only : u,b
-      use grid,           only : nb,nxb,nyb,nzb
+      use arrays,         only: u,b
+      use grid,           only: nb,nxb,nyb,nzb
       implicit none
       character(LEN=4)     :: var
       character(LEN=2)     :: ij
@@ -239,8 +239,8 @@ module initproblem
    end subroutine user_plt
 
    subroutine user_hdf5(var,tab,ierrh)
-!      use arrays,          only : u,b
-!      use grid,            only : nb,nx,ny,nz
+!      use arrays,          only: u,b
+!      use grid,            only: nb,nx,ny,nz
       implicit none
       character(LEN=4)     :: var
       real(kind=4), dimension(:,:,:) :: tab

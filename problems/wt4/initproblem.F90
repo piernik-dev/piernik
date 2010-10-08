@@ -74,15 +74,15 @@ contains
 
    subroutine read_problem_par
 
-      use grid,          only : xmin, xmax, ymin, ymax, zmin, zmax
-      use errh,          only : namelist_errh, die
-      use mpisetup,      only : ierr, rbuff, cbuff, ibuff, lbuff, proc, &
+      use grid,          only: xmin, xmax, ymin, ymax, zmin, zmax
+      use errh,          only: namelist_errh, die
+      use mpisetup,      only: ierr, rbuff, cbuff, ibuff, lbuff, proc, &
            &                    MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL, &
            &                    buffer_dim, comm, smalld
-      use constants,     only : pi
-      use errh,          only : die
-      use dataio_public, only : ierrh, msg, par_file
-      use func,          only : compare_namelist
+      use constants,     only: pi
+      use errh,          only: die
+      use dataio_public, only: ierrh, msg, par_file
+      use func,          only: compare_namelist
 
       implicit none
 
@@ -184,10 +184,10 @@ contains
 
    subroutine read_IC_file
 
-      use grid,          only : xminb, xmaxb, yminb, ymaxb, zminb, zmaxb
-      use mpisetup,      only : proc, nproc, comm3d, status, ierr, MPI_INTEGER, MPI_DOUBLE_PRECISION
-      use errh,          only : die
-      use dataio_public, only : msg
+      use grid,          only: xminb, xmaxb, yminb, ymaxb, zminb, zmaxb
+      use mpisetup,      only: proc, nproc, comm3d, status, ierr, MPI_INTEGER, MPI_DOUBLE_PRECISION
+      use errh,          only: die
+      use dataio_public, only: msg
 
       implicit none
 
@@ -268,15 +268,15 @@ contains
 
    subroutine init_prob
 
-      use mpisetup,      only : proc, smalld
-      use arrays,        only : u, b, cs_iso2_arr
-      use grid,          only : is, ie, js, je, ks, ke, nx, ny, nz, nb, x, y, z, dx, dy, dz
-      use initionized,   only : idni, imxi, imyi, imzi
-      use list_hdf5,     only : additional_attrs, problem_write_restart, problem_read_restart
-      use constants,     only : small, kboltz, mH
-      use errh,          only : die, warn, printinfo
-      use dataio_public, only : msg
-      use types,         only : problem_customize_solution
+      use mpisetup,      only: proc, smalld
+      use arrays,        only: u, b, cs_iso2_arr
+      use grid,          only: is, ie, js, je, ks, ke, nx, ny, nz, nb, x, y, z, dx, dy, dz
+      use initionized,   only: idni, imxi, imyi, imzi
+      use list_hdf5,     only: additional_attrs, problem_write_restart, problem_read_restart
+      use constants,     only: small, kboltz, mH
+      use errh,          only: die, warn, printinfo
+      use dataio_public, only: msg
+      use types,         only: problem_customize_solution
 
       implicit none
 
@@ -388,9 +388,9 @@ contains
 
    subroutine init_prob_attrs(file_id)
 
-      use hdf5, only : HID_T, SIZE_T
-      use h5lt, only : h5ltset_attribute_double_f
-      use constants, only : fpiG
+      use hdf5, only: HID_T, SIZE_T
+      use h5lt, only: h5ltset_attribute_double_f
+      use constants, only: fpiG
 
       implicit none
 
@@ -406,9 +406,9 @@ contains
 
    subroutine write_initial_fld_to_restart(file_id)
 
-      use hdf5,        only : HID_T
-      use grid,        only : nx, ny, nz
-      use dataio_hdf5, only : write_3darr_to_restart
+      use hdf5,        only: HID_T
+      use grid,        only: nx, ny, nz
+      use dataio_hdf5, only: write_3darr_to_restart
 
       implicit none
 
@@ -426,9 +426,9 @@ contains
 
    subroutine read_initial_fld_from_restart(file_id)
 
-      use hdf5,        only : HID_T
-      use grid,        only : nx, ny, nz
-      use dataio_hdf5, only : read_3darr_from_restart
+      use hdf5,        only: HID_T
+      use grid,        only: nx, ny, nz
+      use dataio_hdf5, only: read_3darr_from_restart
 
       implicit none
 

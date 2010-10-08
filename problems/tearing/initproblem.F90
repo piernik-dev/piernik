@@ -53,11 +53,11 @@ module initproblem
 
    subroutine read_problem_par
 
-      use errh,     only : namelist_errh
-      use mpisetup, only : MPI_CHARACTER, MPI_DOUBLE_PRECISION, &
+      use errh,     only: namelist_errh
+      use mpisetup, only: MPI_CHARACTER, MPI_DOUBLE_PRECISION, &
            &               cbuff_len, cbuff, rbuff, buffer_dim, comm, ierr, proc
-      use dataio_public, only : ierrh, msg, par_file
-      use func,          only : compare_namelist
+      use dataio_public, only: ierrh, msg, par_file
+      use func,          only: compare_namelist
 
       implicit none
 
@@ -97,13 +97,13 @@ module initproblem
 !-----------------------------------------------------------------------------
 
    subroutine init_prob
-      use arrays,       only : u, b
-      use constants,    only : pi
-      use fluidindex,   only : ibx, iby, ibz
-      use grid,         only : x, y, nx, ny, nz, xmax, ymax, zmax
-      use initionized,  only : idni, imxi, imyi, imzi
+      use arrays,       only: u, b
+      use constants,    only: pi
+      use fluidindex,   only: ibx, iby, ibz
+      use grid,         only: x, y, nx, ny, nz, xmax, ymax, zmax
+      use initionized,  only: idni, imxi, imyi, imzi
 #ifndef ISO
-      use initionized,  only : ieni
+      use initionized,  only: ieni
 #endif /* !ISO */
 
 

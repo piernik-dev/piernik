@@ -21,11 +21,11 @@ contains
 
   subroutine read_problem_par
 
-     use errh,     only : namelist_errh
-     use mpisetup, only : cbuff_len, cbuff, rbuff, buffer_dim, comm, ierr, proc, &
+     use errh,     only: namelist_errh
+     use mpisetup, only: cbuff_len, cbuff, rbuff, buffer_dim, comm, ierr, proc, &
                            MPI_CHARACTER, MPI_DOUBLE_PRECISION
-     use dataio_public, only : ierrh, msg, par_file
-     use func,          only : compare_namelist
+     use dataio_public, only: ierrh, msg, par_file
+     use func,          only: compare_namelist
 
      implicit none
 
@@ -73,12 +73,12 @@ contains
 !-----------------------------------------------------------------------------
 
   subroutine init_prob
-    use arrays, only      : u,b
-    use constants, only   : dpi
-    use grid, only        : x,y,z,nx,ny,nz
-    use initfluids, only  : gamma
-    use initneutral, only : idnn,imxn,imyn,imzn,ienn, gamma_neu
-    use mpisetup, only    : proc
+    use arrays, only: u,b
+    use constants, only: dpi
+    use grid, only: x,y,z,nx,ny,nz
+    use initfluids, only: gamma
+    use initneutral, only: idnn,imxn,imyn,imzn,ienn, gamma_neu
+    use mpisetup, only: proc
     implicit none
 
     integer            :: i,j,k,m,n,l

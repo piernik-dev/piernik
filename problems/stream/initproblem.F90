@@ -30,8 +30,8 @@
 
 module initproblem
 
-   use problem_pub, only : problem_name, run_id
-   use mpisetup,    only : cbuff_len
+   use problem_pub, only: problem_name, run_id
+   use mpisetup,    only: cbuff_len
 
    character(len=cbuff_len) :: fnoise
    real :: rhog, eps, amp, kx, kz
@@ -47,11 +47,11 @@ module initproblem
 
    subroutine read_problem_par
 
-      use errh,     only : namelist_errh
-      use mpisetup, only : ierr, rbuff, cbuff, lbuff, proc, buffer_dim, comm, &
+      use errh,     only: namelist_errh
+      use mpisetup, only: ierr, rbuff, cbuff, lbuff, proc, buffer_dim, comm, &
            &               MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_LOGICAL
-      use dataio_public, only : ierrh, msg, par_file
-      use func,          only : compare_namelist
+      use dataio_public, only: ierrh, msg, par_file
+      use func,          only: compare_namelist
 
       implicit none
 
@@ -108,19 +108,19 @@ module initproblem
 !-----------------------------------------------------------------------------
 
    subroutine init_prob
-      use mpisetup,    only : proc,pcoords
-      use arrays,       only : u
-      use grid,         only : x,y,z,nx,ny,nz,nzd,ymin,ymax,Lx,Lz
+      use mpisetup,    only: proc,pcoords
+      use arrays,       only: u
+      use grid,         only: x,y,z,nx,ny,nz,nzd,ymin,ymax,Lx,Lz
 #ifdef NEUTRAL
-      use initneutral,  only : gamma_neu,idnn,imxn,imyn,imzn, cs_iso_neu, eta_gas_neu, csvk
+      use initneutral,  only: gamma_neu,idnn,imxn,imyn,imzn, cs_iso_neu, eta_gas_neu, csvk
 #endif /* NEUTRAL */
 #ifdef DUST
-      use initdust,     only : idnd,imxd,imyd,imzd, dragc_gas_dust
+      use initdust,     only: idnd,imxd,imyd,imzd, dragc_gas_dust
 #endif /* DUST */
-      use constants,    only : pi,dpi
-      use shear,        only : omega, qshear
+      use constants,    only: pi,dpi
+      use shear,        only: omega, qshear
 #ifndef ISO
-      use initneutral,  only : ienn
+      use initneutral,  only: ienn
 #endif /* !ISO */
       implicit none
 
@@ -268,9 +268,9 @@ module initproblem
 !-----------------------------------------------------------------------------------------------------------------------------------
 
    subroutine compare(t)
-      use constants,    only : dpi
-      use arrays,       only : u
-      use grid,         only : x,y,z,Lx,Lz
+      use constants,    only: dpi
+      use arrays,       only: u
+      use grid,         only: x,y,z,Lx,Lz
       implicit none
       real, intent(in) :: t
       complex(kind=8), dimension(8) :: coeff
