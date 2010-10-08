@@ -48,12 +48,12 @@ module initproblem
 
    subroutine read_problem_par
 
-      use mpisetup, only: MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION, &
-           &              cbuff_len, cbuff, ibuff, rbuff, buffer_dim, comm, ierr, proc
-      use grid,     only: dxmn
-      use errh,     only: namelist_errh, die
-      use dataio_public, only : ierrh, msg, par_file
-      use func,          only : compare_namelist
+      use dataio_public, only: ierrh, msg, par_file
+      use errh,          only: namelist_errh, die
+      use func,          only: compare_namelist
+      use grid,          only: dxmn
+      use mpisetup,      only: MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION, &
+                &              cbuff_len, cbuff, ibuff, rbuff, buffer_dim, comm, ierr, proc
 
       implicit none
 
@@ -132,15 +132,14 @@ module initproblem
 
    subroutine init_prob
 
-      use fluidindex,     only : ibx,iby,ibz
-      use initionized,    only : idni,imxi,imyi,imzi,ieni
-      use initcosmicrays, only : gamma_crs, iarr_crs, ncrn, ncre
-      use initionized,    only : gamma_ion
-      use arrays,         only : b, u
-      use grid,           only : nx, ny, nz, nb, x, y, z, is, ie, js, je, ks, ke, nxd, nyd, nzd
-      use errh,           only : die, printinfo
-      use dataio_public,  only : msg
-      use types,          only : problem_customize_solution, finalize_problem
+      use arrays,         only: b, u
+      use dataio_public,  only: msg
+      use errh,           only: die, printinfo
+      use fluidindex,     only: ibx, iby, ibz
+      use grid,           only: nx, ny, nz, nb, x, y, z, is, ie, js, je, ks, ke, nxd, nyd, nzd
+      use initcosmicrays, only: gamma_crs, iarr_crs, ncrn, ncre
+      use initionized,    only: idni, imxi, imyi, imzi, ieni, gamma_ion
+      use types,          only: problem_customize_solution, finalize_problem
 
       implicit none
 
@@ -211,12 +210,12 @@ module initproblem
 
    subroutine check_norm
 
-      use mpisetup,       only : proc, comm3d, ierr, MPI_DOUBLE_PRECISION, MPI_SUM, MPI_MIN, MPI_MAX, MPI_IN_PLACE, t, nstep
-      use grid,           only : x, y, z, is, ie, js, je, ks, ke
-      use arrays,         only : b, u
-      use initcosmicrays, only : iarr_crs, ncrn, ncre, K_crn_paral, K_crn_perp
-      use errh,           only : die, printinfo
-      use dataio_public,  only : code_progress, PIERNIK_FINISHED, halfstep, msg
+      use arrays,         only: b, u
+      use dataio_public,  only: code_progress, PIERNIK_FINISHED, halfstep, msg
+      use errh,           only: die, printinfo
+      use grid,           only: x, y, z, is, ie, js, je, ks, ke
+      use initcosmicrays, only: iarr_crs, ncrn, ncre, K_crn_paral, K_crn_perp
+      use mpisetup,       only: proc, comm3d, ierr, MPI_DOUBLE_PRECISION, MPI_SUM, MPI_MIN, MPI_MAX, MPI_IN_PLACE, t, nstep
 
       implicit none
 

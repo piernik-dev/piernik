@@ -43,12 +43,12 @@ contains
 
    subroutine read_problem_par
 
-      use grid,        only : xmin, xmax, ymin, ymax, zmin, zmax, dx, dy, dz, nxd, nyd, nzd
-      use errh,        only : namelist_errh, die
-      use mpisetup,    only : ierr, rbuff, cbuff_len, cbuff, proc, buffer_dim, comm, smalld, smallei, MPI_CHARACTER, MPI_DOUBLE_PRECISION
-      use initneutral, only : gamma_neu
-      use dataio_public, only : ierrh, msg, par_file
-      use func,        only : compare_namelist
+      use dataio_public, only: ierrh, msg, par_file
+      use errh,          only: namelist_errh, die
+      use func,          only: compare_namelist
+      use grid,          only: xmin, xmax, ymin, ymax, zmin, zmax, dx, dy, dz, nxd, nyd, nzd
+      use initneutral,   only: gamma_neu
+      use mpisetup,      only: ierr, rbuff, cbuff_len, cbuff, proc, buffer_dim, comm, smalld, smallei, MPI_CHARACTER, MPI_DOUBLE_PRECISION
 
       implicit none
 
@@ -112,10 +112,10 @@ contains
 
    subroutine init_prob
 
-      use arrays,        only : u, b
-      use grid,          only : x, y, z, is, ie, js, je, ks, ke
-      use initneutral,   only : gamma_neu, idnn, imxn, imyn, imzn, ienn
-      use mpisetup,      only : smalld, smallei
+      use arrays,        only: u, b
+      use grid,          only: x, y, z, is, ie, js, je, ks, ke
+      use initneutral,   only: gamma_neu, idnn, imxn, imyn, imzn, ienn
+      use mpisetup,      only: smalld, smallei
 
       implicit none
 

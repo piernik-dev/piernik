@@ -46,10 +46,10 @@ module initproblem
 
    subroutine read_problem_par
 
-      use errh,     only : namelist_errh
-      use mpisetup, only : MPI_CHARACTER, MPI_DOUBLE_PRECISION, cbuff_len, cbuff, rbuff, buffer_dim, comm, ierr, proc
-      use dataio_public, only : ierrh, msg, par_file
-      use func,          only : compare_namelist
+      use dataio_public, only: ierrh, msg, par_file
+      use errh,          only: namelist_errh
+      use func,          only: compare_namelist
+      use mpisetup,      only: MPI_CHARACTER, MPI_DOUBLE_PRECISION, cbuff_len, cbuff, rbuff, buffer_dim, comm, ierr, proc
 
       implicit none
 
@@ -111,9 +111,9 @@ module initproblem
 
    subroutine init_prob
 
-      use arrays,       only : u
-      use grid,         only : x, y, z, nx, ny, nz, nzd, ymin, ymax
-      use initneutral,  only : gamma_neu, idnn, imxn, imyn, imzn, ienn
+      use arrays,       only: u
+      use grid,         only: x, y, z, nx, ny, nz, nzd, ymin, ymax
+      use initneutral,  only: gamma_neu, idnn, imxn, imyn, imzn, ienn
 
       implicit none
 
