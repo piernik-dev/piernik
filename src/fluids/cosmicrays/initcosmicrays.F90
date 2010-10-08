@@ -91,7 +91,7 @@ contains
       use errh,     only: namelist_errh, die
       use mpisetup, only: proc, ibuff, rbuff, comm, ierr, MPI_DOUBLE_PRECISION, MPI_INTEGER, buffer_dim
       use dataio_public, only: par_file, ierrh
-      use func,        only : compare_namelist
+      use func,        only: compare_namelist
 
       implicit none
 
@@ -145,7 +145,7 @@ contains
             rbuff(ne+1+2*ncre:ne+3*ncre) = K_cre_perp (1:ncre)
          endif
 
-      end if
+      endif
 
       call MPI_Bcast(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
       call MPI_Bcast(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
@@ -250,9 +250,9 @@ contains
 #ifdef NEW_HDF5
    subroutine cr_add_hdf5(nvar_crs)
 
-      use arrays,    only : u
-      use grid,      only : nxb, nyb, nzb, is, ie, js, je, ks, ke
-      use list_hdf5, only : add_lhdf5, lhdf5_info
+      use arrays,    only: u
+      use grid,      only: nxb, nyb, nzb, is, ie, js, je, ks, ke
+      use list_hdf5, only: add_lhdf5, lhdf5_info
 
       implicit none
 

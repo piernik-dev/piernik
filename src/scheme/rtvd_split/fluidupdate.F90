@@ -36,21 +36,21 @@ contains
 
    subroutine fluid_update
 
-      use errh,          only : printinfo
-      use timer,         only : timer_
-      use dataio,        only : check_log, check_tsl
-      use timestep,      only : time_step
-      use mpisetup,      only : proc, dt, dtm, t, nstep
-      use dataio_public, only : halfstep, msg
+      use errh,          only: printinfo
+      use timer,         only: timer_
+      use dataio,        only: check_log, check_tsl
+      use timestep,      only: time_step
+      use mpisetup,      only: proc, dt, dtm, t, nstep
+      use dataio_public, only: halfstep, msg
 #ifdef SN_SRC
-      use snsources,     only : random_sn
+      use snsources,     only: random_sn
 #endif /* SN_SRC */
 #ifdef SNE_DISTR
-      use sndistr,       only : supernovae_distribution
+      use sndistr,       only: supernovae_distribution
 #endif /* SNE_DISTR */
 #ifdef DEBUG
-      use dataio_public, only : nhdf
-      use dataio,        only : write_hdf
+      use dataio_public, only: nhdf
+      use dataio,        only: write_hdf
 #endif /* DEBUG */
 
       implicit none
@@ -87,7 +87,7 @@ contains
       if (first_run .and. proc == 0) then
          write(msg, 900) 0,dt,t,ts
          call printinfo(msg, .true.)
-      end if
+      endif
 
       t=t+dt
 
@@ -124,7 +124,7 @@ contains
       if (proc == 0) then
          write(msg, 900) nstep,dt,t,ts
          call printinfo(msg, .true.)
-      end if
+      endif
 
    end subroutine fluid_update
 
@@ -135,16 +135,16 @@ contains
 
    subroutine make_3sweeps(forward)
 
-      use types,           only : problem_customize_solution
-      use dataio_public,   only : skip_advection
+      use types,           only: problem_customize_solution
+      use dataio_public,   only: skip_advection
 #ifdef SHEAR
-      use shear,           only : yshift
-      use fluidboundaries, only : bnd_u
-      use mpisetup,        only : t, dt
-      use grid,            only : nxd, nyd, nzd
+      use shear,           only: yshift
+      use fluidboundaries, only: bnd_u
+      use mpisetup,        only: t, dt
+      use grid,            only: nxd, nyd, nzd
 #endif /* SHEAR */
 #ifdef GRAV
-      use gravity,         only : source_terms_grav
+      use gravity,         only: source_terms_grav
 #endif /* GRAV */
 
       implicit none
@@ -167,14 +167,14 @@ contains
          if (forward) then
             do s = DIR_X, DIR_Z
                call make_sweep(s, forward)
-            end do
+            enddo
          else
             do s = DIR_Z, DIR_X, -1
                call make_sweep(s, forward)
-            end do
-         end if
+            enddo
+         endif
          if (associated(problem_customize_solution)) call problem_customize_solution
-      end if
+      endif
 
    end subroutine make_3sweeps
 
@@ -185,19 +185,19 @@ contains
 
    subroutine make_sweep(dir, forward)
 
-      use sweeps,         only : sweepx, sweepy, sweepz
-      use grid,           only : nxd, nyd, nzd
-      use errh,           only : die
-      use dataio_public,  only : msg
+      use sweeps,         only: sweepx, sweepy, sweepz
+      use grid,           only: nxd, nyd, nzd
+      use errh,           only: die
+      use dataio_public,  only: msg
 #if defined SHEAR && defined FLUID_INTERACTIONS
-      use sweeps,         only : source_terms_y
+      use sweeps,         only: source_terms_y
 #endif /* SHEAR */
 #ifdef COSM_RAYS
-      use crdiffusion,    only : cr_diff_x, cr_diff_y, cr_diff_z
+      use crdiffusion,    only: cr_diff_x, cr_diff_y, cr_diff_z
 #endif /* COSM_RAYS */
 #ifdef DEBUG
-      use dataio_public,  only : nhdf
-      use dataio,         only : write_hdf
+      use dataio_public,  only: nhdf
+      use dataio,         only: write_hdf
 #endif /* DEBUG */
 
       implicit none
@@ -216,7 +216,7 @@ contains
 #ifdef MAGNETIC
                   call magfieldbyzx
 #endif /* MAGNETIC */
-               end if
+               endif
 
                call sweepx
 
@@ -227,7 +227,7 @@ contains
 #ifdef COSM_RAYS
                   call cr_diff_x
 #endif /* COSM_RAYS */
-               end if
+               endif
             endif
 
          case(DIR_Y)
@@ -239,7 +239,7 @@ contains
 #ifdef MAGNETIC
                   call magfieldbzxy
 #endif /* MAGNETIC */
-               end if
+               endif
                call sweepy
 
                if (forward) then
@@ -249,7 +249,7 @@ contains
 #ifdef COSM_RAYS
                   call cr_diff_y
 #endif /* COSM_RAYS */
-               end if
+               endif
             else
 #if defined SHEAR && defined FLUID_INTERACTIONS
                call source_terms_y
@@ -265,7 +265,7 @@ contains
 #ifdef MAGNETIC
                   call magfieldbxyz
 #endif /* MAGNETIC */
-               end if
+               endif
 
                call sweepz
 
@@ -276,7 +276,7 @@ contains
 #ifdef COSM_RAYS
                   call cr_diff_z
 #endif /* COSM_RAYS */
-               end if
+               endif
             endif
 
          case default
@@ -296,12 +296,12 @@ contains
 #ifdef MAGNETIC
    subroutine magfieldbyzx
 
-      use fluidindex,  only : ibx,iby,ibz
-      use arrays,      only : b
-      use grid,        only : xdim,ydim,zdim,nyd,nzd
-      use advects,     only : advectby_x,advectbz_x
+      use fluidindex,  only: ibx,iby,ibz
+      use arrays,      only: b
+      use grid,        only: xdim,ydim,zdim,nyd,nzd
+      use advects,     only: advectby_x,advectbz_x
 #ifdef RESISTIVE
-      use resistivity, only : diffuseby_x,diffusebz_x
+      use resistivity, only: diffuseby_x,diffusebz_x
 #endif /* RESISTIVE */
 
       implicit none
@@ -328,12 +328,12 @@ contains
 
    subroutine magfieldbzxy
 
-      use fluidindex,  only : ibx,iby,ibz
-      use arrays,      only : b
-      use grid,        only : xdim,ydim,zdim,nzd,nxd
-      use advects,     only : advectbx_y,advectbz_y
+      use fluidindex,  only: ibx,iby,ibz
+      use arrays,      only: b
+      use grid,        only: xdim,ydim,zdim,nzd,nxd
+      use advects,     only: advectbx_y,advectbz_y
 #ifdef RESISTIVE
-      use resistivity, only : diffusebx_y,diffusebz_y
+      use resistivity, only: diffusebx_y,diffusebz_y
 #endif /* RESISTIVE */
 
       implicit none
@@ -360,12 +360,12 @@ contains
 
    subroutine magfieldbxyz
 
-      use fluidindex,  only : ibx,iby,ibz
-      use arrays,      only : b
-      use grid,        only : xdim,ydim,zdim,nxd,nyd
-      use advects,     only : advectbx_z,advectby_z
+      use fluidindex,  only: ibx,iby,ibz
+      use arrays,      only: b
+      use grid,        only: xdim,ydim,zdim,nxd,nyd
+      use advects,     only: advectbx_z,advectby_z
 #ifdef RESISTIVE
-      use resistivity, only : diffusebx_z,diffuseby_z
+      use resistivity, only: diffusebx_z,diffuseby_z
 #endif /* RESISTIVE */
 
       implicit none
@@ -388,10 +388,10 @@ contains
 
    subroutine mag_add(ib1,dim1,ib2,dim2)
 
-      use func,          only : pshift, mshift
-      use arrays,        only : b, wa, wcu
-      use grid,          only : dl
-      use magboundaries, only : all_mag_boundaries
+      use func,          only: pshift, mshift
+      use arrays,        only: b, wa, wcu
+      use grid,          only: dl
+      use magboundaries, only: all_mag_boundaries
 
       implicit none
 

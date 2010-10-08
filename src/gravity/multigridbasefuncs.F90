@@ -41,7 +41,7 @@ contains
 
    subroutine zero_boundaries(lev)
 
-      use multigridvars, only : lvl
+      use multigridvars, only: lvl
 
       implicit none
 
@@ -93,7 +93,7 @@ contains
          call prolong_level0(lev, iv)
       else
          call prolong_level_hord(lev, iv) ! experimental part
-      end if
+      endif
 
       call check_dirty(fine%level, iv, "prolong")
 
@@ -157,7 +157,7 @@ contains
 
       do i = level_max, level_min+1, -1
          call restrict_level(i, iv)
-      end do
+      enddo
 
       call check_dirty(0, iv, "restrict_all+")
 
@@ -291,7 +291,7 @@ contains
                  ( lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k-1, soln)       + &
                  & lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k+1, soln)) * Lz - &
                  & lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k,   soln)  * L0
-         end do
+         enddo
       else
          ! In 3D this implementation can give a bit more cache misses, few times more writes and significantly more instructions executed than monolithic 3D above
          do k = lvl(lev)%ks, lvl(lev)%ke
@@ -313,8 +313,8 @@ contains
                  & lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k,   def)   - &
                  ( lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k-1, soln)  + &
                  & lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k+1, soln)) * Lz
-         end do
-      end if
+         enddo
+      endif
 
    end subroutine residual2
 

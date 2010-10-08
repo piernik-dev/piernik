@@ -31,18 +31,18 @@ module sweeps     ! split sweeps
 
 #if defined SHEAR && defined FLUID_INTERACTIONS
   subroutine source_terms_y
-    use mpisetup, only  : dt
-    use arrays, only : u
-    use grid, only : nx,nz
-    use shear,           only : omega, qshear
+    use mpisetup, only: dt
+    use arrays, only: u
+    use grid, only: nx,nz
+    use shear,           only: omega, qshear
 #ifdef NEUTRAL
-    use initneutral,     only : global_gradP_neu
+    use initneutral,     only: global_gradP_neu
 #endif /* NEUTRAL */
 #ifdef DUST
-    use initdust,        only : dragc_gas_dust
+    use initdust,        only: dragc_gas_dust
 #endif /* DUST */
-    use fluidindex,      only : iarr_all_dn, iarr_all_mx, iarr_all_my, nvar
-    use fluidboundaries, only : all_fluid_boundaries
+    use fluidindex,      only: iarr_all_dn, iarr_all_mx, iarr_all_my, nvar
+    use fluidboundaries, only: all_fluid_boundaries
 
     implicit none
     real, dimension(size(iarr_all_my),nx,nz) :: vxr, v_r, rotaccr
@@ -86,18 +86,18 @@ module sweeps     ! split sweeps
 
   subroutine sweepx
 
-    use fluidindex,   only : nvar, iarr_all_swpx
-    use fluidindex,   only : nmag
-    use fluidindex,   only : ibx,iby,ibz
+    use fluidindex,   only: nvar, iarr_all_swpx
+    use fluidindex,   only: nmag
+    use fluidindex,   only: ibx,iby,ibz
 
-    use mpisetup, only  : dt
-    use arrays, only : u,b
-    use grid, only   : dx,nb,nx,ks,ke,js,je,nyd,nzd
-    use rtvd, only   : relaxing_tvd
-    use fluidboundaries, only : all_fluid_boundaries
+    use mpisetup, only: dt
+    use arrays, only: u,b
+    use grid, only: dx,nb,nx,ks,ke,js,je,nyd,nzd
+    use rtvd, only: relaxing_tvd
+    use fluidboundaries, only: all_fluid_boundaries
 
 #ifdef COSM_RAYS
-    use crhelpers,  only : div_v
+    use crhelpers,  only: div_v
 #endif /* COSM_RAYS */
 
     implicit none
@@ -127,8 +127,8 @@ module sweeps     ! split sweeps
 
         call relaxing_tvd(nx, u_x, b_x, 'xsweep', j, k, dx, dt)
         u(:,:,j,k)=u_x(iarr_all_swpx,:)
-      end do
-    end do
+      enddo
+    enddo
 
     call all_fluid_boundaries
 
@@ -138,17 +138,17 @@ module sweeps     ! split sweeps
 !------------------------------------------------------------------------------------------
 
   subroutine sweepy
-    use fluidindex, only : nvar, iarr_all_swpy
-    use fluidindex,   only : nmag
-    use fluidindex, only : ibx,iby,ibz
-    use mpisetup, only  : dt
-    use arrays, only : u,b
-    use grid, only   : dy,nb,ny,is,ie,ks,ke,nxd,nzd
-    use rtvd, only     : relaxing_tvd
-    use fluidboundaries, only : all_fluid_boundaries
+    use fluidindex, only: nvar, iarr_all_swpy
+    use fluidindex,   only: nmag
+    use fluidindex, only: ibx,iby,ibz
+    use mpisetup, only: dt
+    use arrays, only: u,b
+    use grid, only: dy,nb,ny,is,ie,ks,ke,nxd,nzd
+    use rtvd, only: relaxing_tvd
+    use fluidboundaries, only: all_fluid_boundaries
 
 #ifdef COSM_RAYS
-    use crhelpers, only   : div_v
+    use crhelpers, only: div_v
 #endif /* COSM_RAYS */
 
     implicit none
@@ -182,8 +182,8 @@ module sweeps     ! split sweeps
         call relaxing_tvd(ny, u_y, b_y, 'ysweep', k, i, dy, dt)
         u(:,i,:,k)=u_y(iarr_all_swpy,:)
 
-      end do
-    end do
+      enddo
+    enddo
 
     call all_fluid_boundaries
 
@@ -192,19 +192,19 @@ module sweeps     ! split sweeps
 !------------------------------------------------------------------------------------------
 
   subroutine sweepz
-    use fluidindex, only   : nvar, iarr_all_swpz
-    use fluidindex, only   : nmag
-    use fluidindex, only : ibx,iby,ibz
+    use fluidindex, only: nvar, iarr_all_swpz
+    use fluidindex, only: nmag
+    use fluidindex, only: ibx,iby,ibz
 
 
-    use mpisetup, only  : dt
-    use arrays, only : u,b
-    use grid, only   : dz,nb,nz,is,ie,js,je,nxd,nyd
-    use rtvd, only     : relaxing_tvd
-    use fluidboundaries, only : all_fluid_boundaries
+    use mpisetup, only: dt
+    use arrays, only: u,b
+    use grid, only: dz,nb,nz,is,ie,js,je,nxd,nyd
+    use rtvd, only: relaxing_tvd
+    use fluidboundaries, only: all_fluid_boundaries
 
 #ifdef COSM_RAYS
-    use crhelpers,  only : div_v
+    use crhelpers,  only: div_v
 #endif /* COSM_RAYS */
 
     implicit none
@@ -237,8 +237,8 @@ module sweeps     ! split sweeps
 
         call relaxing_tvd(nz, u_z, b_z, 'zsweep', i, j, dz, dt)
         u(:,i,j,:)=u_z(iarr_all_swpz,:)
-      end do
-    end do
+      enddo
+    enddo
 
     call all_fluid_boundaries
 

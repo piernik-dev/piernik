@@ -38,8 +38,8 @@
 !<
 module dataio_hdf5
 
-   use list_hdf5,     only : S_LEN
-   use dataio_public, only : maxparfilelen, maxparfilelines
+   use list_hdf5,     only: S_LEN
+   use dataio_public, only: maxparfilelen, maxparfilelines
 
    implicit none
 
@@ -75,7 +75,7 @@ module dataio_hdf5
 
    subroutine null_attrs(file_id)
 
-      use hdf5, only : HID_T
+      use hdf5, only: HID_T
 
       implicit none
 
@@ -290,7 +290,7 @@ module dataio_hdf5
 #endif /* GRAV */
       use fluidindex,   only: ind
 #ifdef COSM_RAYS
-      use fluidindex,   only : iarr_all_crs
+      use fluidindex,   only: iarr_all_crs
 #endif /* COSM_RAYS */
 #ifdef NEUTRAL
       use initneutral,  only: gamma_neu
@@ -605,9 +605,9 @@ module dataio_hdf5
 
    subroutine write_plot
 
-      use hdf5,       only : HID_T, H5open_f, H5Fcreate_f, H5Gcreate_f, H5F_ACC_TRUNC_F, H5Gclose_f, H5close_f, h5fclose_f
-      use mpisetup,   only : t, comm3d, ierr, proc
-      use dataio_public, only : cwdlen, log_file
+      use hdf5,       only: HID_T, H5open_f, H5Fcreate_f, H5Gcreate_f, H5F_ACC_TRUNC_F, H5Gclose_f, H5close_f, h5fclose_f
+      use mpisetup,   only: t, comm3d, ierr, proc
+      use dataio_public, only: cwdlen, log_file
 
       implicit none
 
@@ -669,12 +669,12 @@ module dataio_hdf5
       use viz,           only: draw_me
 #endif /* PGPLOT */
       use dataio_public, only: vizit, fmin, fmax, cwdlen, log_file, msg, varlen
-      use mpisetup, only : MPI_CHARACTER, comm3d, ierr, pxsize, pysize, pzsize, MPI_DOUBLE_PRECISION, t, pcoords
-      use hdf5,     only : HID_T, HSIZE_T, SIZE_T, H5F_ACC_RDWR_F, h5fopen_f, h5gopen_f, h5gclose_f, h5fclose_f
-      use h5lt,     only : h5ltmake_dataset_double_f, h5ltset_attribute_double_f
-      use arrays,   only : u
-      use grid,     only : nxb,nyb,nzb,nxd,nyd,nzd,nb
-      use errh,     only : die, warn
+      use mpisetup, only: MPI_CHARACTER, comm3d, ierr, pxsize, pysize, pzsize, MPI_DOUBLE_PRECISION, t, pcoords
+      use hdf5,     only: HID_T, HSIZE_T, SIZE_T, H5F_ACC_RDWR_F, h5fopen_f, h5gopen_f, h5gclose_f, h5fclose_f
+      use h5lt,     only: h5ltmake_dataset_double_f, h5ltset_attribute_double_f
+      use arrays,   only: u
+      use grid,     only: nxb,nyb,nzb,nxd,nyd,nzd,nb
+      use errh,     only: die, warn
 
       implicit none
 
@@ -1798,7 +1798,7 @@ module dataio_hdf5
          do i = 1, parfilelines
             write(dset_name,'(A8,I4.4)') "parfile_",i
             call h5ltmake_dataset_string_f (gr_id, trim(dset_name), trim(parfile(i)), error)
-         end do
+         enddo
          call H5Gclose_f(gr_id, error)
 
          bufsize = 3

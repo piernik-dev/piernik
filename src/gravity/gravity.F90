@@ -98,12 +98,12 @@ module gravity
 !<
    subroutine init_grav
 
-      use errh,     only : namelist_errh, warn
-      use mpisetup, only : ibuff, rbuff, buffer_dim, comm, ierr, proc, &
+      use errh,     only: namelist_errh, warn
+      use mpisetup, only: ibuff, rbuff, buffer_dim, comm, ierr, proc, &
            &               MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL, lbuff
-      use arrays,   only : gpot
-      use func,     only : compare_namelist
-      use dataio_public, only : ierrh, par_file
+      use arrays,   only: gpot
+      use func,     only: compare_namelist
+      use dataio_public, only: ierrh, par_file
 
       implicit none
 
@@ -160,7 +160,7 @@ module gravity
 
          lbuff(1)  = user_grav
 
-      end if
+      endif
 
       call MPI_Bcast(ibuff, buffer_dim, MPI_INTEGER,          0, comm, ierr)
       call MPI_Bcast(lbuff, buffer_dim, MPI_LOGICAL,          0, comm, ierr)
@@ -205,13 +205,13 @@ module gravity
    subroutine source_terms_grav
 
 #if defined(MULTIGRID) || defined(POISSON_FFT)
-      use fluidindex,    only : iarr_all_sg
-      use arrays,        only : u, sgp, sgpm
+      use fluidindex,    only: iarr_all_sg
+      use arrays,        only: u, sgp, sgpm
 #ifdef POISSON_FFT
-      use poissonsolver, only : poisson_solve
+      use poissonsolver, only: poisson_solve
 #endif /* POISSON_FFT */
 #ifdef MULTIGRID
-      use multigrid,     only : multigrid_solve
+      use multigrid,     only: multigrid_solve
 #endif /* MULTIGRID */
 #endif /* defined(MULTIGRID) || defined(POISSON_FFT) */
 
@@ -232,7 +232,7 @@ module gravity
          call multigrid_solve( sum(u(iarr_all_sg,:,:,:),1) )
          ! BEWARE Here a lot of heap space is required and some compilers may generate code that do segfaults for big enough domains.
          ! It is the weakest point of this type in Maclaurin test. Next one (in fluidboundaries.F90) is 8 times less sensitive.
-      end if
+      endif
 #endif /* MULTIGRID */
 
       ! communicate boundary values for sgp(:, :, :) because multtigrid solver gives at most 2 guardcells, while for hydro solver typically 4 is required.
@@ -249,10 +249,10 @@ module gravity
 
    subroutine sum_potential
 
-      use mpisetup, only : dt, dtm
-      use arrays,   only : gpot, gp, hgpot
+      use mpisetup, only: dt, dtm
+      use arrays,   only: gpot, gp, hgpot
 #if defined(MULTIGRID) || defined(POISSON_FFT)
-      use arrays,   only : sgp, sgpm
+      use arrays,   only: sgp, sgpm
 #endif /* MULTIGRID || POISSON_FFT */
 
       implicit none
@@ -281,15 +281,15 @@ module gravity
 
    subroutine all_sgp_boundaries
 
-      use mpisetup,   only : comm3d, ierr, MPI_STATUS_SIZE, MPI_REQUEST_NULL, &
+      use mpisetup,   only: comm3d, ierr, MPI_STATUS_SIZE, MPI_REQUEST_NULL, &
            &                 procxl, procxr, procyl, procyr, proczl, proczr, proc, pxsize, pysize, pzsize, &
            &                 bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr, &
            &                 ARR_YZ_LEFT_BND, ARR_YZ_RIGHT_BND, ARR_YZ_LEFT_DOM, ARR_YZ_RIGHT_DOM, &
            &                 ARR_XZ_LEFT_BND, ARR_XZ_RIGHT_BND, ARR_XZ_LEFT_DOM, ARR_XZ_RIGHT_DOM, &
            &                 ARR_XY_LEFT_BND, ARR_XY_RIGHT_BND, ARR_XY_LEFT_DOM, ARR_XY_RIGHT_DOM
-      use arrays,     only : sgp
-      use grid,       only : nb, nxd, nyd, nzd
-      use errh,       only : die
+      use arrays,     only: sgp
+      use grid,       only: nb, nxd, nyd, nzd
+      use errh,       only: die
 
       implicit none
 
@@ -306,43 +306,43 @@ module gravity
             case ('per')
                do i = 1, ceiling(nb/real(nxd)) ! Repeating is important for domains that are narrower than their guardcells (e.g. nxd = 2)
                   sgp(1:nb, :, :) = sgp(nxd+1:nxd+nb, :, :)
-               end do
+               enddo
             case ('mpi')
                if (pxsize > 1) then
                   call MPI_Isend(sgp(1, 1, 1), 1, ARR_YZ_LEFT_DOM,  procxl, 12, comm3d, req3d(1), ierr)
                   call MPI_Irecv(sgp(1, 1, 1), 1, ARR_YZ_LEFT_BND,  procxl, 22, comm3d, req3d(2), ierr)
                else
                   call die("[gravity:all_grav_boundaries] bnd_xl == 'mpi' && pxsize <= 1")
-               end if
+               endif
             case ('she') ! move appropriate code from poissonsolver::poisson_solve or do nothing. Or die until someone really needs SHEAR.
                 call die("[gravity:all_grav_boundaries] bnd_xl == 'she' not implemented")
             case default ! Set gradient == 0 on the boundaries
                do i = 1, nb
                   sgp(i, :, :) = sgp(nb+1, :, :)
-               end do
+               enddo
          end select
 
          select case (bnd_xr)
             case ('per')
                do i = 1, ceiling(nb/real(nxd))
                   sgp(nxd+nb+1:nxd+2*nb, :, :) = sgp(nb+1:2*nb, :, :)
-               end do
+               enddo
             case ('mpi')
                if (pxsize > 1) then
                   call MPI_Isend(sgp(1, 1, 1), 1, ARR_YZ_RIGHT_DOM, procxr, 22, comm3d, req3d(3), ierr)
                   call MPI_Irecv(sgp(1, 1, 1), 1, ARR_YZ_RIGHT_BND, procxr, 12, comm3d, req3d(4), ierr)
                else
                   call die("[gravity:all_grav_boundaries] bnd_xr == 'mpi' && pxsize <= 1")
-               end if
+               endif
             case ('she')
                 call die("[gravity:all_grav_boundaries] bnd_xl == 'she' not implemented")
             case default
                do i = 1, nb
                   sgp(nb+nxd+i, :, :) = sgp(nb+nxd, :, :)
-               end do
+               enddo
          end select
 
-      end if
+      endif
 
       if (nyd /= 1) then
 
@@ -350,39 +350,39 @@ module gravity
             case ('per')
                do i = 1, ceiling(nb/real(nyd))
                   sgp(:, 1:nb, :) = sgp(:, nyd+1:nyd+nb, :)
-               end do
+               enddo
             case ('mpi')
                if (pysize > 1) then
                   call MPI_Isend(sgp(1, 1, 1), 1, ARR_XZ_LEFT_DOM,  procyl, 32, comm3d, req3d(5), ierr)
                   call MPI_Irecv(sgp(1, 1, 1), 1, ARR_XZ_LEFT_BND,  procyl, 42, comm3d, req3d(6), ierr)
                else
                   call die("[gravity:all_grav_boundaries] bnd_yl == 'mpi' && pysize <= 1")
-               end if
+               endif
             case default
                do i = 1, nb
                   sgp(:, i, :) = sgp(:, nb+1, :)
-               end do
+               enddo
          end select
 
          select case (bnd_yr)
             case ('per')
                do i = 1, ceiling(nb/real(nyd))
                   sgp(:, nyd+nb+1:nyd+2*nb, :) = sgp(:, nb+1:2*nb, :)
-               end do
+               enddo
             case ('mpi')
                if (pysize > 1) then
                   call MPI_Isend(sgp(1, 1, 1), 1, ARR_XZ_RIGHT_DOM, procyr, 42, comm3d, req3d(7), ierr)
                   call MPI_Irecv(sgp(1, 1, 1), 1, ARR_XZ_RIGHT_BND, procyr, 32, comm3d, req3d(8), ierr)
                else
                   call die("[gravity:all_grav_boundaries] bnd_yr == 'mpi' && pysize <= 1")
-               end if
+               endif
             case default
                do i = 1, nb
                   sgp(:, nb+nyd+i, :) = sgp(:, nb+nyd, :)
-               end do
+               enddo
          end select
 
-      end if
+      endif
 
       if (nzd /= 1) then
 
@@ -390,39 +390,39 @@ module gravity
             case ('per')
                do i = 1, ceiling(nb/real(nzd))
                   sgp(:, :, 1:nb) = sgp(:, :, nzd+1:nzd+nb)
-               end do
+               enddo
             case ('mpi')
                if (pzsize > 1) then
                   call MPI_Isend(sgp(1, 1, 1), 1, ARR_XY_LEFT_DOM,  proczl, 52, comm3d, req3d(9), ierr)
                   call MPI_Irecv(sgp(1, 1, 1), 1, ARR_XY_LEFT_BND,  proczl, 62, comm3d, req3d(10), ierr)
                else
                   call die("[gravity:all_grav_boundaries] bnd_zl == 'mpi' && pzsize <= 1")
-               end if
+               endif
             case default
                do i = 1, nb
                   sgp(:, :, i) = sgp(:, :, nb+1)
-               end do
+               enddo
          end select
 
          select case (bnd_zr)
             case ('per')
                do i = 1, ceiling(nb/real(nzd))
                   sgp(:, :, nzd+nb+1:nzd+2*nb) = sgp(:, :, nb+1:2*nb)
-               end do
+               enddo
             case ('mpi')
                if (pzsize > 1) then
                   call MPI_Isend(sgp(1, 1, 1), 1, ARR_XY_RIGHT_DOM, proczr, 62, comm3d, req3d(11), ierr)
                   call MPI_Irecv(sgp(1, 1, 1), 1, ARR_XY_RIGHT_BND, proczr, 52, comm3d, req3d(12), ierr)
                else
                   call die("[gravity:all_grav_boundaries] bnd_zr == 'mpi' && pzsize <= 1")
-               end if
+               endif
             case default
                do i = 1, nb
                   sgp(:, :, nb+nzd+i) = sgp(:, :, nb+nzd)
-               end do
+               enddo
          end select
 
-      end if
+      endif
 
       call MPI_Waitall(nreq, req3d(:), status3d(:,:), ierr)
 
@@ -455,18 +455,18 @@ module gravity
 !<
 
    subroutine default_grav_pot_3d
-      use arrays, only     : gp
+      use arrays, only: gp
 #if defined GRAV_PTMASS || defined GRAV_PTMASSPURE || defined GRAV_PTFLAT
-      use constants, only  : newtong
+      use constants, only: newtong
 #endif /* GRAV_PTMASS || GRAV_PTMASSPURE || GRAV_PTFLAT */
-      use grid, only       : nx,ny,nz,x,y,z
-      use mpisetup, only   : smalld
-      use initfluids, only : cs_iso2
+      use grid, only: nx,ny,nz,x,y,z
+      use mpisetup, only: smalld
+      use initfluids, only: cs_iso2
 #ifdef GRAV_USER
-      use gravity_user, only : grav_pot_user
+      use gravity_user, only: grav_pot_user
 #endif /* GRAV_USER */
 #if defined (GRAV_PTMASSPURE) || defined (GRAV_PTMASS) || defined (GRAV_PTFLAT) || defined (GRAV_PTMASSSTIFF)
-      use constants, only : newtong
+      use constants, only: newtong
 #endif /* GRAV_PTMASSPURE || GRAV_PTMASS || GRAV_PTFLAT || GRAV_PTMASSSTIFF */
       implicit none
 
@@ -531,7 +531,7 @@ module gravity
                   gp(i,j,k) = gmr * (3. - r2/r_smooth2)
                else
                   gp(i,j,k) = gm / dsqrt(r2)
-               end if
+               endif
              enddo
           enddo
        enddo
@@ -594,15 +594,15 @@ module gravity
 !<
 
    subroutine grav_accel(sweep, i1,i2, xsw, n, grav)
-      use grid, only     : nb
-      use arrays, only   : gp
-      use grid, only     : x,y,z,dl,xdim,ydim,zdim,nx,ny,nz
-      use grid, only     : is,ie,js,je,ks,ke, xr,yr,zr
+      use grid, only: nb
+      use arrays, only: gp
+      use grid, only: x,y,z,dl,xdim,ydim,zdim,nx,ny,nz
+      use grid, only: is,ie,js,je,ks,ke, xr,yr,zr
 #if defined GRAV_PTMASS || defined GRAV_PTFLAT
-      use mpisetup, only : smalld
+      use mpisetup, only: smalld
 #endif /* GRAV_PTMASS || GRAV_PTFLAT */
 #if defined GRAV_ACC_USER
-      use gravity_user, only : grav_accel_user
+      use gravity_user, only: grav_accel_user
 #endif /* GRAV_ACC_USER  */
       implicit none
       character(len=6), intent(in)   :: sweep
@@ -647,8 +647,8 @@ module gravity
 !! \param grav 1D array of gravitational acceleration values computed for positions from xsw and returned by the routine
 !<
    subroutine grav_pot2accel(sweep, i1,i2, n, grav,istep)
-      use arrays, only : gpot, hgpot
-      use grid, only   : dl, xdim, ydim, zdim
+      use arrays, only: gpot, hgpot
+      use grid, only: dl, xdim, ydim, zdim
       implicit none
       character(len=6), intent(in)   :: sweep
       integer, intent(in)            :: i1, i2
@@ -711,10 +711,10 @@ module gravity
 !<
    subroutine grav_accel2pot
 
-      use mpisetup, only : pxsize, pysize, pzsize, pcoords, proc, nproc, ndims, &
+      use mpisetup, only: pxsize, pysize, pzsize, pcoords, proc, nproc, ndims, &
            &               comm, comm3d, err, ierr, MPI_DOUBLE_PRECISION, mpifind
-      use arrays,   only : gp
-      use grid,     only : dl, xdim, ydim, zdim, is, ie, js, je, ks, ke, nb, nx, ny, nz, zr, yr, xr
+      use arrays,   only: gp
+      use grid,     only: dl, xdim, ydim, zdim, is, ie, js, je, ks, ke, nb, nx, ny, nz, zr, yr, xr
 
       implicit none
       integer               :: i, j, k, ip, pgpmax

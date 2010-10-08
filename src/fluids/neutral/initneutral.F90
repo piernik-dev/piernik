@@ -79,7 +79,7 @@ module initneutral
     use mpisetup, only: proc, ierr, comm, rbuff, lbuff, buffer_dim, MPI_LOGICAL, MPI_DOUBLE_PRECISION
     use errh,     only: namelist_errh
     use dataio_public, only: par_file, ierrh
-    use func,        only : compare_namelist
+    use func,        only: compare_namelist
 
 #ifdef SHEAR
     use shear,    only: omega
@@ -105,7 +105,7 @@ module initneutral
        rbuff(3)   = eta_gas_neu
        rbuff(4)   = csvk
 
-    end if
+    endif
 
     call MPI_Bcast(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
     call MPI_Bcast(lbuff,    buffer_dim, MPI_LOGICAL,          0, comm, ierr)

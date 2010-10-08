@@ -86,7 +86,7 @@ contains
                starts(XDIR) = lvl(i)%nxb + lnb
                call MPI_Type_create_subarray(NDIM, sizes, subsizes, starts,  ord, old, lvl(i)%MPI_YZ_RIGHT_BND(ib), ierr)
                call MPI_Type_commit(lvl(i)%MPI_YZ_RIGHT_BND(ib), ierr)
-            end if
+            endif
 
             if (has_dir(YDIR)) then         !! Y Direction
                sizes    = [ lvl(i)%nx, lvl(i)%ny, lvl(i)%nz ]
@@ -107,7 +107,7 @@ contains
                starts(YDIR) = lvl(i)%nyb + lnb
                call MPI_Type_create_subarray(NDIM, sizes, subsizes, starts, ord, old, lvl(i)%MPI_XZ_RIGHT_BND(ib), ierr)
                call MPI_Type_commit(lvl(i)%MPI_XZ_RIGHT_BND(ib), ierr)
-            end if
+            endif
 
             if (has_dir(ZDIR)) then         !! Z Direction
                sizes    = [ lvl(i)%nx, lvl(i)%ny, lvl(i)%nz ]
@@ -128,7 +128,7 @@ contains
                starts(ZDIR) = lvl(i)%nzb + lnb
                call MPI_Type_create_subarray(NDIM, sizes, subsizes, starts, ord, old, lvl(i)%MPI_XY_RIGHT_BND(ib), ierr)
                call MPI_Type_commit(lvl(i)%MPI_XY_RIGHT_BND(ib), ierr)
-            end if
+            endif
 
          enddo
       enddo
@@ -185,7 +185,7 @@ contains
             if (.not. is_external(XLO)) lvl(lev)%mgvar(lvl(lev)%is-ng:lvl(lev)%is-1,  :, :, iv) = lvl(lev)%mgvar(lvl(lev)%ie-ng+1:lvl(lev)%ie,      :, :, iv)
             if (.not. is_external(XHI)) lvl(lev)%mgvar(lvl(lev)%ie+1 :lvl(lev)%ie+ng, :, :, iv) = lvl(lev)%mgvar(lvl(lev)%is     :lvl(lev)%is+ng-1, :, :, iv)
          endif
-      end if
+      endif
 
       if (has_dir(YDIR)) then
          if(pysize > 1) then
@@ -197,7 +197,7 @@ contains
             if (.not. is_external(YLO)) lvl(lev)%mgvar(:, lvl(lev)%js-ng:lvl(lev)%js-1,  :, iv) = lvl(lev)%mgvar(:, lvl(lev)%je-ng+1:lvl(lev)%je,      :, iv)
             if (.not. is_external(YHI)) lvl(lev)%mgvar(:, lvl(lev)%je+1 :lvl(lev)%je+ng, :, iv) = lvl(lev)%mgvar(:, lvl(lev)%js     :lvl(lev)%js+ng-1, :, iv)
          endif
-      end if
+      endif
 
       if (has_dir(ZDIR)) then
          if(pzsize > 1) then
@@ -209,7 +209,7 @@ contains
             if (.not. is_external(ZLO)) lvl(lev)%mgvar(:, :, lvl(lev)%ks-ng:lvl(lev)%ks-1,  iv) = lvl(lev)%mgvar(:, :, lvl(lev)%ke-ng+1:lvl(lev)%ke,      iv)
             if (.not. is_external(ZHI)) lvl(lev)%mgvar(:, :, lvl(lev)%ke+1 :lvl(lev)%ke+ng, iv) = lvl(lev)%mgvar(:, :, lvl(lev)%ks     :lvl(lev)%ks+ng-1, iv)
          endif
-      end if
+      endif
 
       call MPI_Waitall(nreq, req3d(:), status3d(:,:), ierr)
 
@@ -257,8 +257,8 @@ contains
                   if (is_external(YHI)) lvl(lev)%mgvar(:, lvl(lev)%je+i, :, iv) = - lvl(lev)%mgvar(:, lvl(lev)%je-i+1, :, iv)
                   if (is_external(ZLO)) lvl(lev)%mgvar(:, :, lvl(lev)%ks-i, iv) = - lvl(lev)%mgvar(:, :, lvl(lev)%ks+i-1, iv)
                   if (is_external(ZHI)) lvl(lev)%mgvar(:, :, lvl(lev)%ke+i, iv) = - lvl(lev)%mgvar(:, :, lvl(lev)%ke-i+1, iv)
-               end if
-            end do
+               endif
+            enddo
          case default
             call die("[multigrid:mpi_multigrid_ext_bnd] boundary type not implemented")
       end select

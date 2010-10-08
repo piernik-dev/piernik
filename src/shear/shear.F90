@@ -76,7 +76,7 @@ module shear
        rbuff(1) = omega
        rbuff(2) = qshear
 
-    end if
+    endif
 
     call MPI_Bcast(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
@@ -91,8 +91,8 @@ module shear
   end subroutine init_shear
 
   subroutine yshift(ts,dts)
-    use arrays, only : u
-    use grid, only : dy,Lx,nyd,x,nb,ny
+    use arrays, only: u
+    use grid, only: dy,Lx,nyd,x,nb,ny
     implicit none
     real, intent(in) :: ts,dts
 #ifdef FFTW
@@ -115,9 +115,9 @@ module shear
 
 #ifdef FFTW
   function unshear_fft(qty,x,ddy,inv)
-    use mpisetup, only  : smalld
-    use grid, only   : dy,nb,Lx
-    use constants, only : dpi
+    use mpisetup, only: smalld
+    use grid, only: dy,nb,Lx
+    use constants, only: dpi
     implicit none
     include "fftw3.f"
     real, intent(in) :: ddy
@@ -180,8 +180,8 @@ module shear
 #endif /* FFTW */
 
   function unshear(qty,x,inv)
-    use grid,  only  : nb,xmax,xmin,nyd,dy
-    use mpisetup, only  : smalld
+    use grid,  only: nb,xmax,xmin,nyd,dy
+    use mpisetup, only: smalld
 
     logical, optional               :: inv
     real, dimension(:,:,:)          :: qty

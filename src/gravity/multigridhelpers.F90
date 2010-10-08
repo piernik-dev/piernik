@@ -76,7 +76,7 @@ contains
 
       do l = level_min, level_max
          lvl(l)%mgvar(:, :, :, iv) = dirtyH
-      end do
+      enddo
 
    end subroutine set_dirty
 
@@ -110,17 +110,17 @@ contains
       else
          l1 = lev
          l2 = lev
-      end if
+      endif
 
       if (present(expand) .and. eff_dim==NDIM) then ! for 1D and 2D one should define ng_x,ng_y and ng_z
          if (expand > mg_nb) then
             ng = mg_nb
          else
             ng = expand
-         end if
+         endif
       else
          ng = 0
-      end if
+      endif
 
       do l = l1, l2
          do k = lvl(l)%ks-ng, lvl(l)%ke+ng
@@ -129,10 +129,10 @@ contains
                   if (abs(lvl(l)%mgvar(i, j, k, iv)) > dirtyL) &
                        write (*, '(3a,i4,a,i2,a,3(i3,a),i2,a,g20.12)') &
                        "[multigridhelpers:check_dirty] ", label, "@", proc, " lvl(", l, ")%mgvar(", i, ",", j, ",", k, ",", iv, ") = ", lvl(l)%mgvar(i, j, k, iv)
-               end do
-            end do
-         end do
-      end do
+               enddo
+            enddo
+         enddo
+      enddo
 
    end subroutine check_dirty
 
@@ -171,10 +171,10 @@ contains
             write(normred, '(f8.0)') vcycle_factors(i,1)
          else
             write(normred, '(es8.2)') vcycle_factors(i,1)
-         end if
+         endif
          lm = len_trim(msg)
          if (len(msg) >= lm + 9) msg(lm+2:lm+9) = normred(1:8)
-      end do
+      enddo
 
       call mg_write_log(msg, stdout)
 
@@ -236,13 +236,13 @@ contains
                        &                          j-lvl(l)%js+gb_cartmap(proc)%proc(YDIR)*lvl(l)%nyb, &
                        &                          k-lvl(l)%ks+gb_cartmap(proc)%proc(ZDIR)*lvl(l)%nzb, &
                        &                          l, lvl(l)%x(i), lvl(l)%y(j), lvl(l)%z(k), lvl(l)%mgvar(i, j, k, 1:ngridvars)
-               end do
+               enddo
                write(fu, '(/)')
-            end do
+            enddo
             write(fu, '(/,/)')
-         end do
+         enddo
          write(fu, '(/,/,/)')
-      end do
+      enddo
 
       close(fu)
 
@@ -279,10 +279,10 @@ contains
          write(msg, '(a,i4,i6,i3)') trim(basename), proc, n, a
       else
          write(msg, '(a,i4,i6)')    trim(basename), proc, n
-      end if
+      endif
       do l = 1, len_trim(msg)
          if (msg(l:l) == " ") msg(l:l) = "_"
-      end do
+      enddo
       call ascii_dump(trim(msg))
 
    end subroutine numbered_ascii_dump

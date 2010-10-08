@@ -86,7 +86,7 @@ module interactions
          rbuff(1)  = collision_factor
          rbuff(2)  = cfl_interact
 
-      end if
+      endif
 
       call MPI_Bcast(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
@@ -123,7 +123,7 @@ module interactions
 !! where \c defined_interaction has to be specified as a subroutine in this module.
 !<
    subroutine fluid_interactions(sweep, i1, i2, n, du, uu)
-      use fluidindex,   only : nvar
+      use fluidindex,   only: nvar
       implicit none
       integer, intent(in)   :: i1,i2,n
       real, dimension(nvar%all,n)  :: du,uu
@@ -151,11 +151,11 @@ module interactions
 !! \param uu sweep fluid array
 !<
    subroutine dragforce(sweep, i1, i2, n, du, uu)
-      use fluidindex,   only : nvar,iarr_all_dn,iarr_all_mx,iarr_all_my
+      use fluidindex,   only: nvar,iarr_all_dn,iarr_all_mx,iarr_all_my
 #ifndef ISO
-      use fluidindex,   only : iarr_all_en
+      use fluidindex,   only: iarr_all_en
 #endif /* !ISO */
-      use grid,         only : maxxyz,x,y,z
+      use grid,         only: maxxyz,x,y,z
       implicit none
       integer, intent(in)   :: i1,i2,n
       real, dimension(nvar%all,n)  :: du,uu

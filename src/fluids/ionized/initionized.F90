@@ -73,10 +73,10 @@ module initionized
 !<
   subroutine init_ionized
 
-    use errh,     only : namelist_errh
-    use mpisetup, only : rbuff, lbuff, MPI_DOUBLE_PRECISION, MPI_LOGICAL, &
+    use errh,     only: namelist_errh
+    use mpisetup, only: rbuff, lbuff, MPI_DOUBLE_PRECISION, MPI_LOGICAL, &
          &               comm, ierr, buffer_dim, proc
-    use func,     only : compare_namelist
+    use func,     only: compare_namelist
     use dataio_public, only: par_file, ierrh
 
     implicit none
@@ -97,7 +97,7 @@ module initionized
        rbuff(2)   = cs_iso_ion
        rbuff(3)   = cs_ion
 
-    end if
+    endif
 
     call MPI_Bcast(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
     call MPI_Bcast(lbuff,    buffer_dim, MPI_LOGICAL,          0, comm, ierr)

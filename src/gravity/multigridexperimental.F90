@@ -107,9 +107,9 @@
          if (proc == 0) then
             write(msg,'(a,i3,a)')"[multigridexperimental:prolong_level_hord] prolongation order ",ord_prolong," is experimental"
             call warn(msg)
-         end if
+         endif
          firstcall = .false.
-      end if
+      endif
 
       call mpi_multigrid_bnd(lev, iv, abs(ord_prolong/2), .false.) ! exchange guardcells with corners
 
@@ -408,7 +408,7 @@
       if (firstcall) then
          if (proc == 0) call warn("[multigridexperimental:residual4] residual order 4 is experimental.")
          firstcall = .false.
-      end if
+      endif
 
       call mpi_multigrid_bnd(lev, soln, 2, .false.) ! no corners required
 
@@ -460,11 +460,11 @@
                           ( lvl(lev)%mgvar(i,   j-1, k,   soln)  + lvl(lev)%mgvar(i,   j+1, k,   soln)) * Ly - &
                           ( lvl(lev)%mgvar(i,   j,   k-1, soln)  + lvl(lev)%mgvar(i,   j,   k+1, soln)) * Lz - &
                           & lvl(lev)%mgvar(i,   j,   k,   soln)  * L0
-                  end if
-               end do
-            end do
-         end do
-      end if
+                  endif
+               enddo
+            enddo
+         enddo
+      endif
 
    end subroutine residual4
 

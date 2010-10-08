@@ -71,13 +71,13 @@ module fluxneutral
 
   subroutine flux_neu(fluxn,cfrn,uun,n)
 
-    use constants,       only : small
-    use fluidindex,      only : idn,imx,imy,imz,ien
-    use fluidindex,      only : nvar
-    use initneutral,     only : gamma_neu, cs_iso_neu2
-    use mpisetup,        only : cfr_smooth
-!    use timestepneutral, only : c_neu   ! check which c_xxx is better
-    use timestep, only : c_all
+    use constants,       only: small
+    use fluidindex,      only: idn,imx,imy,imz,ien
+    use fluidindex,      only: nvar
+    use initneutral,     only: gamma_neu, cs_iso_neu2
+    use mpisetup,        only: cfr_smooth
+!    use timestepneutral, only: c_neu   ! check which c_xxx is better
+    use timestep, only: c_all
 
     implicit none
     integer,intent(in) :: n                     !< number of cells in the current sweep

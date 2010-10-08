@@ -31,17 +31,17 @@
 !<
 program piernik
 
-  use mpisetup,      only : comm, comm3d, ierr, proc, t, dt, nstep, cleanup_mpi
-  use dataio_public, only : nend, nstep_start, tend, msg, fplen, &
+  use mpisetup,      only: comm, comm3d, ierr, proc, t, dt, nstep, cleanup_mpi
+  use dataio_public, only: nend, nstep_start, tend, msg, fplen, &
        &                    code_progress, PIERNIK_START, PIERNIK_INITIALIZED, PIERNIK_FINISHED, PIERNIK_CLEANUP
-  use timer,         only : time_left
+  use timer,         only: time_left
 #ifdef PERFMON
-  use timer,         only : timer_start, timer_stop
+  use timer,         only: timer_start, timer_stop
 #endif
-  use dataio,        only : write_data, user_msg_handler
-  use fluidupdate,   only : fluid_update
-  use types,         only : finalize_problem
-  use errh,          only : printinfo, warn
+  use dataio,        only: write_data, user_msg_handler
+  use fluidupdate,   only: fluid_update
+  use types,         only: finalize_problem
+  use errh,          only: printinfo, warn
 
   implicit none
 
@@ -65,7 +65,7 @@ program piernik
   if (proc == 0) then
      call printinfo("======================================================================================================", .false.)
      call printinfo("###############     Simulation     ###############", .false.)
-  end if
+  endif
 
   do while(t < tend .and. nstep < nend .and. .not.(end_sim) .and. time_left() )
 
@@ -78,7 +78,7 @@ program piernik
 
      call user_msg_handler(end_sim)
 
-  end do ! main loop
+  enddo ! main loop
 
   code_progress = PIERNIK_FINISHED
 
@@ -92,20 +92,20 @@ program piernik
      if (t >= tend) then
         write(msg, '(2a)') "Simulation has reached final time t = ",trim(tstr)
         call printinfo(msg)
-     end if
+     endif
      if (nstep >= nend) then
         write(msg, '(4a)') "Maximum step count exceeded (",trim(nstr),") at t = ",trim(tstr)
         call warn(msg)
-     end if
+     endif
      if (end_sim) then
         write(msg, '(4a)') "Enforced stop at step ",trim(nstr),", t = ", trim(tstr)
         call warn(msg)
-     end if
+     endif
      if(.not.time_left()) then
         write(msg, '(4a)') "Wall time limit exceeded at step ",trim(nstr),", t = ", trim(tstr)
         call warn(msg)
-     end if
-  end if
+     endif
+  endif
 
   if(associated(finalize_problem)) call finalize_problem
 
@@ -182,7 +182,7 @@ contains
       if (tmp_log_exist) then
          open(3, file=tmp_log_file)
          close(3, status="delete")
-      end if
+      endif
 
       call init_mpi
 
@@ -199,7 +199,7 @@ contains
          write(msg,'(2a)') "   Starting problem : ",trim(problem_name)
          call printinfo(msg, .true.)
          call printinfo("", .true.)
-      end if
+      endif
 
       call init_fluids
 
@@ -263,7 +263,7 @@ contains
          endif
 #endif /* GRAV */
          call write_data(output='all') ! moved from dataio::init_dataio
-      end if
+      endif
 #ifdef VERBOSE
       call diagnose_arrays
 #endif /* VERBOSE */
@@ -276,17 +276,17 @@ contains
 
    subroutine cleanup_piernik
 
-      use mpisetup,    only : cleanup_mpi
-      use grid,        only : cleanup_grid
-      use dataio,      only : cleanup_dataio
-      use arrays,      only : cleanup_arrays
-      use initfluids,  only : cleanup_fluids
-      use timer,       only : cleanup_timers
+      use mpisetup,    only: cleanup_mpi
+      use grid,        only: cleanup_grid
+      use dataio,      only: cleanup_dataio
+      use arrays,      only: cleanup_arrays
+      use initfluids,  only: cleanup_fluids
+      use timer,       only: cleanup_timers
 #ifdef RESISTIVE
-      use resistivity, only : cleanup_resistivity
+      use resistivity, only: cleanup_resistivity
 #endif /* RESISTIVE */
 #ifdef MULTIGRID
-      use multigrid,   only : cleanup_multigrid
+      use multigrid,   only: cleanup_multigrid
 #endif /* MULTIGRID */
 
       call cleanup_grid;        if (proc == 0) write(*,'(a)',advance='no')"." ! QA_WARN

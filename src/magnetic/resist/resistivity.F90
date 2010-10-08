@@ -79,14 +79,14 @@ contains
 !! \n \n
 !<
       subroutine init_resistivity
-         use mpisetup, only : rbuff, ibuff, ierr, MPI_INTEGER, MPI_DOUBLE_PRECISION, buffer_dim, comm, proc
-         use grid, only : nx,ny,nz
-         use errh, only : die, namelist_errh
+         use mpisetup, only: rbuff, ibuff, ierr, MPI_INTEGER, MPI_DOUBLE_PRECISION, buffer_dim, comm, proc
+         use grid, only: nx,ny,nz
+         use errh, only: die, namelist_errh
          use dataio_public, only: par_file, ierrh
-         use func,        only : compare_namelist
+         use func,        only: compare_namelist
 
 #ifndef ISO
-         use initionized, only : ieni
+         use initionized, only: ieni
 #endif /* !ISO */
 
          implicit none
@@ -113,7 +113,7 @@ contains
             rbuff(4) = j_crit
             rbuff(5) = deint_max
 
-         end if
+         endif
 
          call MPI_Bcast(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
          call MPI_Bcast(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
@@ -144,15 +144,15 @@ contains
       end subroutine init_resistivity
 
       subroutine compute_resist(eta,ici)
-         use arrays,       only : b,u
-         use constants,    only : small
-         use grid,         only : dl,xdim,ydim,zdim,nx,ny,nz,is,ie,js,je,ks,ke,nzd
-         use func,         only : mshift, pshift
-         use mpisetup,     only : MPI_DOUBLE_PRECISION, MPI_MAX, comm, ierr
-         use fluidindex,   only : ibx, iby, ibz, icx, icy, icz
-         use initionized,  only : idni, imxi, imyi, imzi
+         use arrays,       only: b,u
+         use constants,    only: small
+         use grid,         only: dl,xdim,ydim,zdim,nx,ny,nz,is,ie,js,je,ks,ke,nzd
+         use func,         only: mshift, pshift
+         use mpisetup,     only: MPI_DOUBLE_PRECISION, MPI_MAX, comm, ierr
+         use fluidindex,   only: ibx, iby, ibz, icx, icy, icz
+         use initionized,  only: idni, imxi, imyi, imzi
 #ifndef ISO
-         use initionized,  only : ieni
+         use initionized,  only: ieni
 #endif /* !ISO */
 
       implicit none
@@ -252,9 +252,9 @@ contains
 !-----------------------------------------------------------------------
 
       subroutine timestep_resist
-         use grid,      only : dxmn
-         use constants, only : big
-         use mpisetup,  only : MPI_DOUBLE_PRECISION, MPI_MIN, comm, ierr
+         use grid,      only: dxmn
+         use constants, only: big
+         use mpisetup,  only: MPI_DOUBLE_PRECISION, MPI_MIN, comm, ierr
 
          implicit none
          real :: dx2,dt_resist_min
@@ -279,10 +279,10 @@ contains
 !-----------------------------------------------------------------------------
 
   subroutine tvdd(ibi,ici,n)
-    use arrays, only : b,wcu
-    use mpisetup,  only : dt
-    use func,   only : mshift, pshift
-    use grid,   only : nx,ny,nz,dxmn,dl
+    use arrays, only: b,wcu
+    use mpisetup,  only: dt
+    use func,   only: mshift, pshift
+    use grid,   only: nx,ny,nz,dxmn,dl
 
     implicit none
     real                     :: di
@@ -312,11 +312,11 @@ contains
 !-------------------------------------------------------------------------------
 
   subroutine diffuseby_x
-    use func, only : mshift, pshift
-    use grid, only : xdim,nxd,nyd,nzd
-    use fluidindex, only : iby,icz
-    use arrays, only : wcu
-    use magboundaries, only : bnd_emf
+    use func, only: mshift, pshift
+    use grid, only: xdim,nxd,nyd,nzd
+    use fluidindex, only: iby,icz
+    use arrays, only: wcu
+    use magboundaries, only: bnd_emf
     implicit none
 
     call tvdd(iby,icz,xdim)
@@ -327,11 +327,11 @@ contains
   end subroutine diffuseby_x
 
   subroutine diffusebz_x
-    use func, only : mshift, pshift
-    use grid, only : xdim,nxd,nyd,nzd
-    use fluidindex, only : ibz,icy
-    use arrays, only : wcu
-    use magboundaries, only : bnd_emf
+    use func, only: mshift, pshift
+    use grid, only: xdim,nxd,nyd,nzd
+    use fluidindex, only: ibz,icy
+    use arrays, only: wcu
+    use magboundaries, only: bnd_emf
     implicit none
 
     call tvdd(ibz,icy,xdim)
@@ -342,11 +342,11 @@ contains
   end subroutine diffusebz_x
 
   subroutine diffusebz_y
-    use func, only : mshift, pshift
-    use grid, only : ydim,nzd,nyd,nxd
-    use fluidindex, only : ibz,icx
-    use arrays, only : wcu
-    use magboundaries, only : bnd_emf
+    use func, only: mshift, pshift
+    use grid, only: ydim,nzd,nyd,nxd
+    use fluidindex, only: ibz,icx
+    use arrays, only: wcu
+    use magboundaries, only: bnd_emf
     implicit none
 
     call tvdd(ibz,icx,ydim)
@@ -356,11 +356,11 @@ contains
   end subroutine diffusebz_y
 
   subroutine diffusebx_y
-    use func, only : mshift, pshift
-    use grid, only : ydim,nzd,nyd,nxd
-    use fluidindex, only : ibx,icz
-    use arrays, only : wcu
-    use magboundaries, only : bnd_emf
+    use func, only: mshift, pshift
+    use grid, only: ydim,nzd,nyd,nxd
+    use fluidindex, only: ibx,icz
+    use arrays, only: wcu
+    use magboundaries, only: bnd_emf
     implicit none
 
     call tvdd(ibx,icz,ydim)
@@ -370,11 +370,11 @@ contains
   end subroutine diffusebx_y
 
   subroutine diffusebx_z
-    use func, only : mshift, pshift
-    use grid, only : zdim,nzd,nyd,nxd
-    use fluidindex, only : ibx,icy
-    use arrays, only : wcu
-    use magboundaries, only : bnd_emf
+    use func, only: mshift, pshift
+    use grid, only: zdim,nzd,nyd,nxd
+    use fluidindex, only: ibx,icy
+    use arrays, only: wcu
+    use magboundaries, only: bnd_emf
     implicit none
 
     call tvdd(ibx,icy,zdim)
@@ -384,11 +384,11 @@ contains
   end subroutine diffusebx_z
 
   subroutine diffuseby_z
-    use func, only : mshift, pshift
-    use grid, only : zdim,nzd,nyd,nxd
-    use fluidindex, only : iby,icx
-    use arrays, only : wcu
-    use magboundaries, only : bnd_emf
+    use func, only: mshift, pshift
+    use grid, only: zdim,nzd,nyd,nxd
+    use fluidindex, only: iby,icx
+    use arrays, only: wcu
+    use magboundaries, only: bnd_emf
     implicit none
 
     call tvdd(iby,icx,zdim)

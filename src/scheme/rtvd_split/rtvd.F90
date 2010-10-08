@@ -102,7 +102,7 @@ module rtvd ! split orig
 !<
 !*/
    subroutine tvdb(vibj,b,vg,n,dt,di)
-      use constants, only : big
+      use constants, only: big
       implicit none
       integer, intent(in) :: n       !< array size
       real, intent(in)    :: dt      !< time step
@@ -162,7 +162,7 @@ module rtvd ! split orig
             w=vg(ip)*b1(ip)
             dwp=(w-vg(ipp)*b1(ipp))*0.5
             dwm=(vg(i)*b1(i)-w)*0.5
-         end if
+         endif
 
 ! the second-order corrections to the EMF components computation with the aid of the van Leer monotonic interpolation and 2nd order EMF computation
 
@@ -218,41 +218,41 @@ module rtvd ! split orig
 !*/
    subroutine relaxing_tvd(n, u, bb, sweep, i1, i2, dx, dt)
 
-      use mpisetup,        only : smalld, integration_order
-      use fluxes,          only : flimiter,all_fluxes
-      use fluidindex,      only : nvar,nmag
-      use fluidindex,      only : ibx,iby,ibz
-      use fluidindex,      only : iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
+      use mpisetup,        only: smalld, integration_order
+      use fluxes,          only: flimiter,all_fluxes
+      use fluidindex,      only: nvar,nmag
+      use fluidindex,      only: ibx,iby,ibz
+      use fluidindex,      only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
 #ifndef ISO
-      use fluidindex,      only : iarr_all_en
-      use mpisetup,        only : smallei
+      use fluidindex,      only: iarr_all_en
+      use mpisetup,        only: smallei
 #endif /* !ISO */
 
 #ifdef GRAV
-      use gravity,         only : grav_pot2accel
+      use gravity,         only: grav_pot2accel
 #endif /* GRAV */
 #ifdef SHEAR
-      use grid,            only : x
-      use shear,           only : qshear, omega
+      use grid,            only: x
+      use shear,           only: qshear, omega
 #ifdef NEUTRAL
-      use initneutral,     only : global_gradP_neu
+      use initneutral,     only: global_gradP_neu
 #endif /* NEUTRAL */
 #endif /* SHEAR */
 #ifdef COSM_RAYS
-      use initcosmicrays,  only : cr_active, smallecr
-      use initcosmicrays,  only : gamma_crs
-      use initcosmicrays,  only : iarr_crs, iarr_crn, iarr_cre
-      use arrays,          only : divvel
+      use initcosmicrays,  only: cr_active, smallecr
+      use initcosmicrays,  only: gamma_crs
+      use initcosmicrays,  only: iarr_crs, iarr_crn, iarr_cre
+      use arrays,          only: divvel
 #ifdef COSM_RAYS_SOURCES
-      use sourcecosmicrays,only : src_crn
+      use sourcecosmicrays,only: src_crn
 #endif /* COSM_RAYS_SOURCES */
 #endif /* COSM_RAYS */
 #ifdef FLUID_INTERACTIONS
-      use initdust,        only : dragc_gas_dust
-      use interactions,    only : fluid_interactions
+      use initdust,        only: dragc_gas_dust
+      use interactions,    only: fluid_interactions
 #endif /* FLUID_INTERACTIONS */
 #ifdef ISO_LOCAL
-      use arrays,          only : cs_iso2_arr
+      use arrays,          only: cs_iso2_arr
 #endif /* ISO_LOCAL */
 
       implicit none

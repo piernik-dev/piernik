@@ -125,8 +125,8 @@ module grid
 !<
    subroutine set_container_grid(cgrid)
 
-      use types, only : grid_container
-      use errh, only  : namelist_errh, die
+      use types, only: grid_container
+      use errh, only: namelist_errh, die
 
       implicit none
 
@@ -165,12 +165,12 @@ module grid
 
    subroutine init_grid(cgrid)
 
-      use types,     only : grid_container
-      use mpisetup,  only : ierr, ibuff, rbuff, MPI_INTEGER, MPI_DOUBLE_PRECISION, proc, &
+      use types,     only: grid_container
+      use mpisetup,  only: ierr, ibuff, rbuff, MPI_INTEGER, MPI_DOUBLE_PRECISION, proc, &
            &                buffer_dim, pxsize, pysize, pzsize, comm
-      use errh,      only : namelist_errh, die, printinfo
-      use func,      only : compare_namelist
-      use dataio_public, only : par_file, ierrh
+      use errh,      only: namelist_errh, die, printinfo
+      use func,      only: compare_namelist
+      use dataio_public, only: par_file, ierrh
 
       implicit none
 
@@ -211,7 +211,7 @@ module grid
          rbuff(5)   = zmin
          rbuff(6)   = zmax
 
-      end if
+      endif
 
       call MPI_Bcast(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
       call MPI_Bcast(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
@@ -302,7 +302,7 @@ module grid
 !<
    subroutine grid_xyz
 
-      use mpisetup, only : psize, pcoords
+      use mpisetup, only: psize, pcoords
 
       implicit none
 

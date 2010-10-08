@@ -42,7 +42,7 @@ module list_hdf5
 
    interface
       subroutine add_attr(file_id)
-         use hdf5, only : HID_T
+         use hdf5, only: HID_T
          implicit none
          integer(HID_T), intent(in) :: file_id
       end subroutine add_attr
@@ -112,8 +112,8 @@ module list_hdf5
 
       subroutine add_lhdf5(item)
 
-         use errh,          only : warn
-         use dataio_public, only : msg
+         use errh,          only: warn
+         use dataio_public, only: msg
 
          implicit none
 
@@ -166,7 +166,7 @@ module list_hdf5
 #endif /* NEW_HDF5 */
 
      subroutine write_arr(data,dsetname,file_id)
-         use hdf5, only : HID_T, HSIZE_T, HSSIZE_T, H5FD_MPIO_INDEPENDENT_F, H5P_DATASET_CREATE_F, H5P_DATASET_XFER_F, H5S_SELECT_SET_F, &
+         use hdf5, only: HID_T, HSIZE_T, HSSIZE_T, H5FD_MPIO_INDEPENDENT_F, H5P_DATASET_CREATE_F, H5P_DATASET_XFER_F, H5S_SELECT_SET_F, &
             H5T_NATIVE_REAL, h5dwrite_f, h5screate_simple_f, h5pcreate_f, h5pset_chunk_f, h5dcreate_f, h5sclose_f, &
             h5dget_space_f, h5sselect_hyperslab_f, h5pset_dxpl_mpio_f, h5dclose_f
          use mpisetup, only: psize, pcoords

@@ -46,7 +46,7 @@ module errh
 
    subroutine printinfo(nm, to_stdout)
 
-      use dataio_public, only : colormessage, T_PLAIN, T_SILENT, T_INFO
+      use dataio_public, only: colormessage, T_PLAIN, T_SILENT, T_INFO
 
       implicit none
 
@@ -58,10 +58,10 @@ module errh
             call colormessage(nm, T_PLAIN)
          else
             call colormessage(nm, T_SILENT)
-         end if
+         endif
       else
          call colormessage(nm, T_INFO)
-      end if
+      endif
 
    end subroutine printinfo
 
@@ -69,7 +69,7 @@ module errh
 
    subroutine warn(nm)
 
-      use dataio_public, only : colormessage, T_WARN
+      use dataio_public, only: colormessage, T_WARN
 
       implicit none
 
@@ -84,7 +84,7 @@ module errh
 
    subroutine die(nm, allprocs)
 
-      use dataio_public, only : colormessage, T_ERR
+      use dataio_public, only: colormessage, T_ERR
 
       implicit none
 
@@ -110,7 +110,7 @@ module errh
 
    subroutine namelist_errh(ierrh,nm)
 
-      use dataio_public, only : msg
+      use dataio_public, only: msg
 
       implicit none
 

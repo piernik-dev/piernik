@@ -32,7 +32,7 @@ module magboundaries
 contains
 
 subroutine bnd_a(A)
-   use mpisetup, only : MAG_YZ_LEFT_DOM, MAG_YZ_RIGHT_DOM, MAG_YZ_LEFT_BND, MAG_YZ_RIGHT_BND, &
+   use mpisetup, only: MAG_YZ_LEFT_DOM, MAG_YZ_RIGHT_DOM, MAG_YZ_LEFT_BND, MAG_YZ_RIGHT_BND, &
       MAG_XY_LEFT_DOM, MAG_XY_RIGHT_DOM, MAG_XY_LEFT_BND, MAG_XY_RIGHT_BND, &
       MAG_XZ_LEFT_DOM, MAG_XZ_RIGHT_DOM, MAG_XZ_LEFT_BND, MAG_XZ_RIGHT_BND, &
       ierr, req, comm3d, procxl, procxr, procyl, procyr, proczl, proczr, status, &
@@ -70,19 +70,19 @@ subroutine bnd_a(A)
 end subroutine bnd_a
 
 subroutine bnd_b(dim)
-   use dataio_public, only : msg
-   use errh,      only : warn
-   use mpisetup,  only : MPI_DOUBLE_PRECISION, bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr, &
+   use dataio_public, only: msg
+   use errh,      only: warn
+   use mpisetup,  only: MPI_DOUBLE_PRECISION, bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr, &
       ierr, req, comm3d, procxl, procxr, procyl, procyr, proczl, proczr, status, &
       pxsize, pysize, pzsize, procxyl, procyxl, pcoords, comm, &
       MAG_YZ_LEFT_DOM, MAG_YZ_RIGHT_DOM, MAG_YZ_LEFT_BND, MAG_YZ_RIGHT_BND, &
       MAG_XY_LEFT_DOM, MAG_XY_RIGHT_DOM, MAG_XY_LEFT_BND, MAG_XY_RIGHT_BND, &
       MAG_XZ_LEFT_DOM, MAG_XZ_RIGHT_DOM, MAG_XZ_LEFT_BND, MAG_XZ_RIGHT_BND
-  use arrays,     only : b
-  use fluidindex, only : ibx, iby, ibz
-  use grid,       only : nb, nx, ny, nz, nxb, nyb, nzb
+  use arrays,     only: b
+  use fluidindex, only: ibx, iby, ibz
+  use grid,       only: nb, nx, ny, nz, nxb, nyb, nzb
 #ifdef SHEAR
-  use shear,      only : eps,delj
+  use shear,      only: eps,delj
 #endif /* SHEAR */
 
   implicit none
@@ -893,7 +893,7 @@ subroutine bnd_emf(var, name, dim)
 end subroutine bnd_emf
 
   subroutine all_mag_boundaries
-   use grid, only : nxd,nyd,nzd
+   use grid, only: nxd,nyd,nzd
    implicit none
 
    if(nxd /= 1) call bnd_b("xdim")

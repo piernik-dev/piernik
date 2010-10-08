@@ -31,7 +31,7 @@
 module multipole
 
    ! needed for global vars in this module
-   use multigridvars, only : plvl, NDIM, LOW, HIGH
+   use multigridvars, only: plvl, NDIM, LOW, HIGH
 
    implicit none
 
@@ -130,25 +130,25 @@ contains
       if (mmax > lmax) then
          if (proc == 0) call warn("[multipole:init_multipole] mmax reduced to lmax")
          mmax = lmax
-      end if
+      endif
       if (mmax < 0) mmax = lmax
 
       if (coarsen_multipole < 0) coarsen_multipole = 0
       if (level_max - coarsen_multipole < level_min) then
          if (proc == 0) call warn("[multipole:init_multipole] too deep multipole coarsening, setting level_min.")
          coarsen_multipole = level_max - level_min
-      end if
+      endif
       lmpole => lvl(level_max - coarsen_multipole)
       if (coarsen_multipole > 0) then
          if (interp_pt2mom) then
             call warn("[multipole:init_multipole] coarsen_multipole > 0 disables interp_pt2mom.")
             interp_pt2mom = .false.
-         end if
+         endif
          if (interp_mom2pot) then
             call warn("[multipole:init_multipole] coarsen_multipole > 0 disables interp_mom2pot.")
             interp_mom2pot = .false.
-         end if
-      end if
+         endif
+      endif
 
       if (.not. use_point_monopole) then
          if (allocated(rn) .or. allocated(irn) .or. allocated(sfac) .or. allocated(cfac)) call die("[multipole:init_multipole] rn, irn, sfac or cfac already allocated")
@@ -179,19 +179,19 @@ contains
                else                     ! ofact(l, 2*m) = ((-1)^m (2m-1)!!)**2 (l-m)! / (l+m)! ; Should work up to m=512 and even beyond
                   ofact(lm(l, 2*m))   = ofact(lm(l, 2*(m-1))) * dble(1 - 2*m)**2 / dble((l+m) * (l-m+1))
                   ofact(lm(l, 2*m-1)) = ofact(lm(l, 2*m))
-               end if
+               endif
                if (l>m) then
                   k12(1, l, m) = dble(2 * l - 1) / dble(l - m)
                   k12(2, l, m) = dble(l + m - 1) / dble(l - m)
-               end if
-            end do
-         end do
+               endif
+            enddo
+         enddo
          ofact(0:lmax) = 1. ! lm(0:lmax,0)
 
          cfac(0) = 1.e0
          sfac(0) = 0.e0
 
-      end if
+      endif
 
    end subroutine init_multipole
 
@@ -238,13 +238,13 @@ contains
          lmpole%bnd_z(:, :, :) = dirtyH
       else
          call zero_boundaries(lmpole%level)
-      end if
+      endif
 
       if (lmpole%level <  level_max) then
          do lev = level_max, lmpole%level + 1, -1
             call restrict_level(lev, solution) ! Overkill, only some layers next to external boundary are needed.
-         end do                                ! An alternative: do potential2img_mass on the roof and restrict bnd_[xyz] data.
-      end if
+         enddo                                ! An alternative: do potential2img_mass on the roof and restrict bnd_[xyz] data.
+      endif
       call potential2img_mass
 
       if (use_point_monopole) then
@@ -255,13 +255,13 @@ contains
          ! With CoM or when it is known than CoM is close to the domain center one may try to save some CPU time by lowering mmax.
          call img_mass2moments
          call moments2bnd_potential
-      end if
+      endif
 
       if (lmpole%level <  level_max) then
          do lev = lmpole%level, level_max - 1
             call prolong_ext_bnd(lev)
-         end do
-      end if
+         enddo
+      endif
 
    end subroutine multipole_solver
 
@@ -289,9 +289,9 @@ contains
                r2 = (lmpole%y(j)-CoM(YDIR))**2 + (lmpole%z(k) - CoM(ZDIR))**2
                if (is_external(XLO)) lmpole%bnd_x(j, k, LOW)  = - newtong * CoM(0) / sqrt(r2 + (fbnd_x(LOW) -CoM(XDIR))**2)
                if (is_external(XHI)) lmpole%bnd_x(j, k, HIGH) = - newtong * CoM(0) / sqrt(r2 + (fbnd_x(HIGH)-CoM(XDIR))**2)
-            end do
-         end do
-      end if
+            enddo
+         enddo
+      endif
 
       if (is_external(YLO) .or. is_external(YHI)) then
          do i = lmpole%is, lmpole%ie
@@ -299,9 +299,9 @@ contains
                r2 = (lmpole%x(i)-CoM(XDIR))**2 + (lmpole%z(k) - CoM(ZDIR))**2
                if (is_external(YLO)) lmpole%bnd_y(i, k, LOW)  = - newtong * CoM(0) / sqrt(r2 + (fbnd_y(LOW) -CoM(YDIR))**2)
                if (is_external(YHI)) lmpole%bnd_y(i, k, HIGH) = - newtong * CoM(0) / sqrt(r2 + (fbnd_y(HIGH)-CoM(YDIR))**2)
-            end do
-         end do
-      end if
+            enddo
+         enddo
+      endif
 
       if (is_external(ZLO) .or. is_external(ZHI)) then
          do i = lmpole%is, lmpole%ie
@@ -309,9 +309,9 @@ contains
                r2 = (lmpole%x(i)-CoM(XDIR))**2 + (lmpole%y(j) - CoM(YDIR))**2
                if (is_external(ZLO)) lmpole%bnd_z(i, j, LOW)  = - newtong * CoM(0) / sqrt(r2 + (fbnd_z(LOW) -CoM(ZDIR))**2)
                if (is_external(ZHI)) lmpole%bnd_z(i, j, HIGH) = - newtong * CoM(0) / sqrt(r2 + (fbnd_z(HIGH)-CoM(ZDIR))**2)
-            end do
-         end do
-      end if
+            enddo
+         enddo
+      endif
 
    end subroutine isolated_monopole
 
@@ -339,7 +339,7 @@ contains
          dsum(YDIR) = sum( sum( lmpole%bnd_x(lmpole%js:lmpole%je, lmpole%ks:lmpole%ke, LOW),  dim=2) * lmpole%y(lmpole%js:lmpole%je) )
          dsum(ZDIR) = sum( sum( lmpole%bnd_x(lmpole%js:lmpole%je, lmpole%ks:lmpole%ke, LOW),  dim=1) * lmpole%z(lmpole%ks:lmpole%ke) )
          lsum(:)    = lsum(:) + dsum(:) * lmpole%dyz
-      end if
+      endif
 
       if (is_external(XHI)) then
          dsum(0)    =      sum( lmpole%bnd_x(lmpole%js:lmpole%je, lmpole%ks:lmpole%ke, HIGH) )
@@ -347,7 +347,7 @@ contains
          dsum(YDIR) = sum( sum( lmpole%bnd_x(lmpole%js:lmpole%je, lmpole%ks:lmpole%ke, HIGH), dim=2) * lmpole%y(lmpole%js:lmpole%je) )
          dsum(ZDIR) = sum( sum( lmpole%bnd_x(lmpole%js:lmpole%je, lmpole%ks:lmpole%ke, HIGH), dim=1) * lmpole%z(lmpole%ks:lmpole%ke) )
          lsum(:)    = lsum(:) + dsum(:) * lmpole%dyz
-      end if
+      endif
 
       if (is_external(YLO)) then
          dsum(0)    =      sum( lmpole%bnd_y(lmpole%is:lmpole%ie, lmpole%ks:lmpole%ke, LOW) )
@@ -355,7 +355,7 @@ contains
          dsum(YDIR) = dsum(0) * fbnd_y(LOW)
          dsum(ZDIR) = sum( sum( lmpole%bnd_y(lmpole%is:lmpole%ie, lmpole%ks:lmpole%ke, LOW),  dim=1) * lmpole%z(lmpole%ks:lmpole%ke) )
          lsum(:)    = lsum(:) + dsum(:) * lmpole%dxz
-      end if
+      endif
 
       if (is_external(YHI)) then
          dsum(0)    =      sum( lmpole%bnd_y(lmpole%is:lmpole%ie, lmpole%ks:lmpole%ke, HIGH) )
@@ -363,7 +363,7 @@ contains
          dsum(YDIR) = dsum(0) * fbnd_y(HIGH)
          dsum(ZDIR) = sum( sum( lmpole%bnd_y(lmpole%is:lmpole%ie, lmpole%ks:lmpole%ke, HIGH), dim=1) * lmpole%z(lmpole%ks:lmpole%ke) )
          lsum(:)    = lsum(:) + dsum(:) * lmpole%dxz
-      end if
+      endif
 
       if (is_external(ZLO)) then
          dsum(0)    =      sum( lmpole%bnd_z(lmpole%is:lmpole%ie, lmpole%js:lmpole%je, LOW) )
@@ -371,7 +371,7 @@ contains
          dsum(YDIR) = sum( sum( lmpole%bnd_z(lmpole%is:lmpole%ie, lmpole%js:lmpole%je, LOW),  dim=1) * lmpole%z(lmpole%ks:lmpole%ke) )
          dsum(ZDIR) = dsum(0) * fbnd_z(LOW)
          lsum(:)    = lsum(:) + dsum(:) * lmpole%dxy
-      end if
+      endif
 
       if (is_external(ZHI)) then
          dsum(0)    =      sum( lmpole%bnd_z(lmpole%is:lmpole%ie, lmpole%js:lmpole%je, HIGH) )
@@ -379,7 +379,7 @@ contains
          dsum(YDIR) = sum( sum( lmpole%bnd_z(lmpole%is:lmpole%ie, lmpole%js:lmpole%je, HIGH), dim=1) * lmpole%z(lmpole%ks:lmpole%ke) )
          dsum(ZDIR) = dsum(0) * fbnd_z(HIGH)
          lsum(:)    = lsum(:) + dsum(:) * lmpole%dxy
-      end if
+      endif
 
       call MPI_Allreduce(lsum(0:NDIM), CoM(0:NDIM), 4, MPI_DOUBLE_PRECISION, MPI_SUM, comm3d, ierr)
 
@@ -387,7 +387,7 @@ contains
          CoM(XDIR:ZDIR) = CoM(XDIR:ZDIR) / CoM(0)
       else
          call die("[multipole:find_img_CoM] Total mass == 0")
-      end if
+      endif
 
    end subroutine find_img_CoM
 
@@ -453,8 +453,8 @@ contains
             call prolong_ext_bnd0(lev)
          else
             call prolong_ext_bnd2(lev)
-         end if
-      end if
+         endif
+      endif
 
    end subroutine prolong_ext_bnd
 
@@ -485,37 +485,37 @@ contains
          fine%bnd_x(fine%js  :fine%je-1:2, fine%ks  :fine%ke-1:2, LOW)  = coarse%bnd_x(coarse%js:coarse%je,   coarse%ks:coarse%ke,   LOW)
          fine%bnd_x(fine%js+1:fine%je  :2, fine%ks  :fine%ke-1:2, LOW)  = fine  %bnd_x(fine%js  :fine%je-1:2, fine%ks  :fine%ke-1:2, LOW)
          fine%bnd_x(fine%js  :fine%je,     fine%ks+1:fine%ke  :2, LOW)  = fine  %bnd_x(fine%js  :fine%je,     fine%ks  :fine%ke-1:2, LOW)
-      end if
+      endif
 
        if (is_external(XHI)) then
          fine%bnd_x(fine%js  :fine%je-1:2, fine%ks  :fine%ke-1:2, HIGH) = coarse%bnd_x(coarse%js:coarse%je,   coarse%ks:coarse%ke,   HIGH)
          fine%bnd_x(fine%js+1:fine%je  :2, fine%ks  :fine%ke-1:2, HIGH) = fine  %bnd_x(fine%js  :fine%je-1:2, fine%ks  :fine%ke-1:2, HIGH)
          fine%bnd_x(fine%js  :fine%je,     fine%ks+1:fine%ke  :2, HIGH) = fine  %bnd_x(fine%js  :fine%je,     fine%ks  :fine%ke-1:2, HIGH)
-      end if
+      endif
 
       if (is_external(YLO)) then
          fine%bnd_y(fine%is  :fine%ie-1:2, fine%ks  :fine%ke-1:2, LOW)  = coarse%bnd_y(coarse%is:coarse%ie,   coarse%ks:coarse%ke,   LOW)
          fine%bnd_y(fine%is+1:fine%ie  :2, fine%ks  :fine%ke-1:2, LOW)  = fine  %bnd_y(fine%is  :fine%ie-1:2, fine%ks  :fine%ke-1:2, LOW)
          fine%bnd_y(fine%is  :fine%ie,     fine%ks+1:fine%ke  :2, LOW)  = fine  %bnd_y(fine%is  :fine%ie,     fine%ks  :fine%ke-1:2, LOW)
-      end if
+      endif
 
        if (is_external(YHI)) then
          fine%bnd_y(fine%is  :fine%ie-1:2, fine%ks  :fine%ke-1:2, HIGH) = coarse%bnd_y(coarse%is:coarse%ie,   coarse%ks:coarse%ke,   HIGH)
          fine%bnd_y(fine%is+1:fine%ie  :2, fine%ks  :fine%ke-1:2, HIGH) = fine  %bnd_y(fine%is  :fine%ie-1:2, fine%ks  :fine%ke-1:2, HIGH)
          fine%bnd_y(fine%is  :fine%ie,     fine%ks+1:fine%ke  :2, HIGH) = fine  %bnd_y(fine%is  :fine%ie,     fine%ks  :fine%ke-1:2, HIGH)
-      end if
+      endif
 
       if (is_external(ZLO)) then
          fine%bnd_z(fine%is  :fine%ie-1:2, fine%js  :fine%je-1:2, LOW)  = coarse%bnd_z(coarse%is:coarse%ie,   coarse%js:coarse%je,   LOW)
          fine%bnd_z(fine%is+1:fine%ie  :2, fine%js  :fine%je-1:2, LOW)  = fine  %bnd_z(fine%is  :fine%ie-1:2, fine%js  :fine%je-1:2, LOW)
          fine%bnd_z(fine%is  :fine%ie,     fine%js+1:fine%je  :2, LOW)  = fine  %bnd_z(fine%is  :fine%ie,     fine%js  :fine%je-1:2, LOW)
-      end if
+      endif
 
        if (is_external(ZHI)) then
          fine%bnd_z(fine%is  :fine%ie-1:2, fine%js  :fine%je-1:2, HIGH) = coarse%bnd_z(coarse%is:coarse%ie,   coarse%js:coarse%je,   HIGH)
          fine%bnd_z(fine%is+1:fine%ie  :2, fine%js  :fine%je-1:2, HIGH) = fine  %bnd_z(fine%is  :fine%ie-1:2, fine%js  :fine%je-1:2, HIGH)
          fine%bnd_z(fine%is  :fine%ie,     fine%js+1:fine%je  :2, HIGH) = fine  %bnd_z(fine%is  :fine%ie,     fine%js  :fine%je-1:2, HIGH)
-      end if
+      endif
 
    end subroutine prolong_ext_bnd0
 
@@ -568,7 +568,7 @@ contains
          pp(i,:,1,2) = p( i)*p(1:-1:-1)
          pp(i,:,2,1) = p(-i)*p(:)
          pp(i,:,2,2) = p(-i)*p(1:-1:-1)
-      end do
+      enddo
 
       coarse => lvl(lev)
       fine   => lvl(lev + 1)
@@ -583,9 +583,9 @@ contains
                fine%bnd_x(-fine%js+2*j+1,-fine%ks+2*k,  LOW) =sum(pp(:,:,2,1) * coarse%bnd_x(j-1:j+1,k-1:k+1,LOW))
                fine%bnd_x(-fine%js+2*j,  -fine%ks+2*k+1,LOW) =sum(pp(:,:,1,2) * coarse%bnd_x(j-1:j+1,k-1:k+1,LOW))
                fine%bnd_x(-fine%js+2*j+1,-fine%ks+2*k+1,LOW) =sum(pp(:,:,2,2) * coarse%bnd_x(j-1:j+1,k-1:k+1,LOW))
-            end do
-         end do
-      end if
+            enddo
+         enddo
+      endif
 
       if (is_external(XHI)) then
          do j = coarse%js+1, coarse%je-1
@@ -594,9 +594,9 @@ contains
                fine%bnd_x(-fine%js+2*j+1,-fine%ks+2*k,  HIGH)=sum(pp(:,:,2,1) * coarse%bnd_x(j-1:j+1,k-1:k+1,HIGH))
                fine%bnd_x(-fine%js+2*j,  -fine%ks+2*k+1,HIGH)=sum(pp(:,:,1,2) * coarse%bnd_x(j-1:j+1,k-1:k+1,HIGH))
                fine%bnd_x(-fine%js+2*j+1,-fine%ks+2*k+1,HIGH)=sum(pp(:,:,2,2) * coarse%bnd_x(j-1:j+1,k-1:k+1,HIGH))
-            end do
-         end do
-      end if
+            enddo
+         enddo
+      endif
 
 
       if (is_external(YLO)) then
@@ -606,9 +606,9 @@ contains
                fine%bnd_y(-fine%is+2*i+1,-fine%ks+2*k,  LOW) =sum(pp(:,:,2,1) * coarse%bnd_y(i-1:i+1,k-1:k+1,LOW))
                fine%bnd_y(-fine%is+2*i,  -fine%ks+2*k+1,LOW) =sum(pp(:,:,1,2) * coarse%bnd_y(i-1:i+1,k-1:k+1,LOW))
                fine%bnd_y(-fine%is+2*i+1,-fine%ks+2*k+1,LOW) =sum(pp(:,:,2,2) * coarse%bnd_y(i-1:i+1,k-1:k+1,LOW))
-            end do
-         end do
-      end if
+            enddo
+         enddo
+      endif
 
       if (is_external(YHI)) then
          do i = coarse%is+1, coarse%ie-1
@@ -617,9 +617,9 @@ contains
                fine%bnd_y(-fine%is+2*i+1,-fine%ks+2*k,  HIGH) =sum(pp(:,:,2,1) * coarse%bnd_y(i-1:i+1,k-1:k+1,HIGH))
                fine%bnd_y(-fine%is+2*i,  -fine%ks+2*k+1,HIGH) =sum(pp(:,:,1,2) * coarse%bnd_y(i-1:i+1,k-1:k+1,HIGH))
                fine%bnd_y(-fine%is+2*i+1,-fine%ks+2*k+1,HIGH) =sum(pp(:,:,2,2) * coarse%bnd_y(i-1:i+1,k-1:k+1,HIGH))
-            end do
-         end do
-      end if
+            enddo
+         enddo
+      endif
 
       if (is_external(ZLO)) then
          do i = coarse%is+1, coarse%ie-1
@@ -628,9 +628,9 @@ contains
                fine%bnd_z(-fine%is+2*i+1,-fine%js+2*j,  LOW) =sum(pp(:,:,2,1) * coarse%bnd_z(i-1:i+1,j-1:j+1,LOW))
                fine%bnd_z(-fine%is+2*i,  -fine%js+2*j+1,LOW) =sum(pp(:,:,1,2) * coarse%bnd_z(i-1:i+1,j-1:j+1,LOW))
                fine%bnd_z(-fine%is+2*i+1,-fine%js+2*j+1,LOW) =sum(pp(:,:,2,2) * coarse%bnd_z(i-1:i+1,j-1:j+1,LOW))
-            end do
-         end do
-      end if
+            enddo
+         enddo
+      endif
 
       if (is_external(ZHI)) then
          do i = coarse%is+1, coarse%ie-1
@@ -639,9 +639,9 @@ contains
                fine%bnd_z(-fine%is+2*i+1,-fine%js+2*j,  HIGH) =sum(pp(:,:,2,1) * coarse%bnd_z(i-1:i+1,j-1:j+1,HIGH))
                fine%bnd_z(-fine%is+2*i,  -fine%js+2*j+1,HIGH) =sum(pp(:,:,1,2) * coarse%bnd_z(i-1:i+1,j-1:j+1,HIGH))
                fine%bnd_z(-fine%is+2*i+1,-fine%js+2*j+1,HIGH) =sum(pp(:,:,2,2) * coarse%bnd_z(i-1:i+1,j-1:j+1,HIGH))
-            end do
-         end do
-      end if
+            enddo
+         enddo
+      endif
 
    end subroutine prolong_ext_bnd2
 
@@ -672,27 +672,27 @@ contains
             do k = lmpole%ks, lmpole%ke
                if (is_external(XLO)) call point2moments(lmpole%bnd_x(j, k, LOW) *lmpole%dyz, fbnd_x(LOW) -CoM(XDIR), lmpole%y(j)-CoM(YDIR),  lmpole%z(k)-CoM(ZDIR))
                if (is_external(XHI)) call point2moments(lmpole%bnd_x(j, k, HIGH)*lmpole%dyz, fbnd_x(HIGH)-CoM(XDIR), lmpole%y(j)-CoM(YDIR),  lmpole%z(k)-CoM(ZDIR))
-            end do
-         end do
-      end if
+            enddo
+         enddo
+      endif
 
       if (is_external(YLO) .or. is_external(YHI)) then
          do i = lmpole%is, lmpole%ie
             do k = lmpole%ks, lmpole%ke
                if (is_external(YLO)) call point2moments(lmpole%bnd_y(i, k, LOW) *lmpole%dxz, lmpole%x(i)-CoM(XDIR),  fbnd_y(LOW) -CoM(YDIR), lmpole%z(k)-CoM(ZDIR))
                if (is_external(YHI)) call point2moments(lmpole%bnd_y(i, k, HIGH)*lmpole%dxz, lmpole%x(i)-CoM(XDIR),  fbnd_y(HIGH)-CoM(YDIR), lmpole%z(k)-CoM(ZDIR))
-            end do
-         end do
-      end if
+            enddo
+         enddo
+      endif
 
       if (is_external(ZLO) .or. is_external(ZHI)) then
          do i = lmpole%is, lmpole%ie
             do j = lmpole%js, lmpole%je
                if (is_external(ZLO)) call point2moments(lmpole%bnd_z(i, j, LOW) *lmpole%dxy, lmpole%x(i)-CoM(XDIR),  lmpole%y(j)-CoM(YDIR),  fbnd_z(LOW) -CoM(ZDIR))
                if (is_external(ZHI)) call point2moments(lmpole%bnd_z(i, j, HIGH)*lmpole%dxy, lmpole%x(i)-CoM(XDIR),  lmpole%y(j)-CoM(YDIR),  fbnd_z(HIGH)-CoM(ZDIR))
-            end do
-         end do
-      end if
+            enddo
+         enddo
+      endif
 
       call MPI_Allreduce(MPI_IN_PLACE, irmin, 1, MPI_INTEGER, MPI_MIN, comm3d, ierr)
       call MPI_Allreduce(MPI_IN_PLACE, irmax, 1, MPI_INTEGER, MPI_MAX, comm3d, ierr)
@@ -702,12 +702,12 @@ contains
       Q(:, INSIDE, rr-1) = Q(:, INSIDE, rr-1) * ofact(:)
       do r = rr, irmax
          Q(:, INSIDE, r) = Q(:, INSIDE, r) * ofact(:) + Q(:, INSIDE, r-1)
-      end do
+      enddo
 
       Q(:, OUTSIDE, irmax+1) = Q(:, OUTSIDE, irmax+1) * ofact(:)
       do r = irmax, rr, -1
          Q(:, OUTSIDE, r) = Q(:, OUTSIDE, r) * ofact(:) + Q(:, OUTSIDE, r+1)
-      end do
+      enddo
 
       call MPI_Allreduce(MPI_IN_PLACE, Q(:, :, irmin:irmax), size(Q(:, :, irmin:irmax)), MPI_DOUBLE_PRECISION, MPI_SUM, comm3d, ierr)
 
@@ -741,7 +741,7 @@ contains
       if (del /= 0.) then
          Q(0, INSIDE,  ir+1) = Q(0, INSIDE,  ir+1) +  rn(0) * del
          Q(0, OUTSIDE, ir+1) = Q(0, OUTSIDE, ir+1) + irn(0) * del
-      end if
+      endif
 
       ! axisymmetric (l,0) moments
       ! Legendre polynomial recurrence: l P_l = x (2l-1) P_{l-1} - (l-1) P_{l-2}, x \eqiv \cos(\theta)
@@ -754,10 +754,10 @@ contains
          if (del /= 0.) then
             Q(l, INSIDE,  ir+1) = Q(l, INSIDE,  ir+1) +  rn(l) * Ql * del
             Q(l, OUTSIDE, ir+1) = Q(l, OUTSIDE, ir+1) + irn(l) * Ql * del
-         end if
+         endif
          Ql2 = Ql1
          Ql1 = Ql
-      end do
+      enddo
 
       ! non-axisymmetric (l,m) moments for 1 <= m <= mmax, m <= l <= lmax.
       do m = 1, mmax
@@ -777,7 +777,7 @@ contains
             Q(m2c+m, INSIDE,  ir+1) = Q(m2c+m, INSIDE,  ir+1) +  rn(m) * Ql1 * cfac(m) * del
             Q(m2s+m, OUTSIDE, ir+1) = Q(m2s+m, OUTSIDE, ir+1) + irn(m) * Ql1 * sfac(m) * del
             Q(m2c+m, OUTSIDE, ir+1) = Q(m2c+m, OUTSIDE, ir+1) + irn(m) * Ql1 * cfac(m) * del
-         end if
+         endif
 
          ! BEWARE: most of computational cost of multipoles is here
          ! from (m+1,m) to (lmax,m)
@@ -795,10 +795,10 @@ contains
                Q(m2c+l, INSIDE,  ir+1) = Q(m2c+l, INSIDE,  ir+1) +  rn(l) * Ql * cfac(m) * del
                Q(m2s+l, OUTSIDE, ir+1) = Q(m2s+l, OUTSIDE, ir+1) + irn(l) * Ql * sfac(m) * del
                Q(m2c+l, OUTSIDE, ir+1) = Q(m2c+l, OUTSIDE, ir+1) + irn(l) * Ql * cfac(m) * del
-            end if
+            endif
             Ql2 = Ql1
             Ql1 = Ql
-         end do
+         enddo
 
       enddo
 
@@ -824,27 +824,27 @@ contains
             do k = lmpole%ks, lmpole%ke
                if (is_external(XLO)) call moments2pot(lmpole%bnd_x(j, k, LOW),  fbnd_x(LOW) -CoM(XDIR), lmpole%y(j)-CoM(YDIR),  lmpole%z(k)-CoM(ZDIR))
                if (is_external(XHI)) call moments2pot(lmpole%bnd_x(j, k, HIGH), fbnd_x(HIGH)-CoM(XDIR), lmpole%y(j)-CoM(YDIR),  lmpole%z(k)-CoM(ZDIR))
-            end do
-         end do
-      end if
+            enddo
+         enddo
+      endif
 
       if (is_external(YLO) .or. is_external(YHI)) then
          do i = lmpole%is, lmpole%ie
             do k = lmpole%ks, lmpole%ke
                if (is_external(YLO)) call moments2pot(lmpole%bnd_y(i, k, LOW),  lmpole%x(i)-CoM(XDIR),  fbnd_y(LOW) -CoM(YDIR), lmpole%z(k)-CoM(ZDIR))
                if (is_external(YHI)) call moments2pot(lmpole%bnd_y(i, k, HIGH), lmpole%x(i)-CoM(XDIR),  fbnd_y(HIGH)-CoM(YDIR), lmpole%z(k)-CoM(ZDIR))
-            end do
-         end do
-      end if
+            enddo
+         enddo
+      endif
 
       if (is_external(ZLO) .or. is_external(ZHI)) then
          do i = lmpole%is, lmpole%ie
             do j = lmpole%js, lmpole%je
                if (is_external(ZLO)) call moments2pot(lmpole%bnd_z(i, j, LOW),  lmpole%x(i)-CoM(XDIR),  lmpole%y(j)-CoM(YDIR),  fbnd_z(LOW) -CoM(ZDIR))
                if (is_external(ZHI)) call moments2pot(lmpole%bnd_z(i, j, HIGH), lmpole%x(i)-CoM(XDIR),  lmpole%y(j)-CoM(YDIR),  fbnd_z(HIGH)-CoM(ZDIR))
-            end do
-         end do
-      end if
+            enddo
+         enddo
+      endif
 
    end subroutine moments2bnd_potential
 
@@ -894,7 +894,7 @@ contains
               &      Q(l, OUTSIDE, ir)   *  rn(l) )
          Ql2 = Ql1
          Ql1 = Ql
-      end do
+      enddo
 
       ! non-axisymmetric (l,m) moments for 1 <= m <= mmax, m <= l <= lmax.
       do m = 1, mmax
@@ -930,8 +930,8 @@ contains
                  &       Q(m2s+l, OUTSIDE, ir)   *  rn(l) ) * sfac(m) )
             Ql2 = Ql1
             Ql1 = Ql
-         end do
-      end do
+         enddo
+      enddo
 
    end subroutine moments2pot
 
@@ -967,7 +967,7 @@ contains
          rinv = 1. / r
       else
          rinv = 0.
-      end if
+      endif
 
       !radial index for the Q(:, :, r) array
       ir = int(r / drq)
@@ -975,7 +975,7 @@ contains
          delta = r/drq - ir
       else
          delta = 0
-      end if
+      endif
       if (ir > rqbin .or. ir < 0) call die("[multipole:geomfac4moments] radial index outside Q(:, :, r) range")
       irmax = max(irmax, ir)
       irmin = min(irmin, ir)
@@ -989,12 +989,12 @@ contains
       else
          cos_ph = 1.
          sin_ph = 0.
-      end if
+      endif
       ! \todo Possible optimization: number of computed elements can be doubled on each loop iteration (should give better pipelining)
       do m = 1, mmax
          cfac(m) = cos_ph*cfac(m-1) - sin_ph*sfac(m-1)
          sfac(m) = cos_ph*sfac(m-1) + sin_ph*cfac(m-1)
-      end do
+      enddo
 
       ! vertical angle
       cos_th = z   * rinv
@@ -1011,7 +1011,7 @@ contains
       do l = 1, lmax
          rn(l)  =  rn(l-1) * r
          irn(l) = irn(l-1) * rinv
-      end do
+      enddo
 
    end subroutine geomfac4moments
 
@@ -1066,13 +1066,13 @@ contains
 !!$      do r = rr, irmax
 !!$         Q(0,      :, INSIDE, r) = Q(0,      :, INSIDE, r)                    + Q(0,      :, INSIDE, r-1)
 !!$         Q(1:lmax, :, INSIDE, r) = Q(1:lmax, :, INSIDE, r) * ofact(1:lmax, :) + Q(1:lmax, :, INSIDE, r-1)
-!!$      end do
+!!$      enddo
 !!$
 !!$      Q(1:lmax, :, OUTSIDE, irmax+1) = Q(1:lmax, :, OUTSIDE, irmax+1) * ofact(1:lmax, :)
 !!$      do r = irmax, rr, -1
 !!$         Q(0,      :, OUTSIDE, r) = Q(0,      :, OUTSIDE, r)                    + Q(0,      :, OUTSIDE, r+1)
 !!$         Q(1:lmax, :, OUTSIDE, r) = Q(1:lmax, :, OUTSIDE, r) * ofact(1:lmax, :) + Q(1:lmax, :, OUTSIDE, r+1)
-!!$      end do
+!!$      enddo
 !!$
 !!$      do i = -60, 60
 !!$         do j = -60, 60
@@ -1084,8 +1084,8 @@ contains
 !!$
 !!$            call moments2pot(phi, x(1), x(2), x(3))
 !!$            write(*,'(a,3f7.2,2(a,g15.5))')" xyz= ",x(1:3)," phi = ",phi," calc= ",cphi ! QA_WARN
-!!$         end do
-!!$      end do
+!!$         enddo
+!!$      enddo
 !!$
 !!$      call die("qniec")
 

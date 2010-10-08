@@ -42,9 +42,9 @@ module fluxcosmicrays
 
   subroutine flux_crs(fluxc,vion,uuc,n)
 
-    use constants,       only : small
-    use fluidindex,      only : iarr_all_crs
-    use fluidindex,      only : nvar
+    use constants,       only: small
+    use fluidindex,      only: iarr_all_crs
+    use fluidindex,      only: nvar
 
     implicit none
     integer, intent(in) :: n

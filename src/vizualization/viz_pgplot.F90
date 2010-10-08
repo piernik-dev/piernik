@@ -145,7 +145,7 @@ module viz
       else if (ttype.eq.5) then
 !        -- aips
          call pgctab(al, ar, ag, ab, 20, contra, bright)
-      end if
+      endif
       end subroutine palett
 
       subroutine setvp

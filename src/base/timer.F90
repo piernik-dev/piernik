@@ -221,7 +221,7 @@ contains
             endif
          else
             clock_end = -cnt_max
-         end if
+         endif
       endif
  ! BEWARE: gfortran gives 1ms resolution, but ifort can offer 0.1ms, which will result in an integer overflow in less than 5 days
  ! Probably it is better to call date_and_time(VALUES) here
@@ -229,16 +229,16 @@ contains
       tf = .true.
       if (clock_end /= -cnt_max) then
          if( clock_end - clock < 0 ) tf = .false.
-      end if
+      endif
 
    end function time_left
 
    subroutine timer_stop
 
-      use mpisetup,      only : MPI_DOUBLE_PRECISION, MPI_SUM, comm, ierr, nstep, proc
-      use grid,          only : nxd,nyd,nzd
-      use errh,          only : printinfo
-      use dataio_public, only : msg
+      use mpisetup,      only: MPI_DOUBLE_PRECISION, MPI_SUM, comm, ierr, nstep, proc
+      use grid,          only: nxd,nyd,nzd
+      use errh,          only: printinfo
+      use dataio_public, only: msg
 
       implicit none
 

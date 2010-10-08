@@ -38,8 +38,8 @@ module timestepcosmicrays
 
   subroutine timestep_crs
 
-    use grid,           only : dxmn
-    use initcosmicrays, only : cfl_cr,K_crs_paral,K_crs_perp
+    use grid,           only: dxmn
+    use initcosmicrays, only: cfl_cr,K_crs_paral,K_crs_perp
 
     implicit none
 
@@ -53,8 +53,8 @@ module timestepcosmicrays
           dt_crs = dt_crs * dxmn**2
        else
           dt_crs = huge(1.0)
-       end if
-    end if
+       endif
+    endif
 
   end subroutine timestep_crs
 

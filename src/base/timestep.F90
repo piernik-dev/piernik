@@ -35,39 +35,39 @@ module timestep
    contains
 
       subroutine time_step
-         use mpisetup,      only : t, dt, dt_old, dt_max_grow, dt_initial, dt_min, nstep, proc
-         use dataio_public, only : tend, msg
-         use errh,          only : warn
-         use constants,     only : small,big
-         use dataio,        only : write_crashed
+         use mpisetup,      only: t, dt, dt_old, dt_max_grow, dt_initial, dt_min, nstep, proc
+         use dataio_public, only: tend, msg
+         use errh,          only: warn
+         use constants,     only: small,big
+         use dataio,        only: write_crashed
 
 #ifdef IONIZED
-         use timestepionized, only : timestep_ion
-         use timestepionized, only : dt_ion,c_ion
+         use timestepionized, only: timestep_ion
+         use timestepionized, only: dt_ion,c_ion
 #endif /* IONIZED */
 
 #ifdef NEUTRAL
-         use timestepneutral, only : timestep_neu
-         use timestepneutral, only : dt_neu,c_neu
+         use timestepneutral, only: timestep_neu
+         use timestepneutral, only: dt_neu,c_neu
 #endif /* NEUTRAL */
 
 #ifdef DUST
-         use timestepdust, only : timestep_dst
-         use timestepdust, only : dt_dst,c_dst
+         use timestepdust, only: timestep_dst
+         use timestepdust, only: dt_dst,c_dst
 #endif /* DUST */
 
 #ifdef COSM_RAYS
-         use timestepcosmicrays, only : timestep_crs
-         use timestepcosmicrays, only : dt_crs
+         use timestepcosmicrays, only: timestep_crs
+         use timestepcosmicrays, only: dt_crs
 #endif /* COSM_RAYS */
 
 #ifdef RESISTIVE
-         use resistivity, only : dt_resist, timestep_resist
+         use resistivity, only: dt_resist, timestep_resist
 #endif /* RESISTIVE */
 
 #ifdef FLUID_INTERACTIONS
-         use timestepinteractions, only : timestep_interactions
-         use timestepinteractions, only : dt_interact
+         use timestepinteractions, only: timestep_interactions
+         use timestepinteractions, only: dt_interact
 #endif /* FLUID_INTERACTIONS */
 
          implicit none
@@ -120,7 +120,7 @@ module timestep
             if (dt_initial > 0.) dt = min(dt, dt_initial)
          else
             if (dt_old > 0.) dt = min(dt, dt_old*dt_max_grow)
-         end if
+         endif
 
          if (dt < dt_min) then ! something nasty had happened
             if (proc == 0) then
@@ -128,7 +128,7 @@ module timestep
                call warn(msg)
             endif
             call write_crashed("[timestep:time_step] dt < dt_min")
-         end if
+         endif
 
       end subroutine time_step
 !------------------------------------------------------------------------------------------

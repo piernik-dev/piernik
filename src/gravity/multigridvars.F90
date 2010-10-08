@@ -30,7 +30,7 @@
 
 module multigridvars
 
-   use mpisetup, only : cbuff_len
+   use mpisetup, only: cbuff_len
 
    implicit none
 

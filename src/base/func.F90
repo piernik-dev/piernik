@@ -136,8 +136,8 @@ module func
 !-----------------------------------------------------------------------------
    subroutine compare_namelist(nml_bef, nml_aft)
 
-      use dataio_public, only : cwd, msg, maxparfilelen
-      use errh,          only : printinfo
+      use dataio_public, only: cwd, msg, maxparfilelen
+      use errh,          only: printinfo
 
       implicit none
 

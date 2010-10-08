@@ -160,9 +160,9 @@ module mpisetup
 !<
       subroutine init_mpi
 
-         use errh,          only : die, namelist_errh, warn, printinfo
-         use dataio_public, only : msg, cwdlen, hnlen, cwd, par_file, ierrh, ansi_white, ansi_black
-         use func,          only : compare_namelist
+         use errh,          only: die, namelist_errh, warn, printinfo
+         use dataio_public, only: msg, cwdlen, hnlen, cwd, par_file, ierrh, ansi_white, ansi_black
+         use func,          only: compare_namelist
 
          implicit none
 
@@ -308,7 +308,7 @@ module mpisetup
 
             lbuff(1) = mpi_magic
 
-         end if
+         endif
 
          call MPI_Bcast(cbuff, cbuff_len*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
          call MPI_Bcast(ibuff,           buffer_dim, MPI_INTEGER,          0, comm, ierr)
@@ -485,7 +485,7 @@ module mpisetup
                call warn(msg)
             endif
             dt_max_grow = dt_default_grow
-         end if
+         endif
 #ifdef VERBOSE
          call printinfo("[mpisetup:init_mpi]: finished. \o/")
 #endif /* VERBOSE */
@@ -496,7 +496,7 @@ module mpisetup
 
       subroutine cleanup_mpi
 
-         use errh, only : printinfo
+         use errh, only: printinfo
 
          implicit none
 
@@ -515,7 +515,7 @@ module mpisetup
             call MPI_Type_free(ARR_YZ_LEFT_DOM, ierr)
             call MPI_Type_free(ARR_YZ_RIGHT_DOM, ierr)
             call MPI_Type_free(ARR_YZ_RIGHT_BND, ierr)
-         end if
+         endif
 
          if (domsize(2) /= 1) then
             call MPI_Type_free(MPI_XZ_LEFT_BND, ierr)
@@ -530,7 +530,7 @@ module mpisetup
             call MPI_Type_free(ARR_XZ_LEFT_DOM, ierr)
             call MPI_Type_free(ARR_XZ_RIGHT_DOM, ierr)
             call MPI_Type_free(ARR_XZ_RIGHT_BND, ierr)
-         end if
+         endif
 
          if (domsize(3) /= 1) then
             call MPI_Type_free(MPI_XY_LEFT_BND, ierr)
@@ -545,7 +545,7 @@ module mpisetup
             call MPI_Type_free(ARR_XY_LEFT_DOM, ierr)
             call MPI_Type_free(ARR_XY_RIGHT_DOM, ierr)
             call MPI_Type_free(ARR_XY_RIGHT_BND, ierr)
-         end if
+         endif
 
          if (proc == 0) call printinfo("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++", .false.)
          call MPI_Barrier(comm,ierr)
@@ -558,8 +558,8 @@ module mpisetup
 
       subroutine mpifind(var, what, loc_arr, loc_proc)
 
-         use errh,          only : warn
-         use dataio_public, only : msg
+         use errh,          only: warn
+         use dataio_public, only: msg
 
          implicit none
 
@@ -612,9 +612,9 @@ module mpisetup
 
       subroutine divide_domain_voodoo(np)
 
-         use errh,          only : die, warn, printinfo
-         use constants,     only : some_primes
-         use dataio_public, only : msg
+         use errh,          only: die, warn, printinfo
+         use constants,     only: some_primes
+         use dataio_public, only: msg
 
          implicit none
 
@@ -639,7 +639,7 @@ module mpisetup
                   j3 = 1 + mod(j1 + ndims -2, ndims)
                   if (ldom(j2) > ldom(j3) .and. mod(ldom(j2), some_primes(p))==0) jj = j2 ! middle edge ...
                   if (jj == 0 .and. mod(ldom(j3), some_primes(p))==0) jj = j3 ! try the shortest edge on last resort
-               end if
+               endif
 
                if (jj == 0) then
                   call die("[divide_domain_voodoo]: Can't find divisible edge")
@@ -647,10 +647,10 @@ module mpisetup
                   psize(jj) = psize(jj) * some_primes(p)
                   n         = n         / some_primes(p)
                   ldom(jj)  = ldom(jj)  / some_primes(p)
-               end if
+               endif
 
-            end do
-         end do
+            enddo
+         enddo
 
          if (n /= 1) call die("[divide_domain_voodoo]: I am not that intelligent") ! np has too big prime factors
 

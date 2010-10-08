@@ -57,14 +57,14 @@ module timestepneutral
 contains
 
   subroutine timestep_neu
-    use mpisetup,    only : MPI_DOUBLE_PRECISION, MPI_MIN, MPI_MAX, comm, ierr, cfl
-    use constants,   only : big
-    use grid, only        : dx,dy,dz,nb,ks,ke,is,ie,js,je,nxd,nyd,nzd
-    use arrays, only      : u,b
-    use initneutral, only : gamma_neu, cs_iso_neu,cs_iso_neu2
-    use initneutral, only : idnn,imxn,imyn,imzn
+    use mpisetup,    only: MPI_DOUBLE_PRECISION, MPI_MIN, MPI_MAX, comm, ierr, cfl
+    use constants,   only: big
+    use grid, only: dx,dy,dz,nb,ks,ke,is,ie,js,je,nxd,nyd,nzd
+    use arrays, only: u,b
+    use initneutral, only: gamma_neu, cs_iso_neu,cs_iso_neu2
+    use initneutral, only: idnn,imxn,imyn,imzn
 #ifndef ISO
-    use initneutral, only : ienn
+    use initneutral, only: ienn
 #endif /* !ISO */
 
     implicit none
@@ -117,9 +117,9 @@ contains
           cz=max(cz,vz+cs)
           c_neu =max(c_neu,cx,cy,cz)
 
-        end do
-      end do
-    end do
+        enddo
+      enddo
+    enddo
 
     if(nxd /= 1 .and. cx /= 0) then
        dt_neu_proc_x = dx/cx

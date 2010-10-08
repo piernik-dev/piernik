@@ -34,12 +34,12 @@ module crhelpers
    contains
 
    subroutine div_v(ifluid)
-      use initionized, only : idni,imxi,imyi,imzi
-      use fluidindex,  only : nvar
-      use fluidindex,  only : iarr_all_dn,iarr_all_mx,iarr_all_my,iarr_all_mz
-      use grid,        only : nx,ny,nz
-      use grid,        only : dx,dy,dz,nxd,nyd,nzd
-      use arrays,      only : u,divvel
+      use initionized, only: idni,imxi,imyi,imzi
+      use fluidindex,  only: nvar
+      use fluidindex,  only: iarr_all_dn,iarr_all_mx,iarr_all_my,iarr_all_mz
+      use grid,        only: nx,ny,nz
+      use grid,        only: dx,dy,dz,nxd,nyd,nzd
+      use arrays,      only: u,divvel
       implicit none
       real, dimension(nx) :: vx
       real, dimension(ny) :: vy
@@ -87,8 +87,8 @@ module crhelpers
    end subroutine div_v
 
    subroutine div_vx(k,j)
-      use grid,        only : nx
-      use arrays,      only : divvel
+      use grid,        only: nx
+      use arrays,      only: divvel
       implicit none
       real,dimension(nx) :: divv
       integer :: j,k
@@ -98,8 +98,8 @@ module crhelpers
    end subroutine div_vx
 
    subroutine div_vy(k,i)
-      use grid,        only : ny
-      use arrays, only      : divvel
+      use grid,        only: ny
+      use arrays, only: divvel
       implicit none
       real,dimension(ny) :: divv
       integer :: i,k
@@ -109,8 +109,8 @@ module crhelpers
    end subroutine div_vy
 
    subroutine  div_vz(j,i)
-      use grid,        only : nz
-      use arrays, only      : divvel
+      use grid,        only: nz
+      use arrays, only: divvel
       implicit none
       real,dimension(nz) :: divv
       integer :: i,j

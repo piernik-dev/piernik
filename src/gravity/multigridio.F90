@@ -125,7 +125,7 @@ contains
            &              h5screate_simple_f, h5sclose_f, h5sselect_hyperslab_f, &
            &              h5pcreate_f, h5pset_chunk_f, h5pset_dxpl_mpio_f, h5pset_dxpl_mpio_f, &
            &              h5dcreate_f, h5dget_space_f, h5dwrite_f, h5dclose_f
-      use multigridvars, only : plvl, ngridvars, source, solution, defect, &
+      use multigridvars, only: plvl, ngridvars, source, solution, defect, &
            &                    correction, hdf5levels, XDIR, YDIR, ZDIR, NDIM
 
       implicit none
@@ -228,7 +228,7 @@ contains
          !
          CALL h5dclose_f(dset_id, error)
 
-      end do
+      enddo
 
    end subroutine multigrid_write_arr
 

@@ -45,12 +45,12 @@ module hydrostatic
 
       use errh, only: die
       use constants, only: small
-      use mpisetup, only : proc
-      use grid, only : nx,ny,nz,dl,zdim,z,zl,zr,nzt,nb,zmin,zmax
-      use gravity, only  : grav_accel,gp_status,nsub,tune_zeq
-      use arrays, only   : gp
+      use mpisetup, only: proc
+      use grid, only: nx,ny,nz,dl,zdim,z,zl,zr,nzt,nb,zmin,zmax
+      use gravity, only: grav_accel,gp_status,nsub,tune_zeq
+      use arrays, only: gp
 #ifndef ISO
-      use arrays, only   : eprof
+      use arrays, only: eprof
 #endif /* ISO */
       implicit none
       real, intent(inout)              :: d0

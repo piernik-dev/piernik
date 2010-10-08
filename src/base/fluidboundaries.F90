@@ -32,35 +32,35 @@ module fluidboundaries
    contains
 
    subroutine bnd_u(dim)
-      use dataio_public,   only : msg
-      use errh,            only : warn
+      use dataio_public,   only: msg
+      use errh,            only: warn
       use fluidboundaries_pub, only: user_bnd_xl, user_bnd_xr, user_bnd_yl, user_bnd_yr, user_bnd_zl, user_bnd_zr
-      use mpisetup,        only : ierr, MPI_XY_RIGHT_DOM, MPI_XY_RIGHT_BND, MPI_XY_LEFT_DOM, MPI_XY_LEFT_BND, &
+      use mpisetup,        only: ierr, MPI_XY_RIGHT_DOM, MPI_XY_RIGHT_BND, MPI_XY_LEFT_DOM, MPI_XY_LEFT_BND, &
          MPI_XZ_RIGHT_DOM, MPI_XZ_RIGHT_BND, MPI_XZ_LEFT_DOM, MPI_XZ_LEFT_BND, &
          MPI_YZ_RIGHT_DOM, MPI_YZ_RIGHT_BND, MPI_YZ_LEFT_DOM, MPI_YZ_LEFT_BND, &
          pxsize, pysize, pzsize, proczl, proczr, procyl, procyr, procxl, procxr, &
          pcoords, bnd_xr, bnd_xl, bnd_yl, bnd_yr, bnd_zl, bnd_zr, req, status, comm, comm3d, &
          MPI_DOUBLE_PRECISION, procxyl, procyxl, smalld, smallei
-      use grid,            only : nb, nxd, nyd, nzd,x,y,z,nzb,nyb,nxb,nx,ny,nz
-      use fluidindex,      only : nvar, iarr_all_dn,iarr_all_mx,iarr_all_my,iarr_all_mz
-      use arrays,          only : u, b
+      use grid,            only: nb, nxd, nyd, nzd,x,y,z,nzb,nyb,nxb,nx,ny,nz
+      use fluidindex,      only: nvar, iarr_all_dn,iarr_all_mx,iarr_all_my,iarr_all_mz
+      use arrays,          only: u, b
 #ifdef COSM_RAYS
-      use initcosmicrays,  only : smallecr
+      use initcosmicrays,  only: smallecr
 #endif /* COSM_RAYS */
 #ifndef ISO
-      use fluidindex,      only : iarr_all_en
+      use fluidindex,      only: iarr_all_en
 #endif /* !ISO */
 
-      use initfluids,      only : gamma, cs_iso2
+      use initfluids,      only: gamma, cs_iso2
 
 #ifdef GRAV
-      use gravity,         only : grav_accel, nsub, tune_zeq_bnd
+      use gravity,         only: grav_accel, nsub, tune_zeq_bnd
 #endif /* GRAV */
 #ifdef SHEAR_BND
-      use shear,           only : qshear, omega, delj, eps, dely, unshear_fft
+      use shear,           only: qshear, omega, delj, eps, dely, unshear_fft
 #endif /* SHEAR_BND */
 #ifdef COSM_RAYS
-      use fluidindex,  only : iarr_all_crs
+      use fluidindex,  only: iarr_all_crs
 #endif /* COSM_RAYS */
 
       implicit none
@@ -805,7 +805,7 @@ module fluidboundaries
    end subroutine bnd_u
 
    subroutine all_fluid_boundaries
-      use grid,  only : nxd,nyd,nzd
+      use grid,  only: nxd,nyd,nzd
       implicit none
       if(nxd /= 1) call bnd_u('xdim')
       if(nyd /= 1) call bnd_u('ydim')

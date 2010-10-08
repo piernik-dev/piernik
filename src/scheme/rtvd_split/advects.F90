@@ -31,13 +31,13 @@ module advects
   contains
 
   subroutine advectby_x
-    use mpisetup,  only : dt
-    use fluidindex, only : ibx,iby,ibz
-    use initionized, only : idni,imxi
-    use arrays, only : b,u,wa
-    use grid,   only : dx,nx,ny,nz,nxd,nyd,nzd,ks,ke
-    use rtvd,     only : tvdb
-    use magboundaries, only : bnd_emf
+    use mpisetup,  only: dt
+    use fluidindex, only: ibx,iby,ibz
+    use initionized, only: idni,imxi
+    use arrays, only: b,u,wa
+    use grid,   only: dx,nx,ny,nz,nxd,nyd,nzd,ks,ke
+    use rtvd,     only: tvdb
+    use magboundaries, only: bnd_emf
 
     implicit none
     real, dimension(nx) :: vxby,by_x,vx
@@ -70,8 +70,8 @@ module advects
         call tvdb(vxby,by_x,vx,nx,dt,dx)
 
         wa(:,j,k) = vxby
-      end do
-    end do
+      enddo
+    enddo
 
     if(nxd /= 1) call bnd_emf(wa, 'vxby', 'xdim')
     if(nyd /= 1) call bnd_emf(wa, 'vxby', 'ydim')
@@ -80,13 +80,13 @@ module advects
   end subroutine advectby_x
 
   subroutine advectbz_x
-    use mpisetup,  only : dt
-    use fluidindex, only : ibx,iby,ibz
-    use initionized, only : idni,imxi
-    use arrays, only : b,u,wa
-    use grid,   only : dx,nx,ny,nz,nxd,nyd,nzd,js,je
-    use rtvd,   only : tvdb
-    use magboundaries, only : bnd_emf
+    use mpisetup,  only: dt
+    use fluidindex, only: ibx,iby,ibz
+    use initionized, only: idni,imxi
+    use arrays, only: b,u,wa
+    use grid,   only: dx,nx,ny,nz,nxd,nyd,nzd,js,je
+    use rtvd,   only: tvdb
+    use magboundaries, only: bnd_emf
 
     implicit none
     real, dimension(nx) :: vxbz,bz_x,vx
@@ -119,8 +119,8 @@ module advects
         call tvdb(vxbz,bz_x,vx,nx,dt,dx)
 
         wa(:,j,k) = vxbz
-      end do
-    end do
+      enddo
+    enddo
 
     if(nxd /= 1) call bnd_emf(wa, 'vxbz', 'xdim')
     if(nyd /= 1) call bnd_emf(wa, 'vxbz', 'ydim')
@@ -129,13 +129,13 @@ module advects
   end subroutine advectbz_x
 
   subroutine advectbz_y
-    use mpisetup,  only : dt
-    use fluidindex, only : ibx,iby,ibz
-    use initionized, only : idni,imyi
-    use arrays, only : b,u,wa
-    use grid,   only : dy,nx,ny,nz,is,ie,nxd,nyd,nzd
-    use rtvd,   only : tvdb
-    use magboundaries, only : bnd_emf
+    use mpisetup,  only: dt
+    use fluidindex, only: ibx,iby,ibz
+    use initionized, only: idni,imyi
+    use arrays, only: b,u,wa
+    use grid,   only: dy,nx,ny,nz,is,ie,nxd,nyd,nzd
+    use rtvd,   only: tvdb
+    use magboundaries, only: bnd_emf
 
     implicit none
     real, dimension(ny)   :: vybz,bz_y,vy
@@ -167,8 +167,8 @@ module advects
         call tvdb(vybz,bz_y,vy,ny,dt,dy)
 
         wa(i,:,k) = vybz
-      end do
-    end do
+      enddo
+    enddo
 
     if(nyd /= 1) call bnd_emf(wa, 'vybz', 'ydim')
     if(nzd /= 1) call bnd_emf(wa, 'vybz', 'zdim')
@@ -177,13 +177,13 @@ module advects
   end subroutine advectbz_y
 
   subroutine advectbx_y
-    use mpisetup,  only : dt
-    use fluidindex, only : ibx,iby,ibz
-    use initionized, only : idni,imyi
-    use arrays, only : b,u,wa
-    use grid,   only : dy,nx,ny,nz,nxd,nzd,nyd,ks,ke
-    use rtvd,     only : tvdb
-    use magboundaries, only : bnd_emf
+    use mpisetup,  only: dt
+    use fluidindex, only: ibx,iby,ibz
+    use initionized, only: idni,imyi
+    use arrays, only: b,u,wa
+    use grid,   only: dy,nx,ny,nz,nxd,nzd,nyd,ks,ke
+    use rtvd,     only: tvdb
+    use magboundaries, only: bnd_emf
 
     implicit none
     real, dimension(ny) :: vybx,bx_y,vy
@@ -216,8 +216,8 @@ module advects
         call tvdb(vybx,bx_y,vy,ny,dt,dy)
 
         wa(i,:,k) = vybx
-      end do
-    end do
+      enddo
+    enddo
 
     if(nyd /= 1) call bnd_emf(wa, 'vybx', 'ydim')
     if(nzd /= 1) call bnd_emf(wa, 'vybx', 'zdim')
@@ -226,13 +226,13 @@ module advects
   end subroutine advectbx_y
 
   subroutine advectbx_z
-    use mpisetup,  only : dt
-    use fluidindex, only : ibx,iby,ibz
-    use initionized, only : idni,imzi
-    use arrays, only : b,u,wa
-    use grid,   only : dz,nx,ny,nz,nxd,nzd,nyd,js,je
-    use rtvd,     only : tvdb
-    use magboundaries, only : bnd_emf
+    use mpisetup,  only: dt
+    use fluidindex, only: ibx,iby,ibz
+    use initionized, only: idni,imzi
+    use arrays, only: b,u,wa
+    use grid,   only: dz,nx,ny,nz,nxd,nzd,nyd,js,je
+    use rtvd,     only: tvdb
+    use magboundaries, only: bnd_emf
 
     implicit none
     real, dimension(nz)  :: vzbx,bx_z,vz
@@ -264,8 +264,8 @@ module advects
         call tvdb(vzbx,bx_z,vz,nz,dt,dz)
 
         wa(i,j,:) = vzbx
-      end do
-    end do
+      enddo
+    enddo
 
     if(nzd /= 1) call bnd_emf(wa, 'vzbx', 'zdim')
     if(nxd /= 1) call bnd_emf(wa, 'vzbx', 'xdim')
@@ -274,13 +274,13 @@ module advects
   end subroutine advectbx_z
 
   subroutine advectby_z
-    use mpisetup,  only : dt
-    use fluidindex, only : ibx,iby,ibz
-    use initionized, only : idni,imzi
-    use arrays, only : b,u,wa
-    use grid,   only : dz,nx,ny,nz,nzd,nyd,nxd,ie,is
-    use rtvd,     only : tvdb
-    use magboundaries, only : bnd_emf
+    use mpisetup,  only: dt
+    use fluidindex, only: ibx,iby,ibz
+    use initionized, only: idni,imzi
+    use arrays, only: b,u,wa
+    use grid,   only: dz,nx,ny,nz,nzd,nyd,nxd,ie,is
+    use rtvd,     only: tvdb
+    use magboundaries, only: bnd_emf
 
     implicit none
     real, dimension(nz)  :: vzby,by_z,vz
@@ -312,8 +312,8 @@ module advects
         call tvdb(vzby,by_z,vz,nz,dt,dz)
 
         wa(i,j,:) = vzby
-      end do
-    end do
+      enddo
+    enddo
 
     if(nzd /= 1) call bnd_emf(wa, 'vzby', 'zdim')
     if(nxd /= 1) call bnd_emf(wa, 'vzby', 'xdim')

@@ -29,7 +29,7 @@
 
 module dataio_public
 
-   use types, only : hdf, domlen
+   use types, only: hdf, domlen
 
    implicit none
 
@@ -157,14 +157,14 @@ contains
             write(*,'(a)') trim(nm)                                                                               ! QA_WARN
          else
             write(*,'(a,a," @",a,i5,2a)') trim(ansicolor),msg_type_str,ansi_black, proc, ': ', trim(nm)           ! QA_WARN
-         end if
-      end if
+         endif
+      endif
 
       if (dataio_initialized) then
          open(log_lun, file=log_file, position='append')
       else
          open(log_lun, file=tmp_log_file, status='unknown', position='append')
-      end if
+      endif
       if (proc == 0 .and. mode == T_ERR) write(log_lun,'(/,a,/)')"###############     Crashing     ###############"
       write(log_lun,'(2a,i5,2a)') msg_type_str," @", proc, ': ', trim(nm)
       close(log_lun)

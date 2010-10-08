@@ -40,15 +40,15 @@ contains
 !!
   subroutine poisson_solve(dens)
 
-    use errh,        only : die
-    use arrays,      only : u,sgp
-    use grid,        only : x, nx, ny, nz, nzb, dz, dx, nb, nxd, nyd, nzd
-    use mpisetup,    only : bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr
+    use errh,        only: die
+    use arrays,      only: u,sgp
+    use grid,        only: x, nx, ny, nz, nzb, dz, dx, nb, nxd, nyd, nzd
+    use mpisetup,    only: bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr
 #ifdef SHEAR
-    use shear,       only : unshear_fft
+    use shear,       only: unshear_fft
 #endif /* SHEAR */
 #ifdef IONIZED
-    use initionized, only : idni
+    use initionized, only: idni
 #endif /* IONIZED */
 
     implicit none
@@ -114,10 +114,10 @@ contains
 !!
 #ifdef SHEAR
   subroutine poisson_xy2d(den, pot, lpot, rpot, dx)
-    use grid, only : xmin,xmax,ymin,ymax,nyd,nb,nxd
-    use constants, only : newtong,dpi,small
-    use arrays, only : x
-    use shear,  only : dely
+    use grid, only: xmin,xmax,ymin,ymax,nyd,nb,nxd
+    use constants, only: newtong,dpi,small
+    use arrays, only: x
+    use shear,  only: dely
     implicit none
 
     real, dimension(:,:), intent(in)             :: den
@@ -264,7 +264,7 @@ contains
 !!
   subroutine poisson_xy(den, pot, dx)
 
-    use constants, only : newtong,dpi
+    use constants, only: newtong,dpi
     implicit none
 
     real, dimension(:,:), intent(in)  :: den
@@ -380,7 +380,7 @@ contains
 !!
   subroutine poisson_xyp(den, pot, dz)
 
-    use constants, only : fpiG,dpi
+    use constants, only: fpiG,dpi
     implicit none
 
     real, dimension(:,:,:), intent(in)  :: den

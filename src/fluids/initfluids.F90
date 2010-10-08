@@ -182,7 +182,7 @@ module initfluids
 
    subroutine cleanup_fluids
 
-      use fluidindex, only : cleanup_fluid_index
+      use fluidindex, only: cleanup_fluid_index
 
       implicit none
 

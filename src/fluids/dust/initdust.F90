@@ -67,7 +67,7 @@ module initdust
     use mpisetup, only: proc, rbuff, lbuff, MPI_LOGICAL, MPI_DOUBLE_PRECISION, buffer_dim, comm, ierr
     use errh,     only: namelist_errh
     use dataio_public, only: par_file, ierrh
-    use func,        only : compare_namelist
+    use func,        only: compare_namelist
 
     implicit none
 
@@ -85,7 +85,7 @@ module initdust
        rbuff(2)   = dalpha
 
        lbuff(1)   = selfgrav_dst
-    end if
+    endif
 
     call MPI_Bcast(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
     call MPI_Bcast(lbuff,    buffer_dim, MPI_LOGICAL,          0, comm, ierr)

@@ -59,17 +59,17 @@ contains
 
    subroutine timestep_ion
 
-      use mpisetup,    only : MPI_DOUBLE_PRECISION, MPI_MIN, MPI_MAX, comm, ierr, cfl
-      use constants,   only : big
-      use grid,        only : dx,dy,dz,nb,ks,ke,is,ie,js,je,nxd,nyd,nzd
-      use arrays,      only : u,b
-      use initionized, only : gamma_ion, cs_iso_ion2
-      use initionized, only : idni,imxi,imyi,imzi
+      use mpisetup,    only: MPI_DOUBLE_PRECISION, MPI_MIN, MPI_MAX, comm, ierr, cfl
+      use constants,   only: big
+      use grid,        only: dx,dy,dz,nb,ks,ke,is,ie,js,je,nxd,nyd,nzd
+      use arrays,      only: u,b
+      use initionized, only: gamma_ion, cs_iso_ion2
+      use initionized, only: idni,imxi,imyi,imzi
 #ifndef ISO
-      use initionized, only : ieni
+      use initionized, only: ieni
 #endif /* !ISO */
 #ifdef ISO_LOCAL
-      use arrays,      only : cs_iso2_arr
+      use arrays,      only: cs_iso2_arr
 #endif /* ISO_LOCAL */
 
       implicit none
@@ -133,9 +133,9 @@ contains
                cz=max(cz,vz+cf)
                c_ion =max(c_ion,cx,cy,cz)
 
-            end do
-         end do
-      end do
+            enddo
+         enddo
+      enddo
 
       if(nxd /= 1) then
          dt_ion_proc_x = dx/cx

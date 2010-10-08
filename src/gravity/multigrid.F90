@@ -146,7 +146,7 @@ contains
          grav_bnd_str = "isolated" ! /todo make this a default, correct default problem.par where necessary
       else
          grav_bnd_str = "periodic"
-      end if
+      endif
 
       aux_par_I0 = 0 ; aux_par_I1 = 0 ; aux_par_I2 = 0
       aux_par_R0 = 0.; aux_par_R1 = 0.; aux_par_R2 = 0.
@@ -205,7 +205,7 @@ contains
          ibuff(buffer_dim-1) = aux_par_I1
          ibuff(buffer_dim-2) = aux_par_I2
 
-      end if
+      endif
 
       call MPI_Bcast(cbuff, cbuff_len*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
       call MPI_Bcast(ibuff,           buffer_dim, MPI_INTEGER,          0, comm, ierr)
@@ -284,7 +284,7 @@ contains
       if (.not. (grav_bnd == bnd_periodic .or. grav_bnd == bnd_dirichlet .or. grav_bnd == bnd_isolated) .and. .not. gb_no_fft) then
          gb_no_fft = .true.
          if (proc == 0) call warn("[multigrid:init_multigrid] Use of FFT not allowed by current boundary type/combination.")
-      end if
+      endif
 
       if (.not. prefer_rbgs_relaxation .and. any([ overrelax, overrelax_x, overrelax_y, overrelax_z ] /= 1.)) then
          if (proc == 0) call warn("[multigrid:init_multigrid] Overrelaxation is disabled for FFT local solver.")
@@ -292,12 +292,12 @@ contains
          overrelax_x   = 1.
          overrelax_y   = 1.
          overrelax_z   = 1.
-      end if
+      endif
 
       if ((Jacobi_damp <= 0. .or. Jacobi_damp>1.) .and. proc == 0) then
          write(msg, '(a,g12.5,a)')"[multigrid:init_multigrid] Jacobi_damp = ",Jacobi_damp," is outside (0, 1] interval."
          call warn(msg)
-      end if
+      endif
 
       if (fft_patient) fftw_flags = FFTW_PATIENT
 
@@ -348,13 +348,13 @@ contains
                   write(msg, '(2(a,i1),a,i4,2(a,i2))')"[multigrid:init_multigrid] Number of guardcells exceeds number of interior cells in the ",i," direction, ", &
                        lvl(idx)%nb, " > ", nx, " at level ", idx, ". You may try to set level_max <=", level_max-idx
                   call die(msg)
-               end if
+               endif
                if (nx * div /= nxc) then
                   write(msg, '(a,i1,a,3f6.1,2(a,i2))')"[multigrid:init_multigrid] Fractional number of cells in ",i," direction ", &
                        nxc/real(div), " at level ", idx, ". You may try to set level_max <=", level_max-idx
                   call die(msg)
-               end if
-            end if
+               endif
+            endif
 
             select case(i)
                case (XDIR)
@@ -364,7 +364,7 @@ contains
                case (ZDIR)
                   lvl(idx)%nzb = nx
             end select
-         end do
+         enddo
 
          lvl(idx)%dvol = 1.
          lvl(idx)%vol  = 1.
@@ -390,7 +390,7 @@ contains
             lvl(idx)%is    = 1
             lvl(idx)%ie    = 1
             lvl(idx)%idx2  = 0.
-         end if
+         endif
 
          if (has_dir(YDIR)) then
             lvl(idx)%ny    = lvl(idx)%nyb + 2*lvl(idx)%nb
@@ -408,7 +408,7 @@ contains
             lvl(idx)%js    = 1
             lvl(idx)%je    = 1
             lvl(idx)%idy2  = 0.
-         end if
+         endif
 
          if (has_dir(ZDIR)) then
             lvl(idx)%nz    = lvl(idx)%nzb + 2*lvl(idx)%nb
@@ -426,7 +426,7 @@ contains
             lvl(idx)%ks    = 1
             lvl(idx)%ke    = 1
             lvl(idx)%idz2  = 0.
-         end if
+         endif
 
          lvl(idx)%dvol2 = lvl(idx)%dvol**2
 
@@ -477,7 +477,7 @@ contains
             lvl(idx)%bnd_z     (:, :, :)    = dirtyH
          else
             lvl(idx)%mgvar     (:, :, :, :) = 0.0 ! should not be necessary if dirty_debug shows nothing suspicious
-         end if
+         endif
 
          if (has_dir(XDIR)) then
             do j = 1, lvl(idx)%nx
@@ -485,7 +485,7 @@ contains
             enddo
          else
             lvl(idx)%x(:) = (cgrid%xminb + cgrid%xmaxb) / 2.
-         end if
+         endif
 
          if (has_dir(YDIR)) then
             do j = 1, lvl(idx)%ny
@@ -493,7 +493,7 @@ contains
             enddo
          else
             lvl(idx)%y(:) = (cgrid%yminb + cgrid%ymaxb) / 2.
-         end if
+         endif
 
          if (has_dir(ZDIR)) then
             do j = 1, lvl(idx)%nz
@@ -501,7 +501,7 @@ contains
             enddo
          else
             lvl(idx)%z(:) = (cgrid%zminb + cgrid%zmaxb) / 2.
-         end if
+         endif
 
          if (prefer_rbgs_relaxation) then
             lvl(idx)%fft_type = fft_none
@@ -511,9 +511,9 @@ contains
             lvl(idx)%fft_type = fft_dst
          else
             lvl(idx)%fft_type = fft_none
-         end if
+         endif
 
-      end do
+      enddo
 
       ! handy shortcuts
       base => lvl(level_min)
@@ -540,13 +540,13 @@ contains
                   mb_alloc = mb_alloc + size(os%old(i)%soln)
                   os%old(i)%time= -HUGE(1.0)
                   if (dirty_debug) os%old(i)%soln(:, :, :) = dirtyH
-               end do
+               enddo
                if (any(aerr(1:nold) /= 0)) call die("[multigrid:init_multigrid] Allocation error: os%old(:)%soln")
                os%valid = .false.
                os%last  = 1
-            end if
-         end do
-      end if
+            endif
+         enddo
+      endif
 
       sgp(:,:,:) = 0. !Initialize all the guardcells, even those which does not impact the solution
 
@@ -569,7 +569,7 @@ contains
                gb%fft_type = fft_none
                if (proc == 0) call warn("[multigrid:init_multigrid] gb_no_fft set but no suitable boundary conditions found. Reverting to RBGS relaxation.")
          end select
-      end if
+      endif
 
       !special initialization of global base-level FFT-related data
       if (gb%fft_type /= fft_none) then
@@ -593,7 +593,7 @@ contains
             mb_alloc = mb_alloc + size(gb_src_temp)
          endif
 
-      end if
+      endif
 
       ! FFT solver storage and data
       do idx = level_max, level_gb, -1
@@ -684,13 +684,13 @@ contains
                enddo
             enddo
 
-         end if
-      end do
+         endif
+      enddo
 
       if (roof%fft_type == fft_none .and. trust_fft_solution) then
          if (proc == 0) call warn("[multigrid:init_multigrid] cannot trust FFT solution on the roof.")
          trust_fft_solution = .false.
-      end if
+      endif
 
       if (allocated(kx)) deallocate(kx)
       if (allocated(ky)) deallocate(ky)
@@ -709,7 +709,7 @@ contains
          gb_cartmap(j)%up(XDIR) = gb_cartmap(j)%lo(XDIR)   + base%nxb - 1 ! ending indices
          gb_cartmap(j)%up(YDIR) = gb_cartmap(j)%lo(YDIR)   + base%nyb - 1
          gb_cartmap(j)%up(ZDIR) = gb_cartmap(j)%lo(ZDIR)   + base%nzb - 1
-      end do
+      enddo
 
       ! mark external faces
       is_external(:) = .false.
@@ -729,7 +729,7 @@ contains
          if (gb_cartmap(proc)%proc(YDIR) == pysize-1) is_external(YHI) = .true.
          if (gb_cartmap(proc)%proc(ZDIR) == 0)        is_external(ZLO) = .true.
          if (gb_cartmap(proc)%proc(ZDIR) == pzsize-1) is_external(ZHI) = .true.
-      end if
+      endif
 
       if (.not. has_dir(XDIR)) is_external(XLO:XHI) = .false.
       if (.not. has_dir(YDIR)) is_external(YLO:YHI) = .false.
@@ -754,7 +754,7 @@ contains
          if (overrelax /= 1. .or. overrelax_x /= 1. .or. overrelax_y /= 1. .or. overrelax_z /= 1.) then
             write(msg, '(a,f8.5,a,3f8.5,a)')"[multigrid:init_multigrid] Overrelaxation factors: global = ", overrelax, ", directional = [", overrelax_x, overrelax_y, overrelax_z, "]"
             call mg_write_log(msg)
-         end if
+         endif
       endif
 
    end subroutine init_multigrid
@@ -802,24 +802,24 @@ contains
                      call MPI_Type_free(lvl(i)%MPI_YZ_LEFT_DOM(ib), ierr)
                      call MPI_Type_free(lvl(i)%MPI_YZ_RIGHT_DOM(ib), ierr)
                      call MPI_Type_free(lvl(i)%MPI_YZ_RIGHT_BND(ib), ierr)
-                  end if
+                  endif
 
                   if (has_dir(YDIR)) then
                      call MPI_Type_free(lvl(i)%MPI_XZ_LEFT_BND(ib), ierr)
                      call MPI_Type_free(lvl(i)%MPI_XZ_LEFT_DOM(ib), ierr)
                      call MPI_Type_free(lvl(i)%MPI_XZ_RIGHT_DOM(ib), ierr)
                      call MPI_Type_free(lvl(i)%MPI_XZ_RIGHT_BND(ib), ierr)
-                  end if
+                  endif
 
                   if (has_dir(ZDIR)) then
                      call MPI_Type_free(lvl(i)%MPI_XY_LEFT_BND(ib), ierr)
                      call MPI_Type_free(lvl(i)%MPI_XY_LEFT_DOM(ib), ierr)
                      call MPI_Type_free(lvl(i)%MPI_XY_RIGHT_DOM(ib), ierr)
                      call MPI_Type_free(lvl(i)%MPI_XY_RIGHT_BND(ib), ierr)
-                  end if
+                  endif
 
-               end do
-            end if
+               enddo
+            endif
 
          enddo
          deallocate(lvl)
@@ -830,7 +830,7 @@ contains
       do i = 1, nold
          if (allocated(inner%old(i)%soln)) deallocate(inner%old(i)%soln)
          if (allocated(outer%old(i)%soln)) deallocate(outer%old(i)%soln)
-      end do
+      enddo
 
       if (allocated(gb_cartmap))  deallocate(gb_cartmap)
       if (allocated(gb_src_temp)) deallocate(gb_src_temp)
@@ -886,7 +886,7 @@ contains
       else
          p1 = p0
          p2 = p0
-      end if
+      endif
 
       ordt = ord_time_extrap
       if (history%valid) then
@@ -898,10 +898,10 @@ contains
             ordt = min(1, ord_time_extrap)
          else                                                            ! simple recycling
             ordt = min(0, ord_time_extrap)
-         end if
+         endif
       else                                                               ! coldstart
          ordt = min(-1, ord_time_extrap)
-      end if
+      endif
 
       select case(ordt)
          case (:-1)
@@ -911,7 +911,7 @@ contains
             endif
             do l = level_min, level_max
                lvl(l)%mgvar(:, :, :, solution) = 0.
-            end do
+            enddo
             history%old(:)%time = -HUGE(1.0)
          case (0)
             roof%mgvar(:, :, :, solution) = history%old(p0)%soln(:, :, :)
@@ -925,7 +925,7 @@ contains
             if (proc == 0 .and. ord_time_extrap > 1) then
                write(msg, '(3a)')"[multigrid:init_solution] Linear extrapolation of ",trim(cprefix),"solution."
                call mg_write_log(msg, stdout)
-            end if
+            endif
          case (2)
             dt_fac(1) = (t - history%old(p0)%time) / (history%old(p1)%time - history%old(p2)%time)
             dt_fac(2) = (t - history%old(p1)%time) / (history%old(p2)%time - history%old(p0)%time)
@@ -986,7 +986,7 @@ contains
          if (grav_bnd /= bnd_givenval) call die("[multigrid:init_source] empty space allowed only for given value boundaries.")
          roof%mgvar(roof%is:roof%ie, roof%js:roof%je, roof%ks:roof%ke, source) = 0.
          norm_rhs_orig = 0.
-      end if
+      endif
 
       select case (grav_bnd)
          case (bnd_periodic) ! probably also bnd_neumann
@@ -1044,7 +1044,7 @@ contains
          history%last = 1 + mod(history%last, nold)
       else
          history%old(:)%time = t ! prevents extrapolation too early
-      end if
+      endif
 
       history%old(history%last)%soln(:, :, :) = roof%mgvar(:, :, :, solution)
       history%old(history%last)%time = t
@@ -1089,7 +1089,7 @@ contains
       if (isolated) then
          grav_bnd = bnd_dirichlet
          cprefix = "i-"
-      end if
+      endif
 
       call init_source(dens)
 
@@ -1102,7 +1102,7 @@ contains
       else
          isb = 1
          ieb = 1
-      end if
+      endif
 
       if (has_dir(YDIR)) then
          jsb = js-mg_nb
@@ -1110,7 +1110,7 @@ contains
       else
          jsb = 1
          jeb = 1
-      end if
+      endif
 
       if (has_dir(ZDIR)) then
          ksb = ks-mg_nb
@@ -1118,7 +1118,7 @@ contains
       else
          ksb = 1
          keb = 1
-      end if
+      endif
 
       sgp(isb:ieb, jsb:jeb, ksb:keb) = roof%mgvar(:, :, :, solution)
 
@@ -1133,7 +1133,7 @@ contains
          sgp(isb:ieb, jsb:jeb, ksb:keb) = sgp(isb:ieb, jsb:jeb, ksb:keb) + roof%mgvar(:, :, :, solution)
 
          grav_bnd = bnd_isolated ! restore
-      end if
+      endif
 
       ts = timer_("multigrid")
       tot_ts = tot_ts + ts
@@ -1180,10 +1180,10 @@ contains
             write(msg, '(3a)')"[multigrid:vcycle] FFT solution trusted, skipping ", trim(cprefix), "cycle."
             call mg_write_log(msg, stdout)
             return
-         end if
+         endif
       else
          call init_solution(history)
-      end if
+      endif
 
       if ((grav_bnd /= bnd_givenval) .and. .not. prefer_modified_norm) then
          norm_rhs = norm_rhs_orig
@@ -1193,7 +1193,7 @@ contains
             write(msg, '(a,f8.5)')"[multigrid:vcycle] norm_rhs/norm_rhs_orig = ", norm_rhs/norm_rhs_orig
             call mg_write_log(msg, stdout)
          endif
-      end if
+      endif
       norm_old = norm_rhs
       norm_lowest = norm_rhs
 
@@ -1203,7 +1203,7 @@ contains
             call mg_write_log(msg)
          endif
          return
-      end if
+      endif
 
 !      if (.not. history%valid .and. prefer_rbgs_relaxation) call approximate_solution(level_max, source, solution) ! not necessary when init_solution called FFT
 ! difficult statement: for approximate_solution_fft it requires to pass a flag to use guardcells instead of prolonging faces.
@@ -1225,10 +1225,10 @@ contains
                fmt='(3a,i3,a,f12.9,a,f8.2,a,f7.3)'
             else
                fmt='(3a,i3,a,f12.9,a,es8.2,a,f7.3)'
-            end if
+            endif
             write(msg, fmt)"[multigrid] ", trim(cprefix), "Cycle:", v, " norm/rhs= ", norm_lhs/norm_rhs, " reduction factor= ", norm_old/norm_lhs, "   dt_wall= ", ts
             call mg_write_log(msg, stdout)
-         end if
+         endif
          vcycle_factors(v,:) = [ norm_old/norm_lhs, ts ]
 
          if (norm_old/norm_lhs <= suspicious_factor .or. dump_every_step .or. (norm_lhs/norm_rhs <= norm_tol .and. dump_result)) then
@@ -1237,8 +1237,8 @@ contains
                call numbered_ascii_dump(dname)
             else
                call numbered_ascii_dump(dname, v)
-            end if
-         end if
+            endif
+         endif
 
          if (norm_lhs/norm_rhs <= norm_tol) exit
 
@@ -1252,9 +1252,9 @@ contains
                   if (.not. verbose_vcycle) call brief_v_log(v, norm_lhs/norm_rhs)
                   call die("[multigrid:vcycle] Serious nonconvergence detected.")
                   !In such case one may increase nsmool, decrease refinement depth or use FFT
-               end if
-            end if
-         end if
+               endif
+            endif
+         endif
 
          norm_old = norm_lhs
 
@@ -1267,17 +1267,17 @@ contains
          do l = level_min, level_max
             call approximate_solution(l, defect, correction)
             call check_dirty(l, correction, "Vup relax+")
-         end do
+         enddo
          roof%mgvar     (roof%is:roof%ie, roof%js:roof%je, roof%ks:roof%ke, solution) = &
               roof%mgvar(roof%is:roof%ie, roof%js:roof%je, roof%ks:roof%ke, solution) + &
               roof%mgvar(roof%is:roof%ie, roof%js:roof%je, roof%ks:roof%ke, correction)
 
-      end do
+      enddo
 
       if (v == max_cycles + 1) then
          if (proc == 0 .and. norm_lhs/norm_rhs > norm_tol) call warn("[multigrid:vcycle] Not enough V-cycles to achieve convergence.")
          v = max_cycles
-      end if
+      endif
 
       if (.not. verbose_vcycle) call brief_v_log(v, norm_lhs/norm_rhs)
 
@@ -1317,8 +1317,8 @@ contains
             call approximate_solution_rbgs(lev, src, soln)
          else
             call approximate_solution_fft(lev, src, soln)
-         end if
-      end if
+         endif
+      endif
 
       if (prefer_rbgs_relaxation .and. soln == correction .and. lev <  level_max) call prolong_level(lev, correction)
       ! BEWARE other implementations of the multigrid algorithm may be incompatible with prolongation called from here
@@ -1360,36 +1360,36 @@ contains
                if (has_dir(XDIR)) then
                   lvl(lev)%bnd_x(:, :, LOW)  = 0.5* sum (lvl(lev)%mgvar(lvl(lev)%is-1:lvl(lev)%is, lvl(lev)%js:lvl(lev)%je, lvl(lev)%ks:lvl(lev)%ke, soln), 1)
                   lvl(lev)%bnd_x(:, :, HIGH) = 0.5* sum (lvl(lev)%mgvar(lvl(lev)%ie:lvl(lev)%ie+1, lvl(lev)%js:lvl(lev)%je, lvl(lev)%ks:lvl(lev)%ke, soln), 1)
-               end if
+               endif
                if (has_dir(YDIR)) then
                   lvl(lev)%bnd_y(:, :, LOW)  = 0.5* sum (lvl(lev)%mgvar(lvl(lev)%is:lvl(lev)%ie, lvl(lev)%js-1:lvl(lev)%js, lvl(lev)%ks:lvl(lev)%ke, soln), 2)
                   lvl(lev)%bnd_y(:, :, HIGH) = 0.5* sum (lvl(lev)%mgvar(lvl(lev)%is:lvl(lev)%ie, lvl(lev)%je:lvl(lev)%je+1, lvl(lev)%ks:lvl(lev)%ke, soln), 2)
-               end if
+               endif
                if (has_dir(ZDIR)) then
                   lvl(lev)%bnd_z(:, :, LOW)  = 0.5* sum (lvl(lev)%mgvar(lvl(lev)%is:lvl(lev)%ie, lvl(lev)%js:lvl(lev)%je, lvl(lev)%ks-1:lvl(lev)%ks, soln), 3)
                   lvl(lev)%bnd_z(:, :, HIGH) = 0.5* sum (lvl(lev)%mgvar(lvl(lev)%is:lvl(lev)%ie, lvl(lev)%js:lvl(lev)%je, lvl(lev)%ke:lvl(lev)%ke+1, soln), 3)
-               end if
-            end if
+               endif
+            endif
 
             if (dirty_debug) then
                if (has_dir(XDIR) .and. any(abs(lvl(lev)%bnd_x(:, :, :)) > dirtyL)) call warn("approximate_solution_fft dirty bnd_x")
                if (has_dir(YDIR) .and. any(abs(lvl(lev)%bnd_y(:, :, :)) > dirtyL)) call warn("approximate_solution_fft dirty bnd_y")
                if (has_dir(ZDIR) .and. any(abs(lvl(lev)%bnd_z(:, :, :)) > dirtyL)) call warn("approximate_solution_fft dirty bnd_z")
-            end if
+            endif
 
             if (has_dir(XDIR)) then
                lvl(lev)%src(1,            :, :) = lvl(lev)%src(1,            :, :) - lvl(lev)%bnd_x(:, :, LOW)  * 2. * lvl(lev)%idx2
                lvl(lev)%src(lvl(lev)%nxb, :, :) = lvl(lev)%src(lvl(lev)%nxb, :, :) - lvl(lev)%bnd_x(:, :, HIGH) * 2. * lvl(lev)%idx2
-            end if
+            endif
             if (has_dir(YDIR)) then
                lvl(lev)%src(:, 1,            :) = lvl(lev)%src(:, 1,            :) - lvl(lev)%bnd_y(:, :, LOW)  * 2. * lvl(lev)%idy2
                lvl(lev)%src(:, lvl(lev)%nyb, :) = lvl(lev)%src(:, lvl(lev)%nyb, :) - lvl(lev)%bnd_y(:, :, HIGH) * 2. * lvl(lev)%idy2
-            end if
+            endif
             if (has_dir(ZDIR)) then
                lvl(lev)%src(:, :, 1           ) = lvl(lev)%src(:, :, 1           ) - lvl(lev)%bnd_z(:, :, LOW)  * 2. * lvl(lev)%idz2
                lvl(lev)%src(:, :, lvl(lev)%nzb) = lvl(lev)%src(:, :, lvl(lev)%nzb) - lvl(lev)%bnd_z(:, :, HIGH) * 2. * lvl(lev)%idz2
-            end if
-         end if
+            endif
+         endif
 
          call fft_convolve(lev)
 
@@ -1435,7 +1435,7 @@ contains
                        lvl               (lev)%mgvar(lvl(lev)%is:lvl(lev)%ie,     lvl(lev)%js:lvl(lev)%je,     lvl(lev)%ks:lvl(lev)%ke,     soln)  + &
                        lvl(lev)%rz * (lvl(lev)%mgvar(lvl(lev)%is:lvl(lev)%ie,     lvl(lev)%js:lvl(lev)%je,     lvl(lev)%ks-1:lvl(lev)%ke-1, soln)  + &
                        &              lvl(lev)%mgvar(lvl(lev)%is:lvl(lev)%ie,     lvl(lev)%js:lvl(lev)%je,     lvl(lev)%ks+1:lvl(lev)%ke+1, soln))
-               end if
+               endif
             else
                ! relax only two layers of cells (1 is  significantly worse, 3 does not improve much)
                ! edges are relaxed twice, corners are relaxed three times which seems to be good
@@ -1458,7 +1458,7 @@ contains
                        lvl(lev)%rz * (lvl(lev)%mgvar(lvl(lev)%ie-D_x  :lvl(lev)%ie,     lvl(lev)%js    :lvl(lev)%je,     lvl(lev)%ks-D_z:lvl(lev)%ke-D_z, soln)  + &
                        &              lvl(lev)%mgvar(lvl(lev)%ie-D_x  :lvl(lev)%ie,     lvl(lev)%js    :lvl(lev)%je,     lvl(lev)%ks+D_z:lvl(lev)%ke+D_z, soln)) - &
                        lvl(lev)%r  *  lvl(lev)%mgvar(lvl(lev)%ie-D_x  :lvl(lev)%ie,     lvl(lev)%js    :lvl(lev)%je,     lvl(lev)%ks    :lvl(lev)%ke,     src)
-               end if
+               endif
 
                if (has_dir(YDIR)) then
                   lvl                    (lev)%mgvar(lvl(lev)%is    :lvl(lev)%ie,     lvl(lev)%js    :lvl(lev)%js+D_y,   lvl(lev)%ks    :lvl(lev)%ke,     soln)  = & ! -Y
@@ -1478,7 +1478,7 @@ contains
                        lvl(lev)%rz * (lvl(lev)%mgvar(lvl(lev)%is    :lvl(lev)%ie,     lvl(lev)%je-D_y  :lvl(lev)%je,     lvl(lev)%ks-D_z:lvl(lev)%ke-D_z, soln)  + &
                        &              lvl(lev)%mgvar(lvl(lev)%is    :lvl(lev)%ie,     lvl(lev)%je-D_y  :lvl(lev)%je,     lvl(lev)%ks+D_z:lvl(lev)%ke+D_z, soln)) - &
                        lvl(lev)%r  *  lvl(lev)%mgvar(lvl(lev)%is    :lvl(lev)%ie,     lvl(lev)%je-D_y  :lvl(lev)%je,     lvl(lev)%ks    :lvl(lev)%ke,     src)
-               end if
+               endif
 
                if (has_dir(ZDIR)) then
                   lvl                    (lev)%mgvar(lvl(lev)%is    :lvl(lev)%ie,     lvl(lev)%js    :lvl(lev)%je,     lvl(lev)%ks    :lvl(lev)%ks+D_z,   soln)  = & ! -Z
@@ -1498,14 +1498,14 @@ contains
                        lvl(lev)%rz * (lvl(lev)%mgvar(lvl(lev)%is    :lvl(lev)%ie,     lvl(lev)%js    :lvl(lev)%je,     lvl(lev)%ke-2*D_z:lvl(lev)%ke-D_z, soln)  + &
                        &              lvl(lev)%mgvar(lvl(lev)%is    :lvl(lev)%ie,     lvl(lev)%js    :lvl(lev)%je,     lvl(lev)%ke      :lvl(lev)%ke+D_z, soln)) - &
                        lvl(lev)%r  *  lvl(lev)%mgvar(lvl(lev)%is    :lvl(lev)%ie,     lvl(lev)%js    :lvl(lev)%je,     lvl(lev)%ke-D_z  :lvl(lev)%ke,     src)
-               end if
+               endif
 
-            end if
-         end do
+            endif
+         enddo
 
          call check_dirty(lev, soln, "approx_soln relax+")
 
-      end do
+      enddo
 
    end subroutine approximate_solution_fft
 
@@ -1533,8 +1533,8 @@ contains
          else
             if (grav_bnd /= bnd_givenval) call zero_boundaries(lev)
             call warn("m:mfb WTF?")
-         end if
-      end if
+         endif
+      endif
 
    end subroutine make_face_boundaries
 
@@ -1570,7 +1570,7 @@ contains
       if (lev == level_min) then
          call warn("[multigrid:prolong_faces] Cannot prolong anything to base level")
          return
-      end if
+      endif
 
       select case(ord_prolong_face)
          case(0)
@@ -1590,7 +1590,7 @@ contains
          pp(i,:,1,2) = 0.5*p( i)*p(1:-1:-1) ! or use matmul()
          pp(i,:,2,1) = 0.5*p(-i)*p(:)
          pp(i,:,2,2) = 0.5*p(-i)*p(1:-1:-1)
-      end do
+      enddo
 
       call mpi_multigrid_bnd(lev-1, soln, 1, .false.) !BEWARE for higher prolongation order more guardcell will be required
       call check_dirty(lev-1, soln, "prolong_faces", 1)
@@ -1610,9 +1610,9 @@ contains
                fine%bnd_x(-fine%js+2*j+D_y,-fine%ks+2*k,    HIGH)=sum(pp(-D_y:D_y, -D_z:D_z, 2, 1) * (coarse%mgvar(coarse%ie,j-D_y:j+D_y,k-D_z:k+D_z,soln) + coarse%mgvar(coarse%ie+1,j-D_y:j+D_y,k-D_z:k+D_z,soln))) / pp_norm
                fine%bnd_x(-fine%js+2*j,    -fine%ks+2*k+D_z,HIGH)=sum(pp(-D_y:D_y, -D_z:D_z, 1, 2) * (coarse%mgvar(coarse%ie,j-D_y:j+D_y,k-D_z:k+D_z,soln) + coarse%mgvar(coarse%ie+1,j-D_y:j+D_y,k-D_z:k+D_z,soln))) / pp_norm
                fine%bnd_x(-fine%js+2*j+D_y,-fine%ks+2*k+D_z,HIGH)=sum(pp(-D_y:D_y, -D_z:D_z, 2, 2) * (coarse%mgvar(coarse%ie,j-D_y:j+D_y,k-D_z:k+D_z,soln) + coarse%mgvar(coarse%ie+1,j-D_y:j+D_y,k-D_z:k+D_z,soln))) / pp_norm
-            end do
-         end do
-      end if
+            enddo
+         enddo
+      endif
 
       if (has_dir(YDIR)) then
          pp_norm = 2.*sum(pp(-D_x:D_x, -D_z:D_z, 1, 1))
@@ -1626,9 +1626,9 @@ contains
                fine%bnd_y(-fine%is+2*i+D_x,-fine%ks+2*k,    HIGH)=sum(pp(-D_x:D_x, -D_z:D_z, 2, 1) * (coarse%mgvar(i-D_x:i+D_x,coarse%je,k-D_z:k+D_z,soln) + coarse%mgvar(i-D_x:i+D_x,coarse%je+1,k-D_z:k+D_z,soln))) / pp_norm
                fine%bnd_y(-fine%is+2*i,    -fine%ks+2*k+D_z,HIGH)=sum(pp(-D_x:D_x, -D_z:D_z, 1, 2) * (coarse%mgvar(i-D_x:i+D_x,coarse%je,k-D_z:k+D_z,soln) + coarse%mgvar(i-D_x:i+D_x,coarse%je+1,k-D_z:k+D_z,soln))) / pp_norm
                fine%bnd_y(-fine%is+2*i+D_x,-fine%ks+2*k+D_z,HIGH)=sum(pp(-D_x:D_x, -D_z:D_z, 2, 2) * (coarse%mgvar(i-D_x:i+D_x,coarse%je,k-D_z:k+D_z,soln) + coarse%mgvar(i-D_x:i+D_x,coarse%je+1,k-D_z:k+D_z,soln))) / pp_norm
-            end do
-         end do
-      end if
+            enddo
+         enddo
+      endif
 
       if (has_dir(ZDIR)) then
          pp_norm = 2.*sum(pp(-D_x:D_x, -D_y:D_y, 1, 1))
@@ -1642,9 +1642,9 @@ contains
                fine%bnd_z(-fine%is+2*i+D_x,-fine%js+2*j,    HIGH)=sum(pp(-D_x:D_x, -D_y:D_y, 2, 1) * (coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ke,soln) + coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ke+1,soln))) / pp_norm
                fine%bnd_z(-fine%is+2*i,    -fine%js+2*j+D_y,HIGH)=sum(pp(-D_x:D_x, -D_y:D_y, 1, 2) * (coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ke,soln) + coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ke+1,soln))) / pp_norm
                fine%bnd_z(-fine%is+2*i+D_x,-fine%js+2*j+D_y,HIGH)=sum(pp(-D_x:D_x, -D_y:D_y, 2, 2) * (coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ke,soln) + coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ke+1,soln))) / pp_norm
-            end do
-         end do
-      end if
+            enddo
+         enddo
+      endif
 
    end subroutine prolong_faces
 
@@ -1678,7 +1678,7 @@ contains
          nsmoo = nsmoob
       else
          nsmoo = nsmool
-      end if
+      endif
 
       do n = 1, RED_BLACK*nsmoo
          call mpi_multigrid_bnd(lev, soln, 1, .false.) ! no corners are required here
@@ -1686,7 +1686,7 @@ contains
          if (dirty_debug) then
             write(dirty_label, '(a,i5)')"relax soln- smoo=", n
             call check_dirty(lev, soln, dirty_label)
-         end if
+         endif
 
          ! Possible optimization: this is the most costly part of the RBGS relaxation (instruction count, read and write data, L1 and L2 read cache miss)
          ! do n = 1, nsmoo
@@ -1695,7 +1695,7 @@ contains
          !    call mpi_multigrid_bnd(lev, soln, 1, .false.)
          !    relax interior cells (except for single layer of cells at all faces), first red, then 1-cell behind black one.
          !    relax single layer of black cells at all faces
-         ! end do
+         ! enddo
 
          ! with explicit outer loops it is easier to describe a 3-D checkerboard :-)
 
@@ -1708,8 +1708,8 @@ contains
                        lvl(lev)%ry * (lvl(lev)%mgvar(i1  :lvl(lev)%ie  :2, j-1, k,   soln) + lvl(lev)%mgvar(i1:  lvl(lev)%ie:  2, j+1, k,   soln)) + &
                        lvl(lev)%rz * (lvl(lev)%mgvar(i1  :lvl(lev)%ie  :2, j,   k-1, soln) + lvl(lev)%mgvar(i1:  lvl(lev)%ie:  2, j,   k+1, soln)) - &
                        lvl(lev)%r  *  lvl(lev)%mgvar(i1  :lvl(lev)%ie  :2, j,   k,   src)
-               end do
-            end do
+               enddo
+            enddo
          else
             ! In 3D this variant significantly increases instruction count and also some data read
             i1 = lvl(lev)%is; id = 1 ! mv to multigridvars, init_multigrid
@@ -1721,7 +1721,7 @@ contains
                jd = RED_BLACK
             else if (has_dir(ZDIR)) then
                kd = RED_BLACK
-            end if
+            endif
 
             if (kd == RED_BLACK) k1 = lvl(lev)%ks + mod(n, RED_BLACK)
             do k = k1, lvl(lev)%ke, kd
@@ -1740,16 +1740,16 @@ contains
                   if (has_dir(ZDIR)) &
                        lvl (lev)%mgvar(i1  :lvl(lev)%ie  :id, j,   k,   soln) = lvl(lev)%mgvar(i1:  lvl(lev)%ie:  id, j,   k,   soln)  + &
                        &       Jacobi_damp *(lvl(lev)%mgvar(i1  :lvl(lev)%ie  :id, j,   k-1, soln) + lvl(lev)%mgvar(i1:  lvl(lev)%ie:  id, j,   k+1, soln)) * lvl(lev)%rz
-               end do
-            end do
-         end if
+               enddo
+            enddo
+         endif
 
          if (dirty_debug) then
             write(dirty_label, '(a,i5)')"relax soln+ smoo=", n
             call check_dirty(lev, soln, dirty_label)
-         end if
+         endif
 
-      end do
+      enddo
 
    end subroutine approximate_solution_rbgs
 
@@ -1767,7 +1767,7 @@ contains
          call gb_fft_solve_gather(src, soln)
       else
          call gb_fft_solve_sendrecv(src, soln)
-      end if
+      endif
 
    end subroutine gb_fft_solve
 
@@ -1802,7 +1802,7 @@ contains
                  &               gb_cartmap(p)%lo(YDIR):gb_cartmap(p)%up(YDIR), &
                  &               gb_cartmap(p)%lo(ZDIR):gb_cartmap(p)%up(ZDIR)), &
                  &        base%nxb*base%nyb*base%nzb, MPI_DOUBLE_PRECISION, p, p, comm3d, status, ierr)
-         end do
+         enddo
 
          call fft_convolve(gb%level)
 
@@ -1816,12 +1816,12 @@ contains
                  &               gb_cartmap(p)%lo(YDIR):gb_cartmap(p)%up(YDIR), &
                  &               gb_cartmap(p)%lo(ZDIR):gb_cartmap(p)%up(ZDIR)), &
                  &        base%nxb*base%nyb*base%nzb, MPI_DOUBLE_PRECISION, p, p, comm3d, ierr)
-         end do
+         enddo
 
       else
          call MPI_Send(base%mgvar(base%is:base%ie, base%js:base%je, base%ks:base%ke, src),  base%nxb*base%nyb*base%nzb, MPI_DOUBLE_PRECISION, 0, proc, comm3d, ierr)
          call MPI_Recv(base%mgvar(base%is:base%ie, base%js:base%je, base%ks:base%ke, soln), base%nxb*base%nyb*base%nzb, MPI_DOUBLE_PRECISION, 0, proc, comm3d, status, ierr)
-      end if
+      endif
 
    end subroutine gb_fft_solve_sendrecv
 

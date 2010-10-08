@@ -35,15 +35,15 @@
 
 module crdiffusion
 
-  use initcosmicrays, only : iarr_crs
-  use initcosmicrays, only : K_crs_paral,K_crs_perp
-  use fluidindex,     only : nvar
-  use fluidindex,     only : ibx,iby,ibz
-  use arrays,         only : b,u,wcr
-  use constants,      only : small
-  use grid,           only : dx,dy,dz,nxd,nyd,nzd,nx,ny,nz
-  use grid,           only : is,ie,js,je,ks,ke
-  use mpisetup,       only : dt
+  use initcosmicrays, only: iarr_crs
+  use initcosmicrays, only: K_crs_paral,K_crs_perp
+  use fluidindex,     only: nvar
+  use fluidindex,     only: ibx,iby,ibz
+  use arrays,         only: b,u,wcr
+  use constants,      only: small
+  use grid,           only: dx,dy,dz,nxd,nyd,nzd,nx,ny,nz
+  use grid,           only: is,ie,js,je,ks,ke
+  use mpisetup,       only: dt
 
  contains
 
@@ -100,7 +100,7 @@ module crdiffusion
                 decr2 = (dqp2+dqm2)* (1.0 + sign(1.0, dqm2*dqp2))*0.25
              else
                 decr2 = 0.0
-             end if
+             endif
 
              if(nzd /= 1) then
                 dqm3  = 0.5*((u(iarr_crs,i-1,j ,k  ) + u(iarr_crs,i ,j ,k  ))    &
