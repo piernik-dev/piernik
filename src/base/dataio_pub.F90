@@ -36,6 +36,7 @@ module dataio_public
    public
 
    ! Buffer lengths for global use
+   integer, parameter :: varlen = 4             !< lengthe of state variable names in hdf files
    integer, parameter :: fplen = 24             !< length of buffer for printed FP or integer number
    integer, parameter :: hnlen = 32             !< hostname length limit
    integer, parameter :: cwdlen = 512           !< allow for quite long CWD

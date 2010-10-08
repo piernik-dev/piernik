@@ -169,7 +169,7 @@ contains
       character(len=TRY)        :: i_try
       real                      :: Cint_old = HUGE(1.), Clim, Clim_old
       real, dimension(NLIM)     :: Clast
-      character(len=16)         :: Ccomment
+      character(len=9)          :: Ccomment ! length of the " Exp warp" string
 
       b(:,    :, :, :) = 0.
       u(idni, :, :, :) = smalld

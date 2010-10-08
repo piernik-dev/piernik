@@ -1149,7 +1149,7 @@ contains
    subroutine vcycle(history)
 
       use errh,               only: die, warn
-      use mpisetup,           only: proc, nproc
+      use mpisetup,           only: proc, nproc, cbuff_len
       use timer,              only: timer_
       use multigridhelpers,   only: set_dirty, check_dirty, mg_write_log, brief_v_log, do_ascii_dump, numbered_ascii_dump
       use multigridbasefuncs, only: norm_sq, residual, restrict_all, substract_average
@@ -1163,8 +1163,9 @@ contains
       integer            :: l, v
       real               :: norm_rhs, norm_lhs, norm_old, norm_lowest
       logical            :: dump_every_step, dump_result
-      character(len=32)  :: fmt
-      character(len=16)  :: dname
+      integer, parameter       :: fmtlen = 32
+      character(len=fmtlen)    :: fmt
+      character(len=cbuff_len) :: dname
 
       inquire(file = "_dump_every_step_", EXIST=dump_every_step) ! use for debug only
       inquire(file = "_dump_result_", EXIST=dump_result)
@@ -1658,7 +1659,7 @@ contains
 
    subroutine approximate_solution_rbgs(lev, src, soln)
 
-      use multigridhelpers,   only: dirty_debug, check_dirty, multidim_code_3D
+      use multigridhelpers,   only: dirty_debug, check_dirty, multidim_code_3D, dirty_label
       use multigridmpifuncs,  only: mpi_multigrid_bnd
       use errh,               only: die
 
@@ -1672,7 +1673,6 @@ contains
 
       integer :: n, j, k, i1, j1, k1, id, jd, kd
       integer :: nsmoo
-      character(len=40) :: dirty_msg
 
       if (lev == level_min) then
          nsmoo = nsmoob
@@ -1684,8 +1684,8 @@ contains
          call mpi_multigrid_bnd(lev, soln, 1, .false.) ! no corners are required here
 
          if (dirty_debug) then
-            write(dirty_msg, '(a,i5)')"relax soln- smoo=", n
-            call check_dirty(lev, soln, dirty_msg)
+            write(dirty_label, '(a,i5)')"relax soln- smoo=", n
+            call check_dirty(lev, soln, dirty_label)
          end if
 
          ! Possible optimization: this is the most costly part of the RBGS relaxation (instruction count, read and write data, L1 and L2 read cache miss)
@@ -1745,8 +1745,8 @@ contains
          end if
 
          if (dirty_debug) then
-            write(dirty_msg, '(a,i5)')"relax soln+ smoo=", n
-            call check_dirty(lev, soln, dirty_msg)
+            write(dirty_label, '(a,i5)')"relax soln+ smoo=", n
+            call check_dirty(lev, soln, dirty_label)
          end if
 
       end do

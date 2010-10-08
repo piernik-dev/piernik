@@ -50,9 +50,10 @@ module dataio
 !!
 !! \todo check the usefullness of wait logical variable
 !<
-   use types,         only : hdf
+   use types,         only : hdf, idlen
    use dataio_public, only : tend, nend, wend, nhdf, nstep_start, domain, nrestart, get_container, set_container_chdf, &
-      vizit, fmin, fmax, hnlen, cwdlen
+      vizit, fmin, fmax, hnlen, cwdlen, varlen
+   use mpisetup,      only : cbuff_len
 
    implicit none
 
@@ -62,9 +63,9 @@ module dataio
    integer               :: istep                  !< current number of substep (related to integration order)
 
    integer, parameter    :: nvarsmx = 16           !< maximum number of variables to dump in hdf files
-   character(len=3)      :: new_id                 !< three character string to change run_id when restarting simulation (e.g. to avoid overwriting of the output from the previous (pre-restart) simulation; if new_id = '' then run_id is still used)
-   character(len=16)     :: restart                !< choice of restart file: if restart = 'last': automatic choice of the last restart file regardless of "nrestart" value; if smth else is set: "nrestart" value is fixing
-   character(len=16)     :: mag_center             !< choice to dump magnetic fields values from cell centers or not (if not then values from cell borders)
+   character(len=idlen)  :: new_id                 !< three character string to change run_id when restarting simulation (e.g. to avoid overwriting of the output from the previous (pre-restart) simulation; if new_id = '' then run_id is still used)
+   character(len=cbuff_len) :: restart             !< choice of restart file: if restart = 'last': automatic choice of the last restart file regardless of "nrestart" value; if smth else is set: "nrestart" value is fixing
+   character(len=cbuff_len) :: mag_center          !< choice to dump magnetic fields values from cell centers or not (if not then values from cell borders)
    integer               :: resdel                 !< number of recent restart dumps which should be saved; each n-resdel-1 restart file is supposed to be deleted while writing n restart file
    real                  :: dt_hdf                 !< time between successive hdf dumps
    real                  :: dt_res                 !< time between successive restart file dumps
@@ -74,33 +75,29 @@ module dataio
    integer               :: min_disk_space_MB      !< minimum disk space in MB to continue simulation <b>(currently not used)</b>
    integer               :: sleep_minutes          !< minutes of sleeping time before continue simulation
    integer               :: sleep_seconds          !< seconds of sleeping time before continue simulation
-   character(len=160)    :: user_message_file      !< path to possible user message file containing dt_xxx changes or orders to dump/stop/end simulation
-   character(len=160)    :: system_message_file    !< path to possible system (UPS) messege file contaning orders to dump/stop/end simulation
+   character(len=cwdlen) :: user_message_file      !< path to possible user message file containing dt_xxx changes or orders to dump/stop/end simulation
+   character(len=cwdlen) :: system_message_file    !< path to possible system (UPS) messege file contaning orders to dump/stop/end simulation
    integer               :: ix                     !< index in x-direction of slice to dump in plt files
    integer               :: iy                     !< index in y-direction of slice to dump in plt files
    integer               :: iz                     !< index in z-direction of slice to dump in plt files
    integer               :: iv                     !< work index to count successive variables to dump in hdf files
-   character(len=4), dimension(nvarsmx) :: vars    !< array of 4-character strings standing for variables to dump in hdf files
+   character(len=varlen), dimension(nvarsmx) :: vars !< array of 4-character strings standing for variables to dump in hdf files
 
    integer               :: tsl_lun = 2            !< luncher for timeslice file
    integer               :: step_res               !< number of simulation timestep corresponding to values dumped in restart file
    integer               :: nhdf_start             !< number of hdf file for the first hdf dump in simulation run
    integer               :: nres_start             !< number of restart file for the first restart dump in simulation run
    real                  :: t_start                !< time in simulation of start simulation run
-   character(len=2)      :: pc1                    !< string of two characters to mark current block in x-direction in hdf4 files
-   character(len=2)      :: pc2                    !< string of two characters to mark current block in y-direction in hdf4 files
-   character(len=2)      :: pc3                    !< string of two characters to mark current block in z-direction in hdf4 files
    logical               :: tsl_firstcall          !< logical value to start a new timeslice file
 
    logical               :: wait                   !< logical value to have a break in simulation (currently not used)
 
    integer               :: nchar                  !< number of characters in a user/system message
-   integer, parameter    :: msg_len = 16
-   character(len=msg_len) :: msg                    !< string of characters - content of a user/system message
-   real                  :: msg_param              !< parameter changed by a user/system message
+   integer, parameter    :: umsg_len = 16
+   character(len=umsg_len) :: umsg                    !< string of characters - content of a user/system message
+   real                  :: umsg_param              !< parameter changed by a user/system message
 
-   character(len=hnlen)  :: hostfull
-   character(len=8)      :: host
+   character(len=hnlen)  :: hostfull, host
    integer               :: pid
    integer               :: uid
    integer               :: ihost
@@ -211,7 +208,7 @@ module dataio
       use fluidboundaries, only : all_fluid_boundaries
       use timer,           only : time_left
       use dataio_hdf5,     only : init_hdf5, read_restart_hdf5, maxparfilelines, parfile, parfilelines
-      use dataio_public,   only : chdf, nres, last_hdf_time, step_hdf, nlog, ntsl, dataio_initialized, log_file, cwdlen, par_file, cwd, ierrh, tmp_log_file
+      use dataio_public,   only : chdf, nres, last_hdf_time, step_hdf, nlog, ntsl, dataio_initialized, log_file, cwdlen, par_file, cwd, ierrh, tmp_log_file, msglen
       use func,            only : compare_namelist
 #ifdef MAGNETIC
       use magboundaries,   only : all_mag_boundaries
@@ -224,7 +221,7 @@ module dataio
       integer(kind=1)      :: hostnm
       integer(kind=1)      :: system
       integer              :: system_status, i
-      character(LEN=160)   :: system_command
+      character(LEN=msglen):: system_command
 
       restart = 'last'   ! 'last': automatic choice of the last restart file
                          ! regardless of "nrestart" value;
@@ -245,7 +242,7 @@ module dataio
       sleep_minutes   = 0
       sleep_seconds   = 0
       write(user_message_file,'(a,"/msg")') trim(cwd)
-      write(system_message_file, '(a)') "/tmp/piernik_msg"
+      system_message_file = "/tmp/piernik_msg"
 
       wait  = .false.
       tsl_firstcall = .true.
@@ -258,17 +255,9 @@ module dataio
       step_hdf  = -1
       step_res  = -1
 
-      pc1 = '00'
-      pc2 = '00'
-      pc3 = '00'
-
       nend = 1
       tend = -1.0
       wend = huge(1.0)
-
-      if(psize(1) .gt. 1) pc1 = '0x'
-      if(psize(2) .gt. 1) pc2 = '0x'
-      if(psize(3) .gt. 1) pc3 = '0x'
 
       pid = getpid()
 
@@ -455,25 +444,24 @@ module dataio
       use problem_pub,   only : problem_name, run_id
       use mpisetup,      only : MPI_CHARACTER, MPI_DOUBLE_PRECISION, comm, ierr, proc, nstep
       use dataio_hdf5,   only : write_hdf5, write_restart_hdf5
-      use dataio_public, only : chdf, step_hdf
+      use dataio_public, only : chdf, step_hdf, msg
       use errh,          only : printinfo, warn
 
       implicit none
 
       logical, intent(inout) :: end_sim
-      character(len=1024)    :: lmsg
       integer :: tsleep
 
 !--- process 0 checks for messages
 
       if (proc == 0) call read_file_msg
 
-      call MPI_BCAST(msg,       msg_len, MPI_CHARACTER,        0, comm, ierr)
-      call MPI_BCAST(msg_param, 1,       MPI_DOUBLE_PRECISION, 0, comm, ierr)
+      call MPI_BCAST(umsg,       umsg_len, MPI_CHARACTER,        0, comm, ierr)
+      call MPI_BCAST(umsg_param, 1,        MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
 !---  if a user message is received then:
-      if (len_trim(msg) /= 0) then
-         select case (trim(msg))
+      if (len_trim(umsg) /= 0) then
+         select case (trim(umsg))
             case ('res','dump')
                call write_restart_hdf5
             case ('hdf')
@@ -486,27 +474,27 @@ module dataio
             case('tsl')
                call write_timeslice
             case('tend')
-               tend   = msg_param
+               tend   = umsg_param
             case('nend')
-               nend   = msg_param
+               nend   = umsg_param
             case('dtres')
-               dt_res = msg_param
+               dt_res = umsg_param
             case('dthdf')
-               dt_hdf = msg_param
+               dt_hdf = umsg_param
             case('dtlog')
-               dt_log = msg_param
+               dt_log = umsg_param
             case('dttsl')
-               dt_tsl = msg_param
+               dt_tsl = umsg_param
             case('dtplt')
-               dt_plt = msg_param
+               dt_plt = umsg_param
             case('sleep')
-               tsleep = 60*msg_param
+               tsleep = 60*umsg_param
                call sleep(tsleep)
             case('stop')
                end_sim = .true.
             case('help')
                if (proc == 0) then
-                  write(lmsg,*) "[dataio:user_msg_handler] Recognized messages:",char(10),&
+                  write(msg,*) "[dataio:user_msg_handler] Recognized messages:",char(10),&
                   &"  help     - prints this information",char(10),&
                   &"  stop     - finish the simulation",char(10),&
                   &"  res|dump - immediately dumps a restart file",char(10),&
@@ -516,12 +504,12 @@ module dataio
                   &"  sleep <number> - wait <number> seconds",char(10),&
                   &"  tend|nend|dtres|dthdf|dtlog|dttsl|dtplt <value> - update specified parameter with <value>",char(10),&
                   &"Note that only one line at a time is read."
-                  call printinfo(lmsg)
+                  call printinfo(msg)
                end if
             case default
                if (proc == 0) then
-                  write(lmsg,*) "[dataio:user_msg_handler]: non-recognized message '",trim(msg),"'. Use message 'help' for list of valid keys."
-                  call warn(lmsg)
+                  write(msg,*) "[dataio:user_msg_handler]: non-recognized message '",trim(umsg),"'. Use message 'help' for list of valid keys."
+                  call warn(msg)
                endif
          end select
       endif
@@ -569,7 +557,7 @@ module dataio
 
       implicit none
 
-      character(len=3)  :: output
+      character(len=*), intent(in) :: output
 
 !- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -1454,9 +1442,9 @@ module dataio
 !-------------------------------------------------------------------------
 
 !\todo: process multiple commands at once
-      use errh,       only : printinfo
+      use errh,       only : printinfo, warn
       use mpisetup,   only : proc
-      use dataio_public, only : ierrh, cwdlen
+      use dataio_public, only : ierrh, cwdlen, msg
 #if defined(__INTEL_COMPILER)
       use ifport,     only : unlink, stat
 #endif /* __INTEL_COMPILER */
@@ -1467,18 +1455,17 @@ module dataio
       include "lib3f.h"
 #endif /* __PGI */
 
-      integer, parameter :: n_msg_origin = 2, u_msg=91
+      integer, parameter :: n_msg_origin = 2, msg_lun=91
       character(len=*), parameter, dimension(n_msg_origin) :: msg_origin = [ "user  ", "system" ]
 
       character(len=cwdlen), dimension(n_msg_origin), save :: fname
-      character(len=160) :: buf
       integer ::  unlink_stat = -99, io = -99, sz, sts = -99, i
       integer, dimension(13) :: stat_buff
       logical :: msg_param_read = .false., ex
       integer, dimension(n_msg_origin), save :: last_msg_stamp
 
-      msg=''
-      msg_param = 0.0
+      umsg=''
+      umsg_param = 0.0
       sz = -1
       fname = [ user_message_file, system_message_file ]
 
@@ -1491,19 +1478,25 @@ module dataio
             if (last_msg_stamp(i) == stat_buff(10)) exit
             last_msg_stamp(i) = stat_buff(10)
 
-            open(u_msg, file=fname(i), status='old')
-            read(u_msg, *, iostat=io) msg, msg_param
-            if(io/=0) then
-               rewind(u_msg)
-               read(u_msg, *, iostat=io) msg
-               write(buf, '(5a)'      )"[dataio:read_file_msg] ",trim(msg_origin(i))," message: '",trim(msg),"'"
+            open(msg_lun, file=fname(i), status='old')
+            read(msg_lun, *, iostat=io) umsg, umsg_param
+            if (io/=0) then
+               rewind(msg_lun)
+               read(msg_lun, *, iostat=io) umsg
+               if (io/=0) then
+                  write(msg, '(5a)'   )"[dataio:read_file_msg] ",trim(msg_origin(i))," message: '",trim(umsg),"'"
+               else
+                  write(msg, '(3a)'   )"[dataio:read_file_msg] Cannot read ",trim(msg_origin(i))," message."
+                  call warn(msg)
+                  msg=""
+               end if
             else
                msg_param_read = .true.
-               write(buf, '(5a,g15.7)')"[dataio:read_file_msg] ",trim(msg_origin(i))," message: '",trim(msg),"', with parameter = ", msg_param
+               write(msg, '(5a,g15.7)')"[dataio:read_file_msg] ",trim(msg_origin(i))," message: '",trim(umsg),"', with parameter = ", umsg_param
             endif
-            close(u_msg)
+            close(msg_lun)
 
-            if (len_trim(buf) > 0 .and. proc==0) call printinfo(buf) ! leave information on stdout and logfile
+            if (len_trim(msg) > 0 .and. proc==0) call printinfo(msg)
 
             sz = len_trim(msg)
             if(fname(i) == user_message_file) unlink_stat = unlink(user_message_file)

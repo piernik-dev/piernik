@@ -111,17 +111,21 @@ module list_hdf5
       end subroutine iterate_lhdf5
 
       subroutine add_lhdf5(item)
-         use errh, only: warn
+
+         use errh,          only : warn
+         use dataio_public, only : msg
+
          implicit none
+
          type(lhdf5_info), intent(in) :: item
          type(lhdf5_list), pointer :: tp
-         character(len=256) :: lmsg
+
          tp => lhdf5_root
          do
             if( associated(tp%next)) then
                if( item%key == tp%next%info%key ) then
-                  write(lmsg,'(3a)') "[list_hdf5:add_lhdf5]: ",trim(item%key)," exists in the list"
-                  call warn(lmsg)
+                  write(msg,'(3a)') "[list_hdf5:add_lhdf5]: ",trim(item%key)," exists in the list"
+                  call warn(msg)
                   return
                else if( item%key < tp%next%info%key) then
                   call insert_lhdf5(tp%next, item)

@@ -74,20 +74,19 @@ contains
 
    subroutine read_problem_par
 
-      use grid,      only: xmin, xmax, ymin, ymax, zmin, zmax
-      use errh,      only: namelist_errh, die
-      use mpisetup,  only: ierr, rbuff, cbuff, ibuff, lbuff, proc, &
-           &               MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL, &
-           &               buffer_dim, comm, smalld
-      use constants, only: pi
-      use errh,      only: die
+      use grid,          only : xmin, xmax, ymin, ymax, zmin, zmax
+      use errh,          only : namelist_errh, die
+      use mpisetup,      only : ierr, rbuff, cbuff, ibuff, lbuff, proc, &
+           &                    MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL, &
+           &                    buffer_dim, comm, smalld
+      use constants,     only : pi
+      use errh,          only : die
       use dataio_public, only : ierrh, msg, par_file
       use func,          only : compare_namelist
 
       implicit none
 
 !      integer, parameter :: maxsub = 10  !< upper limit for subsampling
-
 
       ! namelist default parameter values
       problem_name    = 'wengen4'
@@ -185,17 +184,18 @@ contains
 
    subroutine read_IC_file
 
-      use grid,     only: xminb, xmaxb, yminb, ymaxb, zminb, zmaxb
-      use mpisetup, only: proc, nproc, comm3d, status, ierr, MPI_INTEGER, MPI_DOUBLE_PRECISION
-      use errh,     only: die
+      use grid,          only : xminb, xmaxb, yminb, ymaxb, zminb, zmaxb
+      use mpisetup,      only : proc, nproc, comm3d, status, ierr, MPI_INTEGER, MPI_DOUBLE_PRECISION
+      use errh,          only : die
+      use dataio_public, only : msg
 
       implicit none
 
       integer, parameter                  :: margin = 1
       integer                             :: i, j, k, v, pe, ostat
-      character(len=128)                  :: msg
       real, allocatable, dimension(:,:,:) :: ic_v
-      integer, dimension(6)               :: ic_rng
+      integer, parameter                  :: NDIM = 3
+      integer, dimension(2*NDIM)          :: ic_rng
 
       ! calculate index ranges for the subset of IC file covering local domain with a safety margin for interpolation
       ic_is = min(ic_nx, max(1,     1+floor((xminb + ic_xysize/2.)/ic_dx) - margin) )
@@ -229,13 +229,13 @@ contains
             end do
             ic_data(ic_is:ic_ie, ic_js:ic_je, ic_ks:ic_ke, v) = ic_v(ic_is:ic_ie, ic_js:ic_je, ic_ks:ic_ke)
             do pe = 1, nproc-1
-               call MPI_Recv( ic_rng, 6, MPI_INTEGER, pe, pe, comm3d, status, ierr)
+               call MPI_Recv( ic_rng, 2*NDIM, MPI_INTEGER, pe, pe, comm3d, status, ierr)
                call MPI_Send(      ic_v(ic_rng(1):ic_rng(2), ic_rng(3):ic_rng(4), ic_rng(5):ic_rng(6)), &
                     &         size(ic_v(ic_rng(1):ic_rng(2), ic_rng(3):ic_rng(4), ic_rng(5):ic_rng(6))), &
                     &         MPI_DOUBLE_PRECISION, pe, pe, comm3d, ierr)
             end do
          else
-            call MPI_Send( [ ic_is, ic_ie, ic_js, ic_je, ic_ks, ic_ke ], 6, MPI_INTEGER, 0, proc, comm3d, ierr)
+            call MPI_Send( [ ic_is, ic_ie, ic_js, ic_je, ic_ks, ic_ke ], 2*NDIM, MPI_INTEGER, 0, proc, comm3d, ierr)
             call MPI_Recv(      ic_data(ic_is:ic_ie, ic_js:ic_je, ic_ks:ic_ke, v), &
                  &         size(ic_data(ic_is:ic_ie, ic_js:ic_je, ic_ks:ic_ke, v)), &
                  &         MPI_DOUBLE_PRECISION, 0, proc, comm3d, status, ierr)
@@ -268,15 +268,15 @@ contains
 
    subroutine init_prob
 
-      use mpisetup,    only: proc, smalld
-      use arrays,      only: u, b, cs_iso2_arr
-      use grid,        only: is, ie, js, je, ks, ke, nx, ny, nz, nb, x, y, z, dx, dy, dz
-      use initionized, only: idni, imxi, imyi, imzi
-      use list_hdf5,   only: additional_attrs, problem_write_restart, problem_read_restart
-      use constants,   only: small, kboltz, mH
-      use errh,        only: die, warn, printinfo
+      use mpisetup,      only : proc, smalld
+      use arrays,        only : u, b, cs_iso2_arr
+      use grid,          only : is, ie, js, je, ks, ke, nx, ny, nz, nb, x, y, z, dx, dy, dz
+      use initionized,   only : idni, imxi, imyi, imzi
+      use list_hdf5,     only : additional_attrs, problem_write_restart, problem_read_restart
+      use constants,     only : small, kboltz, mH
+      use errh,          only : die, warn, printinfo
       use dataio_public, only : msg
-      use types,       only: problem_customize_solution
+      use types,         only : problem_customize_solution
 
       implicit none
 
