@@ -108,13 +108,13 @@ contains
 
     dt_dst_proc   = min(dt_dst_proc_x, dt_dst_proc_y, dt_dst_proc_z)
 
-    call MPI_REDUCE(c_dst, c_max_all, 1, MPI_DOUBLE_PRECISION, MPI_MAX, 0, comm, ierr)
-    call MPI_BCAST(c_max_all, 1, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+    call MPI_Reduce(c_dst, c_max_all, 1, MPI_DOUBLE_PRECISION, MPI_MAX, 0, comm, ierr)
+    call MPI_Bcast(c_max_all, 1, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
     c_dst = c_max_all
 
-    call MPI_REDUCE(dt_dst_proc, dt_dst_all, 1, MPI_DOUBLE_PRECISION, MPI_MIN, 0, comm, ierr)
-    call MPI_BCAST(dt_dst_all, 1, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+    call MPI_Reduce(dt_dst_proc, dt_dst_all, 1, MPI_DOUBLE_PRECISION, MPI_MIN, 0, comm, ierr)
+    call MPI_Bcast(dt_dst_all, 1, MPI_DOUBLE_PRECISION, 0, comm, ierr)
     dt_dst = cfl*dt_dst_all
 
   end subroutine timestep_dst

@@ -184,14 +184,14 @@ module mpisetup
          integer :: cwd_status
          logical :: par_file_exist
 
-         call MPI_INIT( ierr )
+         call MPI_Init( ierr )
 #ifdef VERBOSE
          call printinfo("[mpisetup:init_mpi]: commencing...")
 #endif /* VERBOSE */
-         call MPI_COMM_RANK(MPI_COMM_WORLD, proc, ierr)
+         call MPI_Comm_rank(MPI_COMM_WORLD, proc, ierr)
          comm = MPI_COMM_WORLD
          info = MPI_INFO_NULL
-         call MPI_COMM_SIZE(comm, nproc, ierr)
+         call MPI_Comm_size(comm, nproc, ierr)
 
          if (allocated(cwd_all) .or. allocated(host_all) .or. allocated(pid_all)) call die("[mpisetup:init_mpi] cwd_all, host_all or pid_all already allocated")
 
@@ -310,10 +310,10 @@ module mpisetup
 
          end if
 
-         call MPI_BCAST(cbuff, cbuff_len*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
-         call MPI_BCAST(ibuff,           buffer_dim, MPI_INTEGER,          0, comm, ierr)
-         call MPI_BCAST(rbuff,           buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
-         call MPI_BCAST(lbuff,           buffer_dim, MPI_LOGICAL,          0, comm, ierr)
+         call MPI_Bcast(cbuff, cbuff_len*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
+         call MPI_Bcast(ibuff,           buffer_dim, MPI_INTEGER,          0, comm, ierr)
+         call MPI_Bcast(rbuff,           buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+         call MPI_Bcast(lbuff,           buffer_dim, MPI_LOGICAL,          0, comm, ierr)
 
          if (proc /= 0) then
 
@@ -395,8 +395,8 @@ module mpisetup
 
          reorder = .false.     ! allows processes reordered for efficiency
 
-         call MPI_CART_CREATE(comm, ndims, psize, periods, reorder, comm3d, ierr)
-         call MPI_CART_COORDS(comm3d, proc, ndims, pcoords, ierr)
+         call MPI_Cart_create(comm, ndims, psize, periods, reorder, comm3d, ierr)
+         call MPI_Cart_coords(comm3d, proc, ndims, pcoords, ierr)
 
          deallocate(host_all)
          deallocate(pid_all)
@@ -404,9 +404,9 @@ module mpisetup
 
 ! Compute neighbors
 
-         call MPI_CART_SHIFT(comm3d,0,1,procxl,procxr,ierr)   ! x dim
-         call MPI_CART_SHIFT(comm3d,1,1,procyl,procyr,ierr)   ! y dim
-         call MPI_CART_SHIFT(comm3d,2,1,proczl,proczr,ierr)   ! z dim
+         call MPI_Cart_shift(comm3d,0,1,procxl,procxr,ierr)   ! x dim
+         call MPI_Cart_shift(comm3d,1,1,procyl,procyr,ierr)   ! y dim
+         call MPI_Cart_shift(comm3d,2,1,proczl,proczr,ierr)   ! z dim
 
          if(bnd_xl(1:3) == 'cor' .and. bnd_yl(1:3) == 'cor' ) then
             if(pcoords(1) == 0 .and. pcoords(2) > 0) then
@@ -548,9 +548,9 @@ module mpisetup
          end if
 
          if (proc == 0) call printinfo("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++", .false.)
-         call MPI_BARRIER(comm,ierr)
-         if (nproc > 1) call sleep(1) !// Prevent random SIGSEGVs in openmpi's mpi_finalize
-         call MPI_FINALIZE(ierr)
+         call MPI_Barrier(comm,ierr)
+         if (nproc > 1) call sleep(1) !// Prevent random SIGSEGVs in openmpi's MPI_Finalize
+         call MPI_Finalize(ierr)
 
       end subroutine cleanup_mpi
 
@@ -574,9 +574,9 @@ module mpisetup
 
          select case (what(1:3))
             case('min')
-               CALL MPI_REDUCE(rsend, rrecv, 1, MPI_2DOUBLE_PRECISION, MPI_MINLOC, 0, comm, ierr)
+               CALL MPI_Reduce(rsend, rrecv, 1, MPI_2DOUBLE_PRECISION, MPI_MINLOC, 0, comm, ierr)
             case('max')
-               CALL MPI_REDUCE(rsend, rrecv, 1, MPI_2DOUBLE_PRECISION, MPI_MAXLOC, 0, comm, ierr)
+               CALL MPI_Reduce(rsend, rrecv, 1, MPI_2DOUBLE_PRECISION, MPI_MAXLOC, 0, comm, ierr)
             case default
                write(msg,*) '[mpisetup:mpifind] actual parameter "', what, '"is not allowed'
                call warn(msg)
@@ -587,13 +587,13 @@ module mpisetup
             loc_proc = rrecv(2)
          endif
 
-         call MPI_BCAST(loc_proc, 1, MPI_INTEGER, 0, comm, ierr)
+         call MPI_Bcast(loc_proc, 1, MPI_INTEGER, 0, comm, ierr)
 
          if(loc_proc /= 0) then
             if(proc == loc_proc) then
-               CALL MPI_SEND  (loc_arr, 3, MPI_INTEGER,     0, 11, comm, ierr)
+               CALL MPI_Send  (loc_arr, 3, MPI_INTEGER,     0, 11, comm, ierr)
             else if(proc == 0) then
-               CALL MPI_RECV  (loc_arr, 3, MPI_INTEGER, loc_proc, 11, comm, status, ierr)
+               CALL MPI_Recv  (loc_arr, 3, MPI_INTEGER, loc_proc, 11, comm, status, ierr)
             endif
          endif
 

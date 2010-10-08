@@ -65,8 +65,8 @@ module timestepinteractions
     dt_interact_proc = cs_iso_neu / (maxval(collfaq) * val)
 
 
-    call MPI_REDUCE(dt_interact_proc, dt_interact_all, 1, MPI_DOUBLE_PRECISION, MPI_MIN, 0, comm, ierr)
-    call MPI_BCAST(dt_interact_all, 1, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+    call MPI_Reduce(dt_interact_proc, dt_interact_all, 1, MPI_DOUBLE_PRECISION, MPI_MIN, 0, comm, ierr)
+    call MPI_Bcast(dt_interact_all, 1, MPI_DOUBLE_PRECISION, 0, comm, ierr)
     dt_interact = cfl_interact*dt_interact_all
 
   end subroutine timestep_interactions

@@ -334,17 +334,17 @@ module dataio
          cbuff(91) = user_message_file(1:cbuff_len)
          cbuff(92) = system_message_file(1:cbuff_len)
 
-         call MPI_BCAST(cbuff, cbuff_len*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
-         call MPI_BCAST(lbuff,    buffer_dim, MPI_LOGICAL,          0, comm, ierr)
-         call MPI_BCAST(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
-         call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+         call MPI_Bcast(cbuff, cbuff_len*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
+         call MPI_Bcast(lbuff,    buffer_dim, MPI_LOGICAL,          0, comm, ierr)
+         call MPI_Bcast(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
+         call MPI_Bcast(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
       else
 
-         call MPI_BCAST(cbuff, cbuff_len*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
-         call MPI_BCAST(lbuff,    buffer_dim, MPI_LOGICAL,          0, comm, ierr)
-         call MPI_BCAST(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
-         call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+         call MPI_Bcast(cbuff, cbuff_len*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
+         call MPI_Bcast(lbuff,    buffer_dim, MPI_LOGICAL,          0, comm, ierr)
+         call MPI_Bcast(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
+         call MPI_Bcast(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
 !  namelist /END_CONTROL/ nend, tend, wend
          nend                = ibuff(1)
@@ -399,8 +399,8 @@ module dataio
       call init_hdf5(vars,ix,iy,iz,dt_plt)
 
       if(proc == 0 .and. restart .eq. 'last') call find_last_restart(nrestart)
-      call MPI_BARRIER(comm,ierr)
-      call MPI_BCAST(nrestart, 1, MPI_INTEGER, 0, comm, ierr)
+      call MPI_Barrier(comm,ierr)
+      call MPI_Bcast(nrestart, 1, MPI_INTEGER, 0, comm, ierr)
 
       call init_version
       if (proc == 0) then
@@ -424,7 +424,7 @@ module dataio
          nhdf_start  = nhdf-1
          if(new_id .ne. '') run_id=new_id
       endif
-      call MPI_BCAST(log_file, cwdlen, MPI_CHARACTER, 0, comm, ierr)
+      call MPI_Bcast(log_file, cwdlen, MPI_CHARACTER, 0, comm, ierr)
       call set_container_chdf(nstep)
       if(all([bnd_xl,bnd_xr,bnd_yl,bnd_yr,bnd_zl,bnd_zr] /= "user")) then
          call all_fluid_boundaries
@@ -461,8 +461,8 @@ module dataio
 
       if (proc == 0) call read_file_msg
 
-      call MPI_BCAST(umsg,       umsg_len, MPI_CHARACTER,        0, comm, ierr)
-      call MPI_BCAST(umsg_param, 1,        MPI_DOUBLE_PRECISION, 0, comm, ierr)
+      call MPI_Bcast(umsg,       umsg_len, MPI_CHARACTER,        0, comm, ierr)
+      call MPI_Bcast(umsg_param, 1,        MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
 !---  if a user message is received then:
       if (len_trim(umsg) /= 0) then
@@ -680,7 +680,7 @@ module dataio
    subroutine write_timeslice
 
       use types,           only : tsl_container
-      use mpisetup,        only : proc, comm3d, t, dt, ierr, mpi_real8, mpi_sum, smalld, nstep
+      use mpisetup,        only : proc, comm3d, t, dt, ierr, MPI_REAL8, MPI_SUM, smalld, nstep
       use fluidindex,      only : ibx,iby,ibz
       use fluidindex,      only : nvar,iarr_all_dn,iarr_all_mx,iarr_all_my,iarr_all_mz
       use grid,            only : dvol,dx,dy,dz,is,ie,js,je,ks,ke,x,y,z,nxd,nyd,nzd
@@ -799,20 +799,20 @@ module dataio
       endif
 
       mass = sum(u(iarr_all_dn,is:ie,js:je,ks:ke)) * dvol
-      call mpi_allreduce(mass, tot_mass, 1, mpi_real8, mpi_sum, comm3d, ierr)
+      call MPI_Allreduce(mass, tot_mass, 1, MPI_REAL8, MPI_SUM, comm3d, ierr)
 
       momx = sum(u(iarr_all_mx,is:ie,js:je,ks:ke)) * dvol
-      call mpi_allreduce(momx, tot_momx, 1, mpi_real8, mpi_sum, comm3d, ierr)
+      call MPI_Allreduce(momx, tot_momx, 1, MPI_REAL8, MPI_SUM, comm3d, ierr)
 
       momy = sum(u(iarr_all_my,is:ie,js:je,ks:ke)) * dvol
-      call mpi_allreduce(momy, tot_momy, 1, mpi_real8, mpi_sum, comm3d, ierr)
+      call MPI_Allreduce(momy, tot_momy, 1, MPI_REAL8, MPI_SUM, comm3d, ierr)
 
       momz = sum(u(iarr_all_mz,is:ie,js:je,ks:ke)) * dvol
-      call mpi_allreduce(momz, tot_momz, 1, mpi_real8, mpi_sum, comm3d, ierr)
+      call MPI_Allreduce(momz, tot_momz, 1, MPI_REAL8, MPI_SUM, comm3d, ierr)
 
 #ifdef GRAV
       epot = sum(u(iarr_all_dn(1),is:ie,js:je,ks:ke) *gpot(is:ie,js:je,ks:ke)) * dvol
-      call mpi_allreduce(epot, tot_epot, 1, mpi_real8, mpi_sum, comm3d, ierr)
+      call MPI_Allreduce(epot, tot_epot, 1, MPI_REAL8, MPI_SUM, comm3d, ierr)
 #endif /* GRAV */
 
       wa(is:ie,js:je,ks:ke) &
@@ -821,32 +821,32 @@ module dataio
                  + u(iarr_all_mz(1),is:ie,js:je,ks:ke)**2)/ &
                    max(u(iarr_all_dn(1),is:ie,js:je,ks:ke),smalld)
       ekin = sum(wa(is:ie,js:je,ks:ke)) * dvol
-      call mpi_allreduce(ekin, tot_ekin, 1, mpi_real8, mpi_sum, comm3d, ierr)
+      call MPI_Allreduce(ekin, tot_ekin, 1, MPI_REAL8, MPI_SUM, comm3d, ierr)
 
       wa(is:ie,js:je,ks:ke) &
          = 0.5 * (b(ibx,is:ie,js:je,ks:ke)**2 + &
                   b(iby,is:ie,js:je,ks:ke)**2 + &
                   b(ibz,is:ie,js:je,ks:ke)**2)
       emag = sum(wa(is:ie,js:je,ks:ke)) * dvol
-      call mpi_allreduce(emag, tot_emag, 1, mpi_real8, mpi_sum, comm3d, ierr)
+      call MPI_Allreduce(emag, tot_emag, 1, MPI_REAL8, MPI_SUM, comm3d, ierr)
 
       wa(is:ie,js:je,ks:ke) = b(ibx,is:ie,js:je,ks:ke)
       mflx = sum(wa(is:ie,js:je,ks:ke)) * dy*dz/nxd
-      call mpi_allreduce(mflx, tot_mflx, 1, mpi_real8, mpi_sum, comm3d, ierr)
+      call MPI_Allreduce(mflx, tot_mflx, 1, MPI_REAL8, MPI_SUM, comm3d, ierr)
 
       wa(is:ie,js:je,ks:ke) = b(iby,is:ie,js:je,ks:ke)
       mfly = sum(wa(is:ie,js:je,ks:ke)) * dx*dz/nyd
-      call mpi_allreduce(mfly, tot_mfly, 1, mpi_real8, mpi_sum, comm3d, ierr)
+      call MPI_Allreduce(mfly, tot_mfly, 1, MPI_REAL8, MPI_SUM, comm3d, ierr)
 
       wa(is:ie,js:je,ks:ke) = b(ibz,is:ie,js:je,ks:ke)
       mflz = sum(wa(is:ie,js:je,ks:ke)) * dx*dy/nzd
-      call mpi_allreduce(mflz, tot_mflz, 1, mpi_real8, mpi_sum, comm3d, ierr)
+      call MPI_Allreduce(mflz, tot_mflz, 1, MPI_REAL8, MPI_SUM, comm3d, ierr)
 #ifdef ISO
       tot_eint = cs_iso2*tot_mass
       tot_ener = tot_eint+tot_ekin+tot_emag
 #else /* ISO */
       ener = sum(u(iarr_all_en,is:ie,js:je,ks:ke)) * dvol
-      call mpi_allreduce(ener, tot_ener, 1, mpi_real8, mpi_sum, comm3d, ierr)
+      call MPI_Allreduce(ener, tot_ener, 1, MPI_REAL8, MPI_SUM, comm3d, ierr)
       tot_eint = tot_ener - tot_ekin - tot_emag
 #endif /* ISO */
 #ifdef GRAV
@@ -855,10 +855,10 @@ module dataio
 
 #ifdef COSM_RAYS
       encr = sum(u(iarr_all_crs,is:ie,js:je,ks:ke)) * dvol
-      call mpi_allreduce(encr, tot_encr, 1, mpi_real8, mpi_sum, comm3d, ierr)
+      call MPI_Allreduce(encr, tot_encr, 1, MPI_REAL8, MPI_SUM, comm3d, ierr)
 #endif /* COSM_RAYS */
 #ifdef SNE_DISTR
-      call mpi_allreduce(emagadd, sum_emagadd, 1, mpi_real8, mpi_sum, comm3d, ierr)
+      call MPI_Allreduce(emagadd, sum_emagadd, 1, MPI_REAL8, MPI_SUM, comm3d, ierr)
       tot_emagadd = tot_emagadd + sum_emagadd
 #endif /* SNE_DISTR */
 

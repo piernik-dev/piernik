@@ -155,12 +155,12 @@ module fluidboundaries
 !
 ! wysylamy na drugi brzeg
 !
-         CALL MPI_ISEND   (send_left , nvar%all*ny*nz*nb, MPI_DOUBLE_PRECISION, procxl, 10, comm, req(1), ierr)
-         CALL MPI_ISEND   (send_right, nvar%all*ny*nz*nb, MPI_DOUBLE_PRECISION, procxr, 20, comm, req(3), ierr)
-         CALL MPI_IRECV   (recv_left , nvar%all*ny*nz*nb, MPI_DOUBLE_PRECISION, procxl, 20, comm, req(2), ierr)
-         CALL MPI_IRECV   (recv_right, nvar%all*ny*nz*nb, MPI_DOUBLE_PRECISION, procxr, 10, comm, req(4), ierr)
+         CALL MPI_Isend   (send_left , nvar%all*ny*nz*nb, MPI_DOUBLE_PRECISION, procxl, 10, comm, req(1), ierr)
+         CALL MPI_Isend   (send_right, nvar%all*ny*nz*nb, MPI_DOUBLE_PRECISION, procxr, 20, comm, req(3), ierr)
+         CALL MPI_Irecv   (recv_left , nvar%all*ny*nz*nb, MPI_DOUBLE_PRECISION, procxl, 20, comm, req(2), ierr)
+         CALL MPI_Irecv   (recv_right, nvar%all*ny*nz*nb, MPI_DOUBLE_PRECISION, procxr, 10, comm, req(4), ierr)
 
-         call MPI_WAITALL(4,req(:),status(:,:),ierr)
+         call MPI_Waitall(4,req(:),status(:,:),ierr)
 
 !
 ! dodajemy ped_y i energie odpowiadajace niezaburzonej rozniczkowej rotacji na prawym brzegu
@@ -221,12 +221,12 @@ module fluidboundaries
                send_right(i,1:nb,:,:)  = unshear_fft(u(i,nx-2*nb+1:nx-nb,nb+1:ny-nb,:),x(nx-2*nb+1:nx-nb),dely,.true.)
             enddo
 
-            CALL MPI_ISEND   (send_left , nvar%all*nyd*nz*nb, MPI_DOUBLE_PRECISION, procxl, 10, comm, req(1), ierr)
-            CALL MPI_ISEND   (send_right, nvar%all*nyd*nz*nb, MPI_DOUBLE_PRECISION, procxr, 20, comm, req(3), ierr)
-            CALL MPI_IRECV   (recv_left , nvar%all*nyd*nz*nb, MPI_DOUBLE_PRECISION, procxl, 20, comm, req(2), ierr)
-            CALL MPI_IRECV   (recv_right, nvar%all*nyd*nz*nb, MPI_DOUBLE_PRECISION, procxr, 10, comm, req(4), ierr)
+            CALL MPI_Isend   (send_left , nvar%all*nyd*nz*nb, MPI_DOUBLE_PRECISION, procxl, 10, comm, req(1), ierr)
+            CALL MPI_Isend   (send_right, nvar%all*nyd*nz*nb, MPI_DOUBLE_PRECISION, procxr, 20, comm, req(3), ierr)
+            CALL MPI_Irecv   (recv_left , nvar%all*nyd*nz*nb, MPI_DOUBLE_PRECISION, procxl, 20, comm, req(2), ierr)
+            CALL MPI_Irecv   (recv_right, nvar%all*nyd*nz*nb, MPI_DOUBLE_PRECISION, procxr, 10, comm, req(4), ierr)
 
-            call MPI_WAITALL(4,req(:),status(:,:),ierr)
+            call MPI_Waitall(4,req(:),status(:,:),ierr)
 
             do i = LBOUND(u,1), UBOUND(u,1)
                u(i,1:nb,nb+1:ny-nb,:) = unshear_fft(recv_left(i,1:nb,:,:), x(1:nb),dely)
@@ -243,34 +243,34 @@ module fluidboundaries
 #else /* SHEAR_BND */
          if(pxsize .gt. 1) then
 
-            CALL MPI_ISEND   (u(1,1,1,1), 1, MPI_YZ_LEFT_DOM,  procxl, 10, comm3d, req(1), ierr)
-            CALL MPI_ISEND   (u(1,1,1,1), 1, MPI_YZ_RIGHT_DOM, procxr, 20, comm3d, req(3), ierr)
-            CALL MPI_IRECV   (u(1,1,1,1), 1, MPI_YZ_LEFT_BND,  procxl, 20, comm3d, req(2), ierr)
-            CALL MPI_IRECV   (u(1,1,1,1), 1, MPI_YZ_RIGHT_BND, procxr, 10, comm3d, req(4), ierr)
+            CALL MPI_Isend   (u(1,1,1,1), 1, MPI_YZ_LEFT_DOM,  procxl, 10, comm3d, req(1), ierr)
+            CALL MPI_Isend   (u(1,1,1,1), 1, MPI_YZ_RIGHT_DOM, procxr, 20, comm3d, req(3), ierr)
+            CALL MPI_Irecv   (u(1,1,1,1), 1, MPI_YZ_LEFT_BND,  procxl, 20, comm3d, req(2), ierr)
+            CALL MPI_Irecv   (u(1,1,1,1), 1, MPI_YZ_RIGHT_BND, procxr, 10, comm3d, req(4), ierr)
 
-            call MPI_WAITALL(4,req(:),status(:,:),ierr)
+            call MPI_Waitall(4,req(:),status(:,:),ierr)
          endif
 #endif /* SHEAR_BND */
       case ('ydim')
          if(pysize .gt. 1) then
 
-            CALL MPI_ISEND   (u(1,1,1,1), 1, MPI_XZ_LEFT_DOM,  procyl, 30, comm3d, req(1), ierr)
-            CALL MPI_ISEND   (u(1,1,1,1), 1, MPI_XZ_RIGHT_DOM, procyr, 40, comm3d, req(3), ierr)
-            CALL MPI_IRECV   (u(1,1,1,1), 1, MPI_XZ_LEFT_BND,  procyl, 40, comm3d, req(2), ierr)
-            CALL MPI_IRECV   (u(1,1,1,1), 1, MPI_XZ_RIGHT_BND, procyr, 30, comm3d, req(4), ierr)
+            CALL MPI_Isend   (u(1,1,1,1), 1, MPI_XZ_LEFT_DOM,  procyl, 30, comm3d, req(1), ierr)
+            CALL MPI_Isend   (u(1,1,1,1), 1, MPI_XZ_RIGHT_DOM, procyr, 40, comm3d, req(3), ierr)
+            CALL MPI_Irecv   (u(1,1,1,1), 1, MPI_XZ_LEFT_BND,  procyl, 40, comm3d, req(2), ierr)
+            CALL MPI_Irecv   (u(1,1,1,1), 1, MPI_XZ_RIGHT_BND, procyr, 30, comm3d, req(4), ierr)
 
-            call MPI_WAITALL(4,req(:),status(:,:),ierr)
+            call MPI_Waitall(4,req(:),status(:,:),ierr)
          endif
 
       case ('zdim')
          if(pzsize .gt. 1) then
 
-            CALL MPI_ISEND   (u(1,1,1,1), 1, MPI_XY_LEFT_DOM,  proczl, 50, comm3d, req(1), ierr)
-            CALL MPI_ISEND   (u(1,1,1,1), 1, MPI_XY_RIGHT_DOM, proczr, 60, comm3d, req(3), ierr)
-            CALL MPI_IRECV   (u(1,1,1,1), 1, MPI_XY_LEFT_BND,  proczl, 60, comm3d, req(2), ierr)
-            CALL MPI_IRECV   (u(1,1,1,1), 1, MPI_XY_RIGHT_BND, proczr, 50, comm3d, req(4), ierr)
+            CALL MPI_Isend   (u(1,1,1,1), 1, MPI_XY_LEFT_DOM,  proczl, 50, comm3d, req(1), ierr)
+            CALL MPI_Isend   (u(1,1,1,1), 1, MPI_XY_RIGHT_DOM, proczr, 60, comm3d, req(3), ierr)
+            CALL MPI_Irecv   (u(1,1,1,1), 1, MPI_XY_LEFT_BND,  proczl, 60, comm3d, req(2), ierr)
+            CALL MPI_Irecv   (u(1,1,1,1), 1, MPI_XY_RIGHT_BND, proczr, 50, comm3d, req(4), ierr)
 
-            call MPI_WAITALL(4,req(:),status(:,:),ierr)
+            call MPI_Waitall(4,req(:),status(:,:),ierr)
          endif
       end select ! (dim)
 
@@ -300,10 +300,10 @@ module fluidboundaries
 
             send_left(:,:,:,:) = u(:,nb+1:2*nb,:,:)
 
-            CALL MPI_ISEND   (send_left , nvar%all*nb*ny*nz, MPI_DOUBLE_PRECISION, procxyl, 70, comm, req(1), ierr)
-            CALL MPI_IRECV   (recv_left , nvar%all*nx*nb*nz, MPI_DOUBLE_PRECISION, procxyl, 80, comm, req(2), ierr)
+            CALL MPI_Isend   (send_left , nvar%all*nb*ny*nz, MPI_DOUBLE_PRECISION, procxyl, 70, comm, req(1), ierr)
+            CALL MPI_Irecv   (recv_left , nvar%all*nx*nb*nz, MPI_DOUBLE_PRECISION, procxyl, 80, comm, req(2), ierr)
 
-            call MPI_WAITALL(2,req(:),status(:,:),ierr)
+            call MPI_Waitall(2,req(:),status(:,:),ierr)
 
             do i=1,nb
                do j=1,ny
@@ -364,10 +364,10 @@ module fluidboundaries
 
             send_left(:,:,:,:) = u(:,:,nb+1:2*nb,:)
 
-            CALL MPI_ISEND   (send_left , nvar%all*nx*nb*nz, MPI_DOUBLE_PRECISION, procyxl, 80, comm, req(1), ierr)
-            CALL MPI_IRECV   (recv_left , nvar%all*nb*ny*nz, MPI_DOUBLE_PRECISION, procyxl, 70, comm, req(2), ierr)
+            CALL MPI_Isend   (send_left , nvar%all*nx*nb*nz, MPI_DOUBLE_PRECISION, procyxl, 80, comm, req(1), ierr)
+            CALL MPI_Irecv   (recv_left , nvar%all*nb*ny*nz, MPI_DOUBLE_PRECISION, procyxl, 70, comm, req(2), ierr)
 
-            call MPI_WAITALL(2,req(:),status(:,:),ierr)
+            call MPI_Waitall(2,req(:),status(:,:),ierr)
 
             do j=1,nb
                do i=1,nx

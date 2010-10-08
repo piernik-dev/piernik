@@ -115,8 +115,8 @@ contains
 
          end if
 
-         call MPI_BCAST(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
-         call MPI_BCAST(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+         call MPI_Bcast(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
+         call MPI_Bcast(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
          if (proc /= 0) then
 
@@ -218,8 +218,8 @@ contains
 
         eta_max = eta_max_proc
 
-        call MPI_REDUCE(eta_max_proc, eta_max_all, 1, MPI_DOUBLE_PRECISION, MPI_MAX, 0, comm, ierr)
-        call MPI_BCAST (eta_max_all, 1, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+        call MPI_Reduce(eta_max_proc, eta_max_all, 1, MPI_DOUBLE_PRECISION, MPI_MAX, 0, comm, ierr)
+        call MPI_Bcast (eta_max_all, 1, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
         eta_max = eta_max_all
 
@@ -269,8 +269,8 @@ contains
             dt_resist = big
          endif
 
-         call MPI_REDUCE(dt_resist, dt_resist_min, 1, MPI_DOUBLE_PRECISION, MPI_MIN, 0, comm, ierr)
-         call MPI_BCAST (dt_resist_min, 1, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+         call MPI_Reduce(dt_resist, dt_resist_min, 1, MPI_DOUBLE_PRECISION, MPI_MIN, 0, comm, ierr)
+         call MPI_Bcast (dt_resist_min, 1, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
          dt_resist = dt_resist_min
 

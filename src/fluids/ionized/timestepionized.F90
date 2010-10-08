@@ -155,13 +155,13 @@ contains
 
       dt_ion_proc   = min(dt_ion_proc_x, dt_ion_proc_y, dt_ion_proc_z)
 
-      call MPI_REDUCE(c_ion, c_max_all, 1, MPI_DOUBLE_PRECISION, MPI_MAX, 0, comm, ierr)
-      call MPI_BCAST(c_max_all, 1, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+      call MPI_Reduce(c_ion, c_max_all, 1, MPI_DOUBLE_PRECISION, MPI_MAX, 0, comm, ierr)
+      call MPI_Bcast(c_max_all, 1, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
       c_ion = c_max_all
 
-      call MPI_REDUCE(dt_ion_proc, dt_ion_all, 1, MPI_DOUBLE_PRECISION, MPI_MIN, 0, comm, ierr)
-      call MPI_BCAST(dt_ion_all, 1, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+      call MPI_Reduce(dt_ion_proc, dt_ion_all, 1, MPI_DOUBLE_PRECISION, MPI_MIN, 0, comm, ierr)
+      call MPI_Bcast(dt_ion_all, 1, MPI_DOUBLE_PRECISION, 0, comm, ierr)
       dt_ion = cfl*dt_ion_all
 
    end subroutine timestep_ion

@@ -52,7 +52,7 @@ program piernik
 
   call init_piernik
 
-  call MPI_BARRIER(comm3d,ierr)
+  call MPI_Barrier(comm3d,ierr)
 !-------------------------------- MAIN LOOP ----------------------------------
 #ifdef PERFMON
   call timer_start
@@ -73,7 +73,7 @@ program piernik
 
      call fluid_update
 
-     call MPI_BARRIER(comm3d,ierr)
+     call MPI_Barrier(comm3d,ierr)
      call write_data(output='all')
 
      call user_msg_handler(end_sim)
@@ -116,7 +116,7 @@ program piernik
   call write_data(output='end')
 !---------------------------- END OF MAIN LOOP ----------------------------------
 
-  call MPI_BARRIER(comm,ierr)
+  call MPI_Barrier(comm,ierr)
 
   code_progress = PIERNIK_CLEANUP
 

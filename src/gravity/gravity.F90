@@ -162,9 +162,9 @@ module gravity
 
       end if
 
-      call MPI_BCAST(ibuff, buffer_dim, MPI_INTEGER,          0, comm, ierr)
-      call MPI_BCAST(lbuff, buffer_dim, MPI_LOGICAL,          0, comm, ierr)
-      call MPI_BCAST(rbuff, buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+      call MPI_Bcast(ibuff, buffer_dim, MPI_INTEGER,          0, comm, ierr)
+      call MPI_Bcast(lbuff, buffer_dim, MPI_LOGICAL,          0, comm, ierr)
+      call MPI_Bcast(rbuff, buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
       if (proc /= 0) then
 
@@ -424,7 +424,7 @@ module gravity
 
       end if
 
-      call MPI_WAITALL(nreq, req3d(:), status3d(:,:), ierr)
+      call MPI_Waitall(nreq, req3d(:), status3d(:,:), ierr)
 
    end subroutine all_sgp_boundaries
 
@@ -767,13 +767,13 @@ module gravity
       dgpy_proc = gpwork(1,js,1)-gpwork(1,1,1)
       dgpz_proc = gpwork(1,1,ks)-gpwork(1,1,1)
 
-      call MPI_GATHER ( dgpx_proc, 1, MPI_DOUBLE_PRECISION, &
+      call MPI_Gather ( dgpx_proc, 1, MPI_DOUBLE_PRECISION, &
                         dgpx_all,  1, MPI_DOUBLE_PRECISION, &
                         0, comm3d, ierr )
-      call MPI_GATHER ( dgpy_proc, 1, MPI_DOUBLE_PRECISION, &
+      call MPI_Gather ( dgpy_proc, 1, MPI_DOUBLE_PRECISION, &
                         dgpy_all,  1, MPI_DOUBLE_PRECISION, &
                         0, comm3d, ierr )
-      call MPI_GATHER ( dgpz_proc, 1, MPI_DOUBLE_PRECISION, &
+      call MPI_Gather ( dgpz_proc, 1, MPI_DOUBLE_PRECISION, &
                         dgpz_all,  1, MPI_DOUBLE_PRECISION, &
                         0, comm3d, ierr )
 
@@ -781,7 +781,7 @@ module gravity
       if(proc .eq. 0) then
 
          do ip = 0, nproc-1
-            call MPI_CART_COORDS(comm3d, ip, ndims, pc, ierr)
+            call MPI_Cart_coords(comm3d, ip, ndims, pc, ierr)
 
             px = pc(1)
             py = pc(2)
@@ -814,7 +814,7 @@ module gravity
 
       endif
 
-      call MPI_BCAST(ddgp, nproc, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+      call MPI_Bcast(ddgp, nproc, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
       px = pcoords(1)
       py = pcoords(2)
@@ -829,7 +829,7 @@ module gravity
       call mpifind(gp_max, 'max', loc_gp_max, proc_gp_max)
       pgpmax = proc_gp_max
 
-      call MPI_BCAST(gp_max, 1, MPI_DOUBLE_PRECISION, pgpmax, comm, ierr)
+      call MPI_Bcast(gp_max, 1, MPI_DOUBLE_PRECISION, pgpmax, comm, ierr)
       gpwork = gpwork - gp_max
 
       gp=gpwork

@@ -268,7 +268,7 @@ contains
       nzones = nxd * nyd * nzd
 
 
-      call MPI_REDUCE(cputot, cpuallp, 1, MPI_DOUBLE_PRECISION, MPI_SUM, 0, comm, ierr)
+      call MPI_Reduce(cputot, cpuallp, 1, MPI_DOUBLE_PRECISION, MPI_SUM, 0, comm, ierr)
 
       if(proc == 0) then
 

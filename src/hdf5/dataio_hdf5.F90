@@ -647,7 +647,7 @@ module dataio_hdf5
             call H5Fclose_f(file_id,error)
             first_entry = .false.
          endif
-         call MPI_BARRIER(comm3d,ierr)
+         call MPI_Barrier(comm3d,ierr)
          do i = 1,nhdf_vars
             if(ix > 0) call write_plot_hdf5(hdf_vars(i),"yz",nimg)
             if(iy > 0) call write_plot_hdf5(hdf_vars(i),"xz",nimg)
@@ -708,7 +708,7 @@ module dataio_hdf5
       rank = 2
       fe = len_trim(log_file)
       write(fname,'(2a)') trim(log_file(1:fe-3)),"plt"
-      call MPI_BCAST(fname, cwdlen, MPI_CHARACTER, 0, comm3d, ierr)
+      call MPI_Bcast(fname, cwdlen, MPI_CHARACTER, 0, comm3d, ierr)
 
       nib = 0; nid = 0; njb = 0; njd = 0; nkb = 0; pisize = 0; pjsize = 0
       select case(plane)
@@ -763,10 +763,10 @@ module dataio_hdf5
 
       dims(1) = nid
       dims(2) = njd
-      call MPI_BARRIER(comm3d,ierr)
-      call MPI_CART_SUB(comm3d,remain,comm2d,ierr)
-      call MPI_COMM_SIZE(comm2d, ls, ierr)
-      call MPI_COMM_RANK(comm2d, lp, ierr)
+      call MPI_Barrier(comm3d,ierr)
+      call MPI_Cart_sub(comm3d,remain,comm2d,ierr)
+      call MPI_Comm_size(comm2d, ls, ierr)
+      call MPI_Comm_rank(comm2d, lp, ierr)
       if((xn > nb .and. xn <= nkb+nb).or.xn == 1) then
          allocate(temp(nib,njb,pisize*pjsize),img(nid,njd))
          allocate(buff(nid*njd))
@@ -781,7 +781,7 @@ module dataio_hdf5
          endif
 
          temp = -1.0
-         call MPI_GATHER(send, nib*njb, MPI_DOUBLE_PRECISION, &
+         call MPI_Gather(send, nib*njb, MPI_DOUBLE_PRECISION, &
                          temp, nib*njb, MPI_DOUBLE_PRECISION, &
                          0, comm2d,ierr)
 
@@ -818,7 +818,7 @@ module dataio_hdf5
          if(allocated(temp)) deallocate(temp)
          if(allocated(img))  deallocate(img)
       endif
-      call MPI_BARRIER(comm3d,ierr)
+      call MPI_Barrier(comm3d,ierr)
 
    end subroutine write_plot_hdf5
 
@@ -869,7 +869,7 @@ module dataio_hdf5
       integer :: error, rank = 4
 
       if (proc==0) write (filename, '(a,a1,a3,a1,i4.4,a4)') trim(problem_name), '_', run_id, '_', nres, '.res'
-      call MPI_BCAST(filename, cwdlen, MPI_CHARACTER, 0, comm, ierr)
+      call MPI_Bcast(filename, cwdlen, MPI_CHARACTER, 0, comm, ierr)
       call set_container_chdf(nstep)
 
       nu = nvar%all
@@ -1357,7 +1357,7 @@ module dataio_hdf5
          write (msg, '(2a)') 'Reading restart  file: ',trim(filename)
          call printinfo(msg)
       endif
-      call MPI_BCAST(filename, cwdlen, MPI_CHARACTER, 0, comm, ierr)
+      call MPI_Bcast(filename, cwdlen, MPI_CHARACTER, 0, comm, ierr)
 
       inquire(file = filename, exist = file_exist)
       if(file_exist .eqv. .false.) then
@@ -1517,21 +1517,21 @@ module dataio_hdf5
          call printinfo(msg, .false.)
       endif
 
-      call MPI_BCAST(chdf%nstep,    1, MPI_INTEGER, 0, comm3d, ierr)
-      call MPI_BCAST(chdf%nres,     1, MPI_INTEGER, 0, comm3d, ierr)
-      call MPI_BCAST(chdf%nhdf,     1, MPI_INTEGER, 0, comm3d, ierr)
-      call MPI_BCAST(chdf%ntsl,     1, MPI_INTEGER, 0, comm3d, ierr)
-      call MPI_BCAST(chdf%nlog,     1, MPI_INTEGER, 0, comm3d, ierr)
-      call MPI_BCAST(chdf%step_res, 1, MPI_INTEGER, 0, comm3d, ierr)
-      call MPI_BCAST(chdf%step_hdf, 1, MPI_INTEGER, 0, comm3d, ierr)
+      call MPI_Bcast(chdf%nstep,    1, MPI_INTEGER, 0, comm3d, ierr)
+      call MPI_Bcast(chdf%nres,     1, MPI_INTEGER, 0, comm3d, ierr)
+      call MPI_Bcast(chdf%nhdf,     1, MPI_INTEGER, 0, comm3d, ierr)
+      call MPI_Bcast(chdf%ntsl,     1, MPI_INTEGER, 0, comm3d, ierr)
+      call MPI_Bcast(chdf%nlog,     1, MPI_INTEGER, 0, comm3d, ierr)
+      call MPI_Bcast(chdf%step_res, 1, MPI_INTEGER, 0, comm3d, ierr)
+      call MPI_Bcast(chdf%step_hdf, 1, MPI_INTEGER, 0, comm3d, ierr)
 
-      call MPI_BCAST(chdf%last_hdf_time, 1, MPI_DOUBLE_PRECISION, 0, comm3d, ierr)
-      call MPI_BCAST(t,                  1, MPI_DOUBLE_PRECISION, 0, comm3d, ierr)
-      call MPI_BCAST(dt,                 1, MPI_DOUBLE_PRECISION, 0, comm3d, ierr)
+      call MPI_Bcast(chdf%last_hdf_time, 1, MPI_DOUBLE_PRECISION, 0, comm3d, ierr)
+      call MPI_Bcast(t,                  1, MPI_DOUBLE_PRECISION, 0, comm3d, ierr)
+      call MPI_Bcast(dt,                 1, MPI_DOUBLE_PRECISION, 0, comm3d, ierr)
 
-      CALL MPI_BCAST(problem_name, cbuff_len, MPI_CHARACTER, 0, comm3d, ierr)
-      CALL MPI_BCAST(chdf%domain,  domlen,    MPI_CHARACTER, 0, comm3d, ierr)
-      CALL MPI_BCAST(chdf%new_id,  idlen,     MPI_CHARACTER, 0, comm3d, ierr)
+      CALL MPI_Bcast(problem_name, cbuff_len, MPI_CHARACTER, 0, comm3d, ierr)
+      CALL MPI_Bcast(chdf%domain,  domlen,    MPI_CHARACTER, 0, comm3d, ierr)
+      CALL MPI_Bcast(chdf%new_id,  idlen,     MPI_CHARACTER, 0, comm3d, ierr)
       CALL h5close_f(error)
 
    end subroutine read_restart_hdf5
@@ -1612,7 +1612,7 @@ module dataio_hdf5
 
       call set_common_attributes(fname, chdf, "output")
 
-      call MPI_BARRIER(comm3d,ierr)
+      call MPI_Barrier(comm3d,ierr)
       CALL h5close_f(error)
 
    end subroutine write_hdf5
