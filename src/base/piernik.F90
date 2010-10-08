@@ -129,6 +129,7 @@ contains
 !<
    subroutine init_piernik
       use errh,                  only: die, warn, printinfo
+      use diagnostics,           only: diagnose_arrays
       use types,                 only: grid_container
       use initfluids,            only: init_fluids
       use fluidindex,            only: nvar
@@ -263,6 +264,9 @@ contains
 #endif /* GRAV */
          call write_data(output='all') ! moved from dataio::init_dataio
       end if
+#ifdef VERBOSE
+      call diagnose_arrays
+#endif /* VERBOSE */
 
    end subroutine init_piernik
 

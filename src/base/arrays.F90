@@ -69,7 +69,8 @@ module arrays
 
    subroutine init_arrays(nx,ny,nz,nvar)
 
-      use fluidtypes, only: var_numbers
+      use diagnostics, only: my_allocate
+      use fluidtypes,  only: var_numbers
 
       implicit none
 
@@ -79,8 +80,8 @@ module arrays
       if(.not.allocated(rlscal))  allocate(rlscal(nrlscal))
       if(.not.allocated(intscal)) allocate(intscal(nintscal))
 
-      if(.not.allocated(u))       allocate(u(nvar%all,nx,ny,nz))
-      if(.not.allocated(b))       allocate(b(3,nx,ny,nz))
+      call my_allocate(u, [nvar%all,nx,ny,nz],"u")
+      call my_allocate(b, [3,nx,ny,nz], "b")
 
 #ifdef GRAV
       if(.not.allocated(gp))      allocate(gp(nx,ny,nz))
