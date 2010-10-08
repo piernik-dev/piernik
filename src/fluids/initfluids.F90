@@ -105,27 +105,6 @@
 !<
 
 module initfluids
-#if defined NEUTRAL && defined IONIZED
-   use errh,         only: warn
-#endif /* defined NEUTRAL && defined IONIZED  */
-#ifdef IONIZED
-  use initionized, only : init_ionized, gamma_ion, cs_iso_ion, cs_iso_ion2
-#endif /* IONIZED */
-
-#ifdef NEUTRAL
-  use initneutral, only : init_neutral, gamma_neu, cs_iso_neu, cs_iso_neu2
-#endif /* NEUTRAL */
-
-#ifdef DUST
-  use initdust, only : init_dust
-#endif /* DUST */
-
-#ifdef COSM_RAYS
-  use initcosmicrays, only : init_cosmicrays
-#endif /* COSM_RAYS */
-
-  use fluidindex,   only   : fluid_index
-  use fluidindex,   only   : nvar
 
   implicit none
 
@@ -135,56 +114,81 @@ module initfluids
 
   contains
 
-  subroutine init_fluids
+   subroutine init_fluids
 
-
+      use fluidindex,      only: fluid_index, nvar
+#ifdef VERBOSE
+      use errh,            only: printinfo
+#endif /* VERBOSE */
+#if defined NEUTRAL && defined IONIZED
+      use errh,            only: warn
+#endif /* defined NEUTRAL && defined IONIZED  */
 #ifdef IONIZED
-  call init_ionized
+      use initionized,     only: init_ionized, gamma_ion, cs_iso_ion, cs_iso_ion2
 #endif /* IONIZED */
-
 #ifdef NEUTRAL
-  call init_neutral
+      use initneutral,     only: init_neutral, gamma_neu, cs_iso_neu, cs_iso_neu2
 #endif /* NEUTRAL */
-
 #ifdef DUST
-  call init_dust
+      use initdust,        only: init_dust
 #endif /* DUST */
-
 #ifdef COSM_RAYS
-  call init_cosmicrays
+      use initcosmicrays,  only: init_cosmicrays
 #endif /* COSM_RAYS */
 
-  call fluid_index
+      implicit none
+#ifdef VERBOSE
+      call printinfo("[initfluids:init_fluids]: commencing...")
+#endif /* VERBOSE */
 
-  allocate(gamma(nvar%fluids))
+#ifdef IONIZED
+      call init_ionized
+#endif /* IONIZED */
+#ifdef NEUTRAL
+      call init_neutral
+#endif /* NEUTRAL */
+#ifdef DUST
+      call init_dust
+#endif /* DUST */
+#ifdef COSM_RAYS
+      call init_cosmicrays
+#endif /* COSM_RAYS */
+
+      call fluid_index
+
+      allocate(gamma(nvar%fluids))
 
 #if defined NEUTRAL && defined IONIZED
-    if(cs_iso_neu /= cs_iso_ion) &
-        call warn("[initfluids:init_fluids]: 'cs_iso_neu' and 'cs_iso_ion' should be equal")
+      if(cs_iso_neu /= cs_iso_ion) &
+         call warn("[initfluids:init_fluids]: 'cs_iso_neu' and 'cs_iso_ion' should be equal")
 #endif /* defined NEUTRAL && defined IONIZED  */
 
 #ifdef IONIZED
-    gamma(nvar%ion%pos) = gamma_ion
-    cs_iso   = cs_iso_ion
-    cs_iso2  = cs_iso_ion2
+      gamma(nvar%ion%pos) = gamma_ion
+      cs_iso   = cs_iso_ion
+      cs_iso2  = cs_iso_ion2
 #endif /* IONIZED */
+
 #ifdef NEUTRAL
-    gamma(nvar%neu%pos) = gamma_neu
-    cs_iso  = cs_iso_neu
-    cs_iso2 = cs_iso_neu2
+      gamma(nvar%neu%pos) = gamma_neu
+      cs_iso  = cs_iso_neu
+      cs_iso2 = cs_iso_neu2
 #endif /* NEUTRAL  */
+#ifdef VERBOSE
+      call printinfo("[initfluids:init_fluids]: finished. \o/")
+#endif /* VERBOSE */
 
-  end subroutine init_fluids
+   end subroutine init_fluids
 
-  subroutine cleanup_fluids
+   subroutine cleanup_fluids
 
-     use fluidindex, only : cleanup_fluid_index
+      use fluidindex, only : cleanup_fluid_index
 
-     implicit none
+      implicit none
 
-     if (allocated(gamma)) deallocate(gamma)
-     call cleanup_fluid_index
+      if (allocated(gamma)) deallocate(gamma)
+      call cleanup_fluid_index
 
-  end subroutine cleanup_fluids
+   end subroutine cleanup_fluids
 
 end module initfluids
