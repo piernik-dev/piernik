@@ -30,11 +30,14 @@ module diagnostics
    implicit none
 
    interface my_allocate
-      module procedure allocate_array_1D
-      module procedure allocate_array_2D
-      module procedure allocate_array_3D
-      module procedure allocate_array_4D
-      module procedure allocate_array_5D
+      module procedure allocate_array_1D_int
+      module procedure allocate_array_2D_int
+      module procedure allocate_array_3D_int
+      module procedure allocate_array_1D_real
+      module procedure allocate_array_2D_real
+      module procedure allocate_array_3D_real
+      module procedure allocate_array_4D_real
+      module procedure allocate_array_5D_real
    end interface my_allocate
 
    interface incr_vec
@@ -60,13 +63,15 @@ contains
       integer :: i
 
       if (allocated(array_names)) then
-         write(msg,'(a,I3,a)') "I am aware of ",size(array_names)," arrays..."
+         write(msg,'(a,I3,a)') "[diagnostics:diagnose_arrays]: I am aware of ",size(array_names)," arrays..."
          call printinfo(msg)
 
          do i = LBOUND(array_names,1), UBOUND(array_names,1)
             write(msg,'(3a,F7.3,a)') "Array ",trim(array_names(i))," has ",array_sizes(i)," MiB"
             call printinfo(msg)
          enddo
+         write(msg,'(a,F8.3,a)') "[diagnostics:diagnose_arrays]: Total memory used = ", used_memory," MiB"
+         call printinfo(msg)
       else
          call warn("[diagnostics:diagnose_arrays]: I am not aware of any arrays :( ")
       endif
@@ -131,7 +136,43 @@ contains
       endif
    end subroutine increase_real_vector
 
-   subroutine allocate_array_1D(array,as,aname)
+   subroutine allocate_array_1D_int(array,as,aname)
+      implicit none
+      integer, dimension(:), allocatable, intent(inout)  :: array
+      integer, dimension(1), intent(in)                  :: as
+      character(len=*), intent(in), optional             :: aname
+
+      if (.not.allocated(array)) allocate( array(as(1)) )
+      used_memory = used_memory + size(array)*MiB*0.5
+      if (present(aname)) call keep_track_of_arrays(size(array)*MiB*0.5,aname)
+
+   end subroutine allocate_array_1D_int
+
+   subroutine allocate_array_2D_int(array,as,aname)
+      implicit none
+      integer, dimension(:,:), allocatable, intent(inout)  :: array
+      integer, dimension(2), intent(in)                    :: as
+      character(len=*), intent(in), optional               :: aname
+
+      if (.not.allocated(array)) allocate( array(as(1),as(2)) )
+      used_memory = used_memory + size(array)*MiB*0.5
+      if (present(aname)) call keep_track_of_arrays(size(array)*MiB*0.5,aname)
+
+   end subroutine allocate_array_2D_int
+
+   subroutine allocate_array_3D_int(array,as,aname)
+      implicit none
+      integer, dimension(:,:,:), allocatable, intent(inout)  :: array
+      integer, dimension(3), intent(in)                      :: as
+      character(len=*), intent(in), optional                 :: aname
+
+      if (.not.allocated(array)) allocate( array(as(1),as(2),as(3)) )
+      used_memory = used_memory + size(array)*MiB*0.5
+      if (present(aname)) call keep_track_of_arrays(size(array)*MiB*0.5,aname)
+
+   end subroutine allocate_array_3D_int
+
+   subroutine allocate_array_1D_real(array,as,aname)
       implicit none
       real, dimension(:), allocatable, intent(inout)  :: array
       integer, dimension(1), intent(in)               :: as
@@ -141,9 +182,9 @@ contains
       used_memory = used_memory + size(array)*MiB
       if (present(aname)) call keep_track_of_arrays(size(array)*MiB,aname)
 
-   end subroutine allocate_array_1D
+   end subroutine allocate_array_1D_real
 
-   subroutine allocate_array_2D(array,as,aname)
+   subroutine allocate_array_2D_real(array,as,aname)
       implicit none
       real, dimension(:,:), allocatable, intent(inout)  :: array
       integer, dimension(2), intent(in)                 :: as
@@ -153,9 +194,9 @@ contains
       used_memory = used_memory + size(array)*MiB
       if (present(aname)) call keep_track_of_arrays(size(array)*MiB,aname)
 
-   end subroutine allocate_array_2D
+   end subroutine allocate_array_2D_real
 
-   subroutine allocate_array_3D(array,as,aname)
+   subroutine allocate_array_3D_real(array,as,aname)
       implicit none
       real, dimension(:,:,:), allocatable, intent(inout)  :: array
       integer, dimension(3), intent(in)                   :: as
@@ -165,9 +206,9 @@ contains
       used_memory = used_memory + size(array)*MiB
       if (present(aname)) call keep_track_of_arrays(size(array)*MiB,aname)
 
-   end subroutine allocate_array_3D
+   end subroutine allocate_array_3D_real
 
-   subroutine allocate_array_4D(array,as,aname)
+   subroutine allocate_array_4D_real(array,as,aname)
       implicit none
       real, dimension(:,:,:,:), allocatable, intent(inout)  :: array
       integer, dimension(4), intent(in)                     :: as
@@ -177,9 +218,9 @@ contains
       used_memory = used_memory + size(array)*MiB
       if (present(aname)) call keep_track_of_arrays(size(array)*MiB,aname)
 
-   end subroutine allocate_array_4D
+   end subroutine allocate_array_4D_real
 
-   subroutine allocate_array_5D(array,as,aname)
+   subroutine allocate_array_5D_real(array,as,aname)
       implicit none
       real, dimension(:,:,:,:,:), allocatable, intent(inout)  :: array
       integer, dimension(5), intent(in)                       :: as
@@ -189,6 +230,6 @@ contains
       used_memory = used_memory + size(array)*MiB
       if (present(aname)) call keep_track_of_arrays(size(array)*MiB,aname)
 
-   end subroutine allocate_array_5D
+   end subroutine allocate_array_5D_real
 
 end module diagnostics

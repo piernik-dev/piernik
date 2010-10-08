@@ -77,34 +77,34 @@ module arrays
       type(var_numbers), intent(in) :: nvar
       integer, intent(in) :: nx,ny,nz
 
-      if (.not.allocated(rlscal))  allocate(rlscal(nrlscal))
-      if (.not.allocated(intscal)) allocate(intscal(nintscal))
+      call my_allocate(rlscal, [nrlscal], "rlscal")
+      call my_allocate(intscal, [nintscal], "intscal")
 
-      call my_allocate(u, [nvar%all,nx,ny,nz],"u")
+      call my_allocate(u, [nvar%all,nx,ny,nz], "u")
       call my_allocate(b, [3,nx,ny,nz], "b")
 
 #ifdef GRAV
-      if (.not.allocated(gp))      allocate(gp(nx,ny,nz))
-      if (.not.allocated(gpot))    allocate(gpot(nx,ny,nz))
-      if (.not.allocated(hgpot))   allocate(hgpot(nx,ny,nz))
+      call my_allocate(gp, [nx,ny,nz], "gp")
+      call my_allocate(gpot, [nx,ny,nz], "gpot")
+      call my_allocate(hgpot, [nx,ny,nz], "hgpot")
 #if defined(MULTIGRID) || defined(POISSON_FFT)
-      if (.not.allocated(sgp))     allocate(sgp(nx,ny,nz))
-      if (.not.allocated(sgpm))    allocate(sgpm(nx,ny,nz))
+      call my_allocate(sgp, [nx,ny,nz], "sgp")
+      call my_allocate(sgpm, [nx,ny,nz], "sgpm")
 #endif
-      if (.not.allocated(dprof))   allocate(dprof(nz))
-      if (.not.allocated(eprof))   allocate(eprof(nz))
+      call my_allocate(dprof, [nz], "dprof")
+      call my_allocate(eprof, [nz], "eprof")
 #endif /* GRAV */
 
-      if (.not.allocated(wa))      allocate(wa(nx,ny,nz))
+      call my_allocate(wa, [nx,ny,nz], "wa")
 #ifdef RESISTIVE
-      if (.not.allocated(wcu))     allocate(wcu(nx,ny,nz))
+      call my_allocate(wcu, [nx,ny,nz], "wcu")
 #endif /* RESISTIVE */
 #ifdef COSM_RAYS
-      if (.not.allocated(divvel)) allocate(divvel(nx,ny,nz))
-      if (.not.allocated(wcr))    allocate(wcr(nvar%crs%all,nx,ny,nz))
+      call my_allocate(divvel, [nx,ny,nz], "divvel")
+      call my_allocate(wcr, [nvar%crs%all,nx,ny,nz], "wcr")
 #endif /* COSM_RAYS  */
 #ifdef ISO_LOCAL
-      if (.not.allocated(cs_iso2_arr)) allocate(cs_iso2_arr(nx,ny,nz))
+      call my_allocate(cs_iso2_arr, [nx,ny,nz], "cs_iso2_arr")
 #endif /* ISO_LOCAL */
    end subroutine init_arrays
 
