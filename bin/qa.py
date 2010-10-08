@@ -41,7 +41,7 @@ def qa_checks(files,options):
    print b.OKBLUE + '"I am the purifier, the light that clears all shadows." - seal of cleansing inscription' + b.ENDC
    files = remove_binaries(files)
    f90files = select_sources(files)
-   qa_trailing_spaces(files,options)
+   qa_nasty_spaces(files,options)
    nt = qa_nonconforming_tabs(files,options)
    wc = qa_depreciated_syntax(f90files,options)
    wc += qa_crude_write(f90files,options)
@@ -101,10 +101,10 @@ def qa_nonconforming_tabs(files,options):
          wrong_files.append(file)
    return wrong_files
 
-def qa_trailing_spaces(files,options):
-   print b.OKGREEN + "QA: " + b.ENDC + "Removing trailing whitespaces"
+def qa_nasty_spaces(files,options):
+   print b.OKGREEN + "QA: " + b.ENDC + "Removing spurious whitespaces"
    for file in files:
-      sp.Popen('sed -i -e "s/\s\+$//" '+file, shell=True, executable="/bin/bash")
+      sp.Popen('sed -i -e "s/\s\+$//;s/endif/endif/;s/enddo/enddo/;s/only *:/only:/" '+file, shell=True, executable="/bin/bash")
       if options.verbose:
          print b.OKGREEN + "QA: " + b.ENDC + " done cleansing in " + file.rstrip('\n')
 
