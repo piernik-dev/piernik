@@ -69,7 +69,7 @@ def qa_crude_write(files,options):
       file = open(name)
       n = 1
       for line in file.readlines():
-         if( re.search("write\(\*",line) and not re.search("QA_WARN",line)):
+         if( re.search("write\(\*", line, flags=re.IGNORECASE) and not re.search("QA_WARN",line)):
             print b.WARNING + "!! crude write  " + b.ENDC + name + " @ L%i => " % n + line.strip()
             warning += 1
          n += 1
@@ -83,7 +83,7 @@ def qa_magic_integers(files,options):
       file = open(name)
       n = 1
       for line in file.readlines():
-         if( re.search("\(len=[1-9][0-9]",line) and not re.search("QA_WARN",line)):
+         if( re.search("\(len=[1-9][0-9]",line, flags=re.IGNORECASE) and not re.search("QA_WARN",line)):
             print b.WARNING + "!! magic integer  " + b.ENDC + name + " @ L%i => " % n + line.strip()
             warning += 1
          n += 1
@@ -113,14 +113,14 @@ def qa_depreciated_syntax(files,options):
       file = open(name)
       n = 1
       for line in file.readlines():
-         if( re.search("^\s{1,12}(?i)(?:real(?:\s|,)|integer(?:\s|,)|logical(?:\s|,|\()|character(?:\s|,))(?!.*::)",line) and
-            not re.search("(?i)\sfunction\s",line)):
+         if( re.search("^\s{1,12}(?i)(?:real(?:\s|,)|integer(?:\s|,)|logical(?:\s|,|\()|character(?:\s|,))(?!.*::)",line, flags=re.IGNORECASE) and
+            not re.search("(?i)\sfunction\s",line, flags=re.IGNORECASE)):
                print b.WARNING + "!! lacking ::   " + b.ENDC + name + " @ L%i => " % n + line.strip()
                warning=warning+1
-         if( re.search("^\s{1,12}(?i)use[\s](?!.*only)",line)):
+         if( re.search("^\s{1,12}(?i)use[\s](?!.*only)",line, flags=re.IGNORECASE)):
                print b.WARNING + "!! greedy use   " + b.ENDC + name + " @ L%i => " % n + line.strip()
                warning=warning+1
-         if( re.search("^\s{1,12}(?i)character(?![(])",line)):
+         if( re.search("^\s{1,12}(?i)character(?![(])",line, flags=re.IGNORECASE)):
                print b.WARNING + "!! wrong syntax " + b.ENDC + name + " @ L%i => " % n + line.strip()
                warning=warning+1
          n = n + 1
