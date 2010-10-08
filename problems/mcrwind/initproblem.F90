@@ -87,7 +87,7 @@ module initproblem
          rbuff(12) = f_sn_kpc2
          rbuff(13) = alpha
 
-      end if
+      endif
 
       call MPI_Bcast(cbuff, cbuff_len*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
       call MPI_Bcast(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)

@@ -86,7 +86,7 @@ module initproblem
          rbuff(15) = bzr
          rbuff(16) = er
 
-      end if
+      endif
 
       call MPI_Bcast(cbuff, cbuff_len*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
       call MPI_Bcast(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)

@@ -78,7 +78,7 @@ module initproblem
          ibuff(2) = m_y
          ibuff(3) = m_z
 
-      end if
+      endif
 
       call MPI_Bcast(cbuff, cbuff_len*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
       call MPI_Bcast(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)

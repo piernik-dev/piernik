@@ -84,7 +84,7 @@ contains
 
          ibuff(1) = nsub
 
-      end if
+      endif
 
       call MPI_Bcast(cbuff, cbuff_len*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
       call MPI_Bcast(ibuff,           buffer_dim, MPI_INTEGER,          0, comm, ierr)
@@ -111,7 +111,7 @@ contains
          a3 = a1 * sqrt(1. - e**2) ! oblate, Maclaurin spheroid
       else
          a3 = a1 / sqrt(1. - e**2) ! prolate spheroid
-      end if
+      endif
       d1 = smalld                  ! ambient density
       p0 = 100.*tiny(d1)           ! pressure
 
@@ -123,7 +123,7 @@ contains
       else if (nsub > maxsub) then
          if (proc == 0)call warn("[initproblem:read_problem_par] too much subsampling.")
          nsub = maxsub
-      end if
+      endif
 
    end subroutine read_problem_par
 
@@ -162,16 +162,16 @@ contains
                            dm = dm + d0
                         else
                            dm = dm + d1
-                        end if
+                        endif
 
-                     end do
-                  end do
-               end do
+                     enddo
+                  enddo
+               enddo
                u(idni, i, j, k) = dm / nsub**3
 
-            end do
-         end do
-      end do
+            enddo
+         enddo
+      enddo
 
       u(imxi:imzi, 1:nx, 1:ny, 1:nz) = 0.0
 
@@ -257,7 +257,7 @@ contains
       else if (e<0.) then            ! ToDo: find analytical expressions for -e > small_e
          AA1 = 2./3. + 2./15. * e**2
          AA3 = 2./3. - 4./15. * e**2
-      end if
+      endif
 
       a12 = a1**2
       a32 = a3**2
@@ -285,22 +285,22 @@ contains
                           (x02 + y02) * sqrt(a32 + lam)/(a12 + lam) + 2.*z02 / sqrt(a32 + lam) )
                   else
                      potential = - 4./3. * a1**3 / sqrt(rr)
-                  end if
+                  endif
                else
                   if (abs(e) > small_e) then
                      potential = - (AA1*(2*a12 - x02 - y02) + AA3 * (a32 - z02))
                   else
                      potential = - 2./3. * (3*a12 - rr)
-                  end if
-               end if
+                  endif
+               endif
                potential = potential * pi * newtong * d0
                norm(1) = norm(1) + (potential - sgp(i, j, k))**2
                norm(2) = norm(2) + potential**2
                dev(1) = min(dev(1), (potential - sgp(i, j, k))/potential)
                dev(2) = max(dev(2), (potential - sgp(i, j, k))/potential)
-            end do
-         end do
-      end do
+            enddo
+         enddo
+      enddo
 
       call MPI_Allreduce(MPI_IN_PLACE, norm,   2, MPI_DOUBLE_PRECISION, MPI_SUM, comm3d, ierr)
       call MPI_Allreduce(MPI_IN_PLACE, dev(1), 1, MPI_DOUBLE_PRECISION, MPI_MIN, comm3d, ierr)
@@ -309,7 +309,7 @@ contains
       if (proc == 0) then
          write(msg,'(a,f12.6,a,2f12.6)')"[initproblem:finalize_problem] L2 error norm = ", sqrt(norm(1)/norm(2)), ", min and max error = ", dev(1:2)
          call printinfo(msg)
-      end if
+      endif
 
    end subroutine finalize_problem_maclaurin
 

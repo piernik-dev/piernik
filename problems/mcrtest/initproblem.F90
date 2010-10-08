@@ -94,7 +94,7 @@ module initproblem
          rbuff(10)= beta_cr
          rbuff(11)= amp_cr
 
-      end if
+      endif
 
       call MPI_Bcast(cbuff, cbuff_len*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
       call MPI_Bcast(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)

@@ -97,7 +97,7 @@ contains
          lbuff(2) = exp_speedup
          lbuff(3) = verbose
 
-      end if
+      endif
 
       call MPI_Bcast(cbuff, cbuff_len*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
       call MPI_Bcast(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
@@ -182,24 +182,24 @@ contains
          if (abs(x(i) - clump_pos_x) <= clump_r) then
             il = min(i, il)
             ih = max(i, ih)
-         end if
-      end do
+         endif
+      enddo
       jl = je+1
       jh = js-1
       do j = js, je
          if (abs(y(j) - clump_pos_y) <= clump_r) then
             jl = min(j, jl)
             jh = max(j, jh)
-         end if
-      end do
+         endif
+      enddo
       kl = ke+1
       kh = ks-1
       do k = ks, ke
          if (abs(z(k) - clump_pos_z) <= clump_r) then
             kl = min(k, kl)
             kh = max(k, kh)
-         end if
-      end do
+         endif
+      enddo
 
       iC = 0
       totME(1) = clump_mass / (4./3. * pi * clump_r**3)
@@ -209,16 +209,16 @@ contains
                if ((x(i)-clump_pos_x)**2 + (y(j)-clump_pos_y)**2 + (z(k)-clump_pos_z)**2 < clump_r**2) then
                   u(idni, i, j, k) = totME(1)
                   iC =iC + 1
-               end if
-            end do
-         end do
-      end do
+               endif
+            enddo
+         enddo
+      enddo
 
       call MPI_Allreduce (MPI_IN_PLACE, iC, 1, MPI_INTEGER, MPI_SUM, comm, ierr)
       if (proc == 0 .and. verbose) then
          write(msg,'(a,es13.7,a,i7,a)')"[initproblem:init_prob] Starting with uniform sphere with M = ", iC*totME(1) * dx * dy * dz, " (", iC, " cells)"
          call printinfo(msg, .true.)
-      end if
+      endif
 
       ! Find C - the level of enthalpy at which density vanishes
       iC = 1
@@ -236,8 +236,8 @@ contains
                Clast(:) = 0. ; Clim = 0.
             else
                Ccomment = ""
-            end if
-         end if
+            endif
+         endif
          hgpot = gpot
          gpot = sgp
 
@@ -263,20 +263,20 @@ contains
                   Cint(LOW)    = Cint_try(t)
                   totME(LOW)   = totME_try(t)
                   ind(LOW:LOW) = i_try(t:t)
-               end if
-            end do
+               endif
+            enddo
             if (Cint(LOW) > Cint(HIGH)) then
                Cint_try(LOW:HIGH) = Cint(LOW:HIGH)
                Cint(LOW:HIGH) = Cint_try(HIGH:LOW:-1)
                totME_try(LOW:HIGH) = totME(LOW:HIGH)
                totME(LOW:HIGH) = totME_try(HIGH:LOW:-1)
-            end if
-         end if
+            endif
+         endif
 
          if (proc == 0 .and. verbose) then
             write(msg,'(2(a,i4),2(a,2es15.7),2a)')"[initproblem:init_prob] iter = ",iC,"/",0," dM= ",totME-clump_mass, " C= ", Cint, " ind = ",ind
             call printinfo(msg, .true.)
-         end if
+         endif
 
          ! Find what C corresponds to mass M in current potential well
          iM = 1
@@ -301,8 +301,8 @@ contains
                      Cint(LOW)    = Cint_try(t)
                      totME(LOW)   = totME_try(t)
                      ind(LOW:LOW) = i_try(t:t)
-                  end if
-               end do
+                  endif
+               enddo
             else ! the interval does not contain target mass M
                tmax = HIGH
                if (clump_mass > totME(HIGH)) then     ! amoeba crawls up
@@ -313,18 +313,18 @@ contains
                   Cint_try(HIGH) = Cint(LOW)
                   Cint_try(LOW)  = 3*Cint(LOW) - 2*Cint(HIGH)
                   i_try(1:tmax)  = 'd-'
-               end if
+               endif
                do t = LOW, HIGH
                   Cint(t) = Cint_try(t)
                   call totalMEnthalpic(Cint(t), totME(t), REL_CALC)
                   ind(t:t) = i_try(t:t)
-               end do
-            end if
+               enddo
+            endif
 
             if (proc == 0 .and. verbose) then
                write(msg,'(2(a,i4),2(a,2es15.7),2a)')"[initproblem:init_prob] iter = ",iC,"/",iM," dM= ",totME-clump_mass, " C= ", Cint, " ind = ",ind
                call printinfo(msg, .true.)
-            end if
+            endif
             t = LOW
             if (abs(1. - totME(LOW)/clump_mass) > abs(1. - totME(HIGH)/clump_mass)) t = HIGH
             if (abs(1. - totME(t)/clump_mass) < epsM) doneM = .true.
@@ -336,10 +336,10 @@ contains
                else
                   if (proc == 0) call warn("[initproblem:init_prob] M-iterations not converged. Continue anyway.")
                   doneM = .true.
-               end if
-            end if
+               endif
+            endif
 
-         end do
+         enddo
          call totalMEnthalpic(Cint(t), totME(t), REL_SET)
          call virialCheck(huge(1.0))
 
@@ -349,7 +349,7 @@ contains
             if (proc == 0) then
                write(msg,'(a,i4,2(a,es15.7),a)')"[initproblem:init_prob] iter = ",iC,"     M=",totME(t), " C=", Cint(t), Ccomment
                call printinfo(msg, .true.)
-            end if
+            endif
          else
             if (Clim /= 0.) Clim_old = Clim
             ! exponential estimate: \lim C \simeq \frac{C_{t} C_{t-2} - C_{t-1}^2}{C_{t} - 2 C_{t-1} + C{t-2}}
@@ -357,8 +357,8 @@ contains
             if (proc == 0) then
                write(msg, '(a,i4,3(a,es15.7))')"[initproblem:init_prob] iter = ",iC,"     M=",totME(t), " C=", Cint(t), " Clim=", Clim
                call printinfo(msg, .true.)
-            end if
-         end if
+            endif
+         endif
 
          if (abs(1. - Cint(t)/Cint_old) < epsC) doneC = .true.
          Cint_old = Cint(t)
@@ -371,10 +371,10 @@ contains
             else
                if (proc == 0) call warn("[initproblem:init_prob] C-iterations not converged. Continue anyway.")
                doneC = .true.
-            end if
-         end if
+            endif
+         endif
 
-      end do
+      enddo
 
       call virialCheck(virial_tol)
 
@@ -400,7 +400,7 @@ contains
       if (proc == 0) then
          write(msg, '(a,g13.7)')"[initproblem:init_prob] Relaxation finished. Largest orbital period: ",2.*pi*sqrt( (min(xmax-xmin, ymax-ymin, zmax-zmin)/2.)**3/(newtong * clump_mass) )
          call printinfo(msg, .true.)
-      end if
+      endif
 
    end subroutine init_prob
 
@@ -434,9 +434,9 @@ contains
 !               TWP(1) = TWP(1) + u(idni, i, j, k) * 0.                !T, will be /= 0. for rotating clump
                TWP(2) = TWP(2) + u(idni, i, j, k) * sgp(i, j, k) * 0.5 !W
                TWP(3) = TWP(3) + presrho(u(idni, i, j, k))             !P
-            end do
-         end do
-      end do
+            enddo
+         enddo
+      enddo
 
       call MPI_Allreduce (MPI_IN_PLACE, TWP, nTWP, MPI_DOUBLE_PRECISION, MPI_SUM, comm, ierr)
 
@@ -445,7 +445,7 @@ contains
       if (proc == 0 .and. (verbose .or. tol < 1.0)) then
          write(msg,'(a,es15.7,a,3es15.7,a)')"[initproblem:virialCheck] VC=",vc, " TWP=(",TWP(:),")"
          call printinfo(msg, .true.)
-      end if
+      endif
 
       if (vc > tol .and. grav_bnd == bnd_isolated) then
          if (proc == 0) then
@@ -453,10 +453,10 @@ contains
                call warn("[initproblem:virialCheck] Virial imbalance occured because the clump is not resolved.")
             else
                call warn("[initproblem:virialCheck] Virial imbalance occured because the clump overfills the domain.")
-            end if
-         end if
+            endif
+         endif
          if (crashNotConv) call die("[initproblem:virialCheck] Virial defect too high.")
-      end if
+      endif
 
    end subroutine virialCheck
 
@@ -492,9 +492,9 @@ contains
                   u(idni, i, j, k) = rho
                   totME = totME + rho
                end select
-            end do
-         end do
-      end do
+            enddo
+         enddo
+      enddo
 
       call MPI_Allreduce (MPI_IN_PLACE, totME, 1, MPI_DOUBLE_PRECISION, MPI_SUM, comm, ierr)
 

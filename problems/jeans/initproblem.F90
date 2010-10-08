@@ -81,7 +81,7 @@ contains
          ibuff(3) = iz
          ibuff(4) = mode
 
-      end if
+      endif
 
       call MPI_Bcast(cbuff, cbuff_len*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
       call MPI_Bcast(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
@@ -114,7 +114,7 @@ contains
          write(msg, '(a,g12.4,a,3i6,a)')     "[initproblem:read_problem_par] Suspicious values for some parameters were detected: amp=", &
               &                               amp," (ix iy iz) = (", ix, iy, iz, ")."
          call warn(msg)
-      end if
+      endif
 
       ! suppress waves in nonexistent directions
       if (nx <= 1) ix = 0
@@ -128,7 +128,7 @@ contains
          kx = kx / 2.
          ky = ky / 2.
          kz = kz / 2.
-      end if
+      endif
 
    end subroutine read_problem_par
 
@@ -164,7 +164,7 @@ contains
       else
          Tamp = 0.
          if (proc == 0) call warn("[initproblem:init_prob] No waves (kn == 0)")
-      end if
+      endif
       if (mode == 1) Tamp = Tamp / 4.
 
       if (proc == 0) then
@@ -191,9 +191,9 @@ contains
             call printinfo(msg, .true.)
             !write(msg, *) 'Something like T(t) = ',Tamp,'* exp(',omg,'t)]' !BEWARE the formula is not completed
             !call printinfo(msg, .true.)
-         end if
+         endif
          call printinfo('Divide T(t) for .tsl by L to get proper amplitude !', .true.)
-      end if
+      endif
 ! Uniform equilibrium state
 
       do k = 1,nz
@@ -230,7 +230,7 @@ contains
        Tamp_rounded = (int(1.05*Tamp/Tamp_aux)+1)*Tamp_aux
     else
        Tamp_rounded = 0.
-    end if
+    endif
     if (proc == 0) then
       call printinfo('', .true.)
       call printinfo('To verify results, run:', .true.)
@@ -258,7 +258,7 @@ contains
             write(137,'(2(a,g11.3),a)')'set yrange [ ',Tamp_rounded/(-4.),':',Tamp_rounded,']'
          else
             write(137,'(a)')'set yrange [ * : * ]'
-         end if
+         endif
          if (Tamp >0) then
             write(137,'(a)') "set key left Left reverse bottom"
             write(137,'(a,g13.5)') "a = ", Tamp
@@ -270,7 +270,7 @@ contains
                write(137,'(a,g11.3,a)')'set xrange [ 0 : int(',tend,'/T)]'
             else
                write(137,'(a)')'set xrange [ * : * ]'
-            end if
+            endif
             write(137,'(a)') 'plot "jeans_ts1_000.tsl" u ($2/T):($11) w p t "calculated", "" u ($2/T):($11) smoo cspl t "" w l 1, y(x*T) t "analytical", "" u ($2/T):(10*(y($2)-$11)) t "10 * difference" w lp, 0 t "" w l 0'
          else
 
@@ -280,7 +280,7 @@ contains
             write(137,'(a,g13.5)') "y(x) = a * exp(b*x)"
             write(137,'(3(a,/),a)') 'set key left Left reverse top', 'set log y', 'set xlabel "time"', 'set xrange [ * : * ]'
             write(137,'(a)') 'plot "jeans_ts1_000.tsl" u ($2):($11) w p t "calculated", y(x) t "exp(2 om T)"'
-         end if
+         endif
       close(137)
     endif
     return

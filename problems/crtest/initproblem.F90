@@ -97,7 +97,7 @@ module initproblem
 
          ibuff(1) = norm_step
 
-      end if
+      endif
 
       call MPI_Bcast(cbuff, cbuff_len*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
       call MPI_Bcast(ibuff,           buffer_dim, MPI_INTEGER,          0, comm, ierr)
@@ -152,7 +152,7 @@ module initproblem
          iecr = iarr_crs(icr)
       else
          call die("[initproblem:init_prob] No CR components defined.")
-      end if
+      endif
 
 ! Uniform equilibrium state
 
@@ -233,7 +233,7 @@ module initproblem
          iecr = iarr_crs(icr)
       else
          call die("[initproblem:init_prob] No CR components defined.")
-      end if
+      endif
 
       norm(:) = 0.
       dev(1) = huge(1.0)
@@ -264,9 +264,9 @@ module initproblem
                dev(1) = min(dev(1), (crt - u(iecr, i, j, k)))
                dev(2) = max(dev(2), (crt - u(iecr, i, j, k)))
 
-            end do
-         end do
-      end do
+            enddo
+         enddo
+      enddo
 
       call MPI_Allreduce(MPI_IN_PLACE, norm,   2, MPI_DOUBLE_PRECISION, MPI_SUM, comm3d, ierr)
       call MPI_Allreduce(MPI_IN_PLACE, dev(1), 1, MPI_DOUBLE_PRECISION, MPI_MIN, comm3d, ierr)
@@ -277,9 +277,9 @@ module initproblem
             write(msg,'(a,f12.5,a,2f12.5)')"[initproblem:check_norm] L2 error norm = ", sqrt(norm(1)/norm(2)), " min and max error = ", dev(1:2)
          else
             write(msg,'(a,2f12.5)')"[initproblem:check_norm] Cannot compute L2 error norm, min and max error = ", dev(1:2)
-         end if
+         endif
          call printinfo(msg)
-      end if
+      endif
 
       nn = nn + 1
 

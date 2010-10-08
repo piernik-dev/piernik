@@ -75,7 +75,7 @@ contains
          rbuff(4) = pulse_vel_z
          rbuff(5) = pulse_amp
 
-      end if
+      endif
 
       call MPI_Bcast(cbuff, cbuff_len*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
       call MPI_Bcast(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
@@ -132,12 +132,12 @@ contains
                   do k = ks, ke
                      if (z(k) > pulse_z_min .and. z(k) < pulse_z_max) then
                         u(idnn, i, j, k) = pulse_low_density * pulse_amp
-                     end if
-                  end do
-               end if
-            end do
-         end if
-      end do
+                     endif
+                  enddo
+               endif
+            enddo
+         endif
+      enddo
 
       where (u(idnn, :, :, :) < smalld) u(idnn, :, :, :) = smalld
 

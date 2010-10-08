@@ -142,7 +142,7 @@ contains
 
          lbuff(1) = fake_ic
 
-      end if
+      endif
 
       call MPI_Bcast(cbuff, cbuff_len*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
       call MPI_Bcast(ibuff,           buffer_dim, MPI_INTEGER,          0, comm, ierr)
@@ -213,10 +213,10 @@ contains
          if (ostat /= 0) then
             write(msg,'(3a,i4)')"[initproblem:read_IC_file] cannot read ic_data from file '",input_file,"' at PE#",proc
             call die(msg)
-         end if
+         endif
          if (allocated(ic_v)) deallocate(ic_v)
          allocate(ic_v(ic_nx, ic_ny, ic_nz))
-      end if
+      endif
 
       do v = 1, ic_vars
          if (proc == 0) then ! read the quantities, then send to everyone interested
@@ -224,23 +224,23 @@ contains
                do j = 1, ic_ny
                   do i = 1, ic_nx
                      read(1,*) ic_v(i,j,k)
-                  end do
-               end do
-            end do
+                  enddo
+               enddo
+            enddo
             ic_data(ic_is:ic_ie, ic_js:ic_je, ic_ks:ic_ke, v) = ic_v(ic_is:ic_ie, ic_js:ic_je, ic_ks:ic_ke)
             do pe = 1, nproc-1
                call MPI_Recv( ic_rng, 2*NDIM, MPI_INTEGER, pe, pe, comm3d, status, ierr)
                call MPI_Send(      ic_v(ic_rng(1):ic_rng(2), ic_rng(3):ic_rng(4), ic_rng(5):ic_rng(6)), &
                     &         size(ic_v(ic_rng(1):ic_rng(2), ic_rng(3):ic_rng(4), ic_rng(5):ic_rng(6))), &
                     &         MPI_DOUBLE_PRECISION, pe, pe, comm3d, ierr)
-            end do
+            enddo
          else
             call MPI_Send( [ ic_is, ic_ie, ic_js, ic_je, ic_ks, ic_ke ], 2*NDIM, MPI_INTEGER, 0, proc, comm3d, ierr)
             call MPI_Recv(      ic_data(ic_is:ic_ie, ic_js:ic_je, ic_ks:ic_ke, v), &
                  &         size(ic_data(ic_is:ic_ie, ic_js:ic_je, ic_ks:ic_ke, v)), &
                  &         MPI_DOUBLE_PRECISION, 0, proc, comm3d, status, ierr)
-         end if
-      end do
+         endif
+      enddo
 
       if (allocated(ic_v)) deallocate(ic_v)
       if (proc == 0) close(1)
@@ -249,7 +249,7 @@ contains
 
       do v = 2, 4 ! convert velocity to momentum
          ic_data(:, :, :, v) = ic_data(:, :, :, v) * ic_data(:, :, :, 1)
-      end do
+      enddo
 
       ! U = ( kB * T ) / (mean_mol_weight * (gamma - 1))
       ! cs2 = (gamma) * kB * T / mean_mol_weight.
@@ -287,20 +287,20 @@ contains
          if (max(dx, dy, dz) > ic_dx) then
             write(msg,'(a)')     "[initproblem:init_prob] Too low resolution" ! call die
             call warn(msg)
-         end if
+         endif
          if (abs(ic_dx/dx-anint(ic_dx/dx)) > beat_dx) then
             write(msg,'(a,f8.4)')"[initproblem:init_prob] X-direction requires interpolation ic_dx/dx= ", ic_dx/dx
             call warn(msg)
-         end if
+         endif
          if (abs(ic_dx/dy-anint(ic_dx/dy)) > beat_dx) then
             write(msg,'(a,f8.4)')"[initproblem:init_prob] Y-direction requires interpolation ic_dx/dy= ", ic_dx/dy
             call warn(msg)
-         end if
+         endif
          if (abs(ic_dx/dz-anint(ic_dx/dz)) > beat_dx) then
             write(msg,'(a,f8.4)')"[initproblem:init_prob] Z-direction requires interpolation ic_dx/dz= ", ic_dx/dz
             call warn(msg)
-         end if
-      end if
+         endif
+      endif
 
       if (fake_ic) then
          u(idni, is:ie, js:je, ks:ke) = 1.
@@ -329,12 +329,12 @@ contains
                      u(imyi, i, j, k)     = small
                      u(imzi, i, j, k)     = small
                      cs_iso2_arr(i, j, k) = mincs2
-                  end if
-               end do
-            end do
-         end do
+                  endif
+               enddo
+            enddo
+         enddo
          if (allocated(ic_data)) deallocate(ic_data)
-      end if
+      endif
 
       do i = 1,nb
          u(:,i,:,:)               = u(:,nb+1,:,:)
@@ -357,7 +357,7 @@ contains
          call printinfo(msg, .true.)
          write(msg,'(2(a,g15.7))') '[initproblem:init_problem]: minval(cs_iso2) = ', minval(cs_iso2_arr(:,:,:)), ' maxval(cs_iso2) = ', maxval(cs_iso2_arr(:,:,:))
          call printinfo(msg, .true.)
-      end if
+      endif
 
       b(:, 1:nx, 1:ny, 1:nz) = 0.0
       additional_attrs      => init_prob_attrs
@@ -507,11 +507,11 @@ contains
                        u(imyi,     i, j, k) = u(imyi, i, j, k) * (1. - damp_factor   * mod_str(i))
                        u(imzi,     i, j, k) = u(imzi, i, j, k) * (1. - damp_factor   * mod_str(i))
                        cs_iso2_arr(i, j, k) = maxcs2           -  (maxcs2-mincs2)    * mod_str(i)
-                    end if
-                 end do
+                    endif
+                 enddo
 #endif /* !__IFORT__ */
-              end do
-           end do
+              enddo
+           enddo
         case(3)
           if(.not. allocated(alf)) then
              allocate(alf(nx,ny))
