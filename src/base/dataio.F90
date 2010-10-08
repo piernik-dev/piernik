@@ -198,17 +198,17 @@ module dataio
 !<
    subroutine init_dataio
 
-      use mpisetup,        only : ibuff, rbuff, cbuff, proc, MPI_CHARACTER, cbuff_len, &
-           &                      MPI_DOUBLE_PRECISION, MPI_INTEGER, comm, ierr, buffer_dim, &
-           &                      psize, t, nstep, bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr, &
-           &                      lbuff, MPI_LOGICAL
-      use errh,            only : namelist_errh, printinfo
+      use mpisetup,        only : lbuff, ibuff, rbuff, cbuff, proc, cbuff_len, comm, ierr, buffer_dim, &
+           &                      MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL, &
+           &                      psize, t, nstep, bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr
+      use errh,            only : namelist_errh, printinfo, warn
       use problem_pub,     only : problem_name, run_id
       use version,         only : nenv,env, init_version
       use fluidboundaries, only : all_fluid_boundaries
       use timer,           only : time_left
-      use dataio_hdf5,     only : init_hdf5, read_restart_hdf5, maxparfilelines, parfile, parfilelines
-      use dataio_public,   only : chdf, nres, last_hdf_time, step_hdf, nlog, ntsl, dataio_initialized, log_file, cwdlen, par_file, cwd, ierrh, tmp_log_file, msglen
+      use dataio_hdf5,     only : init_hdf5, read_restart_hdf5, parfile, parfilelines
+      use dataio_public,   only : chdf, nres, last_hdf_time, step_hdf, nlog, ntsl, dataio_initialized, log_file, cwdlen, par_file, maxparfilelines, cwd, &
+           &                      ierrh, tmp_log_file, msglen
       use func,            only : compare_namelist
 #ifdef MAGNETIC
       use magboundaries,   only : all_mag_boundaries
@@ -275,10 +275,15 @@ module dataio
             if (ierrh == 0) then
                parfilelines = parfilelines + 1
                i = len_trim(parfile(parfilelines))
-               if (i < len(parfile(parfilelines))) parfile(parfilelines)(i+1:i+1) = achar(0)
+               if (i < len(parfile(parfilelines))) then
+                  parfile(parfilelines)(i+1:i+1) = achar(0)
+               else
+                  call warn("[dataio:init_dataio] problem.par contains very long lines. The copy in the logfile and HDF dumps can be truncated.")
+               end if
             end if
          end do
          close(1)
+         if (parfilelines == maxparfilelines) call warn("[dataio:init_dataio] problem.par has too many lines. The copy in the logfile and HDF dumps can be truncated.")
 
          diff_nml(OUTPUT_CONTROL)
          diff_nml(RESTART_CONTROL)

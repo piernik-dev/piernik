@@ -33,10 +33,11 @@ module initproblem
 ! Initial condition for Keplerian disk
 ! Written by: M. Hanasz, March 2006
 
-   use problem_pub, only: problem_name, run_id
+   use problem_pub, only : problem_name, run_id
+   use mpisetup,    only : cbuff_len
 
    real :: d0, r_max, dout, alpha
-   character(len=32) :: mag_field_orient
+   character(len=cbuff_len) :: mag_field_orient
 
    namelist /PROBLEM_CONTROL/  problem_name, run_id, alpha, &
                                d0,dout,r_max,mag_field_orient
@@ -47,7 +48,7 @@ module initproblem
 
    subroutine read_problem_par
       use errh,     only : namelist_errh
-      use mpisetup, only : cbuff_len, cbuff, rbuff, buffer_dim, proc, comm, ierr, &
+      use mpisetup, only : cbuff, rbuff, buffer_dim, proc, comm, ierr, &
                            mpi_character, mpi_double_precision
       use dataio_public, only : ierrh, msg, par_file
       use func,          only : compare_namelist

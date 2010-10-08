@@ -42,6 +42,8 @@ module dataio_public
    integer, parameter :: cwdlen = 512           !< allow for quite long CWD
    integer, parameter :: msglen = 1024          !< 1kB for a message ought to be enough for anybody ;-)
    integer, parameter :: ansilen = 7, ansirst=4 !< length of our ANSI colorstrings
+   integer, parameter :: maxparfilelen   = 128  !< max length of line in problem.par file
+   integer, parameter :: maxparfilelines = 256  !< max number of lines in problem.par
 
    ! Simulation control
    real               :: tend                   !< simulation time to end

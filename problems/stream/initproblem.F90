@@ -30,9 +30,10 @@
 
 module initproblem
 
-   use problem_pub, only: problem_name, run_id
+   use problem_pub, only : problem_name, run_id
+   use mpisetup,    only : cbuff_len
 
-   character(len=32) :: fnoise
+   character(len=cbuff_len) :: fnoise
    real :: rhog, eps, amp, kx, kz
    real, dimension(8), save :: vec
    logical :: linear
@@ -47,7 +48,7 @@ module initproblem
    subroutine read_problem_par
 
       use errh,     only : namelist_errh
-      use mpisetup, only : ierr, rbuff, cbuff_len, cbuff, lbuff, proc, buffer_dim, comm, &
+      use mpisetup, only : ierr, rbuff, cbuff, lbuff, proc, buffer_dim, comm, &
            &               MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_LOGICAL
       use dataio_public, only : ierrh, msg, par_file
       use func,          only : compare_namelist
@@ -129,7 +130,7 @@ module initproblem
       real(kind=4), dimension(3,nx,ny,nz) :: noise
       integer, dimension(:), allocatable :: seed
       complex(kind=8), dimension(7) :: coeff
-!      character(len=32) :: ala
+!      character(len=cbuff_len) :: ala
 
       if(run_id == 'lnA') then
          coeff(4) = (-0.1691398, 0.0361553 ) ! u_x

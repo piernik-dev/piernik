@@ -76,6 +76,8 @@ def qa_crude_write(files,options):
       file.close()
    return warning
 
+#ToDo: look for dimension([1-9]
+#ToDo: also warn about strings shorter than 10 characters. These also can make funny errors.
 def qa_magic_integers(files,options):
    print b.OKGREEN + "QA: " + b.ENDC + "Checking for hardcoded integers"
    warning = 0

@@ -136,14 +136,14 @@ module func
 !-----------------------------------------------------------------------------
    subroutine compare_namelist(nml_bef, nml_aft)
 
-      use dataio_public, only : cwd, msg
+      use dataio_public, only : cwd, msg, maxparfilelen
       use errh,          only : printinfo
 
       implicit none
 
       character(len=*), intent(in)     :: nml_bef, nml_aft
       integer                          :: io
-      character(len=256)               :: sa, sb
+      character(len=maxparfilelen)     :: sa, sb
       integer, parameter               :: lun_bef=501, lun_aft=502
 
       open(lun_bef, file=nml_bef, status='old')

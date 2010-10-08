@@ -33,10 +33,11 @@ module initproblem
 ! Initial condition for Keplerian disk
 ! Written by: M. Hanasz, March 2006
 
-   use problem_pub, only: problem_name, run_id
+   use problem_pub, only : problem_name, run_id
+   use mpisetup,    only : cbuff_len
 
    real    :: sigma0, Rin, R0, HtoR, eps, amp
-   character(len=32) :: sigma_model
+   character(len=cbuff_len) :: sigma_model
 
    namelist /PROBLEM_CONTROL/  problem_name, run_id, sigma0, amp, &
                                Rin, R0, HtoR, sigma_model, eps

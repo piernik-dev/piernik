@@ -37,14 +37,18 @@
 !!
 !<
 module dataio_hdf5
-   use list_hdf5, only : S_LEN
+
+   use list_hdf5,     only : S_LEN
+   use dataio_public, only : maxparfilelen, maxparfilelines
 
    implicit none
+
    private
    public :: init_hdf5, read_restart_hdf5, cleanup_hdf5, write_hdf5, write_restart_hdf5, write_plot, write_3darr_to_restart, read_3darr_from_restart
    public :: parfile, parfilelines, maxparfilelines
 
-   character(LEN=10), dimension(3) :: dname = (/"fluid     ","mag       ","dinit     "/)  !< dataset names for restart files
+   integer, parameter :: dnamelen=10
+   character(LEN=dnamelen), dimension(3) :: dname = (/"fluid     ","mag       ","dinit     "/)  !< dataset names for restart files
    character(len=S_LEN), allocatable, dimension(:) :: hdf_vars  !< dataset names for hdf files
    integer :: nhdf_vars !< number of quantities ploted to hdf files
    integer :: ix !< no. of cell (1 <= ix < nxd) for YZ slice in plt files
@@ -60,8 +64,6 @@ module dataio_hdf5
    real    :: piernik_hdf5_version = 1.1   !< output version
 
    ! storage for the problem.par
-   integer, parameter                        :: maxparfilelen   = 128  !<
-   integer, parameter                        :: maxparfilelines = 1024 !<
    character(len=maxparfilelen), dimension(maxparfilelines) :: parfile !< contents of the parameter file
    integer                                   :: parfilelines=0         !< number of lines in the parameter file
 
@@ -282,6 +284,7 @@ module dataio_hdf5
    subroutine common_plt_hdf5(var,ij,xn,tab,ierrh)
       use grid,         only: nb, nyb, nzb, nxb
       use arrays,       only: u, b
+      use dataio_public, only: varlen
 #ifdef GRAV
       use arrays,       only: gpot
 #endif /* GRAV */
@@ -294,7 +297,7 @@ module dataio_hdf5
 #endif /* NEUTRAL */
 
       implicit none
-      character(LEN=4)     :: var !< quantity to be plotted
+      character(LEN=varlen):: var !< quantity to be plotted
       character(LEN=2)     :: ij  !< plane of plot
       integer              :: xn  !< no. of cell at which we are slicing the local block
       integer              :: ierrh !< error handling
@@ -485,6 +488,7 @@ module dataio_hdf5
       use fluidindex,   only: ind
       use grid,         only: nb, nx, ny, nz
       use arrays,       only: u, b
+      use dataio_public, only: varlen
 #ifdef GRAV
       use arrays,       only: gpot
 #ifdef MULTIGRID
@@ -499,7 +503,7 @@ module dataio_hdf5
 #endif /* NEUTRAL */
 
       implicit none
-      character(LEN=4), intent(in)   :: var
+      character(LEN=varlen), intent(in)   :: var
       real(kind=4), dimension(:,:,:) :: tab
       integer, intent(out)           :: ierrh
 #ifdef COSM_RAYS
@@ -664,7 +668,7 @@ module dataio_hdf5
 #ifdef PGPLOT
       use viz,           only: draw_me
 #endif /* PGPLOT */
-      use dataio_public, only: vizit, fmin, fmax, cwdlen, log_file, msg
+      use dataio_public, only: vizit, fmin, fmax, cwdlen, log_file, msg, varlen
       use mpisetup, only : MPI_CHARACTER, comm3d, ierr, pxsize, pysize, pzsize, MPI_DOUBLE_PRECISION, t, pcoords
       use hdf5,     only : HID_T, HSIZE_T, SIZE_T, H5F_ACC_RDWR_F, h5fopen_f, h5gopen_f, h5gclose_f, h5fclose_f
       use h5lt,     only : h5ltmake_dataset_double_f, h5ltset_attribute_double_f
@@ -675,7 +679,7 @@ module dataio_hdf5
       implicit none
 
       character(LEN=2), intent(in)        :: plane
-      character(LEN=4), intent(in)        :: var                           !> not yet implemented
+      character(LEN=varlen), intent(in)   :: var                           !> not yet implemented
       integer, intent(in)                 :: nimg
       logical, dimension(3)               :: remain
       logical                             :: ok_plt_var
@@ -687,7 +691,8 @@ module dataio_hdf5
       integer                             :: comm2d, lp, ls, xn, error
       character(LEN=3)                    :: pij
       character(LEN=cwdlen)               :: fname
-      character(LEN=12)                   :: dname
+      integer, parameter                  :: vdn_len = 12
+      character(LEN=vdn_len)              :: vdname
 
       integer(HID_T)                      :: file_id                       !> File identifier
       integer(HID_T)                      :: gr_id,gr2_id                  !> Group indentifier
@@ -799,11 +804,11 @@ module dataio_hdf5
                call H5Fopen_f(fname, H5F_ACC_RDWR_F, file_id, error)
                call H5Gopen_f(file_id,plane,gr_id,error)
                call H5Gopen_f(gr_id,var,gr2_id,error)
-               write(dname,'(a3,a4,a1,i4.4)') pij,var,"_",nimg
-               call h5ltmake_dataset_double_f(gr2_id, dname, rank, dims, img, error)
+               write(vdname,'(a3,a4,a1,i4.4)') pij,var,"_",nimg
+               call h5ltmake_dataset_double_f(gr2_id, vdname, rank, dims, img, error)
                bufsize = 1
                timebuffer = (/t/)
-               call h5ltset_attribute_double_f(gr2_id,dname,"time",timebuffer,bufsize,error)
+               call h5ltset_attribute_double_f(gr2_id,vdname,"time",timebuffer,bufsize,error)
                call H5Gclose_f(gr2_id,error)
                call H5Gclose_f(gr_id,error)
                call H5Fclose_f(file_id,error)
@@ -1704,7 +1709,7 @@ module dataio_hdf5
    subroutine set_common_attributes(filename, chdf, stype)
 
       use dataio_public, only: msg
-      use mpisetup,     only: proc, t, dt, psize
+      use mpisetup,     only: proc, t, dt, psize, cbuff_len
       use h5lt,         only: h5ltset_attribute_double_f, h5ltset_attribute_int_f, h5ltmake_dataset_string_f, h5ltset_attribute_string_f
       use hdf5,         only: HID_T, SIZE_T, H5F_ACC_RDWR_F, h5fopen_f, h5fclose_f, h5gcreate_f, h5gclose_f
       use types,        only: hdf
@@ -1722,16 +1727,16 @@ module dataio_hdf5
 
       integer(HID_T) :: file_id       !> File identifier
       integer(HID_T) :: gr_id         !> Group identifier
-      character(len=32)  :: dset_name
-      character(len=128) :: trim_env
+      character(len=cbuff_len) :: dset_name
+      character(len=maxparfilelen) :: trim_env
       integer            :: fe, i
       integer(SIZE_T) :: bufsize
       integer :: error
       integer, parameter          :: buf_len = 50
       integer, dimension(buf_len) :: ibuffer
       real,    dimension(buf_len) :: rbuffer
-      character(len=32), dimension(buf_len) :: ibuffer_name = ""
-      character(len=32), dimension(buf_len) :: rbuffer_name = ""
+      character(len=cbuff_len), dimension(buf_len) :: ibuffer_name = ""
+      character(len=cbuff_len), dimension(buf_len) :: rbuffer_name = ""
 
       if (proc == 0) then
 
