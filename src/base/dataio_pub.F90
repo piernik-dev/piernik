@@ -150,7 +150,7 @@ contains
             msg_type_str = ""
       end select
 
-      call MPI_comm_rank(MPI_COMM_WORLD, proc, ierrh)
+      call MPI_Comm_rank(MPI_COMM_WORLD, proc, ierrh)
 
       if (mode /= T_SILENT) then
          if (mode == T_PLAIN) then

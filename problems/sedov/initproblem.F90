@@ -51,7 +51,7 @@ module initproblem
       use errh,     only : namelist_errh
       use grid,     only : dxmn
       use mpisetup, only : cbuff_len, cbuff, ibuff, rbuff, buffer_dim, proc, comm, ierr, &
-                           mpi_character, mpi_double_precision, mpi_integer
+                           MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER
       use dataio_public, only : ierrh, msg, par_file
       use func,          only : compare_namelist
 

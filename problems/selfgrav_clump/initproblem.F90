@@ -214,7 +214,7 @@ contains
          end do
       end do
 
-      call MPI_AllReduce (MPI_IN_PLACE, iC, 1, MPI_INTEGER, MPI_SUM, comm, ierr)
+      call MPI_Allreduce (MPI_IN_PLACE, iC, 1, MPI_INTEGER, MPI_SUM, comm, ierr)
       if (proc == 0 .and. verbose) then
          write(msg,'(a,es13.7,a,i7,a)')"[initproblem:init_prob] Starting with uniform sphere with M = ", iC*totME(1) * dx * dy * dz, " (", iC, " cells)"
          call printinfo(msg, .true.)
@@ -243,8 +243,8 @@ contains
 
          Cint = [ minval(sgp(is:ie,js:je,ks:ke)), maxval(sgp(is:ie,js:je,ks:ke)) ] ! rotation will modify this
 
-         call MPI_AllReduce (MPI_IN_PLACE, Cint(LOW),  1, MPI_DOUBLE_PRECISION, MPI_MIN, comm, ierr)
-         call MPI_AllReduce (MPI_IN_PLACE, Cint(HIGH), 1, MPI_DOUBLE_PRECISION, MPI_MAX, comm, ierr)
+         call MPI_Allreduce (MPI_IN_PLACE, Cint(LOW),  1, MPI_DOUBLE_PRECISION, MPI_MIN, comm, ierr)
+         call MPI_Allreduce (MPI_IN_PLACE, Cint(HIGH), 1, MPI_DOUBLE_PRECISION, MPI_MAX, comm, ierr)
 
          call totalMEnthalpic(Cint(LOW),  totME(LOW),  REL_CALC)
          call totalMEnthalpic(Cint(HIGH), totME(HIGH), REL_CALC)
@@ -438,7 +438,7 @@ contains
          end do
       end do
 
-      call MPI_AllReduce (MPI_IN_PLACE, TWP, nTWP, MPI_DOUBLE_PRECISION, MPI_SUM, comm, ierr)
+      call MPI_Allreduce (MPI_IN_PLACE, TWP, nTWP, MPI_DOUBLE_PRECISION, MPI_SUM, comm, ierr)
 
       TWP = TWP * dx * dy * dz
       vc = abs(2.*TWP(1) + TWP(2) + 3*TWP(3))/abs(TWP(2))
@@ -496,7 +496,7 @@ contains
          end do
       end do
 
-      call MPI_AllReduce (MPI_IN_PLACE, totME, 1, MPI_DOUBLE_PRECISION, MPI_SUM, comm, ierr)
+      call MPI_Allreduce (MPI_IN_PLACE, totME, 1, MPI_DOUBLE_PRECISION, MPI_SUM, comm, ierr)
 
       totME = totME * dx * dy * dz
 

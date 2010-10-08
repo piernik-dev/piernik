@@ -49,7 +49,7 @@ module initproblem
    subroutine read_problem_par
       use errh,     only : namelist_errh
       use mpisetup, only : cbuff, rbuff, buffer_dim, proc, comm, ierr, &
-                           mpi_character, mpi_double_precision
+                           MPI_CHARACTER, MPI_DOUBLE_PRECISION
       use dataio_public, only : ierrh, msg, par_file
       use func,          only : compare_namelist
 
