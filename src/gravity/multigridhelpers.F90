@@ -143,17 +143,16 @@ contains
 
       use multigridvars, only: vcycle_factors, cprefix, stdout
       use mpisetup,      only: proc
-      use dataio_public, only: msg
+      use dataio_public, only: msg, fplen
 
       implicit none
 
       integer, intent(in) :: v    !< number of V-cycles taken
       real, intent(in)    :: norm !< norm reduction factor achieved
 
-      real              :: at
-      integer           :: i, lm
-      integer, parameter :: fp_len = 24 !< length of printed FP number
-      character(len=fp_len) :: normred
+      real                 :: at
+      integer              :: i, lm
+      character(len=fplen) :: normred
 
       if (proc /= 0) return
 

@@ -29,12 +29,20 @@
 
 module dataio_public
 
-   use types, only : hdf
+   use types, only : hdf, domlen
 
    implicit none
 
    public
 
+   ! Buffer lengths for global use
+   integer, parameter :: fplen = 24             !< length of buffer for printed FP or integer number
+   integer, parameter :: hnlen = 32             !< hostname length limit
+   integer, parameter :: cwdlen = 512           !< allow for quite long CWD
+   integer, parameter :: msglen = 1024          !< 1kB for a message ought to be enough for anybody ;-)
+   integer, parameter :: ansilen = 7, ansirst=4 !< length of our ANSI colorstrings
+
+   ! Simulation control
    real               :: tend                   !< simulation time to end
    real               :: wend                   !< wall clock time to end (in hours)
 
@@ -46,15 +54,28 @@ module dataio_public
    integer            :: ntsl                   !< current number of timeslice file
    integer            :: nrestart               !< number of restart file to be read while restart is not set to ''
    integer            :: step_hdf               !< number of simulation timestep corresponding to values dumped in hdf file
+   character(len=domlen) :: domain              !< string to choose if boundaries have to be dumped in hdf files
 
-   integer, parameter :: hnlen = 32             !< hostname length limit
-   integer, parameter :: cwdlen = 512           !< allow for moderately long CWD
+   ! Buffers for global use
    character(len=cwdlen) :: cwd                 !< path to the current working directory
    character(len=cwdlen) :: log_file            !< path to the current log file
    character(len=cwdlen) :: tmp_log_file        !< path to the temporary log file
    character(len=cwdlen) :: par_file            !< path to the parameter file
+
+   ! Handy variables
    integer            :: ierrh                  !< variable for iostat
+   type(hdf)          :: chdf                   !< container for some vital simulation parameters
+
+   ! Simulation state
+   integer, parameter :: PIERNIK_START       = 1                       ! before initialization
+   integer, parameter :: PIERNIK_INITIALIZED = PIERNIK_START       + 1 ! initialized, running
+   integer, parameter :: PIERNIK_FINISHED    = PIERNIK_INITIALIZED + 1
+   integer, parameter :: PIERNIK_CLEANUP     = PIERNIK_FINISHED    + 1
+   integer            :: code_progress          !< rough estimate of code execution progress
    logical            :: halfstep = .false.     !< true when X-Y-Z sweeps are done and Z-Y-X are not
+   real               :: last_hdf_time          !< time in simulation of the last resent hdf file dump
+   logical            :: skip_advection = .false. !< .true. will instruct fluidupdate:make_3sweeps to skip sweeps (used by maclaurin problem, replaces precompiler symbol __NO_FLUID_STEP)
+   logical, save      :: dataio_initialized = .false.
 
    !! ToDo:
    !!  Currently to use PGPLOT you need to:
@@ -65,29 +86,15 @@ module dataio_public
    real               :: fmin                   !< minimum on pgplot scale
    real               :: fmax                   !< maximum on pgplot scale
 
-   type(hdf)          :: chdf                   !< container for some vital simulation parameters
-   character(len=16)  :: domain                 !< string to choose if boundaries have to be dumped in hdf files
-   real               :: last_hdf_time          !< time in simulation of the last resent hdf file dump
-
+   ! stdout and logfile messages
    integer, parameter :: T_PLAIN  = 0, &        !< enum for message types
         &                T_ERR    = T_PLAIN + 1, &
         &                T_WARN   = T_ERR   + 1, &
         &                T_INFO   = T_WARN  + 1, &
         &                T_SILENT = T_INFO  + 1
-
-   integer, parameter :: PIERNIK_START       = 1                       ! before initialization
-   integer, parameter :: PIERNIK_INITIALIZED = PIERNIK_START       + 1 ! initialized, running
-   integer, parameter :: PIERNIK_FINISHED    = PIERNIK_INITIALIZED + 1
-   integer, parameter :: PIERNIK_CLEANUP     = PIERNIK_FINISHED    + 1
-   integer            :: code_progress          !< rough estimate of code execution progress
-
-   logical            :: skip_advection = .false. !< .true. will instruct fluidupdate:make_3sweeps to skip sweeps (used by maclaurin problem, replaces precompiler symbol __NO_FLUID_STEP)
-   logical, save      :: dataio_initialized = .false.
-
-   character(LEN=1024) :: msg                   !< buffer for messages
-
-   character(len=4) :: ansi_black
-   character(len=7) :: ansi_red, ansi_green, ansi_yellow, ansi_blue, ansi_magenta, ansi_cyan, ansi_white
+   character(len=msglen)  :: msg                   !< buffer for messages
+   character(len=ansirst) :: ansi_black
+   character(len=ansilen) :: ansi_red, ansi_green, ansi_yellow, ansi_blue, ansi_magenta, ansi_cyan, ansi_white
 
    include 'mpif.h'
 
@@ -102,12 +109,11 @@ contains
       character(len=*), intent(in) :: nm
       integer, intent(in) :: mode
 
-      integer, parameter  :: log_lun = 3            !< luncher for log file
-
-      character(len=7)  :: ansicolor
-      character(len=7) :: msg_type_str
-      integer :: proc, ierr
-      logical, save :: frun = .true.
+      integer, parameter     :: log_lun = 3            !< luncher for log file
+      character(len=ansilen) :: ansicolor
+      character(len=7)       :: msg_type_str           ! length of the "Warning" word.
+      integer                :: proc
+      logical, save          :: frun = .true.
 
       if(frun) then
          write(ansi_black,  '(A1,A3)') char(27),"[0m"
@@ -141,7 +147,7 @@ contains
             msg_type_str = ""
       end select
 
-      call MPI_comm_rank(MPI_COMM_WORLD, proc, ierr)
+      call MPI_comm_rank(MPI_COMM_WORLD, proc, ierrh)
 
       if (mode /= T_SILENT) then
          if (mode == T_PLAIN) then

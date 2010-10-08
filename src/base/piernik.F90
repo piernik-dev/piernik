@@ -32,7 +32,7 @@
 program piernik
 
   use mpisetup,      only : comm, comm3d, ierr, proc, t, dt, nstep, cleanup_mpi
-  use dataio_public, only : nend, nstep_start, tend, msg, &
+  use dataio_public, only : nend, nstep_start, tend, msg, fplen, &
        &                    code_progress, PIERNIK_START, PIERNIK_INITIALIZED, PIERNIK_FINISHED, PIERNIK_CLEANUP
   use timer,         only : time_left
 #ifdef PERFMON
@@ -45,8 +45,8 @@ program piernik
 
   implicit none
 
-  logical            :: end_sim !< Used in main loop, to test whether to stop simulation or not
-  character(len=32)  :: nstr, tstr
+  logical              :: end_sim !< Used in main loop, to test whether to stop simulation or not
+  character(len=fplen) :: nstr, tstr
 
   code_progress = PIERNIK_START
 

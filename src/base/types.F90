@@ -34,7 +34,7 @@ module types
    public :: indx, hdf, value, grid_container, tsl_container, &
    & problem_customize_solution, finalize_problem, domlen, idlen
 
-   integer, parameter :: domlen = 16
+   integer, parameter :: domlen = 16 ! should be <= mpisetup::cbuff_len
    integer, parameter :: idlen  = 3
 
    type :: indx
