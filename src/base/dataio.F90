@@ -474,30 +474,30 @@ module dataio
                call write_hdf5(chdf)
                nhdf = nhdf + 1
                step_hdf = nstep
-            case('log')
+            case ('log')
                call write_log
-            case('tsl')
+            case ('tsl')
                call write_timeslice
-            case('tend')
+            case ('tend')
                tend   = umsg_param
-            case('nend')
+            case ('nend')
                nend   = umsg_param
-            case('dtres')
+            case ('dtres')
                dt_res = umsg_param
-            case('dthdf')
+            case ('dthdf')
                dt_hdf = umsg_param
-            case('dtlog')
+            case ('dtlog')
                dt_log = umsg_param
-            case('dttsl')
+            case ('dttsl')
                dt_tsl = umsg_param
-            case('dtplt')
+            case ('dtplt')
                dt_plt = umsg_param
-            case('sleep')
+            case ('sleep')
                tsleep = 60*umsg_param
                call sleep(tsleep)
-            case('stop')
+            case ('stop')
                end_sim = .true.
-            case('help')
+            case ('help')
                if (proc == 0) then
                   write(msg,*) "[dataio:user_msg_handler] Recognized messages:",char(10),&
                   &"  help     - prints this information",char(10),&

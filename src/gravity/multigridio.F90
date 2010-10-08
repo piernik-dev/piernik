@@ -165,14 +165,14 @@ contains
       chunk_dims = [ llvl%nxb, llvl%nyb, llvl%nzb ] ! Chunks dimensions
 
       do v = 1, ngridvars
-         select case(v)
-            case(source)
+         select case (v)
+            case (source)
                write(dname,'(2a)') trim(dsetname),"_src"
-            case(solution)
+            case (solution)
                write(dname,'(2a)') trim(dsetname),"_soln"
-            case(defect)
+            case (defect)
                write(dname,'(2a)') trim(dsetname),"_def"
-            case(correction)
+            case (correction)
                write(dname,'(2a)') trim(dsetname),"_corr"
             case default
                write(dname,'(2a)') trim(dsetname),"_???"

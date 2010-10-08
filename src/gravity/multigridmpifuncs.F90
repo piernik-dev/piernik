@@ -238,10 +238,10 @@ contains
 
       integer :: i
 
-      select case(grav_bnd)
-         case(bnd_periodic)
+      select case (grav_bnd)
+         case (bnd_periodic)
             return
-         case(bnd_dirichlet, bnd_givenval, bnd_isolated)
+         case (bnd_dirichlet, bnd_givenval, bnd_isolated)
             do i = 1, ng
                if (extrapolate_bnd) then
                   if (is_external(XLO)) lvl(lev)%mgvar(lvl(lev)%is-i, :, :, iv) = (1+i) * lvl(lev)%mgvar(lvl(lev)%is, :, :, iv) - i * lvl(lev)%mgvar(lvl(lev)%is+1, :, :, iv)

@@ -198,7 +198,7 @@ module initproblem
       real, dimension(:,:) :: tab
 
       ierrh = 0
-      select case(var)
+      select case (var)
          case default
             ierrh = -1
       end select
@@ -213,7 +213,7 @@ module initproblem
       real(kind=4), dimension(:,:,:) :: tab
 
       ierrh = 0
-      select case(var)
+      select case (var)
          case default
             ierrh = -1
       end select

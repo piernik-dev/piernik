@@ -573,9 +573,9 @@ module mpisetup
          rsend(2) = proc
 
          select case (what(1:3))
-            case('min')
+            case ('min')
                CALL MPI_Reduce(rsend, rrecv, 1, MPI_2DOUBLE_PRECISION, MPI_MINLOC, 0, comm, ierr)
-            case('max')
+            case ('max')
                CALL MPI_Reduce(rsend, rrecv, 1, MPI_2DOUBLE_PRECISION, MPI_MAXLOC, 0, comm, ierr)
             case default
                write(msg,*) '[mpisetup:mpifind] actual parameter "', what, '"is not allowed'

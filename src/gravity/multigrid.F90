@@ -268,14 +268,14 @@ contains
 
       ! boundaries
       grav_bnd = bnd_invalid
-      select case(grav_bnd_str)
-         case("isolated", "iso")
+      select case (grav_bnd_str)
+         case ("isolated", "iso")
             grav_bnd = bnd_isolated
-         case("periodic", "per")
+         case ("periodic", "per")
             if (bnd_xl_dom /= 'per' .or. bnd_xr_dom /= 'per' .or. bnd_yl_dom /= 'per' .or. bnd_yr_dom /= 'per' .or. bnd_zl_dom /= 'per' .or. bnd_zr_dom /= 'per') &
                  call die("[multigrid:init_multigrid] cannot use periodic boundaries for gravity on nonperiodic domain")
             grav_bnd = bnd_periodic
-         case("dirichlet", "dir")
+         case ("dirichlet", "dir")
             grav_bnd = bnd_dirichlet
          case default
             call die("[multigrid:init_multigrid] Non-recognized boundary description.")
@@ -332,7 +332,7 @@ contains
          lvl(idx)%nb    = mg_nb                                    ! number of guardcells
 
          do i = XDIR, ZDIR ! this can be rewritten as a three subroutine/function calls
-            select case(i)
+            select case (i)
                case (XDIR)
                   nxc = cgrid%nxb
                case (YDIR)
@@ -356,7 +356,7 @@ contains
                endif
             endif
 
-            select case(i)
+            select case (i)
                case (XDIR)
                   lvl(idx)%nxb = nx
                case (YDIR)
@@ -528,9 +528,9 @@ contains
          do j = 1, 2 ! inner and outer arrays
             if (associated(os)) nullify(os)
             select case (j)
-               case(1)
+               case (1)
                   os => inner
-               case(2)
+               case (2)
                   if (grav_bnd == bnd_isolated) os => outer
             end select
             if (associated(os)) then
@@ -903,7 +903,7 @@ contains
          ordt = min(-1, ord_time_extrap)
       endif
 
-      select case(ordt)
+      select case (ordt)
          case (:-1)
             if (proc == 0 .and. ord_time_extrap > -1) then
                write(msg, '(3a)')"[multigrid:init_solution] Clearing ",trim(cprefix),"solution."
@@ -1572,14 +1572,14 @@ contains
          return
       endif
 
-      select case(ord_prolong_face)
-         case(0)
+      select case (ord_prolong_face)
+         case (0)
             p(:) = p0(:)
-         case(1,-1)
+         case (1,-1)
             p(:) = p1(:)
-         case(2)
+         case (2)
             p(:) = p2i(:)
-         case(-2)
+         case (-2)
             p(:) = p2d(:)
          case default
             p(:) = p0(:)

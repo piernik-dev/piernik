@@ -474,8 +474,8 @@ contains
 
      if (.not. allocated(mod_str)) allocate(mod_str(is:ie)) !BEWARE not deallocated anywhere yet
 
-     select case(divine_intervention_type)
-        case(1)                                                                                ! crude
+     select case (divine_intervention_type)
+        case (1)                                                                                ! crude
            where (u(idni, is:ie, js:je, ks:ke) < ambient_density)
               u(imxi, is:ie, js:je, ks:ke) = (1. - damp_factor) * u(imxi, is:ie, js:je, ks:ke)
               u(imyi, is:ie, js:je, ks:ke) = (1. - damp_factor) * u(imyi, is:ie, js:je, ks:ke)
@@ -483,8 +483,8 @@ contains
               cs_iso2_arr(is:ie, js:je, ks:ke) = mincs2
            elsewhere
               cs_iso2_arr(is:ie, js:je, ks:ke) = maxcs2
-           end where
-        case(2)                                                                                ! smooth
+           endwhere
+        case (2)                                                                                ! smooth
            ambient_density_min = ambient_density / max_ambient
            do k = ks, ke
               do j = js, je
@@ -498,7 +498,7 @@ contains
                     u(imyi,     is:ie, j, k) = u(imyi, is:ie, j, k) * (1. - damp_factor   * mod_str(is:ie))
                     u(imzi,     is:ie, j, k) = u(imzi, is:ie, j, k) * (1. - damp_factor   * mod_str(is:ie))
                     cs_iso2_arr(is:ie, j, k) = maxcs2               -  (maxcs2-mincs2)    * mod_str(is:ie)
-                 end where
+                 endwhere
 #else /* !__IFORT__ */
                  do i = is, ie
                     if (mod_str(i) > max_ambient**(-2)) then
@@ -512,7 +512,7 @@ contains
 #endif /* !__IFORT__ */
               enddo
            enddo
-        case(3)
+        case (3)
           if (.not. allocated(alf)) then
              allocate(alf(nx,ny))
              do i = 1,nx

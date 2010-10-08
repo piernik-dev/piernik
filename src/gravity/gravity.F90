@@ -616,13 +616,13 @@ module gravity
 #endif /* GRAV_PTMASS || GRAV_PTFLAT */
 
       select case (sweep)
-         case('xsweep')
+         case ('xsweep')
             x1  = y(i1)
             x2  = z(i2)
-         case('ysweep')
+         case ('ysweep')
             x1  = z(i1)
             x2  = x(i2)
-         case('zsweep')
+         case ('zsweep')
             x1  = x(i1)
             x2  = y(i2)
          case default ! just for suppressing compiler warning
@@ -661,43 +661,43 @@ module gravity
 ! Gravitational accelleration is computed on right cell boundaries
 
 !      if (istep==1) then
-!         select case(sweep)
-!            case('xsweep')
+!         select case (sweep)
+!            case ('xsweep')
 !               grav(3:n-2) = onetw*(hgpot(5:n,i1,i2) - 8.*hgpot(4:n-1,i1,i2) + 8.*hgpot(2:n-3,i1,i2) - hgpot(1:n-4,i1,i2) )/dl(xdim)
-!            case('ysweep')
+!            case ('ysweep')
 !               grav(3:n-2) = onetw*(hgpot(i2,5:n,i1) - 8.*hgpot(i2,4:n-1,i1) + 8.*hgpot(i2,2:n-3,i1) - hgpot(i2,1:n-4,i1) )/dl(xdim)
-!            case('zsweep')
+!            case ('zsweep')
 !               grav(3:n-2) = onetw*(hgpot(i1,i2,5:n) - 8.*hgpot(i1,i2,4:n-1) + 8.*hgpot(i1,i2,2:n-3) - hgpot(i1,i2,1:n-4) )/dl(xdim)
 !         end select
 !      else
-!         select case(sweep)
-!            case('xsweep')
+!         select case (sweep)
+!            case ('xsweep')
 !               grav(3:n-2) = onetw*(gpot(5:n,i1,i2) - 8.*gpot(4:n-1,i1,i2) + 8.*gpot(2:n-3,i1,i2) - gpot(1:n-4,i1,i2) )/dl(xdim)
-!            case('ysweep')
+!            case ('ysweep')
 !               grav(3:n-2) = onetw*(gpot(i2,5:n,i1) - 8.*gpot(i2,4:n-1,i1) + 8.*gpot(i2,2:n-3,i1) - gpot(i2,1:n-4,i1) )/dl(xdim)
-!            case('zsweep')
+!            case ('zsweep')
 !               grav(3:n-2) = onetw*(gpot(i1,i2,5:n) - 8.*gpot(i1,i2,4:n-1) + 8.*gpot(i1,i2,2:n-3) - gpot(i1,i2,1:n-4) )/dl(xdim)
 !         end select
 !      endif
 !      grav(2) = grav(3); grav(n-1) = grav(n-2)
 !      grav(1) = grav(2); grav(n) = grav(n-1)
       if (istep==1) then
-         select case(sweep)
-            case('xsweep')
+         select case (sweep)
+            case ('xsweep')
                grav(2:n-1) = 0.5*(hgpot(1:n-2,i1,i2) - hgpot(3:n,i1,i2))/dl(xdim)
-            case('ysweep')
+            case ('ysweep')
                grav(2:n-1) = 0.5*(hgpot(i2,1:n-2,i1) - hgpot(i2,3:n,i1))/dl(ydim)
-            case('zsweep')
+            case ('zsweep')
                grav(2:n-1) = 0.5*(hgpot(i1,i2,1:n-2) - hgpot(i1,i2,3:n))/dl(zdim)
          end select
 
       else
-         select case(sweep)
-            case('xsweep')
+         select case (sweep)
+            case ('xsweep')
                grav(2:n-1) = 0.5*(gpot(1:n-2,i1,i2) - gpot(3:n,i1,i2))/dl(xdim)
-            case('ysweep')
+            case ('ysweep')
                grav(2:n-1) = 0.5*(gpot(i2,1:n-2,i1) - gpot(i2,3:n,i1))/dl(ydim)
-            case('zsweep')
+            case ('zsweep')
                grav(2:n-1) = 0.5*(gpot(i1,i2,1:n-2) - gpot(i1,i2,3:n))/dl(zdim)
          end select
       endif

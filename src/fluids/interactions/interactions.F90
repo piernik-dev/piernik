@@ -169,18 +169,18 @@ module interactions
 
       du=0.0
 !-----collisions between fluids------
-      select case(sweep)
-         case('xsweep')
+      select case (sweep)
+         case ('xsweep')
             a1    = y(i1)
             rend  = size(x)
             r1(1:rend) = x(:)                            ! r1   max(size(x),size(y),size(z))
             r2(1:rend) = a1 / (r1(1:rend)*r1(1:rend) + a1 * a1)
-         case('ysweep')
+         case ('ysweep')
             a1    = x(i2)
             rend  = size(y)
             r1(1:rend) = y(1:rend)
             r2(1:rend) = a1 / (r1(1:rend)*r1(1:rend) + a1 * a1)
-         case('zsweep')
+         case ('zsweep')
             a1    = 1.0
             rend  = size(z)
             r1(1:rend) = 0.0

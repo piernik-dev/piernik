@@ -550,14 +550,14 @@ contains
 
       if (eff_dim<NDIM) call die("[multigridmultipole:prolong_ext_bnd2] 1D and 2D not finished")
 
-      select case(ord_prolong_mpole)
-         case(0)
+      select case (ord_prolong_mpole)
+         case (0)
             p(:) = p0(:)
-         case(1,-1)
+         case (1,-1)
             p(:) = p1(:)
-         case(2)
+         case (2)
             p(:) = p2i(:)
-         case(-2)
+         case (-2)
             p(:) = p2d(:)
          case default
             p(:) = p0(:)

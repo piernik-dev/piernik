@@ -105,7 +105,7 @@ def qa_nonconforming_tabs(files,options):
 def qa_nasty_spaces(files,options):
    print b.OKGREEN + "QA: " + b.ENDC + "Removing spurious whitespaces"
    for file in files:
-      sp.Popen('sed -i -e "s/end *if/endif/;s/end *do/enddo/;s/end *where/endwhere/;s/only *:/only:/;s/if(/if (/;s/where(/where (/;s/while(/while (/;s/forall(/forall (/;s/case(/case (/" '+file, shell=True, executable="/bin/bash")
+      sp.Popen('sed -i -e "s/end *if/endif/;s/end *do/enddo/;s/end *where/endwhere/;s/only *:/only:/;s/if(/if (/;s/where(/where (/;s/while(/while (/;s/forall(/forall (/;s/ case(/ case (/" '+file, shell=True, executable="/bin/bash")
       if options.verbose:
          print b.OKGREEN + "QA: " + b.ENDC + " done cleansing in " + file.rstrip('\n')
 

@@ -141,7 +141,7 @@ module dataio_hdf5
 
       nhdf_vars = 0
       do i = 1, nvars
-         select case(vars(i))
+         select case (vars(i))
             case ('dens')
                nhdf_vars = nhdf_vars + SIZE(iarr_all_dn,1)
             case ('velx')
@@ -181,7 +181,7 @@ module dataio_hdf5
       enddo
       allocate(hdf_vars(nhdf_vars)); j = 1
       do i = 1, nvars
-         select case(vars(i))
+         select case (vars(i))
             case ('dens')
 #ifdef DUST
                hdf_vars(j) = 'dend' ; j = j + 1
@@ -307,7 +307,7 @@ module dataio_hdf5
 #endif /* COSM_RAYS */
 
       ierrh = 0
-      select case(var)
+      select case (var)
          case ("dend")
             if (ij=="yz") tab(:,:) = u(ind%dnd,xn,nb+1:nyb+nb,nb+1:nzb+nb)
             if (ij=="xz") tab(:,:) = u(ind%dnd,nb+1:nxb+nb,xn,nb+1:nzb+nb)
@@ -412,7 +412,7 @@ module dataio_hdf5
             tab(:,:) = 0.0
 #endif /* !ISO */
 #ifdef NEUTRAL
-         case("pren")
+         case ("pren")
 #ifndef ISO
             if (ij=="xy") then
                tab(:,:) = real( u(ind%enn,nb+1:nxb+nb,nb+1:nyb+nb,xn) - &
@@ -513,39 +513,39 @@ module dataio_hdf5
 
       ierrh = 0
 #ifdef COSM_RAYS
-      select case(var(1:3))
-         case("ecr")
+      select case (var(1:3))
+         case ("ecr")
            read(var,'(A3,I1)') aux,i
            tab(:,:,:) = real(u(ind%arr_crs(i),RNG),4)
       end select
 #endif /* COSM_RAYS */
-      select case(var)
-         case("dend")
+      select case (var)
+         case ("dend")
             tab(:,:,:) = real(u(ind%dnd,RNG),4)
-         case("denn")
+         case ("denn")
             tab(:,:,:) = real(u(ind%dnn,RNG),4)
-         case("deni")
+         case ("deni")
             tab(:,:,:) = real(u(ind%dni,RNG),4)
-         case("vlxd")
+         case ("vlxd")
             tab(:,:,:) = real(u(ind%mxd,RNG) / u(ind%dnd,RNG),4)
-         case("vlxn")
+         case ("vlxn")
             tab(:,:,:) = real(u(ind%mxn,RNG) / u(ind%dnn,RNG),4)
-         case("vlxi")
+         case ("vlxi")
             tab(:,:,:) = real(u(ind%mxi,RNG) / u(ind%dni,RNG),4)
-         case("vlyd")
+         case ("vlyd")
             tab(:,:,:) = real(u(ind%myd,RNG) / u(ind%dnd,RNG),4)
-         case("vlyn")
+         case ("vlyn")
             tab(:,:,:) = real(u(ind%myn,RNG) / u(ind%dnn,RNG),4)
-         case("vlyi")
+         case ("vlyi")
             tab(:,:,:) = real(u(ind%myi,RNG) / u(ind%dni,RNG),4)
-         case("vlzd")
+         case ("vlzd")
             tab(:,:,:) = real(u(ind%mzd,RNG) / u(ind%dnd,RNG),4)
-         case("vlzn")
+         case ("vlzn")
             tab(:,:,:) = real(u(ind%mzn,RNG) / u(ind%dnn,RNG),4)
-         case("vlzi")
+         case ("vlzi")
             tab(:,:,:) = real(u(ind%mzi,RNG) / u(ind%dni,RNG),4)
 #ifdef NEUTRAL
-         case("pren")
+         case ("pren")
 #ifndef ISO
             tab(:,:,:) = real( u(ind%enn,RNG) - &
               0.5 *( u(ind%mxn,RNG)**2 + u(ind%myn,RNG)**2 + u(ind%mzn,RNG)**2 ) / u(ind%dnn,RNG),4)*(gamma_neu-1.0)
@@ -553,7 +553,7 @@ module dataio_hdf5
             tab = 0.0
 #endif /* !ISO */
 #endif /* NEUTRAL */
-         case("enen")
+         case ("enen")
 #ifdef ISO
             tab(:,:,:) = real(0.5 *( u(ind%mxn,RNG)**2 + &
                                      u(ind%myn,RNG)**2 + &
@@ -563,7 +563,7 @@ module dataio_hdf5
             tab(:,:,:) = real(u(ind%enn,RNG),4)
 #endif /* ISO */
 #ifdef IONIZED
-         case("enei")
+         case ("enei")
 #ifdef ISO
             tab(:,:,:) = real(0.5 *( u(ind%mxi,RNG)**2 + &
                                      u(ind%myi,RNG)**2 + &
@@ -572,7 +572,7 @@ module dataio_hdf5
 #else /* ISO */
             tab(:,:,:) = real(u(ind%eni,RNG),4)
 #endif /* ISO */
-         case("prei")
+         case ("prei")
 #ifndef ISO
             tab(:,:,:) = real( u(ind%eni,RNG) - &
               0.5 *( u(ind%mxi,RNG)**2 + u(ind%myi,RNG)**2 + u(ind%mzi,RNG)**2 ) / u(ind%dni,RNG),4)*(gamma_ion-1.0)
@@ -582,14 +582,14 @@ module dataio_hdf5
             tab = 0.0
 #endif /* !ISO */
 #endif /* IONIZED */
-         case("magx")
+         case ("magx")
             tab(:,:,:) = real(b(ind%bx,RNG),4)
-         case("magy")
+         case ("magy")
             tab(:,:,:) = real(b(ind%by,RNG),4)
-         case("magz")
+         case ("magz")
             tab(:,:,:) = real(b(ind%bz,RNG),4)
 #ifdef GRAV
-         case("gpot")
+         case ("gpot")
             tab(:,:,:) = real(gpot(RNG),4)
 #ifdef MULTIGRID
          case ("mgso")
@@ -711,8 +711,8 @@ module dataio_hdf5
       call MPI_Bcast(fname, cwdlen, MPI_CHARACTER, 0, comm3d, ierr)
 
       nib = 0; nid = 0; njb = 0; njd = 0; nkb = 0; pisize = 0; pjsize = 0
-      select case(plane)
-         case("yz")
+      select case (plane)
+         case ("yz")
             if (nxd > 1) then
                xn     = ix + nb - pcoords(1)*nxb
             else
@@ -727,7 +727,7 @@ module dataio_hdf5
             nkb    = nxb
             pisize = pysize
             pjsize = pzsize
-         case("xz")
+         case ("xz")
             if (nyd > 1) then
                xn     = iy + nb - pcoords(2)*nyb
             else
@@ -742,7 +742,7 @@ module dataio_hdf5
             nkb    = nyb
             pisize = pxsize
             pjsize = pzsize
-         case("xy")
+         case ("xy")
             if (nzd > 1) then
                xn = iz + nb - pcoords(3)*nzb
             else

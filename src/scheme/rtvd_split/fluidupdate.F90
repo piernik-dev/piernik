@@ -207,7 +207,7 @@ contains
 
       select case (dir)
 
-         case(DIR_X)
+         case (DIR_X)
             if (nxd /= 1) then
                if (.not. forward) then
 #ifdef COSM_RAYS
@@ -230,7 +230,7 @@ contains
                endif
             endif
 
-         case(DIR_Y)
+         case (DIR_Y)
             if (nyd /= 1) then
                if (.not. forward) then
 #ifdef COSM_RAYS
@@ -256,7 +256,7 @@ contains
 #endif /* SHEAR */
             endif
 
-         case(DIR_Z)
+         case (DIR_Z)
             if (nzd /= 1) then
                if (.not. forward) then
 #ifdef COSM_RAYS

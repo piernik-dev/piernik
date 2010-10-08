@@ -140,7 +140,7 @@ module rtvd ! split orig
          vibj1=b*vg
       elsewhere
          vibj1=eoshift(b*vg,1,boundary=big)
-      end where
+      endwhere
 
 ! values of magnetic field computation in Runge-Kutta half step
 
@@ -500,11 +500,11 @@ module rtvd ! split orig
 
 #if defined COSM_RAYS && defined IONIZED
          select case (sweep)
-            case('xsweep')
+            case ('xsweep')
                divv = divvel(:,i1,i2)
-            case('ysweep')
+            case ('ysweep')
                divv = divvel(i2,:,i1)
-            case('zsweep')
+            case ('zsweep')
                divv = divvel(i1,i2,:)
          end select
 
