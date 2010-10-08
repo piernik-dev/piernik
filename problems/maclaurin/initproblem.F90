@@ -30,7 +30,7 @@
 
 module initproblem
 
-   use problem_pub, only : problem_name, run_id
+   use problem_pub, only: problem_name, run_id
 
    real              :: x0, y0, z0, d0, a1, e, d1, p0, a3
    integer           :: nsub
@@ -43,12 +43,12 @@ contains
 
    subroutine read_problem_par
 
-      use errh,          only : namelist_errh, die, warn
-      use mpisetup,      only : ierr, rbuff, cbuff, ibuff, proc, buffer_dim, comm, smalld, cbuff_len, &
-           &                    MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER
-      use constants,     only : pi
-      use dataio_public, only : skip_advection, ierrh, msg, par_file
-      use func,          only : compare_namelist
+      use constants,     only: pi
+      use dataio_public, only: skip_advection, ierrh, msg, par_file
+      use errh,          only: namelist_errh, die, warn
+      use func,          only: compare_namelist
+      use mpisetup,      only: ierr, rbuff, cbuff, ibuff, proc, buffer_dim, comm, smalld, cbuff_len, &
+           &                   MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER
 
       implicit none
 
@@ -131,15 +131,15 @@ contains
 
    subroutine init_prob
 
-      use mpisetup,      only : proc
-      use arrays,        only : u, b
-      use constants,     only : pi
-      use grid,          only : x, y, z, dx, dy, dz, nx, ny, nz, xmin, xmax, ymin, ymax, zmin, zmax
-      use initionized,   only : gamma_ion, idni, imxi, imzi, ieni
-      use list_hdf5,     only : additional_attrs
-      use types,         only : finalize_problem
-      use dataio_public, only : msg
-      use errh,          only : printinfo, warn
+      use arrays,        only: u, b
+      use constants,     only: pi
+      use dataio_public, only: msg
+      use errh,          only: printinfo, warn
+      use grid,          only: x, y, z, dx, dy, dz, nx, ny, nz, xmin, xmax, ymin, ymax, zmin, zmax
+      use initionized,   only: gamma_ion, idni, imxi, imzi, ieni
+      use list_hdf5,     only: additional_attrs
+      use mpisetup,      only: proc
+      use types,         only: finalize_problem
 
       implicit none
 
@@ -198,9 +198,9 @@ contains
 
    subroutine init_prob_attrs(file_id)
 
-      use hdf5,      only : HID_T, SIZE_T
-      use h5lt,      only : h5ltset_attribute_double_f
-      use constants, only : fpiG
+      use constants, only: fpiG
+      use hdf5,      only: HID_T, SIZE_T
+      use h5lt,      only: h5ltset_attribute_double_f
 
       implicit none
 
@@ -228,12 +228,12 @@ contains
 !
    subroutine finalize_problem_maclaurin
 
-      use mpisetup,      only : proc, comm3d, ierr, MPI_DOUBLE_PRECISION, MPI_SUM, MPI_MIN, MPI_MAX, MPI_IN_PLACE
-      use constants,     only : pi, newtong
-      use grid,          only : x, y, z, is, ie, js, je, ks, ke
-      use arrays,        only : sgp
-      use errh,          only : printinfo, warn
-      use dataio_public, only : msg
+      use arrays,        only: sgp
+      use constants,     only: pi, newtong
+      use dataio_public, only: msg
+      use errh,          only: printinfo, warn
+      use grid,          only: x, y, z, is, ie, js, je, ks, ke
+      use mpisetup,      only: proc, comm3d, ierr, MPI_DOUBLE_PRECISION, MPI_SUM, MPI_MIN, MPI_MAX, MPI_IN_PLACE
 
       implicit none
 

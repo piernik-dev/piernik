@@ -46,12 +46,12 @@ contains
 
    subroutine read_problem_par
 
-      use grid,     only : xmin, xmax, ymin, ymax, zmin, zmax, dx, dy, dz, nxd, nyd, nzd
-      use errh,     only : namelist_errh, die
-      use mpisetup, only : ierr, rbuff, cbuff_len, cbuff, ibuff, lbuff, proc, buffer_dim, comm, &
-           &               MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL
       use dataio_public, only: par_file, ierrh
-      use func,     only : compare_namelist
+      use errh,          only: namelist_errh, die
+      use func,          only: compare_namelist
+      use grid,          only: xmin, xmax, ymin, ymax, zmin, zmax, dx, dy, dz, nxd, nyd, nzd
+      use mpisetup,      only: ierr, rbuff, cbuff_len, cbuff, ibuff, lbuff, proc, buffer_dim, comm, &
+           &                   MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL
 
       implicit none
 
@@ -148,14 +148,14 @@ contains
 !
    subroutine init_prob
 
-      use mpisetup,      only : proc, smalld, smallei, MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_MIN, MPI_MAX, MPI_SUM, comm, ierr
-      use arrays,        only : u, b, sgp, gpot, hgpot
-      use constants,     only : fpiG, pi, newtong
-      use grid,          only : xmin, xmax, ymin, ymax, zmin, zmax, x, y, z, dx, dy, dz, is, ie, js, je, ks, ke
-      use initionized,   only : gamma_ion, idni, imxi, imyi, imzi, ieni
-      use dataio_public, only : tend, msg
-      use multigrid,     only : multigrid_solve
-      use errh,          only : die, warn, printinfo
+      use arrays,        only: u, b, sgp, gpot, hgpot
+      use constants,     only: fpiG, pi, newtong
+      use dataio_public, only: tend, msg
+      use errh,          only: die, warn, printinfo
+      use grid,          only: xmin, xmax, ymin, ymax, zmin, zmax, x, y, z, dx, dy, dz, is, ie, js, je, ks, ke
+      use initionized,   only: gamma_ion, idni, imxi, imyi, imzi, ieni
+      use multigrid,     only: multigrid_solve
+      use mpisetup,      only: proc, smalld, smallei, MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_MIN, MPI_MAX, MPI_SUM, comm, ierr
 
       implicit none
 
@@ -409,13 +409,13 @@ contains
 
    subroutine virialCheck(tol)
 
-      use grid,          only : is, ie, js, je, ks, ke, dx, dy, dz
-      use arrays,        only : u, sgp
-      use mpisetup,      only : proc, comm, ierr, MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_SUM
-      use initionized,   only : idni
-      use errh,          only : die, warn, printinfo
-      use multigridvars, only : grav_bnd, bnd_isolated
-      use dataio_public, only : msg
+      use arrays,        only: u, sgp
+      use dataio_public, only: msg
+      use errh,          only: die, warn, printinfo
+      use grid,          only: is, ie, js, je, ks, ke, dx, dy, dz
+      use initionized,   only: idni
+      use mpisetup,      only: proc, comm, ierr, MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_SUM
+      use multigridvars, only: grav_bnd, bnd_isolated
 
       implicit none
 
@@ -465,10 +465,10 @@ contains
 
    subroutine totalMEnthalpic(C, totME, mode)
 
-      use mpisetup,    only : smalld, comm, ierr, MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_SUM
-      use arrays,      only : sgp, u
-      use grid,        only : is, ie, js, je, ks, ke, dx, dy, dz
-      use initionized, only : idni
+      use arrays,      only: sgp, u
+      use grid,        only: is, ie, js, je, ks, ke, dx, dy, dz
+      use initionized, only: idni
+      use mpisetup,    only: smalld, comm, ierr, MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_SUM
 
       implicit none
 
@@ -520,7 +520,7 @@ contains
 
    real function presrho(rho)
 
-      use initionized, only : gamma_ion
+      use initionized, only: gamma_ion
 
       implicit none
 
@@ -535,8 +535,8 @@ contains
 
    real function rhoH(H)
 
-      use initionized, only : gamma_ion
-      use mpisetup,    only : smalld
+      use initionized, only: gamma_ion
+      use mpisetup,    only: smalld
 
       implicit none
 
@@ -555,7 +555,7 @@ contains
 
    real function hRho(rho)
 
-      use initionized,   only : gamma_ion
+      use initionized,   only: gamma_ion
 
       implicit none
 

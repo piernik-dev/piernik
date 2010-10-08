@@ -50,11 +50,11 @@ module initproblem
 !-----------------------------------------------------------------------------
 
    subroutine read_problem_par
-      use errh,     only : namelist_errh
-      use mpisetup, only : cbuff_len, cbuff, rbuff, buffer_dim, comm, ierr, proc, &
-                           MPI_CHARACTER, MPI_DOUBLE_PRECISION
-      use dataio_public, only : ierrh, msg, par_file
-      use func,          only : compare_namelist
+      use dataio_public, only: ierrh, msg, par_file
+      use errh,          only: namelist_errh
+      use func,          only: compare_namelist
+      use mpisetup,      only: cbuff_len, cbuff, rbuff, buffer_dim, comm, ierr, proc, &
+                               MPI_CHARACTER, MPI_DOUBLE_PRECISION
 
       implicit none
 
@@ -119,16 +119,16 @@ module initproblem
 !-----------------------------------------------------------------------------
 
    subroutine init_prob
-      use arrays,         only : u, b, dprof
-      use fluidindex,     only : ibx,iby,ibz
-      use grid,           only : x, y, z, nx, ny, nz, nxd, nyd, xmin, xmax, ymin, ymax, lx, ly
-      use hydrostatic,    only : hydrostatic_zeq
-      use initcosmicrays, only : gamma_crs, iarr_crs, cr_eff
-      use initfluids,     only : cs_iso2
-      use initionized,    only : idni, imxi, imyi, imzi
-      use mpisetup,       only : proc, smalld
+      use arrays,         only: u, b, dprof
+      use fluidindex,     only: ibx, iby, ibz
+      use grid,           only: x, y, z, nx, ny, nz, nxd, nyd, xmin, xmax, ymin, ymax, lx, ly
+      use hydrostatic,    only: hydrostatic_zeq
+      use initcosmicrays, only: gamma_crs, iarr_crs, cr_eff
+      use initfluids,     only: cs_iso2
+      use initionized,    only: idni, imxi, imyi, imzi
+      use mpisetup,       only: proc, smalld
 #ifdef SHEAR
-      use shear,          only : qshear, omega
+      use shear,          only: qshear, omega
 #endif /* SHEAR */
 
       implicit none
@@ -248,11 +248,11 @@ module initproblem
 !! \author M. Hanasz
 !<
    subroutine cr_sn_beware(pos)
-      use arrays,         only : u
-      use crcomposition,  only : icr_H1, icr_Be10, icr_C12, icr_N14, icr_O16, primary_C12, primary_N14, primary_O16
-      use fluidindex,     only :  nvar
-      use grid,           only : nx,ny,nz,x,y,z,Lx,Ly
-      use initcosmicrays, only : iarr_crn
+      use arrays,         only: u
+      use crcomposition,  only: icr_H1, icr_Be10, icr_C12, icr_N14, icr_O16, primary_C12, primary_N14, primary_O16
+      use fluidindex,     only: nvar
+      use grid,           only: nx, ny, nz, x, y, z, Lx, Ly
+      use initcosmicrays, only: iarr_crn
 
       implicit none
 

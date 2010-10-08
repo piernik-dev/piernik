@@ -30,14 +30,6 @@
 
 module initproblem
 
-   use arrays,       only : u,b
-   use grid,         only : x,y,z,nx,ny,nz, xl, yl
-   use initionized,  only : idni,imxi,imyi,imzi
-#ifndef ISO
-   use initionized,  only : ieni, gamma_ion
-#endif /* !ISO */
-   use grid,         only : dx,dy
-   use constants,    only : pi,dpi,fpi
    use problem_pub, only: problem_name, run_id
 
    real              :: d0,r0,bx0,by0,bz0
@@ -51,11 +43,11 @@ module initproblem
 
    subroutine read_problem_par
 
-      use mpisetup, only: MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION, &
-           &              cbuff_len, cbuff, ibuff, rbuff, comm, ierr, buffer_dim, proc
-      use errh, only: namelist_errh
-      use dataio_public, only : ierrh, msg, par_file
-      use func,          only : compare_namelist
+      use dataio_public, only: ierrh, msg, par_file
+      use errh,          only: namelist_errh
+      use func,          only: compare_namelist
+      use mpisetup,      only: MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION, &
+           &                   cbuff_len, cbuff, ibuff, rbuff, comm, ierr, buffer_dim, proc
 
       implicit none
 
@@ -95,13 +87,20 @@ module initproblem
 
    subroutine init_prob
 
-      use mpisetup, only: smallei
+      use arrays,       only: u,b
+      use constants,    only: pi, dpi, fpi
+      use grid,         only: x, y, z, nx, ny, nz, xl, yl, dx, dy
+      use initionized,  only: idni, imxi, imyi, imzi
+#ifndef ISO
+      use initionized,  only: ieni, gamma_ion
+#endif /* !ISO */
+      use mpisetup,     only: smallei
 
       implicit none
 
-      integer :: i,j,k
-      real :: xi,yj,zk
-      real :: vx,vy,vz,rho,pre,bx,by,bz,b0
+      integer :: i, j, k
+      real    :: xi, yj, zk
+      real    :: vx, vy, vz, rho, pre, bx, by, bz, b0
       real, dimension(:,:,:),allocatable :: A
 
 !   Secondary parameters

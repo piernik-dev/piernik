@@ -33,8 +33,8 @@ module initproblem
 ! Initial condition for Keplerian disk
 ! Written by: M. Hanasz, March 2006
 
-   use problem_pub, only : problem_name, run_id
-   use mpisetup,    only : cbuff_len
+   use mpisetup,    only: cbuff_len
+   use problem_pub, only: problem_name, run_id
 
    real :: d0, r_max, dout, alpha
    character(len=cbuff_len) :: mag_field_orient
@@ -47,11 +47,11 @@ module initproblem
 !-----------------------------------------------------------------------------
 
    subroutine read_problem_par
-      use errh,     only : namelist_errh
-      use mpisetup, only : cbuff, rbuff, buffer_dim, proc, comm, ierr, &
-                           MPI_CHARACTER, MPI_DOUBLE_PRECISION
-      use dataio_public, only : ierrh, msg, par_file
-      use func,          only : compare_namelist
+      use dataio_public, only: ierrh, msg, par_file
+      use errh,          only: namelist_errh
+      use func,          only: compare_namelist
+      use mpisetup,      only: cbuff, rbuff, buffer_dim, proc, comm, ierr, &
+                               MPI_CHARACTER, MPI_DOUBLE_PRECISION
 
       implicit none
 
@@ -100,18 +100,18 @@ module initproblem
 !-----------------------------------------------------------------------------
 
    subroutine init_prob
-      use arrays,      only : u, b, dprof
-      use constants,   only : newtong
-      use fluidindex,  only : ibx, iby, ibz
-      use gravity,     only : r_smooth, r_grav, n_gravr, ptmass
-      use grid,        only : x, y, z, nx, ny, nz, nzd
-      use hydrostatic, only : hydrostatic_zeq
-      use initfluids,  only : gamma, cs_iso
-      use initionized, only : idni, imxi, imyi, imzi
+      use arrays,      only: u, b, dprof
+      use constants,   only: newtong
+      use fluidindex,  only: ibx, iby, ibz
+      use gravity,     only: r_smooth, r_grav, n_gravr, ptmass
+      use grid,        only: x, y, z, nx, ny, nz, nzd
+      use hydrostatic, only: hydrostatic_zeq
+      use initfluids,  only: gamma, cs_iso
+      use initionized, only: idni, imxi, imyi, imzi
 #ifndef ISO
-      use initionized, only : ieni, gamma_ion, cs_ion
+      use initionized, only: ieni, gamma_ion, cs_ion
 #endif /* !ISO */
-      use mpisetup,    only : smalld
+      use mpisetup,    only: smalld
       implicit none
 
       integer :: i, j, k, kmid

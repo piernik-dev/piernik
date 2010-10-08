@@ -46,10 +46,10 @@ module initproblem
 
    subroutine read_problem_par
 
-      use mpisetup, only: MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION, &
-           &              cbuff_len, cbuff, ibuff, rbuff, comm, ierr, buffer_dim, proc
-      use dataio_public, only : cwd, msg, par_file
-      use func,          only : compare_namelist
+      use dataio_public, only: cwd, msg, par_file
+      use func,          only: compare_namelist
+      use mpisetup,      only: MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION, &
+                &              cbuff_len, cbuff, ibuff, rbuff, comm, ierr, buffer_dim, proc
 
       implicit none
 
@@ -105,10 +105,10 @@ module initproblem
 
    subroutine init_prob
 
-      use arrays,    only : u
-      use constants, only : pi
-      use initdust,  only : idnd,imxd,imyd,imzd
-      use grid,      only : Lx, Ly, Lz, nx, ny, nz, x, y, z
+      use arrays,    only: u
+      use constants, only: pi
+      use grid,      only: Lx, Ly, Lz, nx, ny, nz, x, y, z
+      use initdust,  only: idnd, imxd, imyd, imzd
 
 
       implicit none

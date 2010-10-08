@@ -48,12 +48,12 @@ module initproblem
 !-----------------------------------------------------------------------------
 
    subroutine read_problem_par
-      use errh,     only : namelist_errh
-      use grid,     only : dxmn
-      use mpisetup, only : cbuff_len, cbuff, ibuff, rbuff, buffer_dim, proc, comm, ierr, &
-                           MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER
-      use dataio_public, only : ierrh, msg, par_file
-      use func,          only : compare_namelist
+      use dataio_public, only: ierrh, msg, par_file
+      use errh,          only: namelist_errh
+      use func,          only: compare_namelist
+      use grid,          only: dxmn
+      use mpisetup,      only: cbuff_len, cbuff, ibuff, rbuff, buffer_dim, proc, comm, ierr, &
+                               MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER
 
       implicit none
 
@@ -129,13 +129,13 @@ module initproblem
 
    subroutine init_prob
 
-      use arrays,      only : u, b
-      use grid,        only : x, y, z, nx, ny, nz
+      use arrays,      only: u, b
+      use grid,        only: x, y, z, nx, ny, nz
 #ifdef IONIZED
-      use initionized, only : gamma_ion, idni, imxi, imyi, imzi, ieni
+      use initionized, only: gamma_ion, idni, imxi, imyi, imzi, ieni
 #endif /* IONIZED */
 #ifdef NEUTRAL
-      use initneutral, only : gamma_neu, idnn, imxn, imyn, imzn, ienn
+      use initneutral, only: gamma_neu, idnn, imxn, imyn, imzn, ienn
 #endif /* NEUTRAL */
 
       implicit none

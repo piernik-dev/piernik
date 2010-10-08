@@ -43,13 +43,13 @@ contains
 
    subroutine read_problem_par
 
-      use grid,          only : xmin, xmax, ymin, ymax, zmin, zmax, nx, ny, nz
-      use errh,          only : namelist_errh, die, warn
-      use mpisetup,      only : ierr, rbuff, cbuff_len, cbuff, ibuff, proc, buffer_dim, comm, &
-           &                    MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER
-      use constants,     only : pi
-      use dataio_public, only : ierrh, msg, par_file
-      use func,          only : compare_namelist
+      use constants,     only: pi
+      use dataio_public, only: ierrh, msg, par_file
+      use errh,          only: namelist_errh, die, warn
+      use func,          only: compare_namelist
+      use grid,          only: xmin, xmax, ymin, ymax, zmin, zmax, nx, ny, nz
+      use mpisetup,      only: ierr, rbuff, cbuff_len, cbuff, ibuff, proc, buffer_dim, comm, &
+           &                   MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER
 
       implicit none
 
@@ -136,13 +136,13 @@ contains
 
    subroutine init_prob
 
-      use mpisetup,      only : proc
-      use arrays,        only : u, b
-      use constants,     only : fpiG, pi, newtong
-      use grid,          only : xmin, xmax, ymin, ymax, zmin, zmax, x, y, z, nx, ny, nz, xmin, ymin, zmin, dx, dy, dz
-      use initionized,   only : gamma_ion, idni, imxi, imzi, ieni
-      use dataio_public, only : tend, msg
-      use errh,          only : printinfo, warn
+      use arrays,        only: u, b
+      use constants,     only: fpiG, pi, newtong
+      use dataio_public, only: tend, msg
+      use errh,          only: printinfo, warn
+      use grid,          only: xmin, xmax, ymin, ymax, zmin, zmax, x, y, z, nx, ny, nz, xmin, ymin, zmin, dx, dy, dz
+      use initionized,   only: gamma_ion, idni, imxi, imzi, ieni
+      use mpisetup,      only: proc
 
       implicit none
 

@@ -48,12 +48,12 @@ module initproblem
 
    subroutine read_problem_par
 
-      use mpisetup, only: MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION, &
-           &              cbuff_len, cbuff, ibuff, rbuff, buffer_dim, comm, ierr, proc
-      use grid,     only: dxmn
-      use errh,     only: namelist_errh
-      use dataio_public, only : cwd, msg, par_file
-      use func,          only : compare_namelist
+      use dataio_public, only: cwd, msg, par_file
+      use errh,          only: namelist_errh
+      use func,          only: compare_namelist
+      use grid,          only: dxmn
+      use mpisetup,      only: MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION, &
+           &                   cbuff_len, cbuff, ibuff, rbuff, buffer_dim, comm, ierr, proc
 
       implicit none
 
@@ -126,17 +126,14 @@ module initproblem
 
    subroutine init_prob
 
-      use grid,           only : Lx,Ly,Lz, xmin,ymin,zmin, nxd,nyd,nzd
-      use fluidindex,     only : ibx,iby,ibz
-      use fluidindex,     only : nvar
-      use initionized,    only : idni,imxi,imyi,imzi,ieni
-      use initcosmicrays, only : iarr_crn, iarr_cre, iarr_crs
-      use initcosmicrays, only : gamma_crn, gamma_cre, gamma_crs
-      use initionized,    only : gamma_ion
-      use arrays,         only : b, u
-      use grid,           only : nx, ny, nz, nb, ks, ke, x, y, z
-      use errh,           only : die
-      use crcomposition,  only : icr_H1, icr_C12
+      use arrays,         only: b, u
+      use crcomposition,  only: icr_H1, icr_C12
+      use errh,           only: die
+      use fluidindex,     only: ibx, iby, ibz, nvar
+      use grid,           only: nx, ny, nz, nb, ks, ke, x, y, z, Lx, Ly, Lz, xmin, ymin, zmin, nxd, nyd, nzd
+      use initionized,    only: idni, imxi, imyi, imzi, ieni
+      use initcosmicrays, only: iarr_crn, iarr_cre, iarr_crs, gamma_crn, gamma_cre, gamma_crs
+      use initionized,    only: gamma_ion
 
       implicit none
 

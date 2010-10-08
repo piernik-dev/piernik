@@ -46,11 +46,11 @@ module initproblem
 !-----------------------------------------------------------------------------
 
    subroutine read_problem_par
-      use errh,     only : namelist_errh
-      use mpisetup, only : cbuff_len, cbuff, rbuff, buffer_dim, proc, comm, ierr, &
-                           MPI_CHARACTER, MPI_DOUBLE_PRECISION
-      use dataio_public, only : ierrh, msg, par_file
-      use func,          only : compare_namelist
+      use dataio_public, only: ierrh, msg, par_file
+      use errh,          only: namelist_errh
+      use func,          only: compare_namelist
+      use mpisetup,      only: cbuff_len, cbuff, rbuff, buffer_dim, proc, comm, ierr, &
+                               MPI_CHARACTER, MPI_DOUBLE_PRECISION
 
       implicit none
       problem_name = 'xxx'
@@ -96,15 +96,15 @@ module initproblem
 !-----------------------------------------------------------------------------
 
    subroutine init_prob
-      use arrays,      only : u, b, dprof
-      use grid,        only : nx, ny, nz
-      use initfluids,  only : cs_iso2
-      use initionized, only : idni, imxi, imyi, imzi
-      use fluidindex,  only : ibx, iby, ibz
-      use hydrostatic, only : hydrostatic_zeq
-      use mpisetup,    only : smalld
+      use arrays,      only: u, b, dprof
+      use fluidindex,  only: ibx, iby, ibz
+      use grid,        only: nx, ny, nz
+      use hydrostatic, only: hydrostatic_zeq
+      use initfluids,  only: cs_iso2
+      use initionized, only: idni, imxi, imyi, imzi
+      use mpisetup,    only: smalld
 #ifdef SHEAR
-      use shear,       only : qshear, omega
+      use shear,       only: qshear, omega
 #endif /* SHEAR */
 
       implicit none
