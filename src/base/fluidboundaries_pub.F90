@@ -50,13 +50,22 @@ contains
    end subroutine default_bnd
 !--------------------------------------------------------------------------------------------------
    subroutine init_fluidboundaries
+#ifdef VERBOSE
+      use errh, only: printinfo
+#endif /* VERBOSE */
       implicit none
+#ifdef VERBOSE
+      call printinfo("[fluidboundaries_pub:init_fluidboundaries]: commencing...")
+#endif /* VERBOSE */
       user_bnd_xl => default_bnd
       user_bnd_xr => default_bnd
       user_bnd_yl => default_bnd
       user_bnd_yr => default_bnd
       user_bnd_zl => default_bnd
       user_bnd_zr => default_bnd
+#ifdef VERBOSE
+      call printinfo("[fluidboundaries_pub:init_fluidboundaries]: finished. \o/")
+#endif /* VERBOSE */
    end subroutine init_fluidboundaries
 
 end module fluidboundaries_pub

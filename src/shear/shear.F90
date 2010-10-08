@@ -54,15 +54,18 @@ module shear
 !<
   subroutine init_shear
 
-    use mpisetup, only : ierr, MPI_DOUBLE_PRECISION, proc, rbuff, buffer_dim, comm
-    use errh, only : namelist_errh
-    use dataio_public, only: par_file, ierrh
-    use func,        only : compare_namelist
+    use mpisetup,       only: ierr, MPI_DOUBLE_PRECISION, proc, rbuff, buffer_dim, comm
+    use errh,           only: namelist_errh, printinfo
+    use dataio_public,  only: par_file, ierrh
+    use func,           only: compare_namelist
 
     implicit none
 
-
     namelist /SHEARING/ omega, qshear
+
+#ifdef VERBOSE
+    call printinfo("[shear:init_shear]: commencing...")
+#endif /* VERBOSE */
 
     omega   = 0.0
     qshear  = 0.0
@@ -82,6 +85,9 @@ module shear
        qshear  = rbuff(2)
     endif
 
+#ifdef VERBOSE
+    call printinfo("[shear:init_shear]: finished. \o/")
+#endif /* VERBOSE */
   end subroutine init_shear
 
   subroutine yshift(ts,dts)
