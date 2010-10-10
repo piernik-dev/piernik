@@ -11,11 +11,7 @@
     use func,          only: compare_namelist
 
 
-  Potential problem: for gnu cpp I'd write:
-
-    call namelist_errh(ierrh, #namelist);
-
-  but it looks like gfortran calls cpp -traditional-cpp and does not perform stringifying
+  It does not work with cpp -traditional-cpp (the default way gfortran calls cpp).
 
  */
 #define diff_nml(namelist)\
