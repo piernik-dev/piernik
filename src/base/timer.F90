@@ -156,7 +156,7 @@ contains
 
          time_old = tp%info%time
          call cpu_time(tp%info%time)
-         !if (.not.reset) write(*,'(A,F7.3,A)') "Timer ["//trim(tp%info%key)//"] = ", tp%info%time - time_old, " s"  ! QA_WARN
+         !if (.not.reset) write(*,'(3A,F7.3,A)') "Timer [",trim(tp%info%key),"] = ", tp%info%time - time_old, " s"  ! QA_WARN
          if (.not.reset) then
             modify_timer = tp%info%time - time_old
          else
@@ -275,11 +275,11 @@ contains
          zcps  = real(nstep) * real(nzones) / cpuallp
 
          call printinfo("", .true.)
-         write (msg, 10) cpuallp
+         write(msg, 10) cpuallp
          call printinfo(msg)
-         write (msg, 20) wctot
+         write(msg, 20) wctot
          call printinfo(msg)
-         write (msg, 30) zcps
+         write(msg, 30) zcps
          call printinfo(msg)
          call printinfo("", .true.)
 

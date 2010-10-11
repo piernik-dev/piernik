@@ -1034,9 +1034,10 @@ contains
 
    subroutine test_multipoles
 
-      use errh,               only: die
+      use errh,               only: die, printinfo
       use constants,          only: newtong
       use multigridhelpers,   only: aux_par_R0, aux_par_R1, aux_par_R2, aux_par_I0, dirty_debug
+      use dataio_public,      only: msg
 
       implicit none
 
@@ -1083,7 +1084,8 @@ contains
 !!$            cphi = - p(0)*newtong / sqrt(1e-290+sum((p(1:3)-x(1:3))**2))
 !!$
 !!$            call moments2pot(phi, x(1), x(2), x(3))
-!!$            write(*,'(a,3f7.2,2(a,g15.5))')" xyz= ",x(1:3)," phi = ",phi," calc= ",cphi ! QA_WARN
+!!$            write(msg,'(a,3f7.2,2(a,g15.5))')" xyz= ",x(1:3)," phi = ",phi," calc= ",cphi
+!!$            call printinfo(msg, .false.)
 !!$         enddo
 !!$      enddo
 !!$

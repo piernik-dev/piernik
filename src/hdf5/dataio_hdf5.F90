@@ -868,7 +868,7 @@ module dataio_hdf5
 
       integer :: error, rank = 4
 
-      if (proc==0) write (filename, '(a,a1,a3,a1,i4.4,a4)') trim(problem_name), '_', run_id, '_', nres, '.res'
+      if (proc==0) write(filename, '(a,a1,a3,a1,i4.4,a4)') trim(problem_name), '_', run_id, '_', nres, '.res'
       call MPI_Bcast(filename, cwdlen, MPI_CHARACTER, 0, comm, ierr)
       call set_container_chdf(nstep)
 
@@ -1353,8 +1353,8 @@ module dataio_hdf5
       nu = nvar%all
 
       if (proc==0) then
-         write (filename,'(a,a1,a3,a1,i4.4,a4)') trim(problem_name),'_', run_id,'_',chdf%nres,'.res'
-         write (msg, '(2a)') 'Reading restart  file: ',trim(filename)
+         write(filename,'(a,a1,a3,a1,i4.4,a4)') trim(problem_name),'_', run_id,'_',chdf%nres,'.res'
+         write(msg, '(2a)') 'Reading restart  file: ',trim(filename)
          call printinfo(msg)
       endif
       call MPI_Bcast(filename, cwdlen, MPI_CHARACTER, 0, comm, ierr)

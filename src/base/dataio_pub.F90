@@ -130,7 +130,7 @@ contains
          frun = .false.
       endif
 
-!      write(*,*) ansi_red//"Red "//ansi_green//"Green "//ansi_yellow//"Yellow "//ansi_blue//"Blue "//ansi_magenta//"Magenta "//ansi_cyan//"Cyan "//ansi_white//"White "//ansi_black ! QA_WARN
+!      write(*,*) ansi_red, "Red ", ansi_green, "Green ", ansi_yellow, "Yellow ", ansi_blue, "Blue ", ansi_magenta, "Magenta ", ansi_cyan, "Cyan ", ansi_white, "White ", ansi_black ! QA_WARN
 
       select case (mode)
          case (T_ERR)

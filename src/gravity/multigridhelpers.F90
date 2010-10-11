@@ -87,9 +87,10 @@ contains
 
    subroutine check_dirty(lev, iv, label, expand)
 
-      use errh,          only: die
+      use errh,          only: die, warn
       use mpisetup,      only: proc
       use multigridvars, only: ngridvars, lvl, level_min, level_max, mg_nb, eff_dim, NDIM
+      use dataio_public, only: msg
 
       implicit none
 
@@ -126,9 +127,11 @@ contains
          do k = lvl(l)%ks-ng, lvl(l)%ke+ng
             do j = lvl(l)%js-ng, lvl(l)%je+ng
                do i = lvl(l)%is-ng, lvl(l)%ie+ng
-                  if (abs(lvl(l)%mgvar(i, j, k, iv)) > dirtyL) &
-                       write (*, '(3a,i4,a,i2,a,3(i3,a),i2,a,g20.12)') &
-                       "[multigridhelpers:check_dirty] ", label, "@", proc, " lvl(", l, ")%mgvar(", i, ",", j, ",", k, ",", iv, ") = ", lvl(l)%mgvar(i, j, k, iv)
+                  if (abs(lvl(l)%mgvar(i, j, k, iv)) > dirtyL) then
+                     write(msg, '(3a,i4,a,i2,a,3(i3,a),i2,a,g20.12)') &
+                        "[multigridhelpers:check_dirty] ", label, "@", proc, " lvl(", l, ")%mgvar(", i, ",", j, ",", k, ",", iv, ") = ", lvl(l)%mgvar(i, j, k, iv)
+                     call warn(msg)
+                  endif
                enddo
             enddo
          enddo

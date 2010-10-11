@@ -271,7 +271,7 @@ module dataio
          open(1,file=par_file)
          ierrh = 0
          do while (ierrh == 0 .and. parfilelines<maxparfilelines)
-            read (unit=1, fmt='(a)', iostat=ierrh) parfile(parfilelines+1)
+            read(unit=1, fmt='(a)', iostat=ierrh) parfile(parfilelines+1)
             if (ierrh == 0) then
                parfilelines = parfilelines + 1
                i = len_trim(parfile(parfilelines))
@@ -408,7 +408,7 @@ module dataio
          do i=1,nenv
             call printinfo(env(i), .false.)
          enddo
-         write (log_file,'(6a,i3.3,a)') trim(cwd),'/',trim(problem_name),'_',trim(run_id),'_',nrestart,'.log'
+         write(log_file,'(6a,i3.3,a)') trim(cwd),'/',trim(problem_name),'_',trim(run_id),'_',nrestart,'.log'
          ! ToDo: if the simulation is restarted then save previous log_file (if exists) under a different, unique name
          write(system_command, '("mv ",a," ",a)') trim(tmp_log_file), trim(log_file)
          system_status = SYSTEM(system_command)
@@ -655,12 +655,12 @@ module dataio
 
       restart_number = 0
 
-      write (file_name_base,'(a,a1,a3,a1)') trim(problem_name),'_',run_id,'_'
+      write(file_name_base,'(a,a1,a3,a1)') trim(problem_name),'_',run_id,'_'
 
       unlink_stat = unlink('restart_list.tmp')
 
       do nres =999,0,-1
-         write (file_name,'(a,a1,a,a1,a3,a1,i4.4,a4)') &
+         write(file_name,'(a,a1,a,a1,a3,a1,i4.4,a4)') &
                trim(cwd),'/',trim(problem_name),'_', run_id,'_',nres,'.res'
          inquire(file = file_name, exist = exist)
          if (exist) then
@@ -752,13 +752,13 @@ module dataio
 
 
       if (proc .eq. 0) then
-         write (tsl_file,'(a,a1,a,a1,a3,a1,i3.3,a4)') &
+         write(tsl_file,'(a,a1,a,a1,a3,a1,i3.3,a4)') &
               trim(cwd),'/',trim(problem_name),'_', run_id,'_',nrestart,'.tsl'
 
          if (tsl_firstcall) then
             open(tsl_lun, file=tsl_file)
 
-            write (tsl_lun, '(a1,a8,50a16)') '#','nstep', 'time', 'timestep',  &
+            write(tsl_lun, '(a1,a8,50a16)') '#','nstep', 'time', 'timestep',  &
                                                'mass', 'momx', 'momy', 'momz', &
                                                'ener', 'epot', 'eint', 'ekin', &
 #ifdef COSM_RAYS
@@ -791,7 +791,7 @@ module dataio
 #endif /* DUST */
                                              'dummy'
 
-            write (tsl_lun, '(a1)') '#'
+            write(tsl_lun, '(a1)') '#'
             tsl_firstcall = .false.
          else
             open(tsl_lun, file=tsl_file, position='append')
@@ -865,7 +865,7 @@ module dataio
       call write_log(tsl)
 
       if (proc == 0) then
-         write (tsl_lun, '(1x,i8,50(1x,es15.8))') &
+         write(tsl_lun, '(1x,i8,50(1x,es15.8))') &
                       nstep, &
                       t, dt, tot_mass, &
                       tot_momx, tot_momy, tot_momz, &
