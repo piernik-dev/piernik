@@ -32,13 +32,15 @@
 module arrays
 
    implicit none
-   integer, parameter  :: nrlscal=100   !< Size of arrays::rlscal array
-   integer, parameter  :: nintscal=100  !< Size of arrays::intscal array
 
    real, allocatable, dimension(:,:,:,:), target :: u    !< //Main array of all fluids' componets
    real, allocatable, dimension(:,:,:,:), target :: b    !< //Main array of magnetic field's components
    real, allocatable, dimension(:,:,:)           :: wa   !< Temporary array used for different purposes, usually has dimension (grid::nx, grid::ny, grid::nz)
+
+#ifdef RESISTIVE
    real, allocatable, dimension(:,:,:)       :: wcu      !< Temporary array used in resistivity module
+#endif /* RESISTIVE */
+
 #ifdef GRAV
    real, allocatable, dimension(:,:,:)       :: gpot     !< Array for sum of gravitational potential at t += dt
    real, allocatable, dimension(:,:,:)       :: hgpot    !< Array for sum of gravitational potential at t += 0.5*dt
@@ -48,26 +50,25 @@ module arrays
 #if defined(MULTIGRID) || defined(POISSON_FFT)
    real, allocatable, dimension(:,:,:)       :: sgp      !< Array for gravitational potential from multigrid or FFT solver
    real, allocatable, dimension(:,:,:)       :: sgpm     !< Array for gravitational potential from multigrid or FFT solver at previous timestep saved by source_terms_grav.
-#endif
+#endif /* MULTIGRID || POISSON_FFT */
 #endif /* GRAV */
 
 #ifdef COSM_RAYS
    real, allocatable, dimension(:,:,:)       :: divvel   !< Array storing \f$\nabla\cdot\mathbf{v}\f$, needed in cosmic ray transport
    real, allocatable, dimension(:,:,:,:)     :: wcr      !< Temporary array used in crdiffusion module
 #endif /* COSM_RAYS  */
+
 #ifdef ISO_LOCAL
    real, allocatable, dimension(:,:,:),target:: cs_iso2_arr !< Array storing squared local isothermal sound speed
 #endif /* ISO_LOCAL */
 
-   real,    allocatable, dimension(:)        :: rlscal   !< Arrays to store additional scalr quantities in hdf4 files (real)
-   integer, allocatable, dimension(:)        :: intscal  !< Arrays to store additional scalr quantities in hdf4 files (int)
-
    contains
+
 !>
 !! Routine that allocates all arrays
 !<
 
-   subroutine init_arrays(nx,ny,nz,nvar)
+   subroutine init_arrays(nx, ny, nz, nvar)
 
       use diagnostics, only: my_allocate
       use fluidtypes,  only: var_numbers
@@ -75,70 +76,70 @@ module arrays
       implicit none
 
       type(var_numbers), intent(in) :: nvar
-      integer, intent(in) :: nx,ny,nz
+      integer, intent(in) :: nx, ny, nz
 
-      call my_allocate(rlscal, [nrlscal], "rlscal")
-      call my_allocate(intscal, [nintscal], "intscal")
+      call my_allocate(u, [nvar%all, nx, ny, nz], "u")
+      call my_allocate(b, [3, nx, ny, nz], "b") ! BEWARE: magic number
+      call my_allocate(wa, [nx, ny, nz], "wa")
 
-      call my_allocate(u, [nvar%all,nx,ny,nz], "u")
-      call my_allocate(b, [3,nx,ny,nz], "b")
+#ifdef RESISTIVE
+      call my_allocate(wcu, [nx, ny, nz], "wcu")
+#endif /* RESISTIVE */
 
 #ifdef GRAV
-      call my_allocate(gp, [nx,ny,nz], "gp")
-      call my_allocate(gpot, [nx,ny,nz], "gpot")
-      call my_allocate(hgpot, [nx,ny,nz], "hgpot")
-#if defined(MULTIGRID) || defined(POISSON_FFT)
-      call my_allocate(sgp, [nx,ny,nz], "sgp")
-      call my_allocate(sgpm, [nx,ny,nz], "sgpm")
-#endif
+      call my_allocate(gpot, [nx, ny, nz], "gpot")
+      call my_allocate(hgpot, [nx, ny, nz], "hgpot")
+      call my_allocate(gp, [nx, ny, nz], "gp")
       call my_allocate(dprof, [nz], "dprof")
       call my_allocate(eprof, [nz], "eprof")
+#if defined(MULTIGRID) || defined(POISSON_FFT)
+      call my_allocate(sgp, [nx, ny, nz], "sgp")
+      call my_allocate(sgpm, [nx, ny, nz], "sgpm")
+#endif /* MULTIGRID || POISSON_FFT */
 #endif /* GRAV */
 
-      call my_allocate(wa, [nx,ny,nz], "wa")
-#ifdef RESISTIVE
-      call my_allocate(wcu, [nx,ny,nz], "wcu")
-#endif /* RESISTIVE */
 #ifdef COSM_RAYS
-      call my_allocate(divvel, [nx,ny,nz], "divvel")
-      call my_allocate(wcr, [nvar%crs%all,nx,ny,nz], "wcr")
+      call my_allocate(divvel, [nx, ny, nz], "divvel")
+      call my_allocate(wcr, [nvar%crs%all, nx, ny, nz], "wcr")
 #endif /* COSM_RAYS  */
+
 #ifdef ISO_LOCAL
-      call my_allocate(cs_iso2_arr, [nx,ny,nz], "cs_iso2_arr")
+      call my_allocate(cs_iso2_arr, [nx, ny, nz], "cs_iso2_arr")
 #endif /* ISO_LOCAL */
+
    end subroutine init_arrays
 
 !>
 !! Routine that deallocates all arrays
 !<
+
    subroutine cleanup_arrays
 
-      if (allocated(rlscal))  deallocate(rlscal)
-      if (allocated(intscal)) deallocate(intscal)
       if (allocated(u))       deallocate(u)
       if (allocated(b))       deallocate(b)
-
       if (allocated(wa))      deallocate(wa)
+
 #ifdef RESISTIVE
       if (allocated(wcu))     deallocate(wcu)
 #endif /* RESISTIVE */
 
 #ifdef GRAV
-      if (allocated(gp))      deallocate(gp)
       if (allocated(gpot))    deallocate(gpot)
       if (allocated(hgpot))   deallocate(hgpot)
+      if (allocated(gp))      deallocate(gp)
+      if (allocated(dprof))   deallocate(dprof)
+      if (allocated(eprof))   deallocate(eprof)
 #if defined(MULTIGRID) || defined(POISSON_FFT)
       if (allocated(sgp))     deallocate(sgp)
       if (allocated(sgpm))    deallocate(sgpm)
-#endif
-      if (allocated(dprof))   deallocate(dprof)
-      if (allocated(eprof))   deallocate(eprof)
+#endif /* MULTIGRID || POISSON_FFT */
 #endif /* GRAV */
 
 #ifdef COSM_RAYS
       if (allocated(divvel))  deallocate(divvel)
       if (allocated(wcr))     deallocate(wcr)
 #endif /* COSM_RAYS */
+
 #ifdef ISO_LOCAL
       if (allocated(cs_iso2_arr)) deallocate(cs_iso2_arr)
 #endif /* ISO_LOCAL */
