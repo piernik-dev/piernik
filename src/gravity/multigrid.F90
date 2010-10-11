@@ -1274,7 +1274,7 @@ contains
 
       enddo
 
-      if (v == max_cycles + 1) then
+      if (v > max_cycles) then
          if (proc == 0 .and. norm_lhs/norm_rhs > norm_tol) call warn("[multigrid:vcycle] Not enough V-cycles to achieve convergence.")
          v = max_cycles
       endif

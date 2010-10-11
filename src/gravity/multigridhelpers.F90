@@ -149,6 +149,7 @@ contains
       use multigridvars, only: vcycle_factors, cprefix, stdout
       use mpisetup,      only: proc
       use dataio_public, only: msg, fplen
+      use errh,          only: warn
 
       implicit none
 
@@ -161,13 +162,15 @@ contains
 
       if (proc /= 0) return
 
+      if (v > ubound(vcycle_factors, 1)) call warn("[multigridhelpers:brief_v_log] Trying to read beyond upper bound of vcycle_factors(:,:).")
+
       at = 0.
       if (v>0) at = sum(vcycle_factors(1:v,2))/v
 
       write(msg, '(a,i3,1x,2a,f7.3,a,i3,a,f7.3,a,f11.9,a)') &
            "[multigrid] ", v, trim(cprefix), "Cycles, dt_wall=", vcycle_factors(0,2), " +", v, "*", at, ", norm/rhs= ", norm, " : "
 
-      do i = 0, v
+      do i = 0, min(v, ubound(vcycle_factors, 1))
          if (vcycle_factors(i,1) < 1.0e4) then
             write(normred, '(f8.2)') vcycle_factors(i,1)
          else if (vcycle_factors(i,1) < 1.0e7) then
