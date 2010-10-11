@@ -388,7 +388,7 @@ print MAKEFILE ".SUFFIXES: \$(SUFFIXES) .F90\n\n";
 print MAKEFILE ".F90.o:\n";
 print MAKEFILE "\t\$(ECHO_FC)\n";
 print MAKEFILE "ifdef USE_GNUCPP\n";
-print MAKEFILE "\tcpp \$(CPPFLAGS) \$< \$(patsubst %.F90,%.f90,\$<)\n";
+print MAKEFILE "\t\@cpp \$(CPPFLAGS) \$< \$(patsubst %.F90,%.f90,\$<)\n";
 print MAKEFILE "\t\$(F90) \$(F90FLAGS) -c \$(patsubst %.F90,%.f90,\$<) && rm \$(patsubst %.F90,%.f90,\$<)\n";
 print MAKEFILE "else\n";
 print MAKEFILE "\t\$(F90) \$(CPPFLAGS) \$(F90FLAGS) -c \$<\n";
