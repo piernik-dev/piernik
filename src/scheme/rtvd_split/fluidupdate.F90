@@ -389,7 +389,10 @@ contains
    subroutine mag_add(ib1,dim1,ib2,dim2)
 
       use func,          only: pshift, mshift
-      use arrays,        only: b, wa, wcu
+      use arrays,        only: b, wa
+#ifdef RESISTIVE
+      use arrays,        only: wcu
+#endif /* RESISTIVE */
       use grid,          only: dl
       use magboundaries, only: all_mag_boundaries
 
