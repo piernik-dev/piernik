@@ -94,8 +94,9 @@ module dataio_public
         &                T_ERR    = T_PLAIN + 1, &
         &                T_WARN   = T_ERR   + 1, &
         &                T_INFO   = T_WARN  + 1, &
-        &                T_SILENT = T_INFO  + 1
-   character(len=msglen)  :: msg                   !< buffer for messages
+        &                T_IO     = T_INFO  + 1, &
+        &                T_SILENT = T_IO    + 1
+   character(len=msglen)  :: msg                !< buffer for messages
    character(len=ansirst) :: ansi_black
    character(len=ansilen) :: ansi_red, ansi_green, ansi_yellow, ansi_blue, ansi_magenta, ansi_cyan, ansi_white
 
@@ -142,6 +143,9 @@ contains
          case (T_INFO)
             ansicolor = ansi_green
             msg_type_str = "Info   "
+         case (T_IO)
+            ansicolor = ansi_blue
+            msg_type_str = "I/O    "
          case (T_SILENT)
             ansicolor = ansi_black
             msg_type_str = ""

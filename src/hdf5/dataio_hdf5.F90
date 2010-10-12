@@ -1318,7 +1318,7 @@ module dataio_hdf5
       use errh,         only: die, printinfo
       use func,         only: fix_string
       use list_hdf5,    only: problem_read_restart
-      use dataio_public, only: cwdlen, msg
+      use dataio_public, only: cwdlen, msg, colormessage, T_IO
 
       IMPLICIT NONE
 
@@ -1355,7 +1355,7 @@ module dataio_hdf5
       if (proc==0) then
          write(filename,'(a,a1,a3,a1,i4.4,a4)') trim(problem_name),'_', run_id,'_',chdf%nres,'.res'
          write(msg, '(2a)') 'Reading restart  file: ',trim(filename)
-         call printinfo(msg)
+         call colormessage(msg, T_IO)
       endif
       call MPI_Bcast(filename, cwdlen, MPI_CHARACTER, 0, comm, ierr)
 
@@ -1708,16 +1708,15 @@ module dataio_hdf5
 
    subroutine set_common_attributes(filename, chdf, stype)
 
-      use dataio_public, only: msg
-      use mpisetup,     only: proc, t, dt, psize, cbuff_len
-      use h5lt,         only: h5ltset_attribute_double_f, h5ltset_attribute_int_f, h5ltmake_dataset_string_f, h5ltset_attribute_string_f
-      use hdf5,         only: HID_T, SIZE_T, H5F_ACC_RDWR_F, h5fopen_f, h5fclose_f, h5gcreate_f, h5gclose_f
-      use types,        only: hdf
-      use grid,         only: nxb, nyb, nzb, nxd, nyd, nzd, nb, xmin, xmax, ymin, ymax, zmin, zmax
-      use version,      only: env, nenv
-      use problem_pub,  only: problem_name, run_id
-      use list_hdf5,    only: additional_attrs
-      use errh,         only: printinfo
+      use dataio_public, only: msg, colormessage, T_IO
+      use mpisetup,      only: proc, t, dt, psize, cbuff_len
+      use h5lt,          only: h5ltset_attribute_double_f, h5ltset_attribute_int_f, h5ltmake_dataset_string_f, h5ltset_attribute_string_f
+      use hdf5,          only: HID_T, SIZE_T, H5F_ACC_RDWR_F, h5fopen_f, h5fclose_f, h5gcreate_f, h5gclose_f
+      use types,         only: hdf
+      use grid,          only: nxb, nyb, nzb, nxd, nyd, nzd, nb, xmin, xmax, ymin, ymax, zmin, zmax
+      use version,       only: env, nenv
+      use problem_pub,   only: problem_name, run_id
+      use list_hdf5,     only: additional_attrs
 
       implicit none
 
@@ -1816,7 +1815,7 @@ module dataio_hdf5
          call h5fclose_f(file_id, error)
 
          write(msg,'(4a)') 'Writing ',stype,' file: ',trim(filename)
-         call printinfo(msg)
+         call colormessage(msg, T_IO)
       endif
 
    end subroutine set_common_attributes

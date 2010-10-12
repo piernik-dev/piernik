@@ -139,7 +139,7 @@ contains
       use initproblem,           only: init_prob, read_problem_par
       use problem_pub,           only: problem_name, run_id
       use dataio,                only: init_dataio, write_data
-      use dataio_public,         only: nrestart, cwd, par_file, tmp_log_file, msg
+      use dataio_public,         only: nrestart, cwd, par_file, tmp_log_file, msg, colormessage, T_IO
       use mpisetup,              only: init_mpi
       use mpiboundaries,         only: mpi_boundaries_prep
       use fluidboundaries_pub,   only: init_fluidboundaries
@@ -243,7 +243,7 @@ contains
       if (nrestart>0) then
          if (proc == 0) then
             write(msg,'(a,i4,a)') "[piernik:init_piernik] Restart file #",nrestart," read."
-            call printinfo(msg)
+            call colormessage(msg, T_IO)
             call warn("skipping init_prob.")
          endif
       else
