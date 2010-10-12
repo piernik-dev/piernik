@@ -43,15 +43,15 @@ module hydrostatic
 !<
     subroutine hydrostatic_zeq(iia,jja, d0, csim2, dprof)
 
-      use errh, only: die
+      use arrays,    only: gp
       use constants, only: small
-      use mpisetup, only: proc
-      use grid, only: nx,ny,nz,dl,zdim,z,zl,zr,nzt,nb,zmin,zmax
-      use gravity, only: grav_accel,gp_status,nsub,tune_zeq
-      use arrays, only: gp
+      use errh,      only: die
+      use gravity,   only: grav_accel, gp_status, nsub, tune_zeq
+      use grid,      only: nx, ny, nz, dl, zdim, z, zl, zr, nzt, nb, zmin, zmax
+      use mpisetup,  only: proc
 #ifndef ISO
-      use arrays, only: eprof
-#endif /* ISO */
+      use arrays,    only: eprof
+#endif /* !ISO */
       implicit none
       real, intent(inout)              :: d0
       integer, intent(in)              :: iia, jja
