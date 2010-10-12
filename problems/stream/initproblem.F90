@@ -47,11 +47,11 @@ module initproblem
 
    subroutine read_problem_par
 
-      use errh,     only: namelist_errh
-      use mpisetup, only: ierr, rbuff, cbuff, lbuff, proc, buffer_dim, comm, &
-           &               MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_LOGICAL
       use dataio_public, only: ierrh, msg, par_file
+      use errh,          only: namelist_errh
       use func,          only: compare_namelist
+      use mpisetup,      only: rbuff, cbuff, lbuff, buffer_dim, proc, comm, ierr, &
+           &                   MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_LOGICAL
 
       implicit none
 
@@ -108,20 +108,20 @@ module initproblem
 !-----------------------------------------------------------------------------
 
    subroutine init_prob
-      use mpisetup,    only: proc,pcoords
       use arrays,       only: u
-      use grid,         only: x,y,z,nx,ny,nz,nzd,ymin,ymax,Lx,Lz
-#ifdef NEUTRAL
-      use initneutral,  only: gamma_neu,idnn,imxn,imyn,imzn, cs_iso_neu, eta_gas_neu, csvk
-#endif /* NEUTRAL */
-#ifdef DUST
-      use initdust,     only: idnd,imxd,imyd,imzd, dragc_gas_dust
-#endif /* DUST */
-      use constants,    only: pi,dpi
+      use constants,    only: pi, dpi
+      use grid,         only: x, y, z, nx, ny, nz, nzd, ymin, ymax, Lx, Lz
+      use mpisetup,     only: proc, pcoords
       use shear,        only: omega, qshear
+#ifdef DUST
+      use initdust,     only: idnd, imxd, imyd, imzd, dragc_gas_dust
+#endif /* DUST */
+#ifdef NEUTRAL
+      use initneutral,  only: idnn, imxn, imyn, imzn, gamma_neu, cs_iso_neu, eta_gas_neu, csvk
 #ifndef ISO
       use initneutral,  only: ienn
 #endif /* !ISO */
+#endif /* NEUTRAL */
       implicit none
 
       real :: rcx, rcy
