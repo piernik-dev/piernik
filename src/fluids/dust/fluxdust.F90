@@ -27,6 +27,7 @@
 !
 #include "piernik.def"
 #define RNG 2:n-1
+!/*
 !>
 !! \brief (MH/JD) (doxy comments ready) Computation of %fluxes for the dust fluid
 !!
@@ -58,7 +59,7 @@
 !!\f]
 !!
 !<
-
+!*/
 module fluxdust
   implicit none
 
