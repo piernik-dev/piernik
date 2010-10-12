@@ -75,8 +75,7 @@ module initionized
 
     use mpisetup, only: rbuff, lbuff, MPI_DOUBLE_PRECISION, MPI_LOGICAL, &
          &               comm, ierr, buffer_dim, proc
-    use func,     only: compare_namelist
-    use dataio_public, only: par_file, ierrh, namelist_errh
+    use dataio_public, only: par_file, ierrh, namelist_errh, compare_namelist
 
     implicit none
 

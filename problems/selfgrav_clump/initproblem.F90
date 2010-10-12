@@ -46,8 +46,7 @@ contains
 
    subroutine read_problem_par
 
-      use dataio_public, only: par_file, ierrh, die, namelist_errh
-      use func,          only: compare_namelist
+      use dataio_public, only: par_file, ierrh, die, namelist_errh, compare_namelist
       use grid,          only: xmin, xmax, ymin, ymax, zmin, zmax, dx, dy, dz, nxd, nyd, nzd
       use mpisetup,      only: ierr, rbuff, cbuff_len, cbuff, ibuff, lbuff, proc, buffer_dim, comm, &
            &                   MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL

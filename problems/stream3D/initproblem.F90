@@ -50,8 +50,7 @@ module initproblem
 
       use mpisetup, only: cbuff_len, cbuff, rbuff, buffer_dim, proc, comm, ierr, &
                            MPI_CHARACTER, MPI_DOUBLE_PRECISION
-      use dataio_public, only: ierrh, msg, par_file, namelist_errh
-      use func,          only: compare_namelist
+      use dataio_public, only: ierrh, msg, par_file, namelist_errh, compare_namelist
 
       implicit none
 

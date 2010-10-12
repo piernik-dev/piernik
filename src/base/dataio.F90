@@ -207,8 +207,7 @@ module dataio
       use timer,           only: time_left
       use dataio_hdf5,     only: init_hdf5, read_restart_hdf5, parfile, parfilelines
       use dataio_public,   only: chdf, nres, last_hdf_time, step_hdf, nlog, ntsl, dataio_initialized, log_file, cwdlen, par_file, maxparfilelines, cwd, &
-           &                      ierrh, tmp_log_file, msglen, printinfo, warn, namelist_errh
-      use func,            only: compare_namelist
+           &                      ierrh, tmp_log_file, msglen, printinfo, warn, namelist_errh, compare_namelist
 #ifdef MAGNETIC
       use magboundaries,   only: all_mag_boundaries
 #endif /* MAGNETIC */

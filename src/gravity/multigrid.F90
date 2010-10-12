@@ -64,7 +64,6 @@ contains
            &                        pxsize, pysize, pzsize, &
            &                        MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL
       use grid,               only: xmin, xmax, ymin, ymax, zmin, zmax
-      use func,               only: compare_namelist
       use multigridhelpers,   only: mg_write_log, dirtyH, do_ascii_dump, dirty_debug, multidim_code_3D, &
            &                        aux_par_I0, aux_par_I1, aux_par_I2, aux_par_R0, aux_par_R1, aux_par_R2
 #ifdef NEW_HDF5
@@ -72,7 +71,7 @@ contains
 #endif /* NEW_HDF5 */
       use multipole,          only: init_multipole, use_point_monopole, lmax, mmax, ord_prolong_mpole, coarsen_multipole, interp_pt2mom, interp_mom2pot
       use multigridmpifuncs,  only: mpi_multigrid_prep
-      use dataio_public,      only: msg, par_file, cwd, die, warn, namelist_errh
+      use dataio_public,      only: msg, par_file, cwd, die, warn, namelist_errh, compare_namelist
 
       implicit none
 

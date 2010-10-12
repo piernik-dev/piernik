@@ -46,8 +46,7 @@ module initproblem
 
    subroutine read_problem_par
 
-      use dataio_public, only: cwd, msg, par_file
-      use func,          only: compare_namelist
+      use dataio_public, only: cwd, msg, par_file, compare_namelist
       use mpisetup,      only: MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION, &
                 &              cbuff_len, cbuff, ibuff, rbuff, comm, ierr, buffer_dim, proc
 

@@ -287,4 +287,32 @@ contains
 
    end subroutine namelist_errh
 !-----------------------------------------------------------------------------
+   subroutine compare_namelist(nml_bef, nml_aft)
+
+      implicit none
+
+      character(len=*), intent(in)     :: nml_bef, nml_aft
+      integer                          :: io
+      character(len=maxparfilelen)     :: sa, sb
+      integer, parameter               :: lun_bef=501, lun_aft=502
+
+      open(lun_bef, file=nml_bef, status='old')
+      open(lun_aft, file=nml_aft, status='old')
+      io = 0
+      do
+         read(lun_bef,'(a)', iostat=io) sa
+         read(lun_aft,'(a)', iostat=io) sb
+         if (io/=0) exit
+         if ((sa/=sb)) then
+            write(msg,'(a1,a)') '*',trim(sb)
+         else
+            write(msg,'(a1,a)') ' ',trim(sb)
+         endif
+         call printinfo(msg, .false.)
+      enddo
+      close(lun_aft, status="delete")
+      close(lun_bef, status="delete")
+
+   end subroutine compare_namelist
+!-----------------------------------------------------------------------------
 end module dataio_public

@@ -79,8 +79,7 @@ contains
            &                    MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL, &
            &                    buffer_dim, comm, smalld
       use constants,     only: pi
-      use dataio_public, only: ierrh, msg, par_file, die, namelist_errh
-      use func,          only: compare_namelist
+      use dataio_public, only: ierrh, msg, par_file, die, namelist_errh, compare_namelist
 
       implicit none
 

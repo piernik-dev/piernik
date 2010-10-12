@@ -160,8 +160,7 @@ module mpisetup
 !<
       subroutine init_mpi
 
-         use dataio_public, only: die, printinfo, msg, cwdlen, hnlen, cwd, par_file, ierrh, ansi_white, ansi_black, warn, namelist_errh
-         use func,          only: compare_namelist
+         use dataio_public, only: die, printinfo, msg, cwdlen, hnlen, cwd, par_file, ierrh, ansi_white, ansi_black, warn, namelist_errh, compare_namelist
 
          implicit none
 

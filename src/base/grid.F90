@@ -168,8 +168,7 @@ module grid
       use types,         only: grid_container
       use mpisetup,      only: ierr, ibuff, rbuff, MPI_INTEGER, MPI_DOUBLE_PRECISION, proc, &
            &                buffer_dim, pxsize, pysize, pzsize, comm
-      use func,          only: compare_namelist
-      use dataio_public, only: par_file, ierrh, die, printinfo, namelist_errh
+      use dataio_public, only: par_file, ierrh, die, printinfo, namelist_errh, compare_namelist
 
       implicit none
 
