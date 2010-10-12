@@ -50,7 +50,7 @@ def main():
    url = entry.url.replace(entry.repos+'/','')
 
    if(url.find('branches') == -1):
-      prefix = "trunk"
+      prefix = url.partition("piernik/")[2].partition("/")[0]
    else:
       prefix = url.partition("branches/")[2].partition("/")[0]
    comment = prefix+": " + options.message
