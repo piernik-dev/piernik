@@ -30,10 +30,10 @@
 !! \brief [DW] Module containing subroutines and functions that govern supernovae insert
 !<
 module snsources
-   use initproblem, only: amp_ecr_sn,ethu,f_sn, h_sn, r_sn
 
+   use initproblem, only: amp_ecr_sn,ethu,f_sn, h_sn, r_sn
 #ifdef SHEAR
-   use shear, only: delj,eps
+   use shear,       only: delj,eps
 #endif /* SHEAR */
 
    implicit none
@@ -50,8 +50,8 @@ module snsources
 !! \brief Main routine to insert one supernova event
 !<
    subroutine random_sn
-      use mpisetup, only: t
       use constants, only: small
+      use mpisetup,  only: t
 
       implicit none
       real :: dt_sn
@@ -86,21 +86,21 @@ module snsources
 !! \param pos real, dimension(3), array of supernova position components
 !<
    subroutine cr_sn(pos)
-      use grid,   only: nx,ny,nz,x,y,z,Lx,Ly
-      use arrays, only: u
+      use arrays,         only: u
+      use fluidindex,     only: nvar
+      use grid,           only: nx, ny, nz, x, y, z, Lx, Ly
       use initcosmicrays, only: iarr_crn
-      use fluidindex, only:  nvar
 #ifdef COSM_RAYS_SOURCES
       use crcomposition,  only: icr_H1, icr_C12, icr_N14, icr_O16, primary_C12, primary_N14, primary_O16
 #endif /* COSM_RAYS_SOURCES */
 
       implicit none
       real, dimension(3), intent(in) :: pos
-      integer  :: i,j,k, ipm, jpm
+      integer  :: i, j, k, ipm, jpm
 #ifdef COSM_RAYS_SOURCES
       integer  :: icr
 #endif /* COSM_RAYS_SOURCES */
-      real     :: decr, xsn,ysn,zsn
+      real     :: decr, xsn, ysn, zsn
       xsn = pos(1)
       ysn = pos(2)
       zsn = pos(3)
@@ -148,9 +148,9 @@ module snsources
 !! \return pos @e real,  @e dimension(3), array of supernova position components
 !<
    subroutine rand_coords(pos)
-      use grid,   only: Lx,Ly,xmin,ymin,nzd
+      use grid,   only: Lx, Ly, xmin, ymin, nzd
 #ifdef SHEAR
-      use grid,   only: dy,nyd,nzd,y,js,je
+      use grid,   only: dy, nyd, nzd, y, js, je
 
       integer :: jsn,jremap
       real :: dysn
