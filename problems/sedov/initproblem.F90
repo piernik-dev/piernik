@@ -48,8 +48,7 @@ module initproblem
 !-----------------------------------------------------------------------------
 
    subroutine read_problem_par
-      use dataio_public, only: ierrh, msg, par_file
-      use errh,          only: namelist_errh
+      use dataio_public, only: ierrh, msg, par_file, namelist_errh
       use func,          only: compare_namelist
       use grid,          only: dxmn
       use mpisetup,      only: cbuff_len, cbuff, ibuff, rbuff, buffer_dim, proc, comm, ierr, &

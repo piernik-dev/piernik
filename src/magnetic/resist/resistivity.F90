@@ -79,11 +79,10 @@ contains
 !! \n \n
 !<
       subroutine init_resistivity
-         use mpisetup, only: rbuff, ibuff, ierr, MPI_INTEGER, MPI_DOUBLE_PRECISION, buffer_dim, comm, proc
-         use grid, only: nx,ny,nz
-         use errh, only: namelist_errh
-         use dataio_public, only: par_file, ierrh, die
-         use func,        only: compare_namelist
+         use mpisetup,      only: rbuff, ibuff, ierr, MPI_INTEGER, MPI_DOUBLE_PRECISION, buffer_dim, comm, proc
+         use grid,          only: nx,ny,nz
+         use dataio_public, only: par_file, ierrh, die, namelist_errh
+         use func,          only: compare_namelist
 
 #ifndef ISO
          use initionized, only: ieni

@@ -253,4 +253,38 @@ contains
 
    end subroutine set_container_chdf
 !-----------------------------------------------------------------------------
+   subroutine namelist_errh(ierrh,nm)
+
+      implicit none
+
+      integer, intent(in) :: ierrh
+      character(len=*), intent(in) :: nm
+
+      select case (ierrh)
+         case (19)
+            call warn("One of the following conditions occurred: ")
+            call warn("    * The variable was not a member of the namelist group.")
+            call warn("    * An attempt was made to subscript a scalar variable.")
+            call warn("    * A subscript of the array variable was out-of-bounds.")
+            call warn("    * An array variable was specified with too many or too few subscripts for the variable.")
+            call warn("    * An attempt was made to specify a substring of a noncharacter variable or array name.")
+            call warn("    * A substring specifier of the character variable was out-of-bounds.")
+            call warn("    * A subscript or substring specifier of the variable was not an integer constant.")
+            call warn("    * An attempt was made to specify a substring by using an unsubscripted array variable.")
+            write(msg,'(3a)') "severe (19): Invalid reference to variable in the ",trim(nm)," namelist"
+            call die(msg)
+         case (-1)
+            write(msg,'(3a)') "Namelist: ",trim(nm)," not found in problem.par"
+            call die(msg)
+         case (239, 5010)
+            write(msg,'(3a)') "One of the variables found in problem.par doesn't belong to the ",trim(nm)," namelist"
+            call die(msg)
+         case (0)
+         case default
+            write(msg, *)'Unknown error (', ierrh,') in namelist ',trim(nm)
+            call die(msg)
+      endselect
+
+   end subroutine namelist_errh
+!-----------------------------------------------------------------------------
 end module dataio_public

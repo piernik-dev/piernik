@@ -55,7 +55,6 @@ contains
    subroutine init_multigrid(cgrid)
 
       use types,              only: grid_container
-      use errh,               only: namelist_errh
       use arrays,             only: sgp
       use constants,          only: pi, dpi
       use mpisetup,           only: buffer_dim, comm, comm3d, ierr, proc, nproc, ndims, cbuff_len, &
@@ -73,7 +72,7 @@ contains
 #endif /* NEW_HDF5 */
       use multipole,          only: init_multipole, use_point_monopole, lmax, mmax, ord_prolong_mpole, coarsen_multipole, interp_pt2mom, interp_mom2pot
       use multigridmpifuncs,  only: mpi_multigrid_prep
-      use dataio_public,      only: msg, par_file, cwd, die, warn
+      use dataio_public,      only: msg, par_file, cwd, die, warn, namelist_errh
 
       implicit none
 

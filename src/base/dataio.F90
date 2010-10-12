@@ -201,14 +201,13 @@ module dataio
       use mpisetup,        only: lbuff, ibuff, rbuff, cbuff, proc, cbuff_len, comm, ierr, buffer_dim, &
            &                      MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL, &
            &                      psize, t, nstep, bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr
-      use errh,            only: namelist_errh
       use problem_pub,     only: problem_name, run_id
       use version,         only: nenv,env, init_version
       use fluidboundaries, only: all_fluid_boundaries
       use timer,           only: time_left
       use dataio_hdf5,     only: init_hdf5, read_restart_hdf5, parfile, parfilelines
       use dataio_public,   only: chdf, nres, last_hdf_time, step_hdf, nlog, ntsl, dataio_initialized, log_file, cwdlen, par_file, maxparfilelines, cwd, &
-           &                      ierrh, tmp_log_file, msglen, printinfo, warn
+           &                      ierrh, tmp_log_file, msglen, printinfo, warn, namelist_errh
       use func,            only: compare_namelist
 #ifdef MAGNETIC
       use magboundaries,   only: all_mag_boundaries

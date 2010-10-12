@@ -73,11 +73,10 @@ module initionized
 !<
   subroutine init_ionized
 
-    use errh,     only: namelist_errh
     use mpisetup, only: rbuff, lbuff, MPI_DOUBLE_PRECISION, MPI_LOGICAL, &
          &               comm, ierr, buffer_dim, proc
     use func,     only: compare_namelist
-    use dataio_public, only: par_file, ierrh
+    use dataio_public, only: par_file, ierrh, namelist_errh
 
     implicit none
 
