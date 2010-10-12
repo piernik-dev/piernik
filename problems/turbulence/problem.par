@@ -63,7 +63,7 @@
  /
 
  $PROBLEM_CONTROL
-    problem_name ='sedov'
+    problem_name ='turbulence'
     run_id =  'tst'
     d0     = 1.0
     Mrms   = 5.0
