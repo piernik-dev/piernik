@@ -46,8 +46,8 @@ contains
 
    subroutine read_problem_par
 
-      use dataio_public, only: par_file, ierrh
-      use errh,          only: namelist_errh, die
+      use dataio_public, only: par_file, ierrh, die
+      use errh,          only: namelist_errh
       use func,          only: compare_namelist
       use grid,          only: xmin, xmax, ymin, ymax, zmin, zmax, dx, dy, dz, nxd, nyd, nzd
       use mpisetup,      only: ierr, rbuff, cbuff_len, cbuff, ibuff, lbuff, proc, buffer_dim, comm, &
@@ -150,8 +150,7 @@ contains
 
       use arrays,        only: u, b, sgp, gpot, hgpot
       use constants,     only: fpiG, pi, newtong
-      use dataio_public, only: tend, msg
-      use errh,          only: die, warn, printinfo
+      use dataio_public, only: tend, msg, die, warn, printinfo
       use grid,          only: xmin, xmax, ymin, ymax, zmin, zmax, x, y, z, dx, dy, dz, is, ie, js, je, ks, ke
       use initionized,   only: gamma_ion, idni, imxi, imyi, imzi, ieni
       use multigrid,     only: multigrid_solve
@@ -410,8 +409,7 @@ contains
    subroutine virialCheck(tol)
 
       use arrays,        only: u, sgp
-      use dataio_public, only: msg
-      use errh,          only: die, warn, printinfo
+      use dataio_public, only: msg, die, warn, printinfo
       use grid,          only: is, ie, js, je, ks, ke, dx, dy, dz
       use initionized,   only: idni
       use mpisetup,      only: proc, comm, ierr, MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_SUM

@@ -60,7 +60,7 @@ contains
 
    subroutine prolong_level(lev, iv)
 
-      use errh,                  only: die
+      use dataio_public,         only: die
       use multigridvars,         only: plvl, lvl, level_min, level_max, ord_prolong, ngridvars
       use multigridhelpers,      only: dirty_debug, check_dirty, dirtyH
 !      use multigridexperimental, only: prolong_level_hord
@@ -107,7 +107,7 @@ contains
    subroutine prolong_level0(lev, iv)
 
       use multigridvars, only: plvl, lvl, eff_dim, NDIM, XDIR, YDIR, ZDIR, has_dir, D_x, D_y, D_z
-      use errh,          only: die
+      use dataio_public, only: die
 
       implicit none
 
@@ -141,7 +141,7 @@ contains
 
    subroutine restrict_all(iv)
 
-      use errh,               only: die
+      use dataio_public,      only: die
       use multigridhelpers,   only: check_dirty
       use multigridvars,      only: level_min, level_max, ngridvars
 
@@ -171,7 +171,7 @@ contains
 
    subroutine restrict_level(lev, iv)
 
-      use errh,               only: die
+      use dataio_public,      only: die
       use multigridhelpers,   only: check_dirty
       use multigridvars,      only: plvl, lvl, level_min, level_max, ngridvars, eff_dim, NDIM, XDIR, YDIR, ZDIR, has_dir, D_x, D_y, D_z
 
@@ -213,7 +213,7 @@ contains
 
    subroutine residual(lev, src, soln, def)
 
-      use errh,                  only: die
+      use dataio_public,         only: die
       use multigridvars,         only: ord_laplacian, level_min, level_max, ngridvars
 !      use multigridexperimental, only: residual4
 
@@ -325,7 +325,7 @@ contains
 
    subroutine norm_sq(iv, norm)
 
-      use errh,          only: die
+      use dataio_public, only: die
       use mpisetup,      only: comm3d, ierr, MPI_DOUBLE_PRECISION, MPI_SUM
       use multigridvars, only: ngridvars, roof
 
@@ -351,7 +351,7 @@ contains
 
    subroutine substract_average(lev, iv)
 
-      use errh,          only: die
+      use dataio_public, only: die
       use mpisetup,      only: comm3d, ierr, MPI_DOUBLE_PRECISION, MPI_SUM
       use multigridvars, only: lvl, level_min, level_max, ngridvars
 

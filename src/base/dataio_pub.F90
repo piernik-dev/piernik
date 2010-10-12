@@ -35,6 +35,8 @@ module dataio_public
 
    public
 
+   include 'mpif.h'
+
    ! Buffer lengths for global use
    integer, parameter :: varlen = 4             !< lengthe of state variable names in hdf files
    integer, parameter :: fplen = 24             !< length of buffer for printed FP or integer number
@@ -100,16 +102,10 @@ module dataio_public
    character(len=ansirst) :: ansi_black
    character(len=ansilen) :: ansi_red, ansi_green, ansi_yellow, ansi_blue, ansi_magenta, ansi_cyan, ansi_white
 
-   include 'mpif.h'
-
 contains
-
 !-----------------------------------------------------------------------------
-
    subroutine colormessage(nm, mode)
-
       implicit none
-
       character(len=*), intent(in) :: nm
       integer, intent(in) :: mode
 
@@ -174,7 +170,53 @@ contains
       close(log_lun)
 
    end subroutine colormessage
+!-----------------------------------------------------------------------------
+   subroutine printinfo(nm, to_stdout)
+      implicit none
+      character(len=*), intent(in) :: nm
+      logical, optional, intent(in) :: to_stdout
 
+      if (present(to_stdout)) then
+         if (to_stdout) then
+            call colormessage(nm, T_PLAIN)
+         else
+            call colormessage(nm, T_SILENT)
+         endif
+      else
+         call colormessage(nm, T_INFO)
+      endif
+
+   end subroutine printinfo
+!-----------------------------------------------------------------------------
+   subroutine warn(nm)
+      implicit none
+      character(len=*), intent(in) :: nm
+
+      call colormessage(nm, T_WARN)
+
+   end subroutine warn
+!-----------------------------------------------------------------------------
+   !! BEWARE: routine is not finished, it should kill PIERNIK gracefully
+   subroutine die(nm, allprocs)
+      implicit none
+      character(len=*), intent(in)  :: nm
+      integer, optional, intent(in) :: allprocs
+
+      integer :: ierr
+
+      call colormessage(nm, T_ERR)
+
+      if (present(allprocs)) then
+         if (allprocs /= 0) then
+            call MPI_Barrier(MPI_COMM_WORLD, ierr)
+            call MPI_Finalize(ierr)
+         endif
+      endif
+
+      stop
+
+   end subroutine die
+!-----------------------------------------------------------------------------
    subroutine get_container(nstep)
 
       implicit none
@@ -192,7 +234,7 @@ contains
       domain        = chdf%domain
 
    end subroutine get_container
-
+!-----------------------------------------------------------------------------
    subroutine set_container_chdf(nstep)
 
       implicit none
@@ -210,5 +252,5 @@ contains
       chdf%domain         = domain
 
    end subroutine set_container_chdf
-
+!-----------------------------------------------------------------------------
 end module dataio_public

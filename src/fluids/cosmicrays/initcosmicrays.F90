@@ -88,10 +88,10 @@ contains
    !<
    subroutine init_cosmicrays
 
-      use errh,     only: namelist_errh, die
-      use mpisetup, only: proc, ibuff, rbuff, comm, ierr, MPI_DOUBLE_PRECISION, MPI_INTEGER, buffer_dim
-      use dataio_public, only: par_file, ierrh
-      use func,        only: compare_namelist
+      use errh,            only: namelist_errh
+      use mpisetup,        only: proc, ibuff, rbuff, comm, ierr, MPI_DOUBLE_PRECISION, MPI_INTEGER, buffer_dim
+      use dataio_public,   only: par_file, ierrh, die
+      use func,            only: compare_namelist
 
       implicit none
 

@@ -57,8 +57,7 @@ module diagnostics
 
 contains
    subroutine diagnose_arrays
-      use errh,          only: printinfo, warn
-      use dataio_public, only: msg
+      use dataio_public, only: printinfo, warn, msg
       implicit none
       integer :: i
 

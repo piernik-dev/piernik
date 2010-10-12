@@ -55,7 +55,7 @@ contains
    subroutine init_multigrid(cgrid)
 
       use types,              only: grid_container
-      use errh,               only: namelist_errh, die, warn
+      use errh,               only: namelist_errh
       use arrays,             only: sgp
       use constants,          only: pi, dpi
       use mpisetup,           only: buffer_dim, comm, comm3d, ierr, proc, nproc, ndims, cbuff_len, &
@@ -73,7 +73,7 @@ contains
 #endif /* NEW_HDF5 */
       use multipole,          only: init_multipole, use_point_monopole, lmax, mmax, ord_prolong_mpole, coarsen_multipole, interp_pt2mom, interp_mom2pot
       use multigridmpifuncs,  only: mpi_multigrid_prep
-      use dataio_public,      only: msg, par_file, cwd
+      use dataio_public,      only: msg, par_file, cwd, die, warn
 
       implicit none
 
@@ -865,10 +865,9 @@ contains
 
    subroutine init_solution(history)
 
-      use errh,             only: die
       use mpisetup,         only: proc, t
       use multigridhelpers, only: set_dirty, check_dirty, mg_write_log
-      use dataio_public,    only: msg
+      use dataio_public,    only: msg, die
 
       implicit none
 
@@ -969,7 +968,7 @@ contains
 #endif /* JEANS_PROBLEM */
       use constants,          only: fpiG
       use grid,               only: is, ie, js, je, ks, ke
-      use errh,               only: die
+      use dataio_public,      only: die
       use multigridhelpers,   only: set_dirty, check_dirty
       use multigridbasefuncs, only: norm_sq, substract_average
 
@@ -1065,11 +1064,11 @@ contains
 
    subroutine multigrid_solve(dens)
 
-      use timer,     only: timer_
-      use arrays,    only: sgp
-      use grid,      only: is, ie, js, je, ks, ke
-      use errh,      only: die
-      use multipole, only: multipole_solver
+      use timer,         only: timer_
+      use arrays,        only: sgp
+      use grid,          only: is, ie, js, je, ks, ke
+      use dataio_public, only: die
+      use multipole,     only: multipole_solver
 
       implicit none
 
@@ -1148,12 +1147,11 @@ contains
 
    subroutine vcycle(history)
 
-      use errh,               only: die, warn
       use mpisetup,           only: proc, nproc, cbuff_len
       use timer,              only: timer_
       use multigridhelpers,   only: set_dirty, check_dirty, mg_write_log, brief_v_log, do_ascii_dump, numbered_ascii_dump
       use multigridbasefuncs, only: norm_sq, residual, restrict_all, substract_average
-      use dataio_public,      only: msg
+      use dataio_public,      only: msg, die, warn
 
       implicit none
 
@@ -1294,7 +1292,7 @@ contains
 
    subroutine approximate_solution(lev, src, soln)
 
-      use errh,               only: die
+      use dataio_public,      only: die
       use multigridhelpers,   only: check_dirty
       use multigridbasefuncs, only: prolong_level
 
@@ -1336,7 +1334,7 @@ contains
 
    subroutine approximate_solution_fft(lev, src, soln)
 
-      use errh,               only: die, warn
+      use dataio_public,      only: die, warn
       use mpisetup,           only: nproc
       use multigridhelpers,   only: dirty_debug, check_dirty, dirtyL, multidim_code_3D
       use multigridmpifuncs,  only: mpi_multigrid_bnd
@@ -1518,7 +1516,7 @@ contains
 
       use mpisetup,           only: nproc
       use multigridbasefuncs, only: zero_boundaries
-      use errh,               only: warn
+      use dataio_public,      only: warn
 
       implicit none
 
@@ -1546,7 +1544,7 @@ contains
    subroutine prolong_faces(lev, soln)
 
       use mpisetup,           only: proc
-      use errh,               only: die, warn
+      use dataio_public,      only: die, warn
       use multigridhelpers,   only: check_dirty
       use multigridmpifuncs,  only: mpi_multigrid_bnd
 
@@ -1661,7 +1659,7 @@ contains
 
       use multigridhelpers,   only: dirty_debug, check_dirty, multidim_code_3D, dirty_label
       use multigridmpifuncs,  only: mpi_multigrid_bnd
-      use errh,               only: die
+      use dataio_public,      only: die
 
       implicit none
 
@@ -1882,7 +1880,7 @@ contains
 
    subroutine fft_convolve(level)
 
-      use errh, only: die
+      use dataio_public, only: die
 
       implicit none
 

@@ -43,8 +43,8 @@ contains
 
    subroutine read_problem_par
 
-      use dataio_public, only: ierrh, msg, par_file
-      use errh,          only: namelist_errh, die
+      use dataio_public, only: ierrh, msg, par_file, die
+      use errh,          only: namelist_errh
       use func,          only: compare_namelist
       use grid,          only: xmin, xmax, ymin, ymax, zmin, zmax, dx, dy, dz, nxd, nyd, nzd
       use initneutral,   only: gamma_neu

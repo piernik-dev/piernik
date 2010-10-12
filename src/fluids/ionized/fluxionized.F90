@@ -80,7 +80,7 @@ module fluxionized
     use initionized,     only: gamma_ion, cs_iso_ion2
     use mpisetup,        only: cfr_smooth
     use timestepionized, only: c_ion
-    use errh,            only: die
+    use dataio_public,   only: die
 
     implicit none
     integer,intent(in) :: n                     !< number of cells in the current sweep

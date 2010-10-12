@@ -36,81 +36,15 @@ module errh
 
    private
 
-   public :: die, warn, printinfo, namelist_errh
+   public :: namelist_errh
 
    include 'mpif.h'
 
    contains
 
-!-----------------------------------------------------------------------------
-
-   subroutine printinfo(nm, to_stdout)
-
-      use dataio_public, only: colormessage, T_PLAIN, T_SILENT, T_INFO
-
-      implicit none
-
-      character(len=*), intent(in) :: nm
-      logical, optional, intent(in) :: to_stdout
-
-      if (present(to_stdout)) then
-         if (to_stdout) then
-            call colormessage(nm, T_PLAIN)
-         else
-            call colormessage(nm, T_SILENT)
-         endif
-      else
-         call colormessage(nm, T_INFO)
-      endif
-
-   end subroutine printinfo
-
-!-----------------------------------------------------------------------------
-
-   subroutine warn(nm)
-
-      use dataio_public, only: colormessage, T_WARN
-
-      implicit none
-
-      character(len=*), intent(in) :: nm
-
-      call colormessage(nm, T_WARN)
-
-   end subroutine warn
-
-!-----------------------------------------------------------------------------
-   !! BEWARE: routine is not finished, it should kill PIERNIK gracefully
-
-   subroutine die(nm, allprocs)
-
-      use dataio_public, only: colormessage, T_ERR
-
-      implicit none
-
-      character(len=*), intent(in)  :: nm
-      integer, optional, intent(in) :: allprocs
-
-      integer :: ierr
-
-      call colormessage(nm, T_ERR)
-
-      if (present(allprocs)) then
-         if (allprocs /= 0) then
-            call MPI_Barrier(MPI_COMM_WORLD, ierr)
-            call MPI_Finalize(ierr)
-         endif
-      endif
-
-      stop
-
-   end subroutine die
-
-!-----------------------------------------------------------------------------
-
    subroutine namelist_errh(ierrh,nm)
 
-      use dataio_public, only: msg
+      use dataio_public, only: msg, die, warn
 
       implicit none
 

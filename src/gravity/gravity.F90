@@ -98,12 +98,12 @@ module gravity
 !<
    subroutine init_grav
 
-      use errh,     only: namelist_errh, warn
+      use errh,     only: namelist_errh
       use mpisetup, only: ibuff, rbuff, buffer_dim, comm, ierr, proc, &
            &               MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL, lbuff
       use arrays,   only: gpot
       use func,     only: compare_namelist
-      use dataio_public, only: ierrh, par_file
+      use dataio_public, only: ierrh, par_file, warn
 
       implicit none
 
@@ -281,15 +281,15 @@ module gravity
 
    subroutine all_sgp_boundaries
 
-      use mpisetup,   only: comm3d, ierr, MPI_STATUS_SIZE, MPI_REQUEST_NULL, &
+      use mpisetup,      only: comm3d, ierr, MPI_STATUS_SIZE, MPI_REQUEST_NULL, &
            &                 procxl, procxr, procyl, procyr, proczl, proczr, proc, pxsize, pysize, pzsize, &
            &                 bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr, &
            &                 ARR_YZ_LEFT_BND, ARR_YZ_RIGHT_BND, ARR_YZ_LEFT_DOM, ARR_YZ_RIGHT_DOM, &
            &                 ARR_XZ_LEFT_BND, ARR_XZ_RIGHT_BND, ARR_XZ_LEFT_DOM, ARR_XZ_RIGHT_DOM, &
            &                 ARR_XY_LEFT_BND, ARR_XY_RIGHT_BND, ARR_XY_LEFT_DOM, ARR_XY_RIGHT_DOM
-      use arrays,     only: sgp
-      use grid,       only: nb, nxd, nyd, nzd
-      use errh,       only: die
+      use arrays,        only: sgp
+      use grid,          only: nb, nxd, nyd, nzd
+      use dataio_public, only: die
 
       implicit none
 

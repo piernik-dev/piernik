@@ -100,8 +100,7 @@ contains
 
    subroutine cleanup_timers
 #ifdef VERBOSE
-      use dataio_public, only: msg
-      use errh,          only: warn
+      use dataio_public, only: msg, warn
 #endif /* VERBOSE */
 
       implicit none
@@ -237,8 +236,7 @@ contains
 
       use mpisetup,      only: MPI_DOUBLE_PRECISION, MPI_SUM, comm, ierr, nstep, proc
       use grid,          only: nxd,nyd,nzd
-      use errh,          only: printinfo
-      use dataio_public, only: msg
+      use dataio_public, only: msg, printinfo
 
       implicit none
 

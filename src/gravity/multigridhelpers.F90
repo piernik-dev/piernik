@@ -61,7 +61,7 @@ contains
 
    subroutine set_dirty(iv)
 
-      use errh,          only: die
+      use dataio_public, only: die
       use multigridvars, only: ngridvars, lvl, level_min, level_max
 
       implicit none
@@ -87,10 +87,9 @@ contains
 
    subroutine check_dirty(lev, iv, label, expand)
 
-      use errh,          only: die, warn
+      use dataio_public, only: die, warn, msg
       use mpisetup,      only: proc
       use multigridvars, only: ngridvars, lvl, level_min, level_max, mg_nb, eff_dim, NDIM
-      use dataio_public, only: msg
 
       implicit none
 
@@ -148,8 +147,7 @@ contains
 
       use multigridvars, only: vcycle_factors, cprefix, stdout
       use mpisetup,      only: proc
-      use dataio_public, only: msg, fplen
-      use errh,          only: warn
+      use dataio_public, only: msg, fplen, warn
 
       implicit none
 
@@ -193,7 +191,7 @@ contains
 
    subroutine mg_write_log(msg, stdout_cntrl)
 
-      use errh,          only: printinfo
+      use dataio_public, only: printinfo
       use mpisetup,      only: proc
 
       implicit none

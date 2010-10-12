@@ -668,13 +668,12 @@ module dataio_hdf5
 #ifdef PGPLOT
       use viz,           only: draw_me
 #endif /* PGPLOT */
-      use dataio_public, only: vizit, fmin, fmax, cwdlen, log_file, msg, varlen
+      use dataio_public, only: vizit, fmin, fmax, cwdlen, log_file, msg, varlen, die, warn
       use mpisetup, only: MPI_CHARACTER, comm3d, ierr, pxsize, pysize, pzsize, MPI_DOUBLE_PRECISION, t, pcoords
       use hdf5,     only: HID_T, HSIZE_T, SIZE_T, H5F_ACC_RDWR_F, h5fopen_f, h5gopen_f, h5gclose_f, h5fclose_f
       use h5lt,     only: h5ltmake_dataset_double_f, h5ltset_attribute_double_f
       use arrays,   only: u
       use grid,     only: nxb,nyb,nzb,nxd,nyd,nzd,nb
-      use errh,     only: die, warn
 
       implicit none
 
@@ -1315,10 +1314,9 @@ module dataio_hdf5
       use arrays,       only: dinit
 #endif /* MASS_COMPENS */
       use problem_pub,  only: problem_name, run_id
-      use errh,         only: die, printinfo
       use func,         only: fix_string
       use list_hdf5,    only: problem_read_restart
-      use dataio_public, only: cwdlen, msg, colormessage, T_IO
+      use dataio_public, only: cwdlen, msg, colormessage, T_IO, die, printinfo
 
       IMPLICIT NONE
 
@@ -1539,7 +1537,6 @@ module dataio_hdf5
 ! ------------------------------------------------------------------------------------
 !
    subroutine write_hdf5(chdf)
-      use errh,        only: die
       use hdf5,        only: HID_T, H5F_ACC_TRUNC_F, H5P_FILE_ACCESS_F, H5P_DEFAULT_F, &
            &                 h5open_f, h5close_f, h5fcreate_f, h5fclose_f, h5pcreate_f, h5pclose_f, h5pset_fapl_mpio_f
       use types,       only: hdf
@@ -1552,7 +1549,7 @@ module dataio_hdf5
 #ifdef MULTIGRID
       use multigridio, only: multigrid_write_hdf5
 #endif /* MULTIGRID */
-      use dataio_public, only: cwdlen, msg
+      use dataio_public, only: cwdlen, msg, die
 
       implicit none
 

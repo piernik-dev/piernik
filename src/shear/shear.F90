@@ -55,8 +55,8 @@ module shear
   subroutine init_shear
 
     use mpisetup,       only: ierr, MPI_DOUBLE_PRECISION, proc, rbuff, buffer_dim, comm
-    use errh,           only: namelist_errh, printinfo
-    use dataio_public,  only: par_file, ierrh
+    use errh,           only: namelist_errh
+    use dataio_public,  only: par_file, ierrh, printinfo
     use func,           only: compare_namelist
 
     implicit none

@@ -125,8 +125,9 @@ module grid
 !<
    subroutine set_container_grid(cgrid)
 
-      use types, only: grid_container
-      use errh, only: namelist_errh, die
+      use types,           only: grid_container
+      use errh,            only: namelist_errh
+      use dataio_public,   only: die
 
       implicit none
 
@@ -168,9 +169,9 @@ module grid
       use types,     only: grid_container
       use mpisetup,  only: ierr, ibuff, rbuff, MPI_INTEGER, MPI_DOUBLE_PRECISION, proc, &
            &                buffer_dim, pxsize, pysize, pzsize, comm
-      use errh,      only: namelist_errh, die, printinfo
+      use errh,      only: namelist_errh
       use func,      only: compare_namelist
-      use dataio_public, only: par_file, ierrh
+      use dataio_public, only: par_file, ierrh, die, printinfo
 
       implicit none
 

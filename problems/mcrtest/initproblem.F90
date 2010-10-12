@@ -128,7 +128,7 @@ module initproblem
 
       use arrays,         only: b, u
       use crcomposition,  only: icr_H1, icr_C12
-      use errh,           only: die
+      use dataio_public,  only: die
       use fluidindex,     only: ibx, iby, ibz, nvar
       use grid,           only: nx, ny, nz, nb, ks, ke, x, y, z, Lx, Ly, Lz, xmin, ymin, zmin, nxd, nyd, nzd
       use initionized,    only: idni, imxi, imyi, imzi, ieni

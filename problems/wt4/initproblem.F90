@@ -75,13 +75,12 @@ contains
    subroutine read_problem_par
 
       use grid,          only: xmin, xmax, ymin, ymax, zmin, zmax
-      use errh,          only: namelist_errh, die
+      use errh,          only: namelist_errh
       use mpisetup,      only: ierr, rbuff, cbuff, ibuff, lbuff, proc, &
            &                    MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL, &
            &                    buffer_dim, comm, smalld
       use constants,     only: pi
-      use errh,          only: die
-      use dataio_public, only: ierrh, msg, par_file
+      use dataio_public, only: ierrh, msg, par_file, die
       use func,          only: compare_namelist
 
       implicit none
@@ -186,8 +185,7 @@ contains
 
       use grid,          only: xminb, xmaxb, yminb, ymaxb, zminb, zmaxb
       use mpisetup,      only: proc, nproc, comm3d, status, ierr, MPI_INTEGER, MPI_DOUBLE_PRECISION
-      use errh,          only: die
-      use dataio_public, only: msg
+      use dataio_public, only: msg, die
 
       implicit none
 
@@ -274,8 +272,7 @@ contains
       use initionized,   only: idni, imxi, imyi, imzi
       use list_hdf5,     only: additional_attrs, problem_write_restart, problem_read_restart
       use constants,     only: small, kboltz, mH
-      use errh,          only: die, warn, printinfo
-      use dataio_public, only: msg
+      use dataio_public, only: die, warn, printinfo, msg
       use types,         only: problem_customize_solution
 
       implicit none

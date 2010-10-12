@@ -70,8 +70,7 @@ subroutine bnd_a(A)
 end subroutine bnd_a
 
 subroutine bnd_b(dim)
-   use dataio_public, only: msg
-   use errh,      only: warn
+   use dataio_public, only: msg, warn
    use mpisetup,  only: MPI_DOUBLE_PRECISION, bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr, &
       ierr, req, comm3d, procxl, procxr, procyl, procyr, proczl, proczr, status, &
       pxsize, pysize, pzsize, procxyl, procyxl, pcoords, comm, &
@@ -400,8 +399,7 @@ end subroutine bnd_b
 !=====================================================================================================
 
 subroutine bnd_emf(var, name, dim)
-   use dataio_public, only: msg
-   use errh,      only: warn
+   use dataio_public, only: msg, warn
    use mpisetup,  only: bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr
    use grid,      only: nx, ny, nz, nb, nxb, nyb, nzb
 

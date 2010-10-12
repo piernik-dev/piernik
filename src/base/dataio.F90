@@ -201,14 +201,14 @@ module dataio
       use mpisetup,        only: lbuff, ibuff, rbuff, cbuff, proc, cbuff_len, comm, ierr, buffer_dim, &
            &                      MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL, &
            &                      psize, t, nstep, bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr
-      use errh,            only: namelist_errh, printinfo, warn
+      use errh,            only: namelist_errh
       use problem_pub,     only: problem_name, run_id
       use version,         only: nenv,env, init_version
       use fluidboundaries, only: all_fluid_boundaries
       use timer,           only: time_left
       use dataio_hdf5,     only: init_hdf5, read_restart_hdf5, parfile, parfilelines
       use dataio_public,   only: chdf, nres, last_hdf_time, step_hdf, nlog, ntsl, dataio_initialized, log_file, cwdlen, par_file, maxparfilelines, cwd, &
-           &                      ierrh, tmp_log_file, msglen
+           &                      ierrh, tmp_log_file, msglen, printinfo, warn
       use func,            only: compare_namelist
 #ifdef MAGNETIC
       use magboundaries,   only: all_mag_boundaries
@@ -449,8 +449,7 @@ module dataio
       use problem_pub,   only: problem_name, run_id
       use mpisetup,      only: MPI_CHARACTER, MPI_DOUBLE_PRECISION, comm, ierr, proc, nstep
       use dataio_hdf5,   only: write_hdf5, write_restart_hdf5
-      use dataio_public, only: chdf, step_hdf, msg
-      use errh,          only: printinfo, warn
+      use dataio_public, only: chdf, step_hdf, msg, printinfo, warn
 
       implicit none
 
@@ -529,9 +528,8 @@ module dataio
 !
    subroutine write_crashed(msg)
 
-      use errh,          only: die
       use problem_pub,   only: problem_name
-      use dataio_public, only: nres
+      use dataio_public, only: nres, die
 
       implicit none
 
@@ -922,8 +920,7 @@ module dataio
       use constants,          only: small, mH, kboltz, gasRconst
       use mpisetup,           only: smallei,cfl,t,dt, proc, mpifind, nstep
       use types,              only: tsl_container, value
-      use errh,               only: printinfo
-      use dataio_public,      only: msg
+      use dataio_public,      only: msg, printinfo
 #ifdef IONIZED
       use initionized,        only: gamma_ion, cs_iso_ion,cs_iso_ion2
       use initionized,        only: idni,imxi,imyi,imzi
@@ -1447,9 +1444,8 @@ module dataio
 !-------------------------------------------------------------------------
 
 !\todo: process multiple commands at once
-      use errh,       only: printinfo, warn
       use mpisetup,   only: proc
-      use dataio_public, only: ierrh, cwdlen, msg
+      use dataio_public, only: ierrh, cwdlen, msg, printinfo, warn
 #if defined(__INTEL_COMPILER)
       use ifport,     only: unlink, stat
 #endif /* __INTEL_COMPILER */

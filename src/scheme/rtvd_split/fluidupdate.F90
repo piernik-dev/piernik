@@ -36,12 +36,11 @@ contains
 
    subroutine fluid_update
 
-      use errh,          only: printinfo
       use timer,         only: timer_
       use dataio,        only: check_log, check_tsl
       use timestep,      only: time_step
       use mpisetup,      only: proc, dt, dtm, t, nstep
-      use dataio_public, only: halfstep, msg
+      use dataio_public, only: halfstep, msg, printinfo
 #ifdef SN_SRC
       use snsources,     only: random_sn
 #endif /* SN_SRC */
@@ -187,8 +186,7 @@ contains
 
       use sweeps,         only: sweepx, sweepy, sweepz
       use grid,           only: nxd, nyd, nzd
-      use errh,           only: die
-      use dataio_public,  only: msg
+      use dataio_public,  only: msg, die
 #if defined SHEAR && defined FLUID_INTERACTIONS
       use sweeps,         only: source_terms_y
 #endif /* SHEAR */

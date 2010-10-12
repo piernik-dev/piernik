@@ -81,8 +81,8 @@ contains
       subroutine init_resistivity
          use mpisetup, only: rbuff, ibuff, ierr, MPI_INTEGER, MPI_DOUBLE_PRECISION, buffer_dim, comm, proc
          use grid, only: nx,ny,nz
-         use errh, only: die, namelist_errh
-         use dataio_public, only: par_file, ierrh
+         use errh, only: namelist_errh
+         use dataio_public, only: par_file, ierrh, die
          use func,        only: compare_namelist
 
 #ifndef ISO

@@ -40,15 +40,15 @@ contains
 !!
   subroutine poisson_solve(dens)
 
-    use errh,        only: die
-    use arrays,      only: u,sgp
-    use grid,        only: x, nx, ny, nz, nzb, dz, dx, nb, nxd, nyd, nzd
-    use mpisetup,    only: bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr
+    use dataio_public,  only: die
+    use arrays,         only: u,sgp
+    use grid,           only: x, nx, ny, nz, nzb, dz, dx, nb, nxd, nyd, nzd
+    use mpisetup,       only: bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr
 #ifdef SHEAR
-    use shear,       only: unshear_fft
+    use shear,          only: unshear_fft
 #endif /* SHEAR */
 #ifdef IONIZED
-    use initionized, only: idni
+    use initionized,    only: idni
 #endif /* IONIZED */
 
     implicit none

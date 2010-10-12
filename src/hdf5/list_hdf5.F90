@@ -112,8 +112,7 @@ module list_hdf5
 
       subroutine add_lhdf5(item)
 
-         use errh,          only: warn
-         use dataio_public, only: msg
+         use dataio_public, only: msg, warn
 
          implicit none
 

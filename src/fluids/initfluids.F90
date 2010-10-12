@@ -118,10 +118,10 @@ module initfluids
 
       use fluidindex,      only: fluid_index, nvar
 #ifdef VERBOSE
-      use errh,            only: printinfo
+      use dataio_public,   only: printinfo
 #endif /* VERBOSE */
 #if defined NEUTRAL && defined IONIZED
-      use errh,            only: warn
+      use dataio_public,   only: warn
 #endif /* defined NEUTRAL && defined IONIZED  */
 #ifdef IONIZED
       use initionized,     only: init_ionized, gamma_ion, cs_iso_ion, cs_iso_ion2

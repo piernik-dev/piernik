@@ -49,7 +49,7 @@ module func
 !! the performance at the cost of the flexibility of original \p CSHIFT.
 !<
    function pshift(tab,d)
-      use errh, only: warn
+      use dataio_public, only: warn
       implicit none
       real, dimension(:,:,:) :: tab
       integer :: d
@@ -96,7 +96,7 @@ module func
 !! the performance at the cost of the flexibility of original \p CSHIFT.
 !<
    function mshift(tab,d)
-      use errh, only: warn
+      use dataio_public, only: warn
       implicit none
       real, dimension(:,:,:) :: tab
       integer :: d
@@ -136,8 +136,7 @@ module func
 !-----------------------------------------------------------------------------
    subroutine compare_namelist(nml_bef, nml_aft)
 
-      use dataio_public, only: cwd, msg, maxparfilelen
-      use errh,          only: printinfo
+      use dataio_public, only: cwd, msg, maxparfilelen, printinfo
 
       implicit none
 

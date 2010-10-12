@@ -32,8 +32,7 @@ module fluidboundaries
    contains
 
    subroutine bnd_u(dim)
-      use dataio_public,   only: msg
-      use errh,            only: warn
+      use dataio_public,   only: msg, warn
       use fluidboundaries_pub, only: user_bnd_xl, user_bnd_xr, user_bnd_yl, user_bnd_yr, user_bnd_zl, user_bnd_zr
       use mpisetup,        only: ierr, MPI_XY_RIGHT_DOM, MPI_XY_RIGHT_BND, MPI_XY_LEFT_DOM, MPI_XY_LEFT_BND, &
          MPI_XZ_RIGHT_DOM, MPI_XZ_RIGHT_BND, MPI_XZ_LEFT_DOM, MPI_XZ_LEFT_BND, &

@@ -147,7 +147,7 @@ contains
 
    subroutine mpi_multigrid_bnd(lev, iv, ng, extrapolate_bnd)
 
-      use errh,                  only: die
+      use dataio_public,         only: die
       use mpisetup,              only: comm3d, ierr, MPI_STATUS_SIZE, MPI_REQUEST_NULL, &
            &                           procxl, procxr, procyl, procyr, proczl, proczr, proc, &
            &                           pxsize, pysize, pzsize
@@ -225,7 +225,7 @@ contains
 
    subroutine mpi_multigrid_ext_bnd(lev, iv, ng, extrapolate_bnd)
 
-      use errh,            only: die
+      use dataio_public,   only: die
       use multigridvars,   only: grav_bnd, bnd_periodic, bnd_dirichlet, bnd_givenval, bnd_isolated, &
            &                     XLO, XHI, YLO, YHI, ZLO, ZHI, lvl, is_external
 

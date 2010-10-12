@@ -32,7 +32,7 @@
 program piernik
 
   use mpisetup,      only: comm, comm3d, ierr, proc, t, dt, nstep, cleanup_mpi
-  use dataio_public, only: nend, nstep_start, tend, msg, fplen, &
+  use dataio_public, only: nend, nstep_start, tend, msg, fplen, printinfo, warn, &
        &                    code_progress, PIERNIK_START, PIERNIK_INITIALIZED, PIERNIK_FINISHED, PIERNIK_CLEANUP
   use timer,         only: time_left
 #ifdef PERFMON
@@ -41,7 +41,6 @@ program piernik
   use dataio,        only: write_data, user_msg_handler
   use fluidupdate,   only: fluid_update
   use types,         only: finalize_problem
-  use errh,          only: printinfo, warn
 
   implicit none
 
@@ -128,7 +127,6 @@ contains
 !! Meta subroutine responsible for initializing all piernik modules
 !<
    subroutine init_piernik
-      use errh,                  only: die, warn, printinfo
       use diagnostics,           only: diagnose_arrays
       use types,                 only: grid_container
       use initfluids,            only: init_fluids
@@ -139,7 +137,7 @@ contains
       use initproblem,           only: init_prob, read_problem_par
       use problem_pub,           only: problem_name, run_id
       use dataio,                only: init_dataio, write_data
-      use dataio_public,         only: nrestart, cwd, par_file, tmp_log_file, msg, colormessage, T_IO
+      use dataio_public,         only: nrestart, cwd, par_file, tmp_log_file, msg, colormessage, T_IO, die, warn, printinfo
       use mpisetup,              only: init_mpi
       use mpiboundaries,         only: mpi_boundaries_prep
       use fluidboundaries_pub,   only: init_fluidboundaries

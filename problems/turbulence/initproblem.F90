@@ -74,8 +74,7 @@ module initproblem
    subroutine init_prob
       use arrays,        only: u,b
       use constants,     only: dpi
-      use dataio_public, only: msg
-      use errh,          only: printinfo
+      use dataio_public, only: msg, printinfo
       use grid,          only: x,y,z,nx,ny,nz
       use initfluids,    only: gamma
       use initneutral,   only: idnn,imxn,imyn,imzn,ienn, gamma_neu

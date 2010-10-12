@@ -44,14 +44,14 @@ contains
 
 !--------------------------------------------------------------------------------------------------
    subroutine default_bnd
-      use errh, only: die
+      use dataio_public, only: die
       implicit none
       call die("User boundaries are not defined")
    end subroutine default_bnd
 !--------------------------------------------------------------------------------------------------
    subroutine init_fluidboundaries
 #ifdef VERBOSE
-      use errh, only: printinfo
+      use dataio_public, only: printinfo
 #endif /* VERBOSE */
       implicit none
 #ifdef VERBOSE
