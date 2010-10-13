@@ -1,4 +1,4 @@
-! $Id: initdsttral.F90 594 2009-01-21 12:33:44Z xarth $
+! $Id$
 !
 ! PIERNIK Code Copyright (C) 2006 Michal Hanasz
 !

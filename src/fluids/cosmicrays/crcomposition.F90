@@ -1,4 +1,4 @@
-! $Id: types.F90 1403 2009-12-06 14:08:48Z xarth $
+! $Id$
 !
 ! PIERNIK Code Copyright (C) 2006 Michal Hanasz
 !
