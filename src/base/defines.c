@@ -1,3 +1,4 @@
+/* $Id$ */
 /*
    Here we check for consistency of the piernik.def file.
 
