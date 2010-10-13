@@ -47,6 +47,7 @@ contains
       use dataio_public, only: skip_advection, ierrh, msg, par_file, die, warn, namelist_errh, compare_namelist
       use mpisetup,      only: ierr, rbuff, cbuff, ibuff, proc, buffer_dim, comm, smalld, cbuff_len, &
            &                   MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER
+      use types,         only: idlen
 
       implicit none
 
@@ -91,7 +92,7 @@ contains
       if (proc /= 0) then
 
          problem_name = cbuff(1)
-         run_id       = cbuff(2)(1:3)
+         run_id       = cbuff(2)(1:idlen)
 
          x0           = rbuff(1)
          y0           = rbuff(2)

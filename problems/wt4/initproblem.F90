@@ -80,6 +80,7 @@ contains
            &                    buffer_dim, comm, smalld
       use constants,     only: pi
       use dataio_public, only: ierrh, msg, par_file, die, namelist_errh, compare_namelist
+      use types,         only: idlen
 
       implicit none
 
@@ -149,7 +150,7 @@ contains
       if (proc /= 0) then
 
          problem_name = trim(cbuff(1))
-         run_id       = cbuff(2)(1:3)
+         run_id       = cbuff(2)(1:idlen)
          input_file   = trim(cbuff(3))
 
          gamma_loc       = rbuff(1)

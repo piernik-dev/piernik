@@ -444,7 +444,6 @@ module dataio
 
    subroutine user_msg_handler(end_sim)
 
-      use problem_pub,   only: problem_name, run_id
       use mpisetup,      only: MPI_CHARACTER, MPI_DOUBLE_PRECISION, comm, ierr, proc, nstep
       use dataio_hdf5,   only: write_hdf5, write_restart_hdf5
       use dataio_public, only: chdf, step_hdf, msg, printinfo, warn
@@ -552,7 +551,6 @@ module dataio
    subroutine write_data(output)
 
       use mpisetup,      only: t, MPI_CHARACTER, comm, ierr, proc, nstep
-      use problem_pub,   only: run_id, problem_name
       use dataio_hdf5,   only: write_hdf5, write_restart_hdf5, write_plot
       use dataio_public, only: chdf, nres, last_hdf_time, step_hdf
 

@@ -52,6 +52,7 @@ module initproblem
       use grid,          only: dxmn
       use mpisetup,      only: cbuff_len, cbuff, ibuff, rbuff, buffer_dim, proc, comm, ierr, &
                                MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER
+      use types,         only: idlen
 
       implicit none
 
@@ -103,7 +104,7 @@ module initproblem
       if (proc /= 0) then
 
          problem_name = cbuff(1)
-         run_id       = cbuff(2)(1:3)
+         run_id       = cbuff(2)(1:idlen)
 
          d0           = rbuff(1)
          p0           = rbuff(2)

@@ -53,6 +53,7 @@ module initproblem
       use dataio_public, only: ierrh, msg, par_file, namelist_errh, compare_namelist
       use mpisetup,      only: cbuff_len, cbuff, rbuff, buffer_dim, comm, ierr, proc, &
                                MPI_CHARACTER, MPI_DOUBLE_PRECISION
+      use types,         only: idlen
 
       implicit none
 
@@ -93,7 +94,7 @@ module initproblem
       if (proc /= 0) then
 
          problem_name = cbuff(1)
-         run_id       = cbuff(2)(1:3)
+         run_id       = cbuff(2)(1:idlen)
 
          d0           = rbuff(1)
          bxn          = rbuff(2)

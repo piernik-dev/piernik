@@ -35,12 +35,13 @@
 module problem_pub
 
    use mpisetup, only: cbuff_len
+   use types,    only: idlen
 
    implicit none
 
    public
 
    character(len=cbuff_len) :: problem_name                   !< The default problem name
-   character(len=3)         :: run_id                         !< Auxiliary run identifier
+   character(len=idlen)     :: run_id                         !< Auxiliary run identifier
 
 end module problem_pub

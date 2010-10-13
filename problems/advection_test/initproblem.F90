@@ -47,6 +47,7 @@ contains
       use grid,          only: xmin, xmax, ymin, ymax, zmin, zmax, dx, dy, dz, nxd, nyd, nzd
       use initneutral,   only: gamma_neu
       use mpisetup,      only: ierr, rbuff, cbuff_len, cbuff, proc, buffer_dim, comm, smalld, smallei, MPI_CHARACTER, MPI_DOUBLE_PRECISION
+      use types,         only: idlen
 
       implicit none
 
@@ -81,7 +82,7 @@ contains
       if (proc /= 0) then
 
          problem_name = cbuff(1)
-         run_id       = cbuff(2)(1:3)
+         run_id       = cbuff(2)(1:idlen)
 
          pulse_size  = rbuff(1)
          pulse_vel_x = rbuff(2)

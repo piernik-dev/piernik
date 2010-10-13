@@ -48,6 +48,7 @@ contains
       use grid,          only: xmin, xmax, ymin, ymax, zmin, zmax, nx, ny, nz
       use mpisetup,      only: ierr, rbuff, cbuff_len, cbuff, ibuff, proc, buffer_dim, comm, &
            &                   MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER
+      use types,         only: idlen
 
       implicit none
 
@@ -88,7 +89,7 @@ contains
       if (proc /= 0) then
 
          problem_name = cbuff(1)
-         run_id       = cbuff(2)(1:3)
+         run_id       = cbuff(2)(1:idlen)
 
          d0           = rbuff(1)
          p0           = rbuff(2)

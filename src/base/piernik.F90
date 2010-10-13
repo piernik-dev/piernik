@@ -194,7 +194,7 @@ contains
 
       call read_problem_par
       if (proc == 0) then
-         write(msg,'(2a)') "   Starting problem : ",trim(problem_name)
+         write(msg,'(4a)') "   Starting problem : ",trim(problem_name)," :: ",trim(run_id)
          call printinfo(msg, .true.)
          call printinfo("", .true.)
       endif

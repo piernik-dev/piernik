@@ -43,9 +43,10 @@ module initproblem
 
    subroutine read_problem_par
 
-      use mpisetup, only: cbuff_len, cbuff, rbuff, buffer_dim, proc, comm, ierr, &
-                           MPI_CHARACTER, MPI_DOUBLE_PRECISION
+      use mpisetup,      only: cbuff_len, cbuff, rbuff, buffer_dim, proc, comm, ierr, &
+                               MPI_CHARACTER, MPI_DOUBLE_PRECISION
       use dataio_public, only: ierrh, msg, par_file, namelist_errh, compare_namelist
+      use types,         only: idlen
 
       implicit none
 
@@ -75,7 +76,7 @@ module initproblem
       if (proc /= 0) then
 
          problem_name = cbuff(1)
-         run_id       = cbuff(2)(1:3)
+         run_id       = cbuff(2)(1:idlen)
 
          d0           = rbuff(1)
          r0           = rbuff(2)
