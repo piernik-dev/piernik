@@ -1,4 +1,4 @@
-!$Id$
+! $Id$
 !
 ! PIERNIK Code Copyright (C) 2006 Michal Hanasz
 !

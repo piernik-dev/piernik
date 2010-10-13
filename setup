@@ -351,7 +351,7 @@ print MAKEFILE "date: \n";
 print MAKEFILE "\t\@if [ -L version.F90 ]; then unlink version.F90; cp ../src/base/version.F90 .; fi; \n";
 print MAKEFILE "\t\@if [ ! -f env.dat ]; then\\\n";
 print MAKEFILE "\t\techo \"". $setup_line . "\" > env.dat; \\\n";
-print MAKEFILE "\t\thead -n 1 *.h *.c *.F90 | grep Id | column -t >> env.dat; \\\n";
+print MAKEFILE "\t\tsed -n '/Id:/p' *.h *.c *.F90 | column -t >> env.dat; \\\n";
 print MAKEFILE "\t\tsed -e '/^\$\$/ d' -e \"/^\\// d\" piernik.def >> env.dat; \\\n";
 print MAKEFILE "\t\twc -l env.dat | awk '{print \"   integer, parameter :: nenv = \"\$\$1\"+0\"}' - >> version.F90; \\\n";
 print MAKEFILE "\t\techo \"   character(len=128), dimension(nenv) :: env\" >> version.F90; \\\n";
