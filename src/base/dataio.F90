@@ -41,14 +41,14 @@
 !! In this module following namelists of parameters are specified:
 !! \copydetails dataio::init_dataio
 !!
-!! \todo check and if necessary bring back usefullness of min_disk_space_MB parameter
+!! \todo check and if necessary bring back usefulness of min_disk_space_MB parameter
 !<
 
 module dataio
 !>
 !! \brief (KK)
 !!
-!! \todo check the usefullness of wait logical variable
+!! \todo check the usefulness of wait logical variable
 !<
    use types,         only: hdf, idlen
    use dataio_public, only: tend, nend, wend, nhdf, nstep_start, domain, nrestart, get_container, set_container_chdf, &
@@ -64,7 +64,7 @@ module dataio
 
    integer, parameter    :: nvarsmx = 16           !< maximum number of variables to dump in hdf files
    character(len=idlen)  :: new_id                 !< three character string to change run_id when restarting simulation (e.g. to avoid overwriting of the output from the previous (pre-restart) simulation; if new_id = '' then run_id is still used)
-   character(len=cbuff_len) :: restart             !< choice of restart file: if restart = 'last': automatic choice of the last restart file regardless of "nrestart" value; if smth else is set: "nrestart" value is fixing
+   character(len=cbuff_len) :: restart             !< choice of restart file: if restart = 'last': automatic choice of the last restart file regardless of "nrestart" value; if something else is set: "nrestart" value is fixing
    character(len=cbuff_len) :: mag_center          !< choice to dump magnetic fields values from cell centers or not (if not then values from cell borders)
    integer               :: resdel                 !< number of recent restart dumps which should be saved; each n-resdel-1 restart file is supposed to be deleted while writing n restart file
    real                  :: dt_hdf                 !< time between successive hdf dumps
@@ -76,7 +76,7 @@ module dataio
    integer               :: sleep_minutes          !< minutes of sleeping time before continue simulation
    integer               :: sleep_seconds          !< seconds of sleeping time before continue simulation
    character(len=cwdlen) :: user_message_file      !< path to possible user message file containing dt_xxx changes or orders to dump/stop/end simulation
-   character(len=cwdlen) :: system_message_file    !< path to possible system (UPS) messege file contaning orders to dump/stop/end simulation
+   character(len=cwdlen) :: system_message_file    !< path to possible system (UPS) message file containing orders to dump/stop/end simulation
    integer               :: ix                     !< index in x-direction of slice to dump in plt files
    integer               :: iy                     !< index in y-direction of slice to dump in plt files
    integer               :: iz                     !< index in z-direction of slice to dump in plt files
@@ -147,7 +147,7 @@ module dataio
 
 !---------------------------------------------------------------------
 !
-! inititalizes dataio parameters
+! initializes dataio parameters
 !
 !---------------------------------------------------------------------
 !
@@ -223,7 +223,7 @@ module dataio
 
       restart = 'last'   ! 'last': automatic choice of the last restart file
                          ! regardless of "nrestart" value;
-                         ! if smth else is set: "nrestart" value is fixing
+                         ! if something else is set: "nrestart" value is fixing
       new_id  = ''
       nrestart=  3
       resdel  = 0

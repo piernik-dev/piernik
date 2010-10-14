@@ -29,7 +29,7 @@
 !>
 !! \brief (MH/JD) (doxy comments ready) Module that collects all flux components from each fluid
 !!
-!!The %fluxes for all fluids are combined in the same order as conservarive variables in the array \a u(:,:,:,:)
+!!The %fluxes for all fluids are combined in the same order as conservative variables in the array \a u(:,:,:,:)
 !!\f{equation}
 !!\vec{F}(\vec{u},\vec{B})
 !!  = \big(\vec{F}^i(\vec{u}^i,\vec{B}), \vec{F}^n(\vec{u}^n),

@@ -619,7 +619,7 @@ module mpisetup
          integer :: j1, j2, j3, jj, n, p
          integer, dimension(3) :: ldom
 
-         ldom(1:3) = domsize(3:1:-1) ! Maxloc returns first occurrence of max, reversing direction order (to ZYX)  gives better cache utilisation.
+         ldom(1:3) = domsize(3:1:-1) ! Maxloc returns first occurrence of max, reversing direction order (to ZYX) gives better cache utilization.
          n = np
          psize(:) = 1
 
@@ -627,7 +627,7 @@ module mpisetup
             do while (mod(n, some_primes(p))==0)
 
                jj = 0
-               j1 = sum(maxloc(ldom), 1) ! First try the longest edge; note the trick to make a scalar from 1-element vector without assigment to another variable
+               j1 = sum(maxloc(ldom), 1) ! First try the longest edge; note the trick to make a scalar from 1-element vector without assignment to another variable
                if (mod(ldom(j1), some_primes(p))==0) then
                   jj = j1
                else
@@ -650,7 +650,7 @@ module mpisetup
 
          if (n /= 1) call die("[divide_domain_voodoo]: I am not that intelligent") ! np has too big prime factors
 
-         pxsize = psize(3) ! directions were reverted at ldom assigment
+         pxsize = psize(3) ! directions were reverted at ldom assignment
          pysize = psize(2)
          pzsize = psize(1)
 

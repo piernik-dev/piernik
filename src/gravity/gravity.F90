@@ -30,7 +30,7 @@
 
 !>
 !! \brief [DW] Module containing all main subroutines and functions that govern %gravity force in the code
-!! \todo to check importance and usefullness of such parameters as g_y and n_gravr2 and tune_zeq_bnd
+!! \todo to check importance and usefulness of such parameters as g_y and n_gravr2 and tune_zeq_bnd
 !!
 !!
 !! In this module a namelist of parameters is specified:
@@ -48,14 +48,14 @@ module gravity
    real    :: ptm_y                 !< point mass position y-component
    real    :: ptm_z                 !< point mass position z-component
    real    :: r_smooth              !< smoothing radius in point mass %types of %gravity
-   integer :: nsub                  !< number of subcells while additionally cell division in z-direction is present during estabilishment of hydrostatic equilibrium
+   integer :: nsub                  !< number of subcells while additionally cell division in z-direction is present during establishment of hydrostatic equilibrium
    real    :: h_grav                !< altitude of acceleration cut used when n_gravh is set to non-zero
    real    :: r_grav                !< radius of gravitational potential cut used by GRAV_PTMASS, GRAV_PTFLAT type of %gravity
-   integer :: n_gravh               !< index of hiperbolic-cosinusoidal cutting of acceleration; used when set to non-zero
-   integer :: n_gravr               !< index of hiperbolic-cosinusoidal cutting of gravitational potential used by GRAV_PTMASS, GRAV_PTFLAT type of %gravity
+   integer :: n_gravh               !< index of hyperbolic-cosinusoidal cutting of acceleration; used when set to non-zero
+   integer :: n_gravr               !< index of hyperbolic-cosinusoidal cutting of gravitational potential used by GRAV_PTMASS, GRAV_PTFLAT type of %gravity
    integer :: n_gravr2              !< similar to n_gravr <b>(currently not used)</b>
-   real    :: tune_zeq              !< z-component of %gravity tunning factor used by hydrostatic_zeq
-   real    :: tune_zeq_bnd          !< z-component of %gravity tunning factor supposed to be used in boundaries <b>(currently not used)</b>
+   real    :: tune_zeq              !< z-component of %gravity tuning factor used by hydrostatic_zeq
+   real    :: tune_zeq_bnd          !< z-component of %gravity tuning factor supposed to be used in boundaries <b>(currently not used)</b>
 
    logical :: user_grav             !< use user defined grav_pot_3d
 
@@ -233,7 +233,7 @@ module gravity
       endif
 #endif /* MULTIGRID */
 
-      ! communicate boundary values for sgp(:, :, :) because multtigrid solver gives at most 2 guardcells, while for hydro solver typically 4 is required.
+      ! communicate boundary values for sgp(:, :, :) because multigrid solver gives at most 2 guardcells, while for hydro solver typically 4 is required.
       call all_sgp_boundaries
       if (frun) then
          sgpm = sgp
@@ -441,14 +441,14 @@ module gravity
 !! \f$\Phi\left(z\right) = -1/2 \cdot const \cdot z^2\f$ \n\n
 !! @b GRAV_PTMASS - softened point mass type of %gravity \n
 !! \f$\Phi\left(x,y,z\right)= - GM/\sqrt{x^2+y^2+z^2+r_{soft}^2}\f$ \n
-!! where \f$r_{soft}\f$ is a radius of softenning\n\n
+!! where \f$r_{soft}\f$ is a radius of softening\n\n
 !! @b GRAV_PTMASSPURE - unsoftened point mass type of %gravity \n
 !! \f$\Phi\left(x,y,z\right)= - GM/\sqrt{x^2+y^2+z^2}\f$ \n\n
 !! @b GRAV_PTMASSSTIFF - softened point mass type of %gravity with stiff-body rotation inside softening radius\n
 !! \f$\Phi\left(x,y,z\right)= - GM/\sqrt{x^2+y^2+z^2}\f$ for \f$r > r_{soft}\f$ and \f$ GM/r_{soft} \left( - 3/2 + 1/2 {x^2+y^2+z^2}/r_{soft}^2 \right)\f$ inside \f$r_{soft}\f$ \n\n
 !! @b GRAV_PTFLAT - planar, softened point mass type of %gravity \n
 !! \f$\Phi\left(x,y,z\right)= - GM/\sqrt{x^2+y^2+r_{soft}^2}\f$ \n
-!! where \f$r_{soft}\f$ is a radius of softenning\n\n
+!! where \f$r_{soft}\f$ is a radius of softening\n\n
 !! @b GRAV_USER - not a standard type of %gravity, implemented by user in the routine grav_pot_user from gravity_user module.\n\n
 !<
 
@@ -656,7 +656,7 @@ module gravity
 !\todo offer high order gradient as an option in parameter file
 !      real, parameter :: onetw = 1./12.
 
-! Gravitational accelleration is computed on right cell boundaries
+! Gravitational acceleration is computed on right cell boundaries
 
 !      if (istep==1) then
 !         select case (sweep)

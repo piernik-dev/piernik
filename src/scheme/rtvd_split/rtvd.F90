@@ -258,7 +258,7 @@ module rtvd ! split orig
       implicit none
 
       integer,                     intent(in)  :: n                  !< array size
-      real, dimension(nvar%all,n), intent(out) :: u                  !< vector of conservative vatiables
+      real, dimension(nvar%all,n), intent(out) :: u                  !< vector of conservative variables
       real, dimension(nmag,n),     intent(in)  :: bb                 !< local copy of magnetic field
       character(len=6),            intent(in)  :: sweep              !< direction (x, y or z) we are doing calculations for
       integer,                     intent(in)  :: i1                 !< coordinate of sweep in the 1st remaining direction

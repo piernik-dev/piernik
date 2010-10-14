@@ -33,7 +33,7 @@ module arrays
 
    implicit none
 
-   real, allocatable, dimension(:,:,:,:), target :: u    !< //Main array of all fluids' componets
+   real, allocatable, dimension(:,:,:,:), target :: u    !< //Main array of all fluids' components
    real, allocatable, dimension(:,:,:,:), target :: b    !< //Main array of magnetic field's components
    real, allocatable, dimension(:,:,:)           :: wa   !< Temporary array used for different purposes, usually has dimension (grid::nx, grid::ny, grid::nz)
 

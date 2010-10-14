@@ -50,7 +50,7 @@ module dataio_hdf5
    integer, parameter :: dnamelen=10
    character(LEN=dnamelen), dimension(3) :: dname = (/"fluid     ","mag       ","dinit     "/)  !< dataset names for restart files
    character(len=S_LEN), allocatable, dimension(:) :: hdf_vars  !< dataset names for hdf files
-   integer :: nhdf_vars !< number of quantities ploted to hdf files
+   integer :: nhdf_vars !< number of quantities plotted to hdf files
    integer :: ix !< no. of cell (1 <= ix < nxd) for YZ slice in plt files
    integer :: iy !< no. of cell (1 <= iy < nyd) for XZ slice in plt files
    integer :: iz !< no. of cell (1 <= iz < nzd) for XY slice in plt files
@@ -617,7 +617,7 @@ module dataio_hdf5
       integer           :: i, error=0, fe
       logical, save     :: first_entry = .true.
       integer(HID_T)    :: file_id                 !> File identifier
-      integer(HID_T)    :: gr_id, gr2_id           !> Groups indentifier
+      integer(HID_T)    :: gr_id, gr2_id           !> Groups identifier
 
       if ( ((t-last_plt_time) > dt_plt) .and. dt_plt > 0.0 .or. first_entry) then
          fe = len_trim(log_file)
@@ -694,7 +694,7 @@ module dataio_hdf5
       character(LEN=vdn_len)              :: vdname
 
       integer(HID_T)                      :: file_id                       !> File identifier
-      integer(HID_T)                      :: gr_id,gr2_id                  !> Group indentifier
+      integer(HID_T)                      :: gr_id,gr2_id                  !> Group identifier
       integer(HSIZE_T), dimension(2)      :: dims
       integer(SIZE_T)                     :: bufsize
       integer                             :: rank

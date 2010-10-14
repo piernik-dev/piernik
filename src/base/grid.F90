@@ -342,7 +342,7 @@ module grid
 
       dvol = dx*dy*dz
 
-!--- Asignments -----------------------------------------------------------
+!--- Assignments -----------------------------------------------------------
     ! left zone boundaries:  xl, yl, zl
     ! zone centers:          x,  y,  z
     ! right zone boundaries: xr, yr, zr

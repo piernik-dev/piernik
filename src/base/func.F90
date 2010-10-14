@@ -32,7 +32,7 @@
 !! This module should be empty. Every function or subroutine placed here belong
 !! elsewhere. We are yet unsure where to put them.
 !! \todo Move all structures elsewhere
-!! \warning Procedures \a dipol and \a rn_angles were moved to sn_sources.F90
+!! \warning Procedures \a dipole and \a rn_angles were moved to sn_sources.F90
 !<
 module func
 
@@ -40,7 +40,7 @@ module func
    contains
 
 !>
-!! \brief Function pshift makes one-cell,foreward circular shift of 3D array in any direction
+!! \brief Function pshift makes one-cell, forward circular shift of 3D array in any direction
 !! \param tab input array
 !! \param d direction of the shift, where 1,2,3 corresponds to \a x,\a y,\a z respectively
 !! \return real, dimension(SIZE(tab,1),SIZE(tab,2),SIZE(tab,3))

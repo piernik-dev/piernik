@@ -87,7 +87,7 @@ module fluidboundaries
 #endif /* FFTW */
 #endif /* SHEAR_BND */
 
-! MPI block comunication
+! MPI block communication
       select case (dim)
       case ('xdim')
 #ifdef SHEAR_BND

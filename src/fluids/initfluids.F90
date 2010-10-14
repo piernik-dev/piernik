@@ -28,7 +28,7 @@
 #include "piernik.def"
 
 !>
-!! \brief (MH) Module to initialise all fluids, fluid components, tracers
+!! \brief (MH) Module to initialize all fluids, fluid components, tracers
 !! and other dependent variables which are relevant for the current problem (doxy
 !! comments ready).
 !!
@@ -55,7 +55,7 @@
 !!
 !! \par DEFINITIONS
 !!
-!! \n\b Fluid \b component: an ingredient characterised by mass density, momenta,
+!! \n\b Fluid \b component: an ingredient characterized by mass density, momenta,
 !!    and optionally energy density.
 !!    Examples: ionized fluid, neutral fluid, dust fluid.
 !!    Variable \b "nfluid" (in fluidindex) counts fluids.
@@ -82,12 +82,12 @@
 !!      tracer, etc ... Variable \b "nvar" (in fluidindex) counts all fluid and
 !!    non-fluid variables. There is no specific counter for non-fluid variables.
 !!
-!! \n All these constituents are organised in the module fluidindex into
+!! \n All these constituents are organized in the module fluidindex into
 !! the array of conservative variables \a u(ivar,:,:,:), where \a ivar is the
 !! index of particular variable.
 !!
-!! \par The module initfluids is organised as follows:
-!! \n (1)  All fluids defined in "piernik.def" are initialised subsequently.
+!! \par The module initfluids is organized as follows:
+!! \n (1)  All fluids defined in "piernik.def" are initialized subsequently.
 !! \n (2)  The routine fluidindex is invoked to construct %arrays of indexes for
 !!         each fluid, e.g.. ionized_index, neutral_index, etc.
 !!         See fluidindex for more details.

@@ -41,7 +41,7 @@ module fluidtypes
       integer :: all         = 0     !< total number of fluid variables = the size of array \a u(:,:,;,:) in the first index
       integer :: fluids      = 0     !< number of fluids (ionized gas, neutral gas, dust)
       integer :: adiab       = 0     !< number of adiabatic fluids (indicating the presence of energy density in the vector of conservative variables)
-      integer :: components  = 0     !< number of components, such as CRs, tracers, magnetic helicity (in future),  whose formal description does not invol
+      integer :: components  = 0     !< number of components, such as CRs, tracers, magnetic helicity (in future), whose formal description does not involve [???]
       integer :: fluids_sg   = 0     !< number of selfgravitating fluids (ionized gas, neutral gas, dust)
 
 #ifdef IONIZED

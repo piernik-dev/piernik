@@ -38,12 +38,12 @@ module dataio_public
    include 'mpif.h'
 
    ! Buffer lengths for global use
-   integer, parameter :: varlen = 4             !< lengthe of state variable names in hdf files
+   integer, parameter :: varlen = 4             !< length of state variable names in hdf files
    integer, parameter :: fplen = 24             !< length of buffer for printed FP or integer number
    integer, parameter :: hnlen = 32             !< hostname length limit
    integer, parameter :: cwdlen = 512           !< allow for quite long CWD
    integer, parameter :: msglen = 1024          !< 1kB for a message ought to be enough for anybody ;-)
-   integer, parameter :: ansilen = 7, ansirst=4 !< length of our ANSI colorstrings
+   integer, parameter :: ansilen = 7, ansirst=4 !< length of our ANSI color-strings
    integer, parameter :: maxparfilelen   = 128  !< max length of line in problem.par file
    integer, parameter :: maxparfilelines = 256  !< max number of lines in problem.par
 
@@ -87,7 +87,7 @@ module dataio_public
    !!   1. set one of i{x,y,z} to positive value and zero to the others
    !!   2. use only one-element vars array in problem.par
    !!
-   logical            :: vizit = .false.        !< performe "live" vizualization using pgplot (BEWARE: highly experimental)
+   logical            :: vizit = .false.        !< perform "live" visualization using pgplot (BEWARE: highly experimental)
    real               :: fmin                   !< minimum on pgplot scale
    real               :: fmax                   !< maximum on pgplot scale
 

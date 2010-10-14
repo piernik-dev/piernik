@@ -184,7 +184,7 @@ contains
       implicit none
       real(kind=4) :: dtime
 !
-!  Initialise cpu and wall clocks.  "cputot" will be the total cpu
+!  Initialize cpu and wall clocks.  "cputot" will be the total cpu
 !  time (in seconds) consumed by this job.  "wctot" will be the total
 !  elapsed wall clock time (in seconds) since the job began.
 !

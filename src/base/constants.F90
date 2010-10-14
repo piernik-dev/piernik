@@ -29,7 +29,7 @@
 
 !>
 !! \brief R [DW] Module containing numerical and physical %constants
-!! \details Module constants contains numerical and physical %constatns for several units systems.
+!! \details Module constants contains numerical and physical %constants for several units systems.
 !! To use one system a proper precompiler directive should be defined.
 !! Available units systems:
 !! @n
@@ -169,7 +169,7 @@ module constants
    real, parameter :: sek        = year/YR_S                !< second, time unit
    real, parameter :: myr        = 1.0                      !< megayear, time unit
 ! mass units:
-   real, parameter :: G_one      = 1.0 !this is not a mass unit, nevertheless it is usefull to be set here
+   real, parameter :: G_one      = 1.0 !this is not a mass unit, nevertheless it is useful to be set here
    real, parameter :: gram       = NEWTON_CGS*cm**3/G_one/sek**2      !< gram, mass unit
    real, parameter :: kg         = 1.0e3*gram               !< kilogram, mass unit
    real, parameter :: Msun       = MSUN_G*gram              !< mass of Sun
@@ -309,7 +309,7 @@ module constants
 
    real, parameter :: fpiG       = fpi*G_one                !< four Pi times Newtonian constant of gravitation
    real, parameter :: newtong    = G_one                    !< Newtonian constant of gravitation
-   real, parameter :: pc         = PC_CM                    !< parsec expressed in units of centimetres
+   real, parameter :: pc         = PC_CM                    !< parsec expressed in units of centimeters
    real, parameter :: kpc        = 1000.0                   !< kiloparsec expressed in units of parsec
    real, parameter :: r_gc_sun   = 8500                     !< Sun distance from the Galaxy Center expressed in parsecs
 
