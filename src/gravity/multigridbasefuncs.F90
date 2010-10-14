@@ -17,7 +17,7 @@
 !    You should have received a copy of the GNU General Public License
 !    along with PIERNIK.  If not, see <http://www.gnu.org/licenses/>.
 !
-!    Initial implemetation of PIERNIK code was based on TVD split MHD code by
+!    Initial implementation of PIERNIK code was based on TVD split MHD code by
 !    Ue-Li Pen
 !        see: Pen, Arras & Wong (2003) for algorithm and
 !             http://www.cita.utoronto.ca/~pen/MHD
@@ -101,7 +101,7 @@ contains
 
 !!$ ============================================================================
 !!
-!! Oth order prolongation : injection
+!! 0th order prolongation : injection
 !!
 
    subroutine prolong_level0(lev, iv)
@@ -346,7 +346,7 @@ contains
 
 !!$ ============================================================================
 !!
-!! Compute the global average value and substract it from the whole domain
+!! Compute the global average value and subtract it from the whole domain
 !!
 
    subroutine substract_average(lev, iv)
@@ -357,7 +357,7 @@ contains
 
       implicit none
 
-      integer, intent(in) :: lev  !< level for which we want to substract its average from
+      integer, intent(in) :: lev  !< level for which we want to subtract its average from
       integer, intent(in) :: iv   !< index of variable in lvl()%mgvar which we want to have zero average
 
       real                :: lsum, avg, vol

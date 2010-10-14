@@ -17,7 +17,7 @@
 !    You should have received a copy of the GNU General Public License
 !    along with PIERNIK.  If not, see <http://www.gnu.org/licenses/>.
 !
-!    Initial implemetation of PIERNIK code was based on TVD split MHD code by
+!    Initial implementation of PIERNIK code was based on TVD split MHD code by
 !    Ue-Li Pen
 !        see: Pen, Arras & Wong (2003) for algorithm and
 !             http://www.cita.utoronto.ca/~pen/MHD
@@ -140,7 +140,7 @@ contains
 
 !!$ ============================================================================
 !!
-!! Assembles one-line log of V-cycle achevments
+!! Assembles one-line log of V-cycle achievements
 !!
 
    subroutine brief_v_log(v, norm)
@@ -197,7 +197,7 @@ contains
       implicit none
 
       character(len=*), intent(in)  :: msg          !< message to be logged
-      logical, optional, intent(in) :: stdout_cntrl !< flag to supress printing to stdout
+      logical, optional, intent(in) :: stdout_cntrl !< flag to suppress printing to stdout
 
       logical            :: to_stdout
 

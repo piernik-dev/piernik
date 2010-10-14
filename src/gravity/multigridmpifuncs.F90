@@ -18,7 +18,7 @@
 !    You should have received a copy of the GNU General Public License
 !    along with PIERNIK.  If not, see <http://www.gnu.org/licenses/>.
 !
-!    Initial implemetation of PIERNIK code was based on TVD split MHD
+!    Initial implementation of PIERNIK code was based on TVD split MHD
 !    code by
 !    Ue-Li Pen
 !        see: Pen, Arras & Wong (2003) for algorithm and
@@ -142,7 +142,7 @@ contains
 !! Boundary conditions
 !!
 !> \brief Routine for inter-process and periodic boundary conditions.
-!! \detail mpi_multigrid_bnd provides communication between local domains to couple solutiopn on the global computational domain
+!! \detail mpi_multigrid_bnd provides communication between local domains to couple solution on the global computational domain
 !!
 
    subroutine mpi_multigrid_bnd(lev, iv, ng, extrapolate_bnd)
@@ -220,7 +220,7 @@ contains
 !! Set external boundary (not required for periodic box) on domain faces.
 !! In multigrid typically mirror boundaries are in use. Extrapolate isolated boundaries at exit.
 !!
-!! has_dir() is not checked here because is_external() should be set to .false. on nonexisting directions in 1D and 2D setups
+!! has_dir() is not checked here because is_external() should be set to .false. on non-existing directions in 1D and 2D setups
 !!
 
    subroutine mpi_multigrid_ext_bnd(lev, iv, ng, extrapolate_bnd)

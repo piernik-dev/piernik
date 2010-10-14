@@ -17,7 +17,7 @@
 !    You should have received a copy of the GNU General Public License
 !    along with PIERNIK.  If not, see <http://www.gnu.org/licenses/>.
 !
-!    Initial implemetation of PIERNIK code was based on TVD split MHD code by
+!    Initial implementation of PIERNIK code was based on TVD split MHD code by
 !    Ue-Li Pen
 !        see: Pen, Arras & Wong (2003) for algorithm and
 !             http://www.cita.utoronto.ca/~pen/MHD
@@ -50,7 +50,7 @@ module multipole
    logical                   :: interp_pt2mom                    !< Distribute contribution from a cell between two adjacent radial bins (linear interpolation in radius)
    logical                   :: interp_mom2pot                   !< Compute the potential from moments from two adjacent radial bins (linear interpolation in radius)
 
-   ! radial discredization
+   ! radial discretization
    integer                   :: rqbin                            !< number of radial samples of multipoles
    real                      :: drq, rscale                      !< radial resolution of multipoles
    integer                   :: irmin, irmax                     !< minimum and maximum Q(:, :, r) indices in use
@@ -76,7 +76,7 @@ contains
 !! Originally there were separate indices for l and m multipole numbers in Q and ofact arrays. Since there are no Y_{l,m} harmonics for l<|m|, approximately half of the Q array
 !! was left unused. For each m there is only lmax-|m|+1 valid Y_{l,m} harmonic contributions (for l = |m| .. lmax). The function lm(l, m) converts each valid (l,m) pair into an
 !! unique index leaving no unused entries in the Q array.
-!! Assume that real Y_{l,m} harmonic was stored in Q(l, 2*|m|, :, :) for even (cosine, positive-m) hamonic, or in Q(l, 2*|m|-1, :, :) for odd (sine, negative-m) harmonic.
+!! Assume that real Y_{l,m} harmonic was stored in Q(l, 2*|m|, :, :) for even (cosine, positive-m) harmonic, or in Q(l, 2*|m|-1, :, :) for odd (sine, negative-m) harmonic.
 !! Then consecutive entries in compressed Q(:, inout, r) array should be related to Y_{l,m} harmonics, starting from index 0 as follows
 !! Y_{0,0}, Y_{1,0}, ..., Y_{lmax, 0}, Y_{1,-1}, Y_{2,-1}, ..., Y_{lmax,-1}, Y_{1,1}, Y_{2,1}, ..., Y_{lmax,1}, Y_{2,-2}, Y_{3,-2}, ..., Y_{lmax,-2},
 !! Y_{2,2}, Y_{3,2}, ..., Y_{lmax,2}, ...,, Y(lmax-1,-(mmax-1)), Y(lmax,-(mmax-1)), Y(lmax-1,mmax-1), Y(lmax,mmax-1), Y(lmax,-mmax), Y(lmax,mmax)
@@ -217,7 +217,7 @@ contains
 !!
 !! Multipole solver
 !!
-!! \todo impmprove multipole expansion on coarser grids
+!! \todo improve multipole expansion on coarser grids
 !! (see. "A Scalable Parallel Poisson Solver in Three Dimensions with Infinite-Domain Boundary Conditions" by McCorquodale, Colella, Balls and Baden).
 !! Coarsening by one level would reduce the multipole costs by a factor of 4.
 !!
@@ -717,7 +717,7 @@ contains
 !!
 !! Compute multipole moments for a single point
 !!
-!! \todo try to improve accuracy with linear interpolaion over radius
+!! \todo try to improve accuracy with linear interpolation over radius
 !!
 
    subroutine point2moments(mass, x, y, z)
@@ -852,7 +852,7 @@ contains
 !!
 !! Compute potential from multipole moments at a single point
 !!
-!! \todo improve accuracy with linear interpolaion over radius
+!! \todo improve accuracy with linear interpolation over radius
 !!
 
    subroutine moments2pot(potential, x, y, z)
@@ -1004,7 +1004,7 @@ contains
       ! rn(l) = factor * r ** l; irn(l) = factor * r ** -(l+1)
       rn(0)  = factor
       irn(0) = factor * rinv
-      ! scale r to reduce risk of occuring a Floating Point Overflow for high l_max and large r values. Leave the original value of r only in irn(0)
+      ! scale r to reduce risk of occurring a Floating Point Overflow for high l_max and large r values. Leave the original value of r only in irn(0)
       r = r / rscale
       rinv = rinv * rscale
       ! \todo Possible optimization: number of computed elements can be doubled on each loop iteration (should give better pipelining)

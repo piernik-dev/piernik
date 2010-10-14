@@ -17,7 +17,7 @@
 !    You should have received a copy of the GNU General Public License
 !    along with PIERNIK.  If not, see <http://www.gnu.org/licenses/>.
 !
-!    Initial implemetation of PIERNIK code was based on TVD split MHD code by
+!    Initial implementation of PIERNIK code was based on TVD split MHD code by
 !    Ue-Li Pen
 !        see: Pen, Arras & Wong (2003) for algorithm and
 !             http://www.cita.utoronto.ca/~pen/MHD
@@ -31,7 +31,7 @@
 
 !!$ ============================================================================
 !>
-!! \brief Multigrid poisson solver
+!! \brief Multigrid Poisson solver
 !<
 
 module multigrid
@@ -993,7 +993,7 @@ contains
             if (mode == 1) roof%mgvar(roof%is:roof%ie, roof%js:roof%je, roof%ks:roof%ke, source) = &
                  &         roof%mgvar(roof%is:roof%ie, roof%js:roof%je, roof%ks:roof%ke, source) - fpiG * d0 ! remove density bias
 #endif /* JEANS_PROBLEM */
-         case (bnd_givenval) ! convert potential into a layer of imaginary mass (substract second derivative normal to computational domain boundary)
+         case (bnd_givenval) ! convert potential into a layer of imaginary mass (subtract second derivative normal to computational domain boundary)
             if (is_external(XLO)) roof%mgvar(roof%is,         roof%js:roof%je, roof%ks:roof%ke, source) = &
                  &                roof%mgvar(roof%is,         roof%js:roof%je, roof%ks:roof%ke, source) - &
                  &                roof%bnd_x(                 roof%js:roof%je, roof%ks:roof%ke, LOW)  * 2. * roof%idx2 / fpiG
@@ -1348,7 +1348,7 @@ contains
       do nf = 1, nsmoof
          lvl(lev)%src(:, :, :) = lvl(lev)%mgvar(lvl(lev)%is:lvl(lev)%ie, lvl(lev)%js:lvl(lev)%je, lvl(lev)%ks:lvl(lev)%ke, src)
 
-         if (lvl(lev)%fft_type == fft_dst) then !correct boundaries on nonperiodic local domain
+         if (lvl(lev)%fft_type == fft_dst) then !correct boundaries on non-periodic local domain
             if (nf == 1) then
                call make_face_boundaries(lev, soln)
             else

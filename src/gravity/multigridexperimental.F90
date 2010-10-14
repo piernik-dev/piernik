@@ -17,7 +17,7 @@
 !    You should have received a copy of the GNU General Public License
 !    along with PIERNIK.  If not, see <http://www.gnu.org/licenses/>.
 !
-!    Initial implemetation of PIERNIK code was based on TVD split MHD code by
+!    Initial implementation of PIERNIK code was based on TVD split MHD code by
 !    Ue-Li Pen
 !        see: Pen, Arras & Wong (2003) for algorithm and
 !             http://www.cita.utoronto.ca/~pen/MHD
@@ -29,7 +29,7 @@
 !!$ ============================================================================
 !
 ! Cell-face prolongation stencils for fast convergence on uniform grid:
-!   -1./12., 7./12., 7./12., -1./12. (integral qubic)
+!   -1./12., 7./12., 7./12., -1./12. (integral cubic)
 ! slightly slower, less wide stencil:
 !            1./2.,  1./2.           (average; integral&direct linear)
 !// Prolongation of cell faces from cell centers will be required for FFT local solver, red-black Gauss-Seidel relaxation don't use it.
@@ -46,7 +46,7 @@
 !               -5./64.,     55./64.,    17./64.,    -3./64.   ; integral cubic
 !   3./128.,   -11./64.,      1.,        11./64.,    -3./128.  ; integral quartic
 !
-! Genaral rule is that  so the second big positive coefficient will be assigned to closer neighbor of the coarse parent cell.
+! General rule is that  so the second big positive coefficient will be assigned to closer neighbor of the coarse parent cell.
 ! Thus a single coarse contributes to fine cells in the following way:
 !
 ! |          |        |          |        |       |      |         |         |         |        | fine level
@@ -60,7 +60,7 @@
 ! The term "n-th order direct interpolation" here means that the prolonged values are n-th order polynomial fit
 ! to the nearest 5 points in each dimension on coarse level evaluated for fine cell centers.
 !
-! It seems that for 3D cartesian grid with isolated boundaries and relaxation implemented in approximate_solution
+! It seems that for 3D Cartesian grid with isolated boundaries and relaxation implemented in approximate_solution
 ! pure injection gives highest norm reduction factors per V-cycle. For other boundary types, FFT implementation of
 ! approximate_solution, specific source distribution or some other multigrid scheme may give faster convergence than injection.
 !

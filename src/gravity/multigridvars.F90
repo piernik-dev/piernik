@@ -17,7 +17,7 @@
 !    You should have received a copy of the GNU General Public License
 !    along with PIERNIK.  If not, see <http://www.gnu.org/licenses/>.
 !
-!    Initial implemetation of PIERNIK code was based on TVD split MHD code by
+!    Initial implementation of PIERNIK code was based on TVD split MHD code by
 !    Ue-Li Pen
 !        see: Pen, Arras & Wong (2003) for algorithm and
 !             http://www.cita.utoronto.ca/~pen/MHD
@@ -40,7 +40,7 @@ module multigridvars
    integer, parameter :: ngridvars = correction                       !< number of variables required for implementation of multigrid; here: 4
    integer, parameter :: level_min = 1, level_gb = level_min-1        !< Base (coarsest) level number and global-base level number
    integer, parameter :: mg_nb = 2                                    !< Number of guardcells in multigrid (simplest laplacian and relaxation require only 1)
-   integer, parameter :: bnd_periodic=1, bnd_dirichlet=2              !< constants for enumerating multgrid boundary types: periodic, 0-value,
+   integer, parameter :: bnd_periodic=1, bnd_dirichlet=2              !< constants for enumerating multigrid boundary types: periodic, 0-value,
    integer, parameter :: bnd_isolated=3, bnd_neumann=4                !< isolated, 0-gradient
    integer, parameter :: bnd_givenval=5, bnd_invalid=-1               !< given value, invalid
    integer, parameter :: fft_none=-1, fft_rcr=1, fft_dst=fft_rcr+1    !< type of FFT transform: none, full, discrete sine
@@ -55,12 +55,12 @@ module multigridvars
    ! namelist parameters
    real               :: norm_tol                                     !< stop V-cycle iterations when the ratio of norms ||residual||/||source|| is below this value
    real               :: overrelax                                    !< overrealaxation factor (if < 1. then works as underrelaxation), provided for tests
-   real               :: overrelax_x, overrelax_y, overrelax_z        !< overrealaxation factors for fine tuning convergence ratio when cell spacing is not equal in all 3 directions. Use with care, parience and lots of hope.
+   real               :: overrelax_x, overrelax_y, overrelax_z        !< overrealaxation factors for fine tuning convergence ratio when cell spacing is not equal in all 3 directions. Use with care, patience and lots of hope.
    real               :: Jacobi_damp                                  !< omega factor for damped Jacobi relaxation. Jacobi_damp == 1 gives undamped method. Try 0.5 in 1D.
    real               :: vcycle_abort                                 !< abort the V-cycle when lhs norm raises by this factor
    real               :: L4_strength                                  !< strength of the 4th order terms in the Laplace operator; 0.: 2nd, 1.: 4th direct, 0.5: 4th integral
    integer            :: level_max                                    !< Levels of multigrid refinement
-   integer            :: max_cycles                                   !< Maximum allowed number ov V-cycles
+   integer            :: max_cycles                                   !< Maximum allowed number of V-cycles
    integer            :: nsmool                                       !< smoothing cycles per call
    integer            :: nsmoob                                       !< smoothing cycles on base level when gb_no_fft = .true. (a convergence check would be much better)
    integer            :: nsmoof                                       !< FFT iterations per call
@@ -68,7 +68,7 @@ module multigridvars
    integer            :: ord_prolong                                  !< Prolongation operator order; allowed values are -4 -2, 0 (default), 2 and 4; -2 is often fast
    integer            :: ord_prolong_face                             !< Face prolongation operator order; allowed values are -2 .. 2
    integer            :: ord_time_extrap                              !< Order of temporal extrapolation for solution recycling; -1 means 0-guess, 2 does parabolic interpolation
-   logical            :: trust_fft_solution                           !< Bypas the V-cycle, when doing FFT on whole domain, make sure first that FFT is properly set up.
+   logical            :: trust_fft_solution                           !< Bypass the V-cycle, when doing FFT on whole domain, make sure first that FFT is properly set up.
    logical            :: stdout                                       !< print verbose messages to stdout
    logical            :: verbose_vcycle                               !< Print one line of log per V-cycle, summary otherwise
    logical            :: gb_no_fft                                    !< Deny solving the base level with FFT. Can be very slow.
@@ -127,7 +127,7 @@ module multigridvars
    ! dimensions
    integer                                 :: eff_dim=0               !< count number of dimensions (>1 cell in a direction)
    logical, dimension(NDIM)                :: has_dir                 !< Set to .true. when there is more than one cell on base level in particular direction
-   integer                                 :: D_x, D_y, D_z              !< set to 1 when diven direction exists and use to construct dimensionally-safe indices for arrays
+   integer                                 :: D_x, D_y, D_z           !< set to 1 when given direction exists and use to construct dimensionally-safe indices for arrays
 
    ! global base-level FFT solver
    type cart   ! auxiliary type for rank-to-coordinates array
@@ -143,7 +143,7 @@ module multigridvars
    integer            :: fftw_flags = FFTW_MEASURE                    !< or FFTW_PATIENT on request
 
    ! solution recycling
-   integer, parameter :: nold_max=3                                   !< maximum implemented extrapolationorder
+   integer, parameter :: nold_max=3                                   !< maximum implemented extrapolation order
    integer :: nold                                                    !< number of old solutions kept for solution recycling
    type old_soln                                                      !< container for an old solution with its timestamp
       real, dimension(:,:,:), allocatable :: soln
@@ -158,7 +158,7 @@ module multigridvars
 
    ! boundaries
    integer                     :: grav_bnd                            !< boundary type for computational domain
-   logical, dimension(XLO:ZHI) :: is_external                         !< .true. for non-"mpi" local domain boundaries when gravity boundary is nonperiodic (even if the global domain is periodic)
+   logical, dimension(XLO:ZHI) :: is_external                         !< .true. for non-"mpi" local domain boundaries when gravity boundary is non-periodic (even if the global domain is periodic)
 
    ! miscellaneous
    real                    :: ts, tot_ts                              !< time for runtime profiling, total multigrid time
