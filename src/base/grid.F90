@@ -100,33 +100,7 @@ module grid
    real, allocatable, dimension(:), target :: zr    !< array of z-positions of %grid cells right borders
 
    contains
-!>
-!! \brief Routine which sets numbers of cells for the domain, MPI blocks and initializes direction meshes (x,y,z).
-!!
-!! \n \n
-!! @b DOMAIN_SIZES
-!! \n \n
-!! <table border="+1">
-!! <tr><td width="150pt"><b>parameter</b></td><td width="135pt"><b>default value</b></td><td width="200pt"><b>possible values</b></td><td width="315pt"> <b>description</b></td></tr>
-!! <tr><td>nxd</td><td>1</td><td>positive integer    </td><td>\copydoc grid::nxd</td></tr>
-!! <tr><td>nyd</td><td>1</td><td>positive integer    </td><td>\copydoc grid::nyd</td></tr>
-!! <tr><td>nzd</td><td>1</td><td>positive integer    </td><td>\copydoc grid::nzd</td></tr>
-!! <tr><td>nb </td><td>4</td><td>non-negative integer</td><td>\copydoc grid::nb </td></tr>
-!! </table>
-!! \n \n
-!! @b DOMAIN_LIMITS
-!! \n \n
-!! <table border="+1">
-!! <tr><td width="150pt"><b>parameter</b></td><td width="135pt"><b>default value</b></td><td width="200pt"><b>possible values</b></td><td width="315pt"> <b>description</b></td></tr>
-!! <tr><td>xmin</td><td></td><td>real</td><td>\copydoc grid::xmin</td></tr>
-!! <tr><td>xmax</td><td></td><td>real</td><td>\copydoc grid::xmax</td></tr>
-!! <tr><td>ymin</td><td></td><td>real</td><td>\copydoc grid::ymin</td></tr>
-!! <tr><td>ymax</td><td></td><td>real</td><td>\copydoc grid::ymax</td></tr>
-!! <tr><td>zmin</td><td></td><td>real</td><td>\copydoc grid::zmin</td></tr>
-!! <tr><td>zmax</td><td></td><td>real</td><td>\copydoc grid::zmax</td></tr>
-!!</table>
-!! \n \n
-!<
+
    subroutine set_container_grid(cgrid)
 
       use dataio_public,   only: die, namelist_errh
@@ -167,6 +141,33 @@ module grid
 
    end subroutine set_container_grid
 
+!>
+!! \brief Routine which sets numbers of cells for the domain, MPI blocks and initializes direction meshes (x,y,z).
+!!
+!! \n \n
+!! @b DOMAIN_SIZES
+!! \n \n
+!! <table border="+1">
+!! <tr><td width="150pt"><b>parameter</b></td><td width="135pt"><b>default value</b></td><td width="200pt"><b>possible values</b></td><td width="315pt"> <b>description</b></td></tr>
+!! <tr><td>nxd</td><td>1</td><td>positive integer    </td><td>\copydoc grid::nxd</td></tr>
+!! <tr><td>nyd</td><td>1</td><td>positive integer    </td><td>\copydoc grid::nyd</td></tr>
+!! <tr><td>nzd</td><td>1</td><td>positive integer    </td><td>\copydoc grid::nzd</td></tr>
+!! <tr><td>nb </td><td>4</td><td>non-negative integer</td><td>\copydoc grid::nb </td></tr>
+!! </table>
+!! \n \n
+!! @b DOMAIN_LIMITS
+!! \n \n
+!! <table border="+1">
+!! <tr><td width="150pt"><b>parameter</b></td><td width="135pt"><b>default value</b></td><td width="200pt"><b>possible values</b></td><td width="315pt"> <b>description</b></td></tr>
+!! <tr><td>xmin</td><td></td><td>real</td><td>\copydoc grid::xmin</td></tr>
+!! <tr><td>xmax</td><td></td><td>real</td><td>\copydoc grid::xmax</td></tr>
+!! <tr><td>ymin</td><td></td><td>real</td><td>\copydoc grid::ymin</td></tr>
+!! <tr><td>ymax</td><td></td><td>real</td><td>\copydoc grid::ymax</td></tr>
+!! <tr><td>zmin</td><td></td><td>real</td><td>\copydoc grid::zmin</td></tr>
+!! <tr><td>zmax</td><td></td><td>real</td><td>\copydoc grid::zmax</td></tr>
+!!</table>
+!! \n \n
+!<
    subroutine init_grid(cgrid)
 
       use dataio_public, only: par_file, ierrh, die, printinfo, namelist_errh, compare_namelist
