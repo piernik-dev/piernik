@@ -234,9 +234,9 @@ contains
 
    subroutine timer_stop
 
-      use mpisetup,      only: MPI_DOUBLE_PRECISION, MPI_SUM, comm, ierr, nstep, proc
-      use grid,          only: nxd,nyd,nzd
       use dataio_public, only: msg, printinfo
+      use grid,          only: nxd, nyd, nzd
+      use mpisetup,      only: MPI_DOUBLE_PRECISION, MPI_SUM, comm, ierr, nstep, proc
 
       implicit none
 

@@ -609,8 +609,8 @@ module mpisetup
 
       subroutine divide_domain_voodoo(np)
 
-         use dataio_public, only: die, warn, printinfo, msg
          use constants,     only: some_primes
+         use dataio_public, only: die, warn, printinfo, msg
 
          implicit none
 

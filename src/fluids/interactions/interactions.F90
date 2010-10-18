@@ -62,10 +62,9 @@ module interactions
 !! \n \n
 !<
    subroutine init_interactions
-      use mpisetup,      only: proc, rbuff, MPI_DOUBLE_PRECISION, buffer_dim, ierr, comm
-      use fluidindex,    only: nvar
       use dataio_public, only: par_file, cwd, ierrh, namelist_errh, compare_namelist
-
+      use fluidindex,    only: nvar
+      use mpisetup,      only: proc, rbuff, MPI_DOUBLE_PRECISION, buffer_dim, ierr, comm
 #ifdef DUST
       use initdust,      only: dragc_gas_dust
 #endif /* DUST */
@@ -149,11 +148,11 @@ module interactions
 !! \param uu sweep fluid array
 !<
    subroutine dragforce(sweep, i1, i2, n, du, uu)
-      use fluidindex,   only: nvar,iarr_all_dn,iarr_all_mx,iarr_all_my
+      use fluidindex,   only: nvar, iarr_all_dn, iarr_all_mx, iarr_all_my
+      use grid,         only: maxxyz, x, y, z
 #ifndef ISO
       use fluidindex,   only: iarr_all_en
 #endif /* !ISO */
-      use grid,         only: maxxyz,x,y,z
       implicit none
       integer, intent(in)   :: i1,i2,n
       real, dimension(nvar%all,n)  :: du,uu

@@ -32,19 +32,19 @@ module mpiboundaries
 
 contains
    subroutine mpi_boundaries_prep
-      use mpisetup,   only: ierr, MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, &
-         MPI_YZ_LEFT_BND, MPI_YZ_RIGHT_BND, MPI_YZ_LEFT_DOM, MPI_YZ_RIGHT_DOM, &
-         MPI_XZ_LEFT_BND, MPI_XZ_RIGHT_BND, MPI_XZ_LEFT_DOM, MPI_XZ_RIGHT_DOM, &
-         MPI_XY_LEFT_BND, MPI_XY_RIGHT_BND, MPI_XY_LEFT_DOM, MPI_XY_RIGHT_DOM, &
-         MAG_YZ_LEFT_BND, MAG_YZ_RIGHT_BND, MAG_YZ_LEFT_DOM, MAG_YZ_RIGHT_DOM, &
-         MAG_XZ_LEFT_BND, MAG_XZ_RIGHT_BND, MAG_XZ_LEFT_DOM, MAG_XZ_RIGHT_DOM, &
-         MAG_XY_LEFT_BND, MAG_XY_RIGHT_BND, MAG_XY_LEFT_DOM, MAG_XY_RIGHT_DOM, &
-         ARR_YZ_LEFT_BND, ARR_YZ_RIGHT_BND, ARR_YZ_LEFT_DOM, ARR_YZ_RIGHT_DOM, &
-         ARR_XZ_LEFT_BND, ARR_XZ_RIGHT_BND, ARR_XZ_LEFT_DOM, ARR_XZ_RIGHT_DOM, &
-         ARR_XY_LEFT_BND, ARR_XY_RIGHT_BND, ARR_XY_LEFT_DOM, ARR_XY_RIGHT_DOM
-      use fluidindex, only: nvar
       use arrays,     only: u
+      use fluidindex, only: nvar
       use grid,       only: nb, nx, ny, nz, nxb, nyb, nzb, nxd, nyd, nzd
+      use mpisetup,   only: ierr, MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, &
+                            MPI_YZ_LEFT_BND, MPI_YZ_RIGHT_BND, MPI_YZ_LEFT_DOM, MPI_YZ_RIGHT_DOM, &
+                            MPI_XZ_LEFT_BND, MPI_XZ_RIGHT_BND, MPI_XZ_LEFT_DOM, MPI_XZ_RIGHT_DOM, &
+                            MPI_XY_LEFT_BND, MPI_XY_RIGHT_BND, MPI_XY_LEFT_DOM, MPI_XY_RIGHT_DOM, &
+                            MAG_YZ_LEFT_BND, MAG_YZ_RIGHT_BND, MAG_YZ_LEFT_DOM, MAG_YZ_RIGHT_DOM, &
+                            MAG_XZ_LEFT_BND, MAG_XZ_RIGHT_BND, MAG_XZ_LEFT_DOM, MAG_XZ_RIGHT_DOM, &
+                            MAG_XY_LEFT_BND, MAG_XY_RIGHT_BND, MAG_XY_LEFT_DOM, MAG_XY_RIGHT_DOM, &
+                            ARR_YZ_LEFT_BND, ARR_YZ_RIGHT_BND, ARR_YZ_LEFT_DOM, ARR_YZ_RIGHT_DOM, &
+                            ARR_XZ_LEFT_BND, ARR_XZ_RIGHT_BND, ARR_XZ_LEFT_DOM, ARR_XZ_RIGHT_DOM, &
+                            ARR_XY_LEFT_BND, ARR_XY_RIGHT_BND, ARR_XY_LEFT_DOM, ARR_XY_RIGHT_DOM
 
       implicit none
       integer, dimension(:), allocatable :: sizes, subsizes, starts

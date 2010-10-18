@@ -40,8 +40,8 @@ contains
 !!
   subroutine poisson_solve(dens)
 
+    use arrays,         only: u, sgp
     use dataio_public,  only: die
-    use arrays,         only: u,sgp
     use grid,           only: x, nx, ny, nz, nzb, dz, dx, nb, nxd, nyd, nzd
     use mpisetup,       only: bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr
 #ifdef SHEAR
@@ -114,27 +114,27 @@ contains
 !!
 #ifdef SHEAR
   subroutine poisson_xy2d(den, pot, lpot, rpot, dx)
-    use grid, only: xmin,xmax,ymin,ymax,nyd,nb,nxd
-    use constants, only: newtong,dpi,small
-    use arrays, only: x
-    use shear,  only: dely
+    use arrays,    only: x
+    use constants, only: newtong, dpi, small
+    use grid,      only: xmin, xmax, ymin, ymax, nxd, nyd, nb
+    use shear,     only: dely
     implicit none
 
-    real, dimension(:,:), intent(in)             :: den
-    real, dimension(:,:), intent(out)            :: pot
-    real, dimension(:,:), intent(out)            :: lpot, rpot
-    real, intent(in)                             :: dx
+    real, dimension(:,:), intent(in)              :: den
+    real, dimension(:,:), intent(out)             :: pot
+    real, dimension(:,:), intent(out)             :: lpot, rpot
+    real, intent(in)                              :: dx
 
-    complex*16, dimension(size(den,1)/2 + 1)  :: ctmp
-    complex*16, dimension(size(den,1))        :: ctm2
-    complex*16, dimension(size(den,1))        :: ctm3
-    complex*16, dimension(size(den,1))        :: ctm4
+    complex*16, dimension(size(den,1)/2 + 1)      :: ctmp
+    complex*16, dimension(size(den,1))            :: ctm2
+    complex*16, dimension(size(den,1))            :: ctm3
+    complex*16, dimension(size(den,1))            :: ctm4
 
     complex*16, dimension(size(den,1),size(den,1)/2 +1 ) :: fft,fft2
 
-    real(kind=8)   , dimension(size(den,1))   :: rtmp
+    real(kind=8)   , dimension(size(den,1))       :: rtmp
     real(kind=8)   , dimension(size(den,1)/2 + 1) :: ky
-    real(kind=8)   , dimension(size(den,1))   :: kx,xx
+    real(kind=8)   , dimension(size(den,1))       :: kx,xx
 
 
     real(kind=8)    :: lambda, factor, St
@@ -264,7 +264,7 @@ contains
 !!
   subroutine poisson_xy(den, pot, dx)
 
-    use constants, only: newtong,dpi
+    use constants, only: newtong, dpi
     implicit none
 
     real, dimension(:,:), intent(in)  :: den
@@ -380,7 +380,7 @@ contains
 !!
   subroutine poisson_xyp(den, pot, dz)
 
-    use constants, only: fpiG,dpi
+    use constants, only: fpiG, dpi
     implicit none
 
     real, dimension(:,:,:), intent(in)  :: den
@@ -531,8 +531,8 @@ contains
 !! bnd conditions in X, Y and Z
 !!
   subroutine poisson_xyzp(den, pot)
-    use grid,      only: nb, dx, dy, dz
     use constants, only: fpiG, dpi
+    use grid,      only: nb, dx, dy, dz
     implicit none
 
     real, dimension(:,:,:), intent(in)  :: den

@@ -73,14 +73,11 @@ module fluxionized
   subroutine flux_ion(fluxi,cfri,vx,uui,bb,n,cs_iso2)
 
     use constants,       only: small
-    use fluidindex,      only: nmag
-    use fluidindex,      only: ibx, iby, ibz
-    use fluidindex,      only: idn, imx, imy, imz, ien
-    use fluidindex,      only: nvar
+    use dataio_public,   only: die
+    use fluidindex,      only: idn, imx, imy, imz, ien, nvar, ibx, iby, ibz, nmag
     use initionized,     only: gamma_ion, cs_iso_ion2
     use mpisetup,        only: cfr_smooth
     use timestepionized, only: c_ion
-    use dataio_public,   only: die
 
     implicit none
     integer,intent(in) :: n                     !< number of cells in the current sweep

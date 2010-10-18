@@ -36,11 +36,11 @@ contains
 
    subroutine fluid_update
 
-      use timer,         only: timer_
       use dataio,        only: check_log, check_tsl
-      use timestep,      only: time_step
-      use mpisetup,      only: proc, dt, dtm, t, nstep
       use dataio_public, only: halfstep, msg, printinfo
+      use mpisetup,      only: proc, dt, dtm, t, nstep
+      use timer,         only: timer_
+      use timestep,      only: time_step
 #ifdef SN_SRC
       use snsources,     only: random_sn
 #endif /* SN_SRC */
@@ -48,8 +48,8 @@ contains
       use sndistr,       only: supernovae_distribution
 #endif /* SNE_DISTR */
 #ifdef DEBUG
-      use dataio_public, only: nhdf
       use dataio,        only: write_hdf
+      use dataio_public, only: nhdf
 #endif /* DEBUG */
 
       implicit none
@@ -134,13 +134,13 @@ contains
 
    subroutine make_3sweeps(forward)
 
-      use types,           only: problem_customize_solution
       use dataio_public,   only: skip_advection
+      use types,           only: problem_customize_solution
 #ifdef SHEAR
-      use shear,           only: yshift
       use fluidboundaries, only: bnd_u
-      use mpisetup,        only: t, dt
       use grid,            only: nxd, nyd, nzd
+      use mpisetup,        only: t, dt
+      use shear,           only: yshift
 #endif /* SHEAR */
 #ifdef GRAV
       use gravity,         only: source_terms_grav
@@ -184,18 +184,18 @@ contains
 
    subroutine make_sweep(dir, forward)
 
-      use sweeps,         only: sweepx, sweepy, sweepz
-      use grid,           only: nxd, nyd, nzd
       use dataio_public,  only: msg, die
+      use grid,           only: nxd, nyd, nzd
+      use sweeps,         only: sweepx, sweepy, sweepz
 #if defined SHEAR && defined FLUID_INTERACTIONS
       use sweeps,         only: source_terms_y
-#endif /* SHEAR */
+#endif /* SHEAR && FLUID_INTERACTIONS */
 #ifdef COSM_RAYS
       use crdiffusion,    only: cr_diff_x, cr_diff_y, cr_diff_z
 #endif /* COSM_RAYS */
 #ifdef DEBUG
-      use dataio_public,  only: nhdf
       use dataio,         only: write_hdf
+      use dataio_public,  only: nhdf
 #endif /* DEBUG */
 
       implicit none
@@ -294,12 +294,12 @@ contains
 #ifdef MAGNETIC
    subroutine magfieldbyzx
 
-      use fluidindex,  only: ibx,iby,ibz
+      use advects,     only: advectby_x, advectbz_x
       use arrays,      only: b
-      use grid,        only: xdim,ydim,zdim,nyd,nzd
-      use advects,     only: advectby_x,advectbz_x
+      use fluidindex,  only: ibx, iby, ibz
+      use grid,        only: xdim, ydim, zdim, nyd, nzd
 #ifdef RESISTIVE
-      use resistivity, only: diffuseby_x,diffusebz_x
+      use resistivity, only: diffuseby_x, diffusebz_x
 #endif /* RESISTIVE */
 
       implicit none
@@ -326,12 +326,12 @@ contains
 
    subroutine magfieldbzxy
 
-      use fluidindex,  only: ibx,iby,ibz
+      use advects,     only: advectbx_y, advectbz_y
       use arrays,      only: b
-      use grid,        only: xdim,ydim,zdim,nzd,nxd
-      use advects,     only: advectbx_y,advectbz_y
+      use fluidindex,  only: ibx, iby, ibz
+      use grid,        only: xdim, ydim, zdim, nzd, nxd
 #ifdef RESISTIVE
-      use resistivity, only: diffusebx_y,diffusebz_y
+      use resistivity, only: diffusebx_y, diffusebz_y
 #endif /* RESISTIVE */
 
       implicit none
@@ -358,12 +358,12 @@ contains
 
    subroutine magfieldbxyz
 
-      use fluidindex,  only: ibx,iby,ibz
+      use advects,     only: advectbx_z, advectby_z
       use arrays,      only: b
-      use grid,        only: xdim,ydim,zdim,nxd,nyd
-      use advects,     only: advectbx_z,advectby_z
+      use fluidindex,  only: ibx, iby, ibz
+      use grid,        only: xdim, ydim, zdim, nxd, nyd
 #ifdef RESISTIVE
-      use resistivity, only: diffusebx_z,diffuseby_z
+      use resistivity, only: diffusebx_z, diffuseby_z
 #endif /* RESISTIVE */
 
       implicit none
@@ -386,13 +386,13 @@ contains
 
    subroutine mag_add(ib1,dim1,ib2,dim2)
 
-      use func,          only: pshift, mshift
       use arrays,        only: b, wa
+      use func,          only: pshift, mshift
+      use grid,          only: dl
+      use magboundaries, only: all_mag_boundaries
 #ifdef RESISTIVE
       use arrays,        only: wcu
 #endif /* RESISTIVE */
-      use grid,          only: dl
-      use magboundaries, only: all_mag_boundaries
 
       implicit none
 

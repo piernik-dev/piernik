@@ -73,9 +73,9 @@ module initionized
 !<
   subroutine init_ionized
 
-    use mpisetup, only: rbuff, lbuff, MPI_DOUBLE_PRECISION, MPI_LOGICAL, &
-         &               comm, ierr, buffer_dim, proc
     use dataio_public, only: par_file, ierrh, namelist_errh, compare_namelist
+    use mpisetup,      only: rbuff, lbuff, MPI_DOUBLE_PRECISION, MPI_LOGICAL, &
+         &                   comm, ierr, buffer_dim, proc
 
     implicit none
 

@@ -35,14 +35,11 @@
 
 module crdiffusion
 
-  use initcosmicrays, only: iarr_crs
-  use initcosmicrays, only: K_crs_paral,K_crs_perp
-  use fluidindex,     only: nvar
-  use fluidindex,     only: ibx,iby,ibz
-  use arrays,         only: b,u,wcr
+  use arrays,         only: b, u, wcr
   use constants,      only: small
-  use grid,           only: dx,dy,dz,nxd,nyd,nzd,nx,ny,nz
-  use grid,           only: is,ie,js,je,ks,ke
+  use fluidindex,     only: ibx, iby, ibz, nvar
+  use grid,           only: dx, dy, dz, nxd, nyd, nzd, nx, ny, nz, is, ie, js, je, ks, ke
+  use initcosmicrays, only: iarr_crs, K_crs_paral, K_crs_perp
   use mpisetup,       only: dt
 
  contains

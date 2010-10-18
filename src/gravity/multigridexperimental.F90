@@ -90,10 +90,10 @@
 
    subroutine prolong_level_hord(lev, iv)
 
-      use mpisetup,           only: proc
       use dataio_public,      only: die, warn, msg
-      use multigridvars,      only: ord_prolong
+      use mpisetup,           only: proc
       use multigridmpifuncs,  only: mpi_multigrid_bnd
+      use multigridvars,      only: ord_prolong
 
       implicit none
 
@@ -134,8 +134,8 @@
 
    subroutine prolong_level2I(lev, iv)
 
-      use multigridvars, only: plvl, lvl, eff_dim, NDIM
       use dataio_public, only: die
+      use multigridvars, only: plvl, lvl, eff_dim, NDIM
 
       implicit none
 
@@ -188,8 +188,8 @@
 
    subroutine prolong_level2D(lev, iv)
 
-      use multigridvars, only: plvl, lvl, eff_dim, NDIM
       use dataio_public, only: die
+      use multigridvars, only: plvl, lvl, eff_dim, NDIM
 
       implicit none
 
@@ -241,8 +241,8 @@
 
    subroutine prolong_level4I(lev, iv)
 
-      use multigridvars, only: plvl, lvl, eff_dim, NDIM
       use dataio_public, only: die
+      use multigridvars, only: plvl, lvl, eff_dim, NDIM
 
       implicit none
 
@@ -307,8 +307,8 @@
 
    subroutine prolong_level4D(lev, iv)
 
-      use multigridvars, only: plvl, lvl, eff_dim, NDIM
       use dataio_public, only: die
+      use multigridvars, only: plvl, lvl, eff_dim, NDIM
 
       implicit none
 
@@ -381,10 +381,10 @@
 
    subroutine residual4(lev, src, soln, def)
 
-      use mpisetup,           only: proc
-      use multigridvars,      only: lvl, eff_dim, NDIM, L4_strength, grav_bnd, bnd_givenval
-      use multigridmpifuncs,  only: mpi_multigrid_bnd
       use dataio_public,      only: die, warn
+      use mpisetup,           only: proc
+      use multigridmpifuncs,  only: mpi_multigrid_bnd
+      use multigridvars,      only: lvl, eff_dim, NDIM, L4_strength, grav_bnd, bnd_givenval
 
       implicit none
 

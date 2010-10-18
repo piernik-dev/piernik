@@ -98,10 +98,10 @@ module gravity
 !<
    subroutine init_grav
 
-      use mpisetup, only: ibuff, rbuff, buffer_dim, comm, ierr, proc, &
-           &               MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL, lbuff
-      use arrays,   only: gpot
+      use arrays,        only: gpot
       use dataio_public, only: ierrh, par_file, warn, namelist_errh, compare_namelist
+      use mpisetup,      only: ibuff, rbuff, buffer_dim, comm, ierr, proc, &
+           &                   MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL, lbuff
 
       implicit none
 
@@ -203,8 +203,8 @@ module gravity
    subroutine source_terms_grav
 
 #if defined(MULTIGRID) || defined(POISSON_FFT)
-      use fluidindex,    only: iarr_all_sg
       use arrays,        only: u, sgp, sgpm
+      use fluidindex,    only: iarr_all_sg
 #ifdef POISSON_FFT
       use poissonsolver, only: poisson_solve
 #endif /* POISSON_FFT */
@@ -247,8 +247,8 @@ module gravity
 
    subroutine sum_potential
 
-      use mpisetup, only: dt, dtm
       use arrays,   only: gpot, gp, hgpot
+      use mpisetup, only: dt, dtm
 #if defined(MULTIGRID) || defined(POISSON_FFT)
       use arrays,   only: sgp, sgpm
 #endif /* MULTIGRID || POISSON_FFT */
@@ -279,15 +279,15 @@ module gravity
 
    subroutine all_sgp_boundaries
 
-      use mpisetup,      only: comm3d, ierr, MPI_STATUS_SIZE, MPI_REQUEST_NULL, &
-           &                 procxl, procxr, procyl, procyr, proczl, proczr, proc, pxsize, pysize, pzsize, &
-           &                 bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr, &
-           &                 ARR_YZ_LEFT_BND, ARR_YZ_RIGHT_BND, ARR_YZ_LEFT_DOM, ARR_YZ_RIGHT_DOM, &
-           &                 ARR_XZ_LEFT_BND, ARR_XZ_RIGHT_BND, ARR_XZ_LEFT_DOM, ARR_XZ_RIGHT_DOM, &
-           &                 ARR_XY_LEFT_BND, ARR_XY_RIGHT_BND, ARR_XY_LEFT_DOM, ARR_XY_RIGHT_DOM
       use arrays,        only: sgp
-      use grid,          only: nb, nxd, nyd, nzd
       use dataio_public, only: die
+      use grid,          only: nb, nxd, nyd, nzd
+      use mpisetup,      only: comm3d, ierr, MPI_STATUS_SIZE, MPI_REQUEST_NULL, &
+           &                   procxl, procxr, procyl, procyr, proczl, proczr, proc, pxsize, pysize, pzsize, &
+           &                   bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr, &
+           &                   ARR_YZ_LEFT_BND, ARR_YZ_RIGHT_BND, ARR_YZ_LEFT_DOM, ARR_YZ_RIGHT_DOM, &
+           &                   ARR_XZ_LEFT_BND, ARR_XZ_RIGHT_BND, ARR_XZ_LEFT_DOM, ARR_XZ_RIGHT_DOM, &
+           &                   ARR_XY_LEFT_BND, ARR_XY_RIGHT_BND, ARR_XY_LEFT_DOM, ARR_XY_RIGHT_DOM
 
       implicit none
 
@@ -453,19 +453,16 @@ module gravity
 !<
 
    subroutine default_grav_pot_3d
-      use arrays, only: gp
-#if defined GRAV_PTMASS || defined GRAV_PTMASSPURE || defined GRAV_PTFLAT
-      use constants, only: newtong
-#endif /* GRAV_PTMASS || GRAV_PTMASSPURE || GRAV_PTFLAT */
-      use grid, only: nx,ny,nz,x,y,z
-      use mpisetup, only: smalld
-      use initfluids, only: cs_iso2
+      use arrays,       only: gp
+      use grid,         only: nx, ny, nz, x, y, z
+      use initfluids,   only: cs_iso2
+      use mpisetup,     only: smalld
+#if defined (GRAV_PTMASSPURE) || defined (GRAV_PTMASS) || defined (GRAV_PTFLAT) || defined (GRAV_PTMASSSTIFF)
+      use constants,    only: newtong
+#endif /* GRAV_PTMASSPURE || GRAV_PTMASS || GRAV_PTFLAT || GRAV_PTMASSSTIFF */
 #ifdef GRAV_USER
       use gravity_user, only: grav_pot_user
 #endif /* GRAV_USER */
-#if defined (GRAV_PTMASSPURE) || defined (GRAV_PTMASS) || defined (GRAV_PTFLAT) || defined (GRAV_PTMASSSTIFF)
-      use constants, only: newtong
-#endif /* GRAV_PTMASSPURE || GRAV_PTMASS || GRAV_PTFLAT || GRAV_PTMASSSTIFF */
       implicit none
 
 #if defined (GRAV_PTMASSPURE) || defined (GRAV_PTMASS) || defined (GRAV_PTFLAT) || defined (GRAV_PTMASSSTIFF)
@@ -592,12 +589,10 @@ module gravity
 !<
 
    subroutine grav_accel(sweep, i1,i2, xsw, n, grav)
-      use grid, only: nb
-      use arrays, only: gp
-      use grid, only: x,y,z,dl,xdim,ydim,zdim,nx,ny,nz
-      use grid, only: is,ie,js,je,ks,ke, xr,yr,zr
+      use arrays,       only: gp
+      use grid,         only: x, y, z, xr, yr, zr, dl, xdim, ydim, zdim, nx, ny, nz, nb, is, ie, js, je, ks, ke
 #if defined GRAV_PTMASS || defined GRAV_PTFLAT
-      use mpisetup, only: smalld
+      use mpisetup,     only: smalld
 #endif /* GRAV_PTMASS || GRAV_PTFLAT */
 #if defined GRAV_ACC_USER
       use gravity_user, only: grav_accel_user
@@ -646,7 +641,7 @@ module gravity
 !<
    subroutine grav_pot2accel(sweep, i1,i2, n, grav,istep)
       use arrays, only: gpot, hgpot
-      use grid, only: dl, xdim, ydim, zdim
+      use grid,   only: dl, xdim, ydim, zdim
       implicit none
       character(len=6), intent(in)   :: sweep
       integer, intent(in)            :: i1, i2
@@ -709,10 +704,10 @@ module gravity
 !<
    subroutine grav_accel2pot
 
-      use mpisetup, only: pxsize, pysize, pzsize, pcoords, proc, nproc, ndims, &
-           &               comm, comm3d, err, ierr, MPI_DOUBLE_PRECISION, mpifind
       use arrays,   only: gp
       use grid,     only: dl, xdim, ydim, zdim, is, ie, js, je, ks, ke, nb, nx, ny, nz, zr, yr, xr
+      use mpisetup, only: pxsize, pysize, pzsize, pcoords, proc, nproc, ndims, &
+           &              comm, comm3d, err, ierr, MPI_DOUBLE_PRECISION, mpifind
 
       implicit none
       integer               :: i, j, k, ip, pgpmax

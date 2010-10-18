@@ -218,16 +218,13 @@ module rtvd ! split orig
 !*/
    subroutine relaxing_tvd(n, u, bb, sweep, i1, i2, dx, dt)
 
+      use fluidindex,      only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz, ibx, iby, ibz, nvar, nmag
+      use fluxes,          only: flimiter, all_fluxes
       use mpisetup,        only: smalld, integration_order
-      use fluxes,          only: flimiter,all_fluxes
-      use fluidindex,      only: nvar,nmag
-      use fluidindex,      only: ibx,iby,ibz
-      use fluidindex,      only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
 #ifndef ISO
       use fluidindex,      only: iarr_all_en
       use mpisetup,        only: smallei
 #endif /* !ISO */
-
 #ifdef GRAV
       use gravity,         only: grav_pot2accel
 #endif /* GRAV */
@@ -239,10 +236,8 @@ module rtvd ! split orig
 #endif /* NEUTRAL */
 #endif /* SHEAR */
 #ifdef COSM_RAYS
-      use initcosmicrays,  only: cr_active, smallecr
-      use initcosmicrays,  only: gamma_crs
-      use initcosmicrays,  only: iarr_crs, iarr_crn, iarr_cre
       use arrays,          only: divvel
+      use initcosmicrays,  only: iarr_crs, iarr_crn, iarr_cre, gamma_crs, cr_active, smallecr
 #ifdef COSM_RAYS_SOURCES
       use sourcecosmicrays,only: src_crn
 #endif /* COSM_RAYS_SOURCES */

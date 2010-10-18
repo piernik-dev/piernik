@@ -59,12 +59,11 @@ contains
 
    subroutine timestep_ion
 
-      use mpisetup,    only: MPI_DOUBLE_PRECISION, MPI_MIN, MPI_MAX, comm, ierr, cfl
+      use arrays,      only: u, b
       use constants,   only: big
-      use grid,        only: dx,dy,dz,nb,ks,ke,is,ie,js,je,nxd,nyd,nzd
-      use arrays,      only: u,b
-      use initionized, only: gamma_ion, cs_iso_ion2
-      use initionized, only: idni,imxi,imyi,imzi
+      use grid,        only: dx, dy, dz, nb, ks, ke, is, ie, js, je, nxd, nyd, nzd
+      use initionized, only: idni, imxi, imyi, imzi, gamma_ion, cs_iso_ion2
+      use mpisetup,    only: MPI_DOUBLE_PRECISION, MPI_MIN, MPI_MAX, comm, ierr, cfl
 #ifndef ISO
       use initionized, only: ieni
 #endif /* !ISO */

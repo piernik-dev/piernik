@@ -61,8 +61,8 @@ contains
    subroutine prolong_level(lev, iv)
 
       use dataio_public,         only: die
-      use multigridvars,         only: plvl, lvl, level_min, level_max, ord_prolong, ngridvars
       use multigridhelpers,      only: dirty_debug, check_dirty, dirtyH
+      use multigridvars,         only: plvl, lvl, level_min, level_max, ord_prolong, ngridvars
 !      use multigridexperimental, only: prolong_level_hord
 
       implicit none
@@ -106,8 +106,8 @@ contains
 
    subroutine prolong_level0(lev, iv)
 
-      use multigridvars, only: plvl, lvl, eff_dim, NDIM, XDIR, YDIR, ZDIR, has_dir, D_x, D_y, D_z
       use dataio_public, only: die
+      use multigridvars, only: plvl, lvl, eff_dim, NDIM, XDIR, YDIR, ZDIR, has_dir, D_x, D_y, D_z
 
       implicit none
 
@@ -255,9 +255,9 @@ contains
 
    subroutine residual2(lev, src, soln, def)
 
-      use multigridvars,      only: lvl, eff_dim, NDIM, XDIR, YDIR, ZDIR, has_dir
-      use multigridmpifuncs,  only: mpi_multigrid_bnd
       use multigridhelpers,   only: multidim_code_3D
+      use multigridmpifuncs,  only: mpi_multigrid_bnd
+      use multigridvars,      only: lvl, eff_dim, NDIM, XDIR, YDIR, ZDIR, has_dir
 
       implicit none
 

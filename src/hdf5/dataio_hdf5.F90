@@ -38,8 +38,8 @@
 !<
 module dataio_hdf5
 
-   use list_hdf5,     only: S_LEN
    use dataio_public, only: maxparfilelen, maxparfilelines
+   use list_hdf5,     only: S_LEN
 
    implicit none
 
@@ -92,12 +92,12 @@ module dataio_hdf5
 
    subroutine init_hdf5(vars,tix,tiy,tiz,tdt_plt)
 
-      use list_hdf5,  only: additional_attrs, problem_write_restart, problem_read_restart
       use fluidindex, only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
+      use grid,       only: nx, ny, nz, nxd, nyd, nzd, nb
+      use list_hdf5,  only: additional_attrs, problem_write_restart, problem_read_restart
 #ifdef COSM_RAYS
       use fluidindex, only: iarr_all_crs
 #endif /* COSM_RAYS */
-      use grid,       only: nx,ny,nz,nxd,nyd,nzd,nb
 
       implicit none
 
@@ -282,18 +282,18 @@ module dataio_hdf5
 !! \brief Routine calculating quantities for plot files
 !<
    subroutine common_plt_hdf5(var,ij,xn,tab,ierrh)
-      use grid,         only: nb, nyb, nzb, nxb
-      use arrays,       only: u, b
+      use arrays,        only: u, b
       use dataio_public, only: varlen
+      use grid,          only: nb, nyb, nzb, nxb
 #ifdef GRAV
-      use arrays,       only: gpot
+      use arrays,        only: gpot
 #endif /* GRAV */
-      use fluidindex,   only: ind
+      use fluidindex,    only: ind
 #ifdef COSM_RAYS
-      use fluidindex,   only: iarr_all_crs
+      use fluidindex,    only: iarr_all_crs
 #endif /* COSM_RAYS */
 #ifdef NEUTRAL
-      use initneutral,  only: gamma_neu
+      use initneutral,   only: gamma_neu
 #endif /* NEUTRAL */
 
       implicit none
@@ -485,27 +485,27 @@ module dataio_hdf5
 !! \brief Routine calculating quantities for .hdf files
 !<
    subroutine common_vars_hdf5(var,tab, ierrh)
-      use fluidindex,   only: ind
-      use grid,         only: nb, nx, ny, nz
-      use arrays,       only: u, b
+      use arrays,        only: u, b
       use dataio_public, only: varlen
+      use fluidindex,    only: ind
+      use grid,          only: nb, nx, ny, nz
 #ifdef GRAV
-      use arrays,       only: gpot
+      use arrays,        only: gpot
 #ifdef MULTIGRID
-      use arrays,       only: sgp
+      use arrays,        only: sgp
 #endif /* MULTIGRID */
 #endif /* GRAV */
 #ifdef IONIZED
-      use initionized,  only: gamma_ion
+      use initionized,   only: gamma_ion
 #endif /* IONIZED */
 #ifdef NEUTRAL
-      use initneutral,  only: gamma_neu
+      use initneutral,   only: gamma_neu
 #endif /* NEUTRAL */
 
       implicit none
-      character(LEN=varlen), intent(in)   :: var
-      real(kind=4), dimension(:,:,:) :: tab
-      integer, intent(out)           :: ierrh
+      character(LEN=varlen), intent(in) :: var
+      real(kind=4), dimension(:,:,:)    :: tab
+      integer, intent(out)              :: ierrh
 #ifdef COSM_RAYS
       integer :: i
       character(len=3) :: aux
@@ -605,9 +605,9 @@ module dataio_hdf5
 
    subroutine write_plot
 
-      use hdf5,       only: HID_T, H5open_f, H5Fcreate_f, H5Gcreate_f, H5F_ACC_TRUNC_F, H5Gclose_f, H5close_f, h5fclose_f
-      use mpisetup,   only: t, comm3d, ierr, proc
       use dataio_public, only: cwdlen, log_file
+      use hdf5,          only: HID_T, H5open_f, H5Fcreate_f, H5Gcreate_f, H5F_ACC_TRUNC_F, H5Gclose_f, H5close_f, h5fclose_f
+      use mpisetup,      only: t, comm3d, ierr, proc
 
       implicit none
 
@@ -665,15 +665,15 @@ module dataio_hdf5
    end subroutine write_plot
 
    subroutine write_plot_hdf5(var,plane,nimg)
+      use arrays,        only: u
+      use dataio_public, only: vizit, fmin, fmax, cwdlen, log_file, msg, varlen, die, warn
+      use grid,          only: nxb, nyb, nzb, nxd, nyd, nzd, nb
+      use hdf5,          only: HID_T, HSIZE_T, SIZE_T, H5F_ACC_RDWR_F, h5fopen_f, h5gopen_f, h5gclose_f, h5fclose_f
+      use h5lt,          only: h5ltmake_dataset_double_f, h5ltset_attribute_double_f
+      use mpisetup,      only: MPI_CHARACTER, comm3d, ierr, pxsize, pysize, pzsize, MPI_DOUBLE_PRECISION, t, pcoords
 #ifdef PGPLOT
       use viz,           only: draw_me
 #endif /* PGPLOT */
-      use dataio_public, only: vizit, fmin, fmax, cwdlen, log_file, msg, varlen, die, warn
-      use mpisetup, only: MPI_CHARACTER, comm3d, ierr, pxsize, pysize, pzsize, MPI_DOUBLE_PRECISION, t, pcoords
-      use hdf5,     only: HID_T, HSIZE_T, SIZE_T, H5F_ACC_RDWR_F, h5fopen_f, h5gopen_f, h5gclose_f, h5fclose_f
-      use h5lt,     only: h5ltmake_dataset_double_f, h5ltset_attribute_double_f
-      use arrays,   only: u
-      use grid,     only: nxb,nyb,nzb,nxd,nyd,nzd,nb
 
       implicit none
 
@@ -827,26 +827,26 @@ module dataio_hdf5
 
    subroutine write_restart_hdf5
 
+      use arrays,        only: u, b
+      use dataio_public, only: chdf, nres, set_container_chdf, cwdlen
+      use fluidindex,    only: nvar
+      use grid,          only: nxb, nyb, nzb, x, y, z, nx, ny, nz
       use hdf5,          only: HID_T, HSIZE_T, HSSIZE_T, H5P_FILE_ACCESS_F, H5F_ACC_TRUNC_F, H5P_DATASET_CREATE_F, H5S_SELECT_SET_F, &
            &                   H5P_DATASET_XFER_F, H5FD_MPIO_INDEPENDENT_F, H5T_NATIVE_DOUBLE, &
            &                   h5open_f, h5close_f, h5fcreate_f, h5fclose_f, &
            &                   h5dcreate_f, h5dwrite_f, h5dclose_f, h5dget_space_f, &
            &                   h5pcreate_f, h5pclose_f, h5pset_fapl_mpio_f, h5pset_chunk_f, h5pset_dxpl_mpio_f, &
            &                   h5screate_simple_f, h5sclose_f, h5sselect_hyperslab_f
-      use types,         only: hdf
+      use list_hdf5,     only: problem_write_restart
       use mpisetup,      only: pcoords, pxsize, pysize, pzsize, comm3d, comm, info, ierr, MPI_CHARACTER, proc, nstep
-      use arrays,        only: u,b
+      use problem_pub,   only: problem_name, run_id
+      use types,         only: hdf
 #ifdef ISO_LOCAL
       use arrays,        only: cs_iso2_arr
 #endif /* ISO_LOCAL */
 #ifdef MASS_COMPENS
       use arrays,        only: dinit
 #endif /* MASS_COMPENS */
-      use grid,          only: nxb, nyb, nzb, x, y, z, nx, ny, nz
-      use problem_pub,   only: problem_name, run_id
-      use fluidindex,    only: nvar
-      use dataio_public, only: chdf, nres, set_container_chdf, cwdlen
-      use list_hdf5,     only: problem_write_restart
 
       implicit none
 
@@ -1132,13 +1132,13 @@ module dataio_hdf5
    end subroutine write_restart_hdf5
 
    subroutine write_3darr_to_restart(tab,file_id,dname,nx,ny,nz)
-      use mpisetup,    only: pcoords, pxsize, pysize, pzsize, comm3d, info
       use hdf5,        only: HID_T, HSIZE_T, HSSIZE_T, H5P_DATASET_CREATE_F, H5S_SELECT_SET_F, &
            &                 H5P_DATASET_XFER_F, H5FD_MPIO_INDEPENDENT_F, H5T_NATIVE_DOUBLE, &
            &                 h5open_f, h5close_f, h5fcreate_f, h5fclose_f, &
            &                 h5dcreate_f, h5dwrite_f, h5dclose_f, h5dget_space_f, &
            &                 h5pcreate_f, h5pclose_f, h5pset_fapl_mpio_f, h5pset_chunk_f, h5pset_dxpl_mpio_f, &
            &                 h5screate_simple_f, h5sclose_f, h5sselect_hyperslab_f
+      use mpisetup,    only: pcoords, pxsize, pysize, pzsize, comm3d, info
       implicit none
       integer, intent(in)                      :: nx,ny,nz
       real, dimension(nx,ny,nz), intent(in) :: tab
@@ -1214,11 +1214,11 @@ module dataio_hdf5
 
    subroutine read_3darr_from_restart(file_id,dname,p3d,nx,ny,nz)
       use hdf5,         only: HID_T, HSIZE_T, HSSIZE_T, SIZE_T, H5P_FILE_ACCESS_F, H5T_NATIVE_DOUBLE, &
-          H5S_SELECT_SET_F, H5F_ACC_RDONLY_F, H5FD_MPIO_INDEPENDENT_F, H5P_DATASET_XFER_F, &
-          h5open_f, h5pcreate_f, h5pset_fapl_mpio_f, h5fopen_f, h5pclose_f, h5dopen_f, &
-          h5dget_space_f, h5sget_simple_extent_ndims_f, h5dget_create_plist_f, h5pget_chunk_f, &
-          h5sselect_hyperslab_f, h5dread_f, h5sclose_f, h5pset_dxpl_mpio_f, h5dclose_f, &
-          h5screate_simple_f, h5fclose_f, h5close_f
+                              H5S_SELECT_SET_F, H5F_ACC_RDONLY_F, H5FD_MPIO_INDEPENDENT_F, H5P_DATASET_XFER_F, &
+                              h5open_f, h5pcreate_f, h5pset_fapl_mpio_f, h5fopen_f, h5pclose_f, h5dopen_f, &
+                              h5dget_space_f, h5sget_simple_extent_ndims_f, h5dget_create_plist_f, h5pget_chunk_f, &
+                              h5sselect_hyperslab_f, h5dread_f, h5sclose_f, h5pset_dxpl_mpio_f, h5dclose_f, &
+                              h5screate_simple_f, h5fclose_f, h5close_f
       use mpisetup,     only: comm, ierr, pcoords, pxsize, pysize, pzsize
 
       implicit none
@@ -1293,30 +1293,30 @@ module dataio_hdf5
 
    subroutine read_restart_hdf5(chdf)
 
-      use types,        only: hdf, domlen, idlen
-      use hdf5,         only: HID_T, HSIZE_T, HSSIZE_T, SIZE_T, H5P_FILE_ACCESS_F, H5T_NATIVE_DOUBLE, &
-          H5S_SELECT_SET_F, H5F_ACC_RDONLY_F, H5FD_MPIO_INDEPENDENT_F, H5P_DATASET_XFER_F, &
-          h5open_f, h5pcreate_f, h5pset_fapl_mpio_f, h5fopen_f, h5pclose_f, h5dopen_f, &
-          h5dget_space_f, h5sget_simple_extent_ndims_f, h5dget_create_plist_f, h5pget_chunk_f, &
-          h5sselect_hyperslab_f, h5dread_f, h5sclose_f, h5pset_dxpl_mpio_f, h5dclose_f, &
-          h5screate_simple_f, h5fclose_f, h5close_f
-      use h5lt,         only: h5ltget_attribute_double_f, h5ltget_attribute_int_f, h5ltget_attribute_string_f
-      use mpisetup,     only: comm, ierr, pcoords, pxsize, pysize, pzsize, &
-          MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION, proc, t, info, comm3d, dt, cbuff_len
-      use fluidindex,   only: nvar
-      use grid,         only: nx, ny, nz, x, y, z, nxb, nyb, nzb, nxd, nyd, nzd, nb, xmin, xmax, &
-          ymin, ymax, zmin, zmax
-      use arrays,       only: u,b
+      use arrays,        only: u, b
+      use dataio_public, only: cwdlen, msg, colormessage, T_IO, die, printinfo
+      use fluidindex,    only: nvar
+      use func,          only: fix_string
+      use grid,          only: nx, ny, nz, x, y, z, nxb, nyb, nzb, nxd, nyd, nzd, nb, xmin, xmax, &
+                               ymin, ymax, zmin, zmax
+      use hdf5,          only: HID_T, HSIZE_T, HSSIZE_T, SIZE_T, H5P_FILE_ACCESS_F, H5T_NATIVE_DOUBLE, &
+                               H5S_SELECT_SET_F, H5F_ACC_RDONLY_F, H5FD_MPIO_INDEPENDENT_F, H5P_DATASET_XFER_F, &
+                               h5open_f, h5pcreate_f, h5pset_fapl_mpio_f, h5fopen_f, h5pclose_f, h5dopen_f, &
+                               h5dget_space_f, h5sget_simple_extent_ndims_f, h5dget_create_plist_f, h5pget_chunk_f, &
+                               h5sselect_hyperslab_f, h5dread_f, h5sclose_f, h5pset_dxpl_mpio_f, h5dclose_f, &
+                               h5screate_simple_f, h5fclose_f, h5close_f
+      use h5lt,          only: h5ltget_attribute_double_f, h5ltget_attribute_int_f, h5ltget_attribute_string_f
+      use list_hdf5,     only: problem_read_restart
+      use mpisetup,      only: comm, ierr, pcoords, pxsize, pysize, pzsize, &
+                               MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION, proc, t, info, comm3d, dt, cbuff_len
+      use problem_pub,   only: problem_name, run_id
+      use types,         only: hdf, domlen, idlen
 #ifdef ISO_LOCAL
-      use arrays,       only: cs_iso2_arr
+      use arrays,        only: cs_iso2_arr
 #endif /* ISO_LOCAL */
 #ifdef MASS_COMPENS
-      use arrays,       only: dinit
+      use arrays,        only: dinit
 #endif /* MASS_COMPENS */
-      use problem_pub,  only: problem_name, run_id
-      use func,         only: fix_string
-      use list_hdf5,    only: problem_read_restart
-      use dataio_public, only: cwdlen, msg, colormessage, T_IO, die, printinfo
 
       IMPLICIT NONE
 
@@ -1537,19 +1537,19 @@ module dataio_hdf5
 ! ------------------------------------------------------------------------------------
 !
    subroutine write_hdf5(chdf)
-      use hdf5,        only: HID_T, H5F_ACC_TRUNC_F, H5P_FILE_ACCESS_F, H5P_DEFAULT_F, &
-           &                 h5open_f, h5close_f, h5fcreate_f, h5fclose_f, h5pcreate_f, h5pclose_f, h5pset_fapl_mpio_f
-      use types,       only: hdf
-      use mpisetup,    only: comm3d, ierr, info
-      use grid,        only: nxb, nyb, nzb
-      use problem_pub, only: problem_name, run_id
+      use dataio_public, only: cwdlen, msg, die
+      use grid,          only: nxb, nyb, nzb
+      use hdf5,          only: HID_T, H5F_ACC_TRUNC_F, H5P_FILE_ACCESS_F, H5P_DEFAULT_F, &
+           &                   h5open_f, h5close_f, h5fcreate_f, h5fclose_f, h5pcreate_f, h5pclose_f, h5pset_fapl_mpio_f
+      use mpisetup,      only: comm3d, ierr, info
+      use problem_pub,   only: problem_name, run_id
+      use types,         only: hdf
 #ifdef NEW_HDF5
-      use list_hdf5,   only: iterate_lhdf5
+      use list_hdf5,     only: iterate_lhdf5
 #endif /* NEW_HDF5 */
 #ifdef MULTIGRID
-      use multigridio, only: multigrid_write_hdf5
+      use multigridio,   only: multigrid_write_hdf5
 #endif /* MULTIGRID */
-      use dataio_public, only: cwdlen, msg, die
 
       implicit none
 
@@ -1615,11 +1615,11 @@ module dataio_hdf5
    end subroutine write_hdf5
 
    subroutine write_arr(data,dsetname,file_id)
-      use hdf5,      only: HID_T, HSIZE_T, HSSIZE_T, h5screate_simple_f, h5pcreate_f, h5pset_chunk_f, &
-         h5sclose_f, h5pset_dxpl_mpio_f, h5dwrite_f, h5dclose_f, H5P_DATASET_XFER_F, H5P_DATASET_CREATE_F, &
-         H5T_NATIVE_REAL, H5S_SELECT_SET_F, H5FD_MPIO_INDEPENDENT_F, h5dcreate_f, h5dget_space_f, &
-         h5sselect_hyperslab_f
       use grid,      only: nxd, nyd, nzd, nb, nxb, nyb, nzb
+      use hdf5,      only: HID_T, HSIZE_T, HSSIZE_T, h5screate_simple_f, h5pcreate_f, h5pset_chunk_f, &
+                           h5sclose_f, h5pset_dxpl_mpio_f, h5dwrite_f, h5dclose_f, H5P_DATASET_XFER_F, H5P_DATASET_CREATE_F, &
+                           H5T_NATIVE_REAL, H5S_SELECT_SET_F, H5FD_MPIO_INDEPENDENT_F, h5dcreate_f, h5dget_space_f, &
+                           h5sselect_hyperslab_f
       use mpisetup,  only: pcoords
 
       implicit none
@@ -1706,14 +1706,14 @@ module dataio_hdf5
    subroutine set_common_attributes(filename, chdf, stype)
 
       use dataio_public, only: msg, colormessage, T_IO
-      use mpisetup,      only: proc, t, dt, psize, cbuff_len
-      use h5lt,          only: h5ltset_attribute_double_f, h5ltset_attribute_int_f, h5ltmake_dataset_string_f, h5ltset_attribute_string_f
-      use hdf5,          only: HID_T, SIZE_T, H5F_ACC_RDWR_F, h5fopen_f, h5fclose_f, h5gcreate_f, h5gclose_f
-      use types,         only: hdf
       use grid,          only: nxb, nyb, nzb, nxd, nyd, nzd, nb, xmin, xmax, ymin, ymax, zmin, zmax
-      use version,       only: env, nenv
-      use problem_pub,   only: problem_name, run_id
+      use hdf5,          only: HID_T, SIZE_T, H5F_ACC_RDWR_F, h5fopen_f, h5fclose_f, h5gcreate_f, h5gclose_f
+      use h5lt,          only: h5ltset_attribute_double_f, h5ltset_attribute_int_f, h5ltmake_dataset_string_f, h5ltset_attribute_string_f
       use list_hdf5,     only: additional_attrs
+      use mpisetup,      only: proc, t, dt, psize, cbuff_len
+      use problem_pub,   only: problem_name, run_id
+      use types,         only: hdf
+      use version,       only: env, nenv
 
       implicit none
 

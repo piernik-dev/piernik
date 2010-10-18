@@ -39,7 +39,7 @@ module timestepcosmicrays
   subroutine timestep_crs
 
     use grid,           only: dxmn
-    use initcosmicrays, only: cfl_cr,K_crs_paral,K_crs_perp
+    use initcosmicrays, only: cfl_cr, K_crs_paral, K_crs_perp
 
     implicit none
 

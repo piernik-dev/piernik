@@ -45,8 +45,8 @@
 
 module fluidindex
 
-   use types,      only: indx
    use fluidtypes, only: var_numbers
+   use types,      only: indx
    implicit none
 
    type(var_numbers),save :: nvar
@@ -104,34 +104,28 @@ module fluidindex
     subroutine fluid_index
 
 #ifdef IONIZED
-      use initionized,    only: ionized_index, selfgrav_ion
+      use initionized,    only: idni, imxi, imyi, imzi, ionized_index, selfgrav_ion
       use initionized,    only: iarr_ion_swpx, iarr_ion_swpy, iarr_ion_swpz
-      use initionized,    only: idni,imxi,imyi,imzi
 #ifndef ISO
       use initionized,    only: ieni
 #endif /* !ISO */
 #endif /* IONIZED */
 
 #ifdef NEUTRAL
-      use initneutral,    only: neutral_index, selfgrav_neu
+      use initneutral,    only: idnn, imxn, imyn, imzn, neutral_index, selfgrav_neu
       use initneutral,    only: iarr_neu_swpx, iarr_neu_swpy, iarr_neu_swpz
-      use initneutral,    only: idnn,imxn,imyn,imzn
 #ifndef ISO
       use initneutral,    only: ienn
 #endif /* !ISO */
 #endif /* NEUTRAL */
 
 #ifdef DUST
-      use initdust,       only: dust_index, selfgrav_dst
+      use initdust,       only: idnd, imxd, imyd, imzd, dust_index, selfgrav_dst
       use initdust,       only: iarr_dst_swpx, iarr_dst_swpy, iarr_dst_swpz
-      use initdust,       only: idnd,imxd,imyd,imzd
 #endif /* DUST */
 
 #ifdef COSM_RAYS
-      use initcosmicrays, only: cosmicray_index
-      use initcosmicrays, only: iarr_crn
-      use initcosmicrays, only: iarr_cre
-      use initcosmicrays, only: iarr_crs
+      use initcosmicrays, only: iarr_crn, iarr_cre, iarr_crs, cosmicray_index
 #endif /* COSM_RAYS */
 
 

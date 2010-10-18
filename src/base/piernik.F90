@@ -31,123 +31,122 @@
 !<
 program piernik
 
-  use mpisetup,      only: comm, comm3d, ierr, proc, t, dt, nstep, cleanup_mpi
-  use dataio_public, only: nend, nstep_start, tend, msg, fplen, printinfo, warn, &
+   use dataio,        only: write_data, user_msg_handler
+   use dataio_public, only: nend, nstep_start, tend, msg, fplen, printinfo, warn, &
        &                    code_progress, PIERNIK_START, PIERNIK_INITIALIZED, PIERNIK_FINISHED, PIERNIK_CLEANUP
-  use timer,         only: time_left
+   use fluidupdate,   only: fluid_update
+   use mpisetup,      only: comm, comm3d, ierr, proc, t, dt, nstep, cleanup_mpi
+   use timer,         only: time_left
+   use types,         only: finalize_problem
 #ifdef PERFMON
-  use timer,         only: timer_start, timer_stop
+   use timer,         only: timer_start, timer_stop
 #endif
-  use dataio,        only: write_data, user_msg_handler
-  use fluidupdate,   only: fluid_update
-  use types,         only: finalize_problem
 
-  implicit none
+   implicit none
 
-  logical              :: end_sim !< Used in main loop, to test whether to stop simulation or not
-  character(len=fplen) :: nstr, tstr
+   logical              :: end_sim !< Used in main loop, to test whether to stop simulation or not
+   character(len=fplen) :: nstr, tstr
 
-  code_progress = PIERNIK_START
+   code_progress = PIERNIK_START
 
-  call init_piernik
+   call init_piernik
 
-  call MPI_Barrier(comm3d,ierr)
+   call MPI_Barrier(comm3d,ierr)
 !-------------------------------- MAIN LOOP ----------------------------------
 #ifdef PERFMON
-  call timer_start
+   call timer_start
 #endif
 
-  code_progress = PIERNIK_INITIALIZED
+   code_progress = PIERNIK_INITIALIZED
 
-  end_sim = .false.
+   end_sim = .false.
 
-  if (proc == 0) then
-     call printinfo("======================================================================================================", .false.)
-     call printinfo("###############     Simulation     ###############", .false.)
-  endif
+   if (proc == 0) then
+      call printinfo("======================================================================================================", .false.)
+      call printinfo("###############     Simulation     ###############", .false.)
+   endif
 
-  do while (t < tend .and. nstep < nend .and. .not.(end_sim) .and. time_left() )
+   do while (t < tend .and. nstep < nend .and. .not.(end_sim) .and. time_left() )
 
-     nstep=nstep+1
+      nstep=nstep+1
 
-     call fluid_update
+      call fluid_update
 
-     call MPI_Barrier(comm3d,ierr)
-     call write_data(output='all')
+      call MPI_Barrier(comm3d,ierr)
+      call write_data(output='all')
 
-     call user_msg_handler(end_sim)
+      call user_msg_handler(end_sim)
 
-  enddo ! main loop
+   enddo ! main loop
 
-  code_progress = PIERNIK_FINISHED
+   code_progress = PIERNIK_FINISHED
 
-  if (proc == 0) then
-     write(tstr, '(g14.6)') t
-     write(nstr, '(i7)') nstep
-     tstr = adjustl(tstr)
-     nstr = adjustl(nstr)
-     call printinfo("======================================================================================================", .false.)
-     call printinfo("###############     Finishing     ###############", .false.)
-     if (t >= tend) then
-        write(msg, '(2a)') "Simulation has reached final time t = ",trim(tstr)
-        call printinfo(msg)
-     endif
-     if (nstep >= nend) then
-        write(msg, '(4a)') "Maximum step count exceeded (",trim(nstr),") at t = ",trim(tstr)
-        call warn(msg)
-     endif
-     if (end_sim) then
-        write(msg, '(4a)') "Enforced stop at step ",trim(nstr),", t = ", trim(tstr)
-        call warn(msg)
-     endif
-     if (.not.time_left()) then
-        write(msg, '(4a)') "Wall time limit exceeded at step ",trim(nstr),", t = ", trim(tstr)
-        call warn(msg)
-     endif
-  endif
+   if (proc == 0) then
+      write(tstr, '(g14.6)') t
+      write(nstr, '(i7)') nstep
+      tstr = adjustl(tstr)
+      nstr = adjustl(nstr)
+      call printinfo("======================================================================================================", .false.)
+      call printinfo("###############     Finishing     ###############", .false.)
+      if (t >= tend) then
+         write(msg, '(2a)') "Simulation has reached final time t = ",trim(tstr)
+         call printinfo(msg)
+      endif
+      if (nstep >= nend) then
+         write(msg, '(4a)') "Maximum step count exceeded (",trim(nstr),") at t = ",trim(tstr)
+         call warn(msg)
+      endif
+      if (end_sim) then
+         write(msg, '(4a)') "Enforced stop at step ",trim(nstr),", t = ", trim(tstr)
+         call warn(msg)
+      endif
+      if (.not.time_left()) then
+         write(msg, '(4a)') "Wall time limit exceeded at step ",trim(nstr),", t = ", trim(tstr)
+         call warn(msg)
+      endif
+   endif
 
-  if (associated(finalize_problem)) call finalize_problem
+   if (associated(finalize_problem)) call finalize_problem
 
 !  nstep=nstep+1
 #ifdef PERFMON
-  call timer_stop
+   call timer_stop
 #endif /* PERFMON */
-  call write_data(output='end')
+   call write_data(output='end')
 !---------------------------- END OF MAIN LOOP ----------------------------------
 
-  call MPI_Barrier(comm,ierr)
+   call MPI_Barrier(comm,ierr)
 
-  code_progress = PIERNIK_CLEANUP
+   code_progress = PIERNIK_CLEANUP
 
-  if (proc == 0) write(*, '(a)', advance='no') "Finishing "       ! QA_WARN
-  call cleanup_piernik
+   if (proc == 0) write(*, '(a)', advance='no') "Finishing "       ! QA_WARN
+   call cleanup_piernik
 
 contains
 !>
 !! Meta subroutine responsible for initializing all piernik modules
 !<
    subroutine init_piernik
-      use diagnostics,           only: diagnose_arrays
-      use types,                 only: grid_container
-      use initfluids,            only: init_fluids
-      use fluidindex,            only: nvar
       use arrays,                only: init_arrays
-      use grid,                  only: nx,ny,nz
-      use grid,                  only: init_grid,grid_xyz
-      use initproblem,           only: init_prob, read_problem_par
-      use problem_pub,           only: problem_name, run_id
       use dataio,                only: init_dataio, write_data
       use dataio_public,         only: nrestart, cwd, par_file, tmp_log_file, msg, colormessage, T_IO, die, warn, printinfo
-      use mpisetup,              only: init_mpi
-      use mpiboundaries,         only: mpi_boundaries_prep
-      use fluidboundaries_pub,   only: init_fluidboundaries
+      use diagnostics,           only: diagnose_arrays
       use fluidboundaries,       only: all_fluid_boundaries
+      use fluidboundaries_pub,   only: init_fluidboundaries
+      use fluidindex,            only: nvar
+      use grid,                  only: nx, ny, nz, init_grid, grid_xyz
+      use initfluids,            only: init_fluids
+      use initproblem,           only: init_prob, read_problem_par
+      use problem_pub,           only: problem_name, run_id
+      use mpiboundaries,         only: mpi_boundaries_prep
+      use mpisetup,              only: init_mpi
+      use types,                 only: grid_container
 #ifdef MAGNETIC
       use magboundaries,         only: all_mag_boundaries
-#endif /* MAGNETIC */
-#if defined MAGNETIC && defined RESISTIVE
+#ifdef RESISTIVE
       use resistivity,           only: init_resistivity
-#endif /* MAGNETIC && RESISTIVE */
+#endif /* RESISTIVE */
+#endif /* MAGNETIC */
 #ifdef SHEAR
       use shear,                 only: init_shear
 #endif /* SHEAR */
@@ -274,11 +273,11 @@ contains
 
    subroutine cleanup_piernik
 
-      use mpisetup,    only: cleanup_mpi
-      use grid,        only: cleanup_grid
-      use dataio,      only: cleanup_dataio
       use arrays,      only: cleanup_arrays
+      use dataio,      only: cleanup_dataio
+      use grid,        only: cleanup_grid
       use initfluids,  only: cleanup_fluids
+      use mpisetup,    only: cleanup_mpi
       use timer,       only: cleanup_timers
 #ifdef RESISTIVE
       use resistivity, only: cleanup_resistivity

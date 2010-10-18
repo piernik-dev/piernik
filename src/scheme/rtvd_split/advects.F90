@@ -31,13 +31,13 @@ module advects
   contains
 
   subroutine advectby_x
-    use mpisetup,  only: dt
-    use fluidindex, only: ibx,iby,ibz
-    use initionized, only: idni,imxi
-    use arrays, only: b,u,wa
-    use grid,   only: dx,nx,ny,nz,nxd,nyd,nzd,ks,ke
-    use rtvd,     only: tvdb
+    use arrays,        only: b, u, wa
+    use fluidindex,    only: ibx, iby, ibz
+    use grid,          only: dx, nx, ny, nz, nxd, nyd, nzd, ks, ke
+    use initionized,   only: idni, imxi
     use magboundaries, only: bnd_emf
+    use mpisetup,      only: dt
+    use rtvd,          only: tvdb
 
     implicit none
     real, dimension(nx) :: vxby,by_x,vx
@@ -80,13 +80,13 @@ module advects
   end subroutine advectby_x
 
   subroutine advectbz_x
-    use mpisetup,  only: dt
-    use fluidindex, only: ibx,iby,ibz
-    use initionized, only: idni,imxi
-    use arrays, only: b,u,wa
-    use grid,   only: dx,nx,ny,nz,nxd,nyd,nzd,js,je
-    use rtvd,   only: tvdb
+    use arrays,        only: b, u, wa
+    use fluidindex,    only: ibx, iby, ibz
+    use grid,          only: dx, nx, ny, nz, nxd, nyd, nzd, js, je
+    use initionized,   only: idni, imxi
     use magboundaries, only: bnd_emf
+    use mpisetup,      only: dt
+    use rtvd,          only: tvdb
 
     implicit none
     real, dimension(nx) :: vxbz,bz_x,vx
@@ -129,13 +129,13 @@ module advects
   end subroutine advectbz_x
 
   subroutine advectbz_y
-    use mpisetup,  only: dt
-    use fluidindex, only: ibx,iby,ibz
-    use initionized, only: idni,imyi
-    use arrays, only: b,u,wa
-    use grid,   only: dy,nx,ny,nz,is,ie,nxd,nyd,nzd
-    use rtvd,   only: tvdb
+    use arrays,        only: b, u, wa
+    use fluidindex,    only: ibx, iby, ibz
+    use grid,          only: dy, nx, ny, nz, is, ie, nxd, nyd, nzd
+    use initionized,   only: idni, imyi
     use magboundaries, only: bnd_emf
+    use mpisetup,      only: dt
+    use rtvd,          only: tvdb
 
     implicit none
     real, dimension(ny)   :: vybz,bz_y,vy
@@ -177,13 +177,13 @@ module advects
   end subroutine advectbz_y
 
   subroutine advectbx_y
-    use mpisetup,  only: dt
-    use fluidindex, only: ibx,iby,ibz
-    use initionized, only: idni,imyi
-    use arrays, only: b,u,wa
-    use grid,   only: dy,nx,ny,nz,nxd,nzd,nyd,ks,ke
-    use rtvd,     only: tvdb
+    use arrays,        only: b, u, wa
+    use fluidindex,    only: ibx, iby, ibz
+    use grid,          only: dy, nx, ny, nz, nxd, nzd, nyd, ks, ke
+    use initionized,   only: idni, imyi
     use magboundaries, only: bnd_emf
+    use mpisetup,      only: dt
+    use rtvd,          only: tvdb
 
     implicit none
     real, dimension(ny) :: vybx,bx_y,vy
@@ -226,13 +226,13 @@ module advects
   end subroutine advectbx_y
 
   subroutine advectbx_z
-    use mpisetup,  only: dt
-    use fluidindex, only: ibx,iby,ibz
-    use initionized, only: idni,imzi
-    use arrays, only: b,u,wa
-    use grid,   only: dz,nx,ny,nz,nxd,nzd,nyd,js,je
-    use rtvd,     only: tvdb
+    use arrays,        only: b, u, wa
+    use fluidindex,    only: ibx, iby, ibz
+    use grid,          only: dz, nx, ny, nz, nxd, nzd, nyd, js, je
+    use initionized,   only: idni, imzi
     use magboundaries, only: bnd_emf
+    use mpisetup,      only: dt
+    use rtvd,          only: tvdb
 
     implicit none
     real, dimension(nz)  :: vzbx,bx_z,vz
@@ -274,13 +274,13 @@ module advects
   end subroutine advectbx_z
 
   subroutine advectby_z
-    use mpisetup,  only: dt
-    use fluidindex, only: ibx,iby,ibz
-    use initionized, only: idni,imzi
-    use arrays, only: b,u,wa
-    use grid,   only: dz,nx,ny,nz,nzd,nyd,nxd,ie,is
-    use rtvd,     only: tvdb
+    use arrays,        only: b, u, wa
+    use fluidindex,    only: ibx, iby, ibz
+    use grid,          only: dz, nx, ny, nz, nzd, nyd, nxd, ie, is
+    use initionized,   only: idni, imzi
     use magboundaries, only: bnd_emf
+    use mpisetup,      only: dt
+    use rtvd,          only: tvdb
 
     implicit none
     real, dimension(nz)  :: vzby,by_z,vz

@@ -64,8 +64,8 @@ module initdust
 !<
   subroutine init_dust
 
-    use mpisetup,       only: proc, rbuff, lbuff, MPI_LOGICAL, MPI_DOUBLE_PRECISION, buffer_dim, comm, ierr
     use dataio_public,  only: par_file, ierrh, namelist_errh, compare_namelist
+    use mpisetup,       only: proc, rbuff, lbuff, MPI_LOGICAL, MPI_DOUBLE_PRECISION, buffer_dim, comm, ierr
 
     implicit none
 

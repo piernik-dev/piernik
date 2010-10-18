@@ -68,13 +68,10 @@ module fluxdust
 
   subroutine flux_dst(fluxd,cfrd,uud,n)
 
-    use mpisetup,        only: cfr_smooth
-    use constants,       only: small
-    use fluidindex,      only: idn,imx,imy,imz,ien
-    use fluidindex,      only: nvar
-
-!    use timestepdust, only: c_dst
-    use timestep, only: c_all
+    use constants,  only: small
+    use fluidindex, only: idn, imx, imy, imz, ien, nvar
+    use mpisetup,   only: cfr_smooth
+    use timestep,   only: c_all
 
 
     implicit none

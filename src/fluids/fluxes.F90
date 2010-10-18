@@ -47,20 +47,20 @@
 module fluxes
 
 #ifdef IONIZED
-  use initionized,    only: iarr_ion
   use fluxionized,    only: flux_ion
+  use initionized,    only: iarr_ion
 #endif /* IONIZED */
 #ifdef NEUTRAL
-  use initneutral,    only: iarr_neu
   use fluxneutral,    only: flux_neu
+  use initneutral,    only: iarr_neu
 #endif /* NEUTRAL */
 #ifdef DUST
-  use initdust,       only: iarr_dst
   use fluxdust,       only: flux_dst
+  use initdust,       only: iarr_dst
 #endif /* DUST */
 #ifdef COSM_RAYS
-  use initcosmicrays, only: iarr_crs
   use fluxcosmicrays, only: flux_crs
+  use initcosmicrays, only: iarr_crs
 #endif /* COSM_RAYS */
 
 contains

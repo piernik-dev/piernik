@@ -35,38 +35,27 @@ module timestep
    contains
 
       subroutine time_step
-         use mpisetup,      only: t, dt, dt_old, dt_max_grow, dt_initial, dt_min, nstep, proc
-         use dataio_public, only: tend, msg, warn
-         use constants,     only: small,big
-         use dataio,        only: write_crashed
-
+         use constants,            only: small, big
+         use dataio,               only: write_crashed
+         use dataio_public,        only: tend, msg, warn
+         use mpisetup,             only: t, dt, dt_old, dt_max_grow, dt_initial, dt_min, nstep, proc
 #ifdef IONIZED
-         use timestepionized, only: timestep_ion
-         use timestepionized, only: dt_ion,c_ion
+         use timestepionized,      only: timestep_ion, dt_ion, c_ion
 #endif /* IONIZED */
-
 #ifdef NEUTRAL
-         use timestepneutral, only: timestep_neu
-         use timestepneutral, only: dt_neu,c_neu
+         use timestepneutral,      only: timestep_neu, dt_neu, c_neu
 #endif /* NEUTRAL */
-
 #ifdef DUST
-         use timestepdust, only: timestep_dst
-         use timestepdust, only: dt_dst,c_dst
+         use timestepdust,         only: timestep_dst, dt_dst, c_dst
 #endif /* DUST */
-
 #ifdef COSM_RAYS
-         use timestepcosmicrays, only: timestep_crs
-         use timestepcosmicrays, only: dt_crs
+         use timestepcosmicrays,   only: timestep_crs, dt_crs
 #endif /* COSM_RAYS */
-
 #ifdef RESISTIVE
-         use resistivity, only: dt_resist, timestep_resist
+         use resistivity,          only: dt_resist, timestep_resist
 #endif /* RESISTIVE */
-
 #ifdef FLUID_INTERACTIONS
-         use timestepinteractions, only: timestep_interactions
-         use timestepinteractions, only: dt_interact
+         use timestepinteractions, only: timestep_interactions, dt_interact
 #endif /* FLUID_INTERACTIONS */
 
          implicit none

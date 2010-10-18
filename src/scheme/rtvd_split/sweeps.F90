@@ -27,22 +27,22 @@
 !
 #include "piernik.def"
 module sweeps     ! split sweeps
-  contains
+   contains
 
 #if defined SHEAR && defined FLUID_INTERACTIONS
-  subroutine source_terms_y
-    use mpisetup, only: dt
-    use arrays, only: u
-    use grid, only: nx,nz
-    use shear,           only: omega, qshear
+   subroutine source_terms_y
+      use arrays,          only: u
+      use fluidboundaries, only: all_fluid_boundaries
+      use fluidindex,      only: iarr_all_dn, iarr_all_mx, iarr_all_my, nvar
+      use grid,            only: nx, nz
+      use mpisetup,        only: dt
+      use shear,           only: omega, qshear
 #ifdef NEUTRAL
-    use initneutral,     only: global_gradP_neu
+      use initneutral,     only: global_gradP_neu
 #endif /* NEUTRAL */
 #ifdef DUST
-    use initdust,        only: dragc_gas_dust
+      use initdust,        only: dragc_gas_dust
 #endif /* DUST */
-    use fluidindex,      only: iarr_all_dn, iarr_all_mx, iarr_all_my, nvar
-    use fluidboundaries, only: all_fluid_boundaries
 
     implicit none
     real, dimension(size(iarr_all_my),nx,nz) :: vxr, v_r, rotaccr
@@ -86,23 +86,19 @@ module sweeps     ! split sweeps
 
   subroutine sweepx
 
-    use fluidindex,   only: nvar, iarr_all_swpx
-    use fluidindex,   only: nmag
-    use fluidindex,   only: ibx,iby,ibz
-
-    use mpisetup, only: dt
-    use arrays, only: u,b
-    use grid, only: dx,nb,nx,ks,ke,js,je,nyd,nzd
-    use rtvd, only: relaxing_tvd
+    use arrays,          only: u, b
     use fluidboundaries, only: all_fluid_boundaries
-
+    use fluidindex,      only: nvar, iarr_all_swpx, ibx, iby, ibz, nmag
+    use grid,            only: dx, nb, nx, ks, ke, js, je, nyd, nzd
+    use mpisetup,        only: dt
+    use rtvd,            only: relaxing_tvd
 #ifdef COSM_RAYS
-    use crhelpers,  only: div_v
+    use crhelpers,       only: div_v
 #endif /* COSM_RAYS */
 
     implicit none
-    real, dimension(nmag,nx)  :: b_x
-    real, dimension(nvar%all,nx)  :: u_x
+    real, dimension(nmag,nx)     :: b_x
+    real, dimension(nvar%all,nx) :: u_x
     integer :: j,k,jp,kp
 
     b_x = 0.0
@@ -138,23 +134,19 @@ module sweeps     ! split sweeps
 !------------------------------------------------------------------------------------------
 
   subroutine sweepy
-    use fluidindex, only: nvar, iarr_all_swpy
-    use fluidindex,   only: nmag
-    use fluidindex, only: ibx,iby,ibz
-    use mpisetup, only: dt
-    use arrays, only: u,b
-    use grid, only: dy,nb,ny,is,ie,ks,ke,nxd,nzd
-    use rtvd, only: relaxing_tvd
+    use arrays,          only: u, b
     use fluidboundaries, only: all_fluid_boundaries
-
+    use fluidindex,      only: nvar, iarr_all_swpy, ibx, iby, ibz, nmag
+    use grid,            only: dy, nb, ny, is, ie, ks, ke, nxd, nzd
+    use mpisetup,        only: dt
+    use rtvd,            only: relaxing_tvd
 #ifdef COSM_RAYS
-    use crhelpers, only: div_v
+    use crhelpers,       only: div_v
 #endif /* COSM_RAYS */
 
     implicit none
-    real, dimension(nmag,ny)  :: b_y
-    real, dimension(nvar%all,ny)  :: u_y
-
+    real, dimension(nmag,ny)     :: b_y
+    real, dimension(nvar%all,ny) :: u_y
     integer :: i,k,ip,kp
 
     b_y = 0.0
@@ -192,24 +184,19 @@ module sweeps     ! split sweeps
 !------------------------------------------------------------------------------------------
 
   subroutine sweepz
-    use fluidindex, only: nvar, iarr_all_swpz
-    use fluidindex, only: nmag
-    use fluidindex, only: ibx,iby,ibz
-
-
-    use mpisetup, only: dt
-    use arrays, only: u,b
-    use grid, only: dz,nb,nz,is,ie,js,je,nxd,nyd
-    use rtvd, only: relaxing_tvd
+    use arrays,          only: u, b
     use fluidboundaries, only: all_fluid_boundaries
-
+    use fluidindex,      only: nvar, iarr_all_swpz, ibx, iby, ibz, nmag
+    use grid,            only: dz, nb, nz, is, ie, js, je, nxd, nyd
+    use mpisetup,        only: dt
+    use rtvd,            only: relaxing_tvd
 #ifdef COSM_RAYS
-    use crhelpers,  only: div_v
+    use crhelpers,       only: div_v
 #endif /* COSM_RAYS */
 
     implicit none
-    real, dimension(nmag,nz)  :: b_z
-    real, dimension(nvar%all,nz)  :: u_z
+    real, dimension(nmag,nz)     :: b_z
+    real, dimension(nvar%all,nz) :: u_z
 
     integer :: i,j,ip,jp
 

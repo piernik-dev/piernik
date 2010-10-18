@@ -31,9 +31,9 @@
 !<
 module snsources
 
-   use initproblem, only: amp_ecr_sn,ethu,f_sn, h_sn, r_sn
+   use initproblem, only: amp_ecr_sn, ethu, f_sn, h_sn, r_sn
 #ifdef SHEAR
-   use shear,       only: delj,eps
+   use shear,       only: delj, eps
 #endif /* SHEAR */
 
    implicit none

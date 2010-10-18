@@ -54,8 +54,8 @@ module shear
 !<
   subroutine init_shear
 
-    use mpisetup,       only: ierr, MPI_DOUBLE_PRECISION, proc, rbuff, buffer_dim, comm
     use dataio_public,  only: par_file, ierrh, printinfo, namelist_errh, compare_namelist
+    use mpisetup,       only: ierr, MPI_DOUBLE_PRECISION, proc, rbuff, buffer_dim, comm
 
     implicit none
 
@@ -90,9 +90,9 @@ module shear
 
   subroutine yshift(ts,dts)
     use arrays, only: u
-    use grid, only: dy,Lx,nyd,x,nb,ny
+    use grid,   only: dy, Lx, nyd, x, nb, ny
     implicit none
-    real, intent(in) :: ts,dts
+    real, intent(in) :: ts, dts
 #ifdef FFTW
     integer :: i
 #endif /* FFTW */
@@ -113,9 +113,9 @@ module shear
 
 #ifdef FFTW
   function unshear_fft(qty,x,ddy,inv)
-    use mpisetup, only: smalld
-    use grid, only: dy,nb,Lx
     use constants, only: dpi
+    use grid,      only: dy, nb, Lx
+    use mpisetup,  only: smalld
     implicit none
     include "fftw3.f"
     real, intent(in) :: ddy
@@ -178,7 +178,7 @@ module shear
 #endif /* FFTW */
 
   function unshear(qty,x,inv)
-    use grid,  only: nb,xmax,xmin,nyd,dy
+    use grid,     only: nb, xmax, xmin, nyd, dy
     use mpisetup, only: smalld
 
     logical, optional               :: inv
@@ -234,4 +234,3 @@ module shear
     return
   end function unshear
 end module shear
-

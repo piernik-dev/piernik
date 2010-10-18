@@ -57,12 +57,12 @@ module timestepneutral
 contains
 
   subroutine timestep_neu
-    use mpisetup,    only: MPI_DOUBLE_PRECISION, MPI_MIN, MPI_MAX, comm, ierr, cfl
+    use arrays,      only: u, b
     use constants,   only: big
-    use grid, only: dx,dy,dz,nb,ks,ke,is,ie,js,je,nxd,nyd,nzd
-    use arrays, only: u,b
-    use initneutral, only: gamma_neu, cs_iso_neu,cs_iso_neu2
-    use initneutral, only: idnn,imxn,imyn,imzn
+    use grid,        only: dx, dy, dz, nb, ks, ke, is, ie, js, je, nxd, nyd, nzd
+    use initneutral, only: gamma_neu, cs_iso_neu, cs_iso_neu2
+    use initneutral, only: idnn, imxn, imyn, imzn
+    use mpisetup,    only: MPI_DOUBLE_PRECISION, MPI_MIN, MPI_MAX, comm, ierr, cfl
 #ifndef ISO
     use initneutral, only: ienn
 #endif /* !ISO */

@@ -50,10 +50,10 @@ module dataio
 !!
 !! \todo check the usefulness of wait logical variable
 !<
-   use types,         only: hdf, idlen
    use dataio_public, only: tend, nend, wend, nhdf, nstep_start, domain, nrestart, get_container, set_container_chdf, &
-      vizit, fmin, fmax, hnlen, cwdlen, varlen
+                            vizit, fmin, fmax, hnlen, cwdlen, varlen
    use mpisetup,      only: cbuff_len
+   use types,         only: hdf, idlen
 
    implicit none
 
@@ -198,16 +198,16 @@ module dataio
 !<
    subroutine init_dataio
 
+      use dataio_hdf5,     only: init_hdf5, read_restart_hdf5, parfile, parfilelines
+      use dataio_public,   only: chdf, nres, last_hdf_time, step_hdf, nlog, ntsl, dataio_initialized, log_file, cwdlen, par_file, maxparfilelines, cwd, &
+           &                      ierrh, tmp_log_file, msglen, printinfo, warn, namelist_errh, compare_namelist
+      use fluidboundaries, only: all_fluid_boundaries
       use mpisetup,        only: lbuff, ibuff, rbuff, cbuff, proc, cbuff_len, comm, ierr, buffer_dim, &
            &                      MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL, &
            &                      psize, t, nstep, bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr
       use problem_pub,     only: problem_name, run_id
-      use version,         only: nenv,env, init_version
-      use fluidboundaries, only: all_fluid_boundaries
       use timer,           only: time_left
-      use dataio_hdf5,     only: init_hdf5, read_restart_hdf5, parfile, parfilelines
-      use dataio_public,   only: chdf, nres, last_hdf_time, step_hdf, nlog, ntsl, dataio_initialized, log_file, cwdlen, par_file, maxparfilelines, cwd, &
-           &                      ierrh, tmp_log_file, msglen, printinfo, warn, namelist_errh, compare_namelist
+      use version,         only: nenv,env, init_version
 #ifdef MAGNETIC
       use magboundaries,   only: all_mag_boundaries
 #endif /* MAGNETIC */
@@ -444,9 +444,9 @@ module dataio
 
    subroutine user_msg_handler(end_sim)
 
-      use mpisetup,      only: MPI_CHARACTER, MPI_DOUBLE_PRECISION, comm, ierr, proc, nstep
       use dataio_hdf5,   only: write_hdf5, write_restart_hdf5
       use dataio_public, only: chdf, step_hdf, msg, printinfo, warn
+      use mpisetup,      only: MPI_CHARACTER, MPI_DOUBLE_PRECISION, comm, ierr, proc, nstep
 
       implicit none
 
@@ -525,8 +525,8 @@ module dataio
 !
    subroutine write_crashed(msg)
 
-      use problem_pub,   only: problem_name
       use dataio_public, only: nres, die
+      use problem_pub,   only: problem_name
 
       implicit none
 
@@ -550,9 +550,9 @@ module dataio
 !
    subroutine write_data(output)
 
-      use mpisetup,      only: t, MPI_CHARACTER, comm, ierr, proc, nstep
       use dataio_hdf5,   only: write_hdf5, write_restart_hdf5, write_plot
       use dataio_public, only: chdf, nres, last_hdf_time, step_hdf
+      use mpisetup,      only: t, MPI_CHARACTER, comm, ierr, proc, nstep
 
       implicit none
 
@@ -628,10 +628,10 @@ module dataio
 
    subroutine find_last_restart(restart_number)
 
-      use problem_pub,  only: problem_name, run_id
       use dataio_public, only: cwdlen, cwd
+      use problem_pub,   only: problem_name, run_id
 #if defined(__INTEL_COMPILER)
-      use ifport,       only: unlink
+      use ifport,        only: unlink
 #endif /* __INTEL_COMPILER */
 
       implicit none
@@ -673,19 +673,18 @@ module dataio
 !
    subroutine write_timeslice
 
-      use types,           only: tsl_container
-      use mpisetup,        only: proc, comm3d, t, dt, ierr, MPI_REAL8, MPI_SUM, smalld, nstep
-      use fluidindex,      only: ibx,iby,ibz
-      use fluidindex,      only: nvar,iarr_all_dn,iarr_all_mx,iarr_all_my,iarr_all_mz
-      use grid,            only: dvol,dx,dy,dz,is,ie,js,je,ks,ke,x,y,z,nxd,nyd,nzd
-      use arrays,          only: u,b,wa
-      use problem_pub,     only: problem_name, run_id
+      use arrays,          only: u, b, wa
       use dataio_public,   only: cwdlen, cwd
+      use fluidindex,      only: nvar, iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz, ibx, iby, ibz
+      use grid,            only: dvol, dx, dy, dz, is, ie, js, je, ks, ke, x, y, z, nxd, nyd, nzd
+      use mpisetup,        only: proc, comm3d, t, dt, ierr, MPI_REAL8, MPI_SUM, smalld, nstep
+      use problem_pub,     only: problem_name, run_id
+      use types,           only: tsl_container
 #ifdef IONIZED
-      use initionized,     only: gamma_ion, cs_iso_ion,cs_iso_ion2
+      use initionized,     only: gamma_ion, cs_iso_ion, cs_iso_ion2
 #endif /* IONIZED */
 #ifdef NEUTRAL
-      use initneutral,     only: gamma_neu, cs_iso_neu,cs_iso_neu2
+      use initneutral,     only: gamma_neu, cs_iso_neu, cs_iso_neu2
 #endif /* NEUTRAL */
 #ifndef ISO
       use fluidindex,      only: iarr_all_en
@@ -910,33 +909,31 @@ module dataio
 !
    subroutine  write_log(tsl)
 
-      use fluidindex,         only: ibx, iby, ibz, nvar
-      use arrays,             only: wa,u,b
-      use grid,               only: dx,dy,dz,dxmn,nb,is,ie,js,je,ks,ke,nx,ny,nz
+      use arrays,             only: wa, u, b
       use constants,          only: small, mH, kboltz, gasRconst
-      use mpisetup,           only: smallei,cfl,t,dt, proc, mpifind, nstep
-      use types,              only: tsl_container, value
       use dataio_public,      only: msg, printinfo
+      use fluidindex,         only: ibx, iby, ibz, nvar
+      use grid,               only: dx, dy, dz, dxmn, nb, is, ie, js, je, ks, ke, nx, ny, nz
+      use mpisetup,           only: smallei, cfl, t, dt, proc, mpifind, nstep
+      use types,              only: tsl_container, value
 #ifdef IONIZED
-      use initionized,        only: gamma_ion, cs_iso_ion,cs_iso_ion2
-      use initionized,        only: idni,imxi,imyi,imzi
+      use initionized,        only: idni, imxi, imyi, imzi, gamma_ion, cs_iso_ion, cs_iso_ion2
 #ifndef ISO
       use initionized,        only: ieni
 #endif /* !ISO */
 #endif /* IONIZED */
 #ifdef NEUTRAL
-      use initneutral,        only: gamma_neu, cs_iso_neu,cs_iso_neu2
-      use initneutral,        only: idnn,imxn,imyn,imzn
+      use initneutral,        only: idnn, imxn, imyn, imzn, gamma_neu, cs_iso_neu, cs_iso_neu2
 #ifndef ISO
       use initneutral,        only: ienn
 #endif /* !ISO */
 #endif /* NEUTRAL */
 #ifdef DUST
-      use initdust,           only: idnd,imxd,imyd,imzd
+      use initdust,           only: idnd, imxd, imyd, imzd
 #endif /* DUST */
 #ifdef COSM_RAYS
+      use fluidindex,         only: iarr_all_crs
       use timestepcosmicrays, only: dt_crs
-      use fluidindex, only: iarr_all_crs
 #endif /* COSM_RAYS */
 #ifdef RESISTIVE
       use resistivity,        only: dt_resist, eta_max
@@ -1440,10 +1437,10 @@ module dataio
 !-------------------------------------------------------------------------
 
 !\todo: process multiple commands at once
-      use mpisetup,   only: proc
       use dataio_public, only: ierrh, cwdlen, msg, printinfo, warn
+      use mpisetup,      only: proc
 #if defined(__INTEL_COMPILER)
-      use ifport,     only: unlink, stat
+      use ifport,        only: unlink, stat
 #endif /* __INTEL_COMPILER */
 
       implicit none
