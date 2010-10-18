@@ -560,13 +560,8 @@ module dataio
 
 !- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-      if (output .eq. 'log' .or. output .eq. 'end') then
-         call write_log
-      endif
-
-      if (output .eq. 'log' .or. output .eq. 'end') then
-         call write_timeslice
-      endif
+      if (output .eq. 'log' .or. output .eq. 'end') call write_log
+      if (output .eq. 'log' .or. output .eq. 'end') call write_timeslice
 
 !    CALL checkdf
 
