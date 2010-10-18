@@ -42,6 +42,9 @@ module grid
    real    :: dx                             !< length of the %grid cell in x-direction
    real    :: dy                             !< length of the %grid cell in y-direction
    real    :: dz                             !< length of the %grid cell in z-direction
+   real    :: idx                            !< inverted length of the %grid cell in x-direction
+   real    :: idy                            !< inverted length of the %grid cell in y-direction
+   real    :: idz                            !< inverted length of the %grid cell in z-direction
    real    :: dxmn                           !< the smallest length of the %grid cell (among dx, dy, and dz)
    real    :: dvol                           !< volume of one %grid cell
    integer :: nxd                            !< number of %grid cells in physical domain (without boundary cells) in x-direction (if equal to 1 then x-dimension is reduced to a point and boundary cells layer is not added)
@@ -85,6 +88,7 @@ module grid
    integer,parameter  :: zdim=3              !< parameter assigned to z-direction
 
    real, allocatable, target :: dl(:)               !< array of %grid cell sizes in all directions
+   real, allocatable, target :: idl(:)              !< array of inverted %grid cell sizes in all directions
    real, allocatable, dimension(:), target :: x     !< array of x-positions of %grid cells centers
    real, allocatable, dimension(:), target :: y     !< array of y-positions of %grid cells centers
    real, allocatable, dimension(:), target :: z     !< array of z-positions of %grid cells centers
@@ -284,6 +288,7 @@ module grid
          ke = nb+nzb
       endif
       allocate(dl(3))
+      allocate(idl(3))
       allocate(x(nx), xl(nx), xr(nx))
       allocate(y(ny), yl(ny), yr(ny))
       allocate(z(nz), zl(nz), zr(nz))
@@ -323,22 +328,26 @@ module grid
       else
          dx = 1.0
       endif
+      idx = 1./dx
       if (nyd /= 1) then
          dy = (ymaxb-yminb)/nyb
          dxmn = min(dxmn,dy)
       else
          dy = 1.0
       endif
+      idy = 1./dy
       if (nzd /= 1) then
          dz = (zmaxb-zminb)/nzb
          dxmn = min(dxmn,dz)
       else
          dz = 1.0
       endif
+      idz = 1./dz
 
       dl(xdim) = dx
       dl(ydim) = dy
       dl(zdim) = dz
+      idl = 1./dl
 
       dvol = dx*dy*dz
 
@@ -402,16 +411,17 @@ module grid
 
       implicit none
 
-      if (allocated(dl)) deallocate(dl)
-      if (allocated(x))  deallocate(x)
-      if (allocated(xl)) deallocate(xl)
-      if (allocated(xr)) deallocate(xr)
-      if (allocated(y))  deallocate(y)
-      if (allocated(yl)) deallocate(yl)
-      if (allocated(yr)) deallocate(yr)
-      if (allocated(z))  deallocate(z)
-      if (allocated(zl)) deallocate(zl)
-      if (allocated(zr)) deallocate(zr)
+      if (allocated(dl))  deallocate(dl)
+      if (allocated(idl)) deallocate(idl)
+      if (allocated(x))   deallocate(x)
+      if (allocated(xl))  deallocate(xl)
+      if (allocated(xr))  deallocate(xr)
+      if (allocated(y))   deallocate(y)
+      if (allocated(yl))  deallocate(yl)
+      if (allocated(yr))  deallocate(yr)
+      if (allocated(z))   deallocate(z)
+      if (allocated(zl))  deallocate(zl)
+      if (allocated(zr))  deallocate(zr)
 
    end subroutine cleanup_grid
 
