@@ -82,7 +82,7 @@ module sweeps     ! split sweeps
     call all_fluid_boundaries
 
   end subroutine source_terms_y
-#endif
+#endif /* SHEAR && FLUID_INTERACTIONS */
 
   subroutine sweepx
 
