@@ -53,32 +53,22 @@ module func
       implicit none
       real, dimension(:,:,:) :: tab
       integer :: d
-      integer :: lx,ly,lz
+      integer :: ll
       real, dimension(SIZE(tab,1),SIZE(tab,2),SIZE(tab,3)) :: pshift
 
-      lx = SIZE(tab,1)
-      ly = SIZE(tab,2)
-      lz = SIZE(tab,3)
+      ll = SIZE(tab,d)
 
-      if (d==1 .and. lx==1) then
-        pshift = tab
-        return
-      endif
-      if (d==2 .and. ly==1) then
-        pshift = tab
-        return
-      endif
-      if (d==3 .and. lz==1) then
+      if (ll==1) then
         pshift = tab
         return
       endif
 
       if (d==1) then
-         pshift(1:lx-1,:,:) = tab(2:lx,:,:); pshift(lx,:,:) = tab(1,:,:)
+         pshift(1:ll-1,:,:) = tab(2:ll,:,:); pshift(ll,:,:) = tab(1,:,:)
       else if (d==2) then
-         pshift(:,1:ly-1,:) = tab(:,2:ly,:); pshift(:,ly,:) = tab(:,1,:)
+         pshift(:,1:ll-1,:) = tab(:,2:ll,:); pshift(:,ll,:) = tab(:,1,:)
       else if (d==3) then
-         pshift(:,:,1:lz-1) = tab(:,:,2:lz); pshift(:,:,lz) = tab(:,:,1)
+         pshift(:,:,1:ll-1) = tab(:,:,2:ll); pshift(:,:,ll) = tab(:,:,1)
       else
          call warn('[func:pshift]: Dim ill defined in pshift!')
       endif
@@ -100,32 +90,22 @@ module func
       implicit none
       real, dimension(:,:,:) :: tab
       integer :: d
-      integer :: lx,ly,lz
+      integer :: ll
       real, dimension(SIZE(tab,1) , SIZE(tab,2) , SIZE(tab,3)) :: mshift
 
-      lx = SIZE(tab,1)
-      ly = SIZE(tab,2)
-      lz = SIZE(tab,3)
+      ll = SIZE(tab,d)
 
-      if (d==1 .and. lx==1) then
-        mshift = tab
-        return
-      endif
-      if (d==2 .and. ly==1) then
-        mshift = tab
-        return
-      endif
-      if (d==3 .and. lz==1) then
+      if (ll==1) then
         mshift = tab
         return
       endif
 
       if (d==1) then
-         mshift(2:lx,:,:) = tab(1:lx-1,:,:); mshift(1,:,:) = tab(lx,:,:)
+         mshift(2:ll,:,:) = tab(1:ll-1,:,:); mshift(1,:,:) = tab(ll,:,:)
       else if (d==2) then
-         mshift(:,2:ly,:) = tab(:,1:ly-1,:); mshift(:,1,:) = tab(:,ly,:)
+         mshift(:,2:ll,:) = tab(:,1:ll-1,:); mshift(:,1,:) = tab(:,ll,:)
       else if (d==3) then
-         mshift(:,:,2:lz) = tab(:,:,1:lz-1); mshift(:,:,1) = tab(:,:,lz)
+         mshift(:,:,2:ll) = tab(:,:,1:ll-1); mshift(:,:,1) = tab(:,:,ll)
       else
          call warn('[func:mshift]: Dim ill defined in mshift!')
       endif
