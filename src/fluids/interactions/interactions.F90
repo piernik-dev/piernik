@@ -154,15 +154,14 @@ module interactions
       use fluidindex,   only: iarr_all_en
 #endif /* !ISO */
       implicit none
-      integer, intent(in)   :: i1,i2,n
+      real                  :: a1
+      integer, intent(in)   :: i1, i2, n
       real, dimension(nvar%all,n)  :: du,uu
       character(len=6), intent(in) :: sweep
-      integer  :: ifl,jfl
+      integer  :: ifl,jfl,rend
       real, dimension(nvar%fluids,nvar%fluids,n) :: flch
       real, dimension(nvar%fluids,n)             :: colls
       real, dimension(maxxyz)                    :: r1,r2
-      real    :: a1
-      integer :: rend
 
       du=0.0
 !-----collisions between fluids------
