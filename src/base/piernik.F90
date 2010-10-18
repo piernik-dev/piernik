@@ -40,7 +40,7 @@ program piernik
    use types,         only: finalize_problem
 #ifdef PERFMON
    use timer,         only: timer_start, timer_stop
-#endif
+#endif /* PERFMON */
 
    implicit none
 
@@ -55,7 +55,7 @@ program piernik
 !-------------------------------- MAIN LOOP ----------------------------------
 #ifdef PERFMON
    call timer_start
-#endif
+#endif /* PERFMON */
 
    code_progress = PIERNIK_INITIALIZED
 
