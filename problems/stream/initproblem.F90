@@ -107,18 +107,19 @@ module initproblem
 !-----------------------------------------------------------------------------
 
    subroutine init_prob
-      use arrays,       only: u
-      use constants,    only: pi, dpi
-      use grid,         only: x, y, z, nx, ny, nz, nzd, ymin, ymax, Lx, Lz
-      use mpisetup,     only: proc, pcoords
-      use shear,        only: omega, qshear
+      use arrays,        only: u
+      use constants,     only: pi, dpi
+      use dataio_public, only: mgs, printinfo
+      use grid,          only: x, y, z, nx, ny, nz, nzd, ymin, ymax, Lx, Lz
+      use mpisetup,      only: proc, pcoords
+      use shear,         only: omega, qshear
 #ifdef DUST
-      use initdust,     only: idnd, imxd, imyd, imzd, dragc_gas_dust
+      use initdust,      only: idnd, imxd, imyd, imzd, dragc_gas_dust
 #endif /* DUST */
 #ifdef NEUTRAL
-      use initneutral,  only: idnn, imxn, imyn, imzn, gamma_neu, cs_iso_neu, eta_gas_neu, csvk
+      use initneutral,   only: idnn, imxn, imyn, imzn, gamma_neu, cs_iso_neu, eta_gas_neu, csvk
 #ifndef ISO
-      use initneutral,  only: ienn
+      use initneutral,   only: ienn
 #endif /* !ISO */
 #endif /* NEUTRAL */
       implicit none
@@ -132,6 +133,7 @@ module initproblem
 !      character(len=cbuff_len) :: ala
 
       if (run_id == 'lnA') then
+         call printinfo("Lin A")
          coeff(4) = (-0.1691398, 0.0361553 ) ! u_x
          coeff(5) = ( 0.1336704, 0.0591695 ) ! u_y
          coeff(6) = ( 0.1691389,-0.0361555 ) ! u_z
@@ -142,7 +144,7 @@ module initproblem
          kx = dpi/Lx
          kz = dpi/Lz
       else if (run_id == 'lnB') then
-         write(*,*) 'Lin B'
+         call printinfo("Lin B")
          coeff(4) = (-0.0174121,-0.2770347 ) ! u_x
          coeff(5) = ( 0.2767976,-0.0187568 ) ! u_y
          coeff(6) = ( 0.0174130, 0.2770423 ) ! u_z
@@ -165,8 +167,6 @@ module initproblem
       call random_seed(put=seed)
       deallocate(seed)
 
-!     write(ala,'(A8,I1,I1)') trim(fnoise),pcoords(1),pcoords(3)
-!     write(*,*) trim(ala)
 !     open(1,file=trim(fnoise),form='unformatted')
 !     read(1) noise
 !     close(1)
@@ -189,9 +189,14 @@ module initproblem
       uy  = (1.0 + eps + taus**2)/ (2.0*taus) * wx
 
 
-      write(*,*) kx,kz
-      write(*,*) ux,uy,wx,wy
-      write(*,*) eta_gas_neu * cs_iso_neu / csvk / omega
+      write(msg,*) 'kx = ',kx,' kz = ',kz
+      call printinfo(msg)
+      write(msg,*) 'ux = ',ux,' uy = ',uy
+      call printinfo(msg)
+      write(msg,*) 'wx = ',wx,' wy = ',wy
+      call printinfo(msg)
+      write(msg,*) '\eta vk / \Omega = ', eta_gas_neu * cs_iso_neu / csvk / omega
+      call printinfo(msg)
 
       do i = 1,nx
          rcx = x(i)
@@ -259,7 +264,8 @@ module initproblem
         u(imzd,:,:,:) = u(imzd,:,:,:) +amp -2.0*amp*noise(3,:,:,:) * u(idnd,:,:,:)
       endif
 
-      write(*,*) 'linear = ',linear
+      write(msg,*) 'linear = ',linear
+      call printinfo(msg)
 
       return
    end subroutine init_prob
@@ -285,7 +291,6 @@ module initproblem
 
          coeff(8) = (-0.3480127, 0.4190204 ) ! omega
       else if (run_id == 'lnB') then
-         write(*,*) 'Lin B'
          coeff(4) = (-0.0174121,-0.2770347 ) ! u_x
          coeff(5) = ( 0.2767976,-0.0187568 ) ! u_y
          coeff(6) = ( 0.0174130, 0.2770423 ) ! u_z
