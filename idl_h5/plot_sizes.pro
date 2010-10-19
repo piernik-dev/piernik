@@ -13,25 +13,25 @@ PRO PLOT_SIZES, data, win_vert_size, crdsys, psiz, plp
   z = data.axes.z
 
   psiz = {win_vsize:1, $
-  	  plot_h0:1, $
-	  plot_v0:1, $
-	  plot_h1:1, $
-	  plot_v1:1, $
-      	  win_hsize_xy:1, $
-	  win_vsize_xy:1, $
-	  plot_hsize_xy:1, $
-	  plot_vsize_xy:1, $
-	  position_xy:FLTARR(4), $
-      	  win_hsize_xz:1, $
-	  win_vsize_xz:1, $
-	  plot_hsize_xz:1, $
-	  plot_vsize_xz:1, $
-	  position_xz:FLTARR(4), $
-      	  win_hsize_yz:1, $
-	  win_vsize_yz:1, $
-	  plot_hsize_yz:1, $
-	  plot_vsize_yz:1, $
-	  position_yz:FLTARR(4)}
+     plot_h0:1, $
+     plot_v0:1, $
+     plot_h1:1, $
+     plot_v1:1, $
+     win_hsize_xy:1, $
+     win_vsize_xy:1, $
+     plot_hsize_xy:1, $
+     plot_vsize_xy:1, $
+     position_xy:FLTARR(4), $
+     win_hsize_xz:1, $
+     win_vsize_xz:1, $
+     plot_hsize_xz:1, $
+     plot_vsize_xz:1, $
+     position_xz:FLTARR(4), $
+     win_hsize_yz:1, $
+     win_vsize_yz:1, $
+     plot_hsize_yz:1, $
+     plot_vsize_yz:1, $
+     position_yz:FLTARR(4)}
 
   psiz.win_vsize = win_vert_size
 
