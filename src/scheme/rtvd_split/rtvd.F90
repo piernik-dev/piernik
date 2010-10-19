@@ -101,12 +101,12 @@ module rtvd ! split orig
 !!Analogous procedure applies to remaining EMF components.
 !<
 !*/
-   subroutine tvdb(vibj,b,vg,n,dt,di)
+   subroutine tvdb(vibj,b,vg,n,dt,idi)
       use constants, only: big
       implicit none
       integer, intent(in) :: n       !< array size
       real, intent(in)    :: dt      !< time step
-      real, intent(in)    :: di      !< cell length, depends on direction x, y or z
+      real, intent(in)    :: idi     !< cell length, depends on direction x, y or z
       real, dimension(n)  :: vibj    !< face-centered electromotive force components (b*vg)
       real, dimension(n)  :: b       !< magnetic field
       real, dimension(n)  :: vg      !< velocity in the center of cell boundary
@@ -132,7 +132,7 @@ module rtvd ! split orig
 
       vh(1:n-1) =(vg(1:n-1)+ vg(2:n))*0.5;     vh(n) = vh(n-1)
 
-      dti = dt/di
+      dti = dt*idi
 
 ! face-centered EMF components computation, depending on the sign of vh, the components are upwinded  to cell edges, leading to 1st order EMF
 

@@ -388,7 +388,7 @@ contains
 
       use arrays,        only: b, wa
       use func,          only: pshift, mshift
-      use grid,          only: dl
+      use grid,          only: idl
       use magboundaries, only: all_mag_boundaries
 #ifdef RESISTIVE
       use arrays,        only: wcu
@@ -401,27 +401,27 @@ contains
 #ifdef RESISTIVE
 ! DIFFUSION FULL STEP
 
-      b(ib1,:,:,:) = b(ib1,:,:,:) - wcu/dl(dim1)
+      b(ib1,:,:,:) = b(ib1,:,:,:) - wcu*idl(dim1)
 !   wcu = cshift(wcu,shift= 1,dim=dim1)
       wcu = pshift(wcu,dim1)
-      b(ib1,:,:,:) = b(ib1,:,:,:) + wcu/dl(dim1)
+      b(ib1,:,:,:) = b(ib1,:,:,:) + wcu*idl(dim1)
 !   wcu = cshift(wcu,shift=-1,dim=dim1)
       wcu = mshift(wcu,dim1)
-      b(ib2,:,:,:) = b(ib2,:,:,:) + wcu/dl(dim2)
+      b(ib2,:,:,:) = b(ib2,:,:,:) + wcu*idl(dim2)
 !   wcu = cshift(wcu,shift= 1,dim=dim2)
       wcu = pshift(wcu,dim2)
-      b(ib2,:,:,:) = b(ib2,:,:,:) - wcu/dl(dim2)
+      b(ib2,:,:,:) = b(ib2,:,:,:) - wcu*idl(dim2)
 #endif /* RESISTIVE */
 ! ADVECTION FULL STEP
 
-      b(ib1,:,:,:) = b(ib1,:,:,:) - wa/dl(dim1)
+      b(ib1,:,:,:) = b(ib1,:,:,:) - wa*idl(dim1)
 !   wa = cshift(wa,shift=-1,dim=dim1)
       wa = mshift(wa,dim1)
-      b(ib1,:,:,:) = b(ib1,:,:,:) + wa/dl(dim1)
-      b(ib2,:,:,:) = b(ib2,:,:,:) - wa/dl(dim2)
+      b(ib1,:,:,:) = b(ib1,:,:,:) + wa*idl(dim1)
+      b(ib2,:,:,:) = b(ib2,:,:,:) - wa*idl(dim2)
 !   wa = cshift(wa,shift=1,dim=dim2)
       wa = pshift(wa,dim2)
-      b(ib2,:,:,:) = b(ib2,:,:,:) + wa/dl(dim2)
+      b(ib2,:,:,:) = b(ib2,:,:,:) + wa*idl(dim2)
 
       call all_mag_boundaries
 
