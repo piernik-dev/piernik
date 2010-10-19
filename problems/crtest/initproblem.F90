@@ -57,9 +57,9 @@ module initproblem
       implicit none
 
 
-      problem_name = 'aaa'
-      run_id       = 'aaa'
-      d0           = 1.0       !< density
+      problem_name = 'cr'
+      run_id       = 'tst'
+      d0           = 1.0e5     !< density
       p0           = 1.0       !< pressure
       bx0          =   0.      !< Magnetic field component x
       by0          =   0.      !< Magnetic field component y
@@ -67,7 +67,7 @@ module initproblem
       x0           = 0.0       !< x-position of the blob
       y0           = 0.0       !< y-position of the blob
       z0           = 0.0       !< z-position of the blob
-      r0           = dxmn/2.   !< radius of the blob
+      r0           = 5.*dxmn   !< radius of the blob
 
       beta_cr      = 0.0       !< ambient level
       amp_cr       = 1.0       !< amplitude of the blob
@@ -75,7 +75,6 @@ module initproblem
       norm_step    = 10        !< how often to compute the norm (in steps)
 
       if (proc == 0) then
-
 
          diff_nml(PROBLEM_CONTROL)
 
@@ -132,10 +131,10 @@ module initproblem
    subroutine init_prob
 
       use arrays,         only: b, u
-      use dataio_public,  only: msg, die, printinfo
+      use dataio_public,  only: msg, die, printinfo, warn
       use fluidindex,     only: ibx, iby, ibz
       use grid,           only: nx, ny, nz, nb, x, y, z, is, ie, js, je, ks, ke, nxd, nyd, nzd
-      use initcosmicrays, only: gamma_crs, iarr_crs, ncrn, ncre
+      use initcosmicrays, only: gamma_crs, iarr_crs, ncrn, ncre, K_crn_paral, K_crn_perp
       use initionized,    only: idni, imxi, imyi, imzi, ieni, gamma_ion
       use types,          only: problem_customize_solution, finalize_problem
 
@@ -159,6 +158,12 @@ module initproblem
       if (nxd <= 1) bx0 = 0. ! ignore B field in nonexistent direction to match the analytical solution
       if (nyd <= 1) by0 = 0.
       if (nzd <= 1) bz0 = 0.
+
+      if ((bx0**2 + by0**2 + bz0**2 == 0.) .and. (K_crn_paral(icr) /= 0. .or. K_crn_perp(icr) /= 0.)) then
+         call warn("[initproblem:init_prob] No magnetic field is set, K_crn_* also have to be 0.")
+         K_crn_paral(icr) = 0.
+         K_crn_perp(icr)  = 0.
+      endif
 
       b(ibx, 1:nx, 1:ny, 1:nz) = bx0
       b(iby, 1:nx, 1:ny, 1:nz) = by0
@@ -216,13 +221,12 @@ module initproblem
 
       implicit none
 
-      integer :: i, j, k
-      real    :: r_par2, r_perp2, delx, dely, delz, magb2, ampt, r0_par2, r0_perp2, crt
-      integer :: iecr = -1
+      integer            :: i, j, k
+      real               :: r_par2, r_perp2, delx, dely, delz, magb, ampt, r0_par2, r0_perp2, crt, bxn=0., byn=0., bzn=0.
+      integer            :: iecr = -1
       integer, parameter :: icr = 1 !< Only first CR component
       real, dimension(2) :: norm, dev
-
-      integer, save :: nn = 0
+      integer, save      :: nn = 0
 
       if (code_progress < PIERNIK_FINISHED .and. (mod(nstep, norm_step) /=0 .or. halfstep)) return
 
@@ -236,7 +240,12 @@ module initproblem
       dev(1) = huge(1.0)
       dev(2) = -dev(1)
 
-      magb2 = bx0**2 + by0**2 + bz0**2 + 100*tiny(1.0)
+      magb = sqrt(bx0**2 + by0**2 + bz0**2)
+      if (magb > 0.) then
+         bxn = bx0 / magb
+         byn = by0 / magb
+         bzn = bz0 / magb
+      endif
 
       r0_par2  = r0**2 + 4 * (K_crn_paral(icr) + K_crn_perp(icr)) * t
       r0_perp2 = r0**2 + 4 * K_crn_perp(icr) * t
@@ -252,7 +261,7 @@ module initproblem
             do i = is, ie
                delx = x(i) - x0
 
-               r_par2 = (bx0*delx + by0*dely + bz0*delz)**2/magb2 ! square of the distance form the center of the bump in direction parallel to the magnetic field
+               r_par2 = (bxn*delx + byn*dely + bzn*delz)**2 ! square of the distance form the center of the bump in direction parallel to the magnetic field
                r_perp2 = delx**2 + dely**2 + delz**2 - r_par2
                crt = ampt * exp( - r_par2/r0_par2 - r_perp2/r0_perp2)
 

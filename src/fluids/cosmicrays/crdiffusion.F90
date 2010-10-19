@@ -35,27 +35,35 @@
 
 module crdiffusion
 
-  use arrays,         only: b, u, wcr
-  use constants,      only: small
-  use fluidindex,     only: ibx, iby, ibz, nvar
-  use grid,           only: idx, idy, idz, nxd, nyd, nzd, nx, ny, nz, is, ie, js, je, ks, ke
-  use initcosmicrays, only: iarr_crs, K_crs_paral, K_crs_perp
-  use mpisetup,       only: dt
+   use arrays,         only: b, u, wcr
+   use fluidindex,     only: ibx, iby, ibz, nvar
+   use grid,           only: idx, idy, idz, nxd, nyd, nzd, nx, ny, nz, is, ie, js, je, ks, ke
+   use initcosmicrays, only: iarr_crs, K_crs_paral, K_crs_perp
+   use mpisetup,       only: dt
 
- contains
+   implicit none
+   private
+   public :: cr_diff_x, cr_diff_y, cr_diff_z
 
+contains
+
+!****************************************************************************
 !
-      subroutine cr_diff_x
+   subroutine cr_diff_x
 !
 !  PURPOSE:  Diffusive transport of ecr in 1-direction
 !
+!-----------------------------------------------------------------------
       implicit none
-      integer :: i, j, k
-      real    :: b1b, b2b, b3b, n1b, n2b, n3b, bb
-      real, dimension(nvar%crs%all) :: decr1, decr2, decr3, fcrdif1
-      real, dimension(nvar%crs%all) :: dqp2, dqm2, dqp3, dqm3
 
-!=======================================================================
+      integer :: i, j, k
+      real    :: b1b, b2b, b3b, bb
+      real, dimension(nvar%crs%all) :: decr1, decr2, decr3, fcrdif1
+      real, dimension(nvar%crs%all) :: dqp, dqm
+
+      !=======================================================================
+
+      if (nxd == 1) return
 
       wcr(:, 1, :, :) = 0.
       wcr(:, :, :, :ks-1) = 0.
@@ -64,94 +72,65 @@ module crdiffusion
       wcr(:, :, je+1:, :) = 0.
 
       do k=ks,ke
-        do j=js,je
-          do i=2,nx     ! if we are here this implies nxd /= 1
+         do j=js,je
+            do i=2,nx     ! if we are here this implies nxd /= 1
 
-             b1b =  b(ibx,i,  j,  k)
-             if (nyd /= 1) then
-                b2b = (b(iby,i,  j,  k) + b(iby,i-1,j,  k)       &
-                     + b(iby,i-1,j+1,k) + b(iby,i,  j+1,k))*0.25
-             else
-                b2b = 0.0
-             endif
-             if (nzd /= 1) then
-                b3b = (b(ibz,i,  j,  k) + b(ibz,i-1,j,  k)       &
-                     + b(ibz,i-1,j,k+1) + b(ibz,i,  j,k+1))*0.25
-             else
-                b3b = 0.0
-             endif
+               decr1 =  (u(iarr_crs,i,  j,  k) - u(iarr_crs,i-1,j,  k)) * idx
+               fcrdif1 = K_crs_perp * decr1
 
-             bb  = sqrt(b1b**2 + b2b**2 + b3b**2 + small)
-             n1b = b1b/bb
-             n2b = b2b/bb
-             n3b = b3b/bb
+               b1b =  b(ibx,i,  j,  k)
 
-             decr1 =  (u(iarr_crs,i,  j,  k) - u(iarr_crs,i-1,j,  k))*idx
+               if (nyd /= 1) then
+                  dqm = 0.5*((u(iarr_crs,i-1,j  ,k ) + u(iarr_crs,i ,j  ,k )) - (u(iarr_crs,i-1,j-1,k ) + u(iarr_crs,i ,j-1,k ))) * idy
+                  dqp = 0.5*((u(iarr_crs,i-1,j+1,k ) + u(iarr_crs,i ,j+1,k )) - (u(iarr_crs,i-1,j  ,k ) + u(iarr_crs,i ,j  ,k ))) * idy
+                  decr2 = (dqp+dqm)* (1.0 + sign(1.0, dqm*dqp))*0.25
+                  b2b = sum(b(iby,i-1:i, j:j+1, k    ))*0.25
+               else
+                  decr2 = 0.
+                  b2b = 0.
+               endif
 
-             if (nyd /= 1) then
-                dqm2  = 0.5*((u(iarr_crs,i-1,j  ,k ) + u(iarr_crs,i ,j  ,k ))    &
-                     &      -(u(iarr_crs,i-1,j-1,k ) + u(iarr_crs,i ,j-1,k )))*idy
-                dqp2  = 0.5*((u(iarr_crs,i-1,j+1,k ) + u(iarr_crs,i ,j+1,k ))    &
-                     &      -(u(iarr_crs,i-1,j  ,k ) + u(iarr_crs,i ,j  ,k )))*idy
+               if (nzd /= 1) then
+                  dqm = 0.5*((u(iarr_crs,i-1,j ,k  ) + u(iarr_crs,i ,j ,k  )) - (u(iarr_crs,i-1,j ,k-1) + u(iarr_crs,i ,j ,k-1))) * idz
+                  dqp = 0.5*((u(iarr_crs,i-1,j ,k+1) + u(iarr_crs,i ,j ,k+1)) - (u(iarr_crs,i-1,j ,k  ) + u(iarr_crs,i ,j ,k  ))) * idz
+                  decr3 = (dqp+dqm)* (1.0 + sign(1.0, dqm*dqp))*0.25
+                  b3b = sum(b(ibz,i-1:i, j,     k:k+1))*0.25
+               else
+                  decr3 = 0.
+                  b3b = 0.
+               endif
 
-                decr2 = (dqp2+dqm2)* (1.0 + sign(1.0, dqm2*dqp2))*0.25
-             else
-                decr2 = 0.0
-             endif
+               bb = b1b**2 + b2b**2 + b3b**2
+               if (bb /= 0.) fcrdif1 = fcrdif1 + K_crs_paral * b1b * (b1b*decr1 + b2b*decr2 + b3b*decr3) / bb
 
-             if (nzd /= 1) then
-                dqm3  = 0.5*((u(iarr_crs,i-1,j ,k  ) + u(iarr_crs,i ,j ,k  ))    &
-                            -(u(iarr_crs,i-1,j ,k-1) + u(iarr_crs,i ,j ,k-1)))*idz
-                dqp3  = 0.5*((u(iarr_crs,i-1,j ,k+1) + u(iarr_crs,i ,j ,k+1))    &
-                            -(u(iarr_crs,i-1,j ,k  ) + u(iarr_crs,i ,j ,k  )))*idz
+               wcr(:,i,j,k) = - fcrdif1 * dt * idx
 
-                decr3 = (dqp3+dqm3)* (1.0 + sign(1.0, dqm3*dqp3))*0.25
-             else
-                decr3 = 0.0
-             endif
-
-             fcrdif1 = K_crs_paral * n1b *   &
-                   (n1b*decr1 + n2b*decr2 + n3b*decr3)  &
-                   + K_crs_perp * decr1
-
-
-             wcr(:,i,j,k) = - fcrdif1 * dt * idx
-
-           enddo
+            enddo
          enddo
       enddo
 
-!     do 60 k=ks,ke
-!       do 50 j=js,je
-!         do 40 i=is,ie
-!            u(iarr_crs,i,j,k) = u(iarr_crs,i,j,k)  &
-!                        -(wcr(:,i+1,j,k)-wcr(:,i,j,k))/dx
-!40       continue
-!50      continue
-!60    continue
       u(iarr_crs,1:nx-1,:,:) = u(iarr_crs,1:nx-1,:,:) - ( wcr(:,2:nx,:,:) - wcr(:,1:nx-1,:,:) )
       u(iarr_crs,nx,:,:) = u(iarr_crs,nx-1,:,:) ! for sanity
 
-      return
-      end subroutine cr_diff_x
-
+   end subroutine cr_diff_x
 
 !****************************************************************************
-
 !
-      subroutine cr_diff_y
+   subroutine cr_diff_y
 !
 !  PURPOSE:   Diffusive transport of ecr in 2-direction
 !
 !-----------------------------------------------------------------------
       implicit none
+
       integer :: i, j, k
-      real    :: b1b, b2b, b3b, n1b, n2b, n3b, bb
+      real    :: b1b, b2b, b3b, bb
       real, dimension(nvar%crs%all) :: decr1, decr2, decr3, fcrdif2
-      real, dimension(nvar%crs%all) :: dqp2, dqm1, dqm2, dqp1
+      real, dimension(nvar%crs%all) :: dqp, dqm
 
 !=======================================================================
-!
+
+      if (nyd == 1) return
 
       wcr(:, :, 1, :) = 0.
       wcr(:, :is-1, :, :) = 0.
@@ -160,94 +139,65 @@ module crdiffusion
       wcr(:, :, :, ke+1:) = 0.
 
       do k=ks,ke
-        do j=2,ny ! if we are here nyd /= 1
-          do i=is,ie
+         do j=2,ny ! if we are here nyd /= 1
+            do i=is,ie
 
-             if (nxd /= 1) then
-                b1b = (b(ibx,i,j,k) + b(ibx,i,j-1,k)   &
-                     + b(ibx,i+1,j-1,k) + b(ibx,i+1,j,k))*0.25
-             else
-                b1b = 0.0
-             endif
+               decr2 = (u(iarr_crs,i,j,k) - u(iarr_crs,i,j-1,k)) * idy
+               fcrdif2 = K_crs_perp * decr2
 
-             b2b =  b(iby,i,j,k)
+               b2b =  b(iby,i,j,k)
 
-             if (nzd /= 1) then
-                b3b = (b(ibz,i,j,k) + b(ibz,i,j-1,k)   &
-                     + b(ibz,i,j-1,k+1) + b(ibz,i,j,k+1))*0.25
-             else
-                b3b = 0.0
-             endif
+               if (nxd /= 1) then
+                  dqm = 0.5*((u(iarr_crs,i  ,j-1,k ) + u(iarr_crs,i  ,j  ,k )) - (u(iarr_crs,i-1,j-1,k ) + u(iarr_crs,i-1,j  ,k ))) * idx
+                  dqp = 0.5*((u(iarr_crs,i+1,j-1,k ) + u(iarr_crs,i+1,j  ,k )) - (u(iarr_crs,i  ,j-1,k ) + u(iarr_crs,i  ,j  ,k ))) * idx
+                  decr1 = (dqp+dqm)* (1.0 + sign(1.0, dqm*dqp))*0.25
+                  b1b = sum(b(ibx,i:i+1, j-1:j, k))*0.25
+               else
+                  decr1 = 0.
+                  b1b = 0.
+               endif
 
-             bb  = sqrt(b1b**2 + b2b**2 + b3b**2 + small)
-             n1b = b1b/bb
-             n2b = b2b/bb
-             n3b = b3b/bb
+               if (nzd /= 1) then
+                  dqm = 0.5*((u(iarr_crs,i ,j-1,k  ) + u(iarr_crs,i ,j  ,k  )) - (u(iarr_crs,i ,j-1,k-1) + u(iarr_crs,i ,j  ,k-1))) * idz
+                  dqp = 0.5*((u(iarr_crs,i ,j-1,k+1) + u(iarr_crs,i ,j  ,k+1)) - (u(iarr_crs,i ,j-1,k  ) + u(iarr_crs,i ,j  ,k  ))) * idz
+                  decr3 = (dqp+dqm)* (1.0 + sign(1.0, dqm*dqp))*0.25
+                  b3b = sum(b(ibz,i, j-1:j, k:k+1))*0.25
+               else
+                  decr3 = 0.
+                  b3b = 0.
+               endif
 
-             if (nxd /= 1) then
-                dqm1  = 0.5*((u(iarr_crs,i  ,j-1,k ) + u(iarr_crs,i  ,j  ,k ))   &
-                            -(u(iarr_crs,i-1,j-1,k ) + u(iarr_crs,i-1,j  ,k )))*idx
-                dqp1  = 0.5*((u(iarr_crs,i+1,j-1,k ) + u(iarr_crs,i+1,j  ,k ))   &
-                            -(u(iarr_crs,i  ,j-1,k ) + u(iarr_crs,i  ,j  ,k )))*idx
+               bb = b1b**2 + b2b**2 + b3b**2
+               if (bb /= 0.) fcrdif2 = fcrdif2 + K_crs_paral * b2b * (b1b*decr1 + b2b*decr2 + b3b*decr3) / bb
 
-                decr1 = (dqp1+dqm1)* (1.0 + sign(1.0, dqm1*dqp1))*0.25
-             else
-                decr1 = 0.0
-             endif
-
-             decr2 = (u(iarr_crs,i,j,k) - u(iarr_crs,i,j-1,k))*idy
-
-             if (nzd /= 1) then
-                dqm2  = 0.5*((u(iarr_crs,i ,j-1,k  ) + u(iarr_crs,i ,j  ,k  ))   &
-                            -(u(iarr_crs,i ,j-1,k-1) + u(iarr_crs,i ,j  ,k-1)))*idz
-                dqp2  = 0.5*((u(iarr_crs,i ,j-1,k+1) + u(iarr_crs,i ,j  ,k+1))   &
-                            -(u(iarr_crs,i ,j-1,k  ) + u(iarr_crs,i ,j  ,k  )))*idz
-
-                decr3 = (dqp2+dqm2)* (1.0 + sign(1.0, dqm2*dqp2))*0.25
-             else
-                decr3 = 0.0
-             endif
-
-
-             fcrdif2 = K_crs_paral * n2b * &
-                      (n1b*decr1 + n2b*decr2 + n3b*decr3) &
-                      + K_crs_perp * decr2
-
-             wcr(:,i,j,k) = - fcrdif2 * dt * idy
+               wcr(:,i,j,k) = - fcrdif2 * dt * idy
 
             enddo
          enddo
       enddo
 
-!      do 60 k=ks,ke
-!        do 50 j=js,je
-!          do 40 i=is,ie
-!            u(iarr_crs,i,j,k) = u(iarr_crs,i,j,k)    &
-!                      - (wcr(:,i,j+1,k)-wcr(:,i,j,k))/dy
-!40        continue
-!50      continue
-!60    continue
-
       u(iarr_crs,:,1:ny-1,:) = u(iarr_crs,:,1:ny-1,:) - ( wcr(:,:,2:ny,:) - wcr(:,:,1:ny-1,:) )
       u(iarr_crs,:,ny,:) = u(iarr_crs,:,ny-1,:) ! for sanity
 
-      return
-      end subroutine cr_diff_y
+   end subroutine cr_diff_y
 
 !************************************************************************
-
-      subroutine cr_diff_z
+!
+   subroutine cr_diff_z
 !
 !  PURPOSE:   Diffusive transport of ecr in 3-direction
 !
+!-----------------------------------------------------------------------
       implicit none
-      integer :: i,j,k
-      real    :: b1b, b2b, b3b, n1b, n2b, n3b, bb
+
+      integer :: i, j, k
+      real    :: b1b, b2b, b3b, bb
       real, dimension(nvar%crs%all) :: decr1, decr2, decr3, fcrdif3
-      real, dimension(nvar%crs%all) :: dqp2, dqm2, dqm1, dqp1
+      real, dimension(nvar%crs%all) :: dqp, dqm
 
 !=======================================================================
-!
+
+      if (nzd == 1) return
 
       wcr(:, :, :, 1) = 0.
       wcr(:, :is-1, :, :) = 0.
@@ -256,75 +206,46 @@ module crdiffusion
       wcr(:, :, je+1:, :) = 0.
 
       do k=2,nz      ! nzd /= 1
-        do j=js,je
-          do i=is,ie
+         do j=js,je
+            do i=is,ie
 
-             if (nxd /= 1) then
-                b1b = (b(ibx,i,  j,k  ) + b(ibx,i,  j,k-1)  &
-                     + b(ibx,i+1,j,k-1) + b(ibx,i+1,j,k  ))*0.25
-             else
-                b1b = 0.0
-             endif
-             if (nyd /= 1) then
-                b2b = (b(iby,i,j,  k  ) + b(iby,i,j,  k-1)  &
-                     + b(iby,i,j+1,k-1) + b(iby,i,j+1,k  ))*0.25
-             else
-                b2b = 0.0
-             endif
-             b3b =  b(ibz,i,j,k)
+               decr3 =  (u(iarr_crs,i,j,k    ) - u(iarr_crs,i,j,  k-1)) * idz
+               fcrdif3 = K_crs_perp * decr3
 
-             bb  = sqrt(b1b**2 + b2b**2 + b3b**2 + small)
-             n1b = b1b/bb
-             n2b = b2b/bb
-             n3b = b3b/bb
+               b3b =  b(ibz,i,j,k)
 
-             if (nxd /= 1) then
-                dqm1  = 0.5*((u(iarr_crs,i  ,j ,k-1) + u(iarr_crs,i  ,j  ,k ))   &
-                            -(u(iarr_crs,i-1,j ,k-1) + u(iarr_crs,i-1,j  ,k )))*idx
-                dqp1  = 0.5*((u(iarr_crs,i+1,j ,k-1) + u(iarr_crs,i+1,j  ,k ))   &
-                            -(u(iarr_crs,i  ,j ,k-1) + u(iarr_crs,i  ,j  ,k )))*idx
+               if (nxd /= 1) then
+                  dqm = 0.5*((u(iarr_crs,i  ,j ,k-1) + u(iarr_crs,i  ,j  ,k )) - (u(iarr_crs,i-1,j ,k-1) + u(iarr_crs,i-1,j  ,k ))) * idx
+                  dqp = 0.5*((u(iarr_crs,i+1,j ,k-1) + u(iarr_crs,i+1,j  ,k )) - (u(iarr_crs,i  ,j ,k-1) + u(iarr_crs,i  ,j  ,k ))) * idx
+                  decr1 = (dqp+dqm)* (1.0 + sign(1.0, dqm*dqp))*0.25
+                  b1b = sum(b(ibx,i:i+1, j,     k-1:k))*0.25
+               else
+                  decr1 = 0.
+                  b1b = 0.
+               endif
 
-                decr1 = (dqp1+dqm1)* (1.0 + sign(1.0, dqm1*dqp1))*0.25
-             else
-                decr1 = 0.0
-             endif
+               if (nyd /= 1) then
+                  dqm = 0.5*((u(iarr_crs,i ,j  ,k-1) + u(iarr_crs,i  ,j  ,k )) - (u(iarr_crs,i ,j-1,k-1) + u(iarr_crs,i  ,j-1,k ))) * idy
+                  dqp = 0.5*((u(iarr_crs,i ,j+1,k-1) + u(iarr_crs,i  ,j+1,k )) - (u(iarr_crs,i ,j  ,k-1) + u(iarr_crs,i  ,j  ,k ))) * idy
+                  decr2 = (dqp+dqm)* (1.0 + sign(1.0, dqm*dqp))*0.25
+                  b2b = sum(b(iby,i,     j:j+1, k-1:k))*0.25
+               else
+                  decr2 = 0.
+                  b2b = 0.
+               endif
 
-             if (nyd /= 1) then
-                dqm2  = 0.5*((u(iarr_crs,i ,j  ,k-1) + u(iarr_crs,i  ,j  ,k ))   &
-                            -(u(iarr_crs,i ,j-1,k-1) + u(iarr_crs,i  ,j-1,k )))*idy
-                dqp2  = 0.5*((u(iarr_crs,i ,j+1,k-1) + u(iarr_crs,i  ,j+1,k ))   &
-                            -(u(iarr_crs,i ,j  ,k-1) + u(iarr_crs,i  ,j  ,k )))*idy
+               bb = b1b**2 + b2b**2 + b3b**2
+               if (bb /= 0.) fcrdif3 = fcrdif3 + K_crs_paral * b3b * (b1b*decr1 + b2b*decr2 + b3b*decr3) / bb
 
-                decr2 = (dqp2+dqm2)* (1.0 + sign(1.0, dqm2*dqp2))*0.25
-             else
-                decr2 = 0.0
-             endif
+               wcr(:,i,j,k) = - fcrdif3 * dt * idz
 
-             decr3 =  (u(iarr_crs,i,j,k    ) - u(iarr_crs,i,j,  k-1))*idz
-
-             fcrdif3 = K_crs_paral * n3b * &
-                  (n1b*decr1 + n2b*decr2 + n3b*decr3) &
-                   + K_crs_perp * decr3
-
-             wcr(:,i,j,k) = - fcrdif3 * dt * idz
-          enddo
-        enddo
+            enddo
+         enddo
       enddo
-
-!      do 60 k=ks,ke
-!        do 50 j=js,je
-!          do 40 i=is,ie
-!            u(iarr_crs,i,j,k) = u(iarr_crs,i,j,k)  &
-!                        -(wcr(:,i,j,k+1)-wcr(:,i,j,k))/dz
-!40        continue
-!50      continue
-!60    continue
 
       u(iarr_crs,:,:,1:nz-1) = u(iarr_crs,:,:,1:nz-1) - ( wcr(:,:,:,2:nz) - wcr(:,:,:,1:nz-1) )
       u(iarr_crs,:,:,nz) = u(iarr_crs,:,:,nz-1) ! for sanity
 
-      return
-      end subroutine cr_diff_z
-
+   end subroutine cr_diff_z
 
 end module crdiffusion

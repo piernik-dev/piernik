@@ -1,6 +1,6 @@
  $DOMAIN_SIZES
-    nxd = 100
-    nyd = 100
+    nxd = 128
+    nyd = 128
     nzd = 1
  /
 
@@ -22,10 +22,10 @@
  /
 
  $OUTPUT_CONTROL
-    dt_hdf  = 1.0
+    dt_hdf  = 5.0
     dt_res  = 0.0
-    dt_log  = 0.00001
-    dt_tsl  = 0.00001
+    dt_log  = 0.000
+    dt_tsl  = 0.000
     vars(1) = 'dens'
     vars(2) = 'velx'
     vars(3) = 'vely'
@@ -71,15 +71,14 @@
     cfl_cr      =   0.9
     ncrn        =   1
 !!!    gamma_crn   =   1.333333
-    K_crn_paral =   1000.0
-    K_crn_perp  =   0.0
+    K_crn_paral =   200.0   ! anisotropic
+!    K_crn_perp  =   50.0 ! isotropic
  /
 
-
  $PROBLEM_CONTROL
-    problem_name ='cr'
-    run_id =  'tst'
-    d0     = 1.0
+    problem_name = 'cr'
+    run_id = 'tst'
+    d0     = 1.0e5
     p0     = 1.0
     bx0    = 5.0
     by0    = 5.0
@@ -87,10 +86,7 @@
     x0     = 0.0
     y0     = 0.0
     z0     = 0.0
-    r0     = 50.0
+    r0     = 64.0
     beta_cr= 0.0
-    amp_cr = 100.0
+    amp_cr = 1.0
  /
-
-
-
