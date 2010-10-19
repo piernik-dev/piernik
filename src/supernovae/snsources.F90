@@ -32,9 +32,6 @@
 module snsources
 
    use initproblem, only: amp_ecr_sn, ethu, f_sn, h_sn, r_sn
-#ifdef SHEAR
-   use shear,       only: delj, eps
-#endif /* SHEAR */
 
    implicit none
    real          :: epsi, epso
@@ -151,6 +148,7 @@ module snsources
       use grid,   only: Lx, Ly, xmin, ymin, nzd
 #ifdef SHEAR
       use grid,   only: dy, nyd, nzd, y, js, je
+      use shear,  only: delj, eps
 
       integer :: jsn,jremap
       real :: dysn
