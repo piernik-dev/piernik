@@ -16,31 +16,31 @@ PRO READ_VARIABLE, filename, varname, data, time, status
         time = float(tmp(1))
 
         IF(varname EQ 'dd' AND lab(0) EQ 'DENSITY') THEN BEGIN
-                HDF_SD_GETDATA, sds_id, data 
+                HDF_SD_GETDATA, sds_id, data
                 status = 0
         ENDIF ELSE IF (varname EQ 'ee' AND lab(0) EQ 'GAS ENERGY')  THEN  BEGIN
-                HDF_SD_GETDATA, sds_id, data 
+                HDF_SD_GETDATA, sds_id, data
                 status = 0
         ENDIF ELSE IF (varname EQ 'er' AND lab(0) EQ 'RADIATION T') THEN  BEGIN
-                HDF_SD_GETDATA, sds_id, data 
+                HDF_SD_GETDATA, sds_id, data
                 status = 0
         ENDIF ELSE IF (varname EQ 'v1' AND lab(0) EQ '1-VELOCITY')  THEN  BEGIN
-                HDF_SD_GETDATA, sds_id, data 
+                HDF_SD_GETDATA, sds_id, data
                 status = 0
         ENDIF ELSE IF (varname EQ 'v2' AND lab(0) EQ '2-VELOCITY')  THEN  BEGIN
-                HDF_SD_GETDATA, sds_id, data  
+                HDF_SD_GETDATA, sds_id, data
                 status = 0
         ENDIF ELSE IF (varname EQ 'v3' AND lab(0) EQ '3-VELOCITY')  THEN  BEGIN
-                HDF_SD_GETDATA, sds_id, data 
+                HDF_SD_GETDATA, sds_id, data
                 status = 0
         ENDIF ELSE IF (varname EQ 'b1' AND lab(0) EQ '1-MAG FIELD') THEN  BEGIN
-                HDF_SD_GETDATA, sds_id, data 
+                HDF_SD_GETDATA, sds_id, data
                 status = 0
         ENDIF ELSE IF (varname EQ 'b2' AND lab(0) EQ '2-MAG FIELD') THEN  BEGIN
-                HDF_SD_GETDATA, sds_id, data  
+                HDF_SD_GETDATA, sds_id, data
                 status = 0
         ENDIF ELSE IF (varname EQ 'b3' AND lab(0) EQ '3-MAG FIELD') THEN  BEGIN
-                HDF_SD_GETDATA, sds_id, data 
+                HDF_SD_GETDATA, sds_id, data
                 status = 0
         ENDIF ELSE BEGIN
 ;

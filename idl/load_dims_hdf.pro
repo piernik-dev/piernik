@@ -13,7 +13,7 @@
 pro load_dims_hdf,  file, pdims=pdims, pcoords=pcoords, dims = dims, $
                     nxd=nxd,nyd=nyd,nzd=nzd, nxb=nxb,nyb=nyb,nzb=nzb, nb=nb, $
                     xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, $
-                    zmin=zmin, zmax=zmax 
+                    zmin=zmin, zmax=zmax
 
     on_error, 2
 

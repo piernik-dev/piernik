@@ -12,7 +12,7 @@
 ;
 function load_block_hdf, file, var, xcoord = xc, ycoord = yc, zcoord = zc, $
                              time = t, tstep =dt, nstep=nstep, dims = dims, $
-                             nxf=nx,nyf=ny,nzf=nz, nxb=nxb, nyb=nyb, nzb=nzb, nb=nb, $ 
+                             nxf=nx,nyf=ny,nzf=nz, nxb=nxb, nyb=nyb, nzb=nzb, nb=nb, $
                              xmin=xmin,xmax=xmax,ymin=ymin,ymax=ymax,zmin=zmin,zmax=zmax, $
                              problem=problem_name, gamma=gamma
 

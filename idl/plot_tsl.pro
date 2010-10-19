@@ -1,4 +1,4 @@
-PRO PLOT_TSL, dir 
+PRO PLOT_TSL, dir
 
 ; Written by M. Hanasz, 2003, 2007
 
@@ -18,7 +18,7 @@ colortable=0 ; 39
 LOADCT, colortable
 
 ncolors =!d.table_size-1
-white = ncolors  
+white = ncolors
 !P.BACKGROUND = white
 !P.COLOR = 0
 !P.POSITION = [0.17,0.22,0.95,0.92]
@@ -87,7 +87,7 @@ FOR itsl=0, ntsl-1 do begin
     data_line=FLTARR(nvar)
     READF,tsl_lun, data_line
     start_times(itsl) = data_line(itime)
-  FREE_LUN, tsl_lun  
+  FREE_LUN, tsl_lun
 ENDFOR
 
 
@@ -96,11 +96,11 @@ ENDFOR
 if(namearr(0) EQ '#') then namearr = namearr(1:nvar-1)
 nvar = n_elements(namearr)
 IF(nvar MOD 2 EQ 0) THEN BEGIN
-  list_nvar = nvar 
-  list_namearr = namearr  
+  list_nvar = nvar
+  list_namearr = namearr
 ENDIF ELSE BEGIN
   list_nvar = nvar + 1
-  list_namearr = [namearr,'none']  
+  list_namearr = [namearr,'none']
 ENDELSE
 
 firststep = 'y'
@@ -138,7 +138,7 @@ FOR itsl = 0, ntsl-1 DO BEGIN
   SKIP:
 
   FREE_LUN,tsl_lun
-  
+
 ENDFOR
 
 GOTO, displayvar
@@ -151,7 +151,7 @@ CASE batchmode OF
   0: BEGIN
        VARIABLES:
        PRINT, ''
-       READ, PROMPT='VARIABLE #/(l)ist/(n)ew data/e(x)it: ', var 
+       READ, PROMPT='VARIABLE #/(l)ist/(n)ew data/e(x)it: ', var
        IF(var EQ  'x') THEN GOTO, finish
        IF(var EQ  'n') THEN GOTO, start
        IF(var EQ  'l') THEN BEGIN
@@ -164,7 +164,7 @@ CASE batchmode OF
        ivar = FIX(var)
        IF(ivar GE nvar) THEN BEGIN
          PRINT, '# out of range'
-         GOTO, DISPLAYVAR       
+         GOTO, DISPLAYVAR
        ENDIF
        dispind = [ivar]
        disparr = [namearr(ivar)]
@@ -189,22 +189,22 @@ FOR i=0, ndisp-1 DO BEGIN
 
   CASE batchmode OF
     0: BEGIN
-         PRINT,'' 
+         PRINT,''
          READ, PROMPT='(s)crean, (ps), (png), (dat) or (c)ancel ? ', output
        END
     1: BEGIN
          output = batchmode_output
-         ivar = dispind(i) 
+         ivar = dispind(i)
        END
   ENDCASE
 
 IF (output EQ 'c') THEN BEGIN
-  GOTO, displayvar 
+  GOTO, displayvar
 ENDIF ELSE IF (output EQ 'x') THEN BEGIN
   set_plot,'x'
   LOADCT, colortable
   ncolors =!d.table_size-1
-  white = ncolors  
+  white = ncolors
   !P.BACKGROUND = white
   !P.COLOR = 0
 ENDIF ELSE IF (output EQ 'dat') THEN BEGIN
@@ -246,13 +246,13 @@ ENDIF ELSE IF (output EQ 's' OR output EQ 'ps' OR output EQ 'png') THEN BEGIN
           ,  bits=8,/color
   ENDIF
   IF(output EQ 'png') THEN BEGIN
-    SET_PLOT, 'Z' 
+    SET_PLOT, 'Z'
     DEVICE, SET_RESOLUTION=resolution
     !P.BACKGROUND = white
     !P.COLOR = 0
   ENDIF
   IF(output EQ 's') THEN BEGIN
-    SET_PLOT, 'X' 
+    SET_PLOT, 'X'
     !P.BACKGROUND = white
     !P.COLOR = 0
     WINDOW, ivar, xsize= resolution(0), ysize=resolution(1)
@@ -266,24 +266,24 @@ ENDIF ELSE IF (output EQ 's' OR output EQ 'ps' OR output EQ 'png') THEN BEGIN
 
 ; special wishes
 
-    'emag':  plot, darray(itime,*),darray(ivar,*) $ 
+    'emag':  plot, darray(itime,*),darray(ivar,*) $
                  , title='MAGNETIC ENERGY'   $
                  , xrange = xrange, xstyle=1 $
                  , xtitle = 'time [Myr]' $
                  , yrange = yrange $
                  , ystyle=1 $
-                 , /ylog 
- 
+                 , /ylog
+
   ELSE: BEGIN
 
 ; default plot format
 
              plot, darray(itime,*),darray(ivar,*),title=namearr(ivar) $
                  , xtitle = 'time [Myr]' $
-                 , xrange = xrange, xstyle=1 
+                 , xrange = xrange, xstyle=1
         END
   ENDCASE
-        
+
   plottime = SYSTIME()
   XYOUTS, 0.03,0.05, plottime, /norm
 
@@ -291,9 +291,9 @@ ENDIF ELSE IF (output EQ 's' OR output EQ 'ps' OR output EQ 'png') THEN BEGIN
   ns = N_ELEMENTS(dirsep)
   sub_dir = dirsep(ns-1)
   XYOUTS, 0.03,0.01, sub_dir, /norm
- 
+
   IF(output EQ 'png') THEN BEGIN
-    frame = TVRD() 
+    frame = TVRD()
     pngfile = plot_dir+ '/'+ plotname +'.png'
     WRITE_PNG,  pngfile,frame,red,green,blue, /verbose
   ENDIF
@@ -309,13 +309,13 @@ ENDIF
 ENDFOR
 
 CASE batchmode OF
-  0: GOTO, displayvar 
+  0: GOTO, displayvar
   1: GOTO, finish
 ENDCASE
 
 FINISH:
 IF(batchmode EQ 1) THEN BEGIN
   PRINT, 'IDL: Leaving TSL '
-ENDIF  
+ENDIF
 
 END

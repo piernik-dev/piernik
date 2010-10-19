@@ -14,11 +14,11 @@ PRO READ_DATA, dir,prefix,step, vars, time, log_scal
 
 COMMON data_min_max, min_dd, max_dd, min_dd0, max_dd0, min_dd1, max_dd1 $
                    , min_ee, max_ee, min_ee0, max_ee0, min_ee1, max_ee1 $
-                   , min_ecr, max_ecr, min_ecr0, max_ecr0, min_ecr1, max_ecr1 $ 
+                   , min_ecr, max_ecr, min_ecr0, max_ecr0, min_ecr1, max_ecr1 $
                    , min_jj, max_jj
- 
 
-  
+
+
   COMMON whatisshown, den, ene, grav, velo, magf, crene, cur
 
   nvar = n_elements(vars)
@@ -33,11 +33,11 @@ FOR ivar=0, nvar-1 DO BEGIN
   status = 0
 ;  READ_VARIABLE, file, var, data, time, status
   IF(status NE 0) THEN GOTO, SKIP
-  
+
     IF(log_scal EQ 'y' AND (var EQ 'den1' OR var EQ 'den2'  OR var EQ 'ene1'  OR var EQ 'ene2' OR var EQ 'encr' )) THEN BEGIN
-      data = alog10(data+1.e-6) 
-    ENDIF 
-  
+      data = alog10(data+1.e-6)
+    ENDIF
+
 
   IF(var EQ 'den1') THEN BEGIN
 ;    dd = alog10(data)
@@ -75,13 +75,13 @@ FOR ivar=0, nvar-1 DO BEGIN
     min_ecr = MIN(ecr)
     max_ecr = MAX(ecr)
   ENDIF
-  
+
   IF(var EQ 'curz') THEN BEGIN
      dd = data
      min_dd = MIN(dd)
      max_dd = MAX(dd)
   endif
-  
+
   IF(var EQ 'vlx1') THEN v1 = data
   IF(var EQ 'vly1') THEN v2 = data
   IF(var EQ 'vlz1') THEN v3 = data
@@ -95,5 +95,5 @@ FOR ivar=0, nvar-1 DO BEGIN
   SKIP:
 ENDFOR
 
- 
+
 END

@@ -23,11 +23,11 @@ PRO PLOTMHD,ff=first,lf=last,var=var,zoom=sf,log=llog,min=amin,max=amax,fix=run
            +string(0, format = '(i2.2)')+'_' $
            +string(first, format = '(i4.4)')
 
-  filename= dir+prefix+'_'+frame+'.hdf'  
-  
+  filename= dir+prefix+'_'+frame+'.hdf'
+
   LOAD_DIMS_HDF, filename, pdims=pdims, pcoords=pcoords, dims=dims, $
                            nxd=nxd,nyd=nyd,nzd=nzd, nxb=nxb,nyb=nyb,nzb=nzb, nb=nb, $
-                           xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, zmin=zmin, zmax=zmax 
+                           xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, zmin=zmin, zmax=zmax
   nproc = pdims(0)*pdims(1)*pdims(2)
 
   if(nxb eq dims(0)) then begin
@@ -46,7 +46,7 @@ PRO PLOTMHD,ff=first,lf=last,var=var,zoom=sf,log=llog,min=amin,max=amax,fix=run
   iy = nyd/2
   iz = nzd/2
 
-  filepref= dir+prefix  
+  filepref= dir+prefix
 
   if(var eq 'phi') then begin
     a = LOAD_DATA_HDF(dir,prefix, step, 'magz', $
@@ -63,7 +63,7 @@ PRO PLOTMHD,ff=first,lf=last,var=var,zoom=sf,log=llog,min=amin,max=amax,fix=run
             xcoord = x, ycoord = y, zcoord = z, $
             nxa=nxa,nya=nya,nza=nza, $
             time = t,allblock='y')
-  endelse  
+  endelse
   timestr = '    t='+strtrim(string(t,format='(f7.2)'),0)
   if(llog EQ 1)    then a    = alog10(a)
   if(amin EQ 0.0)  then amin = min(a)

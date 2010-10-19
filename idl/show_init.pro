@@ -20,17 +20,17 @@ COMMON whatisshown, den, ene, grav, velo, magf, crene, cur
 
 COMMON data_min_max, min_dd, max_dd, min_dd0, max_dd0, min_dd1, max_dd1 $
                    , min_ee, max_ee, min_ee0, max_ee0, min_ee1, max_ee1 $
-                   , min_ecr, max_ecr, min_ecr0, max_ecr0, min_ecr1, max_ecr1 $ 
+                   , min_ecr, max_ecr, min_ecr0, max_ecr0, min_ecr1, max_ecr1 $
                    , min_jj, max_jj
 
-COMMON mag_field, b1_mean, b2_mean, bh_mean, b1_m 
+COMMON mag_field, b1_mean, b2_mean, bh_mean, b1_m
 
 COMMON sldata  $
        , xdis, ydis, udis, vdis, sdis  $
-       , xrange_, yrange_ $ 
+       , xrange_, yrange_ $
        , time_str, slice_str $
-       , lunit, tunit, bunit, vunit, dunit, eunit, ecrunit  
-  
+       , lunit, tunit, bunit, vunit, dunit, eunit, ecrunit
+
 
 COMMON plot_params, chars_, xmarg_, ymarg_, color_bar_
 
@@ -39,7 +39,7 @@ COMMON plot_coords $
       , win_hsize_xy, win_vsize_xy,  plot_hsize_xy, plot_vsize_xy, position_xy $
       , win_hsize_xz, win_vsize_xz,  plot_hsize_xz, plot_vsize_xz, position_xz $
       , win_hsize_yz, win_vsize_yz,  plot_hsize_yz, plot_vsize_yz, position_yz $
-      , win_hsize_b1, win_vsize_b1,  plot_hsize_b1, plot_vsize_b1, position_b1  
+      , win_hsize_b1, win_vsize_b1,  plot_hsize_b1, plot_vsize_b1, position_b1
 
 
 COMMON disp, ncolors, min_data, max_data, mincolor, maxcolor
@@ -66,10 +66,10 @@ n_slices = 0
 
 
 swap_endian   = 'n'
-data_type = 'hdf1'		; 'usr', 'hdf1' (ZeusMP) or 'hdf2' (Zeus3D)                
+data_type = 'hdf1'   ; 'usr', 'hdf1' (ZeusMP) or 'hdf2' (Zeus3D)
 
 
-      				; Specify the directory with data files
+                     ; Specify the directory with data files
 batchmode = 0
 dump = 'hdfdump'
 

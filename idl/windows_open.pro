@@ -9,7 +9,7 @@ COMMON plot_coords $
       , win_hsize_xy, win_vsize_xy,  plot_hsize_xy, plot_vsize_xy, position_xy $
       , win_hsize_xz, win_vsize_xz,  plot_hsize_xz, plot_vsize_xz, position_xz $
       , win_hsize_yz, win_vsize_yz,  plot_hsize_yz, plot_vsize_yz, position_yz $
-      , win_hsize_b1, win_vsize_b1,  plot_hsize_b1, plot_vsize_b1, position_b1  
+      , win_hsize_b1, win_vsize_b1,  plot_hsize_b1, plot_vsize_b1, position_b1
 
 
   n_slices = N_ELEMENTS(slice_array) - 1
@@ -20,11 +20,11 @@ COMMON plot_coords $
 
 
       IF(dims EQ '2d') THEN BEGIN
-        IF(s.type EQ plane3) THEN BEGIN 
+        IF(s.type EQ plane3) THEN BEGIN
           resol=[win_hsize_xy,win_vsize_xy]
          IF(display EQ 'y') THEN BEGIN
             WINDOW,i_slice,xsize=resol[0],ysize=resol[1], $
-                             title = s.name 
+                             title = s.name
          ENDIF
         ENDIF
 
@@ -35,7 +35,7 @@ COMMON plot_coords $
         IF(s.type EQ plane1) THEN resol=[win_hsize_yz,win_vsize_yz]
         IF(display EQ 'y') THEN BEGIN
           WINDOW,i_slice,xsize=resol[0],ysize=resol[1], $
-                  title = s.name 
+                  title = s.name
         ENDIF
       ENDIF
 

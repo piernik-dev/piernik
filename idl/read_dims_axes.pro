@@ -26,7 +26,7 @@ ON_ERROR, 1
                  END
         ELSE:
         ENDCASE
-      ENDIF 
+      ENDIF
       HDF_SD_ENDACCESS, sds_id
  ENDFOR
 

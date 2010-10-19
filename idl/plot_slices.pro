@@ -9,7 +9,7 @@ COMMON plot_coords $
       , win_hsize_xy, win_vsize_xy,  plot_hsize_xy, plot_vsize_xy, position_xy $
       , win_hsize_xz, win_vsize_xz,  plot_hsize_xz, plot_vsize_xz, position_xz $
       , win_hsize_yz, win_vsize_yz,  plot_hsize_yz, plot_vsize_yz, position_yz $
-      , win_hsize_b1, win_vsize_b1,  plot_hsize_b1, plot_vsize_b1, position_b1  
+      , win_hsize_b1, win_vsize_b1,  plot_hsize_b1, plot_vsize_b1, position_b1
 COMMON frames, first_frame, i_frame
 
   n_slices = N_ELEMENTS(slice_array)-1
@@ -30,14 +30,14 @@ COMMON frames, first_frame, i_frame
         WSHOW, i_slice
         WSET, i_slice
       ENDIF
-    
+
       MAKE_SLICE, slice_array, i_slice, n_vectors
 
-      SET_PLOT, 'Z' 
+      SET_PLOT, 'Z'
       DEVICE, SET_RESOLUTION=resol,SET_COLORS=ncolors
       SHOW_SLICE, slice_array, i_slice, time
 
-      frame = TVRD() 
+      frame = TVRD()
 
       IF(display_frames EQ 'y') THEN BEGIN
         SET_PLOT,'X'

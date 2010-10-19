@@ -12,7 +12,7 @@
 ;
 function load_data_hdf, dir, prefix, step, var, xcoord = x, ycoord = y, zcoord = z, $
                              time = t, tstep =dt, nstep=nstep, dims = dims, $
-                             nxa=nxa,nya=nya,nza=nza, nxd=nxd, nyd=nyd, nzd=nzd, nb=nb, $ 
+                             nxa=nxa,nya=nya,nza=nza, nxd=nxd, nyd=nyd, nzd=nzd, nb=nb, $
                              xmin=xmin,xmax=xmax,ymin=ymin,ymax=ymax,zmin=zmin,zmax=zmax, $
                              problem=problem_name, gamma=gamma, $
                              xbl=xbl, xbr=xbr, ybl=ybl, ybr=ybr, zbl=zbl, zbr=zbr, allblocks=allblocks
@@ -24,10 +24,10 @@ function load_data_hdf, dir, prefix, step, var, xcoord = x, ycoord = y, zcoord =
            +string(0, format = '(i2.2)')+'_' $
            +string(step, format = '(i4.4)')
 
-  filename= dir+'/'+prefix+'_'+frame+'.hdf'  
+  filename= dir+'/'+prefix+'_'+frame+'.hdf'
   LOAD_DIMS_HDF, filename, pdims=pdims, pcoords=pcoords, dims=dims, $
                            nxd=nxd,nyd=nyd,nzd=nzd, nxb=nxb,nyb=nyb,nzb=nzb, nb=nb, $
-                           xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, zmin=zmin, zmax=zmax 
+                           xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, zmin=zmin, zmax=zmax
 ;  nproc = pdims(0)*pdims(1)*pdims(2)
   if(nxb eq dims(0)) then begin
     nx=nxb
@@ -49,7 +49,7 @@ function load_data_hdf, dir, prefix, step, var, xcoord = x, ycoord = y, zcoord =
   endelse
 
   framedisp   = '0x_0x_0x_'+string(step, format = '(i4.4)')
-  filenamedisp= prefix+'_'+framedisp+'.hdf'  
+  filenamedisp= prefix+'_'+framedisp+'.hdf'
   print, 'directory is ', dir
   print, 'file(s) = ',filenamedisp
 
@@ -62,7 +62,7 @@ function load_data_hdf, dir, prefix, step, var, xcoord = x, ycoord = y, zcoord =
     zbl = 0
     zbr = pdims(2)-1
   endif
- 
+
   for pc0 = xbl, xbr do begin
     for pc1 = ybl, ybr do begin
       for pc2 = zbl, zbr do begin
@@ -73,7 +73,7 @@ function load_data_hdf, dir, prefix, step, var, xcoord = x, ycoord = y, zcoord =
                  +string(step, format = '(i4.4)')
 
 
-        filename= dir+'/'+prefix+'_'+frame+'.hdf'  
+        filename= dir+'/'+prefix+'_'+frame+'.hdf'
 
      case var of
        'ein1' : begin
@@ -93,7 +93,7 @@ function load_data_hdf, dir, prefix, step, var, xcoord = x, ycoord = y, zcoord =
                   velx = LOAD_BLOCK_HDF(filename, 'velx',  xcoord = x_block, ycoord = y_block, zcoord = z_block, time = t)
                   vely = LOAD_BLOCK_HDF(filename, 'vely',  xcoord = x_block, ycoord = y_block, zcoord = z_block, time = t)
                   velz = LOAD_BLOCK_HDF(filename, 'velz',  xcoord = x_block, ycoord = y_block, zcoord = z_block, time = t)
-  		  a_block = 0.5*dens*(velx^2 + vely^2 + velz^2)
+                  a_block = 0.5*dens*(velx^2 + vely^2 + velz^2)
                 end
        'emdi' : begin
                   ener = LOAD_BLOCK_HDF(filename, 'ener',  xcoord = x_block, ycoord = y_block, zcoord = z_block, time = t)
@@ -104,7 +104,7 @@ function load_data_hdf, dir, prefix, step, var, xcoord = x, ycoord = y, zcoord =
                   magx = LOAD_BLOCK_HDF(filename, 'magx',  xcoord = x_block, ycoord = y_block, zcoord = z_block, time = t)
                   magy = LOAD_BLOCK_HDF(filename, 'magy',  xcoord = x_block, ycoord = y_block, zcoord = z_block, time = t)
                   magz = LOAD_BLOCK_HDF(filename, 'magz',  xcoord = x_block, ycoord = y_block, zcoord = z_block, time = t)
-	          a_block = 0.5*(magx^2 + magy^2 + magz^2)/(ener - 0.5*dens*(velx^2 + vely^2 + velz^2) - 0.5*(magx^2 + magy^2 + magz^2))
+                  a_block = 0.5*(magx^2 + magy^2 + magz^2)/(ener - 0.5*dens*(velx^2 + vely^2 + velz^2) - 0.5*(magx^2 + magy^2 + magz^2))
                 end
        'eidm' : begin
                   ener = LOAD_BLOCK_HDF(filename, 'ener',  xcoord = x_block, ycoord = y_block, zcoord = z_block, time = t)
@@ -115,7 +115,7 @@ function load_data_hdf, dir, prefix, step, var, xcoord = x, ycoord = y, zcoord =
                   magx = LOAD_BLOCK_HDF(filename, 'magx',  xcoord = x_block, ycoord = y_block, zcoord = z_block, time = t)
                   magy = LOAD_BLOCK_HDF(filename, 'magy',  xcoord = x_block, ycoord = y_block, zcoord = z_block, time = t)
                   magz = LOAD_BLOCK_HDF(filename, 'magz',  xcoord = x_block, ycoord = y_block, zcoord = z_block, time = t)
-  	          a_block = (ener - 0.5*dens*(velx^2 + vely^2 + velz^2) - 0.5*(magz^2 + magz^2 + magz^2))/(0.5*(magz^2 + magz^2 + magz^2))
+                  a_block = (ener - 0.5*dens*(velx^2 + vely^2 + velz^2) - 0.5*(magz^2 + magz^2 + magz^2))/(0.5*(magz^2 + magz^2 + magz^2))
                 end
        'emdk' : begin
                   dens = LOAD_BLOCK_HDF(filename, 'dens',  xcoord = x_block, ycoord = y_block, zcoord = z_block, time = t)
@@ -125,7 +125,7 @@ function load_data_hdf, dir, prefix, step, var, xcoord = x, ycoord = y, zcoord =
                   magx = LOAD_BLOCK_HDF(filename, 'magx',  xcoord = x_block, ycoord = y_block, zcoord = z_block, time = t)
                   magy = LOAD_BLOCK_HDF(filename, 'magy',  xcoord = x_block, ycoord = y_block, zcoord = z_block, time = t)
                   magz = LOAD_BLOCK_HDF(filename, 'magz',  xcoord = x_block, ycoord = y_block, zcoord = z_block, time = t)
-	          a_block = 0.5*(magx^2 + magy^2 + magz^2)/(0.5*dens*(velx^2 + vely^2 + velz^2))
+                  a_block = 0.5*(magx^2 + magy^2 + magz^2)/(0.5*dens*(velx^2 + vely^2 + velz^2))
                 end
        'ekdm' : begin
                   dens = LOAD_BLOCK_HDF(filename, 'dens',  xcoord = x_block, ycoord = y_block, zcoord = z_block, time = t)
@@ -135,47 +135,47 @@ function load_data_hdf, dir, prefix, step, var, xcoord = x, ycoord = y, zcoord =
                   magx = LOAD_BLOCK_HDF(filename, 'magx',  xcoord = x_block, ycoord = y_block, zcoord = z_block, time = t)
                   magy = LOAD_BLOCK_HDF(filename, 'magy',  xcoord = x_block, ycoord = y_block, zcoord = z_block, time = t)
                   magz = LOAD_BLOCK_HDF(filename, 'magz',  xcoord = x_block, ycoord = y_block, zcoord = z_block, time = t)
-	          a_block = 0.5*dens*(velx^2 + vely^2 + velz^2)/(0.5*(magx^2 + magy^2 + magz^2))
+                  a_block = 0.5*dens*(velx^2 + vely^2 + velz^2)/(0.5*(magx^2 + magy^2 + magz^2))
                 end
        'vela' : begin
                   velx = LOAD_BLOCK_HDF(filename, 'velx',  xcoord = x_block, ycoord = y_block, zcoord = z_block, time = t)
                   vely = LOAD_BLOCK_HDF(filename, 'vely',  xcoord = x_block, ycoord = y_block, zcoord = z_block, time = t)
                   velz = LOAD_BLOCK_HDF(filename, 'velz',  xcoord = x_block, ycoord = y_block, zcoord = z_block, time = t)
-		  a_block = (velx^2 + vely^2 + velz^2)^0.5
+                  a_block = (velx^2 + vely^2 + velz^2)^0.5
                 end
        'velr' : begin
                   velx = LOAD_BLOCK_HDF(filename, 'velx',  xcoord = x_block, ycoord = y_block, zcoord = z_block, time = t)
                   vely = LOAD_BLOCK_HDF(filename, 'vely',  xcoord = x_block, ycoord = y_block, zcoord = z_block, time = t)
-		  a_block = (velx^2 + vely^2)^0.5
+                  a_block = (velx^2 + vely^2)^0.5
                 end
        'vlxa' : begin
                   velx = LOAD_BLOCK_HDF(filename, 'velx',  xcoord = x_block, ycoord = y_block, zcoord = z_block, time = t)
                   vely = LOAD_BLOCK_HDF(filename, 'vely',  xcoord = x_block, ycoord = y_block, zcoord = z_block, time = t)
                   velz = LOAD_BLOCK_HDF(filename, 'velz',  xcoord = x_block, ycoord = y_block, zcoord = z_block, time = t)
-		  a_block = velx/(velx^2 + vely^2 + velz^2)^0.5
+                  a_block = velx/(velx^2 + vely^2 + velz^2)^0.5
                 end
        'vlya' : begin
                   velx = LOAD_BLOCK_HDF(filename, 'velx',  xcoord = x_block, ycoord = y_block, zcoord = z_block, time = t)
                   vely = LOAD_BLOCK_HDF(filename, 'vely',  xcoord = x_block, ycoord = y_block, zcoord = z_block, time = t)
                   velz = LOAD_BLOCK_HDF(filename, 'velz',  xcoord = x_block, ycoord = y_block, zcoord = z_block, time = t)
-		  a_block = vely/(velx^2 + vely^2 + velz^2)^0.5
+                  a_block = vely/(velx^2 + vely^2 + velz^2)^0.5
                 end
        'vlza' : begin
                   velx = LOAD_BLOCK_HDF(filename, 'velx',  xcoord = x_block, ycoord = y_block, zcoord = z_block, time = t)
                   vely = LOAD_BLOCK_HDF(filename, 'vely',  xcoord = x_block, ycoord = y_block, zcoord = z_block, time = t)
                   velz = LOAD_BLOCK_HDF(filename, 'velz',  xcoord = x_block, ycoord = y_block, zcoord = z_block, time = t)
-		  a_block = velz/(velx^2 + vely^2 + velz^2)^0.5
+                  a_block = velz/(velx^2 + vely^2 + velz^2)^0.5
                 end
        'maga' : begin
                   magx = LOAD_BLOCK_HDF(filename, 'magx',  xcoord = x_block, ycoord = y_block, zcoord = z_block, time = t)
                   magy = LOAD_BLOCK_HDF(filename, 'magy',  xcoord = x_block, ycoord = y_block, zcoord = z_block, time = t)
                   magz = LOAD_BLOCK_HDF(filename, 'magz',  xcoord = x_block, ycoord = y_block, zcoord = z_block, time = t)
-	          a_block = (magx^2 + magy^2 + magz^2)^0.5
+                  a_block = (magx^2 + magy^2 + magz^2)^0.5
                 end
        'magp' : begin
                   magx = LOAD_BLOCK_HDF(filename, 'magx',  xcoord = x_block, ycoord = y_block, zcoord = z_block, time = t)
                   magy = LOAD_BLOCK_HDF(filename, 'magy',  xcoord = x_block, ycoord = y_block, zcoord = z_block, time = t)
-	          a_block = sqrt(magx^2 + magy^2)
+                  a_block = sqrt(magx^2 + magy^2)
                 end
        'lgam' : begin
                    encr = LOAD_BLOCK_HDF(filename, 'encr',  xcoord = x_block, ycoord = y_block, zcoord = z_block, time = t)
@@ -197,67 +197,67 @@ function load_data_hdf, dir, prefix, step, var, xcoord = x, ycoord = y, zcoord =
                   magx = LOAD_BLOCK_HDF(filename, 'magx',  xcoord = x_block, ycoord = y_block, zcoord = z_block, time = t)
                   magy = LOAD_BLOCK_HDF(filename, 'magy',  xcoord = x_block, ycoord = y_block, zcoord = z_block, time = t)
                   magz = LOAD_BLOCK_HDF(filename, 'magz',  xcoord = x_block, ycoord = y_block, zcoord = z_block, time = t)
-	          a_block = 2.*encr/(magx^2 + magy^2 + magz^2)
+                  a_block = 2.*encr/(magx^2 + magy^2 + magz^2)
                 end
        'em2c' : begin
                   encr = LOAD_BLOCK_HDF(filename, 'encr',  xcoord = x_block, ycoord = y_block, zcoord = z_block, time = t)
                   magx = LOAD_BLOCK_HDF(filename, 'magx',  xcoord = x_block, ycoord = y_block, zcoord = z_block, time = t)
                   magy = LOAD_BLOCK_HDF(filename, 'magy',  xcoord = x_block, ycoord = y_block, zcoord = z_block, time = t)
                   magz = LOAD_BLOCK_HDF(filename, 'magz',  xcoord = x_block, ycoord = y_block, zcoord = z_block, time = t)
-	          a_block = (magx^2 + magy^2 + magz^2)/(2.*encr)
+                  a_block = (magx^2 + magy^2 + magz^2)/(2.*encr)
                 end
        'esyn' : begin
                   encr = LOAD_BLOCK_HDF(filename, 'encr',  xcoord = x_block, ycoord = y_block, zcoord = z_block, time = t)
                   magx = LOAD_BLOCK_HDF(filename, 'magx',  xcoord = x_block, ycoord = y_block, zcoord = z_block, time = t)
                   magy = LOAD_BLOCK_HDF(filename, 'magy',  xcoord = x_block, ycoord = y_block, zcoord = z_block, time = t)
                   magz = LOAD_BLOCK_HDF(filename, 'magz',  xcoord = x_block, ycoord = y_block, zcoord = z_block, time = t)
-	          a_block = encr*(magx^2 + magy^2 + magz^2)^(1.7/2.)
+                  a_block = encr*(magx^2 + magy^2 + magz^2)^(1.7/2.)
                 end
        'mgxa' : begin
                   magx = LOAD_BLOCK_HDF(filename, 'magx',  xcoord = x_block, ycoord = y_block, zcoord = z_block, time = t)
                   magy = LOAD_BLOCK_HDF(filename, 'magy',  xcoord = x_block, ycoord = y_block, zcoord = z_block, time = t)
                   magz = LOAD_BLOCK_HDF(filename, 'magz',  xcoord = x_block, ycoord = y_block, zcoord = z_block, time = t)
-	          a_block = magx/(magx^2 + magy^2 + magz^2)^0.5
+                  a_block = magx/(magx^2 + magy^2 + magz^2)^0.5
                 end
        'mgya' : begin
                   magx = LOAD_BLOCK_HDF(filename, 'magx',  xcoord = x_block, ycoord = y_block, zcoord = z_block, time = t)
                   magy = LOAD_BLOCK_HDF(filename, 'magy',  xcoord = x_block, ycoord = y_block, zcoord = z_block, time = t)
                   magz = LOAD_BLOCK_HDF(filename, 'magz',  xcoord = x_block, ycoord = y_block, zcoord = z_block, time = t)
-	          a_block = magy/(magx^2 + magy^2 + magz^2)^0.5
+                  a_block = magy/(magx^2 + magy^2 + magz^2)^0.5
                 end
        'mgza' : begin
                   magx = LOAD_BLOCK_HDF(filename, 'magx',  xcoord = x_block, ycoord = y_block, zcoord = z_block, time = t)
                   magy = LOAD_BLOCK_HDF(filename, 'magy',  xcoord = x_block, ycoord = y_block, zcoord = z_block, time = t)
                   magz = LOAD_BLOCK_HDF(filename, 'magz',  xcoord = x_block, ycoord = y_block, zcoord = z_block, time = t)
-	          a_block = magz/(magx^2 + magy^2 + magz^2)^0.5
+                  a_block = magz/(magx^2 + magy^2 + magz^2)^0.5
                 end
        'momx' : begin
                   dens = LOAD_BLOCK_HDF(filename, 'dens',  xcoord = x_block, ycoord = y_block, zcoord = z_block, time = t)
                   velx = LOAD_BLOCK_HDF(filename, 'velx',  xcoord = x_block, ycoord = y_block, zcoord = z_block, time = t)
-		  a_block = dens*velx
+                  a_block = dens*velx
                 end
        'momy' : begin
                   dens = LOAD_BLOCK_HDF(filename, 'dens',  xcoord = x_block, ycoord = y_block, zcoord = z_block, time = t)
                   vely = LOAD_BLOCK_HDF(filename, 'vely',  xcoord = x_block, ycoord = y_block, zcoord = z_block, time = t)
-		  a_block = dens*vely
+                  a_block = dens*vely
                 end
        'momz' : begin
                   dens = LOAD_BLOCK_HDF(filename, 'dens',  xcoord = x_block, ycoord = y_block, zcoord = z_block, time = t)
                   velz = LOAD_BLOCK_HDF(filename, 'velz',  xcoord = x_block, ycoord = y_block, zcoord = z_block, time = t)
-		  a_block = dens*velz
+                  a_block = dens*velz
                 end
        'moma' : begin
                   dens = LOAD_BLOCK_HDF(filename, 'dens',  xcoord = x_block, ycoord = y_block, zcoord = z_block, time = t)
                   velx = LOAD_BLOCK_HDF(filename, 'velx',  xcoord = x_block, ycoord = y_block, zcoord = z_block, time = t)
                   vely = LOAD_BLOCK_HDF(filename, 'vely',  xcoord = x_block, ycoord = y_block, zcoord = z_block, time = t)
                   velz = LOAD_BLOCK_HDF(filename, 'velz',  xcoord = x_block, ycoord = y_block, zcoord = z_block, time = t)
-		  a_block = dens*(velx^2 + vely^2 + velz^2)^0.5
+                  a_block = dens*(velx^2 + vely^2 + velz^2)^0.5
                 end
        'momr' : begin
                   dens = LOAD_BLOCK_HDF(filename, 'dens',  xcoord = x_block, ycoord = y_block, zcoord = z_block, time = t)
                   velx = LOAD_BLOCK_HDF(filename, 'velx',  xcoord = x_block, ycoord = y_block, zcoord = z_block, time = t)
                   vely = LOAD_BLOCK_HDF(filename, 'vely',  xcoord = x_block, ycoord = y_block, zcoord = z_block, time = t)
-		  a_block = dens*(velx^2 + vely^2)^0.5
+                  a_block = dens*(velx^2 + vely^2)^0.5
                 end
        'curz' : begin
                   magx = LOAD_BLOCK_HDF(filename, 'magx',  xcoord = x_block, ycoord = y_block, zcoord = z_block, time = t)
@@ -266,7 +266,7 @@ function load_data_hdf, dir, prefix, step, var, xcoord = x, ycoord = y, zcoord =
                   a_block = (a_block^2)^0.5
                   ss = size(a_block)
                   a_block(ss(1)-1,*) = a_block(ss(1)-2,*)
-                end 
+                end
        'ccur' : begin
                   magx = LOAD_BLOCK_HDF(filename, 'magx',  xcoord = x_block, ycoord = y_block, zcoord = z_block, time = t)
                   magy = LOAD_BLOCK_HDF(filename, 'magy',  xcoord = x_block, ycoord = y_block, zcoord = z_block, time = t)
@@ -281,15 +281,15 @@ function load_data_hdf, dir, prefix, step, var, xcoord = x, ycoord = y, zcoord =
 ;DW-
      else :       a_block = LOAD_BLOCK_HDF(filename, var,  xcoord = x_block, ycoord = y_block, zcoord = z_block, time = t)
      endcase
-    
+
         if(pc2 EQ zbl) then begin
           a_column=a_block
           x_column=x_block
           y_column=y_block
           z_column=z_block
           nz_column=nz
-        endif else begin  
-          a_column = [[[a_column]],[[a_block]]] 
+        endif else begin
+          a_column = [[[a_column]],[[a_block]]]
           z_column = [z_column,z_block]
           nz_column = nz_column + nz
         endelse
@@ -305,8 +305,8 @@ function load_data_hdf, dir, prefix, step, var, xcoord = x, ycoord = y, zcoord =
         y_plane=y_column
         z_plane=z_column
         ny_plane=ny
-      endif else begin  
-        a_plane = [[a_plane],[a_column]] 
+      endif else begin
+        a_plane = [[a_plane],[a_column]]
         y_plane = [y_plane,y_column]
         ny_plane = ny_plane + ny
       endelse
@@ -322,8 +322,8 @@ function load_data_hdf, dir, prefix, step, var, xcoord = x, ycoord = y, zcoord =
       y_volume=y_plane
       z_volume=z_plane
       nx_volume=nx
-    endif else begin  
-      a_volume = [a_volume,a_plane] 
+    endif else begin
+      a_volume = [a_volume,a_plane]
       x_volume = [x_volume,x_column]
       nx_volume = nx_volume + nx
     endelse
