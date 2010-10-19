@@ -160,7 +160,6 @@ module initproblem
          f_sn = f_sn * 2.0*r_sn/1000.0
       endif
 
-      write(*,*) proc, csim2
 !   Secondary parameters
 
       b0 = sqrt(2.*alpha*d0*cs_iso2)

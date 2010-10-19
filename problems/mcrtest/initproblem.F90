@@ -127,7 +127,7 @@ module initproblem
 
       use arrays,         only: b, u
       use crcomposition,  only: icr_H1, icr_C12
-      use dataio_public,  only: die
+      use dataio_public,  only: die, msg, printinfo
       use fluidindex,     only: ibx, iby, ibz, nvar
       use grid,           only: nx, ny, nz, nb, ks, ke, x, y, z, Lx, Ly, Lz, xmin, ymin, zmin, nxd, nyd, nzd
       use initionized,    only: idni, imxi, imyi, imzi, ieni
@@ -199,8 +199,10 @@ module initproblem
       enddo
 
       do icr=1,nvar%crs%all
-         write(*,*) 'icr=',icr,'maxecr =',maxval(u(iarr_crs(icr),:,:,:))
-         write(*,*) 'icr=',icr,'maxloc =',maxloc(u(iarr_crs(icr),:,:,:))
+         write(msg,*) 'icr=',icr,'maxecr =',maxval(u(iarr_crs(icr),:,:,:))
+         call printinfo(msg)
+         write(msg,*) 'icr=',icr,'maxloc =',maxloc(u(iarr_crs(icr),:,:,:))
+         call printinfo(msg)
       enddo
 
 #endif /* COSM_RAYS */

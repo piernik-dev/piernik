@@ -116,8 +116,6 @@ module initproblem
       integer :: i,j,k
       real    :: k_x,k_y,k_z,k_a
 
-      write(*,*) 'initproblem:', pi
-
       k_x = 2.*pi/Lx*real(m_x)
       k_y = 2.*pi/Ly*real(m_y)
       k_z = 2.*pi/Lz*real(m_z)

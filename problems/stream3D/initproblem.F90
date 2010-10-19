@@ -142,8 +142,6 @@ module initproblem
 
       sqr_gm = sqrt(newtong*ptmass)
 
-      write(*,*) 'dx = ',dx
-
       n = 0.5*Rin / (R0 - Rin)
       ninv = 1./n
       if (sigma_model == 'hayashi') then
@@ -213,7 +211,6 @@ module initproblem
 
          enddo
       enddo
-      write(*,*) maxval(u(idnn,:,:,:)), minval(u(idnn,:,:,:))
 
       deallocate(omega,omegad)
 

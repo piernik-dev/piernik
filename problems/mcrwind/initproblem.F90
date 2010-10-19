@@ -167,8 +167,6 @@ module initproblem
 
       csim2 = cs_iso2*(1.0+alpha)
 
-      write(*,*) proc, csim2
-
       call hydrostatic_zeq(1, 1, d0, csim2, dprof)
 
 
