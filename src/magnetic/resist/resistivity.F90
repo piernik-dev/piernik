@@ -36,8 +36,9 @@
 module resistivity
 
    implicit none
-   real    :: cfl_resist, eta_0, eta_1, j_crit, deint_max
+   real    :: cfl_resist, eta_0, eta_1, j_crit, jc2, deint_max
    integer :: eta_scale
+   double precision :: d_eta_factor
 
    real :: eta_max, dt_resist, dt_eint
    real :: eta_max_proc, eta_max_all
@@ -80,7 +81,7 @@ module resistivity
 !<
    subroutine init_resistivity
       use dataio_public, only: par_file, ierrh, die, namelist_errh, compare_namelist
-      use grid,          only: nx, ny, nz
+      use grid,          only: nx, ny, nz, nzd
       use mpisetup,      only: rbuff, ibuff, ierr, MPI_INTEGER, MPI_DOUBLE_PRECISION, buffer_dim, comm, proc
 #ifndef ISO
       use initionized,   only: ieni
@@ -138,6 +139,13 @@ module resistivity
       if (.not.allocated(etahelp)) allocate(etahelp(nx,ny,nz))
       if (.not.allocated(b1) ) allocate(b1(nx,ny,nz) )
 
+      jc2 = j_crit**2
+      if (nzd /= 1) then
+         d_eta_factor = 1./(6.+dble(eta_scale))
+      else
+         d_eta_factor = 1./(4.+dble(eta_scale))
+      endif
+
    end subroutine init_resistivity
 
    subroutine compute_resist(eta,ici)
@@ -145,7 +153,7 @@ module resistivity
       use constants,    only: small
       use fluidindex,   only: ibx, iby, ibz, icx, icy, icz
       use func,         only: mshift, pshift
-      use grid,         only: dl, xdim, ydim, zdim, nx, ny, nz, is, ie, js, je, ks, ke, nzd
+      use grid,         only: idl, xdim, ydim, zdim, nx, ny, nz, is, ie, js, je, ks, ke, nzd
       use initionized,  only: idni, imxi, imyi, imzi
       use mpisetup,     only: MPI_DOUBLE_PRECISION, MPI_MAX, comm, ierr
 #ifndef ISO
@@ -153,32 +161,26 @@ module resistivity
 #endif /* !ISO */
 
       implicit none
-      integer,intent(in)                    :: ici
+      integer,intent(in)                       :: ici
       real, dimension(nx,ny,nz), intent(inout) :: eta
 
 !--- square current computing in cell corner step by step
 
 !--- current_z
-!      wb(:,:,:) = (b(iby,:,:,:)-mshift(b(iby,:,:,:),xdim))/dl(xdim) &
-!                 -(b(ibx,:,:,:)-mshift(b(ibx,:,:,:),ydim))/dl(ydim)
-      wb(:,:,:) = (b(iby,:,:,:)-mshift(b(iby,:,:,:),xdim))/dl(xdim)
-      wb = wb -   (b(ibx,:,:,:)-mshift(b(ibx,:,:,:),ydim))/dl(ydim)
+      wb(:,:,:) = (b(iby,:,:,:)-mshift(b(iby,:,:,:),xdim))*idl(xdim)
+      wb = wb -   (b(ibx,:,:,:)-mshift(b(ibx,:,:,:),ydim))*idl(ydim)
 
       eta(:,:,:) = 0.25*( wb(:,:,:) + mshift(wb(:,:,:),zdim) )**2
 
       if (nzd /=1) then
 !--- current_x
-!         wb(:,:,:) = (b(ibz,:,:,:)-mshift(b(ibz,:,:,:),ydim))/dl(ydim) &
-!                    -(b(iby,:,:,:)-mshift(b(iby,:,:,:),zdim))/dl(zdim)
-         wb(:,:,:) = (b(ibz,:,:,:)-mshift(b(ibz,:,:,:),ydim))/dl(ydim)
-         wb = wb -   (b(iby,:,:,:)-mshift(b(iby,:,:,:),zdim))/dl(zdim)
+         wb(:,:,:) = (b(ibz,:,:,:)-mshift(b(ibz,:,:,:),ydim))*idl(ydim)
+         wb = wb -   (b(iby,:,:,:)-mshift(b(iby,:,:,:),zdim))*idl(zdim)
 
          eta(:,:,:) = eta(:,:,:) + 0.25*( wb(:,:,:)+mshift(wb(:,:,:),xdim) )**2
 !--- current_y
-!         wb(:,:,:) = (b(ibx,:,:,:)-mshift(b(ibx,:,:,:),zdim))/dl(zdim) &
-!                    -(b(ibz,:,:,:)-mshift(b(ibz,:,:,:),xdim))/dl(xdim)
-         wb(:,:,:) = (b(ibx,:,:,:)-mshift(b(ibx,:,:,:),zdim))/dl(zdim)
-         wb = wb -   (b(ibz,:,:,:)-mshift(b(ibz,:,:,:),xdim))/dl(xdim)
+         wb(:,:,:) = (b(ibx,:,:,:)-mshift(b(ibx,:,:,:),zdim))*idl(zdim)
+         wb = wb -   (b(ibz,:,:,:)-mshift(b(ibz,:,:,:),xdim))*idl(xdim)
 
          eta(:,:,:) = eta(:,:,:) +0.25*( wb(:,:,:) + mshift(wb(:,:,:),ydim))**2
       endif
@@ -186,7 +188,7 @@ module resistivity
 !--- wb = current**2
       wb(:,:,:) = eta(:,:,:)
 
-      eta(:,:,:) = eta_0 + eta_1*sqrt(max(0.0,eta(:,:,:)- j_crit**2 ))
+      eta(:,:,:) = eta_0 + eta_1*sqrt(max(0.0,eta(:,:,:)- jc2 ))
 !>
 !! \todo Following lines are splitted into separate lines because of intel and gnu dbgs
 !! shoud that be so? Is there any other solution instead splitting?
@@ -198,15 +200,15 @@ module resistivity
          etahelp = etahelp + pshift(eta(:,:,:),ydim)
          etahelp = etahelp + mshift(eta(:,:,:),zdim)
          etahelp = etahelp + pshift(eta(:,:,:),zdim)
-         etahelp = (etahelp+dble(eta_scale)*eta(:,:,:))/(6.+dble(eta_scale))
+         etahelp = (etahelp+dble(eta_scale)*eta(:,:,:))*d_eta_factor
          where (eta > eta_0)
             eta = etahelp
          endwhere
       else
          where (eta > eta_0)
-           eta(:,:,:) = (mshift(eta(:,:,:),xdim) + pshift(eta(:,:,:),xdim) &
-                        +mshift(eta(:,:,:),ydim) + pshift(eta(:,:,:),ydim) &
-                        +dble(eta_scale)*eta(:,:,:))/(4.+dble(eta_scale))
+            eta(:,:,:) = (mshift(eta(:,:,:),xdim) + pshift(eta(:,:,:),xdim) &
+                         +mshift(eta(:,:,:),ydim) + pshift(eta(:,:,:),ydim) &
+                         +dble(eta_scale)*eta(:,:,:))*d_eta_factor
          endwhere
       endif
 
@@ -234,13 +236,8 @@ module resistivity
                       *wb(is:ie,js:je,ks:ke)+small) ))
 #endif /* !ISO */
 
-      if (ici .eq. icz) then
-         eta(:,:,:)=0.5*(eta(:,:,:)+pshift(eta(:,:,:),zdim))
-      elseif (ici .eq. icy) then
-         eta(:,:,:)=0.5*(eta(:,:,:)+pshift(eta(:,:,:),ydim))
-      elseif (ici .eq. icx) then
-         eta(:,:,:)=0.5*(eta(:,:,:)+pshift(eta(:,:,:),xdim))
-      endif
+! icx = xdim = 1, icy = ydim = 2, icz = zdim = 3
+      eta(:,:,:)=0.5*(eta(:,:,:)+pshift(eta(:,:,:),ici))
 
       return
 
@@ -278,26 +275,26 @@ module resistivity
    subroutine tvdd(ibi,ici,n)
       use arrays,    only: b, wcu
       use func,      only: mshift, pshift
-      use grid,      only: nx, ny, nz, dxmn, dl
+      use grid,      only: nx, ny, nz, dxmn, idl
       use mpisetup,  only: dt
 
       implicit none
-      real    :: di
+      real    :: idi
       integer :: ibi,ici,n
 
 
-      di = dl(n)
+      idi = idl(n)
       eta = 0.0
 
       call compute_resist(eta,ici)
 
 ! HALF STEP
-      w(:,:,:) = (b(ibi,:,:,:)-mshift(b(ibi,:,:,:),n))/di
+      w(:,:,:) = (b(ibi,:,:,:)-mshift(b(ibi,:,:,:),n))*idi
       w  = eta*w
-      b1 = b(ibi,:,:,:)+0.5*(pshift(w,n)-w)*dt/di
+      b1 = b(ibi,:,:,:)+0.5*(pshift(w,n)-w)*dt*idi
 
 ! FULL STEP
-      w(:,:,:) = (b1(:,:,:)-mshift(b1(:,:,:),n))/di
+      w(:,:,:) = (b1(:,:,:)-mshift(b1(:,:,:),n))*idi
       w  = eta*w
       wp = 0.5*(pshift(w,n)-w)
       wm = 0.5*(w-mshift(w,n))
