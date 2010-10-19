@@ -126,7 +126,7 @@ module initproblem
 #ifndef ISO
       use initionized,  only: ieni, gamma_ion
       use mpisetup,     only: smallei
-#endif /* ISO */
+#endif /* !ISO */
       implicit none
 
       integer  :: i,j,k

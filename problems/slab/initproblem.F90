@@ -98,7 +98,7 @@ module initproblem
 #ifndef ISO
       use initionized,  only: ieni, gamma_ion
       use mpisetup,     only: smallei
-#endif /* ISO */
+#endif /* !ISO */
       use shear,        only: qshear, omega
       implicit none
 
