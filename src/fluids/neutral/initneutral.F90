@@ -127,41 +127,51 @@ module initneutral
 
   end subroutine init_neutral
 
+   subroutine neutral_index(nvar)
+      use fluidtypes,   only: var_numbers
+      use diagnostics,  only: my_allocate
+      implicit none
+      type(var_numbers), intent(inout) :: nvar
 
+      nvar%neu%beg    = nvar%all + 1
 
-  subroutine neutral_index(nvar,nvar_neu)
+      idnn = nvar%all + 1
+      imxn = nvar%all + 2
+      imyn = nvar%all + 3
+      imzn = nvar%all + 4
 
-    implicit none
-    integer :: nvar, nvar_neu
+      nvar%neu%all  = 4
+      nvar%all      = imzn
+#ifndef ISO
+      ienn          = imzn + 1
+      nvar%all      = nvar%all + 1
+      nvar%neu%all  = nvar%neu%all +1
+#endif /* !ISO */
 
+      call my_allocate(iarr_neu,       [nvar%neu%all], "iarr_neu")
+      call my_allocate(iarr_neu_swpx,  [nvar%neu%all], "iarr_neu_swpx")
+      call my_allocate(iarr_neu_swpy,  [nvar%neu%all], "iarr_neu_swpy")
+      call my_allocate(iarr_neu_swpz,  [nvar%neu%all], "iarr_neu_swpz")
 
-      idnn = nvar + 1
-      imxn = nvar + 2
-      imyn = nvar + 3
-      imzn = nvar + 4
+      iarr_neu(1:4)      = [idnn,imxn,imyn,imzn]
+      iarr_neu_swpx(1:4) = [idnn,imxn,imyn,imzn]
+      iarr_neu_swpy(1:4) = [idnn,imyn,imxn,imzn]
+      iarr_neu_swpz(1:4) = [idnn,imzn,imyn,imxn]
 
-#ifdef ISO
-      nvar_neu      = 4
-      nvar          = imzn
+#ifndef ISO
+      iarr_neu(5)      = ienn
+      iarr_neu_swpx(5) = ienn
+      iarr_neu_swpy(5) = ienn
+      iarr_neu_swpz(5) = ienn
 
-      allocate(iarr_neu(nvar_neu),iarr_neu_swpx(nvar_neu), iarr_neu_swpy(nvar_neu), iarr_neu_swpz(nvar_neu))
-
-      iarr_neu      = [idnn,imxn,imyn,imzn]
-      iarr_neu_swpx = [idnn,imxn,imyn,imzn]
-      iarr_neu_swpy = [idnn,imyn,imxn,imzn]
-      iarr_neu_swpz = [idnn,imzn,imyn,imxn]
-#else /* ISO */
-      ienn          = nvar + 5
-      nvar_neu      = 5
-      nvar          = ienn
-
-      allocate(iarr_neu(nvar_neu),iarr_neu_swpx(nvar_neu), iarr_neu_swpy(nvar_neu), iarr_neu_swpz(nvar_neu))
-
-      iarr_neu      = [idnn,imxn,imyn,imzn,ienn]
-      iarr_neu_swpx = [idnn,imxn,imyn,imzn,ienn]
-      iarr_neu_swpy = [idnn,imyn,imxn,imzn,ienn]
-      iarr_neu_swpz = [idnn,imzn,imyn,imxn,ienn]
+      nvar%adiab = nvar%adiab + 1
 #endif /* ISO */
+
+      nvar%neu%end    = nvar%all
+      nvar%components = nvar%components + 1
+      nvar%fluids     = nvar%fluids + 1
+      nvar%neu%pos    = nvar%components
+      if (selfgrav_neu)  nvar%fluids_sg = nvar%fluids_sg + 1
 
    end subroutine neutral_index
 
