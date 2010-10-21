@@ -119,7 +119,7 @@ module grid
       cgrid%nxb = nxb; cgrid%nyb = nyb; cgrid%nzb = nzb
       cgrid%nxt = nxt; cgrid%nyt = nyt; cgrid%nzt = nzt
       cgrid%is = is; cgrid%js = js; cgrid%ks = ks
-      cgrid%ie = ie; cgrid%je = je; cgrid%ks = ke
+      cgrid%ie = ie; cgrid%je = je; cgrid%ke = ke
 
       cgrid%xmin = xmin; cgrid%ymin = ymin; cgrid%zmin = zmin
       cgrid%xmax = xmax; cgrid%ymax = ymax; cgrid%zmax = zmax
