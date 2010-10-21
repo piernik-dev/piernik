@@ -64,13 +64,9 @@ module fluidindex
    integer, parameter  :: imz = 4     !< position of z-mom. in the vector of conserv. variables for single fluid
    integer, parameter  :: ien = 5     !< position of energy density in the vector of conserv. variables for single fluid (only for adiabatic fluids)
 
-#ifdef IONIZED
-#ifdef RESISTIVE
    integer, parameter  :: icx = 1     !< index of x-component of current density
    integer, parameter  :: icy = 2     !< index of y-component of current density
    integer, parameter  :: icz = 3     !< index of z-component of current density
-#endif /* RESISTIVE */
-#endif /* IONIZED */
 
    integer, allocatable, dimension(:) :: iarr_all_dn   !< array of indexes pointing to mass densities of all fluids
    integer, allocatable, dimension(:) :: iarr_all_sg   !< array of indexes pointing to mass densities of all selfgravitating fluids
@@ -85,12 +81,10 @@ module fluidindex
    integer, allocatable, dimension(:) :: iarr_all_swpy !< array (size = nvar) of all fluid indexes with \a x and \a y components of mom. interchanged
    integer, allocatable, dimension(:) :: iarr_all_swpz !< array (size = nvar) of all fluid indexes with \a x and \a z components of mom. interchanged
 
-#ifdef IONIZED
    integer, allocatable, dimension(:) :: iarr_all_mag  !< array (size = nmag) of all magnetic field components
    integer, allocatable, dimension(:) :: iarr_mag_swpx !< array (size = nmag) of all mag. field indexes in the original order (same as iarr_all_mag)
    integer, allocatable, dimension(:) :: iarr_mag_swpy !< array (size = nmag) of all mag. field indexes \a x and \a z components interchanged
    integer, allocatable, dimension(:) :: iarr_mag_swpz !< array (size = nmag) of all mag. field indexes \a x and \a z components interchanged
-#endif /* IONIZED */
 
    integer :: i_sg                                     !< index denoting position of the selfgravitating fluid in the row of fluids - should be an iarr_sg !
 
@@ -127,7 +121,6 @@ module fluidindex
 #ifdef COSM_RAYS
       use initcosmicrays, only: iarr_crn, iarr_cre, iarr_crs, cosmicray_index
 #endif /* COSM_RAYS */
-
 
       implicit none
 
@@ -292,32 +285,27 @@ module fluidindex
    end subroutine fluid_index
 
    subroutine cleanup_fluidindex
-
+      use diagnostics, only: my_deallocate
       implicit none
 
-#ifdef IONIZED
-      deallocate(iarr_mag_swpx, iarr_mag_swpy, iarr_mag_swpz, iarr_all_mag)
-#endif /* IONIZED */
-      deallocate(iarr_all_swpx, iarr_all_swpy, iarr_all_swpz)
-      deallocate(iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz)
-      deallocate(iarr_all_sg)
-#ifndef ISO
-      deallocate(iarr_all_en)
-#else /* !ISO */
-      deallocate(iarr_all_en)
-#endif /* !ISO */
+      call my_deallocate(iarr_mag_swpx)
+      call my_deallocate(iarr_mag_swpy)
+      call my_deallocate(iarr_mag_swpz)
+      call my_deallocate(iarr_all_swpx)
+      call my_deallocate(iarr_all_swpy)
+      call my_deallocate(iarr_all_swpz)
+      call my_deallocate(iarr_all_mag)
+      call my_deallocate(iarr_all_dn)
+      call my_deallocate(iarr_all_mx)
+      call my_deallocate(iarr_all_my)
+      call my_deallocate(iarr_all_mz)
+      call my_deallocate(iarr_all_sg)
+      call my_deallocate(iarr_all_en)
 
-#ifdef COSM_RAYS
-      deallocate(iarr_all_crn)
-      deallocate(iarr_all_cre)
-      deallocate(iarr_all_crs)
-#else /* COSM_RAYS */
-      deallocate(iarr_all_crn)
-      deallocate(iarr_all_cre)
-      deallocate(iarr_all_crs)
-#endif /* COSM_RAYS */
+      call my_deallocate(iarr_all_crn)
+      call my_deallocate(iarr_all_cre)
+      call my_deallocate(iarr_all_crs)
 
    end subroutine cleanup_fluidindex
 
 end module fluidindex
-
