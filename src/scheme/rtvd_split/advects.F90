@@ -152,9 +152,9 @@ module advects
       do i=is,ie
         vy=0.0
         if (km == 0) then
-           vy = u(imyi,i,:,1) / u(nvar%ion%idn,i,:,1)
+           vy = u(nvar%ion%imy,i,:,1) / u(nvar%ion%idn,i,:,1)
         else
-           vy=(u(imyi,i,:,km)+u(imyi,i,:,k))/(u(nvar%ion%idn,i,:,km)+u(nvar%ion%idn,i,:,k))
+           vy=(u(nvar%ion%imy,i,:,km)+u(nvar%ion%imy,i,:,k))/(u(nvar%ion%idn,i,:,km)+u(nvar%ion%idn,i,:,k))
         endif
         vy(2:ny-1)=(vy(1:ny-2) + vy(3:ny) + 2.0*vy(2:ny-1))*0.25
         vy(1)  = vy(2)
@@ -200,9 +200,9 @@ module advects
         im=i-1
         vy=0.0
         if (im == 0) then
-           vy = u(imyi,1,:,k) / u(nvar%ion%idn,1,:,k)
+           vy = u(nvar%ion%imy,1,:,k) / u(nvar%ion%idn,1,:,k)
         else
-           vy=(u(imyi,im,:,k)+u(imyi,i,:,k))/(u(nvar%ion%idn,im,:,k)+u(nvar%ion%idn,i,:,k))
+           vy=(u(nvar%ion%imy,im,:,k)+u(nvar%ion%imy,i,:,k))/(u(nvar%ion%idn,im,:,k)+u(nvar%ion%idn,i,:,k))
         endif
         vy(2:ny-1)=(vy(1:ny-2) + vy(3:ny) + 2.0*vy(2:ny-1))*0.25
         vy(1)  = vy(2)

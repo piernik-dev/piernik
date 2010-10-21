@@ -47,9 +47,6 @@ contains
 #ifdef SHEAR
     use shear,          only: unshear_fft
 #endif /* SHEAR */
-#ifdef IONIZED
-    use initionized,    only: idni
-#endif /* IONIZED */
 
     implicit none
     real, dimension(:,:,:), intent(in)  :: dens
