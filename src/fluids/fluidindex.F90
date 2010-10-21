@@ -51,8 +51,6 @@ module fluidindex
 
    type(var_numbers),save :: nvar
 
-   type(indx),save     :: ind         !< derived type variable storing all fluid-, component- and magnetic-field-indexes
-
    integer, parameter  :: nmag = 3    !< number of magnetic field components
 
    integer, parameter  :: ibx = 1     !< index of x-component of magnetic field
@@ -174,7 +172,6 @@ module fluidindex
       iarr_mag_swpy = [iby,ibx,ibz]
       iarr_mag_swpz = [ibz,iby,ibx]
       iarr_all_mag  = [ibx,iby,ibz]
-      ind%bx = ibx; ind%by = iby; ind%bz = ibz
 #endif /* IONIZED */
 
 #ifdef IONIZED
@@ -187,12 +184,12 @@ module fluidindex
          i_sg = i_sg + 1
          iarr_all_sg(i_sg) = idni
       endif
-      iarr_all_dn(nvar%ion%pos)      = idni ; ind%dni = idni
-      iarr_all_mx(nvar%ion%pos)      = imxi ; ind%mxi = imxi
-      iarr_all_my(nvar%ion%pos)      = imyi ; ind%myi = imyi
-      iarr_all_mz(nvar%ion%pos)      = imzi ; ind%mzi = imzi
+      iarr_all_dn(nvar%ion%pos)      = idni
+      iarr_all_mx(nvar%ion%pos)      = imxi
+      iarr_all_my(nvar%ion%pos)      = imyi
+      iarr_all_mz(nvar%ion%pos)      = imzi
 #ifndef ISO
-      iarr_all_en(nvar%ion%pos)      = ieni ; ind%eni = ieni
+      iarr_all_en(nvar%ion%pos)      = ieni
 #endif /* !ISO */
 #endif /* IONIZED */
 
@@ -206,12 +203,12 @@ module fluidindex
          i_sg = i_sg + 1
          iarr_all_sg(i_sg) = idnn
       endif
-      iarr_all_dn(nvar%neu%pos)      = idnn ; ind%dnn = idnn
-      iarr_all_mx(nvar%neu%pos)      = imxn ; ind%mxn = imxn
-      iarr_all_my(nvar%neu%pos)      = imyn ; ind%myn = imyn
-      iarr_all_mz(nvar%neu%pos)      = imzn ; ind%mzn = imzn
+      iarr_all_dn(nvar%neu%pos)      = idnn
+      iarr_all_mx(nvar%neu%pos)      = imxn
+      iarr_all_my(nvar%neu%pos)      = imyn
+      iarr_all_mz(nvar%neu%pos)      = imzn
 #ifndef ISO
-      iarr_all_en(nvar%neu%pos)      = ienn ; ind%enn = ienn
+      iarr_all_en(nvar%neu%pos)      = ienn
 #endif /* !ISO */
 #endif /* NEUTRAL */
 
@@ -225,10 +222,10 @@ module fluidindex
          i_sg = i_sg + 1
          iarr_all_sg(i_sg) = idnd
       endif
-      iarr_all_dn(nvar%dst%pos)      = idnd ; ind%dnd = idnd
-      iarr_all_mx(nvar%dst%pos)      = imxd ; ind%mxd = imxd
-      iarr_all_my(nvar%dst%pos)      = imyd ; ind%myd = imyd
-      iarr_all_mz(nvar%dst%pos)      = imzd ; ind%mzd = imzd
+      iarr_all_dn(nvar%dst%pos)      = idnd
+      iarr_all_mx(nvar%dst%pos)      = imxd
+      iarr_all_my(nvar%dst%pos)      = imyd
+      iarr_all_mz(nvar%dst%pos)      = imzd
 #endif /* DUST */
 
 #ifdef COSM_RAYS
@@ -242,8 +239,6 @@ module fluidindex
       iarr_all_crn(1:nvar%crn%all) = iarr_crn
       iarr_all_cre(1:nvar%cre%all) = iarr_cre
       iarr_all_crs(1:nvar%crs%all) = iarr_crs
-
-      ind%arr_crs => iarr_all_crs
 
 #endif /* COSM_RAYS */
 

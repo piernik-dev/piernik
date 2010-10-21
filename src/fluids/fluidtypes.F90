@@ -56,26 +56,22 @@ module fluidtypes
       integer :: components  = 0     !< number of components, such as CRs, tracers, magnetic helicity (in future), whose formal description does not involve [???]
       integer :: fluids_sg   = 0     !< number of selfgravitating fluids (ionized gas, neutral gas, dust)
 
-#ifdef IONIZED
       type(component_fluid) :: ion         !< numbers of variables for the ionized fluid
       integer, allocatable, dimension(:)  :: iarr_ion
       integer, allocatable, dimension(:)  :: iarr_ion_swpx, iarr_ion_swpy, iarr_ion_swpz
-#endif /* IONIZED */
-#ifdef NEUTRAL
+
       type(component_fluid) :: neu         !< numbers of variables for the neutral fluid
       integer, allocatable, dimension(:)  :: iarr_neu
       integer, allocatable, dimension(:)  :: iarr_neu_swpx, iarr_neu_swpy, iarr_neu_swpz
-#endif /* NEUTRAL */
-#ifdef DUST
+
       type(component_fluid) :: dst         !< numbers of variables for the dust fluid
       integer, allocatable, dimension(:)  :: iarr_dst
       integer, allocatable, dimension(:)  :: iarr_dst_swpx, iarr_dst_swpy, iarr_dst_swpz
-#endif /* DUST */
-#ifdef COSM_RAYS
+
       type(component) :: crs         !< numbers of variables in all cosmic ray components
       type(component) :: crn         !< numbers of variables in cosmic ray nuclear components
       type(component) :: cre         !< numbers of variables in cosmic ray electron components
-#endif /* COSM_RAYS */
+
    end type var_numbers
 
 end module fluidtypes

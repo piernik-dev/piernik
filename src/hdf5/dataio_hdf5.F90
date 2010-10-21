@@ -288,7 +288,7 @@ module dataio_hdf5
 #ifdef GRAV
       use arrays,        only: gpot
 #endif /* GRAV */
-      use fluidindex,    only: ind
+      use fluidindex,    only: nvar, ibx, iby, ibz
 #ifdef COSM_RAYS
       use fluidindex,    only: iarr_all_crs
 #endif /* COSM_RAYS */
@@ -309,101 +309,101 @@ module dataio_hdf5
       ierrh = 0
       select case (var)
          case ("dend")
-            if (ij=="yz") tab(:,:) = u(ind%dnd,xn,nb+1:nyb+nb,nb+1:nzb+nb)
-            if (ij=="xz") tab(:,:) = u(ind%dnd,nb+1:nxb+nb,xn,nb+1:nzb+nb)
-            if (ij=="xy") tab(:,:) = u(ind%dnd,nb+1:nxb+nb,nb+1:nyb+nb,xn)
+            if (ij=="yz") tab(:,:) = u(nvar%dst%idn,xn,nb+1:nyb+nb,nb+1:nzb+nb)
+            if (ij=="xz") tab(:,:) = u(nvar%dst%idn,nb+1:nxb+nb,xn,nb+1:nzb+nb)
+            if (ij=="xy") tab(:,:) = u(nvar%dst%idn,nb+1:nxb+nb,nb+1:nyb+nb,xn)
          case ("denn")
-            if (ij=="yz") tab(:,:) = u(ind%dnn,xn,nb+1:nyb+nb,nb+1:nzb+nb)
-            if (ij=="xz") tab(:,:) = u(ind%dnn,nb+1:nxb+nb,xn,nb+1:nzb+nb)
-            if (ij=="xy") tab(:,:) = u(ind%dnn,nb+1:nxb+nb,nb+1:nyb+nb,xn)
+            if (ij=="yz") tab(:,:) = u(nvar%neu%idn,xn,nb+1:nyb+nb,nb+1:nzb+nb)
+            if (ij=="xz") tab(:,:) = u(nvar%neu%idn,nb+1:nxb+nb,xn,nb+1:nzb+nb)
+            if (ij=="xy") tab(:,:) = u(nvar%neu%idn,nb+1:nxb+nb,nb+1:nyb+nb,xn)
          case ("deni")
-            if (ij=="yz") tab(:,:) = u(ind%dni,xn,nb+1:nyb+nb,nb+1:nzb+nb)
-            if (ij=="xz") tab(:,:) = u(ind%dni,nb+1:nxb+nb,xn,nb+1:nzb+nb)
-            if (ij=="xy") tab(:,:) = u(ind%dni,nb+1:nxb+nb,nb+1:nyb+nb,xn)
+            if (ij=="yz") tab(:,:) = u(nvar%ion%idn,xn,nb+1:nyb+nb,nb+1:nzb+nb)
+            if (ij=="xz") tab(:,:) = u(nvar%ion%idn,nb+1:nxb+nb,xn,nb+1:nzb+nb)
+            if (ij=="xy") tab(:,:) = u(nvar%ion%idn,nb+1:nxb+nb,nb+1:nyb+nb,xn)
          case ("vlxd")
-            if (ij=="yz") tab(:,:) = u(ind%mxd,xn,nb+1:nyb+nb,nb+1:nzb+nb) / &
-                           u(ind%dnd,xn,nb+1:nyb+nb,nb+1:nzb+nb)
-            if (ij=="xz") tab(:,:) = u(ind%mxd,nb+1:nxb+nb,xn,nb+1:nzb+nb) / &
-                           u(ind%dnd,nb+1:nxb+nb,xn,nb+1:nzb+nb)
-            if (ij=="xy") tab(:,:) = u(ind%mxd,nb+1:nxb+nb,nb+1:nyb+nb,xn) / &
-                           u(ind%dnd,nb+1:nxb+nb,nb+1:nyb+nb,xn)
+            if (ij=="yz") tab(:,:) = u(nvar%dst%imx,xn,nb+1:nyb+nb,nb+1:nzb+nb) / &
+                           u(nvar%dst%idn,xn,nb+1:nyb+nb,nb+1:nzb+nb)
+            if (ij=="xz") tab(:,:) = u(nvar%dst%imx,nb+1:nxb+nb,xn,nb+1:nzb+nb) / &
+                           u(nvar%dst%idn,nb+1:nxb+nb,xn,nb+1:nzb+nb)
+            if (ij=="xy") tab(:,:) = u(nvar%dst%imx,nb+1:nxb+nb,nb+1:nyb+nb,xn) / &
+                           u(nvar%dst%idn,nb+1:nxb+nb,nb+1:nyb+nb,xn)
          case ("vlxn")
-            if (ij=="yz") tab(:,:) = u(ind%mxn,xn,nb+1:nyb+nb,nb+1:nzb+nb) / &
-                           u(ind%dnn,xn,nb+1:nyb+nb,nb+1:nzb+nb)
-            if (ij=="xz") tab(:,:) = u(ind%mxn,nb+1:nxb+nb,xn,nb+1:nzb+nb) / &
-                           u(ind%dnn,nb+1:nxb+nb,xn,nb+1:nzb+nb)
-            if (ij=="xy") tab(:,:) = u(ind%mxn,nb+1:nxb+nb,nb+1:nyb+nb,xn) / &
-                           u(ind%dnn,nb+1:nxb+nb,nb+1:nyb+nb,xn)
+            if (ij=="yz") tab(:,:) = u(nvar%neu%imx,xn,nb+1:nyb+nb,nb+1:nzb+nb) / &
+                           u(nvar%neu%idn,xn,nb+1:nyb+nb,nb+1:nzb+nb)
+            if (ij=="xz") tab(:,:) = u(nvar%neu%imx,nb+1:nxb+nb,xn,nb+1:nzb+nb) / &
+                           u(nvar%neu%idn,nb+1:nxb+nb,xn,nb+1:nzb+nb)
+            if (ij=="xy") tab(:,:) = u(nvar%neu%imx,nb+1:nxb+nb,nb+1:nyb+nb,xn) / &
+                           u(nvar%neu%idn,nb+1:nxb+nb,nb+1:nyb+nb,xn)
          case ("vlxi")
-            if (ij=="yz") tab(:,:) = u(ind%mxi,xn,nb+1:nyb+nb,nb+1:nzb+nb) / &
-                           u(ind%dni,xn,nb+1:nyb+nb,nb+1:nzb+nb)
-            if (ij=="xz") tab(:,:) = u(ind%mxi,nb+1:nxb+nb,xn,nb+1:nzb+nb) / &
-                           u(ind%dni,nb+1:nxb+nb,xn,nb+1:nzb+nb)
-            if (ij=="xy") tab(:,:) = u(ind%mxi,nb+1:nxb+nb,nb+1:nyb+nb,xn) / &
-                           u(ind%dni,nb+1:nxb+nb,nb+1:nyb+nb,xn)
+            if (ij=="yz") tab(:,:) = u(nvar%ion%imx,xn,nb+1:nyb+nb,nb+1:nzb+nb) / &
+                           u(nvar%ion%idn,xn,nb+1:nyb+nb,nb+1:nzb+nb)
+            if (ij=="xz") tab(:,:) = u(nvar%ion%imx,nb+1:nxb+nb,xn,nb+1:nzb+nb) / &
+                           u(nvar%ion%idn,nb+1:nxb+nb,xn,nb+1:nzb+nb)
+            if (ij=="xy") tab(:,:) = u(nvar%ion%imx,nb+1:nxb+nb,nb+1:nyb+nb,xn) / &
+                           u(nvar%ion%idn,nb+1:nxb+nb,nb+1:nyb+nb,xn)
          case ("vlyd")
-            if (ij=="yz") tab(:,:) = u(ind%myd,xn,nb+1:nyb+nb,nb+1:nzb+nb) / &
-                           u(ind%dnd,xn,nb+1:nyb+nb,nb+1:nzb+nb)
-            if (ij=="xz") tab(:,:) = u(ind%myd,nb+1:nxb+nb,xn,nb+1:nzb+nb) / &
-                           u(ind%dnd,nb+1:nxb+nb,xn,nb+1:nzb+nb)
-            if (ij=="xy") tab(:,:) = u(ind%myd,nb+1:nxb+nb,nb+1:nyb+nb,xn) / &
-                           u(ind%dnd,nb+1:nxb+nb,nb+1:nyb+nb,xn)
+            if (ij=="yz") tab(:,:) = u(nvar%dst%imy,xn,nb+1:nyb+nb,nb+1:nzb+nb) / &
+                           u(nvar%dst%idn,xn,nb+1:nyb+nb,nb+1:nzb+nb)
+            if (ij=="xz") tab(:,:) = u(nvar%dst%imy,nb+1:nxb+nb,xn,nb+1:nzb+nb) / &
+                           u(nvar%dst%idn,nb+1:nxb+nb,xn,nb+1:nzb+nb)
+            if (ij=="xy") tab(:,:) = u(nvar%dst%imy,nb+1:nxb+nb,nb+1:nyb+nb,xn) / &
+                           u(nvar%dst%idn,nb+1:nxb+nb,nb+1:nyb+nb,xn)
          case ("vlyn")
-            if (ij=="yz") tab(:,:) = u(ind%myn,xn,nb+1:nyb+nb,nb+1:nzb+nb) / &
-                           u(ind%dnn,xn,nb+1:nyb+nb,nb+1:nzb+nb)
-            if (ij=="xz") tab(:,:) = u(ind%myn,nb+1:nxb+nb,xn,nb+1:nzb+nb) / &
-                           u(ind%dnn,nb+1:nxb+nb,xn,nb+1:nzb+nb)
-            if (ij=="xy") tab(:,:) = u(ind%myn,nb+1:nxb+nb,nb+1:nyb+nb,xn) / &
-                           u(ind%dnn,nb+1:nxb+nb,nb+1:nyb+nb,xn)
+            if (ij=="yz") tab(:,:) = u(nvar%neu%imy,xn,nb+1:nyb+nb,nb+1:nzb+nb) / &
+                           u(nvar%neu%idn,xn,nb+1:nyb+nb,nb+1:nzb+nb)
+            if (ij=="xz") tab(:,:) = u(nvar%neu%imy,nb+1:nxb+nb,xn,nb+1:nzb+nb) / &
+                           u(nvar%neu%idn,nb+1:nxb+nb,xn,nb+1:nzb+nb)
+            if (ij=="xy") tab(:,:) = u(nvar%neu%imy,nb+1:nxb+nb,nb+1:nyb+nb,xn) / &
+                           u(nvar%neu%idn,nb+1:nxb+nb,nb+1:nyb+nb,xn)
          case ("vlyi")
-            if (ij=="yz") tab(:,:) = u(ind%myi,xn,nb+1:nyb+nb,nb+1:nzb+nb) / &
-                           u(ind%dni,xn,nb+1:nyb+nb,nb+1:nzb+nb)
-            if (ij=="xz") tab(:,:) = u(ind%myi,nb+1:nxb+nb,xn,nb+1:nzb+nb) / &
-                           u(ind%dni,nb+1:nxb+nb,xn,nb+1:nzb+nb)
-            if (ij=="xy") tab(:,:) = u(ind%myi,nb+1:nxb+nb,nb+1:nyb+nb,xn) / &
-                           u(ind%dni,nb+1:nxb+nb,nb+1:nyb+nb,xn)
+            if (ij=="yz") tab(:,:) = u(nvar%ion%imy,xn,nb+1:nyb+nb,nb+1:nzb+nb) / &
+                           u(nvar%ion%idn,xn,nb+1:nyb+nb,nb+1:nzb+nb)
+            if (ij=="xz") tab(:,:) = u(nvar%ion%imy,nb+1:nxb+nb,xn,nb+1:nzb+nb) / &
+                           u(nvar%ion%idn,nb+1:nxb+nb,xn,nb+1:nzb+nb)
+            if (ij=="xy") tab(:,:) = u(nvar%ion%imy,nb+1:nxb+nb,nb+1:nyb+nb,xn) / &
+                           u(nvar%ion%idn,nb+1:nxb+nb,nb+1:nyb+nb,xn)
          case ("vlzd")
-            if (ij=="yz") tab(:,:) = u(ind%mzd,xn,nb+1:nyb+nb,nb+1:nzb+nb) / &
-                           u(ind%dnd,xn,nb+1:nyb+nb,nb+1:nzb+nb)
-            if (ij=="xz") tab(:,:) = u(ind%mzd,nb+1:nxb+nb,xn,nb+1:nzb+nb) / &
-                           u(ind%dnd,nb+1:nxb+nb,xn,nb+1:nzb+nb)
-            if (ij=="xy") tab(:,:) = u(ind%mzd,nb+1:nxb+nb,nb+1:nyb+nb,xn) / &
-                           u(ind%dnd,nb+1:nxb+nb,nb+1:nyb+nb,xn)
+            if (ij=="yz") tab(:,:) = u(nvar%dst%imz,xn,nb+1:nyb+nb,nb+1:nzb+nb) / &
+                           u(nvar%dst%idn,xn,nb+1:nyb+nb,nb+1:nzb+nb)
+            if (ij=="xz") tab(:,:) = u(nvar%dst%imz,nb+1:nxb+nb,xn,nb+1:nzb+nb) / &
+                           u(nvar%dst%idn,nb+1:nxb+nb,xn,nb+1:nzb+nb)
+            if (ij=="xy") tab(:,:) = u(nvar%dst%imz,nb+1:nxb+nb,nb+1:nyb+nb,xn) / &
+                           u(nvar%dst%idn,nb+1:nxb+nb,nb+1:nyb+nb,xn)
          case ("vlzn")
-            if (ij=="yz") tab(:,:) = u(ind%mzn,xn,nb+1:nyb+nb,nb+1:nzb+nb) / &
-                           u(ind%dnn,xn,nb+1:nyb+nb,nb+1:nzb+nb)
-            if (ij=="xz") tab(:,:) = u(ind%mzn,nb+1:nxb+nb,xn,nb+1:nzb+nb) / &
-                           u(ind%dnn,nb+1:nxb+nb,xn,nb+1:nzb+nb)
-            if (ij=="xy") tab(:,:) = u(ind%mzn,nb+1:nxb+nb,nb+1:nyb+nb,xn) / &
-                           u(ind%dnn,nb+1:nxb+nb,nb+1:nyb+nb,xn)
+            if (ij=="yz") tab(:,:) = u(nvar%neu%imz,xn,nb+1:nyb+nb,nb+1:nzb+nb) / &
+                           u(nvar%neu%idn,xn,nb+1:nyb+nb,nb+1:nzb+nb)
+            if (ij=="xz") tab(:,:) = u(nvar%neu%imz,nb+1:nxb+nb,xn,nb+1:nzb+nb) / &
+                           u(nvar%neu%idn,nb+1:nxb+nb,xn,nb+1:nzb+nb)
+            if (ij=="xy") tab(:,:) = u(nvar%neu%imz,nb+1:nxb+nb,nb+1:nyb+nb,xn) / &
+                           u(nvar%neu%idn,nb+1:nxb+nb,nb+1:nyb+nb,xn)
          case ("vlzi")
-            if (ij=="yz") tab(:,:) = u(ind%mzi,xn,nb+1:nyb+nb,nb+1:nzb+nb) / &
-                           u(ind%dni,xn,nb+1:nyb+nb,nb+1:nzb+nb)
-            if (ij=="xz") tab(:,:) = u(ind%mzi,nb+1:nxb+nb,xn,nb+1:nzb+nb) / &
-                           u(ind%dni,nb+1:nxb+nb,xn,nb+1:nzb+nb)
-            if (ij=="xy") tab(:,:) = u(ind%mzi,nb+1:nxb+nb,nb+1:nyb+nb,xn) / &
-                           u(ind%dni,nb+1:nxb+nb,nb+1:nyb+nb,xn)
+            if (ij=="yz") tab(:,:) = u(nvar%ion%imz,xn,nb+1:nyb+nb,nb+1:nzb+nb) / &
+                           u(nvar%ion%idn,xn,nb+1:nyb+nb,nb+1:nzb+nb)
+            if (ij=="xz") tab(:,:) = u(nvar%ion%imz,nb+1:nxb+nb,xn,nb+1:nzb+nb) / &
+                           u(nvar%ion%idn,nb+1:nxb+nb,xn,nb+1:nzb+nb)
+            if (ij=="xy") tab(:,:) = u(nvar%ion%imz,nb+1:nxb+nb,nb+1:nyb+nb,xn) / &
+                           u(nvar%ion%idn,nb+1:nxb+nb,nb+1:nyb+nb,xn)
          case ("enen")
 #ifndef ISO
-            if (ij=="yz") tab(:,:) = u(ind%enn,xn,nb+1:nyb+nb,nb+1:nzb+nb)
-            if (ij=="xz") tab(:,:) = u(ind%enn,nb+1:nxb+nb,xn,nb+1:nzb+nb)
-            if (ij=="xy") tab(:,:) = u(ind%enn,nb+1:nxb+nb,nb+1:nyb+nb,xn)
+            if (ij=="yz") tab(:,:) = u(nvar%neu%ien,xn,nb+1:nyb+nb,nb+1:nzb+nb)
+            if (ij=="xz") tab(:,:) = u(nvar%neu%ien,nb+1:nxb+nb,xn,nb+1:nzb+nb)
+            if (ij=="xy") tab(:,:) = u(nvar%neu%ien,nb+1:nxb+nb,nb+1:nyb+nb,xn)
 #else /* !ISO */
             if (ij=="yz") tab(:,:) = 0.5 * (                     &
-                          u(ind%mxn,xn,nb+1:nyb+nb,nb+1:nzb+nb)**2 &
-                        + u(ind%myn,xn,nb+1:nyb+nb,nb+1:nzb+nb)**2 &
-                        + u(ind%mzn,xn,nb+1:nyb+nb,nb+1:nzb+nb)**2) / &
-                             u(ind%dnn,xn,nb+1:nyb+nb,nb+1:nzb+nb)
+                          u(nvar%neu%imx,xn,nb+1:nyb+nb,nb+1:nzb+nb)**2 &
+                        + u(nvar%neu%imy,xn,nb+1:nyb+nb,nb+1:nzb+nb)**2 &
+                        + u(nvar%neu%imz,xn,nb+1:nyb+nb,nb+1:nzb+nb)**2) / &
+                             u(nvar%neu%idn,xn,nb+1:nyb+nb,nb+1:nzb+nb)
             if (ij=="xz") tab(:,:) = 0.5 * (                     &
-                          u(ind%mxn,nb+1:nxb+nb,xn,nb+1:nzb+nb)**2 &
-                         +u(ind%myn,nb+1:nxb+nb,xn,nb+1:nzb+nb)**2 &
-                         +u(ind%mzn,nb+1:nxb+nb,xn,nb+1:nzb+nb)**2) / &
-                             u(ind%dnn,nb+1:nxb+nb,xn,nb+1:nzb+nb)
+                          u(nvar%neu%imx,nb+1:nxb+nb,xn,nb+1:nzb+nb)**2 &
+                         +u(nvar%neu%imy,nb+1:nxb+nb,xn,nb+1:nzb+nb)**2 &
+                         +u(nvar%neu%imz,nb+1:nxb+nb,xn,nb+1:nzb+nb)**2) / &
+                             u(nvar%neu%idn,nb+1:nxb+nb,xn,nb+1:nzb+nb)
             if (ij=="xy") tab(:,:) = 0.5 * (                     &
-                          u(ind%mxn,nb+1:nxb+nb,nb+1:nyb+nb,xn)**2 &
-                         +u(ind%myn,nb+1:nxb+nb,nb+1:nyb+nb,xn)**2 &
-                         +u(ind%mzn,nb+1:nxb+nb,nb+1:nyb+nb,xn)**2) / &
-                             u(ind%dnn,nb+1:nxb+nb,nb+1:nyb+nb,xn)
+                          u(nvar%neu%imx,nb+1:nxb+nb,nb+1:nyb+nb,xn)**2 &
+                         +u(nvar%neu%imy,nb+1:nxb+nb,nb+1:nyb+nb,xn)**2 &
+                         +u(nvar%neu%imz,nb+1:nxb+nb,nb+1:nyb+nb,xn)**2) / &
+                             u(nvar%neu%idn,nb+1:nxb+nb,nb+1:nyb+nb,xn)
 #endif /* !ISO */
          case ('prei')
 #ifndef ISO
@@ -415,9 +415,9 @@ module dataio_hdf5
          case ("pren")
 #ifndef ISO
             if (ij=="xy") then
-               tab(:,:) = real( u(ind%enn,nb+1:nxb+nb,nb+1:nyb+nb,xn) - &
-                 0.5 *( u(ind%mxn,nb+1:nxb+nb,nb+1:nyb+nb,xn)**2 + u(ind%myn,nb+1:nxb+nb,nb+1:nyb+nb,xn)**2 + &
-                        u(ind%mzn,nb+1:nxb+nb,nb+1:nyb+nb,xn)**2 ) / u(ind%dnn,nb+1:nxb+nb,nb+1:nyb+nb,xn),4)*(gamma_neu-1.0)
+               tab(:,:) = real( u(nvar%neu%ien,nb+1:nxb+nb,nb+1:nyb+nb,xn) - &
+                 0.5 *( u(nvar%neu%imx,nb+1:nxb+nb,nb+1:nyb+nb,xn)**2 + u(nvar%neu%imy,nb+1:nxb+nb,nb+1:nyb+nb,xn)**2 + &
+                        u(nvar%neu%imz,nb+1:nxb+nb,nb+1:nyb+nb,xn)**2 ) / u(nvar%neu%idn,nb+1:nxb+nb,nb+1:nyb+nb,xn),4)*(gamma_neu-1.0)
             endif
 #else /* !ISO */
             tab = 0.0
@@ -425,39 +425,39 @@ module dataio_hdf5
 #endif /* NEUTRAL */
          case ("enei")
 #ifndef ISO
-            if (ij=="yz") tab(:,:) = u(ind%eni,xn,nb+1:nyb+nb,nb+1:nzb+nb)
-            if (ij=="xz") tab(:,:) = u(ind%eni,nb+1:nxb+nb,xn,nb+1:nzb+nb)
-            if (ij=="xy") tab(:,:) = u(ind%eni,nb+1:nxb+nb,nb+1:nyb+nb,xn)
+            if (ij=="yz") tab(:,:) = u(nvar%ion%ien,xn,nb+1:nyb+nb,nb+1:nzb+nb)
+            if (ij=="xz") tab(:,:) = u(nvar%ion%ien,nb+1:nxb+nb,xn,nb+1:nzb+nb)
+            if (ij=="xy") tab(:,:) = u(nvar%ion%ien,nb+1:nxb+nb,nb+1:nyb+nb,xn)
 #else /* !ISO */
             if (ij=="yz") tab(:,:) = 0.5 * (                     &
-                          u(ind%mxi,xn,nb+1:nyb+nb,nb+1:nzb+nb)**2 &
-                        + u(ind%myi,xn,nb+1:nyb+nb,nb+1:nzb+nb)**2 &
-                        + u(ind%mzi,xn,nb+1:nyb+nb,nb+1:nzb+nb)**2) / &
-                             u(ind%dni,xn,nb+1:nyb+nb,nb+1:nzb+nb)
+                          u(nvar%ion%imx,xn,nb+1:nyb+nb,nb+1:nzb+nb)**2 &
+                        + u(nvar%ion%imy,xn,nb+1:nyb+nb,nb+1:nzb+nb)**2 &
+                        + u(nvar%ion%imz,xn,nb+1:nyb+nb,nb+1:nzb+nb)**2) / &
+                             u(nvar%ion%idn,xn,nb+1:nyb+nb,nb+1:nzb+nb)
             if (ij=="xz") tab(:,:) = 0.5 * (                     &
-                          u(ind%mxi,nb+1:nxb+nb,xn,nb+1:nzb+nb)**2 &
-                         +u(ind%myi,nb+1:nxb+nb,xn,nb+1:nzb+nb)**2 &
-                         +u(ind%mzi,nb+1:nxb+nb,xn,nb+1:nzb+nb)**2) / &
-                             u(ind%dni,nb+1:nxb+nb,xn,nb+1:nzb+nb)
+                          u(nvar%ion%imx,nb+1:nxb+nb,xn,nb+1:nzb+nb)**2 &
+                         +u(nvar%ion%imy,nb+1:nxb+nb,xn,nb+1:nzb+nb)**2 &
+                         +u(nvar%ion%imz,nb+1:nxb+nb,xn,nb+1:nzb+nb)**2) / &
+                             u(nvar%ion%idn,nb+1:nxb+nb,xn,nb+1:nzb+nb)
             if (ij=="xy") tab(:,:) = 0.5 * (                     &
-                          u(ind%mxi,nb+1:nxb+nb,nb+1:nyb+nb,xn)**2 &
-                         +u(ind%myi,nb+1:nxb+nb,nb+1:nyb+nb,xn)**2 &
-                         +u(ind%mzi,nb+1:nxb+nb,nb+1:nyb+nb,xn)**2) / &
-                             u(ind%dni,nb+1:nxb+nb,nb+1:nyb+nb,xn)
+                          u(nvar%ion%imx,nb+1:nxb+nb,nb+1:nyb+nb,xn)**2 &
+                         +u(nvar%ion%imy,nb+1:nxb+nb,nb+1:nyb+nb,xn)**2 &
+                         +u(nvar%ion%imz,nb+1:nxb+nb,nb+1:nyb+nb,xn)**2) / &
+                             u(nvar%ion%idn,nb+1:nxb+nb,nb+1:nyb+nb,xn)
 #endif /* !ISO */
 
          case ("magx")
-            if (ij=="yz") tab(:,:) = b(ind%bx,xn,nb+1:nyb+nb,nb+1:nzb+nb)
-            if (ij=="xz") tab(:,:) = b(ind%bx,nb+1:nxb+nb,xn,nb+1:nzb+nb)
-            if (ij=="xy") tab(:,:) = b(ind%bx,nb+1:nxb+nb,nb+1:nyb+nb,xn)
+            if (ij=="yz") tab(:,:) = b(ibx,xn,nb+1:nyb+nb,nb+1:nzb+nb)
+            if (ij=="xz") tab(:,:) = b(ibx,nb+1:nxb+nb,xn,nb+1:nzb+nb)
+            if (ij=="xy") tab(:,:) = b(ibx,nb+1:nxb+nb,nb+1:nyb+nb,xn)
          case ("magy")
-            if (ij=="yz") tab(:,:) = b(ind%by,xn,nb+1:nyb+nb,nb+1:nzb+nb)
-            if (ij=="xz") tab(:,:) = b(ind%by,nb+1:nxb+nb,xn,nb+1:nzb+nb)
-            if (ij=="xy") tab(:,:) = b(ind%by,nb+1:nxb+nb,nb+1:nyb+nb,xn)
+            if (ij=="yz") tab(:,:) = b(iby,xn,nb+1:nyb+nb,nb+1:nzb+nb)
+            if (ij=="xz") tab(:,:) = b(iby,nb+1:nxb+nb,xn,nb+1:nzb+nb)
+            if (ij=="xy") tab(:,:) = b(iby,nb+1:nxb+nb,nb+1:nyb+nb,xn)
          case ("magz")
-            if (ij=="yz") tab(:,:) = b(ind%bz,xn,nb+1:nyb+nb,nb+1:nzb+nb)
-            if (ij=="xz") tab(:,:) = b(ind%bz,nb+1:nxb+nb,xn,nb+1:nzb+nb)
-            if (ij=="xy") tab(:,:) = b(ind%bz,nb+1:nxb+nb,nb+1:nyb+nb,xn)
+            if (ij=="yz") tab(:,:) = b(ibz,xn,nb+1:nyb+nb,nb+1:nzb+nb)
+            if (ij=="xz") tab(:,:) = b(ibz,nb+1:nxb+nb,xn,nb+1:nzb+nb)
+            if (ij=="xy") tab(:,:) = b(ibz,nb+1:nxb+nb,nb+1:nyb+nb,xn)
 #ifdef GRAV
          case ("gpot")
             if (ij=="yz") tab(:,:) = gpot(xn,nb+1:nyb+nb,nb+1:nzb+nb)
@@ -487,7 +487,7 @@ module dataio_hdf5
    subroutine common_vars_hdf5(var,tab, ierrh)
       use arrays,        only: u, b
       use dataio_public, only: varlen
-      use fluidindex,    only: ind
+      use fluidindex,    only: nvar, ibx, iby, ibz
       use grid,          only: nb, nx, ny, nz
 #ifdef GRAV
       use arrays,        only: gpot
@@ -513,81 +513,82 @@ module dataio_hdf5
 
       ierrh = 0
 #ifdef COSM_RAYS
-      select case (var(1:3))
-         case ("ecr")
-           read(var,'(A3,I1)') aux,i
-           tab(:,:,:) = real(u(ind%arr_crs(i),RNG),4)
-      end select
+!      ! Obsolete?
+!      select case (var(1:3))
+!         case ("ecr")
+!           read(var,'(A3,I1)') aux,i
+!           tab(:,:,:) = real(u(ind%arr_crs(i),RNG),4)
+!      end select
 #endif /* COSM_RAYS */
       select case (var)
          case ("dend")
-            tab(:,:,:) = real(u(ind%dnd,RNG),4)
+            tab(:,:,:) = real(u(nvar%dst%idn,RNG),4)
          case ("denn")
-            tab(:,:,:) = real(u(ind%dnn,RNG),4)
+            tab(:,:,:) = real(u(nvar%neu%idn,RNG),4)
          case ("deni")
-            tab(:,:,:) = real(u(ind%dni,RNG),4)
+            tab(:,:,:) = real(u(nvar%ion%idn,RNG),4)
          case ("vlxd")
-            tab(:,:,:) = real(u(ind%mxd,RNG) / u(ind%dnd,RNG),4)
+            tab(:,:,:) = real(u(nvar%dst%imx,RNG) / u(nvar%dst%idn,RNG),4)
          case ("vlxn")
-            tab(:,:,:) = real(u(ind%mxn,RNG) / u(ind%dnn,RNG),4)
+            tab(:,:,:) = real(u(nvar%neu%imx,RNG) / u(nvar%neu%idn,RNG),4)
          case ("vlxi")
-            tab(:,:,:) = real(u(ind%mxi,RNG) / u(ind%dni,RNG),4)
+            tab(:,:,:) = real(u(nvar%ion%imx,RNG) / u(nvar%ion%idn,RNG),4)
          case ("vlyd")
-            tab(:,:,:) = real(u(ind%myd,RNG) / u(ind%dnd,RNG),4)
+            tab(:,:,:) = real(u(nvar%dst%imy,RNG) / u(nvar%dst%idn,RNG),4)
          case ("vlyn")
-            tab(:,:,:) = real(u(ind%myn,RNG) / u(ind%dnn,RNG),4)
+            tab(:,:,:) = real(u(nvar%neu%imy,RNG) / u(nvar%neu%idn,RNG),4)
          case ("vlyi")
-            tab(:,:,:) = real(u(ind%myi,RNG) / u(ind%dni,RNG),4)
+            tab(:,:,:) = real(u(nvar%ion%imy,RNG) / u(nvar%ion%idn,RNG),4)
          case ("vlzd")
-            tab(:,:,:) = real(u(ind%mzd,RNG) / u(ind%dnd,RNG),4)
+            tab(:,:,:) = real(u(nvar%dst%imz,RNG) / u(nvar%dst%idn,RNG),4)
          case ("vlzn")
-            tab(:,:,:) = real(u(ind%mzn,RNG) / u(ind%dnn,RNG),4)
+            tab(:,:,:) = real(u(nvar%neu%imz,RNG) / u(nvar%neu%idn,RNG),4)
          case ("vlzi")
-            tab(:,:,:) = real(u(ind%mzi,RNG) / u(ind%dni,RNG),4)
+            tab(:,:,:) = real(u(nvar%ion%imz,RNG) / u(nvar%ion%idn,RNG),4)
 #ifdef NEUTRAL
          case ("pren")
 #ifndef ISO
-            tab(:,:,:) = real( u(ind%enn,RNG) - &
-              0.5 *( u(ind%mxn,RNG)**2 + u(ind%myn,RNG)**2 + u(ind%mzn,RNG)**2 ) / u(ind%dnn,RNG),4)*(gamma_neu-1.0)
+            tab(:,:,:) = real( u(nvar%neu%ien,RNG) - &
+              0.5 *( u(nvar%neu%imx,RNG)**2 + u(nvar%neu%imy,RNG)**2 + u(nvar%neu%imz,RNG)**2 ) / u(nvar%neu%idn,RNG),4)*(gamma_neu-1.0)
 #else /* !ISO */
             tab = 0.0
 #endif /* !ISO */
 #endif /* NEUTRAL */
          case ("enen")
 #ifdef ISO
-            tab(:,:,:) = real(0.5 *( u(ind%mxn,RNG)**2 + &
-                                     u(ind%myn,RNG)**2 + &
-                                     u(ind%mzn,RNG)**2 ) &
-                              / u(ind%dnn,RNG),4)
+            tab(:,:,:) = real(0.5 *( u(nvar%neu%imx,RNG)**2 + &
+                                     u(nvar%neu%imy,RNG)**2 + &
+                                     u(nvar%neu%imz,RNG)**2 ) &
+                              / u(nvar%neu%idn,RNG),4)
 #else /* ISO */
-            tab(:,:,:) = real(u(ind%enn,RNG),4)
+            tab(:,:,:) = real(u(nvar%neu%ien,RNG),4)
 #endif /* ISO */
 #ifdef IONIZED
          case ("enei")
 #ifdef ISO
-            tab(:,:,:) = real(0.5 *( u(ind%mxi,RNG)**2 + &
-                                     u(ind%myi,RNG)**2 + &
-                                     u(ind%mzi,RNG)**2 ) &
-                              / u(ind%dni,RNG),4)
+            tab(:,:,:) = real(0.5 *( u(nvar%ion%imx,RNG)**2 + &
+                                     u(nvar%ion%imy,RNG)**2 + &
+                                     u(nvar%ion%imz,RNG)**2 ) &
+                              / u(nvar%ion%idn,RNG),4)
 #else /* ISO */
-            tab(:,:,:) = real(u(ind%eni,RNG),4)
+            tab(:,:,:) = real(u(nvar%ion%ien,RNG),4)
 #endif /* ISO */
          case ("prei")
 #ifndef ISO
-            tab(:,:,:) = real( u(ind%eni,RNG) - &
-              0.5 *( u(ind%mxi,RNG)**2 + u(ind%myi,RNG)**2 + u(ind%mzi,RNG)**2 ) / u(ind%dni,RNG),4)*(gamma_ion-1.0)
-            tab(:,:,:) = tab(:,:,:) - real( 0.5*(gamma_ion-1.0)*(b(ind%bx,RNG)**2 + &
-               b(ind%by,RNG)**2 + b(ind%bz,RNG)**2),4)
+            tab(:,:,:) = real( u(nvar%ion%ien,RNG) - &
+              0.5 *( u(nvar%ion%imx,RNG)**2 + u(nvar%ion%imy,RNG)**2 + u(nvar%ion%imz,RNG)**2 ) / u(nvar%ion%idn,RNG),4)*(gamma_ion-1.0)
+            tab(:,:,:) = tab(:,:,:) - real( 0.5*(gamma_ion-1.0)*(b(ibx,RNG)**2 + &
+               b(iby,RNG)**2 + b(ibz,RNG)**2),4)
 #else /* !ISO */
             tab = 0.0
 #endif /* !ISO */
 #endif /* IONIZED */
          case ("magx")
-            tab(:,:,:) = real(b(ind%bx,RNG),4)
+            tab(:,:,:) = real(b(ibx,RNG),4)
          case ("magy")
-            tab(:,:,:) = real(b(ind%by,RNG),4)
+            tab(:,:,:) = real(b(iby,RNG),4)
          case ("magz")
-            tab(:,:,:) = real(b(ind%bz,RNG),4)
+            tab(:,:,:) = real(b(ibz,RNG),4)
 #ifdef GRAV
          case ("gpot")
             tab(:,:,:) = real(gpot(RNG),4)
