@@ -108,7 +108,6 @@ module fluidindex
 
 #ifdef NEUTRAL
       use initneutral,    only: idnn, imxn, imyn, imzn, neutral_index, selfgrav_neu
-      use initneutral,    only: iarr_neu_swpx, iarr_neu_swpy, iarr_neu_swpz
 #ifndef ISO
       use initneutral,    only: ienn
 #endif /* !ISO */
@@ -200,9 +199,9 @@ module fluidindex
 
 #ifdef NEUTRAL
 ! Compute index arrays for the neutral fluid
-      iarr_all_swpx(nvar%neu%beg:nvar%neu%end) = iarr_neu_swpx
-      iarr_all_swpy(nvar%neu%beg:nvar%neu%end) = iarr_neu_swpy
-      iarr_all_swpz(nvar%neu%beg:nvar%neu%end) = iarr_neu_swpz
+      iarr_all_swpx(nvar%neu%beg:nvar%neu%end) = nvar%iarr_neu_swpx
+      iarr_all_swpy(nvar%neu%beg:nvar%neu%end) = nvar%iarr_neu_swpy
+      iarr_all_swpz(nvar%neu%beg:nvar%neu%end) = nvar%iarr_neu_swpz
 
       if (selfgrav_neu) then
          i_sg = i_sg + 1

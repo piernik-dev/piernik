@@ -52,7 +52,6 @@ module fluxes
 #endif /* IONIZED */
 #ifdef NEUTRAL
   use fluxneutral,    only: flux_neu
-  use initneutral,    only: iarr_neu
 #endif /* NEUTRAL */
 #ifdef DUST
   use fluxdust,       only: flux_dst
@@ -118,13 +117,13 @@ subroutine all_fluxes(n, flux, cfr, uu, bb, cs_iso2)
 #endif /* IONIZED */
 
 #ifdef NEUTRAL
-   uuneu(:,:)=uu(iarr_neu,:)
+   uuneu(:,:)=uu(nvar%iarr_neu,:)
 
    call flux_neu(fluxneu,cfrneu,uuneu,n)
 
-   flux(iarr_neu,:) = fluxneu
-   cfr(iarr_neu,:)  = cfrneu
-   uu(iarr_neu,:)   = uuneu
+   flux(nvar%iarr_neu,:) = fluxneu
+   cfr(nvar%iarr_neu,:)  = cfrneu
+   uu(nvar%iarr_neu,:)   = uuneu
 #endif /* NEUTRAL */
 
 #ifdef DUST
