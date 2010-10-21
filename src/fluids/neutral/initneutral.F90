@@ -54,9 +54,6 @@ module initneutral
     integer               :: ienn
 #endif /* !ISO */
 
-    integer, allocatable, dimension(:)  :: iarr_neu
-    integer, allocatable, dimension(:)  :: iarr_neu_swpx, iarr_neu_swpy, iarr_neu_swpz
-
   contains
 
 !>
@@ -140,29 +137,35 @@ module initneutral
       imyn = nvar%all + 3
       imzn = nvar%all + 4
 
+      nvar%neu%idn = idnn
+      nvar%neu%imx = imxn
+      nvar%neu%imy = imyn
+      nvar%neu%imz = imzn
+
       nvar%neu%all  = 4
       nvar%all      = imzn
 #ifndef ISO
       ienn          = imzn + 1
+      nvar%neu%ien  = ienn
       nvar%all      = nvar%all + 1
       nvar%neu%all  = nvar%neu%all +1
 #endif /* !ISO */
 
-      call my_allocate(iarr_neu,       [nvar%neu%all], "iarr_neu")
-      call my_allocate(iarr_neu_swpx,  [nvar%neu%all], "iarr_neu_swpx")
-      call my_allocate(iarr_neu_swpy,  [nvar%neu%all], "iarr_neu_swpy")
-      call my_allocate(iarr_neu_swpz,  [nvar%neu%all], "iarr_neu_swpz")
+      call my_allocate(nvar%iarr_neu,       [nvar%neu%all], "iarr_neu")
+      call my_allocate(nvar%iarr_neu_swpx,  [nvar%neu%all], "iarr_neu_swpx")
+      call my_allocate(nvar%iarr_neu_swpy,  [nvar%neu%all], "iarr_neu_swpy")
+      call my_allocate(nvar%iarr_neu_swpz,  [nvar%neu%all], "iarr_neu_swpz")
 
-      iarr_neu(1:4)      = [idnn,imxn,imyn,imzn]
-      iarr_neu_swpx(1:4) = [idnn,imxn,imyn,imzn]
-      iarr_neu_swpy(1:4) = [idnn,imyn,imxn,imzn]
-      iarr_neu_swpz(1:4) = [idnn,imzn,imyn,imxn]
+      nvar%iarr_neu(1:4)      = [idnn,imxn,imyn,imzn]
+      nvar%iarr_neu_swpx(1:4) = [idnn,imxn,imyn,imzn]
+      nvar%iarr_neu_swpy(1:4) = [idnn,imyn,imxn,imzn]
+      nvar%iarr_neu_swpz(1:4) = [idnn,imzn,imyn,imxn]
 
 #ifndef ISO
-      iarr_neu(5)      = ienn
-      iarr_neu_swpx(5) = ienn
-      iarr_neu_swpy(5) = ienn
-      iarr_neu_swpz(5) = ienn
+      nvar%iarr_neu(5)      = ienn
+      nvar%iarr_neu_swpx(5) = ienn
+      nvar%iarr_neu_swpy(5) = ienn
+      nvar%iarr_neu_swpz(5) = ienn
 
       nvar%adiab = nvar%adiab + 1
 #endif /* ISO */
