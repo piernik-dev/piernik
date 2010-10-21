@@ -114,39 +114,51 @@ module initionized
 
   end subroutine init_ionized
 
-  subroutine ionized_index(nvar,nvar_ion)
+   subroutine ionized_index(nvar)
+      use fluidtypes,   only: var_numbers
+      use diagnostics,  only: my_allocate
+      implicit none
+      type(var_numbers), intent(inout) :: nvar
 
-    implicit none
-    integer :: nvar, nvar_ion
+      nvar%ion%beg  = nvar%all + 1
 
+      idni = nvar%all + 1
+      imxi = nvar%all + 2
+      imyi = nvar%all + 3
+      imzi = nvar%all + 4
 
-      idni = nvar + 1
-      imxi = nvar + 2
-      imyi = nvar + 3
-      imzi = nvar + 4
+      nvar%ion%all  = 4
+      nvar%all      = imzi
+#ifndef ISO
+      ieni          = imzi + 1
+      nvar%all      = nvar%all + 1
+      nvar%ion%all  = nvar%ion%all + 1
+#endif /* !ISO */
 
-#ifdef ISO
-      nvar_ion      = 4
-      nvar          = imzi
+      call my_allocate(iarr_ion,       [nvar%ion%all], "iarr_ion")
+      call my_allocate(iarr_ion_swpx,  [nvar%ion%all], "iarr_ion_swpx")
+      call my_allocate(iarr_ion_swpy,  [nvar%ion%all], "iarr_ion_swpy")
+      call my_allocate(iarr_ion_swpz,  [nvar%ion%all], "iarr_ion_swpz")
 
-      allocate(iarr_ion(nvar_ion),iarr_ion_swpx(nvar_ion), iarr_ion_swpy(nvar_ion), iarr_ion_swpz(nvar_ion))
+      iarr_ion(1:4)      = [idni,imxi,imyi,imzi]
+      iarr_ion_swpx(1:4) = [idni,imxi,imyi,imzi]
+      iarr_ion_swpy(1:4) = [idni,imyi,imxi,imzi]
+      iarr_ion_swpz(1:4) = [idni,imzi,imyi,imxi]
 
-      iarr_ion      = [idni,imxi,imyi,imzi]
-      iarr_ion_swpx = [idni,imxi,imyi,imzi]
-      iarr_ion_swpy = [idni,imyi,imxi,imzi]
-      iarr_ion_swpz = [idni,imzi,imyi,imxi]
-#else /* ISO */
-      ieni          = nvar + 5
-      nvar_ion      = 5
-      nvar          = ieni
+#ifndef ISO
+      iarr_ion(5)      = ieni
+      iarr_ion_swpx(5) = ieni
+      iarr_ion_swpy(5) = ieni
+      iarr_ion_swpz(5) = ieni
 
-      allocate(iarr_ion(nvar_ion),iarr_ion_swpx(nvar_ion), iarr_ion_swpy(nvar_ion), iarr_ion_swpz(nvar_ion))
+      nvar%adiab = nvar%adiab + 1
+#endif /* !ISO */
 
-      iarr_ion      = [idni,imxi,imyi,imzi,ieni]
-      iarr_ion_swpx = [idni,imxi,imyi,imzi,ieni]
-      iarr_ion_swpy = [idni,imyi,imxi,imzi,ieni]
-      iarr_ion_swpz = [idni,imzi,imyi,imxi,ieni]
-#endif /* ISO */
+      nvar%ion%end    = nvar%all
+      nvar%components = nvar%components + 1
+      nvar%fluids     = nvar%fluids + 1
+      nvar%ion%pos    = nvar%components
+      if (selfgrav_ion)  nvar%fluids_sg = nvar%fluids_sg + 1
 
    end subroutine ionized_index
 

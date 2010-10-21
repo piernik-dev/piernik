@@ -130,16 +130,7 @@ module fluidindex
 
 #ifdef IONIZED
 !  Compute indexes for the ionized fluid and update counters
-      nvar%ion%beg    = nvar%all + 1
-      call ionized_index(nvar%all,nvar%ion%all)
-      nvar%ion%end    = nvar%all
-      nvar%components = nvar%components + 1
-      nvar%fluids     = nvar%fluids + 1
-      nvar%ion%pos    = nvar%components
-      if (selfgrav_ion)  nvar%fluids_sg = nvar%fluids_sg + 1
-#ifndef ISO
-      nvar%adiab = nvar%adiab + 1
-#endif /* !ISO */
+     call ionized_index(nvar)
 #endif /* IONIZED */
 
 #ifdef NEUTRAL
