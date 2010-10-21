@@ -198,7 +198,7 @@ contains
          call printinfo("", .true.)
       endif
 
-      call init_fluids
+      call init_fluids(cgrid)
 
       call init_arrays(nx,ny,nz,nvar)
 

@@ -43,6 +43,7 @@ module initcosmicrays
    integer, parameter                  :: ncr_max = 9  !< maximum number of CR nuclear and electron components
    integer                             :: ncrn         !< number of CR nuclear  components
    integer                             :: ncre         !< number of CR electron components
+   integer                             :: ncrs         !< number of all CR components
 
    real                                :: cfl_cr       !< CFL number for diffusive CR transport
    real                                :: smallecr     !< floor value for CR energy density
@@ -87,14 +88,14 @@ contains
    !! \n \n
    !<
    subroutine init_cosmicrays
-
+      use diagnostics,     only: my_allocate
       use dataio_public,   only: par_file, ierrh, die, namelist_errh, compare_namelist
       use mpisetup,        only: proc, ibuff, rbuff, comm, ierr, MPI_DOUBLE_PRECISION, MPI_INTEGER, buffer_dim
 
       implicit none
 
-      integer            :: nn
-      integer            :: ne
+      integer                          :: nn
+      integer                          :: ne
 
       namelist /COSMIC_RAYS/ cfl_cr, smallecr, cr_active, cr_eff, &
            &                 ncrn, gamma_crn, K_crn_paral, K_crn_perp, &
@@ -178,7 +179,11 @@ contains
       if (ncrn > ncr_max) call die("[initcosmicrays:init_cosmicrays] ncrn > ncr_max")
       if (ncre > ncr_max) call die("[initcosmicrays:init_cosmicrays] ncre > ncr_max")
 
-      allocate(gamma_crs(ncrn+ncre),K_crs_paral(ncrn+ncre),K_crs_perp(ncrn+ncre))
+      ncrs = ncre + ncrn
+
+      call my_allocate(gamma_crs,   [ncrs], "gamma_crs")
+      call my_allocate(K_crs_paral, [ncrs], "K_crs_paral")
+      call my_allocate(K_crs_perp,  [ncrs], "K_crs_perp")
 
       if (ncrn > 0) then
          gamma_crs  (1:ncrn) = gamma_crn  (1:ncrn)
@@ -187,10 +192,14 @@ contains
       endif
 
       if (ncre > 0) then
-         gamma_crs  (ncrn+1:ncrn+ncre) = gamma_cre  (1:ncre)
-         K_crs_paral(ncrn+1:ncrn+ncre) = K_cre_paral(1:ncre)
-         K_crs_perp (ncrn+1:ncrn+ncre) = K_cre_perp (1:ncre)
+         gamma_crs  (ncrn+1:ncrs) = gamma_cre  (1:ncre)
+         K_crs_paral(ncrn+1:ncrs) = K_cre_paral(1:ncre)
+         K_crs_perp (ncrn+1:ncrs) = K_cre_perp (1:ncre)
       endif
+
+      call my_allocate(iarr_crn,[ncrn],"iarr_crn")
+      call my_allocate(iarr_cre,[ncre],"iarr_cre")
+      call my_allocate(iarr_crs,[ncrs],"iarr_crs")
 
    end subroutine init_cosmicrays
 
@@ -198,7 +207,8 @@ contains
 
    end subroutine cosmicray_species
 
-   subroutine cosmicray_index(nvar, nvar_crn, nvar_cre, nvar_crs)
+   subroutine cosmicray_index(nvar, nvar_crn, nvar_cre, nvar_crs, cgrid)
+      use types,           only: grid_container
 
       implicit none
 
@@ -206,15 +216,12 @@ contains
       integer :: nvar_crn
       integer :: nvar_cre
       integer :: nvar_crs
+      type(grid_container), intent(in) :: cgrid
       integer :: icr
 
       nvar_crn      = ncrn
       nvar_cre      = ncre
-      nvar_crs      = ncrn + ncre
-
-      allocate(iarr_crn(ncrn))
-      allocate(iarr_cre(ncre))
-      allocate(iarr_crs(nvar_crs))
+      nvar_crs      = ncrs
 
       do icr = 1, ncrn
          iarr_crn(icr)      =nvar+icr
@@ -227,41 +234,41 @@ contains
          iarr_crs(ncrn+icr) =nvar+icr
       enddo
       nvar = nvar + nvar_cre
-
 #ifdef NEW_HDF5
-      call cr_add_hdf5(ncrn+ncre)
+      call cr_add_hdf5(ncrs,cgrid)
 #endif /* NEW_HDF5 */
 
    end subroutine cosmicray_index
 
    subroutine cleanup_cosmicrays
-
+      use diagnostics, only: my_deallocate
       implicit none
 
-      if (allocated(iarr_crn)) deallocate(iarr_crn)
-      if (allocated(iarr_cre)) deallocate(iarr_cre)
-      if (allocated(iarr_crs)) deallocate(iarr_crs)
-      if (allocated(gamma_crs)) deallocate(gamma_crs, K_crs_paral, K_crs_perp) !BEWARE: simplified allocated() check
+      call my_deallocate(iarr_crn)
+      call my_deallocate(iarr_cre)
+      call my_deallocate(iarr_crs)
+      call my_deallocate(gamma_crs)
+      call my_deallocate(K_crs_paral)
+      call my_deallocate(K_crs_perp)
 
    end subroutine cleanup_cosmicrays
 
 #ifdef NEW_HDF5
-   subroutine cr_add_hdf5(nvar_crs)
-
+   subroutine cr_add_hdf5(nvar_crs,cgrid)
+      use types,     only: grid_container
       use arrays,    only: u
-      use grid,      only: nxb, nyb, nzb, is, ie, js, je, ks, ke
       use list_hdf5, only: add_lhdf5, lhdf5_info
 
       implicit none
-
-      integer, intent(in) :: nvar_crs
+      integer, intent(in)              :: nvar_crs
+      type(grid_container), intent(in) :: cgrid
 
       type(lhdf5_info) :: item
       integer          :: i
 
       item%p    => get_cr
-      item%sz   = (/nxb, nyb, nzb/)
-      item%ind  = (/is, ie, js, je, ks, ke/)
+      item%sz   = [cgrid%nxb, cgrid%nyb, cgrid%nzb]
+      item%ind  = [cgrid%is, cgrid%ie, cgrid%js, cgrid%je, cgrid%ks, cgrid%ke]
 
       do i = 1, nvar_crs
 

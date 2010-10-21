@@ -114,8 +114,9 @@ module initfluids
 
   contains
 
-   subroutine init_fluids
+   subroutine init_fluids(cgrid)
 
+      use types,           only: grid_container
       use fluidindex,      only: fluid_index, nvar
 #ifdef VERBOSE
       use dataio_public,   only: printinfo
@@ -137,6 +138,7 @@ module initfluids
 #endif /* COSM_RAYS */
 
       implicit none
+      type(grid_container), intent(in) :: cgrid
 #ifdef VERBOSE
       call printinfo("[initfluids:init_fluids]: commencing...")
 #endif /* VERBOSE */
@@ -154,7 +156,7 @@ module initfluids
       call init_cosmicrays
 #endif /* COSM_RAYS */
 
-      call fluid_index
+      call fluid_index(cgrid)
 
       allocate(gamma(nvar%fluids))
 

@@ -95,8 +95,9 @@ module fluidindex
 !! of PIERNIK code
 !! \param none - all arguments are global variables
 !<
-    subroutine fluid_index
-
+    subroutine fluid_index(cgrid)
+      use diagnostics,    only: my_allocate
+      use types,          only: grid_container
 #ifdef IONIZED
       use initionized,    only: idni, imxi, imyi, imzi, ionized_index, selfgrav_ion
       use initionized,    only: iarr_ion_swpx, iarr_ion_swpy, iarr_ion_swpz
@@ -123,6 +124,7 @@ module fluidindex
 #endif /* COSM_RAYS */
 
       implicit none
+      type(grid_container), intent(in) :: cgrid
 
       i_sg        = 0
 
@@ -169,7 +171,7 @@ module fluidindex
 !  Compute indexes for the CR component and update counters
       nvar%crn%beg    = nvar%all + 1
       nvar%crs%beg    = nvar%crn%beg
-      call cosmicray_index(nvar%all, nvar%crn%all, nvar%cre%all, nvar%crs%all)
+      call cosmicray_index(nvar%all, nvar%crn%all, nvar%cre%all, nvar%crs%all, cgrid)
       nvar%crn%end    = nvar%crn%beg + nvar%crn%all - 1
       nvar%cre%beg    = nvar%crn%end + 1
       nvar%cre%end    = nvar%all
