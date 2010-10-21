@@ -181,13 +181,22 @@ module initfluids
    end subroutine init_fluids
 
    subroutine cleanup_fluids
-
-      use fluidindex, only: cleanup_fluid_index
+#ifdef IONIZED
+      use initionized,    only: cleanup_ionized
+#endif /* IONIZED */
+#ifdef COSM_RAYS
+      use initcosmicrays, only: cleanup_cosmicrays
+#endif /* COSM_RAYS */
 
       implicit none
 
       if (allocated(gamma)) deallocate(gamma)
-      call cleanup_fluid_index
+#ifdef IONIZED
+      call cleanup_ionized
+#endif /* IONIZED */
+#ifdef COSM_RAYS
+      call cleanup_cosmicrays
+#endif /* COSM_RAYS */
 
    end subroutine cleanup_fluids
 

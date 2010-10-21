@@ -277,6 +277,7 @@ contains
       use dataio,      only: cleanup_dataio
       use grid,        only: cleanup_grid
       use initfluids,  only: cleanup_fluids
+      use fluidindex,  only: cleanup_fluidindex
       use mpisetup,    only: cleanup_mpi
       use timer,       only: cleanup_timers
 #ifdef RESISTIVE
@@ -296,6 +297,7 @@ contains
 #endif /* MULTIGRID */
       call cleanup_arrays;      if (proc == 0) write(*,'(a)',advance='no')"." ! QA_WARN
       call cleanup_fluids;      if (proc == 0) write(*,'(a)',advance='no')"." ! QA_WARN
+      call cleanup_fluidindex;  if (proc == 0) write(*,'(a)',advance='no')"." ! QA_WARN
       call cleanup_timers;      if (proc == 0) write(*,'(a)',advance='no')"." ! QA_WARN
       call cleanup_mpi;         if (proc == 0) write(*,'(a)')"."              ! QA_WARN
 

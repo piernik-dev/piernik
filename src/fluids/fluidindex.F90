@@ -293,17 +293,10 @@ module fluidindex
 
    subroutine cleanup_fluid_index
 
-#ifdef IONIZED
-      use initionized,    only: cleanup_ionized
-#endif /* IONIZED */
-#ifdef COSM_RAYS
-      use initcosmicrays, only: cleanup_cosmicrays
-#endif /* COSM_RAYS */
       implicit none
 
 #ifdef IONIZED
       deallocate(iarr_mag_swpx, iarr_mag_swpy, iarr_mag_swpz, iarr_all_mag)
-      call cleanup_ionized
 #endif /* IONIZED */
       deallocate(iarr_all_swpx, iarr_all_swpy, iarr_all_swpz)
       deallocate(iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz)
@@ -318,7 +311,6 @@ module fluidindex
       deallocate(iarr_all_crn)
       deallocate(iarr_all_cre)
       deallocate(iarr_all_crs)
-      call cleanup_cosmicrays
 #else /* COSM_RAYS */
       deallocate(iarr_all_crn)
       deallocate(iarr_all_cre)
