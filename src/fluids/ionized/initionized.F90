@@ -52,9 +52,6 @@ module initionized
     integer               :: ieni
 #endif /* !ISO */
 
-    integer, allocatable, dimension(:)  :: iarr_ion
-    integer, allocatable, dimension(:)  :: iarr_ion_swpx, iarr_ion_swpy, iarr_ion_swpz
-
  contains
 
 !>
@@ -127,29 +124,35 @@ module initionized
       imyi = nvar%all + 3
       imzi = nvar%all + 4
 
+      nvar%ion%idn  = idni
+      nvar%ion%imx  = imxi
+      nvar%ion%imy  = imyi
+      nvar%ion%imz  = imzi
+
       nvar%ion%all  = 4
       nvar%all      = imzi
 #ifndef ISO
       ieni          = imzi + 1
       nvar%all      = nvar%all + 1
       nvar%ion%all  = nvar%ion%all + 1
+      nvar%ion%ien  = ieni
 #endif /* !ISO */
 
-      call my_allocate(iarr_ion,       [nvar%ion%all], "iarr_ion")
-      call my_allocate(iarr_ion_swpx,  [nvar%ion%all], "iarr_ion_swpx")
-      call my_allocate(iarr_ion_swpy,  [nvar%ion%all], "iarr_ion_swpy")
-      call my_allocate(iarr_ion_swpz,  [nvar%ion%all], "iarr_ion_swpz")
+      call my_allocate(nvar%iarr_ion,       [nvar%ion%all], "iarr_ion")
+      call my_allocate(nvar%iarr_ion_swpx,  [nvar%ion%all], "iarr_ion_swpx")
+      call my_allocate(nvar%iarr_ion_swpy,  [nvar%ion%all], "iarr_ion_swpy")
+      call my_allocate(nvar%iarr_ion_swpz,  [nvar%ion%all], "iarr_ion_swpz")
 
-      iarr_ion(1:4)      = [idni,imxi,imyi,imzi]
-      iarr_ion_swpx(1:4) = [idni,imxi,imyi,imzi]
-      iarr_ion_swpy(1:4) = [idni,imyi,imxi,imzi]
-      iarr_ion_swpz(1:4) = [idni,imzi,imyi,imxi]
+      nvar%iarr_ion(1:4)      = [idni,imxi,imyi,imzi]
+      nvar%iarr_ion_swpx(1:4) = [idni,imxi,imyi,imzi]
+      nvar%iarr_ion_swpy(1:4) = [idni,imyi,imxi,imzi]
+      nvar%iarr_ion_swpz(1:4) = [idni,imzi,imyi,imxi]
 
 #ifndef ISO
-      iarr_ion(5)      = ieni
-      iarr_ion_swpx(5) = ieni
-      iarr_ion_swpy(5) = ieni
-      iarr_ion_swpz(5) = ieni
+      nvar%iarr_ion(5)      = ieni
+      nvar%iarr_ion_swpx(5) = ieni
+      nvar%iarr_ion_swpy(5) = ieni
+      nvar%iarr_ion_swpz(5) = ieni
 
       nvar%adiab = nvar%adiab + 1
 #endif /* !ISO */
@@ -163,10 +166,7 @@ module initionized
    end subroutine ionized_index
 
    subroutine cleanup_ionized
-
       implicit none
-
-      if (allocated(iarr_ion)) deallocate(iarr_ion, iarr_ion_swpx, iarr_ion_swpy, iarr_ion_swpz) ! BEWARE: simplified allocated() check
 
    end subroutine cleanup_ionized
 

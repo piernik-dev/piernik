@@ -100,7 +100,6 @@ module fluidindex
       use types,          only: grid_container
 #ifdef IONIZED
       use initionized,    only: idni, imxi, imyi, imzi, ionized_index, selfgrav_ion
-      use initionized,    only: iarr_ion_swpx, iarr_ion_swpy, iarr_ion_swpz
 #ifndef ISO
       use initionized,    only: ieni
 #endif /* !ISO */
@@ -180,9 +179,9 @@ module fluidindex
 
 #ifdef IONIZED
 ! Compute index arrays for the ionized fluid
-      iarr_all_swpx(nvar%ion%beg:nvar%ion%end) = iarr_ion_swpx
-      iarr_all_swpy(nvar%ion%beg:nvar%ion%end) = iarr_ion_swpy
-      iarr_all_swpz(nvar%ion%beg:nvar%ion%end) = iarr_ion_swpz
+      iarr_all_swpx(nvar%ion%beg:nvar%ion%end) = nvar%iarr_ion_swpx
+      iarr_all_swpy(nvar%ion%beg:nvar%ion%end) = nvar%iarr_ion_swpy
+      iarr_all_swpz(nvar%ion%beg:nvar%ion%end) = nvar%iarr_ion_swpz
 
       if (selfgrav_ion) then
          i_sg = i_sg + 1

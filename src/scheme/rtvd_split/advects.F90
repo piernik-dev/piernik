@@ -32,9 +32,8 @@ module advects
 
   subroutine advectby_x
     use arrays,        only: b, u, wa
-    use fluidindex,    only: ibx, iby, ibz
+    use fluidindex,    only: ibx, iby, ibz, nvar
     use grid,          only: idx, nx, ny, nz, nxd, nyd, nzd, ks, ke
-    use initionized,   only: idni, imxi
     use magboundaries, only: bnd_emf
     use mpisetup,      only: dt
     use rtvd,          only: tvdb
@@ -58,9 +57,9 @@ module advects
         jm=j-1
         vx=0.0
         if (jm == 0) then
-           vx = u(imxi,:,1,k) / u(idni,:,1,k)
+           vx = u(nvar%ion%imx,:,1,k) / u(nvar%ion%idn,:,1,k)
         else
-           vx=(u(imxi,:,jm,k)+u(imxi,:,j,k))/(u(idni,:,jm,k)+u(idni,:,j,k))
+           vx=(u(nvar%ion%imx,:,jm,k)+u(nvar%ion%imx,:,j,k))/(u(nvar%ion%idn,:,jm,k)+u(nvar%ion%idn,:,j,k))
         endif
         vx(2:nx-1)=(vx(1:nx-2) + vx(3:nx) + 2.0*vx(2:nx-1))*0.25
         vx(1)  = vx(2)
@@ -81,9 +80,8 @@ module advects
 
   subroutine advectbz_x
     use arrays,        only: b, u, wa
-    use fluidindex,    only: ibx, iby, ibz
+    use fluidindex,    only: ibx, iby, ibz, nvar
     use grid,          only: idx, nx, ny, nz, nxd, nyd, nzd, js, je
-    use initionized,   only: idni, imxi
     use magboundaries, only: bnd_emf
     use mpisetup,      only: dt
     use rtvd,          only: tvdb
@@ -107,9 +105,9 @@ module advects
       do j=js,je
         vx=0.0
         if (km == 0) then
-           vx = u(imxi,:,j,1) / u(idni,:,j,1)
+           vx = u(nvar%ion%imx,:,j,1) / u(nvar%ion%idn,:,j,1)
         else
-           vx=(u(imxi,:,j,km)+u(imxi,:,j,k))/(u(idni,:,j,km)+u(idni,:,j,k))
+           vx=(u(nvar%ion%imx,:,j,km)+u(nvar%ion%imx,:,j,k))/(u(nvar%ion%idn,:,j,km)+u(nvar%ion%idn,:,j,k))
         endif
         vx(2:nx-1)=(vx(1:nx-2) + vx(3:nx) + 2.0*vx(2:nx-1))*0.25
         vx(1)  = vx(2)
@@ -130,9 +128,8 @@ module advects
 
   subroutine advectbz_y
     use arrays,        only: b, u, wa
-    use fluidindex,    only: ibx, iby, ibz
+    use fluidindex,    only: ibx, iby, ibz, nvar
     use grid,          only: idy, nx, ny, nz, is, ie, nxd, nyd, nzd
-    use initionized,   only: idni, imyi
     use magboundaries, only: bnd_emf
     use mpisetup,      only: dt
     use rtvd,          only: tvdb
@@ -155,9 +152,9 @@ module advects
       do i=is,ie
         vy=0.0
         if (km == 0) then
-           vy = u(imyi,i,:,1) / u(idni,i,:,1)
+           vy = u(imyi,i,:,1) / u(nvar%ion%idn,i,:,1)
         else
-           vy=(u(imyi,i,:,km)+u(imyi,i,:,k))/(u(idni,i,:,km)+u(idni,i,:,k))
+           vy=(u(imyi,i,:,km)+u(imyi,i,:,k))/(u(nvar%ion%idn,i,:,km)+u(nvar%ion%idn,i,:,k))
         endif
         vy(2:ny-1)=(vy(1:ny-2) + vy(3:ny) + 2.0*vy(2:ny-1))*0.25
         vy(1)  = vy(2)
@@ -178,9 +175,8 @@ module advects
 
   subroutine advectbx_y
     use arrays,        only: b, u, wa
-    use fluidindex,    only: ibx, iby, ibz
+    use fluidindex,    only: ibx, iby, ibz, nvar
     use grid,          only: idy, nx, ny, nz, nxd, nzd, nyd, ks, ke
-    use initionized,   only: idni, imyi
     use magboundaries, only: bnd_emf
     use mpisetup,      only: dt
     use rtvd,          only: tvdb
@@ -204,9 +200,9 @@ module advects
         im=i-1
         vy=0.0
         if (im == 0) then
-           vy = u(imyi,1,:,k) / u(idni,1,:,k)
+           vy = u(imyi,1,:,k) / u(nvar%ion%idn,1,:,k)
         else
-           vy=(u(imyi,im,:,k)+u(imyi,i,:,k))/(u(idni,im,:,k)+u(idni,i,:,k))
+           vy=(u(imyi,im,:,k)+u(imyi,i,:,k))/(u(nvar%ion%idn,im,:,k)+u(nvar%ion%idn,i,:,k))
         endif
         vy(2:ny-1)=(vy(1:ny-2) + vy(3:ny) + 2.0*vy(2:ny-1))*0.25
         vy(1)  = vy(2)
@@ -227,9 +223,8 @@ module advects
 
   subroutine advectbx_z
     use arrays,        only: b, u, wa
-    use fluidindex,    only: ibx, iby, ibz
+    use fluidindex,    only: ibx, iby, ibz, nvar
     use grid,          only: idz, nx, ny, nz, nxd, nzd, nyd, js, je
-    use initionized,   only: idni, imzi
     use magboundaries, only: bnd_emf
     use mpisetup,      only: dt
     use rtvd,          only: tvdb
@@ -252,9 +247,9 @@ module advects
         im=i-1
         vz=0.0
         if (im == 0) then
-           vz = u(imzi,1,j,:) / u(idni,1,j,:)
+           vz = u(nvar%ion%imz,1,j,:) / u(nvar%ion%idn,1,j,:)
         else
-           vz = (u(imzi,im,j,:)+u(imzi,i,j,:))/(u(idni,im,j,:)+u(idni,i,j,:))
+           vz = (u(nvar%ion%imz,im,j,:)+u(nvar%ion%imz,i,j,:))/(u(nvar%ion%idn,im,j,:)+u(nvar%ion%idn,i,j,:))
         endif
         vz(2:nz-1)=(vz(1:nz-2) + vz(3:nz) + 2.0*vz(2:nz-1))*0.25
         vz(1)  = vz(2)
@@ -275,9 +270,8 @@ module advects
 
   subroutine advectby_z
     use arrays,        only: b, u, wa
-    use fluidindex,    only: ibx, iby, ibz
+    use fluidindex,    only: ibx, iby, ibz, nvar
     use grid,          only: idz, nx, ny, nz, nzd, nyd, nxd, ie, is
-    use initionized,   only: idni, imzi
     use magboundaries, only: bnd_emf
     use mpisetup,      only: dt
     use rtvd,          only: tvdb
@@ -300,9 +294,9 @@ module advects
       do i=is,ie
         vz=0.0
         if (jm == 0) then
-           vz = u(imzi,i,1,:) / u(idni,i,1,:)
+           vz = u(nvar%ion%imz,i,1,:) / u(nvar%ion%idn,i,1,:)
         else
-           vz=(u(imzi,i,jm,:)+u(imzi,i,j,:))/(u(idni,i,jm,:)+u(idni,i,j,:))
+           vz=(u(nvar%ion%imz,i,jm,:)+u(nvar%ion%imz,i,j,:))/(u(nvar%ion%idn,i,jm,:)+u(nvar%ion%idn,i,j,:))
         endif
         vz(2:nz-1)=(vz(1:nz-2) + vz(3:nz) + 2.0*vz(2:nz-1))*0.25
         vz(1)  = vz(2)

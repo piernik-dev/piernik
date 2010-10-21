@@ -48,7 +48,6 @@ module fluxes
 
 #ifdef IONIZED
   use fluxionized,    only: flux_ion
-  use initionized,    only: iarr_ion
 #endif /* IONIZED */
 #ifdef NEUTRAL
   use fluxneutral,    only: flux_neu
@@ -105,13 +104,13 @@ subroutine all_fluxes(n, flux, cfr, uu, bb, cs_iso2)
    vion(:) = 0.0
 
 #ifdef IONIZED
-   uuion(:,:)=uu(iarr_ion,:)
+   uuion(:,:)=uu(nvar%iarr_ion,:)
 
    call flux_ion(fluxion,cfrion,vion,uuion,bb,n,cs_iso2)
 
-   flux(iarr_ion,:) = fluxion
-   cfr(iarr_ion,:)  = cfrion
-   uu(iarr_ion,:)   = uuion
+   flux(nvar%iarr_ion,:) = fluxion
+   cfr(nvar%iarr_ion,:)  = cfrion
+   uu(nvar%iarr_ion,:)   = uuion
 #else /* IONIZED */
    if (.false.) dummy = size(bb)*size(cs_iso2) ! suppress compiler warnings on unused arguments
 #endif /* IONIZED */
