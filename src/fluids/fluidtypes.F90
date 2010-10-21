@@ -30,12 +30,24 @@
 !! \brief (KK)
 !<
 module fluidtypes
-  type :: component
-     integer :: all = 0              !< number of all variables in fluid/component
-     integer :: beg = 0              !< beginning number of variables in fluid/component
-     integer :: end = 0              !< end number of variables in fluid/component
-     integer :: pos = 0              !< index denoting position of the fluid in the row of fluids
+   type :: component
+      integer :: all = 0              !< number of all variables in fluid/component
+      integer :: beg = 0              !< beginning number of variables in fluid/component
+      integer :: end = 0              !< end number of variables in fluid/component
+      integer :: pos = 0              !< index denoting position of the fluid in the row of fluids
    end type component
+
+   type :: component_fluid
+      integer :: all = 0              !< number of all variables in fluid/component
+      integer :: beg = 0              !< beginning number of variables in fluid/component
+      integer :: end = 0              !< end number of variables in fluid/component
+      integer :: pos = 0              !< index denoting position of the fluid in the row of fluids
+      integer :: idn = -1
+      integer :: imx = -1
+      integer :: imy = -1
+      integer :: imz = -1
+      integer :: ien = -1
+   end type component_fluid
 
    type :: var_numbers
       integer :: all         = 0     !< total number of fluid variables = the size of array \a u(:,:,;,:) in the first index
@@ -45,13 +57,19 @@ module fluidtypes
       integer :: fluids_sg   = 0     !< number of selfgravitating fluids (ionized gas, neutral gas, dust)
 
 #ifdef IONIZED
-      type(component) :: ion         !< numbers of variables for the ionized fluid
+      type(component_fluid) :: ion         !< numbers of variables for the ionized fluid
+      integer, allocatable, dimension(:)  :: iarr_ion
+      integer, allocatable, dimension(:)  :: iarr_ion_swpx, iarr_ion_swpy, iarr_ion_swpz
 #endif /* IONIZED */
 #ifdef NEUTRAL
-      type(component):: neu         !< numbers of variables for the neutral fluid
+      type(component_fluid) :: neu         !< numbers of variables for the neutral fluid
+      integer, allocatable, dimension(:)  :: iarr_neu
+      integer, allocatable, dimension(:)  :: iarr_neu_swpx, iarr_neu_swpy, iarr_neu_swpz
 #endif /* NEUTRAL */
 #ifdef DUST
-      type(component) :: dst         !< numbers of variables for the dust fluid
+      type(component_fluid) :: dst         !< numbers of variables for the dust fluid
+      integer, allocatable, dimension(:)  :: iarr_dst
+      integer, allocatable, dimension(:)  :: iarr_dst_swpx, iarr_dst_swpy, iarr_dst_swpz
 #endif /* DUST */
 #ifdef COSM_RAYS
       type(component) :: crs         !< numbers of variables in all cosmic ray components
