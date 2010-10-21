@@ -109,7 +109,7 @@ module initproblem
    subroutine init_prob
       use arrays,        only: u
       use constants,     only: pi, dpi
-      use dataio_public, only: mgs, printinfo
+      use dataio_public, only: msg, printinfo
       use grid,          only: x, y, z, nx, ny, nz, nzd, ymin, ymax, Lx, Lz
       use mpisetup,      only: proc, pcoords
       use shear,         only: omega, qshear
