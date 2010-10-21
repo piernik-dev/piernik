@@ -149,13 +149,7 @@ module fluidindex
 
 #ifdef DUST
 !  Compute indexes for the dust fluid and update counters
-      nvar%dst%beg    = nvar%all + 1
-      call dust_index(nvar%all,nvar%dst%all)
-      nvar%dst%end    = nvar%all
-      nvar%components = nvar%components + 1
-      nvar%fluids     = nvar%fluids + 1
-      nvar%dst%pos    = nvar%components
-      if (selfgrav_dst)  nvar%fluids_sg = nvar%fluids_sg + 1
+      call dust_index(nvar)
 #endif /* DUST */
 
 #ifdef COSM_RAYS

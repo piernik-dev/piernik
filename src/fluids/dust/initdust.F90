@@ -101,27 +101,38 @@ module initdust
   end subroutine init_dust
 
 
-  subroutine dust_index(nvar,nvar_dst)
+   subroutine dust_index(nvar)
+      use fluidtypes,   only: var_numbers
+      use diagnostics,  only: my_allocate
 
-    implicit none
-    integer :: nvar, nvar_dst
+      implicit none
+      type(var_numbers), intent(inout) :: nvar
 
+      nvar%dst%beg    = nvar%all + 1
 
-      idnd = nvar + 1
-      imxd = nvar + 2
-      imyd = nvar + 3
-      imzd = nvar + 4
+      idnd = nvar%all + 1
+      imxd = nvar%all + 2
+      imyd = nvar%all + 3
+      imzd = nvar%all + 4
 
-      nvar_dst      = 4
-      nvar          = imzd
+      nvar%dst%all  = 4
+      nvar%all      = imzd
 
-      allocate(iarr_dst(nvar_dst),iarr_dst_swpx(nvar_dst), iarr_dst_swpy(nvar_dst), iarr_dst_swpz(nvar_dst))
+      call my_allocate(iarr_dst,      [nvar%dst%all], "iarr_dst")
+      call my_allocate(iarr_dst_swpx, [nvar%dst%all], "iarr_dst_swpx")
+      call my_allocate(iarr_dst_swpy, [nvar%dst%all], "iarr_dst_swpy")
+      call my_allocate(iarr_dst_swpz, [nvar%dst%all], "iarr_dst_swpz")
 
       iarr_dst      = [idnd,imxd,imyd,imzd]
       iarr_dst_swpx = [idnd,imxd,imyd,imzd]
       iarr_dst_swpy = [idnd,imyd,imxd,imzd]
       iarr_dst_swpz = [idnd,imzd,imyd,imxd]
 
+      nvar%dst%end    = nvar%all
+      nvar%components = nvar%components + 1
+      nvar%fluids     = nvar%fluids + 1
+      nvar%dst%pos    = nvar%components
+      if (selfgrav_dst)  nvar%fluids_sg = nvar%fluids_sg + 1
 
    end subroutine dust_index
 
