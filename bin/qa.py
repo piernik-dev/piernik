@@ -43,7 +43,8 @@ def qa_checks(files,options):
    f90files = select_sources(files)
    qa_trailing_spaces(files,options)
    qa_nasty_spaces(f90files,options)
-   nt = qa_nonconforming_tabs(files,options)
+   nt = qa_labels(f90files,options)
+   nt += qa_nonconforming_tabs(files,options)
    wc = qa_depreciated_syntax(f90files,options)
    wc += qa_crude_write(f90files,options)
    wc += qa_magic_integers(f90files,options)
@@ -62,6 +63,17 @@ def qa_checks(files,options):
          exit()
    else:
       print b.OKGREEN + "Yay! No errors!!! " + b.ENDC
+
+def qa_labels(files,options):
+   print b.OKGREEN + "QA: " + b.ENDC + "Checking for labels"
+   wrong_files = []
+   for file in files:
+      if (len(sp.Popen('grep "^[0-9]" '+file, shell=True, executable="/bin/bash",stdout=sp.PIPE).communicate()[0])):
+         print b.FAIL + "QA:  " + b.ENDC + "label detected in " + file
+         wrong_files.append(file)
+   if(len(wrong_files) > 0):
+      print b.FAIL + "Seriously!? Don't tell me your using \"goto\" too. It's XXI century..." + b.ENDC
+   return wrong_files
 
 def qa_crude_write(files,options):
    print b.OKGREEN + "QA: " + b.ENDC + "Checking for crude writes to stdout (suppress this by appending QA_WARN at the eol)"

@@ -232,34 +232,38 @@ module snsources
 !! \return @e real, random value of normal distribution
 !! \todo Change function @c gasdev into another one
 !<
-       function gasdev(x,y)
+      function gasdev(x,y)
 
-          implicit none
-          real :: x, y, x1, y1, r, fac, gasdev
-          real,    save :: gset
-          integer, save :: iset, irand
-          real, dimension(2) :: rand
+         implicit none
+         real               :: x, y, x1, y1, r, fac, gasdev
+         real,    save      :: gset
+         integer, save      :: iset, irand
+         real, dimension(2) :: rand
 
-          if (iset.eq.0) then
-1            x1=2.*x-1.
-             y1=2.*y-1.
-             r=x1**2+y1**2
-             if (r.ge.1.) then
-                call random_number(rand)
-                x = rand(1)
-                y = rand(2)
-                irand = irand+2
-                go to 1
-             endif
-             fac=sqrt(-2.*log(r)/r)
-             gset=x1*fac
-             gasdev=y1*fac
-             iset=1
-          else
-             gasdev=gset
-             iset=0
-          endif
-          return
-       end function gasdev
+         r = 2.0
+         if (iset == 0) then
+            do
+               x1 = 2.0*x - 1.0
+               y1 = 2.0*y - 1.0
+               r  = x1**2 + y1**2
+               if (r >= 1.0) then
+                  call random_number(rand)
+                  x = rand(1)
+                  y = rand(2)
+                  irand = irand+2
+               else
+                  exit
+               endif
+            enddo
+            fac=sqrt(-2.*log(r)/r)
+            gset=x1*fac
+            gasdev=y1*fac
+            iset=1
+         else
+            gasdev=gset
+            iset=0
+         endif
+         return
+      end function gasdev
 
 end module snsources
