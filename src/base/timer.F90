@@ -273,19 +273,15 @@ contains
          zcps  = real(nstep) * real(nzones) / cpuallp
 
          call printinfo("", .true.)
-         write(msg, 10) cpuallp
+         write(msg, "('CPU time        = ', f12.2,' s')") cpuallp
          call printinfo(msg)
-         write(msg, 20) wctot
+         write(msg, "('Wall clock time = ', f12.2,' s')") wctot
          call printinfo(msg)
-         write(msg, 30) zcps
+         write(msg, "('Zone-cycles / s = ',en12.5)") zcps
          call printinfo(msg)
          call printinfo("", .true.)
 
       endif
-
-10    format('CPU time        = ', f12.2,' s')
-20    format('Wall clock time = ', f12.2,' s')
-30    format('Zone-cycles / s = ',es12.5)
 
    end subroutine timer_stop
 

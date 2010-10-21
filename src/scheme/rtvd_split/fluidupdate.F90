@@ -37,7 +37,7 @@ contains
    subroutine fluid_update
 
       use dataio,        only: check_log, check_tsl
-      use dataio_public, only: halfstep, msg, printinfo
+      use dataio_public, only: cwdlen, halfstep, msg, printinfo
       use mpisetup,      only: proc, dt, dtm, t, nstep
       use timer,         only: timer_
       use timestep,      only: time_step
@@ -53,11 +53,11 @@ contains
 #endif /* DEBUG */
 
       implicit none
-
-      logical, save      :: first_run = .true.
-      real               :: ts   ! Timestep wallclock
+      character(len=cwdlen), parameter :: fmt900 = "('   nstep = ',i7,'   dt = ',es22.16,'   t = ',es22.16,'   dWallClock = ',f7.2,' s')"
+      logical, save                    :: first_run = .true.
+      real                             :: ts   ! Timestep wallclock
 #ifdef DEBUG
-      integer            :: system, syslog
+      integer                          :: system, syslog
 #endif /* DEBUG */
 
       halfstep = .false.
@@ -81,10 +81,8 @@ contains
 
       call check_log
       call check_tsl
-
-900   format('   nstep = ',i7,'   dt = ',es22.16,'   t = ',es22.16,'   dWallClock = ',f7.2,' s')
       if (first_run .and. proc == 0) then
-         write(msg, 900) 0,dt,t,ts
+         write(msg, fmt900) 0,dt,t,ts
          call printinfo(msg, .true.)
       endif
 
@@ -121,7 +119,7 @@ contains
 
       ts=timer_("fluid_update")
       if (proc == 0) then
-         write(msg, 900) nstep,dt,t,ts
+         write(msg, fmt900) nstep,dt,t,ts
          call printinfo(msg, .true.)
       endif
 
