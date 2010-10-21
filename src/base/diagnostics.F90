@@ -40,13 +40,24 @@ module diagnostics
       module procedure allocate_array_5D_real
    end interface my_allocate
 
+   interface my_deallocate
+      module procedure deallocate_array_1D_int
+      module procedure deallocate_array_2D_int
+      module procedure deallocate_array_3D_int
+      module procedure deallocate_array_1D_real
+      module procedure deallocate_array_2D_real
+      module procedure deallocate_array_3D_real
+      module procedure deallocate_array_4D_real
+      module procedure deallocate_array_5D_real
+   end interface my_deallocate
+
    interface incr_vec
       module procedure increase_char_vector
       module procedure increase_real_vector
    end interface incr_vec
 
    private
-   public :: my_allocate, diagnose_arrays
+   public :: my_allocate, diagnose_arrays, my_deallocate
 
    real,    parameter :: MiB = 8./1048576.  ! sizeof(double) / 2**20
    integer, parameter :: an_len = 64
@@ -134,6 +145,88 @@ contains
          deallocate(temp)
       endif
    end subroutine increase_real_vector
+
+   ! GOD I NEED TEMPLATES IN FORTRAN!!!!
+
+   subroutine deallocate_array_1D_int(array,aname)
+      implicit none
+      integer, dimension(:), allocatable, intent(inout)  :: array
+      character(len=*), intent(in), optional             :: aname
+      
+      used_memory = used_memory - size(array)*MiB*0.5
+      if (allocated(array)) deallocate(array)
+
+   end subroutine deallocate_array_1D_int
+
+   subroutine deallocate_array_2D_int(array,aname)
+      implicit none
+      integer, dimension(:,:), allocatable, intent(inout)  :: array
+      character(len=*), intent(in), optional               :: aname
+      
+      used_memory = used_memory - size(array)*MiB*0.5
+      if (allocated(array)) deallocate(array)
+
+   end subroutine deallocate_array_2D_int
+
+   subroutine deallocate_array_3D_int(array,aname)
+      implicit none
+      integer, dimension(:,:,:), allocatable, intent(inout)  :: array
+      character(len=*), intent(in), optional                 :: aname
+      
+      used_memory = used_memory - size(array)*MiB*0.5
+      if (allocated(array)) deallocate(array)
+
+   end subroutine deallocate_array_3D_int
+
+   subroutine deallocate_array_1D_real(array,aname)
+      implicit none
+      real, dimension(:), allocatable, intent(inout)  :: array
+      character(len=*), intent(in), optional          :: aname
+      
+      used_memory = used_memory - size(array)*MiB
+      if (allocated(array)) deallocate(array)
+
+   end subroutine deallocate_array_1D_real
+
+   subroutine deallocate_array_2D_real(array,aname)
+      implicit none
+      real, dimension(:,:), allocatable, intent(inout)  :: array
+      character(len=*), intent(in), optional            :: aname
+      
+      used_memory = used_memory - size(array)*MiB
+      if (allocated(array)) deallocate(array)
+
+   end subroutine deallocate_array_2D_real
+
+   subroutine deallocate_array_3D_real(array,aname)
+      implicit none
+      real, dimension(:,:,:), allocatable, intent(inout)  :: array
+      character(len=*), intent(in), optional              :: aname
+      
+      used_memory = used_memory - size(array)*MiB
+      if (allocated(array)) deallocate(array)
+
+   end subroutine deallocate_array_3D_real
+
+   subroutine deallocate_array_4D_real(array,aname)
+      implicit none
+      real, dimension(:,:,:,:), allocatable, intent(inout)  :: array
+      character(len=*), intent(in), optional                :: aname
+      
+      used_memory = used_memory - size(array)*MiB
+      if (allocated(array)) deallocate(array)
+
+   end subroutine deallocate_array_4D_real
+
+   subroutine deallocate_array_5D_real(array,aname)
+      implicit none
+      real, dimension(:,:,:,:,:), allocatable, intent(inout)  :: array
+      character(len=*), intent(in), optional                  :: aname
+      
+      used_memory = used_memory - size(array)*MiB
+      if (allocated(array)) deallocate(array)
+
+   end subroutine deallocate_array_5D_real
 
    subroutine allocate_array_1D_int(array,as,aname)
       implicit none
