@@ -160,17 +160,7 @@ module fluidindex
 
 #ifdef COSM_RAYS
 !  Compute indexes for the CR component and update counters
-      nvar%crn%beg    = nvar%all + 1
-      nvar%crs%beg    = nvar%crn%beg
-      call cosmicray_index(nvar%all, nvar%crn%all, nvar%cre%all, nvar%crs%all, cgrid)
-      nvar%crn%end    = nvar%crn%beg + nvar%crn%all - 1
-      nvar%cre%beg    = nvar%crn%end + 1
-      nvar%cre%end    = nvar%all
-      nvar%crs%end    = nvar%cre%end
-      if (nvar%crn%all  /= 0) nvar%components = nvar%components + 1
-      nvar%crn%pos = nvar%components
-      if (nvar%cre%all  /= 0) nvar%components = nvar%components + 1
-      nvar%cre%pos = nvar%components
+      call cosmicray_index(nvar, cgrid)
 #endif /* COSM_RAYS */
 
 ! Allocate index arrays

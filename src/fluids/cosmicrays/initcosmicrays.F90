@@ -207,33 +207,43 @@ contains
 
    end subroutine cosmicray_species
 
-   subroutine cosmicray_index(nvar, nvar_crn, nvar_cre, nvar_crs, cgrid)
+   subroutine cosmicray_index(nvar, cgrid)
       use types,           only: grid_container
-
+      use fluidtypes,      only: var_numbers
       implicit none
 
-      integer :: nvar
-      integer :: nvar_crn
-      integer :: nvar_cre
-      integer :: nvar_crs
+      type(var_numbers), intent(inout) :: nvar
       type(grid_container), intent(in) :: cgrid
       integer :: icr
 
-      nvar_crn      = ncrn
-      nvar_cre      = ncre
-      nvar_crs      = ncrs
+      nvar%crn%beg    = nvar%all + 1
+      nvar%crs%beg    = nvar%crn%beg
+
+      nvar%crn%all  = ncrn
+      nvar%cre%all  = ncre
+      nvar%crs%all  = ncrs
 
       do icr = 1, ncrn
-         iarr_crn(icr)      =nvar+icr
-         iarr_crs(icr)      =nvar+icr
+         iarr_crn(icr)      =nvar%all+icr
+         iarr_crs(icr)      =nvar%all+icr
       enddo
-      nvar = nvar + nvar_crn
+      nvar%all = nvar%all + nvar%crn%all
 
       do icr = 1, ncre
-         iarr_cre(icr)      =nvar+icr
-         iarr_crs(ncrn+icr) =nvar+icr
+         iarr_cre(icr)      =nvar%all+icr
+         iarr_crs(ncrn+icr) =nvar%all+icr
       enddo
-      nvar = nvar + nvar_cre
+      nvar%all = nvar%all + nvar%cre%all
+
+      nvar%crn%end    = nvar%crn%beg + nvar%crn%all - 1
+      nvar%cre%beg    = nvar%crn%end + 1
+      nvar%cre%end    = nvar%all
+      nvar%crs%end    = nvar%cre%end
+      if (nvar%crn%all  /= 0) nvar%components = nvar%components + 1
+      nvar%crn%pos = nvar%components
+      if (nvar%cre%all  /= 0) nvar%components = nvar%components + 1
+      nvar%cre%pos = nvar%components
+
 #ifdef NEW_HDF5
       call cr_add_hdf5(ncrs,cgrid)
 #endif /* NEW_HDF5 */
