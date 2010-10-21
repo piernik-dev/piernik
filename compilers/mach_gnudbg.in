@@ -1,0 +1,15 @@
+PROG      = piernik
+
+### gcc-4.5 debug
+
+USE_GNUCPP = yes
+PRECOMP    =  /opt/gcc/4.5/bin/cpp
+
+
+F90        = /opt/gcc/4.5/hdf5/bin/h5pfc
+
+F90FLAGS   = -I/usr/include -g -ggdb -O0 -fdefault-real-8 -ffpe-trap=zero,overflow,invalid -Wall -W -pedantic-errors -ffree-form -std=gnu -fimplicit-none -ffree-line-length-none -fcheck=all
+
+LDFLAGS    = -L/usr/lib -L/opt/gcc/4.5/lib -L/opt/gcc/4.5/hdf5/lib
+
+
