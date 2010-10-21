@@ -116,7 +116,6 @@ module fluidindex
 
 #ifdef DUST
       use initdust,       only: idnd, imxd, imyd, imzd, dust_index, selfgrav_dst
-      use initdust,       only: iarr_dst_swpx, iarr_dst_swpy, iarr_dst_swpz
 #endif /* DUST */
 
 #ifdef COSM_RAYS
@@ -220,9 +219,9 @@ module fluidindex
 
 #ifdef DUST
 ! Compute index arrays for the dust fluid
-      iarr_all_swpx(nvar%dst%beg:nvar%dst%end) = iarr_dst_swpx
-      iarr_all_swpy(nvar%dst%beg:nvar%dst%end) = iarr_dst_swpy
-      iarr_all_swpz(nvar%dst%beg:nvar%dst%end) = iarr_dst_swpz
+      iarr_all_swpx(nvar%dst%beg:nvar%dst%end) = nvar%iarr_dst_swpx
+      iarr_all_swpy(nvar%dst%beg:nvar%dst%end) = nvar%iarr_dst_swpy
+      iarr_all_swpz(nvar%dst%beg:nvar%dst%end) = nvar%iarr_dst_swpz
 
       if (selfgrav_dst) then
          i_sg = i_sg + 1

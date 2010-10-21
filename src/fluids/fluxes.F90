@@ -56,7 +56,6 @@ module fluxes
 #endif /* NEUTRAL */
 #ifdef DUST
   use fluxdust,       only: flux_dst
-  use initdust,       only: iarr_dst
 #endif /* DUST */
 #ifdef COSM_RAYS
   use fluxcosmicrays, only: flux_crs
@@ -129,11 +128,11 @@ subroutine all_fluxes(n, flux, cfr, uu, bb, cs_iso2)
 #endif /* NEUTRAL */
 
 #ifdef DUST
-   uudst=uu(iarr_dst,:)
+   uudst=uu(nvar%iarr_dst,:)
    call flux_dst(fluxdst,cfrdst,uudst,n)
-   flux(iarr_dst,:) = fluxdst
-   cfr(iarr_dst,:)  = cfrdst
-   uu(iarr_dst,:)   = uudst
+   flux(nvar%iarr_dst,:) = fluxdst
+   cfr(nvar%iarr_dst,:)  = cfrdst
+   uu(nvar%iarr_dst,:)   = uudst
 #endif /* DUST */
 
 #ifdef COSM_RAYS

@@ -38,16 +38,13 @@
 
 module initdust
 
-  implicit none
+   implicit none
 
-    integer               :: idnd, imxd, imyd, imzd
-    real                  :: dragc_gas_dust, taus, dalpha
-    logical               :: selfgrav_dst
+   integer               :: idnd, imxd, imyd, imzd
+   real                  :: dragc_gas_dust, taus, dalpha
+   logical               :: selfgrav_dst
 
-    integer, allocatable, dimension(:)  :: iarr_dst
-    integer, allocatable, dimension(:)  :: iarr_dst_swpx, iarr_dst_swpy, iarr_dst_swpz
-
-  contains
+   contains
 
 !>
 !! \brief Routine to set parameter values from namelist FLUID_DUST
@@ -115,18 +112,23 @@ module initdust
       imyd = nvar%all + 3
       imzd = nvar%all + 4
 
+      nvar%dst%idn  = idnd
+      nvar%dst%imx  = imxd
+      nvar%dst%imy  = imyd
+      nvar%dst%imz  = imzd
+
       nvar%dst%all  = 4
       nvar%all      = imzd
 
-      call my_allocate(iarr_dst,      [nvar%dst%all], "iarr_dst")
-      call my_allocate(iarr_dst_swpx, [nvar%dst%all], "iarr_dst_swpx")
-      call my_allocate(iarr_dst_swpy, [nvar%dst%all], "iarr_dst_swpy")
-      call my_allocate(iarr_dst_swpz, [nvar%dst%all], "iarr_dst_swpz")
+      call my_allocate(nvar%iarr_dst,      [nvar%dst%all], "iarr_dst")
+      call my_allocate(nvar%iarr_dst_swpx, [nvar%dst%all], "iarr_dst_swpx")
+      call my_allocate(nvar%iarr_dst_swpy, [nvar%dst%all], "iarr_dst_swpy")
+      call my_allocate(nvar%iarr_dst_swpz, [nvar%dst%all], "iarr_dst_swpz")
 
-      iarr_dst      = [idnd,imxd,imyd,imzd]
-      iarr_dst_swpx = [idnd,imxd,imyd,imzd]
-      iarr_dst_swpy = [idnd,imyd,imxd,imzd]
-      iarr_dst_swpz = [idnd,imzd,imyd,imxd]
+      nvar%iarr_dst      = [idnd,imxd,imyd,imzd]
+      nvar%iarr_dst_swpx = [idnd,imxd,imyd,imzd]
+      nvar%iarr_dst_swpy = [idnd,imyd,imxd,imzd]
+      nvar%iarr_dst_swpz = [idnd,imzd,imyd,imxd]
 
       nvar%dst%end    = nvar%all
       nvar%components = nvar%components + 1
