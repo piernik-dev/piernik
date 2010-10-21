@@ -291,7 +291,7 @@ module fluidindex
 
    end subroutine fluid_index
 
-   subroutine cleanup_fluid_index
+   subroutine cleanup_fluidindex
 
       implicit none
 
@@ -317,7 +317,7 @@ module fluidindex
       deallocate(iarr_all_crs)
 #endif /* COSM_RAYS */
 
-   end subroutine cleanup_fluid_index
+   end subroutine cleanup_fluidindex
 
 end module fluidindex
 
