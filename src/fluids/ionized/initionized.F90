@@ -112,7 +112,7 @@ module initionized
   end subroutine init_ionized
 
    subroutine ionized_index(nvar)
-      use fluidtypes,   only: var_numbers
+      use types,        only: var_numbers
       use diagnostics,  only: my_allocate
       implicit none
       type(var_numbers), intent(inout) :: nvar

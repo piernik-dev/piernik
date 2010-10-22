@@ -32,7 +32,8 @@
 module types
    private
    public :: indx, hdf, value, grid_container, tsl_container, phys_prop, &
-   & problem_customize_solution, finalize_problem, domlen, idlen
+   & problem_customize_solution, finalize_problem, domlen, idlen, phys_group, &
+   & component_fluid, var_numbers
 
    integer, parameter :: domlen = 16 ! should be <= mpisetup::cbuff_len
    integer, parameter :: idlen  = 3
@@ -93,6 +94,55 @@ module types
       real, dimension(:), pointer  :: y, yl, yr
       real, dimension(:), pointer  :: z, zl, zr
    end type grid_container
+
+   type :: component
+      integer :: all = 0              !< number of all variables in fluid/component
+      integer :: beg = 0              !< beginning number of variables in fluid/component
+      integer :: end = 0              !< end number of variables in fluid/component
+      integer :: pos = 0              !< index denoting position of the fluid in the row of fluids
+   end type component
+
+   type :: component_fluid
+      integer :: all = 0              !< number of all variables in fluid/component
+      integer :: beg = 0              !< beginning number of variables in fluid/component
+      integer :: end = 0              !< end number of variables in fluid/component
+      integer :: pos = 0              !< index denoting position of the fluid in the row of fluids
+      integer :: idn = -1
+      integer :: imx = -1
+      integer :: imy = -1
+      integer :: imz = -1
+      integer :: ien = -1
+
+      real    :: cs  = 0.0
+      real    :: cs2 = 0.0
+      real    :: gam = -1.0
+
+      logical :: sg  = .false.
+
+      integer, allocatable, dimension(:)  :: iarr
+      integer, allocatable, dimension(:)  :: iarr_swpx
+      integer, allocatable, dimension(:)  :: iarr_swpy
+      integer, allocatable, dimension(:)  :: iarr_swpz
+
+      type(phys_prop) :: snap
+   end type component_fluid
+
+   type :: var_numbers
+      integer :: all         = 0     !< total number of fluid variables = the size of array \a u(:,:,;,:) in the first index
+      integer :: fluids      = 0     !< number of fluids (ionized gas, neutral gas, dust)
+      integer :: adiab       = 0     !< number of adiabatic fluids (indicating the presence of energy density in the vector of conservative variables)
+      integer :: components  = 0     !< number of components, such as CRs, tracers, magnetic helicity (in future), whose formal description does not involve [???]
+      integer :: fluids_sg   = 0     !< number of selfgravitating fluids (ionized gas, neutral gas, dust)
+
+      type(component_fluid) :: ion         !< numbers of variables for the ionized fluid
+      type(component_fluid) :: neu         !< numbers of variables for the neutral fluid
+      type(component_fluid) :: dst         !< numbers of variables for the dust fluid
+
+      type(component) :: crs         !< numbers of variables in all cosmic ray components
+      type(component) :: crn         !< numbers of variables in cosmic ray nuclear components
+      type(component) :: cre         !< numbers of variables in cosmic ray electron components
+
+   end type var_numbers
 
    type :: tsl_container
 #ifdef COSM_RAYS

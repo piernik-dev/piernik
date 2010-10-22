@@ -208,8 +208,7 @@ contains
    end subroutine cosmicray_species
 
    subroutine cosmicray_index(nvar, cgrid)
-      use types,           only: grid_container
-      use fluidtypes,      only: var_numbers
+      use types,           only: grid_container, var_numbers
       implicit none
 
       type(var_numbers), intent(inout) :: nvar

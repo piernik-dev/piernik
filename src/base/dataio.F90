@@ -972,8 +972,7 @@ module dataio
    subroutine get_common_vars(fl)
       use arrays,     only: u, wa
       use grid,       only: is, ie, js, je, ks, ke
-      use types,      only: phys_prop
-      use fluidtypes, only: component_fluid
+      use types,      only: phys_prop, component_fluid
       use constants,  only: mH, kboltz, gasRconst
       implicit none
       type(component_fluid), intent(inout), target :: fl
@@ -985,13 +984,13 @@ module dataio
       call get_extremum(wa(is:ie,js:je,ks:ke), 'min', pr%dens_min)
 
       wa = abs(u(fl%imx,:,:,:)/u(fl%idn,:,:,:))
-      call get_extremum(wa(is:ie,js:je,ks:ke), 'max', pr%velx_max) 
+      call get_extremum(wa(is:ie,js:je,ks:ke), 'max', pr%velx_max)
 
       wa = abs(u(fl%imy,:,:,:)/u(fl%idn,:,:,:))
-      call get_extremum(wa(is:ie,js:je,ks:ke), 'max', pr%vely_max) 
+      call get_extremum(wa(is:ie,js:je,ks:ke), 'max', pr%vely_max)
 
       wa = abs(u(fl%imz,:,:,:)/u(fl%idn,:,:,:))
-      call get_extremum(wa(is:ie,js:je,ks:ke), 'max', pr%velz_max) 
+      call get_extremum(wa(is:ie,js:je,ks:ke), 'max', pr%velz_max)
 
 #ifdef ISO
       pr%pres_min%val  = fl%cs2*pr%dens_min%val
@@ -1023,15 +1022,15 @@ module dataio
 
       wa = 0.0
 
-      call get_extremum(wa(is:ie,js:je,ks:ke), 'max', pr%pres_max) 
-      call get_extremum(wa(is:ie,js:je,ks:ke), 'min', pr%pres_min) 
+      call get_extremum(wa(is:ie,js:je,ks:ke), 'max', pr%pres_max)
+      call get_extremum(wa(is:ie,js:je,ks:ke), 'min', pr%pres_min)
 
       wa(:,:,:) = fl%gam*wa(:,:,:)
-      call get_extremum(wa(is:ie,js:je,ks:ke), 'max', pr%cs_max) 
+      call get_extremum(wa(is:ie,js:je,ks:ke), 'max', pr%cs_max)
 
       wa(:,:,:) = mH/kboltz / fl%gam * gasRconst * wa(:,:,:) / u(fl%idn,:,:,:)
-      call get_extremum(wa(is:ie,js:je,ks:ke), 'max', pr%temp_max) 
-      call get_extremum(wa(is:ie,js:je,ks:ke), 'min', pr%temp_min) 
+      call get_extremum(wa(is:ie,js:je,ks:ke), 'max', pr%temp_max)
+      call get_extremum(wa(is:ie,js:je,ks:ke), 'min', pr%temp_min)
 #endif /* ISO */
       end subroutine get_common_vars
    !---------------------------------------------------------------------
@@ -1050,8 +1049,7 @@ module dataio
          use fluidindex,         only: ibx, iby, ibz, nvar
          use grid,               only: dx, dy, dz, dxmn, nb, is, ie, js, je, ks, ke, nx, ny, nz
          use mpisetup,           only: smallei, cfl, t, dt, proc, mpifind, nstep
-         use types,              only: tsl_container, value
-         use fluidtypes,         only: component_fluid
+         use types,              only: tsl_container, value, component_fluid
          use fluidindex,         only: nvar
 #ifdef COSM_RAYS
          use fluidindex,         only: iarr_all_crs

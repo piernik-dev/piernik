@@ -98,8 +98,8 @@ module initdust
   end subroutine init_dust
 
    subroutine dust_index(nvar)
-      use fluidtypes,   only: var_numbers
-      use diagnostics,  only: my_allocate
+      use types,         only: var_numbers
+      use diagnostics,   only: my_allocate
 
       implicit none
       type(var_numbers), intent(inout) :: nvar

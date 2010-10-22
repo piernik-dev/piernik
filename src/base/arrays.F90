@@ -71,7 +71,7 @@ module arrays
    subroutine init_arrays(nx, ny, nz, nvar)
 
       use diagnostics, only: my_allocate
-      use fluidtypes,  only: var_numbers
+      use types,       only: var_numbers
 
       implicit none
 

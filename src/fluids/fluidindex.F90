@@ -45,8 +45,7 @@
 
 module fluidindex
 
-   use fluidtypes, only: var_numbers
-   use types,      only: indx
+   use types, only: var_numbers
    implicit none
 
    type(var_numbers),save :: nvar
