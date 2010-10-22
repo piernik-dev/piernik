@@ -138,21 +138,21 @@ module initionized
       nvar%ion%ien  = ieni
 #endif /* !ISO */
 
-      call my_allocate(nvar%iarr_ion,       [nvar%ion%all], "iarr_ion")
-      call my_allocate(nvar%iarr_ion_swpx,  [nvar%ion%all], "iarr_ion_swpx")
-      call my_allocate(nvar%iarr_ion_swpy,  [nvar%ion%all], "iarr_ion_swpy")
-      call my_allocate(nvar%iarr_ion_swpz,  [nvar%ion%all], "iarr_ion_swpz")
+      call my_allocate(nvar%ion%iarr,       [nvar%ion%all], "ion%iarr")
+      call my_allocate(nvar%ion%iarr_swpx,  [nvar%ion%all], "ion%iarr_swpx")
+      call my_allocate(nvar%ion%iarr_swpy,  [nvar%ion%all], "ion%iarr_swpy")
+      call my_allocate(nvar%ion%iarr_swpz,  [nvar%ion%all], "ion%iarr_swpz")
 
-      nvar%iarr_ion(1:4)      = [idni,imxi,imyi,imzi]
-      nvar%iarr_ion_swpx(1:4) = [idni,imxi,imyi,imzi]
-      nvar%iarr_ion_swpy(1:4) = [idni,imyi,imxi,imzi]
-      nvar%iarr_ion_swpz(1:4) = [idni,imzi,imyi,imxi]
+      nvar%ion%iarr(1:4)      = [idni,imxi,imyi,imzi]
+      nvar%ion%iarr_swpx(1:4) = [idni,imxi,imyi,imzi]
+      nvar%ion%iarr_swpy(1:4) = [idni,imyi,imxi,imzi]
+      nvar%ion%iarr_swpz(1:4) = [idni,imzi,imyi,imxi]
 
 #ifndef ISO
-      nvar%iarr_ion(5)      = ieni
-      nvar%iarr_ion_swpx(5) = ieni
-      nvar%iarr_ion_swpy(5) = ieni
-      nvar%iarr_ion_swpz(5) = ieni
+      nvar%ion%iarr(5)      = ieni
+      nvar%ion%iarr_swpx(5) = ieni
+      nvar%ion%iarr_swpy(5) = ieni
+      nvar%ion%iarr_swpz(5) = ieni
 
       nvar%adiab = nvar%adiab + 1
 #endif /* !ISO */

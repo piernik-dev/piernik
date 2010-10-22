@@ -176,9 +176,9 @@ module fluidindex
 
 #ifdef IONIZED
 ! Compute index arrays for the ionized fluid
-      iarr_all_swpx(nvar%ion%beg:nvar%ion%end) = nvar%iarr_ion_swpx
-      iarr_all_swpy(nvar%ion%beg:nvar%ion%end) = nvar%iarr_ion_swpy
-      iarr_all_swpz(nvar%ion%beg:nvar%ion%end) = nvar%iarr_ion_swpz
+      iarr_all_swpx(nvar%ion%beg:nvar%ion%end) = nvar%ion%iarr_swpx
+      iarr_all_swpy(nvar%ion%beg:nvar%ion%end) = nvar%ion%iarr_swpy
+      iarr_all_swpz(nvar%ion%beg:nvar%ion%end) = nvar%ion%iarr_swpz
 
       if (selfgrav_ion) then
          i_sg = i_sg + 1
@@ -195,9 +195,9 @@ module fluidindex
 
 #ifdef NEUTRAL
 ! Compute index arrays for the neutral fluid
-      iarr_all_swpx(nvar%neu%beg:nvar%neu%end) = nvar%iarr_neu_swpx
-      iarr_all_swpy(nvar%neu%beg:nvar%neu%end) = nvar%iarr_neu_swpy
-      iarr_all_swpz(nvar%neu%beg:nvar%neu%end) = nvar%iarr_neu_swpz
+      iarr_all_swpx(nvar%neu%beg:nvar%neu%end) = nvar%neu%iarr_swpx
+      iarr_all_swpy(nvar%neu%beg:nvar%neu%end) = nvar%neu%iarr_swpy
+      iarr_all_swpz(nvar%neu%beg:nvar%neu%end) = nvar%neu%iarr_swpz
 
       if (selfgrav_neu) then
          i_sg = i_sg + 1
@@ -214,9 +214,9 @@ module fluidindex
 
 #ifdef DUST
 ! Compute index arrays for the dust fluid
-      iarr_all_swpx(nvar%dst%beg:nvar%dst%end) = nvar%iarr_dst_swpx
-      iarr_all_swpy(nvar%dst%beg:nvar%dst%end) = nvar%iarr_dst_swpy
-      iarr_all_swpz(nvar%dst%beg:nvar%dst%end) = nvar%iarr_dst_swpz
+      iarr_all_swpx(nvar%dst%beg:nvar%dst%end) = nvar%dst%iarr_swpx
+      iarr_all_swpy(nvar%dst%beg:nvar%dst%end) = nvar%dst%iarr_swpy
+      iarr_all_swpz(nvar%dst%beg:nvar%dst%end) = nvar%dst%iarr_swpz
 
       if (selfgrav_dst) then
          i_sg = i_sg + 1

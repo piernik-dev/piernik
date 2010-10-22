@@ -120,15 +120,15 @@ module initdust
       nvar%dst%all  = 4
       nvar%all      = imzd
 
-      call my_allocate(nvar%iarr_dst,      [nvar%dst%all], "iarr_dst")
-      call my_allocate(nvar%iarr_dst_swpx, [nvar%dst%all], "iarr_dst_swpx")
-      call my_allocate(nvar%iarr_dst_swpy, [nvar%dst%all], "iarr_dst_swpy")
-      call my_allocate(nvar%iarr_dst_swpz, [nvar%dst%all], "iarr_dst_swpz")
+      call my_allocate(nvar%dst%iarr,      [nvar%dst%all], "dst%iarr")
+      call my_allocate(nvar%dst%iarr_swpx, [nvar%dst%all], "dst%iarr_swpx")
+      call my_allocate(nvar%dst%iarr_swpy, [nvar%dst%all], "dst%iarr_swpy")
+      call my_allocate(nvar%dst%iarr_swpz, [nvar%dst%all], "dst%iarr_swpz")
 
-      nvar%iarr_dst      = [idnd,imxd,imyd,imzd]
-      nvar%iarr_dst_swpx = [idnd,imxd,imyd,imzd]
-      nvar%iarr_dst_swpy = [idnd,imyd,imxd,imzd]
-      nvar%iarr_dst_swpz = [idnd,imzd,imyd,imxd]
+      nvar%dst%iarr      = [idnd,imxd,imyd,imzd]
+      nvar%dst%iarr_swpx = [idnd,imxd,imyd,imzd]
+      nvar%dst%iarr_swpy = [idnd,imyd,imxd,imzd]
+      nvar%dst%iarr_swpz = [idnd,imzd,imyd,imxd]
 
       nvar%dst%end    = nvar%all
       nvar%components = nvar%components + 1

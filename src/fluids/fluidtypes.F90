@@ -47,6 +47,13 @@ module fluidtypes
       integer :: imy = -1
       integer :: imz = -1
       integer :: ien = -1
+      real    :: cs  = 0.0
+      real    :: cs2 = 0.0
+      real    :: gam = 0.0
+      integer, allocatable, dimension(:)  :: iarr
+      integer, allocatable, dimension(:)  :: iarr_swpx
+      integer, allocatable, dimension(:)  :: iarr_swpy
+      integer, allocatable, dimension(:)  :: iarr_swpz
    end type component_fluid
 
    type :: var_numbers
@@ -57,16 +64,8 @@ module fluidtypes
       integer :: fluids_sg   = 0     !< number of selfgravitating fluids (ionized gas, neutral gas, dust)
 
       type(component_fluid) :: ion         !< numbers of variables for the ionized fluid
-      integer, allocatable, dimension(:)  :: iarr_ion
-      integer, allocatable, dimension(:)  :: iarr_ion_swpx, iarr_ion_swpy, iarr_ion_swpz
-
       type(component_fluid) :: neu         !< numbers of variables for the neutral fluid
-      integer, allocatable, dimension(:)  :: iarr_neu
-      integer, allocatable, dimension(:)  :: iarr_neu_swpx, iarr_neu_swpy, iarr_neu_swpz
-
       type(component_fluid) :: dst         !< numbers of variables for the dust fluid
-      integer, allocatable, dimension(:)  :: iarr_dst
-      integer, allocatable, dimension(:)  :: iarr_dst_swpx, iarr_dst_swpy, iarr_dst_swpz
 
       type(component) :: crs         !< numbers of variables in all cosmic ray components
       type(component) :: crn         !< numbers of variables in cosmic ray nuclear components

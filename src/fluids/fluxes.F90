@@ -104,33 +104,33 @@ subroutine all_fluxes(n, flux, cfr, uu, bb, cs_iso2)
    vion(:) = 0.0
 
 #ifdef IONIZED
-   uuion(:,:)=uu(nvar%iarr_ion,:)
+   uuion(:,:)=uu(nvar%ion%iarr,:)
 
    call flux_ion(fluxion,cfrion,vion,uuion,bb,n,cs_iso2)
 
-   flux(nvar%iarr_ion,:) = fluxion
-   cfr(nvar%iarr_ion,:)  = cfrion
-   uu(nvar%iarr_ion,:)   = uuion
+   flux(nvar%ion%iarr,:) = fluxion
+   cfr(nvar%ion%iarr,:)  = cfrion
+   uu(nvar%ion%iarr,:)   = uuion
 #else /* IONIZED */
    if (.false.) dummy = size(bb)*size(cs_iso2) ! suppress compiler warnings on unused arguments
 #endif /* IONIZED */
 
 #ifdef NEUTRAL
-   uuneu(:,:)=uu(nvar%iarr_neu,:)
+   uuneu(:,:)=uu(nvar%neu%iarr,:)
 
    call flux_neu(fluxneu,cfrneu,uuneu,n)
 
-   flux(nvar%iarr_neu,:) = fluxneu
-   cfr(nvar%iarr_neu,:)  = cfrneu
-   uu(nvar%iarr_neu,:)   = uuneu
+   flux(nvar%neu%iarr,:) = fluxneu
+   cfr(nvar%neu%iarr,:)  = cfrneu
+   uu(nvar%neu%iarr,:)   = uuneu
 #endif /* NEUTRAL */
 
 #ifdef DUST
-   uudst=uu(nvar%iarr_dst,:)
+   uudst=uu(nvar%dst%iarr,:)
    call flux_dst(fluxdst,cfrdst,uudst,n)
-   flux(nvar%iarr_dst,:) = fluxdst
-   cfr(nvar%iarr_dst,:)  = cfrdst
-   uu(nvar%iarr_dst,:)   = uudst
+   flux(nvar%dst%iarr,:) = fluxdst
+   cfr(nvar%dst%iarr,:)  = cfrdst
+   uu(nvar%dst%iarr,:)   = uudst
 #endif /* DUST */
 
 #ifdef COSM_RAYS

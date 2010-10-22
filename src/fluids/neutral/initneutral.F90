@@ -151,21 +151,21 @@ module initneutral
       nvar%neu%all  = nvar%neu%all +1
 #endif /* !ISO */
 
-      call my_allocate(nvar%iarr_neu,       [nvar%neu%all], "iarr_neu")
-      call my_allocate(nvar%iarr_neu_swpx,  [nvar%neu%all], "iarr_neu_swpx")
-      call my_allocate(nvar%iarr_neu_swpy,  [nvar%neu%all], "iarr_neu_swpy")
-      call my_allocate(nvar%iarr_neu_swpz,  [nvar%neu%all], "iarr_neu_swpz")
+      call my_allocate(nvar%neu%iarr,       [nvar%neu%all], "neu%iarr")
+      call my_allocate(nvar%neu%iarr_swpx,  [nvar%neu%all], "neu%iarr_swpx")
+      call my_allocate(nvar%neu%iarr_swpy,  [nvar%neu%all], "neu%iarr_swpy")
+      call my_allocate(nvar%neu%iarr_swpz,  [nvar%neu%all], "neu%iarr_swpz")
 
-      nvar%iarr_neu(1:4)      = [idnn,imxn,imyn,imzn]
-      nvar%iarr_neu_swpx(1:4) = [idnn,imxn,imyn,imzn]
-      nvar%iarr_neu_swpy(1:4) = [idnn,imyn,imxn,imzn]
-      nvar%iarr_neu_swpz(1:4) = [idnn,imzn,imyn,imxn]
+      nvar%neu%iarr(1:4)      = [idnn,imxn,imyn,imzn]
+      nvar%neu%iarr_swpx(1:4) = [idnn,imxn,imyn,imzn]
+      nvar%neu%iarr_swpy(1:4) = [idnn,imyn,imxn,imzn]
+      nvar%neu%iarr_swpz(1:4) = [idnn,imzn,imyn,imxn]
 
 #ifndef ISO
-      nvar%iarr_neu(5)      = ienn
-      nvar%iarr_neu_swpx(5) = ienn
-      nvar%iarr_neu_swpy(5) = ienn
-      nvar%iarr_neu_swpz(5) = ienn
+      nvar%neu%iarr(5)      = ienn
+      nvar%neu%iarr_swpx(5) = ienn
+      nvar%neu%iarr_swpy(5) = ienn
+      nvar%neu%iarr_swpz(5) = ienn
 
       nvar%adiab = nvar%adiab + 1
 #endif /* ISO */
