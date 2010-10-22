@@ -32,7 +32,7 @@
 module types
    private
    public :: indx, hdf, value, grid_container, tsl_container, phys_prop, &
-   & problem_customize_solution, finalize_problem, domlen, idlen, phys_group, &
+   & problem_customize_solution, finalize_problem, domlen, idlen, &
    & component_fluid, var_numbers
 
    integer, parameter :: domlen = 16 ! should be <= mpisetup::cbuff_len

@@ -1044,7 +1044,7 @@ module dataio
       subroutine  write_log(tsl)
 
          use arrays,             only: wa, u, b
-         use constants,          only: small, mH, kboltz, gasRconst
+         use constants,          only: small
          use dataio_public,      only: msg, printinfo
          use fluidindex,         only: ibx, iby, ibz, nvar
          use grid,               only: dx, dy, dz, dxmn, nb, is, ie, js, je, ks, ke, nx, ny, nz
@@ -1227,9 +1227,7 @@ module dataio
       endif
 
    end subroutine write_log
-
 !------------------------------------------------------------------------
-
    subroutine read_file_msg
 !-------------------------------------------------------------------------
 !     configurable parameters: problem.par
@@ -1301,7 +1299,5 @@ module dataio
       enddo
 
    end subroutine read_file_msg
-
 !------------------------------------------------------------------------
-
 end module dataio
