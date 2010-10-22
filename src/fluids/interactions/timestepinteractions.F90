@@ -42,9 +42,7 @@ module timestepinteractions
   subroutine timestep_interactions
     use arrays,       only: u, b
     use constants,    only: small
-    use fluidindex,   only: iarr_all_dn
-    use initdust,     only: imxd, imyd, imzd, idnd
-    use initneutral,  only: imxn, imyn, imzn, cs_iso_neu
+    use fluidindex,   only: iarr_all_dn, nvar
     use interactions, only: collfaq, cfl_interact
     use mpisetup,     only: comm, ierr, MPI_MIN, MPI_DOUBLE_PRECISION
 
@@ -59,10 +57,10 @@ module timestepinteractions
 
     !!!!BEWARE: works only with neu+dust!!!!
 
-    val = maxval (  sqrt( (u(imxd,:,:,:)-u(imxn,:,:,:))**2 + &
-                    (u(imyd,:,:,:)-u(imyn,:,:,:))**2 + &
-                    (u(imzd,:,:,:)-u(imzn,:,:,:))**2   ) * u(idnd,:,:,:) )
-    dt_interact_proc = cs_iso_neu / (maxval(collfaq) * val)
+    val = maxval (  sqrt( (u(nvar%dst%imx,:,:,:)-u(nvar%neu%imx,:,:,:))**2 + &
+                    (u(nvar%dst%imy,:,:,:)-u(nvar%neu%imy,:,:,:))**2 + &
+                    (u(nvar%dst%imz,:,:,:)-u(nvar%neu%imz,:,:,:))**2   ) * u(nvar%dst%idn,:,:,:) )
+    dt_interact_proc = nvar%neu%cs / (maxval(collfaq) * val)
 
 
     call MPI_Reduce(dt_interact_proc, dt_interact_all, 1, MPI_DOUBLE_PRECISION, MPI_MIN, 0, comm, ierr)
