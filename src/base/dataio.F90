@@ -873,10 +873,10 @@ module dataio
 
 ! some quantities computed in "write_log".One can add more, or change.
 #ifdef IONIZED
-                      tsl%vxi_max, tsl%vyi_max, tsl%vzi_max, tsl%csi_max, &
-                      tsl%deni_min, tsl%deni_max, tsl%prei_min, tsl%prei_max, &
+                      nvar%ion%snap%velx_max%val, nvar%ion%snap%vely_max%val, nvar%ion%snap%velz_max%val, nvar%ion%snap%cs_max%val, &
+                      nvar%ion%snap%dens_min%val, nvar%ion%snap%dens_max%val, nvar%ion%snap%pres_min%val, nvar%ion%snap%pres_max%val, &
 #ifndef ISO
-                      tsl%temi_min, tsl%temi_max, &
+                      nvar%ion%snap%temp_min%val, nvar%ion%snap%temp_max%val, &
 #endif /* !ISO */
 #endif /* IONIZED */
 
@@ -886,7 +886,7 @@ module dataio
 #endif /* NEUTRAL */
 
 #ifdef DUST
-                      tsl%dend_min, tsl%dend_max, tsl%vxd_max, tsl%vyd_max, tsl%vzd_max, &
+                      nvar%dst%snap%dens_min%val, nvar%dst%snap%dens_max%val, nvar%dst%snap%velx_max%val, nvar%dst%snap%vely_max%val, nvar%dst%snap%velz_max%val, &
 #endif /* DUST */
                       0.0
          close(tsl_lun)
@@ -1076,27 +1076,12 @@ module dataio
 #ifdef MAGNETIC
          type(value) :: b_min, b_max, divb_max, vai_max
 #endif /* MAGNETIC */
-
-#ifdef IONIZED
-         type(value) :: deni_min, deni_max, vxi_max, vyi_max, vzi_max, &
-                        prei_min, prei_max, temi_min, temi_max, csi_max
-#endif /* IONIZED */
-
-#ifdef DUST
-         type(value) :: dend_min, dend_max, vxd_max, vyd_max, vzd_max
-#endif /* DUST */
-
 #ifdef COSM_RAYS
          type(value) :: encr_min, encr_max
 #endif /* COSM_RAYS */
-
 #ifdef RESISTIVE
          type(value) :: etamax
 #endif /* RESISTIVE */
-
-#ifdef ISO_LOCAL
-    !      type(value) :: cs_iso2_max, cs_iso2_min
-#endif /* ISO_LOCAL */
 
          if (dxmn >= sqrt(huge(1.0))) then
             dxmn_safe = sqrt(huge(1.0))
@@ -1192,7 +1177,8 @@ module dataio
 #ifdef IONIZED
             call common_shout(nvar%ion%snap,'ION',.true.,.true.,.true.)
 #ifdef MAGNETIC
-            write(msg, fmt777) 'max(c_f)    ION  =', sqrt(csi_max%val**2+vai_max%val**2), 'dt=',cfl*dxmn_safe/sqrt(csi_max%val**2+vai_max%val**2)
+            write(msg, fmt777) 'max(c_f)    ION  =', sqrt(nvar%ion%snap%cs_max%val**2+vai_max%val**2), &
+               'dt=',cfl*dxmn_safe/sqrt(nvar%ion%snap%cs_max%val**2+vai_max%val**2)
             call printinfo(msg, .false.)
             write(msg, fmt777) 'max(v_a)    ION  =', vai_max%val, 'dt=',cfl*dxmn_safe/(vai_max%val+small), vai_max%proc, vai_max%loc
             call printinfo(msg, .false.)
@@ -1225,32 +1211,12 @@ module dataio
 #endif /* RESISTIVE */
             call printinfo('================================================================================', .false.)
          else
-#ifdef IONIZED
-            tsl%deni_min = deni_min%val
-            tsl%deni_max = deni_max%val
-            tsl%vxi_max  = vxi_max%val
-            tsl%vyi_max  = vyi_max%val
-            tsl%vzi_max  = vzi_max%val
-            tsl%prei_min = prei_min%val
-            tsl%prei_max = prei_max%val
-            tsl%temi_min = temi_min%val
-            tsl%temi_max = temi_max%val
-            tsl%csi_max  = csi_max%val
-#endif /* IONIZED */
 #ifdef MAGNETIC
             tsl%b_min = b_min%val
             tsl%b_max = b_max%val
             tsl%divb_max = divb_max%val
             tsl%vai_max  = vai_max%val
 #endif /* MAGNETIC */
-
-#ifdef DUST
-            tsl%dend_min = dend_min%val
-            tsl%dend_max = dend_max%val
-            tsl%vxd_max = vxd_max%val
-            tsl%vyd_max = vyd_max%val
-            tsl%vzd_max = vzd_max%val
-#endif /* DUST */
 
 #ifdef COSM_RAYS
             tsl%encr_min = encr_min%val
