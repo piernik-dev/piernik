@@ -881,8 +881,8 @@ module dataio
 #endif /* IONIZED */
 
 #ifdef NEUTRAL
-                      tsl%denn_min, tsl%denn_max, tsl%vxn_max, tsl%vyn_max, tsl%vzn_max, &
-                      tsl%pren_min, tsl%pren_max, tsl%temn_min, tsl%temn_max, tsl%csn_max, &
+                      nvar%neu%snap%dens_min%val, nvar%neu%snap%dens_max%val, nvar%neu%snap%velx_max%val, nvar%neu%snap%vely_max%val, nvar%neu%snap%velz_max%val, &
+                      nvar%neu%snap%pres_min%val, nvar%neu%snap%pres_max%val, nvar%neu%snap%temp_min%val, nvar%neu%snap%temp_max%val, nvar%neu%snap%cs_max%val, &
 #endif /* NEUTRAL */
 
 #ifdef DUST
@@ -894,86 +894,45 @@ module dataio
 
    end subroutine write_timeslice
 
-!---------------------------------------------------------------------
-!
-! writes timestep diagnostics to the logfile
-!
-! Quite costly routine due to extensive array searches
-!
-!---------------------------------------------------------------------
-!
-   subroutine  write_log(tsl)
-
-      use arrays,             only: wa, u, b
-      use constants,          only: small, mH, kboltz, gasRconst
-      use dataio_public,      only: msg, printinfo
-      use fluidindex,         only: ibx, iby, ibz, nvar
-      use grid,               only: dx, dy, dz, dxmn, nb, is, ie, js, je, ks, ke, nx, ny, nz
-      use mpisetup,           only: smallei, cfl, t, dt, proc, mpifind, nstep
-      use types,              only: tsl_container, value
-#ifdef IONIZED
-      use initionized,        only: idni, imxi, imyi, imzi, gamma_ion, cs_iso_ion, cs_iso_ion2
-#ifndef ISO
-      use initionized,        only: ieni
-#endif /* !ISO */
-#endif /* IONIZED */
-#ifdef NEUTRAL
-      use initneutral,        only: idnn, imxn, imyn, imzn, gamma_neu, cs_iso_neu, cs_iso_neu2
-#ifndef ISO
-      use initneutral,        only: ienn
-#endif /* !ISO */
-#endif /* NEUTRAL */
-#ifdef DUST
-      use initdust,           only: idnd, imxd, imyd, imzd
-#endif /* DUST */
-#ifdef COSM_RAYS
-      use fluidindex,         only: iarr_all_crs
-      use timestepcosmicrays, only: dt_crs
-#endif /* COSM_RAYS */
-#ifdef RESISTIVE
-      use resistivity,        only: dt_resist, eta_max
-#endif /* RESISTIVE */
-#ifdef ISO_LOCAL
-      use arrays,             only: cs_iso2_arr
-#endif /* ISO_LOCAL */
-
+   subroutine get_extremum(tab,minmax,prop)
+      use dataio_public, only: msg, warn
+      use types,         only: value
+      use grid,          only: nb
+      use mpisetup,      only: mpifind
       implicit none
+      real, dimension(:,:,:), intent(in) :: tab
+      character(len=*), intent(in)       :: minmax
+      type(value), intent(out)           :: prop
 
-      character(len=cwdlen), parameter :: fmt771 = "(5x,a18,(1x,es15.9),16x,5(1x,i4))"
-      character(len=cwdlen), parameter :: fmt777 = "(5x,a18,(1x,es15.9),2x,a3,(1x,es10.4),5(1x,i4))"
+      if(minmax=='min') then
+         prop%val = minval(tab)
+         prop%loc = minloc(tab) + [nb,nb,nb]
+      elseif(minmax=='max') then
+         prop%val = maxval(tab)
+         prop%loc = maxloc(tab) + [nb,nb,nb]
+      else
+         write(msg,*) "[dataio:get_extremum]: I don't know what to do with minmax = ", trim(minmax)
+         call warn(msg)
+      endif
 
-      type(tsl_container), optional :: tsl
+      call mpifind(prop%val, trim(minmax), prop%loc, prop%proc)
+      return
+   end subroutine get_extremum
+
+   subroutine common_shout(pr, fluid, pres_tn, temp_tn, cs_tn)
+      use types,           only: phys_prop
+      use grid,            only: dxmn, dx, dy, dz
+      use mpisetup,        only: cfl
+      use constants,       only: small
+      use dataio_public,   only: msg, printinfo
+      implicit none
+      type(phys_prop), intent(in)  :: pr
+      character(len=*), intent(in) :: fluid
+      logical, intent(in)          :: pres_tn, temp_tn, cs_tn
+
+      character(len=cwdlen), parameter :: fmt772 = "(5x,a12,2a3,(1x,es15.9),16x,5(1x,i4))"
+      character(len=cwdlen), parameter :: fmt778 = "(5x,a12,2a3,(1x,es15.9),2x,a3,(1x,es10.4),5(1x,i4))"
       real :: dxmn_safe
-
-#ifdef MAGNETIC
-      type(value) :: b_min, b_max, divb_max, vai_max
-#endif /* MAGNETIC */
-
-#ifdef IONIZED
-      type(value) :: deni_min, deni_max, vxi_max, vyi_max, vzi_max, &
-                     prei_min, prei_max, temi_min, temi_max, csi_max
-#endif /* IONIZED */
-
-#ifdef NEUTRAL
-      type(value) :: denn_min, denn_max, vxn_max, vyn_max, vzn_max, &
-                     pren_min, pren_max, temn_min, temn_max, csn_max
-#endif /* NEUTRAL */
-
-#ifdef DUST
-      type(value) :: dend_min, dend_max, vxd_max, vyd_max, vzd_max
-#endif /* DUST */
-
-#ifdef COSM_RAYS
-      type(value) :: encr_min, encr_max
-#endif /* COSM_RAYS */
-
-#ifdef RESISTIVE
-      type(value) :: etamax
-#endif /* RESISTIVE */
-
-#ifdef ISO_LOCAL
- !      type(value) :: cs_iso2_max, cs_iso2_min
-#endif /* ISO_LOCAL */
 
       if (dxmn >= sqrt(huge(1.0))) then
          dxmn_safe = sqrt(huge(1.0))
@@ -981,267 +940,238 @@ module dataio
          dxmn_safe = dxmn
       endif
 
-! Timestep diagnostics
-#ifdef NEUTRAL
-      wa            = u(idnn,:,:,:)
-      denn_min%val  = minval(wa(is:ie,js:je,ks:ke))
-      denn_min%loc  = minloc(wa(is:ie,js:je,ks:ke)) &
-                    + (/nb,nb,nb/)
-      call mpifind(denn_min%val, 'min', denn_min%loc, denn_min%proc)
+      write(msg, fmt772) 'min(dens)   ',fluid,'  =', pr%dens_min%val,  pr%dens_min%proc,  pr%dens_min%loc
+      call printinfo(msg, .false.)
+      write(msg, fmt772) 'max(dens)   ',fluid,'  =', pr%dens_max%val,  pr%dens_max%proc,  pr%dens_max%loc
+      call printinfo(msg, .false.)
+      if(temp_tn) then
+         write(msg, fmt772) 'min(temp)   ',fluid,'  =', pr%temp_min%val,  pr%temp_min%proc,  pr%temp_min%loc
+         call printinfo(msg, .false.)
+         write(msg, fmt772) 'max(temp)   ',fluid,'  =', pr%temp_max%val,  pr%temp_max%proc,  pr%temp_max%loc
+         call printinfo(msg, .false.)
+      endif
+      if(pres_tn) then
+         write(msg, fmt772) 'min(pres)   ',fluid,'  =', pr%pres_min%val,  pr%pres_min%proc,  pr%pres_min%loc
+         call printinfo(msg, .false.)
+         write(msg, fmt772) 'max(pres)   ',fluid,'  =', pr%pres_max%val,  pr%pres_max%proc,  pr%pres_max%loc
+         call printinfo(msg, .false.)
+      endif
 
-      denn_max%val  = maxval(wa(is:ie,js:je,ks:ke))
-      denn_max%loc  = maxloc(wa(is:ie,js:je,ks:ke)) &
-                    + (/nb,nb,nb/)
-      call mpifind(denn_max%val, 'max', denn_max%loc, denn_max%proc)
+      write(msg, fmt778) 'max(|vx|)   ',fluid,'  =', pr%velx_max%val, 'dt=',cfl*dx/(pr%velx_max%val+small),   pr%velx_max%proc, pr%velx_max%loc
+      call printinfo(msg, .false.)
+      write(msg, fmt778) 'max(|vy|)   ',fluid,'  =', pr%vely_max%val, 'dt=',cfl*dy/(pr%vely_max%val+small),   pr%vely_max%proc, pr%vely_max%loc
+      call printinfo(msg, .false.)
+      write(msg, fmt778) 'max(|vz|)   ',fluid,'  =', pr%velz_max%val, 'dt=',cfl*dz/(pr%velz_max%val+small),   pr%velz_max%proc, pr%velz_max%loc
+      call printinfo(msg, .false.)
+      if(cs_tn) then
+         write(msg, fmt778) 'max(c_s )   ',fluid,'  =', pr%cs_max%val, 'dt=',cfl*dxmn_safe/(pr%cs_max%val+small), pr%cs_max%proc, pr%cs_max%loc
+         call printinfo(msg, .false.)
+      endif
+   end subroutine common_shout
 
-      wa          = abs(u(imxn,:,:,:)/u(idnn,:,:,:))
-      vxn_max%val = maxval(wa(is:ie,js:je,ks:ke))
-      vxn_max%loc = maxloc(wa(is:ie,js:je,ks:ke)) &
-                  + (/nb,nb,nb/)
-      call mpifind(vxn_max%val, 'max', vxn_max%loc, vxn_max%proc)
+   subroutine get_common_vars(fl)
+      use arrays,     only: u, wa
+      use grid,       only: is, ie, js, je, ks, ke
+      use types,      only: phys_prop
+      use fluidtypes, only: component_fluid
+      use constants,  only: mH, kboltz, gasRconst
+      implicit none
+      type(component_fluid), intent(inout), target :: fl
+      type(phys_prop), pointer                     :: pr
 
-      wa          = abs(u(imyn,:,:,:)/u(idnn,:,:,:))
-      vyn_max%val = maxval(wa(is:ie,js:je,ks:ke))
-      vyn_max%loc = maxloc(wa(is:ie,js:je,ks:ke)) &
-                  + (/nb,nb,nb/)
-      call mpifind(vyn_max%val, 'max', vyn_max%loc, vyn_max%proc)
+      pr => fl%snap
+      wa = u(fl%idn,:,:,:)
+      call get_extremum(wa(is:ie,js:je,ks:ke), 'max', pr%dens_max)
+      call get_extremum(wa(is:ie,js:je,ks:ke), 'min', pr%dens_min)
 
-      wa           = abs(u(imzn,:,:,:)/u(idnn,:,:,:))
-      vzn_max%val  = maxval(wa(is:ie,js:je,ks:ke))
-      vzn_max%loc  = maxloc(wa(is:ie,js:je,ks:ke)) &
-                   + (/nb,nb,nb/)
-      call mpifind(vzn_max%val, 'max', vzn_max%loc, vzn_max%proc)
+      wa = abs(u(fl%imx,:,:,:)/u(fl%idn,:,:,:))
+      call get_extremum(wa(is:ie,js:je,ks:ke), 'max', pr%velx_max) 
+
+      wa = abs(u(fl%imy,:,:,:)/u(fl%idn,:,:,:))
+      call get_extremum(wa(is:ie,js:je,ks:ke), 'max', pr%vely_max) 
+
+      wa = abs(u(fl%imz,:,:,:)/u(fl%idn,:,:,:))
+      call get_extremum(wa(is:ie,js:je,ks:ke), 'max', pr%velz_max) 
+
 #ifdef ISO
-      pren_min%val  = cs_iso_neu2*denn_min%val
-      pren_min%loc  = denn_min%loc
-      pren_min%proc = denn_min%proc
-      pren_max%val  = cs_iso_neu2*denn_max%val
-      pren_max%loc  = denn_max%loc
-      pren_max%proc = denn_max%proc
-      csn_max%val   = cs_iso_neu
-      csn_max%loc   = 0
-      csn_max%proc  = 0
-      temn_min%val  = mH / kboltz * gasRconst/gamma_neu * cs_iso_neu2
-      temn_min%loc  = 0
-      temn_min%proc = 0
-      temn_max%val  = mH / kboltz * gasRconst/gamma_neu * cs_iso_neu2
-      temn_max%loc  = 0
-      temn_max%proc = 0
+      pr%pres_min%val  = fl%cs2*pr%dens_min%val
+      pr%pres_min%loc  = pr%dens_min%loc
+      pr%pres_min%proc = pr%dens_min%proc
+      pr%pres_max%val  = fl%cs2*pr%dens_max%val
+      pr%pres_max%loc  = pr%dens_max%loc
+      pr%pres_max%proc = pr%dens_max%proc
+      pr%cs_max%val    = fl%cs
+      pr%cs_max%loc    = 0
+      pr%cs_max%proc   = 0
+      pr%temp_min%val  = mH / kboltz * gasRconst/fl%gam * fl%cs2
+      pr%temp_min%loc  = 0
+      pr%temp_min%proc = 0
+      pr%temp_max%val  = mH / kboltz * gasRconst/fl%gam * fl%cs2
+      pr%temp_max%loc  = 0
+      pr%temp_max%proc = 0
 #else /* ISO */
-      wa(:,:,:) = (u(ienn,:,:,:) &                ! eint
-                - 0.5*((u(imxn,:,:,:)**2 +u(imyn,:,:,:)**2 &
-                      + u(imzn,:,:,:)**2)/u(idnn,:,:,:)))
-      wa(:,:,:) = max(wa(:,:,:),smallei)
-      wa(:,:,:) = (gamma_neu-1.0)*wa(:,:,:)           ! pres
 
-      pren_min%val  = minval(wa(is:ie,js:je,ks:ke))
-      pren_min%loc  = minloc(wa(is:ie,js:je,ks:ke)) + (/nb,nb,nb/)
-      call mpifind(pren_min%val, 'min', pren_min%loc, pren_min%proc)
 
-      pren_max%val  = maxval(wa(is:ie,js:je,ks:ke))
-      pren_max%loc  = maxloc(wa(is:ie,js:je,ks:ke)) + (/nb,nb,nb/)
-      call mpifind(pren_max%val, 'max', pren_max%loc, pren_max%proc)
+! Calculating pressure/temperature/cs differs from fluid to fluid...
+! Switching this off for the time being
 
-      temn_max%val  = maxval( mH / kboltz * wa(is:ie,js:je,ks:ke) &
-                            * gasRconst/u(idnn,is:ie,js:je,ks:ke))
-      temn_max%loc  = maxloc(wa(is:ie,js:je,ks:ke)    &
-                        /u(idnn,is:ie,js:je,ks:ke)  ) + (/nb,nb,nb/)
-      call mpifind(temn_max%val, 'max', temn_max%loc, temn_max%proc)
+!      wa(:,:,:) = (u(fl%ien,:,:,:) &                ! eint
+!                - 0.5*((u(fl%imx,:,:,:)**2 +u(fl%imy,:,:,:)**2 + u(fl%imz,:,:,:)**2)/u(fl%idn,:,:,:)))
+!      wa(:,:,:) = max(wa(:,:,:),smallei)
+!
+!      wa(:,:,:) = (fl%gam-1.0)*wa(:,:,:)            ! pres
 
-      temn_min%val  = minval( mH / kboltz * wa(is:ie,js:je,ks:ke) &
-                            * gasRconst/u(idnn,is:ie,js:je,ks:ke))
-      temn_min%loc  = minloc(wa(is:ie,js:je,ks:ke) &
-                        /u(idnn,is:ie,js:je,ks:ke)  ) &
-                     + (/nb,nb,nb/)
-      call mpifind(temn_min%val, 'min', temn_min%loc, temn_min%proc)
+      wa = 0.0
 
-      wa(:,:,:) = gamma_neu*wa(:,:,:)
-      csn_max%val    = sqrt(maxval(wa(is:ie,js:je,ks:ke) &
-                              /u(idnn,is:ie,js:je,ks:ke)))
-      csn_max%loc    = maxloc(wa(is:ie,js:je,ks:ke) &
-                         /u(idnn,is:ie,js:je,ks:ke)) &
-                     + (/nb,nb,nb/)
-      call mpifind(csn_max%val, 'max', csn_max%loc, csn_max%proc)
+      call get_extremum(wa(is:ie,js:je,ks:ke), 'max', pr%pres_max) 
+      call get_extremum(wa(is:ie,js:je,ks:ke), 'min', pr%pres_min) 
+
+      wa(:,:,:) = fl%gam*wa(:,:,:)
+      call get_extremum(wa(is:ie,js:je,ks:ke), 'max', pr%cs_max) 
+
+      wa(:,:,:) = mH/kboltz / fl%gam * gasRconst * wa(:,:,:) / u(fl%idn,:,:,:)
+      call get_extremum(wa(is:ie,js:je,ks:ke), 'max', pr%temp_max) 
+      call get_extremum(wa(is:ie,js:je,ks:ke), 'min', pr%temp_min) 
 #endif /* ISO */
+      end subroutine get_common_vars
+   !---------------------------------------------------------------------
+   !
+   ! writes timestep diagnostics to the logfile
+   !
+   ! Quite costly routine due to extensive array searches
+   !
+   !---------------------------------------------------------------------
+   !
+      subroutine  write_log(tsl)
 
+         use arrays,             only: wa, u, b
+         use constants,          only: small, mH, kboltz, gasRconst
+         use dataio_public,      only: msg, printinfo
+         use fluidindex,         only: ibx, iby, ibz, nvar
+         use grid,               only: dx, dy, dz, dxmn, nb, is, ie, js, je, ks, ke, nx, ny, nz
+         use mpisetup,           only: smallei, cfl, t, dt, proc, mpifind, nstep
+         use types,              only: tsl_container, value
+         use fluidtypes,         only: component_fluid
+         use fluidindex,         only: nvar
+#ifdef COSM_RAYS
+         use fluidindex,         only: iarr_all_crs
+         use timestepcosmicrays, only: dt_crs
+#endif /* COSM_RAYS */
+#ifdef RESISTIVE
+         use resistivity,        only: dt_resist, eta_max
+#endif /* RESISTIVE */
+#ifdef ISO_LOCAL
+         use arrays,             only: cs_iso2_arr
+#endif /* ISO_LOCAL */
+
+         implicit none
+
+         character(len=cwdlen), parameter :: fmt771 = "(5x,a18,(1x,es15.9),16x,5(1x,i4))"
+         character(len=cwdlen), parameter :: fmt777 = "(5x,a18,(1x,es15.9),2x,a3,(1x,es10.4),5(1x,i4))"
+
+         type(tsl_container), optional  :: tsl
+         type(component_fluid), pointer :: p
+         real :: dxmn_safe
+
+#ifdef MAGNETIC
+         type(value) :: b_min, b_max, divb_max, vai_max
+#endif /* MAGNETIC */
+
+#ifdef IONIZED
+         type(value) :: deni_min, deni_max, vxi_max, vyi_max, vzi_max, &
+                        prei_min, prei_max, temi_min, temi_max, csi_max
+#endif /* IONIZED */
+
+#ifdef DUST
+         type(value) :: dend_min, dend_max, vxd_max, vyd_max, vzd_max
+#endif /* DUST */
+
+#ifdef COSM_RAYS
+         type(value) :: encr_min, encr_max
+#endif /* COSM_RAYS */
+
+#ifdef RESISTIVE
+         type(value) :: etamax
+#endif /* RESISTIVE */
+
+#ifdef ISO_LOCAL
+    !      type(value) :: cs_iso2_max, cs_iso2_min
+#endif /* ISO_LOCAL */
+
+         if (dxmn >= sqrt(huge(1.0))) then
+            dxmn_safe = sqrt(huge(1.0))
+         else
+            dxmn_safe = dxmn
+         endif
+
+   ! Timestep diagnostics
+#ifdef NEUTRAL
+         call get_common_vars(nvar%neu)
 #endif /* NEUTRAL */
 
 #ifdef IONIZED
-      wa            = u(idni,:,:,:)
-      deni_min%val  = minval(wa(is:ie,js:je,ks:ke))
-      deni_min%loc  = minloc(wa(is:ie,js:je,ks:ke)) &
-                  + (/nb,nb,nb/)
-      call mpifind(deni_min%val, 'min', deni_min%loc, deni_min%proc)
-
-      deni_max%val  = maxval(wa(is:ie,js:je,ks:ke))
-      deni_max%loc  = maxloc(wa(is:ie,js:je,ks:ke)) &
-                  + (/nb,nb,nb/)
-      call mpifind(deni_max%val, 'max', deni_max%loc, deni_max%proc)
-
-      wa          = abs(u(imxi,:,:,:)/u(idni,:,:,:))
-      vxi_max%val = maxval(wa(is:ie,js:je,ks:ke))
-      vxi_max%loc = maxloc(wa(is:ie,js:je,ks:ke)) &
-                  + (/nb,nb,nb/)
-      call mpifind(vxi_max%val, 'max', vxi_max%loc, vxi_max%proc)
-
-      wa          = abs(u(imyi,:,:,:)/u(idni,:,:,:))
-      vyi_max%val = maxval(wa(is:ie,js:je,ks:ke))
-      vyi_max%loc = maxloc(wa(is:ie,js:je,ks:ke)) &
-                  + (/nb,nb,nb/)
-      call mpifind(vyi_max%val, 'max', vyi_max%loc, vyi_max%proc)
-
-      wa           = abs(u(imzi,:,:,:)/u(idni,:,:,:))
-      vzi_max%val  = maxval(wa(is:ie,js:je,ks:ke))
-      vzi_max%loc  = maxloc(wa(is:ie,js:je,ks:ke)) &
-                  + (/nb,nb,nb/)
-      call mpifind(vzi_max%val, 'max', vzi_max%loc, vzi_max%proc)
+         call get_common_vars(nvar%ion)
 
 #ifdef MAGNETIC
-      wa(:,:,:)  = b(1,:,:,:)*b(1,:,:,:) + b(2,:,:,:)*b(2,:,:,:) + &
-                   b(3,:,:,:)*b(3,:,:,:)
-      b_min%val  = sqrt(minval(wa(is:ie,js:je,ks:ke)))
-      b_min%loc  = minloc(wa(is:ie,js:je,ks:ke)) &
-                  + (/nb,nb,nb/)
-      call mpifind(b_min%val, 'min', b_min%loc, b_min%proc)
-
-      b_max%val  = sqrt(maxval(wa(is:ie,js:je,ks:ke)))
-      b_max%loc  = maxloc(wa(is:ie,js:je,ks:ke)) &
-                  + (/nb,nb,nb/)
-      call mpifind(b_max%val, 'max', b_max%loc, b_max%proc)
-
-      vai_max%val = sqrt(maxval(wa(is:ie,js:je,ks:ke) &
-                           /u(idni,is:ie,js:je,ks:ke)))
-      vai_max%loc = maxloc(wa(is:ie,js:je,ks:ke)     &
-                      /u(idni,is:ie,js:je,ks:ke)) &
-                  + (/nb,nb,nb/)
-      call mpifind(vai_max%val, 'max', vai_max%loc, vai_max%proc)
+!         wa(:,:,:)  = b(1,:,:,:)*b(1,:,:,:) + b(2,:,:,:)*b(2,:,:,:) + &
+!                      b(3,:,:,:)*b(3,:,:,:)
+!         b_min%val  = sqrt(minval(wa(is:ie,js:je,ks:ke)))
+!         b_min%loc  = minloc(wa(is:ie,js:je,ks:ke)) &
+!                     + (/nb,nb,nb/)
+!         call mpifind(b_min%val, 'min', b_min%loc, b_min%proc)
+!
+!         b_max%val  = sqrt(maxval(wa(is:ie,js:je,ks:ke)))
+!         b_max%loc  = maxloc(wa(is:ie,js:je,ks:ke)) &
+!                     + (/nb,nb,nb/)
+!         call mpifind(b_max%val, 'max', b_max%loc, b_max%proc)
+!
+!         vai_max%val = sqrt(maxval(wa(is:ie,js:je,ks:ke) &
+!                              /u(idni,is:ie,js:je,ks:ke)))
+!         vai_max%loc = maxloc(wa(is:ie,js:je,ks:ke)     &
+!                         /u(idni,is:ie,js:je,ks:ke)) &
+!                     + (/nb,nb,nb/)
+!         call mpifind(vai_max%val, 'max', vai_max%loc, vai_max%proc)
 #endif /* MAGNETIC */
 
 #ifdef ISO
 #ifdef ISO_LOCAL
-      wa            = cs_iso2_arr(:,:,:)*u(idni,:,:,:)
-      prei_min%val  = minval(wa(is:ie,js:je,ks:ke))
-      prei_min%loc  = minloc(wa(is:ie,js:je,ks:ke)) + [nb, nb, nb]
-      call mpifind(prei_min%val, 'min', prei_min%loc, prei_min%proc)
-
-      prei_max%val  = maxval(wa(is:ie,js:je,ks:ke))
-      prei_max%loc  = maxloc(wa(is:ie,js:je,ks:ke)) + [nb, nb, nb]
-      call mpifind(prei_max%val, 'max', prei_max%loc, prei_max%proc)
-
-      csi_max%val   = maxval(cs_iso2_arr(is:ie,js:je,ks:ke))
-      csi_max%loc   = maxloc(cs_iso2_arr(is:ie,js:je,ks:ke)) + [nb, nb, nb]
-      call mpifind(csi_max%val, 'max', csi_max%loc, csi_max%proc)
-
-      wa            = mH / kboltz * cs_iso2_arr(:,:,:)
-      temi_min%val  = minval(wa(is:ie,js:je,ks:ke))
-      temi_min%loc  = minloc(wa(is:ie,js:je,ks:ke)) + [nb, nb, nb]
-      call mpifind(temi_min%val, 'min', temi_min%loc, temi_min%proc)
-
-      temi_max%val  = maxval(wa(is:ie,js:je,ks:ke))
-      temi_max%loc  = maxloc(wa(is:ie,js:je,ks:ke)) + [nb, nb, nb]
-      call mpifind(temi_max%val, 'max', temi_max%loc, temi_max%proc)
-
-#else /* ISO_LOCAL */
-      prei_min%val  = cs_iso_ion2*deni_min%val
-      prei_min%loc  = deni_min%loc
-      prei_min%proc = deni_min%proc
-      prei_max%val  = cs_iso_ion2*deni_max%val
-      prei_max%loc  = deni_max%loc
-      prei_max%proc = deni_max%proc
-      csi_max%val   = cs_iso_ion
-      csi_max%loc   = 0
-      csi_max%proc  = 0
-      temi_min%val  = mH / kboltz * gasRconst/gamma_ion * cs_iso_ion2
-      temi_min%loc  = 0
-      temi_min%proc = 0
-      temi_max%val  = mH / kboltz * gasRconst/gamma_ion * cs_iso_ion2
-      temi_max%loc  = 0
-      temi_max%proc = 0
+!        wa            = cs_iso2_arr(:,:,:)*u(idni,:,:,:)
+!        prei_min%val  = minval(wa(is:ie,js:je,ks:ke))
+!        prei_min%loc  = minloc(wa(is:ie,js:je,ks:ke)) + [nb, nb, nb]
+!        call mpifind(prei_min%val, 'min', prei_min%loc, prei_min%proc)
+!
+!        prei_max%val  = maxval(wa(is:ie,js:je,ks:ke))
+!        prei_max%loc  = maxloc(wa(is:ie,js:je,ks:ke)) + [nb, nb, nb]
+!        call mpifind(prei_max%val, 'max', prei_max%loc, prei_max%proc)
+!
+!        csi_max%val   = maxval(cs_iso2_arr(is:ie,js:je,ks:ke))
+!        csi_max%loc   = maxloc(cs_iso2_arr(is:ie,js:je,ks:ke)) + [nb, nb, nb]
+!        call mpifind(csi_max%val, 'max', csi_max%loc, csi_max%proc)
+!
+!        wa            = mH / kboltz * cs_iso2_arr(:,:,:)
+!        temi_min%val  = minval(wa(is:ie,js:je,ks:ke))
+!        temi_min%loc  = minloc(wa(is:ie,js:je,ks:ke)) + [nb, nb, nb]
+!        call mpifind(temi_min%val, 'min', temi_min%loc, temi_min%proc)
+!
+!        temi_max%val  = maxval(wa(is:ie,js:je,ks:ke))
+!        temi_max%loc  = maxloc(wa(is:ie,js:je,ks:ke)) + [nb, nb, nb]
+!        call mpifind(temi_max%val, 'max', temi_max%loc, temi_max%proc)
 #endif /* ISO_LOCAL */
 #else /* ISO */
-      wa(:,:,:) = (u(ieni,:,:,:) &                ! eint
-                - 0.5*((u(imxi,:,:,:)**2 +u(imyi,:,:,:)**2 &
-                  + u(imzi,:,:,:)**2)/u(idni,:,:,:)))
+!        wa(:,:,:) = (u(ieni,:,:,:) &                ! eint
+!                  - 0.5*((u(imxi,:,:,:)**2 +u(imyi,:,:,:)**2 &
+!                    + u(imzi,:,:,:)**2)/u(idni,:,:,:)))
 #ifdef MAGNETIC
-      wa(:,:,:) = wa(:,:,:) - 0.5*(b(ibx,:,:,:)**2 + b(iby,:,:,:)**2 + &
-                 b(ibz,:,:,:)**2)
+!        wa(:,:,:) = wa(:,:,:) - 0.5*(b(ibx,:,:,:)**2 + b(iby,:,:,:)**2 + &
+!                   b(ibz,:,:,:)**2)
 #endif /* MAGNETIC */
-      wa(:,:,:) = max(wa(:,:,:),smallei)
-      wa(:,:,:) = (gamma_ion-1.0)*wa(:,:,:)           ! pres
 
-      prei_min%val  = minval(wa(is:ie,js:je,ks:ke))
-      prei_min%loc  = minloc(wa(is:ie,js:je,ks:ke)) + (/nb,nb,nb/)
-      call mpifind(prei_min%val, 'min', prei_min%loc, prei_min%proc)
-
-      prei_max%val  = maxval(wa(is:ie,js:je,ks:ke))
-      prei_max%loc  = maxloc(wa(is:ie,js:je,ks:ke)) + (/nb,nb,nb/)
-      call mpifind(prei_max%val, 'max', prei_max%loc, prei_max%proc)
-
-      temi_max%val  = maxval( mH / kboltz * wa(is:ie,js:je,ks:ke) &
-                            * gasRconst/u(idni,is:ie,js:je,ks:ke))
-      temi_max%loc  = maxloc(wa(is:ie,js:je,ks:ke)    &
-                        /u(idni,is:ie,js:je,ks:ke)  ) + (/nb,nb,nb/)
-      call mpifind(temi_max%val, 'max', temi_max%loc, temi_max%proc)
-
-      temi_min%val  = minval( mH / kboltz * wa(is:ie,js:je,ks:ke) &
-                            * gasRconst/u(idni,is:ie,js:je,ks:ke))
-      temi_min%loc  = minloc(wa(is:ie,js:je,ks:ke) &
-                        /u(idni,is:ie,js:je,ks:ke)  ) &
-                     + (/nb,nb,nb/)
-      call mpifind(temi_min%val, 'min', temi_min%loc, temi_min%proc)
-
-      wa(:,:,:) = gamma_ion*wa(:,:,:)
-      csi_max%val    = sqrt(maxval(wa(is:ie,js:je,ks:ke) &
-                              /u(idni,is:ie,js:je,ks:ke)))
-      csi_max%loc    = maxloc(wa(is:ie,js:je,ks:ke) &
-                         /u(idni,is:ie,js:je,ks:ke)) &
-                     + (/nb,nb,nb/)
-      call mpifind(csi_max%val, 'max', csi_max%loc, csi_max%proc)
 #endif /* ISO */
 
 #endif /* IONIZED */
 
 #ifdef DUST
-      wa            = u(idnd,:,:,:)
-      dend_min%val  = minval(wa(is:ie,js:je,ks:ke))
-      dend_min%loc  = minloc(wa(is:ie,js:je,ks:ke)) &
-                  + (/nb,nb,nb/)
-      call mpifind(dend_min%val, 'min', dend_min%loc, dend_min%proc)
-
-      dend_max%val  = maxval(wa(is:ie,js:je,ks:ke))
-      dend_max%loc  = maxloc(wa(is:ie,js:je,ks:ke)) &
-                  + (/nb,nb,nb/)
-      call mpifind(dend_max%val, 'max', dend_max%loc, dend_max%proc)
-
-      where (u(idnd,:,:,:) > 0.0)
-         wa          = abs(u(imxd,:,:,:)/u(idnd,:,:,:))
-      elsewhere
-         wa          = 0.0
-      endwhere
-      vxd_max%val = maxval(wa(is:ie,js:je,ks:ke))
-      vxd_max%loc = maxloc(wa(is:ie,js:je,ks:ke)) &
-                  + (/nb,nb,nb/)
-      call mpifind(vxd_max%val, 'max', vxd_max%loc, vxd_max%proc)
-
-      where (u(idnd,:,:,:) > 0.0)
-         wa          = abs(u(imyd,:,:,:)/u(idnd,:,:,:))
-      elsewhere
-         wa          = 0.0
-      endwhere
-      vyd_max%val = maxval(wa(is:ie,js:je,ks:ke))
-      vyd_max%loc = maxloc(wa(is:ie,js:je,ks:ke)) &
-                  + (/nb,nb,nb/)
-      call mpifind(vyd_max%val, 'max', vyd_max%loc, vyd_max%proc)
-
-      where (u(idnd,:,:,:) > 0.0)
-         wa           = abs(u(imzd,:,:,:)/u(idnd,:,:,:))
-      elsewhere
-         wa          = 0.0
-      endwhere
-      vzd_max%val  = maxval(wa(is:ie,js:je,ks:ke))
-      vzd_max%loc  = maxloc(wa(is:ie,js:je,ks:ke)) &
-                  + (/nb,nb,nb/)
-      call mpifind(vzd_max%val, 'max', vzd_max%loc, vzd_max%proc)
+      call get_common_vars(nvar%dst)
 #endif /* DUST */
 
 #ifdef RESISTIVE
@@ -1284,31 +1214,12 @@ module dataio
          if (.not.present(tsl)) then
             call printinfo('================================================================================', .false.)
 #ifdef IONIZED
-            write(msg, fmt771) 'min(dens)   ION  =', deni_min%val,  deni_min%proc,  deni_min%loc
-            call printinfo(msg, .false.)
-            write(msg, fmt771) 'max(dens)   ION  =', deni_max%val,  deni_max%proc,  deni_max%loc
-            call printinfo(msg, .false.)
-            write(msg, fmt771) 'min(temp)   ION  =', temi_min%val,  temi_min%proc,  temi_min%loc
-            call printinfo(msg, .false.)
-            write(msg, fmt771) 'max(temp)   ION  =', temi_max%val,  temi_max%proc,  temi_max%loc
-            call printinfo(msg, .false.)
-            write(msg, fmt771) 'min(pres)   ION  =', prei_min%val,  prei_min%proc,  prei_min%loc
-            call printinfo(msg, .false.)
-            write(msg, fmt771) 'max(pres)   ION  =', prei_max%val,  prei_max%proc,  prei_max%loc
-            call printinfo(msg, .false.)
-            write(msg, fmt777) 'max(|vx|)   ION  =', vxi_max%val, 'dt=',cfl*dx/(vxi_max%val+small),   vxi_max%proc, vxi_max%loc
-            call printinfo(msg, .false.)
-            write(msg, fmt777) 'max(|vy|)   ION  =', vyi_max%val, 'dt=',cfl*dy/(vyi_max%val+small),   vyi_max%proc, vyi_max%loc
-            call printinfo(msg, .false.)
-            write(msg, fmt777) 'max(|vz|)   ION  =', vzi_max%val, 'dt=',cfl*dz/(vzi_max%val+small),   vzi_max%proc, vzi_max%loc
-            call printinfo(msg, .false.)
-            write(msg, fmt777) 'max(c_si)   ION  =', csi_max%val, 'dt=',cfl*dxmn_safe/(csi_max%val+small), csi_max%proc, csi_max%loc
-            call printinfo(msg, .false.)
+            call common_shout(nvar%ion%snap,'ION',.true.,.true.,.true.)
 #ifdef MAGNETIC
-            write(msg, fmt777) 'max(c_f)    ION  =', sqrt(csi_max%val**2+vai_max%val**2), 'dt=',cfl*dxmn_safe/sqrt(csi_max%val**2+vai_max%val**2)
-            call printinfo(msg, .false.)
-            write(msg, fmt777) 'max(v_a)    ION  =', vai_max%val, 'dt=',cfl*dxmn_safe/(vai_max%val+small), vai_max%proc, vai_max%loc
-            call printinfo(msg, .false.)
+!            write(msg, fmt777) 'max(c_f)    ION  =', sqrt(csi_max%val**2+vai_max%val**2), 'dt=',cfl*dxmn_safe/sqrt(csi_max%val**2+vai_max%val**2)
+!            call printinfo(msg, .false.)
+!            write(msg, fmt777) 'max(v_a)    ION  =', vai_max%val, 'dt=',cfl*dxmn_safe/(vai_max%val+small), vai_max%proc, vai_max%loc
+!            call printinfo(msg, .false.)
             write(msg, fmt771) 'min(|b|)    MAG  =', b_min%val,     b_min%proc,     b_min%loc
             call printinfo(msg, .false.)
             write(msg, fmt771) 'max(|b|)    MAG  =', b_max%val,     b_max%proc,     b_max%loc
@@ -1320,42 +1231,11 @@ module dataio
             call printinfo(msg, .false.)
 #endif /* MAGNETIC */
 #endif /* IONIZED */
-
 #ifdef NEUTRAL
-            write(msg, fmt771) 'min(dens)   NEU  =', denn_min%val,  denn_min%proc,  denn_min%loc
-            call printinfo(msg, .false.)
-            write(msg, fmt771) 'max(dens)   NEU  =', denn_max%val,  denn_max%proc,  denn_max%loc
-            call printinfo(msg, .false.)
-#ifndef ISO
-            write(msg, fmt771) 'min(temp)   NEU  =', temn_min%val,  temn_min%proc,  temn_min%loc
-            call printinfo(msg, .false.)
-            write(msg, fmt771) 'max(temp)   NEU  =', temn_max%val,  temn_max%proc,  temn_max%loc
-            call printinfo(msg, .false.)
-#endif /* !ISO */
-            write(msg, fmt771) 'min(pres)   NEU  =', pren_min%val,  pren_min%proc,  pren_min%loc
-            call printinfo(msg, .false.)
-            write(msg, fmt771) 'max(pres)   NEU  =', pren_max%val,  pren_max%proc,  pren_max%loc
-            call printinfo(msg, .false.)
-            write(msg, fmt777) 'max(|vx|)   NEU  =', vxn_max%val, 'dt=',cfl*dx/(vxn_max%val+small),   vxn_max%proc, vxn_max%loc
-            call printinfo(msg, .false.)
-            write(msg, fmt777) 'max(|vy|)   NEU  =', vyn_max%val, 'dt=',cfl*dy/(vyn_max%val+small),   vyn_max%proc, vyn_max%loc
-            call printinfo(msg, .false.)
-            write(msg, fmt777) 'max(|vz|)   NEU  =', vzn_max%val, 'dt=',cfl*dz/(vzn_max%val+small),   vzn_max%proc, vzn_max%loc
-            call printinfo(msg, .false.)
-            write(msg, fmt777) 'max(c_s )   NEU  =', csn_max%val, 'dt=',cfl*dxmn_safe/(csn_max%val+small), csn_max%proc, csn_max%loc
-            call printinfo(msg, .false.)
+            call common_shout(nvar%neu%snap,'NEU',.true.,.true.,.true.)
 #endif /* NEUTRAL */
 #ifdef DUST
-            write(msg, fmt771) 'min(dens)   DST  =', dend_min%val,  dend_min%proc,  dend_min%loc
-            call printinfo(msg, .false.)
-            write(msg, fmt771) 'max(dens)   DST  =', dend_max%val,  dend_max%proc,  dend_max%loc
-            call printinfo(msg, .false.)
-            write(msg, fmt777) 'max(|vx|)   DST  =', vxd_max%val, 'dt=',cfl*dx/(vxd_max%val+small),   vxd_max%proc, vxd_max%loc
-            call printinfo(msg, .false.)
-            write(msg, fmt777) 'max(|vy|)   DST  =', vyd_max%val, 'dt=',cfl*dy/(vyd_max%val+small),   vyd_max%proc, vyd_max%loc
-            call printinfo(msg, .false.)
-            write(msg, fmt777) 'max(|vz|)   DST  =', vzd_max%val, 'dt=',cfl*dz/(vzd_max%val+small),   vzd_max%proc, vzd_max%loc
-            call printinfo(msg, .false.)
+            call common_shout(nvar%dst%snap,'DST',.false.,.false.,.false.)
 #endif /* DUST */
 #ifdef COSM_RAYS
             write(msg, fmt771) 'min(encr)   CRS  =', encr_min%val,        encr_min%proc, encr_min%loc
@@ -1387,18 +1267,6 @@ module dataio
             tsl%divb_max = divb_max%val
             tsl%vai_max  = vai_max%val
 #endif /* MAGNETIC */
-#ifdef NEUTRAL
-            tsl%denn_min = denn_min%val
-            tsl%denn_max = denn_max%val
-            tsl%vxn_max  = vxn_max%val
-            tsl%vyn_max  = vyn_max%val
-            tsl%vzn_max  = vzn_max%val
-            tsl%pren_min = pren_min%val
-            tsl%pren_max = pren_max%val
-            tsl%temn_min = temn_min%val
-            tsl%temn_max = temn_max%val
-            tsl%csn_max  = csn_max%val
-#endif /* NEUTRAL */
 
 #ifdef DUST
             tsl%dend_min = dend_min%val

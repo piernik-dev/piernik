@@ -30,6 +30,7 @@
 !! \brief (KK)
 !<
 module fluidtypes
+   use types, only: phys_prop
    type :: component
       integer :: all = 0              !< number of all variables in fluid/component
       integer :: beg = 0              !< beginning number of variables in fluid/component
@@ -50,7 +51,7 @@ module fluidtypes
 
       real    :: cs  = 0.0
       real    :: cs2 = 0.0
-      real    :: gam = 0.0
+      real    :: gam = -1.0
 
       logical :: sg  = .false.
 
@@ -58,6 +59,8 @@ module fluidtypes
       integer, allocatable, dimension(:)  :: iarr_swpx
       integer, allocatable, dimension(:)  :: iarr_swpy
       integer, allocatable, dimension(:)  :: iarr_swpz
+
+      type(phys_prop) :: snap
    end type component_fluid
 
    type :: var_numbers

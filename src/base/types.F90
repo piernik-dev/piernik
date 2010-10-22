@@ -31,11 +31,12 @@
 !<
 module types
    private
-   public :: indx, hdf, value, grid_container, tsl_container, &
+   public :: indx, hdf, value, grid_container, tsl_container, phys_prop, &
    & problem_customize_solution, finalize_problem, domlen, idlen
 
    integer, parameter :: domlen = 16 ! should be <= mpisetup::cbuff_len
    integer, parameter :: idlen  = 3
+   integer, parameter :: dims   = 3
 
    type :: indx
       integer :: dnd = -1, dnn = -1, dni = -1
@@ -55,10 +56,23 @@ module types
    end type hdf
 
    type :: value
-      real    :: val
-      integer, dimension(3) :: loc ! BEWARE: magic number
-      integer :: proc
+      real                     :: val
+      integer, dimension(dims) :: loc
+      integer                  :: proc
    end type value
+
+   type :: phys_prop
+      type(value) :: dens_min
+      type(value) :: dens_max
+      type(value) :: velx_max
+      type(value) :: vely_max
+      type(value) :: velz_max
+      type(value) :: pres_max
+      type(value) :: pres_min
+      type(value) :: temp_max
+      type(value) :: temp_min
+      type(value) :: cs_max
+   end type phys_prop
 
    type :: grid_container
       real    :: dx, dy, dz, dxmn, dvol
