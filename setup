@@ -210,7 +210,6 @@ if( grep { /MULTIGRID/ } @d) {
 if( grep { /SHEAR/ }  @d) {push(@addons, "../src/shear/shear.F90");}
 push(@addons, "../src/hdf5/dataio_hdf5.F90");
 push(@addons, "../src/hdf5/list_hdf5.F90");
-push(@addons, "../src/fluids/fluidtypes.F90");
 push(@addons, "../src/fluids/initfluids.F90");
 push(@addons, "../src/fluids/fluidindex.F90");
 push(@addons, "../src/fluids/fluxes.F90");
