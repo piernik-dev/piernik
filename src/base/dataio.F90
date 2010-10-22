@@ -1150,7 +1150,6 @@ module dataio
       call mpifind(etamax%val, 'max', etamax%loc, etamax%proc)
 #endif /* RESISTIVE */
 
-
 #ifdef MAGNETIC
       wa(1:nx-1,1:ny-1,1:max(nz-1,1)) = &
                  (b(ibx,2:nx,1:ny-1,1:max(nz-1,1)) - b(ibx,1:nx-1,1:ny-1,1:max(nz-1,1)))*dy*dz &

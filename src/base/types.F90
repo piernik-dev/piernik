@@ -95,15 +95,6 @@ module types
    end type grid_container
 
    type :: tsl_container
-#ifdef NEUTRAL
-      real :: denn_min, denn_max, vxn_max, vyn_max, vzn_max, &
-              pren_min, pren_max, temn_min, temn_max, csn_max
-#endif /* NEUTRAL */
-
-#ifdef DUST
-      real :: dend_min, dend_max, vxd_max, vyd_max, vzd_max
-#endif /* DUST */
-
 #ifdef COSM_RAYS
       real :: encr_min, encr_max
 #endif /* COSM_RAYS */
@@ -117,8 +108,7 @@ module types
 #endif /* MAGNETIC */
 
 #ifdef IONIZED
-      real :: deni_min, deni_max, vxi_max, vyi_max, vzi_max, &
-              prei_min, prei_max, temi_min, temi_max, vai_max, csi_max
+      real :: vai_max
 #endif /* IONIZED */
    end type tsl_container
 
