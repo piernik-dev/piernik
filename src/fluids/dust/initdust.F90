@@ -97,7 +97,6 @@ module initdust
 
   end subroutine init_dust
 
-
    subroutine dust_index(nvar)
       use fluidtypes,   only: var_numbers
       use diagnostics,  only: my_allocate
@@ -135,6 +134,11 @@ module initdust
       nvar%fluids     = nvar%fluids + 1
       nvar%dst%pos    = nvar%components
       if (selfgrav_dst)  nvar%fluids_sg = nvar%fluids_sg + 1
+
+      nvar%dst%gam = -1.
+      nvar%dst%cs  = 0.0
+      nvar%dst%cs2 = 0.0
+      nvar%dst%sg  = selfgrav_dst
 
    end subroutine dust_index
 

@@ -47,9 +47,13 @@ module fluidtypes
       integer :: imy = -1
       integer :: imz = -1
       integer :: ien = -1
+
       real    :: cs  = 0.0
       real    :: cs2 = 0.0
       real    :: gam = 0.0
+
+      logical :: sg  = .false.
+
       integer, allocatable, dimension(:)  :: iarr
       integer, allocatable, dimension(:)  :: iarr_swpx
       integer, allocatable, dimension(:)  :: iarr_swpy
