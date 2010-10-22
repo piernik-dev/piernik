@@ -1113,24 +1113,12 @@ module dataio
          call get_common_vars(nvar%ion)
 
 #ifdef MAGNETIC
-!         wa(:,:,:)  = b(1,:,:,:)*b(1,:,:,:) + b(2,:,:,:)*b(2,:,:,:) + &
-!                      b(3,:,:,:)*b(3,:,:,:)
-!         b_min%val  = sqrt(minval(wa(is:ie,js:je,ks:ke)))
-!         b_min%loc  = minloc(wa(is:ie,js:je,ks:ke)) &
-!                     + (/nb,nb,nb/)
-!         call mpifind(b_min%val, 'min', b_min%loc, b_min%proc)
-!
-!         b_max%val  = sqrt(maxval(wa(is:ie,js:je,ks:ke)))
-!         b_max%loc  = maxloc(wa(is:ie,js:je,ks:ke)) &
-!                     + (/nb,nb,nb/)
-!         call mpifind(b_max%val, 'max', b_max%loc, b_max%proc)
-!
-!         vai_max%val = sqrt(maxval(wa(is:ie,js:je,ks:ke) &
-!                              /u(idni,is:ie,js:je,ks:ke)))
-!         vai_max%loc = maxloc(wa(is:ie,js:je,ks:ke)     &
-!                         /u(idni,is:ie,js:je,ks:ke)) &
-!                     + (/nb,nb,nb/)
-!         call mpifind(vai_max%val, 'max', vai_max%loc, vai_max%proc)
+         wa(:,:,:)  = sqrt(b(1,:,:,:)*b(1,:,:,:) + b(2,:,:,:)*b(2,:,:,:) + b(3,:,:,:)*b(3,:,:,:))
+         call get_extremum(wa(is:ie,js:je,ks:ke), 'max', b_max)
+         call get_extremum(wa(is:ie,js:je,ks:ke), 'min', b_min)
+
+         wa(:,:,:)  = wa(:,:,:) / sqrt(u(nvar%ion%idn,:,:,:))
+         call get_extremum(wa(is:ie,js:je,ks:ke), 'max', vai_max)
 #endif /* MAGNETIC */
 
 #ifdef ISO
@@ -1165,9 +1153,7 @@ module dataio
 !        wa(:,:,:) = wa(:,:,:) - 0.5*(b(ibx,:,:,:)**2 + b(iby,:,:,:)**2 + &
 !                   b(ibz,:,:,:)**2)
 #endif /* MAGNETIC */
-
 #endif /* ISO */
-
 #endif /* IONIZED */
 
 #ifdef DUST
@@ -1191,23 +1177,13 @@ module dataio
       wa(:,je,:) = wa(:,max(je-1,1),:)
       wa(:,:,ke) = wa(:,:,max(ke-1,1))
 
-      divb_max%val  = maxval(wa(is:ie,js:je,ks:ke))
-      divb_max%loc  = maxloc(wa(is:ie,js:je,ks:ke)) &
-                  + (/nb,nb,nb/)
-      call mpifind(divb_max%val, 'max', divb_max%loc, divb_max%proc)
+      call get_extremum(wa(is:ie,js:je,ks:ke), 'max', divb_max)
 #endif /* MAGNETIC */
 
 #ifdef COSM_RAYS
       wa            = sum(u(iarr_all_crs,:,:,:),1)
-      encr_min%val  = minval(wa(is:ie,js:je,ks:ke))
-      encr_min%loc  = minloc(wa(is:ie,js:je,ks:ke)) &
-                  + (/nb,nb,nb/)
-      call mpifind(encr_min%val, 'min', encr_min%loc, encr_min%proc)
-
-      encr_max%val  = maxval(wa(is:ie,js:je,ks:ke))
-      encr_max%loc  = maxloc(wa(is:ie,js:je,ks:ke)) &
-                  + (/nb,nb,nb/)
-      call mpifind(encr_max%val, 'max', encr_max%loc, encr_max%proc)
+      call get_extremum(wa(is:ie,js:je,ks:ke), 'max', encr_max)
+      call get_extremum(wa(is:ie,js:je,ks:ke), 'min', encr_min)
 #endif /* COSM_RAYS */
 
       if (proc == 0)  then
@@ -1216,10 +1192,10 @@ module dataio
 #ifdef IONIZED
             call common_shout(nvar%ion%snap,'ION',.true.,.true.,.true.)
 #ifdef MAGNETIC
-!            write(msg, fmt777) 'max(c_f)    ION  =', sqrt(csi_max%val**2+vai_max%val**2), 'dt=',cfl*dxmn_safe/sqrt(csi_max%val**2+vai_max%val**2)
-!            call printinfo(msg, .false.)
-!            write(msg, fmt777) 'max(v_a)    ION  =', vai_max%val, 'dt=',cfl*dxmn_safe/(vai_max%val+small), vai_max%proc, vai_max%loc
-!            call printinfo(msg, .false.)
+            write(msg, fmt777) 'max(c_f)    ION  =', sqrt(csi_max%val**2+vai_max%val**2), 'dt=',cfl*dxmn_safe/sqrt(csi_max%val**2+vai_max%val**2)
+            call printinfo(msg, .false.)
+            write(msg, fmt777) 'max(v_a)    ION  =', vai_max%val, 'dt=',cfl*dxmn_safe/(vai_max%val+small), vai_max%proc, vai_max%loc
+            call printinfo(msg, .false.)
             write(msg, fmt771) 'min(|b|)    MAG  =', b_min%val,     b_min%proc,     b_min%loc
             call printinfo(msg, .false.)
             write(msg, fmt771) 'max(|b|)    MAG  =', b_max%val,     b_max%proc,     b_max%loc
@@ -1227,8 +1203,8 @@ module dataio
             write(msg, fmt771) 'max(|divb|) MAG  =', divb_max%val,  divb_max%proc,  divb_max%loc
             call printinfo(msg, .false.)
 #else /* MAGNETIC */
-            if (csi_max%val > 0.) write(msg, fmt777) 'max(c_s )   ION  =', sqrt(csi_max%val**2), 'dt=',cfl*dxmn_safe/sqrt(csi_max%val**2)
-            call printinfo(msg, .false.)
+!            if (csi_max%val > 0.) write(msg, fmt777) 'max(c_s )   ION  =', sqrt(csi_max%val**2), 'dt=',cfl*dxmn_safe/sqrt(csi_max%val**2)
+!            call printinfo(msg, .false.)
 #endif /* MAGNETIC */
 #endif /* IONIZED */
 #ifdef NEUTRAL
