@@ -1050,7 +1050,6 @@ module dataio
          use grid,               only: dx, dy, dz, dxmn, nb, is, ie, js, je, ks, ke, nx, ny, nz
          use mpisetup,           only: smallei, cfl, t, dt, proc, mpifind, nstep
          use types,              only: tsl_container, value, component_fluid
-         use fluidindex,         only: nvar
 #ifdef COSM_RAYS
          use fluidindex,         only: iarr_all_crs
          use timestepcosmicrays, only: dt_crs
