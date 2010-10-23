@@ -69,31 +69,26 @@ contains
 
       implicit none
 
-      real :: dt_proc             !< minimum timestep for the current processor
-      real :: dt_all              !< minimum timestep for all the processors
-      real :: c_max_all           !< maximum speed for the fluid for all the processors
-      real :: dt_proc_x           !< timestep computed for X direction for the current processor
-      real :: dt_proc_y           !< timestep computed for Y direction for the current processor
-      real :: dt_proc_z           !< timestep computed for Z direction for the current processor
-      real :: cx                  !< maximum velocity for X direction
-      real :: cy                  !< maximum velocity for Y direction
-      real :: cz                  !< maximum velocity for Z direction
-      real :: vx                  !< velocity in X direction computed for current cell
-      real :: vy                  !< velocity in Y direction computed for current cell
-      real :: vz                  !< velocity in Z direction computed for current cell
-      real :: cs                  !< speed of sound
+      real :: dt_proc = 0.0       !< minimum timestep for the current processor
+      real :: dt_all = 0.0        !< minimum timestep for all the processors
+      real :: c_max_all = 0.0     !< maximum speed for the fluid for all the processors
+      real :: dt_proc_x = 0.0     !< timestep computed for X direction for the current processor
+      real :: dt_proc_y = 0.0     !< timestep computed for Y direction for the current processor
+      real :: dt_proc_z = 0.0     !< timestep computed for Z direction for the current processor
+      real :: cx = 0.0            !< maximum velocity for X direction
+      real :: cy = 0.0            !< maximum velocity for Y direction
+      real :: cz = 0.0            !< maximum velocity for Z direction
+      real :: vx = 0.0            !< velocity in X direction computed for current cell
+      real :: vy = 0.0            !< velocity in Y direction computed for current cell
+      real :: vz = 0.0            !< velocity in Z direction computed for current cell
+      real :: cs = 0.0            !< speed of sound
 
 ! locals
-      real                           :: pmag, bx, by, bz, ps, p, c_max
+      real                           :: pmag = 0.0, bx = 0.0, by = 0.0, bz = 0.0, ps = 0.0, p = 0.0, c_max = 0.0
       integer                        :: i, j, k, ip, jp, kp
       type(component_fluid), pointer :: fl
 
       fl => nvar%ion
-
-      cx    = 0.0
-      cy    = 0.0
-      cz    = 0.0
-      c_max = 0.0
 
       do k = ks, ke
          kp = mod(k,ke)+1
