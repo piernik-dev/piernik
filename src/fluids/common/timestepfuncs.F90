@@ -1,0 +1,109 @@
+! $Id$
+!
+! PIERNIK Code Copyright (C) 2006 Michal Hanasz
+!
+!    This file is part of PIERNIK code.
+!
+!    PIERNIK is free software: you can redistribute it and/or modify
+!    it under the terms of the GNU General Public License as published by
+!    the Free Software Foundation, either version 3 of the License, or
+!    (at your option) any later version.
+!
+!    PIERNIK is distributed in the hope that it will be useful,
+!    but WITHOUT ANY WARRANTY; without even the implied warranty of
+!    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+!    GNU General Public License for more details.
+!
+!    You should have received a copy of the GNU General Public License
+!    along with PIERNIK.  If not, see <http://www.gnu.org/licenses/>.
+!
+!    Initial implementation of PIERNIK code was based on TVD split MHD code by
+!    Ue-Li Pen
+!        see: Pen, Arras & Wong (2003) for algorithm and
+!             http://www.cita.utoronto.ca/~pen/MHD
+!             for original source code "mhd.f90"
+!
+!    For full list of developers see $PIERNIK_HOME/license/pdt.txt
+!
+#include "piernik.def"
+
+!>
+!! \brief (KK)
+!<
+module timestepfuncs
+   implicit none
+   private
+   public :: compute_c_max, compute_dt
+
+contains
+
+   subroutine compute_c_max(fl,cs,i,j,k,cx,cy,cz,c_max)
+      use arrays,      only: u
+      use types,       only: component_fluid
+      implicit none
+      type(component_fluid), pointer, intent(in) :: fl
+      real, intent(in)                           :: cs
+      integer, intent(in)                        :: i, j, k
+      real, intent(inout)                        :: cx, cy, cz, c_max
+      real                                       :: vx, vy, vz
+
+      if ( u(fl%idn,i,j,k) > 0.0) then
+         vx = abs(u(fl%imx,i,j,k)/u(fl%idn,i,j,k))
+         vy = abs(u(fl%imy,i,j,k)/u(fl%idn,i,j,k))
+         vz = abs(u(fl%imz,i,j,k)/u(fl%idn,i,j,k))
+      else
+         vx = 0.0; vy = 0.0; vz = 0.0
+      endif
+
+      cx    = max(cx,vx+cs)
+      cy    = max(cy,vy+cs)
+      cz    = max(cz,vz+cs)
+      c_max = max(c_max,cx,cy,cz)
+   end subroutine compute_c_max
+
+   subroutine compute_dt(cx,cy,cz,c_max,c_out,dt_out)
+      use grid,      only: nxd, nyd, nzd, dx, dy, dz
+      use constants, only: big
+      use mpisetup,  only: MPI_DOUBLE_PRECISION, MPI_MIN, MPI_MAX, comm, ierr, cfl
+
+      implicit none
+      real, intent(in)  :: cx, cy, cz, c_max
+      real, intent(out) :: c_out, dt_out
+      real :: dt_proc = 0.0       !< minimum timestep for the current processor
+      real :: dt_all = 0.0        !< minimum timestep for all the processors
+      real :: c_max_all = 0.0     !< maximum speed for the fluid for all the processors
+      real :: dt_proc_x = 0.0     !< timestep computed for X direction for the current processor
+      real :: dt_proc_y = 0.0     !< timestep computed for Y direction for the current processor
+      real :: dt_proc_z = 0.0     !< timestep computed for Z direction for the current processor
+
+      if (nxd /= 1 .and. cx /= 0) then
+         dt_proc_x = dx/cx
+      else
+         dt_proc_x = big
+      endif
+      if (nyd /= 1 .and. cy /= 0) then
+         dt_proc_y = dy/cy
+      else
+         dt_proc_y = big
+      endif
+      if (nzd /= 1 .and. cz /= 0) then
+         dt_proc_z = dz/cz
+      else
+         dt_proc_z = big
+      endif
+
+      dt_proc   = min(dt_proc_x, dt_proc_y, dt_proc_z)
+
+      call MPI_Reduce(c_max, c_max_all, 1, MPI_DOUBLE_PRECISION, MPI_MAX, 0, comm, ierr)
+      call MPI_Bcast(c_max_all, 1, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+
+      call MPI_Reduce(dt_proc, dt_all, 1, MPI_DOUBLE_PRECISION, MPI_MIN, 0, comm, ierr)
+      call MPI_Bcast(dt_all, 1, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+
+      c_out  = c_max_all
+      dt_out = cfl*dt_all
+
+      return
+   end subroutine compute_dt
+
+end module timestepfuncs

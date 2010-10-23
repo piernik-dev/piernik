@@ -213,6 +213,7 @@ push(@addons, "../src/hdf5/list_hdf5.F90");
 push(@addons, "../src/fluids/initfluids.F90");
 push(@addons, "../src/fluids/fluidindex.F90");
 push(@addons, "../src/fluids/fluxes.F90");
+push(@addons, "../src/fluids/common/timestepfuncs.F90");
 
 if( grep { /MAGNETIC/} @d) {
    push(@addons, "../src/magnetic/magboundaries.F90");
