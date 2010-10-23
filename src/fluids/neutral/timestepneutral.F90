@@ -51,104 +51,102 @@
 !<
 module timestepneutral
 
-  real :: dt_neu                                                        !< final timestep for neutral fluid
-  real :: c_neu                                                         !< maximum speed at which information travels in the neutral fluid
+   real :: dt_neu               !< final timestep for neutral fluid
+   real :: c_neu                !< maximum speed at which information travels in the neutral fluid
 
 contains
 
-  subroutine timestep_neu
-    use arrays,      only: u, b
-    use constants,   only: big
-    use grid,        only: dx, dy, dz, nb, ks, ke, is, ie, js, je, nxd, nyd, nzd
-    use initneutral, only: gamma_neu, cs_iso_neu, cs_iso_neu2
-    use initneutral, only: idnn, imxn, imyn, imzn
-    use mpisetup,    only: MPI_DOUBLE_PRECISION, MPI_MIN, MPI_MAX, comm, ierr, cfl
-#ifndef ISO
-    use initneutral, only: ienn
-#endif /* !ISO */
+   subroutine timestep_neu
+      use types,       only: component_fluid
+      use arrays,      only: u, b
+      use constants,   only: big
+      use grid,        only: dx, dy, dz, nb, ks, ke, is, ie, js, je, nxd, nyd, nzd
+      use mpisetup,    only: MPI_DOUBLE_PRECISION, MPI_MIN, MPI_MAX, comm, ierr, cfl
+      use fluidindex,  only: nvar
 
-    implicit none
+      implicit none
 
-    real :: dt_neu_proc                   !< minimum timestep for the neutral fluid for the current processor
-    real :: dt_neu_all                    !< minimum timestep for the neutral fluid for all the processors
-    real :: c_max_all                     !< maximum speed for the neutral fluid for all the processors
-    real :: dt_neu_proc_x                 !< timestep computed for X direction for the current processor
-    real :: dt_neu_proc_y                 !< timestep computed for Y direction for the current processor
-    real :: dt_neu_proc_z                 !< timestep computed for Z direction for the current processor
-    real :: cx                            !< maximum velocity for X direction
-    real :: cy                            !< maximum velocity for Y direction
-    real :: cz                            !< maximum velocity for Z direction
-    real :: vx                            !< velocity in X direction computed for current cell
-    real :: vy                            !< velocity in Y direction computed for current cell
-    real :: vz                            !< velocity in Z direction computed for current cell
-    real :: cs                            !< speed of sound for the neutral fluid
+      real :: dt_proc             !< minimum timestep for the current processor
+      real :: dt_all              !< minimum timestep for all the processors
+      real :: c_max_all           !< maximum speed for the fluid for all the processors
+      real :: dt_proc_x           !< timestep computed for X direction for the current processor
+      real :: dt_proc_y           !< timestep computed for Y direction for the current processor
+      real :: dt_proc_z           !< timestep computed for Z direction for the current processor
+      real :: cx                  !< maximum velocity for X direction
+      real :: cy                  !< maximum velocity for Y direction
+      real :: cz                  !< maximum velocity for Z direction
+      real :: vx                  !< velocity in X direction computed for current cell
+      real :: vy                  !< velocity in Y direction computed for current cell
+      real :: vz                  !< velocity in Z direction computed for current cell
+      real :: cs                  !< speed of sound
 
 ! locals
 
-    real    :: p
-    integer :: i,j,k
+      real                           :: p
+      integer                        :: i, j, k
+      type(component_fluid), pointer :: fl
 
+      fl => nvar%neu
 
-    cx    = 0.0
-    cy    = 0.0
-    cz    = 0.0
-    c_neu = 0.0
+      cx    = 0.0
+      cy    = 0.0
+      cz    = 0.0
+      c_max = 0.0
 
-    do k=ks,ke
-      do j=js,je
-        do i=is,ie
+      do k = ks, ke
+         do j = js, je
+            do i = is, ie
 
-          vx=abs(u(imxn,i,j,k)/u(idnn,i,j,k))
-          vy=abs(u(imyn,i,j,k)/u(idnn,i,j,k))
-          vz=abs(u(imzn,i,j,k)/u(idnn,i,j,k))
+               vx = abs(u(fl%imx,i,j,k)/u(fl%idn,i,j,k))
+               vy = abs(u(fl%imy,i,j,k)/u(fl%idn,i,j,k))
+               vz = abs(u(fl%imz,i,j,k)/u(fl%idn,i,j,k))
 
 #ifdef ISO
-            p = cs_iso_neu2*u(idnn,i,j,k)
-            cs = sqrt(cs_iso_neu2)
+               p  = fl%cs2*u(fl%idn,i,j,k)
+               cs = sqrt(fl%cs2)
 #else /* ISO */
-            p=(u(ienn,i,j,k)-sum(u(imxn:imzn,i,j,k)**2,1) &
-              /u(idnn,i,j,k)/2.)*(gamma_neu-1.)
+               p  = (u(ienn,i,j,k)-sum(u(fl%imx:fl%imz,i,j,k)**2,1) &
+                     /u(fl%idn,i,j,k)/2.)*(fl%gam-1.)
 
-            cs = sqrt(abs(  (gamma_neu*p)/u(idnn,i,j,k)) )
+               cs = sqrt(abs(  (fl%gam*p)/u(fl%idn,i,j,k)) )
 #endif /* ISO */
 
-          cx=max(cx,vx+cs)
-          cy=max(cy,vy+cs)
-          cz=max(cz,vz+cs)
-          c_neu =max(c_neu,cx,cy,cz)
+               cx    = max(cx,vx+cs)
+               cy    = max(cy,vy+cs)
+               cz    = max(cz,vz+cs)
+               c_max = max(c_max,cx,cy,cz)
 
-        enddo
+            enddo
+         enddo
       enddo
-    enddo
 
-    if (nxd /= 1 .and. cx /= 0) then
-       dt_neu_proc_x = dx/cx
-    else
-       dt_neu_proc_x = big
-    endif
-    if (nyd /= 1 .and. cy /= 0) then
-       dt_neu_proc_y = dy/cy
-    else
-       dt_neu_proc_y = big
-    endif
-    if (nzd /= 1 .and. cz /= 0) then
-       dt_neu_proc_z = dz/cz
-    else
-       dt_neu_proc_z = big
-    endif
+      if (nxd /= 1 .and. cx /= 0) then
+         dt_proc_x = dx/cx
+      else
+         dt_proc_x = big
+      endif
+      if (nyd /= 1 .and. cy /= 0) then
+         dt_proc_y = dy/cy
+      else
+         dt_proc_y = big
+      endif
+      if (nzd /= 1 .and. cz /= 0) then
+         dt_proc_z = dz/cz
+      else
+         dt_proc_z = big
+      endif
 
-    dt_neu_proc   = min(dt_neu_proc_x, dt_neu_proc_y, dt_neu_proc_z)
+      dt_proc   = min(dt_proc_x, dt_proc_y, dt_proc_z)
 
-    call MPI_Reduce(c_neu, c_max_all, 1, MPI_DOUBLE_PRECISION, MPI_MAX, 0, comm, ierr)
-    call MPI_Bcast(c_max_all, 1, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+      call MPI_Reduce(c_max, c_max_all, 1, MPI_DOUBLE_PRECISION, MPI_MAX, 0, comm, ierr)
+      call MPI_Bcast(c_max_all, 1, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
-    c_neu = c_max_all
+      call MPI_Reduce(dt_proc, dt_all, 1, MPI_DOUBLE_PRECISION, MPI_MIN, 0, comm, ierr)
+      call MPI_Bcast(dt_all, 1, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
-    call MPI_Reduce(dt_neu_proc, dt_neu_all, 1, MPI_DOUBLE_PRECISION, MPI_MIN, 0, comm, ierr)
-    call MPI_Bcast(dt_neu_all, 1, MPI_DOUBLE_PRECISION, 0, comm, ierr)
-    dt_neu = cfl*dt_neu_all
+      c_neu  = c_max_all
+      dt_neu = cfl*dt_all
 
-  end subroutine timestep_neu
+   end subroutine timestep_neu
 
-!-------------------------------------------------------------------------------
 end module timestepneutral

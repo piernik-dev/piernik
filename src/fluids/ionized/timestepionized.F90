@@ -49,7 +49,6 @@
 !! Information about the computed %timesteps is exchanged between MPI blocks in order to choose the minimum %timestep for the fluid.
 !! The final %timestep is multiplied by the Courant number specified in parameters of each task.
 !<
-
 module timestepionized
 
    real :: dt_ion             !< final timestep for ionized fluids
@@ -58,7 +57,6 @@ module timestepionized
 contains
 
    subroutine timestep_ion
-
       use types,       only: component_fluid
       use arrays,      only: u, b
       use constants,   only: big
@@ -71,23 +69,22 @@ contains
 
       implicit none
 
-      real :: dt_ion_proc         !< minimum timestep for the ionized fluid for the current processor
-      real :: dt_ion_all          !< minimum timestep for the ionized fluid for all the processors
-      real :: c_max_all           !< maximum speed for the ionized fluid for all the processors
-      real :: dt_ion_proc_x       !< timestep computed for X direction for the current processor
-      real :: dt_ion_proc_y       !< timestep computed for Y direction for the current processor
-      real :: dt_ion_proc_z       !< timestep computed for Z direction for the current processor
+      real :: dt_proc             !< minimum timestep for the current processor
+      real :: dt_all              !< minimum timestep for all the processors
+      real :: c_max_all           !< maximum speed for the fluid for all the processors
+      real :: dt_proc_x           !< timestep computed for X direction for the current processor
+      real :: dt_proc_y           !< timestep computed for Y direction for the current processor
+      real :: dt_proc_z           !< timestep computed for Z direction for the current processor
       real :: cx                  !< maximum velocity for X direction
       real :: cy                  !< maximum velocity for Y direction
       real :: cz                  !< maximum velocity for Z direction
       real :: vx                  !< velocity in X direction computed for current cell
       real :: vy                  !< velocity in Y direction computed for current cell
       real :: vz                  !< velocity in Z direction computed for current cell
-      real :: cf                  !< speed of sound for the ionized fluid
+      real :: cs                  !< speed of sound
 
 ! locals
-      real :: pmag, bx, by, bz
-      real :: ps,p
+      real                           :: pmag, bx, by, bz, ps, p, c_max
       integer                        :: i, j, k, ip, jp, kp
       type(component_fluid), pointer :: fl
 
@@ -96,18 +93,18 @@ contains
       cx    = 0.0
       cy    = 0.0
       cz    = 0.0
-      c_ion     = 0.0
+      c_max = 0.0
 
-      do k=ks,ke
+      do k = ks, ke
          kp = mod(k,ke)+1
-         do j=js,je
+         do j = js, je
             jp = mod(j,je)+1
-            do i=is,ie
+            do i = is, ie
                ip = mod(i,ie)+1
 
-               vx=abs(u(fl%imx,i,j,k)/u(fl%idn,i,j,k))
-               vy=abs(u(fl%imy,i,j,k)/u(fl%idn,i,j,k))
-               vz=abs(u(fl%imz,i,j,k)/u(fl%idn,i,j,k))
+               vx = abs(u(fl%imx,i,j,k)/u(fl%idn,i,j,k))
+               vy = abs(u(fl%imy,i,j,k)/u(fl%idn,i,j,k))
+               vz = abs(u(fl%imz,i,j,k)/u(fl%idn,i,j,k))
 
                bx = 0.5*(b(ibx,i,j,k) + b(ibx,ip,j,k))
                by = 0.5*(b(iby,i,j,k) + b(iby,i,jp,k))
@@ -116,53 +113,52 @@ contains
                pmag = 0.5*(bx*bx + by*by + bz*bz)
 
 #ifdef ISO
-               p = fl%cs2*u(fl%idn,i,j,k)
-               ps =p+pmag
-               cf = sqrt(abs(  (2.*pmag+p)/u(fl%idn,i,j,k)) )
+               p  = fl%cs2*u(fl%idn,i,j,k)
+               ps = p + pmag
+               cs = sqrt(abs(  (2.*pmag+p)/u(fl%idn,i,j,k)) )
 #else /* ISO */
-               ps=(u(fl%ien,i,j,k)-sum(u(fl%imx:fl%imz,i,j,k)**2,1) &
-               /u(fl%idn,i,j,k)*0.5)*(fl%gam-1.)+(2.-fl%gam)*pmag
-               p=ps-pmag
-               cf = sqrt(abs(  (2.*pmag+fl%gam*p)/u(fl%idn,i,j,k)) )
+               ps = (u(fl%ien,i,j,k)-sum(u(fl%imx:fl%imz,i,j,k)**2,1) &
+                     /u(fl%idn,i,j,k)*0.5)*(fl%gam-1.)+(2.-fl%gam)*pmag
+               p  = ps - pmag
+               cs = sqrt(abs(  (2.*pmag+fl%gam*p)/u(fl%idn,i,j,k)) )
 #endif /* ISO */
 
-               cx=max(cx,vx+cf)
-               cy=max(cy,vy+cf)
-               cz=max(cz,vz+cf)
-               c_ion =max(c_ion,cx,cy,cz)
+               cx    = max(cx,vx+cs)
+               cy    = max(cy,vy+cs)
+               cz    = max(cz,vz+cs)
+               c_max = max(c_max,cx,cy,cz)
 
             enddo
          enddo
       enddo
 
-      if (nxd /= 1) then
-         dt_ion_proc_x = dx/cx
+      if (nxd /= 1 .and. cx /= 0) then
+         dt_proc_x = dx/cx
       else
-         dt_ion_proc_x = big
+         dt_proc_x = big
       endif
-      if (nyd /= 1) then
-         dt_ion_proc_y = dy/cy
+      if (nyd /= 1 .and. cy /= 0) then
+         dt_proc_y = dy/cy
       else
-         dt_ion_proc_y = big
+         dt_proc_y = big
       endif
-      if (nzd /= 1) then
-         dt_ion_proc_z = dz/cz
+      if (nzd /= 1 .and. cz /= 0) then
+         dt_proc_z = dz/cz
       else
-         dt_ion_proc_z = big
+         dt_proc_z = big
       endif
 
-      dt_ion_proc   = min(dt_ion_proc_x, dt_ion_proc_y, dt_ion_proc_z)
+      dt_proc   = min(dt_proc_x, dt_proc_y, dt_proc_z)
 
-      call MPI_Reduce(c_ion, c_max_all, 1, MPI_DOUBLE_PRECISION, MPI_MAX, 0, comm, ierr)
+      call MPI_Reduce(c_max, c_max_all, 1, MPI_DOUBLE_PRECISION, MPI_MAX, 0, comm, ierr)
       call MPI_Bcast(c_max_all, 1, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
-      c_ion = c_max_all
+      call MPI_Reduce(dt_proc, dt_all, 1, MPI_DOUBLE_PRECISION, MPI_MIN, 0, comm, ierr)
+      call MPI_Bcast(dt_all, 1, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
-      call MPI_Reduce(dt_ion_proc, dt_ion_all, 1, MPI_DOUBLE_PRECISION, MPI_MIN, 0, comm, ierr)
-      call MPI_Bcast(dt_ion_all, 1, MPI_DOUBLE_PRECISION, 0, comm, ierr)
-      dt_ion = cfl*dt_ion_all
+      c_ion  = c_max_all
+      dt_ion = cfl*dt_all
 
    end subroutine timestep_ion
 
-!-------------------------------------------------------------------------------
 end module timestepionized
