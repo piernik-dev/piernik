@@ -59,14 +59,12 @@ contains
 
    subroutine timestep_ion
 
+      use types,       only: component_fluid
       use arrays,      only: u, b
       use constants,   only: big
       use grid,        only: dx, dy, dz, nb, ks, ke, is, ie, js, je, nxd, nyd, nzd
-      use initionized, only: idni, imxi, imyi, imzi, gamma_ion, cs_iso_ion2
       use mpisetup,    only: MPI_DOUBLE_PRECISION, MPI_MIN, MPI_MAX, comm, ierr, cfl
-#ifndef ISO
-      use initionized, only: ieni
-#endif /* !ISO */
+      use fluidindex,  only: nvar, ibx, iby, ibz
 #ifdef ISO_LOCAL
       use arrays,      only: cs_iso2_arr
 #endif /* ISO_LOCAL */
@@ -90,9 +88,10 @@ contains
 ! locals
       real :: pmag, bx, by, bz
       real :: ps,p
-      integer :: i,j,k
-      integer :: kp,jp,ip
+      integer                        :: i, j, k, ip, jp, kp
+      type(component_fluid), pointer :: fl
 
+      fl => nvar%ion
 
       cx    = 0.0
       cy    = 0.0
@@ -106,25 +105,25 @@ contains
             do i=is,ie
                ip = mod(i,ie)+1
 
-               vx=abs(u(imxi,i,j,k)/u(idni,i,j,k))
-               vy=abs(u(imyi,i,j,k)/u(idni,i,j,k))
-               vz=abs(u(imzi,i,j,k)/u(idni,i,j,k))
+               vx=abs(u(fl%imx,i,j,k)/u(fl%idn,i,j,k))
+               vy=abs(u(fl%imy,i,j,k)/u(fl%idn,i,j,k))
+               vz=abs(u(fl%imz,i,j,k)/u(fl%idn,i,j,k))
 
-               bx = 0.5*(b(1,i,j,k) + b(1,ip,j,k))
-               by = 0.5*(b(2,i,j,k) + b(2,i,jp,k))
-               bz = 0.5*(b(3,i,j,k) + b(3,i,j,kp))
+               bx = 0.5*(b(ibx,i,j,k) + b(ibx,ip,j,k))
+               by = 0.5*(b(iby,i,j,k) + b(iby,i,jp,k))
+               bz = 0.5*(b(ibz,i,j,k) + b(ibz,i,j,kp))
 
                pmag = 0.5*(bx*bx + by*by + bz*bz)
 
 #ifdef ISO
-               p = cs_iso_ion2*u(idni,i,j,k)
+               p = fl%cs2*u(fl%idn,i,j,k)
                ps =p+pmag
-               cf = sqrt(abs(  (2.*pmag+p)/u(idni,i,j,k)) )
+               cf = sqrt(abs(  (2.*pmag+p)/u(fl%idn,i,j,k)) )
 #else /* ISO */
-               ps=(u(ieni,i,j,k)-sum(u(imxi:imzi,i,j,k)**2,1) &
-               /u(idni,i,j,k)*0.5)*(gamma_ion-1.)+(2.-gamma_ion)*pmag
+               ps=(u(fl%ien,i,j,k)-sum(u(fl%imx:fl%imz,i,j,k)**2,1) &
+               /u(fl%idn,i,j,k)*0.5)*(fl%gam-1.)+(2.-fl%gam)*pmag
                p=ps-pmag
-               cf = sqrt(abs(  (2.*pmag+gamma_ion*p)/u(idni,i,j,k)) )
+               cf = sqrt(abs(  (2.*pmag+fl%gam*p)/u(fl%idn,i,j,k)) )
 #endif /* ISO */
 
                cx=max(cx,vx+cf)

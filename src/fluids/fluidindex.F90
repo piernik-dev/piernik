@@ -124,16 +124,19 @@ module fluidindex
 
 #ifdef IONIZED
 !  Compute indexes for the ionized fluid and update counters
+      allocate(nvar%ion)
       call ionized_index(nvar)
 #endif /* IONIZED */
 
 #ifdef NEUTRAL
 !  Compute indexes for the neutral fluid and update counters
+      allocate(nvar%neu)
       call neutral_index(nvar)
 #endif /* NEUTRAL */
 
 #ifdef DUST
 !  Compute indexes for the dust fluid and update counters
+      allocate(nvar%dst)
       call dust_index(nvar)
 #endif /* DUST */
 

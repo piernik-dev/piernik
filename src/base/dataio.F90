@@ -675,12 +675,6 @@ module dataio
       use mpisetup,        only: proc, comm3d, t, dt, ierr, MPI_REAL8, MPI_SUM, smalld, nstep
       use problem_pub,     only: problem_name, run_id
       use types,           only: tsl_container
-#ifdef IONIZED
-      use initionized,     only: gamma_ion, cs_iso_ion, cs_iso_ion2
-#endif /* IONIZED */
-#ifdef NEUTRAL
-      use initneutral,     only: gamma_neu, cs_iso_neu, cs_iso_neu2
-#endif /* NEUTRAL */
 #ifndef ISO
       use fluidindex,      only: iarr_all_en
 #endif /* !ISO */
@@ -690,14 +684,6 @@ module dataio
 #ifdef GRAV
       use arrays,          only: gpot
 #endif /* GRAV */
-#ifdef ISO
-#ifdef IONIZED
-      use initionized,     only: cs_iso_ion2
-#endif /* IONIZED */
-#ifdef NEUTRAL
-      use initneutral,     only: cs_iso_neu2
-#endif /* NEUTRAL */
-#endif /* ISO */
 #ifdef SNE_DISTR
       use sndistr,         only: emagadd, tot_emagadd
 #endif /* SNE_DISTR */
@@ -728,10 +714,10 @@ module dataio
 !- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 !
 #ifdef IONIZED
-      cs_iso2 = cs_iso_ion2
+      cs_iso2 = nvar%ion%cs2
 #endif /* IONIZED */
 #ifdef NEUTRAL
-      cs_iso2 = cs_iso_neu2
+      cs_iso2 = nvar%neu%cs2
 #else /* NEUTRAL */
 #ifndef IONIZED
       cs_iso2 = 0.0

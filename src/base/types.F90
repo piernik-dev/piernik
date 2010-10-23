@@ -134,9 +134,9 @@ module types
       integer :: components  = 0     !< number of components, such as CRs, tracers, magnetic helicity (in future), whose formal description does not involve [???]
       integer :: fluids_sg   = 0     !< number of selfgravitating fluids (ionized gas, neutral gas, dust)
 
-      type(component_fluid) :: ion         !< numbers of variables for the ionized fluid
-      type(component_fluid) :: neu         !< numbers of variables for the neutral fluid
-      type(component_fluid) :: dst         !< numbers of variables for the dust fluid
+      type(component_fluid), pointer :: ion         !< numbers of variables for the ionized fluid
+      type(component_fluid), pointer :: neu         !< numbers of variables for the neutral fluid
+      type(component_fluid), pointer :: dst         !< numbers of variables for the dust fluid
 
       type(component) :: crs         !< numbers of variables in all cosmic ray components
       type(component) :: crn         !< numbers of variables in cosmic ray nuclear components
