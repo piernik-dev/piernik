@@ -57,30 +57,20 @@ module timestepionized
 contains
 
    subroutine timestep_ion
-      use types,       only: component_fluid
-      use arrays,      only: u, b
-      use constants,   only: big
-      use grid,        only: dx, dy, dz, nb, ks, ke, is, ie, js, je, nxd, nyd, nzd
-      use mpisetup,    only: MPI_DOUBLE_PRECISION, MPI_MIN, MPI_MAX, comm, ierr, cfl
-      use fluidindex,  only: nvar, ibx, iby, ibz
+      use types,         only: component_fluid
+      use arrays,        only: u, b
+      use grid,          only: ks, ke, is, ie, js, je
+      use fluidindex,    only: nvar, ibx, iby, ibz
+      use timestepfuncs, only: compute_c_max, compute_dt
 #ifdef ISO_LOCAL
       use arrays,      only: cs_iso2_arr
 #endif /* ISO_LOCAL */
 
       implicit none
 
-      real :: dt_proc = 0.0       !< minimum timestep for the current processor
-      real :: dt_all = 0.0        !< minimum timestep for all the processors
-      real :: c_max_all = 0.0     !< maximum speed for the fluid for all the processors
-      real :: dt_proc_x = 0.0     !< timestep computed for X direction for the current processor
-      real :: dt_proc_y = 0.0     !< timestep computed for Y direction for the current processor
-      real :: dt_proc_z = 0.0     !< timestep computed for Z direction for the current processor
       real :: cx = 0.0            !< maximum velocity for X direction
       real :: cy = 0.0            !< maximum velocity for Y direction
       real :: cz = 0.0            !< maximum velocity for Z direction
-      real :: vx = 0.0            !< velocity in X direction computed for current cell
-      real :: vy = 0.0            !< velocity in Y direction computed for current cell
-      real :: vz = 0.0            !< velocity in Z direction computed for current cell
       real :: cs = 0.0            !< speed of sound
 
 ! locals
@@ -96,10 +86,6 @@ contains
             jp = mod(j,je)+1
             do i = is, ie
                ip = mod(i,ie)+1
-
-               vx = abs(u(fl%imx,i,j,k)/u(fl%idn,i,j,k))
-               vy = abs(u(fl%imy,i,j,k)/u(fl%idn,i,j,k))
-               vz = abs(u(fl%imz,i,j,k)/u(fl%idn,i,j,k))
 
                bx = 0.5*(b(ibx,i,j,k) + b(ibx,ip,j,k))
                by = 0.5*(b(iby,i,j,k) + b(iby,i,jp,k))
@@ -117,42 +103,11 @@ contains
                p  = ps - pmag
                cs = sqrt(abs(  (2.*pmag+fl%gam*p)/u(fl%idn,i,j,k)) )
 #endif /* ISO */
-
-               cx    = max(cx,vx+cs)
-               cy    = max(cy,vy+cs)
-               cz    = max(cz,vz+cs)
-               c_max = max(c_max,cx,cy,cz)
-
+               call compute_c_max(fl,cs,i,j,k,cx,cy,cz,c_max)
             enddo
          enddo
       enddo
-
-      if (nxd /= 1 .and. cx /= 0) then
-         dt_proc_x = dx/cx
-      else
-         dt_proc_x = big
-      endif
-      if (nyd /= 1 .and. cy /= 0) then
-         dt_proc_y = dy/cy
-      else
-         dt_proc_y = big
-      endif
-      if (nzd /= 1 .and. cz /= 0) then
-         dt_proc_z = dz/cz
-      else
-         dt_proc_z = big
-      endif
-
-      dt_proc   = min(dt_proc_x, dt_proc_y, dt_proc_z)
-
-      call MPI_Reduce(c_max, c_max_all, 1, MPI_DOUBLE_PRECISION, MPI_MAX, 0, comm, ierr)
-      call MPI_Bcast(c_max_all, 1, MPI_DOUBLE_PRECISION, 0, comm, ierr)
-
-      call MPI_Reduce(dt_proc, dt_all, 1, MPI_DOUBLE_PRECISION, MPI_MIN, 0, comm, ierr)
-      call MPI_Bcast(dt_all, 1, MPI_DOUBLE_PRECISION, 0, comm, ierr)
-
-      c_ion  = c_max_all
-      dt_ion = cfl*dt_all
+      call compute_dt(cx,cy,cz,c_max,c_ion,dt_ion)
 
    end subroutine timestep_ion
 
