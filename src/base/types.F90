@@ -145,6 +145,7 @@ module types
    end type var_numbers
 
    type :: tsl_container
+      logical :: dummy
 #ifdef COSM_RAYS
       real :: encr_min, encr_max
 #endif /* COSM_RAYS */

@@ -32,92 +32,94 @@
 !!
 !!
 !<
-
 module timestepdust
 
-  real :: dt_dst                !< final timestep for dust
-  real :: c_dst                 !< maximum speed at which information travels in dust
+   real :: dt_dst                !< final timestep for dust
+   real :: c_dst                 !< maximum speed at which information travels in dust
 
 contains
 
-  subroutine timestep_dst
+   subroutine timestep_dst
+      use types,       only: component_fluid
+      use arrays,      only: u, b
+      use constants,   only: big, small
+      use grid,        only: dx, dy, dz, nb, ks, ke, is, ie, js, je, nxd, nyd, nzd
+      use mpisetup,    only: ierr, comm, cfl, MPI_MAX, MPI_MIN, MPI_DOUBLE_PRECISION
+      use fluidindex,  only: nvar
 
-    use arrays,      only: u, b
-    use constants,   only: big, small
-    use grid,        only: dx, dy, dz, nb, ks, ke, is, ie, js, je, nxd, nyd, nzd
-    use initdust,    only: idnd, imxd, imyd, imzd
-    use mpisetup,    only: ierr, comm, cfl, MPI_MAX, MPI_MIN, MPI_DOUBLE_PRECISION
+      implicit none
 
-    implicit none
-
-    real :: dt_dst_proc, dt_dst_all, c_max_all
-    real :: dt_dst_proc_x, dt_dst_proc_y, dt_dst_proc_z
-    real :: cx, cy, cz, vx, vy, vz
-
+      real :: dt_proc = 0.0       !< minimum timestep for the current processor
+      real :: dt_all = 0.0        !< minimum timestep for all the processors
+      real :: c_max_all = 0.0     !< maximum speed for the fluid for all the processors
+      real :: dt_proc_x = 0.0     !< timestep computed for X direction for the current processor
+      real :: dt_proc_y = 0.0     !< timestep computed for Y direction for the current processor
+      real :: dt_proc_z = 0.0     !< timestep computed for Z direction for the current processor
+      real :: cx = 0.0            !< maximum velocity for X direction
+      real :: cy = 0.0            !< maximum velocity for Y direction
+      real :: cz = 0.0            !< maximum velocity for Z direction
+      real :: vx = 0.0            !< velocity in X direction computed for current cell
+      real :: vy = 0.0            !< velocity in Y direction computed for current cell
+      real :: vz = 0.0            !< velocity in Z direction computed for current cell
+      real :: cs = 0.0            !< speed of sound
 
 ! locals
 
-    integer :: i,j,k
+      real                           :: c_max = 0
+      integer                        :: i, j, k
+      type(component_fluid), pointer :: fl
 
+      fl => nvar%dst
 
-    cx    = 0.0
-    cy    = 0.0
-    cz    = 0.0
-    c_dst     = 0.0
+      do k=ks,ke
+         do j=js,je
+            do i=is,ie
+               if (u(fl%idn,i,j,k) > 0.0) then
+                  vx = abs(u(fl%imx,i,j,k)/u(fl%idn,i,j,k))
+                  vy = abs(u(fl%imy,i,j,k)/u(fl%idn,i,j,k))
+                  vz = abs(u(fl%imz,i,j,k)/u(fl%idn,i,j,k))
+               else
+                  vx = 0.0
+                  vy = 0.0
+                  vz = 0.0
+               endif
 
-    do k=ks,ke
-      do j=js,je
-        do i=is,ie
-          if (u(idnd,i,j,k) > 0.0) then
-             vx=abs(u(imxd,i,j,k)/u(idnd,i,j,k))
-             vy=abs(u(imyd,i,j,k)/u(idnd,i,j,k))
-             vz=abs(u(imzd,i,j,k)/u(idnd,i,j,k))
-          else
-             vx = 0.0
-             vy = 0.0
-             vz = 0.0
-          endif
+               cx    = max(cx,vx+cs)
+               cy    = max(cy,vy+cs)
+               cz    = max(cz,vz+cs)
+               c_max = max(c_max,cx,cy,cz)
 
-          cx=max(cx,vx)
-          cy=max(cy,vy)
-          cz=max(cz,vz)
-          c_dst =max(c_dst,cx,cy,cz)
-
-        enddo
+            enddo
+         enddo
       enddo
-    enddo
 
+      if (nxd /= 1 .and. cx /= 0) then
+         dt_proc_x = dx/cx
+      else
+         dt_proc_x = big
+      endif
+      if (nyd /= 1 .and. cy /= 0) then
+         dt_proc_y = dy/cy
+      else
+         dt_proc_y = big
+      endif
+      if (nzd /= 1 .and. cz /= 0) then
+         dt_proc_z = dz/cz
+      else
+         dt_proc_z = big
+      endif
 
-    if (nxd /= 1) then
-       dt_dst_proc_x = dx/max(cx,small)
-    else
-       dt_dst_proc_x = big
-    endif
-    if (nyd /= 1) then
-       dt_dst_proc_y = dy/max(cy,small)
-    else
-       dt_dst_proc_y = big
-    endif
-    if (nzd /= 1) then
-       dt_dst_proc_z = dz/max(cz,small)
-    else
-       dt_dst_proc_z = big
-    endif
+      dt_proc   = min(dt_proc_x, dt_proc_y, dt_proc_z)
 
+      call MPI_Reduce(c_max, c_max_all, 1, MPI_DOUBLE_PRECISION, MPI_MAX, 0, comm, ierr)
+      call MPI_Bcast(c_max_all, 1, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
-    dt_dst_proc   = min(dt_dst_proc_x, dt_dst_proc_y, dt_dst_proc_z)
+      call MPI_Reduce(dt_proc, dt_all, 1, MPI_DOUBLE_PRECISION, MPI_MIN, 0, comm, ierr)
+      call MPI_Bcast(dt_all, 1, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+    
+      c_dst  = c_max_all
+      dt_dst = cfl*dt_all
 
-    call MPI_Reduce(c_dst, c_max_all, 1, MPI_DOUBLE_PRECISION, MPI_MAX, 0, comm, ierr)
-    call MPI_Bcast(c_max_all, 1, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+   end subroutine timestep_dst
 
-    c_dst = c_max_all
-
-    call MPI_Reduce(dt_dst_proc, dt_dst_all, 1, MPI_DOUBLE_PRECISION, MPI_MIN, 0, comm, ierr)
-    call MPI_Bcast(dt_dst_all, 1, MPI_DOUBLE_PRECISION, 0, comm, ierr)
-    dt_dst = cfl*dt_dst_all
-
-  end subroutine timestep_dst
-
-!-------------------------------------------------------------------------------
 end module timestepdust
-
