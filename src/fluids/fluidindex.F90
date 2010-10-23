@@ -85,8 +85,30 @@ module fluidindex
 
    integer :: i_sg                                     !< index denoting position of the selfgravitating fluid in the row of fluids - should be an iarr_sg !
 
-  contains
+contains
 
+   subroutine set_fluidindex_arrays(fl,have_ener)
+      use types, only: component_fluid 
+      implicit none
+      type(component_fluid), intent(inout) :: fl
+      logical, intent(in)                  :: have_ener
+
+      iarr_all_swpx(fl%beg:fl%end) = fl%iarr_swpx
+      iarr_all_swpy(fl%beg:fl%end) = fl%iarr_swpy
+      iarr_all_swpz(fl%beg:fl%end) = fl%iarr_swpz
+
+      if (fl%sg) then
+         i_sg = i_sg + 1
+         iarr_all_sg(i_sg) = fl%idn
+      endif
+      iarr_all_dn(fl%pos)      = fl%idn
+      iarr_all_mx(fl%pos)      = fl%imx
+      iarr_all_my(fl%pos)      = fl%imy
+      iarr_all_mz(fl%pos)      = fl%imz
+#ifndef ISO
+      if (have_ener) iarr_all_en(fl%pos)      = fl%ien
+#endif /* !ISO */
+   end subroutine set_fluidindex_arrays
 !>
 !! \brief Subroutine fluid_index constructing all multi-fluid indexes used in other parts
 !! of PIERNIK code
@@ -96,21 +118,13 @@ module fluidindex
       use diagnostics,    only: my_allocate
       use types,          only: grid_container
 #ifdef IONIZED
-      use initionized,    only: idni, imxi, imyi, imzi, ionized_index, selfgrav_ion
-#ifndef ISO
-      use initionized,    only: ieni
-#endif /* !ISO */
+      use initionized,    only: ionized_index
 #endif /* IONIZED */
-
 #ifdef NEUTRAL
-      use initneutral,    only: idnn, imxn, imyn, imzn, neutral_index, selfgrav_neu
-#ifndef ISO
-      use initneutral,    only: ienn
-#endif /* !ISO */
+      use initneutral,    only: neutral_index
 #endif /* NEUTRAL */
-
 #ifdef DUST
-      use initdust,       only: idnd, imxd, imyd, imzd, dust_index, selfgrav_dst
+      use initdust,       only: dust_index
 #endif /* DUST */
 
 #ifdef COSM_RAYS
@@ -178,62 +192,21 @@ module fluidindex
 
 #ifdef IONIZED
 ! Compute index arrays for the ionized fluid
-      iarr_all_swpx(nvar%ion%beg:nvar%ion%end) = nvar%ion%iarr_swpx
-      iarr_all_swpy(nvar%ion%beg:nvar%ion%end) = nvar%ion%iarr_swpy
-      iarr_all_swpz(nvar%ion%beg:nvar%ion%end) = nvar%ion%iarr_swpz
-
-      if (selfgrav_ion) then
-         i_sg = i_sg + 1
-         iarr_all_sg(i_sg) = idni
-      endif
-      iarr_all_dn(nvar%ion%pos)      = idni
-      iarr_all_mx(nvar%ion%pos)      = imxi
-      iarr_all_my(nvar%ion%pos)      = imyi
-      iarr_all_mz(nvar%ion%pos)      = imzi
-#ifndef ISO
-      iarr_all_en(nvar%ion%pos)      = ieni
-#endif /* !ISO */
+      call set_fluidindex_arrays(nvar%ion,.true.)
 #endif /* IONIZED */
 
 #ifdef NEUTRAL
 ! Compute index arrays for the neutral fluid
-      iarr_all_swpx(nvar%neu%beg:nvar%neu%end) = nvar%neu%iarr_swpx
-      iarr_all_swpy(nvar%neu%beg:nvar%neu%end) = nvar%neu%iarr_swpy
-      iarr_all_swpz(nvar%neu%beg:nvar%neu%end) = nvar%neu%iarr_swpz
-
-      if (selfgrav_neu) then
-         i_sg = i_sg + 1
-         iarr_all_sg(i_sg) = idnn
-      endif
-      iarr_all_dn(nvar%neu%pos)      = idnn
-      iarr_all_mx(nvar%neu%pos)      = imxn
-      iarr_all_my(nvar%neu%pos)      = imyn
-      iarr_all_mz(nvar%neu%pos)      = imzn
-#ifndef ISO
-      iarr_all_en(nvar%neu%pos)      = ienn
-#endif /* !ISO */
+      call set_fluidindex_arrays(nvar%neu,.true.)
 #endif /* NEUTRAL */
 
 #ifdef DUST
 ! Compute index arrays for the dust fluid
-      iarr_all_swpx(nvar%dst%beg:nvar%dst%end) = nvar%dst%iarr_swpx
-      iarr_all_swpy(nvar%dst%beg:nvar%dst%end) = nvar%dst%iarr_swpy
-      iarr_all_swpz(nvar%dst%beg:nvar%dst%end) = nvar%dst%iarr_swpz
-
-      if (selfgrav_dst) then
-         i_sg = i_sg + 1
-         iarr_all_sg(i_sg) = idnd
-      endif
-      iarr_all_dn(nvar%dst%pos)      = idnd
-      iarr_all_mx(nvar%dst%pos)      = imxd
-      iarr_all_my(nvar%dst%pos)      = imyd
-      iarr_all_mz(nvar%dst%pos)      = imzd
+      call set_fluidindex_arrays(nvar%dst,.false.)
 #endif /* DUST */
 
 #ifdef COSM_RAYS
 ! Compute index arrays for the CR components
-
-
       iarr_all_swpx(nvar%crs%beg:nvar%crs%end) = iarr_crs
       iarr_all_swpy(nvar%crs%beg:nvar%crs%end) = iarr_crs
       iarr_all_swpz(nvar%crs%beg:nvar%crs%end) = iarr_crs
@@ -241,7 +214,6 @@ module fluidindex
       iarr_all_crn(1:nvar%crn%all) = iarr_crn
       iarr_all_cre(1:nvar%cre%all) = iarr_cre
       iarr_all_crs(1:nvar%crs%all) = iarr_crs
-
 #endif /* COSM_RAYS */
 
    end subroutine fluid_index
