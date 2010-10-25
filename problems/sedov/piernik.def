@@ -1,7 +1,7 @@
 /* choosing fluids */
 #define IONIZED
 #define MAGNETIC
-#undef  NEUTRAL
+#define  NEUTRAL
 /* choosing freezing speed */
 #define LOCAL_FR_SPEED
 

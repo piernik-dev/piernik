@@ -181,6 +181,7 @@ module initneutral
       nvar%neu%cs    = cs_iso_neu
       nvar%neu%cs2   = cs_iso_neu**2
       nvar%neu%sg    = selfgrav_neu
+      nvar%neu%tag   = "NEU"
 
    end subroutine neutral_index
 

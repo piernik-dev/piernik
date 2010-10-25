@@ -1163,7 +1163,7 @@ module dataio
             call common_shout(nvar%ion%snap,'ION',.true.,.true.,.true.)
 #ifdef MAGNETIC
             write(msg, fmt777) 'max(c_f)    ION  =', sqrt(nvar%ion%snap%cs_max%val**2+vai_max%val**2), &
-               'dt=',cfl*dxmn_safe/sqrt(nvar%ion%snap%cs_max%val**2+vai_max%val**2)
+               'dt=',cfl*dxmn_safe/sqrt(nvar%ion%snap%cs_max%val**2+vai_max%val**2+small)
             call printinfo(msg, .false.)
             write(msg, fmt777) 'max(v_a)    ION  =', vai_max%val, 'dt=',cfl*dxmn_safe/(vai_max%val+small), vai_max%proc, vai_max%loc
             call printinfo(msg, .false.)

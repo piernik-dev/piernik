@@ -122,6 +122,8 @@ module types
 
       logical :: sg  = .false.
 
+      character(len=idlen) :: tag = ''
+
       integer, allocatable, dimension(:)  :: iarr
       integer, allocatable, dimension(:)  :: iarr_swpx
       integer, allocatable, dimension(:)  :: iarr_swpy
@@ -136,6 +138,8 @@ module types
       integer :: adiab       = 0     !< number of adiabatic fluids (indicating the presence of energy density in the vector of conservative variables)
       integer :: components  = 0     !< number of components, such as CRs, tracers, magnetic helicity (in future), whose formal description does not involve [???]
       integer :: fluids_sg   = 0     !< number of selfgravitating fluids (ionized gas, neutral gas, dust)
+
+      type(component_fluid), dimension(:), pointer :: all_fluids
 
       type(component_fluid), pointer :: ion         !< numbers of variables for the ionized fluid
       type(component_fluid), pointer :: neu         !< numbers of variables for the neutral fluid

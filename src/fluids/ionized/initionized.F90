@@ -168,6 +168,7 @@ module initionized
       nvar%ion%cs    = cs_iso_ion
       nvar%ion%cs2   = cs_iso_ion**2
       nvar%ion%sg    = selfgrav_ion
+      nvar%ion%tag   = "ION"
 
    end subroutine ionized_index
 

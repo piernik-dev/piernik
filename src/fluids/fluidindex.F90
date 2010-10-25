@@ -133,6 +133,7 @@ contains
 
       implicit none
       type(grid_container), intent(in) :: cgrid
+      integer                          :: i
 
       i_sg        = 0
 
@@ -218,6 +219,17 @@ contains
       iarr_all_crs(1:nvar%crs%all) = iarr_crs
 #endif /* COSM_RAYS */
 
+      allocate(nvar%all_fluids(nvar%fluids))
+      i = 1
+#ifdef IONIZED
+      nvar%all_fluids(i) = nvar%ion ; i = i + 1
+#endif /* IONIZED */
+#ifdef NEUTRAL
+      nvar%all_fluids(i) = nvar%neu ; i = i + 1
+#endif /* NEUTRAL */
+#ifdef DUST
+      nvar%all_fluids(i) = nvar%dst ; i = i + 1
+#endif /* DUST */
    end subroutine fluid_index
 
    subroutine cleanup_fluidindex

@@ -139,6 +139,7 @@ module initdust
       nvar%dst%cs  = 0.0
       nvar%dst%cs2 = 0.0
       nvar%dst%sg  = selfgrav_dst
+      nvar%dst%tag = "DST"
 
    end subroutine dust_index
 
