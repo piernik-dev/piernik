@@ -113,7 +113,17 @@ module dataio_public
       end subroutine plt_hdf5
    end interface
 
-   procedure(plt_hdf5), pointer :: user_plt_hdf5 => Null()
+   interface
+      subroutine vars_hdf5(var, tab, ierrh)
+         implicit none
+         character(len=*), intent(in)                    :: var
+         real(kind=4), dimension(:,:,:), intent(inout)   :: tab
+         integer, intent(inout)                          :: ierrh
+      end subroutine vars_hdf5
+   end interface
+
+   procedure(plt_hdf5),  pointer :: user_plt_hdf5 => Null()
+   procedure(vars_hdf5), pointer :: user_vars_hdf5 => Null()
 
 contains
 !-----------------------------------------------------------------------------

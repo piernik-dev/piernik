@@ -27,7 +27,7 @@
 !
 #include "piernik.def"
 #include "macros.h"
-
+#define RNG is:ie, js:je, ks:ke
 module initproblem
 
 ! Initial condition for Sedov-Taylor explosion
@@ -122,7 +122,7 @@ contains
 !-----------------------------------------------------------------------------
    subroutine init_prob
       use types,          only: component_fluid
-      use dataio_public,  only: msg, die, printinfo, user_plt_hdf5
+      use dataio_public,  only: msg, die, printinfo, user_plt_hdf5, user_vars_hdf5
       use arrays,         only: u, b
       use grid,           only: x, y, z, nx, ny, nz
       use fluidindex,     only: nvar, ibx, iby, ibz
@@ -184,6 +184,7 @@ contains
          endif
       enddo
       user_plt_hdf5 => sedov_plt_hdf5
+      user_vars_hdf5 => sedov_vars_hdf5
       return
    end subroutine init_prob
 !-----------------------------------------------------------------------------
@@ -201,13 +202,31 @@ contains
       ierrh = 0
       select case (var)
          case ("fooo")   ! Totally bogus quantity, just to check user_plt_hdf5 works
-            if (ij=="yz") tab(:,:) = u(2,xn,nb+1:nyb+nb,nb+1:nzb+nb)*u(3,xn,nb+1:nyb+nb,nb+1:nzb+nb)
-            if (ij=="xz") tab(:,:) = u(2,nb+1:nxb+nb,xn,nb+1:nzb+nb)*u(3,nb+1:nxb+nb,xn,nb+1:nzb+nb)
-            if (ij=="xy") tab(:,:) = u(2,nb+1:nxb+nb,nb+1:nyb+nb,xn)*u(3,nb+1:nxb+nb,nb+1:nyb+nb,xn)
+            if (ij=="yz") tab(:,:) = u(2,xn,nb+1:nyb+nb,nb+1:nzb+nb)*u(3,xn,nb+1:nyb+nb,nb+1:nzb+nb)* .123456789
+            if (ij=="xz") tab(:,:) = u(2,nb+1:nxb+nb,xn,nb+1:nzb+nb)*u(3,nb+1:nxb+nb,xn,nb+1:nzb+nb)* .123456789
+            if (ij=="xy") tab(:,:) = u(2,nb+1:nxb+nb,nb+1:nyb+nb,xn)*u(3,nb+1:nxb+nb,nb+1:nyb+nb,xn)* .123456789
          case default
             ierrh = -1
       end select
 
    end subroutine sedov_plt_hdf5
+!-----------------------------------------------------------------------------
+   subroutine sedov_vars_hdf5(var,tab, ierrh)
+      use arrays, only: u
+      use grid,   only: is, ie, js, je, ks, ke
+      implicit none
+      character(len=*), intent(in)                    :: var
+      real(kind=4), dimension(:,:,:), intent(inout)   :: tab
+      integer, intent(inout)                          :: ierrh
+
+      ierrh = 0
+      select case (trim(var))
+         case ("fooo")  ! Totally bogus quantity, just to check user_vars_hdf5 works
+            tab(:,:,:) = .123456789
+         case default
+            ierrh = -1
+      end select
+      return
+   end subroutine sedov_vars_hdf5
 !-----------------------------------------------------------------------------
 end module initproblem

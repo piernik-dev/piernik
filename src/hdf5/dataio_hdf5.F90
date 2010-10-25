@@ -620,7 +620,7 @@ module dataio_hdf5
       integer(HID_T)    :: file_id                 !> File identifier
       integer(HID_T)    :: gr_id, gr2_id           !> Groups identifier
 
-      if ( ((t-last_plt_time) > dt_plt) .and. dt_plt > 0.0 .or. first_entry) then
+      if ( ((t-last_plt_time > dt_plt) .or. first_entry ) .and. dt_plt > 0.0 ) then
          fe = len_trim(log_file)
          write(fname,'(2a)') trim(log_file(1:fe-3)),"plt"
          call H5open_f(error)
@@ -1525,7 +1525,7 @@ module dataio_hdf5
 ! ------------------------------------------------------------------------------------
 !
    subroutine write_hdf5(chdf)
-      use dataio_public, only: cwdlen, msg, die
+      use dataio_public, only: cwdlen, msg, die, user_vars_hdf5
       use grid,          only: nxb, nyb, nzb
       use hdf5,          only: HID_T, H5F_ACC_TRUNC_F, H5P_FILE_ACCESS_F, H5P_DEFAULT_F, &
            &                   h5open_f, h5close_f, h5fcreate_f, h5fclose_f, h5pcreate_f, h5pclose_f, h5pset_fapl_mpio_f
@@ -1568,11 +1568,13 @@ module dataio_hdf5
       CALL h5fcreate_f(trim(fname), H5F_ACC_TRUNC_F, file_id, error, creation_prp = H5P_DEFAULT_F, access_prp = plist_id)
       CALL h5pclose_f(plist_id, error)
       if (.not.allocated(data)) allocate(data(nxb,nyb,nzb))
-      ierrh = 0; ok_var = .false.
       do i = 1, nhdf_vars
-         call common_vars_hdf5(hdf_vars(i),data,ierrh);  if (ierrh == 0) ok_var = .true.
+         ierrh = 0; ok_var = .false.
+         call common_vars_hdf5(hdf_vars(i),data,ierrh)
+         if (associated(user_vars_hdf5) .and. ierrh /= 0) call user_vars_hdf5(hdf_vars(i),data,ierrh)
+         if (ierrh>=0) ok_var = .true.
          if (.not.ok_var) then
-            write(msg,'(3a)') "[dataio_hdf5:write_hdf5]: ",hdf_vars(i)," is not defined in common_vars_hdf5, neither in user_hdf5."
+            write(msg,'(3a)') "[dataio_hdf5:write_hdf5]: ",hdf_vars(i)," is not defined in common_vars_hdf5, neither in user_vars_hdf5."
             call die(msg)
          endif
          call write_arr(data,hdf_vars(i),file_id)
