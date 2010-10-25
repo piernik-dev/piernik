@@ -48,7 +48,7 @@ module dataio_hdf5
    public :: parfile, parfilelines, maxparfilelines
 
    integer, parameter :: dnamelen=10
-   character(LEN=dnamelen), dimension(3) :: dname = (/"fluid     ","mag       ","dinit     "/)  !< dataset names for restart files
+   character(LEN=dnamelen), dimension(2) :: dname = (/"fluid     ","mag       "/)  !< dataset names for restart files
    character(len=S_LEN), allocatable, dimension(:) :: hdf_vars  !< dataset names for hdf files
    integer :: nhdf_vars !< number of quantities plotted to hdf files
    integer :: ix !< no. of cell (1 <= ix < nxd) for YZ slice in plt files
@@ -841,9 +841,6 @@ module dataio_hdf5
 #ifdef ISO_LOCAL
       use arrays,        only: cs_iso2_arr
 #endif /* ISO_LOCAL */
-#ifdef MASS_COMPENS
-      use arrays,        only: dinit
-#endif /* MASS_COMPENS */
 
       implicit none
 
@@ -879,9 +876,6 @@ module dataio_hdf5
 
       if (associated(problem_write_restart)) call problem_write_restart(file_id)
 
-#ifdef MASS_COMPENS
-      call write_3darr_to_restart(dinit(is:ie,js:je,ks:ke),file_id,dname(3),nxb,nyb,nzb)
-#endif /* MASS_COMPENS */
 #ifdef ISO_LOCAL
       call write_3darr_to_restart(cs_iso2_arr(:,:,:),file_id,"cs_iso2",nx,ny,nz)
 #endif /* ISO_LOCAL */
@@ -1311,9 +1305,6 @@ module dataio_hdf5
 #ifdef ISO_LOCAL
       use arrays,        only: cs_iso2_arr
 #endif /* ISO_LOCAL */
-#ifdef MASS_COMPENS
-      use arrays,        only: dinit
-#endif /* MASS_COMPENS */
 
       IMPLICIT NONE
 
@@ -1369,11 +1360,6 @@ module dataio_hdf5
 
       if (associated(problem_read_restart)) call problem_read_restart(file_id)
 
-#ifdef MASS_COMPENS
-      if (.not.associated(p3d)) p3d => dinit(is:ie,js:je,ks:ke)
-      call read_3darr_from_restart(file_id,dname(3),p3d,nxb,nyb,nzb)
-      if (associated(p3d)) nullify(p3d)
-#endif /* MASS_COMPENS */
 #ifdef ISO_LOCAL
       if (.not.associated(p3d)) p3d => cs_iso2_arr(:,:,:)
       call read_3darr_from_restart(file_id,"cs_iso2",p3d,nx,ny,nz)
