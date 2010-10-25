@@ -61,69 +61,69 @@
 !<
 !*/
 module fluxdust
-  implicit none
+   implicit none
+   private
+   public :: flux_dst
 
-  contains
+contains
 !==========================================================================================
 
-  subroutine flux_dst(fluxd,cfrd,uud,n)
+   subroutine flux_dst(fluxd,cfrd,uud,n)
 
-    use constants,  only: small
-    use fluidindex, only: idn, imx, imy, imz, ien, nvar
-    use mpisetup,   only: cfr_smooth
-    use timestep,   only: c_all
+      use constants,  only: small
+      use fluidindex, only: idn, imx, imy, imz, ien, nvar
+      use mpisetup,   only: cfr_smooth
+      use timestep,   only: c_all
 
 
-    implicit none
-    integer, intent(in) :: n                     !< number of cells in the current sweep
+      implicit none
+      integer, intent(in)                          :: n       !< number of cells in the current sweep
+      real, dimension(nvar%dst%all,n), intent(out) :: fluxd   !< flux for dust
+      real, dimension(nvar%dst%all,n), intent(in)  :: uud     !< part of u for dust
+      real, dimension(nvar%dst%all,n), intent(out) :: cfrd    !< freezing speed for dust
 
-! locals
-    real :: minvx, maxvx, amp
-    real, dimension(nvar%dst%all,n):: fluxd      !< flux for dust
-    real, dimension(nvar%dst%all,n):: uud        !< part of u for dust
-    real, dimension(nvar%dst%all,n):: cfrd       !< freezing speed for dust
-!    real, dimension(n) :: p                  !< pressure
-    real, dimension(n) :: vx                 !< velocity for current sweep
+      ! locals
+      real               :: minvx, maxvx, amp
+      real, dimension(n) :: vx                 !< velocity for current sweep
 
-    fluxd   = 0.0
-    cfrd    = 0.0
-    vx      = 0.0
+      fluxd   = 0.0; cfrd    = 0.0; vx      = 0.0
 
-    where (uud(idn,RNG) > 0.0)
-       vx(RNG)=uud(imx,RNG)/uud(idn,RNG)
-    elsewhere
-       vx(RNG) = 0.0
-    endwhere
+      where (uud(idn,RNG) > 0.0)
+         vx(RNG)=uud(imx,RNG)/uud(idn,RNG)
+      elsewhere
+         vx(RNG) = 0.0
+      endwhere
 
-    where (abs(vx) < 1.e-20 .and. vx /= 0.0) vx = sign(1.e-20,vx)
+      where (abs(vx) < 1.e-20 .and. vx /= 0.0) vx = sign(1.e-20,vx)   !!! BEWARE: cheat 
 
-    fluxd(idn,RNG)=uud(imx,RNG)
-    fluxd(imx,RNG)=uud(imx,RNG)*vx(RNG)
-    fluxd(imy,RNG)=uud(imy,RNG)*vx(RNG)
-    fluxd(imz,RNG)=uud(imz,RNG)*vx(RNG)
+      fluxd(idn,RNG)=uud(imx,RNG)
+      fluxd(imx,RNG)=uud(imx,RNG)*vx(RNG)
+      fluxd(imy,RNG)=uud(imy,RNG)*vx(RNG)
+      fluxd(imz,RNG)=uud(imz,RNG)*vx(RNG)
 
 #ifdef LOCAL_FR_SPEED
-!       The freezing speed is now computed locally (in each cell)
-!       as in Trac & Pen (2003). This ensures much sharper shocks,
-!       but sometimes may lead to numerical instabilities
+      ! The freezing speed is now computed locally (in each cell)
+      !  as in Trac & Pen (2003). This ensures much sharper shocks,
+      !  but sometimes may lead to numerical instabilities
 
-    minvx = minval(vx(RNG))
-    maxvx = maxval(vx(RNG))
-    amp   = (maxvx-minvx)*0.5
-    cfrd(1,RNG) = max(sqrt(vx(RNG)**2+cfr_smooth*amp),small)
+      minvx = minval(vx(RNG))
+      maxvx = maxval(vx(RNG))
+      amp   = (maxvx-minvx)*0.5
+      cfrd(1,RNG) = max(sqrt(vx(RNG)**2+cfr_smooth*amp),small)
 
-    cfrd(1,1) = cfrd(1,2)
-    cfrd(1,n) = cfrd(1,n-1)
-    cfrd = spread(cfrd(1,:),1,nvar%dst%all)
+      cfrd(1,1) = cfrd(1,2)
+      cfrd(1,n) = cfrd(1,n-1)
+      cfrd = spread(cfrd(1,:),1,nvar%dst%all)
 #endif /* LOCAL_FR_SPEED */
 
 #ifdef GLOBAL_FR_SPEED
-!       The freezing speed is now computed globally
-!       (c=const for the whole domain) in sobroutine 'timestep'
-    cfrd(:,:) = c_dst
+      ! The freezing speed is now computed globally
+      ! (c=const for the whole domain) in sobroutine 'timestep'
+      !
+      !  cfrd(:,:) = nvar%dst%snap%c
+      cfrd(:,:) = c_all
 #endif /* GLOBAL_FR_SPEED */
 
-  end subroutine flux_dst
-
+   end subroutine flux_dst
 
 end module fluxdust
