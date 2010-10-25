@@ -82,7 +82,7 @@ module mpisetup
    real    :: dt_max_grow
    real    :: dt_min
    real    :: cfl
-   real    :: smallp                   !< artificial infimum for pressure 
+   real    :: smallp                   !< artificial infimum for pressure
    real    :: smalld                   !< artificial infimum for density
    real    :: smallc                   !< artificial infimum for freezing speed
    real    :: smallei                  !< artificial infimum for internal energy density

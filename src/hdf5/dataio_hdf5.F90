@@ -246,7 +246,7 @@ module dataio_hdf5
                   else
                      write(msg, '(a,i3)')"[dataio_hdf5:init_hdf5] Cannot create name for CR energy component #",k
                      call warn(msg)
-                  end if
+                  endif
                enddo
 #endif /* !NEW_HDF5 */
 #endif /* COSM_RAYS */

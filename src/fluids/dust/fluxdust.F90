@@ -94,7 +94,7 @@ contains
          vx(RNG) = 0.0
       endwhere
 
-      where (abs(vx) < 1.e-20 .and. vx /= 0.0) vx = sign(1.e-20,vx)   !!! BEWARE: cheat 
+      where (abs(vx) < 1.e-20 .and. vx /= 0.0) vx = sign(1.e-20,vx)   !!! BEWARE: cheat
 
       fluxd(idn,RNG)=uud(imx,RNG)
       fluxd(imx,RNG)=uud(imx,RNG)*vx(RNG)
