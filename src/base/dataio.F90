@@ -1051,8 +1051,10 @@ module dataio
 
 #if (defined(MAGNETIC) || defined(COSM_RAYS))
          character(len=cwdlen), parameter :: fmt771 = "(5x,a18,(1x,es15.9),16x,5(1x,i4))"
-         character(len=cwdlen), parameter :: fmt777 = "(5x,a18,(1x,es15.9),2x,a3,(1x,es10.4),5(1x,i4))"
 #endif /* MAGNETIC || COSM_RAYS */
+#if (defined(MAGNETIC) || defined(COSM_RAYS) || defined(RESISTIVE))
+         character(len=cwdlen), parameter :: fmt777 = "(5x,a18,(1x,es15.9),2x,a3,(1x,es10.4),5(1x,i4))"
+#endif /* MAGNETIC || COSM_RAYS || RESISTIVE */
 
          type(tsl_container), optional  :: tsl
          real :: dxmn_safe
