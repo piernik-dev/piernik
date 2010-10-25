@@ -23,6 +23,7 @@
 
  $OUTPUT_CONTROL
     dt_hdf  = 1.0
+    dt_plt  = 0.1
     dt_res  = 0.0
     dt_log  = 0.00001
     dt_tsl  = 0.00001

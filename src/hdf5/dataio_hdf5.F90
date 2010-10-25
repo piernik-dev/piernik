@@ -513,14 +513,12 @@ module dataio_hdf5
 #endif /* COSM_RAYS */
 
       ierrh = 0
-#ifdef COSM_RAYS
-      select case (var(1:3))
-         case ("ecr")
-           read(var,'(A3,I1)') aux,i !BEWARE 0 <= i <= 9, no other indices can be dumped to hdf file
-           tab(:,:,:) = real(u(nvar%crs%beg+i-1,RNG),4)
-      end select
-#endif /* COSM_RAYS */
       select case (var)
+#ifdef COSM_RAYS
+         case ("ecr1" : "ecr9")
+            read(var,'(A3,I1)') aux,i !BEWARE 0 <= i <= 9, no other indices can be dumped to hdf file
+            tab(:,:,:) = real(u(nvar%crs%beg+i-1,RNG),4)
+#endif /* COSM_RAYS */
          case ("dend")
             tab(:,:,:) = real(u(nvar%dst%idn,RNG),4)
          case ("denn")
