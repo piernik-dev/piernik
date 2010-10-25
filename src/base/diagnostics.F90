@@ -148,81 +148,73 @@ contains
 
    ! GOD I NEED TEMPLATES IN FORTRAN!!!!
 
-   subroutine deallocate_array_1D_int(array,aname)
+   subroutine deallocate_array_1D_int(array)
       implicit none
       integer, dimension(:), allocatable, intent(inout)  :: array
-      character(len=*), intent(in), optional             :: aname
-      
+
       used_memory = used_memory - size(array)*MiB*0.5
       if (allocated(array)) deallocate(array)
 
    end subroutine deallocate_array_1D_int
 
-   subroutine deallocate_array_2D_int(array,aname)
+   subroutine deallocate_array_2D_int(array)
       implicit none
       integer, dimension(:,:), allocatable, intent(inout)  :: array
-      character(len=*), intent(in), optional               :: aname
-      
+
       used_memory = used_memory - size(array)*MiB*0.5
       if (allocated(array)) deallocate(array)
 
    end subroutine deallocate_array_2D_int
 
-   subroutine deallocate_array_3D_int(array,aname)
+   subroutine deallocate_array_3D_int(array)
       implicit none
       integer, dimension(:,:,:), allocatable, intent(inout)  :: array
-      character(len=*), intent(in), optional                 :: aname
-      
+
       used_memory = used_memory - size(array)*MiB*0.5
       if (allocated(array)) deallocate(array)
 
    end subroutine deallocate_array_3D_int
 
-   subroutine deallocate_array_1D_real(array,aname)
+   subroutine deallocate_array_1D_real(array)
       implicit none
       real, dimension(:), allocatable, intent(inout)  :: array
-      character(len=*), intent(in), optional          :: aname
-      
+
       used_memory = used_memory - size(array)*MiB
       if (allocated(array)) deallocate(array)
 
    end subroutine deallocate_array_1D_real
 
-   subroutine deallocate_array_2D_real(array,aname)
+   subroutine deallocate_array_2D_real(array)
       implicit none
       real, dimension(:,:), allocatable, intent(inout)  :: array
-      character(len=*), intent(in), optional            :: aname
-      
+
       used_memory = used_memory - size(array)*MiB
       if (allocated(array)) deallocate(array)
 
    end subroutine deallocate_array_2D_real
 
-   subroutine deallocate_array_3D_real(array,aname)
+   subroutine deallocate_array_3D_real(array)
       implicit none
       real, dimension(:,:,:), allocatable, intent(inout)  :: array
-      character(len=*), intent(in), optional              :: aname
-      
+
       used_memory = used_memory - size(array)*MiB
       if (allocated(array)) deallocate(array)
 
    end subroutine deallocate_array_3D_real
 
-   subroutine deallocate_array_4D_real(array,aname)
+   subroutine deallocate_array_4D_real(array)
       implicit none
       real, dimension(:,:,:,:), allocatable, intent(inout)  :: array
-      character(len=*), intent(in), optional                :: aname
-      
+
       used_memory = used_memory - size(array)*MiB
       if (allocated(array)) deallocate(array)
 
    end subroutine deallocate_array_4D_real
 
-   subroutine deallocate_array_5D_real(array,aname)
+   subroutine deallocate_array_5D_real(array)
       implicit none
       real, dimension(:,:,:,:,:), allocatable, intent(inout)  :: array
-      character(len=*), intent(in), optional                  :: aname
-      
+
       used_memory = used_memory - size(array)*MiB
       if (allocated(array)) deallocate(array)
 

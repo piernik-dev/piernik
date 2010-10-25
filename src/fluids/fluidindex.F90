@@ -88,7 +88,7 @@ module fluidindex
 contains
 
    subroutine set_fluidindex_arrays(fl,have_ener)
-      use types, only: component_fluid 
+      use types, only: component_fluid
       implicit none
       type(component_fluid), intent(inout) :: fl
       logical, intent(in)                  :: have_ener
@@ -157,6 +157,8 @@ contains
 #ifdef COSM_RAYS
 !  Compute indexes for the CR component and update counters
       call cosmicray_index(nvar, cgrid)
+#else
+      if (.false.) i_sg = 0 * cgrid%is !suppress compiler warnings on unused arguments
 #endif /* COSM_RAYS */
 
 ! Allocate index arrays

@@ -890,10 +890,10 @@ module dataio
       character(len=*), intent(in)       :: minmax
       type(value), intent(out)           :: prop
 
-      if(minmax=='min') then
+      if (minmax=='min') then
          prop%val = minval(tab)
          prop%loc = minloc(tab) + [nb,nb,nb]
-      elseif(minmax=='max') then
+      elseif (minmax=='max') then
          prop%val = maxval(tab)
          prop%loc = maxloc(tab) + [nb,nb,nb]
       else
@@ -930,13 +930,13 @@ module dataio
       call printinfo(msg, .false.)
       write(msg, fmt772) 'max(dens)   ',fluid,'  =', pr%dens_max%val,  pr%dens_max%proc,  pr%dens_max%loc
       call printinfo(msg, .false.)
-      if(temp_tn) then
+      if (temp_tn) then
          write(msg, fmt772) 'min(temp)   ',fluid,'  =', pr%temp_min%val,  pr%temp_min%proc,  pr%temp_min%loc
          call printinfo(msg, .false.)
          write(msg, fmt772) 'max(temp)   ',fluid,'  =', pr%temp_max%val,  pr%temp_max%proc,  pr%temp_max%loc
          call printinfo(msg, .false.)
       endif
-      if(pres_tn) then
+      if (pres_tn) then
          write(msg, fmt772) 'min(pres)   ',fluid,'  =', pr%pres_min%val,  pr%pres_min%proc,  pr%pres_min%loc
          call printinfo(msg, .false.)
          write(msg, fmt772) 'max(pres)   ',fluid,'  =', pr%pres_max%val,  pr%pres_max%proc,  pr%pres_max%loc
@@ -949,7 +949,7 @@ module dataio
       call printinfo(msg, .false.)
       write(msg, fmt778) 'max(|vz|)   ',fluid,'  =', pr%velz_max%val, 'dt=',cfl*dz/(pr%velz_max%val+small),   pr%velz_max%proc, pr%velz_max%loc
       call printinfo(msg, .false.)
-      if(cs_tn) then
+      if (cs_tn) then
          write(msg, fmt778) 'max(c_s )   ',fluid,'  =', pr%cs_max%val, 'dt=',cfl*dxmn_safe/(pr%cs_max%val+small), pr%cs_max%proc, pr%cs_max%loc
          call printinfo(msg, .false.)
       endif
@@ -1049,11 +1049,14 @@ module dataio
 
          implicit none
 
+#if (defined(MAGNETIC) || defined(COSM_RAYS))
          character(len=cwdlen), parameter :: fmt771 = "(5x,a18,(1x,es15.9),16x,5(1x,i4))"
+#ifdef RESISTIVE
          character(len=cwdlen), parameter :: fmt777 = "(5x,a18,(1x,es15.9),2x,a3,(1x,es10.4),5(1x,i4))"
+#endif
+#endif /* MAGNETIC || COSM_RAYS */
 
          type(tsl_container), optional  :: tsl
-         type(component_fluid), pointer :: p
          real :: dxmn_safe
 
 #ifdef MAGNETIC

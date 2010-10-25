@@ -507,8 +507,8 @@ module dataio_hdf5
       real(kind=4), dimension(:,:,:)    :: tab
       integer, intent(out)              :: ierrh
 #ifdef COSM_RAYS
-      integer :: i
-      character(len=3) :: aux
+!      integer :: i
+!      character(len=3) :: aux
 #endif /* COSM_RAYS */
 
       ierrh = 0
