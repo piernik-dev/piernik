@@ -25,7 +25,7 @@ def remove_binaries(files):
    list = []
    for file in files:
       if(not sp.Popen('file -bi '+file, stdout=sp.PIPE, shell=True, executable="/bin/bash").communicate()[0].startswith('text') ):
-         print b.WARNING + "QA:  " + b.ENDC + file + " is a binary. I will not test it."
+         print b.WARNING + "QA:  " + b.ENDC + file + " is not a text file. I will not test it."
       else:
          list.append(file)
    return list
@@ -82,7 +82,7 @@ def qa_crude_write(files,options):
       file = open(name)
       n = 1
       for line in file.readlines():
-         if( re.search("write\(\*", line, flags=re.IGNORECASE) and not re.search("QA_WARN",line)):
+         if( re.search("write *\( *\*", line, flags=re.IGNORECASE) and not re.search("QA_WARN",line)):
             print b.WARNING + "!! crude write  " + b.ENDC + name + " @ L%i => " % n + line.strip()
             warning += 1
          n += 1
