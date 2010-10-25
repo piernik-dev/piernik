@@ -176,10 +176,9 @@ contains
 
       endif
 
-      if (ncrn > ncr_max) call die("[initcosmicrays:init_cosmicrays] ncrn > ncr_max")
-      if (ncre > ncr_max) call die("[initcosmicrays:init_cosmicrays] ncre > ncr_max")
-
       ncrs = ncre + ncrn
+
+      if (ncrs > ncr_max) call die("[initcosmicrays:init_cosmicrays] ncrs > ncr_max") ! higher limit would require changes in names of components in dataio_hdf5
 
       call my_allocate(gamma_crs,   [ncrs], "gamma_crs")
       call my_allocate(K_crs_paral, [ncrs], "K_crs_paral")

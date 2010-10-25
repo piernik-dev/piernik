@@ -92,11 +92,12 @@ module dataio_hdf5
 
    subroutine init_hdf5(vars,tix,tiy,tiz,tdt_plt)
 
-      use fluidindex, only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
-      use grid,       only: nx, ny, nz, nxd, nyd, nzd, nb
-      use list_hdf5,  only: additional_attrs, problem_write_restart, problem_read_restart
+      use fluidindex,    only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
+      use grid,          only: nx, ny, nz, nxd, nyd, nzd, nb
+      use list_hdf5,     only: additional_attrs, problem_write_restart, problem_read_restart
 #ifdef COSM_RAYS
-      use fluidindex, only: iarr_all_crs
+      use fluidindex,    only: iarr_all_crs
+      use dataio_public, only: warn, msg
 #endif /* COSM_RAYS */
 
       implicit none
@@ -239,8 +240,13 @@ module dataio_hdf5
 #ifndef NEW_HDF5
             case ('encr')
                do k = 1, size(iarr_all_crs,1)
-                  write(aux,'(A3,I1)') 'ecr',k
-                  hdf_vars(j) = aux ; j = j + 1
+                  if (k<=9) then
+                     write(aux,'(A3,I1)') 'ecr',k
+                     hdf_vars(j) = aux ; j = j + 1
+                  else
+                     write(msg, '(a,i3)')"[dataio_hdf5:init_hdf5] Cannot create name for CR energy component #",k
+                     call warn(msg)
+                  end if
                enddo
 #endif /* !NEW_HDF5 */
 #endif /* COSM_RAYS */
@@ -498,18 +504,17 @@ module dataio_hdf5
       real(kind=4), dimension(:,:,:)    :: tab
       integer, intent(out)              :: ierrh
 #ifdef COSM_RAYS
-!      integer :: i
-!      character(len=3) :: aux
+      integer :: i
+      character(len=3) :: aux
 #endif /* COSM_RAYS */
 
       ierrh = 0
 #ifdef COSM_RAYS
-!      ! Obsolete?
-!      select case (var(1:3))
-!         case ("ecr")
-!           read(var,'(A3,I1)') aux,i
-!           tab(:,:,:) = real(u(ind%arr_crs(i),RNG),4)
-!      end select
+      select case (var(1:3))
+         case ("ecr")
+           read(var,'(A3,I1)') aux,i !BEWARE 0 <= i <= 9, no other indices can be dumped to hdf file
+           tab(:,:,:) = real(u(nvar%crs%beg+i-1,RNG),4)
+      end select
 #endif /* COSM_RAYS */
       select case (var)
          case ("dend")
