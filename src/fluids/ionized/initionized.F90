@@ -163,10 +163,11 @@ module initionized
       nvar%ion%pos    = nvar%components
       if (selfgrav_ion)  nvar%fluids_sg = nvar%fluids_sg + 1
 
-      nvar%ion%gam = gamma_ion
-      nvar%ion%cs  = cs_iso_ion
-      nvar%ion%cs2 = cs_iso_ion**2
-      nvar%ion%sg  = selfgrav_ion
+      nvar%ion%gam   = gamma_ion
+      nvar%ion%gam_1 = gamma_ion-1.0
+      nvar%ion%cs    = cs_iso_ion
+      nvar%ion%cs2   = cs_iso_ion**2
+      nvar%ion%sg    = selfgrav_ion
 
    end subroutine ionized_index
 

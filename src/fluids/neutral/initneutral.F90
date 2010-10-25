@@ -176,10 +176,11 @@ module initneutral
       nvar%neu%pos    = nvar%components
       if (selfgrav_neu)  nvar%fluids_sg = nvar%fluids_sg + 1
 
-      nvar%neu%gam = gamma_neu
-      nvar%neu%cs  = cs_iso_neu
-      nvar%neu%cs2 = cs_iso_neu**2
-      nvar%neu%sg  = selfgrav_neu
+      nvar%neu%gam   = gamma_neu
+      nvar%neu%gam_1 = gamma_neu-1.0
+      nvar%neu%cs    = cs_iso_neu
+      nvar%neu%cs2   = cs_iso_neu**2
+      nvar%neu%sg    = selfgrav_neu
 
    end subroutine neutral_index
 

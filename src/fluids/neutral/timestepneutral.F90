@@ -86,7 +86,7 @@ contains
                cs = sqrt(fl%cs2)
 #else /* ISO */
                p  = (u(fl%ien,i,j,k)-sum(u(fl%imx:fl%imz,i,j,k)**2,1) &
-                     /u(fl%idn,i,j,k)/2.)*(fl%gam-1.)
+                     /u(fl%idn,i,j,k)/2.)*(fl%gam_1)
 
                cs = sqrt(abs(  (fl%gam*p)/u(fl%idn,i,j,k)) )
 #endif /* ISO */

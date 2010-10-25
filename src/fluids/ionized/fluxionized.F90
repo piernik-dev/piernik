@@ -119,7 +119,7 @@ contains
 #else /* ISO */
       ps(RNG)=(uui(ien,RNG) - &
       0.5*( uui(imx,RNG)**2 + uui(imy,RNG)**2 + uui(imz,RNG)**2 ) &
-          / uui(idn,RNG))*(nvar%ion%gam-1.0) + (2.0-nvar%ion%gam)*pmag(RNG)
+          / uui(idn,RNG))*(nvar%ion%gam_1) + (2.0-nvar%ion%gam)*pmag(RNG)
       p(RNG) = ps(RNG)- pmag(RNG)
 #endif /* ISO */
 

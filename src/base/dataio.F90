@@ -1004,7 +1004,7 @@ module dataio
 !                - 0.5*((u(fl%imx,:,:,:)**2 +u(fl%imy,:,:,:)**2 + u(fl%imz,:,:,:)**2)/u(fl%idn,:,:,:)))
 !      wa(:,:,:) = max(wa(:,:,:),smallei)
 !
-!      wa(:,:,:) = (fl%gam-1.0)*wa(:,:,:)            ! pres
+!      wa(:,:,:) = (fl%gam_1)*wa(:,:,:)            ! pres
 
       wa = 0.0
 

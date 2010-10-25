@@ -115,9 +115,10 @@ module types
       integer :: imz = -1
       integer :: ien = -1
 
-      real    :: cs  = 0.0
-      real    :: cs2 = 0.0
-      real    :: gam = -1.0
+      real    :: cs    = 0.0
+      real    :: cs2   = 0.0
+      real    :: gam   = -1.0
+      real    :: gam_1 = -1.0
 
       logical :: sg  = .false.
 

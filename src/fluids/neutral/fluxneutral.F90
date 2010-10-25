@@ -101,7 +101,7 @@ contains
 #else /* ISO */
       p(RNG)  = (uun(ien,RNG)  &
       - 0.5*( uun(imx,RNG)**2 + uun(imy,RNG)**2 + uun(imz,RNG)**2 ) &
-          / uun(idn,RNG))*(nvar%neu%gam-1.0)
+          / uun(idn,RNG))*(nvar%neu%gam_1)
       p(RNG)  = max(p(RNG),smallp)
 #endif /* ISO */
 

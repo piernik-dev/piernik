@@ -414,7 +414,7 @@ module dataio_hdf5
             if (ij=="xy") then
                tab(:,:) = real( u(nvar%neu%ien,nb+1:nxb+nb,nb+1:nyb+nb,xn) - &
                  0.5 *( u(nvar%neu%imx,nb+1:nxb+nb,nb+1:nyb+nb,xn)**2 + u(nvar%neu%imy,nb+1:nxb+nb,nb+1:nyb+nb,xn)**2 + &
-                        u(nvar%neu%imz,nb+1:nxb+nb,nb+1:nyb+nb,xn)**2 ) / u(nvar%neu%idn,nb+1:nxb+nb,nb+1:nyb+nb,xn),4)*(nvar%neu%gam-1.0)
+                        u(nvar%neu%imz,nb+1:nxb+nb,nb+1:nyb+nb,xn)**2 ) / u(nvar%neu%idn,nb+1:nxb+nb,nb+1:nyb+nb,xn),4)*(nvar%neu%gam_1)
             endif
 #else /* !ISO */
             tab = 0.0
@@ -540,7 +540,7 @@ module dataio_hdf5
          case ("pren")
 #ifndef ISO
             tab(:,:,:) = real( u(nvar%neu%ien,RNG) - &
-              0.5 *( u(nvar%neu%imx,RNG)**2 + u(nvar%neu%imy,RNG)**2 + u(nvar%neu%imz,RNG)**2 ) / u(nvar%neu%idn,RNG),4)*(nvar%neu%gam-1.0)
+              0.5 *( u(nvar%neu%imx,RNG)**2 + u(nvar%neu%imy,RNG)**2 + u(nvar%neu%imz,RNG)**2 ) / u(nvar%neu%idn,RNG),4)*(nvar%neu%gam_1)
 #else /* !ISO */
             tab = 0.0
 #endif /* !ISO */
@@ -567,8 +567,8 @@ module dataio_hdf5
          case ("prei")
 #ifndef ISO
             tab(:,:,:) = real( u(nvar%ion%ien,RNG) - &
-              0.5 *( u(nvar%ion%imx,RNG)**2 + u(nvar%ion%imy,RNG)**2 + u(nvar%ion%imz,RNG)**2 ) / u(nvar%ion%idn,RNG),4)*(nvar%ion%gam-1.0)
-            tab(:,:,:) = tab(:,:,:) - real( 0.5*(nvar%ion%gam-1.0)*(b(ibx,RNG)**2 + &
+              0.5 *( u(nvar%ion%imx,RNG)**2 + u(nvar%ion%imy,RNG)**2 + u(nvar%ion%imz,RNG)**2 ) / u(nvar%ion%idn,RNG),4)*(nvar%ion%gam_1)
+            tab(:,:,:) = tab(:,:,:) - real( 0.5*(nvar%ion%gam_1)*(b(ibx,RNG)**2 + &
                b(iby,RNG)**2 + b(ibz,RNG)**2),4)
 #else /* !ISO */
             tab = 0.0
