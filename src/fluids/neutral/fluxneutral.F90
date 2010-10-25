@@ -148,5 +148,5 @@ contains
 #endif /* GLOBAL_FR_SPEED */
 
    end subroutine flux_neu
-      
+
 end module fluxneutral

@@ -553,7 +553,7 @@ module gravity
        enddo
 
 #elif defined (GRAV_USER)
-       call grav_pot_user()
+       call grav_pot_user
 
 #else /* GRAV_(SPECIFIED) */
        gp_status = 'undefined'

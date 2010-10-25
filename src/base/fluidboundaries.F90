@@ -71,7 +71,7 @@ module fluidboundaries
       real, dimension(nvar%fluids,nx,ny) :: ekb, eib
       integer :: ifluid
 #endif /* !ISO */
-      real, dimension(nsub+1):: zs, gprofs
+      real, dimension(nsub+1)             :: zs, gprofs
       real, dimension(nvar%fluids,nsub+1) :: dprofs
       real, dimension(nvar%fluids) :: factor
       real :: dzs,z1,z2
