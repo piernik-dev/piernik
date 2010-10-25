@@ -102,6 +102,19 @@ module dataio_public
    character(len=ansirst) :: ansi_black
    character(len=ansilen) :: ansi_red, ansi_green, ansi_yellow, ansi_blue, ansi_magenta, ansi_cyan, ansi_white
 
+   interface
+      subroutine plt_hdf5(var,ij,xn,tab,ierrh)
+         implicit none
+         character(LEN=*), intent(in)        :: var   !< quantity to be plotted
+         character(LEN=*), intent(in)        :: ij    !< plane of plot
+         integer, intent(in)                 :: xn    !< no. of cell at which we are slicing the local block
+         integer, intent(inout)              :: ierrh !< error handling
+         real, dimension(:,:), intent(inout) :: tab   !< array  containing given quantity
+      end subroutine plt_hdf5
+   end interface
+
+   procedure(plt_hdf5), pointer :: user_plt_hdf5 => Null()
+
 contains
 !-----------------------------------------------------------------------------
    subroutine colormessage(nm, mode)

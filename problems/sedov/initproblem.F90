@@ -122,7 +122,7 @@ contains
 !-----------------------------------------------------------------------------
    subroutine init_prob
       use types,          only: component_fluid
-      use dataio_public,  only: msg, die, printinfo
+      use dataio_public,  only: msg, die, printinfo, user_plt_hdf5
       use arrays,         only: u, b
       use grid,           only: x, y, z, nx, ny, nz
       use fluidindex,     only: nvar, ibx, iby, ibz
@@ -170,7 +170,7 @@ contains
             enddo
          enddo
 
-         if(fl%tag=="ION") then
+         if (fl%tag=="ION") then
             do k = 1,nz
                do j = 1,ny
                   do i = 1,nx
@@ -183,7 +183,31 @@ contains
             enddo
          endif
       enddo
+      user_plt_hdf5 => sedov_plt_hdf5
       return
    end subroutine init_prob
+!-----------------------------------------------------------------------------
+   subroutine sedov_plt_hdf5(var,ij,xn,tab,ierrh)
+      use grid,          only: nb, nxb, nyb, nzb
+      use dataio_public, only: varlen
+      use arrays,        only: u
+      implicit none
+      character(LEN=*), intent(in)        :: var   !< quantity to be plotted
+      character(LEN=*), intent(in)        :: ij    !< plane of plot
+      integer, intent(in)                 :: xn    !< no. of cell at which we are slicing the local block
+      integer, intent(inout)              :: ierrh !< error handling
+      real, dimension(:,:), intent(inout) :: tab   !< array  containing given quantity
+
+      ierrh = 0
+      select case (var)
+         case ("fooo")   ! Totally bogus quantity, just to check user_plt_hdf5 works
+            if (ij=="yz") tab(:,:) = u(2,xn,nb+1:nyb+nb,nb+1:nzb+nb)*u(3,xn,nb+1:nyb+nb,nb+1:nzb+nb)
+            if (ij=="xz") tab(:,:) = u(2,nb+1:nxb+nb,xn,nb+1:nzb+nb)*u(3,nb+1:nxb+nb,xn,nb+1:nzb+nb)
+            if (ij=="xy") tab(:,:) = u(2,nb+1:nxb+nb,nb+1:nyb+nb,xn)*u(3,nb+1:nxb+nb,nb+1:nyb+nb,xn)
+         case default
+            ierrh = -1
+      end select
+
+   end subroutine sedov_plt_hdf5
 !-----------------------------------------------------------------------------
 end module initproblem

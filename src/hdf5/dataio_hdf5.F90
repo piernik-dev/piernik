@@ -178,6 +178,8 @@ module dataio_hdf5
 #endif /* COSM_RAYS */
             case ('pres')
                nhdf_vars = nhdf_vars + 1
+            case default
+               nhdf_vars = nhdf_vars + 1
          end select
       enddo
       allocate(hdf_vars(nhdf_vars)); j = 1
@@ -265,6 +267,8 @@ module dataio_hdf5
 #ifdef IONIZED
                hdf_vars(j) = 'prei' ; j = j + 1
 #endif /* IONIZED */
+            case default
+               hdf_vars(j) = trim(vars(i)) ; j = j + 1
          end select
       enddo
 
@@ -663,7 +667,7 @@ module dataio_hdf5
 
    subroutine write_plot_hdf5(var,plane,nimg)
       use arrays,        only: u
-      use dataio_public, only: vizit, fmin, fmax, cwdlen, log_file, msg, varlen, die, warn
+      use dataio_public, only: vizit, fmin, fmax, cwdlen, log_file, msg, varlen, die, warn, user_plt_hdf5
       use grid,          only: nxb, nyb, nzb, nxd, nyd, nzd, nb
       use hdf5,          only: HID_T, HSIZE_T, SIZE_T, H5F_ACC_RDWR_F, h5fopen_f, h5gopen_f, h5gclose_f, h5fclose_f
       use h5lt,          only: h5ltmake_dataset_double_f, h5ltset_attribute_double_f
@@ -770,9 +774,10 @@ module dataio_hdf5
 
          ok_plt_var = .false.
          call common_plt_hdf5(var,plane,xn,send,ierrh)
+         if (associated(user_plt_hdf5) .and. ierrh /= 0) call user_plt_hdf5(var,plane,xn,send,ierrh)
          if (ierrh==0) ok_plt_var = .true.
          if (.not.ok_plt_var) then
-            write(msg,'(2a)') var, " is not defined in common_plt_hdf5, neither in user_plt !!!"
+            write(msg,'(2a)') var, " is not defined in common_plt_hdf5, neither in user_plt_hdf5 !!!"
             call die(msg)
          endif
 
