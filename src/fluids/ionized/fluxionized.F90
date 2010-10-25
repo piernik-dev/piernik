@@ -65,113 +65,104 @@
 !<
 !*/
 module fluxionized
-  implicit none
+   implicit none
+   private
+   public :: flux_ion
 
-  contains
-!==========================================================================================
+contains
 
-  subroutine flux_ion(fluxi,cfri,vx,uui,bb,n,cs_iso2)
+   subroutine flux_ion(fluxi,cfri,vx,uui,bb,n,cs_iso2)
 
-    use constants,       only: small
-    use dataio_public,   only: die
-    use fluidindex,      only: idn, imx, imy, imz, ien, nvar, ibx, iby, ibz, nmag
-    use initionized,     only: gamma_ion, cs_iso_ion2
-    use mpisetup,        only: cfr_smooth
-    use timestepionized, only: c_ion
+      use constants,       only: small
+      use dataio_public,   only: die
+      use fluidindex,      only: idn, imx, imy, imz, ien, nvar, ibx, iby, ibz, nmag
+      use mpisetup,        only: cfr_smooth
 
-    implicit none
-    integer,intent(in) :: n                     !< number of cells in the current sweep
+      implicit none
+      integer, intent(in)                          :: n           !< number of cells in the current sweep
+      real, dimension(nmag,n), intent(in)          :: bb          !< magnetic field
+      real, dimension(nvar%ion%all,n), intent(in)  :: uui         !< part of u for ionized fluid
+      real, dimension(nvar%ion%all,n), intent(out) :: fluxi       !< flux of ionized fluid
+      real, dimension(nvar%ion%all,n), intent(out) :: cfri        !< freezing speed for ionized fluid
+      real, dimension(n), intent(out)              :: vx          !< velocity of ionized fluid for current sweep
+      real, dimension(n), intent(in), optional     :: cs_iso2     !< local isothermal sound speed (optional)
 
-! locals
-    real, dimension(nvar%ion%all,n):: fluxi     !< flux of ionized fluid
-    real, dimension(nvar%ion%all,n):: uui       !< part of u for ionized fluid
-    real, dimension(nvar%ion%all,n):: cfri      !< freezing speed for ionized fluid
-    real, dimension(nmag,n):: bb                !< magnetic field
-    real, dimension(n) :: vx                    !< velocity of ionized fluid for current sweep
-    real, dimension(n) :: ps                    !< total pressure of ionized fluid
-    real, dimension(n) :: p                     !< thermal pressure of ionized fluid
-    real, dimension(n) :: pmag                  !< pressure of magnetic field
-    real, dimension(n), optional :: cs_iso2     !< local isothermal sound speed (optional)
-
+      real, dimension(n)               :: ps          !< total pressure of ionized fluid
+      real, dimension(n)               :: p           !< thermal pressure of ionized fluid
+      real, dimension(n)               :: pmag        !< pressure of magnetic field
 #ifdef LOCAL_FR_SPEED
-    real :: minvx                               !<
-    real :: maxvx                               !<
-    real :: amp                                 !<
-!    real, dimension(n) :: c_fr                  !< temporary array for freezing speed
-!    integer :: i
+      real                             :: minvx       !<
+      real                             :: maxvx       !<
+      real                             :: amp         !<
 #endif /* LOCAL_FR_SPEED */
 
-    fluxi   = 0.0
-    cfri    = 0.0
-    vx      = 0.0
-    ps      = 0.0
+      fluxi = 0.0; cfri = 0.0; vx = 0.0; ps = 0.0; p = 0.0; pmag = 0.0
 
 #ifdef MAGNETIC
-    pmag(RNG)=0.5*( bb(ibx,RNG)**2 + bb(iby,RNG)**2 +bb(ibz,RNG)**2 )
+      pmag(RNG)=0.5*( bb(ibx,RNG)**2 + bb(iby,RNG)**2 +bb(ibz,RNG)**2 )
 #else /* MAGNETIC */
-    pmag(:) = 0.0
+      pmag(:) = 0.0
 #endif /* MAGNETIC */
-    vx(RNG)=uui(imx,RNG)/uui(idn,RNG)
+      vx(RNG)=uui(imx,RNG)/uui(idn,RNG)
 
 #ifndef ISO_LOCAL
-    if (present(cs_iso2)) call die("[fluxionized:flux_ion] cs_iso2 should not be present")
+      if (present(cs_iso2)) call die("[fluxionized:flux_ion] cs_iso2 should not be present")
 #endif /* !ISO_LOCAL */
 
 #ifdef ISO
 #ifdef ISO_LOCAL
-    p(RNG) = cs_iso2(RNG) * uui(idn,RNG)
+      p(RNG) = cs_iso2(RNG) * uui(idn,RNG)
 #else /* ISO_LOCAL */
-    p(RNG) = cs_iso_ion2*uui(idn,RNG)
+      p(RNG) = nvar%ion%cs2 * uui(idn,RNG)
 #endif /* ISO_LOCAL */
-    ps(RNG)= p(RNG) + pmag(RNG)
+      ps(RNG)= p(RNG) + pmag(RNG)
 #else /* ISO */
-    ps(RNG)=(uui(ien,RNG) - &
+      ps(RNG)=(uui(ien,RNG) - &
       0.5*( uui(imx,RNG)**2 + uui(imy,RNG)**2 + uui(imz,RNG)**2 ) &
-          / uui(idn,RNG))*(gamma_ion-1.0) + (2.0-gamma_ion)*pmag(RNG)
-    p(RNG) = ps(RNG)- pmag(RNG)
+          / uui(idn,RNG))*(nvar%ion%gam-1.0) + (2.0-nvar%ion%gam)*pmag(RNG)
+      p(RNG) = ps(RNG)- pmag(RNG)
 #endif /* ISO */
 
-    fluxi(idn,RNG)=uui(imx,RNG)
-    fluxi(imx,RNG)=uui(imx,RNG)*vx(RNG)+ps(RNG) - bb(ibx,RNG)**2
-    fluxi(imy,RNG)=uui(imy,RNG)*vx(RNG)-bb(iby,RNG)*bb(ibx,RNG)
-    fluxi(imz,RNG)=uui(imz,RNG)*vx(RNG)-bb(ibz,RNG)*bb(ibx,RNG)
+      fluxi(idn,RNG)=uui(imx,RNG)
+      fluxi(imx,RNG)=uui(imx,RNG)*vx(RNG)+ps(RNG) - bb(ibx,RNG)**2
+      fluxi(imy,RNG)=uui(imy,RNG)*vx(RNG)-bb(iby,RNG)*bb(ibx,RNG)
+      fluxi(imz,RNG)=uui(imz,RNG)*vx(RNG)-bb(ibz,RNG)*bb(ibx,RNG)
 #ifndef ISO
-    fluxi(ien,RNG)=(uui(ien,RNG)+ps(RNG))*vx(RNG)-bb(ibx,RNG)*(bb(ibx,RNG)*uui(imx,RNG) &
+      fluxi(ien,RNG)=(uui(ien,RNG)+ps(RNG))*vx(RNG)-bb(ibx,RNG)*(bb(ibx,RNG)*uui(imx,RNG) &
                 +bb(iby,RNG)*uui(imy,RNG)+bb(ibz,RNG)*uui(imz,RNG))/uui(idn,RNG)
 #endif /* !ISO */
 
 #ifdef LOCAL_FR_SPEED
 
-!       The freezing speed is now computed locally (in each cell)
-!       as in Trac & Pen (2003). This ensures much sharper shocks,
-!       but sometimes may lead to numerical instabilities
-    minvx = minval(vx(RNG))
-    maxvx = maxval(vx(RNG))
-    amp   = 0.5*(maxvx-minvx)
-!    c_fr  = 0.0
+      ! The freezing speed is now computed locally (in each cell)
+      !  as in Trac & Pen (2003). This ensures much sharper shocks,
+      !  but sometimes may lead to numerical instabilities
+      minvx = minval(vx(RNG))
+      maxvx = maxval(vx(RNG))
+      amp   = 0.5*(maxvx-minvx)
 #ifdef ISO
-    cfri(1,RNG) = sqrt(vx(RNG)**2+cfr_smooth*amp) + max(sqrt( abs(2.0*pmag(RNG) +           p(RNG))/uui(idn,RNG)),small)
+      cfri(1,RNG) = sqrt(vx(RNG)**2+cfr_smooth*amp) + max(sqrt( abs(2.0*pmag(RNG) +              p(RNG))/uui(idn,RNG)),small)
 #else /* ISO */
-    cfri(1,RNG) = sqrt(vx(RNG)**2+cfr_smooth*amp) + max(sqrt( abs(2.0*pmag(RNG) + gamma_ion*p(RNG))/uui(idn,RNG)),small)
+      cfri(1,RNG) = sqrt(vx(RNG)**2+cfr_smooth*amp) + max(sqrt( abs(2.0*pmag(RNG) + nvar%ion%gam*p(RNG))/uui(idn,RNG)),small)
 #endif /* ISO */
-!BEWARE: that is the cause of fast decreasing of timestep in galactic disk problem
-!TODO: find why is it so
-!if such a treatment is OK then should be applied also in both cases of neutral and ionized gas
-!    do i = 2,n-1
-!       cfri(1,i) = maxval( [c_fr(i-1), c_fr(i), c_fr(i+1)] )
-!    enddo
+      ! BEWARE: that is the cause of fast decreasing of timestep in galactic disk problem
+      ! TODO: find why is it so
+      ! if such a treatment is OK then should be applied also in both cases of neutral and ionized gas
+      !    do i = 2,n-1
+      !       cfri(1,i) = maxval( [c_fr(i-1), c_fr(i), c_fr(i+1)] )
+      !    enddo
 
-    cfri(1,1) = cfri(1,2)
-    cfri(1,n) = cfri(1,n-1)
-    cfri = spread(cfri(1,:),1,nvar%ion%all)
+      cfri(1,1) = cfri(1,2)
+      cfri(1,n) = cfri(1,n-1)
+      cfri = spread(cfri(1,:),1,nvar%ion%all)
 #endif /* LOCAL_FR_SPEED */
 
 #ifdef GLOBAL_FR_SPEED
-!       The freezing speed is now computed globally
-!       (c=const for the whole domain) in sobroutine 'timestep'
-    cfri(:,:) = c_ion
+      ! The freezing speed is now computed globally
+      !  (c=const for the whole domain) in subroutine 'timestep'
+      cfri(:,:) = nvar%ion%snap%c
 #endif /* GLOBAL_FR_SPEED */
 
-  end subroutine flux_ion
+   end subroutine flux_ion
 
 end module fluxionized

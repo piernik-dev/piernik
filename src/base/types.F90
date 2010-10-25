@@ -73,6 +73,8 @@ module types
       type(value) :: temp_max
       type(value) :: temp_min
       type(value) :: cs_max
+      real        :: c
+      real        :: dt
    end type phys_prop
 
    type :: grid_container

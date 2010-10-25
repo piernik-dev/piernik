@@ -107,7 +107,7 @@ contains
             enddo
          enddo
       enddo
-      call compute_dt(cx,cy,cz,c_max,c_ion,dt_ion)
+      call compute_dt(fl,cx,cy,cz,c_max,c_ion,dt_ion)
 
    end subroutine timestep_ion
 

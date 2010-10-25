@@ -67,7 +67,7 @@ contains
             enddo
          enddo
       enddo
-      call compute_dt(cx,cy,cz,c_max,c_dst,dt_dst)
+      call compute_dt(fl,cx,cy,cz,c_max,c_dst,dt_dst)
 
    end subroutine timestep_dst
 

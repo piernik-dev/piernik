@@ -61,12 +61,13 @@ contains
       c_max = max(c_max,cx,cy,cz)
    end subroutine compute_c_max
 
-   subroutine compute_dt(cx,cy,cz,c_max,c_out,dt_out)
+   subroutine compute_dt(fl,cx,cy,cz,c_max,c_out,dt_out)
+      use types,     only: component_fluid
       use grid,      only: nxd, nyd, nzd, dx, dy, dz
       use constants, only: big
       use mpisetup,  only: MPI_DOUBLE_PRECISION, MPI_MIN, MPI_MAX, comm, ierr, cfl
-
       implicit none
+      type(component_fluid), pointer, intent(inout) :: fl
       real, intent(in)  :: cx, cy, cz, c_max
       real, intent(out) :: c_out, dt_out
       real :: dt_proc = 0.0       !< minimum timestep for the current processor
@@ -102,6 +103,9 @@ contains
 
       c_out  = c_max_all
       dt_out = cfl*dt_all
+
+      fl%snap%c  = c_max_all
+      fl%snap%dt = dt_out
 
       return
    end subroutine compute_dt

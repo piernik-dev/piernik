@@ -94,7 +94,7 @@ contains
             enddo
          enddo
       enddo
-      call compute_dt(cx,cy,cz,c_max,c_neu,dt_neu)
+      call compute_dt(fl,cx,cy,cz,c_max,c_neu,dt_neu)
 
    end subroutine timestep_neu
 
