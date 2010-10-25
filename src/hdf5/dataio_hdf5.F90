@@ -171,8 +171,8 @@ module dataio_hdf5
             case ('magz')
                nhdf_vars = nhdf_vars + 1
 #ifdef COSM_RAYS
-#ifndef NEW_HDF5
             case ('encr')
+#ifndef NEW_HDF5
                nhdf_vars = nhdf_vars + SIZE(iarr_all_crs,1)
 #endif /* !NEW_HDF5 */
 #endif /* COSM_RAYS */
@@ -239,8 +239,8 @@ module dataio_hdf5
             case ('magz')
                hdf_vars(j) = 'magz' ; j = j + 1
 #ifdef COSM_RAYS
-#ifndef NEW_HDF5
             case ('encr')
+#ifndef NEW_HDF5
                do k = 1, size(iarr_all_crs,1)
                   if (k<=9) then
                      write(aux,'(A3,I1)') 'ecr',k
