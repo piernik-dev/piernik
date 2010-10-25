@@ -82,13 +82,14 @@ module mpisetup
    real    :: dt_max_grow
    real    :: dt_min
    real    :: cfl
-   real    :: smalld
-   real    :: smallc
-   real    :: smallei
+   real    :: smallp                   !< artificial infimum for pressure 
+   real    :: smalld                   !< artificial infimum for density
+   real    :: smallc                   !< artificial infimum for freezing speed
+   real    :: smallei                  !< artificial infimum for internal energy density
    real    :: cfr_smooth
    integer :: integration_order
 
-   namelist /NUMERICAL_SETUP/  cfl, smalld, smallei, integration_order, cfr_smooth, dt_initial, dt_max_grow, dt_min, smallc
+   namelist /NUMERICAL_SETUP/  cfl, smalld, smallei, integration_order, cfr_smooth, dt_initial, dt_max_grow, dt_min, smallc, smallp
 
    integer, dimension(3) :: domsize   !< local copy of nxd, nyd, nzd which can be used before init_grid()
 
@@ -148,6 +149,7 @@ module mpisetup
 !! <table border="+1">
 !! <tr><td width="150pt"><b>parameter</b></td><td width="135pt"><b>default value</b></td><td width="200pt"><b>possible values</b></td><td width="315pt"> <b>description</b></td></tr>
 !! <tr><td>cfl              </td><td>0.7   </td><td>real value between 0.0 and 1.0       </td><td>\copydoc mpisetup::cfl              </td></tr>
+!! <tr><td>smallp           </td><td>1.e-10</td><td>real value                           </td><td>\copydoc mpisetup::smallp           </td></tr>
 !! <tr><td>smalld           </td><td>1.e-10</td><td>real value                           </td><td>\copydoc mpisetup::smalld           </td></tr>
 !! <tr><td>smallei          </td><td>1.e-10</td><td>real value                           </td><td>\copydoc mpisetup::smallei          </td></tr>
 !! <tr><td>integration_order</td><td>2     </td><td>1 or 2 (or 3 - currently unavailable)</td><td>\copydoc mpisetup::integration_order</td></tr>
@@ -257,6 +259,7 @@ module mpisetup
 
          cfl         = 0.7
          cfr_smooth  = 0.0
+         smallp      = 1.e-10
          smalld      = 1.e-10
          smallc      = 1.e-10
          smallei     = 1.e-10
@@ -297,6 +300,7 @@ module mpisetup
 
             rbuff(1) = smalld
             rbuff(10)= smallc
+            rbuff(11)= smallp
             rbuff(2) = smallei
             rbuff(3) = cfl
             rbuff(4) = cfr_smooth
@@ -319,6 +323,7 @@ module mpisetup
 
             smalld      = rbuff(1)
             smallc      = rbuff(10)
+            smallp      = rbuff(11)
             smallei     = rbuff(2)
             cfl         = rbuff(3)
             cfr_smooth  = rbuff(4)
