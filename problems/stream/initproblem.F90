@@ -107,30 +107,39 @@ module initproblem
 !-----------------------------------------------------------------------------
 
    subroutine init_prob
+      use types,         only: component_fluid
       use arrays,        only: u
       use constants,     only: pi, dpi
       use dataio_public, only: msg, printinfo
       use grid,          only: x, y, z, nx, ny, nz, nzd, ymin, ymax, Lx, Lz
       use mpisetup,      only: proc, pcoords
       use shear,         only: omega, qshear
+      use fluidindex,    only: nvar
 #ifdef DUST
-      use initdust,      only: idnd, imxd, imyd, imzd, dragc_gas_dust
+      use initdust,      only: dragc_gas_dust
 #endif /* DUST */
 #ifdef NEUTRAL
-      use initneutral,   only: idnn, imxn, imyn, imzn, gamma_neu, cs_iso_neu, eta_gas_neu, csvk
-#ifndef ISO
-      use initneutral,   only: ienn
-#endif /* !ISO */
+      use initneutral,   only: eta_gas_neu, csvk
 #endif /* NEUTRAL */
       implicit none
 
-      real :: rcx, rcy
-      real :: ux,uy,wx,wy,taus,eta,vk,beta !, inv
-      integer :: i, j, k,n, clock
+      real                                :: rcx, rcy, ux, uy, wx, wy, taus, eta, vk, beta !, inv
+      integer                             :: i, j, k, n, clock
       real(kind=4), dimension(3,nx,ny,nz) :: noise
-      integer, dimension(:), allocatable :: seed
-      complex(kind=8), dimension(7) :: coeff
-!      character(len=cbuff_len) :: ala
+      integer, dimension(:), allocatable  :: seed
+      complex(kind=8), dimension(7)       :: coeff
+      type(component_fluid), pointer      :: dst, neu
+
+#ifdef DUST
+      dst => nvar%dst
+#else /* DUST */
+      call warn("[initproblem]: Dust fluid not initialized. I hope you know what you are doing!"
+#endif /* DUST */
+#ifdef NEUTRAL
+      neu => nvar%neu
+#else /* NEUTRAL */
+      call warn("[initproblem]: Dust fluid not initialized. I hope you know what you are doing!"
+#endif /* NEUTRAL */
 
       if (run_id == 'lnA') then
          call printinfo("Lin A")
@@ -167,13 +176,8 @@ module initproblem
       call random_seed(put=seed)
       deallocate(seed)
 
-!     open(1,file=trim(fnoise),form='unformatted')
-!     read(1) noise
-!     close(1)
-
-
       taus = 1./dragc_gas_dust
-      vk   = cs_iso_neu/csvk
+      vk   = neu%cs/csvk
       eta  = eta_gas_neu
 !      beta = 2.0*omega*eta*vk
 !      inv  = 1./(4.0*omega**2*taus**2 + (eps+1.0)**2)
@@ -195,7 +199,7 @@ module initproblem
       call printinfo(msg)
       write(msg,*) 'wx = ',wx,' wy = ',wy
       call printinfo(msg)
-      write(msg,*) '\eta vk / \Omega = ', eta_gas_neu * cs_iso_neu / csvk / omega
+      write(msg,*) '\eta vk / \Omega = ', eta_gas_neu * neu%cs / csvk / omega
       call printinfo(msg)
 
       do i = 1,nx
@@ -204,50 +208,50 @@ module initproblem
             rcy = y(j)
             do k = 1,nz
 #ifdef NEUTRAL
-               u(idnn,i,j,k) = rhog
-               u(imxn,i,j,k) = ux * rhog
-               u(imyn,i,j,k) = uy * rhog
-               u(imzn,i,j,k) = 0.0
+               u(neu%idn,i,j,k) = rhog
+               u(neu%imx,i,j,k) = ux * rhog
+               u(neu%imy,i,j,k) = uy * rhog
+               u(neu%imz,i,j,k) = 0.0
 #ifndef ISO
-               u(ienn,i,j,:) = 1.0/(gamma_neu-1.0)
+               u(neu%ien,i,j,:) = 1.0/(gamma_neu-1.0)
 #endif /* !ISO */
 #endif /* NEUTRAL */
 #ifdef DUST
-               u(idnd,i,j,k) = eps*rhog
-               u(imxd,i,j,k) = wx * eps*rhog
-               u(imyd,i,j,k) = wy * eps*rhog
-               u(imzd,i,j,k) = 0.0
+               u(dst%idn,i,j,k) = eps*rhog
+               u(dst%imx,i,j,k) = wx * eps*rhog
+               u(dst%imy,i,j,k) = wy * eps*rhog
+               u(dst%imz,i,j,k) = 0.0
 
 ! Linear test
             if (linear) then
-!               u(idnd,i,j,k) =  u(idnd,i,j,k) + amp*eps*dsin(kz*z(k))*dcos(kx*x(i))
-               u(idnd,i,j,k) =  u(idnd,i,j,k) + amp*eps*dcos(kz*z(k))*dcos(kx*x(i))
-! ...                u(idnd,i,j,k) =  u(idnd,i,j,k) + amp*eps*dcos(kx*x(i))*dcos(kz*z(k))
-! B              u(idnd,i,j,k) =  u(idnd,i,j,k) + amp * eps *&
+!               u(dst%idn,i,j,k) =  u(dst%idn,i,j,k) + amp*eps*dsin(kz*z(k))*dcos(kx*x(i))
+               u(dst%idn,i,j,k) =  u(dst%idn,i,j,k) + amp*eps*dcos(kz*z(k))*dcos(kx*x(i))
+! ...                u(dst%idn,i,j,k) =  u(dst%idn,i,j,k) + amp*eps*dcos(kx*x(i))*dcos(kz*z(k))
+! B              u(dst%idn,i,j,k) =  u(dst%idn,i,j,k) + amp * eps *&
 ! B                 ( real(coeff(7))*dcos(kx*x(i)) - &
 ! B                  aimag(coeff(7))*dsin(kx*x(i))) * dcos(kz*z(k))
-               u(imxd,i,j,k) =  u(imxd,i,j,k) + eta*vk*amp * &
+               u(dst%imx,i,j,k) =  u(dst%imx,i,j,k) + eta*vk*amp * &
                   ( real(coeff(1))*dcos(kx*x(i)) - &
                    aimag(coeff(1))*dsin(kx*x(i))) * dcos(kz*z(k))
-               u(imyd,i,j,k) =  u(imyd,i,j,k) + eta*vk*amp * &
+               u(dst%imy,i,j,k) =  u(dst%imy,i,j,k) + eta*vk*amp * &
                   ( real(coeff(2))*dcos(kx*x(i)) - &
                    aimag(coeff(2))*dsin(kx*x(i))) * dcos(kz*z(k))
-               u(imzd,i,j,k) =  u(imzd,i,j,k) + eta*vk*(-amp) * &
+               u(dst%imz,i,j,k) =  u(dst%imz,i,j,k) + eta*vk*(-amp) * &
                   (aimag(coeff(3))*dcos(kx*x(i)) + &
                     real(coeff(3))*dsin(kx*x(i))) * dsin(kz*z(k))
-               u(imxn,i,j,k) =  u(imxn,i,j,k) + eta*vk*amp * &
+               u(neu%imx,i,j,k) =  u(neu%imx,i,j,k) + eta*vk*amp * &
                   ( real(coeff(4))*dcos(kx*x(i)) - &
                    aimag(coeff(4))*dsin(kx*x(i))) * dcos(kz*z(k))
-               u(imyn,i,j,k) =  u(imyn,i,j,k) + eta*vk*amp * &
+               u(neu%imy,i,j,k) =  u(neu%imy,i,j,k) + eta*vk*amp * &
                   ( real(coeff(5))*dcos(kx*x(i)) - &
                    aimag(coeff(5))*dsin(kx*x(i))) * dcos(kz*z(k))
-               u(imzn,i,j,k) =  u(imzn,i,j,k) + eta*vk*(-amp) * &
+               u(neu%imz,i,j,k) =  u(neu%imz,i,j,k) + eta*vk*(-amp) * &
                   (aimag(coeff(6))*dcos(kx*x(i)) + &
                     real(coeff(6))*dsin(kx*x(i))) * dsin(kz*z(k))
-!               u(idnn,i,j,k) =  u(idnn,i,j,k) + amp * &
+!               u(neu%idn,i,j,k) =  u(neu%idn,i,j,k) + amp * &
 !                  ( real(coeff(7))*dcos(kx*x(i)) - &
 !                   aimag(coeff(7))*dsin(kx*x(i))) * dcos(kz*z(k))
-               u(idnn,i,j,k) =  u(idnn,i,j,k) + (eta*vk)**2 * amp * &
+               u(neu%idn,i,j,k) =  u(neu%idn,i,j,k) + (eta*vk)**2 * amp * &
                   ( real(coeff(7))*dcos(kx*x(i)) - &
                    aimag(coeff(7))*dsin(kx*x(i))) * dcos(kz*z(k))
              endif
@@ -259,9 +263,9 @@ module initproblem
       enddo
       if (.not.linear) then
         call random_number(noise)
-        u(imxd,:,:,:) = u(imxd,:,:,:) +amp -2.0*amp*noise(1,:,:,:) * u(idnd,:,:,:)
-        u(imyd,:,:,:) = u(imyd,:,:,:) +amp -2.0*amp*noise(2,:,:,:) * u(idnd,:,:,:)
-        u(imzd,:,:,:) = u(imzd,:,:,:) +amp -2.0*amp*noise(3,:,:,:) * u(idnd,:,:,:)
+        u(dst%imx,:,:,:) = u(dst%imx,:,:,:) +amp -2.0*amp*noise(1,:,:,:) * u(dst%idn,:,:,:)
+        u(dst%imy,:,:,:) = u(dst%imy,:,:,:) +amp -2.0*amp*noise(2,:,:,:) * u(dst%idn,:,:,:)
+        u(dst%imz,:,:,:) = u(dst%imz,:,:,:) +amp -2.0*amp*noise(3,:,:,:) * u(dst%idn,:,:,:)
       endif
 
       write(msg,*) 'linear = ',linear
