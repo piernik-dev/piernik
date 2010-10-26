@@ -84,7 +84,7 @@ module resistivity
       use grid,          only: nx, ny, nz, nzd
       use mpisetup,      only: rbuff, ibuff, ierr, MPI_INTEGER, MPI_DOUBLE_PRECISION, buffer_dim, comm, proc
 #ifndef ISO
-      use initionized,   only: ieni
+      use fluidindex,    only: nvar
 #endif /* !ISO */
 
       implicit none
@@ -151,14 +151,10 @@ module resistivity
    subroutine compute_resist(eta,ici)
       use arrays,       only: b, u
       use constants,    only: small
-      use fluidindex,   only: ibx, iby, ibz, icx, icy, icz
+      use fluidindex,   only: ibx, iby, ibz, icx, icy, icz, nvar
       use func,         only: mshift, pshift
       use grid,         only: idl, xdim, ydim, zdim, nx, ny, nz, is, ie, js, je, ks, ke, nzd
-      use initionized,  only: idni, imxi, imyi, imzi
       use mpisetup,     only: MPI_DOUBLE_PRECISION, MPI_MAX, comm, ierr
-#ifndef ISO
-      use initionized,  only: ieni
-#endif /* !ISO */
 
       implicit none
       integer,intent(in)                       :: ici
@@ -224,11 +220,11 @@ module resistivity
 
 #ifndef ISO
       dt_eint = deint_max * abs(minval(               &
-                ( u(ieni,is:ie,js:je,ks:ke)           &
-                - 0.5*( u(imxi,is:ie,js:je,ks:ke)**2  &
-                      + u(imyi,is:ie,js:je,ks:ke)**2  &
-                      + u(imzi,is:ie,js:je,ks:ke)**2 )&
-                      /u(idni,is:ie,js:je,ks:ke)      &
+                ( u(nvar%ion%ien,is:ie,js:je,ks:ke)           &
+                - 0.5*( u(nvar%ion%imx,is:ie,js:je,ks:ke)**2  &
+                      + u(nvar%ion%imy,is:ie,js:je,ks:ke)**2  &
+                      + u(nvar%ion%imz,is:ie,js:je,ks:ke)**2 )&
+                      /u(nvar%ion%idn,is:ie,js:je,ks:ke)      &
                 - 0.5*( b(ibx,is:ie,js:je,ks:ke)**2   &
                       + b(iby,is:ie,js:je,ks:ke)**2   &
                       + b(ibz,is:ie,js:je,ks:ke)**2)) &

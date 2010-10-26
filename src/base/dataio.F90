@@ -833,7 +833,7 @@ module dataio
 #endif /* SNE_DISTR */
 
       call write_log(tsl)
-   
+
       if (proc == 0) then
          call pop_vector(tsl_vars, [t, dt, tot_mass, tot_momx, tot_momy, tot_momz, tot_ener, tot_epot, tot_eint, tot_ekin])
 #ifdef MAGNETIC
