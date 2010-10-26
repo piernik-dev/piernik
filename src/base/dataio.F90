@@ -112,6 +112,11 @@ module dataio
                              min_disk_space_MB, sleep_minutes, sleep_seconds, &
                              user_message_file, system_message_file
 
+   interface mpi_addmul
+      module procedure mpi_sum4d_and_multiply
+      module procedure mpi_sum3d_and_multiply
+   end interface mpi_addmul
+
    contains
 
       subroutine check_log
@@ -660,6 +665,26 @@ module dataio
 
    end subroutine find_last_restart
 
+
+   function mpi_sum4d_and_multiply(tab,factor) result(output)
+      use mpisetup, only: MPI_DOUBLE_PRECISION, MPI_SUM, comm3d, ierr
+      implicit none
+      real, dimension(:,:,:,:), intent(in) :: tab
+      real, intent(in)                     :: factor
+      real :: local, output
+      local = sum(tab(:,:,:,:)) * factor
+      call MPI_ALLREDUCE(local, output, 1, MPI_DOUBLE_PRECISION, MPI_SUM, comm3d, ierr)
+   end function mpi_sum4d_and_multiply
+
+   function mpi_sum3d_and_multiply(tab,factor) result(output)
+      use mpisetup, only: MPI_DOUBLE_PRECISION, MPI_SUM, comm3d, ierr
+      implicit none
+      real, dimension(:,:,:), intent(in) :: tab
+      real, intent(in)                   :: factor
+      real :: local, output
+      local = sum(tab(:,:,:)) * factor
+      call MPI_ALLREDUCE(local, output, 1, MPI_DOUBLE_PRECISION, MPI_SUM, comm3d, ierr)
+   end function mpi_sum3d_and_multiply
 !---------------------------------------------------------------------
 !
 ! writes integrals to text file
@@ -692,23 +717,14 @@ module dataio
 
       character(len=cwdlen) :: tsl_file
 
-      real :: mass = 0.0, momx = 0.0, momy = 0.0,  momz = 0.0, &
-#ifndef ISO
-              ener = 0.0, &
-#endif /* !ISO */
-              ekin = 0.0,  emag = 0.0, &
-              tot_mass = 0.0, tot_momx = 0.0, tot_momy = 0.0, tot_momz = 0.0, &
+      real :: tot_mass = 0.0, tot_momx = 0.0, tot_momy = 0.0, tot_momz = 0.0, &
               tot_ener = 0.0, tot_eint = 0.0, tot_ekin = 0.0, tot_emag = 0.0, &
-              tot_epot = 0.0, mflx = 0.0, mfly = 0.0, mflz = 0.0, &
-              tot_mflx = 0.0, tot_mfly = 0.0, tot_mflz = 0.0
+              tot_epot = 0.0, tot_mflx = 0.0, tot_mfly = 0.0, tot_mflz = 0.0
 
       type(tsl_container) :: tsl
 
-#ifdef GRAV
-      real     :: epot =0.0
-#endif /* GRAV */
 #ifdef COSM_RAYS
-      real     :: encr = 0.0, tot_encr = 0.0
+      real     :: tot_encr = 0.0
 #endif /* COSM_RAYS */
       real     :: cs_iso2
 !- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -772,21 +788,12 @@ module dataio
          endif
       endif
 
-      mass = sum(u(iarr_all_dn,is:ie,js:je,ks:ke)) * dvol
-      call MPI_Allreduce(mass, tot_mass, 1, MPI_REAL8, MPI_SUM, comm3d, ierr)
-
-      momx = sum(u(iarr_all_mx,is:ie,js:je,ks:ke)) * dvol
-      call MPI_Allreduce(momx, tot_momx, 1, MPI_REAL8, MPI_SUM, comm3d, ierr)
-
-      momy = sum(u(iarr_all_my,is:ie,js:je,ks:ke)) * dvol
-      call MPI_Allreduce(momy, tot_momy, 1, MPI_REAL8, MPI_SUM, comm3d, ierr)
-
-      momz = sum(u(iarr_all_mz,is:ie,js:je,ks:ke)) * dvol
-      call MPI_Allreduce(momz, tot_momz, 1, MPI_REAL8, MPI_SUM, comm3d, ierr)
-
+      tot_mass = mpi_addmul(u(iarr_all_dn,is:ie,js:je,ks:ke), dvol)
+      tot_momx = mpi_addmul(u(iarr_all_mx,is:ie,js:je,ks:ke), dvol)
+      tot_momy = mpi_addmul(u(iarr_all_my,is:ie,js:je,ks:ke), dvol)
+      tot_momz = mpi_addmul(u(iarr_all_mz,is:ie,js:je,ks:ke), dvol)
 #ifdef GRAV
-      epot = sum(u(iarr_all_dn(1),is:ie,js:je,ks:ke) *gpot(is:ie,js:je,ks:ke)) * dvol
-      call MPI_Allreduce(epot, tot_epot, 1, MPI_REAL8, MPI_SUM, comm3d, ierr)
+      tot_epot = mpi_addmul(u(iarr_all_dn(1),is:ie,js:je,ks:ke) *gpot(is:ie,js:je,ks:ke),dvol)
 #endif /* GRAV */
 
       wa(is:ie,js:je,ks:ke) &
@@ -794,33 +801,22 @@ module dataio
                  + u(iarr_all_my(1),is:ie,js:je,ks:ke)**2   &
                  + u(iarr_all_mz(1),is:ie,js:je,ks:ke)**2)/ &
                    max(u(iarr_all_dn(1),is:ie,js:je,ks:ke),smalld)
-      ekin = sum(wa(is:ie,js:je,ks:ke)) * dvol
-      call MPI_Allreduce(ekin, tot_ekin, 1, MPI_REAL8, MPI_SUM, comm3d, ierr)
+      tot_ekin = mpi_addmul(wa(is:ie,js:je,ks:ke), dvol)
 
       wa(is:ie,js:je,ks:ke) &
          = 0.5 * (b(ibx,is:ie,js:je,ks:ke)**2 + &
                   b(iby,is:ie,js:je,ks:ke)**2 + &
                   b(ibz,is:ie,js:je,ks:ke)**2)
-      emag = sum(wa(is:ie,js:je,ks:ke)) * dvol
-      call MPI_Allreduce(emag, tot_emag, 1, MPI_REAL8, MPI_SUM, comm3d, ierr)
+      tot_emag = mpi_addmul(wa(is:ie,js:je,ks:ke), dvol)
 
-      wa(is:ie,js:je,ks:ke) = b(ibx,is:ie,js:je,ks:ke)
-      mflx = sum(wa(is:ie,js:je,ks:ke)) * dy*dz/nxd
-      call MPI_Allreduce(mflx, tot_mflx, 1, MPI_REAL8, MPI_SUM, comm3d, ierr)
-
-      wa(is:ie,js:je,ks:ke) = b(iby,is:ie,js:je,ks:ke)
-      mfly = sum(wa(is:ie,js:je,ks:ke)) * dx*dz/nyd
-      call MPI_Allreduce(mfly, tot_mfly, 1, MPI_REAL8, MPI_SUM, comm3d, ierr)
-
-      wa(is:ie,js:je,ks:ke) = b(ibz,is:ie,js:je,ks:ke)
-      mflz = sum(wa(is:ie,js:je,ks:ke)) * dx*dy/nzd
-      call MPI_Allreduce(mflz, tot_mflz, 1, MPI_REAL8, MPI_SUM, comm3d, ierr)
+      tot_mflx = mpi_addmul(b(ibx,is:ie,js:je,ks:ke), dy*dz/nxd)
+      tot_mfly = mpi_addmul(b(iby,is:ie,js:je,ks:ke), dx*dz/nyd)
+      tot_mflz = mpi_addmul(b(ibz,is:ie,js:je,ks:ke), dx*dy/nzd)
 #ifdef ISO
       tot_eint = cs_iso2*tot_mass
       tot_ener = tot_eint+tot_ekin+tot_emag
 #else /* ISO */
-      ener = sum(u(iarr_all_en,is:ie,js:je,ks:ke)) * dvol
-      call MPI_Allreduce(ener, tot_ener, 1, MPI_REAL8, MPI_SUM, comm3d, ierr)
+      tot_ener = mpi_addmul(u(iarr_all_en,is:ie,js:je,ks:ke), dvol)
       tot_eint = tot_ener - tot_ekin - tot_emag
 #endif /* ISO */
 #ifdef GRAV
@@ -828,8 +824,7 @@ module dataio
 #endif /* GRAV */
 
 #ifdef COSM_RAYS
-      encr = sum(u(iarr_all_crs,is:ie,js:je,ks:ke)) * dvol
-      call MPI_Allreduce(encr, tot_encr, 1, MPI_REAL8, MPI_SUM, comm3d, ierr)
+      tot_encr = mpi_addmul(u(iarr_all_crs,is:ie,js:je,ks:ke), dvol)
 #endif /* COSM_RAYS */
 #ifdef SNE_DISTR
       call MPI_Allreduce(emagadd, sum_emagadd, 1, MPI_REAL8, MPI_SUM, comm3d, ierr)
