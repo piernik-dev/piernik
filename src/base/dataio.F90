@@ -695,6 +695,7 @@ module dataio
 
       use arrays,          only: u, b, wa
       use dataio_public,   only: cwdlen, cwd
+      use diagnostics,     only: pop_char_vector
       use fluidindex,      only: nvar, iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz, ibx, iby, ibz
       use grid,            only: dvol, dx, dy, dz, is, ie, js, je, ks, ke, x, y, z, nxd, nyd, nzd
       use mpisetup,        only: proc, comm3d, t, dt, ierr, MPI_REAL8, MPI_SUM, smalld, nstep
@@ -715,7 +716,8 @@ module dataio
 
       implicit none
 
-      character(len=cwdlen) :: tsl_file
+      character(len=cwdlen)                           :: tsl_file, head_fmt
+      character(len=hnlen), dimension(:), allocatable :: tsl_names
 
       real :: tot_mass = 0.0, tot_momx = 0.0, tot_momy = 0.0, tot_momz = 0.0, &
               tot_ener = 0.0, tot_eint = 0.0, tot_ekin = 0.0, tot_emag = 0.0, &
@@ -741,46 +743,40 @@ module dataio
 #endif /* NEUTRAL */
 
 
-      if (proc .eq. 0) then
+      if (proc == 0) then
          write(tsl_file,'(a,a1,a,a1,a3,a1,i3.3,a4)') &
               trim(cwd),'/',trim(problem_name),'_', run_id,'_',nrestart,'.tsl'
 
          if (tsl_firstcall) then
-            open(tsl_lun, file=tsl_file)
+            call pop_char_vector(tsl_names, hnlen, ["nstep", "time", "timestep", "mass", "momx", "momy", "momz", "ener", "epot", "eint", "ekin"])
 
-            write(tsl_lun, '(a1,a8,50a16)') '#','nstep', 'time', 'timestep',  &
-                                               'mass', 'momx', 'momy', 'momz', &
-                                               'ener', 'epot', 'eint', 'ekin', &
 #ifdef COSM_RAYS
-                                               'encr_tot', 'encr_min', 'encr_max',&
+            call pop_char_vector(tsl_names, hnlen, ["encr_tot", "encr_min", "encr_max"])
 #endif /* COSM_RAYS */
-
 #ifdef MAGNETIC
-                                               'emag', 'mflx', 'mfly', 'mflz', 'vai_max', &
-                                               'b_min', 'b_max', 'divb_max', &
+            call pop_char_vector(tsl_names, hnlen, ["emag", "mflx", "mfly", "mflz", "vai_max", "b_min", "b_max", "divb_max"])
 #ifdef RESISTIVE
-                                               'eta_max', &
+            call pop_char_vector(tsl_names, hnlen, ["eta_max"])
 #endif /* RESISTIVE */
 #endif /* MAGNETIC */
-! some quantities computed in "write_log".One can add more, or change.
 #ifdef IONIZED
-                                               'vxi_max', 'vyi_max', 'vzi_max', 'csi_max', &
-                                               'deni_min', 'deni_max', 'prei_min', 'prei_max', &
+            call pop_char_vector(tsl_names, hnlen, ["vxi_max", "vyi_max", "vzi_max" , "csi_max", "deni_min", "deni_max", "prei_min", "prei_max"])
 #ifndef ISO
-                                               'temi_min', 'temi_max', &
+            call pop_char_vector(tsl_names, hnlen, ["temi_min", "temi_max"])
 #endif /* !ISO */
 #endif /* IONIZED */
-
 #ifdef NEUTRAL
-                                               'denn_min', 'denn_max', 'vxn_max', 'vyn_max', 'vzn_max', &
-                                               'pren_min', 'pren_max', 'temn_min', 'temn_max', 'csn_max', &
+            call pop_char_vector(tsl_names, hnlen, ["denn_min", "denn_max", "vxn_max", "vyn_max", "vzn_max", "pren_min", &
+               "pren_max", "temn_min", "temn_max", "csn_max"])
 #endif /* NEUTRAL */
-
 #ifdef DUST
-                                              'dend_min', 'dend_max', 'vxd_max', 'vyd_max', 'vzd_max', &
+            call pop_char_vector(tsl_names, hnlen, ["dend_min", "dend_max", "vxd_max", "vyd_max", "vzd_max"])
 #endif /* DUST */
-                                             'dummy'
 
+            write(head_fmt,'(A,I2,A)') "(a1,a8,",size(tsl_names)-1,"a16)"
+
+            open(tsl_lun, file=tsl_file)
+            write(tsl_lun,fmt=head_fmt) "#",tsl_names
             write(tsl_lun, '(a1)') '#'
             tsl_firstcall = .false.
          else

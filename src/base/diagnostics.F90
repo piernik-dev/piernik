@@ -57,7 +57,7 @@ module diagnostics
    end interface incr_vec
 
    private
-   public :: my_allocate, diagnose_arrays, my_deallocate
+   public :: my_allocate, diagnose_arrays, my_deallocate, pop_char_vector
 
    real,    parameter :: MiB = 8./1048576.  ! sizeof(double) / 2**20
    integer, parameter :: an_len = 64
@@ -100,6 +100,25 @@ contains
       array_names(ubound(array_names)) = new_name
 
    end subroutine keep_track_of_arrays
+
+   subroutine pop_char_vector(vec,lensize,words)
+      use dataio_public, only: die, msg
+      implicit none
+      integer, intent(in) :: lensize
+      character(len=*), intent(in), dimension(:) :: words
+      character(len=lensize), dimension(:), allocatable, intent(inout) :: vec
+      integer :: old, i
+
+      do i = 1, size(words)
+         if (len_trim(words(i)) > lensize) call die("[diagnostics:pop_char_vector] word > lensize")
+      enddo
+
+      old = size(vec)
+      call incr_vec(vec,size(words),lensize)
+      vec(old+1:old+size(words)) = words(:)
+      return
+
+   end subroutine pop_char_vector
 
    subroutine increase_char_vector(vec,addlen,lensize)
       ! ToDo: get rid of lensize
