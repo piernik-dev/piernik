@@ -950,7 +950,8 @@ module dataio
    end subroutine common_shout
 
    subroutine get_common_vars(fl)
-      use arrays,     only: u, wa
+      use arrays,     only: u, b, wa
+      use mpisetup,   only: smallp
       use grid,       only: is, ie, js, je, ks, ke
       use types,      only: phys_prop, component_fluid
       use constants,  only: mH, kboltz, gasRconst
@@ -989,28 +990,23 @@ module dataio
       pr%temp_max%loc  = 0
       pr%temp_max%proc = 0
 #else /* ISO */
+      if(fl%tag /= "DST") then
+         wa(:,:,:) = (u(fl%ien,:,:,:) &                ! eint
+                   - 0.5*((u(fl%imx,:,:,:)**2 +u(fl%imy,:,:,:)**2 + u(fl%imz,:,:,:)**2)/u(fl%idn,:,:,:)))
+         if(fl%tag == "ION") wa(:,:,:) = wa(:,:,:) - 0.5*(sum(b**2,dim=1))
 
+         wa(:,:,:) = max((fl%gam_1)*wa(:,:,:),smallp)  ! pres
 
-! Calculating pressure/temperature/cs differs from fluid to fluid...
-! Switching this off for the time being
+         call get_extremum(wa(is:ie,js:je,ks:ke), 'max', pr%pres_max)
+         call get_extremum(wa(is:ie,js:je,ks:ke), 'min', pr%pres_min)
 
-!      wa(:,:,:) = (u(fl%ien,:,:,:) &                ! eint
-!                - 0.5*((u(fl%imx,:,:,:)**2 +u(fl%imy,:,:,:)**2 + u(fl%imz,:,:,:)**2)/u(fl%idn,:,:,:)))
-!      wa(:,:,:) = max(wa(:,:,:),smallei)
-!
-!      wa(:,:,:) = (fl%gam_1)*wa(:,:,:)            ! pres
+         wa(:,:,:) = fl%gam*wa(:,:,:)
+         call get_extremum(wa(is:ie,js:je,ks:ke), 'max', pr%cs_max)
 
-      wa = 0.0
-
-      call get_extremum(wa(is:ie,js:je,ks:ke), 'max', pr%pres_max)
-      call get_extremum(wa(is:ie,js:je,ks:ke), 'min', pr%pres_min)
-
-      wa(:,:,:) = fl%gam*wa(:,:,:)
-      call get_extremum(wa(is:ie,js:je,ks:ke), 'max', pr%cs_max)
-
-      wa(:,:,:) = mH/kboltz / fl%gam * gasRconst * wa(:,:,:) / u(fl%idn,:,:,:)
-      call get_extremum(wa(is:ie,js:je,ks:ke), 'max', pr%temp_max)
-      call get_extremum(wa(is:ie,js:je,ks:ke), 'min', pr%temp_min)
+         wa(:,:,:) = mH/kboltz / fl%gam * gasRconst * wa(:,:,:) / u(fl%idn,:,:,:)
+         call get_extremum(wa(is:ie,js:je,ks:ke), 'max', pr%temp_max)
+         call get_extremum(wa(is:ie,js:je,ks:ke), 'min', pr%temp_min)
+      endif
 #endif /* ISO */
       end subroutine get_common_vars
    !---------------------------------------------------------------------
