@@ -122,7 +122,7 @@ contains
 !-----------------------------------------------------------------------------
    subroutine init_prob
       use types,          only: component_fluid
-      use dataio_public,  only: msg, die, printinfo, user_plt_hdf5, user_vars_hdf5
+      use dataio_public,  only: msg, die, printinfo, user_plt_hdf5, user_vars_hdf5, user_tsl
       use arrays,         only: u, b
       use grid,           only: x, y, z, nx, ny, nz
       use fluidindex,     only: nvar, ibx, iby, ibz
@@ -185,6 +185,7 @@ contains
       enddo
       user_plt_hdf5 => sedov_plt_hdf5
       user_vars_hdf5 => sedov_vars_hdf5
+      user_tsl => sedov_tsl
       return
    end subroutine init_prob
 !-----------------------------------------------------------------------------
@@ -228,5 +229,19 @@ contains
       end select
       return
    end subroutine sedov_vars_hdf5
+!-----------------------------------------------------------------------------
+      subroutine sedov_tsl(user_vars, tsl_names)
+         use diagnostics,     only: pop_vector
+         implicit none
+         real, dimension(:), intent(inout), allocatable                       :: user_vars
+         character(len=*), dimension(:), intent(inout), allocatable, optional :: tsl_names
+         
+         if (present(tsl_names)) then 
+            call pop_vector(tsl_names, len(tsl_names(1)), ["foobar_sedov"])    !   add to header
+         else
+            call pop_vector(user_vars,[12345678.9])                            !   pop value
+         endif
+         return
+      end subroutine sedov_tsl
 !-----------------------------------------------------------------------------
 end module initproblem

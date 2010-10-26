@@ -122,8 +122,18 @@ module dataio_public
       end subroutine vars_hdf5
    end interface
 
+   interface
+      subroutine tsl_out(user_vars, tsl_names)
+         implicit none
+         real, dimension(:), intent(inout), allocatable                       :: user_vars
+         character(len=*), dimension(:), intent(inout), allocatable, optional :: tsl_names
+
+      end subroutine tsl_out
+   end interface
+
    procedure(plt_hdf5),  pointer :: user_plt_hdf5 => Null()
    procedure(vars_hdf5), pointer :: user_vars_hdf5 => Null()
+   procedure(tsl_out),   pointer :: user_tsl => Null()
 
 contains
 !-----------------------------------------------------------------------------

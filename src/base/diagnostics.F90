@@ -56,8 +56,13 @@ module diagnostics
       module procedure increase_real_vector
    end interface incr_vec
 
+   interface pop_vector
+      module procedure pop_char_vector
+      module procedure pop_real_vector
+   end interface pop_vector
+
    private
-   public :: my_allocate, diagnose_arrays, my_deallocate, pop_char_vector
+   public :: my_allocate, diagnose_arrays, my_deallocate, pop_vector
 
    real,    parameter :: MiB = 8./1048576.  ! sizeof(double) / 2**20
    integer, parameter :: an_len = 64
@@ -107,18 +112,33 @@ contains
       integer, intent(in) :: lensize
       character(len=*), intent(in), dimension(:) :: words
       character(len=lensize), dimension(:), allocatable, intent(inout) :: vec
-      integer :: old, i
+      integer :: old , i
 
+      old = 0
       do i = 1, size(words)
          if (len_trim(words(i)) > lensize) call die("[diagnostics:pop_char_vector] word > lensize")
       enddo
 
-      old = size(vec)
+      if(allocated(vec)) old = size(vec)
       call incr_vec(vec,size(words),lensize)
       vec(old+1:old+size(words)) = words(:)
       return
 
    end subroutine pop_char_vector
+
+   subroutine pop_real_vector(vec,words)
+      implicit none
+      real, intent(in), dimension(:) :: words
+      real, dimension(:), allocatable, intent(inout) :: vec
+      integer :: old
+
+      old = 0
+      if(allocated(vec)) old = size(vec)
+      call incr_vec(vec,size(words))
+      vec(old+1:old+size(words)) = words(:)
+      return
+
+   end subroutine pop_real_vector
 
    subroutine increase_char_vector(vec,addlen,lensize)
       ! ToDo: get rid of lensize

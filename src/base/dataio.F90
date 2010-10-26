@@ -694,13 +694,13 @@ module dataio
    subroutine write_timeslice
 
       use arrays,          only: u, b, wa
-      use dataio_public,   only: cwdlen, cwd
-      use diagnostics,     only: pop_char_vector
+      use dataio_public,   only: cwdlen, cwd, user_tsl
+      use diagnostics,     only: pop_vector
       use fluidindex,      only: nvar, iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz, ibx, iby, ibz
       use grid,            only: dvol, dx, dy, dz, is, ie, js, je, ks, ke, x, y, z, nxd, nyd, nzd
       use mpisetup,        only: proc, comm3d, t, dt, ierr, MPI_REAL8, MPI_SUM, smalld, nstep
       use problem_pub,     only: problem_name, run_id
-      use types,           only: tsl_container
+      use types,           only: tsl_container, phys_prop
 #ifndef ISO
       use fluidindex,      only: iarr_all_en
 #endif /* !ISO */
@@ -718,6 +718,8 @@ module dataio
 
       character(len=cwdlen)                           :: tsl_file, head_fmt
       character(len=hnlen), dimension(:), allocatable :: tsl_names
+      real, allocatable, dimension(:)                 :: tsl_vars
+      type(phys_prop), pointer                        :: sn
 
       real :: tot_mass = 0.0, tot_momx = 0.0, tot_momy = 0.0, tot_momz = 0.0, &
               tot_ener = 0.0, tot_eint = 0.0, tot_ekin = 0.0, tot_emag = 0.0, &
@@ -748,38 +750,39 @@ module dataio
               trim(cwd),'/',trim(problem_name),'_', run_id,'_',nrestart,'.tsl'
 
          if (tsl_firstcall) then
-            call pop_char_vector(tsl_names, hnlen, ["nstep   ", "time    ", "timestep"])
-            call pop_char_vector(tsl_names, hnlen, ["mass", "momx", "momy", "momz", "ener", "epot", "eint", "ekin"])
+            call pop_vector(tsl_names, hnlen, ["nstep   ", "time    ", "timestep"])
+            call pop_vector(tsl_names, hnlen, ["mass", "momx", "momy", "momz", "ener", "epot", "eint", "ekin"])
 
 #ifdef COSM_RAYS
-            call pop_char_vector(tsl_names, hnlen, ["encr_tot", "encr_min", "encr_max"])
+            call pop_vector(tsl_names, hnlen, ["encr_tot", "encr_min", "encr_max"])
 #endif /* COSM_RAYS */
 #ifdef MAGNETIC
-            call pop_char_vector(tsl_names, hnlen, ["emag   ", "mflx   ", "mfly   ", "mflz   ", "vai_max", "b_min  ", "b_max  "])
-            call pop_char_vector(tsl_names, hnlen, ["divb_max"])
+            call pop_vector(tsl_names, hnlen, ["emag   ", "mflx   ", "mfly   ", "mflz   ", "vai_max", "b_min  ", "b_max  "])
+            call pop_vector(tsl_names, hnlen, ["divb_max"])
 #ifdef RESISTIVE
-            call pop_char_vector(tsl_names, hnlen, ["eta_max"])
+            call pop_vector(tsl_names, hnlen, ["eta_max"])
 #endif /* RESISTIVE */
 #endif /* MAGNETIC */
 #ifdef IONIZED
-            call pop_char_vector(tsl_names, hnlen, ["vxi_max ", "vyi_max ", "vzi_max " , "csi_max ", "deni_min", "deni_max", "prei_min", "prei_max"])
+            call pop_vector(tsl_names, hnlen, ["vxi_max ", "vyi_max ", "vzi_max " , "csi_max ", "deni_min", "deni_max", "prei_min", "prei_max"])
 #ifndef ISO
-            call pop_char_vector(tsl_names, hnlen, ["temi_min", "temi_max"])
+            call pop_vector(tsl_names, hnlen, ["temi_min", "temi_max"])
 #endif /* !ISO */
 #endif /* IONIZED */
 #ifdef NEUTRAL
-            call pop_char_vector(tsl_names, hnlen, ["denn_min", "denn_max", "vxn_max ", "vyn_max ", "vzn_max ", "pren_min", &
+            call pop_vector(tsl_names, hnlen, ["denn_min", "denn_max", "vxn_max ", "vyn_max ", "vzn_max ", "pren_min", &
                "pren_max", "temn_min", "temn_max", "csn_max "])
 #endif /* NEUTRAL */
 #ifdef DUST
-            call pop_char_vector(tsl_names, hnlen, ["dend_min", "dend_max", "vxd_max ", "vyd_max ", "vzd_max "])
+            call pop_vector(tsl_names, hnlen, ["dend_min", "dend_max", "vxd_max ", "vyd_max ", "vzd_max "])
 #endif /* DUST */
-
+            if(associated(user_tsl)) call user_tsl(tsl_vars, tsl_names)
             write(head_fmt,'(A,I2,A)') "(a1,a8,",size(tsl_names)-1,"a16)"
 
             open(tsl_lun, file=tsl_file)
             write(tsl_lun,fmt=head_fmt) "#",tsl_names
             write(tsl_lun, '(a1)') '#'
+            deallocate(tsl_names)
             tsl_firstcall = .false.
          else
             open(tsl_lun, file=tsl_file, position='append')
@@ -830,45 +833,43 @@ module dataio
 #endif /* SNE_DISTR */
 
       call write_log(tsl)
-
+   
       if (proc == 0) then
-         write(tsl_lun, '(1x,i8,50(1x,es15.8))') &
-                      nstep, &
-                      t, dt, tot_mass, &
-                      tot_momx, tot_momy, tot_momz, &
-#ifdef GRAV
-#endif /* GRAV */
-                      tot_ener, tot_epot, tot_eint, tot_ekin,&
+         call pop_vector(tsl_vars, [t, dt, tot_mass, tot_momx, tot_momy, tot_momz, tot_ener, tot_epot, tot_eint, tot_ekin])
 #ifdef MAGNETIC
-                      tot_emag, tot_mflx, tot_mfly, tot_mflz, tsl%vai_max, &
-                      tsl%b_min, tsl%b_max, tsl%divb_max, &
+         call pop_vector(tsl_vars, [tot_emag, tot_mflx, tot_mfly, tot_mflz, tsl%vai_max, tsl%b_min, tsl%b_max, tsl%divb_max])
 #ifdef RESISTIVE
-                      tsl%etamax, &
+         call pop_vector(tsl_vars, [tsl%etamax])
 #endif /* RESISTIVE */
 #endif /* MAGNETIC */
 #ifdef COSM_RAYS
-                      tot_encr, tsl%encr_min, tsl%encr_max, &
+         call pop_vector(tsl_vars, [tot_encr, tsl%encr_min, tsl%encr_max])
 #endif /* COSM_RAYS */
-
-! some quantities computed in "write_log".One can add more, or change.
 #ifdef IONIZED
-                      nvar%ion%snap%velx_max%val, nvar%ion%snap%vely_max%val, nvar%ion%snap%velz_max%val, nvar%ion%snap%cs_max%val, &
-                      nvar%ion%snap%dens_min%val, nvar%ion%snap%dens_max%val, nvar%ion%snap%pres_min%val, nvar%ion%snap%pres_max%val, &
+         sn=>nvar%ion%snap
+         call pop_vector(tsl_vars, [sn%velx_max%val, sn%vely_max%val, sn%velz_max%val, sn%cs_max%val, &
+                                    sn%dens_min%val, sn%dens_max%val, sn%pres_min%val, sn%pres_max%val])
 #ifndef ISO
-                      nvar%ion%snap%temp_min%val, nvar%ion%snap%temp_max%val, &
+         call pop_vector(tsl_vars, [sn%temp_min%val, sn%temp_max%val])
 #endif /* !ISO */
 #endif /* IONIZED */
 
 #ifdef NEUTRAL
-                      nvar%neu%snap%dens_min%val, nvar%neu%snap%dens_max%val, nvar%neu%snap%velx_max%val, nvar%neu%snap%vely_max%val, nvar%neu%snap%velz_max%val, &
-                      nvar%neu%snap%pres_min%val, nvar%neu%snap%pres_max%val, nvar%neu%snap%temp_min%val, nvar%neu%snap%temp_max%val, nvar%neu%snap%cs_max%val, &
+         sn=>nvar%neu%snap
+         call pop_vector(tsl_vars, [sn%dens_min%val, sn%dens_max%val, sn%velx_max%val, sn%vely_max%val, sn%velz_max%val, &
+                                    sn%pres_min%val, sn%pres_max%val, sn%temp_min%val, sn%temp_max%val, sn%cs_max%val])
 #endif /* NEUTRAL */
-
 #ifdef DUST
-                      nvar%dst%snap%dens_min%val, nvar%dst%snap%dens_max%val, nvar%dst%snap%velx_max%val, nvar%dst%snap%vely_max%val, nvar%dst%snap%velz_max%val, &
+         sn=>nvar%dst%snap
+         call pop_vector(tsl_vars, [sn%dens_min%val, sn%dens_max%val, sn%velx_max%val, sn%vely_max%val, sn%velz_max%val])
 #endif /* DUST */
-                      0.0
+
+         if(associated(user_tsl)) call user_tsl(tsl_vars)
+         write(tsl_lun, '(1x,i8,50(1x,es15.8))') nstep, tsl_vars
+
+! some quantities computed in "write_log".One can add more, or change.
          close(tsl_lun)
+         deallocate(tsl_vars)
       endif
 
    end subroutine write_timeslice
