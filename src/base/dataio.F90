@@ -748,29 +748,31 @@ module dataio
               trim(cwd),'/',trim(problem_name),'_', run_id,'_',nrestart,'.tsl'
 
          if (tsl_firstcall) then
-            call pop_char_vector(tsl_names, hnlen, ["nstep", "time", "timestep", "mass", "momx", "momy", "momz", "ener", "epot", "eint", "ekin"])
+            call pop_char_vector(tsl_names, hnlen, ["nstep   ", "time    ", "timestep"])
+            call pop_char_vector(tsl_names, hnlen, ["mass", "momx", "momy", "momz", "ener", "epot", "eint", "ekin"])
 
 #ifdef COSM_RAYS
             call pop_char_vector(tsl_names, hnlen, ["encr_tot", "encr_min", "encr_max"])
 #endif /* COSM_RAYS */
 #ifdef MAGNETIC
-            call pop_char_vector(tsl_names, hnlen, ["emag", "mflx", "mfly", "mflz", "vai_max", "b_min", "b_max", "divb_max"])
+            call pop_char_vector(tsl_names, hnlen, ["emag   ", "mflx   ", "mfly   ", "mflz   ", "vai_max", "b_min  ", "b_max  "])
+            call pop_char_vector(tsl_names, hnlen, ["divb_max"])
 #ifdef RESISTIVE
             call pop_char_vector(tsl_names, hnlen, ["eta_max"])
 #endif /* RESISTIVE */
 #endif /* MAGNETIC */
 #ifdef IONIZED
-            call pop_char_vector(tsl_names, hnlen, ["vxi_max", "vyi_max", "vzi_max" , "csi_max", "deni_min", "deni_max", "prei_min", "prei_max"])
+            call pop_char_vector(tsl_names, hnlen, ["vxi_max ", "vyi_max ", "vzi_max " , "csi_max ", "deni_min", "deni_max", "prei_min", "prei_max"])
 #ifndef ISO
             call pop_char_vector(tsl_names, hnlen, ["temi_min", "temi_max"])
 #endif /* !ISO */
 #endif /* IONIZED */
 #ifdef NEUTRAL
-            call pop_char_vector(tsl_names, hnlen, ["denn_min", "denn_max", "vxn_max", "vyn_max", "vzn_max", "pren_min", &
-               "pren_max", "temn_min", "temn_max", "csn_max"])
+            call pop_char_vector(tsl_names, hnlen, ["denn_min", "denn_max", "vxn_max ", "vyn_max ", "vzn_max ", "pren_min", &
+               "pren_max", "temn_min", "temn_max", "csn_max "])
 #endif /* NEUTRAL */
 #ifdef DUST
-            call pop_char_vector(tsl_names, hnlen, ["dend_min", "dend_max", "vxd_max", "vyd_max", "vzd_max"])
+            call pop_char_vector(tsl_names, hnlen, ["dend_min", "dend_max", "vxd_max ", "vyd_max ", "vzd_max "])
 #endif /* DUST */
 
             write(head_fmt,'(A,I2,A)') "(a1,a8,",size(tsl_names)-1,"a16)"
