@@ -287,20 +287,42 @@ contains
       use multigrid,   only: cleanup_multigrid
 #endif /* MULTIGRID */
 
-      call cleanup_grid;        if (proc == 0) write(*,'(a)',advance='no')"." ! QA_WARN
-      call cleanup_dataio;      if (proc == 0) write(*,'(a)',advance='no')"." ! QA_WARN
+      call cleanup_grid;        call nextdot(.false.)
+      call cleanup_dataio;      call nextdot(.false.)
 #ifdef RESISTIVE
-      call cleanup_resistivity; if (proc == 0) write(*,'(a)',advance='no')"." ! QA_WARN
+      call cleanup_resistivity; call nextdot(.false.)
 #endif /* RESISTIVE */
 #ifdef MULTIGRID
-      call cleanup_multigrid;   if (proc == 0) write(*,'(a)',advance='no')"." ! QA_WARN
+      call cleanup_multigrid;   call nextdot(.false.)
 #endif /* MULTIGRID */
-      call cleanup_arrays;      if (proc == 0) write(*,'(a)',advance='no')"." ! QA_WARN
-      call cleanup_fluids;      if (proc == 0) write(*,'(a)',advance='no')"." ! QA_WARN
-      call cleanup_fluidindex;  if (proc == 0) write(*,'(a)',advance='no')"." ! QA_WARN
-      call cleanup_timers;      if (proc == 0) write(*,'(a)',advance='no')"." ! QA_WARN
-      call cleanup_mpi;         if (proc == 0) write(*,'(a)')"."              ! QA_WARN
+      call cleanup_arrays;      call nextdot(.false.)
+      call cleanup_fluids;      call nextdot(.false.)
+      call cleanup_fluidindex;  call nextdot(.false.)
+      call cleanup_timers;      call nextdot(.false.)
+      call cleanup_mpi;         call nextdot(.true.)
 
    end subroutine cleanup_piernik
+
+!>
+!! Just print a dot on the screen, do not put a newline unless asked to do so.
+!<
+
+   subroutine nextdot(advance)
+
+      use mpisetup,      only: proc
+
+      implicit none
+
+      logical, intent(in) :: advance
+
+      if (proc == 0) then
+         if (advance) then
+            write(*,'(a)')"."              ! QA_WARN
+         else
+            write(*,'(a)',advance='no')"." ! QA_WARN
+         endif
+      endif
+
+   end subroutine nextdot
 
 end program piernik
