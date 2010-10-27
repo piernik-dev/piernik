@@ -50,7 +50,7 @@ module dataio
 !!
 !! \todo check the usefulness of wait logical variable
 !<
-   use dataio_pub   , only: tend, nend, wend, nhdf, nstep_start, domain, nrestart, get_container, set_container_chdf, &
+   use dataio_pub,    only: tend, nend, wend, nhdf, nstep_start, domain, nrestart, get_container, set_container_chdf, &
                             vizit, fmin, fmax, hnlen, cwdlen, varlen
    use mpisetup,      only: cbuff_len
    use types,         only: hdf, idlen
@@ -122,7 +122,7 @@ module dataio
       subroutine check_log
 
          use mpisetup,      only: t
-         use dataio_pub   , only: nlog
+         use dataio_pub,    only: nlog
 
          implicit none
 
@@ -138,7 +138,7 @@ module dataio
       subroutine check_tsl
 
          use mpisetup,      only: t
-         use dataio_pub   , only: ntsl
+         use dataio_pub,    only: ntsl
 
          implicit none
 
@@ -204,7 +204,7 @@ module dataio
    subroutine init_dataio
 
       use dataio_hdf5,     only: init_hdf5, read_restart_hdf5, parfile, parfilelines
-      use dataio_pub   ,   only: chdf, nres, last_hdf_time, step_hdf, nlog, ntsl, dataio_initialized, log_file, cwdlen, par_file, maxparfilelines, cwd, &
+      use dataio_pub,      only: chdf, nres, last_hdf_time, step_hdf, nlog, ntsl, dataio_initialized, log_file, cwdlen, par_file, maxparfilelines, cwd, &
            &                      ierrh, tmp_log_file, msglen, printinfo, warn, namelist_errh, compare_namelist
       use fluidboundaries, only: all_fluid_boundaries
       use mpisetup,        only: lbuff, ibuff, rbuff, cbuff, proc, cbuff_len, comm, ierr, buffer_dim, &
@@ -450,7 +450,7 @@ module dataio
    subroutine user_msg_handler(end_sim)
 
       use dataio_hdf5,   only: write_hdf5, write_restart_hdf5
-      use dataio_pub   , only: chdf, step_hdf, msg, printinfo, warn
+      use dataio_pub,    only: chdf, step_hdf, msg, printinfo, warn
       use mpisetup,      only: MPI_CHARACTER, MPI_DOUBLE_PRECISION, comm, ierr, proc, nstep
 
       implicit none
@@ -529,7 +529,7 @@ module dataio
 !
    subroutine write_crashed(msg)
 
-      use dataio_pub   , only: nres, die
+      use dataio_pub,    only: nres, die
       use problem_pub,   only: problem_name
 
       implicit none
@@ -555,7 +555,7 @@ module dataio
    subroutine write_data(output)
 
       use dataio_hdf5,   only: write_hdf5, write_restart_hdf5, write_plot
-      use dataio_pub   , only: chdf, nres, last_hdf_time, step_hdf
+      use dataio_pub,    only: chdf, nres, last_hdf_time, step_hdf
       use mpisetup,      only: t, MPI_CHARACTER, comm, ierr, proc, nstep
 
       implicit none
@@ -626,7 +626,7 @@ module dataio
 
    subroutine find_last_restart(restart_number)
 
-      use dataio_pub   , only: cwdlen, cwd
+      use dataio_pub,    only: cwdlen, cwd
       use problem_pub,   only: problem_name, run_id
 #if defined(__INTEL_COMPILER)
       use ifport,        only: unlink
@@ -692,7 +692,7 @@ module dataio
    subroutine write_timeslice
 
       use arrays,          only: u, b, wa
-      use dataio_pub   ,   only: cwdlen, cwd, user_tsl
+      use dataio_pub,      only: cwdlen, cwd, user_tsl
       use diagnostics,     only: pop_vector
       use fluidindex,      only: nvar, iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz, ibx, iby, ibz
       use grid,            only: dvol, dx, dy, dz, is, ie, js, je, ks, ke, x, y, z, nxd, nyd, nzd
@@ -873,7 +873,7 @@ module dataio
    end subroutine write_timeslice
 
    subroutine get_extremum(tab,minmax,prop)
-      use dataio_pub   , only: msg, warn
+      use dataio_pub,    only: msg, warn
       use types,         only: value
       use grid,          only: nb
       use mpisetup,      only: mpifind
@@ -902,7 +902,7 @@ module dataio
       use grid,            only: dxmn, dx, dy, dz
       use mpisetup,        only: cfl
       use constants,       only: small
-      use dataio_pub   ,   only: msg, printinfo
+      use dataio_pub,      only: msg, printinfo
       implicit none
       type(phys_prop), intent(in)  :: pr
       character(len=*), intent(in) :: fluid
@@ -1019,7 +1019,7 @@ module dataio
 
          use arrays,             only: wa, u, b
          use constants,          only: small
-         use dataio_pub   ,      only: msg, printinfo
+         use dataio_pub,         only: msg, printinfo
          use fluidindex,         only: ibx, iby, ibz, nvar
          use grid,               only: dx, dy, dz, dxmn, nb, is, ie, js, je, ks, ke, nx, ny, nz
          use mpisetup,           only: smallei, cfl, t, dt, proc, mpifind, nstep
@@ -1213,7 +1213,7 @@ module dataio
 !-------------------------------------------------------------------------
 
 !\todo: process multiple commands at once
-      use dataio_pub   , only: ierrh, cwdlen, msg, printinfo, warn
+      use dataio_pub,    only: ierrh, cwdlen, msg, printinfo, warn
       use mpisetup,      only: proc
 #if defined(__INTEL_COMPILER)
       use ifport,        only: unlink, stat

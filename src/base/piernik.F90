@@ -32,7 +32,7 @@
 program piernik
 
    use dataio,        only: write_data, user_msg_handler
-   use dataio_pub   , only: nend, nstep_start, tend, msg, fplen, printinfo, warn, &
+   use dataio_pub,    only: nend, nstep_start, tend, msg, fplen, printinfo, warn, &
        &                    code_progress, PIERNIK_START, PIERNIK_INITIALIZED, PIERNIK_FINISHED, PIERNIK_CLEANUP
    use fluidupdate,   only: fluid_update
    use mpisetup,      only: comm, comm3d, ierr, proc, t, dt, nstep, cleanup_mpi
@@ -129,7 +129,7 @@ contains
    subroutine init_piernik
       use arrays,                only: init_arrays
       use dataio,                only: init_dataio, write_data
-      use dataio_pub   ,         only: nrestart, cwd, par_file, tmp_log_file, msg, colormessage, T_IO, die, warn, printinfo
+      use dataio_pub,            only: nrestart, cwd, par_file, tmp_log_file, msg, colormessage, T_IO, die, warn, printinfo
       use diagnostics,           only: diagnose_arrays
       use fluidboundaries,       only: all_fluid_boundaries
       use fluidboundaries_pub,   only: init_fluidboundaries

@@ -37,7 +37,7 @@ module timestep
       subroutine time_step
          use constants,            only: small, big
          use dataio,               only: write_crashed
-         use dataio_pub   ,        only: tend, msg, warn
+         use dataio_pub,           only: tend, msg, warn
          use mpisetup,             only: t, dt, dt_old, dt_max_grow, dt_initial, dt_min, nstep, proc
 #ifdef IONIZED
          use timestepionized,      only: timestep_ion, dt_ion, c_ion

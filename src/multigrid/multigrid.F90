@@ -62,7 +62,7 @@ contains
       use multigridhelpers,   only: mg_write_log, dirtyH, do_ascii_dump, dirty_debug, multidim_code_3D, &
            &                        aux_par_I0, aux_par_I1, aux_par_I2, aux_par_R0, aux_par_R1, aux_par_R2
       use multigridmpifuncs,  only: mpi_multigrid_prep
-      use dataio_pub   ,      only: msg, par_file, die, warn, namelist_errh, compare_namelist
+      use dataio_pub,         only: msg, par_file, die, warn, namelist_errh, compare_namelist
 #ifdef GRAV
       use multigrid_gravity,  only: init_multigrid_grav, init_multigrid_grav_post
 #endif /* GRAV */
@@ -429,7 +429,7 @@ contains
       use multigridvars,      only: lvl, level_gb, level_min, level_max, has_dir, XDIR, YDIR, ZDIR, tot_ts, vcycle_factors, gb_cartmap
       use mpisetup,           only: proc, nproc, MPI_DOUBLE_PRECISION, comm3d, ierr
       use multigridhelpers,   only: mg_write_log
-      use dataio_pub   ,      only: msg
+      use dataio_pub,         only: msg
 #ifdef GRAV
       use multigrid_gravity,  only: cleanup_multigrid_grav
 #endif /* GRAV */

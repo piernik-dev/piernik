@@ -44,7 +44,7 @@ contains
    subroutine read_problem_par
 
       use constants,     only: pi
-      use dataio_pub   , only: skip_advection, ierrh, msg, par_file, die, warn, namelist_errh, compare_namelist
+      use dataio_pub,    only: skip_advection, ierrh, msg, par_file, die, warn, namelist_errh, compare_namelist
       use mpisetup,      only: ierr, rbuff, cbuff, ibuff, proc, buffer_dim, comm, smalld, cbuff_len, &
            &                   MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER
       use types,         only: idlen
@@ -132,7 +132,7 @@ contains
 
       use arrays,        only: u, b
       use constants,     only: pi
-      use dataio_pub   , only: msg, printinfo, warn
+      use dataio_pub,    only: msg, printinfo, warn
       use grid,          only: x, y, z, dx, dy, dz, nx, ny, nz, xmin, xmax, ymin, ymax, zmin, zmax
       use initionized,   only: gamma_ion, idni, imxi, imzi, ieni
       use list_hdf5,     only: additional_attrs
@@ -228,7 +228,7 @@ contains
 
       use arrays,        only: sgp
       use constants,     only: pi, newtong
-      use dataio_pub   , only: msg, printinfo, warn
+      use dataio_pub,    only: msg, printinfo, warn
       use grid,          only: x, y, z, is, ie, js, je, ks, ke
       use mpisetup,      only: proc, comm3d, ierr, MPI_DOUBLE_PRECISION, MPI_SUM, MPI_MIN, MPI_MAX, MPI_IN_PLACE
 

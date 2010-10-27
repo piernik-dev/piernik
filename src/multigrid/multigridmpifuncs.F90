@@ -147,7 +147,7 @@ contains
 
    subroutine mpi_multigrid_bnd(lev, iv, ng, mode)
 
-      use dataio_pub   ,      only: die
+      use dataio_pub,         only: die
       use mpisetup,           only: comm3d, ierr, MPI_STATUS_SIZE, MPI_REQUEST_NULL, &
            &                        procxl, procxr, procyl, procyr, proczl, proczr, proc, &
            &                        pxsize, pysize, pzsize
@@ -225,7 +225,7 @@ contains
 
    subroutine multigrid_ext_bnd(lev, iv, ng, mode)
 
-      use dataio_pub   ,   only: die
+      use dataio_pub,      only: die
       use multigridvars,   only: extbnd_donothing, extbnd_zero, extbnd_extrapolate, extbnd_mirror, extbnd_antimirror, &
            &                     XLO, XHI, YLO, YHI, ZLO, ZHI, lvl, is_external
 

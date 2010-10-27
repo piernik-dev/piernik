@@ -90,7 +90,7 @@
 
    subroutine prolong_level_hord(lev, iv)
 
-      use dataio_pub   ,      only: die, warn, msg
+      use dataio_pub,         only: die, warn, msg
       use mpisetup,           only: proc
       use multigridmpifuncs,  only: mpi_multigrid_bnd
       use multigridvars,      only: ord_prolong, extbnd_antimirror
@@ -134,7 +134,7 @@
 
    subroutine prolong_level2I(lev, iv)
 
-      use dataio_pub   , only: die
+      use dataio_pub,    only: die
       use multigridvars, only: plvl, lvl, eff_dim, NDIM
 
       implicit none
@@ -188,7 +188,7 @@
 
    subroutine prolong_level2D(lev, iv)
 
-      use dataio_pub   , only: die
+      use dataio_pub,    only: die
       use multigridvars, only: plvl, lvl, eff_dim, NDIM
 
       implicit none
@@ -241,7 +241,7 @@
 
    subroutine prolong_level4I(lev, iv)
 
-      use dataio_pub   , only: die
+      use dataio_pub,    only: die
       use multigridvars, only: plvl, lvl, eff_dim, NDIM
 
       implicit none
@@ -307,7 +307,7 @@
 
    subroutine prolong_level4D(lev, iv)
 
-      use dataio_pub   , only: die
+      use dataio_pub,    only: die
       use multigridvars, only: plvl, lvl, eff_dim, NDIM
 
       implicit none
