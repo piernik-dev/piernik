@@ -47,7 +47,7 @@ contains
       use grid,                only: dxmn
       use initcosmicrays,      only: cfl_cr, K_crs_paral, K_crs_perp, use_split
 #ifdef MULTIGRID
-      use multigrid_diffusion, only: diff_explicit, diff_tstep_fac
+      use multigrid_diffusion, only: diff_explicit, diff_tstep_fac, diff_dt_crs_orig
 #endif /* MULTIGRID */
 
       implicit none
@@ -63,6 +63,7 @@ contains
          if (dxmn < sqrt(huge(1.0))/dt_crs) then
             dt_crs = dt_crs * dxmn**2
 #ifdef MULTIGRID
+            diff_dt_crs_orig = dt_crs
             if (.not. (use_split .or. diff_explicit)) dt_crs = dt_crs * diff_tstep_fac ! enlarge timestep for non-explicit diffusion
 #endif /* MULTIGRID */
          else

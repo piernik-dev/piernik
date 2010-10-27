@@ -48,7 +48,7 @@ module multigrid_diffusion
 
    private
    public :: init_multigrid_diff, init_multigrid_diff_post, cleanup_multigrid_diff, multigrid_solve_diff
-   public :: diff_tstep_fac, diff_explicit
+   public :: diff_tstep_fac, diff_explicit, diff_dt_crs_orig
 
    ! namelist parameters
    real               :: norm_tol                                     !< stop V-cycle iterations when the ratio of norms ||residual||/||source|| is below this value
@@ -59,6 +59,7 @@ module multigrid_diffusion
    real               :: diff_theta                                   !< 0. is explicit, 1. is fully implicit 0.5 is Crank-Nicholson
    real               :: diff_tstep_fac                               !< How much we stretch timestep. Note that for diff_theta == 0. this should not be > 1.
    logical            :: diff_explicit                                !< If .true. then do not use multigrid for diffusion
+   real               :: diff_dt_crs_orig                             !< timestep calculated at timestepcosmicrays.F90, before enlarging by diff_tstep_fac
 
    integer, parameter :: diff_bx = correction+1, diff_by = diff_bx + 1, diff_bz = diff_by + 1 !< indices pointing to multigrid copies of the b(:,:,:,:) array
 
@@ -212,8 +213,9 @@ contains
       use dataio_pub,         only: halfstep, warn, printinfo, msg
       use crdiffusion,        only: cr_diff_x, cr_diff_y, cr_diff_z
       use timer,              only: timer_
-      use multigridvars,      only: ts, tot_ts, norm_rhs_orig
+      use multigridvars,      only: ts, tot_ts, norm_rhs_orig, stdout
       use fluidindex,         only: nvar
+      use mpisetup,           only: dt
 
       implicit none
 
@@ -236,6 +238,11 @@ contains
             call cr_diff_z
          endif
       else
+
+         if (dt < 0.99999 * diff_dt_crs_orig * diff_tstep_fac .and. .not. halfstep) then
+            write(msg,'(a,f8.3,a)')"[multigrid_diffusion:multigrid_solve_diff] Timestep limited somewhere else: dt = ",dt/diff_dt_crs_orig, " of explicit dt_crs."
+            call printinfo(msg, stdout)
+         endif
 
          ! set diffBC
          call init_b
