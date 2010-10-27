@@ -28,6 +28,12 @@
 
 #include "piernik.def"
 
+!!$ ============================================================================
+!!
+!! This module contains various routines (interpolation, boundaries) that are useful
+!! for all flavours of multigrid solvers.
+!!
+
 module multigridbasefuncs
 
    implicit none
@@ -55,7 +61,7 @@ contains
 
 !!$ ============================================================================
 !!
-!! Multigrid elementary operators: prolongation, restriction, residual, norm etc.
+!! Multigrid elementary operators: prolongation, restriction, norm etc.
 !!
 
    subroutine prolong_level(lev, iv)
@@ -208,118 +214,6 @@ contains
 
 !!$ ============================================================================
 !!
-!! Calculate the residuum for the Poisson equation.
-!!
-
-   subroutine residual(lev, src, soln, def)
-
-      use dataio_public,         only: die
-      use multigridvars,         only: ord_laplacian, level_min, level_max, ngridvars
-!      use multigridexperimental, only: residual4
-
-      implicit none
-
-      integer, intent(in) :: lev  !< level for which approximate the solution
-      integer, intent(in) :: src  !< index of source in lvl()%mgvar
-      integer, intent(in) :: soln !< index of solution in lvl()%mgvar
-      integer, intent(in) :: def  !< index of defect in lvl()%mgvar
-
-      interface
-         subroutine residual4(lev, src, soln, def)
-            implicit none
-            integer, intent(in) :: lev  !< level for which approximate the solution
-            integer, intent(in) :: src  !< index of source in lvl()%mgvar
-            integer, intent(in) :: soln !< index of solution in lvl()%mgvar
-            integer, intent(in) :: def  !< index of defect in lvl()%mgvar
-         end subroutine residual4
-      end interface
-
-      if (any( [ src, soln, def ] <= 0) .or. any( [ src, soln, def ] > ngridvars)) call die("[multigridbasefuncs:residual] Invalid variable index")
-      if (lev < level_min .or. lev > level_max) call die("[multigridbasefuncs:residual] Invalid level number")
-
-      select case (ord_laplacian)
-      case (2)
-         call residual2(lev, src, soln, def)
-      case (4)
-         call residual4(lev, src, soln, def)
-      case default
-         call die("[multigridbasefuncs:residual] The parameter 'ord_laplacian' must be 2 or 4")
-      end select
-
-   end subroutine residual
-
-!!$ ============================================================================
-!!
-!! 2nd order Laplacian
-!!
-
-   subroutine residual2(lev, src, soln, def)
-
-      use multigridhelpers,   only: multidim_code_3D
-      use multigridmpifuncs,  only: mpi_multigrid_bnd
-      use multigridvars,      only: lvl, eff_dim, NDIM, XDIR, YDIR, ZDIR, has_dir
-
-      implicit none
-
-      integer, intent(in) :: lev  !< level for which approximate the solution
-      integer, intent(in) :: src  !< index of source in lvl()%mgvar
-      integer, intent(in) :: soln !< index of solution in lvl()%mgvar
-      integer, intent(in) :: def  !< index of defect in lvl()%mgvar
-
-      real                :: L0, Lx, Ly, Lz
-      integer :: k
-
-      call mpi_multigrid_bnd(lev, soln, 1, .false.) ! no corners required
-
-      ! Coefficients for a simplest 3-point Laplacian operator: [ 1, -2, 1 ]
-      ! for 2D and 1D setups appropriate elements of [ Lx, Ly, Lz ] should be == 0.
-      Lx = lvl(lev)%idx2
-      Ly = lvl(lev)%idy2
-      Lz = lvl(lev)%idz2
-      L0 = -2. * (Lx + Ly + Lz)
-
-      ! Possible optimization candidate: reduce cache misses (secondary importance, cache-aware implementation required)
-      ! Explicit loop over k gives here better performance than array operation due to less cache misses (at least on 32^3 and 64^3 arrays)
-      if (eff_dim == NDIM .and. .not. multidim_code_3D) then
-         do k = lvl(lev)%ks, lvl(lev)%ke
-            lvl(       lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k,   def)        = &
-                 & lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k,   src)        - &
-                 ( lvl(lev)%mgvar(lvl(lev)%is-1:lvl(lev)%ie-1, lvl(lev)%js  :lvl(lev)%je,   k,   soln)       + &
-                 & lvl(lev)%mgvar(lvl(lev)%is+1:lvl(lev)%ie+1, lvl(lev)%js  :lvl(lev)%je,   k,   soln)) * Lx - &
-                 ( lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js-1:lvl(lev)%je-1, k,   soln)       + &
-                 & lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js+1:lvl(lev)%je+1, k,   soln)) * Ly - &
-                 ( lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k-1, soln)       + &
-                 & lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k+1, soln)) * Lz - &
-                 & lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k,   soln)  * L0
-         enddo
-      else
-         ! In 3D this implementation can give a bit more cache misses, few times more writes and significantly more instructions executed than monolithic 3D above
-         do k = lvl(lev)%ks, lvl(lev)%ke
-            lvl(       lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k,   def)   = &
-                 & lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k,   src)   - &
-                 & lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k,   soln)  * L0
-            if (has_dir(XDIR)) &
-                 & lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k,   def)   = &
-                 & lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k,   def)   - &
-                 ( lvl(lev)%mgvar(lvl(lev)%is-1:lvl(lev)%ie-1, lvl(lev)%js  :lvl(lev)%je,   k,   soln)  + &
-                 & lvl(lev)%mgvar(lvl(lev)%is+1:lvl(lev)%ie+1, lvl(lev)%js  :lvl(lev)%je,   k,   soln)) * Lx
-            if (has_dir(YDIR)) &
-                 & lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k,   def)   = &
-                 & lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k,   def)   - &
-                 ( lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js-1:lvl(lev)%je-1, k,   soln)  + &
-                 & lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js+1:lvl(lev)%je+1, k,   soln)) * Ly
-            if (has_dir(ZDIR)) &
-                 & lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k,   def)   = &
-                 & lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k,   def)   - &
-                 ( lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k-1, soln)  + &
-                 & lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k+1, soln)) * Lz
-         enddo
-      endif
-
-   end subroutine residual2
-
-!!$ ============================================================================
-!!
 !! Calculate L2 norm
 !!
 
@@ -373,5 +267,116 @@ contains
       lvl(lev)%mgvar(:, :, :, iv) = lvl(lev)%mgvar(:, :, :, iv) - avg
 
    end subroutine substract_average
+
+!!$ ============================================================================
+!!
+!! Prolong solution data at level (lev-1) to faces at level lev
+!!
+
+   subroutine prolong_faces(lev, soln)
+
+      use mpisetup,           only: proc
+      use dataio_public,      only: die, warn
+      use multigridhelpers,   only: check_dirty
+      use multigridmpifuncs,  only: mpi_multigrid_bnd
+      use multigridvars,      only: plvl, lvl, has_dir, XDIR, YDIR, ZDIR, LOW, HIGH, ord_prolong_face, level_min, level_max, D_x, D_y, D_z, extbnd_antimirror
+
+      implicit none
+
+      integer, intent(in) :: lev  !< level for which approximate the solution
+      integer, intent(in) :: soln !< index of solution in lvl()%mgvar
+
+      integer                       :: i, j, k
+      type(plvl), pointer           :: coarse, fine
+      real, parameter, dimension(3) :: p0  = [ 0.,       1.,     0.     ] ! injection
+      real, parameter, dimension(3) :: p1  = [ 0.,       3./4.,  1./4.  ] ! 1D linear prolongation stencil
+      real, parameter, dimension(3) :: p2i = [ -1./8.,   1.,     1./8.  ] ! 1D integral cubic prolongation stencil
+      real, parameter, dimension(3) :: p2d = [ -3./32., 30./32., 5./32. ] ! 1D direct cubic prolongation stencil
+      real, dimension(-1:1)         :: p
+      real, dimension(-1:1,-1:1,2,2):: pp   ! 2D prolongation stencil
+      real                          :: pp_norm
+
+      if (lev < level_min .or. lev > level_max) call die("[multigridbasefuncs:prolong_faces] Invalid level")
+
+      if (lev == level_min) then
+         call warn("[multigridbasefuncs:prolong_faces] Cannot prolong anything to base level")
+         return
+      endif
+
+      select case (ord_prolong_face)
+         case (0)
+            p(:) = p0(:)
+         case (1,-1)
+            p(:) = p1(:)
+         case (2)
+            p(:) = p2i(:)
+         case (-2)
+            p(:) = p2d(:)
+         case default
+            p(:) = p0(:)
+      end select
+
+      do i = -1, 1
+         pp(i,:,1,1) = 0.5*p( i)*p(:)       ! 0.5 because of face averaging
+         pp(i,:,1,2) = 0.5*p( i)*p(1:-1:-1) ! or use matmul()
+         pp(i,:,2,1) = 0.5*p(-i)*p(:)
+         pp(i,:,2,2) = 0.5*p(-i)*p(1:-1:-1)
+      enddo
+
+      call mpi_multigrid_bnd(lev-1, soln, 1, extbnd_antimirror) !BEWARE for higher prolongation order more guardcell will be required
+      call check_dirty(lev-1, soln, "prolong_faces", 1)
+
+      coarse => lvl(lev - 1)
+      fine   => lvl(lev)
+
+      if (has_dir(XDIR)) then
+         pp_norm = 2.*sum(pp(-D_y:D_y, -D_z:D_z, 1, 1)) ! normalization is required for ord_prolong_face == 1 and -2
+         do j = coarse%js, coarse%je
+            do k = coarse%ks, coarse%ke
+               fine%bnd_x(-fine%js+2*j,    -fine%ks+2*k,    LOW) =sum(pp(-D_y:D_y, -D_z:D_z, 1, 1) * (coarse%mgvar(coarse%is,j-D_y:j+D_y,k-D_z:k+D_z,soln) + coarse%mgvar(coarse%is-1,j-D_y:j+D_y,k-D_z:k+D_z,soln))) / pp_norm
+               fine%bnd_x(-fine%js+2*j+D_y,-fine%ks+2*k,    LOW) =sum(pp(-D_y:D_y, -D_z:D_z, 2, 1) * (coarse%mgvar(coarse%is,j-D_y:j+D_y,k-D_z:k+D_z,soln) + coarse%mgvar(coarse%is-1,j-D_y:j+D_y,k-D_z:k+D_z,soln))) / pp_norm
+               fine%bnd_x(-fine%js+2*j,    -fine%ks+2*k+D_z,LOW) =sum(pp(-D_y:D_y, -D_z:D_z, 1, 2) * (coarse%mgvar(coarse%is,j-D_y:j+D_y,k-D_z:k+D_z,soln) + coarse%mgvar(coarse%is-1,j-D_y:j+D_y,k-D_z:k+D_z,soln))) / pp_norm
+               fine%bnd_x(-fine%js+2*j+D_y,-fine%ks+2*k+D_z,LOW) =sum(pp(-D_y:D_y, -D_z:D_z, 2, 2) * (coarse%mgvar(coarse%is,j-D_y:j+D_y,k-D_z:k+D_z,soln) + coarse%mgvar(coarse%is-1,j-D_y:j+D_y,k-D_z:k+D_z,soln))) / pp_norm
+               fine%bnd_x(-fine%js+2*j,    -fine%ks+2*k,    HIGH)=sum(pp(-D_y:D_y, -D_z:D_z, 1, 1) * (coarse%mgvar(coarse%ie,j-D_y:j+D_y,k-D_z:k+D_z,soln) + coarse%mgvar(coarse%ie+1,j-D_y:j+D_y,k-D_z:k+D_z,soln))) / pp_norm
+               fine%bnd_x(-fine%js+2*j+D_y,-fine%ks+2*k,    HIGH)=sum(pp(-D_y:D_y, -D_z:D_z, 2, 1) * (coarse%mgvar(coarse%ie,j-D_y:j+D_y,k-D_z:k+D_z,soln) + coarse%mgvar(coarse%ie+1,j-D_y:j+D_y,k-D_z:k+D_z,soln))) / pp_norm
+               fine%bnd_x(-fine%js+2*j,    -fine%ks+2*k+D_z,HIGH)=sum(pp(-D_y:D_y, -D_z:D_z, 1, 2) * (coarse%mgvar(coarse%ie,j-D_y:j+D_y,k-D_z:k+D_z,soln) + coarse%mgvar(coarse%ie+1,j-D_y:j+D_y,k-D_z:k+D_z,soln))) / pp_norm
+               fine%bnd_x(-fine%js+2*j+D_y,-fine%ks+2*k+D_z,HIGH)=sum(pp(-D_y:D_y, -D_z:D_z, 2, 2) * (coarse%mgvar(coarse%ie,j-D_y:j+D_y,k-D_z:k+D_z,soln) + coarse%mgvar(coarse%ie+1,j-D_y:j+D_y,k-D_z:k+D_z,soln))) / pp_norm
+            enddo
+         enddo
+      endif
+
+      if (has_dir(YDIR)) then
+         pp_norm = 2.*sum(pp(-D_x:D_x, -D_z:D_z, 1, 1))
+         do i = coarse%is, coarse%ie
+            do k = coarse%ks, coarse%ke
+               fine%bnd_y(-fine%is+2*i,    -fine%ks+2*k,    LOW) =sum(pp(-D_x:D_x, -D_z:D_z, 1, 1) * (coarse%mgvar(i-D_x:i+D_x,coarse%js,k-D_z:k+D_z,soln) + coarse%mgvar(i-D_x:i+D_x,coarse%js-1,k-D_z:k+D_z,soln))) / pp_norm
+               fine%bnd_y(-fine%is+2*i+D_x,-fine%ks+2*k,    LOW) =sum(pp(-D_x:D_x, -D_z:D_z, 2, 1) * (coarse%mgvar(i-D_x:i+D_x,coarse%js,k-D_z:k+D_z,soln) + coarse%mgvar(i-D_x:i+D_x,coarse%js-1,k-D_z:k+D_z,soln))) / pp_norm
+               fine%bnd_y(-fine%is+2*i,    -fine%ks+2*k+D_z,LOW) =sum(pp(-D_x:D_x, -D_z:D_z, 1, 2) * (coarse%mgvar(i-D_x:i+D_x,coarse%js,k-D_z:k+D_z,soln) + coarse%mgvar(i-D_x:i+D_x,coarse%js-1,k-D_z:k+D_z,soln))) / pp_norm
+               fine%bnd_y(-fine%is+2*i+D_x,-fine%ks+2*k+D_z,LOW) =sum(pp(-D_x:D_x, -D_z:D_z, 2, 2) * (coarse%mgvar(i-D_x:i+D_x,coarse%js,k-D_z:k+D_z,soln) + coarse%mgvar(i-D_x:i+D_x,coarse%js-1,k-D_z:k+D_z,soln))) / pp_norm
+               fine%bnd_y(-fine%is+2*i,    -fine%ks+2*k,    HIGH)=sum(pp(-D_x:D_x, -D_z:D_z, 1, 1) * (coarse%mgvar(i-D_x:i+D_x,coarse%je,k-D_z:k+D_z,soln) + coarse%mgvar(i-D_x:i+D_x,coarse%je+1,k-D_z:k+D_z,soln))) / pp_norm
+               fine%bnd_y(-fine%is+2*i+D_x,-fine%ks+2*k,    HIGH)=sum(pp(-D_x:D_x, -D_z:D_z, 2, 1) * (coarse%mgvar(i-D_x:i+D_x,coarse%je,k-D_z:k+D_z,soln) + coarse%mgvar(i-D_x:i+D_x,coarse%je+1,k-D_z:k+D_z,soln))) / pp_norm
+               fine%bnd_y(-fine%is+2*i,    -fine%ks+2*k+D_z,HIGH)=sum(pp(-D_x:D_x, -D_z:D_z, 1, 2) * (coarse%mgvar(i-D_x:i+D_x,coarse%je,k-D_z:k+D_z,soln) + coarse%mgvar(i-D_x:i+D_x,coarse%je+1,k-D_z:k+D_z,soln))) / pp_norm
+               fine%bnd_y(-fine%is+2*i+D_x,-fine%ks+2*k+D_z,HIGH)=sum(pp(-D_x:D_x, -D_z:D_z, 2, 2) * (coarse%mgvar(i-D_x:i+D_x,coarse%je,k-D_z:k+D_z,soln) + coarse%mgvar(i-D_x:i+D_x,coarse%je+1,k-D_z:k+D_z,soln))) / pp_norm
+            enddo
+         enddo
+      endif
+
+      if (has_dir(ZDIR)) then
+         pp_norm = 2.*sum(pp(-D_x:D_x, -D_y:D_y, 1, 1))
+         do i = coarse%is, coarse%ie
+            do j = coarse%js, coarse%je
+               fine%bnd_z(-fine%is+2*i,    -fine%js+2*j,    LOW) =sum(pp(-D_x:D_x, -D_y:D_y, 1, 1) * (coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ks,soln) + coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ks-1,soln))) / pp_norm
+               fine%bnd_z(-fine%is+2*i+D_x,-fine%js+2*j,    LOW) =sum(pp(-D_x:D_x, -D_y:D_y, 2, 1) * (coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ks,soln) + coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ks-1,soln))) / pp_norm
+               fine%bnd_z(-fine%is+2*i,    -fine%js+2*j+D_y,LOW) =sum(pp(-D_x:D_x, -D_y:D_y, 1, 2) * (coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ks,soln) + coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ks-1,soln))) / pp_norm
+               fine%bnd_z(-fine%is+2*i+D_x,-fine%js+2*j+D_y,LOW) =sum(pp(-D_x:D_x, -D_y:D_y, 2, 2) * (coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ks,soln) + coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ks-1,soln))) / pp_norm
+               fine%bnd_z(-fine%is+2*i,    -fine%js+2*j,    HIGH)=sum(pp(-D_x:D_x, -D_y:D_y, 1, 1) * (coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ke,soln) + coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ke+1,soln))) / pp_norm
+               fine%bnd_z(-fine%is+2*i+D_x,-fine%js+2*j,    HIGH)=sum(pp(-D_x:D_x, -D_y:D_y, 2, 1) * (coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ke,soln) + coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ke+1,soln))) / pp_norm
+               fine%bnd_z(-fine%is+2*i,    -fine%js+2*j+D_y,HIGH)=sum(pp(-D_x:D_x, -D_y:D_y, 1, 2) * (coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ke,soln) + coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ke+1,soln))) / pp_norm
+               fine%bnd_z(-fine%is+2*i+D_x,-fine%js+2*j+D_y,HIGH)=sum(pp(-D_x:D_x, -D_y:D_y, 2, 2) * (coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ke,soln) + coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ke+1,soln))) / pp_norm
+            enddo
+         enddo
+      endif
+
+   end subroutine prolong_faces
 
 end module multigridbasefuncs

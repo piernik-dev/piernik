@@ -48,10 +48,10 @@ module initproblem
 
    subroutine read_problem_par
 
-      use dataio_public, only: ierrh, msg, par_file, die, namelist_errh, compare_namelist
+      use dataio_public, only: ierrh, msg, die, par_file, namelist_errh, compare_namelist
       use grid,          only: dxmn
       use mpisetup,      only: MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION, &
-                &              cbuff_len, cbuff, ibuff, rbuff, buffer_dim, comm, ierr, proc
+           &                   cbuff_len, cbuff, ibuff, rbuff, buffer_dim, comm, ierr, proc
       use types,         only: idlen
 
       implicit none
@@ -131,7 +131,7 @@ module initproblem
    subroutine init_prob
 
       use arrays,         only: b, u
-      use dataio_public,  only: msg, die, printinfo, warn
+      use dataio_public,  only: die, msg, printinfo, warn
       use fluidindex,     only: ibx, iby, ibz
       use grid,           only: nx, ny, nz, nb, x, y, z, is, ie, js, je, ks, ke, nxd, nyd, nzd
       use initcosmicrays, only: gamma_crs, iarr_crs, ncrn, ncre, K_crn_paral, K_crn_perp
@@ -141,9 +141,9 @@ module initproblem
       implicit none
 
       integer :: i, j, k
-      real    :: cs_iso, r2
-      integer :: iecr = -1
       integer, parameter :: icr = 1 !< Only first CR component
+      integer :: iecr = -1
+      real    :: cs_iso, r2
 
       if (ncrn+ncre >= icr) then
          iecr = iarr_crs(icr)
@@ -165,11 +165,11 @@ module initproblem
          K_crn_perp(icr)  = 0.
       endif
 
-      b(ibx, 1:nx, 1:ny, 1:nz) = bx0
-      b(iby, 1:nx, 1:ny, 1:nz) = by0
-      b(ibz, 1:nx, 1:ny, 1:nz) = bz0
-      u(idni, 1:nx, 1:ny, 1:nz) = d0
-      u(imxi:imzi, 1:nx, 1:ny, 1:nz) = 0.0
+      b(ibx, :, :, :) = bx0
+      b(iby, :, :, :) = by0
+      b(ibz, :, :, :) = bz0
+      u(idni, :, :, :) = d0
+      u(imxi:imzi, :, :, :) = 0.0
 
 #ifndef ISO
       do k = 1,nz
@@ -183,22 +183,18 @@ module initproblem
       enddo
 #endif /* !ISO */
 
-! Explosions
-
 #ifdef COSM_RAYS
-      u(iecr, 1:nx, 1:ny, 1:nz)      =  beta_cr*cs_iso**2 * u(idni, 1:nx, 1:ny, 1:nz)/(gamma_crs(icr)-1.0)
+      u(iecr, :, :, :)      =  beta_cr*cs_iso**2 * u(idni, :, :, :)/(gamma_crs(icr)-1.0)
+
+! Explosions
       do k = ks, ke
          do j = js, je
             do i = is, ie
                r2 = (x(i)-x0)**2+(y(j)-y0)**2+(z(k)-z0)**2
-               u(iecr,i,j,k)= u(iecr,i,j,k) + amp_cr*exp(-r2/r0**2)
+               u(iecr, i, j, k)= u(iecr, i, j, k) + amp_cr*exp(-r2/r0**2)
             enddo
          enddo
       enddo
-
-      write(msg,*) 'maxecr =',maxval(u(iecr,:,:,:)), amp_cr
-      call printinfo(msg, .true.)
-
 #endif /* COSM_RAYS */
 
       problem_customize_solution => check_norm

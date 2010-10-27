@@ -143,6 +143,12 @@ contains
 #ifdef GRAV
       use gravity,         only: source_terms_grav
 #endif /* GRAV */
+#ifdef COSM_RAYS
+      use initcosmicrays,     only: use_split
+#ifdef MULTIGRID
+      use multigrid_diffusion, only: multigrid_solve_diff
+#endif /* MULTIGRID */
+#endif /* COSM_RAYS */
 
       implicit none
 
@@ -159,6 +165,12 @@ contains
 #ifdef GRAV
       call source_terms_grav
 #endif /* GRAV */
+
+#ifdef COSM_RAYS
+#ifdef MULTIGRID
+      if (.not. use_split) call multigrid_solve_diff
+#endif /* MULTIGRID */
+#endif /* COSM_RAYS */
 
       if (.not. skip_advection) then
          if (forward) then
@@ -190,6 +202,7 @@ contains
 #endif /* SHEAR && FLUID_INTERACTIONS */
 #ifdef COSM_RAYS
       use crdiffusion,    only: cr_diff_x, cr_diff_y, cr_diff_z
+      use initcosmicrays, only: use_split
 #endif /* COSM_RAYS */
 #ifdef DEBUG
       use dataio,         only: write_hdf
@@ -207,7 +220,7 @@ contains
             if (nxd /= 1) then
                if (.not. forward) then
 #ifdef COSM_RAYS
-                  call cr_diff_x
+                  if (use_split) call cr_diff_x
 #endif /* COSM_RAYS */
 #ifdef MAGNETIC
                   call magfieldbyzx
@@ -221,7 +234,7 @@ contains
                   call magfieldbyzx
 #endif /* MAGNETIC */
 #ifdef COSM_RAYS
-                  call cr_diff_x
+                  if (use_split) call cr_diff_x
 #endif /* COSM_RAYS */
                endif
             endif
@@ -230,7 +243,7 @@ contains
             if (nyd /= 1) then
                if (.not. forward) then
 #ifdef COSM_RAYS
-                  call cr_diff_y
+                  if (use_split) call cr_diff_y
 #endif /* COSM_RAYS */
 #ifdef MAGNETIC
                   call magfieldbzxy
@@ -243,7 +256,7 @@ contains
                   call magfieldbzxy
 #endif /* MAGNETIC */
 #ifdef COSM_RAYS
-                  call cr_diff_y
+                  if (use_split) call cr_diff_y
 #endif /* COSM_RAYS */
                endif
             else
@@ -256,7 +269,7 @@ contains
             if (nzd /= 1) then
                if (.not. forward) then
 #ifdef COSM_RAYS
-                  call cr_diff_z
+                  if (use_split) call cr_diff_z
 #endif /* COSM_RAYS */
 #ifdef MAGNETIC
                   call magfieldbxyz
@@ -270,7 +283,7 @@ contains
                   call magfieldbxyz
 #endif /* MAGNETIC */
 #ifdef COSM_RAYS
-                  call cr_diff_z
+                  if (use_split) call cr_diff_z
 #endif /* COSM_RAYS */
                endif
             endif

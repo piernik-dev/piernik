@@ -9,6 +9,8 @@
 /* choosing fluids */
 #define IONIZED
 #define COSM_RAYS
+
+/* BEWARE: buggy! */
 #define COSM_RAYS_SOURCES
 
 /* adiabatic or isothermal */
@@ -25,3 +27,6 @@
 
 /* gravity type choosing */
 #undef GRAV
+
+/* include multigrid for diffusion */
+#define MULTIGRID

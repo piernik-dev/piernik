@@ -93,7 +93,7 @@
       use dataio_public,      only: die, warn, msg
       use mpisetup,           only: proc
       use multigridmpifuncs,  only: mpi_multigrid_bnd
-      use multigridvars,      only: ord_prolong
+      use multigridvars,      only: ord_prolong, extbnd_antimirror
 
       implicit none
 
@@ -110,7 +110,7 @@
          firstcall = .false.
       endif
 
-      call mpi_multigrid_bnd(lev, iv, abs(ord_prolong/2), .false.) ! exchange guardcells with corners
+      call mpi_multigrid_bnd(lev, iv, abs(ord_prolong/2), extbnd_antimirror) ! exchange guardcells with corners
 
       select case (ord_prolong)
       case (-4)
@@ -146,7 +146,7 @@
 
       real, parameter :: P0 = 1., P1 = 1./8.
 
-      if (eff_dim<NDIM) call die("[multigrid:prolong_level2I] 1D and 2D not finished")
+      if (eff_dim<NDIM) call die("[multigridexperimental:prolong_level2I] 1D and 2D not finished")
 
       coarse => lvl(lev)
       fine   => lvl(lev + 1)
@@ -199,7 +199,7 @@
       type(plvl), pointer :: coarse, fine
       real, parameter :: P_1 = -3./32., P0 = 30./32., P1 = 5./32.
 
-      if (eff_dim<NDIM) call die("[multigrid:prolong_level2D] 1D and 2D not finished")
+      if (eff_dim<NDIM) call die("[multigridexperimental:prolong_level2D] 1D and 2D not finished")
 
       coarse => lvl(lev)
       fine   => lvl(lev + 1)
@@ -253,7 +253,7 @@
 
       real, parameter :: P0 = 1., P1 = 11./64., P2 = 3./128.
 
-      if (eff_dim<NDIM) call die("[multigrid:prolong_level4I] 1D and 2D not finished")
+      if (eff_dim<NDIM) call die("[multigridexperimental:prolong_level4I] 1D and 2D not finished")
 
       coarse => lvl(lev)
       fine   => lvl(lev + 1)
@@ -319,7 +319,7 @@
 
       real, parameter :: P_2 = 35./2048., P_1 = -252./2048., P0 = 1890./2048., P1 = 420./2048., P2 = -45./2048.
 
-      if (eff_dim<NDIM) call die("[multigrid:prolong_level4D] 1D and 2D not finished")
+      if (eff_dim<NDIM) call die("[multigridexperimental:prolong_level4D] 1D and 2D not finished")
 
       coarse => lvl(lev)
       fine   => lvl(lev + 1)
@@ -365,106 +365,5 @@
            + P2 * fine%prolong_xy(fine%is:fine%ie, fine%js:fine%je, coarse%ks+2:coarse%ke+2)
 
    end subroutine prolong_level4D
-
-!!$ ============================================================================
-!!
-!! 4th order Laplacian
-!!
-!! Significantly slows down convergence, does not seem to improve quality of solution in simple tests.
-!!
-!! L4 = [0, 1, -2, 1, 0] + L4_strength * 1./12. * [ -1, 4, -6, 4, -1 ]
-!! For integrated face fluxes in the 4th order Laplacian estimate set L4_strength = 0.5
-!! For simple 5-point L4 set L4_strength = 1.0
-!!
-!! There also exists more compact Mehrstellen scheme.
-!!
-
-   subroutine residual4(lev, src, soln, def)
-
-      use dataio_public,      only: die, warn
-      use mpisetup,           only: proc
-      use multigridmpifuncs,  only: mpi_multigrid_bnd
-      use multigridvars,      only: lvl, eff_dim, NDIM, L4_strength, grav_bnd, bnd_givenval
-
-      implicit none
-
-      integer, intent(in) :: lev  !< level for which approximate the solution
-      integer, intent(in) :: src  !< index of source in lvl()%mgvar
-      integer, intent(in) :: soln !< index of solution in lvl()%mgvar
-      integer, intent(in) :: def  !< index of defect in lvl()%mgvar
-
-      real, parameter     :: L4_scaling = 1./12. ! with L4_strength = 1. this gives an L4 approximation for finite differences approach
-      integer, parameter  :: L2w = 2             ! #layers of boundary cells for L2 operator
-
-      real                :: c21, c41, c42 !, c20, c40
-      real                :: L0, Lx1, Lx2, Ly1, Ly2, Lz1, Lz2, Lx, Ly, Lz
-
-      logical, save       :: firstcall = .true.
-      integer             :: i, j, k
-
-      if (eff_dim<NDIM) call die("[multigrid:residual4] Only 3D is implemented")
-
-      if (firstcall) then
-         if (proc == 0) call warn("[multigridexperimental:residual4] residual order 4 is experimental.")
-         firstcall = .false.
-      endif
-
-      call mpi_multigrid_bnd(lev, soln, 2, .false.) ! no corners required
-
-      c21 = 1.
-      c42 = - L4_scaling * L4_strength
-      c41 = c21 + 4. * L4_scaling * L4_strength
-      !c20 = -2.
-      !c40 = c20 - 6. * L4_strength
-
-      Lx1 = c41 * lvl(lev)%idx2
-      Ly1 = c41 * lvl(lev)%idy2
-      Lz1 = c41 * lvl(lev)%idz2
-      Lx2 = c42 * lvl(lev)%idx2
-      Ly2 = c42 * lvl(lev)%idy2
-      Lz2 = c42 * lvl(lev)%idz2
-!      L0  = c40 * (lvl(lev)%idx2 + lvl(lev)%idy2 + lvl(lev)%idz2 )
-      L0 = -2. * (Lx1 + Lx2 + Ly1 + Ly2 + Lz1 + Lz2)
-
-      lvl(     lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   lvl(lev)%ks  :lvl(lev)%ke,   def)        = &
-           lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   lvl(lev)%ks  :lvl(lev)%ke,   src)        - &
-           lvl(lev)%mgvar(lvl(lev)%is-2:lvl(lev)%ie-2, lvl(lev)%js  :lvl(lev)%je,   lvl(lev)%ks  :lvl(lev)%ke,   soln) * Lx2 - &
-           lvl(lev)%mgvar(lvl(lev)%is+2:lvl(lev)%ie+2, lvl(lev)%js  :lvl(lev)%je,   lvl(lev)%ks  :lvl(lev)%ke,   soln) * Lx2 - &
-           lvl(lev)%mgvar(lvl(lev)%is-1:lvl(lev)%ie-1, lvl(lev)%js  :lvl(lev)%je,   lvl(lev)%ks  :lvl(lev)%ke,   soln) * Lx1 - &
-           lvl(lev)%mgvar(lvl(lev)%is+1:lvl(lev)%ie+1, lvl(lev)%js  :lvl(lev)%je,   lvl(lev)%ks  :lvl(lev)%ke,   soln) * Lx1 - &
-           lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js-2:lvl(lev)%je-2, lvl(lev)%ks  :lvl(lev)%ke,   soln) * Ly2 - &
-           lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js+2:lvl(lev)%je+2, lvl(lev)%ks  :lvl(lev)%ke,   soln) * Ly2 - &
-           lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js-1:lvl(lev)%je-1, lvl(lev)%ks  :lvl(lev)%ke,   soln) * Ly1 - &
-           lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js+1:lvl(lev)%je+1, lvl(lev)%ks  :lvl(lev)%ke,   soln) * Ly1 - &
-           lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   lvl(lev)%ks-2:lvl(lev)%ke-2, soln) * Lz2 - &
-           lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   lvl(lev)%ks+2:lvl(lev)%ke+2, soln) * Lz2 - &
-           lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   lvl(lev)%ks-1:lvl(lev)%ke-1, soln) * Lz1 - &
-           lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   lvl(lev)%ks+1:lvl(lev)%ke+1, soln) * Lz1 - &
-           lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   lvl(lev)%ks  :lvl(lev)%ke,   soln) * L0
-
-      ! WARNING: not optimized
-      if (grav_bnd == bnd_givenval) then ! probably also in some other cases
-         ! Use L2 Laplacian in two layers of cells next to the boundary because L4 seems to be incompatible with present image mass construction
-         Lx = c21 * lvl(lev)%idx2
-         Ly = c21 * lvl(lev)%idy2
-         Lz = c21 * lvl(lev)%idz2
-         L0 = -2. * (Lx + Ly + Lz)
-
-         do k = lvl(lev)%ks, lvl(lev)%ke
-            do j = lvl(lev)%js, lvl(lev)%je
-               do i = lvl(lev)%is, lvl(lev)%ie
-                  if ( i<lvl(lev)%is+L2w .or. i>lvl(lev)%ie-L2w .or. j<lvl(lev)%js+L2w .or. j>lvl(lev)%je-L2w .or. k<lvl(lev)%ks+L2w .or. k>lvl(lev)%ke-L2w) then
-                     lvl(       lev)%mgvar(i,   j,   k,   def)   = lvl(lev)%mgvar(i,   j,   k,   src)        - &
-                          ( lvl(lev)%mgvar(i-1, j,   k,   soln)  + lvl(lev)%mgvar(i+1, j,   k,   soln)) * Lx - &
-                          ( lvl(lev)%mgvar(i,   j-1, k,   soln)  + lvl(lev)%mgvar(i,   j+1, k,   soln)) * Ly - &
-                          ( lvl(lev)%mgvar(i,   j,   k-1, soln)  + lvl(lev)%mgvar(i,   j,   k+1, soln)) * Lz - &
-                          & lvl(lev)%mgvar(i,   j,   k,   soln)  * L0
-                  endif
-               enddo
-            enddo
-         enddo
-      endif
-
-   end subroutine residual4
 
 !end module multigridexperimental

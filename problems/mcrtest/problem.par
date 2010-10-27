@@ -1,6 +1,6 @@
  $DOMAIN_SIZES
-    nxd = 100
-    nyd = 100
+    nxd = 128
+    nyd = 128
     nzd = 1
  /
 
@@ -22,11 +22,11 @@
  /
 
  $OUTPUT_CONTROL
-    dt_hdf  = 1.0
+    dt_hdf  = 5.0
     dt_plt  = 0.1
     dt_res  = 0.0
-    dt_log  = 0.00001
-    dt_tsl  = 0.00001
+    dt_log  = 0.000
+    dt_tsl  = 0.000
     vars(1) = 'dens'
     vars(2) = 'velx'
     vars(3) = 'vely'
@@ -36,7 +36,7 @@
     vars(7) = 'magy'
     vars(8) = 'magz'
     vars(9) = 'encr'
-   domain  = 'phys_domain'
+    domain  = 'phys_domain'
  /
 
  $BOUNDARIES
@@ -69,37 +69,50 @@
  /
 
  $COSMIC_RAYS
-    cfl_cr      =   0.9
-    cr_active   =   1.0
-    ncrn        =   9
-    gamma_crn(1)   =  1.333333
-    gamma_crn(2)   =  1.333333
-    gamma_crn(3)   =  1.333333
-    K_crn_paral(1) = 1000.0
-    K_crn_paral(2) = 1000.0
+    cfl_cr      = 0.9
+    cr_active   = 1.0
+    ncrn        = 7
+    gamma_crn(1)   = 1.333333
+    gamma_crn(2)   = 1.333333
+    gamma_crn(3)   = 1.333333
+    K_crn_paral(1) = 200.0 ! anisotropic
+    K_crn_paral(2) = 200.0
     K_crn_paral(3) = 0.0
-    K_crn_perp(1)  = 0
+    K_crn_perp(1)  = 0     ! isotropic
     K_crn_perp(2)  = 0
     K_crn_perp(3)  = 0
     ncre        = 0
+    use_split   = .false.
  /
 
+ $MULTIGRID_SOLVER
+    stdout = .true.
+    level_max = 5
+ /
+
+ $MULTIGRID_DIFFUSION
+!    diff_explicit = .true.
+    diff_theta     = 0.5
+    diff_tstep_fac = 91.0222223 !45.511112
+    norm_tol = 1e-3
+    nsmool = 4
+    nsmoob = 4
+    max_cycles = 50
+ /
 
  $PROBLEM_CONTROL
-    problem_name ='cr'
-    run_id =  'tst'
-    d0     = 1.0
+    problem_name = 'mcr'
+    run_id = 'tst'
+    d0     = 1.0e5
     p0     = 1.0
     bx0    = 5.0
     by0    = 5.0
-    bz0    = 0.0
+    bz0    = 5.0
     x0     = 0.0
     y0     = 0.0
     z0     = 0.0
-    r0     = 50.0
-    beta_cr= 1.0
-    amp_cr = 100.0
+    r0     = 64.0
+    beta_cr= 0.0
+    amp_cr = 1.0
+    norm_step = 1
  /
-
-
-

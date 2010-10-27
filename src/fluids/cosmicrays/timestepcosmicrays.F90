@@ -30,6 +30,7 @@
 !! \brief (MH) Computation of %timestep for diffusive Cosmic Ray transport
 !!
 !<
+
 module timestepcosmicrays
    implicit none
    private
@@ -40,11 +41,15 @@ module timestepcosmicrays
 contains
    ! Following subroutine evaluates some constants, there is no need to run it
    ! more than once, apart from wasting CPU cycles...
+
    subroutine timestep_crs
+
       use grid,           only: dxmn
-      use initcosmicrays, only: cfl_cr, K_crs_paral, K_crs_perp
+      use initcosmicrays, only: cfl_cr, K_crs_paral, K_crs_perp, use_split
+      use multigrid_diffusion, only: diff_explicit, diff_tstep_fac
 
       implicit none
+
       logical, save :: frun = .true.
 
       if (.not.frun) return
@@ -55,6 +60,9 @@ contains
          dt_crs = cfl_cr * 0.5/maxval(K_crs_paral+K_crs_perp)
          if (dxmn < sqrt(huge(1.0))/dt_crs) then
             dt_crs = dt_crs * dxmn**2
+#ifdef MULTIGRID
+            if (.not. (use_split .or. diff_explicit)) dt_crs = dt_crs * diff_tstep_fac ! enlarge timestep for non-explicit diffusion
+#endif /* MULTIGRID */
          else
             dt_crs = huge(1.0)
          endif

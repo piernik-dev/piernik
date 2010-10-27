@@ -92,6 +92,10 @@
  $MULTIGRID_SOLVER
     level_max = 3
     stdout    = .true.
+    dirty_debug = .true.
+ /
+
+ $MULTIGRID_GRAVITY
     norm_tol  = 1.e-6
     nsmool    = 8
     overrelax     =  1.0054
@@ -103,7 +107,4 @@
     overrelax_x = 1.0023
     overrelax_z = 1.000
     overrelax_y = 1.06
-    dirty_debug = .true.
  /
-
-

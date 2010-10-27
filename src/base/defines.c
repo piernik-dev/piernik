@@ -308,5 +308,17 @@
 */
 
 #if defined(MULTIGRID) && defined(POISSON_FFT)
-#error MULTIGRID and POISSON_FFT are not meant to work together
+#error MULTIGRID and POISSON_FFT are not meant to work together.
+#endif
+
+/*
+  Multigrid solver
+
+  at least one of { GRAV, COSM_RAYS }
+*/
+
+#ifdef MULTIGRID
+#  if !defined(GRAV) && !defined(COSM_RAYS)
+#    warning MULTIGRID defined but none of { GRAV, COSM_RAYS } are used.
+#  endif
 #endif

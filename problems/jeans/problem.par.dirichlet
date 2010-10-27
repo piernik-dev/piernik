@@ -95,11 +95,12 @@
 
  $MULTIGRID_SOLVER
     level_max = 3
-    nsmool = 8
     stdout = .true.
     gb_no_fft = .true.
+ /
+
+ $MULTIGRID_GRAVITY
+    nsmool = 8
     aux_par_I0 = 0
     grav_bnd_str = "dir"
  /
-
-

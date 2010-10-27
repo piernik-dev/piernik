@@ -1,6 +1,6 @@
  $DOMAIN_SIZES
-    nxd = 128
-    nyd = 128
+    nxd = 96
+    nyd = 96
     nzd = 1
  /
 
@@ -17,7 +17,7 @@
  /
 
  $END_CONTROL
-    tend   = 50.0
+    tend   = 100.0
     nend   = 10000
  /
 
@@ -68,26 +68,26 @@
  /
 
  $COSMIC_RAYS
-    cfl_cr      = 0.9
-    cr_active   = 1.0
-    ncrn        = 1
-    K_crn_paral = 200.0   ! anisotropic
-!    K_crn_perp  = 200.0 ! isotropic
+    cfl_cr      =   0.9
+    ncrn        =   1
+    K_crn_paral =   0.0
+    K_crn_perp  =   100.0
     use_split   = .false.
  /
 
  $MULTIGRID_SOLVER
     stdout = .true.
     level_max = 5
+    dirty_debug = .true.
  /
 
  $MULTIGRID_DIFFUSION
 !    diff_explicit = .true.
-    diff_theta     = 0.5
-    diff_tstep_fac = 91.0222223 !45.511112
-    norm_tol = 1e-3
+    diff_tstep_fac = 30.0
+    diff_theta     = 0.6
+    norm_tol = 1e-13
     nsmool = 4
-    nsmoob = 4
+    nsmoob = 1
     max_cycles = 50
  /
 
@@ -102,7 +102,7 @@
     x0     = 0.0
     y0     = 0.0
     z0     = 0.0
-    r0     = 64.0
+    r0     = 50.0
     beta_cr= 0.0
     amp_cr = 1.0
     norm_step = 1

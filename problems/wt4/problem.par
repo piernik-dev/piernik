@@ -106,8 +106,11 @@
  /
 
  $MULTIGRID_SOLVER
-    grav_bnd_str = "isolated"
     level_max    = 3
     stdout       = .true.
+ /
+
+ $MULTIGRID_GRAVITY
+    grav_bnd_str = "isolated"
     norm_tol     = 1.e-6
  /

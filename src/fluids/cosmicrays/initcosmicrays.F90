@@ -41,15 +41,16 @@ module initcosmicrays
    implicit none
 
    integer, parameter                  :: ncr_max = 9  !< maximum number of CR nuclear and electron components
+
+   ! namelist parameters
    integer                             :: ncrn         !< number of CR nuclear  components
    integer                             :: ncre         !< number of CR electron components
    integer                             :: ncrs         !< number of all CR components
-
    real                                :: cfl_cr       !< CFL number for diffusive CR transport
    real                                :: smallecr     !< floor value for CR energy density
    real                                :: cr_active    !< //parameter specifying whether CR pressure gradient is (when =1.) or isn't (when =0.) included in the gas equation of motion
    real                                :: cr_eff       !< conversion rate of SN explosion energy to CR energy (default = 0.1)
-
+   logical                             :: use_split    !< apply all diffusion operators at once (.false.) or use directional splittiong (.true.)
    real, dimension(ncr_max)            :: gamma_crn    !< array containing adiabatic indexes of all CR nuclear components
    real, dimension(ncr_max)            :: K_crn_paral  !< array containing parallel diffusion coefficients of all CR nuclear components
    real, dimension(ncr_max)            :: K_crn_perp   !< array containing perpendicular diffusion coefficients of all CR nuclear components
@@ -57,6 +58,7 @@ module initcosmicrays
    real, dimension(ncr_max)            :: K_cre_paral  !< array containing parallel diffusion coefficients of all CR electron components
    real, dimension(ncr_max)            :: K_cre_perp   !< array containing perpendicular diffusion coefficients of all CR electron components
 
+   ! public component data
    integer, allocatable, dimension(:)  :: iarr_crn     !< array of indexes pointing to all CR nuclear components
    integer, allocatable, dimension(:)  :: iarr_cre     !< array of indexes pointing to all CR electron components
    integer, allocatable, dimension(:)  :: iarr_crs     !< array of indexes pointing to all CR components
@@ -89,15 +91,15 @@ contains
    !<
    subroutine init_cosmicrays
       use diagnostics,     only: my_allocate
-      use dataio_public,   only: par_file, ierrh, die, namelist_errh, compare_namelist
-      use mpisetup,        only: proc, ibuff, rbuff, comm, ierr, MPI_DOUBLE_PRECISION, MPI_INTEGER, buffer_dim
+      use dataio_public,   only: par_file, ierrh, die, warn, namelist_errh, compare_namelist
+      use mpisetup,        only: proc, ibuff, rbuff, lbuff, comm, ierr, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL, buffer_dim
 
       implicit none
 
       integer                          :: nn
       integer                          :: ne
 
-      namelist /COSMIC_RAYS/ cfl_cr, smallecr, cr_active, cr_eff, &
+      namelist /COSMIC_RAYS/ cfl_cr, smallecr, cr_active, cr_eff, use_split, &
            &                 ncrn, gamma_crn, K_crn_paral, K_crn_perp, &
            &                 ncre, gamma_cre, K_cre_paral, K_cre_perp
 
@@ -109,6 +111,8 @@ contains
       ncrn       = 0
       ncre       = 0
 
+      use_split  = .true.
+
       gamma_crn(:)   = 4./3.
       K_crn_paral(:) = 0.0
       K_crn_perp(:)  = 0.0
@@ -116,9 +120,14 @@ contains
       K_cre_paral(:) = 0.0
       K_cre_perp(:)  = 0.0
 
-      if (proc == 0) then
+      if (proc == 0) diff_nml(COSMIC_RAYS)
+#ifndef MULTIGRID
+      if (.not. use_split) call warn("[initcosmicrays:init_cosmicrays] No multigrid solver compiled in: use_split reset to .true.")
+      use_split  = .true.
+#endif /* !MULTIGRID */
+      rbuff(:)   = HUGE(1.)                         ! mark unused entries to allow automatic determination of nn
 
-         diff_nml(COSMIC_RAYS)
+      if (proc == 0) then
 
          ibuff(1)   = ncrn
          ibuff(2)   = ncre
@@ -128,7 +137,9 @@ contains
          rbuff(3)   = cr_active
          rbuff(4)   = cr_eff
 
-         nn         = 4         ! WARNING: this must match the last rbuff() index above
+         lbuff(1)   = use_split
+
+         nn         = count(rbuff(:) < HUGE(1.))    ! this must match the last rbuff() index above
          ne         = nn + 3 * ncrn
          if (ne + 3 * ncre > ubound(rbuff, 1)) call die("[initcosmicrays:init_cosmicrays] rbuff size exceeded.")
 
@@ -148,6 +159,7 @@ contains
 
       call MPI_Bcast(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
       call MPI_Bcast(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+      call MPI_BCAST(lbuff,    buffer_dim, MPI_LOGICAL,          0, comm, ierr)
 
       if (proc /= 0) then
 
@@ -159,7 +171,9 @@ contains
          cr_active  = rbuff(3)
          cr_eff     = rbuff(4)
 
-         nn         = 4         ! WARNING: this must match the last rbuff() index above
+         use_split  = lbuff(1)
+
+         nn         = count(rbuff(:) < HUGE(1.))    ! this must match the last rbuff() index above
          ne         = nn + 3 * ncrn
 
          if (ncrn > 0) then
@@ -202,9 +216,7 @@ contains
 
    end subroutine init_cosmicrays
 
-   subroutine cosmicray_species
-
-   end subroutine cosmicray_species
+!
 
    subroutine cosmicray_index(nvar, cgrid)
       use types,           only: grid_container, var_numbers
@@ -250,6 +262,8 @@ contains
 
    end subroutine cosmicray_index
 
+!
+
    subroutine cleanup_cosmicrays
       use diagnostics, only: my_deallocate
       implicit none
@@ -265,6 +279,7 @@ contains
 
 #ifdef NEW_HDF5
    subroutine cr_add_hdf5(nvar_crs,cgrid)
+
       use types,     only: grid_container
       use arrays,    only: u
       use list_hdf5, only: add_lhdf5, lhdf5_info

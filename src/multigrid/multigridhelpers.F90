@@ -231,12 +231,12 @@ contains
 
       open(fu, file=filename, status="unknown")
 
-      write(fu, '("#",a3,2a4,a6,7a20,/)')"i", "j", "k", "level", "x(i)", "y(j)", "z(k)", "source", "solution", "defect", "correction"
+      write(fu, '("#",a3,2a4,a6,10a20,/)')"i", "j", "k", "level", "x(i)", "y(j)", "z(k)", "source", "solution", "defect", "correction", "bx", "by", "bz"
       do l = level_min, level_max
          do i = lvl(l)%is, lvl(l)%ie
             do j = lvl(l)%js, lvl(l)%je
                do k = lvl(l)%ks, lvl(l)%ke
-                  write(fu, '(3i4,i6,7es20.11e3)')i-lvl(l)%is+gb_cartmap(proc)%proc(XDIR)*lvl(l)%nxb, &
+                  write(fu, '(3i4,i6,10es20.11e3)')i-lvl(l)%is+gb_cartmap(proc)%proc(XDIR)*lvl(l)%nxb, &
                        &                          j-lvl(l)%js+gb_cartmap(proc)%proc(YDIR)*lvl(l)%nyb, &
                        &                          k-lvl(l)%ks+gb_cartmap(proc)%proc(ZDIR)*lvl(l)%nzb, &
                        &                          l, lvl(l)%x(i), lvl(l)%y(j), lvl(l)%z(k), lvl(l)%mgvar(i, j, k, 1:ngridvars)

@@ -92,16 +92,17 @@
  $MULTIGRID_SOLVER
     level_max = 3
     stdout    = .true.
+    dirty_debug = .true.
+ /
+
+ $MULTIGRID_GRAVITY
     norm_tol  = 1.e-6
     nsmool    = 8
     grav_bnd_str  = "isolated"
     max_cycles = 100
     vcycle_abort  = 100.
-    dirty_debug = .true.
     nsmoof = 2
     fft_full_relax = .true.
     lmax = 16
 !    use_point_monopole = .true.
  /
-
-

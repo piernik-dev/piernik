@@ -16,3 +16,6 @@
 
 /* gravity type choosing */
 #undef GRAV
+
+/* include multigrid for diffusion */
+#define MULTIGRID

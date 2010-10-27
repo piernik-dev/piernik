@@ -101,12 +101,15 @@
 
  $MULTIGRID_SOLVER
     level_max = 3
-    nsmool    = 4
 !    stdout    = .true.
+    dirty_debug = .true.
+ /
+
+ $MULTIGRID_GRAVITY
+    nsmool    = 4
 !    grav_bnd_str  = "isolated"
     grav_bnd_str = "periodic"
 !    prefer_rbgs_relaxation = .true.
-    dirty_debug = .true.
  /
 
 

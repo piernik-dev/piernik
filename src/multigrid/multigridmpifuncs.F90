@@ -145,33 +145,33 @@ contains
 !! \detail mpi_multigrid_bnd provides communication between local domains to couple solution on the global computational domain
 !!
 
-   subroutine mpi_multigrid_bnd(lev, iv, ng, extrapolate_bnd)
+   subroutine mpi_multigrid_bnd(lev, iv, ng, mode)
 
-      use dataio_public,         only: die
-      use mpisetup,              only: comm3d, ierr, MPI_STATUS_SIZE, MPI_REQUEST_NULL, &
-           &                           procxl, procxr, procyl, procyr, proczl, proczr, proc, &
-           &                           pxsize, pysize, pzsize
-      use multigridvars,         only: NDIM, lvl, XLO, XHI, YLO, YHI, ZLO, ZHI, is_external, ngridvars, &
-           &                           level_min, level_max, XDIR, YDIR, ZDIR, has_dir
+      use dataio_public,      only: die
+      use mpisetup,           only: comm3d, ierr, MPI_STATUS_SIZE, MPI_REQUEST_NULL, &
+           &                        procxl, procxr, procyl, procyr, proczl, proczr, proc, &
+           &                        pxsize, pysize, pzsize
+      use multigridvars,      only: NDIM, lvl, XLO, XHI, YLO, YHI, ZLO, ZHI, is_external, ngridvars, &
+           &                        level_min, level_max, XDIR, YDIR, ZDIR, has_dir
 
       implicit none
 
       integer, intent(in) :: lev             !< level which we are doing communication at
       integer, intent(in) :: iv              !< variable which we want to communicate
       integer, intent(in) :: ng              !< number of guardcells to exchange
-      logical, intent(in) :: extrapolate_bnd !< if not extrapolate, then just reflect
+      integer, intent(in) :: mode            !< what to do with external boundaries
 
       integer, parameter                        :: nreq = NDIM*4
       integer, dimension(nreq)                  :: req3d
       integer, dimension(MPI_STATUS_SIZE, nreq) :: status3d
 
-      if (iv < 1 .or. iv > ngridvars) call die("[multigrid:mpi_multigrid_bnd] Invalid variable index.")
-      if (lev < level_min .or. lev > level_max) call die("[multigrid:mpi_multigrid_bnd] Invalid level number.")
+      if (iv < 1 .or. iv > ngridvars) call die("[multigridmpifuncs:mpi_multigrid_bnd] Invalid variable index.")
+      if (lev < level_min .or. lev > level_max) call die("[multigridmpifuncs:mpi_multigrid_bnd] Invalid level number.")
 
-      if (ng > lvl(lev)%nb .or. ng <= 0) call die("[multigrid:mpi_multigrid_bnd] Too many or <0 guardcells requested.")
+      if (ng > lvl(lev)%nb .or. ng <= 0) call die("[multigridmpifuncs:mpi_multigrid_bnd] Too many or <0 guardcells requested.")
 
       ! First, set the external boundary, where appropriate
-      if (any(is_external(:))) call mpi_multigrid_ext_bnd(lev, iv, ng, extrapolate_bnd)
+      if (any(is_external(:))) call multigrid_ext_bnd(lev, iv, ng, mode)
 
       req3d(:) = MPI_REQUEST_NULL
 
@@ -223,10 +223,10 @@ contains
 !! has_dir() is not checked here because is_external() should be set to .false. on non-existing directions in 1D and 2D setups
 !!
 
-   subroutine mpi_multigrid_ext_bnd(lev, iv, ng, extrapolate_bnd)
+   subroutine multigrid_ext_bnd(lev, iv, ng, mode)
 
       use dataio_public,   only: die
-      use multigridvars,   only: grav_bnd, bnd_periodic, bnd_dirichlet, bnd_givenval, bnd_isolated, &
+      use multigridvars,   only: extbnd_donothing, extbnd_zero, extbnd_extrapolate, extbnd_mirror, extbnd_antimirror, &
            &                     XLO, XHI, YLO, YHI, ZLO, ZHI, lvl, is_external
 
       implicit none
@@ -234,35 +234,51 @@ contains
       integer, intent(in) :: lev             !< level which we are preparing the guardcells at
       integer, intent(in) :: iv              !< variable which we want to set
       integer, intent(in) :: ng              !< number of guardcells to set
-      logical, intent(in) :: extrapolate_bnd !< if not extrapolate, then just reflect
+      integer, intent(in) :: mode            !< what to do with external boundaries
 
       integer :: i
 
-      select case (grav_bnd)
-         case (bnd_periodic)
+      select case (mode)
+         case (extbnd_donothing)
             return
-         case (bnd_dirichlet, bnd_givenval, bnd_isolated)
+         case (extbnd_extrapolate)
             do i = 1, ng
-               if (extrapolate_bnd) then
-                  if (is_external(XLO)) lvl(lev)%mgvar(lvl(lev)%is-i, :, :, iv) = (1+i) * lvl(lev)%mgvar(lvl(lev)%is, :, :, iv) - i * lvl(lev)%mgvar(lvl(lev)%is+1, :, :, iv)
-                  if (is_external(XHI)) lvl(lev)%mgvar(lvl(lev)%ie+i, :, :, iv) = (1+i) * lvl(lev)%mgvar(lvl(lev)%ie, :, :, iv) - i * lvl(lev)%mgvar(lvl(lev)%ie-1, :, :, iv)
-                  if (is_external(YLO)) lvl(lev)%mgvar(:, lvl(lev)%js-i, :, iv) = (1+i) * lvl(lev)%mgvar(:, lvl(lev)%js, :, iv) - i * lvl(lev)%mgvar(:, lvl(lev)%js+1, :, iv)
-                  if (is_external(YHI)) lvl(lev)%mgvar(:, lvl(lev)%je+i, :, iv) = (1+i) * lvl(lev)%mgvar(:, lvl(lev)%je, :, iv) - i * lvl(lev)%mgvar(:, lvl(lev)%je-1, :, iv)
-                  if (is_external(ZLO)) lvl(lev)%mgvar(:, :, lvl(lev)%ks-i, iv) = (1+i) * lvl(lev)%mgvar(:, :, lvl(lev)%ks, iv) - i * lvl(lev)%mgvar(:, :, lvl(lev)%ks+1, iv)
-                  if (is_external(ZHI)) lvl(lev)%mgvar(:, :, lvl(lev)%ke+i, iv) = (1+i) * lvl(lev)%mgvar(:, :, lvl(lev)%ke, iv) - i * lvl(lev)%mgvar(:, :, lvl(lev)%ke-1, iv)
-               else
-                  if (is_external(XLO)) lvl(lev)%mgvar(lvl(lev)%is-i, :, :, iv) = - lvl(lev)%mgvar(lvl(lev)%is+i-1, :, :, iv)
-                  if (is_external(XHI)) lvl(lev)%mgvar(lvl(lev)%ie+i, :, :, iv) = - lvl(lev)%mgvar(lvl(lev)%ie-i+1, :, :, iv)
-                  if (is_external(YLO)) lvl(lev)%mgvar(:, lvl(lev)%js-i, :, iv) = - lvl(lev)%mgvar(:, lvl(lev)%js+i-1, :, iv)
-                  if (is_external(YHI)) lvl(lev)%mgvar(:, lvl(lev)%je+i, :, iv) = - lvl(lev)%mgvar(:, lvl(lev)%je-i+1, :, iv)
-                  if (is_external(ZLO)) lvl(lev)%mgvar(:, :, lvl(lev)%ks-i, iv) = - lvl(lev)%mgvar(:, :, lvl(lev)%ks+i-1, iv)
-                  if (is_external(ZHI)) lvl(lev)%mgvar(:, :, lvl(lev)%ke+i, iv) = - lvl(lev)%mgvar(:, :, lvl(lev)%ke-i+1, iv)
-               endif
+               if (is_external(XLO)) lvl(lev)%mgvar(lvl(lev)%is-i, :, :, iv) = (1+i) * lvl(lev)%mgvar(lvl(lev)%is, :, :, iv) - i * lvl(lev)%mgvar(lvl(lev)%is+1, :, :, iv)
+               if (is_external(XHI)) lvl(lev)%mgvar(lvl(lev)%ie+i, :, :, iv) = (1+i) * lvl(lev)%mgvar(lvl(lev)%ie, :, :, iv) - i * lvl(lev)%mgvar(lvl(lev)%ie-1, :, :, iv)
+               if (is_external(YLO)) lvl(lev)%mgvar(:, lvl(lev)%js-i, :, iv) = (1+i) * lvl(lev)%mgvar(:, lvl(lev)%js, :, iv) - i * lvl(lev)%mgvar(:, lvl(lev)%js+1, :, iv)
+               if (is_external(YHI)) lvl(lev)%mgvar(:, lvl(lev)%je+i, :, iv) = (1+i) * lvl(lev)%mgvar(:, lvl(lev)%je, :, iv) - i * lvl(lev)%mgvar(:, lvl(lev)%je-1, :, iv)
+               if (is_external(ZLO)) lvl(lev)%mgvar(:, :, lvl(lev)%ks-i, iv) = (1+i) * lvl(lev)%mgvar(:, :, lvl(lev)%ks, iv) - i * lvl(lev)%mgvar(:, :, lvl(lev)%ks+1, iv)
+               if (is_external(ZHI)) lvl(lev)%mgvar(:, :, lvl(lev)%ke+i, iv) = (1+i) * lvl(lev)%mgvar(:, :, lvl(lev)%ke, iv) - i * lvl(lev)%mgvar(:, :, lvl(lev)%ke-1, iv)
             enddo
-         case default
-            call die("[multigrid:mpi_multigrid_ext_bnd] boundary type not implemented")
-      end select
+         case (extbnd_zero)
+            if (is_external(XLO)) lvl(lev)%mgvar(:lvl(lev)%is, :, :, iv) = 0.
+            if (is_external(XHI)) lvl(lev)%mgvar(lvl(lev)%ie:, :, :, iv) = 0.
+            if (is_external(YLO)) lvl(lev)%mgvar(:, :lvl(lev)%js, :, iv) = 0.
+            if (is_external(YHI)) lvl(lev)%mgvar(:, lvl(lev)%je:, :, iv) = 0.
+            if (is_external(ZLO)) lvl(lev)%mgvar(:, :, :lvl(lev)%ks, iv) = 0.
+            if (is_external(ZHI)) lvl(lev)%mgvar(:, :, lvl(lev)%ke:, iv) = 0.
+         case (extbnd_mirror)
+            do i = 1, ng
+               if (is_external(XLO)) lvl(lev)%mgvar(lvl(lev)%is-i, :, :, iv) = lvl(lev)%mgvar(lvl(lev)%is+i-1, :, :, iv)
+               if (is_external(XHI)) lvl(lev)%mgvar(lvl(lev)%ie+i, :, :, iv) = lvl(lev)%mgvar(lvl(lev)%ie-i+1, :, :, iv)
+               if (is_external(YLO)) lvl(lev)%mgvar(:, lvl(lev)%js-i, :, iv) = lvl(lev)%mgvar(:, lvl(lev)%js+i-1, :, iv)
+               if (is_external(YHI)) lvl(lev)%mgvar(:, lvl(lev)%je+i, :, iv) = lvl(lev)%mgvar(:, lvl(lev)%je-i+1, :, iv)
+               if (is_external(ZLO)) lvl(lev)%mgvar(:, :, lvl(lev)%ks-i, iv) = lvl(lev)%mgvar(:, :, lvl(lev)%ks+i-1, iv)
+               if (is_external(ZHI)) lvl(lev)%mgvar(:, :, lvl(lev)%ke+i, iv) = lvl(lev)%mgvar(:, :, lvl(lev)%ke-i+1, iv)
+            enddo
+          case (extbnd_antimirror)
+            do i = 1, ng
+               if (is_external(XLO)) lvl(lev)%mgvar(lvl(lev)%is-i, :, :, iv) = - lvl(lev)%mgvar(lvl(lev)%is+i-1, :, :, iv)
+               if (is_external(XHI)) lvl(lev)%mgvar(lvl(lev)%ie+i, :, :, iv) = - lvl(lev)%mgvar(lvl(lev)%ie-i+1, :, :, iv)
+               if (is_external(YLO)) lvl(lev)%mgvar(:, lvl(lev)%js-i, :, iv) = - lvl(lev)%mgvar(:, lvl(lev)%js+i-1, :, iv)
+               if (is_external(YHI)) lvl(lev)%mgvar(:, lvl(lev)%je+i, :, iv) = - lvl(lev)%mgvar(:, lvl(lev)%je-i+1, :, iv)
+               if (is_external(ZLO)) lvl(lev)%mgvar(:, :, lvl(lev)%ks-i, iv) = - lvl(lev)%mgvar(:, :, lvl(lev)%ks+i-1, iv)
+               if (is_external(ZHI)) lvl(lev)%mgvar(:, :, lvl(lev)%ke+i, iv) = - lvl(lev)%mgvar(:, :, lvl(lev)%ke-i+1, iv)
+            enddo
+        case default
+            call die("[multigridmpifuncs:multigrid_ext_bnd] boundary type not implemented")
+         end select
 
-   end subroutine mpi_multigrid_ext_bnd
+   end subroutine multigrid_ext_bnd
 
 end module multigridmpifuncs

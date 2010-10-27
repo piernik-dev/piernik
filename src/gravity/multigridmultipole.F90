@@ -41,7 +41,7 @@ module multipole
 
    integer, parameter        :: INSIDE = 1, OUTSIDE = INSIDE + 1 !< distinction between interior and exterior multipole expansion
 
-   ! namelist parameters
+   ! namelist parameters for MULTIGRID_GRAVITY
    integer                   :: lmax                             !< Maximum l-order of multipole moments
    integer                   :: mmax                             !< Maximum m-order of multipole moments. Equal to lmax by default.
    integer                   :: ord_prolong_mpole                !< boundary prolongation operator order; allowed values are -2 .. 2
@@ -201,6 +201,7 @@ contains
 !!
 
    subroutine cleanup_multipole
+
       implicit none
 
       if  (allocated(rn))    deallocate(rn)
@@ -404,7 +405,8 @@ contains
       implicit none
 
       real, parameter :: a1 = -2., a2 = (-2. - a1)/3. ! interpolation parameters;   <---- a1=-2 => a2=0
-      ! a1==-2. is the simplest, low order choice, gives best agreement of total mass and CoM location when compared to 3-D integration
+      ! a1 = -2. is the simplest, low order choice, gives best agreement of total mass and CoM location when compared to 3-D integration
+      ! a1 = -1., a2 = -1./3. seems to do the best job, \todo: find out how and why
 
       if (is_external(XLO)) lmpole%bnd_x(             lmpole%js:lmpole%je, lmpole%ks:lmpole%ke, LOW) =    ( &
            &           a1 * lmpole%mgvar(lmpole%is,   lmpole%js:lmpole%je, lmpole%ks:lmpole%ke, solution) + &

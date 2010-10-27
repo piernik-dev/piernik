@@ -203,7 +203,9 @@ if( grep { /GRAV/ }  @d) {
 if( grep { /POISSON_FFT/ }  @d) {push(@addons, "../src/gravity/poissonsolver.F90");}
 if( grep { /PGPLOT/ }  @d) {push(@addons, "../src/vizualization/viz_pgplot.F90");}
 if( grep { /MULTIGRID/ } @d) {
-   @temp=<src/gravity/multigrid*.F90>;
+   @temp=<src/multigrid/multigrid*.F90>;
+   if( grep { /COSM_RAYS/} @d) {push(@temp, <src/fluids/cosmicrays/multigrid*.F90>)};
+   if( grep { /GRAV/ }  @d) {push(@temp, <src/gravity/multigrid*.F90>)};
    for (@temp) { s/src/\.\.\/src/;}
    push(@addons, @temp);
 }

@@ -33,110 +33,136 @@
 !>
 !! \brief Multigrid Poisson solver
 !<
+!! This module contains routines and variables specific for multigrid self-gravity solver.
+!!
+!! Some code pieces (low-level FFT routines) here are not really gravity-related,
+!! but these are not needed for implicit CR-diffusion solver either.
+!! These parts of code can be moved to other multigrid files when any other multigrid solver uses them.
+!!
 
-module multigrid
+module multigrid_gravity
 
-#ifdef MULTIGRID
+#if defined(MULTIGRID) && defined(GRAV)
 
-   use multigridvars    ! QA: ignoring only check
+   use mpisetup, only: cbuff_len
 
    implicit none
 
    private
-   public :: init_multigrid, cleanup_multigrid, multigrid_solve
+   public :: init_multigrid_grav, init_multigrid_grav_post, cleanup_multigrid_grav, multigrid_solve_grav
+
+   ! multigrid constants
+   integer, parameter :: fft_none=-1, fft_rcr=1, fft_dst=fft_rcr+1    !< type of FFT transform: none, full, discrete sine
+
+   ! namelist parameters
+   real               :: norm_tol                                     !< stop V-cycle iterations when the ratio of norms ||residual||/||source|| is below this value
+   real               :: overrelax                                    !< overrealaxation factor (if < 1. then works as underrelaxation), provided for tests
+   real               :: overrelax_x, overrelax_y, overrelax_z        !< overrealaxation factors for fine tuning convergence ratio when cell spacing is not equal in all 3 directions. Use with care, patience and lots of hope.
+   real               :: Jacobi_damp                                  !< omega factor for damped Jacobi relaxation. Jacobi_damp == 1 gives undamped method. Try 0.5 in 1D.
+   real               :: vcycle_abort                                 !< abort the V-cycle when lhs norm raises by this factor
+   real               :: L4_strength                                  !< strength of the 4th order terms in the Laplace operator; 0.: 2nd, 1.: 4th direct, 0.5: 4th integral
+   integer            :: max_cycles                                   !< Maximum allowed number of V-cycles
+   integer            :: nsmool                                       !< smoothing cycles per call
+   integer            :: nsmoob                                       !< smoothing cycles on base level when gb_no_fft = .true. (a convergence check would be much better)
+   integer            :: nsmoof                                       !< FFT iterations per call
+   integer            :: ord_laplacian                                !< Laplace operator order; allowed values are 2 (default) and 4 (experimental, not fully implemented)
+   integer            :: ord_time_extrap                              !< Order of temporal extrapolation for solution recycling; -1 means 0-guess, 2 does parabolic interpolation
+   logical            :: trust_fft_solution                           !< Bypass the V-cycle, when doing FFT on whole domain, make sure first that FFT is properly set up.
+   logical            :: gb_no_fft                                    !< Deny solving the base level with FFT. Can be very slow.
+   logical            :: prefer_rbgs_relaxation                       !< Prefer relaxation over FFT local solver. Typically faster.
+   ! \todo allow to perform one or more V-cycles with FFT method, the switch to the RBGS (may save one V-cycle in some cases)
+   logical            :: fft_full_relax                               !< Perform full or boundary relaxation after local FFT solve
+   logical            :: prefer_modified_norm                         !< Use norm of the unmodified source
+   logical            :: gb_solve_gather                              !< Prefer MPI_Gather over Send/Recv when solving global base level (looks a bit faster on small domains)
+   logical            :: fft_patient                                  !< Spend more time in init_multigrid to find faster fft plan
+   logical            :: hdf5levels                                   !< Dump mgvar to the HDF5 file?
+   character(len=cbuff_len) :: grav_bnd_str                           !< Type of gravitational boundary conditions.
+
+   ! boundaries
+   integer                     :: grav_bnd                            !< boundary type for computational domain
+   !integer                     :: grav_extbnd_mode                    !< external boundary mode
+
+   ! global base-level FFT solver
+   real,       dimension(:,:,:,:), allocatable :: gb_src_temp         !< Storage for collected base level if using gb_solve_gather
+
+   ! constants from fftw3.f
+   integer, parameter :: FFTW_MEASURE=0, FFTW_PATIENT=32, FFTW_ESTIMATE=64
+   integer, parameter :: FFTW_RODFT01=8, FFTW_RODFT10=9
+
+   integer            :: fftw_flags = FFTW_MEASURE                    !< or FFTW_PATIENT on request
+
+   ! solution recycling
+   integer, parameter :: nold_max=3                                   !< maximum implemented extrapolation order
+   integer :: nold                                                    !< number of old solutions kept for solution recycling
+   type old_soln                                                      !< container for an old solution with its timestamp
+      real, dimension(:,:,:), allocatable :: soln
+      real :: time
+   end type old_soln
+   type soln_history                                                  !< container for a set of several old potential solutions
+      type(old_soln), dimension(nold_max) :: old
+      integer :: last                                                 !< index of the last stored potential
+      logical :: valid                                                !< .true. when old(last) was properly initialized
+   end type soln_history
+   type(soln_history), target :: inner, outer                         !< storage for recycling the inner and outer potentials
 
 contains
 
 !!$ ============================================================================
 !!
-!! Initializations and cleanup
+!! Initialization
 !!
 
-   subroutine init_multigrid(cgrid)
+   subroutine init_multigrid_grav
 
-      use types,              only: grid_container
-      use arrays,             only: sgp
-      use constants,          only: pi, dpi
-      use mpisetup,           only: buffer_dim, comm, comm3d, ierr, proc, nproc, ndims, cbuff_len, &
+      use multigridvars,      only: bnd_periodic, bnd_dirichlet, bnd_isolated, bnd_invalid, correction, mg_nb, ngridvars
+      use multipole,          only: use_point_monopole, lmax, mmax, ord_prolong_mpole, coarsen_multipole, interp_pt2mom, interp_mom2pot
+      use mpisetup,           only: buffer_dim, comm, ierr, proc, ibuff, cbuff, rbuff, lbuff, &
            &                        bnd_xl_dom, bnd_xr_dom, bnd_yl_dom, bnd_yr_dom, bnd_zl_dom, bnd_zr_dom, &
-           &                        bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr, &
-           &                        ibuff, cbuff, rbuff, lbuff, &
-           &                        pxsize, pysize, pzsize, &
            &                        MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL
-      use grid,               only: xmin, xmax, ymin, ymax, zmin, zmax
-      use multigridhelpers,   only: mg_write_log, dirtyH, do_ascii_dump, dirty_debug, multidim_code_3D, &
-           &                        aux_par_I0, aux_par_I1, aux_par_I2, aux_par_R0, aux_par_R1, aux_par_R2
-#ifdef NEW_HDF5
-      use multigridio,        only: multigrid_add_hdf5
-#endif /* NEW_HDF5 */
-      use multipole,          only: init_multipole, use_point_monopole, lmax, mmax, ord_prolong_mpole, coarsen_multipole, interp_pt2mom, interp_mom2pot
-      use multigridmpifuncs,  only: mpi_multigrid_prep
-      use dataio_public,      only: msg, par_file, cwd, die, warn, namelist_errh, compare_namelist
+      use dataio_public,      only: par_file, ierrh, namelist_errh, compare_namelist, msg, die, warn, printinfo
 
       implicit none
 
-      type(grid_container), intent(in) :: cgrid                  !< copy of grid variables
-
-      integer                          :: ierrh, div, idx, i, j, nxc=1, nx
       logical, save                    :: frun = .true.          !< First run flag
-      real                             :: mb_alloc               !< Allocation counter
-      integer, dimension(6)            :: aerr                   !BEWARE: hardcoded magic integer. Update when you change number of simultaneous error checks
-      real, allocatable, dimension(:)  :: kx, ky, kz             !< FFT kernel directional components for convolution
-      type(soln_history), pointer      :: os
 
-      namelist /MULTIGRID_SOLVER/ norm_tol, overrelax, overrelax_x, overrelax_y, overrelax_z, Jacobi_damp, vcycle_abort, L4_strength, &
-           &                      level_max, coarsen_multipole, lmax, mmax, max_cycles, nsmool, nsmoob, nsmoof, &
-           &                      ord_laplacian, ord_prolong, ord_prolong_face, ord_prolong_mpole, ord_time_extrap, &
-           &                      use_point_monopole, trust_fft_solution, stdout, verbose_vcycle, gb_no_fft, prefer_rbgs_relaxation, &
-           &                      fft_full_relax, prefer_modified_norm, gb_solve_gather, fft_patient, do_ascii_dump, dirty_debug, hdf5levels, multidim_code_3D, &
-           &                      interp_pt2mom, interp_mom2pot, &
-           &                      grav_bnd_str, &
-           &                      aux_par_I0, aux_par_I1, aux_par_I2, aux_par_R0, aux_par_R1, aux_par_R2
+      namelist /MULTIGRID_GRAVITY/ norm_tol, vcycle_abort, max_cycles, nsmool, nsmoob, &
+           &                       overrelax, overrelax_x, overrelax_y, overrelax_z, Jacobi_damp, L4_strength, nsmoof, ord_laplacian, ord_time_extrap, &
+           &                       prefer_rbgs_relaxation, prefer_modified_norm, gb_no_fft, gb_solve_gather, fft_full_relax, fft_patient, trust_fft_solution, &
+           &                       coarsen_multipole, lmax, mmax, ord_prolong_mpole, use_point_monopole, interp_pt2mom, interp_mom2pot, &
+           &                       grav_bnd_str
 
-      if (.not.frun) call die("[multigrid:init_multigrid] Called more than once.")
+      if (.not.frun) call die("[multigrid_gravity:init_multigrid_grav] Called more than once.")
       frun = .false.
 
-      if (ndims /= NDIM) call die("[multigrid:init_multigrid] broken dimensional constants")
-
       ! Default values for namelist variables
-      norm_tol      = 1.e-6
-      overrelax     = 1.
-      overrelax_x   = 1.
-      overrelax_y   = 1.
-      overrelax_z   = 1.
-      Jacobi_damp   = 1.
-      vcycle_abort  = 2.
-      L4_strength   = 1.0
+      norm_tol               = 1.e-6
+      overrelax              = 1.
+      overrelax_x            = 1.
+      overrelax_y            = 1.
+      overrelax_z            = 1.
+      Jacobi_damp            = 1.
+      vcycle_abort           = 2.
+      L4_strength            = 1.0
 
-      level_max         = 1
-      coarsen_multipole = 1
-      lmax              = 16
-      mmax              = -1 ! will be automatically set to lmax unless explicitly limited in problem.par
-      max_cycles        = 20
-      nsmool            = 4
-      nsmoob            = 100
-      nsmoof            = 1
-      ord_laplacian     = 2
-      ord_prolong       = 0
-      ord_prolong_face  = 0
-      ord_prolong_mpole = -2
-      ord_time_extrap   = 1
+      coarsen_multipole      = 1
+      lmax                   = 16
+      mmax                   = -1 ! will be automatically set to lmax unless explicitly limited in problem.par
+      max_cycles             = 20
+      nsmool                 = 4
+      nsmoob                 = 100
+      nsmoof                 = 1
+      ord_laplacian          = 2
+      ord_prolong_mpole      = -2
+      ord_time_extrap        = 1
 
-      ! May all the logical parameters be .false. by default
       use_point_monopole     = .false.
       trust_fft_solution     = .false.
-      stdout                 = .false.
-      verbose_vcycle         = .false.
       gb_no_fft              = .false.
       prefer_rbgs_relaxation = .false.
       fft_full_relax         = .false.
       prefer_modified_norm   = .false.
       gb_solve_gather        = .false.
       fft_patient            = .false.
-      do_ascii_dump          = .false.
-      dirty_debug            = .false.
-      hdf5levels             = .false.
-      multidim_code_3D       = .false.
       interp_pt2mom          = .false.
       interp_mom2pot         = .false.
 
@@ -146,12 +172,9 @@ contains
          grav_bnd_str = "periodic"
       endif
 
-      aux_par_I0 = 0 ; aux_par_I1 = 0 ; aux_par_I2 = 0
-      aux_par_R0 = 0.; aux_par_R1 = 0.; aux_par_R2 = 0.
-
       if (proc == 0) then
 
-         diff_nml(MULTIGRID_SOLVER)
+         diff_nml(MULTIGRID_GRAVITY)
 
          rbuff(1) = norm_tol
          rbuff(2) = overrelax
@@ -162,46 +185,29 @@ contains
          rbuff(7) = vcycle_abort
          rbuff(8) = L4_strength
 
-         ibuff( 1) = level_max
-         ibuff( 2) = coarsen_multipole
-         ibuff( 3) = lmax
-         ibuff( 4) = mmax
-         ibuff( 5) = max_cycles
-         ibuff( 6) = nsmool
-         ibuff( 7) = nsmoob
-         ibuff( 8) = nsmoof
-         ibuff( 9) = ord_laplacian
-         ibuff(10) = ord_prolong
-         ibuff(11) = ord_prolong_face
-         ibuff(12) = ord_prolong_mpole
-         ibuff(13) = ord_time_extrap
+         ibuff( 1) = coarsen_multipole
+         ibuff( 2) = lmax
+         ibuff( 3) = mmax
+         ibuff( 4) = max_cycles
+         ibuff( 5) = nsmool
+         ibuff( 6) = nsmoob
+         ibuff( 7) = nsmoof
+         ibuff( 8) = ord_laplacian
+         ibuff( 9) = ord_prolong_mpole
+         ibuff(10) = ord_time_extrap
 
          lbuff( 1) = use_point_monopole
          lbuff( 2) = trust_fft_solution
-         lbuff( 3) = stdout
-         lbuff( 4) = verbose_vcycle
-         lbuff( 5) = gb_no_fft
-         lbuff( 6) = prefer_rbgs_relaxation
-         lbuff( 7) = fft_full_relax
-         lbuff( 8) = prefer_modified_norm
-         lbuff( 9) = gb_solve_gather
-         lbuff(10) = fft_patient
-         lbuff(11) = do_ascii_dump
-         lbuff(12) = dirty_debug
-         lbuff(13) = hdf5levels
-         lbuff(14) = multidim_code_3D
-         lbuff(15) = interp_pt2mom
-         lbuff(16) = interp_mom2pot
+         lbuff( 3) = gb_no_fft
+         lbuff( 4) = prefer_rbgs_relaxation
+         lbuff( 5) = fft_full_relax
+         lbuff( 6) = prefer_modified_norm
+         lbuff( 7) = gb_solve_gather
+         lbuff( 8) = fft_patient
+         lbuff( 9) = interp_pt2mom
+         lbuff(10) = interp_mom2pot
 
          cbuff(1) = grav_bnd_str
-
-         rbuff(buffer_dim  ) = aux_par_R0
-         rbuff(buffer_dim-1) = aux_par_R1
-         rbuff(buffer_dim-2) = aux_par_R2
-
-         ibuff(buffer_dim  ) = aux_par_I0
-         ibuff(buffer_dim-1) = aux_par_I1
-         ibuff(buffer_dim-2) = aux_par_I2
 
       endif
 
@@ -221,48 +227,33 @@ contains
          vcycle_abort   = rbuff(7)
          L4_strength    = rbuff(8)
 
-         level_max         = ibuff( 1)
-         coarsen_multipole = ibuff( 2)
-         lmax              = ibuff( 3)
-         mmax              = ibuff( 4)
-         max_cycles        = ibuff( 5)
-         nsmool            = ibuff( 6)
-         nsmoob            = ibuff( 7)
-         nsmoof            = ibuff( 8)
-         ord_laplacian     = ibuff( 9)
-         ord_prolong       = ibuff(10)
-         ord_prolong_face  = ibuff(11)
-         ord_prolong_mpole = ibuff(12)
-         ord_time_extrap   = ibuff(13)
+         coarsen_multipole = ibuff( 1)
+         lmax              = ibuff( 2)
+         mmax              = ibuff( 3)
+         max_cycles        = ibuff( 4)
+         nsmool            = ibuff( 5)
+         nsmoob            = ibuff( 6)
+         nsmoof            = ibuff( 7)
+         ord_laplacian     = ibuff( 8)
+         ord_prolong_mpole = ibuff( 9)
+         ord_time_extrap   = ibuff(10)
 
          use_point_monopole      = lbuff( 1)
          trust_fft_solution      = lbuff( 2)
-         stdout                  = lbuff( 3)
-         verbose_vcycle          = lbuff( 4)
-         gb_no_fft               = lbuff( 5)
-         prefer_rbgs_relaxation  = lbuff( 6)
-         fft_full_relax          = lbuff( 7)
-         prefer_modified_norm    = lbuff( 8)
-         gb_solve_gather         = lbuff( 9)
-         fft_patient             = lbuff(10)
-         do_ascii_dump           = lbuff(11)
-         dirty_debug             = lbuff(12)
-         hdf5levels              = lbuff(13)
-         multidim_code_3D        = lbuff(14)
-         interp_pt2mom           = lbuff(15)
-         interp_mom2pot          = lbuff(16)
+         gb_no_fft               = lbuff( 3)
+         prefer_rbgs_relaxation  = lbuff( 4)
+         fft_full_relax          = lbuff( 5)
+         prefer_modified_norm    = lbuff( 6)
+         gb_solve_gather         = lbuff( 7)
+         fft_patient             = lbuff( 8)
+         interp_pt2mom           = lbuff( 9)
+         interp_mom2pot          = lbuff(10)
 
          grav_bnd_str   = cbuff(1)(1:len(grav_bnd_str))
 
-         aux_par_R0     = rbuff(buffer_dim)
-         aux_par_R1     = rbuff(buffer_dim-1)
-         aux_par_R2     = rbuff(buffer_dim-2)
-
-         aux_par_I0     = ibuff(buffer_dim)
-         aux_par_I1     = ibuff(buffer_dim-1)
-         aux_par_I2     = ibuff(buffer_dim-2)
-
       endif
+
+      ngridvars = max(ngridvars, correction)
 
       ! boundaries
       grav_bnd = bnd_invalid
@@ -271,163 +262,82 @@ contains
             grav_bnd = bnd_isolated
          case ("periodic", "per")
             if (bnd_xl_dom /= 'per' .or. bnd_xr_dom /= 'per' .or. bnd_yl_dom /= 'per' .or. bnd_yr_dom /= 'per' .or. bnd_zl_dom /= 'per' .or. bnd_zr_dom /= 'per') &
-                 call die("[multigrid:init_multigrid] cannot use periodic boundaries for gravity on nonperiodic domain")
+                 call die("[multigrid_gravity:init_multigrid_grav] cannot use periodic boundaries for gravity on nonperiodic domain")
             grav_bnd = bnd_periodic
          case ("dirichlet", "dir")
             grav_bnd = bnd_dirichlet
          case default
-            call die("[multigrid:init_multigrid] Non-recognized boundary description.")
+            call die("[multigrid_gravity:init_multigrid_grav] Non-recognized boundary description.")
       end select
+!!$      select case (grav_bnd)
+!!$         case (bnd_periodic)
+!!$            grav_extbnd_mode = extbnd_donothing
+!!$         case (bnd_isolated, bnd_dirichlet, bnd_givenval)
+!!$            grav_extbnd_mode = extbnd_antimirror
+!!$         case default
+!!$            call die("[multigrid_gravity:init_multigrid_grav] Unsupported grav_bnd.")
+!!$            !grav_extbnd_mode = extbnd_donothing
+!!$      end select
 
       if (.not. (grav_bnd == bnd_periodic .or. grav_bnd == bnd_dirichlet .or. grav_bnd == bnd_isolated) .and. .not. gb_no_fft) then
          gb_no_fft = .true.
-         if (proc == 0) call warn("[multigrid:init_multigrid] Use of FFT not allowed by current boundary type/combination.")
+         if (proc == 0) call warn("[multigrid_gravity:init_multigrid_grav] Use of FFT not allowed by current boundary type/combination.")
       endif
 
       if (.not. prefer_rbgs_relaxation .and. any([ overrelax, overrelax_x, overrelax_y, overrelax_z ] /= 1.)) then
-         if (proc == 0) call warn("[multigrid:init_multigrid] Overrelaxation is disabled for FFT local solver.")
+         if (proc == 0) call warn("[multigrid_gravity:init_multigrid_grav] Overrelaxation is disabled for FFT local solver.")
          overrelax = 1.
          overrelax_x   = 1.
          overrelax_y   = 1.
          overrelax_z   = 1.
       endif
 
-      if ((Jacobi_damp <= 0. .or. Jacobi_damp>1.) .and. proc == 0) then
-         write(msg, '(a,g12.5,a)')"[multigrid:init_multigrid] Jacobi_damp = ",Jacobi_damp," is outside (0, 1] interval."
-         call warn(msg)
+      if (proc == 0) then
+         if ((Jacobi_damp <= 0. .or. Jacobi_damp>1.)) then
+            write(msg, '(a,g12.5,a)')"[multigrid_gravity:init_multigrid_grav] Jacobi_damp = ",Jacobi_damp," is outside (0, 1] interval."
+            call warn(msg)
+         endif
+         if (overrelax /= 1. .or. overrelax_x /= 1. .or. overrelax_y /= 1. .or. overrelax_z /= 1.) then
+            write(msg, '(a,f8.5,a,3f8.5,a)')"[multigrid_gravity:init_multigrid_grav] Overrelaxation factors: global = ", overrelax, ", directional = [", overrelax_x, overrelax_y, overrelax_z, "]"
+            call printinfo(msg, .true.)
+         endif
       endif
 
       if (fft_patient) fftw_flags = FFTW_PATIENT
 
       !! Sanity checks
-      if (max(abs(ord_laplacian), abs(ord_prolong)) > 2*mg_nb) call die("[multigrid:init_multigrid] not enough guardcells for given operator order")
-      if (allocated(lvl)) call die("[multigrid:init_multigrid] lvl already allocated")
-      allocate(lvl(level_gb:level_max), stat=aerr(1))                                 ! level_gb = level_min-1 contains some global base level data
-      if (aerr(1) /= 0) call die("[multigrid:init_multigrid] Allocation error: lvl")
-      mb_alloc = size(lvl)
+      if (abs(ord_laplacian) > 2*mg_nb) call die("[multigrid_gravity:init_multigrid_grav] not enough guardcells for given laplacian operator order")
 
-      has_dir(XDIR) = (cgrid%nxb > 1)
-      has_dir(YDIR) = (cgrid%nyb > 1)
-      has_dir(ZDIR) = (cgrid%nzb > 1)
-      eff_dim = count(has_dir(:))
-      if (eff_dim < 1 .or. eff_dim > 3) call die("[multigrid:init_multigrid] Unsupported number of dimensions.")
-      if (has_dir(XDIR)) D_x = 1
-      if (has_dir(YDIR)) D_y = 1
-      if (has_dir(ZDIR)) D_z = 1
+   end subroutine init_multigrid_grav
 
-      !! Initialization of all regular levels (all but global base)
-      !! Following loop gives us:
-      !!    * SHAPE (lvl(level_max  )) = (nxb  , nyb  , nzd  ) + (2*nb, 2*nb, 2*nb)
-      !!    * SHAPE (lvl(level_max-1)) = (nxb/2, nyb/2, nzd/2) + (2*nb, 2*nb, 2*nb)
-      !!    * SHAPE (lvl(level_max-2)) = (nxb/4, nyb/4, nzd/4) + (2*nb, 2*nb, 2*nb)
-      !!    * ...
-      !!    * SHAPE (lvl(1)) = (nxb/2**(level_max-1)0, nyb/2**(level_max-1), nzd/2**(level_max-1)) + (2*nb, 2*nb, 2*nb)
+!!$ ============================================================================
+!!
+!! Initialization - continued after allocation of everything interesting
+!!
+
+   subroutine init_multigrid_grav_post(cgrid, mb_alloc)
+
+      use types,              only: grid_container
+      use arrays,             only: sgp
+      use multigridvars,      only: lvl, roof, base, gb, gb_cartmap, level_gb, level_max, level_min, bnd_periodic, bnd_dirichlet, bnd_isolated, vcycle_factors, &
+           &                        is_external, has_dir, XDIR, YDIR, ZDIR, XLO, XHI, YLO, YHI, ZLO, ZHI
+      use mpisetup,           only: proc, nproc, pxsize, pysize, pzsize, bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr
+      use multigridhelpers,   only: dirty_debug, dirtyH
+      use constants,          only: pi, dpi
+      use dataio_public,      only: die, warn
+      use multipole,          only: init_multipole
+
+      implicit none
+
+      type(grid_container), intent(in) :: cgrid                  !< copy of grid variables
+      real, intent(inout)              :: mb_alloc               !< Allocation counter
+
+      type(soln_history), pointer      :: os
+      real, allocatable, dimension(:)  :: kx, ky, kz             !< FFT kernel directional components for convolution
+      integer, dimension(6)            :: aerr                   !BEWARE: hardcoded magic integer. Update when you change number of simultaneous error checks
+      integer :: i, j, idx
+
       do idx = level_max, level_min, -1
-
-         lvl(idx)%level = idx                                      ! level number
-
-         div = 2**(level_max -idx)                                 ! derefinement factor with respect to the top level
-         lvl(idx)%nb    = mg_nb                                    ! number of guardcells
-
-         do i = XDIR, ZDIR ! this can be rewritten as a three subroutine/function calls
-            select case (i)
-               case (XDIR)
-                  nxc = cgrid%nxb
-               case (YDIR)
-                  nxc = cgrid%nyb
-               case (ZDIR)
-                  nxc = cgrid%nzb
-            end select
-
-            nx = 1
-            if (has_dir(i)) then
-               nx = nxc / div ! number of interior cells in direction i
-               if (nx < lvl(idx)%nb) then
-                  write(msg, '(2(a,i1),a,i4,2(a,i2))')"[multigrid:init_multigrid] Number of guardcells exceeds number of interior cells in the ",i," direction, ", &
-                       lvl(idx)%nb, " > ", nx, " at level ", idx, ". You may try to set level_max <=", level_max-idx
-                  call die(msg)
-               endif
-               if (nx * div /= nxc) then
-                  write(msg, '(a,i1,a,3f6.1,2(a,i2))')"[multigrid:init_multigrid] Fractional number of cells in ",i," direction ", &
-                       nxc/real(div), " at level ", idx, ". You may try to set level_max <=", level_max-idx
-                  call die(msg)
-               endif
-            endif
-
-            select case (i)
-               case (XDIR)
-                  lvl(idx)%nxb = nx
-               case (YDIR)
-                  lvl(idx)%nyb = nx
-               case (ZDIR)
-                  lvl(idx)%nzb = nx
-            end select
-         enddo
-
-         lvl(idx)%dvol = 1.
-         lvl(idx)%vol  = 1.
-
-         ! /todo: check if these are correctly defined for multipole solver
-         lvl(idx)%dxy = 1.
-         lvl(idx)%dxz = 1.
-         lvl(idx)%dyz = 1.
-
-         if (has_dir(XDIR)) then
-            lvl(idx)%nx    = lvl(idx)%nxb + 2*lvl(idx)%nb             ! total number of cells in x, y and z directions
-            lvl(idx)%dx    = (cgrid%xmaxb-cgrid%xminb) / lvl(idx)%nxb ! cell size in x, y and z directions
-            lvl(idx)%is    = lvl(idx)%nb + 1                          ! lowest and highest indices for interior cells
-            lvl(idx)%ie    = lvl(idx)%nb + lvl(idx)%nxb
-            lvl(idx)%idx2  = 1. / lvl(idx)%dx**2                      ! auxiliary invariants
-            lvl(idx)%dvol  = lvl(idx)%dvol * lvl(idx)%dx              ! cell volume
-            lvl(idx)%vol   = lvl(idx)%vol * (cgrid%xmaxb-cgrid%xminb)
-            lvl(idx)%dxy   = lvl(idx)%dxy * lvl(idx)%dx
-            lvl(idx)%dxz   = lvl(idx)%dxz * lvl(idx)%dx
-         else
-            lvl(idx)%nx    = 1
-            lvl(idx)%dx    = huge(1.0)
-            lvl(idx)%is    = 1
-            lvl(idx)%ie    = 1
-            lvl(idx)%idx2  = 0.
-         endif
-
-         if (has_dir(YDIR)) then
-            lvl(idx)%ny    = lvl(idx)%nyb + 2*lvl(idx)%nb
-            lvl(idx)%dy    = (cgrid%ymaxb-cgrid%yminb) / lvl(idx)%nyb
-            lvl(idx)%js    = lvl(idx)%nb + 1
-            lvl(idx)%je    = lvl(idx)%nb + lvl(idx)%nyb
-            lvl(idx)%idy2  = 1. / lvl(idx)%dy**2
-            lvl(idx)%dvol  = lvl(idx)%dvol * lvl(idx)%dy
-            lvl(idx)%vol   = lvl(idx)%vol * (cgrid%ymaxb-cgrid%yminb)
-            lvl(idx)%dxy   = lvl(idx)%dxy * lvl(idx)%dy
-            lvl(idx)%dyz   = lvl(idx)%dyz * lvl(idx)%dy
-         else
-            lvl(idx)%ny    = 1
-            lvl(idx)%dy    = huge(1.0)
-            lvl(idx)%js    = 1
-            lvl(idx)%je    = 1
-            lvl(idx)%idy2  = 0.
-         endif
-
-         if (has_dir(ZDIR)) then
-            lvl(idx)%nz    = lvl(idx)%nzb + 2*lvl(idx)%nb
-            lvl(idx)%dz    = (cgrid%zmaxb-cgrid%zminb) / lvl(idx)%nzb
-            lvl(idx)%ks    = lvl(idx)%nb + 1
-            lvl(idx)%ke    = lvl(idx)%nb + lvl(idx)%nzb
-            lvl(idx)%idz2  = 1. / lvl(idx)%dz**2
-            lvl(idx)%dvol  = lvl(idx)%dvol * lvl(idx)%dz
-            lvl(idx)%vol   = lvl(idx)%vol * (cgrid%zmaxb-cgrid%zminb)
-            lvl(idx)%dxz   = lvl(idx)%dxz * lvl(idx)%dz
-            lvl(idx)%dyz   = lvl(idx)%dyz * lvl(idx)%dz
-         else
-            lvl(idx)%nz    = 1
-            lvl(idx)%dz    = huge(1.0)
-            lvl(idx)%ks    = 1
-            lvl(idx)%ke    = 1
-            lvl(idx)%idz2  = 0.
-         endif
-
-         lvl(idx)%dvol2 = lvl(idx)%dvol**2
-
          ! this should work correctly also when eff_dim < 3
          lvl(idx)%r  = overrelax   / 2.
          lvl(idx)%rx = lvl(idx)%dvol2 * lvl(idx)%idx2
@@ -442,65 +352,6 @@ contains
          ! BEWARE: some of the above invariants may be not optimally defined - the convergence ratio drops when dx /= dy or dy /= dz or dx /= dz
          ! and overrelaxation factors are required to get any convergence (often poor)
 
-         ! data storage
-         ! BEWARE prolong_x and %prolong_xy are used only with RBGS relaxation when ord_prolong /= 0
-         if ( allocated(lvl(idx)%prolong_x) .or. allocated(lvl(idx)%prolong_xy) .or. allocated(lvl(idx)%mgvar) .or. &
-              allocated(lvl(idx)%x) .or. allocated(lvl(idx)%y) .or. allocated(lvl(idx)%z) ) call die("[multigrid:init_multigrid] multigrid arrays already allocated")
-         allocate( lvl(idx)%mgvar     (lvl(idx)%nx, lvl(idx)%ny,                  lvl(idx)%nz,                  ngridvars), stat=aerr(1) )
-         allocate( lvl(idx)%prolong_x (lvl(idx)%nx, lvl(idx)%nyb/2+2*lvl(idx)%nb, lvl(idx)%nzb/2+2*lvl(idx)%nb),            stat=aerr(2) )
-         allocate( lvl(idx)%prolong_xy(lvl(idx)%nx, lvl(idx)%ny,                  lvl(idx)%nzb/2+2*lvl(idx)%nb),            stat=aerr(3) )
-         allocate( lvl(idx)%x         (lvl(idx)%nx),                                                                        stat=aerr(4) )
-         allocate( lvl(idx)%y         (lvl(idx)%ny),                                                                        stat=aerr(5) )
-         allocate( lvl(idx)%z         (lvl(idx)%nz),                                                                        stat=aerr(6) )
-         if (any(aerr(1:6) /= 0)) call die("[multigrid:init_multigrid] Allocation error: lvl(idx)%*")
-         if ( .not. allocated(lvl(idx)%prolong_x) .or. .not. allocated(lvl(idx)%prolong_xy) .or. .not. allocated(lvl(idx)%mgvar) .or. &
-              .not. allocated(lvl(idx)%x) .or. .not. allocated(lvl(idx)%y) .or. .not. allocated(lvl(idx)%z) ) &
-              call die("[multigrid:init_multigrid] some multigrid arrays not allocated")
-         mb_alloc  = mb_alloc + size(lvl(idx)%prolong_x) + size(lvl(idx)%prolong_xy) + size(lvl(idx)%mgvar) + size(lvl(idx)%x)  + size(lvl(idx)%y) + size(lvl(idx)%z)
-
-         if ( allocated(lvl(idx)%bnd_x) .or. allocated(lvl(idx)%bnd_y) .or. allocated(lvl(idx)%bnd_z)) call die("[multigrid:init_multigrid] multigrid boundary arrays already allocated")
-         allocate( lvl(idx)%bnd_x(lvl(idx)%js:lvl(idx)%je, lvl(idx)%ks:lvl(idx)%ke, LOW:HIGH), stat=aerr(1) )
-         allocate( lvl(idx)%bnd_y(lvl(idx)%is:lvl(idx)%ie, lvl(idx)%ks:lvl(idx)%ke, LOW:HIGH), stat=aerr(2) )
-         allocate( lvl(idx)%bnd_z(lvl(idx)%is:lvl(idx)%ie, lvl(idx)%js:lvl(idx)%je, LOW:HIGH), stat=aerr(3) )
-         if (any(aerr(1:3) /= 0)) call die("[multigrid:init_multigrid] Allocation error: lvl(idx)%bnd_?")
-         mb_alloc  = mb_alloc + size(lvl(idx)%bnd_x) + size(lvl(idx)%bnd_y) + size(lvl(idx)%bnd_z)
-
-         ! array initialization
-         if (dirty_debug) then
-            lvl(idx)%mgvar     (:, :, :, :) = dirtyH
-            lvl(idx)%prolong_x (:, :, :)    = dirtyH
-            lvl(idx)%prolong_xy(:, :, :)    = dirtyH
-            lvl(idx)%bnd_x     (:, :, :)    = dirtyH
-            lvl(idx)%bnd_y     (:, :, :)    = dirtyH
-            lvl(idx)%bnd_z     (:, :, :)    = dirtyH
-         else
-            lvl(idx)%mgvar     (:, :, :, :) = 0.0 ! should not be necessary if dirty_debug shows nothing suspicious
-         endif
-
-         if (has_dir(XDIR)) then
-            do j = 1, lvl(idx)%nx
-               lvl(idx)%x(j)  = cgrid%xminb + 0.5*lvl(idx)%dx + (j-lvl(idx)%nb-1)*lvl(idx)%dx
-            enddo
-         else
-            lvl(idx)%x(:) = (cgrid%xminb + cgrid%xmaxb) / 2.
-         endif
-
-         if (has_dir(YDIR)) then
-            do j = 1, lvl(idx)%ny
-               lvl(idx)%y(j)  = cgrid%yminb + 0.5*lvl(idx)%dy + (j-lvl(idx)%nb-1)*lvl(idx)%dy
-            enddo
-         else
-            lvl(idx)%y(:) = (cgrid%yminb + cgrid%ymaxb) / 2.
-         endif
-
-         if (has_dir(ZDIR)) then
-            do j = 1, lvl(idx)%nz
-               lvl(idx)%z(j)  = cgrid%zminb + 0.5*lvl(idx)%dz + (j-lvl(idx)%nb-1)*lvl(idx)%dz
-            enddo
-         else
-            lvl(idx)%z(:) = (cgrid%zminb + cgrid%zmaxb) / 2.
-         endif
-
          if (prefer_rbgs_relaxation) then
             lvl(idx)%fft_type = fft_none
          else if (grav_bnd == bnd_periodic .and. nproc == 1) then
@@ -511,15 +362,9 @@ contains
             lvl(idx)%fft_type = fft_none
          endif
 
-      enddo
-
-      ! handy shortcuts
-      base => lvl(level_min)
-      roof => lvl(level_max)
-      gb   => lvl(level_gb)
+     enddo
 
       ! solution recycling
-
       ord_time_extrap = min(nold_max-1, max(-1, ord_time_extrap))
       nold = ord_time_extrap + 1
       if (nold > 0) then
@@ -533,13 +378,13 @@ contains
             end select
             if (associated(os)) then
                do i = 1, nold
-                  if ( allocated(os%old(i)%soln) ) call die("[multigrid:init_multigrid] os%old(:)%soln arrays already allocated")
+                  if ( allocated(os%old(i)%soln) ) call die("[multigrid_gravity:init_multigrid_grav_post] os%old(:)%soln arrays already allocated")
                   allocate( os%old(i)%soln( roof%nx, roof%ny, roof%nz), stat=aerr(i) )
                   mb_alloc = mb_alloc + size(os%old(i)%soln)
                   os%old(i)%time= -HUGE(1.0)
                   if (dirty_debug) os%old(i)%soln(:, :, :) = dirtyH
                enddo
-               if (any(aerr(1:nold) /= 0)) call die("[multigrid:init_multigrid] Allocation error: os%old(:)%soln")
+               if (any(aerr(1:nold) /= 0)) call die("[multigrid_gravity:init_multigrid_grav_post] Allocation error: os%old(:)%soln")
                os%valid = .false.
                os%last  = 1
             endif
@@ -547,12 +392,6 @@ contains
       endif
 
       sgp(:,:,:) = 0. !Initialize all the guardcells, even those which does not impact the solution
-
-      call mpi_multigrid_prep
-
-#ifdef NEW_HDF5
-      call multigrid_add_hdf5
-#endif /* NEW_HDF5 */
 
       ! data related to local and global base-level FFT solver
       if (gb_no_fft) then
@@ -565,7 +404,7 @@ contains
                gb%fft_type = fft_dst
             case default
                gb%fft_type = fft_none
-               if (proc == 0) call warn("[multigrid:init_multigrid] gb_no_fft set but no suitable boundary conditions found. Reverting to RBGS relaxation.")
+               if (proc == 0) call warn("[multigrid_gravity:init_multigrid_grav_post] gb_no_fft set but no suitable boundary conditions found. Reverting to RBGS relaxation.")
          end select
       endif
 
@@ -585,9 +424,9 @@ contains
          gb%idz2  = base%idz2
 
          if (gb_solve_gather) then
-            if (allocated(gb_src_temp)) call die("[multigrid:init_multigrid] gb_src_temp already allocated")
+            if (allocated(gb_src_temp)) call die("[multigrid_gravity:init_multigrid_grav_post] gb_src_temp already allocated")
             allocate(gb_src_temp(base%nxb, base%nyb, base%nzb, 0:nproc-1), stat=aerr(1))
-            if (aerr(1) /= 0) call die("[multigrid:init_multigrid] Allocation error: gb_src_temp")
+            if (aerr(1) /= 0) call die("[multigrid_gravity:init_multigrid_grav_post] Allocation error: gb_src_temp")
             mb_alloc = mb_alloc + size(gb_src_temp)
          endif
 
@@ -607,13 +446,13 @@ contains
                case (fft_dst)
                   lvl(idx)%nxc = lvl(idx)%nxb
                case default
-                  call die("[multigrid:init_multigrid] Unknown FFT type.")
+                  call die("[multigrid_gravity:init_multigrid_grav_post] Unknown FFT type.")
             end select
 
-            if (allocated(lvl(idx)%Green3D) .or. allocated(lvl(idx)%src)) call die("[multigrid:init_multigrid] Green3D or src arrays already allocated")
+            if (allocated(lvl(idx)%Green3D) .or. allocated(lvl(idx)%src)) call die("[multigrid_gravity:init_multigrid_grav_post] Green3D or src arrays already allocated")
             allocate(lvl(idx)%Green3D(lvl(idx)%nxc, lvl(idx)%nyb, lvl(idx)%nzb), stat=aerr(1))
             allocate(lvl(idx)%src    (lvl(idx)%nxb, lvl(idx)%nyb, lvl(idx)%nzb), stat=aerr(2))
-            if (any(aerr(1:2) /= 0)) call die("[multigrid:init_multigrid] Allocation error: lvl(idx)%Green3D or lvl(idx)%src.")
+            if (any(aerr(1:2) /= 0)) call die("[multigrid_gravity:init_multigrid_grav_post] Allocation error: lvl(idx)%Green3D or lvl(idx)%src.")
             mb_alloc = mb_alloc + size(lvl(idx)%Green3D) + size(lvl(idx)%src)
 
             if (allocated(kx)) deallocate(kx)
@@ -622,7 +461,7 @@ contains
             allocate(kx(lvl(idx)%nxc), stat=aerr(1))
             allocate(ky(lvl(idx)%nyb), stat=aerr(2))
             allocate(kz(lvl(idx)%nzb), stat=aerr(3))
-            if (any(aerr(1:3) /= 0)) call die("[multigrid:init_multigrid] Allocation error: k[xyz]")
+            if (any(aerr(1:3) /= 0)) call die("[multigrid_gravity:init_multigrid_grav_post] Allocation error: k[xyz]")
 
             select case (lvl(idx)%fft_type)
 
@@ -630,9 +469,9 @@ contains
               ! call dfftw_execute(lvl(idx)%planf); lvl(idx)%fftr(:, :, :) = lvl(idx)%fftr(:, :, :) * lvl(idx)%fft_norm ; call dfftw_execute(lvl(idx)%plani)
 
                case (fft_rcr)
-                  if (allocated(lvl(idx)%fft)) call die("[multigrid:init_multigrid] fft or Green3D array already allocated")
+                  if (allocated(lvl(idx)%fft)) call die("[multigrid_gravity:init_multigrid_grav_post] fft or Green3D array already allocated")
                   allocate(lvl(idx)%fft(lvl(idx)%nxc, lvl(idx)%nyb, lvl(idx)%nzb), stat=aerr(1))
-                  if (aerr(1) /= 0) call die("[multigrid:init_multigrid] Allocation error: fft.")
+                  if (aerr(1) /= 0) call die("[multigrid_gravity:init_multigrid_grav_post] Allocation error: fft.")
                   mb_alloc  = mb_alloc + 2*size(lvl(idx)%fft)
 
                   lvl(idx)%fft_norm = 1. / real( lvl(idx)%nxb * lvl(idx)%nyb * lvl(idx)%nzb ) ! No 4 pi G factor here because the source was already multiplied by it
@@ -653,9 +492,9 @@ contains
 
                case (fft_dst)
 
-                  if (allocated(lvl(idx)%fftr)) call die("[multigrid:init_multigrid] fftr array already allocated")
+                  if (allocated(lvl(idx)%fftr)) call die("[multigrid_gravity:init_multigrid_grav_post] fftr array already allocated")
                   allocate(lvl(idx)%fftr(lvl(idx)%nxc, lvl(idx)%nyb, lvl(idx)%nzb), stat=aerr(1))
-                  if (aerr(1) /= 0) call die("[multigrid:init_multigrid] Allocation error: fftr.")
+                  if (aerr(1) /= 0) call die("[multigrid_gravity:init_multigrid_grav_post] Allocation error: fftr.")
                   mb_alloc  = mb_alloc + size(lvl(idx)%fftr)
 
                   lvl(idx)%fft_norm = 1. / (8. * real( lvl(idx)%nxb * lvl(idx)%nyb * lvl(idx)%nzb ))
@@ -668,7 +507,7 @@ contains
                        &                 FFTW_RODFT01, FFTW_RODFT01, FFTW_RODFT01, fftw_flags)
 
                case default
-                  call die("[multigrid:init_multigrid] Unknown FFT type.")
+                  call die("[multigrid_gravity:init_multigrid_grav_post] Unknown FFT type.")
             end select
 
             !// compute Green's function for 7-point 3D discrete laplacian
@@ -686,7 +525,7 @@ contains
       enddo
 
       if (roof%fft_type == fft_none .and. trust_fft_solution) then
-         if (proc == 0) call warn("[multigrid:init_multigrid] cannot trust FFT solution on the roof.")
+         if (proc == 0) call warn("[multigrid_gravity:init_multigrid_grav_post] cannot trust FFT solution on the roof.")
          trust_fft_solution = .false.
       endif
 
@@ -694,21 +533,8 @@ contains
       if (allocated(ky)) deallocate(ky)
       if (allocated(kz)) deallocate(kz)
 
-      ! construct global PE mapping
-      if (allocated(gb_cartmap)) call die("[multigrid:init_multigrid] gb_cartmap array already allocated")
-      allocate(gb_cartmap(0:nproc-1), stat=aerr(1))
-      if (aerr(1) /= 0) call die("[multigrid:init_multigrid] Allocation error: gb_cartmap")
-      mb_alloc = mb_alloc + size(gb_cartmap) !may be inaccurate
-      do j=0, nproc-1
-         call MPI_Cart_coords(comm3d, j, NDIM, gb_cartmap(j)%proc, ierr)
-         gb_cartmap(j)%lo(XDIR) = gb_cartmap(j)%proc(XDIR) * base%nxb + 1 ! starting x, y and z indices of interior cells from
-         gb_cartmap(j)%lo(YDIR) = gb_cartmap(j)%proc(YDIR) * base%nyb + 1 ! coarsest level on the gb_src array
-         gb_cartmap(j)%lo(ZDIR) = gb_cartmap(j)%proc(ZDIR) * base%nzb + 1
-         gb_cartmap(j)%up(XDIR) = gb_cartmap(j)%lo(XDIR)   + base%nxb - 1 ! ending indices
-         gb_cartmap(j)%up(YDIR) = gb_cartmap(j)%lo(YDIR)   + base%nyb - 1
-         gb_cartmap(j)%up(ZDIR) = gb_cartmap(j)%lo(ZDIR)   + base%nzb - 1
-      enddo
-
+!BEWARE: There is a conflict here, because gravity solver can treat some boundaries as external, even on periodic domain
+!        and it is undecided yet what diffusion solver requires from boundaries
       ! mark external faces
       is_external(:) = .false.
       if (grav_bnd /= bnd_periodic) then
@@ -735,56 +561,43 @@ contains
 
       if (grav_bnd == bnd_isolated) call init_multipole(mb_alloc,cgrid)
 
-      tot_ts = 0.
-
-      if (allocated(vcycle_factors)) deallocate(vcycle_factors)
-      allocate(vcycle_factors(0:max_cycles, 2), stat=aerr(1))
-      if (aerr(1) /= 0) call die("[multigrid:init_multigrid] Allocation error: vcycle_factors")
-      mb_alloc = mb_alloc + size(vcycle_factors)
-
-      cprefix=""
-
-      ! summary
-      if (proc == 0) then
-         write(msg, '(a,i2,a,3(i4,a),f6.1,a)')"[multigrid:init_multigrid] Initialized ", level_max, " levels, coarsest resolution [ ", &
-            lvl(1)%nxb, ",", lvl(1)%nyb, ",", lvl(1)%nzb, " ] per processor, allocated", mb_alloc*8./1048576., "MiB" ! sizeof(double)/2.**20
-         call mg_write_log(msg)
-         if (overrelax /= 1. .or. overrelax_x /= 1. .or. overrelax_y /= 1. .or. overrelax_z /= 1.) then
-            write(msg, '(a,f8.5,a,3f8.5,a)')"[multigrid:init_multigrid] Overrelaxation factors: global = ", overrelax, ", directional = [", overrelax_x, overrelax_y, overrelax_z, "]"
-            call mg_write_log(msg)
-         endif
+      if (allocated(vcycle_factors)) then
+         if (ubound(vcycle_factors, 1) < max_cycles) deallocate(vcycle_factors)
+      endif
+      if (.not. allocated(vcycle_factors)) then
+         allocate(vcycle_factors(0:max_cycles, 2), stat=aerr(1))
+         if (aerr(1) /= 0) call die("[multigrid_gravity:init_multigrid_grav_post] Allocation error: vcycle_factors")
+         mb_alloc = mb_alloc + size(vcycle_factors)
       endif
 
-   end subroutine init_multigrid
+   end subroutine init_multigrid_grav_post
 
 !!$ ============================================================================
 !!
-!! Deallocate, destroy, demolish ...
+!! Cleanup
 !!
 
-   subroutine cleanup_multigrid
+   subroutine cleanup_multigrid_grav
 
-      use mpisetup,           only: proc, nproc, MPI_DOUBLE_PRECISION, comm3d, ierr
-      use multigridhelpers,   only: mg_write_log
       use multipole,          only: cleanup_multipole
-      use dataio_public,      only: msg
+      use multigridvars, only: lvl, level_gb, level_max, vcycle_factors
 
       implicit none
 
-      integer :: i, ib
-      real, allocatable, dimension(:) :: all_ts
+      integer :: i
+
+      call cleanup_multipole
+
+      do i = 1, nold
+         if (allocated(inner%old(i)%soln)) deallocate(inner%old(i)%soln)
+         if (allocated(outer%old(i)%soln)) deallocate(outer%old(i)%soln)
+      enddo
+
+      if (allocated(gb_src_temp)) deallocate(gb_src_temp)
+      if (allocated(vcycle_factors)) deallocate(vcycle_factors)
 
       if (allocated(lvl)) then
-         do i=level_gb, level_max
-            if (allocated(lvl(i)%prolong_xy)) deallocate(lvl(i)%prolong_xy)
-            if (allocated(lvl(i)%prolong_x))  deallocate(lvl(i)%prolong_x)
-            if (allocated(lvl(i)%mgvar))      deallocate(lvl(i)%mgvar)
-            if (allocated(lvl(i)%x))          deallocate(lvl(i)%x)
-            if (allocated(lvl(i)%y))          deallocate(lvl(i)%y)
-            if (allocated(lvl(i)%z))          deallocate(lvl(i)%z)
-            if (allocated(lvl(i)%bnd_x))      deallocate(lvl(i)%bnd_x)
-            if (allocated(lvl(i)%bnd_y))      deallocate(lvl(i)%bnd_y)
-            if (allocated(lvl(i)%bnd_z))      deallocate(lvl(i)%bnd_z)
+         do i = level_gb, level_max
             if (allocated(lvl(i)%fft))        deallocate(lvl(i)%fft)
             if (allocated(lvl(i)%fftr))       deallocate(lvl(i)%fftr)
             if (allocated(lvl(i)%src))        deallocate(lvl(i)%src)
@@ -792,63 +605,12 @@ contains
 
             if (lvl(i)%planf /= 0) call dfftw_destroy_plan(lvl(i)%planf)
             if (lvl(i)%plani /= 0) call dfftw_destroy_plan(lvl(i)%plani)
-
-            if (i >= level_min) then
-               do ib = 1, lvl(i)%nb
-                  if (has_dir(XDIR)) then
-                     call MPI_Type_free(lvl(i)%MPI_YZ_LEFT_BND(ib), ierr)
-                     call MPI_Type_free(lvl(i)%MPI_YZ_LEFT_DOM(ib), ierr)
-                     call MPI_Type_free(lvl(i)%MPI_YZ_RIGHT_DOM(ib), ierr)
-                     call MPI_Type_free(lvl(i)%MPI_YZ_RIGHT_BND(ib), ierr)
-                  endif
-
-                  if (has_dir(YDIR)) then
-                     call MPI_Type_free(lvl(i)%MPI_XZ_LEFT_BND(ib), ierr)
-                     call MPI_Type_free(lvl(i)%MPI_XZ_LEFT_DOM(ib), ierr)
-                     call MPI_Type_free(lvl(i)%MPI_XZ_RIGHT_DOM(ib), ierr)
-                     call MPI_Type_free(lvl(i)%MPI_XZ_RIGHT_BND(ib), ierr)
-                  endif
-
-                  if (has_dir(ZDIR)) then
-                     call MPI_Type_free(lvl(i)%MPI_XY_LEFT_BND(ib), ierr)
-                     call MPI_Type_free(lvl(i)%MPI_XY_LEFT_DOM(ib), ierr)
-                     call MPI_Type_free(lvl(i)%MPI_XY_RIGHT_DOM(ib), ierr)
-                     call MPI_Type_free(lvl(i)%MPI_XY_RIGHT_BND(ib), ierr)
-                  endif
-
-               enddo
-            endif
-
          enddo
-         deallocate(lvl)
       endif
 
       call dfftw_cleanup
 
-      do i = 1, nold
-         if (allocated(inner%old(i)%soln)) deallocate(inner%old(i)%soln)
-         if (allocated(outer%old(i)%soln)) deallocate(outer%old(i)%soln)
-      enddo
-
-      if (allocated(gb_cartmap))  deallocate(gb_cartmap)
-      if (allocated(gb_src_temp)) deallocate(gb_src_temp)
-
-      call cleanup_multipole
-
-      if (allocated(all_ts)) deallocate(all_ts)
-      allocate(all_ts(0:nproc-1))
-
-      call MPI_Gather(tot_ts, 1, MPI_DOUBLE_PRECISION, all_ts, 1, MPI_DOUBLE_PRECISION, 0, comm3d, ierr)
-
-      if (proc == 0) then
-         write(msg, '(a,3(g11.4,a))')"[multigrid] Spent ", sum(all_ts)/nproc, " seconds in multigrid_solve (min= ",minval(all_ts)," max= ",maxval(all_ts),")."
-         call mg_write_log(msg, .false.)
-      endif
-
-      if (allocated(vcycle_factors)) deallocate(vcycle_factors)
-      if (allocated(all_ts)) deallocate(all_ts)
-
-   end subroutine cleanup_multigrid
+   end subroutine cleanup_multigrid_grav
 
 !!$ ============================================================================
 !!
@@ -866,6 +628,7 @@ contains
       use mpisetup,         only: proc, t
       use multigridhelpers, only: set_dirty, check_dirty, mg_write_log
       use dataio_public,    only: msg, die
+      use multigridvars,    only: lvl, roof, cprefix, level_min, level_max, stdout, solution
 
       implicit none
 
@@ -903,7 +666,7 @@ contains
       select case (ordt)
          case (:-1)
             if (proc == 0 .and. ord_time_extrap > -1) then
-               write(msg, '(3a)')"[multigrid:init_solution] Clearing ",trim(cprefix),"solution."
+               write(msg, '(3a)')"[multigrid_gravity:init_solution] Clearing ",trim(cprefix),"solution."
                call mg_write_log(msg, stdout)
             endif
             do l = level_min, level_max
@@ -913,14 +676,14 @@ contains
          case (0)
             roof%mgvar(:, :, :, solution) = history%old(p0)%soln(:, :, :)
             if (proc == 0 .and. ord_time_extrap > 0) then
-               write(msg, '(3a)')"[multigrid:init_solution] No extrapolation of ",trim(cprefix),"solution."
+               write(msg, '(3a)')"[multigrid_gravity:init_solution] No extrapolation of ",trim(cprefix),"solution."
                call mg_write_log(msg, stdout)
             endif
          case (1)
             dt_fac(1) = (t - history%old(p0)%time) / (history%old(p0)%time - history%old(p1)%time)
             roof%mgvar(:, :, :, solution) = (1. + dt_fac(1)) * history%old(p0)%soln(:, :, :) - dt_fac(1) *  history%old(p1)%soln(:, :, :)
             if (proc == 0 .and. ord_time_extrap > 1) then
-               write(msg, '(3a)')"[multigrid:init_solution] Linear extrapolation of ",trim(cprefix),"solution."
+               write(msg, '(3a)')"[multigrid_gravity:init_solution] Linear extrapolation of ",trim(cprefix),"solution."
                call mg_write_log(msg, stdout)
             endif
          case (2)
@@ -931,7 +694,7 @@ contains
                  &                          - dt_fac(1) * dt_fac(3) * history%old(p1)%soln(:, :, :) &
                  &                          - dt_fac(1) * dt_fac(2) * history%old(p2)%soln(:, :, :)
          case default
-            call die("[multigrid:init_solution] Extrapolation order not implemented")
+            call die("[multigrid_gravity:init_solution] Extrapolation order not implemented")
       end select
 
       call check_dirty(level_max, solution, "init_soln")
@@ -940,25 +703,9 @@ contains
 
 !!$ ============================================================================
 !!
-!! Solve finest level if allowed (typically on single CPU)
-!!
-
-   subroutine fft_solve_roof
-
-      implicit none
-
-      if (roof%fft_type == fft_none) return
-
-      roof%src(:, :, :) = roof%mgvar(roof%is:roof%ie, roof%js:roof%je, roof%ks:roof%ke, source)
-      call fft_convolve(roof%level)
-      roof%mgvar(roof%is:roof%ie, roof%js:roof%je, roof%ks:roof%ke, solution) = roof%src(:, :, :)
-
-   end subroutine fft_solve_roof
-
-!!$ ============================================================================
-!!
 !! Make a local copy of source (density) and multiply by 4 pi G
 !!
+
    subroutine init_source(dens)
 
 #ifdef JEANS_PROBLEM
@@ -969,6 +716,9 @@ contains
       use dataio_public,      only: die
       use multigridhelpers,   only: set_dirty, check_dirty
       use multigridbasefuncs, only: norm_sq, substract_average
+      use multigridvars,      only: roof, source, level_max, is_external, norm_rhs_orig, &
+           &                        XLO, XHI, YLO, YHI, ZLO, ZHI, LOW, HIGH, &
+           &                        bnd_periodic, bnd_dirichlet, bnd_givenval
 
       implicit none
 
@@ -978,9 +728,9 @@ contains
 
       if (present(dens)) then
          roof%mgvar(roof%is:roof%ie, roof%js:roof%je, roof%ks:roof%ke, source) = fpiG * dens(is:ie, js:je, ks:ke)
-         call norm_sq(source, norm_rhs_orig) ! The norm of corrected source will be calculated in multigrid_solve
+         call norm_sq(source, norm_rhs_orig) ! The norm of corrected source will be calculated in multigrid_solve_*
       else
-         if (grav_bnd /= bnd_givenval) call die("[multigrid:init_source] empty space allowed only for given value boundaries.")
+         if (grav_bnd /= bnd_givenval) call die("[multigrid_gravity:init_source] empty space allowed only for given value boundaries.")
          roof%mgvar(roof%is:roof%ie, roof%js:roof%je, roof%ks:roof%ke, source) = 0.
          norm_rhs_orig = 0.
       endif
@@ -1013,7 +763,7 @@ contains
                  &                roof%mgvar(roof%is:roof%ie, roof%js:roof%je,         roof%ke, source) - &
                  &                roof%bnd_z(roof%is:roof%ie, roof%js:roof%je,                  HIGH) * 2. * roof%idz2 / fpiG
          case default
-            call die("[multigrid:init_source] Unknown boundary type")
+            call die("[multigrid_gravity:init_source] Unknown boundary type")
       end select
 
       call check_dirty(level_max, source, "init_src")
@@ -1029,11 +779,11 @@ contains
 
       use mpisetup,          only: proc, t
       use multigridmpifuncs, only: mpi_multigrid_bnd
+      use multigridvars,     only: roof, bnd_isolated, bnd_givenval, solution, level_max, mg_nb, extbnd_extrapolate, extbnd_mirror
 
       implicit none
 
       type(soln_history), intent(inout) :: history !< inner or outer potential history to store recent solution
-      logical :: extrapolate_bnd
 
       if (nold <= 0) return
 
@@ -1048,25 +798,29 @@ contains
       history%valid = .true.
 
       ! Update guardcells of the solution before leaving. This can be done in higher-level routines that collect all the gravity contributions, but would be less safe.
-      ! Extrapolate isolated boundaries, remember that grav_bnd is messed up by multigrid_solve
-      extrapolate_bnd = (grav_bnd == bnd_isolated .or. grav_bnd == bnd_givenval)
-      call mpi_multigrid_bnd(level_max, solution, mg_nb, extrapolate_bnd)
+      ! Extrapolate isolated boundaries, remember that grav_bnd is messed up by multigrid_solve_*
+      if (grav_bnd == bnd_isolated .or. grav_bnd == bnd_givenval) then
+         call mpi_multigrid_bnd(level_max, solution, mg_nb, extbnd_extrapolate)
+      else
+         call mpi_multigrid_bnd(level_max, solution, mg_nb, extbnd_mirror)
+      endif
 
    end subroutine store_solution
 
 !!$ ============================================================================
 !!
-!! Multigrid driver. This is the only multigrid routine intended to be called from the gravity module.
+!! Multigrid gravity driver. This is the only multigrid routine intended to be called from the gravity module.
 !! This routine is also responsible for communicating the solution to the rest of world via sgp array.
 !!
 
-   subroutine multigrid_solve(dens)
+   subroutine multigrid_solve_grav(dens)
 
       use timer,         only: timer_
       use arrays,        only: sgp
       use grid,          only: is, ie, js, je, ks, ke
       use dataio_public, only: die
       use multipole,     only: multipole_solver
+      use multigridvars, only: roof, solution, bnd_isolated, bnd_dirichlet, bnd_givenval, has_dir, XDIR, YDIR, ZDIR, cprefix, mg_nb, tot_ts, ts
 
       implicit none
 
@@ -1079,18 +833,20 @@ contains
       if ( (has_dir(XDIR) .and. is-mg_nb <= 0) .or. &
            (has_dir(YDIR) .and. js-mg_nb <= 0) .or. &
            (has_dir(ZDIR) .and. ks-mg_nb <= 0) )    &
-           call die("[multigrid:multigrid_solve] Current implementation requires at least 2 guardcells in the hydro part")
+           call die("[multigrid_gravity:multigrid_solve_grav] Current implementation requires at least 2 guardcells in the hydro part")
 
       isolated = (grav_bnd == bnd_isolated) ! BEWARE: not elegant; probably there should be two global grav_bnd variables
 
       if (isolated) then
          grav_bnd = bnd_dirichlet
          cprefix = "i-"
+      else
+         cprefix = ""
       endif
 
       call init_source(dens)
 
-      call vcycle(inner)
+      call vcycle_hg(inner)
 
       ! /todo: move to multigridvars and init_multigrid
       if (has_dir(XDIR)) then
@@ -1126,16 +882,18 @@ contains
          call multipole_solver
          call init_source
 
-         call vcycle(outer)
+         call vcycle_hg(outer)
+
          sgp(isb:ieb, jsb:jeb, ksb:keb) = sgp(isb:ieb, jsb:jeb, ksb:keb) + roof%mgvar(:, :, :, solution)
 
          grav_bnd = bnd_isolated ! restore
+
       endif
 
       ts = timer_("multigrid")
       tot_ts = tot_ts + ts
 
-   end subroutine multigrid_solve
+   end subroutine multigrid_solve_grav
 
 !!$ ============================================================================
 !!
@@ -1143,13 +901,15 @@ contains
 !! For more difficult problems, like variable coefficient diffusion equation a more sophisticated V-cycle may be more effective.
 !!
 
-   subroutine vcycle(history)
+   subroutine vcycle_hg(history)
 
       use mpisetup,           only: proc, nproc, cbuff_len
       use timer,              only: timer_
       use multigridhelpers,   only: set_dirty, check_dirty, mg_write_log, brief_v_log, do_ascii_dump, numbered_ascii_dump
-      use multigridbasefuncs, only: norm_sq, residual, restrict_all, substract_average
+      use multigridbasefuncs, only: norm_sq, restrict_all, substract_average
       use dataio_public,      only: msg, die, warn
+      use multigridvars,      only: roof, base, source, solution, correction, defect, verbose_vcycle, vcycle_factors, cprefix, &
+           &                        bnd_givenval, bnd_periodic, norm_rhs_orig, level_min, level_max, stdout, tot_ts, ts
 
       implicit none
 
@@ -1173,7 +933,7 @@ contains
          call set_dirty(solution)
          call fft_solve_roof
          if (trust_fft_solution) then
-            write(msg, '(3a)')"[multigrid:vcycle] FFT solution trusted, skipping ", trim(cprefix), "cycle."
+            write(msg, '(3a)')"[multigrid_gravity:vcycle_hg] FFT solution trusted, skipping ", trim(cprefix), "cycle."
             call mg_write_log(msg, stdout)
             return
          endif
@@ -1186,7 +946,7 @@ contains
       else
          call norm_sq(source, norm_rhs)
          if (proc == 0 .and. norm_rhs<(1.-1e-6)*norm_rhs_orig) then
-            write(msg, '(a,f8.5)')"[multigrid:vcycle] norm_rhs/norm_rhs_orig = ", norm_rhs/norm_rhs_orig
+            write(msg, '(a,f8.5)')"[multigrid_gravity:vcycle_hg] norm_rhs/norm_rhs_orig = ", norm_rhs/norm_rhs_orig
             call mg_write_log(msg, stdout)
          endif
       endif
@@ -1195,7 +955,7 @@ contains
 
       if (norm_rhs == 0.) then ! empty domain => potential == 0.
          if (proc == 0) then
-            write(msg, '(a)')"[multigrid:vcycle] source == 0"
+            write(msg, '(a)')"[multigrid_gravity:vcycle_hg] source == 0"
             call mg_write_log(msg)
          endif
          return
@@ -1222,7 +982,7 @@ contains
             else
                fmt='(3a,i3,a,f12.9,a,es8.2,a,f7.3)'
             endif
-            write(msg, fmt)"[multigrid] ", trim(cprefix), "Cycle:", v, " norm/rhs= ", norm_lhs/norm_rhs, " reduction factor= ", norm_old/norm_lhs, "   dt_wall= ", ts
+            write(msg, fmt)"[multigrid_gravity] ", trim(cprefix), "Cycle:", v, " norm/rhs= ", norm_lhs/norm_rhs, " reduction factor= ", norm_old/norm_lhs, "   dt_wall= ", ts
             call mg_write_log(msg, stdout)
          endif
          vcycle_factors(v,:) = [ norm_old/norm_lhs, ts ]
@@ -1246,7 +1006,7 @@ contains
             else
                if (norm_lhs/norm_lowest > vcycle_abort) then
                   if (.not. verbose_vcycle) call brief_v_log(v, norm_lhs/norm_rhs)
-                  call die("[multigrid:vcycle] Serious nonconvergence detected.")
+                  call die("[multigrid_gravity:vcycle_hg] Serious nonconvergence detected.")
                   !In such case one may increase nsmool, decrease refinement depth or use FFT
                endif
             endif
@@ -1271,7 +1031,7 @@ contains
       enddo
 
       if (v > max_cycles) then
-         if (proc == 0 .and. norm_lhs/norm_rhs > norm_tol) call warn("[multigrid:vcycle] Not enough V-cycles to achieve convergence.")
+         if (proc == 0 .and. norm_lhs/norm_rhs > norm_tol) call warn("[multigrid_gravity:vcycle_hg] Not enough V-cycles to achieve convergence.")
          v = max_cycles
       endif
 
@@ -1281,7 +1041,209 @@ contains
 
       call store_solution(history)
 
-   end subroutine vcycle
+   end subroutine vcycle_hg
+
+!!$ ============================================================================
+!!
+!! Calculate the residuum for the Poisson equation.
+!!
+
+   subroutine residual(lev, src, soln, def)
+
+      use dataio_public,         only: die
+      use multigridvars,         only: level_min, level_max, ngridvars
+
+      implicit none
+
+      integer, intent(in) :: lev  !< level for which approximate the solution
+      integer, intent(in) :: src  !< index of source in lvl()%mgvar
+      integer, intent(in) :: soln !< index of solution in lvl()%mgvar
+      integer, intent(in) :: def  !< index of defect in lvl()%mgvar
+
+      if (any( [ src, soln, def ] <= 0) .or. any( [ src, soln, def ] > ngridvars)) call die("[multigrid_gravity:residual] Invalid variable index")
+      if (lev < level_min .or. lev > level_max) call die("[multigrid_gravity:residual] Invalid level number")
+
+      select case (ord_laplacian)
+      case (2)
+         call residual2(lev, src, soln, def)
+      case (4)
+         call residual4(lev, src, soln, def)
+      case default
+         call die("[multigrid_gravity:residual] The parameter 'ord_laplacian' must be 2 or 4")
+      end select
+
+   end subroutine residual
+
+!!$ ============================================================================
+!!
+!! 2nd order Laplacian
+!!
+
+   subroutine residual2(lev, src, soln, def)
+
+      use multigridhelpers,   only: multidim_code_3D
+      use multigridmpifuncs,  only: mpi_multigrid_bnd
+      use multigridvars,      only: lvl, eff_dim, NDIM, XDIR, YDIR, ZDIR, has_dir, extbnd_antimirror
+
+      implicit none
+
+      integer, intent(in) :: lev  !< level for which approximate the solution
+      integer, intent(in) :: src  !< index of source in lvl()%mgvar
+      integer, intent(in) :: soln !< index of solution in lvl()%mgvar
+      integer, intent(in) :: def  !< index of defect in lvl()%mgvar
+
+      real                :: L0, Lx, Ly, Lz
+      integer :: k
+
+      call mpi_multigrid_bnd(lev, soln, 1, extbnd_antimirror) ! no corners required
+
+      ! Coefficients for a simplest 3-point Laplacian operator: [ 1, -2, 1 ]
+      ! for 2D and 1D setups appropriate elements of [ Lx, Ly, Lz ] should be == 0.
+      Lx = lvl(lev)%idx2
+      Ly = lvl(lev)%idy2
+      Lz = lvl(lev)%idz2
+      L0 = -2. * (Lx + Ly + Lz)
+
+      ! Possible optimization candidate: reduce cache misses (secondary importance, cache-aware implementation required)
+      ! Explicit loop over k gives here better performance than array operation due to less cache misses (at least on 32^3 and 64^3 arrays)
+      if (eff_dim == NDIM .and. .not. multidim_code_3D) then
+         do k = lvl(lev)%ks, lvl(lev)%ke
+            lvl(       lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k,   def)        = &
+                 & lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k,   src)        - &
+                 ( lvl(lev)%mgvar(lvl(lev)%is-1:lvl(lev)%ie-1, lvl(lev)%js  :lvl(lev)%je,   k,   soln)       + &
+                 & lvl(lev)%mgvar(lvl(lev)%is+1:lvl(lev)%ie+1, lvl(lev)%js  :lvl(lev)%je,   k,   soln)) * Lx - &
+                 ( lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js-1:lvl(lev)%je-1, k,   soln)       + &
+                 & lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js+1:lvl(lev)%je+1, k,   soln)) * Ly - &
+                 ( lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k-1, soln)       + &
+                 & lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k+1, soln)) * Lz - &
+                 & lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k,   soln)  * L0
+         enddo
+      else
+         ! In 3D this implementation can give a bit more cache misses, few times more writes and significantly more instructions executed than monolithic 3D above
+         do k = lvl(lev)%ks, lvl(lev)%ke
+            lvl(       lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k,   def)   = &
+                 & lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k,   src)   - &
+                 & lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k,   soln)  * L0
+            if (has_dir(XDIR)) &
+                 & lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k,   def)   = &
+                 & lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k,   def)   - &
+                 ( lvl(lev)%mgvar(lvl(lev)%is-1:lvl(lev)%ie-1, lvl(lev)%js  :lvl(lev)%je,   k,   soln)  + &
+                 & lvl(lev)%mgvar(lvl(lev)%is+1:lvl(lev)%ie+1, lvl(lev)%js  :lvl(lev)%je,   k,   soln)) * Lx
+            if (has_dir(YDIR)) &
+                 & lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k,   def)   = &
+                 & lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k,   def)   - &
+                 ( lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js-1:lvl(lev)%je-1, k,   soln)  + &
+                 & lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js+1:lvl(lev)%je+1, k,   soln)) * Ly
+            if (has_dir(ZDIR)) &
+                 & lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k,   def)   = &
+                 & lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k,   def)   - &
+                 ( lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k-1, soln)  + &
+                 & lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k+1, soln)) * Lz
+         enddo
+      endif
+
+   end subroutine residual2
+
+!!$ ============================================================================
+!!
+!! 4th order Laplacian
+!!
+!! Significantly slows down convergence, does not seem to improve quality of solution in simple tests.
+!!
+!! L4 = [0, 1, -2, 1, 0] + L4_strength * 1./12. * [ -1, 4, -6, 4, -1 ]
+!! For integrated face fluxes in the 4th order Laplacian estimate set L4_strength = 0.5
+!! For simple 5-point L4 set L4_strength = 1.0
+!!
+!! There also exists more compact Mehrstellen scheme.
+!!
+
+   subroutine residual4(lev, src, soln, def)
+
+      use dataio_public,      only: die, warn
+      use mpisetup,           only: proc
+      use multigridmpifuncs,  only: mpi_multigrid_bnd
+      use multigridvars,      only: lvl, eff_dim, NDIM, bnd_givenval, extbnd_antimirror
+
+      implicit none
+
+      integer, intent(in) :: lev  !< level for which approximate the solution
+      integer, intent(in) :: src  !< index of source in lvl()%mgvar
+      integer, intent(in) :: soln !< index of solution in lvl()%mgvar
+      integer, intent(in) :: def  !< index of defect in lvl()%mgvar
+
+      real, parameter     :: L4_scaling = 1./12. ! with L4_strength = 1. this gives an L4 approximation for finite differences approach
+      integer, parameter  :: L2w = 2             ! #layers of boundary cells for L2 operator
+
+      real                :: c21, c41, c42 !, c20, c40
+      real                :: L0, Lx1, Lx2, Ly1, Ly2, Lz1, Lz2, Lx, Ly, Lz
+
+      logical, save       :: firstcall = .true.
+      integer             :: i, j, k
+
+      if (eff_dim<NDIM) call die("[multigrid_gravity:residual4] Only 3D is implemented")
+
+      if (firstcall) then
+         if (proc == 0) call warn("[multigrid_gravity:residual4] residual order 4 is experimental.")
+         firstcall = .false.
+      endif
+
+      call mpi_multigrid_bnd(lev, soln, 2, extbnd_antimirror) ! no corners required
+
+      c21 = 1.
+      c42 = - L4_scaling * L4_strength
+      c41 = c21 + 4. * L4_scaling * L4_strength
+      !c20 = -2.
+      !c40 = c20 - 6. * L4_strength
+
+      Lx1 = c41 * lvl(lev)%idx2
+      Ly1 = c41 * lvl(lev)%idy2
+      Lz1 = c41 * lvl(lev)%idz2
+      Lx2 = c42 * lvl(lev)%idx2
+      Ly2 = c42 * lvl(lev)%idy2
+      Lz2 = c42 * lvl(lev)%idz2
+!      L0  = c40 * (lvl(lev)%idx2 + lvl(lev)%idy2 + lvl(lev)%idz2 )
+      L0 = -2. * (Lx1 + Lx2 + Ly1 + Ly2 + Lz1 + Lz2)
+
+      lvl(     lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   lvl(lev)%ks  :lvl(lev)%ke,   def)        = &
+           lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   lvl(lev)%ks  :lvl(lev)%ke,   src)        - &
+           lvl(lev)%mgvar(lvl(lev)%is-2:lvl(lev)%ie-2, lvl(lev)%js  :lvl(lev)%je,   lvl(lev)%ks  :lvl(lev)%ke,   soln) * Lx2 - &
+           lvl(lev)%mgvar(lvl(lev)%is+2:lvl(lev)%ie+2, lvl(lev)%js  :lvl(lev)%je,   lvl(lev)%ks  :lvl(lev)%ke,   soln) * Lx2 - &
+           lvl(lev)%mgvar(lvl(lev)%is-1:lvl(lev)%ie-1, lvl(lev)%js  :lvl(lev)%je,   lvl(lev)%ks  :lvl(lev)%ke,   soln) * Lx1 - &
+           lvl(lev)%mgvar(lvl(lev)%is+1:lvl(lev)%ie+1, lvl(lev)%js  :lvl(lev)%je,   lvl(lev)%ks  :lvl(lev)%ke,   soln) * Lx1 - &
+           lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js-2:lvl(lev)%je-2, lvl(lev)%ks  :lvl(lev)%ke,   soln) * Ly2 - &
+           lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js+2:lvl(lev)%je+2, lvl(lev)%ks  :lvl(lev)%ke,   soln) * Ly2 - &
+           lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js-1:lvl(lev)%je-1, lvl(lev)%ks  :lvl(lev)%ke,   soln) * Ly1 - &
+           lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js+1:lvl(lev)%je+1, lvl(lev)%ks  :lvl(lev)%ke,   soln) * Ly1 - &
+           lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   lvl(lev)%ks-2:lvl(lev)%ke-2, soln) * Lz2 - &
+           lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   lvl(lev)%ks+2:lvl(lev)%ke+2, soln) * Lz2 - &
+           lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   lvl(lev)%ks-1:lvl(lev)%ke-1, soln) * Lz1 - &
+           lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   lvl(lev)%ks+1:lvl(lev)%ke+1, soln) * Lz1 - &
+           lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   lvl(lev)%ks  :lvl(lev)%ke,   soln) * L0
+
+      ! WARNING: not optimized
+      if (grav_bnd == bnd_givenval) then ! probably also in some other cases
+         ! Use L2 Laplacian in two layers of cells next to the boundary because L4 seems to be incompatible with present image mass construction
+         Lx = c21 * lvl(lev)%idx2
+         Ly = c21 * lvl(lev)%idy2
+         Lz = c21 * lvl(lev)%idz2
+         L0 = -2. * (Lx + Ly + Lz)
+
+         do k = lvl(lev)%ks, lvl(lev)%ke
+            do j = lvl(lev)%js, lvl(lev)%je
+               do i = lvl(lev)%is, lvl(lev)%ie
+                  if ( i<lvl(lev)%is+L2w .or. i>lvl(lev)%ie-L2w .or. j<lvl(lev)%js+L2w .or. j>lvl(lev)%je-L2w .or. k<lvl(lev)%ks+L2w .or. k>lvl(lev)%ke-L2w) then
+                     lvl(       lev)%mgvar(i,   j,   k,   def)   = lvl(lev)%mgvar(i,   j,   k,   src)        - &
+                          ( lvl(lev)%mgvar(i-1, j,   k,   soln)  + lvl(lev)%mgvar(i+1, j,   k,   soln)) * Lx - &
+                          ( lvl(lev)%mgvar(i,   j-1, k,   soln)  + lvl(lev)%mgvar(i,   j+1, k,   soln)) * Ly - &
+                          ( lvl(lev)%mgvar(i,   j,   k-1, soln)  + lvl(lev)%mgvar(i,   j,   k+1, soln)) * Lz - &
+                          & lvl(lev)%mgvar(i,   j,   k,   soln)  * L0
+                  endif
+               enddo
+            enddo
+         enddo
+      endif
+
+   end subroutine residual4
 
 !!$ ============================================================================
 !!
@@ -1293,6 +1255,7 @@ contains
       use dataio_public,      only: die
       use multigridhelpers,   only: check_dirty
       use multigridbasefuncs, only: prolong_level
+      use multigridvars,      only: level_min, level_max, ngridvars, correction
 
       implicit none
 
@@ -1300,8 +1263,8 @@ contains
       integer, intent(in) :: src  !< index of source in lvl()%mgvar
       integer, intent(in) :: soln !< index of solution in lvl()%mgvar
 
-      if (any( [ src, soln ] <= 0) .or. any( [ src, soln ] > ngridvars)) call die("[multigrid:approximate_solution] Invalid variable index.")
-      if (lev < level_min .or. lev > level_max) call die("[multigrid:approximate_solution] Invalid level number.")
+      if (any( [ src, soln ] <= 0) .or. any( [ src, soln ] > ngridvars)) call die("[multigrid_gravity:approximate_solution] Invalid variable index.")
+      if (lev < level_min .or. lev > level_max) call die("[multigrid_gravity:approximate_solution] Invalid level number.")
 
       call check_dirty(lev, src, "approx_soln src-")
 
@@ -1325,6 +1288,112 @@ contains
 
 !!$ ============================================================================
 !!
+!! Red-Black Gauss-Seidel relaxation.
+!!
+!! This is the most costly routine in a serial run. Try to find optimal values for nsmool and nsmoob.
+!! This routine also depends a lot on communication so it  may limit scalability of the multigrid.
+!! \todo Implement convergence check on base level (not very important since we have a FFT solver for base level)
+!!
+
+   subroutine approximate_solution_rbgs(lev, src, soln)
+
+      use multigridhelpers,   only: dirty_debug, check_dirty, multidim_code_3D, dirty_label
+      use multigridmpifuncs,  only: mpi_multigrid_bnd
+      use dataio_public,      only: die
+      use multigridvars,      only: lvl, level_min, eff_dim, NDIM, has_dir, XDIR, YDIR, ZDIR, extbnd_antimirror
+
+      implicit none
+
+      integer, intent(in) :: lev  !< level for which approximate the solution
+      integer, intent(in) :: src  !< index of source in lvl()%mgvar
+      integer, intent(in) :: soln !< index of solution in lvl()%mgvar
+
+      integer, parameter :: RED_BLACK = 2 !< the checkerboard requires two sweeps
+
+      integer :: n, j, k, i1, j1, k1, id, jd, kd
+      integer :: nsmoo
+
+      if (lev == level_min) then
+         nsmoo = nsmoob
+      else
+         nsmoo = nsmool
+      endif
+
+      do n = 1, RED_BLACK*nsmoo
+         call mpi_multigrid_bnd(lev, soln, 1, extbnd_antimirror) ! no corners are required here
+
+         if (dirty_debug) then
+            write(dirty_label, '(a,i5)')"relax soln- smoo=", n
+            call check_dirty(lev, soln, dirty_label)
+         endif
+
+         ! Possible optimization: this is the most costly part of the RBGS relaxation (instruction count, read and write data, L1 and L2 read cache miss)
+         ! do n = 1, nsmoo
+         !    call mpi_multigrid_bnd(lev, soln, 1, extbnd_antimirror)
+         !    relax single layer of red cells at all faces
+         !    call mpi_multigrid_bnd(lev, soln, 1, extbnd_antimirror)
+         !    relax interior cells (except for single layer of cells at all faces), first red, then 1-cell behind black one.
+         !    relax single layer of black cells at all faces
+         ! enddo
+
+         ! with explicit outer loops it is easier to describe a 3-D checkerboard :-)
+
+         if (eff_dim==NDIM .and. .not. multidim_code_3D) then
+            do k = lvl(lev)%ks, lvl(lev)%ke
+               do j = lvl(lev)%js, lvl(lev)%je
+                  i1 = lvl(lev)%is + mod(n+j+k, RED_BLACK)
+                  lvl(          lev          )%mgvar(i1  :lvl(lev)%ie  :2, j,   k,   soln) = &
+                       lvl(lev)%rx * (lvl(lev)%mgvar(i1-1:lvl(lev)%ie-1:2, j,   k,   soln) + lvl(lev)%mgvar(i1+1:lvl(lev)%ie+1:2, j,   k,   soln)) + &
+                       lvl(lev)%ry * (lvl(lev)%mgvar(i1  :lvl(lev)%ie  :2, j-1, k,   soln) + lvl(lev)%mgvar(i1:  lvl(lev)%ie:  2, j+1, k,   soln)) + &
+                       lvl(lev)%rz * (lvl(lev)%mgvar(i1  :lvl(lev)%ie  :2, j,   k-1, soln) + lvl(lev)%mgvar(i1:  lvl(lev)%ie:  2, j,   k+1, soln)) - &
+                       lvl(lev)%r  *  lvl(lev)%mgvar(i1  :lvl(lev)%ie  :2, j,   k,   src)
+               enddo
+            enddo
+         else
+            ! In 3D this variant significantly increases instruction count and also some data read
+            i1 = lvl(lev)%is; id = 1 ! mv to multigridvars, init_multigrid
+            j1 = lvl(lev)%js; jd = 1
+            k1 = lvl(lev)%ks; kd = 1
+            if (has_dir(XDIR)) then
+               id = RED_BLACK
+            else if (has_dir(YDIR)) then
+               jd = RED_BLACK
+            else if (has_dir(ZDIR)) then
+               kd = RED_BLACK
+            endif
+
+            if (kd == RED_BLACK) k1 = lvl(lev)%ks + mod(n, RED_BLACK)
+            do k = k1, lvl(lev)%ke, kd
+               if (jd == RED_BLACK) j1 = lvl(lev)%js + mod(n+k, RED_BLACK)
+               do j = j1, lvl(lev)%je, jd
+                  if (id == RED_BLACK) i1 = lvl(lev)%is + mod(n+j+k, RED_BLACK)
+                  lvl(      lev)%mgvar(i1  :lvl(lev)%ie  :id, j,   k,   soln) = &
+                       & (1. - Jacobi_damp)* lvl(lev)%mgvar(i1  :lvl(lev)%ie  :id, j,   k,   soln) &
+                       &     - Jacobi_damp * lvl(lev)%mgvar(i1  :lvl(lev)%ie  :id, j,   k,   src)  * lvl(lev)%r
+                  if (has_dir(XDIR)) &
+                       lvl (lev)%mgvar(i1  :lvl(lev)%ie  :id, j,   k,   soln) = lvl(lev)%mgvar(i1:  lvl(lev)%ie:  id, j,   k,   soln)  + &
+                       &       Jacobi_damp *(lvl(lev)%mgvar(i1-1:lvl(lev)%ie-1:id, j,   k,   soln) + lvl(lev)%mgvar(i1+1:lvl(lev)%ie+1:id, j,   k,   soln)) * lvl(lev)%rx
+                  if (has_dir(YDIR)) &
+                       lvl (lev)%mgvar(i1  :lvl(lev)%ie  :id, j,   k,   soln) = lvl(lev)%mgvar(i1:  lvl(lev)%ie:  id, j,   k,   soln)  + &
+                       &       Jacobi_damp *(lvl(lev)%mgvar(i1  :lvl(lev)%ie  :id, j-1, k,   soln) + lvl(lev)%mgvar(i1:  lvl(lev)%ie:  id, j+1, k,   soln)) * lvl(lev)%ry
+                  if (has_dir(ZDIR)) &
+                       lvl (lev)%mgvar(i1  :lvl(lev)%ie  :id, j,   k,   soln) = lvl(lev)%mgvar(i1:  lvl(lev)%ie:  id, j,   k,   soln)  + &
+                       &       Jacobi_damp *(lvl(lev)%mgvar(i1  :lvl(lev)%ie  :id, j,   k-1, soln) + lvl(lev)%mgvar(i1:  lvl(lev)%ie:  id, j,   k+1, soln)) * lvl(lev)%rz
+               enddo
+            enddo
+         endif
+
+         if (dirty_debug) then
+            write(dirty_label, '(a,i5)')"relax soln+ smoo=", n
+            call check_dirty(lev, soln, dirty_label)
+         endif
+
+      enddo
+
+   end subroutine approximate_solution_rbgs
+
+!!$ ============================================================================
+!!
 !! FFT given-boundary Poisson solver applied to local domain. Should require less communication than RBGS implementation.
 !!
 !! \todo test a configuration with wider area being subjected to FFT (sizes would no longer be 2**n) to avoid the need of relaxation
@@ -1336,6 +1405,7 @@ contains
       use mpisetup,           only: nproc
       use multigridhelpers,   only: dirty_debug, check_dirty, dirtyL, multidim_code_3D
       use multigridmpifuncs,  only: mpi_multigrid_bnd
+      use multigridvars,      only: lvl, LOW, HIGH, D_x, D_y, D_z, NDIM, eff_dim, has_dir, XDIR, YDIR, ZDIR, extbnd_antimirror
 
       implicit none
 
@@ -1352,7 +1422,7 @@ contains
             if (nf == 1) then
                call make_face_boundaries(lev, soln)
             else
-               call mpi_multigrid_bnd(lev, soln, 1, .false.)
+               call mpi_multigrid_bnd(lev, soln, 1, extbnd_antimirror)
                if (has_dir(XDIR)) then
                   lvl(lev)%bnd_x(:, :, LOW)  = 0.5* sum (lvl(lev)%mgvar(lvl(lev)%is-1:lvl(lev)%is, lvl(lev)%js:lvl(lev)%je, lvl(lev)%ks:lvl(lev)%ke, soln), 1)
                   lvl(lev)%bnd_x(:, :, HIGH) = 0.5* sum (lvl(lev)%mgvar(lvl(lev)%ie:lvl(lev)%ie+1, lvl(lev)%js:lvl(lev)%je, lvl(lev)%ks:lvl(lev)%ke, soln), 1)
@@ -1397,7 +1467,7 @@ contains
 
          !relax the boundaries
          do n = 1, nsmool
-            call mpi_multigrid_bnd(lev, soln, 1, .false.)
+            call mpi_multigrid_bnd(lev, soln, 1, extbnd_antimirror)
             ! Possible optimization: This is a quite costly part of the local FFT solver
             if (fft_full_relax) then
                if (eff_dim == NDIM .and. .not. multidim_code_3D) then
@@ -1411,7 +1481,7 @@ contains
                        lvl(lev)%r  *  lvl(lev)%mgvar(lvl(lev)%is:lvl(lev)%ie,     lvl(lev)%js:lvl(lev)%je,     lvl(lev)%ks:lvl(lev)%ke,     src)
                else
 
-                  call die("[multigrid:approximate_solution_fft] fft_full_relax is allowed only for 3D at the moment")
+                  call die("[multigrid_gravity:approximate_solution_fft] fft_full_relax is allowed only for 3D at the moment")
 
                   ! An additional array (lvl(lev)%src would be good enough) is required here to assemble partial results or use red-black passes
                   lvl                    (lev)%mgvar(lvl(lev)%is:lvl(lev)%ie,     lvl(lev)%js:lvl(lev)%je,     lvl(lev)%ks:lvl(lev)%ke,     soln)  = &
@@ -1513,8 +1583,9 @@ contains
    subroutine make_face_boundaries(lev, soln)
 
       use mpisetup,           only: nproc
-      use multigridbasefuncs, only: zero_boundaries
+      use multigridbasefuncs, only: zero_boundaries, prolong_faces
       use dataio_public,      only: warn
+      use multigridvars,      only: bnd_givenval, bnd_periodic, level_min
 
       implicit none
 
@@ -1536,224 +1607,11 @@ contains
 
 !!$ ============================================================================
 !!
-!! Prolong solution data at level (lev-1) to faces at level lev
-!!
-
-   subroutine prolong_faces(lev, soln)
-
-      use mpisetup,           only: proc
-      use dataio_public,      only: die, warn
-      use multigridhelpers,   only: check_dirty
-      use multigridmpifuncs,  only: mpi_multigrid_bnd
-
-      implicit none
-
-      integer, intent(in) :: lev  !< level for which approximate the solution
-      integer, intent(in) :: soln !< index of solution in lvl()%mgvar
-
-      integer                       :: i, j, k
-      type(plvl), pointer           :: coarse, fine
-      real, parameter, dimension(3) :: p0  = [ 0.,       1.,     0.     ] ! injection
-      real, parameter, dimension(3) :: p1  = [ 0.,       3./4.,  1./4.  ] ! 1D linear prolongation stencil
-      real, parameter, dimension(3) :: p2i = [ -1./8.,   1.,     1./8.  ] ! 1D integral cubic prolongation stencil
-      real, parameter, dimension(3) :: p2d = [ -3./32., 30./32., 5./32. ] ! 1D direct cubic prolongation stencil
-      real, dimension(-1:1)         :: p
-      real, dimension(-1:1,-1:1,2,2):: pp   ! 2D prolongation stencil
-      real                          :: pp_norm
-
-      if (lev < level_min .or. lev > level_max) call die("[multigrid:prolong_faces] Invalid level")
-
-      if (lev == level_min) then
-         call warn("[multigrid:prolong_faces] Cannot prolong anything to base level")
-         return
-      endif
-
-      select case (ord_prolong_face)
-         case (0)
-            p(:) = p0(:)
-         case (1,-1)
-            p(:) = p1(:)
-         case (2)
-            p(:) = p2i(:)
-         case (-2)
-            p(:) = p2d(:)
-         case default
-            p(:) = p0(:)
-      end select
-
-      do i = -1, 1
-         pp(i,:,1,1) = 0.5*p( i)*p(:)       ! 0.5 because of face averaging
-         pp(i,:,1,2) = 0.5*p( i)*p(1:-1:-1) ! or use matmul()
-         pp(i,:,2,1) = 0.5*p(-i)*p(:)
-         pp(i,:,2,2) = 0.5*p(-i)*p(1:-1:-1)
-      enddo
-
-      call mpi_multigrid_bnd(lev-1, soln, 1, .false.) !BEWARE for higher prolongation order more guardcell will be required
-      call check_dirty(lev-1, soln, "prolong_faces", 1)
-
-      coarse => lvl(lev - 1)
-      fine   => lvl(lev)
-
-      if (has_dir(XDIR)) then
-         pp_norm = 2.*sum(pp(-D_y:D_y, -D_z:D_z, 1, 1)) ! normalization is required for ord_prolong_face == 1 and -2
-         do j = coarse%js, coarse%je
-            do k = coarse%ks, coarse%ke
-               fine%bnd_x(-fine%js+2*j,    -fine%ks+2*k,    LOW) =sum(pp(-D_y:D_y, -D_z:D_z, 1, 1) * (coarse%mgvar(coarse%is,j-D_y:j+D_y,k-D_z:k+D_z,soln) + coarse%mgvar(coarse%is-1,j-D_y:j+D_y,k-D_z:k+D_z,soln))) / pp_norm
-               fine%bnd_x(-fine%js+2*j+D_y,-fine%ks+2*k,    LOW) =sum(pp(-D_y:D_y, -D_z:D_z, 2, 1) * (coarse%mgvar(coarse%is,j-D_y:j+D_y,k-D_z:k+D_z,soln) + coarse%mgvar(coarse%is-1,j-D_y:j+D_y,k-D_z:k+D_z,soln))) / pp_norm
-               fine%bnd_x(-fine%js+2*j,    -fine%ks+2*k+D_z,LOW) =sum(pp(-D_y:D_y, -D_z:D_z, 1, 2) * (coarse%mgvar(coarse%is,j-D_y:j+D_y,k-D_z:k+D_z,soln) + coarse%mgvar(coarse%is-1,j-D_y:j+D_y,k-D_z:k+D_z,soln))) / pp_norm
-               fine%bnd_x(-fine%js+2*j+D_y,-fine%ks+2*k+D_z,LOW) =sum(pp(-D_y:D_y, -D_z:D_z, 2, 2) * (coarse%mgvar(coarse%is,j-D_y:j+D_y,k-D_z:k+D_z,soln) + coarse%mgvar(coarse%is-1,j-D_y:j+D_y,k-D_z:k+D_z,soln))) / pp_norm
-               fine%bnd_x(-fine%js+2*j,    -fine%ks+2*k,    HIGH)=sum(pp(-D_y:D_y, -D_z:D_z, 1, 1) * (coarse%mgvar(coarse%ie,j-D_y:j+D_y,k-D_z:k+D_z,soln) + coarse%mgvar(coarse%ie+1,j-D_y:j+D_y,k-D_z:k+D_z,soln))) / pp_norm
-               fine%bnd_x(-fine%js+2*j+D_y,-fine%ks+2*k,    HIGH)=sum(pp(-D_y:D_y, -D_z:D_z, 2, 1) * (coarse%mgvar(coarse%ie,j-D_y:j+D_y,k-D_z:k+D_z,soln) + coarse%mgvar(coarse%ie+1,j-D_y:j+D_y,k-D_z:k+D_z,soln))) / pp_norm
-               fine%bnd_x(-fine%js+2*j,    -fine%ks+2*k+D_z,HIGH)=sum(pp(-D_y:D_y, -D_z:D_z, 1, 2) * (coarse%mgvar(coarse%ie,j-D_y:j+D_y,k-D_z:k+D_z,soln) + coarse%mgvar(coarse%ie+1,j-D_y:j+D_y,k-D_z:k+D_z,soln))) / pp_norm
-               fine%bnd_x(-fine%js+2*j+D_y,-fine%ks+2*k+D_z,HIGH)=sum(pp(-D_y:D_y, -D_z:D_z, 2, 2) * (coarse%mgvar(coarse%ie,j-D_y:j+D_y,k-D_z:k+D_z,soln) + coarse%mgvar(coarse%ie+1,j-D_y:j+D_y,k-D_z:k+D_z,soln))) / pp_norm
-            enddo
-         enddo
-      endif
-
-      if (has_dir(YDIR)) then
-         pp_norm = 2.*sum(pp(-D_x:D_x, -D_z:D_z, 1, 1))
-         do i = coarse%is, coarse%ie
-            do k = coarse%ks, coarse%ke
-               fine%bnd_y(-fine%is+2*i,    -fine%ks+2*k,    LOW) =sum(pp(-D_x:D_x, -D_z:D_z, 1, 1) * (coarse%mgvar(i-D_x:i+D_x,coarse%js,k-D_z:k+D_z,soln) + coarse%mgvar(i-D_x:i+D_x,coarse%js-1,k-D_z:k+D_z,soln))) / pp_norm
-               fine%bnd_y(-fine%is+2*i+D_x,-fine%ks+2*k,    LOW) =sum(pp(-D_x:D_x, -D_z:D_z, 2, 1) * (coarse%mgvar(i-D_x:i+D_x,coarse%js,k-D_z:k+D_z,soln) + coarse%mgvar(i-D_x:i+D_x,coarse%js-1,k-D_z:k+D_z,soln))) / pp_norm
-               fine%bnd_y(-fine%is+2*i,    -fine%ks+2*k+D_z,LOW) =sum(pp(-D_x:D_x, -D_z:D_z, 1, 2) * (coarse%mgvar(i-D_x:i+D_x,coarse%js,k-D_z:k+D_z,soln) + coarse%mgvar(i-D_x:i+D_x,coarse%js-1,k-D_z:k+D_z,soln))) / pp_norm
-               fine%bnd_y(-fine%is+2*i+D_x,-fine%ks+2*k+D_z,LOW) =sum(pp(-D_x:D_x, -D_z:D_z, 2, 2) * (coarse%mgvar(i-D_x:i+D_x,coarse%js,k-D_z:k+D_z,soln) + coarse%mgvar(i-D_x:i+D_x,coarse%js-1,k-D_z:k+D_z,soln))) / pp_norm
-               fine%bnd_y(-fine%is+2*i,    -fine%ks+2*k,    HIGH)=sum(pp(-D_x:D_x, -D_z:D_z, 1, 1) * (coarse%mgvar(i-D_x:i+D_x,coarse%je,k-D_z:k+D_z,soln) + coarse%mgvar(i-D_x:i+D_x,coarse%je+1,k-D_z:k+D_z,soln))) / pp_norm
-               fine%bnd_y(-fine%is+2*i+D_x,-fine%ks+2*k,    HIGH)=sum(pp(-D_x:D_x, -D_z:D_z, 2, 1) * (coarse%mgvar(i-D_x:i+D_x,coarse%je,k-D_z:k+D_z,soln) + coarse%mgvar(i-D_x:i+D_x,coarse%je+1,k-D_z:k+D_z,soln))) / pp_norm
-               fine%bnd_y(-fine%is+2*i,    -fine%ks+2*k+D_z,HIGH)=sum(pp(-D_x:D_x, -D_z:D_z, 1, 2) * (coarse%mgvar(i-D_x:i+D_x,coarse%je,k-D_z:k+D_z,soln) + coarse%mgvar(i-D_x:i+D_x,coarse%je+1,k-D_z:k+D_z,soln))) / pp_norm
-               fine%bnd_y(-fine%is+2*i+D_x,-fine%ks+2*k+D_z,HIGH)=sum(pp(-D_x:D_x, -D_z:D_z, 2, 2) * (coarse%mgvar(i-D_x:i+D_x,coarse%je,k-D_z:k+D_z,soln) + coarse%mgvar(i-D_x:i+D_x,coarse%je+1,k-D_z:k+D_z,soln))) / pp_norm
-            enddo
-         enddo
-      endif
-
-      if (has_dir(ZDIR)) then
-         pp_norm = 2.*sum(pp(-D_x:D_x, -D_y:D_y, 1, 1))
-         do i = coarse%is, coarse%ie
-            do j = coarse%js, coarse%je
-               fine%bnd_z(-fine%is+2*i,    -fine%js+2*j,    LOW) =sum(pp(-D_x:D_x, -D_y:D_y, 1, 1) * (coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ks,soln) + coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ks-1,soln))) / pp_norm
-               fine%bnd_z(-fine%is+2*i+D_x,-fine%js+2*j,    LOW) =sum(pp(-D_x:D_x, -D_y:D_y, 2, 1) * (coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ks,soln) + coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ks-1,soln))) / pp_norm
-               fine%bnd_z(-fine%is+2*i,    -fine%js+2*j+D_y,LOW) =sum(pp(-D_x:D_x, -D_y:D_y, 1, 2) * (coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ks,soln) + coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ks-1,soln))) / pp_norm
-               fine%bnd_z(-fine%is+2*i+D_x,-fine%js+2*j+D_y,LOW) =sum(pp(-D_x:D_x, -D_y:D_y, 2, 2) * (coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ks,soln) + coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ks-1,soln))) / pp_norm
-               fine%bnd_z(-fine%is+2*i,    -fine%js+2*j,    HIGH)=sum(pp(-D_x:D_x, -D_y:D_y, 1, 1) * (coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ke,soln) + coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ke+1,soln))) / pp_norm
-               fine%bnd_z(-fine%is+2*i+D_x,-fine%js+2*j,    HIGH)=sum(pp(-D_x:D_x, -D_y:D_y, 2, 1) * (coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ke,soln) + coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ke+1,soln))) / pp_norm
-               fine%bnd_z(-fine%is+2*i,    -fine%js+2*j+D_y,HIGH)=sum(pp(-D_x:D_x, -D_y:D_y, 1, 2) * (coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ke,soln) + coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ke+1,soln))) / pp_norm
-               fine%bnd_z(-fine%is+2*i+D_x,-fine%js+2*j+D_y,HIGH)=sum(pp(-D_x:D_x, -D_y:D_y, 2, 2) * (coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ke,soln) + coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ke+1,soln))) / pp_norm
-            enddo
-         enddo
-      endif
-
-   end subroutine prolong_faces
-
-!!$ ============================================================================
-!!
-!! Red-Black Gauss-Seidel relaxation.
-!!
-!! This is the most costly routine in a serial run. Try to find optimal values for nsmool and nsmoob.
-!! This routine also depends a lot on communication so it  may limit scalability of the multigrid.
-!! \todo Implement convergence check on base level (not very important since we have a FFT solver for base level)
-!!
-
-   subroutine approximate_solution_rbgs(lev, src, soln)
-
-      use multigridhelpers,   only: dirty_debug, check_dirty, multidim_code_3D, dirty_label
-      use multigridmpifuncs,  only: mpi_multigrid_bnd
-      use dataio_public,      only: die
-
-      implicit none
-
-      integer, intent(in) :: lev  !< level for which approximate the solution
-      integer, intent(in) :: src  !< index of source in lvl()%mgvar
-      integer, intent(in) :: soln !< index of solution in lvl()%mgvar
-
-      integer, parameter :: RED_BLACK = 2 !< the checkerboard requires two sweeps
-
-      integer :: n, j, k, i1, j1, k1, id, jd, kd
-      integer :: nsmoo
-
-      if (lev == level_min) then
-         nsmoo = nsmoob
-      else
-         nsmoo = nsmool
-      endif
-
-      do n = 1, RED_BLACK*nsmoo
-         call mpi_multigrid_bnd(lev, soln, 1, .false.) ! no corners are required here
-
-         if (dirty_debug) then
-            write(dirty_label, '(a,i5)')"relax soln- smoo=", n
-            call check_dirty(lev, soln, dirty_label)
-         endif
-
-         ! Possible optimization: this is the most costly part of the RBGS relaxation (instruction count, read and write data, L1 and L2 read cache miss)
-         ! do n = 1, nsmoo
-         !    call mpi_multigrid_bnd(lev, soln, 1, .false.)
-         !    relax single layer of red cells at all faces
-         !    call mpi_multigrid_bnd(lev, soln, 1, .false.)
-         !    relax interior cells (except for single layer of cells at all faces), first red, then 1-cell behind black one.
-         !    relax single layer of black cells at all faces
-         ! enddo
-
-         ! with explicit outer loops it is easier to describe a 3-D checkerboard :-)
-
-         if (eff_dim==NDIM .and. .not. multidim_code_3D) then
-            do k = lvl(lev)%ks, lvl(lev)%ke
-               do j = lvl(lev)%js, lvl(lev)%je
-                  i1 = lvl(lev)%is + mod(n+j+k, RED_BLACK)
-                  lvl(          lev          )%mgvar(i1  :lvl(lev)%ie  :2, j,   k,   soln) = &
-                       lvl(lev)%rx * (lvl(lev)%mgvar(i1-1:lvl(lev)%ie-1:2, j,   k,   soln) + lvl(lev)%mgvar(i1+1:lvl(lev)%ie+1:2, j,   k,   soln)) + &
-                       lvl(lev)%ry * (lvl(lev)%mgvar(i1  :lvl(lev)%ie  :2, j-1, k,   soln) + lvl(lev)%mgvar(i1:  lvl(lev)%ie:  2, j+1, k,   soln)) + &
-                       lvl(lev)%rz * (lvl(lev)%mgvar(i1  :lvl(lev)%ie  :2, j,   k-1, soln) + lvl(lev)%mgvar(i1:  lvl(lev)%ie:  2, j,   k+1, soln)) - &
-                       lvl(lev)%r  *  lvl(lev)%mgvar(i1  :lvl(lev)%ie  :2, j,   k,   src)
-               enddo
-            enddo
-         else
-            ! In 3D this variant significantly increases instruction count and also some data read
-            i1 = lvl(lev)%is; id = 1 ! mv to multigridvars, init_multigrid
-            j1 = lvl(lev)%js; jd = 1
-            k1 = lvl(lev)%ks; kd = 1
-            if (has_dir(XDIR)) then
-               id = RED_BLACK
-            else if (has_dir(YDIR)) then
-               jd = RED_BLACK
-            else if (has_dir(ZDIR)) then
-               kd = RED_BLACK
-            endif
-
-            if (kd == RED_BLACK) k1 = lvl(lev)%ks + mod(n, RED_BLACK)
-            do k = k1, lvl(lev)%ke, kd
-               if (jd == RED_BLACK) j1 = lvl(lev)%js + mod(n+k, RED_BLACK)
-               do j = j1, lvl(lev)%je, jd
-                  if (id == RED_BLACK) i1 = lvl(lev)%is + mod(n+j+k, RED_BLACK)
-                  lvl(      lev)%mgvar(i1  :lvl(lev)%ie  :id, j,   k,   soln) = &
-                       & (1. - Jacobi_damp)* lvl(lev)%mgvar(i1  :lvl(lev)%ie  :id, j,   k,   soln) &
-                       &     - Jacobi_damp * lvl(lev)%mgvar(i1  :lvl(lev)%ie  :id, j,   k,   src)  * lvl(lev)%r
-                  if (has_dir(XDIR)) &
-                       lvl (lev)%mgvar(i1  :lvl(lev)%ie  :id, j,   k,   soln) = lvl(lev)%mgvar(i1:  lvl(lev)%ie:  id, j,   k,   soln)  + &
-                       &       Jacobi_damp *(lvl(lev)%mgvar(i1-1:lvl(lev)%ie-1:id, j,   k,   soln) + lvl(lev)%mgvar(i1+1:lvl(lev)%ie+1:id, j,   k,   soln)) * lvl(lev)%rx
-                  if (has_dir(YDIR)) &
-                       lvl (lev)%mgvar(i1  :lvl(lev)%ie  :id, j,   k,   soln) = lvl(lev)%mgvar(i1:  lvl(lev)%ie:  id, j,   k,   soln)  + &
-                       &       Jacobi_damp *(lvl(lev)%mgvar(i1  :lvl(lev)%ie  :id, j-1, k,   soln) + lvl(lev)%mgvar(i1:  lvl(lev)%ie:  id, j+1, k,   soln)) * lvl(lev)%ry
-                  if (has_dir(ZDIR)) &
-                       lvl (lev)%mgvar(i1  :lvl(lev)%ie  :id, j,   k,   soln) = lvl(lev)%mgvar(i1:  lvl(lev)%ie:  id, j,   k,   soln)  + &
-                       &       Jacobi_damp *(lvl(lev)%mgvar(i1  :lvl(lev)%ie  :id, j,   k-1, soln) + lvl(lev)%mgvar(i1:  lvl(lev)%ie:  id, j,   k+1, soln)) * lvl(lev)%rz
-               enddo
-            enddo
-         endif
-
-         if (dirty_debug) then
-            write(dirty_label, '(a,i5)')"relax soln+ smoo=", n
-            call check_dirty(lev, soln, dirty_label)
-         endif
-
-      enddo
-
-   end subroutine approximate_solution_rbgs
-
-!!$ ============================================================================
-!!
 !! Obtain an exact solution on base level. (wrapper)
 !!
+
    subroutine gb_fft_solve(src, soln)
+
       implicit none
 
       integer, intent(in) :: src  !< index of source in lvl()%mgvar
@@ -1777,7 +1635,8 @@ contains
 
    subroutine gb_fft_solve_sendrecv(src, soln)
 
-      use mpisetup, only: nproc, proc, ierr, comm3d, status, MPI_DOUBLE_PRECISION
+      use mpisetup,      only: nproc, proc, ierr, comm3d, status, MPI_DOUBLE_PRECISION
+      use multigridvars, only: gb, gb_cartmap, XDIR, YDIR, ZDIR, base
 
       implicit none
 
@@ -1836,7 +1695,8 @@ contains
 
    subroutine gb_fft_solve_gather(src, soln)
 
-      use mpisetup, only: nproc, proc, ierr, comm3d, status, MPI_DOUBLE_PRECISION
+      use mpisetup,      only: nproc, proc, ierr, comm3d, status, MPI_DOUBLE_PRECISION
+      use multigridvars, only: gb, gb_cartmap, base, XDIR, YDIR, ZDIR
 
       implicit none
 
@@ -1873,12 +1733,32 @@ contains
 
 !!$ ============================================================================
 !!
+!! Solve finest level if allowed (typically on single CPU)
+!!
+
+   subroutine fft_solve_roof
+
+      use multigridvars,    only: roof, source, solution
+
+      implicit none
+
+      if (roof%fft_type == fft_none) return
+
+      roof%src(:, :, :) = roof%mgvar(roof%is:roof%ie, roof%js:roof%je, roof%ks:roof%ke, source)
+      call fft_convolve(roof%level)
+      roof%mgvar(roof%is:roof%ie, roof%js:roof%je, roof%ks:roof%ke, solution) = roof%src(:, :, :)
+
+   end subroutine fft_solve_roof
+
+!!$ ============================================================================
+!!
 !! Do the FFT convolution
 !!
 
    subroutine fft_convolve(level)
 
       use dataio_public, only: die
+      use multigridvars, only: lvl
 
       implicit none
 
@@ -1893,17 +1773,15 @@ contains
          case (fft_dst)
             lvl(level)%fftr = lvl(level)%fftr * lvl(level)%Green3D
          case default
-            call die("[multigrid:fft_convolve] Unknown FFT type.")
+            call die("[multigrid_gravity:fft_convolve] Unknown FFT type.")
       end select
 
       call dfftw_execute(lvl(level)%plani) ! lvl(level)%fft{r}(:,:,:) -> lvl(level)%src(:,:,:)
 
-    end subroutine fft_convolve
+   end subroutine fft_convolve
 
-#else /* MULTIGRID */
-#warning This should not happen. Probably the multigrid.F90 file is included in object directory by mistake.
-#endif /* MULTIGRID */
+#else /* MULTIGRID && GRAV */
+#warning This should not happen. Probably the multigrid_gravity.F90 file is included in object directory by mistake.
+#endif /* MULTIGRID && GRAV */
 
-end module multigrid
-
-!!$ ============================================================================
+end module multigrid_gravity

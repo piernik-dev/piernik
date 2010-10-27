@@ -34,13 +34,15 @@ module initproblem
    use problem_pub, only: problem_name, run_id
 
    real               :: t_sn
-   integer            :: n_sn, ierrh
+   integer            :: n_sn
+   integer            :: norm_step
    real               :: d0, p0, bx0, by0, bz0, x0, y0, z0, r0, beta_cr, amp_cr
 
    namelist /PROBLEM_CONTROL/  problem_name, run_id,      &
                                d0, p0, bx0, by0, bz0, &
                                x0, y0, z0, r0, &
-                               beta_cr, amp_cr
+                               beta_cr, amp_cr, &
+                               norm_step
 
    contains
 
@@ -48,7 +50,7 @@ module initproblem
 
    subroutine read_problem_par
 
-      use dataio_public, only: cwd, msg, par_file, namelist_errh, compare_namelist
+      use dataio_public, only: ierrh, msg, die, par_file, namelist_errh, compare_namelist
       use grid,          only: dxmn
       use mpisetup,      only: MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION, &
            &                   cbuff_len, cbuff, ibuff, rbuff, buffer_dim, comm, ierr, proc
@@ -58,27 +60,29 @@ module initproblem
 
       t_sn = 0.0
 
-      problem_name = 'aaa'
-      run_id  = 'aaa'
-      d0      = 1.0
-      p0      = 1.0
-      bx0     =   0.
-      by0     =   0.
-      bz0     =   0.
-      x0      = 0.0
-      y0      = 0.0
-      z0      = 0.0
-      r0      = dxmn/2.
+      problem_name = 'mcr'
+      run_id       = 'tst'
+      d0           = 1.0e5     !< density
+      p0           = 1.0       !< pressure
+      bx0          =   0.      !< Magnetic field component x
+      by0          =   0.      !< Magnetic field component y
+      bz0          =   0.      !< Magnetic field component z
+      x0           = 0.0       !< x-position of the blob
+      y0           = 0.0       !< y-position of the blob
+      z0           = 0.0       !< z-position of the blob
+      r0           = 5.*dxmn   !< radius of the blob
 
-      beta_cr    = 0.0
-      amp_cr     = 1.0
+      beta_cr      = 0.0       !< ambient level
+      amp_cr       = 1.0       !< amplitude of the blob
+
+      norm_step    = 10        !< how often to compute the norm (in steps)
 
       if (proc == 0) then
 
          diff_nml(PROBLEM_CONTROL)
 
-         cbuff(1) =  problem_name
-         cbuff(2) =  run_id
+         cbuff(1) = problem_name
+         cbuff(2) = run_id
 
          rbuff(1) = d0
          rbuff(2) = p0
@@ -89,15 +93,16 @@ module initproblem
          rbuff(7) = y0
          rbuff(8) = z0
          rbuff(9) = r0
-
          rbuff(10)= beta_cr
          rbuff(11)= amp_cr
+
+         ibuff(1) = norm_step
 
       endif
 
       call MPI_Bcast(cbuff, cbuff_len*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
-      call MPI_Bcast(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
-      call MPI_Bcast(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+      call MPI_Bcast(ibuff,           buffer_dim, MPI_INTEGER,          0, comm, ierr)
+      call MPI_Bcast(rbuff,           buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
       if (proc /= 0) then
 
@@ -113,11 +118,14 @@ module initproblem
          y0           = rbuff(7)
          z0           = rbuff(8)
          r0           = rbuff(9)
-
          beta_cr      = rbuff(10)
          amp_cr       = rbuff(11)
 
+         norm_step    = ibuff(1)
+
       endif
+
+      if (r0 == 0.) call die("[initproblem:read_problem_par] r0 == 0")
 
    end subroutine read_problem_par
 
@@ -126,20 +134,24 @@ module initproblem
    subroutine init_prob
 
       use arrays,         only: b, u
-      use crcomposition,  only: icr_H1, icr_C12
-      use dataio_public,  only: die, msg, printinfo
+      use dataio_public,  only: die, msg, warn, printinfo
       use fluidindex,     only: ibx, iby, ibz, nvar
-      use grid,           only: nx, ny, nz, nb, ks, ke, x, y, z, Lx, Ly, Lz, xmin, ymin, zmin, nxd, nyd, nzd
-      use initionized,    only: idni, imxi, imyi, imzi, ieni
-      use initcosmicrays, only: iarr_crn, iarr_cre, iarr_crs, gamma_crn, gamma_cre, gamma_crs
-      use initionized,    only: gamma_ion
+      use grid,           only: nx, ny, nz, x, y, z, is, ie, js, je, ks, ke, nxd, nyd, nzd
+      use initcosmicrays, only: iarr_crn, iarr_crs, gamma_crn, K_crn_paral, K_crn_perp
+      use initionized,    only: idni, imxi, imyi, imzi, ieni, gamma_ion
+#ifdef COSM_RAYS_SOURCES
+      use crcomposition,  only: icr_H1, icr_C12
+#endif /* COSM_RAYS_SOURCES */
 
       implicit none
 
       integer :: i, j, k
       integer :: icr
-      real    :: cs_iso, r2
-      real    :: xsn,ysn,zsn    ! BEWARE: those vars are used but not initialized
+      real    :: cs_iso
+      real    :: xsn, ysn, zsn    ! BEWARE: those vars are used but not initialized
+#ifdef COSM_RAYS_SOURCES
+      real    :: r2
+#endif /* COSM_RAYS_SOURCES */
 
       ! BEWARE: temporary fix
       xsn = 0.0
@@ -150,64 +162,65 @@ module initproblem
 
       cs_iso = sqrt(p0/d0)
 
+      if (nxd <= 1) bx0 = 0. ! ignore B field in nonexistent direction
+      if (nyd <= 1) by0 = 0.
+      if (nzd <= 1) bz0 = 0.
+
+      if ((bx0**2 + by0**2 + bz0**2 == 0.) .and. (any(K_crn_paral(:) /= 0.) .or. any(K_crn_perp(:) /= 0.))) then
+         call warn("[initproblem:init_prob] No magnetic field is set, K_crn_* also have to be 0.")
+         K_crn_paral(:) = 0.
+         K_crn_perp(:)  = 0.
+      endif
+
+      b(ibx, :, :, :) = bx0
+      b(iby, :, :, :) = by0
+      b(ibz, :, :, :) = bz0
+      u(idni, :, :, :) = d0
+      u(imxi:imzi, :, :, :) = 0.0
+
+#ifndef ISO
       do k = 1,nz
          do j = 1,ny
             do i = 1,nx
-
-               b(ibx,i,j,k)       = bx0
-               b(iby,i,j,k)       = by0
-               b(ibz,i,j,k)       = bz0
-
-               u(idni,i,j,k)      = d0
-               u(imxi:imzi,i,j,k) = 0.0
-#ifndef ISO
-               u(ieni,i,j,k)      = p0/(gamma_ion-1.0)
-               u(ieni,i,j,k)      = u(ieni,i,j,k) &
-                                    + 0.5*sum(u(imxi:imzi,i,j,k)**2,1)/u(idni,i,j,k)
-               u(ieni,i,j,k)      = u(ieni,i,j,k) + 0.5*sum(b(:,i,j,k)**2,1)
-#endif /* !ISO */
-
-#ifdef COSM_RAYS
-               u(iarr_crn(:),i,j,k) =  beta_cr*cs_iso**2 * u(idni,i,j,k)/(gamma_crn(1)-1.0)
-#endif /* COSM_RAYS */
-
+               u(ieni,i,j,k) = p0/(gamma_ion-1.0) + &
+                    &          0.5*sum(u(imxi:imzi,i,j,k)**2,1)/u(idni,i,j,k) + &
+                    &          0.5*sum(b(:,i,j,k)**2,1)
             enddo
          enddo
       enddo
-
-! Explosions
+#endif /* !ISO */
 
 #ifdef COSM_RAYS
+      do icr = 1, nvar%crs%all
+         u(iarr_crs(icr), :, :, :) =  beta_cr*cs_iso**2 * u(idni, :, :, :)/(gamma_crn(icr)-1.0)
+      enddo
 
-      do icr=1, nvar%crn%all
-
-         do k = ks,ke
-            do j = nb+1,ny-nb
-               do i = nb+1,nx-nb
+! Explosions
+#ifdef COSM_RAYS_SOURCES
+      do icr = 1, nvar%crn%all
+         do k = ks, ke
+            do j = js, je
+               do i = is, ie
                   r2 = (x(i)-xsn)**2+(y(j)-ysn)**2+(z(k)-zsn)**2
                   if (icr == icr_H1) then
-                     u(iarr_crn(icr),i,j,k) = u(iarr_crn(icr),i,j,k) + amp_cr*exp(-r2/r0**2)
+                     u(iarr_crn(icr), i, j, k) = u(iarr_crn(icr), i, j, k) + amp_cr*exp(-r2/r0**2)
                   elseif (icr == icr_C12) then
-                     u(iarr_crn(icr),i,j,k) = u(iarr_crn(icr),i,j,k) + amp_cr*0.1*exp(-r2/r0**2)
+                     u(iarr_crn(icr), i, j, k) = u(iarr_crn(icr), i, j, k) + amp_cr*0.1*exp(-r2/r0**2) ! BEWARE: magic number
                   else
-                     u(iarr_crn(icr),i,j,k) = 0.0
+                     u(iarr_crn(icr), i, j, k) = 0.0
                   endif
                enddo
             enddo
          enddo
-
       enddo
+#endif /* COSM_RAYS_SOURCES */
 
-      do icr=1,nvar%crs%all
-         write(msg,*) 'icr=',icr,'maxecr =',maxval(u(iarr_crs(icr),:,:,:))
-         call printinfo(msg)
-         write(msg,*) 'icr=',icr,'maxloc =',maxloc(u(iarr_crs(icr),:,:,:))
+      do icr = 1, nvar%crs%all
+         write(msg,*) '[initproblem:init_prob] icr=',icr,' maxecr =',maxval(u(iarr_crs(icr),:,:,:)),' maxloc =',maxloc(u(iarr_crs(icr),:,:,:))
          call printinfo(msg)
       enddo
-
 #endif /* COSM_RAYS */
 
-      return
    end subroutine init_prob
 
 end module initproblem
