@@ -235,8 +235,8 @@ contains
          implicit none
          real, dimension(:), intent(inout), allocatable                       :: user_vars
          character(len=*), dimension(:), intent(inout), allocatable, optional :: tsl_names
-         
-         if (present(tsl_names)) then 
+
+         if (present(tsl_names)) then
             call pop_vector(tsl_names, len(tsl_names(1)), ["foobar_sedov"])    !   add to header
          else
             call pop_vector(user_vars,[12345678.9])                            !   pop value

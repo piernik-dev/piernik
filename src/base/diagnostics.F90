@@ -119,7 +119,7 @@ contains
          if (len_trim(words(i)) > lensize) call die("[diagnostics:pop_char_vector] word > lensize")
       enddo
 
-      if(allocated(vec)) old = size(vec)
+      if (allocated(vec)) old = size(vec)
       call incr_vec(vec,size(words),lensize)
       vec(old+1:old+size(words)) = words(:)
       return
@@ -133,7 +133,7 @@ contains
       integer :: old
 
       old = 0
-      if(allocated(vec)) old = size(vec)
+      if (allocated(vec)) old = size(vec)
       call incr_vec(vec,size(words))
       vec(old+1:old+size(words)) = words(:)
       return

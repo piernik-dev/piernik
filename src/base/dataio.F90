@@ -776,7 +776,7 @@ module dataio
 #ifdef DUST
             call pop_vector(tsl_names, hnlen, ["dend_min", "dend_max", "vxd_max ", "vyd_max ", "vzd_max "])
 #endif /* DUST */
-            if(associated(user_tsl)) call user_tsl(tsl_vars, tsl_names)
+            if (associated(user_tsl)) call user_tsl(tsl_vars, tsl_names)
             write(head_fmt,'(A,I2,A)') "(a1,a8,",size(tsl_names)-1,"a16)"
 
             open(tsl_lun, file=tsl_file)
@@ -864,7 +864,7 @@ module dataio
          call pop_vector(tsl_vars, [sn%dens_min%val, sn%dens_max%val, sn%velx_max%val, sn%vely_max%val, sn%velz_max%val])
 #endif /* DUST */
 
-         if(associated(user_tsl)) call user_tsl(tsl_vars)
+         if (associated(user_tsl)) call user_tsl(tsl_vars)
          write(tsl_lun, '(1x,i8,50(1x,es15.8))') nstep, tsl_vars
 
 ! some quantities computed in "write_log".One can add more, or change.
@@ -990,10 +990,10 @@ module dataio
       pr%temp_max%loc  = 0
       pr%temp_max%proc = 0
 #else /* ISO */
-      if(fl%tag /= "DST") then
+      if (fl%tag /= "DST") then
          wa(:,:,:) = (u(fl%ien,:,:,:) &                ! eint
                    - 0.5*((u(fl%imx,:,:,:)**2 +u(fl%imy,:,:,:)**2 + u(fl%imz,:,:,:)**2)/u(fl%idn,:,:,:)))
-         if(fl%tag == "ION") wa(:,:,:) = wa(:,:,:) - 0.5*(sum(b**2,dim=1))
+         if (fl%tag == "ION") wa(:,:,:) = wa(:,:,:) - 0.5*(sum(b**2,dim=1))
 
          wa(:,:,:) = max((fl%gam_1)*wa(:,:,:),smallp)  ! pres
 
