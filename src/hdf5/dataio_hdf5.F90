@@ -1519,7 +1519,7 @@ module dataio_hdf5
 ! ------------------------------------------------------------------------------------
 !
    subroutine write_hdf5(chdf)
-      use dataio_public, only: cwdlen, msg, die, user_vars_hdf5
+      use dataio_public, only: cwdlen, msg, die, user_vars_hdf5, nhdf
       use grid,          only: nxb, nyb, nzb
       use hdf5,          only: HID_T, H5F_ACC_TRUNC_F, H5P_FILE_ACCESS_F, H5P_DEFAULT_F, &
            &                   h5open_f, h5close_f, h5fcreate_f, h5fclose_f, h5pcreate_f, h5pclose_f, h5pset_fapl_mpio_f
@@ -1595,6 +1595,8 @@ module dataio_hdf5
 
       call MPI_Barrier(comm3d,ierr)
       CALL h5close_f(error)
+
+      nhdf = nhdf + 1
 
    end subroutine write_hdf5
 

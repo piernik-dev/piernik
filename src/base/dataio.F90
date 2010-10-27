@@ -473,7 +473,6 @@ module dataio
             case ('hdf')
                call set_container_chdf(nstep)
                call write_hdf5(chdf)
-               nhdf = nhdf + 1
                step_hdf = nstep
             case ('log')
                call write_log
@@ -586,7 +585,6 @@ module dataio
             if ((t-last_hdf_time) .ge. dt_hdf) last_hdf_time = last_hdf_time + dt_hdf
             if ((t-last_hdf_time) .ge. dt_hdf) last_hdf_time = t ! additional control
                           ! in the case of changing dt_hdf into smaller value via msg
-            nhdf = nhdf + 1
             step_hdf = nstep
          endif
       endif

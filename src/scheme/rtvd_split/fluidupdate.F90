@@ -46,11 +46,11 @@ contains
 #endif /* SN_SRC */
 #ifdef SNE_DISTR
       use sndistr,       only: supernovae_distribution
-#endif /* SNE_DISTR */
 #ifdef DEBUG
       use dataio_hdf5,   only: write_hdf5
-      use dataio_public, only: nhdf
+      use dataio_public, only: chdf
 #endif /* DEBUG */
+#endif /* SNE_DISTR */
 
       implicit none
       character(len=cwdlen), parameter :: fmt900 = "('   nstep = ',i7,'   dt = ',es22.16,'   t = ',es22.16,'   dWallClock = ',f7.2,' s')"
@@ -107,7 +107,6 @@ contains
       call supernovae_distribution
 #ifdef DEBUG
       call write_hdf5(chdf)
-      nhdf = nhdf + 1
 #endif /* DEBUG */
 #endif /* SNE_DISTR */
 
@@ -202,7 +201,7 @@ contains
 #endif /* COSM_RAYS */
 #ifdef DEBUG
       use dataio_hdf5,    only: write_hdf5
-      use dataio_public,  only: nhdf, chdf
+      use dataio_public,  only: chdf
 #endif /* DEBUG */
 
       implicit none
@@ -292,7 +291,6 @@ contains
 
 #ifdef DEBUG
       call write_hdf5(chdf)
-      nhdf = nhdf + 1 !\todo should go inside write_hdf
 #endif /* DEBUG */
 
    end subroutine make_sweep
