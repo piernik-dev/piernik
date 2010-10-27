@@ -62,6 +62,8 @@ module multigrid_diffusion
 
    integer, parameter :: diff_bx = correction+1, diff_by = diff_bx + 1, diff_bz = diff_by + 1 !< indices pointing to multigrid copies of the b(:,:,:,:) array
 
+   logical, allocatable, dimension(:) :: norm_was_zero                !< Flag for suppressing repeated warnings on nonexistent CR components
+
 contains
 
 !!$ ============================================================================
@@ -154,6 +156,7 @@ contains
       use types,              only: grid_container
       use multigridvars,      only: vcycle_factors
       use dataio_pub,         only: die
+      use fluidindex,         only: nvar
 
       implicit none
 
@@ -163,6 +166,13 @@ contains
       integer                          :: ierr
 
       if (.false.) ierr = cgrid%nxb ! suppress compiler warnings on unused arguments
+
+      if (.not. allocated(norm_was_zero)) then
+         allocate(norm_was_zero(nvar%crs%all), stat=ierr)
+         if (ierr /= 0) call die("[multigrid_diffusion:init_multigrid] Allocation error: norm_was_zero")
+         mb_alloc = mb_alloc + size(norm_was_zero)/2
+         norm_was_zero(:) = .false.
+      endif
 
       if (allocated(vcycle_factors)) then
          if (ubound(vcycle_factors, 1) < max_cycles) deallocate(vcycle_factors)
@@ -187,6 +197,7 @@ contains
       implicit none
 
       if (allocated(vcycle_factors)) deallocate(vcycle_factors)
+      if (allocated(norm_was_zero)) deallocate(norm_was_zero)
 
    end subroutine cleanup_multigrid_diff
 
@@ -237,9 +248,13 @@ contains
                ! do substepping
                call vcycle_hg(cr_id)
                ! enddo
+               norm_was_zero(cr_id) = .false.
             else
-               write(msg,'(a,i2,a)')"[multigrid_diffusion:multigrid_solve_diff] Source norm of CR-fluid #",cr_id," == 0., skipping."
-               call warn(msg)
+               if (.not. norm_was_zero(cr_id)) then
+                  write(msg,'(a,i2,a)')"[multigrid_diffusion:multigrid_solve_diff] Source norm of CR-fluid #",cr_id," == 0., skipping."
+                  call warn(msg)
+               endif
+               norm_was_zero(cr_id) = .true.
             endif
          enddo
 

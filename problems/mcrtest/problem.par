@@ -25,7 +25,7 @@
     dt_hdf  = 5.0
     dt_plt  = 0.1
     dt_res  = 0.0
-    dt_log  = 0.000
+    dt_log  = 0.05
     dt_tsl  = 0.000
     vars(1) = 'dens'
     vars(2) = 'velx'
@@ -86,7 +86,7 @@
  /
 
  $MULTIGRID_SOLVER
-    stdout = .true.
+!    stdout = .true.
     level_max = 5
  /
 
