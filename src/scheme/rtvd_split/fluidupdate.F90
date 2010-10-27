@@ -48,7 +48,7 @@ contains
       use sndistr,       only: supernovae_distribution
 #endif /* SNE_DISTR */
 #ifdef DEBUG
-      use dataio,        only: write_hdf
+      use dataio_hdf5,   only: write_hdf5
       use dataio_public, only: nhdf
 #endif /* DEBUG */
 
@@ -56,9 +56,6 @@ contains
       character(len=cwdlen), parameter :: fmt900 = "('   nstep = ',i7,'   dt = ',es22.16,'   t = ',es22.16,'   dWallClock = ',f7.2,' s')"
       logical, save                    :: first_run = .true.
       real                             :: ts   ! Timestep wallclock
-#ifdef DEBUG
-      integer                          :: system, syslog
-#endif /* DEBUG */
 
       halfstep = .false.
 
@@ -109,8 +106,7 @@ contains
 #ifdef SNE_DISTR
       call supernovae_distribution
 #ifdef DEBUG
-      syslog = system('echo -n sne_dis')
-      call write_hdf
+      call write_hdf5(chdf)
       nhdf = nhdf + 1
 #endif /* DEBUG */
 #endif /* SNE_DISTR */
@@ -205,8 +201,8 @@ contains
       use initcosmicrays, only: use_split
 #endif /* COSM_RAYS */
 #ifdef DEBUG
-      use dataio,         only: write_hdf
-      use dataio_public,  only: nhdf
+      use dataio_hdf5,    only: write_hdf5
+      use dataio_public,  only: nhdf, chdf
 #endif /* DEBUG */
 
       implicit none
@@ -295,8 +291,7 @@ contains
       end select
 
 #ifdef DEBUG
-      ! syslog = system('echo -n sweep z')
-      call write_hdf
+      call write_hdf5(chdf)
       nhdf = nhdf + 1 !\todo should go inside write_hdf
 #endif /* DEBUG */
 
