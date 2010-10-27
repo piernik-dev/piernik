@@ -98,12 +98,12 @@ contains
       vx(RNG) = uun(imx,RNG)/uun(idn,RNG)
 #ifdef ISO
       p(RNG)  = nvar%neu%cs2*uun(idn,RNG)
-#else /* ISO */
+#else /* !ISO */
       p(RNG)  = (uun(ien,RNG)  &
       - 0.5*( uun(imx,RNG)**2 + uun(imy,RNG)**2 + uun(imz,RNG)**2 ) &
           / uun(idn,RNG))*(nvar%neu%gam_1)
       p(RNG)  = max(p(RNG),smallp)
-#endif /* ISO */
+#endif /* !ISO */
 
       fluxn(idn,RNG)=uun(imx,RNG)
       fluxn(imx,RNG)=uun(imx,RNG)*vx(RNG)+p(RNG)
@@ -124,9 +124,9 @@ contains
       !    c_fr  = 0.0
 #ifdef ISO
       cfrn(1,RNG) = sqrt(vx(RNG)**2+cfr_smooth*amp) + max(sqrt( abs(             p(RNG))/uun(idn,RNG)),small)
-#else /* ISO */
+#else /* !ISO */
       cfrn(1,RNG) = sqrt(vx(RNG)**2+cfr_smooth*amp) + max(sqrt( abs(nvar%neu%gam*p(RNG))/uun(idn,RNG)),small)
-#endif /* ISO */
+#endif /* !ISO */
       !BEWARE: that is the cause of fast decreasing of timestep in galactic disk problem
       !TODO: find why is it so
       !if such a treatment is OK then should be applied also in both cases of neutral and ionized gas

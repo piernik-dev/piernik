@@ -391,11 +391,7 @@ module dataio_hdf5
             if (ij=="xy") tab(:,:) = u(nvar%ion%imz,nb+1:nxb+nb,nb+1:nyb+nb,xn) / &
                            u(nvar%ion%idn,nb+1:nxb+nb,nb+1:nyb+nb,xn)
          case ("enen")
-#ifndef ISO
-            if (ij=="yz") tab(:,:) = u(nvar%neu%ien,xn,nb+1:nyb+nb,nb+1:nzb+nb)
-            if (ij=="xz") tab(:,:) = u(nvar%neu%ien,nb+1:nxb+nb,xn,nb+1:nzb+nb)
-            if (ij=="xy") tab(:,:) = u(nvar%neu%ien,nb+1:nxb+nb,nb+1:nyb+nb,xn)
-#else /* !ISO */
+#ifdef ISO
             if (ij=="yz") tab(:,:) = 0.5 * (                     &
                           u(nvar%neu%imx,xn,nb+1:nyb+nb,nb+1:nzb+nb)**2 &
                         + u(nvar%neu%imy,xn,nb+1:nyb+nb,nb+1:nzb+nb)**2 &
@@ -411,31 +407,27 @@ module dataio_hdf5
                          +u(nvar%neu%imy,nb+1:nxb+nb,nb+1:nyb+nb,xn)**2 &
                          +u(nvar%neu%imz,nb+1:nxb+nb,nb+1:nyb+nb,xn)**2) / &
                              u(nvar%neu%idn,nb+1:nxb+nb,nb+1:nyb+nb,xn)
+#else /* !ISO */
+            if (ij=="yz") tab(:,:) = u(nvar%neu%ien,xn,nb+1:nyb+nb,nb+1:nzb+nb)
+            if (ij=="xz") tab(:,:) = u(nvar%neu%ien,nb+1:nxb+nb,xn,nb+1:nzb+nb)
+            if (ij=="xy") tab(:,:) = u(nvar%neu%ien,nb+1:nxb+nb,nb+1:nyb+nb,xn)
 #endif /* !ISO */
          case ('prei')
-#ifndef ISO
             tab(:,:) = 0.0
-#else /* !ISO */
-            tab(:,:) = 0.0
-#endif /* !ISO */
 #ifdef NEUTRAL
          case ("pren")
-#ifndef ISO
+#ifdef ISO
+            tab = 0.0
+#else /* !ISO */
             if (ij=="xy") then
                tab(:,:) = real( u(nvar%neu%ien,nb+1:nxb+nb,nb+1:nyb+nb,xn) - &
                  0.5 *( u(nvar%neu%imx,nb+1:nxb+nb,nb+1:nyb+nb,xn)**2 + u(nvar%neu%imy,nb+1:nxb+nb,nb+1:nyb+nb,xn)**2 + &
                         u(nvar%neu%imz,nb+1:nxb+nb,nb+1:nyb+nb,xn)**2 ) / u(nvar%neu%idn,nb+1:nxb+nb,nb+1:nyb+nb,xn),4)*(nvar%neu%gam_1)
             endif
-#else /* !ISO */
-            tab = 0.0
 #endif /* !ISO */
 #endif /* NEUTRAL */
          case ("enei")
-#ifndef ISO
-            if (ij=="yz") tab(:,:) = u(nvar%ion%ien,xn,nb+1:nyb+nb,nb+1:nzb+nb)
-            if (ij=="xz") tab(:,:) = u(nvar%ion%ien,nb+1:nxb+nb,xn,nb+1:nzb+nb)
-            if (ij=="xy") tab(:,:) = u(nvar%ion%ien,nb+1:nxb+nb,nb+1:nyb+nb,xn)
-#else /* !ISO */
+#ifdef ISO
             if (ij=="yz") tab(:,:) = 0.5 * (                     &
                           u(nvar%ion%imx,xn,nb+1:nyb+nb,nb+1:nzb+nb)**2 &
                         + u(nvar%ion%imy,xn,nb+1:nyb+nb,nb+1:nzb+nb)**2 &
@@ -451,6 +443,10 @@ module dataio_hdf5
                          +u(nvar%ion%imy,nb+1:nxb+nb,nb+1:nyb+nb,xn)**2 &
                          +u(nvar%ion%imz,nb+1:nxb+nb,nb+1:nyb+nb,xn)**2) / &
                              u(nvar%ion%idn,nb+1:nxb+nb,nb+1:nyb+nb,xn)
+#else /* !ISO */
+            if (ij=="yz") tab(:,:) = u(nvar%ion%ien,xn,nb+1:nyb+nb,nb+1:nzb+nb)
+            if (ij=="xz") tab(:,:) = u(nvar%ion%ien,nb+1:nxb+nb,xn,nb+1:nzb+nb)
+            if (ij=="xy") tab(:,:) = u(nvar%ion%ien,nb+1:nxb+nb,nb+1:nyb+nb,xn)
 #endif /* !ISO */
 
          case ("magx")
@@ -545,11 +541,11 @@ module dataio_hdf5
             tab(:,:,:) = real(u(nvar%ion%imz,RNG) / u(nvar%ion%idn,RNG),4)
 #ifdef NEUTRAL
          case ("pren")
-#ifndef ISO
+#ifdef ISO
+            tab = 0.0
+#else /* !ISO */
             tab(:,:,:) = real( u(nvar%neu%ien,RNG) - &
               0.5 *( u(nvar%neu%imx,RNG)**2 + u(nvar%neu%imy,RNG)**2 + u(nvar%neu%imz,RNG)**2 ) / u(nvar%neu%idn,RNG),4)*(nvar%neu%gam_1)
-#else /* !ISO */
-            tab = 0.0
 #endif /* !ISO */
 #endif /* NEUTRAL */
          case ("enen")
@@ -558,9 +554,9 @@ module dataio_hdf5
                                      u(nvar%neu%imy,RNG)**2 + &
                                      u(nvar%neu%imz,RNG)**2 ) &
                               / u(nvar%neu%idn,RNG),4)
-#else /* ISO */
+#else /* !ISO */
             tab(:,:,:) = real(u(nvar%neu%ien,RNG),4)
-#endif /* ISO */
+#endif /* !ISO */
 #ifdef IONIZED
          case ("enei")
 #ifdef ISO
@@ -568,17 +564,17 @@ module dataio_hdf5
                                      u(nvar%ion%imy,RNG)**2 + &
                                      u(nvar%ion%imz,RNG)**2 ) &
                               / u(nvar%ion%idn,RNG),4)
-#else /* ISO */
+#else /* !ISO */
             tab(:,:,:) = real(u(nvar%ion%ien,RNG),4)
-#endif /* ISO */
+#endif /* !ISO */
          case ("prei")
-#ifndef ISO
+#ifdef ISO
+            tab = 0.0
+#else /* !ISO */
             tab(:,:,:) = real( u(nvar%ion%ien,RNG) - &
               0.5 *( u(nvar%ion%imx,RNG)**2 + u(nvar%ion%imy,RNG)**2 + u(nvar%ion%imz,RNG)**2 ) / u(nvar%ion%idn,RNG),4)*(nvar%ion%gam_1)
             tab(:,:,:) = tab(:,:,:) - real( 0.5*(nvar%ion%gam_1)*(b(ibx,RNG)**2 + &
                b(iby,RNG)**2 + b(ibz,RNG)**2),4)
-#else /* !ISO */
-            tab = 0.0
 #endif /* !ISO */
 #endif /* IONIZED */
          case ("magx")
@@ -796,9 +792,9 @@ module dataio_hdf5
             if (vizit) then
 #ifdef PGPLOT
                call draw_me(real(img,4), real(fmin,4), real(fmax,4))
-#else /* PGPLOT */
+#else /* !PGPLOT */
                call warn("[dataio_hdf5:write_plot_hdf5] vizit used without PGPLOT")
-#endif /* PGPLOT */
+#endif /* !PGPLOT */
             else
                call H5Fopen_f(fname, H5F_ACC_RDWR_F, file_id, error)
                call H5Gopen_f(file_id,plane,gr_id,error)

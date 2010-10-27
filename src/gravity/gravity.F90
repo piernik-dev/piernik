@@ -203,13 +203,13 @@ module gravity
    subroutine source_terms_grav
 
 #if defined(MULTIGRID) || defined(POISSON_FFT)
-      use arrays,            only: u, sgp, sgpm
-      use fluidindex,        only: iarr_all_sg
+      use arrays,        only: u, sgp, sgpm
+      use fluidindex,    only: iarr_all_sg
 #ifdef POISSON_FFT
-      use poissonsolver,     only: poisson_solve
+      use poissonsolver, only: poisson_solve
 #endif /* POISSON_FFT */
 #ifdef MULTIGRID
-      use multigrid_gravity, only: multigrid_solve_grav
+      use multigrid,     only: multigrid_solve
 #endif /* MULTIGRID */
 #endif /* defined(MULTIGRID) || defined(POISSON_FFT) */
 
@@ -225,9 +225,9 @@ module gravity
 #endif /* POISSON_FFT */
 #ifdef MULTIGRID
       if (size(iarr_all_sg) == 1) then
-         call multigrid_solve_grav(u(iarr_all_sg(1),:,:,:))
+         call multigrid_solve(u(iarr_all_sg(1),:,:,:))
       else
-         call multigrid_solve_grav( sum(u(iarr_all_sg,:,:,:),1) )
+         call multigrid_solve( sum(u(iarr_all_sg,:,:,:),1) )
          ! BEWARE Here a lot of heap space is required and some compilers may generate code that do segfaults for big enough domains.
          ! It is the weakest point of this type in Maclaurin test. Next one (in fluidboundaries.F90) is 8 times less sensitive.
       endif
@@ -265,11 +265,11 @@ module gravity
 #if defined(MULTIGRID) || defined(POISSON_FFT)
       gpot  = gp + (1.+h)    *sgp -     h*sgpm
       hgpot = gp + (1.+0.5*h)*sgp - 0.5*h*sgpm
-#else /* MULTIGRID || POISSON_FFT */
+#else /* !(MULTIGRID || POISSON_FFT) */
       !// BEWARE: as long as grav_pot_3d is called only in init_piernik this assignment probably don't need to be repeated more than once
       gpot  = gp
       hgpot = gp
-#endif /* MULTIGRID || POISSON_FFT */
+#endif /* !(MULTIGRID || POISSON_FFT) */
 
    end subroutine sum_potential
 
@@ -555,12 +555,12 @@ module gravity
 #elif defined (GRAV_USER)
        call grav_pot_user
 
-#else /* GRAV_(SPECIFIED) */
+#else /* !GRAV_(SPECIFIED) */
        gp_status = 'undefined'
 !#warning 'GRAV declared, but gravity model undefined in grav_pot'
 ! niektore modele grawitacji realizowane sa za pomoca przyspieszenia
 ! (np. 'galactic') z ktorego liczony jest potencjal
-#endif /* GRAV_(SPECIFIED) */
+#endif /* !GRAV_(SPECIFIED) */
 !-----------------------
 
       if (gp_status .eq. 'undefined') then
@@ -829,5 +829,6 @@ module gravity
       if (allocated(gpwork)) deallocate(gpwork)
 
    end subroutine grav_accel2pot
+
 
 end module gravity

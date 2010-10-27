@@ -33,8 +33,8 @@ module initproblem
 ! Initial condition for Keplerian disk
 ! Written by: M. Hanasz, March 2006
 
-   use problem_pub, only: problem_name, run_id
    use mpisetup,    only: cbuff_len
+   use problem_pub, only: problem_name, run_id
 
    real    :: sigma0, Rin, R0, HtoR, eps, amp
    character(len=cbuff_len) :: sigma_model
@@ -48,9 +48,9 @@ module initproblem
 
    subroutine read_problem_par
 
+      use dataio_public, only: ierrh, msg, par_file, namelist_errh, compare_namelist
       use mpisetup,      only: cbuff_len, cbuff, rbuff, buffer_dim, proc, comm, ierr, &
                                MPI_CHARACTER, MPI_DOUBLE_PRECISION
-      use dataio_public, only: ierrh, msg, par_file, namelist_errh, compare_namelist
       use types,         only: idlen
 
       implicit none

@@ -190,10 +190,10 @@ module snsources
       if (jremap .ge. (je+1)) jremap = jremap - nyd
 
       ysni = y(jremap) + epsi + dysn
-#else /* SHEAR */
+#else /* !SHEAR */
       ysno = ysn
       ysni = ysn
-#endif /* SHEAR */
+#endif /* !SHEAR */
 
       pos(1) = xsn
       pos(2) = ysn

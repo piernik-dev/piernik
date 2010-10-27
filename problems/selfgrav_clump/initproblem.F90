@@ -152,8 +152,8 @@ contains
       use dataio_public, only: tend, msg, die, warn, printinfo
       use grid,          only: xmin, xmax, ymin, ymax, zmin, zmax, x, y, z, dx, dy, dz, is, ie, js, je, ks, ke
       use initionized,   only: gamma_ion, idni, imxi, imyi, imzi, ieni
-      use multigrid,     only: multigrid_solve
       use mpisetup,      only: proc, smalld, smallei, MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_MIN, MPI_MAX, MPI_SUM, comm, ierr
+      use multigrid,     only: multigrid_solve
 
       implicit none
 

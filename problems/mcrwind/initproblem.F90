@@ -298,6 +298,5 @@ module initproblem
 
    end subroutine cr_sn_beware
 
-
 end module initproblem
 

@@ -151,7 +151,7 @@ contains
             if (allocated(recv_right)) deallocate(recv_right)
 
 !===============================================================================
-#else /* SHEAR */
+#else /* !SHEAR */
 
             if (pxsize .gt. 1) then
 
@@ -163,7 +163,7 @@ contains
                call MPI_Waitall(4,req(:),status(:,:),ierr)
 
             endif
-#endif /* SHEAR */
+#endif /* !SHEAR */
 
 
          case ("ydim")

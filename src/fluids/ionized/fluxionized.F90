@@ -100,9 +100,9 @@ contains
 
 #ifdef MAGNETIC
       pmag(RNG)=0.5*( bb(ibx,RNG)**2 + bb(iby,RNG)**2 +bb(ibz,RNG)**2 )
-#else /* MAGNETIC */
+#else /* !MAGNETIC */
       pmag(:) = 0.0
-#endif /* MAGNETIC */
+#endif /* !MAGNETIC */
       vx(RNG)=uui(imx,RNG)/uui(idn,RNG)
 
 #ifndef ISO_LOCAL
@@ -112,16 +112,16 @@ contains
 #ifdef ISO
 #ifdef ISO_LOCAL
       p(RNG) = cs_iso2(RNG) * uui(idn,RNG)
-#else /* ISO_LOCAL */
+#else /* !ISO_LOCAL */
       p(RNG) = nvar%ion%cs2 * uui(idn,RNG)
-#endif /* ISO_LOCAL */
+#endif /* !ISO_LOCAL */
       ps(RNG)= p(RNG) + pmag(RNG)
-#else /* ISO */
+#else /* !ISO */
       ps(RNG)=(uui(ien,RNG) - &
       0.5*( uui(imx,RNG)**2 + uui(imy,RNG)**2 + uui(imz,RNG)**2 ) &
           / uui(idn,RNG))*(nvar%ion%gam_1) + (2.0-nvar%ion%gam)*pmag(RNG)
       p(RNG) = ps(RNG)- pmag(RNG)
-#endif /* ISO */
+#endif /* !ISO */
 
       fluxi(idn,RNG)=uui(imx,RNG)
       fluxi(imx,RNG)=uui(imx,RNG)*vx(RNG)+ps(RNG) - bb(ibx,RNG)**2
@@ -142,9 +142,9 @@ contains
       amp   = 0.5*(maxvx-minvx)
 #ifdef ISO
       cfri(1,RNG) = sqrt(vx(RNG)**2+cfr_smooth*amp) + max(sqrt( abs(2.0*pmag(RNG) +              p(RNG))/uui(idn,RNG)),small)
-#else /* ISO */
+#else /* !ISO */
       cfri(1,RNG) = sqrt(vx(RNG)**2+cfr_smooth*amp) + max(sqrt( abs(2.0*pmag(RNG) + nvar%ion%gam*p(RNG))/uui(idn,RNG)),small)
-#endif /* ISO */
+#endif /* !ISO */
       ! BEWARE: that is the cause of fast decreasing of timestep in galactic disk problem
       ! TODO: find why is it so
       ! if such a treatment is OK then should be applied also in both cases of neutral and ionized gas

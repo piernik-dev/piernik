@@ -43,9 +43,9 @@ module initproblem
 
    subroutine read_problem_par
 
+      use dataio_public, only: ierrh, msg, par_file, namelist_errh, compare_namelist
       use mpisetup,      only: cbuff_len, cbuff, rbuff, buffer_dim, proc, comm, ierr, &
                                MPI_CHARACTER, MPI_DOUBLE_PRECISION
-      use dataio_public, only: ierrh, msg, par_file, namelist_errh, compare_namelist
       use types,         only: idlen
 
       implicit none
@@ -117,10 +117,10 @@ module initproblem
             do k = 1,nz
                zk = z(k)
                vx = 0.0
-#ifndef FFTW
-               vy = -qshear*omega*xi
-#else /* !FFTW */
+#ifdef FFTW
                vy = 0.0
+#else /* !FFTW */
+               vy = -qshear*omega*xi
 #endif /* !FFTW */
                vz = 0.0
                if (abs(yj) <= r0 ) then

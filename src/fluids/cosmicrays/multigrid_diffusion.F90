@@ -802,8 +802,8 @@ contains
 
    end subroutine approximate_solution
 
-#else
+#else /* !(COSM_RAYS && MULTIGRID) */
 #warning This should not happen. Probably the multigrid_diffusion.F90 file is included in object directory by mistake.
-#endif /* COSM_RAYS && MULTIGRID */
+#endif /* !(COSM_RAYS && MULTIGRID) */
 
 end module multigrid_diffusion

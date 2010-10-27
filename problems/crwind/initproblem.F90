@@ -134,7 +134,7 @@ module initproblem
       implicit none
 
       integer :: i,j,k
-      real :: b0, csim2
+      real    :: b0, csim2
 
       ethu = 7.0**2/(5.0/3.0-1.0) * 1.0    ! thermal energy unit=0.76eV/cm**3
                                            ! for c_si= 7km/s, n=1/cm^3

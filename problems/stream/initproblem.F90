@@ -30,8 +30,8 @@
 
 module initproblem
 
-   use problem_pub, only: problem_name, run_id
    use mpisetup,    only: cbuff_len
+   use problem_pub, only: problem_name, run_id
 
    character(len=cbuff_len) :: fnoise
    real :: rhog, eps, amp, kx, kz
@@ -107,14 +107,14 @@ module initproblem
 !-----------------------------------------------------------------------------
 
    subroutine init_prob
-      use types,         only: component_fluid
       use arrays,        only: u
       use constants,     only: pi, dpi
       use dataio_public, only: msg, printinfo
+      use fluidindex,    only: nvar
       use grid,          only: x, y, z, nx, ny, nz, nzd, ymin, ymax, Lx, Lz
       use mpisetup,      only: proc, pcoords
       use shear,         only: omega, qshear
-      use fluidindex,    only: nvar
+      use types,         only: component_fluid
 #ifdef DUST
       use initdust,      only: dragc_gas_dust
 #endif /* DUST */
@@ -132,14 +132,14 @@ module initproblem
 
 #ifdef DUST
       dst => nvar%dst
-#else /* DUST */
+#else /* !DUST */
       call warn("[initproblem]: Dust fluid not initialized. I hope you know what you are doing!"
-#endif /* DUST */
+#endif /* !DUST */
 #ifdef NEUTRAL
       neu => nvar%neu
-#else /* NEUTRAL */
+#else /* !NEUTRAL */
       call warn("[initproblem]: Dust fluid not initialized. I hope you know what you are doing!"
-#endif /* NEUTRAL */
+#endif /* !NEUTRAL */
 
       if (run_id == 'lnA') then
          call printinfo("Lin A")

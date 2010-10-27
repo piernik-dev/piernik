@@ -97,12 +97,12 @@ contains
                p  = fl%cs2*u(fl%idn,i,j,k)
                ps = p + pmag
                cs = sqrt(abs(  (2.*pmag+p)/u(fl%idn,i,j,k)) )
-#else /* ISO */
+#else /* !ISO */
                ps = (u(fl%ien,i,j,k)-sum(u(fl%imx:fl%imz,i,j,k)**2,1) &
                      /u(fl%idn,i,j,k)*0.5)*(fl%gam_1)+(2.-fl%gam)*pmag
                p  = ps - pmag
                cs = sqrt(abs(  (2.*pmag+fl%gam*p)/u(fl%idn,i,j,k)) )
-#endif /* ISO */
+#endif /* !ISO */
                call compute_c_max(fl,cs,i,j,k,cx,cy,cz,c_max)
             enddo
          enddo

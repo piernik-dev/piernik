@@ -74,12 +74,12 @@ contains
 
    subroutine read_problem_par
 
-      use grid,          only: xmin, xmax, ymin, ymax, zmin, zmax
-      use mpisetup,      only: ierr, rbuff, cbuff, ibuff, lbuff, proc, &
-           &                    MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL, &
-           &                    buffer_dim, comm, smalld
       use constants,     only: pi
       use dataio_public, only: ierrh, msg, par_file, die, namelist_errh, compare_namelist
+      use grid,          only: xmin, xmax, ymin, ymax, zmin, zmax
+      use mpisetup,      only: ierr, rbuff, cbuff, ibuff, lbuff, proc, &
+           &                   MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL, &
+           &                   buffer_dim, comm, smalld
       use types,         only: idlen
 
       implicit none
@@ -182,9 +182,9 @@ contains
 
    subroutine read_IC_file
 
+      use dataio_public, only: msg, die
       use grid,          only: xminb, xmaxb, yminb, ymaxb, zminb, zmaxb
       use mpisetup,      only: proc, nproc, comm3d, status, ierr, MPI_INTEGER, MPI_DOUBLE_PRECISION
-      use dataio_public, only: msg, die
 
       implicit none
 
@@ -265,13 +265,13 @@ contains
 
    subroutine init_prob
 
-      use mpisetup,      only: proc, smalld
       use arrays,        only: u, b, cs_iso2_arr
+      use constants,     only: small, kboltz, mH
+      use dataio_public, only: die, warn, printinfo, msg
       use grid,          only: is, ie, js, je, ks, ke, nx, ny, nz, nb, x, y, z, dx, dy, dz
       use initionized,   only: idni, imxi, imyi, imzi
       use list_hdf5,     only: additional_attrs, problem_write_restart, problem_read_restart
-      use constants,     only: small, kboltz, mH
-      use dataio_public, only: die, warn, printinfo, msg
+      use mpisetup,      only: proc, smalld
       use types,         only: problem_customize_solution
 
       implicit none
@@ -384,9 +384,9 @@ contains
 
    subroutine init_prob_attrs(file_id)
 
+      use constants, only: fpiG
       use hdf5, only: HID_T, SIZE_T
       use h5lt, only: h5ltset_attribute_double_f
-      use constants, only: fpiG
 
       implicit none
 
@@ -402,9 +402,9 @@ contains
 
    subroutine write_initial_fld_to_restart(file_id)
 
-      use hdf5,        only: HID_T
-      use grid,        only: nx, ny, nz
       use dataio_hdf5, only: write_3darr_to_restart
+      use grid,        only: nx, ny, nz
+      use hdf5,        only: HID_T
 
       implicit none
 
@@ -422,9 +422,9 @@ contains
 
    subroutine read_initial_fld_from_restart(file_id)
 
-      use hdf5,        only: HID_T
-      use grid,        only: nx, ny, nz
       use dataio_hdf5, only: read_3darr_from_restart
+      use grid,        only: nx, ny, nz
+      use hdf5,        only: HID_T
 
       implicit none
 
@@ -455,10 +455,10 @@ contains
 
    subroutine problem_customize_solution_wt4
 
-     use mpisetup,    only: proc
      use arrays,      only: u, cs_iso2_arr
      use grid,        only: is, ie, js, je, ks, ke, nx, ny, nz, x, y
      use initionized, only: idni, imxi, imyi, imzi
+     use mpisetup,    only: proc
 
      implicit none
 
@@ -487,15 +487,7 @@ contains
                  mod_str(is:ie) = max(0., (1. + 1./max_ambient) * ambient_density_min / (max(0., u(idni, is:ie, j, k)) + ambient_density_min) - 1./max_ambient)
                  ! ifort can have memory leaks on WHERE - let's provide explicit loop for this crappy compiler
                  ! The __IFORT__ macro has to be defined manually, e.g. in appropriate compiler.in file
-#ifndef __IFORT__
-                 where (mod_str(is:ie) > max_ambient**(-2))
-                    u(idni,     is:ie, j, k) = u(idni, is:ie, j, k) + ambient_density_min * mod_str(is:ie)
-                    u(imxi,     is:ie, j, k) = u(imxi, is:ie, j, k) * (1. - damp_factor   * mod_str(is:ie))
-                    u(imyi,     is:ie, j, k) = u(imyi, is:ie, j, k) * (1. - damp_factor   * mod_str(is:ie))
-                    u(imzi,     is:ie, j, k) = u(imzi, is:ie, j, k) * (1. - damp_factor   * mod_str(is:ie))
-                    cs_iso2_arr(is:ie, j, k) = maxcs2               -  (maxcs2-mincs2)    * mod_str(is:ie)
-                 endwhere
-#else /* !__IFORT__ */
+#ifdef __IFORT__
                  do i = is, ie
                     if (mod_str(i) > max_ambient**(-2)) then
                        u(idni,     i, j, k) = u(idni, i, j, k) + ambient_density_min * mod_str(i)
@@ -505,6 +497,14 @@ contains
                        cs_iso2_arr(i, j, k) = maxcs2           -  (maxcs2-mincs2)    * mod_str(i)
                     endif
                  enddo
+#else /* !__IFORT__ */
+                 where (mod_str(is:ie) > max_ambient**(-2))
+                    u(idni,     is:ie, j, k) = u(idni, is:ie, j, k) + ambient_density_min * mod_str(is:ie)
+                    u(imxi,     is:ie, j, k) = u(imxi, is:ie, j, k) * (1. - damp_factor   * mod_str(is:ie))
+                    u(imyi,     is:ie, j, k) = u(imyi, is:ie, j, k) * (1. - damp_factor   * mod_str(is:ie))
+                    u(imzi,     is:ie, j, k) = u(imzi, is:ie, j, k) * (1. - damp_factor   * mod_str(is:ie))
+                    cs_iso2_arr(is:ie, j, k) = maxcs2               -  (maxcs2-mincs2)    * mod_str(is:ie)
+                 endwhere
 #endif /* !__IFORT__ */
               enddo
            enddo

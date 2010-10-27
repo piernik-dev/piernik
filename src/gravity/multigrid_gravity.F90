@@ -1780,8 +1780,8 @@ contains
 
    end subroutine fft_convolve
 
-#else /* MULTIGRID && GRAV */
+#else /* !(MULTIGRID && GRAV) */
 #warning This should not happen. Probably the multigrid_gravity.F90 file is included in object directory by mistake.
-#endif /* MULTIGRID && GRAV */
+#endif /* !(MULTIGRID && GRAV) */
 
 end module multigrid_gravity

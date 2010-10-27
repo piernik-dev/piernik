@@ -459,10 +459,10 @@ module mpisetup
          endif
 #endif /* !FFTW */
 
-#else /* SHEAR_BND */
+#else /* !SHEAR_BND */
          if (procxl /= MPI_PROC_NULL .and. procxl /= proc) bnd_xl = 'mpi'
          if (procxr /= MPI_PROC_NULL .and. procxr /= proc) bnd_xr = 'mpi'
-#endif /* SHEAR_BND */
+#endif /* !SHEAR_BND */
 
          if (procyl /= MPI_PROC_NULL .and. procyl /= proc) bnd_yl = 'mpi'
          if (procyr /= MPI_PROC_NULL .and. procyr /= proc) bnd_yr = 'mpi'

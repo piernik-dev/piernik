@@ -256,9 +256,9 @@ contains
 
 #ifdef NEW_HDF5
       call cr_add_hdf5(ncrs,cgrid)
-#else
+#else /* !NEW_HDF5 */
       if (.false.) icr = 0 * cgrid%is !suppress compiler warnings on unused arguments
-#endif /* NEW_HDF5 */
+#endif /* !NEW_HDF5 */
 
    end subroutine cosmicray_index
 

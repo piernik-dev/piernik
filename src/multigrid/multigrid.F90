@@ -65,10 +65,10 @@ contains
       use dataio_public,      only: msg, par_file, die, warn, namelist_errh, compare_namelist
 #ifdef GRAV
       use multigrid_gravity,  only: init_multigrid_grav, init_multigrid_grav_post
-#endif
+#endif /* GRAV */
 #ifdef COSM_RAYS
       use multigrid_diffusion, only: init_multigrid_diff, init_multigrid_diff_post
-#endif
+#endif /* COSM_RAYS */
 #ifdef NEW_HDF5
       use multigridio,        only: multigrid_add_hdf5
 #endif /* NEW_HDF5 */
@@ -163,10 +163,10 @@ contains
 ! ToDo: Make array of subroutine pointers
 #ifdef GRAV
       call init_multigrid_grav
-#endif
+#endif /* GRAV */
 #ifdef COSM_RAYS
       call init_multigrid_diff
-#endif
+#endif /* COSM_RAYS */
 
       !! Sanity checks
       if (abs(ord_prolong) > 2*mg_nb) call die("[multigrid:init_multigrid] not enough guardcells for given prolongation operator order")
@@ -405,10 +405,10 @@ contains
 
 #ifdef GRAV
       call init_multigrid_grav_post(cgrid, mb_alloc)
-#endif
+#endif /* !GRAV */
 #ifdef COSM_RAYS
       call init_multigrid_diff_post(cgrid, mb_alloc)
-#endif
+#endif /* COSM_RAYS */
 
       ! summary
       if (proc == 0) then
@@ -432,10 +432,10 @@ contains
       use dataio_public,      only: msg
 #ifdef GRAV
       use multigrid_gravity,  only: cleanup_multigrid_grav
-#endif
+#endif /* GRAV */
 #ifdef COSM_RAYS
       use multigrid_diffusion, only: cleanup_multigrid_diff
-#endif
+#endif /* COSM_RAYS */
 
       implicit none
 
@@ -444,10 +444,10 @@ contains
 
 #ifdef GRAV
       call cleanup_multigrid_grav
-#endif
+#endif /* GRAV */
 #ifdef COSM_RAYS
       call cleanup_multigrid_diff
-#endif
+#endif /* COSM_RAYS */
 
       if (allocated(lvl)) then
          do i=level_gb, level_max

@@ -85,9 +85,9 @@ subroutine all_fluxes(n, flux, cfr, uu, bb, cs_iso2)
 
 #ifdef IONIZED
     real, dimension(nvar%ion%all,n) :: fluxion,cfrion,uuion
-#else /* IONIZED */
+#else /* !IONIZED */
     integer :: dummy
-#endif /* IONIZED */
+#endif /* !IONIZED */
 
 #ifdef NEUTRAL
     real, dimension(nvar%neu%all,n) :: fluxneu,cfrneu,uuneu
@@ -111,9 +111,9 @@ subroutine all_fluxes(n, flux, cfr, uu, bb, cs_iso2)
    flux(nvar%ion%iarr,:) = fluxion
    cfr(nvar%ion%iarr,:)  = cfrion
    uu(nvar%ion%iarr,:)   = uuion
-#else /* IONIZED */
+#else /* !IONIZED */
    if (.false.) dummy = size(bb)*size(cs_iso2) ! suppress compiler warnings on unused arguments
-#endif /* IONIZED */
+#endif /* !IONIZED */
 
 #ifdef NEUTRAL
    uuneu(:,:)=uu(nvar%neu%iarr,:)

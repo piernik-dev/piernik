@@ -197,7 +197,7 @@ module fluidboundaries
          if (allocated(recv_left))  deallocate(recv_left)
          if (allocated(recv_right)) deallocate(recv_right)
 
-#else /* !FFTW */
+#else /* FFTW */
 
          if ( (bnd_xl == 'she').and.(bnd_xr == 'she')) then
 
@@ -236,8 +236,8 @@ module fluidboundaries
          if (allocated(recv_right)) deallocate(recv_right)
 
          endif
-#endif /* !FFTW */
-#else /* SHEAR_BND */
+#endif /* FFTW */
+#else /* !SHEAR_BND */
          if (pxsize .gt. 1) then
 
             CALL MPI_Isend   (u(1,1,1,1), 1, MPI_YZ_LEFT_DOM,  procxl, 10, comm3d, req(1), ierr)
@@ -247,7 +247,7 @@ module fluidboundaries
 
             call MPI_Waitall(4,req(:),status(:,:),ierr)
          endif
-#endif /* SHEAR_BND */
+#endif /* !SHEAR_BND */
       case ('ydim')
          if (pysize .gt. 1) then
 
@@ -640,14 +640,14 @@ module fluidboundaries
                db = max(db,smalld)
 #ifdef ISO
                csi2b = cs_iso2
-#else /* ISO */
+#else /* !ISO */
                ekb= 0.5*(u(iarr_all_mx,:,:,kb)**2+u(iarr_all_my,:,:,kb)**2+u(iarr_all_mz,:,:,kb)**2)/db
                eib = u(iarr_all_en,:,:,kb) - ekb
                eib = max(eib,smallei)
                do ifluid=1,nvar%fluids
                   csi2b(ifluid,:,:) = (gamma(ifluid)-1.0)*eib(ifluid,:,:)/db(ifluid,:,:)
                enddo
-#endif /* ISO */
+#endif /* !ISO */
                z1 = z(kb)
                z2 = z(kb-1)
                dzs = (z2-z1)/real(nsub)
@@ -742,14 +742,14 @@ module fluidboundaries
                db = max(db,smalld)
 #ifdef ISO
                csi2b = cs_iso2
-#else /* ISO */
+#else /* !ISO */
                ekb= 0.5*(u(iarr_all_mx,:,:,kb)**2+u(iarr_all_my,:,:,kb)**2+u(iarr_all_mz,:,:,kb)**2)/db
                eib = u(iarr_all_en,:,:,kb) - ekb
                eib = max(eib,smallei)
                do ifluid=1,nvar%fluids
                   csi2b(ifluid,:,:) = (gamma(ifluid)-1.0)*eib(ifluid,:,:)/db(ifluid,:,:)
                enddo
-#endif /* ISO */
+#endif /* !ISO */
                z1 = z(kb)
                z2 = z(kb+1)
                dzs = (z2-z1)/real(nsub)

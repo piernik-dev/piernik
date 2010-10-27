@@ -235,9 +235,9 @@ contains
 
 #ifdef MULTIGRID
       call printinfo(' % gnuplot verify.gpl; display jeans-mg.png', .true.)
-#else /* MULTIGRID */
+#else /* !MULTIGRID */
       call printinfo(' % gnuplot verify.gpl; display jeans-fft.png', .true.)
-#endif /* MULTIGRID */
+#endif /* !MULTIGRID */
       call printinfo('', .true.)
 
       open(137,file="verify.gpl",status="unknown")
@@ -246,10 +246,10 @@ contains
 #ifdef MULTIGRID
          write(137,'(a)') "set output 'jeans-mg.png'"
          write(137,'(a)') 'set title "Jeans oscillations (multigrid)"'
-#else /* MULTIGRID */
+#else /* !MULTIGRID */
          write(137,'(a)') "set output 'jeans-fft.png'"
          write(137,'(a)') 'set title "Jeans oscillations (FFT)"'
-#endif /* MULTIGRID */
+#endif /* !MULTIGRID */
          write(137,'(3(a,/),a)') 'set ylabel "E_int"', 'set xtics 1', 'set mxtics 2', 'set mytics 2'
          if (Tamp_rounded /= 0 .and. Tamp >0) then
             write(137,'(a,g11.3)')'set ytics ',Tamp_rounded/2.

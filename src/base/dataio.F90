@@ -574,9 +574,9 @@ module dataio
       if (output .ne. 'gpt') then
          call write_log
          call write_timeslice
-#else /* HDFSWEEP */
+#else /* !HDFSWEEP */
       if (dt_hdf .gt. 0.0 .and. nstep .gt. step_hdf .and. output .ne. 'gpt') then
-#endif /* HDFSWEEP */
+#endif /* !HDFSWEEP */
 
          if ((t-last_hdf_time) .ge. dt_hdf &
                 .or. output .eq. 'hdf' .or. output .eq. 'end') then
@@ -738,11 +738,11 @@ module dataio
 #endif /* IONIZED */
 #ifdef NEUTRAL
       cs_iso2 = nvar%neu%cs2
-#else /* NEUTRAL */
+#else /* !NEUTRAL */
 #ifndef IONIZED
       cs_iso2 = 0.0
 #endif /* !IONIZED */
-#endif /* NEUTRAL */
+#endif /* !NEUTRAL */
 
 
       if (proc == 0) then
@@ -816,10 +816,10 @@ module dataio
 #ifdef ISO
       tot_eint = cs_iso2*tot_mass
       tot_ener = tot_eint+tot_ekin+tot_emag
-#else /* ISO */
+#else /* !ISO */
       tot_ener = mpi_addmul(u(iarr_all_en,is:ie,js:je,ks:ke), dvol)
       tot_eint = tot_ener - tot_ekin - tot_emag
-#endif /* ISO */
+#endif /* !ISO */
 #ifdef GRAV
       tot_ener = tot_ener + tot_epot
 #endif /* GRAV */
@@ -989,7 +989,7 @@ module dataio
       pr%temp_max%val  = mH / kboltz * gasRconst/fl%gam * fl%cs2
       pr%temp_max%loc  = 0
       pr%temp_max%proc = 0
-#else /* ISO */
+#else /* !ISO */
       if (fl%tag /= "DST") then
          wa(:,:,:) = (u(fl%ien,:,:,:) &                ! eint
                    - 0.5*((u(fl%imx,:,:,:)**2 +u(fl%imy,:,:,:)**2 + u(fl%imz,:,:,:)**2)/u(fl%idn,:,:,:)))
@@ -1007,7 +1007,7 @@ module dataio
          call get_extremum(wa(is:ie,js:je,ks:ke), 'max', pr%temp_max)
          call get_extremum(wa(is:ie,js:je,ks:ke), 'min', pr%temp_min)
       endif
-#endif /* ISO */
+#endif /* !ISO */
       end subroutine get_common_vars
    !---------------------------------------------------------------------
    !
@@ -1106,7 +1106,7 @@ module dataio
 !        temi_max%loc  = maxloc(wa(is:ie,js:je,ks:ke)) + [nb, nb, nb]
 !        call mpifind(temi_max%val, 'max', temi_max%loc, temi_max%proc)
 #endif /* ISO_LOCAL */
-#else /* ISO */
+#else /* !ISO */
 !        wa(:,:,:) = (u(ieni,:,:,:) &                ! eint
 !                  - 0.5*((u(imxi,:,:,:)**2 +u(imyi,:,:,:)**2 &
 !                    + u(imzi,:,:,:)**2)/u(idni,:,:,:)))
@@ -1114,7 +1114,7 @@ module dataio
 !        wa(:,:,:) = wa(:,:,:) - 0.5*(b(ibx,:,:,:)**2 + b(iby,:,:,:)**2 + &
 !                   b(ibz,:,:,:)**2)
 #endif /* MAGNETIC */
-#endif /* ISO */
+#endif /* !ISO */
 #endif /* IONIZED */
 
 #ifdef DUST
@@ -1163,10 +1163,10 @@ module dataio
             call printinfo(msg, .false.)
             write(msg, fmt771) 'max(|divb|) MAG  =', divb_max%val,  divb_max%proc,  divb_max%loc
             call printinfo(msg, .false.)
-#else /* MAGNETIC */
+#else /* !MAGNETIC */
 !            if (csi_max%val > 0.) write(msg, fmt777) 'max(c_s )   ION  =', sqrt(csi_max%val**2), 'dt=',cfl*dxmn_safe/sqrt(csi_max%val**2)
 !            call printinfo(msg, .false.)
-#endif /* MAGNETIC */
+#endif /* !MAGNETIC */
 #endif /* IONIZED */
 #ifdef NEUTRAL
             call common_shout(nvar%neu%snap,'NEU',.true.,.true.,.true.)

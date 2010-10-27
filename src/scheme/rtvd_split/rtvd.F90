@@ -351,10 +351,10 @@ module rtvd ! split orig
       do istep=1,integration_order
 
 ! Fluxes calculation for cells centers
-#ifndef ISO_LOCAL
-         call all_fluxes(n, w, cfr, u1, bb)
-#else /* !ISO_LOCAL */
+#ifdef ISO_LOCAL
          call all_fluxes(n, w, cfr, u1, bb, cs_iso2)
+#else /* !ISO_LOCAL */
+         call all_fluxes(n, w, cfr, u1, bb)
 #endif /* !ISO_LOCAL */
 ! Right and left fluxes decoupling
 
@@ -409,9 +409,9 @@ module rtvd ! split orig
 #ifdef FLUID_INTERACTIONS
 #ifdef SHEAR
          df = (/global_gradP_neu,0.0/)        ! znacznik1
-#else /* SHEAR */
+#else /* !SHEAR */
          df = 0.0
-#endif /* SHEAR */
+#endif /* !SHEAR */
          epsa(1,:) = dragc_gas_dust * u(iarr_all_dn(2),:)  / u(iarr_all_dn(1),:)
          epsa(2,:) = dragc_gas_dust
          where (u(iarr_all_dn,:) > 0.0)
@@ -429,10 +429,10 @@ module rtvd ! split orig
             endif
          enddo
 
-#else /* FLUID_INTERACTIONS */
+#else /* !FLUID_INTERACTIONS */
          fricacc(:,:) = 0.0
          df = 0.0
-#endif /* FLUID_INTERACTIONS */
+#endif /* !FLUID_INTERACTIONS */
 
 #ifdef SHEAR
          where (u(iarr_all_dn,:) > 0.0)
@@ -456,15 +456,15 @@ module rtvd ! split orig
                rotacc(ind,:) = 0.0
             endif
          enddo
-#else /* SHEAR */
+#else /* !SHEAR */
          rotacc(:,:) = 0.0
-#endif /* SHEAR */
+#endif /* !SHEAR */
 
 #ifdef GRAV
          call grav_pot2accel(sweep,i1,i2, n, gravacc, istep)
-#else /* GRAV */
+#else /* !GRAV */
          gravacc = 0.0
-#endif /* GRAV */
+#endif /* !GRAV */
 
 
 #if defined GRAV || defined SHEAR || defined FLUID_INTERACTIONS

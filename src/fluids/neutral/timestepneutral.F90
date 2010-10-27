@@ -84,12 +84,12 @@ contains
 #ifdef ISO
                p  = fl%cs2*u(fl%idn,i,j,k)
                cs = sqrt(fl%cs2)
-#else /* ISO */
+#else /* !ISO */
                p  = (u(fl%ien,i,j,k)-sum(u(fl%imx:fl%imz,i,j,k)**2,1) &
                      /u(fl%idn,i,j,k)/2.)*(fl%gam_1)
 
                cs = sqrt(abs(  (fl%gam*p)/u(fl%idn,i,j,k)) )
-#endif /* ISO */
+#endif /* !ISO */
                call compute_c_max(fl,cs,i,j,k,cx,cy,cz,c_max)
             enddo
          enddo

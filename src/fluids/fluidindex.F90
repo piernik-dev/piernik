@@ -158,9 +158,9 @@ contains
 #ifdef COSM_RAYS
 !  Compute indexes for the CR component and update counters
       call cosmicray_index(nvar, cgrid)
-#else
+#else /* !COSM_RAYS */
       if (.false.) i_sg = 0 * cgrid%is !suppress compiler warnings on unused arguments
-#endif /* COSM_RAYS */
+#endif /* !COSM_RAYS */
 
 ! Allocate index arrays
 #ifdef IONIZED
@@ -169,21 +169,21 @@ contains
       allocate(iarr_all_swpx(nvar%all),iarr_all_swpy(nvar%all),iarr_all_swpz(nvar%all))
       allocate(iarr_all_dn(nvar%fluids),iarr_all_mx(nvar%fluids),iarr_all_my(nvar%fluids),iarr_all_mz(nvar%fluids))
       allocate(iarr_all_sg(nvar%fluids_sg))
-#ifndef ISO
-      allocate(iarr_all_en(nvar%adiab))
-#else /* !ISO */
+#ifdef ISO
       allocate(iarr_all_en(0))
+#else /* !ISO */
+      allocate(iarr_all_en(nvar%adiab))
 #endif /* !ISO */
 
 #ifdef COSM_RAYS
       allocate(iarr_all_crn(nvar%crn%all))
       allocate(iarr_all_cre(nvar%cre%all))
       allocate(iarr_all_crs(nvar%crs%all))
-#else /* COSM_RAYS */
+#else /* !COSM_RAYS */
       allocate(iarr_all_crn(0))
       allocate(iarr_all_cre(0))
       allocate(iarr_all_crs(0))
-#endif /* COSM_RAYS */
+#endif /* !COSM_RAYS */
 
 #ifdef IONIZED
 ! Compute index arrays for magnetic field

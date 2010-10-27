@@ -614,8 +614,8 @@ contains
 !------------------------------------------
     end subroutine poisson_xyzp
 
-#else /* POISSON_FFT */
+#else /* !POISSON_FFT */
 #warning This should not happen. Probably the poissonsolver.F90 file is included in object directory by mistake.
-#endif /* POISSON_FFT */
+#endif /* !POISSON_FFT */
 
 end module poissonsolver

@@ -44,9 +44,11 @@ contains
 
    subroutine timestep_crs
 
-      use grid,           only: dxmn
-      use initcosmicrays, only: cfl_cr, K_crs_paral, K_crs_perp, use_split
+      use grid,                only: dxmn
+      use initcosmicrays,      only: cfl_cr, K_crs_paral, K_crs_perp, use_split
+#ifdef MULTIGRID
       use multigrid_diffusion, only: diff_explicit, diff_tstep_fac
+#endif /* MULTIGRID */
 
       implicit none
 

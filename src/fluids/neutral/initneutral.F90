@@ -118,9 +118,9 @@ module initneutral
     cs_iso_neu2      = cs_iso_neu**2
 #ifdef SHEAR
     global_gradP_neu = 2.0*omega*eta_gas_neu * cs_iso_neu / csvk
-#else /* SHEAR */
+#else /* !SHEAR */
     global_gradP_neu = 0.0
-#endif /* SHEAR */
+#endif /* !SHEAR */
 
   end subroutine init_neutral
 
