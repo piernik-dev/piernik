@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-import re
+import re, sys
 import subprocess as sp
 
 class bcolors:
@@ -39,12 +39,14 @@ def select_sources(files):
 
 def qa_checks(files,options):
    print b.OKBLUE + '"I am the purifier, the light that clears all shadows." - seal of cleansing inscription' + b.ENDC
+   runpath = sys.argv[0].split("qa.py")[0]
    files = remove_binaries(files)
    f90files = select_sources(files)
    qa_trailing_spaces(files,options)
    qa_nasty_spaces(f90files,options)
    nt = qa_labels(f90files,options)
    nt += qa_nonconforming_tabs(files,options)
+   nt += qa_implicit_saves(f90files,options,runpath)
    wc = qa_depreciated_syntax(f90files,options)
    wc += qa_crude_write(f90files,options)
    wc += qa_magic_integers(f90files,options)
@@ -63,6 +65,16 @@ def qa_checks(files,options):
          exit()
    else:
       print b.OKGREEN + "Yay! No errors!!! " + b.ENDC
+
+def qa_implicit_saves(files,options,runpath):
+   print b.OKGREEN + "QA: " + b.ENDC + "Checking for implicit saves"
+   wrong_files = []
+   for file in files:
+      p = sp.Popen(runpath+'implicit_save.sh '+file, shell=True, executable="/bin/bash", stdout=sp.PIPE).communicate()[0]
+      if (len(p)):
+         print p.rstrip()
+         wrong_files.append(file)
+   return wrong_files
 
 def qa_labels(files,options):
    print b.OKGREEN + "QA: " + b.ENDC + "Checking for labels"
