@@ -69,8 +69,9 @@ def qa_checks(files,options):
 def qa_implicit_saves(files,options,runpath):
    print b.OKGREEN + "QA: " + b.ENDC + "Checking for implicit saves"
    wrong_files = []
+   dirname = runpath.split("svnci.py")[0]
    for file in files:
-      p = sp.Popen(runpath+'implicit_save.sh '+file, shell=True, executable="/bin/bash", stdout=sp.PIPE).communicate()[0]
+      p = sp.Popen(dirname+'implicit_save.sh '+file, shell=True, executable="/bin/bash", stdout=sp.PIPE).communicate()[0]
       if (len(p)):
          print p.rstrip()
          wrong_files.append(file)
