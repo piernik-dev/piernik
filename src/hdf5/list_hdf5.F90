@@ -173,7 +173,7 @@ module list_hdf5
          implicit none
          real(kind=4), dimension(:,:,:) :: data
 
-         integer :: rank = 3 ! Dataset rank
+         integer, parameter :: rank = 3 ! Dataset rank
 
          CHARACTER(LEN=S_LEN) :: dsetname    !< Dataset name
 
