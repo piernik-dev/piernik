@@ -149,9 +149,10 @@ module initproblem
       integer :: icr
       real    :: cs_iso
       real    :: xsn, ysn, zsn    ! BEWARE: those vars are used but not initialized
-#ifdef COSM_RAYS_SOURCES
       real    :: r2
-#endif /* COSM_RAYS_SOURCES */
+#ifndef COSM_RAYS_SOURCES
+      integer, parameter :: icr_H1 = 1, icr_C12 = 2
+#endif /* !COSM_RAYS_SOURCES */
 
       ! BEWARE: temporary fix
       xsn = 0.0
@@ -196,7 +197,6 @@ module initproblem
       enddo
 
 ! Explosions
-#ifdef COSM_RAYS_SOURCES
       do icr = 1, nvar%crn%all
          do k = ks, ke
             do j = js, je
@@ -213,7 +213,6 @@ module initproblem
             enddo
          enddo
       enddo
-#endif /* COSM_RAYS_SOURCES */
 
       do icr = 1, nvar%crs%all
          write(msg,*) '[initproblem:init_prob] icr=',icr,' maxecr =',maxval(u(iarr_crs(icr),:,:,:)),' maxloc =',maxloc(u(iarr_crs(icr),:,:,:))
