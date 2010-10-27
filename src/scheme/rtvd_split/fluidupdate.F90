@@ -37,7 +37,7 @@ contains
    subroutine fluid_update
 
       use dataio,        only: check_log, check_tsl
-      use dataio_pub, only: cwdlen, halfstep, msg, printinfo
+      use dataio_pub   , only: cwdlen, halfstep, msg, printinfo
       use mpisetup,      only: proc, dt, dtm, t, nstep
       use timer,         only: timer_
       use timestep,      only: time_step
@@ -48,7 +48,7 @@ contains
       use sndistr,       only: supernovae_distribution
 #ifdef DEBUG
       use dataio_hdf5,   only: write_hdf5
-      use dataio_pub, only: chdf
+      use dataio_pub   , only: chdf
 #endif /* DEBUG */
 #endif /* SNE_DISTR */
 
@@ -127,7 +127,7 @@ contains
 
    subroutine make_3sweeps(forward)
 
-      use dataio_pub,   only: skip_advection
+      use dataio_pub   ,   only: skip_advection
       use types,           only: problem_customize_solution
 #ifdef SHEAR
       use fluidboundaries, only: bnd_u
@@ -189,7 +189,7 @@ contains
 
    subroutine make_sweep(dir, forward)
 
-      use dataio_pub,  only: msg, die
+      use dataio_pub   ,  only: msg, die
       use grid,           only: nxd, nyd, nzd
       use sweeps,         only: sweepx, sweepy, sweepz
 #if defined SHEAR && defined FLUID_INTERACTIONS
@@ -201,7 +201,7 @@ contains
 #endif /* COSM_RAYS */
 #ifdef DEBUG
       use dataio_hdf5,    only: write_hdf5
-      use dataio_pub,  only: chdf
+      use dataio_pub   ,  only: chdf
 #endif /* DEBUG */
 
       implicit none

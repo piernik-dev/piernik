@@ -119,10 +119,10 @@ module initfluids
       use types,           only: grid_container
       use fluidindex,      only: fluid_index, nvar
 #ifdef VERBOSE
-      use dataio_pub,   only: printinfo
+      use dataio_pub   ,   only: printinfo
 #endif /* VERBOSE */
 #if defined NEUTRAL && defined IONIZED
-      use dataio_pub,   only: warn
+      use dataio_pub   ,   only: warn
 #endif /* defined NEUTRAL && defined IONIZED  */
 #ifdef IONIZED
       use initionized,     only: init_ionized, gamma_ion, cs_iso_ion, cs_iso_ion2

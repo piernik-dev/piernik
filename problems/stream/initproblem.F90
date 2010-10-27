@@ -47,7 +47,7 @@ module initproblem
 
    subroutine read_problem_par
 
-      use dataio_pub, only: ierrh, msg, par_file, namelist_errh, compare_namelist
+      use dataio_pub   , only: ierrh, msg, par_file, namelist_errh, compare_namelist
       use mpisetup,      only: rbuff, cbuff, lbuff, buffer_dim, proc, comm, ierr, &
            &                   MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_LOGICAL
       use types,         only: idlen
@@ -109,7 +109,7 @@ module initproblem
    subroutine init_prob
       use arrays,        only: u
       use constants,     only: pi, dpi
-      use dataio_pub, only: msg, printinfo
+      use dataio_pub   , only: msg, printinfo
       use fluidindex,    only: nvar
       use grid,          only: x, y, z, nx, ny, nz, nzd, ymin, ymax, Lx, Lz
       use mpisetup,      only: proc, pcoords

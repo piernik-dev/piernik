@@ -49,7 +49,7 @@ module func
 !! the performance at the cost of the flexibility of original \p CSHIFT.
 !<
    function pshift(tab,d)
-      use dataio_pub, only: warn
+      use dataio_pub   , only: warn
       implicit none
       real, dimension(:,:,:) :: tab
       integer :: d
@@ -86,7 +86,7 @@ module func
 !! the performance at the cost of the flexibility of original \p CSHIFT.
 !<
    function mshift(tab,d)
-      use dataio_pub, only: warn
+      use dataio_pub   , only: warn
       implicit none
       real, dimension(:,:,:) :: tab
       integer :: d

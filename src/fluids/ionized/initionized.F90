@@ -70,7 +70,7 @@ module initionized
 !<
   subroutine init_ionized
 
-    use dataio_pub, only: par_file, ierrh, namelist_errh, compare_namelist
+    use dataio_pub   , only: par_file, ierrh, namelist_errh, compare_namelist
     use mpisetup,      only: rbuff, lbuff, MPI_DOUBLE_PRECISION, MPI_LOGICAL, &
          &                   comm, ierr, buffer_dim, proc
 

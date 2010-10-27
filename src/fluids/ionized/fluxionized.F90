@@ -74,7 +74,7 @@ contains
    subroutine flux_ion(fluxi,cfri,vx,uui,bb,n,cs_iso2)
 
       use constants,       only: small
-      use dataio_pub,   only: die
+      use dataio_pub   ,   only: die
       use fluidindex,      only: idn, imx, imy, imz, ien, nvar, ibx, iby, ibz, nmag
       use mpisetup,        only: cfr_smooth
 

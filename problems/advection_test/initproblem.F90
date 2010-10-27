@@ -43,7 +43,7 @@ contains
 
    subroutine read_problem_par
 
-      use dataio_pub, only: ierrh, msg, par_file, die, namelist_errh, compare_namelist
+      use dataio_pub   , only: ierrh, msg, par_file, die, namelist_errh, compare_namelist
       use grid,          only: xmin, xmax, ymin, ymax, zmin, zmax, dx, dy, dz, nxd, nyd, nzd
       use initneutral,   only: gamma_neu
       use mpisetup,      only: ierr, rbuff, cbuff_len, cbuff, proc, buffer_dim, comm, smalld, smallei, MPI_CHARACTER, MPI_DOUBLE_PRECISION

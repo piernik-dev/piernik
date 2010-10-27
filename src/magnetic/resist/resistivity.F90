@@ -80,7 +80,7 @@ module resistivity
 !! \n \n
 !<
    subroutine init_resistivity
-      use dataio_pub, only: par_file, ierrh, die, namelist_errh, compare_namelist
+      use dataio_pub   , only: par_file, ierrh, die, namelist_errh, compare_namelist
       use grid,          only: nx, ny, nz, nzd
       use mpisetup,      only: rbuff, ibuff, ierr, MPI_INTEGER, MPI_DOUBLE_PRECISION, buffer_dim, comm, proc
 #ifndef ISO

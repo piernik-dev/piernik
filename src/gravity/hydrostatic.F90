@@ -45,7 +45,7 @@ module hydrostatic
 
       use arrays,          only: gp
       use constants,       only: small
-      use dataio_pub,   only: die
+      use dataio_pub   ,   only: die
       use gravity,         only: grav_accel, gp_status, nsub, tune_zeq
       use grid,            only: nx, ny, nz, dl, zdim, z, zl, zr, nzt, nb, zmin, zmax
       use mpisetup,        only: proc
