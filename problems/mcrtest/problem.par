@@ -103,7 +103,7 @@
  $PROBLEM_CONTROL
     problem_name = 'mcr'
     run_id = 'tst'
-    d0     = 1.0e5
+    d0     = 1.0 ! when COSM_RAYS_SOURCES are defined, the density somehow scales the result of sourcecosmicrays.F90 and values like 1e5 quickly lead to FP overflow. This must be a bug.
     p0     = 1.0
     bx0    = 5.0
     by0    = 5.0
