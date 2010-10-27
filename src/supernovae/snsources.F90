@@ -108,9 +108,9 @@ module snsources
 
                do ipm=-1,1
 
-                  if (ipm .eq. -1) ysna = ysno
-                  if (ipm .eq.  0) ysna = ysn
-                  if (ipm .eq.  1) ysna = ysni
+                  if (ipm == -1) ysna = ysno
+                  if (ipm ==  0) ysna = ysn
+                  if (ipm ==  1) ysna = ysni
 
                   do jpm=-1,1
 
@@ -180,14 +180,14 @@ module snsources
 !  outer boundary
       jremap = jsn - delj
       jremap = mod(mod(jremap, nyd)+nyd,nyd)
-      if (jremap .le. (js-1)) jremap = jremap + nyd
+      if (jremap <= (js-1)) jremap = jremap + nyd
 
       ysno = y(jremap) + epso + dysn
 
 !  inner boundary
       jremap = jsn + delj
       jremap = mod(jremap, nyd)+nyd
-      if (jremap .ge. (je+1)) jremap = jremap - nyd
+      if (jremap >= (je+1)) jremap = jremap - nyd
 
       ysni = y(jremap) + epsi + dysn
 #else /* !SHEAR */
