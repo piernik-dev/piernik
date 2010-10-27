@@ -209,7 +209,7 @@ contains
 
    subroutine multigrid_solve_diff
 
-      use dataio_pub,         only: halfstep, warn, msg
+      use dataio_pub,         only: halfstep, warn, printinfo, msg
       use crdiffusion,        only: cr_diff_x, cr_diff_y, cr_diff_z
       use timer,              only: timer_
       use multigridvars,      only: ts, tot_ts, norm_rhs_orig
@@ -243,12 +243,16 @@ contains
          do cr_id = 1, nvar%crs%all
             call init_source(cr_id)
             if (norm_rhs_orig /= 0) then
-               call init_solution(cr_id)
+               if (norm_was_zero(cr_id)) then
+                  write(msg,'(a,i2,a)')"[multigrid_diffusion:multigrid_solve_diff] CR-fluid #",cr_id," is now available in measurable quantities."
+                  call printinfo(msg)
+               endif
+               norm_was_zero(cr_id) = .false.
 
+               call init_solution(cr_id)
                ! do substepping
                call vcycle_hg(cr_id)
                ! enddo
-               norm_was_zero(cr_id) = .false.
             else
                if (.not. norm_was_zero(cr_id)) then
                   write(msg,'(a,i2,a)')"[multigrid_diffusion:multigrid_solve_diff] Source norm of CR-fluid #",cr_id," == 0., skipping."
