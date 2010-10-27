@@ -31,46 +31,47 @@
 !<
 module crcomposition
 
-   type cr_component
-      character(len=8) :: isotope     !< isotope name, eg. Be10
-      integer          :: index=-1    !< relative index (with respect to crn_beg)
-      real             :: abund=0.0   !< initial abundance relative to H
-   end type cr_component
+! this type looks useful but is unused.
+!!$   type cr_component
+!!$      character(len=8) :: isotope     !< isotope name, eg. Be10
+!!$      integer          :: index=      !< relative index (with respect to crn_beg)
+!!$      real             :: abund=      !< initial abundance relative to H
+!!$   end type cr_component
 
-   integer     :: icr_H1   = 1
-   integer     :: icr_C12  = 2
-   integer     :: icr_N14  = 3
-   integer     :: icr_O16  = 4
-   integer     :: icr_Li7  = 5         !< from decay of Be7 with tau of 0.3 years
-   integer     :: icr_Be9  = 6
-   integer     :: icr_Be10 = 7    !!! BEWARE: ncrn should be set up gerater than maximum isotope numeber,
+   integer, parameter :: icr_H1   = 1
+   integer, parameter :: icr_C12  = 2
+   integer, parameter :: icr_N14  = 3
+   integer, parameter :: icr_O16  = 4
+   integer, parameter :: icr_Li7  = 5         !< from decay of Be7 with tau of 0.3 years
+   integer, parameter :: icr_Be9  = 6
+   integer, parameter :: icr_Be10 = 7    !!! BEWARE: ncrn should be set up gerater than maximum isotope numeber,
                                   !!! which should be smaller than ncr_max (<10 currently)
 
 
 !<====Cross sections for spallation from Garcia-Munoz 1987 (see also Longair)====>
 
-   real,parameter   :: mbarn=1e-27 !cm2   !!! BEWARE: this line breaks unit consistency, move it to constants.F90 and use scaling
+   real, parameter :: mbarn=1e-27 !cm2   !!! BEWARE: this line breaks unit consistency, move it to constants.F90 and use scaling
 
-   real   :: sigma_C12_Li7  = 10*mbarn
-   real   :: sigma_C12_Be9  = 6*mbarn
-   real   :: sigma_C12_Be10 = 3.5*mbarn
+   real, parameter :: sigma_C12_Li7  = 10*mbarn
+   real, parameter :: sigma_C12_Be9  = 6*mbarn
+   real, parameter :: sigma_C12_Be10 = 3.5*mbarn
 
-   real   :: sigma_N14_Li7  = 9.5*mbarn
+   real, parameter :: sigma_N14_Li7  = 9.5*mbarn
 
-   real   :: sigma_O16_Li7  = 9.5*mbarn
-   real   :: sigma_O16_Be9  = 4.5*mbarn
-   real   :: sigma_O16_Be10 = 2*mbarn
+   real, parameter :: sigma_O16_Li7  = 9.5*mbarn
+   real, parameter :: sigma_O16_Be9  = 4.5*mbarn
+   real, parameter :: sigma_O16_Be10 = 2*mbarn
 
 !<====Decay half live times from Garcia-Munoz 1987====>
 
    real,parameter :: Myear=1d6*365*24*60*60 !s !!! BEWARE: this line breaks unit consistency, move it to constants.F90 and use scaling
 
-   real   :: tau_Be10 = 1.6 !Myr !!! BEWARE: this line breaks unit consistency, move it to constants.F90 and use scaling
+   real, parameter   :: tau_Be10 = 1.6 !Myr !!! BEWARE: this line breaks unit consistency, move it to constants.F90 and use scaling
 
 !<Initial source abundances (in numer density) relative to hydrogen (compare e.g. Longair)>
 
-   real   :: primary_C12  =  4.5e-3
-   real   :: primary_N14  =  1e-3
-   real   :: primary_O16  =  4e-3
+   real, parameter :: primary_C12  =  4.5e-3
+   real, parameter :: primary_N14  =  1e-3
+   real, parameter :: primary_O16  =  4e-3
 
 end module crcomposition
