@@ -1335,9 +1335,9 @@ module dataio_hdf5
       integer, dimension(1) :: ibuf
 
       real, dimension(:,:,:,:), pointer :: p4d
-#if defined ISO_LOCAL || defined MASS_COMPENS
+#ifdef ISO_LOCAL
       real, dimension(:,:,:), pointer :: p3d
-#endif /* ISO_LOCAL || MASS_COMPENS */
+#endif /* ISO_LOCAL */
 
       nu = nvar%all
 
