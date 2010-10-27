@@ -378,7 +378,11 @@ contains
          call norm_sq(defect, norm_lhs)
          ts = timer_("multigrid_diffusion")
          tot_ts = tot_ts + ts
-         vcycle_factors(v,:) = [ norm_old/norm_lhs, ts ]
+         if (norm_lhs /= 0) then
+            vcycle_factors(v,:) = [ norm_old/norm_lhs, ts ]
+         else
+            vcycle_factors(v,:) = [ huge(1.0), ts ]
+         endif
          norm_old = norm_lhs
 
          if (dump_every_step) call numbered_ascii_dump("md_dump", v)
