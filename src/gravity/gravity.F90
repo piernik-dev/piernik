@@ -203,13 +203,13 @@ module gravity
    subroutine source_terms_grav
 
 #if defined(MULTIGRID) || defined(POISSON_FFT)
-      use arrays,        only: u, sgp, sgpm
-      use fluidindex,    only: iarr_all_sg
+      use arrays,            only: u, sgp, sgpm
+      use fluidindex,        only: iarr_all_sg
 #ifdef POISSON_FFT
-      use poissonsolver, only: poisson_solve
+      use poissonsolver,     only: poisson_solve
 #endif /* POISSON_FFT */
 #ifdef MULTIGRID
-      use multigrid,     only: multigrid_solve
+      use multigrid_gravity, only: multigrid_solve_grav
 #endif /* MULTIGRID */
 #endif /* defined(MULTIGRID) || defined(POISSON_FFT) */
 
@@ -225,9 +225,9 @@ module gravity
 #endif /* POISSON_FFT */
 #ifdef MULTIGRID
       if (size(iarr_all_sg) == 1) then
-         call multigrid_solve(u(iarr_all_sg(1),:,:,:))
+         call multigrid_solve_grav(u(iarr_all_sg(1),:,:,:))
       else
-         call multigrid_solve( sum(u(iarr_all_sg,:,:,:),1) )
+         call multigrid_solve_grav( sum(u(iarr_all_sg,:,:,:),1) )
          ! BEWARE Here a lot of heap space is required and some compilers may generate code that do segfaults for big enough domains.
          ! It is the weakest point of this type in Maclaurin test. Next one (in fluidboundaries.F90) is 8 times less sensitive.
       endif
