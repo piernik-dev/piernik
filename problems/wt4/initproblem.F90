@@ -75,7 +75,7 @@ contains
    subroutine read_problem_par
 
       use constants,     only: pi
-      use dataio_public, only: ierrh, msg, par_file, die, namelist_errh, compare_namelist
+      use dataio_pub, only: ierrh, msg, par_file, die, namelist_errh, compare_namelist
       use grid,          only: xmin, xmax, ymin, ymax, zmin, zmax
       use mpisetup,      only: ierr, rbuff, cbuff, ibuff, lbuff, proc, &
            &                   MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL, &
@@ -182,7 +182,7 @@ contains
 
    subroutine read_IC_file
 
-      use dataio_public, only: msg, die
+      use dataio_pub, only: msg, die
       use grid,          only: xminb, xmaxb, yminb, ymaxb, zminb, zmaxb
       use mpisetup,      only: proc, nproc, comm3d, status, ierr, MPI_INTEGER, MPI_DOUBLE_PRECISION
 
@@ -267,7 +267,7 @@ contains
 
       use arrays,        only: u, b, cs_iso2_arr
       use constants,     only: small, kboltz, mH
-      use dataio_public, only: die, warn, printinfo, msg
+      use dataio_pub, only: die, warn, printinfo, msg
       use grid,          only: is, ie, js, je, ks, ke, nx, ny, nz, nb, x, y, z, dx, dy, dz
       use initionized,   only: idni, imxi, imyi, imzi
       use list_hdf5,     only: additional_attrs, problem_write_restart, problem_read_restart

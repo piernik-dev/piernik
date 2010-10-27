@@ -62,7 +62,7 @@ module interactions
 !! \n \n
 !<
    subroutine init_interactions
-      use dataio_public, only: par_file, cwd, ierrh, namelist_errh, compare_namelist
+      use dataio_pub, only: par_file, cwd, ierrh, namelist_errh, compare_namelist
       use fluidindex,    only: nvar
       use mpisetup,      only: proc, rbuff, MPI_DOUBLE_PRECISION, buffer_dim, ierr, comm
 #ifdef DUST

@@ -44,7 +44,7 @@ module initproblem
 contains
 !-----------------------------------------------------------------------------
    subroutine read_problem_par
-      use dataio_public, only: ierrh, msg, par_file, namelist_errh, compare_namelist
+      use dataio_pub, only: ierrh, msg, par_file, namelist_errh, compare_namelist
       use grid,          only: dxmn
       use mpisetup,      only: cbuff_len, cbuff, ibuff, rbuff, buffer_dim, proc, comm, ierr, &
                                MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER
@@ -122,7 +122,7 @@ contains
 !-----------------------------------------------------------------------------
    subroutine init_prob
       use arrays,         only: u, b
-      use dataio_public,  only: msg, die, printinfo, user_plt_hdf5, user_vars_hdf5, user_tsl
+      use dataio_pub,  only: msg, die, printinfo, user_plt_hdf5, user_vars_hdf5, user_tsl
       use fluidindex,     only: nvar, ibx, iby, ibz
       use grid,           only: x, y, z, nx, ny, nz
       use types,          only: component_fluid
@@ -191,7 +191,7 @@ contains
 !-----------------------------------------------------------------------------
    subroutine sedov_plt_hdf5(var,ij,xn,tab,ierrh)
       use arrays,        only: u
-      use dataio_public, only: varlen
+      use dataio_pub, only: varlen
       use grid,          only: nb, nxb, nyb, nzb
       implicit none
       character(LEN=*), intent(in)        :: var   !< quantity to be plotted

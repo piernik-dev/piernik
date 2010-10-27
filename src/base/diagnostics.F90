@@ -73,7 +73,7 @@ module diagnostics
 
 contains
    subroutine diagnose_arrays
-      use dataio_public, only: printinfo, warn, msg
+      use dataio_pub, only: printinfo, warn, msg
       implicit none
       integer :: i
 
@@ -107,7 +107,7 @@ contains
    end subroutine keep_track_of_arrays
 
    subroutine pop_char_vector(vec,lensize,words)
-      use dataio_public, only: die, msg
+      use dataio_pub, only: die, msg
       implicit none
       integer, intent(in) :: lensize
       character(len=*), intent(in), dimension(:) :: words

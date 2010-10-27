@@ -61,7 +61,7 @@ contains
 
    subroutine set_dirty(iv)
 
-      use dataio_public, only: die
+      use dataio_pub, only: die
       use multigridvars, only: ngridvars, lvl, level_min, level_max
 
       implicit none
@@ -87,7 +87,7 @@ contains
 
    subroutine check_dirty(lev, iv, label, expand)
 
-      use dataio_public, only: die, warn, msg
+      use dataio_pub, only: die, warn, msg
       use mpisetup,      only: proc
       use multigridvars, only: ngridvars, lvl, level_min, level_max, mg_nb, eff_dim, NDIM
 
@@ -147,7 +147,7 @@ contains
 
       use multigridvars, only: vcycle_factors, cprefix, stdout
       use mpisetup,      only: proc
-      use dataio_public, only: msg, fplen, warn
+      use dataio_pub, only: msg, fplen, warn
 
       implicit none
 
@@ -191,7 +191,7 @@ contains
 
    subroutine mg_write_log(msg, stdout_cntrl)
 
-      use dataio_public, only: printinfo
+      use dataio_pub, only: printinfo
       use mpisetup,      only: proc
 
       implicit none
@@ -216,7 +216,7 @@ contains
 
    subroutine ascii_dump(filename)
 
-      use dataio_public, only: msg
+      use dataio_pub, only: msg
       use mpisetup,      only: proc
       use multigridvars, only: level_min, level_max, lvl, gb_cartmap, ngridvars, XDIR, YDIR, ZDIR
 
@@ -265,7 +265,7 @@ contains
    subroutine numbered_ascii_dump(basename, a)
 
       use mpisetup,      only: proc, nstep
-      use dataio_public, only: halfstep, msg
+      use dataio_pub, only: halfstep, msg
 
       implicit none
 

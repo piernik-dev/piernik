@@ -48,7 +48,7 @@ module initproblem
 
    subroutine read_problem_par
 
-      use dataio_public, only: ierrh, msg, die, par_file, namelist_errh, compare_namelist
+      use dataio_pub, only: ierrh, msg, die, par_file, namelist_errh, compare_namelist
       use grid,          only: dxmn
       use mpisetup,      only: MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION, &
            &                   cbuff_len, cbuff, ibuff, rbuff, buffer_dim, comm, ierr, proc
@@ -131,7 +131,7 @@ module initproblem
    subroutine init_prob
 
       use arrays,         only: b, u
-      use dataio_public,  only: die, msg, printinfo, warn
+      use dataio_pub,  only: die, msg, printinfo, warn
       use fluidindex,     only: ibx, iby, ibz
       use grid,           only: nx, ny, nz, nb, x, y, z, is, ie, js, je, ks, ke, nxd, nyd, nzd
       use initcosmicrays, only: gamma_crs, iarr_crs, ncrn, ncre, K_crn_paral, K_crn_perp
@@ -210,7 +210,7 @@ module initproblem
    subroutine check_norm
 
       use arrays,         only: b, u
-      use dataio_public,  only: code_progress, PIERNIK_FINISHED, halfstep, msg, die, printinfo
+      use dataio_pub,  only: code_progress, PIERNIK_FINISHED, halfstep, msg, die, printinfo
       use grid,           only: x, y, z, is, ie, js, je, ks, ke
       use initcosmicrays, only: iarr_crs, ncrn, ncre, K_crn_paral, K_crn_perp
       use mpisetup,       only: proc, comm3d, ierr, MPI_DOUBLE_PRECISION, MPI_SUM, MPI_MIN, MPI_MAX, MPI_IN_PLACE, t, nstep

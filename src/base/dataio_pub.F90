@@ -27,7 +27,7 @@
 !
 #include "piernik.def"
 
-module dataio_public
+module dataio_pub
 
    use types, only: hdf, domlen
 
@@ -348,4 +348,4 @@ contains
 
    end subroutine compare_namelist
 !-----------------------------------------------------------------------------
-end module dataio_public
+end module dataio_pub

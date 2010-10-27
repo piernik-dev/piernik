@@ -119,7 +119,7 @@ contains
       use mpisetup,           only: buffer_dim, comm, ierr, proc, ibuff, cbuff, rbuff, lbuff, &
            &                        bnd_xl_dom, bnd_xr_dom, bnd_yl_dom, bnd_yr_dom, bnd_zl_dom, bnd_zr_dom, &
            &                        MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL
-      use dataio_public,      only: par_file, ierrh, namelist_errh, compare_namelist, msg, die, warn, printinfo
+      use dataio_pub,      only: par_file, ierrh, namelist_errh, compare_namelist, msg, die, warn, printinfo
 
       implicit none
 
@@ -324,7 +324,7 @@ contains
       use mpisetup,           only: proc, nproc, pxsize, pysize, pzsize, bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr
       use multigridhelpers,   only: dirty_debug, dirtyH
       use constants,          only: pi, dpi
-      use dataio_public,      only: die, warn
+      use dataio_pub,      only: die, warn
       use multipole,          only: init_multipole
 
       implicit none
@@ -627,7 +627,7 @@ contains
 
       use mpisetup,         only: proc, t
       use multigridhelpers, only: set_dirty, check_dirty, mg_write_log
-      use dataio_public,    only: msg, die
+      use dataio_pub,    only: msg, die
       use multigridvars,    only: lvl, roof, cprefix, level_min, level_max, stdout, solution
 
       implicit none
@@ -713,7 +713,7 @@ contains
 #endif /* JEANS_PROBLEM */
       use constants,          only: fpiG
       use grid,               only: is, ie, js, je, ks, ke
-      use dataio_public,      only: die
+      use dataio_pub,      only: die
       use multigridhelpers,   only: set_dirty, check_dirty
       use multigridbasefuncs, only: norm_sq, substract_average
       use multigridvars,      only: roof, source, level_max, is_external, norm_rhs_orig, &
@@ -818,7 +818,7 @@ contains
       use timer,         only: timer_
       use arrays,        only: sgp
       use grid,          only: is, ie, js, je, ks, ke
-      use dataio_public, only: die
+      use dataio_pub, only: die
       use multipole,     only: multipole_solver
       use multigridvars, only: roof, solution, bnd_isolated, bnd_dirichlet, bnd_givenval, has_dir, XDIR, YDIR, ZDIR, cprefix, mg_nb, tot_ts, ts
 
@@ -907,7 +907,7 @@ contains
       use timer,              only: timer_
       use multigridhelpers,   only: set_dirty, check_dirty, mg_write_log, brief_v_log, do_ascii_dump, numbered_ascii_dump
       use multigridbasefuncs, only: norm_sq, restrict_all, substract_average
-      use dataio_public,      only: msg, die, warn
+      use dataio_pub,      only: msg, die, warn
       use multigridvars,      only: roof, base, source, solution, correction, defect, verbose_vcycle, vcycle_factors, cprefix, &
            &                        bnd_givenval, bnd_periodic, norm_rhs_orig, level_min, level_max, stdout, tot_ts, ts
 
@@ -1050,7 +1050,7 @@ contains
 
    subroutine residual(lev, src, soln, def)
 
-      use dataio_public,         only: die
+      use dataio_pub,         only: die
       use multigridvars,         only: level_min, level_max, ngridvars
 
       implicit none
@@ -1159,7 +1159,7 @@ contains
 
    subroutine residual4(lev, src, soln, def)
 
-      use dataio_public,      only: die, warn
+      use dataio_pub,      only: die, warn
       use mpisetup,           only: proc
       use multigridmpifuncs,  only: mpi_multigrid_bnd
       use multigridvars,      only: lvl, eff_dim, NDIM, bnd_givenval, extbnd_antimirror
@@ -1252,7 +1252,7 @@ contains
 
    subroutine approximate_solution(lev, src, soln)
 
-      use dataio_public,      only: die
+      use dataio_pub,      only: die
       use multigridhelpers,   only: check_dirty
       use multigridbasefuncs, only: prolong_level
       use multigridvars,      only: level_min, level_max, ngridvars, correction
@@ -1299,7 +1299,7 @@ contains
 
       use multigridhelpers,   only: dirty_debug, check_dirty, multidim_code_3D, dirty_label
       use multigridmpifuncs,  only: mpi_multigrid_bnd
-      use dataio_public,      only: die
+      use dataio_pub,      only: die
       use multigridvars,      only: lvl, level_min, eff_dim, NDIM, has_dir, XDIR, YDIR, ZDIR, extbnd_antimirror
 
       implicit none
@@ -1401,7 +1401,7 @@ contains
 
    subroutine approximate_solution_fft(lev, src, soln)
 
-      use dataio_public,      only: die, warn
+      use dataio_pub,      only: die, warn
       use mpisetup,           only: nproc
       use multigridhelpers,   only: dirty_debug, check_dirty, dirtyL, multidim_code_3D
       use multigridmpifuncs,  only: mpi_multigrid_bnd
@@ -1584,7 +1584,7 @@ contains
 
       use mpisetup,           only: nproc
       use multigridbasefuncs, only: zero_boundaries, prolong_faces
-      use dataio_public,      only: warn
+      use dataio_pub,      only: warn
       use multigridvars,      only: bnd_givenval, bnd_periodic, level_min
 
       implicit none
@@ -1757,7 +1757,7 @@ contains
 
    subroutine fft_convolve(level)
 
-      use dataio_public, only: die
+      use dataio_pub, only: die
       use multigridvars, only: lvl
 
       implicit none

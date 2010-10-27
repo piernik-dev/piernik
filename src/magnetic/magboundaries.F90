@@ -71,7 +71,7 @@ contains
 
    subroutine bnd_b(dim)
       use arrays,        only: b
-      use dataio_public, only: msg, warn
+      use dataio_pub, only: msg, warn
       use fluidindex,    only: ibx, iby, ibz
       use grid,          only: nb, nx, ny, nz, nxb, nyb, nzb
       use mpisetup,      only: MPI_DOUBLE_PRECISION, bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr, &
@@ -391,7 +391,7 @@ contains
 !=====================================================================================================
 
    subroutine bnd_emf(var, name, dim)
-      use dataio_public, only: msg, warn
+      use dataio_pub, only: msg, warn
       use grid,          only: nx, ny, nz, nb, nxb, nyb, nzb
       use mpisetup,      only: bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr
 

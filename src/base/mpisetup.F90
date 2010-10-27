@@ -162,7 +162,7 @@ module mpisetup
 !<
       subroutine init_mpi
 
-         use dataio_public, only: die, printinfo, msg, cwdlen, hnlen, cwd, par_file, ierrh, ansi_white, ansi_black, warn, namelist_errh, compare_namelist
+         use dataio_pub, only: die, printinfo, msg, cwdlen, hnlen, cwd, par_file, ierrh, ansi_white, ansi_black, warn, namelist_errh, compare_namelist
 
          implicit none
 
@@ -499,7 +499,7 @@ module mpisetup
 
       subroutine cleanup_mpi
 
-         use dataio_public, only: printinfo
+         use dataio_pub, only: printinfo
 
          implicit none
 
@@ -561,7 +561,7 @@ module mpisetup
 
       subroutine mpifind(var, what, loc_arr, loc_proc)
 
-         use dataio_public, only: msg, warn
+         use dataio_pub, only: msg, warn
 
          implicit none
 
@@ -615,7 +615,7 @@ module mpisetup
       subroutine divide_domain_voodoo(np)
 
          use constants,     only: some_primes
-         use dataio_public, only: die, warn, printinfo, msg
+         use dataio_pub, only: die, warn, printinfo, msg
 
          implicit none
 

@@ -112,7 +112,7 @@ module list_hdf5
 
       subroutine add_lhdf5(item)
 
-         use dataio_public, only: msg, warn
+         use dataio_pub, only: msg, warn
 
          implicit none
 

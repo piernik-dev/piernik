@@ -99,7 +99,7 @@ module gravity
    subroutine init_grav
 
       use arrays,        only: gpot
-      use dataio_public, only: ierrh, par_file, warn, namelist_errh, compare_namelist
+      use dataio_pub, only: ierrh, par_file, warn, namelist_errh, compare_namelist
       use mpisetup,      only: ibuff, rbuff, buffer_dim, comm, ierr, proc, &
            &                   MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL, lbuff
 
@@ -280,7 +280,7 @@ module gravity
    subroutine all_sgp_boundaries
 
       use arrays,        only: sgp
-      use dataio_public, only: die
+      use dataio_pub, only: die
       use grid,          only: nb, nxd, nyd, nzd
       use mpisetup,      only: comm3d, ierr, MPI_STATUS_SIZE, MPI_REQUEST_NULL, &
            &                   procxl, procxr, procyl, procyr, proczl, proczr, proc, pxsize, pysize, pzsize, &

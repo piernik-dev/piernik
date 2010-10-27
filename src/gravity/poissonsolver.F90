@@ -41,7 +41,7 @@ contains
   subroutine poisson_solve(dens)
 
     use arrays,         only: u, sgp
-    use dataio_public,  only: die
+    use dataio_pub,  only: die
     use grid,           only: x, nx, ny, nz, nzb, dz, dx, nb, nxd, nyd, nzd
     use mpisetup,       only: bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr
 #ifdef SHEAR

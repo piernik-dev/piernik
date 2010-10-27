@@ -54,7 +54,7 @@ module shear
 !<
   subroutine init_shear
 
-    use dataio_public,  only: par_file, ierrh, printinfo, namelist_errh, compare_namelist
+    use dataio_pub,  only: par_file, ierrh, printinfo, namelist_errh, compare_namelist
     use mpisetup,       only: ierr, MPI_DOUBLE_PRECISION, proc, rbuff, buffer_dim, comm
 
     implicit none

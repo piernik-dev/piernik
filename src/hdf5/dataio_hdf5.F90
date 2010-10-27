@@ -38,7 +38,7 @@
 !<
 module dataio_hdf5
 
-   use dataio_public, only: maxparfilelen, maxparfilelines
+   use dataio_pub, only: maxparfilelen, maxparfilelines
    use list_hdf5,     only: S_LEN
 
    implicit none
@@ -97,7 +97,7 @@ module dataio_hdf5
       use list_hdf5,     only: additional_attrs, problem_write_restart, problem_read_restart
 #ifdef COSM_RAYS
       use fluidindex,    only: iarr_all_crs
-      use dataio_public, only: warn, msg
+      use dataio_pub, only: warn, msg
 #endif /* COSM_RAYS */
 
       implicit none
@@ -293,7 +293,7 @@ module dataio_hdf5
 !<
    subroutine common_plt_hdf5(var,ij,xn,tab,ierrh)
       use arrays,        only: u, b
-      use dataio_public, only: varlen
+      use dataio_pub, only: varlen
       use grid,          only: nb, nyb, nzb, nxb
 #ifdef GRAV
       use arrays,        only: gpot
@@ -489,7 +489,7 @@ module dataio_hdf5
 !<
    subroutine common_vars_hdf5(var,tab, ierrh)
       use arrays,        only: u, b
-      use dataio_public, only: varlen
+      use dataio_pub, only: varlen
       use fluidindex,    only: nvar, ibx, iby, ibz
       use grid,          only: nb, nx, ny, nz
 #ifdef GRAV
@@ -600,7 +600,7 @@ module dataio_hdf5
 
    subroutine write_plot
 
-      use dataio_public, only: cwdlen, log_file
+      use dataio_pub, only: cwdlen, log_file
       use hdf5,          only: HID_T, H5open_f, H5Fcreate_f, H5Gcreate_f, H5F_ACC_TRUNC_F, H5Gclose_f, H5close_f, h5fclose_f
       use mpisetup,      only: t, comm3d, ierr, proc
 
@@ -661,7 +661,7 @@ module dataio_hdf5
 
    subroutine write_plot_hdf5(var,plane,nimg)
       use arrays,        only: u
-      use dataio_public, only: vizit, fmin, fmax, cwdlen, log_file, msg, varlen, die, warn, user_plt_hdf5
+      use dataio_pub, only: vizit, fmin, fmax, cwdlen, log_file, msg, varlen, die, warn, user_plt_hdf5
       use grid,          only: nxb, nyb, nzb, nxd, nyd, nzd, nb
       use hdf5,          only: HID_T, HSIZE_T, SIZE_T, H5F_ACC_RDWR_F, h5fopen_f, h5gopen_f, h5gclose_f, h5fclose_f
       use h5lt,          only: h5ltmake_dataset_double_f, h5ltset_attribute_double_f
@@ -824,7 +824,7 @@ module dataio_hdf5
    subroutine write_restart_hdf5
 
       use arrays,        only: u, b
-      use dataio_public, only: chdf, nres, set_container_chdf, cwdlen
+      use dataio_pub, only: chdf, nres, set_container_chdf, cwdlen
       use fluidindex,    only: nvar
       use grid,          only: nxb, nyb, nzb, x, y, z, nx, ny, nz
       use hdf5,          only: HID_T, HSIZE_T, HSSIZE_T, H5P_FILE_ACCESS_F, H5F_ACC_TRUNC_F, H5P_DATASET_CREATE_F, H5S_SELECT_SET_F, &
@@ -1284,7 +1284,7 @@ module dataio_hdf5
    subroutine read_restart_hdf5(chdf)
 
       use arrays,        only: u, b
-      use dataio_public, only: cwdlen, msg, colormessage, T_IO, die, printinfo
+      use dataio_pub, only: cwdlen, msg, colormessage, T_IO, die, printinfo
       use fluidindex,    only: nvar
       use func,          only: fix_string
       use grid,          only: nx, ny, nz, x, y, z, nxb, nyb, nzb, nxd, nyd, nzd, nb, xmin, xmax, &
@@ -1519,7 +1519,7 @@ module dataio_hdf5
 ! ------------------------------------------------------------------------------------
 !
    subroutine write_hdf5(chdf)
-      use dataio_public, only: cwdlen, msg, die, user_vars_hdf5, nhdf
+      use dataio_pub, only: cwdlen, msg, die, user_vars_hdf5, nhdf
       use grid,          only: nxb, nyb, nzb
       use hdf5,          only: HID_T, H5F_ACC_TRUNC_F, H5P_FILE_ACCESS_F, H5P_DEFAULT_F, &
            &                   h5open_f, h5close_f, h5fcreate_f, h5fclose_f, h5pcreate_f, h5pclose_f, h5pset_fapl_mpio_f
@@ -1691,7 +1691,7 @@ module dataio_hdf5
 
    subroutine set_common_attributes(filename, chdf, stype)
 
-      use dataio_public, only: msg, colormessage, T_IO
+      use dataio_pub, only: msg, colormessage, T_IO
       use grid,          only: nxb, nyb, nzb, nxd, nyd, nzd, nb, xmin, xmax, ymin, ymax, zmin, zmax
       use hdf5,          only: HID_T, SIZE_T, H5F_ACC_RDWR_F, h5fopen_f, h5fclose_f, h5gcreate_f, h5gclose_f
       use h5lt,          only: h5ltset_attribute_double_f, h5ltset_attribute_int_f, h5ltmake_dataset_string_f, h5ltset_attribute_string_f

@@ -47,7 +47,7 @@ module initproblem
 
    subroutine read_problem_par
 
-      use dataio_public, only: ierrh, msg, par_file, namelist_errh, compare_namelist
+      use dataio_pub, only: ierrh, msg, par_file, namelist_errh, compare_namelist
       use mpisetup,      only: MPI_CHARACTER, MPI_DOUBLE_PRECISION, &
            &                   cbuff_len, cbuff, rbuff, buffer_dim, comm, ierr, proc
       use types,         only: idlen

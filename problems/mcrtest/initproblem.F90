@@ -50,7 +50,7 @@ module initproblem
 
    subroutine read_problem_par
 
-      use dataio_public, only: ierrh, msg, die, par_file, namelist_errh, compare_namelist
+      use dataio_pub, only: ierrh, msg, die, par_file, namelist_errh, compare_namelist
       use grid,          only: dxmn
       use mpisetup,      only: MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION, &
            &                   cbuff_len, cbuff, ibuff, rbuff, buffer_dim, comm, ierr, proc
@@ -134,7 +134,7 @@ module initproblem
    subroutine init_prob
 
       use arrays,         only: b, u
-      use dataio_public,  only: die, msg, warn, printinfo
+      use dataio_pub,  only: die, msg, warn, printinfo
       use fluidindex,     only: ibx, iby, ibz, nvar
       use grid,           only: nx, ny, nz, x, y, z, is, ie, js, je, ks, ke, nxd, nyd, nzd
       use initcosmicrays, only: iarr_crn, iarr_crs, gamma_crn, K_crn_paral, K_crn_perp

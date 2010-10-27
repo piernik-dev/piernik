@@ -33,7 +33,7 @@ module fluidboundaries
 
    subroutine bnd_u(dim)
       use arrays,              only: u, b
-      use dataio_public,       only: msg, warn
+      use dataio_pub,       only: msg, warn
       use fluidboundaries_pub, only: user_bnd_xl, user_bnd_xr, user_bnd_yl, user_bnd_yr, user_bnd_zl, user_bnd_zr
       use fluidindex,          only: nvar, iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
       use grid,                only: nb, nxd, nyd, nzd, x, y, z, nzb, nyb, nxb, nx, ny, nz

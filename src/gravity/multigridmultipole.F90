@@ -100,7 +100,7 @@ contains
 
    subroutine init_multipole(mb_alloc, cgrid)
 
-      use dataio_public, only: die, warn
+      use dataio_pub, only: die, warn
       use types,         only: grid_container
       use mpisetup,      only: proc
       use multigridvars, only: level_min, level_max, lvl, eff_dim, XDIR, YDIR, ZDIR
@@ -325,7 +325,7 @@ contains
    subroutine find_img_CoM
 
       use multigridvars,   only: is_external, XLO, XHI, YLO, YHI, ZLO, ZHI, XDIR, YDIR, ZDIR, LOW, HIGH
-      use dataio_public,   only: die
+      use dataio_pub,   only: die
       use mpisetup,        only: comm3d, ierr, MPI_DOUBLE_PRECISION, MPI_SUM
 
       implicit none
@@ -442,7 +442,7 @@ contains
    subroutine prolong_ext_bnd(lev)
 
       use multigridvars,   only: is_external
-      use dataio_public,   only: die
+      use dataio_pub,   only: die
 
       implicit none
 
@@ -468,7 +468,7 @@ contains
    subroutine prolong_ext_bnd0(lev)
 
       use multigridvars,   only: lvl, is_external, level_max, XLO, XHI, YLO, YHI, ZLO, ZHI, HIGH, LOW, eff_dim, NDIM
-      use dataio_public,   only: die
+      use dataio_pub,   only: die
 
       implicit none
 
@@ -532,7 +532,7 @@ contains
    subroutine prolong_ext_bnd2(lev)
 
       use multigridvars,   only: lvl, is_external, level_max, XLO, XHI, YLO, YHI, ZLO, ZHI, HIGH, LOW, eff_dim, NDIM
-      use dataio_public,   only: die
+      use dataio_pub,   only: die
 
       implicit none
 
@@ -947,7 +947,7 @@ contains
 
    subroutine geomfac4moments(factor, x, y, z, sin_th, cos_th, ir, delta)
 
-      use dataio_public, only: die
+      use dataio_pub, only: die
 
       implicit none
 
@@ -1036,7 +1036,7 @@ contains
 
    subroutine test_multipoles
 
-      use dataio_public,      only: die, printinfo, msg
+      use dataio_pub,      only: die, printinfo, msg
       use constants,          only: newtong
       use multigridhelpers,   only: aux_par_R0, aux_par_R1, aux_par_R2, aux_par_I0, dirty_debug
 

@@ -66,7 +66,7 @@ contains
 
    subroutine prolong_level(lev, iv)
 
-      use dataio_public,         only: die
+      use dataio_pub,         only: die
       use multigridhelpers,      only: dirty_debug, check_dirty, dirtyH
       use multigridvars,         only: plvl, lvl, level_min, level_max, ord_prolong, ngridvars
 !      use multigridexperimental, only: prolong_level_hord
@@ -112,7 +112,7 @@ contains
 
    subroutine prolong_level0(lev, iv)
 
-      use dataio_public, only: die
+      use dataio_pub, only: die
       use multigridvars, only: plvl, lvl, eff_dim, NDIM, XDIR, YDIR, ZDIR, has_dir, D_x, D_y, D_z
 
       implicit none
@@ -147,7 +147,7 @@ contains
 
    subroutine restrict_all(iv)
 
-      use dataio_public,      only: die
+      use dataio_pub,      only: die
       use multigridhelpers,   only: check_dirty
       use multigridvars,      only: level_min, level_max, ngridvars
 
@@ -177,7 +177,7 @@ contains
 
    subroutine restrict_level(lev, iv)
 
-      use dataio_public,      only: die
+      use dataio_pub,      only: die
       use multigridhelpers,   only: check_dirty
       use multigridvars,      only: plvl, lvl, level_min, level_max, ngridvars, eff_dim, NDIM, XDIR, YDIR, ZDIR, has_dir, D_x, D_y, D_z
 
@@ -219,7 +219,7 @@ contains
 
    subroutine norm_sq(iv, norm)
 
-      use dataio_public, only: die
+      use dataio_pub, only: die
       use mpisetup,      only: comm3d, ierr, MPI_DOUBLE_PRECISION, MPI_SUM
       use multigridvars, only: ngridvars, roof
 
@@ -245,7 +245,7 @@ contains
 
    subroutine substract_average(lev, iv)
 
-      use dataio_public, only: die
+      use dataio_pub, only: die
       use mpisetup,      only: comm3d, ierr, MPI_DOUBLE_PRECISION, MPI_SUM
       use multigridvars, only: lvl, level_min, level_max, ngridvars
 
@@ -276,7 +276,7 @@ contains
    subroutine prolong_faces(lev, soln)
 
       use mpisetup,           only: proc
-      use dataio_public,      only: die, warn
+      use dataio_pub,      only: die, warn
       use multigridhelpers,   only: check_dirty
       use multigridmpifuncs,  only: mpi_multigrid_bnd
       use multigridvars,      only: plvl, lvl, has_dir, XDIR, YDIR, ZDIR, LOW, HIGH, ord_prolong_face, level_min, level_max, D_x, D_y, D_z, extbnd_antimirror

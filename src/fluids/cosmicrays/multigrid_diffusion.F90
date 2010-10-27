@@ -73,7 +73,7 @@ contains
 
       use multigridvars,      only: ngridvars
       use mpisetup,           only: buffer_dim, comm, ierr, proc, ibuff, rbuff, lbuff, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL
-      use dataio_public,      only: par_file, ierrh, namelist_errh, compare_namelist, die, warn
+      use dataio_pub,      only: par_file, ierrh, namelist_errh, compare_namelist, die, warn
 
       implicit none
 
@@ -153,7 +153,7 @@ contains
 
       use types,              only: grid_container
       use multigridvars,      only: vcycle_factors
-      use dataio_public,      only: die
+      use dataio_pub,      only: die
 
       implicit none
 
@@ -198,7 +198,7 @@ contains
 
    subroutine multigrid_solve_diff
 
-      use dataio_public,      only: halfstep, warn, msg
+      use dataio_pub,      only: halfstep, warn, msg
       use crdiffusion,        only: cr_diff_x, cr_diff_y, cr_diff_z
       use timer,              only: timer_
       use multigridvars,      only: ts, tot_ts, norm_rhs_orig
@@ -261,7 +261,7 @@ contains
       use grid,               only: is, ie, js, je, ks, ke
       use arrays,             only: u
       use multigridbasefuncs, only: norm_sq
-      use dataio_public,      only: die
+      use dataio_pub,      only: die
 
       implicit none
 
@@ -315,7 +315,7 @@ contains
       use multigridbasefuncs, only: restrict_all
       use multigridmpifuncs,  only: mpi_multigrid_bnd
       use fluidindex,         only: ibx, iby, ibz
-      use dataio_public,      only: die
+      use dataio_pub,      only: die
 
       implicit none
 
@@ -348,7 +348,7 @@ contains
       use initcosmicrays,     only: iarr_crs
       use arrays,             only: u
       use grid,               only: is, ie, js, je, ks, ke
-      use dataio_public,      only: msg, warn
+      use dataio_pub,      only: msg, warn
       use mpisetup,           only: proc
       use timer,              only: timer_
 
@@ -715,7 +715,7 @@ contains
 
       use multigridvars,      only: level_min, has_dir, XDIR, YDIR, ZDIR, lvl, extbnd_antimirror
       use multigridmpifuncs,  only: mpi_multigrid_bnd
-      use dataio_public,      only: die
+      use dataio_pub,      only: die
       use initcosmicrays,     only: K_crs_perp, K_crs_paral
       use mpisetup,           only: dt
       use arrays,             only: wa
