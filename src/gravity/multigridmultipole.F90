@@ -110,7 +110,7 @@ contains
       real,                 intent(inout) :: mb_alloc               !< multigrid allocation counter
       type(grid_container), intent(in)    :: cgrid                  !< copy of grid variables
 
-      integer, dimension(4) :: aerr = 0
+      integer, dimension(4) :: aerr
       integer               :: l,m
 
       ! external face coordinates

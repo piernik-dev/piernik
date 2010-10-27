@@ -77,7 +77,7 @@ contains
 
       type(grid_container), intent(in) :: cgrid                  !< copy of grid variables
 
-      integer                          :: ierrh, div, idx, i, j, nxc=1, nx
+      integer                          :: ierrh, div, idx, i, j, nxc, nx
       logical, save                    :: frun = .true.          !< First run flag
       real                             :: mb_alloc               !< Allocation counter
       integer, dimension(6)            :: aerr                   !BEWARE: hardcoded magic integer. Update when you change number of simultaneous error checks
@@ -198,6 +198,7 @@ contains
          div = 2**(level_max -idx)                                 ! derefinement factor with respect to the top level
          lvl(idx)%nb    = mg_nb                                    ! number of guardcells
 
+         nxc = 1  ! suppres warning on possibly uninitialized variables
          do i = XDIR, ZDIR ! this can be rewritten as a three subroutine/function calls
             select case (i)
                case (XDIR)
