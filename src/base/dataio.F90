@@ -825,10 +825,6 @@ module dataio
 #ifdef COSM_RAYS
       tot_encr = mpi_addmul(u(iarr_all_crs,is:ie,js:je,ks:ke), dvol)
 #endif /* COSM_RAYS */
-#ifdef SNE_DISTR
-      call MPI_Allreduce(emagadd, sum_emagadd, 1, MPI_REAL8, MPI_SUM, comm3d, ierr)
-      tot_emagadd = tot_emagadd + sum_emagadd
-#endif /* SNE_DISTR */
 
       call write_log(tsl)
 
@@ -898,11 +894,11 @@ module dataio
    end subroutine get_extremum
 
    subroutine common_shout(pr, fluid, pres_tn, temp_tn, cs_tn)
-      use types,           only: phys_prop
-      use grid,            only: dxmn, dx, dy, dz
-      use mpisetup,        only: cfl
       use constants,       only: small
       use dataio_pub,      only: msg, printinfo
+      use grid,            only: dxmn, dx, dy, dz
+      use mpisetup,        only: cfl
+      use types,           only: phys_prop
       implicit none
       type(phys_prop), intent(in)  :: pr
       character(len=*), intent(in) :: fluid
