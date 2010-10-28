@@ -49,7 +49,7 @@ module sweeps     ! split sweeps
     real, dimension(nx,nz)      :: epsa
     real, dimension(nvar%all,nx,nz) :: u1
     integer :: ind,i
-    real, dimension(2) :: fac = (/0.5,1.0/)
+    real, parameter, dimension(2) :: fac = [0.5, 1.0]
 
     u1(:,:,:) = u(:,:,1,:)
 

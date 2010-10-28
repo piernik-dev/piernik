@@ -70,12 +70,12 @@ contains
       type(component_fluid), pointer, intent(inout) :: fl
       real, intent(in)  :: cx, cy, cz, c_max
       real, intent(out) :: c_out, dt_out
-      real :: dt_proc = 0.0       !< minimum timestep for the current processor
-      real :: dt_all = 0.0        !< minimum timestep for all the processors
-      real :: c_max_all = 0.0     !< maximum speed for the fluid for all the processors
-      real :: dt_proc_x = 0.0     !< timestep computed for X direction for the current processor
-      real :: dt_proc_y = 0.0     !< timestep computed for Y direction for the current processor
-      real :: dt_proc_z = 0.0     !< timestep computed for Z direction for the current processor
+      real :: dt_proc             !< minimum timestep for the current processor
+      real :: dt_all              !< minimum timestep for all the processors
+      real :: c_max_all           !< maximum speed for the fluid for all the processors
+      real :: dt_proc_x           !< timestep computed for X direction for the current processor
+      real :: dt_proc_y           !< timestep computed for Y direction for the current processor
+      real :: dt_proc_z           !< timestep computed for Z direction for the current processor
 
       if (nxd /= 1 .and. cx /= 0) then
          dt_proc_x = dx/cx

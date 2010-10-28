@@ -65,16 +65,18 @@ contains
 
       implicit none
 
-      real :: cx = 0.0            !< maximum velocity for X direction
-      real :: cy = 0.0            !< maximum velocity for Y direction
-      real :: cz = 0.0            !< maximum velocity for Z direction
-      real :: cs = 0.0            !< speed of sound
+      real :: cx                  !< maximum velocity for X direction
+      real :: cy                  !< maximum velocity for Y direction
+      real :: cz                  !< maximum velocity for Z direction
+      real :: cs                  !< speed of sound
 
 ! locals
 
-      real                           :: p = 0.0, c_max = 0.0
+      real                           :: p, c_max
       integer                        :: i, j, k
       type(component_fluid), pointer :: fl
+
+      cx = 0.0; cy = 0.0; cz = 0.0; cs = 0.0; p = 0.0; c_max = 0.0
 
       fl => nvar%neu
 

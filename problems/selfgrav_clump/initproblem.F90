@@ -165,10 +165,11 @@ contains
       character(len=HIGH)       :: ind
       real, dimension(TRY)      :: Cint_try, totME_try
       character(len=TRY)        :: i_try
-      real                      :: Cint_old = HUGE(1.), Clim, Clim_old
+      real                      :: Cint_old, Clim, Clim_old
       real, dimension(NLIM)     :: Clast
       character(len=9)          :: Ccomment ! length of the " Exp warp" string
 
+      Cint_old = HUGE(1.)
       b(:,    :, :, :) = 0.
       u(idni, :, :, :) = smalld
       u(ieni, :, :, :) = smallei

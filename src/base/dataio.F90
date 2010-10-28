@@ -83,7 +83,7 @@ module dataio
    integer               :: iv                     !< work index to count successive variables to dump in hdf files
    character(len=varlen), dimension(nvarsmx) :: vars !< array of 4-character strings standing for variables to dump in hdf files
 
-   integer               :: tsl_lun = 2            !< luncher for timeslice file
+   integer, parameter    :: tsl_lun = 2            !< luncher for timeslice file
    integer               :: step_res               !< number of simulation timestep corresponding to values dumped in restart file
    integer               :: nhdf_start             !< number of hdf file for the first hdf dump in simulation run
    integer               :: nres_start             !< number of restart file for the first restart dump in simulation run
@@ -719,14 +719,14 @@ module dataio
       real, allocatable, dimension(:)                 :: tsl_vars
       type(phys_prop), pointer                        :: sn
 
-      real :: tot_mass = 0.0, tot_momx = 0.0, tot_momy = 0.0, tot_momz = 0.0, &
-              tot_ener = 0.0, tot_eint = 0.0, tot_ekin = 0.0, tot_emag = 0.0, &
-              tot_epot = 0.0, tot_mflx = 0.0, tot_mfly = 0.0, tot_mflz = 0.0
+      real, save :: tot_mass = 0.0, tot_momx = 0.0, tot_momy = 0.0, tot_momz = 0.0, &
+                    tot_ener = 0.0, tot_eint = 0.0, tot_ekin = 0.0, tot_emag = 0.0, &
+                    tot_epot = 0.0, tot_mflx = 0.0, tot_mfly = 0.0, tot_mflz = 0.0
 
       type(tsl_container) :: tsl
 
 #ifdef COSM_RAYS
-      real     :: tot_encr = 0.0
+      real, save :: tot_encr = 0.0
 #endif /* COSM_RAYS */
       real     :: cs_iso2
 !- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -1225,7 +1225,7 @@ module dataio
       character(len=*), parameter, dimension(n_msg_origin) :: msg_origin = [ "user  ", "system" ]
 
       character(len=cwdlen), dimension(n_msg_origin), save :: fname
-      integer ::  unlink_stat = -99, io = -99, sz, sts = -99, i
+      integer ::  unlink_stat, io, sz, sts, i
       integer, dimension(13) :: stat_buff
       logical :: msg_param_read = .false., ex
       integer, dimension(n_msg_origin), save :: last_msg_stamp

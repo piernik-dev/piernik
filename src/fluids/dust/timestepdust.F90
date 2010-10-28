@@ -48,16 +48,17 @@ contains
 
       implicit none
 
-      real :: cx = 0.0            !< maximum velocity for X direction
-      real :: cy = 0.0            !< maximum velocity for Y direction
-      real :: cz = 0.0            !< maximum velocity for Z direction
+      real :: cx                  !< maximum velocity for X direction
+      real :: cy                  !< maximum velocity for Y direction
+      real :: cz                  !< maximum velocity for Z direction
 
 ! locals
 
-      real                           :: c_max = 0.0
+      real                           :: c_max
       integer                        :: i, j, k
       type(component_fluid), pointer :: fl
 
+      c_max = 0.0; cx = 0.0; cy = 0.0; cz = 0.0
       fl => nvar%dst
 
       do k= ks, ke

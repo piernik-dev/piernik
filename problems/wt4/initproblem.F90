@@ -391,9 +391,10 @@ contains
       implicit none
 
       integer(HID_T),intent(in)  :: file_id
-      integer(SIZE_T) :: bufsize = 1
-      integer :: error
+      integer(SIZE_T)            :: bufsize
+      integer                    :: error
 
+      bufsize = 1
       call h5ltset_attribute_double_f(file_id, "/", "fpiG", [fpiG], bufsize,error)
 
    end subroutine init_prob_attrs

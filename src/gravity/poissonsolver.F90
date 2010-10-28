@@ -541,7 +541,7 @@ contains
     real   , dimension(:)    , allocatable    :: kx, ky, kz
     real    :: norm
     integer(kind=selected_int_kind(16)) :: planf, plani
-    integer         :: nx, ny, nz, np, i, j=0, k
+    integer         :: nx, ny, nz, np, i, j, k
     integer     , parameter :: FFTW_ESTIMATE = 64
 !
 !----------------------------------------------------------------------

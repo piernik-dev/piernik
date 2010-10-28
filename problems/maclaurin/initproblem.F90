@@ -204,9 +204,10 @@ contains
 
       integer(HID_T),intent(in)  :: file_id
 
-      integer(SIZE_T) :: bufsize = 1
+      integer(SIZE_T) :: bufsize
       integer         :: error
 
+      bufsize = 1
       call h5ltset_attribute_double_f(file_id, "/", "rho0", [d0],   bufsize,error)
       call h5ltset_attribute_double_f(file_id, "/", "fpiG", [fpiG], bufsize,error)
       call h5ltset_attribute_double_f(file_id, "/", "a1",   [a1],   bufsize,error)
@@ -237,12 +238,13 @@ contains
       integer            :: i, j, k
       real               :: potential, r2, rr
       real, dimension(2) :: norm, dev
-      real               :: AA1 = 2./3., AA3 = 2./3., a12, a32, x02, y02, z02, lam, h
+      real               :: AA1, AA3, a12, a32, x02, y02, z02, lam, h
       real, parameter    :: small_e = 1e-3
       norm(:) = 0.
       dev(1) = huge(1.0)
       dev(2) = -dev(1)
 
+      AA1 = 2./3. ; AA3 = 2./3.
       if (e < 0. .and. proc == 0) call warn("[initproblem:finalize_problem] e<0. not fully implemented yet!")
 
       if (e > small_e) then

@@ -47,6 +47,7 @@ module dataio_hdf5
    public :: init_hdf5, read_restart_hdf5, cleanup_hdf5, write_hdf5, write_restart_hdf5, write_plot, write_3darr_to_restart, read_3darr_from_restart
    public :: parfile, parfilelines, maxparfilelines
 
+   real, parameter    :: piernik_hdf5_version = 1.1   !< output version
    integer, parameter :: dnamelen=10
    character(LEN=dnamelen), dimension(2) :: dname = (/"fluid     ","mag       "/)  !< dataset names for restart files
    character(len=S_LEN), allocatable, dimension(:) :: hdf_vars  !< dataset names for hdf files
@@ -61,11 +62,10 @@ module dataio_hdf5
    integer :: ks !< COMMENT ME
    integer :: ke !< COMMENT ME
    real    :: dt_plt !< frequency of plt output
-   real    :: piernik_hdf5_version = 1.1   !< output version
 
    ! storage for the problem.par
    character(len=maxparfilelen), dimension(maxparfilelines) :: parfile !< contents of the parameter file
-   integer                                   :: parfilelines=0         !< number of lines in the parameter file
+   integer, save                             :: parfilelines = 0       !< number of lines in the parameter file
 
    contains
 
@@ -606,10 +606,10 @@ module dataio_hdf5
 
       implicit none
 
-      integer, save     :: nimg = 0
+      integer, save     :: nimg = 0, error = 0
       real, save        :: last_plt_time = 0.0
       character(LEN=cwdlen) :: fname
-      integer           :: i, error=0, fe
+      integer           :: i, fe
       logical, save     :: first_entry = .true.
       integer(HID_T)    :: file_id                 !> File identifier
       integer(HID_T)    :: gr_id, gr2_id           !> Groups identifier
@@ -694,8 +694,8 @@ module dataio_hdf5
       integer(SIZE_T)                     :: bufsize
       integer                             :: rank
 
-      integer                             :: nib=0, nid=0, njb=0, njd=0, nkb=0
-      integer                             :: pisize=0, pjsize=0, fe
+      integer                             :: nib, nid, njb, njd, nkb
+      integer                             :: pisize, pjsize, fe
 
       real, dimension(1)                  :: timebuffer
 
@@ -858,7 +858,7 @@ module dataio_hdf5
       integer(HSIZE_T),  DIMENSION(:), allocatable :: block
       integer(HSIZE_T),  DIMENSION(:), allocatable :: dimsf, dimsfi, chunk_dims
 
-      integer :: error, rank = 4
+      integer :: error, rank
 
       if (proc==0) write(filename, '(a,a1,a3,a1,i4.4,a4)') trim(problem_name), '_', run_id, '_', nres, '.res'
       call MPI_Bcast(filename, cwdlen, MPI_CHARACTER, 0, comm, ierr)
@@ -1316,7 +1316,7 @@ module dataio_hdf5
       integer(HID_T)        :: plist_id      ! Property list identifier
       integer(HID_T)        :: filespace     ! Dataspace identifier in file
       integer(HID_T)        :: memspace      ! Dataspace identifier in memory
-      integer(SIZE_T)       :: bufsize = 1
+      integer(SIZE_T)       :: bufsize
 
       integer(HSIZE_T),  DIMENSION(:), allocatable :: count
       integer(HSSIZE_T), DIMENSION(:), allocatable :: offset
@@ -1611,22 +1611,22 @@ module dataio_hdf5
       implicit none
       real(kind=4), dimension(:,:,:) :: data
 
-      integer           :: rank = 3       ! Dataset rank
+      integer, parameter :: rank = 3       ! Dataset rank
 
-      CHARACTER(LEN=4)  :: dsetname       ! Dataset name
+      CHARACTER(LEN=4)   :: dsetname       ! Dataset name
 
-      integer(HID_T)    :: file_id        ! Dataset identifier
-      integer(HID_T)    :: dset_id        ! Dataset identifier
-      integer(HID_T)    :: plist_id       ! Dataset identifier
-      integer(HID_T)    :: filespace      ! Dataspace identifier in file
-      integer(HID_T)    :: memspace       ! Dataspace identifier in memory
+      integer(HID_T)     :: file_id        ! Dataset identifier
+      integer(HID_T)     :: dset_id        ! Dataset identifier
+      integer(HID_T)     :: plist_id       ! Dataset identifier
+      integer(HID_T)     :: filespace      ! Dataspace identifier in file
+      integer(HID_T)     :: memspace       ! Dataspace identifier in memory
 
       integer, parameter :: ndims = 3
       integer(HSIZE_T),  DIMENSION(ndims) :: count
       integer(HSSIZE_T), DIMENSION(ndims) :: offset
       integer(HSIZE_T),  DIMENSION(ndims) :: stride
       integer(HSIZE_T),  DIMENSION(ndims) :: block
-      integer(HSIZE_T), DIMENSION(ndims) :: dimsf, dimsfi, chunk_dims
+      integer(HSIZE_T),  DIMENSION(ndims) :: dimsf, dimsfi, chunk_dims
       integer :: error
 
       dimsf = (/nxd,nyd,nzd/) ! Dataset dimensions

@@ -142,9 +142,10 @@ module initproblem
 
       integer :: i, j, k
       integer, parameter :: icr = 1 !< Only first CR component
-      integer :: iecr = -1
+      integer :: iecr
       real    :: cs_iso, r2
 
+      iecr = -1
       if (ncrn+ncre >= icr) then
          iecr = iarr_crs(icr)
       else
@@ -218,12 +219,13 @@ module initproblem
       implicit none
 
       integer            :: i, j, k
-      real               :: r_par2, r_perp2, delx, dely, delz, magb, ampt, r0_par2, r0_perp2, crt, bxn=0., byn=0., bzn=0.
-      integer            :: iecr = -1
+      real               :: r_par2, r_perp2, delx, dely, delz, magb, ampt, r0_par2, r0_perp2, crt, bxn, byn, bzn.
+      integer            :: iecr
       integer, parameter :: icr = 1 !< Only first CR component
       real, dimension(2) :: norm, dev
       integer, save      :: nn = 0
 
+      iecr = -1
       if (code_progress < PIERNIK_FINISHED .and. (mod(nstep, norm_step) /=0 .or. halfstep)) return
 
       if (ncrn+ncre >= icr) then
@@ -241,6 +243,10 @@ module initproblem
          bxn = bx0 / magb
          byn = by0 / magb
          bzn = bz0 / magb
+      else
+         bxn = 0.0
+         byn = 0.0
+         bzn = 0.0
       endif
 
       r0_par2  = r0**2 + 4 * (K_crn_paral(icr) + K_crn_perp(icr)) * t
