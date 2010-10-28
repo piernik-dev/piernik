@@ -708,9 +708,6 @@ module dataio
 #ifdef GRAV
       use arrays,          only: gpot
 #endif /* GRAV */
-#ifdef SNE_DISTR
-      use sndistr,         only: emagadd, tot_emagadd
-#endif /* SNE_DISTR */
 
       implicit none
 

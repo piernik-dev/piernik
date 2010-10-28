@@ -44,13 +44,6 @@ contains
 #ifdef SN_SRC
       use snsources,     only: random_sn
 #endif /* SN_SRC */
-#ifdef SNE_DISTR
-      use sndistr,       only: supernovae_distribution
-#ifdef DEBUG
-      use dataio_hdf5,   only: write_hdf5
-      use dataio_pub,    only: chdf
-#endif /* DEBUG */
-#endif /* SNE_DISTR */
 
       implicit none
       character(len=cwdlen), parameter :: fmt900 = "('   nstep = ',i7,'   dt = ',es22.16,'   t = ',es22.16,'   dWallClock = ',f7.2,' s')"
@@ -90,9 +83,7 @@ contains
 ! Sources ----------------------------------------
 
 #ifdef SN_SRC
-#ifndef SNE_DISTR
       call random_sn
-#endif /* !SNE_DISTR */
 #endif /* SN_SRC */
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -102,13 +93,6 @@ contains
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
       call make_3sweeps(.false.) ! Z -> Y -> X
-
-#ifdef SNE_DISTR
-      call supernovae_distribution
-#ifdef DEBUG
-      call write_hdf5(chdf)
-#endif /* DEBUG */
-#endif /* SNE_DISTR */
 
       if (first_run) first_run = .false.
 

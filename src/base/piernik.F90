@@ -156,9 +156,6 @@ contains
 #ifdef FLUID_INTERACTIONS
       use interactions,          only: init_interactions
 #endif /* FLUID_INTERACTIONS */
-#ifdef SNE_DISTR
-      use sndistr,               only: init_sndistr
-#endif /* SNE_DISTR */
 #ifdef MULTIGRID
       use multigrid,             only: init_multigrid
 #endif /* MULTIGRID */
@@ -225,9 +222,6 @@ contains
       call init_interactions
 #endif /* FLUID_INTERACTIONS */
 
-#ifdef SNE_DISTR
-      call init_sndistr
-#endif /* SNE_DISTR */
 #ifdef MULTIGRID
       call init_multigrid(cgrid)
 #endif /* MULTIGRID */
