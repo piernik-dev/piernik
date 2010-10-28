@@ -605,23 +605,6 @@ module dataio
 
    end subroutine write_data
 
-   subroutine next_fluid_or_var(ifluid,ivar,nvar)
-#ifdef SN_SRC
-      use snsources, only: nsn
-#endif /* SN_SRC */
-
-      implicit none
-      integer :: ifluid,ivar,nvar
-      if (ifluid .lt. nvar) then
-         ifluid=ifluid+1
-         ivar=1
-      else
-         ivar=0
-         ifluid=1
-      endif
-      return
-   end subroutine next_fluid_or_var
-
 !------------------------------------------------------------------------
 
    subroutine find_last_restart(restart_number)
