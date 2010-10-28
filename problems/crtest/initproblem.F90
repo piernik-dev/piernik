@@ -219,7 +219,7 @@ module initproblem
       implicit none
 
       integer            :: i, j, k
-      real               :: r_par2, r_perp2, delx, dely, delz, magb, ampt, r0_par2, r0_perp2, crt, bxn, byn, bzn.
+      real               :: r_par2, r_perp2, delx, dely, delz, magb, ampt, r0_par2, r0_perp2, crt, bxn, byn, bzn
       integer            :: iecr
       integer, parameter :: icr = 1 !< Only first CR component
       real, dimension(2) :: norm, dev
