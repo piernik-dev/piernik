@@ -170,9 +170,10 @@ if(!-r $probdir) {
    exit $FAILED;
 }
 
-@prob = ( "../" . $probdir . "initproblem.F90",
-          "../" . $probdir . $param_file );
-
+@prob = <$probdir*.F90 $probdir$param_file>;
+for (@prob) {
+   s/problems/\.\.\/problems/;
+}
 @base = <src/base/*.F90 src/base/*.c src/base/*.h>;
 for (@base) {
    s/src/\.\.\/src/;
