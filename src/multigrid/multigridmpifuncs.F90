@@ -39,6 +39,10 @@ module multigridmpifuncs
 
    implicit none
 
+   private
+
+   public :: mpi_multigrid_prep, mpi_multigrid_bnd
+
 contains
 
 !!$ ============================================================================
@@ -275,9 +279,9 @@ contains
                if (is_external(ZLO)) lvl(lev)%mgvar(:, :, lvl(lev)%ks-i, iv) = - lvl(lev)%mgvar(:, :, lvl(lev)%ks+i-1, iv)
                if (is_external(ZHI)) lvl(lev)%mgvar(:, :, lvl(lev)%ke+i, iv) = - lvl(lev)%mgvar(:, :, lvl(lev)%ke-i+1, iv)
             enddo
-        case default
+         case default
             call die("[multigridmpifuncs:multigrid_ext_bnd] boundary type not implemented")
-         end select
+      end select
 
    end subroutine multigrid_ext_bnd
 

@@ -30,13 +30,17 @@
 
 !!$ ============================================================================
 !!
-!! This module contains various routines (interpolation, boundaries) that are useful
-!! for all flavours of multigrid solvers.
+!! This module contains various routines (interpolation, boundaries and some global reduction)
+!! that are useful for all flavours of multigrid solvers.
 !!
 
 module multigridbasefuncs
 
    implicit none
+
+   private
+
+   public :: prolong_level, restrict_all, norm_sq, substract_average, prolong_faces, zero_boundaries, restrict_level
 
 contains
 

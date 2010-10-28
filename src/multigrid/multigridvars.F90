@@ -32,6 +32,8 @@ module multigridvars
 
    implicit none
 
+   public ! no secrets are kept here
+
    ! multigrid constants
    integer, parameter :: source=1,          solution=source+1         !< Names of density and potential fields
    integer, parameter :: defect=solution+1, correction=defect+1       !< Names of auxiliary fields (related to source and solution, respectively)
@@ -113,7 +115,7 @@ module multigridvars
    integer, parameter :: extbnd_mirror = extbnd_extrapolate + 1       !< Zero-gradient, mirroring external boundaries
    integer, parameter :: extbnd_antimirror = - extbnd_mirror          !< mirroring external boundaries with opposite sign
 
-  type cart   ! auxiliary type for rank-to-coordinates array
+   type cart   ! auxiliary type for rank-to-coordinates array
       integer, dimension(NDIM) :: lo, up, proc
    end type cart
    type(cart), dimension(:),       allocatable :: gb_cartmap          !< rank-to-coordinates array and ranges on gb_src for assembling base level;

@@ -37,6 +37,11 @@ module multigridhelpers
 
    implicit none
 
+   private
+
+   public :: set_dirty, check_dirty, brief_v_log, mg_write_log, numbered_ascii_dump
+   public :: do_ascii_dump, multidim_code_3D, dirty_debug, dirty_label, dirtyH, dirtyL, aux_par_I0, aux_par_I1, aux_par_I2, aux_par_R0, aux_par_R1, aux_par_R2
+
    ! namelist parameters
    logical            :: do_ascii_dump                      !< to dump, or not to dump: that is a question (ascii)
    logical            :: multidim_code_3D                   !< prefer code written for any 1D and 2D configuration even in 3D for benchmarking and debugging
