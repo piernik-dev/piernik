@@ -255,9 +255,6 @@ if( grep { /FLUID_INTERACTIONS/} @d) {
 if( grep { /SN_SRC/} @d) {
    push(@addons, "../src/supernovae/snsources.F90");
 }
-if( grep { /SNE_DISTR/} @d) {
-   push(@addons, "../src/supernovae/sndistr.F90");
-}
 
 #if( grep { /UMUSCL/} @d) {
 #   push(@addons, "../src/scheme/unsplit_muscl_hancock/fluidupdate.F90");
