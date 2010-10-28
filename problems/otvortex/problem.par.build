@@ -1,0 +1,103 @@
+ $DOMAIN_SIZES
+    nxd = 512
+    nyd = 512
+    nzd = 1
+ /
+
+ $MPI_BLOCKS
+    pxsize = 1
+    pysize = 1
+    pzsize = 1
+ /
+
+ $START_CONTROL
+ /
+
+ $RESTART_CONTROL
+    restart  = 'last'
+    new_id   = ''
+    nrestart = 0
+ /
+
+ $END_CONTROL
+    tend   = 0.60
+    nend   = 20
+ /
+
+ $OUTPUT_CONTROL
+    dt_hdf  = 0.012
+    dt_res  = 0.0
+    dt_log  = 0.00001
+    dt_tsl  = 0.00001
+    vars(1) = 'dens'
+    vars(2) = 'velx'
+    vars(3) = 'vely'
+    vars(4) = 'velz'
+    vars(5) = 'magx'
+    vars(6) = 'magy'
+    vars(7) = 'magz'
+    vars(8) = 'pres'
+    domain  = 'phys_domain'
+    mag_center = 'no'
+ /
+
+ $BOUNDARIES
+    bnd_xl = 'per'
+    bnd_xr = 'per'
+    bnd_yl = 'per'
+    bnd_yr = 'per'
+    bnd_zl = 'per'
+    bnd_zr = 'per'
+ /
+
+ $DOMAIN_LIMITS
+    xmin   = 0.0
+    xmax   = 1.0
+    ymin   = 0.0
+    ymax   = 1.0
+    zmin   = -0.5
+    zmax   = 0.5
+ /
+
+ $FLUID_IONIZED
+    gamma_ion  = 1.666666666
+ /
+
+ $FLUID_NEUTRAL
+    gamma_neut = 1.666666666
+ /
+
+
+ $EQUATION_OF_STATE
+    c_si   = 1.0
+    alpha  = 0.0
+ /
+
+ $NUMERICAL_SETUP
+    cfl    = 0.8
+    smalld = 1.e-3
+    smallei= 1.e-5
+    integration_order = 2
+ /
+
+ $GRAVITY
+ /
+
+ $THERMAL
+ /
+
+ $RESISTIVITY
+   eta_0      = 1.0e-4
+   cfl_resist = 0.5
+   eta_1      = 0.0
+   j_crit     = 1.0
+   deint_max  = 0.01
+ /
+
+ $PROBLEM_CONTROL
+    problem_name = 'otvortex'
+    run_id       = 'rs4'
+ /
+
+ $SHEARING
+ /

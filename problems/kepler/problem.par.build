@@ -1,0 +1,94 @@
+ $DOMAIN_SIZES
+    nxd = 75
+    nyd = 75
+    nzd = 1
+    nb=4
+ /
+
+ $MPI_BLOCKS
+    pxsize = 1
+    pysize = 1
+    pzsize = 1
+ /
+
+ $RESTART_CONTROL
+    restart  = 'last'
+    new_id   = ''
+    nrestart = 0
+ /
+
+ $END_CONTROL
+    tend   = 10.0
+    nend   = 20
+ /
+
+ $OUTPUT_CONTROL
+    dt_hdf  = 1.0e-1
+    dt_res  = 0.0
+    dt_log  = 0.001
+    dt_tsl  = 0.001
+    vars(1) = 'dens'
+    vars(2) = 'velx'
+    vars(3) = 'vely'
+    vars(4) = 'velz'
+    vars(5) = 'ener'
+    vars(6) = 'magx'
+    vars(7) = 'magy'
+    vars(8) = 'magz'
+    domain  = 'phys_domain'
+    mag_center = 'no'
+ /
+
+ $BOUNDARIES
+    bnd_xl = 'cor'
+    bnd_xr = 'out'
+    bnd_yl = 'cor'
+    bnd_yr = 'out'
+    bnd_zl = 'outd'
+    bnd_zr = 'outd'
+ /
+
+ $DOMAIN_LIMITS
+    xmin   = 0.0
+    xmax   = 1.5
+    ymin   = 0.0
+    ymax   = 1.5
+    zmin   =-0.5
+    zmax   = 0.5
+ /
+
+ $FLUID_IONIZED
+    cs_ion     = 0.2
+    cs_iso_ion = 0.2
+ /
+
+ $NUMERICAL_SETUP
+    cfl    = 0.8
+    smalld = 1.e-6
+    smallei= 1.e-6
+    integration_order = 2
+ /
+
+ $GRAVITY
+    ptmass  = 1.0
+    ptm_x   = 0.0
+    ptm_y   = 0.0
+    ptm_z   = 0.0
+    r_smooth= 0.2
+    nsub    = 10
+    r_grav  = 1.0
+    n_gravr = 10
+ /
+
+ $RESISTIVITY
+ /
+
+ $PROBLEM_CONTROL
+    problem_name ='kepler'
+    run_id  =  'tst'
+    alpha   = 0.0
+    d0      = 1.0
+    dout    = 1.0e-4
+    r_max   = 1.0e-1
+    mag_field_orient = 'none'
+/
