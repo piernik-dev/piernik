@@ -61,9 +61,14 @@ module multigrid_diffusion
    logical            :: diff_explicit                                !< If .true. then do not use multigrid for diffusion
    real               :: diff_dt_crs_orig                             !< timestep calculated at timestepcosmicrays.F90, before enlarging by diff_tstep_fac
 
+   ! mgvar entries for the B field
    integer, parameter :: diff_bx = correction+1, diff_by = diff_bx + 1, diff_bz = diff_by + 1 !< indices pointing to multigrid copies of the b(:,:,:,:) array
 
+   ! miscellaneous
+   real                               :: norm_rhs_orig                !< Norm of the unmodified source
+   real, allocatable, dimension(:,:)  :: vcycle_factors               !< buffer for storing V-cycle convergence factors and execution times
    logical, allocatable, dimension(:) :: norm_was_zero                !< Flag for suppressing repeated warnings on nonexistent CR components
+   character(len=2)        :: cprefix                                 !< optional prefix for distinguishing inner and outer potential V-cycles in the log
 
 contains
 
@@ -135,6 +140,8 @@ contains
       endif
 
       ngridvars = max(ngridvars, diff_bz)
+      norm_rhs_orig = 0.
+      cprefix=""
 
       !diffusion
       if (.not. diff_explicit) then
@@ -155,7 +162,6 @@ contains
    subroutine init_multigrid_diff_post(cgrid, mb_alloc)
 
       use types,              only: grid_container
-      use multigridvars,      only: vcycle_factors
       use dataio_pub,         only: die
       use fluidindex,         only: nvar
 
@@ -168,21 +174,17 @@ contains
 
       if (.false.) ierr = cgrid%nxb ! suppress compiler warnings on unused arguments
 
-      if (.not. allocated(norm_was_zero)) then
-         allocate(norm_was_zero(nvar%crs%all), stat=ierr)
-         if (ierr /= 0) call die("[multigrid_diffusion:init_multigrid] Allocation error: norm_was_zero")
-         mb_alloc = mb_alloc + size(norm_was_zero)/2
-         norm_was_zero(:) = .false.
-      endif
+      if (allocated(norm_was_zero)) call die("[multigrid_diffusion:init_multigrid] norm_was_zero already allocated")
+      allocate(norm_was_zero(nvar%crs%all), stat=ierr)
+      if (ierr /= 0) call die("[multigrid_diffusion:init_multigrid] Allocation error: norm_was_zero")
+      mb_alloc = mb_alloc + size(norm_was_zero)/2
+      norm_was_zero(:) = .false.
 
-      if (allocated(vcycle_factors)) then
-         if (ubound(vcycle_factors, 1) < max_cycles) deallocate(vcycle_factors)
-      endif
-      if (.not. allocated(vcycle_factors)) then
-         allocate(vcycle_factors(0:max_cycles, 2), stat=ierr)
-         if (ierr /= 0) call die("[multigrid_diffusion:init_multigrid] Allocation error: vcycle_factors")
-         mb_alloc = mb_alloc + size(vcycle_factors)
-      endif
+      if (allocated(vcycle_factors)) call die("[multigrid_diffusion:init_multigrid] vcycle_factors already allocated")
+      allocate(vcycle_factors(0:max_cycles, 2), stat=ierr)
+      if (ierr /= 0) call die("[multigrid_diffusion:init_multigrid] Allocation error: vcycle_factors")
+      mb_alloc = mb_alloc + size(vcycle_factors)
+      vcycle_factors(:,:) = 0.
 
    end subroutine init_multigrid_diff_post
 
@@ -192,8 +194,6 @@ contains
 !!
 
    subroutine cleanup_multigrid_diff
-
-      use multigridvars,      only: vcycle_factors
 
       implicit none
 
@@ -213,7 +213,7 @@ contains
       use dataio_pub,         only: halfstep, warn, printinfo, msg
       use crdiffusion,        only: cr_diff_x, cr_diff_y, cr_diff_z
       use timer,              only: timer_
-      use multigridvars,      only: ts, tot_ts, norm_rhs_orig, stdout
+      use multigridvars,      only: ts, tot_ts, stdout
       use fluidindex,         only: nvar
       use mpisetup,           only: dt
 
@@ -282,7 +282,7 @@ contains
 
    subroutine init_source(cr_id)
 
-      use multigridvars,      only: roof, source, defect, correction, norm_rhs_orig
+      use multigridvars,      only: roof, source, defect, correction
       use initcosmicrays,     only: iarr_crs
       use grid,               only: is, ie, js, je, ks, ke
       use arrays,             only: u
@@ -368,7 +368,7 @@ contains
 
    subroutine vcycle_hg(cr_id)
 
-      use multigridvars,      only: norm_rhs_orig, source, defect, solution, correction, base, roof, level_min, level_max, lvl, vcycle_factors, ts, tot_ts, stdout, cprefix
+      use multigridvars,      only: source, defect, solution, correction, base, roof, level_min, level_max, lvl, ts, tot_ts, stdout
       use multigridbasefuncs, only: norm_sq, restrict_all, prolong_level
       use multigridhelpers,   only: set_dirty, check_dirty, do_ascii_dump, numbered_ascii_dump, mg_write_log, brief_v_log
       use initcosmicrays,     only: iarr_crs
@@ -453,7 +453,7 @@ contains
          v = max_cycles
       endif
 
-      call brief_v_log(v, norm_lhs/norm_rhs)
+      call brief_v_log(v, norm_lhs/norm_rhs, vcycle_factors, cprefix)
 
       call norm_sq(solution, norm_rhs)
       call norm_sq(defect, norm_lhs)

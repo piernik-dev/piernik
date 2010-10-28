@@ -105,6 +105,11 @@ module multigrid_gravity
    end type soln_history
    type(soln_history), target :: inner, outer                         !< storage for recycling the inner and outer potentials
 
+   ! miscellaneous
+   real                              :: norm_rhs_orig                 !< Norm of the unmodified source
+   real, allocatable, dimension(:,:) :: vcycle_factors                !< buffer for storing V-cycle convergence factors and execution times
+   character(len=2)        :: cprefix                                 !< optional prefix for distinguishing inner and outer potential V-cycles in the log
+
 contains
 
 !!$ ============================================================================
@@ -254,6 +259,8 @@ contains
       endif
 
       ngridvars = max(ngridvars, correction)
+      norm_rhs_orig = 0.
+      cprefix=""
 
       ! boundaries
       grav_bnd = bnd_invalid
@@ -319,7 +326,7 @@ contains
 
       use types,              only: grid_container
       use arrays,             only: sgp
-      use multigridvars,      only: lvl, roof, base, gb, gb_cartmap, level_gb, level_max, level_min, bnd_periodic, bnd_dirichlet, bnd_isolated, vcycle_factors, &
+      use multigridvars,      only: lvl, roof, base, gb, gb_cartmap, level_gb, level_max, level_min, bnd_periodic, bnd_dirichlet, bnd_isolated, &
            &                        is_external, has_dir, XDIR, YDIR, ZDIR, XLO, XHI, YLO, YHI, ZLO, ZHI
       use mpisetup,           only: proc, nproc, pxsize, pysize, pzsize, bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr
       use multigridhelpers,   only: dirty_debug, dirtyH
@@ -561,14 +568,11 @@ contains
 
       if (grav_bnd == bnd_isolated) call init_multipole(mb_alloc,cgrid)
 
-      if (allocated(vcycle_factors)) then
-         if (ubound(vcycle_factors, 1) < max_cycles) deallocate(vcycle_factors)
-      endif
-      if (.not. allocated(vcycle_factors)) then
-         allocate(vcycle_factors(0:max_cycles, 2), stat=aerr(1))
-         if (aerr(1) /= 0) call die("[multigrid_gravity:init_multigrid_grav_post] Allocation error: vcycle_factors")
-         mb_alloc = mb_alloc + size(vcycle_factors)
-      endif
+      if (allocated(vcycle_factors)) call die("[multigrid_diffusion:init_multigrid] vcycle_factors already allocated")
+      allocate(vcycle_factors(0:max_cycles, 2), stat=aerr(1))
+      if (aerr(1) /= 0) call die("[multigrid_diffusion:init_multigrid] Allocation error: vcycle_factors")
+      mb_alloc = mb_alloc + size(vcycle_factors)
+      vcycle_factors(:,:) = 0.
 
    end subroutine init_multigrid_grav_post
 
@@ -580,7 +584,7 @@ contains
    subroutine cleanup_multigrid_grav
 
       use multipole,          only: cleanup_multipole
-      use multigridvars, only: lvl, level_gb, level_max, vcycle_factors
+      use multigridvars, only: lvl, level_gb, level_max
 
       implicit none
 
@@ -628,7 +632,7 @@ contains
       use mpisetup,         only: proc, t
       use multigridhelpers, only: set_dirty, check_dirty, mg_write_log
       use dataio_pub,       only: msg, die
-      use multigridvars,    only: lvl, roof, cprefix, level_min, level_max, stdout, solution
+      use multigridvars,    only: lvl, roof, level_min, level_max, stdout, solution
 
       implicit none
 
@@ -716,9 +720,8 @@ contains
       use dataio_pub,         only: die
       use multigridhelpers,   only: set_dirty, check_dirty
       use multigridbasefuncs, only: norm_sq, substract_average
-      use multigridvars,      only: roof, source, level_max, is_external, norm_rhs_orig, &
-           &                        XLO, XHI, YLO, YHI, ZLO, ZHI, LOW, HIGH, &
-           &                        bnd_periodic, bnd_dirichlet, bnd_givenval
+      use multigridvars,      only: roof, source, level_max, is_external, bnd_periodic, bnd_dirichlet, bnd_givenval, &
+           &                        XLO, XHI, YLO, YHI, ZLO, ZHI, LOW, HIGH
 
       implicit none
 
@@ -820,7 +823,7 @@ contains
       use grid,          only: is, ie, js, je, ks, ke
       use dataio_pub,    only: die
       use multipole,     only: multipole_solver
-      use multigridvars, only: roof, solution, bnd_isolated, bnd_dirichlet, bnd_givenval, has_dir, XDIR, YDIR, ZDIR, cprefix, mg_nb, tot_ts, ts
+      use multigridvars, only: roof, solution, bnd_isolated, bnd_dirichlet, bnd_givenval, has_dir, XDIR, YDIR, ZDIR, mg_nb, tot_ts, ts
 
       implicit none
 
@@ -908,8 +911,8 @@ contains
       use multigridhelpers,   only: set_dirty, check_dirty, mg_write_log, brief_v_log, do_ascii_dump, numbered_ascii_dump
       use multigridbasefuncs, only: norm_sq, restrict_all, substract_average
       use dataio_pub,         only: msg, die, warn
-      use multigridvars,      only: roof, base, source, solution, correction, defect, verbose_vcycle, vcycle_factors, cprefix, &
-           &                        bnd_givenval, bnd_periodic, norm_rhs_orig, level_min, level_max, stdout, tot_ts, ts
+      use multigridvars,      only: roof, base, source, solution, correction, defect, verbose_vcycle, &
+           &                        bnd_givenval, bnd_periodic, level_min, level_max, stdout, tot_ts, ts
 
       implicit none
 
@@ -1005,7 +1008,7 @@ contains
                norm_lowest = norm_lhs
             else
                if (norm_lhs/norm_lowest > vcycle_abort) then
-                  if (.not. verbose_vcycle) call brief_v_log(v, norm_lhs/norm_rhs)
+                  if (.not. verbose_vcycle) call brief_v_log(v, norm_lhs/norm_rhs, vcycle_factors, cprefix)
                   call die("[multigrid_gravity:vcycle_hg] Serious nonconvergence detected.")
                   !In such case one may increase nsmool, decrease refinement depth or use FFT
                endif
@@ -1035,7 +1038,7 @@ contains
          v = max_cycles
       endif
 
-      if (.not. verbose_vcycle) call brief_v_log(v, norm_lhs/norm_rhs)
+      if (.not. verbose_vcycle) call brief_v_log(v, norm_lhs/norm_rhs, vcycle_factors, cprefix)
 
       call check_dirty(level_max, solution, "final_solution")
 

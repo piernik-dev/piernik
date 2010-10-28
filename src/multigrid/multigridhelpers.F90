@@ -148,9 +148,9 @@ contains
 !! Assembles one-line log of V-cycle achievements
 !!
 
-   subroutine brief_v_log(v, norm)
+   subroutine brief_v_log(v, norm, vcycle_factors, cprefix)
 
-      use multigridvars, only: vcycle_factors, cprefix, stdout
+      use multigridvars, only: stdout
       use mpisetup,      only: proc
       use dataio_pub,    only: msg, fplen, warn
 
@@ -158,6 +158,8 @@ contains
 
       integer, intent(in) :: v    !< number of V-cycles taken
       real, intent(in)    :: norm !< norm reduction factor achieved
+      real, dimension(:,:), intent(in) :: vcycle_factors
+      character(len=*), intent(in)     :: cprefix
 
       real                 :: at
       integer              :: i, lm
@@ -165,15 +167,15 @@ contains
 
       if (proc /= 0) return
 
-      if (v > ubound(vcycle_factors, 1)) call warn("[multigridhelpers:brief_v_log] Trying to read beyond upper bound of vcycle_factors(:,:).")
+      if (v+1 > ubound(vcycle_factors, 1)) call warn("[multigridhelpers:brief_v_log] Trying to read beyond upper bound of vcycle_factors(:,:).")
 
       at = 0.
-      if (v>0) at = sum(vcycle_factors(1:v,2))/v
+      if (v>1) at = sum(vcycle_factors(1:v+1,2))/v
 
       write(msg, '(a,i3,1x,2a,f7.3,a,i3,a,f7.3,a,f11.9,a)') &
-           "[multigrid] ", v, trim(cprefix), "Cycles, dt_wall=", vcycle_factors(0,2), " +", v, "*", at, ", norm/rhs= ", norm, " : "
+           "[multigrid] ", v, trim(cprefix), "Cycles, dt_wall=", vcycle_factors(1,2), " +", v, "*", at, ", norm/rhs= ", norm, " : "
 
-      do i = 0, min(v, ubound(vcycle_factors, 1))
+      do i = 1, min(v+1, ubound(vcycle_factors, 1))
          if (vcycle_factors(i,1) < 1.0e4) then
             write(normred, '(f8.2)') vcycle_factors(i,1)
          else if (vcycle_factors(i,1) < 1.0e7) then

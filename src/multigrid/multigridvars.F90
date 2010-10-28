@@ -122,9 +122,5 @@ module multigridvars
 
    ! miscellaneous
    real                    :: ts, tot_ts                              !< time for runtime profiling, total multigrid time
-   real                    :: norm_rhs_orig                           !< Norm of the unmodified source
-   character(len=2)        :: cprefix                                 !< optional prefix for distinguishing inner and outer potential V-cycles in the log
-
-   real, dimension(:,:), allocatable :: vcycle_factors                !< buffer for storing V-cycle convergence factors and execution times
 
 end module multigridvars

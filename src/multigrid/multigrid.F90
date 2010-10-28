@@ -54,8 +54,7 @@ contains
 
       use multigridvars,      only: lvl, level_max, level_min, level_gb, roof, base, gb, gb_cartmap, mg_nb, ngridvars, correction, &
            &                        is_external, eff_dim, NDIM, has_dir, XDIR, YDIR, ZDIR, XLO, XHI, YLO, YHI, ZLO, ZHI, LOW, HIGH, D_x, D_y, D_z, &
-           &                        ord_prolong, ord_prolong_face, stdout, verbose_vcycle, hdf5levels, &
-           &                        cprefix, tot_ts
+           &                        ord_prolong, ord_prolong_face, stdout, verbose_vcycle, hdf5levels, tot_ts
       use types,              only: grid_container
       use mpisetup,           only: buffer_dim, comm, comm3d, ierr, proc, nproc, ndims, pxsize, pysize, pzsize, &
            &                        ibuff, rbuff, lbuff, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL
@@ -372,8 +371,6 @@ contains
 
       tot_ts = 0.
 
-      cprefix=""
-
       ! construct global PE mapping
       if (allocated(gb_cartmap)) call die("[multigrid:init_multigrid] gb_cartmap array already allocated")
       allocate(gb_cartmap(0:nproc-1), stat=aerr(1))
@@ -427,7 +424,7 @@ contains
 
    subroutine cleanup_multigrid
 
-      use multigridvars,      only: lvl, level_gb, level_min, level_max, has_dir, XDIR, YDIR, ZDIR, tot_ts, vcycle_factors, gb_cartmap
+      use multigridvars,      only: lvl, level_gb, level_min, level_max, has_dir, XDIR, YDIR, ZDIR, tot_ts, gb_cartmap
       use mpisetup,           only: proc, nproc, MPI_DOUBLE_PRECISION, comm3d, ierr
       use multigridhelpers,   only: mg_write_log
       use dataio_pub,         only: msg
