@@ -70,9 +70,6 @@ module snsources
          call cr_sn(snpos)
 #endif /* COSM_RAYS */
 
-#ifdef DIPOLS
-!        call magn_multipole_sn(rand_angles(),snpos,)
-#endif /* DIPOLS */
       enddo ! isn
       return
    end subroutine random_sn
@@ -203,27 +200,6 @@ module snsources
    end subroutine rand_coords
 
 !-----------------------------------------------------------------------
-
-!>
-!! \brief Function generates point on the surface of unit
-!! sphere with uniform distribution and returns its latidude and longitude
-!<
-   function rand_angles()
-
-      use constants, only: pi
-      implicit none
-      real :: rand(2)
-      real :: rnx,rny,rnz               !! Point's position in cartesian coordinates
-      real, dimension(2) :: rand_angles !! Latidue and longitude
-
-      call random_number(rand)
-      rnz = (1.0-2.0*rand(1))
-      rnx = sqrt(1.0-rnz**2)*cos(2.*pi*rand(2))
-      rny = sqrt(1.0-rnz**2)*sin(2.*pi*rand(2))
-      rand_angles(1) = 2.0*pi*rand(2)
-      rand_angles(2) = acos(rnz/sqrt(rnz**2+rny**2+rnx**2) )
-
-   end function rand_angles
 
 !>
 !! \brief Function that generates values of normal distribution (from Numerical Recipies)
