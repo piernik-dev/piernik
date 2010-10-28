@@ -39,7 +39,7 @@ module multigridhelpers
 
    private
 
-   public :: set_dirty, check_dirty, brief_v_log, mg_write_log, numbered_ascii_dump
+   public :: set_dirty, check_dirty, vcycle_stats_init, brief_v_log, mg_write_log, numbered_ascii_dump
    public :: do_ascii_dump, multidim_code_3D, dirty_debug, dirty_label, dirtyH, dirtyL, aux_par_I0, aux_par_I1, aux_par_I2, aux_par_R0, aux_par_R1, aux_par_R2
 
    ! namelist parameters
@@ -145,43 +145,76 @@ contains
 
 !!$ ============================================================================
 !!
+!! Initialize vcycle_stats
+!!
+
+   subroutine vcycle_stats_init(vs, size)
+
+      use dataio_pub,    only: die, ierrh
+      use multigridvars, only: vcycle_stats
+
+      implicit none
+
+      type(vcycle_stats), intent(out) :: vs   !< V-cycle statistics variable to be created or reset
+      integer, intent(in)             :: size !< size of the vs structure (usually max_cycles); for nonpositive value perform reset only
+
+      if (size > 0) then
+         if (allocated(vs%factor) .or. allocated(vs%time)) call die("[multigridhelpers:vcycle_stats_init] vcycle_stats already allocated.")
+         allocate(vs%factor(0:size), stat=ierrh)
+         if (ierrh /= 0) call die("[multigridhelpers:vcycle_stats_init] Allocation error: vs%factor.")
+         allocate(vs%time(0:size), stat=ierrh)
+         if (ierrh /= 0) call die("[multigridhelpers:vcycle_stats_init] Allocation error: vs%time.")
+      endif
+
+      vs%factor(:)     = 0.
+      vs%time(:)       = 0.
+      vs%count         = 0
+      vs%norm_rhs_orig = 0.
+      vs%norm_final    = 0.
+      vs%cprefix       = ""
+
+   end subroutine vcycle_stats_init
+
+!!$ ============================================================================
+!!
 !! Assembles one-line log of V-cycle achievements
 !!
 
-   subroutine brief_v_log(v, norm, vcycle_factors, cprefix)
+   subroutine brief_v_log(vs)
 
-      use multigridvars, only: stdout
+      use multigridvars, only: stdout, vcycle_stats
       use mpisetup,      only: proc
       use dataio_pub,    only: msg, fplen, warn
 
       implicit none
 
-      integer, intent(in) :: v    !< number of V-cycles taken
-      real, intent(in)    :: norm !< norm reduction factor achieved
-      real, dimension(:,:), intent(in) :: vcycle_factors
-      character(len=*), intent(in)     :: cprefix
+      type(vcycle_stats), intent(in) :: vs
 
       real                 :: at
       integer              :: i, lm
       character(len=fplen) :: normred
+      character            :: dash
 
       if (proc /= 0) return
 
-      if (v+1 > ubound(vcycle_factors, 1)) call warn("[multigridhelpers:brief_v_log] Trying to read beyond upper bound of vcycle_factors(:,:).")
+      if (vs%count > ubound(vs%factor, 1)) call warn("[multigridhelpers:brief_v_log] Trying to read beyond upper bound of vcycle_stats.")
 
       at = 0.
-      if (v>1) at = sum(vcycle_factors(1:v+1,2))/v
+      if (vs%count > 0) at = sum(vs%time(1:vs%count))/vs%count ! average V-cycle time on PE# 0
 
-      write(msg, '(a,i3,1x,2a,f7.3,a,i3,a,f7.3,a,f11.9,a)') &
-           "[multigrid] ", v, trim(cprefix), "Cycles, dt_wall=", vcycle_factors(1,2), " +", v, "*", at, ", norm/rhs= ", norm, " : "
+      dash = ""
+      if (len_trim(vs%cprefix) > 0) dash="-"
 
-      do i = 1, min(v+1, ubound(vcycle_factors, 1))
-         if (vcycle_factors(i,1) < 1.0e4) then
-            write(normred, '(f8.2)') vcycle_factors(i,1)
-         else if (vcycle_factors(i,1) < 1.0e7) then
-            write(normred, '(f8.0)') vcycle_factors(i,1)
+      write(msg, '(a,i3,1x,3a,f7.3,a,i3,a,f7.3,a,f11.9,a)') &
+           "[multigrid] ", vs%count, trim(vs%cprefix), dash, "Cycles, dt_wall=", vs%time(0), " +", vs%count, "*", at, ", norm/rhs= ", vs%norm_final, " : "
+
+      do i = 0, min(vs%count, ubound(vs%factor, 1))
+         if (vs%factor(i) < 1.0e4) then
+            write(normred, '(f8.2)') vs%factor(i)
+         else if (vs%factor(i) < 1.0e7) then
+            write(normred, '(f8.0)') vs%factor(i)
          else
-            write(normred, '(es8.2)') vcycle_factors(i,1)
+            write(normred, '(es8.2)') vs%factor(i)
          endif
          lm = len_trim(msg)
          if (len(msg) >= lm + 9) msg(lm+2:lm+9) = normred(1:8)

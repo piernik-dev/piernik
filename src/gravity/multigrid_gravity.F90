@@ -44,7 +44,8 @@ module multigrid_gravity
 
 #if defined(MULTIGRID) && defined(GRAV)
 
-   use mpisetup, only: cbuff_len
+   use mpisetup,      only: cbuff_len
+   use multigridvars, only: vcycle_stats
 
    implicit none
 
@@ -106,9 +107,7 @@ module multigrid_gravity
    type(soln_history), target :: inner, outer                         !< storage for recycling the inner and outer potentials
 
    ! miscellaneous
-   real                              :: norm_rhs_orig                 !< Norm of the unmodified source
-   real, allocatable, dimension(:,:) :: vcycle_factors                !< buffer for storing V-cycle convergence factors and execution times
-   character(len=2)        :: cprefix                                 !< optional prefix for distinguishing inner and outer potential V-cycles in the log
+   type(vcycle_stats) :: vstat                                        !< V-cycle statistics
 
 contains
 
@@ -259,8 +258,6 @@ contains
       endif
 
       ngridvars = max(ngridvars, correction)
-      norm_rhs_orig = 0.
-      cprefix=""
 
       ! boundaries
       grav_bnd = bnd_invalid
@@ -327,9 +324,9 @@ contains
       use types,              only: grid_container
       use arrays,             only: sgp
       use multigridvars,      only: lvl, roof, base, gb, gb_cartmap, level_gb, level_max, level_min, bnd_periodic, bnd_dirichlet, bnd_isolated, &
-           &                        is_external, has_dir, XDIR, YDIR, ZDIR, XLO, XHI, YLO, YHI, ZLO, ZHI
+           &                        is_external, has_dir, XDIR, YDIR, ZDIR, XLO, XHI, YLO, YHI, ZLO, ZHI, vcycle_stats
       use mpisetup,           only: proc, nproc, pxsize, pysize, pzsize, bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr
-      use multigridhelpers,   only: dirty_debug, dirtyH
+      use multigridhelpers,   only: vcycle_stats_init, dirty_debug, dirtyH
       use constants,          only: pi, dpi
       use dataio_pub,         only: die, warn
       use multipole,          only: init_multipole
@@ -568,11 +565,8 @@ contains
 
       if (grav_bnd == bnd_isolated) call init_multipole(mb_alloc,cgrid)
 
-      if (allocated(vcycle_factors)) call die("[multigrid_diffusion:init_multigrid] vcycle_factors already allocated")
-      allocate(vcycle_factors(0:max_cycles, 2), stat=aerr(1))
-      if (aerr(1) /= 0) call die("[multigrid_diffusion:init_multigrid] Allocation error: vcycle_factors")
-      mb_alloc = mb_alloc + size(vcycle_factors)
-      vcycle_factors(:,:) = 0.
+      call vcycle_stats_init(vstat, max_cycles)
+      mb_alloc = mb_alloc + 2*max_cycles
 
    end subroutine init_multigrid_grav_post
 
@@ -598,7 +592,8 @@ contains
       enddo
 
       if (allocated(gb_src_temp)) deallocate(gb_src_temp)
-      if (allocated(vcycle_factors)) deallocate(vcycle_factors)
+      if (allocated(vstat%factor)) deallocate(vstat%factor)
+      if (allocated(vstat%time)) deallocate(vstat%time)
 
       if (allocated(lvl)) then
          do i = level_gb, level_max
@@ -670,7 +665,7 @@ contains
       select case (ordt)
          case (:-1)
             if (proc == 0 .and. ord_time_extrap > -1) then
-               write(msg, '(3a)')"[multigrid_gravity:init_solution] Clearing ",trim(cprefix),"solution."
+               write(msg, '(3a)')"[multigrid_gravity:init_solution] Clearing ",trim(vstat%cprefix),"solution."
                call mg_write_log(msg, stdout)
             endif
             do l = level_min, level_max
@@ -680,14 +675,14 @@ contains
          case (0)
             roof%mgvar(:, :, :, solution) = history%old(p0)%soln(:, :, :)
             if (proc == 0 .and. ord_time_extrap > 0) then
-               write(msg, '(3a)')"[multigrid_gravity:init_solution] No extrapolation of ",trim(cprefix),"solution."
+               write(msg, '(3a)')"[multigrid_gravity:init_solution] No extrapolation of ",trim(vstat%cprefix),"solution."
                call mg_write_log(msg, stdout)
             endif
          case (1)
             dt_fac(1) = (t - history%old(p0)%time) / (history%old(p0)%time - history%old(p1)%time)
             roof%mgvar(:, :, :, solution) = (1. + dt_fac(1)) * history%old(p0)%soln(:, :, :) - dt_fac(1) *  history%old(p1)%soln(:, :, :)
             if (proc == 0 .and. ord_time_extrap > 1) then
-               write(msg, '(3a)')"[multigrid_gravity:init_solution] Linear extrapolation of ",trim(cprefix),"solution."
+               write(msg, '(3a)')"[multigrid_gravity:init_solution] Linear extrapolation of ",trim(vstat%cprefix),"solution."
                call mg_write_log(msg, stdout)
             endif
          case (2)
@@ -731,11 +726,11 @@ contains
 
       if (present(dens)) then
          roof%mgvar(roof%is:roof%ie, roof%js:roof%je, roof%ks:roof%ke, source) = fpiG * dens(is:ie, js:je, ks:ke)
-         call norm_sq(source, norm_rhs_orig) ! The norm of corrected source will be calculated in multigrid_solve_*
+         call norm_sq(source, vstat%norm_rhs_orig) ! The norm of corrected source will be calculated in multigrid_solve_*
       else
          if (grav_bnd /= bnd_givenval) call die("[multigrid_gravity:init_source] empty space allowed only for given value boundaries.")
          roof%mgvar(roof%is:roof%ie, roof%js:roof%je, roof%ks:roof%ke, source) = 0.
-         norm_rhs_orig = 0.
+         vstat%norm_rhs_orig = 0.
       endif
 
       select case (grav_bnd)
@@ -842,9 +837,13 @@ contains
 
       if (isolated) then
          grav_bnd = bnd_dirichlet
-         cprefix = "i-"
+         vstat%cprefix = "Gi"
       else
-         cprefix = ""
+#ifdef COSM_RAYS
+         vstat%cprefix = "G"
+#else
+         vstat%cprefix = ""
+#endif /* COSM_RAYS */
       endif
 
       call init_source(dens)
@@ -881,7 +880,7 @@ contains
       if (isolated) then
          grav_bnd = bnd_givenval
 
-         cprefix = "o-"
+         vstat%cprefix = "Go-"
          call multipole_solver
          call init_source
 
@@ -936,7 +935,7 @@ contains
          call set_dirty(solution)
          call fft_solve_roof
          if (trust_fft_solution) then
-            write(msg, '(3a)')"[multigrid_gravity:vcycle_hg] FFT solution trusted, skipping ", trim(cprefix), "cycle."
+            write(msg, '(3a)')"[multigrid_gravity:vcycle_hg] FFT solution trusted, skipping ", trim(vstat%cprefix), "cycle."
             call mg_write_log(msg, stdout)
             return
          endif
@@ -945,11 +944,11 @@ contains
       endif
 
       if ((grav_bnd /= bnd_givenval) .and. .not. prefer_modified_norm) then
-         norm_rhs = norm_rhs_orig
+         norm_rhs = vstat%norm_rhs_orig
       else
          call norm_sq(source, norm_rhs)
-         if (proc == 0 .and. norm_rhs<(1.-1e-6)*norm_rhs_orig) then
-            write(msg, '(a,f8.5)')"[multigrid_gravity:vcycle_hg] norm_rhs/norm_rhs_orig = ", norm_rhs/norm_rhs_orig
+         if (proc == 0 .and. norm_rhs<(1.-1e-6)*vstat%norm_rhs_orig) then
+            write(msg, '(a,f8.5)')"[multigrid_gravity:vcycle_hg] norm_rhs/norm_rhs_orig = ", norm_rhs/vstat%norm_rhs_orig
             call mg_write_log(msg, stdout)
          endif
       endif
@@ -985,13 +984,20 @@ contains
             else
                fmt='(3a,i3,a,f12.9,a,es8.2,a,f7.3)'
             endif
-            write(msg, fmt)"[multigrid_gravity] ", trim(cprefix), "Cycle:", v, " norm/rhs= ", norm_lhs/norm_rhs, " reduction factor= ", norm_old/norm_lhs, "   dt_wall= ", ts
+            write(msg, fmt)"[multigrid_gravity] ", trim(vstat%cprefix), "Cycle:", v, " norm/rhs= ", norm_lhs/norm_rhs, " reduction factor= ", norm_old/norm_lhs, "   dt_wall= ", ts
             call mg_write_log(msg, stdout)
          endif
-         vcycle_factors(v,:) = [ norm_old/norm_lhs, ts ]
+
+         vstat%count = v
+         if (norm_lhs /= 0) then
+            vstat%factor(vstat%count) = norm_old/norm_lhs
+         else
+            vstat%factor(vstat%count) = huge(1.0)
+         endif
+         vstat%time(vstat%count) = ts
 
          if (norm_old/norm_lhs <= suspicious_factor .or. dump_every_step .or. (norm_lhs/norm_rhs <= norm_tol .and. dump_result)) then
-            write(dname,'(2a)')trim(cprefix),"mdump"
+            write(dname,'(2a)')trim(vstat%cprefix),"mdump"
             if (dump_result .and. norm_lhs/norm_rhs <= norm_tol) then
                call numbered_ascii_dump(dname)
             else
@@ -1008,7 +1014,8 @@ contains
                norm_lowest = norm_lhs
             else
                if (norm_lhs/norm_lowest > vcycle_abort) then
-                  if (.not. verbose_vcycle) call brief_v_log(v, norm_lhs/norm_rhs, vcycle_factors, cprefix)
+                  vstat%norm_final = norm_lhs/norm_rhs
+                  if (.not. verbose_vcycle) call brief_v_log(vstat)
                   call die("[multigrid_gravity:vcycle_hg] Serious nonconvergence detected.")
                   !In such case one may increase nsmool, decrease refinement depth or use FFT
                endif
@@ -1038,7 +1045,8 @@ contains
          v = max_cycles
       endif
 
-      if (.not. verbose_vcycle) call brief_v_log(v, norm_lhs/norm_rhs, vcycle_factors, cprefix)
+      vstat%norm_final = norm_lhs/norm_rhs
+      if (.not. verbose_vcycle) call brief_v_log(vstat)
 
       call check_dirty(level_max, solution, "final_solution")
 

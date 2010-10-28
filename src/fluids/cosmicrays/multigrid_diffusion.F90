@@ -42,7 +42,7 @@ module multigrid_diffusion
 
 #if defined(COSM_RAYS) && defined(MULTIGRID)
 
-   use multigridvars, only: correction
+   use multigridvars, only: correction, vcycle_stats
 
    implicit none
 
@@ -65,10 +65,8 @@ module multigrid_diffusion
    integer, parameter :: diff_bx = correction+1, diff_by = diff_bx + 1, diff_bz = diff_by + 1 !< indices pointing to multigrid copies of the b(:,:,:,:) array
 
    ! miscellaneous
-   real                               :: norm_rhs_orig                !< Norm of the unmodified source
-   real, allocatable, dimension(:,:)  :: vcycle_factors               !< buffer for storing V-cycle convergence factors and execution times
    logical, allocatable, dimension(:) :: norm_was_zero                !< Flag for suppressing repeated warnings on nonexistent CR components
-   character(len=2)        :: cprefix                                 !< optional prefix for distinguishing inner and outer potential V-cycles in the log
+   type(vcycle_stats) :: vstat                                        !< V-cycle statistics
 
 contains
 
@@ -140,8 +138,6 @@ contains
       endif
 
       ngridvars = max(ngridvars, diff_bz)
-      norm_rhs_orig = 0.
-      cprefix=""
 
       !diffusion
       if (.not. diff_explicit) then
@@ -164,6 +160,8 @@ contains
       use types,              only: grid_container
       use dataio_pub,         only: die
       use fluidindex,         only: nvar
+      use multigridhelpers,   only: vcycle_stats_init
+      use multigridvars,      only: vcycle_stats
 
       implicit none
 
@@ -180,11 +178,8 @@ contains
       mb_alloc = mb_alloc + size(norm_was_zero)/2
       norm_was_zero(:) = .false.
 
-      if (allocated(vcycle_factors)) call die("[multigrid_diffusion:init_multigrid] vcycle_factors already allocated")
-      allocate(vcycle_factors(0:max_cycles, 2), stat=ierr)
-      if (ierr /= 0) call die("[multigrid_diffusion:init_multigrid] Allocation error: vcycle_factors")
-      mb_alloc = mb_alloc + size(vcycle_factors)
-      vcycle_factors(:,:) = 0.
+      call vcycle_stats_init(vstat, max_cycles)
+      mb_alloc = mb_alloc + 2*max_cycles
 
    end subroutine init_multigrid_diff_post
 
@@ -197,7 +192,8 @@ contains
 
       implicit none
 
-      if (allocated(vcycle_factors)) deallocate(vcycle_factors)
+      if (allocated(vstat%factor)) deallocate(vstat%factor)
+      if (allocated(vstat%time)) deallocate(vstat%time)
       if (allocated(norm_was_zero)) deallocate(norm_was_zero)
 
    end subroutine cleanup_multigrid_diff
@@ -249,7 +245,7 @@ contains
 
          do cr_id = 1, nvar%crs%all
             call init_source(cr_id)
-            if (norm_rhs_orig /= 0) then
+            if (vstat%norm_rhs_orig /= 0) then
                if (norm_was_zero(cr_id)) then
                   write(msg,'(a,i2,a)')"[multigrid_diffusion:multigrid_solve_diff] CR-fluid #",cr_id," is now available in measurable quantities."
                   call printinfo(msg)
@@ -302,7 +298,7 @@ contains
          call die("[multigrid_diffusion:init_source] diff_theta = 0 not supported.")
       endif
 
-      call norm_sq(source, norm_rhs_orig)
+      call norm_sq(source, vstat%norm_rhs_orig)
 
    end subroutine init_source
 
@@ -388,7 +384,7 @@ contains
       real               :: norm_lhs, norm_rhs, norm_old
       logical            :: dump_every_step
 
-      write(cprefix,'(i1,"-")') cr_id !BEWARE: this is another place with 0 <= cr_id <= 9 limit
+      write(vstat%cprefix,'("D",i1)') cr_id !BEWARE: this is another place with 0 <= cr_id <= 9 limit
 
       inquire(file = "_dump_every_step_", EXIST=dump_every_step) ! use for debug only
       do_ascii_dump = do_ascii_dump .or. dump_every_step
@@ -404,11 +400,15 @@ contains
          call norm_sq(defect, norm_lhs)
          ts = timer_("multigrid_diffusion")
          tot_ts = tot_ts + ts
+
+         vstat%count = v
          if (norm_lhs /= 0) then
-            vcycle_factors(v,:) = [ norm_old/norm_lhs, ts ]
+            vstat%factor(vstat%count) = norm_old/norm_lhs
          else
-            vcycle_factors(v,:) = [ huge(1.0), ts ]
+            vstat%factor(vstat%count) = huge(1.0)
          endif
+         vstat%time(vstat%count) = ts
+
          norm_old = norm_lhs
 
          if (dump_every_step) call numbered_ascii_dump("md_dump", v)
@@ -416,7 +416,7 @@ contains
          if (norm_lhs/norm_rhs <= norm_tol) exit
 
          if (v>convergence_history) then
-            if (product(vcycle_factors(v-convergence_history:v,1)) < barely_greater_than_1) then
+            if (product(vstat%factor(v-convergence_history:v)) < barely_greater_than_1) then
                write(msg, '(a,i3,a,g15.5)')"[multigrid_diffusion:vcycle_hg] Too slow convergence: cycle = ",v,", norm_lhs/norm_rhs = ", norm_lhs/norm_rhs
                call warn(msg)
                exit
@@ -453,12 +453,13 @@ contains
          v = max_cycles
       endif
 
-      call brief_v_log(v, norm_lhs/norm_rhs, vcycle_factors, cprefix)
+      vstat%norm_final = norm_lhs/norm_rhs
+      call brief_v_log(vstat)
 
       call norm_sq(solution, norm_rhs)
       call norm_sq(defect, norm_lhs)
       if (proc == 0 .and. stdout) then
-         write(msg,'(a,3g15.5)')"[multigrid_diffusion:vcycle_hg] norms: src, soln, defect: ",norm_rhs_orig, norm_rhs, norm_lhs
+         write(msg,'(a,3g15.5)')"[multigrid_diffusion:vcycle_hg] norms: src, soln, defect: ",vstat%norm_rhs_orig, norm_rhs, norm_lhs
          call mg_write_log(msg)
       endif
       u(iarr_crs(cr_id), is:ie, js:je, ks:ke) = roof%mgvar(roof%is:roof%ie, roof%js:roof%je, roof%ks:roof%ke, solution)
