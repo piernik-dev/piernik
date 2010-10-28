@@ -193,7 +193,7 @@ contains
       real                 :: at
       integer              :: i, lm
       character(len=fplen) :: normred
-      character            :: dash
+      character(len=1)     :: dash
 
       if (proc /= 0) return
 
@@ -206,7 +206,7 @@ contains
       if (len_trim(vs%cprefix) > 0) dash="-"
 
       write(msg, '(a,i3,1x,3a,f7.3,a,i3,a,f7.3,a,f11.9,a)') &
-           "[multigrid] ", vs%count, trim(vs%cprefix), dash, "Cycles, dt_wall=", vs%time(0), " +", vs%count, "*", at, ", norm/rhs= ", vs%norm_final, " : "
+           "[multigrid] ", vs%count, trim(vs%cprefix), dash, "cycles, dt_wall=", vs%time(0), " +", vs%count, "*", at, ", norm/rhs= ", vs%norm_final, " : "
 
       do i = 0, min(vs%count, ubound(vs%factor, 1))
          if (vs%factor(i) < 1.0e4) then

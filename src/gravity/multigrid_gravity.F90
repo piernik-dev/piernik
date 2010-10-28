@@ -880,7 +880,7 @@ contains
       if (isolated) then
          grav_bnd = bnd_givenval
 
-         vstat%cprefix = "Go-"
+         vstat%cprefix = "Go"
          call multipole_solver
          call init_source
 
