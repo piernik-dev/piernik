@@ -6,7 +6,7 @@
 
 
   Requires:
-    use dataio_public, only: par_file, ierrh, namelist_errh, compare_namelist
+    use dataio_pub, only: par_file, ierrh, namelist_errh, compare_namelist  ! QA_WARN
 
 
   It does not work with cpp -traditional-cpp (the default way gfortran calls cpp).
