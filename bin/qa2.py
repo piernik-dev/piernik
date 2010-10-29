@@ -238,12 +238,13 @@ def remove_amp(lines):
       if(continuation.search(line)):
          buf = re.sub('&','',line.split("!")[0])
       else:
-         temp.append(line.split("!")[0])
+         #temp.append(line.split("!")[0])     #kills QA_WARN
+         temp.append(line)
    return temp
 
 def qa_false_refs(lines,name,store,fname):
    temp = remove_amp(lines)
-   uses = filter(has_use.search, temp)
+   uses = filter(remove_warn.match, filter(has_use.search, temp))
 
    for item in uses:
       to_check = [f.strip() for f in item.split("only:")[1].split(',')]
