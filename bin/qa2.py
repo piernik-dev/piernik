@@ -247,6 +247,7 @@ def qa_false_refs(lines,name,store,fname):
 
    for item in uses:
       to_check = [f.strip() for f in item.split("only:")[1].split(',')]
+      to_check = [re.sub('&','',f).lstrip() for f in to_check]     # additional sanitization
       for func in to_check:
          pattern = re.compile(func, re.IGNORECASE)
          if(len(filter(pattern.search, temp)) < 2):   #stupid but seems to work
