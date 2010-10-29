@@ -84,9 +84,14 @@
 !! This module contains experimental routines, not recommended for production runs.
 !!
 
-!module multigridexperimental
+module multigridexperimental
 
-!contains
+   implicit none
+
+   private
+   public :: prolong_level_hord
+
+contains
 
    subroutine prolong_level_hord(lev, iv)
 
@@ -366,4 +371,4 @@
 
    end subroutine prolong_level4D
 
-!end module multigridexperimental
+end module multigridexperimental

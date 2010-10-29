@@ -32,7 +32,7 @@ module multigridvars
 
    implicit none
 
-   public ! no secrets are kept here
+   public ! QA_WARN no secrets are kept here
 
    ! multigrid constants
    integer, parameter :: source=1,          solution=source+1         !< Names of density and potential fields
@@ -123,13 +123,14 @@ module multigridvars
    ! miscellaneous
    real                    :: ts, tot_ts                              !< time for runtime profiling, total multigrid time
 
+   integer, parameter :: prefix_len = 3                               !< length of prefix for distinguishing V-cycles in the log
    type :: vcycle_stats
       real, allocatable, dimension(:) :: factor                       !< norm reduction factor
       real, allocatable, dimension(:) :: time                         !< time spent
       integer                         :: count                        !< number of executed V-cycles
       real                            :: norm_rhs_orig                !< norm of the unmodified source
       real                            :: norm_final                   !< norm of the defect relative to the source
-      character(len=3)                :: cprefix                      !< prefix for distinguishing V-cycles in the log (e.g inner or outer potential, CR component)
+      character(len=prefix_len)       :: cprefix                      !< prefix for distinguishing V-cycles in the log (e.g inner or outer potential, CR component)
    end type vcycle_stats
 
 end module multigridvars

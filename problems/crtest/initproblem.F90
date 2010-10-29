@@ -33,6 +33,11 @@ module initproblem
 
    use problem_pub, only: problem_name, run_id
 
+   implicit none
+
+   private
+   public :: read_problem_par, init_prob
+
    integer            :: norm_step
    real               :: d0, p0, bx0, by0, bz0, x0, y0, z0, r0, beta_cr, amp_cr
 

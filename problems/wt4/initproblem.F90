@@ -33,6 +33,11 @@ module initproblem
    use mpisetup,    only: cbuff_len
    use problem_pub, only: problem_name, run_id
 
+   implicit none
+
+   private
+   public :: read_problem_par, init_prob
+
    integer, parameter :: ic_nx = 512, ic_ny = 512, ic_nz = 52 !< initial conditions size
    integer, parameter :: ic_vars = 5                          !< number of quantities in the IC
    real, parameter    :: ic_xysize = 8.                       !< X- and Y- size of the domain covered by the IC
@@ -486,7 +491,7 @@ contains
            do k = ks, ke
               do j = js, je
                  mod_str(is:ie) = max(0., (1. + 1./max_ambient) * ambient_density_min / (max(0., u(idni, is:ie, j, k)) + ambient_density_min) - 1./max_ambient)
-                 ! ifort can have memory leaks on WHERE - let's provide explicit loop for this crappy compiler
+                 ! //ifort can have memory leaks on WHERE - let's provide explicit loop for this crappy compiler
                  ! The __IFORT__ macro has to be defined manually, e.g. in appropriate compiler.in file
 #ifdef __IFORT__
                  do i = is, ie

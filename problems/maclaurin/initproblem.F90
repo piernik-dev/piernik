@@ -32,6 +32,11 @@ module initproblem
 
    use problem_pub, only: problem_name, run_id
 
+   implicit none
+
+   private
+   public :: read_problem_par, init_prob
+
    real              :: x0, y0, z0, d0, a1, e, d1, p0, a3
    integer           :: nsub
 

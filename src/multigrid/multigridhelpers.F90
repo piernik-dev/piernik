@@ -190,10 +190,11 @@ contains
 
       type(vcycle_stats), intent(in) :: vs
 
-      real                 :: at
-      integer              :: i, lm
-      character(len=fplen) :: normred
-      character(len=1)     :: dash
+      real                   :: at
+      integer                :: i, lm
+      character(len=fplen)   :: normred
+      integer, parameter     :: onechar = 1
+      character(len=onechar) :: dash
 
       if (proc /= 0) return
 

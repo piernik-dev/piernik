@@ -30,15 +30,20 @@
 
 module initproblem
 
-  use problem_pub, only: problem_name, run_id
+   use problem_pub, only: problem_name, run_id
 
-  real               :: clump_mass, clump_pos_x, clump_pos_y, clump_pos_z, clump_vel_x, clump_vel_y, clump_vel_z, clump_K, clump_r, epsC, epsM
-  logical            :: crashNotConv, exp_speedup, verbose
-  integer            :: maxitC, maxitM
+   implicit none
 
-  integer, parameter :: REL_CALC = 1, REL_SET = REL_CALC + 1
+   private
+   public :: read_problem_par, init_prob
 
-  namelist /PROBLEM_CONTROL/  problem_name, run_id, clump_mass, clump_vel_x, clump_vel_y, clump_vel_z, clump_K, clump_r, epsC, epsM, maxitC, maxitM, crashNotConv, exp_speedup, verbose
+   real               :: clump_mass, clump_pos_x, clump_pos_y, clump_pos_z, clump_vel_x, clump_vel_y, clump_vel_z, clump_K, clump_r, epsC, epsM
+   logical            :: crashNotConv, exp_speedup, verbose
+   integer            :: maxitC, maxitM
+
+   integer, parameter :: REL_CALC = 1, REL_SET = REL_CALC + 1
+
+   namelist /PROBLEM_CONTROL/  problem_name, run_id, clump_mass, clump_vel_x, clump_vel_y, clump_vel_z, clump_K, clump_r, epsC, epsM, maxitC, maxitM, crashNotConv, exp_speedup, verbose
 
 contains
 
@@ -147,13 +152,13 @@ contains
 !
    subroutine init_prob
 
-      use arrays,        only: u, b, sgp, gpot, hgpot
-      use constants,     only: fpiG, pi, newtong
-      use dataio_pub,    only: tend, msg, die, warn, printinfo
-      use grid,          only: xmin, xmax, ymin, ymax, zmin, zmax, x, y, z, dx, dy, dz, is, ie, js, je, ks, ke
-      use initionized,   only: gamma_ion, idni, imxi, imyi, imzi, ieni
-      use mpisetup,      only: proc, smalld, smallei, MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_MIN, MPI_MAX, MPI_SUM, comm, ierr
-      use multigrid,     only: multigrid_solve
+      use arrays,            only: u, b, sgp, gpot, hgpot
+      use constants,         only: fpiG, pi, newtong
+      use dataio_pub,        only: tend, msg, die, warn, printinfo
+      use grid,              only: xmin, xmax, ymin, ymax, zmin, zmax, x, y, z, dx, dy, dz, is, ie, js, je, ks, ke
+      use initionized,       only: gamma_ion, idni, imxi, imyi, imzi, ieni
+      use mpisetup,          only: proc, smalld, smallei, MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_MIN, MPI_MAX, MPI_SUM, comm, ierr
+      use multigrid_gravity, only: multigrid_solve_grav
 
       implicit none
 
@@ -167,7 +172,8 @@ contains
       character(len=TRY)        :: i_try
       real                      :: Cint_old, Clim, Clim_old
       real, dimension(NLIM)     :: Clast
-      character(len=9)          :: Ccomment ! length of the " Exp warp" string
+      integer, parameter        :: cmt_len=9 ! length of the " Exp warp" string
+      character(len=cmt_len)    :: Ccomment
 
       Cint_old = HUGE(1.)
       b(:,    :, :, :) = 0.
@@ -227,7 +233,7 @@ contains
 
       do while (.not. doneC)
 
-         call multigrid_solve(u(idni,:,:,:))
+         call multigrid_solve_grav(u(idni,:,:,:))
          if (exp_speedup .and. Clim_old /= 0.) then ! extrapolate potential assuming exponential convergence (extremely risky)
             if (abs(1. - Clim/Clim_old) < min(sqrt(epsC), 100.*epsC, 0.01)) then
                sgp = (sgp*hgpot - gpot**2)/(sgp + hgpot - 2.*gpot)
@@ -378,7 +384,7 @@ contains
       call virialCheck(virial_tol)
 
       ! final touch
-      call multigrid_solve(u(idni,:,:,:))
+      call multigrid_solve_grav(u(idni,:,:,:))
       gpot = sgp
 
       where (u(idni, :, :, :) < smalld) u(idni, :, :, :) = smalld
@@ -408,12 +414,13 @@ contains
 
    subroutine virialCheck(tol)
 
-      use arrays,        only: u, sgp
-      use dataio_pub,    only: msg, die, warn, printinfo
-      use grid,          only: is, ie, js, je, ks, ke, dx, dy, dz
-      use initionized,   only: idni
-      use mpisetup,      only: proc, comm, ierr, MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_SUM
-      use multigridvars, only: grav_bnd, bnd_isolated
+      use arrays,            only: u, sgp
+      use dataio_pub,        only: msg, die, warn, printinfo
+      use grid,              only: is, ie, js, je, ks, ke, dx, dy, dz
+      use initionized,       only: idni
+      use mpisetup,          only: proc, comm, ierr, MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_SUM
+      use multigridvars,     only: bnd_isolated
+      use multigrid_gravity, only: grav_bnd
 
       implicit none
 

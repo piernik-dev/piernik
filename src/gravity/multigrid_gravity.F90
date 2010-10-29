@@ -51,6 +51,7 @@ module multigrid_gravity
 
    private
    public :: init_multigrid_grav, init_multigrid_grav_post, cleanup_multigrid_grav, multigrid_solve_grav
+   public :: grav_bnd
 
    ! multigrid constants
    integer, parameter :: fft_none=-1, fft_rcr=1, fft_dst=fft_rcr+1    !< type of FFT transform: none, full, discrete sine

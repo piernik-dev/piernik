@@ -30,12 +30,17 @@
 
 module initproblem
 
-  use problem_pub, only: problem_name, run_id
+   use problem_pub, only: problem_name, run_id
 
-  real :: pulse_size, pulse_vel_x, pulse_vel_y, pulse_vel_z, pulse_amp, pulse_low_density, pulse_pressure, &
-       &  pulse_x_min, pulse_x_max, pulse_y_min, pulse_y_max, pulse_z_min, pulse_z_max
+   implicit none
 
-  namelist /PROBLEM_CONTROL/  problem_name, run_id, pulse_size, pulse_vel_x, pulse_vel_y, pulse_vel_z, pulse_amp
+   private
+   public :: read_problem_par, init_prob
+
+   real :: pulse_size, pulse_vel_x, pulse_vel_y, pulse_vel_z, pulse_amp, pulse_low_density, pulse_pressure, &
+        &  pulse_x_min, pulse_x_max, pulse_y_min, pulse_y_max, pulse_z_min, pulse_z_max
+
+   namelist /PROBLEM_CONTROL/  problem_name, run_id, pulse_size, pulse_vel_x, pulse_vel_y, pulse_vel_z, pulse_amp
 
 contains
 

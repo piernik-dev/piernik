@@ -73,7 +73,7 @@ contains
       use dataio_pub,            only: die
       use multigridhelpers,      only: dirty_debug, check_dirty, dirtyH
       use multigridvars,         only: plvl, lvl, level_min, level_max, ord_prolong, ngridvars
-!      use multigridexperimental, only: prolong_level_hord
+      use multigridexperimental, only: prolong_level_hord
 
       implicit none
 
@@ -81,14 +81,6 @@ contains
       integer, intent(in)      :: iv    !< variable to be prolonged
 
       type(plvl), pointer :: coarse, fine
-
-      interface
-         subroutine prolong_level_hord(lev, iv)
-            implicit none
-            integer, intent(in)      :: lev   !< level to prolong from
-            integer, intent(in)      :: iv    !< variable to be prolonged
-         end subroutine prolong_level_hord
-      end interface
 
       if (lev >= level_max) return !// can't prolong finest level
       if (lev <  level_min) call die("[multigridbasefuncs:prolong_level] level <= 0.")

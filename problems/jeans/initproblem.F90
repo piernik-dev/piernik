@@ -30,12 +30,18 @@
 
 module initproblem
 
-  use problem_pub, only: problem_name, run_id
+   use problem_pub, only: problem_name, run_id
 
-  real              :: d0, p0, amp, kx, ky, kz
-  integer           :: ix, iy, iz, mode
+   implicit none
 
-  namelist /PROBLEM_CONTROL/  problem_name, run_id, d0, p0, ix, iy, iz, amp, mode
+   private
+   public :: read_problem_par, init_prob
+   public :: d0, mode
+
+   real              :: d0, p0, amp, kx, ky, kz
+   integer           :: ix, iy, iz, mode
+
+   namelist /PROBLEM_CONTROL/  problem_name, run_id, d0, p0, ix, iy, iz, amp, mode
 
 contains
 

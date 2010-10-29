@@ -105,11 +105,12 @@ contains
 
       integer(HID_T), intent(in) :: file_id
 
-      character(len=8) :: dname
-      integer          :: i
+      integer, parameter       :: dname_len = 5
+      character(len=dname_len) :: dname
+      integer                  :: i
 
       do i = level_min, level_max
-         write(dname, '(A3,I1)') 'lvl', i
+         write(dname, '(A3,I2.2)') 'lvl', i                      ! correct for 0 < level < 99
          call multigrid_write_arr(lvl(i), trim(dname), file_id)
       enddo
 
