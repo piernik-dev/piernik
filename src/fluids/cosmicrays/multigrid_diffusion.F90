@@ -43,6 +43,7 @@ module multigrid_diffusion
 #if defined(COSM_RAYS) && defined(MULTIGRID)
 
    use multigridvars, only: correction, vcycle_stats
+   use mpisetup,      only: cbuff_len
 
    implicit none
 
@@ -60,6 +61,7 @@ module multigrid_diffusion
    real               :: diff_tstep_fac                               !< How much we stretch timestep. Note that for diff_theta == 0. this should not be > 1.
    logical            :: diff_explicit                                !< If .true. then do not use multigrid for diffusion
    real               :: diff_dt_crs_orig                             !< timestep calculated at timestepcosmicrays.F90, before enlarging by diff_tstep_fac
+   character(len=cbuff_len) :: diff_bnd_str                           !< Type of diffusion boundary conditions.
 
    ! mgvar entries for the B field
    integer, parameter :: diff_bx = correction+1, diff_by = diff_bx + 1, diff_bz = diff_by + 1 !< indices pointing to multigrid copies of the b(:,:,:,:) array
@@ -67,6 +69,7 @@ module multigrid_diffusion
    ! miscellaneous
    logical, allocatable, dimension(:) :: norm_was_zero                !< Flag for suppressing repeated warnings on nonexistent CR components
    type(vcycle_stats) :: vstat                                        !< V-cycle statistics
+   integer :: diff_extbnd                                             !< external boundary type for relaxation and computation of residuum
 
 contains
 
@@ -77,16 +80,16 @@ contains
 
    subroutine init_multigrid_diff
 
-      use multigridvars,      only: ngridvars
-      use mpisetup,           only: buffer_dim, comm, ierr, proc, ibuff, rbuff, lbuff, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL
-      use dataio_pub,         only: par_file, ierrh, namelist_errh, compare_namelist, die, warn
+      use multigridvars,      only: ngridvars, extbnd_zero, extbnd_extrapolate, extbnd_mirror, extbnd_antimirror
+      use mpisetup,           only: buffer_dim, comm, ierr, proc, ibuff, rbuff, lbuff, cbuff, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL, MPI_CHARACTER
+      use dataio_pub,         only: par_file, ierrh, namelist_errh, compare_namelist, die, warn, msg
 
       implicit none
 
       logical, save                    :: frun = .true.          !< First run flag
 
       namelist /MULTIGRID_DIFFUSION/ norm_tol, vcycle_abort, max_cycles, nsmool, nsmoob, &
-           &                         diff_theta, diff_tstep_fac, diff_explicit
+           &                         diff_theta, diff_tstep_fac, diff_explicit, diff_bnd_str
 
       if (.not.frun) call die("[multigrid_diffusion:init_multigrid_diff] Called more than once.")
       frun = .false.
@@ -100,6 +103,7 @@ contains
       nsmool         = 4
       nsmoob         = 1
       diff_explicit  = .false.
+      diff_bnd_str   = "zero"
 
       if (proc == 0) then
 
@@ -116,11 +120,14 @@ contains
 
          lbuff(1) = diff_explicit
 
+         cbuff(1) = diff_bnd_str
+
       endif
 
-      call MPI_Bcast(ibuff, buffer_dim, MPI_INTEGER,          0, comm, ierr)
-      call MPI_Bcast(rbuff, buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
-      call MPI_Bcast(lbuff, buffer_dim, MPI_LOGICAL,          0, comm, ierr)
+      call MPI_Bcast(cbuff, cbuff_len*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
+      call MPI_Bcast(ibuff,           buffer_dim, MPI_INTEGER,          0, comm, ierr)
+      call MPI_Bcast(rbuff,           buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+      call MPI_Bcast(lbuff,           buffer_dim, MPI_LOGICAL,          0, comm, ierr)
 
       if (proc /= 0) then
 
@@ -135,9 +142,25 @@ contains
 
          diff_explicit  = lbuff(1)
 
+         diff_bnd_str   = cbuff(1)(1:len(diff_bnd_str))
+
       endif
 
       ngridvars = max(ngridvars, diff_bz)
+
+      ! boundaries
+      diff_extbnd = extbnd_zero
+      select case (diff_bnd_str)
+         case ("isolated", "iso", "free")
+            diff_extbnd = extbnd_extrapolate
+         case ("reflecting", "refl", "styrofoam")
+            diff_extbnd = extbnd_mirror
+         case ("zero", "cold", "antireflecting")
+            diff_extbnd = extbnd_antimirror
+         case default
+            write(msg,'(3a)')"[multigrid_diffusion:init_multigrid_diff] Non-recognized boundary description '",diff_bnd_str,"'"
+            call die(msg)
+      end select
 
       !diffusion
       if (.not. diff_explicit) then
@@ -349,7 +372,7 @@ contains
          roof%mgvar(roof%is:roof%ie, roof%js:roof%je, roof%ks:roof%ke, diff_bx+ib-ibx) = b(ib, is:ie, js:je, ks:ke)
          call restrict_all(diff_bx+ib-ibx)
          do il = level_min, level_max
-            call mpi_multigrid_bnd(il, diff_bx+ib-ibx, 1, extbnd_mirror) ! or extbnd_extrapolate
+            call mpi_multigrid_bnd(il, diff_bx+ib-ibx, 1, extbnd_mirror) ! ToDo: use global boundary type for B
             !BEWARE b is set on a staggered grid; corners should be properly set here (now they are not)
             ! the problem is that the b(:,:,:,:) elements are face-centered so restriction and external boundaries should take this into account
          enddo
@@ -662,7 +685,7 @@ contains
 
    subroutine residual(lev, src, soln, def, cr_id)
 
-      use multigridvars,     only: lvl, XDIR, YDIR, ZDIR, has_dir, extbnd_antimirror
+      use multigridvars,     only: lvl, XDIR, YDIR, ZDIR, has_dir
       use multigridmpifuncs, only: mpi_multigrid_bnd
       use initcosmicrays,    only: K_crs_perp, K_crs_paral
       use mpisetup,          only: dt
@@ -678,7 +701,7 @@ contains
 
       integer             :: i, j, k
 
-      call mpi_multigrid_bnd(lev, soln, 1, extbnd_antimirror) ! no corners required ! try also extbnd_mirror
+      call mpi_multigrid_bnd(lev, soln, 1, diff_extbnd) ! no corners required
 
       do k = lvl(lev)%ks, lvl(lev)%ke
          lvl(         lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k,   def)                =   &
@@ -740,7 +763,7 @@ contains
 
    subroutine approximate_solution(lev, src, soln, cr_id)
 
-      use multigridvars,      only: level_min, has_dir, XDIR, YDIR, ZDIR, lvl, extbnd_antimirror
+      use multigridvars,      only: level_min, has_dir, XDIR, YDIR, ZDIR, lvl, extbnd_donothing
       use multigridmpifuncs,  only: mpi_multigrid_bnd
       use dataio_pub,         only: die
       use initcosmicrays,     only: K_crs_perp, K_crs_paral
@@ -778,7 +801,11 @@ contains
       endif
 
       do n = 1, RED_BLACK*nsmoo
-         call mpi_multigrid_bnd(lev, soln, 1, extbnd_antimirror) ! no corners are required here ! try also extbnd_mirror
+         if (mod(n,2) == 1) then
+            call mpi_multigrid_bnd(lev, soln, 1, diff_extbnd) ! no corners are required here
+         else
+            call mpi_multigrid_bnd(lev, soln, 1, extbnd_donothing)
+         endif
 
          if (kd == RED_BLACK) k1 = lvl(lev)%ks + mod(n, RED_BLACK)
          do k = k1, lvl(lev)%ke, kd

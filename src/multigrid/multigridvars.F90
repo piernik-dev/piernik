@@ -39,9 +39,6 @@ module multigridvars
    integer, parameter :: defect=solution+1, correction=defect+1       !< Names of auxiliary fields (related to source and solution, respectively)
    integer, parameter :: level_min = 1, level_gb = level_min-1        !< Base (coarsest) level number and global-base level number
    integer, parameter :: mg_nb = 2                                    !< Number of guardcells in multigrid (simplest laplacian and relaxation require only 1)
-   integer, parameter :: bnd_periodic=1, bnd_dirichlet=2              !< constants for enumerating multigrid boundary types: periodic, 0-value,
-   integer, parameter :: bnd_isolated=3, bnd_neumann=4                !< isolated, 0-gradient
-   integer, parameter :: bnd_givenval=5, bnd_invalid=-1               !< given value, invalid
 
    ! these constants can be #defined and used in other source files as well
    integer, parameter :: LOW=1, HIGH=LOW+1                            !< indices for low and high boundary values (third index of plvl%bnd_[xyz] array)
@@ -108,6 +105,9 @@ module multigridvars
    integer                                 :: ngridvars               !< number of variables required for implementation of multigrid
 
    ! boundaries
+   integer, parameter :: bnd_periodic=1, bnd_dirichlet=2              !< constants for enumerating multigrid boundary types: periodic, 0-value,
+   integer, parameter :: bnd_isolated=3, bnd_neumann=4                !< isolated, 0-gradient
+   integer, parameter :: bnd_givenval=5, bnd_invalid=-1               !< given value, invalid
    logical, dimension(XLO:ZHI) :: is_external                         !< .true. for non-"mpi" local domain boundaries when gravity boundary is non-periodic (even if the global domain is periodic)
    integer, parameter :: extbnd_donothing = 0                         !< Do not touch external boundaries
    integer, parameter :: extbnd_zero = extbnd_donothing + 1           !< Fill external boundaries with zeroes
