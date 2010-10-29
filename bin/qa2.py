@@ -25,6 +25,7 @@ depr_syntax_3      = re.compile('''^\s{1,12}(?i)character(?![(])''', re.IGNORECA
 is_function        = re.compile('''(?i)\sfunction\s''', re.IGNORECASE)
 not_function       = re.compile('''(?!.*function)''', re.IGNORECASE)
 tab_char           = re.compile('\t')
+has_use            = re.compile("^\s{1,12}(?i)use\s")
 have_label         = re.compile('^[0-9]',re.VERBOSE)
 crude_write        = re.compile("write *\( *\*", re.IGNORECASE)
 magic_integer      = re.compile("\(len=[1-9]", re.IGNORECASE)
@@ -152,6 +153,7 @@ def qa_checks(files,options):
          part = np.array(pfile[obj['beg']:obj['end']])
          if(obj['type'] == 'mod'):
             qa_have_priv_pub(part,obj['name'],warns,f)
+         qa_false_refs(part,obj['name'],warns,f)
          qa_have_implicit(part,obj['name'],errors,f)
          qa_depreciated_syntax(part,obj['name'],warns,f)
          qa_implicit_saves(part,obj['name'],errors,f)
@@ -226,19 +228,34 @@ def qa_have_implicit(lines,name,store,fname):
    if(not filter(have_implicit.search, lines)):
       store.append(give_err("QA:  ") + "missing 'implicit none'      [%s:%s]" % (fname, name))
 
-def qa_implicit_saves(lines,name,store,fname):
-#   print b.OKGREEN + "QA: " + b.ENDC + "Checking for implicit saves"
+def remove_amp(lines):
    buf = ''
    temp = []
    for line in lines:
       if(len(buf)):
-         line = buf + line
+         line = buf + line.lstrip()
          buf = ''
       if(continuation.search(line)):
          buf = re.sub('&','',line.split("!")[0])
       else:
          temp.append(line.split("!")[0])
-   impl = filter(not_param_nor_save.match, filter(implicit_save.search, temp))
+   return temp
+
+def qa_false_refs(lines,name,store,fname):
+   temp = remove_amp(lines)
+   uses = filter(has_use.search, temp)
+
+   for item in uses:
+      to_check = [f.strip() for f in item.split("only:")[1].split(',')]
+      for func in to_check:
+         pattern = re.compile(func, re.IGNORECASE)
+         if(len(filter(pattern.search, temp)) < 2):   #stupid but seems to work
+            print give_warn("QA:  ")+"'" + func + "' grabbed but not used in [%s:%s]" % (fname,name)
+
+
+def qa_implicit_saves(lines,name,store,fname):
+#   print b.OKGREEN + "QA: " + b.ENDC + "Checking for implicit saves"
+   impl = filter(not_param_nor_save.match, filter(implicit_save.search, remove_amp(lines)))
    if(len(impl)):
       store.append(give_err("QA:  ") + "implicit saves detected in   [%s:%s]" % (fname,name))
    for line in impl:
