@@ -228,7 +228,7 @@ def qa_have_implicit(lines,name,store,fname):
    if(not filter(have_implicit.search, lines)):
       store.append(give_err("QA:  ") + "missing 'implicit none'      [%s:%s]" % (fname, name))
 
-def remove_amp(lines):
+def remove_amp(lines,strip):
    buf = ''
    temp = []
    for line in lines:
@@ -238,12 +238,14 @@ def remove_amp(lines):
       if(continuation.search(line)):
          buf = re.sub('&','',line.split("!")[0])
       else:
-         #temp.append(line.split("!")[0])     #kills QA_WARN
-         temp.append(line)
+         if(strip):
+            temp.append(line.split("!")[0])     #kills QA_WARN
+         else:
+            temp.append(line)
    return temp
 
 def qa_false_refs(lines,name,store,fname):
-   temp = remove_amp(lines)
+   temp = remove_amp(lines,False)
    uses = filter(remove_warn.match, filter(has_use.search, temp))
 
    for item in uses:
@@ -257,7 +259,7 @@ def qa_false_refs(lines,name,store,fname):
 
 def qa_implicit_saves(lines,name,store,fname):
 #   print b.OKGREEN + "QA: " + b.ENDC + "Checking for implicit saves"
-   impl = filter(not_param_nor_save.match, filter(implicit_save.search, remove_amp(lines)))
+   impl = filter(not_param_nor_save.match, filter(implicit_save.search, remove_amp(lines,True)))
    if(len(impl)):
       store.append(give_err("QA:  ") + "implicit saves detected in   [%s:%s]" % (fname,name))
    for line in impl:
