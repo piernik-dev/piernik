@@ -229,7 +229,7 @@ contains
 
    subroutine multigrid_ext_bnd(lev, iv, ng, mode)
 
-      use dataio_pub,      only: die
+      use dataio_pub,      only: die, msg
       use multigridvars,   only: extbnd_donothing, extbnd_zero, extbnd_extrapolate, extbnd_mirror, extbnd_antimirror, &
            &                     XLO, XHI, YLO, YHI, ZLO, ZHI, lvl, is_external
 
@@ -243,9 +243,9 @@ contains
       integer :: i
 
       select case (mode)
-         case (extbnd_donothing)
+         case (extbnd_donothing) ! remember to initialize everything first!
             return
-         case (extbnd_extrapolate)
+         case (extbnd_extrapolate) ! mixed-tybe BC: free flux; BEWARE: it is not protected from inflow
             do i = 1, ng
                if (is_external(XLO)) lvl(lev)%mgvar(lvl(lev)%is-i, :, :, iv) = (1+i) * lvl(lev)%mgvar(lvl(lev)%is, :, :, iv) - i * lvl(lev)%mgvar(lvl(lev)%is+1, :, :, iv)
                if (is_external(XHI)) lvl(lev)%mgvar(lvl(lev)%ie+i, :, :, iv) = (1+i) * lvl(lev)%mgvar(lvl(lev)%ie, :, :, iv) - i * lvl(lev)%mgvar(lvl(lev)%ie-1, :, :, iv)
@@ -254,14 +254,14 @@ contains
                if (is_external(ZLO)) lvl(lev)%mgvar(:, :, lvl(lev)%ks-i, iv) = (1+i) * lvl(lev)%mgvar(:, :, lvl(lev)%ks, iv) - i * lvl(lev)%mgvar(:, :, lvl(lev)%ks+1, iv)
                if (is_external(ZHI)) lvl(lev)%mgvar(:, :, lvl(lev)%ke+i, iv) = (1+i) * lvl(lev)%mgvar(:, :, lvl(lev)%ke, iv) - i * lvl(lev)%mgvar(:, :, lvl(lev)%ke-1, iv)
             enddo
-         case (extbnd_zero)
+         case (extbnd_zero) ! homogenous Dirichlet BC with 0 at first guardcell row
             if (is_external(XLO)) lvl(lev)%mgvar(:lvl(lev)%is, :, :, iv) = 0.
             if (is_external(XHI)) lvl(lev)%mgvar(lvl(lev)%ie:, :, :, iv) = 0.
             if (is_external(YLO)) lvl(lev)%mgvar(:, :lvl(lev)%js, :, iv) = 0.
             if (is_external(YHI)) lvl(lev)%mgvar(:, lvl(lev)%je:, :, iv) = 0.
             if (is_external(ZLO)) lvl(lev)%mgvar(:, :, :lvl(lev)%ks, iv) = 0.
             if (is_external(ZHI)) lvl(lev)%mgvar(:, :, lvl(lev)%ke:, iv) = 0.
-         case (extbnd_mirror)
+         case (extbnd_mirror) ! reflecting BC (homogenous Neumamnn)
             do i = 1, ng
                if (is_external(XLO)) lvl(lev)%mgvar(lvl(lev)%is-i, :, :, iv) = lvl(lev)%mgvar(lvl(lev)%is+i-1, :, :, iv)
                if (is_external(XHI)) lvl(lev)%mgvar(lvl(lev)%ie+i, :, :, iv) = lvl(lev)%mgvar(lvl(lev)%ie-i+1, :, :, iv)
@@ -270,7 +270,7 @@ contains
                if (is_external(ZLO)) lvl(lev)%mgvar(:, :, lvl(lev)%ks-i, iv) = lvl(lev)%mgvar(:, :, lvl(lev)%ks+i-1, iv)
                if (is_external(ZHI)) lvl(lev)%mgvar(:, :, lvl(lev)%ke+i, iv) = lvl(lev)%mgvar(:, :, lvl(lev)%ke-i+1, iv)
             enddo
-          case (extbnd_antimirror)
+          case (extbnd_antimirror) ! homogenous Dirichlet BC with 0 at external faces
             do i = 1, ng
                if (is_external(XLO)) lvl(lev)%mgvar(lvl(lev)%is-i, :, :, iv) = - lvl(lev)%mgvar(lvl(lev)%is+i-1, :, :, iv)
                if (is_external(XHI)) lvl(lev)%mgvar(lvl(lev)%ie+i, :, :, iv) = - lvl(lev)%mgvar(lvl(lev)%ie-i+1, :, :, iv)
@@ -280,7 +280,8 @@ contains
                if (is_external(ZHI)) lvl(lev)%mgvar(:, :, lvl(lev)%ke+i, iv) = - lvl(lev)%mgvar(:, :, lvl(lev)%ke-i+1, iv)
             enddo
          case default
-            call die("[multigridmpifuncs:multigrid_ext_bnd] boundary type not implemented")
+            write(msg, '(a,i3,a)')"[multigridmpifuncs:multigrid_ext_bnd] boundary type ",mode," not implemented"
+            call die(msg)
       end select
 
    end subroutine multigrid_ext_bnd
