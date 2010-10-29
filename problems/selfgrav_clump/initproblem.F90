@@ -51,7 +51,7 @@ contains
 
    subroutine read_problem_par
 
-      use dataio_pub,    only: par_file, ierrh, die, namelist_errh, compare_namelist
+      use dataio_pub,    only: par_file, ierrh, die, namelist_errh, compare_namelist   ! QA_WARN
       use grid,          only: xmin, xmax, ymin, ymax, zmin, zmax, dx, dy, dz
       use mpisetup,      only: ierr, rbuff, cbuff_len, cbuff, ibuff, lbuff, proc, buffer_dim, comm, &
            &                   MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL

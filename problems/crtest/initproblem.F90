@@ -53,7 +53,7 @@ module initproblem
 
    subroutine read_problem_par
 
-      use dataio_pub,    only: ierrh, die, par_file, namelist_errh, compare_namelist
+      use dataio_pub,    only: ierrh, die, par_file, namelist_errh, compare_namelist      ! QA_WARN
       use grid,          only: dxmn
       use mpisetup,      only: MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION, &
            &                   cbuff_len, cbuff, ibuff, rbuff, buffer_dim, comm, ierr, proc

@@ -35,7 +35,9 @@ module initproblem
 
    use mpisetup,    only: cbuff_len
    use problem_pub, only: problem_name, run_id
-
+   implicit none
+   private
+   public  :: read_problem_par, init_prob
    real    :: sigma0, Rin, R0, HtoR, eps, amp
    character(len=cbuff_len) :: sigma_model
 
@@ -48,13 +50,12 @@ module initproblem
 
    subroutine read_problem_par
 
-      use dataio_pub,    only: ierrh, msg, par_file, namelist_errh, compare_namelist
+      use dataio_pub,    only: par_file, ierrh, namelist_errh, compare_namelist         ! QA_WARN
       use mpisetup,      only: cbuff_len, cbuff, rbuff, buffer_dim, proc, comm, ierr, &
                                MPI_CHARACTER, MPI_DOUBLE_PRECISION
       use types,         only: idlen
 
       implicit none
-
 
       problem_name = 'stream_3D'
       run_id  = 'ts1'
@@ -86,7 +87,7 @@ module initproblem
       call MPI_Bcast(cbuff, cbuff_len*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
       call MPI_Bcast(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
-      if (proc / =0) then
+      if (proc /= 0) then
 
          problem_name = cbuff(1)
          run_id       = cbuff(2)(1:idlen)
@@ -106,6 +107,7 @@ module initproblem
 !-----------------------------------------------------------------------------
 
    real function dens_Rdistr(R,Rin,n)
+      implicit none
       real, intent(in) :: R,Rin,n
       real :: ninv
       ninv = 1./n
@@ -114,12 +116,12 @@ module initproblem
 
    subroutine init_prob
       use arrays,      only: u,gp
-      use grid,        only: x,y,z,nx,ny,nz,nzd,dx,dy,dz,xmin,nb
+      use grid,        only: x,y,z,nx,ny,nz,dx,xmin,nb
       use constants,   only: newtong,pi,dpi
-      use gravity,     only: ptmass, r_smooth, grav_pot2accel
+      use gravity,     only: ptmass
       use initneutral, only: idnn, imxn, imyn, imzn
       use initdust,    only: idnd, imxd, imyd, imzd
-      use initfluids,  only: cs_iso_neu, cs_iso_neu2
+      use initneutral, only: cs_iso_neu, cs_iso_neu2
       use mpisetup,    only: smalld
 #ifndef ISO
       use initneutral, only: ienn, gamma_neu
@@ -198,7 +200,7 @@ module initproblem
             u(imyn,i,j,:) =  xi*iOmega*u(idnn,i,j,:)
             u(imzn,i,j,:) = 0.0
 #ifndef ISO
-            u(ienn,i,j,:) = cs_iso_neu2/(gamma_ion-1.0)*u(idnn,i,j,:)
+            u(ienn,i,j,:) = cs_iso_neu2/(gamma_neu-1.0)*u(idnn,i,j,:)
             u(ienn,i,j,:) = max(u(ienn,i,j,:), smallei)
             u(ienn,i,j,:) = u(ienn,i,j,:) +0.5*(vx**2+vy**2+vz**2)*u(idnn,i,j,:)
 #endif /* !ISO */
@@ -216,38 +218,6 @@ module initproblem
 
       return
    end subroutine init_prob
-
-   subroutine user_plt(var,ij,xn,tab,ierrh)
-      use arrays,         only: u,b
-      use grid,           only: nb,nxb,nyb,nzb
-      implicit none
-      character(LEN=4)     :: var
-      character(LEN=2)     :: ij
-      integer              :: xn,ierrh
-      real, dimension(:,:) :: tab
-
-      ierrh = 0
-      select case (var)
-         case default
-            ierrh = -1
-      end select
-
-   end subroutine user_plt
-
-   subroutine user_hdf5(var,tab,ierrh)
-!      use arrays,          only: u,b
-!      use grid,            only: nb,nx,ny,nz
-      implicit none
-      character(LEN=4)     :: var
-      real(kind=4), dimension(:,:,:) :: tab
-
-      ierrh = 0
-      select case (var)
-         case default
-            ierrh = -1
-      end select
-
-   end subroutine user_hdf5
 
 end module initproblem
 

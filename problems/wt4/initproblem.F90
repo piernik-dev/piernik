@@ -80,7 +80,7 @@ contains
    subroutine read_problem_par
 
       use constants,     only: pi
-      use dataio_pub,    only: ierrh, par_file, namelist_errh, compare_namelist
+      use dataio_pub,    only: ierrh, par_file, namelist_errh, compare_namelist      ! QA_WARN
       use mpisetup,      only: ierr, rbuff, cbuff, ibuff, lbuff, proc, &
            &                   MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL, &
            &                   buffer_dim, comm

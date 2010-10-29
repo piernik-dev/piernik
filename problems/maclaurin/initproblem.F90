@@ -49,7 +49,8 @@ contains
    subroutine read_problem_par
 
       use constants,     only: pi
-      use dataio_pub,    only: skip_advection, ierrh, par_file, die, warn, namelist_errh, compare_namelist
+      use dataio_pub,    only: ierrh, par_file, namelist_errh, compare_namelist      ! QA_WARN
+      use dataio_pub,    only: skip_advection, die, warn
       use mpisetup,      only: ierr, rbuff, cbuff, ibuff, proc, buffer_dim, comm, smalld, cbuff_len, &
            &                   MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER
       use types,         only: idlen
