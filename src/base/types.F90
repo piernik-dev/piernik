@@ -33,7 +33,7 @@ module types
    private
    public :: indx, hdf, value, grid_container, tsl_container, phys_prop, &
    & problem_customize_solution, finalize_problem, domlen, idlen, &
-   & component_fluid, var_numbers
+   & component_fluid, var_numbers, custom_emf_advect_bnd, custom_emf_resist_bnd
 
    integer, parameter :: domlen = 16 ! should be <= mpisetup::cbuff_len
    integer, parameter :: idlen  = 3
@@ -178,5 +178,7 @@ module types
 
    procedure(no_args), pointer :: problem_customize_solution => NULL()
    procedure(no_args), pointer :: finalize_problem           => NULL()
+   procedure(no_args), pointer :: custom_emf_advect_bnd      => NULL()
+   procedure(no_args), pointer :: custom_emf_resist_bnd      => NULL()
 
 end module types
