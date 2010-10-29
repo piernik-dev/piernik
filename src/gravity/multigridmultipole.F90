@@ -204,13 +204,13 @@ contains
 
       implicit none
 
-      if  (allocated(rn))    deallocate(rn)
-      if  (allocated(irn))   deallocate(irn)
-      if  (allocated(sfac))  deallocate(sfac)
-      if  (allocated(cfac))  deallocate(cfac)
-      if  (allocated(Q))     deallocate(Q)
-      if  (allocated(k12))   deallocate(k12)
-      if  (allocated(ofact)) deallocate(ofact)
+      if (allocated(rn))    deallocate(rn)
+      if (allocated(irn))   deallocate(irn)
+      if (allocated(sfac))  deallocate(sfac)
+      if (allocated(cfac))  deallocate(cfac)
+      if (allocated(Q))     deallocate(Q)
+      if (allocated(k12))   deallocate(k12)
+      if (allocated(ofact)) deallocate(ofact)
 
    end subroutine cleanup_multipole
 
