@@ -31,16 +31,20 @@
 module initproblem
 
    use problem_pub, only: problem_name, run_id
+   use constants,   only: one
+   implicit none
+
+   private
+   public :: read_problem_par, init_prob
 
    real :: d0,r0,bx0,by0,bz0
-   character(len=1) :: dir
+   character(len=one) :: dir
 
    namelist /PROBLEM_CONTROL/  problem_name, run_id, d0, r0,bx0,by0,bz0
 
    contains
 
 !-----------------------------------------------------------------------------
-
    subroutine read_problem_par
 
       use dataio_pub,    only: ierrh, par_file, namelist_errh, compare_namelist      ! QA_WARN
@@ -87,9 +91,7 @@ module initproblem
       endif
 
    end subroutine read_problem_par
-
 !-----------------------------------------------------------------------------
-
    subroutine init_prob
 
       use arrays,       only: u,b
@@ -149,37 +151,5 @@ module initproblem
       enddo
       return
    end subroutine init_prob
-
-   subroutine user_plt(var,ij,xn,tab,ierrh)
-      use arrays,         only: u,b
-      use grid,           only: nb,nxb,nyb,nzb
-      implicit none
-      character(LEN=4)     :: var
-      character(LEN=2)     :: ij
-      integer              :: xn,ierrh
-      real, dimension(:,:) :: tab
-
-      ierrh = 0
-      select case (var)
-         case default
-            ierrh = -1
-      end select
-
-   end subroutine user_plt
-
-   subroutine user_hdf5(var,tab,ierrh)
-!      use arrays,          only: u,b
-!      use grid,            only: nb,nx,ny,nz
-      implicit none
-      character(LEN=4)     :: var
-      real(kind=4), dimension(:,:,:) :: tab
-
-      ierrh = 0
-      select case (var)
-         case default
-            ierrh = -1
-      end select
-
-   end subroutine user_hdf5
-
+!-----------------------------------------------------------------------------
 end module initproblem

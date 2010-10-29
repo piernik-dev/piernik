@@ -33,6 +33,10 @@ module initproblem
 ! Initial condition for dust fronts
 ! Written by: M. Hanasz, January 2009
    use problem_pub, only: problem_name, run_id
+   implicit none
+
+   private
+   public :: read_problem_par, init_prob
 
    real      :: d0, v0, v1
    integer   :: m_x, m_y, m_z

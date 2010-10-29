@@ -34,6 +34,10 @@ module initproblem
 ! Written by: M. Hanasz, March 2006
 
    use problem_pub, only: problem_name, run_id
+   implicit none
+
+   private
+   public  :: read_problem_par, init_prob
 
    integer :: n_sn
    real    :: d0, p0, bx0, by0, bz0, Eexpl, x0, y0, z0, r0, dt_sn, r, t_sn
@@ -191,7 +195,6 @@ contains
 !-----------------------------------------------------------------------------
    subroutine sedov_plt_hdf5(var,ij,xn,tab,ierrh)
       use arrays,        only: u
-      use dataio_pub,    only: varlen
       use grid,          only: nb, nxb, nyb, nzb
       implicit none
       character(LEN=*), intent(in)        :: var   !< quantity to be plotted
@@ -214,7 +217,6 @@ contains
 !-----------------------------------------------------------------------------
    subroutine sedov_vars_hdf5(var,tab, ierrh)
       use arrays, only: u
-      use grid,   only: is, ie, js, je, ks, ke
       implicit none
       character(len=*), intent(in)                    :: var
       real(kind=4), dimension(:,:,:), intent(inout)   :: tab

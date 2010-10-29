@@ -32,6 +32,10 @@
 module initproblem
 
    use problem_pub, only: problem_name, run_id
+   implicit none
+
+   private
+   public :: read_problem_par, init_prob
 
    real               :: t_sn
    integer            :: n_sn
@@ -135,11 +139,11 @@ module initproblem
    subroutine init_prob
 
       use arrays,         only: b, u
-      use dataio_pub,     only: die, msg, warn, printinfo
+      use dataio_pub,     only: msg, warn, printinfo
       use fluidindex,     only: ibx, iby, ibz, nvar
       use grid,           only: nx, ny, nz, x, y, z, is, ie, js, je, ks, ke, nxd, nyd, nzd
       use initcosmicrays, only: iarr_crn, iarr_crs, gamma_crn, K_crn_paral, K_crn_perp
-      use initionized,    only: idni, imxi, imyi, imzi, ieni, gamma_ion
+      use initionized,    only: idni, imxi, imzi, ieni, gamma_ion
 #ifdef COSM_RAYS_SOURCES
       use crcomposition,  only: icr_H1, icr_C12
 #endif /* COSM_RAYS_SOURCES */

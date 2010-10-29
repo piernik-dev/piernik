@@ -31,9 +31,14 @@
 module initproblem
 
    use problem_pub, only: problem_name, run_id
+   use constants,   only: one
+   implicit none
 
-   real              :: d0,r0,bx0,by0,bz0
-   character(len=1)  :: dir
+   private
+   public :: read_problem_par, init_prob
+
+   real               :: d0,r0,bx0,by0,bz0
+   character(len=one) :: dir
 
    namelist /PROBLEM_CONTROL/  problem_name, run_id, d0, r0,bx0,by0,bz0
 
@@ -44,8 +49,8 @@ module initproblem
    subroutine read_problem_par
 
       use dataio_pub,    only: ierrh, par_file, namelist_errh, compare_namelist      ! QA_WARN
-      use mpisetup,      only: MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION, &
-           &                   cbuff_len, cbuff, ibuff, rbuff, comm, ierr, buffer_dim, proc
+      use mpisetup,      only: MPI_CHARACTER, MPI_DOUBLE_PRECISION, &
+           &                   cbuff_len, cbuff, rbuff, comm, ierr, buffer_dim, proc
       use types,         only: idlen
 
       implicit none
@@ -88,7 +93,7 @@ module initproblem
 
       use arrays,       only: u,b
       use constants,    only: pi, dpi, fpi
-      use grid,         only: x, y, z, nx, ny, nz, xl, yl, dx, dy
+      use grid,         only: x, y, z, nx, ny, nz, xl, yl
       use initionized,  only: idni, imxi, imyi, imzi
 #ifndef ISO
       use initionized,  only: ieni, gamma_ion

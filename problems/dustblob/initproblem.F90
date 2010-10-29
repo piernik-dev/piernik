@@ -32,6 +32,10 @@ module initproblem
 
 ! Initial condition for blob test
    use problem_pub, only: problem_name, run_id
+   implicit none
+
+   private
+   public :: read_problem_par, init_prob
 
    real              :: d_gas, p_gas, v_gas, d_dust, v_dust, x0, y0, z0, r0
 
@@ -107,7 +111,7 @@ module initproblem
 
    subroutine init_prob
       use arrays,       only: u
-      use grid,         only: x, y, z, nx, ny, nz, nzd, ymin, ymax
+      use grid,         only: x, y, z, nx, ny, nz, nzd
       use initdust,     only: idnd, imxd, imyd, imzd
       use initneutral,  only: idnn, imxn, imyn, imzn, gamma_neu
       use mpisetup,     only: smalld

@@ -32,6 +32,10 @@ module initproblem
 
    use mpisetup,    only: cbuff_len
    use problem_pub, only: problem_name, run_id
+   implicit none
+
+   private
+   public :: read_problem_par, init_prob
 
    character(len=cbuff_len) :: fnoise
    real :: rhog, eps, amp, kx, kz
@@ -111,9 +115,9 @@ module initproblem
       use constants,     only: pi, dpi
       use dataio_pub,    only: msg, printinfo
       use fluidindex,    only: nvar
-      use grid,          only: x, y, z, nx, ny, nz, nzd, ymin, ymax, Lx, Lz
-      use mpisetup,      only: proc, pcoords
-      use shear,         only: omega, qshear
+      use grid,          only: x, y, z, nx, ny, nz, Lx, Lz
+      use mpisetup,      only: proc
+      use shear,         only: omega
       use types,         only: component_fluid
 #ifdef DUST
       use initdust,      only: dragc_gas_dust

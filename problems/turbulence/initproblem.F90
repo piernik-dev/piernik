@@ -8,6 +8,10 @@ module initproblem
 
 ! Initial condition for Sedov-Taylor explosion
    use problem_pub, only: problem_name, run_id
+   implicit none
+
+   private
+   public :: read_problem_par, init_prob
 
    integer           :: n_sn
    real              :: d0, Mrms, t_sn, c_si

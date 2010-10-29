@@ -35,6 +35,10 @@ module initproblem
 
    use mpisetup,    only: cbuff_len
    use problem_pub, only: problem_name, run_id
+   implicit none
+
+   private
+   public :: read_problem_par, init_prob
 
    real :: d0, r_max, dout, alpha
    character(len=cbuff_len) :: mag_field_orient
@@ -187,4 +191,3 @@ module initproblem
    end subroutine init_prob
 
 end module initproblem
-

@@ -36,8 +36,11 @@ module initproblem
 ! Written by: D. Woltanski, February 2008
 
    use problem_pub, only: problem_name, run_id
+   implicit none
 
-   real              :: chi, dbot, lpert, Mtop, Mbot, dpert, tkh, vtransf
+   private
+   public :: read_problem_par, init_prob
+   real   :: chi, dbot, lpert, Mtop, Mbot, dpert, tkh, vtransf
 
    namelist /PROBLEM_CONTROL/  problem_name, run_id, chi, dbot, lpert, Mtop, Mbot, dpert, tkh, vtransf
 

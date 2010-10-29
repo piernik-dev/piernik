@@ -36,6 +36,10 @@ module initproblem
 ! Modified by M.Hanasz for CR-driven dynamo
 
    use problem_pub, only: problem_name, run_id
+   implicit none
+
+   private
+   public :: read_problem_par, init_prob
 
    real :: d0, bxn,byn,bzn, alpha
 
@@ -158,4 +162,3 @@ module initproblem
    end subroutine init_prob
 
 end module initproblem
-

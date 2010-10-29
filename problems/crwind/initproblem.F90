@@ -36,6 +36,10 @@ module initproblem
 ! Modified by M.Hanasz for CR-driven dynamo
 
    use problem_pub, only: problem_name, run_id
+   implicit none
+
+   private
+   public :: read_problem_par, init_prob
 
    real :: d0, bxn,byn,bzn, h_sn, f_sn_kpc2, amp_cr, beta_cr, r_sn
    real :: ethu, f_sn, amp_ecr_sn, alpha, x0, y0, z0
@@ -126,7 +130,7 @@ module initproblem
       use initcosmicrays, only: gamma_crs, iarr_crs, cr_eff
       use initfluids,     only: cs_iso2
       use initionized,    only: idni, imxi, imyi, imzi
-      use mpisetup,       only: proc, smalld
+      use mpisetup,       only: smalld
 #ifdef SHEAR
       use shear,          only: qshear, omega
 #endif /* SHEAR */
@@ -217,4 +221,3 @@ module initproblem
    end subroutine init_prob
 
 end module initproblem
-

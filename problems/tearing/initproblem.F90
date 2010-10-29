@@ -42,8 +42,12 @@ module initproblem
 !       dimdir can't be equal magdir!!
 
    use problem_pub, only: problem_name, run_id
+   implicit none
 
-   real              :: beta, v0
+   private
+   public :: read_problem_par, init_prob
+
+   real   :: beta, v0
 
    namelist /PROBLEM_CONTROL/ problem_name, run_id, beta, v0
 

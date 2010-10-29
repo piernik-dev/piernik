@@ -32,11 +32,15 @@ module initproblem
 
 ! Initial condition for blob test
 ! Blob test by Agertz et al., 2007, MNRAS, 380, 963.
-   use problem_pub, only: problem_name, run_id
-
 ! ToDo: write support for original, SPH-noisy, initial conditions
 
-   real              :: chi, rblob, blobxc, blobyc, blobzc, Mext, denv, tkh, vgal
+   use problem_pub, only: problem_name, run_id
+   implicit none
+
+   private
+   public :: read_problem_par, init_prob
+
+   real   :: chi, rblob, blobxc, blobyc, blobzc, Mext, denv, tkh, vgal
 
    namelist /PROBLEM_CONTROL/  problem_name, run_id, chi, rblob, blobxc, blobyc, blobzc, Mext, denv, tkh, vgal
 
@@ -111,7 +115,7 @@ module initproblem
    subroutine init_prob
 
       use arrays,       only: u
-      use grid,         only: x, y, z, nx, ny, nz, nzd, ymin, ymax
+      use grid,         only: x, y, z, nx, ny, nz, nzd
       use initneutral,  only: gamma_neu, idnn, imxn, imyn, imzn, ienn
 
       implicit none
@@ -153,4 +157,3 @@ module initproblem
 !------------------------------------------------------------------------------------------
 
 end module initproblem
-

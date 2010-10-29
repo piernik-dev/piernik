@@ -37,10 +37,15 @@ module initproblem
 ! ----------------------------------------- !
 
    use problem_pub, only: problem_name, run_id
+   use constants,   only: one
+   implicit none
 
-   real             :: dl,vxl,vyl,vzl,bxl,byl,bzl,el
-   real             :: dr,vxr,vyr,vzr,bxr,byr,bzr,er
-   character(len=1) :: dir
+   private
+   public :: read_problem_par, init_prob
+
+   real               :: dl,vxl,vyl,vzl,bxl,byl,bzl,el
+   real               :: dr,vxr,vyr,vzr,bxr,byr,bzr,er
+   character(len=one) :: dir
 
    namelist /PROBLEM_CONTROL/  problem_name, &
       run_id,dl,vxl,vyl,vzl,bxl,byl,bzl,el,  &
@@ -49,7 +54,6 @@ module initproblem
    contains
 
 !-----------------------------------------------------------------------------
-
    subroutine read_problem_par
       use dataio_pub,    only: ierrh, par_file, namelist_errh, compare_namelist      ! QA_WARN
       use mpisetup,      only: cbuff_len, cbuff, rbuff, buffer_dim, proc, comm, ierr, &
@@ -115,16 +119,14 @@ module initproblem
       endif
 
    end subroutine read_problem_par
-
 !-----------------------------------------------------------------------------
-
    subroutine init_prob
 
       use arrays,       only: u,b
       use grid,         only: x,y,z,nx,ny,nz
       use initionized,  only: idni,imxi,imyi,imzi
 #ifndef ISO
-      use initionized,  only: ieni, gamma_ion
+      use initionized,  only: ieni
       use mpisetup,     only: smallei
 #endif /* !ISO */
       implicit none
@@ -185,37 +187,5 @@ module initproblem
       enddo
       return
    end subroutine init_prob
-
-   subroutine user_plt(var,ij,xn,tab,ierrh)
-      use arrays,         only: u,b
-      use grid,           only: nb,nxb,nyb,nzb
-      implicit none
-      character(LEN=4)     :: var
-      character(LEN=2)     :: ij
-      integer              :: xn,ierrh
-      real, dimension(:,:) :: tab
-
-      ierrh = 0
-      select case (var)
-         case default
-            ierrh = -1
-      end select
-
-   end subroutine user_plt
-
-   subroutine user_hdf5(var,tab,ierrh)
-!      use arrays,          only: u,b
-!      use grid,            only: nb,nx,ny,nz
-      implicit none
-      character(LEN=4)     :: var
-      real(kind=4), dimension(:,:,:) :: tab
-
-      ierrh = 0
-      select case (var)
-         case default
-            ierrh = -1
-      end select
-
-   end subroutine user_hdf5
-
+!-----------------------------------------------------------------------------
 end module initproblem

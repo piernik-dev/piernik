@@ -36,6 +36,10 @@ module initproblem
 ! Modified by M.Hanasz for CR-driven dynamo
 
    use problem_pub, only: problem_name, run_id
+   implicit none
+
+   private
+   public :: read_problem_par, init_prob
 
    real :: d0, bxn,byn,bzn, x0, y0, z0, r_sn, h_sn, f_sn_kpc2, amp_cr, beta_cr
    real :: ethu, f_sn, amp_ecr_sn, alpha
@@ -122,10 +126,10 @@ module initproblem
       use fluidindex,     only: ibx, iby, ibz
       use grid,           only: x, y, z, nx, ny, nz, nxd, nyd, xmin, xmax, ymin, ymax, lx, ly
       use hydrostatic,    only: hydrostatic_zeq
-      use initcosmicrays, only: gamma_crs, iarr_crs, cr_eff
+      use initcosmicrays, only: cr_eff
       use initfluids,     only: cs_iso2
       use initionized,    only: idni, imxi, imyi, imzi
-      use mpisetup,       only: proc, smalld
+      use mpisetup,       only: smalld
 #ifdef SHEAR
       use shear,          only: qshear, omega
 #endif /* SHEAR */
@@ -246,7 +250,7 @@ module initproblem
 !<
    subroutine cr_sn_beware(pos)
       use arrays,         only: u
-      use crcomposition,  only: icr_H1, icr_Be10, icr_C12, icr_N14, icr_O16, primary_C12, primary_N14, primary_O16
+      use crcomposition,  only: icr_H1, icr_C12, icr_N14, icr_O16, primary_C12, primary_N14, primary_O16
       use fluidindex,     only: nvar
       use grid,           only: nx, ny, nz, x, y, z, Lx, Ly
       use initcosmicrays, only: iarr_crn
@@ -299,4 +303,3 @@ module initproblem
    end subroutine cr_sn_beware
 
 end module initproblem
-
