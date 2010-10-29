@@ -1034,18 +1034,18 @@ contains
 
 #error "The test_multipoles routine is outdated and was commented out"
 
-   subroutine test_multipoles
-
-      use dataio_pub,         only: die, printinfo, msg
-      use constants,          only: newtong
-      use multigridhelpers,   only: aux_par_R0, aux_par_R1, aux_par_R2, aux_par_I0, dirty_debug
-
-      implicit none
-
-      integer :: i, j, r, rr
-      real :: phi, cphi
-      real, dimension(0:3) :: p, x
-
+!!$   subroutine test_multipoles
+!!$
+!!$      use dataio_pub,         only: die, printinfo, msg
+!!$      use constants,          only: newtong
+!!$      use multigridhelpers,   only: aux_par_R0, aux_par_R1, aux_par_R2, aux_par_I0, dirty_debug
+!!$
+!!$      implicit none
+!!$
+!!$      integer :: i, j, r, rr
+!!$      real :: phi, cphi
+!!$      real, dimension(0:3) :: p, x
+!!$
 !!$      ! reset the multipole data
 !!$      Q(:, :, :, :) = 0.
 !!$
@@ -1091,8 +1091,8 @@ contains
 !!$      enddo
 !!$
 !!$      call die("qniec")
-
-   end subroutine test_multipoles
+!!$
+!!$   end subroutine test_multipoles
 
 #endif /* HEAVY_DEBUG */
 

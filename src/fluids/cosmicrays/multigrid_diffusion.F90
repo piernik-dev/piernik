@@ -387,7 +387,7 @@ contains
 
    subroutine vcycle_hg(cr_id)
 
-      use multigridvars,      only: source, defect, solution, correction, base, roof, level_min, level_max, lvl, ts, tot_ts, stdout
+      use multigridvars,      only: source, defect, solution, correction, base, roof, level_min, level_max, ts, tot_ts, stdout
       use multigridbasefuncs, only: norm_sq, restrict_all, prolong_level
       use multigridhelpers,   only: set_dirty, check_dirty, do_ascii_dump, numbered_ascii_dump, mg_write_log, brief_v_log
       use initcosmicrays,     only: iarr_crs
@@ -497,7 +497,7 @@ contains
    ! BEWARE: almost replicated code (see crdiffusion.F90)
    subroutine diff_flux_x(i, j, k, soln, lev, cr_id, Keff)
 
-      use multigridvars,     only: lvl, XDIR, YDIR, ZDIR, has_dir
+      use multigridvars,     only: lvl, YDIR, ZDIR, has_dir
       use initcosmicrays,    only: K_crs_perp, K_crs_paral
       use mpisetup,          only: dt
       use arrays,            only: wa
@@ -559,7 +559,7 @@ contains
 
    subroutine diff_flux_y(i, j, k, soln, lev, cr_id, Keff)
 
-      use multigridvars,     only: lvl, XDIR, YDIR, ZDIR, has_dir
+      use multigridvars,     only: lvl, XDIR, ZDIR, has_dir
       use initcosmicrays,    only: K_crs_perp, K_crs_paral
       use mpisetup,          only: dt
       use arrays,            only: wa
@@ -621,7 +621,7 @@ contains
 
    subroutine diff_flux_z(i, j, k, soln, lev, cr_id, Keff)
 
-      use multigridvars,     only: lvl, XDIR, YDIR, ZDIR, has_dir
+      use multigridvars,     only: lvl, XDIR, YDIR, has_dir
       use initcosmicrays,    only: K_crs_perp, K_crs_paral
       use mpisetup,          only: dt
       use arrays,            only: wa
@@ -765,8 +765,6 @@ contains
 
       use multigridvars,      only: level_min, has_dir, XDIR, YDIR, ZDIR, lvl, extbnd_donothing
       use multigridmpifuncs,  only: mpi_multigrid_bnd
-      use dataio_pub,         only: die
-      use initcosmicrays,     only: K_crs_perp, K_crs_paral
       use mpisetup,           only: dt
       use arrays,             only: wa
 

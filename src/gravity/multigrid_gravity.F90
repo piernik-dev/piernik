@@ -776,7 +776,7 @@ contains
 
    subroutine store_solution(history)
 
-      use mpisetup,          only: proc, t
+      use mpisetup,          only: t
       use multigridmpifuncs, only: mpi_multigrid_bnd
       use multigridvars,     only: roof, bnd_isolated, bnd_givenval, solution, level_max, mg_nb, extbnd_extrapolate, extbnd_mirror
 
@@ -1311,7 +1311,6 @@ contains
 
       use multigridhelpers,   only: dirty_debug, check_dirty, multidim_code_3D, dirty_label
       use multigridmpifuncs,  only: mpi_multigrid_bnd
-      use dataio_pub,         only: die
       use multigridvars,      only: lvl, level_min, eff_dim, NDIM, has_dir, XDIR, YDIR, ZDIR, extbnd_antimirror
 
       implicit none
@@ -1414,7 +1413,6 @@ contains
    subroutine approximate_solution_fft(lev, src, soln)
 
       use dataio_pub,         only: die, warn
-      use mpisetup,           only: nproc
       use multigridhelpers,   only: dirty_debug, check_dirty, dirtyL, multidim_code_3D
       use multigridmpifuncs,  only: mpi_multigrid_bnd
       use multigridvars,      only: lvl, LOW, HIGH, D_x, D_y, D_z, NDIM, eff_dim, has_dir, XDIR, YDIR, ZDIR, extbnd_antimirror
@@ -1707,7 +1705,7 @@ contains
 
    subroutine gb_fft_solve_gather(src, soln)
 
-      use mpisetup,      only: nproc, proc, ierr, comm3d, status, MPI_DOUBLE_PRECISION
+      use mpisetup,      only: nproc, proc, ierr, comm3d, MPI_DOUBLE_PRECISION
       use multigridvars, only: gb, gb_cartmap, base, XDIR, YDIR, ZDIR
 
       implicit none
