@@ -52,7 +52,7 @@ contains
    subroutine read_problem_par
 
       use dataio_pub,    only: par_file, ierrh, die, namelist_errh, compare_namelist
-      use grid,          only: xmin, xmax, ymin, ymax, zmin, zmax, dx, dy, dz, nxd, nyd, nzd
+      use grid,          only: xmin, xmax, ymin, ymax, zmin, zmax, dx, dy, dz
       use mpisetup,      only: ierr, rbuff, cbuff_len, cbuff, ibuff, lbuff, proc, buffer_dim, comm, &
            &                   MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL
       use types,         only: idlen
@@ -153,8 +153,8 @@ contains
    subroutine init_prob
 
       use arrays,            only: u, b, sgp, gpot, hgpot
-      use constants,         only: fpiG, pi, newtong
-      use dataio_pub,        only: tend, msg, die, warn, printinfo
+      use constants,         only: pi, newtong
+      use dataio_pub,        only: msg, die, warn, printinfo
       use grid,              only: xmin, xmax, ymin, ymax, zmin, zmax, x, y, z, dx, dy, dz, is, ie, js, je, ks, ke
       use initionized,       only: gamma_ion, idni, imxi, imyi, imzi, ieni
       use mpisetup,          only: proc, smalld, smallei, MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_MIN, MPI_MAX, MPI_SUM, comm, ierr
@@ -473,7 +473,7 @@ contains
       use arrays,      only: sgp, u
       use grid,        only: is, ie, js, je, ks, ke, dx, dy, dz
       use initionized, only: idni
-      use mpisetup,    only: smalld, comm, ierr, MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_SUM
+      use mpisetup,    only: comm, ierr, MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_SUM
 
       implicit none
 

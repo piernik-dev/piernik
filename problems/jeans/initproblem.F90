@@ -144,7 +144,7 @@ contains
       use arrays,        only: u, b
       use constants,     only: fpiG, pi, newtong
       use dataio_pub,    only: tend, msg, printinfo, warn
-      use grid,          only: xmin, xmax, ymin, ymax, zmin, zmax, x, y, z, nx, ny, nz, xmin, ymin, zmin, dx, dy, dz
+      use grid,          only: xmin, xmax, ymin, ymax, zmin, zmax, x, y, z, nx, ny, nz, xmin, ymin, zmin
       use initionized,   only: gamma_ion, idni, imxi, imzi, ieni
       use mpisetup,      only: proc
 
