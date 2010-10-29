@@ -141,7 +141,7 @@ def qa_checks(files,options):
          pfile.append(line)
       fp.close()
 
-      f = f.split('/')[-1]
+      #f = f.split('/')[-1]
       # checks for f90 file as whole
       qa_nonconforming_tabs(np.array(pfile),'',errors,f)
       qa_labels(np.array(pfile),'',errors,f)
