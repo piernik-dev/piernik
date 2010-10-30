@@ -280,6 +280,7 @@ contains
 #ifdef MULTIGRID
       use multigrid,   only: cleanup_multigrid
 #endif /* MULTIGRID */
+      implicit none
 
       call cleanup_grid;        call nextdot(.false.)
       call cleanup_dataio;      call nextdot(.false.)

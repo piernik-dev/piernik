@@ -28,7 +28,9 @@
 #include "piernik.def"
 
 module magboundaries
-
+   implicit none
+   private
+   public :: bnd_a, bnd_b, bnd_emf, all_mag_boundaries
 contains
 
    subroutine bnd_a(A)

@@ -62,7 +62,8 @@
 !! @n @b SCALED - a suit of %constants without physical units. This is automatically set while neither of the former systems is chosen.
 !<
 module constants
-
+   implicit none
+   public                                                ! QA_WARN
    real, parameter :: one        = 1.0                   !< one
    real, parameter :: half       = 0.5                   !< a half
    real, parameter :: onet       = 1./3.                 !< one third

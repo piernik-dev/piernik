@@ -114,6 +114,7 @@ module arrays
 !<
 
    subroutine cleanup_arrays
+      implicit none
 
       if (allocated(u))       deallocate(u)
       if (allocated(b))       deallocate(b)

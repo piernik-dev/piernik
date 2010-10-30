@@ -87,11 +87,12 @@ module viz
 !-----------------------------------------------------------------------
       end subroutine draw_me
 
-      subroutine palett(ttype, contra, bright)
 !-----------------------------------------------------------------------
 ! set a "palette" of colors in the range of color indices used by
 ! pgimag.
 !-----------------------------------------------------------------------
+   subroutine palett(ttype, contra, bright)
+      implicit none
       integer      :: ttype
       real(kind=4) :: contra, bright
 !
@@ -146,7 +147,7 @@ module viz
 !        -- aips
          call pgctab(al, ar, ag, ab, 20, contra, bright)
       endif
-      end subroutine palett
+   end subroutine palett
 
       subroutine setvp
          implicit none
@@ -169,6 +170,7 @@ module viz
       end subroutine setvp
 
       subroutine outlin(i1,i2,j1,j2,tr)
+      implicit none
       integer      :: i1,i2,j1,j2
       real(kind=4) :: tr(6)
 !-----------------------------------------------------------------------

@@ -35,6 +35,7 @@ module fluidboundaries_pub
 
    interface
       subroutine user_bnd
+         implicit none
       end subroutine user_bnd
    end interface
 

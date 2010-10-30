@@ -28,7 +28,9 @@
 #include "piernik.def"
 
 module fluidboundaries
-
+   implicit none
+   private
+   public :: bnd_u, all_fluid_boundaries
    contains
 
    subroutine bnd_u(dim)

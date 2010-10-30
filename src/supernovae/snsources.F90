@@ -146,7 +146,7 @@ module snsources
 #ifdef SHEAR
       use grid,   only: dy, nyd, nzd, y, js, je
       use shear,  only: delj, eps
-
+      implicit none
       integer :: jsn,jremap
       real :: dysn
 #endif /* SHEAR */

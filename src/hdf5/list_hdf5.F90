@@ -63,6 +63,7 @@ module list_hdf5
 
    abstract interface
       function func2(ind,sz,opti)
+         implicit none
          integer, dimension(6), intent(in)    :: ind
          integer, dimension(3), intent(in)    :: sz
          integer, dimension(5), intent(in)    :: opti

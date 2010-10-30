@@ -29,7 +29,9 @@ module mpiboundaries
 !>
 !! \brief (KK)
 !<
-
+   implicit none
+   private
+   public :: mpi_boundaries_prep
 contains
    subroutine mpi_boundaries_prep
       use arrays,     only: u
