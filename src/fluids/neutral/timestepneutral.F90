@@ -50,9 +50,11 @@
 !! The final %timestep is multiplied by the Courant number specified in parameters of each task.
 !<
 module timestepneutral
-
-   real :: dt_neu               !< final timestep for neutral fluid
-   real :: c_neu                !< maximum speed at which information travels in the neutral fluid
+   implicit none
+   private
+   public :: dt_neu, c_neu, timestep_neu
+   real   :: dt_neu               !< final timestep for neutral fluid
+   real   :: c_neu                !< maximum speed at which information travels in the neutral fluid
 
 contains
 

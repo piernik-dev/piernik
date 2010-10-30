@@ -33,9 +33,11 @@
 !!
 !<
 module timestepdust
-
-   real :: dt_dst                !< final timestep for dust
-   real :: c_dst                 !< maximum speed at which information travels in dust
+   implicit none
+   private
+   public :: dt_dst, c_dst, timestep_dst
+   real   :: dt_dst                !< final timestep for dust
+   real   :: c_dst                 !< maximum speed at which information travels in dust
 
 contains
 

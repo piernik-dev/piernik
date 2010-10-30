@@ -37,7 +37,7 @@
 !! \copydetails interactions::init_interactions
 !<
 module interactions
-
+   implicit none
    real, allocatable, dimension(:,:,:,:)  :: omx0        !< array to store x component of initial velocity
    real, allocatable, dimension(:,:,:,:)  :: omy0        !< array to store y component of initial velocity
    real, allocatable, dimension(:,:)      :: alfsup      !< xy-array of values between 0 and 1, 1 where boundary support is used

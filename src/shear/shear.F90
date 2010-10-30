@@ -34,10 +34,13 @@
 !! \copydetails shear::init_shear
 !<
 module shear
-  real    :: ts, dely, eps, omega, qshear, dts, ddly
-  integer :: delj
+   implicit none
+   private
+   public  :: init_shear, yshift, qshear, omega, eps, delj, dely, unshear_fft
+   real    :: ts, dely, eps, omega, qshear, dts, ddly
+   integer :: delj
 
-  contains
+contains
 
 !>
 !! \brief Routine to set parameter values from namelist SHEARING

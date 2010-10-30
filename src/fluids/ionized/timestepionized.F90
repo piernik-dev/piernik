@@ -50,9 +50,11 @@
 !! The final %timestep is multiplied by the Courant number specified in parameters of each task.
 !<
 module timestepionized
-
-   real :: dt_ion             !< final timestep for ionized fluids
-   real :: c_ion              !< maximum speed at which information travels in the ionized fluid
+   implicit none
+   private
+   public :: dt_ion, c_ion, timestep_ion
+   real   :: dt_ion             !< final timestep for ionized fluids
+   real   :: c_ion              !< maximum speed at which information travels in the ionized fluid
 
 contains
 

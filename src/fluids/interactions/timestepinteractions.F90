@@ -30,10 +30,12 @@
 !! \brief [DW] Module containing a routine to compute upper limit of %timestep due to fluids %interactions.
 !<
 module timestepinteractions
+   implicit none
+   private
+   public :: dt_interact, timestep_interactions
+   real   :: dt_interact                    !< value of the upper limit of integration %timestep due to fluids %interactions.
 
-   real :: dt_interact                    !< value of the upper limit of integration %timestep due to fluids %interactions.
-
- contains
+contains
 !>
 !! \brief Routine that computes upper limit of %timestep due to fluids %interactions.
 !! \warning works only with neutrals and dust case !!!!
@@ -68,6 +70,5 @@ module timestepinteractions
     dt_interact = cfl_interact*dt_interact_all
 
   end subroutine timestep_interactions
-
 !-------------------------------------------------------------------------------
 end module timestepinteractions
