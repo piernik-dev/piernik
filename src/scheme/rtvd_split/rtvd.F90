@@ -32,7 +32,9 @@
 !! The implementation was based on TVD split MHD code by Pen et al. (2003).
 !<
 module rtvd ! split orig
-
+   implicit none
+   private
+   public  :: tvdb, relaxing_tvd
    contains
 !/*
 !>

@@ -31,8 +31,13 @@
 !! \brief [DW] Module containing a subroutine that arranges %hydrostatic equilibrium in the vertical (z) direction
 !<
 module hydrostatic
+   implicit none
+   private
 #ifdef GRAV
-  contains
+   public :: hydrostatic_zeq
+#endif
+contains
+#ifdef GRAV
 !>
 !! \brief Routine that arranges %hydrostatic equilibrium in the vertical (z) direction
 !! \param iia integer, number of a column in the x direction
@@ -41,7 +46,7 @@ module hydrostatic
 !! \param csim2 real, square value of sound speed
 !! \param dprof array of reals, computed density distribution in vertical direction returned by the routine
 !<
-    subroutine hydrostatic_zeq(iia,jja, d0, csim2, dprof)
+   subroutine hydrostatic_zeq(iia,jja, d0, csim2, dprof)
 
       use arrays,          only: gp
       use constants,       only: small
@@ -140,6 +145,5 @@ module hydrostatic
 
 
       end subroutine hydrostatic_zeq
-
 #endif /* GRAV */
 end module hydrostatic

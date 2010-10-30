@@ -37,7 +37,7 @@
 !! \copydetails gravity::init_grav
 !<
 module gravity
-
+   implicit none
    character(LEN=9) :: gp_status    !< variable set as 'undefined' in grav_pot_3d when grav_accel is supposed to use
    real    :: g_z                   !< z-component used by GRAV_UNIFORM type of %gravity
    real    :: g_y                   !< y-component of GRAV_UNIFORM constant <b>(currently not used)</b>
@@ -61,6 +61,7 @@ module gravity
 
    interface
       subroutine user_grav_pot_3d
+         implicit none
       end subroutine user_grav_pot_3d
    end interface
 

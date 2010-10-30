@@ -28,6 +28,9 @@
 #include "piernik.def"
 
 module advects
+   implicit none
+   private
+   public  :: advectby_x, advectbz_x, advectbz_y, advectbx_y, advectbx_z, advectby_z
   contains
 
   subroutine advectby_x

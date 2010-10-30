@@ -27,8 +27,13 @@
 !
 #include "piernik.def"
 module sweeps     ! split sweeps
+   implicit none
+   private
+   public  :: sweepx, sweepy, sweepz
+#if defined SHEAR && defined FLUID_INTERACTIONS
+   public  :: source_terms_y
+#endif /* SHEAR && FLUID_INTERACTIONS */
    contains
-
 #if defined SHEAR && defined FLUID_INTERACTIONS
    subroutine source_terms_y
       use arrays,          only: u
@@ -83,7 +88,6 @@ module sweeps     ! split sweeps
 
   end subroutine source_terms_y
 #endif /* SHEAR && FLUID_INTERACTIONS */
-
   subroutine sweepx
 
     use arrays,          only: u, b
@@ -130,9 +134,7 @@ module sweeps     ! split sweeps
 
 
   end subroutine sweepx
-
 !------------------------------------------------------------------------------------------
-
   subroutine sweepy
     use arrays,          only: u, b
     use fluidboundaries, only: all_fluid_boundaries
@@ -180,9 +182,7 @@ module sweeps     ! split sweeps
     call all_fluid_boundaries
 
   end subroutine sweepy
-
 !------------------------------------------------------------------------------------------
-
   subroutine sweepz
     use arrays,          only: u, b
     use fluidboundaries, only: all_fluid_boundaries
