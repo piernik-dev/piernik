@@ -5,3 +5,4 @@
 ! Do not try to fix it to make it a valid Fortran source file!
 !
 module version
+   implicit none
