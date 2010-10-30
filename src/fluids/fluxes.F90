@@ -45,23 +45,11 @@
 !! \warning This module should not be changed by user.
 !<
 module fluxes
+   implicit none
+   private
+   public  :: all_fluxes, flimiter
 
-#ifdef IONIZED
-  use fluxionized,    only: flux_ion
-#endif /* IONIZED */
-#ifdef NEUTRAL
-  use fluxneutral,    only: flux_neu
-#endif /* NEUTRAL */
-#ifdef DUST
-  use fluxdust,       only: flux_dst
-#endif /* DUST */
-#ifdef COSM_RAYS
-  use fluxcosmicrays, only: flux_crs
-  use initcosmicrays, only: iarr_crs
-#endif /* COSM_RAYS */
-
-contains
-
+   contains
 !>
 !! \brief Subroutine which changes flux and cfr from mhdflux regarding specified fluids.
 !! \param flux flux
@@ -70,79 +58,85 @@ contains
 !! \param bb magnetic field x,y,z-components table
 !! \param n number of cells in the current sweep
 !<
-subroutine all_fluxes(n, flux, cfr, uu, bb, cs_iso2)
+   subroutine all_fluxes(n, flux, cfr, uu, bb, cs_iso2)
+#ifdef IONIZED
+      use fluxionized,    only: flux_ion
+#endif /* IONIZED */
+#ifdef NEUTRAL
+      use fluxneutral,    only: flux_neu
+#endif /* NEUTRAL */
+#ifdef DUST
+      use fluxdust,       only: flux_dst
+#endif /* DUST */
+#ifdef COSM_RAYS
+      use fluxcosmicrays, only: flux_crs
+      use initcosmicrays, only: iarr_crs
+#endif /* COSM_RAYS */
+      use fluidindex, only: nvar, nmag
 
-    use fluidindex, only: nvar, nmag
+      implicit none
 
-    implicit none
+      integer,                      intent(in)  :: n
+      real, dimension(nvar%all,n),  intent(out) :: flux, cfr, uu
+      real, dimension(nmag,n),      intent(in)  :: bb
+      real, dimension(n), optional, intent(in)  :: cs_iso2
+      real, dimension(n)              :: vion
+#ifdef IONIZED
+      real, dimension(nvar%ion%all,n) :: fluxion,cfrion,uuion
+#else /* !IONIZED */
+      integer :: dummy
+#endif /* !IONIZED */
+#ifdef NEUTRAL
+      real, dimension(nvar%neu%all,n) :: fluxneu,cfrneu,uuneu
+#endif /* NEUTRAL */
+#ifdef DUST
+      real, dimension(nvar%dst%all,n) :: fluxdst,cfrdst,uudst
+#endif /* DUST */
+#ifdef COSM_RAYS
+      real, dimension(nvar%crs%all,n) :: fluxcrs,uucrs
+#endif /* COSM_RAYS */
 
-    integer,                      intent(in)  :: n
-    real, dimension(nvar%all,n),  intent(out) :: flux, cfr, uu
-    real, dimension(nmag,n),      intent(in)  :: bb
-    real, dimension(n), optional, intent(in)  :: cs_iso2
-
-    real, dimension(n)              :: vion
+      vion(:) = 0.0
 
 #ifdef IONIZED
-    real, dimension(nvar%ion%all,n) :: fluxion,cfrion,uuion
+      uuion(:,:)=uu(nvar%ion%iarr,:)
+
+      call flux_ion(fluxion,cfrion,vion,uuion,bb,n,cs_iso2)
+
+      flux(nvar%ion%iarr,:) = fluxion
+      cfr(nvar%ion%iarr,:)  = cfrion
+      uu(nvar%ion%iarr,:)   = uuion
 #else /* !IONIZED */
-    integer :: dummy
+      if (.false.) dummy = size(bb)*size(cs_iso2) ! suppress compiler warnings on unused arguments
 #endif /* !IONIZED */
 
 #ifdef NEUTRAL
-    real, dimension(nvar%neu%all,n) :: fluxneu,cfrneu,uuneu
+      uuneu(:,:)=uu(nvar%neu%iarr,:)
+
+      call flux_neu(fluxneu,cfrneu,uuneu,n)
+
+      flux(nvar%neu%iarr,:) = fluxneu
+      cfr(nvar%neu%iarr,:)  = cfrneu
+      uu(nvar%neu%iarr,:)   = uuneu
 #endif /* NEUTRAL */
 
 #ifdef DUST
-    real, dimension(nvar%dst%all,n) :: fluxdst,cfrdst,uudst
+      uudst=uu(nvar%dst%iarr,:)
+      call flux_dst(fluxdst,cfrdst,uudst,n)
+      flux(nvar%dst%iarr,:) = fluxdst
+      cfr(nvar%dst%iarr,:)  = cfrdst
+      uu(nvar%dst%iarr,:)   = uudst
 #endif /* DUST */
 
 #ifdef COSM_RAYS
-    real, dimension(nvar%crs%all,n) :: fluxcrs,uucrs
+      uucrs=uu(iarr_crs,:)
+      call flux_crs(fluxcrs,vion,uucrs,n)
+      flux(iarr_crs,:) = fluxcrs
+      cfr(iarr_crs,:)  = spread(cfrion(1,:),1,nvar%crs%all)
+      uu(iarr_crs,:)   = uucrs
 #endif /* COSM_RAYS */
 
-   vion(:) = 0.0
-
-#ifdef IONIZED
-   uuion(:,:)=uu(nvar%ion%iarr,:)
-
-   call flux_ion(fluxion,cfrion,vion,uuion,bb,n,cs_iso2)
-
-   flux(nvar%ion%iarr,:) = fluxion
-   cfr(nvar%ion%iarr,:)  = cfrion
-   uu(nvar%ion%iarr,:)   = uuion
-#else /* !IONIZED */
-   if (.false.) dummy = size(bb)*size(cs_iso2) ! suppress compiler warnings on unused arguments
-#endif /* !IONIZED */
-
-#ifdef NEUTRAL
-   uuneu(:,:)=uu(nvar%neu%iarr,:)
-
-   call flux_neu(fluxneu,cfrneu,uuneu,n)
-
-   flux(nvar%neu%iarr,:) = fluxneu
-   cfr(nvar%neu%iarr,:)  = cfrneu
-   uu(nvar%neu%iarr,:)   = uuneu
-#endif /* NEUTRAL */
-
-#ifdef DUST
-   uudst=uu(nvar%dst%iarr,:)
-   call flux_dst(fluxdst,cfrdst,uudst,n)
-   flux(nvar%dst%iarr,:) = fluxdst
-   cfr(nvar%dst%iarr,:)  = cfrdst
-   uu(nvar%dst%iarr,:)   = uudst
-#endif /* DUST */
-
-#ifdef COSM_RAYS
-   uucrs=uu(iarr_crs,:)
-   call flux_crs(fluxcrs,vion,uucrs,n)
-   flux(iarr_crs,:) = fluxcrs
-   cfr(iarr_crs,:)  = spread(cfrion(1,:),1,nvar%crs%all)
-   uu(iarr_crs,:)   = uucrs
-#endif /* COSM_RAYS */
-
-
-end subroutine all_fluxes
+   end subroutine all_fluxes
 
 !==========================================================================================
 !/*
@@ -183,35 +177,35 @@ end subroutine all_fluxes
 !! are %fluxes of left- and right-moving waves interpolated to cell boundaries.
 !<
 !*/
-  subroutine flimiter(f,a,b,m,n)
-    implicit none
-    integer, intent(in)  :: m  !< number of conservative variables
-    integer, intent(in)  :: n  !< array size
-    real, dimension(m,n) :: f  !< second order flux correction for left- or right- moving waves
-    real, dimension(m,n) :: a  !< second order correction of left- or right- moving waves flux on the left cell boundary
-    real, dimension(m,n) :: b  !< second order correction of left- or right- moving waves flux on the right cell boundary
-    real, dimension(m,n) :: c  !< a*b
+   subroutine flimiter(f,a,b,m,n)
+      implicit none
+      integer, intent(in)  :: m  !< number of conservative variables
+      integer, intent(in)  :: n  !< array size
+      real, dimension(m,n) :: f  !< second order flux correction for left- or right- moving waves
+      real, dimension(m,n) :: a  !< second order correction of left- or right- moving waves flux on the left cell boundary
+      real, dimension(m,n) :: b  !< second order correction of left- or right- moving waves flux on the right cell boundary
+      real, dimension(m,n) :: c  !< a*b
 #ifdef VANLEER
       c = a*b
       where (c .gt. 0.0)
-        f = f+2.0*c/(a+b)
+         f = f+2.0*c/(a+b)
       endwhere
 #endif /* VANLEER */
 #ifdef MONCEN
-        f = f+(sign(1.0,a)+sign(1.0,b))*min(2.*abs(a),2.*abs(b),0.5*abs(a+b))*0.5
+         f = f+(sign(1.0,a)+sign(1.0,b))*min(2.*abs(a),2.*abs(b),0.5*abs(a+b))*0.5
 #endif /* MONCEN */
 #ifdef MINMOD
-        f = f+(sign(1.0,a)+sign(1.0,b))*min(abs(a),abs(b))*0.5
+         f = f+(sign(1.0,a)+sign(1.0,b))*min(abs(a),abs(b))*0.5
 #endif /* MINMOD */
 #ifdef SUPERBEE
       where (abs(a) .gt. abs(b))
-        f = f+(sign(1.0,a)+sign(1.0,b))*min(abs(a), abs(2.0*b))*0.5
+         f = f+(sign(1.0,a)+sign(1.0,b))*min(abs(a), abs(2.0*b))*0.5
       elsewhere
-        f = f+(sign(1.0,a)+sign(1.0,b))*min(abs(2.0*a), abs(b))*0.5
+         f = f+(sign(1.0,a)+sign(1.0,b))*min(abs(2.0*a), abs(b))*0.5
       endwhere
 #endif /* SUPERBEE */
 
-    return
-  end subroutine flimiter
+      return
+   end subroutine flimiter
 
 end module fluxes
