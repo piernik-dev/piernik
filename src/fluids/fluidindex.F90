@@ -96,7 +96,9 @@ contains
       type(component_fluid), intent(inout) :: fl
       logical, intent(in)                  :: have_ener
 
+#ifdef ISO
       logical :: fnord
+#endif /* ISO */
 
       iarr_all_swpx(fl%beg:fl%end) = fl%iarr_swpx
       iarr_all_swpy(fl%beg:fl%end) = fl%iarr_swpy
