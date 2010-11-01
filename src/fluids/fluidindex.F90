@@ -87,11 +87,16 @@ module fluidindex
 
 contains
 
-   subroutine set_fluidindex_arrays(fl,have_ener)
+   subroutine set_fluidindex_arrays(fl, have_ener)
+
       use types, only: component_fluid
+
       implicit none
+
       type(component_fluid), intent(inout) :: fl
       logical, intent(in)                  :: have_ener
+
+      logical :: fnord
 
       iarr_all_swpx(fl%beg:fl%end) = fl%iarr_swpx
       iarr_all_swpy(fl%beg:fl%end) = fl%iarr_swpy
@@ -101,14 +106,20 @@ contains
          i_sg = i_sg + 1
          iarr_all_sg(i_sg) = fl%idn
       endif
-      iarr_all_dn(fl%pos)      = fl%idn
-      iarr_all_mx(fl%pos)      = fl%imx
-      iarr_all_my(fl%pos)      = fl%imy
-      iarr_all_mz(fl%pos)      = fl%imz
-#ifndef ISO
-      if (have_ener) iarr_all_en(fl%pos)      = fl%ien
-#endif /* !ISO */
+
+      iarr_all_dn(fl%pos) = fl%idn
+      iarr_all_mx(fl%pos) = fl%imx
+      iarr_all_my(fl%pos) = fl%imy
+      iarr_all_mz(fl%pos) = fl%imz
+
+#ifdef ISO
+      if (.false.) fnord = have_ener ! suppress compiler warning on unused argument
+#else
+      if (have_ener) iarr_all_en(fl%pos) = fl%ien
+#endif /* ISO */
+
    end subroutine set_fluidindex_arrays
+
 !>
 !! \brief Subroutine fluid_index constructing all multi-fluid indexes used in other parts
 !! of PIERNIK code
