@@ -35,8 +35,10 @@
 !! \warning Procedures \a dipole and \a rn_angles were moved to sn_sources.F90
 !<
 module func
-
    implicit none
+   private
+   public :: pshift, mshift, fix_string
+   integer, parameter :: one = 1
    contains
 
 !>
@@ -118,8 +120,8 @@ module func
       character(len=*), intent(in)  :: str
       character(len=len(str)) :: outstr
 
-      integer          :: i
-      character(len=1) :: c
+      integer            :: i
+      character(len=one) :: c
 
       do i=1, len(str)
          outstr(i:i) = " "
@@ -139,7 +141,7 @@ module func
 
    logical function is_lowercase(c)
       implicit none
-      character(len=1), intent(in) :: c
+      character(len=one),  intent(in) :: c
 
       is_lowercase = .false.
 
@@ -148,7 +150,7 @@ module func
 
    logical function is_uppercase(c)
       implicit none
-      character(len=1), intent(in) :: c
+      character(len=one), intent(in) :: c
 
       is_uppercase = .false.
 
@@ -157,7 +159,7 @@ module func
 
    logical function is_digit(c)
       implicit none
-      character(len=1), intent(in) :: c
+      character(len=one), intent(in) :: c
 
       is_digit = .false.
 
