@@ -112,9 +112,9 @@ module initproblem
    subroutine init_prob
       use arrays,         only: u, b, dprof
       use fluidindex,     only: ibx,iby,ibz
-      use grid,           only: x, y, z, nx, ny, nz, nxd, nyd, xmin, xmax, ymin, ymax, lx, ly
+      use grid,           only: x, y, z, nx, ny, nz
       use hydrostatic,    only: hydrostatic_zeq
-      use initcosmicrays, only: gamma_crs, iarr_crs, cr_eff
+      use initcosmicrays, only: gamma_crs, iarr_crs
       use initfluids,     only: cs_iso2
       use initionized,    only: idni, imxi, imyi, imzi
       use mpisetup,       only: smalld
