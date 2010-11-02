@@ -285,6 +285,13 @@ open(MAKEFILE, "> Makefile-prep");
 # Source listing
 #
 #print MAKEFILE @makein;
+print MAKEFILE "RM ?= /bin/rm\n";
+print MAKEFILE "MV ?= /bin/mv\n";
+print MAKEFILE "ifdef CHECK_MAGIC\n";
+print MAKEFILE "\tRM  = /bin/true\n";
+print MAKEFILE "\tMV  = /bin/true\n";
+print MAKEFILE "\tF90 = /bin/true\n";
+print MAKEFILE "endif\n";
 print MAKEFILE "SRCS =\t";
 @srcs = <*.c *.F90>;
 &PrintWords(8, 0, @srcs);
@@ -346,7 +353,7 @@ print MAKEFILE "\t\techo -n \"WARNING: unused object files: \";\\\n";
 print MAKEFILE "\t\tjoin -v 2 \$AO1 \$AO2 | tr '\\n' ' ';\\\n";
 print MAKEFILE "\t\techo;\\\n";
 print MAKEFILE "\tfi;\\\n";
-print MAKEFILE "\trm \$AO1 \$AO2\n\n";
+print MAKEFILE "\t\$(RM) \$AO1 \$AO2\n\n";
 #
 # make date
 #
@@ -370,17 +377,17 @@ print MAKEFILE "\tfi;\n\n";
 # make clean
 #
 print MAKEFILE "clean:\n";
-print MAKEFILE "\trm -f \$(PROG) \$(OBJS) *.mod\n\n";
+print MAKEFILE "\t\$(RM) \$(PROG) \$(OBJS) *.mod\n\n";
 #
 # make clean-run
 #
 print MAKEFILE "clean-run:\n";
-print MAKEFILE "\trm -f *.bck *~ *.h5 *.res *.log *.tsl *.out *.tmp core*\n\n";
+print MAKEFILE "\t\$(RM) *.bck *~ *.h5 *.res *.log *.tsl *.out *.tmp core*\n\n";
 #
 # make clean-all
 #
 print MAKEFILE "clean-all:\n";
-print MAKEFILE "\trm -f \$(PROG) \$(OBJS) *.mod *.bck *~ *.h5 *.res *.log *.tsl *.out *.tmp core* *.f *.dbg \n\n";
+print MAKEFILE "\t\$(RM) \$(PROG) \$(OBJS) *.mod *.bck *~ *.h5 *.res *.log *.tsl *.out *.tmp core* *.f *.dbg \n\n";
 #
 # Make .F90 a valid suffix
 #
@@ -392,7 +399,7 @@ print MAKEFILE ".F90.o:\n";
 print MAKEFILE "\t\$(ECHO_FC)\n";
 print MAKEFILE "ifdef USE_GNUCPP\n";
 print MAKEFILE "\t\@\$(PRECOMP) \$(CPPFLAGS) \$< \$(patsubst %.F90,%\_.f90,\$<)\n";
-print MAKEFILE "\t\$(F90) \$(F90FLAGS) -c \$(patsubst %.F90,%\_.f90,\$<) && ( rm \$(patsubst %.F90,%\_.f90,\$<); mv \$(patsubst %.F90,%\_.o,\$<) \$(patsubst %.F90,%.o,\$<) )\n";
+print MAKEFILE "\t\$(F90) \$(F90FLAGS) -c \$(patsubst %.F90,%\_.f90,\$<) && ( \$(RM) \$(patsubst %.F90,%\_.f90,\$<); \$(MV) \$(patsubst %.F90,%\_.o,\$<) \$(patsubst %.F90,%.o,\$<) )\n";
 print MAKEFILE "else\n";
 print MAKEFILE "\t\$(F90) \$(CPPFLAGS) \$(F90FLAGS) -c \$<\n";
 print MAKEFILE "endif\n\n";
@@ -429,6 +436,11 @@ if ( (! -r $objdir) || (! -r "$objdir/".$param_file) || (! -r "$objdir/Makefile"
 
 if ($moo{nocompile}) {
   print "Compilation skipped on request. You may want to run 'make -C $objdir' to compile the Piernik code.\n\n";
+  @cir = grep(/Circular/ig, `make -C $objdir CHECK_MAGIC=yes piernik 2>&1`);
+  if( @cir ) {
+     print @cir;
+     exit $FAILED
+  }
   exit $OK;
 }
 
