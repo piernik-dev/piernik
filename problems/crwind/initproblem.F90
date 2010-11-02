@@ -41,18 +41,13 @@ module initproblem
    private
    public :: read_problem_par, init_prob
 
-   real :: d0, bxn,byn,bzn, h_sn, f_sn_kpc2, amp_cr, beta_cr, r_sn
-   real :: ethu, f_sn, amp_ecr_sn, alpha, x0, y0, z0
+   real :: d0, bxn, byn, bzn, beta_cr, amp_cr
+   real :: alpha, x0, y0, z0
 
-   namelist /PROBLEM_CONTROL/  problem_name, run_id, &
-                               d0, &
-                               bxn,byn,bzn, &
-                               x0, y0, z0, alpha, &
-                               r_sn, h_sn, f_sn_kpc2, amp_cr, beta_cr
+   namelist /PROBLEM_CONTROL/  problem_name, run_id, d0, bxn, byn, bzn, x0, y0, z0, alpha, amp_cr, beta_cr
    contains
 
 !-----------------------------------------------------------------------------
-
    subroutine read_problem_par
       use dataio_pub,    only: ierrh, par_file, namelist_errh, compare_namelist      ! QA_WARN required for diff_nml
       use mpisetup,      only: cbuff_len, cbuff, rbuff, buffer_dim, comm, ierr, proc, &
@@ -87,9 +82,6 @@ module initproblem
          rbuff(7)  = z0
          rbuff(8)  = amp_cr
          rbuff(9)  = beta_cr
-         rbuff(10) = r_sn
-         rbuff(11) = h_sn
-         rbuff(12) = f_sn_kpc2
          rbuff(13) = alpha
 
       endif
@@ -111,17 +103,12 @@ module initproblem
          z0           = rbuff(7)
          amp_cr       = rbuff(8)
          beta_cr      = rbuff(9)
-         r_sn         = rbuff(10)
-         h_sn         = rbuff(11)
-         f_sn_kpc2    = rbuff(12)
          alpha        = rbuff(13)
 
       endif
 
    end subroutine read_problem_par
-
 !-----------------------------------------------------------------------------
-
    subroutine init_prob
       use arrays,         only: u, b, dprof
       use fluidindex,     only: ibx,iby,ibz
@@ -131,6 +118,7 @@ module initproblem
       use initfluids,     only: cs_iso2
       use initionized,    only: idni, imxi, imyi, imzi
       use mpisetup,       only: smalld
+      use snsources,      only: r_sn
 #ifdef SHEAR
       use shear,          only: qshear, omega
 #endif /* SHEAR */
@@ -139,30 +127,6 @@ module initproblem
 
       integer :: i,j,k
       real    :: b0, csim2
-
-      ethu = 7.0**2/(5.0/3.0-1.0) * 1.0    ! thermal energy unit=0.76eV/cm**3
-                                           ! for c_si= 7km/s, n=1/cm^3
-                                           ! gamma=5/3
-
-      amp_ecr_sn = 4.96e6*cr_eff/r_sn**3   ! cosmic ray explosion amplitude
-                                           ! in units:
-                                           ! e_0 = 1/(5/3-1)*rho_0*c_s0**2
-                                           ! rho_0=1.67e-24g/cm**3,
-                                           ! c_s0 = 7km/s
-
-      f_sn = f_sn_kpc2                     ! SN freq
-
-      if (nxd /=1) then
-         f_sn = f_sn * (xmax-xmin)/1000.0
-      else
-         f_sn = f_sn * 2.0*r_sn/1000.0
-      endif
-
-      if (nyd /=1) then
-         f_sn = f_sn * (ymax-ymin)/1000.0
-      else
-         f_sn = f_sn * 2.0*r_sn/1000.0
-      endif
 
 !   Secondary parameters
 
