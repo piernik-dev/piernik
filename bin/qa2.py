@@ -104,7 +104,7 @@ def parse_f90file(lines,fname,store):
    test = np.array(lines)
    mod = filter(module_body.match, test)
    if (len(mod) > 1):
-      obj = (mod[0].strip().split(" ")[1],  line_num(test, mod[0]), line_num(test,mod[1]), 'mod')
+      obj = (mod[0].strip().split(" ")[1],  line_num(test, mod[0]), line_num(test,mod[1]), mod[0].strip().split(" ")[0][0:3])
       subs_array = np.append(subs_array, np.array([obj],dtype=typ1))
    elif (len(mod) == 1):
       obj = (mod[0].strip().split(" ")[1],  line_num(test, mod[0]), len(lines), 'mod')
