@@ -45,11 +45,11 @@ module crcomposition
 
    integer, parameter :: icr_H1   = 1
    integer, parameter :: icr_C12  = 2
-   integer, parameter :: icr_N14  = 3
-   integer, parameter :: icr_O16  = 4
-   integer, parameter :: icr_Li7  = 5         !< from decay of Be7 with tau of 0.3 years
-   integer, parameter :: icr_Be9  = 6
-   integer, parameter :: icr_Be10 = 7    !!! BEWARE: ncrn should be set up gerater than maximum isotope numeber,
+   integer, parameter :: icr_Be9  = 3
+   integer, parameter :: icr_Be10 = 4
+   integer, parameter :: icr_N14  = 5         !< from decay of Be7 with tau of 0.3 years
+   integer, parameter :: icr_O16  = 6
+   integer, parameter :: icr_Li7  = 7    !!! BEWARE: ncrn should be set up gerater than maximum isotope numeber,
                                   !!! which should be smaller than ncr_max (<10 currently)
 
 

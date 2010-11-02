@@ -59,13 +59,16 @@ module sourcecosmicrays
 ! locals
     real, dimension(nvar%all,n)     :: uu
     real, dimension(nvar%crn%all,n) :: decrn
-    real, dimension(n)              :: dgas
+    real, allocatable               :: dgas(:)
 
     real, parameter  :: gamma_lor = 10.
     real, parameter  :: speed_of_light = 3d10*1d6*365.*24.*60.*60. !cm/Myr !!! BEWARE: this line breaks unit consistency, move it to constants.F90 and use scaling
     real, parameter  :: ndim = 2.
 
+    allocate(dgas(n))
+
     dgas(:) = 0.0
+
 #ifdef IONIZED
     dgas(:) = dgas(:) + uu(nvar%ion%idn,:)
 #endif /* IONIZED */
@@ -75,27 +78,29 @@ module sourcecosmicrays
 
     decrn(:,:) = 0.0
 
-
-    decrn(icr_C12,:)  = -1./ndim*dgas(:)*speed_of_light*sigma_C12_Li7*uu(nvar%crn%beg-1+icr_C12,:) &
-                        -1./ndim*dgas(:)*speed_of_light*sigma_C12_Be9*uu(nvar%crn%beg-1+icr_C12,:) &
+    decrn(icr_C12,:)  = -1./ndim*dgas(:)*speed_of_light*sigma_C12_Be9*uu(nvar%crn%beg-1+icr_C12,:) &
                         -1./ndim*dgas(:)*speed_of_light*sigma_C12_Be10*uu(nvar%crn%beg-1+icr_C12,:)
 
-    decrn(icr_N14,:)  = -1./ndim*dgas(:)*speed_of_light*sigma_N14_Li7*uu(nvar%crn%beg-1+icr_N14,:)
-
-    decrn(icr_O16,:)  = -1./ndim*dgas(:)*speed_of_light*sigma_O16_Li7*uu(nvar%crn%beg-1+icr_O16,:) &
-                        -1./ndim*dgas(:)*speed_of_light*sigma_O16_Be9*uu(nvar%crn%beg-1+icr_O16,:) &
-                        -1./ndim*dgas(:)*speed_of_light*sigma_O16_Be10*uu(nvar%crn%beg-1+icr_O16,:)
-
-    decrn(icr_Li7,:)  =( 1./ndim*dgas(:)*speed_of_light*sigma_C12_Li7*uu(nvar%crn%beg-1+icr_C12,:) &
-                        +1./ndim*dgas(:)*speed_of_light*sigma_N14_Li7*uu(nvar%crn%beg-1+icr_N14,:) &
-                        +1./ndim*dgas(:)*speed_of_light*sigma_O16_Li7*uu(nvar%crn%beg-1+icr_O16,:) )
-
-    decrn(icr_Be9,:)  =(  1./ndim*dgas(:)*speed_of_light*sigma_C12_Be9*uu(nvar%crn%beg-1+icr_C12,:) &
-                         +1./ndim*dgas(:)*speed_of_light*sigma_O16_Be9*uu(nvar%crn%beg-1+icr_O16,:)  )
+    decrn(icr_Be9,:)  =(  1./ndim*dgas(:)*speed_of_light*sigma_C12_Be9*uu(nvar%crn%beg-1+icr_C12,:) )!&
+!                         +1./ndim*dgas(:)*speed_of_light*sigma_O16_Be9*uu(nvar%crn%beg-1+icr_O16,:)  )
 
     decrn(icr_Be10,:) =(  1./ndim*dgas(:)*speed_of_light*sigma_C12_Be10*uu(nvar%crn%beg-1+icr_C12,:) &
-                         +1./ndim*dgas(:)*speed_of_light*sigma_O16_Be10*uu(nvar%crn%beg-1+icr_O16,:) &
+!                         +1./ndim*dgas(:)*speed_of_light*sigma_O16_Be10*uu(nvar%crn%beg-1+icr_O16,:) &
                          -1./ndim*uu(nvar%crn%beg-1+icr_Be10,:)/gamma_lor/tau_Be10 )
+
+!                        -1./ndim*dgas(:)*speed_of_light*sigma_C12_Li7*uu(nvar%crn%beg-1+icr_C12,:)
+!    decrn(icr_Li7,:)  =( 1./ndim*dgas(:)*speed_of_light*sigma_C12_Li7*uu(nvar%crn%beg-1+icr_C12,:) !&
+!                        +1./ndim*dgas(:)*speed_of_light*sigma_N14_Li7*uu(nvar%crn%beg-1+icr_N14,:) &
+!                        +1./ndim*dgas(:)*speed_of_light*sigma_O16_Li7*uu(nvar%crn%beg-1+icr_O16,:) )
+
+
+!    decrn(icr_N14,:)  = -1./ndim*dgas(:)*speed_of_light*sigma_N14_Li7*uu(nvar%crn%beg-1+icr_N14,:)
+
+!    decrn(icr_O16,:)  = -1./ndim*dgas(:)*speed_of_light*sigma_O16_Li7*uu(nvar%crn%beg-1+icr_O16,:) &
+!                        -1./ndim*dgas(:)*speed_of_light*sigma_O16_Be9*uu(nvar%crn%beg-1+icr_O16,:) &
+!                        -1./ndim*dgas(:)*speed_of_light*sigma_O16_Be10*uu(nvar%crn%beg-1+icr_O16,:)
+
+
 
   end subroutine src_crn
 
