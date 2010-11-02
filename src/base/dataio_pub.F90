@@ -38,6 +38,7 @@ module dataio_pub
    include 'mpif.h'
 
    ! Buffer lengths for global use
+   integer, parameter :: planelen = 2           !< length of planes names e.g. "xy","yz","rp" etc.
    integer, parameter :: varlen = 4             !< length of state variable names in hdf files
    integer, parameter :: fplen = 24             !< length of buffer for printed FP or integer number
    integer, parameter :: hnlen = 32             !< hostname length limit

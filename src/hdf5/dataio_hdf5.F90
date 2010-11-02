@@ -95,6 +95,7 @@ module dataio_hdf5
       use fluidindex,    only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
       use grid,          only: nx, ny, nz, nxd, nyd, nzd, nb
       use list_hdf5,     only: additional_attrs, problem_write_restart, problem_read_restart
+      use dataio_pub,    only: varlen
 #ifdef COSM_RAYS
       use fluidindex,    only: iarr_all_crs
       use dataio_pub,    only: warn, msg
@@ -102,7 +103,7 @@ module dataio_hdf5
 
       implicit none
 
-      character(len=4), dimension(:), intent(in) :: vars  !< quantities to be plotted, see dataio::vars
+      character(len=varlen), dimension(:), intent(in) :: vars  !< quantities to be plotted, see dataio::vars
       integer, intent(in) :: tix     !< local copy of dataio::ix
       integer, intent(in) :: tiy     !< local copy of dataio::iy
       integer, intent(in) :: tiz     !< local copy of dataio::iz
@@ -111,7 +112,7 @@ module dataio_hdf5
       integer :: nvars, i, j
 #if defined COSM_RAYS && !defined NEW_HDF5
       integer :: k
-      character(len=4) :: aux
+      character(len=varlen) :: aux
 #endif /* COSM_RAYS && !NEW_HDF5 */
 
       ix = tix; iy = tiy; iz = tiz; dt_plt = tdt_plt
@@ -293,7 +294,7 @@ module dataio_hdf5
 !<
    subroutine common_plt_hdf5(var,ij,xn,tab,ierrh)
       use arrays,        only: u, b
-      use dataio_pub,    only: varlen
+      use dataio_pub,    only: varlen, planelen
       use grid,          only: nb, nyb, nzb, nxb
 #ifdef GRAV
       use arrays,        only: gpot
@@ -304,13 +305,13 @@ module dataio_hdf5
 #endif /* COSM_RAYS */
 
       implicit none
-      character(LEN=varlen):: var !< quantity to be plotted
-      character(LEN=2)     :: ij  !< plane of plot
-      integer              :: xn  !< no. of cell at which we are slicing the local block
-      integer              :: ierrh !< error handling
-      real, dimension(:,:) :: tab !< array containing given quantity
+      character(LEN=varlen)   :: var !< quantity to be plotted
+      character(LEN=planelen) :: ij  !< plane of plot
+      integer                 :: xn  !< no. of cell at which we are slicing the local block
+      integer                 :: ierrh !< error handling
+      real, dimension(:,:)    :: tab !< array containing given quantity
 #ifdef COSM_RAYS
-      integer              :: i
+      integer                 :: i
 #endif /* COSM_RAYS */
 
       ierrh = 0
@@ -491,7 +492,6 @@ module dataio_hdf5
       use arrays,        only: u, b
       use dataio_pub,    only: varlen
       use fluidindex,    only: nvar, ibx, iby, ibz
-      use grid,          only: nb, nx, ny, nz
 #ifdef GRAV
       use arrays,        only: gpot
 #ifdef MULTIGRID
@@ -505,7 +505,8 @@ module dataio_hdf5
       integer, intent(out)              :: ierrh
 #ifdef COSM_RAYS
       integer :: i
-      character(len=3) :: aux
+      integer, parameter    :: auxlen = varlen - 1
+      character(len=auxlen) :: aux
 #endif /* COSM_RAYS */
 
       ierrh = 0
@@ -661,7 +662,7 @@ module dataio_hdf5
 
    subroutine write_plot_hdf5(var,plane,nimg)
       use arrays,        only: u
-      use dataio_pub,    only: vizit, fmin, fmax, cwdlen, log_file, msg, varlen, die, warn, user_plt_hdf5
+      use dataio_pub,    only: vizit, fmin, fmax, cwdlen, log_file, msg, varlen, die, warn, user_plt_hdf5, planelen
       use grid,          only: nxb, nyb, nzb, nxd, nyd, nzd, nb
       use hdf5,          only: HID_T, HSIZE_T, SIZE_T, H5F_ACC_RDWR_F, h5fopen_f, h5gopen_f, h5gclose_f, h5fclose_f
       use h5lt,          only: h5ltmake_dataset_double_f, h5ltset_attribute_double_f
@@ -672,7 +673,7 @@ module dataio_hdf5
 
       implicit none
 
-      character(LEN=2), intent(in)        :: plane
+      character(LEN=planelen), intent(in) :: plane
       character(LEN=varlen), intent(in)   :: var                           !> not yet implemented
       integer, intent(in)                 :: nimg
       logical, dimension(3)               :: remain
@@ -683,7 +684,8 @@ module dataio_hdf5
       real                                :: imax, imin, di
       integer                             :: ierrh, i, j
       integer                             :: comm2d, lp, ls, xn, error
-      character(LEN=3)                    :: pij
+      integer, parameter                  :: suffixed_planelen = planelen + 1  !< plane name + suffix e.g "xy_"
+      character(LEN=suffixed_planelen)    :: pij
       character(LEN=cwdlen)               :: fname
       integer, parameter                  :: vdn_len = 12
       character(LEN=vdn_len)              :: vdname
@@ -1124,11 +1126,10 @@ module dataio_hdf5
    subroutine write_3darr_to_restart(tab,file_id,dname,nx,ny,nz)
       use hdf5,        only: HID_T, HSIZE_T, HSSIZE_T, H5P_DATASET_CREATE_F, H5S_SELECT_SET_F, &
            &                 H5P_DATASET_XFER_F, H5FD_MPIO_INDEPENDENT_F, H5T_NATIVE_DOUBLE, &
-           &                 h5open_f, h5close_f, h5fcreate_f, h5fclose_f, &
            &                 h5dcreate_f, h5dwrite_f, h5dclose_f, h5dget_space_f, &
-           &                 h5pcreate_f, h5pclose_f, h5pset_fapl_mpio_f, h5pset_chunk_f, h5pset_dxpl_mpio_f, &
+           &                 h5pcreate_f, h5pset_chunk_f, h5pset_dxpl_mpio_f, &
            &                 h5screate_simple_f, h5sclose_f, h5sselect_hyperslab_f
-      use mpisetup,    only: pcoords, pxsize, pysize, pzsize, comm3d, info
+      use mpisetup,    only: pcoords, pxsize, pysize, pzsize
       implicit none
       integer, intent(in)                      :: nx,ny,nz
       real, dimension(nx,ny,nz), intent(in) :: tab
@@ -1203,13 +1204,12 @@ module dataio_hdf5
    end subroutine write_3darr_to_restart
 
    subroutine read_3darr_from_restart(file_id,dname,p3d,nx,ny,nz)
-      use hdf5,         only: HID_T, HSIZE_T, HSSIZE_T, SIZE_T, H5P_FILE_ACCESS_F, H5T_NATIVE_DOUBLE, &
-                              H5S_SELECT_SET_F, H5F_ACC_RDONLY_F, H5FD_MPIO_INDEPENDENT_F, H5P_DATASET_XFER_F, &
-                              h5open_f, h5pcreate_f, h5pset_fapl_mpio_f, h5fopen_f, h5pclose_f, h5dopen_f, &
+      use hdf5,         only: HID_T, HSIZE_T, HSSIZE_T, SIZE_T, H5T_NATIVE_DOUBLE, &
+                              H5S_SELECT_SET_F, H5FD_MPIO_INDEPENDENT_F, H5P_DATASET_XFER_F, &
+                              h5pcreate_f, h5pclose_f, h5screate_simple_f, h5dopen_f, &
                               h5dget_space_f, h5sget_simple_extent_ndims_f, h5dget_create_plist_f, h5pget_chunk_f, &
-                              h5sselect_hyperslab_f, h5dread_f, h5sclose_f, h5pset_dxpl_mpio_f, h5dclose_f, &
-                              h5screate_simple_f, h5fclose_f, h5close_f
-      use mpisetup,     only: comm, ierr, pcoords, pxsize, pysize, pzsize
+                              h5sselect_hyperslab_f, h5dread_f, h5sclose_f, h5pset_dxpl_mpio_f, h5dclose_f
+      use mpisetup,     only: pcoords, pxsize, pysize, pzsize
 
       implicit none
       integer, intent(in)                  :: nx,ny,nz
@@ -1287,8 +1287,7 @@ module dataio_hdf5
       use dataio_pub,    only: cwdlen, msg, colormessage, T_IO, die, printinfo
       use fluidindex,    only: nvar
       use func,          only: fix_string
-      use grid,          only: nx, ny, nz, x, y, z, nxb, nyb, nzb, nxd, nyd, nzd, nb, xmin, xmax, &
-                               ymin, ymax, zmin, zmax
+      use grid,          only: nx, ny, nz, x, y, z, nxb, nyb, nzb
       use hdf5,          only: HID_T, HSIZE_T, HSSIZE_T, SIZE_T, H5P_FILE_ACCESS_F, H5T_NATIVE_DOUBLE, &
                                H5S_SELECT_SET_F, H5F_ACC_RDONLY_F, H5FD_MPIO_INDEPENDENT_F, H5P_DATASET_XFER_F, &
                                h5open_f, h5pcreate_f, h5pset_fapl_mpio_f, h5fopen_f, h5pclose_f, h5dopen_f, &
@@ -1519,7 +1518,7 @@ module dataio_hdf5
 ! ------------------------------------------------------------------------------------
 !
    subroutine write_hdf5(chdf)
-      use dataio_pub,    only: cwdlen, msg, die, user_vars_hdf5, nhdf
+      use dataio_pub,    only: cwdlen, msg, die, user_vars_hdf5, nhdf, varlen
       use grid,          only: nxb, nyb, nzb
       use hdf5,          only: HID_T, H5F_ACC_TRUNC_F, H5P_FILE_ACCESS_F, H5P_DEFAULT_F, &
            &                   h5open_f, h5close_f, h5fcreate_f, h5fclose_f, h5pcreate_f, h5pclose_f, h5pset_fapl_mpio_f
@@ -1540,7 +1539,7 @@ module dataio_hdf5
       integer(HID_T)          :: plist_id      ! Property list identifier
       integer                 :: ierrh, error, i
       logical                 :: ok_var
-      character(len=4)        :: dd
+      character(len=varlen)   :: dd
       CHARACTER(LEN=cwdlen)   :: fname
 
       real(kind=4), allocatable :: data (:,:,:)  ! Data to write
@@ -1601,25 +1600,26 @@ module dataio_hdf5
    end subroutine write_hdf5
 
    subroutine write_arr(data,dsetname,file_id)
-      use grid,      only: nxd, nyd, nzd, nb, nxb, nyb, nzb
-      use hdf5,      only: HID_T, HSIZE_T, HSSIZE_T, h5screate_simple_f, h5pcreate_f, h5pset_chunk_f, &
+      use dataio_pub,    only: varlen
+      use grid,          only: nxd, nyd, nzd, nxb, nyb, nzb
+      use hdf5,          only: HID_T, HSIZE_T, HSSIZE_T, h5screate_simple_f, h5pcreate_f, h5pset_chunk_f, &
                            h5sclose_f, h5pset_dxpl_mpio_f, h5dwrite_f, h5dclose_f, H5P_DATASET_XFER_F, H5P_DATASET_CREATE_F, &
                            H5T_NATIVE_REAL, H5S_SELECT_SET_F, H5FD_MPIO_INDEPENDENT_F, h5dcreate_f, h5dget_space_f, &
                            h5sselect_hyperslab_f
-      use mpisetup,  only: pcoords
+      use mpisetup,      only: pcoords
 
       implicit none
       real(kind=4), dimension(:,:,:) :: data
 
       integer, parameter :: rank = 3       ! Dataset rank
 
-      CHARACTER(LEN=4)   :: dsetname       ! Dataset name
+      CHARACTER(LEN=varlen) :: dsetname       ! Dataset name
 
-      integer(HID_T)     :: file_id        ! Dataset identifier
-      integer(HID_T)     :: dset_id        ! Dataset identifier
-      integer(HID_T)     :: plist_id       ! Dataset identifier
-      integer(HID_T)     :: filespace      ! Dataspace identifier in file
-      integer(HID_T)     :: memspace       ! Dataspace identifier in memory
+      integer(HID_T)        :: file_id        ! Dataset identifier
+      integer(HID_T)        :: dset_id        ! Dataset identifier
+      integer(HID_T)        :: plist_id       ! Dataset identifier
+      integer(HID_T)        :: filespace      ! Dataspace identifier in file
+      integer(HID_T)        :: memspace       ! Dataspace identifier in memory
 
       integer, parameter :: ndims = 3
       integer(HSIZE_T),  DIMENSION(ndims) :: count

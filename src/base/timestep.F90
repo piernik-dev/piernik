@@ -32,9 +32,9 @@ module timestep
    implicit none
 
    private
-   public :: time_step
+   public :: time_step, c_all
 
-   real :: c_all ! BEWARE: assigned but unused
+   real :: c_all
 
    contains
 
