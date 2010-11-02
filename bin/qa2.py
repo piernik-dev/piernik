@@ -78,10 +78,10 @@ def select_sources(files):
    return filter(test.search, files)
 
 def wtf(lines,line,rname,fname):
-  if(type(lines)==np.int64):
-    linenum = lines
-  else:
+  if(type(lines)==np.ndarray):
     linenum = line_num(lines,line)
+  else:
+    linenum = lines
 
   line = line.split("!")[0]    # Strip comments
   if(rname==''):
