@@ -259,7 +259,7 @@ def qa_false_refs(lines,name,store,fname):
 
 def qa_implicit_saves(lines,name,store,fname):
 #   print b.OKGREEN + "QA: " + b.ENDC + "Checking for implicit saves"
-   impl = filter(not_param_nor_save.match, filter(implicit_save.search, remove_amp(lines,True)))
+   impl = filter(not_param_nor_save.match, filter(implicit_save.search, remove_amp(filter(remove_warn.match, lines),True)))
    if(len(impl)):
       store.append(give_err("QA:  ") + "implicit saves detected in   [%s:%s]" % (fname,name))
    for line in impl:
