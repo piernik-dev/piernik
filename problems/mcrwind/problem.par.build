@@ -18,8 +18,8 @@
  /
 
  $END_CONTROL
-    tend         = 100.0
-    nend         = 1000000000
+    tend         = 10.0
+    nend         = 1000
  /
 
  $OUTPUT_CONTROL
