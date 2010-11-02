@@ -159,6 +159,9 @@ contains
 #ifdef MULTIGRID
       use multigrid,             only: init_multigrid
 #endif /* MULTIGRID */
+#ifdef SN_SRC
+      use snsources,             only: init_snsources
+#endif /* SN_SRC */
 
       implicit none
 
@@ -221,6 +224,10 @@ contains
 #ifdef FLUID_INTERACTIONS
       call init_interactions
 #endif /* FLUID_INTERACTIONS */
+
+#ifdef SN_SRC
+      call init_snsources
+#endif /* SN_SRC */
 
 #ifdef MULTIGRID
       call init_multigrid(cgrid)

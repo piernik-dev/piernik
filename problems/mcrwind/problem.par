@@ -104,6 +104,12 @@
     qshear       = 1.0      ! shearing param. q: vy=q*omega*x
  /
 
+ $SN_SOURCES
+    r_sn         =  50.0    ! radius of explosion (gauss function)
+    h_sn         = 100.0    ! std. dev. for normal distribution of SN i "z" direction
+    f_sn_kpc2    =   0.0    ! surface frequency of SN ( / kpc^2 / Myr )
+ /
+
  $PROBLEM_CONTROL
     problem_name = 'crwind'
     run_id       = 'tst'
@@ -116,8 +122,5 @@
     z0           =  100.0   !
     beta_cr      =  0.0     ! participation of CR in initial equil. (similar to alfa for B)
     amp_cr       =  1000.0     ! amplitude of expl. (init_problem, x0,y0,z0)
-    r_sn         =  50.0    ! radius of explosion (gauss function)
-    h_sn         = 100.0    ! std. dev. for normal distribution of SN i "z" direction
-    f_sn_kpc2    =   0.0    ! surface frequency of SN ( / kpc^2 / Myr )
     alpha        =  1.0
  /

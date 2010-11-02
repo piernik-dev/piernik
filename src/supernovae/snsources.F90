@@ -26,14 +26,16 @@
 !    For full list of developers see $PIERNIK_HOME/license/pdt.txt
 !
 #include "piernik.def"
+#include "macros.h"
 !>
 !! \brief [DW] Module containing subroutines and functions that govern supernovae insert
 !<
 module snsources
 
-   use initproblem, only: amp_ecr_sn, ethu, f_sn, h_sn, r_sn
-
    implicit none
+   private
+   public ::  random_sn, init_snsources, r_sn
+
    real          :: epsi, epso
    real          :: ysna, ysni, ysno
    integer, save :: nsn, nsn_last
@@ -41,8 +43,65 @@ module snsources
    real,    save :: gset
    integer, save :: irand, iset
 
+   real, parameter :: ethu = 7.0**2/(5.0/3.0-1.0) * 1.0    ! thermal energy unit=0.76eV/cm**3 for c_si= 7km/s, n=1/cm^3 gamma=5/3
+
+   real            :: amp_ecr_sn          !< cosmic ray explosion amplitude in units: e_0 = 1/(5/3-1)*rho_0*c_s0**2  rho_0=1.67e-24g/cm**3, c_s0 = 7km/s
+   real            :: f_sn                !< frequency of SN
+   real            :: f_sn_kpc2           !< frequency of SN per kpc^2
+   real            :: h_sn                !< galactic height in SN gaussian distribution ?
+   real            :: r_sn                !< radius of SN
+
+!   namelist /SN_SOURCES/ amp_ecr_sn, f_sn, h_sn, r_sn, f_sn_kpc2
+   namelist /SN_SOURCES/ h_sn, r_sn, f_sn_kpc2
 
    contains
+   subroutine init_snsources
+      use dataio_pub,     only: ierrh, par_file, namelist_errh, compare_namelist                  ! QA_WARN required for diff_nml
+      use mpisetup,       only: rbuff, buffer_dim, comm, ierr, proc, MPI_DOUBLE_PRECISION
+      use initcosmicrays, only: cr_eff
+      use grid,           only: xmin, xmax, ymin, ymax, nxd, nyd
+      implicit none
+
+!      amp_ecr_sn = 0.0    ! ToDo: set sane default values
+      f_sn       = 0.0    !
+      h_sn       = 0.0
+      r_sn       = 0.0
+
+      if (proc == 0) then
+         diff_nml(SN_SOURCES)
+!         rbuff(1)   = amp_ecr_sn
+!         rbuff(2)   = f_sn
+         rbuff(3)   = h_sn
+         rbuff(4)   = r_sn
+         rbuff(5)   = f_sn_kpc2
+      endif
+
+      call MPI_Bcast(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+
+      if (proc /= 0) then
+!        amp_ecr_sn  = rbuff(1)
+!        f_sn        = rbuff(2)
+         h_sn        = rbuff(3)
+         r_sn        = rbuff(4)
+         f_sn_kpc2   = rbuff(5)
+      endif
+
+      amp_ecr_sn = 4.96e6*cr_eff/r_sn**3
+
+      if (nxd /=1) then
+         f_sn = f_sn_kpc2 * (xmax-xmin)/1000.0
+      else
+         f_sn = f_sn_kpc2 * 2.0*r_sn/1000.0
+      endif
+
+      if (nyd /=1) then
+         f_sn = f_sn * (ymax-ymin)/1000.0
+      else
+         f_sn = f_sn * 2.0*r_sn/1000.0
+      endif
+
+
+   end subroutine init_snsources
 !>
 !! \brief Main routine to insert one supernova event
 !<

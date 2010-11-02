@@ -41,14 +41,12 @@ module initproblem
    private
    public :: read_problem_par, init_prob
 
-   real :: ethu                                                              !< thermal energy unit for this problem
-   real :: d0, alpha, bxn,byn,bzn, h_sn, f_sn, f_sn_kpc2, amp_cr, beta_cr    !< galactic disk specific parameters
-   real :: x0, y0, z0, r_sn                                                  !< parameters for a single supernova exploding at t=0
-   real :: amp_ecr_sn                                                        !< normalized amplitude of SN (10% of SN energy)
+   real :: d0, alpha, bxn,byn,bzn, amp_cr, beta_cr                           !< galactic disk specific parameters
+   real :: x0, y0, z0                                                        !< parameters for a single supernova exploding at t=0
 
    namelist /PROBLEM_CONTROL/  problem_name, run_id, &
-                               d0, alpha, bxn, byn, bzn, h_sn, f_sn_kpc2, beta_cr, &
-                               x0, y0, z0, r_sn, amp_cr
+                               d0, alpha, bxn, byn, bzn, beta_cr, &
+                               x0, y0, z0,  amp_cr
    contains
 
 !-----------------------------------------------------------------------------
@@ -87,9 +85,6 @@ module initproblem
          rbuff(7)  = z0
          rbuff(8)  = amp_cr
          rbuff(9)  = beta_cr
-         rbuff(10) = r_sn
-         rbuff(11) = h_sn
-         rbuff(12) = f_sn_kpc2
          rbuff(13) = alpha
 
       endif
@@ -111,9 +106,6 @@ module initproblem
          z0           = rbuff(7)
          amp_cr       = rbuff(8)
          beta_cr      = rbuff(9)
-         r_sn         = rbuff(10)
-         h_sn         = rbuff(11)
-         f_sn_kpc2    = rbuff(12)
          alpha        = rbuff(13)
 
       endif
@@ -141,30 +133,7 @@ module initproblem
       real               :: b0, csim2
       real, dimension(3) :: sn_pos
 
-      ethu = 7.0**2/(5.0/3.0-1.0) * 1.0    ! thermal energy unit=0.76eV/cm**3
-                                           ! for c_si= 7km/s, n=1/cm^3
-                                           ! gamma=5/3
-
-      amp_ecr_sn = 4.96e6*cr_eff/r_sn**3   ! cosmic ray explosion amplitude
-                                           ! in units:
-                                           ! e_0 = 1/(5/3-1)*rho_0*c_s0**2
-                                           ! rho_0=1.67e-24g/cm**3,
-                                           ! c_s0 = 7km/s
-
-      f_sn   = f_sn_kpc2                     ! SN freq
       sn_pos = [x0,y0,z0]
-
-      if (nxd /=1) then
-         f_sn = f_sn * (xmax-xmin)/1000.0
-      else
-         f_sn = f_sn * 2.0*r_sn/1000.0
-      endif
-
-      if (nyd /=1) then
-         f_sn = f_sn * (ymax-ymin)/1000.0
-      else
-         f_sn = f_sn * 2.0*r_sn/1000.0
-      endif
 
 !   Secondary parameters
 
@@ -254,6 +223,7 @@ module initproblem
       use fluidindex,     only: nvar
       use grid,           only: nx, ny, nz, x, y, z, Lx, Ly
       use initcosmicrays, only: iarr_crn
+      use snsources,      only: r_sn
 
       implicit none
 
