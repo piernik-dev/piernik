@@ -38,15 +38,13 @@
 !<
 module interactions
    implicit none
-   real, allocatable, dimension(:,:,:,:)  :: omx0        !< array to store x component of initial velocity
-   real, allocatable, dimension(:,:,:,:)  :: omy0        !< array to store y component of initial velocity
-   real, allocatable, dimension(:,:)      :: alfsup      !< xy-array of values between 0 and 1, 1 where boundary support is used
+   private
+   public :: init_interactions, fluid_interactions, collfaq, cfl_interact
    real, allocatable, dimension(:,:)      :: collfaq     !< nvar%fluids x nvar%fluids array of collision factors
    real :: collision_factor                              !< collision factor
    real :: cfl_interact                                  !< Courant factor for %interactions
 
-
-   contains
+contains
 !>
 !! \brief Routine that sets the initial values of %interactions parameters from namelist @c INTERACTIONS
 !>
@@ -125,7 +123,7 @@ module interactions
       implicit none
       integer, intent(in)   :: i1,i2,n
       real, dimension(nvar%all,n)  :: du,uu
-      character(len=6), intent(in) :: sweep
+      character(len=*), intent(in) :: sweep
 #ifdef COLLISIONS
       real, dimension(nvar%all,n)  :: ddu
 #endif /* COLLISIONS */
@@ -149,7 +147,7 @@ module interactions
 !! \param uu sweep fluid array
 !<
    subroutine dragforce(sweep, i1, i2, n, du, uu)
-      use fluidindex,   only: nvar, iarr_all_dn, iarr_all_mx, iarr_all_my
+      use fluidindex,   only: nvar, iarr_all_dn, iarr_all_mx
       use grid,         only: maxxyz, x, y, z
 #ifndef ISO
       use fluidindex,   only: iarr_all_en
@@ -158,7 +156,7 @@ module interactions
       real                  :: a1
       integer, intent(in)   :: i1, i2, n
       real, dimension(nvar%all,n)  :: du,uu
-      character(len=6), intent(in) :: sweep
+      character(len=*), intent(in) :: sweep
       integer  :: ifl,jfl,rend
       real, dimension(nvar%fluids,nvar%fluids,n) :: flch
       real, dimension(nvar%fluids,n)             :: colls

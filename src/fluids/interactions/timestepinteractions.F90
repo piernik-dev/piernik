@@ -44,7 +44,7 @@ contains
   subroutine timestep_interactions
     use arrays,       only: u, b
     use constants,    only: small
-    use fluidindex,   only: iarr_all_dn, nvar
+    use fluidindex,   only: nvar
     use interactions, only: collfaq, cfl_interact
     use mpisetup,     only: comm, ierr, MPI_MIN, MPI_DOUBLE_PRECISION
 
@@ -62,7 +62,7 @@ contains
     val = maxval (  sqrt( (u(nvar%dst%imx,:,:,:)-u(nvar%neu%imx,:,:,:))**2 + &
                     (u(nvar%dst%imy,:,:,:)-u(nvar%neu%imy,:,:,:))**2 + &
                     (u(nvar%dst%imz,:,:,:)-u(nvar%neu%imz,:,:,:))**2   ) * u(nvar%dst%idn,:,:,:) )
-    dt_interact_proc = nvar%neu%cs / (maxval(collfaq) * val)
+    dt_interact_proc = nvar%neu%cs / (maxval(collfaq) * val + small)
 
 
     call MPI_Reduce(dt_interact_proc, dt_interact_all, 1, MPI_DOUBLE_PRECISION, MPI_MIN, 0, comm, ierr)
