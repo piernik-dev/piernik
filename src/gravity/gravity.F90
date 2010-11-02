@@ -611,7 +611,7 @@ module gravity
 
       implicit none
 
-      character(len=6), intent(in)   :: sweep
+      character(len=*), intent(in)   :: sweep
       integer, intent(in)            :: i1, i2
       integer, intent(in)            :: n
       real, dimension(:)             :: xsw
