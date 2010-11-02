@@ -41,13 +41,14 @@ module initproblem
    private
    public :: read_problem_par, init_prob
 
-   real :: d0, bxn, byn, bzn, beta_cr, amp_cr
-   real :: alpha, x0, y0, z0
+   real :: d0, alpha, bxn,byn,bzn, amp_cr, beta_cr                           !< galactic disk specific parameters
+   real :: x0, y0, z0                                                        !< parameters for a single supernova exploding at t=0
 
    namelist /PROBLEM_CONTROL/  problem_name, run_id, d0, bxn, byn, bzn, x0, y0, z0, alpha, amp_cr, beta_cr
    contains
 
 !-----------------------------------------------------------------------------
+
    subroutine read_problem_par
       use dataio_pub,    only: ierrh, par_file, namelist_errh, compare_namelist      ! QA_WARN required for diff_nml
       use mpisetup,      only: cbuff_len, cbuff, rbuff, buffer_dim, comm, ierr, proc, &
@@ -108,10 +109,12 @@ module initproblem
       endif
 
    end subroutine read_problem_par
+
 !-----------------------------------------------------------------------------
+
    subroutine init_prob
       use arrays,         only: u, b, dprof
-      use fluidindex,     only: ibx,iby,ibz
+      use fluidindex,     only: ibx, iby, ibz
       use grid,           only: x, y, z, nx, ny, nz
       use hydrostatic,    only: hydrostatic_zeq
       use initcosmicrays, only: gamma_crs, iarr_crs
@@ -122,10 +125,13 @@ module initproblem
 #ifdef SHEAR
       use shear,          only: qshear, omega
 #endif /* SHEAR */
+#ifdef GALAXY
+      use grid,           only: Lx, Ly
+#endif /* GALAXY */
 
       implicit none
 
-      integer :: i,j,k
+      integer :: i, j, k
       real    :: b0, csim2
 
 !   Secondary parameters

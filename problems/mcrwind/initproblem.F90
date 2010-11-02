@@ -44,9 +44,7 @@ module initproblem
    real :: d0, alpha, bxn,byn,bzn, amp_cr, beta_cr                           !< galactic disk specific parameters
    real :: x0, y0, z0                                                        !< parameters for a single supernova exploding at t=0
 
-   namelist /PROBLEM_CONTROL/  problem_name, run_id, &
-                               d0, alpha, bxn, byn, bzn, beta_cr, &
-                               x0, y0, z0,  amp_cr
+   namelist /PROBLEM_CONTROL/  problem_name, run_id, d0, bxn, byn, bzn, x0, y0, z0, alpha, amp_cr, beta_cr
    contains
 
 !-----------------------------------------------------------------------------
@@ -128,7 +126,7 @@ module initproblem
 
       implicit none
 
-      integer            :: i,j,k
+      integer            :: i, j, k
       real               :: b0, csim2
       real, dimension(3) :: sn_pos
 
