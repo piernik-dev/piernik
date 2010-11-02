@@ -93,7 +93,7 @@ if ($moo{problems}) {
    print " --linkexe         - do not copy obj/piernik to runs/<problem> but link it instead\n";
 #   print " --dumpenv\t- do not compile the source but dump the environment to \'obj/version.F90\'\n";
    print " --verbose         - try to confuse the user with some diagnostics ;-)\n";
-   print " --nocompile       - Create object directory but do not compile or prepare run directory.
+   print " --nocompile       - Create object directory, check for circular dependencies, but do not compile or prepare run directory.
                      In combination with --copy will prepare portable object directory.\n";
    print " --laconic         - Compress stdout from make process.\n";
    print " --param <file>    - use <file> instead problem.par\n";
