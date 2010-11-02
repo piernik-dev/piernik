@@ -36,8 +36,12 @@
 !! \copydetails grid::init_grid
 !<
 module grid
-
    implicit none
+   private
+   public  :: &
+      & Lx, Ly, Lz, cleanup_grid, dl, dvol, dx, dxmn, dy, dz, grid_xyz, idl, idx, idy, idz, ie, init_grid, is, je, js, ke, ks, &
+      & maxxyz, nb, nx, nxb, nxd, ny, nyb, nyd, nz, nzb, nzd, nzt, x, xdim, xl, xmax, xmaxb, xmin, xminb, xr, y, ydim, yl, &
+      & ymax, ymaxb, ymin, yminb, yr, z, zdim, zl, zmax, zmaxb, zmin, zminb, zr
 
    real    :: dx                             !< length of the %grid cell in x-direction
    real    :: dy                             !< length of the %grid cell in y-direction
@@ -103,7 +107,6 @@ module grid
 
    subroutine set_container_grid(cgrid)
 
-      use dataio_pub,      only: die, namelist_errh
       use types,           only: grid_container
 
       implicit none
