@@ -28,18 +28,24 @@
 #include "piernik.def"
 
 module magboundaries
+
    implicit none
+
    private
    public :: bnd_a, bnd_b, bnd_emf, all_mag_boundaries
+
 contains
 
    subroutine bnd_a(A)
+
       use mpisetup, only: MAG_YZ_LEFT_DOM, MAG_YZ_RIGHT_DOM, MAG_YZ_LEFT_BND, MAG_YZ_RIGHT_BND, &
          MAG_XY_LEFT_DOM, MAG_XY_RIGHT_DOM, MAG_XY_LEFT_BND, MAG_XY_RIGHT_BND, &
          MAG_XZ_LEFT_DOM, MAG_XZ_RIGHT_DOM, MAG_XZ_LEFT_BND, MAG_XZ_RIGHT_BND, &
          ierr, req, comm3d, procxl, procxr, procyl, procyr, proczl, proczr, status, &
          pxsize, pysize, pzsize
+
       implicit none
+
       real, dimension(:,:,:,:) :: A
 
       if (pxsize .gt. 1) then
@@ -69,9 +75,11 @@ contains
 
          call MPI_Waitall(4,req(:),status(:,:),ierr)
       endif
+
    end subroutine bnd_a
 
    subroutine bnd_b(dim)
+
       use arrays,        only: b
       use dataio_pub,    only: msg, warn
       use fluidindex,    only: ibx, iby, ibz
@@ -87,6 +95,7 @@ contains
 #endif /* SHEAR */
 
       implicit none
+
       character(len=*)  :: dim
       integer           :: i, j
       real, allocatable :: send_left(:,:,:,:),recv_left(:,:,:,:)
@@ -393,16 +402,18 @@ contains
 !=====================================================================================================
 
    subroutine bnd_emf(var, name, dim)
+
       use dataio_pub,    only: msg, warn
       use grid,          only: nx, ny, nz, nb, nxb, nyb, nzb
       use mpisetup,      only: bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr
 
       implicit none
+
       real, dimension(nx,ny,nz) :: var
       real, dimension(ny,nz)    :: dvarx
       real, dimension(nx,nz)    :: dvary
       real, dimension(nx,ny)    :: dvarz
-      character(len=4)          :: name, dim
+      character(len=*)          :: name, dim
       integer                   :: ib
 
 
@@ -882,10 +893,13 @@ contains
             end select  ! (name)
 
       end select ! (dim)
+
    end subroutine bnd_emf
 
    subroutine all_mag_boundaries
+
       use grid, only: nxd, nyd, nzd
+
       implicit none
 
       if (nxd /= 1) call bnd_b("xdim")
