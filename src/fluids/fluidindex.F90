@@ -46,7 +46,10 @@
 module fluidindex
 
    use types, only: var_numbers
+
    implicit none
+
+   public ! QA_WARN no secrets are kept here
 
    type(var_numbers),save :: nvar
 
@@ -128,7 +131,8 @@ contains
 !! \param none - all arguments are global variables
 !<
     subroutine fluid_index(cgrid)
-      use diagnostics,    only: my_allocate
+
+!      use diagnostics,    only: my_allocate
       use types,          only: grid_container
 #ifdef IONIZED
       use initionized,    only: ionized_index
@@ -145,6 +149,7 @@ contains
 #endif /* COSM_RAYS */
 
       implicit none
+
       type(grid_container), intent(in) :: cgrid
       integer                          :: i
 
@@ -246,7 +251,9 @@ contains
    end subroutine fluid_index
 
    subroutine cleanup_fluidindex
+
       use diagnostics, only: my_deallocate
+
       implicit none
 
       call my_deallocate(iarr_mag_swpx)

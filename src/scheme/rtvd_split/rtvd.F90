@@ -239,7 +239,7 @@ module rtvd ! split orig
 #endif /* SHEAR */
 #ifdef COSM_RAYS
       use arrays,          only: divvel
-      use initcosmicrays,  only: iarr_crs, iarr_crn, iarr_cre, gamma_crs, cr_active, smallecr
+      use initcosmicrays,  only: iarr_crs, iarr_crn, gamma_crs, cr_active, smallecr
 #ifdef COSM_RAYS_SOURCES
       use sourcecosmicrays,only: src_crn
 #endif /* COSM_RAYS_SOURCES */
@@ -257,7 +257,7 @@ module rtvd ! split orig
       integer,                     intent(in)  :: n                  !< array size
       real, dimension(nvar%all,n), intent(out) :: u                  !< vector of conservative variables
       real, dimension(nmag,n),     intent(in)  :: bb                 !< local copy of magnetic field
-      character(len=6),            intent(in)  :: sweep              !< direction (x, y or z) we are doing calculations for
+      character(len=*),            intent(in)  :: sweep              !< direction (x, y or z) we are doing calculations for
       integer,                     intent(in)  :: i1                 !< coordinate of sweep in the 1st remaining direction
       integer,                     intent(in)  :: i2                 !< coordinate of sweep in the 2nd remaining direction
       real,                        intent(in)  :: dx                 !< cell length

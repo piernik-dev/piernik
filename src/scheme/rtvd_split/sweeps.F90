@@ -42,9 +42,6 @@ module sweeps     ! split sweeps
       use grid,            only: nx, nz
       use mpisetup,        only: dt
       use shear,           only: omega, qshear
-#ifdef NEUTRAL
-      use initneutral,     only: global_gradP_neu
-#endif /* NEUTRAL */
 #ifdef DUST
       use initdust,        only: dragc_gas_dust
 #endif /* DUST */
@@ -93,7 +90,7 @@ module sweeps     ! split sweeps
     use arrays,          only: u, b
     use fluidboundaries, only: all_fluid_boundaries
     use fluidindex,      only: nvar, iarr_all_swpx, ibx, iby, ibz, nmag
-    use grid,            only: dx, nb, nx, ks, ke, js, je, nyd, nzd
+    use grid,            only: dx, nx, ks, ke, js, je, nyd, nzd
     use mpisetup,        only: dt
     use rtvd,            only: relaxing_tvd
 #ifdef COSM_RAYS
@@ -139,7 +136,7 @@ module sweeps     ! split sweeps
     use arrays,          only: u, b
     use fluidboundaries, only: all_fluid_boundaries
     use fluidindex,      only: nvar, iarr_all_swpy, ibx, iby, ibz, nmag
-    use grid,            only: dy, nb, ny, is, ie, ks, ke, nxd, nzd
+    use grid,            only: dy, ny, is, ie, ks, ke, nxd, nzd
     use mpisetup,        only: dt
     use rtvd,            only: relaxing_tvd
 #ifdef COSM_RAYS
@@ -187,7 +184,7 @@ module sweeps     ! split sweeps
     use arrays,          only: u, b
     use fluidboundaries, only: all_fluid_boundaries
     use fluidindex,      only: nvar, iarr_all_swpz, ibx, iby, ibz, nmag
-    use grid,            only: dz, nb, nz, is, ie, js, je, nxd, nyd
+    use grid,            only: dz, nz, is, ie, js, je, nxd, nyd
     use mpisetup,        only: dt
     use rtvd,            only: relaxing_tvd
 #ifdef COSM_RAYS

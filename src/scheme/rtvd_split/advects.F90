@@ -28,15 +28,19 @@
 #include "piernik.def"
 
 module advects
+
    implicit none
+
    private
    public  :: advectby_x, advectbz_x, advectbz_y, advectbx_y, advectbx_z, advectby_z
-  contains
+
+contains
 
   subroutine advectby_x
+
     use arrays,        only: b, u, wa
-    use fluidindex,    only: ibx, iby, ibz, nvar
-    use grid,          only: idx, nx, ny, nz, nxd, nyd, nzd, ks, ke
+    use fluidindex,    only: iby, nvar
+    use grid,          only: idx, nx, ny, nz, nxd, nyd, nzd
     use magboundaries, only: bnd_emf
     use mpisetup,      only: dt
     use rtvd,          only: tvdb
@@ -83,7 +87,7 @@ module advects
 
   subroutine advectbz_x
     use arrays,        only: b, u, wa
-    use fluidindex,    only: ibx, iby, ibz, nvar
+    use fluidindex,    only: ibz, nvar
     use grid,          only: idx, nx, ny, nz, nxd, nyd, nzd, js, je
     use magboundaries, only: bnd_emf
     use mpisetup,      only: dt
@@ -131,7 +135,7 @@ module advects
 
   subroutine advectbz_y
     use arrays,        only: b, u, wa
-    use fluidindex,    only: ibx, iby, ibz, nvar
+    use fluidindex,    only: bz, nvar
     use grid,          only: idy, nx, ny, nz, is, ie, nxd, nyd, nzd
     use magboundaries, only: bnd_emf
     use mpisetup,      only: dt
@@ -178,7 +182,7 @@ module advects
 
   subroutine advectbx_y
     use arrays,        only: b, u, wa
-    use fluidindex,    only: ibx, iby, ibz, nvar
+    use fluidindex,    only: ibx, nvar
     use grid,          only: idy, nx, ny, nz, nxd, nzd, nyd, ks, ke
     use magboundaries, only: bnd_emf
     use mpisetup,      only: dt
@@ -226,7 +230,7 @@ module advects
 
   subroutine advectbx_z
     use arrays,        only: b, u, wa
-    use fluidindex,    only: ibx, iby, ibz, nvar
+    use fluidindex,    only: ibx, nvar
     use grid,          only: idz, nx, ny, nz, nxd, nzd, nyd, js, je
     use magboundaries, only: bnd_emf
     use mpisetup,      only: dt
@@ -273,7 +277,7 @@ module advects
 
   subroutine advectby_z
     use arrays,        only: b, u, wa
-    use fluidindex,    only: ibx, iby, ibz, nvar
+    use fluidindex,    only: iby, nvar
     use grid,          only: idz, nx, ny, nz, nzd, nyd, nxd, ie, is
     use magboundaries, only: bnd_emf
     use mpisetup,      only: dt

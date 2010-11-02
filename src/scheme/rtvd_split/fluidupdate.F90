@@ -30,6 +30,9 @@ module fluidupdate   ! SPLIT
 
    implicit none
 
+   private
+   public :: fluid_update
+
    integer, parameter :: DIR_X = 1, DIR_Y = DIR_X + 1, DIR_Z = DIR_Y + 1
 
 contains
@@ -115,7 +118,7 @@ contains
       use types,           only: problem_customize_solution
 #ifdef SHEAR
       use fluidboundaries, only: bnd_u
-      use grid,            only: nxd, nyd, nzd
+      use grid,            only: nxd, nyd
       use mpisetup,        only: t, dt
       use shear,           only: yshift
 #endif /* SHEAR */
@@ -285,7 +288,7 @@ contains
       use advects,     only: advectby_x, advectbz_x
       use arrays,      only: b
       use fluidindex,  only: ibx, iby, ibz
-      use grid,        only: xdim, ydim, zdim, nyd, nzd
+      use grid,        only: xdim, ydim, zdim
 #ifdef RESISTIVE
       use resistivity, only: diffuseby_x, diffusebz_x
 #endif /* RESISTIVE */
@@ -317,7 +320,7 @@ contains
       use advects,     only: advectbx_y, advectbz_y
       use arrays,      only: b
       use fluidindex,  only: ibx, iby, ibz
-      use grid,        only: xdim, ydim, zdim, nzd, nxd
+      use grid,        only: xdim, ydim, zdim
 #ifdef RESISTIVE
       use resistivity, only: diffusebx_y, diffusebz_y
 #endif /* RESISTIVE */
@@ -349,7 +352,7 @@ contains
       use advects,     only: advectbx_z, advectby_z
       use arrays,      only: b
       use fluidindex,  only: ibx, iby, ibz
-      use grid,        only: xdim, ydim, zdim, nxd, nyd
+      use grid,        only: xdim, ydim, zdim
 #ifdef RESISTIVE
       use resistivity, only: diffusebx_z, diffuseby_z
 #endif /* RESISTIVE */
