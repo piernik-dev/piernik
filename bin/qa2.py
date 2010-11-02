@@ -245,8 +245,8 @@ def remove_amp(lines,strip):
    return temp
 
 def qa_false_refs(lines,name,store,fname):
-   temp = remove_amp(lines,False)
-   uses = filter(remove_warn.match, filter(has_use.search, temp))
+   temp = remove_amp(filter(remove_warn.match,lines),True)
+   uses = filter(has_use.search, temp)
 
    for item in uses:
       to_check = [f.strip() for f in item.split("only:")[1].split(',')]
