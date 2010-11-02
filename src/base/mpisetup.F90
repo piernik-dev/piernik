@@ -36,6 +36,18 @@
 module mpisetup
 
    implicit none
+   private
+   public :: &
+    &  ARR_XY_LEFT_BND, ARR_XY_LEFT_DOM, ARR_XY_RIGHT_BND, ARR_XY_RIGHT_DOM, ARR_XZ_LEFT_BND, ARR_XZ_LEFT_DOM, ARR_XZ_RIGHT_BND, ARR_XZ_RIGHT_DOM, &
+    &  ARR_YZ_LEFT_BND, ARR_YZ_LEFT_DOM, ARR_YZ_RIGHT_BND, ARR_YZ_RIGHT_DOM, MAG_XY_LEFT_BND, MAG_XY_LEFT_DOM, MAG_XY_RIGHT_BND, MAG_XY_RIGHT_DOM, &
+    &  MAG_XZ_LEFT_BND, MAG_XZ_LEFT_DOM, MAG_XZ_RIGHT_BND, MAG_XZ_RIGHT_DOM, MAG_YZ_LEFT_BND, MAG_YZ_LEFT_DOM, MAG_YZ_RIGHT_BND, MAG_YZ_RIGHT_DOM, &
+    &  MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_IN_PLACE, MPI_LOGICAL, MPI_MAX, MPI_MIN, MPI_ORDER_FORTRAN, MPI_REQUEST_NULL, &
+    &  MPI_STATUS_SIZE, MPI_SUM, MPI_XY_LEFT_BND, MPI_XY_LEFT_DOM, MPI_XY_RIGHT_BND, MPI_XY_RIGHT_DOM, MPI_XZ_LEFT_BND, MPI_XZ_LEFT_DOM, &
+    &  MPI_XZ_RIGHT_BND, MPI_XZ_RIGHT_DOM, MPI_YZ_LEFT_BND, MPI_YZ_LEFT_DOM, MPI_YZ_RIGHT_BND, MPI_YZ_RIGHT_DOM, bnd_xl, bnd_xl_dom, bnd_xr, &
+    &  bnd_xr_dom, bnd_yl, bnd_yl_dom, bnd_yr, bnd_yr_dom, bnd_zl, bnd_zl_dom, bnd_zr, bnd_zr_dom, buffer_dim, cbuff, cbuff_len, cfl, &
+    &  cfr_smooth, cleanup_mpi, comm, comm3d, dt, dt_initial, dt_max_grow, dt_min, dt_old, dtm, err, ibuff, ierr, info, init_mpi, &
+    &  integration_order, lbuff, mpifind, ndims, nproc, nstep, pcoords, proc, procxl, procxr, procxyl, procyl, procyr, procyxl, proczl, &
+    &  proczr, psize, pxsize, pysize, pzsize, rbuff, req, smalld, smallei, smallp, status, t
 
    include 'mpif.h'
 
@@ -68,13 +80,14 @@ module mpisetup
 
    namelist /MPI_BLOCKS/ pxsize, pysize, pzsize, mpi_magic
 
-   character(len=4) :: bnd_xl    !< type of boundary conditions for the left x-boundary
-   character(len=4) :: bnd_xr    !< type of boundary conditions for right the x-boundary
-   character(len=4) :: bnd_yl    !< type of boundary conditions for the left y-boundary
-   character(len=4) :: bnd_yr    !< type of boundary conditions for the right y-boundary
-   character(len=4) :: bnd_zl    !< type of boundary conditions for the left z-boundary
-   character(len=4) :: bnd_zr    !< type of boundary conditions for the right z-boundary
-   character(len=4) :: bnd_xl_dom, bnd_xr_dom, bnd_yl_dom, bnd_yr_dom, bnd_zl_dom, bnd_zr_dom !< computational domain boundaries
+   integer, parameter    :: bndlen = 4 !< length of boundary names
+   character(len=bndlen) :: bnd_xl     !< type of boundary conditions for the left  x-boundary
+   character(len=bndlen) :: bnd_xr     !< type of boundary conditions for the right x-boundary
+   character(len=bndlen) :: bnd_yl     !< type of boundary conditions for the left  y-boundary
+   character(len=bndlen) :: bnd_yr     !< type of boundary conditions for the right y-boundary
+   character(len=bndlen) :: bnd_zl     !< type of boundary conditions for the left  z-boundary
+   character(len=bndlen) :: bnd_zr     !< type of boundary conditions for the right z-boundary
+   character(len=bndlen) :: bnd_xl_dom, bnd_xr_dom, bnd_yl_dom, bnd_yr_dom, bnd_zl_dom, bnd_zr_dom !< computational domain boundaries
 
    namelist /BOUNDARIES/ bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr
 
@@ -566,11 +579,11 @@ module mpisetup
 
          implicit none
 
-         character(len=3), intent(in) :: what
-         real       :: var
-         real, dimension(2)    :: rsend, rrecv
-         integer, dimension(3) :: loc_arr
-         integer               :: loc_proc
+         character(len=*), intent(in) :: what
+         real                         :: var
+         real, dimension(2)           :: rsend, rrecv
+         integer, dimension(3)        :: loc_arr
+         integer                      :: loc_proc
 
          rsend(1) = var
          rsend(2) = proc
@@ -616,7 +629,7 @@ module mpisetup
       subroutine divide_domain_voodoo(np)
 
          use constants,     only: some_primes
-         use dataio_pub,    only: die, warn, printinfo, msg
+         use dataio_pub,    only: die, printinfo, msg
 
          implicit none
 
