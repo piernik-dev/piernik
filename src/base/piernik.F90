@@ -119,7 +119,7 @@ program piernik
 
    code_progress = PIERNIK_CLEANUP
 
-   if (proc == 0) write(*, '(a)', advance='no') "Finishing "       ! QA_WARN
+   if (proc == 0) write(*, '(a)', advance='no') "Finishing "       ! QA_WARN we allow non-advancing stdout on special occasions
    call cleanup_piernik
 
 contains
@@ -312,9 +312,9 @@ contains
 
       if (proc == 0) then
          if (advance) then
-            write(*,'(a)')"."              ! QA_WARN
+            write(*,'(a)')"."              ! QA_WARN we allow non-advancing stdout on special occasions
          else
-            write(*,'(a)',advance='no')"." ! QA_WARN
+            write(*,'(a)',advance='no')"." ! QA_WARN we allow non-advancing stdout on special occasions
          endif
       endif
 

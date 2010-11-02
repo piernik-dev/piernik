@@ -82,7 +82,8 @@ contains
 
       use multigridvars,      only: ngridvars, extbnd_zero, extbnd_extrapolate, extbnd_mirror, extbnd_antimirror
       use mpisetup,           only: buffer_dim, comm, ierr, proc, ibuff, rbuff, lbuff, cbuff, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL, MPI_CHARACTER
-      use dataio_pub,         only: par_file, ierrh, namelist_errh, compare_namelist, die, warn, msg
+      use dataio_pub,         only: par_file, ierrh, namelist_errh, compare_namelist      ! QA_WARN required for diff_nml
+      use dataio_pub,         only: die, warn, msg
 
       implicit none
 

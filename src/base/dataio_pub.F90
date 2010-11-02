@@ -33,7 +33,7 @@ module dataio_pub
 
    implicit none
 
-   public
+   public  ! QA_WARN no secrets are kept here
 
    include 'mpif.h'
 
@@ -160,7 +160,7 @@ contains
          frun = .false.
       endif
 
-!      write(*,*) ansi_red, "Red ", ansi_green, "Green ", ansi_yellow, "Yellow ", ansi_blue, "Blue ", ansi_magenta, "Magenta ", ansi_cyan, "Cyan ", ansi_white, "White ", ansi_black ! QA_WARN
+!      write(*,*) ansi_red, "Red ", ansi_green, "Green ", ansi_yellow, "Yellow ", ansi_blue, "Blue ", ansi_magenta, "Magenta ", ansi_cyan, "Cyan ", ansi_white, "White ", ansi_black ! QA_WARN debug
 
       select case (mode)
          case (T_ERR)
@@ -187,9 +187,9 @@ contains
 
       if (mode /= T_SILENT) then
          if (mode == T_PLAIN) then
-            write(*,'(a)') trim(nm)                                                                               ! QA_WARN
+            write(*,'(a)') trim(nm)                                                                               ! QA_WARN the colormessage should do most writes to stdout
          else
-            write(*,'(a,a," @",a,i5,2a)') trim(ansicolor),msg_type_str,ansi_black, proc, ': ', trim(nm)           ! QA_WARN
+            write(*,'(a,a," @",a,i5,2a)') trim(ansicolor),msg_type_str,ansi_black, proc, ': ', trim(nm)           ! QA_WARN the colormessage should do most writes to stdout
          endif
       endif
 

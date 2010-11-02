@@ -62,7 +62,8 @@ module interactions
 !! \n \n
 !<
    subroutine init_interactions
-      use dataio_pub,    only: par_file, cwd, ierrh, namelist_errh, compare_namelist
+
+      use dataio_pub,    only: par_file, ierrh, namelist_errh, compare_namelist      ! QA_WARN required for diff_nml
       use fluidindex,    only: nvar
       use mpisetup,      only: proc, rbuff, MPI_DOUBLE_PRECISION, buffer_dim, ierr, comm
 #ifdef DUST

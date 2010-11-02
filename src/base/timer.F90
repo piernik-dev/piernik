@@ -155,7 +155,7 @@ contains
 
          time_old = tp%info%time
          call cpu_time(tp%info%time)
-         !if (.not.reset) write(*,'(3A,F7.3,A)') "Timer [",trim(tp%info%key),"] = ", tp%info%time - time_old, " s"  ! QA_WARN
+         !if (.not.reset) write(*,'(3A,F7.3,A)') "Timer [",trim(tp%info%key),"] = ", tp%info%time - time_old, " s"  ! QA_WARN debug?
          if (.not.reset) then
             modify_timer = tp%info%time - time_old
          else

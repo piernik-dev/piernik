@@ -30,8 +30,11 @@
 !! \brief (MH)
 !<
 module crcomposition
+
    implicit none
-   public               ! QA_WARN
+
+   public               ! QA_WARN no secrets are kept here
+
 ! this type looks useful but is unused.
 !!$   type cr_component
 !!$      character(len=8) :: isotope     !< isotope name, eg. Be10

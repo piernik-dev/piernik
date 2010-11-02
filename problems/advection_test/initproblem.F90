@@ -48,7 +48,7 @@ contains
 
    subroutine read_problem_par
 
-      use dataio_pub,    only: ierrh, par_file, namelist_errh, compare_namelist      ! QA_WARN
+      use dataio_pub,    only: ierrh, par_file, namelist_errh, compare_namelist      ! QA_WARN required for diff_nml
       use dataio_pub,    only: die
       use grid,          only: xmin, xmax, ymin, ymax, zmin, zmax
       use initneutral,   only: gamma_neu

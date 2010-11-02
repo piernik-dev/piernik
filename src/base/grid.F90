@@ -170,7 +170,8 @@ module grid
 !<
    subroutine init_grid(cgrid)
 
-      use dataio_pub,    only: par_file, ierrh, die, printinfo, namelist_errh, compare_namelist
+      use dataio_pub,    only: par_file, ierrh, namelist_errh, compare_namelist  ! QA_WARN required for diff_nml
+      use dataio_pub,    only: printinfo, die
       use mpisetup,      only: ierr, ibuff, rbuff, MPI_INTEGER, MPI_DOUBLE_PRECISION, proc, &
            &                   buffer_dim, pxsize, pysize, pzsize, comm
       use types,         only: grid_container

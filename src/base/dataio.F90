@@ -204,8 +204,9 @@ module dataio
    subroutine init_dataio
 
       use dataio_hdf5,     only: init_hdf5, read_restart_hdf5, parfile, parfilelines
-      use dataio_pub,      only: chdf, nres, last_hdf_time, step_hdf, nlog, ntsl, dataio_initialized, log_file, cwdlen, par_file, maxparfilelines, cwd, &
-           &                      ierrh, tmp_log_file, msglen, printinfo, warn, namelist_errh, compare_namelist
+      use dataio_pub,      only: chdf, nres, last_hdf_time, step_hdf, nlog, ntsl, dataio_initialized, log_file, cwdlen, maxparfilelines, cwd, &
+           &                     tmp_log_file, msglen, printinfo, warn
+      use dataio_pub,      only: par_file, ierrh, namelist_errh, compare_namelist  ! QA_WARN required for diff_nml
       use fluidboundaries, only: all_fluid_boundaries
       use mpisetup,        only: lbuff, ibuff, rbuff, cbuff, proc, cbuff_len, comm, ierr, buffer_dim, &
            &                      MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL, &

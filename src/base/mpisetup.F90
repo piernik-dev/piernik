@@ -162,7 +162,8 @@ module mpisetup
 !<
       subroutine init_mpi
 
-         use dataio_pub,    only: die, printinfo, msg, cwdlen, hnlen, cwd, par_file, ierrh, ansi_white, ansi_black, warn, namelist_errh, compare_namelist
+         use dataio_pub,    only: die, printinfo, msg, cwdlen, hnlen, cwd, ansi_white, ansi_black, warn
+         use dataio_pub,    only: par_file, ierrh, namelist_errh, compare_namelist  ! QA_WARN required for diff_nml
 
          implicit none
 

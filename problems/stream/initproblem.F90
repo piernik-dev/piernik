@@ -51,7 +51,7 @@ module initproblem
 
    subroutine read_problem_par
 
-      use dataio_pub,    only: ierrh, par_file, namelist_errh, compare_namelist      ! QA_WARN
+      use dataio_pub,    only: ierrh, par_file, namelist_errh, compare_namelist      ! QA_WARN required for diff_nml
       use mpisetup,      only: rbuff, cbuff, lbuff, buffer_dim, proc, comm, ierr, &
            &                   MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_LOGICAL
       use types,         only: idlen
