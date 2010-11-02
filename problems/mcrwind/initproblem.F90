@@ -41,14 +41,14 @@ module initproblem
    private
    public :: read_problem_par, init_prob
 
-   real :: d0, bxn,byn,bzn, x0, y0, z0, r_sn, h_sn, f_sn_kpc2, amp_cr, beta_cr
-   real :: ethu, f_sn, amp_ecr_sn, alpha
+   real :: ethu                                                              !< thermal energy unit for this problem
+   real :: d0, alpha, bxn,byn,bzn, h_sn, f_sn, f_sn_kpc2, amp_cr, beta_cr    !< galactic disk specific parameters
+   real :: x0, y0, z0, r_sn                                                  !< parameters for a single supernova exploding at t=0
+   real :: amp_ecr_sn                                                        !< normalized amplitude of SN (10% of SN energy)
 
    namelist /PROBLEM_CONTROL/  problem_name, run_id, &
-                               d0, &
-                               bxn,byn,bzn, &
-                               x0, y0, z0, alpha, &
-                               r_sn, h_sn, f_sn_kpc2, amp_cr, beta_cr
+                               d0, alpha, bxn, byn, bzn, h_sn, f_sn_kpc2, beta_cr, &
+                               x0, y0, z0, r_sn, amp_cr
    contains
 
 !-----------------------------------------------------------------------------
@@ -72,6 +72,8 @@ module initproblem
       z0     = 0.0
 
       if (proc == 0) then
+
+         diff_nml(PROBLEM_CONTROL)
 
          cbuff(1) =  problem_name
          cbuff(2) =  run_id
@@ -113,7 +115,6 @@ module initproblem
          h_sn         = rbuff(11)
          f_sn_kpc2    = rbuff(12)
          alpha        = rbuff(13)
-
 
       endif
 
@@ -172,7 +173,6 @@ module initproblem
       csim2 = cs_iso2*(1.0+alpha)
 
       call hydrostatic_zeq(1, 1, d0, csim2, dprof)
-
 
       do k = 1,nz
          do j = 1,ny
@@ -279,7 +279,8 @@ module initproblem
 
                   do jpm=-1,1
 
-                     decr = amp_ecr_sn * ethu  &
+!                     decr = amp_ecr_sn * ethu  &
+                     decr = amp_cr  &
                            * EXP(-((x(i)-xsn+real(ipm)*Lx)**2  &
                            + (y(j)-ysna+real(jpm)*Ly)**2  &
                            + (z(k)-zsn)**2)/r_sn**2)
