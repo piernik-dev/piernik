@@ -143,11 +143,12 @@ contains
       character(len=*), intent(in) :: nm
       integer, intent(in) :: mode
 
-      integer, parameter     :: log_lun = 3            !< luncher for log file
-      character(len=ansilen) :: ansicolor
-      character(len=7)       :: msg_type_str           ! length of the "Warning" word.
-      integer                :: proc
-      logical, save          :: frun = .true.
+      integer, parameter            :: log_lun = 3            !< luncher for log file
+      character(len=ansilen)        :: ansicolor
+      integer, parameter            :: msg_type_len = 7       !< length of the "Warning" word.
+      character(len=msg_type_len)   :: msg_type_str
+      integer                       :: proc
+      logical, save                 :: frun = .true.
 
       if (frun) then
          write(ansi_black,  '(A1,A3)') char(27),"[0m"

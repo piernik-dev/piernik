@@ -33,8 +33,8 @@ module timer
 
    implicit none
    integer, parameter, private :: S_LEN = 30
-
-   private :: search_timer, delete_timer, clock_start, clock_end
+   private
+   public :: cleanup_timers, time_left, timer_, timer_start, timer_stop
 
    type, private :: timer_info
       character(len=S_LEN) :: key
