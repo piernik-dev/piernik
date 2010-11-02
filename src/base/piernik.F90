@@ -32,10 +32,10 @@
 program piernik
 
    use dataio,        only: write_data, user_msg_handler
-   use dataio_pub,    only: nend, nstep_start, tend, msg, fplen, printinfo, warn, &
+   use dataio_pub,    only: nend, tend, msg, fplen, printinfo, warn, &
        &                    code_progress, PIERNIK_START, PIERNIK_INITIALIZED, PIERNIK_FINISHED, PIERNIK_CLEANUP
    use fluidupdate,   only: fluid_update
-   use mpisetup,      only: comm, comm3d, ierr, proc, t, dt, nstep, cleanup_mpi
+   use mpisetup,      only: comm, comm3d, ierr, proc, t, nstep
    use timer,         only: time_left
    use types,         only: finalize_problem
 #ifdef PERFMON
@@ -134,7 +134,7 @@ contains
       use fluidboundaries,       only: all_fluid_boundaries
       use fluidboundaries_pub,   only: init_fluidboundaries
       use fluidindex,            only: nvar
-      use grid,                  only: nx, ny, nz, init_grid, grid_xyz
+      use grid,                  only: nx, ny, nz, init_grid
       use initfluids,            only: init_fluids
       use initproblem,           only: init_prob, read_problem_par
       use problem_pub,           only: problem_name, run_id

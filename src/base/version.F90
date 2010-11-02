@@ -6,3 +6,4 @@
 !
 module version
    implicit none
+   public         ! QA_WARN nothing to hide here

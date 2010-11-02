@@ -107,7 +107,7 @@ contains
    end subroutine keep_track_of_arrays
 
    subroutine pop_char_vector(vec,lensize,words)
-      use dataio_pub,    only: die, msg
+      use dataio_pub,    only: die
       implicit none
       integer, intent(in) :: lensize
       character(len=*), intent(in), dimension(:) :: words

@@ -38,7 +38,7 @@ module fluidboundaries
       use dataio_pub,          only: msg, warn
       use fluidboundaries_pub, only: user_bnd_xl, user_bnd_xr, user_bnd_yl, user_bnd_yr, user_bnd_zl, user_bnd_zr
       use fluidindex,          only: nvar, iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
-      use grid,                only: nb, nxd, nyd, nzd, x, y, z, nzb, nyb, nxb, nx, ny, nz
+      use grid,                only: nb, nyd, x, y, z, nzb, nyb, nxb, nx, ny, nz
       use initfluids,          only: gamma, cs_iso2
       use mpisetup,            only: ierr, MPI_XY_RIGHT_DOM, MPI_XY_RIGHT_BND, MPI_XY_LEFT_DOM, MPI_XY_LEFT_BND, &
                                      MPI_XZ_RIGHT_DOM, MPI_XZ_RIGHT_BND, MPI_XZ_LEFT_DOM, MPI_XZ_LEFT_BND, &

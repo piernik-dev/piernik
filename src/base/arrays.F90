@@ -30,8 +30,8 @@
 !! Module storing all global %arrays used in simulation
 !<
 module arrays
-
    implicit none
+   public  ! QA_WARN nothing to hide here
 
    real, allocatable, dimension(:,:,:,:), target :: u    !< //Main array of all fluids' components
    real, allocatable, dimension(:,:,:,:), target :: b    !< //Main array of magnetic field's components
