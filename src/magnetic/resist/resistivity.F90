@@ -34,8 +34,10 @@
 !! \copydetails resistivity::init_resistivity
 !<
 module resistivity
-
    implicit none
+   private
+   public  :: init_resistivity, timestep_resist, cleanup_resistivity, dt_resist, eta_max, &
+      diffuseby_x, diffusebz_x, diffusebx_y, diffusebz_y, diffusebx_z, diffuseby_z
    real    :: cfl_resist, eta_0, eta_1, j_crit, jc2, deint_max
    integer :: eta_scale
    double precision :: d_eta_factor
@@ -84,9 +86,6 @@ module resistivity
       use dataio_pub,    only: die
       use grid,          only: nx, ny, nz, nzd
       use mpisetup,      only: rbuff, ibuff, ierr, MPI_INTEGER, MPI_DOUBLE_PRECISION, buffer_dim, comm, proc
-#ifndef ISO
-      use fluidindex,    only: nvar
-#endif /* !ISO */
 
       implicit none
 
@@ -152,10 +151,13 @@ module resistivity
    subroutine compute_resist(eta,ici)
       use arrays,       only: b, u
       use constants,    only: small
-      use fluidindex,   only: ibx, iby, ibz, icx, icy, icz, nvar
+      use fluidindex,   only: ibx, iby, ibz
       use func,         only: mshift, pshift
       use grid,         only: idl, xdim, ydim, zdim, nx, ny, nz, is, ie, js, je, ks, ke, nzd
       use mpisetup,     only: MPI_DOUBLE_PRECISION, MPI_MAX, comm, ierr
+#ifndef ISO
+      use fluidindex,   only: nvar
+#endif /* !ISO */
 
       implicit none
       integer,intent(in)                       :: ici
@@ -272,7 +274,7 @@ module resistivity
    subroutine tvdd(ibi,ici,n)
       use arrays,    only: b, wcu
       use func,      only: mshift, pshift
-      use grid,      only: nx, ny, nz, dxmn, idl
+      use grid,      only: idl
       use mpisetup,  only: dt
 
       implicit none
@@ -305,7 +307,6 @@ module resistivity
    subroutine diffuseby_x
       use arrays,        only: wcu
       use fluidindex,    only: iby, icz
-      use func,          only: mshift, pshift
       use grid,          only: xdim, nxd, nyd, nzd
       use magboundaries, only: bnd_emf
       implicit none
@@ -320,7 +321,6 @@ module resistivity
    subroutine diffusebz_x
       use arrays,        only: wcu
       use fluidindex,    only: ibz, icy
-      use func,          only: mshift, pshift
       use grid,          only: xdim, nxd, nyd, nzd
       use magboundaries, only: bnd_emf
       implicit none
@@ -335,7 +335,6 @@ module resistivity
    subroutine diffusebz_y
       use arrays,        only: wcu
       use fluidindex,    only: ibz, icx
-      use func,          only: mshift, pshift
       use grid,          only: ydim, nzd, nyd, nxd
       use magboundaries, only: bnd_emf
       implicit none
@@ -349,7 +348,6 @@ module resistivity
    subroutine diffusebx_y
       use arrays,        only: wcu
       use fluidindex,    only: ibx, icz
-      use func,          only: mshift, pshift
       use grid,          only: ydim, nzd, nyd, nxd
       use magboundaries, only: bnd_emf
       implicit none
@@ -363,7 +361,6 @@ module resistivity
    subroutine diffusebx_z
       use arrays,        only: wcu
       use fluidindex,    only: ibx, icy
-      use func,          only: mshift, pshift
       use grid,          only: zdim, nzd, nyd, nxd
       use magboundaries, only: bnd_emf
       implicit none
@@ -377,7 +374,6 @@ module resistivity
    subroutine diffuseby_z
       use arrays,        only: wcu
       use fluidindex,    only: iby, icx
-      use func,          only: mshift, pshift
       use grid,          only: zdim, nzd, nyd, nxd
       use magboundaries, only: bnd_emf
       implicit none
