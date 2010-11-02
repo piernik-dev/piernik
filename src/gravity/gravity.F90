@@ -37,7 +37,13 @@
 !! \copydetails gravity::init_grav
 !<
 module gravity
+
    implicit none
+
+   private
+   public :: init_grav, grav_accel, source_terms_grav, grav_pot2accel, grav_pot_3d
+   public :: g_z, g_y, dg_dz, r_gc, ptmass, ptm_x, ptm_y, ptm_z, r_smooth, nsub, tune_zeq, tune_zeq_bnd, h_grav, r_grav, n_gravr, n_gravr2, n_gravh, user_grav, gp_status
+
    character(LEN=9) :: gp_status    !< variable set as 'undefined' in grav_pot_3d when grav_accel is supposed to use
    real    :: g_z                   !< z-component used by GRAV_UNIFORM type of %gravity
    real    :: g_y                   !< y-component of GRAV_UNIFORM constant <b>(currently not used)</b>
@@ -108,7 +114,7 @@ module gravity
       implicit none
 
 
-      namelist /GRAVITY/ g_z,g_y, dg_dz, r_gc, ptmass, ptm_x, ptm_y, ptm_z, r_smooth, &
+      namelist /GRAVITY/ g_z, g_y, dg_dz, r_gc, ptmass, ptm_x, ptm_y, ptm_z, r_smooth, &
                 nsub, tune_zeq, tune_zeq_bnd, h_grav, r_grav, n_gravr, n_gravr2, n_gravh, user_grav
 
 #ifdef VERBOSE
@@ -455,6 +461,7 @@ module gravity
 !<
 
    subroutine default_grav_pot_3d
+
       use arrays,       only: gp
       use grid,         only: nx, ny, nz, x, y, z
       use initfluids,   only: cs_iso2
@@ -465,6 +472,7 @@ module gravity
 #ifdef GRAV_USER
       use gravity_user, only: grav_pot_user
 #endif /* GRAV_USER */
+
       implicit none
 
 #if defined (GRAV_PTMASSPURE) || defined (GRAV_PTMASS) || defined (GRAV_PTFLAT) || defined (GRAV_PTMASSSTIFF)
@@ -591,6 +599,7 @@ module gravity
 !<
 
    subroutine grav_accel(sweep, i1,i2, xsw, n, grav)
+
       use arrays,       only: gp
       use grid,         only: x, y, z, xr, yr, zr, dl, xdim, ydim, zdim, nx, ny, nz, nb, is, ie, js, je, ks, ke
 #if defined GRAV_PTMASS || defined GRAV_PTFLAT
@@ -599,7 +608,9 @@ module gravity
 #if defined GRAV_ACC_USER
       use gravity_user, only: grav_accel_user
 #endif /* GRAV_ACC_USER  */
+
       implicit none
+
       character(len=6), intent(in)   :: sweep
       integer, intent(in)            :: i1, i2
       integer, intent(in)            :: n
@@ -642,9 +653,11 @@ module gravity
 !! \param grav 1D array of gravitational acceleration values computed for positions from xsw and returned by the routine
 !<
    subroutine grav_pot2accel(sweep, i1,i2, n, grav,istep)
+
       use arrays, only: gpot, hgpot
       use grid,   only: dl, xdim, ydim, zdim
       implicit none
+
       character(len=6), intent(in)   :: sweep
       integer, intent(in)            :: i1, i2
       integer, intent(in)            :: n
@@ -831,6 +844,5 @@ module gravity
       if (allocated(gpwork)) deallocate(gpwork)
 
    end subroutine grav_accel2pot
-
 
 end module gravity

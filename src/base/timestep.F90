@@ -30,12 +30,16 @@
 module timestep
 
    implicit none
+
+   private
+   public :: time_step
+
    real :: c_all ! BEWARE: assigned but unused
 
    contains
 
       subroutine time_step
-         use constants,            only: small, big
+
          use dataio,               only: write_crashed
          use dataio_pub,           only: tend, msg, warn
          use mpisetup,             only: t, dt, dt_old, dt_max_grow, dt_initial, dt_min, nstep, proc

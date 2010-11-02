@@ -32,6 +32,9 @@ module poissonsolver
 
   implicit none
 
+  private
+  public :: poisson_solve
+
 contains
 
 !!=====================================================================
@@ -42,11 +45,8 @@ contains
 
     use arrays,         only: u, sgp
     use dataio_pub,     only: die
-    use grid,           only: x, nx, ny, nz, nzb, dz, dx, nb, nxd, nyd, nzd
+    use grid,           only: x, nx, ny, nz, dz, dx, nb, nxd, nyd, nzd
     use mpisetup,       only: bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr
-#ifdef SHEAR
-    use shear,          only: unshear_fft
-#endif /* SHEAR */
 
     implicit none
     real, dimension(:,:,:), intent(in)  :: dens
@@ -112,7 +112,7 @@ contains
 #ifdef SHEAR
   subroutine poisson_xy2d(den, pot, lpot, rpot, dx)
     use arrays,    only: x
-    use constants, only: newtong, dpi, small
+    use constants, only: newtong, dpi
     use grid,      only: xmin, xmax, ymin, ymax, nxd, nyd, nb
     use shear,     only: dely
     implicit none
@@ -528,8 +528,10 @@ contains
 !! bnd conditions in X, Y and Z
 !!
   subroutine poisson_xyzp(den, pot)
+
     use constants, only: fpiG, dpi
-    use grid,      only: nb, dx, dy, dz
+    use grid,      only: dx, dy, dz
+
     implicit none
 
     real, dimension(:,:,:), intent(in)  :: den
