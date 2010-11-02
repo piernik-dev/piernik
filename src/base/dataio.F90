@@ -50,10 +50,9 @@ module dataio
 !!
 !! \todo check the usefulness of wait logical variable
 !<
-   use dataio_pub,    only: tend, nend, wend, nhdf, nstep_start, domain, nrestart, get_container, set_container_chdf, &
-                            vizit, fmin, fmax, hnlen, cwdlen, varlen
+   use dataio_pub,    only: cwdlen, hnlen, varlen, domain, fmin, fmax, vizit, nend, tend, wend, nrestart
    use mpisetup,      only: cbuff_len
-   use types,         only: hdf, idlen
+   use types,         only: idlen
 
    implicit none
 
@@ -205,12 +204,12 @@ module dataio
 
       use dataio_hdf5,     only: init_hdf5, read_restart_hdf5, parfile, parfilelines
       use dataio_pub,      only: chdf, nres, last_hdf_time, step_hdf, nlog, ntsl, dataio_initialized, log_file, cwdlen, maxparfilelines, cwd, &
-           &                     tmp_log_file, msglen, printinfo, warn
+           &                     tmp_log_file, msglen, printinfo, warn, nhdf, nstep_start, set_container_chdf, get_container
       use dataio_pub,      only: par_file, ierrh, namelist_errh, compare_namelist  ! QA_WARN required for diff_nml
       use fluidboundaries, only: all_fluid_boundaries
       use mpisetup,        only: lbuff, ibuff, rbuff, cbuff, proc, cbuff_len, comm, ierr, buffer_dim, &
            &                      MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL, &
-           &                      psize, t, nstep, bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr
+           &                      t, nstep, bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr
       use problem_pub,     only: problem_name, run_id
       use timer,           only: time_left
       use version,         only: nenv,env, init_version
@@ -451,7 +450,7 @@ module dataio
    subroutine user_msg_handler(end_sim)
 
       use dataio_hdf5,   only: write_hdf5, write_restart_hdf5
-      use dataio_pub,    only: chdf, step_hdf, msg, printinfo, warn
+      use dataio_pub,    only: chdf, step_hdf, msg, printinfo, warn, set_container_chdf
       use mpisetup,      only: MPI_CHARACTER, MPI_DOUBLE_PRECISION, comm, ierr, proc, nstep
 
       implicit none
@@ -556,8 +555,8 @@ module dataio
    subroutine write_data(output)
 
       use dataio_hdf5,   only: write_hdf5, write_restart_hdf5, write_plot
-      use dataio_pub,    only: chdf, nres, last_hdf_time, step_hdf
-      use mpisetup,      only: t, MPI_CHARACTER, comm, ierr, proc, nstep
+      use dataio_pub,    only: chdf, nres, last_hdf_time, step_hdf, set_container_chdf
+      use mpisetup,      only: t, nstep
 
       implicit none
 
@@ -680,7 +679,7 @@ module dataio
       use diagnostics,     only: pop_vector
       use fluidindex,      only: nvar, iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz, ibx, iby, ibz
       use grid,            only: dvol, dx, dy, dz, is, ie, js, je, ks, ke, x, y, z, nxd, nyd, nzd
-      use mpisetup,        only: proc, comm3d, t, dt, ierr, MPI_REAL8, MPI_SUM, smalld, nstep
+      use mpisetup,        only: proc, t, dt, smalld, nstep
       use problem_pub,     only: problem_name, run_id
       use types,           only: tsl_container, phys_prop
 #ifndef ISO
@@ -998,9 +997,9 @@ module dataio
          use constants,          only: small
          use dataio_pub,         only: msg, printinfo
          use fluidindex,         only: ibx, iby, ibz, nvar
-         use grid,               only: dx, dy, dz, dxmn, nb, is, ie, js, je, ks, ke, nx, ny, nz
-         use mpisetup,           only: smallei, cfl, t, dt, proc, mpifind, nstep
-         use types,              only: tsl_container, value, component_fluid
+         use grid,               only: dx, dy, dz, dxmn, is, ie, js, je, ks, ke, nx, ny, nz
+         use mpisetup,           only: cfl, t, dt, proc, mpifind
+         use types,              only: tsl_container, value
 #ifdef COSM_RAYS
          use fluidindex,         only: iarr_all_crs
          use timestepcosmicrays, only: dt_crs
@@ -1008,9 +1007,6 @@ module dataio
 #ifdef RESISTIVE
          use resistivity,        only: dt_resist, eta_max
 #endif /* RESISTIVE */
-#ifdef ISO_LOCAL
-         use arrays,             only: cs_iso2_arr
-#endif /* ISO_LOCAL */
 
          implicit none
 
@@ -1190,7 +1186,7 @@ module dataio
 !-------------------------------------------------------------------------
 
 !\todo: process multiple commands at once
-      use dataio_pub,    only: ierrh, cwdlen, msg, printinfo, warn
+      use dataio_pub,    only: cwdlen, msg, printinfo, warn
       use mpisetup,      only: proc
 #if defined(__INTEL_COMPILER)
       use ifport,        only: unlink, stat
