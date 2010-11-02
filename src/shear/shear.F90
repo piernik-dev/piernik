@@ -119,7 +119,6 @@ contains
   function unshear_fft(qty,x,ddy,inv)
     use constants, only: dpi
     use grid,      only: dy, nb, Lx
-    use mpisetup,  only: smalld
     implicit none
     include "fftw3.f"
     real, intent(in) :: ddy
@@ -183,7 +182,6 @@ contains
 
   function unshear(qty,x,inv)
     use grid,     only: nb, xmax, xmin, nyd, dy
-    use mpisetup, only: smalld
 
     logical, optional               :: inv
     real, dimension(:,:,:)          :: qty
