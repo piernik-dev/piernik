@@ -39,7 +39,7 @@ module initproblem
 !       magdir - sets the magnetic field component to change
 !                choose between: 'x', 'y', 'z'
 !
-!       dimdir can't be equal magdir!!
+!//       dimdir can't be equal magdir!!
 
    use problem_pub, only: problem_name, run_id
    implicit none
