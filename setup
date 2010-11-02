@@ -436,7 +436,7 @@ if ( (! -r $objdir) || (! -r "$objdir/".$param_file) || (! -r "$objdir/Makefile"
 
 if ($moo{nocompile}) {
   print "Compilation skipped on request. You may want to run 'make -C $objdir' to compile the Piernik code.\n\n";
-  @cir = grep(/Circular/ig, `make -C $objdir CHECK_MAGIC=yes piernik 2>&1`);
+  @cir = grep(/Circular/ig, `LC_ALL=C make -C $objdir CHECK_MAGIC=yes piernik 2>&1`);
   if( @cir ) {
      print @cir;
      exit $FAILED
