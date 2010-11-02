@@ -40,11 +40,13 @@ module initdust
 
    implicit none
 
+   public ! QA_WARN no secrets are kept here
+
    integer               :: idnd, imxd, imyd, imzd
    real                  :: dragc_gas_dust, taus, dalpha
    logical               :: selfgrav_dst
 
-   contains
+contains
 
 !>
 !! \brief Routine to set parameter values from namelist FLUID_DUST

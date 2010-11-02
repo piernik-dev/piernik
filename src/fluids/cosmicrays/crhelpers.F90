@@ -26,20 +26,25 @@
 !    For full list of developers see $PIERNIK_HOME/license/pdt.txt
 !
 #include "piernik.def"
+
 module crhelpers
+
    implicit none
+
    private
    public :: div_v, div_vx, div_vy, div_vz, whichfaq
 
    contains
 
    subroutine div_v(ifluid)
-      use fluidindex,  only: nvar
+
       use fluidindex,  only: iarr_all_dn,iarr_all_mx,iarr_all_my,iarr_all_mz
       use grid,        only: nx,ny,nz
       use grid,        only: dx,dy,dz,nxd,nyd,nzd
       use arrays,      only: u,divvel
+
       implicit none
+
       real, dimension(nx) :: vx
       real, dimension(ny) :: vy
       real, dimension(nz) :: vz

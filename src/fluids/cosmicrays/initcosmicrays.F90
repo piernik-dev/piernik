@@ -40,6 +40,8 @@ module initcosmicrays
 
    implicit none
 
+   public ! QA_WARN no secrets are kept here
+
    integer, parameter                  :: ncr_max = 9  !< maximum number of CR nuclear and electron components
 
    ! namelist parameters

@@ -71,7 +71,7 @@ contains
    subroutine flux_dst(fluxd,cfrd,uud,n)
 
       use constants,  only: small
-      use fluidindex, only: idn, imx, imy, imz, ien, nvar
+      use fluidindex, only: idn, imx, imy, imz, nvar
       use mpisetup,   only: cfr_smooth
       use timestep,   only: c_all
 

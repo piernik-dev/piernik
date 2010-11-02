@@ -39,22 +39,23 @@
 
 module initneutral
 
-  implicit none
+   implicit none
 
-    real                  :: gamma_neu             !< adiabatic index for the neutral gas
-    real                  :: cs_iso_neu            !< isothermal sound speed (p = cs_iso_neu<sup>2</sup>\f$\rho\f$), active only if neutral gas is \ref isothermal
-    real                  :: cs_iso_neu2
-    real                  :: global_gradP_neu
-    real                  :: eta_gas_neu
-    real                  :: csvk
-    logical               :: selfgrav_neu
+   public ! QA_WARN no secrets are kept here
 
-    integer               :: idnn, imxn, imyn, imzn
+   real                  :: gamma_neu             !< adiabatic index for the neutral gas
+   real                  :: cs_iso_neu            !< isothermal sound speed (p = cs_iso_neu<sup>2</sup>\f$\rho\f$), active only if neutral gas is \ref isothermal
+   real                  :: cs_iso_neu2
+   real                  :: global_gradP_neu
+   real                  :: eta_gas_neu
+   real                  :: csvk
+   logical               :: selfgrav_neu
+   integer               :: idnn, imxn, imyn, imzn
 #ifndef ISO
-    integer               :: ienn
+   integer               :: ienn
 #endif /* !ISO */
 
-  contains
+contains
 
 !>
 !! \brief Routine to set parameters values from namelist FLUID_NEUTRAL

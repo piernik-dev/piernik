@@ -147,19 +147,19 @@ module types
       integer :: ien = -1              ! QA_WARN implicit save does not work in types
 
       !>
-      !! fluid's isothermal sound speed
+      !! //fluid's isothermal sound speed
       !<
       real    :: cs    = 0.0           ! QA_WARN implicit save does not work in types
       !>
-      !! fluid's isothermal sound speed squared
+      !! //fluid's isothermal sound speed squared
       !<
       real    :: cs2   = 0.0           ! QA_WARN implicit save does not work in types
       !>
-      !! fluid's adiabatic index
+      !! //fluid's adiabatic index
       !<
       real    :: gam   = -1.0          ! QA_WARN implicit save does not work in types
       !>
-      !! fluid's adiabatic index minus one
+      !! //fluid's adiabatic index minus one
       !<
       real    :: gam_1 = -1.0          ! QA_WARN implicit save does not work in types
       !>

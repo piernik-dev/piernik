@@ -135,7 +135,7 @@ contains
 
   subroutine advectbz_y
     use arrays,        only: b, u, wa
-    use fluidindex,    only: bz, nvar
+    use fluidindex,    only: ibz, nvar
     use grid,          only: idy, nx, ny, nz, is, ie, nxd, nyd, nzd
     use magboundaries, only: bnd_emf
     use mpisetup,      only: dt

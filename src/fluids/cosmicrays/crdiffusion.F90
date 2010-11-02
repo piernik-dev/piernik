@@ -35,13 +35,8 @@
 
 module crdiffusion
 
-   use arrays,         only: b, u, wcr
-   use fluidindex,     only: ibx, iby, ibz, nvar
-   use grid,           only: idx, idy, idz, nxd, nyd, nzd, nx, ny, nz, is, ie, js, je, ks, ke
-   use initcosmicrays, only: iarr_crs, K_crs_paral, K_crs_perp
-   use mpisetup,       only: dt
-
    implicit none
+
    private
    public :: cr_diff_x, cr_diff_y, cr_diff_z
 
@@ -54,6 +49,12 @@ contains
 !  PURPOSE:  Diffusive transport of ecr in 1-direction
 !
 !-----------------------------------------------------------------------
+      use arrays,         only: b, u, wcr
+      use fluidindex,     only: ibx, iby, ibz, nvar
+      use grid,           only: idx, idy, idz, nxd, nyd, nzd, nx, ny, nz, js, je, ks, ke
+      use initcosmicrays, only: iarr_crs, K_crs_paral, K_crs_perp
+      use mpisetup,       only: dt
+
       implicit none
 
       integer :: i, j, k
@@ -121,6 +122,12 @@ contains
 !  PURPOSE:   Diffusive transport of ecr in 2-direction
 !
 !-----------------------------------------------------------------------
+      use arrays,         only: b, u, wcr
+      use fluidindex,     only: ibx, iby, ibz, nvar
+      use grid,           only: idx, idy, idz, nxd, nyd, nzd, nx, ny, nz, is, ie, ks, ke
+      use initcosmicrays, only: iarr_crs, K_crs_paral, K_crs_perp
+      use mpisetup,       only: dt
+
       implicit none
 
       integer :: i, j, k
@@ -188,6 +195,12 @@ contains
 !  PURPOSE:   Diffusive transport of ecr in 3-direction
 !
 !-----------------------------------------------------------------------
+      use arrays,         only: b, u, wcr
+      use fluidindex,     only: ibx, iby, ibz, nvar
+      use grid,           only: idx, idy, idz, nxd, nyd, nzd, nx, ny, nz, is, ie, js, je
+      use initcosmicrays, only: iarr_crs, K_crs_paral, K_crs_perp
+      use mpisetup,       only: dt
+
       implicit none
 
       integer :: i, j, k

@@ -50,23 +50,24 @@
 !! The final %timestep is multiplied by the Courant number specified in parameters of each task.
 !<
 module timestepionized
+
    implicit none
+
    private
    public :: dt_ion, c_ion, timestep_ion
+
    real   :: dt_ion             !< final timestep for ionized fluids
    real   :: c_ion              !< maximum speed at which information travels in the ionized fluid
 
 contains
 
    subroutine timestep_ion
+
       use types,         only: component_fluid
       use arrays,        only: u, b
       use grid,          only: ks, ke, is, ie, js, je
       use fluidindex,    only: nvar, ibx, iby, ibz
       use timestepfuncs, only: compute_c_max, compute_dt
-#ifdef ISO_LOCAL
-      use arrays,      only: cs_iso2_arr
-#endif /* ISO_LOCAL */
 
       implicit none
 

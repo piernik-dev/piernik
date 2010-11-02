@@ -35,17 +35,22 @@
 !<
 
 module fluxcosmicrays
+
   implicit none
 
+  private
+  public :: flux_crs
+
   contains
+
 !==========================================================================================
 
   subroutine flux_crs(fluxc,vion,uuc,n)
 
-    use constants,       only: small
-    use fluidindex,      only: iarr_all_crs, nvar
+    use fluidindex,      only: nvar
 
     implicit none
+
     integer, intent(in) :: n
     real, dimension(n), intent(in)  :: vion
     real, dimension(nvar%crs%all,n), intent(in) :: uuc
@@ -57,6 +62,5 @@ module fluxcosmicrays
     fluxc(:,RNG)= uuc(:,RNG)*spread(vion(RNG),1,nvar%crs%all)
 
   end subroutine flux_crs
-
 
 end module fluxcosmicrays
