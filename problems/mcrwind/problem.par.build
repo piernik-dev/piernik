@@ -18,12 +18,12 @@
  /
 
  $END_CONTROL
-    tend         = 200.0
+    tend         = 100.0
     nend         = 1000000000
  /
 
  $OUTPUT_CONTROL
-    dt_hdf       = 1. !e-6
+    dt_hdf       = 50. !e-6
     dt_res       = 0.0
     dt_log       = 1. !e-6
     dt_tsl       = 1.0e-6
