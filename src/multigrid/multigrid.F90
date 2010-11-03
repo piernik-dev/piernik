@@ -52,25 +52,26 @@ contains
 
    subroutine init_multigrid(cgrid)
 
-      use multigridvars,      only: lvl, level_max, level_min, level_gb, roof, base, gb, gb_cartmap, mg_nb, ngridvars, correction, &
-           &                        is_external, eff_dim, NDIM, has_dir, XDIR, YDIR, ZDIR, XLO, XHI, YLO, YHI, ZLO, ZHI, LOW, HIGH, D_x, D_y, D_z, &
-           &                        ord_prolong, ord_prolong_face, stdout, verbose_vcycle, hdf5levels, tot_ts
-      use types,              only: grid_container
-      use mpisetup,           only: buffer_dim, comm, comm3d, ierr, proc, nproc, ndims, pxsize, pysize, pzsize, &
-           &                        ibuff, rbuff, lbuff, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL
-      use multigridhelpers,   only: mg_write_log, dirtyH, do_ascii_dump, dirty_debug, multidim_code_3D, &
-           &                        aux_par_I0, aux_par_I1, aux_par_I2, aux_par_R0, aux_par_R1, aux_par_R2
-      use multigridmpifuncs,  only: mpi_multigrid_prep
-      use dataio_pub,         only: die
-      use dataio_pub,         only: msg, par_file, namelist_errh, compare_namelist  ! QA_WARN required for diff_nml
+      use multigridvars,       only: lvl, level_max, level_min, level_gb, roof, base, gb, gb_cartmap, mg_nb, ngridvars, correction, &
+           &                         is_external, eff_dim, NDIM, has_dir, XDIR, YDIR, ZDIR, XLO, XHI, YLO, YHI, ZLO, ZHI, LOW, HIGH, D_x, D_y, D_z, &
+           &                         ord_prolong, ord_prolong_face, stdout, verbose_vcycle, hdf5levels, tot_ts
+      use types,               only: grid_container
+      use mpisetup,            only: buffer_dim, comm, comm3d, ierr, proc, nproc, ndims, pxsize, pysize, pzsize, &
+           &                         ibuff, rbuff, lbuff, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL, &
+           &                         bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr
+      use multigridhelpers,    only: mg_write_log, dirtyH, do_ascii_dump, dirty_debug, multidim_code_3D, &
+           &                         aux_par_I0, aux_par_I1, aux_par_I2, aux_par_R0, aux_par_R1, aux_par_R2
+      use multigridmpifuncs,   only: mpi_multigrid_prep
+      use dataio_pub,          only: die
+      use dataio_pub,          only: msg, par_file, namelist_errh, compare_namelist  ! QA_WARN required for diff_nml
 #ifdef GRAV
-      use multigrid_gravity,  only: init_multigrid_grav, init_multigrid_grav_post
+      use multigrid_gravity,   only: init_multigrid_grav, init_multigrid_grav_post
 #endif /* GRAV */
 #ifdef COSM_RAYS
       use multigrid_diffusion, only: init_multigrid_diff, init_multigrid_diff_post
 #endif /* COSM_RAYS */
 #ifdef NEW_HDF5
-      use multigridio,        only: multigrid_add_hdf5
+      use multigridio,         only: multigrid_add_hdf5
 #endif /* NEW_HDF5 */
 
       implicit none
@@ -390,13 +391,12 @@ contains
       ! mark external faces
       is_external(:) = .false.
 
-      ! BEWARE: ignores periodicity of the grid
-      if (gb_cartmap(proc)%proc(XDIR) == 0)        is_external(XLO) = .true.
-      if (gb_cartmap(proc)%proc(XDIR) == pxsize-1) is_external(XHI) = .true.
-      if (gb_cartmap(proc)%proc(YDIR) == 0)        is_external(YLO) = .true.
-      if (gb_cartmap(proc)%proc(YDIR) == pysize-1) is_external(YHI) = .true.
-      if (gb_cartmap(proc)%proc(ZDIR) == 0)        is_external(ZLO) = .true.
-      if (gb_cartmap(proc)%proc(ZDIR) == pzsize-1) is_external(ZHI) = .true.
+      if (gb_cartmap(proc)%proc(XDIR) == 0        .and. (bnd_xl /= "mpi" .and. bnd_xl /= "per")) is_external(XLO) = .true.
+      if (gb_cartmap(proc)%proc(XDIR) == pxsize-1 .and. (bnd_xr /= "mpi" .and. bnd_xr /= "per")) is_external(XHI) = .true.
+      if (gb_cartmap(proc)%proc(YDIR) == 0        .and. (bnd_yl /= "mpi" .and. bnd_yl /= "per")) is_external(YLO) = .true.
+      if (gb_cartmap(proc)%proc(YDIR) == pysize-1 .and. (bnd_yr /= "mpi" .and. bnd_yr /= "per")) is_external(YHI) = .true.
+      if (gb_cartmap(proc)%proc(ZDIR) == 0        .and. (bnd_zl /= "mpi" .and. bnd_zl /= "per")) is_external(ZLO) = .true.
+      if (gb_cartmap(proc)%proc(ZDIR) == pzsize-1 .and. (bnd_zr /= "mpi" .and. bnd_zr /= "per")) is_external(ZHI) = .true.
 
       if (.not. has_dir(XDIR)) is_external(XLO:XHI) = .false.
       if (.not. has_dir(YDIR)) is_external(YLO:YHI) = .false.
