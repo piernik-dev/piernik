@@ -33,7 +33,7 @@ module types
    private
    public :: hdf, value, grid_container, tsl_container, phys_prop, &
    & problem_customize_solution, finalize_problem, domlen, idlen, &
-   & component_fluid, var_numbers, custom_emf_advect_bnd, custom_emf_resist_bnd
+   & component_fluid, var_numbers, custom_emf_bnd
 
    integer, parameter :: domlen = 16 ! should be <= mpisetup::cbuff_len
    integer, parameter :: idlen  = 3
@@ -236,11 +236,14 @@ module types
       subroutine no_args
          implicit none
       end subroutine no_args
+      subroutine tab_args(tab)
+         implicit none
+         real, dimension(:,:,:), intent(inout) :: tab
+      end subroutine tab_args
    end interface
 
-   procedure(no_args), pointer :: problem_customize_solution => NULL()
-   procedure(no_args), pointer :: finalize_problem           => NULL()
-   procedure(no_args), pointer :: custom_emf_advect_bnd      => NULL()
-   procedure(no_args), pointer :: custom_emf_resist_bnd      => NULL()
+   procedure(no_args),  pointer :: problem_customize_solution => NULL()
+   procedure(no_args),  pointer :: finalize_problem           => NULL()
+   procedure(tab_args), pointer :: custom_emf_bnd             => NULL()
 
 end module types
