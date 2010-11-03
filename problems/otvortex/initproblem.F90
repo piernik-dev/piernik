@@ -31,14 +31,12 @@
 module initproblem
 
    use problem_pub, only: problem_name, run_id
-   use constants,   only: one
    implicit none
 
    private
    public :: read_problem_par, init_prob
 
    real               :: d0,r0,bx0,by0,bz0
-   character(len=one) :: dir
 
    namelist /PROBLEM_CONTROL/  problem_name, run_id, d0, r0,bx0,by0,bz0
 
