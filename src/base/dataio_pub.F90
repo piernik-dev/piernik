@@ -330,6 +330,10 @@ contains
       integer                          :: io
       character(len=maxparfilelen)     :: sa, sb
       integer, parameter               :: lun_bef=501, lun_aft=502
+      integer                          :: proc
+
+      call MPI_Comm_rank(MPI_COMM_WORLD, proc, ierrh)
+      if (proc > 0) call die("[dataio_pub:compare_namelist] This routine must not be called by many threads at once. Make sure that diff_nml macro is called only from rank 0.")
 
       open(lun_bef, file=nml_bef, status='old')
       open(lun_aft, file=nml_aft, status='old')

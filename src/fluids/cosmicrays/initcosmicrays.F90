@@ -124,7 +124,9 @@ contains
       K_cre_paral(:) = 0.0
       K_cre_perp(:)  = 0.0
 
-      if (proc == 0) diff_nml(COSMIC_RAYS)
+      if (proc == 0) then
+         diff_nml(COSMIC_RAYS) ! Do not use one-line if here!
+      endif
 #ifndef MULTIGRID
       if (.not. use_split) call warn("[initcosmicrays:init_cosmicrays] No multigrid solver compiled in: use_split reset to .true.")
       use_split  = .true.
