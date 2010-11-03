@@ -146,6 +146,7 @@ contains
          lbuff(1)   = use_split
 
          nn         = count(rbuff(:) < HUGE(1.))    ! this must match the last rbuff() index above
+         ibuff(ubound(ibuff, 1)) = nn
          ne         = nn + 3 * ncrn
          if (ne + 3 * ncre > ubound(rbuff, 1)) call die("[initcosmicrays:init_cosmicrays] rbuff size exceeded.")
 
@@ -179,7 +180,7 @@ contains
 
          use_split  = lbuff(1)
 
-         nn         = count(rbuff(:) < HUGE(1.))    ! this must match the last rbuff() index above
+         nn         = ibuff(ubound(ibuff, 1))    ! this must match the last rbuff() index above
          ne         = nn + 3 * ncrn
 
          if (ncrn > 0) then
