@@ -392,7 +392,7 @@ contains
 
 #ifdef RESISTIVE
 ! DIFFUSION FULL STEP
-      if (associated(custom_emf_resist_bnd)) call custom_emf_bnd(wcu)
+      if (associated(custom_emf_bnd)) call custom_emf_bnd(wcu)
       b(ib1,:,:,:) = b(ib1,:,:,:) - wcu*idl(dim1)
       wcu = pshift(wcu,dim1)
       b(ib1,:,:,:) = b(ib1,:,:,:) + wcu*idl(dim1)
@@ -402,7 +402,7 @@ contains
       b(ib2,:,:,:) = b(ib2,:,:,:) - wcu*idl(dim2)
 #endif /* RESISTIVE */
 ! ADVECTION FULL STEP
-      if (associated(custom_emf_advect_bnd)) call custom_emf_bnd(wa)
+      if (associated(custom_emf_bnd)) call custom_emf_bnd(wa)
       b(ib1,:,:,:) = b(ib1,:,:,:) - wa*idl(dim1)
       wa = mshift(wa,dim1)
       b(ib1,:,:,:) = b(ib1,:,:,:) + wa*idl(dim1)
