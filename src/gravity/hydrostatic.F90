@@ -37,7 +37,7 @@ module hydrostatic
    private
 #ifdef GRAV
    public :: hydrostatic_zeq
-#endif
+#endif /* GRAV */
 
 contains
 #ifdef GRAV
