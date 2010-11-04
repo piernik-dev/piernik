@@ -74,9 +74,9 @@ plot_par.zticks = 4
 plot_par.xminor = 6
 plot_par.yminor = 6
 plot_par.zminor = 6
-plot_par.xtickf = '(F5.1)'
-plot_par.ytickf = '(F5.1)'
-plot_par.ztickf = '(F5.1)'
+plot_par.xtickf = '(F7.1)'
+plot_par.ytickf = '(F7.1)'
+plot_par.ztickf = '(F7.1)'
 
 
 ; Default units

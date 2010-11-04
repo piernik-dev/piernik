@@ -1,6 +1,6 @@
 PRO SHOW
 
-data_dir = '../obj'
+data_dir = '../obj_mcrtmg'
 prefix = 'crwind_tst'
 
 png_dir = data_dir+'/frames'
@@ -67,7 +67,7 @@ n_slices = n_slices+1
 
 ;------------------------------------------------------------------------------
 
-s.sw	= 'on'  
+s.sw	= 'off'  
 s.panel_name	= 'b'			; If more slices of the same type 
                                         ; are needed use this index
 
@@ -90,8 +90,8 @@ n_slices = n_slices+1
 
 ;------------------------------------------------------------------------------
 
-s.sw	= 'on'  
-s.panel_name	= 'b'			; If more slices of the same type 
+s.sw	= 'off'  
+s.panel_name	= 'c'			; If more slices of the same type 
                                         ; are needed use this index
 
 s.type		= 'yz'			; Chose 'yz', 'xz' or 'xy' plane
@@ -113,8 +113,8 @@ n_slices = n_slices+1
 
 ;------------------------------------------------------------------------------
 
-s.sw	= 'on'  
-s.panel_name	= 'b'			; If more slices of the same type 
+s.sw	= 'off'  
+s.panel_name	= 'd'			; If more slices of the same type 
                                         ; are needed use this index
 
 s.type		= 'yz'			; Chose 'yz', 'xz' or 'xy' plane
@@ -136,8 +136,8 @@ n_slices = n_slices+1
 
 ;------------------------------------------------------------------------------
 
-s.sw	= 'off'  
-s.panel_name	= 'c'			; If more slices of the same type 
+s.sw	= 'on'  
+s.panel_name	= 'e'			; If more slices of the same type 
                                         ; are needed use this index
 
 s.type		= 'yz'			; Chose 'yz', 'xz' or 'xy' plane
