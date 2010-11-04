@@ -60,7 +60,6 @@ contains
 
       real, intent(inout)              :: d0
       integer, intent(in)              :: iia, jja
-      real, dimension(nz), intent(out) :: dprof
       real, intent(in)                 :: csim2
 
       real, allocatable, dimension(:)  :: zs, dprofs, gprofs, gpots
@@ -142,7 +141,6 @@ contains
     if (allocated(gpots)) deallocate(gpots)
 
     return
-
 
       end subroutine hydrostatic_zeq
 #endif /* GRAV */
