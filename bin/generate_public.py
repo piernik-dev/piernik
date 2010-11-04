@@ -19,12 +19,12 @@ def do_magic(files,options):
    return numpy.unique([unwanted.sub('',f) for f in glob])
 
 def pretty_format(list,col):
-   print "   private :: &"
-   str = "       & "
+   print "   public :: &"
+   str = "        & "
    for item in list:
       if(len(str) + len(item) + 2 > int(col)):
          print str + "&"
-         str = "       & "
+         str = "        & "
       str= str + item + ", "
    print str.rstrip(", ")
 
