@@ -10,19 +10,27 @@ def do_magic(files,options):
    name = files[0]
    glob  = []
    temp  = []
-   for f in files[1:]:
+   for f in files[2:]:
       lines = open(f,'r').readlines()
       temp  = qa2.remove_amp(filter(remove_warn.match,lines),True)
       uses  = [f for f in filter(have_use.search, temp) if (re.match("\s{0,9}use "+name,f))]
       for f in uses:
          glob.extend(f.split("only: ")[1].strip().split(','))
-   my_priv = numpy.unique([unwanted.sub('',f) for f in glob])
-   print my_priv
+   return numpy.unique([unwanted.sub('',f) for f in glob])
 
+def pretty_format(list,col):
+   print "   private :: &"
+   str = "       & "
+   for item in list:
+      if(len(str) + len(item) + 2 > int(col)):
+         print str + "&"
+         str = "       & "
+      str= str + item + ", "
+   print str.rstrip(", ")
 
 if __name__ == "__main__":
    from optparse import OptionParser
-   usage = "usage: %prog module_name FILES"
+   usage = "usage: %prog module_name line_lenght FILES"
    parser = OptionParser(usage=usage)
    parser.add_option("-v", "--verbose",
                   action="store_true", dest="verbose", default=False,
@@ -36,5 +44,6 @@ if __name__ == "__main__":
    (options, args) = parser.parse_args()
    if len(args) < 1:
       parser.error("incorrect number of arguments")
-   do_magic(args,options)
+   tab = do_magic(args,options)
+   pretty_format(tab,args[1])
 
