@@ -36,7 +36,7 @@ module hydrostatic
 
    private
 #ifdef GRAV
-   public :: hydrostatic_zeq
+   public :: hydrostatic_zeq_densmid
 #endif /* GRAV */
 
 contains
@@ -48,7 +48,7 @@ contains
 !! \param d0 real, density value in the midplane
 !! \param csim2 real, square value of sound speed
 !<
-   subroutine hydrostatic_zeq(iia,jja, d0, csim2)
+   subroutine hydrostatic_zeq_densmid(iia,jja, d0, csim2)
 
       use arrays,          only: gp, dprof
       use constants,       only: small
@@ -142,6 +142,6 @@ contains
 
     return
 
-      end subroutine hydrostatic_zeq
+      end subroutine hydrostatic_zeq_densmid
 #endif /* GRAV */
 end module hydrostatic

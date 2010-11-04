@@ -108,7 +108,7 @@ module initproblem
       use fluidindex,  only: ibx, iby, ibz
       use gravity,     only: r_smooth, r_grav, n_gravr, ptmass
       use grid,        only: x, y, z, nx, ny, nz, nzd
-      use hydrostatic, only: hydrostatic_zeq
+      use hydrostatic, only: hydrostatic_zeq_densmid
       use initfluids,  only: gamma, cs_iso
       use initionized, only: idni, imxi, imyi, imzi
 #ifndef ISO
@@ -143,7 +143,7 @@ module initproblem
             rc = sqrt(xi**2+yj**2)
 
             if (nzd /= 1) then
-               call hydrostatic_zeq(i, j, d0, csim2)
+               call hydrostatic_zeq_densmid(i, j, d0, csim2)
             endif
 
             do k = 1,nz

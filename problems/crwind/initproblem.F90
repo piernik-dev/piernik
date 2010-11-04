@@ -116,7 +116,7 @@ module initproblem
       use arrays,         only: u, b, dprof
       use fluidindex,     only: ibx, iby, ibz
       use grid,           only: x, y, z, nx, ny, nz
-      use hydrostatic,    only: hydrostatic_zeq
+      use hydrostatic,    only: hydrostatic_zeq_densmid
       use initcosmicrays, only: gamma_crs, iarr_crs
       use initfluids,     only: cs_iso2
       use initionized,    only: idni, imxi, imyi, imzi
@@ -140,7 +140,7 @@ module initproblem
 
       csim2 = cs_iso2*(1.0+alpha)
 
-      call hydrostatic_zeq(1, 1, d0, csim2)
+      call hydrostatic_zeq_densmid(1, 1, d0, csim2)
 
       do k = 1,nz
          do j = 1,ny
