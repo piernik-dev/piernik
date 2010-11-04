@@ -41,11 +41,13 @@ module gravity
    implicit none
 
    private
-   public :: init_grav, grav_accel, source_terms_grav, grav_pot2accel, grav_pot_3d
-   public :: g_z, g_y, dg_dz, r_gc, ptmass, ptm_x, ptm_y, ptm_z, r_smooth, nsub, tune_zeq, tune_zeq_bnd, h_grav, r_grav, n_gravr, n_gravr2, n_gravh, user_grav, gp_status
+   public :: init_grav, grav_accel, source_terms_grav, grav_pot2accel, grav_pot_3d, get_gprofs
+   public :: g_z, g_y, dg_dz, r_gc, ptmass, ptm_x, ptm_y, ptm_z, r_smooth, nsub, tune_zeq, tune_zeq_bnd, h_grav, r_grav, n_gravr, n_gravr2, n_gravh, user_grav, gp_status, gprofs_target
 
    integer, parameter         :: gp_stat_len = 9
+   integer, parameter         :: gproft_len  = 5
    character(LEN=gp_stat_len) :: gp_status       !< variable set as 'undefined' in grav_pot_3d when grav_accel is supposed to use
+   character(LEN=gproft_len)  :: gprofs_target   !< variable set pointing gravity routine in hydrostatic_zeq ('accel' or ready gp array 'gparr')
    real    :: g_z                   !< z-component used by GRAV_UNIFORM type of %gravity
    real    :: g_y                   !< y-component of GRAV_UNIFORM constant <b>(currently not used)</b>
    real    :: dg_dz                 !< constant used by GRAV_LINEAR type of %gravity
@@ -70,9 +72,14 @@ module gravity
       subroutine user_grav_pot_3d
          implicit none
       end subroutine user_grav_pot_3d
+      subroutine gprofs_default(iia,jja)
+         implicit none
+         integer, intent(in) :: iia, jja
+      end subroutine gprofs_default
    end interface
 
    procedure(user_grav_pot_3d), pointer :: grav_pot_3d => NULL()
+   procedure(gprofs_default),   pointer :: get_gprofs  => NULL()
 
    contains
 
@@ -109,14 +116,14 @@ module gravity
       use arrays,        only: gpot
       use dataio_pub,    only: ierrh, par_file, namelist_errh, compare_namelist    ! QA_WARN required for diff_nml
       use dataio_pub,    only: warn
-      use mpisetup,      only: ibuff, rbuff, buffer_dim, comm, ierr, proc, &
-           &                   MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL, lbuff
+      use mpisetup,      only: ibuff, rbuff, cbuff, cbuff_len, buffer_dim, comm, ierr, proc, &
+           &                   MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL, lbuff, MPI_CHARACTER
 
       implicit none
 
 
       namelist /GRAVITY/ g_z, g_y, dg_dz, r_gc, ptmass, ptm_x, ptm_y, ptm_z, r_smooth, &
-                nsub, tune_zeq, tune_zeq_bnd, h_grav, r_grav, n_gravr, n_gravr2, n_gravh, user_grav
+                nsub, tune_zeq, tune_zeq_bnd, h_grav, r_grav, n_gravr, n_gravr2, n_gravh, user_grav, gprofs_target
 
 #ifdef VERBOSE
       call warn("[gravity:init_grav] Commencing gravity module initialization")
@@ -139,6 +146,7 @@ module gravity
       n_gravr = 0
       n_gravr2= 0
       n_gravh = 0
+      gprofs_target = 'gparr'
 
       user_grav = .false.
 
@@ -166,12 +174,14 @@ module gravity
          rbuff(13) = r_grav
 
          lbuff(1)  = user_grav
+         cbuff(1)  = gprofs_target
 
       endif
 
       call MPI_Bcast(ibuff, buffer_dim, MPI_INTEGER,          0, comm, ierr)
       call MPI_Bcast(lbuff, buffer_dim, MPI_LOGICAL,          0, comm, ierr)
       call MPI_Bcast(rbuff, buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+      call MPI_Bcast(cbuff, cbuff_len*buffer_dim, MPI_CHARACTER, 0, comm, ierr)
 
       if (proc /= 0) then
 
@@ -195,6 +205,7 @@ module gravity
          r_grav              = rbuff(13)
 
          user_grav           = lbuff(1)
+         gprofs_target       = cbuff(1)(1:gproft_len)
 
       endif
 
