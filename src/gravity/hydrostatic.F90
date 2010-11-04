@@ -36,7 +36,7 @@ module hydrostatic
 
    private
 #ifdef GRAV
-   public :: hydrostatic_zeq_coldens, hydrostatic_zeq_densmid
+   public :: hydrostatic_zeq_coldens, hydrostatic_zeq_densmid, gprofs
 #endif /* GRAV */
 
    real, allocatable, dimension(:), save :: zs, gprofs
