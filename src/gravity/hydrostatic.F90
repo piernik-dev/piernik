@@ -63,7 +63,9 @@ contains
 
       real, allocatable, dimension(:) :: dprofs
       integer :: ksub, ksmid, k
-      real    :: dzs, factor, dmid
+#ifndef NEW_HYDROSTATIC
+      real    :: factor
+#endif /* !NEW_HYDROSTATIC */
 
       if (.not.hstarted) call die("[hydrostatic:hydrostatic_main] procedure used before initializing with start_hydrostatic")
       allocate(dprofs(nstot))
