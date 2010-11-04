@@ -141,7 +141,7 @@ module initproblem
       use arrays,         only: b, u
       use dataio_pub,     only: msg, warn, printinfo
       use fluidindex,     only: ibx, iby, ibz, nvar
-      use grid,           only: nx, ny, nz, x, y, z, is, ie, js, je, ks, ke, nxd, nyd, nzd
+      use grid,           only: nx, ny, nz, x, y, z, is, ie, js, je, ks, ke, nxd, nyd, nzd, Lx, Ly, Lz
       use initcosmicrays, only: iarr_crn, iarr_crs, gamma_crn, K_crn_paral, K_crn_perp
       use initionized,    only: idni, imxi, imzi, ieni, gamma_ion
 #ifdef COSM_RAYS_SOURCES
@@ -155,14 +155,18 @@ module initproblem
       real    :: cs_iso
       real    :: xsn, ysn, zsn    ! BEWARE: those vars are used but not initialized
       real    :: r2
+      integer :: ipm, jpm, kpm
+      real    :: ysna, ysni, ysno
+
+
 #ifndef COSM_RAYS_SOURCES
       integer, parameter :: icr_H1 = 1, icr_C12 = 2
 #endif /* !COSM_RAYS_SOURCES */
 
       ! BEWARE: temporary fix
-      xsn = 0.0
-      ysn = 0.0
-      zsn = 0.0
+      xsn = x0
+      ysn = y0
+      zsn = z0
 
 ! Uniform equilibrium state
 
@@ -206,14 +210,23 @@ module initproblem
          do k = ks, ke
             do j = js, je
                do i = is, ie
-                  r2 = (x(i)-xsn)**2+(y(j)-ysn)**2+(z(k)-zsn)**2
-                  if (icr == icr_H1) then
-                     u(iarr_crn(icr), i, j, k) = u(iarr_crn(icr), i, j, k) + amp_cr*exp(-r2/r0**2)
-                  elseif (icr == icr_C12) then
-                     u(iarr_crn(icr), i, j, k) = u(iarr_crn(icr), i, j, k) + amp_cr*0.1*exp(-r2/r0**2) ! BEWARE: magic number
-                  else
-                     u(iarr_crn(icr), i, j, k) = 0.0
-                  endif
+
+                  do ipm=-1,1
+                     do jpm=-1,1
+                        do kpm=-1,1
+
+                           r2 = (x(i)-xsn+real(ipm)*Lx)**2+(y(j)-ysn+real(jpm)*Ly)**2+(z(k)-zsn+real(kpm)*Lz)**2
+                           if (icr == icr_H1) then
+                              u(iarr_crn(icr), i, j, k) = u(iarr_crn(icr), i, j, k) + amp_cr*exp(-r2/r0**2)
+                           elseif (icr == icr_C12) then
+                              u(iarr_crn(icr), i, j, k) = u(iarr_crn(icr), i, j, k) + amp_cr*0.1*exp(-r2/r0**2) ! BEWARE: magic number
+                           else
+                              u(iarr_crn(icr), i, j, k) = 0.0
+                           endif
+
+                        enddo
+                     enddo
+                  enddo
                enddo
             enddo
          enddo

@@ -2,11 +2,12 @@
     nxd = 128
     nyd = 128
     nzd = 1
+    nb  = 4
  /
 
  $MPI_BLOCKS
-    pxsize = 1
-    pysize = 1
+    pxsize = 2
+    pysize = 2
     pzsize = 1
  /
 
@@ -40,12 +41,12 @@
  /
 
  $BOUNDARIES
-    bnd_xl = 'out'
-    bnd_xr = 'out'
-    bnd_yl = 'out'
-    bnd_yr = 'out'
-    bnd_zl = 'out'
-    bnd_zr = 'out'
+    bnd_xl = 'per'
+    bnd_xr = 'per'
+    bnd_yl = 'per'
+    bnd_yr = 'per'
+    bnd_zl = 'per'
+    bnd_zr = 'per'
  /
 
  $DOMAIN_LIMITS
@@ -71,12 +72,12 @@
  $COSMIC_RAYS
     cfl_cr      = 0.9
     cr_active   = 1.0
-    ncrn        = 7
+    ncrn        = 4
     gamma_crn(1)   = 1.333333
     gamma_crn(2)   = 1.333333
     gamma_crn(3)   = 1.333333
-    K_crn_paral(1) = 200.0 ! anisotropic
-    K_crn_paral(2) = 200.0
+    K_crn_paral(1) = 10000.0 ! anisotropic
+    K_crn_paral(2) = 10000.0
     K_crn_paral(3) = 0.0
     K_crn_perp(1)  = 0     ! isotropic
     K_crn_perp(2)  = 0
@@ -108,11 +109,11 @@
     bx0    = 5.0
     by0    = 5.0
     bz0    = 5.0
-    x0     = 0.0
+    x0     = 500.0
     y0     = 0.0
     z0     = 0.0
     r0     = 64.0
     beta_cr= 0.0
-    amp_cr = 1.0
+    amp_cr = 1000.0
     norm_step = 1
  /
