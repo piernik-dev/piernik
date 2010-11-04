@@ -173,11 +173,11 @@ contains
       use arrays,  only: dprof
       use gravity, only: get_gprofs
       implicit none
-      integer, intent(in) :: iia, jja
-      real,    intent(in) :: coldens, csim2
+      integer, intent(inout) :: iia, jja
+      real,    intent(in)    :: coldens, csim2
       real :: sdprof
 
-      call start_hydrostatic
+      call start_hydrostatic(iia,jja,csim2)
       sdprof = sum(dprof)
       dprof = dprof * coldens / sdprof
       call finish_hydrostatic
@@ -190,8 +190,8 @@ contains
       use dataio_pub, only: die
       use gravity,    only: get_gprofs
       implicit none
-      integer, intent(in) :: iia, jja
-      real,    intent(in) :: d0, csim2
+      integer, intent(inout) :: iia, jja
+      real,    intent(in)    :: d0, csim2
 
       if (d0 .le. small) then
          call die("[hydrostatic:hydrostatic_zeq_densmid] d0 must be /= 0")
@@ -200,17 +200,19 @@ contains
       dmid = d0
 #endif /* !NEW_HYDROSTATIC */
 
-      call start_hydrostatic
+      call start_hydrostatic(iia,jja,csim2)
       dprof = dprof * d0
       call finish_hydrostatic
 
    end subroutine hydrostatic_zeq_densmid
 
-   subroutine start_hydrostatic
+   subroutine start_hydrostatic(iia,jja,csim2)
       use dataio_pub, only: die
       use gravity,    only: get_gprofs, gprofs_target, nsub
       use grid,       only: zmin, zmax, zdim, nzt, dl, nb
       implicit none
+      integer, intent(inout) :: iia, jja
+      real,    intent(in)    :: csim2
       integer :: ksub
       if (.not.associated(get_gprofs)) then
          select case (gprofs_target)
@@ -237,7 +239,6 @@ contains
       implicit none
       if (allocated(zs))     deallocate(zs)
       if (allocated(gprofs)) deallocate(gprofs)
-      hstarted = .false.
    end subroutine finish_hydrostatic
 #endif /* GRAV */
 end module hydrostatic
