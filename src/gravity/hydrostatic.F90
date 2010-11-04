@@ -87,61 +87,61 @@ contains
 
       ksmid = 0
       do ksub=1, nstot
-        zs(ksub) = zmin-nb*dl(zdim) + dzs/2 + (ksub-1)*dzs  !
-        if (zs(ksub) .lt. 0.0) ksmid = ksub      ! the midplane is in between
+         zs(ksub) = zmin-nb*dl(zdim) + dzs/2 + (ksub-1)*dzs  !
+         if (zs(ksub) .lt. 0.0) ksmid = ksub      ! the midplane is in between
       enddo                                  ! ksmid and ksmid+1
       if (ksmid == 0) call die("[hydrostatic:hydrostatic_zeq] ksmid not set")
 
       if (gp_status .eq. 'undefined') then
-        call grav_accel('zsweep',ia, ja, zs, nstot, gprofs)
+         call grav_accel('zsweep',ia, ja, zs, nstot, gprofs)
       else
-        k = 1; gpots(:) = 0.0
-        do ksub=1, nstot
-           if (zs(ksub) >= z(min(k+1,nz))) k = k + 1
-           if (zs(ksub) >= z(min(k,nz-1)) .and. zs(ksub) < z(min(k+1,nz))) then
+         k = 1; gpots(:) = 0.0
+         do ksub=1, nstot
+            if (zs(ksub) >= z(min(k+1,nz))) k = k + 1
+            if (zs(ksub) >= z(min(k,nz-1)) .and. zs(ksub) < z(min(k+1,nz))) then
                gpots(ksub) = gp(iia,jja,k) + (zs(ksub) - z(k)) * &
                 (gp(iia,jja,min(k+1,nz)) - gp(iia,jja,k)) / (z(min(k+1,nz)) - z(min(k,nz-1)))
-           endif
-        enddo
+            endif
+         enddo
 !        call grav_pot('zsweep', ia,ja, zs, nstot, gpots,gp_status,.true.)
-        gprofs(1:nstot-1) = (gpots(1:nstot-1) - gpots(2:nstot))/dzs
+         gprofs(1:nstot-1) = (gpots(1:nstot-1) - gpots(2:nstot))/dzs
       endif
       gprofs = tune_zeq*gprofs
 
       if (ksmid .lt. nstot) then
-        dprofs(ksmid+1) = dmid
-        do ksub=ksmid+1, nstot-1
-          factor = (1.0 + 0.5*dzs*gprofs(ksub)/csim2)  &
-                  /(1.0 - 0.5*dzs*gprofs(ksub)/csim2)
-          dprofs(ksub+1) = factor * dprofs(ksub)
-        enddo
+         dprofs(ksmid+1) = dmid
+         do ksub=ksmid+1, nstot-1
+            factor = (1.0 + 0.5*dzs*gprofs(ksub)/csim2)  &
+                    /(1.0 - 0.5*dzs*gprofs(ksub)/csim2)
+            dprofs(ksub+1) = factor * dprofs(ksub)
+         enddo
       endif
 
       if (ksmid .gt. 1) then
-        dprofs(ksmid) = dmid
-        do ksub=ksmid, 2, -1
-          factor = (1.0 - 0.5*dzs*gprofs(ksub)/csim2)  &
-                  /(1.0 + 0.5*dzs*gprofs(ksub)/csim2)
-          dprofs(ksub-1) = factor * dprofs(ksub)
-        enddo
+         dprofs(ksmid) = dmid
+         do ksub=ksmid, 2, -1
+            factor = (1.0 - 0.5*dzs*gprofs(ksub)/csim2)  &
+                    /(1.0 + 0.5*dzs*gprofs(ksub)/csim2)
+            dprofs(ksub-1) = factor * dprofs(ksub)
+         enddo
       endif
 
       dprof(:) =0.0
       do k=1,nz
-        do ksub=1, nstot
-          if (zs(ksub) .gt. zl(k) .and. zs(ksub) .lt. zr(k)) then
-            dprof(k) = dprof(k) + dprofs(ksub)/real(nsub)
-          endif
-        enddo
+         do ksub=1, nstot
+            if (zs(ksub) .gt. zl(k) .and. zs(ksub) .lt. zr(k)) then
+               dprof(k) = dprof(k) + dprofs(ksub)/real(nsub)
+            endif
+         enddo
       enddo
 
-    if (allocated(zs)) deallocate(zs)
-    if (allocated(dprofs)) deallocate(dprofs)
-    if (allocated(gprofs)) deallocate(gprofs)
-    if (allocated(gpots)) deallocate(gpots)
+      if (allocated(zs)) deallocate(zs)
+      if (allocated(dprofs)) deallocate(dprofs)
+      if (allocated(gprofs)) deallocate(gprofs)
+      if (allocated(gpots)) deallocate(gpots)
 
-    return
+      return
 
-      end subroutine hydrostatic_zeq_densmid
+   end subroutine hydrostatic_zeq_densmid
 #endif /* GRAV */
 end module hydrostatic
