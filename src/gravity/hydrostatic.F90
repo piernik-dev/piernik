@@ -80,14 +80,14 @@ contains
       if (ksmid .lt. nstot) then
          dprofs(ksmid+1) = 1.0
          do ksub=ksmid+1, nstot-1
-            dprofs(ksub+1) = dprofs(ksub)*(0.5*(gprofs(ksub)+gprofs(ksub+1))*dzs + 1.0)
+            dprofs(ksub+1) = dprofs(ksub)*(1.0 + 0.5*(gprofs(ksub)+gprofs(ksub+1))*dzs)
          enddo
       endif
 
       if (ksmid .gt. 1) then
          dprofs(ksmid) = 1.0
          do ksub=ksmid, 2, -1
-            dprofs(ksub-1) = dprofs(ksub)*(0.5*(gprofs(ksub)+gprofs(ksub-1))*dzs + 1.0)
+            dprofs(ksub-1) = dprofs(ksub)*(1.0 - 0.5*(gprofs(ksub)+gprofs(ksub-1))*dzs)
          enddo
       endif
 
