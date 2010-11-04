@@ -129,6 +129,7 @@ contains
       use initcosmicrays,     only: use_split
 #ifdef MULTIGRID
       use multigrid_diffusion, only: multigrid_solve_diff
+      use fluidboundaries,     only: all_fluid_boundaries
 #endif /* MULTIGRID */
 #endif /* COSM_RAYS */
 
@@ -150,7 +151,10 @@ contains
 
 #ifdef COSM_RAYS
 #ifdef MULTIGRID
-      if (.not. use_split) call multigrid_solve_diff
+      if (.not. use_split) then
+         call multigrid_solve_diff
+         call all_fluid_boundaries
+      endif
 #endif /* MULTIGRID */
 #endif /* COSM_RAYS */
 
