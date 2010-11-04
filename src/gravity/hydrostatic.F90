@@ -36,78 +36,68 @@ module hydrostatic
 
    private
 #ifdef GRAV
-   public :: hydrostatic_zeq_densmid
+   public :: hydrostatic_zeq_coldens, hydrostatic_zeq_densmid
 #endif /* GRAV */
+
+   real, allocatable, dimension(:), save :: zs, gprofs
+   real,    save :: dzs
+   integer, save :: nstot
+   logical, save :: hstarted = .false.
+#ifndef NEW_HYDROSTATIC
+   real,    save :: dmid
+#endif /* !NEW_HYDROSTATIC */
 
 contains
 #ifdef GRAV
 !>
 !! \brief Routine that arranges %hydrostatic equilibrium in the vertical (z) direction
-!! \param iia integer, number of a column in the x direction
-!! \param jja integer, number of a column in the y direction
-!! \param d0 real, density value in the midplane
-!! \param csim2 real, square value of sound speed
 !<
-   subroutine hydrostatic_zeq_densmid(iia,jja, d0, csim2)
+   subroutine hydrostatic_main
 
-      use arrays,          only: gp, dprof
-      use constants,       only: small
-      use dataio_pub,      only: die
-      use gravity,         only: grav_accel, gp_status, nsub, tune_zeq
-      use grid,            only: nx, ny, nz, dl, zdim, z, zl, zr, nzt, nb, zmin, zmax
+      use arrays,     only: dprof
+      use dataio_pub, only: die
+      use gravity,    only: nsub !, gp_status
+      use grid,       only: nz, zl, zr
 
       implicit none
 
-      real, intent(inout)              :: d0
-      integer, intent(in)              :: iia, jja
-      real, intent(in)                 :: csim2
-
-      real, allocatable, dimension(:)  :: zs, dprofs, gprofs, gpots
-      integer :: ksub, ksmid, k, ia, ja, nstot, iter, itermx
+      real, allocatable, dimension(:) :: dprofs
+      integer :: ksub, ksmid, k
       real    :: dzs, factor, dmid
 
-!      csim2 = cs_iso2*(1.0+alpha)
-
-      ia = min(nx,max(1, iia))
-      ja = min(ny,max(1, jja))
-
-      nstot=nsub*nzt
-
-      allocate(zs(nstot), dprofs(nstot), gprofs(nstot), gpots(nstot))
-      itermx = 20
-      if (d0 .gt. small) then
-         dmid = d0
-         iter = 0
-      else
-         call die("[hydrostatic:hydrostatic_zeq] d0 must be /= 0")
-         dmid = 0. ! just for suppressing compiler warning
-      endif
-
-      dzs = (zmax-zmin)/real(nstot-2*nb*nsub)
+      if (.not.hstarted) call die("[hydrostatic:hydrostatic_main] procedure used before initializing with start_hydrostatic")
+      allocate(dprofs(nstot))
 
       ksmid = 0
       do ksub=1, nstot
-         zs(ksub) = zmin-nb*dl(zdim) + dzs/2 + (ksub-1)*dzs  !
          if (zs(ksub) .lt. 0.0) ksmid = ksub      ! the midplane is in between
       enddo                                  ! ksmid and ksmid+1
-      if (ksmid == 0) call die("[hydrostatic:hydrostatic_zeq] ksmid not set")
+      if (ksmid == 0) call die("[hydrostatic:hydrostatic_main] ksmid not set")
 
-      if (gp_status .eq. 'undefined') then
-         call grav_accel('zsweep',ia, ja, zs, nstot, gprofs)
-      else
-         k = 1; gpots(:) = 0.0
+#ifdef NEW_HYDROSTATIC
+      if (ksmid .lt. nstot) then
+         dprofs(ksmid+1) = 1.0
+         do ksub=ksmid+1, nstot-1
+            dprofs(ksub+1) = dprofs(ksub)*(0.5*(gprofs(ksub)+gprofs(ksub+1))*dzs + 1.0)
+         enddo
+      endif
+
+      if (ksmid .gt. 1) then
+         dprofs(ksmid) = 1.0
+         do ksub=ksmid, 2, -1
+            dprofs(ksub-1) = dprofs(ksub)*(0.5*(gprofs(ksub)+gprofs(ksub-1))*dzs + 1.0)
+         enddo
+      endif
+
+      dprof(:) =0.0
+      do k=1,nz
          do ksub=1, nstot
-            if (zs(ksub) >= z(min(k+1,nz))) k = k + 1
-            if (zs(ksub) >= z(min(k,nz-1)) .and. zs(ksub) < z(min(k+1,nz))) then
-               gpots(ksub) = gp(iia,jja,k) + (zs(ksub) - z(k)) * &
-                (gp(iia,jja,min(k+1,nz)) - gp(iia,jja,k)) / (z(min(k+1,nz)) - z(min(k,nz-1)))
+            if (zs(ksub) .gt. zl(k) .and. zs(ksub) .lt. zr(k)) then
+               dprof(k) = dprof(k) + dprofs(ksub)/real(nsub)
             endif
          enddo
-!        call grav_pot('zsweep', ia,ja, zs, nstot, gpots,gp_status,.true.)
-         gprofs(1:nstot-1) = (gpots(1:nstot-1) - gpots(2:nstot))/dzs
-      endif
-      gprofs = tune_zeq*gprofs/csim2
-
+      enddo
+#else /* !NEW_HYDROSTATIC */
       if (ksmid .lt. nstot) then
          dprofs(ksmid+1) = dmid
          do ksub=ksmid+1, nstot-1
@@ -132,14 +122,126 @@ contains
             endif
          enddo
       enddo
+#endif /* !NEW_HYDROSTATIC */
 
-      if (allocated(zs)) deallocate(zs)
       if (allocated(dprofs)) deallocate(dprofs)
-      if (allocated(gprofs)) deallocate(gprofs)
-      if (allocated(gpots)) deallocate(gpots)
 
       return
+   end subroutine hydrostatic_main
+
+   subroutine get_gprofs_accel(iia,jja)
+      use gravity, only: tune_zeq, grav_accel
+      use grid,    only: nx, ny
+      implicit none
+      integer, intent(in) :: iia, jja
+      integer :: ia, ja
+
+
+      ia = min(nx,max(1, iia))
+      ja = min(ny,max(1, jja))
+      call grav_accel('zsweep',ia, ja, zs, nstot, gprofs)
+      gprofs = tune_zeq*gprofs
+
+   end subroutine get_gprofs_accel
+
+   subroutine get_gprofs_gparray(iia,jja)
+      use arrays,  only: gp
+      use gravity, only: tune_zeq
+      use grid,    only: nz, z
+      implicit none
+      integer, intent(in) :: iia, jja
+      integer :: ksub, k
+      real, allocatable, dimension(:)  :: gpots
+
+      allocate(gpots(nstot))
+      k = 1; gpots(:) = 0.0
+      do ksub=1, nstot
+         if (zs(ksub) >= z(min(k+1,nz))) k = k + 1
+         if (zs(ksub) >= z(min(k,nz-1)) .and. zs(ksub) < z(min(k+1,nz))) then
+            gpots(ksub) = gp(iia,jja,k) + (zs(ksub) - z(k)) * &
+             (gp(iia,jja,min(k+1,nz)) - gp(iia,jja,k)) / (z(min(k+1,nz)) - z(min(k,nz-1)))
+         endif
+      enddo
+!         call grav_pot('zsweep', ia,ja, zs, nstot, gpots,gp_status,.true.)
+      gprofs(1:nstot-1) = (gpots(1:nstot-1) - gpots(2:nstot))/dzs
+      gprofs = tune_zeq*gprofs
+      if (allocated(gpots)) deallocate(gpots)
+
+   end subroutine get_gprofs_gparray
+
+   subroutine hydrostatic_zeq_coldens(iia,jja,coldens,csim2)
+      use arrays,  only: dprof
+      use gravity, only: get_gprofs
+      implicit none
+      integer, intent(in) :: iia, jja
+      real,    intent(in) :: coldens, csim2
+      real :: sdprof
+
+      call start_hydrostatic
+      call get_gprofs(iia,jja)
+      gprofs = gprofs / csim2
+      call hydrostatic_main
+      sdprof = sum(dprof)
+      dprof = dprof * coldens / sdprof
+      call finish_hydrostatic
+
+   end subroutine hydrostatic_zeq_coldens
+
+   subroutine hydrostatic_zeq_densmid(iia,jja,d0,csim2)
+      use arrays,     only: dprof
+      use constants,  only: small
+      use dataio_pub, only: die
+      use gravity,    only: get_gprofs
+      implicit none
+      integer, intent(in) :: iia, jja
+      real,    intent(in) :: d0, csim2
+
+      if (d0 .le. small) then
+         call die("[hydrostatic:hydrostatic_zeq_densmid] d0 must be /= 0")
+      endif
+#ifndef NEW_HYDROSTATIC
+      dmid = d0
+#endif /* !NEW_HYDROSTATIC */
+
+      call start_hydrostatic
+      call get_gprofs(iia,jja)
+      gprofs = gprofs / csim2
+      call hydrostatic_main
+      dprof = dprof * d0
+      call finish_hydrostatic
 
    end subroutine hydrostatic_zeq_densmid
+
+   subroutine start_hydrostatic
+      use dataio_pub, only: die
+      use gravity,    only: get_gprofs, gprofs_target, nsub
+      use grid,       only: zmin, zmax, zdim, nzt, dl, nb
+      implicit none
+      integer :: ksub
+      if (.not.associated(get_gprofs)) then
+         select case (gprofs_target)
+            case ('accel')
+               get_gprofs => get_gprofs_accel
+            case ('gparr')
+               get_gprofs => get_gprofs_gparray
+            case default
+               call die("[hydrostatic:start_hydrostatic] get_gprofs'' target has not been specified")
+         end select
+      endif
+      nstot = nsub * nzt
+      dzs = (zmax-zmin)/real(nstot-2*nb*nsub)
+      allocate(zs(nstot), gprofs(nstot))
+      do ksub=1, nstot
+         zs(ksub) = zmin-nb*dl(zdim) + dzs/2 + (ksub-1)*dzs
+      enddo
+      hstarted = .true.
+   end subroutine start_hydrostatic
+
+   subroutine finish_hydrostatic
+      implicit none
+      if (allocated(zs))     deallocate(zs)
+      if (allocated(gprofs)) deallocate(gprofs)
+      hstarted = .false.
+   end subroutine finish_hydrostatic
 #endif /* GRAV */
 end module hydrostatic
