@@ -42,7 +42,6 @@ module hydrostatic
    real, allocatable, dimension(:), save :: zs, gprofs
    real,    save :: dzs
    integer, save :: nstot
-   logical, save :: hstarted = .false.
 #ifndef NEW_HYDROSTATIC
    real,    save :: dmid
 #endif /* !NEW_HYDROSTATIC */
@@ -67,7 +66,6 @@ contains
       real    :: factor
 #endif /* !NEW_HYDROSTATIC */
 
-      if (.not.hstarted) call die("[hydrostatic:hydrostatic_main] procedure used before initializing with start_hydrostatic")
       allocate(dprofs(nstot))
 
       ksmid = 0
@@ -180,9 +178,6 @@ contains
       real :: sdprof
 
       call start_hydrostatic
-      call get_gprofs(iia,jja)
-      gprofs = gprofs / csim2
-      call hydrostatic_main
       sdprof = sum(dprof)
       dprof = dprof * coldens / sdprof
       call finish_hydrostatic
@@ -206,9 +201,6 @@ contains
 #endif /* !NEW_HYDROSTATIC */
 
       call start_hydrostatic
-      call get_gprofs(iia,jja)
-      gprofs = gprofs / csim2
-      call hydrostatic_main
       dprof = dprof * d0
       call finish_hydrostatic
 
@@ -236,7 +228,9 @@ contains
       do ksub=1, nstot
          zs(ksub) = zmin-nb*dl(zdim) + dzs/2 + (ksub-1)*dzs
       enddo
-      hstarted = .true.
+      call get_gprofs(iia,jja)
+      gprofs = gprofs / csim2
+      call hydrostatic_main
    end subroutine start_hydrostatic
 
    subroutine finish_hydrostatic
