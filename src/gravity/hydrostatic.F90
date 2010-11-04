@@ -106,13 +106,12 @@ contains
 !        call grav_pot('zsweep', ia,ja, zs, nstot, gpots,gp_status,.true.)
          gprofs(1:nstot-1) = (gpots(1:nstot-1) - gpots(2:nstot))/dzs
       endif
-      gprofs = tune_zeq*gprofs
+      gprofs = tune_zeq*gprofs/csim2
 
       if (ksmid .lt. nstot) then
          dprofs(ksmid+1) = dmid
          do ksub=ksmid+1, nstot-1
-            factor = (1.0 + 0.5*dzs*gprofs(ksub)/csim2)  &
-                    /(1.0 - 0.5*dzs*gprofs(ksub)/csim2)
+            factor = (2.0 + dzs*gprofs(ksub))/(2.0 - dzs*gprofs(ksub))
             dprofs(ksub+1) = factor * dprofs(ksub)
          enddo
       endif
@@ -120,8 +119,7 @@ contains
       if (ksmid .gt. 1) then
          dprofs(ksmid) = dmid
          do ksub=ksmid, 2, -1
-            factor = (1.0 - 0.5*dzs*gprofs(ksub)/csim2)  &
-                    /(1.0 + 0.5*dzs*gprofs(ksub)/csim2)
+            factor = (2.0 - dzs*gprofs(ksub))/(2.0 + dzs*gprofs(ksub))
             dprofs(ksub-1) = factor * dprofs(ksub)
          enddo
       endif
