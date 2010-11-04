@@ -47,11 +47,10 @@ contains
 !! \param jja integer, number of a column in the y direction
 !! \param d0 real, density value in the midplane
 !! \param csim2 real, square value of sound speed
-!! \param dprof array of reals, computed density distribution in vertical direction returned by the routine
 !<
-   subroutine hydrostatic_zeq(iia,jja, d0, csim2, dprof)
+   subroutine hydrostatic_zeq(iia,jja, d0, csim2)
 
-      use arrays,          only: gp
+      use arrays,          only: gp, dprof
       use constants,       only: small
       use dataio_pub,      only: die
       use gravity,         only: grav_accel, gp_status, nsub, tune_zeq

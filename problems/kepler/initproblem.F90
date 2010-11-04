@@ -143,7 +143,7 @@ module initproblem
             rc = sqrt(xi**2+yj**2)
 
             if (nzd /= 1) then
-               call hydrostatic_zeq(i, j, d0, csim2, dprof)
+               call hydrostatic_zeq(i, j, d0, csim2)
             endif
 
             do k = 1,nz
