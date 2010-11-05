@@ -230,6 +230,11 @@ module types
 #ifdef IONIZED
       real :: vai_max
 #endif /* IONIZED */
+
+#ifdef VARIABLE_GP
+      real :: gpxmax, gpymax, gpzmax
+#endif /* VARIABLE_GP */
+
    end type tsl_container
 
    interface

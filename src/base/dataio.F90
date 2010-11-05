@@ -1007,6 +1007,10 @@ module dataio
 #ifdef RESISTIVE
          use resistivity,        only: dt_resist, eta_max
 #endif /* RESISTIVE */
+#ifdef VARIABLE_GP
+         use arrays,             only: gp
+         use grid,               only: nb
+#endif /* VARIABLE_GP */
 
          implicit none
 
@@ -1029,6 +1033,9 @@ module dataio
 #ifdef RESISTIVE
          type(value) :: etamax
 #endif /* RESISTIVE */
+#ifdef VARIABLE_GP
+         type(value) :: gpxmax, gpymax, gpzmax
+#endif /* VARIABLE_GP */
 
          if (dxmn >= sqrt(huge(1.0))) then
             dxmn_safe = sqrt(huge(1.0))
@@ -1091,6 +1098,15 @@ module dataio
 #ifdef DUST
       call get_common_vars(nvar%dst)
 #endif /* DUST */
+
+#ifdef VARIABLE_GP
+      wa(1:nx-1,:,:) = abs((gp(2:nx,:,:)-gp(1:nx-1,:,:))/dx)
+      call get_extremum(wa(is:ie,js:je,ks:ke), 'max', gpxmax)
+      wa(:,1:ny-1,:) = abs((gp(:,2:ny,:)-gp(:,1:ny-1,:))/dy)
+      call get_extremum(wa(is:ie,js:je,ks:ke), 'max', gpymax)
+      wa(:,:,1:nz-1) = abs((gp(:,:,2:nz)-gp(:,:,1:nz-1))/dz)
+      call get_extremum(wa(is:ie,js:je,ks:ke), 'max', gpzmax)
+#endif /* VARIABLE_GP */
 
 #ifdef RESISTIVE
       etamax%val = eta_max
@@ -1155,6 +1171,14 @@ module dataio
             write(msg, fmt777) 'max(eta)    RES  =', etamax%val ,      'dt=',dt_resist, etamax%proc,  etamax%loc
             call printinfo(msg, .false.)
 #endif /* RESISTIVE */
+#ifdef VARIABLE_GP
+            write(msg,fmt771) 'max(|gpx|)  GPT  =', gpxmax%val,   gpxmax%proc,     gpxmax%loc
+            call printinfo(msg, .false.)
+            write(msg,fmt771) 'max(|gpy|)  GPT  =', gpymax%val,   gpymax%proc,     gpymax%loc
+            call printinfo(msg, .false.)
+            write(msg,fmt771) 'max(|gpz|)  GPT  =', gpzmax%val,   gpzmax%proc,     gpzmax%loc
+            call printinfo(msg, .false.)
+#endif /* VARIABLE_GP */
             call printinfo('================================================================================', .false.)
          else
 #ifdef MAGNETIC
@@ -1172,6 +1196,12 @@ module dataio
 #ifdef RESISTIVE
             tsl%etamax = etamax%val
 #endif /* RESISTIVE */
+
+#ifdef VARIABLE_GP
+            tsl%gpxmax = gpxmax%val
+            tsl%gpymax = gpymax%val
+            tsl%gpzmax = gpzmax%val
+#endif /* VARIABLE_GP */
          endif
       endif
 
