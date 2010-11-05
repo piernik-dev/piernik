@@ -1,6 +1,6 @@
 ! $Id$
 
-#include "piernik.def"
+#include "piernik.h"
 #include "macros.h"
 
 #define RNG nb+1:nx-nb, nb+1:ny-nb, nb+1:nz-nb

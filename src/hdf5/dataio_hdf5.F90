@@ -27,7 +27,7 @@
 !
 
 #define RNG is:ie, js:je, ks:ke
-#include "piernik.def"
+#include "piernik.h"
 
 !>
 !! \brief (KK) Module that contains I/O routines using HDF5 library

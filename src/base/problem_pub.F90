@@ -25,7 +25,7 @@
 !
 !    For full list of developers see $PIERNIK_HOME/license/pdt.txt
 !
-#include "piernik.def"
+#include "piernik.h"
 
 !<
 !! This module contains problem variables common to all problems.

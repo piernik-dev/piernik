@@ -25,7 +25,7 @@
 !
 !    For full list of developers see $PIERNIK_HOME/license/pdt.txt
 !
-#include "piernik.def"
+#include "piernik.h"
 !>
 !! \brief (JD) (doxy comments ready) This module implements relaxing TVD scheme
 !!

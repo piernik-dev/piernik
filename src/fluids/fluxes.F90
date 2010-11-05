@@ -25,7 +25,7 @@
 !
 !    For full list of developers see $PIERNIK_HOME/license/pdt.txt
 !
-#include "piernik.def"
+#include "piernik.h"
 !>
 !! \brief (MH/JD) (doxy comments ready) Module that collects all flux components from each fluid
 !!

@@ -25,7 +25,7 @@
 !
 !    For full list of developers see $PIERNIK_HOME/license/pdt.txt
 !
-#include "piernik.def"
+#include "piernik.h"
 
 !>
 !! \brief (MH) In this module fluid variables of individual fluids are indexed to make use of the single array

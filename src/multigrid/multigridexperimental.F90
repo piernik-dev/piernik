@@ -77,7 +77,7 @@
 ! on fine-coarse boundaries. For uniform grid the simplest operators are probably the fastest and give best V-cycle convergence rates.
 !
 
-#include "piernik.def"
+#include "piernik.h"
 
 !!$ ============================================================================
 !!
