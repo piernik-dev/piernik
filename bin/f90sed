@@ -1,0 +1,34 @@
+#!/bin/bash
+
+if [[ -n $1 ]]; then
+   echo "Sedding $1 in PIERNIK sources"
+else
+   echo "USAGE: f90sed <pattern>"
+   exit 0
+fi
+
+if [[ -z ${PIERNIK_ROOT} ]]; then
+   echo "PIERNIK_ROOT undefined"
+   exit 1
+else
+   echo ${PIERNIK_ROOT}
+fi
+
+sed -i -e "$1" $(find ${PIERNIK_ROOT} -name "*F90" -type f)
+#!/bin/bash
+
+if [[ -n $1 ]]; then
+   echo "Sedding $1 in PIERNIK sources"
+else
+   echo "USAGE: f90sed <pattern>"
+   exit 0
+fi
+
+if [[ -z ${PIERNIK_ROOT} ]]; then
+   echo "PIERNIK_ROOT undefined"
+   exit 1
+else
+   echo ${PIERNIK_ROOT}
+fi
+
+sed -i -e "$1" $(find ${PIERNIK_ROOT} -name "*F90" -type f)
