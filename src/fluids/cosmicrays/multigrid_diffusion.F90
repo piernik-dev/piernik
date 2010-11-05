@@ -235,7 +235,7 @@ contains
       use timer,              only: timer_
       use multigridvars,      only: ts, tot_ts, stdout
       use fluidindex,         only: nvar
-      use mpisetup,           only: dt
+      use mpisetup,           only: dt, proc
 
       implicit none
 
@@ -270,7 +270,7 @@ contains
          do cr_id = 1, nvar%crs%all
             call init_source(cr_id)
             if (vstat%norm_rhs_orig /= 0) then
-               if (norm_was_zero(cr_id)) then
+               if (norm_was_zero(cr_id) .and. proc == 0) then
                   write(msg,'(a,i2,a)')"[multigrid_diffusion:multigrid_solve_diff] CR-fluid #",cr_id," is now available in measurable quantities."
                   call printinfo(msg)
                endif
@@ -281,7 +281,7 @@ contains
                call vcycle_hg(cr_id)
                ! enddo
             else
-               if (.not. norm_was_zero(cr_id)) then
+               if (.not. norm_was_zero(cr_id) .and. proc == 0) then
                   write(msg,'(a,i2,a)')"[multigrid_diffusion:multigrid_solve_diff] Source norm of CR-fluid #",cr_id," == 0., skipping."
                   call warn(msg)
                endif
@@ -357,7 +357,7 @@ contains
 
       use arrays,             only: b
       use grid,               only: is, ie, js, je, ks, ke
-      use multigridvars,      only: roof, level_min, level_max, extbnd_mirror
+      use multigridvars,      only: roof, level_min, level_max, extbnd_mirror, D_x, D_y, D_z
       use multigridbasefuncs, only: restrict_all
       use multigridmpifuncs,  only: mpi_multigrid_bnd
       use fluidindex,         only: ibx, iby, ibz
@@ -370,9 +370,9 @@ contains
       if (diff_bx+iby-ibx /= diff_by .or. diff_bx+ibz-ibx /= diff_bz) call die("[multigrid_diffusion:init_b] Something is wrong with diff_by or diff_bz indices.")
 
       do ib = ibx, ibz
-         roof%mgvar(roof%is:roof%ie, roof%js:roof%je, roof%ks:roof%ke, diff_bx+ib-ibx) = b(ib, is:ie, js:je, ks:ke)
-         call restrict_all(diff_bx+ib-ibx)
-         do il = level_min, level_max
+         roof%mgvar(roof%is-D_x:roof%ie+D_x, roof%js-D_y:roof%je+D_y, roof%ks-D_z:roof%ke+D_z, diff_bx+ib-ibx) = b(ib, is-D_x:ie+D_x, js-D_y:je+D_y, ks-D_z:ke+D_z)
+         call restrict_all(diff_bx+ib-ibx)             ! Implement correct restriction (and probably also separate inter-process communication) routines
+         do il = level_min, level_max-1
             call mpi_multigrid_bnd(il, diff_bx+ib-ibx, 1, extbnd_mirror) ! ToDo: use global boundary type for B
             !BEWARE b is set on a staggered grid; corners should be properly set here (now they are not)
             ! the problem is that the b(:,:,:,:) elements are face-centered so restriction and external boundaries should take this into account
@@ -388,9 +388,10 @@ contains
 
    subroutine vcycle_hg(cr_id)
 
-      use multigridvars,      only: source, defect, solution, correction, base, roof, level_min, level_max, ts, tot_ts, stdout
+      use multigridvars,      only: source, defect, solution, correction, base, roof, level_min, level_max, ts, tot_ts, stdout, D_x, D_y, D_z
       use multigridbasefuncs, only: norm_sq, restrict_all, prolong_level
       use multigridhelpers,   only: set_dirty, check_dirty, do_ascii_dump, numbered_ascii_dump, mg_write_log, brief_v_log
+!      use multigridmpifuncs,  only: mpi_multigrid_bnd
       use initcosmicrays,     only: iarr_crs
       use arrays,             only: u
       use grid,               only: is, ie, js, je, ks, ke
@@ -486,6 +487,9 @@ contains
          write(msg,'(a,3g15.5)')"[multigrid_diffusion:vcycle_hg] norms: src, soln, defect: ",vstat%norm_rhs_orig, norm_rhs, norm_lhs
          call mg_write_log(msg)
       endif
+!     Do we need to take care of boundaries here?
+!      call mpi_multigrid_bnd(roof%level, solution, 1, diff_extbnd)
+!      u(iarr_crs(cr_id), is-D_x:ie+D_x, js-D_y:je+D_y, ks-D_z:ke+D_z) = roof%mgvar(roof%is-D_x:roof%ie+D_x, roof%js-D_y:roof%je+D_y, roof%ks-D_z:roof%ke+D_z, solution)
       u(iarr_crs(cr_id), is:ie, js:je, ks:ke) = roof%mgvar(roof%is:roof%ie, roof%js:roof%je, roof%ks:roof%ke, solution)
 
    end subroutine vcycle_hg
@@ -751,6 +755,7 @@ contains
               ( wa(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   lvl(lev)%ks+1:lvl(lev)%ke+1)      - &
               & wa(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   lvl(lev)%ks  :lvl(lev)%ke  ) )
       endif
+
    end subroutine residual
 
 !!$ ============================================================================

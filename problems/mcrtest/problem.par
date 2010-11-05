@@ -93,9 +93,9 @@
 
  $MULTIGRID_DIFFUSION
 !    diff_explicit = .true.
-    diff_theta     = 0.5
-    diff_tstep_fac = 91.0222223 !45.511112
-    norm_tol = 1e-3
+    diff_theta     = 0.6
+    diff_tstep_fac = 1000
+    norm_tol = 1e-2
     nsmool = 4
     nsmoob = 4
     max_cycles = 50

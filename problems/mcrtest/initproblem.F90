@@ -144,6 +144,7 @@ module initproblem
       use grid,           only: nx, ny, nz, x, y, z, is, ie, js, je, ks, ke, nxd, nyd, nzd, Lx, Ly, Lz
       use initcosmicrays, only: iarr_crn, iarr_crs, gamma_crn, K_crn_paral, K_crn_perp
       use initionized,    only: idni, imxi, imzi, ieni, gamma_ion
+      use mpisetup,       only: MPI_IN_PLACE, MPI_INTEGER, MPI_MAX, comm3d, ierr, proc
 #ifdef COSM_RAYS_SOURCES
       use crcomposition,  only: icr_H1, icr_C12
 #endif /* COSM_RAYS_SOURCES */
@@ -153,11 +154,9 @@ module initproblem
       integer :: i, j, k
       integer :: icr
       real    :: cs_iso
-      real    :: xsn, ysn, zsn    ! BEWARE: those vars are used but not initialized
-      real    :: r2
+      real    :: xsn, ysn, zsn
+      real    :: r2, maxv
       integer :: ipm, jpm, kpm
-      real    :: ysna, ysni, ysno
-
 
 #ifndef COSM_RAYS_SOURCES
       integer, parameter :: icr_H1 = 1, icr_C12 = 2
@@ -233,8 +232,12 @@ module initproblem
       enddo
 
       do icr = 1, nvar%crs%all
-         write(msg,*) '[initproblem:init_prob] icr=',icr,' maxecr =',maxval(u(iarr_crs(icr),:,:,:)),' maxloc =',maxloc(u(iarr_crs(icr),:,:,:))
-         call printinfo(msg)
+         maxv = maxval(u(iarr_crs(icr),:,:,:))
+         call MPI_Allreduce(MPI_IN_PLACE, maxv, 1, MPI_INTEGER, MPI_MAX, comm3d, ierr)
+         if (proc == 0) then
+            write(msg,*) '[initproblem:init_prob] icr=',icr,' maxecr =',maxv
+            call printinfo(msg)
+         endif
       enddo
 #endif /* COSM_RAYS */
 
