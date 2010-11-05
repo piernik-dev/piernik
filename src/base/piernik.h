@@ -5,7 +5,7 @@
 #define SELF_GRAV
 #endif
 
-#if defined(SELF_GRAV) || defined(VARIABLE_USER_GP)
+#ifdef VARIABLE_USER_GP
 #define VARIABLE_GP
 #endif
 
