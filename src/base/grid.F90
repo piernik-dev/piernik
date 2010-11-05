@@ -40,7 +40,7 @@ module grid
    private
    public  :: &
       & Lx, Ly, Lz, cleanup_grid, dl, dvol, dx, dxmn, dy, dz, grid_xyz, idl, idx, idy, idz, ie, init_grid, is, je, js, ke, ks, &
-      & maxxyz, nb, nx, nxb, nxd, nxt, ny, nyb, nyd, nz, nzb, nzd, nzt, x, xdim, xl, xmax, xmaxb, xmin, xminb, xr, y, ydim, yl, &
+      & maxxyz, nb, nx, nxb, nxd, nxt, ny, nyb, nyd, nyt, nz, nzb, nzd, nzt, x, xdim, xl, xmax, xmaxb, xmin, xminb, xr, y, ydim, yl, &
       & ymax, ymaxb, ymin, yminb, yr, z, zdim, zl, zmax, zmaxb, zmin, zminb, zr
 
    real    :: dx                             !< length of the %grid cell in x-direction
