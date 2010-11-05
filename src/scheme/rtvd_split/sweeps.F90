@@ -27,6 +27,7 @@
 !
 #include "piernik.h"
 module sweeps     ! split sweeps
+! pulled by ANY
    implicit none
    private
    public  :: sweepx, sweepy, sweepz

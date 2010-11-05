@@ -28,7 +28,7 @@
 #include "piernik.h"
 
 module advects
-
+! pulled by MAGNETIC
    implicit none
 
    private

@@ -65,6 +65,7 @@
 !<
 !*/
 module fluxionized
+! pulled by IONIZED
    implicit none
    private
    public :: flux_ion

@@ -39,7 +39,7 @@
 !!
 
 module multigrid_diffusion
-
+! pulled by MULTIGRID && COSM_RAYS
 #if defined(COSM_RAYS) && defined(MULTIGRID)
 
    use multigridvars, only: correction, vcycle_stats

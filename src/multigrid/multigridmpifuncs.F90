@@ -36,7 +36,7 @@
 !!
 
 module multigridmpifuncs
-
+! pulled by MULTIGRID
    implicit none
 
    private

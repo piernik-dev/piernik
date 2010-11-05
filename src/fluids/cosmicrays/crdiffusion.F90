@@ -34,7 +34,7 @@
 !<
 
 module crdiffusion
-
+! pulled by COSM_RAYS
    implicit none
 
    private

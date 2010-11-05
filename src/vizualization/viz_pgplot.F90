@@ -27,6 +27,7 @@
 !
 #include "piernik.h"
 module viz
+! pulled by PGPLOT
    implicit none
    private
    public :: draw_me

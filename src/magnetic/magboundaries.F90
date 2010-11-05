@@ -28,7 +28,7 @@
 #include "piernik.h"
 
 module magboundaries
-
+! pulled by MAGNETIC
    implicit none
 
    private

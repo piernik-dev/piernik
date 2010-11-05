@@ -27,7 +27,7 @@
 !
 #include "piernik.h"
 module poissonsolver
-
+! pulled by POISSON_FFT
 #ifdef POISSON_FFT
 
   implicit none

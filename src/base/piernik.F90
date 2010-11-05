@@ -30,7 +30,7 @@
 !! Main program
 !<
 program piernik
-
+! pulled by ANY
    use dataio,        only: write_data, user_msg_handler
    use dataio_pub,    only: nend, tend, msg, fplen, printinfo, warn, &
        &                    code_progress, PIERNIK_START, PIERNIK_INITIALIZED, PIERNIK_FINISHED, PIERNIK_CLEANUP

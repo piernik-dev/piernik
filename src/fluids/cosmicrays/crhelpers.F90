@@ -28,7 +28,7 @@
 #include "piernik.h"
 
 module crhelpers
-
+! pulled by COSM_RAYS
    implicit none
 
    private

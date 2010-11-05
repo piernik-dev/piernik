@@ -29,7 +29,7 @@
 #include "piernik.h"
 
 module multigridvars
-
+! pulled by MULTIGRID
    implicit none
 
    public ! QA_WARN no secrets are kept here

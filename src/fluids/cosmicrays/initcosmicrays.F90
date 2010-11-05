@@ -37,7 +37,7 @@
 !! \copydetails initcosmicrays::init_cosmicrays
 !<
 module initcosmicrays
-
+! pulled by COSM_RAYS
    implicit none
 
    public ! QA_WARN no secrets are kept here

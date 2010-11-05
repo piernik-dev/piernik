@@ -32,6 +32,7 @@
 !<
 
 module timestepcosmicrays
+! pulled by COSM_RAYS
    implicit none
    private
    public :: dt_crs, timestep_crs

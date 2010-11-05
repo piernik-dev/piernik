@@ -41,7 +41,7 @@
 !!
 
 module multigrid_gravity
-
+! pulled by MULTIGRID && GRAV
 #if defined(MULTIGRID) && defined(GRAV)
 
    use mpisetup,      only: cbuff_len

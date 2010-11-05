@@ -31,7 +31,7 @@
 !! \brief [DW] Module containing subroutines and functions that govern supernovae insert
 !<
 module snsources
-
+! pulled by SN_SRC
    implicit none
    private
    public ::  random_sn, init_snsources, r_sn

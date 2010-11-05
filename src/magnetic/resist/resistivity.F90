@@ -34,6 +34,7 @@
 !! \copydetails resistivity::init_resistivity
 !<
 module resistivity
+! pulled by RESIST
    implicit none
    private
    public  :: init_resistivity, timestep_resist, cleanup_resistivity, dt_resist, eta_max, &

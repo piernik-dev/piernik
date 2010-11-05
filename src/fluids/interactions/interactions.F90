@@ -37,6 +37,7 @@
 !! \copydetails interactions::init_interactions
 !<
 module interactions
+! pulled by FLUID_INTERACTIONS
    implicit none
    private
    public :: init_interactions, fluid_interactions, collfaq, cfl_interact

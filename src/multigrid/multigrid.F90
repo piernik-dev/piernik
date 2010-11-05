@@ -35,7 +35,7 @@
 !<
 
 module multigrid
-
+! pulled by MULTIGRID
 #ifdef MULTIGRID
 
    implicit none

@@ -35,7 +35,7 @@
 !<
 
 module fluxcosmicrays
-
+! pulled by COSM_RAYS
   implicit none
 
   private

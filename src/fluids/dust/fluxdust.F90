@@ -61,6 +61,7 @@
 !<
 !*/
 module fluxdust
+! pulled by DUST
    implicit none
    private
    public :: flux_dst

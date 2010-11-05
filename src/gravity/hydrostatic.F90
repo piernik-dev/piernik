@@ -31,7 +31,7 @@
 !! \brief [DW] Module containing a subroutine that arranges %hydrostatic equilibrium in the vertical (z) direction
 !<
 module hydrostatic
-
+! pulled by GRAV
    implicit none
 
    private

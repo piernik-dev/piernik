@@ -64,6 +64,7 @@
 !<
 !*/
 module fluxneutral
+! pulled by NEUTRAL
    implicit none
    private
    public :: flux_neu

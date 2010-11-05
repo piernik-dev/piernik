@@ -34,6 +34,7 @@
 !! \copydetails shear::init_shear
 !<
 module shear
+! pulled by SHEAR
    implicit none
    private
    public  :: init_shear, yshift, qshear, omega, eps, delj, dely, unshear_fft

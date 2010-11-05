@@ -35,7 +35,7 @@
 !<
 
 module sourcecosmicrays
-
+! pulled by COSM_RAYS_SOURCES
   implicit none
 
   private

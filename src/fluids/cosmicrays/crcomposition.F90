@@ -30,7 +30,7 @@
 !! \brief (MH)
 !<
 module crcomposition
-
+! pulled by COSM_RAYS_SOURCES
    implicit none
 
    public               ! QA_WARN no secrets are kept here

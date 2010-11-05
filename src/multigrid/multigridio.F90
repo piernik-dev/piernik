@@ -29,7 +29,7 @@
 #include "piernik.h"
 
 module multigridio
-
+! pulled by MULTIGRID
    implicit none
    private
 #ifdef NEW_HDF5

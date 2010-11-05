@@ -29,6 +29,7 @@
 #include "piernik.h"
 
 module list_hdf5
+! pulled by ANY
 #ifdef NEW_HDF5
    use hdf5, only: HID_T
 #endif /* NEW_HDF5 */

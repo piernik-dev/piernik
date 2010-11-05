@@ -29,7 +29,7 @@
 #include "piernik.h"
 
 module multipole
-
+! pulled by MULTIGRID && GRAV
    ! needed for global vars in this module
    use multigridvars, only: plvl, NDIM, LOW, HIGH
 
