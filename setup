@@ -293,7 +293,7 @@ print MAKEFILE "\tMV  = /bin/true\n";
 print MAKEFILE "\tF90 = /bin/true\n";
 print MAKEFILE "endif\n";
 print MAKEFILE "SRCS =\t";
-@srcs = <*.c *.F90 version.F90>;
+@srcs = <*.c *.F90>;
 &PrintWords(8, 0, @srcs);
 print MAKEFILE "\n\n";
 #
@@ -358,22 +358,21 @@ print MAKEFILE "\t\$(RM) \$AO1 \$AO2\n\n";
 # make date
 #
 print MAKEFILE "date: \n";
+print MAKEFILE "\t\@if [ -L version.F90 ]; then unlink version.F90; cp ../src/base/version.F90 .; fi; \n";
 print MAKEFILE "\t\@if [ ! -f env.dat ]; then\\\n";
 print MAKEFILE "\t\techo \"". $setup_line . "\" > env.dat; \\\n";
 print MAKEFILE "\t\tsed -n '/Id:/p' *.h *.c *.F90 | column -t >> env.dat; \\\n";
 print MAKEFILE "\t\tsed -e '/^\$\$/ d' -e \"/^\\// d\" piernik.def >> env.dat; \\\n";
+print MAKEFILE "\t\twc -l env.dat | awk '{print \"   integer, parameter :: nenv = \"\$\$1\"+0\"}' - >> version.F90; \\\n";
+print MAKEFILE "\t\techo \"   character(len=128), dimension(nenv) :: env\" >> version.F90; \\\n";
+print MAKEFILE "\t\techo 'contains' >> version.F90; \\\n";
+print MAKEFILE "\t\techo '   subroutine init_version' >> version.F90; \\\n";
+print MAKEFILE "\t\techo '      implicit none' >> version.F90; \\\n";
+print MAKEFILE "\t\tawk '{printf(\"       env(%i) = \\\"%s\\\"\\n\",NR,\$\$0)}' env.dat >> version.F90; \\\n";
+print MAKEFILE "\t\techo '    end subroutine init_version' >> version.F90; \\\n";
+print MAKEFILE "\t\techo 'end module version' >> version.F90; \\\n";
+print MAKEFILE "\t\techo 'generated version.F90'; \\\n";
 print MAKEFILE "\tfi;\n\n";
-#
-# make version.F90
-#
-print MAKEFILE "version.F90: date\n";
-print MAKEFILE "\t\@if [ -e version.F90 ]; then unlink version.F90; fi; \n";
-print MAKEFILE "\t@( echo -e \"module version\\n   implicit none\\n   public\\n\"; \\\n";
-print MAKEFILE "\twc -l env.dat | awk '{print \"   integer, parameter :: nenv = \"\$\$1\"+0\"}'; \\\n";
-print MAKEFILE "\techo -e \"   character(len=128), dimension(nenv) :: env\\ncontains\\n   subroutine init_version\\n      implicit none\"; \\\n";
-print MAKEFILE "\tawk '{printf(\"       env(%i) = \\\"%s\\\"\\n\",NR,\$\$0)}' env.dat; \\\n";
-print MAKEFILE "\techo -e \"    end subroutine init_version\\nend module version\" ) > version.F90; \\\n";
-print MAKEFILE "\techo 'generated version.F90'; \\\n\n";
 #
 # make clean
 #
