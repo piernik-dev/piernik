@@ -83,7 +83,7 @@ module initproblem
          rbuff(7)  = z0
          rbuff(8)  = amp_cr
          rbuff(9)  = beta_cr
-         rbuff(13) = alpha
+         rbuff(10) = alpha
 
       endif
 
@@ -104,7 +104,7 @@ module initproblem
          z0           = rbuff(7)
          amp_cr       = rbuff(8)
          beta_cr      = rbuff(9)
-         alpha        = rbuff(13)
+         alpha        = rbuff(10)
 
       endif
 
@@ -228,7 +228,7 @@ module initproblem
 
       integer :: i, j, k, ipm, jpm, icr
       real    :: decr, xsn, ysn, zsn
-      real    :: ysna, ysni, ysno
+      real    :: ysna !, ysni, ysno
 
       xsn = pos(1)
       ysn = pos(2)
@@ -240,9 +240,9 @@ module initproblem
 
                do ipm=-1,1
 
-                  if (ipm .eq. -1) ysna = ysno
+                  if (ipm .eq. -1) ysna = ysn   ! if (SHEAR) => ysna = ysno
                   if (ipm .eq.  0) ysna = ysn
-                  if (ipm .eq.  1) ysna = ysni
+                  if (ipm .eq.  1) ysna = ysn   ! if (SHEAR) => ysna = ysni
 
                   do jpm=-1,1
 
