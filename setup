@@ -293,7 +293,7 @@ print MAKEFILE "\tMV  = /bin/true\n";
 print MAKEFILE "\tF90 = /bin/true\n";
 print MAKEFILE "endif\n";
 print MAKEFILE "SRCS =\t";
-@srcs = <*.c *.F90 version.F90>;
+@srcs = <*.c *.F90>;
 &PrintWords(8, 0, @srcs);
 print MAKEFILE "\n\n";
 #
