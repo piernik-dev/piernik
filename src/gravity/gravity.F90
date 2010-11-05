@@ -222,7 +222,7 @@ module gravity
 
    subroutine source_terms_grav
 
-#if defined(MULTIGRID) || defined(POISSON_FFT)
+#ifdef SELF_GRAV
       use arrays,            only: u, sgp, sgpm
       use fluidindex,        only: iarr_all_sg
 #ifdef POISSON_FFT
@@ -231,11 +231,11 @@ module gravity
 #ifdef MULTIGRID
       use multigrid_gravity, only: multigrid_solve_grav
 #endif /* MULTIGRID */
-#endif /* defined(MULTIGRID) || defined(POISSON_FFT) */
+#endif /* SELF_GRAV */
 
       implicit none
 
-#if defined(MULTIGRID) || defined(POISSON_FFT)
+#ifdef SELF_GRAV
       logical, save :: frun = .true.
 
       sgpm = sgp
@@ -259,7 +259,7 @@ module gravity
          sgpm = sgp
          frun = .false.
       endif
-#endif /* defined(MULTIGRID) || defined(POISSON_FFT) */
+#endif /* SELF_GRAV */
 
       call sum_potential
 
@@ -269,9 +269,9 @@ module gravity
 
       use arrays,   only: gpot, gp, hgpot
       use mpisetup, only: dt, dtm
-#if defined(MULTIGRID) || defined(POISSON_FFT)
+#ifdef SELF_GRAV
       use arrays,   only: sgp, sgpm
-#endif /* MULTIGRID || POISSON_FFT */
+#endif /* SELF_GRAV */
 
       implicit none
       real :: h
@@ -282,18 +282,18 @@ module gravity
          h = 0.0
       endif
 
-#if defined(MULTIGRID) || defined(POISSON_FFT)
+#ifdef SELF_GRAV
       gpot  = gp + (1.+h)    *sgp -     h*sgpm
       hgpot = gp + (1.+0.5*h)*sgp - 0.5*h*sgpm
-#else /* !(MULTIGRID || POISSON_FFT) */
+#else /* !SELF_GRAV */
       !// BEWARE: as long as grav_pot_3d is called only in init_piernik this assignment probably don't need to be repeated more than once
       gpot  = gp
       hgpot = gp
-#endif /* !(MULTIGRID || POISSON_FFT) */
+#endif /* !SELF_GRAV */
 
    end subroutine sum_potential
 
-#if defined(MULTIGRID) || defined(POISSON_FFT)
+#ifdef SELF_GRAV
 
 !// An improper evaluation of guardcell potential may occur when the multigrid boundary conditions doesn't match /BOUNDARIES/ namelist (e.g. isolated on periodic domain).
 
@@ -446,7 +446,7 @@ module gravity
 
    end subroutine all_sgp_boundaries
 
-#endif /* defined(MULTIGRID) || defined(POISSON_FFT) */
+#endif /* SELF_GRAV */
 
 !--------------------------------------------------------------------------
 !>
@@ -478,19 +478,19 @@ module gravity
       use grid,         only: nx, ny, nz, x, y, z
       use initfluids,   only: cs_iso2
       use mpisetup,     only: smalld
-#if defined (GRAV_PTMASSPURE) || defined (GRAV_PTMASS) || defined (GRAV_PTFLAT) || defined (GRAV_PTMASSSTIFF)
+#ifdef GRAV_PTMTYPE
       use constants,    only: newtong
-#endif /* GRAV_PTMASSPURE || GRAV_PTMASS || GRAV_PTFLAT || GRAV_PTMASSSTIFF */
+#endif /* GRAV_PTMTYPE */
 #ifdef GRAV_USER
       use gravity_user, only: grav_pot_user
 #endif /* GRAV_USER */
 
       implicit none
 
-#if defined (GRAV_PTMASSPURE) || defined (GRAV_PTMASS) || defined (GRAV_PTFLAT) || defined (GRAV_PTMASSSTIFF)
+#ifdef GRAV_PTMTYPE
       integer :: i, j, k
       real    :: r_smooth2, gm, gmr, z2, yz2
-#endif /* GRAV_PTMASSPURE || GRAV_PTMASS || GRAV_PTFLAT || GRAV_PTMASSSTIFF */
+#endif /* GRAV_PTMTYPE */
 #if defined GRAV_UNIFORM || defined GRAV_LINEAR
       integer :: i
 #endif /* GRAV_UNIFORM || GRAV_LINEAR */

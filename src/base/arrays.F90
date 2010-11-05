@@ -47,10 +47,10 @@ module arrays
    real, allocatable, dimension(:,:,:)       :: gp       !< Array for gravitational potential from external fields
    real, allocatable, dimension(:)           :: dprof    !< Array used for storing density during calculation of hydrostatic equilibrium
    real, allocatable, dimension(:)           :: eprof    !< Array used for storing energy during calculation of hydrostatic equilibrium
-#if defined(MULTIGRID) || defined(POISSON_FFT)
+#ifdef SELF_GRAV
    real, allocatable, dimension(:,:,:)       :: sgp      !< Array for gravitational potential from multigrid or FFT solver
    real, allocatable, dimension(:,:,:)       :: sgpm     !< Array for gravitational potential from multigrid or FFT solver at previous timestep saved by source_terms_grav.
-#endif /* MULTIGRID || POISSON_FFT */
+#endif /* SELF_GRAV */
 #endif /* GRAV */
 
 #ifdef COSM_RAYS
@@ -92,10 +92,10 @@ module arrays
       call my_allocate(gp, [nx, ny, nz], "gp")
       call my_allocate(dprof, [nz], "dprof")
       call my_allocate(eprof, [nz], "eprof")
-#if defined(MULTIGRID) || defined(POISSON_FFT)
+#ifdef SELF_GRAV
       call my_allocate(sgp, [nx, ny, nz], "sgp")
       call my_allocate(sgpm, [nx, ny, nz], "sgpm")
-#endif /* MULTIGRID || POISSON_FFT */
+#endif /* SELF_GRAV */
 #endif /* GRAV */
 
 #ifdef COSM_RAYS
@@ -130,10 +130,10 @@ module arrays
       if (allocated(gp))      deallocate(gp)
       if (allocated(dprof))   deallocate(dprof)
       if (allocated(eprof))   deallocate(eprof)
-#if defined(MULTIGRID) || defined(POISSON_FFT)
+#ifdef SELF_GRAV
       if (allocated(sgp))     deallocate(sgp)
       if (allocated(sgpm))    deallocate(sgpm)
-#endif /* MULTIGRID || POISSON_FFT */
+#endif /* SELF_GRAV */
 #endif /* GRAV */
 
 #ifdef COSM_RAYS
