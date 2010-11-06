@@ -221,36 +221,36 @@ module rtvd ! split orig
 !*/
    subroutine relaxing_tvd(n, u, bb, sweep, i1, i2, dx, dt)
 
-      use fluidindex,      only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz, ibx, iby, ibz, nvar, nmag
-      use fluxes,          only: flimiter, all_fluxes
-      use mpisetup,        only: smalld, integration_order
+      use fluidindex,       only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz, ibx, iby, ibz, nvar, nmag
+      use fluxes,           only: flimiter, all_fluxes
+      use mpisetup,         only: smalld, integration_order
 #ifndef ISO
-      use fluidindex,      only: iarr_all_en
-      use mpisetup,        only: smallei
+      use fluidindex,       only: iarr_all_en
+      use mpisetup,         only: smallei
 #endif /* !ISO */
 #ifdef GRAV
-      use gravity,         only: grav_pot2accel
+      use gravity,          only: grav_pot2accel
 #endif /* GRAV */
 #ifdef SHEAR
-      use grid,            only: x
-      use shear,           only: qshear, omega
+      use grid,             only: x
+      use shear,            only: qshear, omega
 #ifdef NEUTRAL
-      use initneutral,     only: global_gradP_neu
+      use initneutral,      only: global_gradP_neu
 #endif /* NEUTRAL */
 #endif /* SHEAR */
 #ifdef COSM_RAYS
-      use arrays,          only: divvel
-      use initcosmicrays,  only: iarr_crs, iarr_crn, gamma_crs, cr_active, smallecr
+      use arrays,           only: divvel
+      use initcosmicrays,   only: iarr_crs, iarr_crn, gamma_crs, cr_active, smallecr
 #ifdef COSM_RAYS_SOURCES
-      use sourcecosmicrays,only: src_crn
+      use sourcecosmicrays, only: src_crn
 #endif /* COSM_RAYS_SOURCES */
 #endif /* COSM_RAYS */
 #ifdef FLUID_INTERACTIONS
-      use initdust,        only: dragc_gas_dust
-      use interactions,    only: fluid_interactions
+      use initdust,         only: dragc_gas_dust
+      use interactions,     only: fluid_interactions
 #endif /* FLUID_INTERACTIONS */
 #ifdef ISO_LOCAL
-      use arrays,          only: cs_iso2_arr
+      use arrays,           only: cs_iso2_arr
 #endif /* ISO_LOCAL */
 
       implicit none
