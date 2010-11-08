@@ -183,7 +183,7 @@ for f in DirectoryWalker(probdir):         # BEWARE: testing on mcrtest
 allfiles.append(probdir+"piernik.def")
 allfiles.append(probdir+options.param)
 
-defines  = sp.Popen(["echo '#include \"piernik.def\"' > foo.f90 && cpp $cppflags -dM foo.f90 && rm foo*"], stdout=sp.PIPE, shell="/bin/bash").communicate()[0].rstrip().split("\n")
+defines  = sp.Popen(["echo '#include \"%spiernik.def\"' > foo.f90 && cpp $cppflags -dM foo.f90 && rm foo*" % probdir], stdout=sp.PIPE, shell="/bin/bash").communicate()[0].rstrip().split("\n")
 our_defs = [f.split(" ")[1] for f in filter(cpp_junk.match,defines)]
 our_defs.append("ANY")
 
@@ -343,6 +343,10 @@ m.write( "\nCPPFLAGS += %s\n" % cppflags )
 if( "PGPLOT" in our_defs ): m.write("LIBS += -lpgplot\n")
 if( "SHEAR" in our_defs or "MULTIGRID" in our_defs ): m.write("LIBS += `pkg-config --libs fftw3`\n")
 if( "POISSON_FFT" in our_defs): m.write("LIBS += `pkg-config --libs fftw3` `pkg-config --libs lapack`\n")
+if( options.laconic ):
+   m.write("SILENT = 1\n\n")
+else:
+   m.write("SILENT = 0\n\n")
 m.write(head_block1)
 m.write("\t\techo \"%s\" > env.dat; \\" % ' '.join(sys.argv))
 m.write(head_block2)
