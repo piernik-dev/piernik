@@ -177,10 +177,10 @@ contains
       real,    intent(in) :: coldens, csim2
       real :: sdprof
 
-      call start_hydrostatic(iia,jja,csim2)
+      sdprof = 1.0
+      call hydrostatic_zeq_densmid(iia,jja,sdprof,csim2)
       sdprof = sum(dprof)
       dprof = dprof * coldens / sdprof
-      call finish_hydrostatic
 
    end subroutine hydrostatic_zeq_coldens
 
@@ -201,7 +201,9 @@ contains
 #endif /* !NEW_HYDROSTATIC */
 
       call start_hydrostatic(iia,jja,csim2)
+#ifdef NEW_HYDROSTATIC
       dprof = dprof * d0
+#endif /* NEW_HYDROSTATIC */
       call finish_hydrostatic
 
    end subroutine hydrostatic_zeq_densmid
