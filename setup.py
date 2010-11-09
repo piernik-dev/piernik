@@ -3,6 +3,7 @@
 import os, re, shutil, sys
 import subprocess as sp
 import numpy as np
+import multiprocessing
 from optparse import OptionParser
 
 columns = 90
@@ -48,188 +49,6 @@ working directory, to use alternative configurations execute
 \'./piernik <directory with an alternative problem.par>\'
 Enjoy your work with the Piernik Code!
 '''
-
-def striplist(l):
-   return([x.strip() for x in l])
-
-def strip_leading_path(l):
-   return([x.rpartition('/')[2] for x in l])
-
-def remove_suf(l):
-   return([x.partition('.')[0] for x in l])
-
-def pretty_format(fname,list,col):
-   out = ""
-   sl = True
-   str = fname
-   for item in list:
-      if(len(str) + len(item) + 2 > int(col)):
-         out += str + "\\\n"
-         str = "\t"
-         sl = False
-      str= str + item + " "
-   if(str != "\t"): out += str
-   if(sl):
-      return str.rstrip("\\\n")+"\n"
-   else:
-      return out.rstrip("\\\n")+"\n"
-
-def pretty_format_suf(fname,list,suf,col):
-   out = fname+'\n'
-   str = "\t"
-   for item in list:
-      if(len(str) + len(item) + len(suf) + 2 > int(col)):
-         out += str + "\\\n"
-         str = "\t"
-      str= str + item + suf + " "
-   return out.rstrip("\\\n")+"\n"
-
-def get_stdout(cmd):
-   return sp.Popen([cmd], stdout=sp.PIPE, shell="/bin/bash").communicate()[0]
-
-class DirectoryWalker:
-    # a forward iterator that traverses a directory tree
-
-    def __init__(self, directory):
-        self.stack = [directory]
-        self.files = []
-        self.index = 0
-
-    def __getitem__(self, index):
-        while 1:
-            try:
-                file = self.files[self.index]
-                self.index = self.index + 1
-            except IndexError:
-                # pop next directory from stack
-                self.directory = self.stack.pop()
-                self.files = os.listdir(self.directory)
-                self.index = 0
-            else:
-                # got a filename
-                fullname = os.path.join(self.directory, file)
-                if os.path.isdir(fullname) and not os.path.islink(fullname):
-                    self.stack.append(fullname)
-                return fullname
-
-#print desc
-usage = "usage: %prog [options] FILES"
-parser = OptionParser(usage=usage)
-parser.add_option("-v", "--verbose", action="store_true", dest="verbose", default=False,
-   help="try to confuse the user with some diagnostics ;-)")
-parser.add_option("-q", "--laconic", action="store_true", dest="laconic", default=False,
-   help="compress stdout from make process")
-parser.add_option("-n", "--nocompile", action="store_true", dest="nocompile", default=False,
-   help='''Create object directory, check for circular dependencies, but do not compile or prepare run directory.
-In combination with --copy will prepare portable object directory.''')
-parser.add_option("--problems", dest="show_problems", action="store_true",
-   help="print available problems and exit")
-parser.add_option("-u","--units", dest="show_units", action="store_true",
-   help="print available units and exit")
-parser.add_option("--copy", dest="hard_copy", action="store_true",
-   help="hard-copy source files instead of linking them")
-parser.add_option("-l","--linkexe", dest="link_exe", action="store_true",
-   help="do not copy obj/piernik to runs/<problem> but link it instead")
-parser.add_option("-p", "--param", dest="param",
-   help="use FILE instead problem.par", metavar="FILE", default="problem.par")
-parser.add_option("-d", "--define", dest="cppflags",
-   help="add precompiler directives, use comma-separated list", metavar="CPPFLAGS")
-parser.add_option("-c", "--compiler", dest="compiler", default="default.in",
-   help="choose specified config from compilers directory", metavar="FILE")
-parser.add_option("-o", "--obj", dest="objdir", metavar="POSTFIX", default='',
-   help="use obj_POSTFIX directory instead of obj/ and runs/<problem>_POSTFIX rather than runs/<problem>")
-
-(options, args) = parser.parse_args()
-if(options.show_problems):
-   print get_stdout("cat problems/*/info")
-   exit()
-
-if(options.show_units):
-   print get_stdout("grep uses ./src/base/constants.F90")
-   exit()
-
-if (len(args) < 1):
-   parser.error("incorrect number of arguments")
-
-# set problem dir
-probdir = 'problems/'+args[0]+'/'
-
-# parse cppflags
-cppflags = '-D' + ' -D'.join(options.cppflags.split(","))
-
-# parse compiler
-if(not re.search('\.in$',options.compiler)):
-   compiler = options.compiler + '.in'
-else:
-   compiler = options.compiler
-
-
-objdir = 'obj'
-if(len(options.objdir)>0):
-   objdir += '_'+options.objdir
-
-if(os.path.isdir(objdir)): shutil.rmtree(objdir)
-os.mkdir(objdir)
-
-f90files = []
-allfiles = []
-for f in DirectoryWalker('src'):
-   if(is_f90.search(f)): f90files.append(f)
-   if(is_header.search(f)): allfiles.append(f)
-
-for f in DirectoryWalker(probdir):         # BEWARE: testing on mcrtest
-   if(is_f90.search(f)): f90files.append(f)
-
-allfiles.append(probdir+"piernik.def")
-allfiles.append(probdir+options.param)
-
-defines  = sp.Popen(["echo '#include \"%spiernik.def\"' > foo.f90 && cpp $cppflags -dM foo.f90 && rm foo*" % probdir], stdout=sp.PIPE, shell="/bin/bash").communicate()[0].rstrip().split("\n")
-our_defs = [f.split(" ")[1] for f in filter(cpp_junk.match,defines)]
-our_defs.append("ANY")
-
-files = ['src/base/defines.c']
-tags  = ['']   # BEWARE missing tag for defines.c
-uses  = [[]]
-incl  = ['']
-
-for f in f90files:
-   tag  = ""
-   keys = []
-   luse = []
-   linc = []
-   for line in file(f):
-      if test2(line):
-         tag  = line.strip()
-      if test(line):
-         keys = striplist(line.split(" ")[3:])
-      if have_use(line):
-         luse.append(line.split()[1].rstrip(","))
-      if have_inc(line):
-         linc.append( line.split('"')[1] )
-# Logic here should be improved...
-   if(len(keys) == 0  or (len(keys) == 1 and keys[0] in our_defs)):
-      files.append(f)
-      tags.append(tag)
-      uses.append( np.unique(luse) )
-      incl.append( np.unique(linc) )
-   if(len(keys) == 3):
-      if((keys[1] == "&&" and (keys[0] in our_defs and keys[2] in our_defs)) or
-         (keys[1] == "||" and (keys[0] in our_defs or  keys[2] in our_defs))   ):
-         files.append(f)
-         tags.append(tag)
-         uses.append( np.unique(luse) )
-         incl.append( np.unique(linc) )
-
-allfiles.extend(files)
-
-for f in allfiles:
-   if(options.hard_copy):
-      shutil.copy(f,objdir)
-   else:
-      os.symlink('../'+f,objdir+'/'+strip_leading_path([f])[0])
-
-makefile_head = open('compilers/'+compiler,'r').readlines()
-m = open(objdir+'/Makefile', 'w')
 
 head_block1='''LIBS +=${STATIC} -lhdf5_fortran -lhdf5hl_fortran -lhdf5_hl -lhdf5 -lz ${DYNAMIC}
 
@@ -328,6 +147,206 @@ endif
 
 '''
 
+def striplist(l):
+   return([x.strip() for x in l])
+
+def strip_leading_path(l):
+   return([x.rpartition('/')[2] for x in l])
+
+def remove_suf(l):
+   return([x.partition('.')[0] for x in l])
+
+def pretty_format(fname,list,col):
+   out = ""
+   sl = True
+   str = fname
+   for item in list:
+      if(len(str) + len(item) + 2 > int(col)):
+         out += str + "\\\n"
+         str = "\t"
+         sl = False
+      str= str + item + " "
+   if(str != "\t"): out += str
+   if(sl):
+      return str.rstrip("\\\n")+"\n"
+   else:
+      return out.rstrip("\\\n")+"\n"
+
+def pretty_format_suf(fname,list,suf,col):
+   out = fname+'\n'
+   str = "\t"
+   for item in list:
+      if(len(str) + len(item) + len(suf) + 2 > int(col)):
+         out += str + "\\\n"
+         str = "\t"
+      str= str + item + suf + " "
+   if(str != "\t"): out += str
+   return out.rstrip("\\\n")+"\n"
+
+def get_stdout(cmd):
+   return sp.Popen([cmd], stdout=sp.PIPE, shell="/bin/bash").communicate()[0]
+
+class DirectoryWalker:
+    # a forward iterator that traverses a directory tree
+
+    def __init__(self, directory):
+        self.stack = [directory]
+        self.files = []
+        self.index = 0
+
+    def __getitem__(self, index):
+        while 1:
+            try:
+                file = self.files[self.index]
+                self.index = self.index + 1
+            except IndexError:
+                # pop next directory from stack
+                self.directory = self.stack.pop()
+                self.files = os.listdir(self.directory)
+                self.index = 0
+            else:
+                # got a filename
+                fullname = os.path.join(self.directory, file)
+                if os.path.isdir(fullname) and not os.path.islink(fullname):
+                    self.stack.append(fullname)
+                return fullname
+
+#print desc
+usage = "usage: %prog [options] FILES"
+parser = OptionParser(usage=usage)
+parser.add_option("-v", "--verbose", action="store_true", dest="verbose", default=False,
+   help="try to confuse the user with some diagnostics ;-)")
+parser.add_option("-q", "--laconic", action="store_true", dest="laconic", default=False,
+   help="compress stdout from make process")
+parser.add_option("-n", "--nocompile", action="store_true", dest="nocompile", default=False,
+   help='''Create object directory, check for circular dependencies, but do not compile or prepare run directory.
+In combination with --copy will prepare portable object directory.''')
+parser.add_option("--problems", dest="show_problems", action="store_true",
+   help="print available problems and exit")
+parser.add_option("-u","--units", dest="show_units", action="store_true",
+   help="print available units and exit")
+parser.add_option("--copy", dest="hard_copy", action="store_true",
+   help="hard-copy source files instead of linking them")
+parser.add_option("-l","--linkexe", dest="link_exe", action="store_true",
+   help="do not copy obj/piernik to runs/<problem> but link it instead")
+parser.add_option("-p", "--param", dest="param",
+   help="use FILE instead problem.par", metavar="FILE", default="problem.par")
+parser.add_option("-d", "--define", dest="cppflags",
+   help="add precompiler directives, use comma-separated list", metavar="CPPFLAGS")
+parser.add_option("-c", "--compiler", dest="compiler", default="default.in",
+   help="choose specified config from compilers directory", metavar="FILE")
+parser.add_option("-o", "--obj", dest="objdir", metavar="POSTFIX", default='',
+   help="use obj_POSTFIX directory instead of obj/ and runs/<problem>_POSTFIX rather than runs/<problem>")
+
+(options, args) = parser.parse_args()
+
+if(options.verbose):
+   print "Setup options:"
+   print options
+   print "Setup arguments:"
+   print args
+
+if(options.show_problems):
+   print get_stdout("cat problems/*/info")
+   exit()
+
+if(options.show_units):
+   print get_stdout("grep uses ./src/base/constants.F90")
+   exit()
+
+if (len(args) < 1):
+   parser.error("incorrect number of arguments")
+
+# set problem dir
+probdir = 'problems/'+args[0]+'/'
+
+# parse cppflags
+if(options.cppflags):
+   cppflags = '-D' + ' -D'.join(options.cppflags.split(","))
+else:
+   cppflags = ""
+
+# parse compiler
+if(not re.search('\.in$',options.compiler)):
+   compiler = options.compiler + '.in'
+else:
+   compiler = options.compiler
+
+
+objdir = 'obj'
+rundir = 'runs/'+args[0]
+if(len(options.objdir)>0):
+   objdir += '_'+options.objdir
+   rundir += '_'+options.objdir+'/'
+else:
+   rundir += '/'
+
+if(os.path.isdir(objdir)): shutil.rmtree(objdir)
+os.mkdir(objdir)
+
+f90files = []
+allfiles = []
+for f in DirectoryWalker('src'):
+   if(is_f90.search(f)): f90files.append(f)
+   if(is_header.search(f)): allfiles.append(f)
+
+for f in DirectoryWalker(probdir):
+   if(is_f90.search(f)): f90files.append(f)
+
+allfiles.append(probdir+"piernik.def")
+allfiles.append(probdir+options.param)
+
+defines  = sp.Popen(["echo '#include \"%spiernik.def\"' > foo.f90 && cpp $cppflags -dM foo.f90 && rm foo*" % probdir], stdout=sp.PIPE, shell=True).communicate()[0].rstrip().split("\n")
+if(options.verbose):
+    print "Defined symbols:"
+    for defin in defines: print defin
+our_defs = [f.split(" ")[1] for f in filter(cpp_junk.match,defines)]
+our_defs.append("ANY")
+
+files = ['src/base/defines.c']
+tags  = ['']   # BEWARE missing tag for defines.c
+uses  = [[]]
+incl  = ['']
+
+for f in f90files:
+   tag  = ""
+   keys = []
+   luse = []
+   linc = []
+   for line in file(f):
+      if test2(line):
+         tag  = line.strip()
+      if test(line):
+         keys = striplist(line.split(" ")[3:])
+      if have_use(line):
+         luse.append(line.split()[1].rstrip(","))
+      if have_inc(line):
+         linc.append( line.split('"')[1] )
+# Logic here should be improved...
+   if(len(keys) == 0  or (len(keys) == 1 and keys[0] in our_defs)):
+      files.append(f)
+      tags.append(tag)
+      uses.append( np.unique(luse) )
+      incl.append( np.unique(linc) )
+   if(len(keys) == 3):
+      if((keys[1] == "&&" and (keys[0] in our_defs and keys[2] in our_defs)) or
+         (keys[1] == "||" and (keys[0] in our_defs or  keys[2] in our_defs))   ):
+         files.append(f)
+         tags.append(tag)
+         uses.append( np.unique(luse) )
+         incl.append( np.unique(linc) )
+
+allfiles.extend(files)
+
+for f in allfiles:
+   if(options.hard_copy):
+      shutil.copy(f,objdir)
+   else:
+      os.symlink('../'+f,objdir+'/'+strip_leading_path([f])[0])
+
+makefile_head = open('compilers/'+compiler,'r').readlines()
+m = open(objdir+'/Makefile', 'w')
+
 stripped_files  = strip_leading_path(files)
 
 stripped_files.append("version.F90")   # adding version
@@ -359,3 +378,31 @@ for i in range(0,len(files_to_build)):
    m.write( pretty_format(deps, d.split(), columns) )
 
 m.close()
+
+makecmd =  "make -j%i -C %s" % ( multiprocessing.cpu_count(), objdir)
+if( sp.call([makecmd], shell=True) != 0):
+   print "It appears that 'make' crashed"
+   print "cannot continue"
+   exit()
+
+try: os.makedirs(rundir)
+except:
+   print "Found old run. Making copy of old 'problem.par'"
+   if(os.path.isfile(rundir+'problem.par')): shutil.move(rundir+'problem.par',rundir+'problem.par.old')
+   if(os.path.isfile(rundir+'piernik')): os.remove(rundir+'piernik')
+   if(os.path.isfile(rundir+'piernik.def')): os.remove(rundir+'piernik.def')
+
+if(options.link_exe):
+   try: os.symlink("../../"+objdir+"/piernik", rundir+'piernik')
+   except: print "Symlinking 'piernik' failed"
+else:
+   try: shutil.copy(objdir+"/piernik", rundir+'piernik')
+   except: print "Copying 'piernik' failed"
+
+try:
+   shutil.copy(objdir+"/"+options.param, rundir+'problem.par')
+   shutil.copy(objdir+"/piernik.def", rundir+'piernik.def')
+except:
+   print "Failed to copy files to %s" % rundir.rstrip('/')
+
+print "%s ready in %s" % (args[0], rundir.rstrip('/') )
