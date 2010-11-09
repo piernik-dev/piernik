@@ -139,7 +139,7 @@ module initproblem
       use arrays,         only: b, u
       use dataio_pub,     only: die, warn
       use fluidindex,     only: ibx, iby, ibz
-      use grid,           only: nx, ny, nz, x, y, z, is, ie, js, je, ks, ke, nxd, nyd, nzd
+      use grid,           only: nx, ny, nz, x, y, z, is, ie, js, je, ks, ke, nxd, nyd, nzd, xmax, ymax
       use initcosmicrays, only: gamma_crs, iarr_crs, ncrn, ncre, K_crn_paral, K_crn_perp
       use initionized,    only: idni, imxi, imzi, ieni, gamma_ion
       use types,          only: problem_customize_solution, finalize_problem
@@ -198,7 +198,8 @@ module initproblem
          do j = js, je
             do i = is, ie
                r2 = (x(i)-x0)**2+(y(j)-y0)**2+(z(k)-z0)**2
-               u(iecr, i, j, k)= u(iecr, i, j, k) + amp_cr*exp(-r2/r0**2)
+               if (x(i)> 2*x0-xmax .and. y(j) > 2*y0-ymax) &
+                  u(iecr, i, j, k)= u(iecr, i, j, k) + amp_cr*exp(-r2/r0**2)
             enddo
          enddo
       enddo

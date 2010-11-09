@@ -39,21 +39,21 @@
  /
 
  $BOUNDARIES
-    bnd_xl = 'out'
-    bnd_xr = 'out'
-    bnd_yl = 'out'
-    bnd_yr = 'out'
+    bnd_xl = 'per'
+    bnd_xr = 'per'
+    bnd_yl = 'per'
+    bnd_yr = 'per'
     bnd_zl = 'out'
     bnd_zr = 'out'
  /
 
  $DOMAIN_LIMITS
-    xmin   =-500.0
-    xmax   = 500.0
-    ymin   =-500.0
-    ymax   = 500.0
-    zmin   =-500.0
-    zmax   = 500.0
+    xmin   =-512.0
+    xmax   = 512.0
+    ymin   =-512.0
+    ymax   = 512.0
+    zmin   =-512.0
+    zmax   = 512.0
  /
 
  $NUMERICAL_SETUP
@@ -71,8 +71,8 @@
     cfl_cr      = 0.9
     cr_active   = 1.0
     ncrn        = 1
-    K_crn_paral = 200.0   ! anisotropic
-!    K_crn_perp  = 200.0 ! isotropic
+!    K_crn_paral = 200.0   ! anisotropic
+    K_crn_perp  = 200.0 ! isotropic
     use_split   = .false.
  /
 
@@ -84,11 +84,12 @@
  $MULTIGRID_DIFFUSION
 !    diff_explicit = .true.
     diff_theta     = 0.5
-    diff_tstep_fac = 91.0222223 !45.511112
-    norm_tol = 1e-3
+    diff_tstep_fac = 86.80555556 !91.0222223 !91.0222223 !45.511112 !22.7555556
+    norm_tol = 1e-13
     nsmool = 4
     nsmoob = 4
     max_cycles = 50
+    diff_bnd_str = "styrofoam"
  /
 
  $PROBLEM_CONTROL
@@ -99,8 +100,8 @@
     bx0    = 5.0
     by0    = 5.0
     bz0    = 5.0
-    x0     = 0.0
-    y0     = 0.0
+    x0     = 416.0
+    y0     = 416.0
     z0     = 0.0
     r0     = 64.0
     beta_cr= 0.0

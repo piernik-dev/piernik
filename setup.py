@@ -295,12 +295,17 @@ for f in DirectoryWalker(probdir):
 allfiles.append(probdir+"piernik.def")
 allfiles.append(probdir+options.param)
 
-defines  = sp.Popen(["echo '#include \"%spiernik.h\"' > foo.f90 && cpp $cppflags -dM foo.f90 && rm foo*" % probdir], stdout=sp.PIPE, shell=True).communicate()[0].rstrip().split("\n")
+cmd = "echo '#include \"%spiernik.h\"' > foo.f90 && cpp $cppflags -dM -I%s foo.f90 && rm foo*" % ('src/base/', probdir)
+defines  = sp.Popen([cmd], stdout=sp.PIPE, shell=True).communicate()[0].rstrip().split("\n")
 if(options.verbose):
     print "Defined symbols:"
     for defin in defines: print defin
+
 our_defs = [f.split(" ")[1] for f in filter(cpp_junk.match,defines)]
 our_defs.append("ANY")
+if(options.verbose):
+   print "our_defs:"
+   print our_defs
 
 files = ['src/base/defines.c']
 tags  = ['']   # BEWARE missing tag for defines.c
