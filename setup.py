@@ -295,7 +295,7 @@ for f in DirectoryWalker(probdir):
 allfiles.append(probdir+"piernik.def")
 allfiles.append(probdir+options.param)
 
-defines  = sp.Popen(["echo '#include \"%spiernik.def\"' > foo.f90 && cpp $cppflags -dM foo.f90 && rm foo*" % probdir], stdout=sp.PIPE, shell=True).communicate()[0].rstrip().split("\n")
+defines  = sp.Popen(["echo '#include \"%spiernik.h\"' > foo.f90 && cpp $cppflags -dM foo.f90 && rm foo*" % probdir], stdout=sp.PIPE, shell=True).communicate()[0].rstrip().split("\n")
 if(options.verbose):
     print "Defined symbols:"
     for defin in defines: print defin
