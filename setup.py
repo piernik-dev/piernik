@@ -295,9 +295,10 @@ for f in DirectoryWalker(probdir):
 allfiles.append(probdir+"piernik.def")
 allfiles.append(probdir+options.param)
 
-cmd = "echo '#include \"%spiernik.h\"' > foo.f90 && cpp $cppflags -dM -I%s foo.f90 && rm foo*" % ('src/base/', probdir)
+cmd = "echo '#include \"%spiernik.h\"' > foo.f90 && cpp %s -dM -I%s foo.f90 && rm foo*" % ('src/base/', cppflags, probdir)
 defines  = sp.Popen([cmd], stdout=sp.PIPE, shell=True).communicate()[0].rstrip().split("\n")
 if(options.verbose):
+    print cmd
     print "Defined symbols:"
     for defin in defines: print defin
 
