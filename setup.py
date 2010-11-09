@@ -2,7 +2,6 @@
 
 import os, re, shutil, sys
 import subprocess as sp
-import numpy as np
 import multiprocessing
 from optparse import OptionParser
 
@@ -326,15 +325,15 @@ for f in f90files:
    if(len(keys) == 0  or (len(keys) == 1 and keys[0] in our_defs)):
       files.append(f)
       tags.append(tag)
-      uses.append( np.unique(luse) )
-      incl.append( np.unique(linc) )
+      uses.append( list(set(luse) ) )
+      incl.append( list(set(linc) ) )
    if(len(keys) == 3):
       if((keys[1] == "&&" and (keys[0] in our_defs and keys[2] in our_defs)) or
          (keys[1] == "||" and (keys[0] in our_defs or  keys[2] in our_defs))   ):
          files.append(f)
          tags.append(tag)
-         uses.append( np.unique(luse) )
-         incl.append( np.unique(linc) )
+         uses.append( list(set(luse) ) )
+         incl.append( list(set(linc) ) )
 
 allfiles.extend(files)
 
@@ -373,8 +372,8 @@ m.write(head_block2)
 for i in range(0,len(files_to_build)):
    deps = files_to_build[i]+".o: "+stripped_files[i]+" "
    d = ""
-   if(np.size(incl[i]) > 0): d += ' '.join(incl[i])+' '
-   if(np.size(uses[i]) > 0): d += '.o '.join(set(uses[i]).intersection(files_to_build))+'.o'
+   if(len(incl[i]) > 0): d += ' '.join(incl[i])+' '
+   if(len(uses[i]) > 0): d += '.o '.join(set(uses[i]).intersection(files_to_build))+'.o'
    m.write( pretty_format(deps, d.split(), columns) )
 
 m.close()
