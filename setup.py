@@ -410,31 +410,35 @@ m.close()
 if (not options.nocompile):
    makecmd =  "make -j%i -C %s" % ( multiprocessing.cpu_count(), objdir)
    if( sp.call([makecmd], shell=True) != 0):
-      print "It appears that 'make' crashed"
-      print "cannot continue"
+      print '\033[91m' + "It appears that 'make' crashed. Cannot continue" + '\033[0m'
       exit()
 
 try: os.makedirs(rundir)
 except:
-   print "Found old run. Making copy of old 'problem.par'"
+   print '\033[93m' + "Found old run." + '\033[0m' + " Making copy of old 'problem.par'"
    if(os.path.isfile(rundir+'problem.par')): shutil.move(rundir+'problem.par',rundir+'problem.par.old')
    if(os.path.isfile(rundir+'piernik')): os.remove(rundir+'piernik')
    if(os.path.isfile(rundir+'piernik.def')): os.remove(rundir+'piernik.def')
 
-if(options.link_exe):
-   try: os.symlink("../../"+objdir+"/piernik", rundir+'piernik')
-   except: print "Symlinking 'piernik' failed"
-else:
-   try: shutil.copy(objdir+"/piernik", rundir+'piernik')
-   except: print "Copying 'piernik' failed"
+if (not options.nocompile):
+   if(options.link_exe):
+      try: os.symlink("../../"+objdir+"/piernik", rundir+'piernik')
+      except: print '\033[91m' + "Symlinking 'piernik' failed" + '\033[0m'
+   else:
+      try: shutil.copy(objdir+"/piernik", rundir+'piernik')
+      except: print '\033[91m' + "Copying 'piernik' failed" + '\033[0m'
 
 try:
    shutil.copy(objdir+"/"+options.param, rundir+'problem.par')
    shutil.copy(objdir+"/piernik.def", rundir+'piernik.def')
 except:
-   print "Failed to copy files to %s" % rundir.rstrip('/')
+   print '\033[91m' + "Failed to copy files to %s" % rundir.rstrip('/') + '\033[0m'
 
 if (options.nocompile):
-   print "Compilation of %s skipped on request. You may want to run 'make -C %s' before running the Piernik code." % (args[0], objdir )
+   print '\033[93m' + "Compilation of %s skipped on request." % args[0] + '\033[0m' + " You may want to run 'make -C %s' before running the Piernik code." % objdir
+   makecmd = "LC_ALL=C make -j%i -C %s CHECK_MAGIC=yes piernik" % ( multiprocessing.cpu_count(), objdir)
+   output = sp.Popen(makecmd, shell=True, stderr=sp.PIPE, stdout=sp.PIPE).communicate()
+   if re.search(r"Circular", output[1]):
+      print '\033[91m' + "Circular dependencies foud in %s" % objdir + '\033[0m'
 else:
-   print "%s ready in %s" % (args[0], rundir.rstrip('/') )
+   print '\033[92m' + "%s ready in %s" % (args[0], rundir.rstrip('/') ) + '\033[0m'
