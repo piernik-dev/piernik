@@ -171,7 +171,6 @@ contains
 
    subroutine hydrostatic_zeq_coldens(iia,jja,coldens,csim2)
       use arrays,  only: dprof
-      use gravity, only: get_gprofs
       implicit none
       integer, intent(in) :: iia, jja
       real,    intent(in) :: coldens, csim2
@@ -188,7 +187,6 @@ contains
       use arrays,     only: dprof
       use constants,  only: small
       use dataio_pub, only: die
-      use gravity,    only: get_gprofs
       implicit none
       integer, intent(in) :: iia, jja
       real,    intent(in) :: d0, csim2

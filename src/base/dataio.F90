@@ -1009,7 +1009,6 @@ module dataio
 #endif /* RESISTIVE */
 #ifdef VARIABLE_GP
          use arrays,             only: gp
-         use grid,               only: nb
 #endif /* VARIABLE_GP */
 
          implicit none
