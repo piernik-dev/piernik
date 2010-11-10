@@ -407,11 +407,12 @@ for i in range(0,len(files_to_build)):
 
 m.close()
 
-makecmd =  "make -j%i -C %s" % ( multiprocessing.cpu_count(), objdir)
-if( sp.call([makecmd], shell=True) != 0):
-   print "It appears that 'make' crashed"
-   print "cannot continue"
-   exit()
+if (not options.nocompile):
+   makecmd =  "make -j%i -C %s" % ( multiprocessing.cpu_count(), objdir)
+   if( sp.call([makecmd], shell=True) != 0):
+      print "It appears that 'make' crashed"
+      print "cannot continue"
+      exit()
 
 try: os.makedirs(rundir)
 except:
@@ -433,4 +434,7 @@ try:
 except:
    print "Failed to copy files to %s" % rundir.rstrip('/')
 
-print "%s ready in %s" % (args[0], rundir.rstrip('/') )
+if (options.nocompile):
+   print "Compilation of %s skipped on request. You may want to run 'make -C %s' before running the Piernik code." % (args[0], objdir )
+else:
+   print "%s ready in %s" % (args[0], rundir.rstrip('/') )
