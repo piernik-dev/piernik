@@ -239,8 +239,11 @@ parser.add_option("-o", "--obj", dest="objdir", metavar="POSTFIX", default='',
    help="use obj_POSTFIX directory instead of obj/ and runs/<problem>_POSTFIX rather than runs/<problem>")
 
 all_args = []
-for line in file(".setuprc"):
-   all_args += line.split()
+try:
+   for line in file(".setuprc"):
+      all_args += line.split()
+except IOError:
+   pass
 all_args += sys.argv[1:]
 (options, args) = parser.parse_args(all_args)
 
