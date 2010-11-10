@@ -238,7 +238,11 @@ parser.add_option("-c", "--compiler", dest="compiler", default="default.in",
 parser.add_option("-o", "--obj", dest="objdir", metavar="POSTFIX", default='',
    help="use obj_POSTFIX directory instead of obj/ and runs/<problem>_POSTFIX rather than runs/<problem>")
 
-(options, args) = parser.parse_args()
+all_args = []
+for line in file(".setuprc"):
+   all_args += line.split()
+all_args += sys.argv[1:]
+(options, args) = parser.parse_args(all_args)
 
 if(options.verbose):
    print "Setup options:"
@@ -380,7 +384,7 @@ if( options.laconic ):
 else:
    m.write("SILENT = 0\n\n")
 m.write(head_block1)
-m.write("\t\techo \"%s\" > env.dat; \\" % ' '.join(sys.argv))
+m.write("\t\techo \"%s\" > env.dat; \\" % (sys.argv[0]+ " " + " ".join(all_args)))
 m.write(head_block2)
 
 for i in range(0,len(files_to_build)):
