@@ -14,6 +14,7 @@ test     = re.compile(r'pulled by',re.IGNORECASE).search
 test2    = re.compile(r"\$Id",re.IGNORECASE).search
 have_use = re.compile(r"^\s{0,9}use\s",re.IGNORECASE).search
 have_inc = re.compile(r"^#include\s",re.IGNORECASE).search
+have_mod = re.compile(r"^\s*module\s+(?!procedure)",re.IGNORECASE).search
 cpp_junk = re.compile("(?!#define\s_)", re.IGNORECASE)
 
 desc='''
@@ -312,6 +313,7 @@ files = ['src/base/defines.c']
 tags  = ['']   # BEWARE missing tag for defines.c
 uses  = [[]]
 incl  = ['']
+module = dict()
 
 for f in f90files:
    tag  = ""
@@ -327,6 +329,8 @@ for f in f90files:
          luse.append(line.split()[1].rstrip(","))
       if have_inc(line):
          linc.append( line.split('"')[1] )
+      if have_mod(line):
+         module.setdefault(line.split()[1], remove_suf(strip_leading_path([f]))[0])
 # Logic here should be improved...
    if(len(keys) == 0  or (len(keys) == 1 and keys[0] in our_defs)):
       files.append(f)
@@ -340,6 +344,10 @@ for f in f90files:
          tags.append(tag)
          uses.append( list(set(luse) ) )
          incl.append( list(set(linc) ) )
+
+#for i in iter(module):
+#   if module[i] != i:
+#      print "File",module[i]+".F90 contains an alien module", i
 
 allfiles.extend(files)
 
@@ -379,7 +387,15 @@ for i in range(0,len(files_to_build)):
    deps = files_to_build[i]+".o: "+stripped_files[i]+" "
    d = ""
    if(len(incl[i]) > 0): d += ' '.join(incl[i])+' '
-   if(len(uses[i]) > 0): d += '.o '.join(set(uses[i]).intersection(files_to_build))+'.o'
+   for j in uses[i]:
+      if j in module:
+         if module[j]+'.F90' in stripped_files:
+            d += module[j]+'.o '
+# These warnings can be useful if we parse preprocessed source files first.
+#         else:
+#            print "Warning: ",module[j]+'.F90',"referenced in",stripped_files[i],"not found!"
+#      else:
+#         print "Warning: module",j," from file ",stripped_files[i],"not found!"
    m.write( pretty_format(deps, d.split(), columns) )
 
 m.close()
