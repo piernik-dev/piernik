@@ -62,7 +62,7 @@ module diagnostics
    end interface pop_vector
 
    private
-   public :: my_allocate, diagnose_arrays, my_deallocate, pop_vector
+   public :: diagnose_arrays, ma1d, ma2d, ma3d, ma4d, ma5d, my_allocate, my_deallocate, pop_vector
 
    real,    parameter :: MiB = 8./1048576.  ! sizeof(double) / 2**20
    integer, parameter :: an_len = 64
@@ -70,6 +70,11 @@ module diagnostics
 
    real, dimension(:), allocatable                  :: array_sizes
    character(len=an_len), dimension(:), allocatable :: array_names
+   integer, dimension(1) :: ma1d
+   integer, dimension(2) :: ma2d
+   integer, dimension(3) :: ma3d
+   integer, dimension(4) :: ma4d
+   integer, dimension(5) :: ma5d
 
 contains
    subroutine diagnose_arrays

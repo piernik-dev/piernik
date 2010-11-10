@@ -100,8 +100,8 @@ contains
   end subroutine init_dust
 
    subroutine dust_index(nvar)
+      use diagnostics,   only: ma1d, my_allocate
       use types,         only: var_numbers
-      use diagnostics,   only: my_allocate
 
       implicit none
       type(var_numbers), intent(inout) :: nvar
@@ -121,10 +121,11 @@ contains
       nvar%dst%all  = 4
       nvar%all      = imzd
 
-      call my_allocate(nvar%dst%iarr,      [nvar%dst%all], "dst%iarr")
-      call my_allocate(nvar%dst%iarr_swpx, [nvar%dst%all], "dst%iarr_swpx")
-      call my_allocate(nvar%dst%iarr_swpy, [nvar%dst%all], "dst%iarr_swpy")
-      call my_allocate(nvar%dst%iarr_swpz, [nvar%dst%all], "dst%iarr_swpz")
+      ma1d = [nvar%dst%all]
+      call my_allocate(nvar%dst%iarr,      ma1d, "dst%iarr")
+      call my_allocate(nvar%dst%iarr_swpx, ma1d, "dst%iarr_swpx")
+      call my_allocate(nvar%dst%iarr_swpy, ma1d, "dst%iarr_swpy")
+      call my_allocate(nvar%dst%iarr_swpz, ma1d, "dst%iarr_swpz")
 
       nvar%dst%iarr      = [idnd,imxd,imyd,imzd]
       nvar%dst%iarr_swpx = [idnd,imxd,imyd,imzd]

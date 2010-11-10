@@ -126,8 +126,8 @@ contains
   end subroutine init_neutral
 
    subroutine neutral_index(nvar)
+      use diagnostics,  only: ma1d, my_allocate
       use types,        only: var_numbers
-      use diagnostics,  only: my_allocate
       implicit none
       type(var_numbers), intent(inout) :: nvar
 
@@ -152,10 +152,11 @@ contains
       nvar%neu%all  = nvar%neu%all +1
 #endif /* !ISO */
 
-      call my_allocate(nvar%neu%iarr,       [nvar%neu%all], "neu%iarr")
-      call my_allocate(nvar%neu%iarr_swpx,  [nvar%neu%all], "neu%iarr_swpx")
-      call my_allocate(nvar%neu%iarr_swpy,  [nvar%neu%all], "neu%iarr_swpy")
-      call my_allocate(nvar%neu%iarr_swpz,  [nvar%neu%all], "neu%iarr_swpz")
+      ma1d = [nvar%neu%all]
+      call my_allocate(nvar%neu%iarr,       ma1d, "neu%iarr")
+      call my_allocate(nvar%neu%iarr_swpx,  ma1d, "neu%iarr_swpx")
+      call my_allocate(nvar%neu%iarr_swpy,  ma1d, "neu%iarr_swpy")
+      call my_allocate(nvar%neu%iarr_swpz,  ma1d, "neu%iarr_swpz")
 
       nvar%neu%iarr(1:4)      = [idnn,imxn,imyn,imzn]
       nvar%neu%iarr_swpx(1:4) = [idnn,imxn,imyn,imzn]

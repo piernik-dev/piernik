@@ -114,8 +114,8 @@ contains
 
    subroutine ionized_index(nvar)
 
+      use diagnostics,  only: ma1d, my_allocate
       use types,        only: var_numbers
-      use diagnostics,  only: my_allocate
 
       implicit none
 
@@ -142,10 +142,11 @@ contains
       nvar%ion%ien  = ieni
 #endif /* !ISO */
 
-      call my_allocate(nvar%ion%iarr,       [nvar%ion%all], "ion%iarr")
-      call my_allocate(nvar%ion%iarr_swpx,  [nvar%ion%all], "ion%iarr_swpx")
-      call my_allocate(nvar%ion%iarr_swpy,  [nvar%ion%all], "ion%iarr_swpy")
-      call my_allocate(nvar%ion%iarr_swpz,  [nvar%ion%all], "ion%iarr_swpz")
+      ma1d = [nvar%ion%all]
+      call my_allocate(nvar%ion%iarr,       ma1d, "ion%iarr")
+      call my_allocate(nvar%ion%iarr_swpx,  ma1d, "ion%iarr_swpx")
+      call my_allocate(nvar%ion%iarr_swpy,  ma1d, "ion%iarr_swpy")
+      call my_allocate(nvar%ion%iarr_swpz,  ma1d, "ion%iarr_swpz")
 
       nvar%ion%iarr(1:4)      = [idni,imxi,imyi,imzi]
       nvar%ion%iarr_swpx(1:4) = [idni,imxi,imyi,imzi]

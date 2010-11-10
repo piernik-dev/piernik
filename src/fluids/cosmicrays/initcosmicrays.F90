@@ -93,7 +93,7 @@ contains
    !<
    subroutine init_cosmicrays
 
-      use diagnostics,     only: my_allocate
+      use diagnostics,     only: ma1d, my_allocate
       use dataio_pub,      only: par_file, ierrh, namelist_errh, compare_namelist   ! QA_WARN required for diff_nml
       use dataio_pub,      only: die, warn
       use mpisetup,        only: proc, ibuff, rbuff, lbuff, comm, ierr, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL, buffer_dim
@@ -201,9 +201,10 @@ contains
 
       if (ncrs > ncr_max) call die("[initcosmicrays:init_cosmicrays] ncrs > ncr_max") ! higher limit would require changes in names of components in dataio_hdf5
 
-      call my_allocate(gamma_crs,   [ncrs], "gamma_crs")
-      call my_allocate(K_crs_paral, [ncrs], "K_crs_paral")
-      call my_allocate(K_crs_perp,  [ncrs], "K_crs_perp")
+      ma1d = [ncrs]
+      call my_allocate(gamma_crs,   ma1d, "gamma_crs")
+      call my_allocate(K_crs_paral, ma1d, "K_crs_paral")
+      call my_allocate(K_crs_perp,  ma1d, "K_crs_perp")
 
       if (ncrn > 0) then
          gamma_crs  (1:ncrn) = gamma_crn  (1:ncrn)
@@ -217,9 +218,12 @@ contains
          K_crs_perp (ncrn+1:ncrs) = K_cre_perp (1:ncre)
       endif
 
-      call my_allocate(iarr_crn,[ncrn],"iarr_crn")
-      call my_allocate(iarr_cre,[ncre],"iarr_cre")
-      call my_allocate(iarr_crs,[ncrs],"iarr_crs")
+      ma1d = [ncrn]
+      call my_allocate(iarr_crn, ma1d, "iarr_crn")
+      ma1d = [ncre]
+      call my_allocate(iarr_cre, ma1d, "iarr_cre")
+      ma1d = [ncrs]
+      call my_allocate(iarr_crs, ma1d, "iarr_crs")
 
    end subroutine init_cosmicrays
 

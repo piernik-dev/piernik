@@ -70,41 +70,49 @@ module arrays
 
    subroutine init_arrays(nx, ny, nz, nvar)
 
-      use diagnostics, only: my_allocate
+      use diagnostics, only: ma3d, ma4d, my_allocate
       use types,       only: var_numbers
+#ifdef GRAV
+      use diagnostics, only: ma1d
+#endif /* GRAV */
 
       implicit none
 
       type(var_numbers), intent(in) :: nvar
       integer, intent(in) :: nx, ny, nz
 
-      call my_allocate(u, [nvar%all, nx, ny, nz], "u")
-      call my_allocate(b, [3, nx, ny, nz], "b") ! BEWARE: magic number
-      call my_allocate(wa, [nx, ny, nz], "wa")
+      ma4d = [nvar%all, nx, ny, nz]
+      call my_allocate(u, ma4d, "u")
+      ma4d = [3, nx, ny, nz]
+      call my_allocate(b, ma4d, "b")
+      ma3d = [nx, ny, nz]
+      call my_allocate(wa, ma3d, "wa")
 
 #ifdef RESISTIVE
-      call my_allocate(wcu, [nx, ny, nz], "wcu")
+      call my_allocate(wcu, ma3d, "wcu")
 #endif /* RESISTIVE */
 
 #ifdef GRAV
-      call my_allocate(gpot, [nx, ny, nz], "gpot")
-      call my_allocate(hgpot, [nx, ny, nz], "hgpot")
-      call my_allocate(gp, [nx, ny, nz], "gp")
-      call my_allocate(dprof, [nz], "dprof")
-      call my_allocate(eprof, [nz], "eprof")
+      call my_allocate(gpot, ma3d, "gpot")
+      call my_allocate(hgpot, ma3d, "hgpot")
+      call my_allocate(gp, ma3d, "gp")
+      ma1d = [nz]
+      call my_allocate(dprof, ma1d, "dprof")
+      call my_allocate(eprof, ma1d, "eprof")
 #ifdef SELF_GRAV
-      call my_allocate(sgp, [nx, ny, nz], "sgp")
-      call my_allocate(sgpm, [nx, ny, nz], "sgpm")
+      call my_allocate(sgp, ma3d, "sgp")
+      call my_allocate(sgpm, ma3d, "sgpm")
 #endif /* SELF_GRAV */
 #endif /* GRAV */
 
 #ifdef COSM_RAYS
-      call my_allocate(divvel, [nx, ny, nz], "divvel")
-      call my_allocate(wcr, [nvar%crs%all, nx, ny, nz], "wcr")
+      call my_allocate(divvel, ma3d, "divvel")
+      ma4d = [nvar%crs%all, nx, ny, nz]
+      call my_allocate(wcr, ma4d, "wcr")
 #endif /* COSM_RAYS  */
 
 #ifdef ISO_LOCAL
-      call my_allocate(cs_iso2_arr, [nx, ny, nz], "cs_iso2_arr")
+      call my_allocate(cs_iso2_arr, ma3d, "cs_iso2_arr")
 #endif /* ISO_LOCAL */
 
    end subroutine init_arrays
