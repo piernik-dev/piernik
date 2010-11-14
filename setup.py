@@ -415,7 +415,7 @@ m.close()
 if (not options.nocompile):
    makejobs = ""
    if (mp):
-      makejobs = "-j%i", multiprocessing.cpu_count()
+      makejobs = "-j%i" % multiprocessing.cpu_count()
    makecmd = "make %s -C %s" % ( makejobs, objdir)
    if( sp.call([makecmd], shell=True) != 0):
       print '\033[91m' + "It appears that 'make' crashed. Cannot continue" + '\033[0m'
@@ -446,7 +446,7 @@ if (options.nocompile):
    print '\033[93m' + "Compilation of %s skipped on request." % args[0] + '\033[0m' + " You may want to run 'make -C %s' before running the Piernik code." % objdir
    makejobs = ""
    if (mp):
-      makejobs = "-j%i", multiprocessing.cpu_count()
+      makejobs = "-j%i" % multiprocessing.cpu_count()
    makecmd = "LC_ALL=C make %s -C %s CHECK_MAGIC=yes piernik" % ( makejobs, objdir)
    output = sp.Popen(makecmd, shell=True, stderr=sp.PIPE, stdout=sp.PIPE).communicate()
    if re.search(r"Circular", output[1]):
