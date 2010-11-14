@@ -2,8 +2,13 @@
 
 import os, re, shutil, sys
 import subprocess as sp
-import multiprocessing
 from optparse import OptionParser
+try:
+   import multiprocessing
+   mp = True
+except:
+   print "No multiprocessing: The make command will be run in single thread unless you specified MAKEFLAGS += -j<n> in compiler setup."
+   mp = False
 
 columns = 90
 
@@ -408,7 +413,10 @@ for i in range(0,len(files_to_build)):
 m.close()
 
 if (not options.nocompile):
-   makecmd =  "make -j%i -C %s" % ( multiprocessing.cpu_count(), objdir)
+   makejobs = ""
+   if (mp):
+      makejobs = "-j%i", multiprocessing.cpu_count()
+   makecmd = "make %s -C %s" % ( makejobs, objdir)
    if( sp.call([makecmd], shell=True) != 0):
       print '\033[91m' + "It appears that 'make' crashed. Cannot continue" + '\033[0m'
       exit()
@@ -436,7 +444,10 @@ except:
 
 if (options.nocompile):
    print '\033[93m' + "Compilation of %s skipped on request." % args[0] + '\033[0m' + " You may want to run 'make -C %s' before running the Piernik code." % objdir
-   makecmd = "LC_ALL=C make -j%i -C %s CHECK_MAGIC=yes piernik" % ( multiprocessing.cpu_count(), objdir)
+   makejobs = ""
+   if (mp):
+      makejobs = "-j%i", multiprocessing.cpu_count()
+   makecmd = "LC_ALL=C make %s -C %s CHECK_MAGIC=yes piernik" % ( makejobs, objdir)
    output = sp.Popen(makecmd, shell=True, stderr=sp.PIPE, stdout=sp.PIPE).communicate()
    if re.search(r"Circular", output[1]):
       print '\033[91m' + "Circular dependencies foud in %s" % objdir + '\033[0m'
