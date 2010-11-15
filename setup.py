@@ -59,6 +59,7 @@ head_block1='''LIBS +=${STATIC} -lhdf5_fortran -lhdf5hl_fortran -lhdf5_hl -lhdf5
 
 RM ?= /bin/rm
 MV ?= /bin/mv
+ECHO ?= /bin/echo
 ifdef CHECK_MAGIC
 \tRM  = /bin/true
 \tMV  = /bin/true
@@ -70,10 +71,10 @@ endif
 ifeq ("$(SILENT)","1")
 MAKEFLAGS += -s
 define ECHO_FC
-@echo [FC] $<
+@$(ECHO) [FC] $<
 endef
 define ECHO_CC
-@echo [CC] $<
+@$(ECHO) [CC] $<
 endef
 else
 define ECHO_FC
@@ -88,21 +89,21 @@ all: date print_fc $(PROG)
 
 print_fc:
 ifeq ("$(SILENT)","1")
-\t@echo FC = $(F90) $(CPPFLAGS) $(F90FLAGS) -c
-\t@echo CC = $(CC) $(CPPFLAGS) $(CFLAGS) -c
+\t@$(ECHO) FC = $(F90) $(CPPFLAGS) $(F90FLAGS) -c
+\t@$(ECHO) CC = $(CC) $(CPPFLAGS) $(CFLAGS) -c
 endif
 
 $(PROG): $(OBJS)
-\t@echo $(F90) $(LDFLAGS) -o $@ '*.o' $(LIBS)
+\t@$(ECHO) $(F90) $(LDFLAGS) -o $@ '*.o' $(LIBS)
 \t@$(F90) $(LDFLAGS) -o $@ $(OBJS) $(LIBS)
 \t@AO1=`mktemp _ao_XXXXXX`;\\
 \tAO2=`mktemp _ao_XXXXXX`;\\
-\techo $(OBJS) | tr ' ' '\\n' | sort > $AO1;\\
-\techo *.o     | tr ' ' '\\n' | sort > $AO2;\\
+\t$(ECHO) $(OBJS) | tr ' ' '\\n' | sort > $AO1;\\
+\t$(ECHO) *.o     | tr ' ' '\\n' | sort > $AO2;\\
 \tif [ `join -v 2 $AO1 $AO2 | wc -l` -gt 0 ] ; then\\
-\t\techo -n "WARNING: unused object files: ";\\
+\t\t$(ECHO) -n "WARNING: unused object files: ";\\
 \t\tjoin -v 2 $AO1 $AO2 | tr '\\n' ' ';\\
-\t\techo;\\
+\t\t$(ECHO);\\
 \tfi;\\
 \t$(RM) $AO1 $AO2
 
@@ -117,12 +118,12 @@ head_block2='''
 
 version.F90: date
 \t@if [ -e version.F90 ]; then unlink version.F90; fi;
-\t@( echo -e "module version\\n   implicit none\\n   public\\n"; \\
+\t@( $(ECHO) -e "module version\\n   implicit none\\n   public\\n"; \\
 \twc -l env.dat | awk '{print "   integer, parameter :: nenv = "$$1"+0"}'; \\
-\techo -e "   character(len=128), dimension(nenv) :: env\\ncontains\\n   subroutine init_version\\n\t\timplicit none"; \\
+\t$(ECHO) -e "   character(len=128), dimension(nenv) :: env\\ncontains\\n   subroutine init_version\\n\t\timplicit none"; \\
 \tawk '{printf("\\t\\t env(%i) = \\"%s\\"\\n",NR,$$0)}' env.dat; \\
-\techo -e "    end subroutine init_version\\nend module version" ) > version.F90; \\
-\techo 'generated version.F90';
+\t$(ECHO) -e "    end subroutine init_version\\nend module version" ) > version.F90; \\
+\t$(ECHO) 'generated version.F90';
 
 clean:
 \t$(RM) $(PROG) $(OBJS) *.mod
@@ -392,7 +393,7 @@ if( options.laconic ):
 else:
    m.write("SILENT = 0\n\n")
 m.write(head_block1)
-m.write("\t\techo \"%s\" > env.dat; \\" % (sys.argv[0]+ " " + " ".join(all_args)))
+m.write("\t\t$(ECHO) \"%s\" > env.dat; \\" % (sys.argv[0]+ " " + " ".join(all_args)))
 m.write(head_block2)
 
 for i in range(0,len(files_to_build)):
