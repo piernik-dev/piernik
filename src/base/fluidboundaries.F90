@@ -39,7 +39,6 @@ module fluidboundaries
       use fluidboundaries_pub, only: user_bnd_xl, user_bnd_xr, user_bnd_yl, user_bnd_yr, user_bnd_zl, user_bnd_zr
       use fluidindex,          only: nvar, iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
       use grid,                only: nb, nyd, x, y, z, nzb, nyb, nxb, nx, ny, nz
-      use initfluids,          only: gamma, cs_iso2
       use mpisetup,            only: ierr, MPI_XY_RIGHT_DOM, MPI_XY_RIGHT_BND, MPI_XY_LEFT_DOM, MPI_XY_LEFT_BND, &
                                      MPI_XZ_RIGHT_DOM, MPI_XZ_RIGHT_BND, MPI_XZ_LEFT_DOM, MPI_XZ_LEFT_BND, &
                                      MPI_YZ_RIGHT_DOM, MPI_YZ_RIGHT_BND, MPI_YZ_LEFT_DOM, MPI_YZ_LEFT_BND, &
@@ -52,9 +51,6 @@ module fluidboundaries
 #ifndef ISO
       use fluidindex,          only: iarr_all_en
 #endif /* !ISO */
-#ifdef GRAV
-      use gravity,             only: grav_accel, nsub, tune_zeq_bnd
-#endif /* GRAV */
 #ifdef SHEAR_BND
       use shear,               only: qshear, omega, delj, eps, dely, unshear_fft
 #endif /* SHEAR_BND */
@@ -64,19 +60,8 @@ module fluidboundaries
 
       implicit none
       character(len=*) :: dim
-      integer          :: ib
-
 #ifdef GRAV
-      integer          :: kb, ksub
-      real, dimension(nvar%fluids,nx,ny) :: db, csi2b
-#ifndef ISO
-      real, dimension(nvar%fluids,nx,ny) :: ekb, eib
-      integer :: ifluid
-#endif /* !ISO */
-      real, dimension(nsub+1)             :: zs, gprofs
-      real, dimension(nvar%fluids,nsub+1) :: dprofs
-      real, dimension(nvar%fluids) :: factor
-      real :: dzs,z1,z2
+      integer          :: ib, kb
 #endif /* GRAV */
       integer :: i,j
       real, allocatable :: send_left(:,:,:,:),recv_left(:,:,:,:)
@@ -638,58 +623,7 @@ module fluidboundaries
          case ('outh')
             do ib=1,nb
                kb = nb+2-ib
-               db = u(iarr_all_dn,:,:,kb)
-               db = max(db,smalld)
-#ifdef ISO
-               csi2b = cs_iso2
-#else /* !ISO */
-               ekb= 0.5*(u(iarr_all_mx,:,:,kb)**2+u(iarr_all_my,:,:,kb)**2+u(iarr_all_mz,:,:,kb)**2)/db
-               eib = u(iarr_all_en,:,:,kb) - ekb
-               eib = max(eib,smallei)
-               do ifluid=1,nvar%fluids
-                  csi2b(ifluid,:,:) = (gamma(ifluid)-1.0)*eib(ifluid,:,:)/db(ifluid,:,:)
-               enddo
-#endif /* !ISO */
-               z1 = z(kb)
-               z2 = z(kb-1)
-               dzs = (z2-z1)/real(nsub)
-
-               do ksub=1, nsub+1
-                  zs(ksub) = z1 + dzs/2 + (ksub-1)*dzs
-               enddo
-
-               do j=1,ny
-                  do i=1,nx
-
-                     call grav_accel('zsweep',i,j, zs, nsub, gprofs)
-                     gprofs=tune_zeq_bnd * gprofs
-
-                     dprofs(:,1) = db(:,i,j)
-                     do ksub=1, nsub
-                        factor = (1.0 + 0.5*dzs*gprofs(ksub)/csi2b(:,i,j))  &
-                                /(1.0 - 0.5*dzs*gprofs(ksub)/csi2b(:,i,j))
-                        dprofs(:,ksub+1) = factor * dprofs(:,ksub)
-                     enddo
-
-                     db(:,i,j)  = dprofs(:,nsub+1)
-                     db(:,i,j)  = max(db(:,i,j), smalld)
-
-                     u(iarr_all_dn,i,j,kb-1)           =     db(:,i,j)
-                     u(iarr_all_mx,i,j,kb-1)           =     u(iarr_all_mx,i,j,kb)
-                     u(iarr_all_my,i,j,kb-1)           =     u(iarr_all_my,i,j,kb)
-                     u(iarr_all_mz,i,j,kb-1)           =     u(iarr_all_mz,i,j,kb)
-! zakomentowac nastepna linie jesli warunek diodowy nie ma byc stosowany razem z hydrostatycznym
-!                u(iarr_all_mz,i,j,kb-1)               =     min(u(iarr_all_mz,i,j,kb-1),0.0)
-#ifndef ISO
-                     eib(:,i,j) = csi2b(:,i,j)*db(:,i,j)/(gamma-1)
-                     eib(:,i,j) = max(eib(:,i,j), smallei)
-                     u(iarr_all_en,i,j,kb-1)                =     ekb(:,i,j) + eib(:,i,j)
-#endif /* !ISO */
-#ifdef COSM_RAYS
-                     u(iarr_all_crs,i,j,kb-1)                =     smallecr
-#endif /* COSM_RAYS */
-                  enddo ! i
-               enddo ! j
+               call outh_bnd(kb, kb-1, "min")
             enddo ! ib
 #endif /* GRAV */
          case default
@@ -740,58 +674,7 @@ module fluidboundaries
          case ('outh')
             do ib=1,nb
                kb = nb+nzb-1+ib
-               db = u(iarr_all_dn,:,:,kb)
-               db = max(db,smalld)
-#ifdef ISO
-               csi2b = cs_iso2
-#else /* !ISO */
-               ekb= 0.5*(u(iarr_all_mx,:,:,kb)**2+u(iarr_all_my,:,:,kb)**2+u(iarr_all_mz,:,:,kb)**2)/db
-               eib = u(iarr_all_en,:,:,kb) - ekb
-               eib = max(eib,smallei)
-               do ifluid=1,nvar%fluids
-                  csi2b(ifluid,:,:) = (gamma(ifluid)-1.0)*eib(ifluid,:,:)/db(ifluid,:,:)
-               enddo
-#endif /* !ISO */
-               z1 = z(kb)
-               z2 = z(kb+1)
-               dzs = (z2-z1)/real(nsub)
-
-               do ksub=1, nsub+1
-                  zs(ksub) = z1 + dzs/2 + (ksub-1)*dzs
-               enddo
-
-               do j=1,ny
-                  do i=1,nx
-
-                     call grav_accel('zsweep',i,j, zs, nsub, gprofs)
-                     gprofs=tune_zeq_bnd * gprofs
-
-                     dprofs(:,1) = db(:,i,j)
-                     do ksub=1, nsub
-                        factor = (1.0 + 0.5*dzs*gprofs(ksub)/csi2b(:,i,j))  &
-                                /(1.0 - 0.5*dzs*gprofs(ksub)/csi2b(:,i,j))
-                        dprofs(:,ksub+1) = factor * dprofs(:,ksub)
-                     enddo
-
-                     db(:,i,j)  = dprofs(:,nsub+1)
-                     db(:,i,j)  = max(db(:,i,j), smalld)
-
-                     u(iarr_all_dn,i,j,kb+1)      =     db(:,i,j)
-                     u(iarr_all_mx,i,j,kb+1)      =     u(iarr_all_mx,i,j,kb)
-                     u(iarr_all_my,i,j,kb+1)      =     u(iarr_all_my,i,j,kb)
-                     u(iarr_all_mz,i,j,kb+1)      =     u(iarr_all_mz,i,j,kb)
-! zakomentowac nastepna linie jesli warunek diodowy nie ma byc stosowany razem z hydrostatycznym
-!                u(iarr_all_mz,i,j,kb+1)           =     max(u(iarr_all_mz,i,j,kb+1),0.0)
-#ifndef ISO
-                     eib(:,i,j) = csi2b(:,i,j)*db(:,i,j)/(gamma-1)
-                     eib(:,i,j) = max(eib(:,i,j), smallei)
-                     u(iarr_all_en,i,j,kb+1)    =     ekb(:,i,j) + eib(:,i,j)
-#endif /* !ISO */
-#ifdef COSM_RAYS
-                     u(iarr_all_crs,i,j,kb+1)           =     smallecr
-#endif /* COSM_RAYS */
-                  enddo ! i
-               enddo ! j
+               call outh_bnd(kb, kb+1, "max")
             enddo ! ib
 #endif /* GRAV */
          case default
@@ -812,4 +695,93 @@ module fluidboundaries
 
    end subroutine all_fluid_boundaries
 
+   subroutine outh_bnd(kb,kk,minmax)
+      use gravity,             only: grav_accel, nsub, tune_zeq_bnd
+      use arrays,              only: u
+      use grid,                only: nx, ny, z
+      use mpisetup,            only: smalld
+      use initfluids,          only: gamma, cs_iso2
+      use fluidindex,          only: nvar, iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
+#ifndef ISO
+      use fluidindex,          only: iarr_all_en
+      use mpisetup,            only: smallei
+#endif /* !ISO */
+#ifdef COSM_RAYS
+      use fluidindex,          only: iarr_all_crs
+      use initcosmicrays,      only: smallecr
+#endif /* COSM_RAYS */
+
+      implicit none
+      integer, intent(in)           :: kb, kk
+      character(len=*), intent(in)  :: minmax
+
+      integer                             :: ksub, ifluid, i, j
+      real, dimension(nvar%fluids,nx,ny)  :: db, csi2b
+#ifndef ISO
+      real, dimension(nvar%fluids,nx,ny)  :: ekb, eib
+#endif /* !ISO */
+      real, dimension(nsub+1)             :: zs, gprofs
+      real, dimension(nvar%fluids,nsub+1) :: dprofs
+      real, dimension(nvar%fluids)        :: factor
+      real                                :: dzs,z1,z2
+
+
+      db = u(iarr_all_dn,:,:,kb)
+      db = max(db,smalld)
+#ifdef ISO
+      csi2b = cs_iso2
+#else /* !ISO */
+      ekb = 0.5*(u(iarr_all_mx,:,:,kb)**2+u(iarr_all_my,:,:,kb)**2+u(iarr_all_mz,:,:,kb)**2)/db
+      eib = u(iarr_all_en,:,:,kb) - ekb
+      eib = max(eib,smallei)
+      do ifluid=1,nvar%fluids
+         csi2b(ifluid,:,:) = (gamma(ifluid)-1.0)*eib(ifluid,:,:)/db(ifluid,:,:)
+      enddo
+#endif /* !ISO */
+      z1 = z(kb)
+      z2 = z(kk)
+      dzs = (z2-z1)/real(nsub)
+
+      do ksub=1, nsub+1
+         zs(ksub) = z1 + dzs/2 + (ksub-1)*dzs
+      enddo
+
+      do j=1,ny
+         do i=1,nx
+
+            call grav_accel('zsweep',i,j, zs, nsub, gprofs)
+            gprofs=tune_zeq_bnd * gprofs
+
+            dprofs(:,1) = db(:,i,j)
+            do ksub=1, nsub
+               factor = (1.0 + 0.5*dzs*gprofs(ksub)/csi2b(:,i,j))  &
+                        /(1.0 - 0.5*dzs*gprofs(ksub)/csi2b(:,i,j))
+               dprofs(:,ksub+1) = factor * dprofs(:,ksub)
+            enddo
+
+            db(:,i,j)  = dprofs(:,nsub+1)
+            db(:,i,j)  = max(db(:,i,j), smalld)
+
+            u(iarr_all_dn,i,j,kk)      =     db(:,i,j)
+            u(iarr_all_mx,i,j,kk)      =     u(iarr_all_mx,i,j,kb)
+            u(iarr_all_my,i,j,kk)      =     u(iarr_all_my,i,j,kb)
+            u(iarr_all_mz,i,j,kk)      =     u(iarr_all_mz,i,j,kb)
+! zakomentowac nastepna linie jesli warunek diodowy nie ma byc stosowany razem z hydrostatycznym
+!           if(minmax == 'max') then
+!              u(iarr_all_mz,i,j,kk)          =     max(u(iarr_all_mz,i,j,kk),0.0)
+!           else
+!              u(iarr_all_mz,i,j,kk)          =     min(u(iarr_all_mz,i,j,kk),0.0)
+!           endif
+            if(0) print *, minmax
+#ifndef ISO
+            eib(:,i,j) = csi2b(:,i,j)*db(:,i,j)/(gamma-1)
+            eib(:,i,j) = max(eib(:,i,j), smallei)
+            u(iarr_all_en,i,j,kk)      =     ekb(:,i,j) + eib(:,i,j)
+#endif /* !ISO */
+#ifdef COSM_RAYS
+            u(iarr_all_crs,i,j,kk)     =     smallecr
+#endif /* COSM_RAYS */
+         enddo ! i
+      enddo ! j
+   end subroutine outh_bnd
 end module fluidboundaries
