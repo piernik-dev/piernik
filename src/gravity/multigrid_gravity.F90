@@ -710,7 +710,7 @@ contains
    subroutine init_source(dens)
 
 #ifdef JEANS_PROBLEM
-      use initproblem,        only: d0, mode ! hack for tests
+      use problem_pub,        only: jeans_d0, jeans_mode ! hack for tests
 #endif /* JEANS_PROBLEM */
       use constants,          only: fpiG
       use grid,               only: is, ie, js, je, ks, ke

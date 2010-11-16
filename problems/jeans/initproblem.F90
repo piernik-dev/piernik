@@ -30,7 +30,7 @@
 
 module initproblem
 
-   use problem_pub, only: problem_name, run_id
+   use problem_pub, only: problem_name, run_id, jeans_d0, jeans_mode
 
    implicit none
 
@@ -135,6 +135,10 @@ contains
          ky = ky / 2.
          kz = kz / 2.
       endif
+
+      ! export variables required for a test in multigrid_gravity
+      jeans_d0 = d0
+      jeans_mode = mode
 
    end subroutine read_problem_par
 

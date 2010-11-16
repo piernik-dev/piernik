@@ -44,4 +44,10 @@ module problem_pub
    character(len=cbuff_len) :: problem_name                   !< The default problem name
    character(len=idlen)     :: run_id                         !< Auxiliary run identifier
 
+   ! hack for tests
+#ifdef JEANS_PROBLEM
+   real :: jeans_d0
+   integer :: jeans_mode
+#endif /* JEANS_PROBLEM */
+
 end module problem_pub
