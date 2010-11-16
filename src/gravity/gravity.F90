@@ -42,15 +42,13 @@ module gravity
 
    private
    public :: init_grav, grav_accel, source_terms_grav, grav_pot2accel, grav_pot_3d, get_gprofs, grav_accel2pot
-   public :: g_z, g_y, dg_dz, r_gc, ptmass, ptm_x, ptm_y, ptm_z, r_smooth, nsub, tune_zeq, tune_zeq_bnd, h_grav, r_grav, n_gravr, n_gravr2, n_gravh, user_grav, gp_status, gprofs_target
+   public :: g_dir, r_gc, ptmass, ptm_x, ptm_y, ptm_z, r_smooth, nsub, tune_zeq, tune_zeq_bnd, h_grav, r_grav, n_gravr, n_gravr2, n_gravh, user_grav, gp_status, gprofs_target
 
    integer, parameter         :: gp_stat_len = 9
    integer, parameter         :: gproft_len  = 5
    character(LEN=gp_stat_len) :: gp_status       !< variable set as 'undefined' in grav_pot_3d when grav_accel is supposed to use
    character(LEN=gproft_len)  :: gprofs_target   !< variable set pointing gravity routine in hydrostatic_zeq ('accel' or ready gp array 'gparr')
-   real    :: g_z                   !< z-component used by GRAV_UNIFORM type of %gravity
-   real    :: g_y                   !< y-component of GRAV_UNIFORM constant <b>(currently not used)</b>
-   real    :: dg_dz                 !< constant used by GRAV_LINEAR type of %gravity
+   real, dimension(3)         :: g_dir           !< vector used by GRAV_UNIFORM and GRAV_LINEAR type of %gravity
    real    :: r_gc                  !< galactocentric radius of the local simulation region used by local Galactic type of %gravity in grav_accel
    real    :: ptmass                !< mass value of point %gravity source used by GRAV_PTMASS, GRAV_PTMASSSTIFF, GRAV_PTMASSPURE, GRAV_PTFLAT type of %gravity
    real    :: ptm_x                 !< point mass position x-component
@@ -100,9 +98,7 @@ module gravity
 !! \n \n
 !! <table border="+1">
 !! <tr><td width="150pt"><b>parameter</b></td><td width="135pt"><b>default value</b></td><td width="200pt"><b>possible values</b></td><td width="315pt"> <b>description</b></td></tr>
-!! <tr><td>g_z         </td><td>0.0 </td><td>real             </td><td>\copydoc gravity::g_z          </td></tr>
-!! <tr><td>g_y         </td><td>0.0 </td><td>real             </td><td>\copydoc gravity::g_y          </td></tr>
-!! <tr><td>dg_dz       </td><td>0.0 </td><td>real             </td><td>\copydoc gravity::dg_dz        </td></tr>
+!! <tr><td>g_dir       </td><td>0.0 </td><td>real             </td><td>\copydoc gravity::g_dir        </td></tr>
 !! <tr><td>r_gc        </td><td>8500</td><td>real             </td><td>\copydoc gravity::r_gc         </td></tr>
 !! <tr><td>ptmass      </td><td>0.0 </td><td>non-negative real</td><td>\copydoc gravity::ptmass       </td></tr>
 !! <tr><td>ptm_x       </td><td>0.0 </td><td>real             </td><td>\copydoc gravity::ptm_x        </td></tr>
@@ -131,16 +127,14 @@ module gravity
       implicit none
 
 
-      namelist /GRAVITY/ g_z, g_y, dg_dz, r_gc, ptmass, ptm_x, ptm_y, ptm_z, r_smooth, &
+      namelist /GRAVITY/ g_dir, r_gc, ptmass, ptm_x, ptm_y, ptm_z, r_smooth, &
                 nsub, tune_zeq, tune_zeq_bnd, h_grav, r_grav, n_gravr, n_gravr2, n_gravh, user_grav, gprofs_target
 
 #ifdef VERBOSE
       call warn("[gravity:init_grav] Commencing gravity module initialization")
 #endif /* VERBOSE */
 
-      g_z     = 0.0
-      g_y     = 0.0
-      dg_dz   = 0.0
+      g_dir   = 0.0
       r_gc    = 8500
       ptmass  = 0.0
       ptm_x   = 0.0
@@ -163,27 +157,25 @@ module gravity
 
          diff_nml(GRAVITY)
 
-         ibuff(1)  = nsub
-         ibuff(2)  = n_gravr
-         ibuff(3)  = n_gravr2
-         ibuff(4)  = n_gravh
+         ibuff(1)   = nsub
+         ibuff(2)   = n_gravr
+         ibuff(3)   = n_gravr2
+         ibuff(4)   = n_gravh
 
-         rbuff(1)  = g_z
-         rbuff(2)  = g_y
-         rbuff(3)  = dg_dz
-         rbuff(4)  = r_gc
-         rbuff(5)  = ptmass
-         rbuff(6)  = ptm_x
-         rbuff(7)  = ptm_y
-         rbuff(8)  = ptm_z
-         rbuff(9)  = tune_zeq
-         rbuff(10) = tune_zeq_bnd
-         rbuff(11) = r_smooth
-         rbuff(12) = h_grav
-         rbuff(13) = r_grav
+         rbuff(1:3) = g_dir
+         rbuff(5)   = r_gc
+         rbuff(6)   = ptmass
+         rbuff(7)   = ptm_x
+         rbuff(8)   = ptm_y
+         rbuff(9)   = ptm_z
+         rbuff(10)  = tune_zeq
+         rbuff(11)  = tune_zeq_bnd
+         rbuff(12)  = r_smooth
+         rbuff(13)  = h_grav
+         rbuff(14)  = r_grav
 
-         lbuff(1)  = user_grav
-         cbuff(1)  = gprofs_target
+         lbuff(1)   = user_grav
+         cbuff(1)   = gprofs_target
 
       endif
 
@@ -199,19 +191,17 @@ module gravity
          n_gravr2            = ibuff(3)
          n_gravh             = ibuff(4)
 
-         g_z                 = rbuff(1)
-         g_y                 = rbuff(2)
-         dg_dz               = rbuff(3)
-         r_gc                = rbuff(4)
-         ptmass              = rbuff(5)
-         ptm_x               = rbuff(6)
-         ptm_y               = rbuff(7)
-         ptm_z               = rbuff(8)
-         tune_zeq            = rbuff(9)
-         tune_zeq_bnd        = rbuff(10)
-         r_smooth            = rbuff(11)
-         h_grav              = rbuff(12)
-         r_grav              = rbuff(13)
+         g_dir               = rbuff(1:3)
+         r_gc                = rbuff(5)
+         ptmass              = rbuff(6)
+         ptm_x               = rbuff(7)
+         ptm_y               = rbuff(8)
+         ptm_z               = rbuff(9)
+         tune_zeq            = rbuff(10)
+         tune_zeq_bnd        = rbuff(11)
+         r_smooth            = rbuff(12)
+         h_grav              = rbuff(13)
+         r_grav              = rbuff(14)
 
          user_grav           = lbuff(1)
          gprofs_target       = cbuff(1)(1:gproft_len)
@@ -457,6 +447,41 @@ module gravity
 
 #endif /* SELF_GRAV */
 
+   subroutine grav_null
+      use arrays, only: gp
+      implicit none
+
+      gp = 0.0
+
+   end subroutine grav_null
+
+   subroutine grav_uniform
+      use arrays, only: gp
+      use grid,   only: nx, ny, nz, x, y, z
+      implicit none
+      integer :: i, j, k
+      do i = 1, nx
+         do j = 1, ny
+            do k = 1, nz
+               gp(:,:,i) = -(g_dir(1)*x(i) + g_dir(2)*y(j) + g_dir(3)*z(i))
+            enddo
+         enddo
+      enddo
+   end subroutine grav_uniform
+
+   subroutine grav_linear
+      use arrays, only: gp
+      use grid,   only: nx, ny, nz, x, y, z
+      implicit none
+      integer :: i, j, k
+      do i = 1, nx
+         do j = 1, ny
+            do k = 1, nz
+               gp(:,:,i) = -0.5*(g_dir(1)*x(i)**2 + g_dir(2)*y(j)**2 + g_dir(3)*z(i)**2)
+            enddo
+         enddo
+      enddo
+   end subroutine grav_linear
 !--------------------------------------------------------------------------
 !>
 !! \brief Routine that compute values of gravitational potential filling in gp array and setting gp_status character string \n\n
@@ -514,18 +539,12 @@ module gravity
       gp_status = ''
 
 #ifdef GRAV_NULL
-      gp(:,:,:) = 0.0      ! do nothing
+      call grav_null
 
 #elif defined (GRAV_UNIFORM)
-      do i = 1, nz
-         gp(:,:,i) = -g_z*z(i)
-      enddo
-
+      call grav_uniform
 #elif defined (GRAV_LINEAR)
-      do i = 1, nz
-         gp(:,:,i) = -0.5 * dg_dz * z(i)**2
-      enddo
-
+      call grav_linear
 #elif defined (GRAV_PTMASS)
        do i = 1, nx
           do j = 1, ny
