@@ -203,8 +203,8 @@ module dataio
    subroutine init_dataio
 
       use dataio_hdf5,     only: init_hdf5, read_restart_hdf5, parfile, parfilelines
-      use dataio_pub,      only: chdf, nres, last_hdf_time, step_hdf, nlog, ntsl, dataio_initialized, log_file, cwdlen, maxparfilelines, cwd, &
-           &                     tmp_log_file, msglen, printinfo, warn, nhdf, nstep_start, set_container_chdf, get_container
+      use dataio_pub,      only: chdf, nres, last_hdf_time, step_hdf, nlog, ntsl, log_file_initialized, log_file, cwdlen, maxparfilelines, cwd, &
+           &                     tmp_log_file, msglen, printinfo, warn, msg, nhdf, nstep_start, set_container_chdf, get_container
       use dataio_pub,      only: par_file, ierrh, namelist_errh, compare_namelist  ! QA_WARN required for diff_nml
       use fluidboundaries, only: all_fluid_boundaries
       use mpisetup,        only: lbuff, ibuff, rbuff, cbuff, proc, cbuff_len, comm, ierr, buffer_dim, &
@@ -415,10 +415,21 @@ module dataio
          ! ToDo: if the simulation is restarted then save previous log_file (if exists) under a different, unique name
          write(system_command, '("mv ",a," ",a)') trim(tmp_log_file), trim(log_file)
          system_status = SYSTEM(system_command)
+         if (system_status /= 0) then
+            write(msg,'(2a)')"[dataio:init_dataio] The log must be stored in ",tmp_log_file
+            call warn(msg)
+            log_file_initialized = .false.
+         else
+            log_file_initialized = .true.
+         end if
       endif
+      call MPI_Bcast(log_file, cwdlen, MPI_CHARACTER, 0, comm, ierr)
+      call MPI_Bcast(log_file_initialized, 1, MPI_LOGICAL, 0, comm, ierr)
+
       call set_container_chdf(nstep); chdf%nres = nrestart
 
       if (nrestart /= 0) then
+         if (proc == 0) call printinfo("###############     Reading restart     ###############", .false.)
          call read_restart_hdf5(chdf)
          call get_container(nstep)
          nstep_start = nstep
@@ -433,10 +444,7 @@ module dataio
 #endif /* MAGNETIC */
          endif
       endif
-      call MPI_Bcast(log_file, cwdlen, MPI_CHARACTER, 0, comm, ierr)
       call set_container_chdf(nstep)
-
-      dataio_initialized = .true.
 
    end subroutine init_dataio
 

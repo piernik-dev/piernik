@@ -81,7 +81,7 @@ module dataio_pub
    logical            :: halfstep = .false.     !< true when X-Y-Z sweeps are done and Z-Y-X are not
    real               :: last_hdf_time          !< time in simulation of the last resent hdf file dump
    logical            :: skip_advection = .false. !< .true. will instruct fluidupdate:make_3sweeps to skip sweeps (used by maclaurin problem, replaces precompiler symbol __NO_FLUID_STEP)
-   logical, save      :: dataio_initialized = .false.
+   logical, save      :: log_file_initialized = .false.
 
    !! ToDo:
    !!  Currently to use PGPLOT you need to:
@@ -195,7 +195,7 @@ contains
          endif
       endif
 
-      if (dataio_initialized) then
+      if (log_file_initialized) then
          open(log_lun, file=log_file, position='append')
       else
          open(log_lun, file=tmp_log_file, status='unknown', position='append')
