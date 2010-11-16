@@ -37,7 +37,7 @@ module initproblem
    private
    public :: read_problem_par, init_prob
 
-   real :: pulse_size, pulse_vel_x, pulse_vel_y, pulse_vel_z, pulse_amp, pulse_low_density, pulse_pressure, &
+   real :: pulse_size, pulse_vel_x, pulse_vel_y, pulse_vel_z, pulse_amp, &
         &  pulse_x_min, pulse_x_max, pulse_y_min, pulse_y_max, pulse_z_min, pulse_z_max
 
    namelist /PROBLEM_CONTROL/  problem_name, run_id, pulse_size, pulse_vel_x, pulse_vel_y, pulse_vel_z, pulse_amp
@@ -51,8 +51,7 @@ contains
       use dataio_pub,    only: ierrh, par_file, namelist_errh, compare_namelist      ! QA_WARN required for diff_nml
       use dataio_pub,    only: die
       use grid,          only: xmin, xmax, ymin, ymax, zmin, zmax
-      use initneutral,   only: gamma_neu
-      use mpisetup,      only: ierr, rbuff, cbuff_len, cbuff, proc, buffer_dim, comm, smalld, smallei, MPI_CHARACTER, MPI_DOUBLE_PRECISION
+      use mpisetup,      only: ierr, rbuff, cbuff_len, cbuff, proc, buffer_dim, comm, MPI_CHARACTER, MPI_DOUBLE_PRECISION
       use types,         only: idlen
 
       implicit none
@@ -107,10 +106,6 @@ contains
       pulse_z_min = (zmax+zmin)/2. - (zmax-zmin)*pulse_size/2.
       pulse_z_max = (zmax+zmin)/2. + (zmax-zmin)*pulse_size/2.
 
-      !BEWARE: hardcoded values
-      pulse_low_density = smalld * 1e5
-      pulse_pressure = smallei * (gamma_neu-1.0) * 1e5
-
    end subroutine read_problem_par
 
 !-----------------------------------------------------------------------------
@@ -124,7 +119,12 @@ contains
 
       implicit none
 
-      integer                   :: i, j, k
+      integer :: i, j, k
+      real    :: pulse_low_density, pulse_pressure
+
+      !BEWARE: hardcoded magic numbers
+      pulse_low_density = smalld * 1e5
+      pulse_pressure = smallei * nvar%neu%gam_1 * 1e5
 
       b(:, :, :, :) = 0.
       u(nvar%neu%idn, :, :, :) = pulse_low_density
