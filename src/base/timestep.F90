@@ -103,10 +103,6 @@ module timestep
          dt = min(dt,dt_interact)
 #endif /* FLUID_INTERACTIONS */
 
-#ifdef SIMPLE_COOL
-         dt = min(dt,0.01 * tauc)
-#endif /* SIMPLE_COOL */
-
          ! finally apply some sanity factors
          if (nstep <=1) then
             if (dt_initial > 0.) dt = min(dt, dt_initial)
