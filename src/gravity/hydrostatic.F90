@@ -318,7 +318,7 @@ contains
 !           else
 !              u(iarr_all_mz,i,j,kk)          =     min(u(iarr_all_mz,i,j,kk),0.0)
 !           endif
-            if (.true.) print *, minmax
+            if (.false.) print *, minmax
 #ifndef ISO
             eib(:,i,j) = csi2b(:,i,j)*db(:,i,j)/(gamma-1)
             eib(:,i,j) = max(eib(:,i,j), smallei)
