@@ -124,7 +124,7 @@ contains
 
       !BEWARE: hardcoded magic numbers
       pulse_low_density = smalld * 1e5
-      pulse_pressure = smallei * nvar%neu%gam_1 * 1e5
+      pulse_pressure = smallei * nvar%neu%gam_1 * 1e2
 
       b(:, :, :, :) = 0.
       u(nvar%neu%idn, :, :, :) = pulse_low_density
