@@ -108,7 +108,6 @@ program piernik
 
    if (associated(finalize_problem)) call finalize_problem
 
-!  nstep=nstep+1
 #ifdef PERFMON
    call timer_stop
 #endif /* PERFMON */

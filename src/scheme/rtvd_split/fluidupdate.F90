@@ -75,7 +75,7 @@ contains
       call check_log
       call check_tsl
       if (first_run .and. proc == 0) then
-         write(msg, fmt900) 0,dt,t,ts
+         write(msg, fmt900) nstep-1,dt,t,ts
          call printinfo(msg, .true.)
       endif
 
