@@ -31,13 +31,15 @@
 !<
 program piernik
 ! pulled by ANY
-   use dataio,        only: write_data, user_msg_handler
-   use dataio_pub,    only: nend, tend, msg, fplen, printinfo, warn, &
+   use dataio,        only: write_data, user_msg_handler, check_log, check_tsl
+   use dataio_pub,    only: nend, tend, msg, fplen, printinfo, warn, cwdlen, &
        &                    code_progress, PIERNIK_START, PIERNIK_INITIALIZED, PIERNIK_FINISHED, PIERNIK_CLEANUP
    use fluidupdate,   only: fluid_update
-   use mpisetup,      only: comm, comm3d, ierr, proc, t, nstep
+   use mpisetup,      only: comm, comm3d, ierr, proc, t, nstep, dt, dtm
    use timer,         only: time_left
    use types,         only: finalize_problem
+   use timestep,      only: time_step
+   use timer,         only: timer_
 #ifdef PERFMON
    use timer,         only: timer_start, timer_stop
 #endif /* PERFMON */
@@ -46,6 +48,9 @@ program piernik
 
    logical              :: end_sim !< Used in main loop, to test whether to stop simulation or not
    character(len=fplen) :: nstr, tstr
+   character(len=cwdlen), parameter :: fmt900 = "('   nstep = ',i7,'   dt = ',es22.16,'   t = ',es22.16,'   dWallClock = ',f7.2,' s')"
+   logical, save                    :: first_step = .true.
+   real                             :: ts   ! Timestep wallclock
 
    code_progress = PIERNIK_START
 
@@ -66,18 +71,49 @@ program piernik
       call printinfo("###############     Simulation     ###############", .false.)
    endif
 
-   do while (t < tend .and. nstep < nend .and. .not.(end_sim) .and. time_left() )
+   do while (t < tend .and. nstep < nend .and. .not.(end_sim) .and. time_left() ) ! main loop
+
+      call time_step
+
+      if (first_step) then
+         dtm = 0.0
+#ifdef RESISTIVE
+         dt  = 0.0    ! BEWARE: smells like some dirty trick
+#endif /* RESISTIVE */
+      else
+         dtm = dt
+      endif
+      if (proc == 0) then
+         write(msg, fmt900) nstep,dt,t,ts
+         call printinfo(msg, .true.)
+      endif
+
+      call check_log
+      call check_tsl
+
+      if (first_step) then
+         ts=timer_("fluid_update",.true.)
+         ts = 0.0
+      else
+         ts=timer_("fluid_update")
+      endif
+      call fluid_update
+      ts=timer_("fluid_update")
 
       nstep=nstep+1
-
-      call fluid_update
 
       call MPI_Barrier(comm3d,ierr)
       call write_data(output='all')
 
       call user_msg_handler(end_sim)
 
+      first_step = .false.
    enddo ! main loop
+
+   if (proc == 0) then
+      write(msg, fmt900) nstep,dt,t,ts
+      call printinfo(msg, .true.)
+   endif
 
    code_progress = PIERNIK_FINISHED
 

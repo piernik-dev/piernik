@@ -39,71 +39,28 @@ contains
 
    subroutine fluid_update
 
-      use dataio,        only: check_log, check_tsl
-      use dataio_pub,    only: cwdlen, halfstep, msg, printinfo
-      use mpisetup,      only: proc, dt, dtm, t, nstep
-      use timer,         only: timer_
-      use timestep,      only: time_step
+      use dataio_pub,    only: halfstep
+      use mpisetup,      only: dt, dtm, t
 #ifdef SN_SRC
       use snsources,     only: random_sn
 #endif /* SN_SRC */
 
       implicit none
-      character(len=cwdlen), parameter :: fmt900 = "('   nstep = ',i7,'   dt = ',es22.16,'   t = ',es22.16,'   dWallClock = ',f7.2,' s')"
-      logical, save                    :: first_run = .true.
-      real                             :: ts   ! Timestep wallclock
 
       halfstep = .false.
-
-      if (first_run) then
-         dtm = 0.0
-         ts=timer_("fluid_update",.true.)
-         ts = 0.0
-      else
-         dtm = dt
-         ts=timer_("fluid_update")
-      endif
-      call time_step
-
-#ifdef RESISTIVE
-      if (first_run) then
-         dtm = 0.0
-         dt  = 0.0
-      endif
-#endif /* RESISTIVE */
-
-      call check_log
-      call check_tsl
-      if (first_run .and. proc == 0) then
-         write(msg, fmt900) nstep-1,dt,t,ts
-         call printinfo(msg, .true.)
-      endif
-
       t=t+dt
-
       call make_3sweeps(.true.) ! X -> Y -> Z
 
 ! Sources ----------------------------------------
 
 #ifdef SN_SRC
-      call random_sn
+      call random_sn ! ToDo: hook this to problem_customize_solution
 #endif /* SN_SRC */
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+      halfstep = .true.
       t=t+dt
       dtm = dt
-      halfstep = .true.
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
       call make_3sweeps(.false.) ! Z -> Y -> X
-
-      if (first_run) first_run = .false.
-
-      ts=timer_("fluid_update")
-      if (proc == 0) then
-         write(msg, fmt900) nstep,dt,t,ts
-         call printinfo(msg, .true.)
-      endif
 
    end subroutine fluid_update
 
@@ -149,14 +106,12 @@ contains
       call source_terms_grav
 #endif /* GRAV */
 
-#ifdef COSM_RAYS
-#ifdef MULTIGRID
+#if defined(COSM_RAYS) && defined(MULTIGRID)
       if (.not. use_split) then
          call multigrid_solve_diff
          call all_fluid_boundaries
       endif
-#endif /* MULTIGRID */
-#endif /* COSM_RAYS */
+#endif /* COSM_RAYS && MULTIGRID */
 
       if (.not. skip_advection) then
          if (forward) then

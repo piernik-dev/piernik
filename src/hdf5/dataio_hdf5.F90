@@ -1284,7 +1284,7 @@ module dataio_hdf5
    subroutine read_restart_hdf5(chdf)
 
       use arrays,        only: u, b
-      use dataio_pub,    only: cwdlen, msg, colormessage, T_IO, die, printinfo
+      use dataio_pub,    only: cwdlen, msg, colormessage, T_IO, die
       use fluidindex,    only: nvar
       use func,          only: fix_string
       use grid,          only: nx, ny, nz, x, y, z, nxb, nyb, nzb
@@ -1338,7 +1338,7 @@ module dataio_hdf5
 
       if (proc==0) then
          write(filename,'(a,a1,a3,a1,i4.4,a4)') trim(problem_name),'_', run_id,'_',chdf%nres,'.res'
-         write(msg, '(2a)') 'Reading restart  file: ',trim(filename)
+         write(msg, '(2a)') 'Reading restart file: ',trim(filename)
          call colormessage(msg, T_IO)
       endif
       call MPI_Bcast(filename, cwdlen, MPI_CHARACTER, 0, comm, ierr)
@@ -1493,7 +1493,7 @@ module dataio_hdf5
          CALL h5fclose_f(file_id, error)
 
          write(msg,'(2a)') 'Done reading restart file: ',trim(filename)
-         call printinfo(msg, .false.)
+         call colormessage(msg, T_IO)
       endif
 
       call MPI_Bcast(chdf%nstep,    1, MPI_INTEGER, 0, comm3d, ierr)
