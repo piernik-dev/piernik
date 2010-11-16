@@ -127,7 +127,7 @@ module initproblem
       use initcosmicrays, only: iarr_crn, gamma_crn
 #endif /* COSM_RAYS */
 #ifdef GRAV
-      use gravity,        only: grav_accel, grav_pot_3d
+      use gravity,        only: grav_accel, grav_pot_3d, user_grav
 #endif /* GRAV */
       implicit none
 
@@ -136,7 +136,7 @@ module initproblem
       real, dimension(3) :: sn_pos
 
       grav_accel  => galactic_grav_accel
-      grav_pot_3d => my_grav_pot_3d
+      if(user_grav) grav_pot_3d => my_grav_pot_3d
 
       call grav_pot_3d
 
