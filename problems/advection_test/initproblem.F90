@@ -119,15 +119,15 @@ contains
 
       use arrays,        only: u, b
       use grid,          only: x, y, z, is, ie, js, je, ks, ke
-      use initneutral,   only: gamma_neu, idnn, imxn, imyn, imzn, ienn
+      use fluidindex,    only: nvar
       use mpisetup,      only: smalld, smallei
 
       implicit none
 
       integer                   :: i, j, k
 
-      b(:,    :, :, :) = 0.
-      u(idnn, :, :, :) = pulse_low_density
+      b(:, :, :, :) = 0.
+      u(nvar%neu%idn, :, :, :) = pulse_low_density
 
       ! Initialize density with uniform sphere
       do i = is, ie
@@ -136,7 +136,7 @@ contains
                if (y(j) > pulse_y_min .and. y(j) < pulse_y_max) then
                   do k = ks, ke
                      if (z(k) > pulse_z_min .and. z(k) < pulse_z_max) then
-                        u(idnn, i, j, k) = pulse_low_density * pulse_amp
+                        u(nvar%neu%idn, i, j, k) = pulse_low_density * pulse_amp
                      endif
                   enddo
                endif
@@ -144,18 +144,17 @@ contains
          endif
       enddo
 
-      where (u(idnn, :, :, :) < smalld) u(idnn, :, :, :) = smalld
+      where (u(nvar%neu%idn, :, :, :) < smalld) u(nvar%neu%idn, :, :, :) = smalld
 
-      u(imxn, :, :, :) = pulse_vel_x * u(idnn,:,:,:)
-      u(imyn, :, :, :) = pulse_vel_y * u(idnn,:,:,:)
-      u(imzn, :, :, :) = pulse_vel_z * u(idnn,:,:,:)
+      u(nvar%neu%imx, :, :, :) = pulse_vel_x * u(nvar%neu%idn, :, :, :)
+      u(nvar%neu%imy, :, :, :) = pulse_vel_y * u(nvar%neu%idn, :, :, :)
+      u(nvar%neu%imz, :, :, :) = pulse_vel_z * u(nvar%neu%idn, :, :, :)
       do k = ks, ke
          do j = js, je
             do i = is, ie
-               u(ienn,i,j,k) = max(smallei,                                             &
-                    &              pulse_pressure / (gamma_neu-1.0)        + &
-                    &              0.5 * sum(u(imxn:imzn,i,j,k)**2,1) / u(idnn,i,j,k) + &
-                    &              0.5 * sum(b(:,i,j,k)**2,1))
+               u(nvar%neu%ien,i,j,k) = max(smallei,                                             &
+                    &              pulse_pressure / nvar%neu%gam_1        + &
+                    &              0.5 * sum(u(nvar%neu%imx:nvar%neu%imz,i,j,k)**2,1) / u(nvar%neu%idn,i,j,k))
             enddo
          enddo
       enddo
