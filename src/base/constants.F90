@@ -313,7 +313,7 @@ module constants
 
    real, parameter :: fpiG       = fpi*G_one                !< four Pi times Newtonian constant of gravitation
    real, parameter :: newtong    = G_one                    !< Newtonian constant of gravitation
-   real, parameter :: pc         = PC_CM                    !< parsec expressed in units of centimeters
+   real, parameter :: pc         = PC_CM                    !< parsec expressed in units of centimeters !BEWARE: this is inconsistent with definition of cm, kpc, r_gc_sun (is it a bug?)
    real, parameter :: kpc        = 1000.0                   !< kiloparsec expressed in units of parsec
    real, parameter :: r_gc_sun   = 8500                     !< Sun distance from the Galaxy Center expressed in parsecs
 
