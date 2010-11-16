@@ -206,16 +206,16 @@ module dataio
       use dataio_pub,      only: chdf, nres, last_hdf_time, step_hdf, nlog, ntsl, dataio_initialized, log_file, cwdlen, maxparfilelines, cwd, &
            &                     tmp_log_file, msglen, printinfo, warn, nhdf, nstep_start, set_container_chdf, get_container
       use dataio_pub,      only: par_file, ierrh, namelist_errh, compare_namelist  ! QA_WARN required for diff_nml
-      use fluidboundaries, only: all_fluid_boundaries
+!      use fluidboundaries, only: all_fluid_boundaries
       use mpisetup,        only: lbuff, ibuff, rbuff, cbuff, proc, cbuff_len, comm, ierr, buffer_dim, &
            &                      MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL, &
            &                      t, nstep, bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr
       use problem_pub,     only: problem_name, run_id
       use timer,           only: time_left
       use version,         only: nenv,env, init_version
-#ifdef MAGNETIC
-      use magboundaries,   only: all_mag_boundaries
-#endif /* MAGNETIC */
+!#ifdef MAGNETIC
+!      use magboundaries,   only: all_mag_boundaries
+!#endif /* MAGNETIC */
 
       implicit none
 
@@ -429,12 +429,13 @@ module dataio
       endif
       call MPI_Bcast(log_file, cwdlen, MPI_CHARACTER, 0, comm, ierr)
       call set_container_chdf(nstep)
-      if (all([bnd_xl,bnd_xr,bnd_yl,bnd_yr,bnd_zl,bnd_zr] /= "user")) then
-         call all_fluid_boundaries
-#ifdef MAGNETIC
-         call all_mag_boundaries
-#endif /* MAGNETIC */
-      endif
+! BEWARE: u and b are not initialized at this point, no need to call boundaries
+!      if (all([bnd_xl,bnd_xr,bnd_yl,bnd_yr,bnd_zl,bnd_zr] /= "user")) then
+!         call all_fluid_boundaries
+!#ifdef MAGNETIC
+!         call all_mag_boundaries
+!#endif /* MAGNETIC */
+!      endif
 
       dataio_initialized = .true.
 
