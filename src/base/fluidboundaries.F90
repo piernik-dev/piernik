@@ -28,6 +28,7 @@
 #include "piernik.h"
 
 module fluidboundaries
+! pulled by ANY
    implicit none
    private
    public :: bnd_u, all_fluid_boundaries
@@ -44,9 +45,10 @@ module fluidboundaries
                                      MPI_YZ_RIGHT_DOM, MPI_YZ_RIGHT_BND, MPI_YZ_LEFT_DOM, MPI_YZ_LEFT_BND, &
                                      pxsize, pysize, pzsize, proczl, proczr, procyl, procyr, procxl, procxr, &
                                      pcoords, bnd_xr, bnd_xl, bnd_yl, bnd_yr, bnd_zl, bnd_zr, req, status, comm, comm3d, &
-                                     MPI_DOUBLE_PRECISION, procxyl, procyxl, smalld, smallei
+                                     MPI_DOUBLE_PRECISION, procxyl, procyxl, smalld
 #ifdef COSM_RAYS
       use initcosmicrays,      only: smallecr
+      use fluidindex,          only: iarr_all_crs
 #endif /* COSM_RAYS */
 #ifndef ISO
       use fluidindex,          only: iarr_all_en
@@ -54,9 +56,9 @@ module fluidboundaries
 #ifdef SHEAR_BND
       use shear,               only: qshear, omega, delj, eps, dely, unshear_fft
 #endif /* SHEAR_BND */
-#ifdef COSM_RAYS
-      use fluidindex,          only: iarr_all_crs
-#endif /* COSM_RAYS */
+#ifdef GRAV
+      use hydrostatic,         only: outh_bnd
+#endif /* GRAV */
 
       implicit none
       character(len=*) :: dim
@@ -694,94 +696,4 @@ module fluidboundaries
       if (nzd /= 1) call bnd_u('zdim')
 
    end subroutine all_fluid_boundaries
-
-   subroutine outh_bnd(kb,kk,minmax)
-      use gravity,             only: grav_accel, nsub, tune_zeq_bnd
-      use arrays,              only: u
-      use grid,                only: nx, ny, z
-      use mpisetup,            only: smalld
-      use initfluids,          only: gamma, cs_iso2
-      use fluidindex,          only: nvar, iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
-#ifndef ISO
-      use fluidindex,          only: iarr_all_en
-      use mpisetup,            only: smallei
-#endif /* !ISO */
-#ifdef COSM_RAYS
-      use fluidindex,          only: iarr_all_crs
-      use initcosmicrays,      only: smallecr
-#endif /* COSM_RAYS */
-
-      implicit none
-      integer, intent(in)           :: kb, kk
-      character(len=*), intent(in)  :: minmax
-
-      integer                             :: ksub, ifluid, i, j
-      real, dimension(nvar%fluids,nx,ny)  :: db, csi2b
-#ifndef ISO
-      real, dimension(nvar%fluids,nx,ny)  :: ekb, eib
-#endif /* !ISO */
-      real, dimension(nsub+1)             :: zs, gprofs
-      real, dimension(nvar%fluids,nsub+1) :: dprofs
-      real, dimension(nvar%fluids)        :: factor
-      real                                :: dzs,z1,z2
-
-
-      db = u(iarr_all_dn,:,:,kb)
-      db = max(db,smalld)
-#ifdef ISO
-      csi2b = cs_iso2
-#else /* !ISO */
-      ekb = 0.5*(u(iarr_all_mx,:,:,kb)**2+u(iarr_all_my,:,:,kb)**2+u(iarr_all_mz,:,:,kb)**2)/db
-      eib = u(iarr_all_en,:,:,kb) - ekb
-      eib = max(eib,smallei)
-      do ifluid=1,nvar%fluids
-         csi2b(ifluid,:,:) = (gamma(ifluid)-1.0)*eib(ifluid,:,:)/db(ifluid,:,:)
-      enddo
-#endif /* !ISO */
-      z1 = z(kb)
-      z2 = z(kk)
-      dzs = (z2-z1)/real(nsub)
-
-      do ksub=1, nsub+1
-         zs(ksub) = z1 + dzs/2 + (ksub-1)*dzs
-      enddo
-
-      do j=1,ny
-         do i=1,nx
-
-            call grav_accel('zsweep',i,j, zs, nsub, gprofs)
-            gprofs=tune_zeq_bnd * gprofs
-
-            dprofs(:,1) = db(:,i,j)
-            do ksub=1, nsub
-               factor = (1.0 + 0.5*dzs*gprofs(ksub)/csi2b(:,i,j))  &
-                        /(1.0 - 0.5*dzs*gprofs(ksub)/csi2b(:,i,j))
-               dprofs(:,ksub+1) = factor * dprofs(:,ksub)
-            enddo
-
-            db(:,i,j)  = dprofs(:,nsub+1)
-            db(:,i,j)  = max(db(:,i,j), smalld)
-
-            u(iarr_all_dn,i,j,kk)      =     db(:,i,j)
-            u(iarr_all_mx,i,j,kk)      =     u(iarr_all_mx,i,j,kb)
-            u(iarr_all_my,i,j,kk)      =     u(iarr_all_my,i,j,kb)
-            u(iarr_all_mz,i,j,kk)      =     u(iarr_all_mz,i,j,kb)
-! zakomentowac nastepna linie jesli warunek diodowy nie ma byc stosowany razem z hydrostatycznym
-!           if(minmax == 'max') then
-!              u(iarr_all_mz,i,j,kk)          =     max(u(iarr_all_mz,i,j,kk),0.0)
-!           else
-!              u(iarr_all_mz,i,j,kk)          =     min(u(iarr_all_mz,i,j,kk),0.0)
-!           endif
-            if(.false.) print *, minmax
-#ifndef ISO
-            eib(:,i,j) = csi2b(:,i,j)*db(:,i,j)/(gamma-1)
-            eib(:,i,j) = max(eib(:,i,j), smallei)
-            u(iarr_all_en,i,j,kk)      =     ekb(:,i,j) + eib(:,i,j)
-#endif /* !ISO */
-#ifdef COSM_RAYS
-            u(iarr_all_crs,i,j,kk)     =     smallecr
-#endif /* COSM_RAYS */
-         enddo ! i
-      enddo ! j
-   end subroutine outh_bnd
 end module fluidboundaries
