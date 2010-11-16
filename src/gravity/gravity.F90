@@ -41,7 +41,7 @@ module gravity
    implicit none
 
    private
-   public :: init_grav, grav_accel, source_terms_grav, grav_pot2accel, grav_pot_3d, get_gprofs
+   public :: init_grav, grav_accel, source_terms_grav, grav_pot2accel, grav_pot_3d, get_gprofs, grav_accel2pot
    public :: g_z, g_y, dg_dz, r_gc, ptmass, ptm_x, ptm_y, ptm_z, r_smooth, nsub, tune_zeq, tune_zeq_bnd, h_grav, r_grav, n_gravr, n_gravr2, n_gravh, user_grav, gp_status, gprofs_target
 
    integer, parameter         :: gp_stat_len = 9
@@ -76,9 +76,18 @@ module gravity
          implicit none
          integer, intent(in) :: iia, jja
       end subroutine gprofs_default
+      subroutine user_grav_accel(sweep, i1,i2, xsw, n, grav)
+         implicit none
+         character(len=*), intent(in)   :: sweep
+         integer, intent(in)            :: i1, i2
+         integer, intent(in)            :: n
+         real, dimension(n),intent(in)  :: xsw
+         real, dimension(n),intent(out) :: grav
+      end subroutine user_grav_accel
    end interface
 
    procedure(user_grav_pot_3d), pointer :: grav_pot_3d => NULL()
+   procedure(user_grav_accel),  pointer :: grav_accel  => NULL()
    procedure(gprofs_default),   pointer :: get_gprofs  => NULL()
 
    contains
@@ -474,6 +483,7 @@ module gravity
 
    subroutine default_grav_pot_3d
 
+      use dataio_pub,   only: die, warn
       use arrays,       only: gp
       use grid,         only: nx, ny, nz, x, y, z
       use initfluids,   only: cs_iso2
@@ -586,68 +596,15 @@ module gravity
 !-----------------------
 
       if (gp_status .eq. 'undefined') then
-         call grav_accel2pot
+         if (associated(grav_accel)) then
+            call warn("[gravity:default_grav_pot_3d]: using 'grav_accel' defined by user")
+            call grav_accel2pot
+         else
+            call die("[gravity:default_grav_pot_3d]: GRAV is defined, but 'gp' is not initialized")
+         endif
       endif
 
    end subroutine default_grav_pot_3d
-
-!--------------------------------------------------------------------------
-!>
-!! \brief Routine that compute values of gravitational acceleration
-!! \param sweep string of characters that points out the current sweep direction
-!! \param i1 integer, number of column in the first direction after one pointed out by sweep
-!! \param i2 integer, number of column in the second direction after one pointed out by sweep
-!! \param xsw 1D position array in the direction pointed out by sweep
-!! \param n number of elements of xsw array
-!! \param grav 1D array of gravitational acceleration values computed for positions from xsw and returned by the routine
-!! \n\n
-!! one type of %gravity is implemented here: \n\n
-!! local Galactic %gravity only in z-direction (see <a href="http://cdsads.u-strasbg.fr/abs/1998ApJ...497..759F">Ferriere K., 1998, Astrophys. Journal, 497, 759</a>)\n
-!! \f[
-!! F_z = 3.23 \cdot 10^8 \cdot \left[\left(-4.4 \cdot 10^{-9} \cdot exp\left(-\frac{(r_{gc}-r_{gc_{}Sun})}{(4.9kpc)}\right) \cdot \frac{z}{\sqrt{(z^2+(0.2kpc)^2)}}\right)
-!! -\left( 1.7 \cdot 10^{-9} \cdot \frac{(r_{gc_{}Sun}^2 + (2.2kpc)^2)}{(r_{gc}^2 + (2.2kpc)^2)} \cdot \frac{z}{1kpc}\right) \right]
-!! \f]
-!! where \f$r_{gc}\f$ is galactocentric radius and \f$r_{gcSun}\f$ is the galactocentric radius of Sun.
-!<
-
-   subroutine grav_accel(sweep, i1,i2, xsw, n, grav)
-      use grid,         only: x, y, z
-      use constants,   only: r_gc_sun, kpc
-
-      implicit none
-
-      character(len=*), intent(in)   :: sweep
-      integer, intent(in)            :: i1, i2
-      integer, intent(in)            :: n
-      real, dimension(:)             :: xsw
-      real, dimension(n),intent(out) :: grav
-      real                           :: x1, x2
-
-      select case (sweep)
-         case ('xsweep')
-            x1  = y(i1)
-            x2  = z(i2)
-         case ('ysweep')
-            x1  = z(i1)
-            x2  = x(i2)
-         case ('zsweep')
-            x1  = x(i1)
-            x2  = y(i2)
-         case default ! just for suppressing compiler warning
-            x1 = xsw(1)
-      end select
-
-      if (sweep == 'zsweep') then
-         grav = 3.23e8 * (  &
-           (-4.4e-9 * exp(-(r_gc-r_gc_sun)/(4.9*kpc)) * xsw/sqrt(xsw**2+(0.2*kpc)**2)) &
-           -( 1.7e-9 * (r_gc_sun**2 + (2.2*kpc)**2)/(r_gc**2 + (2.2*kpc)**2)*xsw/kpc) )
-!          -Om*(Om+G) * Z * (kpc ?) ! in the transition region between rigid
-!                                   ! and flat rotation F'98: eq.(36)
-      else
-         grav=0.0
-      endif
-
-   end subroutine grav_accel
 
 !>
 !! \brief Routine that compute values of gravitational acceleration using gravitational potential array gp

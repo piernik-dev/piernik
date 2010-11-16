@@ -44,8 +44,8 @@
     bnd_xr       = 'per'
     bnd_yl       = 'per'
     bnd_yr       = 'per'
-    bnd_zl       = 'outd'
-    bnd_zr       = 'outd'
+    bnd_zl       = 'outh'
+    bnd_zr       = 'outh'
  /
 
  $DOMAIN_LIMITS
@@ -71,6 +71,7 @@
   /
 
  $GRAVITY
+    user_grav    = .true.
     r_gc         = 5000     ! Galactic radius of coordinate system
     nsub         = 10
  /

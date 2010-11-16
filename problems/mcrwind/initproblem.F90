@@ -123,12 +123,22 @@ module initproblem
 #ifdef SHEAR
       use shear,          only: qshear, omega
 #endif /* SHEAR */
-
+#ifdef COSM_RAYS
+      use initcosmicrays, only: iarr_crn, gamma_crn
+#endif /* COSM_RAYS */
+#ifdef GRAV
+      use gravity,        only: grav_accel, grav_pot_3d
+#endif /* GRAV */
       implicit none
 
       integer            :: i, j, k
       real               :: b0, csim2
       real, dimension(3) :: sn_pos
+
+      grav_accel  => galactic_grav_accel
+      grav_pot_3d => my_grav_pot_3d
+
+      call grav_pot_3d
 
       sn_pos = [x0,y0,z0]
 
@@ -157,10 +167,9 @@ module initproblem
                                + 0.5*(u(imxi,i,j,k)**2 + u(imyi,i,j,k)**2 + &
                                       u(imzi,i,j,k)**2 ) / u(idni,i,j,k)
 #endif /* !ISO */
-!#ifdef COSM_RAYS
-!               u(iarr_crn(icr_H1),i,j,k)   = beta_cr*cs_iso2 * u(idni,i,j,k)/( gamma_crn(1) - 1.0 )
-!               u(iarr_crn(icr_C12),i,j,k)  = 0.0
-!               u(iarr_crn(icr_Be10),i,j,k) = 0.0
+#ifdef COSM_RAYS
+               u(iarr_crn,i,j,k)  = 0.0
+               u(iarr_crn(1),i,j,k)   = beta_cr*cs_iso2 * u(idni,i,j,k)/( gamma_crn(1) - 1.0 )
 !#ifdef GALAXY
 !! Single SN explosion in x0,y0,z0 at t = 0 if amp_cr /= 0
 !
@@ -179,7 +188,7 @@ module initproblem
 !!
 !
 !#endif /* GALAXY */
-!#endif /* COSM_RAYS */
+#endif /* COSM_RAYS */
             enddo
          enddo
       enddo
@@ -206,6 +215,66 @@ module initproblem
       return
    end subroutine init_prob
 
+   subroutine my_grav_pot_3d
+      use gravity,    only: grav_accel, grav_accel2pot
+      use dataio_pub, only: die, warn
+      implicit none
+      logical, save  :: frun = .true.
+
+      if (.not.frun) return
+
+      if (associated(grav_accel)) then
+         call warn("[gravity:default_grav_pot_3d]: using 'grav_accel' defined by user")
+         call grav_accel2pot
+      else
+         call die("[gravity:default_grav_pot_3d]: GRAV is defined, but 'gp' is not initialized")
+      endif
+      frun = .false.
+   end subroutine my_grav_pot_3d
+
+!--------------------------------------------------------------------------
+!>
+!! \brief Routine that compute values of gravitational acceleration
+!! \param sweep string of characters that points out the current sweep direction
+!! \param i1 integer, number of column in the first direction after one pointed out by sweep
+!! \param i2 integer, number of column in the second direction after one pointed out by sweep
+!! \param xsw 1D position array in the direction pointed out by sweep
+!! \param n number of elements of xsw array
+!! \param grav 1D array of gravitational acceleration values computed for positions from xsw and returned by the routine
+!! \n\n
+!! one type of %gravity is implemented here: \n\n
+!! local Galactic %gravity only in z-direction (see <a href="http://cdsads.u-strasbg.fr/abs/1998ApJ...497..759F">Ferriere K., 1998, Astrophys. Journal, 497, 759</a>)\n
+!! \f[
+!! F_z = 3.23 \cdot 10^8 \cdot \left[\left(-4.4 \cdot 10^{-9} \cdot exp\left(-\frac{(r_{gc}-r_{gc_{}Sun})}{(4.9kpc)}\right) \cdot \frac{z}{\sqrt{(z^2+(0.2kpc)^2)}}\right)
+!! -\left( 1.7 \cdot 10^{-9} \cdot \frac{(r_{gc_{}Sun}^2 + (2.2kpc)^2)}{(r_{gc}^2 + (2.2kpc)^2)} \cdot \frac{z}{1kpc}\right) \right]
+!! \f]
+!! where \f$r_{gc}\f$ is galactocentric radius and \f$r_{gcSun}\f$ is the galactocentric radius of Sun.
+!<
+
+   subroutine galactic_grav_accel(sweep, i1,i2, xsw, n, grav)
+      use grid,        only: x, y, z
+      use constants,   only: r_gc_sun, kpc
+      use gravity,     only: r_gc
+
+      implicit none
+
+      character(len=*), intent(in)   :: sweep
+      integer, intent(in)            :: i1, i2
+      integer, intent(in)            :: n
+      real, dimension(n),intent(in)  :: xsw
+      real, dimension(n),intent(out) :: grav
+
+      if (sweep == 'zsweep') then
+         grav = 3.23e8 * (  &
+           (-4.4e-9 * exp(-(r_gc-r_gc_sun)/(4.9*kpc)) * xsw/sqrt(xsw**2+(0.2*kpc)**2)) &
+           -( 1.7e-9 * (r_gc_sun**2 + (2.2*kpc)**2)/(r_gc**2 + (2.2*kpc)**2)*xsw/kpc) )
+!          -Om*(Om+G) * Z * (kpc ?) ! in the transition region between rigid
+!                                   ! and flat rotation F'98: eq.(36)
+      else
+         grav=0.0
+      endif
+
+   end subroutine galactic_grav_accel
 
 !------------------------------------------------------------------------------
 !BEWARE!
@@ -251,7 +320,7 @@ module initproblem
                            * EXP(-((x(i)-xsn+real(ipm)*Lx)**2  &
                            + (y(j)-ysna+real(jpm)*Ly)**2  &
                            + (z(k)-zsn)**2)/r_sn**2)
-
+!                     u(iarr_crn,i,j,k) = u(iarr_crn,i,j,k) + max(decr,1e-10) * [1., primary_C12*12., primary_N14*14., primary_O16*16.]
                      do icr=1,nvar%crn%all
                         if (icr == icr_H1) u(iarr_crn(icr),i,j,k) = u(iarr_crn(icr),i,j,k) + decr
                         if (icr == icr_C12) u(iarr_crn(icr),i,j,k) = u(iarr_crn(icr),i,j,k) + primary_C12*12*decr
@@ -265,7 +334,6 @@ module initproblem
             enddo ! i
          enddo ! j
       enddo ! k
-
       return
 
    end subroutine cr_sn_beware
