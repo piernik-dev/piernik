@@ -61,12 +61,13 @@ module fluidboundaries
 #endif /* GRAV */
 
       implicit none
+
       character(len=*) :: dim
-#ifdef GRAV
-      integer          :: ib, kb
-#endif /* GRAV */
-      integer :: i,j
+      integer :: i,j, ib
       real, allocatable :: send_left(:,:,:,:),recv_left(:,:,:,:)
+#ifdef GRAV
+      integer          :: kb
+#endif /* GRAV */
 #ifdef SHEAR_BND
       real, allocatable :: send_right(:,:,:,:),recv_right(:,:,:,:)
 #ifdef FFTW
@@ -696,4 +697,5 @@ module fluidboundaries
       if (nzd /= 1) call bnd_u('zdim')
 
    end subroutine all_fluid_boundaries
+
 end module fluidboundaries
