@@ -84,7 +84,7 @@ program piernik
          dtm = dt
       endif
       if (proc == 0) then
-         write(msg, fmt900) nstep,dt,t,ts
+         write(msg, fmt900) nstep, dt, t, 0.0
          call printinfo(msg, .true.)
       endif
 
@@ -111,7 +111,7 @@ program piernik
    enddo ! main loop
 
    if (proc == 0) then
-      write(msg, fmt900) nstep,dt,t,ts
+      write(msg, fmt900) nstep, dt, t, ts
       call printinfo(msg, .true.)
    endif
 
