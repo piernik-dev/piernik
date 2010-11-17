@@ -1284,7 +1284,7 @@ module dataio_hdf5
    subroutine read_restart_hdf5(chdf)
 
       use arrays,        only: u, b
-      use dataio_pub,    only: cwdlen, msg, colormessage, T_IO, die
+      use dataio_pub,    only: cwdlen, msg, printio, die
       use fluidindex,    only: nvar
       use func,          only: fix_string
       use grid,          only: nx, ny, nz, x, y, z, nxb, nyb, nzb
@@ -1339,7 +1339,7 @@ module dataio_hdf5
       if (proc==0) then
          write(filename,'(a,a1,a3,a1,i4.4,a4)') trim(problem_name),'_', run_id,'_',chdf%nres,'.res'
          write(msg, '(2a)') 'Reading restart file: ',trim(filename)
-         call colormessage(msg, T_IO)
+         call printio(msg)
       endif
       call MPI_Bcast(filename, cwdlen, MPI_CHARACTER, 0, comm, ierr)
 
@@ -1493,7 +1493,7 @@ module dataio_hdf5
          CALL h5fclose_f(file_id, error)
 
          write(msg,'(2a)') 'Done reading restart file: ',trim(filename)
-         call colormessage(msg, T_IO)
+         call printio(msg)
       endif
 
       call MPI_Bcast(chdf%nstep,    1, MPI_INTEGER, 0, comm3d, ierr)
@@ -1691,7 +1691,7 @@ module dataio_hdf5
 
    subroutine set_common_attributes(filename, chdf, stype)
 
-      use dataio_pub,    only: msg, colormessage, T_IO
+      use dataio_pub,    only: msg, printio
       use grid,          only: nxb, nyb, nzb, nxd, nyd, nzd, nb, xmin, xmax, ymin, ymax, zmin, zmax
       use hdf5,          only: HID_T, SIZE_T, H5F_ACC_RDWR_F, h5fopen_f, h5fclose_f, h5gcreate_f, h5gclose_f
       use h5lt,          only: h5ltset_attribute_double_f, h5ltset_attribute_int_f, h5ltmake_dataset_string_f, h5ltset_attribute_string_f
@@ -1798,7 +1798,7 @@ module dataio_hdf5
          call h5fclose_f(file_id, error)
 
          write(msg,'(4a)') 'Writing ',stype,' file: ',trim(filename)
-         call colormessage(msg, T_IO)
+         call printio(msg)
       endif
 
    end subroutine set_common_attributes

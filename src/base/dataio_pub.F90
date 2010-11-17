@@ -33,7 +33,10 @@ module dataio_pub
 
    implicit none
 
-   public  ! QA_WARN no secrets are kept here
+   public  ! QA_WARN most variables are not secrets here
+   private :: colormessage, T_PLAIN, T_ERR, T_WARN, T_INFO, T_IO, T_SILENT, ansi_red, ansi_green, ansi_yellow, ansi_blue, ansi_magenta, ansi_cyan
+   !mpisetup uses: ansi_white and ansi_black
+
 
    include 'mpif.h'
 
@@ -139,9 +142,11 @@ module dataio_pub
 contains
 !-----------------------------------------------------------------------------
    subroutine colormessage(nm, mode)
+
       implicit none
-      character(len=*), intent(in) :: nm
-      integer, intent(in) :: mode
+
+      character(len=*),  intent(in) :: nm
+      integer,           intent(in) :: mode
 
       integer, parameter            :: log_lun = 3            !< luncher for log file
       character(len=ansilen)        :: ansicolor
@@ -207,8 +212,10 @@ contains
    end subroutine colormessage
 !-----------------------------------------------------------------------------
    subroutine printinfo(nm, to_stdout)
+
       implicit none
-      character(len=*), intent(in) :: nm
+
+      character(len=*),  intent(in) :: nm
       logical, optional, intent(in) :: to_stdout
 
       if (present(to_stdout)) then
@@ -223,8 +230,20 @@ contains
 
    end subroutine printinfo
 !-----------------------------------------------------------------------------
-   subroutine warn(nm)
+   subroutine printio(nm)
+
       implicit none
+
+      character(len=*), intent(in) :: nm
+
+      call colormessage(nm, T_IO)
+
+   end subroutine printio
+!-----------------------------------------------------------------------------
+   subroutine warn(nm)
+
+      implicit none
+
       character(len=*), intent(in) :: nm
 
       call colormessage(nm, T_WARN)
@@ -233,7 +252,9 @@ contains
 !-----------------------------------------------------------------------------
    !! BEWARE: routine is not finished, it should kill PIERNIK gracefully
    subroutine die(nm, allprocs)
+
       implicit none
+
       character(len=*), intent(in)  :: nm
       integer, optional, intent(in) :: allprocs
 

@@ -164,7 +164,7 @@ contains
    subroutine init_piernik
       use arrays,                only: init_arrays
       use dataio,                only: init_dataio, write_data
-      use dataio_pub,            only: nrestart, cwd, par_file, tmp_log_file, msg, colormessage, T_IO, die, warn, printinfo
+      use dataio_pub,            only: nrestart, cwd, par_file, tmp_log_file, msg, printio, die, warn, printinfo
       use diagnostics,           only: diagnose_arrays
       use fluidboundaries,       only: all_fluid_boundaries
       use fluidboundaries_pub,   only: init_fluidboundaries
@@ -276,7 +276,7 @@ contains
       if (nrestart>0) then
          if (proc == 0) then
             write(msg,'(a,i4,a)') "[piernik:init_piernik] Restart file #",nrestart," read. Skipping init_prob."
-            call colormessage(msg, T_IO)
+            call printio(msg)
          endif
       else
          call init_prob
