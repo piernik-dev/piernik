@@ -482,6 +482,33 @@ module gravity
          enddo
       enddo
    end subroutine grav_linear
+
+   subroutine grav_ptmass_softened
+      use arrays,     only: gp
+      use constants,  only: newtong
+      use grid,       only: nx, ny, nz, x, y, z
+      use initfluids, only: cs_iso2
+      use mpisetup,   only: smalld
+      implicit none
+      integer :: i, j, k
+      real    :: rc2, r_smooth2, GM, fr, x2
+
+      r_smooth2 = r_smooth**2
+      GM        = newtong*ptmass
+
+       do i = 1, nx
+          x2 = (x(i) - ptm_x)**2
+          do j = 1, ny
+             rc2 = x2 + (y(j) - ptm_y)**2
+             fr  = min( (sqrt(rc2)/r_grav)**n_gravr , 100.0)    ! BEWARE: hardcoded value
+             fr  = max( 1./cosh(fr), smalld*1.e-2)              ! BEWARE: hadrcoded value
+             fr  = -cs_iso2 * log(fr)
+
+             gp(i,j,:) = -GM / sqrt( (z(:) - ptm_z)**2 + rc2 + r_smooth2 ) + fr
+
+          enddo
+       enddo
+   end subroutine grav_ptmass_softened
 !--------------------------------------------------------------------------
 !>
 !! \brief Routine that compute values of gravitational potential filling in gp array and setting gp_status character string \n\n
@@ -540,25 +567,12 @@ module gravity
 
 #ifdef GRAV_NULL
       call grav_null
-
 #elif defined (GRAV_UNIFORM)
       call grav_uniform
 #elif defined (GRAV_LINEAR)
       call grav_linear
 #elif defined (GRAV_PTMASS)
-       do i = 1, nx
-          do j = 1, ny
-             do k = 1, nz
-               rc = dsqrt(x(i)**2+y(j)**2)
-               r2 = x(i)**2 + y(j)**2 + z(k)**2
-               fr = min( (rc/r_grav)**n_gravr , 100.0)
-               fr = max(1./cosh(fr),smalld/100.)
-               gp(i,j,k) = -newtong*ptmass / dsqrt(r2 + r_smooth**2)
-               gp(i,j,k) = gp(i,j,k) - cs_iso2 * dlog(fr) ! *d0
-             enddo
-          enddo
-       enddo
-
+      call grav_ptmass_softened
 #elif defined (GRAV_PTMASSSTIFF)
 
        !// promote stiff-body rotation inside smoothing length, don't affect the global potential outside
