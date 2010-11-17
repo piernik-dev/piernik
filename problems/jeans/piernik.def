@@ -11,7 +11,6 @@
 #define VANLEER
 
 #define GRAV
-#define GRAV_NULL
 
 #if !(defined(MULTIGRID) || defined(POISSON_FFT))
 #define MULTIGRID

@@ -11,7 +11,6 @@
 #define VANLEER
 
 #define GRAV
-#define GRAV_PTMASSSTIFF
 #define MULTIGRID
 
 #if __GNUC__ >=4 && __GNUC_MINOR__ >=5

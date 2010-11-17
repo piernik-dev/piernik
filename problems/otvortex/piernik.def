@@ -16,6 +16,3 @@
 
 /* gravity type choosing */
 #define GRAV
-#ifdef GRAV /* define external source of gravity */
-#define GRAV_NULL
-#endif /* GRAV */

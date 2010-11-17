@@ -19,6 +19,3 @@
 /* gravity type choosing */
 #define PLN
 #define GRAV
-#ifdef GRAV /* define external source of gravity */
-#define GRAV_PTMASSPURE
-#endif /* GRAV */

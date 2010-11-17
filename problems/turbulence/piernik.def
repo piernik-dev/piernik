@@ -18,6 +18,4 @@
 
 /* gravity type choosing */
 #undef GRAV
-#undef GRAV_NULL
 #undef POISSON_FFT
-

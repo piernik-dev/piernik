@@ -38,16 +38,18 @@
 !<
 module gravity
 ! pulled by GRAV
+   use mpisetup, only: cbuff_len
    implicit none
 
    private
    public :: init_grav, grav_accel, source_terms_grav, grav_pot2accel, grav_pot_3d, get_gprofs, grav_accel2pot
    public :: g_dir, r_gc, ptmass, ptm_x, ptm_y, ptm_z, r_smooth, nsub, tune_zeq, tune_zeq_bnd, h_grav, r_grav, n_gravr, n_gravr2, n_gravh, user_grav, gp_status, gprofs_target
 
-   integer, parameter         :: gp_stat_len = 9
-   integer, parameter         :: gproft_len  = 5
+   integer, parameter         :: gp_stat_len   = 9
+   integer, parameter         :: gproft_len    = 5
    character(LEN=gp_stat_len) :: gp_status       !< variable set as 'undefined' in grav_pot_3d when grav_accel is supposed to use
    character(LEN=gproft_len)  :: gprofs_target   !< variable set pointing gravity routine in hydrostatic_zeq ('accel' or ready gp array 'gparr')
+   character(LEN=cbuff_len)   :: external_gp     !< variable allowing to choose external gravitational potential
    real, dimension(3)         :: g_dir           !< vector used by GRAV_UNIFORM and GRAV_LINEAR type of %gravity
    real    :: r_gc                  !< galactocentric radius of the local simulation region used by local Galactic type of %gravity in grav_accel
    real    :: ptmass                !< mass value of point %gravity source used by GRAV_PTMASS, GRAV_PTMASSSTIFF, GRAV_PTMASSPURE, GRAV_PTFLAT type of %gravity
@@ -127,7 +129,7 @@ module gravity
       implicit none
 
 
-      namelist /GRAVITY/ g_dir, r_gc, ptmass, ptm_x, ptm_y, ptm_z, r_smooth, &
+      namelist /GRAVITY/ g_dir, r_gc, ptmass, ptm_x, ptm_y, ptm_z, r_smooth, external_gp, &
                 nsub, tune_zeq, tune_zeq_bnd, h_grav, r_grav, n_gravr, n_gravr2, n_gravh, user_grav, gprofs_target
 
 #ifdef VERBOSE
@@ -149,7 +151,9 @@ module gravity
       n_gravr = 0
       n_gravr2= 0
       n_gravh = 0
+
       gprofs_target = 'gparr'
+      external_gp   = 'null'
 
       user_grav = .false.
 
@@ -175,7 +179,9 @@ module gravity
          rbuff(14)  = r_grav
 
          lbuff(1)   = user_grav
+
          cbuff(1)   = gprofs_target
+         cbuff(2)   = external_gp
 
       endif
 
@@ -204,7 +210,9 @@ module gravity
          r_grav              = rbuff(14)
 
          user_grav           = lbuff(1)
+
          gprofs_target       = cbuff(1)(1:gproft_len)
+         external_gp         = cbuff(2)
 
       endif
 
@@ -490,7 +498,7 @@ module gravity
       implicit none
       logical, intent(in) :: flatten
       integer             :: i, j
-      real                :: rc2, GM, x2
+      real                :: rc2, GM, x2, r_smooth2
 
       r_smooth2 = r_smooth**2
       GM        = newtong*ptmass
@@ -597,59 +605,35 @@ module gravity
 !<
 
    subroutine default_grav_pot_3d
-
       use dataio_pub,   only: die, warn
-      use arrays,       only: gp
-      use grid,         only: nx, ny, nz, x, y, z
-      use initfluids,   only: cs_iso2
-      use mpisetup,     only: smalld
-#ifdef GRAV_PTMTYPE
-      use constants,    only: newtong
-#endif /* GRAV_PTMTYPE */
-#ifdef GRAV_USER
-      use gravity_user, only: grav_pot_user
-#endif /* GRAV_USER */
 
       implicit none
 
-#ifdef GRAV_PTMTYPE
-      integer :: i, j, k
-      real    :: r_smooth2, gm, gmr, z2, yz2
-#endif /* GRAV_PTMTYPE */
-#if defined GRAV_UNIFORM || defined GRAV_LINEAR
-      integer :: i
-#endif /* GRAV_UNIFORM || GRAV_LINEAR */
-#if defined (GRAV_PTMASSPURE) || defined (GRAV_PTMASS) || defined (GRAV_PTMASSSTIFF)
-      real    :: r2
-#endif /* GRAV_PTMASSPURE || GRAV_PTMASS || GRAV_PTMASSSTIFF */
-#if defined (GRAV_PTFLAT) || defined (GRAV_PTMASS)
-      real    :: rc, fr
-#endif /* GRAV_PTFLAT || GRAV_PTMASS */
-
       gp_status = ''
 
-#ifdef GRAV_NULL
-      call grav_null
-#elif defined (GRAV_UNIFORM)
-      call grav_uniform
-#elif defined (GRAV_LINEAR)
-      call grav_linear
-#elif defined (GRAV_PTMASS)
-      call grav_ptmass_softened(.false.)
-#elif defined (GRAV_PTMASSSTIFF)
-      call grav_ptmass_stiff
-#elif defined (GRAV_PTMASSPURE)
-      call grav_ptmass_pure(.false.)
-#elif defined (GRAV_PTFLAT)
-      call grav_ptmass_softened(.true.)
-#elif defined (GRAV_USER)
-      call grav_pot_user
-#else /* !GRAV_(SPECIFIED) */
-      gp_status = 'undefined'
-!#warning 'GRAV declared, but gravity model undefined in grav_pot'
-! niektore modele grawitacji realizowane sa za pomoca przyspieszenia
-! (np. 'galactic') z ktorego liczony jest potencjal
-#endif /* !GRAV_(SPECIFIED) */
+      select case (external_gp)
+         case ("null", "grav_null", "GRAV_NULL")
+            call grav_null
+         case ("linear", "grav_lin", "GRAV_LINEAR")
+            call grav_linear
+         case ("uniform", "grav_unif", "GRAV_UNIFORM")
+            call grav_uniform
+         case ("softened ptmass", "ptmass_soft", "GRAV_PTMASS")
+            call grav_ptmass_softened(.false.)
+         case ("stiff ptmass", "ptmass_stiff", "GRAV_PTMASSSTIFF")
+            call grav_ptmass_stiff
+         case ("ptmass", "ptmass_pure", "GRAV_PTMASSPURE")
+            call grav_ptmass_pure(.false.)
+         case ("flat softened ptmass", "flat_ptmass_soft", "GRAV_PTFLAT")
+            call grav_ptmass_softened(.true.)
+         case ("flat ptmass", "flat_ptmass")
+            call grav_ptmass_pure(.true.)
+         case ("user", "grav_user", "GRAV_USER")
+            call die("[gravity:default_grav_pot_3d] user 'grav_pot_3d' should be defined in initprob!")
+         case default
+            gp_status = 'undefined'
+      end select
+
 !-----------------------
 
       if (gp_status .eq. 'undefined') then

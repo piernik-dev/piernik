@@ -68,6 +68,7 @@
   /
 
  $GRAVITY
+    external_gp = "GRAV_LINEAR"
     nsub         =  10
     g_dir        =  0.0, 0.0, -10.0
  /

@@ -77,6 +77,7 @@
  /
 
  $GRAVITY
+    external_gp = "GRAV_PTMASSSTIFF"
     ptmass = 10.0
     r_smooth = 0.5
     ptm_x  = 0.0

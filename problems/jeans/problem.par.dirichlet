@@ -73,6 +73,7 @@
  /
 
  $GRAVITY
+    external_gp = "null"
  /
 
  $THERMAL
