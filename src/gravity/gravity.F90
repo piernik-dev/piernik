@@ -483,15 +483,14 @@ module gravity
       enddo
    end subroutine grav_linear
 
-   subroutine grav_ptmass_softened
+   subroutine grav_ptmass_pure(flatten)
       use arrays,     only: gp
       use constants,  only: newtong
-      use grid,       only: nx, ny, nz, x, y, z
-      use initfluids, only: cs_iso2
-      use mpisetup,   only: smalld
+      use grid,       only: nx, ny, x, y, z
       implicit none
-      integer :: i, j, k
-      real    :: rc2, r_smooth2, GM, fr, x2
+      logical, intent(in) :: flatten
+      integer             :: i, j
+      real                :: rc2, GM, x2
 
       r_smooth2 = r_smooth**2
       GM        = newtong*ptmass
@@ -500,15 +499,79 @@ module gravity
           x2 = (x(i) - ptm_x)**2
           do j = 1, ny
              rc2 = x2 + (y(j) - ptm_y)**2
-             fr  = min( (sqrt(rc2)/r_grav)**n_gravr , 100.0)    ! BEWARE: hardcoded value
-             fr  = max( 1./cosh(fr), smalld*1.e-2)              ! BEWARE: hadrcoded value
-             fr  = -cs_iso2 * log(fr)
 
-             gp(i,j,:) = -GM / sqrt( (z(:) - ptm_z)**2 + rc2 + r_smooth2 ) + fr
+             if (flatten) then
+                gp(i,j,:) = -GM / sqrt(rc2)
+             else 
+                gp(i,j,:) = -GM / sqrt( (z(:) - ptm_z)**2 + rc2 )
+             endif
 
           enddo
        enddo
+   end subroutine grav_ptmass_pure
+
+   subroutine grav_ptmass_softened(flatten)
+      use arrays,     only: gp
+      use constants,  only: newtong
+      use grid,       only: nx, ny, x, y, z
+      use initfluids, only: cs_iso2
+      use mpisetup,   only: smalld
+      implicit none
+      logical, intent(in) :: flatten
+      integer             :: i, j
+      real                :: rc2, r_smooth2, GM, fr, x2
+
+      r_smooth2 = r_smooth**2
+      GM        = newtong*ptmass
+
+      do i = 1, nx
+         x2 = (x(i) - ptm_x)**2
+         do j = 1, ny
+            rc2 = x2 + (y(j) - ptm_y)**2
+            fr  = min( (sqrt(rc2)/r_grav)**n_gravr , 100.0)    ! BEWARE: hardcoded value
+            fr  = max( 1./cosh(fr), smalld*1.e-2)              ! BEWARE: hadrcoded value
+            fr  = -cs_iso2 * log(fr)
+
+            if (flatten) then
+               gp(i,j,:) = -GM / sqrt( rc2 + r_smooth2 ) + fr
+            else
+               gp(i,j,:) = -GM / sqrt( (z(:) - ptm_z)**2 + rc2 + r_smooth2 ) + fr
+            endif
+
+         enddo
+      enddo
    end subroutine grav_ptmass_softened
+
+   subroutine grav_ptmass_stiff
+      use arrays,     only: gp
+      use constants,  only: newtong
+      use grid,       only: nx, ny, nz, x, y, z
+      use initfluids, only: cs_iso2
+      implicit none
+      integer :: i, j, k
+      real    :: r_smooth2, r2, gmr, gm, z2, yz2
+      !// promote stiff-body rotation inside smoothing length, don't affect the global potential outside
+
+      r_smooth2 = r_smooth**2 ! can be used also i other GRAV_PTMASS* clauses
+      gm =  - newtong * ptmass
+      gmr = 0.5 * gm / r_smooth
+
+      do k = 1, nz
+         z2 = (z(k) - ptm_z)**2
+         do j = 1, ny
+            yz2 = z2 + (y(j) - ptm_y)**2
+            do i = 1, nx
+               r2 = yz2 + (x(i) - ptm_x)**2
+               if (r2 < r_smooth2) then
+                  gp(i,j,k) = gmr * (3. - r2/r_smooth2)
+               else
+                  gp(i,j,k) = gm / dsqrt(r2)
+               endif
+            enddo
+         enddo
+      enddo
+   end subroutine grav_ptmass_stiff
+   
 !--------------------------------------------------------------------------
 !>
 !! \brief Routine that compute values of gravitational potential filling in gp array and setting gp_status character string \n\n
@@ -572,56 +635,17 @@ module gravity
 #elif defined (GRAV_LINEAR)
       call grav_linear
 #elif defined (GRAV_PTMASS)
-      call grav_ptmass_softened
+      call grav_ptmass_softened(.false.)
 #elif defined (GRAV_PTMASSSTIFF)
-
-       !// promote stiff-body rotation inside smoothing length, don't affect the global potential outside
-
-       r_smooth2 = r_smooth**2 ! can be used also i other GRAV_PTMASS* clauses
-       gm =  - newtong * ptmass
-       gmr = 0.5 * gm / r_smooth
-
-       do k = 1, nz
-          z2 = (z(k) - ptm_z)**2
-          do j = 1, ny
-             yz2 = z2 + (y(j) - ptm_y)**2
-             do i = 1, nx
-               r2 = yz2 + (x(i) - ptm_x)**2
-               if (r2 < r_smooth2) then
-                  gp(i,j,k) = gmr * (3. - r2/r_smooth2)
-               else
-                  gp(i,j,k) = gm / dsqrt(r2)
-               endif
-             enddo
-          enddo
-       enddo
-
+      call grav_ptmass_stiff
 #elif defined (GRAV_PTMASSPURE)
-       do i = 1, nx
-          do j = 1, ny
-             do k = 1, nz
-               r2 = (x(i) - ptm_x)**2 + (y(j) - ptm_y)**2 + (z(k) - ptm_z)**2
-               gp(i,j,k) = -newtong*ptmass / dsqrt(r2 + r_smooth**2)
-             enddo
-          enddo
-       enddo
-
+      call grav_ptmass_pure(.false.)
 #elif defined (GRAV_PTFLAT)
-       do i = 1, nx
-          do j = 1, ny
-             rc = dsqrt(x(i)**2+y(j)**2)
-             fr = min( (rc/r_grav)**n_gravr , 100.0)
-             fr = max(1./cosh(fr),smalld/100.)
-             gp(i,j,:) = -newtong*ptmass / dsqrt(rc**2 + r_smooth**2)
-             gp(i,j,:) = gp(i,j,:) - cs_iso2 * dlog(fr) ! *d0
-          enddo
-       enddo
-
+      call grav_ptmass_softened(.true.)
 #elif defined (GRAV_USER)
-       call grav_pot_user
-
+      call grav_pot_user
 #else /* !GRAV_(SPECIFIED) */
-       gp_status = 'undefined'
+      gp_status = 'undefined'
 !#warning 'GRAV declared, but gravity model undefined in grav_pot'
 ! niektore modele grawitacji realizowane sa za pomoca przyspieszenia
 ! (np. 'galactic') z ktorego liczony jest potencjal
