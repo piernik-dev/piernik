@@ -76,6 +76,7 @@ program piernik
       call time_step
 
       if (first_step) then
+         ts  = 0.0
          dtm = 0.0
 #ifdef RESISTIVE
          dt  = 0.0    ! BEWARE: smells like some dirty trick
@@ -84,7 +85,7 @@ program piernik
          dtm = dt
       endif
       if (proc == 0) then
-         write(msg, fmt900) nstep, dt, t, 0.0
+         write(msg, fmt900) nstep, dt, t, ts
          call printinfo(msg, .true.)
       endif
 
