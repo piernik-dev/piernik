@@ -740,8 +740,8 @@ contains
             call substract_average(level_max, source)
          case (bnd_dirichlet)
 #ifdef JEANS_PROBLEM
-            if (mode == 1) roof%mgvar(roof%is:roof%ie, roof%js:roof%je, roof%ks:roof%ke, source) = &
-                 &         roof%mgvar(roof%is:roof%ie, roof%js:roof%je, roof%ks:roof%ke, source) - fpiG * d0 ! remove density bias
+            if (jeans_mode == 1) roof%mgvar(roof%is:roof%ie, roof%js:roof%je, roof%ks:roof%ke, source) = &
+                 &         roof%mgvar(roof%is:roof%ie, roof%js:roof%je, roof%ks:roof%ke, source) - fpiG * jeans_d0 ! remove density bias
 #endif /* JEANS_PROBLEM */
          case (bnd_givenval) ! convert potential into a layer of imaginary mass (subtract second derivative normal to computational domain boundary)
             if (is_external(XLO)) roof%mgvar(roof%is,         roof%js:roof%je, roof%ks:roof%ke, source) = &
