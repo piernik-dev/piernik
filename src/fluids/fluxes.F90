@@ -48,7 +48,18 @@ module fluxes
 ! pulled by ANY
    implicit none
    private
-   public  :: all_fluxes, flimiter
+   public  :: all_fluxes, flimiter, set_limiter
+
+   interface
+      subroutine limiter(f,a,b)
+         implicit none
+         real, dimension(:,:), intent(in)      :: a
+         real, dimension(:,:), intent(in)      :: b
+         real, dimension(:,:), intent(inout)   :: f
+      end subroutine limiter
+   end interface
+
+   procedure(limiter), pointer :: flimiter
 
    contains
 !>
@@ -147,9 +158,7 @@ module fluxes
 !! Flux limiter is a function used when interpolation of %fluxes onto cell boundaries is made to avoid the spurious oscillations.
 !!
 !! You can choose between van Leer's, monotonized central, minmod or superbee flux limiters. The chosen flux limiter has to be defined in
-!! file piernik.def.
-!!
-!! BEWARE: There is no default choice. If one forgets to define a flux limiter, none will be applied and error will be reported.
+!! file piernik.def. Default is "vanleer"
 !!
 !! The van Leer flux limiter can be noted as:
 !! \f{equation}
@@ -178,35 +187,79 @@ module fluxes
 !! are %fluxes of left- and right-moving waves interpolated to cell boundaries.
 !<
 !*/
-   subroutine flimiter(f,a,b,m,n)
+   subroutine set_limiter(lname)
+      use dataio_pub, only: msg, die
+#ifdef VERBOSE
+      use dataio_pub, only: printinfo
+#endif /* VERBOSE */
       implicit none
-      integer, intent(in)  :: m  !< number of conservative variables
-      integer, intent(in)  :: n  !< array size
-      real, dimension(m,n) :: f  !< second order flux correction for left- or right- moving waves
-      real, dimension(m,n) :: a  !< second order correction of left- or right- moving waves flux on the left cell boundary
-      real, dimension(m,n) :: b  !< second order correction of left- or right- moving waves flux on the right cell boundary
-      real, dimension(m,n) :: c  !< a*b
-#ifdef VANLEER
-      c = a*b
-      where (c .gt. 0.0)
+      character(len=*), intent(in) :: lname
+      if (associated(flimiter)) call die("[fluxes:set_limiter] flimiter already associated")
+      select case (lname)
+         case ('vanleer', 'VANLEER')
+            flimiter => vanleer_limiter
+         case ('minmod', 'MINMOD')
+            flimiter => minmod_limiter
+         case ('moncen', 'MONCEN')
+            flimiter => moncen_limiter
+         case ('superbee', 'SUPERBEE')
+            flimiter => superbee_limiter
+         case default
+            write(msg,'(2a)') "[fluxes:set_limiter] unknown limiter ", lname
+            call die(msg)
+      end select
+#ifdef VERBOSE
+      write(msg,'(2a)') "[fluxes:set_limiter] limiter set to ", lname
+      call printinfo(msg)
+#endif /* VERBOSE */
+   end subroutine set_limiter
+
+   subroutine vanleer_limiter(f,a,b)
+      implicit none
+      real, dimension(:,:), intent(in)      :: a !< second order correction of left- or right- moving waves flux on the left cell boundary
+      real, dimension(:,:), intent(in)      :: b !< second order correction of left- or right- moving waves flux on the right cell boundary
+      real, dimension(:,:), intent(inout)   :: f !< second order flux correction for left- or right- moving waves
+      ! locals
+      real, dimension(size(a,1), size(a,2)) :: c !< a*b
+
+      c = a*b                                                                    ! ToDO: OPTIMIZE ME
+      where (c > 0.0)
          f = f+2.0*c/(a+b)
       endwhere
-#endif /* VANLEER */
-#ifdef MONCEN
-         f = f+(sign(1.0,a)+sign(1.0,b))*min(2.*abs(a),2.*abs(b),0.5*abs(a+b))*0.5
-#endif /* MONCEN */
-#ifdef MINMOD
-         f = f+(sign(1.0,a)+sign(1.0,b))*min(abs(a),abs(b))*0.5
-#endif /* MINMOD */
-#ifdef SUPERBEE
-      where (abs(a) .gt. abs(b))
+      return
+   end subroutine vanleer_limiter
+
+   subroutine moncen_limiter(f,a,b)
+      implicit none
+      real, dimension(:,:), intent(in)      :: a
+      real, dimension(:,:), intent(in)      :: b
+      real, dimension(:,:), intent(inout)   :: f
+
+      f = f+(sign(1.0,a)+sign(1.0,b))*min(2.*abs(a),2.*abs(b),0.5*abs(a+b))*0.5  ! ToDo: OPTIMIZE ME
+      return
+   end subroutine moncen_limiter
+
+   subroutine minmod_limiter(f,a,b)
+      implicit none
+      real, dimension(:,:), intent(in)      :: a
+      real, dimension(:,:), intent(in)      :: b
+      real, dimension(:,:), intent(inout)   :: f
+
+      f = f+(sign(1.0,a)+sign(1.0,b))*min(abs(a),abs(b))*0.5                     ! ToDo: OPTIMIZE ME
+      return
+   end subroutine minmod_limiter
+
+   subroutine superbee_limiter(f,a,b)
+      implicit none
+      real, dimension(:,:), intent(in)      :: a
+      real, dimension(:,:), intent(in)      :: b
+      real, dimension(:,:), intent(inout)   :: f
+
+      where (abs(a) > abs(b))                                                    ! ToDo: OPTIMIZE ME
          f = f+(sign(1.0,a)+sign(1.0,b))*min(abs(a), abs(2.0*b))*0.5
       elsewhere
          f = f+(sign(1.0,a)+sign(1.0,b))*min(abs(2.0*a), abs(b))*0.5
       endwhere
-#endif /* SUPERBEE */
-
       return
-   end subroutine flimiter
-
+   end subroutine superbee_limiter
 end module fluxes

@@ -47,7 +47,7 @@ module mpisetup
     &  bnd_xr_dom, bnd_yl, bnd_yl_dom, bnd_yr, bnd_yr_dom, bnd_zl, bnd_zl_dom, bnd_zr, bnd_zr_dom, buffer_dim, cbuff, cbuff_len, cfl, &
     &  cfr_smooth, cleanup_mpi, comm, comm3d, coords, dt, dt_initial, dt_max_grow, dt_min, dt_old, dtm, err, ibuff, ierr, info, init_mpi, &
     &  integration_order, lbuff, mpifind, ndims, nproc, nstep, pcoords, proc, procxl, procxr, procxyl, procyl, procyr, procyxl, proczl, &
-    &  proczr, psize, pxsize, pysize, pzsize, rbuff, req, smalld, smallei, smallp, status, t
+    &  proczr, psize, pxsize, pysize, pzsize, rbuff, req, smalld, smallei, smallp, status, t, limiter
 
    include 'mpif.h'
 
@@ -101,8 +101,9 @@ module mpisetup
    real    :: smallei                  !< artificial infimum for internal energy density
    real    :: cfr_smooth
    integer :: integration_order
+   character(len=cbuff_len) :: limiter !< type of flux limiter
 
-   namelist /NUMERICAL_SETUP/  cfl, smalld, smallei, integration_order, cfr_smooth, dt_initial, dt_max_grow, dt_min, smallc, smallp
+   namelist /NUMERICAL_SETUP/  cfl, smalld, smallei, integration_order, cfr_smooth, dt_initial, dt_max_grow, dt_min, smallc, smallp, limiter
 
    integer, dimension(3) :: domsize   !< local copy of nxd, nyd, nzd which can be used before init_grid()
 
@@ -170,6 +171,7 @@ module mpisetup
 !! <tr><td>dt_initial       </td><td>-1.   </td><td>positive real value or -1.           </td><td>\copydoc mpisetup::dt_initial       </td></tr>
 !! <tr><td>dt_max_grow      </td><td>2.    </td><td>real value > 1.1                     </td><td>\copydoc mpisetup::dt_max_grow      </td></tr>
 !! <tr><td>dt_min           </td><td>0.    </td><td>positive real value                  </td><td>\copydoc mpisetup::dt_min           </td></tr>
+!! <tr><td>limiter          </td><td>vanleer</td><td>string                              </td><td>\copydoc mpisetup::limiter          </td></tr>
 !! </table>
 !! \n \n
 !<
@@ -271,6 +273,19 @@ module mpisetup
          bnd_zl = 'per'
          bnd_zr = 'per'
 
+         ! Provide backward compatibility for choosing limiter via preprocessor flag
+         ! ToDo: Remove it when all problems are fixed
+
+         limiter = 'vanleer'
+#if defined(MONCEN)
+         limiter = 'moncen'
+#elif defined(MINMOD)
+         limiter = 'minmod'
+#elif defined(SUPERBEE)
+         limiter = 'superbee'
+#endif
+
+
          cfl         = 0.7
          cfr_smooth  = 0.0
          smallp      = 1.e-10
@@ -302,6 +317,7 @@ module mpisetup
             cbuff(4) = bnd_yr
             cbuff(5) = bnd_zl
             cbuff(6) = bnd_zr
+            cbuff(7) = limiter
 
             ibuff(1) = pxsize
             ibuff(2) = pysize
@@ -345,12 +361,13 @@ module mpisetup
             dt_max_grow = rbuff(6)
             dt_min      = rbuff(7)
 
-            bnd_xl = cbuff(1)(1:4)
-            bnd_xr = cbuff(2)(1:4)
-            bnd_yl = cbuff(3)(1:4)
-            bnd_yr = cbuff(4)(1:4)
-            bnd_zl = cbuff(5)(1:4)
-            bnd_zr = cbuff(6)(1:4)
+            bnd_xl  = cbuff(1)(1:4)
+            bnd_xr  = cbuff(2)(1:4)
+            bnd_yl  = cbuff(3)(1:4)
+            bnd_yr  = cbuff(4)(1:4)
+            bnd_zl  = cbuff(5)(1:4)
+            bnd_zr  = cbuff(6)(1:4)
+            limiter = cbuff(7)
 
             pxsize = ibuff(1)
             pysize = ibuff(2)

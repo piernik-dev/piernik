@@ -120,6 +120,8 @@ module initfluids
 
       use types,           only: grid_container
       use fluidindex,      only: fluid_index, nvar
+      use fluxes,          only: set_limiter
+      use mpisetup,        only: limiter
 #ifdef VERBOSE
       use dataio_pub,      only: printinfo
 #endif /* VERBOSE */
@@ -178,6 +180,7 @@ module initfluids
       cs_iso  = cs_iso_neu
       cs_iso2 = cs_iso_neu2
 #endif /* NEUTRAL  */
+      call set_limiter(limiter)
 #ifdef VERBOSE
       call printinfo("[initfluids:init_fluids]: finished. \o/")
 #endif /* VERBOSE */

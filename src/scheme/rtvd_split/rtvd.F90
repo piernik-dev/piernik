@@ -386,11 +386,11 @@ module rtvd ! split orig
 
 ! Flux limiter application
 
-            call flimiter(fr,dfrm,dfrp,nvar%all,n)
+            call flimiter(fr,dfrm,dfrp)
 
             dflp(:,1:n-1) = 0.5*(fl(:,1:n-1) - fl(:,2:n)); dflp(:,n) = dflp(:,n-1)
             dflm(:,2:n)   = dflp(:,1:n-1);                 dflm(:,1) = dflm(:,2)
-            call flimiter(fl,dflm,dflp,nvar%all,n)
+            call flimiter(fl,dflm,dflp)
          endif
 
 ! u corrections
