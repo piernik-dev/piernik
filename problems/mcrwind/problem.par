@@ -1,7 +1,7 @@
  $DOMAIN_SIZES
     nxd          = 1
-    nyd          = 50
-    nzd          = 100
+    nyd          = 48
+    nzd          = 96
     nb           = 4
  /
 
@@ -99,6 +99,7 @@
     K_crn_paral(7) = 10000.0
     K_crn_perp(1)  = 0
     smallecr       = 0.e-2
+    use_split   = .false.
  /
 
  $SHEARING
@@ -125,4 +126,22 @@
     beta_cr      =  0.0     ! participation of CR in initial equil. (similar to alfa for B)
     amp_cr       =  1000.0     ! amplitude of expl. (init_problem, x0,y0,z0)
     alpha        =  1.0
+ /
+
+ $MULTIGRID_SOLVER
+    level_max = 3
+ /
+
+ $MULTIGRID_DIFFUSION
+!    diff_explicit = .true.
+    diff_theta     = 0.6
+    diff_tstep_fac = 1000
+    norm_tol = 1e-2
+    nsmool = 4
+    nsmoob = 4
+    max_cycles = 50
+ /
+
+ $MULTIGRID_GRAVITY
+    grav_bnd_str = "dirichlet"
  /
