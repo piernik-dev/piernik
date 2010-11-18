@@ -421,7 +421,7 @@ module dataio
             log_file_initialized = .false.
          else
             log_file_initialized = .true.
-         end if
+         endif
       endif
       call MPI_Bcast(log_file, cwdlen, MPI_CHARACTER, 0, comm, ierr)
       call MPI_Bcast(log_file_initialized, 1, MPI_LOGICAL, 0, comm, ierr)

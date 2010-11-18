@@ -510,7 +510,7 @@ module gravity
 
              if (flatten) then
                 gp(i,j,:) = -GM / sqrt(rc2)
-             else 
+             else
                 gp(i,j,:) = -GM / sqrt( (z(:) - ptm_z)**2 + rc2 )
              endif
 
@@ -554,7 +554,6 @@ module gravity
       use arrays,     only: gp
       use constants,  only: newtong
       use grid,       only: nx, ny, nz, x, y, z
-      use initfluids, only: cs_iso2
       implicit none
       integer :: i, j, k
       real    :: r_smooth2, r2, gmr, gm, z2, yz2
@@ -579,7 +578,7 @@ module gravity
          enddo
       enddo
    end subroutine grav_ptmass_stiff
-   
+
 !--------------------------------------------------------------------------
 !>
 !! \brief Routine that compute values of gravitational potential filling in gp array and setting gp_status character string \n\n

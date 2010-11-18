@@ -136,7 +136,7 @@ module initproblem
       real, dimension(3) :: sn_pos
 
       grav_accel  => galactic_grav_accel
-      if(user_grav) grav_pot_3d => my_grav_pot_3d
+      if (user_grav) grav_pot_3d => my_grav_pot_3d
 
       call grav_pot_3d
 

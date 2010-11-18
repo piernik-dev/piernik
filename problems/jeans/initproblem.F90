@@ -30,7 +30,7 @@
 
 module initproblem
 
-   use problem_pub, only: problem_name, run_id, jeans_d0, jeans_mode
+   use problem_pub, only: problem_name, run_id
 
    implicit none
 
@@ -56,6 +56,7 @@ contains
       use mpisetup,      only: ierr, rbuff, cbuff_len, cbuff, ibuff, proc, buffer_dim, comm, &
            &                   MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER
       use types,         only: idlen
+      use problem_pub,   only: jeans_d0, jeans_mode
 
       implicit none
 

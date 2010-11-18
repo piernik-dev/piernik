@@ -388,7 +388,7 @@ contains
 
    subroutine vcycle_hg(cr_id)
 
-      use multigridvars,      only: source, defect, solution, correction, base, roof, level_min, level_max, ts, tot_ts, stdout, D_x, D_y, D_z
+      use multigridvars,      only: source, defect, solution, correction, base, roof, level_min, level_max, ts, tot_ts, stdout!, D_x, D_y, D_z
       use multigridbasefuncs, only: norm_sq, restrict_all, prolong_level
       use multigridhelpers,   only: set_dirty, check_dirty, do_ascii_dump, numbered_ascii_dump, mg_write_log, brief_v_log
 !      use multigridmpifuncs,  only: mpi_multigrid_bnd
