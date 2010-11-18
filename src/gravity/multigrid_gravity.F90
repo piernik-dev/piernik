@@ -923,6 +923,7 @@ contains
       integer            :: l, v
       real               :: norm_rhs, norm_lhs, norm_old, norm_lowest
       logical            :: dump_every_step, dump_result
+      logical, save      :: norm_was_zero = .false.
       integer, parameter       :: fmtlen = 32
       character(len=fmtlen)    :: fmt
       character(len=cbuff_len) :: dname
@@ -958,11 +959,12 @@ contains
       norm_lowest = norm_rhs
 
       if (norm_rhs == 0.) then ! empty domain => potential == 0.
-         if (proc == 0) then
-            write(msg, '(a)')"[multigrid_gravity:vcycle_hg] source == 0"
-            call mg_write_log(msg)
-         endif
+         if (proc == 0 .and. .not. norm_was_zero) call warn("[multigrid_gravity:vcycle_hg] No gravitational potential for an empty space.")
+         norm_was_zero = .true.
          return
+      else
+         if (proc == 0 .and. norm_was_zero) call warn("[multigrid_gravity:vcycle_hg] Spontaneous mass creation detected!")
+         norm_was_zero = .false.
       endif
 
 !      if (.not. history%valid .and. prefer_rbgs_relaxation) call approximate_solution(level_max, source, solution) ! not necessary when init_solution called FFT
