@@ -219,7 +219,7 @@ contains
                   call die(msg)
                endif
                if (nx * div /= nxc) then
-                  write(msg, '(a,i1,a,3f6.1,2(a,i2))')"[multigrid:init_multigrid] Fractional number of cells in ",i," direction ", &
+                  write(msg, '(a,i1,a,f6.1,2(a,i2))')"[multigrid:init_multigrid] Fractional number of cells in ",i," direction ", &
                        nxc/real(div), " at level ", idx, ". You may try to set level_max <=", level_max-idx
                   call die(msg)
                endif
