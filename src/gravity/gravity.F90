@@ -133,7 +133,7 @@ module gravity
                 nsub, tune_zeq, tune_zeq_bnd, h_grav, r_grav, n_gravr, n_gravr2, n_gravh, user_grav, gprofs_target
 
 #ifdef VERBOSE
-      call warn("[gravity:init_grav] Commencing gravity module initialization")
+      if (proc == 0) call warn("[gravity:init_grav] Commencing gravity module initialization")
 #endif /* VERBOSE */
 
       g_dir   = 0.0
@@ -221,7 +221,7 @@ module gravity
       if (.not.user_grav) then
          grav_pot_3d => default_grav_pot_3d
 #ifdef VERBOSE
-         call warn("[gravity:init_grav] user_grav is set to false. Using default grav_pot_3d.")
+         if (proc == 0) call warn("[gravity:init_grav] user_grav is set to false. Using default grav_pot_3d.")
 #endif /* VERBOSE */
       endif
 
@@ -604,7 +604,9 @@ module gravity
 !<
 
    subroutine default_grav_pot_3d
+
       use dataio_pub,   only: die, warn
+      use mpisetup,     only: proc
 
       implicit none
 
@@ -637,7 +639,7 @@ module gravity
 
       if (gp_status .eq. 'undefined') then
          if (associated(grav_accel)) then
-            call warn("[gravity:default_grav_pot_3d]: using 'grav_accel' defined by user")
+            if (proc == 0) call warn("[gravity:default_grav_pot_3d]: using 'grav_accel' defined by user")
             call grav_accel2pot
          else
             call die("[gravity:default_grav_pot_3d]: GRAV is defined, but 'gp' is not initialized")

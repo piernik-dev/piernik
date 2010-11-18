@@ -216,18 +216,23 @@ module initproblem
    end subroutine init_prob
 
    subroutine my_grav_pot_3d
+
       use gravity,    only: grav_accel, grav_accel2pot
       use dataio_pub, only: die, warn
+      use mpisetup,   only: proc
+
+
       implicit none
+
       logical, save  :: frun = .true.
 
       if (.not.frun) return
 
       if (associated(grav_accel)) then
-         call warn("[gravity:default_grav_pot_3d]: using 'grav_accel' defined by user")
+         if (proc == 0) call warn("[initproblem:my_grav_pot_3d]: using 'grav_accel' defined by user")
          call grav_accel2pot
       else
-         call die("[gravity:default_grav_pot_3d]: GRAV is defined, but 'gp' is not initialized")
+         call die("[initproblem:my_grav_pot_3d]: GRAV is defined, but 'gp' is not initialized")
       endif
       frun = .false.
    end subroutine my_grav_pot_3d
