@@ -190,7 +190,10 @@ def pretty_format_suf(fname,list,suf,col):
    return out.rstrip("\\\n")+"\n"
 
 def get_stdout(cmd):
-   return sp.Popen([cmd], stdout=sp.PIPE, shell="/bin/bash").communicate()[0]
+   nul_f = open(os.devnull, 'w')
+   process = sp.Popen([cmd], stdout=sp.PIPE, shell="/bin/bash", stderr = nul_f)
+   nul_f.close()
+   return process.communicate()[0]
 
 class DirectoryWalker:
     # a forward iterator that traverses a directory tree
@@ -329,34 +332,35 @@ incl  = ['']
 module = dict()
 
 for f in f90files:
+   keys_logic1 = False
+   keys_logic2 = False
    tag  = ""
    keys = []
    luse = []
    linc = []
-   for line in file(f):
-      if test2(line):
-         tag  = line.strip()
+   for line in open(f):       # Scan original files
       if test(line):
          keys = striplist(line.split(" ")[3:])
-      if have_use(line):
-         luse.append(line.split()[1].rstrip(","))
       if have_inc(line):
-         linc.append( line.split('"')[1] )
-      if have_mod(line):
-         module.setdefault(line.split()[1], remove_suf(strip_leading_path([f]))[0])
-# Logic here should be improved...
-   if(len(keys) == 0  or (len(keys) == 1 and keys[0] in our_defs)):
+         linc.append(line.split('"')[1])
+
+   keys_logic1 = len(keys) == 0  or (len(keys) == 1 and keys[0] in our_defs)
+   if(len(keys) == 3):
+      keys_logic2 = (keys[1] == "&&" and (keys[0] in our_defs and keys[2] in our_defs)) or (keys[1] == "||" and (keys[0] in our_defs or  keys[2] in our_defs))
+
+   if(keys_logic1 or keys_logic2):
+      cmd =  "cpp %s -I%s -I%s %s" % ( cppflags, probdir, 'src/base', f)
+      for line in get_stdout(cmd).split('\n'):    # Scan preprocessed files
+         if test2(line):
+            tag  = line.strip()
+         if have_use(line):
+            luse.append(line.split()[1].rstrip(","))
+         if have_mod(line):
+            module.setdefault(line.split()[1], remove_suf(strip_leading_path([f]))[0])
       files.append(f)
       tags.append(tag)
       uses.append( list(set(luse) ) )
       incl.append( list(set(linc) ) )
-   if(len(keys) == 3):
-      if((keys[1] == "&&" and (keys[0] in our_defs and keys[2] in our_defs)) or
-         (keys[1] == "||" and (keys[0] in our_defs or  keys[2] in our_defs))   ):
-         files.append(f)
-         tags.append(tag)
-         uses.append( list(set(luse) ) )
-         incl.append( list(set(linc) ) )
 
 #for i in iter(module):
 #   if module[i] != i:
@@ -378,6 +382,7 @@ stripped_files  = strip_leading_path(files)
 stripped_files.append("version.F90")   # adding version
 incl.append('')
 uses.append([])
+module.setdefault('version', 'version')
 
 files_to_build = remove_suf(stripped_files)
 
@@ -404,11 +409,10 @@ for i in range(0,len(files_to_build)):
       if j in module:
          if module[j]+'.F90' in stripped_files:
             d += module[j]+'.o '
-# These warnings can be useful if we parse preprocessed source files first.
-#         else:
-#            print "Warning: ",module[j]+'.F90',"referenced in",stripped_files[i],"not found!"
-#      else:
-#         print "Warning: module",j," from file ",stripped_files[i],"not found!"
+         else:
+            print "Warning: ",module[j]+'.F90',"referenced in",stripped_files[i],"not found!"
+      else:
+         print "Warning: module",j," from file ",stripped_files[i],"not found!"
    m.write( pretty_format(deps, d.split(), columns) )
 
 m.close()
