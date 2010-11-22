@@ -1016,7 +1016,7 @@ module dataio
          use resistivity,        only: dt_resist, eta_max
 #endif /* RESISTIVE */
 #ifdef VARIABLE_GP
-         use arrays,             only: gp
+         use arrays,             only: gpot
 #endif /* VARIABLE_GP */
 
          implicit none
@@ -1107,11 +1107,11 @@ module dataio
 #endif /* DUST */
 
 #ifdef VARIABLE_GP
-      wa(1:nx-1,:,:) = abs((gp(2:nx,:,:)-gp(1:nx-1,:,:))/dx)
+      wa(1:nx-1,:,:) = abs((gpot(2:nx,:,:)-gpot(1:nx-1,:,:))/dx)
       call get_extremum(wa(is:ie,js:je,ks:ke), 'max', gpxmax)
-      wa(:,1:ny-1,:) = abs((gp(:,2:ny,:)-gp(:,1:ny-1,:))/dy)
+      wa(:,1:ny-1,:) = abs((gpot(:,2:ny,:)-gpot(:,1:ny-1,:))/dy)
       call get_extremum(wa(is:ie,js:je,ks:ke), 'max', gpymax)
-      wa(:,:,1:nz-1) = abs((gp(:,:,2:nz)-gp(:,:,1:nz-1))/dz)
+      wa(:,:,1:nz-1) = abs((gpot(:,:,2:nz)-gpot(:,:,1:nz-1))/dz)
       call get_extremum(wa(is:ie,js:je,ks:ke), 'max', gpzmax)
 #endif /* VARIABLE_GP */
 
