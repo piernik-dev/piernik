@@ -159,7 +159,7 @@ contains
       logical, save            :: scale_me = .false.
       logical                  :: to_stdout
 
-      namelist /CONSTANTS/ constants_set, cm, sek, gram, miu0, kelvin
+      namelist /CONSTANTS/ constants_set, miu0, kelvin
 
 
       constants_set='scaled'
@@ -173,9 +173,8 @@ contains
 
          cbuff(1) = constants_set
 
-         rbuff(1) = cm
-         rbuff(2) = sek
-         rbuff(3) = gram
+         rbuff(1) = miu0
+         rbuff(2) = kelvin
 
       endif
 
@@ -186,9 +185,8 @@ contains
 
          constants_set = cbuff(1)
 
-         cm    = rbuff(1)
-         sek   = rbuff(2)
-         gram  = rbuff(3)
+         miu0   = rbuff(1)
+         kelvin = rbuff(2)
 
       endif
 
@@ -196,6 +194,8 @@ contains
 #ifdef VERBOSE
       to_stdout = .true.
 #endif  /* VERBOSE */
+      s_len_u  = ' undefined'; s_time_u = s_len_u; s_mass_u = s_len_u
+
 
       select case (trim(constants_set))
          case ("PSM", "psm")
@@ -281,15 +281,16 @@ contains
             s_mass_u = ' [0.1 M_sun]'
 
          case default
-            call warn("[constants:init_constants] you haven't chosen constants set. That means physical vars taken from 'constants' are worthless or equal 1")
+            if (proc == 0) call warn("[constants:init_constants] you haven't chosen constants set. That means physical vars taken from 'constants' are worthless or equal 1")
             cm   = small
             gram = small
             sek  = small
+
             scale_me = .true.
 
       end select
 
-      if (proc == 0) then
+      if (proc == 0 .and. .not. scale_me) then
          write(msg,'(a,es13.7,a)') '[constants:init_constants] cm   = ', cm,   trim(s_len_u)
          call printinfo(msg, to_stdout)
          write(msg,'(a,es13.7,a)') '[constants:init_constants] sek  = ', sek,  trim(s_time_u)
@@ -357,4 +358,5 @@ contains
       endif
 
    end subroutine init_constants
+
 end module constants
