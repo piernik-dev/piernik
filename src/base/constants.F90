@@ -150,13 +150,14 @@ contains
    subroutine init_constants
       use mpisetup,   only: cbuff_len, cbuff, rbuff, buffer_dim, MPI_CHARACTER, MPI_DOUBLE_PRECISION, comm, ierr, proc
       use dataio_pub, only: par_file, ierrh, namelist_errh, compare_namelist  ! QA_WARN required for diff_nml
-      use dataio_pub, only: warn
-#ifdef VERBOSE
-      use dataio_pub, only: printinfo, msg
-#endif /* VERBOSE */
+      use dataio_pub, only: warn,  printinfo, msg
+
       implicit none
+
       character(len=cbuff_len) :: constants_set
+      character(len=cbuff_len) :: s_len_u, s_time_u, s_mass_u
       logical, save            :: scale_me = .false.
+      logical                  :: to_stdout
 
       namelist /CONSTANTS/ constants_set, cm, sek, gram, miu0, kelvin
 
@@ -211,118 +212,83 @@ contains
 
       endif
 
+      to_stdout = .false.
+#ifdef VERBOSE
+      to_stdout = .true.
+#endif  /* VERBOSE */
+
       select case (trim(constants_set))
          case ("PSM", "psm")
             ! PSM  uses: length --> pc,     mass --> Msun,        time --> myr,        miu0 --> 4*pi,    temperature --> kelvin
             cm         = 1.0/pc_cm            !< centimetre, length unit
             sek        = 1.0/(1.0e6*yr_s)     !< second, time unit
             gram       = 1.0/msun_g           !< gram, mass unit
-#ifdef VERBOSE
-            write(msg,'(a,es13.7,a)') '[constants:init_constants] cm   = ', cm,   ' [pc]'
-            call printinfo(msg)
-            write(msg,'(a,es13.7,a)') '[constants:init_constants] sek  = ', sek,  ' [Myr]'
-            call printinfo(msg)
-            write(msg,'(a,es13.7,a)') '[constants:init_constants] gram = ', gram, ' [M_sun]'
-            call printinfo(msg)
-#endif /* VERBOSE */
+            s_len_u  = ' [pc]'
+            s_time_u = ' [Myr]'
+            s_mass_u = ' [M_sun]'
 
          case ("PLN", "pln")
             ! PLN  uses: length --> AU,     mass --> Mjup,        time --> yr,         miu0 --> 4*pi,    temperature --> kelvin
             cm         = 1.0/au_cm            !< centimetre, length unit
             sek        = 1.0/yr_s             !< second, time unit
             gram       = 1.0/mjup_g           !< gram, mass unit
-#ifdef VERBOSE
-            write(msg,'(a,es13.7,a)') '[constants:init_constants] cm   = ', cm,   ' [AU]'
-            call printinfo(msg)
-            write(msg,'(a,es13.7,a)') '[constants:init_constants] sek  = ', sek,  ' [yr]'
-            call printinfo(msg)
-            write(msg,'(a,es13.7,a)') '[constants:init_constants] gram = ', gram, ' [M_jup]'
-            call printinfo(msg)
-#endif /* VERBOSE */
+            s_len_u  = ' [AU]'
+            s_time_u = ' [yr]'
+            s_mass_u = ' [M_jup]'
 
          case ("KSG", "ksg")
             ! KSG  uses: length --> kpc,    mass --> 10^6*Msun,   time --> Gyr,        miu0 --> 4*pi,    temperature --> kelvin
             cm         = 1.0/(1.0e3*pc_cm)    !< centimetre, length unit
             sek        = 1.0/(1.0e9*yr_s)     !< second, time unit
             gram       = 1.0/(1.0e6*msun_g)   !< gram, mass unit
-#ifdef VERBOSE
-            write(msg,'(a,es13.7,a)') '[constants:init_constants] cm   = ', cm,   ' [kpc]'
-            call printinfo(msg)
-            write(msg,'(a,es13.7,a)') '[constants:init_constants] sek  = ', sek,  ' [Gyr]'
-            call printinfo(msg)
-            write(msg,'(a,es13.7,a)') '[constants:init_constants] gram = ', gram, ' [10^6 M_sun]'
-            call printinfo(msg)
-#endif /* VERBOSE */
+            s_len_u  = ' [kpc]'
+            s_time_u = ' [Gyr]'
+            s_mass_u = ' [10^6 M_sun]'
 
          case ("KSM", "ksm")
             ! KSM  uses: length --> kpc,    mass --> Msun,        time --> myr,        miu0 --> 4*pi,    temperature --> kelvin
             cm =         1.0/(1.0e3*pc_cm)    !< centimetre, length unit
             sek =        1.0/(1.0e6*yr_s)     !< second, time unit
             gram =       1.0/msun_g           !< gram, mass unit
-#ifdef VERBOSE
-            write(msg,'(a,es13.7,a)') '[constants:init_constants] cm   = ', cm,   ' [kpc]'
-            call printinfo(msg)
-            write(msg,'(a,es13.7,a)') '[constants:init_constants] sek  = ', sek,  ' [Myr]'
-            call printinfo(msg)
-            write(msg,'(a,es13.7,a)') '[constants:init_constants] gram = ', gram, ' [M_sun]'
-            call printinfo(msg)
-#endif /* VERBOSE */
+            s_len_u  = ' [kpc]'
+            s_time_u = ' [Myr]'
+            s_mass_u = ' [M_sun]'
 
          case ("PGM", "pgm")
             ! PGM  uses: length --> pc,     newtong --> 1.0,      time --> myr,        miu0 --> 4*pi,    temperature --> kelvin
             cm         = 1.0/pc_cm            !< centimetre, length unit
             sek        = 1.0/(1.0e6*yr_s)     !< second, time unit
             gram       = newton_cgs*cm**3/1.0/sek**2      !< gram, mass unit  G = 1.0
-#ifdef VERBOSE
-            write(msg,'(a,es13.7,a)') '[constants:init_constants] cm   = ', cm,   ' [pc]'
-            call printinfo(msg)
-            write(msg,'(a,es13.7,a)') '[constants:init_constants] sek  = ', sek,  ' [Myr]'
-            call printinfo(msg)
-            write(msg,'(a,es13.7,a)') '[constants:init_constants] gram = ', gram, ' [-> G=1]'
-            call printinfo(msg)
-#endif /* VERBOSE */
+            s_len_u  = ' [pc]'
+            s_time_u = ' [Myr]'
+            s_mass_u = ' [-> G=1]'
 
          case ("SSY", "ssy")
             ! SSY  uses: length --> 10^16 cm,  mass --> Msun,     time --> year,       miu0 --> 4*pi,    temperature --> kelvin
             cm         = 1.0/1.0e16           !< centimetre, length unit
             sek        = 1.0/yr_s             !< second, time unit
             gram       = 1.0/msun_g           !< gram, mass unit
-#ifdef VERBOSE
-            write(msg,'(a,es13.7,a)') '[constants:init_constants] cm   = ', cm,   ' [10^16 cm]'
-            call printinfo(msg)
-            write(msg,'(a,es13.7,a)') '[constants:init_constants] sek  = ', sek,  ' [yr]'
-            call printinfo(msg)
-            write(msg,'(a,es13.7,a)') '[constants:init_constants] gram = ', gram, ' [M_sun]'
-            call printinfo(msg)
-#endif /* VERBOSE */
+            s_len_u  = ' [10^16 cm]'
+            s_time_u = ' [yr]'
+            s_mass_u = ' [M_sun]'
 
          case ("SI", "si")
             ! SI   uses: length --> metr,   mass --> kg,          time --> sek,        miu0 --> 4*pi,    temperature --> kelvin
             cm         = 1.0/1.0e2            !< centimetre, length unit
             sek        = 1.0                  !< second, time unit
             gram       = 1.0/1.0e3            !< gram, mass unit
-#ifdef VERBOSE
-            write(msg,'(a,es13.7,a)') '[constants:init_constants] cm   = ', cm,   ' [m]'
-            call printinfo(msg)
-            write(msg,'(a,es13.7,a)') '[constants:init_constants] sek  = ', sek,  ' [s]'
-            call printinfo(msg)
-            write(msg,'(a,es13.7,a)') '[constants:init_constants] gram = ', gram, ' [kg]'
-            call printinfo(msg)
-#endif /* VERBOSE */
+            s_len_u  = ' [m]'
+            s_time_u = ' [s]'
+            s_mass_u = ' [kg]'
 
          case ("CGS", "cgs")
             ! CGS  uses: length --> cm,     mass --> gram,        time --> sek,        miu0 --> 4*pi,    temperature --> kelvin
             cm         = 1.0                  !< centimetre, length unit
             sek        = 1.0                  !< second, time unit
             gram       = 1.0                  !< gram, mass unit
-#ifdef VERBOSE
-            write(msg,'(a,es13.7,a)') '[constants:init_constants] cm   = ', cm,   ' [cm]'
-            call printinfo(msg)
-            write(msg,'(a,es13.7,a)') '[constants:init_constants] sek  = ', sek,  ' [s]'
-            call printinfo(msg)
-            write(msg,'(a,es13.7,a)') '[constants:init_constants] gram = ', gram, ' [g]'
-            call printinfo(msg)
-#endif /* VERBOSE */
+            s_len_u  = ' [cm]'
+            s_time_u = ' [s]'
+            s_mass_u = ' [g]'
 
          case ("WT4", "wt4")
             ! WT4  uses: length --> 6.25AU, mass --> 0.1 M_sun,   time --> 2.5**3.5 /pi years (=> G \approx 1. in Wengen Test #4),
@@ -330,22 +296,27 @@ contains
             !// It's really weird that use of 2.5**3.5 here can cause Internal Compiler Error at multigridmultipole.F90:827
             sek         = 1./(24.7052942200655/pi * yr_s) !< year, time unit; 24.7052942200655 = 2.5**3.5
             gram        = 1/(0.1*msun_g)      !< gram, mass unit
-#ifdef VERBOSE
-            write(msg,'(a,es13.7,a)') '[constants:init_constants] cm   = ', cm,   ' [6.25AU]'
-            call printinfo(msg)
-            write(msg,'(a,es13.7,a)') '[constants:init_constants] sek  = ', sek,  ' [2.5**3.5 /pi years]'
-            call printinfo(msg)
-            write(msg,'(a,es13.7,a)') '[constants:init_constants] gram = ', gram, ' [0.1 M_sun]'
-            call printinfo(msg)
-#endif /* VERBOSE */
+            s_len_u  = ' [6.25 AU]'
+            s_time_u = ' [2.5**3.5 /pi years]'
+            s_mass_u = ' [0.1 M_sun]'
+
          case default
             call warn("[constants:init_constants] you haven't chosen constants set. That means physical vars taken from 'constants' are worthless or equal 1")
             cm   = small
             gram = small
             sek  = small
             scale_me = .true.
+
       end select
 
+      if (proc == 0) then
+         write(msg,'(a,es13.7,a)') '[constants:init_constants] cm   = ', cm,   trim(s_len_u)
+         call printinfo(msg, to_stdout)
+         write(msg,'(a,es13.7,a)') '[constants:init_constants] sek  = ', sek,  trim(s_time_u)
+         call printinfo(msg, to_stdout)
+         write(msg,'(a,es13.7,a)') '[constants:init_constants] gram = ', gram, trim(s_mass_u)
+         call printinfo(msg, to_stdout)
+      endif
 
 ! length units:
       metr       = 1.0e2*cm                 !< metre, length unit
