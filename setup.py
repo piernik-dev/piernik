@@ -117,13 +117,13 @@ head_block2='''
 \tfi;
 
 version.F90: date
-\t@if [ -e version.F90 ]; then unlink version.F90; fi;
 \t@( $(ECHO) -e "module version\\n   implicit none\\n   public\\n"; \\
 \twc -l env.dat | awk '{print "   integer, parameter :: nenv = "$$1"+0"}'; \\
 \t$(ECHO) -e "   character(len=128), dimension(nenv) :: env\\ncontains\\n   subroutine init_version\\n\t\timplicit none"; \\
 \tawk '{printf("\\t\\t env(%i) = \\"%s\\"\\n",NR,$$0)}' env.dat; \\
-\t$(ECHO) -e "    end subroutine init_version\\nend module version" ) > version.F90; \\
-\t$(ECHO) 'generated version.F90';
+\t$(ECHO) -e "    end subroutine init_version\\nend module version" ) > version_.F90; \\
+\tif [ -e version.F90 ]; then diff version_.F90 version.F90 > /dev/null || unlink version.F90 ; fi; \\
+\tif [ ! -e version.F90 ]; then mv version_.F90 version.F90 ; $(ECHO) 'generated version.F90'; fi
 
 clean:
 \t$(RM) $(PROG) $(OBJS) *.mod
