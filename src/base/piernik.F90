@@ -164,6 +164,7 @@ contains
 !<
    subroutine init_piernik
       use arrays,                only: init_arrays
+      use constants,             only: init_constants
       use dataio,                only: init_dataio, write_data
       use dataio_pub,            only: nrestart, cwd, par_file, tmp_log_file, msg, printio, die, warn, printinfo
       use diagnostics,           only: diagnose_arrays
@@ -218,6 +219,8 @@ contains
       endif
 
       call init_mpi
+
+      call init_constants
 
       call init_grid(cgrid)
 

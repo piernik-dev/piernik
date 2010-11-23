@@ -26,7 +26,7 @@
 !    For full list of developers see $PIERNIK_HOME/license/pdt.txt
 !
 #include "piernik.h"
-
+#include "macros.h"
 !>
 !! \brief R [DW] Module containing numerical and physical %constants
 !! \details Module constants contains numerical and physical %constants for several units systems.
@@ -80,7 +80,7 @@ module constants
    real, parameter :: fpi        = 4.*pi                 !< four Pi
    real, parameter :: e          = 2.718281828459045235  !< //Napier's constant (base of Natural logarithm)
 
-   real(kind=8), parameter :: au_cm       =  1.49597870691e13   ! Astonomical unit [cm]
+   real(kind=8), parameter :: au_cm       =  1.49597870691d13   ! Astonomical unit [cm]
    real(kind=8), parameter :: pc_au       =  206264.806248712d0 ! Parsec [AU] 1 pc/1 AU = 1./atan(pi/180. * 1./3600.)
    real(kind=8), parameter :: pc_cm       =  pc_au*au_cm        ! Parsec [cm]
    real(kind=8), parameter :: Msun_g      =  1.98892e33         ! Solar mass [g]
@@ -94,135 +94,319 @@ module constants
    !< First twenty six primes should be enough for everyone ;-)
    integer, parameter, dimension(26) :: some_primes = [ 2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97, 101 ]
 
+   real, protected :: cm      !< centimetre, length unit
+   real, protected :: gram    !< gram, mass unit
+   real, protected :: sek     !< second, time unit
+   real, protected :: miu0    !< permeability
+   real, protected :: kelvin  !< kelvin, temperature unit
+
+! length units:
+   real, protected :: metr                                  !< metre, length unit
+   real, protected :: km                                    !< kilometer, length unit
+   real, protected :: au                                    !< astronomical unit (length unit)
+   real, protected :: pc                                    !< parsec, length unit
+   real, protected :: kpc                                   !< kiloparsec, length unit
+   real, protected :: lyr                                   !< light year, length unit
+! time units:
+   real, protected :: minute                                !< minute, time unit
+   real, protected :: hour                                  !< hour, time unit
+   real, protected :: day                                   !< day, time unit
+   real, protected :: year                                  !< year, time unit
+   real, protected :: myr                                   !< megayear, time unit
+! mass units:
+   real, protected :: kg                                    !< kilogram, mass unit
+   real, protected :: me                                    !< electron mass
+   real, protected :: mp                                    !< proton mass
+   real, protected :: mH                                    !< hydrogen atom mass
+   real, protected :: amu                                   !< atomic mass unit
+   real, protected :: Msun                                  !< Solar mass, mass unit
+   real, protected :: gmu                                   !< galactic mass unit
+! force units:
+   real, protected :: newton                                !< 1N (SI force unit)
+   real, protected :: dyna                                  !< 1 dyna (cgs force unit)
+! energy units:
+   real, protected :: joul                                  !< 1J (SI energy unit)
+   real, protected :: erg                                   !< 1 erg (cgs energy unit)
+   real, protected :: eV                                    !< 1 eV
+! density units:
+   real, protected :: ppcm3                                 !< spatial density unit
+   real, protected :: ppcm2                                 !< column density unit
+! physical constants:
+   real, protected :: kboltz                                !< boltzmann constant
+   real, protected :: gasRconst                             !< gas constant R =  8.314472e7*erg/kelvin/mol
+   real, protected :: clight                                !< speed of light in vacuum
+   real, protected :: Gs                                    !< 1 Gs (cgs magnetic induction unit)
+   real, protected :: mGs                                   !< 1 microgauss
+   real, protected :: Tesla                                 !< 1 T (SI magnetic induction unit)
+   real, protected :: newtong                               !< newtonian constant of gravitation
+   real, protected :: fpiG                                  !< four Pi times Newtonian constant of gravitation (commonly used in self-gravity routines)
+   real, protected :: planck                                !< Planck constant
+   real, protected :: r_gc_sun                              !< Sun distance from the Galaxy Center
+   real, protected :: vsun                                  !< velocity value of Sun in the Galaxy
+   real, protected :: sunradius                             !< radius of Sun
+   real, protected :: Lsun                                  !< luminosity of Sun
+   real, protected :: Mearth                                !< mass of Earth
+   real, protected :: earthradius                           !< radius of Earth
+
+contains
+
+   subroutine init_constants
+      use mpisetup,   only: cbuff_len, cbuff, rbuff, buffer_dim, MPI_CHARACTER, MPI_DOUBLE_PRECISION, comm, ierr, proc
+      use dataio_pub, only: par_file, ierrh, namelist_errh, compare_namelist  ! QA_WARN required for diff_nml
+      use dataio_pub, only: warn
+#ifdef VERBOSE
+      use dataio_pub, only: printinfo, msg
+#endif /* VERBOSE */
+      implicit none
+      character(len=cbuff_len) :: constants_set
+      logical, save            :: scale_me = .false.
+
+      namelist /CONSTANTS/ constants_set, cm, sek, gram, miu0, kelvin
+
 #ifdef PSM
-! PSM  uses: length --> pc,     mass --> Msun,        time --> myr,        miu0 --> 4*pi,    temperature --> kelvin
-   real, parameter :: cm         = 1.0/pc_cm            !< centimetre, length unit
-   real, parameter :: sek        = 1.0/(1.0e6*yr_s)     !< second, time unit
-   real, parameter :: gram       = 1.0/msun_g           !< gram, mass unit
-
+      constants_set='PSM'
 #elif defined (PLN)
-! PLN  uses: length --> AU,     mass --> Mjup,        time --> yr,         miu0 --> 4*pi,    temperature --> kelvin
-   real, parameter :: cm         = 1.0/au_cm            !< centimetre, length unit
-   real, parameter :: sek        = 1.0/yr_s             !< second, time unit
-   real, parameter :: gram       = 1.0/mjup_g           !< gram, mass unit
-
+      constants_set='PLN'
 #elif defined (KSG)
-! KSG  uses: length --> kpc,    mass --> 10^6*Msun,   time --> Gyr,        miu0 --> 4*pi,    temperature --> kelvin
-   real, parameter :: cm         = 1.0/(1.0e3*pc_cm)    !< centimetre, length unit
-   real, parameter :: sek        = 1.0/(1.0e9*yr_s)     !< second, time unit
-   real, parameter :: gram       = 1.0/(1.0e6*msun_g)   !< gram, mass unit
-
+      constants_set='KSG'
 #elif defined (KSM)
-! KSM  uses: length --> kpc,    mass --> Msun,        time --> myr,        miu0 --> 4*pi,    temperature --> kelvin
-   real, parameter :: cm =         1.0/(1.0e3*pc_cm)    !< centimetre, length unit
-   real, parameter :: sek =        1.0/(1.0e6*yr_s)     !< second, time unit
-   real, parameter :: gram =       1.0/msun_g           !< gram, mass unit
-
+      constants_set='KSG'
 #elif defined (PGM)
-! PGM  uses: length --> pc,     newtong --> 1.0,      time --> myr,        miu0 --> 4*pi,    temperature --> kelvin
-   real, parameter :: cm         = 1.0/pc_cm            !< centimetre, length unit
-   real, parameter :: sek        = 1.0/(1.0e6*yr_s)     !< second, time unit
-   real, parameter :: G_one      = 1.0                  !this is not a mass unit, nevertheless it is useful to be set here
-   real, parameter :: gram       = newton_cgs*cm**3/G_one/sek**2      !< gram, mass unit
-
+      constants_set='PGM'
 #elif defined (SSY)
-! SSY  uses: length --> 10^16 cm,  mass --> Msun,     time --> year,       miu0 --> 4*pi,    temperature --> kelvin
-   real, parameter :: cm         = 1.0/1.0e16           !< centimetre, length unit
-   real, parameter :: sek        = 1.0/yr_s             !< second, time unit
-   real, parameter :: gram       = 1.0/msun_g           !< gram, mass unit
-
+      constants_set='SSY'
 #elif defined(SI)
-! SI   uses: length --> metr,   mass --> kg,          time --> sek,        miu0 --> 4*pi,    temperature --> kelvin
-   real, parameter :: cm         = 1.0/1.0e2            !< centimetre, length unit
-   real, parameter :: sek        = 1.0                  !< second, time unit
-   real, parameter :: gram       = 1.0/1.0e3            !< gram, mass unit
-
+      constants_set='SI'
 #elif defined(CGS)
-! CGS  uses: length --> cm,     mass --> gram,        time --> sek,        miu0 --> 4*pi,    temperature --> kelvin
-   real, parameter :: cm         = 1.0                  !< centimetre, length unit
-   real, parameter :: sek        = 1.0                  !< second, time unit
-   real, parameter :: gram       = 1.0                  !< gram, mass unit
+      constants_set='CGS'
 #elif defined(WT4)
-! WT4  uses: length --> 6.25AU, mass --> 0.1 M_sun,   time --> 2.5**3.5 /pi years (=> G \approx 1. in Wengen Test #4),
-   real, parameter :: cm          = 1./(6.25*au_cm)     !< centimetre, length unit
-   !// It's really weird that use of 2.5**3.5 here can cause Internal Compiler Error at multigridmultipole.F90:827
-   real, parameter :: sek         = 1./(24.7052942200655/pi * yr_s) !< year, time unit; 24.7052942200655 = 2.5**3.5
-   real, parameter :: gram        = 1/(0.1*msun_g)      !< gram, mass unit
+      constants_set='WT4'
 #else /* !(PSM, KSG, PGM, SSY, SI, CGS) */
 #define SCALED
+      constants_set='scaled'
 #endif /* !(PSM, KSG, PGM, SSY, SI, CGS) */
 
-#ifndef SCALED
+      miu0   = fpi
+      kelvin = one
+
+      if (proc == 0) then
+
+         diff_nml(CONSTANTS)
+
+         cbuff(1) = constants_set
+
+         rbuff(1) = cm
+         rbuff(2) = sek
+         rbuff(3) = gram
+
+      endif
+
+      call MPI_Bcast(cbuff, cbuff_len*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
+      call MPI_Bcast(rbuff,           buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+
+      if (proc /= 0) then
+
+         constants_set = cbuff(1)
+
+         cm    = rbuff(1)
+         sek   = rbuff(2)
+         gram  = rbuff(3)
+
+      endif
+
+      select case (trim(constants_set))
+         case ("PSM", "psm")
+            ! PSM  uses: length --> pc,     mass --> Msun,        time --> myr,        miu0 --> 4*pi,    temperature --> kelvin
+            cm         = 1.0/pc_cm            !< centimetre, length unit
+            sek        = 1.0/(1.0e6*yr_s)     !< second, time unit
+            gram       = 1.0/msun_g           !< gram, mass unit
+#ifdef VERBOSE
+            write(msg,'(a,es13.7,a)') '[constants:init_constants] cm   = ', cm,   ' [pc]'
+            call printinfo(msg)
+            write(msg,'(a,es13.7,a)') '[constants:init_constants] sek  = ', sek,  ' [Myr]'
+            call printinfo(msg)
+            write(msg,'(a,es13.7,a)') '[constants:init_constants] gram = ', gram, ' [M_sun]'
+            call printinfo(msg)
+#endif /* VERBOSE */
+
+         case ("PLN", "pln")
+            ! PLN  uses: length --> AU,     mass --> Mjup,        time --> yr,         miu0 --> 4*pi,    temperature --> kelvin
+            cm         = 1.0/au_cm            !< centimetre, length unit
+            sek        = 1.0/yr_s             !< second, time unit
+            gram       = 1.0/mjup_g           !< gram, mass unit
+#ifdef VERBOSE
+            write(msg,'(a,es13.7,a)') '[constants:init_constants] cm   = ', cm,   ' [AU]'
+            call printinfo(msg)
+            write(msg,'(a,es13.7,a)') '[constants:init_constants] sek  = ', sek,  ' [yr]'
+            call printinfo(msg)
+            write(msg,'(a,es13.7,a)') '[constants:init_constants] gram = ', gram, ' [M_jup]'
+            call printinfo(msg)
+#endif /* VERBOSE */
+
+         case ("KSG", "ksg")
+            ! KSG  uses: length --> kpc,    mass --> 10^6*Msun,   time --> Gyr,        miu0 --> 4*pi,    temperature --> kelvin
+            cm         = 1.0/(1.0e3*pc_cm)    !< centimetre, length unit
+            sek        = 1.0/(1.0e9*yr_s)     !< second, time unit
+            gram       = 1.0/(1.0e6*msun_g)   !< gram, mass unit
+#ifdef VERBOSE
+            write(msg,'(a,es13.7,a)') '[constants:init_constants] cm   = ', cm,   ' [kpc]'
+            call printinfo(msg)
+            write(msg,'(a,es13.7,a)') '[constants:init_constants] sek  = ', sek,  ' [Gyr]'
+            call printinfo(msg)
+            write(msg,'(a,es13.7,a)') '[constants:init_constants] gram = ', gram, ' [10^6 M_sun]'
+            call printinfo(msg)
+#endif /* VERBOSE */
+
+         case ("KSM", "ksm")
+            ! KSM  uses: length --> kpc,    mass --> Msun,        time --> myr,        miu0 --> 4*pi,    temperature --> kelvin
+            cm =         1.0/(1.0e3*pc_cm)    !< centimetre, length unit
+            sek =        1.0/(1.0e6*yr_s)     !< second, time unit
+            gram =       1.0/msun_g           !< gram, mass unit
+#ifdef VERBOSE
+            write(msg,'(a,es13.7,a)') '[constants:init_constants] cm   = ', cm,   ' [kpc]'
+            call printinfo(msg)
+            write(msg,'(a,es13.7,a)') '[constants:init_constants] sek  = ', sek,  ' [Myr]'
+            call printinfo(msg)
+            write(msg,'(a,es13.7,a)') '[constants:init_constants] gram = ', gram, ' [M_sun]'
+            call printinfo(msg)
+#endif /* VERBOSE */
+
+         case ("PGM", "pgm")
+            ! PGM  uses: length --> pc,     newtong --> 1.0,      time --> myr,        miu0 --> 4*pi,    temperature --> kelvin
+            cm         = 1.0/pc_cm            !< centimetre, length unit
+            sek        = 1.0/(1.0e6*yr_s)     !< second, time unit
+            gram       = newton_cgs*cm**3/1.0/sek**2      !< gram, mass unit  G = 1.0
+#ifdef VERBOSE
+            write(msg,'(a,es13.7,a)') '[constants:init_constants] cm   = ', cm,   ' [pc]'
+            call printinfo(msg)
+            write(msg,'(a,es13.7,a)') '[constants:init_constants] sek  = ', sek,  ' [Myr]'
+            call printinfo(msg)
+            write(msg,'(a,es13.7,a)') '[constants:init_constants] gram = ', gram, ' [-> G=1]'
+            call printinfo(msg)
+#endif /* VERBOSE */
+
+         case ("SSY", "ssy")
+            ! SSY  uses: length --> 10^16 cm,  mass --> Msun,     time --> year,       miu0 --> 4*pi,    temperature --> kelvin
+            cm         = 1.0/1.0e16           !< centimetre, length unit
+            sek        = 1.0/yr_s             !< second, time unit
+            gram       = 1.0/msun_g           !< gram, mass unit
+#ifdef VERBOSE
+            write(msg,'(a,es13.7,a)') '[constants:init_constants] cm   = ', cm,   ' [10^16 cm]'
+            call printinfo(msg)
+            write(msg,'(a,es13.7,a)') '[constants:init_constants] sek  = ', sek,  ' [yr]'
+            call printinfo(msg)
+            write(msg,'(a,es13.7,a)') '[constants:init_constants] gram = ', gram, ' [M_sun]'
+            call printinfo(msg)
+#endif /* VERBOSE */
+
+         case ("SI", "si")
+            ! SI   uses: length --> metr,   mass --> kg,          time --> sek,        miu0 --> 4*pi,    temperature --> kelvin
+            cm         = 1.0/1.0e2            !< centimetre, length unit
+            sek        = 1.0                  !< second, time unit
+            gram       = 1.0/1.0e3            !< gram, mass unit
+#ifdef VERBOSE
+            write(msg,'(a,es13.7,a)') '[constants:init_constants] cm   = ', cm,   ' [m]'
+            call printinfo(msg)
+            write(msg,'(a,es13.7,a)') '[constants:init_constants] sek  = ', sek,  ' [s]'
+            call printinfo(msg)
+            write(msg,'(a,es13.7,a)') '[constants:init_constants] gram = ', gram, ' [kg]'
+            call printinfo(msg)
+#endif /* VERBOSE */
+
+         case ("CGS", "cgs")
+            ! CGS  uses: length --> cm,     mass --> gram,        time --> sek,        miu0 --> 4*pi,    temperature --> kelvin
+            cm         = 1.0                  !< centimetre, length unit
+            sek        = 1.0                  !< second, time unit
+            gram       = 1.0                  !< gram, mass unit
+#ifdef VERBOSE
+            write(msg,'(a,es13.7,a)') '[constants:init_constants] cm   = ', cm,   ' [cm]'
+            call printinfo(msg)
+            write(msg,'(a,es13.7,a)') '[constants:init_constants] sek  = ', sek,  ' [s]'
+            call printinfo(msg)
+            write(msg,'(a,es13.7,a)') '[constants:init_constants] gram = ', gram, ' [g]'
+            call printinfo(msg)
+#endif /* VERBOSE */
+
+         case ("WT4", "wt4")
+            ! WT4  uses: length --> 6.25AU, mass --> 0.1 M_sun,   time --> 2.5**3.5 /pi years (=> G \approx 1. in Wengen Test #4),
+            cm          = 1./(6.25*au_cm)     !< centimetre, length unit
+            !// It's really weird that use of 2.5**3.5 here can cause Internal Compiler Error at multigridmultipole.F90:827
+            sek         = 1./(24.7052942200655/pi * yr_s) !< year, time unit; 24.7052942200655 = 2.5**3.5
+            gram        = 1/(0.1*msun_g)      !< gram, mass unit
+#ifdef VERBOSE
+            write(msg,'(a,es13.7,a)') '[constants:init_constants] cm   = ', cm,   ' [6.25AU]'
+            call printinfo(msg)
+            write(msg,'(a,es13.7,a)') '[constants:init_constants] sek  = ', sek,  ' [2.5**3.5 /pi years]'
+            call printinfo(msg)
+            write(msg,'(a,es13.7,a)') '[constants:init_constants] gram = ', gram, ' [0.1 M_sun]'
+            call printinfo(msg)
+#endif /* VERBOSE */
+         case default
+            call warn("[constants:init_constants] you haven't chosen constants set. That means physical vars taken from 'constants' are worthless or equal 1")
+            cm   = small
+            gram = small
+            sek  = small
+            scale_me = .true.
+      end select
+
+
 ! length units:
-   real, parameter :: metr       = 1.0e2*cm                 !< metre, length unit
-   real, parameter :: km         = 1.0e5*cm                 !< kilometer, length unit
-   real, parameter :: au         = au_cm*cm                 !< astronomical unit (length unit)
-   real, parameter :: pc         = pc_cm*cm                 !< parsec, length unit
-   real, parameter :: kpc        = 1000.0*pc                !< kiloparsec, length unit
-   real, parameter :: lyr        = 9.4605e17*cm             !< light year, length unit
+      metr       = 1.0e2*cm                 !< metre, length unit
+      km         = 1.0e5*cm                 !< kilometer, length unit
+      au         = au_cm*cm                 !< astronomical unit (length unit)
+      pc         = pc_cm*cm                 !< parsec, length unit
+      kpc        = 1000.0*pc                !< kiloparsec, length unit
+      lyr        = 9.4605e17*cm             !< light year, length unit
 ! time units:
-   real, parameter :: minute     = 60.0*sek                 !< minute, time unit
-   real, parameter :: hour       = 3600.0*sek               !< hour, time unit
-   real, parameter :: day        = day_s*sek                !< day, time unit
-   real, parameter :: year       = yr_s*sek                 !< year, time unit
-   real, parameter :: myr        = 1.0e6*year               !< megayear, time unit
+      minute     = 60.0*sek                 !< minute, time unit
+      hour       = 3600.0*sek               !< hour, time unit
+      day        = day_s*sek                !< day, time unit
+      year       = yr_s*sek                 !< year, time unit
+      myr        = 1.0e6*year               !< megayear, time unit
 ! mass units:
-   real, parameter :: kg         = 1.0e3*gram               !< kilogram, mass unit
-   real, parameter :: me         = 9.109558e-28*gram        !< electron mass
-   real, parameter :: mp         = 1.672614e-24*gram        !< proton mass
-   real, parameter :: mH         = 1.673559e-24*gram        !< hydrogen atom mass
-   real, parameter :: amu        = 1.660531e-24*gram        !< atomic mass unit
-   real, parameter :: Msun       = msun_g*gram              !< Solar mass, mass unit
-   real, parameter :: gmu        = 2.32e7*Msun              !< galactic mass unit
+      kg         = 1.0e3*gram               !< kilogram, mass unit
+      me         = 9.109558e-28*gram        !< electron mass
+      mp         = 1.672614e-24*gram        !< proton mass
+      mH         = 1.673559e-24*gram        !< hydrogen atom mass
+      amu        = 1.660531e-24*gram        !< atomic mass unit
+      Msun       = msun_g*gram              !< Solar mass, mass unit
+      gmu        = 2.32e7*Msun              !< galactic mass unit
 ! force units:
-   real, parameter :: newton     = kg*metr/sek**2           !< 1N (SI force unit)
-   real, parameter :: dyna       = gram*cm/sek**2           !< 1 dyna (cgs force unit)
+      newton     = kg*metr/sek**2           !< 1N (SI force unit)
+      dyna       = gram*cm/sek**2           !< 1 dyna (cgs force unit)
 ! energy units:
-   real, parameter :: joul       = kg*metr**2/sek**2        !< 1J (SI energy unit)
-   real, parameter :: erg        = gram*cm**2/sek**2        !< 1 erg (cgs energy unit)
-   real, parameter :: eV         = 1.6022e-12*erg           !< 1 eV
+      joul       = kg*metr**2/sek**2        !< 1J (SI energy unit)
+      erg        = gram*cm**2/sek**2        !< 1 erg (cgs energy unit)
+      eV         = 1.6022e-12*erg           !< 1 eV
 ! density units:
-   real, parameter :: ppcm3      = 1.36 * mp / cm**3        !< spatial density unit
-   real, parameter :: ppcm2      = 1.36 * mp / cm**2        !< column density unit
+      ppcm3      = 1.36 * mp / cm**3        !< spatial density unit
+      ppcm2      = 1.36 * mp / cm**2        !< column density unit
 ! temperature units:
-   real, parameter :: kelvin     = 1.0                      !< kelvin, temperature unit
+      kelvin     = 1.0                      !< kelvin, temperature unit
 ! physical constants:
-   real, parameter :: kboltz     = kB_cgs*erg/kelvin        !< boltzmann constant
-   real, parameter :: gasRconst  = 8.314472e7*erg/kelvin    !< gas constant R =  8.314472e7*erg/kelvin/mol
-   real, parameter :: clight     = 2.997924562e10*cm/sek    !< speed of light in vacuum
-#ifdef __PGI__
- ! BEWARE: pgf95 does not accept sqrt intrinsic here. The __PGI__ macro has to be defined manually, e.g. in appropriate compiler.in file
- !   real :: Gs, mGs, Tesla
-#else /* !__PGI__ */
-   real, parameter :: Gs         = sqrt(4.*pi*gram/cm)/sek  !< 1 Gs (cgs magnetic induction unit)
-   real, parameter :: mGs        = Gs*1.e-6                 !< 1 microgauss
-   real, parameter :: Tesla      = 1.e4*Gs                  !< 1 T (SI magnetic induction unit)
-#endif /* !__PGI__ */
-#ifdef PGM
-   real, parameter :: newtong    = G_one                    !< Newtonian constant of gravitation (equal to G_one while PGM defined)
-#else /* !PGM */
-   real, parameter :: newtong    = newton_cgs*cm**3/gram/sek**2 !< newtonian constant of gravitation
-#endif /* !PGM */
-   real, parameter :: fpiG       = fpi*newtong              !< four Pi times Newtonian constant of gravitation (commonly used in self-gravity routines)
-   real, parameter :: planck     = 6.626196e-27*erg*sek     !< Planck constant
-   real, parameter :: r_gc_sun   = 8.5*kpc                  !< Sun distance from the Galaxy Center
-   real, parameter :: vsun       = 220.0*km/sek             !< velocity value of Sun in the Galaxy
-   real, parameter :: sunradius  = 6.9598e10*cm             !< radius of Sun
-   real, parameter :: Lsun       = 3.826e33*erg/sek         !< luminosity of Sun
-   real, parameter :: Mearth     = 5.977e27*gram            !< mass of Earth
-   real, parameter :: earthradius= 6378.17*km               !< radius of Earth
+      kboltz     = kB_cgs*erg/kelvin        !< boltzmann constant
+      gasRconst  = 8.314472e7*erg/kelvin    !< gas constant R =  8.314472e7*erg/kelvin/mol
+      clight     = 2.997924562e10*cm/sek    !< speed of light in vacuum
+      Gs         = sqrt(4.*pi*gram/cm)/sek  !< 1 Gs (cgs magnetic induction unit)
+      mGs        = Gs*1.e-6                 !< 1 microgauss
+      Tesla      = 1.e4*Gs                  !< 1 T (SI magnetic induction unit)
+      newtong    = newton_cgs*cm**3/gram/sek**2 !< newtonian constant of gravitation
+      fpiG       = fpi*newtong              !< four Pi times Newtonian constant of gravitation (commonly used in self-gravity routines)
+      planck     = 6.626196e-27*erg*sek     !< Planck constant
+      r_gc_sun   = 8.5*kpc                  !< Sun distance from the Galaxy Center
+      vsun       = 220.0*km/sek             !< velocity value of Sun in the Galaxy
+      sunradius  = 6.9598e10*cm             !< radius of Sun
+      Lsun       = 3.826e33*erg/sek         !< luminosity of Sun
+      Mearth     = 5.977e27*gram            !< mass of Earth
+      earthradius= 6378.17*km               !< radius of Earth
 
-#else /* SCALED */
+      if (scale_me) then
+         kboltz    = 1.0
+         gasRconst = 1.0
+         mH        = 1.0
+         fpiG      = fpi
+         newtong   = 1.0
+      endif
 
-   real, parameter :: kboltz     = 1.0                      !< boltzmann constant (scaled)
-   real, parameter :: gasRconst  = 1.0                      !< gas constant (scaled)
-   real, parameter :: amu        = 1.660531e-24             !< atomic mass unit (in grams while SCALED)
-   real, parameter :: mH         = 1.0                      !< hydrogen atom mass (scaled, used to compute gas temperature)
-
-   real, parameter :: G_one      = 1.0                      !< Newtonian constant of gravitation in scaled units
-   real, parameter :: fpiG       = fpi*G_one                !< four Pi times Newtonian constant of gravitation
-   real, parameter :: newtong    = G_one                    !< Newtonian constant of gravitation
-
-#endif /* SCALED */
-
+   end subroutine init_constants
 end module constants
