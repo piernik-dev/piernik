@@ -10,7 +10,7 @@
     pzsize = 1
  /
 
- $CONSTANTS 
+ $CONSTANTS
  /
 
  $RESTART_CONTROL

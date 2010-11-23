@@ -9,7 +9,7 @@
     pzsize = 1
  /
 
- $CONSTANTS 
+ $CONSTANTS
     constants_set = "cgs"
  /
 
