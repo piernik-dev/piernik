@@ -7,8 +7,9 @@
 #else
 #undef NEW_HDF5
 #endif
-
 #endif
+
+#define PSM
 
 /* choosing fluids */
 #define IONIZED
