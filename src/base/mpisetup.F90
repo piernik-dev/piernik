@@ -408,6 +408,11 @@ module mpisetup
             endif
          endif
 
+         if ( (bnd_xl(1:3) == 'cor' .or. bnd_yl(1:3) == 'cor' .or. bnd_xr(1:3) == 'cor' .or. bnd_yr(1:3) == 'cor') .and. (pxsize /= pysize) ) then
+            write(msg, '(a,2(i3,a))')"[mpisetup:init_mpi] Corner BC require equal pxsize and pysize. Detected: [",pxsize,",",pysize,"]"
+            call die(msg)
+         endif
+
          if (pxsize*pysize*pzsize /= 1) mpi = .true.
 
          periods(:) = .false.
