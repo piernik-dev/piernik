@@ -91,9 +91,6 @@ module constants
    real(kind=8), parameter :: newton_cgs  =  6.67428e-8         ! Gravitational constant [ cm^3 / g s^2 ]
    real(kind=8), parameter :: kB_cgs      =  1.3806504e-16      ! Boltzmann constant [ g cm^2 / K s^2 ]
 
-   !< First twenty six primes should be enough for everyone ;-)
-   integer, parameter, dimension(26) :: some_primes = [ 2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97, 101 ]
-
    real, protected :: cm      !< centimetre, length unit
    real, protected :: gram    !< gram, mass unit
    real, protected :: sek     !< second, time unit
