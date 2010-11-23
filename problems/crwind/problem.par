@@ -11,6 +11,9 @@
     pzsize       = 2
  /
 
+ $CONSTANTS 
+ /
+
  $RESTART_CONTROL
     restart      = 'last'
     nrestart     = 0

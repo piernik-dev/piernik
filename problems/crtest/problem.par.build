@@ -10,6 +10,9 @@
     pzsize = 1
  /
 
+ $CONSTANTS 
+ /
+
  $RESTART_CONTROL
     restart  = 'last'
     new_id   = ''

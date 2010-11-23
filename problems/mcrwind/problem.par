@@ -11,6 +11,10 @@
     pzsize       = 1
  /
 
+ $CONSTANTS
+    constants_set = "PSM"
+ /
+
  $RESTART_CONTROL
     restart      = 'last'
     nrestart     = 0
