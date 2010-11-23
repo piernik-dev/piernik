@@ -147,7 +147,8 @@ contains
 #endif /* COSM_RAYS */
 #ifdef DEBUG
       use dataio_hdf5,    only: write_hdf5
-      use dataio_pub,     only: chdf
+      use dataio_pub,     only: chdf, set_container_chdf
+      use mpisetup,       only: nstep
 #endif /* DEBUG */
 
       implicit none
@@ -236,6 +237,7 @@ contains
       end select
 
 #ifdef DEBUG
+      call set_container_chdf(nstep)
       call write_hdf5(chdf)
 #endif /* DEBUG */
 
