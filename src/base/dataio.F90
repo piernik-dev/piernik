@@ -577,16 +577,8 @@ module dataio
 
 !    CALL checkdf
 
-#ifdef HDFSWEEP
-      if (output .ne. 'gpt') then
-         call write_log
-         call write_timeslice
-#else /* !HDFSWEEP */
       if (dt_hdf .gt. 0.0 .and. nstep .gt. step_hdf .and. output .ne. 'gpt') then
-#endif /* !HDFSWEEP */
-
-         if ((t-last_hdf_time) .ge. dt_hdf &
-                .or. output .eq. 'hdf' .or. output .eq. 'end') then
+         if ((t-last_hdf_time) .ge. dt_hdf .or. output .eq. 'hdf' .or. output .eq. 'end') then
             call set_container_chdf(nstep)
             call write_hdf5(chdf)
 
