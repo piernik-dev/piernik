@@ -9,6 +9,10 @@
     pzsize = 2
  /
 
+ $CONSTANTS 
+    constants_set = "cgs"
+ /
+
  $RESTART_CONTROL
     restart  = 'none'
     new_id   = ''

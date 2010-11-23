@@ -11,7 +11,8 @@
     pzsize       = 1
  /
 
- $CONSTANTS 
+ $CONSTANTS
+    constants_set = "PSM"
  /
 
  $RESTART_CONTROL

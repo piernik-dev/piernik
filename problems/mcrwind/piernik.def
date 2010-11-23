@@ -9,8 +9,6 @@
 #endif
 #endif
 
-#define PSM
-
 /* choosing fluids */
 #define IONIZED
 #define COSM_RAYS

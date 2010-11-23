@@ -4,8 +4,6 @@
 #define NEUTRAL
 #define LOCAL_FR_SPEED
 
-#define CGS       /*cm,gram,sek unitsystem*/
-
 #undef ISO
 
 #define VANLEER

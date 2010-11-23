@@ -17,5 +17,4 @@
 #define COLLISIONS
 
 /* gravity type choosing */
-#define PLN
 #define GRAV

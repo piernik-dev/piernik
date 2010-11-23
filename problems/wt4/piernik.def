@@ -2,8 +2,6 @@
 #define IONIZED
 #undef  MAGNETIC
 
-#define WT4 /* unit system */
-
 #define ISO
 #define ISO_LOCAL
 

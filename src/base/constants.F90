@@ -161,28 +161,8 @@ contains
 
       namelist /CONSTANTS/ constants_set, cm, sek, gram, miu0, kelvin
 
-#ifdef PSM
-      constants_set='PSM'
-#elif defined (PLN)
-      constants_set='PLN'
-#elif defined (KSG)
-      constants_set='KSG'
-#elif defined (KSM)
-      constants_set='KSM'
-#elif defined (PGM)
-      constants_set='PGM'
-#elif defined (SSY)
-      constants_set='SSY'
-#elif defined(SI)
-      constants_set='SI'
-#elif defined(CGS)
-      constants_set='CGS'
-#elif defined(WT4)
-      constants_set='WT4'
-#else /* !(PSM, KSG, PGM, SSY, SI, CGS) */
-#define SCALED
+
       constants_set='scaled'
-#endif /* !(PSM, KSG, PGM, SSY, SI, CGS) */
 
       miu0   = fpi
       kelvin = one
