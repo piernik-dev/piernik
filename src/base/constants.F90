@@ -150,7 +150,7 @@ contains
    subroutine init_constants
       use mpisetup,   only: cbuff_len, cbuff, rbuff, buffer_dim, MPI_CHARACTER, MPI_DOUBLE_PRECISION, comm, ierr, proc
       use dataio_pub, only: par_file, ierrh, namelist_errh, compare_namelist  ! QA_WARN required for diff_nml
-      use dataio_pub, only: warn,  printinfo, msg
+      use dataio_pub, only: warn, printinfo, msg, die
 
       implicit none
 
@@ -159,13 +159,16 @@ contains
       logical, save            :: scale_me = .false.
       logical                  :: to_stdout
 
-      namelist /CONSTANTS/ constants_set, miu0, kelvin
+      namelist /CONSTANTS/ constants_set, miu0, kelvin, cm, gram, sek
 
 
       constants_set='scaled'
 
       miu0   = fpi
       kelvin = one
+      cm     = small
+      gram   = small
+      sek    = small
 
       if (proc == 0) then
 
@@ -175,6 +178,9 @@ contains
 
          rbuff(1) = miu0
          rbuff(2) = kelvin
+         rbuff(3) = cm
+         rbuff(4) = gram
+         rbuff(5) = sek
 
       endif
 
@@ -187,6 +193,9 @@ contains
 
          miu0   = rbuff(1)
          kelvin = rbuff(2)
+         cm     = rbuff(3)
+         gram   = rbuff(4)
+         sek    = rbuff(5)
 
       endif
 
@@ -279,6 +288,14 @@ contains
             s_len_u  = ' [6.25 AU]'
             s_time_u = ' [2.5**3.5 /pi years]'
             s_mass_u = ' [0.1 M_sun]'
+
+         case ("USER", "user")
+            if (proc == 0) call warn("[constants:init_constants] PIERNIK will use 'cm', 'sek', 'gram' defined in problem.par")
+            if (any([cm == small, sek == small, gram == small])) &
+               call die("[constants:init_constants] constants_set=='user', yet one of {'cm','sek','gram'} is not set in problem.par") ! Don't believe in coincidence
+            to_stdout = .true.               ! Force output in case someone is not aware what he/she is doing
+            s_len_u   = ' [user unit]'
+            s_time_u  = s_len_u; s_mass_u  = s_len_u
 
          case default
             if (proc == 0) call warn("[constants:init_constants] you haven't chosen constants set. That means physical vars taken from 'constants' are worthless or equal 1")
