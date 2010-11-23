@@ -64,7 +64,7 @@ module constants
    implicit none
 
    public                                                ! QA_WARN no secrets are kept here
-   private :: au_cm, pc_au, pc_cm, msun_g, mjup_g, day_s, yr_day, yr_s, newton_cgs, kB_cgs
+   private :: au_cm, pc_au, pc_cm, msun_g, mjup_g, day_s, yr_day, yr_s, newton_cgs, kB_cgs  ! QA_WARN don't use those vars outside constants!
 
    real, parameter :: one        = 1.0                   !< one
    real, parameter :: half       = 0.5                   !< a half
@@ -213,24 +213,15 @@ module constants
    real, parameter :: earthradius= 6378.17*km               !< radius of Earth
 
 #else /* SCALED */
-!>
-!! \todo to check validity of declaration in SCALED units following constants: sek, cm, pc, kpc (e.g. to find coincidence with another unit system)
-!<
-   real, parameter :: sek        = 1.0e-6/yr_s              !< second expressed in units of megayears
-   real, parameter :: cm         = 1.0/pc_cm                !< centimetre expressed in units of parsecs
 
-   real, parameter :: kboltz     = kB_cgs                   !< boltzmann constant (in erg/kelvin while scaled)
+   real, parameter :: kboltz     = 1.0                      !< boltzmann constant (scaled)
    real, parameter :: gasRconst  = 1.0                      !< gas constant (scaled)
    real, parameter :: amu        = 1.660531e-24             !< atomic mass unit (in grams while SCALED)
    real, parameter :: mH         = 1.0                      !< hydrogen atom mass (scaled, used to compute gas temperature)
 
    real, parameter :: G_one      = 1.0                      !< Newtonian constant of gravitation in scaled units
-
    real, parameter :: fpiG       = fpi*G_one                !< four Pi times Newtonian constant of gravitation
    real, parameter :: newtong    = G_one                    !< Newtonian constant of gravitation
-   real, parameter :: pc         = pc_cm                    !< parsec expressed in units of centimeters !beware: this is inconsistent with definition of cm, kpc, r_gc_sun (is it a bug?)
-   real, parameter :: kpc        = 1000.0                   !< kiloparsec expressed in units of parsec
-   real, parameter :: r_gc_sun   = 8500                     !< Sun distance from the Galaxy Center expressed in parsecs
 
 #endif /* SCALED */
 
