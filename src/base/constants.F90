@@ -75,10 +75,10 @@ module constants
    real, parameter :: small      = 1.e-29                !< a constant used as the lower limit number
    real, parameter :: big        = 1.e+29                !< a constant used as the upper limit number
 
-   real, parameter :: pi         = 3.141592653589793238  !< //Pi (Archimedes' constant)
+   real, parameter :: pi         = 3.141592653589793238  !< Pi (Archimedes' constant)
    real, parameter :: dpi        = 2.*pi                 !< doubled Pi
    real, parameter :: fpi        = 4.*pi                 !< four Pi
-   real, parameter :: e          = 2.718281828459045235  !< //Napier's constant (base of Natural logarithm)
+   real, parameter :: e          = 2.718281828459045235  !< Napier's constant (base of Natural logarithm)
 
    real(kind=8), parameter :: au_cm       =  1.49597870691d13   ! Astonomical unit [cm]
    real(kind=8), parameter :: pc_au       =  206264.806248712d0 ! Parsec [AU] 1 pc/1 AU = 1./atan(pi/180. * 1./3600.)
@@ -282,7 +282,7 @@ contains
          case ("WT4", "wt4")
             ! WT4  uses: length --> 6.25AU, mass --> 0.1 M_sun,   time --> 2.5**3.5 /pi years (=> G \approx 1. in Wengen Test #4),
             cm          = 1./(6.25*au_cm)     !< centimetre, length unit
-            !// It's really weird that use of 2.5**3.5 here can cause Internal Compiler Error at multigridmultipole.F90:827
+            ! It's really weird that use of 2.5**3.5 here can cause Internal Compiler Error at multigridmultipole.F90:827
             sek         = 1./(24.7052942200655/pi * yr_s) !< year, time unit; 24.7052942200655 = 2.5**3.5
             gram        = 1/(0.1*msun_g)      !< gram, mass unit
             s_len_u  = ' [6.25 AU]'

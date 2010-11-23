@@ -230,7 +230,7 @@ module mpisetup
          call MPI_Gather(host_proc, hnlen,  MPI_CHARACTER, host_all, hnlen,  MPI_CHARACTER, 0, comm, err)
          call MPI_Gather(pid_proc,  1,      MPI_INTEGER,   pid_all,  1,      MPI_INTEGER,   0, comm, err)
 
-         ! cwd = trim(cwd_proc)  !//BEWARE: It's redundant, we get cwd for command line in init_piernik subroutine
+         ! cwd = trim(cwd_proc)  !BEWARE: It's redundant, we get cwd for command line in init_piernik subroutine
 
          if (proc == 0) then
             inquire(file=par_file, exist=par_file_exist)
@@ -588,7 +588,7 @@ module mpisetup
 
          if (proc == 0) call printinfo("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++", .false.)
          call MPI_Barrier(comm,ierr)
-         if (nproc > 1) call sleep(1) !// Prevent random SIGSEGVs in openmpi's MPI_Finalize
+         if (nproc > 1) call sleep(1) ! Prevent random SIGSEGVs in openmpi's MPI_Finalize
          call MPI_Finalize(ierr)
 
       end subroutine cleanup_mpi

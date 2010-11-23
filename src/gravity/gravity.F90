@@ -293,7 +293,7 @@ module gravity
       gpot  = gp + (1.+h)    *sgp -     h*sgpm
       hgpot = gp + (1.+0.5*h)*sgp - 0.5*h*sgpm
 #else /* !SELF_GRAV */
-      !// BEWARE: as long as grav_pot_3d is called only in init_piernik this assignment probably don't need to be repeated more than once
+      !BEWARE: as long as grav_pot_3d is called only in init_piernik this assignment probably don't need to be repeated more than once
       gpot  = gp
       hgpot = gp
 #endif /* !SELF_GRAV */
@@ -302,7 +302,7 @@ module gravity
 
 #ifdef SELF_GRAV
 
-!// An improper evaluation of guardcell potential may occur when the multigrid boundary conditions doesn't match /BOUNDARIES/ namelist (e.g. isolated on periodic domain).
+! An improper evaluation of guardcell potential may occur when the multigrid boundary conditions doesn't match /BOUNDARIES/ namelist (e.g. isolated on periodic domain).
 
    subroutine all_sgp_boundaries
 
@@ -557,7 +557,7 @@ module gravity
       implicit none
       integer :: i, j, k
       real    :: r_smooth2, r2, gmr, gm, z2, yz2
-      !// promote stiff-body rotation inside smoothing length, don't affect the global potential outside
+      ! promote stiff-body rotation inside smoothing length, don't affect the global potential outside
 
       r_smooth2 = r_smooth**2 ! can be used also i other GRAV_PTMASS* clauses
       gm =  - newtong * ptmass

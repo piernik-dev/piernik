@@ -82,7 +82,7 @@ contains
 
       type(plvl), pointer :: coarse, fine
 
-      if (lev >= level_max) return !// can't prolong finest level
+      if (lev >= level_max) return ! can't prolong finest level
       if (lev <  level_min) call die("[multigridbasefuncs:prolong_level] level <= 0.")
       if (iv < 1 .or. iv > ngridvars) call die("[multigridbasefuncs:prolong_level] Invalid variable index.")
 
@@ -183,7 +183,7 @@ contains
 
       type(plvl), pointer :: coarse, fine
 
-      if (lev <= level_min) return !// can't restrict base level
+      if (lev <= level_min) return ! can't restrict base level
       if (lev >  level_max) call die("[multigridbasefuncs:restrict_level] level>max.")
       if (iv < 1 .or. iv > ngridvars) call die("[multigridbasefuncs:restrict_level] Invalid variable index.")
 

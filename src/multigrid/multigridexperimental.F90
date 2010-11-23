@@ -32,7 +32,7 @@
 !   -1./12., 7./12., 7./12., -1./12. (integral cubic)
 ! slightly slower, less wide stencil:
 !            1./2.,  1./2.           (average; integral&direct linear)
-!// Prolongation of cell faces from cell centers will be required for FFT local solver, red-black Gauss-Seidel relaxation don't use it.
+! Prolongation of cell faces from cell centers will be required for FFT local solver, red-black Gauss-Seidel relaxation don't use it.
 
 !!$ ============================================================================
 !

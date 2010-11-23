@@ -155,7 +155,7 @@ contains
 !
     n = size(den, 1)
     xx(:) = x(nb+1:nxd+nb)
-    if (n /= size(den,2)) stop 'nx != ny in poisson_xy'
+    if (n /= size(den,2)) stop 'nx /= ny in poisson_xy'
 
 ! compute dimensions for complex arrays
 !
@@ -288,7 +288,7 @@ contains
 !
   nx = size(den, 1)
   ny = size(den, 2)
-  if (nx /= ny) stop 'nx != ny in poisson_xy'
+  if (nx /= ny) stop 'nx /= ny in poisson_xy'
 
 ! compute dimensions for complex arrays
 !

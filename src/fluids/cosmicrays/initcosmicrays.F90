@@ -50,7 +50,7 @@ module initcosmicrays
    integer                             :: ncrs         !< number of all CR components
    real                                :: cfl_cr       !< CFL number for diffusive CR transport
    real                                :: smallecr     !< floor value for CR energy density
-   real                                :: cr_active    !< //parameter specifying whether CR pressure gradient is (when =1.) or isn't (when =0.) included in the gas equation of motion
+   real                                :: cr_active    !< parameter specifying whether CR pressure gradient is (when =1.) or isn't (when =0.) included in the gas equation of motion
    real                                :: cr_eff       !< conversion rate of SN explosion energy to CR energy (default = 0.1)
    logical                             :: use_split    !< apply all diffusion operators at once (.false.) or use directional splittiong (.true.)
    real, dimension(ncr_max)            :: gamma_crn    !< array containing adiabatic indexes of all CR nuclear components

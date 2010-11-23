@@ -489,7 +489,7 @@ contains
            do k = ks, ke
               do j = js, je
                  mod_str(is:ie) = max(0., (1. + 1./max_ambient) * ambient_density_min / (max(0., u(idni, is:ie, j, k)) + ambient_density_min) - 1./max_ambient)
-                 ! //ifort can have memory leaks on WHERE - let's provide explicit loop for this crappy compiler
+                 ! ifort can have memory leaks on WHERE - let's provide explicit loop for this crappy compiler
                  ! The __IFORT__ macro has to be defined manually, e.g. in appropriate compiler.in file
 #ifdef __IFORT__
                  do i = is, ie

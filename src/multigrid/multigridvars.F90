@@ -89,7 +89,7 @@ module multigridvars
       complex, allocatable, dimension(:,:,:) :: fft                   !< a complex array for FFT operations (Fourier space)
       real,    allocatable, dimension(:,:,:) :: fftr                  !< a real array for FFT operations (Fourier space for sine transform)
       real,    allocatable, dimension(:,:,:) :: src                   !< an input array for FFT (real space data)
-      real,    allocatable, dimension(:,:,:) :: Green3D               !< //Green's function (0.5 * gb_fft_norm / (kx + ky + kz))
+      real,    allocatable, dimension(:,:,:) :: Green3D               !< Green's function (0.5 * gb_fft_norm / (kx + ky + kz))
       integer (kind = selected_int_kind(16)) :: planf, plani          !< FFT forward and inverse plans
       real                                   :: fft_norm              !< normalization factor
 
