@@ -170,7 +170,7 @@ contains
 #elif defined (KSG)
       constants_set='KSG'
 #elif defined (KSM)
-      constants_set='KSG'
+      constants_set='KSM'
 #elif defined (PGM)
       constants_set='PGM'
 #elif defined (SSY)
@@ -387,7 +387,7 @@ contains
       kboltz     = kB_cgs*erg/kelvin        !< boltzmann constant
       gasRconst  = 8.314472e7*erg/kelvin    !< gas constant R =  8.314472e7*erg/kelvin/mol
       clight     = 2.997924562e10*cm/sek    !< speed of light in vacuum
-      Gs         = sqrt(4.*pi*gram/cm)/sek  !< 1 Gs (cgs magnetic induction unit)
+      Gs         = sqrt(miu0*gram/cm)/sek   !< 1 Gs (cgs magnetic induction unit)
       mGs        = Gs*1.e-6                 !< 1 microgauss
       Tesla      = 1.e4*Gs                  !< 1 T (SI magnetic induction unit)
       newtong    = newton_cgs*cm**3/gram/sek**2 !< newtonian constant of gravitation
