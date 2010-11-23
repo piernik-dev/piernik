@@ -349,12 +349,14 @@ contains
       Mearth     = 5.977e27*gram            !< mass of Earth
       earthradius= 6378.17*km               !< radius of Earth
 
+      ! Following physicical constants are used in various modules.
+      ! They need to have some sane values.
       if (scale_me) then
-         kboltz    = 1.0
-         gasRconst = 1.0
-         mH        = 1.0
-         fpiG      = fpi
-         newtong   = 1.0
+         kboltz    = 1.0  ! dataio
+         gasRconst = 1.0  ! dataio
+         mH        = 1.0  ! dataio
+         fpiG      = fpi  ! multigrid_gravity, poissonsolver
+         newtong   = 1.0  ! multigridmultipole, gravity, poissonsolver
       endif
 
    end subroutine init_constants
