@@ -37,7 +37,7 @@ module multipole
 
    private
    public :: init_multipole, cleanup_multipole, multipole_solver
-   public :: lmax, mmax, ord_prolong_mpole, coarsen_multipole, use_point_monopole, interp_pt2mom, interp_mom2pot
+   public :: lmax, mmax, ord_prolong_mpole, coarsen_multipole, use_point_monopole, interp_pt2mom, interp_mom2pot ! initialized in multigrid_gravity
 
    integer, parameter        :: INSIDE = 1, OUTSIDE = INSIDE + 1 !< distinction between interior and exterior multipole expansion
 
