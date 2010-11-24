@@ -78,6 +78,7 @@
     cfl    = 0.7
     smalld = 1.e3
     smallei= 1.e10
+    limiter= 'vanleer'
  /
 
  $GRAVITY

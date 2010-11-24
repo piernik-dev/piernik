@@ -9,9 +9,6 @@
 #undef      GLOBAL_FR_SPEED
 #define     LOCAL_FR_SPEED
 
-/* choosing flux limiter */
-#define VANLEER
-
 /* physics including */
 #define FLUID_INTERACTIONS
 #define COLLISIONS

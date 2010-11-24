@@ -69,6 +69,7 @@
     smalld = 1.e-4
     smallei= 1.e-4
     integration_order = 2
+    limiter= 'vanleer'
     magnetic = 'no'
     dimensions = '3d'
     nu_bulk    = 0.0001

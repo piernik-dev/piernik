@@ -69,6 +69,7 @@
     smalld       = 1.e-5
     smallei      = 1.e-4
     integration_order = 2
+    limiter      = 'vanleer'
   /
 
  $GRAVITY

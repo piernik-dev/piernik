@@ -9,9 +9,6 @@
 /* choosing freezing speed */
 #define GLOBAL_FR_SPEED
 
-/* choosing flux limiter */
-#define VANLEER
-
 /* physics including */
 #define RESISTIVE
 

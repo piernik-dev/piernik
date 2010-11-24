@@ -4,9 +4,6 @@
 /* adiabatic or isothermal */
 #undef ISO
 
-/* choosing flux limiter */
-#define VANLEER
-
 /* choosing freezing speed */
 #define GLOBAL_FR_SPEED
 

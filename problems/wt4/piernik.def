@@ -6,7 +6,6 @@
 #define ISO_LOCAL
 
 #define LOCAL_FR_SPEED
-#define VANLEER
 
 #define GRAV
 #define MULTIGRID

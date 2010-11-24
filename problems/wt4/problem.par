@@ -78,6 +78,7 @@
     dt_initial = 5e-4
     dt_min = 1e-5
     dt_max_grow = 1.25
+    limiter= 'vanleer'
  /
 
  $GRAVITY

@@ -6,8 +6,6 @@
 
 #define GLOBAL_FR_SPEED
 
-#define VANLEER
-
 #define GRAV
 
 #if !(defined(MULTIGRID) || defined(POISSON_FFT))

@@ -9,9 +9,6 @@
 /* choosing freezing speed */
 #define LOCAL_FR_SPEED
 
-/* choosing flux limiter */
-#define VANLEER
-
 /* gravity type choosing */
 #undef GRAV
 

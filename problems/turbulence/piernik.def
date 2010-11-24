@@ -7,12 +7,6 @@
 #define LOCAL_FR_SPEED
 #undef  GLOBAL_FR_SPEED
 
-/* choosing flux limiter */
-#undef VANLEER
-#define MONCEN
-#undef MINMOD
-#undef SUPERBEE
-
 /* physics including */
 #undef RESIST
 

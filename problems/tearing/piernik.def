@@ -7,9 +7,6 @@
 /* choosing freezing speed */
 #define LOCAL_FR_SPEED
 
-/* choosing flux limiter */
-#define VANLEER
-
 /* physics including */
 #define MAGNETIC
 #define RESISTIVE
