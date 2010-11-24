@@ -15,6 +15,7 @@
 
 #include "piernik.def"
 
+/*
 #undef FLIM
 #undef FLIM2
 
@@ -53,6 +54,8 @@
 #ifndef FLIM
 #error No flux limiters have been defined.
 #endif
+
+*/
 
 /*
   Freezing speed
