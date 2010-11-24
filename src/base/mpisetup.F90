@@ -277,14 +277,6 @@ module mpisetup
          ! ToDo: Remove it when all problems are fixed
 
          limiter = 'vanleer'
-#if defined(MONCEN)
-         limiter = 'moncen'
-#elif defined(MINMOD)
-         limiter = 'minmod'
-#elif defined(SUPERBEE)
-         limiter = 'superbee'
-#endif
-
 
          cfl         = 0.7
          cfr_smooth  = 0.0
