@@ -308,11 +308,15 @@ contains
       use arrays,             only: u
       use multigridbasefuncs, only: norm_sq
       use dataio_pub,         only: die
+      use multigridhelpers,   only: set_dirty, check_dirty
 
       implicit none
 
       integer, intent(in) :: cr_id !< CR component index
 
+      call set_dirty(source)
+      call set_dirty(correction)
+      call set_dirty(defect)
       ! Trick residual subroutine to initialize with: u + (1-theta) dt grad (c grad u)
       if (diff_theta /= 0.) then
          roof%mgvar(roof%is:roof%ie, roof%js:roof%je, roof%ks:roof%ke, correction) = (1. -1./diff_theta) * u(iarr_crs(cr_id), is:ie, js:je, ks:ke)
@@ -321,6 +325,7 @@ contains
       else
          call die("[multigrid_diffusion:init_source] diff_theta = 0 not supported.")
       endif
+      call check_dirty(roof%level, source, "init source")
 
       call norm_sq(source, vstat%norm_rhs_orig)
 
@@ -337,12 +342,15 @@ contains
       use grid,           only: is, ie, js, je, ks, ke
       use arrays,         only: u
       use initcosmicrays, only: iarr_crs
+      use multigridhelpers,   only: set_dirty, check_dirty
 
       implicit none
 
       integer, intent(in) :: cr_id !< CR component index
 
+      call set_dirty(solution)
       roof%mgvar(roof%is:roof%ie, roof%js:roof%je, roof%ks:roof%ke, solution) = u(iarr_crs(cr_id),  is:ie, js:je, ks:ke)
+      call check_dirty(roof%level, solution, "init solution")
 
    end subroutine init_solution
 
@@ -362,6 +370,7 @@ contains
       use multigridmpifuncs,  only: mpi_multigrid_bnd
       use fluidindex,         only: ibx, iby, ibz
       use dataio_pub,         only: die
+      use multigridhelpers,   only: set_dirty, check_dirty, dirty_label
 
       implicit none
 
@@ -370,12 +379,15 @@ contains
       if (diff_bx+iby-ibx /= diff_by .or. diff_bx+ibz-ibx /= diff_bz) call die("[multigrid_diffusion:init_b] Something is wrong with diff_by or diff_bz indices.")
 
       do ib = ibx, ibz
+         call set_dirty(diff_bx+ib-ibx)
          roof%mgvar(roof%is-D_x:roof%ie+D_x, roof%js-D_y:roof%je+D_y, roof%ks-D_z:roof%ke+D_z, diff_bx+ib-ibx) = b(ib, is-D_x:ie+D_x, js-D_y:je+D_y, ks-D_z:ke+D_z)
          call restrict_all(diff_bx+ib-ibx)             ! Implement correct restriction (and probably also separate inter-process communication) routines
          do il = level_min, level_max-1
             call mpi_multigrid_bnd(il, diff_bx+ib-ibx, 1, extbnd_mirror) ! ToDo: use global boundary type for B
             !BEWARE b is set on a staggered grid; corners should be properly set here (now they are not)
             ! the problem is that the b(:,:,:,:) elements are face-centered so restriction and external boundaries should take this into account
+            write(dirty_label, '(a,i1)')"init b",ib
+            call check_dirty(il, diff_bx+ib-ibx, dirty_label)
          enddo
       enddo
 
@@ -695,6 +707,7 @@ contains
       use initcosmicrays,    only: K_crs_perp, K_crs_paral
       use mpisetup,          only: dt
       use arrays,            only: wa
+      use multigridhelpers,  only: check_dirty
 
       implicit none
 
@@ -706,7 +719,7 @@ contains
 
       integer             :: i, j, k
 
-      call mpi_multigrid_bnd(lev, soln, 1, diff_extbnd) ! no corners required
+      call mpi_multigrid_bnd(lev, soln, 1, diff_extbnd) ! corners are required for fluxes
 
       do k = lvl(lev)%ks, lvl(lev)%ke
          lvl(         lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k,   def)                =   &
@@ -755,6 +768,8 @@ contains
               ( wa(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   lvl(lev)%ks+1:lvl(lev)%ke+1)      - &
               & wa(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   lvl(lev)%ks  :lvl(lev)%ke  ) )
       endif
+
+      call check_dirty(lev, def, "res def")
 
    end subroutine residual
 

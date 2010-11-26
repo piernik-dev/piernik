@@ -91,13 +91,15 @@ contains
 
       if (dirty_debug) fine%mgvar(:, :, :, iv) = dirtyH
 
+      call check_dirty(coarse%level, iv, "prolong-")
+
       if (ord_prolong == 0) then
          call prolong_level0(lev, iv)
       else
          call prolong_level_hord(lev, iv) ! experimental part
       endif
 
-      call check_dirty(fine%level, iv, "prolong")
+      call check_dirty(fine%level, iv, "prolong+")
 
    end subroutine prolong_level
 
