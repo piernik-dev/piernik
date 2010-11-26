@@ -383,7 +383,7 @@ contains
          roof%mgvar(roof%is-D_x:roof%ie+D_x, roof%js-D_y:roof%je+D_y, roof%ks-D_z:roof%ke+D_z, diff_bx+ib-ibx) = b(ib, is-D_x:ie+D_x, js-D_y:je+D_y, ks-D_z:ke+D_z)
          call restrict_all(diff_bx+ib-ibx)             ! Implement correct restriction (and probably also separate inter-process communication) routines
          do il = level_min, level_max-1
-            call mpi_multigrid_bnd(il, diff_bx+ib-ibx, 1, extbnd_mirror) ! ToDo: use global boundary type for B
+            call mpi_multigrid_bnd(il, diff_bx+ib-ibx, 1, extbnd_mirror, .true.) ! ToDo: use global boundary type for B
             !BEWARE b is set on a staggered grid; corners should be properly set here (now they are not)
             ! the problem is that the b(:,:,:,:) elements are face-centered so restriction and external boundaries should take this into account
             write(dirty_label, '(a,i1)')"init b",ib
@@ -719,7 +719,7 @@ contains
 
       integer             :: i, j, k
 
-      call mpi_multigrid_bnd(lev, soln, 1, diff_extbnd) ! corners are required for fluxes
+      call mpi_multigrid_bnd(lev, soln, 1, diff_extbnd, .true.) ! corners are required for fluxes
 
       do k = lvl(lev)%ks, lvl(lev)%ke
          lvl(         lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k,   def)                =   &
@@ -821,9 +821,9 @@ contains
 
       do n = 1, RED_BLACK*nsmoo
          if (mod(n,2) == 1) then
-            call mpi_multigrid_bnd(lev, soln, 1, diff_extbnd) ! no corners are required here
+            call mpi_multigrid_bnd(lev, soln, 1, diff_extbnd, .true.) ! corners are required for fluxes
          else
-            call mpi_multigrid_bnd(lev, soln, 1, extbnd_donothing)
+            call mpi_multigrid_bnd(lev, soln, 1, extbnd_donothing, .true.)
          endif
 
          if (kd == RED_BLACK) k1 = lvl(lev)%ks + mod(n, RED_BLACK)
