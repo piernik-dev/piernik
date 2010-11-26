@@ -149,7 +149,7 @@ contains
 !! \detail mpi_multigrid_bnd provides communication between local domains to couple solution on the global computational domain
 !!
 
-   subroutine mpi_multigrid_bnd(lev, iv, ng, mode)
+   subroutine mpi_multigrid_bnd(lev, iv, ng, mode, corners)
 
       use dataio_pub,         only: die
       use mpisetup,           only: comm3d, ierr, MPI_STATUS_SIZE, MPI_REQUEST_NULL, &
@@ -160,22 +160,30 @@ contains
 
       implicit none
 
-      integer, intent(in) :: lev             !< level which we are doing communication at
-      integer, intent(in) :: iv              !< variable which we want to communicate
-      integer, intent(in) :: ng              !< number of guardcells to exchange
-      integer, intent(in) :: mode            !< what to do with external boundaries
+      integer, intent(in) :: lev               !< level which we are doing communication at
+      integer, intent(in) :: iv                !< variable which we want to communicate
+      integer, intent(in) :: ng                !< number of guardcells to exchange
+      integer, intent(in) :: mode              !< what to do with external boundaries
+      logical, intent(in), optional :: corners !< if .true. then don't forget aboutpay close attention to corners
 
       integer, parameter                        :: nreq = NDIM*4
       integer, dimension(nreq)                  :: req3d
       integer, dimension(MPI_STATUS_SIZE, nreq) :: status3d
+      logical                                   :: cor
 
       if (iv < 1 .or. iv > ngridvars) call die("[multigridmpifuncs:mpi_multigrid_bnd] Invalid variable index.")
       if (lev < level_min .or. lev > level_max) call die("[multigridmpifuncs:mpi_multigrid_bnd] Invalid level number.")
 
       if (ng > lvl(lev)%nb .or. ng <= 0) call die("[multigridmpifuncs:mpi_multigrid_bnd] Too many or <0 guardcells requested.")
 
-      ! First, set the external boundary, where appropriate
-      if (any(is_external(:))) call multigrid_ext_bnd(lev, iv, ng, mode)
+      if (present(corners)) then
+         cor = corners
+      else
+         cor = .false.
+      endif
+
+      ! Set the external boundary, where appropriate
+      if (any(is_external(:))) call multigrid_ext_bnd(lev, iv, ng, mode, cor)
 
       req3d(:) = MPI_REQUEST_NULL
 
@@ -189,6 +197,7 @@ contains
             if (.not. is_external(XLO)) lvl(lev)%mgvar(lvl(lev)%is-ng:lvl(lev)%is-1,  :, :, iv) = lvl(lev)%mgvar(lvl(lev)%ie-ng+1:lvl(lev)%ie,      :, :, iv)
             if (.not. is_external(XHI)) lvl(lev)%mgvar(lvl(lev)%ie+1 :lvl(lev)%ie+ng, :, :, iv) = lvl(lev)%mgvar(lvl(lev)%is     :lvl(lev)%is+ng-1, :, :, iv)
          endif
+         if (cor) call MPI_Waitall(4, req3d(1:4), status3d(:,1:4), ierr)
       endif
 
       if (has_dir(YDIR)) then
@@ -201,6 +210,7 @@ contains
             if (.not. is_external(YLO)) lvl(lev)%mgvar(:, lvl(lev)%js-ng:lvl(lev)%js-1,  :, iv) = lvl(lev)%mgvar(:, lvl(lev)%je-ng+1:lvl(lev)%je,      :, iv)
             if (.not. is_external(YHI)) lvl(lev)%mgvar(:, lvl(lev)%je+1 :lvl(lev)%je+ng, :, iv) = lvl(lev)%mgvar(:, lvl(lev)%js     :lvl(lev)%js+ng-1, :, iv)
          endif
+         if (cor) call MPI_Waitall(4, req3d(5:8), status3d(:,5:8), ierr)
       endif
 
       if (has_dir(ZDIR)) then
@@ -213,9 +223,12 @@ contains
             if (.not. is_external(ZLO)) lvl(lev)%mgvar(:, :, lvl(lev)%ks-ng:lvl(lev)%ks-1,  iv) = lvl(lev)%mgvar(:, :, lvl(lev)%ke-ng+1:lvl(lev)%ke,      iv)
             if (.not. is_external(ZHI)) lvl(lev)%mgvar(:, :, lvl(lev)%ke+1 :lvl(lev)%ke+ng, iv) = lvl(lev)%mgvar(:, :, lvl(lev)%ks     :lvl(lev)%ks+ng-1, iv)
          endif
+         if (cor) call MPI_Waitall(4, req3d(9:12), status3d(:,9:12), ierr)
       endif
 
-      call MPI_Waitall(nreq, req3d(:), status3d(:,:), ierr)
+! ToDo: Make a benchmark of a massively parallel run to determine difference in execution between calling MPI_Waitall for each direction and calling it once.
+! If the difference is small then set cor permanently to .true.
+      if (.not. cor) call MPI_Waitall(nreq, req3d(:), status3d(:,:), ierr)
 
    end subroutine mpi_multigrid_bnd
 
@@ -227,9 +240,9 @@ contains
 !! has_dir() is not checked here because is_external() should be set to .false. on non-existing directions in 1D and 2D setups
 !!
 
-   subroutine multigrid_ext_bnd(lev, iv, ng, mode)
+   subroutine multigrid_ext_bnd(lev, iv, ng, mode, cor)
 
-      use dataio_pub,      only: die, msg
+      use dataio_pub,      only: die, msg, warn
       use multigridvars,   only: extbnd_donothing, extbnd_zero, extbnd_extrapolate, extbnd_mirror, extbnd_antimirror, &
            &                     XLO, XHI, YLO, YHI, ZLO, ZHI, lvl, is_external
 
@@ -239,8 +252,11 @@ contains
       integer, intent(in) :: iv              !< variable which we want to set
       integer, intent(in) :: ng              !< number of guardcells to set
       integer, intent(in) :: mode            !< what to do with external boundaries
+      logical, intent(in) :: cor             !< if .true. then don't forget about corners !BEWARE: not implemented properly
 
       integer :: i
+
+      if (cor) call warn("[multigridmpifuncs:multigrid_ext_bnd] some corners may not be properly filled")
 
       select case (mode)
          case (extbnd_donothing) ! remember to initialize everything first!
