@@ -279,17 +279,12 @@ module rtvd ! split orig
       real, dimension(nvar%all,n)    :: w                  !< auxiliary vector to calculate fluxes
       real, dimension(nvar%all,n)    :: fr                 !< flux of the right-moving waves
       real, dimension(nvar%all,n)    :: fl                 !< flux of the left-moving waves
+      real, dimension(nvar%all,n)    :: fu                 !< sum of fluxes of right- and left-moving waves
       real, dimension(nvar%all,n)    :: dfrp               !< second order correction of right-moving waves flux on the right cell boundary
       real, dimension(nvar%all,n)    :: dfrm               !< second order correction of right-moving waves flux on the left cell boundary
       real, dimension(nvar%all,n)    :: dflm               !< second order correction of left-moving waves flux on the left cell boundary
       real, dimension(nvar%all,n)    :: dflp               !< second order correction of left-moving waves flux on the right cell boundary
-      real, dimension(nvar%all,n)    :: dulf               !< second order correction of the vector of conservative variables for the left-moving waves
-      real, dimension(nvar%all,n)    :: durf               !< second order correction of the vector of conservative variables for the right-moving waves
-      real, dimension(nvar%all,n)    :: ul0                !< left moving wave in first order scheme
-      real, dimension(nvar%all,n)    :: ur0                !< right moving wave in first order scheme
       real, dimension(nvar%all,n)    :: u1                 !< updated vector of conservative variables (after one timestep in second order scheme)
-      real, dimension(nvar%all,n)    :: ul1                !< left moving wave (after one timestep in second order scheme)
-      real, dimension(nvar%all,n)    :: ur1                !< right moving wave (after one timestep in second order scheme)
       real, dimension(nvar%fluids,n) :: rotacc             !< acceleration caused by rotation
       real, dimension(nvar%fluids,n) :: fricacc            !< acceleration caused by friction
       real, dimension(2)             :: df                 !< marker
@@ -366,17 +361,6 @@ module rtvd ! split orig
          fr = (u1*cfr+w)*0.5
          fl = (u1*cfr-w)*0.5
 
-         if (istep == 1) then
-
-! Right moving waves construction for first-order scheme
-
-            ur0 = fr/cfr
-
-! Left moving waves construction for first-order scheme
-
-            ul0 = fl/cfr
-         endif
-
          fl(:,1:n-1) = fl(:,2:n)                         ; fl(:,n)   = fl(:,n-1)
 
          if (istep == 2) then
@@ -395,27 +379,10 @@ module rtvd ! split orig
             call flimiter(fl,dflm,dflp)
          endif
 
-! u corrections
-
-         durf(:,2:n) = dtx*(fr(:,2:n) - fr(:,1:n-1));     durf(:,1) = durf(:,2)
-         dulf(:,2:n) = dtx*(fl(:,2:n) - fl(:,1:n-1));     dulf(:,1) = dulf(:,2)
-
 ! u update
 
-         ur1(:,:) = ur0 - rk2coef(integration_order,istep)*durf
-         ul1(:,:) = ul0 + rk2coef(integration_order,istep)*dulf
-
-         u1 = ul1 + ur1
-         !
-         ! SHOW MAGIC THAT'S ABOUT TO HAPPEN
-         ! u1 = ur0 + ul0 + rk2coef(integration_order,istep)* ( dulf - durf )
-         ! u1 = (0.5*u0*cfr + 0.5*w + 0.5*u0*cfr - 0.5*w)/cfr  + rk2coef(integration_order,istep)* ( dulf - durf )
-         ! u1 =    u0     + rk2coef(integration_order,istep)* ( dulf - durf )
-         ! u1 =    u0     - rk2coef(integration_order,istep)* ( durf - dulf )
-         ! u1 =    u0            - rk2coef(integration_order,istep)*dtx* [(fr(:,2:n) - fr(:,1:n-1)) - (fl(:,2:n)   - fl(:,1:n-1)) ]
-         ! u1(:,2:n) = u0(:,2:n) - rk2coef(integration_order,istep)*dtx* [(fr(:,2:n) - fl(:,2:n)  ) - (fr(:,1:n-1) - fl(:,1:n-1)) ]
-         ! fu := fr - fl
-         ! u1(:,2:n) = u0(:,2:n) - rk2coef(integration_order,istep)*dtx* (  fu(:,2:n) - fu(:,1:n-1) )   ; u1(:,1) = u1(:,2:n)
+         fu = fr - fl
+         u1(:,2:n) = u0(:,2:n) - rk2coef(integration_order,istep) * dtx * ( fu(:,2:n) - fu(:,1:n-1) )   ; u1(:,1) = u1(:,2)
 
          ! BEWARE: This is ordinary cheating. If negative density is patched here with smalld, the code will most likely crash in next timestep (FPE or sudden drop of timestep).
          u1(iarr_all_dn(1),:) = max(u1(iarr_all_dn(1),:), smalld)
