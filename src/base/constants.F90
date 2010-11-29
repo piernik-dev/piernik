@@ -351,7 +351,8 @@ contains
       kelvin     = 1.0                      !< kelvin, temperature unit
 ! physical constants:
       kboltz     = kB_cgs*erg/kelvin        !< boltzmann constant
-      gasRconst  = 8.314472e7*erg/kelvin    !< gas constant R =  8.314472e7*erg/kelvin/mol
+      gasRconst  = 8.314472e7*erg/kelvin    !< gas constant R =  8.314472e7*erg/kelvin/mol = k_B * N_A
+      N_A        = gasRconst / kboltz       !< Avogadro constant
       clight     = 2.997924562e10*cm/sek    !< speed of light in vacuum
       Gs         = sqrt(miu0*gram/cm)/sek   !< 1 Gs (cgs magnetic induction unit)
       mGs        = Gs*1.e-6                 !< 1 microgauss
