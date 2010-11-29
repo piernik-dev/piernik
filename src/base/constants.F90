@@ -132,6 +132,7 @@ module constants
 ! physical constants:
    real, protected :: kboltz                                !< boltzmann constant
    real, protected :: gasRconst                             !< gas constant R =  8.314472e7*erg/kelvin/mol
+   real, protected :: N_A                                   !< Avogadro constant
    real, protected :: clight                                !< speed of light in vacuum
    real, protected :: Gs                                    !< 1 Gs (cgs magnetic induction unit)
    real, protected :: mGs                                   !< 1 microgauss
