@@ -974,7 +974,7 @@ module dataio
          call get_extremum(wa(is:ie,js:je,ks:ke), 'max', pr%pres_max)
          call get_extremum(wa(is:ie,js:je,ks:ke), 'min', pr%pres_min)
 
-         wa(:,:,:) = fl%gam*wa(:,:,:)
+         wa(:,:,:) = sqrt(fl%gam*wa(:,:,:)/u(fl%idn,:,:,:))
          call get_extremum(wa(is:ie,js:je,ks:ke), 'max', pr%cs_max)
 
          wa(:,:,:) = mH/kboltz / fl%gam * gasRconst * wa(:,:,:) / u(fl%idn,:,:,:)
