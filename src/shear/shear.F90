@@ -37,7 +37,10 @@ module shear
 ! pulled by SHEAR
    implicit none
    private
-   public  :: init_shear, yshift, qshear, omega, eps, delj, dely, unshear_fft
+   public  :: init_shear, yshift, qshear, omega, eps, delj, dely
+#ifdef FFTW
+   public  :: unshear_fft
+#endif FFTW
    real    :: ts, dely, eps, omega, qshear, dts, ddly
    integer :: delj
 
