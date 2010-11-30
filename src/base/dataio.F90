@@ -849,11 +849,14 @@ module dataio
    end subroutine write_timeslice
 
    subroutine get_extremum(tab,minmax,prop)
+
       use dataio_pub,    only: msg, warn
       use types,         only: value
       use grid,          only: nb
       use mpisetup,      only: mpifind
+
       implicit none
+
       real, dimension(:,:,:), intent(in) :: tab
       character(len=*), intent(in)       :: minmax
       type(value), intent(out)           :: prop
@@ -1109,7 +1112,9 @@ module dataio
 
 #ifdef RESISTIVE
       etamax%val = eta_max
-      call mpifind(etamax%val, 'max', etamax%loc, etamax%proc)
+      etamax%proc = 0
+      etamax%loc = [ 0 , 0, 0 ]
+!      call mpifind(etamax%val, 'max', etamax%loc, etamax%proc) ! Nothing to scan or compare here
 #endif /* RESISTIVE */
 
 #ifdef MAGNETIC
