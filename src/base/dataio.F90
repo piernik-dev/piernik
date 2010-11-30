@@ -1001,7 +1001,7 @@ module dataio
          use dataio_pub,         only: msg, printinfo
          use fluidindex,         only: ibx, iby, ibz, nvar
          use grid,               only: dx, dy, dz, dxmn, is, ie, js, je, ks, ke, nx, ny, nz
-         use mpisetup,           only: cfl, t, dt, proc, mpifind
+         use mpisetup,           only: cfl, t, dt, proc
          use types,              only: tsl_container, value
 #ifdef COSM_RAYS
          use fluidindex,         only: iarr_all_crs
