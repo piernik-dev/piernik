@@ -53,9 +53,8 @@ module fluxcosmicrays
 
     integer, intent(in) :: n
     real, dimension(n), intent(in)  :: vion
-    real, dimension(nvar%crs%all,n), intent(in) :: uuc
-
-    real, dimension(nvar%crs%all,n) :: fluxc
+    real, dimension(:,:), intent(in), pointer  :: uuc
+    real, dimension(:,:), intent(out), pointer :: fluxc
 
     fluxc   = 0.0
 

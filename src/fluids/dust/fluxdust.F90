@@ -78,10 +78,10 @@ contains
 
 
       implicit none
-      integer, intent(in)                          :: n       !< number of cells in the current sweep
-      real, dimension(nvar%dst%all,n), intent(out) :: fluxd   !< flux for dust
-      real, dimension(nvar%dst%all,n), intent(in)  :: uud     !< part of u for dust
-      real, dimension(nvar%dst%all,n), intent(out) :: cfrd    !< freezing speed for dust
+      integer, intent(in)                         :: n       !< number of cells in the current sweep
+      real, dimension(:,:), intent(out), pointer  :: fluxd   !< flux for dust
+      real, dimension(:,:), intent(in),  pointer  :: uud     !< part of u for dust
+      real, dimension(:,:), intent(out), pointer  :: cfrd    !< freezing speed for dust
 
       ! locals
       real               :: minvx, maxvx, amp

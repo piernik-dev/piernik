@@ -50,6 +50,8 @@ module fluxes
    private
    public  :: all_fluxes, flimiter, set_limiter
 
+   logical, save                              :: fluxes_initialized = .false.
+
    interface
       subroutine limiter(f,a,b)
          implicit none
@@ -61,7 +63,13 @@ module fluxes
 
    procedure(limiter), pointer :: flimiter
 
-   contains
+contains
+
+   subroutine init_fluxes
+      implicit none
+
+      fluxes_initialized = .true.
+   end subroutine init_fluxes
 !>
 !! \brief Subroutine which changes flux and cfr from mhdflux regarding specified fluids.
 !! \param flux flux
@@ -71,6 +79,7 @@ module fluxes
 !! \param n number of cells in the current sweep
 !<
    subroutine all_fluxes(n, flux, cfr, uu, bb, cs_iso2)
+      use types,          only: component_fluid
 #ifdef IONIZED
       use fluxionized,    only: flux_ion
 #endif /* IONIZED */
@@ -82,70 +91,62 @@ module fluxes
 #endif /* DUST */
 #ifdef COSM_RAYS
       use fluxcosmicrays, only: flux_crs
-      use initcosmicrays, only: iarr_crs
 #endif /* COSM_RAYS */
       use fluidindex, only: nvar, nmag
 
       implicit none
 
       integer,                      intent(in)  :: n
-      real, dimension(nvar%all,n),  intent(out) :: flux, cfr, uu
+      real, dimension(nvar%all,n),  intent(out), target :: flux, cfr, uu
       real, dimension(nmag,n),      intent(in)  :: bb
       real, dimension(n), optional, intent(in)  :: cs_iso2
       real, dimension(n)              :: vion
-#ifdef IONIZED
-      real, dimension(nvar%ion%all,n) :: fluxion,cfrion,uuion
-#else /* !IONIZED */
+
+      real, dimension(:,:), pointer             :: pflux, pcfr, puu
+      type(component_fluid), pointer            :: pfl
+
+#ifndef IONIZED
       integer :: dummy
 #endif /* !IONIZED */
-#ifdef NEUTRAL
-      real, dimension(nvar%neu%all,n) :: fluxneu,cfrneu,uuneu
-#endif /* NEUTRAL */
-#ifdef DUST
-      real, dimension(nvar%dst%all,n) :: fluxdst,cfrdst,uudst
-#endif /* DUST */
-#ifdef COSM_RAYS
-      real, dimension(nvar%crs%all,n) :: fluxcrs,uucrs
-#endif /* COSM_RAYS */
 
       vion(:) = 0.0
 
 #ifdef IONIZED
-      uuion(:,:)=uu(nvar%ion%iarr,:)
+      pfl   => nvar%ion
+      puu   =>   uu(pfl%beg:pfl%end,:)
+      pcfr  =>  cfr(pfl%beg:pfl%end,:)
+      pflux => flux(pfl%beg:pfl%end,:)
 
-      call flux_ion(fluxion,cfrion,vion,uuion,bb,n,cs_iso2)
-
-      flux(nvar%ion%iarr,:) = fluxion
-      cfr(nvar%ion%iarr,:)  = cfrion
-      uu(nvar%ion%iarr,:)   = uuion
+      call flux_ion(pflux,pcfr,vion,puu,bb,n,cs_iso2)
 #else /* !IONIZED */
       if (.false.) dummy = size(bb)*size(cs_iso2) ! suppress compiler warnings on unused arguments
 #endif /* !IONIZED */
 
 #ifdef NEUTRAL
-      uuneu(:,:)=uu(nvar%neu%iarr,:)
+      pfl   => nvar%neu
+      puu   =>   uu(pfl%beg:pfl%end,:)
+      pcfr  =>  cfr(pfl%beg:pfl%end,:)
+      pflux => flux(pfl%beg:pfl%end,:)
 
-      call flux_neu(fluxneu,cfrneu,uuneu,n)
-
-      flux(nvar%neu%iarr,:) = fluxneu
-      cfr(nvar%neu%iarr,:)  = cfrneu
-      uu(nvar%neu%iarr,:)   = uuneu
+      call flux_neu(pflux,pcfr,puu,n)
 #endif /* NEUTRAL */
 
 #ifdef DUST
-      uudst=uu(nvar%dst%iarr,:)
-      call flux_dst(fluxdst,cfrdst,uudst,n)
-      flux(nvar%dst%iarr,:) = fluxdst
-      cfr(nvar%dst%iarr,:)  = cfrdst
-      uu(nvar%dst%iarr,:)   = uudst
+      pfl   => nvar%dst
+      puu   =>   uu(pfl%beg:pfl%end,:)
+      pcfr  =>  cfr(pfl%beg:pfl%end,:)
+      pflux => flux(pfl%beg:pfl%end,:)
+
+      call flux_dst(pflux,pcfr,puu,n)
 #endif /* DUST */
 
 #ifdef COSM_RAYS
-      uucrs=uu(iarr_crs,:)
-      call flux_crs(fluxcrs,vion,uucrs,n)
-      flux(iarr_crs,:) = fluxcrs
-      cfr(iarr_crs,:)  = spread(cfrion(1,:),1,nvar%crs%all)
-      uu(iarr_crs,:)   = uucrs
+      puu   => uu(nvar%crs%beg:nvar%crs%end,:)
+      pflux => flux(nvar%crs%beg:nvar%crs%end,:)
+
+      call flux_crs(pflux,vion,puu,n)
+
+      cfr(nvar%crs%beg:nvar%crs%end,:)  = spread(cfr(nvar%ion%iarr(1),:),1,nvar%crs%all)
 #endif /* COSM_RAYS */
 
    end subroutine all_fluxes

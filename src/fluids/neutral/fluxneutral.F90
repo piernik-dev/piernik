@@ -81,9 +81,9 @@ contains
 
       implicit none
       integer, intent(in)                          :: n         !< number of cells in the current sweep
-      real, dimension(nvar%neu%all,n), intent(out) :: fluxn     !< flux of neutral fluid
-      real, dimension(nvar%neu%all,n), intent(in)  :: uun       !< part of u for neutral fluid
-      real, dimension(nvar%neu%all,n), intent(out) :: cfrn      !< freezing speed for neutral fluid
+      real, dimension(:,:), intent(out), pointer :: fluxn     !< flux of neutral fluid
+      real, dimension(:,:), intent(in),  pointer :: uun       !< part of u for neutral fluid
+      real, dimension(:,:), intent(out), pointer :: cfrn      !< freezing speed for neutral fluid
 
       ! locals
       real, dimension(n) :: vx        !< velocity of neutral fluid for current sweep

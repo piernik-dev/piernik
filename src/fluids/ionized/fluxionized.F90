@@ -82,9 +82,9 @@ contains
       implicit none
       integer, intent(in)                          :: n           !< number of cells in the current sweep
       real, dimension(nmag,n), intent(in)          :: bb          !< magnetic field
-      real, dimension(nvar%ion%all,n), intent(in)  :: uui         !< part of u for ionized fluid
-      real, dimension(nvar%ion%all,n), intent(out) :: fluxi       !< flux of ionized fluid
-      real, dimension(nvar%ion%all,n), intent(out) :: cfri        !< freezing speed for ionized fluid
+      real, dimension(:,:), intent(in), pointer    :: uui         !< part of u for ionized fluid
+      real, dimension(:,:), intent(out), pointer   :: fluxi       !< flux of ionized fluid
+      real, dimension(:,:), intent(out), pointer   :: cfri        !< freezing speed for ionized fluid
       real, dimension(n), intent(out)              :: vx          !< velocity of ionized fluid for current sweep
       real, dimension(n), intent(in), optional     :: cs_iso2     !< local isothermal sound speed (optional)
 
