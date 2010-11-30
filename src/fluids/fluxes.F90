@@ -48,7 +48,7 @@ module fluxes
 ! pulled by ANY
    implicit none
    private
-   public  :: all_fluxes, flimiter, set_limiter
+   public  :: all_fluxes, flimiter, set_limiter, init_fluxes
 
    logical, save                              :: fluxes_initialized = .false.
 
@@ -61,12 +61,61 @@ module fluxes
       end subroutine limiter
    end interface
 
+   interface
+      subroutine flux_interface(flux,cfr,uu,n,vx,bb,cs_iso2)
+         implicit none
+         integer, intent(in)                        :: n         !< number of cells in the current sweep
+         real, dimension(:,:), intent(out), pointer :: flux      !< flux of fluid
+         real, dimension(:,:), intent(in),  pointer :: uu        !< part of u for fluid
+         real, dimension(:,:), intent(out), pointer :: cfr       !< freezing speed for fluid
+         real, dimension(:,:), intent(in),  pointer :: bb
+         real, dimension(:),   intent(out), pointer :: vx        !< velocity of fluid for current sweep
+         real, dimension(:),   intent(in),  pointer :: cs_iso2
+      end subroutine flux_interface
+   end interface
+
+   type flux_func
+      procedure(flux_interface), pointer, nopass :: flux_func
+   end type flux_func
+
+   type(flux_func), dimension(:), allocatable :: flist
    procedure(limiter), pointer :: flimiter
 
 contains
 
    subroutine init_fluxes
+      ! ToDo: Remove precompiler directives from this routine, it is called only once.
+      use fluidindex,  only: nvar
+#ifdef NEUTRAL
+      use fluxneutral, only: flux_neu
+#endif /* NEUTRAL */
+#ifdef DUST
+      use fluxdust,    only: flux_dst
+#endif /* DUST */
+#ifdef IONIZED
+      use fluxionized, only: flux_ion
+#endif /* IONIZED */
       implicit none
+      integer :: i
+
+      allocate(flist(nvar%fluids))
+
+      do i = 1, nvar%fluids
+         select case (nvar%all_fluids(i)%tag)
+#ifdef NEUTRAL
+            case ("NEU", "neu")
+               flist(nvar%all_fluids(i)%pos)%flux_func => flux_neu
+#endif /* NEUTRAL */
+#ifdef DUST
+            case ("DST", "dst")
+               flist(nvar%all_fluids(i)%pos)%flux_func => flux_dst
+#endif /* DUST */
+#ifdef IONIZED
+            case ("ION", "ion")
+               flist(nvar%all_fluids(i)%pos)%flux_func => flux_ion
+#endif /* IONIZED */
+         end select
+      enddo
 
       fluxes_initialized = .true.
    end subroutine init_fluxes
@@ -80,19 +129,10 @@ contains
 !<
    subroutine all_fluxes(n, flux, cfr, uu, bb, cs_iso2)
       use types,          only: component_fluid
-#ifdef IONIZED
-      use fluxionized,    only: flux_ion
-#endif /* IONIZED */
-#ifdef NEUTRAL
-      use fluxneutral,    only: flux_neu
-#endif /* NEUTRAL */
-#ifdef DUST
-      use fluxdust,       only: flux_dst
-#endif /* DUST */
 #ifdef COSM_RAYS
       use fluxcosmicrays, only: flux_crs
 #endif /* COSM_RAYS */
-      use fluidindex, only: nvar, nmag
+      use fluidindex,     only: nvar, nmag
 
       implicit none
 
@@ -107,51 +147,28 @@ contains
       real, dimension(:), pointer                       :: pcs2, pvx
       type(component_fluid), pointer                    :: pfl
 
-#ifndef IONIZED
-      integer :: dummy
-#endif /* !IONIZED */
+      integer :: p
 
-#ifdef IONIZED
-      pfl   => nvar%ion
-      puu   =>   uu(pfl%beg:pfl%end,:)
-      pcfr  =>  cfr(pfl%beg:pfl%end,:)
-      pflux => flux(pfl%beg:pfl%end,:)
-      pvx   =>   vx(pfl%pos,:)
+      ! ToDo: pbb and pcs2 may need more careful treatment
+      !  currently both arrays don't matter for dst and neu and
+      !  are properly set for ion
       pbb   =>   bb(:,:)
+
       if (present(cs_iso2)) then
-         pcs2  => cs_iso2(:)
+         pcs2  => cs_iso2(:)           ! ToDo: It would be better to always set cs2 as an array, even if global
       else
          pcs2  => null()
       endif
 
-      call flux_ion(pflux, pcfr, puu, n, pvx, pbb, pcs2)
-#else /* !IONIZED */
-      if (.false.) dummy = size(bb)*size(cs_iso2) ! suppress compiler warnings on unused arguments
-#endif /* !IONIZED */
+      do p = 1, nvar%fluids
+         pfl   => nvar%all_fluids(p)
+         puu   =>   uu(pfl%beg:pfl%end,:)
+         pcfr  =>  cfr(pfl%beg:pfl%end,:)
+         pflux => flux(pfl%beg:pfl%end,:)
+         pvx   =>   vx(pfl%pos,:)
 
-#ifdef NEUTRAL
-      pfl   => nvar%neu
-      puu   =>   uu(pfl%beg:pfl%end,:)
-      pcfr  =>  cfr(pfl%beg:pfl%end,:)
-      pflux => flux(pfl%beg:pfl%end,:)
-      pvx   =>  vx(pfl%pos,:)
-      pbb   => null()
-      pcs2  => null()
-
-      call flux_neu(pflux, pcfr, puu, n, pvx, pbb, pcs2)
-#endif /* NEUTRAL */
-
-#ifdef DUST
-      pfl   => nvar%dst
-      puu   =>   uu(pfl%beg:pfl%end,:)
-      pcfr  =>  cfr(pfl%beg:pfl%end,:)
-      pflux => flux(pfl%beg:pfl%end,:)
-      pvx   =>  vx(pfl%pos,:)
-      pbb   => null()
-      pcs2  => null()
-
-      call flux_dst(pflux, pcfr, puu, n, pvx, pbb, pcs2)
-#endif /* DUST */
+         call flist(pfl%pos)%flux_func(pflux, pcfr, puu, n, pvx, pbb, pcs2)
+      enddo
 
 #ifdef COSM_RAYS
       puu   => uu(nvar%crs%beg:nvar%crs%end,:)

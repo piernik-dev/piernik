@@ -120,7 +120,7 @@ module initfluids
 
       use types,           only: grid_container
       use fluidindex,      only: fluid_index, nvar
-      use fluxes,          only: set_limiter
+      use fluxes,          only: set_limiter, init_fluxes
       use mpisetup,        only: limiter
 #ifdef VERBOSE
       use dataio_pub,      only: printinfo
@@ -161,6 +161,8 @@ module initfluids
 #endif /* COSM_RAYS */
 
       call fluid_index(cgrid)
+
+      call init_fluxes
 
       allocate(gamma(nvar%fluids))
 
