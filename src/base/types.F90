@@ -108,23 +108,7 @@ module types
       integer :: pos = 0              ! QA_WARN implicit save does not work in types
    end type component
 
-   type :: component_fluid
-      !>
-      !! @copydoc component::all
-      !<
-      integer :: all = 0               ! QA_WARN implicit save does not work in types
-      !>
-      !! @copydoc component::beg
-      !<
-      integer :: beg = 0               ! QA_WARN implicit save does not work in types
-      !>
-      !! @copydoc component::end
-      !<
-      integer :: end = 0               ! QA_WARN implicit save does not work in types
-      !>
-      !! @copydoc component::pos
-      !<
-      integer :: pos = 0               ! QA_WARN implicit save does not work in types
+   type, extends(component) :: component_fluid
       !>
       !! index denoting position of the fluid density in array arrays::u
       !<
