@@ -242,11 +242,11 @@ contains
    end subroutine finish_hydrostatic
 
    subroutine outh_bnd(kb,kk,minmax)
+      use dataio_pub,          only: die
       use gravity,             only: grav_accel, nsub, tune_zeq_bnd
       use arrays,              only: u
       use grid,                only: nx, ny, z
       use mpisetup,            only: smalld
-      use initfluids,          only: gamma, cs_iso2
       use fluidindex,          only: nvar, iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
 #ifndef ISO
       use fluidindex,          only: iarr_all_en
@@ -271,17 +271,18 @@ contains
       real, dimension(nvar%fluids)        :: factor
       real                                :: dzs,z1,z2
 
+      if (.not.associated(grav_accel)) call die("[hydrostatic:outh_bnd] grav_accel not associated")
 
       db = u(iarr_all_dn,:,:,kb)
       db = max(db,smalld)
 #ifdef ISO
-      csi2b = cs_iso2
+      csi2b = maxval(nvar%all_fluids(:)%cs2)   ! BEWARE should be fluid dependent
 #else /* !ISO */
       ekb = 0.5*(u(iarr_all_mx,:,:,kb)**2+u(iarr_all_my,:,:,kb)**2+u(iarr_all_mz,:,:,kb)**2)/db
       eib = u(iarr_all_en,:,:,kb) - ekb
       eib = max(eib,smallei)
       do ifluid=1,nvar%fluids
-         csi2b(ifluid,:,:) = (gamma(ifluid)-1.0)*eib(ifluid,:,:)/db(ifluid,:,:)
+         csi2b(ifluid,:,:) = (nvar%all_fluids(ifluid)%gam_1)*eib(ifluid,:,:)/db(ifluid,:,:)
       enddo
 #endif /* !ISO */
       z1 = z(kb)
@@ -320,7 +321,7 @@ contains
 !           endif
             if (.false.) print *, minmax
 #ifndef ISO
-            eib(:,i,j) = csi2b(:,i,j)*db(:,i,j)/(gamma-1)
+            eib(:,i,j) = csi2b(:,i,j)*db(:,i,j)/(nvar%all_fluids(:)%gam_1)
             eib(:,i,j) = max(eib(:,i,j), smallei)
             u(iarr_all_en,i,j,kk)      =     ekb(:,i,j) + eib(:,i,j)
 #endif /* !ISO */
