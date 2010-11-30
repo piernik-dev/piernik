@@ -72,7 +72,7 @@ module fluxionized
 
 contains
 
-   subroutine flux_ion(fluxi,cfri,vx,uui,bb,n,cs_iso2)
+   subroutine flux_ion(fluxi, cfri, uui, n, vx, bb, cs_iso2)
 
       use constants,       only: small
       use dataio_pub,      only: die

@@ -117,7 +117,7 @@ contains
       pcfr  =>  cfr(pfl%beg:pfl%end,:)
       pflux => flux(pfl%beg:pfl%end,:)
 
-      call flux_ion(pflux,pcfr,vion,puu,bb,n,cs_iso2)
+      call flux_ion(pflux, pcfr, puu, n, vion, bb, cs_iso2)
 #else /* !IONIZED */
       if (.false.) dummy = size(bb)*size(cs_iso2) ! suppress compiler warnings on unused arguments
 #endif /* !IONIZED */
