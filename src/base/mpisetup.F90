@@ -34,7 +34,6 @@
 !! \copydetails mpisetup::init_mpi
 !<
 module mpisetup
-notify test
 
    implicit none
    private

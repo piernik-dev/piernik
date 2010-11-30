@@ -40,8 +40,6 @@
 !! These parts of code can be moved to other multigrid files when any other multigrid solver uses them.
 !!
 
-notify test
-
 module multigrid_gravity
 ! pulled by MULTIGRID && GRAV
 #if defined(MULTIGRID) && defined(GRAV)
