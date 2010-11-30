@@ -522,13 +522,15 @@ module gravity
       use arrays,     only: gp
       use constants,  only: newtong
       use grid,       only: nx, ny, x, y, z
-      use initfluids, only: cs_iso2
       use mpisetup,   only: smalld
+      use fluidindex, only: nvar
       implicit none
       logical, intent(in) :: flatten
       integer             :: i, j
       real                :: rc2, r_smooth2, GM, fr, x2
+      real                :: cs_iso2
 
+      cs_iso2   = maxval(nvar%all_fluids(:)%cs2)
       r_smooth2 = r_smooth**2
       GM        = newtong*ptmass
 
