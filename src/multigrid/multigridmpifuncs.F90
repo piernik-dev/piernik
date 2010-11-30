@@ -255,8 +255,14 @@ contains
       logical, intent(in) :: cor             !< if .true. then don't forget about corners !BEWARE: not implemented properly
 
       integer :: i
+      logical, save :: warned = .false.
 
-      if (cor) call warn("[multigridmpifuncs:multigrid_ext_bnd] some corners may not be properly filled")
+      if (cor) then
+         if (.not. warned) then
+            call warn("[multigridmpifuncs:multigrid_ext_bnd] some corners may not be properly filled. FIX ME!")
+            warned = .true.
+         endif
+      endif
 
       select case (mode)
          case (extbnd_donothing) ! remember to initialize everything first!
