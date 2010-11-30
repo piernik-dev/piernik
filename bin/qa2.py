@@ -254,7 +254,7 @@ def qa_false_refs(lines,name,store,fname):
       for func in to_check:
          pattern = re.compile(func, re.IGNORECASE)
          if(len(filter(pattern.search, temp)) < 2):   #stupid but seems to work
-            print give_warn("QA:  ")+"'" + func + "' grabbed but not used in [%s:%s]" % (fname,name)
+            store.append(give_warn("QA:  ")+"'" + func + "' grabbed but not used in [%s:%s]" % (fname,name))
 
 
 def qa_implicit_saves(lines,name,store,fname):
