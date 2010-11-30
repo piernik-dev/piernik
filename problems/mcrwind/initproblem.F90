@@ -317,9 +317,11 @@ module initproblem
 
                do ipm=-1,1
 
-                  if (ipm .eq. -1) ysna = ysn   ! if (SHEAR) => ysna = ysno
-                  if (ipm .eq.  0) ysna = ysn
-                  if (ipm .eq.  1) ysna = ysn   ! if (SHEAR) => ysna = ysni
+                  ysna = ysn
+! ToDo: when implementing SHEAR, use select case construct or an assignment like this: ysna = ysn_array(ipm)
+!                  if (ipm .eq. -1) ysna = ysn   ! if (SHEAR) => ysna = ysno
+!                  if (ipm .eq.  0) ysna = ysn
+!                  if (ipm .eq.  1) ysna = ysn   ! if (SHEAR) => ysna = ysni
 
                   do jpm=-1,1
 
