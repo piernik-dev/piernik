@@ -76,7 +76,7 @@ contains
 
       use constants,       only: small
       use dataio_pub,      only: die
-      use fluidindex,      only: idn, imx, imy, imz, ien, nvar, ibx, iby, ibz, nmag
+      use fluidindex,      only: idn, imx, imy, imz, ien, nvar, ibx, iby, ibz
       use mpisetup,        only: cfr_smooth
 
       implicit none
