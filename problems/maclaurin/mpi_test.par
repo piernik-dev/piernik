@@ -39,12 +39,12 @@
  /
 
  $BOUNDARIES
-    bnd_xl = 'per'
-    bnd_xr = 'per'
-    bnd_yl = 'per'
-    bnd_yr = 'per'
-    bnd_zl = 'per'
-    bnd_zr = 'per'
+    bnd_xl = 'out'
+    bnd_xr = 'out'
+    bnd_yl = 'out'
+    bnd_yr = 'out'
+    bnd_zl = 'out'
+    bnd_zr = 'out'
  /
 
  $DOMAIN_LIMITS
@@ -70,6 +70,7 @@
     cfl    = 0.7
     smalld = 1.e-20
     smallei= 1.e-20
+    limiter= 'vanleer'
  /
 
  $GRAVITY

@@ -53,12 +53,14 @@ contains
    subroutine init_multigrid(cgrid)
 
       use multigridvars,       only: lvl, level_max, level_min, level_gb, roof, base, gb, gb_cartmap, mg_nb, ngridvars, correction, &
-           &                         is_external, eff_dim, NDIM, has_dir, XDIR, YDIR, ZDIR, XLO, XHI, YLO, YHI, ZLO, ZHI, LOW, HIGH, D_x, D_y, D_z, &
+           &                         is_external, periodic_bnd_cnt, non_periodic_bnd_cnt, eff_dim, NDIM, has_dir, &
+           &                         XDIR, YDIR, ZDIR, XLO, XHI, YLO, YHI, ZLO, ZHI, LOW, HIGH, D_x, D_y, D_z, &
            &                         ord_prolong, ord_prolong_face, stdout, verbose_vcycle, hdf5levels, tot_ts
       use types,               only: grid_container
       use mpisetup,            only: buffer_dim, comm, comm3d, ierr, proc, nproc, ndims, pxsize, pysize, pzsize, &
            &                         ibuff, rbuff, lbuff, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL, &
-           &                         bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr
+           &                         bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr, &
+           &                         bnd_xl_dom, bnd_xr_dom, bnd_yl_dom, bnd_yr_dom, bnd_zl_dom, bnd_zr_dom
       use multigridhelpers,    only: mg_write_log, dirtyH, do_ascii_dump, dirty_debug, multidim_code_3D, &
            &                         aux_par_I0, aux_par_I1, aux_par_I2, aux_par_R0, aux_par_R1, aux_par_R2
       use multigridmpifuncs,   only: mpi_multigrid_prep
@@ -161,6 +163,30 @@ contains
 
       ngridvars = correction  !< 4 variables are required for basic use of the multigrid solver
 
+      has_dir(XDIR) = (cgrid%nxb > 1)
+      has_dir(YDIR) = (cgrid%nyb > 1)
+      has_dir(ZDIR) = (cgrid%nzb > 1)
+      eff_dim = count(has_dir(:))
+      if (eff_dim < 1 .or. eff_dim > 3) call die("[multigrid:init_multigrid] Unsupported number of dimensions.")
+      if (has_dir(XDIR)) D_x = 1
+      if (has_dir(YDIR)) D_y = 1
+      if (has_dir(ZDIR)) D_z = 1
+
+      periodic_bnd_cnt = 0
+      non_periodic_bnd_cnt = 0
+      if (has_dir(XDIR)) then
+         call count_periodic(bnd_xl_dom)
+         call count_periodic(bnd_xr_dom)
+      endif
+      if (has_dir(YDIR)) then
+         call count_periodic(bnd_yl_dom)
+         call count_periodic(bnd_yr_dom)
+      endif
+      if (has_dir(ZDIR)) then
+         call count_periodic(bnd_zl_dom)
+         call count_periodic(bnd_zr_dom)
+      endif
+
 ! ToDo: Make array of subroutine pointers
 #ifdef GRAV
       call init_multigrid_grav
@@ -175,15 +201,6 @@ contains
       allocate(lvl(level_gb:level_max), stat=aerr(1))                                 ! level_gb = level_min-1 contains some global base level data
       if (aerr(1) /= 0) call die("[multigrid:init_multigrid] Allocation error: lvl")
       mb_alloc = size(lvl)
-
-      has_dir(XDIR) = (cgrid%nxb > 1)
-      has_dir(YDIR) = (cgrid%nyb > 1)
-      has_dir(ZDIR) = (cgrid%nzb > 1)
-      eff_dim = count(has_dir(:))
-      if (eff_dim < 1 .or. eff_dim > 3) call die("[multigrid:init_multigrid] Unsupported number of dimensions.")
-      if (has_dir(XDIR)) D_x = 1
-      if (has_dir(YDIR)) D_y = 1
-      if (has_dir(ZDIR)) D_z = 1
 
       !! Initialization of all regular levels (all but global base)
       !! Following loop gives us:
@@ -389,6 +406,7 @@ contains
       enddo
 
       ! mark external faces
+      ! BEWARE The checks may not work correctly for shear and corner boundaries
       is_external(:) = .false.
 
       if (gb_cartmap(proc)%proc(XDIR) == 0        .and. (bnd_xl /= "mpi" .and. bnd_xl /= "per")) is_external(XLO) = .true.
@@ -417,6 +435,27 @@ contains
       endif
 
    end subroutine init_multigrid
+
+!!$ ============================================================================
+!!
+!! ToDo: pack bnd_{x,y,z}{l,r}_dom into a bnd_dom(XDIR:ZDIR)(LOW:HIGH)  array
+!!
+
+   subroutine count_periodic(bnd_str)
+
+      use multigridvars, only: periodic_bnd_cnt, non_periodic_bnd_cnt
+
+      implicit none
+
+      character(len=*), intent(in) :: bnd_str
+
+      if (bnd_str == 'per') then
+         periodic_bnd_cnt = periodic_bnd_cnt + 1
+      else
+         non_periodic_bnd_cnt = non_periodic_bnd_cnt + 1
+      endif
+
+   end subroutine count_periodic
 
 !!$ ============================================================================
 !!

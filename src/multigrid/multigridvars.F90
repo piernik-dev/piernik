@@ -108,7 +108,8 @@ module multigridvars
    integer, parameter :: bnd_periodic=1, bnd_dirichlet=2              !< constants for enumerating multigrid boundary types: periodic, 0-value,
    integer, parameter :: bnd_isolated=3, bnd_neumann=4                !< isolated, 0-gradient
    integer, parameter :: bnd_givenval=5, bnd_invalid=-1               !< given value, invalid
-   logical, dimension(XLO:ZHI) :: is_external                         !< .true. for non-"mpi" local domain boundaries when gravity boundary is non-periodic (even if the global domain is periodic)
+   logical, dimension(XLO:ZHI) :: is_external                         !< .true. for non-"mpi" local domain boundaries
+   integer :: periodic_bnd_cnt, non_periodic_bnd_cnt                  !< counts periodic and non-periodic boundaries in existing directions
    integer, parameter :: extbnd_donothing = 0                         !< Do not touch external boundaries
    integer, parameter :: extbnd_zero = extbnd_donothing + 1           !< Fill external boundaries with zeroes
    integer, parameter :: extbnd_extrapolate = extbnd_zero + 1         !< Perform extrapolation in external boundaries

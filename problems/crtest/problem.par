@@ -82,17 +82,18 @@
 
  $MULTIGRID_SOLVER
     stdout = .true.
-    level_max = 5
+    level_max = 3
+    dirty_debug = .true.
  /
 
  $MULTIGRID_DIFFUSION
 !    diff_explicit = .true.
-    diff_theta     = 0.5
+    diff_theta     = 0.6
     diff_tstep_fac = 86.80555556 !91.0222223 !91.0222223 !45.511112 !22.7555556
     norm_tol = 1e-13
     nsmool = 4
     nsmoob = 4
-    max_cycles = 50
+    max_cycles = 10
     diff_bnd_str = "styrofoam"
  /
 

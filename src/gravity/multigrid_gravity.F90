@@ -119,7 +119,8 @@ contains
 
    subroutine init_multigrid_grav
 
-      use multigridvars,      only: bnd_periodic, bnd_dirichlet, bnd_isolated, bnd_invalid, correction, mg_nb, ngridvars
+      use multigridvars,      only: bnd_periodic, bnd_dirichlet, bnd_isolated, bnd_invalid, correction, mg_nb, ngridvars, has_dir, XDIR, YDIR, ZDIR, &
+           &                        periodic_bnd_cnt, non_periodic_bnd_cnt
       use multipole,          only: use_point_monopole, lmax, mmax, ord_prolong_mpole, coarsen_multipole, interp_pt2mom, interp_mom2pot
       use mpisetup,           only: buffer_dim, comm, ierr, proc, ibuff, cbuff, rbuff, lbuff, &
            &                        bnd_xl_dom, bnd_xr_dom, bnd_yl_dom, bnd_yr_dom, bnd_zl_dom, bnd_zr_dom, &
@@ -172,10 +173,10 @@ contains
       interp_pt2mom          = .false.
       interp_mom2pot         = .false.
 
-      if (bnd_xl_dom /= 'per' .or. bnd_xr_dom /= 'per' .or. bnd_yl_dom /= 'per' .or. bnd_yr_dom /= 'per' .or. bnd_zl_dom /= 'per' .or. bnd_zr_dom /= 'per') then
-         grav_bnd_str = "isolated" ! /todo make this a default, correct default problem.par where necessary
-      else
+      if (periodic_bnd_cnt == 2*count(has_dir(:))) then
          grav_bnd_str = "periodic"
+      else
+         grav_bnd_str = "dirichlet"
       endif
 
       if (proc == 0) then
@@ -268,13 +269,22 @@ contains
             grav_bnd = bnd_isolated
          case ("periodic", "per")
             if (bnd_xl_dom /= 'per' .or. bnd_xr_dom /= 'per' .or. bnd_yl_dom /= 'per' .or. bnd_yr_dom /= 'per' .or. bnd_zl_dom /= 'per' .or. bnd_zr_dom /= 'per') &
-                 call die("[multigrid_gravity:init_multigrid_grav] cannot use periodic boundaries for gravity on nonperiodic domain")
+                 call die("[multigrid_gravity:init_multigrid_grav] cannot enforce periodic boundaries for gravity on a not fully periodic domain")
             grav_bnd = bnd_periodic
          case ("dirichlet", "dir")
             grav_bnd = bnd_dirichlet
          case default
             call die("[multigrid_gravity:init_multigrid_grav] Non-recognized boundary description.")
       end select
+
+      if (periodic_bnd_cnt == 2*count(has_dir(:))) then ! fully periodic domain
+         if (grav_bnd /= bnd_periodic .and. proc ==0) call warn("[multigrid_gravity:init_multigrid_grav] Ignoring non-periodic boundary conditions for gravity on a fully periodic domain.")
+         grav_bnd = bnd_periodic
+      else if (periodic_bnd_cnt > 0 .and. non_periodic_bnd_cnt > 0) then
+         if (proc ==0) call warn("[multigrid_gravity:init_multigrid_grav] Mixing periodic and non-periodic boundary conditions for gravity is experimental.")
+         prefer_rbgs_relaxation = .true.
+         gb_no_fft = .true.
+      endif
 !!$      select case (grav_bnd)
 !!$         case (bnd_periodic)
 !!$            grav_extbnd_mode = extbnd_donothing
@@ -367,8 +377,7 @@ contains
          else
             lvl(idx)%fft_type = fft_none
          endif
-
-     enddo
+      enddo
 
       ! solution recycling
       ord_time_extrap = min(nold_max-1, max(-1, ord_time_extrap))
@@ -538,32 +547,6 @@ contains
       if (allocated(kx)) deallocate(kx)
       if (allocated(ky)) deallocate(ky)
       if (allocated(kz)) deallocate(kz)
-
-!BEWARE: There is a conflict here, because gravity solver can treat some boundaries as external, even on periodic domain
-!        and it is undecided yet what diffusion solver requires from boundaries
-      ! mark external faces
-      is_external(:) = .false.
-      if (grav_bnd /= bnd_periodic) then
-         ! BEWARE I am not sure if the checks are complete. It probably will crash on shear boundaries
-         if (bnd_xl(1:3) /= "mpi") is_external(XLO) = .true.
-         if (bnd_xr(1:3) /= "mpi") is_external(XHI) = .true.
-         if (bnd_yl(1:3) /= "mpi") is_external(YLO) = .true.
-         if (bnd_yr(1:3) /= "mpi") is_external(YHI) = .true.
-         if (bnd_zl(1:3) /= "mpi") is_external(ZLO) = .true.
-         if (bnd_zr(1:3) /= "mpi") is_external(ZHI) = .true.
-
-         ! force domain boundaries for gravity if requested even when the domain is periodic
-         if (gb_cartmap(proc)%proc(XDIR) == 0)        is_external(XLO) = .true.
-         if (gb_cartmap(proc)%proc(XDIR) == pxsize-1) is_external(XHI) = .true.
-         if (gb_cartmap(proc)%proc(YDIR) == 0)        is_external(YLO) = .true.
-         if (gb_cartmap(proc)%proc(YDIR) == pysize-1) is_external(YHI) = .true.
-         if (gb_cartmap(proc)%proc(ZDIR) == 0)        is_external(ZLO) = .true.
-         if (gb_cartmap(proc)%proc(ZDIR) == pzsize-1) is_external(ZHI) = .true.
-      endif
-
-      if (.not. has_dir(XDIR)) is_external(XLO:XHI) = .false.
-      if (.not. has_dir(YDIR)) is_external(YLO:YHI) = .false.
-      if (.not. has_dir(ZDIR)) is_external(ZLO:ZHI) = .false.
 
       if (grav_bnd == bnd_isolated) call init_multipole(mb_alloc,cgrid)
 

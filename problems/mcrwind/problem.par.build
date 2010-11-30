@@ -128,3 +128,21 @@
     amp_cr       =  0.0     ! amplitude of expl. (init_problem, x0,y0,z0)
     alpha        =  1.0
  /
+
+ $MULTIGRID_SOLVER
+    level_max = 3
+ /
+
+ $MULTIGRID_DIFFUSION
+!    diff_explicit = .true.
+    diff_theta     = 0.6
+    diff_tstep_fac = 30
+    norm_tol = 1e-4
+    nsmool = 4
+    nsmoob = 4
+    max_cycles = 20
+    diff_bnd_str = "zero"
+ /
+
+ $MULTIGRID_GRAVITY
+ /
