@@ -257,6 +257,7 @@ module initproblem
 !<
 
    subroutine galactic_grav_accel(sweep, i1,i2, xsw, n, grav)
+
       use grid,        only: x, y, z
       use constants,   only: r_gc_sun, kpc
       use gravity,     only: r_gc
@@ -268,6 +269,8 @@ module initproblem
       integer, intent(in)            :: n
       real, dimension(n),intent(in)  :: xsw
       real, dimension(n),intent(out) :: grav
+
+      if (.false.) grav(1) = i1+i2 ! suppress compiler warning on unused argument
 
       if (sweep == 'zsweep') then
          grav = 3.23e8 * (  &

@@ -261,9 +261,10 @@ contains
       integer, intent(in)           :: kb, kk
       character(len=*), intent(in)  :: minmax
 
-      integer                             :: ksub, ifluid, i, j
+      integer                             :: ksub, i, j
       real, dimension(nvar%fluids,nx,ny)  :: db, csi2b
 #ifndef ISO
+      integer                             :: ifluid
       real, dimension(nvar%fluids,nx,ny)  :: ekb, eib
 #endif /* !ISO */
       real, dimension(nsub+1)             :: zs, gprofs
