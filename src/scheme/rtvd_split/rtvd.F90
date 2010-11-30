@@ -358,8 +358,9 @@ module rtvd ! split orig
 #endif /* !ISO_LOCAL */
 ! Right and left fluxes decoupling
 
-         fr = (u1*cfr+w)*0.5
          fl = (u1*cfr-w)*0.5
+!        fr = (u1*cfr+w)*0.5
+         fr = fl + w
 
          fl(:,1:n-1) = fl(:,2:n)                         ; fl(:,n)   = fl(:,n-1)
 
