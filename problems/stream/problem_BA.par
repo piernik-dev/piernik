@@ -10,6 +10,9 @@
     pzsize = 2
  /
 
+ $CONSTANTS
+ /
+
  $RESTART_CONTROL
     restart  = 'last'
     new_id   = ''
@@ -86,6 +89,7 @@
  /
 
  $GRAVITY
+    external_gp = "null"
  /
 
  $SHEARING
