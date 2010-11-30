@@ -166,12 +166,12 @@ contains
          if (ierrh /= 0) call die("[multigridhelpers:vcycle_stats_init] Allocation error: vs%time.")
       endif
 
-      vs%factor(:)     = 0.
-      vs%time(:)       = 0.
-      vs%count         = 0
-      vs%norm_rhs_orig = 0.
-      vs%norm_final    = 0.
-      vs%cprefix       = ""
+      vs%factor(:)  = 0.
+      vs%time(:)    = 0.
+      vs%count      = 0
+      vs%norm_rhs   = 0.
+      vs%norm_final = 0.
+      vs%cprefix    = ""
 
    end subroutine vcycle_stats_init
 
@@ -193,8 +193,6 @@ contains
       real                   :: at
       integer                :: i, lm
       character(len=fplen)   :: normred
-      integer, parameter     :: onechar = 1
-      character(len=onechar) :: dash
 
       if (proc /= 0) return
 
@@ -203,11 +201,9 @@ contains
       at = 0.
       if (vs%count > 0) at = sum(vs%time(1:vs%count))/vs%count ! average V-cycle time on PE# 0
 
-      dash = ""
-      if (len_trim(vs%cprefix) > 0) dash="-"
 
-      write(msg, '(a,i3,1x,3a,f7.3,a,i3,a,f7.3,a,f11.9,a)') &
-           "[multigrid] ", vs%count, trim(vs%cprefix), dash, "cycles, dt_wall=", vs%time(0), " +", vs%count, "*", at, ", norm/rhs= ", vs%norm_final, " : "
+      write(msg, '(a,i3,1x,2a,f7.3,a,i3,a,f7.3,a,f11.9,a)') &
+           "[multigrid] ", vs%count, trim(vs%cprefix), "cycles, dt_wall=", vs%time(0), " +", vs%count, "*", at, ", norm/rhs= ", vs%norm_final, " : "
 
       do i = 0, min(vs%count, ubound(vs%factor, 1))
          if (vs%factor(i) < 1.0e4) then

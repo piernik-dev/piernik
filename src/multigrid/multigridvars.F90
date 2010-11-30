@@ -129,7 +129,7 @@ module multigridvars
       real, allocatable, dimension(:) :: factor                       !< norm reduction factor
       real, allocatable, dimension(:) :: time                         !< time spent
       integer                         :: count                        !< number of executed V-cycles
-      real                            :: norm_rhs_orig                !< norm of the unmodified source
+      real                            :: norm_rhs                     !< norm of the source
       real                            :: norm_final                   !< norm of the defect relative to the source
       character(len=prefix_len)       :: cprefix                      !< prefix for distinguishing V-cycles in the log (e.g inner or outer potential, CR component)
    end type vcycle_stats

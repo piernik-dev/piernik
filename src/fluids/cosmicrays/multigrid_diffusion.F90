@@ -269,7 +269,7 @@ contains
 
          do cr_id = 1, nvar%crs%all
             call init_source(cr_id)
-            if (vstat%norm_rhs_orig /= 0) then
+            if (vstat%norm_rhs /= 0) then
                if (norm_was_zero(cr_id) .and. proc == 0) then
                   write(msg,'(a,i2,a)')"[multigrid_diffusion:multigrid_solve_diff] CR-fluid #",cr_id," is now available in measurable quantities."
                   call printinfo(msg)
@@ -327,7 +327,7 @@ contains
       endif
       call check_dirty(roof%level, source, "init source")
 
-      call norm_sq(source, vstat%norm_rhs_orig)
+      call norm_sq(source, vstat%norm_rhs)
 
    end subroutine init_source
 
@@ -400,9 +400,9 @@ contains
 
    subroutine vcycle_hg(cr_id)
 
-      use multigridvars,      only: source, defect, solution, correction, base, roof, level_min, level_max, ts, tot_ts, stdout!, D_x, D_y, D_z
+      use multigridvars,      only: source, defect, solution, correction, base, roof, level_min, level_max, ts, tot_ts!, D_x, D_y, D_z
       use multigridbasefuncs, only: norm_sq, restrict_all, prolong_level
-      use multigridhelpers,   only: set_dirty, check_dirty, do_ascii_dump, numbered_ascii_dump, mg_write_log, brief_v_log
+      use multigridhelpers,   only: set_dirty, check_dirty, do_ascii_dump, numbered_ascii_dump, brief_v_log
 !      use multigridmpifuncs,  only: mpi_multigrid_bnd
       use initcosmicrays,     only: iarr_crs
       use arrays,             only: u
@@ -421,7 +421,7 @@ contains
       real               :: norm_lhs, norm_rhs, norm_old
       logical            :: dump_every_step
 
-      write(vstat%cprefix,'("D",i1)') cr_id !BEWARE: this is another place with 0 <= cr_id <= 9 limit
+      write(vstat%cprefix,'("C",i1,"-")') cr_id !BEWARE: this is another place with 0 <= cr_id <= 9 limit
 
       inquire(file = "_dump_every_step_", EXIST=dump_every_step) ! use for debug only
       do_ascii_dump = do_ascii_dump .or. dump_every_step
@@ -495,10 +495,6 @@ contains
 
       call norm_sq(solution, norm_rhs)
       call norm_sq(defect, norm_lhs)
-      if (proc == 0 .and. stdout) then
-         write(msg,'(a,3g15.5)')"[multigrid_diffusion:vcycle_hg] norms: src, soln, defect: ",vstat%norm_rhs_orig, norm_rhs, norm_lhs
-         call mg_write_log(msg)
-      endif
 !     Do we need to take care of boundaries here?
 !      call mpi_multigrid_bnd(roof%level, solution, 1, diff_extbnd)
 !      u(iarr_crs(cr_id), is-D_x:ie+D_x, js-D_y:je+D_y, ks-D_z:ke+D_z) = roof%mgvar(roof%is-D_x:roof%ie+D_x, roof%js-D_y:roof%je+D_y, roof%ks-D_z:roof%ke+D_z, solution)

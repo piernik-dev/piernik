@@ -74,7 +74,6 @@ module multigrid_gravity
    logical            :: prefer_rbgs_relaxation                       !< Prefer relaxation over FFT local solver. Typically faster.
    ! \todo allow to perform one or more V-cycles with FFT method, the switch to the RBGS (may save one V-cycle in some cases)
    logical            :: fft_full_relax                               !< Perform full or boundary relaxation after local FFT solve
-   logical            :: prefer_modified_norm                         !< Use norm of the unmodified source
    logical            :: gb_solve_gather                              !< Prefer MPI_Gather over Send/Recv when solving global base level (looks a bit faster on small domains)
    logical            :: fft_patient                                  !< Spend more time in init_multigrid to find faster fft plan
    logical            :: hdf5levels                                   !< Dump mgvar to the HDF5 file?
@@ -133,7 +132,7 @@ contains
 
       namelist /MULTIGRID_GRAVITY/ norm_tol, vcycle_abort, max_cycles, nsmool, nsmoob, &
            &                       overrelax, overrelax_x, overrelax_y, overrelax_z, Jacobi_damp, L4_strength, nsmoof, ord_laplacian, ord_time_extrap, &
-           &                       prefer_rbgs_relaxation, prefer_modified_norm, gb_no_fft, gb_solve_gather, fft_full_relax, fft_patient, trust_fft_solution, &
+           &                       prefer_rbgs_relaxation, gb_no_fft, gb_solve_gather, fft_full_relax, fft_patient, trust_fft_solution, &
            &                       coarsen_multipole, lmax, mmax, ord_prolong_mpole, use_point_monopole, interp_pt2mom, interp_mom2pot, &
            &                       grav_bnd_str
 
@@ -166,7 +165,6 @@ contains
       gb_no_fft              = .false.
       prefer_rbgs_relaxation = .false.
       fft_full_relax         = .false.
-      prefer_modified_norm   = .false.
       gb_solve_gather        = .false.
       fft_patient            = .false.
       interp_pt2mom          = .false.
@@ -202,16 +200,15 @@ contains
          ibuff( 9) = ord_prolong_mpole
          ibuff(10) = ord_time_extrap
 
-         lbuff( 1) = use_point_monopole
-         lbuff( 2) = trust_fft_solution
-         lbuff( 3) = gb_no_fft
-         lbuff( 4) = prefer_rbgs_relaxation
-         lbuff( 5) = fft_full_relax
-         lbuff( 6) = prefer_modified_norm
-         lbuff( 7) = gb_solve_gather
-         lbuff( 8) = fft_patient
-         lbuff( 9) = interp_pt2mom
-         lbuff(10) = interp_mom2pot
+         lbuff(1) = use_point_monopole
+         lbuff(2) = trust_fft_solution
+         lbuff(3) = gb_no_fft
+         lbuff(4) = prefer_rbgs_relaxation
+         lbuff(5) = fft_full_relax
+         lbuff(6) = gb_solve_gather
+         lbuff(7) = fft_patient
+         lbuff(8) = interp_pt2mom
+         lbuff(9) = interp_mom2pot
 
          cbuff(1) = grav_bnd_str
 
@@ -244,16 +241,15 @@ contains
          ord_prolong_mpole = ibuff( 9)
          ord_time_extrap   = ibuff(10)
 
-         use_point_monopole      = lbuff( 1)
-         trust_fft_solution      = lbuff( 2)
-         gb_no_fft               = lbuff( 3)
-         prefer_rbgs_relaxation  = lbuff( 4)
-         fft_full_relax          = lbuff( 5)
-         prefer_modified_norm    = lbuff( 6)
-         gb_solve_gather         = lbuff( 7)
-         fft_patient             = lbuff( 8)
-         interp_pt2mom           = lbuff( 9)
-         interp_mom2pot          = lbuff(10)
+         use_point_monopole      = lbuff(1)
+         trust_fft_solution      = lbuff(2)
+         gb_no_fft               = lbuff(3)
+         prefer_rbgs_relaxation  = lbuff(4)
+         fft_full_relax          = lbuff(5)
+         gb_solve_gather         = lbuff(6)
+         fft_patient             = lbuff(7)
+         interp_pt2mom           = lbuff(8)
+         interp_mom2pot          = lbuff(9)
 
          grav_bnd_str   = cbuff(1)(1:len(grav_bnd_str))
 
@@ -697,7 +693,7 @@ contains
       use grid,               only: is, ie, js, je, ks, ke
       use dataio_pub,         only: die
       use multigridhelpers,   only: set_dirty, check_dirty
-      use multigridbasefuncs, only: norm_sq, substract_average
+      use multigridbasefuncs, only: substract_average
       use multigridvars,      only: roof, source, level_max, is_external, bnd_periodic, bnd_dirichlet, bnd_givenval, &
            &                        XLO, XHI, YLO, YHI, ZLO, ZHI, LOW, HIGH
 
@@ -709,11 +705,9 @@ contains
 
       if (present(dens)) then
          roof%mgvar(roof%is:roof%ie, roof%js:roof%je, roof%ks:roof%ke, source) = fpiG * dens(is:ie, js:je, ks:ke)
-         call norm_sq(source, vstat%norm_rhs_orig) ! The norm of corrected source will be calculated in multigrid_solve_*
       else
          if (grav_bnd /= bnd_givenval) call die("[multigrid_gravity:init_source] empty space allowed only for given value boundaries.")
          roof%mgvar(roof%is:roof%ie, roof%js:roof%je, roof%ks:roof%ke, source) = 0.
-         vstat%norm_rhs_orig = 0.
       endif
 
       select case (grav_bnd)
@@ -820,10 +814,10 @@ contains
 
       if (isolated) then
          grav_bnd = bnd_dirichlet
-         vstat%cprefix = "Gi"
+         vstat%cprefix = "Gi-"
       else
 #ifdef COSM_RAYS
-         vstat%cprefix = "G"
+         vstat%cprefix = "G-"
 #else
          vstat%cprefix = ""
 #endif /* COSM_RAYS */
@@ -863,7 +857,7 @@ contains
       if (isolated) then
          grav_bnd = bnd_givenval
 
-         vstat%cprefix = "Go"
+         vstat%cprefix = "Go-"
          call multipole_solver
          call init_source
 
@@ -894,7 +888,7 @@ contains
       use multigridbasefuncs, only: norm_sq, restrict_all, substract_average
       use dataio_pub,         only: msg, die, warn
       use multigridvars,      only: roof, base, source, solution, correction, defect, verbose_vcycle, &
-           &                        bnd_givenval, bnd_periodic, level_min, level_max, stdout, tot_ts, ts
+           &                        bnd_periodic, level_min, level_max, stdout, tot_ts, ts
 
       implicit none
 
@@ -927,15 +921,7 @@ contains
          call init_solution(history)
       endif
 
-      if ((grav_bnd /= bnd_givenval) .and. .not. prefer_modified_norm) then
-         norm_rhs = vstat%norm_rhs_orig
-      else
-         call norm_sq(source, norm_rhs)
-         if (proc == 0 .and. norm_rhs<(1.-1e-6)*vstat%norm_rhs_orig) then
-            write(msg, '(a,f8.5)')"[multigrid_gravity:vcycle_hg] norm_rhs/norm_rhs_orig = ", norm_rhs/vstat%norm_rhs_orig
-            call mg_write_log(msg, stdout)
-         endif
-      endif
+      call norm_sq(source, norm_rhs)
       norm_old = norm_rhs
       norm_lowest = norm_rhs
 
