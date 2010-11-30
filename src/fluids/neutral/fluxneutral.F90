@@ -72,7 +72,7 @@ module fluxneutral
 contains
 !==========================================================================================
 
-   subroutine flux_neu(fluxn,cfrn,uun,n)
+   subroutine flux_neu(fluxn,cfrn,uun,n,vx,bb,cs_iso2)
 
       use constants,       only: small
       use fluidindex,      only: idn, imx, imy, imz, ien, nvar
@@ -80,13 +80,15 @@ contains
       use timestep,        only: c_all
 
       implicit none
-      integer, intent(in)                          :: n         !< number of cells in the current sweep
+      integer, intent(in)                        :: n         !< number of cells in the current sweep
       real, dimension(:,:), intent(out), pointer :: fluxn     !< flux of neutral fluid
       real, dimension(:,:), intent(in),  pointer :: uun       !< part of u for neutral fluid
       real, dimension(:,:), intent(out), pointer :: cfrn      !< freezing speed for neutral fluid
+      real, dimension(:,:), intent(in),  pointer :: bb
+      real, dimension(:),   intent(out), pointer :: vx        !< velocity of neutral fluid for current sweep
+      real, dimension(:),   intent(in),  pointer :: cs_iso2
 
       ! locals
-      real, dimension(n) :: vx        !< velocity of neutral fluid for current sweep
       real, dimension(n) :: p         !< pressure of neutral fluid
 #ifdef LOCAL_FR_SPEED
       real               :: minvx     !<

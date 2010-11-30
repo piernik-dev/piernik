@@ -69,7 +69,7 @@ module fluxdust
 contains
 !==========================================================================================
 
-   subroutine flux_dst(fluxd,cfrd,uud,n)
+   subroutine flux_dst(fluxd,cfrd,uud,n,vx,bb,cs_iso2)
 
       use constants,  only: small
       use fluidindex, only: idn, imx, imy, imz, nvar
@@ -82,10 +82,12 @@ contains
       real, dimension(:,:), intent(out), pointer  :: fluxd   !< flux for dust
       real, dimension(:,:), intent(in),  pointer  :: uud     !< part of u for dust
       real, dimension(:,:), intent(out), pointer  :: cfrd    !< freezing speed for dust
+      real, dimension(:,:), intent(in),  pointer  :: bb      !< magnetic field
+      real, dimension(:),   intent(out), pointer  :: vx      !< velocity of dust fluid for current sweep
+      real, dimension(:),   intent(in),  pointer  :: cs_iso2 !< local isothermal sound speed (optional)
 
       ! locals
       real               :: minvx, maxvx, amp
-      real, dimension(n) :: vx                 !< velocity for current sweep
 
       fluxd   = 0.0; cfrd    = 0.0; vx      = 0.0
 

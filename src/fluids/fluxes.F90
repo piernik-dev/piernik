@@ -98,26 +98,33 @@ contains
 
       integer,                      intent(in)  :: n
       real, dimension(nvar%all,n),  intent(out), target :: flux, cfr, uu
-      real, dimension(nmag,n),      intent(in)  :: bb
-      real, dimension(n), optional, intent(in)  :: cs_iso2
-      real, dimension(n)              :: vion
+      real, dimension(nmag,n),      intent(in),  target :: bb
+      real, dimension(n), optional, intent(in),  target :: cs_iso2
 
-      real, dimension(:,:), pointer             :: pflux, pcfr, puu
-      type(component_fluid), pointer            :: pfl
+      real, dimension(nvar%fluids,n), target            :: vx
+
+      real, dimension(:,:), pointer                     :: pflux, pcfr, puu, pbb
+      real, dimension(:), pointer                       :: pcs2, pvx
+      type(component_fluid), pointer                    :: pfl
 
 #ifndef IONIZED
       integer :: dummy
 #endif /* !IONIZED */
-
-      vion(:) = 0.0
 
 #ifdef IONIZED
       pfl   => nvar%ion
       puu   =>   uu(pfl%beg:pfl%end,:)
       pcfr  =>  cfr(pfl%beg:pfl%end,:)
       pflux => flux(pfl%beg:pfl%end,:)
+      pvx   =>   vx(pfl%pos,:)
+      pbb   =>   bb(:,:)
+      if (present(cs_iso2)) then
+         pcs2  => cs_iso2(:)
+      else
+         pcs2  => null()
+      endif
 
-      call flux_ion(pflux, pcfr, puu, n, vion, bb, cs_iso2)
+      call flux_ion(pflux, pcfr, puu, n, pvx, pbb, pcs2)
 #else /* !IONIZED */
       if (.false.) dummy = size(bb)*size(cs_iso2) ! suppress compiler warnings on unused arguments
 #endif /* !IONIZED */
@@ -127,8 +134,11 @@ contains
       puu   =>   uu(pfl%beg:pfl%end,:)
       pcfr  =>  cfr(pfl%beg:pfl%end,:)
       pflux => flux(pfl%beg:pfl%end,:)
+      pvx   =>  vx(pfl%pos,:)
+      pbb   => null()
+      pcs2  => null()
 
-      call flux_neu(pflux,pcfr,puu,n)
+      call flux_neu(pflux, pcfr, puu, n, pvx, pbb, pcs2)
 #endif /* NEUTRAL */
 
 #ifdef DUST
@@ -136,15 +146,19 @@ contains
       puu   =>   uu(pfl%beg:pfl%end,:)
       pcfr  =>  cfr(pfl%beg:pfl%end,:)
       pflux => flux(pfl%beg:pfl%end,:)
+      pvx   =>  vx(pfl%pos,:)
+      pbb   => null()
+      pcs2  => null()
 
-      call flux_dst(pflux,pcfr,puu,n)
+      call flux_dst(pflux, pcfr, puu, n, pvx, pbb, pcs2)
 #endif /* DUST */
 
 #ifdef COSM_RAYS
       puu   => uu(nvar%crs%beg:nvar%crs%end,:)
       pflux => flux(nvar%crs%beg:nvar%crs%end,:)
+      pvx   => vx(nvar%ion%pos,:)
 
-      call flux_crs(pflux,vion,puu,n)
+      call flux_crs(pflux,pvx,puu,n)
 
       cfr(nvar%crs%beg:nvar%crs%end,:)  = spread(cfr(nvar%ion%iarr(1),:),1,nvar%crs%all)
 #endif /* COSM_RAYS */
