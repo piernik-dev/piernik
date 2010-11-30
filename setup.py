@@ -432,7 +432,7 @@ if (not options.nocompile):
    makecmd = "make %s -C %s" % ( makejobs, objdir)
    if( sp.call([makecmd], shell=True) != 0):
       print '\033[91m' + "It appears that '%s' crashed. Cannot continue." % makecmd + '\033[0m'
-      exit()
+      exit(1)
 
 try: os.makedirs(rundir)
 except OSError:
