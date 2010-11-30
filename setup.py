@@ -431,8 +431,7 @@ if (not options.nocompile):
       makejobs = "-j%i" % multiprocessing.cpu_count()
    makecmd = "make %s -C %s" % ( makejobs, objdir)
    if( sp.call([makecmd], shell=True) != 0):
-      print '\033[91m' + "It appears that '%s' crashed. Cannot continue." % makecmd + '\033[0m'
-      exit(1)
+      exit('\033[91m' + "It appears that '%s' crashed. Cannot continue." % makecmd + '\033[0m')
 
 try: os.makedirs(rundir)
 except OSError:
