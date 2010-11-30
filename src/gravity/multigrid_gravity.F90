@@ -119,8 +119,7 @@ contains
 
    subroutine init_multigrid_grav
 
-      use multigridvars,      only: bnd_periodic, bnd_dirichlet, bnd_isolated, bnd_invalid, correction, mg_nb, ngridvars, has_dir, XDIR, YDIR, ZDIR, &
-           &                        periodic_bnd_cnt, non_periodic_bnd_cnt
+      use multigridvars,      only: bnd_periodic, bnd_dirichlet, bnd_isolated, bnd_invalid, correction, mg_nb, ngridvars, has_dir, periodic_bnd_cnt, non_periodic_bnd_cnt
       use multipole,          only: use_point_monopole, lmax, mmax, ord_prolong_mpole, coarsen_multipole, interp_pt2mom, interp_mom2pot
       use mpisetup,           only: buffer_dim, comm, ierr, proc, ibuff, cbuff, rbuff, lbuff, &
            &                        bnd_xl_dom, bnd_xr_dom, bnd_yl_dom, bnd_yr_dom, bnd_zl_dom, bnd_zr_dom, &
@@ -335,9 +334,8 @@ contains
 
       use types,              only: grid_container
       use arrays,             only: sgp
-      use multigridvars,      only: lvl, roof, base, gb, gb_cartmap, level_gb, level_max, level_min, bnd_periodic, bnd_dirichlet, bnd_isolated, &
-           &                        is_external, has_dir, XDIR, YDIR, ZDIR, XLO, XHI, YLO, YHI, ZLO, ZHI, vcycle_stats
-      use mpisetup,           only: proc, nproc, pxsize, pysize, pzsize, bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr
+      use multigridvars,      only: lvl, roof, base, gb, level_gb, level_max, level_min, bnd_periodic, bnd_dirichlet, bnd_isolated, vcycle_stats
+      use mpisetup,           only: proc, nproc, pxsize, pysize, pzsize
       use multigridhelpers,   only: vcycle_stats_init, dirty_debug, dirtyH
       use constants,          only: pi, dpi
       use dataio_pub,         only: die, warn
