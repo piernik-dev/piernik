@@ -48,7 +48,7 @@ contains
    subroutine multigrid_add_hdf5
 
       use multigridvars, only: level_min, level_max, lvl, source, solution, hdf5levels, &
-           &                   defect, correction, XDIR, YDIR, ZDIR, NDIM, XLO, XHI, YLO, YHI, ZLO, ZHI
+           &                   defect, correction
       use list_hdf5,     only: add_lhdf5, lhdf5_info
 
       implicit none
@@ -61,37 +61,59 @@ contains
       item%p    => get_lvl
 
       do i = level_min, level_max
-         item%sz   = [ lvl(i)%nxb, lvl(i)%nyb, lvl(i)%nzb ]
-         item%ind  = [ lvl(i)%is,  lvl(i)%ie,  lvl(i)%js, lvl(i)%je, lvl(i)%ks, lvl(i)%ke ]
+         if (.not.allocated(item%ivec)) allocate(item%ivec(2))
+         if (.not.allocated(item%rvec)) allocate(item%rvec(0))
 
          write(item%key, '(A,I1)')  "mg_src", i
-         item%opti = [ i, source, 0, 0, 0 ]       !< optional integer passed to func
+         item%ivec(:) = [ i, source ]         !< optional integer passed to func
          call add_lhdf5(item)
 
          write(item%key, '(A,I1)')  "mg_sln", i
-         item%opti = [ i, solution, 0, 0, 0 ]     !< optional integer passed to func
+         item%ivec(:) = [ i, solution ]     !< optional integer passed to func
          call add_lhdf5(item)
 
          write(item%key, '(A,I1)')  "mg_def", i
-         item%opti = [ i, defect, 0, 0, 0 ]       !< optional integer passed to func
+         item%ivec(:) = [ i, defect ]       !< optional integer passed to func
          call add_lhdf5(item)
 
          write(item%key, '(A,I1)')  "mg_cor", i
-         item%opti = [ i, correction, 0, 0, 0 ]   !< optional integer passed to func
+         item%ivec(:) = [ i, correction ]   !< optional integer passed to func
          call add_lhdf5(item)
       enddo
-
-      contains
-         function get_lvl(i, sz, opti) result (outtab)
-            implicit none
-            integer, dimension(XLO:ZHI), intent(in)     :: i
-            integer, dimension(NDIM), intent(in)        :: sz
-            integer, dimension(5), intent(in)           :: opti
-            real, dimension(sz(XDIR), sz(YDIR), sz(ZDIR)) :: outtab
-            outtab(:,:,:) =  lvl(opti(1))%mgvar(i(XLO):i(XHI), i(YLO):i(YHI), i(ZLO):i(ZHI), opti(2))
-         end function get_lvl
-
    end subroutine multigrid_add_hdf5
+
+   subroutine get_lvl(ivec, rvec, outtab)
+      use dataio_pub, only: die
+      use multigridvars, only:  lvl
+      implicit none
+      integer, dimension(:), intent(in)     :: ivec
+      real,    dimension(:), intent(in)     :: rvec
+      real, dimension(:,:,:), allocatable, intent(out) :: outtab
+
+      ! locals
+      integer :: nx, ny, nz, is, ie, js, je, ks, ke, l, varnm
+
+      l     = ivec(1)
+      varnm = ivec(2)
+
+      nx = lvl(l)%nxb
+      ny = lvl(l)%nyb
+      nz = lvl(l)%nzb
+
+      is = lvl(l)%is
+      ie = lvl(l)%ie
+      js = lvl(l)%js
+      je = lvl(l)%je
+      ks = lvl(l)%ks
+      ke = lvl(l)%ke
+
+      if (allocated(outtab)) call die("[multigridio:get_lvl]: outtab already allocated")
+
+      allocate(outtab(nx,ny,nz))
+      outtab(:,:,:) =  lvl(l)%mgvar(is:ie, js:je, ks:ke, varnm)
+      return
+   end subroutine get_lvl
+
 #endif /* NEW_HDF5 */
 
 !!$ ============================================================================

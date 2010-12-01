@@ -55,21 +55,19 @@ module list_hdf5
 
 #ifdef NEW_HDF5
    type :: lhdf5_info
-      character(len=S_LEN)  :: key
-      integer, dimension(6) :: ind
-      integer, dimension(3) :: sz
-      integer, dimension(5) :: opti
-      procedure(func2) ,pointer, nopass :: p
+      character(len=S_LEN)                :: key
+      real,    dimension(:), allocatable  :: rvec
+      integer, dimension(:), allocatable  :: ivec
+      procedure(get_tab) ,pointer, nopass :: p
    end type lhdf5_info
 
    abstract interface
-      function func2(ind,sz,opti)
+      subroutine get_tab(ivec,rvec,tab)
          implicit none
-         integer, dimension(6), intent(in)    :: ind
-         integer, dimension(3), intent(in)    :: sz
-         integer, dimension(5), intent(in)    :: opti
-         real, dimension(sz(1),sz(2),sz(3))   :: func2
-      end function func2
+         integer,  dimension(:), intent(in),  allocatable :: ivec
+         real,     dimension(:), intent(in),  allocatable :: rvec
+         real, dimension(:,:,:), allocatable, intent(out) :: tab
+      end subroutine get_tab
    end interface
 
    type :: lhdf5_list
@@ -88,7 +86,7 @@ module list_hdf5
 #ifdef NEW_HDF5
       subroutine iterate_lhdf5(file_id)
          implicit none
-         integer(HID_T) :: file_id       !> File identifier
+         integer(HID_T)            :: file_id       !> File identifier
          type(lhdf5_list), pointer :: tp
          tp => lhdf5_root
          do while (associated(tp%next))
@@ -100,13 +98,12 @@ module list_hdf5
 
             subroutine get_lhdf5(tp,file_id)
                implicit none
-               integer(HID_T) :: file_id       !> File identifier
-               type(lhdf5_node), pointer :: tp
-               real, dimension(:,:,:),allocatable :: a
-               allocate(a(tp%info%sz(1),tp%info%sz(2),tp%info%sz(3)))
-               a = tp%info%p(tp%info%ind,tp%info%sz,tp%info%opti)
+               integer(HID_T)                      :: file_id       !> File identifier
+               type(lhdf5_node), pointer           :: tp
+               real, dimension(:,:,:), allocatable :: a
+               call tp%info%p(tp%info%ivec,tp%info%rvec,a)
                call write_arr(real(a,4),tp%info%key,file_id)
-               deallocate(a)
+               if (allocated(a)) deallocate(a)
                return
             end subroutine get_lhdf5
 
@@ -150,9 +147,14 @@ module list_hdf5
 
             allocate(temp)
             temp%info%key  = item%key
-            temp%info%sz   = item%sz
-            temp%info%ind  = item%ind
-            temp%info%opti = item%opti
+            if (allocated(item%ivec)) then
+               allocate(temp%info%ivec(size(item%ivec)))
+               temp%info%ivec = item%ivec
+            endif
+            if (allocated(item%rvec)) then
+               allocate(temp%info%rvec(size(item%rvec)))
+               temp%info%rvec = item%rvec
+            endif
 
             temp%info%p    => item%p
             temp%node%next => tp

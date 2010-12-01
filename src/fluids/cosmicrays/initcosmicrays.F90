@@ -303,33 +303,35 @@ contains
       integer          :: i
 
       item%p    => get_cr
-      item%sz   = [cgrid%nxb, cgrid%nyb, cgrid%nzb]
-      item%ind  = [cgrid%is, cgrid%ie, cgrid%js, cgrid%je, cgrid%ks, cgrid%ke]
+      if (.not.allocated(item%ivec)) allocate(item%ivec(10))
+      if (.not.allocated(item%rvec)) allocate(item%rvec(0))
+      item%ivec  = [cgrid%nxb, cgrid%nyb, cgrid%nzb, cgrid%is, cgrid%ie, cgrid%js, cgrid%je, cgrid%ks, cgrid%ke]
 
       do i = 1, nvar_crs
 
          write(item%key,'(A,I1)')  "ecr",i
-         item%opti = (/iarr_crs(i),0,0,0,0/)       !< optional integer passed to func
+         item%ivec(10) = iarr_crs(i)
          call add_lhdf5(item)
 
       enddo
-
-   contains
-
-      function get_cr(i,sz,opti) result (outtab)
-
-         implicit none
-
-         integer, dimension(6), intent(in)    :: i
-         integer, dimension(3), intent(in)    :: sz
-         integer, dimension(5), intent(in)    :: opti
-         real, dimension(sz(1),sz(2),sz(3))   :: outtab
-
-         outtab(:,:,:) = u(opti(1),i(1):i(2),i(3):i(4),i(5):i(6))
-
-      end function get_cr
-
    end subroutine cr_add_hdf5
+
+
+   subroutine get_cr(ivec,rvec,outtab)
+      use arrays,       only: u
+      use dataio_pub,   only: die
+      implicit none
+
+      integer, dimension(:), intent(in)  :: ivec
+      real,    dimension(:), intent(in)  :: rvec
+      real, dimension(:,:,:), allocatable, intent(out) :: outtab
+
+      if (allocated(outtab)) call die("[initcosmicrays:get_cr]: outtab already allocated")
+      allocate(outtab(ivec(1),ivec(2),ivec(3)))
+      outtab(:,:,:) = u(ivec(10),ivec(4):ivec(5),ivec(6):ivec(7),ivec(8):ivec(9))
+      return
+   end subroutine get_cr
+
 #endif /* NEW_HDF5 */
 
 end module initcosmicrays
