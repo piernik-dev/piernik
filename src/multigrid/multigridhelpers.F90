@@ -50,8 +50,8 @@ module multigridhelpers
    real               :: aux_par_R0, aux_par_R1, aux_par_R2 !< auxiliary real parameters
    integer, parameter    :: dl_len = 64                     !<
    character(len=dl_len) :: dirty_label                     !< buffer for label for check_dirty subroutine
-
-   real, parameter    :: dirtyH = 1e200, dirtyL = 1e50      !< If dirty_debug, initialize arrays with dirtyH and check if the solution contains anything above dirtyL
+   real, parameter    :: big_s =  huge(real(1.0,4))
+   real, parameter    :: dirtyH = big_s, dirtyL = sqrt(big_s) !< If dirty_debug, initialize arrays with dirtyH and check if the solution contains anything above dirtyL
 
 contains
 
