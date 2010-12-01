@@ -3,19 +3,21 @@
 # Make definitions for lothlorien (Mandriva 2009.1, x86)
 #
 # System packages:
-#   gcc 4.4.1, gcc-gfortran, gcc-cpp (from Mandriva 2010.0, with minimal set of dependencies)
 #   openmpi, libopenmpi-devel
 #   hdf5, libhdf5-devel, liblapack-devel, libfftw-devel
 #
 # User-compiled:
+#   GCC 4.5.1
+#     ./configure --prefix=/opt/gcc-4.5.1
+#     make && make install
 #   HDF5:
-#     FC=mpif90 FCFLAGS=-I/usr/include CC=mpicc ./configure --prefix=${HOME}/usr2009.1/ --enable-fortran --enable-parallel --with-szlib
+#     FC=mpif90 FCFLAGS=-I/usr/include CC=mpicc ./configure --prefix=/opt/hdf5-1.8.5-patch1 --enable-fortran --enable-parallel
 #     make && make install
 #
 
 PROG     = piernik
 F90      = h5pfc
-F90FLAGS = -O3 -funroll-loops -fdefault-real-8 -Wall -W -pedantic-errors -std=gnu -fimplicit-none -ffree-line-length-none -fbacktrace -ggdb
-#F90FLAGS += -fbounds-check -Wsurprising -Wcharacter-truncation -ffpe-trap=invalid,zero,overflow,denormal
+F90FLAGS = -O3 -funroll-loops -fdefault-real-8 -Wall -Wextra -Wno-unused-variable -W  -std=gnu -fimplicit-none -ffree-line-length-none -fbacktrace -ggdb
+#F90FLAGS += -fbounds-check -Wsurprising -Wcharacter-truncation -ffpe-trap=invalid,zero,overflow,denormal -pedantic
 USE_GNUCPP = yes
 MAKEFLAGS += -j4
