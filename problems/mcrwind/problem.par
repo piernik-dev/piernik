@@ -48,8 +48,8 @@
     bnd_xr       = 'per'
     bnd_yl       = 'per'
     bnd_yr       = 'per'
-    bnd_zl       = 'outh'
-    bnd_zr       = 'outh'
+    bnd_zl       = 'outd'
+    bnd_zr       = 'outd'
  /
 
  $DOMAIN_LIMITS

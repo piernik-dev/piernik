@@ -34,3 +34,6 @@
 
 /* numerical solutions and limitations */
 #undef SHEAR
+
+/* include multigrid for diffusion */
+#define MULTIGRID
