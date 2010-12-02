@@ -38,16 +38,16 @@ module mpisetup
    implicit none
    private
    public :: &
-    &  ARR_XY_LEFT_BND, ARR_XY_LEFT_DOM, ARR_XY_RIGHT_BND, ARR_XY_RIGHT_DOM, ARR_XZ_LEFT_BND, ARR_XZ_LEFT_DOM, ARR_XZ_RIGHT_BND, ARR_XZ_RIGHT_DOM, &
-    &  ARR_YZ_LEFT_BND, ARR_YZ_LEFT_DOM, ARR_YZ_RIGHT_BND, ARR_YZ_RIGHT_DOM, MAG_XY_LEFT_BND, MAG_XY_LEFT_DOM, MAG_XY_RIGHT_BND, MAG_XY_RIGHT_DOM, &
-    &  MAG_XZ_LEFT_BND, MAG_XZ_LEFT_DOM, MAG_XZ_RIGHT_BND, MAG_XZ_RIGHT_DOM, MAG_YZ_LEFT_BND, MAG_YZ_LEFT_DOM, MAG_YZ_RIGHT_BND, MAG_YZ_RIGHT_DOM, &
-    &  MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_IN_PLACE, MPI_LOGICAL, MPI_MAX, MPI_MIN, MPI_ORDER_FORTRAN, MPI_REQUEST_NULL, &
-    &  MPI_STATUS_SIZE, MPI_SUM, MPI_XY_LEFT_BND, MPI_XY_LEFT_DOM, MPI_XY_RIGHT_BND, MPI_XY_RIGHT_DOM, MPI_XZ_LEFT_BND, MPI_XZ_LEFT_DOM, &
-    &  MPI_XZ_RIGHT_BND, MPI_XZ_RIGHT_DOM, MPI_YZ_LEFT_BND, MPI_YZ_LEFT_DOM, MPI_YZ_RIGHT_BND, MPI_YZ_RIGHT_DOM, bnd_xl, bnd_xl_dom, bnd_xr, &
-    &  bnd_xr_dom, bnd_yl, bnd_yl_dom, bnd_yr, bnd_yr_dom, bnd_zl, bnd_zl_dom, bnd_zr, bnd_zr_dom, buffer_dim, cbuff, cbuff_len, cfl, &
-    &  cfr_smooth, cleanup_mpi, comm, comm3d, coords, dt, dt_initial, dt_max_grow, dt_min, dt_old, dtm, err, ibuff, ierr, info, init_mpi, &
-    &  integration_order, lbuff, mpifind, ndims, nproc, nstep, pcoords, proc, procxl, procxr, procxyl, procyl, procyr, procyxl, proczl, &
-    &  proczr, psize, pxsize, pysize, pzsize, rbuff, req, smalld, smallei, smallp, status, t, limiter, cflcontrol
+        & ARR_XY_LEFT_BND, ARR_XY_LEFT_DOM, ARR_XY_RIGHT_BND, ARR_XY_RIGHT_DOM, ARR_XZ_LEFT_BND, ARR_XZ_LEFT_DOM, ARR_XZ_RIGHT_BND, ARR_XZ_RIGHT_DOM, &
+        & ARR_YZ_LEFT_BND, ARR_YZ_LEFT_DOM, ARR_YZ_RIGHT_BND, ARR_YZ_RIGHT_DOM, MAG_XY_LEFT_BND, MAG_XY_LEFT_DOM, MAG_XY_RIGHT_BND, MAG_XY_RIGHT_DOM, &
+        & MAG_XZ_LEFT_BND, MAG_XZ_LEFT_DOM, MAG_XZ_RIGHT_BND, MAG_XZ_RIGHT_DOM, MAG_YZ_LEFT_BND, MAG_YZ_LEFT_DOM, MAG_YZ_RIGHT_BND, MAG_YZ_RIGHT_DOM, &
+        & MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_IN_PLACE, MPI_LOGICAL, MPI_MAX, MPI_MIN, MPI_ORDER_FORTRAN, MPI_REQUEST_NULL, &
+        & MPI_STATUS_SIZE, MPI_SUM, MPI_XY_LEFT_BND, MPI_XY_LEFT_DOM, MPI_XY_RIGHT_BND, MPI_XY_RIGHT_DOM, MPI_XZ_LEFT_BND, MPI_XZ_LEFT_DOM, &
+        & MPI_XZ_RIGHT_BND, MPI_XZ_RIGHT_DOM, MPI_YZ_LEFT_BND, MPI_YZ_LEFT_DOM, MPI_YZ_RIGHT_BND, MPI_YZ_RIGHT_DOM, bnd_xl, bnd_xl_dom, bnd_xr, &
+        & bnd_xr_dom, bnd_yl, bnd_yl_dom, bnd_yr, bnd_yr_dom, bnd_zl, bnd_zl_dom, bnd_zr, bnd_zr_dom, buffer_dim, cbuff, cbuff_len, cfl, cflcontrol, &
+        & cfr_smooth, cleanup_mpi, comm, comm3d, dt, dt_initial, dt_max_grow, dt_min, dt_old, dtm, err, ibuff, ierr, info, init_mpi, &
+        & integration_order, lbuff, limiter, mpifind, ndims, nproc, nstep, pcoords, proc, procxl, procxr, procxyl, procyl, procyr, procyxl, proczl, &
+        & proczr, psize, pxsize, pysize, pzsize, rbuff, req, smalld, smallei, smallp, status, t
 
    include 'mpif.h'
 
