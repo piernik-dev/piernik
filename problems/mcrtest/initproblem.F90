@@ -141,7 +141,7 @@ module initproblem
       use arrays,         only: b, u
       use dataio_pub,     only: msg, warn, printinfo
       use fluidindex,     only: ibx, iby, ibz, nvar
-      use grid,           only: nx, ny, nz, x, y, z, is, ie, js, je, ks, ke, nxd, nyd, nzd, Lx, Ly, Lz
+      use grid,           only: nx, ny, nz, x, y, z, is, ie, js, je, ks, ke, xdim, ydim, zdim, has_dir, Lx, Ly, Lz
       use initcosmicrays, only: iarr_crn, iarr_crs, gamma_crn, K_crn_paral, K_crn_perp
       use initionized,    only: idni, imxi, imzi, ieni, gamma_ion
       use mpisetup,       only: MPI_IN_PLACE, MPI_INTEGER, MPI_MAX, comm3d, ierr, proc
@@ -171,9 +171,9 @@ module initproblem
 
       cs_iso = sqrt(p0/d0)
 
-      if (nxd <= 1) bx0 = 0. ! ignore B field in nonexistent direction
-      if (nyd <= 1) by0 = 0.
-      if (nzd <= 1) bz0 = 0.
+      if (.not.has_dir(xdim)) bx0 = 0. ! ignore B field in nonexistent direction
+      if (.not.has_dir(ydim)) by0 = 0.
+      if (.not.has_dir(zdim)) bz0 = 0.
 
       if ((bx0**2 + by0**2 + bz0**2 == 0.) .and. (any(K_crn_paral(:) /= 0.) .or. any(K_crn_perp(:) /= 0.))) then
          call warn("[initproblem:init_prob] No magnetic field is set, K_crn_* also have to be 0.")

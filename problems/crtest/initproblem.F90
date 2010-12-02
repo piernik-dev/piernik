@@ -139,7 +139,7 @@ module initproblem
       use arrays,         only: b, u
       use dataio_pub,     only: die, warn
       use fluidindex,     only: ibx, iby, ibz
-      use grid,           only: nx, ny, nz, x, y, z, is, ie, js, je, ks, ke, nxd, nyd, nzd, xmax, ymax
+      use grid,           only: nx, ny, nz, x, y, z, is, ie, js, je, ks, ke, xdim, ydim, zdim, has_dir, xmax, ymax
       use initcosmicrays, only: gamma_crs, iarr_crs, ncrn, ncre, K_crn_paral, K_crn_perp
       use initionized,    only: idni, imxi, imzi, ieni, gamma_ion
       use types,          only: problem_customize_solution, finalize_problem
@@ -162,9 +162,9 @@ module initproblem
 
       cs_iso = sqrt(p0/d0)
 
-      if (nxd <= 1) bx0 = 0. ! ignore B field in nonexistent direction to match the analytical solution
-      if (nyd <= 1) by0 = 0.
-      if (nzd <= 1) bz0 = 0.
+      if (.not.has_dir(xdim)) bx0 = 0. ! ignore B field in nonexistent direction to match the analytical solution
+      if (.not.has_dir(ydim)) by0 = 0.
+      if (.not.has_dir(zdim)) bz0 = 0.
 
       if ((bx0**2 + by0**2 + bz0**2 == 0.) .and. (K_crn_paral(icr) /= 0. .or. K_crn_perp(icr) /= 0.)) then
          call warn("[initproblem:init_prob] No magnetic field is set, K_crn_* also have to be 0.")
