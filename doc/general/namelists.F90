@@ -15,9 +15,10 @@
 !! \copydetails initionized::init_ionized
 !! \copydetails initneutral::init_neutral
 !! \copydetails interactions::init_interactions
-!! \copydetails mpisetup::mpistart
+!! \copydetails mpisetup::init_mpi
 !! \copydetails resistivity::init_resistivity
 !! \copydetails shear::init_shear
+!! \copydetails constants::init_constants
 !<
 
 
