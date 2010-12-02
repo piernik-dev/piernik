@@ -142,9 +142,10 @@ module mpisetup
 !! \n \n
 !! <table border="+1">
 !! <tr><td width="150pt"><b>parameter</b></td><td width="135pt"><b>default value</b></td><td width="200pt"><b>possible values</b></td><td width="315pt"> <b>description</b></td></tr>
-!! <tr><td>pxsize</td><td>1</td><td>integer</td><td>\copydoc mpisetup::pxsize</td></tr>
-!! <tr><td>pysize</td><td>1</td><td>integer</td><td>\copydoc mpisetup::pysize</td></tr>
-!! <tr><td>pzsize</td><td>1</td><td>integer</td><td>\copydoc mpisetup::pzsize</td></tr>
+!! <tr><td>pxsize   </td><td>1     </td><td>integer</td><td>\copydoc mpisetup::pxsize   </td></tr>
+!! <tr><td>pysize   </td><td>1     </td><td>integer</td><td>\copydoc mpisetup::pysize   </td></tr>
+!! <tr><td>pzsize   </td><td>1     </td><td>integer</td><td>\copydoc mpisetup::pzsize   </td></tr>
+!! <tr><td>mpi_magic</td><td>.true.</td><td>logical</td><td>\copydoc mpisetup::mpi_magic</td></tr>
 !! </table>
 !! \n \n
 !! @b BOUNDARIES
@@ -167,6 +168,7 @@ module mpisetup
 !! <tr><td>smallp           </td><td>1.e-10</td><td>real value                           </td><td>\copydoc mpisetup::smallp           </td></tr>
 !! <tr><td>smalld           </td><td>1.e-10</td><td>real value                           </td><td>\copydoc mpisetup::smalld           </td></tr>
 !! <tr><td>smallei          </td><td>1.e-10</td><td>real value                           </td><td>\copydoc mpisetup::smallei          </td></tr>
+!! <tr><td>smallc           </td><td>1.e-10</td><td>real value                           </td><td>\copydoc mpisetup::smallc           </td></tr>
 !! <tr><td>integration_order</td><td>2     </td><td>1 or 2 (or 3 - currently unavailable)</td><td>\copydoc mpisetup::integration_order</td></tr>
 !! <tr><td>cfr_smooth       </td><td>0.0   </td><td>real value                           </td><td>\copydoc mpisetup::cfr_smooth       </td></tr>
 !! <tr><td>dt_initial       </td><td>-1.   </td><td>positive real value or -1.           </td><td>\copydoc mpisetup::dt_initial       </td></tr>

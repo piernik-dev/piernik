@@ -63,9 +63,10 @@ contains
 !! \n \n
 !! <table border="+1">
 !! <tr><td width="150pt"><b>parameter</b></td><td width="135pt"><b>default value</b></td><td width="200pt"><b>possible values</b></td><td width="315pt"> <b>description</b></td></tr>
-!! <tr><td>gamma_ion  </td><td>1.66666666</td><td>real value</td><td>\copydoc initionized::gamma_ion </td></tr>
-!! <tr><td>cs_iso_ion</td><td>1.0        </td><td>real value</td><td>\copydoc initionized::cs_iso_ion</td></tr>
-!! <tr><td>cs_ion     </td><td>          </td><td>real value</td><td>\copydoc initionized::cs_ion    </td></tr>
+!! <tr><td>gamma_ion     </td><td>1.66666666</td><td>real value </td><td>\copydoc initionized::gamma_ion </td></tr>
+!! <tr><td>cs_iso_ion    </td><td>1.0        </td><td>real value</td><td>\copydoc initionized::cs_iso_ion</td></tr>
+!! <tr><td>cs_ion        </td><td>           </td><td>real value</td><td>\copydoc initionized::cs_ion    </td></tr>
+!! <tr><td>selfgrav_ion  </td><td>.false.    </td><td>logical   </td><td>\copydoc initdust::selfgrav_ion </td></tr>
 !! </table>
 !! \n \n
 !<
