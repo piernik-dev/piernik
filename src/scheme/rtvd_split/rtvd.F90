@@ -487,15 +487,17 @@ module rtvd ! split orig
          end select
 
          grad_pcr(:) = 0
-         do icr = 1, 1 !nvar_crs  !<BEWARE TEMPORARY!
-            decr(:)                = -(gamma_crs(icr)-1.)*u1(iarr_crs(icr),:)*divv(:)*dt
-            u1  (iarr_crs(icr),:)  = u1(iarr_crs(icr),:) + rk2coef(integration_order,istep)*decr(:)
-            u1  (iarr_crs(icr),:)  = max(smallecr,u1(iarr_crs(icr),:))
+         if (nvar%crn%all > 0) then ! BEWARE: quick hack
+            do icr = 1, 1 !nvar_crs  !<BEWARE TEMPORARY!
+               decr(:)                = -(gamma_crs(icr)-1.)*u1(iarr_crs(icr),:)*divv(:)*dt
+               u1  (iarr_crs(icr),:)  = u1(iarr_crs(icr),:) + rk2coef(integration_order,istep)*decr(:)
+               u1  (iarr_crs(icr),:)  = max(smallecr,u1(iarr_crs(icr),:))
 
-            ecr                    = u1(iarr_crs(icr),:)
-            grad_pcr(2:n-1) = grad_pcr(2:n-1) + cr_active*(gamma_crs(icr) -1.)*(ecr(3:n)-ecr(1:n-2))/(2.*dx)
+               ecr                    = u1(iarr_crs(icr),:)
+               grad_pcr(2:n-1) = grad_pcr(2:n-1) + cr_active*(gamma_crs(icr) -1.)*(ecr(3:n)-ecr(1:n-2))/(2.*dx)
 
-         enddo
+            enddo
+         endif
          grad_pcr(1:2)   = 0.0 ; grad_pcr(n-1:n) = 0.0
 
 #ifndef ISO
