@@ -64,7 +64,7 @@ contains
 
    subroutine compute_dt(fl,cx,cy,cz,c_max,c_out,dt_out)
       use types,     only: component_fluid
-      use grid,      only: nxd, nyd, nzd, dx, dy, dz
+      use grid,      only: has_dir, xdim, ydim, zdim, dx, dy, dz
       use constants, only: big
       use mpisetup,  only: MPI_DOUBLE_PRECISION, MPI_MIN, MPI_MAX, comm, ierr, cfl
       implicit none
@@ -78,17 +78,17 @@ contains
       real :: dt_proc_y           !< timestep computed for Y direction for the current processor
       real :: dt_proc_z           !< timestep computed for Z direction for the current processor
 
-      if (nxd /= 1 .and. cx /= 0) then
+      if (has_dir(xdim) .and. cx /= 0) then
          dt_proc_x = dx/cx
       else
          dt_proc_x = big
       endif
-      if (nyd /= 1 .and. cy /= 0) then
+      if (has_dir(ydim) .and. cy /= 0) then
          dt_proc_y = dy/cy
       else
          dt_proc_y = big
       endif
-      if (nzd /= 1 .and. cz /= 0) then
+      if (has_dir(zdim) .and. cz /= 0) then
          dt_proc_z = dz/cz
       else
          dt_proc_z = big

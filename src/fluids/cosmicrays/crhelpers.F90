@@ -38,10 +38,10 @@ module crhelpers
 
    subroutine div_v(ifluid)
 
-      use fluidindex,  only: iarr_all_dn,iarr_all_mx,iarr_all_my,iarr_all_mz
-      use grid,        only: nx,ny,nz
-      use grid,        only: dx,dy,dz,nxd,nyd,nzd
-      use arrays,      only: u,divvel
+      use fluidindex,  only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
+      use grid,        only: nx, ny, nz
+      use grid,        only: dx, dy, dz, xdim, ydim, zdim, has_dir
+      use arrays,      only: u, divvel
 
       implicit none
 
@@ -58,7 +58,7 @@ module crhelpers
 
       divvel(:,:,:) = 0.0
 
-      if (nxd /= 1) then
+      if (has_dir(xdim)) then
          do k = 1, nz
             do j = 1, ny
                vx = u(imxf,:,j,k) / u(idnf,:,j,k)
@@ -68,7 +68,7 @@ module crhelpers
          divvel(1,:,:) = divvel(2,:,:); divvel(nx,:,:) = divvel(nx-1,:,:) ! for sanity
       endif
 
-      if (nyd /= 1) then
+      if (has_dir(ydim)) then
          do k = 1, nz
             do i = 1, nx
                vy = u(imyf,i,:,k) / u(idnf,i,:,k)
@@ -78,7 +78,7 @@ module crhelpers
          divvel(:,1,:) = divvel(:,2,:); divvel(:,ny,:) = divvel(:,ny-1,:) ! for sanity
       endif
 
-      if (nzd /= 1) then
+      if (has_dir(zdim)) then
          do j = 1, ny
             do i = 1, nx
                vz = u(imzf,i,j,:) / u(idnf,i,j,:)

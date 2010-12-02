@@ -51,7 +51,7 @@ contains
 !-----------------------------------------------------------------------
       use arrays,         only: b, u, wcr
       use fluidindex,     only: ibx, iby, ibz, nvar
-      use grid,           only: idx, idy, idz, nxd, nyd, nzd, nx, ny, nz, js, je, ks, ke
+      use grid,           only: idx, idy, idz, xdim, ydim, zdim, has_dir, nx, js, je, ks, ke
       use initcosmicrays, only: iarr_crs, K_crs_paral, K_crs_perp
       use mpisetup,       only: dt
 
@@ -64,7 +64,7 @@ contains
 
       !=======================================================================
 
-      if (nxd == 1) return
+      if (.not.has_dir(xdim)) return
 
       wcr(:, 1, :, :) = 0.
       wcr(:, :, :, :ks-1) = 0.
@@ -74,14 +74,14 @@ contains
 
       do k=ks,ke
          do j=js,je
-            do i=2,nx     ! if we are here this implies nxd /= 1
+            do i=2,nx     ! if we are here this implies nxb /= 1
 
                decr1 =  (u(iarr_crs,i,  j,  k) - u(iarr_crs,i-1,j,  k)) * idx
                fcrdif1 = K_crs_perp * decr1
 
                b1b =  b(ibx,i,  j,  k)
 
-               if (nyd /= 1) then
+               if (has_dir(ydim)) then
                   dqm = 0.5*((u(iarr_crs,i-1,j  ,k ) + u(iarr_crs,i ,j  ,k )) - (u(iarr_crs,i-1,j-1,k ) + u(iarr_crs,i ,j-1,k ))) * idy
                   dqp = 0.5*((u(iarr_crs,i-1,j+1,k ) + u(iarr_crs,i ,j+1,k )) - (u(iarr_crs,i-1,j  ,k ) + u(iarr_crs,i ,j  ,k ))) * idy
                   decr2 = (dqp+dqm)* (1.0 + sign(1.0, dqm*dqp))*0.25
@@ -91,7 +91,7 @@ contains
                   b2b = 0.
                endif
 
-               if (nzd /= 1) then
+               if (has_dir(zdim)) then
                   dqm = 0.5*((u(iarr_crs,i-1,j ,k  ) + u(iarr_crs,i ,j ,k  )) - (u(iarr_crs,i-1,j ,k-1) + u(iarr_crs,i ,j ,k-1))) * idz
                   dqp = 0.5*((u(iarr_crs,i-1,j ,k+1) + u(iarr_crs,i ,j ,k+1)) - (u(iarr_crs,i-1,j ,k  ) + u(iarr_crs,i ,j ,k  ))) * idz
                   decr3 = (dqp+dqm)* (1.0 + sign(1.0, dqm*dqp))*0.25
@@ -124,7 +124,7 @@ contains
 !-----------------------------------------------------------------------
       use arrays,         only: b, u, wcr
       use fluidindex,     only: ibx, iby, ibz, nvar
-      use grid,           only: idx, idy, idz, nxd, nyd, nzd, nx, ny, nz, is, ie, ks, ke
+      use grid,           only: idx, idy, idz, xdim, ydim, zdim, has_dir, ny, is, ie, ks, ke
       use initcosmicrays, only: iarr_crs, K_crs_paral, K_crs_perp
       use mpisetup,       only: dt
 
@@ -137,7 +137,7 @@ contains
 
 !=======================================================================
 
-      if (nyd == 1) return
+      if (.not.has_dir(ydim)) return
 
       wcr(:, :, 1, :) = 0.
       wcr(:, :is-1, :, :) = 0.
@@ -146,7 +146,7 @@ contains
       wcr(:, :, :, ke+1:) = 0.
 
       do k=ks,ke
-         do j=2,ny ! if we are here nyd /= 1
+         do j=2,ny ! if we are here nyb /= 1
             do i=is,ie
 
                decr2 = (u(iarr_crs,i,j,k) - u(iarr_crs,i,j-1,k)) * idy
@@ -154,7 +154,7 @@ contains
 
                b2b =  b(iby,i,j,k)
 
-               if (nxd /= 1) then
+               if (has_dir(xdim)) then
                   dqm = 0.5*((u(iarr_crs,i  ,j-1,k ) + u(iarr_crs,i  ,j  ,k )) - (u(iarr_crs,i-1,j-1,k ) + u(iarr_crs,i-1,j  ,k ))) * idx
                   dqp = 0.5*((u(iarr_crs,i+1,j-1,k ) + u(iarr_crs,i+1,j  ,k )) - (u(iarr_crs,i  ,j-1,k ) + u(iarr_crs,i  ,j  ,k ))) * idx
                   decr1 = (dqp+dqm)* (1.0 + sign(1.0, dqm*dqp))*0.25
@@ -164,7 +164,7 @@ contains
                   b1b = 0.
                endif
 
-               if (nzd /= 1) then
+               if (has_dir(zdim)) then
                   dqm = 0.5*((u(iarr_crs,i ,j-1,k  ) + u(iarr_crs,i ,j  ,k  )) - (u(iarr_crs,i ,j-1,k-1) + u(iarr_crs,i ,j  ,k-1))) * idz
                   dqp = 0.5*((u(iarr_crs,i ,j-1,k+1) + u(iarr_crs,i ,j  ,k+1)) - (u(iarr_crs,i ,j-1,k  ) + u(iarr_crs,i ,j  ,k  ))) * idz
                   decr3 = (dqp+dqm)* (1.0 + sign(1.0, dqm*dqp))*0.25
@@ -197,7 +197,7 @@ contains
 !-----------------------------------------------------------------------
       use arrays,         only: b, u, wcr
       use fluidindex,     only: ibx, iby, ibz, nvar
-      use grid,           only: idx, idy, idz, nxd, nyd, nzd, nx, ny, nz, is, ie, js, je
+      use grid,           only: idx, idy, idz, xdim, ydim, zdim, has_dir, nz, is, ie, js, je
       use initcosmicrays, only: iarr_crs, K_crs_paral, K_crs_perp
       use mpisetup,       only: dt
 
@@ -210,7 +210,7 @@ contains
 
 !=======================================================================
 
-      if (nzd == 1) return
+      if (.not.has_dir(zdim)) return
 
       wcr(:, :, :, 1) = 0.
       wcr(:, :is-1, :, :) = 0.
@@ -218,7 +218,7 @@ contains
       wcr(:, :, :js-1, :) = 0.
       wcr(:, :, je+1:, :) = 0.
 
-      do k=2,nz      ! nzd /= 1
+      do k=2,nz      ! nzb /= 1
          do j=js,je
             do i=is,ie
 
@@ -227,7 +227,7 @@ contains
 
                b3b =  b(ibz,i,j,k)
 
-               if (nxd /= 1) then
+               if (has_dir(xdim)) then
                   dqm = 0.5*((u(iarr_crs,i  ,j ,k-1) + u(iarr_crs,i  ,j  ,k )) - (u(iarr_crs,i-1,j ,k-1) + u(iarr_crs,i-1,j  ,k ))) * idx
                   dqp = 0.5*((u(iarr_crs,i+1,j ,k-1) + u(iarr_crs,i+1,j  ,k )) - (u(iarr_crs,i  ,j ,k-1) + u(iarr_crs,i  ,j  ,k ))) * idx
                   decr1 = (dqp+dqm)* (1.0 + sign(1.0, dqm*dqp))*0.25
@@ -237,7 +237,7 @@ contains
                   b1b = 0.
                endif
 
-               if (nyd /= 1) then
+               if (has_dir(ydim)) then
                   dqm = 0.5*((u(iarr_crs,i ,j  ,k-1) + u(iarr_crs,i  ,j  ,k )) - (u(iarr_crs,i ,j-1,k-1) + u(iarr_crs,i  ,j-1,k ))) * idy
                   dqp = 0.5*((u(iarr_crs,i ,j+1,k-1) + u(iarr_crs,i  ,j+1,k )) - (u(iarr_crs,i ,j  ,k-1) + u(iarr_crs,i  ,j  ,k ))) * idy
                   decr2 = (dqp+dqm)* (1.0 + sign(1.0, dqm*dqp))*0.25

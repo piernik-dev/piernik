@@ -311,7 +311,7 @@ module gravity
 
       use arrays,        only: sgp
       use dataio_pub,    only: die
-      use grid,          only: nb, nxb, nyb, nzb, nxd, nyd, nzd
+      use grid,          only: nb, nxb, nyb, nzb, xdim, ydim, zdim, has_dir
       use mpisetup,      only: comm3d, ierr, MPI_STATUS_SIZE, MPI_REQUEST_NULL, &
            &                   procxl, procxr, procyl, procyr, proczl, proczr, proc, pxsize, pysize, pzsize, &
            &                   bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr, &
@@ -328,7 +328,7 @@ module gravity
 
       req3d(:) = MPI_REQUEST_NULL
 
-      if (nxd /= 1) then
+      if (has_dir(xdim)) then
 
          select case (bnd_xl)
             case ('per')
@@ -372,7 +372,7 @@ module gravity
 
       endif
 
-      if (nyd /= 1) then
+      if (has_dir(ydim)) then
 
          select case (bnd_yl)
             case ('per')
@@ -412,7 +412,7 @@ module gravity
 
       endif
 
-      if (nzd /= 1) then
+      if (has_dir(zdim)) then
 
          select case (bnd_zl)
             case ('per')
