@@ -73,7 +73,7 @@ module snsources
       use dataio_pub,     only: ierrh, par_file, namelist_errh, compare_namelist                  ! QA_WARN required for diff_nml
       use mpisetup,       only: rbuff, buffer_dim, comm, ierr, proc, MPI_DOUBLE_PRECISION
       use initcosmicrays, only: cr_eff
-      use grid,           only: xmin, xmax, ymin, ymax, nxd, nyd
+      use grid,           only: xmin, xmax, ymin, ymax, xdim, ydim, has_dir
       implicit none
 
 !      amp_ecr_sn = 0.0    ! ToDo: set sane default values
@@ -102,13 +102,13 @@ module snsources
 
       amp_ecr_sn = 4.96e6*cr_eff/r_sn**3
 
-      if (nxd /=1) then
+      if (has_dir(xdim)) then
          f_sn = f_sn_kpc2 * (xmax-xmin)/1000.0
       else
          f_sn = f_sn_kpc2 * 2.0*r_sn/1000.0
       endif
 
-      if (nyd /=1) then
+      if (has_dir(ydim)) then
          f_sn = f_sn * (ymax-ymin)/1000.0
       else
          f_sn = f_sn * 2.0*r_sn/1000.0

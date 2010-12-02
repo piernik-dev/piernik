@@ -898,13 +898,13 @@ contains
 
    subroutine all_mag_boundaries
 
-      use grid, only: nxd, nyd, nzd
+      use grid, only: has_dir, xdim, ydim, zdim
 
       implicit none
 
-      if (nxd /= 1) call bnd_b("xdim")
-      if (nyd /= 1) call bnd_b("ydim")
-      if (nzd /= 1) call bnd_b("zdim")
+      if (has_dir(xdim)) call bnd_b("xdim")
+      if (has_dir(ydim)) call bnd_b("ydim")
+      if (has_dir(zdim)) call bnd_b("zdim")
 
    end subroutine all_mag_boundaries
 
