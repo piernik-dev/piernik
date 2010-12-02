@@ -215,9 +215,9 @@ module snsources
 !! \return pos @e real,  @e dimension(3), array of supernova position components
 !<
    subroutine rand_coords(pos)
-      use grid,   only: Lx, Ly, xmin, ymin, nzd
+      use grid,   only: Lx, Ly, xmin, ymin, zdim, has_dir
 #ifdef SHEAR
-      use grid,   only: dy, nyd, nzd, y, js, je
+      use grid,   only: dy, nyd, y, js, je
       use shear,  only: delj, eps
       implicit none
       integer :: jsn,jremap
@@ -232,7 +232,7 @@ module snsources
       xsn = xmin+ Lx*rand(1)
       ysn = ymin+ Ly*rand(2)
 
-      if (nzd /= 1) then
+      if (has_dir(zdim)) then
          irand = irand+4
          znorm = gasdev(rand(3),rand(4))
          zsn = h_sn*znorm
