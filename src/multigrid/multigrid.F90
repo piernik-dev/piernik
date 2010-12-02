@@ -230,9 +230,9 @@ contains
 
       !! Initialization of all regular levels (all but global base)
       !! Following loop gives us:
-      !!    * SHAPE (lvl(level_max  )) = (nxb  , nyb  , nzd  ) + (2*nb, 2*nb, 2*nb)
-      !!    * SHAPE (lvl(level_max-1)) = (nxb/2, nyb/2, nzd/2) + (2*nb, 2*nb, 2*nb)
-      !!    * SHAPE (lvl(level_max-2)) = (nxb/4, nyb/4, nzd/4) + (2*nb, 2*nb, 2*nb)
+      !!    * SHAPE (lvl(level_max  )) = (nxb  , nyb  , nzb  ) + (2*nb, 2*nb, 2*nb)
+      !!    * SHAPE (lvl(level_max-1)) = (nxb/2, nyb/2, nzb/2) + (2*nb, 2*nb, 2*nb)
+      !!    * SHAPE (lvl(level_max-2)) = (nxb/4, nyb/4, nzb/4) + (2*nb, 2*nb, 2*nb)
       !!    * ...
       !!    * SHAPE (lvl(1)) = (nxb/2**(level_max-1)0, nyb/2**(level_max-1), nzd/2**(level_max-1)) + (2*nb, 2*nb, 2*nb)
       do idx = level_max, level_min, -1

@@ -120,7 +120,6 @@ module grid
       cgrid%dxmn = minval([dx,dy,dz])
       cgrid%dvol = dx*dy*dz
       cgrid%nb = nb
-      cgrid%nxd = nxd; cgrid%nyd = nyd; cgrid%nzd = nzd
       cgrid%nx = nx; cgrid%ny = ny; cgrid%nz = nz
       cgrid%nxb = nxb; cgrid%nyb = nyb; cgrid%nzb = nzb
       cgrid%nxt = nxt; cgrid%nyt = nyt; cgrid%nzt = nzt

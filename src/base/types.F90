@@ -69,8 +69,7 @@ module types
 
    type :: grid_container
       real    :: dx, dy, dz, dxmn, dvol
-      integer :: nxd, nyd, nzd, nb
-      integer :: nx, ny, nz
+      integer :: nb, nx, ny, nz
       integer :: nxb, nyb, nzb
       integer :: nxt, nyt, nzt
       integer :: is, ie, js, je, ks, ke
