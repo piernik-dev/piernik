@@ -73,7 +73,7 @@ program piernik
 
    do while (t < tend .and. nstep < nend .and. .not.(end_sim) .and. time_left() ) ! main loop
 
-      call time_step
+      call time_step(dt)
 
       if (first_step) then
          ts  = 0.0

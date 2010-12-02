@@ -38,11 +38,11 @@ module timestep
 
    contains
 
-      subroutine time_step
+      subroutine time_step(dt)
 
          use dataio,               only: write_crashed
          use dataio_pub,           only: tend, msg, warn
-         use mpisetup,             only: t, dt, dt_old, dt_max_grow, dt_initial, dt_min, nstep, proc
+         use mpisetup,             only: t, dt_old, dt_max_grow, dt_initial, dt_min, nstep, proc
 #ifdef IONIZED
          use timestepionized,      only: timestep_ion, dt_ion, c_ion
 #endif /* IONIZED */
@@ -63,6 +63,7 @@ module timestep
 #endif /* FLUID_INTERACTIONS */
 
          implicit none
+         real, intent(inout) :: dt
 ! Timestep computation
 
          dt_old = dt
@@ -117,7 +118,7 @@ module timestep
             endif
             call write_crashed("[timestep:time_step] dt < dt_min")
          endif
-
+         return
       end subroutine time_step
 !------------------------------------------------------------------------------------------
 
