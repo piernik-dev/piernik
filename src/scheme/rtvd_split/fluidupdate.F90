@@ -75,7 +75,7 @@ contains
       use types,           only: problem_customize_solution
 #ifdef SHEAR
       use fluidboundaries, only: bnd_u
-      use grid,            only: nxd, nyd
+      use grid,            only: xdim, ydim, has_dir
       use mpisetup,        only: t, dt
       use shear,           only: yshift
 #endif /* SHEAR */
@@ -97,9 +97,9 @@ contains
       integer :: s
 
 #ifdef SHEAR
-      if (nyd /= 1) call yshift(t, dt)
-      if (nxd /= 1) call bnd_u('xdim')
-      if (nyd /= 1) call bnd_u('ydim')
+      if (has_dir(ydim)) call yshift(t, dt)
+      if (has_dir(xdim)) call bnd_u('xdim')
+      if (has_dir(ydim)) call bnd_u('ydim')
 #endif /* SHEAR */
 
 #ifdef GRAV
@@ -136,7 +136,7 @@ contains
    subroutine make_sweep(dir, forward)
 
       use dataio_pub,     only: msg, die
-      use grid,           only: nxd, nyd, nzd
+      use grid,           only: xdim, ydim, zdim, has_dir
       use sweeps,         only: sweepx, sweepy, sweepz
       use timestep,       only: cfl_manager
 #if defined SHEAR && defined FLUID_INTERACTIONS
@@ -163,7 +163,7 @@ contains
       select case (dir)
 
          case (DIR_X)
-            if (nxd /= 1) then
+            if (has_dir(xdim)) then
                if (.not. forward) then
 #ifdef COSM_RAYS
                   if (use_split) call cr_diff_x
@@ -186,7 +186,7 @@ contains
             endif
 
          case (DIR_Y)
-            if (nyd /= 1) then
+            if (has_dir(ydim)) then
                if (.not. forward) then
 #ifdef COSM_RAYS
                   if (use_split) call cr_diff_y
@@ -212,7 +212,7 @@ contains
             endif
 
          case (DIR_Z)
-            if (nzd /= 1) then
+            if (has_dir(zdim)) then
                if (.not. forward) then
 #ifdef COSM_RAYS
                   if (use_split) call cr_diff_z

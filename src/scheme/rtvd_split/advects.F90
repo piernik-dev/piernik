@@ -40,7 +40,7 @@ contains
 
     use arrays,        only: b, u, wa
     use fluidindex,    only: iby, nvar
-    use grid,          only: idx, nx, ny, nz, nxd, nyd, nzd
+    use grid,          only: idx, nx, ny, xdim, ydim, zdim, has_dir, ks, ke
     use magboundaries, only: bnd_emf
     use mpisetup,      only: dt
     use rtvd,          only: tvdb
@@ -51,7 +51,7 @@ contains
 
     vxby = 0.0
 
-    if (nyd /= 1) then
+    if (has_dir(ydim)) then
         j_s = 2
         j_e = ny
     else
@@ -59,8 +59,8 @@ contains
         j_e = 1
     endif
 
-    do k=1,nz
-      do j=j_s,j_e         ! nyd is /= 1 in by_x
+    do k = ks, ke
+      do j = j_s, j_e         ! nyb is /= 1 in by_x
         jm=j-1
         vx=0.0
         if (jm == 0) then
@@ -79,16 +79,16 @@ contains
       enddo
     enddo
 
-    if (nxd /= 1) call bnd_emf(wa, 'vxby', 'xdim')
-    if (nyd /= 1) call bnd_emf(wa, 'vxby', 'ydim')
-    if (nzd /= 1) call bnd_emf(wa, 'vxby', 'zdim')
+    if (has_dir(xdim)) call bnd_emf(wa, 'vxby', 'xdim')
+    if (has_dir(ydim)) call bnd_emf(wa, 'vxby', 'ydim')
+    if (has_dir(zdim)) call bnd_emf(wa, 'vxby', 'zdim')
 
   end subroutine advectby_x
 
   subroutine advectbz_x
     use arrays,        only: b, u, wa
     use fluidindex,    only: ibz, nvar
-    use grid,          only: idx, nx, ny, nz, nxd, nyd, nzd, js, je
+    use grid,          only: idx, nx, nz, xdim, ydim, zdim, has_dir, js, je
     use magboundaries, only: bnd_emf
     use mpisetup,      only: dt
     use rtvd,          only: tvdb
@@ -99,7 +99,7 @@ contains
 
     vxbz = 0.0
 
-    if (nzd /= 1) then
+    if (has_dir(zdim)) then
         k_s = 2
         k_e = nz
     else
@@ -127,16 +127,16 @@ contains
       enddo
     enddo
 
-    if (nxd /= 1) call bnd_emf(wa, 'vxbz', 'xdim')
-    if (nyd /= 1) call bnd_emf(wa, 'vxbz', 'ydim')
-    if (nzd /= 1) call bnd_emf(wa, 'vxbz', 'zdim')
+    if (has_dir(xdim)) call bnd_emf(wa, 'vxbz', 'xdim')
+    if (has_dir(ydim)) call bnd_emf(wa, 'vxbz', 'ydim')
+    if (has_dir(zdim)) call bnd_emf(wa, 'vxbz', 'zdim')
 
   end subroutine advectbz_x
 
   subroutine advectbz_y
     use arrays,        only: b, u, wa
     use fluidindex,    only: ibz, nvar
-    use grid,          only: idy, nx, ny, nz, is, ie, nxd, nyd, nzd
+    use grid,          only: idy, ny, nz, is, ie, xdim, ydim, zdim, has_dir
     use magboundaries, only: bnd_emf
     use mpisetup,      only: dt
     use rtvd,          only: tvdb
@@ -146,7 +146,7 @@ contains
     integer             :: i, k, km, k_s, k_e
 
     vybz = 0.0
-    if (nzd /= 1) then
+    if (has_dir(zdim)) then
         k_s = 2
         k_e = nz
     else
@@ -174,16 +174,16 @@ contains
       enddo
     enddo
 
-    if (nyd /= 1) call bnd_emf(wa, 'vybz', 'ydim')
-    if (nzd /= 1) call bnd_emf(wa, 'vybz', 'zdim')
-    if (nxd /= 1) call bnd_emf(wa, 'vybz', 'xdim')
+    if (has_dir(ydim)) call bnd_emf(wa, 'vybz', 'ydim')
+    if (has_dir(zdim)) call bnd_emf(wa, 'vybz', 'zdim')
+    if (has_dir(xdim)) call bnd_emf(wa, 'vybz', 'xdim')
 
   end subroutine advectbz_y
 
   subroutine advectbx_y
     use arrays,        only: b, u, wa
     use fluidindex,    only: ibx, nvar
-    use grid,          only: idy, nx, ny, nz, nxd, nzd, nyd, ks, ke
+    use grid,          only: idy, nx, ny, xdim, ydim, zdim, has_dir, ks, ke
     use magboundaries, only: bnd_emf
     use mpisetup,      only: dt
     use rtvd,          only: tvdb
@@ -194,7 +194,7 @@ contains
 
     vybx = 0.0
 
-    if (nxd /= 1) then
+    if (has_dir(xdim)) then
         i_s = 2
         i_e = nx
     else
@@ -222,16 +222,16 @@ contains
       enddo
     enddo
 
-    if (nyd /= 1) call bnd_emf(wa, 'vybx', 'ydim')
-    if (nzd /= 1) call bnd_emf(wa, 'vybx', 'zdim')
-    if (nxd /= 1) call bnd_emf(wa, 'vybx', 'xdim')
+    if (has_dir(ydim)) call bnd_emf(wa, 'vybx', 'ydim')
+    if (has_dir(zdim)) call bnd_emf(wa, 'vybx', 'zdim')
+    if (has_dir(xdim)) call bnd_emf(wa, 'vybx', 'xdim')
 
   end subroutine advectbx_y
 
   subroutine advectbx_z
     use arrays,        only: b, u, wa
     use fluidindex,    only: ibx, nvar
-    use grid,          only: idz, nx, ny, nz, nxd, nzd, nyd, js, je
+    use grid,          only: idz, nx, nz, xdim, ydim, zdim, has_dir, js, je
     use magboundaries, only: bnd_emf
     use mpisetup,      only: dt
     use rtvd,          only: tvdb
@@ -242,7 +242,7 @@ contains
 
     vzbx = 0.0
 
-    if (nxd /= 1) then
+    if (has_dir(xdim)) then
         i_s = 2
         i_e = nx
     else
@@ -269,16 +269,16 @@ contains
       enddo
     enddo
 
-    if (nzd /= 1) call bnd_emf(wa, 'vzbx', 'zdim')
-    if (nxd /= 1) call bnd_emf(wa, 'vzbx', 'xdim')
-    if (nyd /= 1) call bnd_emf(wa, 'vzbx', 'ydim')
+    if (has_dir(zdim)) call bnd_emf(wa, 'vzbx', 'zdim')
+    if (has_dir(xdim)) call bnd_emf(wa, 'vzbx', 'xdim')
+    if (has_dir(ydim)) call bnd_emf(wa, 'vzbx', 'ydim')
 
   end subroutine advectbx_z
 
   subroutine advectby_z
     use arrays,        only: b, u, wa
     use fluidindex,    only: iby, nvar
-    use grid,          only: idz, nx, ny, nz, nzd, nyd, nxd, ie, is
+    use grid,          only: idz, ny, nz, xdim, ydim, zdim, has_dir, ie, is
     use magboundaries, only: bnd_emf
     use mpisetup,      only: dt
     use rtvd,          only: tvdb
@@ -288,7 +288,7 @@ contains
     integer             :: i, j, jm, j_s, j_e
 
     vzby = 0.0
-    if (nyd /= 1) then
+    if (has_dir(ydim)) then
         j_s = 2
         j_e = ny
     else
@@ -316,9 +316,9 @@ contains
       enddo
     enddo
 
-    if (nzd /= 1) call bnd_emf(wa, 'vzby', 'zdim')
-    if (nxd /= 1) call bnd_emf(wa, 'vzby', 'xdim')
-    if (nyd /= 1) call bnd_emf(wa, 'vzby', 'ydim')
+    if (has_dir(zdim)) call bnd_emf(wa, 'vzby', 'zdim')
+    if (has_dir(xdim)) call bnd_emf(wa, 'vzby', 'xdim')
+    if (has_dir(ydim)) call bnd_emf(wa, 'vzby', 'ydim')
 
   end subroutine advectby_z
 
