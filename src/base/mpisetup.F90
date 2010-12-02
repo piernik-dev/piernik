@@ -47,7 +47,7 @@ module mpisetup
     &  bnd_xr_dom, bnd_yl, bnd_yl_dom, bnd_yr, bnd_yr_dom, bnd_zl, bnd_zl_dom, bnd_zr, bnd_zr_dom, buffer_dim, cbuff, cbuff_len, cfl, &
     &  cfr_smooth, cleanup_mpi, comm, comm3d, coords, dt, dt_initial, dt_max_grow, dt_min, dt_old, dtm, err, ibuff, ierr, info, init_mpi, &
     &  integration_order, lbuff, mpifind, ndims, nproc, nstep, pcoords, proc, procxl, procxr, procxyl, procyl, procyr, procyxl, proczl, &
-    &  proczr, psize, pxsize, pysize, pzsize, rbuff, req, smalld, smallei, smallp, status, t, limiter
+    &  proczr, psize, pxsize, pysize, pzsize, rbuff, req, smalld, smallei, smallp, status, t, limiter, cflcontrol
 
    include 'mpif.h'
 
@@ -102,8 +102,9 @@ module mpisetup
    real    :: cfr_smooth
    integer :: integration_order
    character(len=cbuff_len) :: limiter !< type of flux limiter
+   character(len=cbuff_len) :: cflcontrol !< type of cfl control just before each sweep (possibilities: 'none', 'main', 'user')
 
-   namelist /NUMERICAL_SETUP/  cfl, smalld, smallei, integration_order, cfr_smooth, dt_initial, dt_max_grow, dt_min, smallc, smallp, limiter
+   namelist /NUMERICAL_SETUP/  cfl, smalld, smallei, integration_order, cfr_smooth, dt_initial, dt_max_grow, dt_min, smallc, smallp, limiter, cflcontrol
 
    integer, dimension(3) :: domsize   !< local copy of nxd, nyd, nzd which can be used before init_grid()
 
@@ -276,7 +277,8 @@ module mpisetup
          ! Provide backward compatibility for choosing limiter via preprocessor flag
          ! ToDo: Remove it when all problems are fixed
 
-         limiter = 'vanleer'
+         limiter     = 'vanleer'
+         cflcontrol  = ''
 
          cfl         = 0.7
          cfr_smooth  = 0.0
@@ -310,6 +312,7 @@ module mpisetup
             cbuff(5) = bnd_zl
             cbuff(6) = bnd_zr
             cbuff(7) = limiter
+            cbuff(8) = cflcontrol
 
             ibuff(1) = pxsize
             ibuff(2) = pysize
@@ -353,13 +356,14 @@ module mpisetup
             dt_max_grow = rbuff(6)
             dt_min      = rbuff(7)
 
-            bnd_xl  = cbuff(1)(1:4)
-            bnd_xr  = cbuff(2)(1:4)
-            bnd_yl  = cbuff(3)(1:4)
-            bnd_yr  = cbuff(4)(1:4)
-            bnd_zl  = cbuff(5)(1:4)
-            bnd_zr  = cbuff(6)(1:4)
-            limiter = cbuff(7)
+            bnd_xl     = cbuff(1)(1:4)
+            bnd_xr     = cbuff(2)(1:4)
+            bnd_yl     = cbuff(3)(1:4)
+            bnd_yr     = cbuff(4)(1:4)
+            bnd_zl     = cbuff(5)(1:4)
+            bnd_zr     = cbuff(6)(1:4)
+            limiter    = cbuff(7)
+            cflcontrol = cbuff(8)
 
             pxsize = ibuff(1)
             pysize = ibuff(2)

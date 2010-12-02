@@ -32,9 +32,10 @@ module timestep
    implicit none
 
    private
-   public :: time_step, c_all
+   public :: time_step, c_all, cfl_manager
 
    real :: c_all
+   procedure(), pointer :: cfl_manager => null()
 
    contains
 
@@ -42,7 +43,7 @@ module timestep
 
          use dataio,               only: write_crashed
          use dataio_pub,           only: tend, msg, warn
-         use mpisetup,             only: t, dt_old, dt_max_grow, dt_initial, dt_min, nstep, proc
+         use mpisetup,             only: t, dt_old, dt_max_grow, dt_initial, dt_min, nstep, proc, cflcontrol
 #ifdef IONIZED
          use timestepionized,      only: timestep_ion, dt_ion, c_ion
 #endif /* IONIZED */
@@ -65,6 +66,8 @@ module timestep
          implicit none
          real, intent(inout) :: dt
 ! Timestep computation
+
+         if (cflcontrol == 'main' .and. .not.associated(cfl_manager)) cfl_manager => cfl_control
 
          dt_old = dt
 
@@ -121,5 +124,26 @@ module timestep
          return
       end subroutine time_step
 !------------------------------------------------------------------------------------------
+   subroutine cfl_control
+      use dataio_pub, only: msg, printinfo, warn
+      use mpisetup,   only: cfl, dt
+      implicit none
+      real :: dtnow, stepcfl, c_all_main
+      c_all_main = c_all
+      call time_step(dtnow)
+! CFL criterion violated if c_sweep * dt_main >= dx (dx = c_all_main * dt_main / cfl)
+      if (c_all >= c_all_main / cfl) then
+         write(msg,'(a48)') "[timestep:cflcontrol] CFL criterion is violated!"
+         call warn(msg)
+      endif
+      stepcfl    =  dtnow/dt*cfl
+      write(msg,'(a32,f6.4)') "[timestep:cflcontrol] stepcfl = ",stepcfl
+      if (stepcfl < cfl) then
+         call warn(msg)
+      else
+         call printinfo(msg)
+      endif
+      c_all      = c_all_main
+   end subroutine cfl_control
 
 end module timestep
