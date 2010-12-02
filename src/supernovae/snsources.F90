@@ -217,7 +217,7 @@ module snsources
    subroutine rand_coords(pos)
       use grid,   only: Lx, Ly, xmin, ymin, zdim, has_dir
 #ifdef SHEAR
-      use grid,   only: dy, nyd, y, js, je
+      use grid,   only: dy, nyb, y, js, je
       use shear,  only: delj, eps
       implicit none
       integer :: jsn,jremap
@@ -249,15 +249,15 @@ module snsources
 
 !  outer boundary
       jremap = jsn - delj
-      jremap = mod(mod(jremap, nyd)+nyd,nyd)
-      if (jremap <= (js-1)) jremap = jremap + nyd
+      jremap = mod(mod(jremap, nyb)+nyb,nyb)
+      if (jremap <= (js-1)) jremap = jremap + nyb
 
       ysno = y(jremap) + epso + dysn
 
 !  inner boundary
       jremap = jsn + delj
-      jremap = mod(jremap, nyd)+nyd
-      if (jremap >= (je+1)) jremap = jremap - nyd
+      jremap = mod(jremap, nyb)+nyb
+      if (jremap >= (je+1)) jremap = jremap - nyb
 
       ysni = y(jremap) + epsi + dysn
 #else /* !SHEAR */
