@@ -41,8 +41,8 @@ module grid
 
    private ! :: nxd, nyd, nzd ! ToDo: replace references to n[xyz]d by has_dir(:) or something
    public :: &
-        & Lx, Ly, cleanup_grid, dl, dvol, dx, dxmn, dy, dz, has_dir, idl, idx, idy, idz, ie, init_grid, is, je, js, ke, ks, maxxyz, nb, nx, &
-        & nxb, nxd, ny, nyb, nyd, nz, nzb, nzd, nzt, x, xdim, xmax, xmin, xr, y, ydim, ymax, ymin, yr, z, zdim, zl, zmax, zmin, zr
+        & Lx, Ly, Lz, cleanup_grid, dl, dvol, dx, dxmn, dy, dz, has_dir, idl, idx, idy, idz, ie, init_grid, is, je, js, ke, ks, maxxyz, nb, nx, &
+        & nxb, nxd, ny, nyb, nyd, nz, nzb, nzd, nzt, x, xdim, xl, xmax, xmin, xr, y, ydim, yl, ymax, ymin, yr, z, zdim, zl, zmax, zmin, zr
 
    real    :: dx                             !< length of the %grid cell in x-direction
    real    :: dy                             !< length of the %grid cell in y-direction
