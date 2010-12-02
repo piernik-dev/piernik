@@ -68,9 +68,9 @@ module fluxes
          real, dimension(:,:), intent(out), pointer :: flux      !< flux of fluid
          real, dimension(:,:), intent(in),  pointer :: uu        !< part of u for fluid
          real, dimension(:,:), intent(out), pointer :: cfr       !< freezing speed for fluid
-         real, dimension(:,:), intent(in),  pointer :: bb
+         real, dimension(:,:), intent(in),  pointer :: bb        !< magnetic field x,y,z-components table
          real, dimension(:),   intent(out), pointer :: vx        !< velocity of fluid for current sweep
-         real, dimension(:),   intent(in),  pointer :: cs_iso2
+         real, dimension(:),   intent(in),  pointer :: cs_iso2   !< isothermal sound speed squared
       end subroutine flux_interface
    end interface
 
@@ -126,6 +126,7 @@ contains
 !! \param uu currently used fluid table
 !! \param bb magnetic field x,y,z-components table
 !! \param n number of cells in the current sweep
+!! \param cs_iso2 isothermal sound speed squared
 !<
    subroutine all_fluxes(n, flux, cfr, uu, bb, cs_iso2)
       use types,          only: component_fluid

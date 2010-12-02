@@ -84,7 +84,7 @@ contains
       real, dimension(:,:), intent(in),  pointer :: uui         !< part of u for ionized fluid
       real, dimension(:,:), intent(out), pointer :: fluxi       !< flux of ionized fluid
       real, dimension(:,:), intent(out), pointer :: cfri        !< freezing speed for ionized fluid
-      real, dimension(:,:), intent(in),  pointer :: bb          !< magnetic field
+      real, dimension(:,:), intent(in),  pointer :: bb          !< \copydoc fluxes::interface::flux_interface::bb
       real, dimension(:),   intent(out), pointer :: vx          !< velocity of ionized fluid for current sweep
       real, dimension(:),   intent(in),  pointer :: cs_iso2     !< local isothermal sound speed (optional)
 

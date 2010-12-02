@@ -84,9 +84,9 @@ contains
       real, dimension(:,:), intent(out), pointer :: fluxn     !< flux of neutral fluid
       real, dimension(:,:), intent(in),  pointer :: uun       !< part of u for neutral fluid
       real, dimension(:,:), intent(out), pointer :: cfrn      !< freezing speed for neutral fluid
-      real, dimension(:,:), intent(in),  pointer :: bb
+      real, dimension(:,:), intent(in),  pointer :: bb        !< \copydoc fluxes::interface::flux_interface::bb
       real, dimension(:),   intent(out), pointer :: vx        !< velocity of neutral fluid for current sweep
-      real, dimension(:),   intent(in),  pointer :: cs_iso2
+      real, dimension(:),   intent(in),  pointer :: cs_iso2   !< \copydoc fluxes::interface::flux_interface::cs_iso2
 
       ! locals
       real, dimension(n) :: p         !< pressure of neutral fluid

@@ -128,7 +128,7 @@ contains
 !>
 !! \brief Subroutine fluid_index constructing all multi-fluid indexes used in other parts
 !! of PIERNIK code
-!! \param none - all arguments are global variables
+!! \param cgrid - container for grid variables
 !<
     subroutine fluid_index(cgrid)
 
