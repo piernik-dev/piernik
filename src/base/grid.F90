@@ -36,8 +36,10 @@
 !! \copydetails grid::init_grid
 !<
 module grid
+
    implicit none
-   private
+
+   private ! :: nxd, nyd, nzd ! ToDo: replace references to n[xyz]d by has_dir(:) or something
    public  :: &
       & Lx, Ly, Lz, cleanup_grid, dl, dvol, dx, dxmn, dy, dz, grid_xyz, idl, idx, idy, idz, ie, init_grid, is, je, js, ke, ks, &
       & maxxyz, nb, nx, nxb, nxd, nxt, ny, nyb, nyd, nyt, nz, nzb, nzd, nzt, x, xdim, xl, xmax, xmaxb, xmin, xminb, xr, y, ydim, yl, &
@@ -87,9 +89,10 @@ module grid
    real    :: Lx                             !< span of the physical domain in x-direction (xmax-xmin)
    real    :: Ly                             !< span of the physical domain in y-direction (ymax-ymin)
    real    :: Lz                             !< span of the physical domain in z-direction (zmax-zmin)
-   integer,parameter  :: xdim=1              !< parameter assigned to x-direction
-   integer,parameter  :: ydim=2              !< parameter assigned to y-direction
-   integer,parameter  :: zdim=3              !< parameter assigned to z-direction
+   integer, parameter :: xdim=1              !< parameter assigned to x-direction
+   integer, parameter :: ydim=2              !< parameter assigned to y-direction
+   integer, parameter :: zdim=3              !< parameter assigned to z-direction
+   logical, dimension(xdim:zdim) :: has_dir  !< .true. for existing directions
 
    real, allocatable, target :: dl(:)               !< array of %grid cell sizes in all directions
    real, allocatable, target :: idl(:)              !< array of inverted %grid cell sizes in all directions
@@ -239,59 +242,59 @@ module grid
 
       endif
 
-      if ((mod(nxd, pxsize) .ne. 0) .or. &
-         (mod(nyd, pysize) .ne. 0) .or. &
-         (mod(nzd, pzsize) .ne. 0)) then
-            call die("One of: (mod(n_d,p_size) /= 0")
+      if ( (mod(nxd, pxsize) .ne. 0) .or. &
+           (mod(nyd, pysize) .ne. 0) .or. &
+           (mod(nzd, pzsize) .ne. 0) ) then
+         call die("One of: (mod(n_d,p_size) /= 0")
       endif
 
-      nxb = nxd/pxsize     !
-      nyb = nyd/pysize     ! Block 'physical' grid sizes
-      nzb = nzd/pzsize     !
+      has_dir(:) = ([ nxd, nyd, nzd ] > 1)
 
-      nx=nxb+2*nb          !
-      ny=nyb+2*nb          ! Block total grid sizes
-      nz=nzb+2*nb          !
-
-      nxt=nxd+2*nb         !
-      nyt=nyd+2*nb         ! Domain total grid sizes
-      nzt=nzd+2*nb         !
-
-      if (nxd == 1) then
-         nx     = 1
+      if (has_dir(xdim)) then
+         nxb = nxd / pxsize     ! Block 'physical' grid sizes
+         nx  = nxb + 2 * nb     ! Block total grid sizes
+         nxt = nxd + 2 * nb     ! Domain total grid sizes
+         is  = nb + 1
+         ie  = nb + nxb
+      else
          nxb    = 1
+         nx     = 1
          nxt    = 1
          pxsize = 1
          is     = 1
          ie     = 1
-      else
-         is = nb+1
-         ie = nb+nxb
       endif
 
-      if (nyd == 1) then
+      if (has_dir(ydim)) then
+         nyb = nyd / pysize
+         ny  = nyb + 2 * nb
+         nyt = nyd + 2 * nb
+         js  = nb + 1
+         je  = nb + nyb
+      else
          ny     = 1
          nyb    = 1
          nyt    = 1
          pysize = 1
          js     = 1
          je     = 1
-      else
-         js = nb+1
-         je = nb+nyb
       endif
 
-      if (nzd == 1) then
-         nz     = 1
+      if (has_dir(zdim)) then
+         nzb = nzd / pzsize
+         nz  = nzb + 2 * nb
+         nzt = nzd + 2 * nb
+         ks  = nb + 1
+         ke  = nb + nzb
+      else
          nzb    = 1
+         nz     = 1
          nzt    = 1
          pzsize = 1
          ks     = 1
          ke     = 1
-      else
-         ks = nb+1
-         ke = nb+nzb
       endif
+
       allocate(dl(3))
       allocate(idl(3))
       allocate(x(nx), xl(nx), xr(nx))
