@@ -77,7 +77,26 @@ contains
 !!
 !! Initialization
 !!
-
+!>
+!! \brief Routine to set parameters values from namelist MULTIGRID_DIFFUSION
+!!
+!! \n \n
+!! @b MULTIGRID_DIFFUSION
+!! \n \n
+!! <table border="+1">
+!! <tr><td width="150pt"><b>parameter</b></td><td width="135pt"><b>default value</b></td><td width="200pt"><b>possible values</b></td><td width="315pt"> <b>description</b></td></tr>
+!! <tr><td>norm_tol      </td><td>1.e-2  </td><td>real value     </td><td>\copydoc multigrid_diffusion::norm_tol      </td></tr>
+!! <tr><td>vcycle_abort  </td><td>2.0    </td><td>real value     </td><td>\copydoc multigrid_diffusion::vcycle_abort  </td></tr>
+!! <tr><td>max_cycles    </td><td>20     </td><td>integer value  </td><td>\copydoc multigrid_diffusion::max_cycles    </td></tr>
+!! <tr><td>nsmool        </td><td>4      </td><td>integer value  </td><td>\copydoc multigrid_diffusion::nsmool        </td></tr>
+!! <tr><td>nsmoob        </td><td>1      </td><td>integer value  </td><td>\copydoc multigrid_diffusion::nsmoob        </td></tr>
+!! <tr><td>diff_theta    </td><td>1.     </td><td>real value     </td><td>\copydoc multigrid_diffusion::diff_theta    </td></tr>
+!! <tr><td>diff_tstep_fac</td><td>1.     </td><td>real value     </td><td>\copydoc multigrid_diffusion::diff_tstep_fac</td></tr>
+!! <tr><td>diff_explicit </td><td>.false.</td><td>logical        </td><td>\copydoc multigrid_diffusion::diff_explicit </td></tr>
+!! <tr><td>diff_bnd_str  </td><td>"zero" </td><td>string of chars</td><td>\copydoc multigrid_diffusion::diff_bnd_str  </td></tr>
+!! </table>
+!! \n \n
+!<
    subroutine init_multigrid_diff
 
       use multigridvars,      only: ngridvars, extbnd_zero, extbnd_extrapolate, extbnd_mirror, extbnd_antimirror
