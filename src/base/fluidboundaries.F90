@@ -39,7 +39,7 @@ module fluidboundaries
       use dataio_pub,          only: msg, warn
       use fluidboundaries_pub, only: user_bnd_xl, user_bnd_xr, user_bnd_yl, user_bnd_yr, user_bnd_zl, user_bnd_zr
       use fluidindex,          only: nvar, iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
-      use grid,                only: nb, nyd, x, y, z, nzb, nyb, nxb, nx, ny, nz
+      use grid,                only: nb, nyb, x, y, z, nzb, nyb, nxb, nx, ny, nz
       use mpisetup,            only: ierr, MPI_XY_RIGHT_DOM, MPI_XY_RIGHT_BND, MPI_XY_LEFT_DOM, MPI_XY_LEFT_BND, &
                                      MPI_XZ_RIGHT_DOM, MPI_XZ_RIGHT_BND, MPI_XZ_LEFT_DOM, MPI_XZ_LEFT_BND, &
                                      MPI_YZ_RIGHT_DOM, MPI_YZ_RIGHT_BND, MPI_YZ_LEFT_DOM, MPI_YZ_LEFT_BND, &
@@ -192,26 +192,26 @@ module fluidboundaries
          if ( (bnd_xl == 'she').and.(bnd_xr == 'she')) then
 
          if (allocated(send_right)) deallocate(send_right)
-         if (.not.allocated(send_right)) allocate(send_right(nvar%all,nb,nyd,nz))
+         if (.not.allocated(send_right)) allocate(send_right(nvar%all,nb,nyb,nz))
 
          if (allocated(send_left)) deallocate(send_left)
-         if (.not.allocated(send_left)) allocate(send_left(nvar%all,nb,nyd,nz))
+         if (.not.allocated(send_left)) allocate(send_left(nvar%all,nb,nyb,nz))
 
          if (allocated(recv_left)) deallocate(recv_left)
-         if (.not.allocated(recv_left)) allocate(recv_left(nvar%all,nb,nyd,nz))
+         if (.not.allocated(recv_left)) allocate(recv_left(nvar%all,nb,nyb,nz))
 
          if (allocated(recv_right)) deallocate(recv_right)
-         if (.not.allocated(recv_right)) allocate(recv_right(nvar%all,nb,nyd,nz))
+         if (.not.allocated(recv_right)) allocate(recv_right(nvar%all,nb,nyb,nz))
 
             do i = LBOUND(u,1), UBOUND(u,1)
                send_left(i,1:nb,:,:)   = unshear_fft(u(i,nb+1:2*nb,nb+1:ny-nb,:),x(nb+1:2*nb),dely,.true.)
                send_right(i,1:nb,:,:)  = unshear_fft(u(i,nx-2*nb+1:nx-nb,nb+1:ny-nb,:),x(nx-2*nb+1:nx-nb),dely,.true.)
             enddo
 
-            CALL MPI_Isend   (send_left , nvar%all*nyd*nz*nb, MPI_DOUBLE_PRECISION, procxl, 10, comm, req(1), ierr)
-            CALL MPI_Isend   (send_right, nvar%all*nyd*nz*nb, MPI_DOUBLE_PRECISION, procxr, 20, comm, req(3), ierr)
-            CALL MPI_Irecv   (recv_left , nvar%all*nyd*nz*nb, MPI_DOUBLE_PRECISION, procxl, 20, comm, req(2), ierr)
-            CALL MPI_Irecv   (recv_right, nvar%all*nyd*nz*nb, MPI_DOUBLE_PRECISION, procxr, 10, comm, req(4), ierr)
+            CALL MPI_Isend   (send_left , nvar%all*nyb*nz*nb, MPI_DOUBLE_PRECISION, procxl, 10, comm, req(1), ierr)
+            CALL MPI_Isend   (send_right, nvar%all*nyb*nz*nb, MPI_DOUBLE_PRECISION, procxr, 20, comm, req(3), ierr)
+            CALL MPI_Irecv   (recv_left , nvar%all*nyb*nz*nb, MPI_DOUBLE_PRECISION, procxl, 20, comm, req(2), ierr)
+            CALL MPI_Irecv   (recv_right, nvar%all*nyb*nz*nb, MPI_DOUBLE_PRECISION, procxr, 10, comm, req(4), ierr)
 
             call MPI_Waitall(4,req(:),status(:,:),ierr)
 
