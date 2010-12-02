@@ -28,8 +28,8 @@
 #include "piernik.h"
 
 module dataio_pub
-
-   use types, only: hdf, domlen
+   use iso_fortran_env, only: error_unit, output_unit
+   use types,           only: hdf, domlen
 
    implicit none
 
@@ -39,6 +39,9 @@ module dataio_pub
 
 
    include 'mpif.h'
+
+   integer, parameter :: stdout = output_unit
+   integer, parameter :: stderr = error_unit
 
    ! Buffer lengths for global use
    integer, parameter :: planelen = 2           !< length of planes names e.g. "xy","yz","rp" etc.
@@ -153,6 +156,7 @@ contains
       integer, parameter            :: msg_type_len = 7       !< length of the "Warning" word.
       character(len=msg_type_len)   :: msg_type_str
       integer                       :: proc
+      integer                       :: outunit
       logical, save                 :: frun = .true.
 
       if (frun) then
@@ -167,26 +171,32 @@ contains
          frun = .false.
       endif
 
-!      write(*,*) ansi_red, "Red ", ansi_green, "Green ", ansi_yellow, "Yellow ", ansi_blue, "Blue ", ansi_magenta, "Magenta ", ansi_cyan, "Cyan ", ansi_white, "White ", ansi_black ! QA_WARN debug
+!      write(stdout,*) ansi_red, "Red ", ansi_green, "Green ", ansi_yellow, "Yellow ", ansi_blue, "Blue ", ansi_magenta, "Magenta ", ansi_cyan, "Cyan ", ansi_white, "White ", ansi_black
 
       select case (mode)
          case (T_ERR)
             ansicolor = ansi_red
+            outunit   = stderr
             msg_type_str = "Error  "
          case (T_WARN)
             ansicolor = ansi_yellow
+            outunit   = stdout
             msg_type_str = "Warning"
          case (T_INFO)
             ansicolor = ansi_green
+            outunit   = stdout
             msg_type_str = "Info   "
          case (T_IO)
             ansicolor = ansi_blue
+            outunit   = stdout
             msg_type_str = "I/O    "
          case (T_SILENT)
             ansicolor = ansi_black
+            outunit   = stdout
             msg_type_str = ""
          case default ! T_PLAIN
             ansicolor = ansi_black
+            outunit   = stdout
             msg_type_str = ""
       end select
 
@@ -194,9 +204,9 @@ contains
 
       if (mode /= T_SILENT) then
          if (mode == T_PLAIN) then
-            write(*,'(a)') trim(nm)                                                                               ! QA_WARN the colormessage should do most writes to stdout
+            write(outunit,'(a)') trim(nm)
          else
-            write(*,'(a,a," @",a,i5,2a)') trim(ansicolor),msg_type_str,ansi_black, proc, ': ', trim(nm)           ! QA_WARN the colormessage should do most writes to stdout
+            write(outunit,'(a,a," @",a,i5,2a)') trim(ansicolor),msg_type_str,ansi_black, proc, ': ', trim(nm)
          endif
       endif
 
