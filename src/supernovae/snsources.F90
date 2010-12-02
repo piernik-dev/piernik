@@ -55,6 +55,20 @@ module snsources
    namelist /SN_SOURCES/ h_sn, r_sn, f_sn_kpc2
 
    contains
+!>
+!! \brief Routine to set parameter values from namelist SN_SOURCES
+!!
+!! \n \n
+!! @b SN_SOURCES
+!! \n \n
+!! <table border="+1">
+!! <tr><td width="150pt"><b>parameter</b></td><td width="135pt"><b>default value</b></td><td width="200pt"><b>possible values</b></td><td width="315pt"> <b>description</b></td></tr>
+!! <tr><td>h_sn     </td><td>0.0  </td><td>real value</td><td>\copydoc snsources::h_sn     </td></tr>
+!! <tr><td>r_sn     </td><td>0.0  </td><td>real value</td><td>\copydoc snsources::r_sn     </td></tr>
+!! <tr><td>f_sn_kpc2</td><td>0.0  </td><td>real value</td><td>\copydoc snsources::f_sn_kpc2</td></tr>
+!! </table>
+!! \n \n
+!<
    subroutine init_snsources
       use dataio_pub,     only: ierrh, par_file, namelist_errh, compare_namelist                  ! QA_WARN required for diff_nml
       use mpisetup,       only: rbuff, buffer_dim, comm, ierr, proc, MPI_DOUBLE_PRECISION
