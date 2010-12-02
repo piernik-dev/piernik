@@ -84,10 +84,13 @@ contains
    !! <tr><td>cfl_cr    </td><td>0.9  </td><td>real value</td><td>\copydoc initcosmicrays::cfl_cr</td></tr>
    !! <tr><td>smallecr  </td><td>0.0  </td><td>real value</td><td>\copydoc initcosmicrays::smallecr</td></tr>
    !! <tr><td>cr_active </td><td>1.0  </td><td>real value</td><td>\copydoc initcosmicrays::cr_active</td></tr>
-   !! <tr><td>gamma_cr  </td><td>4/3  </td><td>real value</td><td>\copydoc initcosmicrays::gamma_cr</td></tr>
    !! <tr><td>cr_eff    </td><td>0.1  </td><td>real value</td><td>\copydoc initcosmicrays::cr_eff</td></tr>
-   !! <tr><td>K_cr_paral</td><td>0.0  </td><td>real value</td><td>\copydoc initcosmicrays::K_cr_paral</td></tr>
-   !! <tr><td>K_cr_perp </td><td>0.0  </td><td>real value</td><td>\copydoc initcosmicrays::K_cr_perp</td></tr>
+   !! <tr><td>gamma_crn </td><td>4/3  </td><td>array of real values</td><td>\copydoc initcosmicrays::gamma_crn</td></tr>
+   !! <tr><td>gamma_cre </td><td>4/3  </td><td>array of real values</td><td>\copydoc initcosmicrays::gamma_cre</td></tr>
+   !! <tr><td>K_cre_paral</td><td>0.0  </td><td>real value</td><td>\copydoc initcosmicrays::K_cre_paral</td></tr>
+   !! <tr><td>K_cre_perp </td><td>0.0  </td><td>real value</td><td>\copydoc initcosmicrays::K_cre_perp</td></tr>
+   !! <tr><td>K_crn_paral</td><td>0.0  </td><td>real value</td><td>\copydoc initcosmicrays::K_crn_paral</td></tr>
+   !! <tr><td>K_crn_perp </td><td>0.0  </td><td>real value</td><td>\copydoc initcosmicrays::K_crn_perp</td></tr>
    !! </table>
    !! \n \n
    !<

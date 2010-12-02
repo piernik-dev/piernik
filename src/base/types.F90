@@ -103,7 +103,7 @@ module types
       !<
       integer :: end = 0              ! QA_WARN implicit save does not work in types
       !>
-      !! index denoting position of the fluid in the row of fluid
+      !! index denoting position of the fluid in the row of fluids
       !<
       integer :: pos = 0              ! QA_WARN implicit save does not work in types
    end type component

@@ -146,7 +146,7 @@ contains
 !! Boundary conditions
 !!
 !> \brief Routine for inter-process and periodic boundary conditions.
-!! \detail mpi_multigrid_bnd provides communication between local domains to couple solution on the global computational domain
+!! \details mpi_multigrid_bnd provides communication between local domains to couple solution on the global computational domain
 !!
 
    subroutine mpi_multigrid_bnd(lev, iv, ng, mode, corners)
