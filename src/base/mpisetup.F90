@@ -173,6 +173,7 @@ module mpisetup
 !! <tr><td>dt_max_grow      </td><td>2.    </td><td>real value > 1.1                     </td><td>\copydoc mpisetup::dt_max_grow      </td></tr>
 !! <tr><td>dt_min           </td><td>0.    </td><td>positive real value                  </td><td>\copydoc mpisetup::dt_min           </td></tr>
 !! <tr><td>limiter          </td><td>vanleer</td><td>string                              </td><td>\copydoc mpisetup::limiter          </td></tr>
+!! <tr><td>cflcontrol       </td><td>       </td><td>string                              </td><td>\copydoc mpisetup::cflcontrol       </td></tr>
 !! </table>
 !! \n \n
 !<
