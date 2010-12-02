@@ -47,7 +47,7 @@ module initionized
    real                  :: cs_iso_ion      !< isothermal sound speed (p = cs_iso_ion<sup>2</sup>\f$\rho\f$), active only if ionized gas is \ref isothermal
    real                  :: cs_iso_ion2
    real                  :: cs_ion
-   logical               :: selfgrav_ion
+   logical               :: selfgrav_ion    !< true if ionized gas is selfgravitating
    integer               :: idni, imxi, imyi, imzi
 #ifndef ISO
    integer               :: ieni
@@ -66,7 +66,7 @@ contains
 !! <tr><td>gamma_ion     </td><td>1.66666666</td><td>real value </td><td>\copydoc initionized::gamma_ion </td></tr>
 !! <tr><td>cs_iso_ion    </td><td>1.0        </td><td>real value</td><td>\copydoc initionized::cs_iso_ion</td></tr>
 !! <tr><td>cs_ion        </td><td>           </td><td>real value</td><td>\copydoc initionized::cs_ion    </td></tr>
-!! <tr><td>selfgrav_ion  </td><td>.false.    </td><td>logical   </td><td>\copydoc initdust::selfgrav_ion </td></tr>
+!! <tr><td>selfgrav_ion  </td><td>.false.    </td><td>logical   </td><td>\copydoc initionized::selfgrav_ion </td></tr>
 !! </table>
 !! \n \n
 !<

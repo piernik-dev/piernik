@@ -668,7 +668,7 @@ module gravity
       integer, intent(in)            :: i1, i2
       integer, intent(in)            :: n
       real, dimension(n),intent(out) :: grav
-      integer, intent(in)            :: istep
+      integer, intent(in)            :: istep      !< istep=1 for halfstep, istep=2 for fullstep
 !\todo offer high order gradient as an option in parameter file
 !      real, parameter :: onetw = 1./12.
 

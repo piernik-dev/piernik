@@ -49,7 +49,7 @@ module initneutral
    real                  :: global_gradP_neu
    real                  :: eta_gas_neu
    real                  :: csvk
-   logical               :: selfgrav_neu
+   logical               :: selfgrav_neu          !< true if neutral gas is selfgravitating
    integer               :: idnn, imxn, imyn, imzn
 #ifndef ISO
    integer               :: ienn
@@ -69,7 +69,7 @@ contains
 !! <tr><td>cs_iso_neu    </td><td>1.0       </td><td>real value</td><td>\copydoc initneutral::cs_iso_neu </td></tr>
 !! <tr><td>eta_gas_neu   </td><td>          </td><td>real value</td><td>\copydoc initneutral::eta_gas_neu</td></tr>
 !! <tr><td>csvk          </td><td>          </td><td>real value</td><td>\copydoc initneutral::csvk       </td></tr>
-!! <tr><td>selfgrav_neu  </td><td>.false.   </td><td>logical   </td><td>\copydoc initdust::selfgrav_neu  </td></tr>
+!! <tr><td>selfgrav_neu  </td><td>.false.   </td><td>logical   </td><td>\copydoc initneutral::selfgrav_neu  </td></tr>
 !! </table>
 !! \n \n
 !<
