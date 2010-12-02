@@ -99,7 +99,7 @@ module fluidboundaries
 !
 ! przesuwamy o calkowita liczbe komorek + periodyczny wb w kierunku y
 !
-         if (nyd /= 1) then
+         if (has_dir(ydim)) then
             send_left (:,:,nb+1:nb+nyb,:)        = cshift(send_left (:,:,nb+1:nb+nyb,:),dim=3,shift= delj)
             send_left (:,:,1:nb,:)               = send_left (:,:,nyb+1:nyb+nb,:)
             send_left (:,:,nb+nyb+1:nyb+2*nb,:)  = send_left (:,:,nb+1:2*nb,:)
@@ -127,7 +127,7 @@ module fluidboundaries
 !
 ! przesuwamy o calkowita liczbe komorek + periodyczny wb w kierunku y
 !
-         if (nyd /= 1) then
+         if (has_dir(ydim)) then
             send_right(:,:,nb+1:nb+nyb,:)        = cshift(send_right(:,:,nb+1:nb+nyb,:),dim=3,shift=-delj)
             send_right (:,:,1:nb,:)              = send_right(:,:,nyb+1:nyb+nb,:)
             send_right (:,:,nb+nyb+1:nyb+2*nb,:) = send_right(:,:,nb+1:2*nb,:)
@@ -690,11 +690,11 @@ module fluidboundaries
    end subroutine bnd_u
 
    subroutine all_fluid_boundaries
-      use grid,  only: nxd,nyd,nzd
+      use grid,  only: has_dir, xdim, ydim, zdim
       implicit none
-      if (nxd /= 1) call bnd_u('xdim')
-      if (nyd /= 1) call bnd_u('ydim')
-      if (nzd /= 1) call bnd_u('zdim')
+      if (has_dir(xdim)) call bnd_u('xdim')
+      if (has_dir(ydim)) call bnd_u('ydim')
+      if (has_dir(zdim)) call bnd_u('zdim')
 
    end subroutine all_fluid_boundaries
 

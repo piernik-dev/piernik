@@ -36,7 +36,7 @@ contains
    subroutine mpi_boundaries_prep
       use arrays,     only: u
       use fluidindex, only: nvar
-      use grid,       only: nb, nx, ny, nz, nxb, nyb, nzb, nxd, nyd, nzd
+      use grid,       only: nb, nx, ny, nz, nxb, nyb, nzb, has_dir, xdim, ydim, zdim
       use mpisetup,   only: ierr, MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, &
                             MPI_YZ_LEFT_BND, MPI_YZ_RIGHT_BND, MPI_YZ_LEFT_DOM, MPI_YZ_RIGHT_DOM, &
                             MPI_XZ_LEFT_BND, MPI_XZ_RIGHT_BND, MPI_XZ_LEFT_DOM, MPI_XZ_RIGHT_DOM, &
@@ -59,7 +59,7 @@ contains
 !------------------------!
 !   X dimension - fluid  !
 !------------------------!
-      if (nxd /= 1) then
+      if (has_dir(xdim)) then
 
          allocate(sizes(4), subsizes(4), starts(4))
 
@@ -145,7 +145,7 @@ contains
 !------------------------!
 !   Y dimension - fluid  !
 !------------------------!
-      if (nyd /= 1) then
+      if (has_dir(ydim)) then
 
          allocate(sizes(4), subsizes(4), starts(4))
 
@@ -231,7 +231,7 @@ contains
 !------------------------!
 !   Z dimension - fluid  !
 !------------------------!
-      if (nzd /= 1) then
+      if (has_dir(zdim)) then
 
          allocate(sizes(4), subsizes(4), starts(4))
 

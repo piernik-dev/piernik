@@ -85,7 +85,7 @@ module resistivity
    subroutine init_resistivity
       use dataio_pub,    only: par_file, ierrh, namelist_errh, compare_namelist  ! QA_WARN required for diff_nml
       use dataio_pub,    only: die
-      use grid,          only: nx, ny, nz, nzd
+      use grid,          only: nx, ny, nz, has_dir, zdim
       use mpisetup,      only: rbuff, ibuff, ierr, MPI_INTEGER, MPI_DOUBLE_PRECISION, buffer_dim, comm, proc
 
       implicit none
@@ -141,7 +141,7 @@ module resistivity
       if (.not.allocated(b1) ) allocate(b1(nx,ny,nz) )
 
       jc2 = j_crit**2
-      if (nzd /= 1) then
+      if (has_dir(zdim)) then
          d_eta_factor = 1./(6.+dble(eta_scale))
       else
          d_eta_factor = 1./(4.+dble(eta_scale))
@@ -154,7 +154,7 @@ module resistivity
       use constants,    only: small
       use fluidindex,   only: ibx, iby, ibz
       use func,         only: mshift, pshift
-      use grid,         only: idl, xdim, ydim, zdim, nx, ny, nz, is, ie, js, je, ks, ke, nzd
+      use grid,         only: idl, xdim, ydim, zdim, nx, ny, nz, is, ie, js, je, ks, ke, has_dir
       use mpisetup,     only: MPI_DOUBLE_PRECISION, MPI_MAX, comm, ierr
 #ifndef ISO
       use fluidindex,   only: nvar
@@ -172,7 +172,7 @@ module resistivity
 
       eta(:,:,:) = 0.25*( wb(:,:,:) + mshift(wb(:,:,:),zdim) )**2
 
-      if (nzd /=1) then
+      if (has_dir(zdim)) then
 !--- current_x
          wb(:,:,:) = (b(ibz,:,:,:)-mshift(b(ibz,:,:,:),ydim))*idl(ydim)
          wb = wb -   (b(iby,:,:,:)-mshift(b(iby,:,:,:),zdim))*idl(zdim)
@@ -193,7 +193,7 @@ module resistivity
 !! \todo Following lines are splitted into separate lines because of intel and gnu dbgs
 !! shoud that be so? Is there any other solution instead splitting?
 !<
-      if (nzd /= 1) then
+      if (has_dir(zdim)) then
          etahelp(:,:,:)  =   mshift(eta(:,:,:),xdim)
          etahelp = etahelp + pshift(eta(:,:,:),xdim)
          etahelp = etahelp + mshift(eta(:,:,:),ydim)
@@ -308,81 +308,81 @@ module resistivity
    subroutine diffuseby_x
       use arrays,        only: wcu
       use fluidindex,    only: iby, icz
-      use grid,          only: xdim, nxd, nyd, nzd
+      use grid,          only: has_dir, xdim, ydim, zdim
       use magboundaries, only: bnd_emf
       implicit none
 
       call tvdd(iby,icz,xdim)
-      if (nxd /= 1) call bnd_emf(wcu,'emfz','xdim')
-      if (nyd /= 1) call bnd_emf(wcu,'emfz','ydim')
-      if (nzd /= 1) call bnd_emf(wcu,'emfz','zdim')
+      if (has_dir(xdim)) call bnd_emf(wcu,'emfz','xdim')
+      if (has_dir(ydim)) call bnd_emf(wcu,'emfz','ydim')
+      if (has_dir(zdim)) call bnd_emf(wcu,'emfz','zdim')
 
    end subroutine diffuseby_x
 
    subroutine diffusebz_x
       use arrays,        only: wcu
       use fluidindex,    only: ibz, icy
-      use grid,          only: xdim, nxd, nyd, nzd
+      use grid,          only: has_dir, xdim, ydim, zdim
       use magboundaries, only: bnd_emf
       implicit none
 
       call tvdd(ibz,icy,xdim)
-      if (nxd /= 1) call bnd_emf(wcu,'emfy','xdim')
-      if (nyd /= 1) call bnd_emf(wcu,'emfy','ydim')
-      if (nzd /= 1) call bnd_emf(wcu,'emfy','zdim')
+      if (has_dir(xdim)) call bnd_emf(wcu,'emfy','xdim')
+      if (has_dir(ydim)) call bnd_emf(wcu,'emfy','ydim')
+      if (has_dir(zdim)) call bnd_emf(wcu,'emfy','zdim')
 
    end subroutine diffusebz_x
 
    subroutine diffusebz_y
       use arrays,        only: wcu
       use fluidindex,    only: ibz, icx
-      use grid,          only: ydim, nzd, nyd, nxd
+      use grid,          only: has_dir, xdim, ydim, zdim
       use magboundaries, only: bnd_emf
       implicit none
 
       call tvdd(ibz,icx,ydim)
-      if (nyd /= 1) call bnd_emf(wcu,'emfx','ydim')
-      if (nzd /= 1) call bnd_emf(wcu,'emfx','zdim')
-      if (nxd /= 1) call bnd_emf(wcu,'emfx','xdim')
+      if (has_dir(ydim)) call bnd_emf(wcu,'emfx','ydim')
+      if (has_dir(zdim)) call bnd_emf(wcu,'emfx','zdim')
+      if (has_dir(xdim)) call bnd_emf(wcu,'emfx','xdim')
    end subroutine diffusebz_y
 
    subroutine diffusebx_y
       use arrays,        only: wcu
       use fluidindex,    only: ibx, icz
-      use grid,          only: ydim, nzd, nyd, nxd
+      use grid,          only: has_dir, xdim, ydim, zdim
       use magboundaries, only: bnd_emf
       implicit none
 
       call tvdd(ibx,icz,ydim)
-      if (nyd /= 1) call bnd_emf(wcu, 'emfz', 'ydim')
-      if (nzd /= 1) call bnd_emf(wcu, 'emfz', 'zdim')
-      if (nxd /= 1) call bnd_emf(wcu, 'emfz', 'xdim')
+      if (has_dir(ydim)) call bnd_emf(wcu, 'emfz', 'ydim')
+      if (has_dir(zdim)) call bnd_emf(wcu, 'emfz', 'zdim')
+      if (has_dir(xdim)) call bnd_emf(wcu, 'emfz', 'xdim')
    end subroutine diffusebx_y
 
    subroutine diffusebx_z
       use arrays,        only: wcu
       use fluidindex,    only: ibx, icy
-      use grid,          only: zdim, nzd, nyd, nxd
+      use grid,          only: has_dir, xdim, ydim, zdim
       use magboundaries, only: bnd_emf
       implicit none
 
       call tvdd(ibx,icy,zdim)
-      if (nzd /= 1) call bnd_emf(wcu, 'emfy', 'zdim')
-      if (nxd /= 1) call bnd_emf(wcu, 'emfy', 'xdim')
-      if (nyd /= 1) call bnd_emf(wcu, 'emfy', 'ydim')
+      if (has_dir(zdim)) call bnd_emf(wcu, 'emfy', 'zdim')
+      if (has_dir(xdim)) call bnd_emf(wcu, 'emfy', 'xdim')
+      if (has_dir(ydim)) call bnd_emf(wcu, 'emfy', 'ydim')
    end subroutine diffusebx_z
 
    subroutine diffuseby_z
       use arrays,        only: wcu
       use fluidindex,    only: iby, icx
-      use grid,          only: zdim, nzd, nyd, nxd
+      use grid,          only: has_dir, xdim, ydim, zdim
       use magboundaries, only: bnd_emf
       implicit none
 
       call tvdd(iby,icx,zdim)
-      if (nzd /= 1) call bnd_emf(wcu, 'emfx', 'zdim')
-      if (nxd /= 1) call bnd_emf(wcu, 'emfx', 'xdim')
-      if (nyd /= 1) call bnd_emf(wcu, 'emfx', 'ydim')
+      if (has_dir(zdim)) call bnd_emf(wcu, 'emfx', 'zdim')
+      if (has_dir(xdim)) call bnd_emf(wcu, 'emfx', 'xdim')
+      if (has_dir(ydim)) call bnd_emf(wcu, 'emfx', 'ydim')
    end subroutine diffuseby_z
 
 end module resistivity
