@@ -1,0 +1,151 @@
+ $DOMAIN_SIZES
+    nxd          = 1
+    nyd          = 48
+    nzd          = 96
+    nb           = 4
+ /
+
+ $MPI_BLOCKS
+    pxsize       = 1
+    pysize       = 1
+    pzsize       = 1
+ /
+
+ $CONSTANTS
+    constants_set = "PSM"
+ /
+
+ $RESTART_CONTROL
+    restart      = 'last'
+    nrestart     = 0
+    new_id       = ''
+ /
+
+ $END_CONTROL
+    tend         = 200.0
+    nend         = 1000000000
+ /
+
+ $OUTPUT_CONTROL
+    dt_hdf       = 1.0
+    dt_res       = 0.0
+    dt_log       = 1.0e-1
+    dt_tsl       = 1.0e-1
+    vars(1)      = 'dens'
+    vars(2)      = 'velx'
+    vars(3)      = 'vely'
+    vars(4)      = 'velz'
+    vars(5)      = 'encr'
+    vars(6)      = 'magx'
+    vars(7)      = 'magy'
+    vars(8)      = 'magz'
+    domain       = 'phys_domain'
+
+ /
+
+ $BOUNDARIES
+    bnd_xl       = 'per'
+    bnd_xr       = 'per'
+    bnd_yl       = 'per'
+    bnd_yr       = 'per'
+    bnd_zl       = 'outd'
+    bnd_zr       = 'outd'
+ /
+
+ $DOMAIN_LIMITS
+    xmin         =-250.0
+    xmax         = 250.0
+    ymin         =-500.0
+    ymax         = 500.0
+    zmin         =-1000.0
+    zmax         = 1000.0
+ /
+
+ $FLUID_IONIZED
+    gamma_ion = 1.66666667
+    cs_iso_ion  =  7.0            ! sound speed
+
+ /
+
+ $NUMERICAL_SETUP
+    cfl          = 0.9
+    smalld       = 1.e-5
+    smallei      = 1.e-4
+    integration_order = 2
+    limiter      = "vanleer"
+  /
+
+ $GRAVITY
+    user_grav    = .true.
+    r_gc         = 5000     ! Galactic radius of coordinate system
+    nsub         = 10
+ /
+
+ $RESISTIVITY
+    cfl_resist   =    0.9   ! Courant's number for resistiwity
+    eta_0        =  100.0   ! uniform resistivity
+    eta_1        =    0.0   ! anomalous resistivity, works above j_crit
+    j_crit       = 1000.0   ! critical value of current
+ /
+
+  $COSMIC_RAYS
+    ncrn        =   4
+    ncre        =   0
+    cfl_cr      =   0.9
+    cr_active   =   1.0
+    gamma_crn(1)   =  1.333333
+    K_crn_paral(1) = 10000.0
+    K_crn_paral(2) = 10000.0
+    K_crn_paral(3) = 10000.0
+    K_crn_paral(4) = 10000.0
+    K_crn_paral(5) = 10000.0
+    K_crn_paral(6) = 10000.0
+    K_crn_paral(7) = 10000.0
+    K_crn_perp(1)  = 0.0
+    smallecr       = 0.e-2
+    use_split   = .false.
+ /
+
+ $SHEARING
+    omega        = 0.0      ! angular freq.
+    qshear       = 1.0      ! shearing param. q: vy=q*omega*x
+ /
+
+ $SN_SOURCES
+    r_sn         =  50.0    ! radius of explosion (gauss function)
+    h_sn         = 100.0    ! std. dev. for normal distribution of SN i "z" direction
+    f_sn_kpc2    =  10.0    ! surface frequency of SN ( / kpc^2 / Myr )
+ /
+
+ $PROBLEM_CONTROL
+    problem_name = 'crwind'
+    run_id       = 'tst'
+    d0           =  5.0     ! density in galactic plane
+    bxn          =  0.0     !
+    byn          =  1.0     ! __direction__ of B field
+    bzn          =  0.0     !
+    x0           =  0.0     ! coordinates of single expl with amplitude
+    y0           =  0.0     ! that is set in init_prob (testing purpose)
+    z0           =  100.0   !
+    beta_cr      =  4.0     ! participation of CR in initial equil. (similar to alfa for B)
+    amp_cr       =  0.0     ! amplitude of expl. (init_problem, x0,y0,z0)
+    alpha        =  1.0
+ /
+
+ $MULTIGRID_SOLVER
+    level_max = 3
+ /
+
+ $MULTIGRID_DIFFUSION
+!    diff_explicit = .true.
+    diff_theta     = 0.6
+    diff_tstep_fac = 30
+    norm_tol = 1e-4
+    nsmool = 4
+    nsmoob = 4
+    max_cycles = 20
+    diff_bnd_str = "zero"
+ /
+
+ $MULTIGRID_GRAVITY
+ /
