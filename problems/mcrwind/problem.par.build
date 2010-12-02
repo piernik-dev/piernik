@@ -1,7 +1,7 @@
  $DOMAIN_SIZES
     nxd          = 1
-    nyd          = 56
-    nzd          = 100
+    nyd          = 48
+    nzd          = 96
     nb           = 4
  /
 
@@ -101,6 +101,7 @@
     K_crn_paral(7) = 10000.0
     K_crn_perp(1)  = 0
     ncre        = 0
+    use_split   = .false.
  /
 
  $SHEARING
