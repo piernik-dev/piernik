@@ -100,21 +100,24 @@ module gravity
 !! \n \n
 !! <table border="+1">
 !! <tr><td width="150pt"><b>parameter</b></td><td width="135pt"><b>default value</b></td><td width="200pt"><b>possible values</b></td><td width="315pt"> <b>description</b></td></tr>
-!! <tr><td>g_dir       </td><td>0.0 </td><td>real             </td><td>\copydoc gravity::g_dir        </td></tr>
-!! <tr><td>r_gc        </td><td>8500</td><td>real             </td><td>\copydoc gravity::r_gc         </td></tr>
-!! <tr><td>ptmass      </td><td>0.0 </td><td>non-negative real</td><td>\copydoc gravity::ptmass       </td></tr>
-!! <tr><td>ptm_x       </td><td>0.0 </td><td>real             </td><td>\copydoc gravity::ptm_x        </td></tr>
-!! <tr><td>ptm_y       </td><td>0.0 </td><td>real             </td><td>\copydoc gravity::ptm_y        </td></tr>
-!! <tr><td>ptm_z       </td><td>0.0 </td><td>real             </td><td>\copydoc gravity::ptm_z        </td></tr>
-!! <tr><td>r_smooth    </td><td>0.0 </td><td>real             </td><td>\copydoc gravity::r_smooth     </td></tr>
-!! <tr><td>nsub        </td><td>10  </td><td>integer > 0      </td><td>\copydoc gravity::nsub         </td></tr>
-!! <tr><td>tune_zeq    </td><td>1.0 </td><td>real             </td><td>\copydoc gravity::tune_zeq     </td></tr>
-!! <tr><td>tune_zeq_bnd</td><td>1.0 </td><td>real             </td><td>\copydoc gravity::tune_zeq_bnd </td></tr>
-!! <tr><td>h_grav      </td><td>1.e6</td><td>real             </td><td>\copydoc gravity::h_grav       </td></tr>
-!! <tr><td>r_grav      </td><td>1.e6</td><td>real             </td><td>\copydoc gravity::r_grav       </td></tr>
-!! <tr><td>n_gravr     </td><td>0   </td><td>real             </td><td>\copydoc gravity::n_gravr      </td></tr>
-!! <tr><td>n_gravr2    </td><td>0   </td><td>real             </td><td>\copydoc gravity::n_gravr2     </td></tr>
-!! <tr><td>n_gravh     </td><td>0   </td><td>real             </td><td>\copydoc gravity::n_gravh      </td></tr>
+!! <tr><td>g_dir        </td><td>0.0    </td><td>real             </td><td>\copydoc gravity::g_dir        </td></tr>
+!! <tr><td>r_gc         </td><td>8500   </td><td>real             </td><td>\copydoc gravity::r_gc         </td></tr>
+!! <tr><td>ptmass       </td><td>0.0    </td><td>non-negative real</td><td>\copydoc gravity::ptmass       </td></tr>
+!! <tr><td>ptm_x        </td><td>0.0    </td><td>real             </td><td>\copydoc gravity::ptm_x        </td></tr>
+!! <tr><td>ptm_y        </td><td>0.0    </td><td>real             </td><td>\copydoc gravity::ptm_y        </td></tr>
+!! <tr><td>ptm_z        </td><td>0.0    </td><td>real             </td><td>\copydoc gravity::ptm_z        </td></tr>
+!! <tr><td>r_smooth     </td><td>0.0    </td><td>real             </td><td>\copydoc gravity::r_smooth     </td></tr>
+!! <tr><td>external_gp  </td><td>'null' </td><td>to be listed     </td><td>\copydoc gravity::external_gp  </td></tr>
+!! <tr><td>nsub         </td><td>10     </td><td>integer > 0      </td><td>\copydoc gravity::nsub         </td></tr>
+!! <tr><td>tune_zeq     </td><td>1.0    </td><td>real             </td><td>\copydoc gravity::tune_zeq     </td></tr>
+!! <tr><td>tune_zeq_bnd </td><td>1.0    </td><td>real             </td><td>\copydoc gravity::tune_zeq_bnd </td></tr>
+!! <tr><td>h_grav       </td><td>1.e6   </td><td>real             </td><td>\copydoc gravity::h_grav       </td></tr>
+!! <tr><td>r_grav       </td><td>1.e6   </td><td>real             </td><td>\copydoc gravity::r_grav       </td></tr>
+!! <tr><td>n_gravr      </td><td>0      </td><td>real             </td><td>\copydoc gravity::n_gravr      </td></tr>
+!! <tr><td>n_gravr2     </td><td>0      </td><td>real             </td><td>\copydoc gravity::n_gravr2     </td></tr>
+!! <tr><td>n_gravh      </td><td>0      </td><td>real             </td><td>\copydoc gravity::n_gravh      </td></tr>
+!! <tr><td>user_grav    </td><td>.false.</td><td>logical          </td><td>\copydoc gravity::user_grav    </td></tr>
+!! <tr><td>gprofs_target</td><td>'gparr'</td><td>string of chars  </td><td>\copydoc gravity::gprofs_target</td></tr>
 !! </table>
 !! \n \n
 !<
