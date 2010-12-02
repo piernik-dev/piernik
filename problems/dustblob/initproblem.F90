@@ -111,7 +111,7 @@ module initproblem
 
    subroutine init_prob
       use arrays,       only: u
-      use grid,         only: x, y, z, nx, ny, nz, nzd
+      use grid,         only: x, y, z, nx, ny, nz, zdim, has_dir
       use initdust,     only: idnd, imxd, imyd, imzd
       use initneutral,  only: idnn, imxn, imyn, imzn, gamma_neu
       use mpisetup,     only: smalld
@@ -128,7 +128,7 @@ module initproblem
          do j = 1,ny
             yj = y(j)
             do k = 1,nz
-               if (nzd /= 1) then
+               if (has_dir(zdim)) then
                   zk = z(k)
                   rc = sqrt((xi-x0)**2+(yj-y0)**2+(zk-z0)**2)
                else

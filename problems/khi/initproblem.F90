@@ -115,7 +115,7 @@ module initproblem
 
       use arrays,      only: u
       use constants,   only: dpi
-      use grid,        only: ymin, ymax, x, y, nx, ny, nzd
+      use grid,        only: ymin, ymax, x, y, nx, ny, zdim, has_dir
       use initneutral, only: idnn, imxn, imyn, imzn, ienn, gamma_neu
 
       implicit none
@@ -150,7 +150,7 @@ module initproblem
             if (abs(rc) .lt. lpert) then
                u(imyn,i,j,:) = vp*sin(k0*rcx)*u(idnn,i,j,:)
             endif
-            if (nzd /= 1) then
+            if (has_dir(zdim)) then
                u(imzn,i,j,:) = vtransf*u(1,i,j,:)
             else
                u(imzn,i,j,:) = 0.0

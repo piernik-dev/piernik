@@ -107,7 +107,7 @@ module initproblem
       use constants,   only: newtong
       use fluidindex,  only: ibx, iby, ibz
       use gravity,     only: r_smooth, r_grav, n_gravr, ptmass
-      use grid,        only: x, y, z, nx, ny, nz, nzd
+      use grid,        only: x, y, z, nx, ny, nz, zdim, has_dir
       use hydrostatic, only: hydrostatic_zeq_densmid
       use initfluids,  only: gamma, cs_iso
       use initionized, only: idni, imxi, imyi, imzi
@@ -142,9 +142,7 @@ module initproblem
             xi = x(i)
             rc = sqrt(xi**2+yj**2)
 
-            if (nzd /= 1) then
-               call hydrostatic_zeq_densmid(i, j, d0, csim2)
-            endif
+            if (has_dir(zdim)) call hydrostatic_zeq_densmid(i, j, d0, csim2)
 
             do k = 1,nz
 
@@ -154,7 +152,7 @@ module initproblem
 
                u(idni,i,j,k) = min((rc/r_grav)**n_gravr,100.0)
 
-               if (nzd /= 1) then
+               if (has_dir(zdim)) then
                   u(idni,i,j,k) = dout + (dprof(k)-dout)/cosh(u(idni,i,j,k))
                else
                   u(idni,i,j,k) = dout + (d0 - dout)/cosh(u(idni,i,j,k))
