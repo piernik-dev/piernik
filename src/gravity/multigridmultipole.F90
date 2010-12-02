@@ -727,7 +727,9 @@ contains
       implicit none
 
       real, intent(in) :: mass    !< mass of the contributing point
-      real, intent(in) :: x, y, z !< coordinates of the contributing point
+      real, intent(in) :: x       !< x coordinate of the contributing point
+      real, intent(in) :: y       !< y coordinate of the contributing point
+      real, intent(in) :: z       !< z coordinate of the contributing point
 
       real    :: sin_th, cos_th, del
       real    :: Ql, Ql1, Ql2
@@ -863,7 +865,9 @@ contains
 
       implicit none
 
-      real, intent(in)  :: x, y, z   !< coordinates of the point
+      real, intent(in)  :: x         !< x coordinate of the contributing point
+      real, intent(in)  :: y         !< y coordinate of the contributing point
+      real, intent(in)  :: z         !< z coordinate of the contributing point
       real, intent(out) :: potential !< calculated potential at given point
 
       real :: sin_th, cos_th, del
@@ -952,8 +956,11 @@ contains
       implicit none
 
       real,    intent(in)  :: factor         !< scaling factor (e.g. mass) of the contributing point
-      real,    intent(in)  :: x, y, z        !< coordinates of the contributing point
-      real,    intent(out) :: sin_th, cos_th !< sine and cosine of the theta angle
+      real,    intent(in)  :: x              !< x coordinate of the contributing point
+      real,    intent(in)  :: y              !< x coordinate of the contributing point
+      real,    intent(in)  :: z              !< x coordinate of the contributing point
+      real,    intent(out) :: sin_th         !< sine of the theta angle
+      real,    intent(out) :: cos_th         !< cosine of the theta angle
       integer, intent(out) :: ir             !< radial index for the Q(:, :, r) array
       real,    intent(out) :: delta          !< fraction of the radial cell for interpolation between ir and ir+1
 

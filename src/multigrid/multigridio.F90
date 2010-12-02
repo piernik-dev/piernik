@@ -153,7 +153,7 @@ contains
 
       implicit none
 
-      type(plvl), intent(in) :: llvl
+      type(plvl), intent(in) :: llvl  !< index of multigrid level
 
       integer :: rank = NDIM ! Dataset rank
 

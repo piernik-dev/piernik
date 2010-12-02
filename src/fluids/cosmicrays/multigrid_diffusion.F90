@@ -517,7 +517,9 @@ contains
 
       implicit none
 
-      integer, intent(in) :: i, j, k      !< cell indices
+      integer, intent(in) :: i            !< first cell index
+      integer, intent(in) :: j            !< second cell index
+      integer, intent(in) :: k            !< third cell index
       integer, intent(in) :: soln         !< multigrid variable to differentiate
       integer, intent(in) :: lev          !< level on which differentiate
       integer, intent(in) :: cr_id        !< CR component index
@@ -579,7 +581,9 @@ contains
 
       implicit none
 
-      integer, intent(in) :: i, j, k      !< cell indices
+      integer, intent(in) :: i            !< first cell index
+      integer, intent(in) :: j            !< second cell index
+      integer, intent(in) :: k            !< third cell index
       integer, intent(in) :: soln         !< multigrid variable to differentiate
       integer, intent(in) :: lev          !< level on which differentiate
       integer, intent(in) :: cr_id        !< CR component index
@@ -641,7 +645,9 @@ contains
 
       implicit none
 
-      integer, intent(in) :: i, j, k      !< cell indices
+      integer, intent(in) :: i            !< first cell index
+      integer, intent(in) :: j            !< second cell index
+      integer, intent(in) :: k            !< third cell index
       integer, intent(in) :: soln         !< multigrid variable to differentiate
       integer, intent(in) :: lev          !< level on which differentiate
       integer, intent(in) :: cr_id        !< CR component index

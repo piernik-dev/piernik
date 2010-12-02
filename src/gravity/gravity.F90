@@ -652,11 +652,6 @@ module gravity
 
 !>
 !! \brief Routine that compute values of gravitational acceleration using gravitational potential array gp
-!! \param sweep string of characters that points out the current sweep direction
-!! \param i1 integer, number of column in the first direction after one pointed out by sweep
-!! \param i2 integer, number of column in the second direction after one pointed out by sweep
-!! \param n number of elements of returned array grav
-!! \param grav 1D array of gravitational acceleration values computed for positions from xsw and returned by the routine
 !<
    subroutine grav_pot2accel(sweep, i1,i2, n, grav,istep)
 
@@ -664,10 +659,11 @@ module gravity
       use grid,   only: dl, xdim, ydim, zdim
       implicit none
 
-      character(len=*), intent(in)   :: sweep
-      integer, intent(in)            :: i1, i2
-      integer, intent(in)            :: n
-      real, dimension(n),intent(out) :: grav
+      character(len=*), intent(in)   :: sweep      !< string of characters that points out the current sweep direction
+      integer, intent(in)            :: i1         !< number of column in the first direction after one pointed out by sweep
+      integer, intent(in)            :: i2         !< number of column in the second direction after one pointed out by sweep
+      integer, intent(in)            :: n          !< number of elements of returned array grav
+      real, dimension(n),intent(out) :: grav       !< 1D array of gravitational acceleration values computed for positions from %xsw and returned by the routine
       integer, intent(in)            :: istep      !< istep=1 for halfstep, istep=2 for fullstep
 !\todo offer high order gradient as an option in parameter file
 !      real, parameter :: onetw = 1./12.

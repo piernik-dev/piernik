@@ -175,7 +175,7 @@ module list_hdf5
          use mpisetup, only: psize, pcoords
 
          implicit none
-         real(kind=4), dimension(:,:,:) :: data
+         real(kind=4), dimension(:,:,:) :: data    !< array of output values
 
          integer, parameter :: rank = 3 ! Dataset rank
 
