@@ -42,7 +42,8 @@ module grid
    private ! :: nxd, nyd, nzd ! ToDo: replace references to n[xyz]d by has_dir(:) or something
    public :: &
         & Lx, Ly, Lz, cleanup_grid, dl, dvol, dx, dxmn, dy, dz, has_dir, idl, idx, idy, idz, ie, init_grid, is, je, js, ke, ks, maxxyz, nb, nx, &
-        & nxb, nxd, ny, nyb, nyd, nz, nzb, nzd, nzt, x, xdim, xl, xmax, xmin, xr, y, ydim, yl, ymax, ymin, yr, z, zdim, zl, zmax, zmin, zr
+        & nxb, nxd, ny, nyb, nyd, nz, nzb, nzd, nzt, total_ncells, x, xdim, xl, xmax, xmin, xr, y, ydim, yl, ymax, ymin, yr, z, zdim, zl, zmax, &
+        & zmin, zr
 
    real    :: dx                             !< length of the %grid cell in x-direction
    real    :: dy                             !< length of the %grid cell in y-direction
@@ -55,6 +56,7 @@ module grid
    integer :: nxd                            !< number of %grid cells in physical domain (without boundary cells) in x-direction (if equal to 1 then x-dimension is reduced to a point and boundary cells layer is not added)
    integer :: nyd                            !< number of %grid cells in physical domain (without boundary cells) in y-direction (if equal to 1 then y-dimension is reduced to a point and boundary cells layer is not added)
    integer :: nzd                            !< number of %grid cells in physical domain (without boundary cells) in z-direction (if equal to 1 then z-dimension is reduced to a point and boundary cells layer is not added)
+   integer :: total_ncells                   !< total number of %grid cells
    integer :: nb                             !< number of boundary cells surrounding the physical domain, same for all directions
    integer :: nx                             !< number of %grid cells in one block in x-direction
    integer :: ny                             !< number of %grid cells in one block in y-direction
@@ -299,6 +301,8 @@ module grid
       allocate(x(nx), xl(nx), xr(nx))
       allocate(y(ny), yl(ny), yr(ny))
       allocate(z(nz), zl(nz), zr(nz))
+
+      total_ncells = nxd * nyd * nzd
 
       call grid_xyz
 

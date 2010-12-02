@@ -53,8 +53,8 @@ module timer
 
    type(timer_list), target, private, save :: timer_root
 
-   integer :: nzones, cpuhours, cpumins, cpusecs , wchours , wcmins  , wcsecs
-   real    :: zcps,  cputot, cpuallp, wctot, cpu_start, cpu_stop
+   integer :: cpuhours, cpumins, cpusecs, wchours, wcmins, wcsecs
+   real    :: zcps, cputot, cpuallp, wctot, cpu_start, cpu_stop
    integer :: iarray(3)
    real(kind=4), dimension(2) :: tarray
    integer :: clock_start, clock_end
@@ -235,7 +235,7 @@ contains
    subroutine timer_stop
 
       use dataio_pub,    only: msg, printinfo
-      use grid,          only: nxd, nyd, nzd
+      use grid,          only: total_ncells
       use mpisetup,      only: MPI_DOUBLE_PRECISION, MPI_SUM, comm, ierr, nstep, proc
 
       implicit none
@@ -263,14 +263,12 @@ contains
       cpumins  =  int ( cputot / 60.0   ) - 60   * cpuhours
       cpusecs  =  int ( cputot + 0.5    ) - 3600 * cpuhours &
                                         - 60   * cpumins
-      nzones = nxd * nyd * nzd
-
 
       call MPI_Reduce(cputot, cpuallp, 1, MPI_DOUBLE_PRECISION, MPI_SUM, 0, comm, ierr)
 
       if (proc == 0) then
 
-         zcps  = real(nstep) * real(nzones) / cpuallp
+         zcps  = real(nstep) * real(total_ncells) / cpuallp
 
          call printinfo("", .true.)
          write(msg, "('CPU time        = ', f12.2,' s')") cpuallp
