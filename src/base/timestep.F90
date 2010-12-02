@@ -136,7 +136,8 @@ module timestep
          write(msg,'(a48)') "[timestep:cflcontrol] CFL criterion is violated!"
          call warn(msg)
       endif
-      stepcfl    =  dtnow/dt*cfl
+      stepcfl = cfl
+      if (dt > 0.0) stepcfl    =  dtnow/dt*cfl
       write(msg,'(a32,f6.4)') "[timestep:cflcontrol] stepcfl = ",stepcfl
       if (stepcfl < cfl) then
          call warn(msg)
