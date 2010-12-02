@@ -682,8 +682,8 @@ module dataio
       use dataio_pub,      only: cwdlen, cwd, user_tsl
       use diagnostics,     only: pop_vector
       use fluidindex,      only: nvar, iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz, ibx, iby, ibz
-      use grid,            only: dvol, dx, dy, dz, is, ie, js, je, ks, ke, x, y, z, nxd, nyd, nzd
-      use mpisetup,        only: proc, t, dt, smalld, nstep
+      use grid,            only: dvol, dx, dy, dz, is, ie, js, je, ks, ke, x, y, z, nxb, nyb, nzb
+      use mpisetup,        only: proc, t, dt, smalld, nstep, pxsize, pysize, pzsize
       use problem_pub,     only: problem_name, run_id
       use types,           only: tsl_container, phys_prop
 #ifndef ISO
@@ -792,9 +792,9 @@ module dataio
                   b(ibz,is:ie,js:je,ks:ke)**2)
       tot_emag = mpi_addmul(wa(is:ie,js:je,ks:ke), dvol)
 
-      tot_mflx = mpi_addmul(b(ibx,is:ie,js:je,ks:ke), dy*dz/nxd)
-      tot_mfly = mpi_addmul(b(iby,is:ie,js:je,ks:ke), dx*dz/nyd)
-      tot_mflz = mpi_addmul(b(ibz,is:ie,js:je,ks:ke), dx*dy/nzd)
+      tot_mflx = mpi_addmul(b(ibx,is:ie,js:je,ks:ke), dy*dz/(nxb*pxsize))
+      tot_mfly = mpi_addmul(b(iby,is:ie,js:je,ks:ke), dx*dz/(nyb*pysize))
+      tot_mflz = mpi_addmul(b(ibz,is:ie,js:je,ks:ke), dx*dy/(nzb*pzsize))
 #ifdef ISO
       tot_eint = cs_iso2*tot_mass
       tot_ener = tot_eint+tot_ekin+tot_emag

@@ -663,7 +663,7 @@ module dataio_hdf5
    subroutine write_plot_hdf5(var,plane,nimg)
       use arrays,        only: u
       use dataio_pub,    only: vizit, fmin, fmax, cwdlen, log_file, msg, varlen, die, warn, user_plt_hdf5, planelen
-      use grid,          only: nxb, nyb, nzb, nxd, nyd, nzd, nb, has_dir, xdim, ydim, zdim
+      use grid,          only: nxb, nyb, nzb, nb, has_dir, xdim, ydim, zdim
       use hdf5,          only: HID_T, HSIZE_T, SIZE_T, H5F_ACC_RDWR_F, h5fopen_f, h5gopen_f, h5gclose_f, h5fclose_f
       use h5lt,          only: h5ltmake_dataset_double_f, h5ltset_attribute_double_f
       use mpisetup,      only: MPI_CHARACTER, comm3d, ierr, pxsize, pysize, pzsize, MPI_DOUBLE_PRECISION, t, pcoords
@@ -717,9 +717,9 @@ module dataio_hdf5
             remain = (/.false.,.true.,.true./)
             pij    = "yz_"
             nib    = nyb
-            nid    = nyd
+            nid    = nyb*pysize
             njb    = nzb
-            njd    = nzd
+            njd    = nzb*pzsize
             nkb    = nxb
             pisize = pysize
             pjsize = pzsize
@@ -732,9 +732,9 @@ module dataio_hdf5
             remain = (/.true.,.false.,.true./)
             pij    = "xz_"
             nib    = nxb
-            nid    = nxd
+            nid    = nxb*pxsize
             njb    = nzb
-            njd    = nzd
+            njd    = nzb*pzsize
             nkb    = nyb
             pisize = pxsize
             pjsize = pzsize
@@ -747,9 +747,9 @@ module dataio_hdf5
             remain = (/.true.,.true.,.false./)
             pij    = "xy_"
             nib    = nxb
-            nid    = nxd
+            nid    = nxb*pxsize
             njb    = nyb
-            njd    = nyd
+            njd    = nyb*pysize
             nkb    = nzb
             pisize = pxsize
             pjsize = pysize
@@ -1601,12 +1601,12 @@ module dataio_hdf5
 
    subroutine write_arr(data,dsetname,file_id)
       use dataio_pub,    only: varlen
-      use grid,          only: nxd, nyd, nzd, nxb, nyb, nzb
+      use grid,          only: nxb, nyb, nzb
       use hdf5,          only: HID_T, HSIZE_T, HSSIZE_T, h5screate_simple_f, h5pcreate_f, h5pset_chunk_f, &
                            h5sclose_f, h5pset_dxpl_mpio_f, h5dwrite_f, h5dclose_f, H5P_DATASET_XFER_F, H5P_DATASET_CREATE_F, &
                            H5T_NATIVE_REAL, H5S_SELECT_SET_F, H5FD_MPIO_INDEPENDENT_F, h5dcreate_f, h5dget_space_f, &
                            h5sselect_hyperslab_f
-      use mpisetup,      only: pcoords
+      use mpisetup,      only: pcoords, pxsize, pysize, pzsize
 
       implicit none
       real(kind=4), dimension(:,:,:) :: data
@@ -1629,9 +1629,9 @@ module dataio_hdf5
       integer(HSIZE_T),  DIMENSION(ndims) :: dimsf, dimsfi, chunk_dims
       integer :: error
 
-      dimsf = (/nxd,nyd,nzd/) ! Dataset dimensions
+      chunk_dims = [nxb,nyb,nzb]                     ! Chunks dimensions
+      dimsf  = chunk_dims * [pxsize, pysize, pzsize]  ! Dataset dimensions
       dimsfi = dimsf
-      chunk_dims = (/nxb,nyb,nzb/) ! Chunks dimensions
       !
       ! Create the data space for the  dataset.
       !
@@ -1692,11 +1692,11 @@ module dataio_hdf5
    subroutine set_common_attributes(filename, chdf, stype)
 
       use dataio_pub,    only: msg, printio
-      use grid,          only: nxb, nyb, nzb, nxd, nyd, nzd, nb, xmin, xmax, ymin, ymax, zmin, zmax
+      use grid,          only: nxb, nyb, nzb, nb, xmin, xmax, ymin, ymax, zmin, zmax
       use hdf5,          only: HID_T, SIZE_T, H5F_ACC_RDWR_F, h5fopen_f, h5fclose_f, h5gcreate_f, h5gclose_f
       use h5lt,          only: h5ltset_attribute_double_f, h5ltset_attribute_int_f, h5ltmake_dataset_string_f, h5ltset_attribute_string_f
       use list_hdf5,     only: additional_attrs
-      use mpisetup,      only: proc, t, dt, psize, cbuff_len
+      use mpisetup,      only: proc, t, dt, psize, cbuff_len, pxsize, pysize, pzsize
       use problem_pub,   only: problem_name, run_id
       use types,         only: hdf
       use version,       only: env, nenv
@@ -1717,8 +1717,8 @@ module dataio_hdf5
       integer, parameter          :: buf_len = 50
       integer, dimension(buf_len) :: ibuffer
       real,    dimension(buf_len) :: rbuffer
-      character(len=cbuff_len), dimension(buf_len) :: ibuffer_name = ""
-      character(len=cbuff_len), dimension(buf_len) :: rbuffer_name = ""
+      character(len=cbuff_len), dimension(buf_len) :: ibuffer_name = ''
+      character(len=cbuff_len), dimension(buf_len) :: rbuffer_name = ''
 
       if (proc == 0) then
 
@@ -1742,9 +1742,9 @@ module dataio_hdf5
          ibuffer(5)  = chdf%nlog                ; ibuffer_name(5)  = "nlog"
          ibuffer(6)  = chdf%nstep               ; ibuffer_name(6)  = "step_res"
          ibuffer(7)  = chdf%step_hdf            ; ibuffer_name(7)  = "step_hdf"
-         ibuffer(8)  = nxd                      ; ibuffer_name(8)  = "nxd"
-         ibuffer(9)  = nyd                      ; ibuffer_name(9)  = "nyd"
-         ibuffer(10) = nzd                      ; ibuffer_name(10) = "nzd"
+         ibuffer(8)  = nxb*pysize               ; ibuffer_name(8)  = "nxd"
+         ibuffer(9)  = nyb*pxsize               ; ibuffer_name(9)  = "nyd"
+         ibuffer(10) = nzb*pzsize               ; ibuffer_name(10) = "nzd"
          ibuffer(11) = nxb                      ; ibuffer_name(11) = "nxb"
          ibuffer(12) = nyb                      ; ibuffer_name(12) = "nyb"
          ibuffer(13) = nzb                      ; ibuffer_name(13) = "nzb"
