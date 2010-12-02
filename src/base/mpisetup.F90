@@ -291,7 +291,7 @@ module mpisetup
          smallei     = 1.e-10
          dt_initial  = -1.              !< negative value indicates automatic choice of initial timestep
          dt_max_grow = dt_default_grow !< for sensitive setups consider setting this as low as 1.1
-         dt_min      = 0.
+         dt_min      = tiny(1.)
 
          integration_order  = 2
 

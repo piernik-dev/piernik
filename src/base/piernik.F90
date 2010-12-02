@@ -32,7 +32,7 @@
 program piernik
 ! pulled by ANY
    use dataio,        only: write_data, user_msg_handler, check_log, check_tsl
-   use dataio_pub,    only: nend, tend, msg, fplen, printinfo, warn, cwdlen, &
+   use dataio_pub,    only: nend, tend, msg, fplen, printinfo, warn, die, cwdlen, &
        &                    code_progress, PIERNIK_START, PIERNIK_INITIALIZED, PIERNIK_FINISHED, PIERNIK_CLEANUP
    use fluidupdate,   only: fluid_update
    use mpisetup,      only: comm, comm3d, ierr, proc, t, nstep, dt, dtm
@@ -50,7 +50,8 @@ program piernik
    character(len=fplen) :: nstr, tstr
    character(len=cwdlen), parameter :: fmt900 = "('   nstep = ',i7,'   dt = ',es22.16,'   t = ',es22.16,'   dWallClock = ',f7.2,' s')"
    logical, save                    :: first_step = .true.
-   real                             :: ts   ! Timestep wallclock
+   real                             :: ts    ! Timestep wallclock
+   real                             :: tlast
 
    code_progress = PIERNIK_START
 
@@ -98,7 +99,9 @@ program piernik
       else
          ts=timer_("fluid_update")
       endif
+      tlast = t
       call fluid_update
+      if (t == tlast .and. .not. first_step) call die("[piernik] timestep is too small: t == t + 2 * dt")
       ts=timer_("fluid_update")
 
       nstep=nstep+1
