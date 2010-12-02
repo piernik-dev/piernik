@@ -93,7 +93,7 @@ module dataio_hdf5
    subroutine init_hdf5(vars,tix,tiy,tiz,tdt_plt)
 
       use fluidindex,    only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
-      use grid,          only: nx, ny, nz, nxd, nyd, nzd, nb
+      use grid,          only: nx, ny, nz, has_dir, xdim, ydim, zdim, nb
       use list_hdf5,     only: additional_attrs, problem_write_restart, problem_read_restart
       use dataio_pub,    only: varlen
 #ifdef COSM_RAYS
@@ -117,22 +117,22 @@ module dataio_hdf5
 
       ix = tix; iy = tiy; iz = tiz; dt_plt = tdt_plt
 
-      if (nxd == 1) then
-         is = 1; ie = 1
-      else
+      if (has_dir(xdim)) then
          is = nb+1; ie = nx-nb
+      else
+         is = 1; ie = 1
       endif
 
-      if (nyd == 1) then
-         js = 1; je = 1
-      else
+      if (has_dir(ydim)) then
          js = nb+1; je = ny-nb
+      else
+         js = 1; je = 1
       endif
 
-      if (nzd == 1) then
-         ks = 1; ke = 1
-      else
+      if (has_dir(zdim)) then
          ks = nb+1; ke = nz-nb
+      else
+         ks = 1; ke = 1
       endif
 
       nvars = 1
@@ -663,7 +663,7 @@ module dataio_hdf5
    subroutine write_plot_hdf5(var,plane,nimg)
       use arrays,        only: u
       use dataio_pub,    only: vizit, fmin, fmax, cwdlen, log_file, msg, varlen, die, warn, user_plt_hdf5, planelen
-      use grid,          only: nxb, nyb, nzb, nxd, nyd, nzd, nb
+      use grid,          only: nxb, nyb, nzb, nxd, nyd, nzd, nb, has_dir, xdim, ydim, zdim
       use hdf5,          only: HID_T, HSIZE_T, SIZE_T, H5F_ACC_RDWR_F, h5fopen_f, h5gopen_f, h5gclose_f, h5fclose_f
       use h5lt,          only: h5ltmake_dataset_double_f, h5ltset_attribute_double_f
       use mpisetup,      only: MPI_CHARACTER, comm3d, ierr, pxsize, pysize, pzsize, MPI_DOUBLE_PRECISION, t, pcoords
@@ -709,7 +709,7 @@ module dataio_hdf5
       nib = 0; nid = 0; njb = 0; njd = 0; nkb = 0; pisize = 0; pjsize = 0
       select case (plane)
          case ("yz")
-            if (nxd > 1) then
+            if (has_dir(xdim)) then
                xn     = ix + nb - pcoords(1)*nxb
             else
                xn     = 1
@@ -724,7 +724,7 @@ module dataio_hdf5
             pisize = pysize
             pjsize = pzsize
          case ("xz")
-            if (nyd > 1) then
+            if (has_dir(ydim)) then
                xn     = iy + nb - pcoords(2)*nyb
             else
                xn     = 1
@@ -739,7 +739,7 @@ module dataio_hdf5
             pisize = pxsize
             pjsize = pzsize
          case ("xy")
-            if (nzd > 1) then
+            if (has_dir(zdim)) then
                xn = iz + nb - pcoords(3)*nzb
             else
                xn = 1

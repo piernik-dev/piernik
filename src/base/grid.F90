@@ -40,10 +40,9 @@ module grid
    implicit none
 
    private ! :: nxd, nyd, nzd ! ToDo: replace references to n[xyz]d by has_dir(:) or something
-   public  :: &
-      & Lx, Ly, Lz, cleanup_grid, dl, dvol, dx, dxmn, dy, dz, grid_xyz, idl, idx, idy, idz, ie, init_grid, is, je, js, ke, ks, &
-      & maxxyz, nb, nx, nxb, nxd, nxt, ny, nyb, nyd, nyt, nz, nzb, nzd, nzt, x, xdim, xl, xmax, xmaxb, xmin, xminb, xr, y, ydim, yl, &
-      & ymax, ymaxb, ymin, yminb, yr, z, zdim, zl, zmax, zmaxb, zmin, zminb, zr
+   public :: &
+        & Lx, Ly, cleanup_grid, dl, dvol, dx, dxmn, dy, dz, has_dir, idl, idx, idy, idz, ie, init_grid, is, je, js, ke, ks, maxxyz, nb, nx, &
+        & nxb, nxd, ny, nyb, nyd, nz, nzb, nzd, nzt, x, xdim, xmax, xmin, xr, y, ydim, ymax, ymin, yr, z, zdim, zl, zmax, zmin, zr
 
    real    :: dx                             !< length of the %grid cell in x-direction
    real    :: dy                             !< length of the %grid cell in y-direction
@@ -330,21 +329,21 @@ module grid
       zmaxb = zmin + real(pcoords(3)+1)*(zmax-zmin)/real(psize(3))
 
       dxmn = huge(1.0)
-      if (nxd /= 1) then
+      if (has_dir(xdim)) then
          dx = (xmaxb-xminb)/nxb
          dxmn = min(dxmn,dx)
       else
          dx = 1.0
       endif
       idx = 1./dx
-      if (nyd /= 1) then
+      if (has_dir(ydim)) then
          dy = (ymaxb-yminb)/nyb
          dxmn = min(dxmn,dy)
       else
          dy = 1.0
       endif
       idy = 1./dy
-      if (nzd /= 1) then
+      if (has_dir(zdim)) then
          dz = (zmaxb-zminb)/nzb
          dxmn = min(dxmn,dz)
       else
@@ -366,7 +365,7 @@ module grid
 
 !--- x-grids --------------------------------------------------------------
 
-      if (nxd /= 1) then
+      if (has_dir(xdim)) then
          do i= 1, nx
             x(i)  = xminb + 0.5*dx + (i-nb-1)*dx
             xl(i) = x(i)  - 0.5*dx
@@ -380,7 +379,7 @@ module grid
 
 !--- y-grids --------------------------------------------------------------
 
-      if (nyd /= 1) then
+      if (has_dir(ydim)) then
          do j= 1, ny
             y(j)  = yminb + 0.5*dy + (j-nb-1)*dy
             yl(j) = y(j)  - 0.5*dy
@@ -394,7 +393,7 @@ module grid
 
 !--- z-grids --------------------------------------------------------------
 
-      if (nzd /= 1) then
+      if (has_dir(zdim)) then
          do k= 1, nz
             z(k)  = zminb + 0.5*dz + (k-nb-1) * dz
             zl(k) = z(k)  - 0.5*dz
