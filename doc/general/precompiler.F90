@@ -32,7 +32,7 @@
 !!
 !! <table border="0">
 !! <tr><td width="40pt"><b></b></td><td width="760pt">
-!! \copydetails gravity::grav_pot_3d
+!! \copydetails gravity::default_grav_pot_3d
 !!
 !! If no %gravity type is defined then vertical component of galactic %gravity is used:
 !!
