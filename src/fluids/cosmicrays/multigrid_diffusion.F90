@@ -510,7 +510,8 @@ contains
    ! BEWARE: almost replicated code (see crdiffusion.F90)
    subroutine diff_flux_x(i, j, k, soln, lev, cr_id, Keff)
 
-      use multigridvars,     only: lvl, YDIR, ZDIR, has_dir
+      use grid,              only: has_dir, ydim, zdim
+      use multigridvars,     only: lvl
       use initcosmicrays,    only: K_crs_perp, K_crs_paral
       use mpisetup,          only: dt
       use arrays,            only: wa
@@ -528,7 +529,7 @@ contains
       real                :: fcrdif, decr1, decr2, decr3
       real                :: b1b, b2b, b3b, magb
 
-      ! Assumes has_dir(XDIR)
+      ! Assumes has_dir(xdim)
       decr1 = (lvl(lev)%mgvar(i, j, k, soln) - lvl(lev)%mgvar(i-1, j, k, soln)) / lvl(lev)%dx
       fcrdif = K_crs_perp(cr_id) * decr1
       if (present(Keff)) Keff = K_crs_perp(cr_id)
@@ -537,7 +538,7 @@ contains
 
          b1b = lvl(lev)%mgvar(i, j, k, diff_bx)
 
-         if (has_dir(YDIR)) then
+         if (has_dir(ydim)) then
             b2b = sum(lvl(lev)%mgvar(i-1:i, j:j+1, k, diff_by))*0.25
             decr2 = ((lvl(lev)%mgvar(i-1, j+1, k, soln) + lvl(lev)%mgvar(i, j+1, k, soln))- &
                  &   (lvl(lev)%mgvar(i-1, j-1, k, soln) + lvl(lev)%mgvar(i, j-1, k, soln))) * 0.25 / lvl(lev)%dy
@@ -546,7 +547,7 @@ contains
             decr2 = 0.
          endif
 
-         if (has_dir(ZDIR)) then
+         if (has_dir(zdim)) then
             b3b = sum(lvl(lev)%mgvar(i-1:i, j, k:k+1, diff_bz))*0.25
             decr3 = ((lvl(lev)%mgvar(i-1, j, k+1, soln) + lvl(lev)%mgvar(i, j, k+1, soln)) - &
                  &   (lvl(lev)%mgvar(i-1, j, k-1, soln) + lvl(lev)%mgvar(i, j, k-1, soln))) * 0.25 / lvl(lev)%dz
@@ -574,7 +575,8 @@ contains
 
    subroutine diff_flux_y(i, j, k, soln, lev, cr_id, Keff)
 
-      use multigridvars,     only: lvl, XDIR, ZDIR, has_dir
+      use grid,              only: has_dir, xdim, zdim
+      use multigridvars,     only: lvl
       use initcosmicrays,    only: K_crs_perp, K_crs_paral
       use mpisetup,          only: dt
       use arrays,            only: wa
@@ -592,14 +594,14 @@ contains
       real                :: fcrdif, decr1, decr2, decr3
       real                :: b1b, b2b, b3b, magb
 
-      ! Assumes has_dir(YDIR)
+      ! Assumes has_dir(ydim)
       decr2 = (lvl(lev)%mgvar(i, j, k, soln) - lvl(lev)%mgvar(i, j-1, k, soln)) / lvl(lev)%dy
       fcrdif = K_crs_perp(cr_id) * decr2
       if (present(Keff)) Keff = K_crs_perp(cr_id)
 
       if (K_crs_paral(cr_id) /= 0.) then
 
-         if (has_dir(XDIR)) then
+         if (has_dir(xdim)) then
             b1b = sum(lvl(lev)%mgvar(i:i+1, j-1:j, k, diff_bx))*0.25
             decr1 = ((lvl(lev)%mgvar(i+1, j-1, k, soln) + lvl(lev)%mgvar(i+1, j,  k, soln)) - &
                  &   (lvl(lev)%mgvar(i-1, j-1, k, soln) + lvl(lev)%mgvar(i-1, j,  k, soln))) * 0.25 / lvl(lev)%dx
@@ -610,7 +612,7 @@ contains
 
          b2b = lvl(lev)%mgvar(i, j, k, diff_by)
 
-         if (has_dir(ZDIR)) then
+         if (has_dir(zdim)) then
             b3b = sum(lvl(lev)%mgvar(i, j-1:j, k:k+1, diff_bz))*0.25
             decr3 = ((lvl(lev)%mgvar(i, j-1, k+1, soln) + lvl(lev)%mgvar(i, j,  k+1, soln)) - &
                  &   (lvl(lev)%mgvar(i, j-1, k-1, soln) + lvl(lev)%mgvar(i, j,  k-1, soln))) * 0.25 / lvl(lev)%dz
@@ -638,7 +640,8 @@ contains
 
    subroutine diff_flux_z(i, j, k, soln, lev, cr_id, Keff)
 
-      use multigridvars,     only: lvl, XDIR, YDIR, has_dir
+      use grid,              only: has_dir, xdim, ydim
+      use multigridvars,     only: lvl
       use initcosmicrays,    only: K_crs_perp, K_crs_paral
       use mpisetup,          only: dt
       use arrays,            only: wa
@@ -656,14 +659,14 @@ contains
       real                :: fcrdif, decr1, decr2, decr3
       real                :: b1b, b2b, b3b, magb
 
-      ! Assumes has_dir(ZDIR)
+      ! Assumes has_dir(zdim)
       decr3 = (lvl(lev)%mgvar(i, j, k, soln) - lvl(lev)%mgvar(i, j, k-1, soln)) / lvl(lev)%dz
       fcrdif = K_crs_perp(cr_id) * decr3
       if (present(Keff)) Keff = K_crs_perp(cr_id)
 
       if (K_crs_paral(cr_id) /= 0.) then
 
-         if (has_dir(XDIR)) then
+         if (has_dir(xdim)) then
             b1b = sum(lvl(lev)%mgvar(i:i+1, j, k-1:k, diff_bx))*0.25
             decr1 = ((lvl(lev)%mgvar(i+1, j, k-1, soln) + lvl(lev)%mgvar(i+1, j,  k, soln)) - &
                  &   (lvl(lev)%mgvar(i-1, j, k-1, soln) + lvl(lev)%mgvar(i-1, j,  k, soln))) * 0.25 / lvl(lev)%dx
@@ -672,7 +675,7 @@ contains
             decr1 = 0.
          endif
 
-         if (has_dir(YDIR)) then
+         if (has_dir(ydim)) then
             b2b = sum(lvl(lev)%mgvar(i, j:j+1, k-1:k, diff_by))*0.25
             decr2 = ((lvl(lev)%mgvar(i, j+1, k-1, soln) + lvl(lev)%mgvar(i,  j+1, k, soln)) - &
                  &   (lvl(lev)%mgvar(i, j-1, k-1, soln) + lvl(lev)%mgvar(i,  j-1, k, soln))) * 0.25 / lvl(lev)%dy
@@ -704,7 +707,8 @@ contains
 
    subroutine residual(lev, src, soln, def, cr_id)
 
-      use multigridvars,     only: lvl, XDIR, YDIR, ZDIR, has_dir
+      use grid,              only: has_dir, xdim, ydim, zdim
+      use multigridvars,     only: lvl
       use multigridmpifuncs, only: mpi_multigrid_bnd
       use initcosmicrays,    only: K_crs_perp, K_crs_paral
       use mpisetup,          only: dt
@@ -729,7 +733,7 @@ contains
               &   lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k,   src)
       enddo
 
-      if (has_dir(XDIR)) then
+      if (has_dir(xdim)) then
          do k = lvl(lev)%ks, lvl(lev)%ke
             do j = lvl(lev)%js, lvl(lev)%je
                do i = lvl(lev)%is, lvl(lev)%ie+1
@@ -743,7 +747,7 @@ contains
          enddo
       endif
 
-      if (has_dir(YDIR)) then
+      if (has_dir(ydim)) then
          do k = lvl(lev)%ks, lvl(lev)%ke
             do j = lvl(lev)%js, lvl(lev)%je+1
                do i = lvl(lev)%is, lvl(lev)%ie
@@ -757,7 +761,7 @@ contains
          enddo
       endif
 
-      if (has_dir(ZDIR)) then
+      if (has_dir(zdim)) then
          do k = lvl(lev)%ks, lvl(lev)%ke+1
             do j = lvl(lev)%js, lvl(lev)%je
                do i = lvl(lev)%is, lvl(lev)%ie
@@ -786,7 +790,8 @@ contains
 
    subroutine approximate_solution(lev, src, soln, cr_id)
 
-      use multigridvars,      only: level_min, has_dir, XDIR, YDIR, ZDIR, lvl, extbnd_donothing
+      use grid,               only: has_dir, xdim, ydim, zdim
+      use multigridvars,      only: level_min, lvl, extbnd_donothing
       use multigridmpifuncs,  only: mpi_multigrid_bnd
       use mpisetup,           only: dt
       use arrays,             only: wa
@@ -813,11 +818,11 @@ contains
       i1 = lvl(lev)%is; id = 1 ! mv to multigridvars, init_multigrid
       j1 = lvl(lev)%js; jd = 1
       k1 = lvl(lev)%ks; kd = 1
-      if (has_dir(XDIR)) then
+      if (has_dir(xdim)) then
          id = RED_BLACK
-      else if (has_dir(YDIR)) then
+      else if (has_dir(ydim)) then
          jd = RED_BLACK
-      else if (has_dir(ZDIR)) then
+      else if (has_dir(zdim)) then
          kd = RED_BLACK
       endif
 
@@ -838,7 +843,7 @@ contains
                   temp = lvl(lev)%mgvar(i, j, k, soln) - lvl(lev)%mgvar(i, j, k, src)
                   dLdu = 0.
 
-                  if (has_dir(XDIR)) then
+                  if (has_dir(xdim)) then
 
                      call diff_flux_x(i,   j, k, soln, lev, cr_id, Keff1)
                      call diff_flux_x(i+1, j, k, soln, lev, cr_id, Keff2)
@@ -848,7 +853,7 @@ contains
 
                   endif
 
-                  if (has_dir(YDIR)) then
+                  if (has_dir(ydim)) then
 
                      call diff_flux_y(i, j,   k, soln, lev, cr_id, Keff1)
                      call diff_flux_y(i, j+1, k, soln, lev, cr_id, Keff2)
@@ -858,7 +863,7 @@ contains
 
                   endif
 
-                  if (has_dir(ZDIR)) then
+                  if (has_dir(zdim)) then
 
                      call diff_flux_z(i, j, k,   soln, lev, cr_id, Keff1)
                      call diff_flux_z(i, j, k+1, soln, lev, cr_id, Keff2)

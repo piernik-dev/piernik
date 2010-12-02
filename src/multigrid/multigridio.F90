@@ -142,6 +142,7 @@ contains
 
    subroutine multigrid_write_arr(llvl, dsetname, file_id)
 
+      use grid,     only: xdim, ydim, zdim
       use mpisetup, only: pcoords, psize
       use hdf5,     only: HID_T, HSIZE_T, HSSIZE_T, &
            &              H5FD_MPIO_INDEPENDENT_F, H5P_DATASET_CREATE_F, H5P_DATASET_XFER_F, H5S_SELECT_SET_F, H5T_NATIVE_DOUBLE, &
@@ -149,7 +150,7 @@ contains
            &              h5pcreate_f, h5pset_chunk_f, h5pset_dxpl_mpio_f, h5pset_dxpl_mpio_f, &
            &              h5dcreate_f, h5dget_space_f, h5dwrite_f, h5dclose_f
       use multigridvars, only: plvl, ngridvars, source, solution, defect, &
-           &                    correction, hdf5levels, XDIR, YDIR, ZDIR, NDIM
+           &                    correction, hdf5levels, NDIM
 
       implicit none
 
@@ -179,9 +180,9 @@ contains
 
       if (.not. hdf5levels) return
 
-      nxd = llvl%nxb*psize(XDIR)
-      nyd = llvl%nyb*psize(YDIR)
-      nzd = llvl%nzb*psize(ZDIR)
+      nxd = llvl%nxb*psize(xdim)
+      nyd = llvl%nyb*psize(ydim)
+      nzd = llvl%nzb*psize(zdim)
 
       dimsf = [ nxd, nyd, nzd ] ! Dataset dimensions
       dimsfi = dimsf

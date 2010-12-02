@@ -272,10 +272,11 @@ contains
 
    subroutine prolong_faces(lev, soln)
 
+      use grid,               only: has_dir, xdim, ydim, zdim
       use dataio_pub,         only: die, warn
       use multigridhelpers,   only: check_dirty
       use multigridmpifuncs,  only: mpi_multigrid_bnd
-      use multigridvars,      only: plvl, lvl, has_dir, XDIR, YDIR, ZDIR, LOW, HIGH, ord_prolong_face, level_min, level_max, D_x, D_y, D_z, extbnd_antimirror
+      use multigridvars,      only: plvl, lvl, LOW, HIGH, ord_prolong_face, level_min, level_max, D_x, D_y, D_z, extbnd_antimirror
 
       implicit none
 
@@ -325,7 +326,7 @@ contains
       coarse => lvl(lev - 1)
       fine   => lvl(lev)
 
-      if (has_dir(XDIR)) then
+      if (has_dir(xdim)) then
          pp_norm = 2.*sum(pp(-D_y:D_y, -D_z:D_z, 1, 1)) ! normalization is required for ord_prolong_face == 1 and -2
          do j = coarse%js, coarse%je
             do k = coarse%ks, coarse%ke
@@ -341,7 +342,7 @@ contains
          enddo
       endif
 
-      if (has_dir(YDIR)) then
+      if (has_dir(ydim)) then
          pp_norm = 2.*sum(pp(-D_x:D_x, -D_z:D_z, 1, 1))
          do i = coarse%is, coarse%ie
             do k = coarse%ks, coarse%ke
@@ -357,7 +358,7 @@ contains
          enddo
       endif
 
-      if (has_dir(ZDIR)) then
+      if (has_dir(zdim)) then
          pp_norm = 2.*sum(pp(-D_x:D_x, -D_y:D_y, 1, 1))
          do i = coarse%is, coarse%ie
             do j = coarse%js, coarse%je

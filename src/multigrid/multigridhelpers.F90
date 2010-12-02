@@ -253,9 +253,10 @@ contains
 
    subroutine ascii_dump(filename)
 
+      use grid,          only: xdim, ydim, zdim
       use dataio_pub,    only: msg
       use mpisetup,      only: proc
-      use multigridvars, only: level_min, level_max, lvl, gb_cartmap, ngridvars, XDIR, YDIR, ZDIR
+      use multigridvars, only: level_min, level_max, lvl, gb_cartmap, ngridvars
 
       implicit none
 
@@ -273,10 +274,10 @@ contains
          do i = lvl(l)%is, lvl(l)%ie
             do j = lvl(l)%js, lvl(l)%je
                do k = lvl(l)%ks, lvl(l)%ke
-                  write(fu, '(3i4,i6,10es20.11e3)')i-lvl(l)%is+gb_cartmap(proc)%proc(XDIR)*lvl(l)%nxb, &
-                       &                          j-lvl(l)%js+gb_cartmap(proc)%proc(YDIR)*lvl(l)%nyb, &
-                       &                          k-lvl(l)%ks+gb_cartmap(proc)%proc(ZDIR)*lvl(l)%nzb, &
-                       &                          l, lvl(l)%x(i), lvl(l)%y(j), lvl(l)%z(k), lvl(l)%mgvar(i, j, k, 1:ngridvars)
+                  write(fu, '(3i4,i6,10es20.11e3)')i-lvl(l)%is+gb_cartmap(proc)%proc(xdim)*lvl(l)%nxb, &
+                       &                           j-lvl(l)%js+gb_cartmap(proc)%proc(ydim)*lvl(l)%nyb, &
+                       &                           k-lvl(l)%ks+gb_cartmap(proc)%proc(zdim)*lvl(l)%nzb, &
+                       &                           l, lvl(l)%x(i), lvl(l)%y(j), lvl(l)%z(k), lvl(l)%mgvar(i, j, k, 1:ngridvars)
                enddo
                write(fu, '(/)')
             enddo

@@ -42,7 +42,7 @@ module multigridvars
 
    ! these constants can be #defined and used in other source files as well
    integer, parameter :: LOW=1, HIGH=LOW+1                            !< indices for low and high boundary values (third index of plvl%bnd_[xyz] array)
-   integer, parameter :: XDIR=1, YDIR=XDIR+1, ZDIR=YDIR+1, NDIM=ZDIR  !< directional indices and number of dimensions
+   integer, parameter :: NDIM=3                                       !< number of dimensions
    integer, parameter :: XLO=1,     XHI=XLO+1                         !< enumerated indices for low and high x boundary (used for is_external(:))
    integer, parameter :: YLO=XHI+1, YHI=YLO+1                         !< as above, low and high y
    integer, parameter :: ZLO=YHI+1, ZHI=ZLO+1                         !< as above, low and high y
@@ -100,7 +100,6 @@ module multigridvars
 
    ! dimensions
    integer                                 :: eff_dim                 !< count number of dimensions (>1 cell in a direction)
-   logical, dimension(NDIM)                :: has_dir                 !< Set to .true. when there is more than one cell on base level in particular direction
    integer                                 :: D_x, D_y, D_z           !< set to 1 when given direction exists and use to construct dimensionally-safe indices for arrays
    integer                                 :: ngridvars               !< number of variables required for implementation of multigrid
 

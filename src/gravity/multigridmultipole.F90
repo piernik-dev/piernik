@@ -100,10 +100,11 @@ contains
 
    subroutine init_multipole(mb_alloc, cgrid)
 
+      use grid,          only: xdim, ydim, zdim
       use dataio_pub,    only: die, warn
       use types,         only: grid_container
       use mpisetup,      only: proc
-      use multigridvars, only: level_min, level_max, lvl, eff_dim, XDIR, YDIR, ZDIR
+      use multigridvars, only: level_min, level_max, lvl, eff_dim
 
       implicit none
 
@@ -120,9 +121,9 @@ contains
 
       ! assume that Center of Mass is approximately in the center of computational domain by default
       CoM(0) = 1.
-      CoM(XDIR) = (cgrid%xmax + cgrid%xmin)/2.
-      CoM(YDIR) = (cgrid%ymax + cgrid%ymin)/2.
-      CoM(ZDIR) = (cgrid%zmax + cgrid%zmin)/2.
+      CoM(xdim) = (cgrid%xmax + cgrid%xmin)/2.
+      CoM(ydim) = (cgrid%ymax + cgrid%ymin)/2.
+      CoM(zdim) = (cgrid%zmax + cgrid%zmin)/2.
 
       if (eff_dim /= NDIM) call die("[multipole:init_multipole] Only 3D is supported")
 
@@ -276,8 +277,9 @@ contains
 
    subroutine isolated_monopole
 
-      use multigridvars,   only: XDIR, YDIR, ZDIR, LOW, HIGH, is_external, XLO, XHI, YLO, YHI, ZLO, ZHI
-      use constants, only: newtong
+      use grid,          only: xdim, ydim, zdim
+      use multigridvars, only: LOW, HIGH, is_external, XLO, XHI, YLO, YHI, ZLO, ZHI
+      use constants,     only: newtong
 
       implicit none
 
@@ -287,9 +289,9 @@ contains
       if (is_external(XLO) .or. is_external(XHI)) then
          do j = lmpole%js, lmpole%je
             do k = lmpole%ks, lmpole%ke
-               r2 = (lmpole%y(j)-CoM(YDIR))**2 + (lmpole%z(k) - CoM(ZDIR))**2
-               if (is_external(XLO)) lmpole%bnd_x(j, k, LOW)  = - newtong * CoM(0) / sqrt(r2 + (fbnd_x(LOW) -CoM(XDIR))**2)
-               if (is_external(XHI)) lmpole%bnd_x(j, k, HIGH) = - newtong * CoM(0) / sqrt(r2 + (fbnd_x(HIGH)-CoM(XDIR))**2)
+               r2 = (lmpole%y(j)-CoM(ydim))**2 + (lmpole%z(k) - CoM(zdim))**2
+               if (is_external(XLO)) lmpole%bnd_x(j, k, LOW)  = - newtong * CoM(0) / sqrt(r2 + (fbnd_x(LOW) -CoM(xdim))**2)
+               if (is_external(XHI)) lmpole%bnd_x(j, k, HIGH) = - newtong * CoM(0) / sqrt(r2 + (fbnd_x(HIGH)-CoM(xdim))**2)
             enddo
          enddo
       endif
@@ -297,9 +299,9 @@ contains
       if (is_external(YLO) .or. is_external(YHI)) then
          do i = lmpole%is, lmpole%ie
             do k = lmpole%ks, lmpole%ke
-               r2 = (lmpole%x(i)-CoM(XDIR))**2 + (lmpole%z(k) - CoM(ZDIR))**2
-               if (is_external(YLO)) lmpole%bnd_y(i, k, LOW)  = - newtong * CoM(0) / sqrt(r2 + (fbnd_y(LOW) -CoM(YDIR))**2)
-               if (is_external(YHI)) lmpole%bnd_y(i, k, HIGH) = - newtong * CoM(0) / sqrt(r2 + (fbnd_y(HIGH)-CoM(YDIR))**2)
+               r2 = (lmpole%x(i)-CoM(xdim))**2 + (lmpole%z(k) - CoM(zdim))**2
+               if (is_external(YLO)) lmpole%bnd_y(i, k, LOW)  = - newtong * CoM(0) / sqrt(r2 + (fbnd_y(LOW) -CoM(ydim))**2)
+               if (is_external(YHI)) lmpole%bnd_y(i, k, HIGH) = - newtong * CoM(0) / sqrt(r2 + (fbnd_y(HIGH)-CoM(ydim))**2)
             enddo
          enddo
       endif
@@ -307,9 +309,9 @@ contains
       if (is_external(ZLO) .or. is_external(ZHI)) then
          do i = lmpole%is, lmpole%ie
             do j = lmpole%js, lmpole%je
-               r2 = (lmpole%x(i)-CoM(XDIR))**2 + (lmpole%y(j) - CoM(YDIR))**2
-               if (is_external(ZLO)) lmpole%bnd_z(i, j, LOW)  = - newtong * CoM(0) / sqrt(r2 + (fbnd_z(LOW) -CoM(ZDIR))**2)
-               if (is_external(ZHI)) lmpole%bnd_z(i, j, HIGH) = - newtong * CoM(0) / sqrt(r2 + (fbnd_z(HIGH)-CoM(ZDIR))**2)
+               r2 = (lmpole%x(i)-CoM(xdim))**2 + (lmpole%y(j) - CoM(ydim))**2
+               if (is_external(ZLO)) lmpole%bnd_z(i, j, LOW)  = - newtong * CoM(0) / sqrt(r2 + (fbnd_z(LOW) -CoM(zdim))**2)
+               if (is_external(ZHI)) lmpole%bnd_z(i, j, HIGH) = - newtong * CoM(0) / sqrt(r2 + (fbnd_z(HIGH)-CoM(zdim))**2)
             enddo
          enddo
       endif
@@ -324,7 +326,8 @@ contains
 
    subroutine find_img_CoM
 
-      use multigridvars,   only: is_external, XLO, XHI, YLO, YHI, ZLO, ZHI, XDIR, YDIR, ZDIR, LOW, HIGH
+      use grid,            only: xdim, ydim, zdim
+      use multigridvars,   only: is_external, XLO, XHI, YLO, YHI, ZLO, ZHI, LOW, HIGH
       use dataio_pub,      only: die
       use mpisetup,        only: comm3d, ierr, MPI_DOUBLE_PRECISION, MPI_SUM
 
@@ -336,56 +339,56 @@ contains
 
       if (is_external(XLO)) then
          dsum(0)    =      sum( lmpole%bnd_x(lmpole%js:lmpole%je, lmpole%ks:lmpole%ke, LOW) )
-         dsum(XDIR) = dsum(0) * fbnd_x(LOW)
-         dsum(YDIR) = sum( sum( lmpole%bnd_x(lmpole%js:lmpole%je, lmpole%ks:lmpole%ke, LOW),  dim=2) * lmpole%y(lmpole%js:lmpole%je) )
-         dsum(ZDIR) = sum( sum( lmpole%bnd_x(lmpole%js:lmpole%je, lmpole%ks:lmpole%ke, LOW),  dim=1) * lmpole%z(lmpole%ks:lmpole%ke) )
+         dsum(xdim) = dsum(0) * fbnd_x(LOW)
+         dsum(ydim) = sum( sum( lmpole%bnd_x(lmpole%js:lmpole%je, lmpole%ks:lmpole%ke, LOW),  dim=2) * lmpole%y(lmpole%js:lmpole%je) )
+         dsum(zdim) = sum( sum( lmpole%bnd_x(lmpole%js:lmpole%je, lmpole%ks:lmpole%ke, LOW),  dim=1) * lmpole%z(lmpole%ks:lmpole%ke) )
          lsum(:)    = lsum(:) + dsum(:) * lmpole%dyz
       endif
 
       if (is_external(XHI)) then
          dsum(0)    =      sum( lmpole%bnd_x(lmpole%js:lmpole%je, lmpole%ks:lmpole%ke, HIGH) )
-         dsum(XDIR) = dsum(0) * fbnd_x(HIGH)
-         dsum(YDIR) = sum( sum( lmpole%bnd_x(lmpole%js:lmpole%je, lmpole%ks:lmpole%ke, HIGH), dim=2) * lmpole%y(lmpole%js:lmpole%je) )
-         dsum(ZDIR) = sum( sum( lmpole%bnd_x(lmpole%js:lmpole%je, lmpole%ks:lmpole%ke, HIGH), dim=1) * lmpole%z(lmpole%ks:lmpole%ke) )
+         dsum(xdim) = dsum(0) * fbnd_x(HIGH)
+         dsum(ydim) = sum( sum( lmpole%bnd_x(lmpole%js:lmpole%je, lmpole%ks:lmpole%ke, HIGH), dim=2) * lmpole%y(lmpole%js:lmpole%je) )
+         dsum(zdim) = sum( sum( lmpole%bnd_x(lmpole%js:lmpole%je, lmpole%ks:lmpole%ke, HIGH), dim=1) * lmpole%z(lmpole%ks:lmpole%ke) )
          lsum(:)    = lsum(:) + dsum(:) * lmpole%dyz
       endif
 
       if (is_external(YLO)) then
          dsum(0)    =      sum( lmpole%bnd_y(lmpole%is:lmpole%ie, lmpole%ks:lmpole%ke, LOW) )
-         dsum(XDIR) = sum( sum( lmpole%bnd_y(lmpole%is:lmpole%ie, lmpole%ks:lmpole%ke, LOW),  dim=2) * lmpole%x(lmpole%is:lmpole%ie) )
-         dsum(YDIR) = dsum(0) * fbnd_y(LOW)
-         dsum(ZDIR) = sum( sum( lmpole%bnd_y(lmpole%is:lmpole%ie, lmpole%ks:lmpole%ke, LOW),  dim=1) * lmpole%z(lmpole%ks:lmpole%ke) )
+         dsum(xdim) = sum( sum( lmpole%bnd_y(lmpole%is:lmpole%ie, lmpole%ks:lmpole%ke, LOW),  dim=2) * lmpole%x(lmpole%is:lmpole%ie) )
+         dsum(ydim) = dsum(0) * fbnd_y(LOW)
+         dsum(zdim) = sum( sum( lmpole%bnd_y(lmpole%is:lmpole%ie, lmpole%ks:lmpole%ke, LOW),  dim=1) * lmpole%z(lmpole%ks:lmpole%ke) )
          lsum(:)    = lsum(:) + dsum(:) * lmpole%dxz
       endif
 
       if (is_external(YHI)) then
          dsum(0)    =      sum( lmpole%bnd_y(lmpole%is:lmpole%ie, lmpole%ks:lmpole%ke, HIGH) )
-         dsum(XDIR) = sum( sum( lmpole%bnd_y(lmpole%is:lmpole%ie, lmpole%ks:lmpole%ke, HIGH), dim=2) * lmpole%x(lmpole%is:lmpole%ie) )
-         dsum(YDIR) = dsum(0) * fbnd_y(HIGH)
-         dsum(ZDIR) = sum( sum( lmpole%bnd_y(lmpole%is:lmpole%ie, lmpole%ks:lmpole%ke, HIGH), dim=1) * lmpole%z(lmpole%ks:lmpole%ke) )
+         dsum(xdim) = sum( sum( lmpole%bnd_y(lmpole%is:lmpole%ie, lmpole%ks:lmpole%ke, HIGH), dim=2) * lmpole%x(lmpole%is:lmpole%ie) )
+         dsum(ydim) = dsum(0) * fbnd_y(HIGH)
+         dsum(zdim) = sum( sum( lmpole%bnd_y(lmpole%is:lmpole%ie, lmpole%ks:lmpole%ke, HIGH), dim=1) * lmpole%z(lmpole%ks:lmpole%ke) )
          lsum(:)    = lsum(:) + dsum(:) * lmpole%dxz
       endif
 
       if (is_external(ZLO)) then
          dsum(0)    =      sum( lmpole%bnd_z(lmpole%is:lmpole%ie, lmpole%js:lmpole%je, LOW) )
-         dsum(XDIR) = sum( sum( lmpole%bnd_z(lmpole%is:lmpole%ie, lmpole%js:lmpole%je, LOW),  dim=2) * lmpole%x(lmpole%is:lmpole%ie) )
-         dsum(YDIR) = sum( sum( lmpole%bnd_z(lmpole%is:lmpole%ie, lmpole%js:lmpole%je, LOW),  dim=1) * lmpole%z(lmpole%ks:lmpole%ke) )
-         dsum(ZDIR) = dsum(0) * fbnd_z(LOW)
+         dsum(xdim) = sum( sum( lmpole%bnd_z(lmpole%is:lmpole%ie, lmpole%js:lmpole%je, LOW),  dim=2) * lmpole%x(lmpole%is:lmpole%ie) )
+         dsum(ydim) = sum( sum( lmpole%bnd_z(lmpole%is:lmpole%ie, lmpole%js:lmpole%je, LOW),  dim=1) * lmpole%z(lmpole%ks:lmpole%ke) )
+         dsum(zdim) = dsum(0) * fbnd_z(LOW)
          lsum(:)    = lsum(:) + dsum(:) * lmpole%dxy
       endif
 
       if (is_external(ZHI)) then
          dsum(0)    =      sum( lmpole%bnd_z(lmpole%is:lmpole%ie, lmpole%js:lmpole%je, HIGH) )
-         dsum(XDIR) = sum( sum( lmpole%bnd_z(lmpole%is:lmpole%ie, lmpole%js:lmpole%je, HIGH), dim=2) * lmpole%x(lmpole%is:lmpole%ie) )
-         dsum(YDIR) = sum( sum( lmpole%bnd_z(lmpole%is:lmpole%ie, lmpole%js:lmpole%je, HIGH), dim=1) * lmpole%z(lmpole%ks:lmpole%ke) )
-         dsum(ZDIR) = dsum(0) * fbnd_z(HIGH)
+         dsum(xdim) = sum( sum( lmpole%bnd_z(lmpole%is:lmpole%ie, lmpole%js:lmpole%je, HIGH), dim=2) * lmpole%x(lmpole%is:lmpole%ie) )
+         dsum(ydim) = sum( sum( lmpole%bnd_z(lmpole%is:lmpole%ie, lmpole%js:lmpole%je, HIGH), dim=1) * lmpole%z(lmpole%ks:lmpole%ke) )
+         dsum(zdim) = dsum(0) * fbnd_z(HIGH)
          lsum(:)    = lsum(:) + dsum(:) * lmpole%dxy
       endif
 
       call MPI_Allreduce(lsum(0:NDIM), CoM(0:NDIM), 4, MPI_DOUBLE_PRECISION, MPI_SUM, comm3d, ierr)
 
       if (CoM(0) /= 0.) then
-         CoM(XDIR:ZDIR) = CoM(XDIR:ZDIR) / CoM(0)
+         CoM(xdim:zdim) = CoM(xdim:zdim) / CoM(0)
       else
          call die("[multipole:find_img_CoM] Total mass == 0")
       endif
@@ -655,8 +658,9 @@ contains
 
    subroutine img_mass2moments
 
-      use multigridvars,   only: is_external, XLO, XHI, YLO, YHI, ZLO, ZHI, LOW, HIGH, XDIR, YDIR, ZDIR
-      use mpisetup, only: comm3d, ierr, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_SUM, MPI_MIN, MPI_MAX, MPI_IN_PLACE
+      use grid,          only: xdim, ydim, zdim
+      use multigridvars, only: is_external, XLO, XHI, YLO, YHI, ZLO, ZHI, LOW, HIGH
+      use mpisetup,      only: comm3d, ierr, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_SUM, MPI_MIN, MPI_MAX, MPI_IN_PLACE
 
       implicit none
 
@@ -672,8 +676,8 @@ contains
       if (is_external(XLO) .or. is_external(XHI)) then
          do j = lmpole%js, lmpole%je
             do k = lmpole%ks, lmpole%ke
-               if (is_external(XLO)) call point2moments(lmpole%bnd_x(j, k, LOW) *lmpole%dyz, fbnd_x(LOW) -CoM(XDIR), lmpole%y(j)-CoM(YDIR),  lmpole%z(k)-CoM(ZDIR))
-               if (is_external(XHI)) call point2moments(lmpole%bnd_x(j, k, HIGH)*lmpole%dyz, fbnd_x(HIGH)-CoM(XDIR), lmpole%y(j)-CoM(YDIR),  lmpole%z(k)-CoM(ZDIR))
+               if (is_external(XLO)) call point2moments(lmpole%bnd_x(j, k, LOW) *lmpole%dyz, fbnd_x(LOW) -CoM(xdim), lmpole%y(j)-CoM(ydim),  lmpole%z(k)-CoM(zdim))
+               if (is_external(XHI)) call point2moments(lmpole%bnd_x(j, k, HIGH)*lmpole%dyz, fbnd_x(HIGH)-CoM(xdim), lmpole%y(j)-CoM(ydim),  lmpole%z(k)-CoM(zdim))
             enddo
          enddo
       endif
@@ -681,8 +685,8 @@ contains
       if (is_external(YLO) .or. is_external(YHI)) then
          do i = lmpole%is, lmpole%ie
             do k = lmpole%ks, lmpole%ke
-               if (is_external(YLO)) call point2moments(lmpole%bnd_y(i, k, LOW) *lmpole%dxz, lmpole%x(i)-CoM(XDIR),  fbnd_y(LOW) -CoM(YDIR), lmpole%z(k)-CoM(ZDIR))
-               if (is_external(YHI)) call point2moments(lmpole%bnd_y(i, k, HIGH)*lmpole%dxz, lmpole%x(i)-CoM(XDIR),  fbnd_y(HIGH)-CoM(YDIR), lmpole%z(k)-CoM(ZDIR))
+               if (is_external(YLO)) call point2moments(lmpole%bnd_y(i, k, LOW) *lmpole%dxz, lmpole%x(i)-CoM(xdim),  fbnd_y(LOW) -CoM(ydim), lmpole%z(k)-CoM(zdim))
+               if (is_external(YHI)) call point2moments(lmpole%bnd_y(i, k, HIGH)*lmpole%dxz, lmpole%x(i)-CoM(xdim),  fbnd_y(HIGH)-CoM(ydim), lmpole%z(k)-CoM(zdim))
             enddo
          enddo
       endif
@@ -690,8 +694,8 @@ contains
       if (is_external(ZLO) .or. is_external(ZHI)) then
          do i = lmpole%is, lmpole%ie
             do j = lmpole%js, lmpole%je
-               if (is_external(ZLO)) call point2moments(lmpole%bnd_z(i, j, LOW) *lmpole%dxy, lmpole%x(i)-CoM(XDIR),  lmpole%y(j)-CoM(YDIR),  fbnd_z(LOW) -CoM(ZDIR))
-               if (is_external(ZHI)) call point2moments(lmpole%bnd_z(i, j, HIGH)*lmpole%dxy, lmpole%x(i)-CoM(XDIR),  lmpole%y(j)-CoM(YDIR),  fbnd_z(HIGH)-CoM(ZDIR))
+               if (is_external(ZLO)) call point2moments(lmpole%bnd_z(i, j, LOW) *lmpole%dxy, lmpole%x(i)-CoM(xdim),  lmpole%y(j)-CoM(ydim),  fbnd_z(LOW) -CoM(zdim))
+               if (is_external(ZHI)) call point2moments(lmpole%bnd_z(i, j, HIGH)*lmpole%dxy, lmpole%x(i)-CoM(xdim),  lmpole%y(j)-CoM(ydim),  fbnd_z(HIGH)-CoM(zdim))
             enddo
          enddo
       endif
@@ -817,7 +821,8 @@ contains
 
    subroutine moments2bnd_potential
 
-      use multigridvars,   only: is_external, XLO, XHI, YLO, YHI, ZLO, ZHI, XDIR, YDIR, ZDIR, LOW, HIGH
+      use grid,            only: xdim, ydim, zdim
+      use multigridvars,   only: is_external, XLO, XHI, YLO, YHI, ZLO, ZHI, LOW, HIGH
 
       implicit none
 
@@ -826,8 +831,8 @@ contains
       if (is_external(XLO) .or. is_external(XHI)) then
          do j = lmpole%js, lmpole%je
             do k = lmpole%ks, lmpole%ke
-               if (is_external(XLO)) call moments2pot(lmpole%bnd_x(j, k, LOW),  fbnd_x(LOW) -CoM(XDIR), lmpole%y(j)-CoM(YDIR),  lmpole%z(k)-CoM(ZDIR))
-               if (is_external(XHI)) call moments2pot(lmpole%bnd_x(j, k, HIGH), fbnd_x(HIGH)-CoM(XDIR), lmpole%y(j)-CoM(YDIR),  lmpole%z(k)-CoM(ZDIR))
+               if (is_external(XLO)) call moments2pot(lmpole%bnd_x(j, k, LOW),  fbnd_x(LOW) -CoM(xdim), lmpole%y(j)-CoM(ydim),  lmpole%z(k)-CoM(zdim))
+               if (is_external(XHI)) call moments2pot(lmpole%bnd_x(j, k, HIGH), fbnd_x(HIGH)-CoM(xdim), lmpole%y(j)-CoM(ydim),  lmpole%z(k)-CoM(zdim))
             enddo
          enddo
       endif
@@ -835,8 +840,8 @@ contains
       if (is_external(YLO) .or. is_external(YHI)) then
          do i = lmpole%is, lmpole%ie
             do k = lmpole%ks, lmpole%ke
-               if (is_external(YLO)) call moments2pot(lmpole%bnd_y(i, k, LOW),  lmpole%x(i)-CoM(XDIR),  fbnd_y(LOW) -CoM(YDIR), lmpole%z(k)-CoM(ZDIR))
-               if (is_external(YHI)) call moments2pot(lmpole%bnd_y(i, k, HIGH), lmpole%x(i)-CoM(XDIR),  fbnd_y(HIGH)-CoM(YDIR), lmpole%z(k)-CoM(ZDIR))
+               if (is_external(YLO)) call moments2pot(lmpole%bnd_y(i, k, LOW),  lmpole%x(i)-CoM(xdim),  fbnd_y(LOW) -CoM(ydim), lmpole%z(k)-CoM(zdim))
+               if (is_external(YHI)) call moments2pot(lmpole%bnd_y(i, k, HIGH), lmpole%x(i)-CoM(xdim),  fbnd_y(HIGH)-CoM(ydim), lmpole%z(k)-CoM(zdim))
             enddo
          enddo
       endif
@@ -844,8 +849,8 @@ contains
       if (is_external(ZLO) .or. is_external(ZHI)) then
          do i = lmpole%is, lmpole%ie
             do j = lmpole%js, lmpole%je
-               if (is_external(ZLO)) call moments2pot(lmpole%bnd_z(i, j, LOW),  lmpole%x(i)-CoM(XDIR),  lmpole%y(j)-CoM(YDIR),  fbnd_z(LOW) -CoM(ZDIR))
-               if (is_external(ZHI)) call moments2pot(lmpole%bnd_z(i, j, HIGH), lmpole%x(i)-CoM(XDIR),  lmpole%y(j)-CoM(YDIR),  fbnd_z(HIGH)-CoM(ZDIR))
+               if (is_external(ZLO)) call moments2pot(lmpole%bnd_z(i, j, LOW),  lmpole%x(i)-CoM(xdim),  lmpole%y(j)-CoM(ydim),  fbnd_z(LOW) -CoM(zdim))
+               if (is_external(ZHI)) call moments2pot(lmpole%bnd_z(i, j, HIGH), lmpole%x(i)-CoM(xdim),  lmpole%y(j)-CoM(ydim),  fbnd_z(HIGH)-CoM(zdim))
             enddo
          enddo
       endif

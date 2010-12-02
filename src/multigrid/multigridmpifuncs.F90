@@ -52,7 +52,8 @@ contains
 
    subroutine mpi_multigrid_prep
 
-      use multigridvars, only: level_min, level_max, lvl, XDIR, YDIR, ZDIR, NDIM, has_dir
+      use grid,          only: has_dir, xdim, ydim, zdim
+      use multigridvars, only: level_min, level_max, lvl, NDIM
       use mpisetup,      only: ierr, MPI_DOUBLE_PRECISION, MPI_ORDER_FORTRAN
 
       implicit none
@@ -71,7 +72,7 @@ contains
 
          do ib = 1, lnb
 
-            if (has_dir(XDIR)) then          !! X direction
+            if (has_dir(xdim)) then          !! X direction
                sizes    = [ lvl(i)%nx, lvl(i)%ny, lvl(i)%nz ]
                subsizes = [    ib,     lvl(i)%ny, lvl(i)%nz ]
                starts   = [  lnb-ib,       0,         0     ]
@@ -79,20 +80,20 @@ contains
                call MPI_Type_create_subarray(NDIM, sizes, subsizes, starts, ord, old, lvl(i)%MPI_YZ_LEFT_BND(ib), ierr)
                call MPI_Type_commit(lvl(i)%MPI_YZ_LEFT_BND(ib), ierr)
 
-               starts(XDIR) = lnb
+               starts(xdim) = lnb
                call MPI_Type_create_subarray(NDIM, sizes, subsizes,  starts, ord, old, lvl(i)%MPI_YZ_LEFT_DOM(ib), ierr)
                call MPI_Type_commit(lvl(i)%MPI_YZ_LEFT_DOM(ib), ierr)
 
-               starts(XDIR) = lvl(i)%nxb + lnb - ib
+               starts(xdim) = lvl(i)%nxb + lnb - ib
                call MPI_Type_create_subarray(NDIM, sizes, subsizes,  starts, ord, old, lvl(i)%MPI_YZ_RIGHT_DOM(ib), ierr)
                call MPI_Type_commit(lvl(i)%MPI_YZ_RIGHT_DOM(ib), ierr)
 
-               starts(XDIR) = lvl(i)%nxb + lnb
+               starts(xdim) = lvl(i)%nxb + lnb
                call MPI_Type_create_subarray(NDIM, sizes, subsizes, starts,  ord, old, lvl(i)%MPI_YZ_RIGHT_BND(ib), ierr)
                call MPI_Type_commit(lvl(i)%MPI_YZ_RIGHT_BND(ib), ierr)
             endif
 
-            if (has_dir(YDIR)) then         !! Y Direction
+            if (has_dir(ydim)) then         !! Y Direction
                sizes    = [ lvl(i)%nx, lvl(i)%ny, lvl(i)%nz ]
                subsizes = [ lvl(i)%nx,     ib,    lvl(i)%nz ]
                starts   = [     0,      lnb-ib,       0     ]
@@ -100,20 +101,20 @@ contains
                call MPI_Type_create_subarray(NDIM, sizes, subsizes, starts, ord, old, lvl(i)%MPI_XZ_LEFT_BND(ib), ierr)
                call MPI_Type_commit(lvl(i)%MPI_XZ_LEFT_BND(ib), ierr)
 
-               starts(YDIR) = lnb
+               starts(ydim) = lnb
                call MPI_Type_create_subarray(NDIM, sizes, subsizes, starts, ord, old, lvl(i)%MPI_XZ_LEFT_DOM(ib), ierr)
                call MPI_Type_commit(lvl(i)%MPI_XZ_LEFT_DOM(ib), ierr)
 
-               starts(YDIR) = lvl(i)%nyb + lnb - ib
+               starts(ydim) = lvl(i)%nyb + lnb - ib
                call MPI_Type_create_subarray(NDIM, sizes, subsizes, starts, ord, old, lvl(i)%MPI_XZ_RIGHT_DOM(ib), ierr)
                call MPI_Type_commit(lvl(i)%MPI_XZ_RIGHT_DOM(ib), ierr)
 
-               starts(YDIR) = lvl(i)%nyb + lnb
+               starts(ydim) = lvl(i)%nyb + lnb
                call MPI_Type_create_subarray(NDIM, sizes, subsizes, starts, ord, old, lvl(i)%MPI_XZ_RIGHT_BND(ib), ierr)
                call MPI_Type_commit(lvl(i)%MPI_XZ_RIGHT_BND(ib), ierr)
             endif
 
-            if (has_dir(ZDIR)) then         !! Z Direction
+            if (has_dir(zdim)) then         !! Z Direction
                sizes    = [ lvl(i)%nx, lvl(i)%ny, lvl(i)%nz ]
                subsizes = [ lvl(i)%nx, lvl(i)%ny,     ib    ]
                starts   = [     0,         0,       lnb-ib  ]
@@ -121,15 +122,15 @@ contains
                call MPI_Type_create_subarray(NDIM, sizes, subsizes, starts, ord, old, lvl(i)%MPI_XY_LEFT_BND(ib), ierr)
                call MPI_Type_commit(lvl(i)%MPI_XY_LEFT_BND(ib), ierr)
 
-               starts(ZDIR) = lnb
+               starts(zdim) = lnb
                call MPI_Type_create_subarray(NDIM, sizes, subsizes, starts, ord, old, lvl(i)%MPI_XY_LEFT_DOM(ib), ierr)
                call MPI_Type_commit(lvl(i)%MPI_XY_LEFT_DOM(ib), ierr)
 
-               starts(ZDIR) = lvl(i)%nzb + lnb - ib
+               starts(zdim) = lvl(i)%nzb + lnb - ib
                call MPI_Type_create_subarray(NDIM, sizes, subsizes, starts, ord, old, lvl(i)%MPI_XY_RIGHT_DOM(ib), ierr)
                call MPI_Type_commit(lvl(i)%MPI_XY_RIGHT_DOM(ib), ierr)
 
-               starts(ZDIR) = lvl(i)%nzb + lnb
+               starts(zdim) = lvl(i)%nzb + lnb
                call MPI_Type_create_subarray(NDIM, sizes, subsizes, starts, ord, old, lvl(i)%MPI_XY_RIGHT_BND(ib), ierr)
                call MPI_Type_commit(lvl(i)%MPI_XY_RIGHT_BND(ib), ierr)
             endif
@@ -151,12 +152,12 @@ contains
 
    subroutine mpi_multigrid_bnd(lev, iv, ng, mode, corners)
 
+      use grid,               only: has_dir, xdim, ydim, zdim
       use dataio_pub,         only: die
       use mpisetup,           only: comm3d, ierr, MPI_STATUS_SIZE, MPI_REQUEST_NULL, &
            &                        procxl, procxr, procyl, procyr, proczl, proczr, proc, &
            &                        pxsize, pysize, pzsize
-      use multigridvars,      only: NDIM, lvl, XLO, XHI, YLO, YHI, ZLO, ZHI, is_external, ngridvars, &
-           &                        level_min, level_max, XDIR, YDIR, ZDIR, has_dir
+      use multigridvars,      only: NDIM, lvl, XLO, XHI, YLO, YHI, ZLO, ZHI, is_external, ngridvars, level_min, level_max
 
       implicit none
 
@@ -187,7 +188,7 @@ contains
 
       req3d(:) = MPI_REQUEST_NULL
 
-      if (has_dir(XDIR)) then
+      if (has_dir(xdim)) then
          if (pxsize > 1) then
             if (.not. is_external(XLO)) CALL MPI_Isend (lvl(lev)%mgvar(1, 1, 1, iv), 1, lvl(lev)%MPI_YZ_LEFT_DOM(ng),  procxl, 15, comm3d, req3d(1),  ierr)
             if (.not. is_external(XHI)) CALL MPI_Isend (lvl(lev)%mgvar(1, 1, 1, iv), 1, lvl(lev)%MPI_YZ_RIGHT_DOM(ng), procxr, 25, comm3d, req3d(3),  ierr)
@@ -200,7 +201,7 @@ contains
          if (cor) call MPI_Waitall(4, req3d(1:4), status3d(:,1:4), ierr)
       endif
 
-      if (has_dir(YDIR)) then
+      if (has_dir(ydim)) then
          if (pysize > 1) then
             if (.not. is_external(YLO)) CALL MPI_Isend (lvl(lev)%mgvar(1, 1, 1, iv), 1, lvl(lev)%MPI_XZ_LEFT_DOM(ng),  procyl, 35, comm3d, req3d(5),  ierr)
             if (.not. is_external(YHI)) CALL MPI_Isend (lvl(lev)%mgvar(1, 1, 1, iv), 1, lvl(lev)%MPI_XZ_RIGHT_DOM(ng), procyr, 45, comm3d, req3d(6),  ierr)
@@ -213,7 +214,7 @@ contains
          if (cor) call MPI_Waitall(4, req3d(5:8), status3d(:,5:8), ierr)
       endif
 
-      if (has_dir(ZDIR)) then
+      if (has_dir(zdim)) then
          if (pzsize > 1) then
             if (.not. is_external(ZLO)) CALL MPI_Isend (lvl(lev)%mgvar(1, 1, 1, iv), 1, lvl(lev)%MPI_XY_LEFT_DOM(ng),  proczl, 55, comm3d, req3d(9),  ierr)
             if (.not. is_external(ZHI)) CALL MPI_Isend (lvl(lev)%mgvar(1, 1, 1, iv), 1, lvl(lev)%MPI_XY_RIGHT_DOM(ng), proczr, 65, comm3d, req3d(10), ierr)

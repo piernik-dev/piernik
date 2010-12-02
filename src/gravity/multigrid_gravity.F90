@@ -118,7 +118,8 @@ contains
 
    subroutine init_multigrid_grav
 
-      use multigridvars,      only: bnd_periodic, bnd_dirichlet, bnd_isolated, bnd_invalid, correction, mg_nb, ngridvars, has_dir, periodic_bnd_cnt, non_periodic_bnd_cnt
+      use grid,               only: has_dir
+      use multigridvars,      only: bnd_periodic, bnd_dirichlet, bnd_isolated, bnd_invalid, correction, mg_nb, ngridvars, periodic_bnd_cnt, non_periodic_bnd_cnt
       use multipole,          only: use_point_monopole, lmax, mmax, ord_prolong_mpole, coarsen_multipole, interp_pt2mom, interp_mom2pot
       use mpisetup,           only: buffer_dim, comm, ierr, proc, ibuff, cbuff, rbuff, lbuff, &
            &                        bnd_xl_dom, bnd_xr_dom, bnd_yl_dom, bnd_yr_dom, bnd_zl_dom, bnd_zr_dom, &
@@ -792,10 +793,10 @@ contains
 
       use timer,         only: timer_
       use arrays,        only: sgp
-      use grid,          only: is, ie, js, je, ks, ke
+      use grid,          only: is, ie, js, je, ks, ke, has_dir, xdim, ydim, zdim
       use dataio_pub,    only: die
       use multipole,     only: multipole_solver
-      use multigridvars, only: roof, solution, bnd_isolated, bnd_dirichlet, bnd_givenval, has_dir, XDIR, YDIR, ZDIR, mg_nb, tot_ts, ts
+      use multigridvars, only: roof, solution, bnd_isolated, bnd_dirichlet, bnd_givenval, mg_nb, tot_ts, ts
 
       implicit none
 
@@ -805,9 +806,9 @@ contains
       integer :: isb, ieb, jsb, jeb, ksb, keb
 
       ts =  timer_("multigrid", .true.)
-      if ( (has_dir(XDIR) .and. is-mg_nb <= 0) .or. &
-           (has_dir(YDIR) .and. js-mg_nb <= 0) .or. &
-           (has_dir(ZDIR) .and. ks-mg_nb <= 0) )    &
+      if ( (has_dir(xdim) .and. is-mg_nb <= 0) .or. &
+           (has_dir(ydim) .and. js-mg_nb <= 0) .or. &
+           (has_dir(zdim) .and. ks-mg_nb <= 0) )    &
            call die("[multigrid_gravity:multigrid_solve_grav] Current implementation requires at least 2 guardcells in the hydro part")
 
       isolated = (grav_bnd == bnd_isolated) ! BEWARE: not elegant; probably there should be two global grav_bnd variables
@@ -828,7 +829,7 @@ contains
       call vcycle_hg(inner)
 
       ! /todo: move to multigridvars and init_multigrid
-      if (has_dir(XDIR)) then
+      if (has_dir(xdim)) then
          isb = is-mg_nb
          ieb = ie+mg_nb
       else
@@ -836,7 +837,7 @@ contains
          ieb = 1
       endif
 
-      if (has_dir(YDIR)) then
+      if (has_dir(ydim)) then
          jsb = js-mg_nb
          jeb = je+mg_nb
       else
@@ -844,7 +845,7 @@ contains
          jeb = 1
       endif
 
-      if (has_dir(ZDIR)) then
+      if (has_dir(zdim)) then
          ksb = ks-mg_nb
          keb = ke+mg_nb
       else
@@ -1063,9 +1064,10 @@ contains
 
    subroutine residual2(lev, src, soln, def)
 
+      use grid,               only: has_dir, xdim, ydim, zdim
       use multigridhelpers,   only: multidim_code_3D
       use multigridmpifuncs,  only: mpi_multigrid_bnd
-      use multigridvars,      only: lvl, eff_dim, NDIM, XDIR, YDIR, ZDIR, has_dir, extbnd_antimirror
+      use multigridvars,      only: lvl, eff_dim, NDIM, extbnd_antimirror
 
       implicit none
 
@@ -1106,17 +1108,17 @@ contains
             lvl(       lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k,   def)   = &
                  & lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k,   src)   - &
                  & lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k,   soln)  * L0
-            if (has_dir(XDIR)) &
+            if (has_dir(xdim)) &
                  & lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k,   def)   = &
                  & lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k,   def)   - &
                  ( lvl(lev)%mgvar(lvl(lev)%is-1:lvl(lev)%ie-1, lvl(lev)%js  :lvl(lev)%je,   k,   soln)  + &
                  & lvl(lev)%mgvar(lvl(lev)%is+1:lvl(lev)%ie+1, lvl(lev)%js  :lvl(lev)%je,   k,   soln)) * Lx
-            if (has_dir(YDIR)) &
+            if (has_dir(ydim)) &
                  & lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k,   def)   = &
                  & lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k,   def)   - &
                  ( lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js-1:lvl(lev)%je-1, k,   soln)  + &
                  & lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js+1:lvl(lev)%je+1, k,   soln)) * Ly
-            if (has_dir(ZDIR)) &
+            if (has_dir(zdim)) &
                  & lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k,   def)   = &
                  & lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k,   def)   - &
                  ( lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k-1, soln)  + &
@@ -1279,9 +1281,10 @@ contains
 
    subroutine approximate_solution_rbgs(lev, src, soln)
 
+      use grid,               only: has_dir, xdim, ydim, zdim
       use multigridhelpers,   only: dirty_debug, check_dirty, multidim_code_3D, dirty_label
       use multigridmpifuncs,  only: mpi_multigrid_bnd
-      use multigridvars,      only: lvl, level_min, eff_dim, NDIM, has_dir, XDIR, YDIR, ZDIR, extbnd_antimirror
+      use multigridvars,      only: lvl, level_min, eff_dim, NDIM, extbnd_antimirror
 
       implicit none
 
@@ -1335,11 +1338,11 @@ contains
             i1 = lvl(lev)%is; id = 1 ! mv to multigridvars, init_multigrid
             j1 = lvl(lev)%js; jd = 1
             k1 = lvl(lev)%ks; kd = 1
-            if (has_dir(XDIR)) then
+            if (has_dir(xdim)) then
                id = RED_BLACK
-            else if (has_dir(YDIR)) then
+            else if (has_dir(ydim)) then
                jd = RED_BLACK
-            else if (has_dir(ZDIR)) then
+            else if (has_dir(zdim)) then
                kd = RED_BLACK
             endif
 
@@ -1351,13 +1354,13 @@ contains
                   lvl(      lev)%mgvar(i1  :lvl(lev)%ie  :id, j,   k,   soln) = &
                        & (1. - Jacobi_damp)* lvl(lev)%mgvar(i1  :lvl(lev)%ie  :id, j,   k,   soln) &
                        &     - Jacobi_damp * lvl(lev)%mgvar(i1  :lvl(lev)%ie  :id, j,   k,   src)  * lvl(lev)%r
-                  if (has_dir(XDIR)) &
+                  if (has_dir(xdim)) &
                        lvl (lev)%mgvar(i1  :lvl(lev)%ie  :id, j,   k,   soln) = lvl(lev)%mgvar(i1:  lvl(lev)%ie:  id, j,   k,   soln)  + &
                        &       Jacobi_damp *(lvl(lev)%mgvar(i1-1:lvl(lev)%ie-1:id, j,   k,   soln) + lvl(lev)%mgvar(i1+1:lvl(lev)%ie+1:id, j,   k,   soln)) * lvl(lev)%rx
-                  if (has_dir(YDIR)) &
+                  if (has_dir(ydim)) &
                        lvl (lev)%mgvar(i1  :lvl(lev)%ie  :id, j,   k,   soln) = lvl(lev)%mgvar(i1:  lvl(lev)%ie:  id, j,   k,   soln)  + &
                        &       Jacobi_damp *(lvl(lev)%mgvar(i1  :lvl(lev)%ie  :id, j-1, k,   soln) + lvl(lev)%mgvar(i1:  lvl(lev)%ie:  id, j+1, k,   soln)) * lvl(lev)%ry
-                  if (has_dir(ZDIR)) &
+                  if (has_dir(zdim)) &
                        lvl (lev)%mgvar(i1  :lvl(lev)%ie  :id, j,   k,   soln) = lvl(lev)%mgvar(i1:  lvl(lev)%ie:  id, j,   k,   soln)  + &
                        &       Jacobi_damp *(lvl(lev)%mgvar(i1  :lvl(lev)%ie  :id, j,   k-1, soln) + lvl(lev)%mgvar(i1:  lvl(lev)%ie:  id, j,   k+1, soln)) * lvl(lev)%rz
                enddo
@@ -1382,10 +1385,11 @@ contains
 
    subroutine approximate_solution_fft(lev, src, soln)
 
+      use grid,               only: has_dir, xdim, ydim, zdim
       use dataio_pub,         only: die, warn
       use multigridhelpers,   only: dirty_debug, check_dirty, dirtyL, multidim_code_3D
       use multigridmpifuncs,  only: mpi_multigrid_bnd
-      use multigridvars,      only: lvl, LOW, HIGH, D_x, D_y, D_z, NDIM, eff_dim, has_dir, XDIR, YDIR, ZDIR, extbnd_antimirror
+      use multigridvars,      only: lvl, LOW, HIGH, D_x, D_y, D_z, NDIM, eff_dim, extbnd_antimirror
 
       implicit none
 
@@ -1403,35 +1407,35 @@ contains
                call make_face_boundaries(lev, soln)
             else
                call mpi_multigrid_bnd(lev, soln, 1, extbnd_antimirror)
-               if (has_dir(XDIR)) then
+               if (has_dir(xdim)) then
                   lvl(lev)%bnd_x(:, :, LOW)  = 0.5* sum (lvl(lev)%mgvar(lvl(lev)%is-1:lvl(lev)%is, lvl(lev)%js:lvl(lev)%je, lvl(lev)%ks:lvl(lev)%ke, soln), 1)
                   lvl(lev)%bnd_x(:, :, HIGH) = 0.5* sum (lvl(lev)%mgvar(lvl(lev)%ie:lvl(lev)%ie+1, lvl(lev)%js:lvl(lev)%je, lvl(lev)%ks:lvl(lev)%ke, soln), 1)
                endif
-               if (has_dir(YDIR)) then
+               if (has_dir(ydim)) then
                   lvl(lev)%bnd_y(:, :, LOW)  = 0.5* sum (lvl(lev)%mgvar(lvl(lev)%is:lvl(lev)%ie, lvl(lev)%js-1:lvl(lev)%js, lvl(lev)%ks:lvl(lev)%ke, soln), 2)
                   lvl(lev)%bnd_y(:, :, HIGH) = 0.5* sum (lvl(lev)%mgvar(lvl(lev)%is:lvl(lev)%ie, lvl(lev)%je:lvl(lev)%je+1, lvl(lev)%ks:lvl(lev)%ke, soln), 2)
                endif
-               if (has_dir(ZDIR)) then
+               if (has_dir(zdim)) then
                   lvl(lev)%bnd_z(:, :, LOW)  = 0.5* sum (lvl(lev)%mgvar(lvl(lev)%is:lvl(lev)%ie, lvl(lev)%js:lvl(lev)%je, lvl(lev)%ks-1:lvl(lev)%ks, soln), 3)
                   lvl(lev)%bnd_z(:, :, HIGH) = 0.5* sum (lvl(lev)%mgvar(lvl(lev)%is:lvl(lev)%ie, lvl(lev)%js:lvl(lev)%je, lvl(lev)%ke:lvl(lev)%ke+1, soln), 3)
                endif
             endif
 
             if (dirty_debug) then
-               if (has_dir(XDIR) .and. any(abs(lvl(lev)%bnd_x(:, :, :)) > dirtyL)) call warn("approximate_solution_fft dirty bnd_x")
-               if (has_dir(YDIR) .and. any(abs(lvl(lev)%bnd_y(:, :, :)) > dirtyL)) call warn("approximate_solution_fft dirty bnd_y")
-               if (has_dir(ZDIR) .and. any(abs(lvl(lev)%bnd_z(:, :, :)) > dirtyL)) call warn("approximate_solution_fft dirty bnd_z")
+               if (has_dir(xdim) .and. any(abs(lvl(lev)%bnd_x(:, :, :)) > dirtyL)) call warn("approximate_solution_fft dirty bnd_x")
+               if (has_dir(ydim) .and. any(abs(lvl(lev)%bnd_y(:, :, :)) > dirtyL)) call warn("approximate_solution_fft dirty bnd_y")
+               if (has_dir(zdim) .and. any(abs(lvl(lev)%bnd_z(:, :, :)) > dirtyL)) call warn("approximate_solution_fft dirty bnd_z")
             endif
 
-            if (has_dir(XDIR)) then
+            if (has_dir(xdim)) then
                lvl(lev)%src(1,            :, :) = lvl(lev)%src(1,            :, :) - lvl(lev)%bnd_x(:, :, LOW)  * 2. * lvl(lev)%idx2
                lvl(lev)%src(lvl(lev)%nxb, :, :) = lvl(lev)%src(lvl(lev)%nxb, :, :) - lvl(lev)%bnd_x(:, :, HIGH) * 2. * lvl(lev)%idx2
             endif
-            if (has_dir(YDIR)) then
+            if (has_dir(ydim)) then
                lvl(lev)%src(:, 1,            :) = lvl(lev)%src(:, 1,            :) - lvl(lev)%bnd_y(:, :, LOW)  * 2. * lvl(lev)%idy2
                lvl(lev)%src(:, lvl(lev)%nyb, :) = lvl(lev)%src(:, lvl(lev)%nyb, :) - lvl(lev)%bnd_y(:, :, HIGH) * 2. * lvl(lev)%idy2
             endif
-            if (has_dir(ZDIR)) then
+            if (has_dir(zdim)) then
                lvl(lev)%src(:, :, 1           ) = lvl(lev)%src(:, :, 1           ) - lvl(lev)%bnd_z(:, :, LOW)  * 2. * lvl(lev)%idz2
                lvl(lev)%src(:, :, lvl(lev)%nzb) = lvl(lev)%src(:, :, lvl(lev)%nzb) - lvl(lev)%bnd_z(:, :, HIGH) * 2. * lvl(lev)%idz2
             endif
@@ -1466,17 +1470,17 @@ contains
                   ! An additional array (lvl(lev)%src would be good enough) is required here to assemble partial results or use red-black passes
                   lvl                    (lev)%mgvar(lvl(lev)%is:lvl(lev)%ie,     lvl(lev)%js:lvl(lev)%je,     lvl(lev)%ks:lvl(lev)%ke,     soln)  = &
                        - lvl(lev)%r * lvl(lev)%mgvar(lvl(lev)%is:lvl(lev)%ie,     lvl(lev)%js:lvl(lev)%je,     lvl(lev)%ks:lvl(lev)%ke,     src)
-                  if (has_dir(XDIR)) &
+                  if (has_dir(xdim)) &
                        lvl               (lev)%mgvar(lvl(lev)%is:lvl(lev)%ie,     lvl(lev)%js:lvl(lev)%je,     lvl(lev)%ks:lvl(lev)%ke,     soln)  = &
                        lvl               (lev)%mgvar(lvl(lev)%is:lvl(lev)%ie,     lvl(lev)%js:lvl(lev)%je,     lvl(lev)%ks:lvl(lev)%ke,     soln)  + &
                        lvl(lev)%rx * (lvl(lev)%mgvar(lvl(lev)%is-1:lvl(lev)%ie-1, lvl(lev)%js:lvl(lev)%je,     lvl(lev)%ks:lvl(lev)%ke,     soln)  + &
                        &              lvl(lev)%mgvar(lvl(lev)%is+1:lvl(lev)%ie+1, lvl(lev)%js:lvl(lev)%je,     lvl(lev)%ks:lvl(lev)%ke,     soln))
-                  if (has_dir(YDIR)) &
+                  if (has_dir(ydim)) &
                        lvl               (lev)%mgvar(lvl(lev)%is:lvl(lev)%ie,     lvl(lev)%js:lvl(lev)%je,     lvl(lev)%ks:lvl(lev)%ke,     soln)  = &
                        lvl               (lev)%mgvar(lvl(lev)%is:lvl(lev)%ie,     lvl(lev)%js:lvl(lev)%je,     lvl(lev)%ks:lvl(lev)%ke,     soln)  + &
                        lvl(lev)%ry * (lvl(lev)%mgvar(lvl(lev)%is:lvl(lev)%ie,     lvl(lev)%js-1:lvl(lev)%je-1, lvl(lev)%ks:lvl(lev)%ke,     soln)  + &
                        &              lvl(lev)%mgvar(lvl(lev)%is:lvl(lev)%ie,     lvl(lev)%js+1:lvl(lev)%je+1, lvl(lev)%ks:lvl(lev)%ke,     soln))
-                  if (has_dir(ZDIR)) &
+                  if (has_dir(zdim)) &
                        lvl               (lev)%mgvar(lvl(lev)%is:lvl(lev)%ie,     lvl(lev)%js:lvl(lev)%je,     lvl(lev)%ks:lvl(lev)%ke,     soln)  = &
                        lvl               (lev)%mgvar(lvl(lev)%is:lvl(lev)%ie,     lvl(lev)%js:lvl(lev)%je,     lvl(lev)%ks:lvl(lev)%ke,     soln)  + &
                        lvl(lev)%rz * (lvl(lev)%mgvar(lvl(lev)%is:lvl(lev)%ie,     lvl(lev)%js:lvl(lev)%je,     lvl(lev)%ks-1:lvl(lev)%ke-1, soln)  + &
@@ -1486,7 +1490,7 @@ contains
                ! relax only two layers of cells (1 is  significantly worse, 3 does not improve much)
                ! edges are relaxed twice, corners are relaxed three times which seems to be good
 
-               if (has_dir(XDIR)) then
+               if (has_dir(xdim)) then
                   lvl                    (lev)%mgvar(lvl(lev)%is    :lvl(lev)%is+D_x,   lvl(lev)%js    :lvl(lev)%je,     lvl(lev)%ks    :lvl(lev)%ke,     soln)  = & ! -X
                        lvl(lev)%rx * (lvl(lev)%mgvar(lvl(lev)%is-D_x:lvl(lev)%is,       lvl(lev)%js    :lvl(lev)%je,     lvl(lev)%ks    :lvl(lev)%ke,     soln)  + &
                        &              lvl(lev)%mgvar(lvl(lev)%is+D_x:lvl(lev)%is+2*D_x, lvl(lev)%js    :lvl(lev)%je,     lvl(lev)%ks    :lvl(lev)%ke,     soln)) + &
@@ -1506,7 +1510,7 @@ contains
                        lvl(lev)%r  *  lvl(lev)%mgvar(lvl(lev)%ie-D_x  :lvl(lev)%ie,     lvl(lev)%js    :lvl(lev)%je,     lvl(lev)%ks    :lvl(lev)%ke,     src)
                endif
 
-               if (has_dir(YDIR)) then
+               if (has_dir(ydim)) then
                   lvl                    (lev)%mgvar(lvl(lev)%is    :lvl(lev)%ie,     lvl(lev)%js    :lvl(lev)%js+D_y,   lvl(lev)%ks    :lvl(lev)%ke,     soln)  = & ! -Y
                        lvl(lev)%rx * (lvl(lev)%mgvar(lvl(lev)%is-D_x:lvl(lev)%ie-D_x, lvl(lev)%js    :lvl(lev)%js+D_y,   lvl(lev)%ks    :lvl(lev)%ke,     soln)  + &
                        &              lvl(lev)%mgvar(lvl(lev)%is+D_x:lvl(lev)%ie+D_x, lvl(lev)%js    :lvl(lev)%js+D_y,   lvl(lev)%ks    :lvl(lev)%ke,     soln)) + &
@@ -1526,7 +1530,7 @@ contains
                        lvl(lev)%r  *  lvl(lev)%mgvar(lvl(lev)%is    :lvl(lev)%ie,     lvl(lev)%je-D_y  :lvl(lev)%je,     lvl(lev)%ks    :lvl(lev)%ke,     src)
                endif
 
-               if (has_dir(ZDIR)) then
+               if (has_dir(zdim)) then
                   lvl                    (lev)%mgvar(lvl(lev)%is    :lvl(lev)%ie,     lvl(lev)%js    :lvl(lev)%je,     lvl(lev)%ks    :lvl(lev)%ks+D_z,   soln)  = & ! -Z
                        lvl(lev)%rx * (lvl(lev)%mgvar(lvl(lev)%is-D_x:lvl(lev)%ie-D_x, lvl(lev)%js    :lvl(lev)%je,     lvl(lev)%ks    :lvl(lev)%ks+D_z,   soln)  + &
                        &              lvl(lev)%mgvar(lvl(lev)%is+D_x:lvl(lev)%ie+D_x, lvl(lev)%js    :lvl(lev)%je,     lvl(lev)%ks    :lvl(lev)%ks+D_z,   soln)) + &
@@ -1615,8 +1619,9 @@ contains
 
    subroutine gb_fft_solve_sendrecv(src, soln)
 
+      use grid,          only: xdim, ydim, zdim
       use mpisetup,      only: nproc, proc, ierr, comm3d, status, MPI_DOUBLE_PRECISION
-      use multigridvars, only: gb, gb_cartmap, XDIR, YDIR, ZDIR, base
+      use multigridvars, only: gb, gb_cartmap, base
 
       implicit none
 
@@ -1628,14 +1633,14 @@ contains
       if (proc == 0) then
 
          ! collect the source on the base level
-         gb%src(gb_cartmap(0)%lo(XDIR):gb_cartmap(0)%up(XDIR), &
-              & gb_cartmap(0)%lo(YDIR):gb_cartmap(0)%up(YDIR), &
-              & gb_cartmap(0)%lo(ZDIR):gb_cartmap(0)%up(ZDIR)) = &
+         gb%src(gb_cartmap(0)%lo(xdim):gb_cartmap(0)%up(xdim), &
+              & gb_cartmap(0)%lo(ydim):gb_cartmap(0)%up(ydim), &
+              & gb_cartmap(0)%lo(zdim):gb_cartmap(0)%up(zdim)) = &
               base%mgvar(base%is:base%ie, base%js:base%je, base%ks:base%ke, src)
          do p = 1, nproc -1
-            call MPI_Recv(gb%src(gb_cartmap(p)%lo(XDIR):gb_cartmap(p)%up(XDIR), &
-                 &               gb_cartmap(p)%lo(YDIR):gb_cartmap(p)%up(YDIR), &
-                 &               gb_cartmap(p)%lo(ZDIR):gb_cartmap(p)%up(ZDIR)), &
+            call MPI_Recv(gb%src(gb_cartmap(p)%lo(xdim):gb_cartmap(p)%up(xdim), &
+                 &               gb_cartmap(p)%lo(ydim):gb_cartmap(p)%up(ydim), &
+                 &               gb_cartmap(p)%lo(zdim):gb_cartmap(p)%up(zdim)), &
                  &        base%nxb*base%nyb*base%nzb, MPI_DOUBLE_PRECISION, p, p, comm3d, status, ierr)
          enddo
 
@@ -1643,13 +1648,13 @@ contains
 
          ! send all the pieces away
          base%mgvar(base%is:base%ie, base%js:base%je, base%ks:base%ke, soln) = &
-              gb%src(gb_cartmap(0)%lo(XDIR):gb_cartmap(0)%up(XDIR), &
-              &      gb_cartmap(0)%lo(YDIR):gb_cartmap(0)%up(YDIR), &
-              &      gb_cartmap(0)%lo(ZDIR):gb_cartmap(0)%up(ZDIR))
+              gb%src(gb_cartmap(0)%lo(xdim):gb_cartmap(0)%up(xdim), &
+              &      gb_cartmap(0)%lo(ydim):gb_cartmap(0)%up(ydim), &
+              &      gb_cartmap(0)%lo(zdim):gb_cartmap(0)%up(zdim))
          do p = 1, nproc -1
-            call MPI_Send(gb%src(gb_cartmap(p)%lo(XDIR):gb_cartmap(p)%up(XDIR), &
-                 &               gb_cartmap(p)%lo(YDIR):gb_cartmap(p)%up(YDIR), &
-                 &               gb_cartmap(p)%lo(ZDIR):gb_cartmap(p)%up(ZDIR)), &
+            call MPI_Send(gb%src(gb_cartmap(p)%lo(xdim):gb_cartmap(p)%up(xdim), &
+                 &               gb_cartmap(p)%lo(ydim):gb_cartmap(p)%up(ydim), &
+                 &               gb_cartmap(p)%lo(zdim):gb_cartmap(p)%up(zdim)), &
                  &        base%nxb*base%nyb*base%nzb, MPI_DOUBLE_PRECISION, p, p, comm3d, ierr)
          enddo
 
@@ -1675,8 +1680,9 @@ contains
 
    subroutine gb_fft_solve_gather(src, soln)
 
+      use grid,          only: xdim, ydim, zdim
       use mpisetup,      only: nproc, proc, ierr, comm3d, MPI_DOUBLE_PRECISION
-      use multigridvars, only: gb, gb_cartmap, base, XDIR, YDIR, ZDIR
+      use multigridvars, only: gb, gb_cartmap, base
 
       implicit none
 
@@ -1690,18 +1696,18 @@ contains
 
       if (proc == 0) then
          do p = 0, nproc-1
-            gb%src(gb_cartmap(p)%lo(XDIR):gb_cartmap(p)%up(XDIR), &
-                   gb_cartmap(p)%lo(YDIR):gb_cartmap(p)%up(YDIR), &
-                   gb_cartmap(p)%lo(ZDIR):gb_cartmap(p)%up(ZDIR)) = gb_src_temp(:,:,:,p)
+            gb%src(gb_cartmap(p)%lo(xdim):gb_cartmap(p)%up(xdim), &
+                   gb_cartmap(p)%lo(ydim):gb_cartmap(p)%up(ydim), &
+                   gb_cartmap(p)%lo(zdim):gb_cartmap(p)%up(zdim)) = gb_src_temp(:,:,:,p)
          enddo
 
          call fft_convolve(gb%level)
 
          do p = 0, nproc-1
             gb_src_temp(:,:,:,p) = &
-               gb%src(gb_cartmap(p)%lo(XDIR):gb_cartmap(p)%up(XDIR), &
-                      gb_cartmap(p)%lo(YDIR):gb_cartmap(p)%up(YDIR), &
-                      gb_cartmap(p)%lo(ZDIR):gb_cartmap(p)%up(ZDIR))
+               gb%src(gb_cartmap(p)%lo(xdim):gb_cartmap(p)%up(xdim), &
+                      gb_cartmap(p)%lo(ydim):gb_cartmap(p)%up(ydim), &
+                      gb_cartmap(p)%lo(zdim):gb_cartmap(p)%up(zdim))
          enddo
       endif
 

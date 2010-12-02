@@ -52,9 +52,10 @@ contains
 
    subroutine init_multigrid(cgrid)
 
+      use grid,                only: has_dir, xdim, ydim, zdim
       use multigridvars,       only: lvl, level_max, level_min, level_gb, roof, base, gb, gb_cartmap, mg_nb, ngridvars, correction, &
-           &                         is_external, periodic_bnd_cnt, non_periodic_bnd_cnt, eff_dim, NDIM, has_dir, &
-           &                         XDIR, YDIR, ZDIR, XLO, XHI, YLO, YHI, ZLO, ZHI, LOW, HIGH, D_x, D_y, D_z, &
+           &                         is_external, periodic_bnd_cnt, non_periodic_bnd_cnt, eff_dim, NDIM, &
+           &                         XLO, XHI, YLO, YHI, ZLO, ZHI, LOW, HIGH, D_x, D_y, D_z, &
            &                         ord_prolong, ord_prolong_face, stdout, verbose_vcycle, hdf5levels, tot_ts
       use types,               only: grid_container
       use mpisetup,            only: buffer_dim, comm, comm3d, ierr, proc, nproc, ndims, pxsize, pysize, pzsize, &
@@ -163,26 +164,26 @@ contains
 
       ngridvars = correction  !< 4 variables are required for basic use of the multigrid solver
 
-      has_dir(XDIR) = (cgrid%nxb > 1)
-      has_dir(YDIR) = (cgrid%nyb > 1)
-      has_dir(ZDIR) = (cgrid%nzb > 1)
+      has_dir(xdim) = (cgrid%nxb > 1)
+      has_dir(ydim) = (cgrid%nyb > 1)
+      has_dir(zdim) = (cgrid%nzb > 1)
       eff_dim = count(has_dir(:))
       if (eff_dim < 1 .or. eff_dim > 3) call die("[multigrid:init_multigrid] Unsupported number of dimensions.")
-      if (has_dir(XDIR)) D_x = 1
-      if (has_dir(YDIR)) D_y = 1
-      if (has_dir(ZDIR)) D_z = 1
+      if (has_dir(xdim)) D_x = 1
+      if (has_dir(ydim)) D_y = 1
+      if (has_dir(zdim)) D_z = 1
 
       periodic_bnd_cnt = 0
       non_periodic_bnd_cnt = 0
-      if (has_dir(XDIR)) then
+      if (has_dir(xdim)) then
          call count_periodic(bnd_xl_dom)
          call count_periodic(bnd_xr_dom)
       endif
-      if (has_dir(YDIR)) then
+      if (has_dir(ydim)) then
          call count_periodic(bnd_yl_dom)
          call count_periodic(bnd_yr_dom)
       endif
-      if (has_dir(ZDIR)) then
+      if (has_dir(zdim)) then
          call count_periodic(bnd_zl_dom)
          call count_periodic(bnd_zr_dom)
       endif
@@ -217,13 +218,13 @@ contains
          lvl(idx)%nb    = mg_nb                                    ! number of guardcells
 
          nxc = 1  ! suppres warning on possibly uninitialized variables
-         do i = XDIR, ZDIR ! this can be rewritten as a three subroutine/function calls
+         do i = xdim, zdim ! this can be rewritten as a three subroutine/function calls
             select case (i)
-               case (XDIR)
+               case (xdim)
                   nxc = cgrid%nxb
-               case (YDIR)
+               case (ydim)
                   nxc = cgrid%nyb
-               case (ZDIR)
+               case (zdim)
                   nxc = cgrid%nzb
             end select
 
@@ -243,11 +244,11 @@ contains
             endif
 
             select case (i)
-               case (XDIR)
+               case (xdim)
                   lvl(idx)%nxb = nx
-               case (YDIR)
+               case (ydim)
                   lvl(idx)%nyb = nx
-               case (ZDIR)
+               case (zdim)
                   lvl(idx)%nzb = nx
             end select
          enddo
@@ -260,7 +261,7 @@ contains
          lvl(idx)%dxz = 1.
          lvl(idx)%dyz = 1.
 
-         if (has_dir(XDIR)) then
+         if (has_dir(xdim)) then
             lvl(idx)%nx    = lvl(idx)%nxb + 2*lvl(idx)%nb             ! total number of cells in x, y and z directions
             lvl(idx)%dx    = (cgrid%xmaxb-cgrid%xminb) / lvl(idx)%nxb ! cell size in x, y and z directions
             lvl(idx)%is    = lvl(idx)%nb + 1                          ! lowest and highest indices for interior cells
@@ -278,7 +279,7 @@ contains
             lvl(idx)%idx2  = 0.
          endif
 
-         if (has_dir(YDIR)) then
+         if (has_dir(ydim)) then
             lvl(idx)%ny    = lvl(idx)%nyb + 2*lvl(idx)%nb
             lvl(idx)%dy    = (cgrid%ymaxb-cgrid%yminb) / lvl(idx)%nyb
             lvl(idx)%js    = lvl(idx)%nb + 1
@@ -296,7 +297,7 @@ contains
             lvl(idx)%idy2  = 0.
          endif
 
-         if (has_dir(ZDIR)) then
+         if (has_dir(zdim)) then
             lvl(idx)%nz    = lvl(idx)%nzb + 2*lvl(idx)%nb
             lvl(idx)%dz    = (cgrid%zmaxb-cgrid%zminb) / lvl(idx)%nzb
             lvl(idx)%ks    = lvl(idx)%nb + 1
@@ -351,7 +352,7 @@ contains
             lvl(idx)%mgvar     (:, :, :, :) = 0.0 ! should not be necessary if dirty_debug shows nothing suspicious
          endif
 
-         if (has_dir(XDIR)) then
+         if (has_dir(xdim)) then
             do j = 1, lvl(idx)%nx
                lvl(idx)%x(j)  = cgrid%xminb + 0.5*lvl(idx)%dx + (j-lvl(idx)%nb-1)*lvl(idx)%dx
             enddo
@@ -359,7 +360,7 @@ contains
             lvl(idx)%x(:) = (cgrid%xminb + cgrid%xmaxb) / 2.
          endif
 
-         if (has_dir(YDIR)) then
+         if (has_dir(ydim)) then
             do j = 1, lvl(idx)%ny
                lvl(idx)%y(j)  = cgrid%yminb + 0.5*lvl(idx)%dy + (j-lvl(idx)%nb-1)*lvl(idx)%dy
             enddo
@@ -367,7 +368,7 @@ contains
             lvl(idx)%y(:) = (cgrid%yminb + cgrid%ymaxb) / 2.
          endif
 
-         if (has_dir(ZDIR)) then
+         if (has_dir(zdim)) then
             do j = 1, lvl(idx)%nz
                lvl(idx)%z(j)  = cgrid%zminb + 0.5*lvl(idx)%dz + (j-lvl(idx)%nb-1)*lvl(idx)%dz
             enddo
@@ -397,28 +398,28 @@ contains
       mb_alloc = mb_alloc + size(gb_cartmap) !may be inaccurate
       do j=0, nproc-1
          call MPI_Cart_coords(comm3d, j, NDIM, gb_cartmap(j)%proc, ierr)
-         gb_cartmap(j)%lo(XDIR) = gb_cartmap(j)%proc(XDIR) * base%nxb + 1 ! starting x, y and z indices of interior cells from
-         gb_cartmap(j)%lo(YDIR) = gb_cartmap(j)%proc(YDIR) * base%nyb + 1 ! coarsest level on the gb_src array
-         gb_cartmap(j)%lo(ZDIR) = gb_cartmap(j)%proc(ZDIR) * base%nzb + 1
-         gb_cartmap(j)%up(XDIR) = gb_cartmap(j)%lo(XDIR)   + base%nxb - 1 ! ending indices
-         gb_cartmap(j)%up(YDIR) = gb_cartmap(j)%lo(YDIR)   + base%nyb - 1
-         gb_cartmap(j)%up(ZDIR) = gb_cartmap(j)%lo(ZDIR)   + base%nzb - 1
+         gb_cartmap(j)%lo(xdim) = gb_cartmap(j)%proc(xdim) * base%nxb + 1 ! starting x, y and z indices of interior cells from
+         gb_cartmap(j)%lo(ydim) = gb_cartmap(j)%proc(ydim) * base%nyb + 1 ! coarsest level on the gb_src array
+         gb_cartmap(j)%lo(zdim) = gb_cartmap(j)%proc(zdim) * base%nzb + 1
+         gb_cartmap(j)%up(xdim) = gb_cartmap(j)%lo(xdim)   + base%nxb - 1 ! ending indices
+         gb_cartmap(j)%up(ydim) = gb_cartmap(j)%lo(ydim)   + base%nyb - 1
+         gb_cartmap(j)%up(zdim) = gb_cartmap(j)%lo(zdim)   + base%nzb - 1
       enddo
 
       ! mark external faces
       ! BEWARE The checks may not work correctly for shear and corner boundaries
       is_external(:) = .false.
 
-      if (gb_cartmap(proc)%proc(XDIR) == 0        .and. (bnd_xl /= "mpi" .and. bnd_xl /= "per")) is_external(XLO) = .true.
-      if (gb_cartmap(proc)%proc(XDIR) == pxsize-1 .and. (bnd_xr /= "mpi" .and. bnd_xr /= "per")) is_external(XHI) = .true.
-      if (gb_cartmap(proc)%proc(YDIR) == 0        .and. (bnd_yl /= "mpi" .and. bnd_yl /= "per")) is_external(YLO) = .true.
-      if (gb_cartmap(proc)%proc(YDIR) == pysize-1 .and. (bnd_yr /= "mpi" .and. bnd_yr /= "per")) is_external(YHI) = .true.
-      if (gb_cartmap(proc)%proc(ZDIR) == 0        .and. (bnd_zl /= "mpi" .and. bnd_zl /= "per")) is_external(ZLO) = .true.
-      if (gb_cartmap(proc)%proc(ZDIR) == pzsize-1 .and. (bnd_zr /= "mpi" .and. bnd_zr /= "per")) is_external(ZHI) = .true.
+      if (gb_cartmap(proc)%proc(xdim) == 0        .and. (bnd_xl /= "mpi" .and. bnd_xl /= "per")) is_external(XLO) = .true.
+      if (gb_cartmap(proc)%proc(xdim) == pxsize-1 .and. (bnd_xr /= "mpi" .and. bnd_xr /= "per")) is_external(XHI) = .true.
+      if (gb_cartmap(proc)%proc(ydim) == 0        .and. (bnd_yl /= "mpi" .and. bnd_yl /= "per")) is_external(YLO) = .true.
+      if (gb_cartmap(proc)%proc(ydim) == pysize-1 .and. (bnd_yr /= "mpi" .and. bnd_yr /= "per")) is_external(YHI) = .true.
+      if (gb_cartmap(proc)%proc(zdim) == 0        .and. (bnd_zl /= "mpi" .and. bnd_zl /= "per")) is_external(ZLO) = .true.
+      if (gb_cartmap(proc)%proc(zdim) == pzsize-1 .and. (bnd_zr /= "mpi" .and. bnd_zr /= "per")) is_external(ZHI) = .true.
 
-      if (.not. has_dir(XDIR)) is_external(XLO:XHI) = .false.
-      if (.not. has_dir(YDIR)) is_external(YLO:YHI) = .false.
-      if (.not. has_dir(ZDIR)) is_external(ZLO:ZHI) = .false.
+      if (.not. has_dir(xdim)) is_external(XLO:XHI) = .false.
+      if (.not. has_dir(ydim)) is_external(YLO:YHI) = .false.
+      if (.not. has_dir(zdim)) is_external(ZLO:ZHI) = .false.
 
 #ifdef GRAV
       call init_multigrid_grav_post(cgrid, mb_alloc)
@@ -438,7 +439,7 @@ contains
 
 !!$ ============================================================================
 !!
-!! ToDo: pack bnd_{x,y,z}{l,r}_dom into a bnd_dom(XDIR:ZDIR)(LOW:HIGH)  array
+!! ToDo: pack bnd_{x,y,z}{l,r}_dom into a bnd_dom(xdim:zdim)(LOW:HIGH)  array
 !!
 
    subroutine count_periodic(bnd_str)
@@ -464,7 +465,8 @@ contains
 
    subroutine cleanup_multigrid
 
-      use multigridvars,      only: lvl, level_gb, level_min, level_max, has_dir, XDIR, YDIR, ZDIR, tot_ts, gb_cartmap
+      use grid,               only: has_dir, xdim, ydim, zdim
+      use multigridvars,      only: lvl, level_gb, level_min, level_max, tot_ts, gb_cartmap
       use mpisetup,           only: proc, nproc, MPI_DOUBLE_PRECISION, comm3d, ierr
       use multigridhelpers,   only: mg_write_log
       use dataio_pub,         only: msg
@@ -501,21 +503,21 @@ contains
 
             if (i >= level_min) then
                do ib = 1, lvl(i)%nb
-                  if (has_dir(XDIR)) then
+                  if (has_dir(xdim)) then
                      call MPI_Type_free(lvl(i)%MPI_YZ_LEFT_BND(ib), ierr)
                      call MPI_Type_free(lvl(i)%MPI_YZ_LEFT_DOM(ib), ierr)
                      call MPI_Type_free(lvl(i)%MPI_YZ_RIGHT_DOM(ib), ierr)
                      call MPI_Type_free(lvl(i)%MPI_YZ_RIGHT_BND(ib), ierr)
                   endif
 
-                  if (has_dir(YDIR)) then
+                  if (has_dir(ydim)) then
                      call MPI_Type_free(lvl(i)%MPI_XZ_LEFT_BND(ib), ierr)
                      call MPI_Type_free(lvl(i)%MPI_XZ_LEFT_DOM(ib), ierr)
                      call MPI_Type_free(lvl(i)%MPI_XZ_RIGHT_DOM(ib), ierr)
                      call MPI_Type_free(lvl(i)%MPI_XZ_RIGHT_BND(ib), ierr)
                   endif
 
-                  if (has_dir(ZDIR)) then
+                  if (has_dir(zdim)) then
                      call MPI_Type_free(lvl(i)%MPI_XY_LEFT_BND(ib), ierr)
                      call MPI_Type_free(lvl(i)%MPI_XY_LEFT_DOM(ib), ierr)
                      call MPI_Type_free(lvl(i)%MPI_XY_RIGHT_DOM(ib), ierr)
