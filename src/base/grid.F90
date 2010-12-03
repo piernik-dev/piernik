@@ -40,10 +40,10 @@ module grid
    implicit none
 
    private
-   public :: &
-        & Lx, Ly, Lz, cleanup_grid, dl, dvol, dx, dxmn, dy, dz, has_dir, idl, idx, idy, idz, ie, init_grid, is, je, js, ke, ks, maxxyz, nb, nx, &
-        & nxb, nxt, ny, nyb, nyt, nz, nzb, nzt, total_ncells, x, xdim, xl, xmax, xmaxb, xmin, xminb, xr, y, ydim, yl, ymax, ymaxb, ymin, yminb, &
-        & yr, z, zdim, zl, zmax, zmaxb, zmin, zminb, zr
+   public :: cleanup_grid, dl, dvol, has_dir, idl, dxmn, init_grid, maxxyz, nb, total_ncells,  &
+        &    Lx, dx, idx, is, ie, nx, nxb, nxt, x, xdim, xl, xmax, xmaxb, xmin, xminb, xr, &
+        &    Ly, dy, idy, js, je, ny, nyb, nyt, y, ydim, yl, ymax, ymaxb, ymin, yminb, yr, &
+        &    Lz, dz, idz, ks, ke, nz, nzb, nzt, z, zdim, zl, zmax, zmaxb, zmin, zminb, zr
 
    real    :: dx                             !< length of the %grid cell in x-direction
    real    :: dy                             !< length of the %grid cell in y-direction
