@@ -229,10 +229,6 @@ contains
 
       call init_fluidboundaries
 
-#ifdef SHEAR
-      call init_shear
-#endif /* SHEAR */
-
       call read_problem_par
       if (proc == 0) then
          write(msg,'(4a)') "   Starting problem : ",trim(problem_name)," :: ",trim(run_id)
@@ -245,6 +241,10 @@ contains
       call init_arrays(nx,ny,nz,nvar)
 
       call mpi_boundaries_prep
+
+#ifdef SHEAR
+      call init_shear
+#endif /* SHEAR */
 
 #ifdef RESISTIVE
       call init_resistivity

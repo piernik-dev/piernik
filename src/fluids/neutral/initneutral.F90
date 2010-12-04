@@ -46,9 +46,6 @@ module initneutral
    real                  :: gamma_neu             !< adiabatic index for the neutral gas
    real                  :: cs_iso_neu            !< isothermal sound speed (p = cs_iso_neu<sup>2</sup>\f$\rho\f$), active only if neutral gas is \ref isothermal
    real                  :: cs_iso_neu2
-   real                  :: global_gradP_neu
-   real                  :: eta_gas_neu
-   real                  :: csvk
    logical               :: selfgrav_neu          !< true if neutral gas is selfgravitating
    integer               :: idnn, imxn, imyn, imzn
 #ifndef ISO
@@ -67,8 +64,6 @@ contains
 !! <tr><td width="150pt"><b>parameter</b></td><td width="135pt"><b>default value</b></td><td width="200pt"><b>possible values</b></td><td width="315pt"> <b>description</b></td></tr>
 !! <tr><td>gamma_neu     </td><td>1.66666666</td><td>real value</td><td>\copydoc initneutral::gamma_neu  </td></tr>
 !! <tr><td>cs_iso_neu    </td><td>1.0       </td><td>real value</td><td>\copydoc initneutral::cs_iso_neu </td></tr>
-!! <tr><td>eta_gas_neu   </td><td>          </td><td>real value</td><td>\copydoc initneutral::eta_gas_neu</td></tr>
-!! <tr><td>csvk          </td><td>          </td><td>real value</td><td>\copydoc initneutral::csvk       </td></tr>
 !! <tr><td>selfgrav_neu  </td><td>.false.   </td><td>logical   </td><td>\copydoc initneutral::selfgrav_neu  </td></tr>
 !! </table>
 !! \n \n
@@ -77,16 +72,12 @@ contains
 
     use dataio_pub,     only: par_file, ierrh, namelist_errh, compare_namelist      ! QA_WARN required for diff_nml
     use mpisetup,       only: proc, ierr, comm, rbuff, lbuff, buffer_dim, MPI_LOGICAL, MPI_DOUBLE_PRECISION
-#ifdef SHEAR
-    use shear,          only: omega
-#endif /* SHEAR */
 
     implicit none
 
+    namelist /FLUID_NEUTRAL/ gamma_neu, cs_iso_neu, selfgrav_neu
 
-    namelist /FLUID_NEUTRAL/ gamma_neu, cs_iso_neu, eta_gas_neu, csvk, selfgrav_neu
-
-    gamma_neu    = 1.66666666
+    gamma_neu    = 5./3.
     cs_iso_neu   = 1.0
     selfgrav_neu = .false.
 
@@ -98,8 +89,6 @@ contains
 
        rbuff(1)   = gamma_neu
        rbuff(2)   = cs_iso_neu
-       rbuff(3)   = eta_gas_neu
-       rbuff(4)   = csvk
 
     endif
 
@@ -112,17 +101,10 @@ contains
 
       gamma_neu   = rbuff(1)
       cs_iso_neu  = rbuff(2)
-      eta_gas_neu = rbuff(3)
-      csvk        = rbuff(4)
 
     endif
 
     cs_iso_neu2      = cs_iso_neu**2
-#ifdef SHEAR
-    global_gradP_neu = 2.0*omega*eta_gas_neu * cs_iso_neu / csvk
-#else /* !SHEAR */
-    global_gradP_neu = 0.0
-#endif /* !SHEAR */
 
   end subroutine init_neutral
 

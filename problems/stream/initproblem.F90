@@ -122,9 +122,9 @@ module initproblem
 #ifdef DUST
       use initdust,      only: dragc_gas_dust
 #endif /* DUST */
-#ifdef NEUTRAL
-      use initneutral,   only: eta_gas_neu, csvk
-#endif /* NEUTRAL */
+#ifdef SHEAR
+      use shear,         only: eta_gas, csvk
+#endif /* SHEAR */
       implicit none
 
       real                                :: rcx, rcy, ux, uy, wx, wy, taus, eta, vk, beta !, inv
@@ -182,7 +182,7 @@ module initproblem
 
       taus = 1./dragc_gas_dust
       vk   = neu%cs/csvk
-      eta  = eta_gas_neu
+      eta  = eta_gas
 !      beta = 2.0*omega*eta*vk
 !      inv  = 1./(4.0*omega**2*taus**2 + (eps+1.0)**2)
 !      ux =  beta*eps*taus * inv
@@ -203,7 +203,7 @@ module initproblem
       call printinfo(msg)
       write(msg,*) 'wx = ',wx,' wy = ',wy
       call printinfo(msg)
-      write(msg,*) '\eta vk / \Omega = ', eta_gas_neu * neu%cs / csvk / omega
+      write(msg,*) '\eta vk / \Omega = ', eta_gas * neu%cs / csvk / omega
       call printinfo(msg)
 
       do i = 1,nx

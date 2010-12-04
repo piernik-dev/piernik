@@ -58,8 +58,6 @@
  $FLUID_NEUTRAL
     gamma_neu   = 1.0
     cs_iso_neu  = 1.0
-    eta_gas_neu = 0.005
-    csvk        = 0.1
  /
 
  $FLUID_DUST
@@ -93,6 +91,8 @@
  /
 
  $SHEARING
-   qshear = 1.5
-   omega  = 1.0
+   qshear  = 1.5
+   omega   = 1.0
+   eta_gas = 0.005
+   csvk    = 0.1
  /

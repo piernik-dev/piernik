@@ -37,12 +37,14 @@ module shear
 ! pulled by SHEAR
    implicit none
    private
-   public  :: init_shear, yshift, qshear, omega, eps, delj, dely
+   public :: csvk, delj, dely, eps, eta_gas, global_gradP, init_shear, omega, qshear, yshift
 #ifdef FFTW
    public  :: unshear_fft
 #endif FFTW
-   real    :: ts, dely, eps, omega, qshear, dts, ddly
+   real    :: ts, dely, eps, omega, qshear, dts, ddly, eta_gas, csvk
    integer :: delj
+
+   real, dimension(:), allocatable :: global_gradP
 
 contains
 
@@ -64,10 +66,12 @@ contains
     use dataio_pub,     only: par_file, ierrh, namelist_errh, compare_namelist  ! QA_WARN required for diff_nml
     use dataio_pub,     only: printinfo
     use mpisetup,       only: ierr, MPI_DOUBLE_PRECISION, proc, rbuff, buffer_dim, comm
+    use fluidindex,     only: nvar
 
     implicit none
+    integer       :: i
 
-    namelist /SHEARING/ omega, qshear
+    namelist /SHEARING/ omega, qshear, eta_gas, csvk
 
 #ifdef VERBOSE
     call printinfo("[shear:init_shear]: commencing...")
@@ -81,6 +85,8 @@ contains
 
        rbuff(1) = omega
        rbuff(2) = qshear
+       rbuff(3) = eta_gas
+       rbuff(4) = csvk
 
     endif
 
@@ -89,11 +95,19 @@ contains
     if (proc /= 0) then
        omega   = rbuff(1)
        qshear  = rbuff(2)
+       eta_gas = rbuff(3)
+       csvk    = rbuff(4)
     endif
 
 #ifdef VERBOSE
     call printinfo("[shear:init_shear]: finished. \o/")
 #endif /* VERBOSE */
+
+    allocate(global_gradP(nvar%fluids))
+    do i = 1, nvar%fluids
+       global_gradP(i) = 2.0*omega * eta_gas * nvar%all_fluids(i)%cs / csvk
+    enddo
+
   end subroutine init_shear
 
   subroutine yshift(ts,dts)

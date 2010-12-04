@@ -233,10 +233,7 @@ module rtvd ! split orig
 #endif /* GRAV */
 #ifdef SHEAR
       use grid,             only: x
-      use shear,            only: qshear, omega
-#ifdef NEUTRAL
-      use initneutral,      only: global_gradP_neu
-#endif /* NEUTRAL */
+      use shear,            only: qshear, omega, global_gradP
 #endif /* SHEAR */
 #ifdef COSM_RAYS
       use arrays,           only: divvel
@@ -391,7 +388,7 @@ module rtvd ! split orig
 ! Source terms -------------------------------------
 #ifdef FLUID_INTERACTIONS
 #ifdef SHEAR
-         df = (/global_gradP_neu,0.0/)        ! znacznik1
+         df = global_gradP
 #else /* !SHEAR */
          df = 0.0
 #endif /* !SHEAR */
