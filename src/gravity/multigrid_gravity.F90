@@ -970,6 +970,7 @@ contains
       if (norm_rhs == 0.) then ! empty domain => potential == 0.
          if (proc == 0 .and. .not. norm_was_zero) call warn("[multigrid_gravity:vcycle_hg] No gravitational potential for an empty space.")
          norm_was_zero = .true.
+         call store_solution(history)
          return
       else
          if (proc == 0 .and. norm_was_zero) call warn("[multigrid_gravity:vcycle_hg] Spontaneous mass creation detected!")
