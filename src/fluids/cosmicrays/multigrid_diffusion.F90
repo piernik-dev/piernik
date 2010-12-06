@@ -423,7 +423,7 @@ contains
 
       use multigridvars,      only: source, defect, solution, correction, base, roof, level_min, level_max, ts, tot_ts!, D_x, D_y, D_z
       use multigridbasefuncs, only: norm_sq, restrict_all, prolong_level
-      use multigridhelpers,   only: set_dirty, check_dirty, do_ascii_dump, numbered_ascii_dump, brief_v_log
+      use multigridhelpers,   only: set_dirty, check_dirty, do_ascii_dump, numbered_ascii_dump, brief_v_log, dirty_label
 !      use multigridmpifuncs,  only: mpi_multigrid_bnd
       use initcosmicrays,     only: iarr_crs
       use arrays,             only: u
@@ -443,6 +443,7 @@ contains
       logical            :: dump_every_step
 
       write(vstat%cprefix,'("C",i1,"-")') cr_id !BEWARE: this is another place with 0 <= cr_id <= 9 limit
+      write(dirty_label, '("md_",i1,"_dump")')  cr_id
 
       inquire(file = "_dump_every_step_", EXIST=dump_every_step) ! use for debug only
       do_ascii_dump = do_ascii_dump .or. dump_every_step
@@ -469,7 +470,7 @@ contains
 
          norm_old = norm_lhs
 
-         if (dump_every_step) call numbered_ascii_dump("md_dump", v)
+         if (dump_every_step) call numbered_ascii_dump(dirty_label, v)
 
          if (norm_lhs/norm_rhs <= norm_tol) exit
 
@@ -499,7 +500,7 @@ contains
 
       enddo
 
-      if (dump_every_step) call numbered_ascii_dump("md_dump")
+      if (dump_every_step) call numbered_ascii_dump(dirty_label)
 
       call check_dirty(level_max, solution, "v_soln")
 

@@ -314,7 +314,7 @@ contains
 
       if (.not. do_ascii_dump) return
 
-      n = 2 * (nstep - 1)
+      n = 2 * nstep
       if (halfstep) n = n + 1
 
       if (present(a)) then
