@@ -72,7 +72,7 @@
     smalld       = 1.e-5
     smallei      = 1.e-4
     integration_order = 2
-    limiter      = 'vanleer'
+    limiter      = "vanleer"
   /
 
  $GRAVITY
@@ -143,6 +143,7 @@
     nsmoob = 4
     max_cycles = 20
     diff_bnd_str = "zero"
+    overrelax = 1.4 ! dirty trick; optimal value depends at least on diff_tstep_fac
  /
 
  $MULTIGRID_GRAVITY
