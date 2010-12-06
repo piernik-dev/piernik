@@ -334,7 +334,7 @@ contains
 
    subroutine find_img_CoM
 
-      use grid,            only: xdim, ydim, zdim
+      use grid,            only: xdim, ydim, zdim, geometry
       use multigridvars,   only: is_external, XLO, XHI, YLO, YHI, ZLO, ZHI, LOW, HIGH
       use dataio_pub,      only: die
       use mpisetup,        only: comm3d, ierr, MPI_DOUBLE_PRECISION, MPI_SUM
