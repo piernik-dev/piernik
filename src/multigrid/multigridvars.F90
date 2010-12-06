@@ -53,7 +53,6 @@ module multigridvars
    integer            :: ord_prolong_face                             !< Face prolongation operator order; allowed values are -2 .. 2
    logical            :: stdout                                       !< print verbose messages to stdout
    logical            :: verbose_vcycle                               !< Print one line of log per V-cycle, summary otherwise
-   logical            :: hdf5levels                                   !< Dump mgvar to the HDF5 file?
 
    ! single level container
    type :: plvl

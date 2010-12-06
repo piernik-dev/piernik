@@ -64,7 +64,6 @@ contains
 !! <tr><td>verbose_vcycle  </td><td>.false.</td><td>logical        </td><td>\copydoc multigrid::verbose_vcycle  </td></tr>
 !! <tr><td>do_ascii_dump   </td><td>.false.</td><td>logical        </td><td>\copydoc multigrid::do_ascii_dump   </td></tr>
 !! <tr><td>dirty_debug     </td><td>.false.</td><td>logical        </td><td>\copydoc multigrid::dirty_debug     </td></tr>
-!! <tr><td>hdf5levels      </td><td>.false.</td><td>logical        </td><td>\copydoc multigrid::hdf5levels      </td></tr>
 !! <tr><td>multidim_code_3D</td><td>.false.</td><td>logical        </td><td>\copydoc multigrid::multidim_code_3D</td></tr>
 !! <tr><td>aux_par_I0      </td><td>0      </td><td>integer value  </td><td>\copydoc multigrid::aux_par_I0      </td></tr>
 !! <tr><td>aux_par_I1      </td><td>0      </td><td>integer value  </td><td>\copydoc multigrid::aux_par_I1      </td></tr>
@@ -81,7 +80,7 @@ contains
       use multigridvars,       only: lvl, level_max, level_min, level_gb, roof, base, gb, gb_cartmap, mg_nb, ngridvars, correction, &
            &                         is_external, periodic_bnd_cnt, non_periodic_bnd_cnt, eff_dim, NDIM, &
            &                         XLO, XHI, YLO, YHI, ZLO, ZHI, LOW, HIGH, D_x, D_y, D_z, &
-           &                         ord_prolong, ord_prolong_face, stdout, verbose_vcycle, hdf5levels, tot_ts
+           &                         ord_prolong, ord_prolong_face, stdout, verbose_vcycle, tot_ts
       use types,               only: grid_container
       use mpisetup,            only: buffer_dim, comm, comm3d, ierr, proc, nproc, ndims, pxsize, pysize, pzsize, &
            &                         ibuff, rbuff, lbuff, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL, &
@@ -98,9 +97,6 @@ contains
 #ifdef COSM_RAYS
       use multigrid_diffusion, only: init_multigrid_diff, init_multigrid_diff_post
 #endif /* COSM_RAYS */
-#ifdef NEW_HDF5
-      use multigridio,         only: multigrid_add_hdf5
-#endif /* NEW_HDF5 */
 
       implicit none
 
@@ -112,7 +108,7 @@ contains
       integer, dimension(6)            :: aerr                   !BEWARE: hardcoded magic integer. Update when you change number of simultaneous error checks
 
       namelist /MULTIGRID_SOLVER/ level_max, ord_prolong, ord_prolong_face, &
-           &                      stdout, verbose_vcycle, do_ascii_dump, dirty_debug, hdf5levels, multidim_code_3D, &
+           &                      stdout, verbose_vcycle, do_ascii_dump, dirty_debug, multidim_code_3D, &
            &                      aux_par_I0, aux_par_I1, aux_par_I2, aux_par_R0, aux_par_R1, aux_par_R2
 
       if (.not.frun) call die("[multigrid:init_multigrid] Called more than once.")
@@ -129,7 +125,6 @@ contains
       verbose_vcycle         = .false.
       do_ascii_dump          = .false.
       dirty_debug            = .false.
-      hdf5levels             = .false.
       multidim_code_3D       = .false.
 
       aux_par_I0 = 0 ; aux_par_I1 = 0 ; aux_par_I2 = 0
@@ -147,8 +142,7 @@ contains
          lbuff(2) = verbose_vcycle
          lbuff(3) = do_ascii_dump
          lbuff(4) = dirty_debug
-         lbuff(5) = hdf5levels
-         lbuff(6) = multidim_code_3D
+         lbuff(5) = multidim_code_3D
 
          rbuff(buffer_dim  ) = aux_par_R0
          rbuff(buffer_dim-1) = aux_par_R1
@@ -174,8 +168,7 @@ contains
          verbose_vcycle   = lbuff(2)
          do_ascii_dump    = lbuff(3)
          dirty_debug      = lbuff(4)
-         hdf5levels       = lbuff(5)
-         multidim_code_3D = lbuff(6)
+         multidim_code_3D = lbuff(5)
 
          aux_par_R0       = rbuff(buffer_dim)
          aux_par_R1       = rbuff(buffer_dim-1)
@@ -409,10 +402,6 @@ contains
       gb   => lvl(level_gb)
 
       call mpi_multigrid_prep
-
-#ifdef NEW_HDF5
-      call multigrid_add_hdf5
-#endif /* NEW_HDF5 */
 
       tot_ts = 0.
 

@@ -1530,9 +1530,6 @@ module dataio_hdf5
 #ifdef NEW_HDF5
       use list_hdf5,     only: iterate_lhdf5
 #endif /* NEW_HDF5 */
-#ifdef MULTIGRID
-      use multigridio,   only: multigrid_write_hdf5
-#endif /* MULTIGRID */
 
       implicit none
 
@@ -1578,11 +1575,6 @@ module dataio_hdf5
      !
      ! Close the property list.
      !
-#ifndef NEW_HDF5
-#ifdef MULTIGRID
-      call multigrid_write_hdf5(file_id)
-#endif /* MULTIGRID */
-#endif /* !NEW_HDF5 */
 #ifdef NEW_HDF5
       call iterate_lhdf5(file_id)
 #endif /* NEW_HDF5 */
