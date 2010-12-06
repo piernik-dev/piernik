@@ -163,7 +163,7 @@ contains
            &                        bnd_xl_dom, bnd_xr_dom, bnd_yl_dom, bnd_yr_dom, bnd_zl_dom, bnd_zr_dom, &
            &                        MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL
       use dataio_pub,         only: par_file, ierrh, namelist_errh, compare_namelist  ! QA_WARN required for diff_nml
-      use dataio_pub,         only: msg, die, warn, printinfo
+      use dataio_pub,         only: msg, die, warn
 
       implicit none
 
@@ -351,7 +351,7 @@ contains
          endif
          if (overrelax /= 1. .or. overrelax_x /= 1. .or. overrelax_y /= 1. .or. overrelax_z /= 1.) then
             write(msg, '(a,f8.5,a,3f8.5,a)')"[multigrid_gravity:init_multigrid_grav] Overrelaxation factors: global = ", overrelax, ", directional = [", overrelax_x, overrelax_y, overrelax_z, "]"
-            call printinfo(msg, .true.)
+            call warn(msg)
          endif
       endif
 

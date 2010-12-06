@@ -145,6 +145,7 @@
     nsmoob = 4
     max_cycles = 20
     diff_bnd_str = "zero"
+    overrelax = 1.4 ! dirty trick; optimal value depends at least on diff_tstep_fac
  /
 
  $MULTIGRID_GRAVITY

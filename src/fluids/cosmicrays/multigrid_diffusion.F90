@@ -54,6 +54,7 @@ module multigrid_diffusion
    ! namelist parameters
    real               :: norm_tol                                     !< stop V-cycle iterations when the ratio of norms ||residual||/||source|| is below this value
    real               :: vcycle_abort                                 !< abort the V-cycle when lhs norm raises by this factor
+   real               :: overrelax                                    !< overrealaxation factor (if < 1. then works as underrelaxation), use with care
    integer            :: max_cycles                                   !< Maximum allowed number of V-cycles
    integer            :: nsmool                                       !< smoothing cycles per call
    integer            :: nsmoob                                       !< smoothing cycles on base level when gb_no_fft = .true. (a convergence check would be much better)
@@ -109,7 +110,7 @@ contains
 
       logical, save                    :: frun = .true.          !< First run flag
 
-      namelist /MULTIGRID_DIFFUSION/ norm_tol, vcycle_abort, max_cycles, nsmool, nsmoob, &
+      namelist /MULTIGRID_DIFFUSION/ norm_tol, vcycle_abort, max_cycles, nsmool, nsmoob, overrelax, &
            &                         diff_theta, diff_tstep_fac, diff_explicit, diff_bnd_str
 
       if (.not.frun) call die("[multigrid_diffusion:init_multigrid_diff] Called more than once.")
@@ -121,6 +122,7 @@ contains
       vcycle_abort   = 2.    ! unused as yet
       diff_theta     = 1.
       diff_tstep_fac = 1.
+      overrelax      = 1.
       max_cycles     = 20
       nsmool         = 4
       nsmoob         = 1
@@ -135,6 +137,7 @@ contains
          rbuff(2) = vcycle_abort
          rbuff(3) = diff_theta
          rbuff(4) = diff_tstep_fac
+         rbuff(5) = overrelax
 
          ibuff(1) = max_cycles
          ibuff(2) = nsmool
@@ -157,6 +160,7 @@ contains
          vcycle_abort   = rbuff(2)
          diff_theta     = rbuff(3)
          diff_tstep_fac = rbuff(4)
+         overrelax      = rbuff(5)
 
          max_cycles     = ibuff(1)
          nsmool         = ibuff(2)
@@ -191,6 +195,11 @@ contains
          ! calculate exact limit formula
          ! for diff_theta=0. stable diff_tstep_fac is 0.5 in 2D (guess: 0.333 in 3D)
          ! for diff_theta<0.5 stable diff_tstep_fac rises by 1./(1.-2.*diff_theta)
+      endif
+
+      if (overrelax /= 1 .and. proc == 0) then
+         write(msg, '(a,f8.5)')"[multigrid_diffusion:init_multigrid_diff] Overrelaxation factor = ", overrelax
+         call warn(msg)
       endif
 
    end subroutine init_multigrid_diff
@@ -895,7 +904,8 @@ contains
 
                   endif
 
-                  lvl(lev)%mgvar(i, j, k, soln) = lvl(lev)%mgvar(i, j, k, soln) - temp/(1.e0 - 0.5e0 * diff_theta * dt * dLdu)
+                  ! ToDo add an option to automagically fine-tune overrelax
+                  lvl(lev)%mgvar(i, j, k, soln) = lvl(lev)%mgvar(i, j, k, soln) - overrelax * temp/(1.e0 - 0.5e0 * diff_theta * dt * dLdu)
 
                enddo
             enddo
