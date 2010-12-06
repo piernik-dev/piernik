@@ -69,7 +69,7 @@ module fluxdust
 contains
 !==========================================================================================
 
-   subroutine flux_dst(fluxd,cfrd,uud,n,vx,bb,cs_iso2)
+   subroutine flux_dst(fluxd,cfrd,uud,n,vx,ps,bb,cs_iso2)
 
       use constants,  only: small
       use fluidindex, only: idn, imx, imy, imz, nvar
@@ -84,20 +84,21 @@ contains
       real, dimension(:,:), intent(out), pointer  :: cfrd    !< freezing speed for dust
       real, dimension(:,:), intent(in),  pointer  :: bb      !< \copydoc fluxes::interface::flux_interface::bb
       real, dimension(:),   intent(out), pointer  :: vx      !< velocity of dust fluid for current sweep
+      real, dimension(:),   intent(out), pointer  :: ps      !< pressure of dust fluid for current sweep
       real, dimension(:),   intent(in),  pointer  :: cs_iso2 !< local isothermal sound speed (optional)
 
       ! locals
       real               :: minvx, maxvx, amp
 
-      fluxd   = 0.0; cfrd    = 0.0; vx      = 0.0
+      fluxd   = 0.0; cfrd    = 0.0; vx      = 0.0; ps = 0.0
 
-      where (uud(idn,RNG) > 0.0)
-         vx(RNG)=uud(imx,RNG)/uud(idn,RNG)
-      elsewhere
-         vx(RNG) = 0.0
-      endwhere
+!      where (uud(idn,RNG) > 0.0)
+       vx(RNG)=uud(imx,RNG)/uud(idn,RNG)
+!      elsewhere
+!         vx(RNG) = 0.0
+!      endwhere
 
-      where (abs(vx) < 1.e-20 .and. vx /= 0.0) vx = sign(1.e-20,vx)   !!! BEWARE: cheat
+!      where (abs(vx) < 1.e-20 .and. vx /= 0.0) vx = sign(1.e-20,vx)   !!! BEWARE: cheat
 
       fluxd(idn,RNG)=uud(imx,RNG)
       fluxd(imx,RNG)=uud(imx,RNG)*vx(RNG)

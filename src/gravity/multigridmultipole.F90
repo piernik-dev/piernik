@@ -105,6 +105,7 @@ contains
       use types,         only: grid_container
       use mpisetup,      only: proc
       use multigridvars, only: level_min, level_max, lvl, eff_dim
+      use grid,          only: geometry
 
       implicit none
 
@@ -114,6 +115,8 @@ contains
       integer, dimension(4) :: aerr
       integer               :: l,m
 
+      if (geometry /= "cartesian") call die("[multigridmultipole:init_multipole] non-cartesian geometry not implemented yet.")
+
       ! external face coordinates
       fbnd_x(LOW:HIGH) = [ cgrid%xminb, cgrid%xmaxb ]
       fbnd_y(LOW:HIGH) = [ cgrid%yminb, cgrid%ymaxb ]
@@ -121,6 +124,7 @@ contains
 
       ! assume that Center of Mass is approximately in the center of computational domain by default
       CoM(0) = 1.
+      !BEWARE: cylindrical factors go here
       CoM(xdim) = (cgrid%xmax + cgrid%xmin)/2.
       CoM(ydim) = (cgrid%ymax + cgrid%ymin)/2.
       CoM(zdim) = (cgrid%zmax + cgrid%zmin)/2.
@@ -160,6 +164,7 @@ contains
          if (any(aerr(1:4) /= 0)) call die("[multipole:init_multipole] Allocation error: rn, irn sfac or cfac")
          mb_alloc = mb_alloc + size(rn) + size(irn) + size(sfac) + size(cfac)
 
+         !BEWARE: cylindrical factors go here
          drq = min(lmpole%dx, lmpole%dy, lmpole%dz) / 2.
          rqbin = int(sqrt((cgrid%xmax - cgrid%xmin)**2 + (cgrid%ymax - cgrid%ymin)**2 + (cgrid%zmax - cgrid%zmin)**2)/drq) + 1
          ! arithmetic average of the closest and farthest points of computational domain with respect to its center
@@ -277,7 +282,8 @@ contains
 
    subroutine isolated_monopole
 
-      use grid,          only: xdim, ydim, zdim
+      use dataio_pub,    only: die
+      use grid,          only: xdim, ydim, zdim, geometry
       use multigridvars, only: LOW, HIGH, is_external, XLO, XHI, YLO, YHI, ZLO, ZHI
       use constants,     only: newtong
 
@@ -285,6 +291,8 @@ contains
 
       integer :: i, j, k
       real    :: r2
+
+      if (geometry /= "cartesian") call die("[multigridmultipole:isolated_monopole] non-cartesian geometry not implemented yet")
 
       if (is_external(XLO) .or. is_external(XHI)) then
          do j = lmpole%js, lmpole%je
@@ -334,6 +342,8 @@ contains
       implicit none
 
       real, dimension(0:NDIM) :: lsum, dsum
+
+      if (geometry /= "cartesian") call die("[multigridmultipole:find_img_CoM] non-cartesian geometry not implemented yet")
 
       lsum(:) = 0.
 
@@ -411,6 +421,7 @@ contains
       ! a1 = -2. is the simplest, low order choice, gives best agreement of total mass and CoM location when compared to 3-D integration
       ! a1 = -1., a2 = -1./3. seems to do the best job, \todo: find out how and why
 
+      !BEWARE: some cylindrical factors may be helpful
       if (is_external(XLO)) lmpole%bnd_x(             lmpole%js:lmpole%je, lmpole%ks:lmpole%ke, LOW) =    ( &
            &           a1 * lmpole%mgvar(lmpole%is,   lmpole%js:lmpole%je, lmpole%ks:lmpole%ke, solution) + &
            &           a2 * lmpole%mgvar(lmpole%is+1, lmpole%js:lmpole%je, lmpole%ks:lmpole%ke, solution) ) / lmpole%dx
@@ -453,6 +464,7 @@ contains
 
       if (abs(ord_prolong_mpole) > 2) call die("[multipole:prolong_ext_bnd] interpolation order too high")
 
+      !BEWARE: do we need cylindrical factors for prolongation?
       if (any(is_external(:))) then
          if (ord_prolong_mpole == 0) then
             call prolong_ext_bnd0(lev)
@@ -957,6 +969,7 @@ contains
    subroutine geomfac4moments(factor, x, y, z, sin_th, cos_th, ir, delta)
 
       use dataio_pub,    only: die
+      use grid, only: geometry
 
       implicit none
 
@@ -972,6 +985,8 @@ contains
       real    :: rxy, r, rinv
       real    :: sin_ph, cos_ph
       integer :: l, m
+
+      if (geometry /= "cartesian") call die("[multigridmultipole:geomfac4moments] non-cartesian geometry not implemented yet")
 
       ! radius and its projection onto XY plane
       rxy  = x**2 + y**2

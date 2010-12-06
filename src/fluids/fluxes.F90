@@ -62,7 +62,7 @@ module fluxes
    end interface
 
    interface
-      subroutine flux_interface(flux,cfr,uu,n,vx,bb,cs_iso2)
+      subroutine flux_interface(flux,cfr,uu,n,vx,ps,bb,cs_iso2)
          implicit none
          integer, intent(in)                        :: n         !< number of cells in the current sweep
          real, dimension(:,:), intent(out), pointer :: flux      !< flux of fluid
@@ -70,6 +70,7 @@ module fluxes
          real, dimension(:,:), intent(out), pointer :: cfr       !< freezing speed for fluid
          real, dimension(:,:), intent(in),  pointer :: bb        !< magnetic field x,y,z-components table
          real, dimension(:),   intent(out), pointer :: vx        !< velocity of fluid for current sweep
+         real, dimension(:),   intent(out), pointer :: ps        !< pressure of fluid for current sweep
          real, dimension(:),   intent(in),  pointer :: cs_iso2   !< isothermal sound speed squared
       end subroutine flux_interface
    end interface
@@ -128,7 +129,8 @@ contains
 !! \param n number of cells in the current sweep
 !! \param cs_iso2 isothermal sound speed squared
 !<
-   subroutine all_fluxes(n, flux, cfr, uu, bb, cs_iso2)
+
+   subroutine all_fluxes(n, flux, cfr, uu, bb, pp, cs_iso2)
       use types,          only: component_fluid
 #ifdef COSM_RAYS
       use fluxcosmicrays, only: flux_crs
@@ -143,9 +145,10 @@ contains
       real, dimension(n), optional, intent(in),  target :: cs_iso2
 
       real, dimension(nvar%fluids,n), target            :: vx
+      real, dimension(nvar%fluids,n), target            :: pp
 
       real, dimension(:,:), pointer                     :: pflux, pcfr, puu, pbb
-      real, dimension(:), pointer                       :: pcs2, pvx
+      real, dimension(:), pointer                       :: pcs2, pvx, ppp
       type(component_fluid), pointer                    :: pfl
 
       integer :: p
@@ -167,8 +170,9 @@ contains
          pcfr  =>  cfr(pfl%beg:pfl%end,:)
          pflux => flux(pfl%beg:pfl%end,:)
          pvx   =>   vx(pfl%pos,:)
+         ppp   =>   pp(pfl%pos,:)
 
-         call flist(pfl%pos)%flux_func(pflux, pcfr, puu, n, pvx, pbb, pcs2)
+         call flist(pfl%pos)%flux_func(pflux, pcfr, puu, n, pvx, ppp, pbb, pcs2)
       enddo
 
 #ifdef COSM_RAYS

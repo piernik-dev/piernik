@@ -221,9 +221,11 @@ module rtvd ! split orig
 !*/
    subroutine relaxing_tvd(n, u, bb, sweep, i1, i2, dx, dt)
 
+      use dataio_pub,       only: msg, die
       use fluidindex,       only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz, ibx, iby, ibz, nvar, nmag
       use fluxes,           only: flimiter, all_fluxes
-      use mpisetup,         only: smalld, integration_order
+      use mpisetup,         only: smalld, integration_order, use_smalld, local_magic_mass
+      use gridgeometry,     only: gc, geometry_source_terms
 #ifndef ISO
       use fluidindex,       only: iarr_all_en
       use mpisetup,         only: smallei
@@ -284,6 +286,8 @@ module rtvd ! split orig
       real, dimension(nvar%all,n)    :: u1                 !< updated vector of conservative variables (after one timestep in second order scheme)
       real, dimension(nvar%fluids,n) :: rotacc             !< acceleration caused by rotation
       real, dimension(nvar%fluids,n) :: fricacc            !< acceleration caused by friction
+      real, dimension(nvar%fluids,n) :: geosrc             !< source terms caused by geometry of coordinate system
+      real, dimension(nvar%fluids,n) :: pressure           !< gas pressure
       real, dimension(2)             :: df                 !< marker
       real, dimension(n)             :: gravacc            !< acceleration caused by gravitation
 #ifdef ISO_LOCAL
@@ -351,7 +355,7 @@ module rtvd ! split orig
 #ifdef ISO_LOCAL
          call all_fluxes(n, w, cfr, u1, bb, cs_iso2)
 #else /* !ISO_LOCAL */
-         call all_fluxes(n, w, cfr, u1, bb)
+         call all_fluxes(n, w, cfr, u1, bb, pressure)
 #endif /* !ISO_LOCAL */
 ! Right and left fluxes decoupling
 
@@ -380,12 +384,26 @@ module rtvd ! split orig
 ! u update
 
          fu = fr - fl
-         u1(:,2:n) = u0(:,2:n) - rk2coef(integration_order,istep) * dtx * ( fu(:,2:n) - fu(:,1:n-1) )   ; u1(:,1) = u1(:,2)
+         u1(:,2:n) = u0(:,2:n) - rk2coef(integration_order,istep) * gc(1,:,2:n) * dtx * ( gc(2,:,2:n)*fu(:,2:n) - gc(3,:,2:n)*fu(:,1:n-1) )
+         u1(:,1)   = u1(:,2)
 
-         ! BEWARE: This is ordinary cheating. If negative density is patched here with smalld, the code will most likely crash in next timestep (FPE or sudden drop of timestep).
-         u1(iarr_all_dn(1),:) = max(u1(iarr_all_dn(1),:), smalld)
+         if (use_smalld) then
+            ! This is needed e.g. for outflow boundaries in presence of perp. gravity
+            u1(iarr_all_dn,:) = max(u1(iarr_all_dn,:),smalld)
+            local_magic_mass = local_magic_mass + sum( abs(u1(iarr_all_dn,2:n-1) - u0(iarr_all_dn,2:n-1)) )
+         else
+            if (any(u1(iarr_all_dn,:) < 0.0)) then
+               write(msg,'(3A,I4,1X,I4,A)') "[rtvd:relaxing_tvd] negative density in sweep ",sweep,"( ", i1, i2, " )"
+               call die(msg)
+            endif
+         endif
 
 ! Source terms -------------------------------------
+         geosrc = geometry_source_terms(u,pressure,sweep)
+#ifndef GRAV
+         u1(iarr_all_mx,:) = u1(iarr_all_mx,:) + rk2coef(integration_order,istep)*geosrc(:,:)*dt
+#endif /* !GRAV */
+
 #ifdef FLUID_INTERACTIONS
 #ifdef SHEAR
          df = global_gradP
@@ -455,12 +473,7 @@ module rtvd ! split orig
 
          acc(:,n)   = acc(:,n-1); acc(:,1) = acc(:,2)
 
-         !!!! BEWARE: May not be necessary anymore. Another dirty cheat?
-         where (u1(iarr_all_dn,:) < 0.0)
-            acc(:,:) = 0.0
-         endwhere
-
-         u1(iarr_all_mx,:) = u1(iarr_all_mx,:) + rk2coef(integration_order,istep)*acc(:,:)*u(iarr_all_dn,:)*dt
+         u1(iarr_all_mx,:) = u1(iarr_all_mx,:) + rk2coef(integration_order,istep)*(acc(:,:)*u(iarr_all_dn,:)+geosrc(:,:))*dt
 #ifndef ISO
          u1(iarr_all_en,:) = u1(iarr_all_en,:) + rk2coef(integration_order,istep)*acc(:,:)*u(iarr_all_mx,:)*dt
 #endif /* !ISO */

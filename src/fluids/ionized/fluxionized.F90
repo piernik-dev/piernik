@@ -72,7 +72,7 @@ module fluxionized
 
 contains
 
-   subroutine flux_ion(fluxi, cfri, uui, n, vx, bb, cs_iso2)
+   subroutine flux_ion(fluxi, cfri, uui, n, vx, ps, bb, cs_iso2)
 
       use constants,       only: small
       use dataio_pub,      only: die
@@ -86,9 +86,9 @@ contains
       real, dimension(:,:), intent(out), pointer :: cfri        !< freezing speed for ionized fluid
       real, dimension(:,:), intent(in),  pointer :: bb          !< \copydoc fluxes::interface::flux_interface::bb
       real, dimension(:),   intent(out), pointer :: vx          !< velocity of ionized fluid for current sweep
+      real, dimension(:),   intent(out), pointer :: ps          !< gas pressure of ionized fluid for current sweep
       real, dimension(:),   intent(in),  pointer :: cs_iso2     !< local isothermal sound speed (optional)
 
-      real, dimension(n)               :: ps          !< total pressure of ionized fluid
       real, dimension(n)               :: p           !< thermal pressure of ionized fluid
       real, dimension(n)               :: pmag        !< pressure of magnetic field
 #ifdef LOCAL_FR_SPEED

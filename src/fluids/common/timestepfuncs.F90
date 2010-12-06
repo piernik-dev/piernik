@@ -64,7 +64,7 @@ contains
 
    subroutine compute_dt(fl,cx,cy,cz,c_max,c_out,dt_out)
       use types,     only: component_fluid
-      use grid,      only: has_dir, xdim, ydim, zdim, dx, dy, dz
+      use grid,      only: has_dir, xdim, ydim, zdim, dx, dy, dz, geometry, xmin
       use constants, only: big
       use mpisetup,  only: MPI_DOUBLE_PRECISION, MPI_MIN, MPI_MAX, comm, ierr, cfl
       implicit none
@@ -85,6 +85,7 @@ contains
       endif
       if (has_dir(ydim) .and. cy /= 0) then
          dt_proc_y = dy/cy
+         if (geometry == 'cylindrical') dt_proc_y = dt_proc_y * xmin
       else
          dt_proc_y = big
       endif

@@ -47,7 +47,7 @@ module mpisetup
         & bnd_xr_dom, bnd_yl, bnd_yl_dom, bnd_yr, bnd_yr_dom, bnd_zl, bnd_zl_dom, bnd_zr, bnd_zr_dom, buffer_dim, cbuff, cbuff_len, cfl, cflcontrol, &
         & cfr_smooth, cleanup_mpi, comm, comm3d, dt, dt_initial, dt_max_grow, dt_min, dt_old, dtm, err, ibuff, ierr, info, init_mpi, &
         & integration_order, lbuff, limiter, mpifind, ndims, nproc, nstep, pcoords, proc, procxl, procxr, procxyl, procyl, procyr, procyxl, proczl, &
-        & proczr, psize, pxsize, pysize, pzsize, rbuff, req, smalld, smallei, smallp, status, t
+        & proczr, psize, pxsize, pysize, pzsize, rbuff, req, smalld, smallei, smallp, status, t, use_smalld, magic_mass, local_magic_mass
 
    include 'mpif.h'
 
@@ -58,6 +58,8 @@ module mpisetup
    real, parameter       :: dt_default_grow = 2.
 
    real                  :: t, dt, dt_old, dtm
+   real, save            :: magic_mass = 0.0
+   real, save            :: local_magic_mass = 0.0
    integer               :: nstep
 
    integer, parameter    :: ndims = 3       ! 3D grid
@@ -95,6 +97,7 @@ module mpisetup
    real    :: dt_max_grow
    real    :: dt_min
    real    :: cfl
+   logical :: use_smalld               !< correct denisty when it gets lower than smalld
    real    :: smallp                   !< artificial infimum for pressure
    real    :: smalld                   !< artificial infimum for density
    real    :: smallc                   !< artificial infimum for freezing speed
@@ -104,7 +107,7 @@ module mpisetup
    character(len=cbuff_len) :: limiter !< type of flux limiter
    character(len=cbuff_len) :: cflcontrol !< type of cfl control just before each sweep (possibilities: 'none', 'main', 'user')
 
-   namelist /NUMERICAL_SETUP/  cfl, smalld, smallei, integration_order, cfr_smooth, dt_initial, dt_max_grow, dt_min, smallc, smallp, limiter, cflcontrol
+   namelist /NUMERICAL_SETUP/  cfl, smalld, smallei, integration_order, cfr_smooth, dt_initial, dt_max_grow, dt_min, smallc, smallp, limiter, cflcontrol, use_smalld
 
    integer, dimension(3) :: domsize   !< local copy of nxd, nyd, nzd which can be used before init_grid()
 
@@ -167,6 +170,7 @@ module mpisetup
 !! <tr><td>cfl              </td><td>0.7   </td><td>real value between 0.0 and 1.0       </td><td>\copydoc mpisetup::cfl              </td></tr>
 !! <tr><td>smallp           </td><td>1.e-10</td><td>real value                           </td><td>\copydoc mpisetup::smallp           </td></tr>
 !! <tr><td>smalld           </td><td>1.e-10</td><td>real value                           </td><td>\copydoc mpisetup::smalld           </td></tr>
+!! <tr><td>use_smalld       </td><td>.true.</td><td>logical value                        </td><td>\copydoc mpisetup::use_smalld       </td></tr>
 !! <tr><td>smallei          </td><td>1.e-10</td><td>real value                           </td><td>\copydoc mpisetup::smallei          </td></tr>
 !! <tr><td>smallc           </td><td>1.e-10</td><td>real value                           </td><td>\copydoc mpisetup::smallc           </td></tr>
 !! <tr><td>integration_order</td><td>2     </td><td>1 or 2 (or 3 - currently unavailable)</td><td>\copydoc mpisetup::integration_order</td></tr>
@@ -287,6 +291,7 @@ module mpisetup
          cfr_smooth  = 0.0
          smallp      = 1.e-10
          smalld      = 1.e-10
+         use_smalld  = .true.
          smallc      = 1.e-10
          smallei     = 1.e-10
          dt_initial  = -1.              !< negative value indicates automatic choice of initial timestep
@@ -337,6 +342,7 @@ module mpisetup
             rbuff(7) = dt_min
 
             lbuff(1) = mpi_magic
+            lbuff(2) = use_smalld
 
          endif
 
@@ -348,6 +354,7 @@ module mpisetup
          if (proc /= 0) then
 
             mpi_magic   = lbuff(1)
+            use_smalld  = lbuff(2)
 
             smalld      = rbuff(1)
             smallc      = rbuff(10)

@@ -176,6 +176,7 @@ contains
       use fluidindex,            only: nvar
       use grid,                  only: nx, ny, nz, init_grid
       use initfluids,            only: init_fluids
+      use gridgeometry,          only: init_geometry
       use initproblem,           only: init_prob, read_problem_par
       use problem_pub,           only: problem_name, run_id
       use mpiboundaries,         only: mpi_boundaries_prep
@@ -239,6 +240,8 @@ contains
       call init_fluids(cgrid)
 
       call init_arrays(nx,ny,nz,nvar)
+
+      call init_geometry
 
       call mpi_boundaries_prep
 
@@ -318,6 +321,7 @@ contains
       use arrays,      only: cleanup_arrays
       use dataio,      only: cleanup_dataio
       use grid,        only: cleanup_grid
+      use gridgeometry, only: cleanup_geometry
       use initfluids,  only: cleanup_fluids
       use fluidindex,  only: cleanup_fluidindex
       use mpisetup,    only: cleanup_mpi
@@ -331,6 +335,7 @@ contains
       implicit none
 
       call cleanup_grid;        call nextdot(.false.)
+      call cleanup_geometry;    call nextdot(.false.)
       call cleanup_dataio;      call nextdot(.false.)
 #ifdef RESISTIVE
       call cleanup_resistivity; call nextdot(.false.)

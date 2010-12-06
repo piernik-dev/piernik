@@ -150,6 +150,10 @@ module types
       !<
       logical :: sg  = .false.         ! QA_WARN implicit save does not work in types
       !>
+      !! True if fluid is magnetized
+      !<
+      logical :: mg  = .false.         ! QA_WARN implicit save does not work in types
+      !>
       !! Human readable tag describing fluid
       !<
       character(len=idlen) :: tag = '' ! QA_WARN implicit save does not work in types

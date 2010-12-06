@@ -36,14 +36,14 @@
 !! \copydetails grid::init_grid
 !<
 module grid
-
+   use mpisetup, only: cbuff_len
    implicit none
 
    private
-   public :: cleanup_grid, dl, dvol, has_dir, idl, dxmn, init_grid, maxxyz, nb, total_ncells,  &
-        &    Lx, dx, idx, is, ie, nx, nxb, nxt, x, xdim, xl, xmax, xmaxb, xmin, xminb, xr, &
-        &    Ly, dy, idy, js, je, ny, nyb, nyt, y, ydim, yl, ymax, ymaxb, ymin, yminb, yr, &
-        &    Lz, dz, idz, ks, ke, nz, nzb, nzt, z, zdim, zl, zmax, zmaxb, zmin, zminb, zr
+   public :: cleanup_grid, dl, dvol, has_dir, idl, dxmn, init_grid, maxxyz, nb, total_ncells, geometry, &
+        &    Lx, dx, idx, inv_x, is, ie, nx, nxb, nxt, x, xdim, xl, xmax, xmaxb, xmin, xminb, xr, &
+        &    Ly, dy, idy, inv_y, js, je, ny, nyb, nyt, y, ydim, yl, ymax, ymaxb, ymin, yminb, yr, &
+        &    Lz, dz, idz, inv_z, ks, ke, nz, nzb, nzt, z, zdim, zl, zmax, zmaxb, zmin, zminb, zr
 
    real    :: dx                             !< length of the %grid cell in x-direction
    real    :: dy                             !< length of the %grid cell in y-direction
@@ -95,11 +95,16 @@ module grid
    integer, parameter :: zdim=3              !< parameter assigned to z-direction
    logical, dimension(xdim:zdim) :: has_dir  !< .true. for existing directions
 
+   character(len=cbuff_len)  :: geometry            !< define system of coordinates
+
    real, allocatable, target :: dl(:)               !< array of %grid cell sizes in all directions
    real, allocatable, target :: idl(:)              !< array of inverted %grid cell sizes in all directions
    real, allocatable, dimension(:), target :: x     !< array of x-positions of %grid cells centers
+   real, allocatable, dimension(:), target :: inv_x !< array of invert x-positions of %grid cells centers
    real, allocatable, dimension(:), target :: y     !< array of y-positions of %grid cells centers
+   real, allocatable, dimension(:), target :: inv_y !< array of invert y-positions of %grid cells centers
    real, allocatable, dimension(:), target :: z     !< array of z-positions of %grid cells centers
+   real, allocatable, dimension(:), target :: inv_z !< array of invert z-positions of %grid cells centers
    real, allocatable, dimension(:), target :: xl    !< array of x-positions of %grid cells left borders
    real, allocatable, dimension(:), target :: yl    !< array of y-positions of %grid cells left borders
    real, allocatable, dimension(:), target :: zl    !< array of z-positions of %grid cells left borders
@@ -178,7 +183,7 @@ module grid
 
       use dataio_pub,    only: par_file, ierrh, namelist_errh, compare_namelist  ! QA_WARN required for diff_nml
       use dataio_pub,    only: printinfo, die
-      use mpisetup,      only: ierr, ibuff, rbuff, MPI_INTEGER, MPI_DOUBLE_PRECISION, proc, &
+      use mpisetup,      only: ierr, ibuff, rbuff, cbuff, MPI_INTEGER, MPI_DOUBLE_PRECISION, MPI_CHARACTER, proc, &
            &                   buffer_dim, pxsize, pysize, pzsize, comm
       use types,         only: grid_container
 
@@ -187,7 +192,7 @@ module grid
       type(grid_container), intent(out) :: cgrid
 
       namelist /DOMAIN_SIZES/ nxd, nyd, nzd, nb
-      namelist /DOMAIN_LIMITS/ xmin, xmax, ymin, ymax, zmin, zmax
+      namelist /DOMAIN_LIMITS/ xmin, xmax, ymin, ymax, zmin, zmax, geometry
 
 #ifdef VERBOSE
       call printinfo("[grid:init_grid]: commencing...")
@@ -197,6 +202,7 @@ module grid
       nyd  = 1
       nzd  = 1
       nb   = 4
+      geometry = "cartesian"
 
       if (proc == 0) then
          diff_nml(DOMAIN_SIZES)
@@ -221,10 +227,12 @@ module grid
          rbuff(5)   = zmin
          rbuff(6)   = zmax
 
+         cbuff(1)   = geometry
       endif
 
-      call MPI_Bcast(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
-      call MPI_Bcast(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+      call MPI_BCAST(cbuff, cbuff_len*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
+      call MPI_Bcast(ibuff,           buffer_dim, MPI_INTEGER,          0, comm, ierr)
+      call MPI_Bcast(rbuff,           buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
       if (proc /= 0) then
 
@@ -239,6 +247,8 @@ module grid
          ymax = rbuff(4)
          zmin = rbuff(5)
          zmax = rbuff(6)
+
+         geometry = cbuff(1)
 
       endif
 
@@ -297,9 +307,9 @@ module grid
 
       allocate(dl(3))
       allocate(idl(3))
-      allocate(x(nx), xl(nx), xr(nx))
-      allocate(y(ny), yl(ny), yr(ny))
-      allocate(z(nz), zl(nz), zr(nz))
+      allocate(x(nx), xl(nx), xr(nx), inv_x(nx))
+      allocate(y(ny), yl(ny), yr(ny), inv_y(ny))
+      allocate(z(nz), zl(nz), zr(nz), inv_z(nz))
 
       total_ncells = nxd * nyd * nzd
 
@@ -379,6 +389,11 @@ module grid
          xl = -0.5*dx
          xr =  0.5*dx
       endif
+      where ( x /= 0.0 )
+         inv_x = 1./x
+      elsewhere
+         inv_x = 0.
+      endwhere
 
 !--- y-grids --------------------------------------------------------------
 
@@ -393,6 +408,11 @@ module grid
          yl = -0.5*dy
          yr =  0.5*dy
       endif
+      where ( y /= 0.0 )
+         inv_y = 1./y
+      elsewhere
+         inv_y = 0.
+      endwhere
 
 !--- z-grids --------------------------------------------------------------
 
@@ -407,6 +427,12 @@ module grid
          zl = -0.5*dz
          zr =  0.5*dz
       endif
+      where ( z /= 0.0 )
+         inv_z = 1./z
+      elsewhere
+         inv_z = 0.
+      endwhere
+
 !--------------------------------------------------------------------------
 
       Lx = xmax - xmin
@@ -421,17 +447,20 @@ module grid
 
       implicit none
 
-      if (allocated(dl))  deallocate(dl)
-      if (allocated(idl)) deallocate(idl)
-      if (allocated(x))   deallocate(x)
-      if (allocated(xl))  deallocate(xl)
-      if (allocated(xr))  deallocate(xr)
-      if (allocated(y))   deallocate(y)
-      if (allocated(yl))  deallocate(yl)
-      if (allocated(yr))  deallocate(yr)
-      if (allocated(z))   deallocate(z)
-      if (allocated(zl))  deallocate(zl)
-      if (allocated(zr))  deallocate(zr)
+      if (allocated(dl))    deallocate(dl)
+      if (allocated(idl))   deallocate(idl)
+      if (allocated(x))     deallocate(x)
+      if (allocated(xl))    deallocate(xl)
+      if (allocated(xr))    deallocate(xr)
+      if (allocated(inv_x)) deallocate(inv_x)
+      if (allocated(y))     deallocate(y)
+      if (allocated(yl))    deallocate(yl)
+      if (allocated(yr))    deallocate(yr)
+      if (allocated(inv_y)) deallocate(inv_y)
+      if (allocated(z))     deallocate(z)
+      if (allocated(zl))    deallocate(zl)
+      if (allocated(zr))    deallocate(zr)
+      if (allocated(inv_z)) deallocate(inv_z)
 
    end subroutine cleanup_grid
 

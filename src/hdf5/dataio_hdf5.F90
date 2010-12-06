@@ -1132,7 +1132,7 @@ module dataio_hdf5
       use mpisetup,    only: pcoords, pxsize, pysize, pzsize
       implicit none
       integer, intent(in)                      :: nx,ny,nz
-      real, dimension(nx,ny,nz), intent(in) :: tab
+      real, dimension(nx,ny,nz), intent(in)    :: tab
       integer(HID_T), intent(in)               :: file_id       !> File identifier
       character(len=*), intent(in)             :: dname
 
@@ -1296,7 +1296,7 @@ module dataio_hdf5
                                h5screate_simple_f, h5fclose_f, h5close_f
       use h5lt,          only: h5ltget_attribute_double_f, h5ltget_attribute_int_f, h5ltget_attribute_string_f
       use list_hdf5,     only: problem_read_restart
-      use mpisetup,      only: comm, ierr, pcoords, pxsize, pysize, pzsize, &
+      use mpisetup,      only: comm, ierr, pcoords, pxsize, pysize, pzsize, magic_mass, &
                                MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION, proc, t, info, comm3d, dt, cbuff_len
       use problem_pub,   only: problem_name, run_id
       use types,         only: hdf, domlen, idlen
@@ -1465,6 +1465,8 @@ module dataio_hdf5
          t = rbuf(1)
          call h5ltget_attribute_double_f(file_id,"/","timestep", rbuf,error)
          dt = rbuf(1)
+         call h5ltget_attribute_double_f(file_id,"/","magic_mass", rbuf,error)
+         magic_mass = rbuf(1)
          call h5ltget_attribute_int_f(file_id,"/","nstep", ibuf,error)
          chdf%nstep = ibuf(1)
          call h5ltget_attribute_int_f(file_id,"/","nres", ibuf,error)
@@ -1696,7 +1698,7 @@ module dataio_hdf5
       use hdf5,          only: HID_T, SIZE_T, H5F_ACC_RDWR_F, h5fopen_f, h5fclose_f, h5gcreate_f, h5gclose_f
       use h5lt,          only: h5ltset_attribute_double_f, h5ltset_attribute_int_f, h5ltmake_dataset_string_f, h5ltset_attribute_string_f
       use list_hdf5,     only: additional_attrs
-      use mpisetup,      only: proc, t, dt, psize, cbuff_len, pxsize, pysize, pzsize
+      use mpisetup,      only: proc, t, dt, psize, cbuff_len, pxsize, pysize, pzsize, local_magic_mass, MPI_DOUBLE_PRECISION, MPI_SUM, comm, ierr, magic_mass
       use problem_pub,   only: problem_name, run_id
       use types,         only: hdf
       use version,       only: env, nenv
@@ -1714,11 +1716,16 @@ module dataio_hdf5
       integer            :: fe, i
       integer(SIZE_T) :: bufsize
       integer :: error
+      real    :: magic_mass0
       integer, parameter          :: buf_len = 50
       integer, dimension(buf_len) :: ibuffer
       real,    dimension(buf_len) :: rbuffer
       character(len=cbuff_len), dimension(buf_len) :: ibuffer_name = ''
       character(len=cbuff_len), dimension(buf_len) :: rbuffer_name = ''
+
+      call MPI_REDUCE(local_magic_mass, magic_mass0, 1, MPI_DOUBLE_PRECISION, MPI_SUM, 0, comm, ierr)
+      magic_mass       = magic_mass + magic_mass0
+      local_magic_mass = 0.0
 
       if (proc == 0) then
 
@@ -1734,6 +1741,7 @@ module dataio_hdf5
          rbuffer(8)  = zmin                     ; rbuffer_name(8)  = "zmin"
          rbuffer(9)  = zmax                     ; rbuffer_name(9)  = "zmax"
          rbuffer(10) = piernik_hdf5_version     ; rbuffer_name(10) = "piernik"
+         rbuffer(11) = magic_mass               ; rbuffer_name(11) = "magic_mass"
 
          ibuffer(1)  = chdf%nstep               ; ibuffer_name(1)  = "nstep"
          ibuffer(2)  = chdf%nres+1              ; ibuffer_name(2)  = "nres"
