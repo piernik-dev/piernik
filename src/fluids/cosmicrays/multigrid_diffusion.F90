@@ -103,6 +103,7 @@ contains
       use mpisetup,           only: buffer_dim, comm, ierr, proc, ibuff, rbuff, lbuff, cbuff, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL, MPI_CHARACTER
       use dataio_pub,         only: par_file, ierrh, namelist_errh, compare_namelist      ! QA_WARN required for diff_nml
       use dataio_pub,         only: die, warn, msg
+      use grid,               only: geometry
 
       implicit none
 
@@ -113,6 +114,7 @@ contains
 
       if (.not.frun) call die("[multigrid_diffusion:init_multigrid_diff] Called more than once.")
       frun = .false.
+      if (geometry /= "cartesian") call die("[multigrid_gravity:init_multigrid_gravdiffusion:init_multigrid_diff] non-cartesian geometry not implemented yet.")
 
       ! Default values for namelist variables
       norm_tol       = 1.e-2

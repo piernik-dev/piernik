@@ -156,7 +156,7 @@ contains
 !<
    subroutine init_multigrid_grav
 
-      use grid,               only: has_dir
+      use grid,               only: has_dir, geometry
       use multigridvars,      only: bnd_periodic, bnd_dirichlet, bnd_isolated, bnd_invalid, correction, mg_nb, ngridvars, periodic_bnd_cnt, non_periodic_bnd_cnt
       use multipole,          only: use_point_monopole, lmax, mmax, ord_prolong_mpole, coarsen_multipole, interp_pt2mom, interp_mom2pot
       use mpisetup,           only: buffer_dim, comm, ierr, proc, ibuff, cbuff, rbuff, lbuff, &
@@ -177,6 +177,8 @@ contains
 
       if (.not.frun) call die("[multigrid_gravity:init_multigrid_grav] Called more than once.")
       frun = .false.
+
+      if (geometry /= "cartesian") call die("[multigrid_gravity:init_multigrid_grav] non-cartesian geometry not implemented yet.")
 
       ! Default values for namelist variables
       norm_tol               = 1.e-6
@@ -758,6 +760,7 @@ contains
                  &         roof%mgvar(roof%is:roof%ie, roof%js:roof%je, roof%ks:roof%ke, source) - fpiG * jeans_d0 ! remove density bias
 #endif /* JEANS_PROBLEM */
          case (bnd_givenval) ! convert potential into a layer of imaginary mass (subtract second derivative normal to computational domain boundary)
+            ! BEWARE: cylindrical factors go here
             if (is_external(XLO)) roof%mgvar(roof%is,         roof%js:roof%je, roof%ks:roof%ke, source) = &
                  &                roof%mgvar(roof%is,         roof%js:roof%je, roof%ks:roof%ke, source) - &
                  &                roof%bnd_x(                 roof%js:roof%je, roof%ks:roof%ke, LOW)  * 2. * roof%idx2 / fpiG
@@ -1128,6 +1131,7 @@ contains
 
       ! Possible optimization candidate: reduce cache misses (secondary importance, cache-aware implementation required)
       ! Explicit loop over k gives here better performance than array operation due to less cache misses (at least on 32^3 and 64^3 arrays)
+      ! BEWARE: cylindrical factors go here
       if (eff_dim == NDIM .and. .not. multidim_code_3D) then
          do k = lvl(lev)%ks, lvl(lev)%ke
             lvl(       lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k,   def)        = &
@@ -1226,6 +1230,7 @@ contains
 !      L0  = c40 * (lvl(lev)%idx2 + lvl(lev)%idy2 + lvl(lev)%idz2 )
       L0 = -2. * (Lx1 + Lx2 + Ly1 + Ly2 + Lz1 + Lz2)
 
+      !BEWARE: cylindrical factors go here
       lvl(     lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   lvl(lev)%ks  :lvl(lev)%ke,   def)        = &
            lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   lvl(lev)%ks  :lvl(lev)%ke,   src)        - &
            lvl(lev)%mgvar(lvl(lev)%is-2:lvl(lev)%ie-2, lvl(lev)%js  :lvl(lev)%je,   lvl(lev)%ks  :lvl(lev)%ke,   soln) * Lx2 - &

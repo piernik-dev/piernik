@@ -265,6 +265,7 @@ contains
          endif
       endif
 
+      !BEWARE: some cylindrical factors may be helpful
       select case (mode)
          case (extbnd_donothing) ! remember to initialize everything first!
             return
