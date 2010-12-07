@@ -10,7 +10,7 @@ test_for_routines  = re.compile('''
       ^\s{0,12}(|end|real|logical|integer)\s    # starts with spaces or spaces and 'end'
       (subroutine|function)       # next goes subroutine or function
    ''',re.VERBOSE)
-test_for_routines  = re.compile('''^(?!!).*(subroutine|function)''',re.VERBOSE)
+test_for_routines  = re.compile('''^(?!\s{0,9}!).*(subroutine|function)''',re.VERBOSE)
 module_body        = re.compile('''^\s{0,3}(module|contains|program)''', re.VERBOSE)
 
 have_implicit      = re.compile('''implicit\snone''', re.IGNORECASE)
