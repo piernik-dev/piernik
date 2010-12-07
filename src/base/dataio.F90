@@ -877,16 +877,19 @@ module dataio
       endif
 
       call mpifind(prop%val, trim(minmax), prop%loc, prop%proc)
-      return
+
    end subroutine get_extremum
 
    subroutine common_shout(pr, fluid, pres_tn, temp_tn, cs_tn)
+
       use constants,       only: small
       use dataio_pub,      only: msg, printinfo
       use grid,            only: dxmn, dx, dy, dz
       use mpisetup,        only: cfl
       use types,           only: phys_prop
+
       implicit none
+
       type(phys_prop), intent(in)  :: pr
       character(len=*), intent(in) :: fluid
       logical, intent(in)          :: pres_tn, temp_tn, cs_tn
@@ -931,12 +934,15 @@ module dataio
    end subroutine common_shout
 
    subroutine get_common_vars(fl)
+
       use arrays,     only: u, b, wa
       use mpisetup,   only: smallp
       use grid,       only: is, ie, js, je, ks, ke
       use types,      only: phys_prop, component_fluid
-      use constants,  only: mH, kboltz, gasRconst
+      use constants,  only: mH, kboltz
+
       implicit none
+
       type(component_fluid), intent(inout), target :: fl
       type(phys_prop), pointer                     :: pr
 
@@ -964,10 +970,10 @@ module dataio
       pr%cs_max%val    = fl%cs
       pr%cs_max%loc    = 0
       pr%cs_max%proc   = 0
-      pr%temp_min%val  = mH / kboltz * gasRconst/fl%gam * fl%cs2
+      pr%temp_min%val  = (mH * fl%cs2)/ (kboltz * fl%gam)
       pr%temp_min%loc  = 0
       pr%temp_min%proc = 0
-      pr%temp_max%val  = mH / kboltz * gasRconst/fl%gam * fl%cs2
+      pr%temp_max%val  = (mH * fl%cs2)/ (kboltz * fl%gam)
       pr%temp_max%loc  = 0
       pr%temp_max%proc = 0
 #else /* !ISO */
@@ -981,10 +987,11 @@ module dataio
          call get_extremum(wa(is:ie,js:je,ks:ke), 'max', pr%pres_max)
          call get_extremum(wa(is:ie,js:je,ks:ke), 'min', pr%pres_min)
 
-         wa(:,:,:) = sqrt(fl%gam*wa(:,:,:)/u(fl%idn,:,:,:))
+         wa(:,:,:) = fl%gam*wa(:,:,:)/u(fl%idn,:,:,:) ! sound speed squared
          call get_extremum(wa(is:ie,js:je,ks:ke), 'max', pr%cs_max)
+         pr%cs_max%val = sqrt(pr%cs_max%val)
 
-         wa(:,:,:) = mH/kboltz / fl%gam * gasRconst * wa(:,:,:) / u(fl%idn,:,:,:)
+         wa(:,:,:) = (mH * wa(:,:,:))/ (kboltz * fl%gam) ! temperature
          call get_extremum(wa(is:ie,js:je,ks:ke), 'max', pr%temp_max)
          call get_extremum(wa(is:ie,js:je,ks:ke), 'min', pr%temp_min)
       endif
