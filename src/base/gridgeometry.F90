@@ -26,7 +26,13 @@
 !    For full list of developers see $PIERNIK_HOME/license/pdt.txt
 !
 #include "piernik.def"
-
+!>
+!! \brief Module that sets coordinate system
+!! \date December 2010
+!!
+!! This module contains routines that calculates grid coefficients and source terms used during flux update in rtvd::relaxing_tvd
+!!
+!<
 module gridgeometry
    implicit none
    private
@@ -40,34 +46,49 @@ module gridgeometry
    real, allocatable, dimension(:,:,:), target  :: gc_zdim !< array of geometrical coefficients in z-direction
 
    interface
+      !>
+      !! \brief interface for routine setting grid coefficients
+      !<
       subroutine set_gc(sweep,nvar,i1,i2)
          implicit none
-         character(len=*), intent(in) :: sweep
-         integer, intent(in)          :: nvar, i1, i2
+         character(len=*), intent(in) :: sweep         !< direction (x, y or z) we are doing calculations for
+         integer, intent(in)          :: nvar          !< number of fluid variables, should be eq. to nvar%fluids
+         integer, intent(in)          :: i1            !< coordinate of sweep in the 1st remaining direction
+         integer, intent(in)          :: i2            !< coordinate of sweep in the 2st remaining direction
       end subroutine set_gc
 
+      !>
+      !! \brief interface for routine returning grid dependent source terms
+      !!
+      !! Currently, gsrc function returns accelerations
+      !<
       function gsrc(u,p,sweep) result(res)
          implicit none
-         character(len=*), intent(in)           :: sweep
-         real, dimension(:,:), intent(in)       :: u, p
-         real, dimension(size(p,1),size(p,2))   :: res
+         character(len=*), intent(in)           :: sweep !< direction (x, y or z) we are doing calculations for
+         real, dimension(:,:), intent(in)       :: u     !< sweep of fluid conservative variables
+         real, dimension(:,:), intent(in)       :: p     !< sweep of pressure
+         real, dimension(size(p,1),size(p,2))   :: res   !< output sweep of accelerations
       end function gsrc
    end interface
 
-   procedure(set_gc), pointer :: set_geo_coeffs
-   procedure(gsrc),   pointer :: geometry_source_terms
-!>
-!! \brief ToDo: comment me
-!<
+   procedure(set_gc), pointer :: set_geo_coeffs          !< generic pointer for routine setting geometrical coefficients
+   procedure(gsrc),   pointer :: geometry_source_terms   !< generic pointer for routine calculating source terms
 contains
+!>
+!! \brief Generic routine for module initialization
+!<
    subroutine init_geometry
       use grid, only: geometry
       implicit none
 
       call set_geometry(geometry)
-
    end subroutine init_geometry
 
+!>
+!! \brief Generic routine for module cleanup
+!!
+!! Currently, deallocates auxiliary arrays for geometrical coefficients
+!<
    subroutine cleanup_geometry
       implicit none
 
@@ -77,10 +98,15 @@ contains
 
    end subroutine cleanup_geometry
 
+!>
+!! \brief Routine associating generic pointers
+!!
+!! Routine associates gridgeometry::set_geo_coeffs() and gridgeometry::geometry_source_terms()
+!<
    subroutine set_geometry(geometry)
       use dataio_pub,    only: die, msg
       implicit none
-      character(len=*), intent(in) :: geometry
+      character(len=*), intent(in) :: geometry  !< string denoting geometry, "cartesian" or "cylindrical"
 
       select case (geometry)
          case ("cartesian")
@@ -95,7 +121,7 @@ contains
       end select
    end subroutine set_geometry
 !>
-!! \brief ToDo: comment me
+!! \brief Routine allocating auxiliary arrays
 !!
 !! We need to allocate those arrays later to have nvar%all
 !<
@@ -103,7 +129,7 @@ contains
       use dataio_pub,    only: die
       use grid,          only: nx, ny, nz
       implicit none
-      integer, intent(in) :: nvar
+      integer, intent(in) :: nvar   !< number of fluids variables
       if ( any( [allocated(gc_xdim), allocated(gc_ydim), allocated(gc_zdim)] ) ) then
          call die("[gridgeometry:geo_coeffs_arrays] double allocation")
       else
@@ -113,7 +139,7 @@ contains
       endif
    end subroutine geo_coeffs_arrays
 !>
-!! \brief ToDo: comment me
+!! \brief routine setting geometrical coefficients for cartesian grid
 !<
    subroutine set_cart_coeffs(sweep,nvar,i1,i2)
       use dataio_pub,    only: die, msg
@@ -145,7 +171,7 @@ contains
       frun = .false.
    end subroutine set_cart_coeffs
 !>
-!! \brief ToDo: comment me
+!! \brief routine setting geometrical coefficients for cylindrical grid
 !<
    subroutine set_cyl_coeffs(sweep,nvar,i1,i2)
       use dataio_pub,    only: die, msg
@@ -189,7 +215,7 @@ contains
       frun = .false.
    end subroutine set_cyl_coeffs
 !>
-!! \brief ToDo: comment me
+!! \brief routine calculating geometrical source term for cartesian grid
 !<
    function cart_geometry_source_terms(u,p,sweep) result(res)
       implicit none
@@ -201,7 +227,7 @@ contains
       return
    end function cart_geometry_source_terms
 !>
-!! \brief ToDo: comment me
+!! \brief routine calculating geometrical source term for cylindrical grid
 !<
    function cyl_geometry_source_terms(u,p,sweep) result(res)
       use fluidindex, only: iarr_all_dn, iarr_all_my
