@@ -138,7 +138,7 @@ module timestep
       endif
       stepcfl = cfl
       if (dt > 0.0) stepcfl    =  dtnow/dt*cfl
-      write(msg,'(a32,f6.4,a12,e8.6)') "[timestep:cflcontrol] stepcfl = ",stepcfl," sweep dt = ",dtnow
+      write(msg,'(a32,f6.4,a12,es12.6)') "[timestep:cflcontrol] stepcfl = ",stepcfl," sweep dt = ",dtnow
       if (stepcfl < cfl) then
          call warn(msg)
       else
