@@ -50,6 +50,8 @@ contains
       select case (cflcontrol)
          case ('warn')
             cfl_manager => cfl_warn
+         case ('auto', 'adaptive')
+            cfl_manager => cfl_auto
          case ('none', '')
          case default
             write(msg, '(3a)')"[timestep:init_time_step] Unknown cfl_manager '",trim(cflcontrol),"'. Assuming 'none'."
@@ -90,7 +92,7 @@ contains
       dt_old = dt
 
       c_all = 0.0
-      dt    = (tend-t)/2.*(1+2.*epsilon(1.))
+      dt = huge(1.0)
 
 #ifdef IONIZED
       call timestep_ion
@@ -143,6 +145,8 @@ contains
          call write_crashed("[timestep:time_step] dt < dt_min")
       endif
 
+      dt  = min(dt, (tend-t)/2.*(1+2.*epsilon(1.)))
+
    end subroutine time_step
 
 !------------------------------------------------------------------------------------------
@@ -173,5 +177,48 @@ contains
       endif
 
    end subroutine cfl_warn
+
+!------------------------------------------------------------------------------------------
+!
+! This routine detects sudden timestep changes due to strong velocity changes and interprets them as possible CFL criterion violations
+! Timestep changes are used to estimate safe value of CFL for the next timestep (EXPERIMENTAL)
+!
+
+   subroutine cfl_auto
+
+      use dataio_pub, only: msg, warn
+      use mpisetup,   only: cfl, cfl_max, proc, dt, dt_old
+
+      implicit none
+
+      real, save :: stepcfl=0., cfl_c = 1.
+      real       :: stepcfl_old
+
+      stepcfl_old = stepcfl
+      stepcfl = cfl
+      if (c_all_old > 0.) then
+         stepcfl = c_all/c_all_old*cfl
+      else
+         stepcfl_old = cfl
+      endif
+
+      if (stepcfl > 0. .and. dt_old > 0.) then
+         cfl_c = min(1., 0.5 * (cfl_c + min(1., stepcfl_old/stepcfl *dt/dt_old)))
+         dt = dt * cfl_c
+      else
+         cfl_c = 1.
+      endif
+
+      if (proc == 0) then
+         msg = ""
+         if (stepcfl > cfl_max) then
+            write(msg,'(a,g10.3)') "[timestep:cfl_auto] Possible violation of CFL: ",stepcfl
+         else if (stepcfl < 2*cfl - cfl_max) then
+            write(msg,'(2(a,g10.3))') "[timestep:cfl_auto] Low CFL: ", stepcfl, " << ", cfl
+         endif
+         if (len_trim(msg) > 0) call warn(msg)
+      endif
+
+   end subroutine cfl_auto
 
 end module timestep

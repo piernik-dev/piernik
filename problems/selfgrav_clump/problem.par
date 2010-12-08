@@ -79,6 +79,8 @@
     smalld = 1.e3
     smallei= 1.e10
     limiter= 'vanleer'
+    cflcontrol = 'auto'
+    dt_initial = 1e-3
  /
 
  $GRAVITY
@@ -100,7 +102,7 @@
     clump_r = 1.0e5
     maxitC = 1000
 !    verbose = .true.
-    exp_speedup = .true.
+!    exp_speedup = .true.
  /
 
  $MULTIGRID_SOLVER
