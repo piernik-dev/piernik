@@ -44,7 +44,7 @@ module mpisetup
         & MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_IN_PLACE, MPI_LOGICAL, MPI_MAX, MPI_MIN, MPI_ORDER_FORTRAN, MPI_REQUEST_NULL, &
         & MPI_STATUS_SIZE, MPI_SUM, MPI_XY_LEFT_BND, MPI_XY_LEFT_DOM, MPI_XY_RIGHT_BND, MPI_XY_RIGHT_DOM, MPI_XZ_LEFT_BND, MPI_XZ_LEFT_DOM, &
         & MPI_XZ_RIGHT_BND, MPI_XZ_RIGHT_DOM, MPI_YZ_LEFT_BND, MPI_YZ_LEFT_DOM, MPI_YZ_RIGHT_BND, MPI_YZ_RIGHT_DOM, bnd_xl, bnd_xl_dom, bnd_xr, &
-        & bnd_xr_dom, bnd_yl, bnd_yl_dom, bnd_yr, bnd_yr_dom, bnd_zl, bnd_zl_dom, bnd_zr, bnd_zr_dom, buffer_dim, cbuff, cbuff_len, cfl, cflcontrol, &
+        & bnd_xr_dom, bnd_yl, bnd_yl_dom, bnd_yr, bnd_yr_dom, bnd_zl, bnd_zl_dom, bnd_zr, bnd_zr_dom, buffer_dim, cbuff, cbuff_len, cfl, cfl_max, cflcontrol, &
         & cfr_smooth, cleanup_mpi, comm, comm3d, dt, dt_initial, dt_max_grow, dt_min, dt_old, dtm, err, ibuff, ierr, info, init_mpi, &
         & integration_order, lbuff, limiter, mpifind, ndims, nproc, nstep, pcoords, proc, procxl, procxr, procxyl, procyl, procyr, procyxl, proczl, &
         & proczr, psize, pxsize, pysize, pzsize, rbuff, req, smalld, smallei, smallp, status, t, use_smalld, magic_mass, local_magic_mass
@@ -97,6 +97,7 @@ module mpisetup
    real    :: dt_max_grow
    real    :: dt_min
    real    :: cfl
+   real    :: cfl_max
    logical :: use_smalld               !< correct denisty when it gets lower than smalld
    real    :: smallp                   !< artificial infimum for pressure
    real    :: smalld                   !< artificial infimum for density
@@ -107,7 +108,7 @@ module mpisetup
    character(len=cbuff_len) :: limiter !< type of flux limiter
    character(len=cbuff_len) :: cflcontrol !< type of cfl control just before each sweep (possibilities: 'none', 'main', 'user')
 
-   namelist /NUMERICAL_SETUP/  cfl, smalld, smallei, integration_order, cfr_smooth, dt_initial, dt_max_grow, dt_min, smallc, smallp, limiter, cflcontrol, use_smalld
+   namelist /NUMERICAL_SETUP/  cfl, smalld, smallei, integration_order, cfr_smooth, dt_initial, dt_max_grow, dt_min, smallc, smallp, limiter, cflcontrol, use_smalld, cfl_max
 
    integer, dimension(3) :: domsize   !< local copy of nxd, nyd, nzd which can be used before init_grid()
 
@@ -168,6 +169,8 @@ module mpisetup
 !! <table border="+1">
 !! <tr><td width="150pt"><b>parameter</b></td><td width="135pt"><b>default value</b></td><td width="200pt"><b>possible values</b></td><td width="315pt"> <b>description</b></td></tr>
 !! <tr><td>cfl              </td><td>0.7   </td><td>real value between 0.0 and 1.0       </td><td>\copydoc mpisetup::cfl              </td></tr>
+!! <tr><td>cfl_max          </td><td>0.9   </td><td>real value between cfl and 1.0       </td><td>\copydoc mpisetup::cfl_max          </td></tr>
+!! <tr><td>cflcontrol       </td><td>       </td><td>string                              </td><td>\copydoc mpisetup::cflcontrol       </td></tr>
 !! <tr><td>smallp           </td><td>1.e-10</td><td>real value                           </td><td>\copydoc mpisetup::smallp           </td></tr>
 !! <tr><td>smalld           </td><td>1.e-10</td><td>real value                           </td><td>\copydoc mpisetup::smalld           </td></tr>
 !! <tr><td>use_smalld       </td><td>.true.</td><td>logical value                        </td><td>\copydoc mpisetup::use_smalld       </td></tr>
@@ -179,7 +182,6 @@ module mpisetup
 !! <tr><td>dt_max_grow      </td><td>2.    </td><td>real value > 1.1                     </td><td>\copydoc mpisetup::dt_max_grow      </td></tr>
 !! <tr><td>dt_min           </td><td>0.    </td><td>positive real value                  </td><td>\copydoc mpisetup::dt_min           </td></tr>
 !! <tr><td>limiter          </td><td>vanleer</td><td>string                              </td><td>\copydoc mpisetup::limiter          </td></tr>
-!! <tr><td>cflcontrol       </td><td>       </td><td>string                              </td><td>\copydoc mpisetup::cflcontrol       </td></tr>
 !! </table>
 !! \n \n
 !<
@@ -285,9 +287,10 @@ module mpisetup
          ! ToDo: Remove it when all problems are fixed
 
          limiter     = 'vanleer'
-         cflcontrol  = ''
+         cflcontrol  = 'warn'
 
          cfl         = 0.7
+         cfl_max     = 0.9
          cfr_smooth  = 0.0
          smallp      = 1.e-10
          smalld      = 1.e-10
@@ -311,6 +314,8 @@ module mpisetup
          nyd = max(1, nyd)
          nzd = max(1, nzd)
 
+         cfl_max = min(max(cfl_max, min(cfl*1.1, cfl+0.05, (1.+cfl)/2.) ), 1.0) ! automatically sanitize cfl_max
+
          if (proc == 0) then
 
             cbuff(1) = bnd_xl
@@ -331,15 +336,16 @@ module mpisetup
             ibuff(7) = nzd
             ibuff(8) = nb
 
-            rbuff(1) = smalld
-            rbuff(10)= smallc
-            rbuff(11)= smallp
-            rbuff(2) = smallei
-            rbuff(3) = cfl
-            rbuff(4) = cfr_smooth
-            rbuff(5) = dt_initial
-            rbuff(6) = dt_max_grow
-            rbuff(7) = dt_min
+            rbuff( 1) = smalld
+            rbuff( 2) = smallc
+            rbuff( 3) = smallp
+            rbuff( 4) = smallei
+            rbuff( 5) = cfl
+            rbuff( 6) = cfr_smooth
+            rbuff( 7) = dt_initial
+            rbuff( 8) = dt_max_grow
+            rbuff( 9) = dt_min
+            rbuff(10) = cfl_max
 
             lbuff(1) = mpi_magic
             lbuff(2) = use_smalld
@@ -356,15 +362,16 @@ module mpisetup
             mpi_magic   = lbuff(1)
             use_smalld  = lbuff(2)
 
-            smalld      = rbuff(1)
-            smallc      = rbuff(10)
-            smallp      = rbuff(11)
-            smallei     = rbuff(2)
-            cfl         = rbuff(3)
-            cfr_smooth  = rbuff(4)
-            dt_initial  = rbuff(5)
-            dt_max_grow = rbuff(6)
-            dt_min      = rbuff(7)
+            smalld      = rbuff( 1)
+            smallc      = rbuff( 2)
+            smallp      = rbuff( 3)
+            smallei     = rbuff( 4)
+            cfl         = rbuff( 5)
+            cfr_smooth  = rbuff( 6)
+            dt_initial  = rbuff( 7)
+            dt_max_grow = rbuff( 8)
+            dt_min      = rbuff( 9)
+            cfl_max     = rbuff(10)
 
             bnd_xl     = cbuff(1)(1:4)
             bnd_xr     = cbuff(2)(1:4)

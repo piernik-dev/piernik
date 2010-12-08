@@ -138,7 +138,6 @@ contains
       use dataio_pub,     only: msg, die
       use grid,           only: xdim, ydim, zdim, has_dir
       use sweeps,         only: sweepx, sweepy, sweepz
-      use timestep,       only: cfl_manager
 #if defined SHEAR && defined FLUID_INTERACTIONS
       use sweeps,         only: source_terms_y
 #endif /* SHEAR && FLUID_INTERACTIONS */
@@ -157,8 +156,6 @@ contains
 
       integer, intent(in) :: dir      !< direction, one of DIR_X, DIR_Y, DIR_Z
       logical, intent(in) :: forward  !< if .false. then reverse operation order in the sweep
-
-      if (associated(cfl_manager)) call cfl_manager
 
       select case (dir)
 

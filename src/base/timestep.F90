@@ -34,7 +34,7 @@ module timestep
    private
    public :: time_step, c_all, cfl_manager
 
-   real :: c_all
+   real :: c_all, c_all_old
    procedure(), pointer :: cfl_manager => null()
 
    contains
@@ -67,9 +67,9 @@ module timestep
          real, intent(inout) :: dt
 ! Timestep computation
 
-         if (cflcontrol == 'main' .and. .not.associated(cfl_manager)) cfl_manager => cfl_control
-
          dt_old = dt
+
+         if (cflcontrol == 'warn' .and. .not.associated(cfl_manager)) cfl_manager => cfl_warn
 
          c_all = 0.0
          dt    = (tend-t)/2.*(1+2.*epsilon(1.))
@@ -114,6 +114,9 @@ module timestep
             if (dt_old > 0.) dt = min(dt, dt_old*dt_max_grow)
          endif
 
+         if (associated(cfl_manager)) call cfl_manager
+         c_all_old = c_all
+
          if (dt < dt_min) then ! something nasty had happened
             if (proc == 0) then
                write(msg,'(2(a,es12.4))')"[timestep:time_step] dt = ",dt,", less than allowed minimum = ",dt_min
@@ -121,30 +124,36 @@ module timestep
             endif
             call write_crashed("[timestep:time_step] dt < dt_min")
          endif
-         return
+
       end subroutine time_step
+
 !------------------------------------------------------------------------------------------
-   subroutine cfl_control
-      use dataio_pub, only: msg, printinfo, warn
-      use mpisetup,   only: cfl, dt
+!
+! This routine detects sudden timestep changes due to strong velocity changes and interprets them as possible CFL criterion violations
+!
+
+   subroutine cfl_warn
+
+      use dataio_pub, only: msg, warn
+      use mpisetup,   only: cfl, cfl_max, proc
+
       implicit none
-      real :: dtnow, stepcfl, c_all_main
-      c_all_main = c_all
-      call time_step(dtnow)
-! CFL criterion violated if c_sweep * dt_main >= dx (dx = c_all_main * dt_main / cfl)
-      if (c_all >= c_all_main / cfl) then
-         write(msg,'(a48)') "[timestep:cflcontrol] CFL criterion is violated!"
-         call warn(msg)
-      endif
+
+      real :: stepcfl
+
       stepcfl = cfl
-      if (dt > 0.0) stepcfl    =  dtnow/dt*cfl
-      write(msg,'(a32,f6.4,a12,es12.6)') "[timestep:cflcontrol] stepcfl = ",stepcfl," sweep dt = ",dtnow
-      if (stepcfl < cfl) then
-         call warn(msg)
-      else
-         call printinfo(msg)
+      if (c_all_old > 0.) stepcfl = c_all/c_all_old*cfl
+
+      if (proc == 0) then
+         msg = ""
+         if (stepcfl > cfl_max) then
+            write(msg,'(a,g10.3)') "[timestep:cfl_warn] Possible violation of CFL: ",stepcfl
+         else if (stepcfl < 2*cfl - cfl_max) then
+            write(msg,'(2(a,g10.3))') "[timestep:cfl_warn] Low CFL: ", stepcfl, " << ", cfl
+         endif
+         if (len_trim(msg) > 0) call warn(msg)
       endif
-      c_all      = c_all_main
-   end subroutine cfl_control
+
+   end subroutine cfl_warn
 
 end module timestep
