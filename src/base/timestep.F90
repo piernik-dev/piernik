@@ -32,12 +32,31 @@ module timestep
    implicit none
 
    private
-   public :: time_step, c_all, cfl_manager
+   public :: init_time_step, time_step, c_all, cfl_manager
 
    real :: c_all, c_all_old
    procedure(), pointer :: cfl_manager => null()
 
 contains
+
+   subroutine init_time_step
+
+      use dataio_pub, only: msg, die, warn
+      use mpisetup,   only: cflcontrol
+
+      implicit none
+
+      if (associated(cfl_manager)) call die("[timestep:init_time_step] cfl_manager already associated.")
+      select case (cflcontrol)
+         case ('warn')
+            cfl_manager => cfl_warn
+         case ('none', '')
+         case default
+            write(msg, '(3a)')"[timestep:init_time_step] Unknown cfl_manager '",trim(cflcontrol),"'. Assuming 'none'."
+            call warn(msg)
+      end select
+
+   end subroutine init_time_step
 
    subroutine time_step(dt)
 
@@ -69,8 +88,6 @@ contains
 ! Timestep computation
 
       dt_old = dt
-
-      if (cflcontrol == 'warn' .and. .not.associated(cfl_manager)) cfl_manager => cfl_warn
 
       c_all = 0.0
       dt    = (tend-t)/2.*(1+2.*epsilon(1.))

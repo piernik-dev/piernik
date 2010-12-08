@@ -166,6 +166,7 @@ contains
 !! Meta subroutine responsible for initializing all piernik modules
 !<
    subroutine init_piernik
+
       use arrays,                only: init_arrays
       use constants,             only: init_constants
       use dataio,                only: init_dataio, write_data
@@ -182,6 +183,7 @@ contains
       use mpiboundaries,         only: mpi_boundaries_prep
       use mpisetup,              only: init_mpi
       use types,                 only: grid_container
+      use timestep,              only: init_time_step
 #ifdef MAGNETIC
       use magboundaries,         only: all_mag_boundaries
 #ifdef RESISTIVE
@@ -223,6 +225,7 @@ contains
       endif
 
       call init_mpi
+      call init_time_step
 
       call init_constants
 
