@@ -37,95 +37,96 @@ module timestep
    real :: c_all, c_all_old
    procedure(), pointer :: cfl_manager => null()
 
-   contains
+contains
 
-      subroutine time_step(dt)
+   subroutine time_step(dt)
 
-         use dataio,               only: write_crashed
-         use dataio_pub,           only: tend, msg, warn
-         use mpisetup,             only: t, dt_old, dt_max_grow, dt_initial, dt_min, nstep, proc, cflcontrol
+      use dataio,               only: write_crashed
+      use dataio_pub,           only: tend, msg, warn
+      use mpisetup,             only: t, dt_old, dt_max_grow, dt_initial, dt_min, nstep, proc, cflcontrol
 #ifdef IONIZED
-         use timestepionized,      only: timestep_ion, dt_ion, c_ion
+      use timestepionized,      only: timestep_ion, dt_ion, c_ion
 #endif /* IONIZED */
 #ifdef NEUTRAL
-         use timestepneutral,      only: timestep_neu, dt_neu, c_neu
+      use timestepneutral,      only: timestep_neu, dt_neu, c_neu
 #endif /* NEUTRAL */
 #ifdef DUST
-         use timestepdust,         only: timestep_dst, dt_dst, c_dst
+      use timestepdust,         only: timestep_dst, dt_dst, c_dst
 #endif /* DUST */
 #ifdef COSM_RAYS
-         use timestepcosmicrays,   only: timestep_crs, dt_crs
+      use timestepcosmicrays,   only: timestep_crs, dt_crs
 #endif /* COSM_RAYS */
 #ifdef RESISTIVE
-         use resistivity,          only: dt_resist, timestep_resist
+      use resistivity,          only: dt_resist, timestep_resist
 #endif /* RESISTIVE */
 #ifdef FLUID_INTERACTIONS
-         use timestepinteractions, only: timestep_interactions, dt_interact
+      use timestepinteractions, only: timestep_interactions, dt_interact
 #endif /* FLUID_INTERACTIONS */
 
-         implicit none
-         real, intent(inout) :: dt
+      implicit none
+
+      real, intent(inout) :: dt
 ! Timestep computation
 
-         dt_old = dt
+      dt_old = dt
 
-         if (cflcontrol == 'warn' .and. .not.associated(cfl_manager)) cfl_manager => cfl_warn
+      if (cflcontrol == 'warn' .and. .not.associated(cfl_manager)) cfl_manager => cfl_warn
 
-         c_all = 0.0
-         dt    = (tend-t)/2.*(1+2.*epsilon(1.))
+      c_all = 0.0
+      dt    = (tend-t)/2.*(1+2.*epsilon(1.))
 
 #ifdef IONIZED
-         call timestep_ion
-         dt=min(dt,dt_ion)
-         c_all = max(c_all,c_ion)
+      call timestep_ion
+      dt=min(dt,dt_ion)
+      c_all = max(c_all,c_ion)
 #endif /* IONIZED */
 
 #ifdef NEUTRAL
-         call timestep_neu
-         dt=min(dt,dt_neu)
-         c_all = max(c_all,c_neu)
+      call timestep_neu
+      dt=min(dt,dt_neu)
+      c_all = max(c_all,c_neu)
 #endif /* NEUTRAL */
 
 #ifdef DUST
-         call timestep_dst
-         dt=min(dt,dt_dst)
-         c_all = max(c_all,c_dst)
+      call timestep_dst
+      dt=min(dt,dt_dst)
+      c_all = max(c_all,c_dst)
 #endif /* DUST */
 
 #ifdef COSM_RAYS
-         call timestep_crs
-         dt=min(dt,dt_crs)
+      call timestep_crs
+      dt=min(dt,dt_crs)
 #endif /* COSM_RAYS */
 
 #ifdef RESISTIVE
-         call timestep_resist
-         dt = min(dt,dt_resist)
+      call timestep_resist
+      dt = min(dt,dt_resist)
 #endif /* RESISTIVE */
 
 #ifdef FLUID_INTERACTIONS
-         call timestep_interactions
-         dt = min(dt,dt_interact)
+      call timestep_interactions
+      dt = min(dt,dt_interact)
 #endif /* FLUID_INTERACTIONS */
 
-         ! finally apply some sanity factors
-         if (nstep <=1) then
-            if (dt_initial > 0.) dt = min(dt, dt_initial)
-         else
-            if (dt_old > 0.) dt = min(dt, dt_old*dt_max_grow)
+      ! finally apply some sanity factors
+      if (nstep <=1) then
+         if (dt_initial > 0.) dt = min(dt, dt_initial)
+      else
+         if (dt_old > 0.) dt = min(dt, dt_old*dt_max_grow)
+      endif
+
+      if (associated(cfl_manager)) call cfl_manager
+      c_all_old = c_all
+
+      if (dt < dt_min) then ! something nasty had happened
+         if (proc == 0) then
+            write(msg,'(2(a,es12.4))')"[timestep:time_step] dt = ",dt,", less than allowed minimum = ",dt_min
+            call warn(msg)
          endif
+         call write_crashed("[timestep:time_step] dt < dt_min")
+      endif
 
-         if (associated(cfl_manager)) call cfl_manager
-         c_all_old = c_all
-
-         if (dt < dt_min) then ! something nasty had happened
-            if (proc == 0) then
-               write(msg,'(2(a,es12.4))')"[timestep:time_step] dt = ",dt,", less than allowed minimum = ",dt_min
-               call warn(msg)
-            endif
-            call write_crashed("[timestep:time_step] dt < dt_min")
-         endif
-
-      end subroutine time_step
+   end subroutine time_step
 
 !------------------------------------------------------------------------------------------
 !
