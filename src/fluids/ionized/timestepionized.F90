@@ -65,9 +65,10 @@ contains
 
       use types,         only: component_fluid
       use arrays,        only: u, b
-      use grid,          only: ks, ke, is, ie, js, je
+      use grid,          only: ks, ke, is, ie, js, je, xdim, ydim, zdim, has_dir
       use fluidindex,    only: nvar, ibx, iby, ibz
       use timestepfuncs, only: compute_c_max, compute_dt
+      use mpisetup,   only: proc
 
       implicit none
 
@@ -86,11 +87,25 @@ contains
       fl => nvar%ion
 
       do k = ks, ke
-         kp = mod(k,ke)+1
+         if (has_dir(zdim)) then
+            kp = k + 1
+         else
+            kp = ks
+         endif
+
          do j = js, je
-            jp = mod(j,je)+1
+            if (has_dir(ydim)) then
+               jp = j + 1
+            else
+               jp = js
+            endif
+
             do i = is, ie
-               ip = mod(i,ie)+1
+               if (has_dir(xdim)) then
+                  ip = i + 1
+               else
+                  ip = is
+               endif
 
                bx = 0.5*(b(ibx,i,j,k) + b(ibx,ip,j,k))
                by = 0.5*(b(iby,i,j,k) + b(iby,i,jp,k))
