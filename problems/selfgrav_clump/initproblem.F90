@@ -476,7 +476,8 @@ contains
       use arrays,      only: sgp, u
       use grid,        only: is, ie, js, je, ks, ke, dx, dy, dz
       use initionized, only: idni
-      use mpisetup,    only: comm, ierr, MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_SUM
+      use mpisetup,    only: comm, ierr
+      use mpi,         only: MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_SUM
 
       implicit none
 
