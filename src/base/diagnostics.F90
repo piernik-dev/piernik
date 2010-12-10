@@ -270,7 +270,10 @@ contains
       integer, dimension(1), intent(in)                  :: as
       character(len=*), intent(in), optional             :: aname
 
-      if (.not.allocated(array)) allocate( array(as(1)) )
+      if (.not.allocated(array)) then
+         allocate( array(as(1)) )
+         array = 0
+      endif
       used_memory = used_memory + size(array)*MiB*0.5
       if (present(aname)) call keep_track_of_arrays(size(array)*MiB*0.5,aname)
 
@@ -282,7 +285,10 @@ contains
       integer, dimension(2), intent(in)                    :: as
       character(len=*), intent(in), optional               :: aname
 
-      if (.not.allocated(array)) allocate( array(as(1),as(2)) )
+      if (.not.allocated(array)) then
+         allocate( array(as(1),as(2)) )
+         array = 0
+      endif
       used_memory = used_memory + size(array)*MiB*0.5
       if (present(aname)) call keep_track_of_arrays(size(array)*MiB*0.5,aname)
 
@@ -294,7 +300,10 @@ contains
       integer, dimension(3), intent(in)                      :: as
       character(len=*), intent(in), optional                 :: aname
 
-      if (.not.allocated(array)) allocate( array(as(1),as(2),as(3)) )
+      if (.not.allocated(array)) then
+         allocate( array(as(1),as(2),as(3)) )
+         array = 0
+      endif
       used_memory = used_memory + size(array)*MiB*0.5
       if (present(aname)) call keep_track_of_arrays(size(array)*MiB*0.5,aname)
 
@@ -306,7 +315,10 @@ contains
       integer, dimension(1), intent(in)               :: as
       character(len=*), intent(in), optional          :: aname
 
-      if (.not.allocated(array)) allocate( array(as(1)) )
+      if (.not.allocated(array)) then
+         allocate( array(as(1)) )
+         array = 0.0
+      endif
       used_memory = used_memory + size(array)*MiB
       if (present(aname)) call keep_track_of_arrays(size(array)*MiB,aname)
 
@@ -318,7 +330,10 @@ contains
       integer, dimension(2), intent(in)                 :: as
       character(len=*), intent(in), optional            :: aname
 
-      if (.not.allocated(array)) allocate( array(as(1),as(2)) )
+      if (.not.allocated(array)) then
+         allocate( array(as(1),as(2)) )
+         array = 0.0
+      endif
       used_memory = used_memory + size(array)*MiB
       if (present(aname)) call keep_track_of_arrays(size(array)*MiB,aname)
 
@@ -330,7 +345,10 @@ contains
       integer, dimension(3), intent(in)                   :: as
       character(len=*), intent(in), optional              :: aname
 
-      if (.not.allocated(array)) allocate( array(as(1),as(2),as(3)) )
+      if (.not.allocated(array)) then
+         allocate( array(as(1),as(2),as(3)) )
+         array = 0.0
+      endif
       used_memory = used_memory + size(array)*MiB
       if (present(aname)) call keep_track_of_arrays(size(array)*MiB,aname)
 
@@ -342,7 +360,10 @@ contains
       integer, dimension(4), intent(in)                     :: as
       character(len=*), intent(in), optional                :: aname
 
-      if (.not.allocated(array)) allocate( array(as(1),as(2),as(3),as(4)) )
+      if (.not.allocated(array)) then
+         allocate( array(as(1),as(2),as(3),as(4)) )
+         array = 0.0
+      endif
       used_memory = used_memory + size(array)*MiB
       if (present(aname)) call keep_track_of_arrays(size(array)*MiB,aname)
 
@@ -354,7 +375,10 @@ contains
       integer, dimension(5), intent(in)                       :: as
       character(len=*), intent(in), optional                  :: aname
 
-      if (.not.allocated(array)) allocate( array(as(1),as(2),as(3),as(4),as(5)) )
+      if (.not.allocated(array)) then
+         allocate( array(as(1),as(2),as(3),as(4),as(5)) )
+         array = 0.0
+      endif
       used_memory = used_memory + size(array)*MiB
       if (present(aname)) call keep_track_of_arrays(size(array)*MiB,aname)
 
