@@ -666,7 +666,8 @@ module dataio_hdf5
       use grid,          only: nxb, nyb, nzb, nb, has_dir, xdim, ydim, zdim
       use hdf5,          only: HID_T, HSIZE_T, SIZE_T, H5F_ACC_RDWR_F, h5fopen_f, h5gopen_f, h5gclose_f, h5fclose_f
       use h5lt,          only: h5ltmake_dataset_double_f, h5ltset_attribute_double_f
-      use mpisetup,      only: MPI_CHARACTER, comm3d, ierr, pxsize, pysize, pzsize, MPI_DOUBLE_PRECISION, t, pcoords
+      use mpisetup,      only: comm3d, ierr, pxsize, pysize, pzsize, t, pcoords
+      use mpi,           only: MPI_CHARACTER, MPI_DOUBLE_PRECISION
 #ifdef PGPLOT
       use viz,           only: draw_me
 #endif /* PGPLOT */
@@ -836,7 +837,8 @@ module dataio_hdf5
            &                   h5pcreate_f, h5pclose_f, h5pset_fapl_mpio_f, h5pset_chunk_f, h5pset_dxpl_mpio_f, &
            &                   h5screate_simple_f, h5sclose_f, h5sselect_hyperslab_f
       use list_hdf5,     only: problem_write_restart
-      use mpisetup,      only: pcoords, pxsize, pysize, pzsize, comm3d, comm, info, ierr, MPI_CHARACTER, proc, nstep
+      use mpisetup,      only: pcoords, pxsize, pysize, pzsize, comm3d, comm, info, ierr, proc, nstep
+      use mpi,           only: MPI_CHARACTER
       use problem_pub,   only: problem_name, run_id
       use types,         only: hdf
 #ifdef ISO_LOCAL
@@ -1296,8 +1298,8 @@ module dataio_hdf5
                                h5screate_simple_f, h5fclose_f, h5close_f
       use h5lt,          only: h5ltget_attribute_double_f, h5ltget_attribute_int_f, h5ltget_attribute_string_f
       use list_hdf5,     only: problem_read_restart
-      use mpisetup,      only: comm, ierr, pcoords, pxsize, pysize, pzsize, magic_mass, &
-                               MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION, proc, t, info, comm3d, dt, cbuff_len
+      use mpisetup,      only: comm, ierr, pcoords, pxsize, pysize, pzsize, magic_mass, proc, t, info, comm3d, dt, cbuff_len
+      use mpi,           only: MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION
       use problem_pub,   only: problem_name, run_id
       use types,         only: hdf, domlen, idlen
 #ifdef ISO_LOCAL
@@ -1690,7 +1692,8 @@ module dataio_hdf5
       use hdf5,          only: HID_T, SIZE_T, H5F_ACC_RDWR_F, h5fopen_f, h5fclose_f, h5gcreate_f, h5gclose_f
       use h5lt,          only: h5ltset_attribute_double_f, h5ltset_attribute_int_f, h5ltmake_dataset_string_f, h5ltset_attribute_string_f
       use list_hdf5,     only: additional_attrs
-      use mpisetup,      only: proc, t, dt, psize, cbuff_len, pxsize, pysize, pzsize, local_magic_mass, MPI_DOUBLE_PRECISION, MPI_SUM, comm, ierr, magic_mass
+      use mpisetup,      only: proc, t, dt, psize, cbuff_len, pxsize, pysize, pzsize, local_magic_mass, comm, ierr, magic_mass
+      use mpi,           only: MPI_DOUBLE_PRECISION, MPI_SUM
       use problem_pub,   only: problem_name, run_id
       use types,         only: hdf
       use version,       only: env, nenv

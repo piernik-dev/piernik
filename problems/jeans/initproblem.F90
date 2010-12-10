@@ -53,8 +53,8 @@ contains
       use dataio_pub,    only: ierrh, par_file, namelist_errh, compare_namelist    ! QA_WARN required for diff_nml
       use dataio_pub,    only: msg, die, warn
       use grid,          only: xmin, xmax, ymin, ymax, zmin, zmax, nx, ny, nz
-      use mpisetup,      only: ierr, rbuff, cbuff_len, cbuff, ibuff, proc, buffer_dim, comm, &
-           &                   MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER
+      use mpisetup,      only: ierr, rbuff, cbuff_len, cbuff, ibuff, proc, buffer_dim, comm
+      use mpi,           only: MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER
       use types,         only: idlen
       use problem_pub,   only: jeans_d0, jeans_mode
 

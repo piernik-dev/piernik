@@ -65,7 +65,8 @@ contains
   subroutine init_dust
 
     use dataio_pub,     only: par_file, ierrh, namelist_errh, compare_namelist  ! QA_WARN required for diff_nml
-    use mpisetup,       only: proc, rbuff, lbuff, MPI_LOGICAL, MPI_DOUBLE_PRECISION, buffer_dim, comm, ierr
+    use mpisetup,       only: proc, rbuff, lbuff, buffer_dim, comm, ierr
+    use mpi,            only: MPI_LOGICAL, MPI_DOUBLE_PRECISION
 
     implicit none
 

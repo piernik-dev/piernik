@@ -51,8 +51,8 @@ contains
       use constants,     only: pi
       use dataio_pub,    only: ierrh, par_file, namelist_errh, compare_namelist      ! QA_WARN required for diff_nml
       use dataio_pub,    only: skip_advection, die, warn
-      use mpisetup,      only: ierr, rbuff, cbuff, ibuff, proc, buffer_dim, comm, smalld, cbuff_len, &
-           &                   MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER
+      use mpisetup,      only: ierr, rbuff, cbuff, ibuff, proc, buffer_dim, comm, smalld, cbuff_len
+      use mpi,           only: MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER
       use types,         only: idlen
 
       implicit none
@@ -237,7 +237,8 @@ contains
       use constants,     only: pi, newtong
       use dataio_pub,    only: msg, printinfo, warn
       use grid,          only: x, y, z, is, ie, js, je, ks, ke
-      use mpisetup,      only: proc, comm3d, ierr, MPI_DOUBLE_PRECISION, MPI_SUM, MPI_MIN, MPI_MAX, MPI_IN_PLACE
+      use mpisetup,      only: proc, comm3d, ierr
+      use mpi,           only: MPI_DOUBLE_PRECISION, MPI_SUM, MPI_MIN, MPI_MAX, MPI_IN_PLACE
 
       implicit none
 

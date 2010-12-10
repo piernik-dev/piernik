@@ -236,7 +236,8 @@ contains
 
       use dataio_pub,    only: msg, printinfo
       use grid,          only: total_ncells
-      use mpisetup,      only: MPI_DOUBLE_PRECISION, MPI_SUM, comm, ierr, nstep, proc
+      use mpisetup,      only: comm, ierr, nstep, proc
+      use mpi,           only: MPI_DOUBLE_PRECISION, MPI_SUM
 
       implicit none
 

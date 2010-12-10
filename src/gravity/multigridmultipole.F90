@@ -337,7 +337,8 @@ contains
       use grid,            only: xdim, ydim, zdim, geometry
       use multigridvars,   only: is_external, XLO, XHI, YLO, YHI, ZLO, ZHI, LOW, HIGH
       use dataio_pub,      only: die
-      use mpisetup,        only: comm3d, ierr, MPI_DOUBLE_PRECISION, MPI_SUM
+      use mpisetup,        only: comm3d, ierr
+      use mpi,             only: MPI_DOUBLE_PRECISION, MPI_SUM
 
       implicit none
 
@@ -672,7 +673,8 @@ contains
 
       use grid,          only: xdim, ydim, zdim
       use multigridvars, only: is_external, XLO, XHI, YLO, YHI, ZLO, ZHI, LOW, HIGH
-      use mpisetup,      only: comm3d, ierr, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_SUM, MPI_MIN, MPI_MAX, MPI_IN_PLACE
+      use mpisetup,      only: comm3d, ierr
+      use mpi,           only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_SUM, MPI_MIN, MPI_MAX, MPI_IN_PLACE
 
       implicit none
 

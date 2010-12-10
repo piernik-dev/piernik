@@ -65,7 +65,8 @@ contains
 
     use dataio_pub,     only: par_file, ierrh, namelist_errh, compare_namelist  ! QA_WARN required for diff_nml
     use dataio_pub,     only: printinfo
-    use mpisetup,       only: ierr, MPI_DOUBLE_PRECISION, proc, rbuff, buffer_dim, comm
+    use mpisetup,       only: ierr, proc, rbuff, buffer_dim, comm
+    use mpi,            only: MPI_DOUBLE_PRECISION
     use fluidindex,     only: nvar
 
     implicit none

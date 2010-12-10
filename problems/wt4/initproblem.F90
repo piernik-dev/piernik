@@ -81,9 +81,8 @@ contains
 
       use constants,     only: pi
       use dataio_pub,    only: ierrh, par_file, namelist_errh, compare_namelist      ! QA_WARN required for diff_nml
-      use mpisetup,      only: ierr, rbuff, cbuff, ibuff, lbuff, proc, &
-           &                   MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL, &
-           &                   buffer_dim, comm
+      use mpisetup,      only: ierr, rbuff, cbuff, ibuff, lbuff, proc, buffer_dim, comm
+      use mpi,           only: MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL
       use types,         only: idlen
 
       implicit none
@@ -188,7 +187,8 @@ contains
 
       use dataio_pub,    only: msg, die
       use grid,          only: xminb, xmaxb, yminb, ymaxb, zminb, zmaxb
-      use mpisetup,      only: proc, nproc, comm3d, status, ierr, MPI_INTEGER, MPI_DOUBLE_PRECISION
+      use mpisetup,      only: proc, nproc, comm3d, status, ierr
+      use mpi,           only: MPI_INTEGER, MPI_DOUBLE_PRECISION
 
       implicit none
 

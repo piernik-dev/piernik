@@ -71,7 +71,8 @@ module snsources
 !<
    subroutine init_snsources
       use dataio_pub,     only: ierrh, par_file, namelist_errh, compare_namelist                  ! QA_WARN required for diff_nml
-      use mpisetup,       only: rbuff, buffer_dim, comm, ierr, proc, MPI_DOUBLE_PRECISION
+      use mpi,            only: MPI_DOUBLE_PRECISION
+      use mpisetup,       only: rbuff, buffer_dim, comm, ierr, proc
       use initcosmicrays, only: cr_eff
       use grid,           only: xmin, xmax, ymin, ymax, xdim, ydim, has_dir
       implicit none

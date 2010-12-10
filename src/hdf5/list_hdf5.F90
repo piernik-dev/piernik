@@ -31,7 +31,9 @@
 module list_hdf5
 ! pulled by ANY
 #ifdef NEW_HDF5
-   use hdf5, only: HID_T
+!   use hdf5, only: HID_T
+   use iso_c_binding, only: c_int
+   integer, parameter :: HID_T = c_int
 #endif /* NEW_HDF5 */
    private
    public :: write_arr, S_LEN, additional_attrs, problem_write_restart, problem_read_restart

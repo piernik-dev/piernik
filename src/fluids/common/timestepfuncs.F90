@@ -66,7 +66,8 @@ contains
       use types,     only: component_fluid
       use grid,      only: has_dir, xdim, ydim, zdim, dx, dy, dz, geometry, xmin
       use constants, only: big
-      use mpisetup,  only: MPI_DOUBLE_PRECISION, MPI_MIN, MPI_MAX, comm, ierr, cfl
+      use mpi,       only: MPI_DOUBLE_PRECISION, MPI_MIN, MPI_MAX
+      use mpisetup,  only: comm, ierr, cfl
       implicit none
       type(component_fluid), pointer, intent(inout) :: fl
       real, intent(in)  :: cx, cy, cz, c_max

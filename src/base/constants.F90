@@ -165,7 +165,8 @@ contains
 !! \n \n
 
    subroutine init_constants
-      use mpisetup,   only: cbuff, rbuff, buffer_dim, MPI_CHARACTER, MPI_DOUBLE_PRECISION, comm, ierr, proc
+      use mpisetup,   only: cbuff, rbuff, buffer_dim, comm, ierr, proc
+      use mpi,        only: MPI_CHARACTER, MPI_DOUBLE_PRECISION
       use dataio_pub, only: par_file, ierrh, namelist_errh, compare_namelist  ! QA_WARN required for diff_nml
       use dataio_pub, only: warn, printinfo, msg, die
 

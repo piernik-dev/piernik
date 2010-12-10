@@ -159,8 +159,8 @@ contains
       use multigridvars,      only: bnd_periodic, bnd_dirichlet, bnd_isolated, bnd_invalid, correction, mg_nb, ngridvars, periodic_bnd_cnt, non_periodic_bnd_cnt
       use multipole,          only: use_point_monopole, lmax, mmax, ord_prolong_mpole, coarsen_multipole, interp_pt2mom, interp_mom2pot
       use mpisetup,           only: buffer_dim, comm, ierr, proc, ibuff, cbuff, rbuff, lbuff, &
-           &                        bnd_xl_dom, bnd_xr_dom, bnd_yl_dom, bnd_yr_dom, bnd_zl_dom, bnd_zr_dom, &
-           &                        MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL
+           &                        bnd_xl_dom, bnd_xr_dom, bnd_yl_dom, bnd_yr_dom, bnd_zl_dom, bnd_zr_dom
+      use mpi,                only: MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL
       use dataio_pub,         only: par_file, ierrh, namelist_errh, compare_namelist  ! QA_WARN required for diff_nml
       use dataio_pub,         only: msg, die, warn
 
@@ -1663,7 +1663,8 @@ contains
    subroutine gb_fft_solve_sendrecv(src, soln)
 
       use grid,          only: xdim, ydim, zdim
-      use mpisetup,      only: nproc, proc, ierr, comm3d, status, MPI_DOUBLE_PRECISION
+      use mpisetup,      only: nproc, proc, ierr, comm3d, status
+      use mpi,           only: MPI_DOUBLE_PRECISION
       use multigridvars, only: gb, gb_cartmap, base
 
       implicit none
@@ -1724,7 +1725,8 @@ contains
    subroutine gb_fft_solve_gather(src, soln)
 
       use grid,          only: xdim, ydim, zdim
-      use mpisetup,      only: nproc, proc, ierr, comm3d, MPI_DOUBLE_PRECISION
+      use mpisetup,      only: nproc, proc, ierr, comm3d
+      use mpi,           only: MPI_DOUBLE_PRECISION
       use multigridvars, only: gb, gb_cartmap, base
 
       implicit none

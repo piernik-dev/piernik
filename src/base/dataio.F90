@@ -212,8 +212,8 @@ module dataio
       use dataio_pub,      only: par_file, ierrh, namelist_errh, compare_namelist  ! QA_WARN required for diff_nml
       use fluidboundaries, only: all_fluid_boundaries
       use mpisetup,        only: lbuff, ibuff, rbuff, cbuff, proc, cbuff_len, comm, ierr, buffer_dim, &
-           &                      MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL, &
            &                      t, nstep, bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr
+      use mpi,             only: MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL
       use problem_pub,     only: problem_name, run_id
       use timer,           only: time_left
       use version,         only: nenv,env, init_version
@@ -463,7 +463,8 @@ module dataio
 
       use dataio_hdf5,   only: write_hdf5, write_restart_hdf5
       use dataio_pub,    only: chdf, step_hdf, msg, printinfo, warn, set_container_chdf
-      use mpisetup,      only: MPI_CHARACTER, MPI_DOUBLE_PRECISION, comm, ierr, proc, nstep
+      use mpisetup,      only: comm, ierr, proc, nstep
+      use mpi,           only: MPI_CHARACTER, MPI_DOUBLE_PRECISION
 
       implicit none
 
@@ -652,7 +653,8 @@ module dataio
 
 
    function mpi_sum4d_and_multiply(tab,factor) result(output)
-      use mpisetup, only: MPI_DOUBLE_PRECISION, MPI_SUM, comm3d, ierr
+      use mpisetup, only: comm3d, ierr
+      use mpi,      only: MPI_DOUBLE_PRECISION, MPI_SUM
       implicit none
       real, dimension(:,:,:,:), intent(in) :: tab
       real, intent(in)                     :: factor
@@ -662,7 +664,8 @@ module dataio
    end function mpi_sum4d_and_multiply
 
    function mpi_sum3d_and_multiply(tab,factor) result(output)
-      use mpisetup, only: MPI_DOUBLE_PRECISION, MPI_SUM, comm3d, ierr
+      use mpisetup, only: comm3d, ierr
+      use mpi,      only: MPI_DOUBLE_PRECISION, MPI_SUM
       implicit none
       real, dimension(:,:,:), intent(in) :: tab
       real, intent(in)                   :: factor

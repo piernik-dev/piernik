@@ -86,7 +86,8 @@ module resistivity
       use dataio_pub,    only: par_file, ierrh, namelist_errh, compare_namelist  ! QA_WARN required for diff_nml
       use dataio_pub,    only: die
       use grid,          only: nx, ny, nz, has_dir, zdim
-      use mpisetup,      only: rbuff, ibuff, ierr, MPI_INTEGER, MPI_DOUBLE_PRECISION, buffer_dim, comm, proc
+      use mpisetup,      only: rbuff, ibuff, ierr, buffer_dim, comm, proc
+      use mpi,           only: MPI_INTEGER, MPI_DOUBLE_PRECISION
 
       implicit none
 
@@ -155,7 +156,8 @@ module resistivity
       use fluidindex,   only: ibx, iby, ibz
       use func,         only: mshift, pshift
       use grid,         only: idl, xdim, ydim, zdim, nx, ny, nz, is, ie, js, je, ks, ke, has_dir
-      use mpisetup,     only: MPI_DOUBLE_PRECISION, MPI_MAX, comm, ierr
+      use mpisetup,     only: comm, ierr
+      use mpi,          only: MPI_DOUBLE_PRECISION, MPI_MAX
 #ifndef ISO
       use fluidindex,   only: nvar
 #endif /* !ISO */
@@ -248,7 +250,8 @@ module resistivity
    subroutine timestep_resist
       use constants, only: big
       use grid,      only: dxmn
-      use mpisetup,  only: MPI_DOUBLE_PRECISION, MPI_MIN, comm, ierr
+      use mpisetup,  only: comm, ierr
+      use mpi,       only: MPI_DOUBLE_PRECISION, MPI_MIN
 
       implicit none
       real :: dx2,dt_resist_min

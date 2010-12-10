@@ -84,7 +84,8 @@ contains
       use dataio_pub,    only: msg, warn
       use fluidindex,    only: ibx, iby, ibz
       use grid,          only: nb, nx, ny, nz, nxb, nyb, nzb
-      use mpisetup,      only: MPI_DOUBLE_PRECISION, bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr, &
+      use mpi,           only: MPI_DOUBLE_PRECISION
+      use mpisetup,      only: bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr, &
                                ierr, req, comm3d, procxl, procxr, procyl, procyr, proczl, proczr, status, &
                                pxsize, pysize, pzsize, procxyl, procyxl, pcoords, comm, &
                                MAG_YZ_LEFT_DOM, MAG_YZ_RIGHT_DOM, MAG_YZ_LEFT_BND, MAG_YZ_RIGHT_BND, &

@@ -45,7 +45,8 @@ module fluidboundaries
                                      MPI_YZ_RIGHT_DOM, MPI_YZ_RIGHT_BND, MPI_YZ_LEFT_DOM, MPI_YZ_LEFT_BND, &
                                      pxsize, pysize, pzsize, proczl, proczr, procyl, procyr, procxl, procxr, &
                                      pcoords, bnd_xr, bnd_xl, bnd_yl, bnd_yr, bnd_zl, bnd_zr, req, status, comm, comm3d, &
-                                     MPI_DOUBLE_PRECISION, procxyl, procyxl, smalld
+                                     procxyl, procyxl, smalld
+      use mpi,                 only: MPI_DOUBLE_PRECISION
 #ifdef COSM_RAYS
       use initcosmicrays,      only: smallecr
       use fluidindex,          only: iarr_all_crs

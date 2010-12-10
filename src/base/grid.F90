@@ -184,8 +184,8 @@ module grid
 
       use dataio_pub,    only: par_file, ierrh, namelist_errh, compare_namelist  ! QA_WARN required for diff_nml
       use dataio_pub,    only: printinfo, die
-      use mpisetup,      only: ierr, ibuff, rbuff, cbuff, MPI_INTEGER, MPI_DOUBLE_PRECISION, MPI_CHARACTER, proc, &
-           &                   buffer_dim, pxsize, pysize, pzsize, comm
+      use mpisetup,      only: ierr, ibuff, rbuff, cbuff, proc, buffer_dim, pxsize, pysize, pzsize, comm
+      use mpi,           only: MPI_INTEGER, MPI_DOUBLE_PRECISION, MPI_CHARACTER
       use types,         only: grid_container
 
       implicit none

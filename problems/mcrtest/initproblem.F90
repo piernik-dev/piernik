@@ -57,8 +57,8 @@ module initproblem
       use dataio_pub,    only: ierrh, par_file, namelist_errh, compare_namelist ! QA_WARN required for diff_nml
       use dataio_pub,    only: die
       use grid,          only: dxmn
-      use mpisetup,      only: MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION, &
-           &                   cbuff_len, cbuff, ibuff, rbuff, buffer_dim, comm, ierr, proc
+      use mpi,           only: MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION
+      use mpisetup,      only: cbuff_len, cbuff, ibuff, rbuff, buffer_dim, comm, ierr, proc
       use types,         only: idlen
 
       implicit none
@@ -144,7 +144,8 @@ module initproblem
       use grid,           only: nx, ny, nz, x, y, z, is, ie, js, je, ks, ke, xdim, ydim, zdim, has_dir, Lx, Ly, Lz
       use initcosmicrays, only: iarr_crn, iarr_crs, gamma_crn, K_crn_paral, K_crn_perp
       use initionized,    only: idni, imxi, imzi, ieni, gamma_ion
-      use mpisetup,       only: MPI_IN_PLACE, MPI_INTEGER, MPI_MAX, comm3d, ierr, proc
+      use mpisetup,       only: comm3d, ierr, proc
+      use mpi,            only: MPI_IN_PLACE, MPI_INTEGER, MPI_MAX
 #ifdef COSM_RAYS_SOURCES
       use crcomposition,  only: icr_H1, icr_C12
 #endif /* COSM_RAYS_SOURCES */

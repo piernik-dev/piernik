@@ -40,7 +40,6 @@ module problem_pub
    implicit none
 
    public  ! QA_WARN nothing to hide here
-
    character(len=cbuff_len) :: problem_name                   !< The default problem name
    character(len=idlen)     :: run_id                         !< Auxiliary run identifier
 

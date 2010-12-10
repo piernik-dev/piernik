@@ -102,7 +102,8 @@ contains
       use diagnostics,     only: ma1d, my_allocate
       use dataio_pub,      only: par_file, ierrh, namelist_errh, compare_namelist   ! QA_WARN required for diff_nml
       use dataio_pub,      only: die, warn
-      use mpisetup,        only: proc, ibuff, rbuff, lbuff, comm, ierr, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL, buffer_dim
+      use mpisetup,        only: proc, ibuff, rbuff, lbuff, comm, ierr, buffer_dim
+      use mpi,             only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL
 
       implicit none
 
@@ -336,6 +337,7 @@ contains
       allocate(outtab(ivec(1),ivec(2),ivec(3)))
       outtab(:,:,:) = u(ivec(10),ivec(4):ivec(5),ivec(6):ivec(7),ivec(8):ivec(9))
       return
+      if (.false.) write(0,*) rvec
    end subroutine get_cr
 
 #endif /* NEW_HDF5 */

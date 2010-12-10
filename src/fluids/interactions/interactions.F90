@@ -64,7 +64,8 @@ contains
 
       use dataio_pub,    only: par_file, ierrh, namelist_errh, compare_namelist      ! QA_WARN required for diff_nml
       use fluidindex,    only: nvar
-      use mpisetup,      only: proc, rbuff, MPI_DOUBLE_PRECISION, buffer_dim, ierr, comm
+      use mpisetup,      only: proc, rbuff, buffer_dim, ierr, comm
+      use mpi,           only: MPI_DOUBLE_PRECISION
 #ifdef DUST
       use initdust,      only: dragc_gas_dust
 #endif /* DUST */

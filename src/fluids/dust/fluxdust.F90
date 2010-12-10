@@ -127,7 +127,8 @@ contains
       !  cfrd(:,:) = nvar%dst%snap%c
       cfrd(:,:) = c_all
 #endif /* GLOBAL_FR_SPEED */
-
+      return
+      if (.false.) write(0,*) bb, cs_iso2
    end subroutine flux_dst
 
 end module fluxdust

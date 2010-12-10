@@ -47,7 +47,8 @@ contains
     use constants,    only: small
     use fluidindex,   only: nvar
     use interactions, only: collfaq, cfl_interact
-    use mpisetup,     only: comm, ierr, MPI_MIN, MPI_DOUBLE_PRECISION
+    use mpisetup,     only: comm, ierr
+    use mpi,          only: MPI_MIN, MPI_DOUBLE_PRECISION
 
     implicit none
 

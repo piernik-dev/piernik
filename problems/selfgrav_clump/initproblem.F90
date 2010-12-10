@@ -54,8 +54,8 @@ contains
       use dataio_pub,    only: par_file, ierrh, namelist_errh, compare_namelist   ! QA_WARN required for diff_nml
       use dataio_pub,    only: die
       use grid,          only: xmin, xmax, ymin, ymax, zmin, zmax, dx, dy, dz
-      use mpisetup,      only: ierr, rbuff, cbuff_len, cbuff, ibuff, lbuff, proc, buffer_dim, comm, &
-           &                   MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL
+      use mpisetup,      only: ierr, rbuff, cbuff_len, cbuff, ibuff, lbuff, proc, buffer_dim, comm
+      use mpi,           only: MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL
       use types,         only: idlen
 
       implicit none
@@ -158,7 +158,8 @@ contains
       use dataio_pub,        only: msg, die, warn, printinfo
       use grid,              only: xmin, xmax, ymin, ymax, zmin, zmax, x, y, z, dx, dy, dz, is, ie, js, je, ks, ke
       use initionized,       only: gamma_ion, idni, imxi, imyi, imzi, ieni
-      use mpisetup,          only: proc, smalld, smallei, MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_MIN, MPI_MAX, MPI_SUM, comm, ierr
+      use mpisetup,          only: proc, smalld, smallei, comm, ierr
+      use mpi,               only: MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_MIN, MPI_MAX, MPI_SUM
       use multigrid_gravity, only: multigrid_solve_grav
 
       implicit none
@@ -419,7 +420,8 @@ contains
       use dataio_pub,        only: msg, die, warn, printinfo
       use grid,              only: is, ie, js, je, ks, ke, dx, dy, dz
       use initionized,       only: idni
-      use mpisetup,          only: proc, comm, ierr, MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_SUM
+      use mpisetup,          only: proc, comm, ierr
+      use mpi,               only: MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_SUM
       use multigridvars,     only: bnd_isolated
       use multigrid_gravity, only: grav_bnd
 

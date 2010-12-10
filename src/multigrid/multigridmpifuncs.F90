@@ -54,7 +54,8 @@ contains
 
       use grid,          only: has_dir, xdim, ydim, zdim
       use multigridvars, only: level_min, level_max, lvl, NDIM
-      use mpisetup,      only: ierr, MPI_DOUBLE_PRECISION, MPI_ORDER_FORTRAN
+      use mpisetup,      only: ierr
+      use mpi,           only: MPI_DOUBLE_PRECISION, MPI_ORDER_FORTRAN
 
       implicit none
 
@@ -154,9 +155,8 @@ contains
 
       use grid,               only: has_dir, xdim, ydim, zdim
       use dataio_pub,         only: die
-      use mpisetup,           only: comm3d, ierr, MPI_STATUS_SIZE, MPI_REQUEST_NULL, &
-           &                        procxl, procxr, procyl, procyr, proczl, proczr, proc, &
-           &                        pxsize, pysize, pzsize
+      use mpisetup,           only: comm3d, ierr, procxl, procxr, procyl, procyr, proczl, proczr, proc, pxsize, pysize, pzsize
+      use mpi,                only: MPI_STATUS_SIZE, MPI_REQUEST_NULL
       use multigridvars,      only: NDIM, lvl, XLO, XHI, YLO, YHI, ZLO, ZHI, is_external, ngridvars, level_min, level_max
 
       implicit none

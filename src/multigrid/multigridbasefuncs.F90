@@ -219,7 +219,8 @@ contains
    subroutine norm_sq(iv, norm)
 
       use dataio_pub,    only: die
-      use mpisetup,      only: comm3d, ierr, MPI_DOUBLE_PRECISION, MPI_SUM
+      use mpisetup,      only: comm3d, ierr
+      use mpi,           only: MPI_DOUBLE_PRECISION, MPI_SUM
       use multigridvars, only: ngridvars, roof
 
       implicit none
@@ -245,7 +246,8 @@ contains
    subroutine substract_average(lev, iv)
 
       use dataio_pub,    only: die
-      use mpisetup,      only: comm3d, ierr, MPI_DOUBLE_PRECISION, MPI_SUM
+      use mpisetup,      only: comm3d, ierr
+      use mpi,           only: MPI_DOUBLE_PRECISION, MPI_SUM
       use multigridvars, only: lvl, level_min, level_max, ngridvars
 
       implicit none

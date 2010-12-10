@@ -149,7 +149,8 @@ contains
       !    cfrn(:,:) = nvar%neu%snap%c   ! check which c_xxx is better
       cfrn(:,:) = c_all
 #endif /* GLOBAL_FR_SPEED */
-
+      return
+      if (.false.) write(0,*) bb, cs_iso2
    end subroutine flux_neu
 
 end module fluxneutral

@@ -56,8 +56,8 @@ module initproblem
       use dataio_pub,    only: ierrh, par_file, namelist_errh, compare_namelist      ! QA_WARN required for diff_nml
       use dataio_pub,    only: die
       use grid,          only: dxmn
-      use mpisetup,      only: MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION, &
-           &                   cbuff_len, cbuff, ibuff, rbuff, buffer_dim, comm, ierr, proc
+      use mpi,           only: MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION
+      use mpisetup,      only: cbuff_len, cbuff, ibuff, rbuff, buffer_dim, comm, ierr, proc
       use types,         only: idlen
 
       implicit none
@@ -221,7 +221,8 @@ module initproblem
       use dataio_pub,     only: code_progress, PIERNIK_FINISHED, halfstep, msg, die, printinfo
       use grid,           only: x, y, z, is, ie, js, je, ks, ke
       use initcosmicrays, only: iarr_crs, ncrn, ncre, K_crn_paral, K_crn_perp
-      use mpisetup,       only: proc, comm3d, ierr, MPI_DOUBLE_PRECISION, MPI_SUM, MPI_MIN, MPI_MAX, MPI_IN_PLACE, t, nstep
+      use mpisetup,       only: proc, comm3d, ierr, t, nstep
+      use mpi,            only: MPI_DOUBLE_PRECISION, MPI_SUM, MPI_MIN, MPI_MAX, MPI_IN_PLACE
 
       implicit none
 

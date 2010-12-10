@@ -82,9 +82,9 @@ contains
            &                         XLO, XHI, YLO, YHI, ZLO, ZHI, LOW, HIGH, &
            &                         ord_prolong, ord_prolong_face, stdout, verbose_vcycle, tot_ts
       use types,               only: grid_container
+      use mpi,                 only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL
       use mpisetup,            only: buffer_dim, comm, comm3d, ierr, proc, nproc, ndims, pxsize, pysize, pzsize, &
-           &                         ibuff, rbuff, lbuff, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL, &
-           &                         bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr, &
+           &                         ibuff, rbuff, lbuff, bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr,        &
            &                         bnd_xl_dom, bnd_xr_dom, bnd_yl_dom, bnd_yr_dom, bnd_zl_dom, bnd_zr_dom
       use multigridhelpers,    only: mg_write_log, dirtyH, do_ascii_dump, dirty_debug, multidim_code_3D, &
            &                         aux_par_I0, aux_par_I1, aux_par_I2, aux_par_R0, aux_par_R1, aux_par_R2
@@ -475,7 +475,8 @@ contains
 
       use grid,               only: has_dir, xdim, ydim, zdim
       use multigridvars,      only: lvl, level_gb, level_min, level_max, tot_ts, gb_cartmap
-      use mpisetup,           only: proc, nproc, MPI_DOUBLE_PRECISION, comm3d, ierr
+      use mpisetup,           only: proc, nproc, comm3d, ierr
+      use mpi,                only: MPI_DOUBLE_PRECISION
       use multigridhelpers,   only: mg_write_log
       use dataio_pub,         only: msg
 #ifdef GRAV

@@ -73,9 +73,8 @@ contains
   subroutine init_ionized
 
     use dataio_pub,    only: par_file, ierrh, namelist_errh, compare_namelist ! QA_WARN required for diff_nml
-    use mpisetup,      only: rbuff, lbuff, MPI_DOUBLE_PRECISION, MPI_LOGICAL, &
-         &                   comm, ierr, buffer_dim, proc
-
+    use mpisetup,      only: rbuff, lbuff, comm, ierr, buffer_dim, proc
+    use mpi,           only: MPI_DOUBLE_PRECISION, MPI_LOGICAL
     implicit none
 
     namelist /FLUID_IONIZED/ gamma_ion, cs_iso_ion, cs_ion, selfgrav_ion

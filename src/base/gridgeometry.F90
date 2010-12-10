@@ -225,6 +225,7 @@ contains
 
       res = 0.0
       return
+      if (.false.) write(0,*) sweep, u, p
    end function cart_geometry_source_terms
 !>
 !! \brief routine calculating geometrical source term for cylindrical grid

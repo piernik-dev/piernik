@@ -38,8 +38,6 @@ module dataio_pub
    !mpisetup uses: ansi_white and ansi_black
 
 
-   include 'mpif.h'
-
    integer, parameter :: stdout = output_unit
    integer, parameter :: stderr = error_unit
 
@@ -145,7 +143,7 @@ module dataio_pub
 contains
 !-----------------------------------------------------------------------------
    subroutine colormessage(nm, mode)
-
+      use mpi,       only: MPI_COMM_WORLD
       implicit none
 
       character(len=*),  intent(in) :: nm
@@ -262,7 +260,7 @@ contains
 !-----------------------------------------------------------------------------
    !! BEWARE: routine is not finished, it should kill PIERNIK gracefully
    subroutine die(nm, allprocs)
-
+      use mpi,    only: MPI_COMM_WORLD
       implicit none
 
       character(len=*), intent(in)  :: nm
@@ -354,7 +352,7 @@ contains
    end subroutine namelist_errh
 !-----------------------------------------------------------------------------
    subroutine compare_namelist(nml_bef, nml_aft)
-
+      use mpi,    only: MPI_COMM_WORLD
       implicit none
 
       character(len=*), intent(in)     :: nml_bef, nml_aft

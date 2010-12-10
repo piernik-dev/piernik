@@ -34,22 +34,20 @@
 !! \copydetails mpisetup::init_mpi
 !<
 module mpisetup
-
+!   use mpi, only: MPI_STATUS_SIZE
    implicit none
+   integer, parameter :: MPI_STATUS_SIZE = 5  ! taken from mpi to silence warnings
    private
    public :: &
         & ARR_XY_LEFT_BND, ARR_XY_LEFT_DOM, ARR_XY_RIGHT_BND, ARR_XY_RIGHT_DOM, ARR_XZ_LEFT_BND, ARR_XZ_LEFT_DOM, ARR_XZ_RIGHT_BND, ARR_XZ_RIGHT_DOM, &
         & ARR_YZ_LEFT_BND, ARR_YZ_LEFT_DOM, ARR_YZ_RIGHT_BND, ARR_YZ_RIGHT_DOM, MAG_XY_LEFT_BND, MAG_XY_LEFT_DOM, MAG_XY_RIGHT_BND, MAG_XY_RIGHT_DOM, &
         & MAG_XZ_LEFT_BND, MAG_XZ_LEFT_DOM, MAG_XZ_RIGHT_BND, MAG_XZ_RIGHT_DOM, MAG_YZ_LEFT_BND, MAG_YZ_LEFT_DOM, MAG_YZ_RIGHT_BND, MAG_YZ_RIGHT_DOM, &
-        & MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_IN_PLACE, MPI_LOGICAL, MPI_MAX, MPI_MIN, MPI_ORDER_FORTRAN, MPI_REQUEST_NULL, &
-        & MPI_STATUS_SIZE, MPI_SUM, MPI_XY_LEFT_BND, MPI_XY_LEFT_DOM, MPI_XY_RIGHT_BND, MPI_XY_RIGHT_DOM, MPI_XZ_LEFT_BND, MPI_XZ_LEFT_DOM, &
+        & MPI_XY_LEFT_BND, MPI_XY_LEFT_DOM, MPI_XY_RIGHT_BND, MPI_XY_RIGHT_DOM, MPI_XZ_LEFT_BND, MPI_XZ_LEFT_DOM, &
         & MPI_XZ_RIGHT_BND, MPI_XZ_RIGHT_DOM, MPI_YZ_LEFT_BND, MPI_YZ_LEFT_DOM, MPI_YZ_RIGHT_BND, MPI_YZ_RIGHT_DOM, bnd_xl, bnd_xl_dom, bnd_xr, &
         & bnd_xr_dom, bnd_yl, bnd_yl_dom, bnd_yr, bnd_yr_dom, bnd_zl, bnd_zl_dom, bnd_zr, bnd_zr_dom, buffer_dim, cbuff, cbuff_len, cfl, cfl_max, cflcontrol, &
         & cfr_smooth, cleanup_mpi, comm, comm3d, dt, dt_initial, dt_max_grow, dt_min, dt_old, dtm, err, ibuff, ierr, info, init_mpi, &
         & integration_order, lbuff, limiter, mpifind, ndims, nproc, nstep, pcoords, proc, procxl, procxr, procxyl, procyl, procyr, procyxl, proczl, &
         & proczr, psize, pxsize, pysize, pzsize, rbuff, req, smalld, smallei, smallp, status, t, use_smalld, magic_mass, local_magic_mass
-
-   include 'mpif.h'
 
    integer :: nproc, proc, ierr , rc, info
    integer :: status(MPI_STATUS_SIZE,4)
@@ -112,7 +110,7 @@ module mpisetup
 
    integer, dimension(3) :: domsize   !< local copy of nxd, nyd, nzd which can be used before init_grid()
 
-   logical     :: mpi
+   logical     :: have_mpi
 
    integer, save :: MPI_XZ_LEFT_BND=-1, MPI_XZ_RIGHT_BND=-1
    integer, save :: MPI_XZ_LEFT_DOM=-1, MPI_XZ_RIGHT_DOM=-1
@@ -186,7 +184,7 @@ module mpisetup
 !! \n \n
 !<
       subroutine init_mpi
-
+         use mpi,           only: MPI_COMM_WORLD, MPI_INFO_NULL, MPI_INFO_NULL, MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION, MPI_LOGICAL, MPI_PROC_NULL
          use dataio_pub,    only: die, printinfo, msg, cwdlen, hnlen, cwd, ansi_white, ansi_black, warn
          use dataio_pub,    only: par_file, ierrh, namelist_errh, compare_namelist  ! QA_WARN required for diff_nml
 
@@ -426,7 +424,7 @@ module mpisetup
             call die(msg)
          endif
 
-         if (pxsize*pysize*pzsize /= 1) mpi = .true.
+         if (pxsize*pysize*pzsize /= 1) have_mpi = .true.
 
          periods(:) = .false.
 
@@ -609,7 +607,7 @@ module mpisetup
 !-----------------------------------------------------------------------------
 
       subroutine mpifind(var, what, loc_arr, loc_proc)
-
+         use mpi,           only: MPI_2DOUBLE_PRECISION, MPI_INTEGER, MPI_MINLOC, MPI_MAXLOC
          use dataio_pub,    only: msg, warn
 
          implicit none

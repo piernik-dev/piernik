@@ -31,13 +31,13 @@
 module initproblem
 
    use problem_pub, only: problem_name, run_id
-   use constants,   only: one
    implicit none
 
    private
    public :: read_problem_par, init_prob
 
    real :: d0,r0,bx0,by0,bz0
+   integer, parameter :: one = 1
    character(len=one) :: dir
 
    namelist /PROBLEM_CONTROL/  problem_name, run_id, d0, r0,bx0,by0,bz0
@@ -48,8 +48,8 @@ module initproblem
    subroutine read_problem_par
 
       use dataio_pub,    only: ierrh, par_file, namelist_errh, compare_namelist      ! QA_WARN required for diff_nml
-      use mpisetup,      only: cbuff_len, cbuff, rbuff, buffer_dim, proc, comm, ierr, &
-                               MPI_CHARACTER, MPI_DOUBLE_PRECISION
+      use mpisetup,      only: cbuff_len, cbuff, rbuff, buffer_dim, proc, comm, ierr
+      use mpi,           only: MPI_CHARACTER, MPI_DOUBLE_PRECISION
       use types,         only: idlen
 
       implicit none
