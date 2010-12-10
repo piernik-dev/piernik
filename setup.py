@@ -385,7 +385,7 @@ stripped_files.append("version.F90")   # adding version
 incl.append('')
 uses.append([])
 module.setdefault('version', 'version')
-known_external_modules = ( "hdf5", "h5lt", "mpi", "iso_c_binding" )
+known_external_modules = ( "hdf5", "h5lt", "mpi", "iso_c_binding", "iso_fortran_env" )
 
 files_to_build = remove_suf(stripped_files)
 
