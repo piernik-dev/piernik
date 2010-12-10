@@ -2,6 +2,7 @@
 
 import os, re, shutil, sys
 import subprocess as sp
+import tempfile
 from optparse import OptionParser
 try:
    import multiprocessing
@@ -313,7 +314,10 @@ for f in DirectoryWalker(probdir):
 allfiles.append(probdir+"piernik.def")
 allfiles.append(probdir+options.param)
 
-cmd = "echo '#include \"%spiernik.h\"' > foo.f90 && cpp %s -dM -I%s foo.f90 && rm foo*" % ('src/base/', cppflags, probdir)
+foo_fd, foo_path = tempfile.mkstemp(suffix=".f90", dir='.')
+cmd = "echo '#include \"%spiernik.h\"' > %s && cpp %s -dM -I%s %s" % ('src/base/', foo_path, cppflags, probdir, foo_path)
+os.close(foo_fd)
+os.remove(foo_path)
 defines  = sp.Popen([cmd], stdout=sp.PIPE, shell=True).communicate()[0].rstrip().split("\n")
 if(options.verbose):
     print cmd
