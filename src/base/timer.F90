@@ -276,7 +276,7 @@ contains
          call printinfo(msg)
          write(msg, "('Wall clock time = ', f12.2,' s')") wctot
          call printinfo(msg)
-         write(msg, "('Zone-cycles / s = ',en12.5)") zcps
+         write(msg, "('Zone-cycles / s = ',en14.5)") zcps
          call printinfo(msg)
          call printinfo("", .true.)
 

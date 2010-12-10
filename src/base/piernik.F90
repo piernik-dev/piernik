@@ -48,7 +48,7 @@ program piernik
 
    logical              :: end_sim !< Used in main loop, to test whether to stop simulation or not
    character(len=fplen) :: nstr, tstr
-   character(len=cwdlen), parameter :: fmt900 = "('   nstep = ',i7,'   dt = ',es22.16,'   t = ',es22.16,'   dWallClock = ',f7.2,' s')"
+   character(len=cwdlen), parameter :: fmt900 = "('   nstep = ',i7,'   dt = ',es23.16,'   t = ',es23.16,'   dWallClock = ',f7.2,' s')"
    logical, save                    :: first_step = .true.
    real                             :: ts    ! Timestep wallclock
    real                             :: tlast

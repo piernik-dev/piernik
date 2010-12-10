@@ -325,11 +325,11 @@ contains
       end select
 
       if (proc == 0 .and. .not. scale_me) then
-         write(msg,'(a,es13.7,a)') '[constants:init_constants] cm   = ', cm,   trim(s_len_u)
+         write(msg,'(a,es14.7,a)') '[constants:init_constants] cm   = ', cm,   trim(s_len_u)
          call printinfo(msg, to_stdout)
-         write(msg,'(a,es13.7,a)') '[constants:init_constants] sek  = ', sek,  trim(s_time_u)
+         write(msg,'(a,es14.7,a)') '[constants:init_constants] sek  = ', sek,  trim(s_time_u)
          call printinfo(msg, to_stdout)
-         write(msg,'(a,es13.7,a)') '[constants:init_constants] gram = ', gram, trim(s_mass_u)
+         write(msg,'(a,es14.7,a)') '[constants:init_constants] gram = ', gram, trim(s_mass_u)
          call printinfo(msg, to_stdout)
       endif
 

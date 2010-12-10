@@ -898,7 +898,7 @@ module dataio
       logical, intent(in)          :: pres_tn, temp_tn, cs_tn
 
       character(len=cwdlen), parameter :: fmt772 = "(5x,a12,2a3,(1x,es16.9),16x,5(1x,i4))"
-      character(len=cwdlen), parameter :: fmt778 = "(5x,a12,2a3,(1x,es16.9),2x,a3,(1x,es10.4),5(1x,i4))"
+      character(len=cwdlen), parameter :: fmt778 = "(5x,a12,2a3,(1x,es16.9),2x,a3,(1x,es11.4),5(1x,i4))"
       real :: dxmn_safe
 
       if (dxmn >= sqrt(huge(1.0))) then
@@ -1034,7 +1034,7 @@ module dataio
          character(len=cwdlen), parameter :: fmt771 = "(5x,a18,(1x,es16.9),16x,5(1x,i4))" ! Note similarity to fmt772
 #endif /* MAGNETIC || COSM_RAYS || defined VARIABLE_GP */
 #if (defined(MAGNETIC) || defined(COSM_RAYS) || defined(RESISTIVE))
-         character(len=cwdlen), parameter :: fmt777 = "(5x,a18,(1x,es16.9),2x,a3,(1x,es10.4),5(1x,i4))" ! Note similarity to fmt778
+         character(len=cwdlen), parameter :: fmt777 = "(5x,a18,(1x,es16.9),2x,a3,(1x,es11.4),5(1x,i4))" ! Note similarity to fmt778
 #endif /* MAGNETIC || COSM_RAYS || RESISTIVE */
 
          type(tsl_container), optional  :: tsl
