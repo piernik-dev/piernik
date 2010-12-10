@@ -315,9 +315,7 @@ allfiles.append(probdir+"piernik.def")
 allfiles.append(probdir+options.param)
 
 foo_fd, foo_path = tempfile.mkstemp(suffix=".f90", dir='.')
-cmd = "echo '#include \"%spiernik.h\"' > %s && cpp %s -dM -I%s %s" % ('src/base/', foo_path, cppflags, probdir, foo_path)
-os.close(foo_fd)
-os.remove(foo_path)
+cmd = "echo '#include \"%spiernik.h\"' > %s && cpp %s -dM -I%s %s && rm %s" % ('src/base/', foo_path, cppflags, probdir, foo_path, foo_path)
 defines  = sp.Popen([cmd], stdout=sp.PIPE, shell=True).communicate()[0].rstrip().split("\n")
 if(options.verbose):
     print cmd
