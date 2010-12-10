@@ -1428,11 +1428,11 @@ contains
 
    subroutine approximate_solution_fft(lev, src, soln)
 
-      use grid,               only: has_dir, xdim, ydim, zdim
+      use grid,               only: has_dir, xdim, ydim, zdim, D_x, D_y, D_z
       use dataio_pub,         only: die, warn
       use multigridhelpers,   only: dirty_debug, check_dirty, dirtyL, multidim_code_3D
       use multigridmpifuncs,  only: mpi_multigrid_bnd
-      use multigridvars,      only: lvl, LOW, HIGH, D_x, D_y, D_z, NDIM, eff_dim, extbnd_antimirror
+      use multigridvars,      only: lvl, LOW, HIGH, NDIM, eff_dim, extbnd_antimirror
 
       implicit none
 

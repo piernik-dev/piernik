@@ -394,8 +394,8 @@ contains
    subroutine init_b
 
       use arrays,             only: b
-      use grid,               only: is, ie, js, je, ks, ke
-      use multigridvars,      only: roof, level_min, level_max, extbnd_mirror, D_x, D_y, D_z
+      use grid,               only: is, ie, js, je, ks, ke, D_x, D_y, D_z
+      use multigridvars,      only: roof, level_min, level_max, extbnd_mirror
       use multigridbasefuncs, only: restrict_all
       use multigridmpifuncs,  only: mpi_multigrid_bnd
       use fluidindex,         only: ibx, iby, ibz
@@ -430,13 +430,13 @@ contains
 
    subroutine vcycle_hg(cr_id)
 
-      use multigridvars,      only: source, defect, solution, correction, base, roof, level_min, level_max, ts, tot_ts!, D_x, D_y, D_z
+      use multigridvars,      only: source, defect, solution, correction, base, roof, level_min, level_max, ts, tot_ts
       use multigridbasefuncs, only: norm_sq, restrict_all, prolong_level
       use multigridhelpers,   only: set_dirty, check_dirty, do_ascii_dump, numbered_ascii_dump, brief_v_log, dirty_label
 !      use multigridmpifuncs,  only: mpi_multigrid_bnd
       use initcosmicrays,     only: iarr_crs
       use arrays,             only: u
-      use grid,               only: is, ie, js, je, ks, ke
+      use grid,               only: is, ie, js, je, ks, ke!, D_x, D_y, D_z
       use dataio_pub,         only: msg, warn
       use mpisetup,           only: proc
       use timer,              only: timer_
@@ -741,8 +741,6 @@ contains
       use grid,              only: has_dir, xdim, ydim, zdim
       use multigridvars,     only: lvl
       use multigridmpifuncs, only: mpi_multigrid_bnd
-      use initcosmicrays,    only: K_crs_perp, K_crs_paral
-      use mpisetup,          only: dt
       use arrays,            only: wa
       use multigridhelpers,  only: check_dirty
 

@@ -76,10 +76,10 @@ contains
 !<
    subroutine init_multigrid(cgrid)
 
-      use grid,                only: has_dir, xdim, ydim, zdim
+      use grid,                only: has_dir, xdim, ydim, zdim, D_x, D_y, D_z
       use multigridvars,       only: lvl, level_max, level_min, level_gb, roof, base, gb, gb_cartmap, mg_nb, ngridvars, correction, &
            &                         is_external, periodic_bnd_cnt, non_periodic_bnd_cnt, eff_dim, NDIM, &
-           &                         XLO, XHI, YLO, YHI, ZLO, ZHI, LOW, HIGH, D_x, D_y, D_z, &
+           &                         XLO, XHI, YLO, YHI, ZLO, ZHI, LOW, HIGH, &
            &                         ord_prolong, ord_prolong_face, stdout, verbose_vcycle, tot_ts
       use types,               only: grid_container
       use mpisetup,            only: buffer_dim, comm, comm3d, ierr, proc, nproc, ndims, pxsize, pysize, pzsize, &
@@ -182,14 +182,8 @@ contains
 
       ngridvars = correction  !< 4 variables are required for basic use of the multigrid solver
 
-      has_dir(xdim) = (cgrid%nxb > 1)
-      has_dir(ydim) = (cgrid%nyb > 1)
-      has_dir(zdim) = (cgrid%nzb > 1)
       eff_dim = count(has_dir(:))
       if (eff_dim < 1 .or. eff_dim > 3) call die("[multigrid:init_multigrid] Unsupported number of dimensions.")
-      if (has_dir(xdim)) D_x = 1
-      if (has_dir(ydim)) D_y = 1
-      if (has_dir(zdim)) D_z = 1
 
       periodic_bnd_cnt = 0
       non_periodic_bnd_cnt = 0

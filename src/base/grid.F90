@@ -41,9 +41,9 @@ module grid
 
    private
    public :: cleanup_grid, dl, dvol, has_dir, idl, dxmn, init_grid, maxxyz, nb, total_ncells, geometry, &
-        &    Lx, dx, idx, inv_x, is, ie, nx, nxb, nxt, x, xdim, xl, xmax, xmaxb, xmin, xminb, xr, &
-        &    Ly, dy, idy, inv_y, js, je, ny, nyb, nyt, y, ydim, yl, ymax, ymaxb, ymin, yminb, yr, &
-        &    Lz, dz, idz, inv_z, ks, ke, nz, nzb, nzt, z, zdim, zl, zmax, zmaxb, zmin, zminb, zr
+        &    Lx, dx, idx, inv_x, is, ie, nx, nxb, nxt, x, xdim, xl, xmax, xmaxb, xmin, xminb, xr, D_x, &
+        &    Ly, dy, idy, inv_y, js, je, ny, nyb, nyt, y, ydim, yl, ymax, ymaxb, ymin, yminb, yr, D_y, &
+        &    Lz, dz, idz, inv_z, ks, ke, nz, nzb, nzt, z, zdim, zl, zmax, zmaxb, zmin, zminb, zr, D_z
 
    real    :: dx                             !< length of the %grid cell in x-direction
    real    :: dy                             !< length of the %grid cell in y-direction
@@ -93,7 +93,8 @@ module grid
    integer, parameter :: xdim=1              !< parameter assigned to x-direction
    integer, parameter :: ydim=2              !< parameter assigned to y-direction
    integer, parameter :: zdim=3              !< parameter assigned to z-direction
-   logical, dimension(xdim:zdim) :: has_dir  !< .true. for existing directions
+   logical, protected, dimension(xdim:zdim) :: has_dir  !< .true. for existing directions
+   integer, protected :: D_x, D_y, D_z       !< set to 1 when given direction exists, 0 otherwise. Use to construct dimensionally-safe indices for arrays
 
    character(len=cbuff_len)  :: geometry            !< define system of coordinates
 
@@ -266,6 +267,7 @@ module grid
          nxt = nxd + 2 * nb     ! Domain total grid sizes
          is  = nb + 1
          ie  = nb + nxb
+         D_x = 1
       else
          nxb    = 1
          nx     = 1
@@ -273,6 +275,7 @@ module grid
          pxsize = 1
          is     = 1
          ie     = 1
+         D_x    = 0
       endif
 
       if (has_dir(ydim)) then
@@ -281,6 +284,7 @@ module grid
          nyt = nyd + 2 * nb
          js  = nb + 1
          je  = nb + nyb
+         D_y = 1
       else
          ny     = 1
          nyb    = 1
@@ -288,6 +292,7 @@ module grid
          pysize = 1
          js     = 1
          je     = 1
+         D_y    = 0
       endif
 
       if (has_dir(zdim)) then
@@ -296,6 +301,7 @@ module grid
          nzt = nzd + 2 * nb
          ks  = nb + 1
          ke  = nb + nzb
+         D_z = 1
       else
          nzb    = 1
          nz     = 1
@@ -303,6 +309,7 @@ module grid
          pzsize = 1
          ks     = 1
          ke     = 1
+         D_z    = 0
       endif
 
       allocate(dl(3))

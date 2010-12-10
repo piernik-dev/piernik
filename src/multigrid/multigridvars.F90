@@ -99,7 +99,6 @@ module multigridvars
 
    ! dimensions
    integer                                 :: eff_dim                 !< count number of dimensions (>1 cell in a direction)
-   integer                                 :: D_x, D_y, D_z           !< set to 1 when given direction exists and use to construct dimensionally-safe indices for arrays
    integer                                 :: ngridvars               !< number of variables required for implementation of multigrid
 
    ! boundaries

@@ -51,7 +51,7 @@ contains
 
     vxby = 0.0
 
-    if (has_dir(ydim)) then
+    if (has_dir(ydim)) then ! This can be converted by use grid, only: Dy; j_s = 1 + D_y; j_e = 1 + D_y * (ny - 1) . How will it impact performance?
         j_s = 2
         j_e = ny
     else

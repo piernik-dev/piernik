@@ -110,7 +110,8 @@ contains
 
    subroutine prolong_level0(lev, iv)
 
-      use multigridvars, only: plvl, lvl, D_x, D_y, D_z
+      use multigridvars, only: plvl, lvl
+      use grid,          only: D_x, D_y, D_z
 
       implicit none
 
@@ -176,7 +177,8 @@ contains
 
       use dataio_pub,         only: die
       use multigridhelpers,   only: check_dirty
-      use multigridvars,      only: plvl, lvl, level_min, level_max, ngridvars, D_x, D_y, D_z
+      use multigridvars,      only: plvl, lvl, level_min, level_max, ngridvars
+      use grid,               only: D_x, D_y, D_z
 
       implicit none
 
@@ -272,11 +274,11 @@ contains
 
    subroutine prolong_faces(lev, soln)
 
-      use grid,               only: has_dir, xdim, ydim, zdim
+      use grid,               only: has_dir, xdim, ydim, zdim, D_x, D_y, D_z
       use dataio_pub,         only: die, warn
       use multigridhelpers,   only: check_dirty
       use multigridmpifuncs,  only: mpi_multigrid_bnd
-      use multigridvars,      only: plvl, lvl, LOW, HIGH, ord_prolong_face, level_min, level_max, D_x, D_y, D_z, extbnd_antimirror
+      use multigridvars,      only: plvl, lvl, LOW, HIGH, ord_prolong_face, level_min, level_max, extbnd_antimirror
 
       implicit none
 
