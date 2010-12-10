@@ -1,18 +1,12 @@
 ###############################################################################
 #
-# Make definitions for lothlorien (Mandriva 2009.1, x86)
+# Make definitions for lothlorien (Fedora 14, x86)
 #
 # System packages:
-#   openmpi, libopenmpi-devel
-#   hdf5, libhdf5-devel, liblapack-devel, libfftw-devel
+#   openmpi, openmpi-devel, hdf5, hdf5-openmpi, hdf5-openmpi-devel, fftw-devel
 #
-# User-compiled:
-#   GCC 4.5.1
-#     ./configure --prefix=/opt/gcc-4.5.1
-#     make && make install
-#   HDF5:
-#     FC=mpif90 FCFLAGS=-I/usr/include CC=mpicc ./configure --prefix=/opt/hdf5-1.8.5-patch1 --enable-fortran --enable-parallel
-#     make && make install
+# ~/.bashrc:
+#   export HDF5_USE_SHLIB=yes
 #
 
 PROG     = piernik
