@@ -45,73 +45,73 @@ module grid
         &    Ly, dy, idy, inv_y, js, je, ny, nyb, nyt, y, ydim, yl, ymax, ymaxb, ymin, yminb, yr, D_y, &
         &    Lz, dz, idz, inv_z, ks, ke, nz, nzb, nzt, z, zdim, zl, zmax, zmaxb, zmin, zminb, zr, D_z
 
-   real    :: dx                             !< length of the %grid cell in x-direction
-   real    :: dy                             !< length of the %grid cell in y-direction
-   real    :: dz                             !< length of the %grid cell in z-direction
-   real    :: idx                            !< inverted length of the %grid cell in x-direction
-   real    :: idy                            !< inverted length of the %grid cell in y-direction
-   real    :: idz                            !< inverted length of the %grid cell in z-direction
-   real    :: dxmn                           !< the smallest length of the %grid cell (among dx, dy, and dz)
-   real    :: dvol                           !< volume of one %grid cell
-   integer :: nxd                            !< number of %grid cells in physical domain (without boundary cells) in x-direction (if equal to 1 then x-dimension is reduced to a point and boundary cells layer is not added)
-   integer :: nyd                            !< number of %grid cells in physical domain (without boundary cells) in y-direction (if equal to 1 then y-dimension is reduced to a point and boundary cells layer is not added)
-   integer :: nzd                            !< number of %grid cells in physical domain (without boundary cells) in z-direction (if equal to 1 then z-dimension is reduced to a point and boundary cells layer is not added)
-   integer :: total_ncells                   !< total number of %grid cells
-   integer :: nb                             !< number of boundary cells surrounding the physical domain, same for all directions
-   integer :: nx                             !< number of %grid cells in one block in x-direction
-   integer :: ny                             !< number of %grid cells in one block in y-direction
-   integer :: nz                             !< number of %grid cells in one block in z-direction
-   integer :: nxb                            !< number of physical domain %grid cells in one block (without boundary cells) in x-direction
-   integer :: nyb                            !< number of physical domain %grid cells in one block (without boundary cells) in y-direction
-   integer :: nzb                            !< number of physical domain %grid cells in one block (without boundary cells) in z-direction
-   integer :: nxt                            !< total number of %grid cells in the whole domain in x-direction
-   integer :: nyt                            !< total number of %grid cells in the whole domain in y-direction
-   integer :: nzt                            !< total number of %grid cells in the whole domain in z-direction
-   integer :: is                             !< index of the first %grid cell of physical domain in x-direction
-   integer :: ie                             !< index of the last %grid cell of physical domain in x-direction
-   integer :: js                             !< index of the first %grid cell of physical domain in y-direction
-   integer :: je                             !< index of the last %grid cell of physical domain in y-direction
-   integer :: ks                             !< index of the first %grid cell of physical domain in z-direction
-   integer :: ke                             !< index of the last %grid cell of physical domain in z-direction
-   integer :: maxxyz                         !< maximum number of %grid cells in any direction
+   real, protected     :: dx                             !< length of the %grid cell in x-direction
+   real, protected     :: dy                             !< length of the %grid cell in y-direction
+   real, protected     :: dz                             !< length of the %grid cell in z-direction
+   real, protected     :: idx                            !< inverted length of the %grid cell in x-direction
+   real, protected     :: idy                            !< inverted length of the %grid cell in y-direction
+   real, protected     :: idz                            !< inverted length of the %grid cell in z-direction
+   real, protected     :: dxmn                           !< the smallest length of the %grid cell (among dx, dy, and dz)
+   real, protected     :: dvol                           !< volume of one %grid cell
+   integer, protected  :: nxd                            !< number of %grid cells in physical domain (without boundary cells) in x-direction (if equal to 1 then x-dimension is reduced to a point and boundary cells layer is not added)
+   integer, protected  :: nyd                            !< number of %grid cells in physical domain (without boundary cells) in y-direction (if equal to 1 then y-dimension is reduced to a point and boundary cells layer is not added)
+   integer, protected  :: nzd                            !< number of %grid cells in physical domain (without boundary cells) in z-direction (if equal to 1 then z-dimension is reduced to a point and boundary cells layer is not added)
+   integer, protected  :: total_ncells                   !< total number of %grid cells
+   integer, protected  :: nb                             !< number of boundary cells surrounding the physical domain, same for all directions
+   integer, protected  :: nx                             !< number of %grid cells in one block in x-direction
+   integer, protected  :: ny                             !< number of %grid cells in one block in y-direction
+   integer, protected  :: nz                             !< number of %grid cells in one block in z-direction
+   integer, protected  :: nxb                            !< number of physical domain %grid cells in one block (without boundary cells) in x-direction
+   integer, protected  :: nyb                            !< number of physical domain %grid cells in one block (without boundary cells) in y-direction
+   integer, protected  :: nzb                            !< number of physical domain %grid cells in one block (without boundary cells) in z-direction
+   integer, protected  :: nxt                            !< total number of %grid cells in the whole domain in x-direction
+   integer, protected  :: nyt                            !< total number of %grid cells in the whole domain in y-direction
+   integer, protected  :: nzt                            !< total number of %grid cells in the whole domain in z-direction
+   integer, protected  :: is                             !< index of the first %grid cell of physical domain in x-direction
+   integer, protected  :: ie                             !< index of the last %grid cell of physical domain in x-direction
+   integer, protected  :: js                             !< index of the first %grid cell of physical domain in y-direction
+   integer, protected  :: je                             !< index of the last %grid cell of physical domain in y-direction
+   integer, protected  :: ks                             !< index of the first %grid cell of physical domain in z-direction
+   integer, protected  :: ke                             !< index of the last %grid cell of physical domain in z-direction
+   integer, protected  :: maxxyz                         !< maximum number of %grid cells in any direction
 
-   real    :: xmin                           !< physical domain left x-boundary position
-   real    :: xmax                           !< physical domain right x-boundary position
-   real    :: ymin                           !< physical domain left y-boundary position
-   real    :: ymax                           !< physical domain right y-boundary position
-   real    :: zmin                           !< physical domain left z-boundary position
-   real    :: zmax                           !< physical domain right z-boundary position
-   real    :: xminb                          !< current block left x-boundary position
-   real    :: xmaxb                          !< current block right x-boundary position
-   real    :: yminb                          !< current block left y-boundary position
-   real    :: ymaxb                          !< current block right y-boundary position
-   real    :: zminb                          !< current block left z-boundary position
-   real    :: zmaxb                          !< current block right z-boundary position
-   real    :: Lx                             !< span of the physical domain in x-direction (xmax-xmin)
-   real    :: Ly                             !< span of the physical domain in y-direction (ymax-ymin)
-   real    :: Lz                             !< span of the physical domain in z-direction (zmax-zmin)
-   integer, parameter :: xdim=1              !< parameter assigned to x-direction
-   integer, parameter :: ydim=2              !< parameter assigned to y-direction
-   integer, parameter :: zdim=3              !< parameter assigned to z-direction
-   logical, protected, dimension(xdim:zdim) :: has_dir  !< .true. for existing directions
-   integer, protected :: D_x, D_y, D_z       !< set to 1 when given direction exists, 0 otherwise. Use to construct dimensionally-safe indices for arrays
+   real, protected     :: xmin                           !< physical domain left x-boundary position
+   real, protected     :: xmax                           !< physical domain right x-boundary position
+   real, protected     :: ymin                           !< physical domain left y-boundary position
+   real, protected     :: ymax                           !< physical domain right y-boundary position
+   real, protected     :: zmin                           !< physical domain left z-boundary position
+   real, protected     :: zmax                           !< physical domain right z-boundary position
+   real, protected     :: xminb                          !< current block left x-boundary position
+   real, protected     :: xmaxb                          !< current block right x-boundary position
+   real, protected     :: yminb                          !< current block left y-boundary position
+   real, protected     :: ymaxb                          !< current block right y-boundary position
+   real, protected     :: zminb                          !< current block left z-boundary position
+   real, protected     :: zmaxb                          !< current block right z-boundary position
+   real, protected     :: Lx                             !< span of the physical domain in x-direction (xmax-xmin)
+   real, protected     :: Ly                             !< span of the physical domain in y-direction (ymax-ymin)
+   real, protected     :: Lz                             !< span of the physical domain in z-direction (zmax-zmin)
+   integer, parameter :: xdim=1                          !< parameter assigned to x-direction
+   integer, parameter :: ydim=2                          !< parameter assigned to y-direction
+   integer, parameter :: zdim=3                          !< parameter assigned to z-direction
+   logical, protected, dimension(xdim:zdim) :: has_dir   !< .true. for existing directions
+   integer, protected :: D_x, D_y, D_z                   !< set to 1 when given direction exists, 0 otherwise. Use to construct dimensionally-safe indices for arrays
 
    character(len=cbuff_len)  :: geometry            !< define system of coordinates
 
-   real, allocatable, target :: dl(:)               !< array of %grid cell sizes in all directions
-   real, allocatable, target :: idl(:)              !< array of inverted %grid cell sizes in all directions
-   real, allocatable, dimension(:), target :: x     !< array of x-positions of %grid cells centers
-   real, allocatable, dimension(:), target :: inv_x !< array of invert x-positions of %grid cells centers
-   real, allocatable, dimension(:), target :: y     !< array of y-positions of %grid cells centers
-   real, allocatable, dimension(:), target :: inv_y !< array of invert y-positions of %grid cells centers
-   real, allocatable, dimension(:), target :: z     !< array of z-positions of %grid cells centers
-   real, allocatable, dimension(:), target :: inv_z !< array of invert z-positions of %grid cells centers
-   real, allocatable, dimension(:), target :: xl    !< array of x-positions of %grid cells left borders
-   real, allocatable, dimension(:), target :: yl    !< array of y-positions of %grid cells left borders
-   real, allocatable, dimension(:), target :: zl    !< array of z-positions of %grid cells left borders
-   real, allocatable, dimension(:), target :: xr    !< array of x-positions of %grid cells right borders
-   real, allocatable, dimension(:), target :: yr    !< array of y-positions of %grid cells right borders
-   real, allocatable, dimension(:), target :: zr    !< array of z-positions of %grid cells right borders
+   real, allocatable, target, protected  :: dl(:)               !< array of %grid cell sizes in all directions
+   real, allocatable, target, protected  :: idl(:)              !< array of inverted %grid cell sizes in all directions
+   real, allocatable, dimension(:), target, protected  :: x     !< array of x-positions of %grid cells centers
+   real, allocatable, dimension(:), target, protected  :: inv_x !< array of invert x-positions of %grid cells centers
+   real, allocatable, dimension(:), target, protected  :: y     !< array of y-positions of %grid cells centers
+   real, allocatable, dimension(:), target, protected  :: inv_y !< array of invert y-positions of %grid cells centers
+   real, allocatable, dimension(:), target, protected  :: z     !< array of z-positions of %grid cells centers
+   real, allocatable, dimension(:), target, protected  :: inv_z !< array of invert z-positions of %grid cells centers
+   real, allocatable, dimension(:), target, protected  :: xl    !< array of x-positions of %grid cells left borders
+   real, allocatable, dimension(:), target, protected  :: yl    !< array of y-positions of %grid cells left borders
+   real, allocatable, dimension(:), target, protected  :: zl    !< array of z-positions of %grid cells left borders
+   real, allocatable, dimension(:), target, protected  :: xr    !< array of x-positions of %grid cells right borders
+   real, allocatable, dimension(:), target, protected  :: yr    !< array of y-positions of %grid cells right borders
+   real, allocatable, dimension(:), target, protected  :: zr    !< array of z-positions of %grid cells right borders
 
    contains
 
