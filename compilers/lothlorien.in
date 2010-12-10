@@ -11,7 +11,7 @@
 
 PROG     = piernik
 F90      = h5pfc
-F90FLAGS = -O3 -funroll-loops -fdefault-real-8 -Wall -Wextra -Wno-unused-variable -W  -std=gnu -fimplicit-none -ffree-line-length-none -fbacktrace -ggdb
+F90FLAGS = -O3 -funroll-loops -fdefault-real-8 -Wall -Wextra -W -std=gnu -fimplicit-none -ffree-line-length-none -fbacktrace -ggdb
 #F90FLAGS += -fbounds-check -Wsurprising -Wcharacter-truncation -ffpe-trap=invalid,zero,overflow,denormal -pedantic
 USE_GNUCPP = yes
 MAKEFLAGS += -j4
