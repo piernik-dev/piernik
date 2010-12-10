@@ -66,6 +66,8 @@ module diagnostics
 
    real,    parameter :: MiB = 8./1048576.  ! sizeof(double) / 2**20
    integer, parameter :: an_len = 64
+   real,    parameter :: big_float =  huge(real(1.0,4))
+   integer, parameter :: big_int   =  huge(int(1,4))
    real, save         :: used_memory = 0.0
 
    real, dimension(:), allocatable                  :: array_sizes
@@ -272,7 +274,7 @@ contains
 
       if (.not.allocated(array)) then
          allocate( array(as(1)) )
-         array = 0
+         array = big_int
       endif
       used_memory = used_memory + size(array)*MiB*0.5
       if (present(aname)) call keep_track_of_arrays(size(array)*MiB*0.5,aname)
@@ -287,7 +289,7 @@ contains
 
       if (.not.allocated(array)) then
          allocate( array(as(1),as(2)) )
-         array = 0
+         array = big_int
       endif
       used_memory = used_memory + size(array)*MiB*0.5
       if (present(aname)) call keep_track_of_arrays(size(array)*MiB*0.5,aname)
@@ -302,7 +304,7 @@ contains
 
       if (.not.allocated(array)) then
          allocate( array(as(1),as(2),as(3)) )
-         array = 0
+         array = big_int
       endif
       used_memory = used_memory + size(array)*MiB*0.5
       if (present(aname)) call keep_track_of_arrays(size(array)*MiB*0.5,aname)
@@ -317,7 +319,7 @@ contains
 
       if (.not.allocated(array)) then
          allocate( array(as(1)) )
-         array = 0.0
+         array = big_float
       endif
       used_memory = used_memory + size(array)*MiB
       if (present(aname)) call keep_track_of_arrays(size(array)*MiB,aname)
@@ -332,7 +334,7 @@ contains
 
       if (.not.allocated(array)) then
          allocate( array(as(1),as(2)) )
-         array = 0.0
+         array = big_float
       endif
       used_memory = used_memory + size(array)*MiB
       if (present(aname)) call keep_track_of_arrays(size(array)*MiB,aname)
@@ -347,7 +349,7 @@ contains
 
       if (.not.allocated(array)) then
          allocate( array(as(1),as(2),as(3)) )
-         array = 0.0
+         array = big_float
       endif
       used_memory = used_memory + size(array)*MiB
       if (present(aname)) call keep_track_of_arrays(size(array)*MiB,aname)
@@ -362,7 +364,7 @@ contains
 
       if (.not.allocated(array)) then
          allocate( array(as(1),as(2),as(3),as(4)) )
-         array = 0.0
+         array = big_float
       endif
       used_memory = used_memory + size(array)*MiB
       if (present(aname)) call keep_track_of_arrays(size(array)*MiB,aname)
@@ -377,7 +379,7 @@ contains
 
       if (.not.allocated(array)) then
          allocate( array(as(1),as(2),as(3),as(4),as(5)) )
-         array = 0.0
+         array = big_float
       endif
       used_memory = used_memory + size(array)*MiB
       if (present(aname)) call keep_track_of_arrays(size(array)*MiB,aname)
