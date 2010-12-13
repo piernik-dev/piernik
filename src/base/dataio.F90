@@ -730,10 +730,11 @@ contains
 #endif /* !NEUTRAL */
 
 
-      if (proc == 0 .and. tsl_firstcall) then
+      if (proc == 0) then
          write(tsl_file,'(a,a1,a,a1,a3,a1,i3.3,a4)') &
               trim(cwd),'/',trim(problem_name),'_', run_id,'_',nrestart,'.tsl'
 
+         if (tsl_firstcall) then
             call pop_vector(tsl_names, hnlen, ["nstep   ", "time    ", "timestep"])
             call pop_vector(tsl_names, hnlen, ["mass", "momx", "momy", "momz", "ener", "epot", "eint", "ekin"])
 
@@ -760,14 +761,7 @@ contains
 #ifdef DUST
             call pop_vector(tsl_names, hnlen, ["dend_min", "dend_max", "vxd_max ", "vyd_max ", "vzd_max "])
 #endif /* DUST */
-      endif
-
-      if (tsl_firstcall) then
-         if (associated(user_tsl)) call user_tsl(tsl_vars, tsl_names)
-      endif
-
-      if (proc == 0) then
-         if (tsl_firstcall) then
+            if (associated(user_tsl)) call user_tsl(tsl_vars, tsl_names)
             write(head_fmt,'(A,I2,A)') "(a1,a8,",size(tsl_names)-1,"a16)"
 
             open(tsl_lun, file=tsl_file)
@@ -852,10 +846,12 @@ contains
 #endif /* DUST */
       endif
 
-      if (associated(user_tsl)) call user_tsl(tsl_vars, tsl_names)
+      if (associated(user_tsl)) call user_tsl(tsl_vars)
 
       if (proc == 0) then
          write(tsl_lun, '(1x,i8,50(1x,es15.8))') nstep, tsl_vars
+
+! some quantities computed in "write_log".One can add more, or change.
          close(tsl_lun)
          deallocate(tsl_vars)
       endif

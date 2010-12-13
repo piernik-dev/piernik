@@ -236,14 +236,19 @@ contains
 !-----------------------------------------------------------------------------
       subroutine sedov_tsl(user_vars, tsl_names)
          use diagnostics,     only: pop_vector
+         use mpisetup,        only: proc, comm3d, ierr
+         use mpi,             only: MPI_DOUBLE_PRECISION, MPI_SUM
          implicit none
          real, dimension(:), intent(inout), allocatable                       :: user_vars
          character(len=*), dimension(:), intent(inout), allocatable, optional :: tsl_names
+         real :: output
 
          if (present(tsl_names)) then
             call pop_vector(tsl_names, len(tsl_names(1)), ["foobar_sedov"])    !   add to header
          else
-            call pop_vector(user_vars,[12345678.9])                            !   pop value
+            ! do mpi stuff here...
+            call MPI_ALLREDUCE(real(proc,8), output, 1, MPI_DOUBLE_PRECISION, MPI_SUM, comm3d, ierr)
+            if (proc == 0) call pop_vector(user_vars,[output])                 !   pop value
          endif
          return
       end subroutine sedov_tsl
