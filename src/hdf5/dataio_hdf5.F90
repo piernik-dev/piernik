@@ -47,7 +47,7 @@ module dataio_hdf5
    public :: init_hdf5, read_restart_hdf5, cleanup_hdf5, write_hdf5, write_restart_hdf5, write_plot, write_3darr_to_restart, read_3darr_from_restart
    public :: parfile, parfilelines, maxparfilelines
 
-   real, parameter    :: piernik_hdf5_version = 1.1   !< output version
+   real, parameter    :: piernik_hdf5_version = 1.11   !< output version
    integer, parameter :: dnamelen=10
    character(LEN=dnamelen), dimension(2) :: dname = (/"fluid     ","mag       "/)  !< dataset names for restart files
    character(len=S_LEN), allocatable, dimension(:) :: hdf_vars  !< dataset names for hdf files
