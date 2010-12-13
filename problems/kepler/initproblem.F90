@@ -248,12 +248,12 @@ contains
                      u(fl%imy,i,j,k) = vphi * u(fl%idn,i,j,k)
                      u(fl%imz,i,j,k) = vz   * u(fl%idn,i,j,k)
                      if (fl%ien > 0) then
-                       u(fl%ien,i,j,k) = fl%cs2/(fl%gam_1)*u(fl%idn,i,j,k)
-                       u(fl%ien,i,j,k) = max(u(fl%ien,i,j,k), smallei)
-                       u(fl%ien,i,j,k) = u(fl%ien,i,j,k) + 0.5*(vr**2+vphi**2+vz**2)*u(fl%idn,i,j,k)
-                       ene0(1,i,j,k)   = u(fl%ien,i,j,k)  ! BEWARE
+                        u(fl%ien,i,j,k) = fl%cs2/(fl%gam_1)*u(fl%idn,i,j,k)
+                        u(fl%ien,i,j,k) = max(u(fl%ien,i,j,k), smallei)
+                        u(fl%ien,i,j,k) = u(fl%ien,i,j,k) + 0.5*(vr**2+vphi**2+vz**2)*u(fl%idn,i,j,k)
+                        ene0(p,i,j,k)   = u(fl%ien,i,j,k)
                      else
-                       ene0(1,i,j,k)   = 0.0   ! BEWARE
+                        ene0(p,i,j,k)   = 0.0
                      endif
                   enddo
                enddo
@@ -286,15 +286,16 @@ contains
       character(len=dname_len) :: dname
 
       do i = LBOUND(den0,1), UBOUND(den0,1)
-         write(dname,*) nvar%all_fluids(i)%tag, '_den0'
+         write(dname,'(2a)') nvar%all_fluids(i)%tag, '_den0'
          if (allocated(den0)) call write_3darr_to_restart(den0(i,:,:,:), file_id, dname, nx, ny, nz)
-         write(dname,*) nvar%all_fluids(i)%tag, '_mtx0'
+         write(dname,'(2a)') nvar%all_fluids(i)%tag, '_mtx0'
          if (allocated(mtx0)) call write_3darr_to_restart(mtx0(i,:,:,:), file_id, dname, nx, ny, nz)
-         write(dname,*) nvar%all_fluids(i)%tag, '_mty0'
+         write(dname,'(2a)') nvar%all_fluids(i)%tag, '_mty0'
          if (allocated(mty0)) call write_3darr_to_restart(mty0(i,:,:,:), file_id, dname, nx, ny, nz)
-         write(dname,*) nvar%all_fluids(i)%tag, '_mtz0'
+         write(dname,'(2a)') nvar%all_fluids(i)%tag, '_mtz0'
          if (allocated(mtz0)) call write_3darr_to_restart(mtz0(i,:,:,:), file_id, dname, nx, ny, nz)
-!        if (allocated(ene0)) call write_3darr_to_restart(ene0(:,:,:), file_id, dname, nx, ny, nz)
+         write(dname,'(2a)') nvar%all_fluids(i)%tag, '_ene0'
+         if (allocated(ene0)) call write_3darr_to_restart(ene0(i,:,:,:), file_id, dname, nx, ny, nz)
       enddo
 
    end subroutine write_initial_fld_to_restart
@@ -320,32 +321,33 @@ contains
       if (.not.allocated(mtx0)) allocate(mtx0(nvar%fluids,nx,ny,nz))
       if (.not.allocated(mty0)) allocate(mty0(nvar%fluids,nx,ny,nz))
       if (.not.allocated(mtz0)) allocate(mtz0(nvar%fluids,nx,ny,nz))
-      if (.not.allocated(ene0)) allocate(ene0(nvar%adiab,nx,ny,nz))
+      if (.not.allocated(ene0)) allocate(ene0(nvar%fluids,nx,ny,nz))
 
       do i=1, nvar%fluids
-         write(dname,*) nvar%all_fluids(i)%tag, '_den0'
+         write(dname,'(2a)') nvar%all_fluids(i)%tag, '_den0'
          if (.not.associated(p3d)) p3d => den0(i,:,:,:)
          call read_3darr_from_restart(file_id,dname,p3d,nx,ny,nz)
          if (associated(p3d)) nullify(p3d)
 
-         write(dname,*) nvar%all_fluids(i)%tag, '_mtx0'
+         write(dname,'(2a)') nvar%all_fluids(i)%tag, '_mtx0'
          if (.not.associated(p3d)) p3d => mtx0(i,:,:,:)
          call read_3darr_from_restart(file_id,dname,p3d,nx,ny,nz)
          if (associated(p3d)) nullify(p3d)
 
-         write(dname,*) nvar%all_fluids(i)%tag, '_mty0'
+         write(dname,'(2a)') nvar%all_fluids(i)%tag, '_mty0'
          if (.not.associated(p3d)) p3d => mty0(i,:,:,:)
          call read_3darr_from_restart(file_id,dname,p3d,nx,ny,nz)
          if (associated(p3d)) nullify(p3d)
 
-         write(dname,*) nvar%all_fluids(i)%tag, '_mtz0'
+         write(dname,'(2a)') nvar%all_fluids(i)%tag, '_mtz0'
          if (.not.associated(p3d)) p3d => mtz0(i,:,:,:)
          call read_3darr_from_restart(file_id,dname,p3d,nx,ny,nz)
          if (associated(p3d)) nullify(p3d)
 
-!         if (.not.associated(p3d)) p3d => ene0(i,:,:,:)
-!         call read_3darr_from_restart(file_id,"ene0",p3d,nx,ny,nz)
-!         if (associated(p3d)) nullify(p3d)
+         write(dname,'(2a)') nvar%all_fluids(i)%tag, '_ene0'
+         if (.not.associated(p3d)) p3d => ene0(i,:,:,:)
+         call read_3darr_from_restart(file_id,dname,p3d,nx,ny,nz)
+         if (associated(p3d)) nullify(p3d)
       enddo
 
    end subroutine read_initial_fld_from_restart

@@ -47,7 +47,6 @@ module dataio_hdf5
    public :: init_hdf5, read_restart_hdf5, cleanup_hdf5, write_hdf5, write_restart_hdf5, write_plot, write_3darr_to_restart, read_3darr_from_restart
    public :: parfile, parfilelines, maxparfilelines
 
-   real, parameter    :: piernik_hdf5_version = 1.11   !< output version
    integer, parameter :: dnamelen=10
    character(LEN=dnamelen), dimension(2) :: dname = (/"fluid     ","mag       "/)  !< dataset names for restart files
    character(len=S_LEN), allocatable, dimension(:) :: hdf_vars  !< dataset names for hdf files
@@ -1286,7 +1285,7 @@ module dataio_hdf5
    subroutine read_restart_hdf5(chdf)
 
       use arrays,        only: u, b
-      use dataio_pub,    only: cwdlen, msg, printio, die
+      use dataio_pub,    only: cwdlen, msg, printio, die, require_init_prob
       use fluidindex,    only: nvar
       use func,          only: fix_string
       use grid,          only: nx, ny, nz, x, y, z, nxb, nyb, nzb
@@ -1335,6 +1334,8 @@ module dataio_hdf5
 #ifdef ISO_LOCAL
       real, dimension(:,:,:), pointer :: p3d
 #endif /* ISO_LOCAL */
+
+      real                  :: restart_hdf5_version
 
       nu = nvar%all
 
@@ -1463,6 +1464,8 @@ module dataio_hdf5
       if (proc == 0) then
          CALL h5fopen_f (filename, H5F_ACC_RDONLY_F, file_id, error)
          bufsize = 1
+         call h5ltget_attribute_double_f(file_id,"/","piernik", rbuf,error)
+         restart_hdf5_version = rbuf(1)
          call h5ltget_attribute_double_f(file_id,"/","time", rbuf,error)
          t = rbuf(1)
          call h5ltget_attribute_double_f(file_id,"/","timestep", rbuf,error)
@@ -1490,6 +1493,11 @@ module dataio_hdf5
          call h5ltget_attribute_string_f(file_id,"/","domain", chdf%domain,error)
          call h5ltget_attribute_string_f(file_id,"/","run_id", chdf%new_id,error)
 
+         if (restart_hdf5_version > 1.11) then
+            call h5ltget_attribute_int_f(file_id,"/","require_init_prob", ibuf,error)
+            require_init_prob = ibuf(1)
+         endif
+
          problem_name = fix_string(problem_name)   ! BEWARE: >=HDF5-1.8.4 has weird issues with strings
          chdf%new_id  = fix_string(chdf%new_id)    !   this bit hacks it around
          chdf%domain  = fix_string(chdf%domain)
@@ -1499,12 +1507,16 @@ module dataio_hdf5
          write(msg,'(2a)') 'Done reading restart file: ',trim(filename)
          call printio(msg)
       endif
+      CALL h5close_f(error)
+
+      call MPI_Bcast(restart_hdf5_version,    1, MPI_DOUBLE_PRECISION, 0, comm3d, ierr)
 
       call MPI_Bcast(chdf%nstep,    1, MPI_INTEGER, 0, comm3d, ierr)
       call MPI_Bcast(chdf%nres,     1, MPI_INTEGER, 0, comm3d, ierr)
       call MPI_Bcast(chdf%nhdf,     1, MPI_INTEGER, 0, comm3d, ierr)
       call MPI_Bcast(chdf%step_res, 1, MPI_INTEGER, 0, comm3d, ierr)
       call MPI_Bcast(chdf%step_hdf, 1, MPI_INTEGER, 0, comm3d, ierr)
+      if (restart_hdf5_version > 1.11) call MPI_Bcast(require_init_prob, 1, MPI_INTEGER, 0, comm3d, ierr)
 
       call MPI_Bcast(chdf%next_t_tsl,    1, MPI_DOUBLE_PRECISION, 0, comm3d, ierr)
       call MPI_Bcast(chdf%next_t_log,    1, MPI_DOUBLE_PRECISION, 0, comm3d, ierr)
@@ -1515,7 +1527,6 @@ module dataio_hdf5
       CALL MPI_Bcast(problem_name, cbuff_len, MPI_CHARACTER, 0, comm3d, ierr)
       CALL MPI_Bcast(chdf%domain,  domlen,    MPI_CHARACTER, 0, comm3d, ierr)
       CALL MPI_Bcast(chdf%new_id,  idlen,     MPI_CHARACTER, 0, comm3d, ierr)
-      CALL h5close_f(error)
 
    end subroutine read_restart_hdf5
 !
@@ -1687,7 +1698,7 @@ module dataio_hdf5
 
    subroutine set_common_attributes(filename, chdf, stype)
 
-      use dataio_pub,    only: msg, printio
+      use dataio_pub,    only: msg, printio, require_init_prob, piernik_hdf5_version
       use grid,          only: nxb, nyb, nzb, nb, xmin, xmax, ymin, ymax, zmin, zmax
       use hdf5,          only: HID_T, SIZE_T, H5F_ACC_RDWR_F, h5fopen_f, h5fclose_f, h5gcreate_f, h5gclose_f
       use h5lt,          only: h5ltset_attribute_double_f, h5ltset_attribute_int_f, h5ltmake_dataset_string_f, h5ltset_attribute_string_f
@@ -1752,6 +1763,7 @@ module dataio_hdf5
          ibuffer(10) = nyb                      ; ibuffer_name(10) = "nyb"
          ibuffer(11) = nzb                      ; ibuffer_name(11) = "nzb"
          ibuffer(12) = nb                       ; ibuffer_name(12) = "nb"
+         ibuffer(13) = require_init_prob        ; ibuffer_name(13) = "require_init_prob"
 
          !BEWARE: A memory leak was detected here. h5lt calls use HD5f2cstring and probably sometimes don't free the allocated buffer
 

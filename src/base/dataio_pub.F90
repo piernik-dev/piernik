@@ -37,6 +37,7 @@ module dataio_pub
    private :: colormessage, T_PLAIN, T_ERR, T_WARN, T_INFO, T_IO, T_SILENT, ansi_red, ansi_green, ansi_yellow, ansi_blue, ansi_magenta, ansi_cyan ! QA_WARN no need to use these symbols outside dataio_pub
    !mpisetup uses: ansi_white and ansi_black
 
+   real, parameter    :: piernik_hdf5_version = 1.12   !< output version
 
    integer, parameter :: stdout = output_unit
    integer, parameter :: stderr = error_unit
@@ -81,11 +82,14 @@ module dataio_pub
    integer, parameter :: PIERNIK_INITIALIZED = PIERNIK_START       + 1 ! initialized, running
    integer, parameter :: PIERNIK_FINISHED    = PIERNIK_INITIALIZED + 1
    integer, parameter :: PIERNIK_CLEANUP     = PIERNIK_FINISHED    + 1
-   integer            :: code_progress          !< rough estimate of code execution progress
-   logical            :: halfstep = .false.     !< true when X-Y-Z sweeps are done and Z-Y-X are not
-   real               :: last_hdf_time          !< time in simulation of the last resent hdf file dump
-   logical            :: skip_advection = .false. !< .true. will instruct fluidupdate:make_3sweeps to skip sweeps (used by maclaurin problem, replaces precompiler symbol __NO_FLUID_STEP)
-   logical, save      :: log_file_initialized = .false.
+
+   real               :: last_hdf_time                  !< time in simulation of the last resent hdf file dump
+   integer            :: code_progress                  !< rough estimate of code execution progress
+
+   logical, save      :: halfstep = .false.             !< true when X-Y-Z sweeps are done and Z-Y-X are not
+   logical, save      :: skip_advection = .false.       !< .true. will instruct fluidupdate:make_3sweeps to skip sweeps (used by maclaurin problem, replaces precompiler symbol __NO_FLUID_STEP)
+   logical, save      :: log_file_initialized = .false. !< ToDo: Comment me
+   integer, save      :: require_init_prob = 0          !< 1 will call initproblem::init_prob on restart
 
    !! ToDo:
    !!  Currently to use PGPLOT you need to:
