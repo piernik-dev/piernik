@@ -58,10 +58,9 @@ module initproblem
       use grid,          only: dxmn
       use mpi,           only: MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION
       use mpisetup,      only: cbuff_len, cbuff, ibuff, rbuff, buffer_dim, comm, ierr, proc
-      use types,         only: idlen
+      use types,         only: idlen, problem_customize_solution, finalize_problem
 
       implicit none
-
 
       problem_name = 'cr'
       run_id       = 'tst'
@@ -130,6 +129,9 @@ module initproblem
 
       if (r0 == 0.) call die("[initproblem:read_problem_par] r0 == 0")
 
+      problem_customize_solution => check_norm
+      finalize_problem           => check_norm
+
    end subroutine read_problem_par
 
 !-----------------------------------------------------------------------------
@@ -142,7 +144,6 @@ module initproblem
       use grid,           only: nx, ny, nz, x, y, z, is, ie, js, je, ks, ke, xdim, ydim, zdim, has_dir, xmax, ymax
       use initcosmicrays, only: gamma_crs, iarr_crs, ncrn, ncre, K_crn_paral, K_crn_perp
       use initionized,    only: idni, imxi, imzi, ieni, gamma_ion
-      use types,          only: problem_customize_solution, finalize_problem
 
       implicit none
 
@@ -204,9 +205,6 @@ module initproblem
          enddo
       enddo
 #endif /* COSM_RAYS */
-
-      problem_customize_solution => check_norm
-      finalize_problem           => check_norm
 
       call check_norm
 

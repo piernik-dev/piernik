@@ -53,7 +53,8 @@ contains
       use dataio_pub,    only: skip_advection, die, warn
       use mpisetup,      only: ierr, rbuff, cbuff, ibuff, proc, buffer_dim, comm, smalld, cbuff_len
       use mpi,           only: MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER
-      use types,         only: idlen
+      use types,         only: idlen, finalize_problem
+      use list_hdf5,     only: additional_attrs
 
       implicit none
 
@@ -130,6 +131,9 @@ contains
          nsub = maxsub
       endif
 
+      additional_attrs => init_prob_attrs
+      finalize_problem => finalize_problem_maclaurin
+
    end subroutine read_problem_par
 
 !-----------------------------------------------------------------------------
@@ -141,9 +145,7 @@ contains
       use dataio_pub,    only: msg, printinfo, warn
       use grid,          only: x, y, z, dx, dy, dz, nx, ny, nz, xmin, xmax, ymin, ymax, zmin, zmax
       use initionized,   only: gamma_ion, idni, imxi, imzi, ieni
-      use list_hdf5,     only: additional_attrs
       use mpisetup,      only: proc
-      use types,         only: finalize_problem
 
       implicit none
 
@@ -192,9 +194,6 @@ contains
          write(msg,'(2(a,g12.5))')   "[initproblem:init_prob] Density = ", d0, " mass = ", 4./3.*pi * a1**2 * a3 * d0
          call printinfo(msg, .true.)
       endif
-
-      additional_attrs => init_prob_attrs
-      finalize_problem => finalize_problem_maclaurin
 
    end subroutine init_prob
 

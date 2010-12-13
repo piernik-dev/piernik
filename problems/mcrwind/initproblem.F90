@@ -54,6 +54,9 @@ module initproblem
       use mpisetup,      only: cbuff_len, cbuff, rbuff, buffer_dim, comm, ierr, proc
       use mpi,           only: MPI_CHARACTER, MPI_DOUBLE_PRECISION
       use types,         only: idlen
+#ifdef GRAV
+      use gravity,       only: grav_accel, grav_pot_3d, user_grav
+#endif /* GRAV */
 
       implicit none
 
@@ -108,6 +111,9 @@ module initproblem
 
       endif
 
+      grav_accel  => galactic_grav_accel
+      if (user_grav) grav_pot_3d => my_grav_pot_3d
+
    end subroutine read_problem_par
 
 !-----------------------------------------------------------------------------
@@ -127,16 +133,13 @@ module initproblem
       use initcosmicrays, only: iarr_crn, gamma_crn
 #endif /* COSM_RAYS */
 #ifdef GRAV
-      use gravity,        only: grav_accel, grav_pot_3d, user_grav
+      use gravity,        only: grav_pot_3d
 #endif /* GRAV */
       implicit none
 
       integer            :: i, j, k
       real               :: b0, csim2
       real, dimension(3) :: sn_pos
-
-      grav_accel  => galactic_grav_accel
-      if (user_grav) grav_pot_3d => my_grav_pot_3d
 
       call grav_pot_3d
 

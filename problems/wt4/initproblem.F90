@@ -83,7 +83,8 @@ contains
       use dataio_pub,    only: ierrh, par_file, namelist_errh, compare_namelist      ! QA_WARN required for diff_nml
       use mpisetup,      only: ierr, rbuff, cbuff, ibuff, lbuff, proc, buffer_dim, comm
       use mpi,           only: MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL
-      use types,         only: idlen
+      use types,         only: idlen, problem_customize_solution
+      use list_hdf5,     only: additional_attrs, problem_write_restart, problem_read_restart
 
       implicit none
 
@@ -178,6 +179,11 @@ contains
       endif
 
       if (mass_mul < 0.) mass_mul = 1.
+
+      problem_customize_solution => problem_customize_solution_wt4
+      additional_attrs           => init_prob_attrs
+      problem_write_restart      => write_initial_fld_to_restart
+      problem_read_restart       => read_initial_fld_from_restart
 
    end subroutine read_problem_par
 
@@ -274,9 +280,7 @@ contains
       use dataio_pub,    only: warn, printinfo, msg
       use grid,          only: is, ie, js, je, ks, ke, nx, ny, nz, nb, x, y, z, dx, dy, dz
       use initionized,   only: idni, imxi, imyi, imzi
-      use list_hdf5,     only: additional_attrs, problem_write_restart, problem_read_restart
       use mpisetup,      only: proc, smalld
-      use types,         only: problem_customize_solution
 
       implicit none
 
@@ -360,9 +364,6 @@ contains
       endif
 
       b(:, 1:nx, 1:ny, 1:nz) = 0.0
-      additional_attrs      => init_prob_attrs
-      problem_write_restart => write_initial_fld_to_restart
-      problem_read_restart  => read_initial_fld_from_restart
 
       ! BEWARE: den0, vlx0 and vly0 are used only with divine_intervention_type = 3
       if (.not.allocated(den0)) allocate(den0(nx,ny,nz))
@@ -374,8 +375,6 @@ contains
       vly0 = u(imyi,:,:,:) / den0
 
       ! It would be cool to dump a restart file here but this would make a cyclic dependency
-
-      problem_customize_solution => problem_customize_solution_wt4
 
 #ifndef UMUSCL
       if (proc == 0 ) call warn("[initproblem:init_problem]: Without UMUSCL you'll likely get Monet-like density maps.")

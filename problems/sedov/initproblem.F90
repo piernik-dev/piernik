@@ -53,6 +53,7 @@ contains
       use mpisetup,      only: cbuff_len, cbuff, ibuff, rbuff, buffer_dim, proc, comm, ierr
       use mpi,           only: MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER
       use types,         only: idlen
+      use dataio_pub,    only: user_plt_hdf5, user_vars_hdf5, user_tsl
 
       implicit none
 
@@ -122,11 +123,15 @@ contains
 
       endif
 
+      user_plt_hdf5  => sedov_plt_hdf5
+      user_vars_hdf5 => sedov_vars_hdf5
+      user_tsl       => sedov_tsl
+
    end subroutine read_problem_par
 !-----------------------------------------------------------------------------
    subroutine init_prob
       use arrays,         only: u, b
-      use dataio_pub,     only: msg, die, printinfo, user_plt_hdf5, user_vars_hdf5, user_tsl
+      use dataio_pub,     only: msg, die, printinfo
       use fluidindex,     only: nvar, ibx, iby, ibz
       use grid,           only: x, y, z, nx, ny, nz
       use types,          only: component_fluid
@@ -187,10 +192,7 @@ contains
             enddo
          endif
       enddo
-      user_plt_hdf5 => sedov_plt_hdf5
-      user_vars_hdf5 => sedov_vars_hdf5
-      user_tsl => sedov_tsl
-      return
+
    end subroutine init_prob
 !-----------------------------------------------------------------------------
    subroutine sedov_plt_hdf5(var,ij,xn,tab,ierrh)
