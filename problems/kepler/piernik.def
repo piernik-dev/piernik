@@ -1,5 +1,7 @@
 /* choosing fluids */
+#if !defined(NEUTRAL) && !defined(DUST)
 #define IONIZED
+#endif
 
 /* adiabatic or isothermal */
 #define ISO
@@ -8,7 +10,9 @@
 #define LOCAL_FR_SPEED
 
 /* physics including */
+#ifdef IONIZED
 #define MAGNETIC
+#endif
 
 /* gravity type choosing */
 #define GRAV
