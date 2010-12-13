@@ -1,0 +1,102 @@
+ $DOMAIN_SIZES
+    nxd = 100
+    nyd = 5
+    nzd = 1
+    nb  = 4
+ /
+
+ $MPI_BLOCKS
+    pxsize = 1
+    pysize = 1
+    pzsize = 1
+    mpi_magic = .true.
+ /
+
+ $CONSTANTS
+ /
+
+ $RESTART_CONTROL
+    restart  = 'last'
+    new_id   = ''
+    nrestart = 0
+ /
+
+ $END_CONTROL
+    tend   = 100.0
+    nend   = 20000
+ /
+
+ $OUTPUT_CONTROL
+    dt_hdf  = 2.0
+    dt_res  = 0.0
+    dt_log  = 0.1
+    dt_tsl  = 0.001
+    vars(1) = 'dens'
+    vars(2) = 'velx'
+    vars(3) = 'vely'
+    vars(4) = 'velz'
+    domain  = 'phys_domain'
+    mag_center = 'no'
+ /
+
+ $BOUNDARIES
+    bnd_xl = 'user'
+    bnd_xr = 'ref'
+    bnd_yl = 'per'
+    bnd_yr = 'per'
+    bnd_zl = 'outd'
+    bnd_zr = 'outd'
+ /
+
+ $DOMAIN_LIMITS
+    geometry = "cylindrical"
+    xmin   = 0.4
+    xmax   = 2.5
+    ymin   = 0.0
+    ymax   = 6.28318530718
+    zmin   =-1.5
+    zmax   = 1.5
+ /
+
+ $FLUID_NEUTRAL
+    gamma_neu  = 1.4
+    cs_iso_neu = 0.8
+ /
+
+ $FLUID_DUST
+ /
+
+ $FLUID_DUST
+ /
+
+ $NUMERICAL_SETUP
+    cfl    = 0.6
+    use_smalld = .false.
+    smalld = 1.e-6
+    smallei= 1.e-6
+    integration_order = 2
+    limiter= 'vanleer'
+ /
+
+ $GRAVITY
+    external_gp = "GRAV_PTMASS"
+    ptmass  = 1.0
+    ptm_x   = 0.0
+    ptm_y   = 0.0
+    ptm_z   = 0.0
+    r_smooth= 0.0
+    user_grav = .true.
+ /
+
+ $PROBLEM_CONTROL
+    problem_name ='kepler'
+    run_id  =  'ts2'
+    alpha   = 1.0
+    d0      = 1.0
+    dout    = 1.0e-4
+    r_max   = 3.2
+    r_in    = 0.5
+    f_in    = 10.0
+    r_out   = 2.1
+    mag_field_orient = 'none'
+/
