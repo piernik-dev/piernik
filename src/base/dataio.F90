@@ -116,38 +116,38 @@ module dataio
       module procedure mpi_sum3d_and_multiply
    end interface mpi_addmul
 
-   contains
+contains
 
-      subroutine check_log
+   subroutine check_log
 
-         use mpisetup,      only: t
-         use dataio_pub,    only: nlog
+      use mpisetup,      only: t
+      use dataio_pub,    only: next_t_log
 
-         implicit none
+      implicit none
 
-         if (dt_log > 0.0) then
-            if (nlog < (int(t / dt_log) + 1)) then
-               call write_log
-               nlog = nlog + 1
-            endif
+      if (dt_log > 0.0) then
+         if (next_t_log < t) then
+            call write_log
+            next_t_log = next_t_log + dt_log
          endif
+      endif
 
-      end subroutine check_log
+   end subroutine check_log
 
-      subroutine check_tsl
+   subroutine check_tsl
 
-         use mpisetup,      only: t
-         use dataio_pub,    only: ntsl
+      use mpisetup,      only: t
+      use dataio_pub,    only: next_t_tsl
 
-         implicit none
+      implicit none
 
-         if (dt_tsl .gt. 0.0) then
-            if (ntsl .lt. (int(t / dt_tsl) + 1)) then
-               call write_timeslice
-               ntsl = ntsl + 1
-             endif
+      if (dt_tsl .gt. 0.0) then
+         if (next_t_tsl < t) then
+            call write_timeslice
+            next_t_tsl = next_t_tsl + dt_tsl
          endif
-      end subroutine check_tsl
+      endif
+   end subroutine check_tsl
 
 !---------------------------------------------------------------------
 !
@@ -207,7 +207,7 @@ module dataio
    subroutine init_dataio
 
       use dataio_hdf5,     only: init_hdf5, read_restart_hdf5, parfile, parfilelines
-      use dataio_pub,      only: chdf, nres, last_hdf_time, step_hdf, nlog, ntsl, log_file_initialized, log_file, cwdlen, maxparfilelines, cwd, &
+      use dataio_pub,      only: chdf, nres, last_hdf_time, step_hdf, next_t_log, next_t_tsl, log_file_initialized, log_file, cwdlen, maxparfilelines, cwd, &
            &                     tmp_log_file, msglen, printinfo, warn, msg, nhdf, nstep_start, set_container_chdf, get_container
       use dataio_pub,      only: par_file, ierrh, namelist_errh, compare_namelist  ! QA_WARN required for diff_nml
       use fluidboundaries, only: all_fluid_boundaries
@@ -255,9 +255,9 @@ module dataio
       tsl_firstcall = .true.
 
       nhdf  = 0
-      ntsl  = 0
       nres  = 0
-      nlog  = 0
+      next_t_tsl  = 0.
+      next_t_log  = 0.
 
       step_hdf  = -1
       step_res  = -1

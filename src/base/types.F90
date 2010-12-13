@@ -40,8 +40,8 @@ module types
    integer, parameter :: dims   = 3
 
    type :: hdf
-      integer :: nhdf, ntsl, nres, nlog, step_hdf, step_res, nstep, nrestart
-      real    :: last_hdf_time
+      integer :: nhdf, nres, step_hdf, step_res, nstep, nrestart
+      real    :: last_hdf_time, next_t_tsl,  next_t_log
       character(len=domlen)  :: domain
       character(len=idlen)   :: new_id
    end type hdf

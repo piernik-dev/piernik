@@ -34,7 +34,7 @@ module dataio_pub
    implicit none
 
    public  ! QA_WARN most variables are not secrets here
-   private :: colormessage, T_PLAIN, T_ERR, T_WARN, T_INFO, T_IO, T_SILENT, ansi_red, ansi_green, ansi_yellow, ansi_blue, ansi_magenta, ansi_cyan
+   private :: colormessage, T_PLAIN, T_ERR, T_WARN, T_INFO, T_IO, T_SILENT, ansi_red, ansi_green, ansi_yellow, ansi_blue, ansi_magenta, ansi_cyan ! QA_WARN no need to use these symbols outside dataio_pub
    !mpisetup uses: ansi_white and ansi_black
 
 
@@ -60,8 +60,8 @@ module dataio_pub
    integer            :: nstep_start            !< number of start timestep
    integer            :: nhdf                   !< current number of hdf file
    integer            :: nres                   !< current number of restart file
-   integer            :: nlog                   !< current number of log file
-   integer            :: ntsl                   !< current number of timeslice file
+   real               :: next_t_log             !< when to print statistics to the log file
+   real               :: next_t_tsl             !< when to produce the timeslice file
    integer            :: nrestart               !< number of restart file to be read while restart is not set to ''
    integer            :: step_hdf               !< number of simulation timestep corresponding to values dumped in hdf file
    character(len=domlen) :: domain              !< string to choose if boundaries have to be dumped in hdf files
@@ -289,9 +289,9 @@ contains
 
       nstep         = chdf%nstep
       nhdf          = chdf%nhdf
-      ntsl          = chdf%ntsl
+      next_t_tsl    = chdf%next_t_tsl
       nres          = chdf%nres
-      nlog          = chdf%nlog
+      next_t_log    = chdf%next_t_log
       step_hdf      = chdf%step_hdf
       last_hdf_time = chdf%last_hdf_time
       nrestart      = chdf%nrestart
@@ -307,9 +307,9 @@ contains
 
       chdf%nstep          = nstep
       chdf%nhdf           = nhdf
-      chdf%ntsl           = ntsl
+      chdf%next_t_tsl     = next_t_tsl
       chdf%nres           = nres
-      chdf%nlog           = nlog
+      chdf%next_t_log     = next_t_log
       chdf%step_hdf       = step_hdf
       chdf%last_hdf_time  = last_hdf_time
       chdf%nrestart       = nrestart

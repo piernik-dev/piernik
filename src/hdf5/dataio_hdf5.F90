@@ -1475,14 +1475,14 @@ module dataio_hdf5
          chdf%nres = ibuf(1)
          call h5ltget_attribute_int_f(file_id,"/","nhdf", ibuf,error)
          chdf%nhdf = ibuf(1)
-         call h5ltget_attribute_int_f(file_id,"/","ntsl", ibuf,error)
-         chdf%ntsl = ibuf(1)
-         call h5ltget_attribute_int_f(file_id,"/","nlog", ibuf,error)
-         chdf%nlog = ibuf(1)
          call h5ltget_attribute_int_f(file_id,"/","step_res", ibuf,error)
          chdf%step_res = ibuf(1)
          call h5ltget_attribute_int_f(file_id,"/","step_hdf", ibuf,error)
          chdf%step_hdf = ibuf(1)
+         call h5ltget_attribute_double_f(file_id,"/","next_t_tsl", rbuf,error)
+         chdf%next_t_tsl = rbuf(1)
+         call h5ltget_attribute_double_f(file_id,"/","next_t_log", rbuf,error)
+         chdf%next_t_log = rbuf(1)
          call h5ltget_attribute_double_f(file_id,"/","last_hdf_time", rbuf,error)
          chdf%last_hdf_time = rbuf(1)
 
@@ -1503,11 +1503,11 @@ module dataio_hdf5
       call MPI_Bcast(chdf%nstep,    1, MPI_INTEGER, 0, comm3d, ierr)
       call MPI_Bcast(chdf%nres,     1, MPI_INTEGER, 0, comm3d, ierr)
       call MPI_Bcast(chdf%nhdf,     1, MPI_INTEGER, 0, comm3d, ierr)
-      call MPI_Bcast(chdf%ntsl,     1, MPI_INTEGER, 0, comm3d, ierr)
-      call MPI_Bcast(chdf%nlog,     1, MPI_INTEGER, 0, comm3d, ierr)
       call MPI_Bcast(chdf%step_res, 1, MPI_INTEGER, 0, comm3d, ierr)
       call MPI_Bcast(chdf%step_hdf, 1, MPI_INTEGER, 0, comm3d, ierr)
 
+      call MPI_Bcast(chdf%next_t_tsl,    1, MPI_DOUBLE_PRECISION, 0, comm3d, ierr)
+      call MPI_Bcast(chdf%next_t_log,    1, MPI_DOUBLE_PRECISION, 0, comm3d, ierr)
       call MPI_Bcast(chdf%last_hdf_time, 1, MPI_DOUBLE_PRECISION, 0, comm3d, ierr)
       call MPI_Bcast(t,                  1, MPI_DOUBLE_PRECISION, 0, comm3d, ierr)
       call MPI_Bcast(dt,                 1, MPI_DOUBLE_PRECISION, 0, comm3d, ierr)
@@ -1737,21 +1737,21 @@ module dataio_hdf5
          rbuffer(9)  = zmax                     ; rbuffer_name(9)  = "zmax"
          rbuffer(10) = piernik_hdf5_version     ; rbuffer_name(10) = "piernik"
          rbuffer(11) = magic_mass               ; rbuffer_name(11) = "magic_mass"
+         rbuffer(12) = chdf%next_t_tsl          ; rbuffer_name(12) = "next_t_tsl"
+         rbuffer(13) = chdf%next_t_log          ; rbuffer_name(13) = "next_t_log"
 
          ibuffer(1)  = chdf%nstep               ; ibuffer_name(1)  = "nstep"
          ibuffer(2)  = chdf%nres+1              ; ibuffer_name(2)  = "nres"
          ibuffer(3)  = chdf%nhdf                ; ibuffer_name(3)  = "nhdf"
-         ibuffer(4)  = chdf%ntsl                ; ibuffer_name(4)  = "ntsl"
-         ibuffer(5)  = chdf%nlog                ; ibuffer_name(5)  = "nlog"
-         ibuffer(6)  = chdf%nstep               ; ibuffer_name(6)  = "step_res"
-         ibuffer(7)  = chdf%step_hdf            ; ibuffer_name(7)  = "step_hdf"
-         ibuffer(8)  = nxb*pxsize               ; ibuffer_name(8)  = "nxd"
-         ibuffer(9)  = nyb*pysize               ; ibuffer_name(9)  = "nyd"
-         ibuffer(10) = nzb*pzsize               ; ibuffer_name(10) = "nzd"
-         ibuffer(11) = nxb                      ; ibuffer_name(11) = "nxb"
-         ibuffer(12) = nyb                      ; ibuffer_name(12) = "nyb"
-         ibuffer(13) = nzb                      ; ibuffer_name(13) = "nzb"
-         ibuffer(14) = nb                       ; ibuffer_name(14) = "nb"
+         ibuffer(4)  = chdf%nstep               ; ibuffer_name(4)  = "step_res"
+         ibuffer(5)  = chdf%step_hdf            ; ibuffer_name(5)  = "step_hdf"
+         ibuffer(6)  = nxb*pxsize               ; ibuffer_name(6)  = "nxd"
+         ibuffer(7)  = nyb*pysize               ; ibuffer_name(7)  = "nyd"
+         ibuffer(8)  = nzb*pzsize               ; ibuffer_name(8)  = "nzd"
+         ibuffer(9)  = nxb                      ; ibuffer_name(9)  = "nxb"
+         ibuffer(10) = nyb                      ; ibuffer_name(10) = "nyb"
+         ibuffer(11) = nzb                      ; ibuffer_name(11) = "nzb"
+         ibuffer(12) = nb                       ; ibuffer_name(12) = "nb"
 
          !BEWARE: A memory leak was detected here. h5lt calls use HD5f2cstring and probably sometimes don't free the allocated buffer
 
