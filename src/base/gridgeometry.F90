@@ -50,11 +50,12 @@ module gridgeometry
       !! \brief interface for routine setting grid coefficients
       !<
       subroutine set_gc(sweep,nvar,i1,i2)
+         use types,         only: var_numbers
          implicit none
-         character(len=*), intent(in) :: sweep         !< direction (x, y or z) we are doing calculations for
-         integer, intent(in)          :: nvar          !< number of fluid variables, should be eq. to nvar%fluids
-         integer, intent(in)          :: i1            !< coordinate of sweep in the 1st remaining direction
-         integer, intent(in)          :: i2            !< coordinate of sweep in the 2st remaining direction
+         character(len=*), intent(in)  :: sweep         !< direction (x, y or z) we are doing calculations for
+         type(var_numbers), intent(in) :: nvar          !< \copydoc fluidindex::nvar
+         integer, intent(in)           :: i1            !< coordinate of sweep in the 1st remaining direction
+         integer, intent(in)           :: i2            !< coordinate of sweep in the 2st remaining direction
       end subroutine set_gc
 
       !>
@@ -126,27 +127,30 @@ contains
 !! We need to allocate those arrays later to have nvar%all
 !<
    subroutine geo_coeffs_arrays(nvar)
+      use types,         only: var_numbers
       use dataio_pub,    only: die
       use grid,          only: nx, ny, nz
       implicit none
-      integer, intent(in) :: nvar   !< number of fluids variables
+      type(var_numbers), intent(in) :: nvar
       if ( any( [allocated(gc_xdim), allocated(gc_ydim), allocated(gc_zdim)] ) ) then
          call die("[gridgeometry:geo_coeffs_arrays] double allocation")
       else
-         allocate(gc_xdim(ngc,nvar,nx))
-         allocate(gc_ydim(ngc,nvar,ny))
-         allocate(gc_zdim(ngc,nvar,nz))
+         allocate(gc_xdim(ngc,nvar%all,nx))
+         allocate(gc_ydim(ngc,nvar%all,ny))
+         allocate(gc_zdim(ngc,nvar%all,nz))
       endif
    end subroutine geo_coeffs_arrays
 !>
 !! \brief routine setting geometrical coefficients for cartesian grid
 !<
    subroutine set_cart_coeffs(sweep,nvar,i1,i2)
+      use types,         only: var_numbers
       use dataio_pub,    only: die, msg
       implicit none
-      character(len=*), intent(in) :: sweep
-      integer, intent(in)          :: i1, i2, nvar
-      logical, save                :: frun = .true.
+      character(len=*), intent(in)  :: sweep
+      type(var_numbers), intent(in) :: nvar
+      integer, intent(in)           :: i1, i2
+      logical, save                 :: frun = .true.
 
       if (frun) then
          call geo_coeffs_arrays(nvar)
@@ -174,27 +178,31 @@ contains
 !! \brief routine setting geometrical coefficients for cylindrical grid
 !<
    subroutine set_cyl_coeffs(sweep,nvar,i1,i2)
+      use types,         only: var_numbers
       use dataio_pub,    only: die, msg
       use grid,          only: inv_x, xr, xl
       implicit none
-      character(len=*), intent(in) :: sweep
-      integer, intent(in)          :: i1, i2, nvar
-      logical, save                :: frun = .true.
+      character(len=*), intent(in)  :: sweep
+      type(var_numbers), intent(in) :: nvar
+      integer, intent(in)           :: i1, i2
+      integer                       :: i
+      logical, save                 :: frun = .true.
 
       if (frun) then
          call geo_coeffs_arrays(nvar)
 
-         gc_xdim(1,:,:) = spread( inv_x(:), 1, nvar)
-         gc_xdim(2,:,:) = spread( xr(:), 1, nvar)
-         gc_xdim(3,:,:) = spread( xl(:), 1, nvar)
+         gc_xdim(1,:,:) = spread( inv_x(:), 1, nvar%all)
+         gc_xdim(2,:,:) = spread( xr(:), 1, nvar%all)
+         gc_xdim(3,:,:) = spread( xl(:), 1, nvar%all)
 
-         gc_xdim(1,3,:) = gc_xdim(1,3,:) * inv_x(:)
-         gc_xdim(2,3,:) = gc_xdim(2,3,:) * xr(:)
-         gc_xdim(3,3,:) = gc_xdim(3,3,:) * xl(:)
+         do i = LBOUND(nvar%all_fluids,1), UBOUND(nvar%all_fluids,1)
+            gc_xdim(1,nvar%all_fluids(i)%imy,:) = gc_xdim(1,nvar%all_fluids(i)%imy,:) * inv_x(:)
+            gc_xdim(2,nvar%all_fluids(i)%imy,:) = gc_xdim(2,nvar%all_fluids(i)%imy,:) * xr(:)
+            gc_xdim(3,nvar%all_fluids(i)%imy,:) = gc_xdim(3,nvar%all_fluids(i)%imy,:) * xl(:)
+         enddo
+         gc_ydim(2:3,:,:) = 1.0     ! [ 1/r , 1 , 1]
 
-         gc_ydim(2:3,:,:) = 1.0
-
-         gc_zdim = 1.0
+         gc_zdim = 1.0              ! [ 1, 1, 1]
 
          frun = .false.
       endif

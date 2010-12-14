@@ -124,7 +124,7 @@ contains
             if (has_dir(zdim) .and. k <= ke)  b_x(ibz,:)=b_x(ibz,:)+0.5*b(ibz,:,j,kp)
 #endif /* MAGNETIC */
 
-            call set_geo_coeffs('xsweep',nvar%all,j,k)
+            call set_geo_coeffs('xsweep',nvar,j,k)
 
             u_x(iarr_all_swpx,:)=u(:,:,j,k)
 
@@ -173,7 +173,7 @@ contains
             b_y((/iby,ibx,ibz/),:)=b_y(:,:)
 #endif /* MAGNETIC */
 
-            call set_geo_coeffs('ysweep',nvar%all,k,i)
+            call set_geo_coeffs('ysweep',nvar,k,i)
 
             u_y(iarr_all_swpy,:)=u(:,i,:,k)
 
@@ -224,7 +224,7 @@ contains
             b_z((/ibz,iby,ibx/),:)=b_z(:,:)
 #endif /* MAGNETIC */
 
-            call set_geo_coeffs('zsweep',nvar%all,i,j)
+            call set_geo_coeffs('zsweep',nvar,i,j)
 
             u_z(iarr_all_swpz,:)=u(:,i,j,:)
 
