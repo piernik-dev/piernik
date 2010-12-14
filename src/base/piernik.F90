@@ -207,6 +207,9 @@ contains
 #ifdef SN_SRC
       use snsources,             only: init_snsources
 #endif /* SN_SRC */
+#ifdef DEBUG
+      use piernikdebug,          only: init_piernikdebug
+#endif /* DEBUG */
 
       implicit none
 
@@ -227,6 +230,9 @@ contains
       endif
 
       call init_mpi
+#ifdef DEBUG
+      call init_piernikdebug
+#endif /* DEBUG */
       call init_time_step
 
       call init_constants

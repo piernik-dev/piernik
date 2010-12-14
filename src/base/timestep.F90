@@ -83,6 +83,10 @@ contains
 #ifdef FLUID_INTERACTIONS
       use timestepinteractions, only: timestep_interactions, dt_interact
 #endif /* FLUID_INTERACTIONS */
+#ifdef DEBUG
+      use piernikdebug,         only: has_const_dt, constant_dt
+      use dataio_pub,           only: printinfo
+#endif /* DEBUG */
 
       implicit none
 
@@ -146,6 +150,14 @@ contains
       endif
 
       dt  = min(dt, (tend-t)/2.*(1+2.*epsilon(1.)))
+#ifdef DEBUG
+      ! We still need all above for c_all
+      if (has_const_dt) then
+         dt    = constant_dt
+         write(msg,*) "[timestep:time_step]: (constant_dt) c_all = ", c_all
+         call printinfo(msg)
+      endif
+#endif /* DEBUG */
 
    end subroutine time_step
 
