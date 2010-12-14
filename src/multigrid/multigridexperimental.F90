@@ -97,7 +97,7 @@ contains
    subroutine prolong_level_hord(lev, iv)
 
       use dataio_pub,         only: die, warn, msg
-      use mpisetup,           only: proc
+      use mpisetup,           only: master
       use multigridmpifuncs,  only: mpi_multigrid_bnd
       use multigridvars,      only: ord_prolong, extbnd_antimirror
 
@@ -109,7 +109,7 @@ contains
       logical, save :: firstcall = .true.
 
       if (firstcall) then
-         if (proc == 0) then
+         if (master) then
             write(msg,'(a,i3,a)')"[multigridexperimental:prolong_level_hord] prolongation order ",ord_prolong," is experimental"
             call warn(msg)
          endif

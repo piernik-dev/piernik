@@ -103,7 +103,7 @@ contains
       use grid,          only: xdim, ydim, zdim
       use dataio_pub,    only: die, warn
       use types,         only: grid_container
-      use mpisetup,      only: proc
+      use mpisetup,      only: master
       use multigridvars, only: level_min, level_max, lvl, eff_dim
       use grid,          only: geometry
 
@@ -133,14 +133,14 @@ contains
 
       !multipole moments
       if (mmax > lmax) then
-         if (proc == 0) call warn("[multipole:init_multipole] mmax reduced to lmax")
+         if (master) call warn("[multipole:init_multipole] mmax reduced to lmax")
          mmax = lmax
       endif
       if (mmax < 0) mmax = lmax
 
       if (coarsen_multipole < 0) coarsen_multipole = 0
       if (level_max - coarsen_multipole < level_min) then
-         if (proc == 0) call warn("[multipole:init_multipole] too deep multipole coarsening, setting level_min.")
+         if (master) call warn("[multipole:init_multipole] too deep multipole coarsening, setting level_min.")
          coarsen_multipole = level_max - level_min
       endif
       lmpole => lvl(level_max - coarsen_multipole)

@@ -83,7 +83,7 @@ contains
            &                         ord_prolong, ord_prolong_face, stdout, verbose_vcycle, tot_ts
       use types,               only: grid_container
       use mpi,                 only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL
-      use mpisetup,            only: buffer_dim, comm, comm3d, ierr, proc, nproc, ndims, pxsize, pysize, pzsize, &
+      use mpisetup,            only: buffer_dim, comm, comm3d, ierr, proc, master, slave, nproc, ndims, pxsize, pysize, pzsize, &
            &                         ibuff, rbuff, lbuff, bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr,        &
            &                         bnd_xl_dom, bnd_xr_dom, bnd_yl_dom, bnd_yr_dom, bnd_zl_dom, bnd_zr_dom
       use multigridhelpers,    only: mg_write_log, dirtyH, do_ascii_dump, dirty_debug, multidim_code_3D, &
@@ -130,7 +130,7 @@ contains
       aux_par_I0 = 0 ; aux_par_I1 = 0 ; aux_par_I2 = 0
       aux_par_R0 = 0.; aux_par_R1 = 0.; aux_par_R2 = 0.
 
-      if (proc == 0) then
+      if (master) then
 
          diff_nml(MULTIGRID_SOLVER)
 
@@ -158,7 +158,7 @@ contains
       call MPI_Bcast(rbuff, buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
       call MPI_Bcast(lbuff, buffer_dim, MPI_LOGICAL,          0, comm, ierr)
 
-      if (proc /= 0) then
+      if (slave) then
 
          level_max        = ibuff(1)
          ord_prolong      = ibuff(2)
@@ -437,7 +437,7 @@ contains
 #endif /* COSM_RAYS */
 
       ! summary
-      if (proc == 0) then
+      if (master) then
          write(msg, '(a,i2,a,3(i4,a),f6.1,a)')"[multigrid:init_multigrid] Initialized ", level_max, " levels, coarsest resolution [ ", &
             lvl(1)%nxb, ",", lvl(1)%nyb, ",", lvl(1)%nzb, " ] per processor, allocated", mb_alloc*8./1048576., "MiB" ! sizeof(double)/2.**20
          call mg_write_log(msg)
@@ -475,7 +475,7 @@ contains
 
       use grid,               only: has_dir, xdim, ydim, zdim
       use multigridvars,      only: lvl, level_gb, level_min, level_max, tot_ts, gb_cartmap
-      use mpisetup,           only: proc, nproc, comm3d, ierr
+      use mpisetup,           only: master, nproc, comm3d, ierr
       use mpi,                only: MPI_DOUBLE_PRECISION
       use multigridhelpers,   only: mg_write_log
       use dataio_pub,         only: msg
@@ -547,7 +547,7 @@ contains
 
       call MPI_Gather(tot_ts, 1, MPI_DOUBLE_PRECISION, all_ts, 1, MPI_DOUBLE_PRECISION, 0, comm3d, ierr)
 
-      if (proc == 0) then
+      if (master) then
          write(msg, '(a,3(g11.4,a))')"[multigrid] Spent ", sum(all_ts)/nproc, " seconds in multigrid_solve_* (min= ",minval(all_ts)," max= ",maxval(all_ts),")."
          call mg_write_log(msg, .false.)
       endif

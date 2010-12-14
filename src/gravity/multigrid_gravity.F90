@@ -158,7 +158,7 @@ contains
       use grid,               only: has_dir, geometry
       use multigridvars,      only: bnd_periodic, bnd_dirichlet, bnd_isolated, bnd_invalid, correction, mg_nb, ngridvars, periodic_bnd_cnt, non_periodic_bnd_cnt
       use multipole,          only: use_point_monopole, lmax, mmax, ord_prolong_mpole, coarsen_multipole, interp_pt2mom, interp_mom2pot
-      use mpisetup,           only: buffer_dim, comm, ierr, proc, ibuff, cbuff, rbuff, lbuff, &
+      use mpisetup,           only: buffer_dim, comm, ierr, master, slave, ibuff, cbuff, rbuff, lbuff, &
            &                        bnd_xl_dom, bnd_xr_dom, bnd_yl_dom, bnd_yr_dom, bnd_zl_dom, bnd_zr_dom
       use mpi,                only: MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL
       use dataio_pub,         only: par_file, ierrh, namelist_errh, compare_namelist  ! QA_WARN required for diff_nml
@@ -216,7 +216,7 @@ contains
          grav_bnd_str = "dirichlet"
       endif
 
-      if (proc == 0) then
+      if (master) then
 
          diff_nml(MULTIGRID_GRAVITY)
 
@@ -259,7 +259,7 @@ contains
       call MPI_Bcast(rbuff,           buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
       call MPI_Bcast(lbuff,           buffer_dim, MPI_LOGICAL,          0, comm, ierr)
 
-      if (proc /= 0) then
+      if (slave) then
 
          norm_tol       = rbuff(1)
          overrelax      = rbuff(2)
@@ -313,10 +313,10 @@ contains
       end select
 
       if (periodic_bnd_cnt == 2*count(has_dir(:))) then ! fully periodic domain
-         if (grav_bnd /= bnd_periodic .and. proc ==0) call warn("[multigrid_gravity:init_multigrid_grav] Ignoring non-periodic boundary conditions for gravity on a fully periodic domain.")
+         if (grav_bnd /= bnd_periodic .and. master) call warn("[multigrid_gravity:init_multigrid_grav] Ignoring non-periodic boundary conditions for gravity on a fully periodic domain.")
          grav_bnd = bnd_periodic
       else if (periodic_bnd_cnt > 0 .and. non_periodic_bnd_cnt > 0) then
-         if (proc ==0) call warn("[multigrid_gravity:init_multigrid_grav] Mixing periodic and non-periodic boundary conditions for gravity is experimental.")
+         if (master) call warn("[multigrid_gravity:init_multigrid_grav] Mixing periodic and non-periodic boundary conditions for gravity is experimental.")
          prefer_rbgs_relaxation = .true.
          gb_no_fft = .true.
       endif
@@ -332,18 +332,18 @@ contains
 
       if (.not. (grav_bnd == bnd_periodic .or. grav_bnd == bnd_dirichlet .or. grav_bnd == bnd_isolated) .and. .not. gb_no_fft) then
          gb_no_fft = .true.
-         if (proc == 0) call warn("[multigrid_gravity:init_multigrid_grav] Use of FFT not allowed by current boundary type/combination.")
+         if (master) call warn("[multigrid_gravity:init_multigrid_grav] Use of FFT not allowed by current boundary type/combination.")
       endif
 
       if (.not. prefer_rbgs_relaxation .and. any([ overrelax, overrelax_x, overrelax_y, overrelax_z ] /= 1.)) then
-         if (proc == 0) call warn("[multigrid_gravity:init_multigrid_grav] Overrelaxation is disabled for FFT local solver.")
+         if (master) call warn("[multigrid_gravity:init_multigrid_grav] Overrelaxation is disabled for FFT local solver.")
          overrelax = 1.
          overrelax_x   = 1.
          overrelax_y   = 1.
          overrelax_z   = 1.
       endif
 
-      if (proc == 0) then
+      if (master) then
          if ((Jacobi_damp <= 0. .or. Jacobi_damp>1.)) then
             write(msg, '(a,g12.5,a)')"[multigrid_gravity:init_multigrid_grav] Jacobi_damp = ",Jacobi_damp," is outside (0, 1] interval."
             call warn(msg)
@@ -371,7 +371,7 @@ contains
       use types,              only: grid_container
       use arrays,             only: sgp
       use multigridvars,      only: lvl, roof, base, gb, level_gb, level_max, level_min, bnd_periodic, bnd_dirichlet, bnd_isolated, vcycle_stats
-      use mpisetup,           only: proc, nproc, pxsize, pysize, pzsize
+      use mpisetup,           only: master, nproc, pxsize, pysize, pzsize
       use multigridhelpers,   only: vcycle_stats_init, dirty_debug, dirtyH
       use constants,          only: pi, dpi
       use dataio_pub,         only: die, warn
@@ -453,7 +453,7 @@ contains
                gb%fft_type = fft_dst
             case default
                gb%fft_type = fft_none
-               if (proc == 0) call warn("[multigrid_gravity:init_multigrid_grav_post] gb_no_fft set but no suitable boundary conditions found. Reverting to RBGS relaxation.")
+               if (master) call warn("[multigrid_gravity:init_multigrid_grav_post] gb_no_fft set but no suitable boundary conditions found. Reverting to RBGS relaxation.")
          end select
       endif
 
@@ -574,7 +574,7 @@ contains
       enddo
 
       if (roof%fft_type == fft_none .and. trust_fft_solution) then
-         if (proc == 0) call warn("[multigrid_gravity:init_multigrid_grav_post] cannot trust FFT solution on the roof.")
+         if (master) call warn("[multigrid_gravity:init_multigrid_grav_post] cannot trust FFT solution on the roof.")
          trust_fft_solution = .false.
       endif
 
@@ -643,7 +643,7 @@ contains
 
    subroutine init_solution(history)
 
-      use mpisetup,         only: proc, t
+      use mpisetup,         only: master, t
       use multigridhelpers, only: set_dirty, check_dirty, mg_write_log
       use dataio_pub,       only: msg, die
       use multigridvars,    only: lvl, roof, level_min, level_max, stdout, solution
@@ -683,7 +683,7 @@ contains
 
       select case (ordt)
          case (:-1)
-            if (proc == 0 .and. ord_time_extrap > -1) then
+            if (master .and. ord_time_extrap > -1) then
                write(msg, '(3a)')"[multigrid_gravity:init_solution] Clearing ",trim(vstat%cprefix),"solution."
                call mg_write_log(msg, stdout)
             endif
@@ -693,14 +693,14 @@ contains
             history%old(:)%time = -HUGE(1.0)
          case (0)
             roof%mgvar(:, :, :, solution) = history%old(p0)%soln(:, :, :)
-            if (proc == 0 .and. ord_time_extrap > 0) then
+            if (master .and. ord_time_extrap > 0) then
                write(msg, '(3a)')"[multigrid_gravity:init_solution] No extrapolation of ",trim(vstat%cprefix),"solution."
                call mg_write_log(msg, stdout)
             endif
          case (1)
             dt_fac(1) = (t - history%old(p0)%time) / (history%old(p0)%time - history%old(p1)%time)
             roof%mgvar(:, :, :, solution) = (1. + dt_fac(1)) * history%old(p0)%soln(:, :, :) - dt_fac(1) *  history%old(p1)%soln(:, :, :)
-            if (proc == 0 .and. ord_time_extrap > 1) then
+            if (master .and. ord_time_extrap > 1) then
                write(msg, '(3a)')"[multigrid_gravity:init_solution] Linear extrapolation of ",trim(vstat%cprefix),"solution."
                call mg_write_log(msg, stdout)
             endif
@@ -923,7 +923,7 @@ contains
 
    subroutine vcycle_hg(history)
 
-      use mpisetup,           only: proc, nproc, cbuff_len
+      use mpisetup,           only: master, nproc, cbuff_len
       use timer,              only: timer_
       use multigridhelpers,   only: set_dirty, check_dirty, mg_write_log, brief_v_log, do_ascii_dump, numbered_ascii_dump
       use multigridbasefuncs, only: norm_sq, restrict_all, substract_average
@@ -967,12 +967,12 @@ contains
       norm_lowest = norm_rhs
 
       if (norm_rhs == 0.) then ! empty domain => potential == 0.
-         if (proc == 0 .and. .not. norm_was_zero) call warn("[multigrid_gravity:vcycle_hg] No gravitational potential for an empty space.")
+         if (master .and. .not. norm_was_zero) call warn("[multigrid_gravity:vcycle_hg] No gravitational potential for an empty space.")
          norm_was_zero = .true.
          call store_solution(history)
          return
       else
-         if (proc == 0 .and. norm_was_zero) call warn("[multigrid_gravity:vcycle_hg] Spontaneous mass creation detected!")
+         if (master .and. norm_was_zero) call warn("[multigrid_gravity:vcycle_hg] Spontaneous mass creation detected!")
          norm_was_zero = .false.
       endif
 
@@ -991,7 +991,7 @@ contains
          call norm_sq(defect, norm_lhs)
          ts = timer_("multigrid")
          tot_ts = tot_ts + ts
-         if (proc == 0 .and. verbose_vcycle) then
+         if (master .and. verbose_vcycle) then
             if (norm_old/norm_lhs < 1.e5) then
                fmt='(3a,i3,a,f12.9,a,f8.2,a,f7.3)'
             else
@@ -1054,7 +1054,7 @@ contains
       enddo
 
       if (v > max_cycles) then
-         if (proc == 0 .and. norm_lhs/norm_rhs > norm_tol) call warn("[multigrid_gravity:vcycle_hg] Not enough V-cycles to achieve convergence.")
+         if (master .and. norm_lhs/norm_rhs > norm_tol) call warn("[multigrid_gravity:vcycle_hg] Not enough V-cycles to achieve convergence.")
          v = max_cycles
       endif
 
@@ -1186,7 +1186,7 @@ contains
    subroutine residual4(lev, src, soln, def)
 
       use dataio_pub,         only: die, warn
-      use mpisetup,           only: proc
+      use mpisetup,           only: master
       use multigridmpifuncs,  only: mpi_multigrid_bnd
       use multigridvars,      only: lvl, eff_dim, NDIM, bnd_givenval, extbnd_antimirror
 
@@ -1209,7 +1209,7 @@ contains
       if (eff_dim<NDIM) call die("[multigrid_gravity:residual4] Only 3D is implemented")
 
       if (firstcall) then
-         if (proc == 0) call warn("[multigrid_gravity:residual4] residual order 4 is experimental.")
+         if (master) call warn("[multigrid_gravity:residual4] residual order 4 is experimental.")
          firstcall = .false.
       endif
 
@@ -1663,7 +1663,7 @@ contains
    subroutine gb_fft_solve_sendrecv(src, soln)
 
       use grid,          only: xdim, ydim, zdim
-      use mpisetup,      only: nproc, proc, ierr, comm3d, status
+      use mpisetup,      only: nproc, proc, master, ierr, comm3d, status
       use mpi,           only: MPI_DOUBLE_PRECISION
       use multigridvars, only: gb, gb_cartmap, base
 
@@ -1674,7 +1674,7 @@ contains
 
       integer :: p
 
-      if (proc == 0) then
+      if (master) then
 
          ! collect the source on the base level
          gb%src(gb_cartmap(0)%lo(xdim):gb_cartmap(0)%up(xdim), &
@@ -1725,7 +1725,7 @@ contains
    subroutine gb_fft_solve_gather(src, soln)
 
       use grid,          only: xdim, ydim, zdim
-      use mpisetup,      only: nproc, proc, ierr, comm3d
+      use mpisetup,      only: nproc, master, ierr, comm3d
       use mpi,           only: MPI_DOUBLE_PRECISION
       use multigridvars, only: gb, gb_cartmap, base
 
@@ -1739,7 +1739,7 @@ contains
       call MPI_Gather(base%mgvar(base%is:base%ie, base%js:base%je, base%ks:base%ke, src),  base%nxb*base%nyb*base%nzb, MPI_DOUBLE_PRECISION, &
            &          gb_src_temp, base%nxb*base%nyb*base%nzb, MPI_DOUBLE_PRECISION, 0, comm3d, ierr)
 
-      if (proc == 0) then
+      if (master) then
          do p = 0, nproc-1
             gb%src(gb_cartmap(p)%lo(xdim):gb_cartmap(p)%up(xdim), &
                    gb_cartmap(p)%lo(ydim):gb_cartmap(p)%up(ydim), &

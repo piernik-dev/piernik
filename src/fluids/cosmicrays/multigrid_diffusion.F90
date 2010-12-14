@@ -101,7 +101,7 @@ contains
    subroutine init_multigrid_diff
 
       use multigridvars,      only: ngridvars, extbnd_zero, extbnd_extrapolate, extbnd_mirror, extbnd_antimirror
-      use mpisetup,           only: buffer_dim, comm, ierr, proc, ibuff, rbuff, lbuff, cbuff
+      use mpisetup,           only: buffer_dim, comm, ierr, master, slave, ibuff, rbuff, lbuff, cbuff
       use mpi,                only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL, MPI_CHARACTER
       use dataio_pub,         only: par_file, ierrh, namelist_errh, compare_namelist      ! QA_WARN required for diff_nml
       use dataio_pub,         only: die, warn, msg
@@ -130,7 +130,7 @@ contains
       diff_explicit  = .false.
       diff_bnd_str   = "zero"
 
-      if (proc == 0) then
+      if (master) then
 
          diff_nml(MULTIGRID_DIFFUSION)
 
@@ -155,7 +155,7 @@ contains
       call MPI_Bcast(rbuff,           buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
       call MPI_Bcast(lbuff,           buffer_dim, MPI_LOGICAL,          0, comm, ierr)
 
-      if (proc /= 0) then
+      if (slave) then
 
          norm_tol       = rbuff(1)
          vcycle_abort   = rbuff(2)
@@ -192,13 +192,13 @@ contains
       !diffusion
       if (.not. diff_explicit) then
          if (diff_theta < 0. .or. diff_theta > 1.) call die("[multigrid_diffusion:init_multigrid] diff_theta must lie in the range [0. .. 1.]")
-         if (diff_theta < 0.5 .and. diff_tstep_fac>1. .and. proc == 0) call warn("[multigrid_diffusion:init_multigrid] diff_tstep_fac > 1. for diff_theta < 0.5 might be unstable")
+         if (diff_theta < 0.5 .and. diff_tstep_fac>1. .and. master) call warn("[multigrid_diffusion:init_multigrid] diff_tstep_fac > 1. for diff_theta < 0.5 might be unstable")
          ! calculate exact limit formula
          ! for diff_theta=0. stable diff_tstep_fac is 0.5 in 2D (guess: 0.333 in 3D)
          ! for diff_theta<0.5 stable diff_tstep_fac rises by 1./(1.-2.*diff_theta)
       endif
 
-      if (overrelax /= 1 .and. proc == 0) then
+      if (overrelax /= 1 .and. master) then
          write(msg, '(a,f8.5)')"[multigrid_diffusion:init_multigrid_diff] Overrelaxation factor = ", overrelax
          call warn(msg)
       endif
@@ -266,7 +266,7 @@ contains
       use timer,              only: timer_
       use multigridvars,      only: ts, tot_ts, stdout
       use fluidindex,         only: nvar
-      use mpisetup,           only: dt, proc
+      use mpisetup,           only: dt, master
 
       implicit none
 
@@ -276,7 +276,7 @@ contains
       ts =  timer_("multigrid_diffusion", .true.)
       if (diff_explicit) then
          if (frun) then
-            if (proc == 0) call warn("[multigrid_diffusion:multigrid_solve_diff] Multigrid was initialized but is not used")
+            if (master) call warn("[multigrid_diffusion:multigrid_solve_diff] Multigrid was initialized but is not used")
             frun = .false.
          endif
          if (halfstep) then
@@ -290,7 +290,7 @@ contains
          endif
       else
 
-         if (dt < 0.99999 * diff_dt_crs_orig * diff_tstep_fac .and. .not. halfstep .and. proc == 0) then
+         if (dt < 0.99999 * diff_dt_crs_orig * diff_tstep_fac .and. .not. halfstep .and. master) then
             write(msg,'(a,f8.3,a)')"[multigrid_diffusion:multigrid_solve_diff] Timestep limited somewhere else: dt = ",dt/diff_dt_crs_orig, " of explicit dt_crs."
             call printinfo(msg, stdout)
          endif
@@ -301,7 +301,7 @@ contains
          do cr_id = 1, nvar%crs%all
             call init_source(cr_id)
             if (vstat%norm_rhs /= 0) then
-               if (norm_was_zero(cr_id) .and. proc == 0) then
+               if (norm_was_zero(cr_id) .and. master) then
                   write(msg,'(a,i2,a)')"[multigrid_diffusion:multigrid_solve_diff] CR-fluid #",cr_id," is now available in measurable quantities."
                   call printinfo(msg)
                endif
@@ -312,7 +312,7 @@ contains
                call vcycle_hg(cr_id)
                ! enddo
             else
-               if (.not. norm_was_zero(cr_id) .and. proc == 0) then
+               if (.not. norm_was_zero(cr_id) .and. master) then
                   write(msg,'(a,i2,a)')"[multigrid_diffusion:multigrid_solve_diff] Source norm of CR-fluid #",cr_id," == 0., skipping."
                   call warn(msg)
                endif
@@ -439,7 +439,7 @@ contains
       use arrays,             only: u
       use grid,               only: is, ie, js, je, ks, ke!, D_x, D_y, D_z
       use dataio_pub,         only: msg, warn
-      use mpisetup,           only: proc
+      use mpisetup,           only: master
       use timer,              only: timer_
 
       implicit none
@@ -485,7 +485,7 @@ contains
          if (norm_lhs/norm_rhs <= norm_tol) exit
 
          if (v>convergence_history) then
-            if (product(vstat%factor(v-convergence_history:v)) < barely_greater_than_1 .and. proc == 0) then
+            if (product(vstat%factor(v-convergence_history:v)) < barely_greater_than_1 .and. master) then
                write(msg, '(a,i3,a,g15.5)')"[multigrid_diffusion:vcycle_hg] Too slow convergence: cycle = ",v,", norm_lhs/norm_rhs = ", norm_lhs/norm_rhs
                call warn(msg)
                exit
@@ -515,7 +515,7 @@ contains
       call check_dirty(level_max, solution, "v_soln")
 
       if (v > max_cycles) then
-         if (proc == 0 .and. norm_lhs/norm_rhs > norm_tol) then
+         if (master .and. norm_lhs/norm_rhs > norm_tol) then
             write(msg, '(a,i3,a,g15.5)')"[multigrid_diffusion:vcycle_hg] Not enough V-cycles to achieve convergence: cycle = ",v,", norm_lhs/norm_rhs = ", norm_lhs/norm_rhs
             call warn(msg)
          endif

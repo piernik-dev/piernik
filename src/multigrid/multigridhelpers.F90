@@ -183,7 +183,7 @@ contains
    subroutine brief_v_log(vs)
 
       use multigridvars, only: stdout, vcycle_stats
-      use mpisetup,      only: proc
+      use mpisetup,      only: slave
       use dataio_pub,    only: msg, fplen, warn
 
       implicit none
@@ -194,7 +194,7 @@ contains
       integer                :: i, lm
       character(len=fplen)   :: normred
 
-      if (proc /= 0) return
+      if (slave) return
 
       if (vs%count > ubound(vs%factor, 1)) call warn("[multigridhelpers:brief_v_log] Trying to read beyond upper bound of vcycle_stats.")
 
@@ -229,7 +229,7 @@ contains
    subroutine mg_write_log(msg, stdout_cntrl)
 
       use dataio_pub,    only: printinfo
-      use mpisetup,      only: proc
+      use mpisetup,      only: master
 
       implicit none
 
@@ -238,7 +238,7 @@ contains
 
       logical            :: to_stdout
 
-      to_stdout = (proc == 0)
+      to_stdout = master
       if (present(stdout_cntrl)) to_stdout = to_stdout .and. stdout_cntrl
       call printinfo(msg, to_stdout)
 
@@ -255,7 +255,7 @@ contains
 
       use grid,          only: xdim, ydim, zdim
       use dataio_pub,    only: msg
-      use mpisetup,      only: proc
+      use mpisetup,      only: proc, master
       use multigridvars, only: level_min, level_max, lvl, gb_cartmap, ngridvars
 
       implicit none
@@ -288,7 +288,7 @@ contains
 
       close(fu)
 
-      if (proc == 0) then
+      if (master) then
          write(msg,'(3a)') "[multigridhelpers:ascii_dump] Wrote dump '",filename,"'"
          call mg_write_log(msg)
       endif
