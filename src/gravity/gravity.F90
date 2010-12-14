@@ -126,7 +126,7 @@ module gravity
       use arrays,        only: gpot
       use dataio_pub,    only: ierrh, par_file, namelist_errh, compare_namelist    ! QA_WARN required for diff_nml
       use dataio_pub,    only: warn
-      use mpisetup,      only: ibuff, rbuff, cbuff, cbuff_len, buffer_dim, comm, ierr, proc, lbuff
+      use mpisetup,      only: ibuff, rbuff, cbuff, cbuff_len, buffer_dim, comm, ierr, master, slave, lbuff
       use mpi,           only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL, MPI_CHARACTER
 
       implicit none
@@ -136,7 +136,7 @@ module gravity
                 nsub, tune_zeq, tune_zeq_bnd, h_grav, r_grav, n_gravr, n_gravr2, n_gravh, user_grav, gprofs_target
 
 #ifdef VERBOSE
-      if (proc == 0) call warn("[gravity:init_grav] Commencing gravity module initialization")
+      if (master) call warn("[gravity:init_grav] Commencing gravity module initialization")
 #endif /* VERBOSE */
 
       g_dir   = 0.0
@@ -160,7 +160,7 @@ module gravity
 
       user_grav = .false.
 
-      if (proc == 0) then
+      if (master) then
 
          diff_nml(GRAVITY)
 
@@ -193,7 +193,7 @@ module gravity
       call MPI_Bcast(rbuff, buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
       call MPI_Bcast(cbuff, cbuff_len*buffer_dim, MPI_CHARACTER, 0, comm, ierr)
 
-      if (proc /= 0) then
+      if (slave) then
 
          nsub                = ibuff(1)
          n_gravr             = ibuff(2)
@@ -224,7 +224,7 @@ module gravity
       if (.not.user_grav) then
          grav_pot_3d => default_grav_pot_3d
 #ifdef VERBOSE
-         if (proc == 0) call warn("[gravity:init_grav] user_grav is set to false. Using default grav_pot_3d.")
+         if (master) call warn("[gravity:init_grav] user_grav is set to false. Using default grav_pot_3d.")
 #endif /* VERBOSE */
       endif
 
@@ -313,7 +313,7 @@ module gravity
       use dataio_pub,    only: die
       use grid,          only: nb, nxb, nyb, nzb, xdim, ydim, zdim, has_dir
       use mpi,           only: MPI_STATUS_SIZE, MPI_REQUEST_NULL
-      use mpisetup,      only: comm3d, ierr, procxl, procxr, procyl, procyr, proczl, proczr, proc, pxsize, pysize, pzsize, &
+      use mpisetup,      only: comm3d, ierr, procxl, procxr, procyl, procyr, proczl, proczr, pxsize, pysize, pzsize, &
            &                   bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr, &
            &                   ARR_YZ_LEFT_BND, ARR_YZ_RIGHT_BND, ARR_YZ_LEFT_DOM, ARR_YZ_RIGHT_DOM, &
            &                   ARR_XZ_LEFT_BND, ARR_XZ_RIGHT_BND, ARR_XZ_LEFT_DOM, ARR_XZ_RIGHT_DOM, &
@@ -611,7 +611,7 @@ module gravity
    subroutine default_grav_pot_3d
 
       use dataio_pub,   only: die, warn
-      use mpisetup,     only: proc
+      use mpisetup,     only: master
 
       implicit none
 
@@ -644,7 +644,7 @@ module gravity
 
       if (gp_status .eq. 'undefined') then
          if (associated(grav_accel)) then
-            if (proc == 0) call warn("[gravity:default_grav_pot_3d]: using 'grav_accel' defined by user")
+            if (master) call warn("[gravity:default_grav_pot_3d]: using 'grav_accel' defined by user")
             call grav_accel2pot
          else
             call die("[gravity:default_grav_pot_3d]: GRAV is defined, but 'gp' is not initialized")
@@ -727,7 +727,7 @@ module gravity
       use arrays,   only: gp
       use grid,     only: dl, xdim, ydim, zdim, is, ie, js, je, ks, ke, nb, nx, ny, nz, zr, yr, xr
       use mpi,      only: MPI_DOUBLE_PRECISION
-      use mpisetup, only: pxsize, pysize, pzsize, pcoords, proc, nproc, ndims, &
+      use mpisetup, only: pxsize, pysize, pzsize, pcoords, master, nproc, ndims, &
            &              comm, comm3d, err, ierr, mpifind
 
       implicit none
@@ -792,7 +792,7 @@ module gravity
                         0, comm3d, ierr )
 
 
-      if (proc .eq. 0) then
+      if (master) then
 
          do ip = 0, nproc-1
             call MPI_Cart_coords(comm3d, ip, ndims, pc, ierr)

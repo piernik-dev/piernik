@@ -72,7 +72,7 @@ module snsources
    subroutine init_snsources
       use dataio_pub,     only: ierrh, par_file, namelist_errh, compare_namelist                  ! QA_WARN required for diff_nml
       use mpi,            only: MPI_DOUBLE_PRECISION
-      use mpisetup,       only: rbuff, buffer_dim, comm, ierr, proc
+      use mpisetup,       only: rbuff, buffer_dim, comm, ierr, master, slave
       use initcosmicrays, only: cr_eff
       use grid,           only: xmin, xmax, ymin, ymax, xdim, ydim, has_dir
       implicit none
@@ -82,7 +82,7 @@ module snsources
       h_sn       = 0.0
       r_sn       = 0.0
 
-      if (proc == 0) then
+      if (master) then
          diff_nml(SN_SOURCES)
 !         rbuff(1)   = amp_ecr_sn
 !         rbuff(2)   = f_sn
@@ -93,7 +93,7 @@ module snsources
 
       call MPI_Bcast(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
-      if (proc /= 0) then
+      if (slave) then
 !        amp_ecr_sn  = rbuff(1)
 !        f_sn        = rbuff(2)
          h_sn        = rbuff(3)

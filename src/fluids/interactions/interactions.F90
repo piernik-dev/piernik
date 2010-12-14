@@ -64,7 +64,7 @@ contains
 
       use dataio_pub,    only: par_file, ierrh, namelist_errh, compare_namelist      ! QA_WARN required for diff_nml
       use fluidindex,    only: nvar
-      use mpisetup,      only: proc, rbuff, buffer_dim, ierr, comm
+      use mpisetup,      only: master, slave, rbuff, buffer_dim, ierr, comm
       use mpi,           only: MPI_DOUBLE_PRECISION
 #ifdef DUST
       use initdust,      only: dragc_gas_dust
@@ -77,7 +77,7 @@ contains
       collision_factor  = 0.0
       cfl_interact      = 0.8
 
-      if (proc .eq. 0) then
+      if (master) then
 
          diff_nml(INTERACTIONS)
 
@@ -88,7 +88,7 @@ contains
 
       call MPI_Bcast(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
-      if (proc /= 0) then
+      if (slave) then
 
          collision_factor     = rbuff(1)
          cfl_interact         = rbuff(2)

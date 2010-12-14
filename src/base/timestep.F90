@@ -64,7 +64,7 @@ contains
 
       use dataio,               only: write_crashed
       use dataio_pub,           only: tend, msg, warn
-      use mpisetup,             only: t, dt_old, dt_max_grow, dt_initial, dt_min, nstep, proc, cflcontrol
+      use mpisetup,             only: t, dt_old, dt_max_grow, dt_initial, dt_min, nstep, master, cflcontrol
 #ifdef IONIZED
       use timestepionized,      only: timestep_ion, dt_ion, c_ion
 #endif /* IONIZED */
@@ -142,7 +142,7 @@ contains
       c_all_old = c_all
 
       if (dt < dt_min) then ! something nasty had happened
-         if (proc == 0) then
+         if (master) then
             write(msg,'(2(a,es12.4))')"[timestep:time_step] dt = ",dt,", less than allowed minimum = ",dt_min
             call warn(msg)
          endif
@@ -169,7 +169,7 @@ contains
    subroutine cfl_warn
 
       use dataio_pub, only: msg, warn
-      use mpisetup,   only: cfl, cfl_max, proc
+      use mpisetup,   only: cfl, cfl_max, master
 
       implicit none
 
@@ -178,7 +178,7 @@ contains
       stepcfl = cfl
       if (c_all_old > 0.) stepcfl = c_all/c_all_old*cfl
 
-      if (proc == 0) then
+      if (master) then
          msg = ""
          if (stepcfl > cfl_max) then
             write(msg,'(a,g10.3)') "[timestep:cfl_warn] Possible violation of CFL: ",stepcfl
@@ -199,7 +199,7 @@ contains
    subroutine cfl_auto
 
       use dataio_pub, only: msg, warn
-      use mpisetup,   only: cfl, cfl_max, proc, dt, dt_old
+      use mpisetup,   only: cfl, cfl_max, master, dt, dt_old
 
       implicit none
 
@@ -221,7 +221,7 @@ contains
          cfl_c = 1.
       endif
 
-      if (proc == 0) then
+      if (master) then
          msg = ""
          if (stepcfl > cfl_max) then
             write(msg,'(a,g10.3)') "[timestep:cfl_auto] Possible violation of CFL: ",stepcfl

@@ -65,7 +65,7 @@ contains
   subroutine init_dust
 
     use dataio_pub,     only: par_file, ierrh, namelist_errh, compare_namelist  ! QA_WARN required for diff_nml
-    use mpisetup,       only: proc, rbuff, lbuff, buffer_dim, comm, ierr
+    use mpisetup,       only: master, slave, rbuff, lbuff, buffer_dim, comm, ierr
     use mpi,            only: MPI_LOGICAL, MPI_DOUBLE_PRECISION
 
     implicit none
@@ -77,7 +77,7 @@ contains
     dalpha = 1.0
     selfgrav_dst = .false.
 
-    if (proc == 0) then
+    if (master) then
        diff_nml(FLUID_DUST)
 
        rbuff(1)   = dragc_gas_dust
@@ -89,7 +89,7 @@ contains
     call MPI_Bcast(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
     call MPI_Bcast(lbuff,    buffer_dim, MPI_LOGICAL,          0, comm, ierr)
 
-    if (proc /= 0) then
+    if (slave) then
 
       selfgrav_dst    = lbuff(1)
 

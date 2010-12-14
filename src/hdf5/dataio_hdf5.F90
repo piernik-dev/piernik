@@ -602,7 +602,7 @@ module dataio_hdf5
 
       use dataio_pub,    only: cwdlen, log_file
       use hdf5,          only: HID_T, H5open_f, H5Fcreate_f, H5Gcreate_f, H5F_ACC_TRUNC_F, H5Gclose_f, H5close_f, h5fclose_f
-      use mpisetup,      only: t, comm3d, ierr, proc
+      use mpisetup,      only: t, comm3d, ierr, master
 
       implicit none
 
@@ -619,7 +619,7 @@ module dataio_hdf5
          write(fname,'(2a)') trim(log_file(1:fe-3)),"plt"
          call H5open_f(error)
 
-         if (proc==0 .and. first_entry) then
+         if (master .and. first_entry) then
             call H5Fcreate_f(fname, H5F_ACC_TRUNC_F, file_id, error)
             call H5Gcreate_f(file_id,"xy",gr_id,error)
             do i=1,nhdf_vars
@@ -836,7 +836,7 @@ module dataio_hdf5
            &                   h5pcreate_f, h5pclose_f, h5pset_fapl_mpio_f, h5pset_chunk_f, h5pset_dxpl_mpio_f, &
            &                   h5screate_simple_f, h5sclose_f, h5sselect_hyperslab_f
       use list_hdf5,     only: problem_write_restart
-      use mpisetup,      only: pcoords, pxsize, pysize, pzsize, comm3d, comm, info, ierr, proc, nstep
+      use mpisetup,      only: pcoords, pxsize, pysize, pzsize, comm3d, comm, info, ierr, master, nstep
       use mpi,           only: MPI_CHARACTER
       use problem_pub,   only: problem_name, run_id
       use types,         only: hdf
@@ -863,7 +863,7 @@ module dataio_hdf5
 
       integer :: error, rank
 
-      if (proc==0) write(filename, '(a,a1,a3,a1,i4.4,a4)') trim(problem_name), '_', run_id, '_', nres, '.res'
+      if (master) write(filename, '(a,a1,a3,a1,i4.4,a4)') trim(problem_name), '_', run_id, '_', nres, '.res'
       call MPI_Bcast(filename, cwdlen, MPI_CHARACTER, 0, comm, ierr)
       call set_container_chdf(nstep)
 
@@ -1297,7 +1297,7 @@ module dataio_hdf5
                                h5screate_simple_f, h5fclose_f, h5close_f
       use h5lt,          only: h5ltget_attribute_double_f, h5ltget_attribute_int_f, h5ltget_attribute_string_f
       use list_hdf5,     only: problem_read_restart
-      use mpisetup,      only: comm, ierr, pcoords, pxsize, pysize, pzsize, magic_mass, proc, t, info, comm3d, dt, cbuff_len
+      use mpisetup,      only: comm, ierr, pcoords, pxsize, pysize, pzsize, magic_mass, master, t, info, comm3d, dt, cbuff_len
       use mpi,           only: MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION
       use problem_pub,   only: problem_name, run_id
       use types,         only: hdf, domlen, idlen
@@ -1339,7 +1339,7 @@ module dataio_hdf5
 
       nu = nvar%all
 
-      if (proc==0) then
+      if (master) then
          write(filename,'(a,a1,a3,a1,i4.4,a4)') trim(problem_name),'_', run_id,'_',chdf%nres,'.res'
          write(msg, '(2a)') 'Reading restart file: ',trim(filename)
          call printio(msg)
@@ -1461,7 +1461,7 @@ module dataio_hdf5
       if (allocated(offset))     deallocate(offset)
       if (allocated(stride))     deallocate(stride)
       if (allocated(block))      deallocate(block)
-      if (proc == 0) then
+      if (master) then
          CALL h5fopen_f (filename, H5F_ACC_RDONLY_F, file_id, error)
          bufsize = 1
          call h5ltget_attribute_double_f(file_id,"/","piernik", rbuf,error)
@@ -1703,7 +1703,7 @@ module dataio_hdf5
       use hdf5,          only: HID_T, SIZE_T, H5F_ACC_RDWR_F, h5fopen_f, h5fclose_f, h5gcreate_f, h5gclose_f
       use h5lt,          only: h5ltset_attribute_double_f, h5ltset_attribute_int_f, h5ltmake_dataset_string_f, h5ltset_attribute_string_f
       use list_hdf5,     only: additional_attrs
-      use mpisetup,      only: proc, t, dt, psize, cbuff_len, pxsize, pysize, pzsize, local_magic_mass, comm, ierr, magic_mass
+      use mpisetup,      only: master, t, dt, psize, cbuff_len, pxsize, pysize, pzsize, local_magic_mass, comm, ierr, magic_mass
       use mpi,           only: MPI_DOUBLE_PRECISION, MPI_SUM
       use problem_pub,   only: problem_name, run_id
       use types,         only: hdf
@@ -1733,7 +1733,7 @@ module dataio_hdf5
       magic_mass       = magic_mass + magic_mass0
       local_magic_mass = 0.0
 
-      if (proc == 0) then
+      if (master) then
 
          call h5fopen_f (filename, H5F_ACC_RDWR_F, file_id, error)
 

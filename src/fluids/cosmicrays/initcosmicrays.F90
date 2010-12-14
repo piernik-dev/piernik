@@ -102,7 +102,7 @@ contains
       use diagnostics,     only: ma1d, my_allocate
       use dataio_pub,      only: par_file, ierrh, namelist_errh, compare_namelist   ! QA_WARN required for diff_nml
       use dataio_pub,      only: die, warn
-      use mpisetup,        only: proc, ibuff, rbuff, lbuff, comm, ierr, buffer_dim
+      use mpisetup,        only: master, slave, ibuff, rbuff, lbuff, comm, ierr, buffer_dim
       use mpi,             only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL
 
       implicit none
@@ -131,7 +131,7 @@ contains
       K_cre_paral(:) = 0.0
       K_cre_perp(:)  = 0.0
 
-      if (proc == 0) then
+      if (master) then
          diff_nml(COSMIC_RAYS) ! Do not use one-line if here!
       endif
 #ifndef MULTIGRID
@@ -140,7 +140,7 @@ contains
 #endif /* !MULTIGRID */
       rbuff(:)   = HUGE(1.)                         ! mark unused entries to allow automatic determination of nn
 
-      if (proc == 0) then
+      if (master) then
 
          ibuff(1)   = ncrn
          ibuff(2)   = ncre
@@ -175,7 +175,7 @@ contains
       call MPI_Bcast(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
       call MPI_BCAST(lbuff,    buffer_dim, MPI_LOGICAL,          0, comm, ierr)
 
-      if (proc /= 0) then
+      if (slave) then
 
          ncrn       = ibuff(1)
          ncre       = ibuff(2)

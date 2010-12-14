@@ -71,7 +71,7 @@ contains
   subroutine init_neutral
 
     use dataio_pub,     only: par_file, ierrh, namelist_errh, compare_namelist      ! QA_WARN required for diff_nml
-    use mpisetup,       only: proc, ierr, comm, rbuff, lbuff, buffer_dim
+    use mpisetup,       only: master, slave, ierr, comm, rbuff, lbuff, buffer_dim
     use mpi,            only: MPI_LOGICAL, MPI_DOUBLE_PRECISION
 
     implicit none
@@ -82,7 +82,7 @@ contains
     cs_iso_neu   = 1.0
     selfgrav_neu = .false.
 
-    if (proc == 0) then
+    if (master) then
 
        diff_nml(FLUID_NEUTRAL)
 
@@ -96,7 +96,7 @@ contains
     call MPI_Bcast(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
     call MPI_Bcast(lbuff,    buffer_dim, MPI_LOGICAL,          0, comm, ierr)
 
-    if (proc /= 0) then
+    if (slave) then
 
       selfgrav_neu = lbuff(1)
 

@@ -165,7 +165,7 @@ contains
 !! \n \n
 
    subroutine init_constants
-      use mpisetup,   only: cbuff, rbuff, buffer_dim, comm, ierr, proc
+      use mpisetup,   only: cbuff, rbuff, buffer_dim, comm, ierr, master, slave
       use mpi,        only: MPI_CHARACTER, MPI_DOUBLE_PRECISION
       use dataio_pub, only: par_file, ierrh, namelist_errh, compare_namelist  ! QA_WARN required for diff_nml
       use dataio_pub, only: warn, printinfo, msg, die
@@ -187,7 +187,7 @@ contains
       gram   = small
       sek    = small
 
-      if (proc == 0) then
+      if (master) then
 
          diff_nml(CONSTANTS)
 
@@ -204,7 +204,7 @@ contains
       call MPI_Bcast(cbuff, cbuff_len*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
       call MPI_Bcast(rbuff,           buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
-      if (proc /= 0) then
+      if (slave) then
 
          constants_set = cbuff(1)
 
@@ -307,7 +307,7 @@ contains
             s_mass_u = ' [0.1 M_sun]'
 
          case ("USER", "user")
-            if (proc == 0) call warn("[constants:init_constants] PIERNIK will use 'cm', 'sek', 'gram' defined in problem.par")
+            if (master) call warn("[constants:init_constants] PIERNIK will use 'cm', 'sek', 'gram' defined in problem.par")
             if (any([cm == small, sek == small, gram == small])) &
                call die("[constants:init_constants] constants_set=='user', yet one of {'cm','sek','gram'} is not set in problem.par") ! Don't believe in coincidence
             to_stdout = .true.               ! Force output in case someone is not aware what he/she is doing
@@ -315,7 +315,7 @@ contains
             s_time_u  = s_len_u; s_mass_u  = s_len_u
 
          case default
-            if (proc == 0) call warn("[constants:init_constants] you haven't chosen constants set. That means physical vars taken from 'constants' are worthless or equal 1")
+            if (master) call warn("[constants:init_constants] you haven't chosen constants set. That means physical vars taken from 'constants' are worthless or equal 1")
             cm   = small
             gram = small
             sek  = small
@@ -324,7 +324,7 @@ contains
 
       end select
 
-      if (proc == 0 .and. .not. scale_me) then
+      if (master .and. .not. scale_me) then
          write(msg,'(a,es14.7,a)') '[constants:init_constants] cm   = ', cm,   trim(s_len_u)
          call printinfo(msg, to_stdout)
          write(msg,'(a,es14.7,a)') '[constants:init_constants] sek  = ', sek,  trim(s_time_u)

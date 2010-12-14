@@ -211,7 +211,7 @@ contains
            &                     tmp_log_file, msglen, printinfo, warn, msg, nhdf, nstep_start, set_container_chdf, get_container
       use dataio_pub,      only: par_file, ierrh, namelist_errh, compare_namelist  ! QA_WARN required for diff_nml
       use fluidboundaries, only: all_fluid_boundaries
-      use mpisetup,        only: lbuff, ibuff, rbuff, cbuff, proc, cbuff_len, comm, ierr, buffer_dim, &
+      use mpisetup,        only: lbuff, ibuff, rbuff, cbuff, master, slave, cbuff_len, comm, ierr, buffer_dim, &
            &                      t, nstep, bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr
       use mpi,             only: MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL
       use problem_pub,     only: problem_name, run_id
@@ -273,7 +273,7 @@ contains
       if (ihost .eq. 0) ihost = index(hostfull,' ')
       host = hostfull(1:ihost-1)
 
-      if (proc == 0) then
+      if (master) then
 
          open(1,file=par_file)
          ierrh = 0
@@ -341,17 +341,14 @@ contains
          cbuff(91) = user_message_file(1:cbuff_len)
          cbuff(92) = system_message_file(1:cbuff_len)
 
-         call MPI_Bcast(cbuff, cbuff_len*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
-         call MPI_Bcast(lbuff,    buffer_dim, MPI_LOGICAL,          0, comm, ierr)
-         call MPI_Bcast(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
-         call MPI_Bcast(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+      endif
 
-      else
+      call MPI_Bcast(cbuff, cbuff_len*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
+      call MPI_Bcast(lbuff,    buffer_dim, MPI_LOGICAL,          0, comm, ierr)
+      call MPI_Bcast(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
+      call MPI_Bcast(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
-         call MPI_Bcast(cbuff, cbuff_len*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
-         call MPI_Bcast(lbuff,    buffer_dim, MPI_LOGICAL,          0, comm, ierr)
-         call MPI_Bcast(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
-         call MPI_Bcast(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+      if (slave) then
 
 !  namelist /END_CONTROL/ nend, tend, wend
          nend                = ibuff(1)
@@ -405,12 +402,12 @@ contains
 
       call init_hdf5(vars,ix,iy,iz,dt_plt)
 
-      if (proc == 0 .and. restart .eq. 'last') call find_last_restart(nrestart)
+      if (master .and. restart .eq. 'last') call find_last_restart(nrestart)
       call MPI_Barrier(comm,ierr)
       call MPI_Bcast(nrestart, 1, MPI_INTEGER, 0, comm, ierr)
 
       call init_version
-      if (proc == 0) then
+      if (master) then
          call printinfo("###############     Source configuration     ###############", .false.)
          do i=1,nenv
             call printinfo(env(i), .false.)
@@ -433,7 +430,7 @@ contains
       call set_container_chdf(nstep); chdf%nres = nrestart
 
       if (nrestart /= 0) then
-         if (proc == 0) call printinfo("###############     Reading restart     ###############", .false.)
+         if (master) call printinfo("###############     Reading restart     ###############", .false.)
          call read_restart_hdf5(chdf)
          call get_container(nstep)
          nstep_start = nstep
@@ -463,7 +460,7 @@ contains
 
       use dataio_hdf5,   only: write_hdf5, write_restart_hdf5
       use dataio_pub,    only: chdf, step_hdf, msg, printinfo, warn, set_container_chdf
-      use mpisetup,      only: comm, ierr, proc, nstep
+      use mpisetup,      only: comm, ierr, master, nstep
       use mpi,           only: MPI_CHARACTER, MPI_DOUBLE_PRECISION
 
       implicit none
@@ -473,7 +470,7 @@ contains
 
 !--- process 0 checks for messages
 
-      if (proc == 0) call read_file_msg
+      if (master) call read_file_msg
 
       call MPI_Bcast(umsg,       umsg_len, MPI_CHARACTER,        0, comm, ierr)
       call MPI_Bcast(umsg_param, 1,        MPI_DOUBLE_PRECISION, 0, comm, ierr)
@@ -511,7 +508,7 @@ contains
             case ('stop')
                end_sim = .true.
             case ('help')
-               if (proc == 0) then
+               if (master) then
                   write(msg,*) "[dataio:user_msg_handler] Recognized messages:",char(10),&
                   &"  help     - prints this information",char(10),&
                   &"  stop     - finish the simulation",char(10),&
@@ -525,7 +522,7 @@ contains
                   call printinfo(msg)
                endif
             case default
-               if (proc == 0) then
+               if (master) then
                   write(msg,*) "[dataio:user_msg_handler]: non-recognized message '",trim(umsg),"'. Use message 'help' for list of valid keys."
                   call warn(msg)
                endif
@@ -686,7 +683,7 @@ contains
       use diagnostics,     only: pop_vector
       use fluidindex,      only: nvar, iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz, ibx, iby, ibz
       use grid,            only: dvol, dx, dy, dz, is, ie, js, je, ks, ke, x, y, z, nxb, nyb, nzb
-      use mpisetup,        only: proc, t, dt, smalld, nstep, pxsize, pysize, pzsize
+      use mpisetup,        only: master, t, dt, smalld, nstep, pxsize, pysize, pzsize
       use problem_pub,     only: problem_name, run_id
       use types,           only: tsl_container, phys_prop
 #ifndef ISO
@@ -730,7 +727,7 @@ contains
 #endif /* !NEUTRAL */
 
 
-      if (proc == 0) then
+      if (master) then
          write(tsl_file,'(a,a1,a,a1,a3,a1,i3.3,a4)') &
               trim(cwd),'/',trim(problem_name),'_', run_id,'_',nrestart,'.tsl'
 
@@ -815,7 +812,7 @@ contains
 
       call write_log(tsl)
 
-      if (proc == 0) then
+      if (master) then
          call pop_vector(tsl_vars, [t, dt, tot_mass, tot_momx, tot_momy, tot_momz, tot_ener, tot_epot, tot_eint, tot_ekin])
 #ifdef MAGNETIC
          call pop_vector(tsl_vars, [tot_emag, tot_mflx, tot_mfly, tot_mflz, tsl%vai_max, tsl%b_min, tsl%b_max, tsl%divb_max])
@@ -848,7 +845,7 @@ contains
 
       if (associated(user_tsl)) call user_tsl(tsl_vars)
 
-      if (proc == 0) then
+      if (master) then
          write(tsl_lun, '(1x,i8,50(1x,es15.8))') nstep, tsl_vars
 
 ! some quantities computed in "write_log".One can add more, or change.
@@ -1018,7 +1015,7 @@ contains
          use dataio_pub,         only: msg, printinfo
          use fluidindex,         only: ibx, iby, ibz, nvar
          use grid,               only: dx, dy, dz, dxmn, is, ie, js, je, ks, ke, nx, ny, nz
-         use mpisetup,           only: cfl, t, dt, proc
+         use mpisetup,           only: cfl, t, dt, master
          use types,              only: tsl_container, value
 #ifdef COSM_RAYS
          use fluidindex,         only: iarr_all_crs
@@ -1154,7 +1151,7 @@ contains
       call get_extremum(wa(is:ie,js:je,ks:ke), 'min', encr_min)
 #endif /* COSM_RAYS */
 
-      if (proc == 0)  then
+      if (master)  then
          if (.not.present(tsl)) then
             call printinfo('================================================================================', .false.)
 #ifdef IONIZED
@@ -1238,7 +1235,7 @@ contains
 
 !\todo: process multiple commands at once
       use dataio_pub,    only: cwdlen, msg, printinfo, warn
-      use mpisetup,      only: proc
+      use mpisetup,      only: master
 #if defined(__INTEL_COMPILER)
       use ifport,        only: unlink, stat
 #endif /* __INTEL_COMPILER */
@@ -1290,7 +1287,7 @@ contains
             endif
             close(msg_lun)
 
-            if (len_trim(msg) > 0 .and. proc==0) call printinfo(msg)
+            if (len_trim(msg) > 0 .and. master) call printinfo(msg)
 
             sz = len_trim(msg)
             if (fname(i) == user_message_file) unlink_stat = unlink(user_message_file)

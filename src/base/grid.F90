@@ -184,7 +184,7 @@ module grid
 
       use dataio_pub,    only: par_file, ierrh, namelist_errh, compare_namelist  ! QA_WARN required for diff_nml
       use dataio_pub,    only: printinfo, die
-      use mpisetup,      only: ierr, ibuff, rbuff, cbuff, proc, buffer_dim, pxsize, pysize, pzsize, comm
+      use mpisetup,      only: ierr, ibuff, rbuff, cbuff, master, slave, buffer_dim, pxsize, pysize, pzsize, comm
       use mpi,           only: MPI_INTEGER, MPI_DOUBLE_PRECISION, MPI_CHARACTER
       use types,         only: grid_container
 
@@ -205,7 +205,7 @@ module grid
       nb   = 4
       geometry = "cartesian"
 
-      if (proc == 0) then
+      if (master) then
          diff_nml(DOMAIN_SIZES)
          diff_nml(DOMAIN_LIMITS)
       endif
@@ -214,7 +214,7 @@ module grid
       nyd = max(1, nyd)
       nzd = max(1, nzd)
 
-      if (proc == 0) then
+      if (master) then
 
          ibuff(1)   = nxd
          ibuff(2)   = nyd
@@ -235,7 +235,7 @@ module grid
       call MPI_Bcast(ibuff,           buffer_dim, MPI_INTEGER,          0, comm, ierr)
       call MPI_Bcast(rbuff,           buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
-      if (proc /= 0) then
+      if (slave) then
 
          nxd  = ibuff(1)
          nyd  = ibuff(2)

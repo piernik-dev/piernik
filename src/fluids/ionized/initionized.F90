@@ -73,7 +73,7 @@ contains
   subroutine init_ionized
 
     use dataio_pub,    only: par_file, ierrh, namelist_errh, compare_namelist ! QA_WARN required for diff_nml
-    use mpisetup,      only: rbuff, lbuff, comm, ierr, buffer_dim, proc
+    use mpisetup,      only: rbuff, lbuff, comm, ierr, buffer_dim, master, slave
     use mpi,           only: MPI_DOUBLE_PRECISION, MPI_LOGICAL
     implicit none
 
@@ -83,7 +83,7 @@ contains
     cs_iso_ion    = 1.0
     selfgrav_ion  = .false.
 
-    if (proc == 0) then
+    if (master) then
 
        diff_nml(FLUID_IONIZED)
 
@@ -98,7 +98,7 @@ contains
     call MPI_Bcast(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
     call MPI_Bcast(lbuff,    buffer_dim, MPI_LOGICAL,          0, comm, ierr)
 
-    if (proc /= 0) then
+    if (slave) then
 
        selfgrav_ion = lbuff(1)
 

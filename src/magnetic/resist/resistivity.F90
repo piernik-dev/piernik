@@ -86,7 +86,7 @@ module resistivity
       use dataio_pub,    only: par_file, ierrh, namelist_errh, compare_namelist  ! QA_WARN required for diff_nml
       use dataio_pub,    only: die
       use grid,          only: nx, ny, nz, has_dir, zdim
-      use mpisetup,      only: rbuff, ibuff, ierr, buffer_dim, comm, proc
+      use mpisetup,      only: rbuff, ibuff, ierr, buffer_dim, comm, master, slave
       use mpi,           only: MPI_INTEGER, MPI_DOUBLE_PRECISION
 
       implicit none
@@ -101,7 +101,7 @@ module resistivity
       j_crit      =  1.0e6
       deint_max   =  0.01
 
-      if (proc == 0) then
+      if (master) then
 
          diff_nml(RESISTIVITY)
 
@@ -118,7 +118,7 @@ module resistivity
       call MPI_Bcast(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
       call MPI_Bcast(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
-      if (proc /= 0) then
+      if (slave) then
 
          eta_scale          = ibuff(1)
 

@@ -236,7 +236,7 @@ contains
 
       use dataio_pub,    only: msg, printinfo
       use grid,          only: total_ncells
-      use mpisetup,      only: comm, ierr, nstep, proc
+      use mpisetup,      only: comm, ierr, nstep, master
       use mpi,           only: MPI_DOUBLE_PRECISION, MPI_SUM
 
       implicit none
@@ -267,7 +267,7 @@ contains
 
       call MPI_Reduce(cputot, cpuallp, 1, MPI_DOUBLE_PRECISION, MPI_SUM, 0, comm, ierr)
 
-      if (proc == 0) then
+      if (master) then
 
          zcps  = real(nstep) * real(total_ncells) / cpuallp
 
