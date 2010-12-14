@@ -51,7 +51,7 @@ contains
       use constants,     only: pi
       use dataio_pub,    only: ierrh, par_file, namelist_errh, compare_namelist      ! QA_WARN required for diff_nml
       use dataio_pub,    only: skip_advection, die, warn
-      use mpisetup,      only: ierr, rbuff, cbuff, ibuff, proc, buffer_dim, comm, smalld, cbuff_len
+      use mpisetup,      only: ierr, rbuff, cbuff, ibuff, master, slave, buffer_dim, comm, smalld, cbuff_len
       use mpi,           only: MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER
       use types,         only: idlen, finalize_problem
       use list_hdf5,     only: additional_attrs
@@ -74,7 +74,7 @@ contains
       e            = 0.0                 !< Eccentricity; e>0 for flattened spheroids, e<0 for elongated spheroids
       nsub         = 3                   !< Subsampling factor
 
-      if (proc == 0) then
+      if (master) then
 
          diff_nml(PROBLEM_CONTROL)
 
@@ -96,7 +96,7 @@ contains
       call MPI_Bcast(ibuff,           buffer_dim, MPI_INTEGER,          0, comm, ierr)
       call MPI_Bcast(rbuff,           buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
-      if (proc /= 0) then
+      if (slave) then
 
          problem_name = cbuff(1)
          run_id       = cbuff(2)(1:idlen)
@@ -124,10 +124,10 @@ contains
       if (d0 < 0.) call die("[initproblem:read_problem_par] Negative average density.")
 
       if (nsub < 1) then
-         if (proc == 0) call warn("[initproblem:read_problem_par] subsampling disabled.")
+         if (master) call warn("[initproblem:read_problem_par] subsampling disabled.")
          nsub = 1
       else if (nsub > maxsub) then
-         if (proc == 0)call warn("[initproblem:read_problem_par] too much subsampling.")
+         if (master)call warn("[initproblem:read_problem_par] too much subsampling.")
          nsub = maxsub
       endif
 
@@ -145,7 +145,7 @@ contains
       use dataio_pub,    only: msg, printinfo, warn
       use grid,          only: x, y, z, dx, dy, dz, nx, ny, nz, xmin, xmax, ymin, ymax, zmin, zmax
       use initionized,   only: gamma_ion, idni, imxi, imzi, ieni
-      use mpisetup,      only: proc
+      use mpisetup,      only: master
 
       implicit none
 
@@ -186,7 +186,7 @@ contains
       u(ieni, 1:nx, 1:ny, 1:nz) = p0/(gamma_ion - 1.0)
 #endif /* !ISO */
 
-      if (proc == 0) then
+      if (master) then
          write(msg, '(3(a,g12.5),a)')"[initproblem:init_prob] Set up spheroid with a1 and a3 axes = ", a1, ", ", a3, " (eccentricity = ", e, ")"
          call printinfo(msg, .true.)
          if (x0-a1<xmin .or. x0+a1>xmax .or. y0-a1<ymin .or. y0+a1>ymax .or. z0-a3<zmin .or. z0+a3>zmax) &
@@ -236,7 +236,7 @@ contains
       use constants,     only: pi, newtong
       use dataio_pub,    only: msg, printinfo, warn
       use grid,          only: x, y, z, is, ie, js, je, ks, ke
-      use mpisetup,      only: proc, comm3d, ierr
+      use mpisetup,      only: master, comm3d, ierr
       use mpi,           only: MPI_DOUBLE_PRECISION, MPI_SUM, MPI_MIN, MPI_MAX, MPI_IN_PLACE
 
       implicit none
@@ -251,7 +251,7 @@ contains
       dev(2) = -dev(1)
 
       AA1 = 2./3. ; AA3 = 2./3.
-      if (e < 0. .and. proc == 0) call warn("[initproblem:finalize_problem] e<0. not fully implemented yet!")
+      if (e < 0. .and. master) call warn("[initproblem:finalize_problem] e<0. not fully implemented yet!")
 
       if (e > small_e) then
          AA1 = ( sqrt(1. - e**2) * asin(e) - e * (1. - e**2) ) / e**3
@@ -311,7 +311,7 @@ contains
       call MPI_Allreduce(MPI_IN_PLACE, dev(1), 1, MPI_DOUBLE_PRECISION, MPI_MIN, comm3d, ierr)
       call MPI_Allreduce(MPI_IN_PLACE, dev(2), 1, MPI_DOUBLE_PRECISION, MPI_MAX, comm3d, ierr)
 
-      if (proc == 0) then
+      if (master) then
          write(msg,'(a,f12.6,a,2f12.6)')"[initproblem:finalize_problem] L2 error norm = ", sqrt(norm(1)/norm(2)), ", min and max error = ", dev(1:2)
          call printinfo(msg)
       endif

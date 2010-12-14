@@ -53,7 +53,7 @@ contains
       use dataio_pub,    only: ierrh, par_file, namelist_errh, compare_namelist    ! QA_WARN required for diff_nml
       use dataio_pub,    only: msg, die, warn
       use grid,          only: xmin, xmax, ymin, ymax, zmin, zmax, nx, ny, nz
-      use mpisetup,      only: ierr, rbuff, cbuff_len, cbuff, ibuff, proc, buffer_dim, comm
+      use mpisetup,      only: ierr, rbuff, cbuff_len, cbuff, ibuff, master, slave, buffer_dim, comm
       use mpi,           only: MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER
       use types,         only: idlen
       use problem_pub,   only: jeans_d0, jeans_mode
@@ -72,7 +72,7 @@ contains
       amp          = 0.0                   !< Perturbation relative amplitude
       mode         = 0                     !< Variant of the test. 0: cos(kx *x + ky*y + kz*z), 1: cos(kx *x) * cos(ky*y) * cos(kz*z)
 
-      if (proc == 0) then
+      if (master) then
 
          diff_nml(PROBLEM_CONTROL)
 
@@ -94,7 +94,7 @@ contains
       call MPI_Bcast(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
       call MPI_Bcast(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
-      if (proc /= 0) then
+      if (slave) then
 
          problem_name = cbuff(1)
          run_id       = cbuff(2)(1:idlen)
@@ -152,7 +152,7 @@ contains
       use dataio_pub,    only: tend, msg, printinfo, warn
       use grid,          only: xmin, xmax, ymin, ymax, zmin, zmax, x, y, z, nx, ny, nz, xmin, ymin, zmin
       use initionized,   only: gamma_ion, idni, imxi, imzi, ieni
-      use mpisetup,      only: proc
+      use mpisetup,      only: master
 
       implicit none
 
@@ -173,11 +173,11 @@ contains
          Tamp = (d0 * amp**2 * omg2 * Vbox)/(4.0 * kn**2)
       else
          Tamp = 0.
-         if (proc == 0) call warn("[initproblem:init_prob] No waves (kn == 0)")
+         if (master) call warn("[initproblem:init_prob] No waves (kn == 0)")
       endif
       if (mode == 1) Tamp = Tamp / 4.
 
-      if (proc == 0) then
+      if (master) then
          write(msg, *) 'Unperturbed adiabatic sound speed = ', cs0
          call printinfo(msg, .true.)
          write(msg, *) 'Gravitational constant * 4pi      = ', fpiG
@@ -241,7 +241,7 @@ contains
     else
        Tamp_rounded = 0.
     endif
-    if (proc == 0) then
+    if (master) then
       call printinfo('', .true.)
       call printinfo('To verify results, run:', .true.)
 

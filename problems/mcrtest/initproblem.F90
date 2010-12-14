@@ -58,7 +58,7 @@ module initproblem
       use dataio_pub,    only: die
       use grid,          only: dxmn
       use mpi,           only: MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION
-      use mpisetup,      only: cbuff_len, cbuff, ibuff, rbuff, buffer_dim, comm, ierr, proc
+      use mpisetup,      only: cbuff_len, cbuff, ibuff, rbuff, buffer_dim, comm, ierr, master, slave
       use types,         only: idlen
 
       implicit none
@@ -82,7 +82,7 @@ module initproblem
 
       norm_step    = 10        !< how often to compute the norm (in steps)
 
-      if (proc == 0) then
+      if (master) then
 
          diff_nml(PROBLEM_CONTROL)
 
@@ -109,7 +109,7 @@ module initproblem
       call MPI_Bcast(ibuff,           buffer_dim, MPI_INTEGER,          0, comm, ierr)
       call MPI_Bcast(rbuff,           buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
-      if (proc /= 0) then
+      if (slave) then
 
          problem_name = cbuff(1)
          run_id       = cbuff(2)(1:idlen)
@@ -144,7 +144,7 @@ module initproblem
       use grid,           only: nx, ny, nz, x, y, z, is, ie, js, je, ks, ke, xdim, ydim, zdim, has_dir, Lx, Ly, Lz
       use initcosmicrays, only: iarr_crn, iarr_crs, gamma_crn, K_crn_paral, K_crn_perp
       use initionized,    only: idni, imxi, imzi, ieni, gamma_ion
-      use mpisetup,       only: comm3d, ierr, proc
+      use mpisetup,       only: comm3d, ierr, master
       use mpi,            only: MPI_IN_PLACE, MPI_INTEGER, MPI_MAX
 #ifdef COSM_RAYS_SOURCES
       use crcomposition,  only: icr_H1, icr_C12
@@ -235,7 +235,7 @@ module initproblem
       do icr = 1, nvar%crs%all
          maxv = maxval(u(iarr_crs(icr),:,:,:))
          call MPI_Allreduce(MPI_IN_PLACE, maxv, 1, MPI_INTEGER, MPI_MAX, comm3d, ierr)
-         if (proc == 0) then
+         if (master) then
             write(msg,*) '[initproblem:init_prob] icr=',icr,' maxecr =',maxv
             call printinfo(msg)
          endif

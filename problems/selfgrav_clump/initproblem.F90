@@ -54,7 +54,7 @@ contains
       use dataio_pub,    only: par_file, ierrh, namelist_errh, compare_namelist   ! QA_WARN required for diff_nml
       use dataio_pub,    only: die
       use grid,          only: xmin, xmax, ymin, ymax, zmin, zmax, dx, dy, dz
-      use mpisetup,      only: ierr, rbuff, cbuff_len, cbuff, ibuff, lbuff, proc, buffer_dim, comm
+      use mpisetup,      only: ierr, rbuff, cbuff_len, cbuff, ibuff, lbuff, master, slave, buffer_dim, comm
       use mpi,           only: MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL
       use types,         only: idlen
 
@@ -79,7 +79,7 @@ contains
       verbose      = .false.               !< Turn on some extra messages
       !\todo add rotation
 
-      if (proc == 0) then
+      if (master) then
 
          diff_nml(PROBLEM_CONTROL)
 
@@ -109,7 +109,7 @@ contains
       call MPI_Bcast(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
       call MPI_Bcast(lbuff,    buffer_dim, MPI_LOGICAL,          0, comm, ierr)
 
-      if (proc /= 0) then
+      if (slave) then
 
          problem_name = cbuff(1)
          run_id       = cbuff(2)(1:idlen)
@@ -158,7 +158,7 @@ contains
       use dataio_pub,        only: msg, die, warn, printinfo
       use grid,              only: xmin, xmax, ymin, ymax, zmin, zmax, x, y, z, dx, dy, dz, is, ie, js, je, ks, ke
       use initionized,       only: gamma_ion, idni, imxi, imyi, imzi, ieni
-      use mpisetup,          only: proc, smalld, smallei, comm, ierr
+      use mpisetup,          only: master, smalld, smallei, comm, ierr
       use mpi,               only: MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_MIN, MPI_MAX, MPI_SUM
       use multigrid_gravity, only: multigrid_solve_grav
 
@@ -222,7 +222,7 @@ contains
       enddo
 
       call MPI_Allreduce (MPI_IN_PLACE, iC, 1, MPI_INTEGER, MPI_SUM, comm, ierr)
-      if (proc == 0 .and. verbose) then
+      if (master .and. verbose) then
          write(msg,'(a,es13.7,a,i7,a)')"[initproblem:init_prob] Starting with uniform sphere with M = ", iC*totME(1) * dx * dy * dz, " (", iC, " cells)"
          call printinfo(msg, .true.)
       endif
@@ -280,7 +280,7 @@ contains
             endif
          endif
 
-         if (proc == 0 .and. verbose) then
+         if (master .and. verbose) then
             write(msg,'(2(a,i4),2(a,2es15.7),2a)')"[initproblem:init_prob] iter = ",iC,"/",0," dM= ",totME-clump_mass, " C= ", Cint, " ind = ",ind
             call printinfo(msg, .true.)
          endif
@@ -328,7 +328,7 @@ contains
                enddo
             endif
 
-            if (proc == 0 .and. verbose) then
+            if (master .and. verbose) then
                write(msg,'(2(a,i4),2(a,2es15.7),2a)')"[initproblem:init_prob] iter = ",iC,"/",iM," dM= ",totME-clump_mass, " C= ", Cint, " ind = ",ind
                call printinfo(msg, .true.)
             endif
@@ -341,7 +341,7 @@ contains
                if (crashNotConv) then
                   call die("[initproblem:init_prob] M-iterations not converged.")
                else
-                  if (proc == 0) call warn("[initproblem:init_prob] M-iterations not converged. Continue anyway.")
+                  if (master) call warn("[initproblem:init_prob] M-iterations not converged. Continue anyway.")
                   doneM = .true.
                endif
             endif
@@ -353,7 +353,7 @@ contains
          Clast(1:NLIM-1) = Clast(2:NLIM)
          Clast(NLIM) = Cint(t)
          if (any(Clast(:) == 0.)) then
-            if (proc == 0) then
+            if (master) then
                write(msg,'(a,i4,2(a,es15.7),a)')"[initproblem:init_prob] iter = ",iC,"     M=",totME(t), " C=", Cint(t), Ccomment
                call printinfo(msg, .true.)
             endif
@@ -361,7 +361,7 @@ contains
             if (Clim /= 0.) Clim_old = Clim
             ! exponential estimate: \lim C \simeq \frac{C_{t} C_{t-2} - C_{t-1}^2}{C_{t} - 2 C_{t-1} + C{t-2}}
             Clim = (Clast(NLIM)*Clast(NLIM-2) - Clast(NLIM-1)**2)/(Clast(NLIM) - 2.*Clast(NLIM-1) + Clast(NLIM-2))
-            if (proc == 0) then
+            if (master) then
                write(msg, '(a,i4,3(a,es15.7))')"[initproblem:init_prob] iter = ",iC,"     M=",totME(t), " C=", Cint(t), " Clim=", Clim
                call printinfo(msg, .true.)
             endif
@@ -376,7 +376,7 @@ contains
             if (crashNotConv) then
                call die("[initproblem:init_prob] C-iterations not converged.")
             else
-               if (proc == 0) call warn("[initproblem:init_prob] C-iterations not converged. Continue anyway.")
+               if (master) call warn("[initproblem:init_prob] C-iterations not converged. Continue anyway.")
                doneC = .true.
             endif
          endif
@@ -404,7 +404,7 @@ contains
          enddo
       enddo
 
-      if (proc == 0) then
+      if (master) then
          write(msg, '(a,g13.7)')"[initproblem:init_prob] Relaxation finished. Largest orbital period: ",2.*pi*sqrt( (min(xmax-xmin, ymax-ymin, zmax-zmin)/2.)**3/(newtong * clump_mass) )
          call printinfo(msg, .true.)
       endif
@@ -420,7 +420,7 @@ contains
       use dataio_pub,        only: msg, die, warn, printinfo
       use grid,              only: is, ie, js, je, ks, ke, dx, dy, dz
       use initionized,       only: idni
-      use mpisetup,          only: proc, comm, ierr
+      use mpisetup,          only: master, comm, ierr
       use mpi,               only: MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_SUM
       use multigridvars,     only: bnd_isolated
       use multigrid_gravity, only: grav_bnd
@@ -450,13 +450,13 @@ contains
 
       TWP = TWP * dx * dy * dz
       vc = abs(2.*TWP(1) + TWP(2) + 3*TWP(3))/abs(TWP(2))
-      if (proc == 0 .and. (verbose .or. tol < 1.0)) then
+      if (master .and. (verbose .or. tol < 1.0)) then
          write(msg,'(a,es15.7,a,3es15.7,a)')"[initproblem:virialCheck] VC=",vc, " TWP=(",TWP(:),")"
          call printinfo(msg, .true.)
       endif
 
       if (vc > tol .and. grav_bnd == bnd_isolated) then
-         if (proc == 0) then
+         if (master) then
             if (3*abs(TWP(3)) < abs(TWP(2))) then
                call warn("[initproblem:virialCheck] Virial imbalance occured because the clump is not resolved.")
             else

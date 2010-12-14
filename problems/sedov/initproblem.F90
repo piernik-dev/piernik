@@ -50,7 +50,7 @@ contains
    subroutine read_problem_par
       use dataio_pub,    only: ierrh, par_file, namelist_errh, compare_namelist      ! QA_WARN required for diff_nml
       use grid,          only: dxmn
-      use mpisetup,      only: cbuff_len, cbuff, ibuff, rbuff, buffer_dim, proc, comm, ierr
+      use mpisetup,      only: cbuff_len, cbuff, ibuff, rbuff, buffer_dim, master, slave, comm, ierr
       use mpi,           only: MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER
       use types,         only: idlen
       use dataio_pub,    only: user_plt_hdf5, user_vars_hdf5, user_tsl
@@ -75,7 +75,7 @@ contains
       n_sn    = 1
       dt_sn   = 0.0
 
-      if (proc .eq. 0) then
+      if (master) then
 
          diff_nml(PROBLEM_CONTROL)
 
@@ -102,7 +102,7 @@ contains
       call MPI_Bcast(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
       call MPI_Bcast(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
-      if (proc /= 0) then
+      if (slave) then
 
          problem_name = cbuff(1)
          run_id       = cbuff(2)(1:idlen)
@@ -236,7 +236,7 @@ contains
 !-----------------------------------------------------------------------------
       subroutine sedov_tsl(user_vars, tsl_names)
          use diagnostics,     only: pop_vector
-         use mpisetup,        only: proc, comm3d, ierr
+         use mpisetup,        only: proc, master, comm3d, ierr
          use mpi,             only: MPI_DOUBLE_PRECISION, MPI_SUM
          implicit none
          real, dimension(:), intent(inout), allocatable                       :: user_vars
@@ -248,7 +248,7 @@ contains
          else
             ! do mpi stuff here...
             call MPI_ALLREDUCE(real(proc,8), output, 1, MPI_DOUBLE_PRECISION, MPI_SUM, comm3d, ierr)
-            if (proc == 0) call pop_vector(user_vars,[output])                 !   pop value
+            if (master) call pop_vector(user_vars,[output])                 !   pop value
          endif
          return
       end subroutine sedov_tsl

@@ -52,7 +52,7 @@ module initproblem
 
       use dataio_pub,    only: par_file, ierrh, namelist_errh, compare_namelist     ! QA_WARN required for diff_nml
       use mpi,           only: MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION
-      use mpisetup,      only: cbuff_len, cbuff, ibuff, rbuff, comm, ierr, buffer_dim, proc
+      use mpisetup,      only: cbuff_len, cbuff, ibuff, rbuff, comm, ierr, buffer_dim, master, slave
       use types,         only: idlen
 
       implicit none
@@ -66,7 +66,7 @@ module initproblem
       m_y          = 0
       m_z          = 0
 
-      if (proc .eq. 0) then
+      if (master) then
 
          diff_nml(PROBLEM_CONTROL)
 
@@ -88,7 +88,7 @@ module initproblem
       call MPI_Bcast(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
       call MPI_Bcast(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
-      if (proc /= 0) then
+      if (slave) then
 
          problem_name = cbuff(1)
          run_id       = cbuff(2)(1:idlen)

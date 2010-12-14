@@ -51,7 +51,7 @@ contains
       use dataio_pub,    only: ierrh, par_file, namelist_errh, compare_namelist      ! QA_WARN required for diff_nml
       use dataio_pub,    only: die
       use grid,          only: xmin, xmax, ymin, ymax, zmin, zmax
-      use mpisetup,      only: ierr, rbuff, cbuff_len, cbuff, proc, buffer_dim, comm
+      use mpisetup,      only: ierr, rbuff, cbuff_len, cbuff, master, slave, buffer_dim, comm
       use mpi,           only: MPI_CHARACTER, MPI_DOUBLE_PRECISION
       use types,         only: idlen
 
@@ -67,7 +67,7 @@ contains
       pulse_vel_z  = 0.0                   !< pulse velocity in z-direction
       pulse_amp    = 2.0                   !< pulse relative amplitude
 
-      if (proc == 0) then
+      if (master) then
 
          diff_nml(PROBLEM_CONTROL)
 
@@ -85,7 +85,7 @@ contains
       call MPI_Bcast(cbuff, cbuff_len*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
       call MPI_Bcast(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
-      if (proc /= 0) then
+      if (slave) then
 
          problem_name = cbuff(1)
          run_id       = cbuff(2)(1:idlen)

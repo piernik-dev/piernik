@@ -51,7 +51,7 @@ module initproblem
    subroutine read_problem_par
 
       use dataio_pub,    only: par_file, ierrh, namelist_errh, compare_namelist         ! QA_WARN required for diff_nml
-      use mpisetup,      only: cbuff_len, cbuff, rbuff, buffer_dim, proc, comm, ierr
+      use mpisetup,      only: cbuff_len, cbuff, rbuff, buffer_dim, master, slave, comm, ierr
       use mpi,           only: MPI_CHARACTER, MPI_DOUBLE_PRECISION
       use types,         only: idlen
 
@@ -67,7 +67,7 @@ module initproblem
       eps     = 1.0
       amp     = 1.e-5
 
-      if (proc .eq. 0) then
+      if (master) then
 
          diff_nml(PROBLEM_CONTROL)
 
@@ -87,7 +87,7 @@ module initproblem
       call MPI_Bcast(cbuff, cbuff_len*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
       call MPI_Bcast(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
-      if (proc /= 0) then
+      if (slave) then
 
          problem_name = cbuff(1)
          run_id       = cbuff(2)(1:idlen)

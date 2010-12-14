@@ -57,7 +57,7 @@ module initproblem
       use dataio_pub,    only: die
       use grid,          only: dxmn
       use mpi,           only: MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION
-      use mpisetup,      only: cbuff_len, cbuff, ibuff, rbuff, buffer_dim, comm, ierr, proc
+      use mpisetup,      only: cbuff_len, cbuff, ibuff, rbuff, buffer_dim, comm, ierr, master, slave
       use types,         only: idlen, problem_customize_solution, finalize_problem
 
       implicit none
@@ -79,7 +79,7 @@ module initproblem
 
       norm_step    = 10        !< how often to compute the norm (in steps)
 
-      if (proc == 0) then
+      if (master) then
 
          diff_nml(PROBLEM_CONTROL)
 
@@ -106,7 +106,7 @@ module initproblem
       call MPI_Bcast(ibuff,           buffer_dim, MPI_INTEGER,          0, comm, ierr)
       call MPI_Bcast(rbuff,           buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
-      if (proc /= 0) then
+      if (slave) then
 
          problem_name = cbuff(1)
          run_id       = cbuff(2)(1:idlen)
@@ -219,7 +219,7 @@ module initproblem
       use dataio_pub,     only: code_progress, PIERNIK_FINISHED, halfstep, msg, die, printinfo
       use grid,           only: x, y, z, is, ie, js, je, ks, ke
       use initcosmicrays, only: iarr_crs, ncrn, ncre, K_crn_paral, K_crn_perp
-      use mpisetup,       only: proc, comm3d, ierr, t, nstep
+      use mpisetup,       only: master, comm3d, ierr, t, nstep
       use mpi,            only: MPI_DOUBLE_PRECISION, MPI_SUM, MPI_MIN, MPI_MAX, MPI_IN_PLACE
 
       implicit none
@@ -286,7 +286,7 @@ module initproblem
       call MPI_Allreduce(MPI_IN_PLACE, dev(1), 1, MPI_DOUBLE_PRECISION, MPI_MIN, comm3d, ierr)
       call MPI_Allreduce(MPI_IN_PLACE, dev(2), 1, MPI_DOUBLE_PRECISION, MPI_MAX, comm3d, ierr)
 
-      if (proc == 0) then
+      if (master) then
          if (norm(2) /= 0) then
             write(msg,'(a,f12.5,a,2f12.5)')"[initproblem:check_norm] L2 error norm = ", sqrt(norm(1)/norm(2)), " min and max error = ", dev(1:2)
          else

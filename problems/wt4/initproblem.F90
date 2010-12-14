@@ -81,7 +81,7 @@ contains
 
       use constants,     only: pi
       use dataio_pub,    only: ierrh, par_file, namelist_errh, compare_namelist      ! QA_WARN required for diff_nml
-      use mpisetup,      only: ierr, rbuff, cbuff, ibuff, lbuff, proc, buffer_dim, comm
+      use mpisetup,      only: ierr, rbuff, cbuff, ibuff, lbuff, master, slave, buffer_dim, comm
       use mpi,           only: MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL
       use types,         only: idlen, problem_customize_solution
       use list_hdf5,     only: additional_attrs, problem_write_restart, problem_read_restart
@@ -117,7 +117,7 @@ contains
       starpos(:)      = 0.0 ! for test4-512 [ -0.00190265, 0.0379506,   0.00083884  ]
       starvel(:)      = 0.0 ! for test4-512 [  0.00172268, 0.00178423, -6.20918e-05 ]
 
-      if (proc == 0) then
+      if (master) then
 
          diff_nml(PROBLEM_CONTROL)
 
@@ -151,7 +151,7 @@ contains
       call MPI_Bcast(rbuff,           buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
       call MPI_Bcast(lbuff,           buffer_dim, MPI_LOGICAL,          0, comm, ierr)
 
-      if (proc /= 0) then
+      if (slave) then
 
          problem_name = trim(cbuff(1))
          run_id       = cbuff(2)(1:idlen)
@@ -193,7 +193,7 @@ contains
 
       use dataio_pub,    only: msg, die
       use grid,          only: xminb, xmaxb, yminb, ymaxb, zminb, zmaxb
-      use mpisetup,      only: proc, nproc, comm3d, status, ierr
+      use mpisetup,      only: proc, master, nproc, comm3d, status, ierr
       use mpi,           only: MPI_INTEGER, MPI_DOUBLE_PRECISION
 
       implicit none
@@ -215,7 +215,7 @@ contains
       if (allocated(ic_data)) call die("[initproblem:read_IC_file] ic_data already allocated")
       allocate(ic_data(ic_is:ic_ie, ic_js:ic_je, ic_ks:ic_ke, ic_vars))
 
-      if (proc == 0) then
+      if (master) then
          open(1, file=input_file, status='old', iostat=ostat)
          if (ostat /= 0) then
             write(msg,'(3a,i4)')"[initproblem:read_IC_file] cannot read ic_data from file '",input_file,"' at PE#",proc
@@ -226,7 +226,7 @@ contains
       endif
 
       do v = 1, ic_vars
-         if (proc == 0) then ! read the quantities, then send to everyone interested
+         if (master) then ! read the quantities, then send to everyone interested
             do k = 1, ic_nz
                do j = 1, ic_ny
                   do i = 1, ic_nx
@@ -250,7 +250,7 @@ contains
       enddo
 
       if (allocated(ic_v)) deallocate(ic_v)
-      if (proc == 0) close(1)
+      if (master) close(1)
 
       if (mass_mul /= 1.0) ic_data(:, :, :, 1) = ic_data(:, :, :, 1) * mass_mul
 
@@ -280,14 +280,14 @@ contains
       use dataio_pub,    only: warn, printinfo, msg
       use grid,          only: is, ie, js, je, ks, ke, nx, ny, nz, nb, x, y, z, dx, dy, dz
       use initionized,   only: idni, imxi, imyi, imzi
-      use mpisetup,      only: proc, smalld
+      use mpisetup,      only: master, smalld
 
       implicit none
 
       real, parameter :: beat_dx = 1e-5
       integer :: i, j, k, iic, jic, kic
 
-      if (proc == 0) then
+      if (master) then
          if (max(dx, dy, dz) > ic_dx) then
             write(msg,'(a)')     "[initproblem:init_prob] Too low resolution" ! call die
             call warn(msg)
@@ -356,7 +356,7 @@ contains
          cs_iso2_arr(:,:,i)       = cs_iso2_arr(:,:,nb+1)
          cs_iso2_arr(:,:,nz-nb+i) = cs_iso2_arr(:,:,nz-nb)
       enddo
-      if (proc == 0 ) then
+      if (master ) then
          write(msg,'(2(a,g15.7))') '[initproblem:init_problem]: minval(dens)    = ', minval(u(idni,:,:,:)),      ' maxval(dens)    = ', maxval(u(idni,:,:,:))
          call printinfo(msg, .true.)
          write(msg,'(2(a,g15.7))') '[initproblem:init_problem]: minval(cs_iso2) = ', minval(cs_iso2_arr(:,:,:)), ' maxval(cs_iso2) = ', maxval(cs_iso2_arr(:,:,:))
@@ -377,7 +377,7 @@ contains
       ! It would be cool to dump a restart file here but this would make a cyclic dependency
 
 #ifndef UMUSCL
-      if (proc == 0 ) call warn("[initproblem:init_problem]: Without UMUSCL you'll likely get Monet-like density maps.")
+      if (master ) call warn("[initproblem:init_problem]: Without UMUSCL you'll likely get Monet-like density maps.")
 #endif /* !UMUSCL */
 
       return
