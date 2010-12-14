@@ -47,11 +47,13 @@ module mpisetup
         & bnd_xr_dom, bnd_yl, bnd_yl_dom, bnd_yr, bnd_yr_dom, bnd_zl, bnd_zl_dom, bnd_zr, bnd_zr_dom, buffer_dim, cbuff, cbuff_len, cfl, cfl_max, cflcontrol, &
         & cfr_smooth, cleanup_mpi, comm, comm3d, dt, dt_initial, dt_max_grow, dt_min, dt_old, dtm, err, ibuff, ierr, info, init_mpi, &
         & integration_order, lbuff, limiter, mpifind, ndims, nproc, nstep, pcoords, proc, procxl, procxr, procxyl, procyl, procyr, procyxl, proczl, &
-        & proczr, psize, pxsize, pysize, pzsize, rbuff, req, smalld, smallei, smallp, status, t, use_smalld, magic_mass, local_magic_mass
+        & proczr, psize, pxsize, pysize, pzsize, rbuff, req, smalld, smallei, smallp, status, t, use_smalld, magic_mass, local_magic_mass, master, slave
 
    integer :: nproc, proc, ierr , rc, info
    integer :: status(MPI_STATUS_SIZE,4)
    integer, dimension(4) :: req, err
+
+   logical, protected    :: master, slave
 
    real, parameter       :: dt_default_grow = 2.
 
@@ -213,6 +215,8 @@ module mpisetup
          call printinfo("[mpisetup:init_mpi]: commencing...")
 #endif /* VERBOSE */
          call MPI_Comm_rank(MPI_COMM_WORLD, proc, ierr)
+         master = (proc == 0)
+         slave  = (proc /= 0)
          comm = MPI_COMM_WORLD
          info = MPI_INFO_NULL
          call MPI_Comm_size(comm, nproc, ierr)
