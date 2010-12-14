@@ -100,3 +100,7 @@
     r_out   = 2.1
     mag_field_orient = 'none'
 /
+
+ $PIERNIK_DEBUG
+   constant_dt = 1.55e-2
+ /
