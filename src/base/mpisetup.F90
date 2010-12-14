@@ -223,7 +223,7 @@ module mpisetup
 
          if (allocated(cwd_all) .or. allocated(host_all) .or. allocated(pid_all)) call die("[mpisetup:init_mpi] cwd_all, host_all or pid_all already allocated")
 
-         ! BEWARE if proc /= 0 it is probably enough to allocate only one element or none at all (may depend on MPI implementation)
+         ! BEWARE if slave it is probably enough to allocate only one element or none at all (may depend on MPI implementation)
          allocate(cwd_all(0:nproc))
          allocate(host_all(0:nproc))
          allocate(pid_all(0:nproc))
@@ -244,12 +244,10 @@ module mpisetup
 
          ! cwd = trim(cwd_proc)  !BEWARE: It's redundant, we get cwd for command line in init_piernik subroutine
 
-         if (proc == 0) then
+         if (master) then
             inquire(file=par_file, exist=par_file_exist)
             if (.not. par_file_exist) call die('[mpisetup:init_mpi] Cannot find "problem.par" in the working directory',0)
-         endif
 
-         if (proc == 0) then
             call printinfo("------------------------------------------------------------------------------------------------------", .false.)
             call printinfo("###############     Environment     ###############", .false.)
             call printinfo("", .false.)
@@ -305,7 +303,7 @@ module mpisetup
 
          integration_order  = 2
 
-         if (proc == 0) then
+         if (master) then
             diff_nml(MPI_BLOCKS)
             diff_nml(BOUNDARIES)
             diff_nml(NUMERICAL_SETUP)
@@ -318,7 +316,7 @@ module mpisetup
 
          cfl_max = min(max(cfl_max, min(cfl*1.1, cfl+0.05, (1.+cfl)/2.) ), 1.0) ! automatically sanitize cfl_max
 
-         if (proc == 0) then
+         if (master) then
 
             cbuff(1) = bnd_xl
             cbuff(2) = bnd_xr
@@ -359,7 +357,7 @@ module mpisetup
          call MPI_Bcast(rbuff,           buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
          call MPI_Bcast(lbuff,           buffer_dim, MPI_LOGICAL,          0, comm, ierr)
 
-         if (proc /= 0) then
+         if (slave) then
 
             mpi_magic   = lbuff(1)
             use_smalld  = lbuff(2)
@@ -414,7 +412,7 @@ module mpisetup
             if (mpi_magic) then
                call divide_domain_voodoo(nproc)
             else
-               if (proc == 0) then
+               if (master) then
                   write(msg,'(A,I5,A,I10)') 'nproc =',nproc,' MUST BE EQUAL TO   pxsize*pysize*pzsize =',pxsize*pysize*pzsize
                   call die(msg,0)
                endif
@@ -534,7 +532,7 @@ module mpisetup
 
          dt_old = -1.
          if (dt_max_grow < 1.01) then
-            if (proc == 0) then
+            if (master) then
                write(msg,'(2(a,g10.3))')"[mpisetup:init_mpi] dt_max_grow = ",dt_max_grow," is way too low. Resetting to ",dt_default_grow
                call warn(msg)
             endif
@@ -601,7 +599,7 @@ module mpisetup
             call MPI_Type_free(ARR_XY_RIGHT_BND, ierr)
          endif
 
-         if (proc == 0) call printinfo("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++", .false.)
+         if (master) call printinfo("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++", .false.)
          call MPI_Barrier(comm,ierr)
          if (nproc > 1) call sleep(1) ! Prevent random SIGSEGVs in openmpi's MPI_Finalize
          call MPI_Finalize(ierr)
@@ -635,7 +633,7 @@ module mpisetup
                call warn(msg)
          end select
 
-         if (proc == 0) then
+         if (master) then
             var = rrecv(1)
             loc_proc = rrecv(2)
          endif
@@ -645,7 +643,7 @@ module mpisetup
          if (loc_proc /= 0) then
             if (proc == loc_proc) then
                CALL MPI_Send  (loc_arr, 3, MPI_INTEGER,     0, 11, comm, ierr)
-            else if (proc == 0) then
+            else if (master) then
                CALL MPI_Recv  (loc_arr, 3, MPI_INTEGER, loc_proc, 11, comm, status, ierr)
             endif
          endif
@@ -712,7 +710,7 @@ module mpisetup
 
          psize = [ pxsize, pysize, pzsize ]
 
-         if (proc == 0 .and. np > 1) then
+         if (master .and. np > 1) then
             write(msg,'(a,3i4,a,3i6,a)')"[mpisetup:divide_domain_voodoo] Domain divided to [",psize(:)," ] pieces, each of [",ldom(3:1:-1)," ] cells."
             call printinfo(msg)
          endif
