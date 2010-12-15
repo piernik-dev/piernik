@@ -281,7 +281,7 @@ contains
          endif
       endif
 
-      stop
+      call exit(-1)
 
    end subroutine die
 !-----------------------------------------------------------------------------
