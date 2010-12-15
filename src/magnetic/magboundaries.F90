@@ -287,7 +287,7 @@ contains
          case ("xdim")
 
             select case (bnd_xl(1:3))
-               case ("she", "mpi", "cor", "inf", "ref")
+               case ("cor", "inf", "mpi", "ref", "she")
                case ("per")
                   b(:,1:nb,:,:)              = b(:,nxb+1:nxb+nb,:,:)
                case ("out")
@@ -298,7 +298,7 @@ contains
             end select  ! (bnd_xl)
 
             select case (bnd_xr(1:3))
-               case ("she", "mpi", "cor", "inf", "ref")
+               case ("cor", "inf", "mpi", "ref", "she")
 !              Do nothing
                case ("per")
                   b(:,nxb+nb+1:nxb+2*nb,:,:) = b(:,nb+1:2*nb,:,:)
@@ -312,7 +312,7 @@ contains
          case ("ydim")
 
             select case (bnd_yl(1:3))
-               case ("mpi", "cor", "inf", "ref")
+               case ("cor", "inf", "mpi", "ref")
 !              Do nothing
                case ("per")
                   b(:,:,1:nb,:)              = b(:,:,nyb+1:nyb+nb,:)
@@ -324,7 +324,7 @@ contains
             end select  ! (bnd_yl)
 
             select case (bnd_yr(1:3))
-               case ("mpi", "cor", "inf", "ref")
+               case ("cor", "inf", "mpi", "ref")
 !              Do nothing if "mpi"
                case ("per")
                   b(:,:,nyb+nb+1:nyb+2*nb,:) = b(:,:,nb+1:2*nb,:)
@@ -392,7 +392,7 @@ contains
                case ("vxby","vxbz")
 
                   select case (bnd_xl(1:3))
-                     case ("she", "mpi", "per", "cor", "inf")
+                     case ("cor", "inf", "mpi", "per", "she")
 !                    Do nothing
                      case ("ref")
                         var(nb,:,:)             = 0.0
@@ -410,7 +410,7 @@ contains
                   end select  ! (bnd_xl)
 
                   select case (bnd_xr(1:3))
-                     case ("she", "mpi", "per", "cor", "inf")
+                     case ("cor", "inf", "mpi", "per", "she")
 !                    Do nothing
                      case ("ref")
                         var(nb+nxb,:,:)         = 0.0
@@ -430,7 +430,7 @@ contains
                case ("vybx","vzbx","emfy","emfz")
 
                   select case (bnd_xl(1:3))
-                     case ("she", "mpi", "per", "cor", "inf")
+                     case ("cor", "inf", "mpi", "per", "she")
 !                    Do nothing
                      case ("ref")
                         var(nb+1,:,:)           = 0.0
@@ -448,7 +448,7 @@ contains
                   end select   ! (bnd_xl)
 
                   select case (bnd_xr(1:3))
-                     case ("she", "mpi", "per", "cor", "inf")
+                     case ("cor", "inf", "mpi", "per", "she")
 !                    Do nothing
                      case ("ref")
                         var(nb+nxb+1,:,:)       = 0.0
@@ -468,7 +468,7 @@ contains
                case ("vybz","vzby","emfx")
 
                   select case (bnd_xl(1:3))
-                     case ("she", "mpi", "per", "cor", "inf")
+                     case ("cor", "inf", "mpi", "per", "she")
 !                    Do nothing
                      case ("ref")
                         do ib=1,nb
@@ -485,7 +485,7 @@ contains
                   end select   ! (bnd_xl)
 
                   select case (bnd_xr(1:3))
-                     case ("she", "mpi", "per", "cor", "inf")
+                     case ("cor", "inf", "mpi", "per", "she")
 !                    Do nothing
                      case ("ref")
                         do ib=1,nb
@@ -509,7 +509,7 @@ contains
                case ("vybz","vybx")
 
                   select case (bnd_yl(1:3))
-                     case ("mpi", "per", "cor", "inf")
+                     case ("cor", "inf", "mpi", "per")
 !                    Do nothing
                      case ("ref")
                         var(:,nb,:)             = 0.0
@@ -527,7 +527,7 @@ contains
                   end select  ! (bnd_yl)
 
                   select case (bnd_yr(1:3))
-                     case ("mpi", "per", "cor", "inf")
+                     case ("cor", "inf", "mpi", "per")
 !                    Do nothing
                      case ("ref")
                         var(:,nb+nyb,:)         = 0.0
@@ -547,7 +547,7 @@ contains
                case ("vzby","vxby","emfz","emfx")
 
                   select case (bnd_yl(1:3))
-                     case ("mpi", "per", "cor", "inf")
+                     case ("cor", "inf", "mpi", "per")
 !                    Do nothing
                      case ("ref")
                         var(:,nb+1,:)           = 0.0
@@ -565,7 +565,7 @@ contains
                   end select   ! (bnd_yl)
 
                   select case (bnd_yr(1:3))
-                     case ("mpi", "per", "cor", "inf")
+                     case ("cor", "inf", "mpi", "per")
 !                    Do nothing
                      case ("ref")
                         var(:,nb+nyb+1,:)       = 0.0
@@ -585,7 +585,7 @@ contains
                case ("vzbx","vxbz","emfy")
 
                   select case (bnd_yl(1:3))
-                     case ("mpi", "per", "cor", "inf")
+                     case ("cor", "inf", "mpi", "per")
 !                    Do nothing
                      case ("ref")
                         do ib=1,nb
@@ -602,7 +602,7 @@ contains
                   end select   ! (bnd_yl)
 
                   select case (bnd_yr(1:3))
-                     case ("mpi", "per", "cor", "inf")
+                     case ("cor", "inf", "mpi", "per")
 !                    Do nothing
                      case ("ref")
                         do ib=1,nb
@@ -628,7 +628,7 @@ contains
                case ("vzbx","vzby")
 
                   select case (bnd_zl(1:3))
-                     case ("mpi", "per", "inf")
+                     case ("inf", "mpi", "per")
 !                    Do nothing
                      case ("ref")
                         var(:,:,nb)             = 0.0
@@ -646,7 +646,7 @@ contains
                   end select  ! (bnd_zl)
 
                   select case (bnd_zr(1:3))
-                     case ("mpi", "per", "inf")
+                     case ("inf", "mpi", "per")
 !                    Do nothing
                      case ("ref")
                         var(:,:,nb+nzb)         = 0.0
@@ -667,7 +667,7 @@ contains
                case ("vxbz","vybz","emfy","emfx")
 
                   select case (bnd_zl(1:3))
-                     case ("mpi", "per", "inf")
+                     case ("inf", "mpi", "per")
 !                    Do nothing
                      case ("ref")
                         var(:,:,nb+1)           = 0.0
@@ -685,7 +685,7 @@ contains
                   end select   ! (bnd_zl)
 
                   select case (bnd_zr(1:3))
-                     case ("mpi", "per", "inf")
+                     case ("inf", "mpi", "per")
 !                    Do nothing
                      case ("ref")
                         var(:,:,nb+nzb+1)       = 0.0
@@ -705,7 +705,7 @@ contains
                case ("vxby","vybx","emfz")
 
                   select case (bnd_zl(1:3))
-                     case ("mpi", "per", "inf")
+                     case ("inf", "mpi", "per")
 !                    Do nothing
                      case ("ref")
                         do ib=1,nb
@@ -722,7 +722,7 @@ contains
                   end select   ! (bnd_zl)
 
                   select case (bnd_zr(1:3))
-                     case ("mpi", "per", "inf")
+                     case ("inf", "mpi", "per")
 !                    Do nothing
                      case ("ref")
                         do ib=1,nb

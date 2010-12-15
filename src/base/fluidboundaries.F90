@@ -385,16 +385,10 @@ module fluidboundaries
       case ('xdim')
 
          select case (bnd_xl)
-         case ('she')
-!         Do nothing if 'mpi'
-         case ('mpi')
-!         Do nothing if 'mpi'
+         case ('cor', 'inf', 'mpi', 'she', 'shef')
+!         Do nothing
          case ('per')
             u(:,1:nb,:,:)                        = u(:,nxb+1:nxb+nb,:,:)
-         case ('cor')
-!         Do nothing if 'cor'
-         case ('inf')
-!         Do nothing if 'inf'
          case ('user')
             call user_bnd_xl
          case ('ref')
@@ -428,26 +422,16 @@ module fluidboundaries
                u(iarr_all_crs,ib,:,:)                     = smallecr
 #endif /* COSM_RAYS */
             enddo
-         case ('shef')
-!         Do nothing if 'mpi'
          case default
             write(msg,'("[fluid_boundaries:bnd_u]: Boundary condition ",a," not implemented in ",a)') trim(bnd_xl), trim(dim)
             call warn(msg)
          end select  ! (bnd_xl)
 
          select case (bnd_xr)
-         case ('shef')
-!         Do nothing if 'mpi'
-         case ('she')
-!         Do nothing if 'mpi'
-         case ('mpi')
-!         Do nothing if mpi
+         case ('cor', 'inf', 'mpi', 'she', 'shef')
+!         Do nothing
          case ('per')
             u(:,nxb+nb+1:nxb+2*nb,:,:)            = u(:,nb+1:2*nb,:,:)
-         case ('cor')
-!         Do nothing if 'cor'
-         case ('inf')
-!         Do nothing if 'inf'
          case ('user')
             call user_bnd_xr
          case ('ref')
@@ -489,14 +473,10 @@ module fluidboundaries
       case ('ydim')
 
          select case (bnd_yl)
-         case ('mpi')
-!         Do nothing if mpi
+         case ('cor', 'inf', 'mpi')
+!         Do nothing
          case ('per')
             u(:,:,1:nb,:)                         = u(:,:,nyb+1:nyb+nb,:)
-         case ('cor')
-!         Do nothing if 'cor'
-         case ('inf')
-!         Do nothing if 'inf'
          case ('user')
             call user_bnd_yl
          case ('ref')
@@ -536,14 +516,10 @@ module fluidboundaries
          end select  ! (bnd_yl)
 
          select case (bnd_yr)
-         case ('mpi')
-!         Do nothing if mpi
+         case ('cor', 'inf', 'mpi')
+!         Do nothing
          case ('per')
             u(:,:,nyb+nb+1:nyb+2*nb,:)            = u(:,:,nb+1:2*nb,:)
-         case ('cor')
-!         Do nothing if 'cor'
-         case ('inf')
-!         Do nothing if 'inf'
          case ('user')
             call user_bnd_yr
          case ('ref')
