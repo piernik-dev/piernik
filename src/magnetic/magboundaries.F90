@@ -103,6 +103,14 @@ contains
 #ifdef SHEAR
       real, allocatable :: send_right(:,:,:,:),recv_right(:,:,:,:)
 #endif /* SHEAR */
+      logical, save                         :: frun = .true.
+      logical, save                         :: bnd_xl_not_provided = .false.
+      logical, save                         :: bnd_xr_not_provided = .false.
+      logical, save                         :: bnd_yl_not_provided = .false.
+      logical, save                         :: bnd_yr_not_provided = .false.
+      logical, save                         :: bnd_zl_not_provided = .false.
+      logical, save                         :: bnd_zr_not_provided = .false.
+
 ! MPI block comunication
 
       select case (dim)
@@ -282,6 +290,20 @@ contains
 
 
 ! Non-MPI boundary conditions
+      if (frun) then
+         bnd_xl_not_provided = any( [bnd_xl(1:3) == "cor", bnd_xl(1:3) == "inf", bnd_xl(1:3) == "mpi", bnd_xl(1:3) == "ref", bnd_xl(1:3) == "she"] )
+         bnd_xr_not_provided = any( [bnd_xr(1:3) == "cor", bnd_xr(1:3) == "inf", bnd_xr(1:3) == "mpi", bnd_xr(1:3) == "ref", bnd_xr(1:3) == "she"] )
+         bnd_yl_not_provided = any( [bnd_yl(1:3) == "cor", bnd_yl(1:3) == "inf", bnd_yl(1:3) == "mpi", bnd_yl(1:3) == "ref" ] )
+         bnd_yr_not_provided = any( [bnd_yr(1:3) == "cor", bnd_yr(1:3) == "inf", bnd_yr(1:3) == "mpi", bnd_yr(1:3) == "ref" ] )
+         bnd_zl_not_provided = any( [bnd_zl(1:3) == "inf", bnd_zl(1:3) == "ref", bnd_zl(1:3) == "mpi" ] )
+         bnd_zr_not_provided = any( [bnd_zr(1:3) == "inf", bnd_zr(1:3) == "ref", bnd_zr(1:3) == "mpi" ] )
+         frun = .false.
+      endif
+
+      if (dim=="xdim" .and. bnd_xl_not_provided .and. bnd_xr_not_provided) return  ! avoid triple case
+      if (dim=="ydim" .and. bnd_yl_not_provided .and. bnd_yr_not_provided) return  ! avoid triple case
+      if (dim=="zdim" .and. bnd_zl_not_provided .and. bnd_zr_not_provided) return  ! avoid triple case
+
 
       select case (dim)
          case ("xdim")
@@ -377,13 +399,33 @@ contains
 
       implicit none
 
-      real, dimension(nx,ny,nz) :: var
-      real, dimension(ny,nz)    :: dvarx
-      real, dimension(nx,nz)    :: dvary
-      real, dimension(nx,ny)    :: dvarz
-      character(len=*)          :: name, dim
-      integer                   :: ib
+      real, dimension(:,:,:), intent(inout) :: var
+      character(len=*), intent(in)          :: name, dim
+      real, dimension(ny,nz)                :: dvarx
+      real, dimension(nx,nz)                :: dvary
+      real, dimension(nx,ny)                :: dvarz
+      integer                               :: ib
+      logical, save                         :: frun = .true.
+      logical, save                         :: bnd_xl_not_provided = .false.
+      logical, save                         :: bnd_xr_not_provided = .false.
+      logical, save                         :: bnd_yl_not_provided = .false.
+      logical, save                         :: bnd_yr_not_provided = .false.
+      logical, save                         :: bnd_zl_not_provided = .false.
+      logical, save                         :: bnd_zr_not_provided = .false.
 
+      if (frun) then
+         bnd_xl_not_provided = any( [bnd_xl(1:3) == "cor", bnd_xl(1:3) == "inf", bnd_xl(1:3) == "per", bnd_xl(1:3) == "mpi", bnd_xl(1:3) == "she"] )
+         bnd_xr_not_provided = any( [bnd_xr(1:3) == "cor", bnd_xr(1:3) == "inf", bnd_xr(1:3) == "per", bnd_xr(1:3) == "mpi", bnd_xr(1:3) == "she"] )
+         bnd_yl_not_provided = any( [bnd_yl(1:3) == "cor", bnd_yl(1:3) == "inf", bnd_yl(1:3) == "per", bnd_yl(1:3) == "mpi" ] )
+         bnd_yr_not_provided = any( [bnd_yr(1:3) == "cor", bnd_yr(1:3) == "inf", bnd_yr(1:3) == "per", bnd_yr(1:3) == "mpi" ] )
+         bnd_zl_not_provided = any( [bnd_zl(1:3) == "inf", bnd_zl(1:3) == "per", bnd_zl(1:3) == "mpi" ] )
+         bnd_zr_not_provided = any( [bnd_zr(1:3) == "inf", bnd_zr(1:3) == "per", bnd_zr(1:3) == "mpi" ] )
+         frun = .false.
+      endif
+
+      if (dim=="xdim" .and. bnd_xl_not_provided .and. bnd_xr_not_provided) return  ! avoid triple case
+      if (dim=="ydim" .and. bnd_yl_not_provided .and. bnd_yr_not_provided) return  ! avoid triple case
+      if (dim=="zdim" .and. bnd_zl_not_provided .and. bnd_zr_not_provided) return  ! avoid triple case
 
       select case (dim)
          case ("xdim")
@@ -393,7 +435,7 @@ contains
 
                   select case (bnd_xl(1:3))
                      case ("cor", "inf", "mpi", "per", "she")
-!                    Do nothing
+                        ! Do nothing
                      case ("ref")
                         var(nb,:,:)             = 0.0
                         do ib=1,nb-1
@@ -411,7 +453,7 @@ contains
 
                   select case (bnd_xr(1:3))
                      case ("cor", "inf", "mpi", "per", "she")
-!                    Do nothing
+                        ! Do nothing
                      case ("ref")
                         var(nb+nxb,:,:)         = 0.0
                         do ib=1,nb-1
