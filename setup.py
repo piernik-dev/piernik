@@ -292,7 +292,7 @@ else:
 
 
 objdir = 'obj'
-rundir = 'runs/'+args[0]
+rundir = 'runs/'+os.path.basename(args[0])
 if(len(options.objdir)>0):
    objdir += '_'+options.objdir
    rundir += '_'+options.objdir+'/'
