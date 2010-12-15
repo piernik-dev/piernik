@@ -287,18 +287,9 @@ contains
          case ("xdim")
 
             select case (bnd_xl(1:3))
-               case ("she")
-!              Do nothing if "she"
-               case ("mpi")
-!              Do nothing if "mpi"
+               case ("she", "mpi", "cor", "inf", "ref")
                case ("per")
                   b(:,1:nb,:,:)              = b(:,nxb+1:nxb+nb,:,:)
-               case ("cor")
-!              Do nothing if "cor"
-               case ("inf")
-!              Do nothing if "inf"
-               case ("ref")
-!              Do nothing if "ref"
                case ("out")
                   b(:,1,:,:) = b(:,2,:,:)
                case default
@@ -307,18 +298,10 @@ contains
             end select  ! (bnd_xl)
 
             select case (bnd_xr(1:3))
-               case ("she")
-!              Do nothing if "she"
-               case ("mpi")
-!              Do nothing if "mpi"
+               case ("she", "mpi", "cor", "inf", "ref")
+!              Do nothing
                case ("per")
                   b(:,nxb+nb+1:nxb+2*nb,:,:) = b(:,nb+1:2*nb,:,:)
-               case ("cor")
-!              Do nothing if "cor"
-               case ("inf")
-!              Do nothing if "inf"
-               case ("ref")
-!              Do nothing if "ref"
                case ("out")
                   b(:,nx,:,:) = b(:,nx-1,:,:)
                case default
@@ -329,16 +312,10 @@ contains
          case ("ydim")
 
             select case (bnd_yl(1:3))
-               case ("mpi")
-!              Do nothing if "mpi"
+               case ("mpi", "cor", "inf", "ref")
+!              Do nothing
                case ("per")
                   b(:,:,1:nb,:)              = b(:,:,nyb+1:nyb+nb,:)
-               case ("cor")
-!              Do nothing if "cor"
-               case ("inf")
-!              Do nothing if "inf"
-               case ("ref")
-!              Do nothing if "ref"
                case ("out")
                   b(:,:,1,:) = b(:,:,2,:)
                case default
@@ -347,16 +324,10 @@ contains
             end select  ! (bnd_yl)
 
             select case (bnd_yr(1:3))
-               case ("mpi")
+               case ("mpi", "cor", "inf", "ref")
 !              Do nothing if "mpi"
                case ("per")
                   b(:,:,nyb+nb+1:nyb+2*nb,:) = b(:,:,nb+1:2*nb,:)
-               case ("cor")
-!              Do nothing if "cor"
-               case ("inf")
-!              Do nothing if "inf"
-               case ("ref")
-!              Do nothing if "ref"
                case ("out")
                   b(:,:,ny,:) = b(:,:,ny-1,:)
                case default
@@ -369,12 +340,10 @@ contains
          case ("zdim")
 
             select case (bnd_zl(1:3))
-               case ("mpi")
-!              Do nothing if "mpi"
+               case ("mpi", "ref")
+!              Do nothing
                case ("per")
                   b(:,:,:,1:nb)              = b(:,:,:,nzb+1:nzb+nb)
-               case ("ref")
-!              Do nothing if "ref"
                case ("out")
                   b(:,:,:,1) = b(:,:,:,2)
                case default
@@ -383,12 +352,10 @@ contains
             end select  ! (bnd_zl)
 
             select case (bnd_zr(1:3))
-               case ("mpi")
-!              Do nothing if "mpi"
+               case ("mpi", "ref")
+!              Do nothing
                case ("per")
                   b(:,:,:,nzb+nb+1:nzb+2*nb) = b(:,:,:,nb+1:2*nb)
-               case ("ref")
-!              Do nothing if "ref"
                case ("out")
                   b(:,:,:,nz) = b(:,:,:,nz-1)
                case default
@@ -425,16 +392,8 @@ contains
                case ("vxby","vxbz")
 
                   select case (bnd_xl(1:3))
-                     case ("she")
-!                    Do nothing if "she"
-                     case ("mpi")
-!                    Do nothing if "mpi"
-                     case ("per")
-!                    Do nothing if "per"
-                     case ("cor")
-!                    Do nothing if "cor"
-                     case ("inf")
-!                    Do nothing if "inf"
+                     case ("she", "mpi", "per", "cor", "inf")
+!                    Do nothing
                      case ("ref")
                         var(nb,:,:)             = 0.0
                         do ib=1,nb-1
@@ -451,16 +410,8 @@ contains
                   end select  ! (bnd_xl)
 
                   select case (bnd_xr(1:3))
-                     case ("she")
-!                    Do nothing if "she"
-                     case ("mpi")
-!                    Do nothing if "mpi"
-                     case ("per")
-!                    Do nothing if "per"
-                     case ("cor")
-!                    Do nothing if "cor"
-                     case ("inf")
-!                    Do nothing if "inf"
+                     case ("she", "mpi", "per", "cor", "inf")
+!                    Do nothing
                      case ("ref")
                         var(nb+nxb,:,:)         = 0.0
                         do ib=1,nb-1
@@ -479,16 +430,8 @@ contains
                case ("vybx","vzbx","emfy","emfz")
 
                   select case (bnd_xl(1:3))
-                     case ("she")
-!                    Do nothing if "she"
-                     case ("mpi")
-!                    Do nothing if "mpi"
-                     case ("per")
-!                    Do nothing if "per"
-                     case ("cor")
-!                    Do nothing if "cor"
-                     case ("inf")
-!                    Do nothing if "inf"
+                     case ("she", "mpi", "per", "cor", "inf")
+!                    Do nothing
                      case ("ref")
                         var(nb+1,:,:)           = 0.0
                         do ib=1,nb
@@ -505,16 +448,8 @@ contains
                   end select   ! (bnd_xl)
 
                   select case (bnd_xr(1:3))
-                     case ("she")
-!                    Do nothing if "she"
-                     case ("mpi")
-!                    Do nothing if "mpi"
-                     case ("per")
-!                    Do nothing if "per"
-                     case ("cor")
-!                    Do nothing if "cor"
-                     case ("inf")
-!                    Do nothing if "inf"
+                     case ("she", "mpi", "per", "cor", "inf")
+!                    Do nothing
                      case ("ref")
                         var(nb+nxb+1,:,:)       = 0.0
                         do ib=1,nb-1
@@ -533,16 +468,8 @@ contains
                case ("vybz","vzby","emfx")
 
                   select case (bnd_xl(1:3))
-                     case ("she")
-!                    Do nothing if "she"
-                     case ("mpi")
-!                    Do nothing if "mpi"
-                     case ("per")
-!                    Do nothing if "per"
-                     case ("cor")
-!                    Do nothing if "cor"
-                     case ("inf")
-!                    Do nothing if "inf"
+                     case ("she", "mpi", "per", "cor", "inf")
+!                    Do nothing
                      case ("ref")
                         do ib=1,nb
                            var(nb+1-ib,:,:)     = var(nb+ib,:,:)
@@ -558,16 +485,8 @@ contains
                   end select   ! (bnd_xl)
 
                   select case (bnd_xr(1:3))
-                     case ("she")
-!                    Do nothing if "she"
-                     case ("mpi")
-!                    Do nothing if "mpi"
-                     case ("per")
-!                    Do nothing if "per"
-                     case ("cor")
-!                    Do nothing if "cor"
-                     case ("inf")
-!                    Do nothing if "inf"
+                     case ("she", "mpi", "per", "cor", "inf")
+!                    Do nothing
                      case ("ref")
                         do ib=1,nb
                            var(nb+nxb+ib,:,:)   = var(nb+nxb+1-ib,:,:)
@@ -590,14 +509,8 @@ contains
                case ("vybz","vybx")
 
                   select case (bnd_yl(1:3))
-                     case ("mpi")
-!                    Do nothing if "mpi"
-                     case ("per")
-!                    Do nothing if "per"
-                     case ("cor")
-!                    Do nothing if "cor"
-                     case ("inf")
-!                    Do nothing if "inf"
+                     case ("mpi", "per", "cor", "inf")
+!                    Do nothing
                      case ("ref")
                         var(:,nb,:)             = 0.0
                         do ib=1,nb-1
@@ -614,14 +527,8 @@ contains
                   end select  ! (bnd_yl)
 
                   select case (bnd_yr(1:3))
-                     case ("mpi")
-!                    Do nothing if "mpi"
-                     case ("per")
-!                    Do nothing if "per"
-                     case ("cor")
-!                    Do nothing if "cor"
-                     case ("inf")
-!                    Do nothing if "inf"
+                     case ("mpi", "per", "cor", "inf")
+!                    Do nothing
                      case ("ref")
                         var(:,nb+nyb,:)         = 0.0
                         do ib=1,nb-1
@@ -640,14 +547,8 @@ contains
                case ("vzby","vxby","emfz","emfx")
 
                   select case (bnd_yl(1:3))
-                     case ("mpi")
-!                    Do nothing if "mpi"
-                     case ("per")
-!                    Do nothing if "per"
-                     case ("cor")
-!                    Do nothing if "cor"
-                     case ("inf")
-!                    Do nothing if "inf"
+                     case ("mpi", "per", "cor", "inf")
+!                    Do nothing
                      case ("ref")
                         var(:,nb+1,:)           = 0.0
                         do ib=1,nb
@@ -664,14 +565,8 @@ contains
                   end select   ! (bnd_yl)
 
                   select case (bnd_yr(1:3))
-                     case ("mpi")
-!                    Do nothing if "mpi"
-                     case ("per")
-!                    Do nothing if "per"
-                     case ("cor")
-!                    Do nothing if "cor"
-                     case ("inf")
-!                    Do nothing if "inf"
+                     case ("mpi", "per", "cor", "inf")
+!                    Do nothing
                      case ("ref")
                         var(:,nb+nyb+1,:)       = 0.0
                         do ib=1,nb-1
@@ -690,14 +585,8 @@ contains
                case ("vzbx","vxbz","emfy")
 
                   select case (bnd_yl(1:3))
-                     case ("mpi")
-!                    Do nothing if "mpi"
-                     case ("per")
-!                    Do nothing if "per"
-                     case ("cor")
-!                    Do nothing if "cor"
-                     case ("inf")
-!                    Do nothing if "inf"
+                     case ("mpi", "per", "cor", "inf")
+!                    Do nothing
                      case ("ref")
                         do ib=1,nb
                            var(:,nb+1-ib,:)     = var(:,nb+ib,:)
@@ -713,14 +602,8 @@ contains
                   end select   ! (bnd_yl)
 
                   select case (bnd_yr(1:3))
-                     case ("mpi")
-!                    Do nothing if "mpi"
-                     case ("per")
-!                    Do nothing if "per"
-                     case ("cor")
-!                    Do nothing if "cor"
-                     case ("inf")
-!                    Do nothing if "inf"
+                     case ("mpi", "per", "cor", "inf")
+!                    Do nothing
                      case ("ref")
                         do ib=1,nb
                            var(:,nb+nyb+ib,:)   = var(:,nb+nyb+1-ib,:)
@@ -745,14 +628,8 @@ contains
                case ("vzbx","vzby")
 
                   select case (bnd_zl(1:3))
-                     case ("mpi")
-!                    Do nothing if "mpi"
-                     case ("per")
-!                    Do nothing if "per"
-                     case ("cor")
-!                    Do nothing if "cor"
-                     case ("inf")
-!                    Do nothing if "inf"
+                     case ("mpi", "per", "inf")
+!                    Do nothing
                      case ("ref")
                         var(:,:,nb)             = 0.0
                         do ib=1,nb-1
@@ -769,14 +646,8 @@ contains
                   end select  ! (bnd_zl)
 
                   select case (bnd_zr(1:3))
-                     case ("mpi")
-!                    Do nothing if "mpi"
-                     case ("per")
-!                    Do nothing if "per"
-                     case ("cor")
-!                    Do nothing if "cor"
-                     case ("inf")
-!                    Do nothing if "inf"
+                     case ("mpi", "per", "inf")
+!                    Do nothing
                      case ("ref")
                         var(:,:,nb+nzb)         = 0.0
                         do ib=1,nb-1
@@ -796,14 +667,8 @@ contains
                case ("vxbz","vybz","emfy","emfx")
 
                   select case (bnd_zl(1:3))
-                     case ("mpi")
-!                    Do nothing if "mpi"
-                     case ("per")
-!                    Do nothing if "per"
-                     case ("cor")
-!                    Do nothing if "cor"
-                     case ("inf")
-!                    Do nothing if "inf"
+                     case ("mpi", "per", "inf")
+!                    Do nothing
                      case ("ref")
                         var(:,:,nb+1)           = 0.0
                         do ib=1,nb
@@ -820,14 +685,8 @@ contains
                   end select   ! (bnd_zl)
 
                   select case (bnd_zr(1:3))
-                     case ("mpi")
-!                    Do nothing if "mpi"
-                     case ("per")
-!                    Do nothing if "per"
-                     case ("cor")
-!                    Do nothing if "cor"
-                     case ("inf")
-!                    Do nothing if "inf"
+                     case ("mpi", "per", "inf")
+!                    Do nothing
                      case ("ref")
                         var(:,:,nb+nzb+1)       = 0.0
                         do ib=1,nb-1
@@ -846,14 +705,8 @@ contains
                case ("vxby","vybx","emfz")
 
                   select case (bnd_zl(1:3))
-                     case ("mpi")
-!                    Do nothing if "mpi"
-                     case ("per")
-!                    Do nothing if "per"
-                     case ("cor")
-!                    Do nothing if "cor"
-                     case ("inf")
-!                    Do nothing if "inf"
+                     case ("mpi", "per", "inf")
+!                    Do nothing
                      case ("ref")
                         do ib=1,nb
                            var(:,:,nb+1-ib)          = var(:,:,nb+ib)
@@ -869,14 +722,8 @@ contains
                   end select   ! (bnd_zl)
 
                   select case (bnd_zr(1:3))
-                     case ("mpi")
-!                    Do nothing if "mpi"
-                     case ("per")
-!                    Do nothing if "per"
-                     case ("cor")
-!                    Do nothing if "cor"
-                     case ("inf")
-!                    Do nothing if "inf"
+                     case ("mpi", "per", "inf")
+!                    Do nothing
                      case ("ref")
                         do ib=1,nb
                            var(:,:,nb+nzb+ib)        = var(:,:,nb+nzb+1-ib)
