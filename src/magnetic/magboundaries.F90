@@ -435,11 +435,11 @@ contains
             if (any( [bnd_xl(1:3) == "ref", bnd_xr(1:3) == "ref", bnd_xl(1:3) == "out", bnd_xr(1:3) == "out"] )) then
                select case (name)
                   case ("vxby","vxbz")
-                     call compute_bnd_indxs(1,nxb,zerocell,nbcells,bndsign,rrefnbcells,zndiff,rlbase,rrbase)
+                     call compute_bnd_indxs(1,nxb,zerocell,nbcells,bndsign,rnbcells,zndiff,rlbase,rrbase)
                   case ("vybx","vzbx","emfy","emfz")
-                     call compute_bnd_indxs(2,nxb,zerocell,nbcells,bndsign,rrefnbcells,zndiff,rlbase,rrbase)
+                     call compute_bnd_indxs(2,nxb,zerocell,nbcells,bndsign,rnbcells,zndiff,rlbase,rrbase)
                   case ("vybz","vzby","emfx")
-                     call compute_bnd_indxs(3,nxb,zerocell,nbcells,bndsign,rrefnbcells,zndiff,rlbase,rrbase)
+                     call compute_bnd_indxs(3,nxb,zerocell,nbcells,bndsign,rnbcells,zndiff,rlbase,rrbase)
                end select  ! (name)
             endif
 
@@ -485,11 +485,11 @@ contains
             if (any( [bnd_yl(1:3) == "ref", bnd_yr(1:3) == "ref", bnd_yl(1:3) == "out", bnd_yr(1:3) == "out"] )) then
                select case (name)
                   case ("vybz","vybx")
-                     call compute_bnd_indxs(1,nyb,zerocell,nbcells,bndsign,rrefnbcells,zndiff,rlbase,rrbase)
+                     call compute_bnd_indxs(1,nyb,zerocell,nbcells,bndsign,rnbcells,zndiff,rlbase,rrbase)
                   case ("vzby","vxby","emfz","emfx")
-                     call compute_bnd_indxs(2,nyb,zerocell,nbcells,bndsign,rrefnbcells,zndiff,rlbase,rrbase)
+                     call compute_bnd_indxs(2,nyb,zerocell,nbcells,bndsign,rnbcells,zndiff,rlbase,rrbase)
                   case ("vzbx","vxbz","emfy")
-                     call compute_bnd_indxs(3,nyb,zerocell,nbcells,bndsign,rrefnbcells,zndiff,rlbase,rrbase)
+                     call compute_bnd_indxs(3,nyb,zerocell,nbcells,bndsign,rnbcells,zndiff,rlbase,rrbase)
                end select  ! (name)
             endif
 
@@ -535,11 +535,11 @@ contains
             if (any( [bnd_zl(1:3) == "ref", bnd_zr(1:3) == "ref", bnd_zl(1:3) == "out", bnd_zr(1:3) == "out"] )) then
                select case (name)
                   case ("vzbx","vzby")
-                     call compute_bnd_indxs(1,nzb,zerocell,nbcells,bndsign,rrefnbcells,zndiff,rlbase,rrbase)
+                     call compute_bnd_indxs(1,nzb,zerocell,nbcells,bndsign,rnbcells,zndiff,rlbase,rrbase)
                   case ("vxbz","vybz","emfy","emfx")
-                     call compute_bnd_indxs(2,nzb,zerocell,nbcells,bndsign,rrefnbcells,zndiff,rlbase,rrbase)
+                     call compute_bnd_indxs(2,nzb,zerocell,nbcells,bndsign,rnbcells,zndiff,rlbase,rrbase)
                   case ("vxby","vybx","emfz")
-                     call compute_bnd_indxs(3,nzb,zerocell,nbcells,bndsign,rrefnbcells,zndiff,rlbase,rrbase)
+                     call compute_bnd_indxs(3,nzb,zerocell,nbcells,bndsign,rnbcells,zndiff,rlbase,rrbase)
                end select  ! (name)
             endif
 
