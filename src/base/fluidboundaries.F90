@@ -442,7 +442,7 @@ module fluidboundaries
 
          select case (bnd_yl)
          case ('cor', 'inf', 'mpi')
-!         Do nothing
+            ! Do nothing
          case ('per')
             u(:,:,1:nb,:)                         = u(:,:,nyb+1:nyb+nb,:)
          case ('user')
@@ -485,7 +485,7 @@ module fluidboundaries
 
          select case (bnd_yr)
          case ('cor', 'inf', 'mpi')
-!         Do nothing
+            ! Do nothing
          case ('per')
             u(:,:,nyb+nb+1:nyb+2*nb,:)            = u(:,:,nb+1:2*nb,:)
          case ('user')
@@ -530,7 +530,7 @@ module fluidboundaries
 
          select case (bnd_zl)
          case ('mpi')
-!         Do nothing if mpi
+            ! Do nothing if mpi
          case ('user')
             call user_bnd_zl
          case ('per')
@@ -581,7 +581,7 @@ module fluidboundaries
 
          select case (bnd_zr)
          case ('mpi')
-!         Do nothing if mpi
+            ! Do nothing if mpi
          case ('user')
             call user_bnd_zr
          case ('per')
