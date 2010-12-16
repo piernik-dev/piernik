@@ -465,7 +465,7 @@ contains
                case ("cor", "inf", "mpi", "per", "she")
                   ! Do nothing
                case ("ref")
-                  if (zndiff == 1) var(zerocell+nxb,:,:) = 0.0
+                  if (zndiff == 1) var(rlbase,:,:) = 0.0
                   do ib=1,rnbcells
                      var(rlbase+ib,:,:) = bndsign * var(rrbase-ib,:,:)
                   enddo
@@ -515,7 +515,7 @@ contains
                case ("cor", "inf", "mpi", "per")
                   ! Do nothing
                case ("ref")
-                  if (zndiff == 1) var(:,zerocell+nyb,:) = 0.0
+                  if (zndiff == 1) var(:,rlbase,:) = 0.0
                   do ib=1,rnbcells
                      var(:,rlbase+ib,:) = bndsign * var(:,rrbase-ib,:)
                   enddo
@@ -565,7 +565,7 @@ contains
                case ("inf", "mpi", "per")
                   ! Do nothing
                case ("ref")
-                  if (zndiff == 1) var(:,:,zerocell+nzb) = 0.0
+                  if (zndiff == 1) var(:,:,rlbase) = 0.0
                   do ib=1,rnbcells
                      var(:,:,rlbase+ib) = bndsign * var(:,:,rrbase-ib)
                   enddo
@@ -584,19 +584,19 @@ contains
 
    end subroutine bnd_emf
 
-   subroutine compute_bnd_indxs(casenb,ndirb,zerocell,nbcells,bndsign,rnbcells,zndiff,rlbase,rrbase)
+   subroutine compute_bnd_indxs(bndcase,ndirb,zerocell,nbcells,bndsign,rnbcells,zndiff,rlbase,rrbase)
       use grid, only: nb
       implicit none
-      integer, intent(in)  :: casenb      !< ToDo: Comment me
+      integer, intent(in)  :: bndcase     !< 1 - v component compatible with direction; 2 - b component compatible with direction or emf component incompatible with direction; 3 - other cases
       integer, intent(in)  :: ndirb       !< nxb/nyb/nzb depanding on the current direction
       integer, intent(out) :: zerocell    !< reference index (in reflection case index of cell with zero value)
       integer, intent(out) :: nbcells     !< number of cells in a loop at left boundary
       integer, intent(out) :: rnbcells    !< number of cells in a loop at right boundary
       real,    intent(out) :: bndsign     !< 1. or -1. to change the sign or not
       integer, intent(out) :: zndiff      !< ToDo: Comment me
-      integer, intent(out) :: rlbase      !< ToDo: Comment me
+      integer, intent(out) :: rlbase      !< zerocell on the right boundary
       integer, intent(out) :: rrbase      !< ToDo: Comment me
-      select case (casenb)
+      select case (bndcase)
          case (1)
             zerocell = nb
             nbcells  = nb-1
