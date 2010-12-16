@@ -586,8 +586,15 @@ contains
    subroutine compute_bnd_indxs(casenb,ndirb,zerocell,nbcells,bndsign,rrefnbcells,zndiff,rlbase,rrbase)
       use grid, only: nb
       implicit none
-      integer, intent(in)  :: casenb, ndirb
-      integer, intent(out) :: zerocell, nbcells, bndsign, rrefnbcells, zndiff, rlbase, rrbase
+      integer, intent(in)  :: casenb      !< ToDo: Comment me
+      integer, intent(in)  :: ndirb       !< ToDo: Comment me
+      integer, intent(out) :: zerocell    !< ToDo: Comment me
+      integer, intent(out) :: nbcells     !< ToDo: Comment me
+      integer, intent(out) :: bndsign     !< ToDo: Comment me
+      integer, intent(out) :: rrefnbcells !< ToDo: Comment me
+      integer, intent(out) :: zndiff      !< ToDo: Comment me
+      integer, intent(out) :: rlbase      !< ToDo: Comment me
+      integer, intent(out) :: rrbase      !< ToDo: Comment me
       select case (casenb)
          case (1)
             zerocell = nb
@@ -606,8 +613,8 @@ contains
             rrefnbcells = nb
       end select  ! (name)
       zndiff = zerocell - nbcells
-      rlbase = ndirb+zerocell
-      rrbase = ndirb+zerocell+1-zndiff
+      rlbase = ndirb + zerocell
+      rrbase = ndirb + zerocell + 1 - zndiff  ! = ndirb + zerocell + 1 - zerocell + nbcells = ndirb + nbcells + 1
       return
    end subroutine compute_bnd_indxs
 
