@@ -413,7 +413,7 @@ contains
       logical, save                         :: bnd_yr_not_provided = .false.
       logical, save                         :: bnd_zl_not_provided = .false.
       logical, save                         :: bnd_zr_not_provided = .false.
-      integer                               :: zerocell, nbcells, rnbcells, zndiff, rlbase, rrbase
+      integer                               :: ledge, redge, lnbcells, rnbcells, zndiff, rrbase
       real                                  :: bndsign
       if (frun) then
          bnd_xl_not_provided = any( [bnd_xl(1:3) == "cor", bnd_xl(1:3) == "inf", bnd_xl(1:3) == "per", bnd_xl(1:3) == "mpi", bnd_xl(1:3) == "she"] )
@@ -435,11 +435,11 @@ contains
             if (any( [bnd_xl(1:3) == "ref", bnd_xr(1:3) == "ref", bnd_xl(1:3) == "out", bnd_xr(1:3) == "out"] )) then
                select case (name)
                   case ("vxby","vxbz")
-                     call compute_bnd_indxs(1,nxb,zerocell,nbcells,bndsign,rnbcells,zndiff,rlbase,rrbase)
+                     call compute_bnd_indxs(1,nxb,ledge,redge,lnbcells,rnbcells,bndsign,zndiff,rrbase)
                   case ("vybx","vzbx","emfy","emfz")
-                     call compute_bnd_indxs(2,nxb,zerocell,nbcells,bndsign,rnbcells,zndiff,rlbase,rrbase)
+                     call compute_bnd_indxs(2,nxb,ledge,redge,lnbcells,rnbcells,bndsign,zndiff,rrbase)
                   case ("vybz","vzby","emfx")
-                     call compute_bnd_indxs(3,nxb,zerocell,nbcells,bndsign,rnbcells,zndiff,rlbase,rrbase)
+                     call compute_bnd_indxs(3,nxb,ledge,redge,lnbcells,rnbcells,bndsign,zndiff,rrbase)
                end select  ! (name)
             endif
 
@@ -447,13 +447,13 @@ contains
                case ("cor", "inf", "mpi", "per", "she")
                   ! Do nothing
                case ("ref")
-                  if (zndiff == 1) var(zerocell,:,:) = 0.0
-                  do ib=1,nbcells
-                     var(nbcells+1-ib,:,:) = bndsign * var(zerocell+ib,:,:)
+                  if (zndiff == 1) var(ledge,:,:) = 0.0
+                  do ib=1,lnbcells
+                     var(lnbcells+1-ib,:,:) = bndsign * var(ledge+ib,:,:)
                   enddo
                case ("out")
-                  dvarx = var(zerocell+1,:,:)-var(zerocell,:,:)
-                  do ib=1,nbcells
+                  dvarx = var(ledge+1,:,:)-var(ledge,:,:)
+                  do ib=1,lnbcells
                      var(ib,:,:) = var(nb+1,:,:) - real(nb+1-ib)*dvarx
                   enddo
                case default
@@ -465,15 +465,15 @@ contains
                case ("cor", "inf", "mpi", "per", "she")
                   ! Do nothing
                case ("ref")
-                  if (zndiff == 1) var(rlbase,:,:) = 0.0
+                  if (zndiff == 1) var(redge,:,:) = 0.0
                   do ib=1,rnbcells
-                     var(rlbase+ib,:,:) = bndsign * var(rrbase-ib,:,:)
+                     var(redge+ib,:,:) = bndsign * var(rrbase-ib,:,:)
                   enddo
                case ("out")
 !                  dvarx = var(rrbase,:,:)-var(rrbase-1,:,:) original
-                  dvarx = var(rlbase,:,:)-var(rlbase-1,:,:)
+                  dvarx = var(redge,:,:)-var(redge-1,:,:)
                   do ib=1,rnbcells
-                     var(rlbase+ib,:,:) = var(rlbase,:,:) + real(ib)*dvarx
+                     var(redge+ib,:,:) = var(redge,:,:) + real(ib)*dvarx
                   enddo
                case default
                   write(msg,'(6a)') "[magboundaries:bnd_emf]: Boundary condition ",bnd_xr," not implemented for ",name, " in ", dim
@@ -485,11 +485,11 @@ contains
             if (any( [bnd_yl(1:3) == "ref", bnd_yr(1:3) == "ref", bnd_yl(1:3) == "out", bnd_yr(1:3) == "out"] )) then
                select case (name)
                   case ("vybz","vybx")
-                     call compute_bnd_indxs(1,nyb,zerocell,nbcells,bndsign,rnbcells,zndiff,rlbase,rrbase)
+                     call compute_bnd_indxs(1,nyb,ledge,redge,lnbcells,rnbcells,bndsign,zndiff,rrbase)
                   case ("vzby","vxby","emfz","emfx")
-                     call compute_bnd_indxs(2,nyb,zerocell,nbcells,bndsign,rnbcells,zndiff,rlbase,rrbase)
+                     call compute_bnd_indxs(2,nyb,ledge,redge,lnbcells,rnbcells,bndsign,zndiff,rrbase)
                   case ("vzbx","vxbz","emfy")
-                     call compute_bnd_indxs(3,nyb,zerocell,nbcells,bndsign,rnbcells,zndiff,rlbase,rrbase)
+                     call compute_bnd_indxs(3,nyb,ledge,redge,lnbcells,rnbcells,bndsign,zndiff,rrbase)
                end select  ! (name)
             endif
 
@@ -497,13 +497,13 @@ contains
                case ("cor", "inf", "mpi", "per")
                   ! Do nothing
                case ("ref")
-                  if (zndiff == 1) var(:,zerocell,:) = 0.0
-                  do ib=1,nbcells
-                     var(:,nbcells+1-ib,:) = bndsign * var(:,zerocell+ib,:)
+                  if (zndiff == 1) var(:,ledge,:) = 0.0
+                  do ib=1,lnbcells
+                     var(:,lnbcells+1-ib,:) = bndsign * var(:,ledge+ib,:)
                   enddo
                case ("out")
-                  dvary = var(:,zerocell+1,:)-var(:,zerocell,:)
-                  do ib=1,nbcells
+                  dvary = var(:,ledge+1,:)-var(:,ledge,:)
+                  do ib=1,lnbcells
                      var(:,ib,:) = var(:,nb+1,:) - real(nb+1-ib)*dvary
                   enddo
                case default
@@ -515,15 +515,15 @@ contains
                case ("cor", "inf", "mpi", "per")
                   ! Do nothing
                case ("ref")
-                  if (zndiff == 1) var(:,rlbase,:) = 0.0
+                  if (zndiff == 1) var(:,redge,:) = 0.0
                   do ib=1,rnbcells
-                     var(:,rlbase+ib,:) = bndsign * var(:,rrbase-ib,:)
+                     var(:,redge+ib,:) = bndsign * var(:,rrbase-ib,:)
                   enddo
                case ("out")
 !                  dvary = var(:,rrbase,:)-var(:,rrbase-1,:) original
-                  dvary = var(:,rlbase,:)-var(:,rlbase-1,:)
+                  dvary = var(:,redge,:)-var(:,redge-1,:)
                   do ib=1,rnbcells
-                     var(:,rlbase+ib,:) = var(:,rlbase,:) + real(ib)*dvary
+                     var(:,redge+ib,:) = var(:,redge,:) + real(ib)*dvary
                   enddo
                case default
                   write(msg,'(6a)') "[magboundaries:bnd_emf]: Boundary condition ",bnd_yr," not implemented for ",name, " in ", dim
@@ -535,11 +535,11 @@ contains
             if (any( [bnd_zl(1:3) == "ref", bnd_zr(1:3) == "ref", bnd_zl(1:3) == "out", bnd_zr(1:3) == "out"] )) then
                select case (name)
                   case ("vzbx","vzby")
-                     call compute_bnd_indxs(1,nzb,zerocell,nbcells,bndsign,rnbcells,zndiff,rlbase,rrbase)
+                     call compute_bnd_indxs(1,nzb,ledge,redge,lnbcells,rnbcells,bndsign,zndiff,rrbase)
                   case ("vxbz","vybz","emfy","emfx")
-                     call compute_bnd_indxs(2,nzb,zerocell,nbcells,bndsign,rnbcells,zndiff,rlbase,rrbase)
+                     call compute_bnd_indxs(2,nzb,ledge,redge,lnbcells,rnbcells,bndsign,zndiff,rrbase)
                   case ("vxby","vybx","emfz")
-                     call compute_bnd_indxs(3,nzb,zerocell,nbcells,bndsign,rnbcells,zndiff,rlbase,rrbase)
+                     call compute_bnd_indxs(3,nzb,ledge,redge,lnbcells,rnbcells,bndsign,zndiff,rrbase)
                end select  ! (name)
             endif
 
@@ -547,13 +547,13 @@ contains
                case ("inf", "mpi", "per")
                   ! Do nothing
                case ("ref")
-                  if (zndiff == 1) var(:,:,zerocell) = 0.0
-                  do ib=1,nbcells
-                     var(:,:,nbcells+1-ib) = bndsign * var(:,:,zerocell+ib)
+                  if (zndiff == 1) var(:,:,ledge) = 0.0
+                  do ib=1,lnbcells
+                     var(:,:,lnbcells+1-ib) = bndsign * var(:,:,ledge+ib)
                   enddo
                case ("out")
-                  dvarz = var(:,:,zerocell+1)-var(:,:,zerocell)
-                  do ib=1,nbcells
+                  dvarz = var(:,:,ledge+1)-var(:,:,ledge)
+                  do ib=1,lnbcells
                      var(:,:,ib) = var(:,:,nb+1) - real(nb+1-ib)*dvarz
                   enddo
                case default
@@ -565,15 +565,15 @@ contains
                case ("inf", "mpi", "per")
                   ! Do nothing
                case ("ref")
-                  if (zndiff == 1) var(:,:,rlbase) = 0.0
+                  if (zndiff == 1) var(:,:,redge) = 0.0
                   do ib=1,rnbcells
-                     var(:,:,rlbase+ib) = bndsign * var(:,:,rrbase-ib)
+                     var(:,:,redge+ib) = bndsign * var(:,:,rrbase-ib)
                   enddo
                case ("out")
 !                  dvarz = var(:,:,rrbase)-var(:,:,rrbase-1) original
-                  dvarz = var(:,:,rlbase)-var(:,:,rlbase-1)
+                  dvarz = var(:,:,redge)-var(:,:,redge-1)
                   do ib=1,rnbcells
-                     var(:,:,rlbase+ib) = var(:,:,rlbase) + real(ib)*dvarz
+                     var(:,:,redge+ib) = var(:,:,redge) + real(ib)*dvarz
                   enddo
                case default
                   write(msg,'(6a)') "[magboundaries:bnd_emf]: Boundary condition ",bnd_zr," not implemented for ",name, " in ", dim
@@ -584,36 +584,36 @@ contains
 
    end subroutine bnd_emf
 
-   subroutine compute_bnd_indxs(bndcase,ndirb,zerocell,nbcells,bndsign,rnbcells,zndiff,rlbase,rrbase)
+   subroutine compute_bnd_indxs(bndcase,ndirb,ledge,redge,lnbcells,rnbcells,bndsign,zndiff,rrbase)
       use grid, only: nb
       implicit none
       integer, intent(in)  :: bndcase     !< 1 - v component compatible with direction; 2 - b component compatible with direction or emf component incompatible with direction; 3 - other cases
       integer, intent(in)  :: ndirb       !< nxb/nyb/nzb depanding on the current direction
-      integer, intent(out) :: zerocell    !< index of the left edge of physical domain for emf
-      integer, intent(out) :: nbcells     !< number of cells in a loop at left boundary
+      integer, intent(out) :: ledge       !< index of the left edge of physical domain for emf
+      integer, intent(out) :: redge       !< index of the right edge of physical domain for emf
+      integer, intent(out) :: lnbcells    !< number of cells in a loop at left boundary
       integer, intent(out) :: rnbcells    !< number of cells in a loop at right boundary
       real,    intent(out) :: bndsign     !< 1. or -1. to change the sign or not
       integer, intent(out) :: zndiff      !< ToDo: Comment me
-      integer, intent(out) :: rlbase      !< index of the right edge of physical domain for emf
       integer, intent(out) :: rrbase      !< ToDo: Comment me
       select case (bndcase)
          case (1)
-            zerocell = nb
-            nbcells  = nb-1
+            ledge    = nb
+            lnbcells = nb-1
             bndsign  = -1.
          case (2)
-            zerocell = nb+1
-            nbcells  = nb
+            ledge    = nb+1
+            lnbcells = nb
             bndsign  = -1.
          case (3)
-            zerocell = nb
-            nbcells  = nb
+            ledge    = nb
+            lnbcells = nb
             bndsign  = 1.
       end select  ! (name)
-      zndiff = zerocell - nbcells
+      zndiff   = ledge - lnbcells
       rnbcells = nb - zndiff
-      rlbase = ndirb + zerocell
-      rrbase = ndirb + nbcells + 1  ! = rlbase + 1 - zndiff
+      redge    = ndirb + ledge
+      rrbase   = ndirb + lnbcells + 1  ! = redge + 1 - zndiff
       return
    end subroutine compute_bnd_indxs
 
