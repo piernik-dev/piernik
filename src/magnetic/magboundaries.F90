@@ -589,12 +589,12 @@ contains
       implicit none
       integer, intent(in)  :: bndcase     !< 1 - v component compatible with direction; 2 - b component compatible with direction or emf component incompatible with direction; 3 - other cases
       integer, intent(in)  :: ndirb       !< nxb/nyb/nzb depanding on the current direction
-      integer, intent(out) :: zerocell    !< reference index (in reflection case index of cell with zero value)
+      integer, intent(out) :: zerocell    !< index of the left edge of physical domain for emf
       integer, intent(out) :: nbcells     !< number of cells in a loop at left boundary
       integer, intent(out) :: rnbcells    !< number of cells in a loop at right boundary
       real,    intent(out) :: bndsign     !< 1. or -1. to change the sign or not
       integer, intent(out) :: zndiff      !< ToDo: Comment me
-      integer, intent(out) :: rlbase      !< zerocell on the right boundary
+      integer, intent(out) :: rlbase      !< index of the right edge of physical domain for emf
       integer, intent(out) :: rrbase      !< ToDo: Comment me
       select case (bndcase)
          case (1)
@@ -613,7 +613,7 @@ contains
       zndiff = zerocell - nbcells
       rnbcells = nb - zndiff
       rlbase = ndirb + zerocell
-      rrbase = ndirb + zerocell + 1 - zndiff  ! = ndirb + zerocell + 1 - zerocell + nbcells = ndirb + nbcells + 1
+      rrbase = ndirb + nbcells + 1  ! = rlbase + 1 - zndiff
       return
    end subroutine compute_bnd_indxs
 
