@@ -413,7 +413,7 @@ contains
       logical, save                         :: bnd_yr_not_provided = .false.
       logical, save                         :: bnd_zl_not_provided = .false.
       logical, save                         :: bnd_zr_not_provided = .false.
-      integer                               :: zerocell, nbcells, rrefnbcells, zndiff, rlbase, rrbase
+      integer                               :: zerocell, nbcells, rnbcells, zndiff, rlbase, rrbase
       real                                  :: bndsign
       if (frun) then
          bnd_xl_not_provided = any( [bnd_xl(1:3) == "cor", bnd_xl(1:3) == "inf", bnd_xl(1:3) == "per", bnd_xl(1:3) == "mpi", bnd_xl(1:3) == "she"] )
@@ -466,13 +466,13 @@ contains
                   ! Do nothing
                case ("ref")
                   if (zndiff == 1) var(zerocell+nxb,:,:) = 0.0
-                  do ib=1,rrefnbcells
+                  do ib=1,rnbcells
                      var(rlbase+ib,:,:) = bndsign * var(rrbase-ib,:,:)
                   enddo
                case ("out")
 !                  dvarx = var(rrbase,:,:)-var(rrbase-1,:,:) original
                   dvarx = var(rlbase,:,:)-var(rlbase-1,:,:)
-                  do ib=1,nb-zndiff
+                  do ib=1,rnbcells
                      var(rlbase+ib,:,:) = var(rlbase,:,:) + real(ib)*dvarx
                   enddo
                case default
@@ -516,13 +516,13 @@ contains
                   ! Do nothing
                case ("ref")
                   if (zndiff == 1) var(:,zerocell+nyb,:) = 0.0
-                  do ib=1,rrefnbcells
+                  do ib=1,rnbcells
                      var(:,rlbase+ib,:) = bndsign * var(:,rrbase-ib,:)
                   enddo
                case ("out")
 !                  dvary = var(:,rrbase,:)-var(:,rrbase-1,:) original
                   dvary = var(:,rlbase,:)-var(:,rlbase-1,:)
-                  do ib=1,nb-zndiff
+                  do ib=1,rnbcells
                      var(:,rlbase+ib,:) = var(:,rlbase,:) + real(ib)*dvary
                   enddo
                case default
@@ -566,13 +566,13 @@ contains
                   ! Do nothing
                case ("ref")
                   if (zndiff == 1) var(:,:,zerocell+nzb) = 0.0
-                  do ib=1,rrefnbcells
+                  do ib=1,rnbcells
                      var(:,:,rlbase+ib) = bndsign * var(:,:,rrbase-ib)
                   enddo
                case ("out")
 !                  dvarz = var(:,:,rrbase)-var(:,:,rrbase-1) original
                   dvarz = var(:,:,rlbase)-var(:,:,rlbase-1)
-                  do ib=1,nb-zndiff
+                  do ib=1,rnbcells
                      var(:,:,rlbase+ib) = var(:,:,rlbase) + real(ib)*dvarz
                   enddo
                case default
@@ -584,15 +584,15 @@ contains
 
    end subroutine bnd_emf
 
-   subroutine compute_bnd_indxs(casenb,ndirb,zerocell,nbcells,bndsign,rrefnbcells,zndiff,rlbase,rrbase)
+   subroutine compute_bnd_indxs(casenb,ndirb,zerocell,nbcells,bndsign,rnbcells,zndiff,rlbase,rrbase)
       use grid, only: nb
       implicit none
       integer, intent(in)  :: casenb      !< ToDo: Comment me
       integer, intent(in)  :: ndirb       !< nxb/nyb/nzb depanding on the current direction
       integer, intent(out) :: zerocell    !< reference index (in reflection case index of cell with zero value)
-      integer, intent(out) :: nbcells     !< number of cells in a loop
+      integer, intent(out) :: nbcells     !< number of cells in a loop at left boundary
+      integer, intent(out) :: rnbcells    !< number of cells in a loop at right boundary
       real,    intent(out) :: bndsign     !< 1. or -1. to change the sign or not
-      integer, intent(out) :: rrefnbcells !< ToDo: Comment me
       integer, intent(out) :: zndiff      !< ToDo: Comment me
       integer, intent(out) :: rlbase      !< ToDo: Comment me
       integer, intent(out) :: rrbase      !< ToDo: Comment me
@@ -601,19 +601,17 @@ contains
             zerocell = nb
             nbcells  = nb-1
             bndsign  = -1.
-            rrefnbcells = nb-1
          case (2)
             zerocell = nb+1
             nbcells  = nb
             bndsign  = -1.
-            rrefnbcells = nb-1
          case (3)
             zerocell = nb
             nbcells  = nb
             bndsign  = 1.
-            rrefnbcells = nb
       end select  ! (name)
       zndiff = zerocell - nbcells
+      rnbcells = nb - zndiff
       rlbase = ndirb + zerocell
       rrbase = ndirb + zerocell + 1 - zndiff  ! = ndirb + zerocell + 1 - zerocell + nbcells = ndirb + nbcells + 1
       return
