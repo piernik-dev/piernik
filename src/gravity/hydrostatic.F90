@@ -145,10 +145,13 @@ contains
    end subroutine get_gprofs_accel
 
    subroutine get_gprofs_gparray(iia,jja)
+
       use arrays,  only: gp
       use gravity, only: tune_zeq
       use grid,    only: nz, z
+
       implicit none
+
       integer, intent(in) :: iia, jja
       integer :: ksub, k
       real, allocatable, dimension(:)  :: gpots
@@ -164,6 +167,7 @@ contains
       enddo
 !         call grav_pot('zsweep', ia,ja, zs, nstot, gpots,gp_status,.true.)
       gprofs(1:nstot-1) = (gpots(1:nstot-1) - gpots(2:nstot))/dzs
+      gprofs(nstot) = 0. ! or maybe gprofs(nstot-1) ?
       gprofs = tune_zeq*gprofs
       if (allocated(gpots)) deallocate(gpots)
 
