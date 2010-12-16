@@ -469,7 +469,8 @@ contains
                      var(rlbase+ib,:,:) = bndsign * var(rrbase-ib,:,:)
                   enddo
                case ("out")
-                  dvarx = var(rrbase,:,:)-var(rrbase-1,:,:)
+!                  dvarx = var(rrbase,:,:)-var(rrbase-1,:,:) original
+                  dvarx = var(rlbase,:,:)-var(rlbase-1,:,:)
                   do ib=1,nb-zndiff
                      var(rlbase+ib,:,:) = var(rlbase,:,:) + real(ib)*dvarx
                   enddo
@@ -518,7 +519,8 @@ contains
                      var(:,rlbase+ib,:) = bndsign * var(:,rrbase-ib,:)
                   enddo
                case ("out")
-                  dvary = var(:,rrbase,:)-var(:,rrbase-1,:)
+!                  dvary = var(:,rrbase,:)-var(:,rrbase-1,:) original
+                  dvary = var(:,rlbase,:)-var(:,rlbase-1,:)
                   do ib=1,nb-zndiff
                      var(:,rlbase+ib,:) = var(:,rlbase,:) + real(ib)*dvary
                   enddo
@@ -567,7 +569,8 @@ contains
                      var(:,:,rlbase+ib) = bndsign * var(:,:,rrbase-ib)
                   enddo
                case ("out")
-                  dvarz = var(:,:,rrbase)-var(:,:,rrbase-1)
+!                  dvarz = var(:,:,rrbase)-var(:,:,rrbase-1) original
+                  dvarz = var(:,:,rlbase)-var(:,:,rlbase-1)
                   do ib=1,nb-zndiff
                      var(:,:,rlbase+ib) = var(:,:,rlbase) + real(ib)*dvarz
                   enddo
