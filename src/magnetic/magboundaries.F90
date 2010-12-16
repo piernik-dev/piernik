@@ -413,7 +413,8 @@ contains
       logical, save                         :: bnd_yr_not_provided = .false.
       logical, save                         :: bnd_zl_not_provided = .false.
       logical, save                         :: bnd_zr_not_provided = .false.
-      integer                               :: zerocell, nbcells, bndsign, rrefnbcells, zndiff, rlbase, rrbase
+      integer                               :: zerocell, nbcells, rrefnbcells, zndiff, rlbase, rrbase
+      real                                  :: bndsign
       if (frun) then
          bnd_xl_not_provided = any( [bnd_xl(1:3) == "cor", bnd_xl(1:3) == "inf", bnd_xl(1:3) == "per", bnd_xl(1:3) == "mpi", bnd_xl(1:3) == "she"] )
          bnd_xr_not_provided = any( [bnd_xr(1:3) == "cor", bnd_xr(1:3) == "inf", bnd_xr(1:3) == "per", bnd_xr(1:3) == "mpi", bnd_xr(1:3) == "she"] )
@@ -587,10 +588,10 @@ contains
       use grid, only: nb
       implicit none
       integer, intent(in)  :: casenb      !< ToDo: Comment me
-      integer, intent(in)  :: ndirb       !< ToDo: Comment me
-      integer, intent(out) :: zerocell    !< ToDo: Comment me
-      integer, intent(out) :: nbcells     !< ToDo: Comment me
-      integer, intent(out) :: bndsign     !< ToDo: Comment me
+      integer, intent(in)  :: ndirb       !< nxb/nyb/nzb depanding on the current direction
+      integer, intent(out) :: zerocell    !< reference index (in reflection case index of cell with zero value)
+      integer, intent(out) :: nbcells     !< number of cells in a loop
+      real,    intent(out) :: bndsign     !< 1. or -1. to change the sign or not
       integer, intent(out) :: rrefnbcells !< ToDo: Comment me
       integer, intent(out) :: zndiff      !< ToDo: Comment me
       integer, intent(out) :: rlbase      !< ToDo: Comment me
@@ -599,17 +600,17 @@ contains
          case (1)
             zerocell = nb
             nbcells  = nb-1
-            bndsign  = -1
+            bndsign  = -1.
             rrefnbcells = nb-1
          case (2)
             zerocell = nb+1
             nbcells  = nb
-            bndsign  = -1
+            bndsign  = -1.
             rrefnbcells = nb-1
          case (3)
             zerocell = nb
             nbcells  = nb
-            bndsign  = 1
+            bndsign  = 1.
             rrefnbcells = nb
       end select  ! (name)
       zndiff = zerocell - nbcells
