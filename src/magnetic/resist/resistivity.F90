@@ -264,7 +264,9 @@ module resistivity
 
    subroutine tvdd_1d(b1d,eta1d,idi,dt,wcu1d)
 !      use fluxes, only: flimiter
+
       implicit none
+
       real, dimension(:), pointer, intent(in)    :: eta1d, b1d
       real, dimension(:), intent(out)            :: wcu1d
       real, intent(in)                           :: idi,dt

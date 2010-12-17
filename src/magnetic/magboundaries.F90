@@ -415,6 +415,7 @@ contains
       logical, save                         :: bnd_zr_not_provided = .false.
       integer                               :: ledge, redge, lnbcells, rnbcells, zndiff, rrbase
       real                                  :: bndsign
+
       if (frun) then
          bnd_xl_not_provided = any( [bnd_xl(1:3) == "cor", bnd_xl(1:3) == "inf", bnd_xl(1:3) == "per", bnd_xl(1:3) == "mpi", bnd_xl(1:3) == "she"] )
          bnd_xr_not_provided = any( [bnd_xr(1:3) == "cor", bnd_xr(1:3) == "inf", bnd_xr(1:3) == "per", bnd_xr(1:3) == "mpi", bnd_xr(1:3) == "she"] )
@@ -428,6 +429,9 @@ contains
       if (dim=="xdim" .and. bnd_xl_not_provided .and. bnd_xr_not_provided) return  ! avoid triple case
       if (dim=="ydim" .and. bnd_yl_not_provided .and. bnd_yr_not_provided) return  ! avoid triple case
       if (dim=="zdim" .and. bnd_zl_not_provided .and. bnd_zr_not_provided) return  ! avoid triple case
+
+      bndsign = huge(1.0); ledge=huge(1); redge=huge(1); lnbcells=huge(1); rnbcells=huge(1); zndiff=huge(1); rrbase=huge(1)
+      ! the code below should not use these values and the compiler should not complain on possible use of uninitialized variables.
 
       select case (dim)
          case ("xdim")
