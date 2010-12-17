@@ -243,13 +243,6 @@ contains
 
       call init_fluids(cgrid)
 
-      call read_problem_par
-      if (master) then
-         write(msg,'(4a)') "   Starting problem : ",trim(problem_name)," :: ",trim(run_id)
-         call printinfo(msg, .true.)
-         call printinfo("", .true.)
-      endif
-
       call init_arrays(nx,ny,nz,nvar)
 
       call init_geometry
@@ -288,6 +281,14 @@ contains
 #ifdef MULTIGRID
       call init_multigrid(cgrid)
 #endif /* MULTIGRID */
+
+      ! Only dataio and dataio_hdf5.depend on problem_pub. The dependency is weak and can be easily removed by moving problem_name and run_id to /OUTPUT_CONTROL/
+      call read_problem_par
+      if (master) then
+         write(msg,'(4a)') "   Starting problem : ",trim(problem_name)," :: ",trim(run_id)
+         call printinfo(msg, .true.)
+         call printinfo("", .true.)
+      endif
 
       call init_dataio
 
