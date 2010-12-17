@@ -46,6 +46,7 @@ module resistivity
    real :: eta_max, dt_resist, dt_eint
    integer, dimension(3) :: loc_eta_max
    real, dimension(:,:,:), allocatable, target :: wb, etahelp, eta
+   logical, save :: inactive = .false.
 
    contains
 
@@ -75,14 +76,14 @@ module resistivity
 !! \n \n
 !<
    subroutine init_resistivity
+
       use dataio_pub,    only: par_file, ierrh, namelist_errh, compare_namelist  ! QA_WARN required for diff_nml
-      use dataio_pub,    only: die
+      use dataio_pub,    only: warn, die
       use grid,          only: nx, ny, nz, has_dir, zdim, xdim, ydim
       use mpisetup,      only: rbuff, ibuff, ierr, buffer_dim, comm, master, slave
       use mpi,           only: MPI_INTEGER, MPI_DOUBLE_PRECISION
 
       implicit none
-
 
       namelist /RESISTIVITY/ cfl_resist, eta_0, eta_1, eta_scale, j_crit, deint_max
 
@@ -135,11 +136,15 @@ module resistivity
          d_eta_factor = 1./(4.+dble(eta_scale))
       endif
 
-      if (master.and..not.all(has_dir(xdim:ydim))) call die("[resistivity:init_resistivity] Resistivity module needs both x and y dimension")
+      if (.not. all(has_dir(xdim:ydim))) then
+         if (master) call warn("[resistivity:init_resistivity] Resistivity module needs both x and y dimension. Switching off.")
+         inactive = .true.
+      endif
 
    end subroutine init_resistivity
 
    subroutine compute_resist
+
       use arrays,       only: b, u
       use constants,    only: small
       use fluidindex,   only: ibx, iby, ibz
@@ -151,8 +156,10 @@ module resistivity
 #endif /* !ISO */
 
       implicit none
+
 !      real, dimension(nx,ny,nz), intent(inout) :: eta
 
+      if (inactive) return
 !BEWARE: uninitialized values are poisoning the wb(:,:,:) array
 !BEWARE: significant differences between single-CPU run and multi-CPU run (due to uninits?)
 !--- square current computing in cell corner step by step
@@ -232,7 +239,7 @@ module resistivity
 
       implicit none
 
-      if (eta_max .ne. 0.) then
+      if (eta_max .ne. 0. .and. .not. inactive) then
          dt_resist = cfl_resist * dxmn**2 / (2. * eta_max)
 #ifndef ISO
          dt_resist = min(dt_resist,dt_eint)
@@ -248,7 +255,9 @@ module resistivity
 !-----------------------------------------------------------------------------
 
    subroutine vanleer_limiter(f,a,b) ! ToDo: overload me or use class(*) if you dare
+
       implicit none
+
       real, dimension(:), intent(in)      :: a !< second order correction of left- or right- moving waves flux on the left cell boundary
       real, dimension(:), intent(in)      :: b !< second order correction of left- or right- moving waves flux on the right cell boundary
       real, dimension(:), intent(inout)   :: f !< second order flux correction for left- or right- moving waves
@@ -259,7 +268,7 @@ module resistivity
       where (c > 0.0)
          f = f+2.0*c/(a+b)
       endwhere
-      return
+
    end subroutine vanleer_limiter
 
    subroutine tvdd_1d(b1d,eta1d,idi,dt,wcu1d)
@@ -274,6 +283,8 @@ module resistivity
       real, dimension(size(b1d))                 :: w, wp, wm, b1
       integer                                    :: n
 
+      if (inactive) return
+
       n = size(b1d)
       w(2:n)    = eta1d(2:n) * ( b1d(2:n) - b1d(1:n-1) )*idi ; w(1)  = w(2)
       b1(1:n-1) = b1d(1:n-1) + 0.5*(w(2:n) - w(1:n-1))*dt*idi; b1(n) = b1(n-1)
@@ -284,21 +295,26 @@ module resistivity
 
       call vanleer_limiter(w,wm,wp)
       wcu1d     = w*dt
-      return
+
    end subroutine tvdd_1d
 
 !-------------------------------------------------------------------------------
 
    subroutine diffuseby_x
+
       use arrays,        only: wcu, b
       use mpisetup,      only: dt
       use fluidindex,    only: iby
       use grid,          only: has_dir, xdim, ydim, zdim, nx, ny, nz, idl
       use magboundaries, only: bnd_emf
+
       implicit none
+
       real, dimension(:), pointer :: b1d, eta1d
       real, dimension(nx)         :: wcu1d
       integer                     :: j, k
+
+      if (inactive) return
 
       call compute_resist
       eta(:,:,1:nz-1) = 0.5*(eta(:,:,1:nz-1)+eta(:,:,2:nz))
@@ -319,15 +335,20 @@ module resistivity
    end subroutine diffuseby_x
 
    subroutine diffusebz_x
+
       use arrays,        only: wcu, b
       use mpisetup,      only: dt
       use fluidindex,    only: ibz
       use grid,          only: has_dir, xdim, ydim, zdim, nx, ny, nz, idl
       use magboundaries, only: bnd_emf
+
       implicit none
+
       real, dimension(:), pointer :: b1d, eta1d
       real, dimension(nx)         :: wcu1d
       integer                     :: j, k
+
+      if (inactive) return
 
       call compute_resist
       eta(:,1:ny-1,:) = 0.5*(eta(:,1:ny-1,:)+eta(:,2:ny,:))
@@ -347,15 +368,20 @@ module resistivity
    end subroutine diffusebz_x
 
    subroutine diffusebz_y
+
       use arrays,        only: wcu, b
       use mpisetup,      only: dt
       use fluidindex,    only: ibz
       use grid,          only: has_dir, xdim, ydim, zdim, nx, ny, nz, idl
       use magboundaries, only: bnd_emf
+
       implicit none
+
       real, dimension(:), pointer :: b1d, eta1d
       real, dimension(ny)         :: wcu1d
       integer                     :: i, k
+
+      if (inactive) return
 
       call compute_resist
       eta(1:nx-1,:,:) = 0.5*(eta(1:nx-1,:,:)+eta(2:nx,:,:))
@@ -371,18 +397,24 @@ module resistivity
       if (has_dir(ydim)) call bnd_emf(wcu,'emfx','ydim')
       if (has_dir(zdim)) call bnd_emf(wcu,'emfx','zdim')
       if (has_dir(xdim)) call bnd_emf(wcu,'emfx','xdim')
+
    end subroutine diffusebz_y
 
    subroutine diffusebx_y
+
       use arrays,        only: wcu, b
       use mpisetup,      only: dt
       use fluidindex,    only: ibx
       use grid,          only: has_dir, xdim, ydim, zdim, nx, ny, nz, idl
       use magboundaries, only: bnd_emf
+
       implicit none
+
       real, dimension(:), pointer :: b1d, eta1d
       real, dimension(ny)         :: wcu1d
       integer                     :: i, k
+
+      if (inactive) return
 
       call compute_resist
       eta(:,:,1:nz-1) = 0.5*(eta(:,:,1:nz-1)+eta(:,:,2:nz))
@@ -398,18 +430,24 @@ module resistivity
       if (has_dir(ydim)) call bnd_emf(wcu, 'emfz', 'ydim')
       if (has_dir(zdim)) call bnd_emf(wcu, 'emfz', 'zdim')
       if (has_dir(xdim)) call bnd_emf(wcu, 'emfz', 'xdim')
+
    end subroutine diffusebx_y
 
    subroutine diffusebx_z
+
       use arrays,        only: wcu, b
       use mpisetup,      only: dt
       use fluidindex,    only: ibx
       use grid,          only: has_dir, xdim, ydim, zdim, nx, ny, nz, idl
       use magboundaries, only: bnd_emf
+
       implicit none
+
       real, dimension(:), pointer :: b1d, eta1d
       real, dimension(nz)         :: wcu1d
       integer                     :: i, j
+
+      if (inactive) return
 
       call compute_resist
       eta(:,1:ny-1,:) = 0.5*(eta(:,1:ny-1,:)+eta(:,2:ny,:))
@@ -425,18 +463,24 @@ module resistivity
       if (has_dir(zdim)) call bnd_emf(wcu, 'emfy', 'zdim')
       if (has_dir(xdim)) call bnd_emf(wcu, 'emfy', 'xdim')
       if (has_dir(ydim)) call bnd_emf(wcu, 'emfy', 'ydim')
+
    end subroutine diffusebx_z
 
    subroutine diffuseby_z
+
       use arrays,        only: wcu, b
       use mpisetup,      only: dt
       use fluidindex,    only: iby
       use grid,          only: has_dir, xdim, ydim, zdim, nx, ny, nz, idl
       use magboundaries, only: bnd_emf
+
       implicit none
+
       real, dimension(:), pointer :: b1d, eta1d
       real, dimension(nz)         :: wcu1d
       integer                     :: i, j
+
+      if (inactive) return
 
       call compute_resist
       eta(1:nx-1,:,:) = 0.5*(eta(1:nx-1,:,:)+eta(2:nx,:,:))
@@ -452,6 +496,7 @@ module resistivity
       if (has_dir(zdim)) call bnd_emf(wcu, 'emfx', 'zdim')
       if (has_dir(xdim)) call bnd_emf(wcu, 'emfx', 'xdim')
       if (has_dir(ydim)) call bnd_emf(wcu, 'emfx', 'ydim')
+
    end subroutine diffuseby_z
 
 end module resistivity
