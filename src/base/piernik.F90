@@ -241,14 +241,14 @@ contains
 
       call init_fluidboundaries
 
+      call init_fluids(cgrid)
+
       call read_problem_par
       if (master) then
          write(msg,'(4a)') "   Starting problem : ",trim(problem_name)," :: ",trim(run_id)
          call printinfo(msg, .true.)
          call printinfo("", .true.)
       endif
-
-      call init_fluids(cgrid)
 
       call init_arrays(nx,ny,nz,nvar)
 
