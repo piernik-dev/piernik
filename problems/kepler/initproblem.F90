@@ -34,7 +34,6 @@ module initproblem
 ! Written by: M. Hanasz, March 2006
 
    use mpisetup,    only: cbuff_len
-   use problem_pub, only: problem_name, run_id
    implicit none
 
    private
@@ -45,7 +44,7 @@ module initproblem
    real, target, allocatable, dimension(:,:,:,:) :: den0, mtx0, mty0, mtz0, ene0
    integer, parameter       :: dname_len = 10
 
-   namelist /PROBLEM_CONTROL/  problem_name, run_id, alpha, d0, dout, r_max, mag_field_orient, r_in, r_out, f_in, f_out
+   namelist /PROBLEM_CONTROL/  alpha, d0, dout, r_max, mag_field_orient, r_in, r_out, f_in, f_out
 
 contains
 !-----------------------------------------------------------------------------
@@ -53,7 +52,6 @@ contains
       use dataio_pub,          only: ierrh, par_file, namelist_errh, compare_namelist      ! QA_WARN required for diff_nml
       use mpisetup,            only: cbuff, rbuff, buffer_dim, master, slave, comm, ierr
       use mpi,                 only: MPI_CHARACTER, MPI_DOUBLE_PRECISION
-      use types,               only: idlen
       use gravity,             only: grav_pot_3d
       use grid,                only: geometry
       use types,               only: problem_customize_solution
@@ -61,8 +59,6 @@ contains
       use fluidboundaries_pub, only: user_bnd_xl, user_bnd_xr
       implicit none
 
-      problem_name     = 'aaa'
-      run_id           = 'aa'
       d0               = 1.0
       dout             = 1.0e-4
       r_max            = 1.0
@@ -79,8 +75,6 @@ contains
          diff_nml(PROBLEM_CONTROL)
 
 
-         cbuff(1) = problem_name
-         cbuff(2) = run_id
          cbuff(3) = mag_field_orient
 
          rbuff(1) = d0
@@ -99,8 +93,6 @@ contains
 
       if (slave) then
 
-         problem_name     = cbuff(1)
-         run_id           = cbuff(2)(1:idlen)
          mag_field_orient = cbuff(3)
 
          d0               = rbuff(1)

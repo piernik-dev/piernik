@@ -25,6 +25,8 @@
  /
 
  $OUTPUT_CONTROL
+    problem_name = 'cr'
+    run_id = 'tst'
     dt_hdf  = 5.0
     dt_res  = 0.0
     dt_log  = 0.000
@@ -98,8 +100,6 @@
  /
 
  $PROBLEM_CONTROL
-    problem_name = 'cr'
-    run_id = 'tst'
     d0     = 1.0e5
     p0     = 1.0
     bx0    = 5.0

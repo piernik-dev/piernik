@@ -30,7 +30,6 @@
 
 module initproblem
 
-   use problem_pub, only: problem_name, run_id
 
    implicit none
 
@@ -41,7 +40,7 @@ module initproblem
    real              :: d0, p0, amp, kx, ky, kz
    integer           :: ix, iy, iz, mode
 
-   namelist /PROBLEM_CONTROL/  problem_name, run_id, d0, p0, ix, iy, iz, amp, mode
+   namelist /PROBLEM_CONTROL/  d0, p0, ix, iy, iz, amp, mode
 
 contains
 
@@ -55,15 +54,12 @@ contains
       use grid,          only: xmin, xmax, ymin, ymax, zmin, zmax, nx, ny, nz
       use mpisetup,      only: ierr, rbuff, cbuff_len, cbuff, ibuff, master, slave, buffer_dim, comm
       use mpi,           only: MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER
-      use types,         only: idlen
       use problem_pub,   only: jeans_d0, jeans_mode
 
       implicit none
 
 
       ! namelist default parameter values
-      problem_name = 'Jeans oscillations'  !< The default problem name
-      run_id       = '_'                   !< Auxiliary run identifier
       d0           = 1.0                   !< Average density of the medium (density bias required for correct EOS evaluation)
       p0           = 1.e-3                 !< Average pressure of the medium (for calculating sound speed ot temperature)
       ix           = 2                     !< Number of perturbation waves in the x direction
@@ -76,8 +72,6 @@ contains
 
          diff_nml(PROBLEM_CONTROL)
 
-         cbuff(1) =  problem_name
-         cbuff(2) =  run_id
 
          rbuff(1) = d0
          rbuff(2) = p0
@@ -96,8 +90,6 @@ contains
 
       if (slave) then
 
-         problem_name = cbuff(1)
-         run_id       = cbuff(2)(1:idlen)
 
          d0           = rbuff(1)
          p0           = rbuff(2)

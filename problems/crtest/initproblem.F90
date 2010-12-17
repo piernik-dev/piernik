@@ -31,7 +31,6 @@
 
 module initproblem
 
-   use problem_pub, only: problem_name, run_id
 
    implicit none
 
@@ -41,7 +40,7 @@ module initproblem
    integer            :: norm_step
    real               :: d0, p0, bx0, by0, bz0, x0, y0, z0, r0, beta_cr, amp_cr
 
-   namelist /PROBLEM_CONTROL/  problem_name, run_id,      &
+   namelist /PROBLEM_CONTROL/       &
                                d0, p0, bx0, by0, bz0, &
                                x0, y0, z0, r0, &
                                beta_cr, amp_cr, &
@@ -58,12 +57,9 @@ module initproblem
       use grid,          only: dxmn
       use mpi,           only: MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION
       use mpisetup,      only: cbuff_len, cbuff, ibuff, rbuff, buffer_dim, comm, ierr, master, slave
-      use types,         only: idlen, problem_customize_solution, finalize_problem
 
       implicit none
 
-      problem_name = 'cr'
-      run_id       = 'tst'
       d0           = 1.0e5     !< density
       p0           = 1.0       !< pressure
       bx0          =   0.      !< Magnetic field component x
@@ -83,8 +79,6 @@ module initproblem
 
          diff_nml(PROBLEM_CONTROL)
 
-         cbuff(1) = problem_name
-         cbuff(2) = run_id
 
          rbuff(1) = d0
          rbuff(2) = p0
@@ -108,8 +102,6 @@ module initproblem
 
       if (slave) then
 
-         problem_name = cbuff(1)
-         run_id       = cbuff(2)(1:idlen)
 
          d0           = rbuff(1)
          p0           = rbuff(2)

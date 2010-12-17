@@ -26,6 +26,8 @@
  /
 
  $OUTPUT_CONTROL
+    problem_name ='shock1d'
+    run_id  =  'r1a'
     dt_hdf  = 0.1
     dt_res  = 0.0
     dt_log  = 0.1
@@ -80,8 +82,6 @@
  /
 
  $PROBLEM_CONTROL
-    problem_name ='shock1d'
-    run_id  =  'r1a'
     dl      =  1.0
     vxl     = 10.0
     vyl     =  0.0

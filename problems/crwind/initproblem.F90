@@ -35,7 +35,6 @@ module initproblem
 ! Written by: M. Hanasz, February 2006
 ! Modified by M.Hanasz for CR-driven dynamo
 
-   use problem_pub, only: problem_name, run_id
    implicit none
 
    private
@@ -44,7 +43,7 @@ module initproblem
    real :: d0, alpha, bxn,byn,bzn, amp_cr, beta_cr                           !< galactic disk specific parameters
    real :: x0, y0, z0                                                        !< parameters for a single supernova exploding at t=0
 
-   namelist /PROBLEM_CONTROL/  problem_name, run_id, d0, bxn, byn, bzn, x0, y0, z0, alpha, amp_cr, beta_cr
+   namelist /PROBLEM_CONTROL/  d0, bxn, byn, bzn, x0, y0, z0, alpha, amp_cr, beta_cr
    contains
 
 !-----------------------------------------------------------------------------
@@ -53,12 +52,9 @@ module initproblem
       use dataio_pub,    only: ierrh, par_file, namelist_errh, compare_namelist      ! QA_WARN required for diff_nml
       use mpisetup,      only: cbuff_len, cbuff, rbuff, buffer_dim, comm, ierr, master, slave
       use mpi,           only: MPI_CHARACTER, MPI_DOUBLE_PRECISION
-      use types,         only: idlen
 
       implicit none
 
-      problem_name = 'xxx'
-      run_id  = 'aaa'
       d0     = 1.0
       bxn    = 0.0
       byn    = 1.0
@@ -71,8 +67,6 @@ module initproblem
 
          diff_nml(PROBLEM_CONTROL)
 
-         cbuff(1) =  problem_name
-         cbuff(2) =  run_id
 
          rbuff(1)  = d0
          rbuff(2)  = bxn
@@ -92,8 +86,6 @@ module initproblem
 
       if (slave) then
 
-         problem_name = cbuff(1)
-         run_id       = cbuff(2)(1:idlen)
 
          d0           = rbuff(1)
          bxn          = rbuff(2)

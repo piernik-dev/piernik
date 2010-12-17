@@ -35,8 +35,12 @@
 !<
 module mpisetup
 !   use mpi, only: MPI_STATUS_SIZE
+   use dataio_pub, only: cbuff_len
+
    implicit none
+
    integer, parameter :: MPI_STATUS_SIZE = 5  ! taken from mpi to silence warnings
+
    private
    public :: &
         & ARR_XY_LEFT_BND, ARR_XY_LEFT_DOM, ARR_XY_RIGHT_BND, ARR_XY_RIGHT_DOM, ARR_XZ_LEFT_BND, ARR_XZ_LEFT_DOM, ARR_XZ_RIGHT_BND, ARR_XZ_RIGHT_DOM, &
@@ -69,7 +73,6 @@ module mpisetup
    integer ::   procxl, procxr, procyl, procyr, proczl, proczr, procxyl, procyxl, procxyr, procyxr
 
    integer, parameter               :: buffer_dim=200
-   integer, parameter               :: cbuff_len=32
    character(len=cbuff_len), dimension(buffer_dim) :: cbuff
    integer,   dimension(buffer_dim) :: ibuff
    real,      dimension(buffer_dim) :: rbuff

@@ -28,20 +28,15 @@
 #include "piernik.h"
 
 !<
-!! This module contains problem variables common to all problems.
-!! It removes dependence of dataio_hdf5 on initproblem, which allows to hook user-provided I/O subroutines.
+!! This module contains problem variables intended to use across the code.
+!! It is strongly discouraged to use this feature for purposes other than debugging.
 !>
 
 module problem_pub
 
-   use mpisetup, only: cbuff_len
-   use types,    only: idlen
-
    implicit none
 
    public  ! QA_WARN nothing to hide here
-   character(len=cbuff_len) :: problem_name                   !< The default problem name
-   character(len=idlen)     :: run_id                         !< Auxiliary run identifier
 
    ! hack for tests
 #ifdef JEANS_PROBLEM

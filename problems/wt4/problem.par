@@ -26,6 +26,8 @@
  /
 
  $OUTPUT_CONTROL
+    problem_name = 'wengen4'
+    run_id       = 'tst'
     ix      = 0
     iy      = 0
     iz      = 0
@@ -97,8 +99,6 @@
  /
 
  $PROBLEM_CONTROL
-    problem_name = 'wengen4'
-    run_id       = 'tst'
     input_file   = 'test4-512.alt'
     mincs2       = 8.725322e-4
     maxcs2       = 5.8168972e-3

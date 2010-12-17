@@ -25,6 +25,8 @@
  /
 
  $OUTPUT_CONTROL
+    problem_name ='maclaurin'
+    run_id =  'sph'
     ix      = 0
     iy      = 0
     iz      = 0
@@ -83,8 +85,6 @@
  /
 
  $PROBLEM_CONTROL
-    problem_name ='maclaurin'
-    run_id =  'sph'
     x0     = 0.
     y0     = 0.
     z0     = 0.

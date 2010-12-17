@@ -33,7 +33,6 @@ module initproblem
 ! Initial condition for Sedov-Taylor explosion
 ! Written by: M. Hanasz, March 2006
 
-   use problem_pub, only: problem_name, run_id
    implicit none
 
    private
@@ -42,7 +41,7 @@ module initproblem
    integer :: n_sn
    real    :: d0, p0, bx0, by0, bz0, Eexpl, x0, y0, z0, r0, dt_sn, r, t_sn
 
-   namelist /PROBLEM_CONTROL/  problem_name, run_id, &
+   namelist /PROBLEM_CONTROL/  &
                                d0,p0, bx0,by0,bz0, Eexpl,  x0,y0,z0, r0, &
                                n_sn, dt_sn
 contains
@@ -52,7 +51,6 @@ contains
       use grid,          only: dxmn
       use mpisetup,      only: cbuff_len, cbuff, ibuff, rbuff, buffer_dim, master, slave, comm, ierr
       use mpi,           only: MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER
-      use types,         only: idlen
       use dataio_pub,    only: user_plt_hdf5, user_vars_hdf5, user_tsl
 
       implicit none
@@ -60,8 +58,6 @@ contains
 
       t_sn = 0.0
 
-      problem_name = 'aaa'
-      run_id  = 'aaa'
       d0      = 1.0
       p0      = 1.e-3
       bx0     =   0.
@@ -79,8 +75,6 @@ contains
 
          diff_nml(PROBLEM_CONTROL)
 
-         cbuff(1) =  problem_name
-         cbuff(2) =  run_id
 
          rbuff(1) = d0
          rbuff(2) = p0
@@ -104,8 +98,6 @@ contains
 
       if (slave) then
 
-         problem_name = cbuff(1)
-         run_id       = cbuff(2)(1:idlen)
 
          d0           = rbuff(1)
          p0           = rbuff(2)

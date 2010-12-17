@@ -35,14 +35,13 @@ module initproblem
 ! based on Agertz et al. 2008
 ! Written by: D. Woltanski, February 2008
 
-   use problem_pub, only: problem_name, run_id
    implicit none
 
    private
    public :: read_problem_par, init_prob
    real   :: chi, dbot, lpert, Mtop, Mbot, dpert, tkh, vtransf
 
-   namelist /PROBLEM_CONTROL/  problem_name, run_id, chi, dbot, lpert, Mtop, Mbot, dpert, tkh, vtransf
+   namelist /PROBLEM_CONTROL/  chi, dbot, lpert, Mtop, Mbot, dpert, tkh, vtransf
 
    contains
 
@@ -53,13 +52,10 @@ module initproblem
       use dataio_pub,    only: ierrh, par_file, namelist_errh, compare_namelist     ! QA_WARN required for diff_nml
       use mpi,           only: MPI_CHARACTER, MPI_DOUBLE_PRECISION
       use mpisetup,      only: cbuff_len, cbuff, rbuff, buffer_dim, comm, ierr, master, slave
-      use types,         only: idlen
 
       implicit none
 
 
-      problem_name = 'aaa'
-      run_id  = 'aa'
       chi     = 8.0
       dbot    = 1.0
       lpert   = 0.05
@@ -74,8 +70,6 @@ module initproblem
          diff_nml(PROBLEM_CONTROL)
 
 
-         cbuff(1) =  problem_name
-         cbuff(2) =  run_id
 
          rbuff(1) = chi
          rbuff(2) = dbot
@@ -93,8 +87,6 @@ module initproblem
 
       if (slave) then
 
-         problem_name = cbuff(1)
-         run_id       = cbuff(2)(1:idlen)
 
          chi          = rbuff(1)
          dbot         = rbuff(2)

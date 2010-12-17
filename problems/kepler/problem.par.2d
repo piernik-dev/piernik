@@ -28,6 +28,8 @@
  /
 
  $OUTPUT_CONTROL
+    problem_name ='keplerian_disk'
+    run_id  =  'ts1'
     dt_hdf  = 0.1
     dt_res  = 10.0
     dt_log  = 0.00001
@@ -90,8 +92,6 @@
  /
 
  $PROBLEM_CONTROL
-    problem_name ='keplerian_disk'
-    run_id  =  'ts1'
     d0      = 1.0
     mag_field_orient = 'toroidal'
 /

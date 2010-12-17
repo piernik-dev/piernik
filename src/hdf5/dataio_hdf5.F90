@@ -826,7 +826,7 @@ module dataio_hdf5
    subroutine write_restart_hdf5
 
       use arrays,        only: u, b
-      use dataio_pub,    only: chdf, nres, set_container_chdf, cwdlen
+      use dataio_pub,    only: chdf, nres, set_container_chdf, cwdlen, problem_name, run_id
       use fluidindex,    only: nvar
       use grid,          only: nxb, nyb, nzb, x, y, z, nx, ny, nz
       use hdf5,          only: HID_T, HSIZE_T, HSSIZE_T, H5P_FILE_ACCESS_F, H5F_ACC_TRUNC_F, H5P_DATASET_CREATE_F, H5S_SELECT_SET_F, &
@@ -838,7 +838,6 @@ module dataio_hdf5
       use list_hdf5,     only: problem_write_restart
       use mpisetup,      only: pcoords, pxsize, pysize, pzsize, comm3d, comm, info, ierr, master, nstep
       use mpi,           only: MPI_CHARACTER
-      use problem_pub,   only: problem_name, run_id
       use types,         only: hdf
 #ifdef ISO_LOCAL
       use arrays,        only: cs_iso2_arr
@@ -1285,7 +1284,7 @@ module dataio_hdf5
    subroutine read_restart_hdf5(chdf)
 
       use arrays,        only: u, b
-      use dataio_pub,    only: cwdlen, msg, printio, die, require_init_prob
+      use dataio_pub,    only: cwdlen, msg, printio, die, require_init_prob, problem_name, run_id
       use fluidindex,    only: nvar
       use func,          only: fix_string
       use grid,          only: nx, ny, nz, x, y, z, nxb, nyb, nzb
@@ -1299,7 +1298,6 @@ module dataio_hdf5
       use list_hdf5,     only: problem_read_restart
       use mpisetup,      only: comm, ierr, pcoords, pxsize, pysize, pzsize, magic_mass, master, t, info, comm3d, dt, cbuff_len
       use mpi,           only: MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION
-      use problem_pub,   only: problem_name, run_id
       use types,         only: hdf, domlen, idlen
 #ifdef ISO_LOCAL
       use arrays,        only: cs_iso2_arr
@@ -1533,12 +1531,11 @@ module dataio_hdf5
 ! ------------------------------------------------------------------------------------
 !
    subroutine write_hdf5(chdf)
-      use dataio_pub,    only: cwdlen, msg, die, user_vars_hdf5, nhdf, varlen
+      use dataio_pub,    only: cwdlen, msg, die, user_vars_hdf5, nhdf, varlen, problem_name, run_id
       use grid,          only: nxb, nyb, nzb
       use hdf5,          only: HID_T, H5F_ACC_TRUNC_F, H5P_FILE_ACCESS_F, H5P_DEFAULT_F, &
            &                   h5open_f, h5close_f, h5fcreate_f, h5fclose_f, h5pcreate_f, h5pclose_f, h5pset_fapl_mpio_f
       use mpisetup,      only: comm3d, ierr, info
-      use problem_pub,   only: problem_name, run_id
       use types,         only: hdf
 #ifdef NEW_HDF5
       use list_hdf5,     only: iterate_lhdf5
@@ -1698,14 +1695,13 @@ module dataio_hdf5
 
    subroutine set_common_attributes(filename, chdf, stype)
 
-      use dataio_pub,    only: msg, printio, require_init_prob, piernik_hdf5_version
+      use dataio_pub,    only: msg, printio, require_init_prob, piernik_hdf5_version, problem_name, run_id
       use grid,          only: nxb, nyb, nzb, nb, xmin, xmax, ymin, ymax, zmin, zmax
       use hdf5,          only: HID_T, SIZE_T, H5F_ACC_RDWR_F, h5fopen_f, h5fclose_f, h5gcreate_f, h5gclose_f
       use h5lt,          only: h5ltset_attribute_double_f, h5ltset_attribute_int_f, h5ltmake_dataset_string_f, h5ltset_attribute_string_f
       use list_hdf5,     only: additional_attrs
       use mpisetup,      only: master, t, dt, psize, cbuff_len, pxsize, pysize, pzsize, local_magic_mass, comm, ierr, magic_mass
       use mpi,           only: MPI_DOUBLE_PRECISION, MPI_SUM
-      use problem_pub,   only: problem_name, run_id
       use types,         only: hdf
       use version,       only: env, nenv
 

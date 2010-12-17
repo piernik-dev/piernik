@@ -27,6 +27,8 @@
  /
 
  $OUTPUT_CONTROL
+    problem_name ='kepler'
+    run_id  =  'ts2'
     dt_hdf  = 2.0
     dt_res  = 0.0
     dt_log  = 0.1
@@ -89,8 +91,6 @@
  /
 
  $PROBLEM_CONTROL
-    problem_name ='kepler'
-    run_id  =  'ts2'
     alpha   = 1.0
     d0      = 1.0
     dout    = 1.0e-4

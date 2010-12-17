@@ -29,6 +29,8 @@
  /
 
  $OUTPUT_CONTROL
+    problem_name ='shock1d'
+    run_id  =  'r4c'
     dt_hdf  = 0.5
     dt_res  = 0.0
     dt_log  = 0.1
@@ -92,8 +94,6 @@
  /
 
  $PROBLEM_CONTROL
-    problem_name ='shock1d'
-    run_id  =  'r4c'
     dl      =  0.65
     vxl     =  0.667
     vyl     =  -0.257

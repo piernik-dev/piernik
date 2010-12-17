@@ -30,7 +30,6 @@
 
 module initproblem
 
-   use problem_pub, only: problem_name, run_id
 
    implicit none
 
@@ -40,7 +39,7 @@ module initproblem
    real              :: x0, y0, z0, d0, a1, e, d1, p0, a3
    integer           :: nsub
 
-   namelist /PROBLEM_CONTROL/ problem_name, run_id, x0, y0, z0, d0, a1, e, nsub
+   namelist /PROBLEM_CONTROL/ x0, y0, z0, d0, a1, e, nsub
 
 contains
 
@@ -53,7 +52,6 @@ contains
       use dataio_pub,    only: skip_advection, die, warn
       use mpisetup,      only: ierr, rbuff, cbuff, ibuff, master, slave, buffer_dim, comm, smalld, cbuff_len
       use mpi,           only: MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER
-      use types,         only: idlen, finalize_problem
       use list_hdf5,     only: additional_attrs
 
       implicit none
@@ -64,8 +62,6 @@ contains
       skip_advection = .true. ! skip sweeps in fluidupdate
 
       ! namelist default parameter values
-      problem_name = 'Maclaurin sphere'  !< The default problem name
-      run_id       = 'sph'               !< Auxiliary run identifier
       x0           = 0.0                 !< x-coordinate of the spheroid center
       y0           = 0.0                 !< y-coordinate of the spheroid center
       z0           = 0.0                 !< z-coordinate of the spheroid center
@@ -78,8 +74,6 @@ contains
 
          diff_nml(PROBLEM_CONTROL)
 
-         cbuff(1) =  problem_name
-         cbuff(2) =  run_id
 
          rbuff(1) = x0
          rbuff(2) = y0
@@ -98,8 +92,6 @@ contains
 
       if (slave) then
 
-         problem_name = cbuff(1)
-         run_id       = cbuff(2)(1:idlen)
 
          x0           = rbuff(1)
          y0           = rbuff(2)

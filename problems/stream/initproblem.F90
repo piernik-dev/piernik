@@ -31,7 +31,6 @@
 module initproblem
 
    use mpisetup,    only: cbuff_len
-   use problem_pub, only: problem_name, run_id
    implicit none
 
    private
@@ -42,7 +41,7 @@ module initproblem
    real, dimension(8), save :: vec
    logical :: linear
 
-   namelist /PROBLEM_CONTROL/  problem_name, run_id, &
+   namelist /PROBLEM_CONTROL/  &
                                rhog, eps, amp, fnoise, kx,kz, linear
 
    contains
@@ -54,14 +53,11 @@ module initproblem
       use dataio_pub,    only: ierrh, par_file, namelist_errh, compare_namelist      ! QA_WARN required for diff_nml
       use mpisetup,      only: rbuff, cbuff, lbuff, buffer_dim, master, slave, comm, ierr
       use mpi,           only: MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_LOGICAL
-      use types,         only: idlen
 
       implicit none
 
 
       linear = .false.
-      problem_name = 'aaa'
-      run_id  = 'aa'
       rhog    = 10.0
       eps     =  1.0
       amp    =  0.0
@@ -72,8 +68,6 @@ module initproblem
 
          diff_nml(PROBLEM_CONTROL)
 
-         cbuff(1) =  problem_name
-         cbuff(2) =  run_id
          cbuff(3) =  fnoise
 
          rbuff(1) = rhog
@@ -92,8 +86,6 @@ module initproblem
 
       if (slave) then
 
-         problem_name = cbuff(1)
-         run_id       = cbuff(2)(1:idlen)
          fnoise       = cbuff(3)
 
          rhog         = rbuff(1)
@@ -145,7 +137,6 @@ module initproblem
       call warn("[initproblem]: Dust fluid not initialized. I hope you know what you are doing!"
 #endif /* !NEUTRAL */
 
-      if (run_id == 'lnA') then
          call printinfo("Lin A")
          coeff(4) = (-0.1691398, 0.0361553 ) ! u_x
          coeff(5) = ( 0.1336704, 0.0591695 ) ! u_y
@@ -156,7 +147,6 @@ module initproblem
          coeff(3) = ( 0.1639549,-0.0233277 ) ! w_z
          kx = dpi/Lx
          kz = dpi/Lz
-      else if (run_id == 'lnB') then
          call printinfo("Lin B")
          coeff(4) = (-0.0174121,-0.2770347 ) ! u_x
          coeff(5) = ( 0.2767976,-0.0187568 ) ! u_y
@@ -288,7 +278,6 @@ module initproblem
       real, intent(in) :: t
       complex(kind=8), dimension(8) :: coeff
 
-      if (run_id == 'lnA') then
          coeff(4) = (-0.1691398, 0.0361553 ) ! u_x
          coeff(5) = ( 0.1336704, 0.0591695 ) ! u_y
          coeff(6) = ( 0.1691389,-0.0361555 ) ! u_z
@@ -298,7 +287,6 @@ module initproblem
          coeff(3) = ( 0.1639549,-0.0233277 ) ! w_z
 
          coeff(8) = (-0.3480127, 0.4190204 ) ! omega
-      else if (run_id == 'lnB') then
          coeff(4) = (-0.0174121,-0.2770347 ) ! u_x
          coeff(5) = ( 0.2767976,-0.0187568 ) ! u_y
          coeff(6) = ( 0.0174130, 0.2770423 ) ! u_z

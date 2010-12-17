@@ -29,6 +29,8 @@
  /
 
  $OUTPUT_CONTROL
+    problem_name ='moving_pulse'
+    run_id =  'ts1'
     ix      = 0
     iy      = 0
     iz      = 0
@@ -76,8 +78,6 @@
  /
 
  $PROBLEM_CONTROL
-    problem_name ='moving_pulse'
-    run_id =  'ts1'
     pulse_vel_x = 2.
  /
 

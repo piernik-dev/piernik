@@ -24,6 +24,8 @@
  /
 
  $OUTPUT_CONTROL
+    problem_name ='turbulence'
+    run_id =  'tst'
     dt_hdf  = 0.01
     dt_res  = 0.0
     dt_log  = 0.001
@@ -67,8 +69,6 @@
  /
 
  $PROBLEM_CONTROL
-    problem_name ='turbulence'
-    run_id =  'tst'
     d0     = 1.0
     Mrms   = 5.0
     c_si   = 0.1

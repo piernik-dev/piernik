@@ -29,6 +29,8 @@
  /
 
  $OUTPUT_CONTROL
+    problem_name ='jeans'
+    run_id =  'ts1'
     ix      = 0
     iy      = 0
     iz      = 0
@@ -92,8 +94,6 @@
  /
 
  $PROBLEM_CONTROL
-    problem_name ='jeans'
-    run_id =  'ts1'
     d0     = 1.5e7
     p0     = 1.5e7
     amp    = 0.001

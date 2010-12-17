@@ -32,7 +32,6 @@ module initproblem
 
 ! Initial condition for dust fronts
 ! Written by: M. Hanasz, January 2009
-   use problem_pub, only: problem_name, run_id
    implicit none
 
    private
@@ -41,7 +40,7 @@ module initproblem
    real      :: d0, v0, v1
    integer   :: m_x, m_y, m_z
 
-   namelist /PROBLEM_CONTROL/  problem_name, run_id, &
+   namelist /PROBLEM_CONTROL/  &
                                d0, v0, v1, m_x, m_y, m_z
 
    contains
@@ -53,12 +52,9 @@ module initproblem
       use dataio_pub,    only: par_file, ierrh, namelist_errh, compare_namelist     ! QA_WARN required for diff_nml
       use mpi,           only: MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION
       use mpisetup,      only: cbuff_len, cbuff, ibuff, rbuff, comm, ierr, buffer_dim, master, slave
-      use types,         only: idlen
 
       implicit none
 
-      problem_name = 'aaa'
-      run_id       = 'aaa'
       d0           = 1.0
       v0           = 0.0
       v1           = 0.01
@@ -71,8 +67,6 @@ module initproblem
          diff_nml(PROBLEM_CONTROL)
 
 
-         cbuff(1) =  problem_name
-         cbuff(2) =  run_id
 
          rbuff(1) = d0
          rbuff(2) = v0
@@ -90,8 +84,6 @@ module initproblem
 
       if (slave) then
 
-         problem_name = cbuff(1)
-         run_id       = cbuff(2)(1:idlen)
 
          d0           = rbuff(1)
          v0           = rbuff(2)

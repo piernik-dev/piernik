@@ -28,6 +28,8 @@
  /
 
  $OUTPUT_CONTROL
+    problem_name = 'tearing'
+    run_id       = 'tst'
     dt_hdf  = 0.01
     dt_log  = 0.001
     dt_tsl  = 0.1
@@ -95,8 +97,6 @@
  /
 
  $PROBLEM_CONTROL
-    problem_name = 'tearing'
-    run_id       = 'tst'
     beta         =  1.0
     v0           =  0.1
  /

@@ -41,7 +41,6 @@ module initproblem
 !
 !       dimdir can't be equal magdir!!
 
-   use problem_pub, only: problem_name, run_id
    implicit none
 
    private
@@ -49,7 +48,7 @@ module initproblem
 
    real   :: beta, v0
 
-   namelist /PROBLEM_CONTROL/ problem_name, run_id, beta, v0
+   namelist /PROBLEM_CONTROL/ beta, v0
 
    contains
 
@@ -60,13 +59,10 @@ module initproblem
       use dataio_pub,    only: ierrh, par_file, namelist_errh, compare_namelist      ! QA_WARN required for diff_nml
       use mpi,           only: MPI_CHARACTER, MPI_DOUBLE_PRECISION
       use mpisetup,      only: cbuff_len, cbuff, rbuff, buffer_dim, comm, ierr, master, slave
-      use types,         only: idlen
 
       implicit none
 
 
-      problem_name = 'tearing'
-      run_id       = 'tst'
       beta         =  1.0
       v0           =  0.1
 
@@ -74,8 +70,6 @@ module initproblem
 
          diff_nml(PROBLEM_CONTROL)
 
-         cbuff(1) =  problem_name
-         cbuff(2) =  run_id
 
          rbuff(1) = beta
          rbuff(2) = v0
@@ -87,8 +81,6 @@ module initproblem
 
       if (slave) then
 
-         problem_name = cbuff(1)
-         run_id       = cbuff(2)(1:idlen)
 
          beta         = rbuff(1)
          v0           = rbuff(2)

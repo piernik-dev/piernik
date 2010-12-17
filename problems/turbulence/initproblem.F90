@@ -7,7 +7,6 @@
 module initproblem
 
 ! Initial condition for Sedov-Taylor explosion
-   use problem_pub, only: problem_name, run_id
    implicit none
 
    private
@@ -16,7 +15,7 @@ module initproblem
    integer           :: n_sn
    real              :: d0, Mrms, t_sn, c_si
 
-   namelist /PROBLEM_CONTROL/  problem_name, run_id, &
+   namelist /PROBLEM_CONTROL/  &
                               d0, c_si, Mrms
 
    contains
@@ -28,14 +27,11 @@ module initproblem
       use dataio_pub,    only: ierrh, par_file, namelist_errh, compare_namelist      ! QA_WARN required for diff_nml
       use mpisetup,      only: cbuff_len, cbuff, rbuff, buffer_dim, comm, ierr, master, slave
       use mpi,           only: MPI_CHARACTER, MPI_DOUBLE_PRECISION
-      use types,         only: idlen
 
       implicit none
 
       t_sn = 0.0
 
-      problem_name = 'aaa'
-      run_id  = 'aaa'
       d0      = 1.0
       c_si    = 0.1
       Mrms    = 5.0
@@ -44,8 +40,6 @@ module initproblem
 
          diff_nml(PROBLEM_CONTROL)
 
-         cbuff(1) =  problem_name
-         cbuff(2) =  run_id
 
          rbuff(1) = d0
          rbuff(2) = Mrms
@@ -57,12 +51,10 @@ module initproblem
       call MPI_Bcast(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
       if (slave) then
-!  namelist /PROBLEM_CONTROL/  problem_name, run_id, &
+!  namelist /PROBLEM_CONTROL/  &
 !                              d0,p0, bx0,by0,bz0, Eexpl,  x0,y0,z0, r0 &
 !                n_sn, dt_sn
 
-         problem_name = cbuff(1)
-         run_id       = cbuff(2)(1:idlen)
 
          d0           = rbuff(1)
          Mrms         = rbuff(2)

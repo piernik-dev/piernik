@@ -34,7 +34,6 @@ module initproblem
 ! Blob test by Agertz et al., 2007, MNRAS, 380, 963.
 ! ToDo: write support for original, SPH-noisy, initial conditions
 
-   use problem_pub, only: problem_name, run_id
    implicit none
 
    private
@@ -42,7 +41,7 @@ module initproblem
 
    real   :: chi, rblob, blobxc, blobyc, blobzc, Mext, denv, tkh, vgal
 
-   namelist /PROBLEM_CONTROL/  problem_name, run_id, chi, rblob, blobxc, blobyc, blobzc, Mext, denv, tkh, vgal
+   namelist /PROBLEM_CONTROL/  chi, rblob, blobxc, blobyc, blobzc, Mext, denv, tkh, vgal
 
    contains
 
@@ -53,13 +52,10 @@ module initproblem
       use dataio_pub,    only: ierrh, par_file, namelist_errh, compare_namelist   ! QA_WARN required for diff_nml
       use mpisetup,      only: cbuff_len, cbuff, rbuff, buffer_dim, comm, ierr, master, slave
       use mpi,           only: MPI_CHARACTER, MPI_DOUBLE_PRECISION
-      use types,         only: idlen
 
       implicit none
 
 
-      problem_name = 'aaa'
-      run_id  = 'aa'
       chi     = 10.0
       rblob   =  1.0
       blobxc  =  5.0
@@ -74,8 +70,6 @@ module initproblem
 
          diff_nml(PROBLEM_CONTROL)
 
-         cbuff(1) =  problem_name
-         cbuff(2) =  run_id
 
          rbuff(1) = chi
          rbuff(2) = rblob
@@ -94,8 +88,6 @@ module initproblem
 
       if (slave) then
 
-         problem_name = cbuff(1)
-         run_id       = cbuff(2)(1:idlen)
 
          chi          = rbuff(1)
          rblob        = rbuff(2)

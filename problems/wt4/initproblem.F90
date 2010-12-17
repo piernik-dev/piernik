@@ -31,7 +31,6 @@
 module initproblem
 
    use mpisetup,    only: cbuff_len
-   use problem_pub, only: problem_name, run_id
 
    implicit none
 
@@ -70,7 +69,7 @@ module initproblem
    real                 :: T_disk                             !< temperature of the disk
    real                 :: mean_mol_weight                    !< mean molecular weight
 
-   namelist /PROBLEM_CONTROL/  problem_name, run_id, input_file, gamma_loc, mass_mul, ambient_density, cs_mul, damp_factor, divine_intervention_type, mincs2, maxcs2, &
+   namelist /PROBLEM_CONTROL/  input_file, gamma_loc, mass_mul, ambient_density, cs_mul, damp_factor, divine_intervention_type, mincs2, maxcs2, &
       &                        r_in, r_out, f_in, f_out, alfasupp, fake_ic, T_disk, mean_mol_weight
 
 contains
@@ -83,7 +82,6 @@ contains
       use dataio_pub,    only: ierrh, par_file, namelist_errh, compare_namelist      ! QA_WARN required for diff_nml
       use mpisetup,      only: ierr, rbuff, cbuff, ibuff, lbuff, master, slave, buffer_dim, comm
       use mpi,           only: MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL
-      use types,         only: idlen, problem_customize_solution
       use list_hdf5,     only: additional_attrs, problem_write_restart, problem_read_restart
 
       implicit none
@@ -91,9 +89,7 @@ contains
 !      integer, parameter :: maxsub = 10  !< upper limit for subsampling
 
       ! namelist default parameter values
-      problem_name    = 'wengen4'
       input_file      = './test4-512.alt'
-      run_id          = 'tst'
 
       gamma_loc       = 1.4
       mass_mul        = 1.0
@@ -121,8 +117,6 @@ contains
 
          diff_nml(PROBLEM_CONTROL)
 
-         cbuff(1) =  problem_name
-         cbuff(2) =  run_id
          cbuff(3) =  input_file
 
          rbuff(1) = gamma_loc
@@ -153,8 +147,6 @@ contains
 
       if (slave) then
 
-         problem_name = trim(cbuff(1))
-         run_id       = cbuff(2)(1:idlen)
          input_file   = trim(cbuff(3))
 
          gamma_loc       = rbuff(1)

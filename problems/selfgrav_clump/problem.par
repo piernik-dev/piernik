@@ -29,6 +29,8 @@
  /
 
  $OUTPUT_CONTROL
+    problem_name ='sg_clump_moving'
+    run_id =  'ts1'
     ix      = 0
     iy      = 0
     iz      = 0
@@ -93,8 +95,6 @@
  /
 
  $PROBLEM_CONTROL
-    problem_name ='sg_clump_moving'
-    run_id =  'ts1'
     clump_mass = 1e23
     clump_K = 1.11e5
 !    crashNotConv = .false.

@@ -25,6 +25,8 @@
  /
 
  $OUTPUT_CONTROL
+    problem_name ='dustwave'
+    run_id   =  'tst'
     dt_hdf  = 1.0
     dt_res  = 5.0
     dt_log  = 0.00001
@@ -66,8 +68,6 @@
  /
 
  $PROBLEM_CONTROL
-    problem_name ='dustwave'
-    run_id   =  'tst'
     d0       = 1.0
     v0       = 0.1
     v1       = 0.01

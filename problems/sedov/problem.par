@@ -24,6 +24,8 @@
  /
 
  $OUTPUT_CONTROL
+    problem_name ='sedov'
+    run_id =  'tst'
     ix = 32
     iy = 32
     iz = 32
@@ -82,8 +84,6 @@
  /
 
  $PROBLEM_CONTROL
-    problem_name ='sedov'
-    run_id =  'tst'
     d0     = 1.0
     p0     = 1.0
     Eexpl  = 1.e6

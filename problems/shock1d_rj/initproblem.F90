@@ -36,7 +36,6 @@ module initproblem
 !    and reference therein                  !
 ! ----------------------------------------- !
 
-   use problem_pub, only: problem_name, run_id
    implicit none
 
    private
@@ -47,8 +46,6 @@ module initproblem
    integer, parameter :: one = 1
    character(len=one) :: dir
 
-   namelist /PROBLEM_CONTROL/  problem_name, &
-      run_id,dl,vxl,vyl,vzl,bxl,byl,bzl,el,  &
       dr,vxr,vyr,vzr,bxr,byr,bzr,er
 
    contains
@@ -58,19 +55,14 @@ module initproblem
       use dataio_pub,    only: ierrh, par_file, namelist_errh, compare_namelist      ! QA_WARN required for diff_nml
       use mpisetup,      only: cbuff_len, cbuff, rbuff, buffer_dim, master, slave, comm, ierr
       use mpi,           only: MPI_CHARACTER, MPI_DOUBLE_PRECISION
-      use types,         only: idlen
 
       implicit none
 
-      problem_name = 'shock'
-      run_id  = 'tst'
 
       if (master) then
 
          diff_nml(PROBLEM_CONTROL)
 
-         cbuff(1) =  problem_name
-         cbuff(2) =  run_id
 
          rbuff(1) = dl
          rbuff(2) = vxl
@@ -96,8 +88,6 @@ module initproblem
 
       if (slave) then
 
-         problem_name = cbuff(1)
-         run_id       = cbuff(2)(1:idlen)
 
          dl  = rbuff(1)
          vxl = rbuff(2)

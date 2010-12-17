@@ -29,6 +29,8 @@
  /
 
  $OUTPUT_CONTROL
+    problem_name ='crdynamo'
+    run_id       = 'tst'
     dt_hdf       = 1.0
     dt_res       = 100.0
     dt_log       = 1.0e-1
@@ -118,8 +120,6 @@
  /
 
  $PROBLEM_CONTROL
-    problem_name ='crdynamo'
-    run_id       = 'tst'
     d0           =  5.0     ! gestosc na pl.symetrii dysku, brana pod uwage gdy col_dns = 0.0
     bxn          =  0.0     !
     byn          =  1.0     ! wspolczynniki okreslajace kierunek B

@@ -31,7 +31,6 @@
 module initproblem
 
 ! Initial condition for blob test
-   use problem_pub, only: problem_name, run_id
    implicit none
 
    private
@@ -39,7 +38,7 @@ module initproblem
 
    real              :: d_gas, p_gas, v_gas, d_dust, v_dust, x0, y0, z0, r0
 
-   namelist /PROBLEM_CONTROL/  problem_name, run_id, &
+   namelist /PROBLEM_CONTROL/  &
                                d_gas, p_gas, v_gas, d_dust, v_dust, x0, y0, z0, r0
 
    contains
@@ -50,12 +49,9 @@ module initproblem
       use dataio_pub,    only: ierrh, par_file, namelist_errh, compare_namelist     ! QA_WARN required for diff_nml
       use mpisetup,      only: cbuff_len, cbuff, rbuff, buffer_dim, master, slave, comm, ierr
       use mpi,           only: MPI_CHARACTER, MPI_DOUBLE_PRECISION
-      use types,         only: idlen
 
       implicit none
 
-      problem_name = 'aaa'
-      run_id  = 'aaa'
       d_gas   =  1.0
       p_gas   =  1.0
       v_gas   =  1.0
@@ -70,8 +66,6 @@ module initproblem
 
          diff_nml(PROBLEM_CONTROL)
 
-         cbuff(1)     =  problem_name
-         cbuff(2)     =  run_id
 
          rbuff(1)     = d_gas
          rbuff(2)     = p_gas
@@ -90,8 +84,6 @@ module initproblem
 
       if (slave) then
 
-         problem_name = cbuff(1)
-         run_id       = cbuff(2)(1:idlen)
 
          d_gas        = rbuff(1)
          p_gas        = rbuff(2)

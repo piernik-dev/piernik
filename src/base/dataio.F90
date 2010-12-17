@@ -50,7 +50,7 @@ module dataio
 !!
 !! \todo check the usefulness of wait logical variable
 !<
-   use dataio_pub,    only: cwdlen, hnlen, varlen, domain, fmin, fmax, vizit, nend, tend, wend, nrestart
+   use dataio_pub,    only: cwdlen, hnlen, varlen, domain, fmin, fmax, vizit, nend, tend, wend, nrestart, problem_name, run_id
    use mpisetup,      only: cbuff_len
    use types,         only: idlen
 
@@ -106,7 +106,7 @@ module dataio
 
    namelist /END_CONTROL/ nend, tend, wend
    namelist /RESTART_CONTROL/ restart, new_id, nrestart, resdel
-   namelist /OUTPUT_CONTROL/ dt_hdf, dt_res, dt_tsl, dt_log, dt_plt, ix, iy, iz, &
+   namelist /OUTPUT_CONTROL/ problem_name, run_id, dt_hdf, dt_res, dt_tsl, dt_log, dt_plt, ix, iy, iz, &
                              domain, vars, mag_center, vizit, fmin, fmax, &
                              min_disk_space_MB, sleep_minutes, sleep_seconds, &
                              user_message_file, system_message_file
@@ -214,7 +214,6 @@ contains
       use mpisetup,        only: lbuff, ibuff, rbuff, cbuff, master, slave, cbuff_len, comm, ierr, buffer_dim, &
            &                      t, nstep, bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr
       use mpi,             only: MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL
-      use problem_pub,     only: problem_name, run_id
       use timer,           only: time_left
       use version,         only: nenv,env, init_version
 #ifdef MAGNETIC
@@ -230,6 +229,8 @@ contains
       integer              :: system_status, i
       character(LEN=msglen):: system_command
 
+      problem_name = "nameless"
+      run_id = "___"
       restart = 'last'   ! 'last': automatic choice of the last restart file
                          ! regardless of "nrestart" value;
                          ! if something else is set: "nrestart" value is fixing
@@ -331,6 +332,8 @@ contains
 
          lbuff(1)  = vizit
 
+         cbuff(31) = problem_name
+         cbuff(32) = run_id
          cbuff(40) = domain
 
          do iv = 1, nvarsmx
@@ -384,6 +387,8 @@ contains
 
          vizit               = lbuff(1)
 
+         problem_name        = cbuff(31)
+         run_id              = cbuff(32)(1:idlen)
          domain              = trim(cbuff(40))
          do iv=1, nvarsmx
             vars(iv)         = trim(cbuff(40+iv))
@@ -540,7 +545,6 @@ contains
    subroutine write_crashed(msg)
 
       use dataio_pub,    only: nres, die
-      use problem_pub,   only: problem_name
 
       implicit none
 
@@ -612,7 +616,6 @@ contains
    subroutine find_last_restart(restart_number)
 
       use dataio_pub,    only: cwdlen, cwd
-      use problem_pub,   only: problem_name, run_id
 #if defined(__INTEL_COMPILER)
       use ifport,        only: unlink
 #endif /* __INTEL_COMPILER */
@@ -684,7 +687,6 @@ contains
       use fluidindex,      only: nvar, iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz, ibx, iby, ibz
       use grid,            only: dvol, dx, dy, dz, is, ie, js, je, ks, ke, x, y, z, nxb, nyb, nzb
       use mpisetup,        only: master, t, dt, smalld, nstep, pxsize, pysize, pzsize
-      use problem_pub,     only: problem_name, run_id
       use types,           only: tsl_container, phys_prop
 #ifndef ISO
       use fluidindex,      only: iarr_all_en

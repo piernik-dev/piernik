@@ -26,6 +26,8 @@
  /
 
  $OUTPUT_CONTROL
+    problem_name ='dustblob'
+    run_id  =  'tst'
     iz = 1
     dt_plt  = 0.0001
     dt_hdf  = 0.05
@@ -79,8 +81,6 @@
  /
 
  $PROBLEM_CONTROL
-    problem_name ='dustblob'
-    run_id  =  'tst'
     d_gas   =  1.0
     p_gas   =  1.0
     v_gas   =  1.0

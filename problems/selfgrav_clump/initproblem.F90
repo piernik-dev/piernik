@@ -30,7 +30,6 @@
 
 module initproblem
 
-   use problem_pub, only: problem_name, run_id
 
    implicit none
 
@@ -43,7 +42,7 @@ module initproblem
 
    integer, parameter :: REL_CALC = 1, REL_SET = REL_CALC + 1
 
-   namelist /PROBLEM_CONTROL/  problem_name, run_id, clump_mass, clump_vel_x, clump_vel_y, clump_vel_z, clump_K, clump_r, epsC, epsM, maxitC, maxitM, crashNotConv, exp_speedup, verbose
+   namelist /PROBLEM_CONTROL/  clump_mass, clump_vel_x, clump_vel_y, clump_vel_z, clump_K, clump_r, epsC, epsM, maxitC, maxitM, crashNotConv, exp_speedup, verbose
 
 contains
 
@@ -56,14 +55,11 @@ contains
       use grid,          only: xmin, xmax, ymin, ymax, zmin, zmax, dx, dy, dz
       use mpisetup,      only: ierr, rbuff, cbuff_len, cbuff, ibuff, lbuff, master, slave, buffer_dim, comm
       use mpi,           only: MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL
-      use types,         only: idlen
 
       implicit none
 
 
       ! namelist default parameter values
-      problem_name = 'selfgrav_clump'      !< The default problem name
-      run_id       = '_'                   !< Auxiliary run identifier
       clump_mass   = 1.0e10                !< Mass of the clump
       clump_vel_x  = 0.                    !< X-velocity in the domain
       clump_vel_y  = 0.                    !< Y-velocity in the domain
@@ -83,8 +79,6 @@ contains
 
          diff_nml(PROBLEM_CONTROL)
 
-         cbuff(1) =  problem_name
-         cbuff(2) =  run_id
 
          rbuff(1) = clump_mass
          rbuff(2) = clump_vel_x
@@ -111,8 +105,6 @@ contains
 
       if (slave) then
 
-         problem_name = cbuff(1)
-         run_id       = cbuff(2)(1:idlen)
 
          clump_mass   = rbuff(1)
          clump_vel_x  = rbuff(2)

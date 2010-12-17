@@ -25,6 +25,8 @@
  /
 
  $OUTPUT_CONTROL
+    problem_name ='stream'
+    run_id  =  'BA_'
     dt_hdf  = 1.0
     dt_res  = 50.0
     dt_log  = 0.1
@@ -78,8 +80,6 @@
  /
 
  $PROBLEM_CONTROL
-    problem_name ='stream'
-    run_id  =  'BA_'
     rhog    =  1.0
     eps     =  0.2
     amp     =  1.e-4

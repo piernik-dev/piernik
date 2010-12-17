@@ -25,6 +25,8 @@
  /
 
  $OUTPUT_CONTROL
+    problem_name ='blob'
+    run_id  =  'tst'
     dt_hdf  = 0.5666666666667e0
     dt_res  = 100.0e0
     dt_log  = 0.001
@@ -67,8 +69,6 @@
  /
 
  $PROBLEM_CONTROL
-    problem_name ='blob'
-    run_id  =  'tst'
     chi     = 10.0
     rblob   =  1.0
     blobxc  =  5.0

@@ -34,14 +34,13 @@ module initproblem
 ! Written by: M. Hanasz, March 2006
 
    use mpisetup,    only: cbuff_len
-   use problem_pub, only: problem_name, run_id
    implicit none
    private
    public  :: read_problem_par, init_prob
    real    :: sigma0, Rin, R0, HtoR, eps, amp
    character(len=cbuff_len) :: sigma_model
 
-   namelist /PROBLEM_CONTROL/  problem_name, run_id, sigma0, amp, &
+   namelist /PROBLEM_CONTROL/  sigma0, amp, &
                                Rin, R0, HtoR, sigma_model, eps
 
    contains
@@ -53,12 +52,9 @@ module initproblem
       use dataio_pub,    only: par_file, ierrh, namelist_errh, compare_namelist         ! QA_WARN required for diff_nml
       use mpisetup,      only: cbuff_len, cbuff, rbuff, buffer_dim, master, slave, comm, ierr
       use mpi,           only: MPI_CHARACTER, MPI_DOUBLE_PRECISION
-      use types,         only: idlen
 
       implicit none
 
-      problem_name = 'stream_3D'
-      run_id  = 'ts1'
       Sigma0  = 1.0
       Rin     = 1.0e-4
       R0      = 1.0
@@ -71,8 +67,6 @@ module initproblem
 
          diff_nml(PROBLEM_CONTROL)
 
-         cbuff(1) =  problem_name
-         cbuff(2) =  run_id
          cbuff(3) =  sigma_model
 
          rbuff(1) = sigma0
@@ -89,8 +83,6 @@ module initproblem
 
       if (slave) then
 
-         problem_name = cbuff(1)
-         run_id       = cbuff(2)(1:idlen)
          sigma_model  = cbuff(3)
 
          sigma0       = rbuff(1)

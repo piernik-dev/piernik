@@ -28,6 +28,8 @@
  /
 
  $OUTPUT_CONTROL
+    problem_name = 'otvortex'
+    run_id       = 'rs4'
     dt_hdf  = 0.012
     dt_res  = 0.0
     dt_log  = 0.00001
@@ -99,8 +101,6 @@
  /
 
  $PROBLEM_CONTROL
-    problem_name = 'otvortex'
-    run_id       = 'rs4'
  /
 
  $SHEARING

@@ -26,6 +26,8 @@
  /
 
  $OUTPUT_CONTROL
+    problem_name ='slab'
+    run_id  =  'ts2'
     dt_hdf  = 0.1
     dt_res  = 0.0
     dt_log  = 0.00001
@@ -81,8 +83,6 @@
  /
 
  $PROBLEM_CONTROL
-    problem_name ='slab'
-    run_id  =  'ts2'
     d0      = 1.0
     r0      = 0.25
     bx0     = 0.0

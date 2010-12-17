@@ -27,6 +27,8 @@
  /
 
  $OUTPUT_CONTROL
+    problem_name ='kepler'
+    run_id  =  'tst'
     dt_hdf  = 1.0
     dt_res  = 0.0
     dt_log  = 0.001
@@ -98,8 +100,6 @@
  /
 
  $PROBLEM_CONTROL
-    problem_name ='kepler'
-    run_id  =  'tst'
     sigma0  = 1.0
     sigma_model = 'hayashi'
     Rin      = 5.0

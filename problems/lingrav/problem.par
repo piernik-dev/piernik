@@ -26,6 +26,8 @@
  /
 
  $OUTPUT_CONTROL
+    problem_name = 'lingrav'
+    run_id       = 'tst'
     dt_hdf       = 0.1
     dt_res       = 0.0
     dt_log       = 1.0e-1
@@ -91,8 +93,6 @@
  /
 
  $PROBLEM_CONTROL
-    problem_name = 'lingrav'
-    run_id       = 'tst'
     d0           =  1.0     ! density in galactic plane
     bxn          =  0.0     !
     byn          =  1.0     ! __direction__ of B field

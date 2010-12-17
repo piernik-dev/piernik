@@ -30,7 +30,6 @@
 
 module initproblem
 
-   use problem_pub, only: problem_name, run_id
 
    implicit none
 
@@ -40,7 +39,7 @@ module initproblem
    real :: pulse_size, pulse_vel_x, pulse_vel_y, pulse_vel_z, pulse_amp, &
         &  pulse_x_min, pulse_x_max, pulse_y_min, pulse_y_max, pulse_z_min, pulse_z_max
 
-   namelist /PROBLEM_CONTROL/  problem_name, run_id, pulse_size, pulse_vel_x, pulse_vel_y, pulse_vel_z, pulse_amp
+   namelist /PROBLEM_CONTROL/  pulse_size, pulse_vel_x, pulse_vel_y, pulse_vel_z, pulse_amp
 
 contains
 
@@ -53,14 +52,11 @@ contains
       use grid,          only: xmin, xmax, ymin, ymax, zmin, zmax
       use mpisetup,      only: ierr, rbuff, cbuff_len, cbuff, master, slave, buffer_dim, comm
       use mpi,           only: MPI_CHARACTER, MPI_DOUBLE_PRECISION
-      use types,         only: idlen
 
       implicit none
 
 
       ! namelist default parameter values
-      problem_name = 'selfgrav_clump'      !< The default problem name
-      run_id       = '_'                   !< Auxiliary run identifier
       pulse_size   = 0.5                   !< "fill factor" in each direction
       pulse_vel_x  = 0.0                   !< pulse velocity in x-direction
       pulse_vel_y  = 0.0                   !< pulse velocity in y-direction
@@ -71,8 +67,6 @@ contains
 
          diff_nml(PROBLEM_CONTROL)
 
-         cbuff(1) = problem_name
-         cbuff(2) = run_id
 
          rbuff(1) = pulse_size
          rbuff(2) = pulse_vel_x
@@ -87,8 +81,6 @@ contains
 
       if (slave) then
 
-         problem_name = cbuff(1)
-         run_id       = cbuff(2)(1:idlen)
 
          pulse_size  = rbuff(1)
          pulse_vel_x = rbuff(2)
