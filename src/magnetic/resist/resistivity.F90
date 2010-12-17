@@ -44,7 +44,6 @@ module resistivity
    double precision :: d_eta_factor
 
    real :: eta_max, dt_resist, dt_eint
-   real :: eta_max_proc, eta_max_all
    integer, dimension(3) :: loc_eta_max
 !!!! temporary solution, one should _NOT_ allocate 7 arrays of size nx*ny*nz !!!!!!
    real, dimension(:,:,:), allocatable :: w,wm,wp,dw,eta,b1
@@ -157,7 +156,7 @@ module resistivity
       use func,         only: mshift, pshift
       use grid,         only: idl, xdim, ydim, zdim, nx, ny, nz, is, ie, js, je, ks, ke, has_dir
       use mpisetup,     only: comm, ierr
-      use mpi,          only: MPI_DOUBLE_PRECISION, MPI_MAX
+      use mpi,          only: MPI_DOUBLE_PRECISION, MPI_MAX, MPI_IN_PLACE
 #ifndef ISO
       use fluidindex,   only: nvar
 #endif /* !ISO */
@@ -166,11 +165,14 @@ module resistivity
       integer,intent(in)                       :: ici
       real, dimension(nx,ny,nz), intent(inout) :: eta
 
+!BEWARE: uninitialized values are poisoning the wb(:,:,:) array
+!BEWARE: significant differences between single-CPU run and multi-CPU run (due to uninits?)
 !--- square current computing in cell corner step by step
 
 !--- current_z
       wb(:,:,:) = (b(iby,:,:,:)-mshift(b(iby,:,:,:),xdim))*idl(xdim)
       wb = wb -   (b(ibx,:,:,:)-mshift(b(ibx,:,:,:),ydim))*idl(ydim)
+!Possible optimization: compute the derivatives directly, without temporary storage created by mshift
 
       eta(:,:,:) = 0.25*( wb(:,:,:) + mshift(wb(:,:,:),zdim) )**2
 
@@ -192,7 +194,7 @@ module resistivity
 
       eta(:,:,:) = eta_0 + eta_1*sqrt(max(0.0,eta(:,:,:)- jc2 ))
 !>
-!! \todo Following lines are splitted into separate lines because of intel and gnu dbgs
+!! \todo Following lines are split into separate lines because of intel and gnu dbgs
 !! shoud that be so? Is there any other solution instead splitting?
 !<
       if (has_dir(zdim)) then
@@ -214,15 +216,10 @@ module resistivity
          endwhere
       endif
 
-      eta_max_proc      = maxval(eta(is:ie,js:je,ks:ke))
+      eta_max           = maxval(eta(is:ie,js:je,ks:ke))
       loc_eta_max       = maxloc(eta(is:ie,js:je,ks:ke))
 
-      eta_max = eta_max_proc
-
-      call MPI_Reduce(eta_max_proc, eta_max_all, 1, MPI_DOUBLE_PRECISION, MPI_MAX, 0, comm, ierr)
-      call MPI_Bcast (eta_max_all, 1, MPI_DOUBLE_PRECISION, 0, comm, ierr)
-
-      eta_max = eta_max_all
+      call MPI_Allreduce(MPI_IN_PLACE, eta_max, 1, MPI_DOUBLE_PRECISION, MPI_MAX, 0, comm, ierr)
 
 #ifndef ISO
       dt_eint = deint_max * abs(minval(               &
@@ -248,17 +245,16 @@ module resistivity
 !-----------------------------------------------------------------------
 
    subroutine timestep_resist
+
       use constants, only: big
       use grid,      only: dxmn
       use mpisetup,  only: comm, ierr
-      use mpi,       only: MPI_DOUBLE_PRECISION, MPI_MIN
+      use mpi,       only: MPI_DOUBLE_PRECISION, MPI_MIN, MPI_IN_PLACE
 
       implicit none
-      real :: dx2,dt_resist_min
 
       if (eta_max .ne. 0.) then
-         dx2 = dxmn**2
-         dt_resist = cfl_resist*dx2/(2.*eta_max)
+         dt_resist = cfl_resist * dxmn**2 / (2. * eta_max)
 #ifndef ISO
          dt_resist = min(dt_resist,dt_eint)
 #endif /* !ISO */
@@ -266,10 +262,7 @@ module resistivity
          dt_resist = big
       endif
 
-      call MPI_Reduce(dt_resist, dt_resist_min, 1, MPI_DOUBLE_PRECISION, MPI_MIN, 0, comm, ierr)
-      call MPI_Bcast (dt_resist_min, 1, MPI_DOUBLE_PRECISION, 0, comm, ierr)
-
-      dt_resist = dt_resist_min
+      call MPI_Allreduce(MPI_IN_PLACE, dt_resist, 1, MPI_DOUBLE_PRECISION, MPI_MIN, 0, comm, ierr)
 
    end subroutine timestep_resist
 
