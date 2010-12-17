@@ -46,8 +46,8 @@ module resistivity
    real :: eta_max, dt_resist, dt_eint
    integer, dimension(3) :: loc_eta_max
 !!!! temporary solution, one should _NOT_ allocate 7 arrays of size nx*ny*nz !!!!!!
-   real, dimension(:,:,:), allocatable :: w,wm,wp,dw,eta,b1
-   real, dimension(:,:,:), allocatable :: wb,etahelp
+   real, dimension(:,:,:), allocatable, target :: w,wm,wp,dw,eta,b1
+   real, dimension(:,:,:), allocatable, target :: wb,etahelp
 
    contains
 
@@ -264,6 +264,44 @@ module resistivity
 
 !-----------------------------------------------------------------------------
 
+   subroutine vanleer_limiter(f,a,b) ! ToDo: overload me or use class(*) if you dare
+      implicit none
+      real, dimension(:), intent(in)      :: a !< second order correction of left- or right- moving waves flux on the left cell boundary
+      real, dimension(:), intent(in)      :: b !< second order correction of left- or right- moving waves flux on the right cell boundary
+      real, dimension(:), intent(inout)   :: f !< second order flux correction for left- or right- moving waves
+      ! locals
+      real, dimension(size(a,1)) :: c !< a*b
+
+      c = a*b                                                                    ! ToDO: OPTIMIZE ME
+      where (c > 0.0)
+         f = f+2.0*c/(a+b)
+      endwhere
+      return
+   end subroutine vanleer_limiter
+
+   subroutine tvdd_1d(b1d,eta1d,idi,dt,wcu1d)
+!      use fluxes, only: flimiter
+      implicit none
+      real, dimension(:), pointer, intent(in)    :: eta1d, b1d
+      real, dimension(:), intent(out)            :: wcu1d
+      real, intent(in)                           :: idi,dt
+
+      real, dimension(size(b1d))                 :: w, wp, wm, dw, b1
+      integer                                    :: n
+
+      n = size(b1d)
+      w(2:n)    = eta1d(2:n) * ( b1d(2:n) - b1d(1:n-1) )*idi ; w(1)  = w(2)
+      b1(1:n-1) = b1d(1:n-1) + 0.5*(w(2:n) - w(1:n-1))*dt*idi; b1(n) = b1(n-1)
+
+      w(2:n)    = eta1d(2:n) * ( b1(2:n) - b1(1:n-1) )*idi   ; w(1)  = w(2)
+      wp(1:n-1) = 0.5*(w(2:n) - w(1:n-1))                    ; wp(n) = wp(n-1)
+      wm(2:n)   = wp(1:n-1)                                  ; wm(1) = wm(2)
+
+      call vanleer_limiter(w,wm,wp)
+      wcu1d     = w*dt
+      return
+   end subroutine tvdd_1d
+
    subroutine tvdd(ibi,ici,n)
       use arrays,    only: b, wcu
       use func,      only: mshift, pshift
@@ -298,13 +336,28 @@ module resistivity
 !-------------------------------------------------------------------------------
 
    subroutine diffuseby_x
-      use arrays,        only: wcu
+      use arrays,        only: wcu, b
+      use mpisetup,      only: dt
       use fluidindex,    only: iby, icz
-      use grid,          only: has_dir, xdim, ydim, zdim
+      use grid,          only: has_dir, xdim, ydim, zdim, nx, ny, nz, idl
       use magboundaries, only: bnd_emf
       implicit none
+      real, dimension(:), pointer :: b1d, eta1d
+      real, dimension(nx)         :: wcu1d
+      integer                     :: j, k
 
-      call tvdd(iby,icz,xdim)
+!     call tvdd(iby,icz,xdim)
+      call compute_resist(eta,icz)
+
+      do j = 1, ny
+         do k = 1, nz
+            b1d    => b(iby,:,j,k)
+            eta1d  => eta(:,j,k)
+            call tvdd_1d(b1d, eta1d, idl(xdim), dt, wcu1d)
+            wcu(:,j,k) = wcu1d
+         enddo
+      enddo
+
       if (has_dir(xdim)) call bnd_emf(wcu,'emfz','xdim')
       if (has_dir(ydim)) call bnd_emf(wcu,'emfz','ydim')
       if (has_dir(zdim)) call bnd_emf(wcu,'emfz','zdim')
