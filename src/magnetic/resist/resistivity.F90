@@ -46,20 +46,20 @@ module resistivity
    real :: eta_max, dt_resist, dt_eint
    integer, dimension(3) :: loc_eta_max
 !!!! temporary solution, one should _NOT_ allocate 7 arrays of size nx*ny*nz !!!!!!
-   real, dimension(:,:,:), allocatable, target :: w,wm,wp,dw,eta,b1
-   real, dimension(:,:,:), allocatable, target :: wb,etahelp
+!   real, dimension(:,:,:), allocatable, target :: w,wm,wp,dw,b1
+   real, dimension(:,:,:), allocatable, target :: wb, etahelp, eta
 
    contains
 
    subroutine cleanup_resistivity
       implicit none
-      if (allocated(w)  ) deallocate(w)
+!      if (allocated(w)  ) deallocate(w)
       if (allocated(wb) ) deallocate(wb)
-      if (allocated(wm) ) deallocate(wm)
-      if (allocated(wp) ) deallocate(wp)
-      if (allocated(dw) ) deallocate(dw)
+!      if (allocated(wm) ) deallocate(wm)
+!      if (allocated(wp) ) deallocate(wp)
+!      if (allocated(dw) ) deallocate(dw)
       if (allocated(eta)) deallocate(eta)
-      if (allocated(b1))  deallocate(b1)
+!      if (allocated(b1))  deallocate(b1)
       if (allocated(etahelp)) deallocate(etahelp)
 
    end subroutine cleanup_resistivity
@@ -131,14 +131,14 @@ module resistivity
 
       if (eta_scale < 0) call die("eta_scale must be greater or equal 0")
 
-      if (.not.allocated(w)  ) allocate(w(nx,ny,nz)  )
+!      if (.not.allocated(w)  ) allocate(w(nx,ny,nz)  )
       if (.not.allocated(wb) ) allocate(wb(nx,ny,nz) )
-      if (.not.allocated(wm) ) allocate(wm(nx,ny,nz) )
-      if (.not.allocated(wp) ) allocate(wp(nx,ny,nz) )
-      if (.not.allocated(dw) ) allocate(dw(nx,ny,nz) )
+!      if (.not.allocated(wm) ) allocate(wm(nx,ny,nz) )
+!      if (.not.allocated(wp) ) allocate(wp(nx,ny,nz) )
+!      if (.not.allocated(dw) ) allocate(dw(nx,ny,nz) )
       if (.not.allocated(eta)) allocate(eta(nx,ny,nz))
       if (.not.allocated(etahelp)) allocate(etahelp(nx,ny,nz))
-      if (.not.allocated(b1) ) allocate(b1(nx,ny,nz) )
+!      if (.not.allocated(b1) ) allocate(b1(nx,ny,nz) )
 
       jc2 = j_crit**2
       if (has_dir(zdim)) then
@@ -173,7 +173,7 @@ module resistivity
 
 !--- current_z
       wb(2:nx,2:ny,:) = (b(iby,2:nx,2:ny,:)-b(iby,1:nx-1,2:ny,:))*idl(xdim) - (b(ibx,2:nx,2:ny,:)-b(ibx,2:nx,1:ny-1,:))*idl(ydim)
-      wb(1,:,:) = w(2,:,:) ; w(:,1,:) = w(:,2,:)
+      wb(1,:,:) = wb(2,:,:) ; wb(:,1,:) = wb(:,2,:)
 
       if (has_dir(zdim)) then
          eta(:,:,2:nz) = 0.25*( wb(:,:,2:nz) + wb(:,:,1:nz-1) )**2 ; eta(:,:,1) = eta(:,:,2)
@@ -302,36 +302,36 @@ module resistivity
       return
    end subroutine tvdd_1d
 
-   subroutine tvdd(ibi,ici,n)
-      use arrays,    only: b, wcu
-      use func,      only: mshift, pshift
-      use grid,      only: idl
-      use mpisetup,  only: dt
-
-      implicit none
-      real    :: idi
-      integer :: ibi,ici,n
-
-
-      idi = idl(n)
-      eta = 0.0
-
-      call compute_resist(eta,ici)
+!   subroutine tvdd(ibi,ici,n)
+!      use arrays,    only: b, wcu
+!      use func,      only: mshift, pshift
+!      use grid,      only: idl
+!      use mpisetup,  only: dt
+!
+!      implicit none
+!      real    :: idi
+!      integer :: ibi,ici,n
+!
+!
+!      idi = idl(n)
+!      eta = 0.0
+!
+!      call compute_resist(eta,ici)
 
 ! HALF STEP
-      w(:,:,:) = (b(ibi,:,:,:)-mshift(b(ibi,:,:,:),n))*idi
-      w  = eta*w
-      b1 = b(ibi,:,:,:)+0.5*(pshift(w,n)-w)*dt*idi
+!      w(:,:,:) = (b(ibi,:,:,:)-mshift(b(ibi,:,:,:),n))*idi
+!      w  = eta*w
+!      b1 = b(ibi,:,:,:)+0.5*(pshift(w,n)-w)*dt*idi
 
 ! FULL STEP
-      w(:,:,:) = (b1(:,:,:)-mshift(b1(:,:,:),n))*idi
-      w  = eta*w
-      wp = 0.5*(pshift(w,n)-w)
-      wm = 0.5*(w-mshift(w,n))
-      dw = 0.
-      where (wm*wp > 0.) dw=2.*wm*wp/(wm+wp)
-      wcu = (w+dw)*dt
-   end subroutine tvdd
+!      w(:,:,:) = (b1(:,:,:)-mshift(b1(:,:,:),n))*idi
+!      w  = eta*w
+!      wp = 0.5*(pshift(w,n)-w)
+!      wm = 0.5*(w-mshift(w,n))
+!      dw = 0.
+!      where (wm*wp > 0.) dw=2.*wm*wp/(wm+wp)
+!      wcu = (w+dw)*dt
+!   end subroutine tvdd
 
 !-------------------------------------------------------------------------------
 
@@ -365,13 +365,27 @@ module resistivity
    end subroutine diffuseby_x
 
    subroutine diffusebz_x
-      use arrays,        only: wcu
+      use arrays,        only: wcu, b
+      use mpisetup,      only: dt
       use fluidindex,    only: ibz, icy
-      use grid,          only: has_dir, xdim, ydim, zdim
+      use grid,          only: has_dir, xdim, ydim, zdim, nx, ny, nz, idl
       use magboundaries, only: bnd_emf
       implicit none
+      real, dimension(:), pointer :: b1d, eta1d
+      real, dimension(nx)         :: wcu1d
+      integer                     :: j, k
 
-      call tvdd(ibz,icy,xdim)
+!      call tvdd(ibz,icy,xdim)
+      call compute_resist(eta,icy)
+
+      do j = 1, ny
+         do k = 1, nz
+            b1d    => b(ibz,:,j,k)
+            eta1d  => eta(:,j,k)
+            call tvdd_1d(b1d, eta1d, idl(xdim), dt, wcu1d)
+            wcu(:,j,k) = wcu1d
+         enddo
+      enddo
       if (has_dir(xdim)) call bnd_emf(wcu,'emfy','xdim')
       if (has_dir(ydim)) call bnd_emf(wcu,'emfy','ydim')
       if (has_dir(zdim)) call bnd_emf(wcu,'emfy','zdim')
@@ -379,52 +393,108 @@ module resistivity
    end subroutine diffusebz_x
 
    subroutine diffusebz_y
-      use arrays,        only: wcu
+      use arrays,        only: wcu, b
+      use mpisetup,      only: dt
       use fluidindex,    only: ibz, icx
-      use grid,          only: has_dir, xdim, ydim, zdim
+      use grid,          only: has_dir, xdim, ydim, zdim, nx, ny, nz, idl
       use magboundaries, only: bnd_emf
       implicit none
+      real, dimension(:), pointer :: b1d, eta1d
+      real, dimension(ny)         :: wcu1d
+      integer                     :: i, k
 
-      call tvdd(ibz,icx,ydim)
+!      call tvdd(ibz,icx,ydim)
+      call compute_resist(eta,icx)
+
+      do i = 1, nx
+         do k = 1, nz
+            b1d    => b(ibz,i,:,k)
+            eta1d  => eta(i,:,k)
+            call tvdd_1d(b1d, eta1d, idl(ydim), dt, wcu1d)
+            wcu(i,:,k) = wcu1d
+         enddo
+      enddo
       if (has_dir(ydim)) call bnd_emf(wcu,'emfx','ydim')
       if (has_dir(zdim)) call bnd_emf(wcu,'emfx','zdim')
       if (has_dir(xdim)) call bnd_emf(wcu,'emfx','xdim')
    end subroutine diffusebz_y
 
    subroutine diffusebx_y
-      use arrays,        only: wcu
+      use arrays,        only: wcu, b
+      use mpisetup,      only: dt
       use fluidindex,    only: ibx, icz
-      use grid,          only: has_dir, xdim, ydim, zdim
+      use grid,          only: has_dir, xdim, ydim, zdim, nx, ny, nz, idl
       use magboundaries, only: bnd_emf
       implicit none
+      real, dimension(:), pointer :: b1d, eta1d
+      real, dimension(ny)         :: wcu1d
+      integer                     :: i, k
 
-      call tvdd(ibx,icz,ydim)
+!      call tvdd(ibx,icz,ydim)
+      call compute_resist(eta,icz)
+
+      do i = 1, nx
+         do k = 1, nz
+            b1d    => b(ibx,i,:,k)
+            eta1d  => eta(i,:,k)
+            call tvdd_1d(b1d, eta1d, idl(ydim), dt, wcu1d)
+            wcu(i,:,k) = wcu1d
+         enddo
+      enddo
       if (has_dir(ydim)) call bnd_emf(wcu, 'emfz', 'ydim')
       if (has_dir(zdim)) call bnd_emf(wcu, 'emfz', 'zdim')
       if (has_dir(xdim)) call bnd_emf(wcu, 'emfz', 'xdim')
    end subroutine diffusebx_y
 
    subroutine diffusebx_z
-      use arrays,        only: wcu
+      use arrays,        only: wcu, b
+      use mpisetup,      only: dt
       use fluidindex,    only: ibx, icy
-      use grid,          only: has_dir, xdim, ydim, zdim
+      use grid,          only: has_dir, xdim, ydim, zdim, nx, ny, nz, idl
       use magboundaries, only: bnd_emf
       implicit none
+      real, dimension(:), pointer :: b1d, eta1d
+      real, dimension(nz)         :: wcu1d
+      integer                     :: i, j
 
-      call tvdd(ibx,icy,zdim)
+!      call tvdd(ibx,icy,zdim)
+      call compute_resist(eta,icy)
+
+      do i = 1, nx
+         do j = 1, ny
+            b1d    => b(ibx,i,j,:)
+            eta1d  => eta(i,j,:)
+            call tvdd_1d(b1d, eta1d, idl(zdim), dt, wcu1d)
+            wcu(i,j,:) = wcu1d
+         enddo
+      enddo
       if (has_dir(zdim)) call bnd_emf(wcu, 'emfy', 'zdim')
       if (has_dir(xdim)) call bnd_emf(wcu, 'emfy', 'xdim')
       if (has_dir(ydim)) call bnd_emf(wcu, 'emfy', 'ydim')
    end subroutine diffusebx_z
 
    subroutine diffuseby_z
-      use arrays,        only: wcu
+      use arrays,        only: wcu, b
+      use mpisetup,      only: dt
       use fluidindex,    only: iby, icx
-      use grid,          only: has_dir, xdim, ydim, zdim
+      use grid,          only: has_dir, xdim, ydim, zdim, nx, ny, nz, idl
       use magboundaries, only: bnd_emf
       implicit none
+      real, dimension(:), pointer :: b1d, eta1d
+      real, dimension(nz)         :: wcu1d
+      integer                     :: i, j
 
-      call tvdd(iby,icx,zdim)
+!      call tvdd(iby,icx,zdim)
+      call compute_resist(eta,icx)
+
+      do i = 1, nx
+         do j = 1, ny
+            b1d    => b(iby,i,j,:)
+            eta1d  => eta(i,j,:)
+            call tvdd_1d(b1d, eta1d, idl(zdim), dt, wcu1d)
+            wcu(i,j,:) = wcu1d
+         enddo
+      enddo
       if (has_dir(zdim)) call bnd_emf(wcu, 'emfx', 'zdim')
       if (has_dir(xdim)) call bnd_emf(wcu, 'emfx', 'xdim')
       if (has_dir(ydim)) call bnd_emf(wcu, 'emfx', 'ydim')
