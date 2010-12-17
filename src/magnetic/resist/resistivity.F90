@@ -45,21 +45,14 @@ module resistivity
 
    real :: eta_max, dt_resist, dt_eint
    integer, dimension(3) :: loc_eta_max
-!!!! temporary solution, one should _NOT_ allocate 7 arrays of size nx*ny*nz !!!!!!
-!   real, dimension(:,:,:), allocatable, target :: w,wm,wp,dw,b1
    real, dimension(:,:,:), allocatable, target :: wb, etahelp, eta
 
    contains
 
    subroutine cleanup_resistivity
       implicit none
-!      if (allocated(w)  ) deallocate(w)
       if (allocated(wb) ) deallocate(wb)
-!      if (allocated(wm) ) deallocate(wm)
-!      if (allocated(wp) ) deallocate(wp)
-!      if (allocated(dw) ) deallocate(dw)
       if (allocated(eta)) deallocate(eta)
-!      if (allocated(b1))  deallocate(b1)
       if (allocated(etahelp)) deallocate(etahelp)
 
    end subroutine cleanup_resistivity
@@ -131,14 +124,9 @@ module resistivity
 
       if (eta_scale < 0) call die("eta_scale must be greater or equal 0")
 
-!      if (.not.allocated(w)  ) allocate(w(nx,ny,nz)  )
       if (.not.allocated(wb) ) allocate(wb(nx,ny,nz) )
-!      if (.not.allocated(wm) ) allocate(wm(nx,ny,nz) )
-!      if (.not.allocated(wp) ) allocate(wp(nx,ny,nz) )
-!      if (.not.allocated(dw) ) allocate(dw(nx,ny,nz) )
       if (.not.allocated(eta)) allocate(eta(nx,ny,nz))
       if (.not.allocated(etahelp)) allocate(etahelp(nx,ny,nz))
-!      if (.not.allocated(b1) ) allocate(b1(nx,ny,nz) )
 
       jc2 = j_crit**2
       if (has_dir(zdim)) then
@@ -151,11 +139,10 @@ module resistivity
 
    end subroutine init_resistivity
 
-   subroutine compute_resist(eta,ici)
+   subroutine compute_resist
       use arrays,       only: b, u
       use constants,    only: small
       use fluidindex,   only: ibx, iby, ibz
-      use func,         only: pshift
       use grid,         only: idl, xdim, ydim, zdim, nx, ny, nz, is, ie, js, je, ks, ke, has_dir
       use mpisetup,     only: comm, ierr
       use mpi,          only: MPI_DOUBLE_PRECISION, MPI_MAX, MPI_IN_PLACE
@@ -164,8 +151,7 @@ module resistivity
 #endif /* !ISO */
 
       implicit none
-      integer,intent(in)                       :: ici
-      real, dimension(nx,ny,nz), intent(inout) :: eta
+!      real, dimension(nx,ny,nz), intent(inout) :: eta
 
 !BEWARE: uninitialized values are poisoning the wb(:,:,:) array
 !BEWARE: significant differences between single-CPU run and multi-CPU run (due to uninits?)
@@ -231,9 +217,6 @@ module resistivity
                       *wb(is:ie,js:je,ks:ke)+small) ))
 #endif /* !ISO */
 
-! icx = xdim = 1, icy = ydim = 2, icz = zdim = 3
-      eta(:,:,:)=0.5*(eta(:,:,:)+pshift(eta(:,:,:),ici))
-
       return
 
    end subroutine compute_resist
@@ -286,7 +269,7 @@ module resistivity
       real, dimension(:), intent(out)            :: wcu1d
       real, intent(in)                           :: idi,dt
 
-      real, dimension(size(b1d))                 :: w, wp, wm, dw, b1
+      real, dimension(size(b1d))                 :: w, wp, wm, b1
       integer                                    :: n
 
       n = size(b1d)
@@ -302,43 +285,12 @@ module resistivity
       return
    end subroutine tvdd_1d
 
-!   subroutine tvdd(ibi,ici,n)
-!      use arrays,    only: b, wcu
-!      use func,      only: mshift, pshift
-!      use grid,      only: idl
-!      use mpisetup,  only: dt
-!
-!      implicit none
-!      real    :: idi
-!      integer :: ibi,ici,n
-!
-!
-!      idi = idl(n)
-!      eta = 0.0
-!
-!      call compute_resist(eta,ici)
-
-! HALF STEP
-!      w(:,:,:) = (b(ibi,:,:,:)-mshift(b(ibi,:,:,:),n))*idi
-!      w  = eta*w
-!      b1 = b(ibi,:,:,:)+0.5*(pshift(w,n)-w)*dt*idi
-
-! FULL STEP
-!      w(:,:,:) = (b1(:,:,:)-mshift(b1(:,:,:),n))*idi
-!      w  = eta*w
-!      wp = 0.5*(pshift(w,n)-w)
-!      wm = 0.5*(w-mshift(w,n))
-!      dw = 0.
-!      where (wm*wp > 0.) dw=2.*wm*wp/(wm+wp)
-!      wcu = (w+dw)*dt
-!   end subroutine tvdd
-
 !-------------------------------------------------------------------------------
 
    subroutine diffuseby_x
       use arrays,        only: wcu, b
       use mpisetup,      only: dt
-      use fluidindex,    only: iby, icz
+      use fluidindex,    only: iby
       use grid,          only: has_dir, xdim, ydim, zdim, nx, ny, nz, idl
       use magboundaries, only: bnd_emf
       implicit none
@@ -346,8 +298,8 @@ module resistivity
       real, dimension(nx)         :: wcu1d
       integer                     :: j, k
 
-!     call tvdd(iby,icz,xdim)
-      call compute_resist(eta,icz)
+      call compute_resist
+      eta(:,:,1:nz-1) = 0.5*(eta(:,:,1:nz-1)+eta(:,:,2:nz))
 
       do j = 1, ny
          do k = 1, nz
@@ -367,7 +319,7 @@ module resistivity
    subroutine diffusebz_x
       use arrays,        only: wcu, b
       use mpisetup,      only: dt
-      use fluidindex,    only: ibz, icy
+      use fluidindex,    only: ibz
       use grid,          only: has_dir, xdim, ydim, zdim, nx, ny, nz, idl
       use magboundaries, only: bnd_emf
       implicit none
@@ -375,8 +327,8 @@ module resistivity
       real, dimension(nx)         :: wcu1d
       integer                     :: j, k
 
-!      call tvdd(ibz,icy,xdim)
-      call compute_resist(eta,icy)
+      call compute_resist
+      eta(:,1:ny-1,:) = 0.5*(eta(:,1:ny-1,:)+eta(:,2:ny,:))
 
       do j = 1, ny
          do k = 1, nz
@@ -395,7 +347,7 @@ module resistivity
    subroutine diffusebz_y
       use arrays,        only: wcu, b
       use mpisetup,      only: dt
-      use fluidindex,    only: ibz, icx
+      use fluidindex,    only: ibz
       use grid,          only: has_dir, xdim, ydim, zdim, nx, ny, nz, idl
       use magboundaries, only: bnd_emf
       implicit none
@@ -403,8 +355,8 @@ module resistivity
       real, dimension(ny)         :: wcu1d
       integer                     :: i, k
 
-!      call tvdd(ibz,icx,ydim)
-      call compute_resist(eta,icx)
+      call compute_resist
+      eta(1:nx-1,:,:) = 0.5*(eta(1:nx-1,:,:)+eta(2:nx,:,:))
 
       do i = 1, nx
          do k = 1, nz
@@ -422,7 +374,7 @@ module resistivity
    subroutine diffusebx_y
       use arrays,        only: wcu, b
       use mpisetup,      only: dt
-      use fluidindex,    only: ibx, icz
+      use fluidindex,    only: ibx
       use grid,          only: has_dir, xdim, ydim, zdim, nx, ny, nz, idl
       use magboundaries, only: bnd_emf
       implicit none
@@ -430,8 +382,8 @@ module resistivity
       real, dimension(ny)         :: wcu1d
       integer                     :: i, k
 
-!      call tvdd(ibx,icz,ydim)
-      call compute_resist(eta,icz)
+      call compute_resist
+      eta(:,:,1:nz-1) = 0.5*(eta(:,:,1:nz-1)+eta(:,:,2:nz))
 
       do i = 1, nx
          do k = 1, nz
@@ -449,7 +401,7 @@ module resistivity
    subroutine diffusebx_z
       use arrays,        only: wcu, b
       use mpisetup,      only: dt
-      use fluidindex,    only: ibx, icy
+      use fluidindex,    only: ibx
       use grid,          only: has_dir, xdim, ydim, zdim, nx, ny, nz, idl
       use magboundaries, only: bnd_emf
       implicit none
@@ -457,8 +409,8 @@ module resistivity
       real, dimension(nz)         :: wcu1d
       integer                     :: i, j
 
-!      call tvdd(ibx,icy,zdim)
-      call compute_resist(eta,icy)
+      call compute_resist
+      eta(:,1:ny-1,:) = 0.5*(eta(:,1:ny-1,:)+eta(:,2:ny,:))
 
       do i = 1, nx
          do j = 1, ny
@@ -476,7 +428,7 @@ module resistivity
    subroutine diffuseby_z
       use arrays,        only: wcu, b
       use mpisetup,      only: dt
-      use fluidindex,    only: iby, icx
+      use fluidindex,    only: iby
       use grid,          only: has_dir, xdim, ydim, zdim, nx, ny, nz, idl
       use magboundaries, only: bnd_emf
       implicit none
@@ -484,8 +436,8 @@ module resistivity
       real, dimension(nz)         :: wcu1d
       integer                     :: i, j
 
-!      call tvdd(iby,icx,zdim)
-      call compute_resist(eta,icx)
+      call compute_resist
+      eta(1:nx-1,:,:) = 0.5*(eta(1:nx-1,:,:)+eta(2:nx,:,:))
 
       do i = 1, nx
          do j = 1, ny
