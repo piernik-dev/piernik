@@ -83,6 +83,7 @@ contains
       use mpisetup,      only: ierr, rbuff, cbuff, ibuff, lbuff, master, slave, buffer_dim, comm
       use mpi,           only: MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL
       use list_hdf5,     only: additional_attrs, problem_write_restart, problem_read_restart
+      use types,         only: problem_customize_solution
 
       implicit none
 

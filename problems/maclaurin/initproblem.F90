@@ -53,6 +53,7 @@ contains
       use mpisetup,      only: ierr, rbuff, cbuff, ibuff, master, slave, buffer_dim, comm, smalld, cbuff_len
       use mpi,           only: MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER
       use list_hdf5,     only: additional_attrs
+      use types,         only: finalize_problem
 
       implicit none
 

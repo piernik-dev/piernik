@@ -57,6 +57,7 @@ module initproblem
       use grid,          only: dxmn
       use mpi,           only: MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION
       use mpisetup,      only: cbuff_len, cbuff, ibuff, rbuff, buffer_dim, comm, ierr, master, slave
+      use types,         only: problem_customize_solution, finalize_problem
 
       implicit none
 
