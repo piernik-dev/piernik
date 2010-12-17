@@ -84,7 +84,7 @@ module resistivity
    subroutine init_resistivity
       use dataio_pub,    only: par_file, ierrh, namelist_errh, compare_namelist  ! QA_WARN required for diff_nml
       use dataio_pub,    only: die
-      use grid,          only: nx, ny, nz, has_dir, zdim
+      use grid,          only: nx, ny, nz, has_dir, zdim, xdim, ydim
       use mpisetup,      only: rbuff, ibuff, ierr, buffer_dim, comm, master, slave
       use mpi,           only: MPI_INTEGER, MPI_DOUBLE_PRECISION
 
@@ -147,13 +147,15 @@ module resistivity
          d_eta_factor = 1./(4.+dble(eta_scale))
       endif
 
+      if (master.and..not.all(has_dir(xdim:ydim))) call die("[resistivity:init_resistivity] Resistivity module needs both x and y dimension")
+
    end subroutine init_resistivity
 
    subroutine compute_resist(eta,ici)
       use arrays,       only: b, u
       use constants,    only: small
       use fluidindex,   only: ibx, iby, ibz
-      use func,         only: mshift, pshift
+      use func,         only: pshift
       use grid,         only: idl, xdim, ydim, zdim, nx, ny, nz, is, ie, js, je, ks, ke, has_dir
       use mpisetup,     only: comm, ierr
       use mpi,          only: MPI_DOUBLE_PRECISION, MPI_MAX, MPI_IN_PLACE
@@ -170,23 +172,24 @@ module resistivity
 !--- square current computing in cell corner step by step
 
 !--- current_z
-      wb(:,:,:) = (b(iby,:,:,:)-mshift(b(iby,:,:,:),xdim))*idl(xdim)
-      wb = wb -   (b(ibx,:,:,:)-mshift(b(ibx,:,:,:),ydim))*idl(ydim)
-!Possible optimization: compute the derivatives directly, without temporary storage created by mshift
+      wb(2:nx,2:ny,:) = (b(iby,2:nx,2:ny,:)-b(iby,1:nx-1,2:ny,:))*idl(xdim) - (b(ibx,2:nx,2:ny,:)-b(ibx,2:nx,1:ny-1,:))*idl(ydim)
+      wb(1,:,:) = w(2,:,:) ; w(:,1,:) = w(:,2,:)
 
-      eta(:,:,:) = 0.25*( wb(:,:,:) + mshift(wb(:,:,:),zdim) )**2
+      if (has_dir(zdim)) then
+         eta(:,:,2:nz) = 0.25*( wb(:,:,2:nz) + wb(:,:,1:nz-1) )**2 ; eta(:,:,1) = eta(:,:,2)
+      else
+         eta = wb**2    ! BEWARE: is it correct?
+      endif
 
       if (has_dir(zdim)) then
 !--- current_x
-         wb(:,:,:) = (b(ibz,:,:,:)-mshift(b(ibz,:,:,:),ydim))*idl(ydim)
-         wb = wb -   (b(iby,:,:,:)-mshift(b(iby,:,:,:),zdim))*idl(zdim)
+         wb(:,2:ny,2:nz) = (b(ibz,:,2:ny,2:nz)-b(ibz,:,1:ny-1,2:nz))*idl(ydim) - (b(iby,:,2:ny,2:nz)-b(iby,:,2:ny,1:nz-1))*idl(zdim)
 
-         eta(:,:,:) = eta(:,:,:) + 0.25*( wb(:,:,:)+mshift(wb(:,:,:),xdim) )**2
+         eta(2:nx,:,:) = eta(2:nx,:,:) + 0.25*(wb(2:nx,:,:)+wb(1:nx-1,:,:))**2; eta(1,:,:) = eta(2,:,:)
 !--- current_y
-         wb(:,:,:) = (b(ibx,:,:,:)-mshift(b(ibx,:,:,:),zdim))*idl(zdim)
-         wb = wb -   (b(ibz,:,:,:)-mshift(b(ibz,:,:,:),xdim))*idl(xdim)
+         wb(2:nx,:,2:nz) = (b(ibx,2:nx,:,2:nz)-b(ibx,2:nx,:,1:nz-1))*idl(zdim) - (b(ibz,2:nx,:,2:nz)-b(ibz,1:nx-1,:,2:nz))*idl(xdim)
 
-         eta(:,:,:) = eta(:,:,:) +0.25*( wb(:,:,:) + mshift(wb(:,:,:),ydim))**2
+         eta(:,2:ny,:) = eta(:,2:ny,:) + 0.25*(wb(:,2:ny,:)+wb(:,1:ny-1,:))**2; eta(:,1,:) = eta(:,2,:)
       endif
 
 !--- wb = current**2
@@ -197,24 +200,17 @@ module resistivity
 !! \todo Following lines are split into separate lines because of intel and gnu dbgs
 !! shoud that be so? Is there any other solution instead splitting?
 !<
+      etahelp(2:nx-1,2:ny-1,:) = eta(1:nx-2,2:ny-1,:) + eta(3:nx,2:ny-1,:) + eta(2:nx-1,1:ny-2,:) + eta(2:nx-1,3:ny,:)
+      etahelp(1,:,:) = etahelp(2,:,:) ; etahelp(nx,:,:) = etahelp(nx-1,:,:) ; etahelp(:,1,:) = etahelp(:,2,:) ; etahelp(:,ny,:) = etahelp(:,ny-1,:)
       if (has_dir(zdim)) then
-         etahelp(:,:,:)  =   mshift(eta(:,:,:),xdim)
-         etahelp = etahelp + pshift(eta(:,:,:),xdim)
-         etahelp = etahelp + mshift(eta(:,:,:),ydim)
-         etahelp = etahelp + pshift(eta(:,:,:),ydim)
-         etahelp = etahelp + mshift(eta(:,:,:),zdim)
-         etahelp = etahelp + pshift(eta(:,:,:),zdim)
-         etahelp = (etahelp+dble(eta_scale)*eta(:,:,:))*d_eta_factor
-         where (eta > eta_0)
-            eta = etahelp
-         endwhere
-      else
-         where (eta > eta_0)
-            eta(:,:,:) = (mshift(eta(:,:,:),xdim) + pshift(eta(:,:,:),xdim) &
-                         +mshift(eta(:,:,:),ydim) + pshift(eta(:,:,:),ydim) &
-                         +dble(eta_scale)*eta(:,:,:))*d_eta_factor
-         endwhere
+         etahelp(:,:,2:nz-1) = etahelp(:,:,2:nz-1) + eta(:,:,1:nz-2) + eta(:,:,3:nz)
+         etahelp(:,:,1) = etahelp(:,:,2) ; etahelp(:,:,nz) = etahelp(:,:,nz-1)
       endif
+      etahelp = (etahelp + dble(eta_scale)*eta)*d_eta_factor
+
+      where (eta > eta_0)
+         eta = etahelp
+      endwhere
 
       eta_max           = maxval(eta(is:ie,js:je,ks:ke))
       loc_eta_max       = maxloc(eta(is:ie,js:je,ks:ke))
