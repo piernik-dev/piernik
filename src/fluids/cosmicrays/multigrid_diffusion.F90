@@ -61,6 +61,7 @@ module multigrid_diffusion
    real               :: diff_theta                                   !< 0. is explicit, 1. is fully implicit 0.5 is Crank-Nicholson
    real, protected    :: diff_tstep_fac                               !< How much we stretch timestep. Note that for diff_theta == 0. this should not be > 1.
    logical, protected :: diff_explicit                                !< If .true. then do not use multigrid for diffusion
+   logical            :: allow_explicit                               !< When timestep is limited somewhere else, allow explicit calculation (should be a bit faster)
    real               :: diff_dt_crs_orig                             !< timestep calculated at timestepcosmicrays.F90, before enlarging by diff_tstep_fac
    character(len=cbuff_len) :: diff_bnd_str                           !< Type of diffusion boundary conditions.
 
@@ -112,7 +113,7 @@ contains
       logical, save                    :: frun = .true.          !< First run flag
 
       namelist /MULTIGRID_DIFFUSION/ norm_tol, vcycle_abort, max_cycles, nsmool, nsmoob, overrelax, &
-           &                         diff_theta, diff_tstep_fac, diff_explicit, diff_bnd_str
+           &                         diff_theta, diff_tstep_fac, diff_explicit, allow_explicit, diff_bnd_str
 
       if (.not.frun) call die("[multigrid_diffusion:init_multigrid_diff] Called more than once.")
       frun = .false.
@@ -128,6 +129,7 @@ contains
       nsmool         = 4
       nsmoob         = 1
       diff_explicit  = .false.
+      allow_explicit = .true.
       diff_bnd_str   = "zero"
 
       if (master) then
@@ -145,6 +147,7 @@ contains
          ibuff(3) = nsmoob
 
          lbuff(1) = diff_explicit
+         lbuff(2) = allow_explicit
 
          cbuff(1) = diff_bnd_str
 
@@ -168,6 +171,7 @@ contains
          nsmoob         = ibuff(3)
 
          diff_explicit  = lbuff(1)
+         allow_explicit = lbuff(2)
 
          diff_bnd_str   = cbuff(1)(1:len(diff_bnd_str))
 
@@ -274,9 +278,11 @@ contains
       integer       :: cr_id         ! maybe we should make this variable global in the module and do not pass it as an argument?
 
       ts =  timer_("multigrid_diffusion", .true.)
-      if (diff_explicit) then
+
+      if (diff_explicit .or. (allow_explicit .and. dt/diff_dt_crs_orig<1)) then
+
          if (frun) then
-            if (master) call warn("[multigrid_diffusion:multigrid_solve_diff] Multigrid was initialized but is not used")
+            if (master .and. diff_explicit) call warn("[multigrid_diffusion:multigrid_solve_diff] Multigrid was initialized but is not used")
             frun = .false.
          endif
          if (halfstep) then
@@ -288,6 +294,7 @@ contains
             call cr_diff_y
             call cr_diff_z
          endif
+
       else
 
          if (dt < 0.99999 * diff_dt_crs_orig * diff_tstep_fac .and. .not. halfstep .and. master) then
