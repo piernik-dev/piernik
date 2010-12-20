@@ -67,7 +67,7 @@ module initproblem
 
          diff_nml(PROBLEM_CONTROL)
 
-         cbuff(3) =  fnoise
+         cbuff(1) =  fnoise
 
          rbuff(1) = rhog
          rbuff(2) = eps
@@ -80,12 +80,12 @@ module initproblem
       endif
 
       call MPI_Bcast(cbuff, cbuff_len*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
-      call MPI_Bcast(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
-      call MPI_Bcast(lbuff,    buffer_dim, MPI_LOGICAL,          0, comm, ierr)
+      call MPI_Bcast(rbuff,           buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+      call MPI_Bcast(lbuff,           buffer_dim, MPI_LOGICAL,          0, comm, ierr)
 
       if (slave) then
 
-         fnoise       = cbuff(3)
+         fnoise       = cbuff(1)
 
          rhog         = rbuff(1)
          eps          = rbuff(2)

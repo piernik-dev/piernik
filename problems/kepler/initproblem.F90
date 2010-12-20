@@ -74,7 +74,7 @@ contains
 
          diff_nml(PROBLEM_CONTROL)
 
-         cbuff(3) = mag_field_orient
+         cbuff(1) = mag_field_orient
 
          rbuff(1) = d0
          rbuff(2) = dout
@@ -92,7 +92,7 @@ contains
 
       if (slave) then
 
-         mag_field_orient = cbuff(3)
+         mag_field_orient = cbuff(1)
 
          d0               = rbuff(1)
          dout             = rbuff(2)

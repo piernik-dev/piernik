@@ -67,7 +67,7 @@ module initproblem
 
          diff_nml(PROBLEM_CONTROL)
 
-         cbuff(3) =  sigma_model
+         cbuff(1) =  sigma_model
 
          rbuff(1) = sigma0
          rbuff(2) = Rin
@@ -79,11 +79,11 @@ module initproblem
       endif
 
       call MPI_Bcast(cbuff, cbuff_len*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
-      call MPI_Bcast(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+      call MPI_Bcast(rbuff,           buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
       if (slave) then
 
-         sigma_model  = cbuff(3)
+         sigma_model  = cbuff(1)
 
          sigma0       = rbuff(1)
          Rin          = rbuff(2)

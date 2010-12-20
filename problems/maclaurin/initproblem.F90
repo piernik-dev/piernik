@@ -49,8 +49,8 @@ contains
       use constants,     only: pi
       use dataio_pub,    only: ierrh, par_file, namelist_errh, compare_namelist      ! QA_WARN required for diff_nml
       use dataio_pub,    only: skip_advection, die, warn
-      use mpisetup,      only: ierr, rbuff, cbuff, ibuff, master, slave, buffer_dim, comm, smalld, cbuff_len
-      use mpi,           only: MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER
+      use mpisetup,      only: ierr, rbuff, ibuff, master, slave, buffer_dim, comm, smalld
+      use mpi,           only: MPI_DOUBLE_PRECISION, MPI_INTEGER
       use list_hdf5,     only: additional_attrs
       use types,         only: finalize_problem
 
@@ -84,9 +84,8 @@ contains
 
       endif
 
-      call MPI_Bcast(cbuff, cbuff_len*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
-      call MPI_Bcast(ibuff,           buffer_dim, MPI_INTEGER,          0, comm, ierr)
-      call MPI_Bcast(rbuff,           buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+      call MPI_Bcast(ibuff, buffer_dim, MPI_INTEGER,          0, comm, ierr)
+      call MPI_Bcast(rbuff, buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
       if (slave) then
 

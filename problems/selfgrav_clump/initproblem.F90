@@ -52,8 +52,8 @@ contains
       use dataio_pub,    only: par_file, ierrh, namelist_errh, compare_namelist   ! QA_WARN required for diff_nml
       use dataio_pub,    only: die
       use grid,          only: xmin, xmax, ymin, ymax, zmin, zmax, dx, dy, dz
-      use mpisetup,      only: ierr, rbuff, cbuff_len, cbuff, ibuff, lbuff, master, slave, buffer_dim, comm
-      use mpi,           only: MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL
+      use mpisetup,      only: ierr, rbuff, ibuff, lbuff, master, slave, buffer_dim, comm
+      use mpi,           only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL
 
       implicit none
 
@@ -95,10 +95,9 @@ contains
 
       endif
 
-      call MPI_Bcast(cbuff, cbuff_len*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
-      call MPI_Bcast(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
-      call MPI_Bcast(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
-      call MPI_Bcast(lbuff,    buffer_dim, MPI_LOGICAL,          0, comm, ierr)
+      call MPI_Bcast(ibuff, buffer_dim, MPI_INTEGER,          0, comm, ierr)
+      call MPI_Bcast(rbuff, buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+      call MPI_Bcast(lbuff, buffer_dim, MPI_LOGICAL,          0, comm, ierr)
 
       if (slave) then
 

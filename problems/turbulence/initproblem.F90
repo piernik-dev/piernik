@@ -25,8 +25,8 @@ module initproblem
    subroutine read_problem_par
 
       use dataio_pub,    only: ierrh, par_file, namelist_errh, compare_namelist      ! QA_WARN required for diff_nml
-      use mpisetup,      only: cbuff_len, cbuff, rbuff, buffer_dim, comm, ierr, master, slave
-      use mpi,           only: MPI_CHARACTER, MPI_DOUBLE_PRECISION
+      use mpisetup,      only: rbuff, buffer_dim, comm, ierr, master, slave
+      use mpi,           only: MPI_DOUBLE_PRECISION
 
       implicit none
 
@@ -46,13 +46,9 @@ module initproblem
 
       endif
 
-      call MPI_Bcast(cbuff, cbuff_len*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
-      call MPI_Bcast(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+      call MPI_Bcast(rbuff, buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
       if (slave) then
-!  namelist /PROBLEM_CONTROL/  &
-!                              d0,p0, bx0,by0,bz0, Eexpl,  x0,y0,z0, r0 &
-!                n_sn, dt_sn
 
          d0           = rbuff(1)
          Mrms         = rbuff(2)
@@ -65,12 +61,14 @@ module initproblem
 !-----------------------------------------------------------------------------
 
    subroutine init_prob
+
       use arrays,        only: u,b
       use dataio_pub,    only: msg, printinfo
       use grid,          only: x,y,z,nx,ny,nz
       use initfluids,    only: gamma
       use initneutral,   only: idnn,imxn,imyn,imzn,ienn, gamma_neu
       use mpisetup,      only: proc
+
       implicit none
 
       integer            :: i,j,k,m,n,l

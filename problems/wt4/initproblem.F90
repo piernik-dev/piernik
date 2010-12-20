@@ -118,7 +118,7 @@ contains
 
          diff_nml(PROBLEM_CONTROL)
 
-         cbuff(3) =  input_file
+         cbuff(1) =  input_file
 
          rbuff(1) = gamma_loc
          rbuff(2) = mass_mul
@@ -148,7 +148,7 @@ contains
 
       if (slave) then
 
-         input_file   = trim(cbuff(3))
+         input_file   = trim(cbuff(1))
 
          gamma_loc       = rbuff(1)
          mass_mul        = rbuff(2)
