@@ -330,7 +330,7 @@ contains
 !<
 
    subroutine cleanup_piernik
-
+      use types,       only: cleanup_problem
       use arrays,      only: cleanup_arrays
       use dataio,      only: cleanup_dataio
       use grid,        only: cleanup_grid
@@ -347,6 +347,7 @@ contains
 #endif /* MULTIGRID */
       implicit none
 
+      if (associated(cleanup_problem)) call cleanup_problem;        call  nextdot(.false.)
       call cleanup_grid;        call nextdot(.false.)
       call cleanup_geometry;    call nextdot(.false.)
       call cleanup_dataio;      call nextdot(.false.)
