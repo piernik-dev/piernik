@@ -213,8 +213,12 @@ class DirectoryWalker:
             except IndexError:
                 # pop next directory from stack
                 self.directory = self.stack.pop()
-                self.files = os.listdir(self.directory)
-                self.index = 0
+                try:
+                   self.files = os.listdir(self.directory)
+                   self.index = 0
+                except OSError:
+                   print "\033[91mCannot open problem directory '%s'." % self.directory + '\033[0m'
+                   exit()
             else:
                 # got a filename
                 fullname = os.path.join(self.directory, file)
@@ -311,6 +315,16 @@ for f in DirectoryWalker('src'):
 for f in DirectoryWalker(probdir):
    if(is_f90.search(f)): f90files.append(f)
 
+pf = probdir+"info"
+if (not os.path.isfile(pf)): print "\033[93mCannot find optonal file",pf,"\033[0m"
+req_prob= [ "piernik.def", "initproblem.F90", "problem.par" ]
+req_missing=False
+for pf in req_prob:
+   if (not os.path.isfile(probdir+pf)):
+      print "\033[91mCannot find required file",probdir+pf,"\033[0m"
+      req_missing = True
+if (req_missing): exit()
+    
 allfiles.append(probdir+"piernik.def")
 allfiles.append(probdir+options.param)
 
