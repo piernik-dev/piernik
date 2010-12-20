@@ -163,8 +163,6 @@ module initfluids
 #if defined NEUTRAL && defined IONIZED
       if (cs_iso_neu /= cs_iso_ion) &
          call warn("[initfluids:init_fluids]: 'cs_iso_neu' and 'cs_iso_ion' should be equal")
-#else
-      if (.false..and.(cs_iso_neu == cs_iso_ion)) call warn("silence compiler")
 #endif /* defined NEUTRAL && defined IONIZED  */
 
       call set_limiter(limiter)
