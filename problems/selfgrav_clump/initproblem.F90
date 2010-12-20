@@ -354,7 +354,7 @@ contains
             ! exponential estimate: \lim C \simeq \frac{C_{t} C_{t-2} - C_{t-1}^2}{C_{t} - 2 C_{t-1} + C{t-2}}
             Clim = (Clast(NLIM)*Clast(NLIM-2) - Clast(NLIM-1)**2)/(Clast(NLIM) - 2.*Clast(NLIM-1) + Clast(NLIM-2))
             if (master) then
-               write(msg, '(a,i4,3(a,es15.7))')"[initproblem:init_prob] iter = ",iC,"     M=",totME(t), " C=", Cint(t), " Clim=", Clim
+               write(msg, '(a,i4,4(a,es15.7))')"[initproblem:init_prob] iter = ",iC,"     M=",totME(t), " C=", Cint(t), " Clim=", Clim, " Clim-C=",Clim-Cint(t)
                call printinfo(msg, .true.)
             endif
          endif
