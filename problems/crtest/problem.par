@@ -77,8 +77,8 @@
     cfl_cr      = 0.9
     cr_active   = 1.0
     ncrn        = 1
-!    K_crn_paral = 200.0   ! anisotropic
-    K_crn_perp  = 200.0 ! isotropic
+    K_crn_paral = 200.0   ! anisotropic
+!    K_crn_perp  = 200.0 ! isotropic
     use_split   = .false.
  /
 
@@ -92,7 +92,7 @@
 !    diff_explicit = .true.
     diff_theta     = 0.6
     diff_tstep_fac = 86.80555556 !91.0222223 !91.0222223 !45.511112 !22.7555556
-    norm_tol = 1e-13
+    norm_tol = 1e-5
     nsmool = 4
     nsmoob = 4
     max_cycles = 10
@@ -105,8 +105,8 @@
     bx0    = 5.0
     by0    = 5.0
     bz0    = 5.0
-    x0     = 416.0
-    y0     = 416.0
+    x0     = 0. !416.0
+    y0     = 0. !416.0
     z0     = 0.0
     r0     = 64.0
     beta_cr= 0.0
