@@ -191,6 +191,9 @@ contains
    end subroutine init_prob
 
 !-----------------------------------------------------------------------------
+!
+! This routine is no longer required for postprocessing. Since r3522 the analytical potential is available in the .h5 output
+!
 
    subroutine init_prob_attrs(file_id)
 
