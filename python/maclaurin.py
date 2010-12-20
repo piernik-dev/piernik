@@ -22,9 +22,9 @@ def Maclaurin_test(file):
    x0   = h5f.root._v_attrs.x0[0]
    y0   = h5f.root._v_attrs.y0[0]
    z0   = h5f.root._v_attrs.z0[0]
-   rho  = h5f.root._v_attrs.rho0[0]
 
-   soln = h5f.root.gpot[:,:,:]
+   soln    = h5f.root.gpot[:,:,:]
+   phi0_3D = h5f.root.apot[:,:,:]
    h5f.close()
 
    nz,ny,nx = soln.shape
@@ -34,38 +34,42 @@ def Maclaurin_test(file):
    yl,yr = ymin+dy*0.5, ymax-dy*0.5
    zl,zr = zmin+dz*0.5, zmax-dz*0.5
 
-   x = np.arange(xl,xr,dx)
-   y = np.arange(yl,yr,dy)
-   z = np.arange(zl,zr,dz)
+   x2 = (np.arange(xl,xr,dx) - x0)**2
+   y2 = (np.arange(yl,yr,dy) - y0)**2
+   z2 = (np.arange(zl,zr,dz) - z0)**2
 
    n = nx*ny*nz
 
-   r   = np.zeros(n)
-   phi = np.zeros(n)
+   r     = np.zeros(n)
+   phi   = np.zeros(n)
+   phi0  = np.zeros(n)
 
+   # *********************************************************************
    ind = 0
-   for i in range(0,nx-1):
-      for j in range(0,ny-1):
-         for k in range(0,nz-1):
-            r[ind] = np.sqrt((x[i]-x0)**2+(y[j]-y0)**2+(z[k]-z0)**2)
-            phi[ind] = soln[k,j,i]
+   ind_i = range(0,nx-1)
+   ind_j = range(0,ny-1)
+   ind_k = range(0,nz-1)
+   for i in ind_i:
+      for j in ind_j:
+         for k in ind_k:
+            r[ind]    = np.sqrt(x2[i]+y2[j]+z2[k])
+            phi[ind]  = soln[k,j,i]
+            phi0[ind] = phi0_3D[k,j,i]
             ind=ind+1
 
    new_r = np.unique(r)
-   mean = np.zeros_like(new_r)
-   std  = np.zeros_like(new_r)
+   mean  = np.zeros_like(new_r)
+   std   = np.zeros_like(new_r)
    phi_0 = np.zeros_like(new_r)
 
    for i in range(0,new_r.shape[0]-1):
-      temp =  phi[np.where(r == new_r[i])]
-      mean[i] = temp.mean()
-      std[i]  = temp.std()
-
-   dpiG = fpiG * 0.5
-
-   phi_0[np.where(new_r <= a)] = -dpiG * rho * (a**2 - 0.333333*new_r[np.where(new_r <= a)]**2)
-   phi_0[np.where(new_r > a)] = -fpiG * rho * a**3 / (3.0*new_r[np.where(new_r > a)])
-
+      ind      = np.where(r == new_r[i])
+      temp     = phi[ind]
+      temp2    = phi0[ind]
+      phi_0[i] = temp2.mean()
+      mean[i]  = temp.mean()
+      std[i]   = temp.std()
+   # *********************************************************************
    # plotting ---------------------------------
    # definitions for the axes
    left, width = 0.15, 0.80
@@ -76,7 +80,7 @@ def Maclaurin_test(file):
    P.figure(1,figsize=(8,8))
 
    axhi = P.axes(rect_hi)
-   axlo   = P.axes(rect_lo)
+   axlo = P.axes(rect_lo)
 
    GM = fpiG/3.
 
@@ -84,7 +88,7 @@ def Maclaurin_test(file):
    axhi.plot(new_r[1:-1],mean[1:-1]/GM,'g.',new_r[1:-1],phi_0[1:-1]/GM,'b')
    axhi.xaxis.set_major_formatter( NullFormatter() )
    axhi.set_ylabel('Gravitational potential / GM')
-   axhi.legend( ('Numerical solution - $\\varphi$','Analitycal solution - $\\varphi_0$'), loc = 'lower right')
+   axhi.legend( ('Numerical solution - $\\varphi$','Analytical solution - $\\varphi_0$'), loc = 'lower right')
 
    axlo.plot(new_r[1:-1],(phi_0[1:-1]-mean[1:-1])/GM,'g',new_r[1:-1],(phi_0[1:-1]-mean[1:-1]-std[1:-1])/GM,'r:',new_r[1:-1],(phi_0[1:-1]-mean[1:-1]+std[1:-1])/GM,'r:')
    axlo.legend( ('avg. difference', '+/- deviation'), loc = 'upper right')
@@ -94,3 +98,7 @@ def Maclaurin_test(file):
    #P.show()
    P.draw()
    P.savefig('maclaurin.png',facecolor='white')
+
+if __name__ == "__main__":
+   import sys
+   Maclaurin_test(sys.argv[1])
