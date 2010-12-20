@@ -576,7 +576,7 @@ module gravity
                if (r2 < r_smooth2) then
                   gp(i,j,k) = gmr * (3. - r2/r_smooth2)
                else
-                  gp(i,j,k) = gm / dsqrt(r2)
+                  gp(i,j,k) = gm / sqrt(r2)
                endif
             enddo
          enddo
