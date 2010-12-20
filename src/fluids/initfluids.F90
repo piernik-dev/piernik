@@ -107,19 +107,15 @@
 module initfluids
 ! pulled by ANY
   implicit none
-
-  public ! QA_WARN no secrets are kept here
-
-  real, allocatable :: gamma(:)          !< array containing adiabatic indices of all fluids, indexed by   ifluid = i_ion, i_neu, etc.
-  real              :: cs_iso            !< isothermal sound speed for a mixture of fluids
-  real              :: cs_iso2           !< square of isothermal sound speed for a mixture of fluids
+  private
+  public :: init_fluids, cleanup_fluids
 
   contains
 
    subroutine init_fluids(cgrid)
 
       use types,           only: grid_container
-      use fluidindex,      only: fluid_index, nvar
+      use fluidindex,      only: fluid_index
       use fluxes,          only: set_limiter, init_fluxes
       use mpisetup,        only: limiter
 #ifdef VERBOSE
@@ -129,10 +125,10 @@ module initfluids
       use dataio_pub,      only: warn
 #endif /* defined NEUTRAL && defined IONIZED  */
 #ifdef IONIZED
-      use initionized,     only: init_ionized, gamma_ion, cs_iso_ion, cs_iso_ion2
+      use initionized,     only: init_ionized, cs_iso_ion
 #endif /* IONIZED */
 #ifdef NEUTRAL
-      use initneutral,     only: init_neutral, gamma_neu, cs_iso_neu, cs_iso_neu2
+      use initneutral,     only: init_neutral, cs_iso_neu
 #endif /* NEUTRAL */
 #ifdef DUST
       use initdust,        only: init_dust
@@ -164,24 +160,13 @@ module initfluids
 
       call init_fluxes
 
-      allocate(gamma(nvar%fluids))
-
 #if defined NEUTRAL && defined IONIZED
       if (cs_iso_neu /= cs_iso_ion) &
          call warn("[initfluids:init_fluids]: 'cs_iso_neu' and 'cs_iso_ion' should be equal")
+#else
+      if (.false..and.(cs_iso_neu == cs_iso_ion)) call warn("silence compiler")
 #endif /* defined NEUTRAL && defined IONIZED  */
 
-#ifdef IONIZED
-      gamma(nvar%ion%pos) = gamma_ion
-      cs_iso   = cs_iso_ion
-      cs_iso2  = cs_iso_ion2
-#endif /* IONIZED */
-
-#ifdef NEUTRAL
-      gamma(nvar%neu%pos) = gamma_neu
-      cs_iso  = cs_iso_neu
-      cs_iso2 = cs_iso_neu2
-#endif /* NEUTRAL  */
       call set_limiter(limiter)
 #ifdef VERBOSE
       call printinfo("[initfluids:init_fluids]: finished. \o/")
@@ -199,7 +184,6 @@ module initfluids
 
       implicit none
 
-      if (allocated(gamma)) deallocate(gamma)
 #ifdef IONIZED
       call cleanup_ionized
 #endif /* IONIZED */
