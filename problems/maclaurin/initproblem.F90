@@ -37,6 +37,7 @@ module initproblem
 
    real              :: x0, y0, z0, d0, a1, e, d1, p0, a3
    integer           :: nsub
+   real, dimension(:,:,:), allocatable :: apot
 
    namelist /PROBLEM_CONTROL/ x0, y0, z0, d0, a1, e, nsub
 
@@ -48,11 +49,11 @@ contains
 
       use constants,     only: pi
       use dataio_pub,    only: ierrh, par_file, namelist_errh, compare_namelist      ! QA_WARN required for diff_nml
-      use dataio_pub,    only: skip_advection, die, warn
+      use dataio_pub,    only: skip_advection, die, warn, user_vars_hdf5
       use mpisetup,      only: ierr, rbuff, ibuff, master, slave, buffer_dim, comm, smalld
       use mpi,           only: MPI_DOUBLE_PRECISION, MPI_INTEGER
       use list_hdf5,     only: additional_attrs
-      use types,         only: finalize_problem
+      use types,         only: finalize_problem, cleanup_problem
 
       implicit none
 
@@ -102,7 +103,7 @@ contains
 
       if (abs(e) >= 1.) call die("[initproblem:read_problem_par] |e|>=1.")
       if (e >= 0.) then            ! vertical axis
-         a3 = a1 * sqrt(1. - e**2) ! oblate, Maclaurin spheroid
+         a3 = a1 * sqrt(1. - e**2) ! oblate Maclaurin spheroid
       else
          a3 = a1 / sqrt(1. - e**2) ! prolate spheroid
       endif
@@ -119,8 +120,12 @@ contains
          nsub = maxsub
       endif
 
+      call compute_maclaurin_potential
+
       additional_attrs => init_prob_attrs
       finalize_problem => finalize_problem_maclaurin
+      user_vars_hdf5   => maclaurin_error_vars
+      cleanup_problem  => cleanup_maclaurin
 
    end subroutine read_problem_par
 
@@ -216,30 +221,25 @@ contains
 ! Oblate potential formula from Ricker_2008ApJS..176..293R
 ! Prolate potential formula from http://scienceworld.wolfram.com/physics/ProlateSpheroidGravitationalPotential.html
 !
-! ToDo: save the analytical potential in the restart file
-!
-   subroutine finalize_problem_maclaurin
+   subroutine compute_maclaurin_potential
 
-      use arrays,        only: sgp
+      use diagnostics,   only: my_allocate
       use constants,     only: pi, newtong
-      use dataio_pub,    only: msg, printinfo, warn
-      use grid,          only: x, y, z, is, ie, js, je, ks, ke
-      use mpisetup,      only: master, comm3d, ierr
-      use mpi,           only: MPI_DOUBLE_PRECISION, MPI_SUM, MPI_MIN, MPI_MAX, MPI_IN_PLACE
+      use dataio_pub,    only: warn
+      use grid,          only: x, y, z, is, ie, js, je, ks, ke, nxb, nyb, nzb
+      use mpisetup,      only: master
 
       implicit none
 
       integer            :: i, j, k
       real               :: potential, r2, rr
-      real, dimension(2) :: norm, dev
       real               :: AA1, AA3, a12, a32, x02, y02, z02, lam, h
       real, parameter    :: small_e = 1e-3
-      norm(:) = 0.
-      dev(1) = huge(1.0)
-      dev(2) = -dev(1)
+
+      call my_allocate(apot, [nxb, nyb, nzb], "apot")
 
       AA1 = 2./3. ; AA3 = 2./3.
-      if (e < 0. .and. master) call warn("[initproblem:finalize_problem] e<0. not fully implemented yet!")
+      if (e < 0. .and. master) call warn("[initproblem:compute_maclaurin_potential] e<0. not fully implemented yet!")
 
       if (e > small_e) then
          AA1 = ( sqrt(1. - e**2) * asin(e) - e * (1. - e**2) ) / e**3
@@ -286,7 +286,52 @@ contains
                      potential = - 2./3. * (3*a12 - rr)
                   endif
                endif
-               potential = potential * pi * newtong * d0
+               apot(i-is+1, j-js+1, k-ks+1) = potential * pi * newtong * d0
+            enddo
+         enddo
+      enddo
+
+   end subroutine compute_maclaurin_potential
+
+!-----------------------------------------------------------------------------
+
+   subroutine cleanup_maclaurin
+
+      use diagnostics, only: my_deallocate
+
+      implicit none
+
+      call my_deallocate(apot)
+
+   end subroutine cleanup_maclaurin
+
+!-----------------------------------------------------------------------------
+!
+! Here we compute the L2 error norm of the error of computed potential with respect to the analytical solution
+!
+
+   subroutine finalize_problem_maclaurin
+
+      use arrays,        only: sgp
+      use dataio_pub,    only: msg, printinfo
+      use grid,          only: is, ie, js, je, ks, ke
+      use mpisetup,      only: master, comm3d, ierr
+      use mpi,           only: MPI_DOUBLE_PRECISION, MPI_SUM, MPI_MIN, MPI_MAX, MPI_IN_PLACE
+
+      implicit none
+
+      integer            :: i, j, k
+      real, dimension(2) :: norm, dev
+      real               :: potential
+
+      norm(:) = 0.
+      dev(1) = huge(1.0)
+      dev(2) = -dev(1)
+
+      do k = ks, ke
+         do j = js, je
+            do i = is, ie
+               potential =  apot(i-is+1, j-js+1, k-ks+1)
                norm(1) = norm(1) + (potential - sgp(i, j, k))**2
                norm(2) = norm(2) + potential**2
                dev(1) = min(dev(1), (potential - sgp(i, j, k))/potential)
@@ -294,7 +339,6 @@ contains
             enddo
          enddo
       enddo
-
       call MPI_Allreduce(MPI_IN_PLACE, norm,   2, MPI_DOUBLE_PRECISION, MPI_SUM, comm3d, ierr)
       call MPI_Allreduce(MPI_IN_PLACE, dev(1), 1, MPI_DOUBLE_PRECISION, MPI_MIN, comm3d, ierr)
       call MPI_Allreduce(MPI_IN_PLACE, dev(2), 1, MPI_DOUBLE_PRECISION, MPI_MAX, comm3d, ierr)
@@ -305,5 +349,35 @@ contains
       endif
 
    end subroutine finalize_problem_maclaurin
+
+!-----------------------------------------------------------------------------
+!
+! This routine provides the "apot" and "errp" variablesvalues to be dumped to the .h5 file
+! "apot" is the analytical potential solution for cell centers
+! "errp" is the difference between analytical potential and computed potential
+!
+
+   subroutine maclaurin_error_vars(var, tab, ierrh)
+
+      use arrays,        only: sgp
+      use grid,          only: is, ie, js, je, ks, ke
+
+      implicit none
+
+      character(len=*), intent(in)                    :: var
+      real(kind=4), dimension(:,:,:), intent(inout)   :: tab
+      integer, intent(inout)                          :: ierrh
+
+      ierrh = 0
+      select case (trim(var))
+         case ("apot")
+            tab(:,:,:) = apot(:,:,:)
+         case ("errp")
+            tab(:,:,:) = apot(:,:,:) - sgp(is:ie, js:je, ks:ke)
+         case default
+            ierrh = -1
+      end select
+
+   end subroutine maclaurin_error_vars
 
 end module initproblem

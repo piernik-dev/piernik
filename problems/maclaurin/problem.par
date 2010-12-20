@@ -37,6 +37,8 @@
     dt_tsl  = 0.001
     vars(1) = 'dens'
     vars(2) = 'gpot'
+    vars(3) = 'apot'
+    vars(4) = 'errp'
     domain  = 'phys_domain'
  /
 
