@@ -65,7 +65,6 @@ module initproblem
       use arrays,        only: u,b
       use dataio_pub,    only: msg, printinfo
       use grid,          only: x,y,z,nx,ny,nz
-      use initfluids,    only: gamma
       use initneutral,   only: idnn,imxn,imyn,imzn,ienn, gamma_neu
       use mpisetup,      only: proc
 
@@ -80,7 +79,6 @@ module initproblem
 !      real :: somx,somy,somz
 
 ! Uniform equilibrium state
-      gamma = gamma_neu
 
       call random_seed()
       do k = 1,nz

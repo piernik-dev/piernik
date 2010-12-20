@@ -103,11 +103,10 @@ module initproblem
 
    subroutine init_prob
       use arrays,         only: u, b, dprof
-      use fluidindex,     only: ibx, iby, ibz
+      use fluidindex,     only: ibx, iby, ibz, nvar
       use grid,           only: x, y, z, nx, ny, nz
       use hydrostatic,    only: hydrostatic_zeq_densmid
       use initcosmicrays, only: gamma_crs, iarr_crs
-      use initfluids,     only: cs_iso2
       use initionized,    only: idni, imxi, imyi, imzi
       use mpisetup,       only: smalld
       use snsources,      only: r_sn
@@ -125,9 +124,9 @@ module initproblem
 
 !   Secondary parameters
 
-      b0 = sqrt(2.*alpha*d0*cs_iso2)
+      b0 = sqrt(2.*alpha*d0*nvar%ion%cs2)
 
-      csim2 = cs_iso2*(1.0+alpha)
+      csim2 = nvar%ion%cs2*(1.0+alpha)
 
       call hydrostatic_zeq_densmid(1, 1, d0, csim2)
 
@@ -144,12 +143,12 @@ module initproblem
 #endif /* SHEAR */
 
 #ifndef ISO
-               u(ieni,i,j,k)   = cs_iso2/(gamma_ion-1.0) * u(idni,i,j,k) &
+               u(ieni,i,j,k)   = nvar%ion%cs2/(nvar%ion%gam_1) * u(idni,i,j,k) &
                                + 0.5*(u(imxi,i,j,k)**2 + u(imyi,i,j,k)**2 + &
                                       u(imzi,i,j,k)**2 ) / u(idni,i,j,k)
 #endif /* !ISO */
 #ifdef COSM_RAYS
-               u(iarr_crs,i,j,k)   =  beta_cr*cs_iso2 * u(idni,i,j,k)/( gamma_crs - 1.0 )
+               u(iarr_crs,i,j,k)   =  beta_cr*nvar%ion%cs2 * u(idni,i,j,k)/( gamma_crs - 1.0 )
 #ifdef GALAXY
 ! Single SN explosion in x0,y0,z0 at t = 0 if amp_cr /= 0
                u(iarr_crs,i,j,k)= u(iarr_crs,i,j,k) &
