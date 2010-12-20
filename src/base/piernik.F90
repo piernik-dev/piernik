@@ -281,10 +281,11 @@ contains
       call init_multigrid(cgrid)
 #endif /* MULTIGRID */
 
-      call init_dataio
-
       ! Almost everything is initialized: do problem-related stuff here, except setting-up the initial conditions.
       call read_problem_par
+
+      call init_dataio
+
       if (master) then
          write(msg,'(4a)') "   Starting problem : ",trim(problem_name)," :: ",trim(run_id)
          call printinfo(msg, .true.)
