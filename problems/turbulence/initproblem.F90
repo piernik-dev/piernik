@@ -40,7 +40,6 @@ module initproblem
 
          diff_nml(PROBLEM_CONTROL)
 
-
          rbuff(1) = d0
          rbuff(2) = Mrms
          rbuff(3) = c_si
@@ -54,7 +53,6 @@ module initproblem
 !  namelist /PROBLEM_CONTROL/  &
 !                              d0,p0, bx0,by0,bz0, Eexpl,  x0,y0,z0, r0 &
 !                n_sn, dt_sn
-
 
          d0           = rbuff(1)
          Mrms         = rbuff(2)

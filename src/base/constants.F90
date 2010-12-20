@@ -178,7 +178,6 @@ contains
 
       namelist /CONSTANTS/ constants_set, miu0, kelvin, cm, gram, sek
 
-
       constants_set='scaled'
 
       miu0   = fpi
@@ -221,7 +220,6 @@ contains
       to_stdout = .true.
 #endif  /* VERBOSE */
       s_len_u  = ' undefined'; s_time_u = s_len_u; s_mass_u = s_len_u
-
 
       select case (trim(constants_set))
          case ("PSM", "psm")

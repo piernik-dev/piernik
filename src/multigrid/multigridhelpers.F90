@@ -201,7 +201,6 @@ contains
       at = 0.
       if (vs%count > 0) at = sum(vs%time(1:vs%count))/vs%count ! average V-cycle time on PE# 0
 
-
       write(msg, '(a,i3,1x,2a,f7.3,a,i3,a,f7.3,a,f11.9,a)') &
            "[multigrid] ", vs%count, trim(vs%cprefix), "cycles, dt_wall=", vs%time(0), " +", vs%count, "*", at, ", norm/rhs= ", vs%norm_final, " : "
 

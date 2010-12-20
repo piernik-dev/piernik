@@ -52,7 +52,6 @@ module crcomposition
    integer, parameter :: icr_Li7  = 7    !!! BEWARE: ncrn should be set up gerater than maximum isotope numeber,
                                   !!! which should be smaller than ncr_max (<10 currently)
 
-
 !<====Cross sections for spallation from Garcia-Munoz 1987 (see also Longair)====>
 
    real, parameter :: mbarn=1e-27 !cm2   !!! BEWARE: this line breaks unit consistency, move it to constants.F90 and use scaling

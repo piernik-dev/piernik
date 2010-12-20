@@ -56,7 +56,6 @@ module initproblem
 
       implicit none
 
-
       linear = .false.
       rhog    = 10.0
       eps     =  1.0
@@ -185,7 +184,6 @@ module initproblem
       ux  = -eps*wx
       wy  = (1+eps)/(2.0*taus) * wx
       uy  = (1.0 + eps + taus**2)/ (2.0*taus) * wx
-
 
       write(msg,*) 'kx = ',kx,' kz = ',kz
       call printinfo(msg)

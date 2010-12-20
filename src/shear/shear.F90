@@ -133,7 +133,6 @@ contains
 #endif /* FFTW */
   end subroutine yshift
 
-
 #ifdef FFTW
   function unshear_fft(qty,x,ddy,inv)
     use constants, only: dpi

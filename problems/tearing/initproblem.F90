@@ -62,14 +62,12 @@ module initproblem
 
       implicit none
 
-
       beta         =  1.0
       v0           =  0.1
 
       if (master) then
 
          diff_nml(PROBLEM_CONTROL)
-
 
          rbuff(1) = beta
          rbuff(2) = v0
@@ -80,7 +78,6 @@ module initproblem
       call MPI_Bcast(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
       if (slave) then
-
 
          beta         = rbuff(1)
          v0           = rbuff(2)
@@ -100,7 +97,6 @@ module initproblem
 #ifndef ISO
       use initionized,  only: ieni
 #endif /* !ISO */
-
 
       implicit none
 

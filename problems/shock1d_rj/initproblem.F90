@@ -58,11 +58,9 @@ module initproblem
 
       implicit none
 
-
       if (master) then
 
          diff_nml(PROBLEM_CONTROL)
-
 
          rbuff(1) = dl
          rbuff(2) = vxl
@@ -87,7 +85,6 @@ module initproblem
       call MPI_Bcast(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
       if (slave) then
-
 
          dl  = rbuff(1)
          vxl = rbuff(2)

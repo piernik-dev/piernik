@@ -55,7 +55,6 @@ module initproblem
 
       implicit none
 
-
       chi     = 8.0
       dbot    = 1.0
       lpert   = 0.05
@@ -68,8 +67,6 @@ module initproblem
       if (master) then
 
          diff_nml(PROBLEM_CONTROL)
-
-
 
          rbuff(1) = chi
          rbuff(2) = dbot
@@ -86,7 +83,6 @@ module initproblem
       call MPI_Bcast(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
       if (slave) then
-
 
          chi          = rbuff(1)
          dbot         = rbuff(2)

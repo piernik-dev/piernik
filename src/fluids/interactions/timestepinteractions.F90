@@ -56,7 +56,6 @@ contains
     real :: dt_interact_all         !< timestep due to %interactions for all MPI blocks
     real :: val                     !< variable used to store the maximum value of relative momentum
 
-
 !    dt_interact_proc = 1.0 / (maxval(collfaq)+small) / maxval(u(iarr_all_dn,:,:,:))
 
     !!!!BEWARE: works only with neu+dust!!!!
@@ -65,7 +64,6 @@ contains
                     (u(nvar%dst%imy,:,:,:)-u(nvar%neu%imy,:,:,:))**2 + &
                     (u(nvar%dst%imz,:,:,:)-u(nvar%neu%imz,:,:,:))**2   ) * u(nvar%dst%idn,:,:,:) )
     dt_interact_proc = nvar%neu%cs / (maxval(collfaq) * val + small)
-
 
     call MPI_Reduce(dt_interact_proc, dt_interact_all, 1, MPI_DOUBLE_PRECISION, MPI_MIN, 0, comm, ierr)
     call MPI_Bcast(dt_interact_all, 1, MPI_DOUBLE_PRECISION, 0, comm, ierr)

@@ -90,7 +90,6 @@ contains
                             sgp(nxb+nb+1:nxb+2*nb,nb+1:nb+nyb,1), &
                             dx)
 
-
          endif
          sgp(:,1:nb,:)              = sgp(:,nyb+1:nyb+nb,:)
          sgp(:,nyb+nb+1:nyb+2*nb,:) = sgp(:,nb+1:2*nb,:)
@@ -133,7 +132,6 @@ contains
     real(kind=8)   , dimension(size(den,1)/2 + 1) :: ky
     real(kind=8)   , dimension(size(den,1))       :: kx,xx
 
-
     real(kind=8)    :: lambda, factor, St
 
     integer(kind=8) :: pf1, pf2, ppb1, pb2
@@ -168,13 +166,11 @@ contains
       ky(p) = dpi * (p-1) / n !      kx(p) = dpi * (p - 1) / nx
     enddo
 
-
     kx(1) = 0.0
     do q = 2, np
       kx(q) = dpi * (q-1) / n !      ky(q) = dpi * (q - 1) / ny
       kx(n+2-q) = kx(q)
     enddo
-
 
 ! create plan for the forward 1D REAL => COMPLEX  FFT
 !
@@ -368,7 +364,6 @@ contains
     if (allocated(ctmp))   deallocate(ctmp)
 
   end subroutine poisson_xy
-
 
 !!=====================================================================
 !!

@@ -92,14 +92,11 @@ module sourcecosmicrays
 !                        +1./ndim*dgas(:)*speed_of_light*sigma_N14_Li7*uu(nvar%crn%beg-1+icr_N14,:) &
 !                        +1./ndim*dgas(:)*speed_of_light*sigma_O16_Li7*uu(nvar%crn%beg-1+icr_O16,:) )
 
-
 !    decrn(icr_N14,:)  = -1./ndim*dgas(:)*speed_of_light*sigma_N14_Li7*uu(nvar%crn%beg-1+icr_N14,:)
 
 !    decrn(icr_O16,:)  = -1./ndim*dgas(:)*speed_of_light*sigma_O16_Li7*uu(nvar%crn%beg-1+icr_O16,:) &
 !                        -1./ndim*dgas(:)*speed_of_light*sigma_O16_Be9*uu(nvar%crn%beg-1+icr_O16,:) &
 !                        -1./ndim*dgas(:)*speed_of_light*sigma_O16_Be10*uu(nvar%crn%beg-1+icr_O16,:)
-
-
 
   end subroutine src_crn
 

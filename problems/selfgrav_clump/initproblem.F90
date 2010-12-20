@@ -30,7 +30,6 @@
 
 module initproblem
 
-
    implicit none
 
    private
@@ -58,7 +57,6 @@ contains
 
       implicit none
 
-
       ! namelist default parameter values
       clump_mass   = 1.0e10                !< Mass of the clump
       clump_vel_x  = 0.                    !< X-velocity in the domain
@@ -78,7 +76,6 @@ contains
       if (master) then
 
          diff_nml(PROBLEM_CONTROL)
-
 
          rbuff(1) = clump_mass
          rbuff(2) = clump_vel_x
@@ -104,7 +101,6 @@ contains
       call MPI_Bcast(lbuff,    buffer_dim, MPI_LOGICAL,          0, comm, ierr)
 
       if (slave) then
-
 
          clump_mass   = rbuff(1)
          clump_vel_x  = rbuff(2)

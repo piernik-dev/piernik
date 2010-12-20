@@ -616,7 +616,6 @@ contains
          enddo
       endif
 
-
       if (is_external(YLO)) then
          do i = coarse%is+1, coarse%ie-1
             do k = coarse%ks+1, coarse%ke-1

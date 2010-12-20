@@ -66,7 +66,6 @@ module initproblem
 
          diff_nml(PROBLEM_CONTROL)
 
-
          rbuff(1)     = d_gas
          rbuff(2)     = p_gas
          rbuff(3)     = v_gas
@@ -83,7 +82,6 @@ module initproblem
       call MPI_Bcast(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
       if (slave) then
-
 
          d_gas        = rbuff(1)
          p_gas        = rbuff(2)

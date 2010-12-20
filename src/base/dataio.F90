@@ -651,7 +651,6 @@ contains
 
    end subroutine find_last_restart
 
-
    function mpi_sum4d_and_multiply(tab,factor) result(output)
       use mpisetup, only: comm3d, ierr
       use mpi,      only: MPI_DOUBLE_PRECISION, MPI_SUM
@@ -727,7 +726,6 @@ contains
       cs_iso2 = 0.0
 #endif /* !IONIZED */
 #endif /* !NEUTRAL */
-
 
       if (master) then
          write(tsl_file,'(a,a1,a,a1,a3,a1,i3.3,a4)') &

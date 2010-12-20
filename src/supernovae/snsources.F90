@@ -115,7 +115,6 @@ module snsources
          f_sn = f_sn * 2.0*r_sn/1000.0
       endif
 
-
    end subroutine init_snsources
 !>
 !! \brief Main routine to insert one supernova event

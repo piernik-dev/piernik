@@ -55,7 +55,6 @@ contains
 
       implicit none
 
-
       t_sn = 0.0
 
       d0      = 1.0
@@ -74,7 +73,6 @@ contains
       if (master) then
 
          diff_nml(PROBLEM_CONTROL)
-
 
          rbuff(1) = d0
          rbuff(2) = p0
@@ -97,7 +95,6 @@ contains
       call MPI_Bcast(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
       if (slave) then
-
 
          d0           = rbuff(1)
          p0           = rbuff(2)
@@ -144,7 +141,6 @@ contains
          if (fl%tag=="DST") call die("[initproblem:init_prob] This setup is not suitable for dust!")
          write(msg,*) "Working with ", fl%tag, " fluid."
          call printinfo(msg)
-
 
 ! Uniform equilibrium state
          do k = 1,nz

@@ -418,7 +418,6 @@ module rtvd ! split orig
             vx0(:,:)  = 0.0
          endwhere
 
-
          do ind = 1, nvar%fluids
             if (ind == 1) then
                fricacc(ind,:) = - epsa(ind,:) * (vx0(1,:) - vx0(2,:))
@@ -463,7 +462,6 @@ module rtvd ! split orig
 #else /* !GRAV */
          gravacc = 0.0
 #endif /* !GRAV */
-
 
 #if defined GRAV || defined SHEAR || defined FLUID_INTERACTIONS
          acc     =  rotacc + fricacc
@@ -515,7 +513,6 @@ module rtvd ! split orig
                               - rk2coef(integration_order,istep)*u1(iarr_all_mx(nvar%ion%pos),:)/u1(iarr_all_dn(nvar%ion%pos),:)*grad_pcr*dt
 #endif /* !ISO */
          u1(iarr_all_mx(nvar%ion%pos),:) = u1(iarr_all_mx(nvar%ion%pos),:) - rk2coef(integration_order,istep)*grad_pcr*dt
-
 
 #ifdef COSM_RAYS_SOURCES
          call src_crn(u1,n, srccrn)

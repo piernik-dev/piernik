@@ -30,7 +30,6 @@
 
 module initproblem
 
-
    implicit none
 
    private
@@ -58,7 +57,6 @@ contains
 
       implicit none
 
-
       ! namelist default parameter values
       d0           = 1.0                   !< Average density of the medium (density bias required for correct EOS evaluation)
       p0           = 1.e-3                 !< Average pressure of the medium (for calculating sound speed ot temperature)
@@ -71,7 +69,6 @@ contains
       if (master) then
 
          diff_nml(PROBLEM_CONTROL)
-
 
          rbuff(1) = d0
          rbuff(2) = p0
@@ -89,7 +86,6 @@ contains
       call MPI_Bcast(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
       if (slave) then
-
 
          d0           = rbuff(1)
          p0           = rbuff(2)

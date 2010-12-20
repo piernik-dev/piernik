@@ -30,7 +30,6 @@
 
 module initproblem
 
-
    implicit none
 
    private
@@ -55,7 +54,6 @@ contains
 
       implicit none
 
-
       ! namelist default parameter values
       pulse_size   = 0.5                   !< "fill factor" in each direction
       pulse_vel_x  = 0.0                   !< pulse velocity in x-direction
@@ -66,7 +64,6 @@ contains
       if (master) then
 
          diff_nml(PROBLEM_CONTROL)
-
 
          rbuff(1) = pulse_size
          rbuff(2) = pulse_vel_x
@@ -80,7 +77,6 @@ contains
       call MPI_Bcast(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
       if (slave) then
-
 
          pulse_size  = rbuff(1)
          pulse_vel_x = rbuff(2)

@@ -268,7 +268,6 @@ module mpisetup
             call printinfo("###############     Namelist parameters     ###############", .false.)
          endif
 
-
          pxsize = 1
          pysize = 1
          pzsize = 1
@@ -492,7 +491,6 @@ module mpisetup
                procyxr = MPI_PROC_NULL
             endif
          endif
-
 
 #ifdef SHEAR_BND
          if (pysize > 1) stop 'Shear-pediodic boundary conditions do not permit pysize > 1'

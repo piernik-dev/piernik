@@ -30,7 +30,6 @@
 
 module initproblem
 
-
    implicit none
 
    private
@@ -59,7 +58,6 @@ contains
 
       integer, parameter :: maxsub = 10  !< upper limit for subsampling
 
-
       skip_advection = .true. ! skip sweeps in fluidupdate
 
       ! namelist default parameter values
@@ -74,7 +72,6 @@ contains
       if (master) then
 
          diff_nml(PROBLEM_CONTROL)
-
 
          rbuff(1) = x0
          rbuff(2) = y0
@@ -92,7 +89,6 @@ contains
       call MPI_Bcast(rbuff,           buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
       if (slave) then
-
 
          x0           = rbuff(1)
          y0           = rbuff(2)

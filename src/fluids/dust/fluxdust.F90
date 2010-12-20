@@ -76,7 +76,6 @@ contains
       use mpisetup,   only: cfr_smooth
       use timestep,   only: c_all
 
-
       implicit none
       integer, intent(in)                         :: n       !< number of cells in the current sweep
       real, dimension(:,:), intent(out), pointer  :: fluxd   !< flux for dust

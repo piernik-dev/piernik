@@ -136,7 +136,6 @@ contains
       integer, intent(in) :: iia, jja
       integer :: ia, ja
 
-
       ia = min(nx,max(1, iia))
       ja = min(ny,max(1, jja))
       call grav_accel('zsweep',ia, ja, zs, nstot, gprofs)

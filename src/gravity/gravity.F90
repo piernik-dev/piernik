@@ -131,7 +131,6 @@ module gravity
 
       implicit none
 
-
       namelist /GRAVITY/ g_dir, r_gc, ptmass, ptm_x, ptm_y, ptm_z, r_smooth, external_gp, &
                 nsub, tune_zeq, tune_zeq_bnd, h_grav, r_grav, n_gravr, n_gravr2, n_gravh, user_grav, gprofs_target
 
@@ -746,7 +745,6 @@ module gravity
                                dgpz(0:pxsize-1,0:pysize-1,0:pzsize-1), &
                                ddgp(0:pxsize-1,0:pysize-1,0:pzsize-1)
 
-
 ! Gravitational potential gp(i,j,k) is defined in cell centers
 ! First we find gp(:,:,:) in each block separately assuming:
 ! Instead of gp, gpwork is used to not change already computed gp when
@@ -790,7 +788,6 @@ module gravity
       call MPI_Gather ( dgpz_proc, 1, MPI_DOUBLE_PRECISION, &
                         dgpz_all,  1, MPI_DOUBLE_PRECISION, &
                         0, comm3d, ierr )
-
 
       if (master) then
 

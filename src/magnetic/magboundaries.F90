@@ -137,7 +137,6 @@ contains
                                       +0.5*eps*(1.+eps) * cshift(send_left (:,:,:,:),shift=1,dim=3)
             endif ! (bnd_xl == "she")
 
-
             if (bnd_xr == "she") then
 !
 ! przesuwamy o calkowita liczbe komorek + periodyczny wb w kierunku y
@@ -184,7 +183,6 @@ contains
 
             endif
 #endif /* !SHEAR */
-
 
          case ("ydim")
             if (pysize .gt. 1) then
@@ -288,7 +286,6 @@ contains
          endif
       endif
 
-
 ! Non-MPI boundary conditions
       if (frun) then
          bnd_xl_not_provided = any( [bnd_xl(1:3) == "cor", bnd_xl(1:3) == "inf", bnd_xl(1:3) == "mpi", bnd_xl(1:3) == "ref", bnd_xl(1:3) == "she"] )
@@ -303,7 +300,6 @@ contains
       if (dim=="xdim" .and. bnd_xl_not_provided .and. bnd_xr_not_provided) return  ! avoid triple case
       if (dim=="ydim" .and. bnd_yl_not_provided .and. bnd_yr_not_provided) return  ! avoid triple case
       if (dim=="zdim" .and. bnd_zl_not_provided .and. bnd_zr_not_provided) return  ! avoid triple case
-
 
       select case (dim)
          case ("xdim")
@@ -358,7 +354,6 @@ contains
                   call warn(msg)
 
             end select  ! (bnd_yr)
-
 
          case ("zdim")
 

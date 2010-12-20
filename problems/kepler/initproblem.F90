@@ -74,7 +74,6 @@ contains
 
          diff_nml(PROBLEM_CONTROL)
 
-
          cbuff(3) = mag_field_orient
 
          rbuff(1) = d0
@@ -136,7 +135,6 @@ contains
 
       real, dimension(:), allocatable :: grav
       type(component_fluid), pointer  :: fl
-
 
 !   Secondary parameters
 
@@ -212,7 +210,6 @@ contains
             fl => nvar%all_fluids(p)
             call source_terms_grav
             call grav_pot2accel('xsweep',1,1, nx, grav, 1)
-
 
             do j = 1,ny
                yj = y(j)

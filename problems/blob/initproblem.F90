@@ -55,7 +55,6 @@ module initproblem
 
       implicit none
 
-
       chi     = 10.0
       rblob   =  1.0
       blobxc  =  5.0
@@ -69,7 +68,6 @@ module initproblem
       if (master) then
 
          diff_nml(PROBLEM_CONTROL)
-
 
          rbuff(1) = chi
          rbuff(2) = rblob
@@ -87,7 +85,6 @@ module initproblem
       call MPI_Bcast(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
       if (slave) then
-
 
          chi          = rbuff(1)
          rblob        = rbuff(2)

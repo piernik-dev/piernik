@@ -34,7 +34,6 @@ module fluidboundaries
    public :: bnd_u, all_fluid_boundaries
    contains
 
-
       subroutine init_fluidboundaries
          use mpisetup,              only: bnd_xl, bnd_xr
          use dataio_pub,            only: msg, warn

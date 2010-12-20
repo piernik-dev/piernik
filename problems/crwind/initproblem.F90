@@ -67,7 +67,6 @@ module initproblem
 
          diff_nml(PROBLEM_CONTROL)
 
-
          rbuff(1)  = d0
          rbuff(2)  = bxn
          rbuff(3)  = byn
@@ -85,7 +84,6 @@ module initproblem
       call MPI_Bcast(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
       if (slave) then
-
 
          d0           = rbuff(1)
          bxn          = rbuff(2)

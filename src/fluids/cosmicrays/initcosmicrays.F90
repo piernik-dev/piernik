@@ -323,7 +323,6 @@ contains
       enddo
    end subroutine cr_add_hdf5
 
-
    subroutine get_cr(ivec,rvec,outtab)
       use arrays,       only: u
       use dataio_pub,   only: die

@@ -125,7 +125,6 @@ contains
 
       ! No guardcells required here
 
-
       ! Possible optimization candidate: reduce L1 and L2 cache misses on both read and write (RBGS only, secondary importance)
       fine%mgvar       (fine%is    :fine%ie-D_x:(1+D_x), fine%js    :fine%je-D_y:(1+D_y), fine%ks    :fine%ke-D_z:(1+D_z), iv) = &
            coarse%mgvar(coarse%is  :coarse%ie,           coarse%js  :coarse%je,           coarse%ks  :coarse%ke,           iv)

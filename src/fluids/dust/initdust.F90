@@ -70,7 +70,6 @@ contains
 
     implicit none
 
-
     namelist /FLUID_DUST/ dragc_gas_dust, dalpha, selfgrav_dst
 
     dragc_gas_dust  = 1.0

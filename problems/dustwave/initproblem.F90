@@ -66,8 +66,6 @@ module initproblem
 
          diff_nml(PROBLEM_CONTROL)
 
-
-
          rbuff(1) = d0
          rbuff(2) = v0
          rbuff(3) = v1
@@ -83,7 +81,6 @@ module initproblem
       call MPI_Bcast(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
       if (slave) then
-
 
          d0           = rbuff(1)
          v0           = rbuff(2)
@@ -105,7 +102,6 @@ module initproblem
       use constants, only: pi
       use grid,      only: Lx, Ly, Lz, nx, ny, nz, x, y, z
       use initdust,  only: idnd, imxd, imyd, imzd
-
 
       implicit none
 
@@ -132,6 +128,5 @@ module initproblem
 
       return
    end subroutine init_prob
-
 
 end module initproblem
