@@ -38,12 +38,10 @@ module initproblem
 
    integer            :: norm_step
    real               :: d0, p0, bx0, by0, bz0, x0, y0, z0, r0, beta_cr, amp_cr
+   real, dimension(:,:,:), allocatable :: aecr1
 
-   namelist /PROBLEM_CONTROL/       &
-                               d0, p0, bx0, by0, bz0, &
-                               x0, y0, z0, r0, &
-                               beta_cr, amp_cr, &
-                               norm_step
+   namelist /PROBLEM_CONTROL/ d0, p0, bx0, by0, bz0, x0, y0, z0, r0, &
+        &                     beta_cr, amp_cr, norm_step
 
    contains
 
@@ -52,11 +50,12 @@ module initproblem
    subroutine read_problem_par
 
       use dataio_pub,    only: ierrh, par_file, namelist_errh, compare_namelist      ! QA_WARN required for diff_nml
-      use dataio_pub,    only: die
-      use grid,          only: dxmn
+      use dataio_pub,    only: die, user_vars_hdf5
+      use diagnostics,   only: my_allocate
+      use grid,          only: dxmn, nxb, nyb, nzb
       use mpi,           only: MPI_INTEGER, MPI_DOUBLE_PRECISION
       use mpisetup,      only: ibuff, rbuff, buffer_dim, comm, ierr, master, slave
-      use types,         only: problem_customize_solution, finalize_problem
+      use types,         only: problem_customize_solution, finalize_problem, cleanup_problem
 
       implicit none
 
@@ -118,10 +117,27 @@ module initproblem
 
       if (r0 == 0.) call die("[initproblem:read_problem_par] r0 == 0")
 
+      call my_allocate(aecr1, [nxb, nyb, nzb], "aecr1")
+      aecr1(:,:,:) = 0.
+
       problem_customize_solution => check_norm
       finalize_problem           => check_norm
+      cleanup_problem            => cleanup_crtest
+      user_vars_hdf5             => crtest_analytic_ecr1
 
    end subroutine read_problem_par
+
+!-----------------------------------------------------------------------------
+
+   subroutine cleanup_crtest
+
+      use diagnostics, only: my_deallocate
+
+      implicit none
+
+      call my_deallocate(aecr1)
+
+   end subroutine cleanup_crtest
 
 !-----------------------------------------------------------------------------
 
@@ -202,36 +218,28 @@ module initproblem
 
 !-----------------------------------------------------------------------------
 
-   subroutine check_norm
+   subroutine compute_analytic_ecr1
 
       use arrays,         only: b, u
-      use dataio_pub,     only: code_progress, PIERNIK_FINISHED, halfstep, msg, die, printinfo
+      use dataio_pub,     only: die
       use grid,           only: x, y, z, is, ie, js, je, ks, ke
       use initcosmicrays, only: iarr_crs, ncrn, ncre, K_crn_paral, K_crn_perp
-      use mpisetup,       only: master, comm3d, ierr, t, nstep
-      use mpi,            only: MPI_DOUBLE_PRECISION, MPI_SUM, MPI_MIN, MPI_MAX, MPI_IN_PLACE
+      use mpisetup,       only: t
 
       implicit none
 
       integer            :: i, j, k
-      real               :: r_par2, r_perp2, delx, dely, delz, magb, ampt, r0_par2, r0_perp2, crt, bxn, byn, bzn
+      real               :: r_par2, r_perp2, delx, dely, delz, magb, ampt, r0_par2, r0_perp2, bxn, byn, bzn
       integer            :: iecr
       integer, parameter :: icr = 1 !< Only first CR component
-      real, dimension(2) :: norm, dev
-      integer, save      :: nn = 0
 
       iecr = -1
-      if (code_progress < PIERNIK_FINISHED .and. (mod(nstep, norm_step) /=0 .or. halfstep)) return
 
       if (ncrn+ncre >= icr) then
          iecr = iarr_crs(icr)
       else
          call die("[initproblem:init_prob] No CR components defined.")
       endif
-
-      norm(:) = 0.
-      dev(1) = huge(1.0)
-      dev(2) = -dev(1)
 
       magb = sqrt(bx0**2 + by0**2 + bz0**2)
       if (magb > 0.) then
@@ -260,13 +268,56 @@ module initproblem
 
                r_par2 = (bxn*delx + byn*dely + bzn*delz)**2 ! square of the distance form the center of the bump in direction parallel to the magnetic field
                r_perp2 = delx**2 + dely**2 + delz**2 - r_par2
-               crt = ampt * exp( - r_par2/r0_par2 - r_perp2/r0_perp2)
+               aecr1(i-is+1, j-js+1, k-ks+1) = ampt * exp( - r_par2/r0_par2 - r_perp2/r0_perp2)
 
+            enddo
+         enddo
+      enddo
+
+   end subroutine compute_analytic_ecr1
+
+!-----------------------------------------------------------------------------
+
+   subroutine check_norm
+
+      use arrays,         only: u
+      use dataio_pub,     only: code_progress, PIERNIK_FINISHED, halfstep, msg, die, printinfo
+      use grid,           only: is, ie, js, je, ks, ke
+      use initcosmicrays, only: iarr_crs, ncrn, ncre
+      use mpisetup,       only: master, comm3d, ierr, t, nstep
+      use mpi,            only: MPI_DOUBLE_PRECISION, MPI_SUM, MPI_MIN, MPI_MAX, MPI_IN_PLACE
+
+      implicit none
+
+      integer            :: i, j, k
+      real, dimension(2) :: norm, dev
+      real               :: crt
+      integer            :: iecr
+      integer, parameter :: icr = 1 !< Only first CR component
+
+      iecr = -1
+
+      if (ncrn+ncre >= icr) then
+         iecr = iarr_crs(icr)
+      else
+         call die("[initproblem:init_prob] No CR components defined.")
+      endif
+
+      if (code_progress < PIERNIK_FINISHED .and. (mod(nstep, norm_step) /=0 .or. halfstep)) return
+
+      call compute_analytic_ecr1
+
+      norm(:) = 0.
+      dev(1) = huge(1.0)
+      dev(2) = -dev(1)
+      do k = ks, ke
+         do j = js, je
+            do i = is, ie
+               crt = aecr1(i-is+1, j-js+1, k-ks+1)
                norm(1) = norm(1) + (crt - u(iecr, i, j, k))**2
                norm(2) = norm(2) + crt**2
                dev(1) = min(dev(1), (crt - u(iecr, i, j, k)))
                dev(2) = max(dev(2), (crt - u(iecr, i, j, k)))
-
             enddo
          enddo
       enddo
@@ -284,8 +335,34 @@ module initproblem
          call printinfo(msg)
       endif
 
-      nn = nn + 1
-
    end subroutine check_norm
+
+!-----------------------------------------------------------------------------
+
+   subroutine crtest_analytic_ecr1(var, tab, ierrh)
+
+      use arrays,         only: u
+      use grid,           only: is, ie, js, je, ks, ke
+      use initcosmicrays, only: iarr_crs
+
+      implicit none
+
+      character(len=*), intent(in)                    :: var
+      real(kind=4), dimension(:,:,:), intent(inout)   :: tab
+      integer, intent(inout)                          :: ierrh
+
+      call compute_analytic_ecr1
+
+      ierrh = 0
+      select case (trim(var))
+         case ("acr1")
+            tab(:,:,:) = aecr1(:,:,:)
+         case ("err1")
+            tab(:,:,:) = aecr1(:,:,:) - u(iarr_crs(1), is:ie, js:je, ks:ke)
+         case default
+            ierrh = -1
+      end select
+
+   end subroutine crtest_analytic_ecr1
 
 end module initproblem

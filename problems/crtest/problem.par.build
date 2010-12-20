@@ -40,6 +40,8 @@
     vars(7) = 'magy'
     vars(8) = 'magz'
     vars(9) = 'encr'
+    vars(10) = 'acr1'
+    vars(11) = 'err1'
     domain  = 'phys_domain'
  /
 
