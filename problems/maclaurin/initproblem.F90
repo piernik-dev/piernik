@@ -192,7 +192,7 @@ contains
 
 !-----------------------------------------------------------------------------
 !
-! This routine is no longer required for postprocessing. Since r3522 the analytical potential is available in the .h5 output
+! This routine provides parameters useful for python/maclaurin.py
 !
 
    subroutine init_prob_attrs(file_id)
@@ -212,7 +212,6 @@ contains
       call h5ltset_attribute_double_f(file_id, "/", "rho0", [d0],   bufsize,error)
       call h5ltset_attribute_double_f(file_id, "/", "fpiG", [fpiG], bufsize,error)
       call h5ltset_attribute_double_f(file_id, "/", "a1",   [a1],   bufsize,error)
-      call h5ltset_attribute_double_f(file_id, "/", "e",    [e],    bufsize,error)
       call h5ltset_attribute_double_f(file_id, "/", "x0",   [x0],   bufsize,error)
       call h5ltset_attribute_double_f(file_id, "/", "y0",   [y0],   bufsize,error)
       call h5ltset_attribute_double_f(file_id, "/", "z0",   [z0],   bufsize,error)

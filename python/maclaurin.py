@@ -1,15 +1,37 @@
 #!/usr/bin/python
 
+import os
+
 def Maclaurin_test(file):
 
-   import tables as h5
-   import numpy as np
-   import matplotlib
+   missing = []
+   try: import tables as h5
+   except ImportError: missing.append("PyTables")
+   try: import numpy as np
+   except ImportError: missing.append("NumPy")
+   try: import matplotlib
+   except ImportError: missing.append("matplotlib")
+
+   if (len(missing) > 0):
+      print "You must install the package(s) ",missing
+      return
+
    matplotlib.use('cairo')      # choose output format
    import pylab as P
    from matplotlib.ticker import NullFormatter
+   # This may sometimes help with font issues
+   # from matplotlib import rc
+   # rc('text',usetex=True)
 
-   h5f = h5.openFile(file,"r")
+   if (not os.path.isfile(file)):
+      print "Cannot find ",file
+      return
+   
+   try:
+      h5f = h5.openFile(file,"r")
+   except:
+      print "Cannot open '"+file+"' as HDF5"
+      return
 
    xmin = h5f.root._v_attrs.xmin[0]
    xmax = h5f.root._v_attrs.xmax[0]
@@ -23,8 +45,12 @@ def Maclaurin_test(file):
    y0   = h5f.root._v_attrs.y0[0]
    z0   = h5f.root._v_attrs.z0[0]
 
-   soln    = h5f.root.gpot[:,:,:]
-   phi0_3D = h5f.root.apot[:,:,:]
+   try:
+      soln    = h5f.root.gpot[:,:,:]
+      phi0_3D = h5f.root.apot[:,:,:]
+   except:
+      print "Cannot find apot or gpot arrays"
+      return
    h5f.close()
 
    nz,ny,nx = soln.shape
@@ -101,4 +127,9 @@ def Maclaurin_test(file):
 
 if __name__ == "__main__":
    import sys
-   Maclaurin_test(sys.argv[1])
+   if (len(sys.argv) <= 1):
+      print "Usage : ",sys.argv[0]," maclaurin_test_hdf_file"
+   else:
+      Maclaurin_test(sys.argv[1])
+      if (len(sys.argv) > 2):
+         print "Ignored arguments: ",sys.argv[2:len(sys.argv)]
