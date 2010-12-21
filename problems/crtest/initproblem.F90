@@ -238,7 +238,7 @@ module initproblem
       if (ncrn+ncre >= icr) then
          iecr = iarr_crs(icr)
       else
-         call die("[initproblem:init_prob] No CR components defined.")
+         call die("[initproblem:compute_analytic_ecr1] No CR components defined.")
       endif
 
       magb = sqrt(bx0**2 + by0**2 + bz0**2)
@@ -255,7 +255,7 @@ module initproblem
       r0_par2  = r0**2 + 4 * (K_crn_paral(icr) + K_crn_perp(icr)) * t
       r0_perp2 = r0**2 + 4 * K_crn_perp(icr) * t
 
-      if (r0_par2 == 0. .or. r0_perp2 == 0.) call die("[initproblem:check_norm] r0_par2 == 0. .or. r0_perp2 == 0.")
+      if (r0_par2 == 0. .or. r0_perp2 == 0.) call die("[initproblem:compute_analytic_ecr1] r0_par2 == 0. .or. r0_perp2 == 0.")
 
       ampt     = amp_cr * r0**2 / sqrt(r0_par2 * r0_perp2)
 
@@ -300,7 +300,7 @@ module initproblem
       if (ncrn+ncre >= icr) then
          iecr = iarr_crs(icr)
       else
-         call die("[initproblem:init_prob] No CR components defined.")
+         call die("[initproblem:check_norm] No CR components defined.")
       endif
 
       if (code_progress < PIERNIK_FINISHED .and. (mod(nstep, norm_step) /=0 .or. halfstep)) return

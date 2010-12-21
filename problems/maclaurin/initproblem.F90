@@ -346,7 +346,7 @@ contains
       call MPI_Allreduce(MPI_IN_PLACE, dev(2), 1, MPI_DOUBLE_PRECISION, MPI_MAX, comm3d, ierr)
 
       if (master) then
-         write(msg,'(a,f12.6,a,2f12.6)')"[initproblem:finalize_problem] L2 error norm = ", sqrt(norm(1)/norm(2)), ", min and max error = ", dev(1:2)
+         write(msg,'(a,f12.6,a,2f12.6)')"[initproblem:finalize_problem_maclaurin] L2 error norm = ", sqrt(norm(1)/norm(2)), ", min and max error = ", dev(1:2)
          call printinfo(msg)
       endif
 
