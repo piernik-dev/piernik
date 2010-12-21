@@ -126,7 +126,7 @@ contains
       implicit none
 
       if (dt_log > 0.0) then
-         if (next_t_log < t) then
+         if (next_t_log <= t) then
             call write_log
             next_t_log = next_t_log + dt_log
          endif
@@ -141,8 +141,8 @@ contains
 
       implicit none
 
-      if (dt_tsl .gt. 0.0) then
-         if (next_t_tsl < t) then
+      if (dt_tsl > 0.0) then
+         if (next_t_tsl <= t) then
             call write_timeslice
             next_t_tsl = next_t_tsl + dt_tsl
          endif
@@ -206,6 +206,7 @@ contains
 !<
    subroutine init_dataio
 
+      use constants,       only: small
       use dataio_hdf5,     only: init_hdf5, read_restart_hdf5, parfile, parfilelines
       use dataio_pub,      only: chdf, nres, last_hdf_time, step_hdf, next_t_log, next_t_tsl, log_file_initialized, log_file, cwdlen, maxparfilelines, cwd, &
            &                     tmp_log_file, msglen, printinfo, warn, msg, nhdf, nstep_start, set_container_chdf, get_container
@@ -257,8 +258,8 @@ contains
 
       nhdf  = 0
       nres  = 0
-      next_t_tsl  = 0.
-      next_t_log  = 0.
+      next_t_tsl  = -1.*small
+      next_t_log  = -1.*small
 
       step_hdf  = -1
       step_res  = -1
