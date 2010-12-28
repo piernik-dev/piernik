@@ -32,7 +32,7 @@
 program piernik
 ! pulled by ANY
    use dataio,        only: write_data, user_msg_handler, check_log, check_tsl
-   use dataio_pub,    only: nend, tend, msg, fplen, printinfo, warn, die, cwdlen, &
+   use dataio_pub,    only: nend, tend, msg, fplen, printinfo, warn, die, cwdlen, stdout, &
        &                    code_progress, PIERNIK_START, PIERNIK_INITIALIZED, PIERNIK_FINISHED, PIERNIK_CLEANUP
    use fluidupdate,   only: fluid_update
    use mpisetup,      only: comm, comm3d, ierr, master, t, nstep, dt, dtm
@@ -160,7 +160,7 @@ program piernik
 
    code_progress = PIERNIK_CLEANUP
 
-   if (master) write(*, '(a)', advance='no') "Finishing "       ! QA_WARN we allow non-advancing stdout on special occasions
+   if (master) write(stdout, '(a)', advance='no') "Finishing "
    call cleanup_piernik
 
 contains
