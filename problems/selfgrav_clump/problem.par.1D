@@ -1,4 +1,4 @@
- $DOMAIN_SIZES
+  $DOMAIN_SIZES
     nxd = 64
     nyd = 1
     nzd = 1
@@ -109,6 +109,7 @@
  /
 
  $MULTIGRID_GRAVITY
+    ord_time_extrap = 2
     nsmool    = 4
 !    grav_bnd_str  = "isolated"
     grav_bnd_str = "periodic"

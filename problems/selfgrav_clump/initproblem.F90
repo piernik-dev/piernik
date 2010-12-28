@@ -145,7 +145,7 @@ contains
       use dataio_pub,        only: msg, die, warn, printinfo
       use grid,              only: xmin, xmax, ymin, ymax, zmin, zmax, x, y, z, dx, dy, dz, is, ie, js, je, ks, ke
       use initionized,       only: gamma_ion, idni, imxi, imyi, imzi, ieni
-      use mpisetup,          only: master, smalld, smallei, comm, ierr
+      use mpisetup,          only: master, smalld, smallei, comm, ierr, t
       use mpi,               only: MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_MIN, MPI_MAX, MPI_SUM
       use multigrid_gravity, only: multigrid_solve_grav
 
@@ -153,7 +153,7 @@ contains
 
       real, parameter           :: virial_tol = 0.01
       integer, parameter        :: LOW=1, HIGH=LOW+1, TRY=3, NLIM=3
-      integer                   :: i, j, k, t, tmax, iC, iM, il, ih, jl, jh, kl, kh
+      integer                   :: i, j, k, tt,tmax, iC, iM, il, ih, jl, jh, kl, kh
       logical                   :: doneC, doneM
       real, dimension(LOW:HIGH) :: Cint, totME
       character(len=HIGH)       :: ind
@@ -163,7 +163,9 @@ contains
       real, dimension(NLIM)     :: Clast
       integer, parameter        :: cmt_len=9 ! length of the " Exp warp" string
       character(len=cmt_len)    :: Ccomment
+      real                      :: t_save
 
+      t_save = t
       Cint_old = HUGE(1.)
       b(:,    :, :, :) = 0.
       u(idni, :, :, :) = smalld
@@ -222,6 +224,8 @@ contains
 
       do while (.not. doneC)
 
+         t = iC * sqrt(tiny(1.0)) ! trick to allow solution extrapolation in multigrid_solve_grav
+
          call multigrid_solve_grav(u(idni,:,:,:))
          if (exp_speedup .and. Clim_old /= 0.) then ! extrapolate potential assuming exponential convergence (extremely risky)
             if (abs(1. - Clim/Clim_old) < min(sqrt(epsC), 100.*epsC, 0.01)) then
@@ -247,16 +251,16 @@ contains
          if (iC > 1) then ! try previous C
             tmax = HIGH
             i_try(1:tmax) = '12'
-            do t = 1, tmax ! replicated code
-               call totalMEnthalpic(Cint_try(t), totME_try(t), REL_CALC)
-               if (totME_try(t) > clump_mass .and. totME_try(t) < totME(HIGH)) then
-                  Cint(HIGH)     = Cint_try(t)
-                  totME(HIGH)    = totME_try(t)
-                  ind(HIGH:HIGH) = i_try(t:t)
-               else if (totME_try(t) < clump_mass .and. totME_try(t) > totME(LOW)) then
-                  Cint(LOW)    = Cint_try(t)
-                  totME(LOW)   = totME_try(t)
-                  ind(LOW:LOW) = i_try(t:t)
+            do tt = 1, tmax ! replicated code
+               call totalMEnthalpic(Cint_try(tt), totME_try(tt), REL_CALC)
+               if (totME_try(tt) > clump_mass .and. totME_try(tt) < totME(HIGH)) then
+                  Cint(HIGH)     = Cint_try(tt)
+                  totME(HIGH)    = totME_try(tt)
+                  ind(HIGH:HIGH) = i_try(tt:tt)
+               else if (totME_try(tt) < clump_mass .and. totME_try(tt) > totME(LOW)) then
+                  Cint(LOW)    = Cint_try(tt)
+                  totME(LOW)   = totME_try(tt)
+                  ind(LOW:LOW) = i_try(tt:tt)
                endif
             enddo
             if (Cint(LOW) > Cint(HIGH)) then
@@ -285,16 +289,16 @@ contains
                Cint_try(HIGH) = (Cint(LOW) + Cint(HIGH))/2.                                                                ! bisection
                Cint_try(TRY)  = 2*Cint_try(1) - Cint(LOW)                                                                  ! 2*overshoot secant
                i_try = 'sbS'
-               do t = 1, tmax
-                  call totalMEnthalpic(Cint_try(t), totME_try(t), REL_CALC)
-                  if (totME_try(t) >= clump_mass .and. totME_try(t) < totME(HIGH)) then
-                     Cint(HIGH)     = Cint_try(t)
-                     totME(HIGH)    = totME_try(t)
-                     ind(HIGH:HIGH) = i_try(t:t)
-                  else if (totME_try(t) <= clump_mass .and. totME_try(t) > totME(LOW)) then
-                     Cint(LOW)    = Cint_try(t)
-                     totME(LOW)   = totME_try(t)
-                     ind(LOW:LOW) = i_try(t:t)
+               do tt = 1, tmax
+                  call totalMEnthalpic(Cint_try(tt), totME_try(tt), REL_CALC)
+                  if (totME_try(tt) >= clump_mass .and. totME_try(tt) < totME(HIGH)) then
+                     Cint(HIGH)     = Cint_try(tt)
+                     totME(HIGH)    = totME_try(tt)
+                     ind(HIGH:HIGH) = i_try(tt:tt)
+                  else if (totME_try(tt) <= clump_mass .and. totME_try(tt) > totME(LOW)) then
+                     Cint(LOW)    = Cint_try(tt)
+                     totME(LOW)   = totME_try(tt)
+                     ind(LOW:LOW) = i_try(tt:tt)
                   endif
                enddo
             else ! the interval does not contain target mass M
@@ -308,10 +312,10 @@ contains
                   Cint_try(LOW)  = 3*Cint(LOW) - 2*Cint(HIGH)
                   i_try(1:tmax)  = 'd-'
                endif
-               do t = LOW, HIGH
-                  Cint(t) = Cint_try(t)
-                  call totalMEnthalpic(Cint(t), totME(t), REL_CALC)
-                  ind(t:t) = i_try(t:t)
+               do tt = LOW, HIGH
+                  Cint(tt) = Cint_try(tt)
+                  call totalMEnthalpic(Cint(tt), totME(tt), REL_CALC)
+                  ind(tt:tt) = i_try(tt:tt)
                enddo
             endif
 
@@ -319,9 +323,9 @@ contains
                write(msg,'(2(a,i4),2(a,2es15.7),2a)')"[initproblem:init_prob] iter = ",iC,"/",iM," dM= ",totME-clump_mass, " C= ", Cint, " ind = ",ind
                call printinfo(msg, .true.)
             endif
-            t = LOW
-            if (abs(1. - totME(LOW)/clump_mass) > abs(1. - totME(HIGH)/clump_mass)) t = HIGH
-            if (abs(1. - totME(t)/clump_mass) < epsM) doneM = .true.
+            tt = LOW
+            if (abs(1. - totME(LOW)/clump_mass) > abs(1. - totME(HIGH)/clump_mass)) tt = HIGH
+            if (abs(1. - totME(tt)/clump_mass) < epsM) doneM = .true.
 
             iM = iM + 1
             if (iM > maxitM .and. .not. doneM) then
@@ -334,14 +338,14 @@ contains
             endif
 
          enddo
-         call totalMEnthalpic(Cint(t), totME(t), REL_SET)
+         call totalMEnthalpic(Cint(tt), totME(tt), REL_SET)
          call virialCheck(huge(1.0))
 
          Clast(1:NLIM-1) = Clast(2:NLIM)
-         Clast(NLIM) = Cint(t)
+         Clast(NLIM) = Cint(tt)
          if (any(Clast(:) == 0.)) then
             if (master) then
-               write(msg,'(a,i4,2(a,es15.7),a)')"[initproblem:init_prob] iter = ",iC,"     M=",totME(t), " C=", Cint(t), Ccomment
+               write(msg,'(a,i4,2(a,es15.7),a)')"[initproblem:init_prob] iter = ",iC,"     M=",totME(tt), " C=", Cint(tt), Ccomment
                call printinfo(msg, .true.)
             endif
          else
@@ -349,13 +353,13 @@ contains
             ! exponential estimate: \lim C \simeq \frac{C_{t} C_{t-2} - C_{t-1}^2}{C_{t} - 2 C_{t-1} + C{t-2}}
             Clim = (Clast(NLIM)*Clast(NLIM-2) - Clast(NLIM-1)**2)/(Clast(NLIM) - 2.*Clast(NLIM-1) + Clast(NLIM-2))
             if (master) then
-               write(msg, '(a,i4,4(a,es15.7))')"[initproblem:init_prob] iter = ",iC,"     M=",totME(t), " C=", Cint(t), " Clim=", Clim, " Clim-C=",Clim-Cint(t)
+               write(msg, '(a,i4,4(a,es15.7))')"[initproblem:init_prob] iter = ",iC,"     M=",totME(tt), " C=", Cint(tt), " Clim=", Clim, " Clim-C=",Clim-Cint(tt)
                call printinfo(msg, .true.)
             endif
          endif
 
-         if (abs(1. - Cint(t)/Cint_old) < epsC) doneC = .true.
-         Cint_old = Cint(t)
+         if (abs(1. - Cint(tt)/Cint_old) < epsC) doneC = .true.
+         Cint_old = Cint(tt)
          Cint_try(LOW:HIGH) = Cint ! try them as first guesses in next iteration
 
          iC = iC + 1
@@ -373,6 +377,7 @@ contains
       call virialCheck(virial_tol)
 
       ! final touch
+      t = t_save ! restore initial time
       call multigrid_solve_grav(u(idni,:,:,:))
       gpot = sgp
 
