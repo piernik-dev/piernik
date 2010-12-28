@@ -372,6 +372,7 @@ contains
    subroutine nextdot(advance)
 
       use mpisetup,      only: master
+      use dataio_pub,    only: stdout
 
       implicit none
 
@@ -379,9 +380,9 @@ contains
 
       if (master) then
          if (advance) then
-            write(*,'(a)')"."              ! QA_WARN we allow non-advancing stdout on special occasions
+            write(stdout,'(a)')"."
          else
-            write(*,'(a)',advance='no')"." ! QA_WARN we allow non-advancing stdout on special occasions
+            write(stdout,'(a)',advance='no')"."
          endif
       endif
 
