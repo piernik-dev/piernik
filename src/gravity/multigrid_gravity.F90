@@ -666,13 +666,15 @@ contains
          p2 = p0
       endif
 
+      ! selfgrav_clump/initproblem.F90 requires monotonic time sequence t > history%old(p0)%time > history%old(p1)%time > history%old(p2)%time
       ordt = ord_time_extrap
       if (history%valid) then
-         if ( history%old(p2)%time /= history%old(p1)%time .and. &       ! quadratic interpolation
-              history%old(p2)%time /= history%old(p0)%time .and. &
-              history%old(p1)%time /= history%old(p0)%time) then
+         if ( history%old(p2)%time < history%old(p1)%time .and. &        ! quadratic interpolation
+              history%old(p1)%time < history%old(p0)%time .and. &
+              history%old(p0)%time < t) then
             ordt = min(2, ord_time_extrap)
-         else if (history%old(p0)%time /= history%old(p1)%time) then     ! linear extrapolation
+         else if (history%old(p1)%time < history%old(p0)%time .and. &
+              &   history%old(p0)%time < t) then      ! linear extrapolation
             ordt = min(1, ord_time_extrap)
          else                                                            ! simple recycling
             ordt = min(0, ord_time_extrap)
