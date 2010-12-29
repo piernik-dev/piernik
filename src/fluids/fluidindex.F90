@@ -107,7 +107,7 @@ contains
       iarr_all_swpy(fl%beg:fl%end) = fl%iarr_swpy
       iarr_all_swpz(fl%beg:fl%end) = fl%iarr_swpz
 
-      if (fl%sg) then
+      if (fl%is_selfgrav) then
          i_sg = i_sg + 1
          iarr_all_sg(i_sg) = fl%idn
       endif

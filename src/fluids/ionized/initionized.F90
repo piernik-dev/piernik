@@ -158,6 +158,7 @@ contains
       nvar%ion%iarr_swpx(5) = ieni
       nvar%ion%iarr_swpy(5) = ieni
       nvar%ion%iarr_swpz(5) = ieni
+      nvar%ion%have_energy  = .true.
 
       nvar%adiab = nvar%adiab + 1
 #endif /* !ISO */
@@ -172,8 +173,8 @@ contains
       nvar%ion%gam_1 = gamma_ion-1.0
       nvar%ion%cs    = cs_iso_ion
       nvar%ion%cs2   = cs_iso_ion**2
-      nvar%ion%sg    = selfgrav_ion
       nvar%ion%tag   = "ION"
+      nvar%ion%is_selfgrav = selfgrav_ion
 
    end subroutine ionized_index
 

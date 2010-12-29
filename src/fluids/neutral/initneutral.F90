@@ -152,6 +152,7 @@ contains
       nvar%neu%iarr_swpx(5) = ienn
       nvar%neu%iarr_swpy(5) = ienn
       nvar%neu%iarr_swpz(5) = ienn
+      nvar%neu%have_energy  = .true.
 
       nvar%adiab = nvar%adiab + 1
 #endif /* ISO */
@@ -166,8 +167,8 @@ contains
       nvar%neu%gam_1 = gamma_neu-1.0
       nvar%neu%cs    = cs_iso_neu
       nvar%neu%cs2   = cs_iso_neu**2
-      nvar%neu%sg    = selfgrav_neu
       nvar%neu%tag   = "NEU"
+      nvar%neu%is_selfgrav = selfgrav_neu
 
    end subroutine neutral_index
 
