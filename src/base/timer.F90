@@ -81,7 +81,7 @@ contains
          temp%reset = .false.
       endif
       call search_timer(temp)
-      timer_ = temp%time
+      set_timer = temp%time
 
    end function set_timer
 
