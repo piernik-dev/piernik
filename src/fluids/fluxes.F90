@@ -75,7 +75,7 @@ module fluxes
       end subroutine flux_interface
    end interface
 
-   type flux_func
+   type :: flux_func
       procedure(flux_interface), pointer, nopass :: flux_func
    end type flux_func
 

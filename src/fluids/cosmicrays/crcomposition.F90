@@ -37,7 +37,7 @@ module crcomposition
 
 ! this type looks useful but is unused.
 !!$   integer, parameter :: isoname_len = 8
-!!$   type cr_component
+!!$   type :: cr_component
 !!$      character(len=isoname_len) :: isotope     !< isotope name, eg. Be10
 !!$      integer          :: index=      !< relative index (with respect to crn_beg)
 !!$      real             :: abund=      !< initial abundance relative to H

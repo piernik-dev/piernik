@@ -39,7 +39,7 @@ program piernik
    use timer,         only: time_left
    use types,         only: finalize_problem
    use timestep,      only: time_step
-   use timer,         only: timer_
+   use timer,         only: set_timer
 #ifdef PERFMON
    use timer,         only: timer_start, timer_stop
 #endif /* PERFMON */
@@ -96,15 +96,15 @@ program piernik
       call check_tsl
 
       if (first_step) then
-         ts=timer_("fluid_update",.true.)
+         ts=set_timer("fluid_update",.true.)
          ts = 0.0
       else
-         ts=timer_("fluid_update")
+         ts=set_timer("fluid_update")
       endif
       tlast = t
       call fluid_update
       if (t == tlast .and. .not. first_step) call die("[piernik] timestep is too small: t == t + 2 * dt")
-      ts=timer_("fluid_update")
+      ts=set_timer("fluid_update")
 
       nstep=nstep+1
 

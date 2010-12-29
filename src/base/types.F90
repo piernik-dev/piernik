@@ -30,6 +30,7 @@
 !! \brief (KK)
 !<
 module types
+   implicit none
    private
    public :: hdf, value, grid_container, tsl_container, phys_prop, &
    & problem_customize_solution, finalize_problem, domlen, idlen, &
@@ -92,7 +93,7 @@ module types
       !>
       !! number of all variables in fluid/component
       !<
-      integer :: all = 0              ! QA_WARN implicit save does not work in types
+      integer :: all = 0
       !>
       !! beginning number of variables in fluid/component
       !<

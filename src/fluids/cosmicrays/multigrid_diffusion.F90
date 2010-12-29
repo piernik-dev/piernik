@@ -267,7 +267,7 @@ contains
 
       use dataio_pub,         only: halfstep, warn, printinfo, msg
       use crdiffusion,        only: cr_diff_x, cr_diff_y, cr_diff_z
-      use timer,              only: timer_
+      use timer,              only: set_timer
       use multigridvars,      only: ts, tot_ts, stdout
       use fluidindex,         only: nvar
       use mpisetup,           only: dt, master
@@ -277,7 +277,7 @@ contains
       logical, save :: frun = .true.
       integer       :: cr_id         ! maybe we should make this variable global in the module and do not pass it as an argument?
 
-      ts =  timer_("multigrid_diffusion", .true.)
+      ts =  set_timer("multigrid_diffusion", .true.)
 
       if (diff_explicit .or. (allow_explicit .and. dt/diff_dt_crs_orig<1)) then
 
@@ -328,7 +328,7 @@ contains
          enddo
 
       endif
-      ts = timer_("multigrid_diffusion")
+      ts = set_timer("multigrid_diffusion")
       tot_ts = tot_ts + ts
 
    end subroutine multigrid_solve_diff
@@ -447,7 +447,7 @@ contains
       use grid,               only: is, ie, js, je, ks, ke!, D_x, D_y, D_z
       use dataio_pub,         only: msg, warn
       use mpisetup,           only: master
-      use timer,              only: timer_
+      use timer,              only: set_timer
 
       implicit none
 
@@ -474,7 +474,7 @@ contains
 
          call residual(level_max, source, solution, defect, cr_id)
          call norm_sq(defect, norm_lhs)
-         ts = timer_("multigrid_diffusion")
+         ts = set_timer("multigrid_diffusion")
          tot_ts = tot_ts + ts
 
          vstat%count = v

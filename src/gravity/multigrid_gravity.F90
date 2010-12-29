@@ -94,11 +94,11 @@ module multigrid_gravity
    ! solution recycling
    integer, parameter :: nold_max=3                                   !< maximum implemented extrapolation order
    integer :: nold                                                    !< number of old solutions kept for solution recycling
-   type old_soln                                                      !< container for an old solution with its timestamp
+   type :: old_soln                                                   !< container for an old solution with its timestamp
       real, dimension(:,:,:), allocatable :: soln
       real :: time
    end type old_soln
-   type soln_history                                                  !< container for a set of several old potential solutions
+   type :: soln_history                                               !< container for a set of several old potential solutions
       type(old_soln), dimension(nold_max) :: old
       integer :: last                                                 !< index of the last stored potential
       logical :: valid                                                !< .true. when old(last) was properly initialized
@@ -833,7 +833,7 @@ contains
 
    subroutine multigrid_solve_grav(dens)
 
-      use timer,         only: timer_
+      use timer,         only: set_timer
       use arrays,        only: sgp
       use grid,          only: is, ie, js, je, ks, ke, has_dir, xdim, ydim, zdim
       use dataio_pub,    only: die
@@ -847,7 +847,7 @@ contains
       logical :: isolated
       integer :: isb, ieb, jsb, jeb, ksb, keb
 
-      ts =  timer_("multigrid", .true.)
+      ts =  set_timer("multigrid", .true.)
       if ( (has_dir(xdim) .and. is-mg_nb <= 0) .or. &
            (has_dir(ydim) .and. js-mg_nb <= 0) .or. &
            (has_dir(zdim) .and. ks-mg_nb <= 0) )    &
@@ -912,7 +912,7 @@ contains
 
       endif
 
-      ts = timer_("multigrid")
+      ts = set_timer("multigrid")
       tot_ts = tot_ts + ts
 
    end subroutine multigrid_solve_grav
@@ -926,7 +926,7 @@ contains
    subroutine vcycle_hg(history)
 
       use mpisetup,           only: master, nproc, cbuff_len
-      use timer,              only: timer_
+      use timer,              only: set_timer
       use multigridhelpers,   only: set_dirty, check_dirty, mg_write_log, brief_v_log, do_ascii_dump, numbered_ascii_dump
       use multigridbasefuncs, only: norm_sq, restrict_all, substract_average
       use dataio_pub,         only: msg, die, warn
@@ -991,7 +991,7 @@ contains
          call check_dirty(level_max, defect, "residual")
 
          call norm_sq(defect, norm_lhs)
-         ts = timer_("multigrid")
+         ts = set_timer("multigrid")
          tot_ts = tot_ts + ts
          if (master .and. verbose_vcycle) then
             if (norm_old/norm_lhs < 1.e5) then

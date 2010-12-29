@@ -34,7 +34,7 @@ module timer
    implicit none
    integer, parameter, private :: S_LEN = 30
    private
-   public :: cleanup_timers, time_left, timer_, timer_start, timer_stop
+   public :: cleanup_timers, time_left, set_timer, timer_start, timer_stop
 
    type, private :: timer_info
       character(len=S_LEN) :: key
@@ -64,12 +64,12 @@ contains
    !>
    !! \brief Wrapper for timer handling.
    !! Only this routine should be used outside timer module.
-   !! USAGE: call timer(name,reset)
+   !! USAGE: call set_timer(name,reset)
    !!    1) if first called with "name", create timer "name" and set it with current cpu_time(), no output
    !!    2) if timer "name" exists, print "name" - current time, set "name" with current cpu_time()
    !!    (optional) if reset is true suppress output, set "name" with current cpu_time
    !<
-   real function timer_(str,reset)
+   real function set_timer(str,reset)
       implicit none
       character(len=*), intent(in) :: str    !< name of the timer
       logical, intent(in), optional :: reset !< if true all output is suppressed, use for resetting timers
@@ -83,7 +83,7 @@ contains
       call search_timer(temp)
       timer_ = temp%time
 
-   end function timer_
+   end function set_timer
 
    function delete_timer(tp) result (item)
       implicit none
