@@ -169,7 +169,7 @@ def qa_checks(files,options):
          part = np.array(pfile[obj['beg']:obj['end']])
          if(obj['type'] == 'mod'):
             # module body is always last, remove lines that've been already checked
-            part = np.delete(part,clean_ind)
+            part = np.delete(part,np.array(clean_ind)-obj['beg'])
             qa_have_priv_pub(part,obj['name'],warns,f)
          else:
             clean_ind += range(obj['beg'],obj['end']+1)
