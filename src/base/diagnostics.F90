@@ -163,7 +163,7 @@ contains
          allocate(temp(old_size))
          temp = vec
          deallocate(vec)
-         allocate(vec(old_size+addlen))
+         allocate(vec(old_size+addlen)) ! BEWARE: not deallocated
          vec = ''
          vec(:old_size) = temp
          deallocate(temp)
@@ -185,7 +185,7 @@ contains
          allocate(temp(old_size))
          temp = vec
          deallocate(vec)
-         allocate(vec(old_size+addlen))
+         allocate(vec(old_size+addlen)) ! BEWARE: not deallocated
          vec = 0.0
          vec(:old_size) = temp
          deallocate(temp)
