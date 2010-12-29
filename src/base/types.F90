@@ -87,77 +87,31 @@ module types
       real, dimension(:), pointer  :: z, zl, zr
    end type grid_container
 
-   ! ToDo: Fix qa2.py script rather than adding QA_WARN for type components
-
    type :: component
-      !>
-      !! number of all variables in fluid/component
-      !<
-      integer :: all = 0
-      !>
-      !! beginning number of variables in fluid/component
-      !<
-      integer :: beg = 0              ! QA_WARN implicit save does not work in types
-      !>
-      !! end number of variables in fluid/component
-      !<
-      integer :: end = 0              ! QA_WARN implicit save does not work in types
-      !>
-      !! index denoting position of the fluid in the row of fluids
-      !<
-      integer :: pos = 0              ! QA_WARN implicit save does not work in types
+      integer :: all = 0   !< number of all variables in fluid/component
+      integer :: beg = 0   !< beginning number of variables in fluid/component
+      integer :: end = 0   !< end number of variables in fluid/component
+      integer :: pos = 0   !< index denoting position of the fluid in the row of fluids
    end type component
 
    type, extends(component) :: component_fluid
-      !>
-      !! index denoting position of the fluid density in array arrays::u
-      !<
-      integer :: idn = -1              ! QA_WARN implicit save does not work in types
-      !>
-      !! index denoting position of the fluid x-momentum in array arrays::u
-      !<
-      integer :: imx = -1              ! QA_WARN implicit save does not work in types
-      !>
-      !! index denoting position of the fluid y-momentum in array arrays::u
-      !<
-      integer :: imy = -1              ! QA_WARN implicit save does not work in types
-      !>
-      !! index denoting position of the fluid z-momentum in array arrays::u
-      !<
-      integer :: imz = -1              ! QA_WARN implicit save does not work in types
-      !>
-      !! index denoting position of the fluid energy in array arrays::u
-      !<
-      integer :: ien = -1              ! QA_WARN implicit save does not work in types
 
-      !>
-      !! fluid's isothermal sound speed
-      !<
-      real    :: cs    = 0.0           ! QA_WARN implicit save does not work in types
-      !>
-      !! fluid's isothermal sound speed squared
-      !<
-      real    :: cs2   = 0.0           ! QA_WARN implicit save does not work in types
-      !>
-      !! fluid's adiabatic index
-      !<
-      real    :: gam   = -1.0          ! QA_WARN implicit save does not work in types
-      !>
-      !! fluid's adiabatic index minus one
-      !<
-      real    :: gam_1 = -1.0          ! QA_WARN implicit save does not work in types
-      !>
-      !! True if fluid is selfgravitating
-      !<
-      logical :: sg  = .false.         ! QA_WARN implicit save does not work in types
-      !>
-      !! True if fluid is magnetized
-      !<
-      logical :: mg  = .false.         ! QA_WARN implicit save does not work in types
-      !>
-      !! Human readable tag describing fluid
-      !<
-      character(len=idlen) :: tag = '' ! QA_WARN implicit save does not work in types
+      integer :: idn = -1      !< index denoting position of the fluid density in array arrays::u
+      integer :: imx = -1      !< index denoting position of the fluid x-momentum in array arrays::u
+      integer :: imy = -1      !< index denoting position of the fluid y-momentum in array arrays::u
+      integer :: imz = -1      !< index denoting position of the fluid z-momentum in array arrays::u
+      integer :: ien = -1      !< index denoting position of the fluid energy in array arrays::u
+
+
+      real    :: cs    = 0.0   !< fluid's isothermal sound speed
+      real    :: cs2   = 0.0   !< fluid's isothermal sound speed squared
+      real    :: gam   = -1.0  !< fluid's adiabatic index
+      real    :: gam_1 = -1.0  !< fluid's adiabatic index minus one
+
+      logical :: sg  = .false. !< True if fluid is selfgravitating
+      logical :: mg  = .false. !< True if fluid is magnetized
+
+      character(len=idlen) :: tag = '' !< Human readable tag describing fluid
 
       integer, allocatable, dimension(:)  :: iarr
       integer, allocatable, dimension(:)  :: iarr_swpx
@@ -168,26 +122,12 @@ module types
    end type component_fluid
 
    type :: var_numbers
-      !>
-      !! total number of fluid variables = the size of array \a u(:,:,;,:) in the first index
-      !<
-      integer :: all         = 0     ! QA_WARN implicit save does not work in types
-      !>
-      !! number of fluids (ionized gas, neutral gas, dust)
-      !<
-      integer :: fluids      = 0     ! QA_WARN implicit save does not work in types
-      !>
-      !! number of adiabatic fluids (indicating the presence of energy density in the vector of conservative variables)
-      !<
-      integer :: adiab       = 0     ! QA_WARN implicit save does not work in types
-      !>
-      !! number of components, such as CRs, tracers, magnetic helicity (in future), whose formal description does not involve [???]
-      !<
-      integer :: components  = 0     ! QA_WARN implicit save does not work in types
-      !>
-      !! number of selfgravitating fluids (ionized gas, neutral gas, dust)
-      !<
-      integer :: fluids_sg   = 0     ! QA_WARN implicit save does not work in types
+
+      integer :: all         = 0      !< total number of fluid variables = the size of array \a u(:,:,;,:) in the first index
+      integer :: fluids      = 0      !< number of fluids (ionized gas, neutral gas, dust)
+      integer :: adiab       = 0      !< number of adiabatic fluids (indicating the presence of energy density in the vector of conservative variables)
+      integer :: components  = 0      !< number of components, such as CRs, tracers, magnetic helicity (in future), whose formal description does not involve [???]
+      integer :: fluids_sg   = 0      !< number of selfgravitating fluids (ionized gas, neutral gas, dust)
 
       type(component_fluid), dimension(:), pointer :: all_fluids
 
