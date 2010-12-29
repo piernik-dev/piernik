@@ -4,13 +4,16 @@ import re, sys
 import subprocess as sp
 import numpy as np
 
+debug = False
+
 typ1 = np.dtype([('name','a50'),('beg','i'),('end','i'),('type','a4')])
 
 test_for_routines  = re.compile('''
-      ^\s{0,12}(|end|real|logical|integer)\s    # starts with spaces or spaces and 'end'
-      (subroutine|function)       # next goes subroutine or function
+      ^\s{0,12}(|end|pure|elemental)\s           # starts with spaces or spaces and one of { 'end', 'pure', ... }
+      (|real|logical|integer)(|\s)               # if function it can have a type
+      (subroutine|function|type(,|\s))           # next goes subroutine or function or type
    ''',re.VERBOSE)
-test_for_routines  = re.compile('''^(?!\s{0,9}!).*(subroutine|function)''',re.VERBOSE)
+#test_for_routines  = re.compile('''^(?!\s{0,9}!).*(subroutine|function|type(,|\s::))''',re.VERBOSE)
 module_body        = re.compile('''^\s{0,3}(module|contains|program)''', re.VERBOSE)
 
 have_implicit      = re.compile('''implicit\snone''', re.IGNORECASE)
@@ -99,9 +102,28 @@ def give_err(s):
    return b.FAIL + s + b.ENDC
 
 def parse_f90file(lines,fname,store):
+   if (debug): print fname
    subs_array = np.zeros((0,), dtype=typ1)
 
    test = np.array(lines)
+
+   subs = filter(test_for_routines.search, test)
+   subs_names = []
+   subs_types = []
+   for f in subs:
+      if (re.match("\s{0,9}end",f)):
+         word = f.strip().split(' ')
+         subs_types.insert(0,word[1])
+         subs_names.append(word[2])
+   for f in subs_names:
+       cur_sub = filter(re.compile(f).search, subs)
+       obj= (f, line_num(test,cur_sub[0]), line_num(test,cur_sub[1]), subs_types.pop())
+       subs_array = np.append(subs_array, np.array([obj],dtype=typ1))
+   
+   if (debug):
+      print subs
+      print subs_names
+
    mod = filter(module_body.match, test)
    if (len(mod) > 1):
       obj = (mod[0].strip().split(" ")[1],  line_num(test, mod[0]), line_num(test,mod[1]), mod[0].strip().split(" ")[0][0:3])
@@ -111,14 +133,6 @@ def parse_f90file(lines,fname,store):
       subs_array = np.append(subs_array, np.array([obj],dtype=typ1))
    else:
       store.append(give_warn("QA:  ") +"[%s] => module body not found!" % fname)
-
-   # fails for e.g "real function"
-   subs = filter(test_for_routines.search, test)
-   subs_names = [f.strip().split(' ')[2] for f in subs if (re.match("\s{0,9}end",f))]
-   for f in subs_names:
-       cur_sub = filter(re.compile(f).search, subs)
-       obj= (f, line_num(test,cur_sub[0]), line_num(test,cur_sub[1]), 'rout')
-       subs_array = np.append(subs_array, np.array([obj],dtype=typ1))
    return subs_array
 
 def qa_checks(files,options):
@@ -149,14 +163,22 @@ def qa_checks(files,options):
       qa_crude_write(np.array(pfile),'',warns,f)
       qa_magic_integers(np.array(pfile),'',warns,f)
       # checks that require parsing f90 files
+      clean_ind = [] 
       for obj in parse_f90file(pfile,f,warns):
+         if (debug): print obj
          part = np.array(pfile[obj['beg']:obj['end']])
          if(obj['type'] == 'mod'):
+            # module body is always last, remove lines that've been already checked
+            part = np.delete(part,clean_ind)
             qa_have_priv_pub(part,obj['name'],warns,f)
+         else:
+            clean_ind += range(obj['beg'],obj['end']+1)
+
          qa_false_refs(part,obj['name'],warns,f)
-         qa_have_implicit(part,obj['name'],errors,f)
          qa_depreciated_syntax(part,obj['name'],warns,f)
-         qa_implicit_saves(part,obj['name'],errors,f)
+         if(obj['type'] != 'type'):
+            qa_have_implicit(part,obj['name'],errors,f)
+            qa_implicit_saves(part,obj['name'],errors,f)
 
    for warning in warns:
       print warning
