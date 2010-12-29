@@ -158,7 +158,7 @@ contains
       nvar%ion%iarr_swpx(5) = ieni
       nvar%ion%iarr_swpy(5) = ieni
       nvar%ion%iarr_swpz(5) = ieni
-      nvar%ion%have_energy  = .true.
+      nvar%ion%has_energy   = .true.
 
       nvar%adiab = nvar%adiab + 1
 #endif /* !ISO */
