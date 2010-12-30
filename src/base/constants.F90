@@ -73,8 +73,8 @@ module constants
    real, parameter :: twot       = 2./3.                 !< two thirds
    real, parameter :: oneq       = 1./4.                 !< one fourth
    real, parameter :: thrq       = 3./4.                 !< three fourths
-   real, parameter :: small      = 1.e-29                !< a constant used as the lower limit number
-   real, parameter :: big        = 1.e+29                !< a constant used as the upper limit number
+   real, parameter :: big        = huge(real(1.0,4))     !< a constant used as the upper limit number
+   real, parameter :: small      = 1./big                !< a constant used as the lower limit number
 
    real, parameter :: pi         = 3.141592653589793238  !< Pi (Archimedes' constant)
    real, parameter :: dpi        = 2.*pi                 !< doubled Pi
