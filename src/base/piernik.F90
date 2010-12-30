@@ -178,7 +178,7 @@ contains
       use fluidboundaries_pub,   only: init_fluidboundaries
       use fluidindex,            only: nvar
       use grid,                  only: nx, ny, nz, init_grid
-      use initfluids,            only: init_fluids
+      use initfluids,            only: init_fluids, sanitize_smallx_checks
       use gridgeometry,          only: init_geometry
       use initproblem,           only: init_prob, read_problem_par
       use mpiboundaries,         only: mpi_boundaries_prep
@@ -322,6 +322,7 @@ contains
 #ifdef VERBOSE
       call diagnose_arrays
 #endif /* VERBOSE */
+      call sanitize_smallx_checks
 
    end subroutine init_piernik
 

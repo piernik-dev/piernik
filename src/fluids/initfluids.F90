@@ -108,7 +108,7 @@ module initfluids
 ! pulled by ANY
   implicit none
   private
-  public :: init_fluids, cleanup_fluids
+  public :: init_fluids, cleanup_fluids, sanitize_smallx_checks
 
   contains
 
@@ -190,5 +190,69 @@ module initfluids
 #endif /* COSM_RAYS */
 
    end subroutine cleanup_fluids
+
+   subroutine sanitize_smallx_checks
+      use mpisetup,   only: smalld, smallp, big_float
+      use func,       only: emag, ekin
+      use dataio_pub, only: warn, msg
+      use types,      only: component_fluid
+      use arrays,     only: u, b
+      use fluidindex, only: nvar, ibx, iby, ibz
+
+      implicit none
+
+      type(component_fluid), pointer  :: fl
+      integer                         :: i
+      real, pointer, dimension(:,:,:) :: dn, mx, my, mz, en, bx, by, bz
+      real, parameter                 :: safety_factor = 1.e-4
+
+      bx => b(ibx,:,:,:)
+      by => b(iby,:,:,:)
+      bz => b(ibz,:,:,:)
+
+      if (smalld >= big_float) then
+         do i = lbound(nvar%all_fluids,1), ubound(nvar%all_fluids,1)
+            fl => nvar%all_fluids(i)
+            dn => u(fl%idn,:,:,:)
+            smalld = min(minval(dn), smalld)
+         enddo
+         smalld = smalld * safety_factor
+         write(msg,'(A,ES10.4)') "[sanitize_smallx_checks] adjusted smalld to ", smalld
+         call warn(msg)
+      endif
+
+      if (smallp >= big_float) then
+         do i = lbound(nvar%all_fluids,1), ubound(nvar%all_fluids,1)
+            fl => nvar%all_fluids(i)
+            if (fl%tag=='DST') cycle
+            dn => u(fl%idn,:,:,:)
+            mx => u(fl%imx,:,:,:)
+            my => u(fl%imy,:,:,:)
+            mz => u(fl%imz,:,:,:)
+            if (fl%has_energy) en => u(fl%ien,:,:,:)
+            if (fl%is_magnetized.and.fl%has_energy) then
+               smallp = min( minval( en - ekin(mx,my,mz,dn) - emag(bx,by,bz))/fl%gam_1, smallp)
+            elseif (fl%has_energy) then
+               smallp = min( minval( en - ekin(mx,my,mz,dn))/fl%gam_1, smallp )
+            else
+               smallp = min( minval( fl%cs2*dn ), smallp )
+            endif
+         enddo
+         smallp = smallp * safety_factor
+         write(msg,'(A,ES10.4)') "[sanitize_smallx_checks] adjusted smallp to ", smallp
+         call warn(msg)
+      endif
+
+      if (associated(dn)) nullify(dn)
+      if (associated(mx)) nullify(mx)
+      if (associated(my)) nullify(my)
+      if (associated(mz)) nullify(mz)
+      if (associated(en)) nullify(en)
+      if (associated(bx)) nullify(bx)
+      if (associated(by)) nullify(by)
+      if (associated(bz)) nullify(bz)
+      if (associated(fl)) nullify(fl)
+
+   end subroutine sanitize_smallx_checks
 
 end module initfluids
