@@ -52,7 +52,7 @@ module mpisetup
         & cfr_smooth, cleanup_mpi, comm, comm3d, dt, dt_initial, dt_max_grow, dt_min, dt_old, dtm, err, ibuff, ierr, info, init_mpi, &
         & integration_order, lbuff, limiter, mpifind, ndims, nproc, nstep, pcoords, proc, procxl, procxr, procxyl, procyl, procyr, procyxl, proczl, &
         & proczr, psize, pxsize, pysize, pzsize, rbuff, req, smalld, smallei, smallp, status, t, use_smalld, magic_mass, local_magic_mass, master, slave, &
-        & nxd, nyd, nzd, nb
+        & nxd, nyd, nzd, nb, big_float
 
    integer :: nproc, proc, ierr , rc, info
    integer :: status(MPI_STATUS_SIZE,4)
@@ -61,7 +61,7 @@ module mpisetup
    logical, protected    :: master, slave
 
    real, parameter       :: dt_default_grow = 2.
-
+   real, parameter       :: big_float =  huge(real(1.0,4))
    real                  :: t, dt, dt_old, dtm
    real, save            :: magic_mass = 0.0
    real, save            :: local_magic_mass = 0.0
@@ -310,8 +310,8 @@ module mpisetup
          cfl         = 0.7
          cfl_max     = 0.9
          cfr_smooth  = 0.0
-         smallp      = 1.e-10
-         smalld      = 1.e-10
+         smallp      = big_float
+         smalld      = big_float
          use_smalld  = .true.
          smallc      = 1.e-10
          smallei     = 1.e-10
