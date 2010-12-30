@@ -521,12 +521,15 @@ module gravity
    end subroutine grav_ptmass_pure
 
    subroutine grav_ptmass_softened(flatten)
+
       use arrays,     only: gp
       use constants,  only: newtong
       use grid,       only: nx, ny, x, y, z
       use mpisetup,   only: smalld
       use fluidindex, only: nvar
+
       implicit none
+
       logical, intent(in) :: flatten
       integer             :: i, j
       real                :: rc2, r_smooth2, GM, fr, x2
@@ -552,13 +555,16 @@ module gravity
 
          enddo
       enddo
+
    end subroutine grav_ptmass_softened
 
    subroutine grav_ptmass_stiff
+
       use arrays,     only: gp
       use constants,  only: newtong
       use grid,       only: nx, ny, nz, x, y, z
       implicit none
+
       integer :: i, j, k
       real    :: r_smooth2, r2, gmr, gm, z2, yz2
       ! promote stiff-body rotation inside smoothing length, don't affect the global potential outside
@@ -730,6 +736,7 @@ module gravity
            &              comm, comm3d, err, ierr, mpifind
 
       implicit none
+
       integer               :: i, j, k, ip, pgpmax
       real, allocatable     :: gpwork(:,:,:)
       real                  :: gravrx(nx), gravry(ny), gravrz(nz)
@@ -779,15 +786,9 @@ module gravity
       dgpy_proc = gpwork(1,js,1)-gpwork(1,1,1)
       dgpz_proc = gpwork(1,1,ks)-gpwork(1,1,1)
 
-      call MPI_Gather ( dgpx_proc, 1, MPI_DOUBLE_PRECISION, &
-                        dgpx_all,  1, MPI_DOUBLE_PRECISION, &
-                        0, comm3d, ierr )
-      call MPI_Gather ( dgpy_proc, 1, MPI_DOUBLE_PRECISION, &
-                        dgpy_all,  1, MPI_DOUBLE_PRECISION, &
-                        0, comm3d, ierr )
-      call MPI_Gather ( dgpz_proc, 1, MPI_DOUBLE_PRECISION, &
-                        dgpz_all,  1, MPI_DOUBLE_PRECISION, &
-                        0, comm3d, ierr )
+      call MPI_Gather ( dgpx_proc, 1, MPI_DOUBLE_PRECISION, dgpx_all, 1, MPI_DOUBLE_PRECISION, 0, comm3d, ierr )
+      call MPI_Gather ( dgpy_proc, 1, MPI_DOUBLE_PRECISION, dgpy_all, 1, MPI_DOUBLE_PRECISION, 0, comm3d, ierr )
+      call MPI_Gather ( dgpz_proc, 1, MPI_DOUBLE_PRECISION, dgpz_all, 1, MPI_DOUBLE_PRECISION, 0, comm3d, ierr )
 
       if (master) then
 

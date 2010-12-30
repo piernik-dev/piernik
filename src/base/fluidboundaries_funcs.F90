@@ -35,19 +35,25 @@ module fluidboundaries_funcs
       & bnd_null, bnd_xl_per, bnd_xr_per, bnd_xl_ref, bnd_xr_ref, bnd_xl_out, bnd_xr_out, bnd_xl_outd, bnd_xr_outd
 
    contains
+
       subroutine bnd_null
          implicit none
          return
       end subroutine bnd_null
 
       subroutine bnd_xl_per
+
          use arrays, only: u
          use grid,   only: nb, nxb
+
          implicit none
+
          u(:,1:nb,:,:) = u(:,nxb+1:nxb+nb,:,:)
+
       end subroutine bnd_xl_per
 
       subroutine bnd_xl_ref
+
          use arrays,         only: u
          use grid,           only: nb
          use fluidindex,     only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
@@ -57,7 +63,9 @@ module fluidboundaries_funcs
 #ifdef COSM_RAYS
          use fluidindex,     only: iarr_all_crs
 #endif /* COSM_RAYS */
+
          implicit none
+
          integer :: ib
 
          do ib=1,nb
@@ -70,26 +78,33 @@ module fluidboundaries_funcs
             u(iarr_all_crs,nb+1-ib,:,:) =  u(iarr_all_crs,nb+ib,:,:)
 #endif /* COSM_RAYS */
          enddo
+
       end subroutine bnd_xl_ref
 
       subroutine bnd_xl_out
+
          use arrays,         only: u
          use grid,           only: nb
 #ifdef COSM_RAYS
          use initcosmicrays, only: smallecr
          use fluidindex,     only: iarr_all_crs
 #endif /* COSM_RAYS */
+
          implicit none
+
          integer :: ib
+
          do ib = 1, nb
             u(:,ib,:,:)            = u(:,nb+1,:,:)
 #ifdef COSM_RAYS
             u(iarr_all_crs,ib,:,:) = smallecr
 #endif /* COSM_RAYS */
          enddo
+
       end subroutine bnd_xl_out
 
       subroutine bnd_xl_outd
+
          use arrays,         only: u
          use grid,           only: nb
          use fluidindex,     only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
@@ -100,8 +115,11 @@ module fluidboundaries_funcs
          use initcosmicrays, only: smallecr
          use fluidindex,     only: iarr_all_crs
 #endif /* COSM_RAYS */
+
          implicit none
+
          integer :: ib
+
          do ib = 1, nb
             u([iarr_all_dn,iarr_all_my,iarr_all_mz],ib,:,:)  = u([iarr_all_dn,iarr_all_my,iarr_all_mz],nb+1,:,:)
             u(iarr_all_mx,ib,:,:)  = min(u(iarr_all_mx,nb+1,:,:),0.0)
@@ -112,16 +130,22 @@ module fluidboundaries_funcs
             u(iarr_all_crs,ib,:,:) = smallecr
 #endif /* COSM_RAYS */
          enddo
+
       end subroutine bnd_xl_outd
 
       subroutine bnd_xr_per
+
          use arrays, only: u
          use grid,   only: nb, nxb
+
          implicit none
+
          u(:,nxb+nb+1:nxb+2*nb,:,:) = u(:,nb+1:2*nb,:,:)
+
       end subroutine bnd_xr_per
 
       subroutine bnd_xr_ref
+
          use arrays,         only: u
          use grid,           only: nb, nxb
          use fluidindex,     only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
@@ -131,7 +155,9 @@ module fluidboundaries_funcs
 #ifdef COSM_RAYS
          use fluidindex,     only: iarr_all_crs
 #endif /* COSM_RAYS */
+
          implicit none
+
          integer :: ib
 
          do ib=1,nb
@@ -144,26 +170,33 @@ module fluidboundaries_funcs
             u(iarr_all_crs,nb+nxb+ib,:,:) =  u(iarr_all_crs,nb+nxb+1-ib,:,:)
 #endif /* COSM_RAYS */
          enddo
+
       end subroutine bnd_xr_ref
 
       subroutine bnd_xr_out
+
          use arrays,         only: u
          use grid,           only: nb, nxb
 #ifdef COSM_RAYS
          use initcosmicrays, only: smallecr
          use fluidindex,     only: iarr_all_crs
 #endif /* COSM_RAYS */
+
          implicit none
+
          integer :: ib
+
          do ib = 1, nb
             u(:,nb+nxb+ib,:,:)            = u(:,nb+nxb,:,:)
 #ifdef COSM_RAYS
             u(iarr_all_crs,nb+nxb+ib,:,:) = smallecr
 #endif /* COSM_RAYS */
          enddo
+
       end subroutine bnd_xr_out
 
       subroutine bnd_xr_outd
+
          use arrays,         only: u
          use grid,           only: nb, nxb
          use fluidindex,     only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
@@ -174,8 +207,11 @@ module fluidboundaries_funcs
          use initcosmicrays, only: smallecr
          use fluidindex,     only: iarr_all_crs
 #endif /* COSM_RAYS */
+
          implicit none
+
          integer :: ib
+
          do ib = 1, nb
             u([iarr_all_dn,iarr_all_my,iarr_all_mz],nb+nxb+ib,:,:) = u([iarr_all_dn,iarr_all_my,iarr_all_mz],nb+nxb,:,:)
             u(iarr_all_mx,nb+nxb+ib,:,:)  = max(u(iarr_all_mx,nb+nxb,:,:),0.0)
@@ -186,6 +222,7 @@ module fluidboundaries_funcs
             u(iarr_all_crs,nb+nxb+ib,:,:) = smallecr
 #endif /* COSM_RAYS */
          enddo
+
       end subroutine bnd_xr_outd
 
 end module fluidboundaries_funcs

@@ -46,7 +46,7 @@ module initproblem
    integer, parameter :: one = 1
    character(len=one) :: dir
 
-      dr,vxr,vyr,vzr,bxr,byr,bzr,er
+   namelist /PROBLEM_CONTROL/  dl,vxl,vyl,vzl,bxl,byl,bzl,el,dr,vxr,vyr,vzr,bxr,byr,bzr,er
 
    contains
 

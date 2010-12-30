@@ -36,11 +36,12 @@
 !! \copydetails grid::init_grid
 !<
 module grid
-   use mpisetup, only: cbuff_len
+
+   use mpisetup, only: cbuff_len, nb
    implicit none
 
    private
-   public :: cleanup_grid, dl, dvol, has_dir, idl, dxmn, init_grid, maxxyz, nb, total_ncells, geometry, &
+   public :: cleanup_grid, dl, dvol, has_dir, idl, dxmn, init_grid, maxxyz, total_ncells, geometry, nb, &
         &    Lx, dx, idx, inv_x, is, ie, nx, nxb, nxt, x, xdim, xl, xmax, xmaxb, xmin, xminb, xr, D_x, &
         &    Ly, dy, idy, inv_y, js, je, ny, nyb, nyt, y, ydim, yl, ymax, ymaxb, ymin, yminb, yr, D_y, &
         &    Lz, dz, idz, inv_z, ks, ke, nz, nzb, nzt, z, zdim, zl, zmax, zmaxb, zmin, zminb, zr, D_z
@@ -53,11 +54,7 @@ module grid
    real, protected     :: idz                            !< inverted length of the %grid cell in z-direction
    real, protected     :: dxmn                           !< the smallest length of the %grid cell (among dx, dy, and dz)
    real, protected     :: dvol                           !< volume of one %grid cell
-   integer, protected  :: nxd                            !< number of %grid cells in physical domain (without boundary cells) in x-direction (if equal to 1 then x-dimension is reduced to a point and boundary cells layer is not added)
-   integer, protected  :: nyd                            !< number of %grid cells in physical domain (without boundary cells) in y-direction (if equal to 1 then y-dimension is reduced to a point and boundary cells layer is not added)
-   integer, protected  :: nzd                            !< number of %grid cells in physical domain (without boundary cells) in z-direction (if equal to 1 then z-dimension is reduced to a point and boundary cells layer is not added)
    integer, protected  :: total_ncells                   !< total number of %grid cells
-   integer, protected  :: nb                             !< number of boundary cells surrounding the physical domain, same for all directions
    integer, protected  :: nx                             !< number of %grid cells in one block in x-direction
    integer, protected  :: ny                             !< number of %grid cells in one block in y-direction
    integer, protected  :: nz                             !< number of %grid cells in one block in z-direction
@@ -157,16 +154,6 @@ module grid
 !! \brief Routine which sets numbers of cells for the domain, MPI blocks and initializes direction meshes (x,y,z).
 !!
 !! \n \n
-!! @b DOMAIN_SIZES
-!! \n \n
-!! <table border="+1">
-!! <tr><td width="150pt"><b>parameter</b></td><td width="135pt"><b>default value</b></td><td width="200pt"><b>possible values</b></td><td width="315pt"> <b>description</b></td></tr>
-!! <tr><td>nxd</td><td>1</td><td>positive integer    </td><td>\copydoc grid::nxd</td></tr>
-!! <tr><td>nyd</td><td>1</td><td>positive integer    </td><td>\copydoc grid::nyd</td></tr>
-!! <tr><td>nzd</td><td>1</td><td>positive integer    </td><td>\copydoc grid::nzd</td></tr>
-!! <tr><td>nb </td><td>4</td><td>non-negative integer</td><td>\copydoc grid::nb </td></tr>
-!! </table>
-!! \n \n
 !! @b DOMAIN_LIMITS
 !! \n \n
 !! <table border="+1">
@@ -182,44 +169,31 @@ module grid
 !<
    subroutine init_grid(cgrid)
 
-      use dataio_pub,    only: par_file, ierrh, namelist_errh, compare_namelist  ! QA_WARN required for diff_nml
-      use dataio_pub,    only: printinfo, die
-      use mpisetup,      only: ierr, ibuff, rbuff, cbuff, master, slave, buffer_dim, pxsize, pysize, pzsize, comm
-      use mpi,           only: MPI_INTEGER, MPI_DOUBLE_PRECISION, MPI_CHARACTER
-      use types,         only: grid_container
+      use dataio_pub, only: par_file, ierrh, namelist_errh, compare_namelist  ! QA_WARN required for diff_nml
+      use dataio_pub, only: printinfo, die
+      use mpisetup,   only: ierr, rbuff, cbuff, master, slave, buffer_dim, pxsize, pysize, pzsize, comm, &
+           &                nxd, nyd, nzd, nb
+      use mpi,        only: MPI_DOUBLE_PRECISION, MPI_CHARACTER
+      use types,      only: grid_container
 
       implicit none
 
       type(grid_container), intent(out) :: cgrid
 
-      namelist /DOMAIN_SIZES/ nxd, nyd, nzd, nb
       namelist /DOMAIN_LIMITS/ xmin, xmax, ymin, ymax, zmin, zmax, geometry
 
 #ifdef VERBOSE
       call printinfo("[grid:init_grid]: commencing...")
 #endif /* VERBOSE */
 
-      nxd  = 1
-      nyd  = 1
-      nzd  = 1
-      nb   = 4
+      xmin = 0.; xmax = 1.
+      ymin = 0.; ymax = 1.
+      zmin = 0.; zmax = 1.
       geometry = "cartesian"
 
       if (master) then
-         diff_nml(DOMAIN_SIZES)
+
          diff_nml(DOMAIN_LIMITS)
-      endif
-
-      nxd = max(1, nxd)
-      nyd = max(1, nyd)
-      nzd = max(1, nzd)
-
-      if (master) then
-
-         ibuff(1)   = nxd
-         ibuff(2)   = nyd
-         ibuff(3)   = nzd
-         ibuff(4)   = nb
 
          rbuff(1)   = xmin
          rbuff(2)   = xmax
@@ -229,18 +203,13 @@ module grid
          rbuff(6)   = zmax
 
          cbuff(1)   = geometry
+
       endif
 
-      call MPI_BCAST(cbuff, cbuff_len*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
-      call MPI_Bcast(ibuff,           buffer_dim, MPI_INTEGER,          0, comm, ierr)
+      call MPI_Bcast(cbuff, cbuff_len*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
       call MPI_Bcast(rbuff,           buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
       if (slave) then
-
-         nxd  = ibuff(1)
-         nyd  = ibuff(2)
-         nzd  = ibuff(3)
-         nb   = ibuff(4)
 
          xmin = rbuff(1)
          xmax = rbuff(2)

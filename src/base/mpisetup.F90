@@ -51,7 +51,8 @@ module mpisetup
         & bnd_xr_dom, bnd_yl, bnd_yl_dom, bnd_yr, bnd_yr_dom, bnd_zl, bnd_zl_dom, bnd_zr, bnd_zr_dom, buffer_dim, cbuff, cbuff_len, cfl, cfl_max, cflcontrol, &
         & cfr_smooth, cleanup_mpi, comm, comm3d, dt, dt_initial, dt_max_grow, dt_min, dt_old, dtm, err, ibuff, ierr, info, init_mpi, &
         & integration_order, lbuff, limiter, mpifind, ndims, nproc, nstep, pcoords, proc, procxl, procxr, procxyl, procyl, procyr, procyxl, proczl, &
-        & proczr, psize, pxsize, pysize, pzsize, rbuff, req, smalld, smallei, smallp, status, t, use_smalld, magic_mass, local_magic_mass, master, slave
+        & proczr, psize, pxsize, pysize, pzsize, rbuff, req, smalld, smallei, smallp, status, t, use_smalld, magic_mass, local_magic_mass, master, slave, &
+        & nxd, nyd, nzd, nb
 
    integer :: nproc, proc, ierr , rc, info
    integer :: status(MPI_STATUS_SIZE,4)
@@ -68,9 +69,10 @@ module mpisetup
 
    integer, parameter    :: ndims = 3       ! 3D grid
    integer               :: comm, comm3d
-   integer, dimension(3) :: psize, pcoords, coords
-   logical               :: periods(3), reorder
-   integer ::   procxl, procxr, procyl, procyr, proczl, proczr, procxyl, procyxl, procxyr, procyxr
+   logical               :: reorder
+   integer, dimension(ndims) :: psize, pcoords, coords
+   logical, dimension(ndims) :: periods
+   integer               ::   procxl, procxr, procyl, procyr, proczl, proczr, procxyl, procyxl, procxyr, procyxr
 
    integer, parameter               :: buffer_dim=200
    character(len=cbuff_len), dimension(buffer_dim) :: cbuff
@@ -84,6 +86,13 @@ module mpisetup
    integer :: pzsize    !< number of MPI blocks in z-dimension
 
    namelist /MPI_BLOCKS/ pxsize, pysize, pzsize, mpi_magic
+
+   integer, protected :: nxd  !< number of %grid cells in physical domain (without boundary cells) in x-direction (if equal to 1 then x-dimension is reduced to a point with no boundary cells)
+   integer, protected :: nyd  !< number of %grid cells in physical domain (without boundary cells) in y-direction (if equal to 1 then y-dimension is reduced to a point with no boundary cells)
+   integer, protected :: nzd  !< number of %grid cells in physical domain (without boundary cells) in z-direction (if equal to 1 then z-dimension is reduced to a point with no boundary cells)
+   integer, protected :: nb   !< number of boundary cells surrounding the physical domain, same for all directions
+
+   namelist /DOMAIN_SIZES/ nxd, nyd, nzd, nb
 
    integer, parameter    :: bndlen = 4 !< length of boundary names
    character(len=bndlen) :: bnd_xl     !< type of boundary conditions for the left  x-boundary
@@ -113,7 +122,7 @@ module mpisetup
 
    namelist /NUMERICAL_SETUP/  cfl, smalld, smallei, integration_order, cfr_smooth, dt_initial, dt_max_grow, dt_min, smallc, smallp, limiter, cflcontrol, use_smalld, cfl_max
 
-   integer, dimension(3) :: domsize   !< local copy of nxd, nyd, nzd which can be used before init_grid()
+   integer, dimension(3) :: domsize   !< local copy of nxd, nyd, nzd
 
    logical     :: have_mpi
 
@@ -153,6 +162,16 @@ module mpisetup
 !! <tr><td>pysize   </td><td>1     </td><td>integer</td><td>\copydoc mpisetup::pysize   </td></tr>
 !! <tr><td>pzsize   </td><td>1     </td><td>integer</td><td>\copydoc mpisetup::pzsize   </td></tr>
 !! <tr><td>mpi_magic</td><td>.true.</td><td>logical</td><td>\copydoc mpisetup::mpi_magic</td></tr>
+!! </table>
+!! \n \n
+!! @b DOMAIN_SIZES
+!! \n \n
+!! <table border="+1">
+!! <tr><td width="150pt"><b>parameter</b></td><td width="135pt"><b>default value</b></td><td width="200pt"><b>possible values</b></td><td width="315pt"> <b>description</b></td></tr>
+!! <tr><td>nxd</td><td>1</td><td>positive integer    </td><td>\copydoc grid::nxd</td></tr>
+!! <tr><td>nyd</td><td>1</td><td>positive integer    </td><td>\copydoc grid::nyd</td></tr>
+!! <tr><td>nzd</td><td>1</td><td>positive integer    </td><td>\copydoc grid::nzd</td></tr>
+!! <tr><td>nb </td><td>4</td><td>non-negative integer</td><td>\copydoc grid::nb </td></tr>
 !! </table>
 !! \n \n
 !! @b BOUNDARIES
@@ -195,10 +214,7 @@ module mpisetup
 
          implicit none
 
-         namelist /DOMAIN_SIZES/ nxd, nyd, nzd, nb ! BEWARE: another definition of DOMAIN_SIZES is in grid.F90
-
          integer :: iproc
-         integer :: nxd, nyd, nzd, nb
 
          character(LEN=cwdlen) :: cwd_proc
          character(LEN=hnlen)  :: host_proc
@@ -406,9 +422,7 @@ module mpisetup
          bnd_zl_dom = bnd_zl
          bnd_zr_dom = bnd_zr
 
-         psize(1)   = pxsize
-         psize(2)   = pysize
-         psize(3)   = pzsize
+         psize(:) = [ pxsize, pysize, pzsize ]
 
          if (pxsize*pysize*pzsize /= nproc) then
             if (mpi_magic) then

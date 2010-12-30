@@ -104,7 +104,7 @@ module initproblem
    subroutine init_prob
       use arrays,        only: u
       use constants,     only: pi, dpi
-      use dataio_pub,    only: msg, printinfo
+      use dataio_pub,    only: msg, printinfo, run_id
       use fluidindex,    only: nvar
       use grid,          only: x, y, z, nx, ny, nz, Lx, Lz
       use mpisetup,      only: proc
@@ -136,6 +136,7 @@ module initproblem
       call warn("[initproblem]: Dust fluid not initialized. I hope you know what you are doing!"
 #endif /* !NEUTRAL */
 
+      if (run_id == 'lnA') then
          call printinfo("Lin A")
          coeff(4) = (-0.1691398, 0.0361553 ) ! u_x
          coeff(5) = ( 0.1336704, 0.0591695 ) ! u_y
@@ -146,6 +147,7 @@ module initproblem
          coeff(3) = ( 0.1639549,-0.0233277 ) ! w_z
          kx = dpi/Lx
          kz = dpi/Lz
+      else if (run_id == 'lnB') then
          call printinfo("Lin B")
          coeff(4) = (-0.0174121,-0.2770347 ) ! u_x
          coeff(5) = ( 0.2767976,-0.0187568 ) ! u_y
@@ -269,13 +271,20 @@ module initproblem
 !-----------------------------------------------------------------------------------------------------------------------------------
 
    subroutine compare(t)
+
       use constants,    only: dpi
       use arrays,       only: u
       use grid,         only: x,y,z,Lx,Lz
+      use dataio_pub,   only: run_id
+
       implicit none
+
       real, intent(in) :: t
       complex(kind=8), dimension(8) :: coeff
 
+      if (t==0) coeff(4) = (0,0) ! suppress compiler warnings
+
+      if (run_id == 'lnA') then
          coeff(4) = (-0.1691398, 0.0361553 ) ! u_x
          coeff(5) = ( 0.1336704, 0.0591695 ) ! u_y
          coeff(6) = ( 0.1691389,-0.0361555 ) ! u_z
@@ -285,6 +294,7 @@ module initproblem
          coeff(3) = ( 0.1639549,-0.0233277 ) ! w_z
 
          coeff(8) = (-0.3480127, 0.4190204 ) ! omega
+      else if (run_id == 'lnB') then
          coeff(4) = (-0.0174121,-0.2770347 ) ! u_x
          coeff(5) = ( 0.2767976,-0.0187568 ) ! u_y
          coeff(6) = ( 0.0174130, 0.2770423 ) ! u_z
@@ -295,6 +305,7 @@ module initproblem
 
          coeff(8) = ( 0.4998786, 0.0154764 ) ! omega
       endif
+
       kx = dpi/Lx
       kz = dpi/Lz
 

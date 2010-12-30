@@ -586,6 +586,7 @@ contains
    subroutine compute_bnd_indxs(bndcase,ndirb,ledge,redge,lnbcells,rnbcells,bndsign,zndiff,rrbase)
       use grid, only: nb
       implicit none
+
       integer, intent(in)  :: bndcase     !< 1 - v component compatible with direction; 2 - b component compatible with direction or emf component incompatible with direction; 3 - other cases
       integer, intent(in)  :: ndirb       !< nxb/nyb/nzb depanding on the current direction
       integer, intent(out) :: ledge       !< index of the left edge of physical domain for emf
@@ -595,6 +596,7 @@ contains
       real,    intent(out) :: bndsign     !< 1. or -1. to change the sign or not
       integer, intent(out) :: zndiff      !< ToDo: Comment me
       integer, intent(out) :: rrbase      !< ToDo: Comment me
+
       select case (bndcase)
          case (1)
             ledge    = nb
@@ -609,11 +611,12 @@ contains
             lnbcells = nb
             bndsign  = 1.
       end select  ! (name)
+
       zndiff   = ledge - lnbcells
       rnbcells = nb - zndiff
       redge    = ndirb + ledge
       rrbase   = ndirb + lnbcells + 1  ! = redge + 1 - zndiff
-      return
+
    end subroutine compute_bnd_indxs
 
    subroutine all_mag_boundaries

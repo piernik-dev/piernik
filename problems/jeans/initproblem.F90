@@ -50,7 +50,7 @@ contains
       use constants,     only: pi
       use dataio_pub,    only: ierrh, par_file, namelist_errh, compare_namelist    ! QA_WARN required for diff_nml
       use dataio_pub,    only: msg, die, warn
-      use grid,          only: xmin, xmax, ymin, ymax, zmin, zmax, nx, ny, nz
+      use grid,          only: xmin, xmax, ymin, ymax, zmin, zmax, has_dir, xdim, ydim, zdim
       use mpisetup,      only: ierr, rbuff, ibuff, master, slave, buffer_dim, comm
       use mpi,           only: MPI_DOUBLE_PRECISION, MPI_INTEGER
       use problem_pub,   only: jeans_d0, jeans_mode
@@ -111,9 +111,9 @@ contains
       endif
 
       ! suppress waves in nonexistent directions
-      if (nx <= 1) ix = 0
-      if (ny <= 1) iy = 0
-      if (nz <= 1) iz = 0
+      if (.not. has_dir(xdim)) ix = 0
+      if (.not. has_dir(ydim)) iy = 0
+      if (.not. has_dir(zdim)) iz = 0
 
       kx = 2. * pi * ix / (xmax - xmin)
       ky = 2. * pi * iy / (ymax - ymin)
@@ -134,12 +134,15 @@ contains
 
    subroutine init_prob
 
-      use arrays,        only: u, b
+      use arrays,        only: u
       use constants,     only: fpiG, pi, newtong
       use dataio_pub,    only: tend, msg, printinfo, warn
       use grid,          only: xmin, xmax, ymin, ymax, zmin, zmax, x, y, z, nx, ny, nz, xmin, ymin, zmin
       use initionized,   only: gamma_ion, idni, imxi, imzi, ieni
       use mpisetup,      only: master
+#ifdef MAGNETIC
+      use arrays,        only: b
+#endif /* MAGNETIC */
 
       implicit none
 
@@ -215,8 +218,10 @@ contains
 #ifndef ISO
                u(ieni,i,j,k)      = pres/(gamma_ion-1.0) + 0.5*sum(u(imxi:imzi,i,j,k)**2,1) / u(idni,i,j,k)
 
+#ifdef MAGNETIC
                b(:,i,j,k)         = 0.0
                u(ieni,i,j,k)      = u(ieni,i,j,k) + 0.5*sum(b(:,i,j,k)**2,1)
+#endif
 #endif /* !ISO */
         enddo
       enddo

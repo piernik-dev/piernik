@@ -154,7 +154,7 @@ contains
     real(kind=8)    , dimension(:)     , allocatable :: ky
 
     ! constants from fftw3.f
-!    integer, parameter :: FFTW_ESTIMATE=64
+    integer, parameter :: FFTW_ESTIMATE=64
 
     St = - ddy / dy / Lx
     if (.not.present(inv)) St = -St

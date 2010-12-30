@@ -35,14 +35,16 @@
 !<
 module resistivity
 ! pulled by RESISTIVE
+
    implicit none
+
    private
    public  :: init_resistivity, timestep_resist, cleanup_resistivity, dt_resist, eta_max, &
-      diffuseby_x, diffusebz_x, diffusebx_y, diffusebz_y, diffusebx_z, diffuseby_z
+        &     diffuseby_x, diffusebz_x, diffusebx_y, diffusebz_y, diffusebx_z, diffuseby_z
+
    real    :: cfl_resist, eta_0, eta_1, j_crit, jc2, deint_max
    integer :: eta_scale
    double precision :: d_eta_factor
-
    real :: eta_max, dt_resist, dt_eint
    integer, dimension(3) :: loc_eta_max
    real, dimension(:,:,:), allocatable, target :: wb, etahelp, eta
@@ -51,7 +53,9 @@ module resistivity
    contains
 
    subroutine cleanup_resistivity
+
       implicit none
+
       if (allocated(wb) ) deallocate(wb)
       if (allocated(eta)) deallocate(eta)
       if (allocated(etahelp)) deallocate(etahelp)
@@ -191,7 +195,7 @@ module resistivity
       eta(:,:,:) = eta_0 + eta_1*sqrt(max(0.0,eta(:,:,:)- jc2 ))
 !>
 !! \todo Following lines are split into separate lines because of intel and gnu dbgs
-!! shoud that be so? Is there any other solution instead splitting?
+!! should that be so? Is there any other solution instead splitting?
 !<
       etahelp(2:nx-1,2:ny-1,:) = eta(1:nx-2,2:ny-1,:) + eta(3:nx,2:ny-1,:) + eta(2:nx-1,1:ny-2,:) + eta(2:nx-1,3:ny,:)
       etahelp(1,:,:) = etahelp(2,:,:) ; etahelp(nx,:,:) = etahelp(nx-1,:,:) ; etahelp(:,1,:) = etahelp(:,2,:) ; etahelp(:,ny,:) = etahelp(:,ny-1,:)

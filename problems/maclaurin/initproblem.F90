@@ -133,12 +133,15 @@ contains
 
    subroutine init_prob
 
-      use arrays,        only: u, b
+      use arrays,        only: u
       use constants,     only: pi
       use dataio_pub,    only: msg, printinfo, warn
       use grid,          only: x, y, z, dx, dy, dz, nx, ny, nz, xmin, xmax, ymin, ymax, zmin, zmax
       use initionized,   only: gamma_ion, idni, imxi, imzi, ieni
       use mpisetup,      only: master
+#ifdef MAGNETIC
+      use arrays,        only: b
+#endif /* MAGNETIC */
 
       implicit none
 
@@ -175,7 +178,9 @@ contains
       u(imxi:imzi, 1:nx, 1:ny, 1:nz) = 0.0
 
 #ifndef ISO
+#ifdef MAGNETIC
       b(:, 1:nx, 1:ny, 1:nz) = 0.0
+#endif /* MAGNETIC */
       u(ieni, 1:nx, 1:ny, 1:nz) = p0/(gamma_ion - 1.0)
 #endif /* !ISO */
 

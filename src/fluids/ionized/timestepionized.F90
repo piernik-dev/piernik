@@ -37,7 +37,7 @@
 !! \f}
 !! where \f$v_x^{i,j,k}\f$ is the maximum speed in \f$x\f$ direction for the cell \f$(i,j,k)\f$ and \f$c_f^{i,j,k}\f$ is the speed of sound for
 !! ionized fluid computed as \f$c_f^{i,j,k}=\sqrt{\left|\frac{2p_{mag}+\gamma p}{\rho^{i,j,k}}\right|}\f$, where \f$p\f$ stands for pressure,
-!! \f$p_{mag}\f$ is pressure of magnetic field, \f$\gamma\f$ is adiabatic index for ionized fluid and \f$\rho^{i,j,k}\f$ is fluid density in the cell
+!! \f$p_{mag}\f$ is pressure of magnetic field, \f$\gamma\f$ is the adiabatic index of the ionized fluid and \f$\rho^{i,j,k}\f$ is fluid density in the cell
 !! \f$(i,j,k)\f$. For directions \f$y, z\f$ the computations are made in similar way.
 !!
 !! %Timestep for each MPI block is then computed as
@@ -78,7 +78,7 @@ contains
 
 ! locals
       real                           :: pmag, bx, by, bz, ps, p, c_max
-      integer                        :: i, j, k, ip, jp, kp
+      integer                        :: i, j, k
       type(component_fluid), pointer :: fl
 
       cx = 0.0; cy = 0.0; cz = 0.0; cs = 0.0;
@@ -86,19 +86,19 @@ contains
       fl => nvar%ion
 
       do k = ks, ke
-         kp = k + D_z
-
          do j = js, je
-            jp = j + D_y
-
             do i = is, ie
-               ip = i + D_x
 
-               bx = 0.5*(b(ibx,i,j,k) + b(ibx,ip,j,k))
-               by = 0.5*(b(iby,i,j,k) + b(iby,i,jp,k))
-               bz = 0.5*(b(ibz,i,j,k) + b(ibz,i,j,kp))
+#ifdef MAGNETIC
+               bx = (b(ibx,i,j,k) + b(ibx, i+D_x, j,     k    ))/(1.+D_x)
+               by = (b(iby,i,j,k) + b(iby, i,     j+D_y, k    ))/(1.+D_y)
+               bz = (b(ibz,i,j,k) + b(ibz, i,     j,     k+D_z))/(1.+D_z)
 
                pmag = 0.5*(bx*bx + by*by + bz*bz)
+#else /* !MAGNETIC */
+               ! all_mag_boundaries has not been called so we cannot trust b(ibx,cgrid%ie+D_x:), b(iby,:cgrid%je+D_y and b(ibz,:,:,cgrid%ke+D_z
+               pmag = 0.
+#endif /* !MAGNETIC */
 
 #ifdef ISO
                p  = fl%cs2*u(fl%idn,i,j,k)
