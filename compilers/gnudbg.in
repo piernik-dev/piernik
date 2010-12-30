@@ -2,5 +2,5 @@ PROG      = piernik
 USE_GNUCPP = yes
 ### gcc-4.5 debug
 F90       = mpif90
-F90FLAGS  = -I/usr/include -g -ggdb -O0 -fdefault-real-8 -ffpe-trap=zero,overflow,invalid -Wall -W -pedantic-errors -ffree-form -std=gnu -fimplicit-none -ffree-line-length-none -fcheck=all
+F90FLAGS  = -I/usr/include -g -ggdb -O0 -fdefault-real-8 -ffpe-trap=zero,overflow,invalid -Wall -W -Wextra -pedantic-errors -ffree-form -std=gnu -fimplicit-none -ffree-line-length-none -fcheck=all
 LDFLAGS   = -L/usr/lib
