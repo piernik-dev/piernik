@@ -135,10 +135,14 @@ contains
 
 #ifdef FFTW
   function unshear_fft(qty,x,ddy,inv)
+
     use constants, only: dpi
     use grid,      only: dy, nb, Lx
+
     implicit none
-    include "fftw3.f"
+
+!    include "fftw3.f" ! this may give tons of warnings on unused parameters
+
     real, intent(in) :: ddy
     logical, optional               :: inv
     real, dimension(:,:,:)          :: qty

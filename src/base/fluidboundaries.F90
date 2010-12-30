@@ -118,9 +118,6 @@ module fluidboundaries
 #endif /* GRAV */
 #ifdef SHEAR_BND
       real, allocatable :: send_right(:,:,:,:),recv_right(:,:,:,:)
-#ifdef FFTW
-      real, allocatable, dimension(:,:,:) :: temp
-#endif /* FFTW */
 #endif /* SHEAR_BND */
 
       if (frun) then
