@@ -37,7 +37,7 @@
 module func
    implicit none
    private
-   public :: pshift, mshift, fix_string
+   public :: pshift, mshift, fix_string, ekin, emag
    integer, parameter :: one = 1
    contains
 
@@ -165,5 +165,19 @@ module func
 
       if (ichar(c) >= 48 .and. ichar(c) <= 57) is_digit=.true.
    end function is_digit
+
+   elemental real function emag(bx,by,bz)
+      implicit none
+      real, intent(in) :: bx, by, bz
+
+      emag = 0.5*(bx**2 + by**2 + bz**2)
+   end function emag
+
+   elemental real function ekin(mx,my,mz,dn)
+      implicit none
+      real, intent(in) :: mx, my, mz, dn
+
+      ekin = emag(mx,my,mz)/dn
+   end function ekin
 
 end module func
