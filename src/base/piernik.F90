@@ -177,13 +177,12 @@ contains
       use fluidboundaries,       only: all_fluid_boundaries
       use fluidboundaries_pub,   only: init_fluidboundaries
       use fluidindex,            only: nvar
-      use grid,                  only: nx, ny, nz, init_grid
+      use grid,                  only: init_grid, cg
       use initfluids,            only: init_fluids, sanitize_smallx_checks
       use gridgeometry,          only: init_geometry
       use initproblem,           only: init_prob, read_problem_par
       use mpiboundaries,         only: mpi_boundaries_prep
       use mpisetup,              only: init_mpi
-      use types,                 only: grid_container
       use timestep,              only: init_time_step
 #ifdef MAGNETIC
       use magboundaries,         only: all_mag_boundaries
@@ -212,7 +211,6 @@ contains
 
       implicit none
 
-      type(grid_container) :: cgrid
       logical :: tmp_log_exist
 #ifdef GRAV
       logical              :: grav_pot_3d_called = .false.
@@ -236,13 +234,13 @@ contains
 
       call init_constants
 
-      call init_grid(cgrid)
+      call init_grid
 
       call init_fluidboundaries
 
-      call init_fluids(cgrid)
+      call init_fluids(cg)
 
-      call init_arrays(nx,ny,nz,nvar)
+      call init_arrays(cg%nx, cg%ny, cg%nz, nvar)
 
       call init_geometry
 
@@ -278,7 +276,7 @@ contains
 #endif /* SN_SRC */
 
 #ifdef MULTIGRID
-      call init_multigrid(cgrid)
+      call init_multigrid(cg)
 #endif /* MULTIGRID */
 
       ! Almost everything is initialized: do problem-related stuff here, except setting-up the initial conditions.

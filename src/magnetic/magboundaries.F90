@@ -83,7 +83,7 @@ contains
       use arrays,        only: b
       use dataio_pub,    only: msg, warn
       use fluidindex,    only: ibx, iby, ibz
-      use grid,          only: nb, nx, ny, nz, nxb, nyb, nzb
+      use grid,          only: cg
       use mpi,           only: MPI_DOUBLE_PRECISION
       use mpisetup,      only: bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr, &
                                ierr, req, comm3d, procxl, procxr, procyl, procyr, proczl, proczr, status, &
@@ -116,19 +116,19 @@ contains
       select case (dim)
          case ("xdim")
 #ifdef SHEAR
-            allocate(send_left(3,nb,ny,nz),send_right(3,nb,ny,nz), &
-                     recv_left(3,nb,ny,nz),recv_right(3,nb,ny,nz))
+            allocate(send_left(3, cg%nb, cg%ny, cg%nz),send_right(3, cg%nb, cg%ny, cg%nz), &
+                     recv_left(3, cg%nb, cg%ny, cg%nz),recv_right(3, cg%nb, cg%ny, cg%nz))
 
-            send_left (:,:,:,:)  = b(:,nb+1:2*nb,:,:)
-            send_right(:,:,:,:)  = b(:,nxb+1:nxb+nb,:,:)
+            send_left (:,:,:,:)  = b(:, cg%nb+1:2*cg%nb,:,:)
+            send_right(:,:,:,:)  = b(:, cg%nxb+1:cg%nxb+cg%nb,:,:)
 
             if (bnd_xl == "she") then
 !
 ! przesuwamy o calkowita liczbe komorek + periodyczny wb w kierunku y
 !
-               send_left (:,:,nb+1:nb+nyb,:)         = cshift(send_left (:,:,nb+1:nb+nyb,:),dim=3,shift= delj)
-               send_left (:,:,1:nb,:)                = send_left  (:,:,nyb+1:nyb+nb,:)
-               send_left (:,:,nb+nyb+1:nyb+2*nb,:)   = send_left  (:,:,nb+1:2*nb,:)
+               send_left (:,:, cg%nb+1:cg%nb+cg%nyb,:)         = cshift(send_left (:,:, cg%nb+1:cg%nb+cg%nyb,:),dim=3,shift= delj)
+               send_left (:,:,1:cg%nb,:)                = send_left  (:,:, cg%nyb+1:cg%nyb+cg%nb,:)
+               send_left (:,:, cg%nb+cg%nyb+1:cg%nyb+2*cg%nb,:)   = send_left  (:,:, cg%nb+1:2*cg%nb,:)
 !
 ! remapujemy  - interpolacja kwadratowa
 !
@@ -141,9 +141,9 @@ contains
 !
 ! przesuwamy o calkowita liczbe komorek + periodyczny wb w kierunku y
 !
-               send_right (:,:,nb+1:nb+nyb,:)        = cshift(send_right(:,:,nb+1:nb+nyb,:),dim=3,shift=-delj)
-               send_right (:,:,1:nb,:)               = send_right (:,:,nyb+1:nyb+nb,:)
-               send_right (:,:,nb+nyb+1:nyb+2*nb,:)  = send_right (:,:,nb+1:2*nb,:)
+               send_right (:,:, cg%nb+1:cg%nb+cg%nyb,:)        = cshift(send_right(:,:, cg%nb+1:cg%nb+cg%nyb,:),dim=3,shift=-delj)
+               send_right (:,:,1:cg%nb,:)               = send_right (:,:, cg%nyb+1:cg%nyb+cg%nb,:)
+               send_right (:,:, cg%nb+cg%nyb+1:cg%nyb+2*cg%nb,:)  = send_right (:,:, cg%nb+1:2*cg%nb,:)
 !
 ! remapujemy - interpolacja kwadratowa
 !
@@ -154,15 +154,15 @@ contains
 !
 ! wysylamy na drugi brzeg
 !
-            CALL MPI_Isend   (send_left , 3*ny*nz*nb, MPI_DOUBLE_PRECISION, procxl, 10, comm, req(1), ierr)
-            CALL MPI_Isend   (send_right, 3*ny*nz*nb, MPI_DOUBLE_PRECISION, procxr, 20, comm, req(3), ierr)
-            CALL MPI_Irecv   (recv_left , 3*ny*nz*nb, MPI_DOUBLE_PRECISION, procxl, 20, comm, req(2), ierr)
-            CALL MPI_Irecv   (recv_right, 3*ny*nz*nb, MPI_DOUBLE_PRECISION, procxr, 10, comm, req(4), ierr)
+            CALL MPI_Isend   (send_left , 3*cg%ny*cg%nz*cg%nb, MPI_DOUBLE_PRECISION, procxl, 10, comm, req(1), ierr)
+            CALL MPI_Isend   (send_right, 3*cg%ny*cg%nz*cg%nb, MPI_DOUBLE_PRECISION, procxr, 20, comm, req(3), ierr)
+            CALL MPI_Irecv   (recv_left , 3*cg%ny*cg%nz*cg%nb, MPI_DOUBLE_PRECISION, procxl, 20, comm, req(2), ierr)
+            CALL MPI_Irecv   (recv_right, 3*cg%ny*cg%nz*cg%nb, MPI_DOUBLE_PRECISION, procxr, 10, comm, req(4), ierr)
 
             call MPI_Waitall(4,req(:),status(:,:),ierr)
 
-            b(:,1:nb-1,:,:)               = recv_left(:,1:nb-1,:,:)
-            b(:,nxb+nb+1+1:nxb+2*nb,:,:)  = recv_right(:,1+1:nb,:,:)
+            b(:,1:cg%nb-1,:,:)               = recv_left(:,1:cg%nb-1,:,:)
+            b(:, cg%nxb+cg%nb+1+1:cg%nxb+2*cg%nb,:,:)  = recv_right(:,1+1:cg%nb,:,:)
 
             if (allocated(send_left))  deallocate(send_left)
             if (allocated(send_right)) deallocate(send_right)
@@ -211,30 +211,30 @@ contains
       if (bnd_xl .eq. "cor") then
 !   - lower to left
          if (pcoords(1) .eq. 0 .and. pcoords(2) .eq. 0) then
-            do i=1,nb
-               do j=nb+1,ny
-                  b(ibx,i,j,:) = -b(iby,j,2*nb+1-i,:)
-                  b(iby,i,j,:) =  b(ibx,j,2*nb+1-i,:)
-                  b(ibz,i,j,:) =  b(ibz,j,2*nb+1-i,:)
+            do i=1, cg%nb
+               do j=cg%nb+1, cg%ny
+                  b(ibx,i,j,:) = -b(iby,j,2*cg%nb+1-i,:)
+                  b(iby,i,j,:) =  b(ibx,j,2*cg%nb+1-i,:)
+                  b(ibz,i,j,:) =  b(ibz,j,2*cg%nb+1-i,:)
                enddo
             enddo
          endif
 
          if (procxyl .gt. 0) then
-            allocate(send_left(3,nb,ny,nz), recv_left(3,nx,nb,nz))
+            allocate(send_left(3, cg%nb, cg%ny, cg%nz), recv_left(3, cg%nx, cg%nb, cg%nz))
 
-            send_left(:,:,:,:) = b(:,nb+1:2*nb,:,:)
+            send_left(:,:,:,:) = b(:, cg%nb+1:2*cg%nb,:,:)
 
-            CALL MPI_Isend   (send_left , 3*nb*ny*nz, MPI_DOUBLE_PRECISION, procxyl, 70, comm, req(1), ierr)
-            CALL MPI_Irecv   (recv_left , 3*nx*nb*nz, MPI_DOUBLE_PRECISION, procxyl, 80, comm, req(2), ierr)
+            CALL MPI_Isend   (send_left , 3*cg%nb*cg%ny*cg%nz, MPI_DOUBLE_PRECISION, procxyl, 70, comm, req(1), ierr)
+            CALL MPI_Irecv   (recv_left , 3*cg%nx*cg%nb*cg%nz, MPI_DOUBLE_PRECISION, procxyl, 80, comm, req(2), ierr)
 
             call MPI_Waitall(2,req(:),status(:,:),ierr)
 
-            do i=1,nb
-               do j=1,ny
-                  b(ibx,i,j,:) = -recv_left(iby,j,nb+1-i,:)
-                  b(iby,i,j,:) =  recv_left(ibx,j,nb+1-i,:)
-                  b(ibz,i,j,:) =  recv_left(ibz,j,nb+1-i,:)
+            do i=1, cg%nb
+               do j=1, cg%ny
+                  b(ibx,i,j,:) = -recv_left(iby,j, cg%nb+1-i,:)
+                  b(iby,i,j,:) =  recv_left(ibx,j, cg%nb+1-i,:)
+                  b(ibz,i,j,:) =  recv_left(ibz,j, cg%nb+1-i,:)
                enddo
             enddo
 
@@ -246,38 +246,38 @@ contains
       if (bnd_yl .eq. "cor") then
 !   - left to lower
          if (pcoords(2) .eq. 0 .and. pcoords(1) .eq. 0 ) then
-            do j=1,nb
-               do i=nb+1,nx
-                  b(ibx,i,j,:) =  b(iby,2*nb+1-j,i,:)
-                  b(iby,i,j,:) = -b(ibx,2*nb+1-j,i,:)
-                  b(ibz,i,j,:) =  b(ibz,2*nb+1-j,i,:)
+            do j=1, cg%nb
+               do i=cg%nb+1, cg%nx
+                  b(ibx,i,j,:) =  b(iby,2*cg%nb+1-j,i,:)
+                  b(iby,i,j,:) = -b(ibx,2*cg%nb+1-j,i,:)
+                  b(ibz,i,j,:) =  b(ibz,2*cg%nb+1-j,i,:)
                enddo
             enddo
 !   - interior to corner
-            do j=1,nb
-               do i=1,nb
-                  b(ibx,i,j,:) =  -b(ibx,2*nb+1-i,2*nb+1-j,:)
-                  b(iby,i,j,:) =  -b(iby,2*nb+1-i,2*nb+1-j,:)
-                  b(ibz,i,j,:) =   b(ibz,2*nb+1-i,2*nb+1-j,:)
+            do j=1, cg%nb
+               do i=1, cg%nb
+                  b(ibx,i,j,:) =  -b(ibx,2*cg%nb+1-i,2*cg%nb+1-j,:)
+                  b(iby,i,j,:) =  -b(iby,2*cg%nb+1-i,2*cg%nb+1-j,:)
+                  b(ibz,i,j,:) =   b(ibz,2*cg%nb+1-i,2*cg%nb+1-j,:)
                enddo
             enddo
          endif
 
          if (procyxl .gt. 0) then
-            allocate(send_left(3,nx,nb,nz), recv_left(3,nb,ny,nz))
+            allocate(send_left(3, cg%nx, cg%nb, cg%nz), recv_left(3, cg%nb, cg%ny, cg%nz))
 
-            send_left(:,:,:,:) = b(:,:,nb+1:2*nb,:)
+            send_left(:,:,:,:) = b(:,:, cg%nb+1:2*cg%nb,:)
 
-            CALL MPI_Isend   (send_left , 3*nx*nb*nz, MPI_DOUBLE_PRECISION, procyxl, 80, comm, req(1), ierr)
-            CALL MPI_Irecv   (recv_left , 3*nb*ny*nz, MPI_DOUBLE_PRECISION, procyxl, 70, comm, req(2), ierr)
+            CALL MPI_Isend   (send_left , 3*cg%nx*cg%nb*cg%nz, MPI_DOUBLE_PRECISION, procyxl, 80, comm, req(1), ierr)
+            CALL MPI_Irecv   (recv_left , 3*cg%nb*cg%ny*cg%nz, MPI_DOUBLE_PRECISION, procyxl, 70, comm, req(2), ierr)
 
             call MPI_Waitall(2,req(:),status(:,:),ierr)
 
-            do j=1,nb
-               do i=1,nx
-                  b(ibx,i,j,:) =  recv_left(iby,nb+1-j,i,:)
-                  b(iby,i,j,:) = -recv_left(ibx,nb+1-j,i,:)
-                  b(ibz,i,j,:) =  recv_left(ibz,nb+1-j,i,:)
+            do j=1, cg%nb
+               do i=1, cg%nx
+                  b(ibx,i,j,:) =  recv_left(iby, cg%nb+1-j,i,:)
+                  b(iby,i,j,:) = -recv_left(ibx, cg%nb+1-j,i,:)
+                  b(ibz,i,j,:) =  recv_left(ibz, cg%nb+1-j,i,:)
                enddo
             enddo
 
@@ -308,7 +308,7 @@ contains
                case ("cor", "inf", "mpi", "ref", "she")
                   ! Do nothing
                case ("per")
-                  b(:,1:nb,:,:)              = b(:,nxb+1:nxb+nb,:,:)
+                  b(:,1:cg%nb,:,:)              = b(:, cg%nxb+1:cg%nxb+cg%nb,:,:)
                case ("out")
                   b(:,1,:,:) = b(:,2,:,:)
                case default
@@ -320,9 +320,9 @@ contains
                case ("cor", "inf", "mpi", "ref", "she")
                   ! Do nothing
                case ("per")
-                  b(:,nxb+nb+1:nxb+2*nb,:,:) = b(:,nb+1:2*nb,:,:)
+                  b(:, cg%nxb+cg%nb+1:cg%nxb+2*cg%nb,:,:) = b(:, cg%nb+1:2*cg%nb,:,:)
                case ("out")
-                  b(:,nx,:,:) = b(:,nx-1,:,:)
+                  b(:, cg%nx,:,:) = b(:, cg%nx-1,:,:)
                case default
                   write(msg,'(4a)') "[magboundaries:bnd_b]: Boundary condition ",bnd_xr," not implemented in ",dim
                   call warn(msg)
@@ -334,7 +334,7 @@ contains
                case ("cor", "inf", "mpi", "ref")
                   ! Do nothing
                case ("per")
-                  b(:,:,1:nb,:)              = b(:,:,nyb+1:nyb+nb,:)
+                  b(:,:,1:cg%nb,:)              = b(:,:, cg%nyb+1:cg%nyb+cg%nb,:)
                case ("out")
                   b(:,:,1,:) = b(:,:,2,:)
                case default
@@ -346,9 +346,9 @@ contains
                case ("cor", "inf", "mpi", "ref")
                   ! Do nothing
                case ("per")
-                  b(:,:,nyb+nb+1:nyb+2*nb,:) = b(:,:,nb+1:2*nb,:)
+                  b(:,:, cg%nyb+cg%nb+1:cg%nyb+2*cg%nb,:) = b(:,:, cg%nb+1:2*cg%nb,:)
                case ("out")
-                  b(:,:,ny,:) = b(:,:,ny-1,:)
+                  b(:,:, cg%ny,:) = b(:,:, cg%ny-1,:)
                case default
                   write(msg,'(4a)') "[magboundaries:bnd_b]: Boundary condition ",bnd_yr," not implemented in ",dim
                   call warn(msg)
@@ -361,7 +361,7 @@ contains
                case ("mpi", "ref")
                   ! Do nothing
                case ("per")
-                  b(:,:,:,1:nb)              = b(:,:,:,nzb+1:nzb+nb)
+                  b(:,:,:,1:cg%nb)              = b(:,:,:, cg%nzb+1:cg%nzb+cg%nb)
                case ("out")
                   b(:,:,:,1) = b(:,:,:,2)
                case default
@@ -373,9 +373,9 @@ contains
                case ("mpi", "ref")
                   ! Do nothing
                case ("per")
-                  b(:,:,:,nzb+nb+1:nzb+2*nb) = b(:,:,:,nb+1:2*nb)
+                  b(:,:,:, cg%nzb+cg%nb+1:cg%nzb+2*cg%nb) = b(:,:,:, cg%nb+1:2*cg%nb)
                case ("out")
-                  b(:,:,:,nz) = b(:,:,:,nz-1)
+                  b(:,:,:, cg%nz) = b(:,:,:, cg%nz-1)
                case default
                   write(msg,'(4a)') "[magboundaries:bnd_b]: Boundary condition ",bnd_zr," not implemented in ",dim
                   call warn(msg)
@@ -390,16 +390,16 @@ contains
    subroutine bnd_emf(var, name, dim)
 
       use dataio_pub,    only: msg, warn
-      use grid,          only: nx, ny, nz, nb, nxb, nyb, nzb
+      use grid,          only: cg
       use mpisetup,      only: bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr
 
       implicit none
 
       real, dimension(:,:,:), intent(inout) :: var
       character(len=*), intent(in)          :: name, dim
-      real, dimension(ny,nz)                :: dvarx
-      real, dimension(nx,nz)                :: dvary
-      real, dimension(nx,ny)                :: dvarz
+      real, dimension(cg%ny, cg%nz)                :: dvarx
+      real, dimension(cg%nx, cg%nz)                :: dvary
+      real, dimension(cg%nx, cg%ny)                :: dvarz
       integer                               :: ib
       logical, save                         :: frun = .true.
       logical, save                         :: bnd_xl_not_provided = .false.
@@ -434,11 +434,11 @@ contains
             if (any( [bnd_xl(1:3) == "ref", bnd_xr(1:3) == "ref", bnd_xl(1:3) == "out", bnd_xr(1:3) == "out"] )) then
                select case (name)
                   case ("vxby","vxbz")
-                     call compute_bnd_indxs(1,nxb,ledge,redge,lnbcells,rnbcells,bndsign,zndiff,rrbase)
+                     call compute_bnd_indxs(1, cg%nxb,ledge,redge,lnbcells,rnbcells,bndsign,zndiff,rrbase)
                   case ("vybx","vzbx","emfy","emfz")
-                     call compute_bnd_indxs(2,nxb,ledge,redge,lnbcells,rnbcells,bndsign,zndiff,rrbase)
+                     call compute_bnd_indxs(2, cg%nxb,ledge,redge,lnbcells,rnbcells,bndsign,zndiff,rrbase)
                   case ("vybz","vzby","emfx")
-                     call compute_bnd_indxs(3,nxb,ledge,redge,lnbcells,rnbcells,bndsign,zndiff,rrbase)
+                     call compute_bnd_indxs(3, cg%nxb,ledge,redge,lnbcells,rnbcells,bndsign,zndiff,rrbase)
                end select  ! (name)
             endif
 
@@ -453,7 +453,7 @@ contains
                case ("out")
                   dvarx = var(ledge+1,:,:)-var(ledge,:,:)
                   do ib=1,lnbcells
-                     var(ib,:,:) = var(nb+1,:,:) - real(nb+1-ib)*dvarx
+                     var(ib,:,:) = var(cg%nb+1,:,:) - real(cg%nb+1-ib)*dvarx
                   enddo
                case default
                   write(msg,'(6a)') "[magboundaries:bnd_emf]: Boundary condition ",bnd_xl," not implemented for ",name, " in ", dim
@@ -484,11 +484,11 @@ contains
             if (any( [bnd_yl(1:3) == "ref", bnd_yr(1:3) == "ref", bnd_yl(1:3) == "out", bnd_yr(1:3) == "out"] )) then
                select case (name)
                   case ("vybz","vybx")
-                     call compute_bnd_indxs(1,nyb,ledge,redge,lnbcells,rnbcells,bndsign,zndiff,rrbase)
+                     call compute_bnd_indxs(1, cg%nyb,ledge,redge,lnbcells,rnbcells,bndsign,zndiff,rrbase)
                   case ("vzby","vxby","emfz","emfx")
-                     call compute_bnd_indxs(2,nyb,ledge,redge,lnbcells,rnbcells,bndsign,zndiff,rrbase)
+                     call compute_bnd_indxs(2, cg%nyb,ledge,redge,lnbcells,rnbcells,bndsign,zndiff,rrbase)
                   case ("vzbx","vxbz","emfy")
-                     call compute_bnd_indxs(3,nyb,ledge,redge,lnbcells,rnbcells,bndsign,zndiff,rrbase)
+                     call compute_bnd_indxs(3, cg%nyb,ledge,redge,lnbcells,rnbcells,bndsign,zndiff,rrbase)
                end select  ! (name)
             endif
 
@@ -503,7 +503,7 @@ contains
                case ("out")
                   dvary = var(:,ledge+1,:)-var(:,ledge,:)
                   do ib=1,lnbcells
-                     var(:,ib,:) = var(:,nb+1,:) - real(nb+1-ib)*dvary
+                     var(:,ib,:) = var(:, cg%nb+1,:) - real(cg%nb+1-ib)*dvary
                   enddo
                case default
                   write(msg,'(6a)') "[magboundaries:bnd_emf]: Boundary condition ",bnd_yl," not implemented for ",name, " in ", dim
@@ -534,11 +534,11 @@ contains
             if (any( [bnd_zl(1:3) == "ref", bnd_zr(1:3) == "ref", bnd_zl(1:3) == "out", bnd_zr(1:3) == "out"] )) then
                select case (name)
                   case ("vzbx","vzby")
-                     call compute_bnd_indxs(1,nzb,ledge,redge,lnbcells,rnbcells,bndsign,zndiff,rrbase)
+                     call compute_bnd_indxs(1, cg%nzb,ledge,redge,lnbcells,rnbcells,bndsign,zndiff,rrbase)
                   case ("vxbz","vybz","emfy","emfx")
-                     call compute_bnd_indxs(2,nzb,ledge,redge,lnbcells,rnbcells,bndsign,zndiff,rrbase)
+                     call compute_bnd_indxs(2, cg%nzb,ledge,redge,lnbcells,rnbcells,bndsign,zndiff,rrbase)
                   case ("vxby","vybx","emfz")
-                     call compute_bnd_indxs(3,nzb,ledge,redge,lnbcells,rnbcells,bndsign,zndiff,rrbase)
+                     call compute_bnd_indxs(3, cg%nzb,ledge,redge,lnbcells,rnbcells,bndsign,zndiff,rrbase)
                end select  ! (name)
             endif
 
@@ -553,7 +553,7 @@ contains
                case ("out")
                   dvarz = var(:,:,ledge+1)-var(:,:,ledge)
                   do ib=1,lnbcells
-                     var(:,:,ib) = var(:,:,nb+1) - real(nb+1-ib)*dvarz
+                     var(:,:,ib) = var(:,:, cg%nb+1) - real(cg%nb+1-ib)*dvarz
                   enddo
                case default
                   write(msg,'(6a)') "[magboundaries:bnd_emf]: Boundary condition ",bnd_zl," not implemented for ",name, " in ", dim
@@ -584,11 +584,13 @@ contains
    end subroutine bnd_emf
 
    subroutine compute_bnd_indxs(bndcase,ndirb,ledge,redge,lnbcells,rnbcells,bndsign,zndiff,rrbase)
-      use grid, only: nb
+
+      use grid, only: cg
+
       implicit none
 
       integer, intent(in)  :: bndcase     !< 1 - v component compatible with direction; 2 - b component compatible with direction or emf component incompatible with direction; 3 - other cases
-      integer, intent(in)  :: ndirb       !< nxb/nyb/nzb depanding on the current direction
+      integer, intent(in)  :: ndirb       !< cg%{nxb,nyb,nzb} depanding on the current direction
       integer, intent(out) :: ledge       !< index of the left edge of physical domain for emf
       integer, intent(out) :: redge       !< index of the right edge of physical domain for emf
       integer, intent(out) :: lnbcells    !< number of cells in a loop at left boundary
@@ -599,21 +601,21 @@ contains
 
       select case (bndcase)
          case (1)
-            ledge    = nb
-            lnbcells = nb-1
+            ledge    = cg%nb
+            lnbcells = cg%nb-1
             bndsign  = -1.
          case (2)
-            ledge    = nb+1
-            lnbcells = nb
+            ledge    = cg%nb+1
+            lnbcells = cg%nb
             bndsign  = -1.
          case (3)
-            ledge    = nb
-            lnbcells = nb
+            ledge    = cg%nb
+            lnbcells = cg%nb
             bndsign  = 1.
       end select  ! (name)
 
       zndiff   = ledge - lnbcells
-      rnbcells = nb - zndiff
+      rnbcells = cg%nb - zndiff
       redge    = ndirb + ledge
       rrbase   = ndirb + lnbcells + 1  ! = redge + 1 - zndiff
 
@@ -621,7 +623,7 @@ contains
 
    subroutine all_mag_boundaries
 
-      use grid, only: has_dir, xdim, ydim, zdim
+      use mpisetup, only: has_dir, xdim, ydim, zdim
 
       implicit none
 

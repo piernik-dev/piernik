@@ -48,7 +48,7 @@ contains
 !-----------------------------------------------------------------------------
    subroutine read_problem_par
       use dataio_pub,    only: ierrh, par_file, namelist_errh, compare_namelist      ! QA_WARN required for diff_nml
-      use grid,          only: dxmn
+      use grid,          only: cg
       use mpisetup,      only: ibuff, rbuff, buffer_dim, master, slave, comm, ierr
       use mpi,           only: MPI_DOUBLE_PRECISION, MPI_INTEGER
       use dataio_pub,    only: user_plt_hdf5, user_vars_hdf5, user_tsl
@@ -66,7 +66,7 @@ contains
       x0      = 0.0
       y0      = 0.0
       z0      = 0.0
-      r0      = dxmn/2.
+      r0      = cg%dxmn/2.
       n_sn    = 1
       dt_sn   = 0.0
 
@@ -121,7 +121,7 @@ contains
       use arrays,         only: u, b
       use dataio_pub,     only: msg, die, printinfo
       use fluidindex,     only: nvar, ibx, iby, ibz
-      use grid,           only: x, y, z, nx, ny, nz
+      use grid,           only: cg
       use types,          only: component_fluid
 
       implicit none
@@ -142,9 +142,9 @@ contains
          call printinfo(msg)
 
 ! Uniform equilibrium state
-         do k = 1,nz
-            do j = 1,ny
-               do i = 1,nx
+         do k = 1, cg%nz
+            do j = 1, cg%ny
+               do i = 1, cg%nx
                   u(fl%idn,i,j,k) = d0
                   u(fl%imx,i,j,k) = 0.0
                   u(fl%imy,i,j,k) = 0.0
@@ -157,19 +157,19 @@ contains
 
 ! Explosion
 
-         do k = 1,nz
-            do j = 1,ny
-               do i = 1,nx
-                  r = dsqrt( (x(i)-x0)**2 + (y(j)-y0)**2 + (z(k)-z0)**2 )
+         do k = 1, cg%nz
+            do j = 1, cg%ny
+               do i = 1, cg%nx
+                  r = dsqrt( (cg%x(i)-x0)**2 + (cg%y(j)-y0)**2 + (cg%z(k)-z0)**2 )
                   if ( r**2 < r0**2) u(fl%ien,i,j,k)   = u(fl%ien,i,j,k) + Eexpl
                enddo
             enddo
          enddo
 
          if (fl%tag=="ION") then
-            do k = 1,nz
-               do j = 1,ny
-                  do i = 1,nx
+            do k = 1, cg%nz
+               do j = 1, cg%ny
+                  do i = 1, cg%nx
                      b(ibx,i,j,k) = bx0
                      b(iby,i,j,k) = by0
                      b(ibz,i,j,k) = bz0
@@ -184,7 +184,7 @@ contains
 !-----------------------------------------------------------------------------
    subroutine sedov_plt_hdf5(var,ij,xn,tab,ierrh)
       use arrays,        only: u
-      use grid,          only: nb, nxb, nyb, nzb
+      use grid,          only: cg
       implicit none
       character(LEN=*), intent(in)        :: var   !< quantity to be plotted
       character(LEN=*), intent(in)        :: ij    !< plane of plot
@@ -195,9 +195,9 @@ contains
       ierrh = 0
       select case (var)
          case ("fooo")   ! Totally bogus quantity, just to check user_plt_hdf5 works
-            if (ij=="yz") tab(:,:) = u(2,xn,nb+1:nyb+nb,nb+1:nzb+nb)*u(3,xn,nb+1:nyb+nb,nb+1:nzb+nb)* .123456789
-            if (ij=="xz") tab(:,:) = u(2,nb+1:nxb+nb,xn,nb+1:nzb+nb)*u(3,nb+1:nxb+nb,xn,nb+1:nzb+nb)* .123456789
-            if (ij=="xy") tab(:,:) = u(2,nb+1:nxb+nb,nb+1:nyb+nb,xn)*u(3,nb+1:nxb+nb,nb+1:nyb+nb,xn)* .123456789
+            if (ij=="yz") tab(:,:) = u(2,xn, cg%nb+1:cg%nyb+cg%nb, cg%nb+1:cg%nzb+cg%nb)*u(3,xn, cg%nb+1:cg%nyb+cg%nb, cg%nb+1:cg%nzb+cg%nb)* .123456789
+            if (ij=="xz") tab(:,:) = u(2, cg%nb+1:cg%nxb+cg%nb,xn, cg%nb+1:cg%nzb+cg%nb)*u(3, cg%nb+1:cg%nxb+cg%nb,xn, cg%nb+1:cg%nzb+cg%nb)* .123456789
+            if (ij=="xy") tab(:,:) = u(2, cg%nb+1:cg%nxb+cg%nb, cg%nb+1:cg%nyb+cg%nb,xn)*u(3, cg%nb+1:cg%nxb+cg%nb, cg%nb+1:cg%nyb+cg%nb,xn)* .123456789
          case default
             ierrh = -1
       end select

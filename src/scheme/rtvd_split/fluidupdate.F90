@@ -75,8 +75,7 @@ contains
       use types,           only: problem_customize_solution
 #ifdef SHEAR
       use fluidboundaries, only: bnd_u
-      use grid,            only: xdim, ydim, has_dir
-      use mpisetup,        only: t, dt
+      use mpisetup,        only: has_dir, xdim, ydim, t, dt
       use shear,           only: yshift
 #endif /* SHEAR */
 #ifdef GRAV
@@ -136,7 +135,7 @@ contains
    subroutine make_sweep(dir, forward)
 
       use dataio_pub,     only: msg, die
-      use grid,           only: xdim, ydim, zdim, has_dir
+      use mpisetup,       only: has_dir, xdim, ydim, zdim
       use sweeps,         only: sweepx, sweepy, sweepz
 #if defined SHEAR && defined FLUID_INTERACTIONS
       use sweeps,         only: source_terms_y
@@ -252,7 +251,7 @@ contains
       use advects,     only: advectby_x, advectbz_x
       use arrays,      only: b
       use fluidindex,  only: ibx, iby, ibz
-      use grid,        only: xdim, ydim, zdim
+      use mpisetup,    only: xdim, ydim, zdim
 #ifdef RESISTIVE
       use resistivity, only: diffuseby_x, diffusebz_x
 #endif /* RESISTIVE */
@@ -284,7 +283,7 @@ contains
       use advects,     only: advectbx_y, advectbz_y
       use arrays,      only: b
       use fluidindex,  only: ibx, iby, ibz
-      use grid,        only: xdim, ydim, zdim
+      use mpisetup,    only: xdim, ydim, zdim
 #ifdef RESISTIVE
       use resistivity, only: diffusebx_y, diffusebz_y
 #endif /* RESISTIVE */
@@ -316,7 +315,7 @@ contains
       use advects,     only: advectbx_z, advectby_z
       use arrays,      only: b
       use fluidindex,  only: ibx, iby, ibz
-      use grid,        only: xdim, ydim, zdim
+      use mpisetup,    only: xdim, ydim, zdim
 #ifdef RESISTIVE
       use resistivity, only: diffusebx_z, diffuseby_z
 #endif /* RESISTIVE */
@@ -343,7 +342,7 @@ contains
 
       use arrays,        only: b, wa
       use func,          only: pshift, mshift
-      use grid,          only: idl
+      use grid,          only: cg
       use magboundaries, only: all_mag_boundaries
       use types,         only: custom_emf_bnd
 #ifdef RESISTIVE
@@ -357,22 +356,22 @@ contains
 #ifdef RESISTIVE
 ! DIFFUSION FULL STEP
       if (associated(custom_emf_bnd)) call custom_emf_bnd(wcu)
-      b(ib1,:,:,:) = b(ib1,:,:,:) - wcu*idl(dim1)
+      b(ib1,:,:,:) = b(ib1,:,:,:) - wcu*cg%idl(dim1)
       wcu = pshift(wcu,dim1)
-      b(ib1,:,:,:) = b(ib1,:,:,:) + wcu*idl(dim1)
+      b(ib1,:,:,:) = b(ib1,:,:,:) + wcu*cg%idl(dim1)
       wcu = mshift(wcu,dim1)
-      b(ib2,:,:,:) = b(ib2,:,:,:) + wcu*idl(dim2)
+      b(ib2,:,:,:) = b(ib2,:,:,:) + wcu*cg%idl(dim2)
       wcu = pshift(wcu,dim2)
-      b(ib2,:,:,:) = b(ib2,:,:,:) - wcu*idl(dim2)
+      b(ib2,:,:,:) = b(ib2,:,:,:) - wcu*cg%idl(dim2)
 #endif /* RESISTIVE */
 ! ADVECTION FULL STEP
       if (associated(custom_emf_bnd)) call custom_emf_bnd(wa)
-      b(ib1,:,:,:) = b(ib1,:,:,:) - wa*idl(dim1)
+      b(ib1,:,:,:) = b(ib1,:,:,:) - wa*cg%idl(dim1)
       wa = mshift(wa,dim1)
-      b(ib1,:,:,:) = b(ib1,:,:,:) + wa*idl(dim1)
-      b(ib2,:,:,:) = b(ib2,:,:,:) - wa*idl(dim2)
+      b(ib1,:,:,:) = b(ib1,:,:,:) + wa*cg%idl(dim1)
+      b(ib2,:,:,:) = b(ib2,:,:,:) - wa*cg%idl(dim2)
       wa = pshift(wa,dim2)
-      b(ib2,:,:,:) = b(ib2,:,:,:) + wa*idl(dim2)
+      b(ib2,:,:,:) = b(ib2,:,:,:) + wa*cg%idl(dim2)
 
       call all_mag_boundaries
 

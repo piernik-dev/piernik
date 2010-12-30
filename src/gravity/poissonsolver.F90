@@ -45,7 +45,7 @@ contains
 
     use arrays,         only: u, sgp
     use dataio_pub,     only: die
-    use grid,           only: x, nx, ny, nz, dz, dx, nb, nxb, nyb, nzb
+    use grid,           only: cg
     use mpisetup,       only: bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr
 
     implicit none
@@ -53,46 +53,45 @@ contains
 #ifdef SHEAR
     real, dimension(:,:,:), allocatable :: ala
 #endif /* SHEAR */
-    integer       :: i
 
-    if (any([nx, ny, nz] <= 1)) call die("[poissonsolver:poisson_solve] Only 3D setups are supported") !BEWARE 2D and 1D probably need small fixes
+    if (any([cg%nx, cg%ny, cg%nz] <= 1)) call die("[poissonsolver:poisson_solve] Only 3D setups are supported") !BEWARE 2D and 1D probably need small fixes
 
     if ( bnd_xl .eq. 'per' .and. bnd_xr .eq. 'per' .and. &
         bnd_yl .eq. 'per' .and. bnd_yr .eq. 'per' .and. &
         bnd_zl .ne. 'per' .and. bnd_zr .ne. 'per'        ) then ! Periodic in X and Y, nonperiodic in Z
 
-         call poisson_xyp(dens(nb+1:nb+nxb,nb+1:nb+nyb,:), &
-                           sgp(nb+1:nb+nxb,nb+1:nb+nyb,:),dz)
+         call poisson_xyp(dens(cg%nb+1:cg%nb+cg%nxb, cg%nb+1:cg%nb+cg%nyb,:), &
+                           sgp(cg%nb+1:cg%nb+cg%nxb, cg%nb+1:cg%nb+cg%nyb,:), cg%dz)
 
         call die("[poissonsolver:poisson_solve] poisson_xyp called")
 
     elseif ( bnd_xl .eq. 'per' .and. bnd_xr .eq. 'per' .and. &
             bnd_yl .eq. 'per' .and. bnd_yr .eq. 'per' .and. &
             bnd_zl .eq. 'per' .and. bnd_zr .eq. 'per'        ) then ! Fully 3D periodic
-        call poisson_xyzp(dens(nb+1:nb+nxb,nb+1:nb+nyb,nb+1:nb+nzb), sgp(nb+1:nb+nxb,nb+1:nb+nyb,nb+1:nb+nzb))
+        call poisson_xyzp(dens(cg%nb+1:cg%nb+cg%nxb, cg%nb+1:cg%nb+cg%nyb, cg%nb+1:cg%nb+cg%nzb), sgp(cg%nb+1:cg%nb+cg%nxb, cg%nb+1:cg%nb+cg%nyb, cg%nb+1:cg%nb+cg%nzb))
 
 #ifdef SHEAR
     elseif ( bnd_xl .eq. 'she' .and. bnd_xr .eq. 'she' .and. &
              bnd_yl .eq. 'per' .and. bnd_yr .eq. 'per' ) then ! 2D shearing box
 
          if (dimensions=='3d') then
-           if (.not.allocated(ala)) allocate(ala(nx-2*nb,ny-2*nb,nz-2*nb))
-           ala = dens(nb+1:nb+nxb,nb+1:nb+nyb,nb+1:nb+nzb)
-           call poisson_xyzp(ala(:,:,:), sgp(nb+1:nb+nxb,nb+1:nb+nyb,nb+1:nb+nzb))
+           if (.not.allocated(ala)) allocate(ala(cg%nx-2*cg%nb, cg%ny-2*cg%nb, cg%nz-2*cg%nb))
+           ala = dens(cg%nb+1:cg%nb+cg%nxb, cg%nb+1:cg%nb+cg%nyb, cg%nb+1:cg%nb+cg%nzb)
+           call poisson_xyzp(ala(:,:,:), sgp(cg%nb+1:cg%nb+cg%nxb, cg%nb+1:cg%nb+cg%nyb, cg%nb+1:cg%nb+cg%nzb))
 
-           sgp(:,:,1:nb)              = sgp(:,:,nzb+1:nzb+nb)
-           sgp(:,:,nzb+nb+1:nzb+2*nb) = sgp(:,:,nb+1:2*nb)
+           sgp(:,:,1:cg%nb)              = sgp(:,:, cg%nzb+1:cg%nzb+cg%nb)
+           sgp(:,:, cg%nzb+cg%nb+1:cg%nzb+2*cg%nb) = sgp(:,:, cg%nb+1:2*cg%nb)
 
          else
-            call poisson_xy2d(dens(nb+1:nb+nxb,nb+1:nb+nyb,1), &
-                            sgp(nb+1:nb+nxb,      nb+1:nb+nyb,1), &
-                            sgp(1:nb,             nb+1:nb+nyb,1), &
-                            sgp(nxb+nb+1:nxb+2*nb,nb+1:nb+nyb,1), &
-                            dx)
+            call poisson_xy2d(dens(cg%nb+1:cg%nb+cg%nxb, cg%nb+1:cg%nb+cg%nyb,1), &
+                            sgp(cg%nb+1:cg%nb+cg%nxb,      cg%nb+1:cg%nb+cg%nyb,1), &
+                            sgp(1:cg%nb,             cg%nb+1:cg%nb+cg%nyb,1), &
+                            sgp(cg%nxb+cg%nb+1:cg%nxb+2*cg%nb, cg%nb+1:cg%nb+cg%nyb,1), &
+                            cg%dx)
 
          endif
-         sgp(:,1:nb,:)              = sgp(:,nyb+1:nyb+nb,:)
-         sgp(:,nyb+nb+1:nyb+2*nb,:) = sgp(:,nb+1:2*nb,:)
+         sgp(:,1:cg%nb,:)              = sgp(:, cg%nyb+1:cg%nyb+cg%nb,:)
+         sgp(:, cg%nyb+cg%nb+1:cg%nyb+2*cg%nb,:) = sgp(:, cg%nb+1:2*cg%nb,:)
 
          if (allocated(ala)) deallocate(ala)
 #endif /* SHEAR */
@@ -110,10 +109,12 @@ contains
 !!
 #ifdef SHEAR
   subroutine poisson_xy2d(den, pot, lpot, rpot, dx)
+
     use arrays,    only: x
     use constants, only: newtong, dpi
-    use grid,      only: xmin, xmax, ymin, ymax, nxb, nyb, nb
+    use grid,      only: cg
     use shear,     only: dely
+
     implicit none
 
     real, dimension(:,:), intent(in)              :: den
@@ -147,13 +148,13 @@ contains
 !----------------------------------------------------------------------
 !
 
-    St = dely / (xmax - xmin)
-    St = -St * nyb /(ymax - ymin)
+    St = dely / cg%Lx
+    St = -St * cg%nyb / cg%Ly
 ! determine input array dimension
 !
     n = size(den, 1)
-    xx(:) = x(nb+1:nxb+nb)
-    if (n /= size(den,2)) stop 'nx /= ny in poisson_xy'
+    xx(:) = x(cg%nb+1:cg%nxb+cg%nb)
+    if (n /= size(den,2)) stop 'cg%nx /= cg%ny in poisson_xy'
 
 ! compute dimensions for complex arrays
 !
@@ -163,12 +164,12 @@ contains
 !
     ky(1) = 0.0
     do p = 2, np
-      ky(p) = dpi * (p-1) / n !      kx(p) = dpi * (p - 1) / nx
+      ky(p) = dpi * (p-1) / n !      kx(p) = dpi * (p - 1) / cg%nx
     enddo
 
     kx(1) = 0.0
     do q = 2, np
-      kx(q) = dpi * (q-1) / n !      ky(q) = dpi * (q - 1) / ny
+      kx(q) = dpi * (q-1) / n !      ky(q) = dpi * (q - 1) / cg%ny
       kx(n+2-q) = kx(q)
     enddo
 
@@ -232,12 +233,12 @@ contains
       call dfftw_execute(pb2)
       pot(i,:)  = rtmp(:) / n / n
     enddo
-    do i = 1,nb
-      ctmp(:)   = fft(n-nb+i,:) * exp( cmplx(0.0, -St*ky(:)*x(i)) )
+    do i = 1, cg%nb
+      ctmp(:)   = fft(n-cg%nb+i,:) * exp( cmplx(0.0, -St*ky(:)*x(i)) )
       call dfftw_execute(pb2)
       lpot(i,:) = rtmp(:) / n / n
 
-      ctmp(:)   = fft(i,:) * exp( cmplx(0.0, -St*ky(:)*x(nxb+nb+i)) )
+      ctmp(:)   = fft(i,:) * exp( cmplx(0.0, -St*ky(:)*x(cg%nxb+cg%nb+i)) )
       call dfftw_execute(pb2)
       rpot(i,:) = rtmp(:) / n / n
     enddo
@@ -525,7 +526,7 @@ contains
   subroutine poisson_xyzp(den, pot)
 
     use constants, only: fpiG, dpi
-    use grid,      only: dx, dy, dz
+    use grid,      only: cg
 
     implicit none
 
@@ -577,9 +578,9 @@ contains
 ! compute eigenvalues for each p, q and r and solve linear system
 ! ToDo: this can be done only once if we do not change arrays
 
-    kx(:) = (cos(dpi/nx*(/(j,j=0,np-1)/))-1.)/dx**2
-    ky(:) = (cos(dpi/ny*(/(j,j=0,ny-1)/))-1.)/dy**2
-    kz(:) = (cos(dpi/nz*(/(j,j=0,nz-1)/))-1.)/dz**2
+    kx(:) = (cos(dpi/nx*(/(j,j=0,np-1)/))-1.)/cg%dx**2
+    ky(:) = (cos(dpi/ny*(/(j,j=0,ny-1)/))-1.)/cg%dy**2
+    kz(:) = (cos(dpi/nz*(/(j,j=0,nz-1)/))-1.)/cg%dz**2
 
 ! Correction for 4-th order (5-point) Laplacian - seems not to be important, at least in Jeans test.
 ! For integral approximation of the 4-th order Laplacian replace (7.-cos(x))/6. by (13.-cos(x))/12.

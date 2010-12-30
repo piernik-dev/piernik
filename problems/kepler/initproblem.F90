@@ -113,17 +113,21 @@ contains
          user_bnd_xr => my_bnd_xr
          grav_pot_3d => my_grav_pot_3d
       endif
+
    end subroutine read_problem_par
+
 !-----------------------------------------------------------------------------
+
    subroutine init_prob
+
       use types,               only: component_fluid
       use arrays,              only: u, b, dprof
       use constants,           only: newtong
       use fluidindex,          only: ibx, iby, ibz, nvar
       use gravity,             only: r_smooth, r_grav, n_gravr, ptmass, source_terms_grav, grav_pot2accel, grav_pot_3d
-      use grid,                only: x, y, z, nx, ny, nz, zdim, has_dir, geometry
+      use grid,                only: cg, geometry
       use hydrostatic,         only: hydrostatic_zeq_densmid
-      use mpisetup,            only: smalld, smallei
+      use mpisetup,            only: smalld, smallei, zdim, has_dir
       use types,               only: component_fluid
       use dataio_pub,          only: die
 
@@ -139,8 +143,8 @@ contains
 !   Secondary parameters
 
       sqr_gm = sqrt(newtong*ptmass)
-      do k = 1, nz
-         if (z(k) < 0.0) kmid = k       ! the midplane is in between ksmid and ksmid+1
+      do k = 1, cg%nz
+         if (cg%z(k) < 0.0) kmid = k       ! the midplane is in between ksmid and ksmid+1
       enddo
 
       if (associated(nvar%ion) .and. geometry=='cartesian') then
@@ -148,15 +152,15 @@ contains
          csim2 = fl%cs2*(1.0+alpha)
          b0    = sqrt(2.*alpha*d0*fl%cs2)
 
-         do j = 1,ny
-            yj = y(j)
-            do i = 1,nx
-               xi = x(i)
+         do j = 1, cg%ny
+            yj = cg%y(j)
+            do i = 1, cg%nx
+               xi = cg%x(i)
                rc = sqrt(xi**2+yj**2)
 
                if (has_dir(zdim)) call hydrostatic_zeq_densmid(i, j, d0, csim2)
 
-               do k = 1,nz
+               do k = 1, cg%nz
 
                   vx = sqr_gm * (-yj)/(rc**2+r_smooth**2)**0.75
                   vy = sqr_gm * ( xi)/(rc**2+r_smooth**2)**0.75
@@ -198,23 +202,23 @@ contains
 
          call grav_pot_3d
 
-         if (.not.allocated(den0)) allocate(den0(nvar%fluids,nx,ny,nz))
-         if (.not.allocated(mtx0)) allocate(mtx0(nvar%fluids,nx,ny,nz))
-         if (.not.allocated(mty0)) allocate(mty0(nvar%fluids,nx,ny,nz))
-         if (.not.allocated(mtz0)) allocate(mtz0(nvar%fluids,nx,ny,nz))
-         if (.not.allocated(ene0)) allocate(ene0(nvar%fluids,nx,ny,nz))
+         if (.not.allocated(den0)) allocate(den0(nvar%fluids, cg%nx, cg%ny, cg%nz))
+         if (.not.allocated(mtx0)) allocate(mtx0(nvar%fluids, cg%nx, cg%ny, cg%nz))
+         if (.not.allocated(mty0)) allocate(mty0(nvar%fluids, cg%nx, cg%ny, cg%nz))
+         if (.not.allocated(mtz0)) allocate(mtz0(nvar%fluids, cg%nx, cg%ny, cg%nz))
+         if (.not.allocated(ene0)) allocate(ene0(nvar%fluids, cg%nx, cg%ny, cg%nz))
 
-         if (.not.allocated(grav)) allocate(grav(nx))
+         if (.not.allocated(grav)) allocate(grav(cg%nx))
 
          do p = 1, nvar%fluids
             fl => nvar%all_fluids(p)
             call source_terms_grav
-            call grav_pot2accel('xsweep',1,1, nx, grav, 1)
+            call grav_pot2accel('xsweep',1,1, cg%nx, grav, 1)
 
-            do j = 1,ny
-               yj = y(j)
-               do i = 1,nx
-                  xi = x(i)
+            do j = 1, cg%ny
+               yj = cg%y(j)
+               do i = 1, cg%nx
+                  xi = cg%x(i)
                   rc = xi + r_smooth
 
                   gprim = newtong*ptmass / xi**3
@@ -224,8 +228,8 @@ contains
                      H2 = 1.0
                   endif
 
-                  do k = 1,nz
-                     zk = z(k)
+                  do k = 1, cg%nz
+                     zk = cg%z(k)
                      u(fl%idn,i,j,k) = max(d0*(1./cosh((xi/r_max)**10)) * exp(-zk**2/H2),smalld)
 
                      vr   = 0.0
@@ -258,13 +262,15 @@ contains
       else
          call die("[initproblem:init_prob] I don't know what to do... :/")
       endif
-      return
+
    end subroutine init_prob
+
 !-----------------------------------------------------------------------------
+
    subroutine write_initial_fld_to_restart(file_id)
 
       use hdf5,        only: HID_T
-      use grid,        only: nx, ny, nz
+      use grid,        only: cg
       use dataio_hdf5, only: write_3darr_to_restart
       use fluidindex,  only: nvar
 
@@ -276,23 +282,25 @@ contains
 
       do i = LBOUND(den0,1), UBOUND(den0,1)
          write(dname,'(2a)') nvar%all_fluids(i)%tag, '_den0'
-         if (allocated(den0)) call write_3darr_to_restart(den0(i,:,:,:), file_id, dname, nx, ny, nz)
+         if (allocated(den0)) call write_3darr_to_restart(den0(i,:,:,:), file_id, dname, cg%nx, cg%ny, cg%nz)
          write(dname,'(2a)') nvar%all_fluids(i)%tag, '_mtx0'
-         if (allocated(mtx0)) call write_3darr_to_restart(mtx0(i,:,:,:), file_id, dname, nx, ny, nz)
+         if (allocated(mtx0)) call write_3darr_to_restart(mtx0(i,:,:,:), file_id, dname, cg%nx, cg%ny, cg%nz)
          write(dname,'(2a)') nvar%all_fluids(i)%tag, '_mty0'
-         if (allocated(mty0)) call write_3darr_to_restart(mty0(i,:,:,:), file_id, dname, nx, ny, nz)
+         if (allocated(mty0)) call write_3darr_to_restart(mty0(i,:,:,:), file_id, dname, cg%nx, cg%ny, cg%nz)
          write(dname,'(2a)') nvar%all_fluids(i)%tag, '_mtz0'
-         if (allocated(mtz0)) call write_3darr_to_restart(mtz0(i,:,:,:), file_id, dname, nx, ny, nz)
+         if (allocated(mtz0)) call write_3darr_to_restart(mtz0(i,:,:,:), file_id, dname, cg%nx, cg%ny, cg%nz)
          write(dname,'(2a)') nvar%all_fluids(i)%tag, '_ene0'
-         if (allocated(ene0)) call write_3darr_to_restart(ene0(i,:,:,:), file_id, dname, nx, ny, nz)
+         if (allocated(ene0)) call write_3darr_to_restart(ene0(i,:,:,:), file_id, dname, cg%nx, cg%ny, cg%nz)
       enddo
 
    end subroutine write_initial_fld_to_restart
+
 !-----------------------------------------------------------------------------
+
    subroutine read_initial_fld_from_restart(file_id)
 
       use hdf5,        only: HID_T
-      use grid,        only: nx, ny, nz
+      use grid,        only: cg
       use fluidindex,  only: nvar
       use dataio_hdf5, only: read_3darr_from_restart
       use fluidindex,  only: nvar
@@ -306,36 +314,36 @@ contains
       integer :: i
 
       ! /todo First query for existence of den0, vlx0 and vly0, then allocate
-      if (.not.allocated(den0)) allocate(den0(nvar%fluids,nx,ny,nz))
-      if (.not.allocated(mtx0)) allocate(mtx0(nvar%fluids,nx,ny,nz))
-      if (.not.allocated(mty0)) allocate(mty0(nvar%fluids,nx,ny,nz))
-      if (.not.allocated(mtz0)) allocate(mtz0(nvar%fluids,nx,ny,nz))
-      if (.not.allocated(ene0)) allocate(ene0(nvar%fluids,nx,ny,nz))
+      if (.not.allocated(den0)) allocate(den0(nvar%fluids, cg%nx, cg%ny, cg%nz))
+      if (.not.allocated(mtx0)) allocate(mtx0(nvar%fluids, cg%nx, cg%ny, cg%nz))
+      if (.not.allocated(mty0)) allocate(mty0(nvar%fluids, cg%nx, cg%ny, cg%nz))
+      if (.not.allocated(mtz0)) allocate(mtz0(nvar%fluids, cg%nx, cg%ny, cg%nz))
+      if (.not.allocated(ene0)) allocate(ene0(nvar%fluids, cg%nx, cg%ny, cg%nz))
 
       do i=1, nvar%fluids
          write(dname,'(2a)') nvar%all_fluids(i)%tag, '_den0'
          if (.not.associated(p3d)) p3d => den0(i,:,:,:)
-         call read_3darr_from_restart(file_id,dname,p3d,nx,ny,nz)
+         call read_3darr_from_restart(file_id,dname,p3d, cg%nx, cg%ny, cg%nz)
          if (associated(p3d)) nullify(p3d)
 
          write(dname,'(2a)') nvar%all_fluids(i)%tag, '_mtx0'
          if (.not.associated(p3d)) p3d => mtx0(i,:,:,:)
-         call read_3darr_from_restart(file_id,dname,p3d,nx,ny,nz)
+         call read_3darr_from_restart(file_id,dname,p3d, cg%nx, cg%ny, cg%nz)
          if (associated(p3d)) nullify(p3d)
 
          write(dname,'(2a)') nvar%all_fluids(i)%tag, '_mty0'
          if (.not.associated(p3d)) p3d => mty0(i,:,:,:)
-         call read_3darr_from_restart(file_id,dname,p3d,nx,ny,nz)
+         call read_3darr_from_restart(file_id,dname,p3d, cg%nx, cg%ny, cg%nz)
          if (associated(p3d)) nullify(p3d)
 
          write(dname,'(2a)') nvar%all_fluids(i)%tag, '_mtz0'
          if (.not.associated(p3d)) p3d => mtz0(i,:,:,:)
-         call read_3darr_from_restart(file_id,dname,p3d,nx,ny,nz)
+         call read_3darr_from_restart(file_id,dname,p3d, cg%nx, cg%ny, cg%nz)
          if (associated(p3d)) nullify(p3d)
 
          write(dname,'(2a)') nvar%all_fluids(i)%tag, '_ene0'
          if (.not.associated(p3d)) p3d => ene0(i,:,:,:)
-         call read_3darr_from_restart(file_id,dname,p3d,nx,ny,nz)
+         call read_3darr_from_restart(file_id,dname,p3d, cg%nx, cg%ny, cg%nz)
          if (associated(p3d)) nullify(p3d)
       enddo
 
@@ -344,7 +352,7 @@ contains
    subroutine problem_customize_solution_kepler
       use mpisetup,        only: dt
       use arrays,          only: u
-      use grid,            only: x, nx, ny, nz
+      use grid,            only: cg
       use fluidboundaries, only: all_fluid_boundaries
       use fluidindex,      only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
 #ifndef ISO
@@ -356,21 +364,21 @@ contains
       real, dimension(:,:), allocatable, save :: funcR
 
       if (frun) then
-         allocate(funcR(size(iarr_all_dn),nx) )
+         allocate(funcR(size(iarr_all_dn), cg%nx) )
 
-         funcR(1,:) = -tanh((x(:)-r_in+1.0)**f_in) + 1.0
+         funcR(1,:) = -tanh((cg%x(:)-r_in+1.0)**f_in) + 1.0
          funcR(1,:) = alpha*funcR(1,:)
          open(212,file="funcR.dat",status="unknown")
-         do i = 1, nx
-            write(212,*) x(i),funcR(1,i)
+         do i = 1, cg%nx
+            write(212,*) cg%x(i),funcR(1,i)
          enddo
          close(212)
          frun = .false.
          funcR(:,:) = spread(funcR(1,:),1,size(iarr_all_dn))
       endif
 
-      do j = 1, ny
-         do k = 1, nz
+      do j = 1, cg%ny
+         do k = 1, cg%nz
             u(iarr_all_dn,:,j,k) = u(iarr_all_dn,:,j,k) - dt*(u(iarr_all_dn,:,j,k) - den0(:,:,j,k))*funcR(:,:)
             u(iarr_all_mx,:,j,k) = u(iarr_all_mx,:,j,k) - dt*(u(iarr_all_mx,:,j,k) - mtx0(:,:,j,k))*funcR(:,:)
             u(iarr_all_my,:,j,k) = u(iarr_all_my,:,j,k) - dt*(u(iarr_all_my,:,j,k) - mty0(:,:,j,k))*funcR(:,:)
@@ -387,16 +395,16 @@ contains
       use constants, only: newtong
       use gravity,   only: ptmass, sum_potential
       use arrays,    only: gp
-      use grid,      only: x, z, nx, nz
+      use grid,      only: cg
       implicit none
       logical, save :: frun = .true.
       real          :: r2
       integer       :: i, k
 
       if (frun) then
-         do i = 1, nx
-            do k = 1, nz
-               r2 = x(i)**2 + z(k)**2
+         do i = 1, cg%nx
+            do k = 1, cg%nz
+               r2 = cg%x(i)**2 + cg%z(k)**2
                gp(i,:,k) = -newtong*ptmass / sqrt(r2)
             enddo
          enddo
@@ -408,7 +416,7 @@ contains
    end subroutine my_grav_pot_3d
 !-----------------------------------------------------------------------------
    subroutine my_bnd_xl
-      use grid,         only: nb,nx,ny,nz,x
+      use grid,         only: cg
       use arrays,       only: u
       use gravity,      only: grav_pot2accel
       use fluidindex,   only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz, nvar
@@ -417,8 +425,8 @@ contains
 #endif /* ISO */
       implicit none
       integer :: i, p
-      real, dimension(nx) :: grav
-      real, dimension(size(iarr_all_my),ny,nz) :: vy,vym
+      real, dimension(cg%nx) :: grav
+      real, dimension(size(iarr_all_my), cg%ny, cg%nz) :: vy,vym
       real, dimension(size(nvar%all_fluids))    :: cs2_arr
       integer, dimension(size(nvar%all_fluids)) :: ind_cs2
 
@@ -427,21 +435,21 @@ contains
          cs2_arr(i) = nvar%all_fluids(i)%cs2
       enddo
 
-      call grav_pot2accel('xsweep',1,1, nx, grav, 1)
+      call grav_pot2accel('xsweep',1,1, cg%nx, grav, 1)
 
-      do i = 1,nb
-         u(iarr_all_dn,i,:,:) = u(iarr_all_dn,nb+1,:,:)
-         u(iarr_all_mx,i,:,:) = max(0.0,u(iarr_all_mx,nb+1,:,:))
+      do i = 1, cg%nb
+         u(iarr_all_dn,i,:,:) = u(iarr_all_dn, cg%nb+1,:,:)
+         u(iarr_all_mx,i,:,:) = max(0.0,u(iarr_all_mx, cg%nb+1,:,:))
          do p = 1, size(nvar%all_fluids)
-            u(iarr_all_my(p),i,:,:) = sqrt( abs(grav(i)) * x(i) - cs2_arr(p)) *  u(iarr_all_dn(p),i,:,:)
+            u(iarr_all_my(p),i,:,:) = sqrt( abs(grav(i)) * cg%x(i) - cs2_arr(p)) *  u(iarr_all_dn(p),i,:,:)
          enddo
-         u(iarr_all_mz,i,:,:) = u(iarr_all_mz,nb+1,:,:)
+         u(iarr_all_mz,i,:,:) = u(iarr_all_mz, cg%nb+1,:,:)
 #ifndef ISO
-         u(iarr_all_en,i,:,:) = u(iarr_all_en,nb+1,:,:)
+         u(iarr_all_en,i,:,:) = u(iarr_all_en, cg%nb+1,:,:)
 #endif
       enddo
 
-      do i = nb,1,-1
+      do i = cg%nb,1,-1
          vym(:,:,:) = u(iarr_all_my,i+2,:,:)/u(iarr_all_dn,i+1,:,:)
          vy(:,:,:)  = u(iarr_all_my,i+1,:,:)/u(iarr_all_dn,i+1,:,:)
 !         u(iarr_all_my,i,:,:) = (vym(:,:,:) + (x(i) - x(i+2)) / (x(i+1) - x(i+2)) * (vy - vym))*u(iarr_all_dn,i,:,:)
@@ -450,7 +458,7 @@ contains
    end subroutine my_bnd_xl
 !-----------------------------------------------------------------------------
    subroutine my_bnd_xr
-      use grid,   only: nb, nxb
+      use grid,   only: cg
       use arrays, only: u
       use fluidindex,  only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
 #ifndef ISO
@@ -458,12 +466,12 @@ contains
 #endif /* ISO */
       implicit none
 
-      u(iarr_all_dn,nxb+nb+1:nxb+2*nb,:,:) = den0(:,nxb+nb+1:nxb+2*nb,:,:)
-      u(iarr_all_mx,nxb+nb+1:nxb+2*nb,:,:) = mtx0(:,nxb+nb+1:nxb+2*nb,:,:)
-      u(iarr_all_my,nxb+nb+1:nxb+2*nb,:,:) = mty0(:,nxb+nb+1:nxb+2*nb,:,:)
-      u(iarr_all_mz,nxb+nb+1:nxb+2*nb,:,:) = mtz0(:,nxb+nb+1:nxb+2*nb,:,:)
+      u(iarr_all_dn, cg%nxb+cg%nb+1:cg%nxb+2*cg%nb,:,:) = den0(:, cg%nxb+cg%nb+1:cg%nxb+2*cg%nb,:,:)
+      u(iarr_all_mx, cg%nxb+cg%nb+1:cg%nxb+2*cg%nb,:,:) = mtx0(:, cg%nxb+cg%nb+1:cg%nxb+2*cg%nb,:,:)
+      u(iarr_all_my, cg%nxb+cg%nb+1:cg%nxb+2*cg%nb,:,:) = mty0(:, cg%nxb+cg%nb+1:cg%nxb+2*cg%nb,:,:)
+      u(iarr_all_mz, cg%nxb+cg%nb+1:cg%nxb+2*cg%nb,:,:) = mtz0(:, cg%nxb+cg%nb+1:cg%nxb+2*cg%nb,:,:)
 #ifndef ISO
-      u(iarr_all_en,nxb+nb+1:nxb+2*nb,:,:) = ene0(:,nxb+nb+1:nxb+2*nb,:,:)
+      u(iarr_all_en, cg%nxb+cg%nb+1:cg%nxb+2*cg%nb,:,:) = ene0(:, cg%nxb+cg%nb+1:cg%nxb+2*cg%nb,:,:)
 #endif
    end subroutine my_bnd_xr
 !-----------------------------------------------------------------------------

@@ -98,19 +98,18 @@ contains
 !! Initialization routine, called from init_multigrid
 !!
 
-   subroutine init_multipole(mb_alloc, cgrid)
+   subroutine init_multipole(mb_alloc, cg)
 
-      use grid,          only: xdim, ydim, zdim
       use dataio_pub,    only: die, warn
       use types,         only: grid_container
-      use mpisetup,      only: master
+      use mpisetup,      only: master, xdim, ydim, zdim
       use multigridvars, only: level_min, level_max, lvl, eff_dim
       use grid,          only: geometry
 
       implicit none
 
       real,                 intent(inout) :: mb_alloc               !< multigrid allocation counter
-      type(grid_container), intent(in)    :: cgrid                  !< copy of grid variables
+      type(grid_container), intent(in)    :: cg                  !< copy of grid variables
 
       integer, dimension(4) :: aerr
       integer               :: l,m
@@ -118,16 +117,16 @@ contains
       if (geometry /= "cartesian") call die("[multigridmultipole:init_multipole] non-cartesian geometry not implemented yet.")
 
       ! external face coordinates
-      fbnd_x(LOW:HIGH) = [ cgrid%xminb, cgrid%xmaxb ]
-      fbnd_y(LOW:HIGH) = [ cgrid%yminb, cgrid%ymaxb ]
-      fbnd_z(LOW:HIGH) = [ cgrid%zminb, cgrid%zmaxb ]
+      fbnd_x(LOW:HIGH) = [ cg%xminb, cg%xmaxb ]
+      fbnd_y(LOW:HIGH) = [ cg%yminb, cg%ymaxb ]
+      fbnd_z(LOW:HIGH) = [ cg%zminb, cg%zmaxb ]
 
       ! assume that Center of Mass is approximately in the center of computational domain by default
       CoM(0) = 1.
       !BEWARE: cylindrical factors go here
-      CoM(xdim) = (cgrid%xmax + cgrid%xmin)/2.
-      CoM(ydim) = (cgrid%ymax + cgrid%ymin)/2.
-      CoM(zdim) = (cgrid%zmax + cgrid%zmin)/2.
+      CoM(xdim) = (cg%xmax + cg%xmin)/2.
+      CoM(ydim) = (cg%ymax + cg%ymin)/2.
+      CoM(zdim) = (cg%zmax + cg%zmin)/2.
 
       if (eff_dim /= NDIM) call die("[multipole:init_multipole] Only 3D is supported")
 
@@ -166,10 +165,10 @@ contains
 
          !BEWARE: cylindrical factors go here
          drq = min(lmpole%dx, lmpole%dy, lmpole%dz) / 2.
-         rqbin = int(sqrt((cgrid%xmax - cgrid%xmin)**2 + (cgrid%ymax - cgrid%ymin)**2 + (cgrid%zmax - cgrid%zmin)**2)/drq) + 1
+         rqbin = int(sqrt((cg%xmax - cg%xmin)**2 + (cg%ymax - cg%ymin)**2 + (cg%zmax - cg%zmin)**2)/drq) + 1
          ! arithmetic average of the closest and farthest points of computational domain with respect to its center
-         rscale = ( min((cgrid%xmax - cgrid%xmin),     (cgrid%ymax - cgrid%ymin),     (cgrid%zmax - cgrid%zmin)) + &
-              &    sqrt((cgrid%xmax - cgrid%xmin)**2 + (cgrid%ymax - cgrid%ymin)**2 + (cgrid%zmax - cgrid%zmin)**2) )/4.
+         rscale = ( min((cg%xmax - cg%xmin),     (cg%ymax - cg%ymin),     (cg%zmax - cg%zmin)) + &
+              &    sqrt((cg%xmax - cg%xmin)**2 + (cg%ymax - cg%ymin)**2 + (cg%zmax - cg%zmin)**2) )/4.
          if (allocated(k12) .or. allocated(ofact) .or. allocated(Q)) call die("[multipole:init_multipole] k12, ofact or Q already allocated")
          allocate(   k12(2, 1:lmax, 0:mmax), stat=aerr(1))
          allocate(ofact(0:lm(lmax, 2*mmax)), stat=aerr(2))
@@ -283,7 +282,8 @@ contains
    subroutine isolated_monopole
 
       use dataio_pub,    only: die
-      use grid,          only: xdim, ydim, zdim, geometry
+      use grid,          only: geometry
+      use mpisetup,      only: xdim, ydim, zdim
       use multigridvars, only: LOW, HIGH, is_external, XLO, XHI, YLO, YHI, ZLO, ZHI
       use constants,     only: newtong
 
@@ -334,10 +334,10 @@ contains
 
    subroutine find_img_CoM
 
-      use grid,            only: xdim, ydim, zdim, geometry
+      use grid,            only: geometry
       use multigridvars,   only: is_external, XLO, XHI, YLO, YHI, ZLO, ZHI, LOW, HIGH
       use dataio_pub,      only: die
-      use mpisetup,        only: comm3d, ierr
+      use mpisetup,        only: xdim, ydim, zdim, comm3d, ierr
       use mpi,             only: MPI_DOUBLE_PRECISION, MPI_SUM
 
       implicit none
@@ -670,9 +670,8 @@ contains
 
    subroutine img_mass2moments
 
-      use grid,          only: xdim, ydim, zdim
       use multigridvars, only: is_external, XLO, XHI, YLO, YHI, ZLO, ZHI, LOW, HIGH
-      use mpisetup,      only: comm3d, ierr
+      use mpisetup,      only: comm3d, ierr, xdim, ydim, zdim
       use mpi,           only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_SUM, MPI_MIN, MPI_MAX, MPI_IN_PLACE
 
       implicit none
@@ -834,7 +833,7 @@ contains
 
    subroutine moments2bnd_potential
 
-      use grid,            only: xdim, ydim, zdim
+      use mpisetup,        only: xdim, ydim, zdim
       use multigridvars,   only: is_external, XLO, XHI, YLO, YHI, ZLO, ZHI, LOW, HIGH
 
       implicit none

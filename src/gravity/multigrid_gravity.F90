@@ -155,11 +155,11 @@ contains
 !<
    subroutine init_multigrid_grav
 
-      use grid,               only: has_dir, geometry
+      use grid,               only: geometry
       use multigridvars,      only: bnd_periodic, bnd_dirichlet, bnd_isolated, bnd_invalid, correction, mg_nb, ngridvars, periodic_bnd_cnt, non_periodic_bnd_cnt
       use multipole,          only: use_point_monopole, lmax, mmax, ord_prolong_mpole, coarsen_multipole, interp_pt2mom, interp_mom2pot
       use mpisetup,           only: buffer_dim, comm, ierr, master, slave, ibuff, cbuff, rbuff, lbuff, &
-           &                        bnd_xl_dom, bnd_xr_dom, bnd_yl_dom, bnd_yr_dom, bnd_zl_dom, bnd_zr_dom
+           &                        bnd_xl_dom, bnd_xr_dom, bnd_yl_dom, bnd_yr_dom, bnd_zl_dom, bnd_zr_dom, has_dir
       use mpi,                only: MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL
       use dataio_pub,         only: par_file, ierrh, namelist_errh, compare_namelist  ! QA_WARN required for diff_nml
       use dataio_pub,         only: msg, die, warn
@@ -366,7 +366,7 @@ contains
 !! Initialization - continued after allocation of everything interesting
 !!
 
-   subroutine init_multigrid_grav_post(cgrid, mb_alloc)
+   subroutine init_multigrid_grav_post(cg, mb_alloc)
 
       use types,              only: grid_container
       use arrays,             only: sgp
@@ -379,7 +379,7 @@ contains
 
       implicit none
 
-      type(grid_container), intent(in) :: cgrid                  !< copy of grid variables
+      type(grid_container), intent(in) :: cg                  !< copy of grid variables
       real, intent(inout)              :: mb_alloc               !< Allocation counter
 
       type(soln_history), pointer      :: os
@@ -582,7 +582,7 @@ contains
       if (allocated(ky)) deallocate(ky)
       if (allocated(kz)) deallocate(kz)
 
-      if (grav_bnd == bnd_isolated) call init_multipole(mb_alloc,cgrid)
+      if (grav_bnd == bnd_isolated) call init_multipole(mb_alloc,cg)
 
       call vcycle_stats_init(vstat, max_cycles)
       mb_alloc = mb_alloc + 2*max_cycles
@@ -732,7 +732,7 @@ contains
       use problem_pub,        only: jeans_d0, jeans_mode ! hack for tests
 #endif /* JEANS_PROBLEM */
       use constants,          only: fpiG
-      use grid,               only: is, ie, js, je, ks, ke
+      use grid,               only: cg
       use dataio_pub,         only: die
       use multigridhelpers,   only: set_dirty, check_dirty
       use multigridbasefuncs, only: substract_average
@@ -746,7 +746,7 @@ contains
       call set_dirty(source)
 
       if (present(dens)) then
-         roof%mgvar(roof%is:roof%ie, roof%js:roof%je, roof%ks:roof%ke, source) = fpiG * dens(is:ie, js:je, ks:ke)
+         roof%mgvar(roof%is:roof%ie, roof%js:roof%je, roof%ks:roof%ke, source) = fpiG * dens(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
       else
          if (grav_bnd /= bnd_givenval) call die("[multigrid_gravity:init_source] empty space allowed only for given value boundaries.")
          roof%mgvar(roof%is:roof%ie, roof%js:roof%je, roof%ks:roof%ke, source) = 0.
@@ -835,7 +835,8 @@ contains
 
       use timer,         only: set_timer
       use arrays,        only: sgp
-      use grid,          only: is, ie, js, je, ks, ke, has_dir, xdim, ydim, zdim
+      use grid,          only: cg
+      use mpisetup,      only: xdim, ydim, zdim, has_dir
       use dataio_pub,    only: die
       use multipole,     only: multipole_solver
       use multigridvars, only: roof, solution, bnd_isolated, bnd_dirichlet, bnd_givenval, mg_nb, tot_ts, ts
@@ -848,9 +849,9 @@ contains
       integer :: isb, ieb, jsb, jeb, ksb, keb
 
       ts =  set_timer("multigrid", .true.)
-      if ( (has_dir(xdim) .and. is-mg_nb <= 0) .or. &
-           (has_dir(ydim) .and. js-mg_nb <= 0) .or. &
-           (has_dir(zdim) .and. ks-mg_nb <= 0) )    &
+      if ( (has_dir(xdim) .and. cg%is-mg_nb <= 0) .or. &
+           (has_dir(ydim) .and. cg%js-mg_nb <= 0) .or. &
+           (has_dir(zdim) .and. cg%ks-mg_nb <= 0) )    &
            call die("[multigrid_gravity:multigrid_solve_grav] Current implementation requires at least 2 guardcells in the hydro part")
 
       isolated = (grav_bnd == bnd_isolated) ! BEWARE: not elegant; probably there should be two global grav_bnd variables
@@ -872,24 +873,24 @@ contains
 
       ! /todo: move to multigridvars and init_multigrid
       if (has_dir(xdim)) then
-         isb = is-mg_nb
-         ieb = ie+mg_nb
+         isb = cg%is-mg_nb
+         ieb = cg%ie+mg_nb
       else
          isb = 1
          ieb = 1
       endif
 
       if (has_dir(ydim)) then
-         jsb = js-mg_nb
-         jeb = je+mg_nb
+         jsb = cg%js-mg_nb
+         jeb = cg%je+mg_nb
       else
          jsb = 1
          jeb = 1
       endif
 
       if (has_dir(zdim)) then
-         ksb = ks-mg_nb
-         keb = ke+mg_nb
+         ksb = cg%ks-mg_nb
+         keb = cg%ke+mg_nb
       else
          ksb = 1
          keb = 1
@@ -1107,7 +1108,7 @@ contains
 
    subroutine residual2(lev, src, soln, def)
 
-      use grid,               only: has_dir, xdim, ydim, zdim
+      use mpisetup,           only: xdim, ydim, zdim, has_dir
       use multigridhelpers,   only: multidim_code_3D
       use multigridmpifuncs,  only: mpi_multigrid_bnd
       use multigridvars,      only: lvl, eff_dim, NDIM, extbnd_antimirror
@@ -1326,7 +1327,7 @@ contains
 
    subroutine approximate_solution_rbgs(lev, src, soln)
 
-      use grid,               only: has_dir, xdim, ydim, zdim
+      use mpisetup,           only: xdim, ydim, zdim, has_dir
       use multigridhelpers,   only: dirty_debug, check_dirty, multidim_code_3D, dirty_label
       use multigridmpifuncs,  only: mpi_multigrid_bnd
       use multigridvars,      only: lvl, level_min, eff_dim, NDIM, extbnd_antimirror
@@ -1430,7 +1431,8 @@ contains
 
    subroutine approximate_solution_fft(lev, src, soln)
 
-      use grid,               only: has_dir, xdim, ydim, zdim, D_x, D_y, D_z
+      use grid,               only: D_x, D_y, D_z
+      use mpisetup,           only: xdim, ydim, zdim, has_dir
       use dataio_pub,         only: die, warn
       use multigridhelpers,   only: dirty_debug, check_dirty, dirtyL, multidim_code_3D
       use multigridmpifuncs,  only: mpi_multigrid_bnd
@@ -1664,8 +1666,7 @@ contains
 
    subroutine gb_fft_solve_sendrecv(src, soln)
 
-      use grid,          only: xdim, ydim, zdim
-      use mpisetup,      only: nproc, proc, master, ierr, comm3d, status
+      use mpisetup,      only: nproc, proc, master, ierr, comm3d, status, xdim, ydim, zdim
       use mpi,           only: MPI_DOUBLE_PRECISION
       use multigridvars, only: gb, gb_cartmap, base
 
@@ -1726,8 +1727,7 @@ contains
 
    subroutine gb_fft_solve_gather(src, soln)
 
-      use grid,          only: xdim, ydim, zdim
-      use mpisetup,      only: nproc, master, ierr, comm3d
+      use mpisetup,      only: nproc, master, ierr, comm3d, xdim, ydim, zdim
       use mpi,           only: MPI_DOUBLE_PRECISION
       use multigridvars, only: gb, gb_cartmap, base
 

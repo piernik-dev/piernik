@@ -56,7 +56,7 @@ contains
       use arrays,     only: dprof
       use dataio_pub, only: die
       use gravity,    only: nsub !, gp_status
-      use grid,       only: nz, zl, zr
+      use grid,       only: cg
 
       implicit none
 
@@ -90,9 +90,9 @@ contains
       endif
 
       dprof(:) =0.0
-      do k=1,nz
+      do k=1, cg%nz
          do ksub=1, nstot
-            if (zs(ksub) .gt. zl(k) .and. zs(ksub) .lt. zr(k)) then
+            if (zs(ksub) .gt. cg%zl(k) .and. zs(ksub) .lt. cg%zr(k)) then
                dprof(k) = dprof(k) + dprofs(ksub)/real(nsub)
             endif
          enddo
@@ -115,9 +115,9 @@ contains
       endif
 
       dprof(:) =0.0
-      do k=1,nz
+      do k=1, cg%nz
          do ksub=1, nstot
-            if (zs(ksub) .gt. zl(k) .and. zs(ksub) .lt. zr(k)) then
+            if (zs(ksub) .gt. cg%zl(k) .and. zs(ksub) .lt. cg%zr(k)) then
                dprof(k) = dprof(k) + dprofs(ksub)/real(nsub)
             endif
          enddo
@@ -131,13 +131,13 @@ contains
 
    subroutine get_gprofs_accel(iia,jja)
       use gravity, only: tune_zeq, grav_accel
-      use grid,    only: nx, ny
+      use grid,    only: cg
       implicit none
       integer, intent(in) :: iia, jja
       integer :: ia, ja
 
-      ia = min(nx,max(1, iia))
-      ja = min(ny,max(1, jja))
+      ia = min(cg%nx,max(1, iia))
+      ja = min(cg%ny,max(1, jja))
       call grav_accel('zsweep',ia, ja, zs, nstot, gprofs)
       gprofs = tune_zeq*gprofs
 
@@ -147,7 +147,7 @@ contains
 
       use arrays,  only: gp
       use gravity, only: tune_zeq
-      use grid,    only: nz, z
+      use grid,    only: cg
 
       implicit none
 
@@ -158,10 +158,10 @@ contains
       allocate(gpots(nstot))
       k = 1; gpots(:) = 0.0
       do ksub=1, nstot
-         if (zs(ksub) >= z(min(k+1,nz))) k = k + 1
-         if (zs(ksub) >= z(min(k,nz-1)) .and. zs(ksub) < z(min(k+1,nz))) then
-            gpots(ksub) = gp(iia,jja,k) + (zs(ksub) - z(k)) * &
-             (gp(iia,jja,min(k+1,nz)) - gp(iia,jja,k)) / (z(min(k+1,nz)) - z(min(k,nz-1)))
+         if (zs(ksub) >= cg%z(min(k+1, cg%nz))) k = k + 1
+         if (zs(ksub) >= cg%z(min(k, cg%nz-1)) .and. zs(ksub) < cg%z(min(k+1, cg%nz))) then
+            gpots(ksub) = gp(iia,jja,k) + (zs(ksub) - cg%z(k)) * &
+             (gp(iia,jja,min(k+1, cg%nz)) - gp(iia,jja,k)) / (cg%z(min(k+1, cg%nz)) - cg%z(min(k, cg%nz-1)))
          endif
       enddo
 !         call grav_pot('zsweep', ia,ja, zs, nstot, gpots,gp_status,.true.)
@@ -173,8 +173,11 @@ contains
    end subroutine get_gprofs_gparray
 
    subroutine hydrostatic_zeq_coldens(iia,jja,coldens,csim2)
+
       use arrays,  only: dprof
+
       implicit none
+
       integer, intent(in) :: iia, jja
       real,    intent(in) :: coldens, csim2
       real :: sdprof
@@ -187,10 +190,13 @@ contains
    end subroutine hydrostatic_zeq_coldens
 
    subroutine hydrostatic_zeq_densmid(iia,jja,d0,csim2)
+
       use arrays,     only: dprof
       use constants,  only: small
       use dataio_pub, only: die
+
       implicit none
+
       integer, intent(in) :: iia, jja
       real,    intent(in) :: d0, csim2
 
@@ -210,13 +216,18 @@ contains
    end subroutine hydrostatic_zeq_densmid
 
    subroutine start_hydrostatic(iia,jja,csim2)
+
       use dataio_pub, only: die
       use gravity,    only: get_gprofs, gprofs_target, nsub
-      use grid,       only: zmin, zmax, zdim, nzt, dl, nb
+      use grid,       only: cg
+      use mpisetup,   only: zdim
+
       implicit none
+
       integer, intent(in) :: iia, jja
       real,    intent(in) :: csim2
       integer :: ksub
+
       if (.not.associated(get_gprofs)) then
          select case (gprofs_target)
             case ('accel')
@@ -227,28 +238,33 @@ contains
                call die("[hydrostatic:start_hydrostatic] get_gprofs'' target has not been specified")
          end select
       endif
-      nstot = nsub * nzt
-      dzs = (zmax-zmin)/real(nstot-2*nb*nsub)
+      nstot = nsub * cg%nzt
+      dzs = (cg%zmax-cg%zmin)/real(nstot-2*cg%nb*nsub)
       allocate(zs(nstot), gprofs(nstot))
       do ksub=1, nstot
-         zs(ksub) = zmin-nb*dl(zdim) + dzs/2 + (ksub-1)*dzs
+         zs(ksub) = cg%zmin-cg%nb*cg%dl(zdim) + dzs/2 + (ksub-1)*dzs
       enddo
       call get_gprofs(iia,jja)
       gprofs = gprofs / csim2
       call hydrostatic_main
+
    end subroutine start_hydrostatic
 
    subroutine finish_hydrostatic
+
       implicit none
+
       if (allocated(zs))     deallocate(zs)
       if (allocated(gprofs)) deallocate(gprofs)
+
    end subroutine finish_hydrostatic
 
    subroutine outh_bnd(kb,kk,minmax)
+
       use dataio_pub,          only: die
       use gravity,             only: grav_accel, nsub, tune_zeq_bnd
       use arrays,              only: u
-      use grid,                only: nx, ny, z
+      use grid,                only: cg
       use mpisetup,            only: smalld
       use fluidindex,          only: nvar, iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
 #ifndef ISO
@@ -261,14 +277,15 @@ contains
 #endif /* COSM_RAYS */
 
       implicit none
+
       integer, intent(in)           :: kb, kk
       character(len=*), intent(in)  :: minmax
 
       integer                             :: ksub, i, j
-      real, dimension(nvar%fluids,nx,ny)  :: db, csi2b
+      real, dimension(nvar%fluids, cg%nx, cg%ny) :: db, csi2b
 #ifndef ISO
       integer                             :: ifluid
-      real, dimension(nvar%fluids,nx,ny)  :: ekb, eib
+      real, dimension(nvar%fluids, cg%nx, cg%ny) :: ekb, eib
 #endif /* !ISO */
       real, dimension(nsub+1)             :: zs, gprofs
       real, dimension(nvar%fluids,nsub+1) :: dprofs
@@ -289,16 +306,16 @@ contains
          csi2b(ifluid,:,:) = (nvar%all_fluids(ifluid)%gam_1)*eib(ifluid,:,:)/db(ifluid,:,:)
       enddo
 #endif /* !ISO */
-      z1 = z(kb)
-      z2 = z(kk)
+      z1 = cg%z(kb)
+      z2 = cg%z(kk)
       dzs = (z2-z1)/real(nsub)
 
       do ksub=1, nsub+1
          zs(ksub) = z1 + dzs/2 + (ksub-1)*dzs
       enddo
 
-      do j=1,ny
-         do i=1,nx
+      do j=1, cg%ny
+         do i=1, cg%nx
 
             call grav_accel('zsweep',i,j, zs, nsub, gprofs)
             gprofs=tune_zeq_bnd * gprofs

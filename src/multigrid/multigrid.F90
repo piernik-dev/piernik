@@ -74,16 +74,16 @@ contains
 !! </table>
 !! \n \n
 !<
-   subroutine init_multigrid(cgrid)
+   subroutine init_multigrid(cg)
 
-      use grid,                only: has_dir, xdim, ydim, zdim, D_x, D_y, D_z
+      use grid,                only: D_x, D_y, D_z
       use multigridvars,       only: lvl, level_max, level_min, level_gb, roof, base, gb, gb_cartmap, mg_nb, ngridvars, correction, &
            &                         is_external, periodic_bnd_cnt, non_periodic_bnd_cnt, eff_dim, NDIM, &
            &                         XLO, XHI, YLO, YHI, ZLO, ZHI, LOW, HIGH, &
            &                         ord_prolong, ord_prolong_face, stdout, verbose_vcycle, tot_ts
       use types,               only: grid_container
       use mpi,                 only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL
-      use mpisetup,            only: buffer_dim, comm, comm3d, ierr, proc, master, slave, nproc, ndims, pxsize, pysize, pzsize, &
+      use mpisetup,            only: buffer_dim, comm, comm3d, ierr, proc, master, slave, nproc, has_dir, xdim, ydim, zdim, ndims, pxsize, pysize, pzsize, &
            &                         ibuff, rbuff, lbuff, bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr,        &
            &                         bnd_xl_dom, bnd_xr_dom, bnd_yl_dom, bnd_yr_dom, bnd_zl_dom, bnd_zr_dom
       use multigridhelpers,    only: mg_write_log, dirtyH, do_ascii_dump, dirty_debug, multidim_code_3D, &
@@ -100,7 +100,7 @@ contains
 
       implicit none
 
-      type(grid_container), intent(in) :: cgrid                  !< copy of grid variables
+      type(grid_container), intent(in) :: cg                  !< copy of grid variables
 
       integer                          :: ierrh, div, idx, i, j, nxc, nx
       logical, save                    :: frun = .true.          !< First run flag
@@ -233,11 +233,11 @@ contains
          do i = xdim, zdim ! this can be rewritten as a three subroutine/function calls
             select case (i)
                case (xdim)
-                  nxc = cgrid%nxb
+                  nxc = cg%nxb
                case (ydim)
-                  nxc = cgrid%nyb
+                  nxc = cg%nyb
                case (zdim)
-                  nxc = cgrid%nzb
+                  nxc = cg%nzb
             end select
 
             nx = 1
@@ -275,12 +275,12 @@ contains
 
          if (has_dir(xdim)) then
             lvl(idx)%nx    = lvl(idx)%nxb + 2*lvl(idx)%nb             ! total number of cells in x, y and z directions
-            lvl(idx)%dx    = (cgrid%xmaxb-cgrid%xminb) / lvl(idx)%nxb ! cell size in x, y and z directions
+            lvl(idx)%dx    = (cg%xmaxb-cg%xminb) / lvl(idx)%nxb ! cell size in x, y and z directions
             lvl(idx)%is    = lvl(idx)%nb + 1                          ! lowest and highest indices for interior cells
             lvl(idx)%ie    = lvl(idx)%nb + lvl(idx)%nxb
             lvl(idx)%idx2  = 1. / lvl(idx)%dx**2                      ! auxiliary invariants
             lvl(idx)%dvol  = lvl(idx)%dvol * lvl(idx)%dx              ! cell volume
-            lvl(idx)%vol   = lvl(idx)%vol * (cgrid%xmaxb-cgrid%xminb)
+            lvl(idx)%vol   = lvl(idx)%vol * (cg%xmaxb-cg%xminb)
             lvl(idx)%dxy   = lvl(idx)%dxy * lvl(idx)%dx
             lvl(idx)%dxz   = lvl(idx)%dxz * lvl(idx)%dx
          else
@@ -293,12 +293,12 @@ contains
 
          if (has_dir(ydim)) then
             lvl(idx)%ny    = lvl(idx)%nyb + 2*lvl(idx)%nb
-            lvl(idx)%dy    = (cgrid%ymaxb-cgrid%yminb) / lvl(idx)%nyb
+            lvl(idx)%dy    = (cg%ymaxb-cg%yminb) / lvl(idx)%nyb
             lvl(idx)%js    = lvl(idx)%nb + 1
             lvl(idx)%je    = lvl(idx)%nb + lvl(idx)%nyb
             lvl(idx)%idy2  = 1. / lvl(idx)%dy**2
             lvl(idx)%dvol  = lvl(idx)%dvol * lvl(idx)%dy
-            lvl(idx)%vol   = lvl(idx)%vol * (cgrid%ymaxb-cgrid%yminb)
+            lvl(idx)%vol   = lvl(idx)%vol * (cg%ymaxb-cg%yminb)
             lvl(idx)%dxy   = lvl(idx)%dxy * lvl(idx)%dy
             lvl(idx)%dyz   = lvl(idx)%dyz * lvl(idx)%dy
          else
@@ -311,12 +311,12 @@ contains
 
          if (has_dir(zdim)) then
             lvl(idx)%nz    = lvl(idx)%nzb + 2*lvl(idx)%nb
-            lvl(idx)%dz    = (cgrid%zmaxb-cgrid%zminb) / lvl(idx)%nzb
+            lvl(idx)%dz    = (cg%zmaxb-cg%zminb) / lvl(idx)%nzb
             lvl(idx)%ks    = lvl(idx)%nb + 1
             lvl(idx)%ke    = lvl(idx)%nb + lvl(idx)%nzb
             lvl(idx)%idz2  = 1. / lvl(idx)%dz**2
             lvl(idx)%dvol  = lvl(idx)%dvol * lvl(idx)%dz
-            lvl(idx)%vol   = lvl(idx)%vol * (cgrid%zmaxb-cgrid%zminb)
+            lvl(idx)%vol   = lvl(idx)%vol * (cg%zmaxb-cg%zminb)
             lvl(idx)%dxz   = lvl(idx)%dxz * lvl(idx)%dz
             lvl(idx)%dyz   = lvl(idx)%dyz * lvl(idx)%dz
          else
@@ -366,26 +366,26 @@ contains
 
          if (has_dir(xdim)) then
             do j = 1, lvl(idx)%nx
-               lvl(idx)%x(j)  = cgrid%xminb + 0.5*lvl(idx)%dx + (j-lvl(idx)%nb-1)*lvl(idx)%dx
+               lvl(idx)%x(j)  = cg%xminb + 0.5*lvl(idx)%dx + (j-lvl(idx)%nb-1)*lvl(idx)%dx
             enddo
          else
-            lvl(idx)%x(:) = (cgrid%xminb + cgrid%xmaxb) / 2.
+            lvl(idx)%x(:) = (cg%xminb + cg%xmaxb) / 2.
          endif
 
          if (has_dir(ydim)) then
             do j = 1, lvl(idx)%ny
-               lvl(idx)%y(j)  = cgrid%yminb + 0.5*lvl(idx)%dy + (j-lvl(idx)%nb-1)*lvl(idx)%dy
+               lvl(idx)%y(j)  = cg%yminb + 0.5*lvl(idx)%dy + (j-lvl(idx)%nb-1)*lvl(idx)%dy
             enddo
          else
-            lvl(idx)%y(:) = (cgrid%yminb + cgrid%ymaxb) / 2.
+            lvl(idx)%y(:) = (cg%yminb + cg%ymaxb) / 2.
          endif
 
          if (has_dir(zdim)) then
             do j = 1, lvl(idx)%nz
-               lvl(idx)%z(j)  = cgrid%zminb + 0.5*lvl(idx)%dz + (j-lvl(idx)%nb-1)*lvl(idx)%dz
+               lvl(idx)%z(j)  = cg%zminb + 0.5*lvl(idx)%dz + (j-lvl(idx)%nb-1)*lvl(idx)%dz
             enddo
          else
-            lvl(idx)%z(:) = (cgrid%zminb + cgrid%zmaxb) / 2.
+            lvl(idx)%z(:) = (cg%zminb + cg%zmaxb) / 2.
          endif
 
       enddo
@@ -430,10 +430,10 @@ contains
       if (.not. has_dir(zdim)) is_external(ZLO:ZHI) = .false.
 
 #ifdef GRAV
-      call init_multigrid_grav_post(cgrid, mb_alloc)
+      call init_multigrid_grav_post(cg, mb_alloc)
 #endif /* !GRAV */
 #ifdef COSM_RAYS
-      call init_multigrid_diff_post(cgrid, mb_alloc)
+      call init_multigrid_diff_post(cg, mb_alloc)
 #endif /* COSM_RAYS */
 
       ! summary
@@ -473,9 +473,8 @@ contains
 
    subroutine cleanup_multigrid
 
-      use grid,               only: has_dir, xdim, ydim, zdim
       use multigridvars,      only: lvl, level_gb, level_min, level_max, tot_ts, gb_cartmap
-      use mpisetup,           only: master, nproc, comm3d, ierr
+      use mpisetup,           only: master, nproc, comm3d, ierr, xdim, ydim, zdim, has_dir
       use mpi,                only: MPI_DOUBLE_PRECISION
       use multigridhelpers,   only: mg_write_log
       use dataio_pub,         only: msg

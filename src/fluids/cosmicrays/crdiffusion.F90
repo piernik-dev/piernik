@@ -51,9 +51,9 @@ contains
 !-----------------------------------------------------------------------
       use arrays,         only: b, u, wcr
       use fluidindex,     only: ibx, iby, ibz, nvar
-      use grid,           only: idx, idy, idz, xdim, ydim, zdim, has_dir, nx, js, je, ks, ke
+      use grid,           only: cg
       use initcosmicrays, only: iarr_crs, K_crs_paral, K_crs_perp
-      use mpisetup,       only: dt
+      use mpisetup,       only: dt, xdim, ydim, zdim, has_dir
 
       implicit none
 
@@ -67,23 +67,23 @@ contains
       if (.not.has_dir(xdim)) return
 
       wcr(:, 1, :, :) = 0.
-      wcr(:, :, :, :ks-1) = 0.
-      wcr(:, :, :, ke+1:) = 0.
-      wcr(:, :, :js-1, :) = 0.
-      wcr(:, :, je+1:, :) = 0.
+      wcr(:, :, :, :cg%ks-1) = 0.
+      wcr(:, :, :, cg%ke+1:) = 0.
+      wcr(:, :, :cg%js-1, :) = 0.
+      wcr(:, :, cg%je+1:, :) = 0.
 
-      do k=ks,ke
-         do j=js,je
-            do i=2,nx     ! if we are here this implies nxb /= 1
+      do k=cg%ks, cg%ke
+         do j=cg%js, cg%je
+            do i=2, cg%nx     ! if we are here this implies nxb /= 1
 
-               decr1 =  (u(iarr_crs,i,  j,  k) - u(iarr_crs,i-1,j,  k)) * idx
+               decr1 =  (u(iarr_crs,i,  j,  k) - u(iarr_crs,i-1,j,  k)) * cg%idx
                fcrdif1 = K_crs_perp * decr1
 
                b1b =  b(ibx,i,  j,  k)
 
                if (has_dir(ydim)) then
-                  dqm = 0.5*((u(iarr_crs,i-1,j  ,k ) + u(iarr_crs,i ,j  ,k )) - (u(iarr_crs,i-1,j-1,k ) + u(iarr_crs,i ,j-1,k ))) * idy
-                  dqp = 0.5*((u(iarr_crs,i-1,j+1,k ) + u(iarr_crs,i ,j+1,k )) - (u(iarr_crs,i-1,j  ,k ) + u(iarr_crs,i ,j  ,k ))) * idy
+                  dqm = 0.5*((u(iarr_crs,i-1,j  ,k ) + u(iarr_crs,i ,j  ,k )) - (u(iarr_crs,i-1,j-1,k ) + u(iarr_crs,i ,j-1,k ))) * cg%idy
+                  dqp = 0.5*((u(iarr_crs,i-1,j+1,k ) + u(iarr_crs,i ,j+1,k )) - (u(iarr_crs,i-1,j  ,k ) + u(iarr_crs,i ,j  ,k ))) * cg%idy
                   decr2 = (dqp+dqm)* (1.0 + sign(1.0, dqm*dqp))*0.25
                   b2b = sum(b(iby,i-1:i, j:j+1, k    ))*0.25
                else
@@ -92,8 +92,8 @@ contains
                endif
 
                if (has_dir(zdim)) then
-                  dqm = 0.5*((u(iarr_crs,i-1,j ,k  ) + u(iarr_crs,i ,j ,k  )) - (u(iarr_crs,i-1,j ,k-1) + u(iarr_crs,i ,j ,k-1))) * idz
-                  dqp = 0.5*((u(iarr_crs,i-1,j ,k+1) + u(iarr_crs,i ,j ,k+1)) - (u(iarr_crs,i-1,j ,k  ) + u(iarr_crs,i ,j ,k  ))) * idz
+                  dqm = 0.5*((u(iarr_crs,i-1,j ,k  ) + u(iarr_crs,i ,j ,k  )) - (u(iarr_crs,i-1,j ,k-1) + u(iarr_crs,i ,j ,k-1))) * cg%idz
+                  dqp = 0.5*((u(iarr_crs,i-1,j ,k+1) + u(iarr_crs,i ,j ,k+1)) - (u(iarr_crs,i-1,j ,k  ) + u(iarr_crs,i ,j ,k  ))) * cg%idz
                   decr3 = (dqp+dqm)* (1.0 + sign(1.0, dqm*dqp))*0.25
                   b3b = sum(b(ibz,i-1:i, j,     k:k+1))*0.25
                else
@@ -104,14 +104,14 @@ contains
                bb = b1b**2 + b2b**2 + b3b**2
                if (bb /= 0.) fcrdif1 = fcrdif1 + K_crs_paral * b1b * (b1b*decr1 + b2b*decr2 + b3b*decr3) / bb
 
-               wcr(:,i,j,k) = - fcrdif1 * dt * idx
+               wcr(:,i,j,k) = - fcrdif1 * dt * cg%idx
 
             enddo
          enddo
       enddo
 
-      u(iarr_crs,1:nx-1,:,:) = u(iarr_crs,1:nx-1,:,:) - ( wcr(:,2:nx,:,:) - wcr(:,1:nx-1,:,:) )
-      u(iarr_crs,nx,:,:) = u(iarr_crs,nx-1,:,:) ! for sanity
+      u(iarr_crs,1:cg%nx-1,:,:) = u(iarr_crs,1:cg%nx-1,:,:) - ( wcr(:,2:cg%nx,:,:) - wcr(:,1:cg%nx-1,:,:) )
+      u(iarr_crs, cg%nx,:,:) = u(iarr_crs, cg%nx-1,:,:) ! for sanity
 
    end subroutine cr_diff_x
 
@@ -124,9 +124,9 @@ contains
 !-----------------------------------------------------------------------
       use arrays,         only: b, u, wcr
       use fluidindex,     only: ibx, iby, ibz, nvar
-      use grid,           only: idx, idy, idz, xdim, ydim, zdim, has_dir, ny, is, ie, ks, ke
+      use grid,           only: cg
       use initcosmicrays, only: iarr_crs, K_crs_paral, K_crs_perp
-      use mpisetup,       only: dt
+      use mpisetup,       only: dt, xdim, ydim, zdim, has_dir
 
       implicit none
 
@@ -140,23 +140,23 @@ contains
       if (.not.has_dir(ydim)) return
 
       wcr(:, :, 1, :) = 0.
-      wcr(:, :is-1, :, :) = 0.
-      wcr(:, ie+1:, :, :) = 0.
-      wcr(:, :, :, :ks-1) = 0.
-      wcr(:, :, :, ke+1:) = 0.
+      wcr(:, :cg%is-1, :, :) = 0.
+      wcr(:, cg%ie+1:, :, :) = 0.
+      wcr(:, :, :, :cg%ks-1) = 0.
+      wcr(:, :, :, cg%ke+1:) = 0.
 
-      do k=ks,ke
-         do j=2,ny ! if we are here nyb /= 1
-            do i=is,ie
+      do k=cg%ks, cg%ke
+         do j=2, cg%ny ! if we are here nyb /= 1
+            do i=cg%is, cg%ie
 
-               decr2 = (u(iarr_crs,i,j,k) - u(iarr_crs,i,j-1,k)) * idy
+               decr2 = (u(iarr_crs,i,j,k) - u(iarr_crs,i,j-1,k)) * cg%idy
                fcrdif2 = K_crs_perp * decr2
 
                b2b =  b(iby,i,j,k)
 
                if (has_dir(xdim)) then
-                  dqm = 0.5*((u(iarr_crs,i  ,j-1,k ) + u(iarr_crs,i  ,j  ,k )) - (u(iarr_crs,i-1,j-1,k ) + u(iarr_crs,i-1,j  ,k ))) * idx
-                  dqp = 0.5*((u(iarr_crs,i+1,j-1,k ) + u(iarr_crs,i+1,j  ,k )) - (u(iarr_crs,i  ,j-1,k ) + u(iarr_crs,i  ,j  ,k ))) * idx
+                  dqm = 0.5*((u(iarr_crs,i  ,j-1,k ) + u(iarr_crs,i  ,j  ,k )) - (u(iarr_crs,i-1,j-1,k ) + u(iarr_crs,i-1,j  ,k ))) * cg%idx
+                  dqp = 0.5*((u(iarr_crs,i+1,j-1,k ) + u(iarr_crs,i+1,j  ,k )) - (u(iarr_crs,i  ,j-1,k ) + u(iarr_crs,i  ,j  ,k ))) * cg%idx
                   decr1 = (dqp+dqm)* (1.0 + sign(1.0, dqm*dqp))*0.25
                   b1b = sum(b(ibx,i:i+1, j-1:j, k))*0.25
                else
@@ -165,8 +165,8 @@ contains
                endif
 
                if (has_dir(zdim)) then
-                  dqm = 0.5*((u(iarr_crs,i ,j-1,k  ) + u(iarr_crs,i ,j  ,k  )) - (u(iarr_crs,i ,j-1,k-1) + u(iarr_crs,i ,j  ,k-1))) * idz
-                  dqp = 0.5*((u(iarr_crs,i ,j-1,k+1) + u(iarr_crs,i ,j  ,k+1)) - (u(iarr_crs,i ,j-1,k  ) + u(iarr_crs,i ,j  ,k  ))) * idz
+                  dqm = 0.5*((u(iarr_crs,i ,j-1,k  ) + u(iarr_crs,i ,j  ,k  )) - (u(iarr_crs,i ,j-1,k-1) + u(iarr_crs,i ,j  ,k-1))) * cg%idz
+                  dqp = 0.5*((u(iarr_crs,i ,j-1,k+1) + u(iarr_crs,i ,j  ,k+1)) - (u(iarr_crs,i ,j-1,k  ) + u(iarr_crs,i ,j  ,k  ))) * cg%idz
                   decr3 = (dqp+dqm)* (1.0 + sign(1.0, dqm*dqp))*0.25
                   b3b = sum(b(ibz,i, j-1:j, k:k+1))*0.25
                else
@@ -177,14 +177,14 @@ contains
                bb = b1b**2 + b2b**2 + b3b**2
                if (bb /= 0.) fcrdif2 = fcrdif2 + K_crs_paral * b2b * (b1b*decr1 + b2b*decr2 + b3b*decr3) / bb
 
-               wcr(:,i,j,k) = - fcrdif2 * dt * idy
+               wcr(:,i,j,k) = - fcrdif2 * dt * cg%idy
 
             enddo
          enddo
       enddo
 
-      u(iarr_crs,:,1:ny-1,:) = u(iarr_crs,:,1:ny-1,:) - ( wcr(:,:,2:ny,:) - wcr(:,:,1:ny-1,:) )
-      u(iarr_crs,:,ny,:) = u(iarr_crs,:,ny-1,:) ! for sanity
+      u(iarr_crs,:,1:cg%ny-1,:) = u(iarr_crs,:,1:cg%ny-1,:) - ( wcr(:,:,2:cg%ny,:) - wcr(:,:,1:cg%ny-1,:) )
+      u(iarr_crs,:, cg%ny,:) = u(iarr_crs,:, cg%ny-1,:) ! for sanity
 
    end subroutine cr_diff_y
 
@@ -197,9 +197,9 @@ contains
 !-----------------------------------------------------------------------
       use arrays,         only: b, u, wcr
       use fluidindex,     only: ibx, iby, ibz, nvar
-      use grid,           only: idx, idy, idz, xdim, ydim, zdim, has_dir, nz, is, ie, js, je
+      use grid,           only: cg
       use initcosmicrays, only: iarr_crs, K_crs_paral, K_crs_perp
-      use mpisetup,       only: dt
+      use mpisetup,       only: dt, xdim, ydim, zdim, has_dir
 
       implicit none
 
@@ -213,23 +213,23 @@ contains
       if (.not.has_dir(zdim)) return
 
       wcr(:, :, :, 1) = 0.
-      wcr(:, :is-1, :, :) = 0.
-      wcr(:, ie+1:, :, :) = 0.
-      wcr(:, :, :js-1, :) = 0.
-      wcr(:, :, je+1:, :) = 0.
+      wcr(:, :cg%is-1, :, :) = 0.
+      wcr(:, cg%ie+1:, :, :) = 0.
+      wcr(:, :, :cg%js-1, :) = 0.
+      wcr(:, :, cg%je+1:, :) = 0.
 
-      do k=2,nz      ! nzb /= 1
-         do j=js,je
-            do i=is,ie
+      do k=2, cg%nz      ! nzb /= 1
+         do j=cg%js, cg%je
+            do i=cg%is, cg%ie
 
-               decr3 =  (u(iarr_crs,i,j,k    ) - u(iarr_crs,i,j,  k-1)) * idz
+               decr3 =  (u(iarr_crs,i,j,k    ) - u(iarr_crs,i,j,  k-1)) * cg%idz
                fcrdif3 = K_crs_perp * decr3
 
                b3b =  b(ibz,i,j,k)
 
                if (has_dir(xdim)) then
-                  dqm = 0.5*((u(iarr_crs,i  ,j ,k-1) + u(iarr_crs,i  ,j  ,k )) - (u(iarr_crs,i-1,j ,k-1) + u(iarr_crs,i-1,j  ,k ))) * idx
-                  dqp = 0.5*((u(iarr_crs,i+1,j ,k-1) + u(iarr_crs,i+1,j  ,k )) - (u(iarr_crs,i  ,j ,k-1) + u(iarr_crs,i  ,j  ,k ))) * idx
+                  dqm = 0.5*((u(iarr_crs,i  ,j ,k-1) + u(iarr_crs,i  ,j  ,k )) - (u(iarr_crs,i-1,j ,k-1) + u(iarr_crs,i-1,j  ,k ))) * cg%idx
+                  dqp = 0.5*((u(iarr_crs,i+1,j ,k-1) + u(iarr_crs,i+1,j  ,k )) - (u(iarr_crs,i  ,j ,k-1) + u(iarr_crs,i  ,j  ,k ))) * cg%idx
                   decr1 = (dqp+dqm)* (1.0 + sign(1.0, dqm*dqp))*0.25
                   b1b = sum(b(ibx,i:i+1, j,     k-1:k))*0.25
                else
@@ -238,8 +238,8 @@ contains
                endif
 
                if (has_dir(ydim)) then
-                  dqm = 0.5*((u(iarr_crs,i ,j  ,k-1) + u(iarr_crs,i  ,j  ,k )) - (u(iarr_crs,i ,j-1,k-1) + u(iarr_crs,i  ,j-1,k ))) * idy
-                  dqp = 0.5*((u(iarr_crs,i ,j+1,k-1) + u(iarr_crs,i  ,j+1,k )) - (u(iarr_crs,i ,j  ,k-1) + u(iarr_crs,i  ,j  ,k ))) * idy
+                  dqm = 0.5*((u(iarr_crs,i ,j  ,k-1) + u(iarr_crs,i  ,j  ,k )) - (u(iarr_crs,i ,j-1,k-1) + u(iarr_crs,i  ,j-1,k ))) * cg%idy
+                  dqp = 0.5*((u(iarr_crs,i ,j+1,k-1) + u(iarr_crs,i  ,j+1,k )) - (u(iarr_crs,i ,j  ,k-1) + u(iarr_crs,i  ,j  ,k ))) * cg%idy
                   decr2 = (dqp+dqm)* (1.0 + sign(1.0, dqm*dqp))*0.25
                   b2b = sum(b(iby,i,     j:j+1, k-1:k))*0.25
                else
@@ -250,14 +250,14 @@ contains
                bb = b1b**2 + b2b**2 + b3b**2
                if (bb /= 0.) fcrdif3 = fcrdif3 + K_crs_paral * b3b * (b1b*decr1 + b2b*decr2 + b3b*decr3) / bb
 
-               wcr(:,i,j,k) = - fcrdif3 * dt * idz
+               wcr(:,i,j,k) = - fcrdif3 * dt * cg%idz
 
             enddo
          enddo
       enddo
 
-      u(iarr_crs,:,:,1:nz-1) = u(iarr_crs,:,:,1:nz-1) - ( wcr(:,:,:,2:nz) - wcr(:,:,:,1:nz-1) )
-      u(iarr_crs,:,:,nz) = u(iarr_crs,:,:,nz-1) ! for sanity
+      u(iarr_crs,:,:,1:cg%nz-1) = u(iarr_crs,:,:,1:cg%nz-1) - ( wcr(:,:,:,2:cg%nz) - wcr(:,:,:,1:cg%nz-1) )
+      u(iarr_crs,:,:, cg%nz) = u(iarr_crs,:,:, cg%nz-1) ! for sanity
 
    end subroutine cr_diff_z
 

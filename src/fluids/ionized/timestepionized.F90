@@ -65,7 +65,7 @@ contains
 
       use types,         only: component_fluid
       use arrays,        only: u, b
-      use grid,          only: ks, ke, is, ie, js, je, D_x, D_y, D_z
+      use grid,          only: D_x, D_y, D_z, cg
       use fluidindex,    only: nvar, ibx, iby, ibz
       use timestepfuncs, only: compute_c_max, compute_dt
 
@@ -85,9 +85,9 @@ contains
       pmag = 0.0; bx = 0.0; by = 0.0; bz = 0.0; ps = 0.0; p = 0.0; c_max = 0.0
       fl => nvar%ion
 
-      do k = ks, ke
-         do j = js, je
-            do i = is, ie
+      do k = cg%ks, cg%ke
+         do j = cg%js, cg%je
+            do i = cg%is, cg%ie
 
 #ifdef MAGNETIC
                bx = (b(ibx,i,j,k) + b(ibx, i+D_x, j,     k    ))/(1.+D_x)
@@ -96,7 +96,7 @@ contains
 
                pmag = 0.5*(bx*bx + by*by + bz*bz)
 #else /* !MAGNETIC */
-               ! all_mag_boundaries has not been called so we cannot trust b(ibx,cgrid%ie+D_x:), b(iby,:cgrid%je+D_y and b(ibz,:,:,cgrid%ke+D_z
+               ! all_mag_boundaries has not been called so we cannot trust b(ibx, cg%ie+D_x:), b(iby,:cg%je+D_y and b(ibz,:,:, cg%ke+D_z
                pmag = 0.
 #endif /* !MAGNETIC */
 

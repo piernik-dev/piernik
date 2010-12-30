@@ -63,12 +63,15 @@ contains
    end subroutine compute_c_max
 
    subroutine compute_dt(fl,cx,cy,cz,c_max,c_out,dt_out)
+
       use types,     only: component_fluid
-      use grid,      only: has_dir, xdim, ydim, zdim, dx, dy, dz, geometry, xmin
+      use grid,      only: geometry, cg
       use constants, only: big
       use mpi,       only: MPI_DOUBLE_PRECISION, MPI_MIN, MPI_MAX
-      use mpisetup,  only: comm, ierr, cfl
+      use mpisetup,  only: comm, ierr, cfl, has_dir, xdim, ydim, zdim
+
       implicit none
+
       type(component_fluid), pointer, intent(inout) :: fl
       real, intent(in)  :: cx, cy, cz, c_max
       real, intent(out) :: c_out, dt_out
@@ -80,18 +83,18 @@ contains
       real :: dt_proc_z           !< timestep computed for Z direction for the current processor
 
       if (has_dir(xdim) .and. cx /= 0) then
-         dt_proc_x = dx/cx
+         dt_proc_x = cg%dx/cx
       else
          dt_proc_x = big
       endif
       if (has_dir(ydim) .and. cy /= 0) then
-         dt_proc_y = dy/cy
-         if (geometry == 'cylindrical') dt_proc_y = dt_proc_y * xmin
+         dt_proc_y = cg%dy/cy
+         if (geometry == 'cylindrical') dt_proc_y = dt_proc_y * cg%xmin
       else
          dt_proc_y = big
       endif
       if (has_dir(zdim) .and. cz /= 0) then
-         dt_proc_z = dz/cz
+         dt_proc_z = cg%dz/cz
       else
          dt_proc_z = big
       endif

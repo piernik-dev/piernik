@@ -51,7 +51,7 @@ contains
 
       use dataio_pub,    only: par_file, ierrh, namelist_errh, compare_namelist   ! QA_WARN required for diff_nml
       use dataio_pub,    only: die
-      use grid,          only: xmin, xmax, ymin, ymax, zmin, zmax, dx, dy, dz
+      use grid,          only: cg
       use mpisetup,      only: ierr, rbuff, ibuff, lbuff, master, slave, buffer_dim, comm
       use mpi,           only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL
 
@@ -125,10 +125,10 @@ contains
       call die("[initproblem:read_problem_par] Isothermal EOS not supported.")
 #endif /* ISO */
 
-      clump_pos_x = (xmax+xmin)/2.
-      clump_pos_y = (ymax+ymin)/2.
-      clump_pos_z = (zmax+zmin)/2.
-      clump_r = max(clump_r, dx, dy, dz)
+      clump_pos_x = (cg%xmax+cg%xmin)/2.
+      clump_pos_y = (cg%ymax+cg%ymin)/2.
+      clump_pos_z = (cg%zmax+cg%zmin)/2.
+      clump_r = max(clump_r, cg%dx, cg%dy, cg%dz)
 
    end subroutine read_problem_par
 
@@ -143,7 +143,7 @@ contains
       use arrays,            only: u, b, sgp, gpot, hgpot
       use constants,         only: pi, newtong
       use dataio_pub,        only: msg, die, warn, printinfo
-      use grid,              only: xmin, xmax, ymin, ymax, zmin, zmax, x, y, z, dx, dy, dz, is, ie, js, je, ks, ke
+      use grid,              only: cg
       use initionized,       only: gamma_ion, idni, imxi, imyi, imzi, ieni
       use mpisetup,          only: master, smalld, smallei, comm, ierr, t
       use mpi,               only: MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_MIN, MPI_MAX, MPI_SUM
@@ -172,26 +172,26 @@ contains
       u(ieni, :, :, :) = smallei
 
       ! Initialize density with uniform sphere
-      il = ie+1
-      ih = is-1
-      do i = is, ie
-         if (abs(x(i) - clump_pos_x) <= clump_r) then
+      il = cg%ie+1
+      ih = cg%is-1
+      do i = cg%is, cg%ie
+         if (abs(cg%x(i) - clump_pos_x) <= clump_r) then
             il = min(i, il)
             ih = max(i, ih)
          endif
       enddo
-      jl = je+1
-      jh = js-1
-      do j = js, je
-         if (abs(y(j) - clump_pos_y) <= clump_r) then
+      jl = cg%je+1
+      jh = cg%js-1
+      do j = cg%js, cg%je
+         if (abs(cg%y(j) - clump_pos_y) <= clump_r) then
             jl = min(j, jl)
             jh = max(j, jh)
          endif
       enddo
-      kl = ke+1
-      kh = ks-1
-      do k = ks, ke
-         if (abs(z(k) - clump_pos_z) <= clump_r) then
+      kl = cg%ke+1
+      kh = cg%ks-1
+      do k = cg%ks, cg%ke
+         if (abs(cg%z(k) - clump_pos_z) <= clump_r) then
             kl = min(k, kl)
             kh = max(k, kh)
          endif
@@ -202,7 +202,7 @@ contains
       do k = kl, kh
          do j = jl, jh
             do i = il, ih
-               if ((x(i)-clump_pos_x)**2 + (y(j)-clump_pos_y)**2 + (z(k)-clump_pos_z)**2 < clump_r**2) then
+               if ((cg%x(i)-clump_pos_x)**2 + (cg%y(j)-clump_pos_y)**2 + (cg%z(k)-clump_pos_z)**2 < clump_r**2) then
                   u(idni, i, j, k) = totME(1)
                   iC =iC + 1
                endif
@@ -212,7 +212,7 @@ contains
 
       call MPI_Allreduce (MPI_IN_PLACE, iC, 1, MPI_INTEGER, MPI_SUM, comm, ierr)
       if (master .and. verbose) then
-         write(msg,'(a,es13.7,a,i7,a)')"[initproblem:init_prob] Starting with uniform sphere with M = ", iC*totME(1) * dx * dy * dz, " (", iC, " cells)"
+         write(msg,'(a,es13.7,a,i7,a)')"[initproblem:init_prob] Starting with uniform sphere with M = ", iC*totME(1) * cg%dvol, " (", iC, " cells)"
          call printinfo(msg, .true.)
       endif
 
@@ -239,7 +239,7 @@ contains
          hgpot = gpot
          gpot = sgp
 
-         Cint = [ minval(sgp(is:ie,js:je,ks:ke)), maxval(sgp(is:ie,js:je,ks:ke)) ] ! rotation will modify this
+         Cint = [ minval(sgp(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)), maxval(sgp(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)) ] ! rotation will modify this
 
          call MPI_Allreduce (MPI_IN_PLACE, Cint(LOW),  1, MPI_DOUBLE_PRECISION, MPI_MIN, comm, ierr)
          call MPI_Allreduce (MPI_IN_PLACE, Cint(HIGH), 1, MPI_DOUBLE_PRECISION, MPI_MAX, comm, ierr)
@@ -385,9 +385,9 @@ contains
       u(imxi, :, :, :) = clump_vel_x * u(idni,:,:,:)
       u(imyi, :, :, :) = clump_vel_y * u(idni,:,:,:)
       u(imzi, :, :, :) = clump_vel_z * u(idni,:,:,:)
-      do k = ks, ke
-         do j = js, je
-            do i = is, ie
+      do k = cg%ks, cg%ke
+         do j = cg%js, cg%je
+            do i = cg%is, cg%ie
                u(ieni,i,j,k) = max(smallei,                                             &
                     &              presrho(u(idni, i, j, k)) / (gamma_ion-1.0)        + &
                     &              0.5 * sum(u(imxi:imzi,i,j,k)**2,1) / u(idni,i,j,k) + &
@@ -397,7 +397,7 @@ contains
       enddo
 
       if (master) then
-         write(msg, '(a,g13.7)')"[initproblem:init_prob] Relaxation finished. Largest orbital period: ",2.*pi*sqrt( (min(xmax-xmin, ymax-ymin, zmax-zmin)/2.)**3/(newtong * clump_mass) )
+         write(msg, '(a,g13.7)')"[initproblem:init_prob] Relaxation finished. Largest orbital period: ",2.*pi*sqrt( (minval([cg%Lx, cg%Ly, cg%Lz])/2.)**3/(newtong * clump_mass) )
          call printinfo(msg, .true.)
       endif
 
@@ -410,7 +410,7 @@ contains
 
       use arrays,            only: u, sgp
       use dataio_pub,        only: msg, die, warn, printinfo
-      use grid,              only: is, ie, js, je, ks, ke, dx, dy, dz
+      use grid,              only: cg
       use initionized,       only: idni
       use mpisetup,          only: master, comm, ierr
       use mpi,               only: MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_SUM
@@ -428,9 +428,9 @@ contains
 
       TWP(:) = 0.
 
-      do k = ks, ke
-         do j = js, je
-            do i = is, ie
+      do k = cg%ks, cg%ke
+         do j = cg%js, cg%je
+            do i = cg%is, cg%ie
 !               TWP(1) = TWP(1) + u(idni, i, j, k) * 0.                !T, will be /= 0. for rotating clump
                TWP(2) = TWP(2) + u(idni, i, j, k) * sgp(i, j, k) * 0.5 !W
                TWP(3) = TWP(3) + presrho(u(idni, i, j, k))             !P
@@ -440,7 +440,7 @@ contains
 
       call MPI_Allreduce (MPI_IN_PLACE, TWP, nTWP, MPI_DOUBLE_PRECISION, MPI_SUM, comm, ierr)
 
-      TWP = TWP * dx * dy * dz
+      TWP = TWP * cg%dvol
       vc = abs(2.*TWP(1) + TWP(2) + 3*TWP(3))/abs(TWP(2))
       if (master .and. (verbose .or. tol < 1.0)) then
          write(msg,'(a,es15.7,a,3es15.7,a)')"[initproblem:virialCheck] VC=",vc, " TWP=(",TWP(:),")"
@@ -466,7 +466,7 @@ contains
    subroutine totalMEnthalpic(C, totME, mode)
 
       use arrays,      only: sgp, u
-      use grid,        only: is, ie, js, je, ks, ke, dx, dy, dz
+      use grid,        only: cg
       use initionized, only: idni
       use mpisetup,    only: comm, ierr
       use mpi,         only: MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_SUM
@@ -482,9 +482,9 @@ contains
 
       totME = 0.
 
-      do k = ks, ke
-         do j = js, je
-            do i = is, ie
+      do k = cg%ks, cg%ke
+         do j = cg%js, cg%je
+            do i = cg%is, cg%ie
                select case (mode)
                case (REL_CALC)
                   totME     = totME     + rhoH(h(C,     sgp(i,j,k)))
@@ -499,7 +499,7 @@ contains
 
       call MPI_Allreduce (MPI_IN_PLACE, totME, 1, MPI_DOUBLE_PRECISION, MPI_SUM, comm, ierr)
 
-      totME = totME * dx * dy * dz
+      totME = totME * cg%dvol
 
    end subroutine totalMEnthalpic
 

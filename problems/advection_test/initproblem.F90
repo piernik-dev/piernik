@@ -48,7 +48,7 @@ contains
 
       use dataio_pub,    only: ierrh, par_file, namelist_errh, compare_namelist      ! QA_WARN required for diff_nml
       use dataio_pub,    only: die
-      use grid,          only: xmin, xmax, ymin, ymax, zmin, zmax
+      use grid,          only: cg
       use mpisetup,      only: ierr, rbuff, master, slave, buffer_dim, comm
       use mpi,           only: MPI_DOUBLE_PRECISION
 
@@ -87,12 +87,12 @@ contains
 
       if (pulse_size <= 0. .or. pulse_size >= 1.) call die("[initproblem:read_problem_par] Pulse width should be between 0. and 1.")
 
-      pulse_x_min = (xmax+xmin)/2. - (xmax-xmin)*pulse_size/2.
-      pulse_x_max = (xmax+xmin)/2. + (xmax-xmin)*pulse_size/2.
-      pulse_y_min = (ymax+ymin)/2. - (ymax-ymin)*pulse_size/2.
-      pulse_y_max = (ymax+ymin)/2. + (ymax-ymin)*pulse_size/2.
-      pulse_z_min = (zmax+zmin)/2. - (zmax-zmin)*pulse_size/2.
-      pulse_z_max = (zmax+zmin)/2. + (zmax-zmin)*pulse_size/2.
+      pulse_x_min = (cg%xmax+cg%xmin)/2. - (cg%xmax-cg%xmin)*pulse_size/2.
+      pulse_x_max = (cg%xmax+cg%xmin)/2. + (cg%xmax-cg%xmin)*pulse_size/2.
+      pulse_y_min = (cg%ymax+cg%ymin)/2. - (cg%ymax-cg%ymin)*pulse_size/2.
+      pulse_y_max = (cg%ymax+cg%ymin)/2. + (cg%ymax-cg%ymin)*pulse_size/2.
+      pulse_z_min = (cg%zmax+cg%zmin)/2. - (cg%zmax-cg%zmin)*pulse_size/2.
+      pulse_z_max = (cg%zmax+cg%zmin)/2. + (cg%zmax-cg%zmin)*pulse_size/2.
 
    end subroutine read_problem_par
 
@@ -101,7 +101,7 @@ contains
    subroutine init_prob
 
       use arrays,        only: u, b
-      use grid,          only: x, y, z, is, ie, js, je, ks, ke
+      use grid,          only: cg
       use fluidindex,    only: nvar
       use mpisetup,      only: smalld, smallei
 
@@ -118,12 +118,12 @@ contains
       u(nvar%neu%idn, :, :, :) = pulse_low_density
 
       ! Initialize density with uniform sphere
-      do i = is, ie
-         if (x(i) > pulse_x_min .and. x(i) < pulse_x_max) then
-            do j = js, je
-               if (y(j) > pulse_y_min .and. y(j) < pulse_y_max) then
-                  do k = ks, ke
-                     if (z(k) > pulse_z_min .and. z(k) < pulse_z_max) then
+      do i = cg%is, cg%ie
+         if (cg%x(i) > pulse_x_min .and. cg%x(i) < pulse_x_max) then
+            do j = cg%js, cg%je
+               if (cg%y(j) > pulse_y_min .and. cg%y(j) < pulse_y_max) then
+                  do k = cg%ks, cg%ke
+                     if (cg%z(k) > pulse_z_min .and. cg%z(k) < pulse_z_max) then
                         u(nvar%neu%idn, i, j, k) = pulse_low_density * pulse_amp
                      endif
                   enddo
@@ -137,9 +137,9 @@ contains
       u(nvar%neu%imx, :, :, :) = pulse_vel_x * u(nvar%neu%idn, :, :, :)
       u(nvar%neu%imy, :, :, :) = pulse_vel_y * u(nvar%neu%idn, :, :, :)
       u(nvar%neu%imz, :, :, :) = pulse_vel_z * u(nvar%neu%idn, :, :, :)
-      do k = ks, ke
-         do j = js, je
-            do i = is, ie
+      do k = cg%ks, cg%ke
+         do j = cg%js, cg%je
+            do i = cg%is, cg%ie
                u(nvar%neu%ien,i,j,k) = max(smallei,                                             &
                     &              pulse_pressure / nvar%neu%gam_1        + &
                     &              0.5 * sum(u(nvar%neu%imx:nvar%neu%imz,i,j,k)**2,1) / u(nvar%neu%idn,i,j,k))

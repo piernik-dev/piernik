@@ -84,7 +84,7 @@ module initproblem
    subroutine init_prob
 
       use arrays,       only: u,b
-      use grid,         only: x,y,z,nx,ny,nz
+      use grid,         only: cg
       use initionized,  only: idni,imxi,imyi,imzi
 #ifndef ISO
       use initionized,  only: ieni, gamma_ion
@@ -101,12 +101,12 @@ module initproblem
 
 !   Secondary parameters
 
-      do j = 1,ny
-         yj = y(j)
-         do i = 1,nx
-            xi = x(i)
-            do k = 1,nz
-               zk = z(k)
+      do j = 1, cg%ny
+         yj = cg%y(j)
+         do i = 1, cg%nx
+            xi = cg%x(i)
+            do k = 1, cg%nz
+               zk = cg%z(k)
                vx = 0.0
 #ifdef FFTW
                vy = 0.0

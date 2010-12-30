@@ -214,7 +214,7 @@ contains
 !! Initialization - continued after allocation of everything interesting
 !!
 
-   subroutine init_multigrid_diff_post(cgrid, mb_alloc)
+   subroutine init_multigrid_diff_post(cg, mb_alloc)
 
       use types,              only: grid_container
       use dataio_pub,         only: die
@@ -224,12 +224,12 @@ contains
 
       implicit none
 
-      type(grid_container), intent(in) :: cgrid                  !< copy of grid variables
+      type(grid_container), intent(in) :: cg                  !< copy of grid variables
       real, intent(inout)              :: mb_alloc               !< Allocation counter
 
       integer                          :: ierr
 
-      if (.false.) ierr = cgrid%nxb ! suppress compiler warnings on unused arguments
+      if (.false.) ierr = cg%nxb ! suppress compiler warnings on unused arguments
 
       if (allocated(norm_was_zero)) call die("[multigrid_diffusion:init_multigrid] norm_was_zero already allocated")
       allocate(norm_was_zero(nvar%crs%all), stat=ierr)
@@ -342,7 +342,7 @@ contains
 
       use multigridvars,      only: roof, source, defect, correction
       use initcosmicrays,     only: iarr_crs
-      use grid,               only: is, ie, js, je, ks, ke
+      use grid,               only: cg
       use arrays,             only: u
       use multigridbasefuncs, only: norm_sq
       use dataio_pub,         only: die
@@ -357,8 +357,8 @@ contains
       call set_dirty(defect)
       ! Trick residual subroutine to initialize with: u + (1-theta) dt grad (c grad u)
       if (diff_theta /= 0.) then
-         roof%mgvar(roof%is:roof%ie, roof%js:roof%je, roof%ks:roof%ke, correction) = (1. -1./diff_theta) * u(iarr_crs(cr_id), is:ie, js:je, ks:ke)
-         roof%mgvar(roof%is:roof%ie, roof%js:roof%je, roof%ks:roof%ke, defect)     =     -1./diff_theta  * u(iarr_crs(cr_id), is:ie, js:je, ks:ke)
+         roof%mgvar(roof%is:roof%ie, roof%js:roof%je, roof%ks:roof%ke, correction) = (1. -1./diff_theta) * u(iarr_crs(cr_id), cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
+         roof%mgvar(roof%is:roof%ie, roof%js:roof%je, roof%ks:roof%ke, defect)     =     -1./diff_theta  * u(iarr_crs(cr_id), cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
          call residual(roof%level, defect, correction, source, cr_id)
       else
          call die("[multigrid_diffusion:init_source] diff_theta = 0 not supported.")
@@ -377,7 +377,7 @@ contains
    subroutine init_solution(cr_id)
 
       use multigridvars,  only: roof, solution
-      use grid,           only: is, ie, js, je, ks, ke
+      use grid,           only: cg
       use arrays,         only: u
       use initcosmicrays, only: iarr_crs
       use multigridhelpers,   only: set_dirty, check_dirty
@@ -387,7 +387,7 @@ contains
       integer, intent(in) :: cr_id !< CR component index
 
       call set_dirty(solution)
-      roof%mgvar(roof%is:roof%ie, roof%js:roof%je, roof%ks:roof%ke, solution) = u(iarr_crs(cr_id),  is:ie, js:je, ks:ke)
+      roof%mgvar(roof%is:roof%ie, roof%js:roof%je, roof%ks:roof%ke, solution) = u(iarr_crs(cr_id),  cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
       call check_dirty(roof%level, solution, "init solution")
 
    end subroutine init_solution
@@ -402,7 +402,7 @@ contains
    subroutine init_b
 
       use arrays,             only: b
-      use grid,               only: is, ie, js, je, ks, ke, D_x, D_y, D_z
+      use grid,               only: cg, D_x, D_y, D_z
       use multigridvars,      only: roof, level_min, level_max, extbnd_mirror
       use multigridbasefuncs, only: restrict_all
       use multigridmpifuncs,  only: mpi_multigrid_bnd
@@ -418,7 +418,7 @@ contains
 
       do ib = ibx, ibz
          call set_dirty(diff_bx+ib-ibx)
-         roof%mgvar(roof%is-D_x:roof%ie+D_x, roof%js-D_y:roof%je+D_y, roof%ks-D_z:roof%ke+D_z, diff_bx+ib-ibx) = b(ib, is-D_x:ie+D_x, js-D_y:je+D_y, ks-D_z:ke+D_z)
+         roof%mgvar(roof%is-D_x:roof%ie+D_x, roof%js-D_y:roof%je+D_y, roof%ks-D_z:roof%ke+D_z, diff_bx+ib-ibx) = b(ib, cg%is-D_x:cg%ie+D_x, cg%js-D_y:cg%je+D_y, cg%ks-D_z:cg%ke+D_z)
          call restrict_all(diff_bx+ib-ibx)             ! Implement correct restriction (and probably also separate inter-process communication) routines
          do il = level_min, level_max-1
             call mpi_multigrid_bnd(il, diff_bx+ib-ibx, 1, extbnd_mirror, .true.) ! ToDo: use global boundary type for B
@@ -444,7 +444,7 @@ contains
 !      use multigridmpifuncs,  only: mpi_multigrid_bnd
       use initcosmicrays,     only: iarr_crs
       use arrays,             only: u
-      use grid,               only: is, ie, js, je, ks, ke!, D_x, D_y, D_z
+      use grid,               only: cg
       use dataio_pub,         only: msg, warn
       use mpisetup,           only: master
       use timer,              only: set_timer
@@ -536,8 +536,8 @@ contains
       call norm_sq(defect, norm_lhs)
 !     Do we need to take care of boundaries here?
 !      call mpi_multigrid_bnd(roof%level, solution, 1, diff_extbnd)
-!      u(iarr_crs(cr_id), is-D_x:ie+D_x, js-D_y:je+D_y, ks-D_z:ke+D_z) = roof%mgvar(roof%is-D_x:roof%ie+D_x, roof%js-D_y:roof%je+D_y, roof%ks-D_z:roof%ke+D_z, solution)
-      u(iarr_crs(cr_id), is:ie, js:je, ks:ke) = roof%mgvar(roof%is:roof%ie, roof%js:roof%je, roof%ks:roof%ke, solution)
+!      u(iarr_crs(cr_id), is-D_x:cg%ie+D_x, cg%js-D_y:cg%je+D_y, cg%ks-D_z:cg%ke+D_z) = roof%mgvar(roof%is-D_x:roof%ie+D_x, roof%js-D_y:roof%je+D_y, roof%ks-D_z:roof%ke+D_z, solution)
+      u(iarr_crs(cr_id), cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = roof%mgvar(roof%is:roof%ie, roof%js:roof%je, roof%ks:roof%ke, solution)
 
    end subroutine vcycle_hg
 
@@ -549,10 +549,9 @@ contains
    ! BEWARE: almost replicated code (see crdiffusion.F90)
    subroutine diff_flux_x(i, j, k, soln, lev, cr_id, Keff)
 
-      use grid,              only: has_dir, ydim, zdim
       use multigridvars,     only: lvl
       use initcosmicrays,    only: K_crs_perp, K_crs_paral
-      use mpisetup,          only: dt
+      use mpisetup,          only: dt, has_dir, ydim, zdim
       use arrays,            only: wa
 
       implicit none
@@ -614,10 +613,9 @@ contains
 
    subroutine diff_flux_y(i, j, k, soln, lev, cr_id, Keff)
 
-      use grid,              only: has_dir, xdim, zdim
       use multigridvars,     only: lvl
       use initcosmicrays,    only: K_crs_perp, K_crs_paral
-      use mpisetup,          only: dt
+      use mpisetup,          only: dt, has_dir, xdim, zdim
       use arrays,            only: wa
 
       implicit none
@@ -679,10 +677,9 @@ contains
 
    subroutine diff_flux_z(i, j, k, soln, lev, cr_id, Keff)
 
-      use grid,              only: has_dir, xdim, ydim
       use multigridvars,     only: lvl
       use initcosmicrays,    only: K_crs_perp, K_crs_paral
-      use mpisetup,          only: dt
+      use mpisetup,          only: dt, has_dir, xdim, ydim
       use arrays,            only: wa
 
       implicit none
@@ -746,7 +743,7 @@ contains
 
    subroutine residual(lev, src, soln, def, cr_id)
 
-      use grid,              only: has_dir, xdim, ydim, zdim
+      use mpisetup,          only: has_dir, xdim, ydim, zdim
       use multigridvars,     only: lvl
       use multigridmpifuncs, only: mpi_multigrid_bnd
       use arrays,            only: wa
@@ -827,10 +824,9 @@ contains
 
    subroutine approximate_solution(lev, src, soln, cr_id)
 
-      use grid,               only: has_dir, xdim, ydim, zdim
       use multigridvars,      only: level_min, lvl, extbnd_donothing
       use multigridmpifuncs,  only: mpi_multigrid_bnd
-      use mpisetup,           only: dt
+      use mpisetup,           only: dt, has_dir, xdim, ydim, zdim
       use arrays,             only: wa
 
       implicit none

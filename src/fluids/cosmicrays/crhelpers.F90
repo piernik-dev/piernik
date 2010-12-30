@@ -39,15 +39,15 @@ module crhelpers
    subroutine div_v(ifluid)
 
       use fluidindex,  only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
-      use grid,        only: nx, ny, nz
-      use grid,        only: dx, dy, dz, xdim, ydim, zdim, has_dir
+      use grid,        only: cg
+      use mpisetup,    only: xdim, ydim, zdim, has_dir
       use arrays,      only: u, divvel
 
       implicit none
 
-      real, dimension(nx) :: vx
-      real, dimension(ny) :: vy
-      real, dimension(nz) :: vz
+      real, dimension(cg%nx) :: vx
+      real, dimension(cg%ny) :: vy
+      real, dimension(cg%nz) :: vz
       integer             :: i,j,k,ifluid
       integer             :: idnf,imxf,imyf,imzf
 
@@ -59,42 +59,45 @@ module crhelpers
       divvel(:,:,:) = 0.0
 
       if (has_dir(xdim)) then
-         do k = 1, nz
-            do j = 1, ny
+         do k = 1, cg%nz
+            do j = 1, cg%ny
                vx = u(imxf,:,j,k) / u(idnf,:,j,k)
-               divvel(2:nx-1,j,k) = ( vx(3:nx) - vx(1:nx-2) )  / (2.*dx)
+               divvel(2:cg%nx-1,j,k) = ( vx(3:cg%nx) - vx(1:cg%nx-2) )  / (2.*cg%dx)
             enddo
          enddo
-         divvel(1,:,:) = divvel(2,:,:); divvel(nx,:,:) = divvel(nx-1,:,:) ! for sanity
+         divvel(1,:,:) = divvel(2,:,:); divvel(cg%nx,:,:) = divvel(cg%nx-1,:,:) ! for sanity
       endif
 
       if (has_dir(ydim)) then
-         do k = 1, nz
-            do i = 1, nx
+         do k = 1, cg%nz
+            do i = 1, cg%nx
                vy = u(imyf,i,:,k) / u(idnf,i,:,k)
-               divvel(i,2:ny-1,k) = divvel(i,2:ny-1,k)+( vy(3:ny) - vy(1:ny-2) )  / (2.*dy)
+               divvel(i,2:cg%ny-1,k) = divvel(i,2:cg%ny-1,k)+( vy(3:cg%ny) - vy(1:cg%ny-2) )  / (2.*cg%dy)
             enddo
          enddo
-         divvel(:,1,:) = divvel(:,2,:); divvel(:,ny,:) = divvel(:,ny-1,:) ! for sanity
+         divvel(:,1,:) = divvel(:,2,:); divvel(:, cg%ny,:) = divvel(:, cg%ny-1,:) ! for sanity
       endif
 
       if (has_dir(zdim)) then
-         do j = 1, ny
-            do i = 1, nx
+         do j = 1, cg%ny
+            do i = 1, cg%nx
                vz = u(imzf,i,j,:) / u(idnf,i,j,:)
-               divvel(i,j,2:nz-1) = divvel(i,j,2:nz-1)+( vz(3:nz) - vz(1:nz-2) )  / (2.*dz)
+               divvel(i,j,2:cg%nz-1) = divvel(i,j,2:cg%nz-1)+( vz(3:cg%nz) - vz(1:cg%nz-2) )  / (2.*cg%dz)
             enddo
          enddo
-         divvel(:,:,1) = divvel(:,:,2); divvel(:,:,nz) = divvel(:,:,nz-1) ! for sanity
+         divvel(:,:,1) = divvel(:,:,2); divvel(:,:, cg%nz) = divvel(:,:, cg%nz-1) ! for sanity
       endif
 
    end subroutine div_v
 
    subroutine div_vx(k,j)
-      use grid,        only: nx
+
+      use grid,        only: cg
       use arrays,      only: divvel
+
       implicit none
-      real,dimension(nx) :: divv
+
+      real,dimension(cg%nx) :: divv
       integer :: j,k
 
       divv = divvel(:,j,k)
@@ -102,10 +105,13 @@ module crhelpers
    end subroutine div_vx
 
    subroutine div_vy(k,i)
-      use grid,        only: ny
+
+      use grid,        only: cg
       use arrays, only: divvel
+
       implicit none
-      real,dimension(ny) :: divv
+
+      real,dimension(cg%ny) :: divv
       integer :: i,k
 
       divv = divvel(i,:,k)
@@ -113,10 +119,13 @@ module crhelpers
    end subroutine div_vy
 
    subroutine  div_vz(j,i)
-      use grid,        only: nz
+
+      use grid,        only: cg
       use arrays, only: divvel
+
       implicit none
-      real,dimension(nz) :: divv
+
+      real,dimension(cg%nz) :: divv
       integer :: i,j
 
       divv = divvel(i,j,:)

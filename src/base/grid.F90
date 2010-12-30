@@ -37,121 +37,24 @@
 !<
 module grid
 
-   use mpisetup, only: cbuff_len, nb
+   use mpisetup, only: cbuff_len
+   use types,    only: grid_container
+
    implicit none
 
    private
-   public :: cleanup_grid, dl, dvol, has_dir, idl, dxmn, init_grid, maxxyz, total_ncells, geometry, nb, &
-        &    Lx, dx, idx, inv_x, is, ie, nx, nxb, nxt, x, xdim, xl, xmax, xmaxb, xmin, xminb, xr, D_x, &
-        &    Ly, dy, idy, inv_y, js, je, ny, nyb, nyt, y, ydim, yl, ymax, ymaxb, ymin, yminb, yr, D_y, &
-        &    Lz, dz, idz, inv_z, ks, ke, nz, nzb, nzt, z, zdim, zl, zmax, zmaxb, zmin, zminb, zr, D_z
+   public :: cleanup_grid, init_grid, total_ncells, geometry, cg, D_x, D_y, D_z
 
-   real, protected     :: dx                             !< length of the %grid cell in x-direction
-   real, protected     :: dy                             !< length of the %grid cell in y-direction
-   real, protected     :: dz                             !< length of the %grid cell in z-direction
-   real, protected     :: idx                            !< inverted length of the %grid cell in x-direction
-   real, protected     :: idy                            !< inverted length of the %grid cell in y-direction
-   real, protected     :: idz                            !< inverted length of the %grid cell in z-direction
-   real, protected     :: dxmn                           !< the smallest length of the %grid cell (among dx, dy, and dz)
-   real, protected     :: dvol                           !< volume of one %grid cell
-   integer, protected  :: total_ncells                   !< total number of %grid cells
-   integer, protected  :: nx                             !< number of %grid cells in one block in x-direction
-   integer, protected  :: ny                             !< number of %grid cells in one block in y-direction
-   integer, protected  :: nz                             !< number of %grid cells in one block in z-direction
-   integer, protected  :: nxb                            !< number of physical domain %grid cells in one block (without boundary cells) in x-direction
-   integer, protected  :: nyb                            !< number of physical domain %grid cells in one block (without boundary cells) in y-direction
-   integer, protected  :: nzb                            !< number of physical domain %grid cells in one block (without boundary cells) in z-direction
-   integer, protected  :: nxt                            !< total number of %grid cells in the whole domain in x-direction
-   integer, protected  :: nyt                            !< total number of %grid cells in the whole domain in y-direction
-   integer, protected  :: nzt                            !< total number of %grid cells in the whole domain in z-direction
-   integer, protected  :: is                             !< index of the first %grid cell of physical domain in x-direction
-   integer, protected  :: ie                             !< index of the last %grid cell of physical domain in x-direction
-   integer, protected  :: js                             !< index of the first %grid cell of physical domain in y-direction
-   integer, protected  :: je                             !< index of the last %grid cell of physical domain in y-direction
-   integer, protected  :: ks                             !< index of the first %grid cell of physical domain in z-direction
-   integer, protected  :: ke                             !< index of the last %grid cell of physical domain in z-direction
-   integer, protected  :: maxxyz                         !< maximum number of %grid cells in any direction
-
-   real, protected     :: xmin                           !< physical domain left x-boundary position
-   real, protected     :: xmax                           !< physical domain right x-boundary position
-   real, protected     :: ymin                           !< physical domain left y-boundary position
-   real, protected     :: ymax                           !< physical domain right y-boundary position
-   real, protected     :: zmin                           !< physical domain left z-boundary position
-   real, protected     :: zmax                           !< physical domain right z-boundary position
-   real, protected     :: xminb                          !< current block left x-boundary position
-   real, protected     :: xmaxb                          !< current block right x-boundary position
-   real, protected     :: yminb                          !< current block left y-boundary position
-   real, protected     :: ymaxb                          !< current block right y-boundary position
-   real, protected     :: zminb                          !< current block left z-boundary position
-   real, protected     :: zmaxb                          !< current block right z-boundary position
-   real, protected     :: Lx                             !< span of the physical domain in x-direction (xmax-xmin)
-   real, protected     :: Ly                             !< span of the physical domain in y-direction (ymax-ymin)
-   real, protected     :: Lz                             !< span of the physical domain in z-direction (zmax-zmin)
-   integer, parameter :: xdim=1                          !< parameter assigned to x-direction
-   integer, parameter :: ydim=2                          !< parameter assigned to y-direction
-   integer, parameter :: zdim=3                          !< parameter assigned to z-direction
-   logical, protected, dimension(xdim:zdim) :: has_dir   !< .true. for existing directions
-   integer, protected :: D_x, D_y, D_z                   !< set to 1 when given direction exists, 0 otherwise. Use to construct dimensionally-safe indices for arrays
-
-   character(len=cbuff_len)  :: geometry            !< define system of coordinates
-
-   real, allocatable, target, protected  :: dl(:)               !< array of %grid cell sizes in all directions
-   real, allocatable, target, protected  :: idl(:)              !< array of inverted %grid cell sizes in all directions
-   real, allocatable, dimension(:), target, protected  :: x     !< array of x-positions of %grid cells centers
-   real, allocatable, dimension(:), target, protected  :: inv_x !< array of invert x-positions of %grid cells centers
-   real, allocatable, dimension(:), target, protected  :: y     !< array of y-positions of %grid cells centers
-   real, allocatable, dimension(:), target, protected  :: inv_y !< array of invert y-positions of %grid cells centers
-   real, allocatable, dimension(:), target, protected  :: z     !< array of z-positions of %grid cells centers
-   real, allocatable, dimension(:), target, protected  :: inv_z !< array of invert z-positions of %grid cells centers
-   real, allocatable, dimension(:), target, protected  :: xl    !< array of x-positions of %grid cells left borders
-   real, allocatable, dimension(:), target, protected  :: yl    !< array of y-positions of %grid cells left borders
-   real, allocatable, dimension(:), target, protected  :: zl    !< array of z-positions of %grid cells left borders
-   real, allocatable, dimension(:), target, protected  :: xr    !< array of x-positions of %grid cells right borders
-   real, allocatable, dimension(:), target, protected  :: yr    !< array of y-positions of %grid cells right borders
-   real, allocatable, dimension(:), target, protected  :: zr    !< array of z-positions of %grid cells right borders
+   integer, protected :: total_ncells                   !< total number of %grid cells
+   integer, protected :: D_x, D_y, D_z                  !< set to 1 when given direction exists, 0 otherwise. Use to construct dimensionally-safe indices for arrays
+   character(len=cbuff_len), protected :: geometry      !< define system of coordinates
+   type(grid_container), protected :: cg             ! AMR: this will be a dynamically resized array
 
    contains
 
-   subroutine set_container_grid(cgrid)
-
-      use types,           only: grid_container
-
-      implicit none
-
-      type(grid_container), intent(out) :: cgrid
-
-      cgrid%dx = dx; cgrid%dy = dy; cgrid%dz = dz
-      cgrid%dxmn = minval([dx,dy,dz])
-      cgrid%dvol = dx*dy*dz
-      cgrid%nb = nb
-      cgrid%nx = nx; cgrid%ny = ny; cgrid%nz = nz
-      cgrid%nxb = nxb; cgrid%nyb = nyb; cgrid%nzb = nzb
-      cgrid%nxt = nxt; cgrid%nyt = nyt; cgrid%nzt = nzt
-      cgrid%is = is; cgrid%js = js; cgrid%ks = ks
-      cgrid%ie = ie; cgrid%je = je; cgrid%ke = ke
-
-      cgrid%xmin = xmin; cgrid%ymin = ymin; cgrid%zmin = zmin
-      cgrid%xmax = xmax; cgrid%ymax = ymax; cgrid%zmax = zmax
-      cgrid%xminb = xminb; cgrid%yminb = yminb; cgrid%zminb = zminb
-      cgrid%xmaxb = xmaxb; cgrid%ymaxb = ymaxb; cgrid%zmaxb = zmaxb
-      cgrid%Lx = Lx; cgrid%Ly = Ly; cgrid%Lz = Lz
-
-      !Association check is not required for uninitialized variables.
-      cgrid%dl=>dl
-      cgrid%x=>x
-      cgrid%y=>y
-      cgrid%z=>z
-      cgrid%xl=>xl
-      cgrid%yl=>yl
-      cgrid%zl=>zl
-      cgrid%xr=>xr
-      cgrid%yr=>yr
-      cgrid%zr=>zr
-
-   end subroutine set_container_grid
-
 !>
 !! \brief Routine which sets numbers of cells for the domain, MPI blocks and initializes direction meshes (x,y,z).
+!! Also compute domain maximum and minimum of coordinates, lengths of cells and coordinates of zone centers and left/right zone boundaries.
 !!
 !! \n \n
 !! @b DOMAIN_LIMITS
@@ -167,18 +70,18 @@ module grid
 !!</table>
 !! \n \n
 !<
-   subroutine init_grid(cgrid)
+   subroutine init_grid
 
       use dataio_pub, only: par_file, ierrh, namelist_errh, compare_namelist  ! QA_WARN required for diff_nml
       use dataio_pub, only: printinfo, die
-      use mpisetup,   only: ierr, rbuff, cbuff, master, slave, buffer_dim, pxsize, pysize, pzsize, comm, &
-           &                nxd, nyd, nzd, nb
+      use mpisetup,   only: ierr, rbuff, cbuff, master, slave, buffer_dim, psize, pxsize, pysize, pzsize, pcoords, comm, &
+           &                has_dir, xdim, ydim, zdim, ndims, nxd, nyd, nzd, nb
       use mpi,        only: MPI_DOUBLE_PRECISION, MPI_CHARACTER
-      use types,      only: grid_container
 
       implicit none
 
-      type(grid_container), intent(out) :: cgrid
+      integer :: i, j, k
+      real    :: xmin, xmax, ymin, ymax, zmin, zmax
 
       namelist /DOMAIN_LIMITS/ xmin, xmax, ymin, ymax, zmin, zmax, geometry
 
@@ -222,130 +125,113 @@ module grid
 
       endif
 
+      cg%xmin = xmin; cg%ymin = ymin; cg%zmin = zmin
+      cg%xmax = xmax; cg%ymax = ymax; cg%zmax = zmax
+
       if ( (mod(nxd, pxsize) .ne. 0) .or. &
            (mod(nyd, pysize) .ne. 0) .or. &
            (mod(nzd, pzsize) .ne. 0) ) then
          call die("One of: (mod(n_d,p_size) /= 0")
       endif
 
-      has_dir(:) = ([ nxd, nyd, nzd ] > 1)
-
       if (has_dir(xdim)) then
-         nxb = nxd / pxsize     ! Block 'physical' grid sizes
-         nx  = nxb + 2 * nb     ! Block total grid sizes
-         nxt = nxd + 2 * nb     ! Domain total grid sizes
-         is  = nb + 1
-         ie  = nb + nxb
+         cg%nxb = nxd / pxsize     ! Block 'physical' grid sizes
+         cg%nx  = cg%nxb + 2 * nb     ! Block total grid sizes
+         cg%nxt = nxd + 2 * nb     ! Domain total grid sizes
+         cg%is  = nb + 1
+         cg%ie  = nb + cg%nxb
          D_x = 1
       else
-         nxb    = 1
-         nx     = 1
-         nxt    = 1
+         cg%nxb    = 1
+         cg%nx     = 1
+         cg%nxt    = 1
          pxsize = 1
-         is     = 1
-         ie     = 1
+         cg%is     = 1
+         cg%ie     = 1
          D_x    = 0
       endif
 
       if (has_dir(ydim)) then
-         nyb = nyd / pysize
-         ny  = nyb + 2 * nb
-         nyt = nyd + 2 * nb
-         js  = nb + 1
-         je  = nb + nyb
+         cg%nyb = nyd / pysize
+         cg%ny  = cg%nyb + 2 * nb
+         cg%nyt = nyd + 2 * nb
+         cg%js  = nb + 1
+         cg%je  = nb + cg%nyb
          D_y = 1
       else
-         ny     = 1
-         nyb    = 1
-         nyt    = 1
+         cg%ny     = 1
+         cg%nyb    = 1
+         cg%nyt    = 1
          pysize = 1
-         js     = 1
-         je     = 1
+         cg%js     = 1
+         cg%je     = 1
          D_y    = 0
       endif
 
       if (has_dir(zdim)) then
-         nzb = nzd / pzsize
-         nz  = nzb + 2 * nb
-         nzt = nzd + 2 * nb
-         ks  = nb + 1
-         ke  = nb + nzb
+         cg%nzb = nzd / pzsize
+         cg%nz  = cg%nzb + 2 * nb
+         cg%nzt = nzd + 2 * nb
+         cg%ks  = nb + 1
+         cg%ke  = nb + cg%nzb
          D_z = 1
       else
-         nzb    = 1
-         nz     = 1
-         nzt    = 1
+         cg%nzb    = 1
+         cg%nz     = 1
+         cg%nzt    = 1
          pzsize = 1
-         ks     = 1
-         ke     = 1
+         cg%ks     = 1
+         cg%ke     = 1
          D_z    = 0
       endif
+      cg%nb = nb
 
-      allocate(dl(3))
-      allocate(idl(3))
-      allocate(x(nx), xl(nx), xr(nx), inv_x(nx))
-      allocate(y(ny), yl(ny), yr(ny), inv_y(ny))
-      allocate(z(nz), zl(nz), zr(nz), inv_z(nz))
+      allocate(cg%dl(ndims))
+      allocate(cg%idl(ndims))
+      allocate(cg%x(cg%nx), cg%xl(cg%nx), cg%xr(cg%nx), cg%inv_x(cg%nx))
+      allocate(cg%y(cg%ny), cg%yl(cg%ny), cg%yr(cg%ny), cg%inv_y(cg%ny))
+      allocate(cg%z(cg%nz), cg%zl(cg%nz), cg%zr(cg%nz), cg%inv_z(cg%nz))
 
       total_ncells = nxd * nyd * nzd
 
-      call grid_xyz
+      cg%maxxyz = maxval([size(cg%x), size(cg%y), size(cg%z)])
 
-      call set_container_grid(cgrid)
-#ifdef VERBOSE
-      call printinfo("[grid:init_grid]: finished. \o/")
-#endif /* VERBOSE */
-   end subroutine init_grid
-!>
-!! \brief Routine that computes domain maximum and minimum of coordinates, lengths of cells and coordinates of zone centers and left/right zone boundaries.
-!<
-   subroutine grid_xyz
+      cg%xminb = cg%xmin + real(pcoords(1)  )*(cg%xmax-cg%xmin)/real(psize(1))
+      cg%xmaxb = cg%xmin + real(pcoords(1)+1)*(cg%xmax-cg%xmin)/real(psize(1))
+      cg%yminb = cg%ymin + real(pcoords(2)  )*(cg%ymax-cg%ymin)/real(psize(2))
+      cg%ymaxb = cg%ymin + real(pcoords(2)+1)*(cg%ymax-cg%ymin)/real(psize(2))
+      cg%zminb = cg%zmin + real(pcoords(3)  )*(cg%zmax-cg%zmin)/real(psize(3))
+      cg%zmaxb = cg%zmin + real(pcoords(3)+1)*(cg%zmax-cg%zmin)/real(psize(3))
 
-      use mpisetup, only: psize, pcoords
-
-      implicit none
-
-      integer :: i,j,k
-
-      maxxyz = max(size(x),size(y))
-      maxxyz = max(size(z),maxxyz)
-
-      xminb = xmin + real(pcoords(1)  )*(xmax-xmin)/real(psize(1))
-      xmaxb = xmin + real(pcoords(1)+1)*(xmax-xmin)/real(psize(1))
-      yminb = ymin + real(pcoords(2)  )*(ymax-ymin)/real(psize(2))
-      ymaxb = ymin + real(pcoords(2)+1)*(ymax-ymin)/real(psize(2))
-      zminb = zmin + real(pcoords(3)  )*(zmax-zmin)/real(psize(3))
-      zmaxb = zmin + real(pcoords(3)+1)*(zmax-zmin)/real(psize(3))
-
-      dxmn = huge(1.0)
+      cg%dxmn = huge(1.0)
       if (has_dir(xdim)) then
-         dx = (xmaxb-xminb)/nxb
-         dxmn = min(dxmn,dx)
+         cg%dx = (cg%xmaxb-cg%xminb)/cg%nxb
+         cg%dxmn = min(cg%dxmn, cg%dx)
       else
-         dx = 1.0
+         cg%dx = 1.0
       endif
-      idx = 1./dx
+      cg%idx = 1./cg%dx
       if (has_dir(ydim)) then
-         dy = (ymaxb-yminb)/nyb
-         dxmn = min(dxmn,dy)
+         cg%dy = (cg%ymaxb-cg%yminb)/cg%nyb
+         cg%dxmn = min(cg%dxmn, cg%dy)
       else
-         dy = 1.0
+         cg%dy = 1.0
       endif
-      idy = 1./dy
+      cg%idy = 1./cg%dy
       if (has_dir(zdim)) then
-         dz = (zmaxb-zminb)/nzb
-         dxmn = min(dxmn,dz)
+         cg%dz = (cg%zmaxb-cg%zminb)/cg%nzb
+         cg%dxmn = min(cg%dxmn, cg%dz)
       else
-         dz = 1.0
+         cg%dz = 1.0
       endif
-      idz = 1./dz
+      cg%idz = 1./cg%dz
 
-      dl(xdim) = dx
-      dl(ydim) = dy
-      dl(zdim) = dz
-      idl = 1./dl
+      cg%dl(xdim) = cg%dx
+      cg%dl(ydim) = cg%dy
+      cg%dl(zdim) = cg%dz
+      cg%idl = 1./cg%dl
 
-      dvol = dx*dy*dz
+      cg%dvol = cg%dx*cg%dy*cg%dz
 
 !--- Assignments -----------------------------------------------------------
     ! left zone boundaries:  xl, yl, zl
@@ -355,67 +241,76 @@ module grid
 !--- x-grids --------------------------------------------------------------
 
       if (has_dir(xdim)) then
-         do i= 1, nx
-            x(i)  = xminb + 0.5*dx + (i-nb-1)*dx
-            xl(i) = x(i)  - 0.5*dx
-            xr(i) = x(i)  + 0.5*dx
+         do i= 1, cg%nx
+            cg%x(i)  = cg%xminb + 0.5*cg%dx + (i-nb-1)*cg%dx
+            cg%xl(i) = cg%x(i)  - 0.5*cg%dx
+            cg%xr(i) = cg%x(i)  + 0.5*cg%dx
          enddo
       else
-         x  =  0.5*(xminb + xmaxb)
-         xl = -0.5*dx
-         xr =  0.5*dx
+         cg%x  =  0.5*(cg%xminb + cg%xmaxb)
+         cg%xl = -0.5*cg%dx
+         cg%xr =  0.5*cg%dx
       endif
-      where ( x /= 0.0 )
-         inv_x = 1./x
+      where ( cg%x /= 0.0 )
+         cg%inv_x = 1./cg%x
       elsewhere
-         inv_x = 0.
+         cg%inv_x = 0.
       endwhere
 
 !--- y-grids --------------------------------------------------------------
 
       if (has_dir(ydim)) then
-         do j= 1, ny
-            y(j)  = yminb + 0.5*dy + (j-nb-1)*dy
-            yl(j) = y(j)  - 0.5*dy
-            yr(j) = y(j)  + 0.5*dy
+         do j= 1, cg%ny
+            cg%y(j)  = cg%yminb + 0.5*cg%dy + (j-nb-1)*cg%dy
+            cg%yl(j) = cg%y(j)  - 0.5*cg%dy
+            cg%yr(j) = cg%y(j)  + 0.5*cg%dy
          enddo
       else
-         y  =  0.5*(yminb + ymaxb)
-         yl = -0.5*dy
-         yr =  0.5*dy
+         cg%y  =  0.5*(cg%yminb + cg%ymaxb)
+         cg%yl = -0.5*cg%dy
+         cg%yr =  0.5*cg%dy
       endif
-      where ( y /= 0.0 )
-         inv_y = 1./y
+      where ( cg%y /= 0.0 )
+         cg%inv_y = 1./cg%y
       elsewhere
-         inv_y = 0.
+         cg%inv_y = 0.
       endwhere
 
 !--- z-grids --------------------------------------------------------------
 
       if (has_dir(zdim)) then
-         do k= 1, nz
-            z(k)  = zminb + 0.5*dz + (k-nb-1) * dz
-            zl(k) = z(k)  - 0.5*dz
-            zr(k) = z(k)  + 0.5*dz
+         do k= 1, cg%nz
+            cg%z(k)  = cg%zminb + 0.5*cg%dz + (k-nb-1) * cg%dz
+            cg%zl(k) = cg%z(k)  - 0.5*cg%dz
+            cg%zr(k) = cg%z(k)  + 0.5*cg%dz
          enddo
       else
-         z  =  0.5*(zminb + zmaxb)
-         zl = -0.5*dz
-         zr =  0.5*dz
+         cg%z  =  0.5*(cg%zminb + cg%zmaxb)
+         cg%zl = -0.5*cg%dz
+         cg%zr =  0.5*cg%dz
       endif
-      where ( z /= 0.0 )
-         inv_z = 1./z
+      where ( cg%z /= 0.0 )
+         cg%inv_z = 1./cg%z
       elsewhere
-         inv_z = 0.
+         cg%inv_z = 0.
       endwhere
 
 !--------------------------------------------------------------------------
 
-      Lx = xmax - xmin
-      Ly = ymax - ymin
-      Lz = zmax - zmin
+      cg%Lx = cg%xmax - cg%xmin
+      cg%Ly = cg%ymax - cg%ymin
+      cg%Lz = cg%zmax - cg%zmin
 
-   end subroutine grid_xyz
+      cg%Vol = 1.
+      if (has_dir(xdim)) cg%Vol = cg%Vol * cg%Lx
+      if (has_dir(ydim)) cg%Vol = cg%Vol * cg%Ly
+      if (has_dir(zdim)) cg%Vol = cg%Vol * cg%Lz
+      ! BEWARE: not true for non-cartesian geometry
+
+#ifdef VERBOSE
+      call printinfo("[grid:init_grid]: finished. \o/")
+#endif /* VERBOSE */
+   end subroutine init_grid
 !>
 !! \brief Routines that deallocates directional meshes.
 !<
@@ -423,20 +318,20 @@ module grid
 
       implicit none
 
-      if (allocated(dl))    deallocate(dl)
-      if (allocated(idl))   deallocate(idl)
-      if (allocated(x))     deallocate(x)
-      if (allocated(xl))    deallocate(xl)
-      if (allocated(xr))    deallocate(xr)
-      if (allocated(inv_x)) deallocate(inv_x)
-      if (allocated(y))     deallocate(y)
-      if (allocated(yl))    deallocate(yl)
-      if (allocated(yr))    deallocate(yr)
-      if (allocated(inv_y)) deallocate(inv_y)
-      if (allocated(z))     deallocate(z)
-      if (allocated(zl))    deallocate(zl)
-      if (allocated(zr))    deallocate(zr)
-      if (allocated(inv_z)) deallocate(inv_z)
+      if (allocated(cg%dl))    deallocate(cg%dl)
+      if (allocated(cg%idl))   deallocate(cg%idl)
+      if (allocated(cg%x))     deallocate(cg%x)
+      if (allocated(cg%xl))    deallocate(cg%xl)
+      if (allocated(cg%xr))    deallocate(cg%xr)
+      if (allocated(cg%inv_x)) deallocate(cg%inv_x)
+      if (allocated(cg%y))     deallocate(cg%y)
+      if (allocated(cg%yl))    deallocate(cg%yl)
+      if (allocated(cg%yr))    deallocate(cg%yr)
+      if (allocated(cg%inv_y)) deallocate(cg%inv_y)
+      if (allocated(cg%z))     deallocate(cg%z)
+      if (allocated(cg%zl))    deallocate(cg%zl)
+      if (allocated(cg%zr))    deallocate(cg%zr)
+      if (allocated(cg%inv_z)) deallocate(cg%inv_z)
 
    end subroutine cleanup_grid
 

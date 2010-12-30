@@ -252,9 +252,8 @@ contains
 
    subroutine ascii_dump(filename)
 
-      use grid,          only: xdim, ydim, zdim
       use dataio_pub,    only: msg
-      use mpisetup,      only: proc, master
+      use mpisetup,      only: proc, master, xdim, ydim, zdim
       use multigridvars, only: level_min, level_max, lvl, gb_cartmap, ngridvars
 
       implicit none

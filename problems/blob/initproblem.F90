@@ -104,7 +104,8 @@ module initproblem
    subroutine init_prob
 
       use arrays,       only: u
-      use grid,         only: x, y, z, nx, ny, nz, zdim, has_dir
+      use grid,         only: cg
+      use mpisetup,     only: zdim, has_dir
       use initneutral,  only: gamma_neu, idnn, imxn, imyn, imzn, ienn
 
       implicit none
@@ -117,13 +118,13 @@ module initproblem
       u(imzn, :, :, :) = 0.0
       u(ienn, :, :, :) = penv/(gamma_neu-1.0)
 
-      do i = 1,nx
-         rcx = (x(i)-blobxc)**2
-         do j = 1,ny
-            rcy = (y(j)-blobyc)**2
-            do k = 1,nz
+      do i = 1, cg%nx
+         rcx = (cg%x(i)-blobxc)**2
+         do j = 1, cg%ny
+            rcy = (cg%y(j)-blobyc)**2
+            do k = 1, cg%nz
                if (has_dir(zdim)) then
-                  rrel = sqrt(rcx + rcy + (z(k)-blobzc)**2)
+                  rrel = sqrt(rcx + rcy + (cg%z(k)-blobzc)**2)
                else
                   rrel = sqrt(rcx + rcy)
                endif

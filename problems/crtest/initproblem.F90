@@ -52,7 +52,7 @@ module initproblem
       use dataio_pub,    only: ierrh, par_file, namelist_errh, compare_namelist      ! QA_WARN required for diff_nml
       use dataio_pub,    only: die, user_vars_hdf5
       use diagnostics,   only: my_allocate
-      use grid,          only: dxmn, nxb, nyb, nzb
+      use grid,          only: cg
       use mpi,           only: MPI_INTEGER, MPI_DOUBLE_PRECISION
       use mpisetup,      only: ibuff, rbuff, buffer_dim, comm, ierr, master, slave
       use types,         only: problem_customize_solution, finalize_problem, cleanup_problem
@@ -67,7 +67,7 @@ module initproblem
       x0           = 0.0       !< x-position of the blob
       y0           = 0.0       !< y-position of the blob
       z0           = 0.0       !< z-position of the blob
-      r0           = 5.*dxmn   !< radius of the blob
+      r0           = 5.*cg%dxmn   !< radius of the blob
 
       beta_cr      = 0.0       !< ambient level
       amp_cr       = 1.0       !< amplitude of the blob
@@ -117,7 +117,7 @@ module initproblem
 
       if (r0 == 0.) call die("[initproblem:read_problem_par] r0 == 0")
 
-      call my_allocate(aecr1, [nxb, nyb, nzb], "aecr1")
+      call my_allocate(aecr1, [cg%nxb, cg%nyb, cg%nzb], "aecr1")
       aecr1(:,:,:) = 0.
 
       problem_customize_solution => check_norm
@@ -146,7 +146,8 @@ module initproblem
       use arrays,         only: b, u
       use dataio_pub,     only: die, warn
       use fluidindex,     only: ibx, iby, ibz
-      use grid,           only: nx, ny, nz, x, y, z, is, ie, js, je, ks, ke, xdim, ydim, zdim, has_dir, xmax, ymax
+      use grid,           only: cg
+      use mpisetup,       only: xdim, ydim, zdim, has_dir
       use initcosmicrays, only: gamma_crs, iarr_crs, ncrn, ncre, K_crn_paral, K_crn_perp
       use initionized,    only: idni, imxi, imzi, ieni, gamma_ion
 
@@ -185,9 +186,9 @@ module initproblem
       u(imxi:imzi, :, :, :) = 0.0
 
 #ifndef ISO
-      do k = 1,nz
-         do j = 1,ny
-            do i = 1,nx
+      do k = 1, cg%nz
+         do j = 1, cg%ny
+            do i = 1, cg%nx
                u(ieni,i,j,k) = p0/(gamma_ion-1.0) + &
                     &          0.5*sum(u(imxi:imzi,i,j,k)**2,1)/u(idni,i,j,k) + &
                     &          0.5*sum(b(:,i,j,k)**2,1)
@@ -200,11 +201,11 @@ module initproblem
       u(iecr, :, :, :)      =  beta_cr*cs_iso**2 * u(idni, :, :, :)/(gamma_crs(icr)-1.0)
 
 ! Explosions
-      do k = ks, ke
-         do j = js, je
-            do i = is, ie
-               r2 = (x(i)-x0)**2+(y(j)-y0)**2+(z(k)-z0)**2
-               if (x(i)> 2*x0-xmax .and. y(j) > 2*y0-ymax) &
+      do k = cg%ks, cg%ke
+         do j = cg%js, cg%je
+            do i = cg%is, cg%ie
+               r2 = (cg%x(i)-x0)**2+(cg%y(j)-y0)**2+(cg%z(k)-z0)**2
+               if (cg%x(i)> 2*x0-cg%xmax .and. cg%y(j) > 2*y0-cg%ymax) &
                   u(iecr, i, j, k)= u(iecr, i, j, k) + amp_cr*exp(-r2/r0**2)
             enddo
          enddo
@@ -222,7 +223,7 @@ module initproblem
 
       use arrays,         only: b, u
       use dataio_pub,     only: die
-      use grid,           only: x, y, z, is, ie, js, je, ks, ke
+      use grid,           only: cg
       use initcosmicrays, only: iarr_crs, ncrn, ncre, K_crn_paral, K_crn_perp
       use mpisetup,       only: t
 
@@ -259,16 +260,16 @@ module initproblem
 
       ampt     = amp_cr * r0**2 / sqrt(r0_par2 * r0_perp2)
 
-      do k = ks, ke
-         delz = z(k) - z0
-         do j = js, je
-            dely = y(j) - y0
-            do i = is, ie
-               delx = x(i) - x0
+      do k = cg%ks, cg%ke
+         delz = cg%z(k) - z0
+         do j = cg%js, cg%je
+            dely = cg%y(j) - y0
+            do i = cg%is, cg%ie
+               delx = cg%x(i) - x0
 
                r_par2 = (bxn*delx + byn*dely + bzn*delz)**2 ! square of the distance form the center of the bump in direction parallel to the magnetic field
                r_perp2 = delx**2 + dely**2 + delz**2 - r_par2
-               aecr1(i-is+1, j-js+1, k-ks+1) = ampt * exp( - r_par2/r0_par2 - r_perp2/r0_perp2)
+               aecr1(i-cg%is+1, j-cg%js+1, k-cg%ks+1) = ampt * exp( - r_par2/r0_par2 - r_perp2/r0_perp2)
 
             enddo
          enddo
@@ -282,7 +283,7 @@ module initproblem
 
       use arrays,         only: u
       use dataio_pub,     only: code_progress, PIERNIK_FINISHED, halfstep, msg, die, printinfo
-      use grid,           only: is, ie, js, je, ks, ke
+      use grid,           only: cg
       use initcosmicrays, only: iarr_crs, ncrn, ncre
       use mpisetup,       only: master, comm3d, ierr, t, nstep
       use mpi,            only: MPI_DOUBLE_PRECISION, MPI_SUM, MPI_MIN, MPI_MAX, MPI_IN_PLACE
@@ -310,10 +311,10 @@ module initproblem
       norm(:) = 0.
       dev(1) = huge(1.0)
       dev(2) = -dev(1)
-      do k = ks, ke
-         do j = js, je
-            do i = is, ie
-               crt = aecr1(i-is+1, j-js+1, k-ks+1)
+      do k = cg%ks, cg%ke
+         do j = cg%js, cg%je
+            do i = cg%is, cg%ie
+               crt = aecr1(i-cg%is+1, j-cg%js+1, k-cg%ks+1)
                norm(1) = norm(1) + (crt - u(iecr, i, j, k))**2
                norm(2) = norm(2) + crt**2
                dev(1) = min(dev(1), (crt - u(iecr, i, j, k)))
@@ -342,7 +343,7 @@ module initproblem
    subroutine crtest_analytic_ecr1(var, tab, ierrh)
 
       use arrays,         only: u
-      use grid,           only: is, ie, js, je, ks, ke
+      use grid,           only: cg
       use initcosmicrays, only: iarr_crs
 
       implicit none
@@ -358,7 +359,7 @@ module initproblem
          case ("acr1")
             tab(:,:,:) = aecr1(:,:,:)
          case ("err1")
-            tab(:,:,:) = aecr1(:,:,:) - u(iarr_crs(1), is:ie, js:je, ks:ke)
+            tab(:,:,:) = aecr1(:,:,:) - u(iarr_crs(1), cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
          case default
             ierrh = -1
       end select

@@ -42,7 +42,7 @@ contains
       use arrays,          only: u
       use fluidboundaries, only: all_fluid_boundaries
       use fluidindex,      only: iarr_all_dn, iarr_all_mx, iarr_all_my, nvar
-      use grid,            only: nx, nz
+      use grid,            only: cg
       use mpisetup,        only: dt
       use shear,           only: omega, qshear
 #ifdef DUST
@@ -50,9 +50,9 @@ contains
 #endif /* DUST */
 
       implicit none
-      real, dimension(size(iarr_all_my),nx,nz) :: vxr, v_r, rotaccr
-      real, dimension(nx,nz)      :: epsa
-      real, dimension(nvar%all,nx,nz) :: u1
+      real, dimension(size(iarr_all_my), cg%nx, cg%nz) :: vxr, v_r, rotaccr
+      real, dimension(cg%nx, cg%nz)      :: epsa
+      real, dimension(nvar%all, cg%nx, cg%nz) :: u1
       integer :: ind,i
       real, parameter, dimension(2) :: fac = [0.5, 1.0]
 
@@ -93,17 +93,17 @@ contains
       use arrays,          only: u, b
       use fluidboundaries, only: all_fluid_boundaries
       use fluidindex,      only: nvar, iarr_all_swpx, ibx, iby, ibz, nmag
-      use grid,            only: dx, nx, ks, ke, js, je, ydim, zdim, has_dir
+      use grid,            only: cg
       use gridgeometry,    only: set_geo_coeffs
-      use mpisetup,        only: dt
+      use mpisetup,        only: dt, ydim, zdim, has_dir
       use rtvd,            only: relaxing_tvd
 #ifdef COSM_RAYS
       use crhelpers,       only: div_v
 #endif /* COSM_RAYS */
 
       implicit none
-      real, dimension(nmag,nx)     :: b_x
-      real, dimension(nvar%all,nx) :: u_x
+      real, dimension(nmag, cg%nx)     :: b_x
+      real, dimension(nvar%all, cg%nx) :: u_x
       integer                      :: j, k, jp, kp
 
       b_x = 0.0
@@ -112,23 +112,23 @@ contains
 #ifdef COSM_RAYS
       call div_v(nvar%ion%pos)
 #endif /* COSM_RAYS */
-      do k=ks,ke
+      do k=cg%ks, cg%ke
          kp=k+1
-         do j=js,je
+         do j=cg%js, cg%je
             jp=j+1
 
 #ifdef MAGNETIC
             b_x=0.5*b(:,:,j,k)
-            b_x(ibx,1:nx-1)=b_x(ibx,1:nx-1)+b_x(ibx,2:nx);       b_x(ibx,nx) = b_x(ibx,nx-1)
-            if (has_dir(ydim) .and. j <= je)  b_x(iby,:)=b_x(iby,:)+0.5*b(iby,:,jp,k)
-            if (has_dir(zdim) .and. k <= ke)  b_x(ibz,:)=b_x(ibz,:)+0.5*b(ibz,:,j,kp)
+            b_x(ibx,1:cg%nx-1)=b_x(ibx,1:cg%nx-1)+b_x(ibx,2:cg%nx);       b_x(ibx, cg%nx) = b_x(ibx, cg%nx-1)
+            if (has_dir(ydim) .and. j <= cg%je)  b_x(iby,:)=b_x(iby,:)+0.5*b(iby,:,jp,k)
+            if (has_dir(zdim) .and. k <= cg%ke)  b_x(ibz,:)=b_x(ibz,:)+0.5*b(ibz,:,j,kp)
 #endif /* MAGNETIC */
 
             call set_geo_coeffs('xsweep',nvar,j,k)
 
             u_x(iarr_all_swpx,:)=u(:,:,j,k)
 
-            call relaxing_tvd(nx, u_x, b_x, 'xsweep', j, k, dx, dt)
+            call relaxing_tvd(cg%nx, u_x, b_x, 'xsweep', j, k, cg%dx, dt)
             u(:,:,j,k)=u_x(iarr_all_swpx,:)
          enddo
       enddo
@@ -141,17 +141,17 @@ contains
       use arrays,          only: u, b
       use fluidboundaries, only: all_fluid_boundaries
       use fluidindex,      only: nvar, iarr_all_swpy, ibx, iby, ibz, nmag
-      use grid,            only: dy, ny, is, ie, ks, ke, xdim, zdim, has_dir
+      use grid,            only: cg
       use gridgeometry,    only: set_geo_coeffs
-      use mpisetup,        only: dt
+      use mpisetup,        only: dt, xdim, zdim, has_dir
       use rtvd,            only: relaxing_tvd
 #ifdef COSM_RAYS
       use crhelpers,       only: div_v
 #endif /* COSM_RAYS */
 
       implicit none
-      real, dimension(nmag,ny)     :: b_y
-      real, dimension(nvar%all,ny) :: u_y
+      real, dimension(nmag, cg%ny)     :: b_y
+      real, dimension(nvar%all, cg%ny) :: u_y
       integer                      :: i, k, ip, kp
       b_y = 0.0
       u_y = 0.0
@@ -160,16 +160,16 @@ contains
       call div_v(nvar%ion%pos)
 #endif /* COSM_RAYS */
 
-      do k=ks,ke
+      do k=cg%ks, cg%ke
          kp=k+1
-         do i=is,ie
+         do i=cg%is, cg%ie
             ip=i+1
 
 #ifdef MAGNETIC
             b_y(:,:) = 0.5*b(:,i,:,k)
-            b_y(iby,1:ny-1)=b_y(iby,1:ny-1)+b_y(iby,2:ny);       b_y(iby,ny) = b_y(iby,ny-1)
-            if (has_dir(xdim) .and. i <= ie) b_y(ibx,:)=b_y(ibx,:)+0.5*b(ibx,ip,:,k)
-            if (has_dir(zdim) .and. k <= ke) b_y(ibz,:)=b_y(ibz,:)+0.5*b(ibz,i,:,kp)
+            b_y(iby,1:cg%ny-1)=b_y(iby,1:cg%ny-1)+b_y(iby,2:cg%ny);       b_y(iby, cg%ny) = b_y(iby, cg%ny-1)
+            if (has_dir(xdim) .and. i <= cg%ie) b_y(ibx,:)=b_y(ibx,:)+0.5*b(ibx,ip,:,k)
+            if (has_dir(zdim) .and. k <= cg%ke) b_y(ibz,:)=b_y(ibz,:)+0.5*b(ibz,i,:,kp)
             b_y((/iby,ibx,ibz/),:)=b_y(:,:)
 #endif /* MAGNETIC */
 
@@ -177,7 +177,7 @@ contains
 
             u_y(iarr_all_swpy,:)=u(:,i,:,k)
 
-            call relaxing_tvd(ny, u_y, b_y, 'ysweep', k, i, dy, dt)
+            call relaxing_tvd(cg%ny, u_y, b_y, 'ysweep', k, i, cg%dy, dt)
             u(:,i,:,k)=u_y(iarr_all_swpy,:)
 
          enddo
@@ -191,17 +191,17 @@ contains
       use arrays,          only: u, b
       use fluidboundaries, only: all_fluid_boundaries
       use fluidindex,      only: nvar, iarr_all_swpz, ibx, iby, ibz, nmag
-      use grid,            only: dz, nz, is, ie, js, je, xdim, ydim, has_dir
+      use grid,            only: cg
       use gridgeometry,    only: set_geo_coeffs
-      use mpisetup,        only: dt
+      use mpisetup,        only: dt, xdim, ydim, has_dir
       use rtvd,            only: relaxing_tvd
 #ifdef COSM_RAYS
       use crhelpers,       only: div_v
 #endif /* COSM_RAYS */
 
       implicit none
-      real, dimension(nmag,nz)     :: b_z
-      real, dimension(nvar%all,nz) :: u_z
+      real, dimension(nmag, cg%nz)     :: b_z
+      real, dimension(nvar%all, cg%nz) :: u_z
       integer                      :: i, j, ip, jp
 
       b_z = 0.0
@@ -211,16 +211,16 @@ contains
       call div_v(nvar%ion%pos)
 #endif /* COSM_RAYS */
 
-      do j=js,je
+      do j=cg%js, cg%je
          jp=j+1
-         do i=is,ie
+         do i=cg%is, cg%ie
             ip=i+1
 
 #ifdef MAGNETIC
             b_z(:,:) = 0.5*b(:,i,j,:)
-            b_z(ibz,1:nz-1) = b_z(ibz,1:nz-1) + b_z(ibz,2:nz);   b_z(ibz,nz) = b_z(ibz,nz-1)
-            if (has_dir(xdim) .and. i <= ie) b_z(ibx,:) = b_z(ibx,:) + 0.5*b(ibx,ip,j,:)
-            if (has_dir(ydim) .and. j <= je) b_z(iby,:) = b_z(iby,:) + 0.5*b(iby,i,jp,:)
+            b_z(ibz,1:cg%nz-1) = b_z(ibz,1:cg%nz-1) + b_z(ibz,2:cg%nz);   b_z(ibz, cg%nz) = b_z(ibz, cg%nz-1)
+            if (has_dir(xdim) .and. i <= cg%ie) b_z(ibx,:) = b_z(ibx,:) + 0.5*b(ibx,ip,j,:)
+            if (has_dir(ydim) .and. j <= cg%je) b_z(iby,:) = b_z(iby,:) + 0.5*b(iby,i,jp,:)
             b_z((/ibz,iby,ibx/),:)=b_z(:,:)
 #endif /* MAGNETIC */
 
@@ -228,7 +228,7 @@ contains
 
             u_z(iarr_all_swpz,:)=u(:,i,j,:)
 
-            call relaxing_tvd(nz, u_z, b_z, 'zsweep', i, j, dz, dt)
+            call relaxing_tvd(cg%nz, u_z, b_z, 'zsweep', i, j, cg%dz, dt)
             u(:,i,j,:)=u_z(iarr_all_swpz,:)
          enddo
       enddo

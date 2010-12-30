@@ -91,7 +91,7 @@ module initproblem
       use arrays,       only: u, b
       use constants,    only: pi
       use fluidindex,   only: ibx, iby, ibz
-      use grid,         only: x, y, nx, ny, nz, xmax, ymax, zmax
+      use grid,         only: cg
       use initionized,  only: idni, imxi, imyi, imzi
 #ifndef ISO
       use initionized,  only: ieni
@@ -102,9 +102,9 @@ module initproblem
       integer  :: i, j, k
       real     :: xmid, ymid, zmid, vzab, b0
 
-      xmid = 0.5*xmax
-      ymid = 0.5*ymax
-      zmid = 0.5*zmax
+      xmid = 0.5*cg%xmax
+      ymid = 0.5*cg%ymax
+      zmid = 0.5*cg%zmax
 
       u(idni,:,:,:) = 1.0
       u(imyi,:,:,:) = 0.0
@@ -117,14 +117,14 @@ module initproblem
 
       b0 = 1.0
 
-      do k = 1,nz
-         do j = 1,ny
-            do i = 1,nx
+      do k = 1, cg%nz
+         do j = 1, cg%ny
+            do i = 1, cg%nx
 
-               vzab = v0*dcos(2.*pi*y(j))
+               vzab = v0*dcos(2.*pi*cg%y(j))
                u(imxi,i,j,k) = u(idni,i,j,k)*vzab
 
-               if (abs(x(i)) .LE. xmid) then
+               if (abs(cg%x(i)) .LE. xmid) then
                   b(iby,i,j,k) = -b0
                else
                   b(iby,i,j,k) =  b0

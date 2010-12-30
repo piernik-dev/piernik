@@ -236,12 +236,12 @@ contains
 
 !
 
-   subroutine cosmicray_index(nvar, cgrid)
+   subroutine cosmicray_index(nvar, cg)
       use types,           only: grid_container, var_numbers
       implicit none
 
       type(var_numbers), intent(inout) :: nvar
-      type(grid_container), intent(in) :: cgrid
+      type(grid_container), intent(in) :: cg
       integer :: icr
 
       nvar%crn%beg    = nvar%all + 1
@@ -273,9 +273,9 @@ contains
       nvar%cre%pos = nvar%components
 
 #ifdef NEW_HDF5
-      call cr_add_hdf5(ncrs,cgrid)
+      call cr_add_hdf5(ncrs,cg)
 #else /* !NEW_HDF5 */
-      if (.false.) icr = 0 * cgrid%is !suppress compiler warnings on unused arguments
+      if (.false.) icr = 0 * cg%is !suppress compiler warnings on unused arguments
 #endif /* !NEW_HDF5 */
 
    end subroutine cosmicray_index
@@ -296,7 +296,7 @@ contains
    end subroutine cleanup_cosmicrays
 
 #ifdef NEW_HDF5
-   subroutine cr_add_hdf5(nvar_crs,cgrid)
+   subroutine cr_add_hdf5(nvar_crs,cg)
 
       use types,     only: grid_container
       use arrays,    only: u
@@ -304,7 +304,7 @@ contains
 
       implicit none
       integer, intent(in)              :: nvar_crs
-      type(grid_container), intent(in) :: cgrid
+      type(grid_container), intent(in) :: cg
 
       type(lhdf5_info) :: item
       integer          :: i
@@ -312,7 +312,7 @@ contains
       item%p    => get_cr
       if (.not.allocated(item%ivec)) allocate(item%ivec(10))
       if (.not.allocated(item%rvec)) allocate(item%rvec(0))
-      item%ivec  = [cgrid%nxb, cgrid%nyb, cgrid%nzb, cgrid%is, cgrid%ie, cgrid%js, cgrid%je, cgrid%ks, cgrid%ke]
+      item%ivec  = [cg%nxb, cg%nyb, cg%nzb, cg%is, cg%ie, cg%js, cg%je, cg%ks, cg%ke]
 
       do i = 1, nvar_crs
 

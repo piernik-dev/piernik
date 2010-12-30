@@ -64,7 +64,7 @@ module initproblem
 
       use arrays,        only: u,b
       use dataio_pub,    only: msg, printinfo
-      use grid,          only: x,y,z,nx,ny,nz
+      use grid,          only: cg
       use initneutral,   only: idnn,imxn,imyn,imzn,ienn, gamma_neu
       use mpisetup,      only: proc
 
@@ -74,39 +74,39 @@ module initproblem
       integer, parameter :: kp = 8
       real, dimension(6) :: mn
       real, dimension(3) :: deltav
-      real, dimension(3,nx,ny,nz) :: dv
+      real, dimension(3, cg%nx, cg%ny, cg%nz) :: dv
       real :: rms,cma, vol
 !      real :: somx,somy,somz
 
 ! Uniform equilibrium state
 
       call random_seed()
-      do k = 1,nz
-         do j = 1,ny
-            do i = 1,nx
+      do k = 1, cg%nz
+         do j = 1, cg%ny
+            do i = 1, cg%nx
                deltav(:) = 0.0
                do m=-kp,kp
                   do n = -kp,kp
                      call random_number(mn)
-!                     somx = dpi*(float(n)*y(j) + float(m)*z(k)) / Lx
-!                     somy = dpi*(float(n)*x(i) + float(m)*z(k)) / Ly
-!                     somz = dpi*(float(n)*x(i) + float(m)*y(j)) / Lz
+!                     somx = dpi*(float(n)*y(j) + float(m)*z(k)) / cg%Lx
+!                     somy = dpi*(float(n)*x(i) + float(m)*z(k)) / cg%Ly
+!                     somz = dpi*(float(n)*x(i) + float(m)*y(j)) / cg%Lz
 !                     deltav(1) = deltav(1) + mn(1)*dsin(somx) + mn(2)*dcos(somx)
 !                     deltav(2) = deltav(2) + mn(3)*dsin(somy) + mn(4)*dcos(somy)
 !                     deltav(3) = deltav(3) + mn(5)*dsin(somz) + mn(6)*dcos(somz)
-                     deltav(1) = deltav(1) + mn(1)*dsin(float(m)*z(k)) &
-                                           + mn(2)*dcos(float(n)*y(j))
-                     deltav(2) = deltav(2) + mn(3)*dsin(float(m)*x(i)) &
-                                           + mn(4)*dcos(float(n)*z(k))
-                     deltav(3) = deltav(3) + mn(5)*dsin(float(m)*y(j)) &
-                                           + mn(6)*dcos(float(n)*x(i))
+                     deltav(1) = deltav(1) + mn(1)*dsin(float(m)*cg%z(k)) &
+                                           + mn(2)*dcos(float(n)*cg%y(j))
+                     deltav(2) = deltav(2) + mn(3)*dsin(float(m)*cg%x(i)) &
+                                           + mn(4)*dcos(float(n)*cg%z(k))
+                     deltav(3) = deltav(3) + mn(5)*dsin(float(m)*cg%y(j)) &
+                                           + mn(6)*dcos(float(n)*cg%x(i))
                   enddo
                enddo
                dv(:,i,j,k) = deltav(:)
             enddo
          enddo
       enddo
-      vol = nx*ny*nz
+      vol = cg%nx*cg%ny*cg%nz
       rms = dsqrt( sum(dv**2) / vol )
 
       cma = 1.0
@@ -124,9 +124,9 @@ module initproblem
       call printinfo(msg, .true.)
       write(msg,'(2(a,g12.5),a,i4)')   "[initproblem:init_prob] c_si = ", c_si, " l = ", l, " on ", proc
       call printinfo(msg, .true.)
-      do k = 1,nz
-         do j = 1,ny
-            do i = 1,nx
+      do k = 1, cg%nz
+         do j = 1, cg%ny
+            do i = 1, cg%nx
                u(idnn,i,j,k) = d0
                u(imxn,i,j,k) = u(idnn,i,j,k) * dv(1,i,j,k) * cma
                u(imyn,i,j,k) = u(idnn,i,j,k) * dv(2,i,j,k) * cma

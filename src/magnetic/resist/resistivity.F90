@@ -83,8 +83,8 @@ module resistivity
 
       use dataio_pub,    only: par_file, ierrh, namelist_errh, compare_namelist  ! QA_WARN required for diff_nml
       use dataio_pub,    only: warn, die
-      use grid,          only: nx, ny, nz, has_dir, zdim, xdim, ydim
-      use mpisetup,      only: rbuff, ibuff, ierr, buffer_dim, comm, master, slave
+      use grid,          only: cg
+      use mpisetup,      only: rbuff, ibuff, ierr, buffer_dim, comm, master, slave, has_dir, zdim, xdim, ydim
       use mpi,           only: MPI_INTEGER, MPI_DOUBLE_PRECISION
 
       implicit none
@@ -129,9 +129,9 @@ module resistivity
 
       if (eta_scale < 0) call die("eta_scale must be greater or equal 0")
 
-      if (.not.allocated(wb) ) allocate(wb(nx,ny,nz) )
-      if (.not.allocated(eta)) allocate(eta(nx,ny,nz))
-      if (.not.allocated(etahelp)) allocate(etahelp(nx,ny,nz))
+      if (.not.allocated(wb) ) allocate(wb(cg%nx, cg%ny, cg%nz) )
+      if (.not.allocated(eta)) allocate(eta(cg%nx, cg%ny, cg%nz))
+      if (.not.allocated(etahelp)) allocate(etahelp(cg%nx, cg%ny, cg%nz))
 
       jc2 = j_crit**2
       if (has_dir(zdim)) then
@@ -152,8 +152,8 @@ module resistivity
       use arrays,       only: b, u
       use constants,    only: small
       use fluidindex,   only: ibx, iby, ibz
-      use grid,         only: idl, xdim, ydim, zdim, nx, ny, nz, is, ie, js, je, ks, ke, has_dir
-      use mpisetup,     only: comm, ierr
+      use grid,         only: cg
+      use mpisetup,     only: comm, ierr, xdim, ydim, zdim, has_dir
       use mpi,          only: MPI_DOUBLE_PRECISION, MPI_MAX, MPI_IN_PLACE
 #ifndef ISO
       use fluidindex,   only: nvar
@@ -161,7 +161,7 @@ module resistivity
 
       implicit none
 
-!      real, dimension(nx,ny,nz), intent(inout) :: eta
+!      real, dimension(cg%nx, cg%ny, cg%nz), intent(inout) :: eta
 
       if (inactive) return
 !BEWARE: uninitialized values are poisoning the wb(:,:,:) array
@@ -169,24 +169,27 @@ module resistivity
 !--- square current computing in cell corner step by step
 
 !--- current_z
-      wb(2:nx,2:ny,:) = (b(iby,2:nx,2:ny,:)-b(iby,1:nx-1,2:ny,:))*idl(xdim) - (b(ibx,2:nx,2:ny,:)-b(ibx,2:nx,1:ny-1,:))*idl(ydim)
+      wb(2:cg%nx,2:cg%ny,:) = (b(iby,2:cg%nx,2:cg%ny,:)-b(iby,1:cg%nx-1,2:cg%ny,:))*cg%idl(xdim) - &
+           &                        (b(ibx,2:cg%nx,2:cg%ny,:)-b(ibx,2:cg%nx,1:cg%ny-1,:))*cg%idl(ydim)
       wb(1,:,:) = wb(2,:,:) ; wb(:,1,:) = wb(:,2,:)
 
       if (has_dir(zdim)) then
-         eta(:,:,2:nz) = 0.25*( wb(:,:,2:nz) + wb(:,:,1:nz-1) )**2 ; eta(:,:,1) = eta(:,:,2)
+         eta(:,:,2:cg%nz) = 0.25*( wb(:,:,2:cg%nz) + wb(:,:,1:cg%nz-1) )**2 ; eta(:,:,1) = eta(:,:,2)
       else
          eta = wb**2    ! BEWARE: is it correct?
       endif
 
       if (has_dir(zdim)) then
 !--- current_x
-         wb(:,2:ny,2:nz) = (b(ibz,:,2:ny,2:nz)-b(ibz,:,1:ny-1,2:nz))*idl(ydim) - (b(iby,:,2:ny,2:nz)-b(iby,:,2:ny,1:nz-1))*idl(zdim)
+         wb(:,2:cg%ny,2:cg%nz) = (b(ibz,:,2:cg%ny,2:cg%nz)-b(ibz,:,1:cg%ny-1,2:cg%nz))*cg%idl(ydim) - &
+              &                        (b(iby,:,2:cg%ny,2:cg%nz)-b(iby,:,2:cg%ny,1:cg%nz-1))*cg%idl(zdim)
 
-         eta(2:nx,:,:) = eta(2:nx,:,:) + 0.25*(wb(2:nx,:,:)+wb(1:nx-1,:,:))**2; eta(1,:,:) = eta(2,:,:)
+         eta(2:cg%nx,:,:) = eta(2:cg%nx,:,:) + 0.25*(wb(2:cg%nx,:,:)+wb(1:cg%nx-1,:,:))**2; eta(1,:,:) = eta(2,:,:)
 !--- current_y
-         wb(2:nx,:,2:nz) = (b(ibx,2:nx,:,2:nz)-b(ibx,2:nx,:,1:nz-1))*idl(zdim) - (b(ibz,2:nx,:,2:nz)-b(ibz,1:nx-1,:,2:nz))*idl(xdim)
+         wb(2:cg%nx,:,2:cg%nz) = (b(ibx,2:cg%nx,:,2:cg%nz)-b(ibx,2:cg%nx,:,1:cg%nz-1))*cg%idl(zdim) - &
+              &                        (b(ibz,2:cg%nx,:,2:cg%nz)-b(ibz,1:cg%nx-1,:,2:cg%nz))*cg%idl(xdim)
 
-         eta(:,2:ny,:) = eta(:,2:ny,:) + 0.25*(wb(:,2:ny,:)+wb(:,1:ny-1,:))**2; eta(:,1,:) = eta(:,2,:)
+         eta(:,2:cg%ny,:) = eta(:,2:cg%ny,:) + 0.25*(wb(:,2:cg%ny,:)+wb(:,1:cg%ny-1,:))**2; eta(:,1,:) = eta(:,2,:)
       endif
 
 !--- wb = current**2
@@ -197,11 +200,11 @@ module resistivity
 !! \todo Following lines are split into separate lines because of intel and gnu dbgs
 !! should that be so? Is there any other solution instead splitting?
 !<
-      etahelp(2:nx-1,2:ny-1,:) = eta(1:nx-2,2:ny-1,:) + eta(3:nx,2:ny-1,:) + eta(2:nx-1,1:ny-2,:) + eta(2:nx-1,3:ny,:)
-      etahelp(1,:,:) = etahelp(2,:,:) ; etahelp(nx,:,:) = etahelp(nx-1,:,:) ; etahelp(:,1,:) = etahelp(:,2,:) ; etahelp(:,ny,:) = etahelp(:,ny-1,:)
+      etahelp(2:cg%nx-1,2:cg%ny-1,:) = eta(1:cg%nx-2,2:cg%ny-1,:) + eta(3:cg%nx,2:cg%ny-1,:) + eta(2:cg%nx-1,1:cg%ny-2,:) + eta(2:cg%nx-1,3:cg%ny,:)
+      etahelp(1,:,:) = etahelp(2,:,:) ; etahelp(cg%nx,:,:) = etahelp(cg%nx-1,:,:) ; etahelp(:,1,:) = etahelp(:,2,:) ; etahelp(:, cg%ny,:) = etahelp(:, cg%ny-1,:)
       if (has_dir(zdim)) then
-         etahelp(:,:,2:nz-1) = etahelp(:,:,2:nz-1) + eta(:,:,1:nz-2) + eta(:,:,3:nz)
-         etahelp(:,:,1) = etahelp(:,:,2) ; etahelp(:,:,nz) = etahelp(:,:,nz-1)
+         etahelp(:,:,2:cg%nz-1) = etahelp(:,:,2:cg%nz-1) + eta(:,:,1:cg%nz-2) + eta(:,:,3:cg%nz)
+         etahelp(:,:,1) = etahelp(:,:,2) ; etahelp(:,:, cg%nz) = etahelp(:,:, cg%nz-1)
       endif
       etahelp = (etahelp + dble(eta_scale)*eta)*d_eta_factor
 
@@ -209,23 +212,23 @@ module resistivity
          eta = etahelp
       endwhere
 
-      eta_max           = maxval(eta(is:ie,js:je,ks:ke))
-      loc_eta_max       = maxloc(eta(is:ie,js:je,ks:ke))
+      eta_max           = maxval(eta(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke))
+      loc_eta_max       = maxloc(eta(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke))
 
       call MPI_Allreduce(MPI_IN_PLACE, eta_max, 1, MPI_DOUBLE_PRECISION, MPI_MAX, 0, comm, ierr)
 
 #ifndef ISO
       dt_eint = deint_max * abs(minval(               &
-                ( u(nvar%ion%ien,is:ie,js:je,ks:ke)           &
-                - 0.5*( u(nvar%ion%imx,is:ie,js:je,ks:ke)**2  &
-                      + u(nvar%ion%imy,is:ie,js:je,ks:ke)**2  &
-                      + u(nvar%ion%imz,is:ie,js:je,ks:ke)**2 )&
-                      /u(nvar%ion%idn,is:ie,js:je,ks:ke)      &
-                - 0.5*( b(ibx,is:ie,js:je,ks:ke)**2   &
-                      + b(iby,is:ie,js:je,ks:ke)**2   &
-                      + b(ibz,is:ie,js:je,ks:ke)**2)) &
-                      /( eta(is:ie,js:je,ks:ke)       &
-                      *wb(is:ie,js:je,ks:ke)+small) ))
+                ( u(nvar%ion%ien, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)           &
+                - 0.5*( u(nvar%ion%imx, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2  &
+                      + u(nvar%ion%imy, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2  &
+                      + u(nvar%ion%imz, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2 )&
+                      /u(nvar%ion%idn, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)      &
+                - 0.5*( b(ibx, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2   &
+                      + b(iby, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2   &
+                      + b(ibz, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2)) &
+                      /( eta(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)       &
+                      *wb(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)+small) ))
 #endif /* !ISO */
 
       return
@@ -237,14 +240,14 @@ module resistivity
    subroutine timestep_resist
 
       use constants, only: big
-      use grid,      only: dxmn
+      use grid,      only: cg
       use mpisetup,  only: comm, ierr
       use mpi,       only: MPI_DOUBLE_PRECISION, MPI_MIN, MPI_IN_PLACE
 
       implicit none
 
       if (eta_max .ne. 0. .and. .not. inactive) then
-         dt_resist = cfl_resist * dxmn**2 / (2. * eta_max)
+         dt_resist = cfl_resist * cg%dxmn**2 / (2. * eta_max)
 #ifndef ISO
          dt_resist = min(dt_resist,dt_eint)
 #endif /* !ISO */
@@ -307,27 +310,27 @@ module resistivity
    subroutine diffuseby_x
 
       use arrays,        only: wcu, b
-      use mpisetup,      only: dt
+      use mpisetup,      only: dt, has_dir, xdim, ydim, zdim
       use fluidindex,    only: iby
-      use grid,          only: has_dir, xdim, ydim, zdim, nx, ny, nz, idl
+      use grid,          only: cg
       use magboundaries, only: bnd_emf
 
       implicit none
 
       real, dimension(:), pointer :: b1d, eta1d
-      real, dimension(nx)         :: wcu1d
+      real, dimension(cg%nx)         :: wcu1d
       integer                     :: j, k
 
       if (inactive) return
 
       call compute_resist
-      eta(:,:,1:nz-1) = 0.5*(eta(:,:,1:nz-1)+eta(:,:,2:nz))
+      eta(:,:,1:cg%nz-1) = 0.5*(eta(:,:,1:cg%nz-1)+eta(:,:,2:cg%nz))
 
-      do j = 1, ny
-         do k = 1, nz
+      do j = 1, cg%ny
+         do k = 1, cg%nz
             b1d    => b(iby,:,j,k)
             eta1d  => eta(:,j,k)
-            call tvdd_1d(b1d, eta1d, idl(xdim), dt, wcu1d)
+            call tvdd_1d(b1d, eta1d, cg%idl(xdim), dt, wcu1d)
             wcu(:,j,k) = wcu1d
          enddo
       enddo
@@ -341,27 +344,27 @@ module resistivity
    subroutine diffusebz_x
 
       use arrays,        only: wcu, b
-      use mpisetup,      only: dt
+      use mpisetup,      only: dt, has_dir, xdim, ydim, zdim
       use fluidindex,    only: ibz
-      use grid,          only: has_dir, xdim, ydim, zdim, nx, ny, nz, idl
+      use grid,          only: cg
       use magboundaries, only: bnd_emf
 
       implicit none
 
       real, dimension(:), pointer :: b1d, eta1d
-      real, dimension(nx)         :: wcu1d
+      real, dimension(cg%nx)         :: wcu1d
       integer                     :: j, k
 
       if (inactive) return
 
       call compute_resist
-      eta(:,1:ny-1,:) = 0.5*(eta(:,1:ny-1,:)+eta(:,2:ny,:))
+      eta(:,1:cg%ny-1,:) = 0.5*(eta(:,1:cg%ny-1,:)+eta(:,2:cg%ny,:))
 
-      do j = 1, ny
-         do k = 1, nz
+      do j = 1, cg%ny
+         do k = 1, cg%nz
             b1d    => b(ibz,:,j,k)
             eta1d  => eta(:,j,k)
-            call tvdd_1d(b1d, eta1d, idl(xdim), dt, wcu1d)
+            call tvdd_1d(b1d, eta1d, cg%idl(xdim), dt, wcu1d)
             wcu(:,j,k) = wcu1d
          enddo
       enddo
@@ -374,27 +377,27 @@ module resistivity
    subroutine diffusebz_y
 
       use arrays,        only: wcu, b
-      use mpisetup,      only: dt
+      use mpisetup,      only: dt, has_dir, xdim, ydim, zdim
       use fluidindex,    only: ibz
-      use grid,          only: has_dir, xdim, ydim, zdim, nx, ny, nz, idl
+      use grid,          only: cg
       use magboundaries, only: bnd_emf
 
       implicit none
 
       real, dimension(:), pointer :: b1d, eta1d
-      real, dimension(ny)         :: wcu1d
+      real, dimension(cg%ny)         :: wcu1d
       integer                     :: i, k
 
       if (inactive) return
 
       call compute_resist
-      eta(1:nx-1,:,:) = 0.5*(eta(1:nx-1,:,:)+eta(2:nx,:,:))
+      eta(1:cg%nx-1,:,:) = 0.5*(eta(1:cg%nx-1,:,:)+eta(2:cg%nx,:,:))
 
-      do i = 1, nx
-         do k = 1, nz
+      do i = 1, cg%nx
+         do k = 1, cg%nz
             b1d    => b(ibz,i,:,k)
             eta1d  => eta(i,:,k)
-            call tvdd_1d(b1d, eta1d, idl(ydim), dt, wcu1d)
+            call tvdd_1d(b1d, eta1d, cg%idl(ydim), dt, wcu1d)
             wcu(i,:,k) = wcu1d
          enddo
       enddo
@@ -407,27 +410,27 @@ module resistivity
    subroutine diffusebx_y
 
       use arrays,        only: wcu, b
-      use mpisetup,      only: dt
+      use mpisetup,      only: dt, has_dir, xdim, ydim, zdim
       use fluidindex,    only: ibx
-      use grid,          only: has_dir, xdim, ydim, zdim, nx, ny, nz, idl
+      use grid,          only: cg
       use magboundaries, only: bnd_emf
 
       implicit none
 
       real, dimension(:), pointer :: b1d, eta1d
-      real, dimension(ny)         :: wcu1d
+      real, dimension(cg%ny)         :: wcu1d
       integer                     :: i, k
 
       if (inactive) return
 
       call compute_resist
-      eta(:,:,1:nz-1) = 0.5*(eta(:,:,1:nz-1)+eta(:,:,2:nz))
+      eta(:,:,1:cg%nz-1) = 0.5*(eta(:,:,1:cg%nz-1)+eta(:,:,2:cg%nz))
 
-      do i = 1, nx
-         do k = 1, nz
+      do i = 1, cg%nx
+         do k = 1, cg%nz
             b1d    => b(ibx,i,:,k)
             eta1d  => eta(i,:,k)
-            call tvdd_1d(b1d, eta1d, idl(ydim), dt, wcu1d)
+            call tvdd_1d(b1d, eta1d, cg%idl(ydim), dt, wcu1d)
             wcu(i,:,k) = wcu1d
          enddo
       enddo
@@ -440,27 +443,27 @@ module resistivity
    subroutine diffusebx_z
 
       use arrays,        only: wcu, b
-      use mpisetup,      only: dt
+      use mpisetup,      only: dt, has_dir, xdim, ydim, zdim
       use fluidindex,    only: ibx
-      use grid,          only: has_dir, xdim, ydim, zdim, nx, ny, nz, idl
+      use grid,          only: cg
       use magboundaries, only: bnd_emf
 
       implicit none
 
       real, dimension(:), pointer :: b1d, eta1d
-      real, dimension(nz)         :: wcu1d
+      real, dimension(cg%nz)         :: wcu1d
       integer                     :: i, j
 
       if (inactive) return
 
       call compute_resist
-      eta(:,1:ny-1,:) = 0.5*(eta(:,1:ny-1,:)+eta(:,2:ny,:))
+      eta(:,1:cg%ny-1,:) = 0.5*(eta(:,1:cg%ny-1,:)+eta(:,2:cg%ny,:))
 
-      do i = 1, nx
-         do j = 1, ny
+      do i = 1, cg%nx
+         do j = 1, cg%ny
             b1d    => b(ibx,i,j,:)
             eta1d  => eta(i,j,:)
-            call tvdd_1d(b1d, eta1d, idl(zdim), dt, wcu1d)
+            call tvdd_1d(b1d, eta1d, cg%idl(zdim), dt, wcu1d)
             wcu(i,j,:) = wcu1d
          enddo
       enddo
@@ -473,27 +476,27 @@ module resistivity
    subroutine diffuseby_z
 
       use arrays,        only: wcu, b
-      use mpisetup,      only: dt
+      use mpisetup,      only: dt, has_dir, xdim, ydim, zdim
       use fluidindex,    only: iby
-      use grid,          only: has_dir, xdim, ydim, zdim, nx, ny, nz, idl
+      use grid,          only: cg
       use magboundaries, only: bnd_emf
 
       implicit none
 
       real, dimension(:), pointer :: b1d, eta1d
-      real, dimension(nz)         :: wcu1d
+      real, dimension(cg%nz)         :: wcu1d
       integer                     :: i, j
 
       if (inactive) return
 
       call compute_resist
-      eta(1:nx-1,:,:) = 0.5*(eta(1:nx-1,:,:)+eta(2:nx,:,:))
+      eta(1:cg%nx-1,:,:) = 0.5*(eta(1:cg%nx-1,:,:)+eta(2:cg%nx,:,:))
 
-      do i = 1, nx
-         do j = 1, ny
+      do i = 1, cg%nx
+         do j = 1, cg%ny
             b1d    => b(iby,i,j,:)
             eta1d  => eta(i,j,:)
-            call tvdd_1d(b1d, eta1d, idl(zdim), dt, wcu1d)
+            call tvdd_1d(b1d, eta1d, cg%idl(zdim), dt, wcu1d)
             wcu(i,j,:) = wcu1d
          enddo
       enddo

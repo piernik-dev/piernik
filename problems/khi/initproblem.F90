@@ -102,17 +102,17 @@ module initproblem
 
       use arrays,      only: u
       use constants,   only: dpi
-      use grid,        only: ymin, ymax, x, y, nx, ny, zdim, has_dir
+      use grid,        only: cg
+      use mpisetup,    only: zdim, has_dir
       use initneutral, only: idnn, imxn, imyn, imzn, ienn, gamma_neu
 
       implicit none
 
-      real :: dtop, lambda, boxlen, p0, vtop, vbot, k0, vp, rcx, rcy, rc
+      real :: dtop, lambda, p0, vtop, vbot, k0, vp, rcx, rcy, rc
       integer :: i,j
 
       dtop = dbot/chi
       lambda = 1./6.
-      boxlen = ymax-ymin
 
       p0 = lambda**2 * (1.+chi)**2 /(chi*tkh**2) *dbot &
             / ( (Mtop*dsqrt(chi)+Mbot)**2 * gamma_neu)
@@ -121,11 +121,11 @@ module initproblem
       k0    = dpi/lambda
       vp    = (Mtop*dsqrt(chi)+Mbot)*dsqrt(gamma_neu*p0/dbot)/dpert
 
-      do i = 1,nx
-         rcx = x(i)
-         do j = 1,ny
-            rcy = y(j)
-            rc=rcy-0.5*boxlen
+      do i = 1, cg%nx
+         rcx = cg%x(i)
+         do j = 1, cg%ny
+            rcy = cg%y(j)
+            rc=rcy-0.5*cg%Ly
             if (rc .gt. 0.0) then
                u(idnn,i,j,:) = dtop
                u(imxn,i,j,:) = vtop*dtop

@@ -108,9 +108,10 @@ module initproblem
 !-----------------------------------------------------------------------------
 
    subroutine init_prob
+
       use arrays,         only: u, b, dprof
       use fluidindex,     only: ibx, iby, ibz, nvar
-      use grid,           only: x, y, z, nx, ny, nz
+      use grid,           only: cg
       use hydrostatic,    only: hydrostatic_zeq_densmid
       use initionized,    only: idni, imxi, imyi, imzi
       use mpisetup,       only: smalld
@@ -141,16 +142,16 @@ module initproblem
 
       call hydrostatic_zeq_densmid(1, 1, d0, csim2)
 
-      do k = 1,nz
-         do j = 1,ny
-            do i = 1,nx
+      do k = 1, cg%nz
+         do j = 1, cg%ny
+            do i = 1, cg%nx
                u(idni,i,j,k)   = max(smalld,dprof(k))
 
                u(imxi,i,j,k) = 0.0
                u(imyi,i,j,k) = 0.0
                u(imzi,i,j,k) = 0.0
 #ifdef SHEAR
-               u(imyi,i,j,k) = -qshear*omega*x(i)*u(idni,i,j,k)
+               u(imyi,i,j,k) = -qshear*omega*cg%x(i)*u(idni,i,j,k)
 #endif /* SHEAR */
 
 #ifndef ISO
@@ -190,9 +191,9 @@ module initproblem
 
 #endif /* COSM_RAYS */
 
-      do k = 1,nz
-         do j = 1,ny
-            do i = 1,nx
+      do k = 1, cg%nz
+         do j = 1, cg%ny
+            do i = 1, cg%nx
                b(ibx,i,j,k)   = b0*sqrt(u(idni,i,j,k)/d0)* bxn/sqrt(bxn**2+byn**2+bzn**2)
                b(iby,i,j,k)   = b0*sqrt(u(idni,i,j,k)/d0)* byn/sqrt(bxn**2+byn**2+bzn**2)
                b(ibz,i,j,k)   = b0*sqrt(u(idni,i,j,k)/d0)* bzn/sqrt(bxn**2+byn**2+bzn**2)
@@ -248,7 +249,6 @@ module initproblem
 
    subroutine galactic_grav_accel(sweep, i1,i2, xsw, n, grav)
 
-      use grid,        only: x, y, z
       use constants,   only: r_gc_sun, kpc
       use gravity,     only: r_gc
 
@@ -285,7 +285,7 @@ module initproblem
       use arrays,         only: u
       use crcomposition,  only: icr_H1, icr_C12, icr_N14, icr_O16, primary_C12, primary_N14, primary_O16
       use fluidindex,     only: nvar
-      use grid,           only: nx, ny, nz, x, y, z, Lx, Ly
+      use grid,           only: cg
       use initcosmicrays, only: iarr_crn
       use snsources,      only: r_sn
 
@@ -301,9 +301,9 @@ module initproblem
       ysn = pos(2)
       zsn = pos(3)
 
-      do k=1,nz
-         do j=1,ny
-            do i=1,nx
+      do k=1, cg%nz
+         do j=1, cg%ny
+            do i=1, cg%nx
 
                do ipm=-1,1
 
@@ -317,9 +317,9 @@ module initproblem
 
 !                     decr = amp_ecr_sn * ethu  &
                      decr = amp_cr  &
-                           * EXP(-((x(i)-xsn+real(ipm)*Lx)**2  &
-                           + (y(j)-ysna+real(jpm)*Ly)**2  &
-                           + (z(k)-zsn)**2)/r_sn**2)
+                           * EXP(-((cg%x(i)-xsn+real(ipm)*cg%Lx)**2  &
+                           + (cg%y(j)-ysna+real(jpm)*cg%Ly)**2  &
+                           + (cg%z(k)-zsn)**2)/r_sn**2)
 !                     u(iarr_crn,i,j,k) = u(iarr_crn,i,j,k) + max(decr,1e-10) * [1., primary_C12*12., primary_N14*14., primary_O16*16.]
                      do icr=1,nvar%crn%all
                         if (icr == icr_H1) u(iarr_crn(icr),i,j,k) = u(iarr_crn(icr),i,j,k) + decr

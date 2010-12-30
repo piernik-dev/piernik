@@ -108,7 +108,7 @@ module initproblem
 
    subroutine init_prob
       use arrays,      only: u,gp
-      use grid,        only: x,y,z,nx,ny,nz,dx,xmin,nb
+      use grid,        only: cg
       use constants,   only: newtong,pi,dpi
       use gravity,     only: ptmass
       use initneutral, only: idnn, imxn, imyn, imzn
@@ -125,13 +125,13 @@ module initproblem
       real :: xi,yj,zk, rc, H0, sqr_gm, rho0
       real :: n,norm, H, ninv
       real :: gradP, iOmega, ilook, gradgp
-      real, dimension(3,nz) :: noise
+      real, dimension(3, cg%nz) :: noise
       real, dimension(:), allocatable :: omega,omegad
 #ifndef ISO
       real :: vx, vy, vz
 #endif /* !ISO */
 
-      allocate(omega(nx),omegad(nx))
+      allocate(omega(cg%nx),omegad(cg%nx))
 !   Secondary parameters
 
       sqr_gm = sqrt(newtong*ptmass)
@@ -149,12 +149,12 @@ module initproblem
 
       norm = 1. / dens_Rdistr(R0,Rin,n)
 
-      do k = 1,nz
-        zk = z(k)
-        do j = 1,ny
-           yj = y(j)
-           do i = 1,nx
-              xi = x(i)
+      do k = 1, cg%nz
+        zk = cg%z(k)
+        do j = 1, cg%ny
+           yj = cg%y(j)
+           do i = 1, cg%nx
+              xi = cg%x(i)
               rc = sqrt(xi**2+yj**2)
               H = HtoR * rc
               u(idnn,i,j,k) = max(rho0 * norm * dens_RdistR(rc,Rin,n) * exp(- 0.25 * zk**2 / H**2 ), smalld)
@@ -163,29 +163,29 @@ module initproblem
         enddo
       enddo
 
-      do i = 2,nx-1   ! 2d
-         rc= x(i)*sqrt(2.0)
-         gradgp=  0.5*(gp(i+1,i+1,max(nz/2,1))-gp(i-1,i-1,max(nz/2,1)))/dx/sqrt(2.)
-         gradp = -0.5*(u(idnn,i+1,i+1,max(nz/2,1))-u(idnn,i-1,i-1,max(nz/2,1)))/dx &
+      do i = 2, cg%nx-1   ! 2d
+         rc= cg%x(i)*sqrt(2.0)
+         gradgp=  0.5*(gp(i+1,i+1,max(cg%nz/2,1))-gp(i-1,i-1,max(cg%nz/2,1)))/cg%dx/sqrt(2.)
+         gradp = -0.5*(u(idnn,i+1,i+1,max(cg%nz/2,1))-u(idnn,i-1,i-1,max(cg%nz/2,1)))/cg%dx &
                             /sqrt(2.)*cs_iso_neu2
          omega(i)  = sqrt( abs( (gradgp-gradp)/rc ) )
          omegad(i) = sqrt( abs(    gradgp/rc      ) )
       enddo
-      omega(1)  = omega(2);  omega(nx)  = omega(nx-1)
-      omegad(1) = omegad(2); omegad(nx) = omegad(nx-1)
+      omega(1)  = omega(2);  omega(cg%nx)  = omega(cg%nx-1)
+      omegad(1) = omegad(2); omegad(cg%nx) = omegad(cg%nx-1)
 
       call random_seed()
 
-      do j = 1,ny
-         yj = y(j)
-         do i = 1,nx
-            xi = x(i)
+      do j = 1, cg%ny
+         yj = cg%y(j)
+         do i = 1, cg%nx
+            xi = cg%x(i)
             rc = sqrt(xi**2+yj**2)
             call random_number(noise)
 
-            ilook = (rc-xmin)/dx/sqrt(2.) + 0.5 + nb
-            iOmega = omega(int(ilook))+(rc-x(int(ilook))*sqrt(2.))*(omega(int(ilook)+1)-omega(int(ilook))) &
-                         /(x(int(ilook)+1)-x(int(ilook)))/sqrt(2.)
+            ilook = (rc-cg%xmin)/cg%dx/sqrt(2.) + 0.5 + cg%nb
+            iOmega = omega(int(ilook))+(rc-cg%x(int(ilook))*sqrt(2.))*(omega(int(ilook)+1)-omega(int(ilook))) &
+                         /(cg%x(int(ilook)+1)-cg%x(int(ilook)))/sqrt(2.)
 !
 !
             u(imxn,i,j,:) = -yj*iOmega*u(idnn,i,j,:)
@@ -197,8 +197,8 @@ module initproblem
             u(ienn,i,j,:) = u(ienn,i,j,:) +0.5*(vx**2+vy**2+vz**2)*u(idnn,i,j,:)
 #endif /* !ISO */
 
-            iOmega = omegad(int(ilook))+(rc-x(int(ilook))*sqrt(2.))*(omegad(int(ilook)+1)-omegad(int(ilook))) &
-                         /(x(int(ilook)+1)-x(int(ilook)))/sqrt(2.)
+            iOmega = omegad(int(ilook))+(rc-cg%x(int(ilook))*sqrt(2.))*(omegad(int(ilook)+1)-omegad(int(ilook))) &
+                         /(cg%x(int(ilook)+1)-cg%x(int(ilook)))/sqrt(2.)
             u(imxd,i,j,:) = -yj*iOmega*u(idnd,i,j,:) + amp*(noise(1,:)-0.5)
             u(imyd,i,j,:) =  xi*iOmega*u(idnd,i,j,:) + amp*(noise(2,:)-0.5)
             u(imzd,i,j,:) = 0.0 + amp*(noise(3,:)-0.5)

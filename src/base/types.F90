@@ -69,22 +69,70 @@ module types
    end type phys_prop
 
    type :: grid_container
-      real    :: dx, dy, dz, dxmn, dvol
-      integer :: nb, nx, ny, nz
-      integer :: nxb, nyb, nzb
-      integer :: nxt, nyt, nzt
-      integer :: is, ie, js, je, ks, ke
-      integer :: maxxyz
 
-      real    :: xmin, xmax, ymin, ymax, zmin, zmax
-      real    :: xminb, xmaxb, yminb, ymaxb, zminb, zmaxb
-      real    :: Lx, Ly, Lz
-      integer, pointer  :: xdim, ydim, zdim
+      real    :: dx                             !< length of the %grid cell in x-direction
+      real    :: dy                             !< length of the %grid cell in y-direction
+      real    :: dz                             !< length of the %grid cell in z-direction
+      real    :: idx                            !< inverted length of the %grid cell in x-direction
+      real    :: idy                            !< inverted length of the %grid cell in y-direction
+      real    :: idz                            !< inverted length of the %grid cell in z-direction
+      real    :: dxmn                           !< the smallest length of the %grid cell (among dx, dy, and dz)
+      real    :: dvol                           !< volume of one %grid cell
+      real    :: xmin                           !< physical domain left x-boundary position
+      real    :: xmax                           !< physical domain right x-boundary position
+      real    :: ymin                           !< physical domain left y-boundary position
+      real    :: ymax                           !< physical domain right y-boundary position
+      real    :: zmin                           !< physical domain left z-boundary position
+      real    :: zmax                           !< physical domain right z-boundary position
+      real    :: xminb                          !< current block left x-boundary position
+      real    :: xmaxb                          !< current block right x-boundary position
+      real    :: yminb                          !< current block left y-boundary position
+      real    :: ymaxb                          !< current block right y-boundary position
+      real    :: zminb                          !< current block left z-boundary position
+      real    :: zmaxb                          !< current block right z-boundary position
 
-      real, dimension(:), pointer :: dl
-      real, dimension(:), pointer  :: x, xl, xr
-      real, dimension(:), pointer  :: y, yl, yr
-      real, dimension(:), pointer  :: z, zl, zr
+      real    :: Lx                             !< span of the physical domain in x-direction (xmax-xmin)
+      real    :: Ly                             !< span of the physical domain in y-direction (ymax-ymin)
+      real    :: Lz                             !< span of the physical domain in z-direction (zmax-zmin)
+      real    :: Vol                            !< total volume of the physical domain
+
+      real, allocatable, dimension(:) :: dl     !< array of %grid cell sizes in all directions
+      real, allocatable, dimension(:) :: idl    !< array of inverted %grid cell sizes in all directions
+      real, allocatable, dimension(:) :: x      !< array of x-positions of %grid cells centers
+      real, allocatable, dimension(:) :: inv_x  !< array of invert x-positions of %grid cells centers
+      real, allocatable, dimension(:) :: y      !< array of y-positions of %grid cells centers
+      real, allocatable, dimension(:) :: inv_y  !< array of invert y-positions of %grid cells centers
+      real, allocatable, dimension(:) :: z      !< array of z-positions of %grid cells centers
+      real, allocatable, dimension(:) :: inv_z  !< array of invert z-positions of %grid cells centers
+      real, allocatable, dimension(:) :: xl     !< array of x-positions of %grid cells left borders
+      real, allocatable, dimension(:) :: yl     !< array of y-positions of %grid cells left borders
+      real, allocatable, dimension(:) :: zl     !< array of z-positions of %grid cells left borders
+      real, allocatable, dimension(:) :: xr     !< array of x-positions of %grid cells right borders
+      real, allocatable, dimension(:) :: yr     !< array of y-positions of %grid cells right borders
+      real, allocatable, dimension(:) :: zr     !< array of z-positions of %grid cells right borders
+
+      integer :: nx                             !< number of %grid cells in one block in x-direction
+      integer :: ny                             !< number of %grid cells in one block in y-direction
+      integer :: nz                             !< number of %grid cells in one block in z-direction
+      integer :: nxb                            !< number of physical domain %grid cells in one block (without boundary cells) in x-direction
+      integer :: nyb                            !< number of physical domain %grid cells in one block (without boundary cells) in y-direction
+      integer :: nzb                            !< number of physical domain %grid cells in one block (without boundary cells) in z-direction
+      integer :: nxt                            !< total number of %grid cells in the whole domain in x-direction
+      integer :: nyt                            !< total number of %grid cells in the whole domain in y-direction
+      integer :: nzt                            !< total number of %grid cells in the whole domain in z-direction
+      integer :: is                             !< index of the first %grid cell of physical domain in x-direction
+      integer :: ie                             !< index of the last %grid cell of physical domain in x-direction
+      integer :: js                             !< index of the first %grid cell of physical domain in y-direction
+      integer :: je                             !< index of the last %grid cell of physical domain in y-direction
+      integer :: ks                             !< index of the first %grid cell of physical domain in z-direction
+      integer :: ke                             !< index of the last %grid cell of physical domain in z-direction
+      integer :: nb                             !< number of boundary cells surrounding the physical domain, same for all directions
+      integer :: maxxyz                         !< maximum number of %grid cells in any direction
+
+      ! a pointer to the next cg
+      ! grid level
+      ! a list of MPI types for communication with targets
+
    end type grid_container
 
    type :: component

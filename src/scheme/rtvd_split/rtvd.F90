@@ -234,7 +234,7 @@ module rtvd ! split orig
       use gravity,          only: grav_pot2accel
 #endif /* GRAV */
 #ifdef SHEAR
-      use grid,             only: x
+!      use grid,             only: cg
       use shear,            only: qshear, omega, global_gradP
 #endif /* SHEAR */
 #ifdef COSM_RAYS
@@ -439,7 +439,7 @@ module rtvd ! split orig
          endwhere
          do ind = 1, nvar%fluids
 !            if (sweep .eq. 'xsweep') then
-!               rotacc(ind,:) =  2.0*omega*(vy0(ind,:) + qshear*omega*x(:))
+!               rotacc(ind,:) =  2.0*omega*(vy0(ind,:) + qshear*omega*cg%x(:))
 !            else if (sweep .eq. 'ysweep')  then
 !               rotacc(ind,:) = - 2.0*omega*vy0(ind,:)          ! with global shear
 !            else

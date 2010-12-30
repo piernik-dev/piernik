@@ -80,7 +80,7 @@ module initproblem
 
       use arrays,       only: u,b
       use constants,    only: pi, dpi, fpi
-      use grid,         only: x, y, z, nx, ny, nz, xl, yl
+      use grid,         only: cg
       use initionized,  only: idni, imxi, imyi, imzi
 #ifndef ISO
       use initionized,  only: ieni, gamma_ion
@@ -96,7 +96,7 @@ module initproblem
 
 !   Secondary parameters
 
-      if (.not.allocated(A)) allocate(A(nx,ny,1))
+      if (.not.allocated(A)) allocate(A(cg%nx, cg%ny,1))
 
       rho = 25.0/(36.0*pi)
       pre =  5.0/(12.0*pi)
@@ -104,18 +104,18 @@ module initproblem
       vz = 0.0
       bz0 = 0.0
 
-      do j=1,ny
-         do i = 1,nx
-            A(i,j,1) = b0*(dcos(fpi*xl(i))/fpi + dcos(dpi*yl(j))/dpi)
+      do j=1, cg%ny
+         do i = 1, cg%nx
+            A(i,j,1) = b0*(dcos(fpi*cg%xl(i))/fpi + dcos(dpi*cg%yl(j))/dpi)
          enddo
       enddo
 
-      do j = 1,ny
-         yj = y(j)
-         do i = 1,nx
-            xi = x(i)
-            do k = 1,nz
-               zk = z(k)
+      do j = 1, cg%ny
+         yj = cg%y(j)
+         do i = 1, cg%nx
+            xi = cg%x(i)
+            do k = 1, cg%nz
+               zk = cg%z(k)
 
                vx  = -dsin(dpi*yj)
                vy  = dsin(dpi*xi)

@@ -99,7 +99,7 @@ module initproblem
 
       use arrays,    only: u
       use constants, only: pi
-      use grid,      only: Lx, Ly, Lz, nx, ny, nz, x, y, z
+      use grid,      only: cg
       use initdust,  only: idnd, imxd, imyd, imzd
 
       implicit none
@@ -107,19 +107,19 @@ module initproblem
       integer :: i,j,k
       real    :: k_x,k_y,k_z,k_a
 
-      k_x = 2.*pi/Lx*real(m_x)
-      k_y = 2.*pi/Ly*real(m_y)
-      k_z = 2.*pi/Lz*real(m_z)
+      k_x = 2.*pi/cg%Lx*real(m_x)
+      k_y = 2.*pi/cg%Ly*real(m_y)
+      k_z = 2.*pi/cg%Lz*real(m_z)
       k_a = sqrt(k_x**2+k_y**2+k_z**2)
 
-      do i = 1,nx
-         do j = 1,ny
-            do k = 1,nz
+      do i = 1, cg%nx
+         do j = 1, cg%ny
+            do k = 1, cg%nz
 
                u(idnd,i,j,k) = d0
-               u(imxd,i,j,k) = d0*k_x/k_a*(v0 +v1*sin(k_x*x(i)+k_y*y(j)+k_z*z(k)))
-               u(imyd,i,j,k) = d0*k_y/k_a*(v0 +v1*sin(k_x*x(i)+k_y*y(j)+k_z*z(k)))
-               u(imzd,i,j,k) = d0*k_z/k_a*(v0 +v1*sin(k_x*x(i)+k_y*y(j)+k_z*z(k)))
+               u(imxd,i,j,k) = d0*k_x/k_a*(v0 +v1*sin(k_x*cg%x(i)+k_y*cg%y(j)+k_z*cg%z(k)))
+               u(imyd,i,j,k) = d0*k_y/k_a*(v0 +v1*sin(k_x*cg%x(i)+k_y*cg%y(j)+k_z*cg%z(k)))
+               u(imzd,i,j,k) = d0*k_z/k_a*(v0 +v1*sin(k_x*cg%x(i)+k_y*cg%y(j)+k_z*cg%z(k)))
 
             enddo
          enddo

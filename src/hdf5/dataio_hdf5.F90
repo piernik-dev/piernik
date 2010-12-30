@@ -92,7 +92,8 @@ module dataio_hdf5
    subroutine init_hdf5(vars,tix,tiy,tiz,tdt_plt)
 
       use fluidindex,    only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
-      use grid,          only: nx, ny, nz, has_dir, xdim, ydim, zdim, nb
+      use grid,          only: cg
+      use mpisetup,      only: has_dir, xdim, ydim, zdim
       use list_hdf5,     only: additional_attrs, problem_write_restart, problem_read_restart
       use dataio_pub,    only: varlen
 #ifdef COSM_RAYS
@@ -117,19 +118,19 @@ module dataio_hdf5
       ix = tix; iy = tiy; iz = tiz; dt_plt = tdt_plt
 
       if (has_dir(xdim)) then
-         is = nb+1; ie = nx-nb
+         is = cg%nb+1; ie = cg%nx-cg%nb
       else
          is = 1; ie = 1
       endif
 
       if (has_dir(ydim)) then
-         js = nb+1; je = ny-nb
+         js = cg%nb+1; je = cg%ny-cg%nb
       else
          js = 1; je = 1
       endif
 
       if (has_dir(zdim)) then
-         ks = nb+1; ke = nz-nb
+         ks = cg%nb+1; ke = cg%nz-cg%nb
       else
          ks = 1; ke = 1
       endif
@@ -294,7 +295,7 @@ module dataio_hdf5
    subroutine common_plt_hdf5(var,ij,xn,tab,ierrh)
       use arrays,        only: u, b
       use dataio_pub,    only: varlen, planelen
-      use grid,          only: nb, nyb, nzb, nxb
+      use grid,          only: cg
 #ifdef GRAV
       use arrays,        only: gpot
 #endif /* GRAV */
@@ -316,101 +317,101 @@ module dataio_hdf5
       ierrh = 0
       select case (var)
          case ("dend")
-            if (ij=="yz") tab(:,:) = u(nvar%dst%idn,xn,nb+1:nyb+nb,nb+1:nzb+nb)
-            if (ij=="xz") tab(:,:) = u(nvar%dst%idn,nb+1:nxb+nb,xn,nb+1:nzb+nb)
-            if (ij=="xy") tab(:,:) = u(nvar%dst%idn,nb+1:nxb+nb,nb+1:nyb+nb,xn)
+            if (ij=="yz") tab(:,:) = u(nvar%dst%idn,xn, cg%nb+1:cg%nyb+cg%nb, cg%nb+1:cg%nzb+cg%nb)
+            if (ij=="xz") tab(:,:) = u(nvar%dst%idn, cg%nb+1:cg%nxb+cg%nb,xn, cg%nb+1:cg%nzb+cg%nb)
+            if (ij=="xy") tab(:,:) = u(nvar%dst%idn, cg%nb+1:cg%nxb+cg%nb, cg%nb+1:cg%nyb+cg%nb,xn)
          case ("denn")
-            if (ij=="yz") tab(:,:) = u(nvar%neu%idn,xn,nb+1:nyb+nb,nb+1:nzb+nb)
-            if (ij=="xz") tab(:,:) = u(nvar%neu%idn,nb+1:nxb+nb,xn,nb+1:nzb+nb)
-            if (ij=="xy") tab(:,:) = u(nvar%neu%idn,nb+1:nxb+nb,nb+1:nyb+nb,xn)
+            if (ij=="yz") tab(:,:) = u(nvar%neu%idn,xn, cg%nb+1:cg%nyb+cg%nb, cg%nb+1:cg%nzb+cg%nb)
+            if (ij=="xz") tab(:,:) = u(nvar%neu%idn, cg%nb+1:cg%nxb+cg%nb,xn, cg%nb+1:cg%nzb+cg%nb)
+            if (ij=="xy") tab(:,:) = u(nvar%neu%idn, cg%nb+1:cg%nxb+cg%nb, cg%nb+1:cg%nyb+cg%nb,xn)
          case ("deni")
-            if (ij=="yz") tab(:,:) = u(nvar%ion%idn,xn,nb+1:nyb+nb,nb+1:nzb+nb)
-            if (ij=="xz") tab(:,:) = u(nvar%ion%idn,nb+1:nxb+nb,xn,nb+1:nzb+nb)
-            if (ij=="xy") tab(:,:) = u(nvar%ion%idn,nb+1:nxb+nb,nb+1:nyb+nb,xn)
+            if (ij=="yz") tab(:,:) = u(nvar%ion%idn,xn, cg%nb+1:cg%nyb+cg%nb, cg%nb+1:cg%nzb+cg%nb)
+            if (ij=="xz") tab(:,:) = u(nvar%ion%idn, cg%nb+1:cg%nxb+cg%nb,xn, cg%nb+1:cg%nzb+cg%nb)
+            if (ij=="xy") tab(:,:) = u(nvar%ion%idn, cg%nb+1:cg%nxb+cg%nb, cg%nb+1:cg%nyb+cg%nb,xn)
          case ("vlxd")
-            if (ij=="yz") tab(:,:) = u(nvar%dst%imx,xn,nb+1:nyb+nb,nb+1:nzb+nb) / &
-                           u(nvar%dst%idn,xn,nb+1:nyb+nb,nb+1:nzb+nb)
-            if (ij=="xz") tab(:,:) = u(nvar%dst%imx,nb+1:nxb+nb,xn,nb+1:nzb+nb) / &
-                           u(nvar%dst%idn,nb+1:nxb+nb,xn,nb+1:nzb+nb)
-            if (ij=="xy") tab(:,:) = u(nvar%dst%imx,nb+1:nxb+nb,nb+1:nyb+nb,xn) / &
-                           u(nvar%dst%idn,nb+1:nxb+nb,nb+1:nyb+nb,xn)
+            if (ij=="yz") tab(:,:) = u(nvar%dst%imx,xn, cg%nb+1:cg%nyb+cg%nb, cg%nb+1:cg%nzb+cg%nb) / &
+                           u(nvar%dst%idn,xn, cg%nb+1:cg%nyb+cg%nb, cg%nb+1:cg%nzb+cg%nb)
+            if (ij=="xz") tab(:,:) = u(nvar%dst%imx, cg%nb+1:cg%nxb+cg%nb,xn, cg%nb+1:cg%nzb+cg%nb) / &
+                           u(nvar%dst%idn, cg%nb+1:cg%nxb+cg%nb,xn, cg%nb+1:cg%nzb+cg%nb)
+            if (ij=="xy") tab(:,:) = u(nvar%dst%imx, cg%nb+1:cg%nxb+cg%nb, cg%nb+1:cg%nyb+cg%nb,xn) / &
+                           u(nvar%dst%idn, cg%nb+1:cg%nxb+cg%nb, cg%nb+1:cg%nyb+cg%nb,xn)
          case ("vlxn")
-            if (ij=="yz") tab(:,:) = u(nvar%neu%imx,xn,nb+1:nyb+nb,nb+1:nzb+nb) / &
-                           u(nvar%neu%idn,xn,nb+1:nyb+nb,nb+1:nzb+nb)
-            if (ij=="xz") tab(:,:) = u(nvar%neu%imx,nb+1:nxb+nb,xn,nb+1:nzb+nb) / &
-                           u(nvar%neu%idn,nb+1:nxb+nb,xn,nb+1:nzb+nb)
-            if (ij=="xy") tab(:,:) = u(nvar%neu%imx,nb+1:nxb+nb,nb+1:nyb+nb,xn) / &
-                           u(nvar%neu%idn,nb+1:nxb+nb,nb+1:nyb+nb,xn)
+            if (ij=="yz") tab(:,:) = u(nvar%neu%imx,xn, cg%nb+1:cg%nyb+cg%nb, cg%nb+1:cg%nzb+cg%nb) / &
+                           u(nvar%neu%idn,xn, cg%nb+1:cg%nyb+cg%nb, cg%nb+1:cg%nzb+cg%nb)
+            if (ij=="xz") tab(:,:) = u(nvar%neu%imx, cg%nb+1:cg%nxb+cg%nb,xn, cg%nb+1:cg%nzb+cg%nb) / &
+                           u(nvar%neu%idn, cg%nb+1:cg%nxb+cg%nb,xn, cg%nb+1:cg%nzb+cg%nb)
+            if (ij=="xy") tab(:,:) = u(nvar%neu%imx, cg%nb+1:cg%nxb+cg%nb, cg%nb+1:cg%nyb+cg%nb,xn) / &
+                           u(nvar%neu%idn, cg%nb+1:cg%nxb+cg%nb, cg%nb+1:cg%nyb+cg%nb,xn)
          case ("vlxi")
-            if (ij=="yz") tab(:,:) = u(nvar%ion%imx,xn,nb+1:nyb+nb,nb+1:nzb+nb) / &
-                           u(nvar%ion%idn,xn,nb+1:nyb+nb,nb+1:nzb+nb)
-            if (ij=="xz") tab(:,:) = u(nvar%ion%imx,nb+1:nxb+nb,xn,nb+1:nzb+nb) / &
-                           u(nvar%ion%idn,nb+1:nxb+nb,xn,nb+1:nzb+nb)
-            if (ij=="xy") tab(:,:) = u(nvar%ion%imx,nb+1:nxb+nb,nb+1:nyb+nb,xn) / &
-                           u(nvar%ion%idn,nb+1:nxb+nb,nb+1:nyb+nb,xn)
+            if (ij=="yz") tab(:,:) = u(nvar%ion%imx,xn, cg%nb+1:cg%nyb+cg%nb, cg%nb+1:cg%nzb+cg%nb) / &
+                           u(nvar%ion%idn,xn, cg%nb+1:cg%nyb+cg%nb, cg%nb+1:cg%nzb+cg%nb)
+            if (ij=="xz") tab(:,:) = u(nvar%ion%imx, cg%nb+1:cg%nxb+cg%nb,xn, cg%nb+1:cg%nzb+cg%nb) / &
+                           u(nvar%ion%idn, cg%nb+1:cg%nxb+cg%nb,xn, cg%nb+1:cg%nzb+cg%nb)
+            if (ij=="xy") tab(:,:) = u(nvar%ion%imx, cg%nb+1:cg%nxb+cg%nb, cg%nb+1:cg%nyb+cg%nb,xn) / &
+                           u(nvar%ion%idn, cg%nb+1:cg%nxb+cg%nb, cg%nb+1:cg%nyb+cg%nb,xn)
          case ("vlyd")
-            if (ij=="yz") tab(:,:) = u(nvar%dst%imy,xn,nb+1:nyb+nb,nb+1:nzb+nb) / &
-                           u(nvar%dst%idn,xn,nb+1:nyb+nb,nb+1:nzb+nb)
-            if (ij=="xz") tab(:,:) = u(nvar%dst%imy,nb+1:nxb+nb,xn,nb+1:nzb+nb) / &
-                           u(nvar%dst%idn,nb+1:nxb+nb,xn,nb+1:nzb+nb)
-            if (ij=="xy") tab(:,:) = u(nvar%dst%imy,nb+1:nxb+nb,nb+1:nyb+nb,xn) / &
-                           u(nvar%dst%idn,nb+1:nxb+nb,nb+1:nyb+nb,xn)
+            if (ij=="yz") tab(:,:) = u(nvar%dst%imy,xn, cg%nb+1:cg%nyb+cg%nb, cg%nb+1:cg%nzb+cg%nb) / &
+                           u(nvar%dst%idn,xn, cg%nb+1:cg%nyb+cg%nb, cg%nb+1:cg%nzb+cg%nb)
+            if (ij=="xz") tab(:,:) = u(nvar%dst%imy, cg%nb+1:cg%nxb+cg%nb,xn, cg%nb+1:cg%nzb+cg%nb) / &
+                           u(nvar%dst%idn, cg%nb+1:cg%nxb+cg%nb,xn, cg%nb+1:cg%nzb+cg%nb)
+            if (ij=="xy") tab(:,:) = u(nvar%dst%imy, cg%nb+1:cg%nxb+cg%nb, cg%nb+1:cg%nyb+cg%nb,xn) / &
+                           u(nvar%dst%idn, cg%nb+1:cg%nxb+cg%nb, cg%nb+1:cg%nyb+cg%nb,xn)
          case ("vlyn")
-            if (ij=="yz") tab(:,:) = u(nvar%neu%imy,xn,nb+1:nyb+nb,nb+1:nzb+nb) / &
-                           u(nvar%neu%idn,xn,nb+1:nyb+nb,nb+1:nzb+nb)
-            if (ij=="xz") tab(:,:) = u(nvar%neu%imy,nb+1:nxb+nb,xn,nb+1:nzb+nb) / &
-                           u(nvar%neu%idn,nb+1:nxb+nb,xn,nb+1:nzb+nb)
-            if (ij=="xy") tab(:,:) = u(nvar%neu%imy,nb+1:nxb+nb,nb+1:nyb+nb,xn) / &
-                           u(nvar%neu%idn,nb+1:nxb+nb,nb+1:nyb+nb,xn)
+            if (ij=="yz") tab(:,:) = u(nvar%neu%imy,xn, cg%nb+1:cg%nyb+cg%nb, cg%nb+1:cg%nzb+cg%nb) / &
+                           u(nvar%neu%idn,xn, cg%nb+1:cg%nyb+cg%nb, cg%nb+1:cg%nzb+cg%nb)
+            if (ij=="xz") tab(:,:) = u(nvar%neu%imy, cg%nb+1:cg%nxb+cg%nb,xn, cg%nb+1:cg%nzb+cg%nb) / &
+                           u(nvar%neu%idn, cg%nb+1:cg%nxb+cg%nb,xn, cg%nb+1:cg%nzb+cg%nb)
+            if (ij=="xy") tab(:,:) = u(nvar%neu%imy, cg%nb+1:cg%nxb+cg%nb, cg%nb+1:cg%nyb+cg%nb,xn) / &
+                           u(nvar%neu%idn, cg%nb+1:cg%nxb+cg%nb, cg%nb+1:cg%nyb+cg%nb,xn)
          case ("vlyi")
-            if (ij=="yz") tab(:,:) = u(nvar%ion%imy,xn,nb+1:nyb+nb,nb+1:nzb+nb) / &
-                           u(nvar%ion%idn,xn,nb+1:nyb+nb,nb+1:nzb+nb)
-            if (ij=="xz") tab(:,:) = u(nvar%ion%imy,nb+1:nxb+nb,xn,nb+1:nzb+nb) / &
-                           u(nvar%ion%idn,nb+1:nxb+nb,xn,nb+1:nzb+nb)
-            if (ij=="xy") tab(:,:) = u(nvar%ion%imy,nb+1:nxb+nb,nb+1:nyb+nb,xn) / &
-                           u(nvar%ion%idn,nb+1:nxb+nb,nb+1:nyb+nb,xn)
+            if (ij=="yz") tab(:,:) = u(nvar%ion%imy,xn, cg%nb+1:cg%nyb+cg%nb, cg%nb+1:cg%nzb+cg%nb) / &
+                           u(nvar%ion%idn,xn, cg%nb+1:cg%nyb+cg%nb, cg%nb+1:cg%nzb+cg%nb)
+            if (ij=="xz") tab(:,:) = u(nvar%ion%imy, cg%nb+1:cg%nxb+cg%nb,xn, cg%nb+1:cg%nzb+cg%nb) / &
+                           u(nvar%ion%idn, cg%nb+1:cg%nxb+cg%nb,xn, cg%nb+1:cg%nzb+cg%nb)
+            if (ij=="xy") tab(:,:) = u(nvar%ion%imy, cg%nb+1:cg%nxb+cg%nb, cg%nb+1:cg%nyb+cg%nb,xn) / &
+                           u(nvar%ion%idn, cg%nb+1:cg%nxb+cg%nb, cg%nb+1:cg%nyb+cg%nb,xn)
          case ("vlzd")
-            if (ij=="yz") tab(:,:) = u(nvar%dst%imz,xn,nb+1:nyb+nb,nb+1:nzb+nb) / &
-                           u(nvar%dst%idn,xn,nb+1:nyb+nb,nb+1:nzb+nb)
-            if (ij=="xz") tab(:,:) = u(nvar%dst%imz,nb+1:nxb+nb,xn,nb+1:nzb+nb) / &
-                           u(nvar%dst%idn,nb+1:nxb+nb,xn,nb+1:nzb+nb)
-            if (ij=="xy") tab(:,:) = u(nvar%dst%imz,nb+1:nxb+nb,nb+1:nyb+nb,xn) / &
-                           u(nvar%dst%idn,nb+1:nxb+nb,nb+1:nyb+nb,xn)
+            if (ij=="yz") tab(:,:) = u(nvar%dst%imz,xn, cg%nb+1:cg%nyb+cg%nb, cg%nb+1:cg%nzb+cg%nb) / &
+                           u(nvar%dst%idn,xn, cg%nb+1:cg%nyb+cg%nb, cg%nb+1:cg%nzb+cg%nb)
+            if (ij=="xz") tab(:,:) = u(nvar%dst%imz, cg%nb+1:cg%nxb+cg%nb,xn, cg%nb+1:cg%nzb+cg%nb) / &
+                           u(nvar%dst%idn, cg%nb+1:cg%nxb+cg%nb,xn, cg%nb+1:cg%nzb+cg%nb)
+            if (ij=="xy") tab(:,:) = u(nvar%dst%imz, cg%nb+1:cg%nxb+cg%nb, cg%nb+1:cg%nyb+cg%nb,xn) / &
+                           u(nvar%dst%idn, cg%nb+1:cg%nxb+cg%nb, cg%nb+1:cg%nyb+cg%nb,xn)
          case ("vlzn")
-            if (ij=="yz") tab(:,:) = u(nvar%neu%imz,xn,nb+1:nyb+nb,nb+1:nzb+nb) / &
-                           u(nvar%neu%idn,xn,nb+1:nyb+nb,nb+1:nzb+nb)
-            if (ij=="xz") tab(:,:) = u(nvar%neu%imz,nb+1:nxb+nb,xn,nb+1:nzb+nb) / &
-                           u(nvar%neu%idn,nb+1:nxb+nb,xn,nb+1:nzb+nb)
-            if (ij=="xy") tab(:,:) = u(nvar%neu%imz,nb+1:nxb+nb,nb+1:nyb+nb,xn) / &
-                           u(nvar%neu%idn,nb+1:nxb+nb,nb+1:nyb+nb,xn)
+            if (ij=="yz") tab(:,:) = u(nvar%neu%imz,xn, cg%nb+1:cg%nyb+cg%nb, cg%nb+1:cg%nzb+cg%nb) / &
+                           u(nvar%neu%idn,xn, cg%nb+1:cg%nyb+cg%nb, cg%nb+1:cg%nzb+cg%nb)
+            if (ij=="xz") tab(:,:) = u(nvar%neu%imz, cg%nb+1:cg%nxb+cg%nb,xn, cg%nb+1:cg%nzb+cg%nb) / &
+                           u(nvar%neu%idn, cg%nb+1:cg%nxb+cg%nb,xn, cg%nb+1:cg%nzb+cg%nb)
+            if (ij=="xy") tab(:,:) = u(nvar%neu%imz, cg%nb+1:cg%nxb+cg%nb, cg%nb+1:cg%nyb+cg%nb,xn) / &
+                           u(nvar%neu%idn, cg%nb+1:cg%nxb+cg%nb, cg%nb+1:cg%nyb+cg%nb,xn)
          case ("vlzi")
-            if (ij=="yz") tab(:,:) = u(nvar%ion%imz,xn,nb+1:nyb+nb,nb+1:nzb+nb) / &
-                           u(nvar%ion%idn,xn,nb+1:nyb+nb,nb+1:nzb+nb)
-            if (ij=="xz") tab(:,:) = u(nvar%ion%imz,nb+1:nxb+nb,xn,nb+1:nzb+nb) / &
-                           u(nvar%ion%idn,nb+1:nxb+nb,xn,nb+1:nzb+nb)
-            if (ij=="xy") tab(:,:) = u(nvar%ion%imz,nb+1:nxb+nb,nb+1:nyb+nb,xn) / &
-                           u(nvar%ion%idn,nb+1:nxb+nb,nb+1:nyb+nb,xn)
+            if (ij=="yz") tab(:,:) = u(nvar%ion%imz,xn, cg%nb+1:cg%nyb+cg%nb, cg%nb+1:cg%nzb+cg%nb) / &
+                           u(nvar%ion%idn,xn, cg%nb+1:cg%nyb+cg%nb, cg%nb+1:cg%nzb+cg%nb)
+            if (ij=="xz") tab(:,:) = u(nvar%ion%imz, cg%nb+1:cg%nxb+cg%nb,xn, cg%nb+1:cg%nzb+cg%nb) / &
+                           u(nvar%ion%idn, cg%nb+1:cg%nxb+cg%nb,xn, cg%nb+1:cg%nzb+cg%nb)
+            if (ij=="xy") tab(:,:) = u(nvar%ion%imz, cg%nb+1:cg%nxb+cg%nb, cg%nb+1:cg%nyb+cg%nb,xn) / &
+                           u(nvar%ion%idn, cg%nb+1:cg%nxb+cg%nb, cg%nb+1:cg%nyb+cg%nb,xn)
          case ("enen")
 #ifdef ISO
             if (ij=="yz") tab(:,:) = 0.5 * (                     &
-                          u(nvar%neu%imx,xn,nb+1:nyb+nb,nb+1:nzb+nb)**2 &
-                        + u(nvar%neu%imy,xn,nb+1:nyb+nb,nb+1:nzb+nb)**2 &
-                        + u(nvar%neu%imz,xn,nb+1:nyb+nb,nb+1:nzb+nb)**2) / &
-                             u(nvar%neu%idn,xn,nb+1:nyb+nb,nb+1:nzb+nb)
+                          u(nvar%neu%imx,xn, cg%nb+1:cg%nyb+cg%nb, cg%nb+1:cg%nzb+cg%nb)**2 &
+                        + u(nvar%neu%imy,xn, cg%nb+1:cg%nyb+cg%nb, cg%nb+1:cg%nzb+cg%nb)**2 &
+                        + u(nvar%neu%imz,xn, cg%nb+1:cg%nyb+cg%nb, cg%nb+1:cg%nzb+cg%nb)**2) / &
+                             u(nvar%neu%idn,xn, cg%nb+1:cg%nyb+cg%nb, cg%nb+1:cg%nzb+cg%nb)
             if (ij=="xz") tab(:,:) = 0.5 * (                     &
-                          u(nvar%neu%imx,nb+1:nxb+nb,xn,nb+1:nzb+nb)**2 &
-                         +u(nvar%neu%imy,nb+1:nxb+nb,xn,nb+1:nzb+nb)**2 &
-                         +u(nvar%neu%imz,nb+1:nxb+nb,xn,nb+1:nzb+nb)**2) / &
-                             u(nvar%neu%idn,nb+1:nxb+nb,xn,nb+1:nzb+nb)
+                          u(nvar%neu%imx, cg%nb+1:cg%nxb+cg%nb,xn, cg%nb+1:cg%nzb+cg%nb)**2 &
+                         +u(nvar%neu%imy, cg%nb+1:cg%nxb+cg%nb,xn, cg%nb+1:cg%nzb+cg%nb)**2 &
+                         +u(nvar%neu%imz, cg%nb+1:cg%nxb+cg%nb,xn, cg%nb+1:cg%nzb+cg%nb)**2) / &
+                             u(nvar%neu%idn, cg%nb+1:cg%nxb+cg%nb,xn, cg%nb+1:cg%nzb+cg%nb)
             if (ij=="xy") tab(:,:) = 0.5 * (                     &
-                          u(nvar%neu%imx,nb+1:nxb+nb,nb+1:nyb+nb,xn)**2 &
-                         +u(nvar%neu%imy,nb+1:nxb+nb,nb+1:nyb+nb,xn)**2 &
-                         +u(nvar%neu%imz,nb+1:nxb+nb,nb+1:nyb+nb,xn)**2) / &
-                             u(nvar%neu%idn,nb+1:nxb+nb,nb+1:nyb+nb,xn)
+                          u(nvar%neu%imx, cg%nb+1:cg%nxb+cg%nb, cg%nb+1:cg%nyb+cg%nb,xn)**2 &
+                         +u(nvar%neu%imy, cg%nb+1:cg%nxb+cg%nb, cg%nb+1:cg%nyb+cg%nb,xn)**2 &
+                         +u(nvar%neu%imz, cg%nb+1:cg%nxb+cg%nb, cg%nb+1:cg%nyb+cg%nb,xn)**2) / &
+                             u(nvar%neu%idn, cg%nb+1:cg%nxb+cg%nb, cg%nb+1:cg%nyb+cg%nb,xn)
 #else /* !ISO */
-            if (ij=="yz") tab(:,:) = u(nvar%neu%ien,xn,nb+1:nyb+nb,nb+1:nzb+nb)
-            if (ij=="xz") tab(:,:) = u(nvar%neu%ien,nb+1:nxb+nb,xn,nb+1:nzb+nb)
-            if (ij=="xy") tab(:,:) = u(nvar%neu%ien,nb+1:nxb+nb,nb+1:nyb+nb,xn)
+            if (ij=="yz") tab(:,:) = u(nvar%neu%ien,xn, cg%nb+1:cg%nyb+cg%nb, cg%nb+1:cg%nzb+cg%nb)
+            if (ij=="xz") tab(:,:) = u(nvar%neu%ien, cg%nb+1:cg%nxb+cg%nb,xn, cg%nb+1:cg%nzb+cg%nb)
+            if (ij=="xy") tab(:,:) = u(nvar%neu%ien, cg%nb+1:cg%nxb+cg%nb, cg%nb+1:cg%nyb+cg%nb,xn)
 #endif /* !ISO */
          case ('prei')
             tab(:,:) = 0.0
@@ -420,60 +421,60 @@ module dataio_hdf5
             tab = 0.0
 #else /* !ISO */
             if (ij=="xy") then
-               tab(:,:) = real( u(nvar%neu%ien,nb+1:nxb+nb,nb+1:nyb+nb,xn) - &
-                 0.5 *( u(nvar%neu%imx,nb+1:nxb+nb,nb+1:nyb+nb,xn)**2 + u(nvar%neu%imy,nb+1:nxb+nb,nb+1:nyb+nb,xn)**2 + &
-                        u(nvar%neu%imz,nb+1:nxb+nb,nb+1:nyb+nb,xn)**2 ) / u(nvar%neu%idn,nb+1:nxb+nb,nb+1:nyb+nb,xn),4)*(nvar%neu%gam_1)
+               tab(:,:) = real( u(nvar%neu%ien, cg%nb+1:cg%nxb+cg%nb, cg%nb+1:cg%nyb+cg%nb,xn) - &
+                 0.5 *( u(nvar%neu%imx, cg%nb+1:cg%nxb+cg%nb, cg%nb+1:cg%nyb+cg%nb,xn)**2 + u(nvar%neu%imy, cg%nb+1:cg%nxb+cg%nb, cg%nb+1:cg%nyb+cg%nb,xn)**2 + &
+                        u(nvar%neu%imz, cg%nb+1:cg%nxb+cg%nb, cg%nb+1:cg%nyb+cg%nb,xn)**2 ) / u(nvar%neu%idn, cg%nb+1:cg%nxb+cg%nb, cg%nb+1:cg%nyb+cg%nb,xn),4)*(nvar%neu%gam_1)
             endif
 #endif /* !ISO */
 #endif /* NEUTRAL */
          case ("enei")
 #ifdef ISO
             if (ij=="yz") tab(:,:) = 0.5 * (                     &
-                          u(nvar%ion%imx,xn,nb+1:nyb+nb,nb+1:nzb+nb)**2 &
-                        + u(nvar%ion%imy,xn,nb+1:nyb+nb,nb+1:nzb+nb)**2 &
-                        + u(nvar%ion%imz,xn,nb+1:nyb+nb,nb+1:nzb+nb)**2) / &
-                             u(nvar%ion%idn,xn,nb+1:nyb+nb,nb+1:nzb+nb)
+                          u(nvar%ion%imx,xn, cg%nb+1:cg%nyb+cg%nb, cg%nb+1:cg%nzb+cg%nb)**2 &
+                        + u(nvar%ion%imy,xn, cg%nb+1:cg%nyb+cg%nb, cg%nb+1:cg%nzb+cg%nb)**2 &
+                        + u(nvar%ion%imz,xn, cg%nb+1:cg%nyb+cg%nb, cg%nb+1:cg%nzb+cg%nb)**2) / &
+                             u(nvar%ion%idn,xn, cg%nb+1:cg%nyb+cg%nb, cg%nb+1:cg%nzb+cg%nb)
             if (ij=="xz") tab(:,:) = 0.5 * (                     &
-                          u(nvar%ion%imx,nb+1:nxb+nb,xn,nb+1:nzb+nb)**2 &
-                         +u(nvar%ion%imy,nb+1:nxb+nb,xn,nb+1:nzb+nb)**2 &
-                         +u(nvar%ion%imz,nb+1:nxb+nb,xn,nb+1:nzb+nb)**2) / &
-                             u(nvar%ion%idn,nb+1:nxb+nb,xn,nb+1:nzb+nb)
+                          u(nvar%ion%imx, cg%nb+1:cg%nxb+cg%nb,xn, cg%nb+1:cg%nzb+cg%nb)**2 &
+                         +u(nvar%ion%imy, cg%nb+1:cg%nxb+cg%nb,xn, cg%nb+1:cg%nzb+cg%nb)**2 &
+                         +u(nvar%ion%imz, cg%nb+1:cg%nxb+cg%nb,xn, cg%nb+1:cg%nzb+cg%nb)**2) / &
+                             u(nvar%ion%idn, cg%nb+1:cg%nxb+cg%nb,xn, cg%nb+1:cg%nzb+cg%nb)
             if (ij=="xy") tab(:,:) = 0.5 * (                     &
-                          u(nvar%ion%imx,nb+1:nxb+nb,nb+1:nyb+nb,xn)**2 &
-                         +u(nvar%ion%imy,nb+1:nxb+nb,nb+1:nyb+nb,xn)**2 &
-                         +u(nvar%ion%imz,nb+1:nxb+nb,nb+1:nyb+nb,xn)**2) / &
-                             u(nvar%ion%idn,nb+1:nxb+nb,nb+1:nyb+nb,xn)
+                          u(nvar%ion%imx, cg%nb+1:cg%nxb+cg%nb, cg%nb+1:cg%nyb+cg%nb,xn)**2 &
+                         +u(nvar%ion%imy, cg%nb+1:cg%nxb+cg%nb, cg%nb+1:cg%nyb+cg%nb,xn)**2 &
+                         +u(nvar%ion%imz, cg%nb+1:cg%nxb+cg%nb, cg%nb+1:cg%nyb+cg%nb,xn)**2) / &
+                             u(nvar%ion%idn, cg%nb+1:cg%nxb+cg%nb, cg%nb+1:cg%nyb+cg%nb,xn)
 #else /* !ISO */
-            if (ij=="yz") tab(:,:) = u(nvar%ion%ien,xn,nb+1:nyb+nb,nb+1:nzb+nb)
-            if (ij=="xz") tab(:,:) = u(nvar%ion%ien,nb+1:nxb+nb,xn,nb+1:nzb+nb)
-            if (ij=="xy") tab(:,:) = u(nvar%ion%ien,nb+1:nxb+nb,nb+1:nyb+nb,xn)
+            if (ij=="yz") tab(:,:) = u(nvar%ion%ien,xn, cg%nb+1:cg%nyb+cg%nb, cg%nb+1:cg%nzb+cg%nb)
+            if (ij=="xz") tab(:,:) = u(nvar%ion%ien, cg%nb+1:cg%nxb+cg%nb,xn, cg%nb+1:cg%nzb+cg%nb)
+            if (ij=="xy") tab(:,:) = u(nvar%ion%ien, cg%nb+1:cg%nxb+cg%nb, cg%nb+1:cg%nyb+cg%nb,xn)
 #endif /* !ISO */
 
          case ("magx")
-            if (ij=="yz") tab(:,:) = b(ibx,xn,nb+1:nyb+nb,nb+1:nzb+nb)
-            if (ij=="xz") tab(:,:) = b(ibx,nb+1:nxb+nb,xn,nb+1:nzb+nb)
-            if (ij=="xy") tab(:,:) = b(ibx,nb+1:nxb+nb,nb+1:nyb+nb,xn)
+            if (ij=="yz") tab(:,:) = b(ibx,xn, cg%nb+1:cg%nyb+cg%nb, cg%nb+1:cg%nzb+cg%nb)
+            if (ij=="xz") tab(:,:) = b(ibx, cg%nb+1:cg%nxb+cg%nb,xn, cg%nb+1:cg%nzb+cg%nb)
+            if (ij=="xy") tab(:,:) = b(ibx, cg%nb+1:cg%nxb+cg%nb, cg%nb+1:cg%nyb+cg%nb,xn)
          case ("magy")
-            if (ij=="yz") tab(:,:) = b(iby,xn,nb+1:nyb+nb,nb+1:nzb+nb)
-            if (ij=="xz") tab(:,:) = b(iby,nb+1:nxb+nb,xn,nb+1:nzb+nb)
-            if (ij=="xy") tab(:,:) = b(iby,nb+1:nxb+nb,nb+1:nyb+nb,xn)
+            if (ij=="yz") tab(:,:) = b(iby,xn, cg%nb+1:cg%nyb+cg%nb, cg%nb+1:cg%nzb+cg%nb)
+            if (ij=="xz") tab(:,:) = b(iby, cg%nb+1:cg%nxb+cg%nb,xn, cg%nb+1:cg%nzb+cg%nb)
+            if (ij=="xy") tab(:,:) = b(iby, cg%nb+1:cg%nxb+cg%nb, cg%nb+1:cg%nyb+cg%nb,xn)
          case ("magz")
-            if (ij=="yz") tab(:,:) = b(ibz,xn,nb+1:nyb+nb,nb+1:nzb+nb)
-            if (ij=="xz") tab(:,:) = b(ibz,nb+1:nxb+nb,xn,nb+1:nzb+nb)
-            if (ij=="xy") tab(:,:) = b(ibz,nb+1:nxb+nb,nb+1:nyb+nb,xn)
+            if (ij=="yz") tab(:,:) = b(ibz,xn, cg%nb+1:cg%nyb+cg%nb, cg%nb+1:cg%nzb+cg%nb)
+            if (ij=="xz") tab(:,:) = b(ibz, cg%nb+1:cg%nxb+cg%nb,xn, cg%nb+1:cg%nzb+cg%nb)
+            if (ij=="xy") tab(:,:) = b(ibz, cg%nb+1:cg%nxb+cg%nb, cg%nb+1:cg%nyb+cg%nb,xn)
 #ifdef GRAV
          case ("gpot")
-            if (ij=="yz") tab(:,:) = gpot(xn,nb+1:nyb+nb,nb+1:nzb+nb)
-            if (ij=="xz") tab(:,:) = gpot(nb+1:nxb+nb,xn,nb+1:nzb+nb)
-            if (ij=="xy") tab(:,:) = gpot(nb+1:nxb+nb,nb+1:nyb+nb,xn)
+            if (ij=="yz") tab(:,:) = gpot(xn, cg%nb+1:cg%nyb+cg%nb, cg%nb+1:cg%nzb+cg%nb)
+            if (ij=="xz") tab(:,:) = gpot(cg%nb+1:cg%nxb+cg%nb,xn, cg%nb+1:cg%nzb+cg%nb)
+            if (ij=="xy") tab(:,:) = gpot(cg%nb+1:cg%nxb+cg%nb, cg%nb+1:cg%nyb+cg%nb,xn)
 #endif /* GRAV */
          case default
 #ifdef COSM_RAYS
             if (var(1:3) == 'ecr') then
                i = iarr_all_crs(ichar(var(4:4))-48)
-               if (ij=="yz") tab(:,:) = u(i,xn,nb+1:nyb+nb,nb+1:nzb+nb)
-               if (ij=="xz") tab(:,:) = u(i,nb+1:nxb+nb,xn,nb+1:nzb+nb)
-               if (ij=="xy") tab(:,:) = u(i,nb+1:nxb+nb,nb+1:nyb+nb,xn)
+               if (ij=="yz") tab(:,:) = u(i,xn, cg%nb+1:cg%nyb+cg%nb, cg%nb+1:cg%nzb+cg%nb)
+               if (ij=="xz") tab(:,:) = u(i, cg%nb+1:cg%nxb+cg%nb,xn, cg%nb+1:cg%nzb+cg%nb)
+               if (ij=="xy") tab(:,:) = u(i, cg%nb+1:cg%nxb+cg%nb, cg%nb+1:cg%nyb+cg%nb,xn)
             else
 #endif /* COSM_RAYS */
             ierrh = -1
@@ -662,10 +663,10 @@ module dataio_hdf5
    subroutine write_plot_hdf5(var,plane,nimg)
       use arrays,        only: u
       use dataio_pub,    only: vizit, fmin, fmax, cwdlen, log_file, msg, varlen, die, warn, user_plt_hdf5, planelen
-      use grid,          only: nxb, nyb, nzb, nb, has_dir, xdim, ydim, zdim
+      use grid,          only: cg
       use hdf5,          only: HID_T, HSIZE_T, SIZE_T, H5F_ACC_RDWR_F, h5fopen_f, h5gopen_f, h5gclose_f, h5fclose_f
       use h5lt,          only: h5ltmake_dataset_double_f, h5ltset_attribute_double_f
-      use mpisetup,      only: comm3d, ierr, pxsize, pysize, pzsize, t, pcoords
+      use mpisetup,      only: comm3d, ierr, pxsize, pysize, pzsize, t, pcoords, xdim, ydim, zdim, has_dir
       use mpi,           only: MPI_CHARACTER, MPI_DOUBLE_PRECISION
 #ifdef PGPLOT
       use viz,           only: draw_me
@@ -710,47 +711,47 @@ module dataio_hdf5
       select case (plane)
          case ("yz")
             if (has_dir(xdim)) then
-               xn     = ix + nb - pcoords(1)*nxb
+               xn     = ix + cg%nb - pcoords(1)*cg%nxb
             else
                xn     = 1
             endif
             remain = (/.false.,.true.,.true./)
             pij    = "yz_"
-            nib    = nyb
-            nid    = nyb*pysize
-            njb    = nzb
-            njd    = nzb*pzsize
-            nkb    = nxb
+            nib    = cg%nyb
+            nid    = cg%nyb*pysize
+            njb    = cg%nzb
+            njd    = cg%nzb*pzsize
+            nkb    = cg%nxb
             pisize = pysize
             pjsize = pzsize
          case ("xz")
             if (has_dir(ydim)) then
-               xn     = iy + nb - pcoords(2)*nyb
+               xn     = iy + cg%nb - pcoords(2)*cg%nyb
             else
                xn     = 1
             endif
             remain = (/.true.,.false.,.true./)
             pij    = "xz_"
-            nib    = nxb
-            nid    = nxb*pxsize
-            njb    = nzb
-            njd    = nzb*pzsize
-            nkb    = nyb
+            nib    = cg%nxb
+            nid    = cg%nxb*pxsize
+            njb    = cg%nzb
+            njd    = cg%nzb*pzsize
+            nkb    = cg%nyb
             pisize = pxsize
             pjsize = pzsize
          case ("xy")
             if (has_dir(zdim)) then
-               xn = iz + nb - pcoords(3)*nzb
+               xn = iz + cg%nb - pcoords(3)*cg%nzb
             else
                xn = 1
             endif
             remain = (/.true.,.true.,.false./)
             pij    = "xy_"
-            nib    = nxb
-            nid    = nxb*pxsize
-            njb    = nyb
-            njd    = nyb*pysize
-            nkb    = nzb
+            nib    = cg%nxb
+            nid    = cg%nxb*pxsize
+            njb    = cg%nyb
+            njd    = cg%nyb*pysize
+            nkb    = cg%nzb
             pisize = pxsize
             pjsize = pysize
          case default
@@ -763,7 +764,7 @@ module dataio_hdf5
       call MPI_Cart_sub(comm3d,remain,comm2d,ierr)
       call MPI_Comm_size(comm2d, ls, ierr)
       call MPI_Comm_rank(comm2d, lp, ierr)
-      if ((xn > nb .and. xn <= nkb+nb).or.xn == 1) then
+      if ((xn > cg%nb .and. xn <= nkb+cg%nb).or.xn == 1) then
          allocate(temp(nib,njb,pisize*pjsize),img(nid,njd))
          allocate(buff(nid*njd))
          allocate(send(nib,njb))
@@ -828,7 +829,7 @@ module dataio_hdf5
       use arrays,        only: u, b
       use dataio_pub,    only: chdf, nres, set_container_chdf, cwdlen, problem_name, run_id
       use fluidindex,    only: nvar
-      use grid,          only: nxb, nyb, nzb, x, y, z, nx, ny, nz
+      use grid,          only: cg
       use hdf5,          only: HID_T, HSIZE_T, HSSIZE_T, H5P_FILE_ACCESS_F, H5F_ACC_TRUNC_F, H5P_DATASET_CREATE_F, H5S_SELECT_SET_F, &
            &                   H5P_DATASET_XFER_F, H5FD_MPIO_INDEPENDENT_F, H5T_NATIVE_DOUBLE, &
            &                   h5open_f, h5close_f, h5fcreate_f, h5fclose_f, &
@@ -878,7 +879,7 @@ module dataio_hdf5
       if (associated(problem_write_restart)) call problem_write_restart(file_id)
 
 #ifdef ISO_LOCAL
-      call write_3darr_to_restart(cs_iso2_arr(:,:,:),file_id,"cs_iso2",nx,ny,nz)
+      call write_3darr_to_restart(cs_iso2_arr(:,:,:),file_id,"cs_iso2", cg%nx, cg%ny, cg%nz)
 #endif /* ISO_LOCAL */
 
       rank = 4
@@ -887,9 +888,9 @@ module dataio_hdf5
       !----------------------------------------------------------------------------------
       !  WRITE FLUID VARIABLES
       !
-      dimsf = [nu, nxb*pxsize, nyb*pysize, nzb*pzsize] ! Dataset dimensions
+      dimsf = [nu, cg%nxb*pxsize, cg%nyb*pysize, cg%nzb*pzsize] ! Dataset dimensions
       dimsfi = dimsf
-      chunk_dims = [nu, nxb, nyb, nzb]                    ! Chunks dimensions
+      chunk_dims = [nu, cg%nxb, cg%nyb, cg%nzb]                    ! Chunks dimensions
 
       ! Create the data space for the  dataset.
       CALL h5screate_simple_f(rank, dimsf, filespace, error)
@@ -930,9 +931,9 @@ module dataio_hdf5
       !----------------------------------------------------------------------------------
       !  WRITE MAG VARIABLES
       !
-      dimsf = [3, nxb*pxsize, nyb*pysize, nzb*pzsize] ! Dataset dimensions
+      dimsf = [3, cg%nxb*pxsize, cg%nyb*pysize, cg%nzb*pzsize] ! Dataset dimensions
       dimsfi = dimsf
-      chunk_dims = [3, nxb, nyb, nzb]                 ! Chunks dimensions
+      chunk_dims = [3, cg%nxb, cg%nyb, cg%nzb]                 ! Chunks dimensions
 
       ! Create the data space for the  dataset.
       CALL h5screate_simple_f(rank, dimsf, filespace, error)
@@ -984,9 +985,9 @@ module dataio_hdf5
       !----------------------------------------------------------------------------------
       !  WRITE X Axis
       !
-      dimsf  = [nxb*pxsize] ! Dataset dimensions
+      dimsf  = [cg%nxb*pxsize] ! Dataset dimensions
       dimsfi = dimsf
-      chunk_dims = [nxb]    ! Chunks dimensions
+      chunk_dims = [cg%nxb]    ! Chunks dimensions
 
       ! Create the data space for the  dataset.
       CALL h5screate_simple_f(rank, dimsf, filespace, error)
@@ -1014,7 +1015,7 @@ module dataio_hdf5
                                   stride, block)
       CALL h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error)
       CALL h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_INDEPENDENT_F, error)
-      CALL h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, x(is:ie), dimsfi, error, &
+      CALL h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, cg%x(is:ie), dimsfi, error, &
                       file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
 
       CALL h5sclose_f(filespace, error)
@@ -1026,9 +1027,9 @@ module dataio_hdf5
       !----------------------------------------------------------------------------------
       !  WRITE Y Axis
       !
-      dimsf  = [nyb*pysize] ! Dataset dimensions
+      dimsf  = [cg%nyb*pysize] ! Dataset dimensions
       dimsfi = dimsf
-      chunk_dims = [nyb]    ! Chunks dimensions
+      chunk_dims = [cg%nyb]    ! Chunks dimensions
 
       ! Create the data space for the  dataset.
       CALL h5screate_simple_f(rank, dimsf, filespace, error)
@@ -1056,7 +1057,7 @@ module dataio_hdf5
                                   stride, block)
       CALL h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error)
       CALL h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_INDEPENDENT_F, error)
-      CALL h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, y(js:je), dimsfi, error, &
+      CALL h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, cg%y(js:je), dimsfi, error, &
                       file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
 
       CALL h5sclose_f(filespace, error)
@@ -1068,9 +1069,9 @@ module dataio_hdf5
       !----------------------------------------------------------------------------------
       !  WRITE Z Axis
       !
-      dimsf  = [nzb*pzsize] ! Dataset dimensions
+      dimsf  = [cg%nzb*pzsize] ! Dataset dimensions
       dimsfi = dimsf
-      chunk_dims = [nzb]    ! Chunks dimensions
+      chunk_dims = [cg%nzb]    ! Chunks dimensions
 
       ! Create the data space for the  dataset.
       CALL h5screate_simple_f(rank, dimsf, filespace, error)
@@ -1098,7 +1099,7 @@ module dataio_hdf5
                                   stride, block)
       CALL h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error)
       CALL h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_INDEPENDENT_F, error)
-      CALL h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, z(ks:ke), dimsfi, error, &
+      CALL h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, cg%z(ks:ke), dimsfi, error, &
                       file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
 
       CALL h5sclose_f(filespace, error)
@@ -1287,7 +1288,7 @@ module dataio_hdf5
       use dataio_pub,    only: cwdlen, msg, printio, die, require_init_prob, problem_name, run_id
       use fluidindex,    only: nvar
       use func,          only: fix_string
-      use grid,          only: nx, ny, nz, x, y, z, nxb, nyb, nzb
+      use grid,          only: cg
       use hdf5,          only: HID_T, HSIZE_T, HSSIZE_T, SIZE_T, H5P_FILE_ACCESS_F, H5T_NATIVE_DOUBLE, &
                                H5S_SELECT_SET_F, H5F_ACC_RDONLY_F, H5FD_MPIO_INDEPENDENT_F, H5P_DATASET_XFER_F, &
                                h5open_f, h5pcreate_f, h5pset_fapl_mpio_f, h5fopen_f, h5pclose_f, h5dopen_f, &
@@ -1361,7 +1362,7 @@ module dataio_hdf5
 
 #ifdef ISO_LOCAL
       if (.not.associated(p3d)) p3d => cs_iso2_arr(:,:,:)
-      call read_3darr_from_restart(file_id,"cs_iso2",p3d,nx,ny,nz)
+      call read_3darr_from_restart(file_id,"cs_iso2",p3d, cg%nx, cg%ny, cg%nz)
       if (associated(p3d)) nullify(p3d)
 #endif /* ISO_LOCAL */
       !----------------------------------------------------------------------------------
@@ -1370,9 +1371,9 @@ module dataio_hdf5
       rank = 4
       allocate(dimsf(rank), dimsfi(rank), chunk_dims(rank), old_chunk(rank))
       allocate(block(rank), offset(rank), count(rank), stride(rank))
-      dimsf = [nu, nxb*pxsize, nyb*pysize, nzb*pzsize] ! Dataset dimensions
+      dimsf = [nu, cg%nxb*pxsize, cg%nyb*pysize, cg%nzb*pzsize] ! Dataset dimensions
       dimsfi = dimsf
-      chunk_dims = [nu, nxb, nyb, nzb]
+      chunk_dims = [nu, cg%nxb, cg%nyb, cg%nzb]
       if (.not.associated(p4d)) p4d => u(:,is:ie,js:je,ks:ke)
 
       ! Create chunked dataset.
@@ -1412,9 +1413,9 @@ module dataio_hdf5
       !----------------------------------------------------------------------------------
       !  READ MAG VARIABLES
       !
-      dimsf = [3, nxb*pxsize, nyb*pysize, nzb*pzsize] ! Dataset dimensions
+      dimsf = [3, cg%nxb*pxsize, cg%nyb*pysize, cg%nzb*pzsize] ! Dataset dimensions
       dimsfi = dimsf
-      chunk_dims = [3, nxb, nyb, nzb]
+      chunk_dims = [3, cg%nxb, cg%nyb, cg%nzb]
       if (.not.associated(p4d)) p4d => b(:,is:ie,js:je,ks:ke)
 
       ! Create chunked dataset.
@@ -1532,7 +1533,7 @@ module dataio_hdf5
 !
    subroutine write_hdf5(chdf)
       use dataio_pub,    only: cwdlen, msg, die, user_vars_hdf5, nhdf, varlen, problem_name, run_id
-      use grid,          only: nxb, nyb, nzb
+      use grid,          only: cg
       use hdf5,          only: HID_T, H5F_ACC_TRUNC_F, H5P_FILE_ACCESS_F, H5P_DEFAULT_F, &
            &                   h5open_f, h5close_f, h5fcreate_f, h5fclose_f, h5pcreate_f, h5pclose_f, h5pset_fapl_mpio_f
       use mpisetup,      only: comm3d, ierr, info
@@ -1569,7 +1570,7 @@ module dataio_hdf5
       !
       CALL h5fcreate_f(trim(fname), H5F_ACC_TRUNC_F, file_id, error, creation_prp = H5P_DEFAULT_F, access_prp = plist_id)
       CALL h5pclose_f(plist_id, error)
-      if (.not.allocated(data)) allocate(data(nxb,nyb,nzb))
+      if (.not.allocated(data)) allocate(data(cg%nxb, cg%nyb, cg%nzb))
       do i = 1, nhdf_vars
          ierrh = 0; ok_var = .false.
          call common_vars_hdf5(hdf_vars(i),data,ierrh)
@@ -1605,7 +1606,7 @@ module dataio_hdf5
 
    subroutine write_arr(data,dsetname,file_id)
       use dataio_pub,    only: varlen
-      use grid,          only: nxb, nyb, nzb
+      use grid,          only: cg
       use hdf5,          only: HID_T, HSIZE_T, HSSIZE_T, h5screate_simple_f, h5pcreate_f, h5pset_chunk_f, &
                            h5sclose_f, h5pset_dxpl_mpio_f, h5dwrite_f, h5dclose_f, H5P_DATASET_XFER_F, H5P_DATASET_CREATE_F, &
                            H5T_NATIVE_REAL, H5S_SELECT_SET_F, H5FD_MPIO_INDEPENDENT_F, h5dcreate_f, h5dget_space_f, &
@@ -1633,7 +1634,7 @@ module dataio_hdf5
       integer(HSIZE_T),  DIMENSION(ndims) :: dimsf, dimsfi, chunk_dims
       integer :: error
 
-      chunk_dims = [nxb,nyb,nzb]                     ! Chunks dimensions
+      chunk_dims = [cg%nxb, cg%nyb, cg%nzb]                     ! Chunks dimensions
       dimsf  = chunk_dims * [pxsize, pysize, pzsize]  ! Dataset dimensions
       dimsfi = dimsf
       !
@@ -1696,7 +1697,7 @@ module dataio_hdf5
    subroutine set_common_attributes(filename, chdf, stype)
 
       use dataio_pub,    only: msg, printio, require_init_prob, piernik_hdf5_version, problem_name, run_id
-      use grid,          only: nxb, nyb, nzb, nb, xmin, xmax, ymin, ymax, zmin, zmax
+      use grid,          only: cg
       use hdf5,          only: HID_T, SIZE_T, H5F_ACC_RDWR_F, h5fopen_f, h5fclose_f, h5gcreate_f, h5gclose_f
       use h5lt,          only: h5ltset_attribute_double_f, h5ltset_attribute_int_f, h5ltmake_dataset_string_f, h5ltset_attribute_string_f
       use list_hdf5,     only: additional_attrs
@@ -1736,12 +1737,12 @@ module dataio_hdf5
          rbuffer(1)  = t                        ; rbuffer_name(1)  = "time"
          rbuffer(2)  = dt                       ; rbuffer_name(2)  = "timestep"
          rbuffer(3)  = chdf%last_hdf_time       ; rbuffer_name(3)  = "last_hdf_time"
-         rbuffer(4)  = xmin                     ; rbuffer_name(4)  = "xmin"
-         rbuffer(5)  = xmax                     ; rbuffer_name(5)  = "xmax"
-         rbuffer(6)  = ymin                     ; rbuffer_name(6)  = "ymin"
-         rbuffer(7)  = ymax                     ; rbuffer_name(7)  = "ymax"
-         rbuffer(8)  = zmin                     ; rbuffer_name(8)  = "zmin"
-         rbuffer(9)  = zmax                     ; rbuffer_name(9)  = "zmax"
+         rbuffer(4)  = cg%xmin               ; rbuffer_name(4)  = "xmin"
+         rbuffer(5)  = cg%xmax               ; rbuffer_name(5)  = "xmax"
+         rbuffer(6)  = cg%ymin               ; rbuffer_name(6)  = "ymin"
+         rbuffer(7)  = cg%ymax               ; rbuffer_name(7)  = "ymax"
+         rbuffer(8)  = cg%zmin               ; rbuffer_name(8)  = "zmin"
+         rbuffer(9)  = cg%zmax               ; rbuffer_name(9)  = "zmax"
          rbuffer(10) = piernik_hdf5_version     ; rbuffer_name(10) = "piernik"
          rbuffer(11) = magic_mass               ; rbuffer_name(11) = "magic_mass"
          rbuffer(12) = chdf%next_t_tsl          ; rbuffer_name(12) = "next_t_tsl"
@@ -1752,13 +1753,13 @@ module dataio_hdf5
          ibuffer(3)  = chdf%nhdf                ; ibuffer_name(3)  = "nhdf"
          ibuffer(4)  = chdf%nstep               ; ibuffer_name(4)  = "step_res"
          ibuffer(5)  = chdf%step_hdf            ; ibuffer_name(5)  = "step_hdf"
-         ibuffer(6)  = nxb*pxsize               ; ibuffer_name(6)  = "nxd"
-         ibuffer(7)  = nyb*pysize               ; ibuffer_name(7)  = "nyd"
-         ibuffer(8)  = nzb*pzsize               ; ibuffer_name(8)  = "nzd"
-         ibuffer(9)  = nxb                      ; ibuffer_name(9)  = "nxb"
-         ibuffer(10) = nyb                      ; ibuffer_name(10) = "nyb"
-         ibuffer(11) = nzb                      ; ibuffer_name(11) = "nzb"
-         ibuffer(12) = nb                       ; ibuffer_name(12) = "nb"
+         ibuffer(6)  = cg%nxb*pxsize         ; ibuffer_name(6)  = "nxd"
+         ibuffer(7)  = cg%nyb*pysize         ; ibuffer_name(7)  = "nyd"
+         ibuffer(8)  = cg%nzb*pzsize         ; ibuffer_name(8)  = "nzd"
+         ibuffer(9)  = cg%nxb                ; ibuffer_name(9)  = "nxb"
+         ibuffer(10) = cg%nyb                ; ibuffer_name(10) = "nyb"
+         ibuffer(11) = cg%nzb                ; ibuffer_name(11) = "nzb"
+         ibuffer(12) = cg%nb                 ; ibuffer_name(12) = "nb"
          ibuffer(13) = require_init_prob        ; ibuffer_name(13) = "require_init_prob"
 
          !BEWARE: A memory leak was detected here. h5lt calls use HD5f2cstring and probably sometimes don't free the allocated buffer

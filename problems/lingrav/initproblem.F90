@@ -90,7 +90,7 @@ module initproblem
    subroutine init_prob
       use arrays,      only: u, b, dprof
       use fluidindex,  only: ibx, iby, ibz, nvar
-      use grid,        only: nx, ny, nz
+      use grid,        only: cg
       use hydrostatic, only: hydrostatic_zeq_densmid
       use initionized, only: idni, imxi, imyi, imzi
       use mpisetup,    only: smalld
@@ -110,9 +110,9 @@ module initproblem
 
       call hydrostatic_zeq_densmid(1, 1, d0, csim2)
 
-      do k = 1,nz
-         do j = 1,ny
-            do i = 1,nx
+      do k = 1, cg%nz
+         do j = 1, cg%ny
+            do i = 1, cg%nx
                u(idni,i,j,k)   = max(smalld,dprof(k))
 
                u(imxi,i,j,k) = 0.0
@@ -132,9 +132,9 @@ module initproblem
          enddo
       enddo
 
-      do k = 1,nz
-         do j = 1,ny
-            do i = 1,nx
+      do k = 1, cg%nz
+         do j = 1, cg%ny
+            do i = 1, cg%nx
                b(ibx,i,j,k)   = b0*sqrt(u(idni,i,j,k)/d0)* bxn/sqrt(bxn**2+byn**2+bzn**2)
                b(iby,i,j,k)   = b0*sqrt(u(idni,i,j,k)/d0)* byn/sqrt(bxn**2+byn**2+bzn**2)
                b(ibz,i,j,k)   = b0*sqrt(u(idni,i,j,k)/d0)* bzn/sqrt(bxn**2+byn**2+bzn**2)

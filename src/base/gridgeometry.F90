@@ -127,18 +127,23 @@ contains
 !! We need to allocate those arrays later to have nvar%all
 !<
    subroutine geo_coeffs_arrays(nvar)
+
       use types,         only: var_numbers
       use dataio_pub,    only: die
-      use grid,          only: nx, ny, nz
+      use grid,          only: cg
+
       implicit none
+
       type(var_numbers), intent(in) :: nvar
+
       if ( any( [allocated(gc_xdim), allocated(gc_ydim), allocated(gc_zdim)] ) ) then
          call die("[gridgeometry:geo_coeffs_arrays] double allocation")
       else
-         allocate(gc_xdim(ngc,nvar%all,nx))
-         allocate(gc_ydim(ngc,nvar%all,ny))
-         allocate(gc_zdim(ngc,nvar%all,nz))
+         allocate(gc_xdim(ngc,nvar%all, cg%nx))
+         allocate(gc_ydim(ngc,nvar%all, cg%ny))
+         allocate(gc_zdim(ngc,nvar%all, cg%nz))
       endif
+
    end subroutine geo_coeffs_arrays
 !>
 !! \brief routine setting geometrical coefficients for cartesian grid
@@ -178,10 +183,13 @@ contains
 !! \brief routine setting geometrical coefficients for cylindrical grid
 !<
    subroutine set_cyl_coeffs(sweep,nvar,i1,i2)
+
       use types,         only: var_numbers
       use dataio_pub,    only: die, msg
-      use grid,          only: inv_x, xr, xl
+      use grid,          only: cg
+
       implicit none
+
       character(len=*), intent(in)  :: sweep
       type(var_numbers), intent(in) :: nvar
       integer, intent(in)           :: i1, i2
@@ -191,14 +199,14 @@ contains
       if (frun) then
          call geo_coeffs_arrays(nvar)
 
-         gc_xdim(1,:,:) = spread( inv_x(:), 1, nvar%all)
-         gc_xdim(2,:,:) = spread( xr(:), 1, nvar%all)
-         gc_xdim(3,:,:) = spread( xl(:), 1, nvar%all)
+         gc_xdim(1,:,:) = spread( cg%inv_x(:), 1, nvar%all)
+         gc_xdim(2,:,:) = spread( cg%xr(:), 1, nvar%all)
+         gc_xdim(3,:,:) = spread( cg%xl(:), 1, nvar%all)
 
          do i = LBOUND(nvar%all_fluids,1), UBOUND(nvar%all_fluids,1)
-            gc_xdim(1,nvar%all_fluids(i)%imy,:) = gc_xdim(1,nvar%all_fluids(i)%imy,:) * inv_x(:)
-            gc_xdim(2,nvar%all_fluids(i)%imy,:) = gc_xdim(2,nvar%all_fluids(i)%imy,:) * xr(:)
-            gc_xdim(3,nvar%all_fluids(i)%imy,:) = gc_xdim(3,nvar%all_fluids(i)%imy,:) * xl(:)
+            gc_xdim(1,nvar%all_fluids(i)%imy,:) = gc_xdim(1,nvar%all_fluids(i)%imy,:) * cg%inv_x(:)
+            gc_xdim(2,nvar%all_fluids(i)%imy,:) = gc_xdim(2,nvar%all_fluids(i)%imy,:) * cg%xr(:)
+            gc_xdim(3,nvar%all_fluids(i)%imy,:) = gc_xdim(3,nvar%all_fluids(i)%imy,:) * cg%xl(:)
          enddo
          gc_ydim(2:3,:,:) = 1.0     ! [ 1/r , 1 , 1]
 
@@ -211,7 +219,7 @@ contains
          case ("xsweep")
             gc => gc_xdim
          case ("ysweep")
-            gc_ydim(1,:,:)   = inv_x(i2)
+            gc_ydim(1,:,:)   = cg%inv_x(i2)
             gc => gc_ydim
          case ("zsweep")
             gc => gc_zdim
@@ -221,12 +229,15 @@ contains
             write(6,*) i1,i2   ! fool the compiler    QA_WARN
       end select
       frun = .false.
+
    end subroutine set_cyl_coeffs
 !>
 !! \brief routine calculating geometrical source term for cartesian grid
 !<
    function cart_geometry_source_terms(u,p,sweep) result(res)
+
       implicit none
+
       character(len=*), intent(in)           :: sweep
       real, dimension(:,:), intent(in)       :: u, p
       real, dimension(size(p,1),size(p,2))   :: res
@@ -234,14 +245,18 @@ contains
       res = 0.0
       return
       if (.false.) write(0,*) sweep, u, p
+
    end function cart_geometry_source_terms
 !>
 !! \brief routine calculating geometrical source term for cylindrical grid
 !<
    function cyl_geometry_source_terms(u,p,sweep) result(res)
+
       use fluidindex, only: iarr_all_dn, iarr_all_my
-      use grid,       only: inv_x
+      use grid,       only: cg
+
       implicit none
+
       character(len=*), intent(in)           :: sweep
       real, dimension(:,:), intent(in)       :: u, p
       real, dimension(size(p,1),size(p,2))   :: res
@@ -249,12 +264,12 @@ contains
 
       if (sweep == 'xsweep') then
          do i = 1, SIZE(iarr_all_dn)
-            res(i,:) = inv_x(:) * (u(iarr_all_my(i),:)**2 / u(iarr_all_dn(i),:) + p(i,:))
+            res(i,:) = cg%inv_x(:) * (u(iarr_all_my(i),:)**2 / u(iarr_all_dn(i),:) + p(i,:))
          enddo
       else
          res = 0.0
       endif
 
-      return
    end function cyl_geometry_source_terms
+
 end module gridgeometry

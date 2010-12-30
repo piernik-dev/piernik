@@ -38,9 +38,12 @@
 !<
 module interactions
 ! pulled by FLUID_INTERACTIONS
+
    implicit none
+
    private
    public :: init_interactions, fluid_interactions, collfaq, cfl_interact
+
    real, allocatable, dimension(:,:)      :: collfaq     !< nvar%fluids x nvar%fluids array of collision factors
    real :: collision_factor                              !< collision factor
    real :: cfl_interact                                  !< Courant factor for %interactions
@@ -150,7 +153,7 @@ contains
 !<
    subroutine dragforce(sweep, i1, i2, n, du, uu)
       use fluidindex,   only: nvar, iarr_all_dn, iarr_all_mx
-      use grid,         only: maxxyz, x, y, z
+      use grid,         only: cg
 #ifndef ISO
       use fluidindex,   only: iarr_all_en
 #endif /* !ISO */
@@ -162,24 +165,24 @@ contains
       integer  :: ifl,jfl,rend
       real, dimension(nvar%fluids,nvar%fluids,n) :: flch
       real, dimension(nvar%fluids,n)             :: colls
-      real, dimension(maxxyz)                    :: r1,r2
+      real, dimension(cg%maxxyz)                    :: r1,r2
 
       du=0.0
 !-----collisions between fluids------
       select case (sweep)
          case ('xsweep')
-            a1    = y(i1)
-            rend  = size(x)
-            r1(1:rend) = x(:)                            ! r1   max(size(x),size(y),size(z))
+            a1    = cg%y(i1)
+            rend  = size(cg%x)
+            r1(1:rend) = cg%x(:)                            ! r1   max(size(x),size(y),size(z))
             r2(1:rend) = a1 / (r1(1:rend)*r1(1:rend) + a1 * a1)
          case ('ysweep')
-            a1    = x(i2)
-            rend  = size(y)
-            r1(1:rend) = y(1:rend)
+            a1    = cg%x(i2)
+            rend  = size(cg%y)
+            r1(1:rend) = cg%y(1:rend)
             r2(1:rend) = a1 / (r1(1:rend)*r1(1:rend) + a1 * a1)
          case ('zsweep')
             a1    = 1.0
-            rend  = size(z)
+            rend  = size(cg%z)
             r1(1:rend) = 0.0
             r2(1:rend) = 1.0
       end select

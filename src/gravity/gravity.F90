@@ -310,10 +310,10 @@ module gravity
 
       use arrays,        only: sgp
       use dataio_pub,    only: die
-      use grid,          only: nb, nxb, nyb, nzb, xdim, ydim, zdim, has_dir
+      use grid,          only: cg
       use mpi,           only: MPI_STATUS_SIZE, MPI_REQUEST_NULL
       use mpisetup,      only: comm3d, ierr, procxl, procxr, procyl, procyr, proczl, proczr, pxsize, pysize, pzsize, &
-           &                   bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr, &
+           &                   bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr, xdim, ydim, zdim, has_dir, &
            &                   ARR_YZ_LEFT_BND, ARR_YZ_RIGHT_BND, ARR_YZ_LEFT_DOM, ARR_YZ_RIGHT_DOM, &
            &                   ARR_XZ_LEFT_BND, ARR_XZ_RIGHT_BND, ARR_XZ_LEFT_DOM, ARR_XZ_RIGHT_DOM, &
            &                   ARR_XY_LEFT_BND, ARR_XY_RIGHT_BND, ARR_XY_LEFT_DOM, ARR_XY_RIGHT_DOM
@@ -331,8 +331,8 @@ module gravity
 
          select case (bnd_xl)
             case ('per')
-               do i = 1, ceiling(nb/real(nxb)) ! Repeating is important for domains that are narrower than their guardcells (e.g. nxb = 2)
-                  sgp(1:nb, :, :) = sgp(nxb+1:nxb+nb, :, :)
+               do i = 1, ceiling(cg%nb/real(cg%nxb)) ! Repeating is important for domains that are narrower than their guardcells (e.g. cg%nxb = 2)
+                  sgp(1:cg%nb, :, :) = sgp(cg%nxb+1:cg%nxb+cg%nb, :, :)
                enddo
             case ('mpi')
                if (pxsize > 1) then
@@ -344,15 +344,15 @@ module gravity
             case ('she') ! move appropriate code from poissonsolver::poisson_solve or do nothing. Or die until someone really needs SHEAR.
                 call die("[gravity:all_grav_boundaries] bnd_xl == 'she' not implemented")
             case default ! Set gradient == 0 on the boundaries
-               do i = 1, nb
-                  sgp(i, :, :) = sgp(nb+1, :, :)
+               do i = 1, cg%nb
+                  sgp(i, :, :) = sgp(cg%nb+1, :, :)
                enddo
          end select
 
          select case (bnd_xr)
             case ('per')
-               do i = 1, ceiling(nb/real(nxb))
-                  sgp(nxb+nb+1:nxb+2*nb, :, :) = sgp(nb+1:2*nb, :, :)
+               do i = 1, ceiling(cg%nb/real(cg%nxb))
+                  sgp(cg%nxb+cg%nb+1:cg%nxb+2*cg%nb, :, :) = sgp(cg%nb+1:2*cg%nb, :, :)
                enddo
             case ('mpi')
                if (pxsize > 1) then
@@ -364,8 +364,8 @@ module gravity
             case ('she')
                 call die("[gravity:all_grav_boundaries] bnd_xl == 'she' not implemented")
             case default
-               do i = 1, nb
-                  sgp(nb+nxb+i, :, :) = sgp(nb+nxb, :, :)
+               do i = 1, cg%nb
+                  sgp(cg%nb+cg%nxb+i, :, :) = sgp(cg%nb+cg%nxb, :, :)
                enddo
          end select
 
@@ -375,8 +375,8 @@ module gravity
 
          select case (bnd_yl)
             case ('per')
-               do i = 1, ceiling(nb/real(nyb))
-                  sgp(:, 1:nb, :) = sgp(:, nyb+1:nyb+nb, :)
+               do i = 1, ceiling(cg%nb/real(cg%nyb))
+                  sgp(:, 1:cg%nb, :) = sgp(:, cg%nyb+1:cg%nyb+cg%nb, :)
                enddo
             case ('mpi')
                if (pysize > 1) then
@@ -386,15 +386,15 @@ module gravity
                   call die("[gravity:all_grav_boundaries] bnd_yl == 'mpi' && pysize <= 1")
                endif
             case default
-               do i = 1, nb
-                  sgp(:, i, :) = sgp(:, nb+1, :)
+               do i = 1, cg%nb
+                  sgp(:, i, :) = sgp(:, cg%nb+1, :)
                enddo
          end select
 
          select case (bnd_yr)
             case ('per')
-               do i = 1, ceiling(nb/real(nyb))
-                  sgp(:, nyb+nb+1:nyb+2*nb, :) = sgp(:, nb+1:2*nb, :)
+               do i = 1, ceiling(cg%nb/real(cg%nyb))
+                  sgp(:, cg%nyb+cg%nb+1:cg%nyb+2*cg%nb, :) = sgp(:, cg%nb+1:2*cg%nb, :)
                enddo
             case ('mpi')
                if (pysize > 1) then
@@ -404,8 +404,8 @@ module gravity
                   call die("[gravity:all_grav_boundaries] bnd_yr == 'mpi' && pysize <= 1")
                endif
             case default
-               do i = 1, nb
-                  sgp(:, nb+nyb+i, :) = sgp(:, nb+nyb, :)
+               do i = 1, cg%nb
+                  sgp(:, cg%nb+cg%nyb+i, :) = sgp(:, cg%nb+cg%nyb, :)
                enddo
          end select
 
@@ -415,8 +415,8 @@ module gravity
 
          select case (bnd_zl)
             case ('per')
-               do i = 1, ceiling(nb/real(nzb))
-                  sgp(:, :, 1:nb) = sgp(:, :, nzb+1:nzb+nb)
+               do i = 1, ceiling(cg%nb/real(cg%nzb))
+                  sgp(:, :, 1:cg%nb) = sgp(:, :, cg%nzb+1:cg%nzb+cg%nb)
                enddo
             case ('mpi')
                if (pzsize > 1) then
@@ -426,15 +426,15 @@ module gravity
                   call die("[gravity:all_grav_boundaries] bnd_zl == 'mpi' && pzsize <= 1")
                endif
             case default
-               do i = 1, nb
-                  sgp(:, :, i) = sgp(:, :, nb+1)
+               do i = 1, cg%nb
+                  sgp(:, :, i) = sgp(:, :, cg%nb+1)
                enddo
          end select
 
          select case (bnd_zr)
             case ('per')
-               do i = 1, ceiling(nb/real(nzb))
-                  sgp(:, :, nzb+nb+1:nzb+2*nb) = sgp(:, :, nb+1:2*nb)
+               do i = 1, ceiling(cg%nb/real(cg%nzb))
+                  sgp(:, :, cg%nzb+cg%nb+1:cg%nzb+2*cg%nb) = sgp(:, :, cg%nb+1:2*cg%nb)
                enddo
             case ('mpi')
                if (pzsize > 1) then
@@ -444,8 +444,8 @@ module gravity
                   call die("[gravity:all_grav_boundaries] bnd_zr == 'mpi' && pzsize <= 1")
                endif
             case default
-               do i = 1, nb
-                  sgp(:, :, nb+nzb+i) = sgp(:, :, nb+nzb)
+               do i = 1, cg%nb
+                  sgp(:, :, cg%nb+cg%nzb+i) = sgp(:, :, cg%nb+cg%nzb)
                enddo
          end select
 
@@ -467,13 +467,13 @@ module gravity
 
    subroutine grav_uniform
       use arrays, only: gp
-      use grid,   only: nx, ny, nz, x, y, z
+      use grid,   only: cg
       implicit none
       integer :: i, j, k
-      do i = 1, nx
-         do j = 1, ny
-            do k = 1, nz
-               gp(:,:,i) = -(g_dir(1)*x(i) + g_dir(2)*y(j) + g_dir(3)*z(i))
+      do i = 1, cg%nx
+         do j = 1, cg%ny
+            do k = 1, cg%nz
+               gp(:,:,i) = -(g_dir(1)*cg%x(i) + g_dir(2)*cg%y(j) + g_dir(3)*cg%z(i))
             enddo
          enddo
       enddo
@@ -481,13 +481,13 @@ module gravity
 
    subroutine grav_linear
       use arrays, only: gp
-      use grid,   only: nx, ny, nz, x, y, z
+      use grid,   only: cg
       implicit none
       integer :: i, j, k
-      do i = 1, nx
-         do j = 1, ny
-            do k = 1, nz
-               gp(:,:,i) = -0.5*(g_dir(1)*x(i)**2 + g_dir(2)*y(j)**2 + g_dir(3)*z(i)**2)
+      do i = 1, cg%nx
+         do j = 1, cg%ny
+            do k = 1, cg%nz
+               gp(:,:,i) = -0.5*(g_dir(1)*cg%x(i)**2 + g_dir(2)*cg%y(j)**2 + g_dir(3)*cg%z(i)**2)
             enddo
          enddo
       enddo
@@ -496,7 +496,7 @@ module gravity
    subroutine grav_ptmass_pure(flatten)
       use arrays,     only: gp
       use constants,  only: newtong
-      use grid,       only: nx, ny, x, y, z
+      use grid,       only: cg
       implicit none
       logical, intent(in) :: flatten
       integer             :: i, j
@@ -505,15 +505,15 @@ module gravity
       r_smooth2 = r_smooth**2
       GM        = newtong*ptmass
 
-       do i = 1, nx
-          x2 = (x(i) - ptm_x)**2
-          do j = 1, ny
-             rc2 = x2 + (y(j) - ptm_y)**2
+       do i = 1, cg%nx
+          x2 = (cg%x(i) - ptm_x)**2
+          do j = 1, cg%ny
+             rc2 = x2 + (cg%y(j) - ptm_y)**2
 
              if (flatten) then
                 gp(i,j,:) = -GM / sqrt(rc2)
              else
-                gp(i,j,:) = -GM / sqrt( (z(:) - ptm_z)**2 + rc2 )
+                gp(i,j,:) = -GM / sqrt( (cg%z(:) - ptm_z)**2 + rc2 )
              endif
 
           enddo
@@ -524,7 +524,7 @@ module gravity
 
       use arrays,     only: gp
       use constants,  only: newtong
-      use grid,       only: nx, ny, x, y, z
+      use grid,       only: cg
       use mpisetup,   only: smalld
       use fluidindex, only: nvar
 
@@ -539,10 +539,10 @@ module gravity
       r_smooth2 = r_smooth**2
       GM        = newtong*ptmass
 
-      do i = 1, nx
-         x2 = (x(i) - ptm_x)**2
-         do j = 1, ny
-            rc2 = x2 + (y(j) - ptm_y)**2
+      do i = 1, cg%nx
+         x2 = (cg%x(i) - ptm_x)**2
+         do j = 1, cg%ny
+            rc2 = x2 + (cg%y(j) - ptm_y)**2
             fr  = min( (sqrt(rc2)/r_grav)**n_gravr , 100.0)    ! BEWARE: hardcoded value
             fr  = max( 1./cosh(fr), smalld*1.e-2)              ! BEWARE: hadrcoded value
             fr  = -cs_iso2 * log(fr)
@@ -550,7 +550,7 @@ module gravity
             if (flatten) then
                gp(i,j,:) = -GM / sqrt( rc2 + r_smooth2 ) + fr
             else
-               gp(i,j,:) = -GM / sqrt( (z(:) - ptm_z)**2 + rc2 + r_smooth2 ) + fr
+               gp(i,j,:) = -GM / sqrt( (cg%z(:) - ptm_z)**2 + rc2 + r_smooth2 ) + fr
             endif
 
          enddo
@@ -562,7 +562,8 @@ module gravity
 
       use arrays,     only: gp
       use constants,  only: newtong
-      use grid,       only: nx, ny, nz, x, y, z
+      use grid,       only: cg
+
       implicit none
 
       integer :: i, j, k
@@ -573,12 +574,12 @@ module gravity
       gm =  - newtong * ptmass
       gmr = 0.5 * gm / r_smooth
 
-      do k = 1, nz
-         z2 = (z(k) - ptm_z)**2
-         do j = 1, ny
-            yz2 = z2 + (y(j) - ptm_y)**2
-            do i = 1, nx
-               r2 = yz2 + (x(i) - ptm_x)**2
+      do k = 1, cg%nz
+         z2 = (cg%z(k) - ptm_z)**2
+         do j = 1, cg%ny
+            yz2 = z2 + (cg%y(j) - ptm_y)**2
+            do i = 1, cg%nx
+               r2 = yz2 + (cg%x(i) - ptm_x)**2
                if (r2 < r_smooth2) then
                   gp(i,j,k) = gmr * (3. - r2/r_smooth2)
                else
@@ -663,8 +664,10 @@ module gravity
 !<
    subroutine grav_pot2accel(sweep, i1,i2, n, grav,istep)
 
-      use arrays, only: gpot, hgpot
-      use grid,   only: dl, xdim, ydim, zdim
+      use arrays,   only: gpot, hgpot
+      use grid,     only: cg
+      use mpisetup, only: xdim, ydim, zdim
+
       implicit none
 
       character(len=*), intent(in)   :: sweep      !< string of characters that points out the current sweep direction
@@ -702,21 +705,21 @@ module gravity
       if (istep==1) then
          select case (sweep)
             case ('xsweep')
-               grav(2:n-1) = 0.5*(hgpot(1:n-2,i1,i2) - hgpot(3:n,i1,i2))/dl(xdim)
+               grav(2:n-1) = 0.5*(hgpot(1:n-2,i1,i2) - hgpot(3:n,i1,i2))/cg%dl(xdim)
             case ('ysweep')
-               grav(2:n-1) = 0.5*(hgpot(i2,1:n-2,i1) - hgpot(i2,3:n,i1))/dl(ydim)
+               grav(2:n-1) = 0.5*(hgpot(i2,1:n-2,i1) - hgpot(i2,3:n,i1))/cg%dl(ydim)
             case ('zsweep')
-               grav(2:n-1) = 0.5*(hgpot(i1,i2,1:n-2) - hgpot(i1,i2,3:n))/dl(zdim)
+               grav(2:n-1) = 0.5*(hgpot(i1,i2,1:n-2) - hgpot(i1,i2,3:n))/cg%dl(zdim)
          end select
 
       else
          select case (sweep)
             case ('xsweep')
-               grav(2:n-1) = 0.5*(gpot(1:n-2,i1,i2) - gpot(3:n,i1,i2))/dl(xdim)
+               grav(2:n-1) = 0.5*(gpot(1:n-2,i1,i2) - gpot(3:n,i1,i2))/cg%dl(xdim)
             case ('ysweep')
-               grav(2:n-1) = 0.5*(gpot(i2,1:n-2,i1) - gpot(i2,3:n,i1))/dl(ydim)
+               grav(2:n-1) = 0.5*(gpot(i2,1:n-2,i1) - gpot(i2,3:n,i1))/cg%dl(ydim)
             case ('zsweep')
-               grav(2:n-1) = 0.5*(gpot(i1,i2,1:n-2) - gpot(i1,i2,3:n))/dl(zdim)
+               grav(2:n-1) = 0.5*(gpot(i1,i2,1:n-2) - gpot(i1,i2,3:n))/cg%dl(zdim)
          end select
       endif
 
@@ -730,16 +733,15 @@ module gravity
    subroutine grav_accel2pot
 
       use arrays,   only: gp
-      use grid,     only: dl, xdim, ydim, zdim, is, ie, js, je, ks, ke, nb, nx, ny, nz, zr, yr, xr
+      use grid,     only: cg
       use mpi,      only: MPI_DOUBLE_PRECISION
-      use mpisetup, only: pxsize, pysize, pzsize, pcoords, master, nproc, ndims, &
-           &              comm, comm3d, err, ierr, mpifind
+      use mpisetup, only: pxsize, pysize, pzsize, pcoords, master, nproc, xdim, ydim, zdim, ndims, comm, comm3d, err, ierr, mpifind
 
       implicit none
 
       integer               :: i, j, k, ip, pgpmax
       real, allocatable     :: gpwork(:,:,:)
-      real                  :: gravrx(nx), gravry(ny), gravrz(nz)
+      real                  :: gravrx(cg%nx), gravry(cg%ny), gravrz(cg%nz)
       real                  :: gp_max
       integer, dimension(3) :: loc_gp_max
       integer               :: proc_gp_max
@@ -758,33 +760,33 @@ module gravity
 ! disk, bulge and halo parts of galactic potential are computed.
 ! gravpart is used to distinguish which part has to be computed.
 
-      allocate(gpwork(nx,ny,nz))
+      allocate(gpwork(cg%nx, cg%ny, cg%nz))
       gpwork(1,1,1) = 0.0
 
-      call grav_accel('xsweep',1,1, xr(:), nx, gravrx)
-      do i = 1, nx-1
-         gpwork(i+1,1,1) = gpwork(i,1,1) - gravrx(i)*dl(xdim)
+      call grav_accel('xsweep',1,1, cg%xr(:), cg%nx, gravrx)
+      do i = 1, cg%nx-1
+         gpwork(i+1,1,1) = gpwork(i,1,1) - gravrx(i)*cg%dl(xdim)
       enddo
 
-      do i=1,nx
-         call grav_accel('ysweep',1, i, yr(:), ny, gravry)
-         do j = 1, ny-1
-            gpwork(i,j+1,1) = gpwork(i,j,1) - gravry(j)*dl(ydim)
+      do i=1, cg%nx
+         call grav_accel('ysweep',1, i, cg%yr(:), cg%ny, gravry)
+         do j = 1, cg%ny-1
+            gpwork(i,j+1,1) = gpwork(i,j,1) - gravry(j)*cg%dl(ydim)
          enddo
       enddo
 
-      do i=1,nx
-         do j=1,ny
-            call grav_accel('zsweep', i, j, zr(:), nz, gravrz)
-            do k = 1, nz-1
-               gpwork(i,j,k+1) = gpwork(i,j,k) - gravrz(k)*dl(zdim)
+      do i=1, cg%nx
+         do j=1, cg%ny
+            call grav_accel('zsweep', i, j, cg%zr(:), cg%nz, gravrz)
+            do k = 1, cg%nz-1
+               gpwork(i,j,k+1) = gpwork(i,j,k) - gravrz(k)*cg%dl(zdim)
             enddo
          enddo
       enddo
 
-      dgpx_proc = gpwork(is,1,1)-gpwork(1,1,1)
-      dgpy_proc = gpwork(1,js,1)-gpwork(1,1,1)
-      dgpz_proc = gpwork(1,1,ks)-gpwork(1,1,1)
+      dgpx_proc = gpwork(cg%is, 1, 1)-gpwork(1,1,1)
+      dgpy_proc = gpwork(1, cg%js, 1)-gpwork(1,1,1)
+      dgpz_proc = gpwork(1, 1, cg%ks)-gpwork(1,1,1)
 
       call MPI_Gather ( dgpx_proc, 1, MPI_DOUBLE_PRECISION, dgpx_all, 1, MPI_DOUBLE_PRECISION, 0, comm3d, ierr )
       call MPI_Gather ( dgpy_proc, 1, MPI_DOUBLE_PRECISION, dgpy_all, 1, MPI_DOUBLE_PRECISION, 0, comm3d, ierr )
@@ -834,9 +836,9 @@ module gravity
 
       gpwork = gpwork + ddgp(px,py,pz)
 
-      gp_max      = maxval(gpwork(is:ie,js:je,ks:ke))
-      loc_gp_max  = maxloc(gpwork(is:ie,js:je,ks:ke)) &
-                  + (/nb,nb,nb/)
+      gp_max      = maxval(gpwork(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke))
+      loc_gp_max  = maxloc(gpwork(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)) &
+                  + [ cg%nb, cg%nb, cg%nb ]
 
       call mpifind(gp_max, 'max', loc_gp_max, proc_gp_max)
       pgpmax = proc_gp_max

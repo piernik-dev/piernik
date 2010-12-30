@@ -52,17 +52,20 @@
 module timestepneutral
 ! pulled by NEUTRAL
    implicit none
+
    private
    public :: dt_neu, c_neu, timestep_neu
+
    real   :: dt_neu               !< final timestep for neutral fluid
    real   :: c_neu                !< maximum speed at which information travels in the neutral fluid
 
 contains
 
    subroutine timestep_neu
+
       use types,         only: component_fluid
       use arrays,        only: u
-      use grid,          only: ks, ke, is, ie, js, je
+      use grid,          only: cg
       use fluidindex,    only: nvar
       use timestepfuncs, only: compute_c_max, compute_dt
 
@@ -83,9 +86,10 @@ contains
 
       fl => nvar%neu
 
-      do k = ks, ke
-         do j = js, je
-            do i = is, ie
+      do k = cg%ks, cg%ke
+         do j = cg%js, cg%je
+            do i = cg%is, cg%ie
+
 #ifdef ISO
                p  = fl%cs2*u(fl%idn,i,j,k)
                cs = sqrt(fl%cs2)

@@ -136,7 +136,7 @@ contains
       use arrays,        only: u
       use constants,     only: pi
       use dataio_pub,    only: msg, printinfo, warn
-      use grid,          only: x, y, z, dx, dy, dz, nx, ny, nz, xmin, xmax, ymin, ymax, zmin, zmax
+      use grid,          only: cg
       use initionized,   only: gamma_ion, idni, imxi, imzi, ieni
       use mpisetup,      only: master
 #ifdef MAGNETIC
@@ -148,17 +148,17 @@ contains
       integer :: i, j, k, ii, jj, kk
       real    :: xx, yy, zz, dm
 
-      do k = 1, nz
-         do j = 1, ny
-            do i = 1, nx
+      do k = cg%ks, cg%ke
+         do j = cg%js, cg%je
+            do i = cg%is, cg%ie
 
                dm = 0.
                do kk = -nsub+1, nsub-1, 2
-                  zz = ((z(k) + kk*dz/(2.*nsub) - z0)/a3)**2
+                  zz = ((cg%z(k) + kk*cg%dz/(2.*nsub) - z0)/a3)**2
                   do jj = -nsub+1, nsub-1, 2
-                     yy = ((y(j) + jj*dy/(2.*nsub) - y0)/a1)**2
+                     yy = ((cg%y(j) + jj*cg%dy/(2.*nsub) - y0)/a1)**2
                      do ii = -nsub+1, nsub-1, 2
-                        xx = ((x(i) + ii*dx/(2.*nsub) - x0)/a1)**2
+                        xx = ((cg%x(i) + ii*cg%dx/(2.*nsub) - x0)/a1)**2
 
                         if (xx+yy+zz <= 1.) then
                            dm = dm + d0
@@ -175,19 +175,19 @@ contains
          enddo
       enddo
 
-      u(imxi:imzi, 1:nx, 1:ny, 1:nz) = 0.0
+      u(imxi:imzi, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = 0.0
 
 #ifndef ISO
 #ifdef MAGNETIC
-      b(:, 1:nx, 1:ny, 1:nz) = 0.0
+      b(:, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = 0.0
 #endif /* MAGNETIC */
-      u(ieni, 1:nx, 1:ny, 1:nz) = p0/(gamma_ion - 1.0)
+      u(ieni, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = p0/(gamma_ion - 1.0)
 #endif /* !ISO */
 
       if (master) then
          write(msg, '(3(a,g12.5),a)')"[initproblem:init_prob] Set up spheroid with a1 and a3 axes = ", a1, ", ", a3, " (eccentricity = ", e, ")"
          call printinfo(msg, .true.)
-         if (x0-a1<xmin .or. x0+a1>xmax .or. y0-a1<ymin .or. y0+a1>ymax .or. z0-a3<zmin .or. z0+a3>zmax) &
+         if (x0-a1<cg%xmin .or. x0+a1>cg%xmax .or. y0-a1<cg%ymin .or. y0+a1>cg%ymax .or. z0-a3<cg%zmin .or. z0+a3>cg%zmax) &
               call warn("[initproblem:init_prob] Part of the spheroid is outside the domain")
          write(msg,'(2(a,g12.5))')   "[initproblem:init_prob] Density = ", d0, " mass = ", 4./3.*pi * a1**2 * a3 * d0
          call printinfo(msg, .true.)
@@ -233,7 +233,7 @@ contains
       use diagnostics,   only: my_allocate
       use constants,     only: pi, newtong
       use dataio_pub,    only: warn
-      use grid,          only: x, y, z, is, ie, js, je, ks, ke, nxb, nyb, nzb
+      use grid,          only: cg
       use mpisetup,      only: master
 
       implicit none
@@ -243,7 +243,7 @@ contains
       real               :: AA1, AA3, a12, a32, x02, y02, z02, lam, h
       real, parameter    :: small_e = 1e-3
 
-      call my_allocate(apot, [nxb, nyb, nzb], "apot")
+      call my_allocate(apot, [cg%nxb, cg%nyb, cg%nzb], "apot")
 
       AA1 = 2./3. ; AA3 = 2./3.
       if (e < 0. .and. master) call warn("[initproblem:compute_maclaurin_potential] e<0. not fully implemented yet!")
@@ -261,12 +261,12 @@ contains
 
       a12 = a1**2
       a32 = a3**2
-      do k = ks, ke
-         z02 = (z(k)-z0)**2
-         do j = js, je
-            y02 = (y(j)-y0)**2
-            do i = is, ie
-               x02 = (x(i)-x0)**2
+      do k = cg%ks, cg%ke
+         z02 = (cg%z(k)-z0)**2
+         do j = cg%js, cg%je
+            y02 = (cg%y(j)-y0)**2
+            do i = cg%is, cg%ie
+               x02 = (cg%x(i)-x0)**2
                r2 = (x02+y02)/a12 + z02/a32
                rr = r2 * a12
                if (r2 > 1.) then
@@ -293,7 +293,7 @@ contains
                      potential = - 2./3. * (3*a12 - rr)
                   endif
                endif
-               apot(i-is+1, j-js+1, k-ks+1) = potential * pi * newtong * d0
+               apot(i-cg%is+1, j-cg%js+1, k-cg%ks+1) = potential * pi * newtong * d0
             enddo
          enddo
       enddo
@@ -321,7 +321,7 @@ contains
 
       use arrays,        only: sgp
       use dataio_pub,    only: msg, printinfo
-      use grid,          only: is, ie, js, je, ks, ke
+      use grid,          only: cg
       use mpisetup,      only: master, comm3d, ierr
       use mpi,           only: MPI_DOUBLE_PRECISION, MPI_SUM, MPI_MIN, MPI_MAX, MPI_IN_PLACE
 
@@ -335,10 +335,10 @@ contains
       dev(1) = huge(1.0)
       dev(2) = -dev(1)
 
-      do k = ks, ke
-         do j = js, je
-            do i = is, ie
-               potential =  apot(i-is+1, j-js+1, k-ks+1)
+      do k = cg%ks, cg%ke
+         do j = cg%js, cg%je
+            do i = cg%is, cg%ie
+               potential =  apot(i-cg%is+1, j-cg%js+1, k-cg%ks+1)
                norm(1) = norm(1) + (potential - sgp(i, j, k))**2
                norm(2) = norm(2) + potential**2
                dev(1) = min(dev(1), (potential - sgp(i, j, k))/potential)
@@ -367,7 +367,7 @@ contains
    subroutine maclaurin_error_vars(var, tab, ierrh)
 
       use arrays,        only: sgp
-      use grid,          only: is, ie, js, je, ks, ke
+      use grid,          only: cg
 
       implicit none
 
@@ -380,7 +380,7 @@ contains
          case ("apot")
             tab(:,:,:) = apot(:,:,:)
          case ("errp")
-            tab(:,:,:) = apot(:,:,:) - sgp(is:ie, js:je, ks:ke)
+            tab(:,:,:) = apot(:,:,:) - sgp(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
          case default
             ierrh = -1
       end select

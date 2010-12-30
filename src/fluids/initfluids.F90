@@ -112,7 +112,7 @@ module initfluids
 
   contains
 
-   subroutine init_fluids(cgrid)
+   subroutine init_fluids(cg)
 
       use types,           only: grid_container
       use fluidindex,      only: fluid_index
@@ -138,7 +138,7 @@ module initfluids
 #endif /* COSM_RAYS */
 
       implicit none
-      type(grid_container), intent(in) :: cgrid
+      type(grid_container), intent(in) :: cg
 #ifdef VERBOSE
       call printinfo("[initfluids:init_fluids]: commencing...")
 #endif /* VERBOSE */
@@ -156,7 +156,7 @@ module initfluids
       call init_cosmicrays
 #endif /* COSM_RAYS */
 
-      call fluid_index(cgrid)
+      call fluid_index(cg)
 
       call init_fluxes
 

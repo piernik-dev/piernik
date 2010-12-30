@@ -106,7 +106,7 @@ module initproblem
       use constants,     only: pi, dpi
       use dataio_pub,    only: msg, printinfo, run_id
       use fluidindex,    only: nvar
-      use grid,          only: x, y, z, nx, ny, nz, Lx, Lz
+      use grid,          only: cg
       use mpisetup,      only: proc
       use shear,         only: omega
       use types,         only: component_fluid
@@ -120,7 +120,7 @@ module initproblem
 
       real                                :: rcx, rcy, ux, uy, wx, wy, taus, eta, vk, beta !, inv
       integer                             :: i, j, k, n, clock
-      real(kind=4), dimension(3,nx,ny,nz) :: noise
+      real(kind=4), dimension(3, cg%nx, cg%ny, cg%nz) :: noise
       integer, dimension(:), allocatable  :: seed
       complex(kind=8), dimension(7)       :: coeff
       type(component_fluid), pointer      :: dst, neu
@@ -145,8 +145,8 @@ module initproblem
          coeff(1) = (-0.1398623, 0.0372951 ) ! w_x
          coeff(2) = ( 0.1305628, 0.0640574 ) ! w_y
          coeff(3) = ( 0.1639549,-0.0233277 ) ! w_z
-         kx = dpi/Lx
-         kz = dpi/Lz
+         kx = dpi/cg%Lx
+         kz = dpi/cg%Lz
       else if (run_id == 'lnB') then
          call printinfo("Lin B")
          coeff(4) = (-0.0174121,-0.2770347 ) ! u_x
@@ -156,11 +156,11 @@ module initproblem
          coeff(1) = ( 0.0462916,-0.2743072 ) ! w_x
          coeff(2) = ( 0.2739304, 0.0039293 ) ! w_y
          coeff(3) = ( 0.0083263, 0.2768866 ) ! w_z
-         kx = dpi/Lx
-         kz = dpi/Lz
+         kx = dpi/cg%Lx
+         kz = dpi/cg%Lz
       else
-         kx = dpi/Lx
-         kz = dpi/Lz
+         kx = dpi/cg%Lx
+         kz = dpi/cg%Lz
          coeff(:) = ( 0.0, 0.0 )
       endif
 
@@ -196,11 +196,11 @@ module initproblem
       write(msg,*) '\eta vk / \Omega = ', eta_gas * neu%cs / csvk / omega
       call printinfo(msg)
 
-      do i = 1,nx
-         rcx = x(i)
-         do j = 1,ny
-            rcy = y(j)
-            do k = 1,nz
+      do i = 1, cg%nx
+         rcx = cg%x(i)
+         do j = 1, cg%ny
+            rcy = cg%y(j)
+            do k = 1, cg%nz
 #ifdef NEUTRAL
                u(neu%idn,i,j,k) = rhog
                u(neu%imx,i,j,k) = ux * rhog
@@ -218,36 +218,36 @@ module initproblem
 
 ! Linear test
             if (linear) then
-!               u(dst%idn,i,j,k) =  u(dst%idn,i,j,k) + amp*eps*dsin(kz*z(k))*dcos(kx*x(i))
-               u(dst%idn,i,j,k) =  u(dst%idn,i,j,k) + amp*eps*dcos(kz*z(k))*dcos(kx*x(i))
-! ...                u(dst%idn,i,j,k) =  u(dst%idn,i,j,k) + amp*eps*dcos(kx*x(i))*dcos(kz*z(k))
+!               u(dst%idn,i,j,k) =  u(dst%idn,i,j,k) + amp*eps*dsin(kz*cg%z(k))*dcos(kx*cg%x(i))
+               u(dst%idn,i,j,k) =  u(dst%idn,i,j,k) + amp*eps*dcos(kz*cg%z(k))*dcos(kx*cg%x(i))
+! ...                u(dst%idn,i,j,k) =  u(dst%idn,i,j,k) + amp*eps*dcos(kx*x(i))*dcos(kz*cg%z(k))
 ! B              u(dst%idn,i,j,k) =  u(dst%idn,i,j,k) + amp * eps *&
-! B                 ( real(coeff(7))*dcos(kx*x(i)) - &
-! B                  aimag(coeff(7))*dsin(kx*x(i))) * dcos(kz*z(k))
+! B                 ( real(coeff(7))*dcos(kx*cg%x(i)) - &
+! B                  aimag(coeff(7))*dsin(kx*cg%x(i))) * dcos(kz*z(k))
                u(dst%imx,i,j,k) =  u(dst%imx,i,j,k) + eta*vk*amp * &
-                  ( real(coeff(1))*dcos(kx*x(i)) - &
-                   aimag(coeff(1))*dsin(kx*x(i))) * dcos(kz*z(k))
+                  ( real(coeff(1))*dcos(kx*cg%x(i)) - &
+                   aimag(coeff(1))*dsin(kx*cg%x(i))) * dcos(kz*cg%z(k))
                u(dst%imy,i,j,k) =  u(dst%imy,i,j,k) + eta*vk*amp * &
-                  ( real(coeff(2))*dcos(kx*x(i)) - &
-                   aimag(coeff(2))*dsin(kx*x(i))) * dcos(kz*z(k))
+                  ( real(coeff(2))*dcos(kx*cg%x(i)) - &
+                   aimag(coeff(2))*dsin(kx*cg%x(i))) * dcos(kz*cg%z(k))
                u(dst%imz,i,j,k) =  u(dst%imz,i,j,k) + eta*vk*(-amp) * &
-                  (aimag(coeff(3))*dcos(kx*x(i)) + &
-                    real(coeff(3))*dsin(kx*x(i))) * dsin(kz*z(k))
+                  (aimag(coeff(3))*dcos(kx*cg%x(i)) + &
+                    real(coeff(3))*dsin(kx*cg%x(i))) * dsin(kz*cg%z(k))
                u(neu%imx,i,j,k) =  u(neu%imx,i,j,k) + eta*vk*amp * &
-                  ( real(coeff(4))*dcos(kx*x(i)) - &
-                   aimag(coeff(4))*dsin(kx*x(i))) * dcos(kz*z(k))
+                  ( real(coeff(4))*dcos(kx*cg%x(i)) - &
+                   aimag(coeff(4))*dsin(kx*cg%x(i))) * dcos(kz*cg%z(k))
                u(neu%imy,i,j,k) =  u(neu%imy,i,j,k) + eta*vk*amp * &
-                  ( real(coeff(5))*dcos(kx*x(i)) - &
-                   aimag(coeff(5))*dsin(kx*x(i))) * dcos(kz*z(k))
+                  ( real(coeff(5))*dcos(kx*cg%x(i)) - &
+                   aimag(coeff(5))*dsin(kx*cg%x(i))) * dcos(kz*cg%z(k))
                u(neu%imz,i,j,k) =  u(neu%imz,i,j,k) + eta*vk*(-amp) * &
-                  (aimag(coeff(6))*dcos(kx*x(i)) + &
-                    real(coeff(6))*dsin(kx*x(i))) * dsin(kz*z(k))
+                  (aimag(coeff(6))*dcos(kx*cg%x(i)) + &
+                    real(coeff(6))*dsin(kx*cg%x(i))) * dsin(kz*cg%z(k))
 !               u(neu%idn,i,j,k) =  u(neu%idn,i,j,k) + amp * &
-!                  ( real(coeff(7))*dcos(kx*x(i)) - &
-!                   aimag(coeff(7))*dsin(kx*x(i))) * dcos(kz*z(k))
+!                  ( real(coeff(7))*dcos(kx*cg%x(i)) - &
+!                   aimag(coeff(7))*dsin(kx*cg%x(i))) * dcos(kz*cg%z(k))
                u(neu%idn,i,j,k) =  u(neu%idn,i,j,k) + (eta*vk)**2 * amp * &
-                  ( real(coeff(7))*dcos(kx*x(i)) - &
-                   aimag(coeff(7))*dsin(kx*x(i))) * dcos(kz*z(k))
+                  ( real(coeff(7))*dcos(kx*cg%x(i)) - &
+                   aimag(coeff(7))*dsin(kx*cg%x(i))) * dcos(kz*cg%z(k))
              endif
 !-------
 
@@ -274,7 +274,7 @@ module initproblem
 
       use constants,    only: dpi
       use arrays,       only: u
-      use grid,         only: x,y,z,Lx,Lz
+      use grid,         only: cg
       use dataio_pub,   only: run_id
 
       implicit none
@@ -306,8 +306,8 @@ module initproblem
          coeff(8) = ( 0.4998786, 0.0154764 ) ! omega
       endif
 
-      kx = dpi/Lx
-      kz = dpi/Lz
+      kx = dpi/cg%Lx
+      kz = dpi/cg%Lz
 
    end subroutine compare
 

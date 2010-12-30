@@ -85,7 +85,7 @@ module fluidboundaries
       use dataio_pub,          only: msg, warn
       use fluidboundaries_pub, only: user_bnd_yl, user_bnd_yr, user_bnd_zl, user_bnd_zr, func_bnd_xl, func_bnd_xr
       use fluidindex,          only: nvar, iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
-      use grid,                only: nb, nyb, x, y, z, nzb, nyb, nxb, nx, ny, nz
+      use grid,                only: cg
       use mpisetup,            only: ierr, MPI_XY_RIGHT_DOM, MPI_XY_RIGHT_BND, MPI_XY_LEFT_DOM, MPI_XY_LEFT_BND, &
                                      MPI_XZ_RIGHT_DOM, MPI_XZ_RIGHT_BND, MPI_XZ_LEFT_DOM, MPI_XZ_LEFT_BND, &
                                      MPI_YZ_RIGHT_DOM, MPI_YZ_RIGHT_BND, MPI_YZ_LEFT_DOM, MPI_YZ_LEFT_BND, &
@@ -130,29 +130,29 @@ module fluidboundaries
       case ('xdim')
 #ifdef SHEAR_BND
 #ifndef FFTW
-         allocate(send_right(nvar%all,nb,ny,nz), send_left(nvar%all,nb,ny,nz), &
-                  recv_left(nvar%all,nb,ny,nz), recv_right(nvar%all,nb,ny,nz) )
-         send_left(:,:,:,:)          =  u(:,nb+1:2*nb,:,:)
-         send_right(:,:,:,:)         =  u(:,nxb+1:nxb+nb,:,:)
+         allocate(send_right(nvar%all, cg%nb,ny,nz), send_left(nvar%all, cg%nb,ny,nz), &
+                  recv_left(nvar%all, cg%nb,ny,nz), recv_right(nvar%all, cg%nb,ny,nz) )
+         send_left(:,:,:,:)          =  u(:, cg%nb+1:2*cg%nb,:,:)
+         send_right(:,:,:,:)         =  u(:, cg%nxb+1:cg%nxb+cg%nb,:,:)
 !
 ! odejmujemy ped_y i energie odpowiadajace niezaburzonej rozniczkowej rotacji na lewym brzegu
 !
          if (bnd_xl == 'she') then
-            do i=1,nb
+            do i=1, cg%nb
                send_left (iarr_all_my,i,:,:) = send_left(iarr_all_my,i,:,:) &
-                                         +qshear*omega * x(nb+i)     * send_left(iarr_all_dn,i,:,:)
+                                         +qshear*omega * x(cg%nb+i)     * send_left(iarr_all_dn,i,:,:)
 #ifndef ISO
                send_left (iarr_all_en,i,:,:) = send_left(iarr_all_en,i,:,:) &
-                                    -0.5*(qshear*omega * x(nb+i))**2 * send_left(iarr_all_dn,i,:,:)
+                                    -0.5*(qshear*omega * x(cg%nb+i))**2 * send_left(iarr_all_dn,i,:,:)
 #endif /* !ISO */
             enddo
 !
 ! przesuwamy o calkowita liczbe komorek + periodyczny wb w kierunku y
 !
          if (has_dir(ydim)) then
-            send_left (:,:,nb+1:nb+nyb,:)        = cshift(send_left (:,:,nb+1:nb+nyb,:),dim=3,shift= delj)
-            send_left (:,:,1:nb,:)               = send_left (:,:,nyb+1:nyb+nb,:)
-            send_left (:,:,nb+nyb+1:nyb+2*nb,:)  = send_left (:,:,nb+1:2*nb,:)
+            send_left (:,:, cg%nb+1:cg%nb+cg%nyb,:)        = cshift(send_left (:,:, cg%nb+1:cg%nb+cg%nyb,:),dim=3,shift= delj)
+            send_left (:,:,1:cg%nb,:)               = send_left (:,:, cg%nyb+1:cg%nyb+cg%nb,:)
+            send_left (:,:, cg%nb+cg%nyb+1:cg%nyb+2*cg%nb,:)  = send_left (:,:, cg%nb+1:2*cg%nb,:)
          endif
 !
 ! remapujemy  - interpolacja kwadratowa
@@ -165,12 +165,12 @@ module fluidboundaries
 ! odejmujemy ped_y i energie odpowiadajace niezaburzonej rozniczkowej rotacji na prawym brzegu
 !
          if (bnd_xr == 'she') then
-            do i=1,nb
+            do i=1, cg%nb
                send_right(iarr_all_my,i,:,:) = send_right(iarr_all_my,i,:,:) &
-                                         +qshear*omega * x(nxb+i)     * send_right(iarr_all_dn,i,:,:)
+                                         +qshear*omega * x(cg%nxb+i)     * send_right(iarr_all_dn,i,:,:)
 #ifndef ISO
                send_right(iarr_all_en,i,:,:) = send_right(iarr_all_en,i,:,:) &
-                                    -0.5*(qshear*omega * x(nxb+i))**2 * send_right(iarr_all_dn,i,:,:)
+                                    -0.5*(qshear*omega * x(cg%nxb+i))**2 * send_right(iarr_all_dn,i,:,:)
 
 #endif /* !ISO */
             enddo
@@ -178,9 +178,9 @@ module fluidboundaries
 ! przesuwamy o calkowita liczbe komorek + periodyczny wb w kierunku y
 !
          if (has_dir(ydim)) then
-            send_right(:,:,nb+1:nb+nyb,:)        = cshift(send_right(:,:,nb+1:nb+nyb,:),dim=3,shift=-delj)
-            send_right (:,:,1:nb,:)              = send_right(:,:,nyb+1:nyb+nb,:)
-            send_right (:,:,nb+nyb+1:nyb+2*nb,:) = send_right(:,:,nb+1:2*nb,:)
+            send_right(:,:, cg%nb+1:cg%nb+cg%nyb,:)        = cshift(send_right(:,:, cg%nb+1:cg%nb+cg%nyb,:),dim=3,shift=-delj)
+            send_right (:,:,1:cg%nb,:)              = send_right(:,:, cg%nyb+1:cg%nyb+cg%nb,:)
+            send_right (:,:, cg%nb+cg%nyb+1:cg%nyb+2*cg%nb,:) = send_right(:,:, cg%nb+1:2*cg%nb,:)
          endif
 !
 ! remapujemy  - interpolacja kwadratowa
@@ -192,10 +192,10 @@ module fluidboundaries
 !
 ! wysylamy na drugi brzeg
 !
-         CALL MPI_Isend   (send_left , nvar%all*ny*nz*nb, MPI_DOUBLE_PRECISION, procxl, 10, comm, req(1), ierr)
-         CALL MPI_Isend   (send_right, nvar%all*ny*nz*nb, MPI_DOUBLE_PRECISION, procxr, 20, comm, req(3), ierr)
-         CALL MPI_Irecv   (recv_left , nvar%all*ny*nz*nb, MPI_DOUBLE_PRECISION, procxl, 20, comm, req(2), ierr)
-         CALL MPI_Irecv   (recv_right, nvar%all*ny*nz*nb, MPI_DOUBLE_PRECISION, procxr, 10, comm, req(4), ierr)
+         CALL MPI_Isend   (send_left , nvar%all*ny*nz*cg%nb, MPI_DOUBLE_PRECISION, procxl, 10, comm, req(1), ierr)
+         CALL MPI_Isend   (send_right, nvar%all*ny*nz*cg%nb, MPI_DOUBLE_PRECISION, procxr, 20, comm, req(3), ierr)
+         CALL MPI_Irecv   (recv_left , nvar%all*ny*nz*cg%nb, MPI_DOUBLE_PRECISION, procxl, 20, comm, req(2), ierr)
+         CALL MPI_Irecv   (recv_right, nvar%all*ny*nz*cg%nb, MPI_DOUBLE_PRECISION, procxr, 10, comm, req(4), ierr)
 
          call MPI_Waitall(4,req(:),status(:,:),ierr)
 
@@ -203,20 +203,20 @@ module fluidboundaries
 ! dodajemy ped_y i energie odpowiadajace niezaburzonej rozniczkowej rotacji na prawym brzegu
 !
          if (bnd_xr == 'she') then
-            do i=1,nb
+            do i=1, cg%nb
 #ifndef ISO
                recv_right (iarr_all_en,i,:,:) = recv_right (iarr_all_en,i,:,:) &
-                                      +0.5*(qshear*omega * x(nb+nxb+i))**2 * recv_right(iarr_all_dn,i,:,:)
+                                      +0.5*(qshear*omega * x(cg%nb+cg%nxb+i))**2 * recv_right(iarr_all_dn,i,:,:)
 #endif /* !ISO */
                recv_right (iarr_all_my,i,:,:) = recv_right (iarr_all_my,i,:,:) &
-                                           -qshear*omega * x(nb+nxb+i)     * recv_right(iarr_all_dn,i,:,:)
+                                           -qshear*omega * x(cg%nb+cg%nxb+i)     * recv_right(iarr_all_dn,i,:,:)
             enddo
          endif !(bnd_xr == 'she')
 !
 ! dodajemy ped_y i energie odpowiadajace niezaburzonej rozniczkowej rotacji na lewym brzegu
 !
          if (bnd_xl == 'she') then
-            do i=1,nb
+            do i=1, cg%nb
 #ifndef ISO
                recv_left(iarr_all_en,i,:,:) = recv_left(iarr_all_en,i,:,:) &
                                     +0.5*(qshear*omega * x(i))**2 * recv_left(iarr_all_dn,i,:,:)
@@ -226,12 +226,12 @@ module fluidboundaries
             enddo
          endif !(bnd_xl == 'she')
 
-         u(:,1:nb,:,:)              = recv_left(:,1:nb,:,:)
-         u(:,nxb+nb+1:nxb+2*nb,:,:) = recv_right(:,1:nb,:,:)
+         u(:,1:cg%nb,:,:)              = recv_left(:,1:cg%nb,:,:)
+         u(:, cg%nxb+cg%nb+1:cg%nxb+2*cg%nb,:,:) = recv_right(:,1:cg%nb,:,:)
 
          !!!! BEWARE: smalld is called only for the first fluid
-         u(iarr_all_dn(1),1:nb,:,:)              = max(u(iarr_all_dn(1),1:nb,:,:),smalld)
-         u(iarr_all_dn(1),nxb+nb+1:nxb+2*nb,:,:) = max(u(iarr_all_dn(1),nxb+nb+1:nxb+2*nb,:,:),smalld)
+         u(iarr_all_dn(1),1:cg%nb,:,:)              = max(u(iarr_all_dn(1),1:cg%nb,:,:),smalld)
+         u(iarr_all_dn(1), cg%nxb+cg%nb+1:cg%nxb+2*cg%nb,:,:) = max(u(iarr_all_dn(1), cg%nxb+cg%nb+1:cg%nxb+2*cg%nb,:,:),smalld)
          if (allocated(send_left))  deallocate(send_left)
          if (allocated(send_right)) deallocate(send_right)
          if (allocated(recv_left))  deallocate(recv_left)
@@ -242,32 +242,32 @@ module fluidboundaries
          if ( (bnd_xl == 'she').and.(bnd_xr == 'she')) then
 
          if (allocated(send_right)) deallocate(send_right)
-         if (.not.allocated(send_right)) allocate(send_right(nvar%all,nb,nyb,nz))
+         if (.not.allocated(send_right)) allocate(send_right(nvar%all, cg%nb, cg%nyb, cg%nz))
 
          if (allocated(send_left)) deallocate(send_left)
-         if (.not.allocated(send_left)) allocate(send_left(nvar%all,nb,nyb,nz))
+         if (.not.allocated(send_left)) allocate(send_left(nvar%all, cg%nb, cg%nyb, cg%nz))
 
          if (allocated(recv_left)) deallocate(recv_left)
-         if (.not.allocated(recv_left)) allocate(recv_left(nvar%all,nb,nyb,nz))
+         if (.not.allocated(recv_left)) allocate(recv_left(nvar%all, cg%nb, cg%nyb, cg%nz))
 
          if (allocated(recv_right)) deallocate(recv_right)
-         if (.not.allocated(recv_right)) allocate(recv_right(nvar%all,nb,nyb,nz))
+         if (.not.allocated(recv_right)) allocate(recv_right(nvar%all, cg%nb, cg%nyb, cg%nz))
 
             do i = LBOUND(u,1), UBOUND(u,1)
-               send_left(i,1:nb,:,:)   = unshear_fft(u(i,nb+1:2*nb,nb+1:ny-nb,:),x(nb+1:2*nb),dely,.true.)
-               send_right(i,1:nb,:,:)  = unshear_fft(u(i,nx-2*nb+1:nx-nb,nb+1:ny-nb,:),x(nx-2*nb+1:nx-nb),dely,.true.)
+               send_left(i,1:cg%nb,:,:)   = unshear_fft(u(i, cg%nb+1:2*cg%nb, cg%nb+1:cg%ny-cg%nb,:), cg%x(cg%nb+1:2*cg%nb),dely,.true.)
+               send_right(i,1:cg%nb,:,:)  = unshear_fft(u(i, cg%nx-2*cg%nb+1:cg%nx-cg%nb, cg%nb+1:cg%ny-cg%nb,:), cg%x(cg%nx-2*cg%nb+1:cg%nx-cg%nb),dely,.true.)
             enddo
 
-            CALL MPI_Isend   (send_left , nvar%all*nyb*nz*nb, MPI_DOUBLE_PRECISION, procxl, 10, comm, req(1), ierr)
-            CALL MPI_Isend   (send_right, nvar%all*nyb*nz*nb, MPI_DOUBLE_PRECISION, procxr, 20, comm, req(3), ierr)
-            CALL MPI_Irecv   (recv_left , nvar%all*nyb*nz*nb, MPI_DOUBLE_PRECISION, procxl, 20, comm, req(2), ierr)
-            CALL MPI_Irecv   (recv_right, nvar%all*nyb*nz*nb, MPI_DOUBLE_PRECISION, procxr, 10, comm, req(4), ierr)
+            CALL MPI_Isend   (send_left , nvar%all*cg%nyb*cg%nz*cg%nb, MPI_DOUBLE_PRECISION, procxl, 10, comm, req(1), ierr)
+            CALL MPI_Isend   (send_right, nvar%all*cg%nyb*cg%nz*cg%nb, MPI_DOUBLE_PRECISION, procxr, 20, comm, req(3), ierr)
+            CALL MPI_Irecv   (recv_left , nvar%all*cg%nyb*cg%nz*cg%nb, MPI_DOUBLE_PRECISION, procxl, 20, comm, req(2), ierr)
+            CALL MPI_Irecv   (recv_right, nvar%all*cg%nyb*cg%nz*cg%nb, MPI_DOUBLE_PRECISION, procxr, 10, comm, req(4), ierr)
 
             call MPI_Waitall(4,req(:),status(:,:),ierr)
 
             do i = LBOUND(u,1), UBOUND(u,1)
-               u(i,1:nb,nb+1:ny-nb,:) = unshear_fft(recv_left(i,1:nb,:,:), x(1:nb),dely)
-               u(i,nx-nb+1:nx,nb+1:ny-nb,:) = unshear_fft(recv_right(i,1:nb,:,:),x(nx-nb+1:nx),dely)
+               u(i,1:cg%nb, cg%nb+1:cg%ny-cg%nb,:) = unshear_fft(recv_left(i,1:cg%nb,:,:), cg%x(1:cg%nb),dely)
+               u(i, cg%nx-cg%nb+1:cg%nx, cg%nb+1:cg%ny-cg%nb,:) = unshear_fft(recv_right(i,1:cg%nb,:,:), cg%x(cg%nx-cg%nb+1:cg%nx),dely)
             enddo
 
          if (allocated(send_left))  deallocate(send_left)
@@ -316,43 +316,43 @@ module fluidboundaries
       if (bnd_xl .eq. 'cor') then
 !   - lower to left
          if (pcoords(1) .eq. 0 .and. pcoords(2) .eq. 0) then
-            do i=1,nb
-               do j=nb+1,ny
-                  u(iarr_all_dn,i,j,:) =  u(iarr_all_dn,j,2*nb+1-i,:)
-                  u(iarr_all_mx,i,j,:) = -u(iarr_all_my,j,2*nb+1-i,:)
-                  u(iarr_all_my,i,j,:) =  u(iarr_all_mx,j,2*nb+1-i,:)
-                  u(iarr_all_mz,i,j,:) =  u(iarr_all_mz,j,2*nb+1-i,:)
+            do i=1, cg%nb
+               do j=cg%nb+1, cg%ny
+                  u(iarr_all_dn,i,j,:) =  u(iarr_all_dn,j,2*cg%nb+1-i,:)
+                  u(iarr_all_mx,i,j,:) = -u(iarr_all_my,j,2*cg%nb+1-i,:)
+                  u(iarr_all_my,i,j,:) =  u(iarr_all_mx,j,2*cg%nb+1-i,:)
+                  u(iarr_all_mz,i,j,:) =  u(iarr_all_mz,j,2*cg%nb+1-i,:)
 #ifndef ISO
-                  u(iarr_all_en,i,j,:) =  u(iarr_all_en,j,2*nb+1-i,:)
+                  u(iarr_all_en,i,j,:) =  u(iarr_all_en,j,2*cg%nb+1-i,:)
 #endif /* !ISO */
 #ifdef COSM_RAYS
-                  u(iarr_all_crs,i,j,:) =  u(iarr_all_crs,j,2*nb+1-i,:)
+                  u(iarr_all_crs,i,j,:) =  u(iarr_all_crs,j,2*cg%nb+1-i,:)
 #endif /* COSM_RAYS */
                enddo
             enddo
          endif
 
          if (procxyl .gt. 0) then
-            allocate(send_left(nvar%all,nb,ny,nz), recv_left(nvar%all,nx,nb,nz))
+            allocate(send_left(nvar%all, cg%nb, cg%ny, cg%nz), recv_left(nvar%all, cg%nx, cg%nb, cg%nz))
 
-            send_left(:,:,:,:) = u(:,nb+1:2*nb,:,:)
+            send_left(:,:,:,:) = u(:, cg%nb+1:2*cg%nb,:,:)
 
-            CALL MPI_Isend   (send_left , nvar%all*nb*ny*nz, MPI_DOUBLE_PRECISION, procxyl, 70, comm, req(1), ierr)
-            CALL MPI_Irecv   (recv_left , nvar%all*nx*nb*nz, MPI_DOUBLE_PRECISION, procxyl, 80, comm, req(2), ierr)
+            CALL MPI_Isend   (send_left , nvar%all*cg%nb*cg%ny*cg%nz, MPI_DOUBLE_PRECISION, procxyl, 70, comm, req(1), ierr)
+            CALL MPI_Irecv   (recv_left , nvar%all*cg%nx*cg%nb*cg%nz, MPI_DOUBLE_PRECISION, procxyl, 80, comm, req(2), ierr)
 
             call MPI_Waitall(2,req(:),status(:,:),ierr)
 
-            do i=1,nb
-               do j=1,ny
-                  u(iarr_all_dn,i,j,:) =  recv_left(iarr_all_dn,j,nb+1-i,:)
-                  u(iarr_all_mx,i,j,:) = -recv_left(iarr_all_my,j,nb+1-i,:)
-                  u(iarr_all_my,i,j,:) =  recv_left(iarr_all_mx,j,nb+1-i,:)
-                  u(iarr_all_mz,i,j,:) =  recv_left(iarr_all_mz,j,nb+1-i,:)
+            do i=1, cg%nb
+               do j=1, cg%ny
+                  u(iarr_all_dn,i,j,:) =  recv_left(iarr_all_dn,j, cg%nb+1-i,:)
+                  u(iarr_all_mx,i,j,:) = -recv_left(iarr_all_my,j, cg%nb+1-i,:)
+                  u(iarr_all_my,i,j,:) =  recv_left(iarr_all_mx,j, cg%nb+1-i,:)
+                  u(iarr_all_mz,i,j,:) =  recv_left(iarr_all_mz,j, cg%nb+1-i,:)
 #ifndef ISO
-                  u(iarr_all_en,i,j,:) =  recv_left(iarr_all_en,j,nb+1-i,:)
+                  u(iarr_all_en,i,j,:) =  recv_left(iarr_all_en,j, cg%nb+1-i,:)
 #endif /* !ISO */
 #ifdef COSM_RAYS
-                  u(iarr_all_crs,i,j,:) =  recv_left(iarr_all_crs,j,nb+1-i,:)
+                  u(iarr_all_crs,i,j,:) =  recv_left(iarr_all_crs,j, cg%nb+1-i,:)
 #endif /* COSM_RAYS */
                enddo
             enddo
@@ -365,58 +365,58 @@ module fluidboundaries
       if (bnd_yl .eq. 'cor') then
 !   - left to lower
          if (pcoords(2) .eq. 0 .and. pcoords(1) .eq. 0 ) then
-            do j=1,nb
-               do i=nb+1,nx
-                  u(iarr_all_dn,i,j,:) =  u(iarr_all_dn,2*nb+1-j,i,:)
-                  u(iarr_all_mx,i,j,:) =  u(iarr_all_my,2*nb+1-j,i,:)
-                  u(iarr_all_my,i,j,:) = -u(iarr_all_mx,2*nb+1-j,i,:)
-                  u(iarr_all_mz,i,j,:) =  u(iarr_all_mz,2*nb+1-j,i,:)
+            do j=1, cg%nb
+               do i=cg%nb+1, cg%nx
+                  u(iarr_all_dn,i,j,:) =  u(iarr_all_dn,2*cg%nb+1-j,i,:)
+                  u(iarr_all_mx,i,j,:) =  u(iarr_all_my,2*cg%nb+1-j,i,:)
+                  u(iarr_all_my,i,j,:) = -u(iarr_all_mx,2*cg%nb+1-j,i,:)
+                  u(iarr_all_mz,i,j,:) =  u(iarr_all_mz,2*cg%nb+1-j,i,:)
 #ifndef ISO
-                  u(iarr_all_en,i,j,:) =  u(iarr_all_en,2*nb+1-j,i,:)
+                  u(iarr_all_en,i,j,:) =  u(iarr_all_en,2*cg%nb+1-j,i,:)
 #endif /* !ISO */
 #ifdef COSM_RAYS
-                  u(iarr_all_crs,i,j,:) =  u(iarr_all_crs,2*nb+1-j,i,:)
+                  u(iarr_all_crs,i,j,:) =  u(iarr_all_crs,2*cg%nb+1-j,i,:)
 #endif /* COSM_RAYS */
                enddo
             enddo
 !   - interior to corner
-            do j=1,nb
-               do i=1,nb
-                  u(iarr_all_dn,i,j,:) =   u(iarr_all_dn,2*nb+1-i,2*nb+1-j,:)
-                  u(iarr_all_mx,i,j,:) =  -u(iarr_all_mx,2*nb+1-i,2*nb+1-j,:)
-                  u(iarr_all_my,i,j,:) =  -u(iarr_all_my,2*nb+1-i,2*nb+1-j,:)
-                  u(iarr_all_mz,i,j,:) =   u(iarr_all_mz,2*nb+1-i,2*nb+1-j,:)
+            do j=1, cg%nb
+               do i=1, cg%nb
+                  u(iarr_all_dn,i,j,:) =   u(iarr_all_dn,2*cg%nb+1-i,2*cg%nb+1-j,:)
+                  u(iarr_all_mx,i,j,:) =  -u(iarr_all_mx,2*cg%nb+1-i,2*cg%nb+1-j,:)
+                  u(iarr_all_my,i,j,:) =  -u(iarr_all_my,2*cg%nb+1-i,2*cg%nb+1-j,:)
+                  u(iarr_all_mz,i,j,:) =   u(iarr_all_mz,2*cg%nb+1-i,2*cg%nb+1-j,:)
 #ifndef ISO
-                  u(iarr_all_en,i,j,:) =   u(iarr_all_en,2*nb+1-i,2*nb+1-j,:)
+                  u(iarr_all_en,i,j,:) =   u(iarr_all_en,2*cg%nb+1-i,2*cg%nb+1-j,:)
 #endif /* !ISO */
 #ifdef COSM_RAYS
-                  u(iarr_all_crs,i,j,:) =   u(iarr_all_crs,2*nb+1-i,2*nb+1-j,:)
+                  u(iarr_all_crs,i,j,:) =   u(iarr_all_crs,2*cg%nb+1-i,2*cg%nb+1-j,:)
 #endif /* COSM_RAYS */
                enddo
             enddo
          endif
 
          if (procyxl .gt. 0) then
-            allocate(send_left(nvar%all,nx,nb,nz), recv_left(nvar%all,nb,ny,nz))
+            allocate(send_left(nvar%all, cg%nx, cg%nb, cg%nz), recv_left(nvar%all, cg%nb, cg%ny, cg%nz))
 
-            send_left(:,:,:,:) = u(:,:,nb+1:2*nb,:)
+            send_left(:,:,:,:) = u(:,:, cg%nb+1:2*cg%nb,:)
 
-            CALL MPI_Isend   (send_left , nvar%all*nx*nb*nz, MPI_DOUBLE_PRECISION, procyxl, 80, comm, req(1), ierr)
-            CALL MPI_Irecv   (recv_left , nvar%all*nb*ny*nz, MPI_DOUBLE_PRECISION, procyxl, 70, comm, req(2), ierr)
+            CALL MPI_Isend   (send_left , nvar%all*cg%nx*cg%nb*cg%nz, MPI_DOUBLE_PRECISION, procyxl, 80, comm, req(1), ierr)
+            CALL MPI_Irecv   (recv_left , nvar%all*cg%nb*cg%ny*cg%nz, MPI_DOUBLE_PRECISION, procyxl, 70, comm, req(2), ierr)
 
             call MPI_Waitall(2,req(:),status(:,:),ierr)
 
-            do j=1,nb
-               do i=1,nx
-                  u(iarr_all_dn,i,j,:) =  recv_left(iarr_all_dn,nb+1-j,i,:)
-                  u(iarr_all_mx,i,j,:) =  recv_left(iarr_all_my,nb+1-j,i,:)
-                  u(iarr_all_my,i,j,:) = -recv_left(iarr_all_mx,nb+1-j,i,:)
-                  u(iarr_all_mz,i,j,:) =  recv_left(iarr_all_mz,nb+1-j,i,:)
+            do j=1, cg%nb
+               do i=1, cg%nx
+                  u(iarr_all_dn,i,j,:) =  recv_left(iarr_all_dn, cg%nb+1-j,i,:)
+                  u(iarr_all_mx,i,j,:) =  recv_left(iarr_all_my, cg%nb+1-j,i,:)
+                  u(iarr_all_my,i,j,:) = -recv_left(iarr_all_mx, cg%nb+1-j,i,:)
+                  u(iarr_all_mz,i,j,:) =  recv_left(iarr_all_mz, cg%nb+1-j,i,:)
 #ifndef ISO
-                  u(iarr_all_en,i,j,:) =  recv_left(iarr_all_en,nb+1-j,i,:)
+                  u(iarr_all_en,i,j,:) =  recv_left(iarr_all_en, cg%nb+1-j,i,:)
 #endif /* !ISO */
 #ifdef COSM_RAYS
-                  u(iarr_all_crs,i,j,:) =  recv_left(iarr_all_crs,nb+1-j,i,:)
+                  u(iarr_all_crs,i,j,:) =  recv_left(iarr_all_crs, cg%nb+1-j,i,:)
 #endif /* COSM_RAYS */
                enddo
             enddo
@@ -440,35 +440,35 @@ module fluidboundaries
          case ('cor', 'inf', 'mpi')
             ! Do nothing
          case ('per')
-            u(:,:,1:nb,:)                         = u(:,:,nyb+1:nyb+nb,:)
+            u(:,:,1:cg%nb,:)                         = u(:,:, cg%nyb+1:cg%nyb+cg%nb,:)
          case ('user')
             call user_bnd_yl
          case ('ref')
-            do ib=1,nb
+            do ib=1, cg%nb
 
-               u((/iarr_all_dn,iarr_all_mx,iarr_all_mz/),:,nb+1-ib,:)   = u((/iarr_all_dn,iarr_all_mx,iarr_all_mz/),:,nb+ib,:)
-               u(iarr_all_my,:,nb+1-ib,:)                 =-u(iarr_all_my,:,nb+ib,:)
+               u((/iarr_all_dn,iarr_all_mx,iarr_all_mz/),:, cg%nb+1-ib,:)   = u((/iarr_all_dn,iarr_all_mx,iarr_all_mz/),:, cg%nb+ib,:)
+               u(iarr_all_my,:, cg%nb+1-ib,:)                 =-u(iarr_all_my,:, cg%nb+ib,:)
 #ifndef ISO
-               u(iarr_all_en,:,nb+1-ib,:)                 = u(iarr_all_en,:,nb+ib,:)
+               u(iarr_all_en,:, cg%nb+1-ib,:)                 = u(iarr_all_en,:, cg%nb+ib,:)
 #endif /* !ISO */
 #ifdef COSM_RAYS
-               u(iarr_all_crs,:,nb+1-ib,:)                 = u(iarr_all_crs,:,nb+ib,:)
+               u(iarr_all_crs,:, cg%nb+1-ib,:)                 = u(iarr_all_crs,:, cg%nb+ib,:)
 #endif /* COSM_RAYS */
             enddo
          case ('out')
-            do ib=1,nb
-               u(:,:,ib,:)                         = u(:,:,nb+1,:)
+            do ib=1, cg%nb
+               u(:,:,ib,:)                         = u(:,:, cg%nb+1,:)
 #ifdef COSM_RAYS
                u(iarr_all_crs,:,ib,:)                      = smallecr
 #endif /* COSM_RAYS */
             enddo
          case ('outd')
-            do ib=1,nb
+            do ib=1, cg%nb
 
-               u((/iarr_all_dn,iarr_all_mx,iarr_all_mz/),:,ib,:)        = u((/iarr_all_dn,iarr_all_mx,iarr_all_mz/),:,nb+1,:)
-               u(iarr_all_my,:,ib,:)                      = min(u(iarr_all_my,:,nb+1,:),0.0)
+               u((/iarr_all_dn,iarr_all_mx,iarr_all_mz/),:,ib,:)        = u((/iarr_all_dn,iarr_all_mx,iarr_all_mz/),:, cg%nb+1,:)
+               u(iarr_all_my,:,ib,:)                      = min(u(iarr_all_my,:, cg%nb+1,:),0.0)
 #ifndef ISO
-               u(iarr_all_en,:,ib,:)                      = u(iarr_all_en,:,nb+1,:)
+               u(iarr_all_en,:,ib,:)                      = u(iarr_all_en,:, cg%nb+1,:)
 #endif /* !ISO */
 #ifdef COSM_RAYS
                u(iarr_all_crs,:,ib,:)                      = smallecr
@@ -483,38 +483,38 @@ module fluidboundaries
          case ('cor', 'inf', 'mpi')
             ! Do nothing
          case ('per')
-            u(:,:,nyb+nb+1:nyb+2*nb,:)            = u(:,:,nb+1:2*nb,:)
+            u(:,:, cg%nyb+cg%nb+1:cg%nyb+2*cg%nb,:)            = u(:,:, cg%nb+1:2*cg%nb,:)
          case ('user')
             call user_bnd_yr
          case ('ref')
-            do ib=1,nb
+            do ib=1, cg%nb
 
-               u((/iarr_all_dn,iarr_all_mx,iarr_all_mz/),:,nb+nyb+ib,:) = u((/iarr_all_dn,iarr_all_mx,iarr_all_mz/),:,nb+nyb+1-ib,:)
-               u(iarr_all_my,:,nb+nyb+ib,:)               =-u(iarr_all_my,:,nb+nyb+1-ib,:)
+               u((/iarr_all_dn,iarr_all_mx,iarr_all_mz/),:, cg%nb+cg%nyb+ib,:) = u((/iarr_all_dn,iarr_all_mx,iarr_all_mz/),:, cg%nb+cg%nyb+1-ib,:)
+               u(iarr_all_my,:, cg%nb+cg%nyb+ib,:)               =-u(iarr_all_my,:, cg%nb+cg%nyb+1-ib,:)
 #ifndef ISO
-               u(iarr_all_en,:,nb+nyb+ib,:)               = u(iarr_all_en,:,nb+nyb+1-ib,:)
+               u(iarr_all_en,:, cg%nb+cg%nyb+ib,:)               = u(iarr_all_en,:, cg%nb+cg%nyb+1-ib,:)
 #endif /* !ISO */
 #ifdef COSM_RAYS
-               u(iarr_all_crs,:,nb+nyb+ib,:)               = u(iarr_all_crs,:,nb+nyb+1-ib,:)
+               u(iarr_all_crs,:, cg%nb+cg%nyb+ib,:)               = u(iarr_all_crs,:, cg%nb+cg%nyb+1-ib,:)
 #endif /* COSM_RAYS */
             enddo
          case ('out')
-            do ib=1,nb
-               u(:,:,nb+nyb+ib,:)                  = u(:,:,nb+nyb,:)
+            do ib=1, cg%nb
+               u(:,:, cg%nb+cg%nyb+ib,:)                  = u(:,:, cg%nb+cg%nyb,:)
 #ifdef COSM_RAYS
-               u(iarr_all_crs,:,nb+nyb+ib,:)               = smallecr
+               u(iarr_all_crs,:, cg%nb+cg%nyb+ib,:)               = smallecr
 #endif /* COSM_RAYS */
             enddo
          case ('outd')
-            do ib=1,nb
+            do ib=1, cg%nb
 
-               u((/iarr_all_dn,iarr_all_mx,iarr_all_mz/),:,nb+nyb+ib,:) = u((/iarr_all_dn,iarr_all_mx,iarr_all_mz/),:,nb+nyb,:)
-               u(iarr_all_my,:,nb+nyb+ib,:)               = max(u(iarr_all_my,:,nb+nyb,:),0.0)
+               u((/iarr_all_dn,iarr_all_mx,iarr_all_mz/),:, cg%nb+cg%nyb+ib,:) = u((/iarr_all_dn,iarr_all_mx,iarr_all_mz/),:, cg%nb+cg%nyb,:)
+               u(iarr_all_my,:, cg%nb+cg%nyb+ib,:)               = max(u(iarr_all_my,:, cg%nb+cg%nyb,:),0.0)
 #ifndef ISO
-               u(iarr_all_en,:,nb+nyb+ib,:)               = u(iarr_all_en,:,nb+nyb,:)
+               u(iarr_all_en,:, cg%nb+cg%nyb+ib,:)               = u(iarr_all_en,:, cg%nb+cg%nyb,:)
 #endif /* !ISO */
 #ifdef COSM_RAYS
-               u(iarr_all_crs,:,nb+nyb+ib,:)               = smallecr
+               u(iarr_all_crs,:, cg%nb+cg%nyb+ib,:)               = smallecr
 #endif /* COSM_RAYS */
             enddo
          case default
@@ -530,34 +530,34 @@ module fluidboundaries
          case ('user')
             call user_bnd_zl
          case ('per')
-            u(:,:,:,1:nb)                         = u(:,:,:,nzb+1:nzb+nb)
+            u(:,:,:,1:cg%nb)                         = u(:,:,:, cg%nzb+1:cg%nzb+cg%nb)
          case ('ref')
-            do ib=1,nb
+            do ib=1, cg%nb
 
-               u((/iarr_all_dn,iarr_all_mx,iarr_all_my/),:,:,nb+1-ib)   = u((/iarr_all_dn,iarr_all_mx,iarr_all_my/),:,:,nb+ib)
-               u(iarr_all_mz,:,:,nb+1-ib)                 =-u(iarr_all_mz,:,:,nb+ib)
+               u((/iarr_all_dn,iarr_all_mx,iarr_all_my/),:,:, cg%nb+1-ib)   = u((/iarr_all_dn,iarr_all_mx,iarr_all_my/),:,:, cg%nb+ib)
+               u(iarr_all_mz,:,:, cg%nb+1-ib)                 =-u(iarr_all_mz,:,:, cg%nb+ib)
 #ifndef ISO
-               u(iarr_all_en,:,:,nb+1-ib)                 = u(iarr_all_en,:,:,nb+ib)
+               u(iarr_all_en,:,:, cg%nb+1-ib)                 = u(iarr_all_en,:,:, cg%nb+ib)
 #endif /* !ISO */
 #ifdef COSM_RAYS
-               u(iarr_all_crs,:,:,nb+1-ib)                 = u(iarr_all_crs,:,:,nb+ib)
+               u(iarr_all_crs,:,:, cg%nb+1-ib)                 = u(iarr_all_crs,:,:, cg%nb+ib)
 #endif /* COSM_RAYS */
             enddo
          case ('out')
-            do ib=1,nb
-               u(:,:,:,ib)                         = u(:,:,:,nb+1)
+            do ib=1, cg%nb
+               u(:,:,:,ib)                         = u(:,:,:, cg%nb+1)
 #ifdef COSM_RAYS
                u(iarr_all_crs,:,:,ib)                      = smallecr
 #endif /* COSM_RAYS */
             enddo
          case ('outd')
-            do ib=1,nb
+            do ib=1, cg%nb
 
-               u((/iarr_all_dn,iarr_all_mx,iarr_all_my/),:,:,ib)        = u((/iarr_all_dn,iarr_all_mx,iarr_all_my/),:,:,nb+1)
+               u((/iarr_all_dn,iarr_all_mx,iarr_all_my/),:,:,ib)        = u((/iarr_all_dn,iarr_all_mx,iarr_all_my/),:,:, cg%nb+1)
  ! BEWARE: use of uninitialized value on first call (a side effect of r1726)
-               u(iarr_all_mz,:,:,ib)                      = min(u(iarr_all_mz,:,:,nb+1),0.0)
+               u(iarr_all_mz,:,:,ib)                      = min(u(iarr_all_mz,:,:, cg%nb+1),0.0)
 #ifndef ISO
-               u(iarr_all_en,:,:,ib)                      = u(iarr_all_en,:,:,nb+1)
+               u(iarr_all_en,:,:,ib)                      = u(iarr_all_en,:,:, cg%nb+1)
 #endif /* !ISO */
 #ifdef COSM_RAYS
                u(iarr_all_crs,:,:,ib)                      = smallecr
@@ -565,8 +565,8 @@ module fluidboundaries
             enddo
 #ifdef GRAV
          case ('outh')
-            do ib=1,nb
-               kb = nb+2-ib
+            do ib=1, cg%nb
+               kb = cg%nb+2-ib
                call outh_bnd(kb, kb-1, "min")
             enddo ! ib
 #endif /* GRAV */
@@ -581,43 +581,43 @@ module fluidboundaries
          case ('user')
             call user_bnd_zr
          case ('per')
-            u(:,:,:,nzb+nb+1:nzb+2*nb)            = u(:,:,:,nb+1:2*nb)
+            u(:,:,:, cg%nzb+cg%nb+1:cg%nzb+2*cg%nb)            = u(:,:,:, cg%nb+1:2*cg%nb)
          case ('ref')
-            do ib=1,nb
+            do ib=1, cg%nb
 
-               u((/iarr_all_dn,iarr_all_mx,iarr_all_my/),:,:,nb+nzb+ib) = u((/iarr_all_dn,iarr_all_mx,iarr_all_my/),:,:,nb+nzb+1-ib)
-               u(iarr_all_mz,:,:,nb+nzb+ib)               =-u(iarr_all_mz,:,:,nb+nzb+1-ib)
+               u((/iarr_all_dn,iarr_all_mx,iarr_all_my/),:,:, cg%nb+cg%nzb+ib) = u((/iarr_all_dn,iarr_all_mx,iarr_all_my/),:,:, cg%nb+cg%nzb+1-ib)
+               u(iarr_all_mz,:,:, cg%nb+cg%nzb+ib)               =-u(iarr_all_mz,:,:, cg%nb+cg%nzb+1-ib)
 #ifndef ISO
-               u(iarr_all_en,:,:,nb+nzb+ib)               = u(iarr_all_en,:,:,nb+nzb+1-ib)
+               u(iarr_all_en,:,:, cg%nb+cg%nzb+ib)               = u(iarr_all_en,:,:, cg%nb+cg%nzb+1-ib)
 #endif /* !ISO */
 #ifdef COSM_RAYS
-               u(iarr_all_crs,:,:,nb+nzb+ib)               = u(iarr_all_crs,:,:,nb+nzb+1-ib)
+               u(iarr_all_crs,:,:, cg%nb+cg%nzb+ib)               = u(iarr_all_crs,:,:, cg%nb+cg%nzb+1-ib)
 #endif /* COSM_RAYS */
             enddo
          case ('out')
-            do ib=1,nb
-               u(:,:,:,nb+nzb+ib)                  = u(:,:,:,nb+nzb)
+            do ib=1, cg%nb
+               u(:,:,:, cg%nb+cg%nzb+ib)                  = u(:,:,:, cg%nb+cg%nzb)
 #ifdef COSM_RAYS
-               u(iarr_all_crs,:,:,nb+nzb+ib)               = smallecr
+               u(iarr_all_crs,:,:, cg%nb+cg%nzb+ib)               = smallecr
 #endif /* COSM_RAYS */
             enddo
          case ('outd')
-            do ib=1,nb
+            do ib=1, cg%nb
 
-               u((/iarr_all_dn,iarr_all_mx,iarr_all_my/),:,:,nb+nzb+ib) = u((/iarr_all_dn,iarr_all_mx,iarr_all_my/),:,:,nb+nzb)
+               u((/iarr_all_dn,iarr_all_mx,iarr_all_my/),:,:, cg%nb+cg%nzb+ib) = u((/iarr_all_dn,iarr_all_mx,iarr_all_my/),:,:, cg%nb+cg%nzb)
  ! BEWARE: use of uninitialized value on first call (a side effect of r1726)
-               u(iarr_all_mz,:,:,nb+nzb+ib)               = max(u(iarr_all_mz,:,:,nb+nzb),0.0)
+               u(iarr_all_mz,:,:, cg%nb+cg%nzb+ib)               = max(u(iarr_all_mz,:,:, cg%nb+cg%nzb),0.0)
 #ifndef ISO
-               u(iarr_all_en,:,:,nb+nzb+ib)               = u(iarr_all_en,:,:,nb+nzb)
+               u(iarr_all_en,:,:, cg%nb+cg%nzb+ib)               = u(iarr_all_en,:,:, cg%nb+cg%nzb)
 #endif /* !ISO */
 #ifdef COSM_RAYS
-               u(iarr_all_crs,:,:,nb+nzb+ib)               = smallecr
+               u(iarr_all_crs,:,:, cg%nb+cg%nzb+ib)               = smallecr
 #endif /* COSM_RAYS */
             enddo
 #ifdef GRAV
          case ('outh')
-            do ib=1,nb
-               kb = nb+nzb-1+ib
+            do ib=1, cg%nb
+               kb = cg%nb+cg%nzb-1+ib
                call outh_bnd(kb, kb+1, "max")
             enddo ! ib
 #endif /* GRAV */
@@ -631,8 +631,11 @@ module fluidboundaries
    end subroutine bnd_u
 
    subroutine all_fluid_boundaries
-      use grid,  only: has_dir, xdim, ydim, zdim
+
+      use mpisetup, only: has_dir, xdim, ydim, zdim
+
       implicit none
+
       if (has_dir(xdim)) call bnd_u('xdim')
       if (has_dir(ydim)) call bnd_u('ydim')
       if (has_dir(zdim)) call bnd_u('zdim')

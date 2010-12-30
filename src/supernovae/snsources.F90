@@ -73,9 +73,10 @@ module snsources
 
       use dataio_pub,     only: ierrh, par_file, namelist_errh, compare_namelist                  ! QA_WARN required for diff_nml
       use mpi,            only: MPI_DOUBLE_PRECISION
-      use mpisetup,       only: rbuff, buffer_dim, comm, ierr, master, slave
+      use mpisetup,       only: rbuff, buffer_dim, comm, ierr, master, slave, xdim, ydim, has_dir
       use initcosmicrays, only: cr_eff
-      use grid,           only: xmin, xmax, ymin, ymax, xdim, ydim, has_dir
+      use grid,           only: cg
+
       implicit none
 
 !      amp_ecr_sn = 0.0    ! ToDo: set sane default values
@@ -105,13 +106,13 @@ module snsources
       amp_ecr_sn = 4.96e6*cr_eff/r_sn**3
 
       if (has_dir(xdim)) then
-         f_sn = f_sn_kpc2 * (xmax-xmin)/1000.0
+         f_sn = f_sn_kpc2 * cg%Lx/1000.0
       else
          f_sn = f_sn_kpc2 * 2.0*r_sn/1000.0
       endif
 
       if (has_dir(ydim)) then
-         f_sn = f_sn * (ymax-ymin)/1000.0
+         f_sn = f_sn * cg%Ly/1000.0
       else
          f_sn = f_sn * 2.0*r_sn/1000.0
       endif
@@ -156,7 +157,7 @@ module snsources
    subroutine cr_sn(pos)
       use arrays,         only: u
       use fluidindex,     only: nvar
-      use grid,           only: nx, ny, nz, x, y, z, Lx, Ly
+      use grid,           only: cg
       use initcosmicrays, only: iarr_crn
 #ifdef COSM_RAYS_SOURCES
       use crcomposition,  only: icr_H1, icr_C12, icr_N14, icr_O16, primary_C12, primary_N14, primary_O16
@@ -173,9 +174,9 @@ module snsources
       ysn = pos(2)
       zsn = pos(3)
 
-      do k=1,nz
-         do j=1,ny
-            do i=1,nx
+      do k=1, cg%nz
+         do j=1, cg%ny
+            do i=1, cg%nx
 
                do ipm=-1,1
 
@@ -186,9 +187,9 @@ module snsources
                   do jpm=-1,1
 
                      decr = amp_ecr_sn * ethu  &
-                           * EXP(-((x(i)-xsn+real(ipm)*Lx)**2  &
-                           + (y(j)-ysna+real(jpm)*Ly)**2  &
-                           + (z(k)-zsn)**2)/r_sn**2)
+                           * EXP(-((cg%x(i)-xsn+real(ipm)*cg%Lx)**2  &
+                           + (cg%y(j)-ysna+real(jpm)*cg%Ly)**2  &
+                           + (cg%z(k)-zsn)**2)/r_sn**2)
 
 #ifdef COSM_RAYS_SOURCES
                      do icr=1,nvar%crn%all
@@ -216,10 +217,11 @@ module snsources
 !! \return pos @e real,  @e dimension(3), array of supernova position components
 !<
    subroutine rand_coords(pos)
-      use grid,   only: Lx, Ly, xmin, ymin, zdim, has_dir
+
+      use grid,     only: cg
+      use mpisetup, only: zdim, has_dir
 #ifdef SHEAR
-      use grid,   only: dy, nyb, y, js, je
-      use shear,  only: delj, eps
+      use shear,    only: delj, eps
 #endif /* SHEAR */
 
       implicit none
@@ -234,8 +236,8 @@ module snsources
       real :: xsn,ysn,zsn,znorm
 
       call random_number(rand)
-      xsn = xmin+ Lx*rand(1)
-      ysn = ymin+ Ly*rand(2)
+      xsn = cg%xmin+ cg%Lx*rand(1)
+      ysn = cg%ymin+ cg%Ly*rand(2)
 
       if (has_dir(zdim)) then
          irand = irand+4
@@ -246,25 +248,25 @@ module snsources
       endif
 
 #ifdef SHEAR
-      jsn  = js+int((ysn-ymin)/dy)
-      dysn  = dmod(ysn,dy)
+      jsn  = js+int((ysn-cg%ymin)/cg%dy)
+      dysn  = dmod(ysn, cg%dy)
 
-      epsi   = eps*dy
+      epsi   = eps*cg%dy
       epso   = -epsi
 
 !  outer boundary
       jremap = jsn - delj
-      jremap = mod(mod(jremap, nyb)+nyb,nyb)
-      if (jremap <= (js-1)) jremap = jremap + nyb
+      jremap = mod(mod(jremap, cg%nyb)+cg%nyb, cg%nyb)
+      if (jremap <= (js-1)) jremap = jremap + cg%nyb
 
-      ysno = y(jremap) + epso + dysn
+      ysno = cg%y(jremap) + epso + dysn
 
 !  inner boundary
       jremap = jsn + delj
-      jremap = mod(jremap, nyb)+nyb
-      if (jremap >= (je+1)) jremap = jremap - nyb
+      jremap = mod(jremap, cg%nyb)+cg%nyb
+      if (jremap >= (je+1)) jremap = jremap - cg%nyb
 
-      ysni = y(jremap) + epsi + dysn
+      ysni = cg%y(jremap) + epsi + dysn
 #else /* !SHEAR */
       ysno = ysn
       ysni = ysn

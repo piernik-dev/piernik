@@ -50,8 +50,8 @@ contains
       use constants,     only: pi
       use dataio_pub,    only: ierrh, par_file, namelist_errh, compare_namelist    ! QA_WARN required for diff_nml
       use dataio_pub,    only: msg, die, warn
-      use grid,          only: xmin, xmax, ymin, ymax, zmin, zmax, has_dir, xdim, ydim, zdim
-      use mpisetup,      only: ierr, rbuff, ibuff, master, slave, buffer_dim, comm
+      use grid,          only: cg
+      use mpisetup,      only: ierr, rbuff, ibuff, master, slave, buffer_dim, comm, has_dir, xdim, ydim, zdim
       use mpi,           only: MPI_DOUBLE_PRECISION, MPI_INTEGER
       use problem_pub,   only: jeans_d0, jeans_mode
 
@@ -115,9 +115,9 @@ contains
       if (.not. has_dir(ydim)) iy = 0
       if (.not. has_dir(zdim)) iz = 0
 
-      kx = 2. * pi * ix / (xmax - xmin)
-      ky = 2. * pi * iy / (ymax - ymin)
-      kz = 2. * pi * iz / (zmax - zmin)
+      kx = 2. * pi * ix / cg%Lx
+      ky = 2. * pi * iy / cg%Ly
+      kz = 2. * pi * iz / cg%Lz
       if (mode == 1) then
          kx = kx / 2.
          ky = ky / 2.
@@ -137,7 +137,7 @@ contains
       use arrays,        only: u
       use constants,     only: fpiG, pi, newtong
       use dataio_pub,    only: tend, msg, printinfo, warn
-      use grid,          only: xmin, xmax, ymin, ymax, zmin, zmax, x, y, z, nx, ny, nz, xmin, ymin, zmin
+      use grid,          only: cg
       use initionized,   only: gamma_ion, idni, imxi, imzi, ieni
       use mpisetup,      only: master
 #ifdef MAGNETIC
@@ -147,20 +147,16 @@ contains
       implicit none
 
       integer :: i, j, k
-      real    :: xi, yj, zk, kn, Vbox, Tamp, pres, Tamp_rounded, Tamp_aux
+      real    :: xi, yj, zk, kn, Tamp, pres, Tamp_rounded, Tamp_aux
       real    :: cs0, omg, omg2, kJ
 
-      Vbox = 1.
-      if (nx>1) Vbox = Vbox * (xmax - xmin)
-      if (ny>1) Vbox = Vbox * (ymax - ymin)
-      if (nz>1) Vbox = Vbox * (zmax - zmin)
       cs0  = sqrt(gamma_ion * p0 / d0)
       kn   = sqrt(kx**2 + ky**2 + kz**2)
       omg2 = cs0**2 * kn**2 - fpiG * d0
       omg  = sqrt(abs(omg2))
       kJ   = sqrt(fpiG * d0) / cs0
       if (kn > 0) then
-         Tamp = (d0 * amp**2 * omg2 * Vbox)/(4.0 * kn**2)
+         Tamp = (d0 * amp**2 * omg2 * cg%Vol)/(4.0 * kn**2)
       else
          Tamp = 0.
          if (master) call warn("[initproblem:init_prob] No waves (kn == 0)")
@@ -196,12 +192,12 @@ contains
       endif
 ! Uniform equilibrium state
 
-      do k = 1,nz
-         zk = z(k)-zmin
-         do j = 1,ny
-            yj = y(j)-ymin
-            do i = 1,nx
-               xi = x(i)-xmin
+      do k = cg%ks, cg%ke
+         zk = cg%z(k)-cg%zmin
+         do j = cg%js, cg%je
+            yj = cg%y(j)-cg%ymin
+            do i = cg%is, cg%ie
+               xi = cg%x(i)-cg%xmin
                select case (mode)
                case (0)
                   u(idni,i,j,k)   = d0 * (1.d0 +             amp * dsin(kx*xi + ky*yj + kz*zk))

@@ -45,7 +45,7 @@ contains
    subroutine timestep_dst
       use types,         only: component_fluid
       use arrays,        only: u
-      use grid,          only: ks, ke, is, ie, js, je
+      use grid,          only: cg
       use fluidindex,    only: nvar
       use timestepfuncs, only: compute_c_max, compute_dt
 
@@ -64,9 +64,9 @@ contains
       c_max = 0.0; cx = 0.0; cy = 0.0; cz = 0.0
       fl => nvar%dst
 
-      do k= ks, ke
-         do j = js, je
-            do i = is, ie
+      do k= cg%ks, cg%ke
+         do j = cg%js, cg%je
+            do i = cg%is, cg%ie
                call compute_c_max(fl,0.0,i,j,k,cx,cy,cz,c_max)
             enddo
          enddo

@@ -113,23 +113,23 @@ contains
 
   subroutine yshift(ts,dts)
     use arrays, only: u
-    use grid,   only: dy, Lx, nyb, x, nb, ny
+    use grid,   only: cg
     implicit none
     real, intent(in) :: ts, dts
 #ifdef FFTW
     integer :: i
 #endif /* FFTW */
 
-    ddly  = dts * qshear*omega*Lx
-    dely  = ts  * qshear*omega*Lx
-    delj  = mod(int(dely/dy),nyb)
-    eps   = mod(dely,dy)/dy
+    ddly  = dts * qshear*omega*cg%Lx
+    dely  = ts  * qshear*omega*cg%Lx
+    delj  = mod(int(dely/cg%dy), cg%nyb)
+    eps   = mod(dely, cg%dy)/cg%dy
 #ifdef FFTW
     do i=LBOUND(u,1),UBOUND(u,1)
-       u(i,:,nb+1:ny-nb,:) = unshear_fft( u(i,:,nb+1:ny-nb,:), x(:),ddly)
+       u(i,:, cg%nb+1:cg%ny-cg%nb,:) = unshear_fft( u(i,:, cg%nb+1:cg%ny-cg%nb,:), cg%x(:),ddly)
     enddo
-    u(:,:,1:nb,:)       = u(:,:,ny-2*nb+1:ny-nb,:)
-    u(:,:,ny-nb+1:ny,:) = u(:,:,nb+1:2*nb,:)
+    u(:,:,1:cg%nb,:)       = u(:,:, cg%ny-2*cg%nb+1:cg%ny-cg%nb,:)
+    u(:,:, cg%ny-cg%nb+1:cg%ny,:) = u(:,:, cg%nb+1:2*cg%nb,:)
 #endif /* FFTW */
   end subroutine yshift
 
@@ -137,7 +137,8 @@ contains
   function unshear_fft(qty,x,ddy,inv)
 
     use constants, only: dpi
-    use grid,      only: dy, nb, Lx
+    use grid,      only: cg
+
 
     implicit none
 
@@ -160,7 +161,7 @@ contains
     ! constants from fftw3.f
     integer, parameter :: FFTW_ESTIMATE=64
 
-    St = - ddy / dy / Lx
+    St = - ddy / cg%dy / cg%Lx
     if (.not.present(inv)) St = -St
 
     nx = size(qty,1)
@@ -203,7 +204,7 @@ contains
 #endif /* FFTW */
 
   function unshear(qty,x,inv)
-    use grid,     only: nb, xmax, xmin, nyb, dy
+    use grid,     only: cg
 
     logical, optional               :: inv
     real, dimension(:,:,:)          :: qty
@@ -217,9 +218,9 @@ contains
     ny = size(qty,2)
     nz = size(qty,3)
 
-    my = 3*nyb+2*nb
+    my = 3*cg%nyb+2*cg%nb
 
-    fx = dely / (xmax - xmin)
+    fx = dely / cg%Lx
     sg = -1
 
     if (.not.allocated(temp)) allocate(temp(my,nz))
@@ -229,14 +230,14 @@ contains
     if (present(inv)) then
        fx = - fx
     endif
-    do i = 1, nx
+    do i = 1, cg%nx
       dl  = fx * x(i)
-      ndl = mod(int(dl/dy),nyb)
-      ddl = mod(dl,dy)/dy
+      ndl = mod(int(dl/cg%dy), cg%nyb)
+      ddl = mod(dl, cg%dy)/cg%dy
 
-      temp(         1:  nyb+nb,:)   = qty(i,   1:nyb+nb ,:)
-      temp(  nyb+nb+1:2*nyb+nb,:)   = qty(i,nb+1:nyb+nb,:)
-      temp(2*nyb+nb+1:3*nyb+2*nb,:) = qty(i,nb+1:ny    ,:)
+      temp(         1:  cg%nyb+cg%nb,:)   = qty(i,   1:cg%nyb+cg%nb ,:)
+      temp(  cg%nyb+cg%nb+1:2*cg%nyb+cg%nb,:)   = qty(i, cg%nb+1:cg%nyb+cg%nb,:)
+      temp(2*cg%nyb+cg%nb+1:3*cg%nyb+2*cg%nb,:) = qty(i, cg%nb+1:ny    ,:)
 
       temp = cshift(temp,dim=1,shift=ndl)
 
@@ -247,10 +248,10 @@ contains
             - 0.5*(ddl)*(1.0-ddl) * cshift(temp(:,:),shift= sg,dim=1) &
             + 0.5*(ddl)*(1.0+ddl) * cshift(temp(:,:),shift=-sg,dim=1)
 
-      unshear(i,nb+1:nb+nyb,:) = temp(nb+nyb+1:nb+2*nyb,:)
+      unshear(i, cg%nb+1:cg%nb+cg%nyb,:) = temp(cg%nb+cg%nyb+1:cg%nb+2*cg%nyb,:)
 
-      unshear(i,1:nb,:)          = unshear(i,nyb+1:nyb+nb,:)
-      unshear(i,nyb+nb+1:ny,:)   = unshear(i,nb+1 :2*nb,:)
+      unshear(i,1:cg%nb,:)          = unshear(i, cg%nyb+1:cg%nyb+cg%nb,:)
+      unshear(i, cg%nyb+cg%nb+1:ny,:)   = unshear(i, cg%nb+1 :2*cg%nb,:)
 
 !      unshear(i,:,:) = max(unshear(i,:,:), smalld)
     enddo

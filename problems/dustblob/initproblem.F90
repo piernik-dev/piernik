@@ -100,10 +100,10 @@ module initproblem
 
    subroutine init_prob
       use arrays,       only: u
-      use grid,         only: x, y, z, nx, ny, nz, zdim, has_dir
+      use grid,         only: cg
       use initdust,     only: idnd, imxd, imyd, imzd
       use initneutral,  only: idnn, imxn, imyn, imzn, gamma_neu
-      use mpisetup,     only: smalld
+      use mpisetup,     only: smalld, zdim, has_dir
 #ifndef ISO
       use initneutral,  only: ienn
 #endif /* !ISO */
@@ -112,13 +112,13 @@ module initproblem
       real    :: xi,yj,zk, rc
       integer :: i, j, k
 
-      do i = 1,nx
-         xi = x(i)
-         do j = 1,ny
-            yj = y(j)
-            do k = 1,nz
+      do i = 1, cg%nx
+         xi = cg%x(i)
+         do j = 1, cg%ny
+            yj = cg%y(j)
+            do k = 1, cg%nz
                if (has_dir(zdim)) then
-                  zk = z(k)
+                  zk = cg%z(k)
                   rc = sqrt((xi-x0)**2+(yj-y0)**2+(zk-z0)**2)
                else
                   rc = sqrt((xi-x0)**2+(yj-y0)**2)

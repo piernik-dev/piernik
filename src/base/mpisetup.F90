@@ -52,7 +52,7 @@ module mpisetup
         & cfr_smooth, cleanup_mpi, comm, comm3d, dt, dt_initial, dt_max_grow, dt_min, dt_old, dtm, err, ibuff, ierr, info, init_mpi, &
         & integration_order, lbuff, limiter, mpifind, ndims, nproc, nstep, pcoords, proc, procxl, procxr, procxyl, procyl, procyr, procyxl, proczl, &
         & proczr, psize, pxsize, pysize, pzsize, rbuff, req, smalld, smallei, smallp, status, t, use_smalld, magic_mass, local_magic_mass, master, slave, &
-        & nxd, nyd, nzd, nb, big_float
+        & nxd, nyd, nzd, nb, xdim, ydim, zdim, has_dir, big_float
 
    integer :: nproc, proc, ierr , rc, info
    integer :: status(MPI_STATUS_SIZE,4)
@@ -67,12 +67,16 @@ module mpisetup
    real, save            :: local_magic_mass = 0.0
    integer               :: nstep
 
+   integer, parameter    :: xdim=1                          !< parameter assigned to x-direction
+   integer, parameter    :: ydim=2                          !< parameter assigned to y-direction
+   integer, parameter    :: zdim=3                          !< parameter assigned to z-direction
    integer, parameter    :: ndims = 3       ! 3D grid
    integer               :: comm, comm3d
    logical               :: reorder
    integer, dimension(ndims) :: psize, pcoords, coords
    logical, dimension(ndims) :: periods
    integer               ::   procxl, procxr, procyl, procyr, proczl, proczr, procxyl, procyxl, procxyr, procyxr
+   logical, protected, dimension(ndims) :: has_dir   !< .true. for existing directions
 
    integer, parameter               :: buffer_dim=200
    character(len=cbuff_len), dimension(buffer_dim) :: cbuff
@@ -413,6 +417,7 @@ module mpisetup
 
          endif
 
+         has_dir(:) = ([ nxd, nyd, nzd ] > 1)
          domsize(:) = [nxd, nyd, nzd]
 
          bnd_xl_dom = bnd_xl

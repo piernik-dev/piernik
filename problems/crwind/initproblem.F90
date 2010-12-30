@@ -49,6 +49,7 @@ module initproblem
 !-----------------------------------------------------------------------------
 
    subroutine read_problem_par
+
       use dataio_pub,    only: ierrh, par_file, namelist_errh, compare_namelist      ! QA_WARN required for diff_nml
       use mpisetup,      only: rbuff, buffer_dim, comm, ierr, master, slave
       use mpi,           only: MPI_DOUBLE_PRECISION
@@ -102,9 +103,10 @@ module initproblem
 !-----------------------------------------------------------------------------
 
    subroutine init_prob
+
       use arrays,         only: u, b, dprof
       use fluidindex,     only: ibx, iby, ibz, nvar
-      use grid,           only: x, y, z, nx, ny, nz
+      use grid,           only: cg
       use hydrostatic,    only: hydrostatic_zeq_densmid
       use initcosmicrays, only: gamma_crs, iarr_crs
       use initionized,    only: idni, imxi, imyi, imzi
@@ -114,7 +116,7 @@ module initproblem
       use shear,          only: qshear, omega
 #endif /* SHEAR */
 #ifdef GALAXY
-      use grid,           only: Lx, Ly
+      use grid,           only: cg
 #endif /* GALAXY */
 
       implicit none
@@ -130,16 +132,16 @@ module initproblem
 
       call hydrostatic_zeq_densmid(1, 1, d0, csim2)
 
-      do k = 1,nz
-         do j = 1,ny
-            do i = 1,nx
+      do k = 1, cg%nz
+         do j = 1, cg%ny
+            do i = 1, cg%nx
                u(idni,i,j,k)   = max(smalld,dprof(k))
 
                u(imxi,i,j,k) = 0.0
                u(imyi,i,j,k) = 0.0
                u(imzi,i,j,k) = 0.0
 #ifdef SHEAR
-               u(imyi,i,j,k) = -qshear*omega*x(i)*u(idni,i,j,k)
+               u(imyi,i,j,k) = -qshear*omega*cg%x(i)*u(idni,i,j,k)
 #endif /* SHEAR */
 
 #ifndef ISO
@@ -152,19 +154,19 @@ module initproblem
 #ifdef GALAXY
 ! Single SN explosion in x0,y0,z0 at t = 0 if amp_cr /= 0
                u(iarr_crs,i,j,k)= u(iarr_crs,i,j,k) &
-                     + amp_cr*exp(-((x(i)- x0    )**2 + (y(j)- y0    )**2 + (z(k)-z0)**2)/r_sn**2) &
-                     + amp_cr*exp(-((x(i)-(x0+Lx))**2 + (y(j)- y0    )**2 + (z(k)-z0)**2)/r_sn**2) &
-                     + amp_cr*exp(-((x(i)- x0    )**2 + (y(j)-(y0+Ly))**2 + (z(k)-z0)**2)/r_sn**2) &
-                     + amp_cr*exp(-((x(i)-(x0+Lx))**2 + (y(j)-(y0+Ly))**2 + (z(k)-z0)**2)/r_sn**2)
+                     + amp_cr*exp(-((cg%x(i)- x0          )**2 + (cg%y(j)- y0    )**2 + (cg%z(k)-z0)**2)/r_sn**2) &
+                     + amp_cr*exp(-((cg%x(i)-(x0+cg%Lx))**2 + (cg%y(j)- y0    )**2 + (cg%z(k)-z0)**2)/r_sn**2) &
+                     + amp_cr*exp(-((cg%x(i)- x0          )**2 + (cg%y(j)-(y0+cg%Ly))**2 + (cg%z(k)-z0)**2)/r_sn**2) &
+                     + amp_cr*exp(-((cg%x(i)-(x0+cg%Lx))**2 + (cg%y(j)-(y0+cg%Ly))**2 + (cg%z(k)-z0)**2)/r_sn**2)
 #endif /* GALAXY */
 #endif /* COSM_RAYS */
             enddo
          enddo
       enddo
 
-      do k = 1,nz
-         do j = 1,ny
-            do i = 1,nx
+      do k = 1, cg%nz
+         do j = 1, cg%ny
+            do i = 1, cg%nx
                b(ibx,i,j,k)   = b0*sqrt(u(idni,i,j,k)/d0)* bxn/sqrt(bxn**2+byn**2+bzn**2)
                b(iby,i,j,k)   = b0*sqrt(u(idni,i,j,k)/d0)* byn/sqrt(bxn**2+byn**2+bzn**2)
                b(ibz,i,j,k)   = b0*sqrt(u(idni,i,j,k)/d0)* bzn/sqrt(bxn**2+byn**2+bzn**2)
