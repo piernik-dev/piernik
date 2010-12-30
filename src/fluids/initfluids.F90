@@ -229,11 +229,13 @@ module initfluids
             mx => u(fl%imx,:,:,:)
             my => u(fl%imy,:,:,:)
             mz => u(fl%imz,:,:,:)
-            if (fl%has_energy) en => u(fl%ien,:,:,:)
-            if (fl%is_magnetized.and.fl%has_energy) then
-               smallp = min( minval( en - ekin(mx,my,mz,dn) - emag(bx,by,bz))/fl%gam_1, smallp)
-            elseif (fl%has_energy) then
-               smallp = min( minval( en - ekin(mx,my,mz,dn))/fl%gam_1, smallp )
+            if (fl%has_energy) then
+               en => u(fl%ien,:,:,:)
+               if (fl%is_magnetized) then
+                  smallp = min( minval( en - ekin(mx,my,mz,dn) - emag(bx,by,bz))/fl%gam_1, smallp)
+               else
+                  smallp = min( minval( en - ekin(mx,my,mz,dn))/fl%gam_1, smallp )
+               endif
             else
                smallp = min( minval( fl%cs2*dn ), smallp )
             endif
