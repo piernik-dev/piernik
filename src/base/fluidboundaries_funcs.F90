@@ -48,7 +48,7 @@ module fluidboundaries_funcs
 
          implicit none
 
-         u(:,1:cg%nb,:,:) = u(:, cg%nxb+1:cg%nxb+cg%nb,:,:)
+         u(:,1:cg%nb,:,:) = u(:, cg%nxb+1:cg%ie,:,:)
 
       end subroutine bnd_xl_per
 
@@ -69,13 +69,13 @@ module fluidboundaries_funcs
          integer :: ib
 
          do ib=1, cg%nb
-            u([iarr_all_dn,iarr_all_my,iarr_all_mz], cg%nb+1-ib,:,:)  = u([iarr_all_dn,iarr_all_my,iarr_all_mz], cg%nb+ib,:,:)
-            u(iarr_all_mx, cg%nb+1-ib,:,:)  = -u(iarr_all_mx, cg%nb+ib,:,:)
+            u([iarr_all_dn,iarr_all_my,iarr_all_mz], cg%is-ib,:,:)  = u([iarr_all_dn,iarr_all_my,iarr_all_mz], cg%nb+ib,:,:)
+            u(iarr_all_mx, cg%is-ib,:,:)  = -u(iarr_all_mx, cg%nb+ib,:,:)
 #ifndef ISO
-            u(iarr_all_en, cg%nb+1-ib,:,:)  =  u(iarr_all_en, cg%nb+ib,:,:)
+            u(iarr_all_en, cg%is-ib,:,:)  =  u(iarr_all_en, cg%nb+ib,:,:)
 #endif /* !ISO */
 #ifdef COSM_RAYS
-            u(iarr_all_crs, cg%nb+1-ib,:,:) =  u(iarr_all_crs, cg%nb+ib,:,:)
+            u(iarr_all_crs, cg%is-ib,:,:) =  u(iarr_all_crs, cg%nb+ib,:,:)
 #endif /* COSM_RAYS */
          enddo
 
@@ -95,7 +95,7 @@ module fluidboundaries_funcs
          integer :: ib
 
          do ib = 1, cg%nb
-            u(:,ib,:,:)            = u(:, cg%nb+1,:,:)
+            u(:,ib,:,:)            = u(:, cg%is,:,:)
 #ifdef COSM_RAYS
             u(iarr_all_crs,ib,:,:) = smallecr
 #endif /* COSM_RAYS */
@@ -121,10 +121,10 @@ module fluidboundaries_funcs
          integer :: ib
 
          do ib = 1, cg%nb
-            u([iarr_all_dn,iarr_all_my,iarr_all_mz],ib,:,:)  = u([iarr_all_dn,iarr_all_my,iarr_all_mz], cg%nb+1,:,:)
-            u(iarr_all_mx,ib,:,:)  = min(u(iarr_all_mx, cg%nb+1,:,:),0.0)
+            u([iarr_all_dn,iarr_all_my,iarr_all_mz],ib,:,:)  = u([iarr_all_dn,iarr_all_my,iarr_all_mz], cg%is,:,:)
+            u(iarr_all_mx,ib,:,:)  = min(u(iarr_all_mx, cg%is,:,:),0.0)
 #ifndef ISO
-            u(iarr_all_en,ib,:,:)  = u(iarr_all_en, cg%nb+1,:,:)
+            u(iarr_all_en,ib,:,:)  = u(iarr_all_en, cg%is,:,:)
 #endif /* !ISO */
 #ifdef COSM_RAYS
             u(iarr_all_crs,ib,:,:) = smallecr
@@ -140,7 +140,7 @@ module fluidboundaries_funcs
 
          implicit none
 
-         u(:, cg%nxb+cg%nb+1:cg%nxb+2*cg%nb,:,:) = u(:, cg%nb+1:2*cg%nb,:,:)
+         u(:, cg%ie+1:cg%nx,:,:) = u(:, cg%is:2*cg%nb,:,:)
 
       end subroutine bnd_xr_per
 
@@ -161,13 +161,13 @@ module fluidboundaries_funcs
          integer :: ib
 
          do ib=1, cg%nb
-            u([iarr_all_dn,iarr_all_my,iarr_all_mz], cg%nb+cg%nxb+ib,:,:) = u([iarr_all_dn,iarr_all_my,iarr_all_mz], cg%nb+cg%nxb+1-ib,:,:)
-            u(iarr_all_mx, cg%nb+cg%nxb+ib,:,:)  = -u(iarr_all_mx, cg%nb+cg%nxb+1-ib,:,:)
+            u([iarr_all_dn,iarr_all_my,iarr_all_mz], cg%ie+ib,:,:) = u([iarr_all_dn,iarr_all_my,iarr_all_mz], cg%ie+1-ib,:,:)
+            u(iarr_all_mx, cg%ie+ib,:,:)  = -u(iarr_all_mx, cg%ie+1-ib,:,:)
 #ifndef ISO
-            u(iarr_all_en, cg%nb+cg%nxb+ib,:,:)  =  u(iarr_all_en, cg%nb+cg%nxb+1-ib,:,:)
+            u(iarr_all_en, cg%ie+ib,:,:)  =  u(iarr_all_en, cg%ie+1-ib,:,:)
 #endif /* !ISO */
 #ifdef COSM_RAYS
-            u(iarr_all_crs, cg%nb+cg%nxb+ib,:,:) =  u(iarr_all_crs, cg%nb+cg%nxb+1-ib,:,:)
+            u(iarr_all_crs, cg%ie+ib,:,:) =  u(iarr_all_crs, cg%ie+1-ib,:,:)
 #endif /* COSM_RAYS */
          enddo
 
@@ -187,9 +187,9 @@ module fluidboundaries_funcs
          integer :: ib
 
          do ib = 1, cg%nb
-            u(:, cg%nb+cg%nxb+ib,:,:)            = u(:, cg%nb+cg%nxb,:,:)
+            u(:, cg%ie+ib,:,:)            = u(:, cg%ie,:,:)
 #ifdef COSM_RAYS
-            u(iarr_all_crs, cg%nb+cg%nxb+ib,:,:) = smallecr
+            u(iarr_all_crs, cg%ie+ib,:,:) = smallecr
 #endif /* COSM_RAYS */
          enddo
 
@@ -213,13 +213,13 @@ module fluidboundaries_funcs
          integer :: ib
 
          do ib = 1, cg%nb
-            u([iarr_all_dn,iarr_all_my,iarr_all_mz], cg%nb+cg%nxb+ib,:,:) = u([iarr_all_dn,iarr_all_my,iarr_all_mz], cg%nb+cg%nxb,:,:)
-            u(iarr_all_mx, cg%nb+cg%nxb+ib,:,:)  = max(u(iarr_all_mx, cg%nb+cg%nxb,:,:),0.0)
+            u([iarr_all_dn,iarr_all_my,iarr_all_mz], cg%ie+ib,:,:) = u([iarr_all_dn,iarr_all_my,iarr_all_mz], cg%ie,:,:)
+            u(iarr_all_mx, cg%ie+ib,:,:)  = max(u(iarr_all_mx, cg%ie,:,:),0.0)
 #ifndef ISO
-            u(iarr_all_en, cg%nb+cg%nxb+ib,:,:)  = u(iarr_all_en, cg%nb+cg%nxb,:,:)
+            u(iarr_all_en, cg%ie+ib,:,:)  = u(iarr_all_en, cg%ie,:,:)
 #endif /* !ISO */
 #ifdef COSM_RAYS
-            u(iarr_all_crs, cg%nb+cg%nxb+ib,:,:) = smallecr
+            u(iarr_all_crs, cg%ie+ib,:,:) = smallecr
 #endif /* COSM_RAYS */
          enddo
 

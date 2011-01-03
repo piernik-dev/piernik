@@ -126,10 +126,10 @@ contains
     eps   = mod(dely, cg%dy)/cg%dy
 #ifdef FFTW
     do i=LBOUND(u,1),UBOUND(u,1)
-       u(i,:, cg%nb+1:cg%ny-cg%nb,:) = unshear_fft( u(i,:, cg%nb+1:cg%ny-cg%nb,:), cg%x(:),ddly)
+       u(i,:, cg%js:cg%je,:) = unshear_fft( u(i,:, cg%js:cg%je,:), cg%x(:),ddly)
     enddo
-    u(:,:,1:cg%nb,:)       = u(:,:, cg%ny-2*cg%nb+1:cg%ny-cg%nb,:)
-    u(:,:, cg%ny-cg%nb+1:cg%ny,:) = u(:,:, cg%nb+1:2*cg%nb,:)
+    u(:,:,1:cg%nb,:)       = u(:,:, cg%ny-2*cg%js:cg%je,:)
+    u(:,:, cg%je+1:cg%ny,:) = u(:,:, cg%js:2*cg%nb,:)
 #endif /* FFTW */
   end subroutine yshift
 
@@ -235,9 +235,9 @@ contains
       ndl = mod(int(dl/cg%dy), cg%nyb)
       ddl = mod(dl, cg%dy)/cg%dy
 
-      temp(         1:  cg%nyb+cg%nb,:)   = qty(i,   1:cg%nyb+cg%nb ,:)
-      temp(  cg%nyb+cg%nb+1:2*cg%nyb+cg%nb,:)   = qty(i, cg%nb+1:cg%nyb+cg%nb,:)
-      temp(2*cg%nyb+cg%nb+1:3*cg%nyb+2*cg%nb,:) = qty(i, cg%nb+1:ny    ,:)
+      temp(         1:  cg%je,:)   = qty(i,   1:cg%je ,:)
+      temp(  cg%je+1:2*cg%nyb+cg%nb,:)   = qty(i, cg%js:cg%je,:)
+      temp(2*cg%nyb+cg%nb+1:3*cg%nyb+2*cg%nb,:) = qty(i, cg%js:ny    ,:)
 
       temp = cshift(temp,dim=1,shift=ndl)
 
@@ -248,10 +248,10 @@ contains
             - 0.5*(ddl)*(1.0-ddl) * cshift(temp(:,:),shift= sg,dim=1) &
             + 0.5*(ddl)*(1.0+ddl) * cshift(temp(:,:),shift=-sg,dim=1)
 
-      unshear(i, cg%nb+1:cg%nb+cg%nyb,:) = temp(cg%nb+cg%nyb+1:cg%nb+2*cg%nyb,:)
+      unshear(i, cg%js:cg%je,:) = temp(cg%je+1:cg%nb+2*cg%nyb,:)
 
-      unshear(i,1:cg%nb,:)          = unshear(i, cg%nyb+1:cg%nyb+cg%nb,:)
-      unshear(i, cg%nyb+cg%nb+1:ny,:)   = unshear(i, cg%nb+1 :2*cg%nb,:)
+      unshear(i,1:cg%nb,:)          = unshear(i, cg%nyb+1:cg%je,:)
+      unshear(i, cg%je+1:ny,:)   = unshear(i, cg%js :2*cg%nb,:)
 
 !      unshear(i,:,:) = max(unshear(i,:,:), smalld)
     enddo

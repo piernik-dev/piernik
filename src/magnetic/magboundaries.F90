@@ -119,16 +119,16 @@ contains
             allocate(send_left(3, cg%nb, cg%ny, cg%nz),send_right(3, cg%nb, cg%ny, cg%nz), &
                      recv_left(3, cg%nb, cg%ny, cg%nz),recv_right(3, cg%nb, cg%ny, cg%nz))
 
-            send_left (:,:,:,:)  = b(:, cg%nb+1:2*cg%nb,:,:)
-            send_right(:,:,:,:)  = b(:, cg%nxb+1:cg%nxb+cg%nb,:,:)
+            send_left (:,:,:,:)  = b(:, cg%is:2*cg%nb,:,:)
+            send_right(:,:,:,:)  = b(:, cg%nxb+1:cg%ie,:,:)
 
             if (bnd_xl == "she") then
 !
 ! przesuwamy o calkowita liczbe komorek + periodyczny wb w kierunku y
 !
-               send_left (:,:, cg%nb+1:cg%nb+cg%nyb,:)         = cshift(send_left (:,:, cg%nb+1:cg%nb+cg%nyb,:),dim=3,shift= delj)
-               send_left (:,:,1:cg%nb,:)                = send_left  (:,:, cg%nyb+1:cg%nyb+cg%nb,:)
-               send_left (:,:, cg%nb+cg%nyb+1:cg%nyb+2*cg%nb,:)   = send_left  (:,:, cg%nb+1:2*cg%nb,:)
+               send_left (:,:, cg%js:cg%je,:)         = cshift(send_left (:,:, cg%js:cg%je,:),dim=3,shift= delj)
+               send_left (:,:,1:cg%nb,:)                = send_left  (:,:, cg%nyb+1:cg%je,:)
+               send_left (:,:, cg%je+1:cg%ny,:)   = send_left  (:,:, cg%js:2*cg%nb,:)
 !
 ! remapujemy  - interpolacja kwadratowa
 !
@@ -141,9 +141,9 @@ contains
 !
 ! przesuwamy o calkowita liczbe komorek + periodyczny wb w kierunku y
 !
-               send_right (:,:, cg%nb+1:cg%nb+cg%nyb,:)        = cshift(send_right(:,:, cg%nb+1:cg%nb+cg%nyb,:),dim=3,shift=-delj)
-               send_right (:,:,1:cg%nb,:)               = send_right (:,:, cg%nyb+1:cg%nyb+cg%nb,:)
-               send_right (:,:, cg%nb+cg%nyb+1:cg%nyb+2*cg%nb,:)  = send_right (:,:, cg%nb+1:2*cg%nb,:)
+               send_right (:,:, cg%js:cg%je,:)        = cshift(send_right(:,:, cg%js:cg%je,:),dim=3,shift=-delj)
+               send_right (:,:,1:cg%nb,:)               = send_right (:,:, cg%nyb+1:cg%je,:)
+               send_right (:,:, cg%je+1:cg%ny,:)  = send_right (:,:, cg%js:2*cg%nb,:)
 !
 ! remapujemy - interpolacja kwadratowa
 !
@@ -162,7 +162,7 @@ contains
             call MPI_Waitall(4,req(:),status(:,:),ierr)
 
             b(:,1:cg%nb-1,:,:)               = recv_left(:,1:cg%nb-1,:,:)
-            b(:, cg%nxb+cg%nb+1+1:cg%nxb+2*cg%nb,:,:)  = recv_right(:,1+1:cg%nb,:,:)
+            b(:, cg%ie+1+1:cg%nx,:,:)  = recv_right(:,1+1:cg%nb,:,:)
 
             if (allocated(send_left))  deallocate(send_left)
             if (allocated(send_right)) deallocate(send_right)
@@ -212,7 +212,7 @@ contains
 !   - lower to left
          if (pcoords(1) .eq. 0 .and. pcoords(2) .eq. 0) then
             do i=1, cg%nb
-               do j=cg%nb+1, cg%ny
+               do j=cg%js, cg%ny
                   b(ibx,i,j,:) = -b(iby,j,2*cg%nb+1-i,:)
                   b(iby,i,j,:) =  b(ibx,j,2*cg%nb+1-i,:)
                   b(ibz,i,j,:) =  b(ibz,j,2*cg%nb+1-i,:)
@@ -223,7 +223,7 @@ contains
          if (procxyl .gt. 0) then
             allocate(send_left(3, cg%nb, cg%ny, cg%nz), recv_left(3, cg%nx, cg%nb, cg%nz))
 
-            send_left(:,:,:,:) = b(:, cg%nb+1:2*cg%nb,:,:)
+            send_left(:,:,:,:) = b(:, cg%is:2*cg%nb,:,:)
 
             CALL MPI_Isend   (send_left , 3*cg%nb*cg%ny*cg%nz, MPI_DOUBLE_PRECISION, procxyl, 70, comm, req(1), ierr)
             CALL MPI_Irecv   (recv_left , 3*cg%nx*cg%nb*cg%nz, MPI_DOUBLE_PRECISION, procxyl, 80, comm, req(2), ierr)
@@ -232,9 +232,9 @@ contains
 
             do i=1, cg%nb
                do j=1, cg%ny
-                  b(ibx,i,j,:) = -recv_left(iby,j, cg%nb+1-i,:)
-                  b(iby,i,j,:) =  recv_left(ibx,j, cg%nb+1-i,:)
-                  b(ibz,i,j,:) =  recv_left(ibz,j, cg%nb+1-i,:)
+                  b(ibx,i,j,:) = -recv_left(iby,j, cg%is-i,:)
+                  b(iby,i,j,:) =  recv_left(ibx,j, cg%is-i,:)
+                  b(ibz,i,j,:) =  recv_left(ibz,j, cg%is-i,:)
                enddo
             enddo
 
@@ -247,7 +247,7 @@ contains
 !   - left to lower
          if (pcoords(2) .eq. 0 .and. pcoords(1) .eq. 0 ) then
             do j=1, cg%nb
-               do i=cg%nb+1, cg%nx
+               do i=cg%is, cg%nx
                   b(ibx,i,j,:) =  b(iby,2*cg%nb+1-j,i,:)
                   b(iby,i,j,:) = -b(ibx,2*cg%nb+1-j,i,:)
                   b(ibz,i,j,:) =  b(ibz,2*cg%nb+1-j,i,:)
@@ -266,7 +266,7 @@ contains
          if (procyxl .gt. 0) then
             allocate(send_left(3, cg%nx, cg%nb, cg%nz), recv_left(3, cg%nb, cg%ny, cg%nz))
 
-            send_left(:,:,:,:) = b(:,:, cg%nb+1:2*cg%nb,:)
+            send_left(:,:,:,:) = b(:,:, cg%js:2*cg%nb,:)
 
             CALL MPI_Isend   (send_left , 3*cg%nx*cg%nb*cg%nz, MPI_DOUBLE_PRECISION, procyxl, 80, comm, req(1), ierr)
             CALL MPI_Irecv   (recv_left , 3*cg%nb*cg%ny*cg%nz, MPI_DOUBLE_PRECISION, procyxl, 70, comm, req(2), ierr)
@@ -275,9 +275,9 @@ contains
 
             do j=1, cg%nb
                do i=1, cg%nx
-                  b(ibx,i,j,:) =  recv_left(iby, cg%nb+1-j,i,:)
-                  b(iby,i,j,:) = -recv_left(ibx, cg%nb+1-j,i,:)
-                  b(ibz,i,j,:) =  recv_left(ibz, cg%nb+1-j,i,:)
+                  b(ibx,i,j,:) =  recv_left(iby, cg%js-j,i,:)
+                  b(iby,i,j,:) = -recv_left(ibx, cg%js-j,i,:)
+                  b(ibz,i,j,:) =  recv_left(ibz, cg%js-j,i,:)
                enddo
             enddo
 
@@ -308,7 +308,7 @@ contains
                case ("cor", "inf", "mpi", "ref", "she")
                   ! Do nothing
                case ("per")
-                  b(:,1:cg%nb,:,:)              = b(:, cg%nxb+1:cg%nxb+cg%nb,:,:)
+                  b(:,1:cg%nb,:,:)              = b(:, cg%nxb+1:cg%ie,:,:)
                case ("out")
                   b(:,1,:,:) = b(:,2,:,:)
                case default
@@ -320,7 +320,7 @@ contains
                case ("cor", "inf", "mpi", "ref", "she")
                   ! Do nothing
                case ("per")
-                  b(:, cg%nxb+cg%nb+1:cg%nxb+2*cg%nb,:,:) = b(:, cg%nb+1:2*cg%nb,:,:)
+                  b(:, cg%ie+1:cg%nx,:,:) = b(:, cg%is:2*cg%nb,:,:)
                case ("out")
                   b(:, cg%nx,:,:) = b(:, cg%nx-1,:,:)
                case default
@@ -334,7 +334,7 @@ contains
                case ("cor", "inf", "mpi", "ref")
                   ! Do nothing
                case ("per")
-                  b(:,:,1:cg%nb,:)              = b(:,:, cg%nyb+1:cg%nyb+cg%nb,:)
+                  b(:,:,1:cg%nb,:)              = b(:,:, cg%nyb+1:cg%je,:)
                case ("out")
                   b(:,:,1,:) = b(:,:,2,:)
                case default
@@ -346,7 +346,7 @@ contains
                case ("cor", "inf", "mpi", "ref")
                   ! Do nothing
                case ("per")
-                  b(:,:, cg%nyb+cg%nb+1:cg%nyb+2*cg%nb,:) = b(:,:, cg%nb+1:2*cg%nb,:)
+                  b(:,:, cg%je+1:cg%ny,:) = b(:,:, cg%js:2*cg%nb,:)
                case ("out")
                   b(:,:, cg%ny,:) = b(:,:, cg%ny-1,:)
                case default
@@ -361,7 +361,7 @@ contains
                case ("mpi", "ref")
                   ! Do nothing
                case ("per")
-                  b(:,:,:,1:cg%nb)              = b(:,:,:, cg%nzb+1:cg%nzb+cg%nb)
+                  b(:,:,:,1:cg%nb)              = b(:,:,:, cg%nzb+1:cg%ke)
                case ("out")
                   b(:,:,:,1) = b(:,:,:,2)
                case default
@@ -373,7 +373,7 @@ contains
                case ("mpi", "ref")
                   ! Do nothing
                case ("per")
-                  b(:,:,:, cg%nzb+cg%nb+1:cg%nzb+2*cg%nb) = b(:,:,:, cg%nb+1:2*cg%nb)
+                  b(:,:,:, cg%ke+1:cg%nz) = b(:,:,:, cg%ks:2*cg%nb)
                case ("out")
                   b(:,:,:, cg%nz) = b(:,:,:, cg%nz-1)
                case default
@@ -453,7 +453,7 @@ contains
                case ("out")
                   dvarx = var(ledge+1,:,:)-var(ledge,:,:)
                   do ib=1,lnbcells
-                     var(ib,:,:) = var(cg%nb+1,:,:) - real(cg%nb+1-ib)*dvarx
+                     var(ib,:,:) = var(cg%is,:,:) - real(cg%is-ib)*dvarx
                   enddo
                case default
                   write(msg,'(6a)') "[magboundaries:bnd_emf]: Boundary condition ",bnd_xl," not implemented for ",name, " in ", dim
@@ -503,7 +503,7 @@ contains
                case ("out")
                   dvary = var(:,ledge+1,:)-var(:,ledge,:)
                   do ib=1,lnbcells
-                     var(:,ib,:) = var(:, cg%nb+1,:) - real(cg%nb+1-ib)*dvary
+                     var(:,ib,:) = var(:, cg%js,:) - real(cg%js-ib)*dvary
                   enddo
                case default
                   write(msg,'(6a)') "[magboundaries:bnd_emf]: Boundary condition ",bnd_yl," not implemented for ",name, " in ", dim
@@ -553,7 +553,7 @@ contains
                case ("out")
                   dvarz = var(:,:,ledge+1)-var(:,:,ledge)
                   do ib=1,lnbcells
-                     var(:,:,ib) = var(:,:, cg%nb+1) - real(cg%nb+1-ib)*dvarz
+                     var(:,:,ib) = var(:,:, cg%ks) - real(cg%ks-ib)*dvarz
                   enddo
                case default
                   write(msg,'(6a)') "[magboundaries:bnd_emf]: Boundary condition ",bnd_zl," not implemented for ",name, " in ", dim

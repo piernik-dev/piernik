@@ -82,7 +82,7 @@ contains
             old,MPI_YZ_RIGHT_DOM,ierr)
          call MPI_Type_commit(MPI_YZ_RIGHT_DOM,ierr)
 
-         starts(2) = cg%nxb+cg%nb
+         starts(2) = cg%ie
          call MPI_Type_create_subarray(4,sizes,subsizes,starts,ord,&
             old,MPI_YZ_RIGHT_BND,ierr)
          call MPI_Type_commit(MPI_YZ_RIGHT_BND,ierr)
@@ -108,7 +108,7 @@ contains
             old,MAG_YZ_RIGHT_DOM,ierr)
          call MPI_Type_commit(MAG_YZ_RIGHT_DOM,ierr)
 
-         starts(2) = cg%nxb+cg%nb
+         starts(2) = cg%ie
          call MPI_Type_create_subarray(4,sizes,subsizes,starts,ord,&
             old,MAG_YZ_RIGHT_BND,ierr)
          call MPI_Type_commit(MAG_YZ_RIGHT_BND,ierr)
@@ -135,7 +135,7 @@ contains
          call MPI_Type_create_subarray(3, sizes, subsizes, starts, ord, old, ARR_YZ_RIGHT_DOM, ierr)
          call MPI_Type_commit(ARR_YZ_RIGHT_DOM, ierr)
 
-         starts(1) = cg%nxb+cg%nb
+         starts(1) = cg%ie
          call MPI_Type_create_subarray(3, sizes, subsizes, starts, ord, old, ARR_YZ_RIGHT_BND, ierr)
          call MPI_Type_commit(ARR_YZ_RIGHT_BND, ierr)
 
@@ -168,7 +168,7 @@ contains
             old,MPI_XZ_RIGHT_DOM,ierr)
          call MPI_Type_commit(MPI_XZ_RIGHT_DOM,ierr)
 
-         starts(3) = cg%nyb+cg%nb
+         starts(3) = cg%je
          call MPI_Type_create_subarray(4,sizes,subsizes,starts,ord,&
             old,MPI_XZ_RIGHT_BND,ierr)
          call MPI_Type_commit(MPI_XZ_RIGHT_BND,ierr)
@@ -194,7 +194,7 @@ contains
             old,MAG_XZ_RIGHT_DOM,ierr)
          call MPI_Type_commit(MAG_XZ_RIGHT_DOM,ierr)
 
-         starts(3) = cg%nyb+cg%nb
+         starts(3) = cg%je
          call MPI_Type_create_subarray(4,sizes,subsizes,starts,ord,&
             old,MAG_XZ_RIGHT_BND,ierr)
          call MPI_Type_commit(MAG_XZ_RIGHT_BND,ierr)
@@ -221,7 +221,7 @@ contains
          call MPI_Type_create_subarray(3, sizes, subsizes, starts, ord, old, ARR_XZ_RIGHT_DOM, ierr)
          call MPI_Type_commit(ARR_XZ_RIGHT_DOM, ierr)
 
-         starts(2) = cg%nyb+cg%nb
+         starts(2) = cg%je
          call MPI_Type_create_subarray(3, sizes, subsizes, starts, ord, old, ARR_XZ_RIGHT_BND, ierr)
          call MPI_Type_commit(ARR_XZ_RIGHT_BND, ierr)
 
@@ -254,7 +254,7 @@ contains
             old,MPI_XY_RIGHT_DOM,ierr)
          call MPI_Type_commit(MPI_XY_RIGHT_DOM,ierr)
 
-         starts(4) = cg%nzb+cg%nb
+         starts(4) = cg%ke
          call MPI_Type_create_subarray(4,sizes,subsizes,starts,ord,&
             old,MPI_XY_RIGHT_BND,ierr)
          call MPI_Type_commit(MPI_XY_RIGHT_BND,ierr)
@@ -280,7 +280,7 @@ contains
             old,MAG_XY_RIGHT_DOM,ierr)
          call MPI_Type_commit(MAG_XY_RIGHT_DOM,ierr)
 
-         starts(4) = cg%nzb+cg%nb
+         starts(4) = cg%ke
          call MPI_Type_create_subarray(4,sizes,subsizes,starts,ord,&
             old,MAG_XY_RIGHT_BND,ierr)
          call MPI_Type_commit(MAG_XY_RIGHT_BND,ierr)
@@ -307,7 +307,7 @@ contains
          call MPI_Type_create_subarray(3, sizes, subsizes, starts, ord, old, ARR_XY_RIGHT_DOM, ierr)
          call MPI_Type_commit(ARR_XY_RIGHT_DOM, ierr)
 
-         starts(3) = cg%nzb+cg%nb
+         starts(3) = cg%ke
          call MPI_Type_create_subarray(3, sizes, subsizes, starts, ord, old, ARR_XY_RIGHT_BND, ierr)
          call MPI_Type_commit(ARR_XY_RIGHT_BND, ierr)
 
