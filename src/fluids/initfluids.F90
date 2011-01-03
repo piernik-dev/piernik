@@ -191,7 +191,9 @@ module initfluids
    end subroutine cleanup_fluids
 
    subroutine sanitize_smallx_checks
-      use mpisetup,   only: smalld, smallp, big_float
+
+      use mpisetup,   only: smalld, smallp, big_float, master, comm, ierr
+      use mpi,        only: MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_MIN
       use func,       only: emag, ekin
       use dataio_pub, only: warn, msg
       use types,      only: component_fluid
@@ -216,8 +218,11 @@ module initfluids
             smalld = min(minval(dn), smalld)
          enddo
          smalld = smalld * safety_factor
-         write(msg,'(A,ES10.4)') "[sanitize_smallx_checks] adjusted smalld to ", smalld
-         call warn(msg)
+         call MPI_Allreduce(MPI_IN_PLACE, smalld, 1, MPI_DOUBLE_PRECISION, MPI_MIN, comm, ierr)
+         if (master) then
+            write(msg,'(A,ES10.4)') "[initfluids:sanitize_smallx_checks] adjusted smalld to ", smalld
+            call warn(msg)
+         endif
       endif
 
       if (smallp >= big_float) then
@@ -240,8 +245,11 @@ module initfluids
             endif
          enddo
          smallp = smallp * safety_factor
-         write(msg,'(A,ES10.4)') "[sanitize_smallx_checks] adjusted smallp to ", smallp
-         call warn(msg)
+         call MPI_Allreduce(MPI_IN_PLACE, smallp, 1, MPI_DOUBLE_PRECISION, MPI_MIN, comm, ierr)
+         if (master) then
+            write(msg,'(A,ES10.4)') "[initfluids:sanitize_smallx_checks] adjusted smallp to ", smallp
+            call warn(msg)
+         endif
       endif
 
       if (associated(dn)) nullify(dn)

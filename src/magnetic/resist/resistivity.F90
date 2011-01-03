@@ -215,7 +215,7 @@ module resistivity
       eta_max           = maxval(eta(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke))
       loc_eta_max       = maxloc(eta(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke))
 
-      call MPI_Allreduce(MPI_IN_PLACE, eta_max, 1, MPI_DOUBLE_PRECISION, MPI_MAX, 0, comm, ierr)
+      call MPI_Allreduce(MPI_IN_PLACE, eta_max, 1, MPI_DOUBLE_PRECISION, MPI_MAX, comm, ierr)
 
 #ifndef ISO
       dt_eint = deint_max * abs(minval(               &
@@ -255,7 +255,7 @@ module resistivity
          dt_resist = big
       endif
 
-      call MPI_Allreduce(MPI_IN_PLACE, dt_resist, 1, MPI_DOUBLE_PRECISION, MPI_MIN, 0, comm, ierr)
+      call MPI_Allreduce(MPI_IN_PLACE, dt_resist, 1, MPI_DOUBLE_PRECISION, MPI_MIN, comm, ierr)
 
    end subroutine timestep_resist
 
