@@ -46,7 +46,7 @@ contains
     use arrays,         only: u, sgp
     use dataio_pub,     only: die
     use grid,           only: cg
-    use mpisetup,       only: bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr
+    use mpisetup,       only: bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr, has_dir
 
     implicit none
     real, dimension(:,:,:), intent(in)  :: dens
@@ -54,44 +54,43 @@ contains
     real, dimension(:,:,:), allocatable :: ala
 #endif /* SHEAR */
 
-    if (any([cg%nx, cg%ny, cg%nz] <= 1)) call die("[poissonsolver:poisson_solve] Only 3D setups are supported") !BEWARE 2D and 1D probably need small fixes
+    if (.not. all(has_dir(:))) call die("[poissonsolver:poisson_solve] Only 3D setups are supported") !BEWARE 2D and 1D probably need small fixes
 
     if ( bnd_xl .eq. 'per' .and. bnd_xr .eq. 'per' .and. &
-        bnd_yl .eq. 'per' .and. bnd_yr .eq. 'per' .and. &
-        bnd_zl .ne. 'per' .and. bnd_zr .ne. 'per'        ) then ! Periodic in X and Y, nonperiodic in Z
+         bnd_yl .eq. 'per' .and. bnd_yr .eq. 'per' .and. &
+         bnd_zl .ne. 'per' .and. bnd_zr .ne. 'per'        ) then ! Periodic in X and Y, nonperiodic in Z
 
-         call poisson_xyp(dens(cg%nb+1:cg%nb+cg%nxb, cg%nb+1:cg%nb+cg%nyb,:), &
-                           sgp(cg%nb+1:cg%nb+cg%nxb, cg%nb+1:cg%nb+cg%nyb,:), cg%dz)
+       call poisson_xyp(dens(cg%is:cg%ie, cg%js:cg%je,:), sgp(cg%is:cg%ie, cg%js:cg%je,:), cg%dz)
 
-        call die("[poissonsolver:poisson_solve] poisson_xyp called")
+       call die("[poissonsolver:poisson_solve] poisson_xyp called")
 
     elseif ( bnd_xl .eq. 'per' .and. bnd_xr .eq. 'per' .and. &
-            bnd_yl .eq. 'per' .and. bnd_yr .eq. 'per' .and. &
-            bnd_zl .eq. 'per' .and. bnd_zr .eq. 'per'        ) then ! Fully 3D periodic
-        call poisson_xyzp(dens(cg%nb+1:cg%nb+cg%nxb, cg%nb+1:cg%nb+cg%nyb, cg%nb+1:cg%nb+cg%nzb), sgp(cg%nb+1:cg%nb+cg%nxb, cg%nb+1:cg%nb+cg%nyb, cg%nb+1:cg%nb+cg%nzb))
+         &   bnd_yl .eq. 'per' .and. bnd_yr .eq. 'per' .and. &
+         &   bnd_zl .eq. 'per' .and. bnd_zr .eq. 'per'        ) then ! Fully 3D periodic
+       call poisson_xyzp(dens(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), sgp(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)) ! BEWARE: something may not be fully initialized here
 
 #ifdef SHEAR
     elseif ( bnd_xl .eq. 'she' .and. bnd_xr .eq. 'she' .and. &
-             bnd_yl .eq. 'per' .and. bnd_yr .eq. 'per' ) then ! 2D shearing box
+         &   bnd_yl .eq. 'per' .and. bnd_yr .eq. 'per' ) then ! 2D shearing box
 
          if (dimensions=='3d') then
-           if (.not.allocated(ala)) allocate(ala(cg%nx-2*cg%nb, cg%ny-2*cg%nb, cg%nz-2*cg%nb))
-           ala = dens(cg%nb+1:cg%nb+cg%nxb, cg%nb+1:cg%nb+cg%nyb, cg%nb+1:cg%nb+cg%nzb)
-           call poisson_xyzp(ala(:,:,:), sgp(cg%nb+1:cg%nb+cg%nxb, cg%nb+1:cg%nb+cg%nyb, cg%nb+1:cg%nb+cg%nzb))
+           if (.not.allocated(ala)) allocate(ala(cg%nxb, cg%nyb, cg%nzb))
+           ala = dens(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
+           call poisson_xyzp(ala(:,:,:), sgp(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke))
 
-           sgp(:,:,1:cg%nb)              = sgp(:,:, cg%nzb+1:cg%nzb+cg%nb)
-           sgp(:,:, cg%nzb+cg%nb+1:cg%nzb+2*cg%nb) = sgp(:,:, cg%nb+1:2*cg%nb)
+           sgp(:,:,1:cg%nb)        = sgp(:,:, cg%nzb+1:cg%ke)
+           sgp(:,:, cg%ke+1:cg%nz) = sgp(:,:, cg%ks:2*cg%nb)
 
          else
-            call poisson_xy2d(dens(cg%nb+1:cg%nb+cg%nxb, cg%nb+1:cg%nb+cg%nyb,1), &
-                            sgp(cg%nb+1:cg%nb+cg%nxb,      cg%nb+1:cg%nb+cg%nyb,1), &
-                            sgp(1:cg%nb,             cg%nb+1:cg%nb+cg%nyb,1), &
-                            sgp(cg%nxb+cg%nb+1:cg%nxb+2*cg%nb, cg%nb+1:cg%nb+cg%nyb,1), &
-                            cg%dx)
+            call poisson_xy2d(dens(cg%is:cg%ie,   cg%js:cg%je,1), &
+                 &            sgp (cg%is:cg%ie,   cg%js:cg%je,1), &
+                 &            sgp (1:cg%nb,       cg%js:cg%je,1), &
+                 &            sgp (cg%is+1:cg%nx, cg%js:cg%je,1), &
+                 &            cg%dx)
 
          endif
-         sgp(:,1:cg%nb,:)              = sgp(:, cg%nyb+1:cg%nyb+cg%nb,:)
-         sgp(:, cg%nyb+cg%nb+1:cg%nyb+2*cg%nb,:) = sgp(:, cg%nb+1:2*cg%nb,:)
+         sgp(:,1:cg%nb,:)        = sgp(:, cg%nyb+1:cg%je,:)
+         sgp(:, cg%je+1:cg%ny,:) = sgp(:, cg%js:2*cg%nb,:)
 
          if (allocated(ala)) deallocate(ala)
 #endif /* SHEAR */
@@ -153,7 +152,7 @@ contains
 ! determine input array dimension
 !
     n = size(den, 1)
-    xx(:) = x(cg%nb+1:cg%nxb+cg%nb)
+    xx(:) = x(cg%is:cg%ie)
     if (n /= size(den,2)) stop 'cg%nx /= cg%ny in poisson_xy'
 
 ! compute dimensions for complex arrays
@@ -238,7 +237,7 @@ contains
       call dfftw_execute(pb2)
       lpot(i,:) = rtmp(:) / n / n
 
-      ctmp(:)   = fft(i,:) * exp( cmplx(0.0, -St*ky(:)*x(cg%nxb+cg%nb+i)) )
+      ctmp(:)   = fft(i,:) * exp( cmplx(0.0, -St*ky(:)*x(cg%ie+i)) )
       call dfftw_execute(pb2)
       rpot(i,:) = rtmp(:) / n / n
     enddo

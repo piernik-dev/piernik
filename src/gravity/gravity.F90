@@ -332,7 +332,7 @@ module gravity
          select case (bnd_xl)
             case ('per')
                do i = 1, ceiling(cg%nb/real(cg%nxb)) ! Repeating is important for domains that are narrower than their guardcells (e.g. cg%nxb = 2)
-                  sgp(1:cg%nb, :, :) = sgp(cg%nxb+1:cg%nxb+cg%nb, :, :)
+                  sgp(1:cg%nb, :, :) = sgp(cg%nxb+1:cg%ie, :, :)
                enddo
             case ('mpi')
                if (pxsize > 1) then
@@ -352,7 +352,7 @@ module gravity
          select case (bnd_xr)
             case ('per')
                do i = 1, ceiling(cg%nb/real(cg%nxb))
-                  sgp(cg%nxb+cg%nb+1:cg%nxb+2*cg%nb, :, :) = sgp(cg%nb+1:2*cg%nb, :, :)
+                  sgp(cg%ie+1:cg%nx, :, :) = sgp(cg%is:2*cg%nb, :, :)
                enddo
             case ('mpi')
                if (pxsize > 1) then
@@ -365,7 +365,7 @@ module gravity
                 call die("[gravity:all_grav_boundaries] bnd_xl == 'she' not implemented")
             case default
                do i = 1, cg%nb
-                  sgp(cg%nb+cg%nxb+i, :, :) = sgp(cg%nb+cg%nxb, :, :)
+                  sgp(cg%ie+i, :, :) = sgp(cg%ie, :, :)
                enddo
          end select
 
@@ -376,7 +376,7 @@ module gravity
          select case (bnd_yl)
             case ('per')
                do i = 1, ceiling(cg%nb/real(cg%nyb))
-                  sgp(:, 1:cg%nb, :) = sgp(:, cg%nyb+1:cg%nyb+cg%nb, :)
+                  sgp(:, 1:cg%nb, :) = sgp(:, cg%nyb+1:cg%je, :)
                enddo
             case ('mpi')
                if (pysize > 1) then
@@ -394,7 +394,7 @@ module gravity
          select case (bnd_yr)
             case ('per')
                do i = 1, ceiling(cg%nb/real(cg%nyb))
-                  sgp(:, cg%nyb+cg%nb+1:cg%nyb+2*cg%nb, :) = sgp(:, cg%nb+1:2*cg%nb, :)
+                  sgp(:, cg%je+1:cg%ny, :) = sgp(:, cg%js:2*cg%nb, :)
                enddo
             case ('mpi')
                if (pysize > 1) then
@@ -405,7 +405,7 @@ module gravity
                endif
             case default
                do i = 1, cg%nb
-                  sgp(:, cg%nb+cg%nyb+i, :) = sgp(:, cg%nb+cg%nyb, :)
+                  sgp(:, cg%je+i, :) = sgp(:, cg%je, :)
                enddo
          end select
 
@@ -416,7 +416,7 @@ module gravity
          select case (bnd_zl)
             case ('per')
                do i = 1, ceiling(cg%nb/real(cg%nzb))
-                  sgp(:, :, 1:cg%nb) = sgp(:, :, cg%nzb+1:cg%nzb+cg%nb)
+                  sgp(:, :, 1:cg%nb) = sgp(:, :, cg%nzb+1:cg%ke)
                enddo
             case ('mpi')
                if (pzsize > 1) then
@@ -434,7 +434,7 @@ module gravity
          select case (bnd_zr)
             case ('per')
                do i = 1, ceiling(cg%nb/real(cg%nzb))
-                  sgp(:, :, cg%nzb+cg%nb+1:cg%nzb+2*cg%nb) = sgp(:, :, cg%nb+1:2*cg%nb)
+                  sgp(:, :, cg%ke+1:cg%nz) = sgp(:, :, cg%ks:2*cg%nb)
                enddo
             case ('mpi')
                if (pzsize > 1) then
@@ -445,7 +445,7 @@ module gravity
                endif
             case default
                do i = 1, cg%nb
-                  sgp(:, :, cg%nb+cg%nzb+i) = sgp(:, :, cg%nb+cg%nzb)
+                  sgp(:, :, cg%ke+i) = sgp(:, :, cg%ke)
                enddo
          end select
 
