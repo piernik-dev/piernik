@@ -236,12 +236,14 @@ contains
 
 !
 
-   subroutine cosmicray_index(nvar, cg)
-      use types,           only: grid_container, var_numbers
+   subroutine cosmicray_index(nvar)
+
+      use grid,            only: cg
+      use types,           only: var_numbers
+
       implicit none
 
       type(var_numbers), intent(inout) :: nvar
-      type(grid_container), intent(in) :: cg
       integer :: icr
 
       nvar%crn%beg    = nvar%all + 1
@@ -273,7 +275,7 @@ contains
       nvar%cre%pos = nvar%components
 
 #ifdef NEW_HDF5
-      call cr_add_hdf5(ncrs,cg)
+      call cr_add_hdf5(ncrs)
 #else /* !NEW_HDF5 */
       if (.false.) icr = 0 * cg%is !suppress compiler warnings on unused arguments
 #endif /* !NEW_HDF5 */
@@ -283,7 +285,9 @@ contains
 !
 
    subroutine cleanup_cosmicrays
+
       use diagnostics, only: my_deallocate
+
       implicit none
 
       call my_deallocate(iarr_crn)
@@ -296,16 +300,15 @@ contains
    end subroutine cleanup_cosmicrays
 
 #ifdef NEW_HDF5
-   subroutine cr_add_hdf5(nvar_crs,cg)
+   subroutine cr_add_hdf5(nvar_crs)
 
-      use types,     only: grid_container
+      use grid,      only: cg
       use arrays,    only: u
       use list_hdf5, only: add_lhdf5, lhdf5_info
 
       implicit none
-      integer, intent(in)              :: nvar_crs
-      type(grid_container), intent(in) :: cg
 
+      integer, intent(in)              :: nvar_crs
       type(lhdf5_info) :: item
       integer          :: i
 

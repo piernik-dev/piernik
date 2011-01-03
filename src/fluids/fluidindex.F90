@@ -128,12 +128,10 @@ contains
 !>
 !! \brief Subroutine fluid_index constructing all multi-fluid indexes used in other parts
 !! of PIERNIK code
-!! \param cg - container for grid variables
 !<
-    subroutine fluid_index(cg)
+    subroutine fluid_index
 
 !      use diagnostics,    only: my_allocate
-      use types,          only: grid_container
 #ifdef IONIZED
       use initionized,    only: ionized_index
 #endif /* IONIZED */
@@ -150,7 +148,6 @@ contains
 
       implicit none
 
-      type(grid_container), intent(in) :: cg
       integer                          :: i
 
       i_sg        = 0
@@ -175,9 +172,7 @@ contains
 
 #ifdef COSM_RAYS
 !  Compute indexes for the CR component and update counters
-      call cosmicray_index(nvar, cg)
-#else /* !COSM_RAYS */
-      if (.false.) i_sg = 0 * cg%is !suppress compiler warnings on unused arguments
+      call cosmicray_index(nvar)
 #endif /* !COSM_RAYS */
 
 ! Allocate index arrays

@@ -112,9 +112,8 @@ module initfluids
 
   contains
 
-   subroutine init_fluids(cg)
+   subroutine init_fluids
 
-      use types,           only: grid_container
       use fluidindex,      only: fluid_index
       use fluxes,          only: set_limiter, init_fluxes
       use mpisetup,        only: limiter
@@ -138,7 +137,7 @@ module initfluids
 #endif /* COSM_RAYS */
 
       implicit none
-      type(grid_container), intent(in) :: cg
+
 #ifdef VERBOSE
       call printinfo("[initfluids:init_fluids]: commencing...")
 #endif /* VERBOSE */
@@ -156,7 +155,7 @@ module initfluids
       call init_cosmicrays
 #endif /* COSM_RAYS */
 
-      call fluid_index(cg)
+      call fluid_index
 
       call init_fluxes
 

@@ -214,9 +214,9 @@ contains
 !! Initialization - continued after allocation of everything interesting
 !!
 
-   subroutine init_multigrid_diff_post(cg, mb_alloc)
+   subroutine init_multigrid_diff_post(mb_alloc)
 
-      use types,              only: grid_container
+      use grid,               only: cg
       use dataio_pub,         only: die
       use fluidindex,         only: nvar
       use multigridhelpers,   only: vcycle_stats_init
@@ -224,9 +224,7 @@ contains
 
       implicit none
 
-      type(grid_container), intent(in) :: cg                  !< copy of grid variables
       real, intent(inout)              :: mb_alloc               !< Allocation counter
-
       integer                          :: ierr
 
       if (.false.) ierr = cg%nxb ! suppress compiler warnings on unused arguments

@@ -176,8 +176,7 @@ contains
       use diagnostics,           only: diagnose_arrays
       use fluidboundaries,       only: all_fluid_boundaries
       use fluidboundaries_pub,   only: init_fluidboundaries
-      use fluidindex,            only: nvar
-      use grid,                  only: init_grid, cg
+      use grid,                  only: init_grid
       use initfluids,            only: init_fluids, sanitize_smallx_checks
       use gridgeometry,          only: init_geometry
       use initproblem,           only: init_prob, read_problem_par
@@ -238,9 +237,9 @@ contains
 
       call init_fluidboundaries
 
-      call init_fluids(cg)
+      call init_fluids
 
-      call init_arrays(cg%nx, cg%ny, cg%nz, nvar)
+      call init_arrays
 
       call init_geometry
 
@@ -276,7 +275,7 @@ contains
 #endif /* SN_SRC */
 
 #ifdef MULTIGRID
-      call init_multigrid(cg)
+      call init_multigrid
 #endif /* MULTIGRID */
 
       ! Almost everything is initialized: do problem-related stuff here, except setting-up the initial conditions.

@@ -98,18 +98,16 @@ contains
 !! Initialization routine, called from init_multigrid
 !!
 
-   subroutine init_multipole(mb_alloc, cg)
+   subroutine init_multipole(mb_alloc)
 
       use dataio_pub,    only: die, warn
-      use types,         only: grid_container
       use mpisetup,      only: master, xdim, ydim, zdim
       use multigridvars, only: level_min, level_max, lvl, eff_dim
-      use grid,          only: geometry
+      use grid,          only: geometry, cg
 
       implicit none
 
       real,                 intent(inout) :: mb_alloc               !< multigrid allocation counter
-      type(grid_container), intent(in)    :: cg                  !< copy of grid variables
 
       integer, dimension(4) :: aerr
       integer               :: l,m

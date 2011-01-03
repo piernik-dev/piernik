@@ -68,24 +68,22 @@ module arrays
 !! Routine that allocates all arrays
 !<
 
-   subroutine init_arrays(nx, ny, nz, nvar)
+   subroutine init_arrays
 
       use diagnostics, only: ma3d, ma4d, my_allocate
-      use types,       only: var_numbers
+      use fluidindex,  only: nvar
+      use grid,        only: cg
 #ifdef GRAV
       use diagnostics, only: ma1d
 #endif /* GRAV */
 
       implicit none
 
-      type(var_numbers), intent(in) :: nvar
-      integer, intent(in) :: nx, ny, nz
-
-      ma4d = [nvar%all, nx, ny, nz]
+      ma4d = [nvar%all, cg%nx, cg%ny, cg%nz]
       call my_allocate(u, ma4d, "u")
-      ma4d = [3, nx, ny, nz]
+      ma4d = [3, cg%nx, cg%ny, cg%nz]
       call my_allocate(b, ma4d, "b")
-      ma3d = [nx, ny, nz]
+      ma3d = [cg%nx, cg%ny, cg%nz]
       call my_allocate(wa, ma3d, "wa")
 
 #ifdef RESISTIVE
@@ -96,7 +94,7 @@ module arrays
       call my_allocate(gpot, ma3d, "gpot")
       call my_allocate(hgpot, ma3d, "hgpot")
       call my_allocate(gp, ma3d, "gp")
-      ma1d = [nz]
+      ma1d = [cg%nz]
       call my_allocate(dprof, ma1d, "dprof")
       call my_allocate(eprof, ma1d, "eprof")
 #ifdef SELF_GRAV
@@ -107,7 +105,7 @@ module arrays
 
 #ifdef COSM_RAYS
       call my_allocate(divvel, ma3d, "divvel")
-      ma4d = [nvar%crs%all, nx, ny, nz]
+      ma4d = [nvar%crs%all, cg%nx, cg%ny, cg%nz]
       call my_allocate(wcr, ma4d, "wcr")
 #endif /* COSM_RAYS  */
 

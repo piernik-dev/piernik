@@ -74,14 +74,13 @@ contains
 !! </table>
 !! \n \n
 !<
-   subroutine init_multigrid(cg)
+   subroutine init_multigrid
 
-      use grid,                only: D_x, D_y, D_z
+      use grid,                only: cg, D_x, D_y, D_z
       use multigridvars,       only: lvl, level_max, level_min, level_gb, roof, base, gb, gb_cartmap, mg_nb, ngridvars, correction, &
            &                         is_external, periodic_bnd_cnt, non_periodic_bnd_cnt, eff_dim, NDIM, &
            &                         XLO, XHI, YLO, YHI, ZLO, ZHI, LOW, HIGH, &
            &                         ord_prolong, ord_prolong_face, stdout, verbose_vcycle, tot_ts
-      use types,               only: grid_container
       use mpi,                 only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL
       use mpisetup,            only: buffer_dim, comm, comm3d, ierr, proc, master, slave, nproc, has_dir, xdim, ydim, zdim, ndims, pxsize, pysize, pzsize, &
            &                         ibuff, rbuff, lbuff, bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr,        &
@@ -99,8 +98,6 @@ contains
 #endif /* COSM_RAYS */
 
       implicit none
-
-      type(grid_container), intent(in) :: cg                  !< copy of grid variables
 
       integer                          :: ierrh, div, idx, i, j, nxc, nx
       logical, save                    :: frun = .true.          !< First run flag
@@ -430,10 +427,10 @@ contains
       if (.not. has_dir(zdim)) is_external(ZLO:ZHI) = .false.
 
 #ifdef GRAV
-      call init_multigrid_grav_post(cg, mb_alloc)
+      call init_multigrid_grav_post(mb_alloc)
 #endif /* !GRAV */
 #ifdef COSM_RAYS
-      call init_multigrid_diff_post(cg, mb_alloc)
+      call init_multigrid_diff_post(mb_alloc)
 #endif /* COSM_RAYS */
 
       ! summary

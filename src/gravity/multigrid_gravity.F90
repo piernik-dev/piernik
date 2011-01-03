@@ -366,9 +366,8 @@ contains
 !! Initialization - continued after allocation of everything interesting
 !!
 
-   subroutine init_multigrid_grav_post(cg, mb_alloc)
+   subroutine init_multigrid_grav_post(mb_alloc)
 
-      use types,              only: grid_container
       use arrays,             only: sgp
       use multigridvars,      only: lvl, roof, base, gb, level_gb, level_max, level_min, bnd_periodic, bnd_dirichlet, bnd_isolated, vcycle_stats
       use mpisetup,           only: master, nproc, pxsize, pysize, pzsize
@@ -379,7 +378,6 @@ contains
 
       implicit none
 
-      type(grid_container), intent(in) :: cg                  !< copy of grid variables
       real, intent(inout)              :: mb_alloc               !< Allocation counter
 
       type(soln_history), pointer      :: os
@@ -582,7 +580,7 @@ contains
       if (allocated(ky)) deallocate(ky)
       if (allocated(kz)) deallocate(kz)
 
-      if (grav_bnd == bnd_isolated) call init_multipole(mb_alloc,cg)
+      if (grav_bnd == bnd_isolated) call init_multipole(mb_alloc)
 
       call vcycle_stats_init(vstat, max_cycles)
       mb_alloc = mb_alloc + 2*max_cycles
