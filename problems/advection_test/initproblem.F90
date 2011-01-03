@@ -40,6 +40,8 @@ module initproblem
 
    namelist /PROBLEM_CONTROL/  pulse_size, pulse_vel_x, pulse_vel_y, pulse_vel_z, pulse_amp
 
+   real, dimension(:,:,:), allocatable :: inid
+
 contains
 
 !-----------------------------------------------------------------------------
@@ -47,10 +49,11 @@ contains
    subroutine read_problem_par
 
       use dataio_pub,    only: ierrh, par_file, namelist_errh, compare_namelist      ! QA_WARN required for diff_nml
-      use dataio_pub,    only: die
+      use dataio_pub,    only: die, user_vars_hdf5
       use grid,          only: cg
       use mpisetup,      only: ierr, rbuff, master, slave, buffer_dim, comm
       use mpi,           only: MPI_DOUBLE_PRECISION
+      use types,         only: finalize_problem, cleanup_problem
 
       implicit none
 
@@ -94,6 +97,10 @@ contains
       pulse_z_min = (cg%zmax+cg%zmin)/2. - (cg%zmax-cg%zmin)*pulse_size/2.
       pulse_z_max = (cg%zmax+cg%zmin)/2. + (cg%zmax-cg%zmin)*pulse_size/2.
 
+      finalize_problem => finalize_problem_adv
+      cleanup_problem  => cleanup_adv
+      user_vars_hdf5   => inid_var_hdf5
+
    end subroutine read_problem_par
 
 !-----------------------------------------------------------------------------
@@ -104,6 +111,7 @@ contains
       use grid,          only: cg
       use fluidindex,    only: nvar
       use mpisetup,      only: smalld, smallei
+      use diagnostics,   only: my_allocate
 
       implicit none
 
@@ -134,6 +142,9 @@ contains
 
       where (u(nvar%neu%idn, :, :, :) < smalld) u(nvar%neu%idn, :, :, :) = smalld
 
+      call my_allocate(inid, [cg%nxb, cg%nyb, cg%nzb], "inid")
+      inid(1:cg%nxb, 1:cg%nyb, 1:cg%nzb) = u(nvar%neu%idn, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
+
       u(nvar%neu%imx, :, :, :) = pulse_vel_x * u(nvar%neu%idn, :, :, :)
       u(nvar%neu%imy, :, :, :) = pulse_vel_y * u(nvar%neu%idn, :, :, :)
       u(nvar%neu%imz, :, :, :) = pulse_vel_z * u(nvar%neu%idn, :, :, :)
@@ -148,5 +159,80 @@ contains
       enddo
 
    end subroutine init_prob
+
+!-----------------------------------------------------------------------------
+
+   subroutine inid_var_hdf5(var, tab, ierrh)
+
+      implicit none
+
+      character(len=*), intent(in)                    :: var
+      real(kind=4), dimension(:,:,:), intent(inout)   :: tab
+      integer, intent(inout)                          :: ierrh
+
+      ierrh = 0
+      select case (trim(var))
+         case ("inid")
+            tab(:,:,:) = inid(:,:,:)
+            case default
+            ierrh = -1
+      end select
+
+   end subroutine inid_var_hdf5
+
+!-----------------------------------------------------------------------------
+
+   subroutine finalize_problem_adv
+
+      use arrays,        only: u
+      use dataio_pub,    only: msg, printinfo
+      use grid,          only: cg
+      use mpisetup,      only: master, comm3d, ierr
+      use mpi,           only: MPI_DOUBLE_PRECISION, MPI_SUM, MPI_MIN, MPI_MAX, MPI_IN_PLACE
+      use fluidindex,    only: nvar
+
+      implicit none
+
+      integer            :: i, j, k
+      real, dimension(2) :: norm, dev
+      real               :: dini
+
+      norm(:) = 0.
+      dev(1) = huge(1.0)
+      dev(2) = -dev(1)
+
+      do k = cg%ks, cg%ke
+         do j = cg%js, cg%je
+            do i = cg%is, cg%ie
+               dini =  inid(i-cg%is+1, j-cg%js+1, k-cg%ks+1)
+               norm(1) = norm(1) + (dini - u(nvar%neu%idn, i, j, k))**2
+               norm(2) = norm(2) + dini**2
+               dev(1) = min(dev(1), (dini - u(nvar%neu%idn, i, j, k))/dini)
+               dev(2) = max(dev(2), (dini - u(nvar%neu%idn, i, j, k))/dini)
+            enddo
+         enddo
+      enddo
+      call MPI_Allreduce(MPI_IN_PLACE, norm,   2, MPI_DOUBLE_PRECISION, MPI_SUM, comm3d, ierr)
+      call MPI_Allreduce(MPI_IN_PLACE, dev(1), 1, MPI_DOUBLE_PRECISION, MPI_MIN, comm3d, ierr)
+      call MPI_Allreduce(MPI_IN_PLACE, dev(2), 1, MPI_DOUBLE_PRECISION, MPI_MAX, comm3d, ierr)
+
+      if (master) then
+         write(msg,'(a,f12.6,a,2f12.6)')"[initproblem:finalize_problem_adv] L2 error norm = ", sqrt(norm(1)/norm(2)), ", min and max error = ", dev(1:2)
+         call printinfo(msg)
+      endif
+
+   end subroutine finalize_problem_adv
+
+!-----------------------------------------------------------------------------
+
+   subroutine cleanup_adv
+
+      use diagnostics, only: my_deallocate
+
+      implicit none
+
+      call my_deallocate(inid)
+
+   end subroutine cleanup_adv
 
 end module initproblem
