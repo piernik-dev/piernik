@@ -127,6 +127,7 @@ module types
       integer :: ks                             !< index of the first %grid cell of physical domain in z-direction
       integer :: ke                             !< index of the last %grid cell of physical domain in z-direction
       integer :: nb                             !< number of boundary cells surrounding the physical domain, same for all directions
+      integer :: isb, ieb, jsb, jeb, ksb, keb   !< auxiliary indices for exchanging boundary data, (e.g. is:isb -> ie+1:nx, ieb:ie -> 1:nb)
       integer :: maxxyz                         !< maximum number of %grid cells in any direction
 
       ! a pointer to the next cg

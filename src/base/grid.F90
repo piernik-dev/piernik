@@ -140,6 +140,8 @@ module grid
          cg%nxt = nxd + 2 * nb     ! Domain total grid sizes
          cg%is  = nb + 1
          cg%ie  = nb + cg%nxb
+         cg%isb = 2*nb
+         cg%ieb = cg%nxb+1
          D_x = 1
       else
          cg%nxb    = 1
@@ -148,6 +150,8 @@ module grid
          pxsize = 1
          cg%is     = 1
          cg%ie     = 1
+         cg%isb    = 1
+         cg%ieb    = 1
          D_x    = 0
       endif
 
@@ -157,6 +161,8 @@ module grid
          cg%nyt = nyd + 2 * nb
          cg%js  = nb + 1
          cg%je  = nb + cg%nyb
+         cg%jsb = 2*nb
+         cg%jeb = cg%nyb+1
          D_y = 1
       else
          cg%ny     = 1
@@ -165,6 +171,8 @@ module grid
          pysize = 1
          cg%js     = 1
          cg%je     = 1
+         cg%jsb    = 1
+         cg%jeb    = 1
          D_y    = 0
       endif
 
@@ -174,6 +182,8 @@ module grid
          cg%nzt = nzd + 2 * nb
          cg%ks  = nb + 1
          cg%ke  = nb + cg%nzb
+         cg%ksb = 2*nb
+         cg%keb = cg%nzb+1
          D_z = 1
       else
          cg%nzb    = 1
@@ -182,6 +192,8 @@ module grid
          pzsize = 1
          cg%ks     = 1
          cg%ke     = 1
+         cg%ksb    = 1
+         cg%keb    = 1
          D_z    = 0
       endif
       cg%nb = nb
