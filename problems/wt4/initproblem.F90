@@ -334,20 +334,20 @@ contains
       endif
 
       do i = 1, cg%nb
-         u(:,i,:,:)               = u(:, cg%nb+1,:,:)
-         u(:, cg%nx-cg%nb+i,:,:)         = u(:, cg%nx-cg%nb,:,:)
-         cs_iso2_arr(i,:,:)       = cs_iso2_arr(cg%nb+1,:,:)
-         cs_iso2_arr(cg%nx-cg%nb+i,:,:) = cs_iso2_arr(cg%nx-cg%nb,:,:)
+         u(:,i,:,:)               = u(:, cg%is,:,:)
+         u(:, cg%ie+i,:,:)        = u(:, cg%ie,:,:)
+         cs_iso2_arr(i,:,:)       = cs_iso2_arr(cg%is,:,:)
+         cs_iso2_arr(cg%ie+i,:,:) = cs_iso2_arr(cg%ie,:,:)
 
-         u(:,:,i,:)               = u(:,:, cg%nb+1,:)
-         u(:,:, cg%ny-cg%nb+i,:)         = u(:,:, cg%ny-cg%nb,:)
-         cs_iso2_arr(:,i,:)       = cs_iso2_arr(:, cg%nb+1,:)
-         cs_iso2_arr(:, cg%ny-cg%nb+i,:) = cs_iso2_arr(:, cg%ny-cg%nb,:)
+         u(:,:,i,:)               = u(:,:, cg%js,:)
+         u(:,:,cg%je+i,:)         = u(:,:, cg%je,:)
+         cs_iso2_arr(:,i,:)       = cs_iso2_arr(:, cg%js,:)
+         cs_iso2_arr(:,cg%je+i,:) = cs_iso2_arr(:, cg%je,:)
 
-         u(:,:,:,i)               = u(:,:,:, cg%nb+1)
-         u(:,:,:, cg%nz-cg%nb+i)         = u(:,:,:, cg%nz-cg%nb)
-         cs_iso2_arr(:,:,i)       = cs_iso2_arr(:,:, cg%nb+1)
-         cs_iso2_arr(:,:, cg%nz-cg%nb+i) = cs_iso2_arr(:,:, cg%nz-cg%nb)
+         u(:,:,:,i)               = u(:,:,:, cg%js)
+         u(:,:,:, cg%je+i)        = u(:,:,:, cg%je)
+         cs_iso2_arr(:,:,i)       = cs_iso2_arr(:,:, cg%js)
+         cs_iso2_arr(:,:,cg%je+i) = cs_iso2_arr(:,:, cg%je)
       enddo
       if (master ) then
          write(msg,'(2(a,g15.7))') '[initproblem:init_problem]: minval(dens)    = ', minval(u(idni,:,:,:)),      ' maxval(dens)    = ', maxval(u(idni,:,:,:))

@@ -48,7 +48,7 @@ module fluidboundaries_funcs
 
          implicit none
 
-         u(:,1:cg%nb,:,:) = u(:, cg%nxb+1:cg%ie,:,:)
+         u(:,1:cg%nb,:,:) = u(:, cg%ieb:cg%ie,:,:)
 
       end subroutine bnd_xl_per
 

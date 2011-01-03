@@ -78,7 +78,7 @@ contains
            ala = dens(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
            call poisson_xyzp(ala(:,:,:), sgp(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke))
 
-           sgp(:,:,1:cg%nb)        = sgp(:,:, cg%nzb+1:cg%ke)
+           sgp(:,:,1:cg%nb)        = sgp(:,:, cg%keb:cg%ke)
            sgp(:,:, cg%ke+1:cg%nz) = sgp(:,:, cg%ks:cg%ksb)
 
          else
@@ -89,7 +89,7 @@ contains
                  &            cg%dx)
 
          endif
-         sgp(:,1:cg%nb,:)        = sgp(:, cg%nyb+1:cg%je,:)
+         sgp(:,1:cg%nb,:)        = sgp(:, cg%jeb:cg%je,:)
          sgp(:, cg%je+1:cg%ny,:) = sgp(:, cg%js:cg%jsb,:)
 
          if (allocated(ala)) deallocate(ala)

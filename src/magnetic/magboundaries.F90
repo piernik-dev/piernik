@@ -120,14 +120,14 @@ contains
                      recv_left(3, cg%nb, cg%ny, cg%nz),recv_right(3, cg%nb, cg%ny, cg%nz))
 
             send_left (:,:,:,:)  = b(:, cg%is:cg%isb,:,:)
-            send_right(:,:,:,:)  = b(:, cg%nxb+1:cg%ie,:,:)
+            send_right(:,:,:,:)  = b(:, cg%ieb:cg%ie,:,:)
 
             if (bnd_xl == "she") then
 !
 ! przesuwamy o calkowita liczbe komorek + periodyczny wb w kierunku y
 !
                send_left (:,:, cg%js:cg%je,:)         = cshift(send_left (:,:, cg%js:cg%je,:),dim=3,shift= delj)
-               send_left (:,:,1:cg%nb,:)                = send_left  (:,:, cg%nyb+1:cg%je,:)
+               send_left (:,:,1:cg%nb,:)                = send_left  (:,:, cg%jeb:cg%je,:)
                send_left (:,:, cg%je+1:cg%ny,:)   = send_left  (:,:, cg%js:cg%jsb,:)
 !
 ! remapujemy  - interpolacja kwadratowa
@@ -142,7 +142,7 @@ contains
 ! przesuwamy o calkowita liczbe komorek + periodyczny wb w kierunku y
 !
                send_right (:,:, cg%js:cg%je,:)        = cshift(send_right(:,:, cg%js:cg%je,:),dim=3,shift=-delj)
-               send_right (:,:,1:cg%nb,:)               = send_right (:,:, cg%nyb+1:cg%je,:)
+               send_right (:,:,1:cg%nb,:)               = send_right (:,:, cg%jeb:cg%je,:)
                send_right (:,:, cg%je+1:cg%ny,:)  = send_right (:,:, cg%js:cg%jsb,:)
 !
 ! remapujemy - interpolacja kwadratowa
@@ -213,9 +213,9 @@ contains
          if (pcoords(1) .eq. 0 .and. pcoords(2) .eq. 0) then
             do i=1, cg%nb
                do j=cg%js, cg%ny
-                  b(ibx,i,j,:) = -b(iby,j,2*cg%nb+1-i,:)
-                  b(iby,i,j,:) =  b(ibx,j,2*cg%nb+1-i,:)
-                  b(ibz,i,j,:) =  b(ibz,j,2*cg%nb+1-i,:)
+                  b(ibx,i,j,:) = -b(iby,j,cg%isb+1-i,:)
+                  b(iby,i,j,:) =  b(ibx,j,cg%isb+1-i,:)
+                  b(ibz,i,j,:) =  b(ibz,j,cg%isb+1-i,:)
                enddo
             enddo
          endif
@@ -248,17 +248,17 @@ contains
          if (pcoords(2) .eq. 0 .and. pcoords(1) .eq. 0 ) then
             do j=1, cg%nb
                do i=cg%is, cg%nx
-                  b(ibx,i,j,:) =  b(iby,2*cg%nb+1-j,i,:)
-                  b(iby,i,j,:) = -b(ibx,2*cg%nb+1-j,i,:)
-                  b(ibz,i,j,:) =  b(ibz,2*cg%nb+1-j,i,:)
+                  b(ibx,i,j,:) =  b(iby,cg%isb+1-j,i,:)
+                  b(iby,i,j,:) = -b(ibx,cg%isb+1-j,i,:)
+                  b(ibz,i,j,:) =  b(ibz,cg%isb+1-j,i,:)
                enddo
             enddo
 !   - interior to corner
             do j=1, cg%nb
                do i=1, cg%nb
-                  b(ibx,i,j,:) =  -b(ibx,2*cg%nb+1-i,2*cg%nb+1-j,:)
-                  b(iby,i,j,:) =  -b(iby,2*cg%nb+1-i,2*cg%nb+1-j,:)
-                  b(ibz,i,j,:) =   b(ibz,2*cg%nb+1-i,2*cg%nb+1-j,:)
+                  b(ibx,i,j,:) =  -b(ibx,cg%isb+1-i,cg%jsb+1-j,:)
+                  b(iby,i,j,:) =  -b(iby,cg%isb+1-i,cg%jsb+1-j,:)
+                  b(ibz,i,j,:) =   b(ibz,cg%isb+1-i,cg%jsb+1-j,:)
                enddo
             enddo
          endif
@@ -308,7 +308,7 @@ contains
                case ("cor", "inf", "mpi", "ref", "she")
                   ! Do nothing
                case ("per")
-                  b(:,1:cg%nb,:,:)              = b(:, cg%nxb+1:cg%ie,:,:)
+                  b(:,1:cg%nb,:,:)              = b(:, cg%ieb:cg%ie,:,:)
                case ("out")
                   b(:,1,:,:) = b(:,2,:,:)
                case default
@@ -334,7 +334,7 @@ contains
                case ("cor", "inf", "mpi", "ref")
                   ! Do nothing
                case ("per")
-                  b(:,:,1:cg%nb,:)              = b(:,:, cg%nyb+1:cg%je,:)
+                  b(:,:,1:cg%nb,:)              = b(:,:, cg%jeb:cg%je,:)
                case ("out")
                   b(:,:,1,:) = b(:,:,2,:)
                case default
@@ -361,7 +361,7 @@ contains
                case ("mpi", "ref")
                   ! Do nothing
                case ("per")
-                  b(:,:,:,1:cg%nb)              = b(:,:,:, cg%nzb+1:cg%ke)
+                  b(:,:,:,1:cg%nb)              = b(:,:,:, cg%keb:cg%ke)
                case ("out")
                   b(:,:,:,1) = b(:,:,:,2)
                case default

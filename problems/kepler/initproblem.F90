@@ -438,14 +438,14 @@ contains
       call grav_pot2accel('xsweep',1,1, cg%nx, grav, 1)
 
       do i = 1, cg%nb
-         u(iarr_all_dn,i,:,:) = u(iarr_all_dn, cg%nb+1,:,:)
-         u(iarr_all_mx,i,:,:) = max(0.0,u(iarr_all_mx, cg%nb+1,:,:))
+         u(iarr_all_dn,i,:,:) = u(iarr_all_dn, cg%is,:,:)
+         u(iarr_all_mx,i,:,:) = max(0.0,u(iarr_all_mx, cg%is,:,:))
          do p = 1, size(nvar%all_fluids)
             u(iarr_all_my(p),i,:,:) = sqrt( abs(grav(i)) * cg%x(i) - cs2_arr(p)) *  u(iarr_all_dn(p),i,:,:)
          enddo
-         u(iarr_all_mz,i,:,:) = u(iarr_all_mz, cg%nb+1,:,:)
+         u(iarr_all_mz,i,:,:) = u(iarr_all_mz, cg%is,:,:)
 #ifndef ISO
-         u(iarr_all_en,i,:,:) = u(iarr_all_en, cg%nb+1,:,:)
+         u(iarr_all_en,i,:,:) = u(iarr_all_en, cg%is,:,:)
 #endif
       enddo
 
@@ -466,12 +466,12 @@ contains
 #endif /* ISO */
       implicit none
 
-      u(iarr_all_dn, cg%nxb+cg%nb+1:cg%nxb+2*cg%nb,:,:) = den0(:, cg%nxb+cg%nb+1:cg%nxb+2*cg%nb,:,:)
-      u(iarr_all_mx, cg%nxb+cg%nb+1:cg%nxb+2*cg%nb,:,:) = mtx0(:, cg%nxb+cg%nb+1:cg%nxb+2*cg%nb,:,:)
-      u(iarr_all_my, cg%nxb+cg%nb+1:cg%nxb+2*cg%nb,:,:) = mty0(:, cg%nxb+cg%nb+1:cg%nxb+2*cg%nb,:,:)
-      u(iarr_all_mz, cg%nxb+cg%nb+1:cg%nxb+2*cg%nb,:,:) = mtz0(:, cg%nxb+cg%nb+1:cg%nxb+2*cg%nb,:,:)
+      u(iarr_all_dn, cg%ie+1:cg%nx,:,:) = den0(:, cg%ie+1:cg%nx,:,:)
+      u(iarr_all_mx, cg%ie+1:cg%nx,:,:) = mtx0(:, cg%ie+1:cg%nx,:,:)
+      u(iarr_all_my, cg%ie+1:cg%nx,:,:) = mty0(:, cg%ie+1:cg%nx,:,:)
+      u(iarr_all_mz, cg%ie+1:cg%nx,:,:) = mtz0(:, cg%ie+1:cg%nx,:,:)
 #ifndef ISO
-      u(iarr_all_en, cg%nxb+cg%nb+1:cg%nxb+2*cg%nb,:,:) = ene0(:, cg%nxb+cg%nb+1:cg%nxb+2*cg%nb,:,:)
+      u(iarr_all_en, cg%ie+1:cg%nx,:,:) = ene0(:, cg%ie+1:cg%nx,:,:)
 #endif
    end subroutine my_bnd_xr
 !-----------------------------------------------------------------------------

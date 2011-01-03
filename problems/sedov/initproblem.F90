@@ -195,9 +195,9 @@ contains
       ierrh = 0
       select case (var)
          case ("fooo")   ! Totally bogus quantity, just to check user_plt_hdf5 works
-            if (ij=="yz") tab(:,:) = u(2,xn, cg%nb+1:cg%nyb+cg%nb, cg%nb+1:cg%nzb+cg%nb)*u(3,xn, cg%nb+1:cg%nyb+cg%nb, cg%nb+1:cg%nzb+cg%nb)* .123456789
-            if (ij=="xz") tab(:,:) = u(2, cg%nb+1:cg%nxb+cg%nb,xn, cg%nb+1:cg%nzb+cg%nb)*u(3, cg%nb+1:cg%nxb+cg%nb,xn, cg%nb+1:cg%nzb+cg%nb)* .123456789
-            if (ij=="xy") tab(:,:) = u(2, cg%nb+1:cg%nxb+cg%nb, cg%nb+1:cg%nyb+cg%nb,xn)*u(3, cg%nb+1:cg%nxb+cg%nb, cg%nb+1:cg%nyb+cg%nb,xn)* .123456789
+            if (ij=="yz") tab(:,:) = u(2, xn, cg%js:cg%je, cg%ks:cg%ke)*u(3, xn, cg%js:cg%je, cg%ks:cg%ke)* .123456789
+            if (ij=="xz") tab(:,:) = u(2, cg%is:cg%ie, xn, cg%ks:cg%ke)*u(3, cg%is:cg%ie, xn, cg%ks:cg%ke)* .123456789
+            if (ij=="xy") tab(:,:) = u(2, cg%is:cg%ie, cg%js:cg%je, xn)*u(3, cg%is:cg%ie, cg%js:cg%je, xn)* .123456789
          case default
             ierrh = -1
       end select

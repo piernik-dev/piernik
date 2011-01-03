@@ -133,7 +133,7 @@ module fluidboundaries
          allocate(send_right(nvar%all, cg%nb,ny,nz), send_left(nvar%all, cg%nb,ny,nz), &
                   recv_left(nvar%all, cg%nb,ny,nz), recv_right(nvar%all, cg%nb,ny,nz) )
          send_left(:,:,:,:)          =  u(:, cg%is:cg%isb,:,:)
-         send_right(:,:,:,:)         =  u(:, cg%nxb+1:cg%ie,:,:)
+         send_right(:,:,:,:)         =  u(:, cg%ieb:cg%ie,:,:)
 !
 ! odejmujemy ped_y i energie odpowiadajace niezaburzonej rozniczkowej rotacji na lewym brzegu
 !
@@ -151,7 +151,7 @@ module fluidboundaries
 !
          if (has_dir(ydim)) then
             send_left (:,:, cg%js:cg%je,:)        = cshift(send_left (:,:, cg%js:cg%je,:),dim=3,shift= delj)
-            send_left (:,:,1:cg%nb,:)               = send_left (:,:, cg%nyb+1:cg%je,:)
+            send_left (:,:,1:cg%nb,:)               = send_left (:,:, cg%jeb:cg%je,:)
             send_left (:,:, cg%je+1:cg%ny,:)  = send_left (:,:, cg%js:cg%jsb,:)
          endif
 !
@@ -179,7 +179,7 @@ module fluidboundaries
 !
          if (has_dir(ydim)) then
             send_right(:,:, cg%js:cg%je,:)        = cshift(send_right(:,:, cg%js:cg%je,:),dim=3,shift=-delj)
-            send_right (:,:,1:cg%nb,:)              = send_right(:,:, cg%nyb+1:cg%je,:)
+            send_right (:,:,1:cg%nb,:)              = send_right(:,:, cg%jeb:cg%je,:)
             send_right (:,:, cg%je+1:cg%ny,:) = send_right(:,:, cg%js:cg%jsb,:)
          endif
 !
@@ -255,7 +255,7 @@ module fluidboundaries
 
             do i = LBOUND(u,1), UBOUND(u,1)
                send_left(i,1:cg%nb,:,:)   = unshear_fft(u(i, cg%is:cg%isb,  cg%js:cg%je,:), cg%x(cg%is:cg%isb),dely,.true.)
-               send_right(i,1:cg%nb,:,:)  = unshear_fft(u(i, cg%nxb+1:cg%ie, cg%js:cg%je,:), cg%x(cg%nxb+1:cg%ie),dely,.true.)
+               send_right(i,1:cg%nb,:,:)  = unshear_fft(u(i, cg%ieb:cg%ie, cg%js:cg%je,:), cg%x(cg%ieb:cg%ie),dely,.true.)
             enddo
 
             CALL MPI_Isend   (send_left , nvar%all*cg%nyb*cg%nz*cg%nb, MPI_DOUBLE_PRECISION, procxl, 10, comm, req(1), ierr)
@@ -318,15 +318,15 @@ module fluidboundaries
          if (pcoords(1) .eq. 0 .and. pcoords(2) .eq. 0) then
             do i=1, cg%nb
                do j=cg%js, cg%ny
-                  u(iarr_all_dn,i,j,:) =  u(iarr_all_dn,j,2*cg%nb+1-i,:)
-                  u(iarr_all_mx,i,j,:) = -u(iarr_all_my,j,2*cg%nb+1-i,:)
-                  u(iarr_all_my,i,j,:) =  u(iarr_all_mx,j,2*cg%nb+1-i,:)
-                  u(iarr_all_mz,i,j,:) =  u(iarr_all_mz,j,2*cg%nb+1-i,:)
+                  u(iarr_all_dn,i,j,:) =  u(iarr_all_dn,j,cg%isb+1-i,:)
+                  u(iarr_all_mx,i,j,:) = -u(iarr_all_my,j,cg%isb+1-i,:)
+                  u(iarr_all_my,i,j,:) =  u(iarr_all_mx,j,cg%isb+1-i,:)
+                  u(iarr_all_mz,i,j,:) =  u(iarr_all_mz,j,cg%isb+1-i,:)
 #ifndef ISO
-                  u(iarr_all_en,i,j,:) =  u(iarr_all_en,j,2*cg%nb+1-i,:)
+                  u(iarr_all_en,i,j,:) =  u(iarr_all_en,j,cg%isb+1-i,:)
 #endif /* !ISO */
 #ifdef COSM_RAYS
-                  u(iarr_all_crs,i,j,:) =  u(iarr_all_crs,j,2*cg%nb+1-i,:)
+                  u(iarr_all_crs,i,j,:) =  u(iarr_all_crs,j,cg%isb+1-i,:)
 #endif /* COSM_RAYS */
                enddo
             enddo
@@ -367,30 +367,30 @@ module fluidboundaries
          if (pcoords(2) .eq. 0 .and. pcoords(1) .eq. 0 ) then
             do j=1, cg%nb
                do i=cg%is, cg%nx
-                  u(iarr_all_dn,i,j,:) =  u(iarr_all_dn,2*cg%nb+1-j,i,:)
-                  u(iarr_all_mx,i,j,:) =  u(iarr_all_my,2*cg%nb+1-j,i,:)
-                  u(iarr_all_my,i,j,:) = -u(iarr_all_mx,2*cg%nb+1-j,i,:)
-                  u(iarr_all_mz,i,j,:) =  u(iarr_all_mz,2*cg%nb+1-j,i,:)
+                  u(iarr_all_dn,i,j,:) =  u(iarr_all_dn,cg%isb+1-j,i,:)
+                  u(iarr_all_mx,i,j,:) =  u(iarr_all_my,cg%isb+1-j,i,:)
+                  u(iarr_all_my,i,j,:) = -u(iarr_all_mx,cg%isb+1-j,i,:)
+                  u(iarr_all_mz,i,j,:) =  u(iarr_all_mz,cg%isb+1-j,i,:)
 #ifndef ISO
-                  u(iarr_all_en,i,j,:) =  u(iarr_all_en,2*cg%nb+1-j,i,:)
+                  u(iarr_all_en,i,j,:) =  u(iarr_all_en,cg%isb+1-j,i,:)
 #endif /* !ISO */
 #ifdef COSM_RAYS
-                  u(iarr_all_crs,i,j,:) =  u(iarr_all_crs,2*cg%nb+1-j,i,:)
+                  u(iarr_all_crs,i,j,:) =  u(iarr_all_crs,cg%isb+1-j,i,:)
 #endif /* COSM_RAYS */
                enddo
             enddo
 !   - interior to corner
             do j=1, cg%nb
                do i=1, cg%nb
-                  u(iarr_all_dn,i,j,:) =   u(iarr_all_dn,2*cg%nb+1-i,2*cg%nb+1-j,:)
-                  u(iarr_all_mx,i,j,:) =  -u(iarr_all_mx,2*cg%nb+1-i,2*cg%nb+1-j,:)
-                  u(iarr_all_my,i,j,:) =  -u(iarr_all_my,2*cg%nb+1-i,2*cg%nb+1-j,:)
-                  u(iarr_all_mz,i,j,:) =   u(iarr_all_mz,2*cg%nb+1-i,2*cg%nb+1-j,:)
+                  u(iarr_all_dn,i,j,:) =   u(iarr_all_dn,cg%isb+1-i,cg%jsb+1-j,:)
+                  u(iarr_all_mx,i,j,:) =  -u(iarr_all_mx,cg%isb+1-i,cg%jsb+1-j,:)
+                  u(iarr_all_my,i,j,:) =  -u(iarr_all_my,cg%isb+1-i,cg%jsb+1-j,:)
+                  u(iarr_all_mz,i,j,:) =   u(iarr_all_mz,cg%isb+1-i,cg%jsb+1-j,:)
 #ifndef ISO
-                  u(iarr_all_en,i,j,:) =   u(iarr_all_en,2*cg%nb+1-i,2*cg%nb+1-j,:)
+                  u(iarr_all_en,i,j,:) =   u(iarr_all_en,cg%isb+1-i,cg%jsb+1-j,:)
 #endif /* !ISO */
 #ifdef COSM_RAYS
-                  u(iarr_all_crs,i,j,:) =   u(iarr_all_crs,2*cg%nb+1-i,2*cg%nb+1-j,:)
+                  u(iarr_all_crs,i,j,:) =   u(iarr_all_crs,cg%isb+1-i,cg%jsb+1-j,:)
 #endif /* COSM_RAYS */
                enddo
             enddo
@@ -440,7 +440,7 @@ module fluidboundaries
          case ('cor', 'inf', 'mpi')
             ! Do nothing
          case ('per')
-            u(:,:,1:cg%nb,:)                         = u(:,:, cg%nyb+1:cg%je,:)
+            u(:,:,1:cg%nb,:)                         = u(:,:, cg%jeb:cg%je,:)
          case ('user')
             call user_bnd_yl
          case ('ref')
@@ -530,7 +530,7 @@ module fluidboundaries
          case ('user')
             call user_bnd_zl
          case ('per')
-            u(:,:,:,1:cg%nb)                         = u(:,:,:, cg%nzb+1:cg%ke)
+            u(:,:,:,1:cg%nb)                         = u(:,:,:, cg%keb:cg%ke)
          case ('ref')
             do ib=1, cg%nb
 

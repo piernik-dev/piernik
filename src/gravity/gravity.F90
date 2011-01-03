@@ -332,7 +332,7 @@ module gravity
          select case (bnd_xl)
             case ('per')
                do i = 1, ceiling(cg%nb/real(cg%nxb)) ! Repeating is important for domains that are narrower than their guardcells (e.g. cg%nxb = 2)
-                  sgp(1:cg%nb, :, :) = sgp(cg%nxb+1:cg%ie, :, :)
+                  sgp(1:cg%nb, :, :) = sgp(cg%ieb:cg%ie, :, :)
                enddo
             case ('mpi')
                if (pxsize > 1) then
@@ -376,7 +376,7 @@ module gravity
          select case (bnd_yl)
             case ('per')
                do i = 1, ceiling(cg%nb/real(cg%nyb))
-                  sgp(:, 1:cg%nb, :) = sgp(:, cg%nyb+1:cg%je, :)
+                  sgp(:, 1:cg%nb, :) = sgp(:, cg%jeb:cg%je, :)
                enddo
             case ('mpi')
                if (pysize > 1) then
@@ -416,7 +416,7 @@ module gravity
          select case (bnd_zl)
             case ('per')
                do i = 1, ceiling(cg%nb/real(cg%nzb))
-                  sgp(:, :, 1:cg%nb) = sgp(:, :, cg%nzb+1:cg%ke)
+                  sgp(:, :, 1:cg%nb) = sgp(:, :, cg%keb:cg%ke)
                enddo
             case ('mpi')
                if (pzsize > 1) then
