@@ -68,16 +68,18 @@ module arrays
 !! Routine that allocates all arrays
 !<
 
-   subroutine init_arrays
+   subroutine init_arrays(nvar)
 
       use diagnostics, only: ma3d, ma4d, my_allocate
-      use fluidindex,  only: nvar
+      use types,       only: var_numbers
       use grid,        only: cg
 #ifdef GRAV
       use diagnostics, only: ma1d
 #endif /* GRAV */
 
       implicit none
+
+      type(var_numbers), intent(in) :: nvar
 
       ma4d = [nvar%all, cg%nx, cg%ny, cg%nz]
       call my_allocate(u, ma4d, "u")

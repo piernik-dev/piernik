@@ -176,6 +176,7 @@ contains
       use diagnostics,           only: diagnose_arrays
       use fluidboundaries,       only: all_fluid_boundaries
       use fluidboundaries_pub,   only: init_fluidboundaries
+      use fluidindex,            only: nvar
       use grid,                  only: init_grid
       use initfluids,            only: init_fluids, sanitize_smallx_checks
       use gridgeometry,          only: init_geometry
@@ -239,7 +240,7 @@ contains
 
       call init_fluids
 
-      call init_arrays
+      call init_arrays(nvar)
 
       call init_geometry
 
