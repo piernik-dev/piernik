@@ -345,14 +345,14 @@ module gravity
                 call die("[gravity:all_grav_boundaries] bnd_xl == 'she' not implemented")
             case default ! Set gradient == 0 on the boundaries
                do i = 1, cg%nb
-                  sgp(i, :, :) = sgp(cg%nb+1, :, :)
+                  sgp(i, :, :) = sgp(cg%is, :, :)
                enddo
          end select
 
          select case (bnd_xr)
             case ('per')
                do i = 1, ceiling(cg%nb/real(cg%nxb))
-                  sgp(cg%ie+1:cg%nx, :, :) = sgp(cg%is:2*cg%nb, :, :)
+                  sgp(cg%ie+1:cg%nx, :, :) = sgp(cg%is:cg%isb, :, :)
                enddo
             case ('mpi')
                if (pxsize > 1) then
@@ -387,14 +387,14 @@ module gravity
                endif
             case default
                do i = 1, cg%nb
-                  sgp(:, i, :) = sgp(:, cg%nb+1, :)
+                  sgp(:, i, :) = sgp(:, cg%js, :)
                enddo
          end select
 
          select case (bnd_yr)
             case ('per')
                do i = 1, ceiling(cg%nb/real(cg%nyb))
-                  sgp(:, cg%je+1:cg%ny, :) = sgp(:, cg%js:2*cg%nb, :)
+                  sgp(:, cg%je+1:cg%ny, :) = sgp(:, cg%js:cg%jsb, :)
                enddo
             case ('mpi')
                if (pysize > 1) then
@@ -427,14 +427,14 @@ module gravity
                endif
             case default
                do i = 1, cg%nb
-                  sgp(:, :, i) = sgp(:, :, cg%nb+1)
+                  sgp(:, :, i) = sgp(:, :, cg%ks)
                enddo
          end select
 
          select case (bnd_zr)
             case ('per')
                do i = 1, ceiling(cg%nb/real(cg%nzb))
-                  sgp(:, :, cg%ke+1:cg%nz) = sgp(:, :, cg%ks:2*cg%nb)
+                  sgp(:, :, cg%ke+1:cg%nz) = sgp(:, :, cg%ks:cg%ksb)
                enddo
             case ('mpi')
                if (pzsize > 1) then

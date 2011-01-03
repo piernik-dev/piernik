@@ -140,7 +140,7 @@ module fluidboundaries_funcs
 
          implicit none
 
-         u(:, cg%ie+1:cg%nx,:,:) = u(:, cg%is:2*cg%nb,:,:)
+         u(:, cg%ie+1:cg%nx,:,:) = u(:, cg%is:cg%isb,:,:)
 
       end subroutine bnd_xr_per
 

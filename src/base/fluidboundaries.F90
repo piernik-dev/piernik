@@ -132,7 +132,7 @@ module fluidboundaries
 #ifndef FFTW
          allocate(send_right(nvar%all, cg%nb,ny,nz), send_left(nvar%all, cg%nb,ny,nz), &
                   recv_left(nvar%all, cg%nb,ny,nz), recv_right(nvar%all, cg%nb,ny,nz) )
-         send_left(:,:,:,:)          =  u(:, cg%is:2*cg%nb,:,:)
+         send_left(:,:,:,:)          =  u(:, cg%is:cg%isb,:,:)
          send_right(:,:,:,:)         =  u(:, cg%nxb+1:cg%ie,:,:)
 !
 ! odejmujemy ped_y i energie odpowiadajace niezaburzonej rozniczkowej rotacji na lewym brzegu
@@ -152,7 +152,7 @@ module fluidboundaries
          if (has_dir(ydim)) then
             send_left (:,:, cg%js:cg%je,:)        = cshift(send_left (:,:, cg%js:cg%je,:),dim=3,shift= delj)
             send_left (:,:,1:cg%nb,:)               = send_left (:,:, cg%nyb+1:cg%je,:)
-            send_left (:,:, cg%je+1:cg%ny,:)  = send_left (:,:, cg%js:2*cg%nb,:)
+            send_left (:,:, cg%je+1:cg%ny,:)  = send_left (:,:, cg%js:cg%jsb,:)
          endif
 !
 ! remapujemy  - interpolacja kwadratowa
@@ -180,7 +180,7 @@ module fluidboundaries
          if (has_dir(ydim)) then
             send_right(:,:, cg%js:cg%je,:)        = cshift(send_right(:,:, cg%js:cg%je,:),dim=3,shift=-delj)
             send_right (:,:,1:cg%nb,:)              = send_right(:,:, cg%nyb+1:cg%je,:)
-            send_right (:,:, cg%je+1:cg%ny,:) = send_right(:,:, cg%js:2*cg%nb,:)
+            send_right (:,:, cg%je+1:cg%ny,:) = send_right(:,:, cg%js:cg%jsb,:)
          endif
 !
 ! remapujemy  - interpolacja kwadratowa
@@ -254,7 +254,7 @@ module fluidboundaries
          if (.not.allocated(recv_right)) allocate(recv_right(nvar%all, cg%nb, cg%nyb, cg%nz))
 
             do i = LBOUND(u,1), UBOUND(u,1)
-               send_left(i,1:cg%nb,:,:)   = unshear_fft(u(i, cg%is:2*cg%nb,  cg%js:cg%je,:), cg%x(cg%is:2*cg%nb),dely,.true.)
+               send_left(i,1:cg%nb,:,:)   = unshear_fft(u(i, cg%is:cg%isb,  cg%js:cg%je,:), cg%x(cg%is:cg%isb),dely,.true.)
                send_right(i,1:cg%nb,:,:)  = unshear_fft(u(i, cg%nxb+1:cg%ie, cg%js:cg%je,:), cg%x(cg%nxb+1:cg%ie),dely,.true.)
             enddo
 
@@ -335,7 +335,7 @@ module fluidboundaries
          if (procxyl .gt. 0) then
             allocate(send_left(nvar%all, cg%nb, cg%ny, cg%nz), recv_left(nvar%all, cg%nx, cg%nb, cg%nz))
 
-            send_left(:,:,:,:) = u(:, cg%is:2*cg%nb,:,:)
+            send_left(:,:,:,:) = u(:, cg%is:cg%isb,:,:)
 
             CALL MPI_Isend   (send_left , nvar%all*cg%nb*cg%ny*cg%nz, MPI_DOUBLE_PRECISION, procxyl, 70, comm, req(1), ierr)
             CALL MPI_Irecv   (recv_left , nvar%all*cg%nx*cg%nb*cg%nz, MPI_DOUBLE_PRECISION, procxyl, 80, comm, req(2), ierr)
@@ -399,7 +399,7 @@ module fluidboundaries
          if (procyxl .gt. 0) then
             allocate(send_left(nvar%all, cg%nx, cg%nb, cg%nz), recv_left(nvar%all, cg%nb, cg%ny, cg%nz))
 
-            send_left(:,:,:,:) = u(:,:, cg%js:2*cg%nb,:)
+            send_left(:,:,:,:) = u(:,:, cg%js:cg%jsb,:)
 
             CALL MPI_Isend   (send_left , nvar%all*cg%nx*cg%nb*cg%nz, MPI_DOUBLE_PRECISION, procyxl, 80, comm, req(1), ierr)
             CALL MPI_Irecv   (recv_left , nvar%all*cg%nb*cg%ny*cg%nz, MPI_DOUBLE_PRECISION, procyxl, 70, comm, req(2), ierr)
@@ -483,7 +483,7 @@ module fluidboundaries
          case ('cor', 'inf', 'mpi')
             ! Do nothing
          case ('per')
-            u(:,:, cg%je+1:cg%ny,:)            = u(:,:, cg%js:2*cg%nb,:)
+            u(:,:, cg%je+1:cg%ny,:)            = u(:,:, cg%js:cg%jsb,:)
          case ('user')
             call user_bnd_yr
          case ('ref')
@@ -581,7 +581,7 @@ module fluidboundaries
          case ('user')
             call user_bnd_zr
          case ('per')
-            u(:,:,:, cg%ke+1:cg%nz)            = u(:,:,:, cg%ks:2*cg%nb)
+            u(:,:,:, cg%ke+1:cg%nz)            = u(:,:,:, cg%ks:cg%ksb)
          case ('ref')
             do ib=1, cg%nb
 

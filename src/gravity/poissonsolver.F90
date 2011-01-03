@@ -79,7 +79,7 @@ contains
            call poisson_xyzp(ala(:,:,:), sgp(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke))
 
            sgp(:,:,1:cg%nb)        = sgp(:,:, cg%nzb+1:cg%ke)
-           sgp(:,:, cg%ke+1:cg%nz) = sgp(:,:, cg%ks:2*cg%nb)
+           sgp(:,:, cg%ke+1:cg%nz) = sgp(:,:, cg%ks:cg%ksb)
 
          else
             call poisson_xy2d(dens(cg%is:cg%ie,   cg%js:cg%je,1), &
@@ -90,7 +90,7 @@ contains
 
          endif
          sgp(:,1:cg%nb,:)        = sgp(:, cg%nyb+1:cg%je,:)
-         sgp(:, cg%je+1:cg%ny,:) = sgp(:, cg%js:2*cg%nb,:)
+         sgp(:, cg%je+1:cg%ny,:) = sgp(:, cg%js:cg%jsb,:)
 
          if (allocated(ala)) deallocate(ala)
 #endif /* SHEAR */

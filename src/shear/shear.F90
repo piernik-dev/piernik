@@ -129,7 +129,7 @@ contains
        u(i,:, cg%js:cg%je,:) = unshear_fft( u(i,:, cg%js:cg%je,:), cg%x(:),ddly)
     enddo
     u(:,:,1:cg%nb,:)       = u(:,:, cg%ny-2*cg%js:cg%je,:)
-    u(:,:, cg%je+1:cg%ny,:) = u(:,:, cg%js:2*cg%nb,:)
+    u(:,:, cg%je+1:cg%ny,:) = u(:,:, cg%js:cg%jsb,:)
 #endif /* FFTW */
   end subroutine yshift
 
@@ -250,8 +250,8 @@ contains
 
       unshear(i, cg%js:cg%je,:) = temp(cg%je+1:cg%nb+2*cg%nyb,:)
 
-      unshear(i,1:cg%nb,:)          = unshear(i, cg%nyb+1:cg%je,:)
-      unshear(i, cg%je+1:ny,:)   = unshear(i, cg%js :2*cg%nb,:)
+      unshear(i,1:cg%nb,:)          = unshear(i, cg%jeb:cg%je,:)
+      unshear(i, cg%je+1:ny,:)   = unshear(i, cg%js:cg%jsb,:)
 
 !      unshear(i,:,:) = max(unshear(i,:,:), smalld)
     enddo
