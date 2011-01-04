@@ -28,12 +28,6 @@
 !!
 !! \b \#define \b GRAV - to include gravitational forces
 !!
-!! \b \#define \b GRAV_\<TYPE\> - to choose other type %gravity
-!!
-!! <table border="0">
-!! <tr><td width="40pt"><b></b></td><td width="760pt">
-!! \copydetails gravity::default_grav_pot_3d
-!!
 !! If no %gravity type is defined then vertical component of galactic %gravity is used:
 !!
 !! local Galactic %gravity only in z-direction (see <a href="http://cdsads.u-strasbg.fr/abs/1998ApJ...497..759F">Ferriere K., 1998, Astrophys. Journal, 497, 759</a>)\n
