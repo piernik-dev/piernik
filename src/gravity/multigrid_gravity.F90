@@ -54,7 +54,9 @@ module multigrid_gravity
    public :: grav_bnd
 
    ! multigrid constants
-   integer, parameter :: fft_none=-1, fft_rcr=1, fft_dst=fft_rcr+1    !< type of FFT transform: none, full, discrete sine
+   integer, parameter :: fft_rcr=1                                    !< type of FFT transform: full
+   integer, parameter :: fft_dst=fft_rcr+1                            !< type of FFT transform: discrete sine
+   integer, parameter :: fft_none=-1                                  !< type of FFT transform: none
 
    ! namelist parameters
    real               :: norm_tol                                     !< stop V-cycle iterations when the ratio of norms ||residual||/||source|| is below this value

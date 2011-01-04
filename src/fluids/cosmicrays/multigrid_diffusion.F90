@@ -63,10 +63,12 @@ module multigrid_diffusion
    logical, protected :: diff_explicit                                !< If .true. then do not use multigrid for diffusion
    logical            :: allow_explicit                               !< When timestep is limited somewhere else, allow explicit calculation (should be a bit faster)
    real               :: diff_dt_crs_orig                             !< timestep calculated at timestepcosmicrays.F90, before enlarging by diff_tstep_fac
-   character(len=cbuff_len) :: diff_bnd_str                           !< Type of diffusion boundary conditions.
+   character(len=cbuff_len) :: diff_bnd_str                           !< Type of diffusion boundary conditions. Can be "isolated", "reflecting" or "zero" (there are some aliases as well)
 
    ! mgvar entries for the B field
-   integer, parameter :: diff_bx = correction+1, diff_by = diff_bx + 1, diff_bz = diff_by + 1 !< indices pointing to multigrid copies of the b(:,:,:,:) array
+   integer, parameter :: diff_bx = correction+1                       !< index of B_x in the b(:,:,:,:) array
+   integer, parameter :: diff_by = diff_bx + 1                        !< index of B_y in the b(:,:,:,:) array
+   integer, parameter :: diff_bz = diff_by + 1                        !< index of B_z in the b(:,:,:,:) array
 
    ! miscellaneous
    logical, allocatable, dimension(:) :: norm_was_zero                !< Flag for suppressing repeated warnings on nonexistent CR components
@@ -92,9 +94,11 @@ contains
 !! <tr><td>max_cycles    </td><td>20     </td><td>integer value  </td><td>\copydoc multigrid_diffusion::max_cycles    </td></tr>
 !! <tr><td>nsmool        </td><td>4      </td><td>integer value  </td><td>\copydoc multigrid_diffusion::nsmool        </td></tr>
 !! <tr><td>nsmoob        </td><td>1      </td><td>integer value  </td><td>\copydoc multigrid_diffusion::nsmoob        </td></tr>
+!! <tr><td>overrelax     </td><td>1.     </td><td>real value     </td><td>\copydoc multigrid_diffusion::overrelax     </td></tr>
 !! <tr><td>diff_theta    </td><td>1.     </td><td>real value     </td><td>\copydoc multigrid_diffusion::diff_theta    </td></tr>
 !! <tr><td>diff_tstep_fac</td><td>1.     </td><td>real value     </td><td>\copydoc multigrid_diffusion::diff_tstep_fac</td></tr>
 !! <tr><td>diff_explicit </td><td>.false.</td><td>logical        </td><td>\copydoc multigrid_diffusion::diff_explicit </td></tr>
+!! <tr><td>allow_explicit</td><td>.true. </td><td>logical        </td><td>\copydoc multigrid_diffusion::allow_explicit</td></tr>
 !! <tr><td>diff_bnd_str  </td><td>"zero" </td><td>string of chars</td><td>\copydoc multigrid_diffusion::diff_bnd_str  </td></tr>
 !! </table>
 !! \n \n
