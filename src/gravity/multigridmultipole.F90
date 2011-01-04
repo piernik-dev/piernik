@@ -28,6 +28,16 @@
 
 #include "piernik.h"
 
+!!$ ============================================================================
+!>
+!! \brief Multipole solver for isolated boundaries
+!!
+!! \details This solver estimates gravitational potential on external (domain) boundaries, which allows to mimic \f$\Phi(\infty) = 0\f$.
+!! The calculated potential may then be used in second pass of the Poisson solver (this time run with an empty space) to calculate correction
+!! to be added to the first-pass solution obtained with homogenous Dirichlet boundary conditions.
+!!
+!<
+
 module multipole
 ! pulled by MULTIGRID && GRAV
    ! needed for global vars in this module

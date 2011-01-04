@@ -92,6 +92,11 @@ module multigridexperimental
 
 contains
 
+!!$ ============================================================================
+!!
+!> \brief high-order order prolongation interpolation
+!!
+
    subroutine prolong_level_hord(lev, iv)
 
       use dataio_pub,         only: die, warn, msg

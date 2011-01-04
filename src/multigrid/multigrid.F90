@@ -31,7 +31,12 @@
 
 !!$ ============================================================================
 !>
-!! \brief Multigrid Poisson solver
+!! \brief Multigrid solver initialization and cleanup
+!!
+!! \details This module contains initialization subroutine that reads the MULTIGRID_SOLVER namelist, performs all required allocation and initializes variables and arrays.
+!! The initialization subroutine also calls secondary initialization routines for self-gravity and cosmic ray diffussion when applicable.
+!! This module contains a cleanup subroutine that does all deallocations. While this is not strictly required for correct execution of the multigrid solver, it helps a lot
+!! to debug memory leaks.
 !<
 
 module multigrid
@@ -444,7 +449,7 @@ contains
 
 !!$ ============================================================================
 !>
-!! \brief
+!! \brief Count periodic boundaries.
 !! \todo pack bnd_{x,y,z}{l,r}_dom into a bnd_dom(xdim:zdim)(LOW:HIGH)  array
 !<
 
@@ -466,7 +471,7 @@ contains
 
 !!$ ============================================================================
 !>
-!! \details Deallocate, destroy, demolish ...
+!! \brief Deallocate, destroy, demolish ...
 !>
 
    subroutine cleanup_multigrid

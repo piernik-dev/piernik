@@ -46,9 +46,7 @@ module multigridmpifuncs
 contains
 
 !!$ ============================================================================
-!>
-!! \brief Initialize MPI shortcuts for local domain communication
-!<
+!> \brief Initialize MPI shortcuts for local domain communication
 
    subroutine mpi_multigrid_prep
 
@@ -147,7 +145,7 @@ contains
 !! Boundary conditions
 !!
 !> \brief Routine for inter-process and periodic boundary conditions.
-!! \details mpi_multigrid_bnd provides communication between local domains to couple solution on the global computational domain
+!> \details mpi_multigrid_bnd provides communication between local domains to couple solution on the global computational domain
 !!
 
    subroutine mpi_multigrid_bnd(lev, iv, ng, mode, corners)
@@ -232,8 +230,8 @@ contains
    end subroutine mpi_multigrid_bnd
 
 !!$ ============================================================================
-!>
-!! \brief Set external boundary (not required for periodic box) on domain faces.
+!!
+!> \brief Set external boundary (not required for periodic box) on domain faces.
 !! \details In multigrid typically mirror boundaries are in use. Extrapolate isolated boundaries at exit.
 !!
 !! has_dir() is not checked here because is_external() should be set to .false. on non-existing directions in 1D and 2D setups

@@ -28,6 +28,13 @@
 
 #include "piernik.h"
 
+!!$ ============================================================================
+!>
+!! \brief Variables and data structures required by multigrid routines.
+!!
+!! \details These variables are not meant to be accessed (or worse: altered) from the outside of multigrid routines (Fortran has no friends :-( )
+!<
+
 module multigridvars
 ! pulled by MULTIGRID
    implicit none
@@ -35,17 +42,23 @@ module multigridvars
    public ! QA_WARN no secrets are kept here
 
    ! multigrid constants
-   integer, parameter :: source=1,          solution=source+1         !< Names of density and potential fields
-   integer, parameter :: defect=solution+1, correction=defect+1       !< Names of auxiliary fields (related to source and solution, respectively)
-   integer, parameter :: level_min = 1, level_gb = level_min-1        !< Base (coarsest) level number and global-base level number
+   integer, parameter :: source=1,                                    !< Index of the density field
+   integer, parameter :: solution=source+1                            !< Index of the iterated solution (potential) fields
+   integer, parameter :: defect=solution+1,                           !< Index of the defect field (effectively the density not accounted in current solution)
+   integer, parameter :: correction=defect+1                          !< Index of the correction to the potential to be applied at the end of V-cycle
+   integer, parameter :: level_min = 1,                               !< Base (coarsest) level number
+   integer, parameter :: level_gb = level_min-1                       !< Global-base level number
    integer, parameter :: mg_nb = 2                                    !< Number of guardcells in multigrid (simplest laplacian and relaxation require only 1)
 
    ! these constants can be #defined and used in other source files as well
    integer, parameter :: LOW=1, HIGH=LOW+1                            !< indices for low and high boundary values (third index of plvl%bnd_[xyz] array)
    integer, parameter :: NDIM=3                                       !< number of dimensions
-   integer, parameter :: XLO=1,     XHI=XLO+1                         !< enumerated indices for low and high x boundary (used for is_external(:))
-   integer, parameter :: YLO=XHI+1, YHI=YLO+1                         !< as above, low and high y
-   integer, parameter :: ZLO=YHI+1, ZHI=ZLO+1                         !< as above, low and high y
+   integer, parameter :: XLO=1,                                       !< Index for low x-boundary  (used for is_external(:))
+   integer, parameter :: XHI=XLO+1                                    !< Index for high x-boundary
+   integer, parameter :: YLO=XHI+1,                                   !< Index for low y-boundary
+   integer, parameter :: YHI=YLO+1                                    !< Index for high y-boundary
+   integer, parameter :: ZLO=YHI+1,                                   !< Index for low z-boundary
+   integer, parameter :: ZHI=ZLO+1                                    !< Index for high z-boundary
 
    ! namelist parameters
    integer            :: level_max                                    !< Levels of multigrid refinement
@@ -95,18 +108,24 @@ module multigridvars
    end type plvl
 
    type(plvl), dimension(:), allocatable, target :: lvl               !< a stack of multigrid arrays
-   type(plvl), pointer                           :: base, roof, gb    !< pointers to coarsest, finest and global-base levels, respectively
+   type(plvl), pointer                           :: base,             !< pointer to coarsest level
+   type(plvl), pointer                           :: roof,             !< pointer to finest level
+   type(plvl), pointer                           :: gb                !< pointer to global-base level
 
    ! dimensions
    integer                                 :: eff_dim                 !< count number of dimensions (>1 cell in a direction)
    integer                                 :: ngridvars               !< number of variables required for implementation of multigrid
 
    ! boundaries
-   integer, parameter :: bnd_periodic=1, bnd_dirichlet=2              !< constants for enumerating multigrid boundary types: periodic, 0-value,
-   integer, parameter :: bnd_isolated=3, bnd_neumann=4                !< isolated, 0-gradient
-   integer, parameter :: bnd_givenval=5, bnd_invalid=-1               !< given value, invalid
+   integer, parameter :: bnd_periodic=1,                              !< constants for enumerating multigrid boundary types: periodic
+   integer, parameter :: bnd_dirichlet=2                              !< 0-value boundary type (uniform Dirichlet)
+   integer, parameter :: bnd_isolated=3,                              !< isolated boundary type
+   integer, parameter :: bnd_neumann=4                                !< 0-gradient boundary type (uniform Neumann)
+   integer, parameter :: bnd_givenval=5,                              !< given value boundary type (general Dirichlet)
+   integer, parameter :: bnd_invalid=-1                               !< invalid
    logical, dimension(XLO:ZHI) :: is_external                         !< .true. for non-"mpi" local domain boundaries
-   integer :: periodic_bnd_cnt, non_periodic_bnd_cnt                  !< counts periodic and non-periodic boundaries in existing directions
+   integer :: periodic_bnd_cnt,                                       !< counter of periodic boundaries in existing directions
+   integer :: non_periodic_bnd_cnt                                    !< counter of non-periodic boundaries in existing directions
    integer, parameter :: extbnd_donothing = 0                         !< Do not touch external boundaries
    integer, parameter :: extbnd_zero = extbnd_donothing + 1           !< Fill external boundaries with zeroes
    integer, parameter :: extbnd_extrapolate = extbnd_zero + 1         !< Perform extrapolation in external boundaries
