@@ -59,9 +59,9 @@ module multigrid_gravity
    ! namelist parameters
    real               :: norm_tol                                     !< stop V-cycle iterations when the ratio of norms ||residual||/||source|| is below this value
    real               :: overrelax                                    !< overrealaxation factor (if < 1. then works as underrelaxation), provided for tests
-   real               :: overrelax_x                                  !< overrealaxation factors for fine tuning convergence ratio when cell spacing is not equal in all 3 directions. Use with care, patience and lots of hope.
-   real               :: overrelax_y                                  !< overrealaxation factors for fine tuning convergence ratio when cell spacing is not equal in all 3 directions. Use with care, patience and lots of hope.
-   real               :: overrelax_z                                  !< overrealaxation factors for fine tuning convergence ratio when cell spacing is not equal in all 3 directions. Use with care, patience and lots of hope.
+   real               :: overrelax_x                                  !< x-direction overrealaxation factor for fine tuning convergence ratio when cell spacing is not equal in all 3 directions. Use with care, patience and lots of hope.
+   real               :: overrelax_y                                  !< y-direction overrealaxation factor for fine tuning convergence ratio when cell spacing is not equal in all 3 directions. Use with care, patience and lots of hope.
+   real               :: overrelax_z                                  !< z-direction overrealaxation factor for fine tuning convergence ratio when cell spacing is not equal in all 3 directions. Use with care, patience and lots of hope.
    real               :: Jacobi_damp                                  !< omega factor for damped Jacobi relaxation. Jacobi_damp == 1 gives undamped method. Try 0.5 in 1D.
    real               :: vcycle_abort                                 !< abort the V-cycle when lhs norm raises by this factor
    real               :: L4_strength                                  !< strength of the 4th order terms in the Laplace operator; 0.: 2nd, 1.: 4th direct, 0.5: 4th integral

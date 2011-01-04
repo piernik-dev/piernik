@@ -38,7 +38,7 @@
 !!   -1./12., 7./12., 7./12., -1./12. (integral cubic)
 !! slightly slower, less wide stencil:
 !!            1./2.,  1./2.           (average; integral&direct linear)
-!! Prolongation of cell faces from cell centers will be required for FFT local solver, red-black Gauss-Seidel relaxation don't use it.
+!! Prolongation of cell faces from cell centers are required for FFT local solver, red-black Gauss-Seidel relaxation don't use it.
 
 !!$ ============================================================================
 !!
@@ -52,7 +52,7 @@
 !!               -5./64.,     55./64.,    17./64.,    -3./64.   ; integral cubic
 !!   3./128.,   -11./64.,      1.,        11./64.,    -3./128.  ; integral quartic
 !!
-!! General rule is that  so the second big positive coefficient will be assigned to closer neighbor of the coarse parent cell.
+!! General rule is that the second big positive coefficient should be assigned to closer neighbor of the coarse parent cell.
 !! Thus a single coarse contributes to fine cells in the following way:
 !!
 !! |          |        |          |        |       |      |         |         |         |        | fine level

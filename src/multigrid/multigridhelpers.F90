@@ -46,13 +46,13 @@ module multigridhelpers
    logical            :: do_ascii_dump                      !< to dump, or not to dump: that is a question (ascii)
    logical            :: multidim_code_3D                   !< prefer code written for any 1D and 2D configuration even in 3D for benchmarking and debugging
    logical            :: dirty_debug                        !< Initialize everything with some insane values (dirtyH, defined below) and check if they can propagate
-   integer            :: aux_par_I0                         !< auxiliary integer parameters
-   integer            :: aux_par_I1                         !< auxiliary integer parameters
-   integer            :: aux_par_I2                         !< auxiliary integer parameters
-   real               :: aux_par_R0                         !< auxiliary real parameters
-   real               :: aux_par_R1                         !< auxiliary real parameters
-   real               :: aux_par_R2                         !< auxiliary real parameters
-   integer, parameter    :: dl_len = 64                     !<
+   integer            :: aux_par_I0                         !< auxiliary integer parameter #0
+   integer            :: aux_par_I1                         !< auxiliary integer parameter #1
+   integer            :: aux_par_I2                         !< auxiliary integer parameter #2
+   real               :: aux_par_R0                         !< auxiliary real parameter #0
+   real               :: aux_par_R1                         !< auxiliary real parameter #1
+   real               :: aux_par_R2                         !< auxiliary real parameter #2
+   integer, parameter    :: dl_len = 64                     !< length of label buffer
    character(len=dl_len) :: dirty_label                     !< buffer for label for check_dirty subroutine
    real, parameter    :: big_s =  huge(real(1.0,4))
    real, parameter    :: dirtyH = big_s, dirtyL = sqrt(big_s) !< If dirty_debug, initialize arrays with dirtyH and check if the solution contains anything above dirtyL

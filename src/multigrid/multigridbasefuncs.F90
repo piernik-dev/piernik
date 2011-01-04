@@ -324,7 +324,7 @@ contains
          pp(i,:,2,2) = 0.5*p(-i)*p(1:-1:-1)
       enddo
 
-      call mpi_multigrid_bnd(lev-1, soln, 1, extbnd_antimirror) !BEWARE for higher prolongation order more guardcell will be required
+      call mpi_multigrid_bnd(lev-1, soln, 1, extbnd_antimirror) !BEWARE for higher prolongation order more guardcell are required
       call check_dirty(lev-1, soln, "prolong_faces", 1)
 
       coarse => lvl(lev - 1)
