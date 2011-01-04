@@ -51,7 +51,7 @@ module fluidindex
 
    public ! QA_WARN no secrets are kept here
 
-   type(var_numbers),save :: nvar
+   type(var_numbers),save :: nvar     !< COMMENT ME
 
    integer, parameter  :: nmag = 3    !< number of magnetic field components
 

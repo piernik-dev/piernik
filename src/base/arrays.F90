@@ -79,7 +79,7 @@ module arrays
 
       implicit none
 
-      type(var_numbers), intent(in) :: nvar
+      type(var_numbers), intent(in) :: nvar !< fluid database; cannot use fluidindex::nvar here due to circular dependences in some setups
 
       ma4d = [nvar%all, cg%nx, cg%ny, cg%nz]
       call my_allocate(u, ma4d, "u")

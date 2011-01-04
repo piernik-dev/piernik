@@ -51,7 +51,8 @@ module multigridvars
    integer, parameter :: mg_nb = 2                                    !< Number of guardcells in multigrid (simplest laplacian and relaxation require only 1)
 
    ! these constants can be #defined and used in other source files as well
-   integer, parameter :: LOW=1, HIGH=LOW+1                            !< indices for low and high boundary values (third index of plvl%bnd_[xyz] array)
+   integer, parameter :: LOW=1                                        !< index for low (left) boundary values (third index of plvl%bnd_[xyz] array)
+   integer, parameter :: HIGH=LOW+1                                   !< index for high (right) boundary values
    integer, parameter :: NDIM=3                                       !< number of dimensions
    integer, parameter :: XLO=1                                        !< Index for low x-boundary  (used for is_external(:))
    integer, parameter :: XHI=XLO+1                                    !< Index for high x-boundary
@@ -138,7 +139,8 @@ module multigridvars
    type(cart), dimension(:),       allocatable :: gb_cartmap          !< rank-to-coordinates array and ranges on gb_src for assembling base level;
 
    ! miscellaneous
-   real                    :: ts, tot_ts                              !< time for runtime profiling, total multigrid time
+   real                    :: ts                                      !< time for runtime profiling
+   real                    :: tot_ts                                  !< total multigrid time
 
    integer, parameter :: prefix_len = 3                               !< length of prefix for distinguishing V-cycles in the log
    type :: vcycle_stats

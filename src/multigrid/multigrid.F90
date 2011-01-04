@@ -560,6 +560,7 @@ contains
 
 #else /* MULTIGRID */
 #warning This should not happen. Probably the multigrid.F90 file is included in object directory by mistake.
+!! \todo I'm just curious what happens to the documentation lines after #else :-)
 #endif /* MULTIGRID */
 
 end module multigrid

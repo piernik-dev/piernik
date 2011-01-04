@@ -32,14 +32,12 @@
 !>
 !! \brief This module contains experimental routines, not recommended for production runs.
 !! \details
-!!$ ============================================================================
 !!
 !! Cell-face prolongation stencils for fast convergence on uniform grid:
 !!\n   -1./12., 7./12., 7./12., -1./12. (integral cubic)
-!!\n  slightly slower, less wide stencil:
+!!\n  slightly slower convergence, less wide stencil:
 !!\n            1./2.,  1./2.           (average; integral&direct linear)
 !!\n  Prolongation of cell faces from cell centers are required for FFT local solver, red-black Gauss-Seidel relaxation don't use it.
-!!$ ============================================================================
 !!
 !!\n Cell-centered prolongation stencils, for odd fine cells, for even fine cells reverse the order.
 !!\n  35./2048., -252./2048., 1890./2048., 420./2048., -45./2048. ; direct quartic

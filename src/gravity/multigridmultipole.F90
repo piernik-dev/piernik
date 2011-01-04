@@ -35,7 +35,6 @@
 !! \details This solver estimates gravitational potential on external (domain) boundaries, which allows to mimic \f$\Phi(\infty) = 0\f$.
 !! The calculated potential may then be used in second pass of the Poisson solver (this time run with an empty space) to calculate correction
 !! to be added to the first-pass solution obtained with homogenous Dirichlet boundary conditions.
-!!
 !<
 
 module multipole
@@ -49,7 +48,8 @@ module multipole
    public :: init_multipole, cleanup_multipole, multipole_solver
    public :: lmax, mmax, ord_prolong_mpole, coarsen_multipole, use_point_monopole, interp_pt2mom, interp_mom2pot ! initialized in multigrid_gravity
 
-   integer, parameter        :: INSIDE = 1, OUTSIDE = INSIDE + 1 !< distinction between interior and exterior multipole expansion
+   integer, parameter        :: INSIDE = 1                       !< index for interior multipole expansion
+   integer, parameter        :: OUTSIDE = INSIDE + 1             !< index for exterior multipole expansion
 
    ! namelist parameters for MULTIGRID_GRAVITY
    integer                   :: lmax                             !< Maximum l-order of multipole moments
@@ -62,21 +62,27 @@ module multipole
 
    ! radial discretization
    integer                   :: rqbin                            !< number of radial samples of multipoles
-   real                      :: drq, rscale                      !< radial resolution of multipoles
-   integer                   :: irmin, irmax                     !< minimum and maximum Q(:, :, r) indices in use
+   real                      :: drq                              !< radial resolution of multipoles
+   real                      :: rscale                           !< scaling factor that limits risk of floating point overflow for high powers of radius (rn(:) and irn(:))
+   integer                   :: irmin                            !< minimum Q(:, :, r) index in use
+   integer                   :: irmax                            !< maximum Q(:, :, r) index in use
 
    type(plvl), pointer       :: lmpole                           !< pointer to the level where multipoles are evaluated
    real, dimension(0:NDIM)   :: CoM                              !< Total mass and center of mass coordinates
 
    ! boundaries
-   real, dimension(LOW:HIGH) :: fbnd_x, fbnd_y, fbnd_z           !< coordinates at faces of local domain
+   real, dimension(LOW:HIGH) :: fbnd_x                           !< coordinates at x-faces of local domain
+   real, dimension(LOW:HIGH) :: fbnd_y                           !< coordinates at y-faces of local domain
+   real, dimension(LOW:HIGH) :: fbnd_z                           !< coordinates at z-faces of local domain
 
    ! multipoles and auxiliary factors
    real, dimension(:,:,:),   allocatable :: Q                    !< The whole moment array with dependence on radius
    real, dimension(:,:,:),   allocatable :: k12                  !< array of Legendre recurrence factors
-   real, dimension(:),       allocatable :: sfac, cfac           !< 0..m_max sized array of azimuthal sine and cosine factors
+   real, dimension(:),       allocatable :: sfac                 !< 0..m_max sized array of azimuthal sine factors
+   real, dimension(:),       allocatable :: cfac                 !< 0..m_max sized array of azimuthal cosine factors
    real, dimension(:),       allocatable :: ofact                !< arrays of Legendre normalization factor (compressed)
-   real, dimension(:),       allocatable :: rn, irn              !< 0..l_max sized array of positive and negative powers of r
+   real, dimension(:),       allocatable :: rn                   !< 0..l_max sized array of positive powers of r
+   real, dimension(:),       allocatable :: irn                  !< 0..l_max sized array of negative powers of r
 
 contains
 
@@ -175,6 +181,8 @@ contains
          drq = min(lmpole%dx, lmpole%dy, lmpole%dz) / 2.
          rqbin = int(sqrt((cg%xmax - cg%xmin)**2 + (cg%ymax - cg%ymin)**2 + (cg%zmax - cg%zmin)**2)/drq) + 1
          ! arithmetic average of the closest and farthest points of computational domain with respect to its center
+         ! \todo check what happens if there are points that are really close to the domain center (maybe we should use a harmonic average?)
+         ! Issue a warning or error if it is known that given lmax leads to FP overflows in rn(:) and irn(:)
          rscale = ( min((cg%xmax - cg%xmin),     (cg%ymax - cg%ymin),     (cg%zmax - cg%zmin)) + &
               &    sqrt((cg%xmax - cg%xmin)**2 + (cg%ymax - cg%ymin)**2 + (cg%zmax - cg%zmin)**2) )/4.
          if (allocated(k12) .or. allocated(ofact) .or. allocated(Q)) call die("[multipole:init_multipole] k12, ofact or Q already allocated")
