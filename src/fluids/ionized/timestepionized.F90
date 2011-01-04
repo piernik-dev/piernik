@@ -28,7 +28,7 @@
 #include "piernik.h"
 
 !>
-!! \brief (MH/JD) (doxy comments ready) %Timestep computation for the ionized fluid
+!! \brief (MH/JD) [R] %Timestep computation for the ionized fluid
 !!
 !! %Timestep for the ionized fluid is set as the minimum %timestep for all of the MPI blocks times the Courant number.
 !! To compute the %timestep in each MPI block, the fastest speed at which information travels in each direction is computed as

@@ -29,7 +29,7 @@
 #include "macros.h"
 
 !>
-!! \brief [DW] Module containing all main subroutines and functions that govern %gravity force in the code
+!! \brief (DW) Module containing all main subroutines and functions that govern %gravity force in the code
 !! \todo to check importance and usefulness of such parameters as g_y and n_gravr2 and tune_zeq_bnd
 !!
 !!

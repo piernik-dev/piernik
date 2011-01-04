@@ -38,9 +38,9 @@ module poissonsolver
 contains
 
 !!=====================================================================
-!!
-!! SUBROUTINE POISSON: solves Poisson equation
-!!
+!>
+!! \brief solves Poisson equation
+!<
   subroutine poisson_solve(dens)
 
     use arrays,         only: u, sgp
@@ -101,11 +101,10 @@ contains
   end subroutine poisson_solve
 
 !!=====================================================================
-!!
-!! SUBROUTINE POISSON_XY2D: solves Poisson equation for periodic
-!! bnd conditions in X and Y in 2D
+!>
+!! \brief solves Poisson equation for periodic bnd conditions in X and Y in 2D
 !! ASSUMPTION: 1) dx = dy
-!!
+!<
 #ifdef SHEAR
   subroutine poisson_xy2d(den, pot, lpot, rpot, dx)
 
@@ -250,11 +249,10 @@ contains
 #endif /* SHEAR */
 
 !!=====================================================================
-!!
-!! SUBROUTINE POISSON_XY: solves Poisson equation for periodic
-!! bnd conditions in X and Y in 2D
+!>
+!! \brief solves Poisson equation for periodic bnd conditions in X and Y in 2D
 !! ASSUMPTION: 1) dx = dy
-!!
+!<
   subroutine poisson_xy(den, pot, dx)
 
     use constants, only: newtong, dpi
@@ -366,10 +364,9 @@ contains
   end subroutine poisson_xy
 
 !!=====================================================================
-!!
-!! SUBROUTINE POISSON_XYP: solves Poisson equation for periodic
-!! bnd conditions in X and Y, and arbitrary bnd in Z
-!!
+!>
+!! \brief solves Poisson equation for periodic bnd conditions in X and Y, and arbitrary bnd in Z
+!<
   subroutine poisson_xyp(den, pot, dz)
 
     use constants, only: fpiG, dpi
@@ -518,10 +515,9 @@ contains
   end subroutine poisson_xyp
 
 !!=====================================================================
-!!
-!! SUBROUTINE POISSON_XYZP: solves Poisson equation for periodic
-!! bnd conditions in X, Y and Z
-!!
+!>
+!! \brief solves Poisson equation for periodic bnd conditions in X, Y and Z
+!<
   subroutine poisson_xyzp(den, pot)
 
     use constants, only: fpiG, dpi
@@ -575,7 +571,7 @@ contains
     call dfftw_destroy_plan(planf)
 
 ! compute eigenvalues for each p, q and r and solve linear system
-! ToDo: this can be done only once if we do not change arrays
+!! \todo this can be done only once if we do not change arrays
 
     kx(:) = (cos(dpi/nx*(/(j,j=0,np-1)/))-1.)/cg%dx**2
     ky(:) = (cos(dpi/ny*(/(j,j=0,ny-1)/))-1.)/cg%dy**2

@@ -29,7 +29,7 @@
 #define RNG 2:n-1
 !/*
 !>
-!! \brief (MH/JD) (doxy comments ready) Computation of %fluxes for the dust fluid
+!! \brief (MH/JD) [R] Computation of %fluxes for the dust fluid
 !!
 !!The flux functions for dust are given by:
 !!\f[
@@ -81,7 +81,7 @@ contains
       real, dimension(:,:), intent(out), pointer  :: fluxd   !< flux for dust
       real, dimension(:,:), intent(in),  pointer  :: uud     !< part of u for dust
       real, dimension(:,:), intent(out), pointer  :: cfrd    !< freezing speed for dust
-      real, dimension(:,:), intent(in),  pointer  :: bb      !< \copydoc fluxes::interface::flux_interface::bb
+      real, dimension(:,:), intent(in),  pointer  :: bb      !< magnetic field x,y,z-components table
       real, dimension(:),   intent(out), pointer  :: vx      !< velocity of dust fluid for current sweep
       real, dimension(:),   intent(out), pointer  :: ps      !< pressure of dust fluid for current sweep
       real, dimension(:),   intent(in),  pointer  :: cs_iso2 !< local isothermal sound speed (optional)

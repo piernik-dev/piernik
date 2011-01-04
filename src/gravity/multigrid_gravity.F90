@@ -32,13 +32,13 @@
 !!$ ============================================================================
 !>
 !! \brief Multigrid Poisson solver
-!<
-!! This module contains routines and variables specific for multigrid self-gravity solver.
+!!
+!! \details This module contains routines and variables specific for multigrid self-gravity solver.
 !!
 !! Some code pieces (low-level FFT routines) here are not really gravity-related,
 !! but these are not needed for implicit CR-diffusion solver either.
 !! These parts of code can be moved to other multigrid files when any other multigrid solver uses them.
-!!
+!<
 
 module multigrid_gravity
 ! pulled by MULTIGRID && GRAV
@@ -142,13 +142,13 @@ contains
 !! <tr><td>fft_full_relax        </td><td>.false.</td><td>logical        </td><td>\copydoc multigrid_gravity::fft_full_relax        </td></tr>
 !! <tr><td>fft_patient           </td><td>.false.</td><td>logical        </td><td>\copydoc multigrid_gravity::fft_patient           </td></tr>
 !! <tr><td>trust_fft_solution    </td><td>.false.</td><td>logical        </td><td>\copydoc multigrid_gravity::trust_fft_solution    </td></tr>
-!! <tr><td>coarsen_multipole     </td><td>1      </td><td>integer value  </td><td>\copydoc multigrid_gravity::coarsen_multipole     </td></tr>
-!! <tr><td>lmax                  </td><td>16     </td><td>integer value  </td><td>\copydoc multigrid_gravity::lmax                  </td></tr>
-!! <tr><td>mmax                  </td><td>-1     </td><td>integer value  </td><td>\copydoc multigrid_gravity::mmax                  </td></tr>
-!! <tr><td>ord_prolong_mpole     </td><td>-2     </td><td>integer value  </td><td>\copydoc multigrid_gravity::ord_prolong_mpole     </td></tr>
-!! <tr><td>use_point_monopole    </td><td>.false.</td><td>logical        </td><td>\copydoc multigrid_gravity::use_point_monopole    </td></tr>
-!! <tr><td>interp_pt2mom         </td><td>.false.</td><td>logical        </td><td>\copydoc multigrid_gravity::interp_pt2mom         </td></tr>
-!! <tr><td>interp_mom2pot        </td><td>.false.</td><td>logical        </td><td>\copydoc multigrid_gravity::interp_mom2pot        </td></tr>
+!! <tr><td>coarsen_multipole     </td><td>1      </td><td>integer value  </td><td>\copydoc multipole::coarsen_multipole             </td></tr>
+!! <tr><td>lmax                  </td><td>16     </td><td>integer value  </td><td>\copydoc multipole::lmax                          </td></tr>
+!! <tr><td>mmax                  </td><td>-1     </td><td>integer value  </td><td>\copydoc multipole::mmax                          </td></tr>
+!! <tr><td>ord_prolong_mpole     </td><td>-2     </td><td>integer value  </td><td>\copydoc multipole::ord_prolong_mpole             </td></tr>
+!! <tr><td>use_point_monopole    </td><td>.false.</td><td>logical        </td><td>\copydoc multipole::use_point_monopole            </td></tr>
+!! <tr><td>interp_pt2mom         </td><td>.false.</td><td>logical        </td><td>\copydoc multipole::interp_pt2mom                 </td></tr>
+!! <tr><td>interp_mom2pot        </td><td>.false.</td><td>logical        </td><td>\copydoc multipole::interp_mom2pot                </td></tr>
 !! <tr><td>grav_bnd_str          </td><td>"periodic"/"dirichlet"</td><td>string of chars</td><td>\copydoc multigrid_gravity::grav_bnd_str          </td></tr>
 !! </table>
 !! \n \n
@@ -362,9 +362,9 @@ contains
    end subroutine init_multigrid_grav
 
 !!$ ============================================================================
-!!
-!! Initialization - continued after allocation of everything interesting
-!!
+!>
+!! \brief Initialization - continued after allocation of everything interesting
+!<
 
    subroutine init_multigrid_grav_post(mb_alloc)
 
@@ -588,9 +588,9 @@ contains
    end subroutine init_multigrid_grav_post
 
 !!$ ============================================================================
-!!
-!! Cleanup
-!!
+!>
+!! \brief Cleanup
+!<
 
    subroutine cleanup_multigrid_grav
 
@@ -629,15 +629,15 @@ contains
    end subroutine cleanup_multigrid_grav
 
 !!$ ============================================================================
-!!
-!! This routine tries to construct first guess of potential based on previously obtained solution, if any.
+!>
+!! \brief This routine tries to construct first guess of potential based on previously obtained solution, if any.
 !! If for some reason it is not desired to do the extrapolation (i.e. timestep varies too much) it would be good to have more control on this behavior.
 !!
-!! Quadratic extrapolation in time often gives better guess for smooth potentials, but is more risky for sharp-peaked potential fields (like moving self-bound clumps)
+!! \details Quadratic extrapolation in time often gives better guess for smooth potentials, but is more risky for sharp-peaked potential fields (like moving self-bound clumps)
 !! Rational extrapolation (1 + a t)(b + c t) can give 2 times better and 10 times worse guess depending on timestep.
 !!
 !! Set history%valid to .false. to force start from scratch.
-!!
+!<
 
    subroutine init_solution(history)
 
@@ -720,9 +720,9 @@ contains
    end subroutine init_solution
 
 !!$ ============================================================================
-!!
-!! Make a local copy of source (density) and multiply by 4 pi G
-!!
+!>
+!! \brief Make a local copy of source (density) and multiply by 4 pi G
+!<
 
    subroutine init_source(dens)
 
@@ -787,9 +787,9 @@ contains
    end subroutine init_source
 
 !!$ ============================================================================
-!!
-!! This routine manages old copies of potential for recycling.
-!!
+!>
+!! \brief This routine manages old copies of potential for recycling.
+!<
 
    subroutine store_solution(history)
 
@@ -824,10 +824,10 @@ contains
    end subroutine store_solution
 
 !!$ ============================================================================
-!!
-!! Multigrid gravity driver. This is the only multigrid routine intended to be called from the gravity module.
+!>
+!! \brief Multigrid gravity driver. This is the only multigrid routine intended to be called from the gravity module.
 !! This routine is also responsible for communicating the solution to the rest of world via sgp array.
-!!
+!<
 
    subroutine multigrid_solve_grav(dens)
 
@@ -917,10 +917,10 @@ contains
    end subroutine multigrid_solve_grav
 
 !!$ ============================================================================
-!!
-!! The solver. Here we choose an adaptation of the Huang-Greengard V-cycle.
+!>
+!! \brief The solver. Here we choose an adaptation of the Huang-Greengard V-cycle.
 !! For more difficult problems, like variable coefficient diffusion equation a more sophisticated V-cycle may be more effective.
-!!
+!<
 
    subroutine vcycle_hg(history)
 
@@ -1069,9 +1069,9 @@ contains
    end subroutine vcycle_hg
 
 !!$ ============================================================================
-!!
-!! Calculate the residuum for the Poisson equation.
-!!
+!>
+!! \brief Calculate the residuum for the Poisson equation.
+!<
 
    subroutine residual(lev, src, soln, def)
 
@@ -1100,9 +1100,9 @@ contains
    end subroutine residual
 
 !!$ ============================================================================
-!!
-!! 2nd order Laplacian
-!!
+!>
+!! \brief 2nd order Laplacian
+!<
 
    subroutine residual2(lev, src, soln, def)
 
@@ -1172,17 +1172,17 @@ contains
    end subroutine residual2
 
 !!$ ============================================================================
+!>
+!! \brief 4th order Laplacian
 !!
-!! 4th order Laplacian
-!!
-!! Significantly slows down convergence, does not seem to improve quality of solution in simple tests.
+!! \details Significantly slows down convergence, does not seem to improve quality of solution in simple tests.
 !!
 !! L4 = [0, 1, -2, 1, 0] + L4_strength * 1./12. * [ -1, 4, -6, 4, -1 ]
 !! For integrated face fluxes in the 4th order Laplacian estimate set L4_strength = 0.5
 !! For simple 5-point L4 set L4_strength = 1.0
 !!
 !! There also exists more compact Mehrstellen scheme.
-!!
+!<
 
    subroutine residual4(lev, src, soln, def)
 
@@ -1274,9 +1274,9 @@ contains
    end subroutine residual4
 
 !!$ ============================================================================
-!!
-!! This routine has to find an approximate solution for given source field and implemented differential operator
-!!
+!>
+!! \brief This routine has to find an approximate solution for given source field and implemented differential operator
+!<
 
    subroutine approximate_solution(lev, src, soln)
 
@@ -1315,13 +1315,13 @@ contains
    end subroutine approximate_solution
 
 !!$ ============================================================================
+!>
+!! \brief Red-Black Gauss-Seidel relaxation.
 !!
-!! Red-Black Gauss-Seidel relaxation.
-!!
-!! This is the most costly routine in a serial run. Try to find optimal values for nsmool and nsmoob.
+!! \details This is the most costly routine in a serial run. Try to find optimal values for nsmool and nsmoob.
 !! This routine also depends a lot on communication so it  may limit scalability of the multigrid.
 !! \todo Implement convergence check on base level (not very important since we have a FFT solver for base level)
-!!
+!<
 
    subroutine approximate_solution_rbgs(lev, src, soln)
 
@@ -1421,11 +1421,11 @@ contains
    end subroutine approximate_solution_rbgs
 
 !!$ ============================================================================
-!!
-!! FFT given-boundary Poisson solver applied to local domain. Should require less communication than RBGS implementation.
+!>
+!! \brief FFT given-boundary Poisson solver applied to local domain. Should require less communication than RBGS implementation.
 !!
 !! \todo test a configuration with wider area being subjected to FFT (sizes would no longer be 2**n) to avoid the need of relaxation
-!!
+!<
 
    subroutine approximate_solution_fft(lev, src, soln)
 
@@ -1605,9 +1605,9 @@ contains
    end subroutine approximate_solution_fft
 
 !!$ ============================================================================
-!!
-!! This routine prepares boundary values for local-FFT solver
-!!
+!>
+!! \brief This routine prepares boundary values for local-FFT solver
+!<
 
    subroutine make_face_boundaries(lev, soln)
 
@@ -1635,9 +1635,9 @@ contains
    end subroutine make_face_boundaries
 
 !!$ ============================================================================
-!!
-!! Obtain an exact solution on base level. (wrapper)
-!!
+!>
+!! \brief Obtain an exact solution on base level. (wrapper)
+!<
 
    subroutine gb_fft_solve(src, soln)
 
@@ -1655,12 +1655,12 @@ contains
    end subroutine gb_fft_solve
 
 !!$ ============================================================================
-!!
-!! Obtain an exact solution on base level.
-!! The source is gathered on the master PE (possible bottleneck), solution is obtained through FFT, then its parts are sent to all PEs.
+!>
+!! \brief Obtain an exact solution on base level.
+!! \details The source is gathered on the master PE (possible bottleneck), solution is obtained through FFT, then its parts are sent to all PEs.
 !! Unfortunately non-blocking communication probably will not change much here.
 !! Alternative implementation: set gb_src to 0, copy local part to it, then call MPI_Allreduce and solve with FFT on each PE (no need to communicate the solution)
-!!
+!<
 
    subroutine gb_fft_solve_sendrecv(src, soln)
 
@@ -1711,8 +1711,8 @@ contains
    end subroutine gb_fft_solve_sendrecv
 
 !!$ ============================================================================
-!!
-!! Alternative version using MPI_Gather
+!>
+!! \brief Alternative version using MPI_Gather
 !!
 !! \todo using 1d ffts and gather to reduce dimensions one by one could prevent possible bottleneck and could be (?) faster:
 !!       1. N_x * N_y independent gathers reduce Z dim
@@ -1722,6 +1722,7 @@ contains
 !!       5. gather (4.) on master proc
 !!       6. fft in X dim on master
 !!       7. Scatter
+!<
 
    subroutine gb_fft_solve_gather(src, soln)
 
@@ -1763,9 +1764,9 @@ contains
    end subroutine gb_fft_solve_gather
 
 !!$ ============================================================================
-!!
-!! Solve finest level if allowed (typically on single CPU)
-!!
+!>
+!! \brief Solve finest level if allowed (typically on single CPU)
+!<
 
    subroutine fft_solve_roof
 
@@ -1782,9 +1783,9 @@ contains
    end subroutine fft_solve_roof
 
 !!$ ============================================================================
-!!
-!! Do the FFT convolution
-!!
+!>
+!! \brief Do the FFT convolution
+!<
 
    subroutine fft_convolve(level)
 

@@ -29,9 +29,9 @@
 #include "piernik.h"
 
 !$ ============================================================================
-!!
-!! This module contains variables and routines useful mostly for developing and debugging
-!!
+!>
+!! \brief This module contains variables and routines useful mostly for developing and debugging
+!<
 
 module multigridhelpers
 ! pulled by MULTIGRID
@@ -55,14 +55,14 @@ module multigridhelpers
 
 contains
 
-!/todo write also general set_dirty_array and check_dirty_array routines so there will be no need to use dirtyH and dirtyL outside multigridhelpers module.
+!! /todo write also general set_dirty_array and check_dirty_array routines so there will be no need to use dirtyH and dirtyL outside multigridhelpers module.
 
 !$ ============================================================================
-!!
-!! This routine pollutes selected multigrid variable with an insane value dirtyH.
-!! If anything in the multigrid works by accident, through compiler-dependent initialization or unintentional relying on outdated values,
+!>
+!! \brief This routine pollutes selected multigrid variable with an insane value dirtyH.
+!! \details If anything in the multigrid works by accident, through compiler-dependent initialization or unintentional relying on outdated values,
 !! the insane value should pollute the solution in an easily visible way.
-!!
+!<
 
    subroutine set_dirty(iv)
 
@@ -86,9 +86,9 @@ contains
    end subroutine set_dirty
 
 !!$ ============================================================================
-!!
-!! This routine checks for detectable traces of set_dirty calls.
-!!
+!>
+!! \brief This routine checks for detectable traces of set_dirty calls.
+!<
 
    subroutine check_dirty(lev, iv, label, expand)
 
@@ -144,9 +144,9 @@ contains
    end subroutine check_dirty
 
 !!$ ============================================================================
-!!
-!! Initialize vcycle_stats
-!!
+!>
+!! \brief Initialize vcycle_stats
+!<
 
    subroutine vcycle_stats_init(vs, size)
 
@@ -176,9 +176,9 @@ contains
    end subroutine vcycle_stats_init
 
 !!$ ============================================================================
-!!
-!! Assembles one-line log of V-cycle achievements
-!!
+!>
+!! \brief Assembles one-line log of V-cycle achievements
+!<
 
    subroutine brief_v_log(vs)
 
@@ -221,9 +221,9 @@ contains
    end subroutine brief_v_log
 
 !!$ ============================================================================
-!!
-!! Logfile
-!!
+!>
+!! \brief Logfile
+!<
 
    subroutine mg_write_log(msg, stdout_cntrl)
 
@@ -244,11 +244,11 @@ contains
    end subroutine mg_write_log
 
 !!$ ============================================================================
+!>
+!! \brief Emergency routine for quick ASCII dumps
 !!
-!! Emergency routine for quick ASCII dumps
-!!
-!! Absolute integer coordinates also allow seamless concatenation of dumps made by all PEs.
-!!
+!! \details Absolute integer coordinates also allow seamless concatenation of dumps made by all PEs.
+!<
 
    subroutine ascii_dump(filename)
 
@@ -294,9 +294,9 @@ contains
    end subroutine ascii_dump
 
 !!$ ============================================================================
-!!
-!! Construct name of emergency ASCII dump
-!!
+!>
+!! \brief Construct name of emergency ASCII dump
+!<
 
    subroutine numbered_ascii_dump(basename, a)
 

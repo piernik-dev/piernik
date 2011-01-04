@@ -35,7 +35,7 @@
 !
 
 !>
-!! \brief [DW] Module containing all main routines  responsible for data output
+!! \brief (DW) Module containing all main routines  responsible for data output
 !!
 !!
 !! In this module following namelists of parameters are specified:
@@ -419,7 +419,7 @@ contains
             call printinfo(env(i), .false.)
          enddo
          write(log_file,'(6a,i3.3,a)') trim(cwd),'/',trim(problem_name),'_',trim(run_id),'_',nrestart,'.log'
-         ! ToDo: if the simulation is restarted then save previous log_file (if exists) under a different, unique name
+         !! \todo if the simulation is restarted then save previous log_file (if exists) under a different, unique name
          write(system_command, '("mv ",a," ",a)') trim(tmp_log_file), trim(log_file)
          system_status = SYSTEM(system_command)
          if (system_status /= 0) then

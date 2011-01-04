@@ -451,6 +451,7 @@ contains
                      var(lnbcells+1-ib,:,:) = bndsign * var(ledge+ib,:,:)
                   enddo
                case ("out")
+                  ledge = ledge + 1 ; lnbcells = lnbcells + 1
                   dvarx = var(ledge+1,:,:)-var(ledge,:,:)
                   do ib=1,lnbcells
                      var(ib,:,:) = var(cg%is,:,:) - real(cg%is-ib)*dvarx
@@ -501,6 +502,7 @@ contains
                      var(:,lnbcells+1-ib,:) = bndsign * var(:,ledge+ib,:)
                   enddo
                case ("out")
+                  ledge = ledge + 1 ; lnbcells = lnbcells + 1
                   dvary = var(:,ledge+1,:)-var(:,ledge,:)
                   do ib=1,lnbcells
                      var(:,ib,:) = var(:, cg%js,:) - real(cg%js-ib)*dvary
@@ -551,6 +553,7 @@ contains
                      var(:,:,lnbcells+1-ib) = bndsign * var(:,:,ledge+ib)
                   enddo
                case ("out")
+                  ledge = ledge + 1 ; lnbcells = lnbcells + 1
                   dvarz = var(:,:,ledge+1)-var(:,:,ledge)
                   do ib=1,lnbcells
                      var(:,:,ib) = var(:,:, cg%ks) - real(cg%ks-ib)*dvarz
@@ -596,8 +599,8 @@ contains
       integer, intent(out) :: lnbcells    !< number of cells in a loop at left boundary
       integer, intent(out) :: rnbcells    !< number of cells in a loop at right boundary
       real,    intent(out) :: bndsign     !< 1. or -1. to change the sign or not
-      integer, intent(out) :: zndiff      !< ToDo: Comment me
-      integer, intent(out) :: rrbase      !< ToDo: Comment me
+      integer, intent(out) :: zndiff      !< \todo Comment me
+      integer, intent(out) :: rrbase      !< \todo Comment me
 
       select case (bndcase)
          case (1)

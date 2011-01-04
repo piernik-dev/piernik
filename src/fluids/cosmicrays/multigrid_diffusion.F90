@@ -32,11 +32,11 @@
 !!$ ============================================================================
 !>
 !! \brief Implicit diffusion multigrid solver
-!<
-!! This module contains routines and variables specific for multigrid diffusion solver.
+!!
+!! \details This module contains routines and variables specific for multigrid diffusion solver.
 !!
 !! Note that for constant-coefficient problems one can use Poisson solver routines, including FFT solver.
-!!
+!<
 
 module multigrid_diffusion
 ! pulled by MULTIGRID && COSM_RAYS
@@ -210,9 +210,9 @@ contains
    end subroutine init_multigrid_diff
 
 !!$ ============================================================================
-!!
-!! Initialization - continued after allocation of everything interesting
-!!
+!>
+!! \brief Initialization - continued after allocation of everything interesting
+!<
 
    subroutine init_multigrid_diff_post(mb_alloc)
 
@@ -241,9 +241,9 @@ contains
    end subroutine init_multigrid_diff_post
 
 !!$ ============================================================================
-!!
-!! Cleanup
-!!
+!>
+!! \brief Cleanup
+!<
 
    subroutine cleanup_multigrid_diff
 
@@ -256,10 +256,10 @@ contains
    end subroutine cleanup_multigrid_diff
 
 !!$ ============================================================================
-!!
-!! Multigrid diffusion driver. This is the only multigrid routine intended to be called from the fluidupdate module.
+!>
+!! \brief Multigrid diffusion driver. This is the only multigrid routine intended to be called from the fluidupdate module.
 !! This routine is also responsible for communicating the solution to the rest of world
-!!
+!<
 
    subroutine multigrid_solve_diff
 
@@ -332,9 +332,9 @@ contains
    end subroutine multigrid_solve_diff
 
 !!$ ============================================================================
-!!
-!! Make a local copy of source
-!!
+!>
+!! \brief Make a local copy of source
+!<
 
    subroutine init_source(cr_id)
 
@@ -368,9 +368,9 @@ contains
    end subroutine init_source
 
 !!$ ============================================================================
-!!
-!! Initialize solution with current CR density (no solution recycling as yet)
-!!
+!>
+!! \brief Initialize solution with current CR density (no solution recycling as yet)
+!<
 
    subroutine init_solution(cr_id)
 
@@ -391,11 +391,11 @@ contains
    end subroutine init_solution
 
 !!$ ============================================================================
+!>
+!! \brief Initialize magnetic field components
 !!
-!! Initialize magnetic field components
-!!
-!! ToDo: test what happens if we use magnetic field interpolated to the cell centers (some optimizations may then become available)
-!!
+!! \todo test what happens if we use magnetic field interpolated to the cell centers (some optimizations may then become available)
+!<
 
    subroutine init_b
 
@@ -419,7 +419,7 @@ contains
          roof%mgvar(roof%is-D_x:roof%ie+D_x, roof%js-D_y:roof%je+D_y, roof%ks-D_z:roof%ke+D_z, diff_bx+ib-ibx) = b(ib, cg%is-D_x:cg%ie+D_x, cg%js-D_y:cg%je+D_y, cg%ks-D_z:cg%ke+D_z)
          call restrict_all(diff_bx+ib-ibx)             ! Implement correct restriction (and probably also separate inter-process communication) routines
          do il = level_min, level_max-1
-            call mpi_multigrid_bnd(il, diff_bx+ib-ibx, 1, extbnd_mirror, .true.) ! ToDo: use global boundary type for B
+            call mpi_multigrid_bnd(il, diff_bx+ib-ibx, 1, extbnd_mirror, .true.) !! \todo use global boundary type for B
             !BEWARE b is set on a staggered grid; corners should be properly set here (now they are not)
             ! the problem is that the b(:,:,:,:) elements are face-centered so restriction and external boundaries should take this into account
             write(dirty_label, '(a,i1)')"init b",ib
@@ -430,9 +430,9 @@ contains
    end subroutine init_b
 
 !!$ ============================================================================
-!!
-!! Huang-Greengard V-cycle
-!!
+!>
+!! \brief Huang-Greengard V-cycle
+!<
 
    subroutine vcycle_hg(cr_id)
 
@@ -540,9 +540,9 @@ contains
    end subroutine vcycle_hg
 
 !!$ ============================================================================
-!!
-!! Compute diffusive flux in the x-direction
-!!
+!>
+!! \brief Compute diffusive flux in the x-direction
+!<
 
    ! BEWARE: almost replicated code (see crdiffusion.F90)
    subroutine diff_flux_x(i, j, k, soln, lev, cr_id, Keff)
@@ -605,9 +605,9 @@ contains
    end subroutine diff_flux_x
 
 !!$ ============================================================================
-!!
-!! Compute diffusive flux in the y-direction
-!!
+!>
+!! \brief Compute diffusive flux in the y-direction
+!<
 
    subroutine diff_flux_y(i, j, k, soln, lev, cr_id, Keff)
 
@@ -669,9 +669,9 @@ contains
    end subroutine diff_flux_y
 
 !!$ ============================================================================
-!!
-!! Compute diffusive flux in the z-direction
-!!
+!>
+!! \brief Compute diffusive flux in the z-direction
+!<
 
    subroutine diff_flux_z(i, j, k, soln, lev, cr_id, Keff)
 
@@ -733,11 +733,11 @@ contains
    end subroutine diff_flux_z
 
 !!$ ============================================================================
-!!
-!! 2nd order: grad (c grad)
+!>
+!! \brief 2nd order: grad (c grad)
 !!
 !! defect = solution - source - grad (c grad (solution))
-!!
+!<
 
    subroutine residual(lev, src, soln, def, cr_id)
 
@@ -812,13 +812,13 @@ contains
    end subroutine residual
 
 !!$ ============================================================================
+!>
+!! \brief Relaxation.
 !!
-!! Relaxation.
-!!
-!! This is the most costly routine in a serial run. Try to find optimal values for nsmool.
+!! \details This is the most costly routine in a serial run. Try to find optimal values for nsmool.
 !! It seems that for this particular scheme nsmoob can be set even to 1 when the base level is coarsened enough.
 !! This routine also depends a lot on communication so it  may limit scalability of the multigrid.
-!!
+!<
 
    subroutine approximate_solution(lev, src, soln, cr_id)
 

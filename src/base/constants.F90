@@ -28,7 +28,7 @@
 #include "piernik.h"
 #include "macros.h"
 !>
-!! \brief R [DW] Module containing numerical and physical %constants
+!! \brief (DW) [R] Module containing numerical and physical %constants
 !! \details Module constants contains numerical and physical %constants for several units systems.
 !! To use one system a proper precompiler directive should be defined.
 !! Available units systems:

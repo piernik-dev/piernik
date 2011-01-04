@@ -172,10 +172,10 @@ module mpisetup
 !! \n \n
 !! <table border="+1">
 !! <tr><td width="150pt"><b>parameter</b></td><td width="135pt"><b>default value</b></td><td width="200pt"><b>possible values</b></td><td width="315pt"> <b>description</b></td></tr>
-!! <tr><td>nxd</td><td>1</td><td>positive integer    </td><td>\copydoc grid::nxd</td></tr>
-!! <tr><td>nyd</td><td>1</td><td>positive integer    </td><td>\copydoc grid::nyd</td></tr>
-!! <tr><td>nzd</td><td>1</td><td>positive integer    </td><td>\copydoc grid::nzd</td></tr>
-!! <tr><td>nb </td><td>4</td><td>non-negative integer</td><td>\copydoc grid::nb </td></tr>
+!! <tr><td>nxd</td><td>1</td><td>positive integer    </td><td>\copydoc mpisetup::nxd</td></tr>
+!! <tr><td>nyd</td><td>1</td><td>positive integer    </td><td>\copydoc mpisetup::nyd</td></tr>
+!! <tr><td>nzd</td><td>1</td><td>positive integer    </td><td>\copydoc mpisetup::nzd</td></tr>
+!! <tr><td>nb </td><td>4</td><td>non-negative integer</td><td>\copydoc mpisetup::nb </td></tr>
 !! </table>
 !! \n \n
 !! @b BOUNDARIES
@@ -306,7 +306,7 @@ module mpisetup
          bnd_zr = 'per'
 
          ! Provide backward compatibility for choosing limiter via preprocessor flag
-         ! ToDo: Remove it when all problems are fixed
+         !! \todo Remove it when all problems are fixed
 
          limiter     = 'vanleer'
          cflcontrol  = 'warn'

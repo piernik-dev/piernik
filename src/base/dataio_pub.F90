@@ -26,7 +26,9 @@
 !    For full list of developers see $PIERNIK_HOME/license/pdt.txt
 !
 #include "piernik.h"
-
+!>
+!! \brief module providing common dataio parameters, variables, routines and interfaces
+!<
 module dataio_pub
    use iso_fortran_env, only: error_unit, output_unit
    use types,           only: hdf, domlen, idlen
@@ -91,10 +93,10 @@ module dataio_pub
 
    logical, save      :: halfstep = .false.             !< true when X-Y-Z sweeps are done and Z-Y-X are not
    logical, save      :: skip_advection = .false.       !< .true. will instruct fluidupdate:make_3sweeps to skip sweeps (used by maclaurin problem, replaces precompiler symbol __NO_FLUID_STEP)
-   logical, save      :: log_file_initialized = .false. !< ToDo: Comment me
+   logical, save      :: log_file_initialized = .false. !< \todo Comment me
    integer, save      :: require_init_prob = 0          !< 1 will call initproblem::init_prob on restart
 
-   !! ToDo:
+   !! \todo
    !!  Currently to use PGPLOT you need to:
    !!   1. set one of i{x,y,z} to positive value and zero to the others
    !!   2. use only one-element vars array in problem.par

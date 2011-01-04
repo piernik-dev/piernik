@@ -27,7 +27,7 @@
 !
 #include "piernik.h"
 !>
-!! \brief [DW] Module containing a routine to compute upper limit of %timestep due to fluids %interactions.
+!! \brief (DW) Module containing a routine to compute upper limit of %timestep due to fluids %interactions.
 !<
 module timestepinteractions
 ! pulled by FLUID_INTERACTIONS

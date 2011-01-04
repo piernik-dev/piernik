@@ -29,7 +29,7 @@
 #define RNG 2:n-1
 !/*
 !>
-!! \brief (MH/JD) (doxy comments ready) Computation of %fluxes for the neutral fluid
+!! \brief (MH/JD) [R] Computation of %fluxes for the neutral fluid
 !!
 !!The flux functions for neutral fluid are given by
 !!
@@ -84,10 +84,10 @@ contains
       real, dimension(:,:), intent(out), pointer :: fluxn     !< flux of neutral fluid
       real, dimension(:,:), intent(in),  pointer :: uun       !< part of u for neutral fluid
       real, dimension(:,:), intent(out), pointer :: cfrn      !< freezing speed for neutral fluid
-      real, dimension(:,:), intent(in),  pointer :: bb        !< \copydoc fluxes::interface::flux_interface::bb
+      real, dimension(:,:), intent(in),  pointer :: bb        !< magnetic field x,y,z-components table
       real, dimension(:),   intent(out), pointer :: vx        !< velocity of neutral fluid for current sweep
       real, dimension(:),   intent(out), pointer :: p         !< pressure of neutral fluid for current sweep
-      real, dimension(:),   intent(in),  pointer :: cs_iso2   !< \copydoc fluxes::interface::flux_interface::cs_iso2
+      real, dimension(:),   intent(in),  pointer :: cs_iso2   !< isothermal sound speed squared
 
       ! locals
 #ifdef LOCAL_FR_SPEED

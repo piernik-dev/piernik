@@ -29,10 +29,10 @@
 #include "piernik.h"
 
 !!$ ============================================================================
-!!
-!! This module contains various routines (interpolation, boundaries and some global reduction)
+!>
+!! \brief This module contains various routines (interpolation, boundaries and some global reduction)
 !! that are useful for all flavours of multigrid solvers.
-!!
+!<
 
 module multigridbasefuncs
 ! pulled by MULTIGRID
@@ -45,9 +45,9 @@ module multigridbasefuncs
 contains
 
 !!$ ============================================================================
-!!
-!! Clear boundary values
-!!
+!>
+!! \brief Clear boundary values
+!<
 
    subroutine zero_boundaries(lev)
 
@@ -64,9 +64,9 @@ contains
    end subroutine zero_boundaries
 
 !!$ ============================================================================
-!!
-!! Multigrid elementary operators: prolongation, restriction, norm etc.
-!!
+!>
+!! \brief Multigrid elementary operators: prolongation, restriction, norm etc.
+!<
 
    subroutine prolong_level(lev, iv)
 
@@ -104,9 +104,9 @@ contains
    end subroutine prolong_level
 
 !!$ ============================================================================
-!!
-!! 0th order prolongation : injection
-!!
+!>
+!! \brief 0th order prolongation : injection
+!<
 
    subroutine prolong_level0(lev, iv)
 
@@ -138,9 +138,9 @@ contains
    end subroutine prolong_level0
 
 !!$ ============================================================================
-!!
-!! Restriction operators
-!!
+!>
+!! \brief Restriction operators
+!<
 
    subroutine restrict_all(iv)
 
@@ -167,10 +167,10 @@ contains
    end subroutine restrict_all
 
 !!$ ============================================================================
-!!
-!! Simplest restriction (averaging).
+!>
+!! \brief Simplest restriction (averaging).
 !! \todo implement high order restriction and test its influence on V-cycle convergence rate
-!!
+!<
 
    subroutine restrict_level(lev, iv)
 
@@ -211,9 +211,9 @@ contains
    end subroutine restrict_level
 
 !!$ ============================================================================
-!!
-!! Calculate L2 norm
-!!
+!>
+!! \brief Calculate L2 norm
+!<
 
    subroutine norm_sq(iv, norm)
 
@@ -238,9 +238,9 @@ contains
    end subroutine norm_sq
 
 !!$ ============================================================================
-!!
-!! Compute the global average value and subtract it from the whole domain
-!!
+!>
+!! \brief Compute the global average value and subtract it from the whole domain
+!<
 
    subroutine substract_average(lev, iv)
 
@@ -269,9 +269,9 @@ contains
    end subroutine substract_average
 
 !!$ ============================================================================
-!!
-!! Prolong solution data at level (lev-1) to faces at level lev
-!!
+!>
+!! \brief Prolong solution data at level (lev-1) to faces at level lev
+!<
 
    subroutine prolong_faces(lev, soln)
 

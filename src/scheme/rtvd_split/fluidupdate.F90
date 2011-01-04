@@ -54,7 +54,7 @@ contains
 ! Sources ----------------------------------------
 
 #ifdef SN_SRC
-      call random_sn ! ToDo: hook this to problem_customize_solution
+      call random_sn !< \todo hook this to problem_customize_solution
 #endif /* SN_SRC */
 
       halfstep = .true.

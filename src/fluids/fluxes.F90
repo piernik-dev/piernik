@@ -27,7 +27,7 @@
 !
 #include "piernik.h"
 !>
-!! \brief (MH/JD) (doxy comments ready) Module that collects all flux components from each fluid
+!! \brief (MH/JD) [R] Module that collects all flux components from each fluid
 !!
 !!The %fluxes for all fluids are combined in the same order as conservative variables in the array \a u(:,:,:,:)
 !!\f{equation}
@@ -85,7 +85,7 @@ module fluxes
 contains
 
    subroutine init_fluxes
-      ! ToDo: Remove precompiler directives from this routine, it is called only once.
+      !! \todo Remove precompiler directives from this routine, it is called only once.
       use fluidindex,  only: nvar
 #ifdef NEUTRAL
       use fluxneutral, only: flux_neu
@@ -128,6 +128,7 @@ contains
 !! \param bb magnetic field x,y,z-components table
 !! \param n number of cells in the current sweep
 !! \param cs_iso2 isothermal sound speed squared
+!! \param pp
 !<
 
    subroutine all_fluxes(n, flux, cfr, uu, bb, pp, cs_iso2)
@@ -153,13 +154,13 @@ contains
 
       integer :: p
 
-      ! ToDo: pbb and pcs2 may need more careful treatment
-      !  currently both arrays don't matter for dst and neu and
-      !  are properly set for ion
+      !! \todo pbb and pcs2 may need more careful treatment
+      !!  currently both arrays don't matter for dst and neu and
+      !!  are properly set for ion
       pbb   =>   bb(:,:)
 
       if (present(cs_iso2)) then
-         pcs2  => cs_iso2(:)           ! ToDo: It would be better to always set cs2 as an array, even if global
+         pcs2  => cs_iso2(:)           !! \todo It would be better to always set cs2 as an array, even if global
       else
          pcs2  => null()
       endif
@@ -259,7 +260,7 @@ contains
       ! locals
       real, dimension(size(a,1), size(a,2)) :: c !< a*b
 
-      c = a*b                                                                    ! ToDO: OPTIMIZE ME
+      c = a*b                                                                    !< \todo OPTIMIZE ME
       where (c > 0.0)
          f = f+2.0*c/(a+b)
       endwhere
@@ -272,7 +273,7 @@ contains
       real, dimension(:,:), intent(in)      :: b
       real, dimension(:,:), intent(inout)   :: f
 
-      f = f+(sign(1.0,a)+sign(1.0,b))*min(2.*abs(a),2.*abs(b),0.5*abs(a+b))*0.5  ! ToDo: OPTIMIZE ME
+      f = f+(sign(1.0,a)+sign(1.0,b))*min(2.*abs(a),2.*abs(b),0.5*abs(a+b))*0.5  !< \todo OPTIMIZE ME
       return
    end subroutine moncen_limiter
 
@@ -282,7 +283,7 @@ contains
       real, dimension(:,:), intent(in)      :: b
       real, dimension(:,:), intent(inout)   :: f
 
-      f = f+(sign(1.0,a)+sign(1.0,b))*min(abs(a),abs(b))*0.5                     ! ToDo: OPTIMIZE ME
+      f = f+(sign(1.0,a)+sign(1.0,b))*min(abs(a),abs(b))*0.5                     !< \todo OPTIMIZE ME
       return
    end subroutine minmod_limiter
 
@@ -292,7 +293,7 @@ contains
       real, dimension(:,:), intent(in)      :: b
       real, dimension(:,:), intent(inout)   :: f
 
-      where (abs(a) > abs(b))                                                    ! ToDo: OPTIMIZE ME
+      where (abs(a) > abs(b))                                                    !< \todo OPTIMIZE ME
          f = f+(sign(1.0,a)+sign(1.0,b))*min(abs(a), abs(2.0*b))*0.5
       elsewhere
          f = f+(sign(1.0,a)+sign(1.0,b))*min(abs(2.0*a), abs(b))*0.5

@@ -71,9 +71,9 @@ module multipole
 contains
 
 !!$ ============================================================================
-!!
-!! This function returns array index for "compressed" Q(:, inout, r) array replacing "plain" Q(l, m, inout, r) array
-!! Originally there were separate indices for l and m multipole numbers in Q and ofact arrays. Since there are no Y_{l,m} harmonics for l<|m|, approximately half of the Q array
+!>
+!! \brief This function returns array index for "compressed" Q(:, inout, r) array replacing "plain" Q(l, m, inout, r) array
+!! \details Originally there were separate indices for l and m multipole numbers in Q and ofact arrays. Since there are no Y_{l,m} harmonics for l<|m|, approximately half of the Q array
 !! was left unused. For each m there is only lmax-|m|+1 valid Y_{l,m} harmonic contributions (for l = |m| .. lmax). The function lm(l, m) converts each valid (l,m) pair into an
 !! unique index leaving no unused entries in the Q array.
 !! Assume that real Y_{l,m} harmonic was stored in Q(l, 2*|m|, :, :) for even (cosine, positive-m) harmonic, or in Q(l, 2*|m|-1, :, :) for odd (sine, negative-m) harmonic.
@@ -81,7 +81,7 @@ contains
 !! Y_{0,0}, Y_{1,0}, ..., Y_{lmax, 0}, Y_{1,-1}, Y_{2,-1}, ..., Y_{lmax,-1}, Y_{1,1}, Y_{2,1}, ..., Y_{lmax,1}, Y_{2,-2}, Y_{3,-2}, ..., Y_{lmax,-2},
 !! Y_{2,2}, Y_{3,2}, ..., Y_{lmax,2}, ...,, Y(lmax-1,-(mmax-1)), Y(lmax,-(mmax-1)), Y(lmax-1,mmax-1), Y(lmax,mmax-1), Y(lmax,-mmax), Y(lmax,mmax)
 !! Does it looks a bit cryptic? I agree.
-!!
+!<
 
    elemental integer function lm(l, m)
 
@@ -94,9 +94,9 @@ contains
    end function lm
 
 !!$ ============================================================================
-!!
-!! Initialization routine, called from init_multigrid
-!!
+!>
+!! \brief Initialization routine, called from init_multigrid
+!<
 
    subroutine init_multipole(mb_alloc)
 
@@ -199,9 +199,9 @@ contains
    end subroutine init_multipole
 
 !!$ ============================================================================
-!!
-!! Multipole cleanup
-!!
+!>
+!! \brief Multipole cleanup
+!<
 
    subroutine cleanup_multipole
 
@@ -218,13 +218,13 @@ contains
    end subroutine cleanup_multipole
 
 !!$ ============================================================================
-!!
-!! Multipole solver
+!>
+!! \brief Multipole solver
 !!
 !! \todo improve multipole expansion on coarser grids
 !! (see. "A Scalable Parallel Poisson Solver in Three Dimensions with Infinite-Domain Boundary Conditions" by McCorquodale, Colella, Balls and Baden).
 !! Coarsening by one level would reduce the multipole costs by a factor of 4.
-!!
+!<
 
    subroutine multipole_solver
 
@@ -270,12 +270,12 @@ contains
    end subroutine multipole_solver
 
 !!$ ============================================================================
-!!
-!! Set boundary potential from monopole source. Fill lmpole%bnd_[xyz] arrays with expected values of the gravitational potential at external face of computational domain.
-!! This is a simplified approach that can be used for tests and as a fast replacement for the
+!>
+!! \brief Set boundary potential from monopole source. Fill lmpole%bnd_[xyz] arrays with expected values of the gravitational potential at external face of computational domain.
+!! \details This is a simplified approach that can be used for tests and as a fast replacement for the
 !! multipole boundary solver for nearly spherically symmetric source distributions.
 !! The isolated_monopole subroutine ignores the radial profile of the monopole
-!!
+!<
 
    subroutine isolated_monopole
 
@@ -325,10 +325,10 @@ contains
    end subroutine isolated_monopole
 
 !!$ ============================================================================
-!!
-!! Find total mass and its center
-!! This routine does the summation only on external boundaries
-!!
+!>
+!! \brief Find total mass and its center
+!! \details This routine does the summation only on external boundaries
+!<
 
    subroutine find_img_CoM
 
@@ -405,10 +405,10 @@ contains
    end subroutine find_img_CoM
 
 !!$ ============================================================================
-!!
-!! Convert potential into image mass. This way we reduce a 3D problem to a 2D one.
-!! There will be work imbalance here because different PEs may operate on different amount of external boundary data
-!!
+!>
+!! \brief Convert potential into image mass. This way we reduce a 3D problem to a 2D one.
+!! \details There will be work imbalance here because different PEs may operate on different amount of external boundary data
+!<
 
    subroutine potential2img_mass
 
@@ -448,9 +448,9 @@ contains
    end subroutine potential2img_mass
 
 !!$ ============================================================================
-!!
-!! Prolong boundaries wrapper
-!!
+!>
+!! \brief Prolong boundaries wrapper
+!<
 
    subroutine prolong_ext_bnd(lev)
 
@@ -475,9 +475,9 @@ contains
    end subroutine prolong_ext_bnd
 
 !!$ ============================================================================
-!!
-!! Prolong boundaries by injection.
-!!
+!>
+!! \brief Prolong boundaries by injection.
+!<
 
    subroutine prolong_ext_bnd0(lev)
 
@@ -536,12 +536,12 @@ contains
    end subroutine prolong_ext_bnd0
 
 !!$ ============================================================================
+!>
+!! \brief Prolong boundaries by linear or quadratic interpolation.
 !!
-!! Prolong boundaries by linear or quadratic interpolation.
-!!
-!! some code is replicated from prolong_faces
+!! \details some code is replicated from prolong_faces
 !! \todo write something more general, a routine that takes arrays or pointers and does the 2D prolongation
-!!
+!<
 
    subroutine prolong_ext_bnd2(lev)
 
@@ -661,10 +661,10 @@ contains
    end subroutine prolong_ext_bnd2
 
 !!$ ============================================================================
-!!
-!! Compute multipole moments for image mass
+!>
+!! \brief Compute multipole moments for image mass
 !! \todo distribute excess of work more evenly (important only for large number of PEs, ticket:43)
-!!
+!<
 
    subroutine img_mass2moments
 
@@ -730,11 +730,11 @@ contains
    end subroutine img_mass2moments
 
 !!$ ============================================================================
-!!
-!! Compute multipole moments for a single point
+!>
+!! \brief Compute multipole moments for a single point
 !!
 !! \todo try to improve accuracy with linear interpolation over radius
-!!
+!<
 
    subroutine point2moments(mass, x, y, z)
 
@@ -823,11 +823,11 @@ contains
    end subroutine point2moments
 
 !!$ ============================================================================
-!!
-!! Compute infinite-boundary potential from multipole moments
+!>
+!! \brief Compute infinite-boundary potential from multipole moments
 !!
 !! \todo distribute excess of work more evenly (important only for large number of PEs, ticket:43)
-!!
+!<
 
    subroutine moments2bnd_potential
 
@@ -868,11 +868,11 @@ contains
    end subroutine moments2bnd_potential
 
 !!$ ============================================================================
-!!
-!! Compute potential from multipole moments at a single point
+!>
+!! \brief Compute potential from multipole moments at a single point
 !!
 !! \todo improve accuracy with linear interpolation over radius
-!!
+!<
 
    subroutine moments2pot(potential, x, y, z)
 
@@ -957,12 +957,12 @@ contains
    end subroutine moments2pot
 
 !!$ ============================================================================
-!!
-!! This routine calculates various geometrical numbers required for multipole evaluation
-!! It modifies rn(:), irn(:), cfac(:) and sfac(:) arrays. Scalars are passed through argument list.
+!>
+!! \brief This routine calculates various geometrical numbers required for multipole evaluation
+!! \details It modifies rn(:), irn(:), cfac(:) and sfac(:) arrays. Scalars are passed through argument list.
 !!
 !! \todo return also fraction of the radial bin, (r/drq - ir) for radial interpolation
-!!
+!<
 
    subroutine geomfac4moments(factor, x, y, z, sin_th, cos_th, ir, delta)
 
@@ -1043,19 +1043,19 @@ contains
    end subroutine geomfac4moments
 
 !!$ ============================================================================
-!!
-!! HEAVY_DEBUG marks routines that normally are never called, but at some point
+!>
+!! \brief HEAVY_DEBUG marks routines that normally are never called, but at some point
 !! were useful to test correctness or something.
-!!
+!<
 
 !#define HEAVY_DEBUG
 #ifdef HEAVY_DEBUG
 
 !!$ ============================================================================
-!!
-!! Quick test for correctness of the multipole solver.
-!! cphi should agree well with phi with largest errors at r = sqrt(sum(p(1:3)**2))
-!!
+!>
+!! \brief Quick test for correctness of the multipole solver.
+!! \details cphi should agree well with phi with largest errors at r = sqrt(sum(p(1:3)**2))
+!<
 
 #error "The test_multipoles routine is outdated and was commented out"
 

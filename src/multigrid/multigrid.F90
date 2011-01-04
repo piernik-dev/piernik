@@ -57,20 +57,20 @@ contains
 !! \n \n
 !! <table border="+1">
 !! <tr><td width="150pt"><b>parameter</b></td><td width="135pt"><b>default value</b></td><td width="200pt"><b>possible values</b></td><td width="315pt"> <b>description</b></td></tr>
-!! <tr><td>level_max       </td><td>1      </td><td>integer value  </td><td>\copydoc multigrid::level_max       </td></tr>
-!! <tr><td>ord_prolong     </td><td>0      </td><td>integer value  </td><td>\copydoc multigrid::ord_prolong     </td></tr>
-!! <tr><td>ord_prolong_face</td><td>0      </td><td>integer value  </td><td>\copydoc multigrid::ord_prolong_face</td></tr>
-!! <tr><td>stdout          </td><td>.false.</td><td>logical        </td><td>\copydoc multigrid::stdout          </td></tr>
-!! <tr><td>verbose_vcycle  </td><td>.false.</td><td>logical        </td><td>\copydoc multigrid::verbose_vcycle  </td></tr>
-!! <tr><td>do_ascii_dump   </td><td>.false.</td><td>logical        </td><td>\copydoc multigrid::do_ascii_dump   </td></tr>
-!! <tr><td>dirty_debug     </td><td>.false.</td><td>logical        </td><td>\copydoc multigrid::dirty_debug     </td></tr>
-!! <tr><td>multidim_code_3D</td><td>.false.</td><td>logical        </td><td>\copydoc multigrid::multidim_code_3D</td></tr>
-!! <tr><td>aux_par_I0      </td><td>0      </td><td>integer value  </td><td>\copydoc multigrid::aux_par_I0      </td></tr>
-!! <tr><td>aux_par_I1      </td><td>0      </td><td>integer value  </td><td>\copydoc multigrid::aux_par_I1      </td></tr>
-!! <tr><td>aux_par_I2      </td><td>0      </td><td>integer value  </td><td>\copydoc multigrid::aux_par_I2      </td></tr>
-!! <tr><td>aux_par_R0      </td><td>0.     </td><td>real value     </td><td>\copydoc multigrid::aux_par_R0      </td></tr>
-!! <tr><td>aux_par_R1      </td><td>0.     </td><td>real value     </td><td>\copydoc multigrid::aux_par_R1      </td></tr>
-!! <tr><td>aux_par_R2      </td><td>0.     </td><td>real value     </td><td>\copydoc multigrid::aux_par_R2      </td></tr>
+!! <tr><td>level_max       </td><td>1      </td><td>integer value  </td><td>\copydoc multigridvars::level_max          </td></tr>
+!! <tr><td>ord_prolong     </td><td>0      </td><td>integer value  </td><td>\copydoc multigridvars::ord_prolong        </td></tr>
+!! <tr><td>ord_prolong_face</td><td>0      </td><td>integer value  </td><td>\copydoc multigridvars::ord_prolong_face   </td></tr>
+!! <tr><td>stdout          </td><td>.false.</td><td>logical        </td><td>\copydoc multigridvars::stdout             </td></tr>
+!! <tr><td>verbose_vcycle  </td><td>.false.</td><td>logical        </td><td>\copydoc multigridvars::verbose_vcycle     </td></tr>
+!! <tr><td>do_ascii_dump   </td><td>.false.</td><td>logical        </td><td>\copydoc multigridhelpers::do_ascii_dump   </td></tr>
+!! <tr><td>dirty_debug     </td><td>.false.</td><td>logical        </td><td>\copydoc multigridhelpers::dirty_debug     </td></tr>
+!! <tr><td>multidim_code_3D</td><td>.false.</td><td>logical        </td><td>\copydoc multigridhelpers::multidim_code_3D</td></tr>
+!! <tr><td>aux_par_I0      </td><td>0      </td><td>integer value  </td><td>\copydoc multigridhelpers::aux_par_I0      </td></tr>
+!! <tr><td>aux_par_I1      </td><td>0      </td><td>integer value  </td><td>\copydoc multigridhelpers::aux_par_I1      </td></tr>
+!! <tr><td>aux_par_I2      </td><td>0      </td><td>integer value  </td><td>\copydoc multigridhelpers::aux_par_I2      </td></tr>
+!! <tr><td>aux_par_R0      </td><td>0.     </td><td>real value     </td><td>\copydoc multigridhelpers::aux_par_R0      </td></tr>
+!! <tr><td>aux_par_R1      </td><td>0.     </td><td>real value     </td><td>\copydoc multigridhelpers::aux_par_R1      </td></tr>
+!! <tr><td>aux_par_R2      </td><td>0.     </td><td>real value     </td><td>\copydoc multigridhelpers::aux_par_R2      </td></tr>
 !! </table>
 !! \n \n
 !<
@@ -197,7 +197,7 @@ contains
          call count_periodic(bnd_zr_dom)
       endif
 
-! ToDo: Make array of subroutine pointers
+!! \todo Make array of subroutine pointers
 #ifdef GRAV
       call init_multigrid_grav
 #endif /* GRAV */
@@ -443,9 +443,10 @@ contains
    end subroutine init_multigrid
 
 !!$ ============================================================================
-!!
-!! ToDo: pack bnd_{x,y,z}{l,r}_dom into a bnd_dom(xdim:zdim)(LOW:HIGH)  array
-!!
+!>
+!! \brief
+!! \todo pack bnd_{x,y,z}{l,r}_dom into a bnd_dom(xdim:zdim)(LOW:HIGH)  array
+!<
 
    subroutine count_periodic(bnd_str)
 
@@ -464,9 +465,9 @@ contains
    end subroutine count_periodic
 
 !!$ ============================================================================
-!!
-!! Deallocate, destroy, demolish ...
-!!
+!>
+!! \details Deallocate, destroy, demolish ...
+!>
 
    subroutine cleanup_multigrid
 

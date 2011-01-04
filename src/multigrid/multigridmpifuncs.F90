@@ -31,9 +31,9 @@
 #include "piernik.h"
 
 !!$ ============================================================================
-!!
-!! This module is responsible for setting boundaries, either by MPI communication or by estimating external boundaries.
-!!
+!>
+!! \brief This module is responsible for setting boundaries, either by MPI communication or by estimating external boundaries.
+!<
 
 module multigridmpifuncs
 ! pulled by MULTIGRID
@@ -46,9 +46,9 @@ module multigridmpifuncs
 contains
 
 !!$ ============================================================================
-!!
-!! Initialize MPI shortcuts for local domain communication
-!!
+!>
+!! \brief Initialize MPI shortcuts for local domain communication
+!<
 
    subroutine mpi_multigrid_prep
 
@@ -225,19 +225,19 @@ contains
          if (cor) call MPI_Waitall(4, req3d(9:12), status3d(:,9:12), ierr)
       endif
 
-! ToDo: Make a benchmark of a massively parallel run to determine difference in execution between calling MPI_Waitall for each direction and calling it once.
-! If the difference is small then set cor permanently to .true.
+!! \todo Make a benchmark of a massively parallel run to determine difference in execution between calling MPI_Waitall for each direction and calling it once.
+!! If the difference is small then set cor permanently to .true.
       if (.not. cor) call MPI_Waitall(nreq, req3d(:), status3d(:,:), ierr)
 
    end subroutine mpi_multigrid_bnd
 
 !!$ ============================================================================
-!!
-!! Set external boundary (not required for periodic box) on domain faces.
-!! In multigrid typically mirror boundaries are in use. Extrapolate isolated boundaries at exit.
+!>
+!! \brief Set external boundary (not required for periodic box) on domain faces.
+!! \details In multigrid typically mirror boundaries are in use. Extrapolate isolated boundaries at exit.
 !!
 !! has_dir() is not checked here because is_external() should be set to .false. on non-existing directions in 1D and 2D setups
-!!
+!<
 
    subroutine multigrid_ext_bnd(lev, iv, ng, mode, cor)
 

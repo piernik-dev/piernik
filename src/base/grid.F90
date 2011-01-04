@@ -28,7 +28,7 @@
 #include "piernik.h"
 #include "macros.h"
 !>
-!! \brief [DW] Module containing routines to specify required computational mesh.
+!! \brief (DW) Module containing routines to specify required computational mesh.
 !! \date January/February 2006
 !!
 !!
@@ -48,7 +48,7 @@ module grid
    integer, protected :: total_ncells                   !< total number of %grid cells
    integer, protected :: D_x, D_y, D_z                  !< set to 1 when given direction exists, 0 otherwise. Use to construct dimensionally-safe indices for arrays
    character(len=cbuff_len), protected :: geometry      !< define system of coordinates
-   type(grid_container), protected :: cg             ! AMR: this will be a dynamically resized array
+   type(grid_container),     protected :: cg            !< AMR: this will be a dynamically resized array
 
    contains
 
@@ -61,12 +61,12 @@ module grid
 !! \n \n
 !! <table border="+1">
 !! <tr><td width="150pt"><b>parameter</b></td><td width="135pt"><b>default value</b></td><td width="200pt"><b>possible values</b></td><td width="315pt"> <b>description</b></td></tr>
-!! <tr><td>xmin</td><td></td><td>real</td><td>\copydoc grid::xmin</td></tr>
-!! <tr><td>xmax</td><td></td><td>real</td><td>\copydoc grid::xmax</td></tr>
-!! <tr><td>ymin</td><td></td><td>real</td><td>\copydoc grid::ymin</td></tr>
-!! <tr><td>ymax</td><td></td><td>real</td><td>\copydoc grid::ymax</td></tr>
-!! <tr><td>zmin</td><td></td><td>real</td><td>\copydoc grid::zmin</td></tr>
-!! <tr><td>zmax</td><td></td><td>real</td><td>\copydoc grid::zmax</td></tr>
+!! <tr><td>xmin</td><td></td><td>real</td><td>physical domain left x-boundary position  </td></tr>
+!! <tr><td>xmax</td><td></td><td>real</td><td>physical domain right x-boundary position </td></tr>
+!! <tr><td>ymin</td><td></td><td>real</td><td>physical domain left y-boundary position  </td></tr>
+!! <tr><td>ymax</td><td></td><td>real</td><td>physical domain right y-boundary position </td></tr>
+!! <tr><td>zmin</td><td></td><td>real</td><td>physical domain left z-boundary position  </td></tr>
+!! <tr><td>zmax</td><td></td><td>real</td><td>physical domain right z-boundary position </td></tr>
 !!</table>
 !! \n \n
 !<
