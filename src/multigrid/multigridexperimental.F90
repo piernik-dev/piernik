@@ -32,29 +32,36 @@
 !>
 !! \brief This module contains experimental routines, not recommended for production runs.
 !! \details
-!!
-!! Cell-face prolongation stencils for fast convergence on uniform grid:
-!!\n   -1./12., 7./12., 7./12., -1./12. (integral cubic)
-!!\n  slightly slower convergence, less wide stencil:
-!!\n            1./2.,  1./2.           (average; integral&direct linear)
-!!\n  Prolongation of cell faces from cell centers are required for FFT local solver, red-black Gauss-Seidel relaxation don't use it.
+!! <table>
+!!   <tr><td> Cell-face prolongation stencils for fast convergence on uniform grid </td>
+!!       <td> -1./12. </td><td> 7./12. </td><td> 7./12. </td><td> -1./12. </td><td> integral cubic </td></tr>
+!!   <tr><td> Slightly slower convergence, less wide stencil  </td>
+!!       <td>         </td><td> 1./2.  </td><td> 1./2.  </td><td>         </td><td> average; integral and direct linear </td></tr>
+!! </table>
+!!\n Prolongation of cell faces from cell centers are required for FFT local solver, red-black Gauss-Seidel relaxation don't use it.
 !!
 !!\n Cell-centered prolongation stencils, for odd fine cells, for even fine cells reverse the order.
-!!\n  35./2048., -252./2048., 1890./2048., 420./2048., -45./2048. ; direct quartic
-!!\n               -7./128.,   105./128.,   35./128.,   -5./128.  ; direct cubic
-!!\n               -3./32.,     30./32.,     5./32.               ; direct quadratic
-!!\n                             1.                               ; injection (0-th order), same for direct and integral approach
-!!\n                             3./4.       1./4.                ; linear, same for direct and integral approach
-!!\n               -1./8.,       1.,         1./8.,               ; integral quadratic
-!!\n               -5./64.,     55./64.,    17./64.,    -3./64.   ; integral cubic
-!!\n   3./128.,   -11./64.,      1.,        11./64.,    -3./128.  ; integral quartic
-!!\n
+!! <table>
+!!   <tr><td> 35./2048. </td><td> -252./2048. </td><td> 1890./2048. </td><td> 420./2048. </td><td> -45./2048. </td><td> direct quartic </td></tr>
+!!   <tr><td>           </td><td>   -7./128.  </td><td>  105./128.  </td><td>  35./128.  </td><td>  -5./128.  </td><td> direct cubic </td></tr>
+!!   <tr><td>           </td><td>   -3./32.   </td><td>   30./32.   </td><td>   5./32.   </td><td>            </td><td> direct quadratic </td></tr>
+!!   <tr><td>           </td><td>             </td><td>    1.       </td><td>            </td><td>            </td><td> injection (0-th order), direct and integral approach </td></tr>
+!!   <tr><td>           </td><td>             </td><td>    3./4.    </td><td>   1./4.    </td><td>            </td><td> linear, direct and integral approach </td></tr>
+!!   <tr><td>           </td><td>   -1./8.    </td><td>    1.       </td><td>   1./8.    </td><td>            </td><td> integral quadratic </td></tr>
+!!   <tr><td>           </td><td>   -5./64.   </td><td>   55./64.   </td><td>  17./64.   </td><td>  -3./64.   </td><td> integral cubic </td></tr>
+!!   <tr><td>   3./128. </td><td>  -11./64.   </td><td>    1.       </td><td>  11./64.   </td><td>  -3./128.  </td><td> integral quartic </td></tr>
+!! </table>
+!!
 !!\n General rule is that the second big positive coefficient should be assigned to closer neighbor of the coarse parent cell.
 !!\n Thus a single coarse contributes to fine cells in the following way:
-!!\n
-!!\n |          |        |          |        |       |      |         |         |         |        | fine level
-!!\n | -3./128., 3./128.,| -11./64., 11./64.,| 1.,    1.,   | 11./64., -11./64.,| 3./128., -3./128.| integral quartic coefficients
-!!\n |                   |                   |              |                   |                  | coarse level
+!! <table>
+!!   <tr><td> fine level   </td>
+!!       <td> -3./128. </td><td> 3./128. </td><td> -11./64. </td><td>  11./64. </td><td> 1. </td><td> 1. </td>
+!!       <td> 11./64. </td><td> -11./64. </td><td> 3./128.  </td><td> -3./128. </td><td> integral quartic coefficients </td></tr>
+!!   <tr><td> coarse level </td>
+!!       <td colspan="2">                </td><td colspan="2">                 </td><td colspan="2"> 1.  </td>
+!!       <td colspan="2">                </td><td colspan="2">                 </td><td>                               </td></tr>
+!! </table>
 !!\n
 !!\n The term "n-th order integral interpolation" here means that the prolonged values satisfy the following condition:
 !!\n Integral over a cell of a n-th order polynomial fit to the nearest 5 points in each dimension on coarse level

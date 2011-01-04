@@ -449,7 +449,9 @@ contains
 
 !!$ ============================================================================
 !>
-!! \brief Count periodic boundaries.
+!! \brief Count periodic boundaries by updating periodic_bnd_cnt and non_periodic_bnd_cnt variables.
+!!
+!! \details This routine is meant to be called for each boundary description string in all existing directions.
 !! \todo pack bnd_{x,y,z}{l,r}_dom into a bnd_dom(xdim:zdim)(LOW:HIGH)  array
 !<
 
@@ -459,7 +461,7 @@ contains
 
       implicit none
 
-      character(len=*), intent(in) :: bnd_str
+      character(len=*), intent(in) :: bnd_str   !< boundary description string
 
       if (bnd_str == 'per') then
          periodic_bnd_cnt = periodic_bnd_cnt + 1

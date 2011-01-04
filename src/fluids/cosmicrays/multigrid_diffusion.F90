@@ -59,7 +59,7 @@ module multigrid_diffusion
    integer            :: nsmool                                       !< smoothing cycles per call
    integer            :: nsmoob                                       !< smoothing cycles on base level when gb_no_fft = .true. (a convergence check would be much better)
    real               :: diff_theta                                   !< 0. is explicit, 1. is fully implicit 0.5 is Crank-Nicholson
-   real, protected    :: diff_tstep_fac                               !< How much we stretch timestep. Note that for diff_theta == 0. this should not be > 1.
+   real,    protected :: diff_tstep_fac                               !< How much we stretch timestep. Note that for diff_theta == 0. this should not be > 1.
    logical, protected :: diff_explicit                                !< If .true. then do not use multigrid for diffusion
    logical            :: allow_explicit                               !< When timestep is limited somewhere else, allow explicit calculation (should be a bit faster)
    real               :: diff_dt_crs_orig                             !< timestep calculated at timestepcosmicrays.F90, before enlarging by diff_tstep_fac
