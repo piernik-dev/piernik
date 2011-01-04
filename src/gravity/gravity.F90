@@ -570,7 +570,7 @@ module gravity
       real    :: r_smooth2, r2, gmr, gm, z2, yz2
       ! promote stiff-body rotation inside smoothing length, don't affect the global potential outside
 
-      r_smooth2 = r_smooth**2 ! can be used also i other GRAV_PTMASS* clauses
+      r_smooth2 = r_smooth**2
       gm =  - newtong * ptmass
       gmr = 0.5 * gm / r_smooth
 
@@ -594,24 +594,25 @@ module gravity
 !>
 !! \brief Routine that compute values of gravitational potential filling in gp array and setting gp_status character string \n\n
 !! The type of %gravity is governed by preprocessor: \n\n
+!! BEWARE: This is no longer true: external_gp does the magic
 !! \details
-!! @b GRAV_NULL - gravitational potential array is set to zero \n\n
-!! @b GRAV_UNIFORM - uniform type of %gravity in z-direction \n
+!! GRAV_NULL - gravitational potential array is set to zero \n\n
+!! GRAV_UNIFORM - uniform type of %gravity in z-direction \n
 !! \f$\Phi\left(z\right)= - const \cdot z \f$\n
 !! where \f$ const \f$ is set by parameter @c g_z \n\n
-!! @b GRAV_LINEAR - linear type of %gravity growing along z-direction \n
+!! GRAV_LINEAR - linear type of %gravity growing along z-direction \n
 !! \f$\Phi\left(z\right) = -1/2 \cdot const \cdot z^2\f$ \n\n
-!! @b GRAV_PTMASS - softened point mass type of %gravity \n
+!! GRAV_PTMASS - softened point mass type of %gravity \n
 !! \f$\Phi\left(x,y,z\right)= - GM/\sqrt{x^2+y^2+z^2+r_{soft}^2}\f$ \n
 !! where \f$r_{soft}\f$ is a radius of softening\n\n
-!! @b GRAV_PTMASSPURE - unsoftened point mass type of %gravity \n
+!! GRAV_PTMASSPURE - unsoftened point mass type of %gravity \n
 !! \f$\Phi\left(x,y,z\right)= - GM/\sqrt{x^2+y^2+z^2}\f$ \n\n
-!! @b GRAV_PTMASSSTIFF - softened point mass type of %gravity with stiff-body rotation inside softening radius\n
+!! GRAV_PTMASSSTIFF - softened point mass type of %gravity with stiff-body rotation inside softening radius\n
 !! \f$\Phi\left(x,y,z\right)= - GM/\sqrt{x^2+y^2+z^2}\f$ for \f$r > r_{soft}\f$ and \f$ GM/r_{soft} \left( - 3/2 + 1/2 {x^2+y^2+z^2}/r_{soft}^2 \right)\f$ inside \f$r_{soft}\f$ \n\n
-!! @b GRAV_PTFLAT - planar, softened point mass type of %gravity \n
+!! GRAV_PTFLAT - planar, softened point mass type of %gravity \n
 !! \f$\Phi\left(x,y,z\right)= - GM/\sqrt{x^2+y^2+r_{soft}^2}\f$ \n
 !! where \f$r_{soft}\f$ is a radius of softening\n\n
-!! @b GRAV_USER - not a standard type of %gravity, implemented by user in the routine grav_pot_user from gravity_user module.\n\n
+!! GRAV_USER - not a standard type of %gravity, implemented by user in the routine grav_pot_user from gravity_user module.\n\n
 !<
 
    subroutine default_grav_pot_3d
