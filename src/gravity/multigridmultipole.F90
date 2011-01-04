@@ -977,9 +977,7 @@ contains
 !!$ ============================================================================
 !>
 !! \brief This routine calculates various geometrical numbers required for multipole evaluation
-!! \details It modifies rn(:), irn(:), cfac(:) and sfac(:) arrays. Scalars are passed through argument list.
-!!
-!! \todo return also fraction of the radial bin, (r/drq - ir) for radial interpolation
+!! \details It modifies the rn(:), irn(:), cfac(:) and sfac(:) arrays. Scalars are passed through argument list.
 !<
 
    subroutine geomfac4moments(factor, x, y, z, sin_th, cos_th, ir, delta)
