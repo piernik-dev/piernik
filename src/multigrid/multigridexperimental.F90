@@ -32,7 +32,7 @@
 !>
 !! \brief This module contains experimental routines, not recommended for production runs.
 !! \details
-!! <table>
+!! <table border="1" cellpadding="4" cellspacing="0">
 !!   <tr><td> Cell-face prolongation stencils for fast convergence on uniform grid </td>
 !!       <td> -1./12. </td><td> 7./12. </td><td> 7./12. </td><td> -1./12. </td><td> integral cubic </td></tr>
 !!   <tr><td> Slightly slower convergence, less wide stencil  </td>
@@ -41,7 +41,7 @@
 !!\n Prolongation of cell faces from cell centers are required for FFT local solver, red-black Gauss-Seidel relaxation don't use it.
 !!
 !!\n Cell-centered prolongation stencils, for odd fine cells, for even fine cells reverse the order.
-!! <table>
+!! <table border="1" cellpadding="4" cellspacing="0">
 !!   <tr><td> 35./2048. </td><td> -252./2048. </td><td> 1890./2048. </td><td> 420./2048. </td><td> -45./2048. </td><td> direct quartic </td></tr>
 !!   <tr><td>           </td><td>   -7./128.  </td><td>  105./128.  </td><td>  35./128.  </td><td>  -5./128.  </td><td> direct cubic </td></tr>
 !!   <tr><td>           </td><td>   -3./32.   </td><td>   30./32.   </td><td>   5./32.   </td><td>            </td><td> direct quadratic </td></tr>
@@ -54,7 +54,7 @@
 !!
 !!\n General rule is that the second big positive coefficient should be assigned to closer neighbor of the coarse parent cell.
 !!\n Thus a single coarse contributes to fine cells in the following way:
-!! <table>
+!! <table border="1" cellpadding="4" cellspacing="0">
 !!   <tr><td> fine level   </td>
 !!       <td> -3./128. </td><td> 3./128. </td><td> -11./64. </td><td>  11./64. </td><td> 1. </td><td> 1. </td>
 !!       <td> 11./64. </td><td> -11./64. </td><td> 3./128.  </td><td> -3./128. </td><td> integral quartic coefficients </td></tr>
