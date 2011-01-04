@@ -35,51 +35,50 @@
 !!$ ============================================================================
 !!
 !! Cell-face prolongation stencils for fast convergence on uniform grid:
-!!   -1./12., 7./12., 7./12., -1./12. (integral cubic)
-!! slightly slower, less wide stencil:
-!!            1./2.,  1./2.           (average; integral&direct linear)
-!! Prolongation of cell faces from cell centers are required for FFT local solver, red-black Gauss-Seidel relaxation don't use it.
-
+!!\n   -1./12., 7./12., 7./12., -1./12. (integral cubic)
+!!\n  slightly slower, less wide stencil:
+!!\n            1./2.,  1./2.           (average; integral&direct linear)
+!!\n  Prolongation of cell faces from cell centers are required for FFT local solver, red-black Gauss-Seidel relaxation don't use it.
 !!$ ============================================================================
 !!
-!! Cell-centered prolongation stencils, for odd fine cells, for even fine cells reverse the order.
-!!  35./2048., -252./2048., 1890./2048., 420./2048., -45./2048. ; direct quartic
-!!               -7./128.,   105./128.,   35./128.,   -5./128.  ; direct cubic
-!!               -3./32.,     30./32.,     5./32.               ; direct quadratic
-!!                             1.                               ; injection (0-th order), same for direct and integral approach
-!!                             3./4.       1./4.                ; linear, same for direct and integral approach
-!!               -1./8.,       1.,         1./8.,               ; integral quadratic
-!!               -5./64.,     55./64.,    17./64.,    -3./64.   ; integral cubic
-!!   3./128.,   -11./64.,      1.,        11./64.,    -3./128.  ; integral quartic
-!!
-!! General rule is that the second big positive coefficient should be assigned to closer neighbor of the coarse parent cell.
-!! Thus a single coarse contributes to fine cells in the following way:
-!!
-!! |          |        |          |        |       |      |         |         |         |        | fine level
-!! | -3./128., 3./128.,| -11./64., 11./64.,| 1.,    1.,   | 11./64., -11./64.,| 3./128., -3./128.| integral quartic coefficients
-!! |                   |                   |              |                   |                  | coarse level
-!!
-!! The term "n-th order integral interpolation" here means that the prolonged values satisfy the following condition:
-!! Integral over a cell of a n-th order polynomial fit to the nearest 5 points in each dimension on coarse level
+!!\n Cell-centered prolongation stencils, for odd fine cells, for even fine cells reverse the order.
+!!\n  35./2048., -252./2048., 1890./2048., 420./2048., -45./2048. ; direct quartic
+!!\n               -7./128.,   105./128.,   35./128.,   -5./128.  ; direct cubic
+!!\n               -3./32.,     30./32.,     5./32.               ; direct quadratic
+!!\n                             1.                               ; injection (0-th order), same for direct and integral approach
+!!\n                             3./4.       1./4.                ; linear, same for direct and integral approach
+!!\n               -1./8.,       1.,         1./8.,               ; integral quadratic
+!!\n               -5./64.,     55./64.,    17./64.,    -3./64.   ; integral cubic
+!!\n   3./128.,   -11./64.,      1.,        11./64.,    -3./128.  ; integral quartic
+!!\n
+!!\n General rule is that the second big positive coefficient should be assigned to closer neighbor of the coarse parent cell.
+!!\n Thus a single coarse contributes to fine cells in the following way:
+!!\n
+!!\n |          |        |          |        |       |      |         |         |         |        | fine level
+!!\n | -3./128., 3./128.,| -11./64., 11./64.,| 1.,    1.,   | 11./64., -11./64.,| 3./128., -3./128.| integral quartic coefficients
+!!\n |                   |                   |              |                   |                  | coarse level
+!!\n
+!!\n The term "n-th order integral interpolation" here means that the prolonged values satisfy the following condition:
+!!\n Integral over a cell of a n-th order polynomial fit to the nearest 5 points in each dimension on coarse level
 !! is equal to the sum of similar integrals over fine cells covering the coarse cell.
-!!
-!! The term "n-th order direct interpolation" here means that the prolonged values are n-th order polynomial fit
+!!\n
+!!\n The term "n-th order direct interpolation" here means that the prolonged values are n-th order polynomial fit
 !! to the nearest 5 points in each dimension on coarse level evaluated for fine cell centers.
-!!
-!! It seems that for 3D Cartesian grid with isolated boundaries and relaxation implemented in approximate_solution
+!!\n
+!!\n It seems that for 3D Cartesian grid with isolated boundaries and relaxation implemented in approximate_solution
 !! pure injection gives highest norm reduction factors per V-cycle. For other boundary types, FFT implementation of
 !! approximate_solution, specific source distribution or some other multigrid scheme may give faster convergence than injection.
-!!
-!! Estimated prolongation costs for integral quartic stencil:
-!!  "gather" approach: loop over fine cells, each one collects weighted values from 5**3 coarse cells (125*n_fine multiplications
-!!  "scatter" approach: loop over coarse cells, each one contributes weighted values to 10**3 fine cells (1000*n_coarse multiplications, roughly equal to cost of gather)
-!!  "directionally split" approach: do the prolongation (either gather or scatter type) first in x direction (10*n_coarse multiplications -> 2*n_coarse intermediate cells
+!!\n
+!!\n Estimated prolongation costs for integral quartic stencil:
+!!\n  "gather" approach: loop over fine cells, each one collects weighted values from 5**3 coarse cells (125*n_fine multiplications
+!!\n  "scatter" approach: loop over coarse cells, each one contributes weighted values to 10**3 fine cells (1000*n_coarse multiplications, roughly equal to cost of gather)
+!!\n  "directionally split" approach: do the prolongation (either gather or scatter type) first in x direction (10*n_coarse multiplications -> 2*n_coarse intermediate cells
 !!                                  result), then in y direction (10*2*n_coarse multiplications -> 4*n_coarse intermediate cells result), then in z direction
 !!                                  (10*4*n_coarse multiplications -> 8*n_coarse = n_fine cells result). Looks like 70*n_coarse multiplications.
 !!                                  Will require two additional arrays for intermediate results.
-!!  "FFT" approach: do the convolution in Fourier space. Unfortunately it is not periodic box, so we cannot use power of 2 FFT sizes. No idea how fast or slow this can be.
-!!
-!! For AMR or nested grid low-order prolongation schemes (injection and linear interpolation at least) are known to produce artifacts
+!!\n  "FFT" approach: do the convolution in Fourier space. Unfortunately it is not periodic box, so we cannot use power of 2 FFT sizes. No idea how fast or slow this can be.
+!!\n
+!!\n For AMR or nested grid low-order prolongation schemes (injection and linear interpolation at least) are known to produce artifacts
 !! on fine-coarse boundaries. For uniform grid the simplest operators are probably the fastest and give best V-cycle convergence rates.
 !<
 
