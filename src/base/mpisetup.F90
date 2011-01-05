@@ -84,7 +84,7 @@ module mpisetup
    real,      dimension(buffer_dim) :: rbuff
    logical,   dimension(buffer_dim) :: lbuff
 
-   logical :: mpi_magic
+   logical :: mpi_magic !< allows to automatically divide the domain
    integer :: pxsize    !< number of MPI blocks in x-dimension
    integer :: pysize    !< number of MPI blocks in y-dimension
    integer :: pzsize    !< number of MPI blocks in z-dimension
@@ -109,18 +109,18 @@ module mpisetup
 
    namelist /BOUNDARIES/ bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr
 
-   real    :: dt_initial
-   real    :: dt_max_grow
-   real    :: dt_min
-   real    :: cfl
-   real    :: cfl_max
+   real    :: dt_initial               !< initial timestep
+   real    :: dt_max_grow              !< maximum timestep growth rate
+   real    :: dt_min                   !< minimum allowed timestep
+   real    :: cfl                      !< desired Courant–Friedrichs–Lewy number
+   real    :: cfl_max                  !< warning threshold for the effective CFL number achieved
    logical :: use_smalld               !< correct denisty when it gets lower than smalld
    real    :: smallp                   !< artificial infimum for pressure
    real    :: smalld                   !< artificial infimum for density
    real    :: smallc                   !< artificial infimum for freezing speed
    real    :: smallei                  !< artificial infimum for internal energy density
-   real    :: cfr_smooth
-   integer :: integration_order
+   real    :: cfr_smooth               !< COMMENT ME
+   integer :: integration_order        !< COMMENT ME
    character(len=cbuff_len) :: limiter !< type of flux limiter
    character(len=cbuff_len) :: cflcontrol !< type of cfl control just before each sweep (possibilities: 'none', 'main', 'user')
 

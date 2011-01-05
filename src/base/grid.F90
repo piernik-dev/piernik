@@ -32,7 +32,7 @@
 !! \date January/February 2006
 !!
 !!
-!! In this module two namelists of parameters are specified:
+!! In this module a following namelist of parameters is specified:
 !! \copydetails grid::init_grid
 !<
 module grid
@@ -46,9 +46,11 @@ module grid
    public :: cleanup_grid, init_grid, total_ncells, geometry, cg, D_x, D_y, D_z
 
    integer, protected :: total_ncells                   !< total number of %grid cells
-   integer, protected :: D_x, D_y, D_z                  !< set to 1 when given direction exists, 0 otherwise. Use to construct dimensionally-safe indices for arrays
-   character(len=cbuff_len), protected :: geometry      !< define system of coordinates
-   type(grid_container),     protected :: cg            !< AMR: this will be a dynamically resized array
+   integer, protected :: D_x                            !< set to 1 when x-direction exists, 0 otherwise. Use to construct dimensionally-safe indices for arrays
+   integer, protected :: D_y                            !< set to 1 when y-direction exists, 0 otherwise.
+   integer, protected :: D_z                            !< set to 1 when z-direction exists, 0 otherwise.
+   character(len=cbuff_len), protected :: geometry      !< define system of coordinates: "cartesian" or "cylindrical"
+   type(grid_container),     protected :: cg            !< A container for the grid. For AMR this will be a dynamically resized array
 
    contains
 
@@ -60,14 +62,15 @@ module grid
 !! @b DOMAIN_LIMITS
 !! \n \n
 !! <table border="+1">
-!! <tr><td width="150pt"><b>parameter</b></td><td width="135pt"><b>default value</b></td><td width="200pt"><b>possible values</b></td><td width="315pt"> <b>description</b></td></tr>
-!! <tr><td>xmin</td><td></td><td>real</td><td>physical domain left x-boundary position  </td></tr>
-!! <tr><td>xmax</td><td></td><td>real</td><td>physical domain right x-boundary position </td></tr>
-!! <tr><td>ymin</td><td></td><td>real</td><td>physical domain left y-boundary position  </td></tr>
-!! <tr><td>ymax</td><td></td><td>real</td><td>physical domain right y-boundary position </td></tr>
-!! <tr><td>zmin</td><td></td><td>real</td><td>physical domain left z-boundary position  </td></tr>
-!! <tr><td>zmax</td><td></td><td>real</td><td>physical domain right z-boundary position </td></tr>
-!!</table>
+!!   <tr><td width="150pt"><b>parameter</b></td><td width="135pt"><b>default value</b></td><td width="200pt"><b>possible values</b></td><td width="315pt"> <b>description</b></td></tr>
+!!   <tr><td> xmin     </td><td> 0.          </td><td> real                     </td><td> physical domain left x-boundary position  </td></tr>
+!!   <tr><td> xmax     </td><td> 1.          </td><td> real                     </td><td> physical domain right x-boundary position </td></tr>
+!!   <tr><td> ymin     </td><td> 0.          </td><td> real                     </td><td> physical domain left y-boundary position  </td></tr>
+!!   <tr><td> ymax     </td><td> 1.          </td><td> real                     </td><td> physical domain right y-boundary position </td></tr>
+!!   <tr><td> zmin     </td><td> 0.          </td><td> real                     </td><td> physical domain left z-boundary position  </td></tr>
+!!   <tr><td> zmax     </td><td> 1.          </td><td> real                     </td><td> physical domain right z-boundary position </td></tr>
+!!   <tr><td> geometry </td><td> "cartesian" </td><td> character(len=cbuff_len) </td><td> \copydoc grid::geometry                   </td></tr>
+!! </table>
 !! \n \n
 !<
    subroutine init_grid

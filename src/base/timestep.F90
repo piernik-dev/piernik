@@ -27,6 +27,10 @@
 !
 #include "piernik.h"
 
+!>
+!! \brief This module gathers all applicable timestep limits and computes next timestep.
+!<
+
 module timestep
 
    implicit none
@@ -38,6 +42,12 @@ module timestep
    procedure(), pointer :: cfl_manager => null()
 
 contains
+
+!>
+!! \brief Initialization routine
+!!
+!! \detailsThis routine sets cfl_manager according to mpisetup::cflcontrol parameter.
+!<
 
    subroutine init_time_step
 
@@ -60,6 +70,13 @@ contains
 
    end subroutine init_time_step
 
+!>
+!! \brief Timestep calculation
+!!
+!! \details This routine calls various routines associated with different modules.
+!! These routines return limit for timestep due to various physical and numerical conditions.
+!! At the end the timestep is checked against remaining simulation time, mimimum, and maximum allowed values etc.
+!<
    subroutine time_step(dt)
 
       use dataio,               only: write_crashed
@@ -90,7 +107,7 @@ contains
 
       implicit none
 
-      real, intent(inout) :: dt
+      real, intent(inout) :: dt !< the timestep
 ! Timestep computation
 
       dt_old = dt
@@ -162,9 +179,9 @@ contains
    end subroutine time_step
 
 !------------------------------------------------------------------------------------------
-!
-! This routine detects sudden timestep changes due to strong velocity changes and interprets them as possible CFL criterion violations
-!
+!>
+!! \brief This routine detects sudden timestep changes due to strong velocity changes and interprets them as possible CFL criterion violations
+!<
 
    subroutine cfl_warn
 
@@ -191,10 +208,10 @@ contains
    end subroutine cfl_warn
 
 !------------------------------------------------------------------------------------------
-!
-! This routine detects sudden timestep changes due to strong velocity changes and interprets them as possible CFL criterion violations
-! Timestep changes are used to estimate safe value of CFL for the next timestep (EXPERIMENTAL)
-!
+!>
+!! \brief This routine detects sudden timestep changes due to strong velocity changes and interprets them as possible CFL criterion violations
+!! Timestep changes are used to estimate safe value of CFL for the next timestep (EXPERIMENTAL)
+!<
 
    subroutine cfl_auto
 
