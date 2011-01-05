@@ -184,7 +184,7 @@ module types
       type(component_fluid), pointer :: neu         !< numbers of variables for the neutral fluid
       type(component_fluid), pointer :: dst         !< numbers of variables for the dust fluid
 
-      !! \todo those vars should be converted to pointers
+      !> \todo those vars should be converted to pointers
       type(component) :: crs         !< numbers of variables in all cosmic ray components
       type(component) :: crn         !< numbers of variables in cosmic ray nuclear components
       type(component) :: cre         !< numbers of variables in cosmic ray electron components

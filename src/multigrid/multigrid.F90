@@ -202,7 +202,7 @@ contains
          call count_periodic(bnd_zr_dom)
       endif
 
-!! \todo Make array of subroutine pointers
+!> \todo Make array of subroutine pointers
 #ifdef GRAV
       call init_multigrid_grav
 #endif /* GRAV */
@@ -270,7 +270,7 @@ contains
          lvl(idx)%dvol = 1.
          lvl(idx)%vol  = 1.
 
-         ! /todo: check if these are correctly defined for multipole solver
+         !> \todo check if these are correctly defined for multipole solver
          lvl(idx)%dxy = 1.
          lvl(idx)%dxz = 1.
          lvl(idx)%dyz = 1.
@@ -562,7 +562,7 @@ contains
 
 #else /* MULTIGRID */
 #warning This should not happen. Probably the multigrid.F90 file is included in object directory by mistake.
-!! \todo I'm just curious what happens to the documentation lines after #else :-)
+!> \todo I'm just curious what happens to the documentation lines after #else :-)
 #endif /* MULTIGRID */
 
 end module multigrid

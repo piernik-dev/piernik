@@ -95,12 +95,12 @@ module dataio_pub
    logical, save      :: skip_advection = .false.       !< .true. will instruct fluidupdate:make_3sweeps to skip sweeps (used by maclaurin problem, replaces precompiler symbol __NO_FLUID_STEP)
    logical, save      :: log_file_initialized = .false. !< \todo Comment me
    integer, save      :: require_init_prob = 0          !< 1 will call initproblem::init_prob on restart
-
-   !! \todo
-   !!  Currently to use PGPLOT you need to:
-   !!   1. set one of i{x,y,z} to positive value and zero to the others
-   !!   2. use only one-element vars array in problem.par
-   !!
+!>
+!! \todo
+!!  Currently to use PGPLOT you need to:
+!!   1. set one of i{x,y,z} to positive value and zero to the others
+!!   2. use only one-element vars array in problem.par
+!<
    logical            :: vizit = .false.        !< perform "live" visualization using pgplot (BEWARE: highly experimental)
    real               :: fmin                   !< minimum on pgplot scale
    real               :: fmax                   !< maximum on pgplot scale

@@ -571,7 +571,7 @@ contains
     call dfftw_destroy_plan(planf)
 
 ! compute eigenvalues for each p, q and r and solve linear system
-!! \todo this can be done only once if we do not change arrays
+!> \todo this can be done only once if we do not change arrays
 
     kx(:) = (cos(dpi/nx*(/(j,j=0,np-1)/))-1.)/cg%dx**2
     ky(:) = (cos(dpi/ny*(/(j,j=0,ny-1)/))-1.)/cg%dy**2

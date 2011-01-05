@@ -60,7 +60,7 @@ module multigridhelpers
 
 contains
 
-!! /todo write also general set_dirty_array and check_dirty_array routines so there will be no need to use dirtyH and dirtyL outside multigridhelpers module.
+!> \todo write also general set_dirty_array and check_dirty_array routines so there will be no need to use dirtyH and dirtyL outside multigridhelpers module.
 
 !$ ============================================================================
 !>

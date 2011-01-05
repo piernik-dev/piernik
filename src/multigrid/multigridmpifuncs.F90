@@ -223,8 +223,10 @@ contains
          if (cor) call MPI_Waitall(4, req3d(9:12), status3d(:,9:12), ierr)
       endif
 
+!>
 !! \todo Make a benchmark of a massively parallel run to determine difference in execution between calling MPI_Waitall for each direction and calling it once.
 !! If the difference is small then set cor permanently to .true.
+!<
       if (.not. cor) call MPI_Waitall(nreq, req3d(:), status3d(:,:), ierr)
 
    end subroutine mpi_multigrid_bnd

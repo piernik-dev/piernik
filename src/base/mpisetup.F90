@@ -306,7 +306,7 @@ module mpisetup
          bnd_zr = 'per'
 
          ! Provide backward compatibility for choosing limiter via preprocessor flag
-         !! \todo Remove it when all problems are fixed
+         !> \todo Remove it when all problems are fixed
 
          limiter     = 'vanleer'
          cflcontrol  = 'warn'

@@ -84,8 +84,8 @@ module fluxes
 
 contains
 
+!> \todo Remove precompiler directives from this routine, it is called only once.
    subroutine init_fluxes
-      !! \todo Remove precompiler directives from this routine, it is called only once.
       use fluidindex,  only: nvar
 #ifdef NEUTRAL
       use fluxneutral, only: flux_neu
@@ -153,14 +153,15 @@ contains
       type(component_fluid), pointer                    :: pfl
 
       integer :: p
-
-      !! \todo pbb and pcs2 may need more careful treatment
-      !!  currently both arrays don't matter for dst and neu and
-      !!  are properly set for ion
+!>
+!! \todo pbb and pcs2 may need more careful treatment
+!!  currently both arrays don't matter for dst and neu and
+!!  are properly set for ion
+!<
       pbb   =>   bb(:,:)
 
       if (present(cs_iso2)) then
-         pcs2  => cs_iso2(:)           !! \todo It would be better to always set cs2 as an array, even if global
+         pcs2  => cs_iso2(:)           !> \todo It would be better to always set cs2 as an array, even if global
       else
          pcs2  => null()
       endif
@@ -260,7 +261,7 @@ contains
       ! locals
       real, dimension(size(a,1), size(a,2)) :: c !< a*b
 
-      c = a*b                                                                    !< \todo OPTIMIZE ME
+      c = a*b                                                                    !> \todo OPTIMIZE ME
       where (c > 0.0)
          f = f+2.0*c/(a+b)
       endwhere
@@ -273,7 +274,7 @@ contains
       real, dimension(:,:), intent(in)      :: b
       real, dimension(:,:), intent(inout)   :: f
 
-      f = f+(sign(1.0,a)+sign(1.0,b))*min(2.*abs(a),2.*abs(b),0.5*abs(a+b))*0.5  !< \todo OPTIMIZE ME
+      f = f+(sign(1.0,a)+sign(1.0,b))*min(2.*abs(a),2.*abs(b),0.5*abs(a+b))*0.5  !> \todo OPTIMIZE ME
       return
    end subroutine moncen_limiter
 
@@ -283,7 +284,7 @@ contains
       real, dimension(:,:), intent(in)      :: b
       real, dimension(:,:), intent(inout)   :: f
 
-      f = f+(sign(1.0,a)+sign(1.0,b))*min(abs(a),abs(b))*0.5                     !< \todo OPTIMIZE ME
+      f = f+(sign(1.0,a)+sign(1.0,b))*min(abs(a),abs(b))*0.5                     !> \todo OPTIMIZE ME
       return
    end subroutine minmod_limiter
 
@@ -293,7 +294,7 @@ contains
       real, dimension(:,:), intent(in)      :: b
       real, dimension(:,:), intent(inout)   :: f
 
-      where (abs(a) > abs(b))                                                    !< \todo OPTIMIZE ME
+      where (abs(a) > abs(b))                                                    !> \todo OPTIMIZE ME
          f = f+(sign(1.0,a)+sign(1.0,b))*min(abs(a), abs(2.0*b))*0.5
       elsewhere
          f = f+(sign(1.0,a)+sign(1.0,b))*min(abs(2.0*a), abs(b))*0.5

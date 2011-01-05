@@ -76,7 +76,7 @@ module multigrid_gravity
    logical            :: trust_fft_solution                           !< Bypass the V-cycle, when doing FFT on whole domain, make sure first that FFT is properly set up.
    logical            :: gb_no_fft                                    !< Deny solving the base level with FFT. Can be very slow.
    logical            :: prefer_rbgs_relaxation                       !< Prefer relaxation over FFT local solver. Typically faster.
-   ! \todo allow to perform one or more V-cycles with FFT method, the switch to the RBGS (may save one V-cycle in some cases)
+   !> \todo allow to perform one or more V-cycles with FFT method, the switch to the RBGS (may save one V-cycle in some cases)
    logical            :: fft_full_relax                               !< Perform full or boundary relaxation after local FFT solve
    logical            :: gb_solve_gather                              !< Prefer MPI_Gather over Send/Recv when solving global base level (looks a bit faster on small domains)
    logical            :: fft_patient                                  !< Spend more time in init_multigrid to find faster fft plan
@@ -873,7 +873,7 @@ contains
 
       call vcycle_hg(inner)
 
-      ! /todo: move to multigridvars and init_multigrid
+      !> \todo move to multigridvars and init_multigrid
       if (has_dir(xdim)) then
          isb = cg%is-mg_nb
          ieb = cg%ie+mg_nb

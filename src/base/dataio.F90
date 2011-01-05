@@ -42,14 +42,11 @@
 !! \copydetails dataio::init_dataio
 !!
 !! \todo check and if necessary bring back usefulness of min_disk_space_MB parameter
+!! \todo check the usefulness of wait logical variable
 !<
 
 module dataio
-!>
-!! \brief (KK)
-!!
-!! \todo check the usefulness of wait logical variable
-!<
+
    use dataio_pub,    only: cwdlen, hnlen, varlen, domain, fmin, fmax, vizit, nend, tend, wend, nrestart, problem_name, run_id
    use mpisetup,      only: cbuff_len
    use types,         only: idlen
@@ -419,7 +416,7 @@ contains
             call printinfo(env(i), .false.)
          enddo
          write(log_file,'(6a,i3.3,a)') trim(cwd),'/',trim(problem_name),'_',trim(run_id),'_',nrestart,'.log'
-         !! \todo if the simulation is restarted then save previous log_file (if exists) under a different, unique name
+!> \todo if the simulation is restarted then save previous log_file (if exists) under a different, unique name
          write(system_command, '("mv ",a," ",a)') trim(tmp_log_file), trim(log_file)
          system_status = SYSTEM(system_command)
          if (system_status /= 0) then
@@ -1234,7 +1231,7 @@ contains
 !      system_message_file         ! 2nd (ups)  message file (eg.'/etc/ups/user/msg')
 !-------------------------------------------------------------------------
 
-!\todo: process multiple commands at once
+!> \todo process multiple commands at once
       use dataio_pub,    only: cwdlen, msg, printinfo, warn
       use mpisetup,      only: master
 #if defined(__INTEL_COMPILER)

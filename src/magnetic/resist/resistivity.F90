@@ -274,7 +274,7 @@ module resistivity
       ! locals
       real, dimension(size(a,1)) :: c !< a*b
 
-      c = a*b                                                                    !< \todo OPTIMIZE ME
+      c = a*b                                                                    !> \todo OPTIMIZE ME
       where (c > 0.0)
          f = f+2.0*c/(a+b)
       endwhere

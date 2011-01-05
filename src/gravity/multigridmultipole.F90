@@ -181,8 +181,10 @@ contains
          drq = min(lmpole%dx, lmpole%dy, lmpole%dz) / 2.
          rqbin = int(sqrt((cg%xmax - cg%xmin)**2 + (cg%ymax - cg%ymin)**2 + (cg%zmax - cg%zmin)**2)/drq) + 1
          ! arithmetic average of the closest and farthest points of computational domain with respect to its center
-         ! \todo check what happens if there are points that are really close to the domain center (maybe we should use a harmonic average?)
-         ! Issue a warning or error if it is known that given lmax leads to FP overflows in rn(:) and irn(:)
+         !>
+         !!\todo check what happens if there are points that are really close to the domain center (maybe we should use a harmonic average?)
+         !! Issue a warning or error if it is known that given lmax leads to FP overflows in rn(:) and irn(:)
+         !<
          rscale = ( min((cg%xmax - cg%xmin),     (cg%ymax - cg%ymin),     (cg%zmax - cg%zmin)) + &
               &    sqrt((cg%xmax - cg%xmin)**2 + (cg%ymax - cg%ymin)**2 + (cg%zmax - cg%zmin)**2) )/4.
          if (allocated(k12) .or. allocated(ofact) .or. allocated(Q)) call die("[multipole:init_multipole] k12, ofact or Q already allocated")
@@ -436,7 +438,8 @@ contains
 
       real, parameter :: a1 = -2., a2 = (-2. - a1)/3. ! interpolation parameters;   <---- a1=-2 => a2=0
       ! a1 = -2. is the simplest, low order choice, gives best agreement of total mass and CoM location when compared to 3-D integration
-      ! a1 = -1., a2 = -1./3. seems to do the best job, \todo: find out how and why
+      ! a1 = -1., a2 = -1./3. seems to do the best job,
+      !> \todo: find out how and why
 
       !BEWARE: some cylindrical factors may be helpful
       if (is_external(XLO)) lmpole%bnd_x(             lmpole%js:lmpole%je, lmpole%ks:lmpole%ke, LOW) =    ( &
@@ -1033,7 +1036,7 @@ contains
          cos_ph = 1.
          sin_ph = 0.
       endif
-      ! \todo Possible optimization: number of computed elements can be doubled on each loop iteration (should give better pipelining)
+!> \todo Possible optimization: number of computed elements can be doubled on each loop iteration (should give better pipelining)
       do m = 1, mmax
          cfac(m) = cos_ph*cfac(m-1) - sin_ph*sfac(m-1)
          sfac(m) = cos_ph*sfac(m-1) + sin_ph*cfac(m-1)
@@ -1043,14 +1046,14 @@ contains
       cos_th = z   * rinv
       sin_th = rxy * rinv
 
-      ! \todo check how much it would degrade solution and improve performance to move the multiplications by rn(:) and irn(:) to img_mass2moments (before and after integration)
+!> \todo check how much it would degrade solution and improve performance to move the multiplications by rn(:) and irn(:) to img_mass2moments (before and after integration)
       ! rn(l) = factor * r ** l; irn(l) = factor * r ** -(l+1)
       rn(0)  = factor
       irn(0) = factor * rinv
       ! scale r to reduce risk of occurring a Floating Point Overflow for high l_max and large r values. Leave the original value of r only in irn(0)
       r = r / rscale
       rinv = rinv * rscale
-      ! \todo Possible optimization: number of computed elements can be doubled on each loop iteration (should give better pipelining)
+!> \todo Possible optimization: number of computed elements can be doubled on each loop iteration (should give better pipelining)
       do l = 1, lmax
          rn(l)  =  rn(l-1) * r
          irn(l) = irn(l-1) * rinv

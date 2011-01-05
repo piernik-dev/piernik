@@ -423,7 +423,7 @@ contains
          roof%mgvar(roof%is-D_x:roof%ie+D_x, roof%js-D_y:roof%je+D_y, roof%ks-D_z:roof%ke+D_z, diff_bx+ib-ibx) = b(ib, cg%is-D_x:cg%ie+D_x, cg%js-D_y:cg%je+D_y, cg%ks-D_z:cg%ke+D_z)
          call restrict_all(diff_bx+ib-ibx)             ! Implement correct restriction (and probably also separate inter-process communication) routines
          do il = level_min, level_max-1
-            call mpi_multigrid_bnd(il, diff_bx+ib-ibx, 1, extbnd_mirror, .true.) !! \todo use global boundary type for B
+            call mpi_multigrid_bnd(il, diff_bx+ib-ibx, 1, extbnd_mirror, .true.) !> \todo use global boundary type for B
             !BEWARE b is set on a staggered grid; corners should be properly set here (now they are not)
             ! the problem is that the b(:,:,:,:) elements are face-centered so restriction and external boundaries should take this into account
             write(dirty_label, '(a,i1)')"init b",ib

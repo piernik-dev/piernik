@@ -79,7 +79,7 @@ module snsources
 
       implicit none
 
-!      amp_ecr_sn = 0.0    !< \todo set sane default values
+!      amp_ecr_sn = 0.0    !> \todo set sane default values
       f_sn       = 0.0    !
       h_sn       = 0.0
       r_sn       = 0.0
