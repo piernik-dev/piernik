@@ -154,22 +154,23 @@ module constants
    real, protected :: earthradius                           !< radius of Earth
 
 contains
+!>
 !! \brief Routine initializing constant modules
 !!
-!! \n \n
+!! \details
 !! @b CONSTANTS
 !! \n \n
 !! <table border="+1">
 !! <tr><td width="150pt"><b>parameter</b></td><td width="135pt"><b>default value</b></td><td width="200pt"><b>possible values</b></td><td width="315pt"> <b>description</b></td></tr>
-!! <tr><td>constant_set</td><td>1</td><td>integer</td><td>\copydoc constants::constants_set</td></tr>
-!! <tr><td>miu0      </td><td>1</td><td>real</td><td>\copydoc constants::miu0</td></tr>
-!! <tr><td>kelvin    </td><td>1</td><td>real</td><td>\copydoc constants::kelvin</td></tr>
-!! <tr><td>cm        </td><td>1</td><td>real</td><td>\copydoc constants::cm</td></tr>
-!! <tr><td>gram      </td><td>1</td><td>real</td><td>\copydoc constants::gram</td></tr>
-!! <tr><td>sek       </td><td>1</td><td>real</td><td>\copydoc constants::sek</td></tr>
+!! <tr><td>constant_set</td><td>'scaled'</td><td>string of characters</td><td>type of constants set     </td></tr>
+!! <tr><td>miu0        </td><td>4*pi    </td><td>real                </td><td>\copydoc constants::miu0  </td></tr>
+!! <tr><td>kelvin      </td><td>1       </td><td>real                </td><td>\copydoc constants::kelvin</td></tr>
+!! <tr><td>cm          </td><td>1       </td><td>real                </td><td>\copydoc constants::cm    </td></tr>
+!! <tr><td>gram        </td><td>1       </td><td>real                </td><td>\copydoc constants::gram  </td></tr>
+!! <tr><td>sek         </td><td>1       </td><td>real                </td><td>\copydoc constants::sek   </td></tr>
 !! </table>
 !! \n \n
-
+!<
    subroutine init_constants
       use mpisetup,   only: cbuff, rbuff, buffer_dim, comm, ierr, master, slave
       use mpi,        only: MPI_CHARACTER, MPI_DOUBLE_PRECISION

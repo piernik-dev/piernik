@@ -23,6 +23,17 @@
 !! \copydetails multigrid::init_multigrid
 !! \copydetails multigrid_diffusion::init_multigrid_diff
 !! \copydetails multigrid_gravity::init_multigrid_grav
+!!
+!! @n @n
+!! There is a list of precompiler directives to choose unit system used in simulation:
+!!
+!! <table border="0">
+!! <tr><td width="40pt"><b></b></td><td width="760pt">
+!! \copydetails constants
+!! </td></tr></table>
+!! \n \n
+!! \copydetails constants::init_constants
+!!
 !<
 
 

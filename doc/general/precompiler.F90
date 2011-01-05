@@ -42,12 +42,4 @@
 !!
 !! \b \#define \b SHEAR - to include Coriolis and tidal forces in gas equation of motion and use  <a href="http://cdsads.u-strasbg.fr/abs/1995ApJ...440..742H">Hawley, Gammie and Balbus (1995)</a> type approach for shearing BCS
 !! @n @n
-!!
-!! There is a list of precompiler directives to choose unit system used in simulation:
-!!
-!! <table border="0">
-!! <tr><td width="40pt"><b></b></td><td width="760pt">
-!! \copydetails constants
-!! </td></tr></table>
-!! \n \n
 !<
