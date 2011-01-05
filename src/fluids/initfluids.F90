@@ -219,7 +219,7 @@ module initfluids
          smalld = smalld * safety_factor
          call MPI_Allreduce(MPI_IN_PLACE, smalld, 1, MPI_DOUBLE_PRECISION, MPI_MIN, comm, ierr)
          if (master) then
-            write(msg,'(A,ES10.4)') "[initfluids:sanitize_smallx_checks] adjusted smalld to ", smalld
+            write(msg,'(A,ES11.4)') "[initfluids:sanitize_smallx_checks] adjusted smalld to ", smalld
             call warn(msg)
          endif
       endif
@@ -246,7 +246,7 @@ module initfluids
          smallp = smallp * safety_factor
          call MPI_Allreduce(MPI_IN_PLACE, smallp, 1, MPI_DOUBLE_PRECISION, MPI_MIN, comm, ierr)
          if (master) then
-            write(msg,'(A,ES10.4)') "[initfluids:sanitize_smallx_checks] adjusted smallp to ", smallp
+            write(msg,'(A,ES11.4)') "[initfluids:sanitize_smallx_checks] adjusted smallp to ", smallp
             call warn(msg)
          endif
       endif
