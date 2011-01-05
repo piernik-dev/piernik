@@ -30,8 +30,8 @@
 !>
 !! \brief (DW) [R] Module containing numerical and physical %constants
 !! \details Module constants contains numerical and physical %constants for several units systems.
-!! To use one system a proper precompiler directive should be defined.
-!! Available units systems:
+!! To use one system a proper value of constant_set should be set.
+!! Available units systems defined by constant_set value:
 !! @n
 !! @n @b PSM (Parsec - Solar_mass - Megayear) - good for global galactic simulations
 !! @n length --> pc,     mass --> Msun,        time --> myr,        miu0 --> 4*pi,    temperature --> kelvin
@@ -56,6 +56,13 @@
 !! @n
 !! @n @b CGS - (Centimetre - Gram - Second)
 !! @n length --> cm,     mass --> gram,        time --> sek,        miu0 --> 4*pi,    temperature --> kelvin
+!! @n
+!! @n @b WT4 - (Centimetre - Gram - Second)
+!! @n length --> 6.25AU, mass --> 0.1 M_sun,   time --> 2.5**3.5 /pi years (=> G \approx 1. in Wengen Test #4),
+!! @n length --> cm,     mass --> gram,        time --> sek,        miu0 --> 4*pi,    temperature --> kelvin
+!! @n
+!! @n @b USER - units system defined by user
+!! @n following variables from CONSTANTS namelist should be specified: miu0, kelvin, cm, gram, sek
 !! @n
 !! @n @b SCALED - a suit of %constants without physical units. This is automatically set while neither of the former systems is chosen.
 !<
@@ -221,6 +228,8 @@ contains
 #endif  /* VERBOSE */
       s_len_u  = ' undefined'; s_time_u = s_len_u; s_mass_u = s_len_u
 
+!!! BEWARE: miu0 and kelvin may be overwritten by values from problem.par even though we choose constant_set value one of the following
+!!! nevertheless, they are not used so far (r3612)
       select case (trim(constants_set))
          case ("PSM", "psm")
             ! PSM  uses: length --> pc,     mass --> Msun,        time --> myr,        miu0 --> 4*pi,    temperature --> kelvin
