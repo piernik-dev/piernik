@@ -119,8 +119,12 @@ module mpisetup
    real    :: smalld                   !< artificial infimum for density
    real    :: smallc                   !< artificial infimum for freezing speed
    real    :: smallei                  !< artificial infimum for internal energy density
-   real    :: cfr_smooth               !< COMMENT ME
-   integer :: integration_order        !< COMMENT ME
+   !>
+   !! small number used to smooth freezing speed, especially handy in dust with random noise in velocity field.
+   !! \f$c_{\textrm{fr}} = \sqrt{v^2 + \frac{1}{2}(\max{v} - \min{v})c_{\textrm{fr}}^{\textrm{smooth}}} + \ldots\f$
+   !<
+   real    :: cfr_smooth
+   integer :: integration_order        !< Runge-Kutta time integration order (1 - 1st order, 2 - 2nd order)
    character(len=cbuff_len) :: limiter !< type of flux limiter
    character(len=cbuff_len) :: cflcontrol !< type of cfl control just before each sweep (possibilities: 'none', 'main', 'user')
 
