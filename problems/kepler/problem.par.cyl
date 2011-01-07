@@ -13,6 +13,7 @@
  /
 
  $CONSTANTS
+   constants_set = "pln"
  /
 
  $RESTART_CONTROL
@@ -22,15 +23,15 @@
  /
 
  $END_CONTROL
-    tend   = 100.0
-    nend   = 20000
+    tend   = 1000.0
+    nend   = 200000
  /
 
  $OUTPUT_CONTROL
     problem_name ='kepler'
-    run_id  =  'ts2'
+    run_id  =  'tst'
     dt_hdf  = 2.0
-    dt_res  = 0.0
+    dt_res  = 500.0
     dt_log  = 0.1
     dt_tsl  = 0.001
     vars(1) = 'dens'
@@ -42,7 +43,7 @@
  /
 
  $BOUNDARIES
-    bnd_xl = 'user'
+    bnd_xl = 'ref'
     bnd_xr = 'ref'
     bnd_yl = 'per'
     bnd_yr = 'per'
@@ -61,8 +62,8 @@
  /
 
  $FLUID_NEUTRAL
-    gamma_neu  = 1.4
-    cs_iso_neu = 0.8
+    gamma_neu  = 1.0
+    cs_iso_neu = 0.05507   ! 150K for PLN
  /
 
  $FLUID_DUST
@@ -92,13 +93,15 @@
 
  $PROBLEM_CONTROL
     alpha   = 1.0
-    d0      = 1.0
+    d0      = 1700.0  ! g/cm**2 Desch
     dout    = 1.0e-4
     r_max   = 3.2
     r_in    = 0.5
     f_in    = 10.0
     r_out   = 2.1
     mag_field_orient = 'none'
+    dens_exp = 1.5    ! Desch
+    eps     = 0.1
  /
 
  $PIERNIK_DEBUG

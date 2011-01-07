@@ -40,11 +40,13 @@ module initproblem
    public :: read_problem_par, init_prob
 
    real                     :: d0, r_max, dout, alpha, r_in, r_out, f_in, f_out
+   real                     :: dens_exp     !< exponent in profile density \f$\rho(R) = \rho_0 R^{-k}\f$
+   real                     :: eps          !< dust to gas ratio
    character(len=cbuff_len) :: mag_field_orient
    real, target, allocatable, dimension(:,:,:,:) :: den0, mtx0, mty0, mtz0, ene0
    integer, parameter       :: dname_len = 10
 
-   namelist /PROBLEM_CONTROL/  alpha, d0, dout, r_max, mag_field_orient, r_in, r_out, f_in, f_out
+   namelist /PROBLEM_CONTROL/  alpha, d0, dout, r_max, mag_field_orient, r_in, r_out, f_in, f_out, dens_exp, eps
 
 contains
 !-----------------------------------------------------------------------------
@@ -70,6 +72,9 @@ contains
       r_out            = 2.1
       f_out            = 0.0
 
+      dens_exp         = 0.0
+      eps              = 1.0
+
       if (master) then
 
          diff_nml(PROBLEM_CONTROL)
@@ -84,6 +89,8 @@ contains
          rbuff(6) = r_out
          rbuff(7) = f_in
          rbuff(8) = f_out
+         rbuff(9)  = dens_exp
+         rbuff(10) = eps
 
       endif
 
@@ -102,6 +109,8 @@ contains
          r_out            = rbuff(6)
          f_in             = rbuff(7)
          f_out            = rbuff(8)
+         dens_exp         = rbuff(9)
+         eps              = rbuff(10)
 
       endif
 
@@ -119,10 +128,10 @@ contains
 !-----------------------------------------------------------------------------
 
    subroutine init_prob
-
+      use dataio_pub,          only: msg, printinfo
       use types,               only: component_fluid
       use arrays,              only: u, b, dprof
-      use constants,           only: newtong
+      use constants,           only: newtong, gram, cm, kboltz, mH
       use fluidindex,          only: ibx, iby, ibz, nvar
       use gravity,             only: r_smooth, r_grav, n_gravr, ptmass, source_terms_grav, grav_pot2accel, grav_pot_3d
       use grid,                only: cg, geometry
@@ -137,7 +146,7 @@ contains
       real    :: xi, yj, zk, rc, vx, vy, vz, b0, sqr_gm, vr, vphi
       real    :: csim2, gprim, H2
 
-      real, dimension(:), allocatable :: grav
+      real, dimension(:), allocatable :: grav, dens_prof
       type(component_fluid), pointer  :: fl
 
 !   Secondary parameters
@@ -200,6 +209,8 @@ contains
          enddo
       else if (geometry=='cylindrical') then
 
+         write(msg,'(A,F9.5)') "cs2(150K) = ", kboltz * 150.0 / mH
+         call printinfo(msg)
          call grav_pot_3d
 
          if (.not.allocated(den0)) allocate(den0(nvar%fluids, cg%nx, cg%ny, cg%nz))
@@ -209,6 +220,9 @@ contains
          if (.not.allocated(ene0)) allocate(ene0(nvar%fluids, cg%nx, cg%ny, cg%nz))
 
          if (.not.allocated(grav)) allocate(grav(cg%nx))
+         if (.not.allocated(dens_prof)) allocate(dens_prof(cg%nx))
+
+         dens_prof(:) = d0 * cg%x(:)**(-dens_exp)  * gram / cm**2
 
          do p = 1, nvar%fluids
             fl => nvar%all_fluids(p)
@@ -230,11 +244,17 @@ contains
 
                   do k = 1, cg%nz
                      zk = cg%z(k)
-                     u(fl%idn,i,j,k) = max(d0*(1./cosh((xi/r_max)**10)) * exp(-zk**2/H2),smalld)
+!                     u(fl%idn,i,j,k) = max(d0*(1./cosh((xi/r_max)**10)) * exp(-zk**2/H2),smalld)
+                     u(fl%idn,i,j,k) = max(dens_prof(i),smalld)
+                     if (fl%tag == "DST") u(fl%idn,i,j,k) = eps * u(fl%idn,i,j,k)
 
                      vr   = 0.0
-!                     vphi = sqrt( max(abs(grav(i)) * rc - fl%cs2,0.0))
-                     vphi = sqrt( max(abs(grav(i)) * rc, 0.0))
+                     ! that condition is not necessary since cs2 == 0.0 for dust
+                     if (fl%tag /= "DST") then
+                        vphi = sqrt( max(abs(grav(i)) * rc - fl%cs2*dens_exp,0.0))
+                     else
+                        vphi = sqrt( max(abs(grav(i)) * rc, 0.0))
+                     endif
                      vz   = 0.0
 
                      u(fl%imx,i,j,k) = vr   * u(fl%idn,i,j,k)
@@ -259,6 +279,7 @@ contains
          enddo
          b = 0.0
          if (allocated(grav)) deallocate(grav)
+         if (allocated(dens_prof)) deallocate(dens_prof)
       else
          call die("[initproblem:init_prob] I don't know what to do... :/")
       endif
