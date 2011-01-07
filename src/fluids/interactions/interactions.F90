@@ -98,12 +98,10 @@ contains
 
       endif
 
-#ifdef COLLISIONS
       allocate(collfaq(nvar%fluids,nvar%fluids))
       collfaq = collision_factor
       collfaq(nvar%dst%pos,:) = dragc_gas_dust
       collfaq(:,nvar%dst%pos) = dragc_gas_dust
-#endif /* COLLISIONS */
 
    end subroutine init_interactions
 !>
@@ -129,19 +127,14 @@ contains
       integer, intent(in)   :: i1,i2,n
       real, dimension(nvar%all,n)  :: du,uu
       character(len=*), intent(in) :: sweep
-#ifdef COLLISIONS
       real, dimension(nvar%all,n)  :: ddu
-#endif /* COLLISIONS */
 
       du=0.0
-#ifdef COLLISIONS
       call dragforce(sweep,i1,i2, n, ddu, uu)
       du = du + ddu
-#endif /* COLLISIONS */
 
    end subroutine fluid_interactions
 
-#ifdef COLLISIONS
 !>
 !! \brief Routine that computes contribution from a drag force
 !! \param sweep string of characters that points out the current sweep direction
@@ -207,6 +200,5 @@ contains
       du(iarr_all_mx,:)=colls
 
    end subroutine dragforce
-#endif /* COLLISIONS */
 
 end module interactions
