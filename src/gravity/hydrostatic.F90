@@ -174,18 +174,26 @@ contains
 
    subroutine hydrostatic_zeq_coldens(iia,jja,coldens,csim2)
 
-      use arrays,  only: dprof
+      use arrays,   only: dprof
+      use mpi,      only: MPI_DOUBLE_PRECISION, MPI_SUM
+      use mpisetup, only: comm3d, ierr
 
       implicit none
 
-      integer, intent(in) :: iia, jja
-      real,    intent(in) :: coldens, csim2
-      real :: sdprof
+      integer, intent(in)   :: iia, jja
+      real,    intent(in)   :: coldens, csim2
+      real                  :: sdprof, sum_sdprof
+      integer               :: comm1d
+      logical, dimension(3) :: remain
 
       sdprof = 1.0
       call hydrostatic_zeq_densmid(iia,jja,sdprof,csim2)
       sdprof = sum(dprof)
-      dprof = dprof * coldens / sdprof
+      remain = (/.false.,.false.,.true./)
+      call MPI_Barrier(comm3d,ierr)
+      call MPI_Cart_sub(comm3d,remain,comm1d,ierr)
+      call MPI_Allreduce(sdprof, sum_sdprof, 1, MPI_DOUBLE_PRECISION, MPI_SUM, comm1d, ierr)
+      dprof = dprof * coldens / sum_sdprof
 
    end subroutine hydrostatic_zeq_coldens
 
