@@ -280,7 +280,7 @@ module mpisetup
             call printinfo("", .false.)
             call printinfo("PROCESSES:", .false.)
             do iproc = 0, nproc-1
-               write(msg,"(a6,i2,a7,i6,a1,a,a7,a)") " proc=",iproc, &
+               write(msg,"(a6,i4,a7,i6,a1,a,a7,a)") " proc=",iproc, &
                     ", pid= ",pid_all(iproc), "@",trim(host_all(iproc)), &
                     ", cwd=",trim(cwd)
                call printinfo(msg, .false.)
