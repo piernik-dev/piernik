@@ -190,7 +190,6 @@ contains
       call hydrostatic_zeq_densmid(iia,jja,sdprof,csim2)
       sdprof = sum(dprof)
       remain = (/.false.,.false.,.true./)
-      call MPI_Barrier(comm3d,ierr)
       call MPI_Cart_sub(comm3d,remain,comm1d,ierr)
       call MPI_Allreduce(sdprof, sum_sdprof, 1, MPI_DOUBLE_PRECISION, MPI_SUM, comm1d, ierr)
       dprof = dprof * coldens / sum_sdprof
