@@ -251,7 +251,7 @@ contains
       integer, intent(in) :: iv              !< variable which we want to set
       integer, intent(in) :: ng              !< number of guardcells to set
       integer, intent(in) :: mode            !< what to do with external boundaries
-      logical, intent(in) :: cor             !< if .true. then don't forget about corners !BEWARE: not implemented properly
+      logical, intent(in) :: cor             !< if .true. then don't forget about corners \deprecated BEWARE: not implemented properly
 
       integer :: i
       logical, save :: warned = .false.
@@ -263,11 +263,11 @@ contains
          endif
       endif
 
-      !BEWARE: some cylindrical factors may be helpful
+      !> \deprecated BEWARE: some cylindrical factors may be helpful
       select case (mode)
          case (extbnd_donothing) ! remember to initialize everything first!
             return
-         case (extbnd_extrapolate) ! mixed-tybe BC: free flux; BEWARE: it is not protected from inflow
+         case (extbnd_extrapolate) !> \deprecated mixed-tybe BC: free flux; BEWARE: it is not protected from inflow
             do i = 1, ng
                if (is_external(XLO)) lvl(lev)%mgvar(lvl(lev)%is-i, :, :, iv) = (1+i) * lvl(lev)%mgvar(lvl(lev)%is, :, :, iv) - i * lvl(lev)%mgvar(lvl(lev)%is+1, :, :, iv)
                if (is_external(XHI)) lvl(lev)%mgvar(lvl(lev)%ie+i, :, :, iv) = (1+i) * lvl(lev)%mgvar(lvl(lev)%ie, :, :, iv) - i * lvl(lev)%mgvar(lvl(lev)%ie-1, :, :, iv)

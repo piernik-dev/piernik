@@ -222,8 +222,10 @@ contains
             clock_end = -cnt_max
          endif
       endif
- ! BEWARE: gfortran gives 1ms resolution, but ifort can offer 0.1ms, which will result in an integer overflow in less than 5 days
- ! Probably it is better to call date_and_time(VALUES) here
+ !>
+ !! \deprecated BEWARE: gfortran gives 1ms resolution, but ifort can offer 0.1ms, which will result in an integer overflow in less than 5 days
+ !! Probably it is better to call date_and_time(VALUES) here
+ !<
       call system_clock(clock, cnt_rate, cnt_max)
       tf = .true.
       if (clock_end /= -cnt_max) then

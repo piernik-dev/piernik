@@ -257,8 +257,10 @@ module gravity
          call multigrid_solve_grav(u(iarr_all_sg(1),:,:,:))
       else
          call multigrid_solve_grav( sum(u(iarr_all_sg,:,:,:),1) )
-         ! BEWARE Here a lot of heap space is required and some compilers may generate code that do segfaults for big enough domains.
-         ! It is the weakest point of this type in Maclaurin test. Next one (in fluidboundaries.F90) is 8 times less sensitive.
+         !>
+         !! \deprecated BEWARE Here a lot of heap space is required and some compilers may generate code that do segfaults for big enough domains.
+         !! It is the weakest point of this type in Maclaurin test. Next one (in fluidboundaries.F90) is 8 times less sensitive.
+         !<
       endif
 #endif /* MULTIGRID */
 
@@ -295,7 +297,7 @@ module gravity
       gpot  = gp + (1.+h)    *sgp -     h*sgpm
       hgpot = gp + (1.+0.5*h)*sgp - 0.5*h*sgpm
 #else /* !SELF_GRAV */
-      !BEWARE: as long as grav_pot_3d is called only in init_piernik this assignment probably don't need to be repeated more than once
+      !> \deprecated BEWARE: as long as grav_pot_3d is called only in init_piernik this assignment probably don't need to be repeated more than once
       gpot  = gp
       hgpot = gp
 #endif /* !SELF_GRAV */
@@ -543,8 +545,8 @@ module gravity
          x2 = (cg%x(i) - ptm_x)**2
          do j = 1, cg%ny
             rc2 = x2 + (cg%y(j) - ptm_y)**2
-            fr  = min( (sqrt(rc2)/r_grav)**n_gravr , 100.0)    ! BEWARE: hardcoded value
-            fr  = max( 1./cosh(fr), smalld*1.e-2)              ! BEWARE: hadrcoded value
+            fr  = min( (sqrt(rc2)/r_grav)**n_gravr , 100.0)    !> \deprecated BEWARE: hardcoded value
+            fr  = max( 1./cosh(fr), smalld*1.e-2)              !> \deprecated BEWARE: hadrcoded value
             fr  = -cs_iso2 * log(fr)
 
             if (flatten) then
@@ -594,7 +596,7 @@ module gravity
 !>
 !! \brief Routine that compute values of gravitational potential filling in gp array and setting gp_status character string \n\n
 !! The type of %gravity is governed by preprocessor: \n\n
-!! BEWARE: This is no longer true: external_gp does the magic
+!! \deprecated BEWARE: This is no longer true: external_gp does the magic
 !! \details
 !! GRAV_NULL - gravitational potential array is set to zero \n\n
 !! GRAV_UNIFORM - uniform type of %gravity in z-direction \n

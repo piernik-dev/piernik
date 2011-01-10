@@ -58,7 +58,7 @@ contains
 
 !    dt_interact_proc = 1.0 / (maxval(collfaq)+small) / maxval(u(iarr_all_dn,:,:,:))
 
-    !!!!BEWARE: works only with neu+dust!!!!
+    !> \deprecated BEWARE: works only with neu+dust!!!!
 
     val = maxval (  sqrt( (u(nvar%dst%imx,:,:,:)-u(nvar%neu%imx,:,:,:))**2 + &
                     (u(nvar%dst%imy,:,:,:)-u(nvar%neu%imy,:,:,:))**2 + &

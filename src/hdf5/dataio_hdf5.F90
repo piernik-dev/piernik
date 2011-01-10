@@ -489,7 +489,7 @@ module dataio_hdf5
       select case (var)
 #ifdef COSM_RAYS
          case ("ecr1" : "ecr9")
-            read(var,'(A3,I1)') aux,i !BEWARE 0 <= i <= 9, no other indices can be dumped to hdf file
+            read(var,'(A3,I1)') aux,i !> \deprecated BEWARE 0 <= i <= 9, no other indices can be dumped to hdf file
             tab(:,:,:) = real(u(nvar%crs%beg+i-1,RNG),4)
 #endif /* COSM_RAYS */
          case ("dend")
@@ -1473,8 +1473,8 @@ module dataio_hdf5
             require_init_prob = ibuf(1)
          endif
 
-         problem_name = fix_string(problem_name)   ! BEWARE: >=HDF5-1.8.4 has weird issues with strings
-         chdf%new_id  = fix_string(chdf%new_id)    !   this bit hacks it around
+         problem_name = fix_string(problem_name)   !> \deprecated BEWARE: >=HDF5-1.8.4 has weird issues with strings
+         chdf%new_id  = fix_string(chdf%new_id)    !> \deprecated   this bit hacks it around
          chdf%domain  = fix_string(chdf%domain)
 
          CALL h5fclose_f(file_id, error)
@@ -1738,7 +1738,7 @@ module dataio_hdf5
          ibuffer(12) = cg%nb                 ; ibuffer_name(12) = "nb"
          ibuffer(13) = require_init_prob        ; ibuffer_name(13) = "require_init_prob"
 
-         !BEWARE: A memory leak was detected here. h5lt calls use HD5f2cstring and probably sometimes don't free the allocated buffer
+         !> \deprecated BEWARE: A memory leak was detected here. h5lt calls use HD5f2cstring and probably sometimes don't free the allocated buffer
 
          bufsize = 1
 

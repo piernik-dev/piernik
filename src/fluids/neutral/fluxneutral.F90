@@ -130,12 +130,14 @@ contains
 #else /* !ISO */
       cfrn(1,RNG) = sqrt(vx(RNG)**2+cfr_smooth*amp) + max(sqrt( abs(nvar%neu%gam*p(RNG))/uun(idn,RNG)),small)
 #endif /* !ISO */
-      !BEWARE: that is the cause of fast decreasing of timestep in galactic disk problem
-      !TODO: find why is it so
-      !if such a treatment is OK then should be applied also in both cases of neutral and ionized gas
-      !    do i = 2,n-1
-      !       cfrn(1,i) = maxval( [c_fr(i-1), c_fr(i), c_fr(i+1)] )
-      !    enddo
+      !> \deprecated BEWARE: that is the cause of fast decreasing of timestep in galactic disk problem
+      !>
+      !! \todo find why is it so
+      !! if such a treatment is OK then should be applied also in both cases of neutral and ionized gas
+      !!    do i = 2,n-1
+      !!       cfrn(1,i) = maxval( [c_fr(i-1), c_fr(i), c_fr(i+1)] )
+      !!    enddo
+      !<
 
       cfrn(1,1) = cfrn(1,2)
       cfrn(1,n) = cfrn(1,n-1)

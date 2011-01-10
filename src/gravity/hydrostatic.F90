@@ -304,7 +304,7 @@ contains
       db = u(iarr_all_dn,:,:,kb)
       db = max(db,smalld)
 #ifdef ISO
-      csi2b = maxval(nvar%all_fluids(:)%cs2)   ! BEWARE should be fluid dependent
+      csi2b = maxval(nvar%all_fluids(:)%cs2)   !> \deprecated BEWARE should be fluid dependent
 #else /* !ISO */
       ekb = 0.5*(u(iarr_all_mx,:,:,kb)**2+u(iarr_all_my,:,:,kb)**2+u(iarr_all_mz,:,:,kb)**2)/db
       eib = u(iarr_all_en,:,:,kb) - ekb

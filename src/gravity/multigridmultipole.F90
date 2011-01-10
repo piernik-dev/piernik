@@ -137,7 +137,7 @@ contains
 
       ! assume that Center of Mass is approximately in the center of computational domain by default
       CoM(0) = 1.
-      !BEWARE: cylindrical factors go here
+      !> \deprecated BEWARE: cylindrical factors go here
       CoM(xdim) = (cg%xmax + cg%xmin)/2.
       CoM(ydim) = (cg%ymax + cg%ymin)/2.
       CoM(zdim) = (cg%zmax + cg%zmin)/2.
@@ -177,7 +177,7 @@ contains
          if (any(aerr(1:4) /= 0)) call die("[multipole:init_multipole] Allocation error: rn, irn sfac or cfac")
          mb_alloc = mb_alloc + size(rn) + size(irn) + size(sfac) + size(cfac)
 
-         !BEWARE: cylindrical factors go here
+         !> \deprecated BEWARE: cylindrical factors go here
          drq = min(lmpole%dx, lmpole%dy, lmpole%dz) / 2.
          rqbin = int(sqrt((cg%xmax - cg%xmin)**2 + (cg%ymax - cg%ymin)**2 + (cg%zmax - cg%zmin)**2)/drq) + 1
          ! arithmetic average of the closest and farthest points of computational domain with respect to its center
@@ -441,7 +441,7 @@ contains
       ! a1 = -1., a2 = -1./3. seems to do the best job,
       !> \todo: find out how and why
 
-      !BEWARE: some cylindrical factors may be helpful
+      !> \deprecated BEWARE: some cylindrical factors may be helpful
       if (is_external(XLO)) lmpole%bnd_x(             lmpole%js:lmpole%je, lmpole%ks:lmpole%ke, LOW) =    ( &
            &           a1 * lmpole%mgvar(lmpole%is,   lmpole%js:lmpole%je, lmpole%ks:lmpole%ke, solution) + &
            &           a2 * lmpole%mgvar(lmpole%is+1, lmpole%js:lmpole%je, lmpole%ks:lmpole%ke, solution) ) / lmpole%dx
@@ -484,7 +484,7 @@ contains
 
       if (abs(ord_prolong_mpole) > 2) call die("[multipole:prolong_ext_bnd] interpolation order too high")
 
-      !BEWARE: do we need cylindrical factors for prolongation?
+      !> \deprecated BEWARE: do we need cylindrical factors for prolongation?
       if (any(is_external(:))) then
          if (ord_prolong_mpole == 0) then
             call prolong_ext_bnd0(lev)
@@ -818,10 +818,12 @@ contains
             Q(m2c+m, OUTSIDE, ir+1) = Q(m2c+m, OUTSIDE, ir+1) + irn(m) * Ql1 * cfac(m) * del
          endif
 
-         ! BEWARE: most of computational cost of multipoles is here
-         ! from (m+1,m) to (lmax,m)
-         ! Associated Legendre polynomial: P_{m+1}^m = x (2m+1) P_m^m
-         ! Associated Legendre polynomial recurrence: (l-m) P_l^m = x (2l-1) P_{l-1}^m - (l+m-1) P_{l-2}^m
+         !>
+         !! \deprecated BEWARE: most of computational cost of multipoles is here
+         !! from (m+1,m) to (lmax,m)
+         !! Associated Legendre polynomial: P_{m+1}^m = x (2m+1) P_m^m
+         !! Associated Legendre polynomial recurrence: (l-m) P_l^m = x (2l-1) P_{l-1}^m - (l+m-1) P_{l-2}^m
+         !<
          Ql2 = 0.
          do l = m + 1, lmax
             Ql = cos_th * k12(1, l, m) * Ql1 - k12(2, l, m) * Ql2
@@ -955,7 +957,7 @@ contains
               &      (Q(m2s+m, INSIDE,  ir-1) * irn(m) + &
               &       Q(m2s+m, OUTSIDE, ir)   *  rn(m) ) * sfac(m) )
 
-         ! BEWARE: lots of computational cost of multipoles is here
+         !> \deprecated BEWARE: lots of computational cost of multipoles is here
          ! from (m+1,m) to (lmax,m)
          Ql2 = 0.
          do l = m+1, lmax

@@ -250,7 +250,7 @@ module mpisetup
 
          if (allocated(cwd_all) .or. allocated(host_all) .or. allocated(pid_all)) call die("[mpisetup:init_mpi] cwd_all, host_all or pid_all already allocated")
 
-         ! BEWARE if slave it is probably enough to allocate only one element or none at all (may depend on MPI implementation)
+         !> \deprecated BEWARE if slave it is probably enough to allocate only one element or none at all (may depend on MPI implementation)
          allocate(cwd_all(0:nproc))
          allocate(host_all(0:nproc))
          allocate(pid_all(0:nproc))
@@ -269,7 +269,7 @@ module mpisetup
          call MPI_Gather(host_proc, hnlen,  MPI_CHARACTER, host_all, hnlen,  MPI_CHARACTER, 0, comm, err)
          call MPI_Gather(pid_proc,  1,      MPI_INTEGER,   pid_all,  1,      MPI_INTEGER,   0, comm, err)
 
-         ! cwd = trim(cwd_proc)  !BEWARE: It's redundant, we get cwd for command line in init_piernik subroutine
+         ! cwd = trim(cwd_proc)  !> \deprecated BEWARE: It's redundant, we get cwd for command line in init_piernik subroutine
 
          if (master) then
             inquire(file=par_file, exist=par_file_exist)

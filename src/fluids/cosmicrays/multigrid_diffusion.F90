@@ -424,8 +424,10 @@ contains
          call restrict_all(diff_bx+ib-ibx)             ! Implement correct restriction (and probably also separate inter-process communication) routines
          do il = level_min, level_max-1
             call mpi_multigrid_bnd(il, diff_bx+ib-ibx, 1, extbnd_mirror, .true.) !> \todo use global boundary type for B
-            !BEWARE b is set on a staggered grid; corners should be properly set here (now they are not)
-            ! the problem is that the b(:,:,:,:) elements are face-centered so restriction and external boundaries should take this into account
+            !>
+            !! |deprecated BEWARE b is set on a staggered grid; corners should be properly set here (now they are not)
+            !! the problem is that the b(:,:,:,:) elements are face-centered so restriction and external boundaries should take this into account
+            !<
             write(dirty_label, '(a,i1)')"init b",ib
             call check_dirty(il, diff_bx+ib-ibx, dirty_label)
          enddo
@@ -461,7 +463,7 @@ contains
       real               :: norm_lhs, norm_rhs, norm_old
       logical            :: dump_every_step
 
-      write(vstat%cprefix,'("C",i1,"-")') cr_id !BEWARE: this is another place with 0 <= cr_id <= 9 limit
+      write(vstat%cprefix,'("C",i1,"-")') cr_id !> \deprecated BEWARE: this is another place with 0 <= cr_id <= 9 limit
       write(dirty_label, '("md_",i1,"_dump")')  cr_id
 
       inquire(file = "_dump_every_step_", EXIST=dump_every_step) ! use for debug only
@@ -548,7 +550,7 @@ contains
 !! \brief Compute diffusive flux in the x-direction
 !<
 
-   ! BEWARE: almost replicated code (see crdiffusion.F90)
+   !> \deprecated BEWARE: almost replicated code (see crdiffusion.F90)
    subroutine diff_flux_x(i, j, k, soln, lev, cr_id, Keff)
 
       use multigridvars,     only: lvl

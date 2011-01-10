@@ -320,7 +320,7 @@ module grid
       if (has_dir(xdim)) cg%Vol = cg%Vol * cg%Lx
       if (has_dir(ydim)) cg%Vol = cg%Vol * cg%Ly
       if (has_dir(zdim)) cg%Vol = cg%Vol * cg%Lz
-      ! BEWARE: not true for non-cartesian geometry
+      !> \deprecated BEWARE: these cg\%Vol settings is not true for non-cartesian geometry
 
 #ifdef VERBOSE
       call printinfo("[grid:init_grid]: finished. \o/")

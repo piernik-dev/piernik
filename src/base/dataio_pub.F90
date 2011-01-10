@@ -101,7 +101,7 @@ module dataio_pub
 !!   1. set one of i{x,y,z} to positive value and zero to the others
 !!   2. use only one-element vars array in problem.par
 !<
-   logical            :: vizit = .false.        !< perform "live" visualization using pgplot (BEWARE: highly experimental)
+   logical            :: vizit = .false.        !< perform "live" visualization using pgplot (\deprecated BEWARE: highly experimental)
    real               :: fmin                   !< minimum on pgplot scale
    real               :: fmax                   !< maximum on pgplot scale
 
@@ -267,7 +267,7 @@ contains
 
    end subroutine warn
 !-----------------------------------------------------------------------------
-   !! BEWARE: routine is not finished, it should kill PIERNIK gracefully
+   !> \deprecated BEWARE: routine is not finished, it should kill PIERNIK gracefully
    subroutine die(nm, allprocs)
       use mpi,    only: MPI_COMM_WORLD
       implicit none

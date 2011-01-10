@@ -386,7 +386,7 @@ contains
 
       type(soln_history), pointer      :: os
       real, allocatable, dimension(:)  :: kx, ky, kz             !< FFT kernel directional components for convolution
-      integer, dimension(6)            :: aerr                   !BEWARE: hardcoded magic integer. Update when you change number of simultaneous error checks
+      integer, dimension(6)            :: aerr                   !> \deprecated BEWARE: hardcoded magic integer. Update when you change number of simultaneous error checks
       integer :: i, j, idx
 
       do idx = level_max, level_min, -1
@@ -401,8 +401,10 @@ contains
          lvl(idx)%rz = overrelax_z * lvl(idx)%rz * lvl(idx)%r
          lvl(idx)%r  = lvl(idx)%r  * lvl(idx)%dvol2
 
-         ! BEWARE: some of the above invariants may be not optimally defined - the convergence ratio drops when dx /= dy or dy /= dz or dx /= dz
-         ! and overrelaxation factors are required to get any convergence (often poor)
+         !>
+         !! \deprecated BEWARE: some of the above invariants may be not optimally defined - the convergence ratio drops when dx /= dy or dy /= dz or dx /= dz
+         !! and overrelaxation factors are required to get any convergence (often poor)
+         !<
 
          if (prefer_rbgs_relaxation) then
             lvl(idx)%fft_type = fft_none
@@ -462,7 +464,7 @@ contains
       !special initialization of global base-level FFT-related data
       if (gb%fft_type /= fft_none) then
 
-         !BEWARE only small subset of gb% members is ever initialized
+         !> \deprecated BEWARE only small subset of gb% members is ever initialized
 
          gb%nxb = base%nxb * pxsize
          gb%nyb = base%nyb * pysize
@@ -763,7 +765,7 @@ contains
                  &         roof%mgvar(roof%is:roof%ie, roof%js:roof%je, roof%ks:roof%ke, source) - fpiG * jeans_d0 ! remove density bias
 #endif /* JEANS_PROBLEM */
          case (bnd_givenval) ! convert potential into a layer of imaginary mass (subtract second derivative normal to computational domain boundary)
-            ! BEWARE: cylindrical factors go here
+            !> \deprecated BEWARE: cylindrical factors go here
             if (is_external(XLO)) roof%mgvar(roof%is,         roof%js:roof%je, roof%ks:roof%ke, source) = &
                  &                roof%mgvar(roof%is,         roof%js:roof%je, roof%ks:roof%ke, source) - &
                  &                roof%bnd_x(                 roof%js:roof%je, roof%ks:roof%ke, LOW)  * 2. * roof%idx2 / fpiG
@@ -856,7 +858,7 @@ contains
            (has_dir(zdim) .and. cg%ks-mg_nb <= 0) )    &
            call die("[multigrid_gravity:multigrid_solve_grav] Current implementation requires at least 2 guardcells in the hydro part")
 
-      isolated = (grav_bnd == bnd_isolated) ! BEWARE: not elegant; probably there should be two global grav_bnd variables
+      isolated = (grav_bnd == bnd_isolated) !> \deprecated BEWARE: not elegant; probably there should be two global grav_bnd variables
 
       if (isolated) then
          grav_bnd = bnd_dirichlet
@@ -940,7 +942,7 @@ contains
 
       type(soln_history), intent(inout) :: history !< inner or outer potential history used for initializing first guess
 
-      real,    parameter :: suspicious_factor = 1.05 ! If the norm decreases too slowly then dump diagnostic output (BEWARE: this option is for tests only)
+      real,    parameter :: suspicious_factor = 1.05 !> \deprecated If the norm decreases too slowly then dump diagnostic output (BEWARE: this option is for tests only)
       integer            :: l, v
       real               :: norm_rhs, norm_lhs, norm_old, norm_lowest
       logical            :: dump_every_step, dump_result
@@ -1136,7 +1138,7 @@ contains
 
       ! Possible optimization candidate: reduce cache misses (secondary importance, cache-aware implementation required)
       ! Explicit loop over k gives here better performance than array operation due to less cache misses (at least on 32^3 and 64^3 arrays)
-      ! BEWARE: cylindrical factors go here
+      !> \deprecated BEWARE: cylindrical factors go here
       if (eff_dim == NDIM .and. .not. multidim_code_3D) then
          do k = lvl(lev)%ks, lvl(lev)%ke
             lvl(       lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k,   def)        = &
@@ -1235,7 +1237,7 @@ contains
 !      L0  = c40 * (lvl(lev)%idx2 + lvl(lev)%idy2 + lvl(lev)%idz2 )
       L0 = -2. * (Lx1 + Lx2 + Ly1 + Ly2 + Lz1 + Lz2)
 
-      !BEWARE: cylindrical factors go here
+      !> \deprecated BEWARE: cylindrical factors go here
       lvl(     lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   lvl(lev)%ks  :lvl(lev)%ke,   def)        = &
            lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   lvl(lev)%ks  :lvl(lev)%ke,   src)        - &
            lvl(lev)%mgvar(lvl(lev)%is-2:lvl(lev)%ie-2, lvl(lev)%js  :lvl(lev)%je,   lvl(lev)%ks  :lvl(lev)%ke,   soln) * Lx2 - &
@@ -1312,7 +1314,7 @@ contains
       endif
 
       if (prefer_rbgs_relaxation .and. soln == correction .and. lev <  level_max) call prolong_level(lev, correction)
-      ! BEWARE other implementations of the multigrid algorithm may be incompatible with prolongation called from here
+      !> \deprecated BEWARE other implementations of the multigrid algorithm may be incompatible with prolongation called from here
 
       call check_dirty(lev, soln, "approx_soln soln+")
 
@@ -1496,7 +1498,7 @@ contains
 
          call check_dirty(lev, soln, "approx_soln fft+")
 
-         !BEWARE use has_dir() here in a way that does not degrade performance
+         !> \deprecated BEWARE use has_dir() here in a way that does not degrade performance
 
          !relax the boundaries
          do n = 1, nsmool

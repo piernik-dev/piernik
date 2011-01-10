@@ -154,7 +154,7 @@ contains
 
 #ifdef IONIZED
 !  Compute indexes for the ionized fluid and update counters
-      allocate(nvar%ion) ! BEWARE: not deallocated
+      allocate(nvar%ion) !> \deprecated BEWARE: nvar\%ion not deallocated
       call ionized_index(nvar)
 #endif /* IONIZED */
 
@@ -232,7 +232,7 @@ contains
       iarr_all_crs(1:nvar%crs%all) = iarr_crs
 #endif /* COSM_RAYS */
 
-      allocate(nvar%all_fluids(nvar%fluids)) ! BEWARE: not deallocated
+      allocate(nvar%all_fluids(nvar%fluids)) !> \deprecated BEWARE: nvar\%fluids not deallocated
       i = 1
 #ifdef IONIZED
       nvar%all_fluids(i) = nvar%ion ; i = i + 1

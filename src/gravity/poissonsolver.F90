@@ -54,7 +54,7 @@ contains
     real, dimension(:,:,:), allocatable :: ala
 #endif /* SHEAR */
 
-    if (.not. all(has_dir(:))) call die("[poissonsolver:poisson_solve] Only 3D setups are supported") !BEWARE 2D and 1D probably need small fixes
+    if (.not. all(has_dir(:))) call die("[poissonsolver:poisson_solve] Only 3D setups are supported") !> \deprecated BEWARE 2D and 1D probably need small fixes
 
     if ( bnd_xl .eq. 'per' .and. bnd_xr .eq. 'per' .and. &
          bnd_yl .eq. 'per' .and. bnd_yr .eq. 'per' .and. &
@@ -67,7 +67,7 @@ contains
     elseif ( bnd_xl .eq. 'per' .and. bnd_xr .eq. 'per' .and. &
          &   bnd_yl .eq. 'per' .and. bnd_yr .eq. 'per' .and. &
          &   bnd_zl .eq. 'per' .and. bnd_zr .eq. 'per'        ) then ! Fully 3D periodic
-       call poisson_xyzp(dens(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), sgp(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)) ! BEWARE: something may not be fully initialized here
+       call poisson_xyzp(dens(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), sgp(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)) !> \deprecated BEWARE: something may not be fully initialized here
 
 #ifdef SHEAR
     elseif ( bnd_xl .eq. 'she' .and. bnd_xr .eq. 'she' .and. &
@@ -429,7 +429,7 @@ contains
 !
     factor = 1.0
 
-    !BEWARE: This routine will work incorrectly if dx /= dz or dy /= dz (poisson_xyzp was corrected in r2124)
+    !> \deprecated BEWARE: This routine will work incorrectly if dx /= dz or dy /= dz (poisson_xyzp was corrected in r2124)
     if (present(dz) .eqv. .true.) factor = dz * dz
 
     do k = 1, nz
@@ -561,7 +561,7 @@ contains
 
     norm = 1.0 / real( nx * ny * nz )
 
-! BEWARE: the plans can probably be reused and it might be more efficient to create them with FFTW_MEASURE
+!> \deprecated BEWARE: the plans can probably be reused and it might be more efficient to create them with FFTW_MEASURE
 ! create plan for the forward FFT
     call dfftw_plan_dft_r2c_3d(planf, nx, ny, nz, den, ctmp, FFTW_ESTIMATE)
 ! perform forward FFT 3D

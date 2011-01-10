@@ -495,8 +495,8 @@ module rtvd ! split orig
          end select
 
          grad_pcr(:) = 0
-         if (nvar%crn%all > 0) then ! BEWARE: quick hack
-            do icr = 1, 1 !nvar_crs  !<BEWARE TEMPORARY!
+         if (nvar%crn%all > 0) then !> \deprecated BEWARE: quick hack
+            do icr = 1, 1 !> \deprecated nvar_crs  !BEWARE TEMPORARY!
                decr(:)                = -(gamma_crs(icr)-1.)*u1(iarr_crs(icr),:)*divv(:)*dt
                u1  (iarr_crs(icr),:)  = u1(iarr_crs(icr),:) + rk2coef(integration_order,istep)*decr(:)
                u1  (iarr_crs(icr),:)  = max(smallecr,u1(iarr_crs(icr),:))

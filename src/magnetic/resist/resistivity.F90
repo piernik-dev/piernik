@@ -164,8 +164,8 @@ module resistivity
 !      real, dimension(cg%nx, cg%ny, cg%nz), intent(inout) :: eta
 
       if (inactive) return
-!BEWARE: uninitialized values are poisoning the wb(:,:,:) array
-!BEWARE: significant differences between single-CPU run and multi-CPU run (due to uninits?)
+!> \deprecated BEWARE: uninitialized values are poisoning the wb(:,:,:) array
+!> \deprecated BEWARE: significant differences between single-CPU run and multi-CPU run (due to uninits?)
 !--- square current computing in cell corner step by step
 
 !--- current_z
@@ -176,7 +176,7 @@ module resistivity
       if (has_dir(zdim)) then
          eta(:,:,2:cg%nz) = 0.25*( wb(:,:,2:cg%nz) + wb(:,:,1:cg%nz-1) )**2 ; eta(:,:,1) = eta(:,:,2)
       else
-         eta = wb**2    ! BEWARE: is it correct?
+         eta = wb**2    !> \deprecated BEWARE: is it correct?
       endif
 
       if (has_dir(zdim)) then

@@ -107,7 +107,7 @@ contains
       integer                          :: ierrh, div, idx, i, j, nxc, nx
       logical, save                    :: frun = .true.          !< First run flag
       real                             :: mb_alloc               !< Allocation counter
-      integer, dimension(6)            :: aerr                   !BEWARE: hardcoded magic integer. Update when you change number of simultaneous error checks
+      integer, dimension(6)            :: aerr                   !> \deprecated BEWARE: hardcoded magic integer. Update when you change number of simultaneous error checks
 
       namelist /MULTIGRID_SOLVER/ level_max, ord_prolong, ord_prolong_face, &
            &                      stdout, verbose_vcycle, do_ascii_dump, dirty_debug, multidim_code_3D, &
@@ -332,7 +332,7 @@ contains
          lvl(idx)%dvol2 = lvl(idx)%dvol**2
 
          ! data storage
-         ! BEWARE prolong_x and %prolong_xy are used only with RBGS relaxation when ord_prolong /= 0
+         !> \deprecated BEWARE prolong_x and %prolong_xy are used only with RBGS relaxation when ord_prolong /= 0
          if ( allocated(lvl(idx)%prolong_x) .or. allocated(lvl(idx)%prolong_xy) .or. allocated(lvl(idx)%mgvar) .or. &
               allocated(lvl(idx)%x) .or. allocated(lvl(idx)%y) .or. allocated(lvl(idx)%z) ) call die("[multigrid:init_multigrid] multigrid arrays already allocated")
          allocate( lvl(idx)%mgvar     (lvl(idx)%nx, lvl(idx)%ny,                  lvl(idx)%nz,                  ngridvars), stat=aerr(1) )
@@ -417,7 +417,7 @@ contains
       enddo
 
       ! mark external faces
-      ! BEWARE The checks may not work correctly for shear and corner boundaries
+      !> \deprecated BEWARE The checks may not work correctly for shear and corner boundaries
       is_external(:) = .false.
 
       if (gb_cartmap(proc)%proc(xdim) == 0        .and. (bnd_xl /= "mpi" .and. bnd_xl /= "per")) is_external(XLO) = .true.

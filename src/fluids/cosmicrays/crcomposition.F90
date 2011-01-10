@@ -49,12 +49,11 @@ module crcomposition
    integer, parameter :: icr_Be10 = 4
    integer, parameter :: icr_N14  = 5         !< from decay of Be7 with tau of 0.3 years
    integer, parameter :: icr_O16  = 6
-   integer, parameter :: icr_Li7  = 7    !!! BEWARE: ncrn should be set up gerater than maximum isotope numeber,
-                                  !!! which should be smaller than ncr_max (<10 currently)
+   integer, parameter :: icr_Li7  = 7    !< \deprecated BEWARE: ncrn should be set up gerater than maximum isotope numeber, which should be smaller than ncr_max (<10 currently)
 
 !<====Cross sections for spallation from Garcia-Munoz 1987 (see also Longair)====>
 
-   real, parameter :: mbarn=1e-27 !cm2   !!! BEWARE: this line breaks unit consistency, move it to constants.F90 and use scaling
+   real, parameter :: mbarn=1e-27 !> cm2   \deprecated BEWARE: this line breaks unit consistency, move it to constants.F90 and use scaling
 
    real, parameter :: sigma_C12_Li7  = 10*mbarn
    real, parameter :: sigma_C12_Be9  = 6*mbarn
@@ -68,9 +67,9 @@ module crcomposition
 
 !<====Decay half live times from Garcia-Munoz 1987====>
 
-   real,parameter :: Myear=1d6*365*24*60*60 !s !!! BEWARE: this line breaks unit consistency, move it to constants.F90 and use scaling
+   real,parameter :: Myear=1d6*365*24*60*60 !> s \deprecated BEWARE: this line breaks unit consistency, move it to constants.F90 and use scaling
 
-   real, parameter   :: tau_Be10 = 1.6 !Myr !!! BEWARE: this line breaks unit consistency, move it to constants.F90 and use scaling
+   real, parameter   :: tau_Be10 = 1.6 !> Myr \deprecated BEWARE: this line breaks unit consistency, move it to constants.F90 and use scaling
 
 !<Initial source abundances (in numer density) relative to hydrogen (compare e.g. Longair)>
 

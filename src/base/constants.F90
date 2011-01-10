@@ -228,8 +228,10 @@ contains
 #endif  /* VERBOSE */
       s_len_u  = ' undefined'; s_time_u = s_len_u; s_mass_u = s_len_u
 
-!!! BEWARE: miu0 and kelvin may be overwritten by values from problem.par even though we choose constant_set value one of the following
-!!! nevertheless, they are not used so far (r3612)
+!>
+!! \deprecated BEWARE: miu0 and kelvin may be overwritten by values from problem.par even though we choose constant_set value one of the following
+!! nevertheless, they are not used so far (r3612)
+!<
       select case (trim(constants_set))
          case ("PSM", "psm")
             ! PSM  uses: length --> pc,     mass --> Msun,        time --> myr,        miu0 --> 4*pi,    temperature --> kelvin
