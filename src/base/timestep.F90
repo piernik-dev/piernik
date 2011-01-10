@@ -46,7 +46,7 @@ contains
 !>
 !! \brief Initialization routine
 !!
-!! \detailsThis routine sets cfl_manager according to mpisetup::cflcontrol parameter.
+!! \details This routine sets cfl_manager according to mpisetup::cflcontrol parameter.
 !<
 
    subroutine init_time_step

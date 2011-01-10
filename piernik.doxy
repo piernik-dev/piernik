@@ -1437,7 +1437,7 @@ PREDEFINED             = COLLISIONS  \
       MULTIGRID  \
       NEW_HDF5  \
       NEW_HYDROSTATIC  \
-      UMUSCL  
+      UMUSCL
 #      NEW_HYDROSTATIC  \
 #      ISO  \
 #      ISO_LOCAL  \
