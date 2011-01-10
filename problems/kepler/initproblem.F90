@@ -136,7 +136,7 @@ contains
       use gravity,             only: r_smooth, r_grav, n_gravr, ptmass, source_terms_grav, grav_pot2accel, grav_pot_3d
       use grid,                only: cg, geometry
       use hydrostatic,         only: hydrostatic_zeq_densmid
-      use mpisetup,            only: smalld, smallei, zdim, has_dir
+      use mpisetup,            only: zdim, has_dir
       use types,               only: component_fluid
       use dataio_pub,          only: die
 
@@ -182,13 +182,13 @@ contains
                   else
                      u(fl%idn,i,j,k) = dout + (d0 - dout)/cosh(u(fl%idn,i,j,k))
                   endif
-                  u(fl%idn,i,j,k) = max(u(fl%idn,i,j,k), smalld)
+                  u(fl%idn,i,j,k) = u(fl%idn,i,j,k)
                   u(fl%imx,i,j,k) = vx*u(fl%idn,i,j,k)
                   u(fl%imy,i,j,k) = vy*u(fl%idn,i,j,k)
                   u(fl%imz,i,j,k) = vz*u(fl%idn,i,j,k)
                   if (fl%ien > 0) then
                      u(fl%ien,i,j,k) = fl%cs2/(fl%gam_1)*u(fl%idn,i,j,k)
-                     u(fl%ien,i,j,k) = max(u(fl%ien,i,j,k), smallei)
+!                     u(fl%ien,i,j,k) = max(u(fl%ien,i,j,k), smallei)
                      u(fl%ien,i,j,k) = u(fl%ien,i,j,k) +0.5*(vx**2+vy**2+vz**2)*u(fl%idn,i,j,k)
                   endif
                   if (trim(mag_field_orient) .eq. 'toroidal') then
@@ -208,9 +208,18 @@ contains
             enddo
          enddo
       else if (geometry=='cylindrical') then
-
-         write(msg,'(A,F9.5)') "cs2(150K) = ", kboltz * 150.0 / mH
+         call printinfo("------------------------------------------------------------------")
+         call printinfo(" Assuming temperature profile for MMSN ")
+         call printinfo(" T(R) = 150 ( R / 1 AU )^(-0.429) K")
+         write(msg,'(A,F5.1,A)') " T(xmin) = ", mmsn_T(cg%xmin)," K"
          call printinfo(msg)
+         write(msg,'(A,F5.1,A)') " T(xmax) = ", mmsn_T(cg%xmax)," K"
+         call printinfo(msg)
+         write(msg,'(A,F5.1,A)') " T_mean  = ", 0.5*(mmsn_T(cg%xmin)+mmsn_T(cg%xmax))," K"
+         call printinfo(msg)
+         write(msg,'(A,F9.5)') "[init_problem:initprob] cs2(T_mean) = ", kboltz * 0.5*(mmsn_T(cg%xmin)+mmsn_T(cg%xmax)) / mH
+         call printinfo(msg)
+         call printinfo("------------------------------------------------------------------")
          call grav_pot_3d
 
          if (.not.allocated(den0)) allocate(den0(nvar%fluids, cg%nx, cg%ny, cg%nz))
@@ -226,6 +235,10 @@ contains
 
          do p = 1, nvar%fluids
             fl => nvar%all_fluids(p)
+            if (fl%tag /= "DST") then
+               write(msg,'(A,F9.5)') "[init_problem:initprob] cs2 used = ", fl%cs2
+               call printinfo(msg)
+            endif
             call source_terms_grav
             call grav_pot2accel('xsweep',1,1, cg%nx, grav, 1)
 
@@ -244,8 +257,8 @@ contains
 
                   do k = 1, cg%nz
                      zk = cg%z(k)
-!                     u(fl%idn,i,j,k) = max(d0*(1./cosh((xi/r_max)**10)) * exp(-zk**2/H2),smalld)
-                     u(fl%idn,i,j,k) = max(dens_prof(i),smalld)
+!                     u(fl%idn,i,j,k) = max(d0*(1./cosh((xi/r_max)**10)) * exp(-zk**2/H2),1.e-10))
+                     u(fl%idn,i,j,k) = dens_prof(i)
                      if (fl%tag == "DST") u(fl%idn,i,j,k) = eps * u(fl%idn,i,j,k)
 
                      vr   = 0.0
@@ -262,7 +275,6 @@ contains
                      u(fl%imz,i,j,k) = vz   * u(fl%idn,i,j,k)
                      if (fl%ien > 0) then
                         u(fl%ien,i,j,k) = fl%cs2/(fl%gam_1)*u(fl%idn,i,j,k)
-                        u(fl%ien,i,j,k) = max(u(fl%ien,i,j,k), smallei)
                         u(fl%ien,i,j,k) = u(fl%ien,i,j,k) + 0.5*(vr**2+vphi**2+vz**2)*u(fl%idn,i,j,k)
                         ene0(p,i,j,k)   = u(fl%ien,i,j,k)
                      else
@@ -285,6 +297,15 @@ contains
       endif
 
    end subroutine init_prob
+
+   real function mmsn_T(r)
+      implicit none
+      real, intent(in) :: r         ! [AU]
+      real, parameter  :: T_0 = 150 ! [K]
+      real, parameter  :: k   = 0.429
+
+      mmsn_T = T_0 * r**(-k)
+   end function mmsn_T
 
 !-----------------------------------------------------------------------------
 
@@ -462,7 +483,7 @@ contains
          u(iarr_all_dn,i,:,:) = u(iarr_all_dn, cg%is,:,:)
          u(iarr_all_mx,i,:,:) = max(0.0,u(iarr_all_mx, cg%is,:,:))
          do p = 1, size(nvar%all_fluids)
-            u(iarr_all_my(p),i,:,:) = sqrt( abs(grav(i)) * cg%x(i) - cs2_arr(p)) *  u(iarr_all_dn(p),i,:,:)
+            u(iarr_all_my(p),i,:,:) = sqrt( abs(grav(i)) * cg%x(i) - cs2_arr(p)*dens_exp) *  u(iarr_all_dn(p),i,:,:)
          enddo
          u(iarr_all_mz,i,:,:) = u(iarr_all_mz, cg%is,:,:)
 #ifndef ISO
@@ -473,7 +494,7 @@ contains
       do i = cg%nb,1,-1
          vym(:,:,:) = u(iarr_all_my,i+2,:,:)/u(iarr_all_dn,i+1,:,:)
          vy(:,:,:)  = u(iarr_all_my,i+1,:,:)/u(iarr_all_dn,i+1,:,:)
-!         u(iarr_all_my,i,:,:) = (vym(:,:,:) + (x(i) - x(i+2)) / (x(i+1) - x(i+2)) * (vy - vym))*u(iarr_all_dn,i,:,:)
+         u(iarr_all_my,i,:,:) = (vym(:,:,:) + (cg%x(i) - cg%x(i+2)) / (cg%x(i+1) - cg%x(i+2)) * (vy - vym))*u(iarr_all_dn,i,:,:)
       enddo
 
    end subroutine my_bnd_xl
