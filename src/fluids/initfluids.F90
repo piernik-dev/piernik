@@ -205,6 +205,10 @@ module initfluids
       integer                         :: i
       real, pointer, dimension(:,:,:) :: dn, mx, my, mz, en, bx, by, bz
       real, parameter                 :: safety_factor = 1.e-4
+      real, parameter                 :: max_dens_span = 5.0
+      real                            :: maxdens, span
+
+      maxdens = 0.0
 
       bx => b(ibx,:,:,:)
       by => b(iby,:,:,:)
@@ -214,13 +218,20 @@ module initfluids
          do i = lbound(nvar%all_fluids,1), ubound(nvar%all_fluids,1)
             fl => nvar%all_fluids(i)
             dn => u(fl%idn,:,:,:)
-            smalld = min(minval(dn), smalld)
+
+            maxdens = max(maxval(dn), maxdens)
+            smalld  = min(minval(dn), smalld)
          enddo
+         span   = log10(maxdens) - log10(smalld)
          smalld = smalld * safety_factor
          call MPI_Allreduce(MPI_IN_PLACE, smalld, 1, MPI_DOUBLE_PRECISION, MPI_MIN, comm, ierr)
          if (master) then
             write(msg,'(A,ES11.4)') "[initfluids:sanitize_smallx_checks] adjusted smalld to ", smalld
             call warn(msg)
+            if (span > max_dens_span) then
+               write(msg,'(A,I3,A)') "[initfluids:sanitize_smallx_checks] density spans over ", int(span), " orders of magnitude!"
+               call warn(msg)
+            endif
          endif
       endif
 
