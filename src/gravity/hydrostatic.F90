@@ -175,6 +175,7 @@ contains
    subroutine hydrostatic_zeq_coldens(iia,jja,coldens,csim2)
 
       use arrays,   only: dprof
+      use grid,     only: cg
       use mpi,      only: MPI_DOUBLE_PRECISION, MPI_SUM
       use mpisetup, only: comm3d, ierr
 
@@ -188,7 +189,7 @@ contains
 
       sdprof = 1.0
       call hydrostatic_zeq_densmid(iia,jja,sdprof,csim2)
-      sdprof = sum(dprof)
+      sdprof = sum(dprof(cg%ks:cg%ke))
       remain = (/.false.,.false.,.true./)
       call MPI_Cart_sub(comm3d,remain,comm1d,ierr)
       call MPI_Allreduce(sdprof, sum_sdprof, 1, MPI_DOUBLE_PRECISION, MPI_SUM, comm1d, ierr)
