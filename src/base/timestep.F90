@@ -98,7 +98,7 @@ contains
       use resistivity,          only: dt_resist, timestep_resist
 #endif /* RESISTIVE */
 #ifdef FLUID_INTERACTIONS
-      use timestepinteractions, only: timestep_interactions, dt_interact
+      use timestepinteractions, only: timestep_interactions
 #endif /* FLUID_INTERACTIONS */
 #ifdef DEBUG
       use piernikdebug,         only: has_const_dt, constant_dt
@@ -144,8 +144,7 @@ contains
 #endif /* RESISTIVE */
 
 #ifdef FLUID_INTERACTIONS
-      call timestep_interactions
-      dt = min(dt,dt_interact)
+      dt = min(dt,timestep_interactions())
 #endif /* FLUID_INTERACTIONS */
 
       ! finally apply some sanity factors

@@ -33,8 +33,7 @@ module timestepinteractions
 ! pulled by FLUID_INTERACTIONS
    implicit none
    private
-   public :: dt_interact, timestep_interactions
-   real   :: dt_interact                    !< value of the upper limit of integration %timestep due to fluids %interactions.
+   public :: timestep_interactions
 
 contains
 !>
@@ -42,7 +41,7 @@ contains
 !! \warning works only with neutrals and dust case !!!!
 !! \todo check if subtraction of momenta is really the case (i am confused again - DW)
 !<
-  subroutine timestep_interactions
+  real function timestep_interactions() result(dt)
     use arrays,       only: u, b
     use constants,    only: small
     use fluidindex,   only: nvar
@@ -67,8 +66,8 @@ contains
 
     call MPI_Reduce(dt_interact_proc, dt_interact_all, 1, MPI_DOUBLE_PRECISION, MPI_MIN, 0, comm, ierr)
     call MPI_Bcast(dt_interact_all, 1, MPI_DOUBLE_PRECISION, 0, comm, ierr)
-    dt_interact = cfl_interact*dt_interact_all
+    dt = cfl_interact*dt_interact_all
 
-  end subroutine timestep_interactions
+  end function timestep_interactions
 !-------------------------------------------------------------------------------
 end module timestepinteractions
