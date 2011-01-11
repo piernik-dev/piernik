@@ -56,7 +56,7 @@ contains
 !! \n \n
 !! <table border="+1">
 !! <tr><td width="150pt"><b>parameter</b></td><td width="135pt"><b>default value</b></td><td width="200pt"><b>possible values</b></td><td width="315pt"> <b>description</b></td></tr>
-!! <tr><td>dragc_gas_dust</td><td>1.0    </td><td>real value</td><td>\copydoc initdust::dragc_gas_dust</td></tr>
+!! <tr><td>dragc_gas_dust</td><td>0.0    </td><td>real value</td><td>\copydoc initdust::dragc_gas_dust</td></tr>
 !! <tr><td>dalpha        </td><td>1.0    </td><td>real value</td><td>\copydoc initdust::dalpha        </td></tr>
 !! <tr><td>selfgrav_dst  </td><td>.false.</td><td>logical   </td><td>\copydoc initdust::selfgrav_dst  </td></tr>
 !! </table>
@@ -70,17 +70,15 @@ contains
 
     implicit none
 
-    namelist /FLUID_DUST/ dragc_gas_dust, dalpha, selfgrav_dst
+    namelist /FLUID_DUST/ dragc_gas_dust, selfgrav_dst
 
-    dragc_gas_dust  = 1.0
-    dalpha = 1.0
+    dragc_gas_dust  = 0.0
     selfgrav_dst = .false.
 
     if (master) then
        diff_nml(FLUID_DUST)
 
        rbuff(1)   = dragc_gas_dust
-       rbuff(2)   = dalpha
 
        lbuff(1)   = selfgrav_dst
     endif
@@ -93,10 +91,9 @@ contains
       selfgrav_dst    = lbuff(1)
 
       dragc_gas_dust  = rbuff(1)
-      dalpha          = rbuff(2)
 
     endif
-    taus = 1. / dragc_gas_dust
+    if (dragc_gas_dust > 0.0) taus = 1. / dragc_gas_dust
 
   end subroutine init_dust
 
