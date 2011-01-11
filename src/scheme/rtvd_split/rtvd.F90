@@ -405,11 +405,6 @@ module rtvd ! split orig
 #endif /* !GRAV */
 
 #ifdef FLUID_INTERACTIONS
-#ifdef SHEAR
-         df = global_gradP
-#else /* !SHEAR */
-         df = 0.0
-#endif /* !SHEAR */
          epsa(1,:) = dragc_gas_dust * u(iarr_all_dn(2),:)  / u(iarr_all_dn(1),:)
          epsa(2,:) = dragc_gas_dust
          where (u(iarr_all_dn,:) > 0.0)
@@ -428,10 +423,13 @@ module rtvd ! split orig
 
 #else /* !FLUID_INTERACTIONS */
          fricacc(:,:) = 0.0
-         df = 0.0
 #endif /* !FLUID_INTERACTIONS */
 
 #ifdef SHEAR
+         df = 0.0
+#ifdef FLUID_INTERACTIONS
+         df = global_gradP       !! \deprecated BEWARE: only for backward compatibility with old streaming problem
+#endif /* !FLUID_INTERACTIONS */
          where (u(iarr_all_dn,:) > 0.0)
             vy0(:,:)  = u(iarr_all_my,:)/u(iarr_all_dn,:)
          elsewhere
