@@ -391,6 +391,8 @@ for f in allfiles:
    else:
       os.symlink('../'+f,objdir+'/'+strip_leading_path([f])[0])
 
+if(options.param != 'problem.par'): os.symlink(options.param,objdir+'/'+'problem.par')
+
 makefile_head = open('compilers/'+compiler,'r').readlines()
 m = open(objdir+'/Makefile', 'w')
 
