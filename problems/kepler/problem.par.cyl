@@ -43,7 +43,7 @@
  /
 
  $BOUNDARIES
-    bnd_xl = 'user'
+    bnd_xl = 'out'
     bnd_xr = 'ref'
     bnd_yl = 'per'
     bnd_yr = 'per'
@@ -91,7 +91,7 @@
  /
 
  $PROBLEM_CONTROL
-    alpha   = 0.0
+    alpha   = 0.5
     d0      = 1700.0  ! g/cm**2 Desch
     dout    = 1.0e-4
     r_max   = 3.2
@@ -100,6 +100,9 @@
     r_out   = 2.1
     mag_field_orient = 'none'
     dens_exp = 1.5    ! Desch
+    dens_amb = 1.e-3
+    cutoff_ncells = 12
+    x_cut   = 0.65
     eps     = 0.1
  /
 

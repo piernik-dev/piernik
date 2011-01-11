@@ -40,20 +40,23 @@ module initproblem
    public :: read_problem_par, init_prob
 
    real                     :: d0, r_max, dout, alpha, r_in, r_out, f_in, f_out
-   real                     :: dens_exp     !< exponent in profile density \f$\rho(R) = \rho_0 R^{-k}\f$
-   real                     :: eps          !< dust to gas ratio
+   real                     :: dens_exp      !< exponent in profile density \f$\rho(R) = \rho_0 R^{-k}\f$
+   real                     :: dens_amb      !< density of ambient medium (used for inner cutoff)
+   real                     :: eps           !< dust to gas ratio
+   real                     :: x_cut         !< radius of inner disk cut-off
+   integer                  :: cutoff_ncells !< width of cut-off profile
    character(len=cbuff_len) :: mag_field_orient
    real, target, allocatable, dimension(:,:,:,:) :: den0, mtx0, mty0, mtz0, ene0
    integer, parameter       :: dname_len = 10
 
-   namelist /PROBLEM_CONTROL/  alpha, d0, dout, r_max, mag_field_orient, r_in, r_out, f_in, f_out, dens_exp, eps
+   namelist /PROBLEM_CONTROL/  alpha, d0, dout, r_max, mag_field_orient, r_in, r_out, f_in, f_out, dens_exp, eps, dens_amb, x_cut, cutoff_ncells
 
 contains
 !-----------------------------------------------------------------------------
    subroutine read_problem_par
       use dataio_pub,          only: ierrh, par_file, namelist_errh, compare_namelist      ! QA_WARN required for diff_nml
-      use mpisetup,            only: cbuff, rbuff, buffer_dim, master, slave, comm, ierr
-      use mpi,                 only: MPI_CHARACTER, MPI_DOUBLE_PRECISION
+      use mpisetup,            only: cbuff, rbuff, ibuff, buffer_dim, master, slave, comm, ierr
+      use mpi,                 only: MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER
       use gravity,             only: grav_pot_3d
       use grid,                only: geometry
       use types,               only: problem_customize_solution
@@ -73,11 +76,17 @@ contains
       f_out            = 0.0
 
       dens_exp         = 0.0
+      dens_amb         = 1.e-3
       eps              = 1.0
+      x_cut            = 0.6
+
+      cutoff_ncells    = 8.0
 
       if (master) then
 
          diff_nml(PROBLEM_CONTROL)
+
+         ibuff(1) = cutoff_ncells
 
          cbuff(1) = mag_field_orient
 
@@ -91,15 +100,20 @@ contains
          rbuff(8) = f_out
          rbuff(9)  = dens_exp
          rbuff(10) = eps
+         rbuff(11) = dens_amb
+         rbuff(12) = x_cut
 
       endif
 
       call MPI_Bcast(cbuff, cbuff_len*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
       call MPI_Bcast(rbuff,           buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+      call MPI_Bcast(ibuff,           buffer_dim, MPI_INTEGER         , 0, comm, ierr)
 
       if (slave) then
 
          mag_field_orient = cbuff(1)
+
+         cutoff_ncells    = ibuff(1)
 
          d0               = rbuff(1)
          dout             = rbuff(2)
@@ -111,6 +125,8 @@ contains
          f_out            = rbuff(8)
          dens_exp         = rbuff(9)
          eps              = rbuff(10)
+         dens_amb         = rbuff(11)
+         x_cut            = rbuff(12)
 
       endif
 
@@ -124,9 +140,7 @@ contains
       endif
 
    end subroutine read_problem_par
-
 !-----------------------------------------------------------------------------
-
    subroutine init_prob
       use dataio_pub,          only: msg, printinfo
       use types,               only: component_fluid
@@ -142,11 +156,12 @@ contains
 
       implicit none
 
-      integer :: i, j, k, kmid, p
+      integer :: i, j, k, kmid, p, middle_of_nx
+      integer, dimension(1) :: n_x_cut
       real    :: xi, yj, zk, rc, vx, vy, vz, b0, sqr_gm, vr, vphi
       real    :: csim2, gprim, H2
 
-      real, dimension(:), allocatable :: grav, dens_prof
+      real, dimension(:), allocatable :: grav, dens_prof, dens_cutoff, ln_dens_der
       type(component_fluid), pointer  :: fl
 
 !   Secondary parameters
@@ -229,9 +244,32 @@ contains
          if (.not.allocated(ene0)) allocate(ene0(nvar%fluids, cg%nx, cg%ny, cg%nz))
 
          if (.not.allocated(grav)) allocate(grav(cg%nx))
+         if (.not.allocated(ln_dens_der)) allocate(ln_dens_der(cg%nx))
          if (.not.allocated(dens_prof)) allocate(dens_prof(cg%nx))
+         if (.not.allocated(dens_cutoff)) allocate(dens_cutoff(cg%nx))
+
+         call source_terms_grav
+         call grav_pot2accel('xsweep',1,1, cg%nx, grav, 1)
 
          dens_prof(:) = d0 * cg%x(:)**(-dens_exp)  * gram / cm**2
+
+         middle_of_nx = cg%nx/2 + 1
+         n_x_cut      = maxloc(cg%x, mask=cg%x<=x_cut)
+         dens_prof    = min(dens_prof, get_lcutoff(cutoff_ncells, (middle_of_nx - n_x_cut(1)), cg%nx, dens_amb, dens_prof(n_x_cut(1))) )
+
+         !! \f$ v_\phi = \sqrt{R\left(c_s^2 \partial_R \ln\rho + \partial_R \Phi \right)} \f$
+         ln_dens_der  = log(dens_prof)
+         ln_dens_der(2:cg%nx)  = ( ln_dens_der(2:cg%nx) - ln_dens_der(1:cg%nx-1) ) / cg%dx
+         ln_dens_der(1)        = ln_dens_der(2)
+
+#ifdef DEBUG
+         open(143,file="dens_prof.dat",status="unknown")
+         do p = 1, cg%nx
+            write(143,'(4(ES14.4,1X))') cg%x(p), dens_prof(p), sqrt( max(cg%x(p)*(nvar%neu%cs2*ln_dens_der(p) + abs(grav(p))),0.0) ), &
+               sqrt( max(abs(grav(p)) * cg%x(p) - nvar%neu%cs2*dens_exp,0.0))
+         enddo
+         close(143)
+#endif /* DEBUG */
 
          do p = 1, nvar%fluids
             fl => nvar%all_fluids(p)
@@ -239,8 +277,6 @@ contains
                write(msg,'(A,F9.5)') "[init_problem:initprob] cs2 used = ", fl%cs2
                call printinfo(msg)
             endif
-            call source_terms_grav
-            call grav_pot2accel('xsweep',1,1, cg%nx, grav, 1)
 
             do j = 1, cg%ny
                yj = cg%y(j)
@@ -264,7 +300,8 @@ contains
                      vr   = 0.0
                      ! that condition is not necessary since cs2 == 0.0 for dust
                      if (fl%tag /= "DST") then
-                        vphi = sqrt( max(abs(grav(i)) * rc - fl%cs2*dens_exp,0.0))
+!                        vphi = sqrt( max(abs(grav(i)) * rc - fl%cs2*dens_exp,0.0))
+                         vphi = sqrt( max(cg%x(i)*(fl%cs2*ln_dens_der(i) + abs(grav(i))),0.0) )
                      else
                         vphi = sqrt( max(abs(grav(i)) * rc, 0.0))
                      endif
@@ -297,7 +334,7 @@ contains
       endif
 
    end subroutine init_prob
-
+!-----------------------------------------------------------------------------
    real function mmsn_T(r)
       implicit none
       real, intent(in) :: r         ! [AU]
@@ -306,9 +343,7 @@ contains
 
       mmsn_T = T_0 * r**(-k)
    end function mmsn_T
-
 !-----------------------------------------------------------------------------
-
    subroutine write_initial_fld_to_restart(file_id)
 
       use hdf5,        only: HID_T
@@ -336,9 +371,7 @@ contains
       enddo
 
    end subroutine write_initial_fld_to_restart
-
 !-----------------------------------------------------------------------------
-
    subroutine read_initial_fld_from_restart(file_id)
 
       use hdf5,        only: HID_T
@@ -410,11 +443,13 @@ contains
 
          funcR(1,:) = -tanh((cg%x(:)-r_in+1.0)**f_in) + 1.0
          funcR(1,:) = alpha*funcR(1,:)
+#ifdef DEBUG
          open(212,file="funcR.dat",status="unknown")
          do i = 1, cg%nx
             write(212,*) cg%x(i),funcR(1,i)
          enddo
          close(212)
+#endif /* DEBUG */
          frun = .false.
          funcR(:,:) = spread(funcR(1,:),1,size(iarr_all_dn))
       endif
@@ -516,5 +551,46 @@ contains
       u(iarr_all_en, cg%ie+1:cg%nx,:,:) = ene0(:, cg%ie+1:cg%nx,:,:)
 #endif
    end subroutine my_bnd_xr
+!-----------------------------------------------------------------------------
+   function get_lcutoff(width,dist,n,vmin,vmax) result(y)
+      implicit none
+      integer, intent(in) :: width  !< width of tanh profile [cells]
+      integer, intent(in) :: dist   !< distance between the expected position of the profile and the middle cell of the domain [cells]
+      integer, intent(in) :: n      !< length of the profile array
+      real, intent(in)    :: vmin   !< minimal value of the profile
+      real, intent(in)    :: vmax   !< maximum value of the profile
+      real, dimension(n)  :: y, x
+
+      real, parameter     :: kstep = 1.0 !< iteration step for tanh fit
+      real                :: dv, k
+      integer             :: nn, i
+
+      x = [(real(i), i=0,n-1)] / real(n) * 10.0 - 5.0
+
+      dv = vmax - vmin
+      nn = huge(1) ; k = 0.0
+
+      do while (width < nn)
+         k = k + kstep
+         nn = get_ncells(x,k)
+      enddo
+
+      y = 0.5*dv*(tanh(x*k) + 1.0) + vmin
+
+      if (dist < 0) then
+         y = eoshift(y,dim=1,shift=dist-width/2,boundary=vmin)
+      else
+         y = eoshift(y,dim=1,shift=dist+width/2,boundary=vmax)
+      endif
+   end function get_lcutoff
+!-----------------------------------------------------------------------------
+   integer function get_ncells(x,k)
+      implicit none
+      real, intent(in) :: k
+      real, intent(in), dimension(:) :: x
+      real, dimension(size(x))       :: y
+      y = tanh(x*k)
+      get_ncells = count(y > -0.99 .and. y < 0.99)
+   end function get_ncells
 !-----------------------------------------------------------------------------
 end module initproblem
