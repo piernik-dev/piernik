@@ -288,13 +288,13 @@ module rtvd ! split orig
       real, dimension(nvar%fluids,n) :: fricacc            !< acceleration caused by friction
       real, dimension(nvar%fluids,n) :: geosrc             !< source terms caused by geometry of coordinate system
       real, dimension(nvar%fluids,n) :: pressure           !< gas pressure
-      real, dimension(2)             :: df                 !< marker
       real, dimension(n)             :: gravacc            !< acceleration caused by gravitation
 #ifdef ISO_LOCAL
       real, dimension(n)             :: cs_iso2            !< square of local isothermal sound speed (optional for ISO_LOCAL)
 #endif /* ISO_LOCAL */
 
 #ifdef SHEAR
+      real, dimension(2)             :: df                 !< \deprecated additional acceleration term used in streaming problem
       real, dimension(nvar%fluids,n) :: vy0
 #endif /* SHEAR */
 
@@ -425,6 +425,9 @@ module rtvd ! split orig
          fricacc(:,:) = 0.0
 #endif /* !FLUID_INTERACTIONS */
 
+!! \deprecated BEWARE: whole shearing bit is heavily biased towards streaming problem, currently works only for 2.5D case, i.e. nyd=1 + source_terms_y
+!! \todo FIX ME!!!
+!! \todo move me to shear module and provide pointer
 #ifdef SHEAR
          df = 0.0
 #ifdef FLUID_INTERACTIONS
