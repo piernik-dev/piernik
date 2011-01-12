@@ -30,7 +30,7 @@
 !! \brief (DW) Module containing a routine to compute upper limit of %timestep due to fluids %interactions.
 !<
 module timestepinteractions
-! pulled by FLUID_INTERACTIONS
+! pulled by ANY
    implicit none
    private
    public :: timestep_interactions
@@ -45,7 +45,7 @@ contains
     use arrays,       only: u, b
     use constants,    only: small
     use fluidindex,   only: nvar
-    use interactions, only: collfaq, cfl_interact
+    use interactions, only: collfaq, cfl_interact, has_interactions
     use mpisetup,     only: comm, ierr
     use mpi,          only: MPI_MIN, MPI_DOUBLE_PRECISION
 
@@ -59,14 +59,18 @@ contains
 
     !> \deprecated BEWARE: works only with neu+dust!!!!
 
-    val = maxval (  sqrt( (u(nvar%dst%imx,:,:,:)-u(nvar%neu%imx,:,:,:))**2 + &
+    if (has_interactions) then
+       val = maxval (  sqrt( (u(nvar%dst%imx,:,:,:)-u(nvar%neu%imx,:,:,:))**2 + &
                     (u(nvar%dst%imy,:,:,:)-u(nvar%neu%imy,:,:,:))**2 + &
                     (u(nvar%dst%imz,:,:,:)-u(nvar%neu%imz,:,:,:))**2   ) * u(nvar%dst%idn,:,:,:) )
-    dt_interact_proc = nvar%neu%cs / (maxval(collfaq) * val + small)
+       dt_interact_proc = nvar%neu%cs / (maxval(collfaq) * val + small)
 
-    call MPI_Reduce(dt_interact_proc, dt_interact_all, 1, MPI_DOUBLE_PRECISION, MPI_MIN, 0, comm, ierr)
-    call MPI_Bcast(dt_interact_all, 1, MPI_DOUBLE_PRECISION, 0, comm, ierr)
-    dt = cfl_interact*dt_interact_all
+       call MPI_Reduce(dt_interact_proc, dt_interact_all, 1, MPI_DOUBLE_PRECISION, MPI_MIN, 0, comm, ierr)
+       call MPI_Bcast(dt_interact_all, 1, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+       dt = cfl_interact*dt_interact_all
+    else
+       dt = huge(real(1.0,4))
+    endif
 
   end function timestep_interactions
 !-------------------------------------------------------------------------------

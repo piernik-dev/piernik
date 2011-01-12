@@ -226,6 +226,7 @@ module rtvd ! split orig
       use fluxes,           only: flimiter, all_fluxes
       use mpisetup,         only: smalld, integration_order, use_smalld, local_magic_mass
       use gridgeometry,     only: gc, geometry_source_terms
+      use interactions,     only: fluid_interactions
 #ifndef ISO
       use fluidindex,       only: iarr_all_en
       use mpisetup,         only: smallei
@@ -244,12 +245,9 @@ module rtvd ! split orig
       use sourcecosmicrays, only: src_crn
 #endif /* COSM_RAYS_SOURCES */
 #endif /* COSM_RAYS */
-#ifdef FLUID_INTERACTIONS
-      use interactions,     only: dragc_gas_dust
 #ifdef FLUID_INTERACTIONS_DW
-      use interactions,     only: fluid_interactions
-#endif /* FLUID_INTERACTIONS_DW */
-#endif /* FLUID_INTERACTIONS */
+      use interactions,     only: fluid_interactions_dw
+#endif /* FLUID_INTERACTIONS_DW *
 #ifdef ISO_LOCAL
       use arrays,           only: cs_iso2_arr
 #endif /* ISO_LOCAL */
@@ -266,16 +264,14 @@ module rtvd ! split orig
       real,                        intent(in)  :: dt                 !< time step
 
       integer                        :: istep              !< step number in the time integration scheme
-#if defined GRAV || defined SHEAR || defined FLUID_INTERACTIONS
+#if defined GRAV || defined SHEAR
       integer                        :: ind                !< fluid index
-#endif /* defined GRAV || defined SHEAR || defined FLUID_INTERACTIONS */
+#endif /* defined GRAV || defined SHEAR */
 
       real                           :: dtx                !< dt/dx
       real, dimension(nvar%all,n)    :: cfr                !< freezing speed
-#if defined GRAV || defined SHEAR || defined FLUID_INTERACTIONS
-      real, dimension(nvar%fluids,n) :: acc                !< acceleration
-#endif /* defined GRAV || defined SHEAR || defined FLUID_INTERACTIONS */
 !locals
+      real, dimension(nvar%fluids,n) :: acc                !< acceleration
       real, dimension(nvar%all,n)    :: u0                 !< initial state of conservative variables
       real, dimension(nvar%all,n)    :: w                  !< auxiliary vector to calculate fluxes
       real, dimension(nvar%all,n)    :: fr                 !< flux of the right-moving waves
@@ -289,8 +285,10 @@ module rtvd ! split orig
       real, dimension(nvar%fluids,n) :: rotacc             !< acceleration caused by rotation
       real, dimension(nvar%fluids,n) :: fricacc            !< acceleration caused by friction
       real, dimension(nvar%fluids,n) :: geosrc             !< source terms caused by geometry of coordinate system
-      real, dimension(nvar%fluids,n) :: pressure           !< gas pressure
-      real, dimension(nvar%fluids,n) :: vel_sweep          !< velocity in the direction of current sweep
+      real, dimension(nvar%fluids,n), target :: pressure   !< gas pressure
+      real, dimension(nvar%fluids,n), target :: density    !< gas density
+      real, dimension(nvar%fluids,n), target :: vel_sweep  !< velocity in the direction of current sweep
+      real, dimension(:,:), pointer  :: dens, vx
       real, dimension(n)             :: gravacc            !< acceleration caused by gravitation
 #ifdef ISO_LOCAL
       real, dimension(n)             :: cs_iso2            !< square of local isothermal sound speed (optional for ISO_LOCAL)
@@ -318,16 +316,13 @@ module rtvd ! split orig
       real, dimension(n)             :: divv,grad_pcr,ecr
       real, dimension(n)             :: decr
 #endif /* COSM_RAYS */
-#ifdef FLUID_INTERACTIONS
-      real, dimension(nvar%fluids,n) :: epsa, vx0
-#endif /* FLUID_INTERACTIONS */
 #ifdef FLUID_INTERACTIONS_DW
       real, dimension(nvar%all,n)    :: dintr
 #endif /* FLUID_INTERACTIONS_DW */
 
       real, dimension(2,2), parameter:: rk2coef = RESHAPE( (/1.0,0.5,0.0,1.0/),(/2,2/))
 
-#if !defined(ISO_LOCAL) && !defined(GRAV) && ! defined(FLUID_INTERACTIONS_DW) && !(defined COSM_RAYS && defined IONIZED)
+#if !defined(ISO_LOCAL) && !defined(GRAV) && !(defined COSM_RAYS && defined IONIZED)
       integer                        :: dummy
       if (.false.) dummy = i1 + i2 ! suppress compiler warnings on unused arguments
 #endif /* !ISO_LOCAL && !GRAV && !FLUID_INTERACTIONS_DW && !(COSM_RAYS && IONIZED) */
@@ -342,6 +337,9 @@ module rtvd ! split orig
       u1 = u
       u0 = u
 
+      vx   => vel_sweep
+      dens => density
+
 #ifdef ISO_LOCAL
       if (sweep .eq. 'xsweep') then
          cs_iso2(:) =  cs_iso2_arr(:,i1,i2)
@@ -353,7 +351,7 @@ module rtvd ! split orig
 #endif /* ISO_LOCAL */
 
       do istep=1,integration_order
-
+         density(:,:) = u(iarr_all_dn,:)
 ! Fluxes calculation for cells centers
 #ifdef ISO_LOCAL
          call all_fluxes(n, w, cfr, u1, bb, pressure, vel_sweep, cs_iso2)
@@ -407,26 +405,7 @@ module rtvd ! split orig
          u1(iarr_all_mx,:) = u1(iarr_all_mx,:) + rk2coef(integration_order,istep)*geosrc(:,:)*dt
 #endif /* !GRAV */
 
-#ifdef FLUID_INTERACTIONS
-         epsa(1,:) = dragc_gas_dust * u(iarr_all_dn(2),:)  / u(iarr_all_dn(1),:)
-         epsa(2,:) = dragc_gas_dust
-         where (u(iarr_all_dn,:) > 0.0)
-            vx0(:,:)  = u(iarr_all_mx,:)/u(iarr_all_dn,:)
-         elsewhere
-            vx0(:,:)  = 0.0
-         endwhere
-
-         do ind = 1, nvar%fluids
-            if (ind == 1) then
-               fricacc(ind,:) = - epsa(ind,:) * (vx0(1,:) - vx0(2,:))
-            else
-               fricacc(ind,:) = - epsa(ind,:) * (vx0(2,:) - vx0(1,:))
-            endif
-         enddo
-
-#else /* !FLUID_INTERACTIONS */
-         fricacc(:,:) = 0.0
-#endif /* !FLUID_INTERACTIONS */
+         call fluid_interactions(dens, vx, fricacc)
 
 !! \deprecated BEWARE: whole shearing bit is heavily biased towards streaming problem, currently works only for 2.5D case, i.e. nyd=1 + source_terms_y
 !! \todo FIX ME!!!
@@ -484,7 +463,7 @@ module rtvd ! split orig
 
 #ifdef FLUID_INTERACTIONS_DW
          !!!! old, more general way of adding interactions
-         call fluid_interactions(sweep,i1,i2, n, dintr, u)
+         call fluid_interactions_dw(sweep,i1,i2, n, dintr, u)
          u1 = u1 + rk2coef(integration_order,istep)*dintr*dt
 #endif /* FLUID_INTERACTIONS_DW */
 

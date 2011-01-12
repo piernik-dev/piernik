@@ -196,9 +196,7 @@ contains
 #ifdef GRAV
       use gravity,               only: init_grav, grav_pot_3d
 #endif /* GRAV */
-#ifdef FLUID_INTERACTIONS
       use interactions,          only: init_interactions
-#endif /* FLUID_INTERACTIONS */
 #ifdef MULTIGRID
       use multigrid,             only: init_multigrid
 #endif /* MULTIGRID */
@@ -267,9 +265,7 @@ contains
       endif
 #endif /* GRAV */
 
-#ifdef FLUID_INTERACTIONS
       call init_interactions
-#endif /* FLUID_INTERACTIONS */
 
 #ifdef SN_SRC
       call init_snsources
