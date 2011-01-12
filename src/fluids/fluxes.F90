@@ -131,7 +131,7 @@ contains
 !! \param pp
 !<
 
-   subroutine all_fluxes(n, flux, cfr, uu, bb, pp, cs_iso2)
+   subroutine all_fluxes(n, flux, cfr, uu, bb, pp, vx, cs_iso2)
       use types,          only: component_fluid
 #ifdef COSM_RAYS
       use fluxcosmicrays, only: flux_crs
@@ -140,13 +140,12 @@ contains
 
       implicit none
 
-      integer,                      intent(in)  :: n
-      real, dimension(nvar%all,n),  intent(out), target :: flux, cfr, uu
-      real, dimension(nmag,n),      intent(in),  target :: bb
-      real, dimension(n), optional, intent(in),  target :: cs_iso2
-
-      real, dimension(nvar%fluids,n), target            :: vx
-      real, dimension(nvar%fluids,n), target            :: pp
+      integer, intent(in)  :: n
+      real, dimension(nvar%all,n),    intent(out), target :: flux, cfr, uu
+      real, dimension(nmag,n),        intent(in),  target :: bb
+      real, dimension(nvar%fluids,n), intent(out), target :: vx
+      real, dimension(nvar%fluids,n), intent(out), target :: pp
+      real, dimension(n), optional,   intent(in),  target :: cs_iso2
 
       real, dimension(:,:), pointer                     :: pflux, pcfr, puu, pbb
       real, dimension(:), pointer                       :: pcs2, pvx, ppp

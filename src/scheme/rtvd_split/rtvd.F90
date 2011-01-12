@@ -290,6 +290,7 @@ module rtvd ! split orig
       real, dimension(nvar%fluids,n) :: fricacc            !< acceleration caused by friction
       real, dimension(nvar%fluids,n) :: geosrc             !< source terms caused by geometry of coordinate system
       real, dimension(nvar%fluids,n) :: pressure           !< gas pressure
+      real, dimension(nvar%fluids,n) :: vel_sweep          !< velocity in the direction of current sweep
       real, dimension(n)             :: gravacc            !< acceleration caused by gravitation
 #ifdef ISO_LOCAL
       real, dimension(n)             :: cs_iso2            !< square of local isothermal sound speed (optional for ISO_LOCAL)
@@ -355,9 +356,9 @@ module rtvd ! split orig
 
 ! Fluxes calculation for cells centers
 #ifdef ISO_LOCAL
-         call all_fluxes(n, w, cfr, u1, bb, cs_iso2)
+         call all_fluxes(n, w, cfr, u1, bb, pressure, vel_sweep, cs_iso2)
 #else /* !ISO_LOCAL */
-         call all_fluxes(n, w, cfr, u1, bb, pressure)
+         call all_fluxes(n, w, cfr, u1, bb, pressure, vel_sweep)
 #endif /* !ISO_LOCAL */
 ! Right and left fluxes decoupling
 
