@@ -43,7 +43,6 @@ module initdust
    public ! QA_WARN no secrets are kept here
 
    integer               :: idnd, imxd, imyd, imzd
-   real                  :: dragc_gas_dust, taus
    logical               :: selfgrav_dst
 
 contains
@@ -56,7 +55,6 @@ contains
 !! \n \n
 !! <table border="+1">
 !! <tr><td width="150pt"><b>parameter</b></td><td width="135pt"><b>default value</b></td><td width="200pt"><b>possible values</b></td><td width="315pt"> <b>description</b></td></tr>
-!! <tr><td>dragc_gas_dust</td><td>0.0    </td><td>real value</td><td>\copydoc initdust::dragc_gas_dust</td></tr>
 !! <tr><td>selfgrav_dst  </td><td>.false.</td><td>logical   </td><td>\copydoc initdust::selfgrav_dst  </td></tr>
 !! </table>
 !! \n \n
@@ -64,35 +62,28 @@ contains
   subroutine init_dust
 
     use dataio_pub,     only: par_file, ierrh, namelist_errh, compare_namelist  ! QA_WARN required for diff_nml
-    use mpisetup,       only: master, slave, rbuff, lbuff, buffer_dim, comm, ierr
-    use mpi,            only: MPI_LOGICAL, MPI_DOUBLE_PRECISION
+    use mpisetup,       only: master, slave, lbuff, buffer_dim, comm, ierr
+    use mpi,            only: MPI_LOGICAL
 
     implicit none
 
-    namelist /FLUID_DUST/ dragc_gas_dust, selfgrav_dst
+    namelist /FLUID_DUST/ selfgrav_dst
 
-    dragc_gas_dust  = 0.0
     selfgrav_dst = .false.
 
     if (master) then
        diff_nml(FLUID_DUST)
 
-       rbuff(1)   = dragc_gas_dust
-
        lbuff(1)   = selfgrav_dst
     endif
 
-    call MPI_Bcast(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
     call MPI_Bcast(lbuff,    buffer_dim, MPI_LOGICAL,          0, comm, ierr)
 
     if (slave) then
 
       selfgrav_dst    = lbuff(1)
 
-      dragc_gas_dust  = rbuff(1)
-
     endif
-    if (dragc_gas_dust > 0.0) taus = 1. / dragc_gas_dust
 
   end subroutine init_dust
 

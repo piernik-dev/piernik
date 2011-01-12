@@ -42,11 +42,13 @@ module interactions
    implicit none
 
    private
-   public :: init_interactions, fluid_interactions, collfaq, cfl_interact
+   public :: init_interactions, fluid_interactions, collfaq, cfl_interact, dragc_gas_dust
 
    real, allocatable, dimension(:,:)      :: collfaq     !< nvar%fluids x nvar%fluids array of collision factors
    real :: collision_factor                              !< collision factor
    real :: cfl_interact                                  !< Courant factor for %interactions
+   real :: dragc_gas_dust                                !< \deprecated remove me
+   real :: taus                                          !< stopping time
 
 contains
 !>
@@ -59,7 +61,8 @@ contains
 !! <table border="+1">
 !! <tr><td width="150pt"><b>parameter</b></td><td width="135pt"><b>default value</b></td><td width="200pt"><b>possible values</b></td><td width="315pt"> <b>description</b></td></tr>
 !! <tr><td>collision_factor</td><td>0.0</td><td>real value, between 0 and 1</td><td>\copydoc interactions::collision_factor</td></tr>
-!! <tr><td>cfl_interact    </td><td>0.8</td><td>real value, between 0 and 1</td><td>\copydoc interactions::cfl_interact    </td></tr>
+!! <tr><td>dragc_gas_dust  </td><td>0.0</td><td>real value</td>                 <td>\copydoc interactions::dragc_gas_dust</td></tr>
+!! <tr><td>cfl_interact    </td><td>0.8</td><td>real value, between 0 and 1</td><td>\copydoc interactions::cfl_interact</td></tr>
 !! </table>
 !! \n \n
 !<
@@ -69,16 +72,14 @@ contains
       use fluidindex,    only: nvar
       use mpisetup,      only: master, slave, rbuff, buffer_dim, ierr, comm
       use mpi,           only: MPI_DOUBLE_PRECISION
-#ifdef DUST
-      use initdust,      only: dragc_gas_dust
-#endif /* DUST */
 
       implicit none
 
-      namelist /INTERACTIONS/ collision_factor, cfl_interact
+      namelist /INTERACTIONS/ collision_factor, cfl_interact, dragc_gas_dust
 
       collision_factor  = 0.0
       cfl_interact      = 0.8
+      dragc_gas_dust    = 0.0
 
       if (master) then
 
@@ -86,6 +87,7 @@ contains
 
          rbuff(1)  = collision_factor
          rbuff(2)  = cfl_interact
+         rbuff(3)  = dragc_gas_dust
 
       endif
 
@@ -95,6 +97,7 @@ contains
 
          collision_factor     = rbuff(1)
          cfl_interact         = rbuff(2)
+         dragc_gas_dust       = rbuff(3)
 
       endif
 
@@ -102,6 +105,8 @@ contains
       collfaq = collision_factor
       collfaq(nvar%dst%pos,:) = dragc_gas_dust
       collfaq(:,nvar%dst%pos) = dragc_gas_dust
+
+      if (dragc_gas_dust > 0.0) taus = 1. / dragc_gas_dust
 
    end subroutine init_interactions
 !>

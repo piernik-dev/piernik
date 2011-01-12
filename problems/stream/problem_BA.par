@@ -63,11 +63,11 @@
  /
 
  $FLUID_DUST
-    dragc_gas_dust = 1.0
  /
 
  $INTERACTIONS
     cfl_interact = 0.1
+    dragc_gas_dust = 1.0
  /
 
  $NUMERICAL_SETUP

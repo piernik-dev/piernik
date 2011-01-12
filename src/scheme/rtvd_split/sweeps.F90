@@ -45,9 +45,7 @@ contains
       use grid,            only: cg
       use mpisetup,        only: dt
       use shear,           only: omega, qshear
-#ifdef DUST
-      use initdust,        only: dragc_gas_dust
-#endif /* DUST */
+      use interactions,    only: dragc_gas_dust
 
       implicit none
       real, dimension(size(iarr_all_my), cg%nx, cg%nz) :: vxr, v_r, rotaccr

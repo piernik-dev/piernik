@@ -245,8 +245,10 @@ module rtvd ! split orig
 #endif /* COSM_RAYS_SOURCES */
 #endif /* COSM_RAYS */
 #ifdef FLUID_INTERACTIONS
-      use initdust,         only: dragc_gas_dust
+      use interactions,     only: dragc_gas_dust
+#ifdef FLUID_INTERACTIONS_DW
       use interactions,     only: fluid_interactions
+#endif /* FLUID_INTERACTIONS_DW */
 #endif /* FLUID_INTERACTIONS */
 #ifdef ISO_LOCAL
       use arrays,           only: cs_iso2_arr

@@ -110,9 +110,7 @@ module initproblem
       use mpisetup,      only: proc
       use shear,         only: omega
       use types,         only: component_fluid
-#ifdef DUST
-      use initdust,      only: dragc_gas_dust
-#endif /* DUST */
+      use interactions,  only: dragc_gas_dust
 #ifdef SHEAR
       use shear,         only: eta_gas, csvk
 #endif /* SHEAR */
@@ -133,7 +131,7 @@ module initproblem
 #ifdef NEUTRAL
       neu => nvar%neu
 #else /* !NEUTRAL */
-      call warn("[initproblem]: Dust fluid not initialized. I hope you know what you are doing!"
+      call warn("[initproblem]: Neutral fluid not initialized. I hope you know what you are doing!"
 #endif /* !NEUTRAL */
 
       if (run_id == 'lnA') then
