@@ -149,9 +149,9 @@ contains
       real, dimension(:,:), intent(in), pointer :: velx
       real, dimension(size(dens,1),size(dens,2)), intent(out) :: acc
 
-      acc(nvar%dst%pos,:) =  dragc_gas_dust * (velx(nvar%dst%pos,:) - velx(nvar%neu%pos,:))
+      acc(nvar%dst%pos,:) = -dragc_gas_dust * (velx(nvar%dst%pos,:) - velx(nvar%neu%pos,:))
       acc(nvar%neu%pos,:) = -acc(nvar%dst%pos,:) * dens(nvar%dst%pos,:) / dens(nvar%neu%pos,:)
-!      acc(nvar%neu%pos,:) = dragc_gas_dust * dens(nvar%dst%pos,:) / dens(nvar%neu%pos,:) * ( velx(nvar%neu%pos,:) - velx(nvar%dst%pos,:) )
+!      acc(nvar%neu%pos,:) = -dragc_gas_dust * dens(nvar%dst%pos,:) / dens(nvar%neu%pos,:) * ( velx(nvar%neu%pos,:) - velx(nvar%dst%pos,:) )
 
    end subroutine fluid_interactions_aero_drag
 
