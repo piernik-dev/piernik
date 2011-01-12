@@ -114,3 +114,6 @@
      interp_pt2mom = .true.
 !    interp_mom2pot = .true.
  /
+
+ $INTERACTIONS
+ /

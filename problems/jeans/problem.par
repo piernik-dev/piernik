@@ -114,3 +114,6 @@
     grav_bnd_str  = "periodic"
 !    prefer_rbgs_relaxation = .true.
  /
+
+ $INTERACTIONS
+ /

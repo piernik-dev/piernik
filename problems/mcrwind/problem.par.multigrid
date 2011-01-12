@@ -152,3 +152,6 @@
     amp_cr       =  1000.0     ! amplitude of expl. (init_problem, x0,y0,z0)
     alpha        =  1.0
  /
+
+ $INTERACTIONS
+ /

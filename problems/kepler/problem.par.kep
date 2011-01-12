@@ -100,3 +100,6 @@
     d0      = 1.0
     mag_field_orient = 'toroidal'
 /
+
+ $INTERACTIONS
+ /

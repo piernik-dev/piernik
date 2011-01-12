@@ -129,3 +129,6 @@
     y0           =  0.0     ! zadawanego w init_prob (do celow testowych)
     z0           =  0.0     !
  /
+
+ $INTERACTIONS
+ /

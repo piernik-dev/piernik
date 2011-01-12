@@ -110,3 +110,6 @@
     aux_par_I0 = 0
     grav_bnd_str = "dir"
  /
+
+ $INTERACTIONS
+ /

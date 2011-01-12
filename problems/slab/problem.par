@@ -94,3 +94,6 @@
    qshear = 1.5
    omega  = 1.0
  /
+
+ $INTERACTIONS
+ /

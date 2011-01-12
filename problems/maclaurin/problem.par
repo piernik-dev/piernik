@@ -108,3 +108,6 @@
     nsmool    = 4
     grav_bnd_str  = "isolated"
  /
+
+ $INTERACTIONS
+ /
