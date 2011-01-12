@@ -43,7 +43,7 @@ module initdust
    public ! QA_WARN no secrets are kept here
 
    integer               :: idnd, imxd, imyd, imzd
-   real                  :: dragc_gas_dust, taus, dalpha
+   real                  :: dragc_gas_dust, taus
    logical               :: selfgrav_dst
 
 contains
@@ -57,7 +57,6 @@ contains
 !! <table border="+1">
 !! <tr><td width="150pt"><b>parameter</b></td><td width="135pt"><b>default value</b></td><td width="200pt"><b>possible values</b></td><td width="315pt"> <b>description</b></td></tr>
 !! <tr><td>dragc_gas_dust</td><td>0.0    </td><td>real value</td><td>\copydoc initdust::dragc_gas_dust</td></tr>
-!! <tr><td>dalpha        </td><td>1.0    </td><td>real value</td><td>\copydoc initdust::dalpha        </td></tr>
 !! <tr><td>selfgrav_dst  </td><td>.false.</td><td>logical   </td><td>\copydoc initdust::selfgrav_dst  </td></tr>
 !! </table>
 !! \n \n
