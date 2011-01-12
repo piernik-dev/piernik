@@ -45,18 +45,26 @@ module initproblem
    real                     :: eps           !< dust to gas ratio
    real                     :: x_cut         !< radius of inner disk cut-off
    integer                  :: cutoff_ncells !< width of cut-off profile
+   real, save               :: T_inner = 0.0 !< Orbital period at the inner boundary, \todo save it to restart as an attribute
+   !>
+   !! \f$\tau\f$ in \f$\frac{Du}{Dt} = - \frac{u-u_0}{\tau}f(R)
+   !! when initproblem::problem_customize_solution is used
+   !<
+   real                     :: dumping_coeff
+   logical                  :: use_inner_orbital_period  !< use 1./T_inner as dumping_coeff
    character(len=cbuff_len) :: mag_field_orient
    real, target, allocatable, dimension(:,:,:,:) :: den0, mtx0, mty0, mtz0, ene0
    integer, parameter       :: dname_len = 10
 
-   namelist /PROBLEM_CONTROL/  alpha, d0, dout, r_max, mag_field_orient, r_in, r_out, f_in, f_out, dens_exp, eps, dens_amb, x_cut, cutoff_ncells
+   namelist /PROBLEM_CONTROL/  alpha, d0, dout, r_max, mag_field_orient, r_in, r_out, f_in, f_out, &
+      & dens_exp, eps, dens_amb, x_cut, cutoff_ncells, dumping_coeff, use_inner_orbital_period
 
 contains
 !-----------------------------------------------------------------------------
    subroutine read_problem_par
       use dataio_pub,          only: ierrh, par_file, namelist_errh, compare_namelist      ! QA_WARN required for diff_nml
-      use mpisetup,            only: cbuff, rbuff, ibuff, buffer_dim, master, slave, comm, ierr
-      use mpi,                 only: MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER
+      use mpisetup,            only: cbuff, rbuff, ibuff, lbuff, buffer_dim, master, slave, comm, ierr
+      use mpi,                 only: MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL
       use gravity,             only: grav_pot_3d
       use grid,                only: geometry
       use types,               only: problem_customize_solution
@@ -81,12 +89,17 @@ contains
       x_cut            = 0.6
 
       cutoff_ncells    = 8.0
+      dumping_coeff    = 1.0
+
+      use_inner_orbital_period = .false.
 
       if (master) then
 
          diff_nml(PROBLEM_CONTROL)
 
          ibuff(1) = cutoff_ncells
+
+         lbuff(1) = use_inner_orbital_period
 
          cbuff(1) = mag_field_orient
 
@@ -102,18 +115,22 @@ contains
          rbuff(10) = eps
          rbuff(11) = dens_amb
          rbuff(12) = x_cut
+         rbuff(13) = dumping_coeff
 
       endif
 
       call MPI_Bcast(cbuff, cbuff_len*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
       call MPI_Bcast(rbuff,           buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
       call MPI_Bcast(ibuff,           buffer_dim, MPI_INTEGER         , 0, comm, ierr)
+      call MPI_Bcast(lbuff,           buffer_dim, MPI_LOGICAL         , 0, comm, ierr)
 
       if (slave) then
 
-         mag_field_orient = cbuff(1)
-
          cutoff_ncells    = ibuff(1)
+
+         use_inner_orbital_period = lbuff(1)
+
+         mag_field_orient = cbuff(1)
 
          d0               = rbuff(1)
          dout             = rbuff(2)
@@ -127,6 +144,7 @@ contains
          eps              = rbuff(10)
          dens_amb         = rbuff(11)
          x_cut            = rbuff(12)
+         dumping_coeff    = rbuff(13)
 
       endif
 
@@ -145,7 +163,7 @@ contains
       use dataio_pub,          only: msg, printinfo
       use types,               only: component_fluid
       use arrays,              only: u, b, dprof
-      use constants,           only: newtong, gram, cm, kboltz, mH
+      use constants,           only: newtong, gram, cm, kboltz, mH, dpi
       use fluidindex,          only: ibx, iby, ibz, nvar
       use gravity,             only: r_smooth, r_grav, n_gravr, ptmass, source_terms_grav, grav_pot2accel, grav_pot_3d
       use grid,                only: cg, geometry
@@ -162,6 +180,7 @@ contains
       real    :: csim2, gprim, H2
 
       real, dimension(:), allocatable :: grav, dens_prof, dens_cutoff, ln_dens_der
+      real, dimension(cg%nx)          :: vphi_arr
       type(component_fluid), pointer  :: fl
 
 !   Secondary parameters
@@ -261,8 +280,9 @@ contains
          ln_dens_der  = log(dens_prof)
          ln_dens_der(2:cg%nx)  = ( ln_dens_der(2:cg%nx) - ln_dens_der(1:cg%nx-1) ) / cg%dx
          ln_dens_der(1)        = ln_dens_der(2)
-
+         T_inner               = dpi*cg%x(cg%is) / sqrt( abs(grav(cg%is)) * cg%x(cg%is) )
 #ifdef DEBUG
+         n_x_cut = maxloc(vphi_arr)
          open(143,file="dens_prof.dat",status="unknown")
          do p = 1, cg%nx
             write(143,'(4(ES14.4,1X))') cg%x(p), dens_prof(p), sqrt( max(cg%x(p)*(nvar%neu%cs2*ln_dens_der(p) + abs(grav(p))),0.0) ), &
@@ -442,7 +462,11 @@ contains
          allocate(funcR(size(iarr_all_dn), cg%nx) )
 
          funcR(1,:) = -tanh((cg%x(:)-r_in+1.0)**f_in) + 1.0
-         funcR(1,:) = alpha*funcR(1,:)
+         if (use_inner_orbital_period) then
+            funcR(1,:) = funcR(1,:) / T_inner
+         else
+            funcR(1,:) = funcR(1,:) * dumping_coeff
+         endif
 #ifdef DEBUG
          open(212,file="funcR.dat",status="unknown")
          do i = 1, cg%nx

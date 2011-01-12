@@ -23,8 +23,8 @@
  /
 
  $END_CONTROL
-    tend   = 1000.0
-    nend   = 200000
+    tend   = 2000.0
+    nend   = 20000000
  /
 
  $OUTPUT_CONTROL
@@ -67,6 +67,7 @@
  /
 
  $FLUID_DUST
+   dragc_gas_dust = 0.0
  /
 
  $FLUID_DUST
@@ -91,7 +92,7 @@
  /
 
  $PROBLEM_CONTROL
-    alpha   = 0.5
+    alpha   = 7.0
     d0      = 1700.0  ! g/cm**2 Desch
     dout    = 1.0e-4
     r_max   = 3.2
@@ -99,6 +100,8 @@
     f_in    = 10.0
     r_out   = 2.1
     mag_field_orient = 'none'
+    use_inner_orbital_period = .false.
+    dumping_coeff = 1.0
     dens_exp = 1.5    ! Desch
     dens_amb = 1.e-3
     cutoff_ncells = 12
@@ -111,6 +114,6 @@
  /
 
  $INTERACTIONS
-   collision_factor  = 1.0
+   collision_factor  = 0.0
    cfl_interact      = 0.8
  /
