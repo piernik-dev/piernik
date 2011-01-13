@@ -159,10 +159,12 @@ def striplist(l):
    return([x.strip() for x in l])
 
 def strip_leading_path(l):
-   return([x.rpartition('/')[2] for x in l])
+   return([x.split('/')[-1] for x in l])
+#  return([x.rpartition('/')[2] for x in l])
 
 def remove_suf(l):
-   return([x.partition('.')[0] for x in l])
+   return([x.split('.')[0] for x in l])
+#  return([x.partition('.')[0] for x in l])
 
 def pretty_format(fname,list,col):
    out = ""
