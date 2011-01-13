@@ -43,7 +43,7 @@ module gravity
 
    private
    public :: init_grav, grav_accel, source_terms_grav, grav_pot2accel, grav_pot_3d, get_gprofs, grav_accel2pot, sum_potential
-   public :: g_dir, r_gc, ptmass, ptm_x, ptm_y, ptm_z, r_smooth, nsub, tune_zeq, tune_zeq_bnd, h_grav, r_grav, n_gravr, n_gravr2, n_gravh, user_grav, gp_status, gprofs_target, ptm1_x, ptm2_x
+   public :: g_dir, r_gc, ptmass, ptm_x, ptm_y, ptm_z, r_smooth, nsub, tune_zeq, tune_zeq_bnd, h_grav, r_grav, n_gravr, n_gravr2, n_gravh, user_grav, gp_status, gprofs_target
 
    integer, parameter         :: gp_stat_len   = 9
    integer, parameter         :: gproft_len    = 5
@@ -65,12 +65,6 @@ module gravity
    integer :: n_gravr2              !< similar to n_gravr <b>(currently not used)</b>
    real    :: tune_zeq              !< z-component of %gravity tuning factor used by hydrostatic_zeq
    real    :: tune_zeq_bnd          !< z-component of %gravity tuning factor supposed to be used in boundaries <b>(currently not used)</b>
-   real    :: ptmass1               !< Roche lobe: mass1
-   real    :: ptmass2               !< Roche lobe: mass2
-   real    :: ptm1_x                !< Roche lobe: location of mass1 (y=z=0)
-   real    :: ptm2_x                !< Roche lobe: -//- mass2
-   real    :: cmass_x               !< Roche lobe: -//- center of mass
-   real    :: Omega                 !< Roche lobe: Rotational angular velocity
 
    logical :: user_grav             !< use user defined grav_pot_3d
 
@@ -134,13 +128,11 @@ module gravity
       use dataio_pub,    only: warn
       use mpisetup,      only: ibuff, rbuff, cbuff, cbuff_len, buffer_dim, comm, ierr, master, slave, lbuff
       use mpi,           only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL, MPI_CHARACTER
-      use constants,     only: newtong
 
       implicit none
 
       namelist /GRAVITY/ g_dir, r_gc, ptmass, ptm_x, ptm_y, ptm_z, r_smooth, external_gp, &
-                nsub, tune_zeq, tune_zeq_bnd, h_grav, r_grav, n_gravr, n_gravr2, n_gravh, user_grav, gprofs_target, &
-                ptmass1, ptmass2, ptm1_x, ptm2_x,cmass_x,Omega
+                nsub, tune_zeq, tune_zeq_bnd, h_grav, r_grav, n_gravr, n_gravr2, n_gravh, user_grav, gprofs_target
 
 #ifdef VERBOSE
       if (master) call warn("[gravity:init_grav] Commencing gravity module initialization")
@@ -161,13 +153,6 @@ module gravity
       n_gravr = 0
       n_gravr2= 0
       n_gravh = 0
-
-      ptmass1 = 1.0
-      ptmass2 = 1.0
-      ptm1_x = 0.0 
-      ptm2_x = -1.0 
-      cmass_x = (ptmass1*ptm1_x + ptmass2*ptm2_x)/(ptmass1+ptmass2)
-      Omega = dsqrt(newtong*(ptmass1+ptmass2)/(abs(ptm1_x-ptm2_x))**3)
 
       gprofs_target = 'gparr'
       external_gp   = 'null'
@@ -194,10 +179,6 @@ module gravity
          rbuff(12)  = r_smooth
          rbuff(13)  = h_grav
          rbuff(14)  = r_grav
-         rbuff(15)  = ptmass1
-         rbuff(16)  = ptmass2
-         rbuff(17)  = ptm1_x 
-         rbuff(18)  = ptm2_x 
 
          lbuff(1)   = user_grav
 
@@ -229,10 +210,6 @@ module gravity
          r_smooth            = rbuff(12)
          h_grav              = rbuff(13)
          r_grav              = rbuff(14)
-         ptmass1             = rbuff(15)
-         ptmass2             = rbuff(16)
-         ptm1_x              = rbuff(17)
-         ptm2_x              = rbuff(18)
 
          user_grav           = lbuff(1)
 
@@ -240,9 +217,6 @@ module gravity
          external_gp         = cbuff(2)
 
       endif
-
-      cmass_x             = (ptmass1*ptm1_x + ptmass2*ptm2_x)/(ptmass1+ptmass2)
-      Omega               = dsqrt(newtong*(ptmass1+ptmass2)/(abs(ptm1_x-ptm2_x))**3)
 
       gpot(:,:,:) = 0.0
 
@@ -586,45 +560,6 @@ module gravity
 
    end subroutine grav_ptmass_softened
 
-   subroutine grav_roche
-
-      use arrays,       only: gp
-      use grid,         only: cg
-      use mpisetup,     only: smalld
-      use constants,    only: newtong
-
-      implicit none
-
-      integer :: i, j, k
-      real    :: r_smooth2, gm, gmr, z2, yz2
-      real    :: r1, r2, rc, GM1, GM2
-
-       r_smooth2 = r_smooth**2 
-       GM1 =  newtong * ptmass1
-       GM2 =  newtong * ptmass2
-
-!       write(*,*) GM1,GM2,ptmass1,ptmass2,Omega,cmass_x
-
-       gm = 0.0 ! to get rid of warnings
-       gmr = 0.0
-       z2 = 0.0 
-       yz2 = 0.0
-
-       do k = 1, cg%nz
-          do j = 1, cg%ny
-             do i = 1, cg%nx
-                r1 = (cg%x(i) - ptm1_x)**2  + (cg%y(j) - 0.0)**2 + (cg%z(k) - 0.0)**2
-                r2 = (cg%x(i) - ptm2_x)**2  + (cg%y(j) - 0.0)**2 + (cg%z(k) - 0.0)**2
-                rc = (cg%x(i) - cmass_x)**2 + (cg%y(j) - 0.0)**2 + (cg%z(k) - 0.0)**2
-                    gp(i,j,k) =  - GM1 / dsqrt(r1 + r_smooth2) &
-                     - GM2 / dsqrt(r2 + r_smooth2) &
-                     - 0.5 * Omega**2 * rc 
-             enddo
-          enddo
-       enddo
-
-   end subroutine grav_roche
-
    subroutine grav_ptmass_stiff
 
       use arrays,     only: gp
@@ -708,8 +643,6 @@ module gravity
             call grav_ptmass_softened(.true.)
          case ("flat ptmass", "flat_ptmass")
             call grav_ptmass_pure(.true.)
-         case ("roche", "grav_roche", "GRAV_ROCHE")
-            call grav_roche
          case ("user", "grav_user", "GRAV_USER")
             call die("[gravity:default_grav_pot_3d] user 'grav_pot_3d' should be defined in initprob!")
          case default
@@ -734,19 +667,9 @@ module gravity
 !<
    subroutine grav_pot2accel(sweep, i1,i2, n, grav,istep)
 
-      use arrays,   only: u, gpot, hgpot
+      use arrays,   only: gpot, hgpot
       use grid,     only: cg
       use mpisetup, only: xdim, ydim, zdim
-
-!     use gravity,only: Omega
-
-#ifdef IONIZED
-      use initionized, only: idni, imxi, imyi, imzi
-#endif
-
-#ifdef NEUTRAL
-      use initneutral, only: idnn, imxn, imyn, imzn
-#endif
 
       implicit none
 
@@ -804,29 +727,6 @@ module gravity
       endif
 
       grav(1) = grav(2); grav(n) = grav(n-1)
-
-      select case (external_gp)
-         case ("user", "grav_user", "GRAV_USER")
-         ! Coriolis force for corotating coords
-          select case (sweep)
-            case ('xsweep')
-#ifdef IONIZED
-               grav(1:n) = grav(1:n) + 2.0 * u(imyi,1:n,i1,i2)/u(idni,1:n,i1,i2)*Omega
-#elif defined (NEUTRAL)
-               grav(1:n) = grav(1:n) + 2.0 * u(imyn,1:n,i1,i2)/u(idnn,1:n,i1,i2)*Omega
-#endif
-            case ('ysweep')
-#ifdef IONIZED
-               grav(1:n) = grav(1:n) - 2.0 * u(imxi,i2,1:n,i1)/u(idni,i2,1:n,i1)*Omega
-#elif defined (NEUTRAL)
-               grav(1:n) = grav(1:n) - 2.0 * u(imxn,i2,1:n,i1)/u(idnn,i2,1:n,i1)*Omega
-#endif
-!            case ('zsweep')
-!               grav(2:n-1) = grav(2:n-1) + 0.0 !no z-component of the Coriolis force
-
-         end select
-
-      end select
    end subroutine grav_pot2accel
 
 !--------------------------------------------------------------------------
