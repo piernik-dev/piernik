@@ -42,8 +42,16 @@ module initproblem
 
    real :: dblob, xblob, yblob, zblob, dnamb, rclear, pblob, dnblob, dnin, vxfac, p0ambfac, dnambfac, taucool, Tblob, pamb
 
-   namelist /PROBLEM_CONTROL/  dnblob,xblob,yblob,zblob,rclear,Tblob,dblob, &
-                               vxfac, p0ambfac, taucool, dnambfac
+   real    :: ptmass1               !< Roche lobe: mass1
+   real    :: ptmass2               !< Roche lobe: mass2
+   real    :: ptm1_x                !< Roche lobe: location of mass1 (y=z=0)
+   real    :: ptm2_x                !< Roche lobe: -//- mass2
+   real    :: cmass_x               !< Roche lobe: -//- center of mass
+   real    :: Omega                 !< Roche lobe: Rotational angular velocity
+
+
+   namelist /PROBLEM_CONTROL/  dnblob,xblob,yblob,zblob,rclear,Tblob,dblob, vxfac, p0ambfac, taucool, dnambfac, &
+      & ptmass1, ptmass2, ptm1_x, ptm2_x
 
    contains
 
@@ -53,9 +61,8 @@ module initproblem
       use dataio_pub,    only: ierrh, par_file, namelist_errh, compare_namelist      ! QA_WARN required for diff_nml
       use mpisetup,      only: rbuff, buffer_dim, proc, comm, ierr
       use mpi,           only: MPI_DOUBLE_PRECISION
-      use types,         only: idlen
       use grid,          only: cg
-      use constants,     only: mH, kboltz, gasRconst
+!      use constants,     only: mH, kboltz, gasRconst
       use types,       only: problem_customize_solution
 
       implicit none
@@ -72,6 +79,11 @@ module initproblem
       vxfac            = 1.0
       taucool          = 1.0e30
 
+      ptmass1 = 1.0
+      ptmass2 = 1.0
+      ptm1_x = 0.0
+      ptm2_x = -1.0
+
       if (proc .eq. 0) then
 
          diff_nml(PROBLEM_CONTROL)
@@ -87,7 +99,11 @@ module initproblem
          rbuff(9) = rclear
          rbuff(10) = vxfac
          rbuff(11) = taucool
- 
+         rbuff(12)  = ptmass1
+         rbuff(13)  = ptmass2
+         rbuff(14)  = ptm1_x
+         rbuff(15)  = ptm2_x
+
 
       endif
 
@@ -101,11 +117,16 @@ module initproblem
          dblob            = rbuff(4)
          Tblob            = rbuff(5)
          dnblob           = rbuff(6)
-         dnambfac            = rbuff(7)
+         dnambfac         = rbuff(7)
          p0ambfac         = rbuff(8)
          rclear           = rbuff(9)
          vxfac            = rbuff(10)
          taucool          = rbuff(11)
+         ptmass1          = rbuff(12)
+         ptmass2          = rbuff(13)
+         ptm1_x           = rbuff(14)
+         ptm2_x           = rbuff(15)
+
 
       endif
 
@@ -118,19 +139,62 @@ module initproblem
       dnamb = dnambfac * dnblob
 
       problem_customize_solution => impose_inflow
-      
+
    end subroutine read_problem_par
 
 !-----------------------------------------------------------------------------
+   subroutine grav_roche
+      use arrays,       only: gp
+      use grid,         only: cg
+      use mpisetup,     only: smalld
+      use constants,    only: newtong
+      use gravity,      only: r_smooth
+      use dataio_pub,   only: printinfo
 
+      implicit none
+
+      integer :: i, j, k
+      real    :: r_smooth2, gm, gmr, z2, yz2
+      real    :: r1, r2, rc, GM1, GM2
+      logical, save :: frun = .true.
+
+      if (.not.frun) return
+      call printinfo("[initprob:grav_roche] setting gravity for problem Roche")
+
+       r_smooth2 = r_smooth**2
+       GM1 =  newtong * ptmass1
+       GM2 =  newtong * ptmass2
+
+!       write(*,*) GM1,GM2,ptmass1,ptmass2,Omega,cmass_x  !QA_WARN
+
+       gm = 0.0 ! to get rid of warnings
+       gmr = 0.0
+       z2 = 0.0
+       yz2 = 0.0
+
+       do k = 1, cg%nz
+          do j = 1, cg%ny
+             do i = 1, cg%nx
+                r1 = (cg%x(i) - ptm1_x)**2  + (cg%y(j) - 0.0)**2 + (cg%z(k) - 0.0)**2
+                r2 = (cg%x(i) - ptm2_x)**2  + (cg%y(j) - 0.0)**2 + (cg%z(k) - 0.0)**2
+                rc = (cg%x(i) - cmass_x)**2 + (cg%y(j) - 0.0)**2 + (cg%z(k) - 0.0)**2
+                    gp(i,j,k) =  - GM1 / dsqrt(r1 + r_smooth2) &
+                     - GM2 / dsqrt(r2 + r_smooth2) &
+                     - 0.5 * Omega**2 * rc
+             enddo
+          enddo
+       enddo
+       frun = .false.
+   end subroutine grav_roche
+!-----------------------------------------------------------------------------
    subroutine init_prob
       use arrays,      only: u, b, dprof
       use constants,   only: newtong
       use fluidindex,  only: ibx, iby, ibz
-      use gravity,     only: r_smooth, r_grav, n_gravr, ptmass
+      use gravity,     only: r_smooth, r_grav, n_gravr, ptmass, grav_pot_3d, user_grav
       use grid,        only: cg
       use hydrostatic, only: hydrostatic_zeq_densmid
-      use initneutral, only: idnn, imxn, imyn, imzn 
+      use initneutral, only: idnn, imxn, imyn, imzn
       use initneutral, only: ienn, gamma_neu
       use mpisetup,    only: smalld, smallei
 
@@ -140,13 +204,20 @@ module initproblem
       integer :: i, j, k, imx,imy,imz,idn
       real    :: xi, yj, vx, vy, vz, zk
 
+      if (user_grav) then
+         grav_pot_3d => grav_roche
+         call grav_pot_3d
+      endif
+
+      cmass_x = (ptmass1*ptm1_x + ptmass2*ptm2_x)/(ptmass1+ptmass2)
+      Omega = dsqrt(newtong*(ptmass1+ptmass2)/(abs(ptm1_x-ptm2_x))**3)
+
       imx=imxn
       imy=imyn
       imz=imzn
       idn=idnn
 
-      
-!      write(*,*) dnamb,dnblob,xblob,dblob
+!      write(*,*) dnamb,dnblob,xblob,dblob  !QA_WARN
       do j = 1,cg%ny
          yj = cg%y(j)
          do i = 1,cg%nx
@@ -158,16 +229,16 @@ module initproblem
                     dnblob*exp(-((xi-xblob)**2+(yj-yblob)**2+zk**2)/dblob)
                u(idn,i,j,k) = max(u(idn,i,j,k), smalld)
                u(ienn,i,j,k) = pamb/(gamma_neu-1.0) + &
-                    pblob/(gamma_neu-1.0)*exp(-((xi-xblob)**2+(yj-yblob)**2+zk**2)/dblob) 
+                    pblob/(gamma_neu-1.0)*exp(-((xi-xblob)**2+(yj-yblob)**2+zk**2)/dblob)
 
-               vx = vxfac*dsqrt(gamma_neu*pblob/dnblob)               
+               vx = vxfac*dsqrt(gamma_neu*pblob/dnblob)
                vy = 0.0
                vz = 0.0
 
                u(imx,i,j,k) = vx*(u(idn,i,j,k)-dnamb)
                u(imy,i,j,k) = vy*(u(idn,i,j,k)-dnamb)
                u(imz,i,j,k) = vz*(u(idn,i,j,k)-dnamb)
-               
+
 
             enddo
          enddo
@@ -183,8 +254,7 @@ module initproblem
       use dataio_pub,     only: code_progress, PIERNIK_FINISHED, halfstep, msg, die, printinfo
       use arrays,         only: b, u
       use grid,           only: cg
-      use gravity,        only: ptm1_x,ptm2_x
-      use initneutral, only: idnn, imxn, imyn, imzn 
+      use initneutral, only: idnn, imxn, imyn, imzn
       use initneutral, only: ienn, gamma_neu
       use mpisetup,    only: smalld, smallei, t, dt
 
@@ -193,7 +263,7 @@ module initproblem
       integer            :: i, j, k, imx,imy,imz,idn,ien
       real    :: xi, yj,zk,r1,r2,dntemp,vx,vy,vz, dnold, enold, entemp, &
            csaim, enaim, coolfac
- 
+
       imx=imxn
       imy=imyn
       imz=imzn
@@ -209,7 +279,7 @@ module initproblem
                zk = cg%z(k)
                r1=dsqrt((xi-ptm1_x)**2 + yj**2 + zk**2)
                r2=dsqrt((xi-ptm2_x)**2 + yj**2 + zk**2)
-               
+
 
 
                if (r1<rclear) then
@@ -220,7 +290,7 @@ module initproblem
                   u(imy,i,j,k) = u(imy,i,j,k)*exp((r1/rclear-1.0)/1.0)
                   u(imz,i,j,k) = u(imz,i,j,k)*exp((r1/rclear-1.0)/1.0)
                   u(ien,i,j,k) = smallei + u(ien,i,j,k)*exp((r1/rclear-1.0)/1.0)
-              
+
                endif
 
                if (r2<rclear) then
@@ -230,14 +300,14 @@ module initproblem
                   u(imy,i,j,k) = u(imy,i,j,k)*exp((r2/rclear-1.0)/1.0)
                   u(imz,i,j,k) = u(imz,i,j,k)*exp((r2/rclear-1.0)/1.0)
                   u(ien,i,j,k) = smallei + u(ien,i,j,k)*exp((r2/rclear-1.0)/1.0)
-              
+
                endif
 
              enddo
          enddo
       enddo
 
-!imposing inflow   
+!imposing inflow
       do j = 1,cg%ny
          yj = cg%y(j)
          do i = 1,cg%nx
@@ -247,8 +317,8 @@ module initproblem
 !blob
                dnold = u(idn,i,j,k)
                dntemp = dnamb + dnblob*exp(-((xi-xblob)**2+(yj-yblob)**2+zk**2)/dblob)
-               u(idn,i,j,k) = max(dntemp, dnold)                  
-       
+               u(idn,i,j,k) = max(dntemp, dnold)
+
 !              cooling
 !              ~sound speed ~temp
                csaim = pamb/dnamb/(gamma_neu-1.0)
@@ -259,14 +329,14 @@ module initproblem
 
 !               u(ienn,i,j,k) = enold - (enold - enaim)/2.0
 !               u(ienn,i,j,k) = max(enaim,u(ienn,i,j,k))
-!               if( zk == 0.0 .and. abs(yj)<= 0.01 .and. xi<-.4) then
-!               write(*,*) xi,yk,enaim,u(ienn,i,j,k),u(idnn,i,j,k)
+!               if ( zk == 0.0 .and. abs(yj)<= 0.01 .and. xi<-.4) then
+!               write(*,*) xi,yk,enaim,u(ienn,i,j,k),u(idnn,i,j,k) !QA_WARN
 !               endif
-          
-!hot blob     
+
+!hot blob
                enold = u(ienn,i,j,k)
                entemp = pamb/(gamma_neu-1.0) + &
-                     pblob/(gamma_neu-1.0)*exp(-((xi-xblob)**2+(yj-yblob)**2+zk**2)/dblob) 
+                     pblob/(gamma_neu-1.0)*exp(-((xi-xblob)**2+(yj-yblob)**2+zk**2)/dblob)
                u(ienn,i,j,k) = max(entemp, enold)
 
 !no inflow
