@@ -77,7 +77,9 @@ contains
       use constants,       only: small
       use fluidindex,      only: idn, imx, imy, imz, ien, nvar
       use mpisetup,        only: cfr_smooth, smallp
+#ifdef GLOBAL_FR_SPEED
       use timestep,        only: c_all
+#endif
 
       implicit none
       integer, intent(in)                        :: n         !< number of cells in the current sweep
@@ -146,7 +148,7 @@ contains
 
 #ifdef GLOBAL_FR_SPEED
       !       The freezing speed is now computed globally
-      !       (c=const for the whole domain) in sobroutine 'timestep'
+      !       (c=const for the whole domain) in subroutine 'timestep'
 
       !    cfrn(:,:) = nvar%neu%snap%c   ! check which c_xxx is better
       cfrn(:,:) = c_all
