@@ -42,7 +42,8 @@ module interactions
    implicit none
 
    private
-   public :: init_interactions, fluid_interactions, collfaq, cfl_interact, dragc_gas_dust, has_interactions
+   public :: init_interactions, fluid_interactions, collfaq, cfl_interact, dragc_gas_dust, has_interactions, &
+      & interactions_grace_passed
 
    real, allocatable, dimension(:,:)      :: collfaq     !< nvar%fluids x nvar%fluids array of collision factors
    real :: collision_factor                              !< collision factor
@@ -81,8 +82,7 @@ contains
    subroutine init_interactions
 
       use dataio_pub,    only: par_file, ierrh, namelist_errh, compare_namelist      ! QA_WARN required for diff_nml
-      use fluidindex,    only: nvar
-      use mpisetup,      only: master, slave, lbuff, rbuff, buffer_dim, ierr, comm
+      use mpisetup,      only: master, slave, lbuff, rbuff, buffer_dim, ierr, comm!, grace_period_passed
       use mpi,           only: MPI_DOUBLE_PRECISION, MPI_LOGICAL
 
       implicit none
@@ -121,7 +121,20 @@ contains
       endif
 
       fluid_interactions => fluid_interactions_dummy
+!      if (grace_period_passed()) call interactions_grace_passed
+
+   end subroutine init_interactions
+
+   subroutine interactions_grace_passed
+      use fluidindex,    only: nvar
+#ifdef VERBOSE
+      use dataio_pub,    only: printinfo
+#endif /* VERBOSE */
+      implicit none
       if (dragc_gas_dust > 0.0 .or. collision_factor > 0.0) then
+#ifdef VERBOSE
+         call printinfo("[interactions:interactions_grace_passed] Initializing aerodynamical drag")
+#endif /* VERBOSE */
          allocate(collfaq(nvar%fluids,nvar%fluids))
          collfaq = collision_factor
          collfaq(nvar%dst%pos,:) = dragc_gas_dust
@@ -131,8 +144,7 @@ contains
          fluid_interactions => fluid_interactions_aero_drag
          has_interactions = .true.    ! \depracted BEWARE: temporary hack
       endif
-
-   end subroutine init_interactions
+   end subroutine interactions_grace_passed
 
    subroutine fluid_interactions_dummy(dens, velx, acc)
       implicit none

@@ -77,6 +77,7 @@ program piernik
    do while (t < tend .and. nstep < nend .and. .not.(end_sim) .and. time_left() ) ! main loop
 
       call time_step(dt)
+      call grace_period
 
       if (first_step) then
          ts  = 0.0
@@ -324,7 +325,6 @@ contains
 !>
 !! Meta subroutine responsible for cleaning after successful run
 !<
-
    subroutine cleanup_piernik
       use types,       only: cleanup_problem
       use arrays,      only: cleanup_arrays
@@ -362,9 +362,32 @@ contains
    end subroutine cleanup_piernik
 
 !>
+!! Meta subroutine responsible for setting proper pointers or doing other magic
+!! after relaxiation/grace period has passed
+!<
+   subroutine grace_period
+      use mpisetup,     only: grace_period_passed, relax_time
+      use dataio_pub,   only: printinfo
+      use interactions, only: interactions_grace_passed
+      use types,        only: problem_grace_passed
+      implicit none
+      logical, save     :: runned = .false.
+
+      if (runned) return
+      if (grace_period_passed()) then
+         if (relax_time > 0.0) then
+            ! write info message only if relax_time was set
+            write(msg,'(A,ES10.3)') "[piernik:grace_period] grace period has passed.", t
+            call printinfo(msg)
+         endif
+         call interactions_grace_passed
+         if (associated(problem_grace_passed)) call problem_grace_passed
+         runned = .true.
+      endif
+   end subroutine grace_period
+!>
 !! Just print a dot on the screen, do not put a newline unless asked to do so.
 !<
-
    subroutine nextdot(advance)
 
       use mpisetup,      only: master

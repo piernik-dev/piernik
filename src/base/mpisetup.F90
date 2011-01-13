@@ -52,7 +52,7 @@ module mpisetup
         & cfr_smooth, cleanup_mpi, comm, comm3d, dt, dt_initial, dt_max_grow, dt_min, dt_old, dtm, err, ibuff, ierr, info, init_mpi, &
         & integration_order, lbuff, limiter, mpifind, ndims, nproc, nstep, pcoords, proc, procxl, procxr, procxyl, procyl, procyr, procyxl, proczl, &
         & proczr, psize, pxsize, pysize, pzsize, rbuff, req, smalld, smallei, smallp, status, t, use_smalld, magic_mass, local_magic_mass, master, slave, &
-        & nxd, nyd, nzd, nb, xdim, ydim, zdim, has_dir, big_float
+        & nxd, nyd, nzd, nb, xdim, ydim, zdim, has_dir, big_float, relax_time, grace_period_passed
 
    integer :: nproc, proc, ierr , rc, info
    integer :: status(MPI_STATUS_SIZE,4)
@@ -124,11 +124,12 @@ module mpisetup
    !! \f$c_{\textrm{fr}} = \sqrt{v^2 + \frac{1}{2}(\max{v} - \min{v})c_{\textrm{fr}}^{\textrm{smooth}}} + \ldots\f$
    !<
    real    :: cfr_smooth
-   integer :: integration_order        !< Runge-Kutta time integration order (1 - 1st order, 2 - 2nd order)
-   character(len=cbuff_len) :: limiter !< type of flux limiter
+   integer :: integration_order           !< Runge-Kutta time integration order (1 - 1st order, 2 - 2nd order)
+   character(len=cbuff_len) :: limiter    !< type of flux limiter
    character(len=cbuff_len) :: cflcontrol !< type of cfl control just before each sweep (possibilities: 'none', 'main', 'user')
+   real    :: relax_time                  !< relaxation/grace time, additional physics will be turned off until mpisetup::t >= mpisetup::relax_time
 
-   namelist /NUMERICAL_SETUP/  cfl, smalld, smallei, integration_order, cfr_smooth, dt_initial, dt_max_grow, dt_min, smallc, smallp, limiter, cflcontrol, use_smalld, cfl_max
+   namelist /NUMERICAL_SETUP/  cfl, smalld, smallei, integration_order, cfr_smooth, dt_initial, dt_max_grow, dt_min, smallc, smallp, limiter, cflcontrol, use_smalld, cfl_max, relax_time
 
    integer, dimension(3) :: domsize   !< local copy of nxd, nyd, nzd
 
@@ -212,6 +213,7 @@ module mpisetup
 !! <tr><td>dt_max_grow      </td><td>2.    </td><td>real value > 1.1                     </td><td>\copydoc mpisetup::dt_max_grow      </td></tr>
 !! <tr><td>dt_min           </td><td>0.    </td><td>positive real value                  </td><td>\copydoc mpisetup::dt_min           </td></tr>
 !! <tr><td>limiter          </td><td>vanleer</td><td>string                              </td><td>\copydoc mpisetup::limiter          </td></tr>
+!! <tr><td>relax_time       </td><td>0.0   </td><td>real value                           </td><td>\copydoc mpisetup::relax_time       </td></tr>
 !! </table>
 !! \n \n
 !<
@@ -372,6 +374,7 @@ module mpisetup
             rbuff( 8) = dt_max_grow
             rbuff( 9) = dt_min
             rbuff(10) = cfl_max
+            rbuff(11) = relax_time
 
             lbuff(1) = mpi_magic
             lbuff(2) = use_smalld
@@ -398,6 +401,7 @@ module mpisetup
             dt_max_grow = rbuff( 8)
             dt_min      = rbuff( 9)
             cfl_max     = rbuff(10)
+            relax_time  = rbuff(11)
 
             bnd_xl     = cbuff(1)(1:4)
             bnd_xr     = cbuff(2)(1:4)
@@ -740,5 +744,10 @@ module mpisetup
          endif
 
       end subroutine divide_domain_voodoo
+
+      logical function grace_period_passed()
+         implicit none
+         grace_period_passed = (t >= relax_time)
+      end function grace_period_passed
 
 end module mpisetup
