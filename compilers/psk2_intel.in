@@ -4,14 +4,16 @@
 #
 
 PROG     = piernik
-F90      = /opt/hdf5/intel/bin/h5pfc
+F90      = /opt/hdf5/mvapich2_intel-1.5.1/bin/h5pfc
+#mpif90
 F90FLAGS = -O3 -r8 -implicitnone -g -traceback -fpe0 -heap-arrays
 
 #For debugging:
-#F90FLAGS += -ftrapuv -check all -check noarg_temp_created -debug all -WB
+F90FLAGS += -ftrapuv -check all -check noarg_temp_created -debug all -WB
 
 CPPFLAGS += -D __INTEL_COMPILER
 USE_GNUCPP = yes
-HDF_LIB  = . -L /usr/lib64/
+HDF_LIB  = . 
+LDFLAGS += -limf -lm
 
-#MAKEFLAGS += -j2
+MAKEFLAGS += -j6
