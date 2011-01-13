@@ -1,0 +1,111 @@
+ $DOMAIN_SIZES
+    nxd = 128
+    nyd = 1
+    nzd = 128
+ /
+
+ $MPI_BLOCKS
+    pxsize = 1
+    pysize = 1
+    pzsize = 1
+ /
+
+ $CONSTANTS
+ /
+
+ $RESTART_CONTROL
+    restart  = 'last'
+    new_id   = ''
+    nrestart = 0
+ /
+
+ $END_CONTROL
+    tend   = 500.0
+    nend   = 1000000
+ /
+
+ $OUTPUT_CONTROL
+    problem_name ='stream'
+    run_id  =  'lnA'
+    dt_hdf  = 0.0
+    dt_res  = 0.0
+    dt_log  = 0.1    ! lnA
+    dt_tsl  = 0.05   ! lnA
+!    dt_log  = 5.0    ! lnB
+!    dt_tsl  = 1.0    ! lnB
+    vars(1) = 'dens'
+    vars(2) = 'velx'
+    vars(3) = 'vely'
+    vars(4) = 'velz'
+    vars(5) = 'ener'
+    domain  = 'phys_domain'
+ /
+
+ $BOUNDARIES
+    bnd_xl = 'per'
+    bnd_xr = 'per'
+    bnd_yl = 'per'
+    bnd_yr = 'per'
+    bnd_zl = 'per'
+    bnd_zr = 'per'
+ /
+
+ $DOMAIN_LIMITS
+    xmin   = -0.005236 ! lnA
+    xmax   =  0.005236 ! lnA
+    ymin   = -0.005236 ! lnA
+    ymax   =  0.005236 ! lnA
+    zmin   = -0.005236 ! lnA
+    zmax   =  0.005236 ! lnA
+
+!    xmin   = -0.026180 ! lnB
+!    xmax   =  0.026180 ! lnB   
+!    ymin   = -0.026180 ! lnB
+!    ymax   =  0.026180 ! lnB   
+!    zmin   = -0.026180 ! lnB
+!    zmax   =  0.026180 ! lnB   
+ /
+
+ $FLUID_NEUTRAL
+    gamma_neu   = 1.0
+    cs_iso_neu  = 1.0
+ /
+
+ $FLUID_DUST
+ /
+
+ $INTERACTIONS
+    cfl_interact = 0.1
+    dragc_gas_dust = 10.0  ! lnA/B
+ /
+
+ $NUMERICAL_SETUP
+    cfl    = 0.8
+    cfr_smooth = 0.1
+    smalld = 1.e-4
+    smallei= 1.e-5
+    integration_order = 2
+    limiter= 'vanleer'
+ /
+
+ $PROBLEM_CONTROL
+    rhog    =  1.0
+    eps     =  3.0  ! lnA
+!    eps     =  0.2  ! lnB
+    amp     =  1.e-6
+    linear  = .true.
+ /
+
+ $GRAVITY
+    external_gp = "null"
+ /
+
+ $SHEARING
+   qshear  = 1.5
+   omega   = 1.0
+   eta_gas = 0.005
+   csvk    = 0.1
+ /
+
+ $PIERNIK_DEBUG
+ /
