@@ -180,7 +180,6 @@ contains
       real    :: csim2, gprim, H2
 
       real, dimension(:), allocatable :: grav, dens_prof, dens_cutoff, ln_dens_der
-      real, dimension(cg%nx)          :: vphi_arr
       type(component_fluid), pointer  :: fl
 
 !   Secondary parameters
@@ -282,7 +281,6 @@ contains
          ln_dens_der(1)        = ln_dens_der(2)
          T_inner               = dpi*cg%x(cg%is) / sqrt( abs(grav(cg%is)) * cg%x(cg%is) )
 #ifdef DEBUG
-         n_x_cut = maxloc(vphi_arr)
          open(143,file="dens_prof.dat",status="unknown")
          do p = 1, cg%nx
             write(143,'(4(ES14.4,1X))') cg%x(p), dens_prof(p), sqrt( max(cg%x(p)*(nvar%neu%cs2*ln_dens_der(p) + abs(grav(p))),0.0) ), &

@@ -29,7 +29,7 @@
 
  $OUTPUT_CONTROL
     problem_name ='kepler'
-    run_id  =  'tst'
+    run_id  =  'ts2'
     dt_hdf  = 2.0
     dt_res  = 500.0
     dt_log  = 0.1
@@ -54,7 +54,7 @@
  $DOMAIN_LIMITS
     geometry = "cylindrical"
     xmin   = 0.4
-    xmax   = 2.5
+    xmax   = 10.0
     ymin   = 0.0
     ymax   = 6.28318530718
     zmin   =-1.5
@@ -67,16 +67,13 @@
  /
 
  $FLUID_DUST
-   dragc_gas_dust = 0.0
- /
-
- $FLUID_DUST
  /
 
  $NUMERICAL_SETUP
     cfl    = 0.6
     use_smalld = .false.
 !    smalld = 1.e-7
+    relax_time = 500.0
     integration_order = 2
     limiter= 'vanleer'
  /
@@ -114,6 +111,7 @@
  /
 
  $INTERACTIONS
-   collision_factor  = 0.0
+   collision_factor  = 1.0
+   dragc_gas_dust    = 1.0
    cfl_interact      = 0.8
  /
