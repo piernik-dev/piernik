@@ -71,25 +71,22 @@ contains
 !! from the beginning of the time step. This is a simple approach, but ignores any changes due to other accelerations during the time step.
 !>
 
-   subroutine coriolis_force(sweep, i1, i2, n, rotacc)
+   subroutine coriolis_force(sweep, u, rotacc)
 
-      use arrays,     only: u
-      use fluidindex, only: nvar, iarr_all_dn, iarr_all_mx, iarr_all_my
+      use fluidindex, only: nvar, iarr_all_dn, iarr_all_my
 
       implicit none
 
       character(len=*), intent(in)                   :: sweep  !< string of characters that points out the current sweep direction
-      integer, intent(in)                            :: i1     !< number of column in the first direction after one pointed out by sweep
-      integer, intent(in)                            :: i2     !< number of column in the second direction after one pointed out by sweep
-      integer, intent(in)                            :: n      !< number of elements in second dimension of returned array
-      real, dimension(nvar%fluids, n), intent(inout) :: rotacc !< an array for Coriolis accelerations
+      real, dimension(:,:), intent(in)               :: u
+      real, dimension(nvar%fluids, size(u,2)), intent(inout) :: rotacc !< an array for Coriolis accelerations
 
       ! Coriolis force for corotating coords
       select case (sweep)
          case ('xsweep')
-            rotacc(:,:) = rotacc(:,:) + 2.0 * coriolis_omega * u(iarr_all_my(:), :, i1, i2)/u(iarr_all_dn(:), :, i1, i2)
+            rotacc(:,:) = rotacc(:,:) + 2.0 * coriolis_omega * u(iarr_all_my(:), :)/u(iarr_all_dn(:), :)
          case ('ysweep')
-            rotacc(:,:) = rotacc(:,:) - 2.0 * coriolis_omega * u(iarr_all_mx(:), i2, :, i1)/u(iarr_all_dn(:), i2, :, i1)
+            rotacc(:,:) = rotacc(:,:) - 2.0 * coriolis_omega * u(iarr_all_my(:), :)/u(iarr_all_dn(:), :)
 !         case ('zsweep') !no z-component of the Coriolis force
       end select
 

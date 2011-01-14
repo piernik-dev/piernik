@@ -447,7 +447,7 @@ module rtvd ! split orig
 
 #ifdef CORIOLIS
          ! \deprecated BEWARE: if GRAV is not defined and any(geosrc(:,:) /= 0.), u1(iarr_all_mx,:) is already altered
-         call coriolis_force(sweep, i1, i2, n, rotacc(:,:))
+         call coriolis_force(sweep, u, rotacc(:,:))
 #endif /* CORIOLIS */
 
 #ifdef GRAV
