@@ -251,6 +251,9 @@ module rtvd ! split orig
 #ifdef ISO_LOCAL
       use arrays,           only: cs_iso2_arr
 #endif /* ISO_LOCAL */
+#ifdef CORIOLIS
+      use coriolis,         only: coriolis_force
+#endif
 
       implicit none
 
@@ -271,7 +274,9 @@ module rtvd ! split orig
       real                           :: dtx                !< dt/dx
       real, dimension(nvar%all,n)    :: cfr                !< freezing speed
 !locals
+#if defined GRAV || defined SHEAR || defined FLUID_INTERACTIONS
       real, dimension(nvar%fluids,n) :: acc                !< acceleration
+#endif /* defined GRAV || defined SHEAR || defined FLUID_INTERACTIONS */
       real, dimension(nvar%all,n)    :: u0                 !< initial state of conservative variables
       real, dimension(nvar%all,n)    :: w                  !< auxiliary vector to calculate fluxes
       real, dimension(nvar%all,n)    :: fr                 !< flux of the right-moving waves
@@ -402,7 +407,7 @@ module rtvd ! split orig
 ! Source terms -------------------------------------
          geosrc = geometry_source_terms(u,pressure,sweep)
 #ifndef GRAV
-         u1(iarr_all_mx,:) = u1(iarr_all_mx,:) + rk2coef(integration_order,istep)*geosrc(:,:)*dt
+         u1(iarr_all_mx,:) = u1(iarr_all_mx,:) + rk2coef(integration_order,istep)*geosrc(:,:)*dt !if GRAV is defined then look ~50 lines below (BEWARE: semi-duplicated code)
 #endif /* !GRAV */
 
          call fluid_interactions(dens, vx, fricacc)  ! \todo convert me to func similar to gridgeometry::geometry_source_terms
@@ -440,8 +445,13 @@ module rtvd ! split orig
          rotacc(:,:) = 0.0
 #endif /* !SHEAR */
 
+#ifdef CORIOLIS
+         ! \deprecated BEWARE: if GRAV is not defined and any(geosrc(:,:) /= 0.), u1(iarr_all_mx,:) is already altered
+         call coriolis_force(sweep, i1, i2, n, rotacc(:,:))
+#endif /* CORIOLIS */
+
 #ifdef GRAV
-         call grav_pot2accel(sweep,i1,i2, n, gravacc, istep)
+         call grav_pot2accel(sweep, i1, i2, n, gravacc, istep)
 #else /* !GRAV */
          gravacc = 0.0
 #endif /* !GRAV */

@@ -207,7 +207,9 @@ contains
 #ifdef DEBUG
       use piernikdebug,          only: init_piernikdebug
 #endif /* DEBUG */
-
+#ifdef CORIOLIS
+      use coriolis,              only: init_coriolis
+#endif
       implicit none
 
       logical :: tmp_log_exist
@@ -267,7 +269,9 @@ contains
 #endif /* GRAV */
 
       call init_interactions
-
+#ifdef CORIOLIS
+      call init_coriolis
+#endif
 #ifdef SN_SRC
       call init_snsources
 #endif /* SN_SRC */
