@@ -267,6 +267,9 @@ contains
             res(i,:) = cg%inv_x(:) * (u(iarr_all_my(i),:)**2 / u(iarr_all_dn(i),:) + p(i,:))
          enddo
       else
+         ! Note that there's no additional source term for angular momentum since we're using
+         ! modified equation of motion following  Mignone et al. (2007), ApJS 170:228- and
+         ! Skinner & Ostriker (2010), ApJSS 188:290-311
          res = 0.0
       endif
 
