@@ -405,7 +405,7 @@ module rtvd ! split orig
          u1(iarr_all_mx,:) = u1(iarr_all_mx,:) + rk2coef(integration_order,istep)*geosrc(:,:)*dt
 #endif /* !GRAV */
 
-         call fluid_interactions(dens, vx, fricacc)
+         call fluid_interactions(dens, vx, fricacc)  ! \todo convert me to func similar to gridgeometry::geometry_source_terms
 
 !! \deprecated BEWARE: whole shearing bit is heavily biased towards streaming problem, currently works only for 2.5D case, i.e. nyd=1 + source_terms_y
 !! \todo FIX ME!!!
