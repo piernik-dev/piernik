@@ -62,7 +62,6 @@ RM ?= /bin/rm
 MV ?= /bin/mv
 ECHO ?= /bin/echo
 ifdef CHECK_MAGIC
-\tRM  = /bin/true
 \tMV  = /bin/true
 \tF90 = /bin/true
 endif
@@ -99,14 +98,14 @@ $(PROG): $(OBJS)
 \t@$(F90) $(LDFLAGS) -o $@ $(OBJS) $(LIBS)
 \t@AO1=`mktemp _ao_XXXXXX`;\\
 \tAO2=`mktemp _ao_XXXXXX`;\\
-\t$(ECHO) $(OBJS) | tr ' ' '\\n' | sort > $AO1;\\
-\t$(ECHO) *.o     | tr ' ' '\\n' | sort > $AO2;\\
-\tif [ `join -v 2 $AO1 $AO2 | wc -l` -gt 0 ] ; then\\
+\t$(ECHO) $(OBJS) | tr ' ' '\\n' | sort > $$AO1;\\
+\t$(ECHO) *.o     | tr ' ' '\\n' | sort > $$AO2;\\
+\tif [ `join -v 2 $$AO1 $$AO2 | wc -l` -gt 0 ] ; then\\
 \t\t$(ECHO) -n "WARNING: unused object files: ";\\
-\t\tjoin -v 2 $AO1 $AO2 | tr '\\n' ' ';\\
+\t\tjoin -v 2 $$AO1 $$AO2 | tr '\\n' ' ';\\
 \t\t$(ECHO);\\
 \tfi;\\
-\t$(RM) $AO1 $AO2
+\t$(RM) $$AO1 $$AO2
 
 env.dat: piernik.def *.h $(SRCS_V)
 '''
