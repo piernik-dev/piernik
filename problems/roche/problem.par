@@ -74,7 +74,12 @@
  /
 
  $GRAVITY
-    user_grav = .true.
+    external_gp = "roche"
+    ptmass  = 1.0
+    ptmass2 = 1.0
+    ptm_x   = 0.0
+    ptm2_x  = -1.0
+
     nsub    = 10
     r_grav  = 1.0
     r_smooth= 0.2
@@ -95,12 +100,7 @@
     p0ambfac = 1.e-4
     dnblob = 1.0
 !    vxin = 0.1    ! vxfac?
-  
 
-    ptmass1 = 1.0
-    ptmass2 = 1.0
-    ptm1_x  = 0.0
-    ptm2_x  = -1.0
 /
 
  $INTERACTIONS

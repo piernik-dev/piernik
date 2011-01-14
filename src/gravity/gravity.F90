@@ -43,7 +43,7 @@ module gravity
 
    private
    public :: init_grav, grav_accel, source_terms_grav, grav_pot2accel, grav_pot_3d, get_gprofs, grav_accel2pot, sum_potential
-   public :: g_dir, r_gc, ptmass, ptm_x, ptm_y, ptm_z, r_smooth, nsub, tune_zeq, tune_zeq_bnd, h_grav, r_grav, n_gravr, n_gravr2, n_gravh, user_grav, gp_status, gprofs_target
+   public :: g_dir, r_gc, ptmass, ptm_x, ptm_y, ptm_z, r_smooth, nsub, tune_zeq, tune_zeq_bnd, h_grav, r_grav, n_gravr, n_gravr2, n_gravh, user_grav, gp_status, gprofs_target, ptmass2, ptm2_x
 
    integer, parameter         :: gp_stat_len   = 9
    integer, parameter         :: gproft_len    = 5
@@ -65,6 +65,10 @@ module gravity
    integer :: n_gravr2              !< similar to n_gravr <b>(currently not used)</b>
    real    :: tune_zeq              !< z-component of %gravity tuning factor used by hydrostatic_zeq
    real    :: tune_zeq_bnd          !< z-component of %gravity tuning factor supposed to be used in boundaries <b>(currently not used)</b>
+   real    :: ptmass2               !< mass of the secondary for Roche potential
+   real    :: ptm2_x                !< x-position of the secondary for Roche potential (y and z positions are assumed to be 0)
+   real    :: cmass_x               !< center of mass for Roche potential
+   real    :: Omega                 !< corotational angular velocity for Roche potential
 
    logical :: user_grav             !< use user defined grav_pot_3d
 
@@ -128,10 +132,14 @@ module gravity
       use dataio_pub,    only: warn
       use mpisetup,      only: ibuff, rbuff, cbuff, cbuff_len, buffer_dim, comm, ierr, master, slave, lbuff
       use mpi,           only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL, MPI_CHARACTER
+      use constants,     only: newtong
+#ifdef CORIOLIS
+      use coriolis,      only: set_omega
+#endif
 
       implicit none
 
-      namelist /GRAVITY/ g_dir, r_gc, ptmass, ptm_x, ptm_y, ptm_z, r_smooth, external_gp, &
+      namelist /GRAVITY/ g_dir, r_gc, ptmass, ptm_x, ptm_y, ptm_z, r_smooth, external_gp, ptmass2, ptm2_x, &
                 nsub, tune_zeq, tune_zeq_bnd, h_grav, r_grav, n_gravr, n_gravr2, n_gravh, user_grav, gprofs_target
 
 #ifdef VERBOSE
@@ -150,6 +158,9 @@ module gravity
       tune_zeq_bnd = 1.0
       h_grav = 1.e6
       r_grav = 1.e6
+      ptmass2 = 0.0
+      ptm2_x = -1.0
+
       n_gravr = 0
       n_gravr2= 0
       n_gravh = 0
@@ -169,16 +180,18 @@ module gravity
          ibuff(4)   = n_gravh
 
          rbuff(1:3) = g_dir
-         rbuff(5)   = r_gc
-         rbuff(6)   = ptmass
-         rbuff(7)   = ptm_x
-         rbuff(8)   = ptm_y
-         rbuff(9)   = ptm_z
-         rbuff(10)  = tune_zeq
-         rbuff(11)  = tune_zeq_bnd
-         rbuff(12)  = r_smooth
-         rbuff(13)  = h_grav
-         rbuff(14)  = r_grav
+         rbuff(4)   = r_gc
+         rbuff(5)   = ptmass
+         rbuff(6)   = ptm_x
+         rbuff(7)   = ptm_y
+         rbuff(8)   = ptm_z
+         rbuff(9)  = tune_zeq
+         rbuff(10)  = tune_zeq_bnd
+         rbuff(11)  = r_smooth
+         rbuff(12)  = h_grav
+         rbuff(13)  = r_grav
+         rbuff(14)  = ptmass2
+         rbuff(15)  = ptm2_x
 
          lbuff(1)   = user_grav
 
@@ -200,22 +213,34 @@ module gravity
          n_gravh             = ibuff(4)
 
          g_dir               = rbuff(1:3)
-         r_gc                = rbuff(5)
-         ptmass              = rbuff(6)
-         ptm_x               = rbuff(7)
-         ptm_y               = rbuff(8)
-         ptm_z               = rbuff(9)
-         tune_zeq            = rbuff(10)
-         tune_zeq_bnd        = rbuff(11)
-         r_smooth            = rbuff(12)
-         h_grav              = rbuff(13)
-         r_grav              = rbuff(14)
+         r_gc                = rbuff(4)
+         ptmass              = rbuff(5)
+         ptm_x               = rbuff(6)
+         ptm_y               = rbuff(7)
+         ptm_z               = rbuff(8)
+         tune_zeq            = rbuff(9)
+         tune_zeq_bnd        = rbuff(10)
+         r_smooth            = rbuff(11)
+         h_grav              = rbuff(12)
+         r_grav              = rbuff(13)
+         ptmass2             = rbuff(14)
+         ptm2_x              = rbuff(15)
 
          user_grav           = lbuff(1)
 
          gprofs_target       = cbuff(1)(1:gproft_len)
          external_gp         = cbuff(2)
 
+      endif
+
+      cmass_x = ptm_x
+      Omega = 0.
+      if (ptmass+ptmass2 > 0.) then
+         cmass_x = (ptmass*ptm_x + ptmass2*ptm2_x)/(ptmass+ptmass2)
+         if (ptm_x-ptm2_x > 0.) Omega = dsqrt(newtong*(ptmass+ptmass2)/(abs(ptm_x-ptm2_x))**3)
+#ifdef CORIOLIS
+         call set_omega(Omega)
+#endif
       endif
 
       gpot(:,:,:) = 0.0
@@ -560,6 +585,38 @@ module gravity
 
    end subroutine grav_ptmass_softened
 
+!<
+!! \brief Roche potential for two bodies oncircular orbits. The coordinate system corotates with the bodies, so they stay on the X axis forever.
+!>
+
+   subroutine grav_roche
+
+      use arrays,       only: gp
+      use grid,         only: cg
+      use constants,    only: newtong
+
+      implicit none
+
+      integer :: j, k
+      real    :: r_smooth2
+      real    :: GM1, GM2, z2, yz2
+
+       r_smooth2 = r_smooth**2
+       GM1 =  newtong * ptmass
+       GM2 =  newtong * ptmass2
+
+       do k = 1, cg%nz
+          z2 = cg%z(k)**2
+          do j = 1, cg%ny
+             yz2 = cg%y(j)**2 + z2
+             gp(:,j,k) =  - GM1 / dsqrt((cg%x(:) - ptm_x)**2  + yz2 + r_smooth2) &
+                  &       - GM2 / dsqrt((cg%x(:) - ptm2_x)**2 + yz2 + r_smooth2) &
+                  &       - 0.5 * Omega**2 * ((cg%x(:) - cmass_x)**2 + yz2)
+          enddo
+       enddo
+
+   end subroutine grav_roche
+
    subroutine grav_ptmass_stiff
 
       use arrays,     only: gp
@@ -643,6 +700,11 @@ module gravity
             call grav_ptmass_softened(.true.)
          case ("flat ptmass", "flat_ptmass")
             call grav_ptmass_pure(.true.)
+         case ("roche", "grav_roche", "GRAV_ROCHE")
+#ifndef CORIOLIS
+            call die("[gravity:default_grav_pot_3d] define CORIOLIS in piernik.def for Roche potential")
+#endif /* !CORIOLIS */
+            call grav_roche
          case ("user", "grav_user", "GRAV_USER")
             call die("[gravity:default_grav_pot_3d] user 'grav_pot_3d' should be defined in initprob!")
          case default

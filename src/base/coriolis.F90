@@ -33,6 +33,8 @@
 
 module coriolis
 ! pulled by CORIOLIS
+! \todo Drop the CORIOLIS preprocessor symbol in favour of something more elegant if it does not incur too much overhead on rtvd.
+
    implicit none
 
    private
@@ -104,9 +106,5 @@ contains
       coriolis_omega = omega_in
 
    end subroutine set_omega
-
-#ifndef CORIOLIS
-#warning coriolis: WTF?
-#endif
 
 end module coriolis
