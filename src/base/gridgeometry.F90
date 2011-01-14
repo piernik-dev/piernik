@@ -270,6 +270,7 @@ contains
          ! Note that there's no additional source term for angular momentum since we're using
          ! modified equation of motion following  Mignone et al. (2007), ApJS 170:228- and
          ! Skinner & Ostriker (2010), ApJSS 188:290-311
+         ! The conservative implementation uses the gc(:,:,:) array to modify the azimuthal momentum flux to mimic angular momentum flux.
          res = 0.0
       endif
 
