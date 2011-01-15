@@ -256,8 +256,9 @@ parser.add_option("-o", "--obj", dest="objdir", metavar="POSTFIX", default='',
 
 all_args = []
 try:
-   for line in file(".setuprc"):
-      all_args += line.split()
+   for frc in (".setuprc", ".setuprc."+os.uname()[1]):
+      for line in file(frc):
+         all_args += line.split()
 except IOError:
    pass
 all_args += sys.argv[1:]
