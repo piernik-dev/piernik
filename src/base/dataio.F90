@@ -42,7 +42,6 @@
 !! \copydetails dataio::init_dataio
 !!
 !! \todo check and if necessary bring back usefulness of min_disk_space_MB parameter
-!! \todo check the usefulness of wait logical variable
 !<
 
 module dataio
@@ -85,8 +84,6 @@ module dataio
    integer               :: nres_start             !< number of restart file for the first restart dump in simulation run
    real                  :: t_start                !< time in simulation of start simulation run
    logical               :: tsl_firstcall          !< logical value to start a new timeslice file
-
-   logical               :: wait                   !< logical value to have a break in simulation (currently not used)
 
    integer               :: nchar                  !< number of characters in a user/system message
    integer, parameter    :: umsg_len = 16
@@ -250,7 +247,6 @@ contains
       write(user_message_file,'(a,"/msg")') trim(cwd)
       system_message_file = "/tmp/piernik_msg"
 
-      wait  = .false.
       tsl_firstcall = .true.
 
       nhdf  = 0
