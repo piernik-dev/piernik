@@ -311,9 +311,6 @@ module mpisetup
          bnd_zl = 'per'
          bnd_zr = 'per'
 
-         ! Provide backward compatibility for choosing limiter via preprocessor flag
-         !> \todo Remove it when all problems are fixed
-
          limiter     = 'vanleer'
          cflcontrol  = 'warn'
 
@@ -326,7 +323,7 @@ module mpisetup
          smallc      = 1.e-10
          smallei     = 1.e-10
          dt_initial  = -1.              !< negative value indicates automatic choice of initial timestep
-         dt_max_grow = dt_default_grow !< for sensitive setups consider setting this as low as 1.1
+         dt_max_grow = dt_default_grow  !< for sensitive setups consider setting this as low as 1.1
          dt_min      = tiny(1.)
 
          integration_order  = 2
