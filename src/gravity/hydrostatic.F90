@@ -176,14 +176,14 @@ contains
 
       use arrays,   only: dprof
       use grid,     only: cg
-      use mpi,      only: MPI_DOUBLE_PRECISION, MPI_SUM
+      use mpi,      only: MPI_DOUBLE_PRECISION, MPI_IN_PLACE, MPI_SUM
       use mpisetup, only: comm3d, ierr
 
       implicit none
 
       integer, intent(in)   :: iia, jja
       real,    intent(in)   :: coldens, csim2
-      real                  :: sdprof, sum_sdprof
+      real                  :: sdprof
       integer               :: comm1d
       logical, dimension(3) :: remain
 
@@ -192,8 +192,8 @@ contains
       sdprof = sum(dprof(cg%ks:cg%ke))
       remain = (/.false.,.false.,.true./)
       call MPI_Cart_sub(comm3d,remain,comm1d,ierr)
-      call MPI_Allreduce(sdprof, sum_sdprof, 1, MPI_DOUBLE_PRECISION, MPI_SUM, comm1d, ierr)
-      dprof = dprof * coldens / sum_sdprof
+      call MPI_Allreduce(MPI_IN_PLACE, sdprof, 1, MPI_DOUBLE_PRECISION, MPI_SUM, comm1d, ierr)
+      dprof = dprof * coldens / sdprof
 
    end subroutine hydrostatic_zeq_coldens
 
