@@ -452,7 +452,7 @@ contains
       use fluidindex,      only: iarr_all_en
 #endif /* ISO */
       implicit none
-      integer                               :: i, j, k
+      integer                               :: j, k
       logical, save                         :: frun = .true.
       real, dimension(:,:), allocatable, save :: funcR
 

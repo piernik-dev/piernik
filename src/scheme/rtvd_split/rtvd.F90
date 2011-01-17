@@ -267,9 +267,9 @@ module rtvd ! split orig
       real,                        intent(in)  :: dt                 !< time step
 
       integer                        :: istep              !< step number in the time integration scheme
-#if defined GRAV || defined SHEAR
+#if defined GRAV || defined SHEAR || defined FLUID_INTERACTIONS
       integer                        :: ind                !< fluid index
-#endif /* defined GRAV || defined SHEAR */
+#endif /* defined GRAV || defined SHEAR || defined FLUID_INTERACTIONS */
 
       real                           :: dtx                !< dt/dx
       real, dimension(nvar%all,n)    :: cfr                !< freezing speed
