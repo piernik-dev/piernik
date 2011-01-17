@@ -535,9 +535,9 @@ contains
    end subroutine user_msg_handler
 
 !---------------------------------------------------------------------
-!
-! Makes data dump on abnormal Piernik termination
-!
+!>
+!! |brief Makes data dump on abnormal Piernik termination
+!<
 !---------------------------------------------------------------------
 !
    subroutine write_crashed(msg)
@@ -559,9 +559,9 @@ contains
    end subroutine write_crashed
 
 !---------------------------------------------------------------------
-!
-! controls data dumping
-!
+!>
+!! \brief controls data dumping
+!<
 !---------------------------------------------------------------------
 !
    subroutine write_data(output)
@@ -671,9 +671,9 @@ contains
       call MPI_ALLREDUCE(local, output, 1, MPI_DOUBLE_PRECISION, MPI_SUM, comm3d, ierr)
    end function mpi_sum3d_and_multiply
 !---------------------------------------------------------------------
-!
-! writes integrals to text file
-!
+!>
+!! \brief writes integrals to text file
+!<
 !---------------------------------------------------------------------
 !
    subroutine write_timeslice
@@ -998,14 +998,14 @@ contains
       endif
 #endif /* !ISO */
       end subroutine get_common_vars
-   !---------------------------------------------------------------------
-   !
-   ! writes timestep diagnostics to the logfile
-   !
-   ! Quite costly routine due to extensive array searches
-   !
-   !---------------------------------------------------------------------
-   !
+!---------------------------------------------------------------------
+!>
+!! \brief writes timestep diagnostics to the logfile
+!!
+!! \deprecated Quite costly routine due to extensive array searches
+!<
+!---------------------------------------------------------------------
+!
       subroutine  write_log(tsl)
 
          use arrays,             only: wa, u, b
