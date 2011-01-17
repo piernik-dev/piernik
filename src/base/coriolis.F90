@@ -40,7 +40,8 @@ module coriolis
    private
    public  :: init_coriolis, coriolis_force, set_omega, coriolis_omega
 
-   real, protected :: coriolis_omega !< Rotational angular velocity
+   real, protected :: coriolis_omega              !< Rotational angular velocity
+   logical, save   :: omega_uninitialized = .true.
 
 contains
 
@@ -55,7 +56,7 @@ contains
 
       implicit none
 
-      coriolis_omega = 0.
+      if (omega_uninitialized) coriolis_omega = 0.
 
       if (geometry /= "cartesian") call die("[coriolis:init_coriolis] Only cartesian geometry is implemented")
 #if !(defined GRAV || defined SHEAR || defined FLUID_INTERACTIONS)
@@ -96,11 +97,22 @@ contains
 
    subroutine set_omega(omega_in)
 
+      use dataio_pub, only: warn, printinfo, msg
+      use mpisetup,   only: master
+
       implicit none
 
       real, intent(in) :: omega_in
 
+      if (.not. omega_uninitialized) then
+         write(msg,"(2(a,g12.5))")"[coriolis:set_omega] coriolis_omega was already set to ",coriolis_omega,". Resetting to ",omega_in
+         call warn(msg)
+      else
+         write(msg,"(a,g12.5)")"[coriolis:set_omega] Setting coriolis_omega to ",omega_in
+         if (master) call printinfo(msg)
+      endif
       coriolis_omega = omega_in
+      omega_uninitialized = .false.
 
    end subroutine set_omega
 

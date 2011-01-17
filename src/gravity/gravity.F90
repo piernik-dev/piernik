@@ -237,7 +237,7 @@ module gravity
       Omega = 0.
       if (ptmass+ptmass2 > 0.) then
          cmass_x = (ptmass*ptm_x + ptmass2*ptm2_x)/(ptmass+ptmass2)
-         if (ptm_x-ptm2_x > 0.) Omega = dsqrt(newtong*(ptmass+ptmass2)/(abs(ptm_x-ptm2_x))**3)
+         if (abs(ptm_x-ptm2_x) > 0.) Omega = dsqrt(newtong*(ptmass+ptmass2)/(abs(ptm_x-ptm2_x))**3)
 #ifdef CORIOLIS
          call set_omega(Omega)
 #endif /* CORIOLIS */
