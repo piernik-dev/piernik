@@ -30,7 +30,6 @@
 
 !>
 !! \brief (DW) Module containing all main subroutines and functions that govern %gravity force in the code
-!! \todo to check importance and usefulness of such parameters as g_y and n_gravr2 and tune_zeq_bnd
 !!
 !!
 !! In this module a namelist of parameters is specified:
@@ -43,7 +42,7 @@ module gravity
 
    private
    public :: init_grav, grav_accel, source_terms_grav, grav_pot2accel, grav_pot_3d, get_gprofs, grav_accel2pot, sum_potential
-   public :: g_dir, r_gc, ptmass, ptm_x, ptm_y, ptm_z, r_smooth, nsub, tune_zeq, tune_zeq_bnd, h_grav, r_grav, n_gravr, n_gravr2, n_gravh, user_grav, gp_status, gprofs_target, ptmass2, ptm2_x
+   public :: g_dir, r_gc, ptmass, ptm_x, ptm_y, ptm_z, r_smooth, nsub, tune_zeq, tune_zeq_bnd, h_grav, r_grav, n_gravr, n_gravh, user_grav, gp_status, gprofs_target, ptmass2, ptm2_x
 
    integer, parameter         :: gp_stat_len   = 9
    integer, parameter         :: gproft_len    = 5
@@ -62,9 +61,8 @@ module gravity
    real    :: r_grav                !< radius of gravitational potential cut used by GRAV_PTMASS, GRAV_PTFLAT type of %gravity
    integer :: n_gravh               !< index of hyperbolic-cosinusoidal cutting of acceleration; used when set to non-zero
    integer :: n_gravr               !< index of hyperbolic-cosinusoidal cutting of gravitational potential used by GRAV_PTMASS, GRAV_PTFLAT type of %gravity
-   integer :: n_gravr2              !< similar to n_gravr <b>(currently not used)</b>
    real    :: tune_zeq              !< z-component of %gravity tuning factor used by hydrostatic_zeq
-   real    :: tune_zeq_bnd          !< z-component of %gravity tuning factor supposed to be used in boundaries <b>(currently not used)</b>
+   real    :: tune_zeq_bnd          !< z-component of %gravity tuning factor supposed to be used in boundaries
    real    :: ptmass2               !< mass of the secondary for Roche potential
    real    :: ptm2_x                !< x-position of the secondary for Roche potential (y and z positions are assumed to be 0)
    real    :: cmass_x               !< center of mass for Roche potential
@@ -118,7 +116,6 @@ module gravity
 !! <tr><td>h_grav       </td><td>1.e6   </td><td>real             </td><td>\copydoc gravity::h_grav       </td></tr>
 !! <tr><td>r_grav       </td><td>1.e6   </td><td>real             </td><td>\copydoc gravity::r_grav       </td></tr>
 !! <tr><td>n_gravr      </td><td>0      </td><td>real             </td><td>\copydoc gravity::n_gravr      </td></tr>
-!! <tr><td>n_gravr2     </td><td>0      </td><td>real             </td><td>\copydoc gravity::n_gravr2     </td></tr>
 !! <tr><td>n_gravh      </td><td>0      </td><td>real             </td><td>\copydoc gravity::n_gravh      </td></tr>
 !! <tr><td>user_grav    </td><td>.false.</td><td>logical          </td><td>\copydoc gravity::user_grav    </td></tr>
 !! <tr><td>gprofs_target</td><td>'gparr'</td><td>string of chars  </td><td>\copydoc gravity::gprofs_target</td></tr>
@@ -140,7 +137,7 @@ module gravity
       implicit none
 
       namelist /GRAVITY/ g_dir, r_gc, ptmass, ptm_x, ptm_y, ptm_z, r_smooth, external_gp, ptmass2, ptm2_x, &
-                nsub, tune_zeq, tune_zeq_bnd, h_grav, r_grav, n_gravr, n_gravr2, n_gravh, user_grav, gprofs_target
+                nsub, tune_zeq, tune_zeq_bnd, h_grav, r_grav, n_gravr, n_gravh, user_grav, gprofs_target
 
 #ifdef VERBOSE
       if (master) call warn("[gravity:init_grav] Commencing gravity module initialization")
@@ -162,7 +159,6 @@ module gravity
       ptm2_x = -1.0
 
       n_gravr = 0
-      n_gravr2= 0
       n_gravh = 0
 
       gprofs_target = 'gparr'
@@ -176,8 +172,7 @@ module gravity
 
          ibuff(1)   = nsub
          ibuff(2)   = n_gravr
-         ibuff(3)   = n_gravr2
-         ibuff(4)   = n_gravh
+         ibuff(3)   = n_gravh
 
          rbuff(1:3) = g_dir
          rbuff(4)   = r_gc
@@ -209,8 +204,7 @@ module gravity
 
          nsub                = ibuff(1)
          n_gravr             = ibuff(2)
-         n_gravr2            = ibuff(3)
-         n_gravh             = ibuff(4)
+         n_gravh             = ibuff(3)
 
          g_dir               = rbuff(1:3)
          r_gc                = rbuff(4)
