@@ -808,20 +808,20 @@ module gravity
 
       implicit none
 
-      integer                         :: i, j, k, ip, pgpmax
-      real, allocatable, dimension(3) :: gpwork
-      real                            :: gravrx(cg%nx), gravry(cg%ny), gravrz(cg%nz)
-      real                            :: gp_max
-      integer, dimension(3)           :: loc_gp_max
-      integer                         :: proc_gp_max
-      integer                         :: px, py, pz, pc(3)
-      real                            :: dgpx_proc, dgpx_all(0:nproc-1), &
-                                         dgpy_proc, dgpy_all(0:nproc-1), &
-                                         dgpz_proc, dgpz_all(0:nproc-1), &
-                                         dgpx(0:pxsize-1,0:pysize-1,0:pzsize-1), &
-                                         dgpy(0:pxsize-1,0:pysize-1,0:pzsize-1), &
-                                         dgpz(0:pxsize-1,0:pysize-1,0:pzsize-1), &
-                                         ddgp(0:pxsize-1,0:pysize-1,0:pzsize-1)
+      integer                             :: i, j, k, ip, pgpmax
+      real, allocatable, dimension(:,:,:) :: gpwork
+      real                                :: gravrx(cg%nx), gravry(cg%ny), gravrz(cg%nz)
+      real                                :: gp_max
+      integer, dimension(3)               :: loc_gp_max
+      integer                             :: proc_gp_max
+      integer                             :: px, py, pz, pc(3)
+      real                                :: dgpx_proc, dgpx_all(0:nproc-1), &
+                                             dgpy_proc, dgpy_all(0:nproc-1), &
+                                             dgpz_proc, dgpz_all(0:nproc-1), &
+                                             dgpx(0:pxsize-1,0:pysize-1,0:pzsize-1), &
+                                             dgpy(0:pxsize-1,0:pysize-1,0:pzsize-1), &
+                                             dgpz(0:pxsize-1,0:pysize-1,0:pzsize-1), &
+                                             ddgp(0:pxsize-1,0:pysize-1,0:pzsize-1)
 
       allocate(gpwork(cg%nx, cg%ny, cg%nz))
       gpwork(1,1,1) = 0.0
