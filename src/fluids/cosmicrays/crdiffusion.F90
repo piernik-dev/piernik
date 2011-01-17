@@ -29,8 +29,6 @@
 
 !>
 !! \brief (MH) Numerical scheme for the diffusive transport of Cosmic Rays
-!!
-!!
 !<
 
 module crdiffusion
@@ -42,13 +40,11 @@ module crdiffusion
 
 contains
 
-!****************************************************************************
-!
+!>
+!! \brief Diffusive transport of ecr in 1-direction
+!<
    subroutine cr_diff_x
-!
-!  PURPOSE:  Diffusive transport of ecr in 1-direction
-!
-!-----------------------------------------------------------------------
+
       use arrays,         only: b, u, wcr
       use fluidindex,     only: ibx, iby, ibz, nvar
       use grid,           only: cg
@@ -115,13 +111,11 @@ contains
 
    end subroutine cr_diff_x
 
-!****************************************************************************
-!
+!>
+!! \brief Diffusive transport of ecr in 2-direction
+!<
    subroutine cr_diff_y
-!
-!  PURPOSE:   Diffusive transport of ecr in 2-direction
-!
-!-----------------------------------------------------------------------
+
       use arrays,         only: b, u, wcr
       use fluidindex,     only: ibx, iby, ibz, nvar
       use grid,           only: cg
@@ -188,13 +182,11 @@ contains
 
    end subroutine cr_diff_y
 
-!************************************************************************
-!
+!>
+!! \brief Diffusive transport of ecr in 3-direction
+!<
    subroutine cr_diff_z
-!
-!  PURPOSE:   Diffusive transport of ecr in 3-direction
-!
-!-----------------------------------------------------------------------
+
       use arrays,         only: b, u, wcr
       use fluidindex,     only: ibx, iby, ibz, nvar
       use grid,           only: cg
