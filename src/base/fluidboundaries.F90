@@ -86,12 +86,8 @@ module fluidboundaries
       use fluidboundaries_pub, only: user_bnd_yl, user_bnd_yr, user_bnd_zl, user_bnd_zr, func_bnd_xl, func_bnd_xr
       use fluidindex,          only: nvar, iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
       use grid,                only: cg
-      use mpisetup,            only: ierr, MPI_XY_RIGHT_DOM, MPI_XY_RIGHT_BND, MPI_XY_LEFT_DOM, MPI_XY_LEFT_BND, &
-                                     MPI_XZ_RIGHT_DOM, MPI_XZ_RIGHT_BND, MPI_XZ_LEFT_DOM, MPI_XZ_LEFT_BND, &
-                                     MPI_YZ_RIGHT_DOM, MPI_YZ_RIGHT_BND, MPI_YZ_LEFT_DOM, MPI_YZ_LEFT_BND, &
-                                     pxsize, pysize, pzsize, proczl, proczr, procyl, procyr, procxl, procxr, &
-                                     pcoords, bnd_xr, bnd_xl, bnd_yl, bnd_yr, bnd_zl, bnd_zr, req, status, comm, comm3d, &
-                                     procxyl, procyxl, smalld
+      use mpisetup,            only: ierr, pxsize, pysize, pzsize, proczl, proczr, procyl, procyr, procxl, procxr, procxyl, procyxl, smalld, &
+           &                         pcoords, bnd_xr, bnd_xl, bnd_yl, bnd_yr, bnd_zl, bnd_zr, req, status, comm, comm3d
       use mpi,                 only: MPI_DOUBLE_PRECISION
 #ifdef COSM_RAYS
       use initcosmicrays,      only: smallecr
@@ -280,10 +276,10 @@ module fluidboundaries
 #else /* !SHEAR_BND */
          if (pxsize .gt. 1) then
 
-            CALL MPI_Isend   (u(1,1,1,1), 1, MPI_YZ_LEFT_DOM,  procxl, 10, comm3d, req(1), ierr)
-            CALL MPI_Isend   (u(1,1,1,1), 1, MPI_YZ_RIGHT_DOM, procxr, 20, comm3d, req(3), ierr)
-            CALL MPI_Irecv   (u(1,1,1,1), 1, MPI_YZ_LEFT_BND,  procxl, 20, comm3d, req(2), ierr)
-            CALL MPI_Irecv   (u(1,1,1,1), 1, MPI_YZ_RIGHT_BND, procxr, 10, comm3d, req(4), ierr)
+            CALL MPI_Isend   (u(1,1,1,1), 1, cg%MPI_YZ_LEFT_DOM,  procxl, 10, comm3d, req(1), ierr)
+            CALL MPI_Isend   (u(1,1,1,1), 1, cg%MPI_YZ_RIGHT_DOM, procxr, 20, comm3d, req(3), ierr)
+            CALL MPI_Irecv   (u(1,1,1,1), 1, cg%MPI_YZ_LEFT_BND,  procxl, 20, comm3d, req(2), ierr)
+            CALL MPI_Irecv   (u(1,1,1,1), 1, cg%MPI_YZ_RIGHT_BND, procxr, 10, comm3d, req(4), ierr)
 
             call MPI_Waitall(4,req(:),status(:,:),ierr)
          endif
@@ -291,10 +287,10 @@ module fluidboundaries
       case ('ydim')
          if (pysize .gt. 1) then
 
-            CALL MPI_Isend   (u(1,1,1,1), 1, MPI_XZ_LEFT_DOM,  procyl, 30, comm3d, req(1), ierr)
-            CALL MPI_Isend   (u(1,1,1,1), 1, MPI_XZ_RIGHT_DOM, procyr, 40, comm3d, req(3), ierr)
-            CALL MPI_Irecv   (u(1,1,1,1), 1, MPI_XZ_LEFT_BND,  procyl, 40, comm3d, req(2), ierr)
-            CALL MPI_Irecv   (u(1,1,1,1), 1, MPI_XZ_RIGHT_BND, procyr, 30, comm3d, req(4), ierr)
+            CALL MPI_Isend   (u(1,1,1,1), 1, cg%MPI_XZ_LEFT_DOM,  procyl, 30, comm3d, req(1), ierr)
+            CALL MPI_Isend   (u(1,1,1,1), 1, cg%MPI_XZ_RIGHT_DOM, procyr, 40, comm3d, req(3), ierr)
+            CALL MPI_Irecv   (u(1,1,1,1), 1, cg%MPI_XZ_LEFT_BND,  procyl, 40, comm3d, req(2), ierr)
+            CALL MPI_Irecv   (u(1,1,1,1), 1, cg%MPI_XZ_RIGHT_BND, procyr, 30, comm3d, req(4), ierr)
 
             call MPI_Waitall(4,req(:),status(:,:),ierr)
          endif
@@ -302,10 +298,10 @@ module fluidboundaries
       case ('zdim')
          if (pzsize .gt. 1) then
 
-            CALL MPI_Isend   (u(1,1,1,1), 1, MPI_XY_LEFT_DOM,  proczl, 50, comm3d, req(1), ierr)
-            CALL MPI_Isend   (u(1,1,1,1), 1, MPI_XY_RIGHT_DOM, proczr, 60, comm3d, req(3), ierr)
-            CALL MPI_Irecv   (u(1,1,1,1), 1, MPI_XY_LEFT_BND,  proczl, 60, comm3d, req(2), ierr)
-            CALL MPI_Irecv   (u(1,1,1,1), 1, MPI_XY_RIGHT_BND, proczr, 50, comm3d, req(4), ierr)
+            CALL MPI_Isend   (u(1,1,1,1), 1, cg%MPI_XY_LEFT_DOM,  proczl, 50, comm3d, req(1), ierr)
+            CALL MPI_Isend   (u(1,1,1,1), 1, cg%MPI_XY_RIGHT_DOM, proczr, 60, comm3d, req(3), ierr)
+            CALL MPI_Irecv   (u(1,1,1,1), 1, cg%MPI_XY_LEFT_BND,  proczl, 60, comm3d, req(2), ierr)
+            CALL MPI_Irecv   (u(1,1,1,1), 1, cg%MPI_XY_RIGHT_BND, proczr, 50, comm3d, req(4), ierr)
 
             call MPI_Waitall(4,req(:),status(:,:),ierr)
          endif

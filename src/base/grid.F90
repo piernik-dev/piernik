@@ -43,7 +43,8 @@ module grid
    implicit none
 
    private
-   public :: cleanup_grid, init_grid, total_ncells, geometry, cg, D_x, D_y, D_z
+   public :: cleanup_grid, init_grid, grid_mpi_boundaries_prep
+   public :: total_ncells, geometry, cg, D_x, D_y, D_z
 
    integer, protected :: total_ncells                   !< total number of %grid cells
    integer, protected :: D_x                            !< set to 1 when x-direction exists, 0 otherwise. Use to construct dimensionally-safe indices for arrays
@@ -326,10 +327,322 @@ module grid
       call printinfo("[grid:init_grid]: finished. \o/")
 #endif /* VERBOSE */
    end subroutine init_grid
+
+!>
+!! \brief Set up subsets of u,b and sgp arrays for MPI communication
+!<
+
+   subroutine grid_mpi_boundaries_prep(numfluids)
+
+      use mpi,        only: MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION
+      use mpisetup,   only: ierr, xdim, ydim, zdim, has_dir, ndims
+
+      implicit none
+
+      integer, intent(in) :: numfluids !< expect nvar%all, here, cannot grab it directly because of cyclic deps in CR-based setups
+
+      integer, dimension(:), allocatable :: sizes, subsizes, starts
+      integer(kind=4) :: ord
+      integer(kind=4) :: old
+      integer, parameter :: dim4 = ndims +1 !< dimensionality of compund arrays: (q, x, y, z)
+      integer, parameter :: dim3 = ndims    !< dimensionality of simple arrays: (x, y, z)
+      integer, parameter :: NOT_EXIST = -1
+
+      ord = MPI_ORDER_FORTRAN
+      old = MPI_DOUBLE_PRECISION
+
+!------------------------!
+!   X dimension - fluid  !
+!------------------------!
+      if (has_dir(xdim)) then
+
+         allocate(sizes(dim4), subsizes(dim4), starts(dim4))
+
+         sizes    = [ numfluids, cg%nx, cg%ny, cg%nz ]
+         subsizes = [ numfluids, cg%nb, cg%ny, cg%nz ]
+         starts   = [ 0, 0, 0, 0 ]
+
+         call MPI_Type_create_subarray(dim4, sizes, subsizes, starts, ord, old, cg%MPI_YZ_LEFT_BND,  ierr)
+         call MPI_Type_commit(cg%MPI_YZ_LEFT_BND, ierr)
+
+         starts(xdim + 1) = cg%nb
+         call MPI_Type_create_subarray(dim4, sizes, subsizes, starts, ord, old, cg%MPI_YZ_LEFT_DOM,  ierr)
+         call MPI_Type_commit(cg%MPI_YZ_LEFT_DOM, ierr)
+
+         starts(xdim + 1) = cg%nxb
+         call MPI_Type_create_subarray(dim4, sizes, subsizes, starts, ord, old, cg%MPI_YZ_RIGHT_DOM, ierr)
+         call MPI_Type_commit(cg%MPI_YZ_RIGHT_DOM, ierr)
+
+         starts(xdim + 1) = cg%ie
+         call MPI_Type_create_subarray(dim4, sizes, subsizes, starts, ord, old, cg%MPI_YZ_RIGHT_BND, ierr)
+         call MPI_Type_commit(cg%MPI_YZ_RIGHT_BND, ierr)
+
+!------------------------!
+!   X dimension - Bfield !
+!------------------------!
+         sizes    = [ ndims, cg%nx, cg%ny, cg%nz ]
+         subsizes = [ ndims, cg%nb, cg%ny, cg%nz ]
+         starts   = [ 0, 0, 0, 0 ]
+
+         call MPI_Type_create_subarray(dim4, sizes, subsizes, starts, ord, old, cg%MAG_YZ_LEFT_BND,  ierr)
+         call MPI_Type_commit(cg%MAG_YZ_LEFT_BND, ierr)
+
+         starts(xdim + 1) = cg%nb
+         call MPI_Type_create_subarray(dim4, sizes, subsizes, starts, ord, old, cg%MAG_YZ_LEFT_DOM,  ierr)
+         call MPI_Type_commit(cg%MAG_YZ_LEFT_DOM, ierr)
+
+         starts(xdim + 1) = cg%nxb
+         call MPI_Type_create_subarray(dim4, sizes, subsizes, starts, ord, old, cg%MAG_YZ_RIGHT_DOM, ierr)
+         call MPI_Type_commit(cg%MAG_YZ_RIGHT_DOM, ierr)
+
+         starts(xdim + 1) = cg%ie
+         call MPI_Type_create_subarray(dim4, sizes, subsizes, starts, ord, old, cg%MAG_YZ_RIGHT_BND, ierr)
+         call MPI_Type_commit(cg%MAG_YZ_RIGHT_BND, ierr)
+
+         deallocate(sizes, subsizes, starts)
+
+!---------------------------------------!
+!   X dimension - cg%nx*cg%ny*cg%nz array (grav) !
+!---------------------------------------!
+         allocate(sizes(dim3), subsizes(dim3), starts(dim3))
+
+         sizes    = [ cg%nx, cg%ny, cg%nz ]
+         subsizes = [ cg%nb, cg%ny, cg%nz ]
+         starts   = [ 0, 0, 0 ]
+
+         call MPI_Type_create_subarray(dim3, sizes, subsizes, starts, ord, old, cg%ARR_YZ_LEFT_BND,  ierr)
+         call MPI_Type_commit(cg%ARR_YZ_LEFT_BND,  ierr)
+
+         starts(xdim) = cg%nb
+         call MPI_Type_create_subarray(dim3, sizes, subsizes, starts, ord, old, cg%ARR_YZ_LEFT_DOM,  ierr)
+         call MPI_Type_commit(cg%ARR_YZ_LEFT_DOM,  ierr)
+
+         starts(xdim) = cg%nxb
+         call MPI_Type_create_subarray(dim3, sizes, subsizes, starts, ord, old, cg%ARR_YZ_RIGHT_DOM, ierr)
+         call MPI_Type_commit(cg%ARR_YZ_RIGHT_DOM, ierr)
+
+         starts(xdim) = cg%ie
+         call MPI_Type_create_subarray(dim3, sizes, subsizes, starts, ord, old, cg%ARR_YZ_RIGHT_BND, ierr)
+         call MPI_Type_commit(cg%ARR_YZ_RIGHT_BND, ierr)
+
+         deallocate(sizes, subsizes, starts)
+
+      else
+
+         cg%MPI_YZ_LEFT_BND  = NOT_EXIST
+         cg%MPI_YZ_RIGHT_BND = NOT_EXIST
+         cg%MPI_YZ_LEFT_DOM  = NOT_EXIST
+         cg%MPI_YZ_RIGHT_DOM = NOT_EXIST
+
+         cg%MAG_YZ_LEFT_BND  = NOT_EXIST
+         cg%MAG_YZ_RIGHT_BND = NOT_EXIST
+         cg%MAG_YZ_LEFT_DOM  = NOT_EXIST
+         cg%MAG_YZ_RIGHT_DOM = NOT_EXIST
+
+         cg%ARR_YZ_LEFT_BND  = NOT_EXIST
+         cg%ARR_YZ_RIGHT_BND = NOT_EXIST
+         cg%ARR_YZ_LEFT_DOM  = NOT_EXIST
+         cg%ARR_YZ_RIGHT_DOM = NOT_EXIST
+
+      endif
+
+!------------------------!
+!   Y dimension - fluid  !
+!------------------------!
+      if (has_dir(ydim)) then
+
+         allocate(sizes(dim4), subsizes(dim4), starts(dim4))
+
+         sizes    = [ numfluids, cg%nx, cg%ny, cg%nz ]
+         subsizes = [ numfluids, cg%nx, cg%nb, cg%nz ]
+         starts   = [ 0, 0, 0, 0 ]
+
+         call MPI_Type_create_subarray(dim4, sizes, subsizes, starts, ord, old, cg%MPI_XZ_LEFT_BND,  ierr)
+         call MPI_Type_commit(cg%MPI_XZ_LEFT_BND, ierr)
+
+         starts(ydim + 1) = cg%nb
+         call MPI_Type_create_subarray(dim4, sizes, subsizes, starts, ord, old, cg%MPI_XZ_LEFT_DOM,  ierr)
+         call MPI_Type_commit(cg%MPI_XZ_LEFT_DOM, ierr)
+
+         starts(ydim + 1) = cg%nyb
+         call MPI_Type_create_subarray(dim4, sizes, subsizes, starts, ord, old, cg%MPI_XZ_RIGHT_DOM, ierr)
+         call MPI_Type_commit(cg%MPI_XZ_RIGHT_DOM, ierr)
+
+         starts(ydim + 1) = cg%je
+         call MPI_Type_create_subarray(dim4, sizes, subsizes, starts, ord, old, cg%MPI_XZ_RIGHT_BND, ierr)
+         call MPI_Type_commit(cg%MPI_XZ_RIGHT_BND, ierr)
+
+!------------------------!
+!   Y dimension - Bfield !
+!------------------------!
+         sizes    = [ ndims, cg%nx, cg%ny, cg%nz ]
+         subsizes = [ ndims, cg%nx, cg%nb, cg%nz ]
+         starts   = [ 0, 0, 0, 0 ]
+
+         call MPI_Type_create_subarray(dim4, sizes, subsizes, starts, ord, old, cg%MAG_XZ_LEFT_BND,  ierr)
+         call MPI_Type_commit(cg%MAG_XZ_LEFT_BND, ierr)
+
+         starts(ydim + 1) = cg%nb
+         call MPI_Type_create_subarray(dim4, sizes, subsizes, starts, ord, old, cg%MAG_XZ_LEFT_DOM,  ierr)
+         call MPI_Type_commit(cg%MAG_XZ_LEFT_DOM, ierr)
+
+         starts(ydim + 1) = cg%nyb
+         call MPI_Type_create_subarray(dim4, sizes, subsizes, starts, ord, old, cg%MAG_XZ_RIGHT_DOM, ierr)
+         call MPI_Type_commit(cg%MAG_XZ_RIGHT_DOM, ierr)
+
+         starts(ydim + 1) = cg%je
+         call MPI_Type_create_subarray(dim4, sizes, subsizes, starts, ord, old, cg%MAG_XZ_RIGHT_BND, ierr)
+         call MPI_Type_commit(cg%MAG_XZ_RIGHT_BND, ierr)
+
+         deallocate(sizes, subsizes, starts)
+
+!---------------------------------------!
+!   Y dimension - cg%nx*cg%ny*cg%nz array (grav) !
+!---------------------------------------!
+         allocate(sizes(dim3), subsizes(dim3), starts(dim3))
+
+         sizes    = [ cg%nx, cg%ny, cg%nz ]
+         subsizes = [ cg%nx, cg%nb, cg%nz ]
+         starts   = [ 0, 0, 0 ]
+
+         call MPI_Type_create_subarray(dim3, sizes, subsizes, starts, ord, old, cg%ARR_XZ_LEFT_BND,  ierr)
+         call MPI_Type_commit(cg%ARR_XZ_LEFT_BND,  ierr)
+
+         starts(ydim) = cg%nb
+         call MPI_Type_create_subarray(dim3, sizes, subsizes, starts, ord, old, cg%ARR_XZ_LEFT_DOM,  ierr)
+         call MPI_Type_commit(cg%ARR_XZ_LEFT_DOM,  ierr)
+
+         starts(ydim) = cg%nyb
+         call MPI_Type_create_subarray(dim3, sizes, subsizes, starts, ord, old, cg%ARR_XZ_RIGHT_DOM, ierr)
+         call MPI_Type_commit(cg%ARR_XZ_RIGHT_DOM, ierr)
+
+         starts(ydim) = cg%je
+         call MPI_Type_create_subarray(dim3, sizes, subsizes, starts, ord, old, cg%ARR_XZ_RIGHT_BND, ierr)
+         call MPI_Type_commit(cg%ARR_XZ_RIGHT_BND, ierr)
+
+         deallocate(sizes, subsizes, starts)
+
+      else
+
+         cg%MPI_XZ_LEFT_BND  = NOT_EXIST
+         cg%MPI_XZ_RIGHT_BND = NOT_EXIST
+         cg%MPI_XZ_LEFT_DOM  = NOT_EXIST
+         cg%MPI_XZ_RIGHT_DOM = NOT_EXIST
+
+         cg%MAG_XZ_LEFT_BND  = NOT_EXIST
+         cg%MAG_XZ_RIGHT_BND = NOT_EXIST
+         cg%MAG_XZ_LEFT_DOM  = NOT_EXIST
+         cg%MAG_XZ_RIGHT_DOM = NOT_EXIST
+
+         cg%ARR_XZ_LEFT_BND  = NOT_EXIST
+         cg%ARR_XZ_RIGHT_BND = NOT_EXIST
+         cg%ARR_XZ_LEFT_DOM  = NOT_EXIST
+         cg%ARR_XZ_RIGHT_DOM = NOT_EXIST
+
+      endif
+
+!------------------------!
+!   Z dimension - fluid  !
+!------------------------!
+      if (has_dir(zdim)) then
+
+         allocate(sizes(dim4), subsizes(dim4), starts(dim4))
+
+         sizes    = [ numfluids, cg%nx, cg%ny, cg%nz ]
+         subsizes = [ numfluids, cg%nx, cg%ny, cg%nb ]
+         starts   = [ 0, 0, 0, 0 ]
+
+         call MPI_Type_create_subarray(dim4, sizes, subsizes, starts, ord, old, cg%MPI_XY_LEFT_BND,  ierr)
+         call MPI_Type_commit(cg%MPI_XY_LEFT_BND, ierr)
+
+         starts(zdim + 1) = cg%nb
+         call MPI_Type_create_subarray(dim4, sizes, subsizes, starts, ord, old, cg%MPI_XY_LEFT_DOM,  ierr)
+         call MPI_Type_commit(cg%MPI_XY_LEFT_DOM, ierr)
+
+         starts(zdim + 1) = cg%nzb
+         call MPI_Type_create_subarray(dim4, sizes, subsizes, starts, ord, old, cg%MPI_XY_RIGHT_DOM, ierr)
+         call MPI_Type_commit(cg%MPI_XY_RIGHT_DOM, ierr)
+
+         starts(zdim + 1) = cg%ke
+         call MPI_Type_create_subarray(dim4, sizes, subsizes, starts, ord, old, cg%MPI_XY_RIGHT_BND, ierr)
+         call MPI_Type_commit(cg%MPI_XY_RIGHT_BND, ierr)
+
+!------------------------!
+!   Z dimension - Bfield !
+!------------------------!
+         sizes    = [ ndims, cg%nx, cg%ny, cg%nz ]
+         subsizes = [ ndims, cg%nx, cg%ny, cg%nb ]
+         starts   = [ 0, 0, 0, 0 ]
+
+         call MPI_Type_create_subarray(dim4, sizes, subsizes, starts, ord, old, cg%MAG_XY_LEFT_BND,  ierr)
+         call MPI_Type_commit(cg%MAG_XY_LEFT_BND, ierr)
+
+         starts(zdim + 1) = cg%nb
+         call MPI_Type_create_subarray(dim4, sizes, subsizes, starts, ord, old, cg%MAG_XY_LEFT_DOM,  ierr)
+         call MPI_Type_commit(cg%MAG_XY_LEFT_DOM, ierr)
+
+         starts(zdim + 1) = cg%nzb
+         call MPI_Type_create_subarray(dim4, sizes, subsizes, starts, ord, old, cg%MAG_XY_RIGHT_DOM, ierr)
+         call MPI_Type_commit(cg%MAG_XY_RIGHT_DOM, ierr)
+
+         starts(zdim + 1) = cg%ke
+         call MPI_Type_create_subarray(dim4, sizes, subsizes, starts, ord, old, cg%MAG_XY_RIGHT_BND, ierr)
+         call MPI_Type_commit(cg%MAG_XY_RIGHT_BND, ierr)
+
+         deallocate(sizes, subsizes, starts)
+
+!---------------------------------------!
+!   Z dimension - cg%nx*cg%ny*cg%nz array (grav) !
+!---------------------------------------!
+         allocate(sizes(dim3), subsizes(dim3), starts(dim3))
+
+         sizes    = [ cg%nx, cg%ny, cg%nz ]
+         subsizes = [ cg%nx, cg%ny, cg%nb ]
+         starts   = [ 0, 0, 0 ]
+
+         call MPI_Type_create_subarray(dim3, sizes, subsizes, starts, ord, old, cg%ARR_XY_LEFT_BND,  ierr)
+         call MPI_Type_commit(cg%ARR_XY_LEFT_BND,  ierr)
+
+         starts(zdim) = cg%nb
+         call MPI_Type_create_subarray(dim3, sizes, subsizes, starts, ord, old, cg%ARR_XY_LEFT_DOM,  ierr)
+         call MPI_Type_commit(cg%ARR_XY_LEFT_DOM,  ierr)
+
+         starts(zdim) = cg%nzb
+         call MPI_Type_create_subarray(dim3, sizes, subsizes, starts, ord, old, cg%ARR_XY_RIGHT_DOM, ierr)
+         call MPI_Type_commit(cg%ARR_XY_RIGHT_DOM, ierr)
+
+         starts(zdim) = cg%ke
+         call MPI_Type_create_subarray(dim3, sizes, subsizes, starts, ord, old, cg%ARR_XY_RIGHT_BND, ierr)
+         call MPI_Type_commit(cg%ARR_XY_RIGHT_BND, ierr)
+
+         deallocate(sizes, subsizes, starts)
+
+      else
+
+         cg%MPI_XY_LEFT_BND  = NOT_EXIST
+         cg%MPI_XY_RIGHT_BND = NOT_EXIST
+         cg%MPI_XY_LEFT_DOM  = NOT_EXIST
+         cg%MPI_XY_RIGHT_DOM = NOT_EXIST
+
+         cg%MAG_XY_LEFT_BND  = NOT_EXIST
+         cg%MAG_XY_RIGHT_BND = NOT_EXIST
+         cg%MAG_XY_LEFT_DOM  = NOT_EXIST
+         cg%MAG_XY_RIGHT_DOM = NOT_EXIST
+
+         cg%ARR_XY_LEFT_BND  = NOT_EXIST
+         cg%ARR_XY_RIGHT_BND = NOT_EXIST
+         cg%ARR_XY_LEFT_DOM  = NOT_EXIST
+         cg%ARR_XY_RIGHT_DOM = NOT_EXIST
+
+      endif
+
+   end subroutine grid_mpi_boundaries_prep
 !>
 !! \brief Routines that deallocates directional meshes.
 !<
    subroutine cleanup_grid
+
+      use mpisetup, only: has_dir, xdim, ydim, zdim, ierr
 
       implicit none
 
@@ -347,6 +660,51 @@ module grid
       if (allocated(cg%zl))    deallocate(cg%zl)
       if (allocated(cg%zr))    deallocate(cg%zr)
       if (allocated(cg%inv_z)) deallocate(cg%inv_z)
+
+      if (has_dir(xdim)) then
+         call MPI_Type_free(cg%MPI_YZ_LEFT_BND,  ierr)
+         call MPI_Type_free(cg%MPI_YZ_LEFT_DOM,  ierr)
+         call MPI_Type_free(cg%MPI_YZ_RIGHT_DOM, ierr)
+         call MPI_Type_free(cg%MPI_YZ_RIGHT_BND, ierr)
+         call MPI_Type_free(cg%MAG_YZ_LEFT_BND,  ierr)
+         call MPI_Type_free(cg%MAG_YZ_LEFT_DOM,  ierr)
+         call MPI_Type_free(cg%MAG_YZ_RIGHT_DOM, ierr)
+         call MPI_Type_free(cg%MAG_YZ_RIGHT_BND, ierr)
+         call MPI_Type_free(cg%ARR_YZ_LEFT_BND,  ierr)
+         call MPI_Type_free(cg%ARR_YZ_LEFT_DOM,  ierr)
+         call MPI_Type_free(cg%ARR_YZ_RIGHT_DOM, ierr)
+         call MPI_Type_free(cg%ARR_YZ_RIGHT_BND, ierr)
+      endif
+
+      if (has_dir(ydim)) then
+         call MPI_Type_free(cg%MPI_XZ_LEFT_BND,  ierr)
+         call MPI_Type_free(cg%MPI_XZ_LEFT_DOM,  ierr)
+         call MPI_Type_free(cg%MPI_XZ_RIGHT_DOM, ierr)
+         call MPI_Type_free(cg%MPI_XZ_RIGHT_BND, ierr)
+         call MPI_Type_free(cg%MAG_XZ_LEFT_BND,  ierr)
+         call MPI_Type_free(cg%MAG_XZ_LEFT_DOM,  ierr)
+         call MPI_Type_free(cg%MAG_XZ_RIGHT_DOM, ierr)
+         call MPI_Type_free(cg%MAG_XZ_RIGHT_BND, ierr)
+         call MPI_Type_free(cg%ARR_XZ_LEFT_BND,  ierr)
+         call MPI_Type_free(cg%ARR_XZ_LEFT_DOM,  ierr)
+         call MPI_Type_free(cg%ARR_XZ_RIGHT_DOM, ierr)
+         call MPI_Type_free(cg%ARR_XZ_RIGHT_BND, ierr)
+      endif
+
+      if (has_dir(zdim)) then
+         call MPI_Type_free(cg%MPI_XY_LEFT_BND,  ierr)
+         call MPI_Type_free(cg%MPI_XY_LEFT_DOM,  ierr)
+         call MPI_Type_free(cg%MPI_XY_RIGHT_DOM, ierr)
+         call MPI_Type_free(cg%MPI_XY_RIGHT_BND, ierr)
+         call MPI_Type_free(cg%MAG_XY_LEFT_BND,  ierr)
+         call MPI_Type_free(cg%MAG_XY_LEFT_DOM,  ierr)
+         call MPI_Type_free(cg%MAG_XY_RIGHT_DOM, ierr)
+         call MPI_Type_free(cg%MAG_XY_RIGHT_BND, ierr)
+         call MPI_Type_free(cg%ARR_XY_LEFT_BND,  ierr)
+         call MPI_Type_free(cg%ARR_XY_LEFT_DOM,  ierr)
+         call MPI_Type_free(cg%ARR_XY_RIGHT_DOM, ierr)
+         call MPI_Type_free(cg%ARR_XY_RIGHT_BND, ierr)
+      endif
 
    end subroutine cleanup_grid
 

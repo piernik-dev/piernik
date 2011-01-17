@@ -133,7 +133,18 @@ module types
 
       ! a pointer to the next cg
       ! grid level
-      ! a list of MPI types for communication with targets
+
+      ! a list of MPI types for communication with neighbours
+      ! AMR: these will become lists
+      integer :: MPI_YZ_LEFT_BND, MPI_YZ_RIGHT_BND, MPI_YZ_LEFT_DOM, MPI_YZ_RIGHT_DOM !< communicator types for the u(:,:,:,:) array, x-direction
+      integer :: MPI_XZ_LEFT_BND, MPI_XZ_RIGHT_BND, MPI_XZ_LEFT_DOM, MPI_XZ_RIGHT_DOM !< - || -, y-direction
+      integer :: MPI_XY_LEFT_BND, MPI_XY_RIGHT_BND, MPI_XY_LEFT_DOM, MPI_XY_RIGHT_DOM !< - || -, z-direction
+      integer :: MAG_YZ_LEFT_BND, MAG_YZ_RIGHT_BND, MAG_YZ_LEFT_DOM, MAG_YZ_RIGHT_DOM !< communicator types for the b(1:3,:,:,:) array
+      integer :: MAG_XZ_LEFT_BND, MAG_XZ_RIGHT_BND, MAG_XZ_LEFT_DOM, MAG_XZ_RIGHT_DOM !< - || -, y-direction
+      integer :: MAG_XY_LEFT_BND, MAG_XY_RIGHT_BND, MAG_XY_LEFT_DOM, MAG_XY_RIGHT_DOM !< - || -, z-direction
+      integer :: ARR_YZ_LEFT_BND, ARR_YZ_RIGHT_BND, ARR_YZ_LEFT_DOM, ARR_YZ_RIGHT_DOM !< communicator types for the sgp(:,:,:,:) and similar arrays
+      integer :: ARR_XZ_LEFT_BND, ARR_XZ_RIGHT_BND, ARR_XZ_LEFT_DOM, ARR_XZ_RIGHT_DOM !< - || -, y-direction
+      integer :: ARR_XY_LEFT_BND, ARR_XY_RIGHT_BND, ARR_XY_LEFT_DOM, ARR_XY_RIGHT_DOM !< - || -, z-direction
 
    end type grid_container
 

@@ -38,11 +38,8 @@ contains
 
    subroutine bnd_a(A)
 
-      use mpisetup, only: MAG_YZ_LEFT_DOM, MAG_YZ_RIGHT_DOM, MAG_YZ_LEFT_BND, MAG_YZ_RIGHT_BND, &
-         MAG_XY_LEFT_DOM, MAG_XY_RIGHT_DOM, MAG_XY_LEFT_BND, MAG_XY_RIGHT_BND, &
-         MAG_XZ_LEFT_DOM, MAG_XZ_RIGHT_DOM, MAG_XZ_LEFT_BND, MAG_XZ_RIGHT_BND, &
-         ierr, req, comm3d, procxl, procxr, procyl, procyr, proczl, proczr, status, &
-         pxsize, pysize, pzsize
+      use mpisetup, only: ierr, req, comm3d, procxl, procxr, procyl, procyr, proczl, proczr, status, pxsize, pysize, pzsize
+      use grid,     only: cg
 
       implicit none
 
@@ -50,28 +47,28 @@ contains
 
       if (pxsize .gt. 1) then
 
-         CALL MPI_Isend  (A(1,1,1,1), 1, MAG_YZ_LEFT_DOM,  procxl, 10, comm3d, req(1), ierr)
-         CALL MPI_Isend  (A(1,1,1,1), 1, MAG_YZ_RIGHT_DOM, procxr, 20, comm3d, req(3), ierr)
-         CALL MPI_Irecv  (A(1,1,1,1), 1, MAG_YZ_LEFT_BND,  procxl, 20, comm3d, req(2), ierr)
-         CALL MPI_Irecv  (A(1,1,1,1), 1, MAG_YZ_RIGHT_BND, procxr, 10, comm3d, req(4), ierr)
+         CALL MPI_Isend  (A(1,1,1,1), 1, cg%MAG_YZ_LEFT_DOM,  procxl, 10, comm3d, req(1), ierr)
+         CALL MPI_Isend  (A(1,1,1,1), 1, cg%MAG_YZ_RIGHT_DOM, procxr, 20, comm3d, req(3), ierr)
+         CALL MPI_Irecv  (A(1,1,1,1), 1, cg%MAG_YZ_LEFT_BND,  procxl, 20, comm3d, req(2), ierr)
+         CALL MPI_Irecv  (A(1,1,1,1), 1, cg%MAG_YZ_RIGHT_BND, procxr, 10, comm3d, req(4), ierr)
 
          call MPI_Waitall(4,req(:),status(:,:),ierr)
       endif
 
       if (pysize .gt. 1) then
-         CALL MPI_Isend  (A(1,1,1,1), 1, MAG_XZ_LEFT_DOM,  procyl, 30, comm3d, req(1), ierr)
-         CALL MPI_Isend  (A(1,1,1,1), 1, MAG_XZ_RIGHT_DOM, procyr, 40, comm3d, req(3), ierr)
-         CALL MPI_Irecv  (A(1,1,1,1), 1, MAG_XZ_LEFT_BND,  procyl, 40, comm3d, req(2), ierr)
-         CALL MPI_Irecv  (A(1,1,1,1), 1, MAG_XZ_RIGHT_BND, procyr, 30, comm3d, req(4), ierr)
+         CALL MPI_Isend  (A(1,1,1,1), 1, cg%MAG_XZ_LEFT_DOM,  procyl, 30, comm3d, req(1), ierr)
+         CALL MPI_Isend  (A(1,1,1,1), 1, cg%MAG_XZ_RIGHT_DOM, procyr, 40, comm3d, req(3), ierr)
+         CALL MPI_Irecv  (A(1,1,1,1), 1, cg%MAG_XZ_LEFT_BND,  procyl, 40, comm3d, req(2), ierr)
+         CALL MPI_Irecv  (A(1,1,1,1), 1, cg%MAG_XZ_RIGHT_BND, procyr, 30, comm3d, req(4), ierr)
 
          call MPI_Waitall(4,req(:),status(:,:),ierr)
       endif
 
       if (pzsize .gt. 1) then
-         CALL MPI_Isend  (A(1,1,1,1), 1, MAG_XY_LEFT_DOM,  proczl, 50, comm3d, req(1), ierr)
-         CALL MPI_Isend  (A(1,1,1,1), 1, MAG_XY_RIGHT_DOM, proczr, 60, comm3d, req(3), ierr)
-         CALL MPI_Irecv  (A(1,1,1,1), 1, MAG_XY_LEFT_BND,  proczl, 60, comm3d, req(2), ierr)
-         CALL MPI_Irecv  (A(1,1,1,1), 1, MAG_XY_RIGHT_BND, proczr, 50, comm3d, req(4), ierr)
+         CALL MPI_Isend  (A(1,1,1,1), 1, cg%MAG_XY_LEFT_DOM,  proczl, 50, comm3d, req(1), ierr)
+         CALL MPI_Isend  (A(1,1,1,1), 1, cg%MAG_XY_RIGHT_DOM, proczr, 60, comm3d, req(3), ierr)
+         CALL MPI_Irecv  (A(1,1,1,1), 1, cg%MAG_XY_LEFT_BND,  proczl, 60, comm3d, req(2), ierr)
+         CALL MPI_Irecv  (A(1,1,1,1), 1, cg%MAG_XY_RIGHT_BND, proczr, 50, comm3d, req(4), ierr)
 
          call MPI_Waitall(4,req(:),status(:,:),ierr)
       endif
@@ -86,11 +83,8 @@ contains
       use grid,          only: cg
       use mpi,           only: MPI_DOUBLE_PRECISION
       use mpisetup,      only: bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr, &
-                               ierr, req, comm3d, procxl, procxr, procyl, procyr, proczl, proczr, status, &
-                               pxsize, pysize, pzsize, procxyl, procyxl, pcoords, comm, &
-                               MAG_YZ_LEFT_DOM, MAG_YZ_RIGHT_DOM, MAG_YZ_LEFT_BND, MAG_YZ_RIGHT_BND, &
-                               MAG_XY_LEFT_DOM, MAG_XY_RIGHT_DOM, MAG_XY_LEFT_BND, MAG_XY_RIGHT_BND, &
-                               MAG_XZ_LEFT_DOM, MAG_XZ_RIGHT_DOM, MAG_XZ_LEFT_BND, MAG_XZ_RIGHT_BND
+           &                   ierr, req, comm3d, procxl, procxr, procyl, procyr, proczl, proczr, status, &
+           &                   pxsize, pysize, pzsize, procxyl, procyxl, pcoords, comm
 #ifdef SHEAR
       use shear,         only: eps,delj
 #endif /* SHEAR */
@@ -174,10 +168,10 @@ contains
 
             if (pxsize .gt. 1) then
 
-               CALL MPI_Isend  (b(1,1,1,1), 1, MAG_YZ_LEFT_DOM,  procxl, 10, comm3d, req(1), ierr)
-               CALL MPI_Isend  (b(1,1,1,1), 1, MAG_YZ_RIGHT_DOM, procxr, 20, comm3d, req(3), ierr)
-               CALL MPI_Irecv  (b(1,1,1,1), 1, MAG_YZ_LEFT_BND,  procxl, 20, comm3d, req(2), ierr)
-               CALL MPI_Irecv  (b(1,1,1,1), 1, MAG_YZ_RIGHT_BND, procxr, 10, comm3d, req(4), ierr)
+               CALL MPI_Isend  (b(1,1,1,1), 1, cg%MAG_YZ_LEFT_DOM,  procxl, 10, comm3d, req(1), ierr)
+               CALL MPI_Isend  (b(1,1,1,1), 1, cg%MAG_YZ_RIGHT_DOM, procxr, 20, comm3d, req(3), ierr)
+               CALL MPI_Irecv  (b(1,1,1,1), 1, cg%MAG_YZ_LEFT_BND,  procxl, 20, comm3d, req(2), ierr)
+               CALL MPI_Irecv  (b(1,1,1,1), 1, cg%MAG_YZ_RIGHT_BND, procxr, 10, comm3d, req(4), ierr)
 
                call MPI_Waitall(4,req(:),status(:,:),ierr)
 
@@ -187,20 +181,20 @@ contains
          case ("ydim")
             if (pysize .gt. 1) then
 
-               CALL MPI_Isend  (b(1,1,1,1), 1, MAG_XZ_LEFT_DOM,  procyl, 30, comm3d, req(1), ierr)
-               CALL MPI_Isend  (b(1,1,1,1), 1, MAG_XZ_RIGHT_DOM, procyr, 40, comm3d, req(3), ierr)
-               CALL MPI_Irecv  (b(1,1,1,1), 1, MAG_XZ_LEFT_BND,  procyl, 40, comm3d, req(2), ierr)
-               CALL MPI_Irecv  (b(1,1,1,1), 1, MAG_XZ_RIGHT_BND, procyr, 30, comm3d, req(4), ierr)
+               CALL MPI_Isend  (b(1,1,1,1), 1, cg%MAG_XZ_LEFT_DOM,  procyl, 30, comm3d, req(1), ierr)
+               CALL MPI_Isend  (b(1,1,1,1), 1, cg%MAG_XZ_RIGHT_DOM, procyr, 40, comm3d, req(3), ierr)
+               CALL MPI_Irecv  (b(1,1,1,1), 1, cg%MAG_XZ_LEFT_BND,  procyl, 40, comm3d, req(2), ierr)
+               CALL MPI_Irecv  (b(1,1,1,1), 1, cg%MAG_XZ_RIGHT_BND, procyr, 30, comm3d, req(4), ierr)
 
                call MPI_Waitall(4,req(:),status(:,:),ierr)
             endif
 
          case ("zdim")
             if (pzsize .gt. 1) then
-               CALL MPI_Isend  (b(1,1,1,1), 1, MAG_XY_LEFT_DOM,  proczl, 50, comm3d, req(1), ierr)
-               CALL MPI_Isend  (b(1,1,1,1), 1, MAG_XY_RIGHT_DOM, proczr, 60, comm3d, req(3), ierr)
-               CALL MPI_Irecv  (b(1,1,1,1), 1, MAG_XY_LEFT_BND,  proczl, 60, comm3d, req(2), ierr)
-               CALL MPI_Irecv  (b(1,1,1,1), 1, MAG_XY_RIGHT_BND, proczr, 50, comm3d, req(4), ierr)
+               CALL MPI_Isend  (b(1,1,1,1), 1, cg%MAG_XY_LEFT_DOM,  proczl, 50, comm3d, req(1), ierr)
+               CALL MPI_Isend  (b(1,1,1,1), 1, cg%MAG_XY_RIGHT_DOM, proczr, 60, comm3d, req(3), ierr)
+               CALL MPI_Irecv  (b(1,1,1,1), 1, cg%MAG_XY_LEFT_BND,  proczl, 60, comm3d, req(2), ierr)
+               CALL MPI_Irecv  (b(1,1,1,1), 1, cg%MAG_XY_RIGHT_BND, proczr, 50, comm3d, req(4), ierr)
 
                call MPI_Waitall(4,req(:),status(:,:),ierr)
             endif

@@ -178,11 +178,10 @@ contains
       use fluidboundaries,       only: all_fluid_boundaries
       use fluidboundaries_pub,   only: init_fluidboundaries
       use fluidindex,            only: nvar
-      use grid,                  only: init_grid
+      use grid,                  only: init_grid, grid_mpi_boundaries_prep
       use initfluids,            only: init_fluids, sanitize_smallx_checks
       use gridgeometry,          only: init_geometry
       use initproblem,           only: init_prob, read_problem_par
-      use mpiboundaries,         only: mpi_boundaries_prep
       use mpisetup,              only: init_mpi
       use timestep,              only: init_time_step
 #ifdef MAGNETIC
@@ -245,7 +244,7 @@ contains
 
       call init_geometry
 
-      call mpi_boundaries_prep
+      call grid_mpi_boundaries_prep(nvar%all)
 
 #ifdef SHEAR
       call init_shear

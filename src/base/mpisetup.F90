@@ -42,17 +42,12 @@ module mpisetup
    integer, parameter :: MPI_STATUS_SIZE = 5  ! taken from mpi to silence warnings
 
    private
-   public :: &
-        & ARR_XY_LEFT_BND, ARR_XY_LEFT_DOM, ARR_XY_RIGHT_BND, ARR_XY_RIGHT_DOM, ARR_XZ_LEFT_BND, ARR_XZ_LEFT_DOM, ARR_XZ_RIGHT_BND, ARR_XZ_RIGHT_DOM, &
-        & ARR_YZ_LEFT_BND, ARR_YZ_LEFT_DOM, ARR_YZ_RIGHT_BND, ARR_YZ_RIGHT_DOM, MAG_XY_LEFT_BND, MAG_XY_LEFT_DOM, MAG_XY_RIGHT_BND, MAG_XY_RIGHT_DOM, &
-        & MAG_XZ_LEFT_BND, MAG_XZ_LEFT_DOM, MAG_XZ_RIGHT_BND, MAG_XZ_RIGHT_DOM, MAG_YZ_LEFT_BND, MAG_YZ_LEFT_DOM, MAG_YZ_RIGHT_BND, MAG_YZ_RIGHT_DOM, &
-        & MPI_XY_LEFT_BND, MPI_XY_LEFT_DOM, MPI_XY_RIGHT_BND, MPI_XY_RIGHT_DOM, MPI_XZ_LEFT_BND, MPI_XZ_LEFT_DOM, &
-        & MPI_XZ_RIGHT_BND, MPI_XZ_RIGHT_DOM, MPI_YZ_LEFT_BND, MPI_YZ_LEFT_DOM, MPI_YZ_RIGHT_BND, MPI_YZ_RIGHT_DOM, bnd_xl, bnd_xl_dom, bnd_xr, &
-        & bnd_xr_dom, bnd_yl, bnd_yl_dom, bnd_yr, bnd_yr_dom, bnd_zl, bnd_zl_dom, bnd_zr, bnd_zr_dom, buffer_dim, cbuff, cbuff_len, cfl, cfl_max, cflcontrol, &
-        & cfr_smooth, cleanup_mpi, comm, comm3d, dt, dt_initial, dt_max_grow, dt_min, dt_old, dtm, err, ibuff, ierr, info, init_mpi, &
-        & integration_order, lbuff, limiter, mpifind, ndims, nproc, nstep, pcoords, proc, procxl, procxr, procxyl, procyl, procyr, procyxl, proczl, &
-        & proczr, psize, pxsize, pysize, pzsize, rbuff, req, smalld, smallei, smallp, status, t, use_smalld, magic_mass, local_magic_mass, master, slave, &
-        & nxd, nyd, nzd, nb, xdim, ydim, zdim, has_dir, big_float, relax_time, grace_period_passed
+   public :: bnd_xl, bnd_xl_dom, bnd_xr, bnd_xr_dom, bnd_yl, bnd_yl_dom, bnd_yr, bnd_yr_dom, bnd_zl, bnd_zl_dom, bnd_zr, bnd_zr_dom, &
+        &    buffer_dim, cbuff, cbuff_len, cfl, cfl_max, cflcontrol, &
+        &    cfr_smooth, cleanup_mpi, comm, comm3d, dt, dt_initial, dt_max_grow, dt_min, dt_old, dtm, err, ibuff, ierr, info, init_mpi, &
+        &    integration_order, lbuff, limiter, mpifind, ndims, nproc, nstep, pcoords, proc, procxl, procxr, procxyl, procyl, procyr, procyxl, proczl, &
+        &    proczr, psize, pxsize, pysize, pzsize, rbuff, req, smalld, smallei, smallp, status, t, use_smalld, magic_mass, local_magic_mass, master, slave, &
+        &    nxd, nyd, nzd, nb, xdim, ydim, zdim, has_dir, big_float, relax_time, grace_period_passed
 
    integer :: nproc, proc, ierr , rc, info
    integer :: status(MPI_STATUS_SIZE,4)
@@ -134,27 +129,6 @@ module mpisetup
    integer, dimension(3) :: domsize   !< local copy of nxd, nyd, nzd
 
    logical     :: have_mpi
-
-   integer, save :: MPI_XZ_LEFT_BND=-1, MPI_XZ_RIGHT_BND=-1
-   integer, save :: MPI_XZ_LEFT_DOM=-1, MPI_XZ_RIGHT_DOM=-1
-   integer, save :: MPI_XY_LEFT_BND=-1, MPI_XY_RIGHT_BND=-1
-   integer, save :: MPI_XY_LEFT_DOM=-1, MPI_XY_RIGHT_DOM=-1
-   integer, save :: MPI_YZ_LEFT_BND=-1, MPI_YZ_RIGHT_BND=-1
-   integer, save :: MPI_YZ_LEFT_DOM=-1, MPI_YZ_RIGHT_DOM=-1
-
-   integer, save :: MAG_XZ_LEFT_BND=-1, MAG_XZ_RIGHT_BND=-1
-   integer, save :: MAG_XZ_LEFT_DOM=-1, MAG_XZ_RIGHT_DOM=-1
-   integer, save :: MAG_XY_LEFT_BND=-1, MAG_XY_RIGHT_BND=-1
-   integer, save :: MAG_XY_LEFT_DOM=-1, MAG_XY_RIGHT_DOM=-1
-   integer, save :: MAG_YZ_LEFT_BND=-1, MAG_YZ_RIGHT_BND=-1
-   integer, save :: MAG_YZ_LEFT_DOM=-1, MAG_YZ_RIGHT_DOM=-1
-
-   integer, save :: ARR_XZ_LEFT_BND=-1, ARR_XZ_RIGHT_BND=-1
-   integer, save :: ARR_XZ_LEFT_DOM=-1, ARR_XZ_RIGHT_DOM=-1
-   integer, save :: ARR_XY_LEFT_BND=-1, ARR_XY_RIGHT_BND=-1
-   integer, save :: ARR_XY_LEFT_DOM=-1, ARR_XY_RIGHT_DOM=-1
-   integer, save :: ARR_YZ_LEFT_BND=-1, ARR_YZ_RIGHT_BND=-1
-   integer, save :: ARR_YZ_LEFT_DOM=-1, ARR_YZ_RIGHT_DOM=-1
 
    contains
 
@@ -578,51 +552,6 @@ module mpisetup
          implicit none
 
          call MPI_Comm_free(comm3d, ierr)
-
-         if (domsize(1) /= 1) then
-            call MPI_Type_free(MPI_YZ_LEFT_BND, ierr)
-            call MPI_Type_free(MPI_YZ_LEFT_DOM, ierr)
-            call MPI_Type_free(MPI_YZ_RIGHT_DOM, ierr)
-            call MPI_Type_free(MPI_YZ_RIGHT_BND, ierr)
-            call MPI_Type_free(MAG_YZ_LEFT_BND, ierr)
-            call MPI_Type_free(MAG_YZ_LEFT_DOM, ierr)
-            call MPI_Type_free(MAG_YZ_RIGHT_DOM, ierr)
-            call MPI_Type_free(MAG_YZ_RIGHT_BND, ierr)
-            call MPI_Type_free(ARR_YZ_LEFT_BND, ierr)
-            call MPI_Type_free(ARR_YZ_LEFT_DOM, ierr)
-            call MPI_Type_free(ARR_YZ_RIGHT_DOM, ierr)
-            call MPI_Type_free(ARR_YZ_RIGHT_BND, ierr)
-         endif
-
-         if (domsize(2) /= 1) then
-            call MPI_Type_free(MPI_XZ_LEFT_BND, ierr)
-            call MPI_Type_free(MPI_XZ_LEFT_DOM, ierr)
-            call MPI_Type_free(MPI_XZ_RIGHT_DOM, ierr)
-            call MPI_Type_free(MPI_XZ_RIGHT_BND, ierr)
-            call MPI_Type_free(MAG_XZ_LEFT_BND, ierr)
-            call MPI_Type_free(MAG_XZ_LEFT_DOM, ierr)
-            call MPI_Type_free(MAG_XZ_RIGHT_DOM, ierr)
-            call MPI_Type_free(MAG_XZ_RIGHT_BND, ierr)
-            call MPI_Type_free(ARR_XZ_LEFT_BND, ierr)
-            call MPI_Type_free(ARR_XZ_LEFT_DOM, ierr)
-            call MPI_Type_free(ARR_XZ_RIGHT_DOM, ierr)
-            call MPI_Type_free(ARR_XZ_RIGHT_BND, ierr)
-         endif
-
-         if (domsize(3) /= 1) then
-            call MPI_Type_free(MPI_XY_LEFT_BND, ierr)
-            call MPI_Type_free(MPI_XY_LEFT_DOM, ierr)
-            call MPI_Type_free(MPI_XY_RIGHT_DOM, ierr)
-            call MPI_Type_free(MPI_XY_RIGHT_BND, ierr)
-            call MPI_Type_free(MAG_XY_LEFT_BND, ierr)
-            call MPI_Type_free(MAG_XY_LEFT_DOM, ierr)
-            call MPI_Type_free(MAG_XY_RIGHT_DOM, ierr)
-            call MPI_Type_free(MAG_XY_RIGHT_BND, ierr)
-            call MPI_Type_free(ARR_XY_LEFT_BND, ierr)
-            call MPI_Type_free(ARR_XY_LEFT_DOM, ierr)
-            call MPI_Type_free(ARR_XY_RIGHT_DOM, ierr)
-            call MPI_Type_free(ARR_XY_RIGHT_BND, ierr)
-         endif
 
          if (master) call printinfo("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++", .false.)
          call MPI_Barrier(comm,ierr)
