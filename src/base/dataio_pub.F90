@@ -93,7 +93,7 @@ module dataio_pub
 
    logical, save      :: halfstep = .false.             !< true when X-Y-Z sweeps are done and Z-Y-X are not
    logical, save      :: skip_advection = .false.       !< .true. will instruct fluidupdate:make_3sweeps to skip sweeps (used by maclaurin problem, replaces precompiler symbol __NO_FLUID_STEP)
-   logical, save      :: log_file_initialized = .false. !< \todo Comment me
+   logical, save      :: log_file_initialized = .false. !< logical to mark initialization of logfile
    integer, save      :: require_init_prob = 0          !< 1 will call initproblem::init_prob on restart
 !>
 !! \todo
