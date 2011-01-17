@@ -331,7 +331,7 @@ module gravity
 
 #ifdef SELF_GRAV
 
-! An improper evaluation of guardcell potential may occur when the multigrid boundary conditions doesn't match /BOUNDARIES/ namelist (e.g. isolated on periodic domain).
+!> \warning An improper evaluation of guardcell potential may occur when the multigrid boundary conditions doesn't match /BOUNDARIES/ namelist (e.g. isolated on periodic domain).
 
    subroutine all_sgp_boundaries
 
@@ -368,7 +368,7 @@ module gravity
                else
                   call die("[gravity:all_grav_boundaries] bnd_xl == 'mpi' && pxsize <= 1")
                endif
-            case ('she') ! move appropriate code from poissonsolver::poisson_solve or do nothing. Or die until someone really needs SHEAR.
+            case ('she') !> \todo move appropriate code from poissonsolver::poisson_solve or do nothing. Or die until someone really needs SHEAR.
                 call die("[gravity:all_grav_boundaries] bnd_xl == 'she' not implemented")
             case default ! Set gradient == 0 on the boundaries
                do i = 1, cg%nb
@@ -794,6 +794,10 @@ module gravity
 !--------------------------------------------------------------------------
 !>
 !! \brief Routine that uses %gravity acceleration given in grav_accel to compute values of gravitational potential filling in gp array
+!!
+!! \details Gravitational potential gp(i,j,k) is defined in cell centers
+!! First we find gp(:,:,:) in each block separately.
+!! Instead of gp, gpwork is used to not change already computed possibly existing other parts of gravitational potential.
 !<
    subroutine grav_accel2pot
 
@@ -804,26 +808,20 @@ module gravity
 
       implicit none
 
-      integer               :: i, j, k, ip, pgpmax
-      real, allocatable     :: gpwork(:,:,:)
-      real                  :: gravrx(cg%nx), gravry(cg%ny), gravrz(cg%nz)
-      real                  :: gp_max
-      integer, dimension(3) :: loc_gp_max
-      integer               :: proc_gp_max
-      integer               :: px, py, pz, pc(3)
-      real                  :: dgpx_proc, dgpx_all(0:nproc-1), &
-                               dgpy_proc, dgpy_all(0:nproc-1), &
-                               dgpz_proc, dgpz_all(0:nproc-1), &
-                               dgpx(0:pxsize-1,0:pysize-1,0:pzsize-1), &
-                               dgpy(0:pxsize-1,0:pysize-1,0:pzsize-1), &
-                               dgpz(0:pxsize-1,0:pysize-1,0:pzsize-1), &
-                               ddgp(0:pxsize-1,0:pysize-1,0:pzsize-1)
-
-! Gravitational potential gp(i,j,k) is defined in cell centers
-! First we find gp(:,:,:) in each block separately assuming:
-! Instead of gp, gpwork is used to not change already computed gp when
-! disk, bulge and halo parts of galactic potential are computed.
-! gravpart is used to distinguish which part has to be computed.
+      integer                         :: i, j, k, ip, pgpmax
+      real, allocatable, dimension(3) :: gpwork
+      real                            :: gravrx(cg%nx), gravry(cg%ny), gravrz(cg%nz)
+      real                            :: gp_max
+      integer, dimension(3)           :: loc_gp_max
+      integer                         :: proc_gp_max
+      integer                         :: px, py, pz, pc(3)
+      real                            :: dgpx_proc, dgpx_all(0:nproc-1), &
+                                         dgpy_proc, dgpy_all(0:nproc-1), &
+                                         dgpz_proc, dgpz_all(0:nproc-1), &
+                                         dgpx(0:pxsize-1,0:pysize-1,0:pzsize-1), &
+                                         dgpy(0:pxsize-1,0:pysize-1,0:pzsize-1), &
+                                         dgpz(0:pxsize-1,0:pysize-1,0:pzsize-1), &
+                                         ddgp(0:pxsize-1,0:pysize-1,0:pzsize-1)
 
       allocate(gpwork(cg%nx, cg%ny, cg%nz))
       gpwork(1,1,1) = 0.0
