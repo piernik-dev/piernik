@@ -407,7 +407,7 @@ module rtvd ! split orig
 ! Source terms -------------------------------------
          geosrc = geometry_source_terms(u,pressure,sweep)
 #ifndef GRAV
-         u1(iarr_all_mx,:) = u1(iarr_all_mx,:) + rk2coef(integration_order,istep)*geosrc(:,:)*dt !if GRAV is defined then look ~50 lines below (BEWARE: semi-duplicated code)
+         u1(iarr_all_mx,:) = u1(iarr_all_mx,:) + rk2coef(integration_order,istep)*geosrc(:,:)*dt !> \deprecated if GRAV is defined then look ~50 lines below (BEWARE: semi-duplicated code)
 #endif /* !GRAV */
 
          call fluid_interactions(dens, vx, fricacc)  !> \todo convert me to func similar to gridgeometry::geometry_source_terms

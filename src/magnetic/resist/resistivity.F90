@@ -129,8 +129,8 @@ module resistivity
 
       if (eta_scale < 0) call die("eta_scale must be greater or equal 0")
 
-      if (.not.allocated(wb) ) allocate(wb(cg%nx, cg%ny, cg%nz) )
-      if (.not.allocated(eta)) allocate(eta(cg%nx, cg%ny, cg%nz))
+      if (.not.allocated(wb) )     allocate(     wb(cg%nx, cg%ny, cg%nz))
+      if (.not.allocated(eta))     allocate(    eta(cg%nx, cg%ny, cg%nz))
       if (.not.allocated(etahelp)) allocate(etahelp(cg%nx, cg%ny, cg%nz))
 
       jc2 = j_crit**2
@@ -170,7 +170,7 @@ module resistivity
 
 !--- current_z
       wb(2:cg%nx,2:cg%ny,:) = (b(iby,2:cg%nx,2:cg%ny,:)-b(iby,1:cg%nx-1,2:cg%ny,:))*cg%idl(xdim) - &
-           &                        (b(ibx,2:cg%nx,2:cg%ny,:)-b(ibx,2:cg%nx,1:cg%ny-1,:))*cg%idl(ydim)
+           &                  (b(ibx,2:cg%nx,2:cg%ny,:)-b(ibx,2:cg%nx,1:cg%ny-1,:))*cg%idl(ydim)
       wb(1,:,:) = wb(2,:,:) ; wb(:,1,:) = wb(:,2,:)
 
       if (has_dir(zdim)) then
@@ -182,12 +182,12 @@ module resistivity
       if (has_dir(zdim)) then
 !--- current_x
          wb(:,2:cg%ny,2:cg%nz) = (b(ibz,:,2:cg%ny,2:cg%nz)-b(ibz,:,1:cg%ny-1,2:cg%nz))*cg%idl(ydim) - &
-              &                        (b(iby,:,2:cg%ny,2:cg%nz)-b(iby,:,2:cg%ny,1:cg%nz-1))*cg%idl(zdim)
+              &                  (b(iby,:,2:cg%ny,2:cg%nz)-b(iby,:,2:cg%ny,1:cg%nz-1))*cg%idl(zdim)
 
          eta(2:cg%nx,:,:) = eta(2:cg%nx,:,:) + 0.25*(wb(2:cg%nx,:,:)+wb(1:cg%nx-1,:,:))**2; eta(1,:,:) = eta(2,:,:)
 !--- current_y
          wb(2:cg%nx,:,2:cg%nz) = (b(ibx,2:cg%nx,:,2:cg%nz)-b(ibx,2:cg%nx,:,1:cg%nz-1))*cg%idl(zdim) - &
-              &                        (b(ibz,2:cg%nx,:,2:cg%nz)-b(ibz,1:cg%nx-1,:,2:cg%nz))*cg%idl(xdim)
+              &                  (b(ibz,2:cg%nx,:,2:cg%nz)-b(ibz,1:cg%nx-1,:,2:cg%nz))*cg%idl(xdim)
 
          eta(:,2:cg%ny,:) = eta(:,2:cg%ny,:) + 0.25*(wb(:,2:cg%ny,:)+wb(:,1:cg%ny-1,:))**2; eta(:,1,:) = eta(:,2,:)
       endif

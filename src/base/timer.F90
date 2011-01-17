@@ -180,14 +180,14 @@ contains
 
    end subroutine search_timer
 
+!>
+!! \brief  Initialize cpu and wall clocks.
+!! \details "cputot" will be the total cpu time (in seconds) consumed by this job.
+!! "wctot" will be the total elapsed wall clock time (in seconds) since the job began.
+!<
    subroutine timer_start
       implicit none
       real(kind=4) :: dtime
-!
-!  Initialize cpu and wall clocks.  "cputot" will be the total cpu
-!  time (in seconds) consumed by this job.  "wctot" will be the total
-!  elapsed wall clock time (in seconds) since the job began.
-!
 
 #ifdef PERFMON
       call itime ( iarray )
@@ -234,6 +234,11 @@ contains
 
    end function time_left
 
+!>
+!! \brief Final wall clock time and cpu usage.
+!! \details Final wall clock time, expressed in hours, minutes, and seconds.
+!!          cpu usage, expressed in hours, minutes, and seconds.
+!<
    subroutine timer_stop
 
       use dataio_pub,    only: msg, printinfo

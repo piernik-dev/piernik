@@ -585,7 +585,9 @@ contains
       end select ! (dim)
 
    end subroutine bnd_emf
-
+!>
+!! \brief Routine delivers common boundary cells indexes in cases of reflection or outflow boundary types
+!<
    subroutine compute_bnd_indxs(bndcase,ndirb,ledge,redge,lnbcells,rnbcells,bndsign,zndiff,rrbase)
 
       use grid, only: cg

@@ -206,7 +206,7 @@ contains
 
       ncrs = ncre + ncrn
 
-      if (ncrs > ncr_max) call die("[initcosmicrays:init_cosmicrays] ncrs > ncr_max") ! higher limit would require changes in names of components in dataio_hdf5
+      if (ncrs > ncr_max) call die("[initcosmicrays:init_cosmicrays] ncrs > ncr_max") !> \warning higher ncr_max limit would require changes in names of components in dataio_hdf5
 
       ma1d = [ncrs]
       call my_allocate(gamma_crs,   ma1d, "gamma_crs")

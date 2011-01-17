@@ -678,16 +678,16 @@ module mpisetup
 
       end subroutine mpifind
 
-!------------------------------------------------------------------------------------------
-! Must be called by all procs to avoid communication and ensure that every proc has
-! proper psize, pxsize, pysize, pzsize
-!
-! This routine tries to divide the computational domain into local domains.
-! The goal is to minimize the ratio of longest to shortest edge to minimize the amount of inter-process communication.
-! If the benchmarks show that some direction should be partitioned in more pieces than other directions, implement appropriate weighting in j1, j2 and j3 calculations.
-!
-! For some weird domains and PE counts this routine may find tiling that does not satisfy multigrid restrictions even if there is some. In such case divide domain manually.
-!
+!>
+!! \brief This routine tries to divide the computational domain into local domains.
+!! \details The goal is to minimize the ratio of longest to shortest edge to minimize the amount of inter-process communication.
+!! If the benchmarks show that some direction should be partitioned in more pieces than other directions, implement appropriate weighting in j1, j2 and j3 calculations.
+!!
+!! For some weird domains and PE counts this routine may find tiling that does not satisfy multigrid restrictions even if there is some. In such case divide domain manually.
+!!
+!! \attention Must be called by all procs to avoid communication and ensure that every proc has
+!! proper psize, pxsize, pysize, pzsize
+!<
 
       subroutine divide_domain_voodoo(np)
 

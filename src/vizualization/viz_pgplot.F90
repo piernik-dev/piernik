@@ -88,10 +88,9 @@ module viz
 !-----------------------------------------------------------------------
       end subroutine draw_me
 
-!-----------------------------------------------------------------------
-! set a "palette" of colors in the range of color indices used by
-! pgimag.
-!-----------------------------------------------------------------------
+!>
+!! \brief set a "palette" of colors in the range of color indices used by pgimag.
+!<
    subroutine palett(ttype, contra, bright)
       implicit none
       integer      :: ttype
@@ -150,14 +149,14 @@ module viz
       endif
    end subroutine palett
 
+!>
+!! \brief set the viewport, allowing margins around the edge for annotation.
+!! \details (this is similar in effect to pgvstd, but has different margins.)
+!! the routine determines the view-surface size and allocates margins
+!! as fractions of the minimum of width and height.
+!<
       subroutine setvp
          implicit none
-!-----------------------------------------------------------------------
-! set the viewport, allowing margins around the edge for annotation.
-! (this is similar in effect to pgvstd, but has different margins.)
-! the routine determines the view-surface size and allocates margins
-! as fractions of the minimum of width and height.
-!-----------------------------------------------------------------------
          real(kind=4) :: d, vpx1, vpx2, vpy1, vpy2
 !
          call pgsvp(nul, one, nul, one)
@@ -170,17 +169,17 @@ module viz
          call pgvsiz(vpx1, vpx2, vpy1, vpy2)
       end subroutine setvp
 
+!>
+!! \brief draw the enclosing rectangle of the subarray to be contoured,
+!! applying the transformation tr.
+!!
+!! \details for a contour map, the corners are (i1,j1) and (i2,j2);
+!! for a gray-scale map, they are (i1-0.5,j1-0.5), (i2+0.5, j2+0.5).
+!<
       subroutine outlin(i1,i2,j1,j2,tr)
       implicit none
       integer      :: i1,i2,j1,j2
       real(kind=4) :: tr(6)
-!-----------------------------------------------------------------------
-! draw the enclosing rectangle of the subarray to be contoured,
-! applying the transformation tr.
-!
-! for a contour map, the corners are (i1,j1) and (i2,j2); for
-! a gray-scale map, they are (i1-0.5,j1-0.5), (i2+0.5, j2+0.5).
-!-----------------------------------------------------------------------
       integer      :: k
       real(kind=4) :: xw(5), yw(5), t
 !

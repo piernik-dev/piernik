@@ -40,9 +40,11 @@ module timestepcosmicrays
    real   :: dt_crs
 
 contains
-   ! Following subroutine evaluates some constants, there is no need to run it
-   ! more than once, apart from wasting CPU cycles...
 
+!>
+!! \brief Following subroutine evaluates some constants, there is no need to run it
+!! more than once, apart from wasting CPU cycles...
+!<
    subroutine timestep_crs
 
       use grid,                only: cg
