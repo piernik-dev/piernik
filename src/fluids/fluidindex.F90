@@ -185,7 +185,7 @@ contains
 #ifdef ISO
       allocate(iarr_all_en(0))
 #else /* !ISO */
-      allocate(iarr_all_en(nvar%adiab))
+      allocate(iarr_all_en(nvar%energ))
 #endif /* !ISO */
 
 #ifdef COSM_RAYS

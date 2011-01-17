@@ -71,7 +71,7 @@
 !!
 !! \n\b Non-isothermal \b fluid: an isothermal fluid does not need energy equation,
 !!    thus \b non-isothermal fluids are distinguished as those, which do not
-!!   engage the energy equation. Variable \b "nvar\%adiab" (in fluidindex) counts
+!!   engage the energy equation. Variable \b "nvar\%energ" (in fluidindex) counts
 !!      independent energy equations used for fluids.
 !!
 !! \n\b Fluid \b variable: Single quantity, such as gas density, x,y,z-momentum
@@ -92,14 +92,9 @@
 !!         See fluidindex for more details.
 !! \n (3)  Physical parameters common for all fluids are computed if necessary.
 !!
-!! \todo Change variable name "nvar\%adiab" to "nenerg". Reason: we are not limited
-!!       to isothermal and  adiabatic equos. Energy equation will be used
-!!       for non-adiabatic fluids in presence of cooling and heating.
-!!
 !! \todo Subdivide different fluids into species
 !!
 !! \warning check if cs_iso and cs_neu are correctly defined (end of init_fluids
-!!
 !!  subroutine) for your purposes (if used).
 !<
 

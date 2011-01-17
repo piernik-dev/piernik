@@ -270,7 +270,7 @@ contains
          colls(ifl,:)=sum(flch(ifl,:,:),1)
       enddo
 #ifndef ISO
-      du(iarr_all_en(1:nvar%adiab),:)=uu(iarr_all_mx(1:nvar%adiab),:)*colls(1:nvar%adiab,:)
+      du(iarr_all_en(1:nvar%energ),:)=uu(iarr_all_mx(1:nvar%energ),:)*colls(1:nvar%energ,:)
 #endif /* !ISO */
       du(iarr_all_mx,:)=colls
 

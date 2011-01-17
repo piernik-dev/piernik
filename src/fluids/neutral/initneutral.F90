@@ -154,7 +154,7 @@ contains
       nvar%neu%iarr_swpz(5) = ienn
       nvar%neu%has_energy   = .true.
 
-      nvar%adiab = nvar%adiab + 1
+      nvar%energ = nvar%energ + 1
 #endif /* ISO */
 
       nvar%neu%end    = nvar%all

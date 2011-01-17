@@ -129,13 +129,13 @@ contains
 
       type(component_fluid), pointer :: fl
 
-      if (nvar%adiab < nvar%fluids) call die("[initproblem:init_prob] Not all fluids are adiabatic!")
+      if (nvar%energ < nvar%fluids) call die("[initproblem:init_prob] Not all fluids are adiabatic!")
 
       ! BEWARE:
       !  3 triple loop are completely unnecessary here, but this problem serves
       !  as an educational example
 
-      do p = 1, nvar%adiab
+      do p = 1, nvar%energ
          fl => nvar%all_fluids(p)
          if (fl%tag=="DST") call die("[initproblem:init_prob] This setup is not suitable for dust!")
          write(msg,*) "Working with ", fl%tag, " fluid."
