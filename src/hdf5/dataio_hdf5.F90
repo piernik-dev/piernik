@@ -263,7 +263,7 @@ module dataio_hdf5
 
    end subroutine cleanup_hdf5
 
-!<
+!>
 !! \brief Routine calculating quantities for plot files
 !<
    subroutine common_plt_hdf5(var,ij,xn,tab,ierrh)
@@ -459,7 +459,7 @@ module dataio_hdf5
 
    end subroutine common_plt_hdf5
 
-!<
+!>
 !! \brief Routine calculating quantities for .hdf files
 !<
    subroutine common_vars_hdf5(var,tab, ierrh)
@@ -796,7 +796,7 @@ module dataio_hdf5
 
    end subroutine write_plot_hdf5
 
-!<
+!>
 !! \brief This routine writes restart dump and updates restart counter
 !<
 
@@ -1667,9 +1667,10 @@ module dataio_hdf5
 
    end subroutine write_arr
 
-! This routine writes all attributes that are common to restart and output files.
-! Other common elements may also be moved here.
-
+!>
+!! \brief This routine writes all attributes that are common to restart and output files.
+!! \details Other common elements may also be moved here.
+!<
    subroutine set_common_attributes(filename, chdf, stype)
 
       use dataio_pub,    only: msg, printio, require_init_prob, piernik_hdf5_version, problem_name, run_id
