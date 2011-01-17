@@ -56,7 +56,11 @@ working directory, to use alternative configurations execute
 Enjoy your work with the Piernik Code!
 '''
 
-head_block1='''LIBS +=${STATIC} -lhdf5_fortran -lhdf5hl_fortran -lhdf5_hl -lhdf5 -lz ${DYNAMIC}
+head_block1='''ifneq (,$(findstring h5pfc, $(F90)))
+LIBS += ${STATIC} -lz ${DYNAMIC}
+else
+LIBS += ${STATIC} -lhdf5_fortran -lhdf5hl_fortran -lhdf5_hl -lhdf5 -lz ${DYNAMIC}
+endif
 
 RM ?= /bin/rm
 MV ?= /bin/mv
