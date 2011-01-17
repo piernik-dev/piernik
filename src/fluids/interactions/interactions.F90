@@ -30,8 +30,6 @@
 !>
 !! \brief (DW) Module that contains all routines related to %interactions between fluids
 !!
-!!
-!!
 !! In this module a namelist of parameters is specified:
 !!
 !! \copydetails interactions::init_interactions
@@ -126,11 +124,14 @@ contains
    end subroutine init_interactions
 
    subroutine interactions_grace_passed
+
       use fluidindex,    only: nvar
 #ifdef VERBOSE
       use dataio_pub,    only: printinfo
 #endif /* VERBOSE */
+
       implicit none
+
       if (dragc_gas_dust > 0.0 .or. collision_factor > 0.0) then
 #ifdef VERBOSE
          call printinfo("[interactions:interactions_grace_passed] Initializing aerodynamical drag")
@@ -144,19 +145,29 @@ contains
          fluid_interactions => fluid_interactions_aero_drag
          has_interactions = .true.    ! \depracted BEWARE: temporary hack
       endif
+
    end subroutine interactions_grace_passed
 
    subroutine fluid_interactions_dummy(dens, velx, acc)
+
       implicit none
+
       real, dimension(:,:), intent(in)  :: dens
       real, dimension(:,:), intent(in)  :: velx
       real, dimension(size(dens,1),size(dens,2)), intent(out) :: acc
+
       acc = 0.0
+
+      if (.false.) acc(1,1) = acc(1,1) + 0.*velx(1,1) ! suppress compiler warning on unused argument
+
    end subroutine fluid_interactions_dummy
 
    subroutine fluid_interactions_aero_drag(dens, velx, acc)
+
       use fluidindex,       only: nvar
+
       implicit none
+
       real, dimension(:,:), intent(in), pointer :: dens
       real, dimension(:,:), intent(in), pointer :: velx
       real, dimension(size(dens,1),size(dens,2)), intent(out) :: acc
