@@ -247,7 +247,7 @@ module rtvd ! split orig
 #endif /* COSM_RAYS */
 #ifdef FLUID_INTERACTIONS_DW
       use interactions,     only: fluid_interactions_dw
-#endif /* FLUID_INTERACTIONS_DW *
+#endif /* FLUID_INTERACTIONS_DW */
 #ifdef ISO_LOCAL
       use arrays,           only: cs_iso2_arr
 #endif /* ISO_LOCAL */
