@@ -79,7 +79,7 @@ contains
       use mpisetup,        only: cfr_smooth, smallp
 #ifdef GLOBAL_FR_SPEED
       use timestep,        only: c_all
-#endif
+#endif /* GLOBAL_FR_SPEED */
 
       implicit none
       integer, intent(in)                        :: n         !< number of cells in the current sweep

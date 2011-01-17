@@ -33,7 +33,7 @@
 
 module coriolis
 ! pulled by CORIOLIS
-! \todo Drop the CORIOLIS preprocessor symbol in favour of something more elegant if it does not incur too much overhead on rtvd.
+!> \todo Drop the CORIOLIS preprocessor symbol in favour of something more elegant if it does not incur too much overhead on rtvd.
 
    implicit none
 
@@ -60,16 +60,16 @@ contains
       if (geometry /= "cartesian") call die("[coriolis:init_coriolis] Only cartesian geometry is implemented")
 #if !(defined GRAV || defined SHEAR || defined FLUID_INTERACTIONS)
       call die("coriolis:init_coriolis] Check how and under what conditions the rtvd::relaxing_tvd handles additional source terms")
-#endif
+#endif /* !(GRAV || SHEAR || FLUID_INTERACTIONS) */
 
    end subroutine init_coriolis
 
-!<
+!>
 !! \brief Compute the Coriolis acceleration for a given row of cells.
 !!
 !! \details This is a low-order estimate of the Coriolis accelerations, because this routine uses density and velocity fields
 !! from the beginning of the time step. This is a simple approach, but ignores any changes due to other accelerations during the time step.
-!>
+!<
 
    subroutine coriolis_force(sweep, u, rotacc)
 
@@ -92,7 +92,7 @@ contains
 
    end subroutine coriolis_force
 
-!< \brief Provides a way to set the protected variable coriolis_omega
+!> \brief Provides a way to set the protected variable coriolis_omega
 
    subroutine set_omega(omega_in)
 

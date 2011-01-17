@@ -135,7 +135,7 @@ module gravity
       use constants,     only: newtong
 #ifdef CORIOLIS
       use coriolis,      only: set_omega
-#endif
+#endif /* CORIOLIS */
 
       implicit none
 
@@ -240,7 +240,7 @@ module gravity
          if (ptm_x-ptm2_x > 0.) Omega = dsqrt(newtong*(ptmass+ptmass2)/(abs(ptm_x-ptm2_x))**3)
 #ifdef CORIOLIS
          call set_omega(Omega)
-#endif
+#endif /* CORIOLIS */
       endif
 
       gpot(:,:,:) = 0.0
@@ -585,9 +585,9 @@ module gravity
 
    end subroutine grav_ptmass_softened
 
-!<
-!! \brief Roche potential for two bodies oncircular orbits. The coordinate system corotates with the bodies, so they stay on the X axis forever.
 !>
+!! \brief Roche potential for two bodies oncircular orbits. The coordinate system corotates with the bodies, so they stay on the X axis forever.
+!<
 
    subroutine grav_roche
 

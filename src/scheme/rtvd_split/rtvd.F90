@@ -253,7 +253,7 @@ module rtvd ! split orig
 #endif /* ISO_LOCAL */
 #ifdef CORIOLIS
       use coriolis,         only: coriolis_force
-#endif
+#endif /* CORIOLIS */
 
       implicit none
 
@@ -410,11 +410,13 @@ module rtvd ! split orig
          u1(iarr_all_mx,:) = u1(iarr_all_mx,:) + rk2coef(integration_order,istep)*geosrc(:,:)*dt !if GRAV is defined then look ~50 lines below (BEWARE: semi-duplicated code)
 #endif /* !GRAV */
 
-         call fluid_interactions(dens, vx, fricacc)  ! \todo convert me to func similar to gridgeometry::geometry_source_terms
+         call fluid_interactions(dens, vx, fricacc)  !> \todo convert me to func similar to gridgeometry::geometry_source_terms
 
+!>
 !! \deprecated BEWARE: whole shearing bit is heavily biased towards streaming problem, currently works only for 2.5D case, i.e. nyd=1 + source_terms_y
 !! \todo FIX ME!!!
 !! \todo move me to shear module and provide pointer
+!<
 #ifdef SHEAR
          df = 0.0
 #ifdef FLUID_INTERACTIONS
@@ -446,7 +448,7 @@ module rtvd ! split orig
 #endif /* !SHEAR */
 
 #ifdef CORIOLIS
-         ! \deprecated BEWARE: if GRAV is not defined and any(geosrc(:,:) /= 0.), u1(iarr_all_mx,:) is already altered
+         !> \deprecated BEWARE: if GRAV is not defined and any(geosrc(:,:) /= 0.), u1(iarr_all_mx,:) is already altered
          call coriolis_force(sweep, u, rotacc(:,:))
 #endif /* CORIOLIS */
 

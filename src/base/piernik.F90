@@ -209,7 +209,7 @@ contains
 #endif /* DEBUG */
 #ifdef CORIOLIS
       use coriolis,              only: init_coriolis
-#endif
+#endif /* CORIOLIS */
       implicit none
 
       logical :: tmp_log_exist
@@ -271,7 +271,7 @@ contains
       call init_interactions
 #ifdef CORIOLIS
       call init_coriolis
-#endif
+#endif /* CORIOLIS */
 #ifdef SN_SRC
       call init_snsources
 #endif /* SN_SRC */
