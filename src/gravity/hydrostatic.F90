@@ -342,6 +342,7 @@ contains
             u(iarr_all_mx,i,j,kk)      =     u(iarr_all_mx,i,j,kb)
             u(iarr_all_my,i,j,kk)      =     u(iarr_all_my,i,j,kb)
             u(iarr_all_mz,i,j,kk)      =     u(iarr_all_mz,i,j,kb)
+            !> \deprecated to use outh together with outd user should manually interfere in the code of outh_bnd routine
 ! zakomentowac nastepna linie jesli warunek diodowy nie ma byc stosowany razem z hydrostatycznym
 !           if (minmax == 'max') then
 !              u(iarr_all_mz,i,j,kk)          =     max(u(iarr_all_mz,i,j,kk),0.0)
