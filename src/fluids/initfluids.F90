@@ -57,7 +57,7 @@
 !! \n\b Fluid \b component: an ingredient characterized by mass density, momenta,
 !!    and optionally energy density.
 !!    Examples: ionized fluid, neutral fluid, dust fluid.
-!!    Variable \b "nfluid" (in fluidindex) counts fluids.
+!!    Variable \b "nvar\%fluids" (in fluidindex) counts fluids.
 !!
 !! \n\b Non-fluid \b component: Some constituents of the system are described by
 !!      a system of equations, which does not involve momentum equation.
@@ -71,7 +71,7 @@
 !!
 !! \n\b Non-isothermal \b fluid: an isothermal fluid does not need energy equation,
 !!    thus \b non-isothermal fluids are distinguished as those, which do not
-!!   engage the energy equation. Variable \b "nadiab" (in fluidindex) counts
+!!   engage the energy equation. Variable \b "nvar\%adiab" (in fluidindex) counts
 !!      independent energy equations used for fluids.
 !!
 !! \n\b Fluid \b variable: Single quantity, such as gas density, x,y,z-momentum
@@ -92,7 +92,7 @@
 !!         See fluidindex for more details.
 !! \n (3)  Physical parameters common for all fluids are computed if necessary.
 !!
-!! \todo Change variable name "nadiab" to "nenerg". Reason: we are not limited
+!! \todo Change variable name "nvar\%adiab" to "nenerg". Reason: we are not limited
 !!       to isothermal and  adiabatic equos. Energy equation will be used
 !!       for non-adiabatic fluids in presence of cooling and heating.
 !!
