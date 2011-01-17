@@ -64,11 +64,9 @@ contains
 
    end subroutine fluid_update
 
-!------------------------------------------------------------------------------------------
-!
-! Perform sweeps in all three directions plus sources that are calculated every timestep
-!
-
+!>
+!! \brief Perform sweeps in all three directions plus sources that are calculated every timestep
+!<
    subroutine make_3sweeps(forward)
 
       use dataio_pub,      only: skip_advection
@@ -127,11 +125,9 @@ contains
 
    end subroutine make_3sweeps
 
-!------------------------------------------------------------------------------------------
-!
-! Perform single sweep in forward or backward direction
-!
-
+!>
+!! \brief Perform single sweep in forward or backward direction
+!<
    subroutine make_sweep(dir, forward)
 
       use dataio_pub,     only: msg, die
