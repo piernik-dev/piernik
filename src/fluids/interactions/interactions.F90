@@ -143,7 +143,7 @@ contains
 
          taus = 1. / dragc_gas_dust
          fluid_interactions => fluid_interactions_aero_drag
-         has_interactions = .true.    ! \depracted BEWARE: temporary hack
+         has_interactions = .true.    !> \depracted BEWARE: temporary hack
       endif
 
    end subroutine interactions_grace_passed
