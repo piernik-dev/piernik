@@ -596,6 +596,8 @@ module gravity
        GM1 =  newtong * ptmass
        GM2 =  newtong * ptmass2
 
+       
+
        do k = 1, cg%nz
           z2 = cg%z(k)**2
           do j = 1, cg%ny
