@@ -180,6 +180,7 @@ module initproblem
       real    :: xi, yj,zk,r1,r2,dntemp,vx,vy,vz, dnold, enold, entemp, &
            csaim, enaim, coolfac
 
+
       imx=imxn
       imy=imyn
       imz=imzn
@@ -194,9 +195,11 @@ module initproblem
             do i = 1,cg%nx
                xi = cg%x(i)
 
+
                r1=dsqrt((xi-ptm_x)**2  + yj**2 + zk**2)
                r2=dsqrt((xi-ptm2_x)**2 + yj**2 + zk**2)
 
+ 
                if (r1<rclear) then
 
                   u(idn,i,j,k) = smalld + u(idn,i,j,k)*exp((r1/rclear-1.0)/1.0)
@@ -205,6 +208,7 @@ module initproblem
                   u(imy,i,j,k) = u(imy,i,j,k)*exp((r1/rclear-1.0)/1.0)
                   u(imz,i,j,k) = u(imz,i,j,k)*exp((r1/rclear-1.0)/1.0)
                   u(ien,i,j,k) = smallei + u(ien,i,j,k)*exp((r1/rclear-1.0)/1.0)
+                  
 
                endif
 
@@ -233,7 +237,6 @@ module initproblem
                dnold = u(idn,i,j,k)
                dntemp = dnamb + dnblob*exp(-((xi-xblob)**2+(yj-yblob)**2+zk**2)/dblob)
                u(idn,i,j,k) = max(dntemp, dnold)
-
 !              cooling
 !              ~sound speed ~temp
                csaim = pamb/dnamb/(gamma_neu-1.0)
@@ -241,8 +244,6 @@ module initproblem
                enold = u(ienn,i,j,k)
                coolfac = max((taucool / dt), 1.0)
 !               u(ienn,i,j,k) = enold - (enold - enaim)/coolfac
-
-!               u(ienn,i,j,k) = enold - (enold - enaim)/2.0
 !               u(ienn,i,j,k) = max(enaim,u(ienn,i,j,k))
 
 !hot blob
@@ -250,7 +251,6 @@ module initproblem
                entemp = pamb/(gamma_neu-1.0) + &
                      pblob/(gamma_neu-1.0)*exp(-((xi-xblob)**2+(yj-yblob)**2+zk**2)/dblob)
                u(ienn,i,j,k) = max(entemp, enold)
-
 !no inflow
 !               u(idnn,i,j,k) = dnold
 !               u(ienn,i,j,k) = enold
@@ -263,10 +263,11 @@ module initproblem
                u(imy,i,j,k) = u(imy,i,j,k) + vy*(u(idn,i,j,k)-dnold)
                u(imz,i,j,k) = u(imz,i,j,k) + vz*(u(idn,i,j,k)-dnold)
 
+               
+
             enddo
          enddo
       enddo
-
 
    end subroutine impose_inflow
 
