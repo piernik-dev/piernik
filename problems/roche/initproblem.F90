@@ -199,7 +199,7 @@ module initproblem
                r1=dsqrt((xi-ptm_x)**2  + yj**2 + zk**2)
                r2=dsqrt((xi-ptm2_x)**2 + yj**2 + zk**2)
 
- 
+
                if (r1<rclear) then
 
                   u(idn,i,j,k) = smalld + u(idn,i,j,k)*exp((r1/rclear-1.0)/1.0)
@@ -208,7 +208,7 @@ module initproblem
                   u(imy,i,j,k) = u(imy,i,j,k)*exp((r1/rclear-1.0)/1.0)
                   u(imz,i,j,k) = u(imz,i,j,k)*exp((r1/rclear-1.0)/1.0)
                   u(ien,i,j,k) = smallei + u(ien,i,j,k)*exp((r1/rclear-1.0)/1.0)
-                  
+
 
                endif
 
@@ -263,7 +263,7 @@ module initproblem
                u(imy,i,j,k) = u(imy,i,j,k) + vy*(u(idn,i,j,k)-dnold)
                u(imz,i,j,k) = u(imz,i,j,k) + vz*(u(idn,i,j,k)-dnold)
 
-               
+
 
             enddo
          enddo
