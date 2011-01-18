@@ -468,7 +468,7 @@ contains
 #ifdef DEBUG
          open(212,file="funcR.dat",status="unknown")
          do j = 1, cg%nx
-            write(212,*) cg%x(i),funcR(1,i)
+            write(212,*) cg%x(j),funcR(1,j)
          enddo
          close(212)
 #endif /* DEBUG */
