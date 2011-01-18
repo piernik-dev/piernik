@@ -22,18 +22,23 @@
  /
 
  $END_CONTROL
-    tend   = 1.0e5
+    tend   = 1.0e12
     nend   = 1000000
  /
 
  $OUTPUT_CONTROL
-    problem_name ='test'
+    problem_name ='roche'
     run_id  =  'tst'
-    dt_hdf  = 1.0e1
-    dt_res  = 0.0
-    dt_log  = 0.001
-    dt_tsl  = 0.001
+
+    dt_hdf  = 5.0e2
+    dt_res  = 1.0e4
+    dt_log  = 1.0e2
+    dt_tsl  = 1.0e2
     vars(1) = 'dens'
+    vars(2) = 'velx'
+    vars(3) = 'vely'
+    vars(4) = 'velz'
+    vars(5) = 'ener'
     domain  = 'phys_domain'
     mag_center = 'no'
  /
@@ -43,17 +48,17 @@
     bnd_xr = 'outd'
     bnd_yl = 'outd'
     bnd_yr = 'outd'
-    bnd_zl = 'outd'
+    bnd_zl = 'ref'
     bnd_zr = 'outd'
  /
 
  $DOMAIN_LIMITS
-    xmin   = -0.5
-    xmax   = 0.5
-    ymin   = -0.5
-    ymax   = 0.5
-    zmin   =-0.2
-    zmax   = 0.2
+    xmin   = -2.3e11
+    xmax   = 3.e11
+    ymin   = -2.65e11
+    ymax   = 2.65e11
+    zmin   = 0
+    zmax   = 1e11
  /
 
  $FLUID_IONIZED
@@ -66,23 +71,24 @@
  /
 
  $NUMERICAL_SETUP
+    dt_initial = 1.e1
     cfl    = 0.7
     smalld = 1.e-6
-    smallei= 1.e-6
+    smallei= 1.e-7
     integration_order = 2
     limiter= 'vanleer'
  /
 
  $GRAVITY
     external_gp = "roche"
-    ptmass  = 1.0
-    ptmass2 = 1.0
+    ptmass  = 2.78474e33
+    ptmass2 = 2.0501e33
     ptm_x   = 0.0
-    ptm2_x  = -1.0
+    ptm2_x  = -4.52075e11
 
     nsub    = 10
-    r_grav  = 1.0
-    r_smooth= 0.2
+    r_grav  = 1.e13
+    r_smooth= 1.e10
     n_gravr = 10
  /
 
@@ -90,17 +96,17 @@
  /
 
  $PROBLEM_CONTROL
-    xblob = -0.5
+    xblob = -2.3e11
     yblob = 0.0
     zblob = 0.0
-    dblob = 0.0005
-!    damb  = 1.e-5
-    rclear = 0.02
-!    p0 = 1.e-2
-    p0ambfac = 1.e-4
-    dnblob = 1.0
-!    vxin = 0.1    ! vxfac?
-
+    dblob = 1.e20
+    Tblob = 3500	
+    dnblob = 1.0e0
+    dnambfac  = 1.e-5
+    p0ambfac = 1.e-2
+    rclear = 1.e10
+    vxfac = 10.0
+    taucool = 1e30
 /
 
  $INTERACTIONS
