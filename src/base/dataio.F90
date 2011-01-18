@@ -577,20 +577,20 @@ contains
 
 !    CALL checkdf
 
-      if (dt_hdf .gt. 0.0 .and. nstep .gt. step_hdf .and. output .ne. 'gpt') then
-         if ((t-last_hdf_time) .ge. dt_hdf .or. output .eq. 'hdf' .or. output .eq. 'end') then
+      if (dt_hdf > 0.0 .and. nstep > step_hdf .and. output .ne. 'gpt') then
+         if ((t-last_hdf_time) >= dt_hdf .or. output .eq. 'hdf' .or. output .eq. 'end') then
             call set_container_chdf(nstep)
             call write_hdf5(chdf)
 
-            if ((t-last_hdf_time) .ge. dt_hdf) last_hdf_time = last_hdf_time + dt_hdf
-            if ((t-last_hdf_time) .ge. dt_hdf) last_hdf_time = t ! additional control
+            if ((t-last_hdf_time) >= dt_hdf) last_hdf_time = last_hdf_time + dt_hdf
+            if ((t-last_hdf_time) >= dt_hdf) last_hdf_time = t ! additional control
                           ! in the case of changing dt_hdf into smaller value via msg
             step_hdf = nstep
          endif
       endif
 
-      if (dt_res .gt. 0.0 .and. nstep .gt. step_res) then
-         if ((nres-nres_start) .lt. (int((t-t_start) / dt_res) + 1) &
+      if (dt_res > 0.0 .and. nstep > step_res) then
+         if ((nres-nres_start) < (int((t-t_start) / dt_res) + 1) &
                 .or. output .eq. 'res' .or. output .eq. 'end') then
             if (nres > 0) then
                call write_restart_hdf5

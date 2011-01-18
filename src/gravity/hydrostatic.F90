@@ -70,19 +70,19 @@ contains
 
       ksmid = 0
       do ksub=1, nstot
-         if (zs(ksub) .lt. 0.0) ksmid = ksub      ! the midplane is in between
+         if (zs(ksub) < 0.0) ksmid = ksub      ! the midplane is in between
       enddo                                  ! ksmid and ksmid+1
       if (ksmid == 0) call die("[hydrostatic:hydrostatic_main] ksmid not set")
 
 #ifdef NEW_HYDROSTATIC
-      if (ksmid .lt. nstot) then
+      if (ksmid < nstot) then
          dprofs(ksmid+1) = 1.0
          do ksub=ksmid+1, nstot-1
             dprofs(ksub+1) = dprofs(ksub)*(1.0 + 0.5*(gprofs(ksub)+gprofs(ksub+1))*dzs)
          enddo
       endif
 
-      if (ksmid .gt. 1) then
+      if (ksmid > 1) then
          dprofs(ksmid) = 1.0
          do ksub=ksmid, 2, -1
             dprofs(ksub-1) = dprofs(ksub)*(1.0 - 0.5*(gprofs(ksub)+gprofs(ksub-1))*dzs)
@@ -92,13 +92,13 @@ contains
       dprof(:) =0.0
       do k=1, cg%nz
          do ksub=1, nstot
-            if (zs(ksub) .gt. cg%zl(k) .and. zs(ksub) .lt. cg%zr(k)) then
+            if (zs(ksub) > cg%zl(k) .and. zs(ksub) < cg%zr(k)) then
                dprof(k) = dprof(k) + dprofs(ksub)/real(nsub)
             endif
          enddo
       enddo
 #else /* !NEW_HYDROSTATIC */
-      if (ksmid .lt. nstot) then
+      if (ksmid < nstot) then
          dprofs(ksmid+1) = dmid
          do ksub=ksmid+1, nstot-1
             factor = (2.0 + dzs*gprofs(ksub))/(2.0 - dzs*gprofs(ksub))
@@ -106,7 +106,7 @@ contains
          enddo
       endif
 
-      if (ksmid .gt. 1) then
+      if (ksmid > 1) then
          dprofs(ksmid) = dmid
          do ksub=ksmid, 2, -1
             factor = (2.0 - dzs*gprofs(ksub))/(2.0 + dzs*gprofs(ksub))
@@ -117,7 +117,7 @@ contains
       dprof(:) =0.0
       do k=1, cg%nz
          do ksub=1, nstot
-            if (zs(ksub) .gt. cg%zl(k) .and. zs(ksub) .lt. cg%zr(k)) then
+            if (zs(ksub) > cg%zl(k) .and. zs(ksub) < cg%zr(k)) then
                dprof(k) = dprof(k) + dprofs(ksub)/real(nsub)
             endif
          enddo
@@ -208,7 +208,7 @@ contains
       integer, intent(in) :: iia, jja
       real,    intent(in) :: d0, csim2
 
-      if (d0 .le. small) then
+      if (d0 <= small) then
          call die("[hydrostatic:hydrostatic_zeq_densmid] d0 must be /= 0")
       endif
 #ifndef NEW_HYDROSTATIC

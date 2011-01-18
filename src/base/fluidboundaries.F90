@@ -29,58 +29,65 @@
 
 module fluidboundaries
 ! pulled by ANY
+
    implicit none
+
    private
    public :: bnd_u, all_fluid_boundaries
-   contains
 
-      subroutine init_fluidboundaries
-         use mpisetup,              only: bnd_xl, bnd_xr
-         use dataio_pub,            only: msg, warn
-         use fluidboundaries_funcs, only: bnd_null, bnd_xl_per, bnd_xl_ref, bnd_xl_out, bnd_xl_outd, bnd_xr_per, bnd_xr_ref, bnd_xr_out, bnd_xr_outd
-         use fluidboundaries_pub,   only: user_bnd_xl, user_bnd_xr, func_bnd_xl, func_bnd_xr
-         implicit none
+contains
 
-         select case (bnd_xl)
-            case ('cor', 'inf', 'mpi', 'she', 'shef')
-               func_bnd_xl => bnd_null
-            case ('per')
-               func_bnd_xl => bnd_xl_per
-            case ('user')
-               func_bnd_xl => user_bnd_xl
-            case ('ref')
-               func_bnd_xl => bnd_xl_ref
-            case ('out')
-               func_bnd_xl => bnd_xl_out
-            case ('outd')
-               func_bnd_xl => bnd_xl_outd
-            case default
-               func_bnd_xl => bnd_null
-               write(msg,'("[fluid_boundaries:bnd_u]: Boundary condition ",a," not implemented in ",a)') trim(bnd_xl), "xdim"
-               call warn(msg)
-         end select  ! (bnd_xl)
+   subroutine init_fluidboundaries
 
-         select case (bnd_xr)
-            case ('cor', 'inf', 'mpi', 'she', 'shef')
-               func_bnd_xr => bnd_null
-            case ('per')
-               func_bnd_xr => bnd_xr_per
-            case ('user')
-               func_bnd_xr => user_bnd_xr
-            case ('ref')
-               func_bnd_xr => bnd_xr_ref
-            case ('out')
-               func_bnd_xr => bnd_xr_out
-            case ('outd')
-               func_bnd_xr => bnd_xr_outd
-            case default
-               func_bnd_xr => bnd_null
-               write(msg,'("[fluid_boundaries:bnd_u]: Boundary condition ",a," not implemented in ",a)') trim(bnd_xr), "xdim"
-               call warn(msg)
-         end select  ! (bnd_xr)
-      end subroutine init_fluidboundaries
+      use mpisetup,              only: bnd_xl, bnd_xr
+      use dataio_pub,            only: msg, warn
+      use fluidboundaries_funcs, only: bnd_null, bnd_xl_per, bnd_xl_ref, bnd_xl_out, bnd_xl_outd, bnd_xr_per, bnd_xr_ref, bnd_xr_out, bnd_xr_outd
+      use fluidboundaries_pub,   only: user_bnd_xl, user_bnd_xr, func_bnd_xl, func_bnd_xr
+
+      implicit none
+
+      select case (bnd_xl)
+         case ('cor', 'inf', 'mpi', 'she', 'shef')
+            func_bnd_xl => bnd_null
+         case ('per')
+            func_bnd_xl => bnd_xl_per
+         case ('user')
+            func_bnd_xl => user_bnd_xl
+         case ('ref')
+            func_bnd_xl => bnd_xl_ref
+         case ('out')
+            func_bnd_xl => bnd_xl_out
+         case ('outd')
+            func_bnd_xl => bnd_xl_outd
+         case default
+            func_bnd_xl => bnd_null
+            write(msg,'("[fluid_boundaries:bnd_u]: Boundary condition ",a," not implemented in ",a)') trim(bnd_xl), "xdim"
+            call warn(msg)
+      end select  ! (bnd_xl)
+
+      select case (bnd_xr)
+         case ('cor', 'inf', 'mpi', 'she', 'shef')
+            func_bnd_xr => bnd_null
+         case ('per')
+            func_bnd_xr => bnd_xr_per
+         case ('user')
+            func_bnd_xr => user_bnd_xr
+         case ('ref')
+            func_bnd_xr => bnd_xr_ref
+         case ('out')
+            func_bnd_xr => bnd_xr_out
+         case ('outd')
+            func_bnd_xr => bnd_xr_outd
+         case default
+            func_bnd_xr => bnd_null
+            write(msg,'("[fluid_boundaries:bnd_u]: Boundary condition ",a," not implemented in ",a)') trim(bnd_xr), "xdim"
+            call warn(msg)
+      end select  ! (bnd_xr)
+
+   end subroutine init_fluidboundaries
 
    subroutine bnd_u(dim)
+
       use arrays,              only: u, b
       use dataio_pub,          only: msg, warn
       use fluidboundaries_pub, only: user_bnd_yl, user_bnd_yr, user_bnd_zl, user_bnd_zr, func_bnd_xl, func_bnd_xr
@@ -274,7 +281,7 @@ module fluidboundaries
          endif
 #endif /* FFTW */
 #else /* !SHEAR_BND */
-         if (pxsize .gt. 1) then
+         if (pxsize > 1) then
 
             CALL MPI_Isend   (u(1,1,1,1), 1, cg%MPI_YZ_LEFT_DOM,  procxl, 10, comm3d, req(1), ierr)
             CALL MPI_Isend   (u(1,1,1,1), 1, cg%MPI_YZ_RIGHT_DOM, procxr, 20, comm3d, req(3), ierr)
@@ -285,7 +292,7 @@ module fluidboundaries
          endif
 #endif /* !SHEAR_BND */
       case ('ydim')
-         if (pysize .gt. 1) then
+         if (pysize > 1) then
 
             CALL MPI_Isend   (u(1,1,1,1), 1, cg%MPI_XZ_LEFT_DOM,  procyl, 30, comm3d, req(1), ierr)
             CALL MPI_Isend   (u(1,1,1,1), 1, cg%MPI_XZ_RIGHT_DOM, procyr, 40, comm3d, req(3), ierr)
@@ -296,7 +303,7 @@ module fluidboundaries
          endif
 
       case ('zdim')
-         if (pzsize .gt. 1) then
+         if (pzsize > 1) then
 
             CALL MPI_Isend   (u(1,1,1,1), 1, cg%MPI_XY_LEFT_DOM,  proczl, 50, comm3d, req(1), ierr)
             CALL MPI_Isend   (u(1,1,1,1), 1, cg%MPI_XY_RIGHT_DOM, proczr, 60, comm3d, req(3), ierr)
@@ -328,7 +335,7 @@ module fluidboundaries
             enddo
          endif
 
-         if (procxyl .gt. 0) then
+         if (procxyl > 0) then
             allocate(send_left(nvar%all, cg%nb, cg%ny, cg%nz), recv_left(nvar%all, cg%nx, cg%nb, cg%nz))
 
             send_left(:,:,:,:) = u(:, cg%is:cg%isb,:,:)
@@ -392,7 +399,7 @@ module fluidboundaries
             enddo
          endif
 
-         if (procyxl .gt. 0) then
+         if (procyxl > 0) then
             allocate(send_left(nvar%all, cg%nx, cg%nb, cg%nz), recv_left(nvar%all, cg%nb, cg%ny, cg%nz))
 
             send_left(:,:,:,:) = u(:,:, cg%js:cg%jsb,:)

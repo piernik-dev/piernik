@@ -84,89 +84,98 @@ module list_hdf5
    type(lhdf5_list), target, save :: lhdf5_root
 #endif /* NEW_HDF5 */
 
-   contains
+contains
+
 #ifdef NEW_HDF5
-      subroutine iterate_lhdf5(file_id)
+
+   subroutine iterate_lhdf5(file_id)
+
+      implicit none
+
+      integer(HID_T)            :: file_id       !> File identifier
+      type(lhdf5_list), pointer :: tp
+
+      tp => lhdf5_root
+      do while (associated(tp%next))
+         call get_lhdf5(tp%next,file_id)
+         tp => tp%next%node
+      enddo
+
+   contains
+
+      subroutine get_lhdf5(tp,file_id)
+
          implicit none
-         integer(HID_T)            :: file_id       !> File identifier
-         type(lhdf5_list), pointer :: tp
-         tp => lhdf5_root
-         do while (associated(tp%next))
-            call get_lhdf5(tp%next,file_id)
-            tp => tp%next%node
-         enddo
 
-         contains
+         integer(HID_T)                      :: file_id       !> File identifier
+         type(lhdf5_node), pointer           :: tp
+         real, dimension(:,:,:), allocatable :: a
 
-            subroutine get_lhdf5(tp,file_id)
-               implicit none
-               integer(HID_T)                      :: file_id       !> File identifier
-               type(lhdf5_node), pointer           :: tp
-               real, dimension(:,:,:), allocatable :: a
-               call tp%info%p(tp%info%ivec,tp%info%rvec,a)
-               call write_arr(real(a,4),tp%info%key,file_id)
-               if (allocated(a)) deallocate(a)
+         call tp%info%p(tp%info%ivec,tp%info%rvec,a)
+         call write_arr(real(a,4),tp%info%key,file_id)
+         if (allocated(a)) deallocate(a)
+
+      end subroutine get_lhdf5
+
+   end subroutine iterate_lhdf5
+
+   subroutine add_lhdf5(item)
+
+      use dataio_pub,    only: msg, warn
+
+      implicit none
+
+      type(lhdf5_info), intent(in) :: item
+      type(lhdf5_list), pointer :: tp
+
+      tp => lhdf5_root
+      do
+         if ( associated(tp%next)) then
+            if ( item%key == tp%next%info%key ) then
+               write(msg,'(3a)') "[list_hdf5:add_lhdf5]: ",trim(item%key)," exists in the list"
+               call warn(msg)
                return
-            end subroutine get_lhdf5
+            else if ( item%key < tp%next%info%key) then
+               call insert_lhdf5(tp%next, item)
+            else
+               tp => tp%next%node
+               cycle ! keep looking
+            endif
+         else
+            call insert_lhdf5(tp%next,item)
+         endif
 
-      end subroutine iterate_lhdf5
+      enddo
 
-      subroutine add_lhdf5(item)
+   contains
 
-         use dataio_pub,    only: msg, warn
+      subroutine insert_lhdf5(tp, item)
 
          implicit none
 
+         type(lhdf5_node), pointer :: tp
          type(lhdf5_info), intent(in) :: item
-         type(lhdf5_list), pointer :: tp
+         type(lhdf5_node), pointer :: temp
 
-         tp => lhdf5_root
-         do
-            if ( associated(tp%next)) then
-               if ( item%key == tp%next%info%key ) then
-                  write(msg,'(3a)') "[list_hdf5:add_lhdf5]: ",trim(item%key)," exists in the list"
-                  call warn(msg)
-                  return
-               else if ( item%key < tp%next%info%key) then
-                  call insert_lhdf5(tp%next, item)
-               else
-                  tp => tp%next%node
-                  cycle ! keep looking
-               endif
-            else
-               call insert_lhdf5(tp%next,item)
-            endif
-            return
-         enddo
+         allocate(temp)
+         temp%info%key  = item%key
+         if (allocated(item%ivec)) then
+            allocate(temp%info%ivec(size(item%ivec)))
+            temp%info%ivec = item%ivec
+         endif
+         if (allocated(item%rvec)) then
+            allocate(temp%info%rvec(size(item%rvec)))
+            temp%info%rvec = item%rvec
+         endif
 
-      contains
+         temp%info%p    => item%p
+         temp%node%next => tp
 
-         subroutine insert_lhdf5(tp, item)
-            implicit none
-            type(lhdf5_node), pointer :: tp
-            type(lhdf5_info), intent(in) :: item
-            type(lhdf5_node), pointer :: temp
+         tp => temp
 
-            allocate(temp)
-            temp%info%key  = item%key
-            if (allocated(item%ivec)) then
-               allocate(temp%info%ivec(size(item%ivec)))
-               temp%info%ivec = item%ivec
-            endif
-            if (allocated(item%rvec)) then
-               allocate(temp%info%rvec(size(item%rvec)))
-               temp%info%rvec = item%rvec
-            endif
+      end subroutine insert_lhdf5
 
-            temp%info%p    => item%p
-            temp%node%next => tp
-
-            tp => temp
-
-            return
-         end subroutine insert_lhdf5
-
-      end subroutine add_lhdf5
+   end subroutine add_lhdf5
 
 #endif /* NEW_HDF5 */
 
