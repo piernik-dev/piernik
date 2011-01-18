@@ -10,6 +10,11 @@ try:
 except ImportError:
    print "No multiprocessing: The make command will be run in single thread unless you specified MAKEFLAGS += -j<n> in compiler setup."
    mp = False
+try:
+   import pickle
+   pickle_avail=True
+except ImportError:
+   pickle_avail=False
 
 columns = 90
 
@@ -245,6 +250,8 @@ parser.add_option("--problems", dest="show_problems", action="store_true",
    help="print available problems and exit")
 parser.add_option("-u","--units", dest="show_units", action="store_true",
    help="print available units and exit")
+parser.add_option("--last", dest="recycle_cmd", action="store_true", default=False,
+   help="call setup with last used options and arguments (require Pickles)")
 parser.add_option("--copy", dest="hard_copy", action="store_true",
    help="hard-copy source files instead of linking them")
 parser.add_option("-l","--linkexe", dest="link_exe", action="store_true",
@@ -267,6 +274,24 @@ except IOError:
    pass
 all_args += sys.argv[1:]
 (options, args) = parser.parse_args(all_args)
+
+if(options.recycle_cmd):
+   if(pickle_avail):
+      if(os.path.isfile('.lastsetup')):
+         output = open('.lastsetup', 'rb')
+         options = pickle.load(output)
+         args    = pickle.load(output)
+         output.close()
+      else:
+         print "No .lastsetup found"
+   else:
+      print "Can't read last setup. No Pickle available!"
+else:
+   if(pickle_avail):
+      output = open('.lastsetup', 'wb')
+      pickle.dump(options, output)
+      pickle.dump(args, output, -1)
+      output.close()
 
 if(options.verbose):
    print "Setup options:"
