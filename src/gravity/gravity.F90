@@ -231,7 +231,7 @@ module gravity
       Omega = 0.
       if (ptmass+ptmass2 > 0.) then
          cmass_x = (ptmass*ptm_x + ptmass2*ptm2_x)/(ptmass+ptmass2)
-         if (abs(ptm_x-ptm2_x) > 0.) Omega = dsqrt(newtong*(ptmass+ptmass2)/(abs(ptm_x-ptm2_x))**3)
+         if (abs(ptm_x-ptm2_x) > 0.) Omega = sqrt(newtong*(ptmass+ptmass2)/(abs(ptm_x-ptm2_x))**3)
 #ifdef CORIOLIS
          call set_omega(Omega)
 #endif /* CORIOLIS */
@@ -596,14 +596,14 @@ module gravity
        GM1 =  newtong * ptmass
        GM2 =  newtong * ptmass2
 
-       
+
 
        do k = 1, cg%nz
           z2 = cg%z(k)**2
           do j = 1, cg%ny
              yz2 = cg%y(j)**2 + z2
-             gp(:,j,k) =  - GM1 / dsqrt((cg%x(:) - ptm_x)**2  + yz2 + r_smooth2) &
-                  &       - GM2 / dsqrt((cg%x(:) - ptm2_x)**2 + yz2 + r_smooth2) &
+             gp(:,j,k) =  - GM1 / sqrt((cg%x(:) - ptm_x)**2  + yz2 + r_smooth2) &
+                  &       - GM2 / sqrt((cg%x(:) - ptm2_x)**2 + yz2 + r_smooth2) &
                   &       - 0.5 * Omega**2 * ((cg%x(:) - cmass_x)**2 + yz2)
           enddo
        enddo

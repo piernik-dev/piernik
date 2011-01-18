@@ -141,11 +141,11 @@ contains
       use initcosmicrays, only: use_split
 #endif /* COSM_RAYS */
 #ifdef DEBUG
-      use piernikdebug,   only: force_hdf5_dump, force_log_dump
       use dataio,         only: write_data
       use dataio_hdf5,    only: write_hdf5
       use dataio_pub,     only: chdf, set_container_chdf
       use mpisetup,       only: nstep
+      use piernikdebug,   only: force_hdf5_dump, force_log_dump
 #endif /* DEBUG */
 
       implicit none
