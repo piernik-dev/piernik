@@ -219,11 +219,11 @@ contains
 
       !! Initialization of all regular levels (all but global base)
       !! Following loop gives us:
-      !!    * SHAPE (lvl(level_max  )) = (nxb  , nyb  , nzb  ) + (2*nb, 2*nb, 2*nb)
-      !!    * SHAPE (lvl(level_max-1)) = (nxb/2, nyb/2, nzb/2) + (2*nb, 2*nb, 2*nb)
-      !!    * SHAPE (lvl(level_max-2)) = (nxb/4, nyb/4, nzb/4) + (2*nb, 2*nb, 2*nb)
+      !!    * SHAPE (lvl(level_max  )) = (cg%nxb  , cg%nyb  , cg%nzb  ) + (2*cg%nb, 2*cg%nb, 2*cg%nb)
+      !!    * SHAPE (lvl(level_max-1)) = (cg%nxb/2, cg%nyb/2, cg%nzb/2) + (2*cg%nb, 2*cg%nb, 2*cg%nb)
+      !!    * SHAPE (lvl(level_max-2)) = (cg%nxb/4, cg%nyb/4, cg%nzb/4) + (2*cg%nb, 2*cg%nb, 2*cg%nb)
       !!    * ...
-      !!    * SHAPE (lvl(1)) = (nxb/2**(level_max-1)0, nyb/2**(level_max-1), nzd/2**(level_max-1)) + (2*nb, 2*nb, 2*nb)
+      !!    * SHAPE (lvl(1)) = (cg%nxb/2**(level_max-1), cg%nyb/2**(level_max-1), cg%nzb/2**(level_max-1)) + (2*cg%nb, 2*cg%nb, 2*ncg%b)
       do idx = level_max, level_min, -1
 
          lvl(idx)%level = idx                                      ! level number
