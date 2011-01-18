@@ -126,7 +126,7 @@ module mpisetup
 
    namelist /NUMERICAL_SETUP/  cfl, smalld, smallei, integration_order, cfr_smooth, dt_initial, dt_max_grow, dt_min, smallc, smallp, limiter, cflcontrol, use_smalld, cfl_max, relax_time
 
-   integer, dimension(3) :: domsize   !< local copy of nxd, nyd, nzd
+   integer, dimension(ndims) :: domsize   !< local copy of nxd, nyd, nzd
 
    logical     :: have_mpi
 
@@ -421,8 +421,8 @@ module mpisetup
             endif
          endif
 
-         if ( (bnd_xl(1:3) == 'cor' .or. bnd_yl(1:3) == 'cor' .or. bnd_xr(1:3) == 'cor' .or. bnd_yr(1:3) == 'cor') .and. (pxsize /= pysize) ) then
-            write(msg, '(a,2(i3,a))')"[mpisetup:init_mpi] Corner BC require equal pxsize and pysize. Detected: [",pxsize,",",pysize,"]"
+         if ( (bnd_xl(1:3) == 'cor' .or. bnd_yl(1:3) == 'cor' .or. bnd_xr(1:3) == 'cor' .or. bnd_yr(1:3) == 'cor') .and. (pxsize /= pysize .or. nxd /= nyd) ) then
+            write(msg, '(a,4(i4,a))')"[mpisetup:init_mpi] Corner BC require pxsize equal to pysize and nxd equal to nyd. Detected: [",pxsize,",",pysize,"] and [",nxd,",",nyd,"]"
             call die(msg)
          endif
 
@@ -430,18 +430,18 @@ module mpisetup
 
          periods(:) = .false.
 
-         if (bnd_xl(1:3) == 'per' .or. bnd_xl(1:3) == 'she') then
-            periods(1) = .true.  ! x periodic
+         if (bnd_xl(1:3) == 'per' .or. bnd_xr(1:3) == 'per' .or. bnd_xl(1:3) == 'she'  .or. bnd_xr(1:3) == 'she') then
+            periods(xdim) = .true.  ! x periodic
             if (bnd_xr(1:3) /= bnd_xl(1:3)) call die("[mpisetup:init_mpi] Periodic or shear BC do not match in X-direction")
          endif
 
-         if (bnd_yl(1:3) == 'per') then
-            periods(2) = .true.  ! y periodic
+         if (bnd_yl(1:3) == 'per' .or. bnd_yr(1:3) == 'per') then
+            periods(ydim) = .true.  ! y periodic
             if (bnd_yr(1:3) /= bnd_yl(1:3)) call die("[mpisetup:init_mpi] Periodic BC do not match in Y-direction")
          endif
 
-         if (bnd_zl(1:3) == 'per') then
-            periods(3) = .true.  ! z periodic
+         if (bnd_zl(1:3) == 'per' .or. bnd_zr(1:3) == 'per') then
+            periods(zdim) = .true.  ! z periodic
             if (bnd_zr(1:3) /= bnd_zl(1:3)) call die("[mpisetup:init_mpi] Periodic BC do not match in Z-direction")
          endif
 
@@ -461,14 +461,14 @@ module mpisetup
          call MPI_Cart_shift(comm3d,2,1,proczl,proczr,ierr)   ! z dim
 
          if (bnd_xl(1:3) == 'cor' .and. bnd_yl(1:3) == 'cor' ) then
-            if (pcoords(1) == 0 .and. pcoords(2) > 0) then
-               coords = (/pcoords(2),pcoords(1),pcoords(3)/)
+            if (pcoords(xdim) == 0 .and. pcoords(ydim) > 0) then
+               coords = (/pcoords(ydim),pcoords(xdim),pcoords(zdim)/)
                call MPI_Cart_rank(comm3d,coords,procxyl,ierr)
             else
                procxyl = MPI_PROC_NULL
             endif
-            if (pcoords(2) == 0 .and. pcoords(1) > 0 ) then
-               coords = (/pcoords(2),pcoords(1),pcoords(3)/)
+            if (pcoords(ydim) == 0 .and. pcoords(xdim) > 0 ) then
+               coords = (/pcoords(ydim),pcoords(xdim),pcoords(zdim)/)
                call MPI_Cart_rank(comm3d,coords,procyxl,ierr)
             else
                procyxl = MPI_PROC_NULL
@@ -476,14 +476,14 @@ module mpisetup
          endif
 
          if (bnd_xr(1:3) == 'cor' .and. bnd_yr(1:3) == 'cor' ) then
-            if (pcoords(1) == psize(1)-1 .and. pcoords(2) < psize(2)-1) then
-               coords = (/pcoords(2),pcoords(1),pcoords(3)/)
+            if (pcoords(xdim) == psize(xdim)-1 .and. pcoords(ydim) < psize(ydim)-1) then
+               coords = (/pcoords(ydim),pcoords(xdim),pcoords(zdim)/)
                call MPI_Cart_rank(comm3d,coords,procxyr,ierr)
             else
                procxyr = MPI_PROC_NULL
             endif
-            if (pcoords(2) == psize(2)-1 .and. pcoords(1) < psize(2)-1 ) then
-               coords = (/pcoords(2),pcoords(1),pcoords(3)/)
+            if (pcoords(ydim) == psize(ydim)-1 .and. pcoords(xdim) < psize(xdim)-1 ) then
+               coords = (/pcoords(ydim),pcoords(xdim),pcoords(zdim)/)
                call MPI_Cart_rank(comm3d,coords,procyxr,ierr)
             else
                procyxr = MPI_PROC_NULL
@@ -494,13 +494,13 @@ module mpisetup
          if (pysize > 1) stop 'Shear-pediodic boundary conditions do not permit pysize > 1'
 
 #ifndef FFTW
-         if (pcoords(1) == 0) then
+         if (pcoords(xdim) == 0) then
             bnd_xl = 'she'
          else
             bnd_xl = 'mpi'
          endif
 
-         if (pcoords(1) == pxsize-1) then
+         if (pcoords(xdim) == pxsize-1) then
             bnd_xr = 'she'
          else
             bnd_xr = 'mpi'
@@ -571,7 +571,7 @@ module mpisetup
          character(len=*), intent(in) :: what
          real                         :: var
          real, dimension(2)           :: rsend, rrecv
-         integer, dimension(3)        :: loc_arr
+         integer, dimension(ndims)    :: loc_arr
          integer                      :: loc_proc
 
          rsend(1) = var
@@ -596,9 +596,9 @@ module mpisetup
 
          if (loc_proc /= 0) then
             if (proc == loc_proc) then
-               CALL MPI_Send  (loc_arr, 3, MPI_INTEGER,     0, 11, comm, ierr)
+               CALL MPI_Send  (loc_arr, ndims, MPI_INTEGER, 0,        11, comm, ierr)
             else if (master) then
-               CALL MPI_Recv  (loc_arr, 3, MPI_INTEGER, loc_proc, 11, comm, status, ierr)
+               CALL MPI_Recv  (loc_arr, ndims, MPI_INTEGER, loc_proc, 11, comm, status, ierr)
             endif
          endif
 
@@ -625,9 +625,9 @@ module mpisetup
          integer, intent(in) :: np
 
          integer :: j1, j2, j3, jj, n, p
-         integer, dimension(3) :: ldom
+         integer, dimension(ndims) :: ldom
 
-         ldom(1:3) = domsize(3:1:-1) ! Maxloc returns first occurrence of max, reversing direction order (to ZYX) gives better cache utilization.
+         ldom(xdim:zdim) = domsize(zdim:xdim:-1) ! Maxloc returns first occurrence of max, reversing direction order (to ZYX) gives better cache utilization.
          n = np
          psize(:) = 1
 
@@ -658,14 +658,14 @@ module mpisetup
 
          if (n /= 1) call die("[divide_domain_voodoo]: I am not that intelligent") ! np has too big prime factors
 
-         pxsize = psize(3) ! directions were reverted at ldom assignment
-         pysize = psize(2)
-         pzsize = psize(1)
+         pxsize = psize(zdim) ! directions were reverted at ldom assignment
+         pysize = psize(ydim)
+         pzsize = psize(xdim)
 
          psize = [ pxsize, pysize, pzsize ]
 
          if (master .and. np > 1) then
-            write(msg,'(a,3i4,a,3i6,a)')"[mpisetup:divide_domain_voodoo] Domain divided to [",psize(:)," ] pieces, each of [",ldom(3:1:-1)," ] cells."
+            write(msg,'(a,3i4,a,3i6,a)')"[mpisetup:divide_domain_voodoo] Domain divided to [",psize(:)," ] pieces, each of [",ldom(zdim:xdim:-1)," ] cells."
             call printinfo(msg)
          endif
 
