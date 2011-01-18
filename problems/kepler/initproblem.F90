@@ -467,7 +467,7 @@ contains
          endif
 #ifdef DEBUG
          open(212,file="funcR.dat",status="unknown")
-         do i = 1, cg%nx
+         do j = 1, cg%nx
             write(212,*) cg%x(i),funcR(1,i)
          enddo
          close(212)
