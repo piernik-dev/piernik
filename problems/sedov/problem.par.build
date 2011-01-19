@@ -30,7 +30,7 @@
     iy = 32
     iz = 32
     dt_hdf  = 0.1
-    dt_res  = 0.0
+    dt_res  = 0.1
     dt_plt  = 0.0001
     dt_log  = 0.00001
     dt_tsl  = 0.001
