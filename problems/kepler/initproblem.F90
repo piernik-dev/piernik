@@ -250,7 +250,9 @@ contains
          call printinfo(msg)
          write(msg,'(A,F5.1,A)') " T_mean  = ", 0.5*(mmsn_T(cg%xmin)+mmsn_T(cg%xmax))," K"
          call printinfo(msg)
-         write(msg,'(A,F9.5)') "[init_problem:initprob] cs2(T_mean) = ", kboltz * 0.5*(mmsn_T(cg%xmin)+mmsn_T(cg%xmax)) / mH
+         write(msg,'(A,F9.5)') " cs2(T_mean) = ", kboltz * 0.5*(mmsn_T(cg%xmin)+mmsn_T(cg%xmax)) / mH
+         call printinfo(msg)
+         write(msg,'(A,ES12.3,A)') " T_real(cs2) = ", nvar%neu%cs2*mH/kboltz, " K"
          call printinfo(msg)
          call printinfo("------------------------------------------------------------------")
          call grav_pot_3d
@@ -273,13 +275,16 @@ contains
 
          middle_of_nx = cg%nx/2 + 1
          n_x_cut      = maxloc(cg%x, mask=cg%x<=x_cut)
-         dens_prof    = min(dens_prof, get_lcutoff(cutoff_ncells, (middle_of_nx - n_x_cut(1)), cg%nx, dens_amb, dens_prof(n_x_cut(1))) )
+!         dens_prof    = min(dens_prof, get_lcutoff(cutoff_ncells, (middle_of_nx - n_x_cut(1)), cg%nx, dens_amb, dens_prof(n_x_cut(1))) )
+         dens_prof    = dens_prof * get_lcutoff(cutoff_ncells, (middle_of_nx - n_x_cut(1)), cg%nx, 0.0, 1.0) + dens_amb
 
          !! \f$ v_\phi = \sqrt{R\left(c_s^2 \partial_R \ln\rho + \partial_R \Phi \right)} \f$
          ln_dens_der  = log(dens_prof)
          ln_dens_der(2:cg%nx)  = ( ln_dens_der(2:cg%nx) - ln_dens_der(1:cg%nx-1) ) / cg%dx
          ln_dens_der(1)        = ln_dens_der(2)
          T_inner               = dpi*cg%x(cg%is) / sqrt( abs(grav(cg%is)) * cg%x(cg%is) )
+         write(msg,*) "III Kepler Law gives T = ", sqr_gm/dpi , " yr at 1 AU"
+         call printinfo(msg)
 #ifdef DEBUG
          open(143,file="dens_prof.dat",status="unknown")
          do p = 1, cg%nx
@@ -459,7 +464,8 @@ contains
       if (frun) then
          allocate(funcR(size(iarr_all_dn), cg%nx) )
 
-         funcR(1,:) = -tanh((cg%x(:)-r_in+1.0)**f_in) + 1.0
+         funcR(1,:) = -tanh((cg%x(:)-r_in+1.0)**f_in) + 1.0 + max( tanh((cg%x(:)-r_out+1.0)**f_out), 0.0)
+
          if (use_inner_orbital_period) then
             funcR(1,:) = funcR(1,:) / T_inner
          else
