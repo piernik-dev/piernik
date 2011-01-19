@@ -61,7 +61,7 @@ contains
 !<
   subroutine init_dust
 
-    use dataio_pub,     only: par_file, ierrh, namelist_errh, compare_namelist  ! QA_WARN required for diff_nml
+    use dataio_pub,     only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml  ! QA_WARN required for diff_nml
     use mpisetup,       only: master, slave, lbuff, buffer_dim, comm, ierr
     use mpi,            only: MPI_LOGICAL
 

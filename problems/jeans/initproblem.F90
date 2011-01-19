@@ -48,7 +48,7 @@ contains
    subroutine read_problem_par
 
       use constants,     only: pi
-      use dataio_pub,    only: ierrh, par_file, namelist_errh, compare_namelist    ! QA_WARN required for diff_nml
+      use dataio_pub,    only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml    ! QA_WARN required for diff_nml
       use dataio_pub,    only: msg, die, warn
       use grid,          only: cg
       use mpisetup,      only: ierr, rbuff, ibuff, master, slave, buffer_dim, comm, has_dir, xdim, ydim, zdim

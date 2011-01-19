@@ -63,7 +63,7 @@ contains
 !<
   subroutine init_shear
 
-    use dataio_pub,     only: par_file, ierrh, namelist_errh, compare_namelist  ! QA_WARN required for diff_nml
+    use dataio_pub,     only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml  ! QA_WARN required for diff_nml
     use dataio_pub,     only: printinfo
     use mpisetup,       only: ierr, master, slave, rbuff, buffer_dim, comm
     use mpi,            only: MPI_DOUBLE_PRECISION

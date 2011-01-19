@@ -70,7 +70,7 @@ contains
 !<
   subroutine init_neutral
 
-    use dataio_pub,     only: par_file, ierrh, namelist_errh, compare_namelist      ! QA_WARN required for diff_nml
+    use dataio_pub,     only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml      ! QA_WARN required for diff_nml
     use mpisetup,       only: master, slave, ierr, comm, rbuff, lbuff, buffer_dim
     use mpi,            only: MPI_LOGICAL, MPI_DOUBLE_PRECISION
 

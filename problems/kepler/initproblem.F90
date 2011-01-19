@@ -62,7 +62,7 @@ module initproblem
 contains
 !-----------------------------------------------------------------------------
    subroutine read_problem_par
-      use dataio_pub,          only: ierrh, par_file, namelist_errh, compare_namelist      ! QA_WARN required for diff_nml
+      use dataio_pub,          only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml      ! QA_WARN required for diff_nml
       use mpisetup,            only: cbuff, rbuff, ibuff, lbuff, buffer_dim, master, slave, comm, ierr
       use mpi,                 only: MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL
       use gravity,             only: grav_pot_3d

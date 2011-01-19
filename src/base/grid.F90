@@ -76,7 +76,7 @@ module grid
 !<
    subroutine init_grid
 
-      use dataio_pub, only: par_file, ierrh, namelist_errh, compare_namelist  ! QA_WARN required for diff_nml
+      use dataio_pub, only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml  ! QA_WARN required for diff_nml
       use dataio_pub, only: printinfo, die
       use mpisetup,   only: ierr, rbuff, cbuff, master, slave, buffer_dim, psize, pxsize, pysize, pzsize, pcoords, comm, &
            &                has_dir, xdim, ydim, zdim, ndims, nxd, nyd, nzd, nb

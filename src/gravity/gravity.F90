@@ -125,7 +125,7 @@ module gravity
    subroutine init_grav
 
       use arrays,        only: gpot
-      use dataio_pub,    only: ierrh, par_file, namelist_errh, compare_namelist    ! QA_WARN required for diff_nml
+      use dataio_pub,    only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml    ! QA_WARN required for diff_nml
       use dataio_pub,    only: warn
       use mpisetup,      only: ibuff, rbuff, cbuff, cbuff_len, buffer_dim, comm, ierr, master, slave, lbuff
       use mpi,           only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL, MPI_CHARACTER

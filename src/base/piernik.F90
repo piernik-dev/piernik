@@ -173,7 +173,7 @@ contains
       use arrays,                only: init_arrays
       use constants,             only: init_constants
       use dataio,                only: init_dataio, write_data
-      use dataio_pub,            only: nrestart, cwd, par_file, tmp_log_file, msg, printio, die, warn, printinfo, require_init_prob, problem_name, run_id
+      use dataio_pub,            only: nrestart, cwd, par_file, tmp_log_file, msg, printio, die, warn, printinfo, require_init_prob, problem_name, run_id, parse_cmdline
       use diagnostics,           only: diagnose_arrays
       use fluidboundaries,       only: all_fluid_boundaries
       use fluidboundaries_pub,   only: init_fluidboundaries
@@ -216,8 +216,9 @@ contains
       logical              :: grav_pot_3d_called = .false.
 #endif /* GRAV */
 
-      call getarg(1, cwd)
-      if (LEN_TRIM(cwd) == 0) cwd = '.'
+!     call getarg(1, cwd)
+!     if (LEN_TRIM(cwd) == 0) cwd = '.'
+      call parse_cmdline
       write(par_file,'(3a)') trim(cwd),'/problem.par'
       write(tmp_log_file,'(2a)') trim(cwd),'/tmp.log'
       inquire(file = tmp_log_file, exist = tmp_log_exist)

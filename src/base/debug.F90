@@ -45,7 +45,7 @@ contains
    subroutine init_piernikdebug
       use mpisetup,              only: master, slave, comm, ierr, buffer_dim, rbuff, lbuff
       use mpi,                   only: MPI_DOUBLE_PRECISION, MPI_LOGICAL
-      use dataio_pub,            only: par_file, ierrh, namelist_errh, compare_namelist  ! QA_WARN required for diff_nml
+      use dataio_pub,            only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml  ! QA_WARN required for diff_nml
       implicit none
 
       constant_dt = 0.0

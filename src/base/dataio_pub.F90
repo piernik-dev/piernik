@@ -77,7 +77,7 @@ module dataio_pub
    character(len=cwdlen) :: log_file            !< path to the current log file
    character(len=cwdlen) :: tmp_log_file        !< path to the temporary log file
    character(len=cwdlen) :: par_file            !< path to the parameter file
-
+   character(len=msglen) :: cmdl_nml            !< buffer for namelist supplied via commandline
    ! Handy variables
    integer            :: ierrh                  !< variable for iostat
    type(hdf)          :: chdf                   !< container for some vital simulation parameters
@@ -150,6 +150,74 @@ module dataio_pub
    procedure(tsl_out),   pointer :: user_tsl => Null()
 
 contains
+!-----------------------------------------------------------------------------
+   subroutine parse_cmdline
+      implicit none
+      integer :: i
+      logical :: skip_next
+      character(len=8)            :: date   ! QA_WARN len defined by ISO standard
+      character(len=10)           :: time   ! QA_WARN len defined by ISO standard
+      character(len=5)            :: zone   ! QA_WARN len defined by ISO standard
+      character(len=cwdlen)       :: arg
+      character(len=*), parameter :: version = '1.0'
+      logical, save               :: do_time = .false.
+
+      skip_next = .false.
+
+      do i = 1, command_argument_count()
+         if (skip_next) then
+            skip_next = .false.
+            cycle
+         endif
+         call get_command_argument(i, arg)
+
+         select case (arg)
+         case ('-v', '--version')
+            print '(2a)', 'cmdline version ', version
+            stop
+         case ('-p', '--param')
+            call get_command_argument(i+1,arg)
+            write(cwd,'(a)') arg
+            skip_next = .true.
+         case ('-n', '--namelist')
+            call get_command_argument(i+1,arg)
+            write(cmdl_nml, '(3A)') cmdl_nml(1:len_trim(cmdl_nml)), " ", trim(arg)
+            skip_next = .true.
+         case ('-h', '--help')
+            call print_help()
+            stop
+         case ('-t', '--time')
+            do_time = .true.
+         case default
+            print '(a,a,/)', 'Unrecognized command-line option: ', arg
+            call print_help()
+            stop
+         end select
+      enddo
+
+      ! Print the date and, optionally, the time
+      call date_and_time(DATE=date, TIME=time, ZONE=zone)
+      if (do_time) then
+         write (stdout, '(a,"-",a,"-",a)', advance='no') date(1:4), date(5:6), date(7:8)
+         write (stdout, '(x,a,":",a,x,a)') time(1:2), time(3:4), zone
+         stop
+      endif
+   end subroutine parse_cmdline
+!-----------------------------------------------------------------------------
+   subroutine print_help
+      implicit none
+      print '(a)', 'usage: cmdline [OPTIONS]'
+      print '(a)', ''
+      print '(a)', 'Without further options, cmdline prints the date and exits.'
+      print '(a)', ''
+      print '(a)', 'cmdline options:'
+      print '(a)', ''
+      print '(a)', '  -v, --version     print version information and exit'
+      print '(a)', '  -n, --namelist    read namelist from command line'
+      print '(a)', '  -p, --param       path to the current working directory'
+      print '(a)', '  -h, --help        print usage information and exit'
+      print '(a)', '  -t, --time        print time and exit'
+  end subroutine print_help
 !-----------------------------------------------------------------------------
    subroutine colormessage(nm, mode)
       use mpi,       only: MPI_COMM_WORLD

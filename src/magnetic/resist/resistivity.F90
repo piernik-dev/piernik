@@ -81,7 +81,7 @@ module resistivity
 !<
    subroutine init_resistivity
 
-      use dataio_pub,    only: par_file, ierrh, namelist_errh, compare_namelist  ! QA_WARN required for diff_nml
+      use dataio_pub,    only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml  ! QA_WARN required for diff_nml
       use dataio_pub,    only: warn, die
       use grid,          only: cg
       use mpisetup,      only: rbuff, ibuff, ierr, buffer_dim, comm, master, slave, has_dir, zdim, xdim, ydim

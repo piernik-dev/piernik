@@ -79,7 +79,7 @@ contains
 !<
    subroutine init_interactions
 
-      use dataio_pub,    only: par_file, ierrh, namelist_errh, compare_namelist      ! QA_WARN required for diff_nml
+      use dataio_pub,    only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml      ! QA_WARN required for diff_nml
       use mpisetup,      only: master, slave, lbuff, rbuff, buffer_dim, ierr, comm!, grace_period_passed
       use mpi,           only: MPI_DOUBLE_PRECISION, MPI_LOGICAL
 

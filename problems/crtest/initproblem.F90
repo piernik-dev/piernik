@@ -49,7 +49,7 @@ module initproblem
 
    subroutine read_problem_par
 
-      use dataio_pub,    only: ierrh, par_file, namelist_errh, compare_namelist      ! QA_WARN required for diff_nml
+      use dataio_pub,    only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml      ! QA_WARN required for diff_nml
       use dataio_pub,    only: die, user_vars_hdf5
       use diagnostics,   only: my_allocate
       use grid,          only: cg

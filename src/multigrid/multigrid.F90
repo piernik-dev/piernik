@@ -94,7 +94,7 @@ contains
            &                         aux_par_I0, aux_par_I1, aux_par_I2, aux_par_R0, aux_par_R1, aux_par_R2
       use multigridmpifuncs,   only: mpi_multigrid_prep
       use dataio_pub,          only: die
-      use dataio_pub,          only: msg, par_file, namelist_errh, compare_namelist  ! QA_WARN required for diff_nml
+      use dataio_pub,          only: msg, par_file, namelist_errh, compare_namelist, cmdl_nml  ! QA_WARN required for diff_nml
 #ifdef GRAV
       use multigrid_gravity,   only: init_multigrid_grav, init_multigrid_grav_post
 #endif /* GRAV */

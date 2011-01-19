@@ -49,7 +49,7 @@ contains
 
    subroutine read_problem_par
 
-      use dataio_pub,    only: par_file, ierrh, namelist_errh, compare_namelist   ! QA_WARN required for diff_nml
+      use dataio_pub,    only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml   ! QA_WARN required for diff_nml
       use dataio_pub,    only: die
       use grid,          only: cg
       use mpisetup,      only: ierr, rbuff, ibuff, lbuff, master, slave, buffer_dim, comm
