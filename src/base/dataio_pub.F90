@@ -199,7 +199,7 @@ contains
       call date_and_time(DATE=date, TIME=time, ZONE=zone)
       if (do_time) then
          write (stdout, '(a,"-",a,"-",a)', advance='no') date(1:4), date(5:6), date(7:8)
-         write (stdout, '(x,a,":",a,x,a)') time(1:2), time(3:4), zone
+         write (stdout, '(1x,a,":",a,1x,a)') time(1:2), time(3:4), zone
          stop
       endif
    end subroutine parse_cmdline
@@ -394,12 +394,13 @@ contains
 
    end subroutine set_container_chdf
 !-----------------------------------------------------------------------------
-   subroutine namelist_errh(ierrh,nm)
+   subroutine namelist_errh(ierrh,nm,skip_eof)
 
       implicit none
 
-      integer, intent(in) :: ierrh
-      character(len=*), intent(in) :: nm
+      integer, intent(in)           :: ierrh
+      character(len=*), intent(in)  :: nm
+      logical, intent(in), optional :: skip_eof
 
       select case (ierrh)
          case (19)
@@ -415,6 +416,9 @@ contains
             write(msg,'(3a)') "severe (19): Invalid reference to variable in the ",trim(nm)," namelist"
             call die(msg)
          case (-1)
+            if (present(skip_eof)) then
+               if (skip_eof) return
+            endif
             write(msg,'(3a)') "Namelist: ",trim(nm)," not found in problem.par"
             call die(msg)
          case (239, 5010)
