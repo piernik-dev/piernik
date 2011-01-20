@@ -32,7 +32,7 @@
 module types
    implicit none
    private
-   public :: hdf, value, grid_container, tsl_container, phys_prop, &
+   public :: axes, hdf, value, grid_container, tsl_container, phys_prop, &
    & problem_customize_solution, finalize_problem, domlen, idlen, &
    & component_fluid, var_numbers, custom_emf_bnd, cleanup_problem, &
    & problem_grace_passed
