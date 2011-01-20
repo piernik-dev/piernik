@@ -144,27 +144,22 @@ contains
 !>
 !! \brief Routine that has to offer a z-sweep of gravity potential with extended z-grid
 !! \deprecated probably now the routine should have different name than gparray which got from the commented part of code
-!! \bug internal compiler error: in fold_convert_loc, at fold-const.c:2792 for GTP defined
-!! \todo cancel old version and as a result cancel GTP directive
+!! \warning in case of moving 'use types, only: axes'' behind use gravity there could be gcc(4.5) internal compiler error: in fold_convert_loc, at fold-const.c:2792
 !<
    subroutine get_gprofs_gparray(iia,jja)
 
+      use types,   only: axes
       use arrays,  only: gp
       use gravity, only: tune_zeq, grav_type
       use grid,    only: cg
-      use types,   only: axes
 
       implicit none
 
       integer, intent(in)                  :: iia, jja
       real, allocatable, dimension(:,:,:)  :: gpots
-#ifdef GTP
       type(axes)                           :: ax
-#else /* !GTP */
-      integer                              :: ksub, k
-#endif /* !GTP */
+
       allocate(gpots(1,1,nstot))
-#ifdef GTP
       if (.not.allocated(ax%x)) allocate(ax%x(1))
       if (.not.allocated(ax%y)) allocate(ax%y(1))
       if (.not.allocated(ax%z)) allocate(ax%z(nstot))
@@ -172,27 +167,23 @@ contains
       ax%y = cg%y(jja)
       ax%z = zs
       call grav_type(gpots,ax)
-#else /* !GTP */
 ! BEWARE: good approximation only for pzsize == 1 (eventuall for pzsize == 2 still works well, but never for higher psize)
-      k = 1; gpots(:,:,:) = 0.0
-      do ksub=1, nstot
-         if (zs(ksub) >= cg%z(min(k+1, cg%nz))) k = k + 1
-         if (zs(ksub) >= cg%z(min(k, cg%nz-1)) .and. zs(ksub) < cg%z(min(k+1, cg%nz))) then
-            gpots(1,1,ksub) = gp(iia,jja,k) + (zs(ksub) - cg%z(k)) * &
-             (gp(iia,jja,min(k+1, cg%nz)) - gp(iia,jja,k)) / (cg%z(min(k+1, cg%nz)) - cg%z(min(k, cg%nz-1)))
-         endif
-      enddo
+!      k = 1; gpots(:,:,:) = 0.0
+!      do ksub=1, nstot
+!         if (zs(ksub) >= cg%z(min(k+1, cg%nz))) k = k + 1
+!         if (zs(ksub) >= cg%z(min(k, cg%nz-1)) .and. zs(ksub) < cg%z(min(k+1, cg%nz))) then
+!            gpots(1,1,ksub) = gp(iia,jja,k) + (zs(ksub) - cg%z(k)) * &
+!             (gp(iia,jja,min(k+1, cg%nz)) - gp(iia,jja,k)) / (cg%z(min(k+1, cg%nz)) - cg%z(min(k, cg%nz-1)))
+!         endif
+!      enddo
 !         call grav_pot('zsweep', ia,ja, zs, nstot, gpots,gp_status,.true.)
-#endif /* !GTP */
       gprofs(1:nstot-1) = (gpots(1,1,1:nstot-1) - gpots(1,1,2:nstot))/dzs
       gprofs(nstot) = 0. ! or maybe gprofs(nstot-1) ?
       gprofs = tune_zeq*gprofs
       if (allocated(gpots)) deallocate(gpots)
-#ifdef GTP
       if (allocated(ax%x))  deallocate(ax%x)
       if (allocated(ax%y))  deallocate(ax%y)
       if (allocated(ax%z))  deallocate(ax%z)
-#endif /* GTP */
    end subroutine get_gprofs_gparray
 
    subroutine hydrostatic_zeq_coldens(iia,jja,coldens,csim2)
