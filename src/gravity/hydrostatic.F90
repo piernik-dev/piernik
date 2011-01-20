@@ -155,7 +155,7 @@ contains
       implicit none
 
       integer, intent(in)                  :: iia, jja
-      integer                              :: ksub, k
+!      integer                              :: ksub, k
       real, allocatable, dimension(:,:,:)  :: gpots
       type(axes)                           :: ax
 
@@ -197,8 +197,6 @@ contains
       integer, intent(in)   :: iia, jja
       real,    intent(in)   :: coldens, csim2
       real                  :: sdprof, sd
-      integer               :: comm1d
-      logical, dimension(3) :: remain
 
       sdprof = 1.0
       call hydrostatic_zeq_densmid(iia,jja,sdprof,csim2,sd)
