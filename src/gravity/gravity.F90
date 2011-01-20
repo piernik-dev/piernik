@@ -491,7 +491,7 @@ module gravity
       do i = 1, cg%nx
          do j = 1, cg%ny
             do k = 1, cg%nz
-               gp(:,:,i) = -(g_dir(1)*cg%x(i) + g_dir(2)*cg%y(j) + g_dir(3)*cg%z(i))
+               gp(:,:,k) = -(g_dir(1)*cg%x(i) + g_dir(2)*cg%y(j) + g_dir(3)*cg%z(k))
             enddo
          enddo
       enddo
@@ -505,7 +505,7 @@ module gravity
       do i = 1, cg%nx
          do j = 1, cg%ny
             do k = 1, cg%nz
-               gp(:,:,i) = -0.5*(g_dir(1)*cg%x(i)**2 + g_dir(2)*cg%y(j)**2 + g_dir(3)*cg%z(i)**2)
+               gp(:,:,k) = -0.5*(g_dir(1)*cg%x(i)**2 + g_dir(2)*cg%y(j)**2 + g_dir(3)*cg%z(k)**2)
             enddo
          enddo
       enddo
