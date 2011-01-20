@@ -141,32 +141,49 @@ contains
 
    end subroutine get_gprofs_accel
 
+!>
+!! \brief Routine that has to offer a z-sweep of gravity potential with extended z-grid
+!! \deprecated probably now the routine should have different name than gparray which got from the commented part of code
+!<
    subroutine get_gprofs_gparray(iia,jja)
 
       use arrays,  only: gp
-      use gravity, only: tune_zeq
+      use gravity, only: tune_zeq, grav_type
       use grid,    only: cg
+      use types,   only: axes
 
       implicit none
 
-      integer, intent(in) :: iia, jja
-      integer :: ksub, k
-      real, allocatable, dimension(:)  :: gpots
+      integer, intent(in)                  :: iia, jja
+      integer                              :: ksub, k
+      real, allocatable, dimension(:,:,:)  :: gpots
+      type(axes)                           :: ax
 
-      allocate(gpots(nstot))
-      k = 1; gpots(:) = 0.0
-      do ksub=1, nstot
-         if (zs(ksub) >= cg%z(min(k+1, cg%nz))) k = k + 1
-         if (zs(ksub) >= cg%z(min(k, cg%nz-1)) .and. zs(ksub) < cg%z(min(k+1, cg%nz))) then
-            gpots(ksub) = gp(iia,jja,k) + (zs(ksub) - cg%z(k)) * &
-             (gp(iia,jja,min(k+1, cg%nz)) - gp(iia,jja,k)) / (cg%z(min(k+1, cg%nz)) - cg%z(min(k, cg%nz-1)))
-         endif
-      enddo
+      allocate(gpots(1,1,nstot))
+! BEWARE: good approximation only for pzsize == 1 (eventuall for pzsize == 2 still works well, but never for higher psize)
+!      k = 1; gpots(:) = 0.0
+!      do ksub=1, nstot
+!         if (zs(ksub) >= cg%z(min(k+1, cg%nz))) k = k + 1
+!         if (zs(ksub) >= cg%z(min(k, cg%nz-1)) .and. zs(ksub) < cg%z(min(k+1, cg%nz))) then
+!            gpots(ksub) = gp(iia,jja,k) + (zs(ksub) - cg%z(k)) * &
+!             (gp(iia,jja,min(k+1, cg%nz)) - gp(iia,jja,k)) / (cg%z(min(k+1, cg%nz)) - cg%z(min(k, cg%nz-1)))
+!         endif
+!      enddo
 !         call grav_pot('zsweep', ia,ja, zs, nstot, gpots,gp_status,.true.)
-      gprofs(1:nstot-1) = (gpots(1:nstot-1) - gpots(2:nstot))/dzs
+      if (.not.allocated(ax%x)) allocate(ax%x(1))
+      if (.not.allocated(ax%y)) allocate(ax%y(1))
+      if (.not.allocated(ax%z)) allocate(ax%z(nstot))
+      ax%x = cg%x(iia)
+      ax%y = cg%y(jja)
+      ax%z = zs
+      call grav_type(gpots,ax)
+      gprofs(1:nstot-1) = (gpots(1,1,1:nstot-1) - gpots(1,1,2:nstot))/dzs
       gprofs(nstot) = 0. ! or maybe gprofs(nstot-1) ?
       gprofs = tune_zeq*gprofs
       if (allocated(gpots)) deallocate(gpots)
+      if (allocated(ax%x))  deallocate(ax%x)
+      if (allocated(ax%y))  deallocate(ax%y)
+      if (allocated(ax%z))  deallocate(ax%z)
 
    end subroutine get_gprofs_gparray
 
