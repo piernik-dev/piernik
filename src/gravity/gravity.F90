@@ -78,6 +78,13 @@ module gravity
          implicit none
          integer, intent(in) :: iia, jja
       end subroutine gprofs_default
+      subroutine grav_types(gp,ax,flatten)
+         use types, only: axes
+         implicit none
+         real, dimension(:,:,:), intent(inout) :: gp
+         type(axes),             intent(in)    :: ax
+         logical,      optional, intent(in)    :: flatten
+      end subroutine grav_types
       subroutine user_grav_accel(sweep, i1,i2, xsw, n, grav)
          implicit none
          character(len=*), intent(in)   :: sweep
@@ -91,6 +98,7 @@ module gravity
    procedure(user_grav_pot_3d), pointer :: grav_pot_3d => NULL()
    procedure(user_grav_accel),  pointer :: grav_accel  => NULL()
    procedure(gprofs_default),   pointer :: get_gprofs  => NULL()
+   procedure(grav_types),       pointer :: grav_type   => NULL()
 
    contains
 
@@ -475,20 +483,22 @@ module gravity
 
 #endif /* SELF_GRAV */
 
-   subroutine grav_null(gp,ax)
+   subroutine grav_null(gp,ax,flatten)
       use types, only: axes
       implicit none
       real, dimension(:,:,:), intent(inout) :: gp
       type(axes), intent(in)                :: ax
+      logical, intent(in), optional         :: flatten
       gp = 0.0
       return
    end subroutine grav_null
 
-   subroutine grav_uniform(gp,ax)
+   subroutine grav_uniform(gp,ax,flatten)
       use types, only: axes
       implicit none
       real, dimension(:,:,:), intent(inout) :: gp
       type(axes), intent(in)                :: ax
+      logical, intent(in), optional         :: flatten
       integer :: i, j, k
       do i = 1, ubound(gp,1)
          do j = 1, ubound(gp,2)
@@ -500,11 +510,12 @@ module gravity
       return
    end subroutine grav_uniform
 
-   subroutine grav_linear(gp,ax)
+   subroutine grav_linear(gp,ax,flatten)
       use types, only: axes
       implicit none
       real, dimension(:,:,:), intent(inout) :: gp
       type(axes), intent(in)                :: ax
+      logical, intent(in), optional         :: flatten
       integer :: i, j, k
       do i = 1, ubound(gp,1)
          do j = 1, ubound(gp,2)
@@ -587,7 +598,7 @@ module gravity
 !! \brief Roche potential for two bodies oncircular orbits. The coordinate system corotates with the bodies, so they stay on the X axis forever.
 !<
 
-   subroutine grav_roche(gp,ax)
+   subroutine grav_roche(gp,ax,flatten)
 
       use constants,    only: newtong
       use types,        only: axes
@@ -596,6 +607,7 @@ module gravity
 
       real, dimension(:,:,:), intent(inout) :: gp
       type(axes), intent(in)                :: ax
+      logical, intent(in), optional         :: flatten
       integer :: j, k
       real    :: r_smooth2
       real    :: GM1, GM2, z2, yz2
@@ -616,7 +628,7 @@ module gravity
       return
    end subroutine grav_roche
 
-   subroutine grav_ptmass_stiff(gp,ax)
+   subroutine grav_ptmass_stiff(gp,ax,flatten)
 
       use constants,  only: newtong
       use types,      only: axes
@@ -625,6 +637,7 @@ module gravity
 
       real, dimension(:,:,:), intent(inout) :: gp
       type(axes), intent(in)                :: ax
+      logical, intent(in), optional         :: flatten
       integer :: i, j, k
       real    :: r_smooth2, r2, gmr, gm, z2, yz2
       ! promote stiff-body rotation inside smoothing length, don't affect the global potential outside
@@ -697,26 +710,26 @@ module gravity
 
       select case (external_gp)
          case ("null", "grav_null", "GRAV_NULL")
-            call grav_null(gp,ax)
+            call grav_null(gp,ax)                    ; grav_type => grav_null
          case ("linear", "grav_lin", "GRAV_LINEAR")
-            call grav_linear(gp,ax)
+            call grav_linear(gp,ax)                  ; grav_type => grav_linear
          case ("uniform", "grav_unif", "GRAV_UNIFORM")
-            call grav_uniform(gp,ax)
+            call grav_uniform(gp,ax)                 ; grav_type => grav_uniform
          case ("softened ptmass", "ptmass_soft", "GRAV_PTMASS")
-            call grav_ptmass_softened(gp,ax,.false.)
+            call grav_ptmass_softened(gp,ax,.false.) ; grav_type => grav_ptmass_softened
          case ("stiff ptmass", "ptmass_stiff", "GRAV_PTMASSSTIFF")
-            call grav_ptmass_stiff(gp,ax)
+            call grav_ptmass_stiff(gp,ax)            ; grav_type => grav_ptmass_stiff
          case ("ptmass", "ptmass_pure", "GRAV_PTMASSPURE")
-            call grav_ptmass_pure(gp,ax,.false.)
+            call grav_ptmass_pure(gp,ax,.false.)     ; grav_type => grav_ptmass_pure
          case ("flat softened ptmass", "flat_ptmass_soft", "GRAV_PTFLAT")
-            call grav_ptmass_softened(gp,ax,.true.)
+            call grav_ptmass_softened(gp,ax,.true.)  ; grav_type => grav_ptmass_softened
          case ("flat ptmass", "flat_ptmass")
-            call grav_ptmass_pure(gp,ax,.true.)
+            call grav_ptmass_pure(gp,ax,.true.)      ; grav_type => grav_ptmass_pure
          case ("roche", "grav_roche", "GRAV_ROCHE")
 #ifndef CORIOLIS
             call die("[gravity:default_grav_pot_3d] define CORIOLIS in piernik.def for Roche potential")
 #endif /* !CORIOLIS */
-            call grav_roche(gp,ax)
+            call grav_roche(gp,ax)                   ; grav_type => grav_roche
          case ("user", "grav_user", "GRAV_USER")
             call die("[gravity:default_grav_pot_3d] user 'grav_pot_3d' should be defined in initprob!")
          case default
