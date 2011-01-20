@@ -216,10 +216,8 @@ contains
       logical              :: grav_pot_3d_called = .false.
 #endif /* GRAV */
 
-!     call getarg(1, cwd)
-!     if (LEN_TRIM(cwd) == 0) cwd = '.'
       call parse_cmdline
-      write(par_file,'(3a)') trim(cwd),'/problem.par'
+      write(par_file,'(2a)') trim(cwd),'/problem.par'
       write(tmp_log_file,'(2a)') trim(cwd),'/tmp.log'
       inquire(file = tmp_log_file, exist = tmp_log_exist)
       if (tmp_log_exist) then

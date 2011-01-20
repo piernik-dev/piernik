@@ -73,11 +73,11 @@ module dataio_pub
    character(len=domlen) :: domain              !< string to choose if boundaries have to be dumped in hdf files
 
    ! Buffers for global use
-   character(len=cwdlen) :: cwd                 !< path to the current working directory
+   character(len=cwdlen), save :: cwd = "."     !< path to the current working directory
+   character(len=msglen), save :: cmdl_nml =" " !< buffer for namelist supplied via commandline
    character(len=cwdlen) :: log_file            !< path to the current log file
    character(len=cwdlen) :: tmp_log_file        !< path to the temporary log file
    character(len=cwdlen) :: par_file            !< path to the parameter file
-   character(len=msglen) :: cmdl_nml            !< buffer for namelist supplied via commandline
    ! Handy variables
    integer            :: ierrh                  !< variable for iostat
    type(hdf)          :: chdf                   !< container for some vital simulation parameters
