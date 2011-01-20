@@ -51,7 +51,7 @@ contains
 !>
 !! \brief Routine that arranges %hydrostatic equilibrium in the vertical (z) direction
 !<
-   subroutine hydrostatic_main
+   subroutine hydrostatic_main(sd)
 
       use arrays,     only: dprof
       use dataio_pub, only: die
@@ -60,6 +60,7 @@ contains
 
       implicit none
 
+      real, intent(out), optional     :: sd
       real, allocatable, dimension(:) :: dprofs
       integer :: ksub, ksmid, k
 #ifndef NEW_HYDROSTATIC
@@ -88,15 +89,6 @@ contains
             dprofs(ksub-1) = dprofs(ksub)*(1.0 - 0.5*(gprofs(ksub)+gprofs(ksub-1))*dzs)
          enddo
       endif
-
-      dprof(:) =0.0
-      do k=1, cg%nz
-         do ksub=1, nstot
-            if (zs(ksub) > cg%zl(k) .and. zs(ksub) < cg%zr(k)) then
-               dprof(k) = dprof(k) + dprofs(ksub)/real(nsub)
-            endif
-         enddo
-      enddo
 #else /* !NEW_HYDROSTATIC */
       if (ksmid < nstot) then
          dprofs(ksmid+1) = dmid
@@ -113,16 +105,22 @@ contains
             dprofs(ksub-1) = factor * dprofs(ksub)
          enddo
       endif
+#endif /* !NEW_HYDROSTATIC */
 
       dprof(:) =0.0
+      if (present(sd)) sd = 0.0
       do k=1, cg%nz
          do ksub=1, nstot
             if (zs(ksub) > cg%zl(k) .and. zs(ksub) < cg%zr(k)) then
                dprof(k) = dprof(k) + dprofs(ksub)/real(nsub)
             endif
+            if (present(sd)) then
+               if (zs(ksub) .gt. cg%zmin .and. zs(ksub) .lt. cg%zmax) then
+                  sd = sd + dprofs(ksub)/real(nsub)
+               endif
+            endif
          enddo
       enddo
-#endif /* !NEW_HYDROSTATIC */
 
       if (allocated(dprofs)) deallocate(dprofs)
 
@@ -176,28 +174,23 @@ contains
 
       use arrays,   only: dprof
       use grid,     only: cg
-      use mpi,      only: MPI_DOUBLE_PRECISION, MPI_IN_PLACE, MPI_SUM
-      use mpisetup, only: comm3d, ierr
 
       implicit none
 
       integer, intent(in)   :: iia, jja
       real,    intent(in)   :: coldens, csim2
-      real                  :: sdprof
+      real                  :: sdprof, sd
       integer               :: comm1d
       logical, dimension(3) :: remain
 
       sdprof = 1.0
-      call hydrostatic_zeq_densmid(iia,jja,sdprof,csim2)
-      sdprof = sum(dprof(cg%ks:cg%ke))
-      remain = (/.false.,.false.,.true./)
-      call MPI_Cart_sub(comm3d,remain,comm1d,ierr)
-      call MPI_Allreduce(MPI_IN_PLACE, sdprof, 1, MPI_DOUBLE_PRECISION, MPI_SUM, comm1d, ierr)
+      call hydrostatic_zeq_densmid(iia,jja,sdprof,csim2,sd)
+      sdprof = sd * cg%dz
       dprof = dprof * coldens / sdprof
 
    end subroutine hydrostatic_zeq_coldens
 
-   subroutine hydrostatic_zeq_densmid(iia,jja,d0,csim2)
+   subroutine hydrostatic_zeq_densmid(iia,jja,d0,csim2,sd)
 
       use arrays,     only: dprof
       use constants,  only: small
@@ -207,6 +200,7 @@ contains
 
       integer, intent(in) :: iia, jja
       real,    intent(in) :: d0, csim2
+      real,    intent(inout), optional :: sd
 
       if (d0 <= small) then
          call die("[hydrostatic:hydrostatic_zeq_densmid] d0 must be /= 0")
@@ -215,7 +209,7 @@ contains
       dmid = d0
 #endif /* !NEW_HYDROSTATIC */
 
-      call start_hydrostatic(iia,jja,csim2)
+      call start_hydrostatic(iia,jja,csim2,sd)
 #ifdef NEW_HYDROSTATIC
       dprof = dprof * d0
 #endif /* NEW_HYDROSTATIC */
@@ -223,7 +217,7 @@ contains
 
    end subroutine hydrostatic_zeq_densmid
 
-   subroutine start_hydrostatic(iia,jja,csim2)
+   subroutine start_hydrostatic(iia,jja,csim2,sd)
 
       use dataio_pub, only: die
       use gravity,    only: get_gprofs, gprofs_target, nsub
@@ -234,6 +228,7 @@ contains
 
       integer, intent(in) :: iia, jja
       real,    intent(in) :: csim2
+      real,    intent(inout), optional :: sd
       integer :: ksub
 
       if (.not.associated(get_gprofs)) then
@@ -254,7 +249,7 @@ contains
       enddo
       call get_gprofs(iia,jja)
       gprofs = gprofs / csim2
-      call hydrostatic_main
+      call hydrostatic_main(sd)
 
    end subroutine start_hydrostatic
 
