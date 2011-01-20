@@ -71,28 +71,34 @@ module gravity
    logical :: user_grav             !< use user defined grav_pot_3d
 
    interface
+
+      !< COMMENT ME
       subroutine user_grav_pot_3d
          implicit none
       end subroutine user_grav_pot_3d
+
       subroutine gprofs_default(iia,jja)
          implicit none
-         integer, intent(in) :: iia, jja
+         integer, intent(in) :: iia, jja                    !< COMMENT ME
       end subroutine gprofs_default
+
       subroutine grav_types(gp,ax,flatten)
          use types, only: axes
          implicit none
-         real, dimension(:,:,:), intent(inout) :: gp
-         type(axes),             intent(in)    :: ax
-         logical,      optional, intent(in)    :: flatten
+         real, dimension(:,:,:), intent(inout) :: gp        !< COMMENT ME
+         type(axes),             intent(in)    :: ax        !< COMMENT ME
+         logical,      optional, intent(in)    :: flatten   !< COMMENT ME
       end subroutine grav_types
+
       subroutine user_grav_accel(sweep, i1,i2, xsw, n, grav)
          implicit none
-         character(len=*), intent(in)   :: sweep
-         integer, intent(in)            :: i1, i2
-         integer, intent(in)            :: n
-         real, dimension(n),intent(in)  :: xsw
-         real, dimension(n),intent(out) :: grav
+         character(len=*), intent(in)   :: sweep            !< COMMENT ME
+         integer, intent(in)            :: i1, i2           !< COMMENT ME
+         integer, intent(in)            :: n                !< COMMENT ME
+         real, dimension(n),intent(in)  :: xsw              !< COMMENT ME
+         real, dimension(n),intent(out) :: grav             !< COMMENT ME
       end subroutine user_grav_accel
+
    end interface
 
    procedure(user_grav_pot_3d), pointer :: grav_pot_3d => NULL()
@@ -483,23 +489,33 @@ module gravity
 
 #endif /* SELF_GRAV */
 
-   subroutine grav_null(gp,ax,flatten)
+   subroutine grav_null(gp, ax, flatten)
+
       use types, only: axes
+
       implicit none
+
       real, dimension(:,:,:), intent(inout) :: gp
       type(axes), intent(in)                :: ax
       logical, intent(in), optional         :: flatten
+
       gp = 0.0
-      return
+
+      if (.false. .and. flatten) gp(1, 1, 1) = ax%x(1) ! suppress compiler warnings on unused arguments
+
    end subroutine grav_null
 
-   subroutine grav_uniform(gp,ax,flatten)
+   subroutine grav_uniform(gp, ax, flatten)
+
       use types, only: axes
+
       implicit none
+
       real, dimension(:,:,:), intent(inout) :: gp
       type(axes), intent(in)                :: ax
       logical, intent(in), optional         :: flatten
       integer :: i, j, k
+
       do i = 1, ubound(gp,1)
          do j = 1, ubound(gp,2)
             do k = 1, ubound(gp,3)
@@ -507,16 +523,22 @@ module gravity
             enddo
          enddo
       enddo
-      return
+
+      if (.false. .and. flatten) i=0 ! suppress compiler warnings on unused arguments
+
    end subroutine grav_uniform
 
-   subroutine grav_linear(gp,ax,flatten)
+   subroutine grav_linear(gp, ax, flatten)
+
       use types, only: axes
+
       implicit none
+
       real, dimension(:,:,:), intent(inout) :: gp
       type(axes), intent(in)                :: ax
       logical, intent(in), optional         :: flatten
       integer :: i, j, k
+
       do i = 1, ubound(gp,1)
          do j = 1, ubound(gp,2)
             do k = 1, ubound(gp,3)
@@ -524,18 +546,31 @@ module gravity
             enddo
          enddo
       enddo
-      return
+
+      if (.false. .and. flatten) i=0 ! suppress compiler warnings on unused arguments
+
    end subroutine grav_linear
 
-   subroutine grav_ptmass_pure(gp,ax,flatten)
+   subroutine grav_ptmass_pure(gp, ax, flatten)
+
       use constants,  only: newtong
       use types,      only: axes
+
       implicit none
+
       real, dimension(:,:,:), intent(inout) :: gp
       type(axes), intent(in)                :: ax
       logical, intent(in), optional         :: flatten
+
       integer             :: i, j
       real                :: rc2, GM, x2
+      logical             :: do_flatten
+
+      if (present(flatten)) then
+         do_flatten = flatten
+      else
+         do_flatten = .false.
+      endif
 
       GM        = newtong*ptmass
 
@@ -544,7 +579,7 @@ module gravity
          do j = 1, ubound(gp,2)
             rc2 = x2 + (ax%y(j) - ptm_y)**2
 
-            if (present(flatten) .and. flatten) then
+            if (do_flatten) then
                gp(i,j,:) = -GM / sqrt(rc2)
             else
                gp(i,j,:) = -GM / sqrt( (ax%z(:) - ptm_z)**2 + rc2 )
@@ -552,10 +587,10 @@ module gravity
 
          enddo
       enddo
-      return
+
    end subroutine grav_ptmass_pure
 
-   subroutine grav_ptmass_softened(gp,ax,flatten)
+   subroutine grav_ptmass_softened(gp, ax, flatten)
 
       use constants,  only: newtong
       use fluidindex, only: nvar
@@ -567,9 +602,17 @@ module gravity
       real, dimension(:,:,:), intent(inout) :: gp
       type(axes), intent(in)                :: ax
       logical, intent(in), optional         :: flatten
+
       integer             :: i, j
       real                :: rc2, r_smooth2, GM, fr, x2
       real                :: cs_iso2
+      logical             :: do_flatten
+
+      if (present(flatten)) then
+         do_flatten = flatten
+      else
+         do_flatten = .false.
+      endif
 
       cs_iso2   = maxval(nvar%all_fluids(:)%cs2)
       r_smooth2 = r_smooth**2
@@ -583,7 +626,7 @@ module gravity
             fr  = max( 1./cosh(fr), smalld*1.e-2)              !> \deprecated BEWARE: hadrcoded value
             fr  = -cs_iso2 * log(fr)
 
-             if (present(flatten) .and. flatten) then
+            if (do_flatten) then
                gp(i,j,:) = -GM / sqrt( rc2 + r_smooth2 ) + fr
             else
                gp(i,j,:) = -GM / sqrt( (ax%z(:) - ptm_z)**2 + rc2 + r_smooth2 ) + fr
@@ -591,14 +634,14 @@ module gravity
 
          enddo
       enddo
-      return
+
    end subroutine grav_ptmass_softened
 
 !>
 !! \brief Roche potential for two bodies oncircular orbits. The coordinate system corotates with the bodies, so they stay on the X axis forever.
 !<
 
-   subroutine grav_roche(gp,ax,flatten)
+   subroutine grav_roche(gp, ax, flatten)
 
       use constants,    only: newtong
       use types,        only: axes
@@ -608,6 +651,7 @@ module gravity
       real, dimension(:,:,:), intent(inout) :: gp
       type(axes), intent(in)                :: ax
       logical, intent(in), optional         :: flatten
+
       integer :: j, k
       real    :: r_smooth2
       real    :: GM1, GM2, z2, yz2
@@ -625,10 +669,12 @@ module gravity
                  &       - 0.5 * Omega**2 * ((ax%x(:) - cmass_x)**2 + yz2)
          enddo
       enddo
-      return
+
+      if (.false. .and. flatten) j=0 ! suppress compiler warnings on unused arguments
+
    end subroutine grav_roche
 
-   subroutine grav_ptmass_stiff(gp,ax,flatten)
+   subroutine grav_ptmass_stiff(gp, ax, flatten)
 
       use constants,  only: newtong
       use types,      only: axes
@@ -638,6 +684,7 @@ module gravity
       real, dimension(:,:,:), intent(inout) :: gp
       type(axes), intent(in)                :: ax
       logical, intent(in), optional         :: flatten
+
       integer :: i, j, k
       real    :: r_smooth2, r2, gmr, gm, z2, yz2
       ! promote stiff-body rotation inside smoothing length, don't affect the global potential outside
@@ -660,7 +707,9 @@ module gravity
             enddo
          enddo
       enddo
-      return
+
+      if (.false. .and. flatten) i=0 ! suppress compiler warnings on unused arguments
+
    end subroutine grav_ptmass_stiff
 
 !--------------------------------------------------------------------------
