@@ -69,7 +69,13 @@ module types
       real        :: dt
    end type phys_prop
 
-   type :: grid_container
+   type :: axes
+      real, allocatable, dimension(:) :: x      !< array of x-positions of %grid cells centers
+      real, allocatable, dimension(:) :: y      !< array of y-positions of %grid cells centers
+      real, allocatable, dimension(:) :: z      !< array of z-positions of %grid cells centers
+   end type axes
+
+   type, extends(axes) :: grid_container
 
       real    :: dx                             !< length of the %grid cell in x-direction
       real    :: dy                             !< length of the %grid cell in y-direction
@@ -99,11 +105,8 @@ module types
 
       real, allocatable, dimension(:) :: dl     !< array of %grid cell sizes in all directions
       real, allocatable, dimension(:) :: idl    !< array of inverted %grid cell sizes in all directions
-      real, allocatable, dimension(:) :: x      !< array of x-positions of %grid cells centers
       real, allocatable, dimension(:) :: inv_x  !< array of invert x-positions of %grid cells centers
-      real, allocatable, dimension(:) :: y      !< array of y-positions of %grid cells centers
       real, allocatable, dimension(:) :: inv_y  !< array of invert y-positions of %grid cells centers
-      real, allocatable, dimension(:) :: z      !< array of z-positions of %grid cells centers
       real, allocatable, dimension(:) :: inv_z  !< array of invert z-positions of %grid cells centers
       real, allocatable, dimension(:) :: xl     !< array of x-positions of %grid cells left borders
       real, allocatable, dimension(:) :: yl     !< array of y-positions of %grid cells left borders
