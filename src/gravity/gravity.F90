@@ -475,80 +475,87 @@ module gravity
 
 #endif /* SELF_GRAV */
 
-   subroutine grav_null
-      use arrays, only: gp
+   subroutine grav_null(gp,ax)
+      use types, only: axes
       implicit none
-
+      real, dimension(:,:,:), intent(inout) :: gp
+      type(axes), intent(in)                :: ax
       gp = 0.0
-
+      return
    end subroutine grav_null
 
-   subroutine grav_uniform
-      use arrays, only: gp
-      use grid,   only: cg
+   subroutine grav_uniform(gp,ax)
+      use types, only: axes
       implicit none
+      real, dimension(:,:,:), intent(inout) :: gp
+      type(axes), intent(in)                :: ax
       integer :: i, j, k
-      do i = 1, cg%nx
-         do j = 1, cg%ny
-            do k = 1, cg%nz
-               gp(i,j,k) = -(g_dir(1)*cg%x(i) + g_dir(2)*cg%y(j) + g_dir(3)*cg%z(k))
+      do i = 1, ubound(gp,1)
+         do j = 1, ubound(gp,2)
+            do k = 1, ubound(gp,3)
+               gp(i,j,k) = -(g_dir(1)*ax%x(i) + g_dir(2)*ax%y(j) + g_dir(3)*ax%z(k))
             enddo
          enddo
       enddo
+      return
    end subroutine grav_uniform
 
-   subroutine grav_linear
-      use arrays, only: gp
-      use grid,   only: cg
+   subroutine grav_linear(gp,ax)
+      use types, only: axes
       implicit none
+      real, dimension(:,:,:), intent(inout) :: gp
+      type(axes), intent(in)                :: ax
       integer :: i, j, k
-      do i = 1, cg%nx
-         do j = 1, cg%ny
-            do k = 1, cg%nz
-               gp(i,j,k) = -0.5*(g_dir(1)*cg%x(i)**2 + g_dir(2)*cg%y(j)**2 + g_dir(3)*cg%z(k)**2)
+      do i = 1, ubound(gp,1)
+         do j = 1, ubound(gp,2)
+            do k = 1, ubound(gp,3)
+               gp(i,j,k) = -0.5*(g_dir(1)*ax%x(i)**2 + g_dir(2)*ax%y(j)**2 + g_dir(3)*ax%z(k)**2)
             enddo
          enddo
       enddo
+      return
    end subroutine grav_linear
 
-   subroutine grav_ptmass_pure(flatten)
-      use arrays,     only: gp
+   subroutine grav_ptmass_pure(gp,ax,flatten)
       use constants,  only: newtong
-      use grid,       only: cg
+      use types,      only: axes
       implicit none
-      logical, intent(in) :: flatten
+      real, dimension(:,:,:), intent(inout) :: gp
+      type(axes), intent(in)                :: ax
+      logical, intent(in), optional         :: flatten
       integer             :: i, j
-      real                :: rc2, GM, x2, r_smooth2
+      real                :: rc2, GM, x2
 
-      r_smooth2 = r_smooth**2
       GM        = newtong*ptmass
 
-       do i = 1, cg%nx
-          x2 = (cg%x(i) - ptm_x)**2
-          do j = 1, cg%ny
-             rc2 = x2 + (cg%y(j) - ptm_y)**2
+      do i = 1, ubound(gp,1)
+         x2 = (ax%x(i) - ptm_x)**2
+         do j = 1, ubound(gp,2)
+            rc2 = x2 + (ax%y(j) - ptm_y)**2
 
-             if (flatten) then
-                gp(i,j,:) = -GM / sqrt(rc2)
-             else
-                gp(i,j,:) = -GM / sqrt( (cg%z(:) - ptm_z)**2 + rc2 )
-             endif
+            if (present(flatten) .and. flatten) then
+               gp(i,j,:) = -GM / sqrt(rc2)
+            else
+               gp(i,j,:) = -GM / sqrt( (ax%z(:) - ptm_z)**2 + rc2 )
+            endif
 
-          enddo
-       enddo
+         enddo
+      enddo
+      return
    end subroutine grav_ptmass_pure
 
-   subroutine grav_ptmass_softened(flatten)
+   subroutine grav_ptmass_softened(gp,ax,flatten)
 
-      use arrays,     only: gp
       use constants,  only: newtong
-      use grid,       only: cg
-      use mpisetup,   only: smalld
       use fluidindex, only: nvar
+      use mpisetup,   only: smalld
+      use types,      only: axes
 
       implicit none
 
-      logical, intent(in) :: flatten
+      real, dimension(:,:,:), intent(inout) :: gp
+      type(axes), intent(in)                :: ax
+      logical, intent(in), optional         :: flatten
       integer             :: i, j
       real                :: rc2, r_smooth2, GM, fr, x2
       real                :: cs_iso2
@@ -557,67 +564,67 @@ module gravity
       r_smooth2 = r_smooth**2
       GM        = newtong*ptmass
 
-      do i = 1, cg%nx
-         x2 = (cg%x(i) - ptm_x)**2
-         do j = 1, cg%ny
-            rc2 = x2 + (cg%y(j) - ptm_y)**2
+      do i = 1, ubound(gp,1)
+         x2 = (ax%x(i) - ptm_x)**2
+         do j = 1, ubound(gp,2)
+            rc2 = x2 + (ax%y(j) - ptm_y)**2
             fr  = min( (sqrt(rc2)/r_grav)**n_gravr , 100.0)    !> \deprecated BEWARE: hardcoded value
             fr  = max( 1./cosh(fr), smalld*1.e-2)              !> \deprecated BEWARE: hadrcoded value
             fr  = -cs_iso2 * log(fr)
 
-            if (flatten) then
+             if (present(flatten) .and. flatten) then
                gp(i,j,:) = -GM / sqrt( rc2 + r_smooth2 ) + fr
             else
-               gp(i,j,:) = -GM / sqrt( (cg%z(:) - ptm_z)**2 + rc2 + r_smooth2 ) + fr
+               gp(i,j,:) = -GM / sqrt( (ax%z(:) - ptm_z)**2 + rc2 + r_smooth2 ) + fr
             endif
 
          enddo
       enddo
-
+      return
    end subroutine grav_ptmass_softened
 
 !>
 !! \brief Roche potential for two bodies oncircular orbits. The coordinate system corotates with the bodies, so they stay on the X axis forever.
 !<
 
-   subroutine grav_roche
+   subroutine grav_roche(gp,ax)
 
-      use arrays,       only: gp
-      use grid,         only: cg
       use constants,    only: newtong
+      use types,        only: axes
 
       implicit none
 
+      real, dimension(:,:,:), intent(inout) :: gp
+      type(axes), intent(in)                :: ax
       integer :: j, k
       real    :: r_smooth2
       real    :: GM1, GM2, z2, yz2
 
-       r_smooth2 = r_smooth**2
-       GM1 =  newtong * ptmass
-       GM2 =  newtong * ptmass2
+      r_smooth2 = r_smooth**2
+      GM1 =  newtong * ptmass
+      GM2 =  newtong * ptmass2
 
-
-
-       do k = 1, cg%nz
-          z2 = cg%z(k)**2
-          do j = 1, cg%ny
-             yz2 = cg%y(j)**2 + z2
-             gp(:,j,k) =  - GM1 / sqrt((cg%x(:) - ptm_x)**2  + yz2 + r_smooth2) &
-                  &       - GM2 / sqrt((cg%x(:) - ptm2_x)**2 + yz2 + r_smooth2) &
-                  &       - 0.5 * Omega**2 * ((cg%x(:) - cmass_x)**2 + yz2)
-          enddo
-       enddo
-
+      do k = 1, ubound(gp,1)
+         z2 = ax%z(k)**2
+         do j = 1, ubound(gp,2)
+            yz2 = ax%y(j)**2 + z2
+            gp(:,j,k) =  - GM1 / sqrt((ax%x(:) - ptm_x)**2  + yz2 + r_smooth2) &
+                 &       - GM2 / sqrt((ax%x(:) - ptm2_x)**2 + yz2 + r_smooth2) &
+                 &       - 0.5 * Omega**2 * ((ax%x(:) - cmass_x)**2 + yz2)
+         enddo
+      enddo
+      return
    end subroutine grav_roche
 
-   subroutine grav_ptmass_stiff
+   subroutine grav_ptmass_stiff(gp,ax)
 
-      use arrays,     only: gp
       use constants,  only: newtong
-      use grid,       only: cg
+      use types,      only: axes
 
       implicit none
 
+      real, dimension(:,:,:), intent(inout) :: gp
+      type(axes), intent(in)                :: ax
       integer :: i, j, k
       real    :: r_smooth2, r2, gmr, gm, z2, yz2
       ! promote stiff-body rotation inside smoothing length, don't affect the global potential outside
@@ -626,12 +633,12 @@ module gravity
       gm =  - newtong * ptmass
       gmr = 0.5 * gm / r_smooth
 
-      do k = 1, cg%nz
-         z2 = (cg%z(k) - ptm_z)**2
-         do j = 1, cg%ny
-            yz2 = z2 + (cg%y(j) - ptm_y)**2
-            do i = 1, cg%nx
-               r2 = yz2 + (cg%x(i) - ptm_x)**2
+      do k = 1, ubound(gp,3)
+         z2 = (ax%z(k) - ptm_z)**2
+         do j = 1, ubound(gp,2)
+            yz2 = z2 + (ax%y(j) - ptm_y)**2
+            do i = 1, ubound(gp,1)
+               r2 = yz2 + (ax%x(i) - ptm_x)**2
                if (r2 < r_smooth2) then
                   gp(i,j,k) = gmr * (3. - r2/r_smooth2)
                else
@@ -640,6 +647,7 @@ module gravity
             enddo
          enddo
       enddo
+      return
    end subroutine grav_ptmass_stiff
 
 !--------------------------------------------------------------------------
@@ -669,35 +677,46 @@ module gravity
 
    subroutine default_grav_pot_3d
 
+      use arrays,       only: gp
       use dataio_pub,   only: die, warn
+      use grid,         only: cg
       use mpisetup,     only: master
+      use types,        only: axes
 
       implicit none
+      type(axes) :: ax
+
+      if (.not.allocated(ax%x)) allocate(ax%x(size(cg%x)))
+      if (.not.allocated(ax%y)) allocate(ax%y(size(cg%y)))
+      if (.not.allocated(ax%z)) allocate(ax%z(size(cg%z)))
+      ax%x = cg%x
+      ax%y = cg%y
+      ax%z = cg%z
 
       gp_status = ''
 
       select case (external_gp)
          case ("null", "grav_null", "GRAV_NULL")
-            call grav_null
+            call grav_null(gp,ax)
          case ("linear", "grav_lin", "GRAV_LINEAR")
-            call grav_linear
+            call grav_linear(gp,ax)
          case ("uniform", "grav_unif", "GRAV_UNIFORM")
-            call grav_uniform
+            call grav_uniform(gp,ax)
          case ("softened ptmass", "ptmass_soft", "GRAV_PTMASS")
-            call grav_ptmass_softened(.false.)
+            call grav_ptmass_softened(gp,ax,.false.)
          case ("stiff ptmass", "ptmass_stiff", "GRAV_PTMASSSTIFF")
-            call grav_ptmass_stiff
+            call grav_ptmass_stiff(gp,ax)
          case ("ptmass", "ptmass_pure", "GRAV_PTMASSPURE")
-            call grav_ptmass_pure(.false.)
+            call grav_ptmass_pure(gp,ax,.false.)
          case ("flat softened ptmass", "flat_ptmass_soft", "GRAV_PTFLAT")
-            call grav_ptmass_softened(.true.)
+            call grav_ptmass_softened(gp,ax,.true.)
          case ("flat ptmass", "flat_ptmass")
-            call grav_ptmass_pure(.true.)
+            call grav_ptmass_pure(gp,ax,.true.)
          case ("roche", "grav_roche", "GRAV_ROCHE")
 #ifndef CORIOLIS
             call die("[gravity:default_grav_pot_3d] define CORIOLIS in piernik.def for Roche potential")
 #endif /* !CORIOLIS */
-            call grav_roche
+            call grav_roche(gp,ax)
          case ("user", "grav_user", "GRAV_USER")
             call die("[gravity:default_grav_pot_3d] user 'grav_pot_3d' should be defined in initprob!")
          case default
@@ -714,6 +733,10 @@ module gravity
             call die("[gravity:default_grav_pot_3d]: GRAV is defined, but 'gp' is not initialized")
          endif
       endif
+
+      if (allocated(ax%x)) deallocate(ax%x)
+      if (allocated(ax%y)) deallocate(ax%y)
+      if (allocated(ax%z)) deallocate(ax%z)
 
    end subroutine default_grav_pot_3d
 
