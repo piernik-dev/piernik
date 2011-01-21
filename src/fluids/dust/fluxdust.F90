@@ -72,7 +72,7 @@ contains
    subroutine flux_dst(fluxd,cfrd,uud,n,vx,ps,bb,cs_iso2)
 
       use constants,  only: small
-      use fluidindex, only: idn, imx, imy, imz, nvar
+      use fluidindex, only: idn, imx, imy, imz, flind
       use mpisetup,   only: cfr_smooth
 #ifdef GLOBAL_FR_SPEED
       use timestep,   only: c_all
@@ -118,14 +118,14 @@ contains
 
       cfrd(1,1) = cfrd(1,2)
       cfrd(1,n) = cfrd(1,n-1)
-      cfrd = spread(cfrd(1,:),1,nvar%dst%all)
+      cfrd = spread(cfrd(1,:),1,flind%dst%all)
 #endif /* LOCAL_FR_SPEED */
 
 #ifdef GLOBAL_FR_SPEED
       ! The freezing speed is now computed globally
       ! (c=const for the whole domain) in sobroutine 'timestep'
       !
-      !  cfrd(:,:) = nvar%dst%snap%c
+      !  cfrd(:,:) = flind%dst%snap%c
       cfrd(:,:) = c_all
 #endif /* GLOBAL_FR_SPEED */
       return

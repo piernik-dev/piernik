@@ -51,7 +51,7 @@ module fluidindex
 
    public ! QA_WARN no secrets are kept here
 
-   type(var_numbers),save :: nvar     !< COMMENT ME
+   type(var_numbers),save :: flind     !< COMMENT ME
 
    integer, parameter  :: nmag = 3    !< number of magnetic field components
 
@@ -77,9 +77,9 @@ module fluidindex
    integer, allocatable, dimension(:) :: iarr_all_crn   !< array of indexes pointing to ener. densities of all nuclear CR-components
    integer, allocatable, dimension(:) :: iarr_all_cre   !< array of indexes pointing to ener. densities of all electron CR-components
    integer, allocatable, dimension(:), target :: iarr_all_crs   !< array of indexes pointing to ener. densities of all CR-components
-   integer, allocatable, dimension(:) :: iarr_all_swpx !< array (size = nvar) of all fluid indexes in the original order
-   integer, allocatable, dimension(:) :: iarr_all_swpy !< array (size = nvar) of all fluid indexes with \a x and \a y components of mom. interchanged
-   integer, allocatable, dimension(:) :: iarr_all_swpz !< array (size = nvar) of all fluid indexes with \a x and \a z components of mom. interchanged
+   integer, allocatable, dimension(:) :: iarr_all_swpx !< array (size = flind) of all fluid indexes in the original order
+   integer, allocatable, dimension(:) :: iarr_all_swpy !< array (size = flind) of all fluid indexes with \a x and \a y components of mom. interchanged
+   integer, allocatable, dimension(:) :: iarr_all_swpz !< array (size = flind) of all fluid indexes with \a x and \a z components of mom. interchanged
 
    integer, allocatable, dimension(:) :: iarr_all_mag  !< array (size = nmag) of all magnetic field components
    integer, allocatable, dimension(:) :: iarr_mag_swpx !< array (size = nmag) of all mag. field indexes in the original order (same as iarr_all_mag)
@@ -154,44 +154,44 @@ contains
 
 #ifdef IONIZED
 !  Compute indexes for the ionized fluid and update counters
-      allocate(nvar%ion) !> \deprecated BEWARE: nvar\%ion not deallocated
-      call ionized_index(nvar)
+      allocate(flind%ion) !> \deprecated BEWARE: flind\%ion not deallocated
+      call ionized_index(flind)
 #endif /* IONIZED */
 
 #ifdef NEUTRAL
 !  Compute indexes for the neutral fluid and update counters
-      allocate(nvar%neu)
-      call neutral_index(nvar)
+      allocate(flind%neu)
+      call neutral_index(flind)
 #endif /* NEUTRAL */
 
 #ifdef DUST
 !  Compute indexes for the dust fluid and update counters
-      allocate(nvar%dst)
-      call dust_index(nvar)
+      allocate(flind%dst)
+      call dust_index(flind)
 #endif /* DUST */
 
 #ifdef COSM_RAYS
 !  Compute indexes for the CR component and update counters
-      call cosmicray_index(nvar)
+      call cosmicray_index(flind)
 #endif /* !COSM_RAYS */
 
 ! Allocate index arrays
 #ifdef IONIZED
       allocate(iarr_mag_swpx(nmag),iarr_mag_swpy(nmag),iarr_mag_swpz(nmag),iarr_all_mag(nmag))
 #endif /* IONIZED */
-      allocate(iarr_all_swpx(nvar%all),iarr_all_swpy(nvar%all),iarr_all_swpz(nvar%all))
-      allocate(iarr_all_dn(nvar%fluids),iarr_all_mx(nvar%fluids),iarr_all_my(nvar%fluids),iarr_all_mz(nvar%fluids))
-      allocate(iarr_all_sg(nvar%fluids_sg))
+      allocate(iarr_all_swpx(flind%all),iarr_all_swpy(flind%all),iarr_all_swpz(flind%all))
+      allocate(iarr_all_dn(flind%fluids),iarr_all_mx(flind%fluids),iarr_all_my(flind%fluids),iarr_all_mz(flind%fluids))
+      allocate(iarr_all_sg(flind%fluids_sg))
 #ifdef ISO
       allocate(iarr_all_en(0))
 #else /* !ISO */
-      allocate(iarr_all_en(nvar%energ))
+      allocate(iarr_all_en(flind%energ))
 #endif /* !ISO */
 
 #ifdef COSM_RAYS
-      allocate(iarr_all_crn(nvar%crn%all))
-      allocate(iarr_all_cre(nvar%cre%all))
-      allocate(iarr_all_crs(nvar%crs%all))
+      allocate(iarr_all_crn(flind%crn%all))
+      allocate(iarr_all_cre(flind%cre%all))
+      allocate(iarr_all_crs(flind%crs%all))
 #else /* !COSM_RAYS */
       allocate(iarr_all_crn(0))
       allocate(iarr_all_cre(0))
@@ -208,40 +208,40 @@ contains
 
 #ifdef IONIZED
 ! Compute index arrays for the ionized fluid
-      call set_fluidindex_arrays(nvar%ion,.true.)
+      call set_fluidindex_arrays(flind%ion,.true.)
 #endif /* IONIZED */
 
 #ifdef NEUTRAL
 ! Compute index arrays for the neutral fluid
-      call set_fluidindex_arrays(nvar%neu,.true.)
+      call set_fluidindex_arrays(flind%neu,.true.)
 #endif /* NEUTRAL */
 
 #ifdef DUST
 ! Compute index arrays for the dust fluid
-      call set_fluidindex_arrays(nvar%dst,.false.)
+      call set_fluidindex_arrays(flind%dst,.false.)
 #endif /* DUST */
 
 #ifdef COSM_RAYS
 ! Compute index arrays for the CR components
-      iarr_all_swpx(nvar%crs%beg:nvar%crs%end) = iarr_crs
-      iarr_all_swpy(nvar%crs%beg:nvar%crs%end) = iarr_crs
-      iarr_all_swpz(nvar%crs%beg:nvar%crs%end) = iarr_crs
+      iarr_all_swpx(flind%crs%beg:flind%crs%end) = iarr_crs
+      iarr_all_swpy(flind%crs%beg:flind%crs%end) = iarr_crs
+      iarr_all_swpz(flind%crs%beg:flind%crs%end) = iarr_crs
 
-      iarr_all_crn(1:nvar%crn%all) = iarr_crn
-      iarr_all_cre(1:nvar%cre%all) = iarr_cre
-      iarr_all_crs(1:nvar%crs%all) = iarr_crs
+      iarr_all_crn(1:flind%crn%all) = iarr_crn
+      iarr_all_cre(1:flind%cre%all) = iarr_cre
+      iarr_all_crs(1:flind%crs%all) = iarr_crs
 #endif /* COSM_RAYS */
 
-      allocate(nvar%all_fluids(nvar%fluids)) !> \deprecated BEWARE: nvar\%fluids not deallocated
+      allocate(flind%all_fluids(flind%fluids)) !> \deprecated BEWARE: flind\%fluids not deallocated
       i = 1
 #ifdef IONIZED
-      nvar%all_fluids(i) = nvar%ion ; i = i + 1
+      flind%all_fluids(i) = flind%ion ; i = i + 1
 #endif /* IONIZED */
 #ifdef NEUTRAL
-      nvar%all_fluids(i) = nvar%neu ; i = i + 1
+      flind%all_fluids(i) = flind%neu ; i = i + 1
 #endif /* NEUTRAL */
 #ifdef DUST
-      nvar%all_fluids(i) = nvar%dst ; i = i + 1
+      flind%all_fluids(i) = flind%dst ; i = i + 1
 #endif /* DUST */
    end subroutine fluid_index
 

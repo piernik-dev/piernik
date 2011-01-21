@@ -283,7 +283,7 @@ contains
       use arrays,              only: u
       use grid,                only: cg
       use mpisetup,            only: smalld
-      use fluidindex,          only: nvar, iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
+      use fluidindex,          only: flind, iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
 #ifndef ISO
       use fluidindex,          only: iarr_all_en
       use mpisetup,            only: smallei
@@ -299,14 +299,14 @@ contains
       character(len=*), intent(in)  :: minmax
 
       integer                             :: ksub, i, j
-      real, dimension(nvar%fluids, cg%nx, cg%ny) :: db, csi2b
+      real, dimension(flind%fluids, cg%nx, cg%ny) :: db, csi2b
 #ifndef ISO
       integer                             :: ifluid
-      real, dimension(nvar%fluids, cg%nx, cg%ny) :: ekb, eib
+      real, dimension(flind%fluids, cg%nx, cg%ny) :: ekb, eib
 #endif /* !ISO */
       real, dimension(nsub+1)             :: zs, gprofs
-      real, dimension(nvar%fluids,nsub+1) :: dprofs
-      real, dimension(nvar%fluids)        :: factor
+      real, dimension(flind%fluids,nsub+1) :: dprofs
+      real, dimension(flind%fluids)        :: factor
       real                                :: dzs,z1,z2
 
       if (.not.associated(grav_accel)) call die("[hydrostatic:outh_bnd] grav_accel not associated")
@@ -314,13 +314,13 @@ contains
       db = u(iarr_all_dn,:,:,kb)
       db = max(db,smalld)
 #ifdef ISO
-      csi2b = maxval(nvar%all_fluids(:)%cs2)   !> \deprecated BEWARE should be fluid dependent
+      csi2b = maxval(flind%all_fluids(:)%cs2)   !> \deprecated BEWARE should be fluid dependent
 #else /* !ISO */
       ekb = 0.5*(u(iarr_all_mx,:,:,kb)**2+u(iarr_all_my,:,:,kb)**2+u(iarr_all_mz,:,:,kb)**2)/db
       eib = u(iarr_all_en,:,:,kb) - ekb
       eib = max(eib,smallei)
-      do ifluid=1,nvar%fluids
-         csi2b(ifluid,:,:) = (nvar%all_fluids(ifluid)%gam_1)*eib(ifluid,:,:)/db(ifluid,:,:)
+      do ifluid=1,flind%fluids
+         csi2b(ifluid,:,:) = (flind%all_fluids(ifluid)%gam_1)*eib(ifluid,:,:)/db(ifluid,:,:)
       enddo
 #endif /* !ISO */
       z1 = cg%z(kb)
@@ -360,7 +360,7 @@ contains
 !           endif
             if (.false.) print *, minmax
 #ifndef ISO
-            eib(:,i,j) = csi2b(:,i,j)*db(:,i,j)/(nvar%all_fluids(:)%gam_1)
+            eib(:,i,j) = csi2b(:,i,j)*db(:,i,j)/(flind%all_fluids(:)%gam_1)
             eib(:,i,j) = max(eib(:,i,j), smallei)
             u(iarr_all_en,i,j,kk)      =     ekb(:,i,j) + eib(:,i,j)
 #endif /* !ISO */

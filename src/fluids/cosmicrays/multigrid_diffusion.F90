@@ -222,7 +222,7 @@ contains
 
       use grid,               only: cg
       use dataio_pub,         only: die
-      use fluidindex,         only: nvar
+      use fluidindex,         only: flind
       use multigridhelpers,   only: vcycle_stats_init
       use multigridvars,      only: vcycle_stats
 
@@ -234,7 +234,7 @@ contains
       if (.false.) ierr = cg%nxb ! suppress compiler warnings on unused arguments
 
       if (allocated(norm_was_zero)) call die("[multigrid_diffusion:init_multigrid] norm_was_zero already allocated")
-      allocate(norm_was_zero(nvar%crs%all), stat=ierr)
+      allocate(norm_was_zero(flind%crs%all), stat=ierr)
       if (ierr /= 0) call die("[multigrid_diffusion:init_multigrid] Allocation error: norm_was_zero")
       mb_alloc = mb_alloc + size(norm_was_zero)/2
       norm_was_zero(:) = .false.
@@ -271,7 +271,7 @@ contains
       use crdiffusion,        only: cr_diff_x, cr_diff_y, cr_diff_z
       use timer,              only: set_timer
       use multigridvars,      only: ts, tot_ts, stdout
-      use fluidindex,         only: nvar
+      use fluidindex,         only: flind
       use mpisetup,           only: dt, master
 
       implicit none
@@ -307,7 +307,7 @@ contains
          ! set diffBC
          call init_b
 
-         do cr_id = 1, nvar%crs%all
+         do cr_id = 1, flind%crs%all
             call init_source(cr_id)
             if (vstat%norm_rhs /= 0) then
                if (norm_was_zero(cr_id) .and. master) then

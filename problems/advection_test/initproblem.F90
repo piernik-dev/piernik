@@ -109,7 +109,7 @@ contains
 
       use arrays,        only: u, b
       use grid,          only: cg
-      use fluidindex,    only: nvar
+      use fluidindex,    only: flind
       use mpisetup,      only: smalld, smallei
       use diagnostics,   only: my_allocate
 
@@ -120,10 +120,10 @@ contains
 
       !BEWARE: hardcoded magic numbers
       pulse_low_density = smalld * 1e5
-      pulse_pressure = smallei * nvar%neu%gam_1 * 1e2
+      pulse_pressure = smallei * flind%neu%gam_1 * 1e2
 
       b(:, :, :, :) = 0.
-      u(nvar%neu%idn, :, :, :) = pulse_low_density
+      u(flind%neu%idn, :, :, :) = pulse_low_density
 
       ! Initialize density with uniform sphere
       do i = cg%is, cg%ie
@@ -132,7 +132,7 @@ contains
                if (cg%y(j) > pulse_y_min .and. cg%y(j) < pulse_y_max) then
                   do k = cg%ks, cg%ke
                      if (cg%z(k) > pulse_z_min .and. cg%z(k) < pulse_z_max) then
-                        u(nvar%neu%idn, i, j, k) = pulse_low_density * pulse_amp
+                        u(flind%neu%idn, i, j, k) = pulse_low_density * pulse_amp
                      endif
                   enddo
                endif
@@ -140,20 +140,20 @@ contains
          endif
       enddo
 
-      where (u(nvar%neu%idn, :, :, :) < smalld) u(nvar%neu%idn, :, :, :) = smalld
+      where (u(flind%neu%idn, :, :, :) < smalld) u(flind%neu%idn, :, :, :) = smalld
 
       call my_allocate(inid, [cg%nxb, cg%nyb, cg%nzb], "inid")
-      inid(1:cg%nxb, 1:cg%nyb, 1:cg%nzb) = u(nvar%neu%idn, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
+      inid(1:cg%nxb, 1:cg%nyb, 1:cg%nzb) = u(flind%neu%idn, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
 
-      u(nvar%neu%imx, :, :, :) = pulse_vel_x * u(nvar%neu%idn, :, :, :)
-      u(nvar%neu%imy, :, :, :) = pulse_vel_y * u(nvar%neu%idn, :, :, :)
-      u(nvar%neu%imz, :, :, :) = pulse_vel_z * u(nvar%neu%idn, :, :, :)
+      u(flind%neu%imx, :, :, :) = pulse_vel_x * u(flind%neu%idn, :, :, :)
+      u(flind%neu%imy, :, :, :) = pulse_vel_y * u(flind%neu%idn, :, :, :)
+      u(flind%neu%imz, :, :, :) = pulse_vel_z * u(flind%neu%idn, :, :, :)
       do k = cg%ks, cg%ke
          do j = cg%js, cg%je
             do i = cg%is, cg%ie
-               u(nvar%neu%ien,i,j,k) = max(smallei,                                             &
-                    &              pulse_pressure / nvar%neu%gam_1        + &
-                    &              0.5 * sum(u(nvar%neu%imx:nvar%neu%imz,i,j,k)**2,1) / u(nvar%neu%idn,i,j,k))
+               u(flind%neu%ien,i,j,k) = max(smallei,                                             &
+                    &              pulse_pressure / flind%neu%gam_1        + &
+                    &              0.5 * sum(u(flind%neu%imx:flind%neu%imz,i,j,k)**2,1) / u(flind%neu%idn,i,j,k))
             enddo
          enddo
       enddo
@@ -189,7 +189,7 @@ contains
       use grid,          only: cg
       use mpisetup,      only: master, comm3d, ierr
       use mpi,           only: MPI_DOUBLE_PRECISION, MPI_SUM, MPI_MIN, MPI_MAX, MPI_IN_PLACE
-      use fluidindex,    only: nvar
+      use fluidindex,    only: flind
 
       implicit none
 
@@ -205,10 +205,10 @@ contains
          do j = cg%js, cg%je
             do i = cg%is, cg%ie
                dini =  inid(i-cg%is+1, j-cg%js+1, k-cg%ks+1)
-               norm(1) = norm(1) + (dini - u(nvar%neu%idn, i, j, k))**2
+               norm(1) = norm(1) + (dini - u(flind%neu%idn, i, j, k))**2
                norm(2) = norm(2) + dini**2
-               dev(1) = min(dev(1), (dini - u(nvar%neu%idn, i, j, k))/dini)
-               dev(2) = max(dev(2), (dini - u(nvar%neu%idn, i, j, k))/dini)
+               dev(1) = min(dev(1), (dini - u(flind%neu%idn, i, j, k))/dini)
+               dev(2) = max(dev(2), (dini - u(flind%neu%idn, i, j, k))/dini)
             enddo
          enddo
       enddo

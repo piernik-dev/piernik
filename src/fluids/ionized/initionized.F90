@@ -112,70 +112,70 @@ contains
 
   end subroutine init_ionized
 
-   subroutine ionized_index(nvar)
+   subroutine ionized_index(flind)
 
       use diagnostics,  only: ma1d, my_allocate
       use types,        only: var_numbers
 
       implicit none
 
-      type(var_numbers), intent(inout) :: nvar
+      type(var_numbers), intent(inout) :: flind
 
-      nvar%ion%beg  = nvar%all + 1
+      flind%ion%beg  = flind%all + 1
 
-      idni = nvar%all + 1
-      imxi = nvar%all + 2
-      imyi = nvar%all + 3
-      imzi = nvar%all + 4
+      idni = flind%all + 1
+      imxi = flind%all + 2
+      imyi = flind%all + 3
+      imzi = flind%all + 4
 
-      nvar%ion%idn  = idni
-      nvar%ion%imx  = imxi
-      nvar%ion%imy  = imyi
-      nvar%ion%imz  = imzi
+      flind%ion%idn  = idni
+      flind%ion%imx  = imxi
+      flind%ion%imy  = imyi
+      flind%ion%imz  = imzi
 
-      nvar%ion%all  = 4
-      nvar%all      = imzi
+      flind%ion%all  = 4
+      flind%all      = imzi
 #ifndef ISO
       ieni          = imzi + 1
-      nvar%all      = nvar%all + 1
-      nvar%ion%all  = nvar%ion%all + 1
-      nvar%ion%ien  = ieni
+      flind%all      = flind%all + 1
+      flind%ion%all  = flind%ion%all + 1
+      flind%ion%ien  = ieni
 #endif /* !ISO */
 
-      ma1d = [nvar%ion%all]
-      call my_allocate(nvar%ion%iarr,       ma1d, "ion%iarr")
-      call my_allocate(nvar%ion%iarr_swpx,  ma1d, "ion%iarr_swpx")
-      call my_allocate(nvar%ion%iarr_swpy,  ma1d, "ion%iarr_swpy")
-      call my_allocate(nvar%ion%iarr_swpz,  ma1d, "ion%iarr_swpz")
+      ma1d = [flind%ion%all]
+      call my_allocate(flind%ion%iarr,       ma1d, "ion%iarr")
+      call my_allocate(flind%ion%iarr_swpx,  ma1d, "ion%iarr_swpx")
+      call my_allocate(flind%ion%iarr_swpy,  ma1d, "ion%iarr_swpy")
+      call my_allocate(flind%ion%iarr_swpz,  ma1d, "ion%iarr_swpz")
 
       !\deprecated repeated magic integers (multifile: initneutral)
-      nvar%ion%iarr(1:4)      = [idni,imxi,imyi,imzi]
-      nvar%ion%iarr_swpx(1:4) = [idni,imxi,imyi,imzi]
-      nvar%ion%iarr_swpy(1:4) = [idni,imyi,imxi,imzi]
-      nvar%ion%iarr_swpz(1:4) = [idni,imzi,imyi,imxi]
+      flind%ion%iarr(1:4)      = [idni,imxi,imyi,imzi]
+      flind%ion%iarr_swpx(1:4) = [idni,imxi,imyi,imzi]
+      flind%ion%iarr_swpy(1:4) = [idni,imyi,imxi,imzi]
+      flind%ion%iarr_swpz(1:4) = [idni,imzi,imyi,imxi]
 
 #ifndef ISO
-      nvar%ion%iarr(5)      = ieni
-      nvar%ion%iarr_swpx(5) = ieni
-      nvar%ion%iarr_swpy(5) = ieni
-      nvar%ion%iarr_swpz(5) = ieni
-      nvar%ion%has_energy   = .true.
+      flind%ion%iarr(5)      = ieni
+      flind%ion%iarr_swpx(5) = ieni
+      flind%ion%iarr_swpy(5) = ieni
+      flind%ion%iarr_swpz(5) = ieni
+      flind%ion%has_energy   = .true.
 
-      nvar%energ = nvar%energ + 1
+      flind%energ = flind%energ + 1
 #endif /* !ISO */
 
-      nvar%ion%end    = nvar%all
-      nvar%components = nvar%components + 1
-      nvar%fluids     = nvar%fluids + 1
-      nvar%ion%pos    = nvar%components
-      if (selfgrav_ion)  nvar%fluids_sg = nvar%fluids_sg + 1
+      flind%ion%end    = flind%all
+      flind%components = flind%components + 1
+      flind%fluids     = flind%fluids + 1
+      flind%ion%pos    = flind%components
+      if (selfgrav_ion)  flind%fluids_sg = flind%fluids_sg + 1
 
-      nvar%ion%gam   = gamma_ion
-      nvar%ion%gam_1 = gamma_ion-1.0
-      nvar%ion%cs    = cs_iso_ion
-      nvar%ion%cs2   = cs_iso_ion**2
-      nvar%ion%tag   = "ION"
-      nvar%ion%is_selfgrav = selfgrav_ion
+      flind%ion%gam   = gamma_ion
+      flind%ion%gam_1 = gamma_ion-1.0
+      flind%ion%cs    = cs_iso_ion
+      flind%ion%cs2   = cs_iso_ion**2
+      flind%ion%tag   = "ION"
+      flind%ion%is_selfgrav = selfgrav_ion
 
    end subroutine ionized_index
 

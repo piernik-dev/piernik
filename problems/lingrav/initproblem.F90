@@ -89,7 +89,7 @@ module initproblem
 
    subroutine init_prob
       use arrays,      only: u, b, dprof
-      use fluidindex,  only: ibx, iby, ibz, nvar
+      use fluidindex,  only: ibx, iby, ibz, flind
       use grid,        only: cg
       use hydrostatic, only: hydrostatic_zeq_densmid
       use initionized, only: idni, imxi, imyi, imzi
@@ -104,9 +104,9 @@ module initproblem
       real :: b0, csim2
 !   Secondary parameters
 
-      b0 = sqrt(2.*alpha*d0*nvar%ion%cs2)
+      b0 = sqrt(2.*alpha*d0*flind%ion%cs2)
 
-      csim2 = nvar%ion%cs2*(1.0+alpha)
+      csim2 = flind%ion%cs2*(1.0+alpha)
 
       call hydrostatic_zeq_densmid(1, 1, d0, csim2)
 
@@ -123,7 +123,7 @@ module initproblem
 #endif /* SHEAR */
 
 #ifndef ISO
-               u(ieni,i,j,k)   = nvar%ion%cs2/(nvar%ion%gam_1) * u(idni,i,j,k) &
+               u(ieni,i,j,k)   = flind%ion%cs2/(flind%ion%gam_1) * u(idni,i,j,k) &
                                + 0.5*(u(imxi,i,j,k)**2 + u(imyi,i,j,k)**2 + &
                                       u(imzi,i,j,k)**2 ) / u(idni,i,j,k)
 #endif /* !ISO */

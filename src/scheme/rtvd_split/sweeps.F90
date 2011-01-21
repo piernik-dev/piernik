@@ -41,7 +41,7 @@ contains
    subroutine source_terms_y
       use arrays,          only: u
       use fluidboundaries, only: all_fluid_boundaries
-      use fluidindex,      only: iarr_all_dn, iarr_all_mx, iarr_all_my, nvar
+      use fluidindex,      only: iarr_all_dn, iarr_all_mx, iarr_all_my, flind
       use grid,            only: cg
       use mpisetup,        only: dt
       use shear,           only: omega, qshear
@@ -50,7 +50,7 @@ contains
       implicit none
       real, dimension(size(iarr_all_my), cg%nx, cg%nz) :: vxr, v_r, rotaccr
       real, dimension(cg%nx, cg%nz)      :: epsa
-      real, dimension(nvar%all, cg%nx, cg%nz) :: u1
+      real, dimension(flind%all, cg%nx, cg%nz) :: u1
       integer :: ind,i
       real, parameter, dimension(2) :: fac = [0.5, 1.0]
 
@@ -90,7 +90,7 @@ contains
    subroutine sweepx
       use arrays,          only: u, b
       use fluidboundaries, only: all_fluid_boundaries
-      use fluidindex,      only: nvar, iarr_all_swpx, ibx, iby, ibz, nmag
+      use fluidindex,      only: flind, iarr_all_swpx, ibx, iby, ibz, nmag
       use grid,            only: cg
       use gridgeometry,    only: set_geo_coeffs
       use mpisetup,        only: dt, ydim, zdim, has_dir
@@ -101,14 +101,14 @@ contains
 
       implicit none
       real, dimension(nmag, cg%nx)     :: b_x
-      real, dimension(nvar%all, cg%nx) :: u_x
+      real, dimension(flind%all, cg%nx) :: u_x
       integer                      :: j, k, jp, kp
 
       b_x = 0.0
       u_x = 0.0
 
 #ifdef COSM_RAYS
-      call div_v(nvar%ion%pos)
+      call div_v(flind%ion%pos)
 #endif /* COSM_RAYS */
       do k=cg%ks, cg%ke
          kp=k+1
@@ -122,7 +122,7 @@ contains
             if (has_dir(zdim) .and. k <= cg%ke)  b_x(ibz,:)=b_x(ibz,:)+0.5*b(ibz,:,j,kp)
 #endif /* MAGNETIC */
 
-            call set_geo_coeffs('xsweep',nvar,j,k)
+            call set_geo_coeffs('xsweep',flind,j,k)
 
             u_x(iarr_all_swpx,:)=u(:,:,j,k)
 
@@ -138,7 +138,7 @@ contains
    subroutine sweepy
       use arrays,          only: u, b
       use fluidboundaries, only: all_fluid_boundaries
-      use fluidindex,      only: nvar, iarr_all_swpy, ibx, iby, ibz, nmag
+      use fluidindex,      only: flind, iarr_all_swpy, ibx, iby, ibz, nmag
       use grid,            only: cg
       use gridgeometry,    only: set_geo_coeffs
       use mpisetup,        only: dt, xdim, zdim, has_dir
@@ -149,13 +149,13 @@ contains
 
       implicit none
       real, dimension(nmag, cg%ny)     :: b_y
-      real, dimension(nvar%all, cg%ny) :: u_y
+      real, dimension(flind%all, cg%ny) :: u_y
       integer                      :: i, k, ip, kp
       b_y = 0.0
       u_y = 0.0
 
 #ifdef COSM_RAYS
-      call div_v(nvar%ion%pos)
+      call div_v(flind%ion%pos)
 #endif /* COSM_RAYS */
 
       do k=cg%ks, cg%ke
@@ -171,7 +171,7 @@ contains
             b_y((/iby,ibx,ibz/),:)=b_y(:,:)
 #endif /* MAGNETIC */
 
-            call set_geo_coeffs('ysweep',nvar,k,i)
+            call set_geo_coeffs('ysweep',flind,k,i)
 
             u_y(iarr_all_swpy,:)=u(:,i,:,k)
 
@@ -188,7 +188,7 @@ contains
    subroutine sweepz
       use arrays,          only: u, b
       use fluidboundaries, only: all_fluid_boundaries
-      use fluidindex,      only: nvar, iarr_all_swpz, ibx, iby, ibz, nmag
+      use fluidindex,      only: flind, iarr_all_swpz, ibx, iby, ibz, nmag
       use grid,            only: cg
       use gridgeometry,    only: set_geo_coeffs
       use mpisetup,        only: dt, xdim, ydim, has_dir
@@ -199,14 +199,14 @@ contains
 
       implicit none
       real, dimension(nmag, cg%nz)     :: b_z
-      real, dimension(nvar%all, cg%nz) :: u_z
+      real, dimension(flind%all, cg%nz) :: u_z
       integer                      :: i, j, ip, jp
 
       b_z = 0.0
       u_z = 0.0
 
 #ifdef COSM_RAYS
-      call div_v(nvar%ion%pos)
+      call div_v(flind%ion%pos)
 #endif /* COSM_RAYS */
 
       do j=cg%js, cg%je
@@ -222,7 +222,7 @@ contains
             b_z((/ibz,iby,ibx/),:)=b_z(:,:)
 #endif /* MAGNETIC */
 
-            call set_geo_coeffs('zsweep',nvar,i,j)
+            call set_geo_coeffs('zsweep',flind,i,j)
 
             u_z(iarr_all_swpz,:)=u(:,i,j,:)
 

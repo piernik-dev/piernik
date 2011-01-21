@@ -47,7 +47,7 @@ module fluxcosmicrays
 
   subroutine flux_crs(fluxc,vion,uuc,n)
 
-    use fluidindex,      only: nvar
+    use fluidindex,      only: flind
 
     implicit none
 
@@ -58,7 +58,7 @@ module fluxcosmicrays
 
     fluxc   = 0.0
 
-    fluxc(:,RNG)= uuc(:,RNG)*spread(vion(RNG),1,nvar%crs%all)
+    fluxc(:,RNG)= uuc(:,RNG)*spread(vion(RNG),1,flind%crs%all)
 
   end subroutine flux_crs
 

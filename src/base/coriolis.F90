@@ -76,13 +76,13 @@ contains
 
    subroutine coriolis_force(sweep, u, rotacc)
 
-      use fluidindex, only: nvar, iarr_all_dn, iarr_all_my
+      use fluidindex, only: flind, iarr_all_dn, iarr_all_my
 
       implicit none
 
       character(len=*), intent(in)                   :: sweep  !< string of characters that points out the current sweep direction
       real, dimension(:,:), intent(in)               :: u
-      real, dimension(nvar%fluids, size(u,2)), intent(inout) :: rotacc !< an array for Coriolis accelerations
+      real, dimension(flind%fluids, size(u,2)), intent(inout) :: rotacc !< an array for Coriolis accelerations
 
       ! Coriolis force for corotating coords
       select case (sweep)

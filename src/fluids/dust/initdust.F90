@@ -87,50 +87,50 @@ contains
 
   end subroutine init_dust
 
-   subroutine dust_index(nvar)
+   subroutine dust_index(flind)
       use diagnostics,   only: ma1d, my_allocate
       use types,         only: var_numbers
 
       implicit none
-      type(var_numbers), intent(inout) :: nvar
+      type(var_numbers), intent(inout) :: flind
 
-      nvar%dst%beg    = nvar%all + 1
+      flind%dst%beg    = flind%all + 1
 
-      idnd = nvar%all + 1
-      imxd = nvar%all + 2
-      imyd = nvar%all + 3
-      imzd = nvar%all + 4
+      idnd = flind%all + 1
+      imxd = flind%all + 2
+      imyd = flind%all + 3
+      imzd = flind%all + 4
 
-      nvar%dst%idn  = idnd
-      nvar%dst%imx  = imxd
-      nvar%dst%imy  = imyd
-      nvar%dst%imz  = imzd
+      flind%dst%idn  = idnd
+      flind%dst%imx  = imxd
+      flind%dst%imy  = imyd
+      flind%dst%imz  = imzd
 
-      nvar%dst%all  = 4
-      nvar%all      = imzd
+      flind%dst%all  = 4
+      flind%all      = imzd
 
-      ma1d = [nvar%dst%all]
-      call my_allocate(nvar%dst%iarr,      ma1d, "dst%iarr")
-      call my_allocate(nvar%dst%iarr_swpx, ma1d, "dst%iarr_swpx")
-      call my_allocate(nvar%dst%iarr_swpy, ma1d, "dst%iarr_swpy")
-      call my_allocate(nvar%dst%iarr_swpz, ma1d, "dst%iarr_swpz")
+      ma1d = [flind%dst%all]
+      call my_allocate(flind%dst%iarr,      ma1d, "dst%iarr")
+      call my_allocate(flind%dst%iarr_swpx, ma1d, "dst%iarr_swpx")
+      call my_allocate(flind%dst%iarr_swpy, ma1d, "dst%iarr_swpy")
+      call my_allocate(flind%dst%iarr_swpz, ma1d, "dst%iarr_swpz")
 
-      nvar%dst%iarr      = [idnd,imxd,imyd,imzd]
-      nvar%dst%iarr_swpx = [idnd,imxd,imyd,imzd]
-      nvar%dst%iarr_swpy = [idnd,imyd,imxd,imzd]
-      nvar%dst%iarr_swpz = [idnd,imzd,imyd,imxd]
+      flind%dst%iarr      = [idnd,imxd,imyd,imzd]
+      flind%dst%iarr_swpx = [idnd,imxd,imyd,imzd]
+      flind%dst%iarr_swpy = [idnd,imyd,imxd,imzd]
+      flind%dst%iarr_swpz = [idnd,imzd,imyd,imxd]
 
-      nvar%dst%end    = nvar%all
-      nvar%components = nvar%components + 1
-      nvar%fluids     = nvar%fluids + 1
-      nvar%dst%pos    = nvar%components
-      if (selfgrav_dst)  nvar%fluids_sg = nvar%fluids_sg + 1
+      flind%dst%end    = flind%all
+      flind%components = flind%components + 1
+      flind%fluids     = flind%fluids + 1
+      flind%dst%pos    = flind%components
+      if (selfgrav_dst)  flind%fluids_sg = flind%fluids_sg + 1
 
-      nvar%dst%gam = -1.
-      nvar%dst%cs  = 0.0
-      nvar%dst%cs2 = 0.0
-      nvar%dst%tag = "DST"
-      nvar%dst%is_selfgrav = selfgrav_dst
+      flind%dst%gam = -1.
+      flind%dst%cs  = 0.0
+      flind%dst%cs2 = 0.0
+      flind%dst%tag = "DST"
+      flind%dst%is_selfgrav = selfgrav_dst
 
    end subroutine dust_index
 

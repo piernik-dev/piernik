@@ -595,7 +595,7 @@ module gravity
    subroutine grav_ptmass_softened(gp, ax, flatten)
 
       use constants,  only: newtong
-      use fluidindex, only: nvar
+      use fluidindex, only: flind
       use mpisetup,   only: smalld
       use types,      only: axes
 
@@ -616,7 +616,7 @@ module gravity
          do_flatten = .false.
       endif
 
-      cs_iso2   = maxval(nvar%all_fluids(:)%cs2)
+      cs_iso2   = maxval(flind%all_fluids(:)%cs2)
       r_smooth2 = r_smooth**2
       GM        = newtong*ptmass
 

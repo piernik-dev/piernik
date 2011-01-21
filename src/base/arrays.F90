@@ -68,7 +68,7 @@ module arrays
 !! Routine that allocates all arrays
 !<
 
-   subroutine init_arrays(nvar)
+   subroutine init_arrays(flind)
 
       use diagnostics, only: ma3d, ma4d, my_allocate
       use dataio_pub,  only: die, code_progress, PIERNIK_INIT_BASE
@@ -80,11 +80,11 @@ module arrays
 
       implicit none
 
-      type(var_numbers), intent(in) :: nvar !< fluid database; cannot use fluidindex::nvar here due to circular dependences in some setups
+      type(var_numbers), intent(in) :: flind !< fluid database; cannot use fluidindex::flind here due to circular dependences in some setups
 
       if (code_progress < PIERNIK_INIT_BASE) call die("[arrays:init_arrays] grid or fluids not initialized.")
 
-      ma4d = [nvar%all, cg%nx, cg%ny, cg%nz]
+      ma4d = [flind%all, cg%nx, cg%ny, cg%nz]
       call my_allocate(u, ma4d, "u")
       ma4d = [3, cg%nx, cg%ny, cg%nz]
       call my_allocate(b, ma4d, "b")
@@ -110,7 +110,7 @@ module arrays
 
 #ifdef COSM_RAYS
       call my_allocate(divvel, ma3d, "divvel")
-      ma4d = [nvar%crs%all, cg%nx, cg%ny, cg%nz]
+      ma4d = [flind%crs%all, cg%nx, cg%ny, cg%nz]
       call my_allocate(wcr, ma4d, "wcr")
 #endif /* COSM_RAYS  */
 

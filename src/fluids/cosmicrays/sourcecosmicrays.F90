@@ -47,7 +47,7 @@ module sourcecosmicrays
 
   subroutine src_crn(uu,n, decrn)
 
-    use fluidindex,    only: nvar
+    use fluidindex,    only: flind
     use crcomposition, only: icr_Be10, icr_Be9, icr_C12, sigma_c12_be10, sigma_c12_be9, tau_Be10
     ! icr_Li7, icr_N14, icr_O16, sigma_c12_li7, sigma_n14_li7, sigma_o16_be10, sigma_o16_be9, sigma_o16_li7
 
@@ -56,8 +56,8 @@ module sourcecosmicrays
     integer, intent(in) :: n
 
 ! locals
-    real, dimension(nvar%all,n)     :: uu
-    real, dimension(nvar%crn%all,n) :: decrn
+    real, dimension(flind%all,n)     :: uu
+    real, dimension(flind%crn%all,n) :: decrn
     real, allocatable               :: dgas(:)
 
     real, parameter  :: gamma_lor = 10.
@@ -69,34 +69,34 @@ module sourcecosmicrays
     dgas(:) = 0.0
 
 #ifdef IONIZED
-    dgas(:) = dgas(:) + uu(nvar%ion%idn,:)
+    dgas(:) = dgas(:) + uu(flind%ion%idn,:)
 #endif /* IONIZED */
 #ifdef NEUTRAL
-    dgas(:) = dgas(:) + uu(nvar%neu%idn,:)
+    dgas(:) = dgas(:) + uu(flind%neu%idn,:)
 #endif /* NEUTRAL */
 
     decrn(:,:) = 0.0
 
-    decrn(icr_C12,:)  = -1./ndim*dgas(:)*speed_of_light*sigma_C12_Be9*uu(nvar%crn%beg-1+icr_C12,:) &
-                        -1./ndim*dgas(:)*speed_of_light*sigma_C12_Be10*uu(nvar%crn%beg-1+icr_C12,:)
+    decrn(icr_C12,:)  = -1./ndim*dgas(:)*speed_of_light*sigma_C12_Be9*uu(flind%crn%beg-1+icr_C12,:) &
+                        -1./ndim*dgas(:)*speed_of_light*sigma_C12_Be10*uu(flind%crn%beg-1+icr_C12,:)
 
-    decrn(icr_Be9,:)  =(  1./ndim*dgas(:)*speed_of_light*sigma_C12_Be9*uu(nvar%crn%beg-1+icr_C12,:) )!&
-!                         +1./ndim*dgas(:)*speed_of_light*sigma_O16_Be9*uu(nvar%crn%beg-1+icr_O16,:)  )
+    decrn(icr_Be9,:)  =(  1./ndim*dgas(:)*speed_of_light*sigma_C12_Be9*uu(flind%crn%beg-1+icr_C12,:) )!&
+!                         +1./ndim*dgas(:)*speed_of_light*sigma_O16_Be9*uu(flind%crn%beg-1+icr_O16,:)  )
 
-    decrn(icr_Be10,:) =(  1./ndim*dgas(:)*speed_of_light*sigma_C12_Be10*uu(nvar%crn%beg-1+icr_C12,:) &
-!                         +1./ndim*dgas(:)*speed_of_light*sigma_O16_Be10*uu(nvar%crn%beg-1+icr_O16,:) &
-                         -1./ndim*uu(nvar%crn%beg-1+icr_Be10,:)/gamma_lor/tau_Be10 )
+    decrn(icr_Be10,:) =(  1./ndim*dgas(:)*speed_of_light*sigma_C12_Be10*uu(flind%crn%beg-1+icr_C12,:) &
+!                         +1./ndim*dgas(:)*speed_of_light*sigma_O16_Be10*uu(flind%crn%beg-1+icr_O16,:) &
+                         -1./ndim*uu(flind%crn%beg-1+icr_Be10,:)/gamma_lor/tau_Be10 )
 
-!                        -1./ndim*dgas(:)*speed_of_light*sigma_C12_Li7*uu(nvar%crn%beg-1+icr_C12,:)
-!    decrn(icr_Li7,:)  =( 1./ndim*dgas(:)*speed_of_light*sigma_C12_Li7*uu(nvar%crn%beg-1+icr_C12,:) !&
-!                        +1./ndim*dgas(:)*speed_of_light*sigma_N14_Li7*uu(nvar%crn%beg-1+icr_N14,:) &
-!                        +1./ndim*dgas(:)*speed_of_light*sigma_O16_Li7*uu(nvar%crn%beg-1+icr_O16,:) )
+!                        -1./ndim*dgas(:)*speed_of_light*sigma_C12_Li7*uu(flind%crn%beg-1+icr_C12,:)
+!    decrn(icr_Li7,:)  =( 1./ndim*dgas(:)*speed_of_light*sigma_C12_Li7*uu(flind%crn%beg-1+icr_C12,:) !&
+!                        +1./ndim*dgas(:)*speed_of_light*sigma_N14_Li7*uu(flind%crn%beg-1+icr_N14,:) &
+!                        +1./ndim*dgas(:)*speed_of_light*sigma_O16_Li7*uu(flind%crn%beg-1+icr_O16,:) )
 
-!    decrn(icr_N14,:)  = -1./ndim*dgas(:)*speed_of_light*sigma_N14_Li7*uu(nvar%crn%beg-1+icr_N14,:)
+!    decrn(icr_N14,:)  = -1./ndim*dgas(:)*speed_of_light*sigma_N14_Li7*uu(flind%crn%beg-1+icr_N14,:)
 
-!    decrn(icr_O16,:)  = -1./ndim*dgas(:)*speed_of_light*sigma_O16_Li7*uu(nvar%crn%beg-1+icr_O16,:) &
-!                        -1./ndim*dgas(:)*speed_of_light*sigma_O16_Be9*uu(nvar%crn%beg-1+icr_O16,:) &
-!                        -1./ndim*dgas(:)*speed_of_light*sigma_O16_Be10*uu(nvar%crn%beg-1+icr_O16,:)
+!    decrn(icr_O16,:)  = -1./ndim*dgas(:)*speed_of_light*sigma_O16_Li7*uu(flind%crn%beg-1+icr_O16,:) &
+!                        -1./ndim*dgas(:)*speed_of_light*sigma_O16_Be9*uu(flind%crn%beg-1+icr_O16,:) &
+!                        -1./ndim*dgas(:)*speed_of_light*sigma_O16_Be10*uu(flind%crn%beg-1+icr_O16,:)
 
   end subroutine src_crn
 

@@ -105,7 +105,7 @@ module initproblem
       use arrays,        only: u
       use constants,     only: pi, dpi
       use dataio_pub,    only: msg, printinfo, run_id
-      use fluidindex,    only: nvar
+      use fluidindex,    only: flind
       use grid,          only: cg
       use mpisetup,      only: proc
       use shear,         only: omega
@@ -124,12 +124,12 @@ module initproblem
       type(component_fluid), pointer      :: dst, neu
 
 #ifdef DUST
-      dst => nvar%dst
+      dst => flind%dst
 #else /* !DUST */
       call warn("[initproblem]: Dust fluid not initialized. I hope you know what you are doing!"
 #endif /* !DUST */
 #ifdef NEUTRAL
-      neu => nvar%neu
+      neu => flind%neu
 #else /* !NEUTRAL */
       call warn("[initproblem]: Neutral fluid not initialized. I hope you know what you are doing!"
 #endif /* !NEUTRAL */

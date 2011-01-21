@@ -43,7 +43,7 @@ module interactions
    public :: init_interactions, fluid_interactions, collfaq, cfl_interact, dragc_gas_dust, has_interactions, &
       & interactions_grace_passed
 
-   real, allocatable, dimension(:,:)      :: collfaq     !< nvar%fluids x nvar%fluids array of collision factors
+   real, allocatable, dimension(:,:)      :: collfaq     !< flind%fluids x flind%fluids array of collision factors
    real :: collision_factor                              !< collision factor
    real :: cfl_interact                                  !< Courant factor for %interactions
    real :: dragc_gas_dust                                !< \deprecated remove me
@@ -128,7 +128,7 @@ contains
 
    subroutine interactions_grace_passed
 
-      use fluidindex,    only: nvar
+      use fluidindex,    only: flind
 #ifdef VERBOSE
       use dataio_pub,    only: printinfo
 #endif /* VERBOSE */
@@ -139,10 +139,10 @@ contains
 #ifdef VERBOSE
          call printinfo("[interactions:interactions_grace_passed] Initializing aerodynamical drag")
 #endif /* VERBOSE */
-         allocate(collfaq(nvar%fluids,nvar%fluids))
+         allocate(collfaq(flind%fluids,flind%fluids))
          collfaq = collision_factor
-         collfaq(nvar%dst%pos,:) = dragc_gas_dust
-         collfaq(:,nvar%dst%pos) = dragc_gas_dust
+         collfaq(flind%dst%pos,:) = dragc_gas_dust
+         collfaq(:,flind%dst%pos) = dragc_gas_dust
 
          taus = 1. / dragc_gas_dust
          fluid_interactions => fluid_interactions_aero_drag
@@ -167,7 +167,7 @@ contains
 
    subroutine fluid_interactions_aero_drag(dens, velx, acc)
 
-      use fluidindex,       only: nvar
+      use fluidindex,       only: flind
 
       implicit none
 
@@ -175,9 +175,9 @@ contains
       real, dimension(:,:), intent(in), pointer :: velx
       real, dimension(size(dens,1),size(dens,2)), intent(out) :: acc
 
-      acc(nvar%dst%pos,:) = -dragc_gas_dust * (velx(nvar%dst%pos,:) - velx(nvar%neu%pos,:))
-      acc(nvar%neu%pos,:) = -acc(nvar%dst%pos,:) * dens(nvar%dst%pos,:) / dens(nvar%neu%pos,:)
-!      acc(nvar%neu%pos,:) = -dragc_gas_dust * dens(nvar%dst%pos,:) / dens(nvar%neu%pos,:) * ( velx(nvar%neu%pos,:) - velx(nvar%dst%pos,:) )
+      acc(flind%dst%pos,:) = -dragc_gas_dust * (velx(flind%dst%pos,:) - velx(flind%neu%pos,:))
+      acc(flind%neu%pos,:) = -acc(flind%dst%pos,:) * dens(flind%dst%pos,:) / dens(flind%neu%pos,:)
+!      acc(flind%neu%pos,:) = -dragc_gas_dust * dens(flind%dst%pos,:) / dens(flind%neu%pos,:) * ( velx(flind%neu%pos,:) - velx(flind%dst%pos,:) )
 
    end subroutine fluid_interactions_aero_drag
 
@@ -200,12 +200,12 @@ contains
 !! where \c defined_interaction has to be specified as a subroutine in this module.
 !<
    subroutine fluid_interactions_dw(sweep, i1, i2, n, du, uu)
-      use fluidindex,   only: nvar
+      use fluidindex,   only: flind
       implicit none
       integer, intent(in)   :: i1,i2,n
-      real, dimension(nvar%all,n)  :: du,uu
+      real, dimension(flind%all,n)  :: du,uu
       character(len=*), intent(in) :: sweep
-      real, dimension(nvar%all,n)  :: ddu
+      real, dimension(flind%all,n)  :: ddu
 
       du=0.0
       call dragforce(sweep,i1,i2, n, ddu, uu)
@@ -223,7 +223,7 @@ contains
 !! \param uu sweep fluid array
 !<
    subroutine dragforce(sweep, i1, i2, n, du, uu)
-      use fluidindex,   only: nvar, iarr_all_dn, iarr_all_mx
+      use fluidindex,   only: flind, iarr_all_dn, iarr_all_mx
       use grid,         only: cg
 #ifndef ISO
       use fluidindex,   only: iarr_all_en
@@ -231,11 +231,11 @@ contains
       implicit none
       real                  :: a1
       integer, intent(in)   :: i1, i2, n
-      real, dimension(nvar%all,n)  :: du,uu
+      real, dimension(flind%all,n)  :: du,uu
       character(len=*), intent(in) :: sweep
       integer  :: ifl,jfl,rend
-      real, dimension(nvar%fluids,nvar%fluids,n) :: flch
-      real, dimension(nvar%fluids,n)             :: colls
+      real, dimension(flind%fluids,flind%fluids,n) :: flch
+      real, dimension(flind%fluids,n)             :: colls
       real, dimension(cg%maxxyz)                    :: r1,r2
 
       du=0.0
@@ -258,8 +258,8 @@ contains
             r2(1:rend) = 1.0
       end select
 
-      do ifl=1,nvar%fluids
-         do jfl=1,nvar%fluids
+      do ifl=1,flind%fluids
+         do jfl=1,flind%fluids
             if (ifl .ne. jfl) then
                flch(ifl,jfl,:)= collfaq(ifl,jfl)*uu(iarr_all_dn(ifl),:) * uu(iarr_all_dn(jfl),:) &
                         *( uu(iarr_all_mx(jfl),:)/uu(iarr_all_dn(jfl),:) &
@@ -269,11 +269,11 @@ contains
             endif
          enddo
       enddo
-      do ifl=1,nvar%fluids
+      do ifl=1,flind%fluids
          colls(ifl,:)=sum(flch(ifl,:,:),1)
       enddo
 #ifndef ISO
-      du(iarr_all_en(1:nvar%energ),:)=uu(iarr_all_mx(1:nvar%energ),:)*colls(1:nvar%energ,:)
+      du(iarr_all_en(1:flind%energ),:)=uu(iarr_all_mx(1:flind%energ),:)*colls(1:flind%energ,:)
 #endif /* !ISO */
       du(iarr_all_mx,:)=colls
 

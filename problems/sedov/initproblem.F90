@@ -120,7 +120,7 @@ contains
    subroutine init_prob
       use arrays,         only: u, b
       use dataio_pub,     only: msg, die, printinfo
-      use fluidindex,     only: nvar, ibx, iby, ibz
+      use fluidindex,     only: flind, ibx, iby, ibz
       use grid,           only: cg
       use types,          only: component_fluid
 
@@ -129,14 +129,14 @@ contains
 
       type(component_fluid), pointer :: fl
 
-      if (nvar%energ < nvar%fluids) call die("[initproblem:init_prob] Not all fluids are adiabatic!")
+      if (flind%energ < flind%fluids) call die("[initproblem:init_prob] Not all fluids are adiabatic!")
 
       ! BEWARE:
       !  3 triple loop are completely unnecessary here, but this problem serves
       !  as an educational example
 
-      do p = 1, nvar%energ
-         fl => nvar%all_fluids(p)
+      do p = 1, flind%energ
+         fl => flind%all_fluids(p)
          if (fl%tag=="DST") call die("[initproblem:init_prob] This setup is not suitable for dust!")
          write(msg,*) "Working with ", fl%tag, " fluid."
          call printinfo(msg)

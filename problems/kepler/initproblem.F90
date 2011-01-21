@@ -164,7 +164,7 @@ contains
       use types,               only: component_fluid
       use arrays,              only: u, b, dprof
       use constants,           only: newtong, gram, cm, kboltz, mH, dpi
-      use fluidindex,          only: ibx, iby, ibz, nvar
+      use fluidindex,          only: ibx, iby, ibz, flind
       use gravity,             only: r_smooth, r_grav, n_gravr, ptmass, source_terms_grav, grav_pot2accel, grav_pot_3d
       use grid,                only: cg, geometry
       use hydrostatic,         only: hydrostatic_zeq_densmid
@@ -189,8 +189,8 @@ contains
          if (cg%z(k) < 0.0) kmid = k       ! the midplane is in between ksmid and ksmid+1
       enddo
 
-      if (associated(nvar%ion) .and. geometry=='cartesian') then
-         fl => nvar%ion
+      if (associated(flind%ion) .and. geometry=='cartesian') then
+         fl => flind%ion
          csim2 = fl%cs2*(1.0+alpha)
          b0    = sqrt(2.*alpha*d0*fl%cs2)
 
@@ -252,16 +252,16 @@ contains
          call printinfo(msg)
          write(msg,'(A,F9.5)') " cs2(T_mean) = ", kboltz * 0.5*(mmsn_T(cg%xmin)+mmsn_T(cg%xmax)) / mH
          call printinfo(msg)
-         write(msg,'(A,ES12.3,A)') " T_real(cs2) = ", nvar%neu%cs2*mH/kboltz, " K"
+         write(msg,'(A,ES12.3,A)') " T_real(cs2) = ", flind%neu%cs2*mH/kboltz, " K"
          call printinfo(msg)
          call printinfo("------------------------------------------------------------------")
          call grav_pot_3d
 
-         if (.not.allocated(den0)) allocate(den0(nvar%fluids, cg%nx, cg%ny, cg%nz))
-         if (.not.allocated(mtx0)) allocate(mtx0(nvar%fluids, cg%nx, cg%ny, cg%nz))
-         if (.not.allocated(mty0)) allocate(mty0(nvar%fluids, cg%nx, cg%ny, cg%nz))
-         if (.not.allocated(mtz0)) allocate(mtz0(nvar%fluids, cg%nx, cg%ny, cg%nz))
-         if (.not.allocated(ene0)) allocate(ene0(nvar%fluids, cg%nx, cg%ny, cg%nz))
+         if (.not.allocated(den0)) allocate(den0(flind%fluids, cg%nx, cg%ny, cg%nz))
+         if (.not.allocated(mtx0)) allocate(mtx0(flind%fluids, cg%nx, cg%ny, cg%nz))
+         if (.not.allocated(mty0)) allocate(mty0(flind%fluids, cg%nx, cg%ny, cg%nz))
+         if (.not.allocated(mtz0)) allocate(mtz0(flind%fluids, cg%nx, cg%ny, cg%nz))
+         if (.not.allocated(ene0)) allocate(ene0(flind%fluids, cg%nx, cg%ny, cg%nz))
 
          if (.not.allocated(grav)) allocate(grav(cg%nx))
          if (.not.allocated(ln_dens_der)) allocate(ln_dens_der(cg%nx))
@@ -288,14 +288,14 @@ contains
 #ifdef DEBUG
          open(143,file="dens_prof.dat",status="unknown")
          do p = 1, cg%nx
-            write(143,'(4(ES14.4,1X))') cg%x(p), dens_prof(p), sqrt( max(cg%x(p)*(nvar%neu%cs2*ln_dens_der(p) + abs(grav(p))),0.0) ), &
-               sqrt( max(abs(grav(p)) * cg%x(p) - nvar%neu%cs2*dens_exp,0.0))
+            write(143,'(4(ES14.4,1X))') cg%x(p), dens_prof(p), sqrt( max(cg%x(p)*(flind%neu%cs2*ln_dens_der(p) + abs(grav(p))),0.0) ), &
+               sqrt( max(abs(grav(p)) * cg%x(p) - flind%neu%cs2*dens_exp,0.0))
          enddo
          close(143)
 #endif /* DEBUG */
 
-         do p = 1, nvar%fluids
-            fl => nvar%all_fluids(p)
+         do p = 1, flind%fluids
+            fl => flind%all_fluids(p)
             if (fl%tag /= "DST") then
                write(msg,'(A,F9.5)') "[init_problem:initprob] cs2 used = ", fl%cs2
                call printinfo(msg)
@@ -372,7 +372,7 @@ contains
       use hdf5,        only: HID_T
       use grid,        only: cg
       use dataio_hdf5, only: write_3darr_to_restart
-      use fluidindex,  only: nvar
+      use fluidindex,  only: flind
 
       implicit none
 
@@ -381,15 +381,15 @@ contains
       character(len=dname_len) :: dname
 
       do i = LBOUND(den0,1), UBOUND(den0,1)
-         write(dname,'(2a)') nvar%all_fluids(i)%tag, '_den0'
+         write(dname,'(2a)') flind%all_fluids(i)%tag, '_den0'
          if (allocated(den0)) call write_3darr_to_restart(den0(i,:,:,:), file_id, dname, cg%nx, cg%ny, cg%nz)
-         write(dname,'(2a)') nvar%all_fluids(i)%tag, '_mtx0'
+         write(dname,'(2a)') flind%all_fluids(i)%tag, '_mtx0'
          if (allocated(mtx0)) call write_3darr_to_restart(mtx0(i,:,:,:), file_id, dname, cg%nx, cg%ny, cg%nz)
-         write(dname,'(2a)') nvar%all_fluids(i)%tag, '_mty0'
+         write(dname,'(2a)') flind%all_fluids(i)%tag, '_mty0'
          if (allocated(mty0)) call write_3darr_to_restart(mty0(i,:,:,:), file_id, dname, cg%nx, cg%ny, cg%nz)
-         write(dname,'(2a)') nvar%all_fluids(i)%tag, '_mtz0'
+         write(dname,'(2a)') flind%all_fluids(i)%tag, '_mtz0'
          if (allocated(mtz0)) call write_3darr_to_restart(mtz0(i,:,:,:), file_id, dname, cg%nx, cg%ny, cg%nz)
-         write(dname,'(2a)') nvar%all_fluids(i)%tag, '_ene0'
+         write(dname,'(2a)') flind%all_fluids(i)%tag, '_ene0'
          if (allocated(ene0)) call write_3darr_to_restart(ene0(i,:,:,:), file_id, dname, cg%nx, cg%ny, cg%nz)
       enddo
 
@@ -399,9 +399,9 @@ contains
 
       use hdf5,        only: HID_T
       use grid,        only: cg
-      use fluidindex,  only: nvar
+      use fluidindex,  only: flind
       use dataio_hdf5, only: read_3darr_from_restart
-      use fluidindex,  only: nvar
+      use fluidindex,  only: flind
 
       implicit none
 
@@ -412,34 +412,34 @@ contains
       integer :: i
 
       ! /todo First query for existence of den0, vlx0 and vly0, then allocate
-      if (.not.allocated(den0)) allocate(den0(nvar%fluids, cg%nx, cg%ny, cg%nz))
-      if (.not.allocated(mtx0)) allocate(mtx0(nvar%fluids, cg%nx, cg%ny, cg%nz))
-      if (.not.allocated(mty0)) allocate(mty0(nvar%fluids, cg%nx, cg%ny, cg%nz))
-      if (.not.allocated(mtz0)) allocate(mtz0(nvar%fluids, cg%nx, cg%ny, cg%nz))
-      if (.not.allocated(ene0)) allocate(ene0(nvar%fluids, cg%nx, cg%ny, cg%nz))
+      if (.not.allocated(den0)) allocate(den0(flind%fluids, cg%nx, cg%ny, cg%nz))
+      if (.not.allocated(mtx0)) allocate(mtx0(flind%fluids, cg%nx, cg%ny, cg%nz))
+      if (.not.allocated(mty0)) allocate(mty0(flind%fluids, cg%nx, cg%ny, cg%nz))
+      if (.not.allocated(mtz0)) allocate(mtz0(flind%fluids, cg%nx, cg%ny, cg%nz))
+      if (.not.allocated(ene0)) allocate(ene0(flind%fluids, cg%nx, cg%ny, cg%nz))
 
-      do i=1, nvar%fluids
-         write(dname,'(2a)') nvar%all_fluids(i)%tag, '_den0'
+      do i=1, flind%fluids
+         write(dname,'(2a)') flind%all_fluids(i)%tag, '_den0'
          if (.not.associated(p3d)) p3d => den0(i,:,:,:)
          call read_3darr_from_restart(file_id,dname,p3d, cg%nx, cg%ny, cg%nz)
          if (associated(p3d)) nullify(p3d)
 
-         write(dname,'(2a)') nvar%all_fluids(i)%tag, '_mtx0'
+         write(dname,'(2a)') flind%all_fluids(i)%tag, '_mtx0'
          if (.not.associated(p3d)) p3d => mtx0(i,:,:,:)
          call read_3darr_from_restart(file_id,dname,p3d, cg%nx, cg%ny, cg%nz)
          if (associated(p3d)) nullify(p3d)
 
-         write(dname,'(2a)') nvar%all_fluids(i)%tag, '_mty0'
+         write(dname,'(2a)') flind%all_fluids(i)%tag, '_mty0'
          if (.not.associated(p3d)) p3d => mty0(i,:,:,:)
          call read_3darr_from_restart(file_id,dname,p3d, cg%nx, cg%ny, cg%nz)
          if (associated(p3d)) nullify(p3d)
 
-         write(dname,'(2a)') nvar%all_fluids(i)%tag, '_mtz0'
+         write(dname,'(2a)') flind%all_fluids(i)%tag, '_mtz0'
          if (.not.associated(p3d)) p3d => mtz0(i,:,:,:)
          call read_3darr_from_restart(file_id,dname,p3d, cg%nx, cg%ny, cg%nz)
          if (associated(p3d)) nullify(p3d)
 
-         write(dname,'(2a)') nvar%all_fluids(i)%tag, '_ene0'
+         write(dname,'(2a)') flind%all_fluids(i)%tag, '_ene0'
          if (.not.associated(p3d)) p3d => ene0(i,:,:,:)
          call read_3darr_from_restart(file_id,dname,p3d, cg%nx, cg%ny, cg%nz)
          if (associated(p3d)) nullify(p3d)
@@ -524,7 +524,7 @@ contains
       use grid,         only: cg
       use arrays,       only: u
       use gravity,      only: grav_pot2accel
-      use fluidindex,   only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz, nvar
+      use fluidindex,   only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz, flind
 #ifndef ISO
       use fluidindex,   only: iarr_all_en
 #endif /* ISO */
@@ -532,12 +532,12 @@ contains
       integer :: i, p
       real, dimension(cg%nx) :: grav
       real, dimension(size(iarr_all_my), cg%ny, cg%nz) :: vy,vym
-      real, dimension(size(nvar%all_fluids))    :: cs2_arr
-      integer, dimension(size(nvar%all_fluids)) :: ind_cs2
+      real, dimension(size(flind%all_fluids))    :: cs2_arr
+      integer, dimension(size(flind%all_fluids)) :: ind_cs2
 
-      do i = 1, size(nvar%all_fluids)
+      do i = 1, size(flind%all_fluids)
          ind_cs2    = i
-         cs2_arr(i) = nvar%all_fluids(i)%cs2
+         cs2_arr(i) = flind%all_fluids(i)%cs2
       enddo
 
       call grav_pot2accel('xsweep',1,1, cg%nx, grav, 1)
@@ -545,7 +545,7 @@ contains
       do i = 1, cg%nb
          u(iarr_all_dn,i,:,:) = u(iarr_all_dn, cg%is,:,:)
          u(iarr_all_mx,i,:,:) = max(0.0,u(iarr_all_mx, cg%is,:,:))
-         do p = 1, size(nvar%all_fluids)
+         do p = 1, size(flind%all_fluids)
             u(iarr_all_my(p),i,:,:) = sqrt( abs(grav(i)) * cg%x(i) - cs2_arr(p)*dens_exp) *  u(iarr_all_dn(p),i,:,:)
          enddo
          u(iarr_all_mz,i,:,:) = u(iarr_all_mz, cg%is,:,:)

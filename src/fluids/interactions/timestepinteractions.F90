@@ -44,7 +44,7 @@ contains
   real function timestep_interactions() result(dt)
     use arrays,       only: u, b
     use constants,    only: small
-    use fluidindex,   only: nvar
+    use fluidindex,   only: flind
     use interactions, only: collfaq, cfl_interact, has_interactions
     use mpisetup,     only: comm, ierr
     use mpi,          only: MPI_MIN, MPI_DOUBLE_PRECISION
@@ -60,10 +60,10 @@ contains
     !> \deprecated BEWARE: works only with neu+dust!!!!
 
     if (has_interactions) then
-       val = maxval (  sqrt( (u(nvar%dst%imx,:,:,:)-u(nvar%neu%imx,:,:,:))**2 + &
-                    (u(nvar%dst%imy,:,:,:)-u(nvar%neu%imy,:,:,:))**2 + &
-                    (u(nvar%dst%imz,:,:,:)-u(nvar%neu%imz,:,:,:))**2   ) * u(nvar%dst%idn,:,:,:) )
-       dt_interact_proc = nvar%neu%cs / (maxval(collfaq) * val + small)
+       val = maxval (  sqrt( (u(flind%dst%imx,:,:,:)-u(flind%neu%imx,:,:,:))**2 + &
+                    (u(flind%dst%imy,:,:,:)-u(flind%neu%imy,:,:,:))**2 + &
+                    (u(flind%dst%imz,:,:,:)-u(flind%neu%imz,:,:,:))**2   ) * u(flind%dst%idn,:,:,:) )
+       dt_interact_proc = flind%neu%cs / (maxval(collfaq) * val + small)
 
        call MPI_Reduce(dt_interact_proc, dt_interact_all, 1, MPI_DOUBLE_PRECISION, MPI_MIN, 0, comm, ierr)
        call MPI_Bcast(dt_interact_all, 1, MPI_DOUBLE_PRECISION, 0, comm, ierr)

@@ -75,7 +75,7 @@ contains
    subroutine flux_neu(fluxn,cfrn,uun,n,vx,p,bb,cs_iso2)
 
       use constants,       only: small
-      use fluidindex,      only: idn, imx, imy, imz, ien, nvar
+      use fluidindex,      only: idn, imx, imy, imz, ien, flind
       use mpisetup,        only: cfr_smooth, smallp
 #ifdef GLOBAL_FR_SPEED
       use timestep,        only: c_all
@@ -102,11 +102,11 @@ contains
 
       vx(RNG) = uun(imx,RNG)/uun(idn,RNG)
 #ifdef ISO
-      p(RNG)  = nvar%neu%cs2*uun(idn,RNG)
+      p(RNG)  = flind%neu%cs2*uun(idn,RNG)
 #else /* !ISO */
       p(RNG)  = (uun(ien,RNG)  &
       - 0.5*( uun(imx,RNG)**2 + uun(imy,RNG)**2 + uun(imz,RNG)**2 ) &
-          / uun(idn,RNG))*(nvar%neu%gam_1)
+          / uun(idn,RNG))*(flind%neu%gam_1)
       p(RNG)  = max(p(RNG),smallp)
 #endif /* !ISO */
 
@@ -130,7 +130,7 @@ contains
 #ifdef ISO
       cfrn(1,RNG) = sqrt(vx(RNG)**2+cfr_smooth*amp) + max(sqrt( abs(             p(RNG))/uun(idn,RNG)),small)
 #else /* !ISO */
-      cfrn(1,RNG) = sqrt(vx(RNG)**2+cfr_smooth*amp) + max(sqrt( abs(nvar%neu%gam*p(RNG))/uun(idn,RNG)),small)
+      cfrn(1,RNG) = sqrt(vx(RNG)**2+cfr_smooth*amp) + max(sqrt( abs(flind%neu%gam*p(RNG))/uun(idn,RNG)),small)
 #endif /* !ISO */
       !> \deprecated BEWARE: that is the cause of fast decreasing of timestep in galactic disk problem
       !>
@@ -143,14 +143,14 @@ contains
 
       cfrn(1,1) = cfrn(1,2)
       cfrn(1,n) = cfrn(1,n-1)
-      cfrn = spread(cfrn(1,:),1,nvar%neu%all)
+      cfrn = spread(cfrn(1,:),1,flind%neu%all)
 #endif /* LOCAL_FR_SPEED */
 
 #ifdef GLOBAL_FR_SPEED
       !       The freezing speed is now computed globally
       !       (c=const for the whole domain) in subroutine 'timestep'
 
-      !    cfrn(:,:) = nvar%neu%snap%c   ! check which c_xxx is better
+      !    cfrn(:,:) = flind%neu%snap%c   ! check which c_xxx is better
       cfrn(:,:) = c_all
 #endif /* GLOBAL_FR_SPEED */
       return

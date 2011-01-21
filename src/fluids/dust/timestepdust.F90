@@ -46,7 +46,7 @@ contains
       use types,         only: component_fluid
       use arrays,        only: u
       use grid,          only: cg
-      use fluidindex,    only: nvar
+      use fluidindex,    only: flind
       use timestepfuncs, only: compute_c_max, compute_dt
 
       implicit none
@@ -62,7 +62,7 @@ contains
       type(component_fluid), pointer :: fl
 
       c_max = 0.0; cx = 0.0; cy = 0.0; cz = 0.0
-      fl => nvar%dst
+      fl => flind%dst
 
       do k= cg%ks, cg%ke
          do j = cg%js, cg%je

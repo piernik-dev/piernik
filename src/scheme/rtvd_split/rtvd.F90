@@ -222,7 +222,7 @@ module rtvd ! split orig
    subroutine relaxing_tvd(n, u, bb, sweep, i1, i2, dx, dt)
 
       use dataio_pub,       only: msg, die
-      use fluidindex,       only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz, ibx, iby, ibz, nvar, nmag
+      use fluidindex,       only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz, ibx, iby, ibz, flind, nmag
       use fluxes,           only: flimiter, all_fluxes
       use mpisetup,         only: smalld, integration_order, use_smalld, local_magic_mass
       use gridgeometry,     only: gc, geometry_source_terms
@@ -258,7 +258,7 @@ module rtvd ! split orig
       implicit none
 
       integer,                     intent(in)  :: n                  !< array size
-      real, dimension(nvar%all,n), intent(out) :: u                  !< vector of conservative variables
+      real, dimension(flind%all,n), intent(out) :: u                  !< vector of conservative variables
       real, dimension(nmag,n),     intent(in)  :: bb                 !< local copy of magnetic field
       character(len=*),            intent(in)  :: sweep              !< direction (x, y or z) we are doing calculations for
       integer,                     intent(in)  :: i1                 !< coordinate of sweep in the 1st remaining direction
@@ -272,27 +272,27 @@ module rtvd ! split orig
 #endif /* defined GRAV || defined SHEAR || defined FLUID_INTERACTIONS */
 
       real                           :: dtx                !< dt/dx
-      real, dimension(nvar%all,n)    :: cfr                !< freezing speed
+      real, dimension(flind%all,n)    :: cfr                !< freezing speed
 !locals
 #if defined GRAV || defined SHEAR || defined FLUID_INTERACTIONS
-      real, dimension(nvar%fluids,n) :: acc                !< acceleration
+      real, dimension(flind%fluids,n) :: acc                !< acceleration
 #endif /* defined GRAV || defined SHEAR || defined FLUID_INTERACTIONS */
-      real, dimension(nvar%all,n)    :: u0                 !< initial state of conservative variables
-      real, dimension(nvar%all,n)    :: w                  !< auxiliary vector to calculate fluxes
-      real, dimension(nvar%all,n)    :: fr                 !< flux of the right-moving waves
-      real, dimension(nvar%all,n)    :: fl                 !< flux of the left-moving waves
-      real, dimension(nvar%all,n)    :: fu                 !< sum of fluxes of right- and left-moving waves
-      real, dimension(nvar%all,n)    :: dfrp               !< second order correction of right-moving waves flux on the right cell boundary
-      real, dimension(nvar%all,n)    :: dfrm               !< second order correction of right-moving waves flux on the left cell boundary
-      real, dimension(nvar%all,n)    :: dflm               !< second order correction of left-moving waves flux on the left cell boundary
-      real, dimension(nvar%all,n)    :: dflp               !< second order correction of left-moving waves flux on the right cell boundary
-      real, dimension(nvar%all,n)    :: u1                 !< updated vector of conservative variables (after one timestep in second order scheme)
-      real, dimension(nvar%fluids,n) :: rotacc             !< acceleration caused by rotation
-      real, dimension(nvar%fluids,n) :: fricacc            !< acceleration caused by friction
-      real, dimension(nvar%fluids,n) :: geosrc             !< source terms caused by geometry of coordinate system
-      real, dimension(nvar%fluids,n), target :: pressure   !< gas pressure
-      real, dimension(nvar%fluids,n), target :: density    !< gas density
-      real, dimension(nvar%fluids,n), target :: vel_sweep  !< velocity in the direction of current sweep
+      real, dimension(flind%all,n)    :: u0                 !< initial state of conservative variables
+      real, dimension(flind%all,n)    :: w                  !< auxiliary vector to calculate fluxes
+      real, dimension(flind%all,n)    :: fr                 !< flux of the right-moving waves
+      real, dimension(flind%all,n)    :: fl                 !< flux of the left-moving waves
+      real, dimension(flind%all,n)    :: fu                 !< sum of fluxes of right- and left-moving waves
+      real, dimension(flind%all,n)    :: dfrp               !< second order correction of right-moving waves flux on the right cell boundary
+      real, dimension(flind%all,n)    :: dfrm               !< second order correction of right-moving waves flux on the left cell boundary
+      real, dimension(flind%all,n)    :: dflm               !< second order correction of left-moving waves flux on the left cell boundary
+      real, dimension(flind%all,n)    :: dflp               !< second order correction of left-moving waves flux on the right cell boundary
+      real, dimension(flind%all,n)    :: u1                 !< updated vector of conservative variables (after one timestep in second order scheme)
+      real, dimension(flind%fluids,n) :: rotacc             !< acceleration caused by rotation
+      real, dimension(flind%fluids,n) :: fricacc            !< acceleration caused by friction
+      real, dimension(flind%fluids,n) :: geosrc             !< source terms caused by geometry of coordinate system
+      real, dimension(flind%fluids,n), target :: pressure   !< gas pressure
+      real, dimension(flind%fluids,n), target :: density    !< gas density
+      real, dimension(flind%fluids,n), target :: vel_sweep  !< velocity in the direction of current sweep
       real, dimension(:,:), pointer  :: dens, vx
       real, dimension(n)             :: gravacc            !< acceleration caused by gravitation
 #ifdef ISO_LOCAL
@@ -301,18 +301,18 @@ module rtvd ! split orig
 
 #ifdef SHEAR
       real, dimension(2)             :: df                 !< \deprecated additional acceleration term used in streaming problem
-      real, dimension(nvar%fluids,n) :: vy0
+      real, dimension(flind%fluids,n) :: vy0
 #endif /* SHEAR */
 
 #ifdef COSM_RAYS
        integer                       :: icr
 #ifdef COSM_RAYS_SOURCES
-       real                          :: srccrn(nvar%crn%all,n)
+       real                          :: srccrn(flind%crn%all,n)
 #endif /* COSM_RAYS_SOURCES */
 #endif /* COSM_RAYS */
 
 #ifndef ISO
-      real, dimension(nvar%fluids,n) :: ekin,eint
+      real, dimension(flind%fluids,n) :: ekin,eint
 #if defined IONIZED && defined MAGNETIC
       real, dimension(n)             :: emag
 #endif /* IONIZED && MAGNETIC */
@@ -322,7 +322,7 @@ module rtvd ! split orig
       real, dimension(n)             :: decr
 #endif /* COSM_RAYS */
 #ifdef FLUID_INTERACTIONS_DW
-      real, dimension(nvar%all,n)    :: dintr
+      real, dimension(flind%all,n)    :: dintr
 #endif /* FLUID_INTERACTIONS_DW */
 
       real, dimension(2,2), parameter:: rk2coef = RESHAPE( (/1.0,0.5,0.0,1.0/),(/2,2/))
@@ -427,7 +427,7 @@ module rtvd ! split orig
          elsewhere
             vy0(:,:)  = 0.0
          endwhere
-         do ind = 1, nvar%fluids
+         do ind = 1, flind%fluids
 !            if (sweep .eq. 'xsweep') then
 !               rotacc(ind,:) =  2.0*omega*(vy0(ind,:) + qshear*omega*cg%x(:))
 !            else if (sweep .eq. 'ysweep')  then
@@ -460,7 +460,7 @@ module rtvd ! split orig
 
 #if defined GRAV || defined SHEAR || defined FLUID_INTERACTIONS
          acc     =  rotacc + fricacc
-         do ind = 1, nvar%fluids
+         do ind = 1, flind%fluids
             acc(ind,:) =  acc(ind,:) + gravacc(:)
          enddo
 
@@ -490,8 +490,8 @@ module rtvd ! split orig
          end select
 
          grad_pcr(:) = 0
-         if (nvar%crn%all > 0) then !> \deprecated BEWARE: quick hack
-            do icr = 1, 1 !> \deprecated nvar_crs  !BEWARE TEMPORARY!
+         if (flind%crn%all > 0) then !> \deprecated BEWARE: quick hack
+            do icr = 1, 1 !> \deprecated flind_crs  !BEWARE TEMPORARY!
                decr(:)                = -(gamma_crs(icr)-1.)*u1(iarr_crs(icr),:)*divv(:)*dt
                u1  (iarr_crs(icr),:)  = u1(iarr_crs(icr),:) + rk2coef(integration_order,istep)*decr(:)
                u1  (iarr_crs(icr),:)  = max(smallecr,u1(iarr_crs(icr),:))
@@ -504,10 +504,10 @@ module rtvd ! split orig
          grad_pcr(1:2)   = 0.0 ; grad_pcr(n-1:n) = 0.0
 
 #ifndef ISO
-         u1(iarr_all_en(nvar%ion%pos),:) = u1(iarr_all_en(nvar%ion%pos),:) &
-                              - rk2coef(integration_order,istep)*u1(iarr_all_mx(nvar%ion%pos),:)/u1(iarr_all_dn(nvar%ion%pos),:)*grad_pcr*dt
+         u1(iarr_all_en(flind%ion%pos),:) = u1(iarr_all_en(flind%ion%pos),:) &
+                              - rk2coef(integration_order,istep)*u1(iarr_all_mx(flind%ion%pos),:)/u1(iarr_all_dn(flind%ion%pos),:)*grad_pcr*dt
 #endif /* !ISO */
-         u1(iarr_all_mx(nvar%ion%pos),:) = u1(iarr_all_mx(nvar%ion%pos),:) - rk2coef(integration_order,istep)*grad_pcr*dt
+         u1(iarr_all_mx(flind%ion%pos),:) = u1(iarr_all_mx(flind%ion%pos),:) - rk2coef(integration_order,istep)*grad_pcr*dt
 
 #ifdef COSM_RAYS_SOURCES
          call src_crn(u1,n, srccrn)
@@ -524,14 +524,14 @@ module rtvd ! split orig
          eint = u1(iarr_all_en,:)-ekin
 #if defined IONIZED && defined MAGNETIC
          emag = 0.5*(bb(ibx,:)*bb(ibx,:) + bb(iby,:)*bb(iby,:) + bb(ibz,:)*bb(ibz,:))
-         eint(nvar%ion%pos,:) = eint(nvar%ion%pos,:) - emag
+         eint(flind%ion%pos,:) = eint(flind%ion%pos,:) - emag
 #endif /* IONIZED && MAGNETIC */
 
          eint = max(eint,smallei)
 
          u1(iarr_all_en,:) = eint+ekin
 #if defined IONIZED && defined MAGNETIC
-         u1(iarr_all_en(nvar%ion%pos),:) = u1(iarr_all_en(nvar%ion%pos),:)+emag
+         u1(iarr_all_en(flind%ion%pos),:) = u1(iarr_all_en(flind%ion%pos),:)+emag
 #endif /* IONIZED && MAGNETIC */
 #endif /* !ISO */
 #endif /*  defined IONIZED || defined NEUTRAL  */

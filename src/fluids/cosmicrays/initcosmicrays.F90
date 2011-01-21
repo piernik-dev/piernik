@@ -236,43 +236,43 @@ contains
 
 !
 
-   subroutine cosmicray_index(nvar)
+   subroutine cosmicray_index(flind)
 
       use grid,            only: cg
       use types,           only: var_numbers
 
       implicit none
 
-      type(var_numbers), intent(inout) :: nvar
+      type(var_numbers), intent(inout) :: flind
       integer :: icr
 
-      nvar%crn%beg    = nvar%all + 1
-      nvar%crs%beg    = nvar%crn%beg
+      flind%crn%beg    = flind%all + 1
+      flind%crs%beg    = flind%crn%beg
 
-      nvar%crn%all  = ncrn
-      nvar%cre%all  = ncre
-      nvar%crs%all  = ncrs
+      flind%crn%all  = ncrn
+      flind%cre%all  = ncre
+      flind%crs%all  = ncrs
 
       do icr = 1, ncrn
-         iarr_crn(icr)      =nvar%all+icr
-         iarr_crs(icr)      =nvar%all+icr
+         iarr_crn(icr)      =flind%all+icr
+         iarr_crs(icr)      =flind%all+icr
       enddo
-      nvar%all = nvar%all + nvar%crn%all
+      flind%all = flind%all + flind%crn%all
 
       do icr = 1, ncre
-         iarr_cre(icr)      =nvar%all+icr
-         iarr_crs(ncrn+icr) =nvar%all+icr
+         iarr_cre(icr)      =flind%all+icr
+         iarr_crs(ncrn+icr) =flind%all+icr
       enddo
-      nvar%all = nvar%all + nvar%cre%all
+      flind%all = flind%all + flind%cre%all
 
-      nvar%crn%end    = nvar%crn%beg + nvar%crn%all - 1
-      nvar%cre%beg    = nvar%crn%end + 1
-      nvar%cre%end    = nvar%all
-      nvar%crs%end    = nvar%cre%end
-      if (nvar%crn%all  /= 0) nvar%components = nvar%components + 1
-      nvar%crn%pos = nvar%components
-      if (nvar%cre%all  /= 0) nvar%components = nvar%components + 1
-      nvar%cre%pos = nvar%components
+      flind%crn%end    = flind%crn%beg + flind%crn%all - 1
+      flind%cre%beg    = flind%crn%end + 1
+      flind%cre%end    = flind%all
+      flind%crs%end    = flind%cre%end
+      if (flind%crn%all  /= 0) flind%components = flind%components + 1
+      flind%crn%pos = flind%components
+      if (flind%cre%all  /= 0) flind%components = flind%components + 1
+      flind%cre%pos = flind%components
 
 #ifdef NEW_HDF5
       call cr_add_hdf5(ncrs)
@@ -300,7 +300,7 @@ contains
    end subroutine cleanup_cosmicrays
 
 #ifdef NEW_HDF5
-   subroutine cr_add_hdf5(nvar_crs)
+   subroutine cr_add_hdf5(flind_crs)
 
       use grid,      only: cg
       use arrays,    only: u
@@ -308,7 +308,7 @@ contains
 
       implicit none
 
-      integer, intent(in)              :: nvar_crs
+      integer, intent(in)              :: flind_crs
       type(lhdf5_info) :: item
       integer          :: i
 
@@ -317,7 +317,7 @@ contains
       if (.not.allocated(item%rvec)) allocate(item%rvec(0))
       item%ivec  = [cg%nxb, cg%nyb, cg%nzb, cg%is, cg%ie, cg%js, cg%je, cg%ks, cg%ke]
 
-      do i = 1, nvar_crs
+      do i = 1, flind_crs
 
          write(item%key,'(A,I1)')  "ecr",i
          item%ivec(10) = iarr_crs(i)

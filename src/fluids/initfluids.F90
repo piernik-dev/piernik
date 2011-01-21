@@ -57,7 +57,7 @@
 !! \n\b Fluid \b component: an ingredient characterized by mass density, momenta,
 !!    and optionally energy density.
 !!    Examples: ionized fluid, neutral fluid, dust fluid.
-!!    Variable \b "nvar\%fluids" (in fluidindex) counts fluids.
+!!    Variable \b "flind\%fluids" (in fluidindex) counts fluids.
 !!
 !! \n\b Non-fluid \b component: Some constituents of the system are described by
 !!      a system of equations, which does not involve momentum equation.
@@ -71,14 +71,14 @@
 !!
 !! \n\b Non-isothermal \b fluid: an isothermal fluid does not need energy equation,
 !!    thus \b non-isothermal fluids are distinguished as those, which do not
-!!   engage the energy equation. Variable \b "nvar\%energ" (in fluidindex) counts
+!!   engage the energy equation. Variable \b "flind\%energ" (in fluidindex) counts
 !!      independent energy equations used for fluids.
 !!
 !! \n\b Fluid \b variable: Single quantity, such as gas density, x,y,z-momentum
 !!   density, and energy density.
 !!
 !! \n\b Non-fluid \b variable: Single quantity, such as CR energy density,
-!!      tracer, etc ... Variable \b "nvar" (in fluidindex) counts all fluid and
+!!      tracer, etc ... Variable \b "flind" (in fluidindex) counts all fluid and
 !!    non-fluid variables. There is no specific counter for non-fluid variables.
 !!
 !! \n All these constituents are organized in the module fluidindex into
@@ -195,7 +195,7 @@ module initfluids
       use dataio_pub, only: warn, msg
       use types,      only: component_fluid
       use arrays,     only: u, b
-      use fluidindex, only: nvar, ibx, iby, ibz
+      use fluidindex, only: flind, ibx, iby, ibz
 
       implicit none
 
@@ -213,8 +213,8 @@ module initfluids
       bz => b(ibz,:,:,:)
 
       if (smalld >= big_float) then
-         do i = lbound(nvar%all_fluids,1), ubound(nvar%all_fluids,1)
-            fl => nvar%all_fluids(i)
+         do i = lbound(flind%all_fluids,1), ubound(flind%all_fluids,1)
+            fl => flind%all_fluids(i)
             dn => u(fl%idn,:,:,:)
 
             maxdens = max(maxval(dn), maxdens)
@@ -234,8 +234,8 @@ module initfluids
       endif
 
       if (smallp >= big_float) then
-         do i = lbound(nvar%all_fluids,1), ubound(nvar%all_fluids,1)
-            fl => nvar%all_fluids(i)
+         do i = lbound(flind%all_fluids,1), ubound(flind%all_fluids,1)
+            fl => flind%all_fluids(i)
             if (fl%tag=='DST') cycle
             dn => u(fl%idn,:,:,:)
             mx => u(fl%imx,:,:,:)

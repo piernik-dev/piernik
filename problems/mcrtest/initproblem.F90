@@ -129,7 +129,7 @@ module initproblem
 
       use arrays,         only: b, u
       use dataio_pub,     only: msg, warn, printinfo
-      use fluidindex,     only: ibx, iby, ibz, nvar
+      use fluidindex,     only: ibx, iby, ibz, flind
       use grid,           only: cg
       use initcosmicrays, only: iarr_crn, iarr_crs, gamma_crn, K_crn_paral, K_crn_perp
       use initionized,    only: idni, imxi, imzi, ieni, gamma_ion
@@ -190,12 +190,12 @@ module initproblem
 #endif /* !ISO */
 
 #ifdef COSM_RAYS
-      do icr = 1, nvar%crs%all
+      do icr = 1, flind%crs%all
          u(iarr_crs(icr), :, :, :) =  beta_cr*cs_iso**2 * u(idni, :, :, :)/(gamma_crn(icr)-1.0)
       enddo
 
 ! Explosions
-      do icr = 1, nvar%crn%all
+      do icr = 1, flind%crn%all
          do k = cg%ks, cg%ke
             do j = cg%js, cg%je
                do i = cg%is, cg%ie
@@ -221,7 +221,7 @@ module initproblem
          enddo
       enddo
 
-      do icr = 1, nvar%crs%all
+      do icr = 1, flind%crs%all
          maxv = maxval(u(iarr_crs(icr),:,:,:))
          call MPI_Allreduce(MPI_IN_PLACE, maxv, 1, MPI_INTEGER, MPI_MAX, comm3d, ierr)
          if (master) then

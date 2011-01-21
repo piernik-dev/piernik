@@ -67,7 +67,7 @@ contains
     use dataio_pub,     only: printinfo, die, code_progress, PIERNIK_INIT_BASE
     use mpisetup,       only: ierr, master, slave, rbuff, buffer_dim, comm
     use mpi,            only: MPI_DOUBLE_PRECISION
-    use fluidindex,     only: nvar
+    use fluidindex,     only: flind
 
     implicit none
     integer       :: i
@@ -106,9 +106,9 @@ contains
     call printinfo("[shear:init_shear]: finished. \o/")
 #endif /* VERBOSE */
 
-    allocate(global_gradP(nvar%fluids))
-    do i = 1, nvar%fluids
-       global_gradP(i) = 2.0*omega * eta_gas * nvar%all_fluids(i)%cs / csvk
+    allocate(global_gradP(flind%fluids))
+    do i = 1, flind%fluids
+       global_gradP(i) = 2.0*omega * eta_gas * flind%all_fluids(i)%cs / csvk
     enddo
 
   end subroutine init_shear

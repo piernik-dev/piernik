@@ -679,7 +679,7 @@ contains
       use arrays,          only: u, b, wa
       use dataio_pub,      only: cwdlen, cwd, user_tsl
       use diagnostics,     only: pop_vector
-      use fluidindex,      only: nvar, iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz, ibx, iby, ibz
+      use fluidindex,      only: flind, iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz, ibx, iby, ibz
       use grid,            only: cg
       use mpisetup,        only: master, t, dt, smalld, nstep, pxsize, pysize, pzsize
       use types,           only: tsl_container, phys_prop
@@ -713,10 +713,10 @@ contains
 !- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 !
 #ifdef IONIZED
-      cs_iso2 = nvar%ion%cs2
+      cs_iso2 = flind%ion%cs2
 #endif /* IONIZED */
 #ifdef NEUTRAL
-      cs_iso2 = nvar%neu%cs2
+      cs_iso2 = flind%neu%cs2
 #else /* !NEUTRAL */
 #ifndef IONIZED
       cs_iso2 = 0.0
@@ -820,7 +820,7 @@ contains
          call pop_vector(tsl_vars, [tot_encr, tsl%encr_min, tsl%encr_max])
 #endif /* COSM_RAYS */
 #ifdef IONIZED
-         sn=>nvar%ion%snap
+         sn=>flind%ion%snap
          call pop_vector(tsl_vars, [sn%velx_max%val, sn%vely_max%val, sn%velz_max%val, sn%cs_max%val, &
                                     sn%dens_min%val, sn%dens_max%val, sn%pres_min%val, sn%pres_max%val])
 #ifndef ISO
@@ -829,12 +829,12 @@ contains
 #endif /* IONIZED */
 
 #ifdef NEUTRAL
-         sn=>nvar%neu%snap
+         sn=>flind%neu%snap
          call pop_vector(tsl_vars, [sn%dens_min%val, sn%dens_max%val, sn%velx_max%val, sn%vely_max%val, sn%velz_max%val, &
                                     sn%pres_min%val, sn%pres_max%val, sn%temp_min%val, sn%temp_max%val, sn%cs_max%val])
 #endif /* NEUTRAL */
 #ifdef DUST
-         sn=>nvar%dst%snap
+         sn=>flind%dst%snap
          call pop_vector(tsl_vars, [sn%dens_min%val, sn%dens_max%val, sn%velx_max%val, sn%vely_max%val, sn%velz_max%val])
 #endif /* DUST */
       endif
@@ -1009,7 +1009,7 @@ contains
          use arrays,             only: wa, u, b
          use constants,          only: small
          use dataio_pub,         only: msg, printinfo
-         use fluidindex,         only: ibx, iby, ibz, nvar
+         use fluidindex,         only: ibx, iby, ibz, flind
          use grid,               only: cg
          use mpisetup,           only: cfl, t, dt, master
          use types,              only: tsl_container, value
@@ -1057,18 +1057,18 @@ contains
 
    ! Timestep diagnostics
 #ifdef NEUTRAL
-         call get_common_vars(nvar%neu)
+         call get_common_vars(flind%neu)
 #endif /* NEUTRAL */
 
 #ifdef IONIZED
-         call get_common_vars(nvar%ion)
+         call get_common_vars(flind%ion)
 
 #ifdef MAGNETIC
          wa(:,:,:)  = sqrt(b(1,:,:,:)*b(1,:,:,:) + b(2,:,:,:)*b(2,:,:,:) + b(3,:,:,:)*b(3,:,:,:))
          call get_extremum(wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), 'max', b_max)
          call get_extremum(wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), 'min', b_min)
 
-         wa(:,:,:)  = wa(:,:,:) / sqrt(u(nvar%ion%idn,:,:,:))
+         wa(:,:,:)  = wa(:,:,:) / sqrt(u(flind%ion%idn,:,:,:))
          call get_extremum(wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), 'max', vai_max)
 #endif /* MAGNETIC */
 
@@ -1108,7 +1108,7 @@ contains
 #endif /* IONIZED */
 
 #ifdef DUST
-      call get_common_vars(nvar%dst)
+      call get_common_vars(flind%dst)
 #endif /* DUST */
 
 #ifdef VARIABLE_GP
@@ -1151,10 +1151,10 @@ contains
          if (.not.present(tsl)) then
             call printinfo('================================================================================', .false.)
 #ifdef IONIZED
-            call common_shout(nvar%ion%snap,'ION',.true.,.true.,.true.)
+            call common_shout(flind%ion%snap,'ION',.true.,.true.,.true.)
 #ifdef MAGNETIC
-            write(msg, fmt777) 'max(c_f)    ION  =', sqrt(nvar%ion%snap%cs_max%val**2+vai_max%val**2), &
-               'dt=',cfl*dxmn_safe/sqrt(nvar%ion%snap%cs_max%val**2+vai_max%val**2+small)
+            write(msg, fmt777) 'max(c_f)    ION  =', sqrt(flind%ion%snap%cs_max%val**2+vai_max%val**2), &
+               'dt=',cfl*dxmn_safe/sqrt(flind%ion%snap%cs_max%val**2+vai_max%val**2+small)
             call printinfo(msg, .false.)
             write(msg, fmt777) 'max(v_a)    ION  =', vai_max%val, 'dt=',cfl*dxmn_safe/(vai_max%val+small), vai_max%proc, vai_max%loc
             call printinfo(msg, .false.)
@@ -1170,10 +1170,10 @@ contains
 #endif /* !MAGNETIC */
 #endif /* IONIZED */
 #ifdef NEUTRAL
-            call common_shout(nvar%neu%snap,'NEU',.true.,.true.,.true.)
+            call common_shout(flind%neu%snap,'NEU',.true.,.true.,.true.)
 #endif /* NEUTRAL */
 #ifdef DUST
-            call common_shout(nvar%dst%snap,'DST',.false.,.false.,.false.)
+            call common_shout(flind%dst%snap,'DST',.false.,.false.,.false.)
 #endif /* DUST */
 #ifdef COSM_RAYS
             write(msg, fmt771) 'min(encr)   CRS  =', encr_min%val,        encr_min%proc, encr_min%loc

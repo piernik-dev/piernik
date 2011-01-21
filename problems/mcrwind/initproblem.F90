@@ -110,7 +110,7 @@ module initproblem
    subroutine init_prob
 
       use arrays,         only: u, b, dprof
-      use fluidindex,     only: ibx, iby, ibz, nvar
+      use fluidindex,     only: ibx, iby, ibz, flind
       use grid,           only: cg
       use hydrostatic,    only: hydrostatic_zeq_densmid
       use initionized,    only: idni, imxi, imyi, imzi
@@ -136,9 +136,9 @@ module initproblem
 
 !   Secondary parameters
 
-      b0 = sqrt(2.*alpha*d0*nvar%ion%cs2)
+      b0 = sqrt(2.*alpha*d0*flind%ion%cs2)
 
-      csim2 = nvar%ion%cs2*(1.0+alpha)
+      csim2 = flind%ion%cs2*(1.0+alpha)
 
       call hydrostatic_zeq_densmid(1, 1, d0, csim2)
 
@@ -155,13 +155,13 @@ module initproblem
 #endif /* SHEAR */
 
 #ifndef ISO
-               u(ieni,i,j,k)   = nvar%ion%cs2/(nvar%ion%gam_1) * u(idni,i,j,k) &
+               u(ieni,i,j,k)   = flind%ion%cs2/(flind%ion%gam_1) * u(idni,i,j,k) &
                                + 0.5*(u(imxi,i,j,k)**2 + u(imyi,i,j,k)**2 + &
                                       u(imzi,i,j,k)**2 ) / u(idni,i,j,k)
 #endif /* !ISO */
 #ifdef COSM_RAYS
                u(iarr_crn,i,j,k)  = 0.0
-               u(iarr_crn(1),i,j,k)   = beta_cr*nvar%ion%cs2 * u(idni,i,j,k)/( gamma_crn(1) - 1.0 )
+               u(iarr_crn(1),i,j,k)   = beta_cr*flind%ion%cs2 * u(idni,i,j,k)/( gamma_crn(1) - 1.0 )
 !#ifdef GALAXY
 !! Single SN explosion in x0,y0,z0 at t = 0 if amp_cr /= 0
 !
@@ -284,7 +284,7 @@ module initproblem
    subroutine cr_sn_beware(pos)
       use arrays,         only: u
       use crcomposition,  only: icr_H1, icr_C12, icr_N14, icr_O16, primary_C12, primary_N14, primary_O16
-      use fluidindex,     only: nvar
+      use fluidindex,     only: flind
       use grid,           only: cg
       use initcosmicrays, only: iarr_crn
       use snsources,      only: r_sn
@@ -321,7 +321,7 @@ module initproblem
                            + (cg%y(j)-ysna+real(jpm)*cg%Ly)**2  &
                            + (cg%z(k)-zsn)**2)/r_sn**2)
 !                     u(iarr_crn,i,j,k) = u(iarr_crn,i,j,k) + max(decr,1e-10) * [1., primary_C12*12., primary_N14*14., primary_O16*16.]
-                     do icr=1,nvar%crn%all
+                     do icr=1,flind%crn%all
                         if (icr == icr_H1) u(iarr_crn(icr),i,j,k) = u(iarr_crn(icr),i,j,k) + decr
                         if (icr == icr_C12) u(iarr_crn(icr),i,j,k) = u(iarr_crn(icr),i,j,k) + primary_C12*12*decr
                         if (icr == icr_N14) u(iarr_crn(icr),i,j,k) = u(iarr_crn(icr),i,j,k) + primary_N14*14*decr

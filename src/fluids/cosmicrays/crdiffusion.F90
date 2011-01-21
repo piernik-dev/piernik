@@ -46,7 +46,7 @@ contains
    subroutine cr_diff_x
 
       use arrays,         only: b, u, wcr
-      use fluidindex,     only: ibx, iby, ibz, nvar
+      use fluidindex,     only: ibx, iby, ibz, flind
       use grid,           only: cg
       use initcosmicrays, only: iarr_crs, K_crs_paral, K_crs_perp
       use mpisetup,       only: dt, xdim, ydim, zdim, has_dir
@@ -55,8 +55,8 @@ contains
 
       integer :: i, j, k
       real    :: b1b, b2b, b3b, bb
-      real, dimension(nvar%crs%all) :: decr1, decr2, decr3, fcrdif1
-      real, dimension(nvar%crs%all) :: dqp, dqm
+      real, dimension(flind%crs%all) :: decr1, decr2, decr3, fcrdif1
+      real, dimension(flind%crs%all) :: dqp, dqm
 
       !=======================================================================
 
@@ -117,7 +117,7 @@ contains
    subroutine cr_diff_y
 
       use arrays,         only: b, u, wcr
-      use fluidindex,     only: ibx, iby, ibz, nvar
+      use fluidindex,     only: ibx, iby, ibz, flind
       use grid,           only: cg
       use initcosmicrays, only: iarr_crs, K_crs_paral, K_crs_perp
       use mpisetup,       only: dt, xdim, ydim, zdim, has_dir
@@ -126,8 +126,8 @@ contains
 
       integer :: i, j, k
       real    :: b1b, b2b, b3b, bb
-      real, dimension(nvar%crs%all) :: decr1, decr2, decr3, fcrdif2
-      real, dimension(nvar%crs%all) :: dqp, dqm
+      real, dimension(flind%crs%all) :: decr1, decr2, decr3, fcrdif2
+      real, dimension(flind%crs%all) :: dqp, dqm
 
 !=======================================================================
 
@@ -188,7 +188,7 @@ contains
    subroutine cr_diff_z
 
       use arrays,         only: b, u, wcr
-      use fluidindex,     only: ibx, iby, ibz, nvar
+      use fluidindex,     only: ibx, iby, ibz, flind
       use grid,           only: cg
       use initcosmicrays, only: iarr_crs, K_crs_paral, K_crs_perp
       use mpisetup,       only: dt, xdim, ydim, zdim, has_dir
@@ -197,8 +197,8 @@ contains
 
       integer :: i, j, k
       real    :: b1b, b2b, b3b, bb
-      real, dimension(nvar%crs%all) :: decr1, decr2, decr3, fcrdif3
-      real, dimension(nvar%crs%all) :: dqp, dqm
+      real, dimension(flind%crs%all) :: decr1, decr2, decr3, fcrdif3
+      real, dimension(flind%crs%all) :: dqp, dqm
 
 !=======================================================================
 

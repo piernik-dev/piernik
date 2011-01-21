@@ -158,7 +158,7 @@ module resistivity
       use mpisetup,     only: comm, ierr, xdim, ydim, zdim, has_dir
       use mpi,          only: MPI_DOUBLE_PRECISION, MPI_MAX, MPI_IN_PLACE
 #ifndef ISO
-      use fluidindex,   only: nvar
+      use fluidindex,   only: flind
 #endif /* !ISO */
 
       implicit none
@@ -221,11 +221,11 @@ module resistivity
 
 #ifndef ISO
       dt_eint = deint_max * abs(minval(               &
-                ( u(nvar%ion%ien, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)           &
-                - 0.5*( u(nvar%ion%imx, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2  &
-                      + u(nvar%ion%imy, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2  &
-                      + u(nvar%ion%imz, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2 )&
-                      /u(nvar%ion%idn, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)      &
+                ( u(flind%ion%ien, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)           &
+                - 0.5*( u(flind%ion%imx, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2  &
+                      + u(flind%ion%imy, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2  &
+                      + u(flind%ion%imz, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2 )&
+                      /u(flind%ion%idn, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)      &
                 - 0.5*( b(ibx, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2   &
                       + b(iby, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2   &
                       + b(ibz, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2)) &

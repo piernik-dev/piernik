@@ -86,7 +86,7 @@ contains
 
 !> \todo Remove precompiler directives from this routine, it is called only once.
    subroutine init_fluxes
-      use fluidindex,  only: nvar
+      use fluidindex,  only: flind
 #ifdef NEUTRAL
       use fluxneutral, only: flux_neu
 #endif /* NEUTRAL */
@@ -99,21 +99,21 @@ contains
       implicit none
       integer :: i
 
-      allocate(flist(nvar%fluids))
+      allocate(flist(flind%fluids))
 
-      do i = 1, nvar%fluids
-         select case (nvar%all_fluids(i)%tag)
+      do i = 1, flind%fluids
+         select case (flind%all_fluids(i)%tag)
 #ifdef NEUTRAL
             case ("NEU", "neu")
-               flist(nvar%all_fluids(i)%pos)%flux_func => flux_neu
+               flist(flind%all_fluids(i)%pos)%flux_func => flux_neu
 #endif /* NEUTRAL */
 #ifdef DUST
             case ("DST", "dst")
-               flist(nvar%all_fluids(i)%pos)%flux_func => flux_dst
+               flist(flind%all_fluids(i)%pos)%flux_func => flux_dst
 #endif /* DUST */
 #ifdef IONIZED
             case ("ION", "ion")
-               flist(nvar%all_fluids(i)%pos)%flux_func => flux_ion
+               flist(flind%all_fluids(i)%pos)%flux_func => flux_ion
 #endif /* IONIZED */
          end select
       enddo
@@ -136,15 +136,15 @@ contains
 #ifdef COSM_RAYS
       use fluxcosmicrays, only: flux_crs
 #endif /* COSM_RAYS */
-      use fluidindex,     only: nvar, nmag
+      use fluidindex,     only: flind, nmag
 
       implicit none
 
       integer, intent(in)  :: n
-      real, dimension(nvar%all,n),    intent(out), target :: flux, cfr, uu
+      real, dimension(flind%all,n),    intent(out), target :: flux, cfr, uu
       real, dimension(nmag,n),        intent(in),  target :: bb
-      real, dimension(nvar%fluids,n), intent(out), target :: vx
-      real, dimension(nvar%fluids,n), intent(out), target :: pp
+      real, dimension(flind%fluids,n), intent(out), target :: vx
+      real, dimension(flind%fluids,n), intent(out), target :: pp
       real, dimension(n), optional,   intent(in),  target :: cs_iso2
 
       real, dimension(:,:), pointer                     :: pflux, pcfr, puu, pbb
@@ -165,8 +165,8 @@ contains
          pcs2  => null()
       endif
 
-      do p = 1, nvar%fluids
-         pfl   => nvar%all_fluids(p)
+      do p = 1, flind%fluids
+         pfl   => flind%all_fluids(p)
          puu   =>   uu(pfl%beg:pfl%end,:)
          pcfr  =>  cfr(pfl%beg:pfl%end,:)
          pflux => flux(pfl%beg:pfl%end,:)
@@ -177,13 +177,13 @@ contains
       enddo
 
 #ifdef COSM_RAYS
-      puu   => uu(nvar%crs%beg:nvar%crs%end,:)
-      pflux => flux(nvar%crs%beg:nvar%crs%end,:)
-      pvx   => vx(nvar%ion%pos,:)
+      puu   => uu(flind%crs%beg:flind%crs%end,:)
+      pflux => flux(flind%crs%beg:flind%crs%end,:)
+      pvx   => vx(flind%ion%pos,:)
 
       call flux_crs(pflux,pvx,puu,n)
 
-      cfr(nvar%crs%beg:nvar%crs%end,:)  = spread(cfr(nvar%ion%iarr(1),:),1,nvar%crs%all)
+      cfr(flind%crs%beg:flind%crs%end,:)  = spread(cfr(flind%ion%iarr(1),:),1,flind%crs%all)
 #endif /* COSM_RAYS */
 
    end subroutine all_fluxes

@@ -159,7 +159,7 @@ module snsources
 !<
    subroutine cr_sn(pos)
       use arrays,         only: u
-      use fluidindex,     only: nvar
+      use fluidindex,     only: flind
       use grid,           only: cg
       use initcosmicrays, only: iarr_crn
 #ifdef COSM_RAYS_SOURCES
@@ -195,7 +195,7 @@ module snsources
                            + (cg%z(k)-zsn)**2)/r_sn**2)
 
 #ifdef COSM_RAYS_SOURCES
-                     do icr=1,nvar%crn%all
+                     do icr=1,flind%crn%all
                         if (icr == icr_H1) u(iarr_crn(icr),i,j,k) = u(iarr_crn(icr),i,j,k) + decr
                         if (icr == icr_C12) u(iarr_crn(icr),i,j,k) = u(iarr_crn(icr),i,j,k) + primary_C12*12*decr
                         if (icr == icr_N14) u(iarr_crn(icr),i,j,k) = u(iarr_crn(icr),i,j,k) + primary_N14*14*decr

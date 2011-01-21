@@ -178,7 +178,7 @@ contains
       use diagnostics,           only: diagnose_arrays
       use fluidboundaries,       only: all_fluid_boundaries
       use fluidboundaries_pub,   only: init_fluidboundaries
-      use fluidindex,            only: nvar
+      use fluidindex,            only: flind
       use grid,                  only: init_grid, grid_mpi_boundaries_prep
       use initfluids,            only: init_fluids, sanitize_smallx_checks
       use gridgeometry,          only: init_geometry
@@ -246,12 +246,12 @@ contains
 
       code_progress = PIERNIK_INIT_BASE      ! Now we can initialize things that depend on all the above fundamental calls
 
-      call init_arrays(nvar) ! depends on grid and fluids
+      call init_arrays(flind) ! depends on grid and fluids
       code_progress = PIERNIK_INIT_ARRAYS    ! It looks that init_arrays can be delayed if necessary
 
       call init_geometry ! depends on grid
 
-      call grid_mpi_boundaries_prep(nvar%all) ! depends on grid and fluids
+      call grid_mpi_boundaries_prep(flind%all) ! depends on grid and fluids
 
 #ifdef SHEAR
       call init_shear ! depends on fluids

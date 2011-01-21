@@ -342,7 +342,7 @@ module grid
 
       implicit none
 
-      integer, intent(in) :: numfluids !< expect nvar%all, here, cannot grab it directly because of cyclic deps in CR-based setups
+      integer, intent(in) :: numfluids !< expect flind%all, here, cannot grab it directly because of cyclic deps in CR-based setups
 
       integer, dimension(:), allocatable :: sizes, subsizes, starts
       integer(kind=4) :: ord

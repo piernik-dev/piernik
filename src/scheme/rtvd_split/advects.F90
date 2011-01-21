@@ -39,7 +39,7 @@ contains
   subroutine advectby_x
 
     use arrays,        only: b, u, wa
-    use fluidindex,    only: iby, nvar
+    use fluidindex,    only: iby, flind
     use grid,          only: cg
     use magboundaries, only: bnd_emf
     use mpisetup,      only: dt, xdim, ydim, zdim, has_dir
@@ -64,9 +64,9 @@ contains
         jm=j-1
         vx=0.0
         if (jm == 0) then
-           vx = u(nvar%ion%imx,:,1,k) / u(nvar%ion%idn,:,1,k)
+           vx = u(flind%ion%imx,:,1,k) / u(flind%ion%idn,:,1,k)
         else
-           vx=(u(nvar%ion%imx,:,jm,k)+u(nvar%ion%imx,:,j,k))/(u(nvar%ion%idn,:,jm,k)+u(nvar%ion%idn,:,j,k))
+           vx=(u(flind%ion%imx,:,jm,k)+u(flind%ion%imx,:,j,k))/(u(flind%ion%idn,:,jm,k)+u(flind%ion%idn,:,j,k))
         endif
         vx(2:cg%nx-1)=(vx(1:cg%nx-2) + vx(3:cg%nx) + 2.0*vx(2:cg%nx-1))*0.25
         vx(1)  = vx(2)
@@ -87,7 +87,7 @@ contains
 
   subroutine advectbz_x
     use arrays,        only: b, u, wa
-    use fluidindex,    only: ibz, nvar
+    use fluidindex,    only: ibz, flind
     use grid,          only: cg
     use magboundaries, only: bnd_emf
     use mpisetup,      only: dt, xdim, ydim, zdim, has_dir
@@ -112,9 +112,9 @@ contains
       do j=cg%js, cg%je
         vx=0.0
         if (km == 0) then
-           vx = u(nvar%ion%imx,:,j,1) / u(nvar%ion%idn,:,j,1)
+           vx = u(flind%ion%imx,:,j,1) / u(flind%ion%idn,:,j,1)
         else
-           vx=(u(nvar%ion%imx,:,j,km)+u(nvar%ion%imx,:,j,k))/(u(nvar%ion%idn,:,j,km)+u(nvar%ion%idn,:,j,k))
+           vx=(u(flind%ion%imx,:,j,km)+u(flind%ion%imx,:,j,k))/(u(flind%ion%idn,:,j,km)+u(flind%ion%idn,:,j,k))
         endif
         vx(2:cg%nx-1)=(vx(1:cg%nx-2) + vx(3:cg%nx) + 2.0*vx(2:cg%nx-1))*0.25
         vx(1)  = vx(2)
@@ -135,7 +135,7 @@ contains
 
   subroutine advectbz_y
     use arrays,        only: b, u, wa
-    use fluidindex,    only: ibz, nvar
+    use fluidindex,    only: ibz, flind
     use grid,          only: cg
     use magboundaries, only: bnd_emf
     use mpisetup,      only: dt, xdim, ydim, zdim, has_dir
@@ -159,9 +159,9 @@ contains
       do i=cg%is, cg%ie
         vy=0.0
         if (km == 0) then
-           vy = u(nvar%ion%imy,i,:,1) / u(nvar%ion%idn,i,:,1)
+           vy = u(flind%ion%imy,i,:,1) / u(flind%ion%idn,i,:,1)
         else
-           vy=(u(nvar%ion%imy,i,:,km)+u(nvar%ion%imy,i,:,k))/(u(nvar%ion%idn,i,:,km)+u(nvar%ion%idn,i,:,k))
+           vy=(u(flind%ion%imy,i,:,km)+u(flind%ion%imy,i,:,k))/(u(flind%ion%idn,i,:,km)+u(flind%ion%idn,i,:,k))
         endif
         vy(2:cg%ny-1)=(vy(1:cg%ny-2) + vy(3:cg%ny) + 2.0*vy(2:cg%ny-1))*0.25
         vy(1)  = vy(2)
@@ -182,7 +182,7 @@ contains
 
   subroutine advectbx_y
     use arrays,        only: b, u, wa
-    use fluidindex,    only: ibx, nvar
+    use fluidindex,    only: ibx, flind
     use grid,          only: cg
     use magboundaries, only: bnd_emf
     use mpisetup,      only: dt, xdim, ydim, zdim, has_dir
@@ -207,9 +207,9 @@ contains
         im=i-1
         vy=0.0
         if (im == 0) then
-           vy = u(nvar%ion%imy,1,:,k) / u(nvar%ion%idn,1,:,k)
+           vy = u(flind%ion%imy,1,:,k) / u(flind%ion%idn,1,:,k)
         else
-           vy=(u(nvar%ion%imy,im,:,k)+u(nvar%ion%imy,i,:,k))/(u(nvar%ion%idn,im,:,k)+u(nvar%ion%idn,i,:,k))
+           vy=(u(flind%ion%imy,im,:,k)+u(flind%ion%imy,i,:,k))/(u(flind%ion%idn,im,:,k)+u(flind%ion%idn,i,:,k))
         endif
         vy(2:cg%ny-1)=(vy(1:cg%ny-2) + vy(3:cg%ny) + 2.0*vy(2:cg%ny-1))*0.25
         vy(1)  = vy(2)
@@ -230,7 +230,7 @@ contains
 
   subroutine advectbx_z
     use arrays,        only: b, u, wa
-    use fluidindex,    only: ibx, nvar
+    use fluidindex,    only: ibx, flind
     use grid,          only: cg
     use magboundaries, only: bnd_emf
     use mpisetup,      only: dt, xdim, ydim, zdim, has_dir
@@ -254,9 +254,9 @@ contains
         im=i-1
         vz=0.0
         if (im == 0) then
-           vz = u(nvar%ion%imz,1,j,:) / u(nvar%ion%idn,1,j,:)
+           vz = u(flind%ion%imz,1,j,:) / u(flind%ion%idn,1,j,:)
         else
-           vz = (u(nvar%ion%imz,im,j,:)+u(nvar%ion%imz,i,j,:))/(u(nvar%ion%idn,im,j,:)+u(nvar%ion%idn,i,j,:))
+           vz = (u(flind%ion%imz,im,j,:)+u(flind%ion%imz,i,j,:))/(u(flind%ion%idn,im,j,:)+u(flind%ion%idn,i,j,:))
         endif
         vz(2:cg%nz-1)=(vz(1:cg%nz-2) + vz(3:cg%nz) + 2.0*vz(2:cg%nz-1))*0.25
         vz(1)  = vz(2)
@@ -277,7 +277,7 @@ contains
 
   subroutine advectby_z
     use arrays,        only: b, u, wa
-    use fluidindex,    only: iby, nvar
+    use fluidindex,    only: iby, flind
     use grid,          only: cg
     use magboundaries, only: bnd_emf
     use mpisetup,      only: dt, xdim, ydim, zdim, has_dir
@@ -301,9 +301,9 @@ contains
       do i=cg%is, cg%ie
         vz=0.0
         if (jm == 0) then
-           vz = u(nvar%ion%imz,i,1,:) / u(nvar%ion%idn,i,1,:)
+           vz = u(flind%ion%imz,i,1,:) / u(flind%ion%idn,i,1,:)
         else
-           vz=(u(nvar%ion%imz,i,jm,:)+u(nvar%ion%imz,i,j,:))/(u(nvar%ion%idn,i,jm,:)+u(nvar%ion%idn,i,j,:))
+           vz=(u(flind%ion%imz,i,jm,:)+u(flind%ion%imz,i,j,:))/(u(flind%ion%idn,i,jm,:)+u(flind%ion%idn,i,j,:))
         endif
         vz(2:cg%nz-1)=(vz(1:cg%nz-2) + vz(3:cg%nz) + 2.0*vz(2:cg%nz-1))*0.25
         vz(1)  = vz(2)

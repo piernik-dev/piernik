@@ -109,67 +109,67 @@ contains
 
   end subroutine init_neutral
 
-   subroutine neutral_index(nvar)
+   subroutine neutral_index(flind)
       use diagnostics,  only: ma1d, my_allocate
       use types,        only: var_numbers
       implicit none
-      type(var_numbers), intent(inout) :: nvar
+      type(var_numbers), intent(inout) :: flind
 
-      nvar%neu%beg    = nvar%all + 1
+      flind%neu%beg    = flind%all + 1
 
-      idnn = nvar%all + 1
-      imxn = nvar%all + 2
-      imyn = nvar%all + 3
-      imzn = nvar%all + 4
+      idnn = flind%all + 1
+      imxn = flind%all + 2
+      imyn = flind%all + 3
+      imzn = flind%all + 4
 
-      nvar%neu%idn = idnn
-      nvar%neu%imx = imxn
-      nvar%neu%imy = imyn
-      nvar%neu%imz = imzn
+      flind%neu%idn = idnn
+      flind%neu%imx = imxn
+      flind%neu%imy = imyn
+      flind%neu%imz = imzn
 
-      nvar%neu%all  = 4
-      nvar%all      = imzn
+      flind%neu%all  = 4
+      flind%all      = imzn
 #ifndef ISO
       ienn          = imzn + 1
-      nvar%neu%ien  = ienn
-      nvar%all      = nvar%all + 1
-      nvar%neu%all  = nvar%neu%all +1
+      flind%neu%ien  = ienn
+      flind%all      = flind%all + 1
+      flind%neu%all  = flind%neu%all +1
 #endif /* !ISO */
 
-      ma1d = [nvar%neu%all]
-      call my_allocate(nvar%neu%iarr,       ma1d, "neu%iarr")
-      call my_allocate(nvar%neu%iarr_swpx,  ma1d, "neu%iarr_swpx")
-      call my_allocate(nvar%neu%iarr_swpy,  ma1d, "neu%iarr_swpy")
-      call my_allocate(nvar%neu%iarr_swpz,  ma1d, "neu%iarr_swpz")
+      ma1d = [flind%neu%all]
+      call my_allocate(flind%neu%iarr,       ma1d, "neu%iarr")
+      call my_allocate(flind%neu%iarr_swpx,  ma1d, "neu%iarr_swpx")
+      call my_allocate(flind%neu%iarr_swpy,  ma1d, "neu%iarr_swpy")
+      call my_allocate(flind%neu%iarr_swpz,  ma1d, "neu%iarr_swpz")
 
       !\deprecated repeated magic integers
-      nvar%neu%iarr(1:4)      = [idnn,imxn,imyn,imzn]
-      nvar%neu%iarr_swpx(1:4) = [idnn,imxn,imyn,imzn]
-      nvar%neu%iarr_swpy(1:4) = [idnn,imyn,imxn,imzn]
-      nvar%neu%iarr_swpz(1:4) = [idnn,imzn,imyn,imxn]
+      flind%neu%iarr(1:4)      = [idnn,imxn,imyn,imzn]
+      flind%neu%iarr_swpx(1:4) = [idnn,imxn,imyn,imzn]
+      flind%neu%iarr_swpy(1:4) = [idnn,imyn,imxn,imzn]
+      flind%neu%iarr_swpz(1:4) = [idnn,imzn,imyn,imxn]
 
 #ifndef ISO
-      nvar%neu%iarr(5)      = ienn
-      nvar%neu%iarr_swpx(5) = ienn
-      nvar%neu%iarr_swpy(5) = ienn
-      nvar%neu%iarr_swpz(5) = ienn
-      nvar%neu%has_energy   = .true.
+      flind%neu%iarr(5)      = ienn
+      flind%neu%iarr_swpx(5) = ienn
+      flind%neu%iarr_swpy(5) = ienn
+      flind%neu%iarr_swpz(5) = ienn
+      flind%neu%has_energy   = .true.
 
-      nvar%energ = nvar%energ + 1
+      flind%energ = flind%energ + 1
 #endif /* ISO */
 
-      nvar%neu%end    = nvar%all
-      nvar%components = nvar%components + 1
-      nvar%fluids     = nvar%fluids + 1
-      nvar%neu%pos    = nvar%components
-      if (selfgrav_neu)  nvar%fluids_sg = nvar%fluids_sg + 1
+      flind%neu%end    = flind%all
+      flind%components = flind%components + 1
+      flind%fluids     = flind%fluids + 1
+      flind%neu%pos    = flind%components
+      if (selfgrav_neu)  flind%fluids_sg = flind%fluids_sg + 1
 
-      nvar%neu%gam   = gamma_neu
-      nvar%neu%gam_1 = gamma_neu-1.0
-      nvar%neu%cs    = cs_iso_neu
-      nvar%neu%cs2   = cs_iso_neu**2
-      nvar%neu%tag   = "NEU"
-      nvar%neu%is_selfgrav = selfgrav_neu
+      flind%neu%gam   = gamma_neu
+      flind%neu%gam_1 = gamma_neu-1.0
+      flind%neu%cs    = cs_iso_neu
+      flind%neu%cs2   = cs_iso_neu**2
+      flind%neu%tag   = "NEU"
+      flind%neu%is_selfgrav = selfgrav_neu
 
    end subroutine neutral_index
 
