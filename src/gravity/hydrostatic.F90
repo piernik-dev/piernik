@@ -144,7 +144,7 @@ contains
 !>
 !! \brief Routine that has to offer a z-sweep of gravity potential with extended z-grid
 !! \deprecated probably now the routine should have different name than gparray which got from the commented part of code
-!! \warning in case of moving 'use types, only: axes'' behind use gravity there could be gcc(4.5) internal compiler error: in fold_convert_loc, at fold-const.c:2792
+!! \warning in case of moving 'use types, only: axes'' behind use gravity there could be gcc(4.5) internal compiler error: in fold_convert_loc, at fold-const.c:2792 (solved in >=gcc-4.6)
 !<
    subroutine get_gprofs_gparray(iia,jja)
 
