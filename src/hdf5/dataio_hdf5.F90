@@ -1703,7 +1703,7 @@ module dataio_hdf5
       character(len=cbuff_len), dimension(buf_len) :: ibuffer_name = ''
       character(len=cbuff_len), dimension(buf_len) :: rbuffer_name = ''
 
-      call MPI_REDUCE(local_magic_mass, magic_mass0, 1, MPI_DOUBLE_PRECISION, MPI_SUM, 0, comm, ierr)
+      call MPI_Reduce(local_magic_mass, magic_mass0, 1, MPI_DOUBLE_PRECISION, MPI_SUM, 0, comm, ierr)
       magic_mass       = magic_mass + magic_mass0
       local_magic_mass = 0.0
 

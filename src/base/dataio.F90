@@ -655,7 +655,7 @@ contains
       real, intent(in)                     :: factor
       real :: local, output
       local = sum(tab(:,:,:,:)) * factor
-      call MPI_ALLREDUCE(local, output, 1, MPI_DOUBLE_PRECISION, MPI_SUM, comm3d, ierr)
+      call MPI_Allreduce(local, output, 1, MPI_DOUBLE_PRECISION, MPI_SUM, comm3d, ierr)
    end function mpi_sum4d_and_multiply
 
    function mpi_sum3d_and_multiply(tab,factor) result(output)
@@ -666,7 +666,7 @@ contains
       real, intent(in)                   :: factor
       real :: local, output
       local = sum(tab(:,:,:)) * factor
-      call MPI_ALLREDUCE(local, output, 1, MPI_DOUBLE_PRECISION, MPI_SUM, comm3d, ierr)
+      call MPI_Allreduce(local, output, 1, MPI_DOUBLE_PRECISION, MPI_SUM, comm3d, ierr)
    end function mpi_sum3d_and_multiply
 !---------------------------------------------------------------------
 !>
