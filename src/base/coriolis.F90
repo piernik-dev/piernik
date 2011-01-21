@@ -27,13 +27,13 @@
 !
 #include "piernik.h"
 
-!<
-!! \brief Implementation of the Coriolis forces for rotating grid
 !>
+!! \brief Implementation of the Coriolis forces for rotating grid
+!! \todo Drop the CORIOLIS preprocessor symbol in favour of something more elegant if it does not incur too much overhead on rtvd.
+!<
 
 module coriolis
 ! pulled by CORIOLIS
-!> \todo Drop the CORIOLIS preprocessor symbol in favour of something more elegant if it does not incur too much overhead on rtvd.
 
    implicit none
 
@@ -45,9 +45,9 @@ module coriolis
 
 contains
 
-!<
-!! \brief Reset coriolis_omega and perform basic checks
 !>
+!! \brief Reset coriolis_omega and perform basic checks
+!<
 
    subroutine init_coriolis
 
