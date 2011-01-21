@@ -217,7 +217,7 @@ def qa_crude_write(lines,rname,store,fname):
       store.append(give_warn("!! crude write  ") + wtf(lines,f,rname,fname))
 
 def qa_magic_integers(lines,rname,store,fname):
-  for f in filter(magic_integer.search, lines):
+  for f in filter(remove_warn.match, filter(magic_integer.search, lines)):
     hits = np.where(lines == f)[0]
     if(len(hits) > 1):
       for i in hits:
