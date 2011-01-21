@@ -51,10 +51,12 @@ contains
 
    subroutine init_coriolis
 
-      use dataio_pub, only: die
+      use dataio_pub, only: die, code_progress, PIERNIK_INIT_BASE
       use grid,       only: geometry
 
       implicit none
+
+      if (code_progress < PIERNIK_INIT_BASE) call die("[coriolis:init_coriolis] grid not initialized.") ! this is a weak check, the real dependency is init_geometry at the moment
 
       if (omega_uninitialized) coriolis_omega = 0.
 

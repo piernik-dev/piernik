@@ -142,6 +142,7 @@ contains
       call my_allocate(nvar%neu%iarr_swpy,  ma1d, "neu%iarr_swpy")
       call my_allocate(nvar%neu%iarr_swpz,  ma1d, "neu%iarr_swpz")
 
+      !\deprecated repeated magic integers
       nvar%neu%iarr(1:4)      = [idnn,imxn,imyn,imzn]
       nvar%neu%iarr_swpx(1:4) = [idnn,imxn,imyn,imzn]
       nvar%neu%iarr_swpy(1:4) = [idnn,imyn,imxn,imzn]

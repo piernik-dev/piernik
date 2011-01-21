@@ -40,11 +40,13 @@ contains
    subroutine init_fluidboundaries
 
       use mpisetup,              only: bnd_xl, bnd_xr
-      use dataio_pub,            only: msg, warn
+      use dataio_pub,            only: msg, warn, die, code_progress, PIERNIK_INIT_MPI
       use fluidboundaries_funcs, only: bnd_null, bnd_xl_per, bnd_xl_ref, bnd_xl_out, bnd_xl_outd, bnd_xr_per, bnd_xr_ref, bnd_xr_out, bnd_xr_outd
       use fluidboundaries_pub,   only: user_bnd_xl, user_bnd_xr, func_bnd_xl, func_bnd_xr
 
       implicit none
+
+      if (code_progress < PIERNIK_INIT_MPI) call die("[fluidboundaries:init_fluidboundaries] MPI not initialized.") ! bnd_xl, bnd_xr
 
       select case (bnd_xl)
          case ('cor', 'inf', 'mpi', 'she', 'shef')

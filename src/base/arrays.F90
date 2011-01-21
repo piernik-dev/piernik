@@ -71,6 +71,7 @@ module arrays
    subroutine init_arrays(nvar)
 
       use diagnostics, only: ma3d, ma4d, my_allocate
+      use dataio_pub,  only: die, code_progress, PIERNIK_INIT_BASE
       use types,       only: var_numbers
       use grid,        only: cg
 #ifdef GRAV
@@ -80,6 +81,8 @@ module arrays
       implicit none
 
       type(var_numbers), intent(in) :: nvar !< fluid database; cannot use fluidindex::nvar here due to circular dependences in some setups
+
+      if (code_progress < PIERNIK_INIT_BASE) call die("[arrays:init_arrays] grid or fluids not initialized.")
 
       ma4d = [nvar%all, cg%nx, cg%ny, cg%nz]
       call my_allocate(u, ma4d, "u")

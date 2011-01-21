@@ -173,7 +173,8 @@ contains
       use arrays,                only: init_arrays
       use constants,             only: init_constants
       use dataio,                only: init_dataio, write_data
-      use dataio_pub,            only: nrestart, cwd, par_file, tmp_log_file, msg, printio, die, warn, printinfo, require_init_prob, problem_name, run_id, parse_cmdline
+      use dataio_pub,            only: nrestart, cwd, par_file, tmp_log_file, msg, printio, die, warn, printinfo, require_init_prob, problem_name, run_id, parse_cmdline, &
+           &                           code_progress, PIERNIK_INIT_MPI, PIERNIK_INIT_BASE, PIERNIK_INIT_ARRAYS, PIERNIK_INIT_IO_IC
       use diagnostics,           only: diagnose_arrays
       use fluidboundaries,       only: all_fluid_boundaries
       use fluidboundaries_pub,   only: init_fluidboundaries
@@ -225,39 +226,46 @@ contains
          close(3, status="delete")
       endif
 
+      ! First, we must initialize the communication (and things that do not depend on init_mpi if there are any)
       call init_mpi
+
+      code_progress = PIERNIK_INIT_MPI ! Now we can initialize grid and everything that depends at most on init_mpi. All calls prior to PIERNIK_INIT_BASE can be reshuffled when necessary
+      call init_grid
+
 #ifdef DEBUG
       call init_piernikdebug
 #endif /* DEBUG */
+
       call init_time_step
 
       call init_constants
-
-      call init_grid
 
       call init_fluidboundaries
 
       call init_fluids
 
-      call init_arrays(nvar)
+      code_progress = PIERNIK_INIT_BASE      ! Now we can initialize things that depend on all the above fundamental calls
 
-      call init_geometry
+      call init_arrays(nvar) ! depends on grid and fluids
+      code_progress = PIERNIK_INIT_ARRAYS    ! It looks that init_arrays can be delayed if necessary
 
-      call grid_mpi_boundaries_prep(nvar%all)
+      call init_geometry ! depends on grid
+
+      call grid_mpi_boundaries_prep(nvar%all) ! depends on grid and fluids
 
 #ifdef SHEAR
-      call init_shear
+      call init_shear ! depends on fluids
 #endif /* SHEAR */
 
 #ifdef RESISTIVE
-      call init_resistivity
+      call init_resistivity ! depends on grid
 #endif /* RESISTIVE */
 
 #ifdef GRAV
-      call init_grav
+      call init_grav ! depends on constants and arrays
 !> \deprecated It is only temporary solution, but grav_pot_3d must be called after init_prob due to csim2,c_si,alpha clash!!!
       if (associated(grav_pot_3d)) then
-         call grav_pot_3d
+         call grav_pot_3d ! depends on grav
          grav_pot_3d_called = .true.
       else
 #ifdef VERBOSE
@@ -266,22 +274,25 @@ contains
       endif
 #endif /* GRAV */
 
-      call init_interactions
+      call init_interactions ! can it be executed before PIERNIK_INIT_BASE ?
+
 #ifdef CORIOLIS
-      call init_coriolis
+      call init_coriolis ! depends on geometry
 #endif /* CORIOLIS */
+
 #ifdef SN_SRC
-      call init_snsources
+      call init_snsources ! depends on grid and fluids/cosmicrays
 #endif /* SN_SRC */
 
 #ifdef MULTIGRID
-      call init_multigrid
+      call init_multigrid ! depends on grid, geometry, constants and arrays
 #endif /* MULTIGRID */
 
-      ! Almost everything is initialized: do problem-related stuff here, except setting-up the initial conditions.
-      call read_problem_par
+      code_progress = PIERNIK_INIT_IO_IC       ! Almost everything is initialized: do problem-related stuff here, set-up I/O and create or read the initial conditions.
 
-      call init_dataio
+      call read_problem_par ! may depend on anything but init_dataio, \todo add checks against PIERNIK_INIT_IO_IC to all initproblem::read_problem_par
+
+      call init_dataio ! depends on constants, fluids (through dataio_hdf5), fluidboundaries, arrays, grid and shear (through magboundaries::bnd_b or fluidboundaries::bnd_u)
 
       if (master) then
          write(msg,'(4a)') "   Starting problem : ",trim(problem_name)," :: ",trim(run_id)
@@ -300,7 +311,7 @@ contains
             call printio(msg)
          endif
       else
-         call init_prob
+         call init_prob ! may depend on anything
          call all_fluid_boundaries !> \warning Never assume that init_prob set guardcells correctly
 #ifdef MAGNETIC
          call all_mag_boundaries
@@ -317,10 +328,12 @@ contains
 #endif /* GRAV */
          call write_data(output='all') ! moved from dataio::init_dataio
       endif
+
 #ifdef VERBOSE
-      call diagnose_arrays
+      call diagnose_arrays ! may depend on everything
 #endif /* VERBOSE */
-      call sanitize_smallx_checks
+
+      call sanitize_smallx_checks ! depends on init_prob || init_dataio/read_restart_hdf5
 
    end subroutine init_piernik
 

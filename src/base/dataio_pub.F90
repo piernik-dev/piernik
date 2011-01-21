@@ -84,9 +84,13 @@ module dataio_pub
 
    ! Simulation state
    integer, parameter :: PIERNIK_START       = 1                       ! before initialization
-   integer, parameter :: PIERNIK_INITIALIZED = PIERNIK_START       + 1 ! initialized, running
-   integer, parameter :: PIERNIK_FINISHED    = PIERNIK_INITIALIZED + 1
-   integer, parameter :: PIERNIK_CLEANUP     = PIERNIK_FINISHED    + 1
+   integer, parameter :: PIERNIK_INIT_MPI    = PIERNIK_START       + 1 ! initialized MPI
+   integer, parameter :: PIERNIK_INIT_BASE   = PIERNIK_INIT_MPI    + 1 ! initialized most fundamental modules that depend only on MPI: constants, grid, fluids, etc.
+   integer, parameter :: PIERNIK_INIT_ARRAYS = PIERNIK_INIT_BASE   + 1 ! initialized arrays
+   integer, parameter :: PIERNIK_INIT_IO_IC  = PIERNIK_INIT_ARRAYS + 1 ! initialized all physics
+   integer, parameter :: PIERNIK_INITIALIZED = PIERNIK_INIT_IO_IC  + 1 ! initialized I/O and IC, running
+   integer, parameter :: PIERNIK_FINISHED    = PIERNIK_INITIALIZED + 1 ! finished simulation
+   integer, parameter :: PIERNIK_CLEANUP     = PIERNIK_FINISHED    + 1 ! finished post-simulation computations and I/O
 
    real               :: last_hdf_time                  !< time in simulation of the last resent hdf file dump
    integer            :: code_progress                  !< rough estimate of code execution progress
@@ -152,7 +156,9 @@ module dataio_pub
 contains
 !-----------------------------------------------------------------------------
    subroutine parse_cmdline
+
       implicit none
+
       integer :: i
       logical :: skip_next
       character(len=8)            :: date   ! QA_WARN len defined by ISO standard

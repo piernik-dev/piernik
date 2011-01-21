@@ -82,7 +82,7 @@ module resistivity
    subroutine init_resistivity
 
       use dataio_pub,    only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml  ! QA_WARN required for diff_nml
-      use dataio_pub,    only: warn, die
+      use dataio_pub,    only: warn, die, code_progress, PIERNIK_INIT_BASE
       use grid,          only: cg
       use mpisetup,      only: rbuff, ibuff, ierr, buffer_dim, comm, master, slave, has_dir, zdim, xdim, ydim
       use mpi,           only: MPI_INTEGER, MPI_DOUBLE_PRECISION
@@ -90,6 +90,8 @@ module resistivity
       implicit none
 
       namelist /RESISTIVITY/ cfl_resist, eta_0, eta_1, eta_scale, j_crit, deint_max
+
+      if (code_progress < PIERNIK_INIT_BASE) call die("[arrays:init_arrays] grid not initialized.")
 
       cfl_resist  =  0.4
       eta_0       =  0.0

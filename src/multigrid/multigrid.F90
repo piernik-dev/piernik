@@ -93,7 +93,7 @@ contains
       use multigridhelpers,    only: mg_write_log, dirtyH, do_ascii_dump, dirty_debug, multidim_code_3D, &
            &                         aux_par_I0, aux_par_I1, aux_par_I2, aux_par_R0, aux_par_R1, aux_par_R2
       use multigridmpifuncs,   only: mpi_multigrid_prep
-      use dataio_pub,          only: die
+      use dataio_pub,          only: die, code_progress, PIERNIK_INIT_ARRAYS
       use dataio_pub,          only: msg, par_file, namelist_errh, compare_namelist, cmdl_nml  ! QA_WARN required for diff_nml
 #ifdef GRAV
       use multigrid_gravity,   only: init_multigrid_grav, init_multigrid_grav_post
@@ -112,6 +112,8 @@ contains
       namelist /MULTIGRID_SOLVER/ level_max, ord_prolong, ord_prolong_face, &
            &                      stdout, verbose_vcycle, do_ascii_dump, dirty_debug, multidim_code_3D, &
            &                      aux_par_I0, aux_par_I1, aux_par_I2, aux_par_R0, aux_par_R1, aux_par_R2
+
+      if (code_progress < PIERNIK_INIT_ARRAYS) call die("[multigrid:init_multigrid] grid, geometry, constants or arrays not initialized") ! This check is too weak (geometry), arrays are required only for multigrid_gravity
 
       if (.not.frun) call die("[multigrid:init_multigrid] Called more than once.")
       frun = .false.

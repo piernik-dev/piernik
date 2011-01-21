@@ -34,7 +34,9 @@
 !!
 !<
 module gridgeometry
+
    implicit none
+
    private
    public   :: gc, init_geometry, cleanup_geometry, set_geo_coeffs, geometry_source_terms
 
@@ -50,12 +52,16 @@ module gridgeometry
       !! \brief interface for routine setting grid coefficients
       !<
       subroutine set_gc(sweep,nvar,i1,i2)
+
          use types,         only: var_numbers
+
          implicit none
+
          character(len=*), intent(in)  :: sweep         !< direction (x, y or z) we are doing calculations for
          type(var_numbers), intent(in) :: nvar          !< \copydoc fluidindex::nvar
          integer, intent(in)           :: i1            !< coordinate of sweep in the 1st remaining direction
          integer, intent(in)           :: i2            !< coordinate of sweep in the 2st remaining direction
+
       end subroutine set_gc
 
       !>
@@ -64,25 +70,48 @@ module gridgeometry
       !! Currently, gsrc function returns accelerations
       !<
       function gsrc(u,p,sweep) result(res)
+
          implicit none
+
          character(len=*), intent(in)           :: sweep !< direction (x, y or z) we are doing calculations for
          real, dimension(:,:), intent(in)       :: u     !< sweep of fluid conservative variables
          real, dimension(:,:), intent(in)       :: p     !< sweep of pressure
          real, dimension(size(p,1),size(p,2))   :: res   !< output sweep of accelerations
+
       end function gsrc
+
    end interface
 
    procedure(set_gc), pointer :: set_geo_coeffs          !< generic pointer for routine setting geometrical coefficients
    procedure(gsrc),   pointer :: geometry_source_terms   !< generic pointer for routine calculating source terms
+
 contains
 !>
-!! \brief Generic routine for module initialization
+!! \brief Routine for module initialization
+!!
+!! \details Routine associates gridgeometry::set_geo_coeffs() and gridgeometry::geometry_source_terms() pointers.
 !<
    subroutine init_geometry
-      use grid, only: geometry
+
+      use dataio_pub, only: msg, die, code_progress, PIERNIK_INIT_BASE
+      use grid,       only: geometry
+
       implicit none
 
-      call set_geometry(geometry)
+      if (code_progress < PIERNIK_INIT_BASE) call die("[gridgeometry:init_geometry] grid not initialized")
+
+      select case (geometry)
+         case ("cartesian")
+            set_geo_coeffs          => set_cart_coeffs
+            geometry_source_terms   => cart_geometry_source_terms
+         case ("cylindrical")
+            set_geo_coeffs          => set_cyl_coeffs
+            geometry_source_terms   => cyl_geometry_source_terms
+         case default
+            write(msg,'(2a)') "[gridgeometry:init_geometry] Unknown system of coordinates ", geometry
+            call die(msg)
+      end select
+
    end subroutine init_geometry
 
 !>
@@ -99,28 +128,6 @@ contains
 
    end subroutine cleanup_geometry
 
-!>
-!! \brief Routine associating generic pointers
-!!
-!! Routine associates gridgeometry::set_geo_coeffs() and gridgeometry::geometry_source_terms()
-!<
-   subroutine set_geometry(geometry)
-      use dataio_pub,    only: die, msg
-      implicit none
-      character(len=*), intent(in) :: geometry  !< string denoting geometry, "cartesian" or "cylindrical"
-
-      select case (geometry)
-         case ("cartesian")
-            set_geo_coeffs          => set_cart_coeffs
-            geometry_source_terms   => cart_geometry_source_terms
-         case ("cylindrical")
-            set_geo_coeffs          => set_cyl_coeffs
-            geometry_source_terms   => cyl_geometry_source_terms
-         case default
-            write(msg,'(2a)') "[gridgeometry:set_geometry] Unknown system of coordinates ", geometry
-            call die(msg)
-      end select
-   end subroutine set_geometry
 !>
 !! \brief Routine allocating auxiliary arrays
 !!

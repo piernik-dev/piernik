@@ -77,7 +77,7 @@ module grid
    subroutine init_grid
 
       use dataio_pub, only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml  ! QA_WARN required for diff_nml
-      use dataio_pub, only: printinfo, die
+      use dataio_pub, only: printinfo, die, code_progress, PIERNIK_INIT_MPI
       use mpisetup,   only: ierr, rbuff, cbuff, master, slave, buffer_dim, psize, pxsize, pysize, pzsize, pcoords, comm, &
            &                has_dir, xdim, ydim, zdim, ndims, nxd, nyd, nzd, nb
       use mpi,        only: MPI_DOUBLE_PRECISION, MPI_CHARACTER
@@ -88,6 +88,8 @@ module grid
       real    :: xmin, xmax, ymin, ymax, zmin, zmax
 
       namelist /DOMAIN_LIMITS/ xmin, xmax, ymin, ymax, zmin, zmax, geometry
+
+      if (code_progress < PIERNIK_INIT_MPI) call die("[grid:init_grid] MPI not initialized.")
 
 #ifdef VERBOSE
       call printinfo("[grid:init_grid]: commencing...")
@@ -334,6 +336,7 @@ module grid
 
    subroutine grid_mpi_boundaries_prep(numfluids)
 
+      use dataio_pub, only: die, code_progress, PIERNIK_INIT_BASE
       use mpi,        only: MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION
       use mpisetup,   only: ierr, xdim, ydim, zdim, has_dir, ndims
 
@@ -347,6 +350,8 @@ module grid
       integer, parameter :: dim4 = ndims +1 !< dimensionality of compund arrays: (q, x, y, z)
       integer, parameter :: dim3 = ndims    !< dimensionality of simple arrays: (x, y, z)
       integer, parameter :: NOT_EXIST = -1
+
+      if (code_progress < PIERNIK_INIT_BASE) call die("[grid:grid_mpi_boundaries_prep] grid or fluids not initialized.")
 
       ord = MPI_ORDER_FORTRAN
       old = MPI_DOUBLE_PRECISION

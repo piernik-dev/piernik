@@ -66,12 +66,15 @@
 !! @n @b SCALED - a suit of %constants without physical units. This is automatically set while neither of the former systems is chosen.
 !<
 module constants
+
    use mpisetup, only: cbuff_len
+
    implicit none
-   character(len=cbuff_len) :: s_len_u, s_time_u, s_mass_u
 
    public                                                ! QA_WARN no secrets are kept here
    private :: au_cm, pc_au, pc_cm, msun_g, mjup_g, day_s, yr_day, yr_s, newton_cgs, kB_cgs  ! QA_WARN don't use those vars outside constants!
+
+   character(len=cbuff_len) :: s_len_u, s_time_u, s_mass_u
 
    real, parameter :: one        = 1.0                   !< one
    real, parameter :: half       = 0.5                   !< a half
@@ -172,10 +175,11 @@ contains
 !! \n \n
 !<
    subroutine init_constants
+
       use mpisetup,   only: cbuff, rbuff, buffer_dim, comm, ierr, master, slave
       use mpi,        only: MPI_CHARACTER, MPI_DOUBLE_PRECISION
       use dataio_pub, only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml  ! QA_WARN required for diff_nml
-      use dataio_pub, only: warn, printinfo, msg, die
+      use dataio_pub, only: warn, printinfo, msg, die, code_progress, PIERNIK_INIT_MPI
 
       implicit none
 
@@ -184,6 +188,8 @@ contains
       logical                  :: to_stdout
 
       namelist /CONSTANTS/ constants_set, miu0, kelvin, cm, gram, sek
+
+      if (code_progress < PIERNIK_INIT_MPI) call die("[constants:init_constants] MPI not initialized.")
 
       constants_set='scaled'
 

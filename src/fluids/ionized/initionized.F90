@@ -148,6 +148,7 @@ contains
       call my_allocate(nvar%ion%iarr_swpy,  ma1d, "ion%iarr_swpy")
       call my_allocate(nvar%ion%iarr_swpz,  ma1d, "ion%iarr_swpz")
 
+      !\deprecated repeated magic integers (multifile: initneutral)
       nvar%ion%iarr(1:4)      = [idni,imxi,imyi,imzi]
       nvar%ion%iarr_swpx(1:4) = [idni,imxi,imyi,imzi]
       nvar%ion%iarr_swpy(1:4) = [idni,imyi,imxi,imzi]

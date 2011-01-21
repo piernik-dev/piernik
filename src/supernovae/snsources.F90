@@ -72,12 +72,15 @@ module snsources
    subroutine init_snsources
 
       use dataio_pub,     only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml                  ! QA_WARN required for diff_nml
+      use dataio_pub,     only: die, code_progress, PIERNIK_INIT_BASE
       use mpi,            only: MPI_DOUBLE_PRECISION
       use mpisetup,       only: rbuff, buffer_dim, comm, ierr, master, slave, xdim, ydim, has_dir
       use initcosmicrays, only: cr_eff
       use grid,           only: cg
 
       implicit none
+
+      if (code_progress < PIERNIK_INIT_BASE) call die("[snsources:init_snsources] grid or fluids/cosmicrays not initialized.")
 
 !      amp_ecr_sn = 0.0    !> \todo set sane default values
       f_sn       = 0.0    !

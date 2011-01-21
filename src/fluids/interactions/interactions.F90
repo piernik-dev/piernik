@@ -80,12 +80,15 @@ contains
    subroutine init_interactions
 
       use dataio_pub,    only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml      ! QA_WARN required for diff_nml
+      use dataio_pub,    only: die, code_progress, PIERNIK_INIT_MPI
       use mpisetup,      only: master, slave, lbuff, rbuff, buffer_dim, ierr, comm!, grace_period_passed
       use mpi,           only: MPI_DOUBLE_PRECISION, MPI_LOGICAL
 
       implicit none
 
       namelist /INTERACTIONS/ collision_factor, cfl_interact, dragc_gas_dust, has_interactions
+
+      if (code_progress < PIERNIK_INIT_MPI) call die("[interactions:init_interactions] MPI not initialized.")
 
       collision_factor  = 0.0
       cfl_interact      = 0.8

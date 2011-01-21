@@ -140,7 +140,7 @@ module gravity
 
       use arrays,        only: gpot
       use dataio_pub,    only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml    ! QA_WARN required for diff_nml
-      use dataio_pub,    only: warn
+      use dataio_pub,    only: warn, die, code_progress, PIERNIK_INIT_ARRAYS
       use mpisetup,      only: ibuff, rbuff, cbuff, cbuff_len, buffer_dim, comm, ierr, master, slave, lbuff
       use mpi,           only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL, MPI_CHARACTER
       use constants,     only: newtong
@@ -152,6 +152,8 @@ module gravity
 
       namelist /GRAVITY/ g_dir, r_gc, ptmass, ptm_x, ptm_y, ptm_z, r_smooth, external_gp, ptmass2, ptm2_x, &
                 nsub, tune_zeq, tune_zeq_bnd, h_grav, r_grav, n_gravr, n_gravh, user_grav, gprofs_target
+
+      if (code_progress < PIERNIK_INIT_ARRAYS) call die("[gravity:init_grav] constants or arrays not initialized.")
 
 #ifdef VERBOSE
       if (master) call warn("[gravity:init_grav] Commencing gravity module initialization")

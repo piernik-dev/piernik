@@ -30,9 +30,12 @@
 
 module piernikdebug
 ! pulled by DEBUG
+
    implicit none
+
    private
    public :: init_piernikdebug, has_const_dt, constant_dt, force_hdf5_dump, force_log_dump
+
    real, protected    :: constant_dt               !< value of timestep regardless of fluid state
    logical, protected :: has_const_dt              !< true if piernikdebug::constant_dt > 0
    logical, protected :: force_hdf5_dump           !< dump hdf5 every sweep regardless of dataio_pub::dt_hdf
@@ -43,10 +46,15 @@ module piernikdebug
 contains
 
    subroutine init_piernikdebug
+
       use mpisetup,              only: master, slave, comm, ierr, buffer_dim, rbuff, lbuff
       use mpi,                   only: MPI_DOUBLE_PRECISION, MPI_LOGICAL
       use dataio_pub,            only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml  ! QA_WARN required for diff_nml
+      use dataio_pub,            only: code_progress, PIERNIK_INIT_MPI
+
       implicit none
+
+      if (code_progress < PIERNIK_INIT_MPI) call die("[debug:init_piernikdebug] MPI not initialized.")
 
       constant_dt = 0.0
 

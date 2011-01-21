@@ -51,10 +51,12 @@ contains
 
    subroutine init_time_step
 
-      use dataio_pub, only: msg, die, warn
+      use dataio_pub, only: msg, die, warn, code_progress, PIERNIK_INIT_MPI
       use mpisetup,   only: cflcontrol
 
       implicit none
+
+      if (code_progress < PIERNIK_INIT_MPI) call die("[grid:init_grid] MPI not initialized.") ! cflcontrol
 
       if (associated(cfl_manager)) call die("[timestep:init_time_step] cfl_manager already associated.")
       select case (cflcontrol)

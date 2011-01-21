@@ -111,6 +111,7 @@ module initfluids
       use fluidindex,      only: fluid_index
       use fluxes,          only: set_limiter, init_fluxes
       use mpisetup,        only: limiter
+      use dataio_pub,      only: die, code_progress, PIERNIK_INIT_MPI
 #ifdef VERBOSE
       use dataio_pub,      only: printinfo
 #endif /* VERBOSE */
@@ -131,6 +132,8 @@ module initfluids
 #endif /* COSM_RAYS */
 
       implicit none
+
+      if (code_progress < PIERNIK_INIT_MPI) call die("[initfluids:init_fluids] MPI not initialized.") ! limiter, init_ionized, init_neutral, init_dust, init_cosmicrays
 
 #ifdef VERBOSE
       call printinfo("[initfluids:init_fluids]: commencing...")
