@@ -27,11 +27,11 @@
 !
 #include "piernik.h"
 
-!<
+!>
 !! \brief This module contains problem variables intended to use across the code.
 !!
 !! \details It is strongly discouraged to use this feature for purposes other than debugging.
-!>
+!<
 
 module problem_pub
 
