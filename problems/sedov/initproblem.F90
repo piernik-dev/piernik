@@ -234,7 +234,7 @@ contains
             call pop_vector(tsl_names, len(tsl_names(1)), ["foobar_sedov"])    !   add to header
          else
             ! do mpi stuff here...
-            call MPI_ALLREDUCE(real(proc,8), output, 1, MPI_DOUBLE_PRECISION, MPI_SUM, comm3d, ierr)
+            call MPI_Allreduce(real(proc,8), output, 1, MPI_DOUBLE_PRECISION, MPI_SUM, comm3d, ierr)
             if (master) call pop_vector(user_vars,[output])                 !   pop value
          endif
          return
