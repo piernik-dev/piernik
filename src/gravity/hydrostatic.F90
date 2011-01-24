@@ -29,6 +29,10 @@
 
 !>
 !! \brief (DW) Module containing a subroutine that arranges %hydrostatic equilibrium in the vertical (z) direction
+!! \details There are two routines to call to set hydrostatic equilibrium:
+!! @n hydrostatic_zeq_coldens that fixes column density,
+!! @n hydrostatic_zeq_densmid that fixes density value in the midplane.
+!! @n Additionally there is also outh_bnd routine to keep hydrostatic equilibrium on the boundaries.
 !<
 module hydrostatic
 ! pulled by GRAV
@@ -49,6 +53,69 @@ module hydrostatic
 contains
 #ifdef GRAV
 !>
+!! \brief Routine that establishes hydrostatic equilibrium for fixed column density
+!! \details Routine calls the routine of the case of fixed plane density value and use the correction for column density.
+!! To properly use this routine it is important to make sure that get_gprofs pointer has been associated. See details of start_hydrostatic routine.
+!! \param iia x-coordinate of z-column
+!! \param jja y-coordinate of z-column
+!! \param coldens column density value for given x and y coordinates
+!! \csim2 sqare of sound velocity
+!<
+   subroutine hydrostatic_zeq_coldens(iia,jja,coldens,csim2)
+
+      use arrays,   only: dprof
+      use grid,     only: cg
+
+      implicit none
+
+      integer, intent(in)   :: iia, jja
+      real,    intent(in)   :: coldens, csim2
+      real                  :: sdprof, sd
+
+      sdprof = 1.0
+      call hydrostatic_zeq_densmid(iia,jja,sdprof,csim2,sd)
+      sdprof = sd * cg%dz
+      dprof = dprof * coldens / sdprof
+
+   end subroutine hydrostatic_zeq_coldens
+
+!>
+!! \brief Routne that establishes hydrostatic equilibrium for fixed plane density value
+!! \detailsTo properly use this routine it is important to make sure that get_gprofs pointer has been associated. See details of start_hydrostatic routine.
+!! \param iia x-coordinate of z-column
+!! \param jja y-coordinate of z-column
+!! \param d0 plane density value for given x and y coordinates
+!! \csim2 sqare of sound velocity
+!! \param sd optional variable to give a sum of dprofs array from hydrostatic_main routine
+!<
+   subroutine hydrostatic_zeq_densmid(iia,jja,d0,csim2,sd)
+
+      use arrays,     only: dprof
+      use constants,  only: small
+      use dataio_pub, only: die
+
+      implicit none
+
+      integer, intent(in) :: iia, jja
+      real,    intent(in) :: d0, csim2
+      real,    intent(inout), optional :: sd
+
+      if (d0 <= small) then
+         call die("[hydrostatic:hydrostatic_zeq_densmid] d0 must be /= 0")
+      endif
+#ifndef NEW_HYDROSTATIC
+      dmid = d0
+#endif /* !NEW_HYDROSTATIC */
+
+      call start_hydrostatic(iia,jja,csim2,sd)
+#ifdef NEW_HYDROSTATIC
+      dprof = dprof * d0
+#endif /* NEW_HYDROSTATIC */
+      call finish_hydrostatic
+
+   end subroutine hydrostatic_zeq_densmid
+
+!>
 !! \brief Routine that arranges %hydrostatic equilibrium in the vertical (z) direction
 !<
    subroutine hydrostatic_main(sd)
@@ -63,37 +130,44 @@ contains
       real, intent(out), optional     :: sd
       real, allocatable, dimension(:) :: dprofs
       integer :: ksub, ksmid, k
-#ifndef NEW_HYDROSTATIC
       real    :: factor
-#endif /* !NEW_HYDROSTATIC */
 
       allocate(dprofs(nstot))
 
       ksmid = 0
+#ifdef NEW_HYDROSTATIC
       do ksub=1, nstot
-         if (zs(ksub) < 0.0) ksmid = ksub      ! the midplane is in between
-      enddo                                  ! ksmid and ksmid+1
+         if (gprofs(ksub) >= 0.0) ksmid = ksub                          ! generally the midplane is where gravity is 0
+      enddo
+      if (abs(gprofs(ksmid-1)) < abs(gprofs(ksmid))) ksmid = ksmid - 1  ! practically we want the least gravity absolute value
+#else /* !NEW_HYDROSTATIC */
+      do ksub=1, nstot
+         if (zs(ksub) < 0.0) ksmid = ksub                               ! the midplane is in between ksmid and ksmid+1
+      enddo
+#endif /* !NEW_HYDROSTATIC */
       if (ksmid == 0) call die("[hydrostatic:hydrostatic_main] ksmid not set")
 
 #ifdef NEW_HYDROSTATIC
       if (ksmid < nstot) then
          dprofs(ksmid+1) = 1.0
          do ksub=ksmid+1, nstot-1
-            dprofs(ksub+1) = dprofs(ksub)*(1.0 + 0.5*(gprofs(ksub)+gprofs(ksub+1))*dzs)
+            factor = (4.0 + (gprofs(ksub)+gprofs(ksub+1)))/(4.0 - (gprofs(ksub)+gprofs(ksub+1)))
+            dprofs(ksub+1) = factor * dprofs(ksub)
          enddo
       endif
 
       if (ksmid > 1) then
          dprofs(ksmid) = 1.0
          do ksub=ksmid, 2, -1
-            dprofs(ksub-1) = dprofs(ksub)*(1.0 - 0.5*(gprofs(ksub)+gprofs(ksub-1))*dzs)
+            factor = (4.0 - (gprofs(ksub)+gprofs(ksub-1)))/(4.0 + (gprofs(ksub)+gprofs(ksub-1)))
+            dprofs(ksub-1) = factor * dprofs(ksub)
          enddo
       endif
 #else /* !NEW_HYDROSTATIC */
       if (ksmid < nstot) then
          dprofs(ksmid+1) = dmid
          do ksub=ksmid+1, nstot-1
-            factor = (2.0 + dzs*gprofs(ksub))/(2.0 - dzs*gprofs(ksub))
+            factor = (2.0 + gprofs(ksub))/(2.0 - gprofs(ksub))
             dprofs(ksub+1) = factor * dprofs(ksub)
          enddo
       endif
@@ -101,7 +175,7 @@ contains
       if (ksmid > 1) then
          dprofs(ksmid) = dmid
          do ksub=ksmid, 2, -1
-            factor = (2.0 - dzs*gprofs(ksub))/(2.0 + dzs*gprofs(ksub))
+            factor = (2.0 - gprofs(ksub))/(2.0 + gprofs(ksub))
             dprofs(ksub-1) = factor * dprofs(ksub)
          enddo
       endif
@@ -186,51 +260,15 @@ contains
       if (allocated(ax%z))  deallocate(ax%z)
    end subroutine get_gprofs_gparray
 
-   subroutine hydrostatic_zeq_coldens(iia,jja,coldens,csim2)
-
-      use arrays,   only: dprof
-      use grid,     only: cg
-
-      implicit none
-
-      integer, intent(in)   :: iia, jja
-      real,    intent(in)   :: coldens, csim2
-      real                  :: sdprof, sd
-
-      sdprof = 1.0
-      call hydrostatic_zeq_densmid(iia,jja,sdprof,csim2,sd)
-      sdprof = sd * cg%dz
-      dprof = dprof * coldens / sdprof
-
-   end subroutine hydrostatic_zeq_coldens
-
-   subroutine hydrostatic_zeq_densmid(iia,jja,d0,csim2,sd)
-
-      use arrays,     only: dprof
-      use constants,  only: small
-      use dataio_pub, only: die
-
-      implicit none
-
-      integer, intent(in) :: iia, jja
-      real,    intent(in) :: d0, csim2
-      real,    intent(inout), optional :: sd
-
-      if (d0 <= small) then
-         call die("[hydrostatic:hydrostatic_zeq_densmid] d0 must be /= 0")
-      endif
-#ifndef NEW_HYDROSTATIC
-      dmid = d0
-#endif /* !NEW_HYDROSTATIC */
-
-      call start_hydrostatic(iia,jja,csim2,sd)
-#ifdef NEW_HYDROSTATIC
-      dprof = dprof * d0
-#endif /* NEW_HYDROSTATIC */
-      call finish_hydrostatic
-
-   end subroutine hydrostatic_zeq_densmid
-
+!>
+!! \brief Routine that prepares data for constructing hydrostatic equilibrium by hydrostatic_main routine
+!! \details It is important to have get_gprofs pointer associated to a proper routine that gives back the column of nsub*nzt elements of gravitational acceleration in z direction. In the most common cases the gprofs_target parameter from GRAVITY namelist may be used. When it is set to 'accel' or 'gparr' the pointer is associated to get_gprofs_accel or get_gprofs_gparray routines, respectively.
+!! \annotate After calling this routine gprofs is multiplied by dzs/csim2 which are assumed to be constant. This is done for optimizing the hydrostatic_main routine.
+!! \param iia x-coordinate of z-column
+!! \param jja y-coordinate of z-column
+!! \csim2 sqare of sound velocity
+!! \param sd optional variable to give a sum of dprofs array from hydrostatic_main routine
+!<
    subroutine start_hydrostatic(iia,jja,csim2,sd)
 
       use dataio_pub, only: die
@@ -262,7 +300,7 @@ contains
          zs(ksub) = cg%zmin-cg%nb*cg%dl(zdim) + dzs/2 + (ksub-1)*dzs
       enddo
       call get_gprofs(iia,jja)
-      gprofs = gprofs / csim2
+      gprofs = gprofs / csim2 *dzs
       call hydrostatic_main(sd)
 
    end subroutine start_hydrostatic
