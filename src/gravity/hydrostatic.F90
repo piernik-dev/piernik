@@ -140,10 +140,12 @@ contains
          if (gprofs(ksub) >= 0.0) ksmid = ksub                          ! generally the midplane is where gravity is 0
       enddo
       if (abs(gprofs(ksmid-1)) < abs(gprofs(ksmid))) ksmid = ksmid - 1  ! practically we want the least gravity absolute value
+      ksmid = minloc(abs(gprofs),1)
 #else /* !NEW_HYDROSTATIC */
       do ksub=1, nstot
          if (zs(ksub) < 0.0) ksmid = ksub                               ! the midplane is in between ksmid and ksmid+1
       enddo
+      ksmid = maxloc(zs,1,mask=(zs < 0.0))
 #endif /* !NEW_HYDROSTATIC */
       if (ksmid == 0) call die("[hydrostatic:hydrostatic_main] ksmid not set")
 
