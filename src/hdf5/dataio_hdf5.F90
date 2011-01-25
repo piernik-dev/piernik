@@ -637,12 +637,13 @@ module dataio_hdf5
    end subroutine write_plot
 
    subroutine write_plot_hdf5(var,plane,nimg)
+
       use arrays,        only: u
       use dataio_pub,    only: vizit, fmin, fmax, cwdlen, log_file, msg, varlen, die, warn, user_plt_hdf5, planelen
       use grid,          only: cg
       use hdf5,          only: HID_T, HSIZE_T, SIZE_T, H5F_ACC_RDWR_F, h5fopen_f, h5gopen_f, h5gclose_f, h5fclose_f
       use h5lt,          only: h5ltmake_dataset_double_f, h5ltset_attribute_double_f
-      use mpisetup,      only: comm3d, ierr, pxsize, pysize, pzsize, t, pcoords, xdim, ydim, zdim, has_dir
+      use mpisetup,      only: comm3d, ierr, pxsize, pysize, pzsize, t, pcoords, xdim, ydim, zdim, has_dir, dom
       use mpi,           only: MPI_CHARACTER, MPI_DOUBLE_PRECISION
 #ifdef PGPLOT
       use viz,           only: draw_me
@@ -709,9 +710,9 @@ module dataio_hdf5
             remain = (/.true.,.false.,.true./)
             pij    = "xz_"
             nib    = cg%nxb
-            nid    = cg%nxb*pxsize
+            nid    = dom%nxd
             njb    = cg%nzb
-            njd    = cg%nzb*pzsize
+            njd    = dom%nzd
             nkb    = cg%nyb
             pisize = pxsize
             pjsize = pzsize
@@ -724,9 +725,9 @@ module dataio_hdf5
             remain = (/.true.,.true.,.false./)
             pij    = "xy_"
             nib    = cg%nxb
-            nid    = cg%nxb*pxsize
+            nid    = dom%nxd
             njb    = cg%nyb
-            njd    = cg%nyb*pysize
+            njd    = dom%nyd
             nkb    = cg%nzb
             pisize = pxsize
             pjsize = pysize
@@ -813,7 +814,7 @@ module dataio_hdf5
            &                   h5pcreate_f, h5pclose_f, h5pset_fapl_mpio_f, h5pset_chunk_f, h5pset_dxpl_mpio_f, &
            &                   h5screate_simple_f, h5sclose_f, h5sselect_hyperslab_f
       use list_hdf5,     only: problem_write_restart
-      use mpisetup,      only: pcoords, pxsize, pysize, pzsize, comm3d, comm, info, ierr, master, nstep
+      use mpisetup,      only: pcoords, comm3d, comm, info, ierr, master, nstep, dom
       use mpi,           only: MPI_CHARACTER
       use types,         only: hdf
 #ifdef ISO_LOCAL
@@ -864,7 +865,7 @@ module dataio_hdf5
       !----------------------------------------------------------------------------------
       !  WRITE FLUID VARIABLES
       !
-      dimsf = [nu, cg%nxb*pxsize, cg%nyb*pysize, cg%nzb*pzsize] ! Dataset dimensions
+      dimsf = [nu, dom%nxd, dom%nyd, dom%nzd] ! Dataset dimensions
       dimsfi = dimsf
       chunk_dims = [nu, cg%nxb, cg%nyb, cg%nzb]                    ! Chunks dimensions
 
@@ -907,7 +908,7 @@ module dataio_hdf5
       !----------------------------------------------------------------------------------
       !  WRITE MAG VARIABLES
       !
-      dimsf = [3, cg%nxb*pxsize, cg%nyb*pysize, cg%nzb*pzsize] ! Dataset dimensions
+      dimsf = [3, dom%nxd, dom%nyd, dom%nzd] ! Dataset dimensions
       dimsfi = dimsf
       chunk_dims = [3, cg%nxb, cg%nyb, cg%nzb]                 ! Chunks dimensions
 
@@ -961,7 +962,7 @@ module dataio_hdf5
       !----------------------------------------------------------------------------------
       !  WRITE X Axis
       !
-      dimsf  = [cg%nxb*pxsize] ! Dataset dimensions
+      dimsf  = [dom%nxd] ! Dataset dimensions
       dimsfi = dimsf
       chunk_dims = [cg%nxb]    ! Chunks dimensions
 
@@ -1003,7 +1004,7 @@ module dataio_hdf5
       !----------------------------------------------------------------------------------
       !  WRITE Y Axis
       !
-      dimsf  = [cg%nyb*pysize] ! Dataset dimensions
+      dimsf  = [dom%nyd] ! Dataset dimensions
       dimsfi = dimsf
       chunk_dims = [cg%nyb]    ! Chunks dimensions
 
@@ -1045,7 +1046,7 @@ module dataio_hdf5
       !----------------------------------------------------------------------------------
       !  WRITE Z Axis
       !
-      dimsf  = [cg%nzb*pzsize] ! Dataset dimensions
+      dimsf  = [dom%nzd] ! Dataset dimensions
       dimsfi = dimsf
       chunk_dims = [cg%nzb]    ! Chunks dimensions
 
@@ -1101,13 +1102,16 @@ module dataio_hdf5
    end subroutine write_restart_hdf5
 
    subroutine write_3darr_to_restart(tab,file_id,dname,nx,ny,nz)
+
       use hdf5,        only: HID_T, HSIZE_T, HSSIZE_T, H5P_DATASET_CREATE_F, H5S_SELECT_SET_F, &
            &                 H5P_DATASET_XFER_F, H5FD_MPIO_INDEPENDENT_F, H5T_NATIVE_DOUBLE, &
            &                 h5dcreate_f, h5dwrite_f, h5dclose_f, h5dget_space_f, &
            &                 h5pcreate_f, h5pset_chunk_f, h5pset_dxpl_mpio_f, &
            &                 h5screate_simple_f, h5sclose_f, h5sselect_hyperslab_f
       use mpisetup,    only: pcoords, pxsize, pysize, pzsize
+
       implicit none
+
       integer, intent(in)                      :: nx,ny,nz
       real, dimension(nx,ny,nz), intent(in)    :: tab
       integer(HID_T), intent(in)               :: file_id       !> File identifier
@@ -1181,14 +1185,16 @@ module dataio_hdf5
    end subroutine write_3darr_to_restart
 
    subroutine read_3darr_from_restart(file_id,dname,p3d,nx,ny,nz)
+
       use hdf5,         only: HID_T, HSIZE_T, HSSIZE_T, SIZE_T, H5T_NATIVE_DOUBLE, &
-                              H5S_SELECT_SET_F, H5FD_MPIO_INDEPENDENT_F, H5P_DATASET_XFER_F, &
-                              h5pcreate_f, h5pclose_f, h5screate_simple_f, h5dopen_f, &
-                              h5dget_space_f, h5sget_simple_extent_ndims_f, h5dget_create_plist_f, h5pget_chunk_f, &
-                              h5sselect_hyperslab_f, h5dread_f, h5sclose_f, h5pset_dxpl_mpio_f, h5dclose_f
+           &                  H5S_SELECT_SET_F, H5FD_MPIO_INDEPENDENT_F, H5P_DATASET_XFER_F, &
+           &                  h5pcreate_f, h5pclose_f, h5screate_simple_f, h5dopen_f, &
+           &                  h5dget_space_f, h5sget_simple_extent_ndims_f, h5dget_create_plist_f, h5pget_chunk_f, &
+           &                  h5sselect_hyperslab_f, h5dread_f, h5sclose_f, h5pset_dxpl_mpio_f, h5dclose_f
       use mpisetup,     only: pcoords, pxsize, pysize, pzsize
 
       implicit none
+
       integer, intent(in)                  :: nx,ny,nz
       real, dimension(:,:,:), pointer      :: p3d
       integer(HID_T), intent(in)           :: file_id       ! File identifier
@@ -1273,7 +1279,7 @@ module dataio_hdf5
                                h5screate_simple_f, h5fclose_f, h5close_f
       use h5lt,          only: h5ltget_attribute_double_f, h5ltget_attribute_int_f, h5ltget_attribute_string_f
       use list_hdf5,     only: problem_read_restart
-      use mpisetup,      only: comm, ierr, pcoords, pxsize, pysize, pzsize, magic_mass, master, t, info, comm3d, dt, cbuff_len
+      use mpisetup,      only: comm, ierr, pcoords, magic_mass, master, t, info, comm3d, dt, cbuff_len, dom
       use mpi,           only: MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION
       use types,         only: hdf, domlen, idlen
 #ifdef ISO_LOCAL
@@ -1347,7 +1353,7 @@ module dataio_hdf5
       rank = 4
       allocate(dimsf(rank), dimsfi(rank), chunk_dims(rank), old_chunk(rank))
       allocate(block(rank), offset(rank), count(rank), stride(rank))
-      dimsf = [nu, cg%nxb*pxsize, cg%nyb*pysize, cg%nzb*pzsize] ! Dataset dimensions
+      dimsf = [nu, dom%nxd, dom%nyd, dom%nzd] ! Dataset dimensions
       dimsfi = dimsf
       chunk_dims = [nu, cg%nxb, cg%nyb, cg%nzb]
       if (.not.associated(p4d)) p4d => u(:,cg%is:cg%ie,cg%js:cg%je,cg%ks:cg%ke)
@@ -1389,7 +1395,7 @@ module dataio_hdf5
       !----------------------------------------------------------------------------------
       !  READ MAG VARIABLES
       !
-      dimsf = [3, cg%nxb*pxsize, cg%nyb*pysize, cg%nzb*pzsize] ! Dataset dimensions
+      dimsf = [3, dom%nxd, dom%nyd, dom%nzd] ! Dataset dimensions
       dimsfi = dimsf
       chunk_dims = [3, cg%nxb, cg%nyb, cg%nzb]
       if (.not.associated(p4d)) p4d => b(:,cg%is:cg%ie,cg%js:cg%je,cg%ks:cg%ke)
@@ -1584,10 +1590,10 @@ module dataio_hdf5
       use dataio_pub,    only: varlen
       use grid,          only: cg
       use hdf5,          only: HID_T, HSIZE_T, HSSIZE_T, h5screate_simple_f, h5pcreate_f, h5pset_chunk_f, &
-                           h5sclose_f, h5pset_dxpl_mpio_f, h5dwrite_f, h5dclose_f, H5P_DATASET_XFER_F, H5P_DATASET_CREATE_F, &
-                           H5T_NATIVE_REAL, H5S_SELECT_SET_F, H5FD_MPIO_INDEPENDENT_F, h5dcreate_f, h5dget_space_f, &
-                           h5sselect_hyperslab_f
-      use mpisetup,      only: pcoords, pxsize, pysize, pzsize
+           &                   h5sclose_f, h5pset_dxpl_mpio_f, h5dwrite_f, h5dclose_f, H5P_DATASET_XFER_F, H5P_DATASET_CREATE_F, &
+           &                   H5T_NATIVE_REAL, H5S_SELECT_SET_F, H5FD_MPIO_INDEPENDENT_F, h5dcreate_f, h5dget_space_f, &
+           &                   h5sselect_hyperslab_f
+      use mpisetup,      only: pcoords, dom
 
       implicit none
       real(kind=4), dimension(:,:,:) :: data
@@ -1611,7 +1617,7 @@ module dataio_hdf5
       integer :: error
 
       chunk_dims = [cg%nxb, cg%nyb, cg%nzb]                     ! Chunks dimensions
-      dimsf  = chunk_dims * [pxsize, pysize, pzsize]  ! Dataset dimensions
+      dimsf  = [dom%nxd, dom%nyd, dom%nzd]  ! Dataset dimensions
       dimsfi = dimsf
       !
       ! Create the data space for the  dataset.
@@ -1678,7 +1684,7 @@ module dataio_hdf5
       use hdf5,          only: HID_T, SIZE_T, H5F_ACC_RDWR_F, h5fopen_f, h5fclose_f, h5gcreate_f, h5gclose_f
       use h5lt,          only: h5ltset_attribute_double_f, h5ltset_attribute_int_f, h5ltmake_dataset_string_f, h5ltset_attribute_string_f
       use list_hdf5,     only: additional_attrs
-      use mpisetup,      only: master, t, dt, psize, cbuff_len, pxsize, pysize, pzsize, local_magic_mass, comm, ierr, magic_mass
+      use mpisetup,      only: master, t, dt, psize, cbuff_len, local_magic_mass, comm, ierr, magic_mass, dom
       use mpi,           only: MPI_DOUBLE_PRECISION, MPI_SUM
       use types,         only: hdf
       use version,       only: env, nenv
@@ -1714,12 +1720,12 @@ module dataio_hdf5
          rbuffer(1)  = t                        ; rbuffer_name(1)  = "time"
          rbuffer(2)  = dt                       ; rbuffer_name(2)  = "timestep"
          rbuffer(3)  = chdf%last_hdf_time       ; rbuffer_name(3)  = "last_hdf_time"
-         rbuffer(4)  = cg%xmin               ; rbuffer_name(4)  = "xmin"
-         rbuffer(5)  = cg%xmax               ; rbuffer_name(5)  = "xmax"
-         rbuffer(6)  = cg%ymin               ; rbuffer_name(6)  = "ymin"
-         rbuffer(7)  = cg%ymax               ; rbuffer_name(7)  = "ymax"
-         rbuffer(8)  = cg%zmin               ; rbuffer_name(8)  = "zmin"
-         rbuffer(9)  = cg%zmax               ; rbuffer_name(9)  = "zmax"
+         rbuffer(4)  = dom%xmin                 ; rbuffer_name(4)  = "xmin"
+         rbuffer(5)  = dom%xmax                 ; rbuffer_name(5)  = "xmax"
+         rbuffer(6)  = dom%ymin                 ; rbuffer_name(6)  = "ymin"
+         rbuffer(7)  = dom%ymax                 ; rbuffer_name(7)  = "ymax"
+         rbuffer(8)  = dom%zmin                 ; rbuffer_name(8)  = "zmin"
+         rbuffer(9)  = dom%zmax                 ; rbuffer_name(9)  = "zmax"
          rbuffer(10) = piernik_hdf5_version     ; rbuffer_name(10) = "piernik"
          rbuffer(11) = magic_mass               ; rbuffer_name(11) = "magic_mass"
          rbuffer(12) = chdf%next_t_tsl          ; rbuffer_name(12) = "next_t_tsl"
@@ -1730,13 +1736,13 @@ module dataio_hdf5
          ibuffer(3)  = chdf%nhdf                ; ibuffer_name(3)  = "nhdf"
          ibuffer(4)  = chdf%nstep               ; ibuffer_name(4)  = "step_res"
          ibuffer(5)  = chdf%step_hdf            ; ibuffer_name(5)  = "step_hdf"
-         ibuffer(6)  = cg%nxb*pxsize         ; ibuffer_name(6)  = "nxd"
-         ibuffer(7)  = cg%nyb*pysize         ; ibuffer_name(7)  = "nyd"
-         ibuffer(8)  = cg%nzb*pzsize         ; ibuffer_name(8)  = "nzd"
-         ibuffer(9)  = cg%nxb                ; ibuffer_name(9)  = "nxb"
-         ibuffer(10) = cg%nyb                ; ibuffer_name(10) = "nyb"
-         ibuffer(11) = cg%nzb                ; ibuffer_name(11) = "nzb"
-         ibuffer(12) = cg%nb                 ; ibuffer_name(12) = "nb"
+         ibuffer(6)  = dom%nxd                  ; ibuffer_name(6)  = "nxd"
+         ibuffer(7)  = dom%nyd                  ; ibuffer_name(7)  = "nyd"
+         ibuffer(8)  = dom%nzd                  ; ibuffer_name(8)  = "nzd"
+         ibuffer(9)  = cg%nxb                   ; ibuffer_name(9)  = "nxb"
+         ibuffer(10) = cg%nyb                   ; ibuffer_name(10) = "nyb"
+         ibuffer(11) = cg%nzb                   ; ibuffer_name(11) = "nzb"
+         ibuffer(12) = cg%nb                    ; ibuffer_name(12) = "nb"
          ibuffer(13) = require_init_prob        ; ibuffer_name(13) = "require_init_prob"
 
          !> \deprecated BEWARE: A memory leak was detected here. h5lt calls use HD5f2cstring and probably sometimes don't free the allocated buffer

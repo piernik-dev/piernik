@@ -36,18 +36,19 @@
 module mpisetup
 !   use mpi, only: MPI_STATUS_SIZE
    use dataio_pub, only: cbuff_len
+   use types,      only: bndlen, domain_container
 
    implicit none
 
    integer, parameter :: MPI_STATUS_SIZE = 5  ! taken from mpi to silence warnings
 
    private
-   public :: bnd_xl, bnd_xl_dom, bnd_xr, bnd_xr_dom, bnd_yl, bnd_yl_dom, bnd_yr, bnd_yr_dom, bnd_zl, bnd_zl_dom, bnd_zr, bnd_zr_dom, &
+   public :: bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr, &
         &    buffer_dim, cbuff, cbuff_len, cfl, cfl_max, cflcontrol, &
         &    cfr_smooth, cleanup_mpi, comm, comm3d, dt, dt_initial, dt_max_grow, dt_min, dt_old, dtm, err, ibuff, ierr, info, init_mpi, &
         &    integration_order, lbuff, limiter, mpifind, ndims, nproc, nstep, pcoords, proc, procxl, procxr, procxyl, procyl, procyr, procyxl, proczl, &
         &    proczr, psize, pxsize, pysize, pzsize, rbuff, req, smalld, smallei, smallp, status, t, use_smalld, magic_mass, local_magic_mass, master, slave, &
-        &    nxd, nyd, nzd, nb, xdim, ydim, zdim, has_dir, big_float, relax_time, grace_period_passed
+        &    nb, xdim, ydim, zdim, has_dir, big_float, relax_time, grace_period_passed, dom, geometry
 
    integer :: nproc, proc, ierr , rc, info
    integer :: status(MPI_STATUS_SIZE,4)
@@ -67,11 +68,12 @@ module mpisetup
    integer, parameter    :: zdim=3                          !< parameter assigned to z-direction
    integer, parameter    :: ndims = 3       ! 3D grid
    integer               :: comm, comm3d
-   logical               :: reorder
    integer, dimension(ndims) :: psize, pcoords, coords
    logical, dimension(ndims) :: periods
    integer               ::   procxl, procxr, procyl, procyr, proczl, proczr, procxyl, procyxl, procxyr, procyxr
    logical, protected, dimension(ndims) :: has_dir   !< .true. for existing directions
+
+   type(domain_container), protected :: dom
 
    integer, parameter               :: buffer_dim=200
    character(len=cbuff_len), dimension(buffer_dim) :: cbuff
@@ -79,12 +81,19 @@ module mpisetup
    real,      dimension(buffer_dim) :: rbuff
    logical,   dimension(buffer_dim) :: lbuff
 
-   logical :: mpi_magic !< allows to automatically divide the domain
-   integer :: pxsize    !< number of MPI blocks in x-dimension
-   integer :: pysize    !< number of MPI blocks in y-dimension
-   integer :: pzsize    !< number of MPI blocks in z-dimension
+   integer, dimension(ndims) :: domsize   !< local copy of nxd, nyd, nzd
 
-   namelist /MPI_BLOCKS/ pxsize, pysize, pzsize, mpi_magic
+   logical     :: have_mpi           !< .true. when run on more than one processor
+
+   ! Namelist variables
+
+   logical :: mpi_magic      !< allows to automatically divide the domain
+   integer :: pxsize         !< number of MPI blocks in x-dimension
+   integer :: pysize         !< number of MPI blocks in y-dimension
+   integer :: pzsize         !< number of MPI blocks in z-dimension
+   logical :: reorder        !< allows processes reordered for efficiency (a parameter of MPI_Cart_create and MPI_graph_create)
+
+   namelist /MPI_BLOCKS/ pxsize, pysize, pzsize, mpi_magic, reorder
 
    integer, protected :: nxd  !< number of %grid cells in physical domain (without boundary cells) in x-direction (if equal to 1 then x-dimension is reduced to a point with no boundary cells)
    integer, protected :: nyd  !< number of %grid cells in physical domain (without boundary cells) in y-direction (if equal to 1 then y-dimension is reduced to a point with no boundary cells)
@@ -93,7 +102,6 @@ module mpisetup
 
    namelist /DOMAIN_SIZES/ nxd, nyd, nzd, nb
 
-   integer, parameter    :: bndlen = 4 !< length of boundary names
    character(len=bndlen) :: bnd_xl     !< type of boundary conditions for the left  x-boundary
    character(len=bndlen) :: bnd_xr     !< type of boundary conditions for the right x-boundary
    character(len=bndlen) :: bnd_yl     !< type of boundary conditions for the left  y-boundary
@@ -103,6 +111,18 @@ module mpisetup
    character(len=bndlen) :: bnd_xl_dom, bnd_xr_dom, bnd_yl_dom, bnd_yr_dom, bnd_zl_dom, bnd_zr_dom !< computational domain boundaries
 
    namelist /BOUNDARIES/ bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr
+
+   real    :: xmin                           !< physical domain left x-boundary position
+   real    :: xmax                           !< physical domain right x-boundary position
+   real    :: ymin                           !< physical domain left y-boundary position
+   real    :: ymax                           !< physical domain right y-boundary position
+   real    :: zmin                           !< physical domain left z-boundary position
+   real    :: zmax                           !< physical domain right z-boundary position
+   character(len=cbuff_len), protected :: geometry      !< define system of coordinates: "cartesian" or "cylindrical"
+   namelist /DOMAIN_LIMITS/ xmin, xmax, ymin, ymax, zmin, zmax, geometry
+
+   !! \todo merge DOMAIN_SIZES, BOUNDARIES and DOMAIN_LIMITS into DOMAIN namelist
+   !namelist /DOMAIN/ dom, geometry, nb
 
    real    :: dt_initial               !< initial timestep
    real    :: dt_max_grow              !< maximum timestep growth rate
@@ -126,10 +146,6 @@ module mpisetup
 
    namelist /NUMERICAL_SETUP/  cfl, smalld, smallei, integration_order, cfr_smooth, dt_initial, dt_max_grow, dt_min, smallc, smallp, limiter, cflcontrol, use_smalld, cfl_max, relax_time
 
-   integer, dimension(ndims) :: domsize   !< local copy of nxd, nyd, nzd
-
-   logical     :: have_mpi
-
    contains
 
 !-----------------------------------------------------------------------------
@@ -141,10 +157,11 @@ module mpisetup
 !! \n \n
 !! <table border="+1">
 !! <tr><td width="150pt"><b>parameter</b></td><td width="135pt"><b>default value</b></td><td width="200pt"><b>possible values</b></td><td width="315pt"> <b>description</b></td></tr>
-!! <tr><td>pxsize   </td><td>1     </td><td>integer</td><td>\copydoc mpisetup::pxsize   </td></tr>
-!! <tr><td>pysize   </td><td>1     </td><td>integer</td><td>\copydoc mpisetup::pysize   </td></tr>
-!! <tr><td>pzsize   </td><td>1     </td><td>integer</td><td>\copydoc mpisetup::pzsize   </td></tr>
-!! <tr><td>mpi_magic</td><td>.true.</td><td>logical</td><td>\copydoc mpisetup::mpi_magic</td></tr>
+!! <tr><td>pxsize       </td><td>1      </td><td>integer</td><td>\copydoc mpisetup::pxsize       </td></tr>
+!! <tr><td>pysize       </td><td>1      </td><td>integer</td><td>\copydoc mpisetup::pysize       </td></tr>
+!! <tr><td>pzsize       </td><td>1      </td><td>integer</td><td>\copydoc mpisetup::pzsize       </td></tr>
+!! <tr><td>mpi_magic    </td><td>.true. </td><td>logical</td><td>\copydoc mpisetup::mpi_magic    </td></tr>
+!! <tr><td>reorder      </td><td>.false.</td><td>logical</td><td>\copydoc mpisetup::reorder      </td></tr>
 !! </table>
 !! \n \n
 !! @b DOMAIN_SIZES
@@ -167,6 +184,19 @@ module mpisetup
 !! <tr><td>bnd_yr</td><td>'per'</td><td>'per', 'ref', 'out', 'outd', 'outh'       </td><td>\copydoc mpisetup::bnd_yr</td></tr>
 !! <tr><td>bnd_zl</td><td>'per'</td><td>'per', 'ref', 'out', 'outd', 'outh'       </td><td>\copydoc mpisetup::bnd_zl</td></tr>
 !! <tr><td>bnd_zr</td><td>'per'</td><td>'per', 'ref', 'out', 'outd', 'outh'       </td><td>\copydoc mpisetup::bnd_zr</td></tr>
+!! </table>
+!! \n \n
+!! @b DOMAIN_LIMITS
+!! \n \n
+!! <table border="+1">
+!!   <tr><td width="150pt"><b>parameter</b></td><td width="135pt"><b>default value</b></td><td width="200pt"><b>possible values</b></td><td width="315pt"> <b>description</b></td></tr>
+!!   <tr><td> xmin     </td><td> 0.          </td><td> real                     </td><td> physical domain left x-boundary position  </td></tr>
+!!   <tr><td> xmax     </td><td> 1.          </td><td> real                     </td><td> physical domain right x-boundary position </td></tr>
+!!   <tr><td> ymin     </td><td> 0.          </td><td> real                     </td><td> physical domain left y-boundary position  </td></tr>
+!!   <tr><td> ymax     </td><td> 1.          </td><td> real                     </td><td> physical domain right y-boundary position </td></tr>
+!!   <tr><td> zmin     </td><td> 0.          </td><td> real                     </td><td> physical domain left z-boundary position  </td></tr>
+!!   <tr><td> zmax     </td><td> 1.          </td><td> real                     </td><td> physical domain right z-boundary position </td></tr>
+!!   <tr><td> geometry </td><td> "cartesian" </td><td> character(len=cbuff_len) </td><td> \copydoc grid::geometry                   </td></tr>
 !! </table>
 !! \n \n
 !! @b NUMERICAL_SETUP
@@ -192,6 +222,7 @@ module mpisetup
 !! \n \n
 !<
       subroutine init_mpi
+
          use mpi,           only: MPI_COMM_WORLD, MPI_INFO_NULL, MPI_INFO_NULL, MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION, MPI_LOGICAL, MPI_PROC_NULL
          use dataio_pub,    only: die, printinfo, msg, cwdlen, hnlen, cwd, ansi_white, ansi_black, warn
          use dataio_pub,    only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml  ! QA_WARN required for diff_nml
@@ -275,8 +306,13 @@ module mpisetup
          nyd    = 1
          nzd    = 1
          nb     = 4
+         xmin = 0.; xmax = 1.
+         ymin = 0.; ymax = 1.
+         zmin = 0.; zmax = 1.
+         geometry = "cartesian"
 
          mpi_magic = .true.
+         reorder   = .false.      !< \todo test it!
 
          bnd_xl = 'per'
          bnd_xr = 'per'
@@ -307,6 +343,7 @@ module mpisetup
             diff_nml(BOUNDARIES)
             diff_nml(NUMERICAL_SETUP)
             diff_nml(DOMAIN_SIZES)
+            diff_nml(DOMAIN_LIMITS)
          endif
 
          nxd = max(1, nxd)
@@ -325,6 +362,7 @@ module mpisetup
             cbuff(6) = bnd_zr
             cbuff(7) = limiter
             cbuff(8) = cflcontrol
+            cbuff(9) = geometry
 
             ibuff(1) = pxsize
             ibuff(2) = pysize
@@ -346,9 +384,16 @@ module mpisetup
             rbuff( 9) = dt_min
             rbuff(10) = cfl_max
             rbuff(11) = relax_time
+            rbuff(12) = xmin
+            rbuff(13) = xmax
+            rbuff(14) = ymin
+            rbuff(15) = ymax
+            rbuff(16) = zmin
+            rbuff(17) = zmax
 
             lbuff(1) = mpi_magic
             lbuff(2) = use_smalld
+            lbuff(3) = reorder
 
          endif
 
@@ -359,8 +404,9 @@ module mpisetup
 
          if (slave) then
 
-            mpi_magic   = lbuff(1)
-            use_smalld  = lbuff(2)
+            mpi_magic     = lbuff(1)
+            use_smalld    = lbuff(2)
+            reorder       = lbuff(3)
 
             smalld      = rbuff( 1)
             smallc      = rbuff( 2)
@@ -373,6 +419,12 @@ module mpisetup
             dt_min      = rbuff( 9)
             cfl_max     = rbuff(10)
             relax_time  = rbuff(11)
+            xmin        = rbuff(12)
+            xmax        = rbuff(13)
+            ymin        = rbuff(14)
+            ymax        = rbuff(15)
+            zmin        = rbuff(16)
+            zmax        = rbuff(17)
 
             bnd_xl     = cbuff(1)(1:4)
             bnd_xr     = cbuff(2)(1:4)
@@ -382,29 +434,39 @@ module mpisetup
             bnd_zr     = cbuff(6)(1:4)
             limiter    = cbuff(7)
             cflcontrol = cbuff(8)
+            geometry   = cbuff(9)
 
-            pxsize = ibuff(1)
-            pysize = ibuff(2)
-            pzsize = ibuff(3)
-
+            pxsize     = ibuff(1)
+            pysize     = ibuff(2)
+            pzsize     = ibuff(3)
             integration_order = ibuff(4)
-
-            nxd = ibuff(5)
-            nyd = ibuff(6)
-            nzd = ibuff(7)
-            nb  = ibuff(8)
+            nxd        = ibuff(5)
+            nyd        = ibuff(6)
+            nzd        = ibuff(7)
+            nb         = ibuff(8)
 
          endif
 
          has_dir(:) = ([ nxd, nyd, nzd ] > 1)
          domsize(:) = [nxd, nyd, nzd]
 
-         bnd_xl_dom = bnd_xl
-         bnd_xr_dom = bnd_xr
-         bnd_yl_dom = bnd_yl
-         bnd_yr_dom = bnd_yr
-         bnd_zl_dom = bnd_zl
-         bnd_zr_dom = bnd_zr
+         dom%nxd = nxd
+         dom%nyd = nyd
+         dom%nzd = nzd
+
+         dom%bnd_xl_dom = bnd_xl
+         dom%bnd_xr_dom = bnd_xr
+         dom%bnd_yl_dom = bnd_yl
+         dom%bnd_yr_dom = bnd_yr
+         dom%bnd_zl_dom = bnd_zl
+         dom%bnd_zr_dom = bnd_zr
+
+         dom%xmin = xmin
+         dom%ymin = ymin
+         dom%zmin = zmin
+         dom%xmax = xmax
+         dom%ymax = ymax
+         dom%zmax = zmax
 
          psize(:) = [ pxsize, pysize, pzsize ]
 
@@ -421,12 +483,12 @@ module mpisetup
             endif
          endif
 
+         if (pxsize*pysize*pzsize /= 1) have_mpi = .true.
+
          if ( (bnd_xl(1:3) == 'cor' .or. bnd_yl(1:3) == 'cor' .or. bnd_xr(1:3) == 'cor' .or. bnd_yr(1:3) == 'cor') .and. (pxsize /= pysize .or. nxd /= nyd) ) then
             write(msg, '(a,4(i4,a))')"[mpisetup:init_mpi] Corner BC require pxsize equal to pysize and nxd equal to nyd. Detected: [",pxsize,",",pysize,"] and [",nxd,",",nyd,"]"
             call die(msg)
          endif
-
-         if (pxsize*pysize*pzsize /= 1) have_mpi = .true.
 
          periods(:) = .false.
 
@@ -444,8 +506,6 @@ module mpisetup
             periods(zdim) = .true.  ! z periodic
             if (bnd_zr(1:3) /= bnd_zl(1:3)) call die("[mpisetup:init_mpi] Periodic BC do not match in Z-direction")
          endif
-
-         reorder = .false.     ! allows processes reordered for efficiency
 
          call MPI_Cart_create(comm, ndims, psize, periods, reorder, comm3d, ierr)
          call MPI_Cart_coords(comm3d, proc, ndims, pcoords, ierr)

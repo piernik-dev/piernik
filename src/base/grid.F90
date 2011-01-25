@@ -37,7 +37,7 @@
 !<
 module grid
 
-   use mpisetup, only: cbuff_len
+   use mpisetup, only: geometry
    use types,    only: grid_container
 
    implicit none
@@ -50,7 +50,6 @@ module grid
    integer, protected :: D_x                            !< set to 1 when x-direction exists, 0 otherwise. Use to construct dimensionally-safe indices for arrays
    integer, protected :: D_y                            !< set to 1 when y-direction exists, 0 otherwise.
    integer, protected :: D_z                            !< set to 1 when z-direction exists, 0 otherwise.
-   character(len=cbuff_len), protected :: geometry      !< define system of coordinates: "cartesian" or "cylindrical"
    type(grid_container),     protected :: cg            !< A container for the grid. For AMR this will be a dynamically resized array
 
    contains
@@ -59,35 +58,16 @@ module grid
 !! \brief Routine which sets numbers of cells for the domain, MPI blocks and initializes direction meshes (x,y,z).
 !! Also compute domain maximum and minimum of coordinates, lengths of cells and coordinates of zone centers and left/right zone boundaries.
 !!
-!! \n \n
-!! @b DOMAIN_LIMITS
-!! \n \n
-!! <table border="+1">
-!!   <tr><td width="150pt"><b>parameter</b></td><td width="135pt"><b>default value</b></td><td width="200pt"><b>possible values</b></td><td width="315pt"> <b>description</b></td></tr>
-!!   <tr><td> xmin     </td><td> 0.          </td><td> real                     </td><td> physical domain left x-boundary position  </td></tr>
-!!   <tr><td> xmax     </td><td> 1.          </td><td> real                     </td><td> physical domain right x-boundary position </td></tr>
-!!   <tr><td> ymin     </td><td> 0.          </td><td> real                     </td><td> physical domain left y-boundary position  </td></tr>
-!!   <tr><td> ymax     </td><td> 1.          </td><td> real                     </td><td> physical domain right y-boundary position </td></tr>
-!!   <tr><td> zmin     </td><td> 0.          </td><td> real                     </td><td> physical domain left z-boundary position  </td></tr>
-!!   <tr><td> zmax     </td><td> 1.          </td><td> real                     </td><td> physical domain right z-boundary position </td></tr>
-!!   <tr><td> geometry </td><td> "cartesian" </td><td> character(len=cbuff_len) </td><td> \copydoc grid::geometry                   </td></tr>
-!! </table>
-!! \n \n
 !<
    subroutine init_grid
 
       use dataio_pub, only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml  ! QA_WARN required for diff_nml
       use dataio_pub, only: printinfo, die, code_progress, PIERNIK_INIT_MPI
-      use mpisetup,   only: ierr, rbuff, cbuff, master, slave, buffer_dim, psize, pxsize, pysize, pzsize, pcoords, comm, &
-           &                has_dir, xdim, ydim, zdim, ndims, nxd, nyd, nzd, nb
-      use mpi,        only: MPI_DOUBLE_PRECISION, MPI_CHARACTER
+      use mpisetup,   only: psize, pxsize, pysize, pzsize, pcoords, comm, has_dir, xdim, ydim, zdim, ndims, dom, nb
 
       implicit none
 
       integer :: i, j, k
-      real    :: xmin, xmax, ymin, ymax, zmin, zmax
-
-      namelist /DOMAIN_LIMITS/ xmin, xmax, ymin, ymax, zmin, zmax, geometry
 
       if (code_progress < PIERNIK_INIT_MPI) call die("[grid:init_grid] MPI not initialized.")
 
@@ -95,55 +75,16 @@ module grid
       call printinfo("[grid:init_grid]: commencing...")
 #endif /* VERBOSE */
 
-      xmin = 0.; xmax = 1.
-      ymin = 0.; ymax = 1.
-      zmin = 0.; zmax = 1.
-      geometry = "cartesian"
-
-      if (master) then
-
-         diff_nml(DOMAIN_LIMITS)
-
-         rbuff(1)   = xmin
-         rbuff(2)   = xmax
-         rbuff(3)   = ymin
-         rbuff(4)   = ymax
-         rbuff(5)   = zmin
-         rbuff(6)   = zmax
-
-         cbuff(1)   = geometry
-
-      endif
-
-      call MPI_Bcast(cbuff, cbuff_len*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
-      call MPI_Bcast(rbuff,           buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
-
-      if (slave) then
-
-         xmin = rbuff(1)
-         xmax = rbuff(2)
-         ymin = rbuff(3)
-         ymax = rbuff(4)
-         zmin = rbuff(5)
-         zmax = rbuff(6)
-
-         geometry = cbuff(1)
-
-      endif
-
-      cg%xmin = xmin; cg%ymin = ymin; cg%zmin = zmin
-      cg%xmax = xmax; cg%ymax = ymax; cg%zmax = zmax
-
-      if ( (mod(nxd, pxsize) .ne. 0) .or. &
-           (mod(nyd, pysize) .ne. 0) .or. &
-           (mod(nzd, pzsize) .ne. 0) ) then
+      if ( (mod(dom%nxd, pxsize) .ne. 0) .or. &
+           (mod(dom%nyd, pysize) .ne. 0) .or. &
+           (mod(dom%nzd, pzsize) .ne. 0) ) then
          call die("One of: (mod(n_d,p_size) /= 0")
       endif
 
       if (has_dir(xdim)) then
-         cg%nxb = nxd / pxsize     ! Block 'physical' grid sizes
+         cg%nxb = dom%nxd / pxsize     ! Block 'physical' grid sizes
          cg%nx  = cg%nxb + 2 * nb     ! Block total grid sizes
-         cg%nxt = nxd + 2 * nb     ! Domain total grid sizes
+         cg%nxt = dom%nxd + 2 * nb     ! Domain total grid sizes
          cg%is  = nb + 1
          cg%ie  = nb + cg%nxb
          cg%isb = 2*nb
@@ -162,9 +103,9 @@ module grid
       endif
 
       if (has_dir(ydim)) then
-         cg%nyb = nyd / pysize
+         cg%nyb = dom%nyd / pysize
          cg%ny  = cg%nyb + 2 * nb
-         cg%nyt = nyd + 2 * nb
+         cg%nyt = dom%nyd + 2 * nb
          cg%js  = nb + 1
          cg%je  = nb + cg%nyb
          cg%jsb = 2*nb
@@ -183,9 +124,9 @@ module grid
       endif
 
       if (has_dir(zdim)) then
-         cg%nzb = nzd / pzsize
+         cg%nzb = dom%nzd / pzsize
          cg%nz  = cg%nzb + 2 * nb
-         cg%nzt = nzd + 2 * nb
+         cg%nzt = dom%nzd + 2 * nb
          cg%ks  = nb + 1
          cg%ke  = nb + cg%nzb
          cg%ksb = 2*nb
@@ -210,16 +151,16 @@ module grid
       allocate(cg%y(cg%ny), cg%yl(cg%ny), cg%yr(cg%ny), cg%inv_y(cg%ny))
       allocate(cg%z(cg%nz), cg%zl(cg%nz), cg%zr(cg%nz), cg%inv_z(cg%nz))
 
-      total_ncells = nxd * nyd * nzd
+      total_ncells = dom%nxd * dom%nyd * dom%nzd
 
       cg%maxxyz = maxval([size(cg%x), size(cg%y), size(cg%z)])
 
-      cg%xminb = cg%xmin + real(pcoords(1)  )*(cg%xmax-cg%xmin)/real(psize(1))
-      cg%xmaxb = cg%xmin + real(pcoords(1)+1)*(cg%xmax-cg%xmin)/real(psize(1))
-      cg%yminb = cg%ymin + real(pcoords(2)  )*(cg%ymax-cg%ymin)/real(psize(2))
-      cg%ymaxb = cg%ymin + real(pcoords(2)+1)*(cg%ymax-cg%ymin)/real(psize(2))
-      cg%zminb = cg%zmin + real(pcoords(3)  )*(cg%zmax-cg%zmin)/real(psize(3))
-      cg%zmaxb = cg%zmin + real(pcoords(3)+1)*(cg%zmax-cg%zmin)/real(psize(3))
+      cg%xminb = dom%xmin + real(pcoords(xdim)  )*(dom%xmax-dom%xmin)/real(psize(xdim))
+      cg%xmaxb = dom%xmin + real(pcoords(xdim)+1)*(dom%xmax-dom%xmin)/real(psize(xdim))
+      cg%yminb = dom%ymin + real(pcoords(ydim)  )*(dom%ymax-dom%ymin)/real(psize(ydim))
+      cg%ymaxb = dom%ymin + real(pcoords(ydim)+1)*(dom%ymax-dom%ymin)/real(psize(ydim))
+      cg%zminb = dom%zmin + real(pcoords(zdim)  )*(dom%zmax-dom%zmin)/real(psize(zdim))
+      cg%zmaxb = dom%zmin + real(pcoords(zdim)+1)*(dom%zmax-dom%zmin)/real(psize(zdim))
 
       cg%dxmn = huge(1.0)
       if (has_dir(xdim)) then
@@ -315,9 +256,9 @@ module grid
 
 !--------------------------------------------------------------------------
 
-      cg%Lx = cg%xmax - cg%xmin
-      cg%Ly = cg%ymax - cg%ymin
-      cg%Lz = cg%zmax - cg%zmin
+      cg%Lx = dom%xmax - dom%xmin
+      cg%Ly = dom%ymax - dom%ymin
+      cg%Lz = dom%zmax - dom%zmin
 
       cg%Vol = 1.
       if (has_dir(xdim)) cg%Vol = cg%Vol * cg%Lx

@@ -50,8 +50,7 @@ contains
 
       use dataio_pub,    only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml      ! QA_WARN required for diff_nml
       use dataio_pub,    only: die, user_vars_hdf5
-      use grid,          only: cg
-      use mpisetup,      only: ierr, rbuff, master, slave, buffer_dim, comm
+      use mpisetup,      only: ierr, rbuff, master, slave, buffer_dim, comm, dom
       use mpi,           only: MPI_DOUBLE_PRECISION
       use types,         only: finalize_problem, cleanup_problem
 
@@ -90,12 +89,12 @@ contains
 
       if (pulse_size <= 0. .or. pulse_size >= 1.) call die("[initproblem:read_problem_par] Pulse width should be between 0. and 1.")
 
-      pulse_x_min = (cg%xmax+cg%xmin)/2. - (cg%xmax-cg%xmin)*pulse_size/2.
-      pulse_x_max = (cg%xmax+cg%xmin)/2. + (cg%xmax-cg%xmin)*pulse_size/2.
-      pulse_y_min = (cg%ymax+cg%ymin)/2. - (cg%ymax-cg%ymin)*pulse_size/2.
-      pulse_y_max = (cg%ymax+cg%ymin)/2. + (cg%ymax-cg%ymin)*pulse_size/2.
-      pulse_z_min = (cg%zmax+cg%zmin)/2. - (cg%zmax-cg%zmin)*pulse_size/2.
-      pulse_z_max = (cg%zmax+cg%zmin)/2. + (cg%zmax-cg%zmin)*pulse_size/2.
+      pulse_x_min = (dom%xmax+dom%xmin)/2. - (dom%xmax-dom%xmin)*pulse_size/2.
+      pulse_x_max = (dom%xmax+dom%xmin)/2. + (dom%xmax-dom%xmin)*pulse_size/2.
+      pulse_y_min = (dom%ymax+dom%ymin)/2. - (dom%ymax-dom%ymin)*pulse_size/2.
+      pulse_y_max = (dom%ymax+dom%ymin)/2. + (dom%ymax-dom%ymin)*pulse_size/2.
+      pulse_z_min = (dom%zmax+dom%zmin)/2. - (dom%zmax-dom%zmin)*pulse_size/2.
+      pulse_z_max = (dom%zmax+dom%zmin)/2. + (dom%zmax-dom%zmin)*pulse_size/2.
 
       finalize_problem => finalize_problem_adv
       cleanup_problem  => cleanup_adv

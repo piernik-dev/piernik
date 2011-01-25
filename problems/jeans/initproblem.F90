@@ -139,7 +139,7 @@ contains
       use dataio_pub,    only: tend, msg, printinfo, warn
       use grid,          only: cg
       use initionized,   only: gamma_ion, idni, imxi, imzi, ieni
-      use mpisetup,      only: master
+      use mpisetup,      only: master, dom
 #ifdef MAGNETIC
       use arrays,        only: b
 #endif /* MAGNETIC */
@@ -193,11 +193,11 @@ contains
 ! Uniform equilibrium state
 
       do k = cg%ks, cg%ke
-         zk = cg%z(k)-cg%zmin
+         zk = cg%z(k)-dom%zmin
          do j = cg%js, cg%je
-            yj = cg%y(j)-cg%ymin
+            yj = cg%y(j)-dom%ymin
             do i = cg%is, cg%ie
-               xi = cg%x(i)-cg%xmin
+               xi = cg%x(i)-dom%xmin
                select case (mode)
                case (0)
                   u(idni,i,j,k)   = d0 * (1.d0 +             amp * dsin(kx*xi + ky*yj + kz*zk))

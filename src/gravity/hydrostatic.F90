@@ -135,6 +135,7 @@ contains
       use dataio_pub, only: die
       use gravity,    only: nsub !, gp_status
       use grid,       only: cg
+      use mpisetup,   only: dom
 
       implicit none
 
@@ -179,7 +180,7 @@ contains
                dprof(k) = dprof(k) + dprofs(ksub)/real(nsub)
             endif
             if (present(sd)) then
-               if (zs(ksub) .gt. cg%zmin .and. zs(ksub) .lt. cg%zmax) then
+               if (zs(ksub) .gt. dom%zmin .and. zs(ksub) .lt. dom%zmax) then
                   sd = sd + dprofs(ksub)/real(nsub)
                endif
             endif
@@ -270,7 +271,7 @@ contains
       use dataio_pub, only: die
       use gravity,    only: get_gprofs, gprofs_target, nsub
       use grid,       only: cg
-      use mpisetup,   only: zdim
+      use mpisetup,   only: zdim, dom
 
       implicit none
 
@@ -290,10 +291,10 @@ contains
          end select
       endif
       nstot = nsub * cg%nzt
-      dzs = (cg%zmax-cg%zmin)/real(nstot-2*cg%nb*nsub)
+      dzs = (dom%zmax-dom%zmin)/real(nstot-2*cg%nb*nsub)
       allocate(zs(nstot), gprofs(nstot))
       do ksub=1, nstot
-         zs(ksub) = cg%zmin-cg%nb*cg%dl(zdim) + dzs/2 + (ksub-1)*dzs
+         zs(ksub) = dom%zmin-cg%nb*cg%dl(zdim) + dzs/2 + (ksub-1)*dzs
       enddo
       call get_gprofs(iia,jja)
       gprofs = gprofs / csim2 *dzs

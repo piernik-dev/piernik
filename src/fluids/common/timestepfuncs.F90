@@ -68,7 +68,7 @@ contains
       use grid,      only: geometry, cg
       use constants, only: big
       use mpi,       only: MPI_DOUBLE_PRECISION, MPI_MIN, MPI_MAX
-      use mpisetup,  only: comm, ierr, cfl, has_dir, xdim, ydim, zdim
+      use mpisetup,  only: comm, ierr, cfl, has_dir, xdim, ydim, zdim, dom
 
       implicit none
 
@@ -89,7 +89,7 @@ contains
       endif
       if (has_dir(ydim) .and. cy /= 0) then
          dt_proc_y = cg%dy/cy
-         if (geometry == 'cylindrical') dt_proc_y = dt_proc_y * cg%xmin
+         if (geometry == 'cylindrical') dt_proc_y = dt_proc_y * dom%xmin
       else
          dt_proc_y = big
       endif

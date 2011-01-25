@@ -160,6 +160,7 @@ contains
    end subroutine read_problem_par
 !-----------------------------------------------------------------------------
    subroutine init_prob
+
       use dataio_pub,          only: msg, printinfo
       use types,               only: component_fluid
       use arrays,              only: u, b, dprof
@@ -168,7 +169,7 @@ contains
       use gravity,             only: r_smooth, r_grav, n_gravr, ptmass, source_terms_grav, grav_pot2accel, grav_pot_3d
       use grid,                only: cg, geometry
       use hydrostatic,         only: hydrostatic_zeq_densmid
-      use mpisetup,            only: zdim, has_dir
+      use mpisetup,            only: zdim, has_dir, dom
       use types,               only: component_fluid
       use dataio_pub,          only: die
 
@@ -244,13 +245,13 @@ contains
          call printinfo("------------------------------------------------------------------")
          call printinfo(" Assuming temperature profile for MMSN ")
          call printinfo(" T(R) = 150 ( R / 1 AU )^(-0.429) K")
-         write(msg,'(A,F5.1,A)') " T(xmin) = ", mmsn_T(cg%xmin)," K"
+         write(msg,'(A,F5.1,A)') " T(xmin) = ", mmsn_T(dom%xmin)," K"
          call printinfo(msg)
-         write(msg,'(A,F5.1,A)') " T(xmax) = ", mmsn_T(cg%xmax)," K"
+         write(msg,'(A,F5.1,A)') " T(xmax) = ", mmsn_T(dom%xmax)," K"
          call printinfo(msg)
-         write(msg,'(A,F5.1,A)') " T_mean  = ", 0.5*(mmsn_T(cg%xmin)+mmsn_T(cg%xmax))," K"
+         write(msg,'(A,F5.1,A)') " T_mean  = ", 0.5*(mmsn_T(dom%xmin)+mmsn_T(dom%xmax))," K"
          call printinfo(msg)
-         write(msg,'(A,F9.5)') " cs2(T_mean) = ", kboltz * 0.5*(mmsn_T(cg%xmin)+mmsn_T(cg%xmax)) / mH
+         write(msg,'(A,F9.5)') " cs2(T_mean) = ", kboltz * 0.5*(mmsn_T(dom%xmin)+mmsn_T(dom%xmax)) / mH
          call printinfo(msg)
          write(msg,'(A,ES12.3,A)') " T_real(cs2) = ", flind%neu%cs2*mH/kboltz, " K"
          call printinfo(msg)

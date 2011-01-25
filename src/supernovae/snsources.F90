@@ -222,7 +222,7 @@ module snsources
    subroutine rand_coords(pos)
 
       use grid,     only: cg
-      use mpisetup, only: zdim, has_dir
+      use mpisetup, only: zdim, has_dir, dom
 #ifdef SHEAR
       use shear,    only: delj, eps
 #endif /* SHEAR */
@@ -239,8 +239,8 @@ module snsources
       real :: xsn,ysn,zsn,znorm
 
       call random_number(rand)
-      xsn = cg%xmin+ cg%Lx*rand(1)
-      ysn = cg%ymin+ cg%Ly*rand(2)
+      xsn = dom%xmin+ cg%Lx*rand(1)
+      ysn = dom%ymin+ cg%Ly*rand(2)
 
       if (has_dir(zdim)) then
          irand = irand+4
@@ -251,7 +251,7 @@ module snsources
       endif
 
 #ifdef SHEAR
-      jsn  = js+int((ysn-cg%ymin)/cg%dy)
+      jsn  = js+int((ysn-dom%ymin)/cg%dy)
       dysn  = dmod(ysn, cg%dy)
 
       epsi   = eps*cg%dy

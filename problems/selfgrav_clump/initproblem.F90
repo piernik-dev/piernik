@@ -52,7 +52,7 @@ contains
       use dataio_pub,    only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml   ! QA_WARN required for diff_nml
       use dataio_pub,    only: die
       use grid,          only: cg
-      use mpisetup,      only: ierr, rbuff, ibuff, lbuff, master, slave, buffer_dim, comm
+      use mpisetup,      only: ierr, rbuff, ibuff, lbuff, master, slave, buffer_dim, comm, dom
       use mpi,           only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL
 
       implicit none
@@ -125,9 +125,9 @@ contains
       call die("[initproblem:read_problem_par] Isothermal EOS not supported.")
 #endif /* ISO */
 
-      clump_pos_x = (cg%xmax+cg%xmin)/2.
-      clump_pos_y = (cg%ymax+cg%ymin)/2.
-      clump_pos_z = (cg%zmax+cg%zmin)/2.
+      clump_pos_x = (dom%xmax+dom%xmin)/2.
+      clump_pos_y = (dom%ymax+dom%ymin)/2.
+      clump_pos_z = (dom%zmax+dom%zmin)/2.
       clump_r = max(clump_r, cg%dx, cg%dy, cg%dz)
 
    end subroutine read_problem_par

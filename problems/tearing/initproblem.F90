@@ -88,11 +88,13 @@ module initproblem
 !-----------------------------------------------------------------------------
 
    subroutine init_prob
+
       use arrays,       only: u, b
       use constants,    only: pi
       use fluidindex,   only: ibx, iby, ibz
       use grid,         only: cg
       use initionized,  only: idni, imxi, imyi, imzi
+      use mpisetup,     only: dom
 #ifndef ISO
       use initionized,  only: ieni
 #endif /* !ISO */
@@ -102,9 +104,9 @@ module initproblem
       integer  :: i, j, k
       real     :: xmid, ymid, zmid, vzab, b0
 
-      xmid = 0.5*cg%xmax
-      ymid = 0.5*cg%ymax
-      zmid = 0.5*cg%zmax
+      xmid = 0.5*(dom%xmax - dom%xmin)
+      ymid = 0.5*(dom%ymax - dom%ymin)
+      zmid = 0.5*(dom%zmax - dom%zmin)
 
       u(idni,:,:,:) = 1.0
       u(imyi,:,:,:) = 0.0

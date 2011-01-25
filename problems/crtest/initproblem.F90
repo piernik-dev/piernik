@@ -147,7 +147,7 @@ module initproblem
       use dataio_pub,     only: die, warn
       use fluidindex,     only: ibx, iby, ibz
       use grid,           only: cg
-      use mpisetup,       only: xdim, ydim, zdim, has_dir
+      use mpisetup,       only: xdim, ydim, zdim, has_dir, dom
       use initcosmicrays, only: gamma_crs, iarr_crs, ncrn, ncre, K_crn_paral, K_crn_perp
       use initionized,    only: idni, imxi, imzi, ieni, gamma_ion
 
@@ -205,7 +205,7 @@ module initproblem
          do j = cg%js, cg%je
             do i = cg%is, cg%ie
                r2 = (cg%x(i)-x0)**2+(cg%y(j)-y0)**2+(cg%z(k)-z0)**2
-               if (cg%x(i)> 2*x0-cg%xmax .and. cg%y(j) > 2*y0-cg%ymax) &
+               if (cg%x(i)> 2*x0-dom%xmax .and. cg%y(j) > 2*y0-dom%ymax) &
                   u(iecr, i, j, k)= u(iecr, i, j, k) + amp_cr*exp(-r2/r0**2)
             enddo
          enddo

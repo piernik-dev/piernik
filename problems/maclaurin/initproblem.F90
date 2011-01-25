@@ -138,7 +138,7 @@ contains
       use dataio_pub,    only: msg, printinfo, warn
       use grid,          only: cg
       use initionized,   only: gamma_ion, idni, imxi, imzi, ieni
-      use mpisetup,      only: master
+      use mpisetup,      only: master, dom
 #ifdef MAGNETIC
       use arrays,        only: b
 #endif /* MAGNETIC */
@@ -187,7 +187,7 @@ contains
       if (master) then
          write(msg, '(3(a,g12.5),a)')"[initproblem:init_prob] Set up spheroid with a1 and a3 axes = ", a1, ", ", a3, " (eccentricity = ", e, ")"
          call printinfo(msg, .true.)
-         if (x0-a1<cg%xmin .or. x0+a1>cg%xmax .or. y0-a1<cg%ymin .or. y0+a1>cg%ymax .or. z0-a3<cg%zmin .or. z0+a3>cg%zmax) &
+         if (x0-a1<dom%xmin .or. x0+a1>dom%xmax .or. y0-a1<dom%ymin .or. y0+a1>dom%ymax .or. z0-a3<dom%zmin .or. z0+a3>dom%zmax) &
               call warn("[initproblem:init_prob] Part of the spheroid is outside the domain")
          write(msg,'(2(a,g12.5))')   "[initproblem:init_prob] Density = ", d0, " mass = ", 4./3.*pi * a1**2 * a3 * d0
          call printinfo(msg, .true.)

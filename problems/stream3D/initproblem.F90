@@ -114,7 +114,7 @@ module initproblem
       use initneutral, only: idnn, imxn, imyn, imzn
       use initdust,    only: idnd, imxd, imyd, imzd
       use initneutral, only: cs_iso_neu, cs_iso_neu2
-      use mpisetup,    only: smalld
+      use mpisetup,    only: smalld, dom
 #ifndef ISO
       use initneutral, only: ienn, gamma_neu
       use mpisetup,    only: smallei
@@ -183,7 +183,7 @@ module initproblem
             rc = sqrt(xi**2+yj**2)
             call random_number(noise)
 
-            ilook = (rc-cg%xmin)/cg%dx/sqrt(2.) + 0.5 + cg%nb
+            ilook = (rc-dom%xmin)/cg%dx/sqrt(2.) + 0.5 + cg%nb
             iOmega = omega(int(ilook))+(rc-cg%x(int(ilook))*sqrt(2.))*(omega(int(ilook)+1)-omega(int(ilook))) &
                          /(cg%x(int(ilook)+1)-cg%x(int(ilook)))/sqrt(2.)
 !

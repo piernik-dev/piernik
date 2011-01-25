@@ -30,15 +30,19 @@
 !! \brief (KK)
 !<
 module types
+
    implicit none
+
    private
-   public :: axes, hdf, value, grid_container, tsl_container, phys_prop, &
-   & problem_customize_solution, finalize_problem, domlen, idlen, &
+   public :: axes, hdf, value, domain_container, grid_container, tsl_container, phys_prop, &
+   & problem_customize_solution, finalize_problem, domlen, idlen, bndlen, &
    & component_fluid, var_numbers, custom_emf_bnd, cleanup_problem, &
    & problem_grace_passed
 
-   integer, parameter :: domlen = 16 ! should be <= mpisetup::cbuff_len
+   integer, parameter :: domlen = 16 ! should be <= dataio_pub::cbuff_len
+   integer, parameter :: bndlen = 4 !< length of boundary names
    integer, parameter :: idlen  = 3
+
    integer, parameter :: dims   = 3
 
    type :: hdf
@@ -75,8 +79,29 @@ module types
       real, allocatable, dimension(:) :: z      !< array of z-positions of %grid cells centers
    end type axes
 
-   type, extends(axes) :: grid_container
+! AMR: There will be at least one domain container for the base grid. It will be possible to host one or more refined domains on the base container and on the refined containers.
+!      The refined domains may cover whole parent domain or only a tiny part of it.
+!      The multigrid solver will operate also on a stack of coarser domains - parents of the base domain. The coarser domains must be no smaller than the base domain.
+   type :: domain_container
+      real    :: xmin                           !< physical domain left x-boundary position
+      real    :: xmax                           !< physical domain right x-boundary position
+      real    :: ymin                           !< physical domain left y-boundary position
+      real    :: ymax                           !< physical domain right y-boundary position
+      real    :: zmin                           !< physical domain left z-boundary position
+      real    :: zmax                           !< physical domain right z-boundary position
+      integer :: nxd                            !< number of grid cells in physical domain in x-direction (if equal to 1 then x-dimension is reduced to a point with no boundary cells)
+      integer :: nyd                            !< number of grid cells in physical domain in y-direction ( - || - )
+      integer :: nzd                            !< number of grid cells in physical domain in z-direction ( - || - )
+      character(len=bndlen) :: bnd_xl_dom       !< low-x computational domain boundary
+      character(len=bndlen) :: bnd_xr_dom       !< high-x computational domain boundary
+      character(len=bndlen) :: bnd_yl_dom       !< low-y computational domain boundary
+      character(len=bndlen) :: bnd_yr_dom       !< high-y computational domain boundary
+      character(len=bndlen) :: bnd_zl_dom       !< low-z computational domain boundary
+      character(len=bndlen) :: bnd_zr_dom       !< high-z computational domain boundary
+      !! \todo add hooks to parent and a list of children domains
+   end type domain_container
 
+   type, extends(axes) :: grid_container
       real    :: dx                             !< length of the %grid cell in x-direction
       real    :: dy                             !< length of the %grid cell in y-direction
       real    :: dz                             !< length of the %grid cell in z-direction
@@ -85,12 +110,6 @@ module types
       real    :: idz                            !< inverted length of the %grid cell in z-direction
       real    :: dxmn                           !< the smallest length of the %grid cell (among dx, dy, and dz)
       real    :: dvol                           !< volume of one %grid cell
-      real    :: xmin                           !< physical domain left x-boundary position
-      real    :: xmax                           !< physical domain right x-boundary position
-      real    :: ymin                           !< physical domain left y-boundary position
-      real    :: ymax                           !< physical domain right y-boundary position
-      real    :: zmin                           !< physical domain left z-boundary position
-      real    :: zmax                           !< physical domain right z-boundary position
       real    :: xminb                          !< current block left x-boundary position
       real    :: xmaxb                          !< current block right x-boundary position
       real    :: yminb                          !< current block left y-boundary position
@@ -229,6 +248,8 @@ module types
 #endif /* VARIABLE_GP */
 
    end type tsl_container
+
+   ! User hooks
 
    interface
       subroutine no_args

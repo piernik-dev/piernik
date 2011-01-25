@@ -88,8 +88,7 @@ contains
            &                         ord_prolong, ord_prolong_face, stdout, verbose_vcycle, tot_ts
       use mpi,                 only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL
       use mpisetup,            only: buffer_dim, comm, comm3d, ierr, proc, master, slave, nproc, has_dir, xdim, ydim, zdim, ndims, pxsize, pysize, pzsize, &
-           &                         ibuff, rbuff, lbuff, bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr,        &
-           &                         bnd_xl_dom, bnd_xr_dom, bnd_yl_dom, bnd_yr_dom, bnd_zl_dom, bnd_zr_dom
+           &                         ibuff, rbuff, lbuff, bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr, dom
       use multigridhelpers,    only: mg_write_log, dirtyH, do_ascii_dump, dirty_debug, multidim_code_3D, &
            &                         aux_par_I0, aux_par_I1, aux_par_I2, aux_par_R0, aux_par_R1, aux_par_R2
       use multigridmpifuncs,   only: mpi_multigrid_prep
@@ -189,19 +188,20 @@ contains
       eff_dim = count(has_dir(:))
       if (eff_dim < 1 .or. eff_dim > 3) call die("[multigrid:init_multigrid] Unsupported number of dimensions.")
 
+      !! \todo move this to mpisetup
       periodic_bnd_cnt = 0
       non_periodic_bnd_cnt = 0
       if (has_dir(xdim)) then
-         call count_periodic(bnd_xl_dom)
-         call count_periodic(bnd_xr_dom)
+         call count_periodic(dom%bnd_xl_dom)
+         call count_periodic(dom%bnd_xr_dom)
       endif
       if (has_dir(ydim)) then
-         call count_periodic(bnd_yl_dom)
-         call count_periodic(bnd_yr_dom)
+         call count_periodic(dom%bnd_yl_dom)
+         call count_periodic(dom%bnd_yr_dom)
       endif
       if (has_dir(zdim)) then
-         call count_periodic(bnd_zl_dom)
-         call count_periodic(bnd_zr_dom)
+         call count_periodic(dom%bnd_zl_dom)
+         call count_periodic(dom%bnd_zr_dom)
       endif
 
 !> \todo Make array of subroutine pointers

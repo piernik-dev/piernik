@@ -162,8 +162,7 @@ contains
       use grid,               only: geometry
       use multigridvars,      only: bnd_periodic, bnd_dirichlet, bnd_isolated, bnd_invalid, correction, mg_nb, ngridvars, periodic_bnd_cnt, non_periodic_bnd_cnt
       use multipole,          only: use_point_monopole, lmax, mmax, ord_prolong_mpole, coarsen_multipole, interp_pt2mom, interp_mom2pot
-      use mpisetup,           only: buffer_dim, comm, ierr, master, slave, ibuff, cbuff, rbuff, lbuff, &
-           &                        bnd_xl_dom, bnd_xr_dom, bnd_yl_dom, bnd_yr_dom, bnd_zl_dom, bnd_zr_dom, has_dir
+      use mpisetup,           only: buffer_dim, comm, ierr, master, slave, ibuff, cbuff, rbuff, lbuff, dom, has_dir
       use mpi,                only: MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL
       use dataio_pub,         only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml  ! QA_WARN required for diff_nml
       use dataio_pub,         only: msg, die, warn
@@ -307,7 +306,7 @@ contains
          case ("isolated", "iso")
             grav_bnd = bnd_isolated
          case ("periodic", "per")
-            if (bnd_xl_dom /= 'per' .or. bnd_xr_dom /= 'per' .or. bnd_yl_dom /= 'per' .or. bnd_yr_dom /= 'per' .or. bnd_zl_dom /= 'per' .or. bnd_zr_dom /= 'per') &
+            if (dom%bnd_xl_dom /= 'per' .or. dom%bnd_xr_dom /= 'per' .or. dom%bnd_yl_dom /= 'per' .or. dom%bnd_yr_dom /= 'per' .or. dom%bnd_zl_dom /= 'per' .or. dom%bnd_zr_dom /= 'per') &
                  call die("[multigrid_gravity:init_multigrid_grav] cannot enforce periodic boundaries for gravity on a not fully periodic domain")
             grav_bnd = bnd_periodic
          case ("dirichlet", "dir")

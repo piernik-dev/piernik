@@ -117,7 +117,7 @@ contains
    subroutine init_multipole(mb_alloc)
 
       use dataio_pub,    only: die, warn
-      use mpisetup,      only: master, xdim, ydim, zdim
+      use mpisetup,      only: master, xdim, ydim, zdim, dom
       use multigridvars, only: level_min, level_max, lvl, eff_dim
       use grid,          only: geometry, cg
 
@@ -138,9 +138,9 @@ contains
       ! assume that Center of Mass is approximately in the center of computational domain by default
       CoM(0) = 1.
       !> \deprecated BEWARE: cylindrical factors go here
-      CoM(xdim) = (cg%xmax + cg%xmin)/2.
-      CoM(ydim) = (cg%ymax + cg%ymin)/2.
-      CoM(zdim) = (cg%zmax + cg%zmin)/2.
+      CoM(xdim) = (dom%xmax + dom%xmin)/2.
+      CoM(ydim) = (dom%ymax + dom%ymin)/2.
+      CoM(zdim) = (dom%zmax + dom%zmin)/2.
 
       if (eff_dim /= NDIM) call die("[multipole:init_multipole] Only 3D is supported")
 
@@ -179,14 +179,14 @@ contains
 
          !> \deprecated BEWARE: cylindrical factors go here
          drq = min(lmpole%dx, lmpole%dy, lmpole%dz) / 2.
-         rqbin = int(sqrt((cg%xmax - cg%xmin)**2 + (cg%ymax - cg%ymin)**2 + (cg%zmax - cg%zmin)**2)/drq) + 1
+         rqbin = int(sqrt((dom%xmax - dom%xmin)**2 + (dom%ymax - dom%ymin)**2 + (dom%zmax - dom%zmin)**2)/drq) + 1
          ! arithmetic average of the closest and farthest points of computational domain with respect to its center
          !>
          !!\todo check what happens if there are points that are really close to the domain center (maybe we should use a harmonic average?)
          !! Issue a warning or error if it is known that given lmax leads to FP overflows in rn(:) and irn(:)
          !<
-         rscale = ( min((cg%xmax - cg%xmin),     (cg%ymax - cg%ymin),     (cg%zmax - cg%zmin)) + &
-              &    sqrt((cg%xmax - cg%xmin)**2 + (cg%ymax - cg%ymin)**2 + (cg%zmax - cg%zmin)**2) )/4.
+         rscale = ( min((dom%xmax - dom%xmin),     (dom%ymax - dom%ymin),     (dom%zmax - dom%zmin)) + &
+              &    sqrt((dom%xmax - dom%xmin)**2 + (dom%ymax - dom%ymin)**2 + (dom%zmax - dom%zmin)**2) )/4.
          if (allocated(k12) .or. allocated(ofact) .or. allocated(Q)) call die("[multipole:init_multipole] k12, ofact or Q already allocated")
          allocate(   k12(2, 1:lmax, 0:mmax), stat=aerr(1))
          allocate(ofact(0:lm(lmax, 2*mmax)), stat=aerr(2))
