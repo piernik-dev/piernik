@@ -83,6 +83,7 @@ module types
 !      The refined domains may cover whole parent domain or only a tiny part of it.
 !      The multigrid solver will operate also on a stack of coarser domains - parents of the base domain. The coarser domains must be no smaller than the base domain.
    type :: domain_container
+      ! primary parameters, read from /DOMAIN_SIZES/, /BOUNDARIES/ and /DOMAIN_LIMITS/ namelists
       real    :: xmin                           !< physical domain left x-boundary position
       real    :: xmax                           !< physical domain right x-boundary position
       real    :: ymin                           !< physical domain left y-boundary position
@@ -98,6 +99,19 @@ module types
       character(len=bndlen) :: bnd_yr_dom       !< high-y computational domain boundary
       character(len=bndlen) :: bnd_zl_dom       !< low-z computational domain boundary
       character(len=bndlen) :: bnd_zr_dom       !< high-z computational domain boundary
+
+      ! derived parameters
+      real    :: Lx                             !< span of the physical domain in x-direction (xmax-xmin)
+      real    :: Ly                             !< span of the physical domain in y-direction (ymax-ymin)
+      real    :: Lz                             !< span of the physical domain in z-direction (zmax-zmin)
+      real    :: x0                             !< center of the physical domain in x-direction (xmax+xmin)/2.
+      real    :: y0                             !< center of the physical domain in y-direction (ymax+ymin)/2.
+      real    :: z0                             !< center of the physical domain in z-direction (zmax+zmin)/2.
+      real    :: Vol                            !< total volume of the physical domain
+      integer :: nxt                            !< total number of %grid cells in the whole domain in x-direction
+      integer :: nyt                            !< total number of %grid cells in the whole domain in y-direction
+      integer :: nzt                            !< total number of %grid cells in the whole domain in z-direction
+
       !! \todo add hooks to parent and a list of children domains
    end type domain_container
 
@@ -117,11 +131,6 @@ module types
       real    :: zminb                          !< current block left z-boundary position
       real    :: zmaxb                          !< current block right z-boundary position
 
-      real    :: Lx                             !< span of the physical domain in x-direction (xmax-xmin)
-      real    :: Ly                             !< span of the physical domain in y-direction (ymax-ymin)
-      real    :: Lz                             !< span of the physical domain in z-direction (zmax-zmin)
-      real    :: Vol                            !< total volume of the physical domain
-
       real, allocatable, dimension(:) :: dl     !< array of %grid cell sizes in all directions
       real, allocatable, dimension(:) :: idl    !< array of inverted %grid cell sizes in all directions
       real, allocatable, dimension(:) :: inv_x  !< array of invert x-positions of %grid cells centers
@@ -140,9 +149,6 @@ module types
       integer :: nxb                            !< number of physical domain %grid cells in one block (without boundary cells) in x-direction
       integer :: nyb                            !< number of physical domain %grid cells in one block (without boundary cells) in y-direction
       integer :: nzb                            !< number of physical domain %grid cells in one block (without boundary cells) in z-direction
-      integer :: nxt                            !< total number of %grid cells in the whole domain in x-direction
-      integer :: nyt                            !< total number of %grid cells in the whole domain in y-direction
-      integer :: nzt                            !< total number of %grid cells in the whole domain in z-direction
       integer :: is                             !< index of the first %grid cell of physical domain in x-direction
       integer :: ie                             !< index of the last %grid cell of physical domain in x-direction
       integer :: js                             !< index of the first %grid cell of physical domain in y-direction

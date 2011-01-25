@@ -133,7 +133,7 @@ module initproblem
       use grid,           only: cg
       use initcosmicrays, only: iarr_crn, iarr_crs, gamma_crn, K_crn_paral, K_crn_perp
       use initionized,    only: idni, imxi, imzi, ieni, gamma_ion
-      use mpisetup,       only: comm3d, ierr, master, xdim, ydim, zdim, has_dir
+      use mpisetup,       only: comm3d, ierr, master, xdim, ydim, zdim, has_dir, dom
       use mpi,            only: MPI_IN_PLACE, MPI_INTEGER, MPI_MAX
 #ifdef COSM_RAYS_SOURCES
       use crcomposition,  only: icr_H1, icr_C12
@@ -204,7 +204,7 @@ module initproblem
                      do jpm=-1,1
                         do kpm=-1,1
 
-                           r2 = (cg%x(i)-xsn+real(ipm)*cg%Lx)**2+(cg%y(j)-ysn+real(jpm)*cg%Ly)**2+(cg%z(k)-zsn+real(kpm)*cg%Lz)**2
+                           r2 = (cg%x(i)-xsn+real(ipm)*dom%Lx)**2+(cg%y(j)-ysn+real(jpm)*dom%Ly)**2+(cg%z(k)-zsn+real(kpm)*dom%Lz)**2
                            if (icr == icr_H1) then
                               u(iarr_crn(icr), i, j, k) = u(iarr_crn(icr), i, j, k) + amp_cr*exp(-r2/r0**2)
                            elseif (icr == icr_C12) then

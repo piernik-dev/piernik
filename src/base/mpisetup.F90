@@ -447,6 +447,7 @@ module mpisetup
 
          endif
 
+         ! set up the global domain
          has_dir(:) = ([ nxd, nyd, nzd ] > 1)
          domsize(:) = [nxd, nyd, nzd]
 
@@ -467,6 +468,37 @@ module mpisetup
          dom%xmax = xmax
          dom%ymax = ymax
          dom%zmax = zmax
+
+         dom%Lx = dom%xmax - dom%xmin
+         dom%Ly = dom%ymax - dom%ymin
+         dom%Lz = dom%zmax - dom%zmin
+
+         dom%Vol = 1.
+         if (has_dir(xdim)) then
+            dom%Vol = dom%Vol * dom%Lx
+            dom%nxt = dom%nxd + 2 * nb     ! Domain total grid sizes
+         else
+            dom%nxt = 1
+         endif
+
+         if (has_dir(ydim)) then
+            dom%Vol = dom%Vol * dom%Ly
+            dom%nyt = dom%nyd + 2 * nb
+         else
+            dom%nyt = 1
+         endif
+
+         if (has_dir(zdim)) then
+            dom%Vol = dom%Vol * dom%Lz
+            dom%nzt = dom%nzd + 2 * nb
+         else
+            dom%nzt = 1
+         endif
+         !> \deprecated BEWARE: dom\%Vol computed above is not true for non-cartesian geometry
+
+         dom%x0 = (dom%xmax + dom%xmin)/2.
+         dom%y0 = (dom%ymax + dom%ymin)/2.
+         dom%z0 = (dom%zmax + dom%zmin)/2.
 
          psize(:) = [ pxsize, pysize, pzsize ]
 

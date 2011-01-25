@@ -125,9 +125,9 @@ contains
       call die("[initproblem:read_problem_par] Isothermal EOS not supported.")
 #endif /* ISO */
 
-      clump_pos_x = (dom%xmax+dom%xmin)/2.
-      clump_pos_y = (dom%ymax+dom%ymin)/2.
-      clump_pos_z = (dom%zmax+dom%zmin)/2.
+      clump_pos_x = dom%x0
+      clump_pos_y = dom%y0
+      clump_pos_z = dom%z0
       clump_r = max(clump_r, cg%dx, cg%dy, cg%dz)
 
    end subroutine read_problem_par
@@ -145,7 +145,7 @@ contains
       use dataio_pub,        only: msg, die, warn, printinfo
       use grid,              only: cg
       use initionized,       only: gamma_ion, idni, imxi, imyi, imzi, ieni
-      use mpisetup,          only: master, smalld, smallei, comm, ierr, t
+      use mpisetup,          only: master, smalld, smallei, comm, ierr, t, dom
       use mpi,               only: MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_MIN, MPI_MAX, MPI_SUM
       use multigrid_gravity, only: multigrid_solve_grav
 
@@ -397,7 +397,7 @@ contains
       enddo
 
       if (master) then
-         write(msg, '(a,g13.7)')"[initproblem:init_prob] Relaxation finished. Largest orbital period: ",2.*pi*sqrt( (minval([cg%Lx, cg%Ly, cg%Lz])/2.)**3/(newtong * clump_mass) )
+         write(msg, '(a,g13.7)')"[initproblem:init_prob] Relaxation finished. Largest orbital period: ",2.*pi*sqrt( (minval([dom%Lx, dom%Ly, dom%Lz])/2.)**3/(newtong * clump_mass) )
          call printinfo(msg, .true.)
       endif
 

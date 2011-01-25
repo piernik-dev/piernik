@@ -114,16 +114,20 @@ contains
   end subroutine init_shear
 
   subroutine yshift(ts,dts)
-    use arrays, only: u
-    use grid,   only: cg
+
+    use arrays,   only: u
+    use grid,     only: cg
+    use mpisetup, only: dom
+
     implicit none
+
     real, intent(in) :: ts, dts
 #ifdef FFTW
     integer :: i
 #endif /* FFTW */
 
-    ddly  = dts * qshear*omega*cg%Lx
-    dely  = ts  * qshear*omega*cg%Lx
+    ddly  = dts * qshear*omega*dom%Lx
+    dely  = ts  * qshear*omega*dom%Lx
     delj  = mod(int(dely/cg%dy), cg%nyb)
     eps   = mod(dely, cg%dy)/cg%dy
 #ifdef FFTW
@@ -140,7 +144,7 @@ contains
 
     use constants, only: dpi
     use grid,      only: cg
-
+    use mpisetup,  only: dom
 
     implicit none
 
@@ -163,7 +167,7 @@ contains
     ! constants from fftw3.f
     integer, parameter :: FFTW_ESTIMATE=64
 
-    St = - ddy / cg%dy / cg%Lx
+    St = - ddy / cg%dy / dom%Lx
     if (.not.present(inv)) St = -St
 
     nx = size(qty,1)
@@ -206,7 +210,11 @@ contains
 #endif /* FFTW */
 
   function unshear(qty,x,inv)
+
     use grid,     only: cg
+    use mpisetup, only: dom
+
+    implicit none
 
     logical, optional               :: inv
     real, dimension(:,:,:)          :: qty
@@ -222,7 +230,7 @@ contains
 
     my = 3*cg%nyb+2*cg%nb
 
-    fx = dely / cg%Lx
+    fx = dely / dom%Lx
     sg = -1
 
     if (.not.allocated(temp)) allocate(temp(my,nz))

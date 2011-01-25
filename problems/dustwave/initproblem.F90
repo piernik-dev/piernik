@@ -101,15 +101,16 @@ module initproblem
       use constants, only: pi
       use grid,      only: cg
       use initdust,  only: idnd, imxd, imyd, imzd
+      use mpisetup,  only: dom
 
       implicit none
 
       integer :: i,j,k
       real    :: k_x,k_y,k_z,k_a
 
-      k_x = 2.*pi/cg%Lx*real(m_x)
-      k_y = 2.*pi/cg%Ly*real(m_y)
-      k_z = 2.*pi/cg%Lz*real(m_z)
+      k_x = 2.*pi/dom%Lx*real(m_x)
+      k_y = 2.*pi/dom%Ly*real(m_y)
+      k_z = 2.*pi/dom%Lz*real(m_z)
       k_a = sqrt(k_x**2+k_y**2+k_z**2)
 
       do i = 1, cg%nx

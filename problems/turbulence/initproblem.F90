@@ -66,7 +66,7 @@ module initproblem
       use dataio_pub,    only: msg, printinfo
       use grid,          only: cg
       use initneutral,   only: idnn,imxn,imyn,imzn,ienn, gamma_neu
-      use mpisetup,      only: proc
+      use mpisetup,      only: proc !, dom
 
       implicit none
 
@@ -88,9 +88,9 @@ module initproblem
                do m=-kp,kp
                   do n = -kp,kp
                      call random_number(mn)
-!                     somx = dpi*(float(n)*y(j) + float(m)*z(k)) / cg%Lx
-!                     somy = dpi*(float(n)*x(i) + float(m)*z(k)) / cg%Ly
-!                     somz = dpi*(float(n)*x(i) + float(m)*y(j)) / cg%Lz
+!                     somx = dpi*(float(n)*y(j) + float(m)*z(k)) / dom%Lx
+!                     somy = dpi*(float(n)*x(i) + float(m)*z(k)) / dom%Ly
+!                     somz = dpi*(float(n)*x(i) + float(m)*y(j)) / dom%Lz
 !                     deltav(1) = deltav(1) + mn(1)*dsin(somx) + mn(2)*dcos(somx)
 !                     deltav(2) = deltav(2) + mn(3)*dsin(somy) + mn(4)*dcos(somy)
 !                     deltav(3) = deltav(3) + mn(5)*dsin(somz) + mn(6)*dcos(somz)

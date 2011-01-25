@@ -84,7 +84,6 @@ module grid
       if (has_dir(xdim)) then
          cg%nxb = dom%nxd / pxsize     ! Block 'physical' grid sizes
          cg%nx  = cg%nxb + 2 * nb     ! Block total grid sizes
-         cg%nxt = dom%nxd + 2 * nb     ! Domain total grid sizes
          cg%is  = nb + 1
          cg%ie  = nb + cg%nxb
          cg%isb = 2*nb
@@ -93,7 +92,6 @@ module grid
       else
          cg%nxb    = 1
          cg%nx     = 1
-         cg%nxt    = 1
          pxsize = 1
          cg%is     = 1
          cg%ie     = 1
@@ -105,7 +103,6 @@ module grid
       if (has_dir(ydim)) then
          cg%nyb = dom%nyd / pysize
          cg%ny  = cg%nyb + 2 * nb
-         cg%nyt = dom%nyd + 2 * nb
          cg%js  = nb + 1
          cg%je  = nb + cg%nyb
          cg%jsb = 2*nb
@@ -114,7 +111,6 @@ module grid
       else
          cg%ny     = 1
          cg%nyb    = 1
-         cg%nyt    = 1
          pysize = 1
          cg%js     = 1
          cg%je     = 1
@@ -126,7 +122,6 @@ module grid
       if (has_dir(zdim)) then
          cg%nzb = dom%nzd / pzsize
          cg%nz  = cg%nzb + 2 * nb
-         cg%nzt = dom%nzd + 2 * nb
          cg%ks  = nb + 1
          cg%ke  = nb + cg%nzb
          cg%ksb = 2*nb
@@ -135,7 +130,6 @@ module grid
       else
          cg%nzb    = 1
          cg%nz     = 1
-         cg%nzt    = 1
          pzsize = 1
          cg%ks     = 1
          cg%ke     = 1
@@ -155,12 +149,12 @@ module grid
 
       cg%maxxyz = maxval([size(cg%x), size(cg%y), size(cg%z)])
 
-      cg%xminb = dom%xmin + real(pcoords(xdim)  )*(dom%xmax-dom%xmin)/real(psize(xdim))
-      cg%xmaxb = dom%xmin + real(pcoords(xdim)+1)*(dom%xmax-dom%xmin)/real(psize(xdim))
-      cg%yminb = dom%ymin + real(pcoords(ydim)  )*(dom%ymax-dom%ymin)/real(psize(ydim))
-      cg%ymaxb = dom%ymin + real(pcoords(ydim)+1)*(dom%ymax-dom%ymin)/real(psize(ydim))
-      cg%zminb = dom%zmin + real(pcoords(zdim)  )*(dom%zmax-dom%zmin)/real(psize(zdim))
-      cg%zmaxb = dom%zmin + real(pcoords(zdim)+1)*(dom%zmax-dom%zmin)/real(psize(zdim))
+      cg%xminb = dom%xmin + real(pcoords(xdim)  )*dom%Lx/real(psize(xdim))
+      cg%xmaxb = dom%xmin + real(pcoords(xdim)+1)*dom%Lx/real(psize(xdim))
+      cg%yminb = dom%ymin + real(pcoords(ydim)  )*dom%Ly/real(psize(ydim))
+      cg%ymaxb = dom%ymin + real(pcoords(ydim)+1)*dom%Ly/real(psize(ydim))
+      cg%zminb = dom%zmin + real(pcoords(zdim)  )*dom%Lz/real(psize(zdim))
+      cg%zmaxb = dom%zmin + real(pcoords(zdim)+1)*dom%Lz/real(psize(zdim))
 
       cg%dxmn = huge(1.0)
       if (has_dir(xdim)) then
@@ -253,18 +247,6 @@ module grid
       elsewhere
          cg%inv_z = 0.
       endwhere
-
-!--------------------------------------------------------------------------
-
-      cg%Lx = dom%xmax - dom%xmin
-      cg%Ly = dom%ymax - dom%ymin
-      cg%Lz = dom%zmax - dom%zmin
-
-      cg%Vol = 1.
-      if (has_dir(xdim)) cg%Vol = cg%Vol * cg%Lx
-      if (has_dir(ydim)) cg%Vol = cg%Vol * cg%Ly
-      if (has_dir(zdim)) cg%Vol = cg%Vol * cg%Lz
-      !> \deprecated BEWARE: these cg\%Vol settings is not true for non-cartesian geometry
 
 #ifdef VERBOSE
       call printinfo("[grid:init_grid]: finished. \o/")

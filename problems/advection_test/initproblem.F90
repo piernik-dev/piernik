@@ -89,12 +89,12 @@ contains
 
       if (pulse_size <= 0. .or. pulse_size >= 1.) call die("[initproblem:read_problem_par] Pulse width should be between 0. and 1.")
 
-      pulse_x_min = (dom%xmax+dom%xmin)/2. - (dom%xmax-dom%xmin)*pulse_size/2.
-      pulse_x_max = (dom%xmax+dom%xmin)/2. + (dom%xmax-dom%xmin)*pulse_size/2.
-      pulse_y_min = (dom%ymax+dom%ymin)/2. - (dom%ymax-dom%ymin)*pulse_size/2.
-      pulse_y_max = (dom%ymax+dom%ymin)/2. + (dom%ymax-dom%ymin)*pulse_size/2.
-      pulse_z_min = (dom%zmax+dom%zmin)/2. - (dom%zmax-dom%zmin)*pulse_size/2.
-      pulse_z_max = (dom%zmax+dom%zmin)/2. + (dom%zmax-dom%zmin)*pulse_size/2.
+      pulse_x_min = dom%x0 - dom%Lx * pulse_size/2.
+      pulse_x_max = dom%x0 + dom%Lx * pulse_size/2.
+      pulse_y_min = dom%y0 - dom%Ly * pulse_size/2.
+      pulse_y_max = dom%y0 + dom%Ly * pulse_size/2.
+      pulse_z_min = dom%z0 - dom%Lz * pulse_size/2.
+      pulse_z_max = dom%z0 + dom%Lz * pulse_size/2.
 
       finalize_problem => finalize_problem_adv
       cleanup_problem  => cleanup_adv

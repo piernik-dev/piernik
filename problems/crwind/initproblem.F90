@@ -110,7 +110,7 @@ module initproblem
       use hydrostatic,    only: hydrostatic_zeq_densmid
       use initcosmicrays, only: gamma_crs, iarr_crs
       use initionized,    only: idni, imxi, imyi, imzi
-      use mpisetup,       only: smalld
+      use mpisetup,       only: smalld, dom
       use snsources,      only: r_sn
 #ifdef SHEAR
       use shear,          only: qshear, omega
@@ -154,10 +154,10 @@ module initproblem
 #ifdef GALAXY
 ! Single SN explosion in x0,y0,z0 at t = 0 if amp_cr /= 0
                u(iarr_crs,i,j,k)= u(iarr_crs,i,j,k) &
-                     + amp_cr*exp(-((cg%x(i)- x0          )**2 + (cg%y(j)- y0    )**2 + (cg%z(k)-z0)**2)/r_sn**2) &
-                     + amp_cr*exp(-((cg%x(i)-(x0+cg%Lx))**2 + (cg%y(j)- y0    )**2 + (cg%z(k)-z0)**2)/r_sn**2) &
-                     + amp_cr*exp(-((cg%x(i)- x0          )**2 + (cg%y(j)-(y0+cg%Ly))**2 + (cg%z(k)-z0)**2)/r_sn**2) &
-                     + amp_cr*exp(-((cg%x(i)-(x0+cg%Lx))**2 + (cg%y(j)-(y0+cg%Ly))**2 + (cg%z(k)-z0)**2)/r_sn**2)
+                     + amp_cr*exp(-((cg%x(i)- x0        )**2 + (cg%y(j)- y0        )**2 + (cg%z(k)-z0)**2)/r_sn**2) &
+                     + amp_cr*exp(-((cg%x(i)-(x0+dom%Lx))**2 + (cg%y(j)- y0        )**2 + (cg%z(k)-z0)**2)/r_sn**2) &
+                     + amp_cr*exp(-((cg%x(i)- x0        )**2 + (cg%y(j)-(y0+dom%Ly))**2 + (cg%z(k)-z0)**2)/r_sn**2) &
+                     + amp_cr*exp(-((cg%x(i)-(x0+dom%Lx))**2 + (cg%y(j)-(y0+dom%Ly))**2 + (cg%z(k)-z0)**2)/r_sn**2)
 #endif /* GALAXY */
 #endif /* COSM_RAYS */
             enddo

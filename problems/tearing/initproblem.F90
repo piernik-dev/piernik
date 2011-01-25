@@ -104,9 +104,9 @@ module initproblem
       integer  :: i, j, k
       real     :: xmid, ymid, zmid, vzab, b0
 
-      xmid = 0.5*(dom%xmax - dom%xmin)
-      ymid = 0.5*(dom%ymax - dom%ymin)
-      zmid = 0.5*(dom%zmax - dom%zmin)
+      xmid = dom%x0
+      ymid = dom%y0
+      zmid = dom%z0
 
       u(idni,:,:,:) = 1.0
       u(imyi,:,:,:) = 0.0

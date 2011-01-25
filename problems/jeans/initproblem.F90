@@ -50,8 +50,7 @@ contains
       use constants,     only: pi
       use dataio_pub,    only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml    ! QA_WARN required for diff_nml
       use dataio_pub,    only: msg, die, warn
-      use grid,          only: cg
-      use mpisetup,      only: ierr, rbuff, ibuff, master, slave, buffer_dim, comm, has_dir, xdim, ydim, zdim
+      use mpisetup,      only: ierr, rbuff, ibuff, master, slave, buffer_dim, comm, has_dir, xdim, ydim, zdim, dom
       use mpi,           only: MPI_DOUBLE_PRECISION, MPI_INTEGER
       use problem_pub,   only: jeans_d0, jeans_mode
 
@@ -115,9 +114,9 @@ contains
       if (.not. has_dir(ydim)) iy = 0
       if (.not. has_dir(zdim)) iz = 0
 
-      kx = 2. * pi * ix / cg%Lx
-      ky = 2. * pi * iy / cg%Ly
-      kz = 2. * pi * iz / cg%Lz
+      kx = 2. * pi * ix / dom%Lx
+      ky = 2. * pi * iy / dom%Ly
+      kz = 2. * pi * iz / dom%Lz
       if (mode == 1) then
          kx = kx / 2.
          ky = ky / 2.
@@ -156,7 +155,7 @@ contains
       omg  = sqrt(abs(omg2))
       kJ   = sqrt(fpiG * d0) / cs0
       if (kn > 0) then
-         Tamp = (d0 * amp**2 * omg2 * cg%Vol)/(4.0 * kn**2)
+         Tamp = (d0 * amp**2 * omg2 * dom%Vol)/(4.0 * kn**2)
       else
          Tamp = 0.
          if (master) call warn("[initproblem:init_prob] No waves (kn == 0)")

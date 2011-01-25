@@ -290,7 +290,7 @@ contains
                call die("[hydrostatic:start_hydrostatic] get_gprofs'' target has not been specified")
          end select
       endif
-      nstot = nsub * cg%nzt
+      nstot = nsub * dom%nzt
       dzs = (dom%zmax-dom%zmin)/real(nstot-2*cg%nb*nsub)
       allocate(zs(nstot), gprofs(nstot))
       do ksub=1, nstot

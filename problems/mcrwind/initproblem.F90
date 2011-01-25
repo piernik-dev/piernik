@@ -282,12 +282,14 @@ module initproblem
 !! \author M. Hanasz
 !<
    subroutine cr_sn_beware(pos)
+
       use arrays,         only: u
       use crcomposition,  only: icr_H1, icr_C12, icr_N14, icr_O16, primary_C12, primary_N14, primary_O16
       use fluidindex,     only: flind
       use grid,           only: cg
       use initcosmicrays, only: iarr_crn
       use snsources,      only: r_sn
+      use mpisetup,       only: dom
 
       implicit none
 
@@ -317,8 +319,8 @@ module initproblem
 
 !                     decr = amp_ecr_sn * ethu  &
                      decr = amp_cr  &
-                           * EXP(-((cg%x(i)-xsn+real(ipm)*cg%Lx)**2  &
-                           + (cg%y(j)-ysna+real(jpm)*cg%Ly)**2  &
+                           * exp(-((cg%x(i)-xsn+real(ipm)*dom%Lx)**2  &
+                           + (cg%y(j)-ysna+real(jpm)*dom%Ly)**2  &
                            + (cg%z(k)-zsn)**2)/r_sn**2)
 !                     u(iarr_crn,i,j,k) = u(iarr_crn,i,j,k) + max(decr,1e-10) * [1., primary_C12*12., primary_N14*14., primary_O16*16.]
                      do icr=1,flind%crn%all

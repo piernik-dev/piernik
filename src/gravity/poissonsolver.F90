@@ -112,6 +112,7 @@ contains
     use constants, only: newtong, dpi
     use grid,      only: cg
     use shear,     only: dely
+    use mpisetup,  only: dom
 
     implicit none
 
@@ -146,8 +147,8 @@ contains
 !----------------------------------------------------------------------
 !
 
-    St = dely / cg%Lx
-    St = -St * cg%nyb / cg%Ly
+    St = dely / dom%Lx
+    St = -St * cg%nyb / dom%Ly
 ! determine input array dimension
 !
     n = size(den, 1)

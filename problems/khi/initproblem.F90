@@ -103,7 +103,7 @@ module initproblem
       use arrays,      only: u
       use constants,   only: dpi
       use grid,        only: cg
-      use mpisetup,    only: zdim, has_dir
+      use mpisetup,    only: zdim, has_dir, dom
       use initneutral, only: idnn, imxn, imyn, imzn, ienn, gamma_neu
 
       implicit none
@@ -125,7 +125,7 @@ module initproblem
          rcx = cg%x(i)
          do j = 1, cg%ny
             rcy = cg%y(j)
-            rc=rcy-0.5*cg%Ly
+            rc=rcy-0.5*dom%Ly
             if (rc .gt. 0.0) then
                u(idnn,i,j,:) = dtop
                u(imxn,i,j,:) = vtop*dtop

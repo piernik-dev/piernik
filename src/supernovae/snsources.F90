@@ -74,9 +74,8 @@ module snsources
       use dataio_pub,     only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml                  ! QA_WARN required for diff_nml
       use dataio_pub,     only: die, code_progress, PIERNIK_INIT_BASE
       use mpi,            only: MPI_DOUBLE_PRECISION
-      use mpisetup,       only: rbuff, buffer_dim, comm, ierr, master, slave, xdim, ydim, has_dir
+      use mpisetup,       only: rbuff, buffer_dim, comm, ierr, master, slave, xdim, ydim, has_dir, dom
       use initcosmicrays, only: cr_eff
-      use grid,           only: cg
 
       implicit none
 
@@ -109,13 +108,13 @@ module snsources
       amp_ecr_sn = 4.96e6*cr_eff/r_sn**3
 
       if (has_dir(xdim)) then
-         f_sn = f_sn_kpc2 * cg%Lx/1000.0
+         f_sn = f_sn_kpc2 * dom%Lx/1000.0 !\deprecated magic numbers
       else
          f_sn = f_sn_kpc2 * 2.0*r_sn/1000.0
       endif
 
       if (has_dir(ydim)) then
-         f_sn = f_sn * cg%Ly/1000.0
+         f_sn = f_sn * dom%Ly/1000.0
       else
          f_sn = f_sn * 2.0*r_sn/1000.0
       endif
@@ -158,15 +157,18 @@ module snsources
 !! \param pos real, dimension(3), array of supernova position components
 !<
    subroutine cr_sn(pos)
+
       use arrays,         only: u
       use fluidindex,     only: flind
       use grid,           only: cg
       use initcosmicrays, only: iarr_crn
+      use mpisetup,       only: dom
 #ifdef COSM_RAYS_SOURCES
       use crcomposition,  only: icr_H1, icr_C12, icr_N14, icr_O16, primary_C12, primary_N14, primary_O16
 #endif /* COSM_RAYS_SOURCES */
 
       implicit none
+
       real, dimension(3), intent(in) :: pos
       integer  :: i, j, k, ipm, jpm
 #ifdef COSM_RAYS_SOURCES
@@ -190,8 +192,8 @@ module snsources
                   do jpm=-1,1
 
                      decr = amp_ecr_sn * ethu  &
-                           * EXP(-((cg%x(i)-xsn+real(ipm)*cg%Lx)**2  &
-                           + (cg%y(j)-ysna+real(jpm)*cg%Ly)**2  &
+                           * EXP(-((cg%x(i)-xsn+real(ipm)*dom%Lx)**2  &
+                           + (cg%y(j)-ysna+real(jpm)*dom%Ly)**2  &
                            + (cg%z(k)-zsn)**2)/r_sn**2)
 
 #ifdef COSM_RAYS_SOURCES
@@ -239,8 +241,8 @@ module snsources
       real :: xsn,ysn,zsn,znorm
 
       call random_number(rand)
-      xsn = dom%xmin+ cg%Lx*rand(1)
-      ysn = dom%ymin+ cg%Ly*rand(2)
+      xsn = dom%xmin+ dom%Lx*rand(1)
+      ysn = dom%ymin+ dom%Ly*rand(2)
 
       if (has_dir(zdim)) then
          irand = irand+4
