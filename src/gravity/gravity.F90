@@ -69,6 +69,7 @@ module gravity
    real    :: Omega                 !< corotational angular velocity for Roche potential
 
    logical :: user_grav             !< use user defined grav_pot_3d
+   logical :: variable_gp           !< .true. if arrays::gp must be evaluated at every step
 
    interface
 
@@ -132,6 +133,7 @@ module gravity
 !! <tr><td>n_gravr      </td><td>0      </td><td>real             </td><td>\copydoc gravity::n_gravr      </td></tr>
 !! <tr><td>n_gravh      </td><td>0      </td><td>real             </td><td>\copydoc gravity::n_gravh      </td></tr>
 !! <tr><td>user_grav    </td><td>.false.</td><td>logical          </td><td>\copydoc gravity::user_grav    </td></tr>
+!! <tr><td>variable_gp  </td><td>.false.</td><td>logical          </td><td>\copydoc gravity::variable_gp  </td></tr>
 !! <tr><td>gprofs_target</td><td>'gparr'</td><td>string of chars  </td><td>\copydoc gravity::gprofs_target</td></tr>
 !! </table>
 !! \n \n
@@ -151,7 +153,7 @@ module gravity
       implicit none
 
       namelist /GRAVITY/ g_dir, r_gc, ptmass, ptm_x, ptm_y, ptm_z, r_smooth, external_gp, ptmass2, ptm2_x, &
-                nsub, tune_zeq, tune_zeq_bnd, h_grav, r_grav, n_gravr, n_gravh, user_grav, gprofs_target
+                nsub, tune_zeq, tune_zeq_bnd, h_grav, r_grav, n_gravr, n_gravh, user_grav, gprofs_target, variable_gp
 
       if (code_progress < PIERNIK_INIT_ARRAYS) call die("[gravity:init_grav] constants or arrays not initialized.")
 
@@ -181,6 +183,7 @@ module gravity
       external_gp   = 'null'
 
       user_grav = .false.
+      variable_gp = .false.
 
       if (master) then
 
@@ -205,6 +208,7 @@ module gravity
          rbuff(15)  = ptm2_x
 
          lbuff(1)   = user_grav
+         lbuff(2)   = variable_gp
 
          cbuff(1)   = gprofs_target
          cbuff(2)   = external_gp
@@ -237,6 +241,7 @@ module gravity
          ptm2_x              = rbuff(15)
 
          user_grav           = lbuff(1)
+         variable_gp         = lbuff(2)
 
          gprofs_target       = cbuff(1)(1:gproft_len)
          external_gp         = cbuff(2)
@@ -306,7 +311,7 @@ module gravity
          frun = .false.
       endif
 #endif /* SELF_GRAV */
-
+      if (variable_gp) call grav_pot_3d
       call sum_potential
 
    end subroutine source_terms_grav
