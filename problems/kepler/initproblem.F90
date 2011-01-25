@@ -67,7 +67,7 @@ contains
       use mpi,                 only: MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL
       use gravity,             only: grav_pot_3d
       use grid,                only: geometry
-      use types,               only: problem_customize_solution
+      use types,               only: problem_customize_solution, problem_grace_passed
       use list_hdf5,           only: problem_write_restart, problem_read_restart
       use fluidboundaries_pub, only: user_bnd_xl, user_bnd_xr
       implicit none
@@ -155,9 +155,39 @@ contains
          user_bnd_xl => my_bnd_xl
          user_bnd_xr => my_bnd_xr
          grav_pot_3d => my_grav_pot_3d
+         problem_grace_passed => add_random_noise
       endif
 
    end subroutine read_problem_par
+!-----------------------------------------------------------------------------
+   subroutine add_random_noise
+      use grid,         only: cg
+      use arrays,       only: u
+      use fluidindex,   only: flind
+      use mpisetup,     only: proc
+      use dataio_pub,   only: printinfo
+
+      implicit none
+      integer, dimension(:), allocatable  :: seed
+      integer :: n, clock, i
+      real, dimension(:,:,:,:), allocatable :: noise
+      real, parameter :: amp = 1.e-6
+
+      call printinfo("[initproblem:add_random_noise]: adding random noise to dust")
+      call random_seed(size=n)
+      allocate(seed(n))
+      call system_clock(count=clock)
+      seed = clock*proc + 37 * (/ (i-1, i = 1, n) /)
+      call random_seed(put=seed)
+      deallocate(seed)
+
+      allocate(noise(3,cg%nx,cg%ny,cg%nz))
+      call random_number(noise)
+      u(flind%dst%imx,:,:,:) = u(flind%dst%imx,:,:,:) +amp -2.0*amp*noise(1,:,:,:) * u(flind%dst%idn,:,:,:)
+      u(flind%dst%imy,:,:,:) = u(flind%dst%imy,:,:,:) +amp -2.0*amp*noise(2,:,:,:) * u(flind%dst%idn,:,:,:)
+      u(flind%dst%imz,:,:,:) = u(flind%dst%imz,:,:,:) +amp -2.0*amp*noise(3,:,:,:) * u(flind%dst%idn,:,:,:)
+      deallocate(noise)
+   end subroutine add_random_noise
 !-----------------------------------------------------------------------------
    subroutine init_prob
 
@@ -510,7 +540,7 @@ contains
       if (frun) then
          do i = 1, cg%nx
             do k = 1, cg%nz
-               r2 = cg%x(i)**2 + cg%z(k)**2
+               r2 = cg%x(i)**2! + cg%z(k)**2
                gp(i,:,k) = -newtong*ptmass / sqrt(r2)
             enddo
          enddo

@@ -1,14 +1,14 @@
  $DOMAIN_SIZES
     nxd = 512
     nyd = 5
-    nzd = 1
+    nzd = 128
     nb  = 4
  /
 
  $MPI_BLOCKS
     pxsize = 1
     pysize = 1
-    pzsize = 1
+    pzsize = 8
     mpi_magic = .true.
  /
 
