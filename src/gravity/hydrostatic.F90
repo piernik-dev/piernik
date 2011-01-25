@@ -50,6 +50,17 @@ module hydrostatic
    real,    save :: dmid
 #endif /* !NEW_HYDROSTATIC */
 
+   interface
+      subroutine hzeqscheme(ksub, up, factor)
+         implicit none
+         integer, intent(in)  :: ksub
+         real,    intent(in)  :: up
+         real,    intent(out) :: factor
+      end subroutine hzeqscheme
+   end interface
+
+   procedure(hzeqscheme), pointer :: hzeq_scheme => NULL()
+
 contains
 #ifdef GRAV
 !>
@@ -136,24 +147,18 @@ contains
 
       ksmid = 0
 #ifdef NEW_HYDROSTATIC
-      do ksub=1, nstot
-         if (gprofs(ksub) >= 0.0) ksmid = ksub                          ! generally the midplane is where gravity is 0
-      enddo
-      if (abs(gprofs(ksmid-1)) < abs(gprofs(ksmid))) ksmid = ksmid - 1  ! practically we want the least gravity absolute value
-      ksmid = minloc(abs(gprofs),1)
+      ksmid = minloc(abs(gprofs),1)          ! generally the midplane is where gravity is 0,  practically we want the least gravity absolute value
+      hzeq_scheme => hzeq_scheme_v2
 #else /* !NEW_HYDROSTATIC */
-      do ksub=1, nstot
-         if (zs(ksub) < 0.0) ksmid = ksub                               ! the midplane is in between ksmid and ksmid+1
-      enddo
-      ksmid = maxloc(zs,1,mask=(zs < 0.0))
+      ksmid = maxloc(zs,1,mask=(zs < 0.0))   ! the midplane is in between ksmid and ksmid+1
+      hzeq_scheme => hzeq_scheme_v1
 #endif /* !NEW_HYDROSTATIC */
       if (ksmid == 0) call die("[hydrostatic:hydrostatic_main] ksmid not set")
 
-#ifdef NEW_HYDROSTATIC
       if (ksmid < nstot) then
          dprofs(ksmid+1) = 1.0
          do ksub=ksmid+1, nstot-1
-            factor = (4.0 + (gprofs(ksub)+gprofs(ksub+1)))/(4.0 - (gprofs(ksub)+gprofs(ksub+1)))
+            call hzeq_scheme(ksub,  1.0, factor)
             dprofs(ksub+1) = factor * dprofs(ksub)
          enddo
       endif
@@ -161,27 +166,10 @@ contains
       if (ksmid > 1) then
          dprofs(ksmid) = 1.0
          do ksub=ksmid, 2, -1
-            factor = (4.0 - (gprofs(ksub)+gprofs(ksub-1)))/(4.0 + (gprofs(ksub)+gprofs(ksub-1)))
+            call hzeq_scheme(ksub, -1.0, factor)
             dprofs(ksub-1) = factor * dprofs(ksub)
          enddo
       endif
-#else /* !NEW_HYDROSTATIC */
-      if (ksmid < nstot) then
-         dprofs(ksmid+1) = dmid
-         do ksub=ksmid+1, nstot-1
-            factor = (2.0 + gprofs(ksub))/(2.0 - gprofs(ksub))
-            dprofs(ksub+1) = factor * dprofs(ksub)
-         enddo
-      endif
-
-      if (ksmid > 1) then
-         dprofs(ksmid) = dmid
-         do ksub=ksmid, 2, -1
-            factor = (2.0 - gprofs(ksub))/(2.0 + gprofs(ksub))
-            dprofs(ksub-1) = factor * dprofs(ksub)
-         enddo
-      endif
-#endif /* !NEW_HYDROSTATIC */
 
       dprof(:) =0.0
       if (present(sd)) sd = 0.0
@@ -202,6 +190,22 @@ contains
 
       return
    end subroutine hydrostatic_main
+
+   subroutine hzeq_scheme_v1(ksub, up, factor)
+      implicit none
+      integer, intent(in)  :: ksub
+      real,    intent(in)  :: up
+      real,    intent(out) :: factor
+      factor = (2.0 + up*gprofs(ksub))/(2.0 - up*gprofs(ksub))
+   end subroutine hzeq_scheme_v1
+
+   subroutine hzeq_scheme_v2(ksub, up, factor)
+      implicit none
+      integer, intent(in)  :: ksub
+      real,    intent(in)  :: up
+      real,    intent(out) :: factor
+      factor = (4.0 + up*(gprofs(ksub)+gprofs(ksub+1)))/(4.0 - up*(gprofs(ksub)+gprofs(ksub+1)))
+   end subroutine hzeq_scheme_v2
 
    subroutine get_gprofs_accel(iia,jja)
       use gravity, only: tune_zeq, grav_accel
