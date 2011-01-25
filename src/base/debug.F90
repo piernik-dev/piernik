@@ -50,7 +50,7 @@ contains
       use mpisetup,              only: master, slave, comm, ierr, buffer_dim, rbuff, lbuff
       use mpi,                   only: MPI_DOUBLE_PRECISION, MPI_LOGICAL
       use dataio_pub,            only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml  ! QA_WARN required for diff_nml
-      use dataio_pub,            only: code_progress, PIERNIK_INIT_MPI
+      use dataio_pub,            only: code_progress, PIERNIK_INIT_MPI, die
 
       implicit none
 

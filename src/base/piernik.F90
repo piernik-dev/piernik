@@ -219,8 +219,8 @@ contains
       write(tmp_log_file,'(2a)') trim(cwd),'/tmp.log'
       inquire(file = tmp_log_file, exist = tmp_log_exist)
       if (tmp_log_exist) then
-         open(3, file=tmp_log_file)
-         close(3, status="delete")
+!         open(3, file=tmp_log_file)
+!         close(3, status="delete")
       endif
 
       ! First, we must initialize the communication (and things that do not depend on init_mpi if there are any)
