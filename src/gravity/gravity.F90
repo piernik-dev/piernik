@@ -41,7 +41,7 @@ module gravity
    implicit none
 
    private
-   public :: init_grav, grav_accel, source_terms_grav, grav_pot2accel, grav_pot_3d, grav_type, get_gprofs, grav_accel2pot, sum_potential
+   public :: init_grav, grav_accel, source_terms_grav, grav_pot2accel, grav_pot_3d, grav_pot_3d_called, grav_type, get_gprofs, grav_accel2pot, sum_potential
    public :: g_dir, r_gc, ptmass, ptm_x, ptm_y, ptm_z, r_smooth, nsub, tune_zeq, tune_zeq_bnd, h_grav, r_grav, n_gravr, n_gravh, user_grav, gp_status, gprofs_target, ptmass2, ptm2_x
 
    integer, parameter         :: gp_stat_len   = 9
@@ -68,6 +68,7 @@ module gravity
    real    :: cmass_x               !< center of mass for Roche potential
    real    :: Omega                 !< corotational angular velocity for Roche potential
 
+   logical :: grav_pot_3d_called = .false.
    logical :: user_grav             !< use user defined grav_pot_3d
    logical :: variable_gp           !< .true. if arrays::gp must be evaluated at every step
 

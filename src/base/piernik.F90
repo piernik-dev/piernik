@@ -195,7 +195,7 @@ contains
       use shear,                 only: init_shear
 #endif /* SHEAR */
 #ifdef GRAV
-      use gravity,               only: init_grav, grav_pot_3d
+      use gravity,               only: init_grav, grav_pot_3d, grav_pot_3d_called
 #endif /* GRAV */
       use interactions,          only: init_interactions
 #ifdef MULTIGRID
@@ -213,9 +213,6 @@ contains
       implicit none
 
       logical :: tmp_log_exist
-#ifdef GRAV
-      logical              :: grav_pot_3d_called = .false.
-#endif /* GRAV */
 
       call parse_cmdline
       write(par_file,'(2a)') trim(cwd),'/problem.par'
