@@ -217,11 +217,13 @@ contains
       call parse_cmdline
       write(par_file,'(2a)') trim(cwd),'/problem.par'
       write(tmp_log_file,'(2a)') trim(cwd),'/tmp.log'
-      inquire(file = tmp_log_file, exist = tmp_log_exist)
-      if (tmp_log_exist) then
+! \deprecated: I/O race condition
+!   we're before init_mpi, so we cannot do it only with one proc
+!      inquire(file = tmp_log_file, exist = tmp_log_exist)
+!      if (tmp_log_exist) then
 !         open(3, file=tmp_log_file)
 !         close(3, status="delete")
-      endif
+!      endif
 
       ! First, we must initialize the communication (and things that do not depend on init_mpi if there are any)
       call init_mpi
