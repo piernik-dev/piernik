@@ -67,14 +67,14 @@ contains
 !! \brief Routine that establishes hydrostatic equilibrium for fixed column density
 !! \details Routine calls the routine of the case of fixed plane density value and use the correction for column density.
 !! To properly use this routine it is important to make sure that get_gprofs pointer has been associated. See details of start_hydrostatic routine.
-!! \param iia x-coordinate of z-column
-!! \param jja y-coordinate of z-column
+!! \param iia x index of z-column
+!! \param jja y index of z-column
 !! \param coldens column density value for given x and y coordinates
 !! \csim2 sqare of sound velocity
 !<
    subroutine hydrostatic_zeq_coldens(iia,jja,coldens,csim2)
 
-      use arrays,   only: dprof
+      use arrays,   only: dprof  !! \todo convert to intent(inout)
       use grid,     only: cg
 
       implicit none
