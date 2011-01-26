@@ -108,6 +108,8 @@ module types
       real    :: y0                             !< center of the physical domain in y-direction (ymax+ymin)/2.
       real    :: z0                             !< center of the physical domain in z-direction (zmax+zmin)/2.
       real    :: Vol                            !< total volume of the physical domain
+
+      ! Do not use n[xyz]t components in the Piernik source tree. Avoid using them in your problem-specific files because it seriuosly limits paralelization
       integer :: nxt                            !< total number of %grid cells in the whole domain in x-direction
       integer :: nyt                            !< total number of %grid cells in the whole domain in y-direction
       integer :: nzt                            !< total number of %grid cells in the whole domain in z-direction
@@ -146,9 +148,9 @@ module types
       integer :: nx                             !< number of %grid cells in one block in x-direction
       integer :: ny                             !< number of %grid cells in one block in y-direction
       integer :: nz                             !< number of %grid cells in one block in z-direction
-      integer :: nxb                            !< number of physical domain %grid cells in one block (without boundary cells) in x-direction
-      integer :: nyb                            !< number of physical domain %grid cells in one block (without boundary cells) in y-direction
-      integer :: nzb                            !< number of physical domain %grid cells in one block (without boundary cells) in z-direction
+      integer :: nxb                            !< number of %grid cells in one block (without boundary cells) in x-direction
+      integer :: nyb                            !< number of %grid cells in one block (without boundary cells) in y-direction
+      integer :: nzb                            !< number of %grid cells in one block (without boundary cells) in z-direction
       integer :: is                             !< index of the first %grid cell of physical domain in x-direction
       integer :: ie                             !< index of the last %grid cell of physical domain in x-direction
       integer :: js                             !< index of the first %grid cell of physical domain in y-direction
