@@ -995,7 +995,7 @@ contains
          call get_extremum(wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), 'min', pr%temp_min)
       endif
 #endif /* !ISO */
-      end subroutine get_common_vars
+   end subroutine get_common_vars
 !---------------------------------------------------------------------
 !>
 !! \brief writes timestep diagnostics to the logfile
@@ -1004,66 +1004,67 @@ contains
 !<
 !---------------------------------------------------------------------
 !
-      subroutine  write_log(tsl)
+   subroutine  write_log(tsl)
 
-         use arrays,             only: wa, u, b
-         use constants,          only: small
-         use dataio_pub,         only: msg, printinfo
-         use fluidindex,         only: ibx, iby, ibz, flind
-         use grid,               only: cg
-         use mpisetup,           only: cfl, t, dt, master
-         use types,              only: tsl_container, value, idlen
+      use arrays,             only: wa, u, b
+      use constants,          only: small
+      use dataio_pub,         only: msg, printinfo
+      use fluidindex,         only: ibx, iby, ibz, flind
+      use grid,               only: cg
+      use mpisetup,           only: cfl, t, dt, master
+      use types,              only: tsl_container, value, idlen
 #ifdef COSM_RAYS
-         use fluidindex,         only: iarr_all_crs
-         use timestepcosmicrays, only: dt_crs
+      use fluidindex,         only: iarr_all_crs
+      use timestepcosmicrays, only: dt_crs
 #endif /* COSM_RAYS */
 #ifdef RESISTIVE
-         use resistivity,        only: dt_resist, eta_max
+      use resistivity,        only: dt_resist, eta_max
 #endif /* RESISTIVE */
 #ifdef VARIABLE_GP
-         use arrays,             only: gpot
+      use arrays,             only: gpot
 #endif /* VARIABLE_GP */
 
-         implicit none
+      implicit none
 
-         type(tsl_container), optional  :: tsl
-         real :: dxmn_safe
+      type(tsl_container), optional  :: tsl
+      real :: dxmn_safe
 
 #ifdef MAGNETIC
-         type(value) :: b_min, b_max, divb_max, vai_max
+      type(value) :: b_min, b_max, divb_max, vai_max
 #endif /* MAGNETIC */
 #ifdef COSM_RAYS
-         type(value) :: encr_min, encr_max
+      type(value) :: encr_min, encr_max
 #endif /* COSM_RAYS */
 #ifdef RESISTIVE
-         type(value) :: etamax
+      type(value) :: etamax
 #endif /* RESISTIVE */
 #ifdef VARIABLE_GP
-         type(value) :: gpxmax, gpymax, gpzmax
+      type(value) :: gpxmax, gpymax, gpzmax
 #endif /* VARIABLE_GP */
-         character(len=idlen) :: id
+      character(len=idlen) :: id
 
-         if (cg%dxmn >= sqrt(huge(1.0))) then
-            dxmn_safe = sqrt(huge(1.0))
-         else
-            dxmn_safe = cg%dxmn
-         endif
+      id = "" ! suppress compiler warnings if noe of the modules requiring the id variable are swithed on.
+      if (cg%dxmn >= sqrt(huge(1.0))) then
+         dxmn_safe = sqrt(huge(1.0))
+      else
+         dxmn_safe = cg%dxmn
+      endif
 
    ! Timestep diagnostics
 #ifdef NEUTRAL
-         call get_common_vars(flind%neu)
+      call get_common_vars(flind%neu)
 #endif /* NEUTRAL */
 
 #ifdef IONIZED
-         call get_common_vars(flind%ion)
+      call get_common_vars(flind%ion)
 
 #ifdef MAGNETIC
-         wa(:,:,:)  = sqrt(b(1,:,:,:)*b(1,:,:,:) + b(2,:,:,:)*b(2,:,:,:) + b(3,:,:,:)*b(3,:,:,:))
-         call get_extremum(wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), 'max', b_max)
-         call get_extremum(wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), 'min', b_min)
+      wa(:,:,:)  = sqrt(b(1,:,:,:)*b(1,:,:,:) + b(2,:,:,:)*b(2,:,:,:) + b(3,:,:,:)*b(3,:,:,:))
+      call get_extremum(wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), 'max', b_max)
+      call get_extremum(wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), 'min', b_min)
 
-         wa(:,:,:)  = wa(:,:,:) / sqrt(u(flind%ion%idn,:,:,:))
-         call get_extremum(wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), 'max', vai_max)
+      wa(:,:,:)  = wa(:,:,:) / sqrt(u(flind%ion%idn,:,:,:))
+      call get_extremum(wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), 'max', vai_max)
 #endif /* MAGNETIC */
 
 #ifdef ISO

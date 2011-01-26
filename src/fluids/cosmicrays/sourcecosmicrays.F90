@@ -36,56 +36,56 @@
 
 module sourcecosmicrays
 ! pulled by COSM_RAYS_SOURCES
-  implicit none
+   implicit none
 
-  private
-  public :: src_crn
+   private
+   public :: src_crn
 
-  contains
+contains
 
 !==========================================================================================
 
-  subroutine src_crn(uu,n, decrn)
+   subroutine src_crn(uu,n, decrn)
 
-    use fluidindex,    only: flind
-    use crcomposition, only: icr_Be10, icr_Be9, icr_C12, sigma_c12_be10, sigma_c12_be9, tau_Be10
-    ! icr_Li7, icr_N14, icr_O16, sigma_c12_li7, sigma_n14_li7, sigma_o16_be10, sigma_o16_be9, sigma_o16_li7
+      use fluidindex,    only: flind
+      use crcomposition, only: icr_Be10, icr_Be9, icr_C12, sigma_c12_be10, sigma_c12_be9, tau_Be10
+      ! icr_Li7, icr_N14, icr_O16, sigma_c12_li7, sigma_n14_li7, sigma_o16_be10, sigma_o16_be9, sigma_o16_li7
 
-    implicit none
+      implicit none
 
-    integer, intent(in) :: n
+      integer, intent(in) :: n
 
 ! locals
-    real, dimension(flind%all,n)     :: uu
-    real, dimension(flind%crn%all,n) :: decrn
-    real, allocatable               :: dgas(:)
+      real, dimension(flind%all,n)     :: uu
+      real, dimension(flind%crn%all,n) :: decrn
+      real, allocatable               :: dgas(:)
 
-    real, parameter  :: gamma_lor = 10.
-    real, parameter  :: speed_of_light = 3d10*1d6*365.*24.*60.*60. !> cm/Myr \deprecated BEWARE: this line breaks unit consistency, move it to constants.F90 and use scaling
-    real, parameter  :: ndim = 2.
+      real, parameter  :: gamma_lor = 10.
+      real, parameter  :: speed_of_light = 3d10*1d6*365.*24.*60.*60. !> cm/Myr \deprecated BEWARE: this line breaks unit consistency, move it to constants.F90 and use scaling
+      real, parameter  :: ndim = 2.
 
-    allocate(dgas(n))
+      allocate(dgas(n))
 
-    dgas(:) = 0.0
+      dgas(:) = 0.0
 
 #ifdef IONIZED
-    dgas(:) = dgas(:) + uu(flind%ion%idn,:)
+      dgas(:) = dgas(:) + uu(flind%ion%idn,:)
 #endif /* IONIZED */
 #ifdef NEUTRAL
-    dgas(:) = dgas(:) + uu(flind%neu%idn,:)
+      dgas(:) = dgas(:) + uu(flind%neu%idn,:)
 #endif /* NEUTRAL */
 
-    decrn(:,:) = 0.0
+      decrn(:,:) = 0.0
 
-    decrn(icr_C12,:)  = -1./ndim*dgas(:)*speed_of_light*sigma_C12_Be9*uu(flind%crn%beg-1+icr_C12,:) &
-                        -1./ndim*dgas(:)*speed_of_light*sigma_C12_Be10*uu(flind%crn%beg-1+icr_C12,:)
+      decrn(icr_C12,:)  = -1./ndim*dgas(:)*speed_of_light*sigma_C12_Be9*uu(flind%crn%beg-1+icr_C12,:) &
+           &              -1./ndim*dgas(:)*speed_of_light*sigma_C12_Be10*uu(flind%crn%beg-1+icr_C12,:)
 
-    decrn(icr_Be9,:)  =(  1./ndim*dgas(:)*speed_of_light*sigma_C12_Be9*uu(flind%crn%beg-1+icr_C12,:) )!&
-!                         +1./ndim*dgas(:)*speed_of_light*sigma_O16_Be9*uu(flind%crn%beg-1+icr_O16,:)  )
+      decrn(icr_Be9,:)  =(  1./ndim*dgas(:)*speed_of_light*sigma_C12_Be9*uu(flind%crn%beg-1+icr_C12,:) )!&
+!          &               +1./ndim*dgas(:)*speed_of_light*sigma_O16_Be9*uu(flind%crn%beg-1+icr_O16,:)  )
 
-    decrn(icr_Be10,:) =(  1./ndim*dgas(:)*speed_of_light*sigma_C12_Be10*uu(flind%crn%beg-1+icr_C12,:) &
-!                         +1./ndim*dgas(:)*speed_of_light*sigma_O16_Be10*uu(flind%crn%beg-1+icr_O16,:) &
-                         -1./ndim*uu(flind%crn%beg-1+icr_Be10,:)/gamma_lor/tau_Be10 )
+      decrn(icr_Be10,:) =(  1./ndim*dgas(:)*speed_of_light*sigma_C12_Be10*uu(flind%crn%beg-1+icr_C12,:) &
+!          &               +1./ndim*dgas(:)*speed_of_light*sigma_O16_Be10*uu(flind%crn%beg-1+icr_O16,:) &
+           &               -1./ndim*uu(flind%crn%beg-1+icr_Be10,:)/gamma_lor/tau_Be10 )
 
 !                        -1./ndim*dgas(:)*speed_of_light*sigma_C12_Li7*uu(flind%crn%beg-1+icr_C12,:)
 !    decrn(icr_Li7,:)  =( 1./ndim*dgas(:)*speed_of_light*sigma_C12_Li7*uu(flind%crn%beg-1+icr_C12,:) !&
@@ -98,6 +98,6 @@ module sourcecosmicrays
 !                        -1./ndim*dgas(:)*speed_of_light*sigma_O16_Be9*uu(flind%crn%beg-1+icr_O16,:) &
 !                        -1./ndim*dgas(:)*speed_of_light*sigma_O16_Be10*uu(flind%crn%beg-1+icr_O16,:)
 
-  end subroutine src_crn
+   end subroutine src_crn
 
 end module sourcecosmicrays

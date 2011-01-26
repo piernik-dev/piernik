@@ -156,9 +156,12 @@ contains
 !! \brief routine setting geometrical coefficients for cartesian grid
 !<
    subroutine set_cart_coeffs(sweep,flind,i1,i2)
+
       use types,         only: var_numbers
       use dataio_pub,    only: die, msg
+
       implicit none
+
       character(len=*), intent(in)  :: sweep
       type(var_numbers), intent(in) :: flind
       integer, intent(in)           :: i1, i2

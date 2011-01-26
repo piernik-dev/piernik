@@ -41,7 +41,7 @@ module initproblem
 
    namelist /PROBLEM_CONTROL/  d0, r0,bx0,by0,bz0
 
-   contains
+contains
 
 !-----------------------------------------------------------------------------
    subroutine read_problem_par
@@ -138,7 +138,7 @@ module initproblem
             enddo
          enddo
       enddo
-      return
+
    end subroutine init_prob
 !-----------------------------------------------------------------------------
 end module initproblem

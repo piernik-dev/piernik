@@ -30,10 +30,13 @@
 
 module list_hdf5
 ! pulled by ANY
+
 #ifdef NEW_HDF5
    use iso_c_binding, only: c_int
 #endif /* NEW_HDF5 */
+
    implicit none
+
    private
    public :: write_arr, S_LEN, additional_attrs, problem_write_restart, problem_read_restart
 #ifdef NEW_HDF5

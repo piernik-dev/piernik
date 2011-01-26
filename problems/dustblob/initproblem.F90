@@ -41,7 +41,7 @@ module initproblem
    namelist /PROBLEM_CONTROL/  &
                                d_gas, p_gas, v_gas, d_dust, v_dust, x0, y0, z0, r0
 
-   contains
+contains
 
 !-----------------------------------------------------------------------------
 
@@ -145,7 +145,6 @@ module initproblem
          enddo
       enddo
 
-      return
    end subroutine init_prob
 
 !-----------------------------------------------------------------------------------------------------------------------------------

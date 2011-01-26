@@ -43,7 +43,7 @@ module initproblem
 
    namelist /PROBLEM_CONTROL/  chi, dbot, lpert, Mtop, Mbot, dpert, tkh, vtransf
 
-   contains
+contains
 
 !-----------------------------------------------------------------------------
 

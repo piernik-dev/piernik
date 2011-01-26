@@ -40,10 +40,9 @@ module initproblem
    real      :: d0, v0, v1
    integer   :: m_x, m_y, m_z
 
-   namelist /PROBLEM_CONTROL/  &
-                               d0, v0, v1, m_x, m_y, m_z
+   namelist /PROBLEM_CONTROL/  d0, v0, v1, m_x, m_y, m_z
 
-   contains
+contains
 
 !-----------------------------------------------------------------------------
 
@@ -126,7 +125,6 @@ module initproblem
          enddo
       enddo
 
-      return
    end subroutine init_prob
 
 end module initproblem

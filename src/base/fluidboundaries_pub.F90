@@ -28,7 +28,9 @@
 #include "piernik.h"
 
 module fluidboundaries_pub
+
    implicit none
+
    private
    public :: user_bnd_xl, user_bnd_xr, user_bnd_yl, user_bnd_yr, user_bnd_zl, user_bnd_zr, init_fluidboundaries, &
       & func_bnd_xl, func_bnd_xr

@@ -44,7 +44,8 @@ module initproblem
    real :: x0, y0, z0                                                        !< parameters for a single supernova exploding at t=0
 
    namelist /PROBLEM_CONTROL/  d0, bxn, byn, bzn, x0, y0, z0, alpha, amp_cr, beta_cr
-   contains
+
+contains
 
 !-----------------------------------------------------------------------------
 
@@ -177,7 +178,6 @@ module initproblem
          enddo
       enddo
 
-      return
    end subroutine init_prob
 
 end module initproblem

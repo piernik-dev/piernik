@@ -62,7 +62,7 @@ module arrays
    real, allocatable, dimension(:,:,:),target:: cs_iso2_arr !< Array storing squared local isothermal sound speed
 #endif /* ISO_LOCAL */
 
-   contains
+contains
 
 !>
 !! Routine that allocates all arrays

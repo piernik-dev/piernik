@@ -40,11 +40,11 @@ module initproblem
    private
    public :: read_problem_par, init_prob
 
-   real :: d0, bxn,byn,bzn, alpha
+   real :: d0, bxn, byn, bzn, alpha
 
-   namelist /PROBLEM_CONTROL/  &
-                               d0, bxn,byn,bzn, alpha
-   contains
+   namelist /PROBLEM_CONTROL/ d0, bxn, byn, bzn, alpha
+
+contains
 
 !-----------------------------------------------------------------------------
 
@@ -88,6 +88,7 @@ module initproblem
 !-----------------------------------------------------------------------------
 
    subroutine init_prob
+
       use arrays,      only: u, b, dprof
       use fluidindex,  only: ibx, iby, ibz, flind
       use grid,        only: cg
@@ -145,7 +146,6 @@ module initproblem
          enddo
       enddo
 
-      return
    end subroutine init_prob
 
 end module initproblem

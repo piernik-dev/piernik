@@ -15,10 +15,9 @@ module initproblem
    integer           :: n_sn
    real              :: d0, Mrms, t_sn, c_si
 
-   namelist /PROBLEM_CONTROL/  &
-                              d0, c_si, Mrms
+   namelist /PROBLEM_CONTROL/  d0, c_si, Mrms
 
-   contains
+contains
 
 !-----------------------------------------------------------------------------
 
@@ -142,7 +141,6 @@ module initproblem
 
 ! Explosions
 
-      return
    end subroutine init_prob
 
 end module initproblem

@@ -43,7 +43,7 @@ module initproblem
 
    namelist /PROBLEM_CONTROL/  chi, rblob, blobxc, blobyc, blobzc, Mext, denv, tkh, vgal
 
-   contains
+contains
 
 !-----------------------------------------------------------------------------
 

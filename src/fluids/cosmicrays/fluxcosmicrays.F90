@@ -36,30 +36,30 @@
 
 module fluxcosmicrays
 ! pulled by COSM_RAYS
-  implicit none
+   implicit none
 
-  private
-  public :: flux_crs
+   private
+   public :: flux_crs
 
-  contains
+contains
 
 !==========================================================================================
 
-  subroutine flux_crs(fluxc,vion,uuc,n)
+   subroutine flux_crs(fluxc,vion,uuc,n)
 
-    use fluidindex,      only: flind
+      use fluidindex,      only: flind
 
-    implicit none
+      implicit none
 
-    integer, intent(in) :: n
-    real, dimension(n), intent(in)  :: vion
-    real, dimension(:,:), intent(in), pointer  :: uuc
-    real, dimension(:,:), intent(out), pointer :: fluxc
+      integer, intent(in) :: n
+      real, dimension(n), intent(in)  :: vion
+      real, dimension(:,:), intent(in), pointer  :: uuc
+      real, dimension(:,:), intent(out), pointer :: fluxc
 
-    fluxc   = 0.0
+      fluxc   = 0.0
 
-    fluxc(:,RNG)= uuc(:,RNG)*spread(vion(RNG),1,flind%crs%all)
+      fluxc(:,RNG)= uuc(:,RNG)*spread(vion(RNG),1,flind%crs%all)
 
-  end subroutine flux_crs
+   end subroutine flux_crs
 
 end module fluxcosmicrays

@@ -108,7 +108,7 @@ module gravity
    procedure(gprofs_default),   pointer :: get_gprofs  => NULL()
    procedure(grav_types),       pointer :: grav_type   => NULL()
 
-   contains
+contains
 
 !>
 !! \brief Routine that sets the initial values of %gravity parameters from namelist @c GRAVITY

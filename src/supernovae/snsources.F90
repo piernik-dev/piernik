@@ -54,7 +54,7 @@ module snsources
 !   namelist /SN_SOURCES/ amp_ecr_sn, f_sn, h_sn, r_sn, f_sn_kpc2
    namelist /SN_SOURCES/ h_sn, r_sn, f_sn_kpc2
 
-   contains
+contains
 !>
 !! \brief Routine to set parameter values from namelist SN_SOURCES
 !!

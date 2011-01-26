@@ -129,7 +129,7 @@ contains
 !! \brief Subroutine fluid_index constructing all multi-fluid indexes used in other parts
 !! of PIERNIK code
 !<
-    subroutine fluid_index
+   subroutine fluid_index
 
 !      use diagnostics,    only: my_allocate
 #ifdef IONIZED

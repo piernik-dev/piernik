@@ -50,7 +50,7 @@ module initproblem
 
    namelist /PROBLEM_CONTROL/ beta, v0
 
-   contains
+contains
 
 !-----------------------------------------------------------------------------
 
@@ -143,7 +143,6 @@ module initproblem
       u(ieni,:,:,:)   = u(ieni,:,:,:) + 0.5*sum(b(:,:,:,:)**2,1)
 #endif /* !ISO */
 
-      return
    end subroutine init_prob
 
 end module initproblem

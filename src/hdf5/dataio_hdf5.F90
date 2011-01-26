@@ -60,7 +60,7 @@ module dataio_hdf5
    character(len=maxparfilelen), dimension(maxparfilelines) :: parfile !< contents of the parameter file
    integer, save                             :: parfilelines = 0       !< number of lines in the parameter file
 
-   contains
+contains
 
 !>
 !! \brief Empty routine assigned to additional_attrs unless the problem provides something else (see maclaurin or wt4 for examples)

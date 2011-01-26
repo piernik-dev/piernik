@@ -39,7 +39,7 @@ module initproblem
 
    namelist /PROBLEM_CONTROL/  d0, r0,bx0,by0,bz0
 
-   contains
+contains
 
 !-----------------------------------------------------------------------------
 
@@ -143,7 +143,7 @@ module initproblem
          enddo
       enddo
       if (allocated(A)) deallocate(A)
-      return
+
    end subroutine init_prob
 
 end module initproblem

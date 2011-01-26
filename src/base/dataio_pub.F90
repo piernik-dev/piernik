@@ -30,6 +30,7 @@
 !! \brief module providing common dataio parameters, variables, routines and interfaces
 !<
 module dataio_pub
+
    use iso_fortran_env, only: error_unit, output_unit
    use types,           only: hdf, domlen, idlen
 

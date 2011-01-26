@@ -35,58 +35,60 @@ module viz
    real(kind=4), parameter :: one = 1.0
    real(kind=4), parameter :: nul = 0.0
 
-   contains
+contains
 
-      subroutine draw_me(f, fmin, fmax)
-         implicit none
-         real(kind=4), dimension(:,:), intent(in) :: f
-         real(kind=4), intent(in)                 :: fmin, fmax
-         integer                          :: mxi, mxj, pgopen
-         integer                          :: i, l, c1, c2, nc
-         real(kind=4)                     :: contra, bright, angle, c, s
-         real(kind=4), dimension(6)       :: tr
-         real(kind=4), dimension(1)       :: alev
-         logical,save       :: frun = .true.
+   subroutine draw_me(f, fmin, fmax)
 
-         mxi = size(f,1)
-         mxj = size(f,2)
+      implicit none
 
-         if (frun) then
-            if (pgopen('/XS') < 1) stop
-            call pgpage
-         endif
+      real(kind=4), dimension(:,:), intent(in) :: f
+      real(kind=4), intent(in)                 :: fmin, fmax
+      integer                          :: mxi, mxj, pgopen
+      integer                          :: i, l, c1, c2, nc
+      real(kind=4)                     :: contra, bright, angle, c, s
+      real(kind=4), dimension(6)       :: tr
+      real(kind=4), dimension(1)       :: alev
+      logical,save       :: frun = .true.
 
-         tr = [ nul, one, nul, nul, nul, one ]
+      mxi = size(f,1)
+      mxj = size(f,2)
 
-         ! Clear the screen. Set up window and viewport.
-         call setvp
-         call pgwnad(nul, one+mxi, nul, one+mxj)
+      if (frun) then
+         if (pgopen('/XS') < 1) stop
+         call pgpage
+      endif
 
-         ! Set up the color map.
-         bright = 0.5
-         contra  = 1.0
-         call palett(2, contra, bright)
+      tr = [ nul, one, nul, nul, nul, one ]
 
-         ! Annotate the plot.
-         if (frun) then
-            call pgsch(real(0.6,4))
-            call pgbox('bcntsi',nul,0,'bcntsiv',nul,0)
-            call pgmtxt('b',real(3.0,4),one,one,'pixel number')
-         endif
+      ! Clear the screen. Set up window and viewport.
+      call setvp
+      call pgwnad(nul, one+mxi, nul, one+mxj)
 
-         ! Draw the map with PGIMAG.
-         call pgimag(f,mxi,mxj,1,mxi,1,mxj,fmin,fmax,tr)
+      ! Set up the color map.
+      bright = 0.5
+      contra  = 1.0
+      call palett(2, contra, bright)
 
-         ! Draw a wedge.
-         if (frun) then
-            call pgwedg('bi', real(4.0,4), real(5.0,4), fmin, fmax, 'pixel value')
-            call pgsch(one)
-         endif
-         frun = .false.
+      ! Annotate the plot.
+      if (frun) then
+         call pgsch(real(0.6,4))
+         call pgbox('bcntsi',nul,0,'bcntsiv',nul,0)
+         call pgmtxt('b',real(3.0,4),one,one,'pixel number')
+      endif
+
+      ! Draw the map with PGIMAG.
+      call pgimag(f,mxi,mxj,1,mxi,1,mxj,fmin,fmax,tr)
+
+      ! Draw a wedge.
+      if (frun) then
+         call pgwedg('bi', real(4.0,4), real(5.0,4), fmin, fmax, 'pixel value')
+         call pgsch(one)
+      endif
+      frun = .false.
 
 !      call pgend
 !-----------------------------------------------------------------------
-      end subroutine draw_me
+   end subroutine draw_me
 
 !>
 !! \brief set a "palette" of colors in the range of color indices used by pgimag.
@@ -155,19 +157,22 @@ module viz
 !! the routine determines the view-surface size and allocates margins
 !! as fractions of the minimum of width and height.
 !<
-      subroutine setvp
-         implicit none
-         real(kind=4) :: d, vpx1, vpx2, vpy1, vpy2
+   subroutine setvp
+
+      implicit none
+
+      real(kind=4) :: d, vpx1, vpx2, vpy1, vpy2
 !
-         call pgsvp(nul, one, nul, one)
-         call pgqvp(1, vpx1, vpx2, vpy1, vpy2)
-         d = min(vpx2-vpx1, vpy2-vpy1)/40.0
-         vpx1 = vpx1 + 5.0*d
-         vpx2 = vpx2 - 2.0*d
-         vpy1 = vpy1 + 8.0*d
-         vpy2 = vpy2 - 2.0*d
-         call pgvsiz(vpx1, vpx2, vpy1, vpy2)
-      end subroutine setvp
+      call pgsvp(nul, one, nul, one)
+      call pgqvp(1, vpx1, vpx2, vpy1, vpy2)
+      d = min(vpx2-vpx1, vpy2-vpy1)/40.0
+      vpx1 = vpx1 + 5.0*d
+      vpx2 = vpx2 - 2.0*d
+      vpy1 = vpy1 + 8.0*d
+      vpy2 = vpy2 - 2.0*d
+      call pgvsiz(vpx1, vpx2, vpy1, vpy2)
+
+   end subroutine setvp
 
 !>
 !! \brief draw the enclosing rectangle of the subarray to be contoured,
@@ -176,8 +181,10 @@ module viz
 !! \details for a contour map, the corners are (i1,j1) and (i2,j2);
 !! for a gray-scale map, they are (i1-0.5,j1-0.5), (i2+0.5, j2+0.5).
 !<
-      subroutine outlin(i1,i2,j1,j2,tr)
+   subroutine outlin(i1,i2,j1,j2,tr)
+
       implicit none
+
       integer      :: i1,i2,j1,j2
       real(kind=4) :: tr(6)
       integer      :: k
@@ -194,11 +201,11 @@ module viz
       xw(5) = i1
       yw(5) = j1
       do k=1,5
-          t = xw(k)
-          xw(k) = tr(1) + tr(2)*t + tr(3)*yw(k)
-          yw(k) = tr(4) + tr(5)*t + tr(6)*yw(k)
+         t = xw(k)
+         xw(k) = tr(1) + tr(2)*t + tr(3)*yw(k)
+         yw(k) = tr(4) + tr(5)*t + tr(6)*yw(k)
       enddo
       call pgline(5,xw,yw)
-      end subroutine outlin
+   end subroutine outlin
 
 end module viz

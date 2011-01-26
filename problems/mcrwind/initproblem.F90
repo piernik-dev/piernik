@@ -44,11 +44,13 @@ module initproblem
    real :: x0, y0, z0                                                        !< parameters for a single supernova exploding at t=0
 
    namelist /PROBLEM_CONTROL/  d0, bxn, byn, bzn, x0, y0, z0, alpha, amp_cr, beta_cr
-   contains
+
+contains
 
 !-----------------------------------------------------------------------------
 
    subroutine read_problem_par
+
       use dataio_pub,    only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml      ! QA_WARN required for diff_nml
       use mpisetup,      only: rbuff, buffer_dim, comm, ierr, master, slave
       use mpi,           only: MPI_DOUBLE_PRECISION
@@ -226,6 +228,7 @@ module initproblem
          call die("[initproblem:my_grav_pot_3d]: GRAV is defined, but 'gp' is not initialized")
       endif
       frun = .false.
+
    end subroutine my_grav_pot_3d
 
 !--------------------------------------------------------------------------
@@ -336,7 +339,6 @@ module initproblem
             enddo ! i
          enddo ! j
       enddo ! k
-      return
 
    end subroutine cr_sn_beware
 

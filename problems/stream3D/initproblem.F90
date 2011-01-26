@@ -34,16 +34,18 @@ module initproblem
 ! Written by: M. Hanasz, March 2006
 
    use mpisetup,    only: cbuff_len
+
    implicit none
+
    private
    public  :: read_problem_par, init_prob
+
    real    :: sigma0, Rin, R0, HtoR, eps, amp
    character(len=cbuff_len) :: sigma_model
 
-   namelist /PROBLEM_CONTROL/  sigma0, amp, &
-                               Rin, R0, HtoR, sigma_model, eps
+   namelist /PROBLEM_CONTROL/  sigma0, amp, Rin, R0, HtoR, sigma_model, eps
 
-   contains
+contains
 
 !-----------------------------------------------------------------------------
 
@@ -208,7 +210,6 @@ module initproblem
 
       deallocate(omega,omegad)
 
-      return
    end subroutine init_prob
 
 end module initproblem

@@ -32,7 +32,9 @@
 module timer
 
    implicit none
+
    integer, parameter, private :: S_LEN = 30
+
    private
    public :: cleanup_timers, time_left, set_timer, timer_start, timer_stop
 

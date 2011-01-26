@@ -39,7 +39,7 @@ module func
    private
    public :: pshift, mshift, fix_string, ekin, emag
    integer, parameter :: one = 1
-   contains
+contains
 
 !>
 !! \brief Function pshift makes one-cell, forward circular shift of 3D array in any direction

@@ -34,7 +34,7 @@ module crhelpers
    private
    public :: div_v, div_vx, div_vy, div_vz, whichfaq
 
-   contains
+contains
 
    subroutine div_v(ifluid)
 

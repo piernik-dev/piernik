@@ -52,7 +52,7 @@ module grid
    integer, protected :: D_z                            !< set to 1 when z-direction exists, 0 otherwise.
    type(grid_container),     protected :: cg            !< A container for the grid. For AMR this will be a dynamically resized array
 
-   contains
+contains
 
 !>
 !! \brief Routine which sets numbers of cells for the domain, MPI blocks and initializes direction meshes (x,y,z).

@@ -100,11 +100,11 @@
 
 module initfluids
 ! pulled by ANY
-  implicit none
-  private
-  public :: init_fluids, cleanup_fluids, sanitize_smallx_checks
+   implicit none
+   private
+   public :: init_fluids, cleanup_fluids, sanitize_smallx_checks
 
-  contains
+contains
 
    subroutine init_fluids
 

@@ -50,7 +50,7 @@ module resistivity
    real, dimension(:,:,:), allocatable, target :: wb, etahelp, eta
    logical, save :: inactive = .false.
 
-   contains
+contains
 
    subroutine cleanup_resistivity
 

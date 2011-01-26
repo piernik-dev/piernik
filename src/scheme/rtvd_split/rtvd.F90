@@ -36,7 +36,7 @@ module rtvd ! split orig
    implicit none
    private
    public  :: tvdb, relaxing_tvd
-   contains
+contains
 !/*
 !>
 !! \brief Subroutine computes magnetic field evolution
@@ -538,8 +538,6 @@ module rtvd ! split orig
 
          u(:,:) = u1(:,:)
       enddo
-
-      return
 
    end subroutine relaxing_tvd
 

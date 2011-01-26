@@ -48,10 +48,11 @@ module initproblem
 
    namelist /PROBLEM_CONTROL/  dl,vxl,vyl,vzl,bxl,byl,bzl,el,dr,vxr,vyr,vzr,bxr,byr,bzr,er
 
-   contains
+contains
 
 !-----------------------------------------------------------------------------
    subroutine read_problem_par
+
       use dataio_pub,    only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml      ! QA_WARN required for diff_nml
       use mpisetup,      only: rbuff, buffer_dim, master, slave, comm, ierr
       use mpi,           only: MPI_DOUBLE_PRECISION
@@ -171,7 +172,7 @@ module initproblem
             enddo
          enddo
       enddo
-      return
+
    end subroutine init_prob
 !-----------------------------------------------------------------------------
 end module initproblem

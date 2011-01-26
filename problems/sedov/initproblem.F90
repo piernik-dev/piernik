@@ -41,12 +41,11 @@ module initproblem
    integer :: n_sn
    real    :: d0, p0, bx0, by0, bz0, Eexpl, x0, y0, z0, r0, dt_sn, r, t_sn
 
-   namelist /PROBLEM_CONTROL/  &
-                               d0,p0, bx0,by0,bz0, Eexpl,  x0,y0,z0, r0, &
-                               n_sn, dt_sn
+   namelist /PROBLEM_CONTROL/ d0, p0, bx0, by0, bz0, Eexpl, x0, y0, z0, r0, n_sn, dt_sn
 contains
 !-----------------------------------------------------------------------------
    subroutine read_problem_par
+
       use dataio_pub,    only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml      ! QA_WARN required for diff_nml
       use grid,          only: cg
       use mpisetup,      only: ibuff, rbuff, buffer_dim, master, slave, comm, ierr
@@ -183,9 +182,12 @@ contains
    end subroutine init_prob
 !-----------------------------------------------------------------------------
    subroutine sedov_plt_hdf5(var,ij,xn,tab,ierrh)
+
       use arrays,        only: u
       use grid,          only: cg
+
       implicit none
+
       character(LEN=*), intent(in)        :: var   !< quantity to be plotted
       character(LEN=*), intent(in)        :: ij    !< plane of plot
       integer, intent(in)                 :: xn    !< no. of cell at which we are slicing the local block
@@ -205,8 +207,11 @@ contains
    end subroutine sedov_plt_hdf5
 !-----------------------------------------------------------------------------
    subroutine sedov_vars_hdf5(var,tab, ierrh)
+
       use arrays, only: u
+
       implicit none
+
       character(len=*), intent(in)                    :: var
       real(kind=4), dimension(:,:,:), intent(inout)   :: tab
       integer, intent(inout)                          :: ierrh
@@ -218,26 +223,29 @@ contains
          case default
             ierrh = -1
       end select
-      return
+
    end subroutine sedov_vars_hdf5
 !-----------------------------------------------------------------------------
-      subroutine sedov_tsl(user_vars, tsl_names)
-         use diagnostics,     only: pop_vector
-         use mpisetup,        only: proc, master, comm3d, ierr
-         use mpi,             only: MPI_DOUBLE_PRECISION, MPI_SUM
-         implicit none
-         real, dimension(:), intent(inout), allocatable                       :: user_vars
-         character(len=*), dimension(:), intent(inout), allocatable, optional :: tsl_names
-         real :: output
+   subroutine sedov_tsl(user_vars, tsl_names)
 
-         if (present(tsl_names)) then
-            call pop_vector(tsl_names, len(tsl_names(1)), ["foobar_sedov"])    !   add to header
-         else
-            ! do mpi stuff here...
-            call MPI_Allreduce(real(proc,8), output, 1, MPI_DOUBLE_PRECISION, MPI_SUM, comm3d, ierr)
-            if (master) call pop_vector(user_vars,[output])                 !   pop value
-         endif
-         return
-      end subroutine sedov_tsl
+      use diagnostics,     only: pop_vector
+      use mpisetup,        only: proc, master, comm3d, ierr
+      use mpi,             only: MPI_DOUBLE_PRECISION, MPI_SUM
+
+      implicit none
+
+      real, dimension(:), intent(inout), allocatable                       :: user_vars
+      character(len=*), dimension(:), intent(inout), allocatable, optional :: tsl_names
+      real :: output
+
+      if (present(tsl_names)) then
+         call pop_vector(tsl_names, len(tsl_names(1)), ["foobar_sedov"])    !   add to header
+      else
+         ! do mpi stuff here...
+         call MPI_Allreduce(real(proc,8), output, 1, MPI_DOUBLE_PRECISION, MPI_SUM, comm3d, ierr)
+         if (master) call pop_vector(user_vars,[output])                 !   pop value
+      endif
+
+   end subroutine sedov_tsl
 !-----------------------------------------------------------------------------
 end module initproblem
