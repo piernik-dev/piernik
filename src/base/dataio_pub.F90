@@ -439,7 +439,9 @@ contains
    end subroutine namelist_errh
 !-----------------------------------------------------------------------------
    subroutine compare_namelist(nml_bef, nml_aft)
+
       use mpi,    only: MPI_COMM_WORLD
+
       implicit none
 
       character(len=*), intent(in)     :: nml_bef, nml_aft
@@ -450,6 +452,8 @@ contains
 
       call MPI_Comm_rank(MPI_COMM_WORLD, proc, ierrh)
       if (proc > 0) call die("[dataio_pub:compare_namelist] This routine must not be called by many threads at once. Make sure that diff_nml macro is called only from rank 0.")
+
+      if (code_progress > PIERNIK_INIT_IO_IC) call warn("[dataio_pub:compare_namelist] Late namelist")
 
       open(lun_bef, file=nml_bef, status='old')
       open(lun_aft, file=nml_aft, status='old')

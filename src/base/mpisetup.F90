@@ -224,7 +224,7 @@ module mpisetup
       subroutine init_mpi
 
          use mpi,           only: MPI_COMM_WORLD, MPI_INFO_NULL, MPI_INFO_NULL, MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION, MPI_LOGICAL, MPI_PROC_NULL
-         use dataio_pub,    only: die, printinfo, msg, cwdlen, hnlen, cwd, ansi_white, ansi_black, warn
+         use dataio_pub,    only: die, printinfo, msg, cwdlen, hnlen, cwd, ansi_white, ansi_black, warn, tmp_log_file
          use dataio_pub,    only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml  ! QA_WARN required for diff_nml
 
          implicit none
@@ -243,17 +243,28 @@ module mpisetup
          integer(kind=4)       :: getpid
          integer :: cwd_status
          logical :: par_file_exist
+         logical :: tmp_log_exist
 
          call MPI_Init( ierr )
-#ifdef VERBOSE
-         call printinfo("[mpisetup:init_mpi]: commencing...")
-#endif /* VERBOSE */
          call MPI_Comm_rank(MPI_COMM_WORLD, proc, ierr)
          master = (proc == 0)
          slave  = (proc /= 0)
          comm = MPI_COMM_WORLD
          info = MPI_INFO_NULL
          call MPI_Comm_size(comm, nproc, ierr)
+
+         !Assume that any tmp_log_file existed before Piernik was started and contains invalid/outydated/... data.
+         !Delete it now and keep in mind that any warn, die, printinfo or printio messages issued before this point will be lost as well.
+         if (master) then
+            inquire(file = tmp_log_file, exist = tmp_log_exist)
+            if (tmp_log_exist) then
+               open(3, file=tmp_log_file)
+               close(3, status="delete")
+            endif
+         endif
+#ifdef VERBOSE
+         call printinfo("[mpisetup:init_mpi]: commencing...")
+#endif /* VERBOSE */
 
          if (allocated(cwd_all) .or. allocated(host_all) .or. allocated(pid_all)) call die("[mpisetup:init_mpi] cwd_all, host_all or pid_all already allocated")
 
@@ -298,6 +309,10 @@ module mpisetup
             call printinfo("", .true.)
             call printinfo("###############     Namelist parameters     ###############", .false.)
          endif
+
+         deallocate(host_all)
+         deallocate(pid_all)
+         deallocate(cwd_all)
 
          pxsize = 1
          pysize = 1
@@ -541,10 +556,6 @@ module mpisetup
 
          call MPI_Cart_create(comm, ndims, psize, periods, reorder, comm3d, ierr)
          call MPI_Cart_coords(comm3d, proc, ndims, pcoords, ierr)
-
-         deallocate(host_all)
-         deallocate(pid_all)
-         deallocate(cwd_all)
 
 ! Compute neighbors
 
