@@ -97,6 +97,8 @@ module dataio
    integer               :: scstatus
 
    character(len=cwdlen) :: filename               !< string of characters indicating currently used file
+   character(len=cwdlen), parameter :: fmt_loc = "(2x,a12,a3,'  = ',es16.9,16x,           5(1x,i4))"
+   character(len=cwdlen), parameter :: fmt_dtloc = "(2x,a12,a3,'  = ',es16.9,'  dt=',es11.4,5(1x,i4))"
 
    namelist /END_CONTROL/ nend, tend, wend
    namelist /RESTART_CONTROL/ restart, new_id, nrestart, resdel
@@ -893,8 +895,6 @@ contains
       character(len=*), intent(in) :: fluid
       logical, intent(in)          :: pres_tn, temp_tn, cs_tn
 
-      character(len=cwdlen), parameter :: fmt772 = "(5x,a12,2a3,(1x,es16.9),16x,5(1x,i4))"
-      character(len=cwdlen), parameter :: fmt778 = "(5x,a12,2a3,(1x,es16.9),2x,a3,(1x,es11.4),5(1x,i4))"
       real :: dxmn_safe
 
       if (cg%dxmn >= sqrt(huge(1.0))) then
@@ -903,31 +903,31 @@ contains
          dxmn_safe = cg%dxmn
       endif
 
-      write(msg, fmt772) 'min(dens)   ',fluid,'  =', pr%dens_min%val,  pr%dens_min%proc,  pr%dens_min%loc
+      write(msg, fmt_loc)     'min(dens)   ',fluid, pr%dens_min%val, pr%dens_min%proc, pr%dens_min%loc
       call printinfo(msg, .false.)
-      write(msg, fmt772) 'max(dens)   ',fluid,'  =', pr%dens_max%val,  pr%dens_max%proc,  pr%dens_max%loc
+      write(msg, fmt_loc)     'max(dens)   ',fluid, pr%dens_max%val, pr%dens_max%proc, pr%dens_max%loc
       call printinfo(msg, .false.)
       if (temp_tn) then
-         write(msg, fmt772) 'min(temp)   ',fluid,'  =', pr%temp_min%val,  pr%temp_min%proc,  pr%temp_min%loc
+         write(msg, fmt_loc)  'min(temp)   ',fluid, pr%temp_min%val, pr%temp_min%proc, pr%temp_min%loc
          call printinfo(msg, .false.)
-         write(msg, fmt772) 'max(temp)   ',fluid,'  =', pr%temp_max%val,  pr%temp_max%proc,  pr%temp_max%loc
+         write(msg, fmt_loc)  'max(temp)   ',fluid, pr%temp_max%val, pr%temp_max%proc, pr%temp_max%loc
          call printinfo(msg, .false.)
       endif
       if (pres_tn) then
-         write(msg, fmt772) 'min(pres)   ',fluid,'  =', pr%pres_min%val,  pr%pres_min%proc,  pr%pres_min%loc
+         write(msg, fmt_loc)  'min(pres)   ',fluid, pr%pres_min%val, pr%pres_min%proc, pr%pres_min%loc
          call printinfo(msg, .false.)
-         write(msg, fmt772) 'max(pres)   ',fluid,'  =', pr%pres_max%val,  pr%pres_max%proc,  pr%pres_max%loc
+         write(msg, fmt_loc)  'max(pres)   ',fluid, pr%pres_max%val, pr%pres_max%proc, pr%pres_max%loc
          call printinfo(msg, .false.)
       endif
 
-      write(msg, fmt778) 'max(|vx|)   ',fluid,'  =', pr%velx_max%val, 'dt=',cfl*cg%dx/(pr%velx_max%val+small),   pr%velx_max%proc, pr%velx_max%loc
+      write(msg, fmt_dtloc)   'max(|vx|)   ',fluid, pr%velx_max%val, cfl*cg%dx/(pr%velx_max%val+small), pr%velx_max%proc, pr%velx_max%loc
       call printinfo(msg, .false.)
-      write(msg, fmt778) 'max(|vy|)   ',fluid,'  =', pr%vely_max%val, 'dt=',cfl*cg%dy/(pr%vely_max%val+small),   pr%vely_max%proc, pr%vely_max%loc
+      write(msg, fmt_dtloc)   'max(|vy|)   ',fluid, pr%vely_max%val, cfl*cg%dy/(pr%vely_max%val+small), pr%vely_max%proc, pr%vely_max%loc
       call printinfo(msg, .false.)
-      write(msg, fmt778) 'max(|vz|)   ',fluid,'  =', pr%velz_max%val, 'dt=',cfl*cg%dz/(pr%velz_max%val+small),   pr%velz_max%proc, pr%velz_max%loc
+      write(msg, fmt_dtloc)   'max(|vz|)   ',fluid, pr%velz_max%val, cfl*cg%dz/(pr%velz_max%val+small), pr%velz_max%proc, pr%velz_max%loc
       call printinfo(msg, .false.)
       if (cs_tn) then
-         write(msg, fmt778) 'max(c_s )   ',fluid,'  =', pr%cs_max%val, 'dt=',cfl*dxmn_safe/(pr%cs_max%val+small), pr%cs_max%proc, pr%cs_max%loc
+         write(msg, fmt_dtloc)'max(c_s )   ',fluid, pr%cs_max%val, cfl*dxmn_safe/(pr%cs_max%val+small), pr%cs_max%proc, pr%cs_max%loc
          call printinfo(msg, .false.)
       endif
    end subroutine common_shout
@@ -1012,7 +1012,7 @@ contains
          use fluidindex,         only: ibx, iby, ibz, flind
          use grid,               only: cg
          use mpisetup,           only: cfl, t, dt, master
-         use types,              only: tsl_container, value
+         use types,              only: tsl_container, value, idlen
 #ifdef COSM_RAYS
          use fluidindex,         only: iarr_all_crs
          use timestepcosmicrays, only: dt_crs
@@ -1025,13 +1025,6 @@ contains
 #endif /* VARIABLE_GP */
 
          implicit none
-
-#if (defined(MAGNETIC) || defined(COSM_RAYS)|| defined (VARIABLE_GP))
-         character(len=cwdlen), parameter :: fmt771 = "(5x,a18,(1x,es16.9),16x,5(1x,i4))" ! Note similarity to fmt772
-#endif /* MAGNETIC || COSM_RAYS || defined VARIABLE_GP */
-#if (defined(MAGNETIC) || defined(COSM_RAYS) || defined(RESISTIVE))
-         character(len=cwdlen), parameter :: fmt777 = "(5x,a18,(1x,es16.9),2x,a3,(1x,es11.4),5(1x,i4))" ! Note similarity to fmt778
-#endif /* MAGNETIC || COSM_RAYS || RESISTIVE */
 
          type(tsl_container), optional  :: tsl
          real :: dxmn_safe
@@ -1048,6 +1041,7 @@ contains
 #ifdef VARIABLE_GP
          type(value) :: gpxmax, gpymax, gpzmax
 #endif /* VARIABLE_GP */
+         character(len=idlen) :: id
 
          if (cg%dxmn >= sqrt(huge(1.0))) then
             dxmn_safe = sqrt(huge(1.0))
@@ -1149,23 +1143,25 @@ contains
 
       if (master)  then
          if (.not.present(tsl)) then
-            call printinfo('================================================================================', .false.)
+            call printinfo('===========================================================================', .false.)
 #ifdef IONIZED
             call common_shout(flind%ion%snap,'ION',.true.,.true.,.true.)
 #ifdef MAGNETIC
-            write(msg, fmt777) 'max(c_f)    ION  =', sqrt(flind%ion%snap%cs_max%val**2+vai_max%val**2), &
-               'dt=',cfl*dxmn_safe/sqrt(flind%ion%snap%cs_max%val**2+vai_max%val**2+small)
+            id = "ION"
+            write(msg, fmt_dtloc) 'max(c_f)    ', id, sqrt(flind%ion%snap%cs_max%val**2+vai_max%val**2), &
+                 &             cfl*dxmn_safe/sqrt(flind%ion%snap%cs_max%val**2+vai_max%val**2+small)
             call printinfo(msg, .false.)
-            write(msg, fmt777) 'max(v_a)    ION  =', vai_max%val, 'dt=',cfl*dxmn_safe/(vai_max%val+small), vai_max%proc, vai_max%loc
+            write(msg, fmt_dtloc) 'max(v_a)    ', id, vai_max%val, cfl*dxmn_safe/(vai_max%val+small), vai_max%proc, vai_max%loc
             call printinfo(msg, .false.)
-            write(msg, fmt771) 'min(|b|)    MAG  =', b_min%val,     b_min%proc,     b_min%loc
+            id = "MAG"
+            write(msg, fmt_loc)   'min(|b|)    ', id, b_min%val,     b_min%proc,     b_min%loc
             call printinfo(msg, .false.)
-            write(msg, fmt771) 'max(|b|)    MAG  =', b_max%val,     b_max%proc,     b_max%loc
+            write(msg, fmt_loc)   'max(|b|)    ', id, b_max%val,     b_max%proc,     b_max%loc
             call printinfo(msg, .false.)
-            write(msg, fmt771) 'max(|divb|) MAG  =', divb_max%val,  divb_max%proc,  divb_max%loc
+            write(msg, fmt_loc)   'max(|divb|) ', id, divb_max%val,  divb_max%proc,  divb_max%loc
             call printinfo(msg, .false.)
 #else /* !MAGNETIC */
-!            if (csi_max%val > 0.) write(msg, fmt777) 'max(c_s )   ION  =', sqrt(csi_max%val**2), 'dt=',cfl*dxmn_safe/sqrt(csi_max%val**2)
+!            if (csi_max%val > 0.) write(msg, fmtff8) 'max(c_s )   ION  =', sqrt(csi_max%val**2), 'dt=',cfl*dxmn_safe/sqrt(csi_max%val**2)
 !            call printinfo(msg, .false.)
 #endif /* !MAGNETIC */
 #endif /* IONIZED */
@@ -1176,24 +1172,27 @@ contains
             call common_shout(flind%dst%snap,'DST',.false.,.false.,.false.)
 #endif /* DUST */
 #ifdef COSM_RAYS
-            write(msg, fmt771) 'min(encr)   CRS  =', encr_min%val,        encr_min%proc, encr_min%loc
+            id = "CRS"
+            write(msg, fmt_loc)   'min(encr)   ', id, encr_min%val, encr_min%proc, encr_min%loc
             call printinfo(msg, .false.)
-            write(msg, fmt777) 'max(encr)   CRS  =', encr_max%val,      'dt=',dt_crs,     encr_max%proc, encr_max%loc
+            write(msg, fmt_dtloc) 'max(encr)   ', id, encr_max%val, dt_crs, encr_max%proc, encr_max%loc
             call printinfo(msg, .false.)
 #endif /* COSM_RAYS */
 #ifdef RESISTIVE
-            write(msg, fmt777) 'max(eta)    RES  =', etamax%val ,      'dt=',dt_resist, etamax%proc,  etamax%loc
+            id = "RES"
+            write(msg, fmt_dtloc) 'max(eta)    ', id, etamax%val, dt_resist, etamax%proc, etamax%loc
             call printinfo(msg, .false.)
 #endif /* RESISTIVE */
 #ifdef VARIABLE_GP
-            write(msg,fmt771) 'max(|gpx|)  GPT  =', gpxmax%val,   gpxmax%proc,     gpxmax%loc
+            id = "GPT"
+            write(msg, fmt_loc)   'max(|gpx|)  ', id, gpxmax%val, gpxmax%proc, gpxmax%loc
             call printinfo(msg, .false.)
-            write(msg,fmt771) 'max(|gpy|)  GPT  =', gpymax%val,   gpymax%proc,     gpymax%loc
+            write(msg, fmt_loc)   'max(|gpy|)  ', id, gpymax%val, gpymax%proc, gpymax%loc
             call printinfo(msg, .false.)
-            write(msg,fmt771) 'max(|gpz|)  GPT  =', gpzmax%val,   gpzmax%proc,     gpzmax%loc
+            write(msg, fmt_loc)   'max(|gpz|)  ', id, gpzmax%val, gpzmax%proc, gpzmax%loc
             call printinfo(msg, .false.)
 #endif /* VARIABLE_GP */
-            call printinfo('================================================================================', .false.)
+            call printinfo('===========================================================================', .false.)
          else
 #ifdef MAGNETIC
             tsl%b_min = b_min%val

@@ -146,7 +146,7 @@ module mpisetup
 
    namelist /NUMERICAL_SETUP/  cfl, smalld, smallei, integration_order, cfr_smooth, dt_initial, dt_max_grow, dt_min, smallc, smallp, limiter, cflcontrol, use_smalld, cfl_max, relax_time
 
-   contains
+contains
 
 !-----------------------------------------------------------------------------
 !>
@@ -221,491 +221,490 @@ module mpisetup
 !! </table>
 !! \n \n
 !<
-      subroutine init_mpi
+   subroutine init_mpi
 
-         use mpi,           only: MPI_COMM_WORLD, MPI_INFO_NULL, MPI_INFO_NULL, MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION, MPI_LOGICAL, MPI_PROC_NULL
-         use dataio_pub,    only: die, printinfo, msg, cwdlen, hnlen, cwd, ansi_white, ansi_black, warn, tmp_log_file
-         use dataio_pub,    only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml  ! QA_WARN required for diff_nml
+      use mpi,           only: MPI_COMM_WORLD, MPI_INFO_NULL, MPI_INFO_NULL, MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION, MPI_LOGICAL, MPI_PROC_NULL
+      use dataio_pub,    only: die, printinfo, msg, cwdlen, hnlen, cwd, ansi_white, ansi_black, warn, tmp_log_file
+      use dataio_pub,    only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml  ! QA_WARN required for diff_nml
 
-         implicit none
+      implicit none
 
-         integer :: iproc
+      integer :: iproc
 
-         character(LEN=cwdlen) :: cwd_proc
-         character(LEN=hnlen)  :: host_proc
-         integer               :: pid_proc
+      character(LEN=cwdlen) :: cwd_proc
+      character(LEN=hnlen)  :: host_proc
+      integer               :: pid_proc
 
-         character(LEN=cwdlen), allocatable, dimension(:) :: cwd_all
-         character(LEN=hnlen) , allocatable, dimension(:) :: host_all
-         integer              , allocatable, dimension(:) :: pid_all
+      character(LEN=cwdlen), allocatable, dimension(:) :: cwd_all
+      character(LEN=hnlen) , allocatable, dimension(:) :: host_all
+      integer              , allocatable, dimension(:) :: pid_all
 
-         integer(kind=1)       :: getcwd, hostnm
-         integer(kind=4)       :: getpid
-         integer :: cwd_status
-         logical :: par_file_exist
-         logical :: tmp_log_exist
+      integer(kind=1)       :: getcwd, hostnm
+      integer(kind=4)       :: getpid
+      integer :: cwd_status
+      logical :: par_file_exist
+      logical :: tmp_log_exist
 
-         call MPI_Init( ierr )
-         call MPI_Comm_rank(MPI_COMM_WORLD, proc, ierr)
-         master = (proc == 0)
-         slave  = (proc /= 0)
-         comm = MPI_COMM_WORLD
-         info = MPI_INFO_NULL
-         call MPI_Comm_size(comm, nproc, ierr)
+      call MPI_Init( ierr )
+      call MPI_Comm_rank(MPI_COMM_WORLD, proc, ierr)
+      master = (proc == 0)
+      slave  = (proc /= 0)
+      comm = MPI_COMM_WORLD
+      info = MPI_INFO_NULL
+      call MPI_Comm_size(comm, nproc, ierr)
 
-         !Assume that any tmp_log_file existed before Piernik was started and contains invalid/outydated/... data.
-         !Delete it now and keep in mind that any warn, die, printinfo or printio messages issued before this point will be lost as well.
-         if (master) then
-            inquire(file = tmp_log_file, exist = tmp_log_exist)
-            if (tmp_log_exist) then
-               open(3, file=tmp_log_file)
-               close(3, status="delete")
-            endif
+      !Assume that any tmp_log_file existed before Piernik was started and contains invalid/outydated/... data.
+      !Delete it now and keep in mind that any warn, die, printinfo or printio messages issued before this point will be lost as well.
+      if (master) then
+         inquire(file = tmp_log_file, exist = tmp_log_exist)
+         if (tmp_log_exist) then
+            open(3, file=tmp_log_file)
+            close(3, status="delete")
          endif
+      endif
 #ifdef VERBOSE
-         call printinfo("[mpisetup:init_mpi]: commencing...")
+      call printinfo("[mpisetup:init_mpi]: commencing...")
 #endif /* VERBOSE */
 
-         if (allocated(cwd_all) .or. allocated(host_all) .or. allocated(pid_all)) call die("[mpisetup:init_mpi] cwd_all, host_all or pid_all already allocated")
+      if (allocated(cwd_all) .or. allocated(host_all) .or. allocated(pid_all)) call die("[mpisetup:init_mpi] cwd_all, host_all or pid_all already allocated")
 
-         !> \deprecated BEWARE if slave it is probably enough to allocate only one element or none at all (may depend on MPI implementation)
-         allocate(cwd_all(0:nproc))
-         allocate(host_all(0:nproc))
-         allocate(pid_all(0:nproc))
+      !> \deprecated BEWARE on slave it is probably enough to allocate only one element or none at all (may depend on MPI implementation)
+      allocate(cwd_all(0:nproc))
+      allocate(host_all(0:nproc))
+      allocate(pid_all(0:nproc))
 
-         pid_proc   = getpid()
-         status     = hostnm(host_proc)
-         cwd_status = getcwd(cwd_proc)
+      pid_proc   = getpid()
+      status     = hostnm(host_proc)
+      cwd_status = getcwd(cwd_proc)
 
-         if (cwd_status /= 0) call die("[mpisetup:init_mpi] problems accessing current working directory.")
+      if (cwd_status /= 0) call die("[mpisetup:init_mpi] problems accessing current working directory.")
 #ifdef DEBUG
-         write(msg,'(3a,i6,3a)') 'mpisetup: host="',trim(host_proc),'", PID=',pid_proc,' CWD="',trim(cwd_proc),'"'
-         call printinfo(msg)
+      write(msg,'(3a,i6,3a)') 'mpisetup: host="',trim(host_proc),'", PID=',pid_proc,' CWD="',trim(cwd_proc),'"'
+      call printinfo(msg)
 #endif /* DEBUG */
 
-         call MPI_Gather(cwd_proc,  cwdlen, MPI_CHARACTER, cwd_all,  cwdlen, MPI_CHARACTER, 0, comm, err)
-         call MPI_Gather(host_proc, hnlen,  MPI_CHARACTER, host_all, hnlen,  MPI_CHARACTER, 0, comm, err)
-         call MPI_Gather(pid_proc,  1,      MPI_INTEGER,   pid_all,  1,      MPI_INTEGER,   0, comm, err)
+      call MPI_Gather(cwd_proc,  cwdlen, MPI_CHARACTER, cwd_all,  cwdlen, MPI_CHARACTER, 0, comm, err)
+      call MPI_Gather(host_proc, hnlen,  MPI_CHARACTER, host_all, hnlen,  MPI_CHARACTER, 0, comm, err)
+      call MPI_Gather(pid_proc,  1,      MPI_INTEGER,   pid_all,  1,      MPI_INTEGER,   0, comm, err)
 
-         ! cwd = trim(cwd_proc)  !> \deprecated BEWARE: It's redundant, we get cwd for command line in init_piernik subroutine
+      ! cwd = trim(cwd_proc)  !> \deprecated BEWARE: It's redundant, we get cwd for command line in init_piernik subroutine
 
-         if (master) then
-            inquire(file=par_file, exist=par_file_exist)
-            if (.not. par_file_exist) call die('[mpisetup:init_mpi] Cannot find "problem.par" in the working directory',0)
+      if (master) then
+         inquire(file=par_file, exist=par_file_exist)
+         if (.not. par_file_exist) call die('[mpisetup:init_mpi] Cannot find "problem.par" in the working directory',0)
 
-            call printinfo("------------------------------------------------------------------------------------------------------", .false.)
-            call printinfo("###############     Environment     ###############", .false.)
-            call printinfo("", .false.)
-            call printinfo("PROCESSES:", .false.)
-            do iproc = 0, nproc-1
-               write(msg,"(a6,i4,a7,i6,a1,a,a7,a)") " proc=",iproc, &
-                    ", pid= ",pid_all(iproc), "@",trim(host_all(iproc)), &
-                    ", cwd=",trim(cwd)
-               call printinfo(msg, .false.)
-            enddo
-            call printinfo("", .true.)
-            write(msg,"(5a,i5)") 'Start of the',ansi_white,' PIERNIK ',ansi_black,'code. No. of procs = ', nproc
-            call printinfo(msg, .true.)
-            call printinfo("", .true.)
-            call printinfo("###############     Namelist parameters     ###############", .false.)
-         endif
+         call printinfo("------------------------------------------------------------------------------------------------------", .false.)
+         call printinfo("###############     Environment     ###############", .false.)
+         call printinfo("", .false.)
+         call printinfo("PROCESSES:", .false.)
+         do iproc = 0, nproc-1
+            write(msg,"(a,i4,a,i6,4a)") " proc=", iproc, ", pid= ",pid_all(iproc), " @",trim(host_all(iproc)), " cwd=",trim(cwd_all(iproc))
+            call printinfo(msg, .false.)
+         enddo
+         call printinfo("", .true.)
+         write(msg,"(5a,i5)") 'Start of the',ansi_white,' PIERNIK ',ansi_black,'code. No. of procs = ', nproc
+         call printinfo(msg, .true.)
+         call printinfo("", .true.)
+         call printinfo("###############     Namelist parameters     ###############", .false.)
+      endif
 
-         deallocate(host_all)
-         deallocate(pid_all)
-         deallocate(cwd_all)
+      deallocate(host_all)
+      deallocate(pid_all)
+      deallocate(cwd_all)
 
-         pxsize = 1
-         pysize = 1
-         pzsize = 1
-         nxd    = 1
-         nyd    = 1
-         nzd    = 1
-         nb     = 4
-         xmin = 0.; xmax = 1.
-         ymin = 0.; ymax = 1.
-         zmin = 0.; zmax = 1.
-         geometry = "cartesian"
+      pxsize = 1
+      pysize = 1
+      pzsize = 1
+      nxd    = 1
+      nyd    = 1
+      nzd    = 1
+      nb     = 4
+      xmin = 0.; xmax = 1.
+      ymin = 0.; ymax = 1.
+      zmin = 0.; zmax = 1.
+      geometry = "cartesian"
 
-         mpi_magic = .true.
-         reorder   = .false.      !< \todo test it!
+      mpi_magic = .true.
+      reorder   = .false.      !< \todo test it!
 
-         bnd_xl = 'per'
-         bnd_xr = 'per'
-         bnd_yl = 'per'
-         bnd_yr = 'per'
-         bnd_zl = 'per'
-         bnd_zr = 'per'
+      bnd_xl = 'per'
+      bnd_xr = 'per'
+      bnd_yl = 'per'
+      bnd_yr = 'per'
+      bnd_zl = 'per'
+      bnd_zr = 'per'
 
-         limiter     = 'vanleer'
-         cflcontrol  = 'warn'
+      limiter     = 'vanleer'
+      cflcontrol  = 'warn'
 
-         cfl         = 0.7
-         cfl_max     = 0.9
-         cfr_smooth  = 0.0
-         smallp      = big_float
-         smalld      = big_float
-         use_smalld  = .true.
-         smallc      = 1.e-10
-         smallei     = 1.e-10
-         dt_initial  = -1.              !< negative value indicates automatic choice of initial timestep
-         dt_max_grow = dt_default_grow  !< for sensitive setups consider setting this as low as 1.1
-         dt_min      = tiny(1.)
+      cfl         = 0.7
+      cfl_max     = 0.9
+      cfr_smooth  = 0.0
+      smallp      = big_float
+      smalld      = big_float
+      use_smalld  = .true.
+      smallc      = 1.e-10
+      smallei     = 1.e-10
+      dt_initial  = -1.              !< negative value indicates automatic choice of initial timestep
+      dt_max_grow = dt_default_grow  !< for sensitive setups consider setting this as low as 1.1
+      dt_min      = tiny(1.)
 
-         integration_order  = 2
+      integration_order  = 2
 
-         if (master) then
-            diff_nml(MPI_BLOCKS)
-            diff_nml(BOUNDARIES)
-            diff_nml(NUMERICAL_SETUP)
-            diff_nml(DOMAIN_SIZES)
-            diff_nml(DOMAIN_LIMITS)
-         endif
+      if (master) then
+         diff_nml(MPI_BLOCKS)
+         diff_nml(BOUNDARIES)
+         diff_nml(NUMERICAL_SETUP)
+         diff_nml(DOMAIN_SIZES)
+         diff_nml(DOMAIN_LIMITS)
+      endif
 
-         nxd = max(1, nxd)
-         nyd = max(1, nyd)
-         nzd = max(1, nzd)
+      nxd = max(1, nxd)
+      nyd = max(1, nyd)
+      nzd = max(1, nzd)
 
-         cfl_max = min(max(cfl_max, min(cfl*1.1, cfl+0.05, (1.+cfl)/2.) ), 1.0) ! automatically sanitize cfl_max
+      cfl_max = min(max(cfl_max, min(cfl*1.1, cfl+0.05, (1.+cfl)/2.) ), 1.0) ! automatically sanitize cfl_max
 
-         if (master) then
+      if (master) then
 
-            cbuff(1) = bnd_xl
-            cbuff(2) = bnd_xr
-            cbuff(3) = bnd_yl
-            cbuff(4) = bnd_yr
-            cbuff(5) = bnd_zl
-            cbuff(6) = bnd_zr
-            cbuff(7) = limiter
-            cbuff(8) = cflcontrol
-            cbuff(9) = geometry
+         cbuff(1) = bnd_xl
+         cbuff(2) = bnd_xr
+         cbuff(3) = bnd_yl
+         cbuff(4) = bnd_yr
+         cbuff(5) = bnd_zl
+         cbuff(6) = bnd_zr
+         cbuff(7) = limiter
+         cbuff(8) = cflcontrol
+         cbuff(9) = geometry
 
-            ibuff(1) = pxsize
-            ibuff(2) = pysize
-            ibuff(3) = pzsize
-            ibuff(4) = integration_order
-            ibuff(5) = nxd
-            ibuff(6) = nyd
-            ibuff(7) = nzd
-            ibuff(8) = nb
+         ibuff(1) = pxsize
+         ibuff(2) = pysize
+         ibuff(3) = pzsize
+         ibuff(4) = integration_order
+         ibuff(5) = nxd
+         ibuff(6) = nyd
+         ibuff(7) = nzd
+         ibuff(8) = nb
 
-            rbuff( 1) = smalld
-            rbuff( 2) = smallc
-            rbuff( 3) = smallp
-            rbuff( 4) = smallei
-            rbuff( 5) = cfl
-            rbuff( 6) = cfr_smooth
-            rbuff( 7) = dt_initial
-            rbuff( 8) = dt_max_grow
-            rbuff( 9) = dt_min
-            rbuff(10) = cfl_max
-            rbuff(11) = relax_time
-            rbuff(12) = xmin
-            rbuff(13) = xmax
-            rbuff(14) = ymin
-            rbuff(15) = ymax
-            rbuff(16) = zmin
-            rbuff(17) = zmax
+         rbuff( 1) = smalld
+         rbuff( 2) = smallc
+         rbuff( 3) = smallp
+         rbuff( 4) = smallei
+         rbuff( 5) = cfl
+         rbuff( 6) = cfr_smooth
+         rbuff( 7) = dt_initial
+         rbuff( 8) = dt_max_grow
+         rbuff( 9) = dt_min
+         rbuff(10) = cfl_max
+         rbuff(11) = relax_time
+         rbuff(12) = xmin
+         rbuff(13) = xmax
+         rbuff(14) = ymin
+         rbuff(15) = ymax
+         rbuff(16) = zmin
+         rbuff(17) = zmax
 
-            lbuff(1) = mpi_magic
-            lbuff(2) = use_smalld
-            lbuff(3) = reorder
+         lbuff(1) = mpi_magic
+         lbuff(2) = use_smalld
+         lbuff(3) = reorder
 
-         endif
+      endif
 
-         call MPI_Bcast(cbuff, cbuff_len*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
-         call MPI_Bcast(ibuff,           buffer_dim, MPI_INTEGER,          0, comm, ierr)
-         call MPI_Bcast(rbuff,           buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
-         call MPI_Bcast(lbuff,           buffer_dim, MPI_LOGICAL,          0, comm, ierr)
+      call MPI_Bcast(cbuff, cbuff_len*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
+      call MPI_Bcast(ibuff,           buffer_dim, MPI_INTEGER,          0, comm, ierr)
+      call MPI_Bcast(rbuff,           buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+      call MPI_Bcast(lbuff,           buffer_dim, MPI_LOGICAL,          0, comm, ierr)
 
-         if (slave) then
+      if (slave) then
 
-            mpi_magic     = lbuff(1)
-            use_smalld    = lbuff(2)
-            reorder       = lbuff(3)
+         mpi_magic     = lbuff(1)
+         use_smalld    = lbuff(2)
+         reorder       = lbuff(3)
 
-            smalld      = rbuff( 1)
-            smallc      = rbuff( 2)
-            smallp      = rbuff( 3)
-            smallei     = rbuff( 4)
-            cfl         = rbuff( 5)
-            cfr_smooth  = rbuff( 6)
-            dt_initial  = rbuff( 7)
-            dt_max_grow = rbuff( 8)
-            dt_min      = rbuff( 9)
-            cfl_max     = rbuff(10)
-            relax_time  = rbuff(11)
-            xmin        = rbuff(12)
-            xmax        = rbuff(13)
-            ymin        = rbuff(14)
-            ymax        = rbuff(15)
-            zmin        = rbuff(16)
-            zmax        = rbuff(17)
+         smalld      = rbuff( 1)
+         smallc      = rbuff( 2)
+         smallp      = rbuff( 3)
+         smallei     = rbuff( 4)
+         cfl         = rbuff( 5)
+         cfr_smooth  = rbuff( 6)
+         dt_initial  = rbuff( 7)
+         dt_max_grow = rbuff( 8)
+         dt_min      = rbuff( 9)
+         cfl_max     = rbuff(10)
+         relax_time  = rbuff(11)
+         xmin        = rbuff(12)
+         xmax        = rbuff(13)
+         ymin        = rbuff(14)
+         ymax        = rbuff(15)
+         zmin        = rbuff(16)
+         zmax        = rbuff(17)
 
-            bnd_xl     = cbuff(1)(1:4)
-            bnd_xr     = cbuff(2)(1:4)
-            bnd_yl     = cbuff(3)(1:4)
-            bnd_yr     = cbuff(4)(1:4)
-            bnd_zl     = cbuff(5)(1:4)
-            bnd_zr     = cbuff(6)(1:4)
-            limiter    = cbuff(7)
-            cflcontrol = cbuff(8)
-            geometry   = cbuff(9)
+         bnd_xl     = cbuff(1)(1:4)
+         bnd_xr     = cbuff(2)(1:4)
+         bnd_yl     = cbuff(3)(1:4)
+         bnd_yr     = cbuff(4)(1:4)
+         bnd_zl     = cbuff(5)(1:4)
+         bnd_zr     = cbuff(6)(1:4)
+         limiter    = cbuff(7)
+         cflcontrol = cbuff(8)
+         geometry   = cbuff(9)
 
-            pxsize     = ibuff(1)
-            pysize     = ibuff(2)
-            pzsize     = ibuff(3)
-            integration_order = ibuff(4)
-            nxd        = ibuff(5)
-            nyd        = ibuff(6)
-            nzd        = ibuff(7)
-            nb         = ibuff(8)
+         pxsize     = ibuff(1)
+         pysize     = ibuff(2)
+         pzsize     = ibuff(3)
+         integration_order = ibuff(4)
+         nxd        = ibuff(5)
+         nyd        = ibuff(6)
+         nzd        = ibuff(7)
+         nb         = ibuff(8)
 
-         endif
+      endif
 
-         ! set up the global domain
-         has_dir(:) = ([ nxd, nyd, nzd ] > 1)
-         domsize(:) = [nxd, nyd, nzd]
+      ! set up the global domain
+      has_dir(:) = ([ nxd, nyd, nzd ] > 1)
+      domsize(:) = [nxd, nyd, nzd]
 
-         dom%nxd = nxd
-         dom%nyd = nyd
-         dom%nzd = nzd
+      dom%nxd = nxd
+      dom%nyd = nyd
+      dom%nzd = nzd
 
-         dom%bnd_xl_dom = bnd_xl
-         dom%bnd_xr_dom = bnd_xr
-         dom%bnd_yl_dom = bnd_yl
-         dom%bnd_yr_dom = bnd_yr
-         dom%bnd_zl_dom = bnd_zl
-         dom%bnd_zr_dom = bnd_zr
+      dom%bnd_xl_dom = bnd_xl
+      dom%bnd_xr_dom = bnd_xr
+      dom%bnd_yl_dom = bnd_yl
+      dom%bnd_yr_dom = bnd_yr
+      dom%bnd_zl_dom = bnd_zl
+      dom%bnd_zr_dom = bnd_zr
 
-         dom%xmin = xmin
-         dom%ymin = ymin
-         dom%zmin = zmin
-         dom%xmax = xmax
-         dom%ymax = ymax
-         dom%zmax = zmax
+      dom%xmin = xmin
+      dom%ymin = ymin
+      dom%zmin = zmin
+      dom%xmax = xmax
+      dom%ymax = ymax
+      dom%zmax = zmax
 
-         dom%Lx = dom%xmax - dom%xmin
-         dom%Ly = dom%ymax - dom%ymin
-         dom%Lz = dom%zmax - dom%zmin
+      dom%Lx = dom%xmax - dom%xmin
+      dom%Ly = dom%ymax - dom%ymin
+      dom%Lz = dom%zmax - dom%zmin
 
-         dom%Vol = 1.
-         if (has_dir(xdim)) then
-            dom%Vol = dom%Vol * dom%Lx
-            dom%nxt = dom%nxd + 2 * nb     ! Domain total grid sizes
+      dom%Vol = 1.
+      if (has_dir(xdim)) then
+         dom%Vol = dom%Vol * dom%Lx
+         dom%nxt = dom%nxd + 2 * nb     ! Domain total grid sizes
+      else
+         dom%nxt = 1
+      endif
+
+      if (has_dir(ydim)) then
+         dom%Vol = dom%Vol * dom%Ly
+         dom%nyt = dom%nyd + 2 * nb
+      else
+         dom%nyt = 1
+      endif
+
+      if (has_dir(zdim)) then
+         dom%Vol = dom%Vol * dom%Lz
+         dom%nzt = dom%nzd + 2 * nb
+      else
+         dom%nzt = 1
+      endif
+      !> \deprecated BEWARE: dom\%Vol computed above is not true for non-cartesian geometry
+
+      dom%x0 = (dom%xmax + dom%xmin)/2.
+      dom%y0 = (dom%ymax + dom%ymin)/2.
+      dom%z0 = (dom%zmax + dom%zmin)/2.
+
+      psize(:) = [ pxsize, pysize, pzsize ]
+
+      if (pxsize*pysize*pzsize /= nproc) then
+         if (mpi_magic) then
+            call divide_domain_voodoo(nproc)
          else
-            dom%nxt = 1
-         endif
-
-         if (has_dir(ydim)) then
-            dom%Vol = dom%Vol * dom%Ly
-            dom%nyt = dom%nyd + 2 * nb
-         else
-            dom%nyt = 1
-         endif
-
-         if (has_dir(zdim)) then
-            dom%Vol = dom%Vol * dom%Lz
-            dom%nzt = dom%nzd + 2 * nb
-         else
-            dom%nzt = 1
-         endif
-         !> \deprecated BEWARE: dom\%Vol computed above is not true for non-cartesian geometry
-
-         dom%x0 = (dom%xmax + dom%xmin)/2.
-         dom%y0 = (dom%ymax + dom%ymin)/2.
-         dom%z0 = (dom%zmax + dom%zmin)/2.
-
-         psize(:) = [ pxsize, pysize, pzsize ]
-
-         if (pxsize*pysize*pzsize /= nproc) then
-            if (mpi_magic) then
-               call divide_domain_voodoo(nproc)
-            else
-               if (master) then
-                  write(msg,'(A,I5,A,I10)') 'nproc =',nproc,' MUST BE EQUAL TO   pxsize*pysize*pzsize =',pxsize*pysize*pzsize
-                  call die(msg,0)
-               endif
-               call MPI_Barrier(MPI_COMM_WORLD, ierr)
-               call MPI_Finalize(ierr)
+            if (master) then
+               write(msg,'(A,I5,A,I10)') 'nproc =',nproc,' MUST BE EQUAL TO   pxsize*pysize*pzsize =',pxsize*pysize*pzsize
+               call die(msg,0)
             endif
+            call MPI_Barrier(MPI_COMM_WORLD, ierr)
+            call MPI_Finalize(ierr)
          endif
+      endif
 
-         if (pxsize*pysize*pzsize /= 1) have_mpi = .true.
+      if (pxsize*pysize*pzsize /= 1) have_mpi = .true.
 
-         if ( (bnd_xl(1:3) == 'cor' .or. bnd_yl(1:3) == 'cor' .or. bnd_xr(1:3) == 'cor' .or. bnd_yr(1:3) == 'cor') .and. (pxsize /= pysize .or. nxd /= nyd) ) then
-            write(msg, '(a,4(i4,a))')"[mpisetup:init_mpi] Corner BC require pxsize equal to pysize and nxd equal to nyd. Detected: [",pxsize,",",pysize,"] and [",nxd,",",nyd,"]"
-            call die(msg)
-         endif
+      if ( (bnd_xl(1:3) == 'cor' .or. bnd_yl(1:3) == 'cor' .or. bnd_xr(1:3) == 'cor' .or. bnd_yr(1:3) == 'cor') .and. (pxsize /= pysize .or. nxd /= nyd) ) then
+         write(msg, '(a,4(i4,a))')"[mpisetup:init_mpi] Corner BC require pxsize equal to pysize and nxd equal to nyd. Detected: [",pxsize,",",pysize,"] and [",nxd,",",nyd,"]"
+         call die(msg)
+      endif
 
-         periods(:) = .false.
+      periods(:) = .false.
 
-         if (bnd_xl(1:3) == 'per' .or. bnd_xr(1:3) == 'per' .or. bnd_xl(1:3) == 'she'  .or. bnd_xr(1:3) == 'she') then
-            periods(xdim) = .true.  ! x periodic
-            if (bnd_xr(1:3) /= bnd_xl(1:3)) call die("[mpisetup:init_mpi] Periodic or shear BC do not match in X-direction")
-         endif
+      if (bnd_xl(1:3) == 'per' .or. bnd_xr(1:3) == 'per' .or. bnd_xl(1:3) == 'she'  .or. bnd_xr(1:3) == 'she') then
+         periods(xdim) = .true.  ! x periodic
+         if (bnd_xr(1:3) /= bnd_xl(1:3)) call die("[mpisetup:init_mpi] Periodic or shear BC do not match in X-direction")
+      endif
 
-         if (bnd_yl(1:3) == 'per' .or. bnd_yr(1:3) == 'per') then
-            periods(ydim) = .true.  ! y periodic
-            if (bnd_yr(1:3) /= bnd_yl(1:3)) call die("[mpisetup:init_mpi] Periodic BC do not match in Y-direction")
-         endif
+      if (bnd_yl(1:3) == 'per' .or. bnd_yr(1:3) == 'per') then
+         periods(ydim) = .true.  ! y periodic
+         if (bnd_yr(1:3) /= bnd_yl(1:3)) call die("[mpisetup:init_mpi] Periodic BC do not match in Y-direction")
+      endif
 
-         if (bnd_zl(1:3) == 'per' .or. bnd_zr(1:3) == 'per') then
-            periods(zdim) = .true.  ! z periodic
-            if (bnd_zr(1:3) /= bnd_zl(1:3)) call die("[mpisetup:init_mpi] Periodic BC do not match in Z-direction")
-         endif
+      if (bnd_zl(1:3) == 'per' .or. bnd_zr(1:3) == 'per') then
+         periods(zdim) = .true.  ! z periodic
+         if (bnd_zr(1:3) /= bnd_zl(1:3)) call die("[mpisetup:init_mpi] Periodic BC do not match in Z-direction")
+      endif
 
-         call MPI_Cart_create(comm, ndims, psize, periods, reorder, comm3d, ierr)
-         call MPI_Cart_coords(comm3d, proc, ndims, pcoords, ierr)
+      call MPI_Cart_create(comm, ndims, psize, periods, reorder, comm3d, ierr)
+      call MPI_Cart_coords(comm3d, proc, ndims, pcoords, ierr)
 
 ! Compute neighbors
 
-         call MPI_Cart_shift(comm3d,0,1,procxl,procxr,ierr)   ! x dim
-         call MPI_Cart_shift(comm3d,1,1,procyl,procyr,ierr)   ! y dim
-         call MPI_Cart_shift(comm3d,2,1,proczl,proczr,ierr)   ! z dim
+      call MPI_Cart_shift(comm3d,0,1,procxl,procxr,ierr)   ! x dim
+      call MPI_Cart_shift(comm3d,1,1,procyl,procyr,ierr)   ! y dim
+      call MPI_Cart_shift(comm3d,2,1,proczl,proczr,ierr)   ! z dim
 
-         if (bnd_xl(1:3) == 'cor' .and. bnd_yl(1:3) == 'cor' ) then
-            if (pcoords(xdim) == 0 .and. pcoords(ydim) > 0) then
-               coords = (/pcoords(ydim),pcoords(xdim),pcoords(zdim)/)
-               call MPI_Cart_rank(comm3d,coords,procxyl,ierr)
-            else
-               procxyl = MPI_PROC_NULL
-            endif
-            if (pcoords(ydim) == 0 .and. pcoords(xdim) > 0 ) then
-               coords = (/pcoords(ydim),pcoords(xdim),pcoords(zdim)/)
-               call MPI_Cart_rank(comm3d,coords,procyxl,ierr)
-            else
-               procyxl = MPI_PROC_NULL
-            endif
+      if (bnd_xl(1:3) == 'cor' .and. bnd_yl(1:3) == 'cor' ) then
+         if (pcoords(xdim) == 0 .and. pcoords(ydim) > 0) then
+            coords = (/pcoords(ydim),pcoords(xdim),pcoords(zdim)/)
+            call MPI_Cart_rank(comm3d,coords,procxyl,ierr)
+         else
+            procxyl = MPI_PROC_NULL
          endif
+         if (pcoords(ydim) == 0 .and. pcoords(xdim) > 0 ) then
+            coords = (/pcoords(ydim),pcoords(xdim),pcoords(zdim)/)
+            call MPI_Cart_rank(comm3d,coords,procyxl,ierr)
+         else
+            procyxl = MPI_PROC_NULL
+         endif
+      endif
 
-         if (bnd_xr(1:3) == 'cor' .and. bnd_yr(1:3) == 'cor' ) then
-            if (pcoords(xdim) == psize(xdim)-1 .and. pcoords(ydim) < psize(ydim)-1) then
-               coords = (/pcoords(ydim),pcoords(xdim),pcoords(zdim)/)
-               call MPI_Cart_rank(comm3d,coords,procxyr,ierr)
-            else
-               procxyr = MPI_PROC_NULL
-            endif
-            if (pcoords(ydim) == psize(ydim)-1 .and. pcoords(xdim) < psize(xdim)-1 ) then
-               coords = (/pcoords(ydim),pcoords(xdim),pcoords(zdim)/)
-               call MPI_Cart_rank(comm3d,coords,procyxr,ierr)
-            else
-               procyxr = MPI_PROC_NULL
-            endif
+      if (bnd_xr(1:3) == 'cor' .and. bnd_yr(1:3) == 'cor' ) then
+         if (pcoords(xdim) == psize(xdim)-1 .and. pcoords(ydim) < psize(ydim)-1) then
+            coords = (/pcoords(ydim),pcoords(xdim),pcoords(zdim)/)
+            call MPI_Cart_rank(comm3d,coords,procxyr,ierr)
+         else
+            procxyr = MPI_PROC_NULL
          endif
+         if (pcoords(ydim) == psize(ydim)-1 .and. pcoords(xdim) < psize(xdim)-1 ) then
+            coords = (/pcoords(ydim),pcoords(xdim),pcoords(zdim)/)
+            call MPI_Cart_rank(comm3d,coords,procyxr,ierr)
+         else
+            procyxr = MPI_PROC_NULL
+         endif
+      endif
 
 #ifdef SHEAR_BND
-         if (pysize > 1) stop 'Shear-pediodic boundary conditions do not permit pysize > 1'
+      if (pysize > 1) stop 'Shear-pediodic boundary conditions do not permit pysize > 1'
 
 #ifndef FFTW
-         if (pcoords(xdim) == 0) then
-            bnd_xl = 'she'
-         else
-            bnd_xl = 'mpi'
-         endif
+      if (pcoords(xdim) == 0) then
+         bnd_xl = 'she'
+      else
+         bnd_xl = 'mpi'
+      endif
 
-         if (pcoords(xdim) == pxsize-1) then
-            bnd_xr = 'she'
-         else
-            bnd_xr = 'mpi'
-         endif
+      if (pcoords(xdim) == pxsize-1) then
+         bnd_xr = 'she'
+      else
+         bnd_xr = 'mpi'
+      endif
 #endif /* !FFTW */
 
 #else /* !SHEAR_BND */
-         if (procxl /= MPI_PROC_NULL .and. procxl /= proc) bnd_xl = 'mpi'
-         if (procxr /= MPI_PROC_NULL .and. procxr /= proc) bnd_xr = 'mpi'
+      if (procxl /= MPI_PROC_NULL .and. procxl /= proc) bnd_xl = 'mpi'
+      if (procxr /= MPI_PROC_NULL .and. procxr /= proc) bnd_xr = 'mpi'
 #endif /* !SHEAR_BND */
 
-         if (procyl /= MPI_PROC_NULL .and. procyl /= proc) bnd_yl = 'mpi'
-         if (procyr /= MPI_PROC_NULL .and. procyr /= proc) bnd_yr = 'mpi'
+      if (procyl /= MPI_PROC_NULL .and. procyl /= proc) bnd_yl = 'mpi'
+      if (procyr /= MPI_PROC_NULL .and. procyr /= proc) bnd_yr = 'mpi'
 
-         if (proczl /= MPI_PROC_NULL .and. proczl /= proc) bnd_zl = 'mpi'
-         if (proczr /= MPI_PROC_NULL .and. proczr /= proc) bnd_zr = 'mpi'
+      if (proczl /= MPI_PROC_NULL .and. proczl /= proc) bnd_zl = 'mpi'
+      if (proczr /= MPI_PROC_NULL .and. proczr /= proc) bnd_zr = 'mpi'
 
 #ifdef DEBUG
-         write(msg,*) 'xdir: ',procxl, proc, procxr
-         call printinfo(msg)
-         write(msg,*) 'ydir: ',procyl, proc, procyr
-         call printinfo(msg)
-         write(msg,*) 'zdir: ',proczl, proc, proczr
-         call printinfo(msg)
+      write(msg,*) 'xdir: ',procxl, proc, procxr
+      call printinfo(msg)
+      write(msg,*) 'ydir: ',procyl, proc, procyr
+      call printinfo(msg)
+      write(msg,*) 'zdir: ',proczl, proc, proczr
+      call printinfo(msg)
 #endif /* DEBUG */
 
-         if (integration_order > 2) call die ('[mpisetup:init_mpi]: "ORIG" scheme integration_order must be 1 or 2')
+      if (integration_order > 2) call die ('[mpisetup:init_mpi]: "ORIG" scheme integration_order must be 1 or 2')
 
-         dt_old = -1.
-         if (dt_max_grow < 1.01) then
-            if (master) then
-               write(msg,'(2(a,g10.3))')"[mpisetup:init_mpi] dt_max_grow = ",dt_max_grow," is way too low. Resetting to ",dt_default_grow
-               call warn(msg)
-            endif
-            dt_max_grow = dt_default_grow
+      dt_old = -1.
+      if (dt_max_grow < 1.01) then
+         if (master) then
+            write(msg,'(2(a,g10.3))')"[mpisetup:init_mpi] dt_max_grow = ",dt_max_grow," is way too low. Resetting to ",dt_default_grow
+            call warn(msg)
          endif
+         dt_max_grow = dt_default_grow
+      endif
 #ifdef VERBOSE
-         call printinfo("[mpisetup:init_mpi]: finished. \o/")
+      call printinfo("[mpisetup:init_mpi]: finished. \o/")
 #endif /* VERBOSE */
 
-      end subroutine init_mpi
+   end subroutine init_mpi
 
 !-----------------------------------------------------------------------------
 
-      subroutine cleanup_mpi
+   subroutine cleanup_mpi
 
-         use dataio_pub,    only: printinfo
+      use dataio_pub,    only: printinfo
 
-         implicit none
+      implicit none
 
-         call MPI_Comm_free(comm3d, ierr)
+      call MPI_Comm_free(comm3d, ierr)
 
-         if (master) call printinfo("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++", .false.)
-         call MPI_Barrier(comm,ierr)
-         if (nproc > 1) call sleep(1) ! Prevent random SIGSEGVs in openmpi's MPI_Finalize
-         call MPI_Finalize(ierr)
+      if (master) call printinfo("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++", .false.)
+      call MPI_Barrier(comm,ierr)
+      if (nproc > 1) call sleep(1) ! Prevent random SIGSEGVs in openmpi's MPI_Finalize
+      call MPI_Finalize(ierr)
 
-      end subroutine cleanup_mpi
+   end subroutine cleanup_mpi
 
 !-----------------------------------------------------------------------------
 
-      subroutine mpifind(var, what, loc_arr, loc_proc)
-         use mpi,           only: MPI_2DOUBLE_PRECISION, MPI_INTEGER, MPI_MINLOC, MPI_MAXLOC
-         use dataio_pub,    only: msg, warn
+   subroutine mpifind(var, what, loc_arr, loc_proc)
 
-         implicit none
+      use mpi,           only: MPI_2DOUBLE_PRECISION, MPI_INTEGER, MPI_MINLOC, MPI_MAXLOC
+      use dataio_pub,    only: msg, warn
 
-         character(len=*), intent(in) :: what
-         real                         :: var
-         real, dimension(2)           :: rsend, rrecv
-         integer, dimension(ndims)    :: loc_arr
-         integer                      :: loc_proc
+      implicit none
 
-         rsend(1) = var
-         rsend(2) = proc
+      character(len=*), intent(in) :: what
+      real                         :: var
+      real, dimension(2)           :: rsend, rrecv
+      integer, dimension(ndims)    :: loc_arr
+      integer                      :: loc_proc
 
-         select case (what(1:3))
-            case ('min')
-               CALL MPI_Reduce(rsend, rrecv, 1, MPI_2DOUBLE_PRECISION, MPI_MINLOC, 0, comm, ierr)
-            case ('max')
-               CALL MPI_Reduce(rsend, rrecv, 1, MPI_2DOUBLE_PRECISION, MPI_MAXLOC, 0, comm, ierr)
-            case default
-               write(msg,*) '[mpisetup:mpifind] actual parameter "', what, '"is not allowed'
-               call warn(msg)
-         end select
+      rsend(1) = var
+      rsend(2) = proc
 
-         if (master) then
-            var = rrecv(1)
-            loc_proc = rrecv(2)
+      select case (what(1:3))
+      case ('min')
+         CALL MPI_Reduce(rsend, rrecv, 1, MPI_2DOUBLE_PRECISION, MPI_MINLOC, 0, comm, ierr)
+      case ('max')
+         CALL MPI_Reduce(rsend, rrecv, 1, MPI_2DOUBLE_PRECISION, MPI_MAXLOC, 0, comm, ierr)
+      case default
+         write(msg,*) '[mpisetup:mpifind] actual parameter "', what, '"is not allowed'
+         call warn(msg)
+      end select
+
+      if (master) then
+         var = rrecv(1)
+         loc_proc = rrecv(2)
+      endif
+
+      call MPI_Bcast(loc_proc, 1, MPI_INTEGER, 0, comm, ierr)
+
+      if (loc_proc /= 0) then
+         if (proc == loc_proc) then
+            CALL MPI_Send  (loc_arr, ndims, MPI_INTEGER, 0,        11, comm, ierr)
+         else if (master) then
+            CALL MPI_Recv  (loc_arr, ndims, MPI_INTEGER, loc_proc, 11, comm, status, ierr)
          endif
+      endif
 
-         call MPI_Bcast(loc_proc, 1, MPI_INTEGER, 0, comm, ierr)
-
-         if (loc_proc /= 0) then
-            if (proc == loc_proc) then
-               CALL MPI_Send  (loc_arr, ndims, MPI_INTEGER, 0,        11, comm, ierr)
-            else if (master) then
-               CALL MPI_Recv  (loc_arr, ndims, MPI_INTEGER, loc_proc, 11, comm, status, ierr)
-            endif
-         endif
-
-      end subroutine mpifind
+   end subroutine mpifind
 
 !>
 !! \brief This routine tries to divide the computational domain into local domains.
@@ -718,65 +717,65 @@ module mpisetup
 !! proper psize, pxsize, pysize, pzsize
 !<
 
-      subroutine divide_domain_voodoo(np)
+   subroutine divide_domain_voodoo(np)
 
-         use dataio_pub,    only: die, printinfo, msg
+      use dataio_pub,    only: die, printinfo, msg
 
-         implicit none
-         integer, parameter, dimension(26) :: some_primes = [ 2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97, 101 ]
+      implicit none
 
-         integer, intent(in) :: np
+      integer, intent(in) :: np
 
-         integer :: j1, j2, j3, jj, n, p
-         integer, dimension(ndims) :: ldom
+      integer, parameter, dimension(26) :: some_primes = [ 2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97, 101 ]
+      integer :: j1, j2, j3, jj, n, p
+      integer, dimension(ndims) :: ldom
 
-         ldom(xdim:zdim) = domsize(zdim:xdim:-1) ! Maxloc returns first occurrence of max, reversing direction order (to ZYX) gives better cache utilization.
-         n = np
-         psize(:) = 1
+      ldom(xdim:zdim) = domsize(zdim:xdim:-1) ! Maxloc returns first occurrence of max, reversing direction order (to ZYX) gives better cache utilization.
+      n = np
+      psize(:) = 1
 
-         do p = size(some_primes), 1, -1 ! start from largest defined primes, continue down to 2
-            do while (mod(n, some_primes(p))==0)
+      do p = size(some_primes), 1, -1 ! start from largest defined primes, continue down to 2
+         do while (mod(n, some_primes(p))==0)
 
-               jj = 0
-               j1 = sum(maxloc(ldom), 1) ! First try the longest edge; note the trick to make a scalar from 1-element vector without assignment to another variable
-               if (mod(ldom(j1), some_primes(p))==0) then
-                  jj = j1
-               else
-                  j2 = 1 + mod(j1 + 0, ndims)
-                  j3 = 1 + mod(j1 + ndims -2, ndims)
-                  if (ldom(j2) > ldom(j3) .and. mod(ldom(j2), some_primes(p))==0) jj = j2 ! middle edge ...
-                  if (jj == 0 .and. mod(ldom(j3), some_primes(p))==0) jj = j3 ! try the shortest edge on last resort
-               endif
+            jj = 0
+            j1 = sum(maxloc(ldom), 1) ! First try the longest edge; note the trick to make a scalar from 1-element vector without assignment to another variable
+            if (mod(ldom(j1), some_primes(p))==0) then
+               jj = j1
+            else
+               j2 = 1 + mod(j1 + 0, ndims)
+               j3 = 1 + mod(j1 + ndims -2, ndims)
+               if (ldom(j2) > ldom(j3) .and. mod(ldom(j2), some_primes(p))==0) jj = j2 ! middle edge ...
+               if (jj == 0 .and. mod(ldom(j3), some_primes(p))==0) jj = j3 ! try the shortest edge on last resort
+            endif
 
-               if (jj == 0) then
-                  call die("[divide_domain_voodoo]: Can't find divisible edge")
-               else
-                  psize(jj) = psize(jj) * some_primes(p)
-                  n         = n         / some_primes(p)
-                  ldom(jj)  = ldom(jj)  / some_primes(p)
-               endif
+            if (jj == 0) then
+               call die("[divide_domain_voodoo]: Can't find divisible edge")
+            else
+               psize(jj) = psize(jj) * some_primes(p)
+               n         = n         / some_primes(p)
+               ldom(jj)  = ldom(jj)  / some_primes(p)
+            endif
 
-            enddo
          enddo
+      enddo
 
-         if (n /= 1) call die("[divide_domain_voodoo]: I am not that intelligent") ! np has too big prime factors
+      if (n /= 1) call die("[divide_domain_voodoo]: I am not that intelligent") ! np has too big prime factors
 
-         pxsize = psize(zdim) ! directions were reverted at ldom assignment
-         pysize = psize(ydim)
-         pzsize = psize(xdim)
+      pxsize = psize(zdim) ! directions were reverted at ldom assignment
+      pysize = psize(ydim)
+      pzsize = psize(xdim)
 
-         psize = [ pxsize, pysize, pzsize ]
+      psize = [ pxsize, pysize, pzsize ]
 
-         if (master .and. np > 1) then
-            write(msg,'(a,3i4,a,3i6,a)')"[mpisetup:divide_domain_voodoo] Domain divided to [",psize(:)," ] pieces, each of [",ldom(zdim:xdim:-1)," ] cells."
-            call printinfo(msg)
-         endif
+      if (master .and. np > 1) then
+         write(msg,'(a,3i4,a,3i6,a)')"[mpisetup:divide_domain_voodoo] Domain divided to [",psize(:)," ] pieces, each of [",ldom(zdim:xdim:-1)," ] cells."
+         call printinfo(msg)
+      endif
 
-      end subroutine divide_domain_voodoo
+   end subroutine divide_domain_voodoo
 
-      logical function grace_period_passed()
-         implicit none
-         grace_period_passed = (t >= relax_time)
-      end function grace_period_passed
+   logical function grace_period_passed()
+      implicit none
+      grace_period_passed = (t >= relax_time)
+   end function grace_period_passed
 
 end module mpisetup
