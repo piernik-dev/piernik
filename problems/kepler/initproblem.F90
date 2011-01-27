@@ -179,7 +179,7 @@ contains
       kx = 15.*dpi/dom%Lx
       kz =  5.*dpi/dom%Lz
 
-      do i = cg%ie, cg%is
+      do i = cg%is, cg%ie
          do k = cg%ks, cg%ke
             u(flind%dst%imx,i,:,k) = u(flind%dst%imx,i,:,k) + amp*sin(kx*cg%x(i) + kz*cg%z(k)) * u(flind%dst%idn,i,:,k)
             u(flind%dst%imy,i,:,k) = u(flind%dst%imy,i,:,k) + amp*sin(kx*cg%x(i) + kz*cg%z(k)) * u(flind%dst%idn,i,:,k)
