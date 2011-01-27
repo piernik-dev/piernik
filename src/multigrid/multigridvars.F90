@@ -114,7 +114,6 @@ module multigridvars
    type(plvl), pointer                           :: gb                !< pointer to global-base level
 
    ! dimensions
-   integer                                 :: eff_dim                 !< count number of dimensions (>1 cell in a direction)
    integer                                 :: ngridvars               !< number of variables required for implementation of multigrid
 
    ! boundaries
