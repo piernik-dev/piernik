@@ -29,7 +29,7 @@
 
  $OUTPUT_CONTROL
     problem_name ='kepler'
-    run_id  =  'ru3'
+    run_id  =  'tst'
     dt_hdf  = 1.0
     dt_res  = 500.0
     dt_log  = 1.0e-12
@@ -73,7 +73,7 @@
     cfl    = 0.6
     use_smalld = .true.
 !    smalld = 1.e-7
-    relax_time = 30.0
+    relax_time = 15.0
     integration_order = 2
     limiter= 'vanleer'
     cfr_smooth = 0.01
@@ -112,7 +112,7 @@
  /
 
  $INTERACTIONS
-   collision_factor  = 0.01
-   dragc_gas_dust    = 0.01
+   collision_factor  = 10.0
+   dragc_gas_dust    = 10.0
    cfl_interact      = 0.8
  /

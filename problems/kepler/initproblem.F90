@@ -155,16 +155,52 @@ contains
          user_bnd_xl => my_bnd_xl
          user_bnd_xr => my_bnd_xr
          grav_pot_3d => my_grav_pot_3d
-         problem_grace_passed => add_random_noise
+!         problem_grace_passed => add_random_noise
+         problem_grace_passed => add_sine
       endif
 
    end subroutine read_problem_par
 !-----------------------------------------------------------------------------
+   subroutine add_sine
+      use mpisetup,     only: master, dom
+      use dataio_pub,   only: printinfo
+      use fluidindex,   only: flind
+      use grid,         only: cg
+      use arrays,       only: u
+      use fluidindex,   only: flind
+      use constants,    only: dpi
+      implicit none
+      real, parameter :: amp = 1.e-6
+      real :: kx, kz
+      integer :: i, k
+
+      if (master) call printinfo("[initproblem:add_sine]: adding sine wave perturbation to dust")
+
+      kx = 15.*dpi/dom%Lx
+      kz =  5.*dpi/dom%Lz
+
+      do i = cg%ie, cg%is
+         do k = cg%ks, cg%ke
+            u(flind%dst%imx,i,:,k) = u(flind%dst%imx,i,:,k) + amp*sin(kx*cg%x(i) + kz*cg%z(k)) * u(flind%dst%idn,i,:,k)
+            u(flind%dst%imy,i,:,k) = u(flind%dst%imy,i,:,k) + amp*sin(kx*cg%x(i) + kz*cg%z(k)) * u(flind%dst%idn,i,:,k)
+            u(flind%dst%imz,i,:,k) = u(flind%dst%imz,i,:,k) + amp*sin(kx*cg%x(i) + kz*cg%z(k)) * u(flind%dst%idn,i,:,k)
+         enddo
+      enddo
+#ifdef DEBUG
+      open(456, file="perturbation.dat", status="unknown")
+      do k = cg%ks, cg%ke
+         write(456,*) cg%z(i), sin(kz*cg%z(k))
+      enddo
+      close(456)
+#endif /* DEBUG */
+
+   end subroutine add_sine
+
    subroutine add_random_noise
       use grid,         only: cg
       use arrays,       only: u
       use fluidindex,   only: flind
-      use mpisetup,     only: proc
+      use mpisetup,     only: proc, master
       use dataio_pub,   only: printinfo
 
       implicit none
@@ -173,7 +209,7 @@ contains
       real, dimension(:,:,:,:), allocatable :: noise
       real, parameter :: amp = 1.e-6
 
-      call printinfo("[initproblem:add_random_noise]: adding random noise to dust")
+      if (master) call printinfo("[initproblem:add_random_noise]: adding random noise to dust")
       call random_seed(size=n)
       allocate(seed(n))
       call system_clock(count=clock)
@@ -199,7 +235,7 @@ contains
       use gravity,             only: r_smooth, r_grav, n_gravr, ptmass, source_terms_grav, grav_pot2accel, grav_pot_3d
       use grid,                only: cg, geometry
       use hydrostatic,         only: hydrostatic_zeq_densmid
-      use mpisetup,            only: zdim, has_dir, dom
+      use mpisetup,            only: zdim, has_dir, dom, master
       use types,               only: component_fluid
       use dataio_pub,          only: die
 
@@ -273,20 +309,22 @@ contains
             enddo
          enddo
       else if (geometry=='cylindrical') then
-         call printinfo("------------------------------------------------------------------")
-         call printinfo(" Assuming temperature profile for MMSN ")
-         call printinfo(" T(R) = 150 ( R / 1 AU )^(-0.429) K")
-         write(msg,'(A,F5.1,A)') " T(xmin) = ", mmsn_T(dom%xmin)," K"
-         call printinfo(msg)
-         write(msg,'(A,F5.1,A)') " T(xmax) = ", mmsn_T(dom%xmax)," K"
-         call printinfo(msg)
-         write(msg,'(A,F5.1,A)') " T_mean  = ", 0.5*(mmsn_T(dom%xmin)+mmsn_T(dom%xmax))," K"
-         call printinfo(msg)
-         write(msg,'(A,F9.5)') " cs2(T_mean) = ", kboltz * 0.5*(mmsn_T(dom%xmin)+mmsn_T(dom%xmax)) / mH
-         call printinfo(msg)
-         write(msg,'(A,ES12.3,A)') " T_real(cs2) = ", flind%neu%cs2*mH/kboltz, " K"
-         call printinfo(msg)
-         call printinfo("------------------------------------------------------------------")
+         if (master) then
+            call printinfo("------------------------------------------------------------------")
+            call printinfo(" Assuming temperature profile for MMSN ")
+            call printinfo(" T(R) = 150 ( R / 1 AU )^(-0.429) K")
+            write(msg,'(A,F5.1,A)') " T(xmin) = ", mmsn_T(dom%xmin)," K"
+            call printinfo(msg)
+            write(msg,'(A,F5.1,A)') " T(xmax) = ", mmsn_T(dom%xmax)," K"
+            call printinfo(msg)
+            write(msg,'(A,F5.1,A)') " T_mean  = ", 0.5*(mmsn_T(dom%xmin)+mmsn_T(dom%xmax))," K"
+            call printinfo(msg)
+            write(msg,'(A,F9.5)') " cs2(T_mean) = ", kboltz * 0.5*(mmsn_T(dom%xmin)+mmsn_T(dom%xmax)) / mH
+            call printinfo(msg)
+            write(msg,'(A,ES12.3,A)') " T_real(cs2) = ", flind%neu%cs2*mH/kboltz, " K"
+            call printinfo(msg)
+            call printinfo("------------------------------------------------------------------")
+         endif
          call grav_pot_3d
 
          if (.not.allocated(den0)) allocate(den0(flind%fluids, cg%nx, cg%ny, cg%nz))
@@ -316,7 +354,7 @@ contains
          ln_dens_der(1)        = ln_dens_der(2)
          T_inner               = dpi*cg%x(cg%is) / sqrt( abs(grav(cg%is)) * cg%x(cg%is) )
          write(msg,*) "III Kepler Law gives T = ", sqr_gm/dpi , " yr at 1 AU"
-         call printinfo(msg)
+         if (master) call printinfo(msg)
 #ifdef DEBUG
          open(143,file="dens_prof.dat",status="unknown")
          do p = 1, cg%nx
@@ -328,7 +366,7 @@ contains
 
          do p = 1, flind%fluids
             fl => flind%all_fluids(p)
-            if (fl%tag /= "DST") then
+            if (fl%tag /= "DST" .and. master) then
                write(msg,'(A,F9.5)') "[init_problem:initprob] cs2 used = ", fl%cs2
                call printinfo(msg)
             endif
