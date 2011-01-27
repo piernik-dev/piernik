@@ -373,7 +373,7 @@ contains
 
       use arrays,             only: sgp
       use multigridvars,      only: lvl, roof, base, gb, level_gb, level_max, level_min, bnd_periodic, bnd_dirichlet, bnd_isolated, vcycle_stats
-      use mpisetup,           only: master, nproc, pxsize, pysize, pzsize
+      use mpisetup,           only: master, nproc, psize, xdim, ydim, zdim
       use multigridhelpers,   only: vcycle_stats_init, dirty_debug, dirtyH
       use constants,          only: pi, dpi
       use dataio_pub,         only: die, warn
@@ -465,9 +465,9 @@ contains
 
          !> \deprecated BEWARE only small subset of gb% members is ever initialized
 
-         gb%nxb = base%nxb * pxsize
-         gb%nyb = base%nyb * pysize
-         gb%nzb = base%nzb * pzsize
+         gb%nxb = base%nxb * psize(xdim)
+         gb%nyb = base%nyb * psize(ydim)
+         gb%nzb = base%nzb * psize(zdim)
 
          gb%level = level_gb
 

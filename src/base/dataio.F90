@@ -683,7 +683,7 @@ contains
       use diagnostics,     only: pop_vector
       use fluidindex,      only: flind, iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz, ibx, iby, ibz
       use grid,            only: cg
-      use mpisetup,        only: master, t, dt, smalld, nstep, pxsize, pysize, pzsize
+      use mpisetup,        only: master, t, dt, smalld, nstep, psize, xdim, ydim, zdim
       use types,           only: tsl_container, phys_prop
 #ifndef ISO
       use fluidindex,      only: iarr_all_en
@@ -790,9 +790,9 @@ contains
                   b(ibz, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2)
       tot_emag = mpi_addmul(wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), cg%dvol)
 
-      tot_mflx = mpi_addmul(b(ibx, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), cg%dy*cg%dz/(cg%nxb*pxsize))
-      tot_mfly = mpi_addmul(b(iby, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), cg%dx*cg%dz/(cg%nyb*pysize))
-      tot_mflz = mpi_addmul(b(ibz, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), cg%dx*cg%dy/(cg%nzb*pzsize))
+      tot_mflx = mpi_addmul(b(ibx, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), cg%dy*cg%dz/(cg%nxb*psize(xdim)))
+      tot_mfly = mpi_addmul(b(iby, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), cg%dx*cg%dz/(cg%nyb*psize(ydim)))
+      tot_mflz = mpi_addmul(b(ibz, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), cg%dx*cg%dy/(cg%nzb*psize(zdim)))
 #ifdef ISO
       tot_eint = cs_iso2*tot_mass
       tot_ener = tot_eint+tot_ekin+tot_emag

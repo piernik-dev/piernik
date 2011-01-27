@@ -643,7 +643,7 @@ contains
       use grid,          only: cg
       use hdf5,          only: HID_T, HSIZE_T, SIZE_T, H5F_ACC_RDWR_F, h5fopen_f, h5gopen_f, h5gclose_f, h5fclose_f
       use h5lt,          only: h5ltmake_dataset_double_f, h5ltset_attribute_double_f
-      use mpisetup,      only: comm3d, ierr, pxsize, pysize, pzsize, t, pcoords, xdim, ydim, zdim, has_dir, dom
+      use mpisetup,      only: comm3d, ierr, psize, t, pcoords, xdim, ydim, zdim, has_dir, dom
       use mpi,           only: MPI_CHARACTER, MPI_DOUBLE_PRECISION
 #ifdef PGPLOT
       use viz,           only: draw_me
@@ -695,12 +695,12 @@ contains
             remain = (/.false.,.true.,.true./)
             pij    = "yz_"
             nib    = cg%nyb
-            nid    = cg%nyb*pysize
+            nid    = cg%nyb*psize(ydim)
             njb    = cg%nzb
-            njd    = cg%nzb*pzsize
+            njd    = cg%nzb*psize(zdim)
             nkb    = cg%nxb
-            pisize = pysize
-            pjsize = pzsize
+            pisize = psize(ydim)
+            pjsize = psize(zdim)
          case ("xz")
             if (has_dir(ydim)) then
                xn     = iy + cg%nb - pcoords(2)*cg%nyb
@@ -714,8 +714,8 @@ contains
             njb    = cg%nzb
             njd    = dom%nzd
             nkb    = cg%nyb
-            pisize = pxsize
-            pjsize = pzsize
+            pisize = psize(xdim)
+            pjsize = psize(zdim)
          case ("xy")
             if (has_dir(zdim)) then
                xn = iz + cg%nb - pcoords(3)*cg%nzb
@@ -729,8 +729,8 @@ contains
             njb    = cg%nyb
             njd    = dom%nyd
             nkb    = cg%nzb
-            pisize = pxsize
-            pjsize = pysize
+            pisize = psize(xdim)
+            pjsize = psize(ydim)
          case default
             call die("[dataio_hdf5:write_plot_hdf5] nonrecognized plane")
       end select
@@ -1108,7 +1108,7 @@ contains
            &                 h5dcreate_f, h5dwrite_f, h5dclose_f, h5dget_space_f, &
            &                 h5pcreate_f, h5pset_chunk_f, h5pset_dxpl_mpio_f, &
            &                 h5screate_simple_f, h5sclose_f, h5sselect_hyperslab_f
-      use mpisetup,    only: pcoords, pxsize, pysize, pzsize
+      use mpisetup,    only: pcoords, psize, xdim, ydim, zdim
 
       implicit none
 
@@ -1136,7 +1136,7 @@ contains
       !----------------------------------------------------------------------------------
       !  WRITE TAB
       !
-      dimsf = [nx*pxsize, ny*pysize, nz*pzsize] ! Dataset dimensions
+      dimsf = [nx*psize(xdim), ny*psize(ydim), nz*psize(zdim)] ! Dataset dimensions
       dimsfi = dimsf
       chunk_dims = [nx, ny, nz]                 ! Chunks dimensions
 
@@ -1191,7 +1191,7 @@ contains
            &                  h5pcreate_f, h5pclose_f, h5screate_simple_f, h5dopen_f, &
            &                  h5dget_space_f, h5sget_simple_extent_ndims_f, h5dget_create_plist_f, h5pget_chunk_f, &
            &                  h5sselect_hyperslab_f, h5dread_f, h5sclose_f, h5pset_dxpl_mpio_f, h5dclose_f
-      use mpisetup,     only: pcoords, pxsize, pysize, pzsize
+      use mpisetup,     only: pcoords, psize, xdim, ydim, zdim
 
       implicit none
 
@@ -1219,7 +1219,7 @@ contains
       rank = 3
       allocate(dimsf(rank), dimsfi(rank), chunk_dims(rank), old_chunk(rank))
       allocate(block(rank), offset(rank), count(rank), stride(rank))
-      dimsf = [nx*pxsize, ny*pysize, nz*pzsize] ! Dataset dimensions
+      dimsf = [nx*psize(xdim), ny*psize(ydim), nz*psize(zdim)] ! Dataset dimensions
       dimsfi = dimsf
       chunk_dims = [nx, ny, nz]
 

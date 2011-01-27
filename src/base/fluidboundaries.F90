@@ -95,8 +95,8 @@ contains
       use fluidboundaries_pub, only: user_bnd_yl, user_bnd_yr, user_bnd_zl, user_bnd_zr, func_bnd_xl, func_bnd_xr
       use fluidindex,          only: flind, iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
       use grid,                only: cg
-      use mpisetup,            only: ierr, pxsize, pysize, pzsize, proczl, proczr, procyl, procyr, procxl, procxr, procxyl, procyxl, smalld, &
-           &                         pcoords, bnd_xr, bnd_xl, bnd_yl, bnd_yr, bnd_zl, bnd_zr, req, status, comm, comm3d
+      use mpisetup,            only: ierr, psize, proczl, proczr, procyl, procyr, procxl, procxr, procxyl, procyxl, smalld, &
+           &                         pcoords, bnd_xr, bnd_xl, bnd_yl, bnd_yr, bnd_zl, bnd_zr, req, status, comm, comm3d, xdim, ydim, zdim
       use mpi,                 only: MPI_DOUBLE_PRECISION
 #ifdef COSM_RAYS
       use initcosmicrays,      only: smallecr
@@ -283,7 +283,7 @@ contains
          endif
 #endif /* FFTW */
 #else /* !SHEAR_BND */
-         if (pxsize > 1) then
+         if (psize(xdim) > 1) then
 
             CALL MPI_Isend   (u(1,1,1,1), 1, cg%MPI_YZ_LEFT_DOM,  procxl, 10, comm3d, req(1), ierr)
             CALL MPI_Isend   (u(1,1,1,1), 1, cg%MPI_YZ_RIGHT_DOM, procxr, 20, comm3d, req(3), ierr)
@@ -294,7 +294,7 @@ contains
          endif
 #endif /* !SHEAR_BND */
       case ('ydim')
-         if (pysize > 1) then
+         if (psize(ydim) > 1) then
 
             CALL MPI_Isend   (u(1,1,1,1), 1, cg%MPI_XZ_LEFT_DOM,  procyl, 30, comm3d, req(1), ierr)
             CALL MPI_Isend   (u(1,1,1,1), 1, cg%MPI_XZ_RIGHT_DOM, procyr, 40, comm3d, req(3), ierr)
@@ -305,7 +305,7 @@ contains
          endif
 
       case ('zdim')
-         if (pzsize > 1) then
+         if (psize(zdim) > 1) then
 
             CALL MPI_Isend   (u(1,1,1,1), 1, cg%MPI_XY_LEFT_DOM,  proczl, 50, comm3d, req(1), ierr)
             CALL MPI_Isend   (u(1,1,1,1), 1, cg%MPI_XY_RIGHT_DOM, proczr, 60, comm3d, req(3), ierr)

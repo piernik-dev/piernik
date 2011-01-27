@@ -87,7 +87,7 @@ contains
            &                         XLO, XHI, YLO, YHI, ZLO, ZHI, LOW, HIGH, &
            &                         ord_prolong, ord_prolong_face, stdout, verbose_vcycle, tot_ts
       use mpi,                 only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL
-      use mpisetup,            only: buffer_dim, comm, comm3d, ierr, proc, master, slave, nproc, has_dir, xdim, ydim, zdim, ndims, pxsize, pysize, pzsize, &
+      use mpisetup,            only: buffer_dim, comm, comm3d, ierr, proc, master, slave, nproc, has_dir, xdim, ydim, zdim, ndims, psize, &
            &                         ibuff, rbuff, lbuff, bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr, dom, eff_dim
       use multigridhelpers,    only: mg_write_log, dirtyH, do_ascii_dump, dirty_debug, multidim_code_3D, &
            &                         aux_par_I0, aux_par_I1, aux_par_I2, aux_par_R0, aux_par_R1, aux_par_R2
@@ -420,12 +420,12 @@ contains
       !> \deprecated BEWARE The checks may not work correctly for shear and corner boundaries
       is_external(:) = .false.
 
-      if (gb_cartmap(proc)%proc(xdim) == 0        .and. (bnd_xl /= "mpi" .and. bnd_xl /= "per")) is_external(XLO) = .true.
-      if (gb_cartmap(proc)%proc(xdim) == pxsize-1 .and. (bnd_xr /= "mpi" .and. bnd_xr /= "per")) is_external(XHI) = .true.
-      if (gb_cartmap(proc)%proc(ydim) == 0        .and. (bnd_yl /= "mpi" .and. bnd_yl /= "per")) is_external(YLO) = .true.
-      if (gb_cartmap(proc)%proc(ydim) == pysize-1 .and. (bnd_yr /= "mpi" .and. bnd_yr /= "per")) is_external(YHI) = .true.
-      if (gb_cartmap(proc)%proc(zdim) == 0        .and. (bnd_zl /= "mpi" .and. bnd_zl /= "per")) is_external(ZLO) = .true.
-      if (gb_cartmap(proc)%proc(zdim) == pzsize-1 .and. (bnd_zr /= "mpi" .and. bnd_zr /= "per")) is_external(ZHI) = .true.
+      if (gb_cartmap(proc)%proc(xdim) == 0             .and. (bnd_xl /= "mpi" .and. bnd_xl /= "per")) is_external(XLO) = .true.
+      if (gb_cartmap(proc)%proc(xdim) == psize(xdim)-1 .and. (bnd_xr /= "mpi" .and. bnd_xr /= "per")) is_external(XHI) = .true.
+      if (gb_cartmap(proc)%proc(ydim) == 0             .and. (bnd_yl /= "mpi" .and. bnd_yl /= "per")) is_external(YLO) = .true.
+      if (gb_cartmap(proc)%proc(ydim) == psize(ydim)-1 .and. (bnd_yr /= "mpi" .and. bnd_yr /= "per")) is_external(YHI) = .true.
+      if (gb_cartmap(proc)%proc(zdim) == 0             .and. (bnd_zl /= "mpi" .and. bnd_zl /= "per")) is_external(ZLO) = .true.
+      if (gb_cartmap(proc)%proc(zdim) == psize(zdim)-1 .and. (bnd_zr /= "mpi" .and. bnd_zr /= "per")) is_external(ZHI) = .true.
 
       if (.not. has_dir(xdim)) is_external(XLO:XHI) = .false.
       if (.not. has_dir(ydim)) is_external(YLO:YHI) = .false.

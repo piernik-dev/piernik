@@ -63,7 +63,7 @@ contains
 
       use dataio_pub, only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml  ! QA_WARN required for diff_nml
       use dataio_pub, only: printinfo, die, code_progress, PIERNIK_INIT_MPI
-      use mpisetup,   only: psize, pxsize, pysize, pzsize, pcoords, comm, has_dir, xdim, ydim, zdim, ndims, dom, nb
+      use mpisetup,   only: psize, pcoords, comm, has_dir, xdim, ydim, zdim, ndims, dom, nb
 
       implicit none
 
@@ -75,14 +75,15 @@ contains
       call printinfo("[grid:init_grid]: commencing...")
 #endif /* VERBOSE */
 
-      if ( (mod(dom%nxd, pxsize) .ne. 0) .or. &
-           (mod(dom%nyd, pysize) .ne. 0) .or. &
-           (mod(dom%nzd, pzsize) .ne. 0) ) then
+      ! \todo Check if that statement is still necessary
+      if ( (mod(dom%nxd, psize(xdim)) .ne. 0) .or. &
+           (mod(dom%nyd, psize(ydim)) .ne. 0) .or. &
+           (mod(dom%nzd, psize(zdim)) .ne. 0) ) then
          call die("One of: (mod(n_d,p_size) /= 0")
       endif
 
       if (has_dir(xdim)) then
-         cg%nxb = dom%nxd / pxsize     ! Block 'physical' grid sizes
+         cg%nxb = dom%nxd / psize(xdim)     ! Block 'physical' grid sizes
          cg%nx  = cg%nxb + 2 * nb     ! Block total grid sizes
          cg%is  = nb + 1
          cg%ie  = nb + cg%nxb
@@ -92,7 +93,6 @@ contains
       else
          cg%nxb    = 1
          cg%nx     = 1
-         pxsize = 1
          cg%is     = 1
          cg%ie     = 1
          cg%isb    = 1
@@ -101,7 +101,7 @@ contains
       endif
 
       if (has_dir(ydim)) then
-         cg%nyb = dom%nyd / pysize
+         cg%nyb = dom%nyd / psize(ydim)
          cg%ny  = cg%nyb + 2 * nb
          cg%js  = nb + 1
          cg%je  = nb + cg%nyb
@@ -111,7 +111,6 @@ contains
       else
          cg%ny     = 1
          cg%nyb    = 1
-         pysize = 1
          cg%js     = 1
          cg%je     = 1
          cg%jsb    = 1
@@ -120,7 +119,7 @@ contains
       endif
 
       if (has_dir(zdim)) then
-         cg%nzb = dom%nzd / pzsize
+         cg%nzb = dom%nzd / psize(zdim)
          cg%nz  = cg%nzb + 2 * nb
          cg%ks  = nb + 1
          cg%ke  = nb + cg%nzb
@@ -130,7 +129,6 @@ contains
       else
          cg%nzb    = 1
          cg%nz     = 1
-         pzsize = 1
          cg%ks     = 1
          cg%ke     = 1
          cg%ksb    = 1

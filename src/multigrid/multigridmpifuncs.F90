@@ -151,7 +151,7 @@ contains
    subroutine mpi_multigrid_bnd(lev, iv, ng, mode, corners)
 
       use dataio_pub,         only: die
-      use mpisetup,           only: comm3d, ierr, procxl, procxr, procyl, procyr, proczl, proczr, proc, pxsize, pysize, pzsize, xdim, ydim, zdim, has_dir
+      use mpisetup,           only: comm3d, ierr, procxl, procxr, procyl, procyr, proczl, proczr, proc, psize, xdim, ydim, zdim, has_dir
       use mpi,                only: MPI_STATUS_SIZE, MPI_REQUEST_NULL
       use multigridvars,      only: NDIM, lvl, XLO, XHI, YLO, YHI, ZLO, ZHI, is_external, ngridvars, level_min, level_max
 
@@ -185,7 +185,7 @@ contains
       req3d(:) = MPI_REQUEST_NULL
 
       if (has_dir(xdim)) then
-         if (pxsize > 1) then
+         if (psize(xdim) > 1) then
             if (.not. is_external(XLO)) CALL MPI_Isend (lvl(lev)%mgvar(1, 1, 1, iv), 1, lvl(lev)%MPI_YZ_LEFT_DOM(ng),  procxl, 15, comm3d, req3d(1),  ierr)
             if (.not. is_external(XHI)) CALL MPI_Isend (lvl(lev)%mgvar(1, 1, 1, iv), 1, lvl(lev)%MPI_YZ_RIGHT_DOM(ng), procxr, 25, comm3d, req3d(3),  ierr)
             if (.not. is_external(XLO)) CALL MPI_Irecv (lvl(lev)%mgvar(1, 1, 1, iv), 1, lvl(lev)%MPI_YZ_LEFT_BND(ng),  procxl, 25, comm3d, req3d(2),  ierr)
@@ -198,7 +198,7 @@ contains
       endif
 
       if (has_dir(ydim)) then
-         if (pysize > 1) then
+         if (psize(ydim) > 1) then
             if (.not. is_external(YLO)) CALL MPI_Isend (lvl(lev)%mgvar(1, 1, 1, iv), 1, lvl(lev)%MPI_XZ_LEFT_DOM(ng),  procyl, 35, comm3d, req3d(5),  ierr)
             if (.not. is_external(YHI)) CALL MPI_Isend (lvl(lev)%mgvar(1, 1, 1, iv), 1, lvl(lev)%MPI_XZ_RIGHT_DOM(ng), procyr, 45, comm3d, req3d(6),  ierr)
             if (.not. is_external(YLO)) CALL MPI_Irecv (lvl(lev)%mgvar(1, 1, 1, iv), 1, lvl(lev)%MPI_XZ_LEFT_BND(ng),  procyl, 45, comm3d, req3d(7),  ierr)
@@ -211,7 +211,7 @@ contains
       endif
 
       if (has_dir(zdim)) then
-         if (pzsize > 1) then
+         if (psize(zdim) > 1) then
             if (.not. is_external(ZLO)) CALL MPI_Isend (lvl(lev)%mgvar(1, 1, 1, iv), 1, lvl(lev)%MPI_XY_LEFT_DOM(ng),  proczl, 55, comm3d, req3d(9),  ierr)
             if (.not. is_external(ZHI)) CALL MPI_Isend (lvl(lev)%mgvar(1, 1, 1, iv), 1, lvl(lev)%MPI_XY_RIGHT_DOM(ng), proczr, 65, comm3d, req3d(10), ierr)
             if (.not. is_external(ZLO)) CALL MPI_Irecv (lvl(lev)%mgvar(1, 1, 1, iv), 1, lvl(lev)%MPI_XY_LEFT_BND(ng),  proczl, 65, comm3d, req3d(11), ierr)

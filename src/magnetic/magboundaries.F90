@@ -38,14 +38,14 @@ contains
 
    subroutine bnd_a(A)
 
-      use mpisetup, only: ierr, req, comm3d, procxl, procxr, procyl, procyr, proczl, proczr, status, pxsize, pysize, pzsize
+      use mpisetup, only: ierr, req, comm3d, procxl, procxr, procyl, procyr, proczl, proczr, status, psize, xdim, ydim, zdim
       use grid,     only: cg
 
       implicit none
 
       real, dimension(:,:,:,:) :: A
 
-      if (pxsize > 1) then
+      if (psize(xdim) > 1) then
 
          CALL MPI_Isend  (A(1,1,1,1), 1, cg%MAG_YZ_LEFT_DOM,  procxl, 10, comm3d, req(1), ierr)
          CALL MPI_Isend  (A(1,1,1,1), 1, cg%MAG_YZ_RIGHT_DOM, procxr, 20, comm3d, req(3), ierr)
@@ -55,7 +55,7 @@ contains
          call MPI_Waitall(4,req(:),status(:,:),ierr)
       endif
 
-      if (pysize > 1) then
+      if (psize(ydim) > 1) then
          CALL MPI_Isend  (A(1,1,1,1), 1, cg%MAG_XZ_LEFT_DOM,  procyl, 30, comm3d, req(1), ierr)
          CALL MPI_Isend  (A(1,1,1,1), 1, cg%MAG_XZ_RIGHT_DOM, procyr, 40, comm3d, req(3), ierr)
          CALL MPI_Irecv  (A(1,1,1,1), 1, cg%MAG_XZ_LEFT_BND,  procyl, 40, comm3d, req(2), ierr)
@@ -64,7 +64,7 @@ contains
          call MPI_Waitall(4,req(:),status(:,:),ierr)
       endif
 
-      if (pzsize > 1) then
+      if (psize(zdim) > 1) then
          CALL MPI_Isend  (A(1,1,1,1), 1, cg%MAG_XY_LEFT_DOM,  proczl, 50, comm3d, req(1), ierr)
          CALL MPI_Isend  (A(1,1,1,1), 1, cg%MAG_XY_RIGHT_DOM, proczr, 60, comm3d, req(3), ierr)
          CALL MPI_Irecv  (A(1,1,1,1), 1, cg%MAG_XY_LEFT_BND,  proczl, 60, comm3d, req(2), ierr)
@@ -84,7 +84,7 @@ contains
       use mpi,           only: MPI_DOUBLE_PRECISION
       use mpisetup,      only: bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr, &
            &                   ierr, req, comm3d, procxl, procxr, procyl, procyr, proczl, proczr, status, &
-           &                   pxsize, pysize, pzsize, procxyl, procyxl, pcoords, comm
+           &                   psize, xdim, ydim, zdim, procxyl, procyxl, pcoords, comm
 #ifdef SHEAR
       use shear,         only: eps,delj
 #endif /* SHEAR */
@@ -166,7 +166,7 @@ contains
 !===============================================================================
 #else /* !SHEAR */
 
-            if (pxsize > 1) then
+            if (psize(xdim) > 1) then
 
                CALL MPI_Isend  (b(1,1,1,1), 1, cg%MAG_YZ_LEFT_DOM,  procxl, 10, comm3d, req(1), ierr)
                CALL MPI_Isend  (b(1,1,1,1), 1, cg%MAG_YZ_RIGHT_DOM, procxr, 20, comm3d, req(3), ierr)
@@ -179,7 +179,7 @@ contains
 #endif /* !SHEAR */
 
          case ("ydim")
-            if (pysize > 1) then
+            if (psize(ydim) > 1) then
 
                CALL MPI_Isend  (b(1,1,1,1), 1, cg%MAG_XZ_LEFT_DOM,  procyl, 30, comm3d, req(1), ierr)
                CALL MPI_Isend  (b(1,1,1,1), 1, cg%MAG_XZ_RIGHT_DOM, procyr, 40, comm3d, req(3), ierr)
@@ -190,7 +190,7 @@ contains
             endif
 
          case ("zdim")
-            if (pzsize > 1) then
+            if (psize(zdim) > 1) then
                CALL MPI_Isend  (b(1,1,1,1), 1, cg%MAG_XY_LEFT_DOM,  proczl, 50, comm3d, req(1), ierr)
                CALL MPI_Isend  (b(1,1,1,1), 1, cg%MAG_XY_RIGHT_DOM, proczr, 60, comm3d, req(3), ierr)
                CALL MPI_Irecv  (b(1,1,1,1), 1, cg%MAG_XY_LEFT_BND,  proczl, 60, comm3d, req(2), ierr)

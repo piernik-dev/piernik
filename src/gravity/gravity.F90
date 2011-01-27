@@ -355,7 +355,7 @@ contains
       use dataio_pub,    only: die
       use grid,          only: cg
       use mpi,           only: MPI_STATUS_SIZE, MPI_REQUEST_NULL
-      use mpisetup,      only: comm3d, ierr, procxl, procxr, procyl, procyr, proczl, proczr, pxsize, pysize, pzsize, &
+      use mpisetup,      only: comm3d, ierr, procxl, procxr, procyl, procyr, proczl, proczr, psize, &
            &                   bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr, xdim, ydim, zdim, has_dir
 
       implicit none
@@ -375,11 +375,11 @@ contains
                   sgp(1:cg%nb, :, :) = sgp(cg%ieb:cg%ie, :, :)
                enddo
             case ('mpi')
-               if (pxsize > 1) then
+               if (psize(xdim) > 1) then
                   call MPI_Isend(sgp(1, 1, 1), 1, cg%ARR_YZ_LEFT_DOM,  procxl, 12, comm3d, req3d(1), ierr)
                   call MPI_Irecv(sgp(1, 1, 1), 1, cg%ARR_YZ_LEFT_BND,  procxl, 22, comm3d, req3d(2), ierr)
                else
-                  call die("[gravity:all_grav_boundaries] bnd_xl == 'mpi' && pxsize <= 1")
+                  call die("[gravity:all_grav_boundaries] bnd_xl == 'mpi' && psize(xdim) <= 1")
                endif
             case ('she') !> \todo move appropriate code from poissonsolver::poisson_solve or do nothing. Or die until someone really needs SHEAR.
                 call die("[gravity:all_grav_boundaries] bnd_xl == 'she' not implemented")
@@ -395,11 +395,11 @@ contains
                   sgp(cg%ie+1:cg%nx, :, :) = sgp(cg%is:cg%isb, :, :)
                enddo
             case ('mpi')
-               if (pxsize > 1) then
+               if (psize(xdim) > 1) then
                   call MPI_Isend(sgp(1, 1, 1), 1, cg%ARR_YZ_RIGHT_DOM, procxr, 22, comm3d, req3d(3), ierr)
                   call MPI_Irecv(sgp(1, 1, 1), 1, cg%ARR_YZ_RIGHT_BND, procxr, 12, comm3d, req3d(4), ierr)
                else
-                  call die("[gravity:all_grav_boundaries] bnd_xr == 'mpi' && pxsize <= 1")
+                  call die("[gravity:all_grav_boundaries] bnd_xr == 'mpi' && psize(xdim) <= 1")
                endif
             case ('she')
                 call die("[gravity:all_grav_boundaries] bnd_xl == 'she' not implemented")
@@ -419,11 +419,11 @@ contains
                   sgp(:, 1:cg%nb, :) = sgp(:, cg%jeb:cg%je, :)
                enddo
             case ('mpi')
-               if (pysize > 1) then
+               if (psize(ydim) > 1) then
                   call MPI_Isend(sgp(1, 1, 1), 1, cg%ARR_XZ_LEFT_DOM,  procyl, 32, comm3d, req3d(5), ierr)
                   call MPI_Irecv(sgp(1, 1, 1), 1, cg%ARR_XZ_LEFT_BND,  procyl, 42, comm3d, req3d(6), ierr)
                else
-                  call die("[gravity:all_grav_boundaries] bnd_yl == 'mpi' && pysize <= 1")
+                  call die("[gravity:all_grav_boundaries] bnd_yl == 'mpi' && psize(ydim) <= 1")
                endif
             case default
                do i = 1, cg%nb
@@ -437,11 +437,11 @@ contains
                   sgp(:, cg%je+1:cg%ny, :) = sgp(:, cg%js:cg%jsb, :)
                enddo
             case ('mpi')
-               if (pysize > 1) then
+               if (psize(ydim) > 1) then
                   call MPI_Isend(sgp(1, 1, 1), 1, cg%ARR_XZ_RIGHT_DOM, procyr, 42, comm3d, req3d(7), ierr)
                   call MPI_Irecv(sgp(1, 1, 1), 1, cg%ARR_XZ_RIGHT_BND, procyr, 32, comm3d, req3d(8), ierr)
                else
-                  call die("[gravity:all_grav_boundaries] bnd_yr == 'mpi' && pysize <= 1")
+                  call die("[gravity:all_grav_boundaries] bnd_yr == 'mpi' && psize(ydim) <= 1")
                endif
             case default
                do i = 1, cg%nb
@@ -459,11 +459,11 @@ contains
                   sgp(:, :, 1:cg%nb) = sgp(:, :, cg%keb:cg%ke)
                enddo
             case ('mpi')
-               if (pzsize > 1) then
+               if (psize(zdim) > 1) then
                   call MPI_Isend(sgp(1, 1, 1), 1, cg%ARR_XY_LEFT_DOM,  proczl, 52, comm3d, req3d(9), ierr)
                   call MPI_Irecv(sgp(1, 1, 1), 1, cg%ARR_XY_LEFT_BND,  proczl, 62, comm3d, req3d(10), ierr)
                else
-                  call die("[gravity:all_grav_boundaries] bnd_zl == 'mpi' && pzsize <= 1")
+                  call die("[gravity:all_grav_boundaries] bnd_zl == 'mpi' && psize(zdim) <= 1")
                endif
             case default
                do i = 1, cg%nb
@@ -477,11 +477,11 @@ contains
                   sgp(:, :, cg%ke+1:cg%nz) = sgp(:, :, cg%ks:cg%ksb)
                enddo
             case ('mpi')
-               if (pzsize > 1) then
+               if (psize(zdim) > 1) then
                   call MPI_Isend(sgp(1, 1, 1), 1, cg%ARR_XY_RIGHT_DOM, proczr, 62, comm3d, req3d(11), ierr)
                   call MPI_Irecv(sgp(1, 1, 1), 1, cg%ARR_XY_RIGHT_BND, proczr, 52, comm3d, req3d(12), ierr)
                else
-                  call die("[gravity:all_grav_boundaries] bnd_zr == 'mpi' && pzsize <= 1")
+                  call die("[gravity:all_grav_boundaries] bnd_zr == 'mpi' && psize(zdim) <= 1")
                endif
             case default
                do i = 1, cg%nb
@@ -890,7 +890,7 @@ contains
       use arrays,   only: gp
       use grid,     only: cg
       use mpi,      only: MPI_DOUBLE_PRECISION
-      use mpisetup, only: pxsize, pysize, pzsize, pcoords, master, nproc, xdim, ydim, zdim, ndims, comm, comm3d, err, ierr, mpifind
+      use mpisetup, only: psize, pcoords, master, nproc, xdim, ydim, zdim, ndims, comm, comm3d, err, ierr, mpifind
 
       implicit none
 
@@ -904,10 +904,10 @@ contains
       real                                :: dgpx_proc, dgpx_all(0:nproc-1), &
                                              dgpy_proc, dgpy_all(0:nproc-1), &
                                              dgpz_proc, dgpz_all(0:nproc-1), &
-                                             dgpx(0:pxsize-1,0:pysize-1,0:pzsize-1), &
-                                             dgpy(0:pxsize-1,0:pysize-1,0:pzsize-1), &
-                                             dgpz(0:pxsize-1,0:pysize-1,0:pzsize-1), &
-                                             ddgp(0:pxsize-1,0:pysize-1,0:pzsize-1)
+                                             dgpx(0:psize(xdim)-1,0:psize(ydim)-1,0:psize(zdim)-1), &
+                                             dgpy(0:psize(xdim)-1,0:psize(ydim)-1,0:psize(zdim)-1), &
+                                             dgpz(0:psize(xdim)-1,0:psize(ydim)-1,0:psize(zdim)-1), &
+                                             ddgp(0:psize(xdim)-1,0:psize(ydim)-1,0:psize(zdim)-1)
 
       allocate(gpwork(cg%nx, cg%ny, cg%nz))
       gpwork(1,1,1) = 0.0
@@ -957,19 +957,19 @@ contains
          enddo
 
          ddgp(0,0,0) = 0.0
-         do i = 1, pxsize-1
+         do i = 1, psize(xdim)-1
             ddgp(i,0,0) = ddgp(i-1,0,0) + dgpx(i-1,0,0)
          enddo
 
-         do i=0, pxsize-1
-            do j = 1, pysize-1
+         do i=0, psize(xdim)-1
+            do j = 1, psize(ydim)-1
                ddgp(i,j,0) = ddgp(i,j-1,0) + dgpy(i,j-1,0)
             enddo
          enddo
 
-         do i=0, pxsize-1
-            do j=0, pysize-1
-               do k = 1, pzsize-1
+         do i=0, psize(xdim)-1
+            do j=0, psize(ydim)-1
+               do k = 1, psize(zdim)-1
                   ddgp(i,j,k)= ddgp(i,j,k-1) + dgpz(i,j,k-1)
                enddo
             enddo
