@@ -232,17 +232,19 @@ contains
       integer, intent(in)                  :: iia, jja
       real, allocatable, dimension(:,:,:)  :: gpots
       type(axes)                           :: ax
+      integer                              :: nstot1
 
-      allocate(gpots(1,1,nstot))
+      nstot1 = nstot + 1
+      allocate(gpots(1,1,nstot1))
       if (.not.allocated(ax%x)) allocate(ax%x(1))
       if (.not.allocated(ax%y)) allocate(ax%y(1))
-      if (.not.allocated(ax%z)) allocate(ax%z(nstot))
-      ax%x = cg%x(iia)
-      ax%y = cg%y(jja)
-      ax%z = zs
+      if (.not.allocated(ax%z)) allocate(ax%z(nstot+1))
+      ax%x          = cg%x(iia)
+      ax%y          = cg%y(jja)
+      ax%z(1:nstot) = zs - 0.5*dzs
+      ax%z(nstot1)  = ax%z(nstot) + dzs
       call grav_type(gpots,ax)
-      gprofs(1:nstot-1) = (gpots(1,1,1:nstot-1) - gpots(1,1,2:nstot))/dzs
-      gprofs(nstot) = 0. ! or maybe gprofs(nstot-1) ?
+      gprofs(1:nstot) = (gpots(1,1,1:nstot) - gpots(1,1,2:nstot1))/dzs
       gprofs = tune_zeq*gprofs
       if (allocated(gpots)) deallocate(gpots)
       if (allocated(ax%x))  deallocate(ax%x)
