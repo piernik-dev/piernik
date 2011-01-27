@@ -238,7 +238,7 @@ contains
       allocate(gpots(1,1,nstot1))
       if (.not.allocated(ax%x)) allocate(ax%x(1))
       if (.not.allocated(ax%y)) allocate(ax%y(1))
-      if (.not.allocated(ax%z)) allocate(ax%z(nstot+1))
+      if (.not.allocated(ax%z)) allocate(ax%z(nstot1))
       ax%x          = cg%x(iia)
       ax%y          = cg%y(jja)
       ax%z(1:nstot) = zs - 0.5*dzs
