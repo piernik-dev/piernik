@@ -48,7 +48,7 @@ module mpisetup
         &    cfr_smooth, cleanup_mpi, comm, comm3d, dt, dt_initial, dt_max_grow, dt_min, dt_old, dtm, err, ibuff, ierr, info, init_mpi, &
         &    integration_order, lbuff, limiter, mpifind, ndims, nproc, nstep, pcoords, proc, procxl, procxr, procxyl, procyl, procyr, procyxl, proczl, &
         &    proczr, psize, pxsize, pysize, pzsize, rbuff, req, smalld, smallei, smallp, status, t, use_smalld, magic_mass, local_magic_mass, master, slave, &
-        &    nb, xdim, ydim, zdim, has_dir, big_float, relax_time, grace_period_passed, dom, geometry
+        &    nb, xdim, ydim, zdim, has_dir, eff_dim, big_float, relax_time, grace_period_passed, dom, geometry
 
    integer :: nproc, proc, ierr , rc, info
    integer :: status(MPI_STATUS_SIZE,4)
@@ -72,6 +72,7 @@ module mpisetup
    logical, dimension(ndims) :: periods
    integer               ::   procxl, procxr, procyl, procyr, proczl, proczr, procxyl, procyxl, procxyr, procyxr
    logical, protected, dimension(ndims) :: has_dir   !< .true. for existing directions
+   integer, protected    :: eff_dim                  !< effective dimensionality of the simulation
 
    type(domain_container), protected :: dom
 
@@ -85,15 +86,16 @@ module mpisetup
 
    logical     :: have_mpi           !< .true. when run on more than one processor
 
+   integer, allocatable, dimension(:) :: primes
+
    ! Namelist variables
 
-   logical :: mpi_magic      !< allows to automatically divide the domain
    integer :: pxsize         !< number of MPI blocks in x-dimension
    integer :: pysize         !< number of MPI blocks in y-dimension
    integer :: pzsize         !< number of MPI blocks in z-dimension
    logical :: reorder        !< allows processes reordered for efficiency (a parameter of MPI_Cart_create and MPI_graph_create)
 
-   namelist /MPI_BLOCKS/ pxsize, pysize, pzsize, mpi_magic, reorder
+   namelist /MPI_BLOCKS/ pxsize, pysize, pzsize, reorder
 
    integer, protected :: nxd  !< number of %grid cells in physical domain (without boundary cells) in x-direction (if equal to 1 then x-dimension is reduced to a point with no boundary cells)
    integer, protected :: nyd  !< number of %grid cells in physical domain (without boundary cells) in y-direction (if equal to 1 then y-dimension is reduced to a point with no boundary cells)
@@ -160,7 +162,6 @@ contains
 !! <tr><td>pxsize       </td><td>1      </td><td>integer</td><td>\copydoc mpisetup::pxsize       </td></tr>
 !! <tr><td>pysize       </td><td>1      </td><td>integer</td><td>\copydoc mpisetup::pysize       </td></tr>
 !! <tr><td>pzsize       </td><td>1      </td><td>integer</td><td>\copydoc mpisetup::pzsize       </td></tr>
-!! <tr><td>mpi_magic    </td><td>.true. </td><td>logical</td><td>\copydoc mpisetup::mpi_magic    </td></tr>
 !! <tr><td>reorder      </td><td>.false.</td><td>logical</td><td>\copydoc mpisetup::reorder      </td></tr>
 !! </table>
 !! \n \n
@@ -252,6 +253,7 @@ contains
       comm = MPI_COMM_WORLD
       info = MPI_INFO_NULL
       call MPI_Comm_size(comm, nproc, ierr)
+      have_mpi = (nproc > 1)
 
       !Assume that any tmp_log_file existed before Piernik was started and contains invalid/outydated/... data.
       !Delete it now and keep in mind that any warn, die, printinfo or printio messages issued before this point will be lost as well.
@@ -324,7 +326,6 @@ contains
       zmin = 0.; zmax = 1.
       geometry = "cartesian"
 
-      mpi_magic = .true.
       reorder   = .false.      !< \todo test it!
 
       bnd_xl = 'per'
@@ -404,9 +405,8 @@ contains
          rbuff(16) = zmin
          rbuff(17) = zmax
 
-         lbuff(1) = mpi_magic
-         lbuff(2) = use_smalld
-         lbuff(3) = reorder
+         lbuff(1) = use_smalld
+         lbuff(2) = reorder
 
       endif
 
@@ -417,9 +417,8 @@ contains
 
       if (slave) then
 
-         mpi_magic     = lbuff(1)
-         use_smalld    = lbuff(2)
-         reorder       = lbuff(3)
+         use_smalld    = lbuff(1)
+         reorder       = lbuff(2)
 
          smalld      = rbuff( 1)
          smallc      = rbuff( 2)
@@ -461,8 +460,9 @@ contains
       endif
 
       ! set up the global domain
-      has_dir(:) = ([ nxd, nyd, nzd ] > 1)
       domsize(:) = [nxd, nyd, nzd]
+      has_dir(:) = domsize(:) > 1
+      eff_dim = count(has_dir(:))
 
       dom%nxd = nxd
       dom%nyd = nyd
@@ -515,20 +515,11 @@ contains
 
       psize(:) = [ pxsize, pysize, pzsize ]
 
-      if (pxsize*pysize*pzsize /= nproc) then
-         if (mpi_magic) then
-            call divide_domain_voodoo(nproc)
-         else
-            if (master) then
-               write(msg,'(A,I5,A,I10)') 'nproc =',nproc,' MUST BE EQUAL TO   pxsize*pysize*pzsize =',pxsize*pysize*pzsize
-               call die(msg,0)
-            endif
-            call MPI_Barrier(MPI_COMM_WORLD, ierr)
-            call MPI_Finalize(ierr)
-         endif
+      if (product(psize(:)) /= nproc) then
+         call Eratosthenes_sieve(primes, nproc) ! it is possible to use primes onlt to sqrt(nproc), but it is easier to have the full table. Cheap for any reasonable nproc.
+         call divide_domain_uniform
+         deallocate(primes)
       endif
-
-      if (pxsize*pysize*pzsize /= 1) have_mpi = .true.
 
       if ( (bnd_xl(1:3) == 'cor' .or. bnd_yl(1:3) == 'cor' .or. bnd_xr(1:3) == 'cor' .or. bnd_yr(1:3) == 'cor') .and. (pxsize /= pysize .or. nxd /= nyd) ) then
          write(msg, '(a,4(i4,a))')"[mpisetup:init_mpi] Corner BC require pxsize equal to pysize and nxd equal to nyd. Detected: [",pxsize,",",pysize,"] and [",nxd,",",nyd,"]"
@@ -711,54 +702,56 @@ contains
 !! \details The goal is to minimize the ratio of longest to shortest edge to minimize the amount of inter-process communication.
 !! If the benchmarks show that some direction should be partitioned in more pieces than other directions, implement appropriate weighting in j1, j2 and j3 calculations.
 !!
-!! For some weird domains and PE counts this routine may find tiling that does not satisfy multigrid restrictions even if there is some. In such case divide domain manually.
+!! For some weird domains and PE counts this routine may find tiling that does not satisfy multigrid restrictions even if there exists an acceptable tiling.
+!! In such case the user must divide domain manually by providing p[xyz]size parameters through problem.par.
 !!
 !! \attention Must be called by all procs to avoid communication and ensure that every proc has
 !! proper psize, pxsize, pysize, pzsize
 !<
-
-   subroutine divide_domain_voodoo(np)
+   subroutine divide_domain_uniform
 
       use dataio_pub,    only: die, printinfo, msg
 
       implicit none
 
-      integer, intent(in) :: np
-
-      integer, parameter, dimension(26) :: some_primes = [ 2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97, 101 ]
       integer :: j1, j2, j3, jj, n, p
       integer, dimension(ndims) :: ldom
 
       ldom(xdim:zdim) = domsize(zdim:xdim:-1) ! Maxloc returns first occurrence of max, reversing direction order (to ZYX) gives better cache utilization.
-      n = np
+      n = nproc
       psize(:) = 1
+      if (n == 1) return
 
-      do p = size(some_primes), 1, -1 ! start from largest defined primes, continue down to 2
-         do while (mod(n, some_primes(p))==0)
+      do p = size(primes), 1, -1 ! start from largest defined primes, continue down to 2
+         do while (mod(n, primes(p))==0)
 
             jj = 0
             j1 = sum(maxloc(ldom), 1) ! First try the longest edge; note the trick to make a scalar from 1-element vector without assignment to another variable
-            if (mod(ldom(j1), some_primes(p))==0) then
+            if (mod(ldom(j1), primes(p))==0) then
                jj = j1
             else
                j2 = 1 + mod(j1 + 0, ndims)
                j3 = 1 + mod(j1 + ndims -2, ndims)
-               if (ldom(j2) > ldom(j3) .and. mod(ldom(j2), some_primes(p))==0) jj = j2 ! middle edge ...
-               if (jj == 0 .and. mod(ldom(j3), some_primes(p))==0) jj = j3 ! try the shortest edge on last resort
+               if (ldom(j2) > ldom(j3)) then
+                  j2 = 1 + mod(j1 + ndims -2, ndims)
+                  j3 = 1 + mod(j1 + 0, ndims)
+               endif
+               if (mod(ldom(j2), primes(p))==0) jj = j2 ! middle edge ...
+               if (jj == 0 .and. mod(ldom(j3), primes(p))==0) jj = j3 ! try the shortest edge on last resort
             endif
 
             if (jj == 0) then
-               call die("[divide_domain_voodoo]: Can't find divisible edge")
+               call die("[divide_domain_uniform]: Can't find divisible edge")
             else
-               psize(jj) = psize(jj) * some_primes(p)
-               n         = n         / some_primes(p)
-               ldom(jj)  = ldom(jj)  / some_primes(p)
+               psize(jj) = psize(jj) * primes(p)
+               n         = n         / primes(p)
+               ldom(jj)  = ldom(jj)  / primes(p)
             endif
 
          enddo
       enddo
 
-      if (n /= 1) call die("[divide_domain_voodoo]: I am not that intelligent") ! np has too big prime factors
+      if (n /= 1) call die("[divide_domain_uniform]: I am not that intelligent") ! nproc has too big prime factors
 
       pxsize = psize(zdim) ! directions were reverted at ldom assignment
       pysize = psize(ydim)
@@ -766,16 +759,45 @@ contains
 
       psize = [ pxsize, pysize, pzsize ]
 
-      if (master .and. np > 1) then
-         write(msg,'(a,3i4,a,3i6,a)')"[mpisetup:divide_domain_voodoo] Domain divided to [",psize(:)," ] pieces, each of [",ldom(zdim:xdim:-1)," ] cells."
+      if (master) then
+         write(msg,'(a,3i4,a,3i6,a)')"[mpisetup:divide_domain_uniform] Domain divided to [",psize(:)," ] pieces, each of [",ldom(zdim:xdim:-1)," ] cells."
          call printinfo(msg)
       endif
 
-   end subroutine divide_domain_voodoo
+   end subroutine divide_domain_uniform
 
    logical function grace_period_passed()
       implicit none
       grace_period_passed = (t >= relax_time)
    end function grace_period_passed
+
+   subroutine Eratosthenes_sieve(tab,n)
+#ifdef DEBUG
+      use dataio_pub, only: msg, printinfo
+#endif /* DEBUG */
+      implicit none
+      integer, intent(inout), allocatable, dimension(:) :: tab
+      integer, intent(in)                               :: n
+      integer, dimension(n)                             :: numb
+
+      integer :: i, no_primes
+
+      numb = [0, (i, i = 2, n)]
+
+      do i = 2, n
+         if (numb(i) /= 0) numb( 2*i : n : i ) = 0
+      enddo
+
+      no_primes = count(numb /= 0)
+      allocate(tab(no_primes))
+      tab       = pack(numb, numb /= 0)
+#ifdef DEBUG
+      if (master) then
+         write(msg,'(2(A,I5))') "There are ", no_primes, " prime numbers less than", n
+         call printinfo(msg)
+         print "(5i7)", tab
+      endif
+#endif /* DEBUG */
+   end subroutine Eratosthenes_sieve
 
 end module mpisetup

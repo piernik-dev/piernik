@@ -1111,10 +1111,10 @@ contains
 
    subroutine residual2(lev, src, soln, def)
 
-      use mpisetup,           only: xdim, ydim, zdim, has_dir
+      use mpisetup,           only: xdim, ydim, zdim, has_dir, eff_dim
       use multigridhelpers,   only: multidim_code_3D
       use multigridmpifuncs,  only: mpi_multigrid_bnd
-      use multigridvars,      only: lvl, eff_dim, NDIM, extbnd_antimirror
+      use multigridvars,      only: lvl, NDIM, extbnd_antimirror
 
       implicit none
 
@@ -1192,9 +1192,9 @@ contains
    subroutine residual4(lev, src, soln, def)
 
       use dataio_pub,         only: die, warn
-      use mpisetup,           only: master
+      use mpisetup,           only: master, eff_dim
       use multigridmpifuncs,  only: mpi_multigrid_bnd
-      use multigridvars,      only: lvl, eff_dim, NDIM, bnd_givenval, extbnd_antimirror
+      use multigridvars,      only: lvl, NDIM, bnd_givenval, extbnd_antimirror
 
       implicit none
 
@@ -1330,10 +1330,10 @@ contains
 
    subroutine approximate_solution_rbgs(lev, src, soln)
 
-      use mpisetup,           only: xdim, ydim, zdim, has_dir
+      use mpisetup,           only: xdim, ydim, zdim, has_dir, eff_dim
       use multigridhelpers,   only: dirty_debug, check_dirty, multidim_code_3D, dirty_label
       use multigridmpifuncs,  only: mpi_multigrid_bnd
-      use multigridvars,      only: lvl, level_min, eff_dim, NDIM, extbnd_antimirror
+      use multigridvars,      only: lvl, level_min, NDIM, extbnd_antimirror
 
       implicit none
 
@@ -1435,11 +1435,11 @@ contains
    subroutine approximate_solution_fft(lev, src, soln)
 
       use grid,               only: D_x, D_y, D_z
-      use mpisetup,           only: xdim, ydim, zdim, has_dir
+      use mpisetup,           only: xdim, ydim, zdim, has_dir, eff_dim
       use dataio_pub,         only: die, warn
       use multigridhelpers,   only: dirty_debug, check_dirty, dirtyL, multidim_code_3D
       use multigridmpifuncs,  only: mpi_multigrid_bnd
-      use multigridvars,      only: lvl, LOW, HIGH, NDIM, eff_dim, extbnd_antimirror
+      use multigridvars,      only: lvl, LOW, HIGH, NDIM, extbnd_antimirror
 
       implicit none
 

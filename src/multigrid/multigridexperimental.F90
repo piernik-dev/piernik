@@ -149,7 +149,8 @@ contains
    subroutine prolong_level2I(lev, iv)
 
       use dataio_pub,    only: die
-      use multigridvars, only: plvl, lvl, eff_dim, NDIM
+      use multigridvars, only: plvl, lvl, NDIM
+      use mpisetup,      only: eff_dim
 
       implicit none
 
@@ -203,7 +204,8 @@ contains
    subroutine prolong_level2D(lev, iv)
 
       use dataio_pub,    only: die
-      use multigridvars, only: plvl, lvl, eff_dim, NDIM
+      use multigridvars, only: plvl, lvl, NDIM
+      use mpisetup,      only: eff_dim
 
       implicit none
 
@@ -256,7 +258,8 @@ contains
    subroutine prolong_level4I(lev, iv)
 
       use dataio_pub,    only: die
-      use multigridvars, only: plvl, lvl, eff_dim, NDIM
+      use multigridvars, only: plvl, lvl, NDIM
+      use mpisetup,      only: eff_dim
 
       implicit none
 
@@ -322,7 +325,8 @@ contains
    subroutine prolong_level4D(lev, iv)
 
       use dataio_pub,    only: die
-      use multigridvars, only: plvl, lvl, eff_dim, NDIM
+      use multigridvars, only: plvl, lvl, NDIM
+      use mpisetup,      only: eff_dim
 
       implicit none
 

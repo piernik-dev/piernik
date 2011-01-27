@@ -117,8 +117,8 @@ contains
    subroutine init_multipole(mb_alloc)
 
       use dataio_pub,    only: die, warn
-      use mpisetup,      only: master, xdim, ydim, zdim, dom
-      use multigridvars, only: level_min, level_max, lvl, eff_dim
+      use mpisetup,      only: master, xdim, ydim, zdim, dom, eff_dim
+      use multigridvars, only: level_min, level_max, lvl
       use grid,          only: geometry, cg
 
       implicit none
@@ -501,8 +501,9 @@ contains
 
    subroutine prolong_ext_bnd0(lev)
 
-      use multigridvars,   only: lvl, is_external, level_max, XLO, XHI, YLO, YHI, ZLO, ZHI, HIGH, LOW, eff_dim, NDIM
+      use multigridvars,   only: lvl, is_external, level_max, XLO, XHI, YLO, YHI, ZLO, ZHI, HIGH, LOW, NDIM
       use dataio_pub,      only: die
+      use mpisetup,        only: eff_dim
 
       implicit none
 
@@ -565,8 +566,9 @@ contains
 
    subroutine prolong_ext_bnd2(lev)
 
-      use multigridvars,   only: lvl, is_external, level_max, XLO, XHI, YLO, YHI, ZLO, ZHI, HIGH, LOW, eff_dim, NDIM
+      use multigridvars,   only: lvl, is_external, level_max, XLO, XHI, YLO, YHI, ZLO, ZHI, HIGH, LOW, NDIM
       use dataio_pub,      only: die
+      use mpisetup,        only: eff_dim
 
       implicit none
 

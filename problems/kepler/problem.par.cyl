@@ -9,7 +9,6 @@
     pxsize = 1
     pysize = 1
     pzsize = 8
-    mpi_magic = .true.
  /
 
  $CONSTANTS

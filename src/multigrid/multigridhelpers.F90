@@ -98,8 +98,8 @@ contains
    subroutine check_dirty(lev, iv, label, expand)
 
       use dataio_pub,    only: die, warn, msg
-      use mpisetup,      only: proc
-      use multigridvars, only: ngridvars, lvl, level_min, level_max, mg_nb, eff_dim, NDIM
+      use mpisetup,      only: proc, eff_dim
+      use multigridvars, only: ngridvars, lvl, level_min, level_max, mg_nb, NDIM
 
       implicit none
 
