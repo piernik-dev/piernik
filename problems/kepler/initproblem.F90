@@ -242,7 +242,8 @@ contains
                   u(fl%idn,i,j,k) = min((rc/r_grav)**n_gravr,100.0)
 
                   if (has_dir(zdim)) then
-                     u(fl%idn,i,j,k) = dout + (dprof(k)-dout)/cosh(u(fl%idn,i,j,k))
+                     u(fl%idn,i,j,k) = dprof(k)/cosh(u(fl%idn,i,j,k))
+                     u(fl%idn,i,j,k) = max(u(fl%idn,i,j,k), dout)
                   else
                      u(fl%idn,i,j,k) = dout + (d0 - dout)/cosh(u(fl%idn,i,j,k))
                   endif
