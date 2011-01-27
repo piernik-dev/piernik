@@ -387,7 +387,7 @@ contains
                   do k = 1, cg%nz
                      zk = cg%z(k)
 !                     u(fl%idn,i,j,k) = max(d0*(1./cosh((xi/r_max)**10)) * exp(-zk**2/H2),1.e-10))
-                     u(fl%idn,i,j,k) = dens_prof(k)
+                     u(fl%idn,i,j,k) = dens_prof(i)
                      if (fl%tag == "DST") u(fl%idn,i,j,k) = eps * u(fl%idn,i,j,k)
 
                      vr   = 0.0
