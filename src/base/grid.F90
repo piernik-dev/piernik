@@ -76,15 +76,11 @@ contains
 #endif /* VERBOSE */
 
       ! \todo Check if that statement is still necessary
-      if ( (mod(dom%nxd, psize(xdim)) .ne. 0) .or. &
-           (mod(dom%nyd, psize(ydim)) .ne. 0) .or. &
-           (mod(dom%nzd, psize(zdim)) .ne. 0) ) then
-         call die("One of: (mod(n_d,p_size) /= 0")
-      endif
+      if ( any(mod([dom%nxd, dom%nyd, dom%nzd], psize(:)) /= 0) ) call die("One of: (mod(n_d,p_size) /= 0")
 
       if (has_dir(xdim)) then
-         cg%nxb = dom%nxd / psize(xdim)     ! Block 'physical' grid sizes
-         cg%nx  = cg%nxb + 2 * nb     ! Block total grid sizes
+         cg%nxb = dom%nxd / psize(xdim) ! Block 'physical' grid sizes
+         cg%nx  = cg%nxb + 2 * nb       ! Block total grid sizes
          cg%is  = nb + 1
          cg%ie  = nb + cg%nxb
          cg%isb = 2*nb

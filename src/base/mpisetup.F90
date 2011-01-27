@@ -47,7 +47,7 @@ module mpisetup
         &    buffer_dim, cbuff, cbuff_len, cfl, cfl_max, cflcontrol, &
         &    cfr_smooth, cleanup_mpi, comm, comm3d, dt, dt_initial, dt_max_grow, dt_min, dt_old, dtm, err, ibuff, ierr, info, init_mpi, &
         &    integration_order, lbuff, limiter, mpifind, ndims, nproc, nstep, pcoords, proc, procxl, procxr, procxyl, procyl, procyr, procyxl, proczl, &
-        &    proczr, psize, pxsize, pysize, pzsize, rbuff, req, smalld, smallei, smallp, status, t, use_smalld, magic_mass, local_magic_mass, master, slave, &
+        &    proczr, psize, rbuff, req, smalld, smallei, smallp, status, t, use_smalld, magic_mass, local_magic_mass, master, slave, &
         &    nb, xdim, ydim, zdim, has_dir, eff_dim, big_float, relax_time, grace_period_passed, dom, geometry
 
    integer :: nproc, proc, ierr , rc, info
@@ -521,8 +521,8 @@ contains
          deallocate(primes)
       endif
 
-      if ( (bnd_xl(1:3) == 'cor' .or. bnd_yl(1:3) == 'cor' .or. bnd_xr(1:3) == 'cor' .or. bnd_yr(1:3) == 'cor') .and. (pxsize /= pysize .or. nxd /= nyd) ) then
-         write(msg, '(a,4(i4,a))')"[mpisetup:init_mpi] Corner BC require pxsize equal to pysize and nxd equal to nyd. Detected: [",pxsize,",",pysize,"] and [",nxd,",",nyd,"]"
+      if ( (bnd_xl(1:3) == 'cor' .or. bnd_yl(1:3) == 'cor' .or. bnd_xr(1:3) == 'cor' .or. bnd_yr(1:3) == 'cor') .and. (psize(xdim) /= psize(ydim) .or. nxd /= nyd) ) then
+         write(msg, '(a,4(i4,a))')"[mpisetup:init_mpi] Corner BC require psize(xdim) equal to psize(ydim) and nxd equal to nyd. Detected: [",psize(xdim),",",psize(ydim),"] and [",nxd,",",nyd,"]"
          call die(msg)
       endif
 
@@ -592,7 +592,7 @@ contains
          bnd_xl = 'mpi'
       endif
 
-      if (pcoords(xdim) == pxsize-1) then
+      if (pcoords(xdim) == psize(xdim)-1) then
          bnd_xr = 'she'
       else
          bnd_xr = 'mpi'
@@ -705,8 +705,7 @@ contains
 !! For some weird domains and PE counts this routine may find tiling that does not satisfy multigrid restrictions even if there exists an acceptable tiling.
 !! In such case the user must divide domain manually by providing p[xyz]size parameters through problem.par.
 !!
-!! \attention Must be called by all procs to avoid communication and ensure that every proc has
-!! proper psize, pxsize, pysize, pzsize
+!! \attention Must be called by all procs to avoid communication and ensure that every proc has proper psize
 !<
    subroutine divide_domain_uniform
 
