@@ -43,12 +43,11 @@ module hydrostatic
    public :: hydrostatic_zeq_coldens, hydrostatic_zeq_densmid, gprofs, nstot, zs, dzs, outh_bnd
 #endif /* GRAV */
 
-   real, allocatable, dimension(:), save :: zs, gprofs
-   real,    save :: dzs
-   integer, save :: nstot
-#ifndef NEW_HYDROSTATIC
-   real,    save :: dmid
-#endif /* !NEW_HYDROSTATIC */
+   real, allocatable, dimension(:), save :: zs        !< array of z-positions of subgrid cells centers
+   real, allocatable, dimension(:), save :: gprofs    !< array of gravitational acceleration in a column of subgrid
+   real,                            save :: dzs       !< length of the subgrid cell in z-direction
+   integer,                         save :: nstot     !< total number of subgrid cells in a column through all z-blocks
+   real,                            save :: dmid      !< density value in a midplane (fixed for hydrostatic_zeq_densmid, overwritten by hydrostatic_zeq_coldens)
 
    interface
       subroutine hzeqscheme(ksub, up, factor)
@@ -101,7 +100,6 @@ contains
 !<
    subroutine hydrostatic_zeq_densmid(iia,jja,d0,csim2,sd)
 
-      use arrays,     only: dprof
       use constants,  only: small
       use dataio_pub, only: die
 
@@ -114,14 +112,9 @@ contains
       if (d0 <= small) then
          call die("[hydrostatic:hydrostatic_zeq_densmid] d0 must be /= 0")
       endif
-#ifndef NEW_HYDROSTATIC
       dmid = d0
-#endif /* !NEW_HYDROSTATIC */
 
       call start_hydrostatic(iia,jja,csim2,sd)
-#ifdef NEW_HYDROSTATIC
-      dprof = dprof * d0
-#endif /* NEW_HYDROSTATIC */
       call finish_hydrostatic
 
    end subroutine hydrostatic_zeq_densmid
@@ -133,7 +126,7 @@ contains
 
       use arrays,     only: dprof
       use dataio_pub, only: die
-      use gravity,    only: nsub !, gp_status
+      use gravity,    only: nsub
       use grid,       only: cg
       use mpisetup,   only: dom
 
@@ -157,7 +150,7 @@ contains
       if (ksmid == 0) call die("[hydrostatic:hydrostatic_main] ksmid not set")
 
       if (ksmid < nstot) then
-         dprofs(ksmid+1) = 1.0
+         dprofs(ksmid+1) = dmid
          do ksub=ksmid+1, nstot-1
             call hzeq_scheme(ksub,  1.0, factor)
             dprofs(ksub+1) = factor * dprofs(ksub)
@@ -165,7 +158,7 @@ contains
       endif
 
       if (ksmid > 1) then
-         dprofs(ksmid) = 1.0
+         dprofs(ksmid) = dmid
          do ksub=ksmid, 2, -1
             call hzeq_scheme(ksub, -1.0, factor)
             dprofs(ksub-1) = factor * dprofs(ksub)
@@ -330,19 +323,19 @@ contains
 
       implicit none
 
-      integer, intent(in)           :: kb, kk
-      character(len=*), intent(in)  :: minmax
+      integer,          intent(in)                :: kb, kk
+      character(len=*), intent(in)                :: minmax
 
-      integer                             :: ksub, i, j
+      integer                                     :: ksub, i, j
       real, dimension(flind%fluids, cg%nx, cg%ny) :: db, csi2b
 #ifndef ISO
-      integer                             :: ifluid
+      integer                                     :: ifluid
       real, dimension(flind%fluids, cg%nx, cg%ny) :: ekb, eib
 #endif /* !ISO */
-      real, dimension(nsub+1)             :: zs, gprofs
-      real, dimension(flind%fluids,nsub+1) :: dprofs
-      real, dimension(flind%fluids)        :: factor
-      real                                :: dzs,z1,z2
+      real, dimension(nsub+1)                     :: zs, gprofs
+      real, dimension(flind%fluids,nsub+1)        :: dprofs
+      real, dimension(flind%fluids)               :: factor
+      real                                        :: dzs,z1,z2
 
       if (.not.associated(grav_accel)) call die("[hydrostatic:outh_bnd] grav_accel not associated")
 
