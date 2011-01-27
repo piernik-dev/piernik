@@ -189,7 +189,7 @@ contains
 #ifdef DEBUG
       open(456, file="perturbation.dat", status="unknown")
       do k = cg%ks, cg%ke
-         write(456,*) cg%z(i), sin(kz*cg%z(k))
+         write(456,*) cg%z(k), sin(kz*cg%z(k))
       enddo
       close(456)
 #endif /* DEBUG */
