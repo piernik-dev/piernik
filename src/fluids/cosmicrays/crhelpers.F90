@@ -38,18 +38,18 @@ contains
 
    subroutine div_v(ifluid)
 
+      use arrays,      only: u, divvel
       use fluidindex,  only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
       use grid,        only: cg
       use mpisetup,    only: xdim, ydim, zdim, has_dir
-      use arrays,      only: u, divvel
 
       implicit none
 
       real, dimension(cg%nx) :: vx
       real, dimension(cg%ny) :: vy
       real, dimension(cg%nz) :: vz
-      integer             :: i,j,k,ifluid
-      integer             :: idnf,imxf,imyf,imzf
+      integer                :: i, j, k, ifluid
+      integer                :: idnf, imxf, imyf, imzf
 
       idnf = iarr_all_dn(ifluid)
       imxf = iarr_all_mx(ifluid)
@@ -92,13 +92,13 @@ contains
 
    subroutine div_vx(k,j)
 
-      use grid,        only: cg
-      use arrays,      only: divvel
+      use arrays, only: divvel
+      use grid,   only: cg
 
       implicit none
 
-      real,dimension(cg%nx) :: divv
-      integer :: j,k
+      real, dimension(cg%nx) :: divv
+      integer                :: j, k
 
       divv = divvel(:,j,k)
 
@@ -106,13 +106,13 @@ contains
 
    subroutine div_vy(k,i)
 
-      use grid,        only: cg
       use arrays, only: divvel
+      use grid,   only: cg
 
       implicit none
 
-      real,dimension(cg%ny) :: divv
-      integer :: i,k
+      real, dimension(cg%ny) :: divv
+      integer                :: i, k
 
       divv = divvel(i,:,k)
 
@@ -120,13 +120,13 @@ contains
 
    subroutine  div_vz(j,i)
 
-      use grid,        only: cg
       use arrays, only: divvel
+      use grid,   only: cg
 
       implicit none
 
-      real,dimension(cg%nz) :: divv
-      integer :: i,j
+      real, dimension(cg%nz) :: divv
+      integer                :: i, j
 
       divv = divvel(i,j,:)
 
@@ -134,8 +134,8 @@ contains
 
    subroutine whichfaq(faq,i,j,n)
       implicit none
-      real :: faq
-      integer :: i,j,n
+      real    :: faq
+      integer :: i, j, n
 
       faq = 0.5
       if (i == 0) then

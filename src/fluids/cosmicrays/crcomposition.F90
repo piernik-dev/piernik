@@ -55,15 +55,15 @@ module crcomposition
 
    real, parameter :: mbarn=1e-27 !> cm2   \deprecated BEWARE: this line breaks unit consistency, move it to constants.F90 and use scaling
 
-   real, parameter :: sigma_C12_Li7  = 10*mbarn
-   real, parameter :: sigma_C12_Be9  = 6*mbarn
-   real, parameter :: sigma_C12_Be10 = 3.5*mbarn
+   real, parameter :: sigma_C12_Li7  = 10   * mbarn
+   real, parameter :: sigma_C12_Be9  =  6   * mbarn
+   real, parameter :: sigma_C12_Be10 =  3.5 * mbarn
 
-   real, parameter :: sigma_N14_Li7  = 9.5*mbarn
+   real, parameter :: sigma_N14_Li7  =  9.5 * mbarn
 
-   real, parameter :: sigma_O16_Li7  = 9.5*mbarn
-   real, parameter :: sigma_O16_Be9  = 4.5*mbarn
-   real, parameter :: sigma_O16_Be10 = 2*mbarn
+   real, parameter :: sigma_O16_Li7  =  9.5 * mbarn
+   real, parameter :: sigma_O16_Be9  =  4.5 * mbarn
+   real, parameter :: sigma_O16_Be10 =  2   * mbarn
 
 !<====Decay half live times from Garcia-Munoz 1987====>
 
@@ -74,7 +74,7 @@ module crcomposition
 !<Initial source abundances (in numer density) relative to hydrogen (compare e.g. Longair)>
 
    real, parameter :: primary_C12  =  4.5e-3
-   real, parameter :: primary_N14  =  1e-3
-   real, parameter :: primary_O16  =  4e-3
+   real, parameter :: primary_N14  =  1.0e-3
+   real, parameter :: primary_O16  =  4.0e-3
 
 end module crcomposition

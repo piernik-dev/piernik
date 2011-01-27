@@ -193,22 +193,22 @@ contains
 
       real(kind=4), dimension(:,:,:) :: data    !< array of output values
 
-      integer, parameter :: rank = 3 ! Dataset rank
+      integer, parameter :: rank = 3            !< Dataset rank
 
-      CHARACTER(LEN=S_LEN) :: dsetname    !< Dataset name
+      CHARACTER(LEN=S_LEN) :: dsetname          !< Dataset name
 
-      integer(HID_T) :: file_id       !< File identifier
-      integer(HID_T) :: dset_id       !< Dataset identifier
-      integer(HID_T) :: plist_id      !< Property list identifier
-      integer(HID_T) :: filespace     !< Dataspace identifier in file
-      integer(HID_T) :: memspace      !< Dataspace identifier in memory
+      integer(HID_T) :: file_id                 !< File identifier
+      integer(HID_T) :: dset_id                 !< Dataset identifier
+      integer(HID_T) :: plist_id                !< Property list identifier
+      integer(HID_T) :: filespace               !< Dataspace identifier in file
+      integer(HID_T) :: memspace                !< Dataspace identifier in memory
 
       integer, parameter :: ndims = 3
       integer(HSIZE_T),  DIMENSION(ndims) :: count
       integer(HSSIZE_T), DIMENSION(ndims) :: offset
       integer(HSIZE_T),  DIMENSION(ndims) :: stride
       integer(HSIZE_T),  DIMENSION(ndims) :: block
-      integer(HSIZE_T), DIMENSION(ndims) :: dimsf, dimsfi, chunk_dims
+      integer(HSIZE_T),  DIMENSION(ndims) :: dimsf, dimsfi, chunk_dims
       integer :: error
 
       dimsf = (/size(data,1)*psize(1),size(data,2)*psize(2),size(data,3)*psize(3)/) ! Dataset dimensions
