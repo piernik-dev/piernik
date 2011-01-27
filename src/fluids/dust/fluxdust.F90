@@ -71,9 +71,9 @@ contains
 
    subroutine flux_dst(fluxd,cfrd,uud,n,vx,ps,bb,cs_iso2)
 
-      use constants,  only: small
+      !use constants,  only: small
       use fluidindex, only: idn, imx, imy, imz, flind
-      use mpisetup,   only: cfr_smooth
+      !use mpisetup,   only: cfr_smooth
 #ifdef GLOBAL_FR_SPEED
       use timestep,   only: c_all
 #endif /* GLOBAL_FR_SPEED */
@@ -90,6 +90,7 @@ contains
 
       ! locals
       real               :: minvx, maxvx, amp
+      real, dimension(size(vx)) :: absvx
 
       fluxd   = 0.0; cfrd    = 0.0; vx      = 0.0; ps = 0.0
 
@@ -111,10 +112,12 @@ contains
       !  as in Trac & Pen (2003). This ensures much sharper shocks,
       !  but sometimes may lead to numerical instabilities
 
-      minvx = minval(vx(RNG))
-      maxvx = maxval(vx(RNG))
-      amp   = (maxvx-minvx)*0.5
-      cfrd(1,RNG) = max(sqrt(vx(RNG)**2+cfr_smooth*amp),small)
+!     minvx = minval(vx(RNG))
+!     maxvx = maxval(vx(RNG))
+!     amp   = (maxvx-minvx)*0.5
+!      cfrd(1,RNG) = max(sqrt(vx(RNG)**2+cfr_smooth*amp),small)
+      absvx = abs(vx)
+      cfrd(1,RNG)  = max( absvx(1:n-2), absvx(2:n-1), absvx(3:n) )
 
       cfrd(1,1) = cfrd(1,2)
       cfrd(1,n) = cfrd(1,n-1)
