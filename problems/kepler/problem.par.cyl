@@ -8,7 +8,7 @@
  $MPI_BLOCKS
     pxsize = 1
     pysize = 1
-    pzsize = 8
+    pzsize = 2
  /
 
  $CONSTANTS
@@ -111,7 +111,7 @@
  /
 
  $INTERACTIONS
-   collision_factor  = 10.0
-   dragc_gas_dust    = 10.0
+   collision_factor  = 100.0
+   dragc_gas_dust    = 100.0
    cfl_interact      = 0.8
  /

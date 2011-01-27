@@ -518,7 +518,7 @@ contains
    end subroutine read_initial_fld_from_restart
 !-----------------------------------------------------------------------------
    subroutine problem_customize_solution_kepler
-      use mpisetup,        only: dt
+      use mpisetup,        only: dt, t, grace_period_passed, relax_time
       use arrays,          only: u
       use grid,            only: cg
       use fluidboundaries, only: all_fluid_boundaries
@@ -526,12 +526,32 @@ contains
 #ifndef ISO
       use fluidindex,      only: iarr_all_en
 #endif /* ISO */
+      use interactions,    only: dragc_gas_dust
+#ifdef VERBOSE
+      use dataio_pub,      only: msg, printinfo
+      use mpisetup,        only: master
+#endif /* VERBOSE */
       implicit none
       integer                               :: j, k
       logical, save                         :: frun = .true.
       real, dimension(:,:), allocatable, save :: funcR
+      real, save :: x0, x1, y0, y1, a, b
+
+      if (grace_period_passed() .and. t <= x1) then
+         dragc_gas_dust = a*t+b
+#ifdef VERBOSE
+         if (master) write(msg,'(A,F6.1)') 'dragc_gas_dust = ', dragc_gas_dust
+         call printinfo(msg)
+#endif /* VERBOSE */
+      endif
 
       if (frun) then
+         x0 = relax_time + 2.0
+         x1 = x0 + 30.0
+         y0 = 100.0
+         y1 = 1.0
+         a = (y0 - y1)/(x0 - x1)
+         b = y0 - a*x0
          allocate(funcR(size(iarr_all_dn), cg%nx) )
 
          funcR(1,:) = -tanh((cg%x(:)-r_in+1.0)**f_in) + 1.0 + max( tanh((cg%x(:)-r_out+1.0)**f_out), 0.0)
