@@ -90,16 +90,16 @@ module mpisetup
 
    ! Namelist variables
 
-   integer :: pxsize         !< number of MPI blocks in x-dimension
-   integer :: pysize         !< number of MPI blocks in y-dimension
-   integer :: pzsize         !< number of MPI blocks in z-dimension
-   logical :: reorder        !< allows processes reordered for efficiency (a parameter of MPI_Cart_create and MPI_graph_create)
+   integer :: pxsize          !< number of MPI blocks in x-dimension
+   integer :: pysize          !< number of MPI blocks in y-dimension
+   integer :: pzsize          !< number of MPI blocks in z-dimension
+   logical :: reorder         !< allows processes reordered for efficiency (a parameter of MPI_Cart_create and MPI_graph_create)
 
    namelist /MPI_BLOCKS/ pxsize, pysize, pzsize, reorder
 
-   integer, protected :: nxd  !< number of %grid cells in physical domain (without boundary cells) in x-direction (if equal to 1 then x-dimension is reduced to a point with no boundary cells)
-   integer, protected :: nyd  !< number of %grid cells in physical domain (without boundary cells) in y-direction (if equal to 1 then y-dimension is reduced to a point with no boundary cells)
-   integer, protected :: nzd  !< number of %grid cells in physical domain (without boundary cells) in z-direction (if equal to 1 then z-dimension is reduced to a point with no boundary cells)
+   integer, protected :: nxd  !< number of %grid cells in physical domain (without boundary cells) in x-direction (if == 1 then x-dimension is reduced to a point with no boundary cells)
+   integer, protected :: nyd  !< number of %grid cells in physical domain (without boundary cells) in y-direction (-- || --)
+   integer, protected :: nzd  !< number of %grid cells in physical domain (without boundary cells) in z-direction (-- || --)
    integer, protected :: nb   !< number of boundary cells surrounding the physical domain, same for all directions
 
    namelist /DOMAIN_SIZES/ nxd, nyd, nzd, nb
@@ -159,10 +159,10 @@ contains
 !! \n \n
 !! <table border="+1">
 !! <tr><td width="150pt"><b>parameter</b></td><td width="135pt"><b>default value</b></td><td width="200pt"><b>possible values</b></td><td width="315pt"> <b>description</b></td></tr>
-!! <tr><td>pxsize       </td><td>1      </td><td>integer</td><td>\copydoc mpisetup::pxsize       </td></tr>
-!! <tr><td>pysize       </td><td>1      </td><td>integer</td><td>\copydoc mpisetup::pysize       </td></tr>
-!! <tr><td>pzsize       </td><td>1      </td><td>integer</td><td>\copydoc mpisetup::pzsize       </td></tr>
-!! <tr><td>reorder      </td><td>.false.</td><td>logical</td><td>\copydoc mpisetup::reorder      </td></tr>
+!! <tr><td>pxsize         </td><td>1      </td><td>integer</td><td>\copydoc mpisetup::pxsize         </td></tr>
+!! <tr><td>pysize         </td><td>1      </td><td>integer</td><td>\copydoc mpisetup::pysize         </td></tr>
+!! <tr><td>pzsize         </td><td>1      </td><td>integer</td><td>\copydoc mpisetup::pzsize         </td></tr>
+!! <tr><td>reorder        </td><td>.false.</td><td>logical</td><td>\copydoc mpisetup::reorder        </td></tr>
 !! </table>
 !! \n \n
 !! @b DOMAIN_SIZES
@@ -514,6 +514,11 @@ contains
       dom%z0 = (dom%zmax + dom%zmin)/2.
 
       psize(:) = [ pxsize, pysize, pzsize ]
+      where (.not. has_dir(:)) psize(:) = 1
+      if (.not. have_mpi) then
+         if (any(psize(:) > 1)) call warn("[mpisetup:init_mpi] Ignoring p[xyz]size > 1 on a single-CPU run")
+         psize(:) = 1
+      endif
 
       if (product(psize(:)) /= nproc) then
          call Eratosthenes_sieve(primes, nproc) ! it is possible to use primes onlt to sqrt(nproc), but it is easier to have the full table. Cheap for any reasonable nproc.
@@ -583,7 +588,7 @@ contains
       endif
 
 #ifdef SHEAR_BND
-      if (pysize > 1) stop 'Shear-pediodic boundary conditions do not permit pysize > 1'
+      if (psize(ydim) > 1) stop 'Shear-pediodic boundary conditions do not permit psize(ydim) > 1'
 
 #ifndef FFTW
       if (pcoords(xdim) == 0) then
@@ -714,7 +719,7 @@ contains
       implicit none
 
       integer :: j1, j2, j3, jj, n, p
-      integer, dimension(ndims) :: ldom
+      integer, dimension(ndims) :: ldom, tmp
 
       ldom(xdim:zdim) = domsize(zdim:xdim:-1) ! Maxloc returns first occurrence of max, reversing direction order (to ZYX) gives better cache utilization.
       n = nproc
@@ -752,11 +757,8 @@ contains
 
       if (n /= 1) call die("[divide_domain_uniform]: I am not that intelligent") ! nproc has too big prime factors
 
-      pxsize = psize(zdim) ! directions were reverted at ldom assignment
-      pysize = psize(ydim)
-      pzsize = psize(xdim)
-
-      psize = [ pxsize, pysize, pzsize ]
+      tmp(xdim:zdim) = psize(zdim:xdim:-1) ! directions were reverted at ldom assignment
+      psize(:) = tmp(:)
 
       if (master) then
          write(msg,'(a,3i4,a,3i6,a)')"[mpisetup:divide_domain_uniform] Domain divided to [",psize(:)," ] pieces, each of [",ldom(zdim:xdim:-1)," ] cells."

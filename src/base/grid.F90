@@ -63,7 +63,7 @@ contains
 
       use dataio_pub, only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml  ! QA_WARN required for diff_nml
       use dataio_pub, only: printinfo, die, code_progress, PIERNIK_INIT_MPI
-      use mpisetup,   only: psize, pcoords, comm, has_dir, xdim, ydim, zdim, ndims, dom, nb
+      use mpisetup,   only: psize, pcoords, comm, has_dir, xdim, ydim, zdim, dom, nb
 
       implicit none
 
@@ -75,110 +75,101 @@ contains
       call printinfo("[grid:init_grid]: commencing...")
 #endif /* VERBOSE */
 
-      ! \todo Check if that statement is still necessary
+      ! This statement will be removed soon
       if ( any(mod([dom%nxd, dom%nyd, dom%nzd], psize(:)) /= 0) ) call die("One of: (mod(n_d,p_size) /= 0")
 
+      cg%nb = nb
+      cg%dxmn = huge(1.0)
+
       if (has_dir(xdim)) then
-         cg%nxb = dom%nxd / psize(xdim) ! Block 'physical' grid sizes
-         cg%nx  = cg%nxb + 2 * nb       ! Block total grid sizes
-         cg%is  = nb + 1
-         cg%ie  = nb + cg%nxb
-         cg%isb = 2*nb
-         cg%ieb = cg%nxb+1
-         D_x = 1
+         cg%nxb   = dom%nxd / psize(xdim) ! Block 'physical' grid sizes
+         cg%nx    = cg%nxb + 2 * nb       ! Block total grid sizes
+         cg%is    = nb + 1
+         cg%ie    = nb + cg%nxb
+         cg%isb   = 2*nb
+         cg%ieb   = cg%nxb+1
+         D_x      = 1
+         cg%dx    = dom%Lx / dom%nxd
+         cg%dxmn  = min(cg%dxmn, cg%dx)
+         cg%xminb = dom%xmin + real(pcoords(xdim)  )*dom%Lx/real(psize(xdim))
+         cg%xmaxb = dom%xmin + real(pcoords(xdim)+1)*dom%Lx/real(psize(xdim))
       else
-         cg%nxb    = 1
-         cg%nx     = 1
-         cg%is     = 1
-         cg%ie     = 1
-         cg%isb    = 1
-         cg%ieb    = 1
-         D_x    = 0
+         cg%nxb   = 1
+         cg%nx    = 1
+         cg%is    = 1
+         cg%ie    = 1
+         cg%isb   = 1
+         cg%ieb   = 1
+         D_x      = 0
+         cg%dx    = 1.0
+         cg%xminb = dom%xmin
+         cg%xmaxb = dom%xmax
       endif
 
       if (has_dir(ydim)) then
-         cg%nyb = dom%nyd / psize(ydim)
-         cg%ny  = cg%nyb + 2 * nb
-         cg%js  = nb + 1
-         cg%je  = nb + cg%nyb
-         cg%jsb = 2*nb
-         cg%jeb = cg%nyb+1
-         D_y = 1
+         cg%nyb   = dom%nyd / psize(ydim)
+         cg%ny    = cg%nyb + 2 * nb
+         cg%js    = nb + 1
+         cg%je    = nb + cg%nyb
+         cg%jsb   = 2*nb
+         cg%jeb   = cg%nyb+1
+         D_y      = 1
+         cg%dy    = dom%Ly / dom%nyd
+         cg%dxmn  = min(cg%dxmn, cg%dy)
+         cg%yminb = dom%ymin + real(pcoords(ydim)  )*dom%Ly/real(psize(ydim))
+         cg%ymaxb = dom%ymin + real(pcoords(ydim)+1)*dom%Ly/real(psize(ydim))
       else
-         cg%ny     = 1
-         cg%nyb    = 1
-         cg%js     = 1
-         cg%je     = 1
-         cg%jsb    = 1
-         cg%jeb    = 1
-         D_y    = 0
+         cg%nyb   = 1
+         cg%ny    = 1
+         cg%js    = 1
+         cg%je    = 1
+         cg%jsb   = 1
+         cg%jeb   = 1
+         D_y      = 0
+         cg%dy    = 1.0
+         cg%yminb = dom%ymin
+         cg%ymaxb = dom%ymax
       endif
 
       if (has_dir(zdim)) then
-         cg%nzb = dom%nzd / psize(zdim)
-         cg%nz  = cg%nzb + 2 * nb
-         cg%ks  = nb + 1
-         cg%ke  = nb + cg%nzb
-         cg%ksb = 2*nb
-         cg%keb = cg%nzb+1
-         D_z = 1
+         cg%nzb   = dom%nzd / psize(zdim)
+         cg%nz    = cg%nzb + 2 * nb
+         cg%ks    = nb + 1
+         cg%ke    = nb + cg%nzb
+         cg%ksb   = 2*nb
+         cg%keb   = cg%nzb+1
+         D_z      = 1
+         cg%dz    = dom%Lz / dom%nzd
+         cg%dxmn  = min(cg%dxmn, cg%dz)
+         cg%zminb = dom%zmin + real(pcoords(zdim)  )*dom%Lz/real(psize(zdim))
+         cg%zmaxb = dom%zmin + real(pcoords(zdim)+1)*dom%Lz/real(psize(zdim))
       else
-         cg%nzb    = 1
-         cg%nz     = 1
-         cg%ks     = 1
-         cg%ke     = 1
-         cg%ksb    = 1
-         cg%keb    = 1
-         D_z    = 0
+         cg%nzb   = 1
+         cg%nz    = 1
+         cg%ks    = 1
+         cg%ke    = 1
+         cg%ksb   = 1
+         cg%keb   = 1
+         D_z      = 0
+         cg%dz    = 1.0
+         cg%zminb = dom%zmin
+         cg%zmaxb = dom%zmax
       endif
-      cg%nb = nb
 
-      allocate(cg%dl(ndims))
-      allocate(cg%idl(ndims))
+      cg%idx = 1./cg%dx
+      cg%idy = 1./cg%dy
+      cg%idz = 1./cg%dz
+
+      cg%dl(xdim:zdim) = [ cg%dx, cg%dy, cg%dz ]
+      cg%idl(:) = 1./cg%dl(:)
+
+      cg%dvol = product(cg%dl(:))
+      total_ncells = dom%nxd * dom%nyd * dom%nzd
+
       allocate(cg%x(cg%nx), cg%xl(cg%nx), cg%xr(cg%nx), cg%inv_x(cg%nx))
       allocate(cg%y(cg%ny), cg%yl(cg%ny), cg%yr(cg%ny), cg%inv_y(cg%ny))
       allocate(cg%z(cg%nz), cg%zl(cg%nz), cg%zr(cg%nz), cg%inv_z(cg%nz))
-
-      total_ncells = dom%nxd * dom%nyd * dom%nzd
-
       cg%maxxyz = maxval([size(cg%x), size(cg%y), size(cg%z)])
-
-      cg%xminb = dom%xmin + real(pcoords(xdim)  )*dom%Lx/real(psize(xdim))
-      cg%xmaxb = dom%xmin + real(pcoords(xdim)+1)*dom%Lx/real(psize(xdim))
-      cg%yminb = dom%ymin + real(pcoords(ydim)  )*dom%Ly/real(psize(ydim))
-      cg%ymaxb = dom%ymin + real(pcoords(ydim)+1)*dom%Ly/real(psize(ydim))
-      cg%zminb = dom%zmin + real(pcoords(zdim)  )*dom%Lz/real(psize(zdim))
-      cg%zmaxb = dom%zmin + real(pcoords(zdim)+1)*dom%Lz/real(psize(zdim))
-
-      cg%dxmn = huge(1.0)
-      if (has_dir(xdim)) then
-         cg%dx = (cg%xmaxb-cg%xminb)/cg%nxb
-         cg%dxmn = min(cg%dxmn, cg%dx)
-      else
-         cg%dx = 1.0
-      endif
-      cg%idx = 1./cg%dx
-      if (has_dir(ydim)) then
-         cg%dy = (cg%ymaxb-cg%yminb)/cg%nyb
-         cg%dxmn = min(cg%dxmn, cg%dy)
-      else
-         cg%dy = 1.0
-      endif
-      cg%idy = 1./cg%dy
-      if (has_dir(zdim)) then
-         cg%dz = (cg%zmaxb-cg%zminb)/cg%nzb
-         cg%dxmn = min(cg%dxmn, cg%dz)
-      else
-         cg%dz = 1.0
-      endif
-      cg%idz = 1./cg%dz
-
-      cg%dl(xdim) = cg%dx
-      cg%dl(ydim) = cg%dy
-      cg%dl(zdim) = cg%dz
-      cg%idl = 1./cg%dl
-
-      cg%dvol = cg%dx*cg%dy*cg%dz
 
 !--- Assignments -----------------------------------------------------------
     ! left zone boundaries:  xl, yl, zl
@@ -568,8 +559,6 @@ contains
 
       implicit none
 
-      if (allocated(cg%dl))    deallocate(cg%dl)
-      if (allocated(cg%idl))   deallocate(cg%idl)
       if (allocated(cg%x))     deallocate(cg%x)
       if (allocated(cg%xl))    deallocate(cg%xl)
       if (allocated(cg%xr))    deallocate(cg%xr)

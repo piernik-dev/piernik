@@ -89,7 +89,7 @@ contains
       real, dimension(:),   intent(in),  pointer  :: cs_iso2 !< local isothermal sound speed (optional)
 
       ! locals
-      real               :: minvx, maxvx, amp
+!      real               :: minvx, maxvx, amp
       real, dimension(size(vx)) :: absvx
 
       fluxd   = 0.0; cfrd    = 0.0; vx      = 0.0; ps = 0.0

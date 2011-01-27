@@ -1108,7 +1108,7 @@ contains
            &                 h5dcreate_f, h5dwrite_f, h5dclose_f, h5dget_space_f, &
            &                 h5pcreate_f, h5pset_chunk_f, h5pset_dxpl_mpio_f, &
            &                 h5screate_simple_f, h5sclose_f, h5sselect_hyperslab_f
-      use mpisetup,    only: pcoords, psize, xdim, ydim, zdim
+      use mpisetup,    only: pcoords, psize
 
       implicit none
 
@@ -1136,7 +1136,7 @@ contains
       !----------------------------------------------------------------------------------
       !  WRITE TAB
       !
-      dimsf = [nx*psize(xdim), ny*psize(ydim), nz*psize(zdim)] ! Dataset dimensions
+      dimsf = [nx, ny, nz] * psize(:)           ! Dataset dimensions
       dimsfi = dimsf
       chunk_dims = [nx, ny, nz]                 ! Chunks dimensions
 
@@ -1191,7 +1191,7 @@ contains
            &                  h5pcreate_f, h5pclose_f, h5screate_simple_f, h5dopen_f, &
            &                  h5dget_space_f, h5sget_simple_extent_ndims_f, h5dget_create_plist_f, h5pget_chunk_f, &
            &                  h5sselect_hyperslab_f, h5dread_f, h5sclose_f, h5pset_dxpl_mpio_f, h5dclose_f
-      use mpisetup,     only: pcoords, psize, xdim, ydim, zdim
+      use mpisetup,     only: pcoords, psize
 
       implicit none
 
@@ -1219,7 +1219,7 @@ contains
       rank = 3
       allocate(dimsf(rank), dimsfi(rank), chunk_dims(rank), old_chunk(rank))
       allocate(block(rank), offset(rank), count(rank), stride(rank))
-      dimsf = [nx*psize(xdim), ny*psize(ydim), nz*psize(zdim)] ! Dataset dimensions
+      dimsf = [nx, ny, nz] * psize(:)           ! Dataset dimensions
       dimsfi = dimsf
       chunk_dims = [nx, ny, nz]
 

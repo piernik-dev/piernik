@@ -133,8 +133,8 @@ module types
       real    :: zminb                          !< current block left z-boundary position
       real    :: zmaxb                          !< current block right z-boundary position
 
-      real, allocatable, dimension(:) :: dl     !< array of %grid cell sizes in all directions
-      real, allocatable, dimension(:) :: idl    !< array of inverted %grid cell sizes in all directions
+      real, dimension(dims)           :: dl     !< array of %grid cell sizes in all directions
+      real, dimension(dims)           :: idl    !< array of inverted %grid cell sizes in all directions
       real, allocatable, dimension(:) :: inv_x  !< array of invert x-positions of %grid cells centers
       real, allocatable, dimension(:) :: inv_y  !< array of invert y-positions of %grid cells centers
       real, allocatable, dimension(:) :: inv_z  !< array of invert z-positions of %grid cells centers
