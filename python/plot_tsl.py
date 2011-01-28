@@ -24,11 +24,14 @@ if (len(tab) < 1):
    print ("Data available in %s file." % args[0])
    for i in range(0,len(line)):
       print (" %2i - %s " % (i,line[i]))
+   exit()
 
 names = tab.pop(0)
 tab.remove(["#"])
 
 data=np.array(tab)
 
-P.plot(data[:,1], data[:,args[1]])
+plt = P.plot(data[:,1], data[:,args[1]])
+P.ylabel(names[int(args[1])])
+P.xlabel(names[1])
 P.show()
