@@ -839,6 +839,7 @@ contains
       integer(HSIZE_T),  DIMENSION(:), allocatable :: dimsf, dimsfi, chunk_dims
 
       integer :: error, rank
+      real, pointer, dimension(:,:,:,:) :: p
 
       if (master) write(filename, '(a,a1,a3,a1,i4.4,a4)') trim(problem_name), '_', run_id, '_', nres, '.res'
       call MPI_Bcast(filename, cwdlen, MPI_CHARACTER, 0, comm, ierr)
@@ -896,7 +897,8 @@ contains
                                   stride, block)
       CALL h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error)
       CALL h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_INDEPENDENT_F, error)
-      CALL h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, u(:,cg%is:cg%ie,cg%js:cg%je,cg%ks:cg%ke), dimsfi, error, &
+      p => u(:,cg%is:cg%ie,cg%js:cg%je,cg%ks:cg%ke)
+      CALL h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, p, dimsfi, error, &
                       file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
 
       CALL h5sclose_f(filespace, error)
@@ -939,7 +941,8 @@ contains
                                   stride, block)
       CALL h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error)
       CALL h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_INDEPENDENT_F, error)
-      CALL h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, b(:,cg%is:cg%ie,cg%js:cg%je,cg%ks:cg%ke), dimsfi, error, &
+      p => b(:,cg%is:cg%ie,cg%js:cg%je,cg%ks:cg%ke)
+      CALL h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, p, dimsfi, error, &
                       file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
 
       CALL h5sclose_f(filespace, error)
@@ -1098,6 +1101,7 @@ contains
       CALL h5close_f(error)
 
       nres = nres + 1
+      if (associated(p)) nullify(p)
 
    end subroutine write_restart_hdf5
 
