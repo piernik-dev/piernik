@@ -65,6 +65,7 @@ contains
    subroutine compute_dt(fl,cx,cy,cz,c_max,c_out,dt_out)
 
       use types,     only: component_fluid
+      use grid,      only: cg
       use constants, only: big
       use mpi,       only: MPI_DOUBLE_PRECISION, MPI_MIN, MPI_MAX
       use mpisetup,  only: comm, ierr, cfl, has_dir, xdim, ydim, zdim, dom, geometry
