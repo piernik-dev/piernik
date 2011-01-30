@@ -37,14 +37,13 @@
 !<
 module grid
 
-   use mpisetup, only: geometry
    use types,    only: grid_container
 
    implicit none
 
    private
    public :: cleanup_grid, init_grid, grid_mpi_boundaries_prep
-   public :: total_ncells, geometry, cg, D_x, D_y, D_z
+   public :: total_ncells, cg, D_x, D_y, D_z
 
    integer, protected :: total_ncells                   !< total number of %grid cells
    integer, protected :: D_x                            !< set to 1 when x-direction exists, 0 otherwise. Use to construct dimensionally-safe indices for arrays

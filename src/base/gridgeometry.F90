@@ -94,7 +94,7 @@ contains
    subroutine init_geometry
 
       use dataio_pub, only: msg, die, code_progress, PIERNIK_INIT_BASE
-      use grid,       only: geometry
+      use mpisetup,   only: geometry
 
       implicit none
 
