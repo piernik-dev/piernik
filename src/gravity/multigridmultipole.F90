@@ -117,9 +117,9 @@ contains
    subroutine init_multipole(mb_alloc)
 
       use dataio_pub,    only: die, warn
-      use mpisetup,      only: master, xdim, ydim, zdim, dom, eff_dim
+      use mpisetup,      only: master, xdim, ydim, zdim, dom, eff_dim, geometry
       use multigridvars, only: level_min, level_max, lvl
-      use grid,          only: geometry, cg
+      use grid,          only: cg
 
       implicit none
 
@@ -299,8 +299,7 @@ contains
    subroutine isolated_monopole
 
       use dataio_pub,    only: die
-      use grid,          only: geometry
-      use mpisetup,      only: xdim, ydim, zdim
+      use mpisetup,      only: xdim, ydim, zdim, geometry
       use multigridvars, only: LOW, HIGH, is_external, XLO, XHI, YLO, YHI, ZLO, ZHI
       use constants,     only: newtong
 
@@ -351,10 +350,9 @@ contains
 
    subroutine find_img_CoM
 
-      use grid,            only: geometry
       use multigridvars,   only: is_external, XLO, XHI, YLO, YHI, ZLO, ZHI, LOW, HIGH
       use dataio_pub,      only: die
-      use mpisetup,        only: xdim, ydim, zdim, comm3d, ierr
+      use mpisetup,        only: xdim, ydim, zdim, comm3d, ierr, geometry
       use mpi,             only: MPI_DOUBLE_PRECISION, MPI_SUM
 
       implicit none
@@ -989,7 +987,7 @@ contains
    subroutine geomfac4moments(factor, x, y, z, sin_th, cos_th, ir, delta)
 
       use dataio_pub,    only: die
-      use grid, only: geometry
+      use mpisetup,      only: geometry
 
       implicit none
 

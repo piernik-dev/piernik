@@ -63,10 +63,9 @@ contains
 !-----------------------------------------------------------------------------
    subroutine read_problem_par
       use dataio_pub,          only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml      ! QA_WARN required for diff_nml
-      use mpisetup,            only: cbuff, rbuff, ibuff, lbuff, buffer_dim, master, slave, comm, ierr
+      use mpisetup,            only: cbuff, rbuff, ibuff, lbuff, buffer_dim, master, slave, comm, ierr, geometry
       use mpi,                 only: MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL
       use gravity,             only: grav_pot_3d
-      use grid,                only: geometry
       use types,               only: problem_customize_solution, problem_grace_passed
       use list_hdf5,           only: problem_write_restart, problem_read_restart
       use fluidboundaries_pub, only: user_bnd_xl, user_bnd_xr
@@ -233,9 +232,9 @@ contains
       use constants,           only: newtong, gram, cm, kboltz, mH, dpi
       use fluidindex,          only: ibx, iby, ibz, flind
       use gravity,             only: r_smooth, r_grav, n_gravr, ptmass, source_terms_grav, grav_pot2accel, grav_pot_3d
-      use grid,                only: cg, geometry
+      use grid,                only: cg
       use hydrostatic,         only: hydrostatic_zeq_densmid
-      use mpisetup,            only: zdim, has_dir, dom, master
+      use mpisetup,            only: zdim, has_dir, dom, master, geometry
       use types,               only: component_fluid
       use dataio_pub,          only: die
 

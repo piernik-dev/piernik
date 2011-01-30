@@ -106,11 +106,10 @@ contains
    subroutine init_multigrid_diff
 
       use multigridvars,      only: ngridvars, extbnd_zero, extbnd_extrapolate, extbnd_mirror, extbnd_antimirror
-      use mpisetup,           only: buffer_dim, comm, ierr, master, slave, ibuff, rbuff, lbuff, cbuff
+      use mpisetup,           only: buffer_dim, comm, ierr, master, slave, ibuff, rbuff, lbuff, cbuff, geometry
       use mpi,                only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL, MPI_CHARACTER
       use dataio_pub,         only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml      ! QA_WARN required for diff_nml
       use dataio_pub,         only: die, warn, msg
-      use grid,               only: geometry
 
       implicit none
 

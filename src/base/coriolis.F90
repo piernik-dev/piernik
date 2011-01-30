@@ -52,7 +52,7 @@ contains
    subroutine init_coriolis
 
       use dataio_pub, only: die, code_progress, PIERNIK_INIT_BASE
-      use grid,       only: geometry
+      use mpisetup,   only: geometry
 
       implicit none
 

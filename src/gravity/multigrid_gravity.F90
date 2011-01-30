@@ -159,10 +159,9 @@ contains
 !<
    subroutine init_multigrid_grav
 
-      use grid,               only: geometry
       use multigridvars,      only: bnd_periodic, bnd_dirichlet, bnd_isolated, bnd_invalid, correction, mg_nb, ngridvars, periodic_bnd_cnt, non_periodic_bnd_cnt
       use multipole,          only: use_point_monopole, lmax, mmax, ord_prolong_mpole, coarsen_multipole, interp_pt2mom, interp_mom2pot
-      use mpisetup,           only: buffer_dim, comm, ierr, master, slave, ibuff, cbuff, rbuff, lbuff, dom, has_dir
+      use mpisetup,           only: buffer_dim, comm, ierr, master, slave, ibuff, cbuff, rbuff, lbuff, dom, has_dir, geometry
       use mpi,                only: MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL
       use dataio_pub,         only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml  ! QA_WARN required for diff_nml
       use dataio_pub,         only: msg, die, warn
