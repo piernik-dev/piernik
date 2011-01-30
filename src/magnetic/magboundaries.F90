@@ -595,8 +595,8 @@ contains
       integer, intent(out) :: lnbcells    !< number of cells in a loop at left boundary
       integer, intent(out) :: rnbcells    !< number of cells in a loop at right boundary
       real,    intent(out) :: bndsign     !< 1. or -1. to change the sign or not
-      integer, intent(out) :: zndiff      !< \todo Comment me
-      integer, intent(out) :: rrbase      !< \todo Comment me
+      integer, intent(out) :: zndiff      !< COMMENT ME
+      integer, intent(out) :: rrbase      !< COMMENT ME
 
       select case (bndcase)
          case (1)

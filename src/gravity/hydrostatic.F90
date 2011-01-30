@@ -69,7 +69,7 @@ contains
 !! \param iia x index of z-column
 !! \param jja y index of z-column
 !! \param coldens column density value for given x and y coordinates
-!! \csim2 sqare of sound velocity
+!! \param csim2 sqare of sound velocity
 !<
    subroutine hydrostatic_zeq_coldens(iia,jja,coldens,csim2)
 
@@ -91,11 +91,11 @@ contains
 
 !>
 !! \brief Routne that establishes hydrostatic equilibrium for fixed plane density value
-!! \detailsTo properly use this routine it is important to make sure that get_gprofs pointer has been associated. See details of start_hydrostatic routine.
+!! \details To properly use this routine it is important to make sure that get_gprofs pointer has been associated. See details of start_hydrostatic routine.
 !! \param iia x-coordinate of z-column
 !! \param jja y-coordinate of z-column
 !! \param d0 plane density value for given x and y coordinates
-!! \csim2 sqare of sound velocity
+!! \param csim2 sqare of sound velocity
 !! \param sd optional variable to give a sum of dprofs array from hydrostatic_main routine
 !<
    subroutine hydrostatic_zeq_densmid(iia,jja,d0,csim2,sd)
@@ -255,10 +255,10 @@ contains
 !>
 !! \brief Routine that prepares data for constructing hydrostatic equilibrium by hydrostatic_main routine
 !! \details It is important to have get_gprofs pointer associated to a proper routine that gives back the column of nsub*nzt elements of gravitational acceleration in z direction. In the most common cases the gprofs_target parameter from GRAVITY namelist may be used. When it is set to 'accel' or 'gparr' the pointer is associated to get_gprofs_accel or get_gprofs_gparray routines, respectively.
-!! \annotate After calling this routine gprofs is multiplied by dzs/csim2 which are assumed to be constant. This is done for optimizing the hydrostatic_main routine.
+!! \note After calling this routine gprofs is multiplied by dzs/csim2 which are assumed to be constant. This is done for optimizing the hydrostatic_main routine.
 !! \param iia x-coordinate of z-column
 !! \param jja y-coordinate of z-column
-!! \csim2 sqare of sound velocity
+!! \param csim2 sqare of sound velocity
 !! \param sd optional variable to give a sum of dprofs array from hydrostatic_main routine
 !<
    subroutine start_hydrostatic(iia,jja,csim2,sd)

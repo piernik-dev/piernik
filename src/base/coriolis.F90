@@ -81,7 +81,7 @@ contains
       implicit none
 
       character(len=*), intent(in)                   :: sweep  !< string of characters that points out the current sweep direction
-      real, dimension(:,:), intent(in)               :: u
+      real, dimension(:,:), intent(in)               :: u      !< current fluid state vector
       real, dimension(flind%fluids, size(u,2)), intent(inout) :: rotacc !< an array for Coriolis accelerations
 
       ! Coriolis force for corotating coords

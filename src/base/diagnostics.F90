@@ -148,9 +148,8 @@ contains
    end subroutine pop_real_vector
 
    subroutine increase_char_vector(vec,addlen,lensize)
-!> \todo get rid of lensize
       implicit none
-      integer, intent(in) :: lensize, addlen
+      integer, intent(in) :: lensize, addlen !> \todo get rid of lensize
       character(len=lensize), dimension(:), allocatable, intent(inout) :: vec
       character(len=lensize), dimension(:), allocatable :: temp
       integer :: old_size

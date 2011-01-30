@@ -251,7 +251,7 @@ contains
       integer, intent(in) :: iv              !< variable which we want to set
       integer, intent(in) :: ng              !< number of guardcells to set
       integer, intent(in) :: mode            !< what to do with external boundaries
-      logical, intent(in) :: cor             !< if .true. then don't forget about corners \depracated BEWARE: not implemented properly
+      logical, intent(in) :: cor             !< if .true. then don't forget about corners \deprecated BEWARE: not implemented properly
 
       integer :: i
       logical, save :: warned = .false.
@@ -263,8 +263,7 @@ contains
          endif
       endif
 
-      !> \deprecated BEWARE: some cylindrical factors may be helpful
-      select case (mode)
+      select case (mode)         !> \deprecated BEWARE: some cylindrical factors may be helpful
          case (extbnd_donothing) ! remember to initialize everything first!
             return
          case (extbnd_extrapolate) !> \deprecated mixed-tybe BC: free flux; BEWARE: it is not protected from inflow

@@ -140,12 +140,14 @@ contains
 
       implicit none
 
-      integer, intent(in)  :: n
-      real, dimension(flind%all,n),    intent(out), target :: flux, cfr, uu
-      real, dimension(nmag,n),        intent(in),  target :: bb
-      real, dimension(flind%fluids,n), intent(out), target :: vx
-      real, dimension(flind%fluids,n), intent(out), target :: pp
-      real, dimension(n), optional,   intent(in),  target :: cs_iso2
+      integer, intent(in)                                   :: n        !< size of input arrays
+      real, dimension(flind%all,n),    intent(out), target  :: flux     !< array storing all fluxes
+      real, dimension(flind%all,n),    intent(out), target  :: cfr      !< array storing all freezing speeds
+      real, dimension(flind%all,n),    intent(out), target  :: uu       !< array with current fluid state
+      real, dimension(nmag,n),         intent(in),  target  :: bb       !< array with current magnetic field state
+      real, dimension(flind%fluids,n), intent(out), target  :: vx       !< array storing velocity in current sweep direction (reused later)
+      real, dimension(flind%fluids,n), intent(out), target  :: pp       !< array storing pressure in current sweeo (reused later)
+      real, dimension(n), optional,    intent(in),  target  :: cs_iso2  !< array with current sound speed squared
 
       real, dimension(:,:), pointer                     :: pflux, pcfr, puu, pbb
       real, dimension(:), pointer                       :: pcs2, pvx, ppp

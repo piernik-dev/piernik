@@ -81,7 +81,8 @@ module gravity
 
       subroutine gprofs_default(iia,jja)
          implicit none
-         integer, intent(in) :: iia, jja                    !< COMMENT ME
+         integer, intent(in) :: iia                    !< COMMENT ME
+         integer, intent(in) :: jja                    !< COMMENT ME
       end subroutine gprofs_default
 
       subroutine grav_types(gp,ax,flatten)
@@ -95,7 +96,8 @@ module gravity
       subroutine user_grav_accel(sweep, i1,i2, xsw, n, grav)
          implicit none
          character(len=*), intent(in)   :: sweep            !< COMMENT ME
-         integer, intent(in)            :: i1, i2           !< COMMENT ME
+         integer, intent(in)            :: i1               !< COMMENT ME
+         integer, intent(in)            :: i2               !< COMMENT ME
          integer, intent(in)            :: n                !< COMMENT ME
          real, dimension(n),intent(in)  :: xsw              !< COMMENT ME
          real, dimension(n),intent(out) :: grav             !< COMMENT ME
