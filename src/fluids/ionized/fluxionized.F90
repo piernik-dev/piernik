@@ -142,9 +142,9 @@ contains
       maxvx = maxval(vx(RNG))
       amp   = 0.5*(maxvx-minvx)
 #ifdef ISO
-      cfri(1,RNG) = sqrt(vx(RNG)**2+cfr_smooth*amp) + max(sqrt( abs(2.5*pmag(RNG) +              p(RNG))/uui(idn,RNG)),small)
+      cfri(1,RNG) = sqrt(vx(RNG)**2+cfr_smooth*amp) + max(sqrt( abs(2.0*pmag(RNG) +              p(RNG))/uui(idn,RNG)),small)
 #else /* !ISO */
-      cfri(1,RNG) = sqrt(vx(RNG)**2+cfr_smooth*amp) + max(sqrt( abs(2.5*pmag(RNG) + flind%ion%gam*p(RNG))/uui(idn,RNG)),small)
+      cfri(1,RNG) = sqrt(vx(RNG)**2+cfr_smooth*amp) + max(sqrt( abs(2.0*pmag(RNG) + flind%ion%gam*p(RNG))/uui(idn,RNG)),small)
 #endif /* !ISO */
       !> \deprecated BEWARE: that is the cause of fast decreasing of timestep in galactic disk problem
       !>
