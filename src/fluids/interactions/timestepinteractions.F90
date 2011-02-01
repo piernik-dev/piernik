@@ -43,6 +43,7 @@ contains
 !<
   real function timestep_interactions() result(dt)
     use arrays,       only: u, b
+    use func,         only: L2norm
     use constants,    only: small
     use fluidindex,   only: flind
     use interactions, only: collfaq, cfl_interact, has_interactions
@@ -60,9 +61,9 @@ contains
     !> \deprecated BEWARE: works only with neu+dust!!!!
 
     if (has_interactions) then
-       val = maxval (  sqrt( (u(flind%dst%imx,:,:,:)-u(flind%neu%imx,:,:,:))**2 + &
-                    (u(flind%dst%imy,:,:,:)-u(flind%neu%imy,:,:,:))**2 + &
-                    (u(flind%dst%imz,:,:,:)-u(flind%neu%imz,:,:,:))**2   ) * u(flind%dst%idn,:,:,:) )
+!       val = maxval (  sqrt( (u(flind%dst%imx,:,:,:)-u(flind%neu%imx,:,:,:))**2 + (u(flind%dst%imy,:,:,:)-u(flind%neu%imy,:,:,:))**2 + &
+!                             (u(flind%dst%imz,:,:,:)-u(flind%neu%imz,:,:,:))**2   ) * u(flind%dst%idn,:,:,:) )
+       val = maxval ( L2norm(u(flind%dst%imx,:,:,:),u(flind%dst%imy,:,:,:),u(flind%dst%imz,:,:,:),u(flind%neu%imx,:,:,:),u(flind%neu%imy,:,:,:),u(flind%neu%imz,:,:,:) ) * u(flind%dst%idn,:,:,:) )
        dt_interact_proc = flind%neu%cs / (maxval(collfaq) * val + small)
 
        call MPI_Reduce(dt_interact_proc, dt_interact_all, 1, MPI_DOUBLE_PRECISION, MPI_MIN, 0, comm, ierr)

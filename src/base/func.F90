@@ -37,7 +37,7 @@
 module func
    implicit none
    private
-   public :: pshift, mshift, fix_string, ekin, emag
+   public :: pshift, mshift, fix_string, ekin, emag, L2norm
    integer, parameter :: one = 1
 contains
 
@@ -166,11 +166,20 @@ contains
       if (ichar(c) >= 48 .and. ichar(c) <= 57) is_digit=.true.
    end function is_digit
 
+   elemental real function L2norm(x1,x2,x3,y1,y2,y3)
+      implicit none
+      real, intent(in) :: x1, x2, x3
+      real, intent(in) :: y1, y2, y3
+
+      L2norm = sqrt( (x1 - y1)**2 + (x2 - y2)**2 + (x3 - y3)**2 )
+   end function L2norm
+
    elemental real function emag(bx,by,bz)
       implicit none
       real, intent(in) :: bx, by, bz
 
       emag = 0.5*(bx**2 + by**2 + bz**2)
+
    end function emag
 
    elemental real function ekin(mx,my,mz,dn)

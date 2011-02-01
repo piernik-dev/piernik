@@ -1013,6 +1013,8 @@ contains
       use grid,               only: cg
       use mpisetup,           only: cfl, t, dt, master
       use types,              only: tsl_container, value, idlen
+      use interactions,       only: has_interactions, collfaq
+      use func,               only: L2norm
 #ifdef COSM_RAYS
       use fluidindex,         only: iarr_all_crs
       use timestepcosmicrays, only: dt_crs
@@ -1029,6 +1031,7 @@ contains
       type(tsl_container), optional  :: tsl
       real :: dxmn_safe
 
+      type(value) :: drag
 #ifdef MAGNETIC
       type(value) :: b_min, b_max, divb_max, vai_max
 #endif /* MAGNETIC */
@@ -1043,7 +1046,7 @@ contains
 #endif /* VARIABLE_GP */
       character(len=idlen) :: id
 
-      id = "" ! suppress compiler warnings if noe of the modules requiring the id variable are swithed on.
+      id = '' ! suppress compiler warnings if noe of the modules requiring the id variable are swithed on.
       if (cg%dxmn >= sqrt(huge(1.0))) then
          dxmn_safe = sqrt(huge(1.0))
       else
@@ -1142,6 +1145,11 @@ contains
       call get_extremum(wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), 'min', encr_min)
 #endif /* COSM_RAYS */
 
+      if (has_interactions) then
+         wa = L2norm(u(flind%dst%imx,:,:,:),u(flind%dst%imy,:,:,:),u(flind%dst%imz,:,:,:),u(flind%neu%imx,:,:,:),u(flind%neu%imy,:,:,:),u(flind%neu%imz,:,:,:) ) * u(flind%dst%idn,:,:,:)
+         call get_extremum(wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), 'max', drag)
+      endif
+
       if (master)  then
          if (.not.present(tsl)) then
             call printinfo('===========================================================================', .false.)
@@ -1172,6 +1180,10 @@ contains
 #ifdef DUST
             call common_shout(flind%dst%snap,'DST',.false.,.false.,.false.)
 #endif /* DUST */
+            if (has_interactions) then
+               write(msg, fmt_dtloc) 'max(drag)   ', "INT", drag%val, flind%neu%cs/(maxval(collfaq) * drag%val + small), drag%proc, drag%loc
+               call printinfo(msg, .false.)
+            endif
 #ifdef COSM_RAYS
             id = "CRS"
             write(msg, fmt_loc)   'min(encr)   ', id, encr_min%val, encr_min%proc, encr_min%loc
