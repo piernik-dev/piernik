@@ -50,14 +50,15 @@ module initproblem
    !! \f$\tau\f$ in \f$\frac{Du}{Dt} = - \frac{u-u_0}{\tau}f(R)
    !! when initproblem::problem_customize_solution is used
    !<
-   real                     :: dumping_coeff
+   real                     :: dumping_coeff, drag_max, drag_min
    logical                  :: use_inner_orbital_period  !< use 1./T_inner as dumping_coeff
    character(len=cbuff_len) :: mag_field_orient
    real, target, allocatable, dimension(:,:,:,:) :: den0, mtx0, mty0, mtz0, ene0
    integer, parameter       :: dname_len = 10
 
    namelist /PROBLEM_CONTROL/  alpha, d0, dout, r_max, mag_field_orient, r_in, r_out, f_in, f_out, &
-      & dens_exp, eps, dens_amb, x_cut, cutoff_ncells, dumping_coeff, use_inner_orbital_period
+      & dens_exp, eps, dens_amb, x_cut, cutoff_ncells, dumping_coeff, use_inner_orbital_period, &
+      & drag_max, drag_min
 
 contains
 !-----------------------------------------------------------------------------
@@ -115,6 +116,8 @@ contains
          rbuff(11) = dens_amb
          rbuff(12) = x_cut
          rbuff(13) = dumping_coeff
+         rbuff(14) = drag_max
+         rbuff(15) = drag_min
 
       endif
 
@@ -144,6 +147,8 @@ contains
          dens_amb         = rbuff(11)
          x_cut            = rbuff(12)
          dumping_coeff    = rbuff(13)
+         drag_max         = rbuff(14)
+         drag_min         = rbuff(15)
 
       endif
 
@@ -547,8 +552,8 @@ contains
       if (frun) then
          x0 = relax_time + 2.0
          x1 = x0 + 30.0
-         y0 = 100.0
-         y1 = 1.0
+         y0 = drag_max
+         y1 = drag_min
          a = (y0 - y1)/(x0 - x1)
          b = y0 - a*x0
          allocate(funcR(size(iarr_all_dn), cg%nx) )
