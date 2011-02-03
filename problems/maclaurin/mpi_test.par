@@ -4,9 +4,7 @@
     nzd = 16
  /
  $MPI_BLOCKS
-    pxsize = 2
-    pysize = 2
-    pzsize = 2
+    psize = 2, 2, 2
  /
 
  $CONSTANTS

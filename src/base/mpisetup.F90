@@ -68,7 +68,7 @@ module mpisetup
    integer, parameter    :: zdim=3                          !< parameter assigned to z-direction
    integer, parameter    :: ndims = 3       ! 3D grid
    integer               :: comm, comm3d
-   integer, dimension(ndims) :: psize, pcoords, coords
+   integer, dimension(ndims) :: pcoords, coords
    logical, dimension(ndims) :: periods
    integer               ::   procxl, procxr, procyl, procyr, proczl, proczr, procxyl, procyxl, procxyr, procyxr
    logical, protected, dimension(ndims) :: has_dir   !< .true. for existing directions
@@ -90,12 +90,10 @@ module mpisetup
 
    ! Namelist variables
 
-   integer :: pxsize          !< number of MPI blocks in x-dimension
-   integer :: pysize          !< number of MPI blocks in y-dimension
-   integer :: pzsize          !< number of MPI blocks in z-dimension
-   logical :: reorder         !< allows processes reordered for efficiency (a parameter of MPI_Cart_create and MPI_graph_create)
+   integer, dimension(ndims) :: psize !< desired number of MPI blocks in x, y and z-dimension
+   logical :: reorder                 !< allows processes reordered for efficiency (a parameter of MPI_Cart_create and MPI_graph_create)
 
-   namelist /MPI_BLOCKS/ pxsize, pysize, pzsize, reorder
+   namelist /MPI_BLOCKS/ psize, reorder
 
    integer, protected :: nxd  !< number of %grid cells in physical domain (without boundary cells) in x-direction (if == 1 then x-dimension is reduced to a point with no boundary cells)
    integer, protected :: nyd  !< number of %grid cells in physical domain (without boundary cells) in y-direction (-- || --)
@@ -159,9 +157,7 @@ contains
 !! \n \n
 !! <table border="+1">
 !! <tr><td width="150pt"><b>parameter</b></td><td width="135pt"><b>default value</b></td><td width="200pt"><b>possible values</b></td><td width="315pt"> <b>description</b></td></tr>
-!! <tr><td>pxsize         </td><td>1      </td><td>integer</td><td>\copydoc mpisetup::pxsize         </td></tr>
-!! <tr><td>pysize         </td><td>1      </td><td>integer</td><td>\copydoc mpisetup::pysize         </td></tr>
-!! <tr><td>pzsize         </td><td>1      </td><td>integer</td><td>\copydoc mpisetup::pzsize         </td></tr>
+!! <tr><td>psize(3)       </td><td>1      </td><td>integer</td><td>\copydoc mpisetup::psize          </td></tr>
 !! <tr><td>reorder        </td><td>.false.</td><td>logical</td><td>\copydoc mpisetup::reorder        </td></tr>
 !! </table>
 !! \n \n
@@ -314,9 +310,8 @@ contains
       deallocate(pid_all)
       deallocate(cwd_all)
 
-      pxsize = 1
-      pysize = 1
-      pzsize = 1
+      psize(:) = [1, 1, 1]
+
       nxd    = 1
       nyd    = 1
       nzd    = 1
@@ -378,9 +373,7 @@ contains
          cbuff(8) = cflcontrol
          cbuff(9) = geometry
 
-         ibuff(1) = pxsize
-         ibuff(2) = pysize
-         ibuff(3) = pzsize
+         ibuff(xdim:zdim) = psize(:)
          ibuff(4) = integration_order
          ibuff(5) = nxd
          ibuff(6) = nyd
@@ -448,9 +441,7 @@ contains
          cflcontrol = cbuff(8)
          geometry   = cbuff(9)
 
-         pxsize     = ibuff(1)
-         pysize     = ibuff(2)
-         pzsize     = ibuff(3)
+         psize(:)   = ibuff(xdim:zdim)
          integration_order = ibuff(4)
          nxd        = ibuff(5)
          nyd        = ibuff(6)
@@ -513,7 +504,6 @@ contains
       dom%y0 = (dom%ymax + dom%ymin)/2.
       dom%z0 = (dom%zmax + dom%zmin)/2.
 
-      psize(:) = [ pxsize, pysize, pzsize ]
       where (.not. has_dir(:)) psize(:) = 1
       if (.not. have_mpi) then
          if (any(psize(:) > 1)) call warn("[mpisetup:init_mpi] Ignoring p[xyz]size > 1 on a single-CPU run")

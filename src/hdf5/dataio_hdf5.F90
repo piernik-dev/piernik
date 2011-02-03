@@ -1591,6 +1591,7 @@ contains
    end subroutine write_hdf5
 
    subroutine write_arr(data,dsetname,file_id)
+
       use dataio_pub,    only: varlen
       use grid,          only: cg
       use hdf5,          only: HID_T, HSIZE_T, HSSIZE_T, h5screate_simple_f, h5pcreate_f, h5pset_chunk_f, &
@@ -1634,8 +1635,7 @@ contains
       !
       CALL h5pcreate_f(H5P_DATASET_CREATE_F, plist_id, error)
       CALL h5pset_chunk_f(plist_id, rank, chunk_dims, error)
-      CALL h5dcreate_f(file_id, dsetname, H5T_NATIVE_REAL, filespace, &
-                       dset_id, error, plist_id)
+      CALL h5dcreate_f(file_id, dsetname, H5T_NATIVE_REAL, filespace, dset_id, error, plist_id)
       CALL h5sclose_f(filespace, error)
 
       !
@@ -1651,8 +1651,8 @@ contains
       ! Select hyperslab in the file.
       !
       CALL h5dget_space_f(dset_id, filespace, error)
-      CALL h5sselect_hyperslab_f (filespace, H5S_SELECT_SET_F, offset, count, error, &
-                                  stride, block)
+      CALL h5sselect_hyperslab_f (filespace, H5S_SELECT_SET_F, offset, count, error, stride, block)
+
       !
       ! Create property list for collective dataset write
       !
@@ -1662,8 +1662,7 @@ contains
       !
       ! Write the dataset collectively.
       !
-      CALL h5dwrite_f(dset_id, H5T_NATIVE_REAL, data, dimsfi, error, &
-                      file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
+      CALL h5dwrite_f(dset_id, H5T_NATIVE_REAL, data, dimsfi, error, file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
 
       !
       ! Close dataspaces.
@@ -1765,6 +1764,7 @@ contains
             i = i+1
          enddo
 
+         !> \todo write env(:) and parfile(:) as an array of strings rather than line by line. switch on GZIP internal compression for these two objects
          call H5Gcreate_f(file_id,"file_versions",gr_id,error)
          do i = 1, nenv
             write(dset_name,'(A4,I3.3)') "env_",i

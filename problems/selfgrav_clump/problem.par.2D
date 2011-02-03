@@ -8,9 +8,7 @@
  /
 
  $MPI_BLOCKS
-    pxsize = 2
-    pysize = 1
-    pzsize = 1
+    psize = 2, 1, 1
  /
 
  $CONSTANTS

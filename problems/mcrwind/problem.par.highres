@@ -6,9 +6,7 @@
  /
 
  $MPI_BLOCKS
-    pxsize       = 1
-    pysize       = 1
-    pzsize       = 4
+    psize = 1, 1, 4
  /
 
  $START_CONTROL
