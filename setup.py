@@ -92,17 +92,13 @@ define ECHO_CC
 endef
 endif
 
-.PHONY: print_fc
+all: env.dat $(PROG)
 
-all: env.dat print_fc $(PROG)
-
-print_fc:
+$(PROG): $(OBJS)
 ifeq ("$(SILENT)","1")
 \t@$(ECHO) FC = $(F90) $(CPPFLAGS) $(F90FLAGS) -c
 \t@$(ECHO) CC = $(CC) $(CPPFLAGS) $(CFLAGS) -c
 endif
-
-$(PROG): $(OBJS)
 \t@$(ECHO) $(F90) $(LDFLAGS) -o $@ '*.o' $(LIBS)
 \t@$(F90) $(LDFLAGS) -o $@ $(OBJS) $(LIBS)
 \t@AO1=`mktemp _ao_XXXXXX`;\\
@@ -336,6 +332,10 @@ else:
 
 if(os.path.isdir(objdir)): shutil.rmtree(objdir)
 os.mkdir(objdir)
+
+sc = open(objdir+"/.setup.call", "w")
+sc.write( " ".join(sys.argv) + "\n#effective call (after evaluation of .setuprc*):\n#" + sys.argv[0] + " ".join(all_args) + "\n" )
+sc.close()
 
 f90files = []
 allfiles = []
