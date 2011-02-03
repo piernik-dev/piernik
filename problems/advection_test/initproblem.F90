@@ -184,7 +184,7 @@ contains
    subroutine finalize_problem_adv
 
       use arrays,        only: u
-      use dataio_pub,    only: msg, printinfo
+      use dataio_pub,    only: msg, printinfo, warn
       use grid,          only: cg
       use mpisetup,      only: master, comm3d, ierr
       use mpi,           only: MPI_DOUBLE_PRECISION, MPI_SUM, MPI_MIN, MPI_MAX, MPI_IN_PLACE
@@ -195,6 +195,11 @@ contains
       integer            :: i, j, k
       real, dimension(2) :: norm, dev
       real               :: dini
+
+      if (.not. allocated(inid)) then
+         if (master) call warn("[initproblem:finalize_problem_adv] Cannot compare results with the initial conditions. Perhaps there is no 'inid' array in the restart file?")
+         return
+      endif
 
       norm(:) = 0.
       dev(1) = huge(1.0)
