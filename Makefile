@@ -34,7 +34,7 @@ all: $(ALLOBJ)
 ifeq ("$(RS)","1")
 	@if [ -e $@/.setup.call ] ; then \
 		eval `grep -v "^#" $@/.setup.call`; \
-	elif [ -e $$i/env.dat ] ; then \
+	elif [ -e $@/env.dat ] ; then \
 		eval `head -n 1 $@/env.dat`; \
 	else \
 		$(ECHO) -e "\033[31;1mDon't know how to resetup '"$@"'\033[0m"; \
