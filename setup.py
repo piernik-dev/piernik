@@ -334,7 +334,7 @@ if(os.path.isdir(objdir)): shutil.rmtree(objdir)
 os.mkdir(objdir)
 
 sc = open(objdir+"/.setup.call", "w")
-sc.write( " ".join(sys.argv) + "\n#effective call (after evaluation of .setuprc*):\n#" + sys.argv[0] + " ".join(all_args) + "\n" )
+sc.write( " ".join(sys.argv) + "\n#effective call (after evaluation of .setuprc*):\n#" + sys.argv[0] + " " + " ".join(all_args) + "\n" )
 sc.close()
 
 f90files = []
