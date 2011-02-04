@@ -71,7 +71,11 @@ module fluxneutral
 
 contains
 !==========================================================================================
-
+!
+! OPT: This routine may cost as much as 30% of rtvd. It seems that all the data fit well a 512kB L2 cache, but Ir:Dr:Dw is like 8:2:1
+! OPT: \todo Try an explicit loop over RNG to check if we're better than the compiler
+! OPT: similar treatment may be helpful for fluxionized.F90, fluxdust.F90 and fluxcosmicrays.F90
+!
    subroutine flux_neu(fluxn,cfrn,uun,n,vx,p,bb,cs_iso2)
 
       use constants,       only: small
@@ -98,6 +102,7 @@ contains
       real               :: amp       !<
 #endif /* LOCAL_FR_SPEED */
 
+      ! OPT: These initializastions may cost about 30% of the routine. Probably we can just delete them.
       fluxn   = 0.0; cfrn    = 0.0; vx      = 0.0; p       = 0.0
 
       vx(RNG) = uun(imx,RNG)/uun(idn,RNG)
@@ -143,6 +148,7 @@ contains
 
       cfrn(1,1) = cfrn(1,2)
       cfrn(1,n) = cfrn(1,n-1)
+      ! OPT: This may cost about 20% of the whole routine, let's what happens with an explicit loop.
       cfrn = spread(cfrn(1,:),1,flind%neu%all)
 #endif /* LOCAL_FR_SPEED */
 

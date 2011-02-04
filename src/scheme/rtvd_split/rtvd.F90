@@ -219,6 +219,13 @@ contains
 !! of oscillations, called Total Variation.
 !<
 !*/
+
+! OPT: 15% of CPU time spent in the relaxing_tvd routine is attributed to the entry point. The rest is more or less evenly distributed across all array operations
+! OPT: \todo try to pass pointers instead of arrays, or assemble the arrays here
+! OPT: n is usually short enough for all the data to fit L2 cache (checked on 512kB)
+! OPT: we may also try to work on bigger parts of the u(:,:,:,:) at a time , but the exact amount may depend on size of the L2 cache
+! OPT: try an explicit loop over n to see if berrer pipelining can be achieved
+
    subroutine relaxing_tvd(n, u, bb, sweep, i1, i2, dx, dt)
 
       use dataio_pub,       only: msg, die
@@ -335,6 +342,7 @@ contains
       if (.false.) dummy = len(sweep)
 #endif /* !ISO_LOCAL && !SHEAR && !GRAV && !FLUID_INTERACTIONS_DW && !(COSM_RAYS && IONIZED) */
 
+      !OPT: try to avoid these explicit initializations of w(:,:), cfr(:,:), u1(:,:) and u0(:,:)
       w         = 0.0
       cfr       = 0.0
       dtx       = dt / dx
@@ -385,6 +393,7 @@ contains
             dflp(:,1:n-1) = 0.5*(fl(:,1:n-1) - fl(:,2:n)); dflp(:,n) = dflp(:,n-1)
             dflm(:,2:n)   = dflp(:,1:n-1);                 dflm(:,1) = dflm(:,2)
             call flimiter(fl,dflm,dflp)
+!OPT 60% of D1mr and 40% D1mw occured in few above lines (D1mr = 0.1% Dr, D1mw = 0.5% Dw)
          endif
 
 ! u update

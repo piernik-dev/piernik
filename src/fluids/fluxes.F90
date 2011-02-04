@@ -262,6 +262,11 @@ contains
       ! locals
       real, dimension(size(a,1), size(a,2)) :: c !< a*b
 
+      ! OPT: We don't really need to know c(:,:) everywhere, we even don't need a(:,:)*b(:,:) to be a separate array
+      ! \todo benchmark an alternative code, and leave a note about results
+      ! where ((a(:,:)>0 .and. b(:,:)>0) .or. (a(:,:)<0 .and b(:,:)<0))
+      !   f = f+2.0*a*b/(a+b)
+      ! endwhere
       c = a*b                                                                    !> \todo OPTIMIZE ME
       where (c > 0.0)
          f = f+2.0*c/(a+b)

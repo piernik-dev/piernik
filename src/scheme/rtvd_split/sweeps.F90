@@ -224,6 +224,9 @@ contains
 
             call set_geo_coeffs('zsweep',flind,i,j)
 
+            !OPT: It looks that u_z gets re-assigned to something inside relaxing_tvd. \todo try to merge these assignments
+            !OPT: 3% D1mr, 3% D2mr, 20% D1mw, Ir:Dr:Dw ~ 10:4:1
+            !OPT: The same applies to sweepy and sweepz
             u_z(iarr_all_swpz,:)=u(:,i,j,:)
 
             call relaxing_tvd(cg%nz, u_z, b_z, 'zsweep', i, j, cg%dz, dt)
