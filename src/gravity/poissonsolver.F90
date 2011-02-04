@@ -431,7 +431,7 @@ contains
       factor = 1.0
 
       !> \deprecated BEWARE: This routine will work incorrectly if dx /= dz or dy /= dz (poisson_xyzp was corrected in r2124)
-      if (present(dz) .eqv. .true.) factor = dz * dz
+      if (present(dz)) factor = dz * dz
 
       do k = 1, nz
          rtmp(:,:)   = factor * den(:,:,k)

@@ -1306,7 +1306,7 @@ contains
       call MPI_Bcast(filename, cwdlen, MPI_CHARACTER, 0, comm, ierr)
 
       inquire(file = filename, exist = file_exist)
-      if (file_exist .eqv. .false.) then
+      if (.not. file_exist) then
          write(msg,'(3a)') '[dataio_hdf5:read_restart_hdf5]: Restart file: ',trim(filename),' does not exist'
          call die(msg)
       endif
@@ -1316,35 +1316,36 @@ contains
          CALL h5fopen_f(trim(filename), H5F_ACC_RDONLY_F, file_id, error)
 
          call h5ltget_attribute_double_f(file_id,"/","piernik", rbuf, error)
+         if (error /= 0) call die("[dataio_hdf5:read_restart_hdf5] Cannot read 'piernik' attribute from the restart file. The file may be either damaged or incompatible")
          if (rbuf(1) > piernik_hdf5_version) call die("[dataio_hdf5:read_restart_hdf5] Cannot read future versions of the restart file. Upgrade your Piernik code and try again.")
          if (int(rbuf(1)) < int(piernik_hdf5_version)) call die("[dataio_hdf5:read_restart_hdf5] The restart file is too ancient. Try to temporarily disable this statement if you are sure that it can be interpreted correctly.")
          if (rbuf(1) < piernik_hdf5_version) call warn("[dataio_hdf5:read_restart_hdf5] Old versions of the restart file may not always work fully correctly.")
 
          call h5ltget_attribute_int_f(file_id,"/","nxd", ibuf,error)
-         if (ibuf(1) /= dom%nxd) call die("[dataio_hdf5:read_restart_hdf5] nxd does not match")
+         if (ibuf(1) /= dom%nxd .or. error /= 0) call die("[dataio_hdf5:read_restart_hdf5] nxd does not match")
          if (has_dir(xdim)) then
             call h5ltget_attribute_double_f(file_id,"/","xmin", rbuf, error)
-            if (rbuf(1) /= dom%xmin) call die("[dataio_hdf5:read_restart_hdf5] xmin does not match")
+            if (rbuf(1) /= dom%xmin .or. error /= 0) call die("[dataio_hdf5:read_restart_hdf5] xmin does not match")
             call h5ltget_attribute_double_f(file_id,"/","xmax", rbuf, error)
-            if (rbuf(1) /= dom%xmax) call die("[dataio_hdf5:read_restart_hdf5] xmax does not match")
+            if (rbuf(1) /= dom%xmax .or. error /= 0) call die("[dataio_hdf5:read_restart_hdf5] xmax does not match")
          endif
 
          call h5ltget_attribute_int_f(file_id,"/","nyd", ibuf,error)
-         if (ibuf(1) /= dom%nyd) call die("[dataio_hdf5:read_restart_hdf5] nyd does not match")
+         if (ibuf(1) /= dom%nyd .or. error /= 0) call die("[dataio_hdf5:read_restart_hdf5] nyd does not match")
          if (has_dir(ydim)) then
             call h5ltget_attribute_double_f(file_id,"/","ymin", rbuf, error)
-            if (rbuf(1) /= dom%ymin) call die("[dataio_hdf5:read_restart_hdf5] ymin does not match")
+            if (rbuf(1) /= dom%ymin .or. error /= 0) call die("[dataio_hdf5:read_restart_hdf5] ymin does not match")
             call h5ltget_attribute_double_f(file_id,"/","ymax", rbuf, error)
-            if (rbuf(1) /= dom%ymax) call die("[dataio_hdf5:read_restart_hdf5] ymax does not match")
+            if (rbuf(1) /= dom%ymax .or. error /= 0) call die("[dataio_hdf5:read_restart_hdf5] ymax does not match")
          endif
 
          call h5ltget_attribute_int_f(file_id,"/","nzd", ibuf,error)
-         if (ibuf(1) /= dom%nzd) call die("[dataio_hdf5:read_restart_hdf5] nzd does not match")
+         if (ibuf(1) /= dom%nzd .or. error /= 0) call die("[dataio_hdf5:read_restart_hdf5] nzd does not match")
          if (has_dir(zdim)) then
             call h5ltget_attribute_double_f(file_id,"/","zmin", rbuf, error)
-            if (rbuf(1) /= dom%zmin) call die("[dataio_hdf5:read_restart_hdf5] zmin does not match")
+            if (rbuf(1) /= dom%zmin .or. error /= 0) call die("[dataio_hdf5:read_restart_hdf5] zmin does not match")
             call h5ltget_attribute_double_f(file_id,"/","zmax", rbuf, error)
-            if (rbuf(1) /= dom%zmax) call die("[dataio_hdf5:read_restart_hdf5] zmax does not match")
+            if (rbuf(1) /= dom%zmax .or. error /= 0) call die("[dataio_hdf5:read_restart_hdf5] zmax does not match")
          endif
 
          CALL h5fclose_f(file_id, error)

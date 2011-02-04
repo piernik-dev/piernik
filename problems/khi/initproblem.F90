@@ -126,15 +126,15 @@ contains
          do j = 1, cg%ny
             rcy = cg%y(j)
             rc=rcy-0.5*dom%Ly
-            if (rc .gt. 0.0) then
+            if (rc > 0.0) then
                u(idnn,i,j,:) = dtop
                u(imxn,i,j,:) = vtop*dtop
             endif
-            if (rc .le. 0.0) then
+            if (rc <= 0.0) then
                u(idnn,i,j,:) = dbot
                u(imxn,i,j,:) = vbot*dbot
             endif
-            if (abs(rc) .lt. lpert) then
+            if (abs(rc) < lpert) then
                u(imyn,i,j,:) = vp*sin(k0*rcx)*u(idnn,i,j,:)
             endif
             if (has_dir(zdim)) then

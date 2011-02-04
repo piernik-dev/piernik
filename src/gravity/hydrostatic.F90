@@ -173,7 +173,7 @@ contains
                dprof(k) = dprof(k) + dprofs(ksub)/real(nsub)
             endif
             if (present(sd)) then
-               if (zs(ksub) .gt. dom%zmin .and. zs(ksub) .lt. dom%zmax) then
+               if (zs(ksub) > dom%zmin .and. zs(ksub) < dom%zmax) then
                   sd = sd + dprofs(ksub)/real(nsub)
                endif
             endif
