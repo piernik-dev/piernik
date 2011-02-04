@@ -281,11 +281,7 @@ contains
             if (ierrh == 0) then
                parfilelines = parfilelines + 1
                i = len_trim(parfile(parfilelines))
-               if (i < len(parfile(parfilelines))) then
-                  parfile(parfilelines)(i+1:i+1) = achar(0)
-               else
-                  call warn("[dataio:init_dataio] problem.par contains very long lines. The copy in the logfile and HDF dumps can be truncated.")
-               endif
+               if (i >= len(parfile(parfilelines))) call warn("[dataio:init_dataio] problem.par contains very long lines. The copy in the logfile and HDF dumps can be truncated.")
             endif
          enddo
          close(1)

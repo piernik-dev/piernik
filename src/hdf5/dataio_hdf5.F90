@@ -1688,8 +1688,10 @@ contains
 
       use dataio_pub,    only: msg, printio, require_init_prob, piernik_hdf5_version, problem_name, run_id
       use grid,          only: cg
-      use hdf5,          only: HID_T, SIZE_T, H5F_ACC_RDWR_F, h5fopen_f, h5fclose_f, h5gcreate_f, h5gclose_f
-      use h5lt,          only: h5ltset_attribute_double_f, h5ltset_attribute_int_f, h5ltmake_dataset_string_f, h5ltset_attribute_string_f
+      use hdf5,          only: HID_T, SIZE_T, HSIZE_T, H5F_ACC_RDWR_F, H5T_NATIVE_CHARACTER, H5Z_FILTER_DEFLATE_F, H5P_DATASET_CREATE_F, &
+           &                   h5fopen_f, h5fclose_f, H5Zfilter_avail_f, H5Pcreate_f, H5Pset_deflate_f, H5Pset_chunk_f, &
+           &                   h5tcopy_f, h5tset_size_f, h5screate_simple_f, H5Dcreate_f, H5Dwrite_f, H5Dclose_f, H5Sclose_f, H5Tclose_f, H5Pclose_f
+      use h5lt,          only: h5ltset_attribute_double_f, h5ltset_attribute_int_f, h5ltset_attribute_string_f
       use list_hdf5,     only: additional_attrs
       use mpisetup,      only: master, t, dt, cbuff_len, local_magic_mass, comm, ierr, magic_mass, dom
       use mpi,           only: MPI_DOUBLE_PRECISION, MPI_SUM
@@ -1702,17 +1704,17 @@ contains
       character(len=*), intent(in) :: stype     !> "output" or "restart"
       type(hdf), intent(in)        :: chdf
 
-      integer(HID_T) :: file_id       !> File identifier
-      integer(HID_T) :: gr_id         !> Group identifier
-      character(len=cbuff_len) :: dset_name
-      character(len=maxparfilelen) :: trim_env
-      integer            :: fe, i
-      integer(SIZE_T) :: bufsize
-      integer :: error
-      real    :: magic_mass0
-      integer, parameter          :: buf_len = 50
-      integer, dimension(buf_len) :: ibuffer
-      real,    dimension(buf_len) :: rbuffer
+      integer(HID_T)                 :: file_id       !> File identifier
+      integer(HID_T)                 :: type_id, dspace_id, dset_id, prp_id
+      integer(HSIZE_T), dimension(1) :: dimstr
+      logical                        :: Z_avail
+      integer                        :: fe, i, maxlen
+      integer(SIZE_T)                :: bufsize
+      integer                        :: error
+      real                           :: magic_mass0
+      integer, parameter             :: buf_len = 50
+      integer, dimension(buf_len)    :: ibuffer
+      real,    dimension(buf_len)    :: rbuffer
       character(len=cbuff_len), dimension(buf_len) :: ibuffer_name = ''
       character(len=cbuff_len), dimension(buf_len) :: rbuffer_name = ''
 
@@ -1770,23 +1772,37 @@ contains
             i = i+1
          enddo
 
-         !> \todo write env(:) and parfile(:) as an array of strings rather than line by line. switch on GZIP internal compression for these two objects
-         call H5Gcreate_f(file_id,"file_versions",gr_id,error)
-         do i = 1, nenv
-            write(dset_name,'(A4,I3.3)') "env_",i
-            trim_env=trim(env(i))
-            if (len_trim(trim_env) < len(trim_env)) trim_env(len_trim(trim_env)+1:len_trim(trim_env)+1) = achar(0)
-            ! I don't understand why passing trim(env(i)) or trim(trim_env) to h5ltmake_dataset_string_f sometimes results in improper detection of the string length.
-            call h5ltmake_dataset_string_f (gr_id, dset_name, trim_env, error)
-         enddo
-         call H5Gclose_f(gr_id, error)
+         ! Store a compressed copy of the problem.par file.
+         maxlen = maxval(len_trim(parfile(:parfilelines)))
+         dimstr = [parfilelines]
+         call H5Zfilter_avail_f(H5Z_FILTER_DEFLATE_F, Z_avail, error)
+         ! call H5Zget_filter_info_f ! everything should be always fine for gzip
+         call H5Pcreate_f(H5P_DATASET_CREATE_F, prp_id, error)
+         if (Z_avail) then
+            call H5Pset_deflate_f(prp_id, 9, error)
+            call H5Pset_chunk_f(prp_id, 1, dimstr, error)
+         endif
+         call H5Tcopy_f(H5T_NATIVE_CHARACTER, type_id, error)
+         call H5Tset_size_f(type_id, maxlen, error)
+         call H5Screate_simple_f(1, dimstr, dspace_id, error)
+         call H5Dcreate_f(file_id, "problem.par", type_id,  dspace_id, dset_id, error, dcpl_id = prp_id)
+         call H5Dwrite_f(dset_id, type_id, parfile(:)(:maxlen), dimstr, error)
+         call H5Dclose_f(dset_id, error)
+         call H5Sclose_f(dspace_id, error)
 
-         call H5Gcreate_f(file_id,"problem.par",gr_id,error)
-         do i = 1, parfilelines
-            write(dset_name,'(A8,I4.4)') "parfile_",i
-            call h5ltmake_dataset_string_f (gr_id, trim(dset_name), trim(parfile(i)), error)
-         enddo
-         call H5Gclose_f(gr_id, error)
+         ! Store a compressed copy of the piernik.def file and Id lines from source files.
+         ! We recycle type_id and prp_id, so we don't close them yet.
+         maxlen = maxval(len_trim(env(:nenv)))
+         dimstr = [nenv]
+         if (Z_avail) call H5Pset_chunk_f(prp_id, 1, dimstr, error)
+         call H5Tset_size_f(type_id, maxlen, error)
+         call H5Screate_simple_f(1, dimstr, dspace_id, error)
+         call H5Dcreate_f(file_id, "env", type_id,  dspace_id, dset_id, error, dcpl_id = prp_id)
+         call H5Dwrite_f(dset_id, type_id, env(:)(:maxlen), dimstr, error)
+         call H5Dclose_f(dset_id, error)
+         call H5Sclose_f(dspace_id, error)
+         call H5Tclose_f(type_id, error)
+         call H5Pclose_f(prp_id, error)
 
          !bufsize = 3
          !call h5ltset_attribute_int_f(file_id, "/", "psize", psize, bufsize, error) ! unused and will be obsolete soon
