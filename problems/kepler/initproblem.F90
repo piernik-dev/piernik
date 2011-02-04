@@ -166,14 +166,16 @@ contains
    end subroutine read_problem_par
 !-----------------------------------------------------------------------------
    subroutine add_sine
+
       use mpisetup,     only: master, dom
       use dataio_pub,   only: printinfo
       use fluidindex,   only: flind
       use grid,         only: cg
       use arrays,       only: u
-      use fluidindex,   only: flind
       use constants,    only: dpi
+
       implicit none
+
       real, parameter :: amp = 1.e-6
       real :: kx, kz
       integer :: i, k
@@ -325,8 +327,10 @@ contains
             call printinfo(msg)
             write(msg,'(A,F9.5)') " cs2(T_mean) = ", kboltz * 0.5*(mmsn_T(dom%xmin)+mmsn_T(dom%xmax)) / mH
             call printinfo(msg)
-            write(msg,'(A,ES12.3,A)') " T_real(cs2) = ", flind%neu%cs2*mH/kboltz, " K"
-            call printinfo(msg)
+            if (associated(flind%neu)) then
+               write(msg,'(A,ES12.3,A)') " T_real(cs2) = ", flind%neu%cs2*mH/kboltz, " K"
+               call printinfo(msg)
+            endif
             call printinfo("------------------------------------------------------------------")
          endif
          call grav_pot_3d
@@ -475,7 +479,6 @@ contains
       use grid,        only: cg
       use fluidindex,  only: flind
       use dataio_hdf5, only: read_3darr_from_restart
-      use fluidindex,  only: flind
 
       implicit none
 
