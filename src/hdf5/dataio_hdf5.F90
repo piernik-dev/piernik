@@ -1708,8 +1708,8 @@ contains
       integer(HID_T)                 :: type_id, dspace_id, dset_id, prp_id
       integer(HSIZE_T), dimension(1) :: dimstr
       logical                        :: Z_avail
-      integer                        :: fe, i, maxlen
-      integer(SIZE_T)                :: bufsize
+      integer                        :: fe, i
+      integer(SIZE_T)                :: bufsize, maxlen
       integer                        :: error
       real                           :: magic_mass0
       integer, parameter             :: buf_len = 50
