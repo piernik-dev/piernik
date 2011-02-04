@@ -344,10 +344,10 @@ contains
          cs_iso2_arr(:,i,:)       = cs_iso2_arr(:, cg%js,:)
          cs_iso2_arr(:,cg%je+i,:) = cs_iso2_arr(:, cg%je,:)
 
-         u(:,:,:,i)               = u(:,:,:, cg%js)
-         u(:,:,:, cg%je+i)        = u(:,:,:, cg%je)
-         cs_iso2_arr(:,:,i)       = cs_iso2_arr(:,:, cg%js)
-         cs_iso2_arr(:,:,cg%je+i) = cs_iso2_arr(:,:, cg%je)
+         u(:,:,:,i)               = u(:,:,:, cg%ks)
+         u(:,:,:, cg%ke+i)        = u(:,:,:, cg%ke)
+         cs_iso2_arr(:,:,i)       = cs_iso2_arr(:,:, cg%ks)
+         cs_iso2_arr(:,:,cg%ke+i) = cs_iso2_arr(:,:, cg%ke)
       enddo
       if (master ) then
          write(msg,'(2(a,g15.7))') '[initproblem:init_problem]: minval(dens)    = ', minval(u(idni,:,:,:)),      ' maxval(dens)    = ', maxval(u(idni,:,:,:))
