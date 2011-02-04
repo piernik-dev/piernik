@@ -372,11 +372,14 @@ contains
 !! after relaxiation/grace period has passed
 !<
    subroutine grace_period
-      use mpisetup,     only: grace_period_passed, relax_time
+
+      use mpisetup,     only: grace_period_passed, relax_time, master
       use dataio_pub,   only: printinfo
       use interactions, only: interactions_grace_passed
       use types,        only: problem_grace_passed
+
       implicit none
+
       logical, save     :: runned = .false.
 
       if (runned) return
@@ -384,7 +387,7 @@ contains
          if (relax_time > 0.0) then
             ! write info message only if relax_time was set
             write(msg,'(A,ES10.3)') "[piernik:grace_period] grace period has passed.", t
-            call printinfo(msg)
+            if (master) call printinfo(msg)
          endif
          call interactions_grace_passed
          if (associated(problem_grace_passed)) call problem_grace_passed

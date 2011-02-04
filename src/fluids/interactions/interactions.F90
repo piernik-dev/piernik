@@ -129,25 +129,33 @@ contains
    subroutine interactions_grace_passed
 
       use fluidindex,    only: flind
+      use dataio_pub,    only: warn
+      use mpisetup,      only: master
 #ifdef VERBOSE
       use dataio_pub,    only: printinfo
-      use mpisetup,      only: master
 #endif /* VERBOSE */
 
       implicit none
 
-      if (dragc_gas_dust > 0.0 .or. collision_factor > 0.0) then
-#ifdef VERBOSE
-         if (master) call printinfo("[interactions:interactions_grace_passed] Initializing aerodynamical drag")
-#endif /* VERBOSE */
-         allocate(collfaq(flind%fluids,flind%fluids))
-         collfaq = collision_factor
-         collfaq(flind%dst%pos,:) = dragc_gas_dust
-         collfaq(:,flind%dst%pos) = dragc_gas_dust
+      logical, save :: warned = .false.
 
-         taus = 1. / dragc_gas_dust
-         fluid_interactions => fluid_interactions_aero_drag
-         has_interactions = .true.    !> \deprecated BEWARE: temporary hack
+      if (dragc_gas_dust > 0.0 .or. collision_factor > 0.0) then
+         if (associated(flind%dst)) then
+#ifdef VERBOSE
+            if (master) call printinfo("[interactions:interactions_grace_passed] Initializing aerodynamical drag")
+#endif /* VERBOSE */
+            allocate(collfaq(flind%fluids,flind%fluids))
+            collfaq = collision_factor
+            collfaq(flind%dst%pos,:) = dragc_gas_dust
+            collfaq(:,flind%dst%pos) = dragc_gas_dust
+
+            taus = 1. / dragc_gas_dust
+            fluid_interactions => fluid_interactions_aero_drag
+            has_interactions = .true.    !> \deprecated BEWARE: temporary hack
+         else
+            if (.not. warned .and. master) call warn("[interactions:interactions_grace_passed] Cannot initialize aerodynamical drag because dust does not exist.")
+            warned = .true.
+         endif
       endif
 
    end subroutine interactions_grace_passed

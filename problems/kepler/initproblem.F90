@@ -168,7 +168,7 @@ contains
    subroutine add_sine
 
       use mpisetup,     only: master, dom
-      use dataio_pub,   only: printinfo
+      use dataio_pub,   only: printinfo, warn
       use fluidindex,   only: flind
       use grid,         only: cg
       use arrays,       only: u
@@ -180,6 +180,10 @@ contains
       real :: kx, kz
       integer :: i, k
 
+      if (.not. associated(flind%dst)) then
+         if (master) call warn("[initproblem:add_sine]: Cannot add sine wave perturbation to dust, because there is no dust.")
+         return
+      endif
       if (master) call printinfo("[initproblem:add_sine]: adding sine wave perturbation to dust")
 
       kx = 15.*dpi/dom%Lx
