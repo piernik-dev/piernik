@@ -811,7 +811,7 @@ contains
            &                   h5pcreate_f, h5pclose_f, h5pset_fapl_mpio_f, h5pset_chunk_f, h5pset_dxpl_mpio_f, &
            &                   h5screate_simple_f, h5sclose_f, h5sselect_hyperslab_f
       use list_hdf5,     only: problem_write_restart
-      use mpisetup,      only: pcoords, comm3d, comm, info, ierr, master, nstep, dom
+      use mpisetup,      only: pcoords, comm3d, comm, info, ierr, master, nstep, dom, psize
       use mpi,           only: MPI_CHARACTER
       use types,         only: hdf
 #ifdef ISO_LOCAL
@@ -836,6 +836,7 @@ contains
       integer(HSIZE_T),  DIMENSION(:), allocatable :: dimsf, dimsfi, chunk_dims
 
       integer :: error, rank
+      integer, dimension(3) :: chnk1, chnk2, chnk3 !> chunk parameters for magnetic fields
       real, pointer, dimension(:,:,:,:) :: p
 
       if (master) write(filename, '(a,a1,a3,a1,i4.4,a4)') trim(problem_name), '_', run_id, '_', nres, '.res'
@@ -904,9 +905,23 @@ contains
       !----------------------------------------------------------------------------------
       !  WRITE MAG VARIABLES
       !
-      dimsf = [3, dom%nxd, dom%nyd, dom%nzd] ! Dataset dimensions
+      dimsf = [3, dom%nxt, dom%nyt, dom%nzt] ! Dataset dimensions
       dimsfi = dimsf
-      chunk_dims = [3, cg%nxb, cg%nyb, cg%nzb]                 ! Chunks dimensions
+
+      ! unlike fluids, we need magnetic field boundaries values. Then chunks might be non-uniform
+      chnk1 = [cg%is,  cg%js,  cg%ks ]
+      chnk2 = [cg%ie,  cg%je,  cg%ke ]
+      chnk3 = [cg%nxb, cg%nyb, cg%nzb]
+      where (pcoords == 0)
+         chnk1 = chnk1 - cg%nb
+         chnk3 = chnk3 + cg%nb
+      endwhere
+      where (pcoords+1 == psize)
+         chnk2 = chnk2 + cg%nb
+         chnk3 = chnk3 + cg%nb
+      endwhere
+
+      chunk_dims = [3, chnk3(1), chnk3(2), chnk3(3)]                 ! Chunks dimensions
 
       ! Create the data space for the  dataset.
       CALL h5screate_simple_f(rank, dimsf, filespace, error)
@@ -925,15 +940,17 @@ contains
       count(:)  = 1
       block(:)  = chunk_dims(:)
 
-      offset(1)   = 0
-      offset(2:4) = pcoords(1:3)*chunk_dims(2:4)
+      offset(1:4)   = 0
+      if (pcoords(1) /= 0) offset(2) = pcoords(1)*cg%nxb + cg%nb
+      if (pcoords(2) /= 0) offset(3) = pcoords(2)*cg%nyb + cg%nb
+      if (pcoords(3) /= 0) offset(4) = pcoords(3)*cg%nzb + cg%nb
 
       ! Select hyperslab in the file.
       CALL h5dget_space_f(dset_id, filespace, error)
       CALL h5sselect_hyperslab_f (filespace, H5S_SELECT_SET_F, offset, count, error, stride, block)
       CALL h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error)
       CALL h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_INDEPENDENT_F, error)
-      p => b(:,cg%is:cg%ie,cg%js:cg%je,cg%ks:cg%ke)
+      p => b(:,chnk1(1):chnk2(1),chnk1(2):chnk2(2),chnk1(3):chnk2(3))
       CALL h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, p, dimsfi, error, file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
 
       CALL h5sclose_f(filespace, error)
@@ -1409,10 +1426,10 @@ contains
       !----------------------------------------------------------------------------------
       !  READ MAG VARIABLES
       !
-      dimsf = [3, dom%nxd, dom%nyd, dom%nzd] ! Dataset dimensions
+      dimsf = [3, dom%nxt, dom%nyt, dom%nzt] ! Dataset dimensions - we do need the whole domain of mag data
       dimsfi = dimsf
-      chunk_dims = [3, cg%nxb, cg%nyb, cg%nzb]
-      if (.not.associated(p4d)) p4d => b(:,cg%is:cg%ie,cg%js:cg%je,cg%ks:cg%ke)
+      chunk_dims = [3, cg%nx, cg%ny, cg%nz]
+      if (.not.associated(p4d)) p4d => b(:,:,:,:)
 
       ! Create chunked dataset.
       CALL h5dopen_f(file_id, dname(2), dset_id, error)
@@ -1428,7 +1445,7 @@ contains
       block(:)  = chunk_dims(:)
 
       offset(1)   = 0
-      offset(2:4) = pcoords(1:3)*chunk_dims(2:4)
+      offset(2:4) = pcoords(1:3)*(chunk_dims(2:4)-2*cg%nb)
 
       ! Select hyperslab in the file.
       CALL h5sselect_hyperslab_f (filespace, H5S_SELECT_SET_F, offset, count, error, stride, block)
