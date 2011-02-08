@@ -93,6 +93,7 @@ module types
       integer :: nxd                            !< number of grid cells in physical domain in x-direction (if equal to 1 then x-dimension is reduced to a point with no boundary cells)
       integer :: nyd                            !< number of grid cells in physical domain in y-direction ( - || - )
       integer :: nzd                            !< number of grid cells in physical domain in z-direction ( - || - )
+      integer, dimension(dims) :: n_d           !< [nxd, nyd, nzd]
       character(len=bndlen) :: bnd_xl_dom       !< low-x computational domain boundary
       character(len=bndlen) :: bnd_xr_dom       !< high-x computational domain boundary
       character(len=bndlen) :: bnd_yl_dom       !< low-y computational domain boundary
@@ -159,6 +160,7 @@ module types
       integer :: ke                             !< index of the last %grid cell of physical domain in z-direction
       integer :: nb                             !< number of boundary cells surrounding the physical domain, same for all directions
       integer :: isb, ieb, jsb, jeb, ksb, keb   !< auxiliary indices for exchanging boundary data, (e.g. is:isb -> ie+1:nx, ieb:ie -> 1:nb)
+      integer, dimension(dims) :: n_b           !< [nxb, nyb, nzb]
       integer :: maxxyz                         !< maximum number of %grid cells in any direction
 
       ! a pointer to the next cg

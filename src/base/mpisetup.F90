@@ -82,8 +82,6 @@ module mpisetup
    real,      dimension(buffer_dim) :: rbuff
    logical,   dimension(buffer_dim) :: lbuff
 
-   integer, dimension(ndims) :: domsize   !< local copy of nxd, nyd, nzd
-
    logical     :: have_mpi           !< .true. when run on more than one processor
 
    integer, allocatable, dimension(:) :: primes
@@ -451,10 +449,9 @@ contains
       endif
 
       ! set up the global domain
-      domsize(:) = [nxd, nyd, nzd]
-      has_dir(:) = domsize(:) > 1
+      dom%n_d(:) = [nxd, nyd, nzd]
+      has_dir(:) = dom%n_d(:) > 1
       eff_dim = count(has_dir(:))
-
       dom%nxd = nxd
       dom%nyd = nyd
       dom%nzd = nzd
@@ -711,7 +708,7 @@ contains
       integer :: j1, j2, j3, jj, n, p
       integer, dimension(ndims) :: ldom, tmp
 
-      ldom(xdim:zdim) = domsize(zdim:xdim:-1) ! Maxloc returns first occurrence of max, reversing direction order (to ZYX) gives better cache utilization.
+      ldom(xdim:zdim) = dom%n_d(zdim:xdim:-1) ! Maxloc returns first occurrence of max, reversing direction order (to ZYX) gives better cache utilization.
       n = nproc
       psize(:) = 1
       if (n == 1) return

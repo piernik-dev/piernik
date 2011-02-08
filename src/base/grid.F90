@@ -80,8 +80,14 @@ contains
       cg%nb = nb
       cg%dxmn = huge(1.0)
 
+      cg%n_b(:) = 1
+      where (has_dir(:)) cg%n_b(:) = dom%n_d(:) / psize(:) ! Block 'physical' grid sizes
+
+      cg%nxb = cg%n_b(xdim)
+      cg%nyb = cg%n_b(ydim)
+      cg%nzb = cg%n_b(zdim)
+
       if (has_dir(xdim)) then
-         cg%nxb   = dom%nxd / psize(xdim) ! Block 'physical' grid sizes
          cg%nx    = cg%nxb + 2 * nb       ! Block total grid sizes
          cg%is    = nb + 1
          cg%ie    = nb + cg%nxb
@@ -93,7 +99,6 @@ contains
          cg%xminb = dom%xmin + real(pcoords(xdim)  )*dom%Lx/real(psize(xdim))
          cg%xmaxb = dom%xmin + real(pcoords(xdim)+1)*dom%Lx/real(psize(xdim))
       else
-         cg%nxb   = 1
          cg%nx    = 1
          cg%is    = 1
          cg%ie    = 1
@@ -106,7 +111,6 @@ contains
       endif
 
       if (has_dir(ydim)) then
-         cg%nyb   = dom%nyd / psize(ydim)
          cg%ny    = cg%nyb + 2 * nb
          cg%js    = nb + 1
          cg%je    = nb + cg%nyb
@@ -118,7 +122,6 @@ contains
          cg%yminb = dom%ymin + real(pcoords(ydim)  )*dom%Ly/real(psize(ydim))
          cg%ymaxb = dom%ymin + real(pcoords(ydim)+1)*dom%Ly/real(psize(ydim))
       else
-         cg%nyb   = 1
          cg%ny    = 1
          cg%js    = 1
          cg%je    = 1
@@ -131,7 +134,6 @@ contains
       endif
 
       if (has_dir(zdim)) then
-         cg%nzb   = dom%nzd / psize(zdim)
          cg%nz    = cg%nzb + 2 * nb
          cg%ks    = nb + 1
          cg%ke    = nb + cg%nzb
@@ -143,7 +145,6 @@ contains
          cg%zminb = dom%zmin + real(pcoords(zdim)  )*dom%Lz/real(psize(zdim))
          cg%zmaxb = dom%zmin + real(pcoords(zdim)+1)*dom%Lz/real(psize(zdim))
       else
-         cg%nzb   = 1
          cg%nz    = 1
          cg%ks    = 1
          cg%ke    = 1

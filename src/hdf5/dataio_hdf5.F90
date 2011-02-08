@@ -812,34 +812,34 @@ contains
 
       select case (area_type)
          case ('allbnd')                           ! whole domain with mpi boundaries
-            chnk   = [cg%nx, cg%ny, cg%nz]
-            area   = chnk*psize
-            lleft  = 1
-            lright = chnk
-            loffs  = pcoords(1:3)*chnk
+            chnk(:)   = [cg%nx, cg%ny, cg%nz]
+            area(:)   = chnk*psize
+            lleft(:)  = 1
+            lright(:) = chnk
+            loffs(:)  = pcoords(1:3)*chnk
          case ('outbnd')                           ! physical domain with outer boundaries
-            area   = [dom%nxt, dom%nyt, dom%nzt]
-            lleft  = [cg%is,   cg%js,   cg%ks  ]
-            lright = [cg%ie,   cg%je,   cg%ke  ]
-            chnk   = [cg%nxb,  cg%nyb,  cg%nzb ]
+            area(:)   = [dom%nxt, dom%nyt, dom%nzt]
+            lleft(:)  = [cg%is,   cg%js,   cg%ks  ]
+            lright(:) = [cg%ie,   cg%je,   cg%ke  ]
+            chnk(:)   = cg%n_b(:)
             where (pcoords == 0)
-               lleft  = lleft  - cg%nb
-               chnk   = chnk   + cg%nb
+               lleft(:)  = lleft(:)  - cg%nb
+               chnk(:)   = chnk(:)   + cg%nb
             endwhere
             where (pcoords+1 == psize)
-               lright = lright + cg%nb
-               chnk   = chnk   + cg%nb
+               lright(:) = lright(:) + cg%nb
+               chnk(:)   = chnk(:)   + cg%nb
             endwhere
-            loffs  = 0
+            loffs(:)  = 0
             if (pcoords(1) /= 0) loffs(1) = pcoords(1)*cg%nxb + cg%nb
             if (pcoords(2) /= 0) loffs(2) = pcoords(2)*cg%nyb + cg%nb
             if (pcoords(3) /= 0) loffs(3) = pcoords(3)*cg%nzb + cg%nb
          case ('no_bnd')                           ! only physical domain without any boundaries
-            area   = [dom%nxd, dom%nyd, dom%nzd]
-            lleft  = [cg%is,   cg%js,   cg%ks  ]
-            lright = [cg%ie,   cg%je,   cg%ke  ]
-            chnk   = [cg%nxb,  cg%nyb,  cg%nzb ]
-            loffs  = pcoords(1:3)*chnk
+            area(:)   = dom%n_d(:)
+            lleft(:)  = [cg%is,   cg%js,   cg%ks  ]
+            lright(:) = [cg%ie,   cg%je,   cg%ke  ]
+            chnk(:)   = cg%n_b(:)
+            loffs(:)  = pcoords(1:3)*chnk
       endselect
 
    end subroutine set_dims_to_write
@@ -861,7 +861,7 @@ contains
            &                   h5pcreate_f, h5pclose_f, h5pset_fapl_mpio_f, h5pset_chunk_f, h5pset_dxpl_mpio_f, &
            &                   h5screate_simple_f, h5sclose_f, h5sselect_hyperslab_f
       use list_hdf5,     only: problem_write_restart
-      use mpisetup,      only: pcoords, comm3d, comm, info, ierr, master, nstep, dom
+      use mpisetup,      only: pcoords, comm3d, comm, info, ierr, master, nstep, dom, xdim, ydim, zdim
       use mpi,           only: MPI_CHARACTER
       use types,         only: hdf
 #ifdef ISO_LOCAL
@@ -921,9 +921,9 @@ contains
       area_type = 'no_bnd'
       if (present(debug_res)) area_type = 'allbnd'
       call set_dims_to_write(area_type, area, chnk, lleft, lright, loffs)
-      dimsf = [nu, area(1), area(2), area(3)] ! Dataset dimensions
+      dimsf = [nu, area(:)]      ! Dataset dimensions
       dimsfi = dimsf
-      chunk_dims = [nu, chnk(1), chnk(2), chnk(3)]                    ! Chunks dimensions
+      chunk_dims = [nu, chnk(:)] ! Chunks dimensions
 
       ! Create the data space for the  dataset.
       CALL h5screate_simple_f(rank, dimsf, filespace, error)
@@ -942,15 +942,14 @@ contains
       count(:)  = 1
       block(:)  = chunk_dims(:)
 
-      offset(1)   = 0
-      offset(2:4) = loffs(1:3)
+      offset(:)   = [0, loffs(:)]
 
       ! Select hyperslab in the file.
       CALL h5dget_space_f(dset_id, filespace, error)
       CALL h5sselect_hyperslab_f (filespace, H5S_SELECT_SET_F, offset, count, error, stride, block)
       CALL h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error)
       CALL h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_INDEPENDENT_F, error)
-      p => u(:,lleft(1):lright(1),lleft(2):lright(2),lleft(3):lright(3))
+      p => u(:,lleft(xdim):lright(xdim),lleft(ydim):lright(ydim),lleft(zdim):lright(zdim))
       CALL h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, p, dimsfi, error, file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
 
       CALL h5sclose_f(filespace, error)
@@ -965,10 +964,10 @@ contains
       area_type = 'outbnd' ! unlike fluids, we need magnetic field boundaries values. Then chunks might be non-uniform
       if (present(debug_res)) area_type = 'allbnd'
       call set_dims_to_write(area_type, area, chnk, lleft, lright, loffs)
-      dimsf = [3, area(1), area(2), area(3)] ! Dataset dimensions
+      dimsf = [3, area(:)] ! Dataset dimensions
       dimsfi = dimsf
 
-      chunk_dims = [3, chnk(1), chnk(2), chnk(3)]                 ! Chunks dimensions
+      chunk_dims = [3, chnk(:)]                 ! Chunks dimensions
 
       ! Create the data space for the  dataset.
       CALL h5screate_simple_f(rank, dimsf, filespace, error)
@@ -987,15 +986,14 @@ contains
       count(:)  = 1
       block(:)  = chunk_dims(:)
 
-      offset(1)   = 0
-      offset(2:4) = loffs(1:3)
+      offset(:) = [0, loffs(:)]
 
       ! Select hyperslab in the file.
       CALL h5dget_space_f(dset_id, filespace, error)
       CALL h5sselect_hyperslab_f (filespace, H5S_SELECT_SET_F, offset, count, error, stride, block)
       CALL h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error)
       CALL h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_INDEPENDENT_F, error)
-      p => b(:,lleft(1):lright(1),lleft(2):lright(2),lleft(3):lright(3))
+      p => b(:,lleft(xdim):lright(xdim),lleft(ydim):lright(ydim),lleft(zdim):lright(zdim))
       CALL h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, p, dimsfi, error, file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
 
       CALL h5sclose_f(filespace, error)
