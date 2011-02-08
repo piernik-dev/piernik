@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-import qa2,re,numpy
+import qa,re,numpy
 
 have_use           = re.compile("^\s{1,12}use\s")
 remove_warn        = re.compile('''(?!.*QA_WARN .+)''', re.VERBOSE)

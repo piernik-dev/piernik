@@ -10,7 +10,7 @@ Examples:
 """
 from optparse import OptionParser
 import pysvn
-import qa2 as qa
+import qa
 
 def print_files(list,action):
    print action
