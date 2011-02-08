@@ -477,8 +477,10 @@ contains
 !---  if a user message is received then:
       if (len_trim(umsg) /= 0) then
          select case (trim(umsg))
-            case ('res','dump')
+            case ('res')
                call write_restart_hdf5
+            case ('dump')
+               call write_restart_hdf5(.true.)
             case ('hdf')
                call set_container_chdf(nstep)
                call write_hdf5(chdf)
@@ -511,7 +513,8 @@ contains
                   write(msg,*) "[dataio:user_msg_handler] Recognized messages:",char(10),&
                   &"  help     - prints this information",char(10),&
                   &"  stop     - finish the simulation",char(10),&
-                  &"  res|dump - immediately dumps a restart file",char(10),&
+                  &"  res      - immediately dumps a restart file",char(10),&
+                  &"  dump     - immediately dumps a restart file of full domain for all blocks",char(10),&
                   &"  hdf      - dumps a plotfile",char(10),&
                   &"  log      - update logfile",char(10),&
                   &"  tsl      - write a timeslice",char(10),&

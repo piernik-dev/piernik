@@ -795,10 +795,60 @@ contains
    end subroutine write_plot_hdf5
 
 !>
+!! \brief Routine to set parameters and dimensions of arrays in restart file
+!! \param area_type case name; possibilities: all - whole domain with mpi boundaries, outbnd - physical domain with outer boundaries, nobnd - only physical domain without any boundaries
+!! \param area grid dimensions in the file
+!! \param chnk dimensions of data array dumped by this process
+!! \param lleft left limits of data from array to be dumped
+!! \param lright right limits of data from array to be dumped
+!! \loffs offset in area for this process
+!<
+   subroutine set_dims_to_write(area_type, area, chnk, lleft, lright, loffs)
+      use grid,     only: cg
+      use mpisetup, only: dom, psize, pcoords
+      implicit none
+      character(len=*),      intent(in)  :: area_type
+      integer, dimension(3), intent(out) :: area, lleft, lright, loffs, chnk
+
+      select case (area_type)
+         case ('allbnd')                           ! whole domain with mpi boundaries
+            chnk   = [cg%nx, cg%ny, cg%nz]
+            area   = chnk*psize
+            lleft  = 1
+            lright = chnk
+            loffs  = pcoords(1:3)*chnk
+         case ('outbnd')                           ! physical domain with outer boundaries
+            area   = [dom%nxt, dom%nyt, dom%nzt]
+            lleft  = [cg%is,   cg%js,   cg%ks  ]
+            lright = [cg%ie,   cg%je,   cg%ke  ]
+            chnk   = [cg%nxb,  cg%nyb,  cg%nzb ]
+            where (pcoords == 0)
+               lleft  = lleft  - cg%nb
+               chnk   = chnk   + cg%nb
+            endwhere
+            where (pcoords+1 == psize)
+               lright = lright + cg%nb
+               chnk   = chnk   + cg%nb
+            endwhere
+            loffs  = 0
+            if (pcoords(1) /= 0) loffs(1) = pcoords(1)*cg%nxb + cg%nb
+            if (pcoords(2) /= 0) loffs(2) = pcoords(2)*cg%nyb + cg%nb
+            if (pcoords(3) /= 0) loffs(3) = pcoords(3)*cg%nzb + cg%nb
+         case ('no_bnd')                           ! only physical domain without any boundaries
+            area   = [dom%nxd, dom%nyd, dom%nzd]
+            lleft  = [cg%is,   cg%js,   cg%ks  ]
+            lright = [cg%ie,   cg%je,   cg%ke  ]
+            chnk   = [cg%nxb,  cg%nyb,  cg%nzb ]
+            loffs  = pcoords(1:3)*chnk
+      endselect
+
+   end subroutine set_dims_to_write
+
+!>
 !! \brief This routine writes restart dump and updates restart counter
 !<
 
-   subroutine write_restart_hdf5
+   subroutine write_restart_hdf5(debug_res)
 
       use arrays,        only: u, b
       use dataio_pub,    only: chdf, nres, set_container_chdf, cwdlen, problem_name, run_id
@@ -811,7 +861,7 @@ contains
            &                   h5pcreate_f, h5pclose_f, h5pset_fapl_mpio_f, h5pset_chunk_f, h5pset_dxpl_mpio_f, &
            &                   h5screate_simple_f, h5sclose_f, h5sselect_hyperslab_f
       use list_hdf5,     only: problem_write_restart
-      use mpisetup,      only: pcoords, comm3d, comm, info, ierr, master, nstep, dom, psize
+      use mpisetup,      only: pcoords, comm3d, comm, info, ierr, master, nstep, dom
       use mpi,           only: MPI_CHARACTER
       use types,         only: hdf
 #ifdef ISO_LOCAL
@@ -819,7 +869,7 @@ contains
 #endif /* ISO_LOCAL */
 
       implicit none
-
+      logical, optional, intent(in) :: debug_res
       integer            :: nu
       CHARACTER(len=cwdlen) :: filename  !> HDF File name
 
@@ -836,8 +886,11 @@ contains
       integer(HSIZE_T),  DIMENSION(:), allocatable :: dimsf, dimsfi, chunk_dims
 
       integer :: error, rank
-      integer, dimension(3) :: chnk1, chnk2, chnk3 !> chunk parameters for magnetic fields
       real, pointer, dimension(:,:,:,:) :: p
+
+      integer, parameter    :: atlen = 6
+      character(len=atlen)  :: area_type
+      integer, dimension(3) :: area, lleft, lright, loffs, chnk
 
       if (master) write(filename, '(a,a1,a3,a1,i4.4,a4)') trim(problem_name), '_', run_id, '_', nres, '.res'
       call MPI_Bcast(filename, cwdlen, MPI_CHARACTER, 0, comm, ierr)
@@ -864,9 +917,13 @@ contains
       !----------------------------------------------------------------------------------
       !  WRITE FLUID VARIABLES
       !
-      dimsf = [nu, dom%nxd, dom%nyd, dom%nzd] ! Dataset dimensions
+
+      area_type = 'no_bnd'
+      if (present(debug_res)) area_type = 'allbnd'
+      call set_dims_to_write(area_type, area, chnk, lleft, lright, loffs)
+      dimsf = [nu, area(1), area(2), area(3)] ! Dataset dimensions
       dimsfi = dimsf
-      chunk_dims = [nu, cg%nxb, cg%nyb, cg%nzb]                    ! Chunks dimensions
+      chunk_dims = [nu, chnk(1), chnk(2), chnk(3)]                    ! Chunks dimensions
 
       ! Create the data space for the  dataset.
       CALL h5screate_simple_f(rank, dimsf, filespace, error)
@@ -886,14 +943,14 @@ contains
       block(:)  = chunk_dims(:)
 
       offset(1)   = 0
-      offset(2:4) = pcoords(1:3)*chunk_dims(2:4)
+      offset(2:4) = loffs(1:3)
 
       ! Select hyperslab in the file.
       CALL h5dget_space_f(dset_id, filespace, error)
       CALL h5sselect_hyperslab_f (filespace, H5S_SELECT_SET_F, offset, count, error, stride, block)
       CALL h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error)
       CALL h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_INDEPENDENT_F, error)
-      p => u(:,cg%is:cg%ie,cg%js:cg%je,cg%ks:cg%ke)
+      p => u(:,lleft(1):lright(1),lleft(2):lright(2),lleft(3):lright(3))
       CALL h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, p, dimsfi, error, file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
 
       CALL h5sclose_f(filespace, error)
@@ -905,23 +962,13 @@ contains
       !----------------------------------------------------------------------------------
       !  WRITE MAG VARIABLES
       !
-      dimsf = [3, dom%nxt, dom%nyt, dom%nzt] ! Dataset dimensions
+      area_type = 'outbnd' ! unlike fluids, we need magnetic field boundaries values. Then chunks might be non-uniform
+      if (present(debug_res)) area_type = 'allbnd'
+      call set_dims_to_write(area_type, area, chnk, lleft, lright, loffs)
+      dimsf = [3, area(1), area(2), area(3)] ! Dataset dimensions
       dimsfi = dimsf
 
-      ! unlike fluids, we need magnetic field boundaries values. Then chunks might be non-uniform
-      chnk1 = [cg%is,  cg%js,  cg%ks ]
-      chnk2 = [cg%ie,  cg%je,  cg%ke ]
-      chnk3 = [cg%nxb, cg%nyb, cg%nzb]
-      where (pcoords == 0)
-         chnk1 = chnk1 - cg%nb
-         chnk3 = chnk3 + cg%nb
-      endwhere
-      where (pcoords+1 == psize)
-         chnk2 = chnk2 + cg%nb
-         chnk3 = chnk3 + cg%nb
-      endwhere
-
-      chunk_dims = [3, chnk3(1), chnk3(2), chnk3(3)]                 ! Chunks dimensions
+      chunk_dims = [3, chnk(1), chnk(2), chnk(3)]                 ! Chunks dimensions
 
       ! Create the data space for the  dataset.
       CALL h5screate_simple_f(rank, dimsf, filespace, error)
@@ -940,17 +987,15 @@ contains
       count(:)  = 1
       block(:)  = chunk_dims(:)
 
-      offset(1:4)   = 0
-      if (pcoords(1) /= 0) offset(2) = pcoords(1)*cg%nxb + cg%nb
-      if (pcoords(2) /= 0) offset(3) = pcoords(2)*cg%nyb + cg%nb
-      if (pcoords(3) /= 0) offset(4) = pcoords(3)*cg%nzb + cg%nb
+      offset(1)   = 0
+      offset(2:4) = loffs(1:3)
 
       ! Select hyperslab in the file.
       CALL h5dget_space_f(dset_id, filespace, error)
       CALL h5sselect_hyperslab_f (filespace, H5S_SELECT_SET_F, offset, count, error, stride, block)
       CALL h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error)
       CALL h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_INDEPENDENT_F, error)
-      p => b(:,chnk1(1):chnk2(1),chnk1(2):chnk2(2),chnk1(3):chnk2(3))
+      p => b(:,lleft(1):lright(1),lleft(2):lright(2),lleft(3):lright(3))
       CALL h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, p, dimsfi, error, file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
 
       CALL h5sclose_f(filespace, error)
