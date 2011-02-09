@@ -28,7 +28,7 @@
 #include "piernik.h"
 #include "macros.h"
 !>
-!! \brief ()
+!! \brief Module of routines that correspond to resistivity
 !!
 !! In this module following namelist of parameters is specified:
 !! \copydetails resistivity::init_resistivity
@@ -42,13 +42,19 @@ module resistivity
    public  :: init_resistivity, timestep_resist, cleanup_resistivity, dt_resist, eta_max, &
         &     diffuseby_x, diffusebz_x, diffusebx_y, diffusebz_y, diffusebx_z, diffuseby_z
 
-   real    :: cfl_resist, eta_0, eta_1, j_crit, jc2, deint_max
-   integer :: eta_scale
+   real    :: cfl_resist                     !< CFL factor for resistivity effect
+   real    :: eta_0                          !< uniform resistivity
+   real    :: eta_1                          !< anomalous resistivity
+   real    :: j_crit                         !< critical value of current density
+   real    :: jc2                            !< squared critical value of current density
+   real    :: deint_max                      !< COMMENT ME
+   integer :: eta_scale                      !< COMMENT ME
    double precision :: d_eta_factor
-   real :: eta_max, dt_resist, dt_eint
+   real    :: eta_max, dt_resist, dt_eint
    integer, dimension(3) :: loc_eta_max
-   real, dimension(:,:,:), allocatable, target :: wb, etahelp, eta
-   logical, save :: inactive = .false.
+   real, dimension(:,:,:), allocatable, target :: wb, eh, eta
+   real, dimension(:,:,:), allocatable         :: dbx, dby, dbz
+   logical, save :: inactive = .false.       !< resistivity off-switcher while x or y dimension does not exist
 
 contains
 
@@ -58,7 +64,10 @@ contains
 
       if (allocated(wb) ) deallocate(wb)
       if (allocated(eta)) deallocate(eta)
-      if (allocated(etahelp)) deallocate(etahelp)
+      if (allocated(eh) ) deallocate(eh)
+      if (allocated(dbx)) deallocate(dbx)
+      if (allocated(dby)) deallocate(dby)
+      if (allocated(dbz)) deallocate(dbz)
 
    end subroutine cleanup_resistivity
 
@@ -82,12 +91,13 @@ contains
    subroutine init_resistivity
 
       use dataio_pub,    only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml  ! QA_WARN required for diff_nml
-      use dataio_pub,    only: warn, die, code_progress, PIERNIK_INIT_BASE
+      use dataio_pub,    only: die, code_progress, PIERNIK_INIT_BASE
       use grid,          only: cg
       use mpisetup,      only: rbuff, ibuff, ierr, buffer_dim, comm, master, slave, has_dir, zdim, xdim, ydim
       use mpi,           only: MPI_INTEGER, MPI_DOUBLE_PRECISION
 
       implicit none
+      real :: dims_twice
 
       namelist /RESISTIVITY/ cfl_resist, eta_0, eta_1, eta_scale, j_crit, deint_max
 
@@ -131,21 +141,28 @@ contains
 
       if (eta_scale < 0) call die("eta_scale must be greater or equal 0")
 
-      if (.not.allocated(wb) )     allocate(     wb(cg%nx, cg%ny, cg%nz))
-      if (.not.allocated(eta))     allocate(    eta(cg%nx, cg%ny, cg%nz))
-      if (.not.allocated(etahelp)) allocate(etahelp(cg%nx, cg%ny, cg%nz))
+      if (.not.allocated(wb) ) allocate( wb(cg%nx, cg%ny, cg%nz))
+      if (.not.allocated(eta)) allocate(eta(cg%nx, cg%ny, cg%nz))
+      if (.not.allocated(eh) ) allocate( eh(cg%nx, cg%ny, cg%nz))
+      if (.not.allocated(dbx)) allocate(dbx(cg%nx, cg%ny, cg%nz))
+      if (.not.allocated(dby)) allocate(dby(cg%nx, cg%ny, cg%nz))
+      if (.not.allocated(dbz)) allocate(dbz(cg%nx, cg%ny, cg%nz))
+
+      if (.not.has_dir(xdim)) dbx = 0.0
+      if (.not.has_dir(ydim)) dby = 0.0
+      if (.not.has_dir(zdim)) dbz = 0.0
 
       jc2 = j_crit**2
-      if (has_dir(zdim)) then
-         d_eta_factor = 1./(6.+dble(eta_scale))
-      else
-         d_eta_factor = 1./(4.+dble(eta_scale))
-      endif
+      dims_twice = 0.0
+      if (has_dir(xdim)) dims_twice = dims_twice + 2.0
+      if (has_dir(ydim)) dims_twice = dims_twice + 2.0
+      if (has_dir(zdim)) dims_twice = dims_twice + 2.0
+      d_eta_factor = 1./(dims_twice+dble(eta_scale))
 
-      if (.not. all(has_dir(xdim:ydim))) then
-         if (master) call warn("[resistivity:init_resistivity] Resistivity module needs both x and y dimension. Switching off.")
-         inactive = .true.
-      endif
+!      if (.not. all(has_dir(xdim:ydim))) then
+!         if (master) call warn("[resistivity:init_resistivity] Resistivity module needs both x and y dimension. Switching off.")
+!         inactive = .true.
+!      endif
 
    end subroutine init_resistivity
 
@@ -163,55 +180,59 @@ contains
 
       implicit none
 
-!      real, dimension(cg%nx, cg%ny, cg%nz), intent(inout) :: eta
-
       if (inactive) return
-!> \deprecated BEWARE: uninitialized values are poisoning the wb(:,:,:) array
+!> \deprecated BEWARE: uninitialized values are poisoning the wb(:,:,:) array - should change  with rev. 3893
 !> \deprecated BEWARE: significant differences between single-CPU run and multi-CPU run (due to uninits?)
 !--- square current computing in cell corner step by step
 
-!--- current_z
-      wb(2:cg%nx,2:cg%ny,:) = (b(iby,2:cg%nx,2:cg%ny,:)-b(iby,1:cg%nx-1,2:cg%ny,:))*cg%idl(xdim) - &
-           &                  (b(ibx,2:cg%nx,2:cg%ny,:)-b(ibx,2:cg%nx,1:cg%ny-1,:))*cg%idl(ydim)
-      wb(1,:,:) = wb(2,:,:) ; wb(:,1,:) = wb(:,2,:)
-
+      if (has_dir(xdim)) then
+         dbx(2:cg%nx,:,:) = (b(iby,2:cg%nx,:,:)-b(iby,1:cg%nx-1,:,:))*cg%idl(xdim) ;      dbx(1,:,:) = dbx(2,:,:)
+      endif
+      if (has_dir(ydim)) then
+         dby(:,2:cg%ny,:) = (b(ibx,:,2:cg%ny,:)-b(ibx,:,1:cg%ny-1,:))*cg%idl(ydim) ;      dby(:,1,:) = dby(:,2,:)
+      endif
       if (has_dir(zdim)) then
-         eta(:,:,2:cg%nz) = 0.25*( wb(:,:,2:cg%nz) + wb(:,:,1:cg%nz-1) )**2 ; eta(:,:,1) = eta(:,:,2)
+         dbz(:,:,2:cg%nz) = (b(iby,:,:,2:cg%nz)-b(iby,:,:,1:cg%nz-1))*cg%idl(zdim) ;      dbz(:,:,1) = dbz(:,:,2)
+      endif
+
+!--- current_z **2
+      eh = dbx - dby
+      if (has_dir(zdim)) then
+         wb(:,:,2:cg%nz) =                   0.25*(eh(:,:,2:cg%nz) + eh(:,:,1:cg%nz-1))**2 ; wb(:,:,1) = wb(:,:,2)
       else
-         eta = wb**2    !> \deprecated BEWARE: is it correct?
+         wb = eh**2
+      endif
+!--- current_x **2
+      eh = dby - dbz
+      if (has_dir(xdim)) then
+         wb(2:cg%nx,:,:) = wb(2:cg%nx,:,:) + 0.25*(eh(2:cg%nx,:,:) + eh(1:cg%nx-1,:,:))**2 ; wb(1,:,:) = wb(2,:,:)
+      else
+         wb = wb + eh**2
+      endif
+!--- current_y **2
+      eh = dbz - dbx
+      if (has_dir(ydim)) then
+         wb(:,2:cg%ny,:) = wb(:,2:cg%ny,:) + 0.25*(eh(:,2:cg%ny,:) + eh(:,1:cg%ny-1,:))**2 ; wb(:,1,:) = wb(:,2,:)
+      else
+         wb = wb + eh**2
       endif
 
+      eta(:,:,:) = eta_0 + eta_1 * sqrt( max(0.0,eta(:,:,:)- jc2 ))
+
+      eh = 0.0
+      if (has_dir(xdim)) then
+         eh(2:cg%nx-1,:,:) = eh(2:cg%nx-1,:,:) + eta(1:cg%nx-2,:,:) + eta(3:cg%nx,:,:) ;  eh(1,:,:) = eh(2,:,:) ; eh(cg%nx,:,:) = eh(cg%nx-1,:,:)
+      endif
+      if (has_dir(ydim)) then
+         eh(:,2:cg%ny-1,:) = eh(:,2:cg%ny-1,:) + eta(:,1:cg%ny-2,:) + eta(:,3:cg%ny,:) ;  eh(:,1,:) = eh(:,2,:) ; eh(:,cg%ny,:) = eh(:,cg%ny-1,:)
+      endif
       if (has_dir(zdim)) then
-!--- current_x
-         wb(:,2:cg%ny,2:cg%nz) = (b(ibz,:,2:cg%ny,2:cg%nz)-b(ibz,:,1:cg%ny-1,2:cg%nz))*cg%idl(ydim) - &
-              &                  (b(iby,:,2:cg%ny,2:cg%nz)-b(iby,:,2:cg%ny,1:cg%nz-1))*cg%idl(zdim)
-
-         eta(2:cg%nx,:,:) = eta(2:cg%nx,:,:) + 0.25*(wb(2:cg%nx,:,:)+wb(1:cg%nx-1,:,:))**2; eta(1,:,:) = eta(2,:,:)
-!--- current_y
-         wb(2:cg%nx,:,2:cg%nz) = (b(ibx,2:cg%nx,:,2:cg%nz)-b(ibx,2:cg%nx,:,1:cg%nz-1))*cg%idl(zdim) - &
-              &                  (b(ibz,2:cg%nx,:,2:cg%nz)-b(ibz,1:cg%nx-1,:,2:cg%nz))*cg%idl(xdim)
-
-         eta(:,2:cg%ny,:) = eta(:,2:cg%ny,:) + 0.25*(wb(:,2:cg%ny,:)+wb(:,1:cg%ny-1,:))**2; eta(:,1,:) = eta(:,2,:)
+         eh(:,:,2:cg%nz-1) = eh(:,:,2:cg%nz-1) + eta(:,:,1:cg%nz-2) + eta(:,:,3:cg%nz) ;  eh(:,:,1) = eh(:,:,2) ; eh(:,:,cg%nz) = eh(:,:,cg%nz-1)
       endif
-
-!--- wb = current**2
-      wb(:,:,:) = eta(:,:,:)
-
-      eta(:,:,:) = eta_0 + eta_1*sqrt(max(0.0,eta(:,:,:)- jc2 ))
-!>
-!! \todo Following lines are split into separate lines because of intel and gnu dbgs
-!! should that be so? Is there any other solution instead splitting?
-!<
-      etahelp(2:cg%nx-1,2:cg%ny-1,:) = eta(1:cg%nx-2,2:cg%ny-1,:) + eta(3:cg%nx,2:cg%ny-1,:) + eta(2:cg%nx-1,1:cg%ny-2,:) + eta(2:cg%nx-1,3:cg%ny,:)
-      etahelp(1,:,:) = etahelp(2,:,:) ; etahelp(cg%nx,:,:) = etahelp(cg%nx-1,:,:) ; etahelp(:,1,:) = etahelp(:,2,:) ; etahelp(:, cg%ny,:) = etahelp(:, cg%ny-1,:)
-      if (has_dir(zdim)) then
-         etahelp(:,:,2:cg%nz-1) = etahelp(:,:,2:cg%nz-1) + eta(:,:,1:cg%nz-2) + eta(:,:,3:cg%nz)
-         etahelp(:,:,1) = etahelp(:,:,2) ; etahelp(:,:, cg%nz) = etahelp(:,:, cg%nz-1)
-      endif
-      etahelp = (etahelp + dble(eta_scale)*eta)*d_eta_factor
+      eh = (eh + dble(eta_scale)*eta)*d_eta_factor
 
       where (eta > eta_0)
-         eta = etahelp
+         eta = eh
       endwhere
 
       eta_max           = maxval(eta(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke))
@@ -220,17 +241,17 @@ contains
       call MPI_Allreduce(MPI_IN_PLACE, eta_max, 1, MPI_DOUBLE_PRECISION, MPI_MAX, comm, ierr)
 
 #ifndef ISO
-      dt_eint = deint_max * abs(minval(               &
-                ( u(flind%ion%ien, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)           &
+     dt_eint = deint_max * abs(minval(               &
+                      ( u(flind%ion%ien, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)     &
                 - 0.5*( u(flind%ion%imx, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2  &
                       + u(flind%ion%imy, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2  &
                       + u(flind%ion%imz, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2 )&
-                      /u(flind%ion%idn, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)      &
-                - 0.5*( b(ibx, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2   &
-                      + b(iby, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2   &
-                      + b(ibz, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2)) &
-                      /( eta(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)       &
-                      *wb(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)+small) ))
+                      / u(flind%ion%idn, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)     &
+                - 0.5 * ( b(ibx,         cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2  &
+                      +   b(iby,         cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2  &
+                      +   b(ibz,         cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2))&
+                      / ( eta(           cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)     &
+                      *    wb(           cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)+small) ))
 #endif /* !ISO */
 
       return
@@ -284,7 +305,6 @@ contains
    end subroutine vanleer_limiter
 
    subroutine tvdd_1d(b1d,eta1d,idi,dt,wcu1d)
-!      use fluxes, only: flimiter
 
       implicit none
 
@@ -315,15 +335,15 @@ contains
    subroutine diffuseby_x
 
       use arrays,        only: wcu, b
-      use mpisetup,      only: dt, has_dir, xdim, ydim, zdim
       use fluidindex,    only: iby
       use grid,          only: cg
       use magboundaries, only: bnd_emf
+      use mpisetup,      only: dt, has_dir, xdim, ydim, zdim
 
       implicit none
 
       real, dimension(:), pointer :: b1d, eta1d
-      real, dimension(cg%nx)         :: wcu1d
+      real, dimension(cg%nx)      :: wcu1d
       integer                     :: j, k
 
       if (inactive) return
@@ -349,15 +369,15 @@ contains
    subroutine diffusebz_x
 
       use arrays,        only: wcu, b
-      use mpisetup,      only: dt, has_dir, xdim, ydim, zdim
       use fluidindex,    only: ibz
       use grid,          only: cg
       use magboundaries, only: bnd_emf
+      use mpisetup,      only: dt, has_dir, xdim, ydim, zdim
 
       implicit none
 
       real, dimension(:), pointer :: b1d, eta1d
-      real, dimension(cg%nx)         :: wcu1d
+      real, dimension(cg%nx)      :: wcu1d
       integer                     :: j, k
 
       if (inactive) return
@@ -382,15 +402,15 @@ contains
    subroutine diffusebz_y
 
       use arrays,        only: wcu, b
-      use mpisetup,      only: dt, has_dir, xdim, ydim, zdim
       use fluidindex,    only: ibz
       use grid,          only: cg
       use magboundaries, only: bnd_emf
+      use mpisetup,      only: dt, has_dir, xdim, ydim, zdim
 
       implicit none
 
       real, dimension(:), pointer :: b1d, eta1d
-      real, dimension(cg%ny)         :: wcu1d
+      real, dimension(cg%ny)      :: wcu1d
       integer                     :: i, k
 
       if (inactive) return
@@ -415,15 +435,15 @@ contains
    subroutine diffusebx_y
 
       use arrays,        only: wcu, b
-      use mpisetup,      only: dt, has_dir, xdim, ydim, zdim
       use fluidindex,    only: ibx
       use grid,          only: cg
       use magboundaries, only: bnd_emf
+      use mpisetup,      only: dt, has_dir, xdim, ydim, zdim
 
       implicit none
 
       real, dimension(:), pointer :: b1d, eta1d
-      real, dimension(cg%ny)         :: wcu1d
+      real, dimension(cg%ny)      :: wcu1d
       integer                     :: i, k
 
       if (inactive) return
@@ -448,15 +468,15 @@ contains
    subroutine diffusebx_z
 
       use arrays,        only: wcu, b
-      use mpisetup,      only: dt, has_dir, xdim, ydim, zdim
       use fluidindex,    only: ibx
       use grid,          only: cg
       use magboundaries, only: bnd_emf
+      use mpisetup,      only: dt, has_dir, xdim, ydim, zdim
 
       implicit none
 
       real, dimension(:), pointer :: b1d, eta1d
-      real, dimension(cg%nz)         :: wcu1d
+      real, dimension(cg%nz)      :: wcu1d
       integer                     :: i, j
 
       if (inactive) return
@@ -481,15 +501,15 @@ contains
    subroutine diffuseby_z
 
       use arrays,        only: wcu, b
-      use mpisetup,      only: dt, has_dir, xdim, ydim, zdim
       use fluidindex,    only: iby
       use grid,          only: cg
       use magboundaries, only: bnd_emf
+      use mpisetup,      only: dt, has_dir, xdim, ydim, zdim
 
       implicit none
 
       real, dimension(:), pointer :: b1d, eta1d
-      real, dimension(cg%nz)         :: wcu1d
+      real, dimension(cg%nz)      :: wcu1d
       integer                     :: i, j
 
       if (inactive) return
