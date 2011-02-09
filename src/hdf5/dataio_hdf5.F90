@@ -931,7 +931,7 @@ contains
 
       ! Create chunked dataset.
       CALL h5pcreate_f(H5P_DATASET_CREATE_F, plist_id, error)
-      CALL h5pset_chunk_f(plist_id, rank, chunk_dims, error)
+      if (area_type /= 'outbnd') CALL h5pset_chunk_f(plist_id, rank, chunk_dims, error)
       CALL h5dcreate_f(file_id, dname(1), H5T_NATIVE_DOUBLE, filespace, dset_id, error, plist_id)
       CALL h5sclose_f(filespace, error)
       CALL h5pclose_f(plist_id, error)
@@ -975,7 +975,7 @@ contains
 
       ! Create chunked dataset.
       CALL h5pcreate_f(H5P_DATASET_CREATE_F, plist_id, error)
-      CALL h5pset_chunk_f(plist_id, rank, chunk_dims, error)
+      if (area_type /= 'outbnd') CALL h5pset_chunk_f(plist_id, rank, chunk_dims, error)
       CALL h5dcreate_f(file_id, dname(2), H5T_NATIVE_DOUBLE, filespace, dset_id, error, plist_id)
       CALL h5sclose_f(filespace, error)
       CALL h5pclose_f(plist_id, error)
