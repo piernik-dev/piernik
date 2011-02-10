@@ -117,11 +117,13 @@ contains
    end subroutine read_problem_par
 !-----------------------------------------------------------------------------
    subroutine init_prob
+
       use arrays,         only: u, b
       use dataio_pub,     only: msg, die, printinfo
       use fluidindex,     only: flind, ibx, iby, ibz
       use grid,           only: cg
       use types,          only: component_fluid
+      use mpisetup,       only: master
 
       implicit none
       integer :: i, j, k, p
@@ -138,7 +140,7 @@ contains
          fl => flind%all_fluids(p)
          if (fl%tag=="DST") call die("[initproblem:init_prob] This setup is not suitable for dust!")
          write(msg,*) "Working with ", fl%tag, " fluid."
-         call printinfo(msg)
+         if (master) call printinfo(msg)
 
 ! Uniform equilibrium state
          do k = 1, cg%nz
