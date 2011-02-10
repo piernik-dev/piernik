@@ -213,7 +213,7 @@ contains
          gc_xdim(2,:,:) = spread( cg%xr(:), 1, flind%all)
          gc_xdim(3,:,:) = spread( cg%xl(:), 1, flind%all)
 
-         do i = LBOUND(flind%all_fluids,1), UBOUND(flind%all_fluids,1)
+         do i = lbound(flind%all_fluids,1), ubound(flind%all_fluids,1)
             gc_xdim(1,flind%all_fluids(i)%imy,:) = gc_xdim(1,flind%all_fluids(i)%imy,:) * cg%inv_x(:)
             gc_xdim(2,flind%all_fluids(i)%imy,:) = gc_xdim(2,flind%all_fluids(i)%imy,:) * cg%xr(:)
             gc_xdim(3,flind%all_fluids(i)%imy,:) = gc_xdim(3,flind%all_fluids(i)%imy,:) * cg%xl(:)
@@ -273,7 +273,7 @@ contains
       integer :: i
 
       if (sweep == 'xsweep') then
-         do i = 1, SIZE(iarr_all_dn)
+         do i = 1, size(iarr_all_dn)
             res(i,:) = cg%inv_x(:) * (u(iarr_all_my(i),:)**2 / u(iarr_all_dn(i),:) + p(i,:))
          enddo
       else

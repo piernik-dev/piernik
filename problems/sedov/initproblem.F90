@@ -190,8 +190,8 @@ contains
 
       implicit none
 
-      character(LEN=*), intent(in)        :: var   !< quantity to be plotted
-      character(LEN=*), intent(in)        :: ij    !< plane of plot
+      character(len=*), intent(in)        :: var   !< quantity to be plotted
+      character(len=*), intent(in)        :: ij    !< plane of plot
       integer, intent(in)                 :: xn    !< no. of cell at which we are slicing the local block
       integer, intent(inout)              :: ierrh !< error handling
       real, dimension(:,:), intent(inout) :: tab   !< array  containing given quantity

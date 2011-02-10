@@ -432,7 +432,7 @@ contains
                   if ( allocated(os%old(i)%soln) ) call die("[multigrid_gravity:init_multigrid_grav_post] os%old(:)%soln arrays already allocated")
                   allocate( os%old(i)%soln( roof%nx, roof%ny, roof%nz), stat=aerr(i) )
                   mb_alloc = mb_alloc + size(os%old(i)%soln)
-                  os%old(i)%time= -HUGE(1.0)
+                  os%old(i)%time= -huge(1.0)
                   if (dirty_debug) os%old(i)%soln(:, :, :) = dirtyH
                enddo
                if (any(aerr(1:nold) /= 0)) call die("[multigrid_gravity:init_multigrid_grav_post] Allocation error: os%old(:)%soln")
@@ -694,7 +694,7 @@ contains
             do l = level_min, level_max
                lvl(l)%mgvar(:, :, :, solution) = 0.
             enddo
-            history%old(:)%time = -HUGE(1.0)
+            history%old(:)%time = -huge(1.0)
          case (0)
             roof%mgvar(:, :, :, solution) = history%old(p0)%soln(:, :, :)
             if (master .and. ord_time_extrap > 0) then

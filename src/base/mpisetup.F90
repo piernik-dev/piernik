@@ -226,12 +226,12 @@ contains
 
       integer :: iproc
 
-      character(LEN=cwdlen) :: cwd_proc
-      character(LEN=hnlen)  :: host_proc
+      character(len=cwdlen) :: cwd_proc
+      character(len=hnlen)  :: host_proc
       integer               :: pid_proc
 
-      character(LEN=cwdlen), allocatable, dimension(:) :: cwd_all
-      character(LEN=hnlen) , allocatable, dimension(:) :: host_all
+      character(len=cwdlen), allocatable, dimension(:) :: cwd_all
+      character(len=hnlen) , allocatable, dimension(:) :: host_all
       integer              , allocatable, dimension(:) :: pid_all
 
       integer(kind=1)       :: getcwd, hostnm
@@ -664,9 +664,9 @@ contains
 
       select case (what(1:3))
       case ('min')
-         CALL MPI_Reduce(rsend, rrecv, 1, MPI_2DOUBLE_PRECISION, MPI_MINLOC, 0, comm, ierr)
+         call MPI_Reduce(rsend, rrecv, 1, MPI_2DOUBLE_PRECISION, MPI_MINLOC, 0, comm, ierr)
       case ('max')
-         CALL MPI_Reduce(rsend, rrecv, 1, MPI_2DOUBLE_PRECISION, MPI_MAXLOC, 0, comm, ierr)
+         call MPI_Reduce(rsend, rrecv, 1, MPI_2DOUBLE_PRECISION, MPI_MAXLOC, 0, comm, ierr)
       case default
          write(msg,*) '[mpisetup:mpifind] actual parameter "', what, '"is not allowed'
          call warn(msg)
@@ -681,9 +681,9 @@ contains
 
       if (loc_proc /= 0) then
          if (proc == loc_proc) then
-            CALL MPI_Send  (loc_arr, ndims, MPI_INTEGER, 0,        11, comm, ierr)
+            call MPI_Send  (loc_arr, ndims, MPI_INTEGER, 0,        11, comm, ierr)
          else if (master) then
-            CALL MPI_Recv  (loc_arr, ndims, MPI_INTEGER, loc_proc, 11, comm, status, ierr)
+            call MPI_Recv  (loc_arr, ndims, MPI_INTEGER, loc_proc, 11, comm, status, ierr)
          endif
       endif
 

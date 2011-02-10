@@ -45,7 +45,7 @@ contains
 !! \brief Function pshift makes one-cell, forward circular shift of 3D array in any direction
 !! \param tab input array
 !! \param d direction of the shift, where 1,2,3 corresponds to \a x,\a y,\a z respectively
-!! \return real, dimension(SIZE(tab,1),SIZE(tab,2),SIZE(tab,3))
+!! \return real, dimension(size(tab,1),size(tab,2),size(tab,3))
 !!
 !! The function was written in order to significantly improve
 !! the performance at the cost of the flexibility of original \p CSHIFT.
@@ -56,9 +56,9 @@ contains
       real, dimension(:,:,:) :: tab
       integer :: d
       integer :: ll
-      real, dimension(SIZE(tab,1),SIZE(tab,2),SIZE(tab,3)) :: pshift
+      real, dimension(size(tab,1),size(tab,2),size(tab,3)) :: pshift
 
-      ll = SIZE(tab,d)
+      ll = size(tab,d)
 
       if (ll==1) then
         pshift = tab
@@ -82,7 +82,7 @@ contains
 !! \brief Function mshift makes one-cell, backward circular shift of 3D array in any direction
 !! \param tab input array
 !! \param d direction of the shift, where 1,2,3 corresponds to \a x,\a y,\a z respectively
-!! \return real, dimension(SIZE(tab,1),SIZE(tab,2),SIZE(tab,3))
+!! \return real, dimension(size(tab,1),size(tab,2),size(tab,3))
 !!
 !! The function was written in order to significantly improve
 !! the performance at the cost of the flexibility of original \p CSHIFT.
@@ -93,9 +93,9 @@ contains
       real, dimension(:,:,:) :: tab
       integer :: d
       integer :: ll
-      real, dimension(SIZE(tab,1) , SIZE(tab,2) , SIZE(tab,3)) :: mshift
+      real, dimension(size(tab,1) , size(tab,2) , size(tab,3)) :: mshift
 
-      ll = SIZE(tab,d)
+      ll = size(tab,d)
 
       if (ll==1) then
         mshift = tab

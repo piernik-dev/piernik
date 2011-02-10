@@ -48,7 +48,7 @@ module dataio_hdf5
    public :: parfile, parfilelines, maxparfilelines
 
    integer, parameter :: dnamelen=10
-   character(LEN=dnamelen), dimension(2) :: dname = (/"fluid     ","mag       "/)  !< dataset names for restart files
+   character(len=dnamelen), dimension(2) :: dname = (/"fluid     ","mag       "/)  !< dataset names for restart files
    character(len=S_LEN), allocatable, dimension(:) :: hdf_vars  !< dataset names for hdf files
    integer :: nhdf_vars !< number of quantities plotted to hdf files
    integer :: ix !< no. of cell (1 <= ix < nxd) for YZ slice in plt files
@@ -110,7 +110,7 @@ contains
       ix = tix; iy = tiy; iz = tiz; dt_plt = tdt_plt
 
       nvars = 1
-      do while ( LEN(TRIM(vars(nvars))) > 1)
+      do while ( len(trim(vars(nvars))) > 1)
         nvars = nvars + 1
       enddo
       nvars = nvars - 1
@@ -119,15 +119,15 @@ contains
       do i = 1, nvars
          select case (vars(i))
             case ('dens')
-               nhdf_vars = nhdf_vars + SIZE(iarr_all_dn,1)
+               nhdf_vars = nhdf_vars + size(iarr_all_dn,1)
             case ('velx')
-               nhdf_vars = nhdf_vars + SIZE(iarr_all_mx,1)
+               nhdf_vars = nhdf_vars + size(iarr_all_mx,1)
             case ('vely')
-               nhdf_vars = nhdf_vars + SIZE(iarr_all_my,1)
+               nhdf_vars = nhdf_vars + size(iarr_all_my,1)
             case ('velz')
-               nhdf_vars = nhdf_vars + SIZE(iarr_all_mz,1)
+               nhdf_vars = nhdf_vars + size(iarr_all_mz,1)
             case ('ener')
-               nhdf_vars = nhdf_vars + SIZE(iarr_all_mz,1)
+               nhdf_vars = nhdf_vars + size(iarr_all_mz,1)
 #ifdef DUST
                nhdf_vars = nhdf_vars - 1
 #endif /* DUST */
@@ -148,7 +148,7 @@ contains
 #ifdef COSM_RAYS
             case ('encr')
 #ifndef NEW_HDF5
-               nhdf_vars = nhdf_vars + SIZE(iarr_all_crs,1)
+               nhdf_vars = nhdf_vars + size(iarr_all_crs,1)
 #endif /* !NEW_HDF5 */
 #endif /* COSM_RAYS */
             case ('pres')
@@ -279,8 +279,8 @@ contains
 #endif /* COSM_RAYS */
 
       implicit none
-      character(LEN=varlen)   :: var !< quantity to be plotted
-      character(LEN=planelen) :: ij  !< plane of plot
+      character(len=varlen)   :: var !< quantity to be plotted
+      character(len=planelen) :: ij  !< plane of plot
       integer                 :: xn  !< no. of cell at which we are slicing the local block
       integer                 :: ierrh !< error handling
       real, dimension(:,:)    :: tab !< array containing given quantity
@@ -476,7 +476,7 @@ contains
 #endif /* GRAV */
 
       implicit none
-      character(LEN=varlen), intent(in) :: var
+      character(len=varlen), intent(in) :: var
       real(kind=4), dimension(:,:,:)    :: tab
       integer, intent(out)              :: ierrh
 #ifdef COSM_RAYS
@@ -585,7 +585,7 @@ contains
 
       integer, save     :: nimg = 0, error = 0
       real, save        :: last_plt_time = 0.0
-      character(LEN=cwdlen) :: fname
+      character(len=cwdlen) :: fname
       integer           :: i, fe
       logical, save     :: first_entry = .true.
       integer(HID_T)    :: file_id                 !> File identifier
@@ -651,8 +651,8 @@ contains
 
       implicit none
 
-      character(LEN=planelen), intent(in) :: plane
-      character(LEN=varlen), intent(in)   :: var                           !> not yet implemented
+      character(len=planelen), intent(in) :: plane
+      character(len=varlen), intent(in)   :: var                           !> not yet implemented
       integer, intent(in)                 :: nimg
       logical, dimension(3)               :: remain
       logical                             :: ok_plt_var
@@ -663,10 +663,10 @@ contains
       integer                             :: ierrh, i, j
       integer                             :: comm2d, lp, ls, xn, error
       integer, parameter                  :: suffixed_planelen = planelen + 1  !< plane name + suffix e.g "xy_"
-      character(LEN=suffixed_planelen)    :: pij
-      character(LEN=cwdlen)               :: fname
+      character(len=suffixed_planelen)    :: pij
+      character(len=cwdlen)               :: fname
       integer, parameter                  :: vdn_len = 12
-      character(LEN=vdn_len)              :: vdname
+      character(len=vdn_len)              :: vdname
 
       integer(HID_T)                      :: file_id                       !> File identifier
       integer(HID_T)                      :: gr_id,gr2_id                  !> Group identifier
@@ -871,7 +871,7 @@ contains
       implicit none
       logical, optional, intent(in) :: debug_res
       integer            :: nu
-      CHARACTER(len=cwdlen) :: filename  !> HDF File name
+      character(len=cwdlen) :: filename  !> HDF File name
 
       integer(HID_T) :: file_id       !> File identifier
       integer(HID_T) :: dset_id       !> Dataset identifier
@@ -898,12 +898,12 @@ contains
 
       nu = flind%all
 
-      CALL h5open_f(error)
-      CALL h5pcreate_f(H5P_FILE_ACCESS_F, plist_id, error)
-      CALL h5pset_fapl_mpio_f(plist_id, comm3d, info, error)
+      call h5open_f(error)
+      call h5pcreate_f(H5P_FILE_ACCESS_F, plist_id, error)
+      call h5pset_fapl_mpio_f(plist_id, comm3d, info, error)
 
-      CALL h5fcreate_f(filename, H5F_ACC_TRUNC_F, file_id, error, access_prp = plist_id)
-      CALL h5pclose_f(plist_id, error)
+      call h5fcreate_f(filename, H5F_ACC_TRUNC_F, file_id, error, access_prp = plist_id)
+      call h5pclose_f(plist_id, error)
 
       if (associated(problem_write_restart)) call problem_write_restart(file_id)
 
@@ -926,15 +926,15 @@ contains
       chunk_dims = [nu, chnk(:)] ! Chunks dimensions
 
       ! Create the data space for the  dataset.
-      CALL h5screate_simple_f(rank, dimsf, filespace, error)
-      CALL h5screate_simple_f(rank, chunk_dims, memspace, error)
+      call h5screate_simple_f(rank, dimsf, filespace, error)
+      call h5screate_simple_f(rank, chunk_dims, memspace, error)
 
       ! Create chunked dataset.
-      CALL h5pcreate_f(H5P_DATASET_CREATE_F, plist_id, error)
-      if (area_type /= 'outbnd') CALL h5pset_chunk_f(plist_id, rank, chunk_dims, error)
-      CALL h5dcreate_f(file_id, dname(1), H5T_NATIVE_DOUBLE, filespace, dset_id, error, plist_id)
-      CALL h5sclose_f(filespace, error)
-      CALL h5pclose_f(plist_id, error)
+      call h5pcreate_f(H5P_DATASET_CREATE_F, plist_id, error)
+      if (area_type /= 'outbnd') call h5pset_chunk_f(plist_id, rank, chunk_dims, error)
+      call h5dcreate_f(file_id, dname(1), H5T_NATIVE_DOUBLE, filespace, dset_id, error, plist_id)
+      call h5sclose_f(filespace, error)
+      call h5pclose_f(plist_id, error)
 
       ! Each process defines dataset in memory and writes it to the hyperslab
       ! in the file.
@@ -945,17 +945,17 @@ contains
       offset(:)   = [0, loffs(:)]
 
       ! Select hyperslab in the file.
-      CALL h5dget_space_f(dset_id, filespace, error)
-      CALL h5sselect_hyperslab_f (filespace, H5S_SELECT_SET_F, offset, count, error, stride, block)
-      CALL h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error)
-      CALL h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_INDEPENDENT_F, error)
+      call h5dget_space_f(dset_id, filespace, error)
+      call h5sselect_hyperslab_f (filespace, H5S_SELECT_SET_F, offset, count, error, stride, block)
+      call h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error)
+      call h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_INDEPENDENT_F, error)
       p => u(:,lleft(xdim):lright(xdim),lleft(ydim):lright(ydim),lleft(zdim):lright(zdim))
-      CALL h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, p, dimsfi, error, file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
+      call h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, p, dimsfi, error, file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
 
-      CALL h5sclose_f(filespace, error)
-      CALL h5sclose_f(memspace, error)
-      CALL h5dclose_f(dset_id, error)
-      CALL h5pclose_f(plist_id, error)
+      call h5sclose_f(filespace, error)
+      call h5sclose_f(memspace, error)
+      call h5dclose_f(dset_id, error)
+      call h5pclose_f(plist_id, error)
       !----------------------------------------------------------------------------------
 
       !----------------------------------------------------------------------------------
@@ -970,15 +970,15 @@ contains
       chunk_dims = [3, chnk(:)]                 ! Chunks dimensions
 
       ! Create the data space for the  dataset.
-      CALL h5screate_simple_f(rank, dimsf, filespace, error)
-      CALL h5screate_simple_f(rank, chunk_dims, memspace, error)
+      call h5screate_simple_f(rank, dimsf, filespace, error)
+      call h5screate_simple_f(rank, chunk_dims, memspace, error)
 
       ! Create chunked dataset.
-      CALL h5pcreate_f(H5P_DATASET_CREATE_F, plist_id, error)
-      if (area_type /= 'outbnd') CALL h5pset_chunk_f(plist_id, rank, chunk_dims, error)
-      CALL h5dcreate_f(file_id, dname(2), H5T_NATIVE_DOUBLE, filespace, dset_id, error, plist_id)
-      CALL h5sclose_f(filespace, error)
-      CALL h5pclose_f(plist_id, error)
+      call h5pcreate_f(H5P_DATASET_CREATE_F, plist_id, error)
+      if (area_type /= 'outbnd') call h5pset_chunk_f(plist_id, rank, chunk_dims, error)
+      call h5dcreate_f(file_id, dname(2), H5T_NATIVE_DOUBLE, filespace, dset_id, error, plist_id)
+      call h5sclose_f(filespace, error)
+      call h5pclose_f(plist_id, error)
 
       ! Each process defines dataset in memory and writes it to the hyperslab
       ! in the file.
@@ -989,17 +989,17 @@ contains
       offset(:) = [0, loffs(:)]
 
       ! Select hyperslab in the file.
-      CALL h5dget_space_f(dset_id, filespace, error)
-      CALL h5sselect_hyperslab_f (filespace, H5S_SELECT_SET_F, offset, count, error, stride, block)
-      CALL h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error)
-      CALL h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_INDEPENDENT_F, error)
+      call h5dget_space_f(dset_id, filespace, error)
+      call h5sselect_hyperslab_f (filespace, H5S_SELECT_SET_F, offset, count, error, stride, block)
+      call h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error)
+      call h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_INDEPENDENT_F, error)
       p => b(:,lleft(xdim):lright(xdim),lleft(ydim):lright(ydim),lleft(zdim):lright(zdim))
-      CALL h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, p, dimsfi, error, file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
+      call h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, p, dimsfi, error, file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
 
-      CALL h5sclose_f(filespace, error)
-      CALL h5sclose_f(memspace, error)
-      CALL h5dclose_f(dset_id, error)
-      CALL h5pclose_f(plist_id, error)
+      call h5sclose_f(filespace, error)
+      call h5sclose_f(memspace, error)
+      call h5dclose_f(dset_id, error)
+      call h5pclose_f(plist_id, error)
       !----------------------------------------------------------------------------------
       if (allocated(dimsf))      deallocate(dimsf)
       if (allocated(dimsfi))     deallocate(dimsfi)
@@ -1021,15 +1021,15 @@ contains
       chunk_dims = [cg%nxb]    ! Chunks dimensions
 
       ! Create the data space for the  dataset.
-      CALL h5screate_simple_f(rank, dimsf, filespace, error)
-      CALL h5screate_simple_f(rank, chunk_dims, memspace, error)
+      call h5screate_simple_f(rank, dimsf, filespace, error)
+      call h5screate_simple_f(rank, chunk_dims, memspace, error)
 
       ! Create chunked dataset.
-      CALL h5pcreate_f(H5P_DATASET_CREATE_F, plist_id, error)
-      CALL h5pset_chunk_f(plist_id, rank, chunk_dims, error)
-      CALL h5dcreate_f(file_id, "X axis", H5T_NATIVE_DOUBLE, filespace, dset_id, error, plist_id)
-      CALL h5sclose_f(filespace, error)
-      CALL h5pclose_f(plist_id, error)
+      call h5pcreate_f(H5P_DATASET_CREATE_F, plist_id, error)
+      call h5pset_chunk_f(plist_id, rank, chunk_dims, error)
+      call h5dcreate_f(file_id, "X axis", H5T_NATIVE_DOUBLE, filespace, dset_id, error, plist_id)
+      call h5sclose_f(filespace, error)
+      call h5pclose_f(plist_id, error)
 
       ! Each process defines dataset in memory and writes it to the hyperslab
       ! in the file.
@@ -1040,16 +1040,16 @@ contains
       offset(1) = pcoords(1)*chunk_dims(1)
 
       ! Select hyperslab in the file.
-      CALL h5dget_space_f(dset_id, filespace, error)
-      CALL h5sselect_hyperslab_f (filespace, H5S_SELECT_SET_F, offset, count, error, stride, block)
-      CALL h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error)
-      CALL h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_INDEPENDENT_F, error)
-      CALL h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, cg%x(cg%is:cg%ie), dimsfi, error, file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
+      call h5dget_space_f(dset_id, filespace, error)
+      call h5sselect_hyperslab_f (filespace, H5S_SELECT_SET_F, offset, count, error, stride, block)
+      call h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error)
+      call h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_INDEPENDENT_F, error)
+      call h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, cg%x(cg%is:cg%ie), dimsfi, error, file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
 
-      CALL h5sclose_f(filespace, error)
-      CALL h5sclose_f(memspace, error)
-      CALL h5dclose_f(dset_id, error)
-      CALL h5pclose_f(plist_id, error)
+      call h5sclose_f(filespace, error)
+      call h5sclose_f(memspace, error)
+      call h5dclose_f(dset_id, error)
+      call h5pclose_f(plist_id, error)
       !----------------------------------------------------------------------------------
 
       !----------------------------------------------------------------------------------
@@ -1060,15 +1060,15 @@ contains
       chunk_dims = [cg%nyb]    ! Chunks dimensions
 
       ! Create the data space for the  dataset.
-      CALL h5screate_simple_f(rank, dimsf, filespace, error)
-      CALL h5screate_simple_f(rank, chunk_dims, memspace, error)
+      call h5screate_simple_f(rank, dimsf, filespace, error)
+      call h5screate_simple_f(rank, chunk_dims, memspace, error)
 
       ! Create chunked dataset.
-      CALL h5pcreate_f(H5P_DATASET_CREATE_F, plist_id, error)
-      CALL h5pset_chunk_f(plist_id, rank, chunk_dims, error)
-      CALL h5dcreate_f(file_id, "Y axis", H5T_NATIVE_DOUBLE, filespace, dset_id, error, plist_id)
-      CALL h5sclose_f(filespace, error)
-      CALL h5pclose_f(plist_id, error)
+      call h5pcreate_f(H5P_DATASET_CREATE_F, plist_id, error)
+      call h5pset_chunk_f(plist_id, rank, chunk_dims, error)
+      call h5dcreate_f(file_id, "Y axis", H5T_NATIVE_DOUBLE, filespace, dset_id, error, plist_id)
+      call h5sclose_f(filespace, error)
+      call h5pclose_f(plist_id, error)
 
       ! Each process defines dataset in memory and writes it to the hyperslab
       ! in the file.
@@ -1079,16 +1079,16 @@ contains
       offset(1) = pcoords(2)*chunk_dims(1)
 
       ! Select hyperslab in the file.
-      CALL h5dget_space_f(dset_id, filespace, error)
-      CALL h5sselect_hyperslab_f (filespace, H5S_SELECT_SET_F, offset, count, error, stride, block)
-      CALL h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error)
-      CALL h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_INDEPENDENT_F, error)
-      CALL h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, cg%y(cg%js:cg%je), dimsfi, error, file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
+      call h5dget_space_f(dset_id, filespace, error)
+      call h5sselect_hyperslab_f (filespace, H5S_SELECT_SET_F, offset, count, error, stride, block)
+      call h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error)
+      call h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_INDEPENDENT_F, error)
+      call h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, cg%y(cg%js:cg%je), dimsfi, error, file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
 
-      CALL h5sclose_f(filespace, error)
-      CALL h5sclose_f(memspace, error)
-      CALL h5dclose_f(dset_id, error)
-      CALL h5pclose_f(plist_id, error)
+      call h5sclose_f(filespace, error)
+      call h5sclose_f(memspace, error)
+      call h5dclose_f(dset_id, error)
+      call h5pclose_f(plist_id, error)
       !----------------------------------------------------------------------------------
 
       !----------------------------------------------------------------------------------
@@ -1099,15 +1099,15 @@ contains
       chunk_dims = [cg%nzb]    ! Chunks dimensions
 
       ! Create the data space for the  dataset.
-      CALL h5screate_simple_f(rank, dimsf, filespace, error)
-      CALL h5screate_simple_f(rank, chunk_dims, memspace, error)
+      call h5screate_simple_f(rank, dimsf, filespace, error)
+      call h5screate_simple_f(rank, chunk_dims, memspace, error)
 
       ! Create chunked dataset.
-      CALL h5pcreate_f(H5P_DATASET_CREATE_F, plist_id, error)
-      CALL h5pset_chunk_f(plist_id, rank, chunk_dims, error)
-      CALL h5dcreate_f(file_id, "Z axis", H5T_NATIVE_DOUBLE, filespace, dset_id, error, plist_id)
-      CALL h5sclose_f(filespace, error)
-      CALL h5pclose_f(plist_id, error)
+      call h5pcreate_f(H5P_DATASET_CREATE_F, plist_id, error)
+      call h5pset_chunk_f(plist_id, rank, chunk_dims, error)
+      call h5dcreate_f(file_id, "Z axis", H5T_NATIVE_DOUBLE, filespace, dset_id, error, plist_id)
+      call h5sclose_f(filespace, error)
+      call h5pclose_f(plist_id, error)
 
       ! Each process defines dataset in memory and writes it to the hyperslab
       ! in the file.
@@ -1118,18 +1118,18 @@ contains
       offset(1) = pcoords(3)*chunk_dims(1)
 
       ! Select hyperslab in the file.
-      CALL h5dget_space_f(dset_id, filespace, error)
-      CALL h5sselect_hyperslab_f (filespace, H5S_SELECT_SET_F, offset, count, error, stride, block)
-      CALL h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error)
-      CALL h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_INDEPENDENT_F, error)
-      CALL h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, cg%z(cg%ks:cg%ke), dimsfi, error, file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
+      call h5dget_space_f(dset_id, filespace, error)
+      call h5sselect_hyperslab_f (filespace, H5S_SELECT_SET_F, offset, count, error, stride, block)
+      call h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error)
+      call h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_INDEPENDENT_F, error)
+      call h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, cg%z(cg%ks:cg%ke), dimsfi, error, file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
 
-      CALL h5sclose_f(filespace, error)
-      CALL h5sclose_f(memspace, error)
-      CALL h5dclose_f(dset_id, error)
+      call h5sclose_f(filespace, error)
+      call h5sclose_f(memspace, error)
+      call h5dclose_f(dset_id, error)
       !----------------------------------------------------------------------------------
-      CALL h5pclose_f(plist_id, error)
-      CALL h5fclose_f(file_id, error)
+      call h5pclose_f(plist_id, error)
+      call h5fclose_f(file_id, error)
       if (allocated(dimsf))      deallocate(dimsf)
       if (allocated(dimsfi))     deallocate(dimsfi)
       if (allocated(chunk_dims)) deallocate(chunk_dims)
@@ -1140,7 +1140,7 @@ contains
 
       call set_common_attributes(filename, chdf, "restart")
 
-      CALL h5close_f(error)
+      call h5close_f(error)
 
       nres = nres + 1
       if (associated(p)) nullify(p)
@@ -1187,14 +1187,14 @@ contains
       chunk_dims = [nx, ny, nz]                 ! Chunks dimensions
 
       ! Create the data space for the  dataset.
-      CALL h5screate_simple_f(rank, dimsf, filespace, error)
-      CALL h5screate_simple_f(rank, chunk_dims, memspace, error)
+      call h5screate_simple_f(rank, dimsf, filespace, error)
+      call h5screate_simple_f(rank, chunk_dims, memspace, error)
 
       ! Create chunked dataset.
-      CALL h5pcreate_f(H5P_DATASET_CREATE_F, plist_id, error)
-      CALL h5pset_chunk_f(plist_id, rank, chunk_dims, error)
-      CALL h5dcreate_f(file_id, trim(dname), H5T_NATIVE_DOUBLE, filespace, dset_id, error, plist_id)
-      CALL h5sclose_f(filespace, error)
+      call h5pcreate_f(H5P_DATASET_CREATE_F, plist_id, error)
+      call h5pset_chunk_f(plist_id, rank, chunk_dims, error)
+      call h5dcreate_f(file_id, trim(dname), H5T_NATIVE_DOUBLE, filespace, dset_id, error, plist_id)
+      call h5sclose_f(filespace, error)
 
       ! Each process defines dataset in memory and writes it to the hyperslab
       ! in the file.
@@ -1205,15 +1205,15 @@ contains
       offset(1:3) = pcoords(1:3)*chunk_dims(1:3)
 
       ! Select hyperslab in the file.
-      CALL h5dget_space_f(dset_id, filespace, error)
-      CALL h5sselect_hyperslab_f (filespace, H5S_SELECT_SET_F, offset, count, error, stride, block)
-      CALL h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error)
-      CALL h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_INDEPENDENT_F, error)
-      CALL h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, tab, dimsfi, error, file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
+      call h5dget_space_f(dset_id, filespace, error)
+      call h5sselect_hyperslab_f (filespace, H5S_SELECT_SET_F, offset, count, error, stride, block)
+      call h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error)
+      call h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_INDEPENDENT_F, error)
+      call h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, tab, dimsfi, error, file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
 
-      CALL h5sclose_f(filespace, error)
-      CALL h5sclose_f(memspace, error)
-      CALL h5dclose_f(dset_id, error)
+      call h5sclose_f(filespace, error)
+      call h5sclose_f(memspace, error)
+      call h5dclose_f(dset_id, error)
 
       if (allocated(dimsf))      deallocate(dimsf)
       if (allocated(dimsfi))     deallocate(dimsfi)
@@ -1266,7 +1266,7 @@ contains
       chunk_dims = [nx, ny, nz]
 
       ! Create chunked dataset.
-      CALL h5dopen_f(file_id, dname, dset_id, error)
+      call h5dopen_f(file_id, dname, dset_id, error)
 
       call h5dget_space_f(dset_id, filespace, error)
       call H5sget_simple_extent_ndims_f (filespace,rank,error)
@@ -1281,16 +1281,16 @@ contains
       offset(1:3) = pcoords(1:3)*chunk_dims(1:3)
 
       ! Select hyperslab in the file.
-      CALL h5sselect_hyperslab_f (filespace, H5S_SELECT_SET_F, offset, count, error, stride, block)
-      CALL h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error)
-      CALL h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_INDEPENDENT_F, error)
-      CALL h5screate_simple_f(rank, chunk_dims, memspace, error)
-      CALL h5dread_f(dset_id, H5T_NATIVE_DOUBLE, p3d, dimsfi, error, file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
+      call h5sselect_hyperslab_f (filespace, H5S_SELECT_SET_F, offset, count, error, stride, block)
+      call h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error)
+      call h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_INDEPENDENT_F, error)
+      call h5screate_simple_f(rank, chunk_dims, memspace, error)
+      call h5dread_f(dset_id, H5T_NATIVE_DOUBLE, p3d, dimsfi, error, file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
 
-      CALL h5sclose_f(filespace, error)
-      CALL h5sclose_f(memspace, error)
-      CALL h5pclose_f(plist_id, error)
-      CALL h5dclose_f(dset_id, error)
+      call h5sclose_f(filespace, error)
+      call h5sclose_f(memspace, error)
+      call h5pclose_f(plist_id, error)
+      call h5dclose_f(dset_id, error)
       !----------------------------------------------------------------------------------
       if (allocated(dimsf))      deallocate(dimsf)
       if (allocated(dimsfi))     deallocate(dimsfi)
@@ -1324,11 +1324,11 @@ contains
       use arrays,        only: cs_iso2_arr
 #endif /* ISO_LOCAL */
 
-      IMPLICIT NONE
+      implicit none
 
       type(hdf)             :: chdf
       integer               :: nu
-      CHARACTER(LEN=cwdlen) :: filename  ! File name
+      character(len=cwdlen) :: filename  ! File name
 
       integer(HID_T)        :: file_id       ! File identifier
       integer(HID_T)        :: dset_id       ! Dataset identifier
@@ -1371,9 +1371,9 @@ contains
          call die(msg)
       endif
 
-      CALL h5open_f(error)
+      call h5open_f(error)
       if (master) then
-         CALL h5fopen_f(trim(filename), H5F_ACC_RDONLY_F, file_id, error)
+         call h5fopen_f(trim(filename), H5F_ACC_RDONLY_F, file_id, error)
 
          call h5ltget_attribute_double_f(file_id,"/","piernik", rbuf, error)
          if (error /= 0) call die("[dataio_hdf5:read_restart_hdf5] Cannot read 'piernik' attribute from the restart file. The file may be either damaged or incompatible")
@@ -1408,14 +1408,14 @@ contains
             if (rbuf(1) /= dom%zmax .or. error /= 0) call die("[dataio_hdf5:read_restart_hdf5] zmax does not match")
          endif
 
-         CALL h5fclose_f(file_id, error)
+         call h5fclose_f(file_id, error)
       endif
 
-      CALL h5pcreate_f(H5P_FILE_ACCESS_F, plist_id, error)
-      CALL h5pset_fapl_mpio_f(plist_id, comm3d, info, error)
+      call h5pcreate_f(H5P_FILE_ACCESS_F, plist_id, error)
+      call h5pset_fapl_mpio_f(plist_id, comm3d, info, error)
 
-      CALL h5fopen_f(trim(filename), H5F_ACC_RDONLY_F, file_id, error, access_prp = plist_id)
-      CALL h5pclose_f(plist_id, error)
+      call h5fopen_f(trim(filename), H5F_ACC_RDONLY_F, file_id, error, access_prp = plist_id)
+      call h5pclose_f(plist_id, error)
 
       if (associated(problem_read_restart)) call problem_read_restart(file_id)
 
@@ -1437,7 +1437,7 @@ contains
       if (.not.associated(p4d)) p4d => u(:,cg%is:cg%ie,cg%js:cg%je,cg%ks:cg%ke)
 
       ! Create chunked dataset.
-      CALL h5dopen_f(file_id, dname(1), dset_id, error)
+      call h5dopen_f(file_id, dname(1), dset_id, error)
 
       call h5dget_space_f(dset_id, filespace, error)
       call H5sget_simple_extent_ndims_f (filespace,rank,error)
@@ -1453,16 +1453,16 @@ contains
       offset(2:4) = pcoords(1:3)*chunk_dims(2:4)
 
       ! Select hyperslab in the file.
-      CALL h5sselect_hyperslab_f (filespace, H5S_SELECT_SET_F, offset, count, error, stride, block)
-      CALL h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error)
-      CALL h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_INDEPENDENT_F, error)
-      CALL h5screate_simple_f(rank, chunk_dims, memspace, error)
-      CALL h5dread_f(dset_id, H5T_NATIVE_DOUBLE, p4d, dimsfi, error, file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
+      call h5sselect_hyperslab_f (filespace, H5S_SELECT_SET_F, offset, count, error, stride, block)
+      call h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error)
+      call h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_INDEPENDENT_F, error)
+      call h5screate_simple_f(rank, chunk_dims, memspace, error)
+      call h5dread_f(dset_id, H5T_NATIVE_DOUBLE, p4d, dimsfi, error, file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
 
-      CALL h5sclose_f(filespace, error)
-      CALL h5sclose_f(memspace, error)
-      CALL h5pclose_f(plist_id, error)
-      CALL h5dclose_f(dset_id, error)
+      call h5sclose_f(filespace, error)
+      call h5sclose_f(memspace, error)
+      call h5pclose_f(plist_id, error)
+      call h5dclose_f(dset_id, error)
       if (associated(p4d)) nullify(p4d)
       !----------------------------------------------------------------------------------
 
@@ -1475,7 +1475,7 @@ contains
       if (.not.associated(p4d)) p4d => b(:,:,:,:)
 
       ! Create chunked dataset.
-      CALL h5dopen_f(file_id, dname(2), dset_id, error)
+      call h5dopen_f(file_id, dname(2), dset_id, error)
 
       call h5dget_space_f(dset_id, filespace, error)
       call H5Sget_simple_extent_ndims_f (filespace,rank,error)
@@ -1491,19 +1491,19 @@ contains
       offset(2:4) = pcoords(1:3)*(chunk_dims(2:4)-2*cg%nb)
 
       ! Select hyperslab in the file.
-      CALL h5sselect_hyperslab_f (filespace, H5S_SELECT_SET_F, offset, count, error, stride, block)
-      CALL h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error)
-      CALL h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_INDEPENDENT_F, error)
-      CALL h5screate_simple_f(rank, chunk_dims, memspace, error)
-      CALL h5dread_f(dset_id, H5T_NATIVE_DOUBLE, p4d, dimsfi, error, file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
+      call h5sselect_hyperslab_f (filespace, H5S_SELECT_SET_F, offset, count, error, stride, block)
+      call h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error)
+      call h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_INDEPENDENT_F, error)
+      call h5screate_simple_f(rank, chunk_dims, memspace, error)
+      call h5dread_f(dset_id, H5T_NATIVE_DOUBLE, p4d, dimsfi, error, file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
 
-      CALL h5sclose_f(filespace, error)
-      CALL h5sclose_f(memspace, error)
-      CALL h5pclose_f(plist_id, error)
-      CALL h5dclose_f(dset_id, error)
+      call h5sclose_f(filespace, error)
+      call h5sclose_f(memspace, error)
+      call h5pclose_f(plist_id, error)
+      call h5dclose_f(dset_id, error)
       if (associated(p4d)) nullify(p4d)
       !----------------------------------------------------------------------------------
-      CALL h5fclose_f(file_id, error)
+      call h5fclose_f(file_id, error)
       if (allocated(dimsf))      deallocate(dimsf)
       if (allocated(dimsfi))     deallocate(dimsfi)
       if (allocated(chunk_dims)) deallocate(chunk_dims)
@@ -1512,7 +1512,7 @@ contains
       if (allocated(stride))     deallocate(stride)
       if (allocated(block))      deallocate(block)
       if (master) then
-         CALL h5fopen_f (filename, H5F_ACC_RDONLY_F, file_id, error)
+         call h5fopen_f (filename, H5F_ACC_RDONLY_F, file_id, error)
          bufsize = 1
          call h5ltget_attribute_double_f(file_id,"/","piernik", rbuf,error)
          restart_hdf5_version = rbuf(1)
@@ -1552,12 +1552,12 @@ contains
          chdf%new_id  = fix_string(chdf%new_id)    !> \deprecated   this bit hacks it around
          chdf%domain  = fix_string(chdf%domain)
 
-         CALL h5fclose_f(file_id, error)
+         call h5fclose_f(file_id, error)
 
          write(msg,'(2a)') 'Done reading restart file: ',trim(filename)
          call printio(msg)
       endif
-      CALL h5close_f(error)
+      call h5close_f(error)
 
       call MPI_Bcast(restart_hdf5_version,    1, MPI_DOUBLE_PRECISION, 0, comm3d, ierr)
 
@@ -1574,9 +1574,9 @@ contains
       call MPI_Bcast(t,                  1, MPI_DOUBLE_PRECISION, 0, comm3d, ierr)
       call MPI_Bcast(dt,                 1, MPI_DOUBLE_PRECISION, 0, comm3d, ierr)
 
-      CALL MPI_Bcast(problem_name, cbuff_len, MPI_CHARACTER, 0, comm3d, ierr)
-      CALL MPI_Bcast(chdf%domain,  domlen,    MPI_CHARACTER, 0, comm3d, ierr)
-      CALL MPI_Bcast(chdf%new_id,  idlen,     MPI_CHARACTER, 0, comm3d, ierr)
+      call MPI_Bcast(problem_name, cbuff_len, MPI_CHARACTER, 0, comm3d, ierr)
+      call MPI_Bcast(chdf%domain,  domlen,    MPI_CHARACTER, 0, comm3d, ierr)
+      call MPI_Bcast(chdf%new_id,  idlen,     MPI_CHARACTER, 0, comm3d, ierr)
 
    end subroutine read_restart_hdf5
 !
@@ -1601,7 +1601,7 @@ contains
       integer                 :: ierrh, error, i
       logical                 :: ok_var
       character(len=varlen)   :: dd
-      CHARACTER(LEN=cwdlen)   :: fname
+      character(len=cwdlen)   :: fname
 
       real(kind=4), allocatable :: data (:,:,:)  ! Data to write
 
@@ -1610,17 +1610,17 @@ contains
       write(dd,'(i4.4)') chdf%nhdf
       write(fname, '(6a)') trim(problem_name),"_",trim(run_id),"_",dd,".h5"
 
-      CALL h5open_f(error)
+      call h5open_f(error)
       !
       ! Setup file access property list with parallel I/O access.
       !
-      CALL h5pcreate_f(H5P_FILE_ACCESS_F, plist_id, error)
-      CALL h5pset_fapl_mpio_f(plist_id, comm3d, info, error)
+      call h5pcreate_f(H5P_FILE_ACCESS_F, plist_id, error)
+      call h5pset_fapl_mpio_f(plist_id, comm3d, info, error)
       !
       ! Create the file collectively.
       !
-      CALL h5fcreate_f(trim(fname), H5F_ACC_TRUNC_F, file_id, error, creation_prp = H5P_DEFAULT_F, access_prp = plist_id)
-      CALL h5pclose_f(plist_id, error)
+      call h5fcreate_f(trim(fname), H5F_ACC_TRUNC_F, file_id, error, creation_prp = H5P_DEFAULT_F, access_prp = plist_id)
+      call h5pclose_f(plist_id, error)
       if (.not.allocated(data)) allocate(data(cg%nxb, cg%nyb, cg%nzb))
       do i = 1, nhdf_vars
          ierrh = 0; ok_var = .false.
@@ -1644,12 +1644,12 @@ contains
       !
       ! Close the property list.
       !
-      CALL h5fclose_f(file_id, error)
+      call h5fclose_f(file_id, error)
 
       call set_common_attributes(fname, chdf, "output")
 
       call MPI_Barrier(comm3d,ierr)
-      CALL h5close_f(error)
+      call h5close_f(error)
 
       nhdf = nhdf + 1
 
@@ -1670,7 +1670,7 @@ contains
 
       integer, parameter :: rank = 3       ! Dataset rank
 
-      CHARACTER(LEN=varlen) :: dsetname       ! Dataset name
+      character(len=varlen) :: dsetname       ! Dataset name
 
       integer(HID_T)        :: file_id        ! Dataset identifier
       integer(HID_T)        :: dset_id        ! Dataset identifier
@@ -1692,16 +1692,16 @@ contains
       !
       ! Create the data space for the  dataset.
       !
-      CALL h5screate_simple_f(rank, dimsf, filespace, error)
-      CALL h5screate_simple_f(rank, chunk_dims, memspace, error)
+      call h5screate_simple_f(rank, dimsf, filespace, error)
+      call h5screate_simple_f(rank, chunk_dims, memspace, error)
 
       !
       ! Create chunked dataset.
       !
-      CALL h5pcreate_f(H5P_DATASET_CREATE_F, plist_id, error)
-      CALL h5pset_chunk_f(plist_id, rank, chunk_dims, error)
-      CALL h5dcreate_f(file_id, dsetname, H5T_NATIVE_REAL, filespace, dset_id, error, plist_id)
-      CALL h5sclose_f(filespace, error)
+      call h5pcreate_f(H5P_DATASET_CREATE_F, plist_id, error)
+      call h5pset_chunk_f(plist_id, rank, chunk_dims, error)
+      call h5dcreate_f(file_id, dsetname, H5T_NATIVE_REAL, filespace, dset_id, error, plist_id)
+      call h5sclose_f(filespace, error)
 
       !
       ! Each process defines dataset in memory and writes it to the hyperslab
@@ -1715,29 +1715,29 @@ contains
       !
       ! Select hyperslab in the file.
       !
-      CALL h5dget_space_f(dset_id, filespace, error)
-      CALL h5sselect_hyperslab_f (filespace, H5S_SELECT_SET_F, offset, count, error, stride, block)
+      call h5dget_space_f(dset_id, filespace, error)
+      call h5sselect_hyperslab_f (filespace, H5S_SELECT_SET_F, offset, count, error, stride, block)
 
       !
       ! Create property list for collective dataset write
       !
-      CALL h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error)
-      CALL h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_INDEPENDENT_F, error)
+      call h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error)
+      call h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_INDEPENDENT_F, error)
 
       !
       ! Write the dataset collectively.
       !
-      CALL h5dwrite_f(dset_id, H5T_NATIVE_REAL, data, dimsfi, error, file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
+      call h5dwrite_f(dset_id, H5T_NATIVE_REAL, data, dimsfi, error, file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
 
       !
       ! Close dataspaces.
       !
-      CALL h5sclose_f(filespace, error)
-      CALL h5sclose_f(memspace, error)
+      call h5sclose_f(filespace, error)
+      call h5sclose_f(memspace, error)
       !
       ! Close the dataset.
       !
-      CALL h5dclose_f(dset_id, error)
+      call h5dclose_f(dset_id, error)
 
    end subroutine write_arr
 

@@ -138,7 +138,7 @@ contains
       if (.not. use_split) call warn("[initcosmicrays:init_cosmicrays] No multigrid solver compiled in: use_split reset to .true.")
       use_split  = .true.
 #endif /* !MULTIGRID */
-      rbuff(:)   = HUGE(1.)                         ! mark unused entries to allow automatic determination of nn
+      rbuff(:)   = huge(1.)                         ! mark unused entries to allow automatic determination of nn
 
       if (master) then
 
@@ -152,7 +152,7 @@ contains
 
          lbuff(1)   = use_split
 
-         nn         = count(rbuff(:) < HUGE(1.))    ! this must match the last rbuff() index above
+         nn         = count(rbuff(:) < huge(1.))    ! this must match the last rbuff() index above
          ibuff(ubound(ibuff, 1)) = nn
          ne         = nn + 3 * ncrn
          if (ne + 3 * ncre > ubound(rbuff, 1)) call die("[initcosmicrays:init_cosmicrays] rbuff size exceeded.")

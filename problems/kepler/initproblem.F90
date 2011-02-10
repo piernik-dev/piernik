@@ -123,8 +123,8 @@ contains
 
       call MPI_Bcast(cbuff, cbuff_len*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
       call MPI_Bcast(rbuff,           buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
-      call MPI_Bcast(ibuff,           buffer_dim, MPI_INTEGER         , 0, comm, ierr)
-      call MPI_Bcast(lbuff,           buffer_dim, MPI_LOGICAL         , 0, comm, ierr)
+      call MPI_Bcast(ibuff,           buffer_dim, MPI_INTEGER,          0, comm, ierr)
+      call MPI_Bcast(lbuff,           buffer_dim, MPI_LOGICAL,          0, comm, ierr)
 
       if (slave) then
 
@@ -462,7 +462,7 @@ contains
       integer :: i
       character(len=dname_len) :: dname
 
-      do i = LBOUND(den0,1), UBOUND(den0,1)
+      do i = lbound(den0,1), ubound(den0,1)
          write(dname,'(2a)') flind%all_fluids(i)%tag, '_den0'
          if (allocated(den0)) call write_3darr_to_restart(den0(i,:,:,:), file_id, dname, cg%nx, cg%ny, cg%nz)
          write(dname,'(2a)') flind%all_fluids(i)%tag, '_mtx0'

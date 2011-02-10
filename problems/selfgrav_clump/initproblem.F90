@@ -166,7 +166,7 @@ contains
       real                      :: t_save
 
       t_save = t
-      Cint_old = HUGE(1.)
+      Cint_old = huge(1.)
       b(:,    :, :, :) = 0.
       u(idni, :, :, :) = smalld
       u(ieni, :, :, :) = smallei

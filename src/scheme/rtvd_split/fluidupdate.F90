@@ -33,8 +33,6 @@ module fluidupdate   ! SPLIT
    private
    public :: fluid_update
 
-   integer, parameter :: DIR_X = 1, DIR_Y = DIR_X + 1, DIR_Z = DIR_Y + 1
-
 contains
 
    subroutine fluid_update
@@ -71,9 +69,10 @@ contains
 
       use dataio_pub,      only: skip_advection
       use types,           only: problem_customize_solution
+      use mpisetup,        only: xdim, ydim, zdim
 #ifdef SHEAR
       use fluidboundaries, only: bnd_u
-      use mpisetup,        only: has_dir, xdim, ydim, t, dt
+      use mpisetup,        only: has_dir, t, dt
       use shear,           only: yshift
 #endif /* SHEAR */
 #ifdef GRAV
@@ -112,11 +111,11 @@ contains
 
       if (.not. skip_advection) then
          if (forward) then
-            do s = DIR_X, DIR_Z
+            do s = xdim, zdim
                call make_sweep(s, forward)
             enddo
          else
-            do s = DIR_Z, DIR_X, -1
+            do s = zdim, xdim, -1
                call make_sweep(s, forward)
             enddo
          endif
@@ -150,12 +149,12 @@ contains
 
       implicit none
 
-      integer, intent(in) :: dir      !< direction, one of DIR_X, DIR_Y, DIR_Z
+      integer, intent(in) :: dir      !< direction, one of xdim, ydim, zdim
       logical, intent(in) :: forward  !< if .false. then reverse operation order in the sweep
 
       select case (dir)
 
-         case (DIR_X)
+         case (xdim)
             if (has_dir(xdim)) then
                if (.not. forward) then
 #ifdef COSM_RAYS
@@ -178,7 +177,7 @@ contains
                endif
             endif
 
-         case (DIR_Y)
+         case (ydim)
             if (has_dir(ydim)) then
                if (.not. forward) then
 #ifdef COSM_RAYS
@@ -204,7 +203,7 @@ contains
 #endif /* SHEAR */
             endif
 
-         case (DIR_Z)
+         case (zdim)
             if (has_dir(zdim)) then
                if (.not. forward) then
 #ifdef COSM_RAYS

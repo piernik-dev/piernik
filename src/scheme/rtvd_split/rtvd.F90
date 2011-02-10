@@ -332,7 +332,7 @@ contains
       real, dimension(flind%all,n)    :: dintr
 #endif /* FLUID_INTERACTIONS_DW */
 
-      real, dimension(2,2), parameter:: rk2coef = RESHAPE( (/1.0,0.5,0.0,1.0/),(/2,2/))
+      real, dimension(2,2), parameter:: rk2coef = reshape( (/1.0,0.5,0.0,1.0/),(/2,2/))
 
 #if !defined(ISO_LOCAL) && !defined(GRAV) && !(defined COSM_RAYS && defined IONIZED)
       integer                        :: dummy

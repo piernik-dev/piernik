@@ -195,7 +195,7 @@ contains
 
       integer, parameter :: rank = 3            !< Dataset rank
 
-      CHARACTER(LEN=S_LEN) :: dsetname          !< Dataset name
+      character(len=S_LEN) :: dsetname          !< Dataset name
 
       integer(HID_T) :: file_id                 !< File identifier
       integer(HID_T) :: dset_id                 !< Dataset identifier
@@ -217,16 +217,16 @@ contains
       !
       ! Create the data space for the  dataset.
       !
-      CALL h5screate_simple_f(rank, dimsf, filespace, error)
-      CALL h5screate_simple_f(rank, chunk_dims, memspace, error)
+      call h5screate_simple_f(rank, dimsf, filespace, error)
+      call h5screate_simple_f(rank, chunk_dims, memspace, error)
 
       !
       ! Create chunked dataset.
       !
-      CALL h5pcreate_f(H5P_DATASET_CREATE_F, plist_id, error)
-      CALL h5pset_chunk_f(plist_id, rank, chunk_dims, error)
-      CALL h5dcreate_f(file_id, dsetname, H5T_NATIVE_real, filespace, dset_id, error, plist_id)
-      CALL h5sclose_f(filespace, error)
+      call h5pcreate_f(H5P_DATASET_CREATE_F, plist_id, error)
+      call h5pset_chunk_f(plist_id, rank, chunk_dims, error)
+      call h5dcreate_f(file_id, dsetname, H5T_NATIVE_real, filespace, dset_id, error, plist_id)
+      call h5sclose_f(filespace, error)
 
       !
       ! Each process defines dataset in memory and writes it to the hyperslab
@@ -240,28 +240,28 @@ contains
       !
       ! Select hyperslab in the file.
       !
-      CALL h5dget_space_f(dset_id, filespace, error)
-      CALL h5sselect_hyperslab_f (filespace, H5S_SELECT_SET_F, offset, count, error, stride, block)
+      call h5dget_space_f(dset_id, filespace, error)
+      call h5sselect_hyperslab_f (filespace, H5S_SELECT_SET_F, offset, count, error, stride, block)
       !
       ! Create property list for collective dataset write
       !
-      CALL h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error)
-      CALL h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_INDEPENDENT_F, error)
+      call h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error)
+      call h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_INDEPENDENT_F, error)
 
       !
       ! Write the dataset collectively.
       !
-      CALL h5dwrite_f(dset_id, H5T_NATIVE_real, data, dimsfi, error, file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
+      call h5dwrite_f(dset_id, H5T_NATIVE_real, data, dimsfi, error, file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
 
       !
       ! Close dataspaces.
       !
-      CALL h5sclose_f(filespace, error)
-      CALL h5sclose_f(memspace, error)
+      call h5sclose_f(filespace, error)
+      call h5sclose_f(memspace, error)
       !
       ! Close the dataset.
       !
-      CALL h5dclose_f(dset_id, error)
+      call h5dclose_f(dset_id, error)
 
    end subroutine write_arr
 

@@ -192,7 +192,7 @@ contains
                   do jpm=-1,1
 
                      decr = amp_ecr_sn * ethu  &
-                           * EXP(-((cg%x(i)-xsn+real(ipm)*dom%Lx)**2  &
+                           * exp(-((cg%x(i)-xsn+real(ipm)*dom%Lx)**2  &
                            + (cg%y(j)-ysna+real(jpm)*dom%Ly)**2  &
                            + (cg%z(k)-zsn)**2)/r_sn**2)
 

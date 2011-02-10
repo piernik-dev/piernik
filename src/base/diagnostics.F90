@@ -88,7 +88,7 @@ contains
          write(msg,'(a,I3,a)') "[diagnostics:diagnose_arrays]: I am aware of ",size(array_names)," arrays..."
          call printinfo(msg)
 
-         do i = LBOUND(array_names,1), UBOUND(array_names,1)
+         do i = lbound(array_names,1), ubound(array_names,1)
             write(msg,'(3a,F7.3,a)') "Array ",trim(array_names(i))," has ",array_sizes(i)," MiB"
             call printinfo(msg)
          enddo

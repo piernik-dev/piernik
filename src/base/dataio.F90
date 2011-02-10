@@ -224,7 +224,7 @@ contains
       integer(kind=1)      :: hostnm
       integer(kind=1)      :: system
       integer              :: system_status, i
-      character(LEN=msglen):: system_command
+      character(len=msglen):: system_command
 
       if (code_progress < PIERNIK_INIT_IO_IC) call die("[dataio:init_dataio] Some physics modules are not initiaslized.")
 
@@ -414,7 +414,7 @@ contains
          write(log_file,'(6a,i3.3,a)') trim(cwd),'/',trim(problem_name),'_',trim(run_id),'_',nrestart,'.log'
 !> \todo if the simulation is restarted then save previous log_file (if exists) under a different, unique name
          write(system_command, '("mv ",a," ",a)') trim(tmp_log_file), trim(log_file)
-         system_status = SYSTEM(system_command)
+         system_status = system(system_command)
          if (system_status /= 0) then
             write(msg,'(2a)')"[dataio:init_dataio] The log must be stored in ",tmp_log_file
             call warn(msg)
@@ -578,7 +578,7 @@ contains
       if (output .eq. 'log' .or. output .eq. 'end') call write_log
       if (output .eq. 'tsl' .or. output .eq. 'end') call write_timeslice
 
-!    CALL checkdf
+!    call checkdf
 
       if (dt_hdf > 0.0 .and. nstep > step_hdf .and. output .ne. 'gpt') then
          if ((t-last_hdf_time) >= dt_hdf .or. output .eq. 'hdf' .or. output .eq. 'end') then

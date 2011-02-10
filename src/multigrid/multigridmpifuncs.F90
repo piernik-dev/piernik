@@ -186,10 +186,10 @@ contains
 
       if (has_dir(xdim)) then
          if (psize(xdim) > 1) then
-            if (.not. is_external(XLO)) CALL MPI_Isend (lvl(lev)%mgvar(1, 1, 1, iv), 1, lvl(lev)%MPI_YZ_LEFT_DOM(ng),  procxl, 15, comm3d, req3d(1),  ierr)
-            if (.not. is_external(XHI)) CALL MPI_Isend (lvl(lev)%mgvar(1, 1, 1, iv), 1, lvl(lev)%MPI_YZ_RIGHT_DOM(ng), procxr, 25, comm3d, req3d(3),  ierr)
-            if (.not. is_external(XLO)) CALL MPI_Irecv (lvl(lev)%mgvar(1, 1, 1, iv), 1, lvl(lev)%MPI_YZ_LEFT_BND(ng),  procxl, 25, comm3d, req3d(2),  ierr)
-            if (.not. is_external(XHI)) CALL MPI_Irecv (lvl(lev)%mgvar(1, 1, 1, iv), 1, lvl(lev)%MPI_YZ_RIGHT_BND(ng), procxr, 15, comm3d, req3d(4),  ierr)
+            if (.not. is_external(XLO)) call MPI_Isend (lvl(lev)%mgvar(1, 1, 1, iv), 1, lvl(lev)%MPI_YZ_LEFT_DOM(ng),  procxl, 15, comm3d, req3d(1),  ierr)
+            if (.not. is_external(XHI)) call MPI_Isend (lvl(lev)%mgvar(1, 1, 1, iv), 1, lvl(lev)%MPI_YZ_RIGHT_DOM(ng), procxr, 25, comm3d, req3d(3),  ierr)
+            if (.not. is_external(XLO)) call MPI_Irecv (lvl(lev)%mgvar(1, 1, 1, iv), 1, lvl(lev)%MPI_YZ_LEFT_BND(ng),  procxl, 25, comm3d, req3d(2),  ierr)
+            if (.not. is_external(XHI)) call MPI_Irecv (lvl(lev)%mgvar(1, 1, 1, iv), 1, lvl(lev)%MPI_YZ_RIGHT_BND(ng), procxr, 15, comm3d, req3d(4),  ierr)
          else
             if (.not. is_external(XLO)) lvl(lev)%mgvar(lvl(lev)%is-ng:lvl(lev)%is-1,  :, :, iv) = lvl(lev)%mgvar(lvl(lev)%ie-ng+1:lvl(lev)%ie,      :, :, iv)
             if (.not. is_external(XHI)) lvl(lev)%mgvar(lvl(lev)%ie+1 :lvl(lev)%ie+ng, :, :, iv) = lvl(lev)%mgvar(lvl(lev)%is     :lvl(lev)%is+ng-1, :, :, iv)
@@ -199,10 +199,10 @@ contains
 
       if (has_dir(ydim)) then
          if (psize(ydim) > 1) then
-            if (.not. is_external(YLO)) CALL MPI_Isend (lvl(lev)%mgvar(1, 1, 1, iv), 1, lvl(lev)%MPI_XZ_LEFT_DOM(ng),  procyl, 35, comm3d, req3d(5),  ierr)
-            if (.not. is_external(YHI)) CALL MPI_Isend (lvl(lev)%mgvar(1, 1, 1, iv), 1, lvl(lev)%MPI_XZ_RIGHT_DOM(ng), procyr, 45, comm3d, req3d(6),  ierr)
-            if (.not. is_external(YLO)) CALL MPI_Irecv (lvl(lev)%mgvar(1, 1, 1, iv), 1, lvl(lev)%MPI_XZ_LEFT_BND(ng),  procyl, 45, comm3d, req3d(7),  ierr)
-            if (.not. is_external(YHI)) CALL MPI_Irecv (lvl(lev)%mgvar(1, 1, 1, iv), 1, lvl(lev)%MPI_XZ_RIGHT_BND(ng), procyr, 35, comm3d, req3d(8),  ierr)
+            if (.not. is_external(YLO)) call MPI_Isend (lvl(lev)%mgvar(1, 1, 1, iv), 1, lvl(lev)%MPI_XZ_LEFT_DOM(ng),  procyl, 35, comm3d, req3d(5),  ierr)
+            if (.not. is_external(YHI)) call MPI_Isend (lvl(lev)%mgvar(1, 1, 1, iv), 1, lvl(lev)%MPI_XZ_RIGHT_DOM(ng), procyr, 45, comm3d, req3d(6),  ierr)
+            if (.not. is_external(YLO)) call MPI_Irecv (lvl(lev)%mgvar(1, 1, 1, iv), 1, lvl(lev)%MPI_XZ_LEFT_BND(ng),  procyl, 45, comm3d, req3d(7),  ierr)
+            if (.not. is_external(YHI)) call MPI_Irecv (lvl(lev)%mgvar(1, 1, 1, iv), 1, lvl(lev)%MPI_XZ_RIGHT_BND(ng), procyr, 35, comm3d, req3d(8),  ierr)
          else
             if (.not. is_external(YLO)) lvl(lev)%mgvar(:, lvl(lev)%js-ng:lvl(lev)%js-1,  :, iv) = lvl(lev)%mgvar(:, lvl(lev)%je-ng+1:lvl(lev)%je,      :, iv)
             if (.not. is_external(YHI)) lvl(lev)%mgvar(:, lvl(lev)%je+1 :lvl(lev)%je+ng, :, iv) = lvl(lev)%mgvar(:, lvl(lev)%js     :lvl(lev)%js+ng-1, :, iv)
@@ -212,10 +212,10 @@ contains
 
       if (has_dir(zdim)) then
          if (psize(zdim) > 1) then
-            if (.not. is_external(ZLO)) CALL MPI_Isend (lvl(lev)%mgvar(1, 1, 1, iv), 1, lvl(lev)%MPI_XY_LEFT_DOM(ng),  proczl, 55, comm3d, req3d(9),  ierr)
-            if (.not. is_external(ZHI)) CALL MPI_Isend (lvl(lev)%mgvar(1, 1, 1, iv), 1, lvl(lev)%MPI_XY_RIGHT_DOM(ng), proczr, 65, comm3d, req3d(10), ierr)
-            if (.not. is_external(ZLO)) CALL MPI_Irecv (lvl(lev)%mgvar(1, 1, 1, iv), 1, lvl(lev)%MPI_XY_LEFT_BND(ng),  proczl, 65, comm3d, req3d(11), ierr)
-            if (.not. is_external(ZHI)) CALL MPI_Irecv (lvl(lev)%mgvar(1, 1, 1, iv), 1, lvl(lev)%MPI_XY_RIGHT_BND(ng), proczr, 55, comm3d, req3d(12), ierr)
+            if (.not. is_external(ZLO)) call MPI_Isend (lvl(lev)%mgvar(1, 1, 1, iv), 1, lvl(lev)%MPI_XY_LEFT_DOM(ng),  proczl, 55, comm3d, req3d(9),  ierr)
+            if (.not. is_external(ZHI)) call MPI_Isend (lvl(lev)%mgvar(1, 1, 1, iv), 1, lvl(lev)%MPI_XY_RIGHT_DOM(ng), proczr, 65, comm3d, req3d(10), ierr)
+            if (.not. is_external(ZLO)) call MPI_Irecv (lvl(lev)%mgvar(1, 1, 1, iv), 1, lvl(lev)%MPI_XY_LEFT_BND(ng),  proczl, 65, comm3d, req3d(11), ierr)
+            if (.not. is_external(ZHI)) call MPI_Irecv (lvl(lev)%mgvar(1, 1, 1, iv), 1, lvl(lev)%MPI_XY_RIGHT_BND(ng), proczr, 55, comm3d, req3d(12), ierr)
          else
             if (.not. is_external(ZLO)) lvl(lev)%mgvar(:, :, lvl(lev)%ks-ng:lvl(lev)%ks-1,  iv) = lvl(lev)%mgvar(:, :, lvl(lev)%ke-ng+1:lvl(lev)%ke,      iv)
             if (.not. is_external(ZHI)) lvl(lev)%mgvar(:, :, lvl(lev)%ke+1 :lvl(lev)%ke+ng, iv) = lvl(lev)%mgvar(:, :, lvl(lev)%ks     :lvl(lev)%ks+ng-1, iv)

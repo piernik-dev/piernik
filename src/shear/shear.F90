@@ -131,7 +131,7 @@ contains
     delj  = mod(int(dely/cg%dy), cg%nyb)
     eps   = mod(dely, cg%dy)/cg%dy
 #ifdef FFTW
-    do i=LBOUND(u,1),UBOUND(u,1)
+    do i=lbound(u,1),ubound(u,1)
        u(i,:, cg%js:cg%je,:) = unshear_fft( u(i,:, cg%js:cg%je,:), cg%x(:),ddly)
     enddo
     u(:,:,1:cg%nb,:)       = u(:,:, cg%ny-2*cg%js:cg%je,:)

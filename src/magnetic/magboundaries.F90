@@ -47,28 +47,28 @@ contains
 
       if (psize(xdim) > 1) then
 
-         CALL MPI_Isend  (A(1,1,1,1), 1, cg%MAG_YZ_LEFT_DOM,  procxl, 10, comm3d, req(1), ierr)
-         CALL MPI_Isend  (A(1,1,1,1), 1, cg%MAG_YZ_RIGHT_DOM, procxr, 20, comm3d, req(3), ierr)
-         CALL MPI_Irecv  (A(1,1,1,1), 1, cg%MAG_YZ_LEFT_BND,  procxl, 20, comm3d, req(2), ierr)
-         CALL MPI_Irecv  (A(1,1,1,1), 1, cg%MAG_YZ_RIGHT_BND, procxr, 10, comm3d, req(4), ierr)
+         call MPI_Isend  (A(1,1,1,1), 1, cg%MAG_YZ_LEFT_DOM,  procxl, 10, comm3d, req(1), ierr)
+         call MPI_Isend  (A(1,1,1,1), 1, cg%MAG_YZ_RIGHT_DOM, procxr, 20, comm3d, req(3), ierr)
+         call MPI_Irecv  (A(1,1,1,1), 1, cg%MAG_YZ_LEFT_BND,  procxl, 20, comm3d, req(2), ierr)
+         call MPI_Irecv  (A(1,1,1,1), 1, cg%MAG_YZ_RIGHT_BND, procxr, 10, comm3d, req(4), ierr)
 
          call MPI_Waitall(4,req(:),status(:,:),ierr)
       endif
 
       if (psize(ydim) > 1) then
-         CALL MPI_Isend  (A(1,1,1,1), 1, cg%MAG_XZ_LEFT_DOM,  procyl, 30, comm3d, req(1), ierr)
-         CALL MPI_Isend  (A(1,1,1,1), 1, cg%MAG_XZ_RIGHT_DOM, procyr, 40, comm3d, req(3), ierr)
-         CALL MPI_Irecv  (A(1,1,1,1), 1, cg%MAG_XZ_LEFT_BND,  procyl, 40, comm3d, req(2), ierr)
-         CALL MPI_Irecv  (A(1,1,1,1), 1, cg%MAG_XZ_RIGHT_BND, procyr, 30, comm3d, req(4), ierr)
+         call MPI_Isend  (A(1,1,1,1), 1, cg%MAG_XZ_LEFT_DOM,  procyl, 30, comm3d, req(1), ierr)
+         call MPI_Isend  (A(1,1,1,1), 1, cg%MAG_XZ_RIGHT_DOM, procyr, 40, comm3d, req(3), ierr)
+         call MPI_Irecv  (A(1,1,1,1), 1, cg%MAG_XZ_LEFT_BND,  procyl, 40, comm3d, req(2), ierr)
+         call MPI_Irecv  (A(1,1,1,1), 1, cg%MAG_XZ_RIGHT_BND, procyr, 30, comm3d, req(4), ierr)
 
          call MPI_Waitall(4,req(:),status(:,:),ierr)
       endif
 
       if (psize(zdim) > 1) then
-         CALL MPI_Isend  (A(1,1,1,1), 1, cg%MAG_XY_LEFT_DOM,  proczl, 50, comm3d, req(1), ierr)
-         CALL MPI_Isend  (A(1,1,1,1), 1, cg%MAG_XY_RIGHT_DOM, proczr, 60, comm3d, req(3), ierr)
-         CALL MPI_Irecv  (A(1,1,1,1), 1, cg%MAG_XY_LEFT_BND,  proczl, 60, comm3d, req(2), ierr)
-         CALL MPI_Irecv  (A(1,1,1,1), 1, cg%MAG_XY_RIGHT_BND, proczr, 50, comm3d, req(4), ierr)
+         call MPI_Isend  (A(1,1,1,1), 1, cg%MAG_XY_LEFT_DOM,  proczl, 50, comm3d, req(1), ierr)
+         call MPI_Isend  (A(1,1,1,1), 1, cg%MAG_XY_RIGHT_DOM, proczr, 60, comm3d, req(3), ierr)
+         call MPI_Irecv  (A(1,1,1,1), 1, cg%MAG_XY_LEFT_BND,  proczl, 60, comm3d, req(2), ierr)
+         call MPI_Irecv  (A(1,1,1,1), 1, cg%MAG_XY_RIGHT_BND, proczr, 50, comm3d, req(4), ierr)
 
          call MPI_Waitall(4,req(:),status(:,:),ierr)
       endif
@@ -148,10 +148,10 @@ contains
 !
 ! wysylamy na drugi brzeg
 !
-            CALL MPI_Isend   (send_left , 3*cg%ny*cg%nz*cg%nb, MPI_DOUBLE_PRECISION, procxl, 10, comm, req(1), ierr)
-            CALL MPI_Isend   (send_right, 3*cg%ny*cg%nz*cg%nb, MPI_DOUBLE_PRECISION, procxr, 20, comm, req(3), ierr)
-            CALL MPI_Irecv   (recv_left , 3*cg%ny*cg%nz*cg%nb, MPI_DOUBLE_PRECISION, procxl, 20, comm, req(2), ierr)
-            CALL MPI_Irecv   (recv_right, 3*cg%ny*cg%nz*cg%nb, MPI_DOUBLE_PRECISION, procxr, 10, comm, req(4), ierr)
+            call MPI_Isend   (send_left , 3*cg%ny*cg%nz*cg%nb, MPI_DOUBLE_PRECISION, procxl, 10, comm, req(1), ierr)
+            call MPI_Isend   (send_right, 3*cg%ny*cg%nz*cg%nb, MPI_DOUBLE_PRECISION, procxr, 20, comm, req(3), ierr)
+            call MPI_Irecv   (recv_left , 3*cg%ny*cg%nz*cg%nb, MPI_DOUBLE_PRECISION, procxl, 20, comm, req(2), ierr)
+            call MPI_Irecv   (recv_right, 3*cg%ny*cg%nz*cg%nb, MPI_DOUBLE_PRECISION, procxr, 10, comm, req(4), ierr)
 
             call MPI_Waitall(4,req(:),status(:,:),ierr)
 
@@ -168,10 +168,10 @@ contains
 
             if (psize(xdim) > 1) then
 
-               CALL MPI_Isend  (b(1,1,1,1), 1, cg%MAG_YZ_LEFT_DOM,  procxl, 10, comm3d, req(1), ierr)
-               CALL MPI_Isend  (b(1,1,1,1), 1, cg%MAG_YZ_RIGHT_DOM, procxr, 20, comm3d, req(3), ierr)
-               CALL MPI_Irecv  (b(1,1,1,1), 1, cg%MAG_YZ_LEFT_BND,  procxl, 20, comm3d, req(2), ierr)
-               CALL MPI_Irecv  (b(1,1,1,1), 1, cg%MAG_YZ_RIGHT_BND, procxr, 10, comm3d, req(4), ierr)
+               call MPI_Isend  (b(1,1,1,1), 1, cg%MAG_YZ_LEFT_DOM,  procxl, 10, comm3d, req(1), ierr)
+               call MPI_Isend  (b(1,1,1,1), 1, cg%MAG_YZ_RIGHT_DOM, procxr, 20, comm3d, req(3), ierr)
+               call MPI_Irecv  (b(1,1,1,1), 1, cg%MAG_YZ_LEFT_BND,  procxl, 20, comm3d, req(2), ierr)
+               call MPI_Irecv  (b(1,1,1,1), 1, cg%MAG_YZ_RIGHT_BND, procxr, 10, comm3d, req(4), ierr)
 
                call MPI_Waitall(4,req(:),status(:,:),ierr)
 
@@ -181,20 +181,20 @@ contains
          case ("ydim")
             if (psize(ydim) > 1) then
 
-               CALL MPI_Isend  (b(1,1,1,1), 1, cg%MAG_XZ_LEFT_DOM,  procyl, 30, comm3d, req(1), ierr)
-               CALL MPI_Isend  (b(1,1,1,1), 1, cg%MAG_XZ_RIGHT_DOM, procyr, 40, comm3d, req(3), ierr)
-               CALL MPI_Irecv  (b(1,1,1,1), 1, cg%MAG_XZ_LEFT_BND,  procyl, 40, comm3d, req(2), ierr)
-               CALL MPI_Irecv  (b(1,1,1,1), 1, cg%MAG_XZ_RIGHT_BND, procyr, 30, comm3d, req(4), ierr)
+               call MPI_Isend  (b(1,1,1,1), 1, cg%MAG_XZ_LEFT_DOM,  procyl, 30, comm3d, req(1), ierr)
+               call MPI_Isend  (b(1,1,1,1), 1, cg%MAG_XZ_RIGHT_DOM, procyr, 40, comm3d, req(3), ierr)
+               call MPI_Irecv  (b(1,1,1,1), 1, cg%MAG_XZ_LEFT_BND,  procyl, 40, comm3d, req(2), ierr)
+               call MPI_Irecv  (b(1,1,1,1), 1, cg%MAG_XZ_RIGHT_BND, procyr, 30, comm3d, req(4), ierr)
 
                call MPI_Waitall(4,req(:),status(:,:),ierr)
             endif
 
          case ("zdim")
             if (psize(zdim) > 1) then
-               CALL MPI_Isend  (b(1,1,1,1), 1, cg%MAG_XY_LEFT_DOM,  proczl, 50, comm3d, req(1), ierr)
-               CALL MPI_Isend  (b(1,1,1,1), 1, cg%MAG_XY_RIGHT_DOM, proczr, 60, comm3d, req(3), ierr)
-               CALL MPI_Irecv  (b(1,1,1,1), 1, cg%MAG_XY_LEFT_BND,  proczl, 60, comm3d, req(2), ierr)
-               CALL MPI_Irecv  (b(1,1,1,1), 1, cg%MAG_XY_RIGHT_BND, proczr, 50, comm3d, req(4), ierr)
+               call MPI_Isend  (b(1,1,1,1), 1, cg%MAG_XY_LEFT_DOM,  proczl, 50, comm3d, req(1), ierr)
+               call MPI_Isend  (b(1,1,1,1), 1, cg%MAG_XY_RIGHT_DOM, proczr, 60, comm3d, req(3), ierr)
+               call MPI_Irecv  (b(1,1,1,1), 1, cg%MAG_XY_LEFT_BND,  proczl, 60, comm3d, req(2), ierr)
+               call MPI_Irecv  (b(1,1,1,1), 1, cg%MAG_XY_RIGHT_BND, proczr, 50, comm3d, req(4), ierr)
 
                call MPI_Waitall(4,req(:),status(:,:),ierr)
             endif
@@ -219,8 +219,8 @@ contains
 
             send_left(:,:,:,:) = b(:, cg%is:cg%isb,:,:)
 
-            CALL MPI_Isend   (send_left , 3*cg%nb*cg%ny*cg%nz, MPI_DOUBLE_PRECISION, procxyl, 70, comm, req(1), ierr)
-            CALL MPI_Irecv   (recv_left , 3*cg%nx*cg%nb*cg%nz, MPI_DOUBLE_PRECISION, procxyl, 80, comm, req(2), ierr)
+            call MPI_Isend   (send_left , 3*cg%nb*cg%ny*cg%nz, MPI_DOUBLE_PRECISION, procxyl, 70, comm, req(1), ierr)
+            call MPI_Irecv   (recv_left , 3*cg%nx*cg%nb*cg%nz, MPI_DOUBLE_PRECISION, procxyl, 80, comm, req(2), ierr)
 
             call MPI_Waitall(2,req(:),status(:,:),ierr)
 
@@ -262,8 +262,8 @@ contains
 
             send_left(:,:,:,:) = b(:,:, cg%js:cg%jsb,:)
 
-            CALL MPI_Isend   (send_left , 3*cg%nx*cg%nb*cg%nz, MPI_DOUBLE_PRECISION, procyxl, 80, comm, req(1), ierr)
-            CALL MPI_Irecv   (recv_left , 3*cg%nb*cg%ny*cg%nz, MPI_DOUBLE_PRECISION, procyxl, 70, comm, req(2), ierr)
+            call MPI_Isend   (send_left , 3*cg%nx*cg%nb*cg%nz, MPI_DOUBLE_PRECISION, procyxl, 80, comm, req(1), ierr)
+            call MPI_Irecv   (recv_left , 3*cg%nb*cg%ny*cg%nz, MPI_DOUBLE_PRECISION, procyxl, 70, comm, req(2), ierr)
 
             call MPI_Waitall(2,req(:),status(:,:),ierr)
 
