@@ -217,7 +217,7 @@ contains
          wb = wb + eh**2
       endif
 
-      eta(:,:,:) = eta_0 + eta_1 * sqrt( max(0.0,eta(:,:,:)- jc2 ))
+      eta(:,:,:) = eta_0 + eta_1 * sqrt( max(0.0,wb(:,:,:)- jc2 ))
 
       eh = 0.0
       if (has_dir(xdim)) then
