@@ -125,12 +125,12 @@ contains
       u(flind%neu%idn, :, :, :) = pulse_low_density
 
       ! Initialize density with uniform sphere
-      do i = cg%is, cg%ie
-         if (cg%x(i) > pulse_x_min .and. cg%x(i) < pulse_x_max) then
+      do k = cg%ks, cg%ke
+         if (cg%z(k) > pulse_z_min .and. cg%z(k) < pulse_z_max) then
             do j = cg%js, cg%je
                if (cg%y(j) > pulse_y_min .and. cg%y(j) < pulse_y_max) then
-                  do k = cg%ks, cg%ke
-                     if (cg%z(k) > pulse_z_min .and. cg%z(k) < pulse_z_max) then
+                  do i = cg%is, cg%ie
+                     if (cg%x(i) > pulse_x_min .and. cg%x(i) < pulse_x_max) then
                         u(flind%neu%idn, i, j, k) = pulse_low_density * pulse_amp
                      endif
                   enddo
