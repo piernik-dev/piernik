@@ -72,6 +72,8 @@ contains
 !!
 !! \details This is a low-order estimate of the Coriolis accelerations, because this routine uses density and velocity fields
 !! from the beginning of the time step. This is a simple approach, but ignores any changes due to other accelerations during the time step.
+!!
+!! \todo add cylindrical geometry support (check carefully what exactly is u(iarr_all_my(:), :)/u(iarr_all_dn(:), :) and fogure out whether any geometrical factors are needed)
 !<
 
    subroutine coriolis_force(sweep, u, rotacc)
