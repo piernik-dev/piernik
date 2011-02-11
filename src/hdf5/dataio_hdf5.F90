@@ -643,7 +643,7 @@ contains
       use grid,          only: cg
       use hdf5,          only: HID_T, HSIZE_T, SIZE_T, H5F_ACC_RDWR_F, h5fopen_f, h5gopen_f, h5gclose_f, h5fclose_f
       use h5lt,          only: h5ltmake_dataset_double_f, h5ltset_attribute_double_f
-      use mpisetup,      only: comm3d, ierr, psize, t, pcoords, xdim, ydim, zdim, has_dir, dom
+      use mpisetup,      only: comm3d, ierr, psize, t, xdim, ydim, zdim, has_dir, dom
       use mpi,           only: MPI_CHARACTER, MPI_DOUBLE_PRECISION
 #ifdef PGPLOT
       use viz,           only: draw_me
@@ -688,7 +688,7 @@ contains
       select case (plane)
          case ("yz")
             if (has_dir(xdim)) then
-               xn     = ix + cg%nb - pcoords(1)*cg%nxb
+               xn     = ix + cg%nb - cg%off(xdim)
             else
                xn     = 1
             endif
@@ -703,7 +703,7 @@ contains
             pjsize = psize(zdim)
          case ("xz")
             if (has_dir(ydim)) then
-               xn     = iy + cg%nb - pcoords(2)*cg%nyb
+               xn     = iy + cg%nb - cg%off(ydim)
             else
                xn     = 1
             endif
@@ -718,7 +718,7 @@ contains
             pjsize = psize(zdim)
          case ("xy")
             if (has_dir(zdim)) then
-               xn = iz + cg%nb - pcoords(3)*cg%nzb
+               xn = iz + cg%nb - cg%off(zdim)
             else
                xn = 1
             endif
@@ -804,9 +804,12 @@ contains
 !! \loffs offset in area for this process
 !<
    subroutine set_dims_to_write(area_type, area, chnk, lleft, lright, loffs)
+
       use grid,     only: cg
-      use mpisetup, only: dom, psize, pcoords
+      use mpisetup, only: dom, has_dir, psize, pcoords
+
       implicit none
+
       character(len=*),      intent(in)  :: area_type
       integer, dimension(3), intent(out) :: area, lleft, lright, loffs, chnk
 
@@ -816,30 +819,28 @@ contains
             area(:)   = chnk*psize
             lleft(:)  = 1
             lright(:) = chnk
-            loffs(:)  = pcoords(1:3)*chnk
+            loffs(:)  = cg%off(:) + 2 * cg%nb * pcoords(:) !\todo invent something better
          case ('outbnd')                           ! physical domain with outer boundaries
             area(:)   = [dom%nxt, dom%nyt, dom%nzt]
             lleft(:)  = [cg%is,   cg%js,   cg%ks  ]
             lright(:) = [cg%ie,   cg%je,   cg%ke  ]
             chnk(:)   = cg%n_b(:)
-            where (pcoords == 0)
+            where (cg%off(:) == 0 .and. has_dir(:))
                lleft(:)  = lleft(:)  - cg%nb
                chnk(:)   = chnk(:)   + cg%nb
             endwhere
-            where (pcoords+1 == psize)
+            where (cg%off(:) + cg%n_b(:) == dom%n_d(:) .and. has_dir(:))
                lright(:) = lright(:) + cg%nb
                chnk(:)   = chnk(:)   + cg%nb
             endwhere
-            loffs(:)  = 0
-            if (pcoords(1) /= 0) loffs(1) = pcoords(1)*cg%nxb + cg%nb
-            if (pcoords(2) /= 0) loffs(2) = pcoords(2)*cg%nyb + cg%nb
-            if (pcoords(3) /= 0) loffs(3) = pcoords(3)*cg%nzb + cg%nb
+            loffs(:)  = cg%off(:)
+            where (loffs(:)>0) loffs(:) = loffs(:) + cg%nb ! the block adjacent to the left boundary are cg%nb cells wider than cg%n[xyz]b
          case ('no_bnd')                           ! only physical domain without any boundaries
             area(:)   = dom%n_d(:)
             lleft(:)  = [cg%is,   cg%js,   cg%ks  ]
             lright(:) = [cg%ie,   cg%je,   cg%ke  ]
             chnk(:)   = cg%n_b(:)
-            loffs(:)  = pcoords(1:3)*chnk
+            loffs(:)  = cg%off(:)
       endselect
 
    end subroutine set_dims_to_write
@@ -861,7 +862,7 @@ contains
            &                   h5pcreate_f, h5pclose_f, h5pset_fapl_mpio_f, h5pset_chunk_f, h5pset_dxpl_mpio_f, &
            &                   h5screate_simple_f, h5sclose_f, h5sselect_hyperslab_f
       use list_hdf5,     only: problem_write_restart
-      use mpisetup,      only: pcoords, comm3d, comm, info, ierr, master, nstep, dom, xdim, ydim, zdim
+      use mpisetup,      only: comm3d, comm, info, ierr, master, nstep, dom, xdim, ydim, zdim
       use mpi,           only: MPI_CHARACTER
       use types,         only: hdf
 #ifdef ISO_LOCAL
@@ -1037,7 +1038,7 @@ contains
       count(:)  = 1
       block(:)  = chunk_dims(:)
 
-      offset(1) = pcoords(1)*chunk_dims(1)
+      offset(1) = cg%off(xdim)
 
       ! Select hyperslab in the file.
       call h5dget_space_f(dset_id, filespace, error)
@@ -1076,7 +1077,7 @@ contains
       count(:)  = 1
       block(:)  = chunk_dims(:)
 
-      offset(1) = pcoords(2)*chunk_dims(1)
+      offset(1) = cg%off(ydim)
 
       ! Select hyperslab in the file.
       call h5dget_space_f(dset_id, filespace, error)
@@ -1115,7 +1116,7 @@ contains
       count(:)  = 1
       block(:)  = chunk_dims(:)
 
-      offset(1) = pcoords(3)*chunk_dims(1)
+      offset(1) = cg%off(zdim)
 
       ! Select hyperslab in the file.
       call h5dget_space_f(dset_id, filespace, error)
@@ -1149,12 +1150,13 @@ contains
 
    subroutine write_3darr_to_restart(tab,file_id,dname,nx,ny,nz)
 
+      use grid,        only: cg
       use hdf5,        only: HID_T, HSIZE_T, HSSIZE_T, H5P_DATASET_CREATE_F, H5S_SELECT_SET_F, &
            &                 H5P_DATASET_XFER_F, H5FD_MPIO_INDEPENDENT_F, H5T_NATIVE_DOUBLE, &
            &                 h5dcreate_f, h5dwrite_f, h5dclose_f, h5dget_space_f, &
            &                 h5pcreate_f, h5pset_chunk_f, h5pset_dxpl_mpio_f, &
            &                 h5screate_simple_f, h5sclose_f, h5sselect_hyperslab_f
-      use mpisetup,    only: pcoords, psize
+      use mpisetup,    only: psize
 
       implicit none
 
@@ -1202,7 +1204,7 @@ contains
       count(:)  = 1
       block(:)  = chunk_dims(:)
 
-      offset(1:3) = pcoords(1:3)*chunk_dims(1:3)
+      offset(:) = cg%off(:)
 
       ! Select hyperslab in the file.
       call h5dget_space_f(dset_id, filespace, error)
@@ -1228,12 +1230,13 @@ contains
 
    subroutine read_3darr_from_restart(file_id,dname,p3d,nx,ny,nz)
 
+      use grid,         only: cg
       use hdf5,         only: HID_T, HSIZE_T, HSSIZE_T, SIZE_T, H5T_NATIVE_DOUBLE, &
            &                  H5S_SELECT_SET_F, H5FD_MPIO_INDEPENDENT_F, H5P_DATASET_XFER_F, &
            &                  h5pcreate_f, h5pclose_f, h5screate_simple_f, h5dopen_f, &
            &                  h5dget_space_f, h5sget_simple_extent_ndims_f, h5dget_create_plist_f, &
            &                  h5sselect_hyperslab_f, h5dread_f, h5sclose_f, h5pset_dxpl_mpio_f, h5dclose_f
-      use mpisetup,     only: pcoords, psize
+      use mpisetup,     only: psize
 
       implicit none
 
@@ -1278,7 +1281,7 @@ contains
       count(:)  = 1
       block(:)  = chunk_dims(:)
 
-      offset(1:3) = pcoords(1:3)*chunk_dims(1:3)
+      offset(:) = cg%off(:)
 
       ! Select hyperslab in the file.
       call h5sselect_hyperslab_f (filespace, H5S_SELECT_SET_F, offset, count, error, stride, block)
@@ -1317,7 +1320,7 @@ contains
            &                   h5screate_simple_f, h5fclose_f, h5close_f
       use h5lt,          only: h5ltget_attribute_double_f, h5ltget_attribute_int_f, h5ltget_attribute_string_f
       use list_hdf5,     only: problem_read_restart
-      use mpisetup,      only: comm, ierr, pcoords, magic_mass, master, t, info, comm3d, dt, cbuff_len, dom, has_dir, xdim, ydim, zdim
+      use mpisetup,      only: comm, ierr, magic_mass, master, t, info, comm3d, dt, cbuff_len, dom, has_dir, xdim, ydim, zdim
       use mpi,           only: MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION
       use types,         only: hdf, domlen, idlen
 #ifdef ISO_LOCAL
@@ -1449,8 +1452,7 @@ contains
       count(:)  = 1
       block(:)  = chunk_dims(:)
 
-      offset(1)   = 0
-      offset(2:4) = pcoords(1:3)*chunk_dims(2:4)
+      offset(:)   = [0, cg%off(:)]
 
       ! Select hyperslab in the file.
       call h5sselect_hyperslab_f (filespace, H5S_SELECT_SET_F, offset, count, error, stride, block)
@@ -1487,8 +1489,7 @@ contains
       count(:)  = 1
       block(:)  = chunk_dims(:)
 
-      offset(1)   = 0
-      offset(2:4) = pcoords(1:3)*(chunk_dims(2:4)-2*cg%nb)
+      offset(:) = [0, cg%off(:)]
 
       ! Select hyperslab in the file.
       call h5sselect_hyperslab_f (filespace, H5S_SELECT_SET_F, offset, count, error, stride, block)
@@ -1663,7 +1664,7 @@ contains
            &                   h5sclose_f, h5pset_dxpl_mpio_f, h5dwrite_f, h5dclose_f, H5P_DATASET_XFER_F, H5P_DATASET_CREATE_F, &
            &                   H5T_NATIVE_REAL, H5S_SELECT_SET_F, H5FD_MPIO_INDEPENDENT_F, h5dcreate_f, h5dget_space_f, &
            &                   h5sselect_hyperslab_f
-      use mpisetup,      only: pcoords, dom
+      use mpisetup,      only: dom
 
       implicit none
       real(kind=4), dimension(:,:,:) :: data
@@ -1711,7 +1712,7 @@ contains
       count(:) =  1
       block(:) = chunk_dims(:)
 
-      offset(:) = pcoords(:)*chunk_dims(:)
+      offset(:) = cg%off(:)
       !
       ! Select hyperslab in the file.
       !

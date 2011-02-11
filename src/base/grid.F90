@@ -75,13 +75,17 @@ contains
 #endif /* VERBOSE */
 
       ! This statement will be removed soon
-      if ( any(mod([dom%nxd, dom%nyd, dom%nzd], psize(:)) /= 0) ) call die("One of: (mod(n_d,p_size) /= 0")
+      if ( any(mod(dom%n_d(:), psize(:)) /= 0) ) call die("One of: (mod(n_d,p_size) /= 0")
 
       cg%nb = nb
       cg%dxmn = huge(1.0)
 
+      cg%off(:) = 0
       cg%n_b(:) = 1
-      where (has_dir(:)) cg%n_b(:) = dom%n_d(:) / psize(:) ! Block 'physical' grid sizes
+      where (has_dir(:))
+         cg%off(:) = (dom%n_d(:) * pcoords(:) ) / psize(:) ! Block offset on the dom% should be between 0 and nxd-nxb
+         cg%n_b(:) = dom%n_d(:) / psize(:)                 ! Block 'physical' grid sizes
+      endwhere
 
       cg%nxb = cg%n_b(xdim)
       cg%nyb = cg%n_b(ydim)
@@ -96,8 +100,8 @@ contains
          D_x      = 1
          cg%dx    = dom%Lx / dom%nxd
          cg%dxmn  = min(cg%dxmn, cg%dx)
-         cg%xminb = dom%xmin + real(pcoords(xdim)  )*dom%Lx/real(psize(xdim))
-         cg%xmaxb = dom%xmin + real(pcoords(xdim)+1)*dom%Lx/real(psize(xdim))
+         cg%xminb = dom%xmin + cg%dx *  cg%off(xdim)
+         cg%xmaxb = dom%xmin + cg%dx * (cg%off(xdim) + cg%nxb)
       else
          cg%nx    = 1
          cg%is    = 1
@@ -119,8 +123,8 @@ contains
          D_y      = 1
          cg%dy    = dom%Ly / dom%nyd
          cg%dxmn  = min(cg%dxmn, cg%dy)
-         cg%yminb = dom%ymin + real(pcoords(ydim)  )*dom%Ly/real(psize(ydim))
-         cg%ymaxb = dom%ymin + real(pcoords(ydim)+1)*dom%Ly/real(psize(ydim))
+         cg%yminb = dom%ymin + cg%dy *  cg%off(ydim)
+         cg%ymaxb = dom%ymin + cg%dy * (cg%off(ydim) + cg%nyb)
       else
          cg%ny    = 1
          cg%js    = 1
@@ -142,8 +146,8 @@ contains
          D_z      = 1
          cg%dz    = dom%Lz / dom%nzd
          cg%dxmn  = min(cg%dxmn, cg%dz)
-         cg%zminb = dom%zmin + real(pcoords(zdim)  )*dom%Lz/real(psize(zdim))
-         cg%zmaxb = dom%zmin + real(pcoords(zdim)+1)*dom%Lz/real(psize(zdim))
+         cg%zminb = dom%zmin + cg%dz *  cg%off(zdim)
+         cg%zmaxb = dom%zmin + cg%dz * (cg%off(zdim) + cg%nzb)
       else
          cg%nz    = 1
          cg%ks    = 1
