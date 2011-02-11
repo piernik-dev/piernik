@@ -78,7 +78,7 @@ contains
 
    subroutine coriolis_force(sweep, u, rotacc)
 
-      use fluidindex, only: flind, iarr_all_dn, iarr_all_my
+      use fluidindex, only: flind, iarr_all_dn, iarr_all_mx, iarr_all_my
 
       implicit none
 
