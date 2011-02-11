@@ -89,7 +89,7 @@ contains
          case ('xsweep')
             rotacc(:,:) = rotacc(:,:) + 2.0 * coriolis_omega * u(iarr_all_my(:), :)/u(iarr_all_dn(:), :)
          case ('ysweep')
-            rotacc(:,:) = rotacc(:,:) - 2.0 * coriolis_omega * u(iarr_all_my(:), :)/u(iarr_all_dn(:), :)
+            rotacc(:,:) = rotacc(:,:) - 2.0 * coriolis_omega * u(iarr_all_mx(:), :)/u(iarr_all_dn(:), :)
 !         case ('zsweep') !no z-component of the Coriolis force
       end select
 
