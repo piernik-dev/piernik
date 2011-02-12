@@ -42,14 +42,14 @@ module arrays
 #endif /* RESISTIVE */
 
 #ifdef GRAV
-   real, allocatable, dimension(:,:,:)       :: gpot     !< Array for sum of gravitational potential at t += dt
-   real, allocatable, dimension(:,:,:)       :: hgpot    !< Array for sum of gravitational potential at t += 0.5*dt
-   real, allocatable, dimension(:,:,:)       :: gp       !< Array for gravitational potential from external fields
-   real, allocatable, dimension(:)           :: dprof    !< Array used for storing density during calculation of hydrostatic equilibrium
-   real, allocatable, dimension(:)           :: eprof    !< Array used for storing energy during calculation of hydrostatic equilibrium
+   real, allocatable, dimension(:,:,:), target :: gpot     !< Array for sum of gravitational potential at t += dt
+   real, allocatable, dimension(:,:,:), target :: hgpot    !< Array for sum of gravitational potential at t += 0.5*dt
+   real, allocatable, dimension(:,:,:), target :: gp       !< Array for gravitational potential from external fields
+   real, allocatable, dimension(:), target     :: dprof    !< Array used for storing density during calculation of hydrostatic equilibrium
+   real, allocatable, dimension(:), target     :: eprof    !< Array used for storing energy during calculation of hydrostatic equilibrium
 #ifdef SELF_GRAV
-   real, allocatable, dimension(:,:,:)       :: sgp      !< Array for gravitational potential from multigrid or FFT solver
-   real, allocatable, dimension(:,:,:)       :: sgpm     !< Array for gravitational potential from multigrid or FFT solver at previous timestep saved by source_terms_grav.
+   real, allocatable, dimension(:,:,:), target :: sgp      !< Array for gravitational potential from multigrid or FFT solver
+   real, allocatable, dimension(:,:,:), target :: sgpm     !< Array for gravitational potential from multigrid or FFT solver at previous timestep saved by source_terms_grav.
 #endif /* SELF_GRAV */
 #endif /* GRAV */
 
