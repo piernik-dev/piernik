@@ -868,6 +868,9 @@ contains
 #ifdef ISO_LOCAL
       use arrays,        only: cs_iso2_arr
 #endif /* ISO_LOCAL */
+#ifdef GRAV
+      use arrays,        only: gp
+#endif /* GRAV */
 
       implicit none
       logical, optional, intent(in) :: debug_res
@@ -911,6 +914,9 @@ contains
 #ifdef ISO_LOCAL
       call write_3darr_to_restart(cs_iso2_arr(:,:,:),file_id,"cs_iso2", cg%nx, cg%ny, cg%nz)
 #endif /* ISO_LOCAL */
+#ifdef GRAV
+      call write_3darr_to_restart(gp(:,:,:),file_id, "gp", cg%nx, cg%ny, cg%nz)
+#endif /* GRAV */
 
       rank = 4
       allocate(dimsf(rank),dimsfi(rank),chunk_dims(rank))
@@ -1326,6 +1332,9 @@ contains
 #ifdef ISO_LOCAL
       use arrays,        only: cs_iso2_arr
 #endif /* ISO_LOCAL */
+#ifdef GRAV
+      use arrays,        only: gp
+#endif /* GRAV */
 
       implicit none
 
@@ -1353,9 +1362,9 @@ contains
       integer, dimension(1) :: ibuf
 
       real, dimension(:,:,:,:), pointer :: p4d
-#ifdef ISO_LOCAL
+#if defined(ISO_LOCAL) || defined(GRAV)
       real, dimension(:,:,:), pointer :: p3d
-#endif /* ISO_LOCAL */
+#endif /* ISO_LOCAL || GRAV */
 
       real                  :: restart_hdf5_version
 
@@ -1424,9 +1433,14 @@ contains
 
 #ifdef ISO_LOCAL
       if (.not.associated(p3d)) p3d => cs_iso2_arr(:,:,:)
-      call read_3darr_from_restart(file_id,"cs_iso2",p3d, cg%nx, cg%ny, cg%nz)
+      call read_3darr_from_restart(file_id, "cs_iso2", p3d, cg%nx, cg%ny, cg%nz)
       if (associated(p3d)) nullify(p3d)
 #endif /* ISO_LOCAL */
+#ifdef GRAV
+      if (.not.associated(p3d)) p3d => gp(:,:,:)
+      call read_3darr_from_restart(file_id, "gp", p3d, cg%nx, cg%ny, cg%nz)
+      if (associated(p3d)) nullify(p3d)
+#endif /* GRAV */
       !----------------------------------------------------------------------------------
       !  READ FLUID VARIABLES
       !

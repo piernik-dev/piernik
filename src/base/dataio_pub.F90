@@ -40,7 +40,7 @@ module dataio_pub
    private :: colormessage, T_PLAIN, T_ERR, T_WARN, T_INFO, T_IO, T_SILENT, ansi_red, ansi_green, ansi_yellow, ansi_blue, ansi_magenta, ansi_cyan ! QA_WARN no need to use these symbols outside dataio_pub
    !mpisetup uses: ansi_white and ansi_black
 
-   real, parameter    :: piernik_hdf5_version = 1.15   !< output version
+   real, parameter    :: piernik_hdf5_version = 1.16   !< output version
 
    integer, parameter :: stdout = output_unit
    integer, parameter :: stderr = error_unit
