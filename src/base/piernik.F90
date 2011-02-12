@@ -234,6 +234,8 @@ contains
 
       call init_fluids
 
+      call init_interactions
+
       code_progress = PIERNIK_INIT_BASE      ! Now we can initialize things that depend on all the above fundamental calls
 
       call init_arrays(flind) ! depends on grid and fluids
@@ -263,8 +265,6 @@ contains
 #endif /* VERBOSE */
       endif
 #endif /* GRAV */
-
-      call init_interactions ! can it be executed before PIERNIK_INIT_BASE ?
 
 #ifdef CORIOLIS
       call init_coriolis ! depends on geometry
