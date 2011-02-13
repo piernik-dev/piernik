@@ -408,9 +408,9 @@ contains
       integer(HID_T),intent(in)  :: file_id
 
       if ( divine_intervention_type == 3) then
-        if (allocated(den0)) call write_3darr_to_restart(den0(:,:,:), file_id, "den0", cg%nx, cg%ny, cg%nz)
-        if (allocated(vlx0)) call write_3darr_to_restart(vlx0(:,:,:), file_id, "vlx0", cg%nx, cg%ny, cg%nz)
-        if (allocated(vly0)) call write_3darr_to_restart(vly0(:,:,:), file_id, "vly0", cg%nx, cg%ny, cg%nz)
+         if (allocated(den0)) call write_3darr_to_restart(den0(:,:,:), file_id, "den0", cg%nx, cg%ny, cg%nz)
+         if (allocated(vlx0)) call write_3darr_to_restart(vlx0(:,:,:), file_id, "vlx0", cg%nx, cg%ny, cg%nz)
+         if (allocated(vly0)) call write_3darr_to_restart(vly0(:,:,:), file_id, "vly0", cg%nx, cg%ny, cg%nz)
       endif
 
    end subroutine write_initial_fld_to_restart
@@ -452,83 +452,85 @@ contains
 
    subroutine problem_customize_solution_wt4
 
-     use arrays,      only: u, cs_iso2_arr
-     use grid,        only: cg
-     use initionized, only: idni, imxi, imyi, imzi
+      use arrays,      only: u, cs_iso2_arr
+      use grid,        only: cg
+      use initionized, only: idni, imxi, imyi, imzi
 
-     implicit none
+      implicit none
 
-     integer :: i, j, k
-     real, allocatable, dimension(:) :: mod_str
-     real, parameter :: max_ambient = 100. ! do not modify solution if density is above max_ambient * ambient_density
-     real, allocatable, dimension(:,:) :: alf
-     real            :: rc, ambient_density_min
+      integer :: i, j, k
+      real, allocatable, dimension(:) :: mod_str
+      real, parameter :: max_ambient = 100. ! do not modify solution if density is above max_ambient * ambient_density
+      real, allocatable, dimension(:,:) :: alf
+      real            :: rc, ambient_density_min
 
-     if (.not. allocated(mod_str)) allocate(mod_str(cg%is:cg%ie)) !BEWARE not deallocated anywhere yet
+      if (.not. allocated(mod_str)) allocate(mod_str(cg%is:cg%ie)) !BEWARE not deallocated anywhere yet
 
-     select case (divine_intervention_type)
-        case (1)                                                                                ! crude
-           where (u(idni, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) < ambient_density)
-              u(imxi, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = (1. - damp_factor) * u(imxi, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
-              u(imyi, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = (1. - damp_factor) * u(imyi, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
-              u(imzi, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = (1. - damp_factor) * u(imzi, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
-              cs_iso2_arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = mincs2
-           elsewhere
-              cs_iso2_arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = maxcs2
-           endwhere
-        case (2)                                                                                ! smooth
-           ambient_density_min = ambient_density / max_ambient
-           do k = cg%ks, cg%ke
-              do j = cg%js, cg%je
-                 mod_str(cg%is:cg%ie) = max(0., (1. + 1./max_ambient) * ambient_density_min / (max(0., u(idni, cg%is:cg%ie, j, k)) + ambient_density_min) - 1./max_ambient)
-                 ! ifort can have memory leaks on WHERE - let's provide explicit loop for this crappy compiler
-                 ! The __IFORT__ macro has to be defined manually, e.g. in appropriate compiler.in file
+      select case (divine_intervention_type)
+         case (1)                                                                                ! crude
+            where (u(idni, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) < ambient_density)
+               u(imxi, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = (1. - damp_factor) * u(imxi, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
+               u(imyi, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = (1. - damp_factor) * u(imyi, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
+               u(imzi, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = (1. - damp_factor) * u(imzi, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
+               cs_iso2_arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = mincs2
+            elsewhere
+               cs_iso2_arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = maxcs2
+            endwhere
+         case (2)                                                                                ! smooth
+            ambient_density_min = ambient_density / max_ambient
+            do k = cg%ks, cg%ke
+               do j = cg%js, cg%je
+                  mod_str(cg%is:cg%ie) = max(0., (1. + 1./max_ambient) * ambient_density_min / (max(0., u(idni, cg%is:cg%ie, j, k)) + ambient_density_min) - 1./max_ambient)
+                  ! ifort can have memory leaks on WHERE - let's provide explicit loop for this crappy compiler
+                  ! The __IFORT__ macro has to be defined manually, e.g. in appropriate compiler.in file
 #ifdef __IFORT__
-                 do i = cg%is, cg%ie
-                    if (mod_str(i) > max_ambient**(-2)) then
-                       u(idni,     i, j, k) = u(idni, i, j, k) + ambient_density_min * mod_str(i)
-                       u(imxi,     i, j, k) = u(imxi, i, j, k) * (1. - damp_factor   * mod_str(i))
-                       u(imyi,     i, j, k) = u(imyi, i, j, k) * (1. - damp_factor   * mod_str(i))
-                       u(imzi,     i, j, k) = u(imzi, i, j, k) * (1. - damp_factor   * mod_str(i))
-                       cs_iso2_arr(i, j, k) = maxcs2           -  (maxcs2-mincs2)    * mod_str(i)
-                    endif
-                 enddo
+                  do i = cg%is, cg%ie
+                     if (mod_str(i) > max_ambient**(-2)) then
+                        u(idni,     i, j, k) = u(idni, i, j, k) + ambient_density_min * mod_str(i)
+                        u(imxi,     i, j, k) = u(imxi, i, j, k) * (1. - damp_factor   * mod_str(i))
+                        u(imyi,     i, j, k) = u(imyi, i, j, k) * (1. - damp_factor   * mod_str(i))
+                        u(imzi,     i, j, k) = u(imzi, i, j, k) * (1. - damp_factor   * mod_str(i))
+                        cs_iso2_arr(i, j, k) = maxcs2           -  (maxcs2-mincs2)    * mod_str(i)
+                     endif
+                  enddo
 #else /* !__IFORT__ */
-                 where (mod_str(cg%is:cg%ie) > max_ambient**(-2))
-                    u(idni,     cg%is:cg%ie, j, k) = u(idni, cg%is:cg%ie, j, k) + ambient_density_min * mod_str(cg%is:cg%ie)
-                    u(imxi,     cg%is:cg%ie, j, k) = u(imxi, cg%is:cg%ie, j, k) * (1. - damp_factor   * mod_str(cg%is:cg%ie))
-                    u(imyi,     cg%is:cg%ie, j, k) = u(imyi, cg%is:cg%ie, j, k) * (1. - damp_factor   * mod_str(cg%is:cg%ie))
-                    u(imzi,     cg%is:cg%ie, j, k) = u(imzi, cg%is:cg%ie, j, k) * (1. - damp_factor   * mod_str(cg%is:cg%ie))
-                    cs_iso2_arr(cg%is:cg%ie, j, k) = maxcs2               -  (maxcs2-mincs2)    * mod_str(cg%is:cg%ie)
-                 endwhere
+                  where (mod_str(cg%is:cg%ie) > max_ambient**(-2))
+                     u(idni,     cg%is:cg%ie, j, k) = u(idni, cg%is:cg%ie, j, k) + ambient_density_min * mod_str(cg%is:cg%ie)
+                     u(imxi,     cg%is:cg%ie, j, k) = u(imxi, cg%is:cg%ie, j, k) * (1. - damp_factor   * mod_str(cg%is:cg%ie))
+                     u(imyi,     cg%is:cg%ie, j, k) = u(imyi, cg%is:cg%ie, j, k) * (1. - damp_factor   * mod_str(cg%is:cg%ie))
+                     u(imzi,     cg%is:cg%ie, j, k) = u(imzi, cg%is:cg%ie, j, k) * (1. - damp_factor   * mod_str(cg%is:cg%ie))
+                     cs_iso2_arr(cg%is:cg%ie, j, k) = maxcs2               -  (maxcs2-mincs2)    * mod_str(cg%is:cg%ie)
+                  endwhere
 #endif /* !__IFORT__ */
-              enddo
-           enddo
-        case (3)
-          if (.not. allocated(alf)) then
-             allocate(alf(cg%nx, cg%ny))
-             do i = 1, cg%nx
-                do j = 1, cg%ny
-                   rc = sqrt(cg%x(i)**2 + cg%y(j)**2)
-                   alf(i,j) = -alfasupp*0.5*(tanh((rc-r_in)/r_in*f_in)-1.)
-                   alf(i,j) = alf(i,j) + alfasupp*0.5*(tanh((rc-r_out)/r_out*f_out) + 1.)
-                enddo
-             enddo
-          endif
-          do k = 1, cg%nz
-             u(idni, :, :, k) = (1. - alf(:,:))*u(idni, :, :, k) + alf*den0(:, :, k)
-             u(imxi, :, :, k) = (1. - alf(:,:))*u(imxi, :, :, k) + alf*den0(:, :, k) * vlx0(:, :, k)
-             u(imyi, :, :, k) = (1. - alf(:,:))*u(imyi, :, :, k) + alf*den0(:, :, k) * vly0(:, :, k)
-          enddo
-          do k = cg%ks, cg%ke
-             do j = cg%js, cg%je
-                mod_str(cg%is:cg%ie) = max(0., (1. + 1./max_ambient) * ambient_density / (max(0., u(idni, cg%is:cg%ie, j, k)) + ambient_density) - 1./max_ambient)
-                where (mod_str(cg%is:cg%ie) > max_ambient**(-2))
-                   u(imzi,     cg%is:cg%ie, j, k) = u(imzi, cg%is:cg%ie, j, k) * (1. - damp_factor * mod_str(cg%is:cg%ie))
-                endwhere
-             enddo
-          enddo
-     end select
+               enddo
+            enddo
+         case (3)
+            if (.not. allocated(alf)) then
+               allocate(alf(cg%nx, cg%ny))
+               do i = 1, cg%nx
+                  do j = 1, cg%ny
+                     rc = sqrt(cg%x(i)**2 + cg%y(j)**2)
+                     alf(i,j) = -alfasupp*0.5*(tanh((rc-r_in)/r_in*f_in)-1.)
+                     alf(i,j) = alf(i,j) + alfasupp*0.5*(tanh((rc-r_out)/r_out*f_out) + 1.)
+                  enddo
+               enddo
+            endif
+            do k = 1, cg%nz
+               u(idni, :, :, k) = (1. - alf(:,:))*u(idni, :, :, k) + alf*den0(:, :, k)
+               u(imxi, :, :, k) = (1. - alf(:,:))*u(imxi, :, :, k) + alf*den0(:, :, k) * vlx0(:, :, k)
+               u(imyi, :, :, k) = (1. - alf(:,:))*u(imyi, :, :, k) + alf*den0(:, :, k) * vly0(:, :, k)
+            enddo
+            do k = cg%ks, cg%ke
+               do j = cg%js, cg%je
+                  mod_str(cg%is:cg%ie) = max(0., (1. + 1./max_ambient) * ambient_density / (max(0., u(idni, cg%is:cg%ie, j, k)) + ambient_density) - 1./max_ambient)
+                  where (mod_str(cg%is:cg%ie) > max_ambient**(-2))
+                     u(imzi,     cg%is:cg%ie, j, k) = u(imzi, cg%is:cg%ie, j, k) * (1. - damp_factor * mod_str(cg%is:cg%ie))
+                  endwhere
+               enddo
+            enddo
+
+      end select
 
    end subroutine problem_customize_solution_wt4
+
 end module initproblem

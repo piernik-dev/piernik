@@ -237,7 +237,7 @@ contains
 !-----------------------------------------------------------------------------
    subroutine init_prob
 
-      use dataio_pub,          only: msg, printinfo
+      use dataio_pub,          only: msg, printinfo, die
       use types,               only: component_fluid
       use arrays,              only: u, b, dprof
       use constants,           only: newtong, gram, cm, kboltz, mH, dpi
@@ -247,7 +247,6 @@ contains
       use hydrostatic,         only: hydrostatic_zeq_densmid
       use mpisetup,            only: zdim, has_dir, dom, master, geometry
       use types,               only: component_fluid
-      use dataio_pub,          only: die
 
       implicit none
 

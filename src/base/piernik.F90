@@ -33,7 +33,7 @@ program piernik
 ! pulled by ANY
    use dataio,        only: write_data, user_msg_handler, check_log, check_tsl
    use dataio_pub,    only: nend, tend, msg, fplen, printinfo, warn, die, cwdlen, stdout, &
-       &                    code_progress, PIERNIK_START, PIERNIK_INITIALIZED, PIERNIK_FINISHED, PIERNIK_CLEANUP
+        &                   code_progress, PIERNIK_START, PIERNIK_INITIALIZED, PIERNIK_FINISHED, PIERNIK_CLEANUP
    use fluidupdate,   only: fluid_update
    use mpisetup,      only: comm, comm3d, ierr, master, t, nstep, dt, dtm
    use timer,         only: time_left

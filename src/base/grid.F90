@@ -176,9 +176,9 @@ contains
       cg%maxxyz = maxval([size(cg%x), size(cg%y), size(cg%z)])
 
 !--- Assignments -----------------------------------------------------------
-    ! left zone boundaries:  xl, yl, zl
-    ! zone centers:          x,  y,  z
-    ! right zone boundaries: xr, yr, zr
+      ! left zone boundaries:  xl, yl, zl
+      ! zone centers:          x,  y,  z
+      ! right zone boundaries: xr, yr, zr
 
 !--- x-grids --------------------------------------------------------------
 

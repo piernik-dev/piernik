@@ -241,7 +241,7 @@ contains
       call MPI_Allreduce(MPI_IN_PLACE, eta_max, 1, MPI_DOUBLE_PRECISION, MPI_MAX, comm, ierr)
 
 #ifndef ISO
-     dt_eint = deint_max * abs(minval(               &
+      dt_eint = deint_max * abs(minval(               &
                       ( u(flind%ion%ien, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)     &
                 - 0.5*( u(flind%ion%imx, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2  &
                       + u(flind%ion%imy, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2  &
@@ -253,8 +253,6 @@ contains
                       / ( eta(           cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)     &
                       *    wb(           cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)+small) ))
 #endif /* !ISO */
-
-      return
 
    end subroutine compute_resist
 

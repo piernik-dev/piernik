@@ -110,8 +110,8 @@ contains
       p(RNG)  = flind%neu%cs2*uun(idn,RNG)
 #else /* !ISO */
       p(RNG)  = (uun(ien,RNG)  &
-      - 0.5*( uun(imx,RNG)**2 + uun(imy,RNG)**2 + uun(imz,RNG)**2 ) &
-          / uun(idn,RNG))*(flind%neu%gam_1)
+           - 0.5*( uun(imx,RNG)**2 + uun(imy,RNG)**2 + uun(imz,RNG)**2 ) &
+           / uun(idn,RNG))*(flind%neu%gam_1)
       p(RNG)  = max(p(RNG),smallp)
 #endif /* !ISO */
 

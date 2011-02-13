@@ -61,8 +61,8 @@ contains
       ll = size(tab,d)
 
       if (ll==1) then
-        pshift = tab
-        return
+         pshift = tab
+         return
       endif
 
       if (d==1) then
@@ -98,8 +98,8 @@ contains
       ll = size(tab,d)
 
       if (ll==1) then
-        mshift = tab
-        return
+         mshift = tab
+         return
       endif
 
       if (d==1) then

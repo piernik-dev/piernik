@@ -148,6 +148,7 @@ contains
       integer :: i, j, k
       real    :: xi, yj, zk, kn, Tamp, pres, Tamp_rounded, Tamp_aux
       real    :: cs0, omg, omg2, kJ
+      integer, parameter :: g_lun = 137
 
       cs0  = sqrt(gamma_ion * p0 / d0)
       kn   = sqrt(kx**2 + ky**2 + kz**2)
@@ -218,69 +219,69 @@ contains
                u(ieni,i,j,k)      = u(ieni,i,j,k) + 0.5*sum(b(:,i,j,k)**2,1)
 #endif
 #endif /* !ISO */
-        enddo
+            enddo
+         enddo
       enddo
-    enddo
 
-    if (Tamp > 0) then
-       Tamp_aux = 10**int(log(Tamp)/log(10.))
-       Tamp_rounded = (int(1.05*Tamp/Tamp_aux)+1)*Tamp_aux
-    else
-       Tamp_rounded = 0.
-    endif
-    if (master) then
-      call printinfo('', .true.)
-      call printinfo('To verify results, run:', .true.)
+      if (Tamp > 0) then
+         Tamp_aux = 10**int(log(Tamp)/log(10.))
+         Tamp_rounded = (int(1.05*Tamp/Tamp_aux)+1)*Tamp_aux
+      else
+         Tamp_rounded = 0.
+      endif
+      if (master) then
+         call printinfo('', .true.)
+         call printinfo('To verify results, run:', .true.)
 
 #ifdef MULTIGRID
-      call printinfo(' % gnuplot verify.gpl; display jeans-mg.png', .true.)
+         call printinfo(' % gnuplot verify.gpl; display jeans-mg.png', .true.)
 #else /* !MULTIGRID */
-      call printinfo(' % gnuplot verify.gpl; display jeans-fft.png', .true.)
+         call printinfo(' % gnuplot verify.gpl; display jeans-fft.png', .true.)
 #endif /* !MULTIGRID */
-      call printinfo('', .true.)
+         call printinfo('', .true.)
 
-      open(137,file="verify.gpl",status="unknown")
-         write(137,'(a)') "set sample 1000"
-         write(137,'(a)') "set term png #font luximr"
+         open(g_lun,file="verify.gpl",status="unknown")
+         write(g_lun,'(a)') "set sample 1000"
+         write(g_lun,'(a)') "set term png #font luximr"
 #ifdef MULTIGRID
-         write(137,'(a)') "set output 'jeans-mg.png'"
-         write(137,'(a)') 'set title "Jeans oscillations (multigrid)"'
+         write(g_lun,'(a)') "set output 'jeans-mg.png'"
+         write(g_lun,'(a)') 'set title "Jeans oscillations (multigrid)"'
 #else /* !MULTIGRID */
-         write(137,'(a)') "set output 'jeans-fft.png'"
-         write(137,'(a)') 'set title "Jeans oscillations (FFT)"'
+         write(g_lun,'(a)') "set output 'jeans-fft.png'"
+         write(g_lun,'(a)') 'set title "Jeans oscillations (FFT)"'
 #endif /* !MULTIGRID */
-         write(137,'(3(a,/),a)') 'set ylabel "E_int"', 'set xtics 1', 'set mxtics 2', 'set mytics 2'
+         write(g_lun,'(3(a,/),a)') 'set ylabel "E_int"', 'set xtics 1', 'set mxtics 2', 'set mytics 2'
          if (Tamp_rounded /= 0 .and. Tamp >0) then
-            write(137,'(a,g11.3)')'set ytics ',Tamp_rounded/2.
-            write(137,'(2(a,g11.3),a)')'set yrange [ ',Tamp_rounded/(-4.),':',Tamp_rounded,']'
+            write(g_lun,'(a,g11.3)')'set ytics ',Tamp_rounded/2.
+            write(g_lun,'(2(a,g11.3),a)')'set yrange [ ',Tamp_rounded/(-4.),':',Tamp_rounded,']'
          else
-            write(137,'(a)')'set yrange [ * : * ]'
+            write(g_lun,'(a)')'set yrange [ * : * ]'
          endif
          if (Tamp >0) then
-            write(137,'(a)') "set key left Left reverse bottom"
-            write(137,'(a,g13.5)') "a = ", Tamp
-            write(137,'(a,g13.5)') "b = ", omg
-            write(137,'(a,g13.5)') "T = 2*pi/b"
-            write(137,'(a,g13.5)') "y(x) = a * sin(b*x)**2"
-            write(137,'(a)') 'set xlabel "time [periods]"'
+            write(g_lun,'(a)') "set key left Left reverse bottom"
+            write(g_lun,'(a,g13.5)') "a = ", Tamp
+            write(g_lun,'(a,g13.5)') "b = ", omg
+            write(g_lun,'(a,g13.5)') "T = 2*pi/b"
+            write(g_lun,'(a,g13.5)') "y(x) = a * sin(b*x)**2"
+            write(g_lun,'(a)') 'set xlabel "time [periods]"'
             if (tend > pi/omg) then
-               write(137,'(a,g11.3,a)')'set xrange [ 0 : int(',tend,'/T)]'
+               write(g_lun,'(a,g11.3,a)')'set xrange [ 0 : int(',tend,'/T)]'
             else
-               write(137,'(a)')'set xrange [ * : * ]'
+               write(g_lun,'(a)')'set xrange [ * : * ]'
             endif
-            write(137,'(a)') 'plot "jeans_ts1_000.tsl" u ($2/T):($11) w p t "calculated", "" u ($2/T):($11) smoo cspl t "" w l lt 1, y(x*T) t "analytical", "" u ($2/T):(10*(y($2)-$11)) t "10 * difference" w lp, 0 t "" w l lt 0'
+            write(g_lun,'(a)') 'plot "jeans_ts1_000.tsl" u ($2/T):($11) w p t "calculated", "" u ($2/T):($11) smoo cspl t "" w l lt 1, y(x*T) t "analytical", "" u ($2/T):(10*(y($2)-$11)) t "10 * difference" w lp, 0 t "" w l lt 0'
          else
 
-            write(137,'(a,g13.5)') "a = ", amp**2 * omg**2 * 800000. !BEWARE: stronger dependence on omg, magic number 800000
-            write(137,'(a,g13.5)') "b = ", 2.0*omg
-            write(137,'(a,g13.5)') "T = 2*pi/b"
-            write(137,'(a,g13.5)') "y(x) = a * exp(b*x)"
-            write(137,'(3(a,/),a)') 'set key left Left reverse top', 'set log y', 'set xlabel "time"', 'set xrange [ * : * ]'
-            write(137,'(a)') 'plot "jeans_ts1_000.tsl" u ($2):($11) w p t "calculated", y(x) t "exp(2 om T)"'
+            write(g_lun,'(a,g13.5)') "a = ", amp**2 * omg**2 * 800000. !BEWARE: stronger dependence on omg, magic number 800000
+            write(g_lun,'(a,g13.5)') "b = ", 2.0*omg
+            write(g_lun,'(a,g13.5)') "T = 2*pi/b"
+            write(g_lun,'(a,g13.5)') "y(x) = a * exp(b*x)"
+            write(g_lun,'(3(a,/),a)') 'set key left Left reverse top', 'set log y', 'set xlabel "time"', 'set xrange [ * : * ]'
+            write(g_lun,'(a)') 'plot "jeans_ts1_000.tsl" u ($2):($11) w p t "calculated", y(x) t "exp(2 om T)"'
          endif
-      close(137)
-    endif
-    return
-  end subroutine init_prob
+         close(g_lun)
+      endif
+
+   end subroutine init_prob
 
 end module initproblem

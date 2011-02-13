@@ -68,51 +68,54 @@ contains
 !! </table>
 !! \n \n
 !<
-  subroutine init_neutral
+   subroutine init_neutral
 
-    use dataio_pub,     only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml      ! QA_WARN required for diff_nml
-    use mpisetup,       only: master, slave, ierr, comm, rbuff, lbuff, buffer_dim
-    use mpi,            only: MPI_LOGICAL, MPI_DOUBLE_PRECISION
+      use dataio_pub,     only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml      ! QA_WARN required for diff_nml
+      use mpisetup,       only: master, slave, ierr, comm, rbuff, lbuff, buffer_dim
+      use mpi,            only: MPI_LOGICAL, MPI_DOUBLE_PRECISION
 
-    implicit none
+      implicit none
 
-    namelist /FLUID_NEUTRAL/ gamma_neu, cs_iso_neu, selfgrav_neu
+      namelist /FLUID_NEUTRAL/ gamma_neu, cs_iso_neu, selfgrav_neu
 
-    gamma_neu    = 5./3.
-    cs_iso_neu   = 1.0
-    selfgrav_neu = .false.
+      gamma_neu    = 5./3.
+      cs_iso_neu   = 1.0
+      selfgrav_neu = .false.
 
-    if (master) then
+      if (master) then
 
-       diff_nml(FLUID_NEUTRAL)
+         diff_nml(FLUID_NEUTRAL)
 
-       lbuff(1)   = selfgrav_neu
+         lbuff(1)   = selfgrav_neu
 
-       rbuff(1)   = gamma_neu
-       rbuff(2)   = cs_iso_neu
+         rbuff(1)   = gamma_neu
+         rbuff(2)   = cs_iso_neu
 
-    endif
+      endif
 
-    call MPI_Bcast(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
-    call MPI_Bcast(lbuff,    buffer_dim, MPI_LOGICAL,          0, comm, ierr)
+      call MPI_Bcast(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+      call MPI_Bcast(lbuff,    buffer_dim, MPI_LOGICAL,          0, comm, ierr)
 
-    if (slave) then
+      if (slave) then
 
-      selfgrav_neu = lbuff(1)
+         selfgrav_neu = lbuff(1)
 
-      gamma_neu   = rbuff(1)
-      cs_iso_neu  = rbuff(2)
+         gamma_neu   = rbuff(1)
+         cs_iso_neu  = rbuff(2)
 
-    endif
+      endif
 
-    cs_iso_neu2      = cs_iso_neu**2
+      cs_iso_neu2      = cs_iso_neu**2
 
-  end subroutine init_neutral
+   end subroutine init_neutral
 
    subroutine neutral_index(flind)
+
       use diagnostics,  only: ma1d, my_allocate
       use types,        only: var_numbers
+
       implicit none
+
       type(var_numbers), intent(inout) :: flind
 
       flind%neu%beg    = flind%all + 1

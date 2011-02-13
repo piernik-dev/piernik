@@ -291,7 +291,7 @@ contains
                if (is_external(ZLO)) lvl(lev)%mgvar(:, :, lvl(lev)%ks-i, iv) = lvl(lev)%mgvar(:, :, lvl(lev)%ks+i-1, iv)
                if (is_external(ZHI)) lvl(lev)%mgvar(:, :, lvl(lev)%ke+i, iv) = lvl(lev)%mgvar(:, :, lvl(lev)%ke-i+1, iv)
             enddo
-          case (extbnd_antimirror) ! homogenous Dirichlet BC with 0 at external faces
+         case (extbnd_antimirror) ! homogenous Dirichlet BC with 0 at external faces
             do i = 1, ng
                if (is_external(XLO)) lvl(lev)%mgvar(lvl(lev)%is-i, :, :, iv) = - lvl(lev)%mgvar(lvl(lev)%is+i-1, :, :, iv)
                if (is_external(XHI)) lvl(lev)%mgvar(lvl(lev)%ie+i, :, :, iv) = - lvl(lev)%mgvar(lvl(lev)%ie-i+1, :, :, iv)

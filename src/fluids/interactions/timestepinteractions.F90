@@ -41,38 +41,39 @@ contains
 !! \warning works only with neutrals and dust case !!!!
 !! \todo check if subtraction of momenta is really the case (i am confused again - DW)
 !<
-  real function timestep_interactions() result(dt)
-    use arrays,       only: u, b
-    use func,         only: L2norm
-    use constants,    only: small
-    use fluidindex,   only: flind
-    use interactions, only: collfaq, cfl_interact, has_interactions
-    use mpisetup,     only: comm, ierr
-    use mpi,          only: MPI_MIN, MPI_DOUBLE_PRECISION
+   real function timestep_interactions() result(dt)
 
-    implicit none
+      use arrays,       only: u, b
+      use func,         only: L2norm
+      use constants,    only: small
+      use fluidindex,   only: flind
+      use interactions, only: collfaq, cfl_interact, has_interactions
+      use mpisetup,     only: comm, ierr
+      use mpi,          only: MPI_MIN, MPI_DOUBLE_PRECISION
 
-    real :: dt_interact_proc        !< timestep due to %interactions for the current process (MPI block) only
-    real :: dt_interact_all         !< timestep due to %interactions for all MPI blocks
-    real :: val                     !< variable used to store the maximum value of relative momentum
+      implicit none
 
-!    dt_interact_proc = 1.0 / (maxval(collfaq)+small) / maxval(u(iarr_all_dn,:,:,:))
+      real :: dt_interact_proc        !< timestep due to %interactions for the current process (MPI block) only
+      real :: dt_interact_all         !< timestep due to %interactions for all MPI blocks
+      real :: val                     !< variable used to store the maximum value of relative momentum
 
-    !> \deprecated BEWARE: works only with neu+dust!!!!
+      !    dt_interact_proc = 1.0 / (maxval(collfaq)+small) / maxval(u(iarr_all_dn,:,:,:))
 
-    if (has_interactions) then
-!       val = maxval (  sqrt( (u(flind%dst%imx,:,:,:)-u(flind%neu%imx,:,:,:))**2 + (u(flind%dst%imy,:,:,:)-u(flind%neu%imy,:,:,:))**2 + &
-!                             (u(flind%dst%imz,:,:,:)-u(flind%neu%imz,:,:,:))**2   ) * u(flind%dst%idn,:,:,:) )
-       val = maxval ( L2norm(u(flind%dst%imx,:,:,:),u(flind%dst%imy,:,:,:),u(flind%dst%imz,:,:,:),u(flind%neu%imx,:,:,:),u(flind%neu%imy,:,:,:),u(flind%neu%imz,:,:,:) ) * u(flind%dst%idn,:,:,:) )
-       dt_interact_proc = flind%neu%cs / (maxval(collfaq) * val + small)
+      !> \deprecated BEWARE: works only with neu+dust!!!!
 
-       call MPI_Reduce(dt_interact_proc, dt_interact_all, 1, MPI_DOUBLE_PRECISION, MPI_MIN, 0, comm, ierr)
-       call MPI_Bcast(dt_interact_all, 1, MPI_DOUBLE_PRECISION, 0, comm, ierr)
-       dt = cfl_interact*dt_interact_all
-    else
-       dt = huge(real(1.0,4))
-    endif
+      if (has_interactions) then
+         !       val = maxval (  sqrt( (u(flind%dst%imx,:,:,:)-u(flind%neu%imx,:,:,:))**2 + (u(flind%dst%imy,:,:,:)-u(flind%neu%imy,:,:,:))**2 + &
+         !                             (u(flind%dst%imz,:,:,:)-u(flind%neu%imz,:,:,:))**2   ) * u(flind%dst%idn,:,:,:) )
+         val = maxval ( L2norm(u(flind%dst%imx,:,:,:),u(flind%dst%imy,:,:,:),u(flind%dst%imz,:,:,:),u(flind%neu%imx,:,:,:),u(flind%neu%imy,:,:,:),u(flind%neu%imz,:,:,:) ) * u(flind%dst%idn,:,:,:) )
+         dt_interact_proc = flind%neu%cs / (maxval(collfaq) * val + small)
 
-  end function timestep_interactions
+         call MPI_Reduce(dt_interact_proc, dt_interact_all, 1, MPI_DOUBLE_PRECISION, MPI_MIN, 0, comm, ierr)
+         call MPI_Bcast(dt_interact_all, 1, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+         dt = cfl_interact*dt_interact_all
+      else
+         dt = huge(real(1.0,4))
+      endif
+
+   end function timestep_interactions
 !-------------------------------------------------------------------------------
 end module timestepinteractions

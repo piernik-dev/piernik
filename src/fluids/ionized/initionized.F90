@@ -70,47 +70,48 @@ contains
 !! </table>
 !! \n \n
 !<
-  subroutine init_ionized
+   subroutine init_ionized
 
-    use dataio_pub,    only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml ! QA_WARN required for diff_nml
-    use mpisetup,      only: rbuff, lbuff, comm, ierr, buffer_dim, master, slave
-    use mpi,           only: MPI_DOUBLE_PRECISION, MPI_LOGICAL
-    implicit none
+      use dataio_pub,    only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml ! QA_WARN required for diff_nml
+      use mpisetup,      only: rbuff, lbuff, comm, ierr, buffer_dim, master, slave
+      use mpi,           only: MPI_DOUBLE_PRECISION, MPI_LOGICAL
 
-    namelist /FLUID_IONIZED/ gamma_ion, cs_iso_ion, cs_ion, selfgrav_ion
+      implicit none
 
-    gamma_ion     = 1.66666666
-    cs_iso_ion    = 1.0
-    selfgrav_ion  = .false.
+      namelist /FLUID_IONIZED/ gamma_ion, cs_iso_ion, cs_ion, selfgrav_ion
 
-    if (master) then
+      gamma_ion     = 1.66666666
+      cs_iso_ion    = 1.0
+      selfgrav_ion  = .false.
 
-       diff_nml(FLUID_IONIZED)
+      if (master) then
 
-       lbuff(1)   = selfgrav_ion
+         diff_nml(FLUID_IONIZED)
 
-       rbuff(1)   = gamma_ion
-       rbuff(2)   = cs_iso_ion
-       rbuff(3)   = cs_ion
+         lbuff(1)   = selfgrav_ion
 
-    endif
+         rbuff(1)   = gamma_ion
+         rbuff(2)   = cs_iso_ion
+         rbuff(3)   = cs_ion
 
-    call MPI_Bcast(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
-    call MPI_Bcast(lbuff,    buffer_dim, MPI_LOGICAL,          0, comm, ierr)
+      endif
 
-    if (slave) then
+      call MPI_Bcast(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+      call MPI_Bcast(lbuff,    buffer_dim, MPI_LOGICAL,          0, comm, ierr)
 
-       selfgrav_ion = lbuff(1)
+      if (slave) then
 
-       gamma_ion    = rbuff(1)
-       cs_iso_ion   = rbuff(2)
-       cs_ion       = rbuff(3)
+         selfgrav_ion = lbuff(1)
 
-    endif
+         gamma_ion    = rbuff(1)
+         cs_iso_ion   = rbuff(2)
+         cs_ion       = rbuff(3)
 
-    cs_iso_ion2  = cs_iso_ion**2
+      endif
 
-  end subroutine init_ionized
+      cs_iso_ion2  = cs_iso_ion**2
+
+   end subroutine init_ionized
 
    subroutine ionized_index(flind)
 

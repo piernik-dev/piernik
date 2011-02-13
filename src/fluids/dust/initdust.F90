@@ -59,33 +59,33 @@ contains
 !! </table>
 !! \n \n
 !<
-  subroutine init_dust
+   subroutine init_dust
 
-    use dataio_pub,     only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml  ! QA_WARN required for diff_nml
-    use mpisetup,       only: master, slave, lbuff, buffer_dim, comm, ierr
-    use mpi,            only: MPI_LOGICAL
+      use dataio_pub,     only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml  ! QA_WARN required for diff_nml
+      use mpisetup,       only: master, slave, lbuff, buffer_dim, comm, ierr
+      use mpi,            only: MPI_LOGICAL
 
-    implicit none
+      implicit none
 
-    namelist /FLUID_DUST/ selfgrav_dst
+      namelist /FLUID_DUST/ selfgrav_dst
 
-    selfgrav_dst = .false.
+      selfgrav_dst = .false.
 
-    if (master) then
-       diff_nml(FLUID_DUST)
+      if (master) then
+         diff_nml(FLUID_DUST)
 
-       lbuff(1)   = selfgrav_dst
-    endif
+         lbuff(1)   = selfgrav_dst
+      endif
 
-    call MPI_Bcast(lbuff,    buffer_dim, MPI_LOGICAL,          0, comm, ierr)
+      call MPI_Bcast(lbuff,    buffer_dim, MPI_LOGICAL,          0, comm, ierr)
 
-    if (slave) then
+      if (slave) then
 
-      selfgrav_dst    = lbuff(1)
+         selfgrav_dst    = lbuff(1)
 
-    endif
+      endif
 
-  end subroutine init_dust
+   end subroutine init_dust
 
    subroutine dust_index(flind)
       use diagnostics,   only: ma1d, my_allocate

@@ -119,8 +119,8 @@ contains
       ps(RNG)= p(RNG) + pmag(RNG)
 #else /* !ISO */
       ps(RNG)=(uui(ien,RNG) - &
-      0.5*( uui(imx,RNG)**2 + uui(imy,RNG)**2 + uui(imz,RNG)**2 ) &
-          / uui(idn,RNG))*(flind%ion%gam_1) + (2.0-flind%ion%gam)*pmag(RNG)
+           0.5*( uui(imx,RNG)**2 + uui(imy,RNG)**2 + uui(imz,RNG)**2 ) &
+           / uui(idn,RNG))*(flind%ion%gam_1) + (2.0-flind%ion%gam)*pmag(RNG)
       p(RNG) = ps(RNG)- pmag(RNG)
 #endif /* !ISO */
 

@@ -522,7 +522,7 @@ contains
          fine%bnd_x(fine%js  :fine%je,     fine%ks+1:fine%ke  :2, LOW)  = fine  %bnd_x(fine%js  :fine%je,     fine%ks  :fine%ke-1:2, LOW)
       endif
 
-       if (is_external(XHI)) then
+      if (is_external(XHI)) then
          fine%bnd_x(fine%js  :fine%je-1:2, fine%ks  :fine%ke-1:2, HIGH) = coarse%bnd_x(coarse%js:coarse%je,   coarse%ks:coarse%ke,   HIGH)
          fine%bnd_x(fine%js+1:fine%je  :2, fine%ks  :fine%ke-1:2, HIGH) = fine  %bnd_x(fine%js  :fine%je-1:2, fine%ks  :fine%ke-1:2, HIGH)
          fine%bnd_x(fine%js  :fine%je,     fine%ks+1:fine%ke  :2, HIGH) = fine  %bnd_x(fine%js  :fine%je,     fine%ks  :fine%ke-1:2, HIGH)
@@ -534,7 +534,7 @@ contains
          fine%bnd_y(fine%is  :fine%ie,     fine%ks+1:fine%ke  :2, LOW)  = fine  %bnd_y(fine%is  :fine%ie,     fine%ks  :fine%ke-1:2, LOW)
       endif
 
-       if (is_external(YHI)) then
+      if (is_external(YHI)) then
          fine%bnd_y(fine%is  :fine%ie-1:2, fine%ks  :fine%ke-1:2, HIGH) = coarse%bnd_y(coarse%is:coarse%ie,   coarse%ks:coarse%ke,   HIGH)
          fine%bnd_y(fine%is+1:fine%ie  :2, fine%ks  :fine%ke-1:2, HIGH) = fine  %bnd_y(fine%is  :fine%ie-1:2, fine%ks  :fine%ke-1:2, HIGH)
          fine%bnd_y(fine%is  :fine%ie,     fine%ks+1:fine%ke  :2, HIGH) = fine  %bnd_y(fine%is  :fine%ie,     fine%ks  :fine%ke-1:2, HIGH)
@@ -546,7 +546,7 @@ contains
          fine%bnd_z(fine%is  :fine%ie,     fine%js+1:fine%je  :2, LOW)  = fine  %bnd_z(fine%is  :fine%ie,     fine%js  :fine%je-1:2, LOW)
       endif
 
-       if (is_external(ZHI)) then
+      if (is_external(ZHI)) then
          fine%bnd_z(fine%is  :fine%ie-1:2, fine%js  :fine%je-1:2, HIGH) = coarse%bnd_z(coarse%is:coarse%ie,   coarse%js:coarse%je,   HIGH)
          fine%bnd_z(fine%is+1:fine%ie  :2, fine%js  :fine%je-1:2, HIGH) = fine  %bnd_z(fine%is  :fine%ie-1:2, fine%js  :fine%je-1:2, HIGH)
          fine%bnd_z(fine%is  :fine%ie,     fine%js+1:fine%je  :2, HIGH) = fine  %bnd_z(fine%is  :fine%ie,     fine%js  :fine%je-1:2, HIGH)

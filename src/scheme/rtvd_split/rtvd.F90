@@ -105,8 +105,11 @@ contains
 !<
 !*/
    subroutine tvdb(vibj,b,vg,n,dt,idi)
+
       use constants, only: big
+
       implicit none
+
       integer, intent(in) :: n       !< array size
       real, intent(in)    :: dt      !< time step
       real, intent(in)    :: idi     !< cell length, depends on direction x, y or z
@@ -128,7 +131,7 @@ contains
       integer :: ipp                 !< i+2
       integer :: im                  !< i-1
 
-  ! unlike the B field, the vibj lives on the right cell boundary
+! unlike the B field, the vibj lives on the right cell boundary
       vh = 0.0
 
 ! velocity interpolation to the cell boundaries
@@ -312,9 +315,9 @@ contains
 #endif /* SHEAR */
 
 #ifdef COSM_RAYS
-       integer                       :: icr
+      integer                       :: icr
 #ifdef COSM_RAYS_SOURCES
-       real                          :: srccrn(flind%crn%all,n)
+      real                          :: srccrn(flind%crn%all,n)
 #endif /* COSM_RAYS_SOURCES */
 #endif /* COSM_RAYS */
 

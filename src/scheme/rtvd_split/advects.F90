@@ -36,290 +36,298 @@ module advects
 
 contains
 
-  subroutine advectby_x
+   subroutine advectby_x
 
-    use arrays,        only: b, u, wa
-    use fluidindex,    only: iby, flind
-    use grid,          only: cg
-    use magboundaries, only: bnd_emf
-    use mpisetup,      only: dt, xdim, ydim, zdim, has_dir
-    use rtvd,          only: tvdb
+      use arrays,        only: b, u, wa
+      use fluidindex,    only: iby, flind
+      use grid,          only: cg
+      use magboundaries, only: bnd_emf
+      use mpisetup,      only: dt, xdim, ydim, zdim, has_dir
+      use rtvd,          only: tvdb
 
-    implicit none
-    real, dimension(cg%nx) :: vxby, by_x, vx
-    integer             :: j, k, jm, j_s, j_e
+      implicit none
+      real, dimension(cg%nx) :: vxby, by_x, vx
+      integer             :: j, k, jm, j_s, j_e
 
-    vxby = 0.0
+      vxby = 0.0
 
-    if (has_dir(ydim)) then ! This can be converted by use grid, only: Dy; j_s = 1 + D_y; j_e = 1 + D_y * (cg%ny - 1) . How will it impact performance?
-        j_s = 2
-        j_e = cg%ny
-    else
-        j_s = 1
-        j_e = 1
-    endif
+      if (has_dir(ydim)) then ! This can be converted by use grid, only: Dy; j_s = 1 + D_y; j_e = 1 + D_y * (cg%ny - 1) . How will it impact performance?
+         j_s = 2
+         j_e = cg%ny
+      else
+         j_s = 1
+         j_e = 1
+      endif
 
-    do k = cg%ks, cg%ke
-      do j = j_s, j_e         ! cg%nyb cg%is /= 1 in by_x
-        jm=j-1
-        vx=0.0
-        if (jm == 0) then
-           vx = u(flind%ion%imx,:,1,k) / u(flind%ion%idn,:,1,k)
-        else
-           vx=(u(flind%ion%imx,:,jm,k)+u(flind%ion%imx,:,j,k))/(u(flind%ion%idn,:,jm,k)+u(flind%ion%idn,:,j,k))
-        endif
-        vx(2:cg%nx-1)=(vx(1:cg%nx-2) + vx(3:cg%nx) + 2.0*vx(2:cg%nx-1))*0.25
-        vx(1)  = vx(2)
-        vx(cg%nx) = vx(cg%nx-1)
-        by_x=b(iby,:,j,k)
+      do k = cg%ks, cg%ke
+         do j = j_s, j_e         ! cg%nyb cg%is /= 1 in by_x
+            jm=j-1
+            vx=0.0
+            if (jm == 0) then
+               vx = u(flind%ion%imx,:,1,k) / u(flind%ion%idn,:,1,k)
+            else
+               vx=(u(flind%ion%imx,:,jm,k)+u(flind%ion%imx,:,j,k))/(u(flind%ion%idn,:,jm,k)+u(flind%ion%idn,:,j,k))
+            endif
+            vx(2:cg%nx-1)=(vx(1:cg%nx-2) + vx(3:cg%nx) + 2.0*vx(2:cg%nx-1))*0.25
+            vx(1)  = vx(2)
+            vx(cg%nx) = vx(cg%nx-1)
+            by_x=b(iby,:,j,k)
 
-        call tvdb(vxby,by_x,vx, cg%nx,dt, cg%idx)
+            call tvdb(vxby,by_x,vx, cg%nx,dt, cg%idx)
 
-        wa(:,j,k) = vxby
+            wa(:,j,k) = vxby
+         enddo
       enddo
-    enddo
 
-    if (has_dir(xdim)) call bnd_emf(wa, 'vxby', 'xdim')
-    if (has_dir(ydim)) call bnd_emf(wa, 'vxby', 'ydim')
-    if (has_dir(zdim)) call bnd_emf(wa, 'vxby', 'zdim')
+      if (has_dir(xdim)) call bnd_emf(wa, 'vxby', 'xdim')
+      if (has_dir(ydim)) call bnd_emf(wa, 'vxby', 'ydim')
+      if (has_dir(zdim)) call bnd_emf(wa, 'vxby', 'zdim')
 
-  end subroutine advectby_x
+   end subroutine advectby_x
 
-  subroutine advectbz_x
-    use arrays,        only: b, u, wa
-    use fluidindex,    only: ibz, flind
-    use grid,          only: cg
-    use magboundaries, only: bnd_emf
-    use mpisetup,      only: dt, xdim, ydim, zdim, has_dir
-    use rtvd,          only: tvdb
+   subroutine advectbz_x
 
-    implicit none
-    real, dimension(cg%nx) :: vxbz, bz_x, vx
-    integer             :: j, k, km, k_s, k_e
+      use arrays,        only: b, u, wa
+      use fluidindex,    only: ibz, flind
+      use grid,          only: cg
+      use magboundaries, only: bnd_emf
+      use mpisetup,      only: dt, xdim, ydim, zdim, has_dir
+      use rtvd,          only: tvdb
 
-    vxbz = 0.0
+      implicit none
 
-    if (has_dir(zdim)) then
-        k_s = 2
-        k_e = cg%nz
-    else
-        k_s = 1
-        k_e = 1
-    endif
+      real, dimension(cg%nx) :: vxbz, bz_x, vx
+      integer             :: j, k, km, k_s, k_e
 
-    do k=k_s,k_e
-      km=k-1
+      vxbz = 0.0
+
+      if (has_dir(zdim)) then
+         k_s = 2
+         k_e = cg%nz
+      else
+         k_s = 1
+         k_e = 1
+      endif
+
+      do k=k_s,k_e
+         km=k-1
+         do j=cg%js, cg%je
+            vx=0.0
+            if (km == 0) then
+               vx = u(flind%ion%imx,:,j,1) / u(flind%ion%idn,:,j,1)
+            else
+               vx=(u(flind%ion%imx,:,j,km)+u(flind%ion%imx,:,j,k))/(u(flind%ion%idn,:,j,km)+u(flind%ion%idn,:,j,k))
+            endif
+            vx(2:cg%nx-1)=(vx(1:cg%nx-2) + vx(3:cg%nx) + 2.0*vx(2:cg%nx-1))*0.25
+            vx(1)  = vx(2)
+            vx(cg%nx) = vx(cg%nx-1)
+            bz_x=b(ibz,:,j,k)
+
+            call tvdb(vxbz,bz_x,vx, cg%nx,dt, cg%idx)
+
+            wa(:,j,k) = vxbz
+         enddo
+      enddo
+
+      if (has_dir(xdim)) call bnd_emf(wa, 'vxbz', 'xdim')
+      if (has_dir(ydim)) call bnd_emf(wa, 'vxbz', 'ydim')
+      if (has_dir(zdim)) call bnd_emf(wa, 'vxbz', 'zdim')
+
+   end subroutine advectbz_x
+
+   subroutine advectbz_y
+
+      use arrays,        only: b, u, wa
+      use fluidindex,    only: ibz, flind
+      use grid,          only: cg
+      use magboundaries, only: bnd_emf
+      use mpisetup,      only: dt, xdim, ydim, zdim, has_dir
+      use rtvd,          only: tvdb
+
+      implicit none
+
+      real, dimension(cg%ny) :: vybz, bz_y, vy
+      integer             :: i, k, km, k_s, k_e
+
+      vybz = 0.0
+      if (has_dir(zdim)) then
+         k_s = 2
+         k_e = cg%nz
+      else
+         k_s = 1
+         k_e = 1
+      endif
+
+      do k=k_s,k_e
+         km=k-1
+         do i=cg%is, cg%ie
+            vy=0.0
+            if (km == 0) then
+               vy = u(flind%ion%imy,i,:,1) / u(flind%ion%idn,i,:,1)
+            else
+               vy=(u(flind%ion%imy,i,:,km)+u(flind%ion%imy,i,:,k))/(u(flind%ion%idn,i,:,km)+u(flind%ion%idn,i,:,k))
+            endif
+            vy(2:cg%ny-1)=(vy(1:cg%ny-2) + vy(3:cg%ny) + 2.0*vy(2:cg%ny-1))*0.25
+            vy(1)  = vy(2)
+            vy(cg%ny) = vy(cg%ny-1)
+            bz_y=b(ibz,i,:,k)
+
+            call tvdb(vybz,bz_y,vy, cg%ny,dt, cg%idy)
+
+            wa(i,:,k) = vybz
+         enddo
+      enddo
+
+      if (has_dir(ydim)) call bnd_emf(wa, 'vybz', 'ydim')
+      if (has_dir(zdim)) call bnd_emf(wa, 'vybz', 'zdim')
+      if (has_dir(xdim)) call bnd_emf(wa, 'vybz', 'xdim')
+
+   end subroutine advectbz_y
+
+   subroutine advectbx_y
+
+      use arrays,        only: b, u, wa
+      use fluidindex,    only: ibx, flind
+      use grid,          only: cg
+      use magboundaries, only: bnd_emf
+      use mpisetup,      only: dt, xdim, ydim, zdim, has_dir
+      use rtvd,          only: tvdb
+
+      implicit none
+
+      real, dimension(cg%ny) :: vybx, bx_y, vy
+      integer             :: k, i, im, i_s, i_e
+
+      vybx = 0.0
+
+      if (has_dir(xdim)) then
+         i_s = 2
+         i_e = cg%nx
+      else
+         i_s = 1
+         i_e = 1
+      endif
+
+      do k=cg%ks, cg%ke
+         do i=i_s,i_e
+            im=i-1
+            vy=0.0
+            if (im == 0) then
+               vy = u(flind%ion%imy,1,:,k) / u(flind%ion%idn,1,:,k)
+            else
+               vy=(u(flind%ion%imy,im,:,k)+u(flind%ion%imy,i,:,k))/(u(flind%ion%idn,im,:,k)+u(flind%ion%idn,i,:,k))
+            endif
+            vy(2:cg%ny-1)=(vy(1:cg%ny-2) + vy(3:cg%ny) + 2.0*vy(2:cg%ny-1))*0.25
+            vy(1)  = vy(2)
+            vy(cg%ny) = vy(cg%ny-1)
+            bx_y=b(ibx,i,:,k)
+
+            call tvdb(vybx,bx_y,vy, cg%ny,dt, cg%idy)
+
+            wa(i,:,k) = vybx
+         enddo
+      enddo
+
+      if (has_dir(ydim)) call bnd_emf(wa, 'vybx', 'ydim')
+      if (has_dir(zdim)) call bnd_emf(wa, 'vybx', 'zdim')
+      if (has_dir(xdim)) call bnd_emf(wa, 'vybx', 'xdim')
+
+   end subroutine advectbx_y
+
+   subroutine advectbx_z
+      use arrays,        only: b, u, wa
+      use fluidindex,    only: ibx, flind
+      use grid,          only: cg
+      use magboundaries, only: bnd_emf
+      use mpisetup,      only: dt, xdim, ydim, zdim, has_dir
+      use rtvd,          only: tvdb
+
+      implicit none
+      real, dimension(cg%nz)  :: vzbx, bx_z, vz
+      integer              :: j, i, im, i_s, i_e
+
+      vzbx = 0.0
+
+      if (has_dir(xdim)) then
+         i_s = 2
+         i_e = cg%nx
+      else
+         i_s = 1
+         i_e = 1
+      endif
       do j=cg%js, cg%je
-        vx=0.0
-        if (km == 0) then
-           vx = u(flind%ion%imx,:,j,1) / u(flind%ion%idn,:,j,1)
-        else
-           vx=(u(flind%ion%imx,:,j,km)+u(flind%ion%imx,:,j,k))/(u(flind%ion%idn,:,j,km)+u(flind%ion%idn,:,j,k))
-        endif
-        vx(2:cg%nx-1)=(vx(1:cg%nx-2) + vx(3:cg%nx) + 2.0*vx(2:cg%nx-1))*0.25
-        vx(1)  = vx(2)
-        vx(cg%nx) = vx(cg%nx-1)
-        bz_x=b(ibz,:,j,k)
+         do i=i_s,i_e
+            im=i-1
+            vz=0.0
+            if (im == 0) then
+               vz = u(flind%ion%imz,1,j,:) / u(flind%ion%idn,1,j,:)
+            else
+               vz = (u(flind%ion%imz,im,j,:)+u(flind%ion%imz,i,j,:))/(u(flind%ion%idn,im,j,:)+u(flind%ion%idn,i,j,:))
+            endif
+            vz(2:cg%nz-1)=(vz(1:cg%nz-2) + vz(3:cg%nz) + 2.0*vz(2:cg%nz-1))*0.25
+            vz(1)  = vz(2)
+            vz(cg%nz) = vz(cg%nz-1)
+            bx_z=b(ibx,i,j,:)
 
-        call tvdb(vxbz,bz_x,vx, cg%nx,dt, cg%idx)
+            call tvdb(vzbx,bx_z,vz, cg%nz,dt, cg%idz)
 
-        wa(:,j,k) = vxbz
+            wa(i,j,:) = vzbx
+         enddo
       enddo
-    enddo
 
-    if (has_dir(xdim)) call bnd_emf(wa, 'vxbz', 'xdim')
-    if (has_dir(ydim)) call bnd_emf(wa, 'vxbz', 'ydim')
-    if (has_dir(zdim)) call bnd_emf(wa, 'vxbz', 'zdim')
+      if (has_dir(zdim)) call bnd_emf(wa, 'vzbx', 'zdim')
+      if (has_dir(xdim)) call bnd_emf(wa, 'vzbx', 'xdim')
+      if (has_dir(ydim)) call bnd_emf(wa, 'vzbx', 'ydim')
 
-  end subroutine advectbz_x
+   end subroutine advectbx_z
 
-  subroutine advectbz_y
-    use arrays,        only: b, u, wa
-    use fluidindex,    only: ibz, flind
-    use grid,          only: cg
-    use magboundaries, only: bnd_emf
-    use mpisetup,      only: dt, xdim, ydim, zdim, has_dir
-    use rtvd,          only: tvdb
+   subroutine advectby_z
 
-    implicit none
-    real, dimension(cg%ny) :: vybz, bz_y, vy
-    integer             :: i, k, km, k_s, k_e
+      use arrays,        only: b, u, wa
+      use fluidindex,    only: iby, flind
+      use grid,          only: cg
+      use magboundaries, only: bnd_emf
+      use mpisetup,      only: dt, xdim, ydim, zdim, has_dir
+      use rtvd,          only: tvdb
 
-    vybz = 0.0
-    if (has_dir(zdim)) then
-        k_s = 2
-        k_e = cg%nz
-    else
-        k_s = 1
-        k_e = 1
-    endif
+      implicit none
 
-    do k=k_s,k_e
-      km=k-1
-      do i=cg%is, cg%ie
-        vy=0.0
-        if (km == 0) then
-           vy = u(flind%ion%imy,i,:,1) / u(flind%ion%idn,i,:,1)
-        else
-           vy=(u(flind%ion%imy,i,:,km)+u(flind%ion%imy,i,:,k))/(u(flind%ion%idn,i,:,km)+u(flind%ion%idn,i,:,k))
-        endif
-        vy(2:cg%ny-1)=(vy(1:cg%ny-2) + vy(3:cg%ny) + 2.0*vy(2:cg%ny-1))*0.25
-        vy(1)  = vy(2)
-        vy(cg%ny) = vy(cg%ny-1)
-        bz_y=b(ibz,i,:,k)
+      real, dimension(cg%nz) :: vzby, by_z, vz
+      integer             :: i, j, jm, j_s, j_e
 
-        call tvdb(vybz,bz_y,vy, cg%ny,dt, cg%idy)
+      vzby = 0.0
+      if (has_dir(ydim)) then
+         j_s = 2
+         j_e = cg%ny
+      else
+         j_s = 1
+         j_e = 1
+      endif
 
-        wa(i,:,k) = vybz
+      do j=j_s,j_e
+         jm=j-1
+         do i=cg%is, cg%ie
+            vz=0.0
+            if (jm == 0) then
+               vz = u(flind%ion%imz,i,1,:) / u(flind%ion%idn,i,1,:)
+            else
+               vz=(u(flind%ion%imz,i,jm,:)+u(flind%ion%imz,i,j,:))/(u(flind%ion%idn,i,jm,:)+u(flind%ion%idn,i,j,:))
+            endif
+            vz(2:cg%nz-1)=(vz(1:cg%nz-2) + vz(3:cg%nz) + 2.0*vz(2:cg%nz-1))*0.25
+            vz(1)  = vz(2)
+            vz(cg%nz) = vz(cg%nz-1)
+            by_z=b(iby,i,j,:)
+
+            call tvdb(vzby,by_z,vz, cg%nz,dt, cg%idz)
+
+            wa(i,j,:) = vzby
+         enddo
       enddo
-    enddo
 
-    if (has_dir(ydim)) call bnd_emf(wa, 'vybz', 'ydim')
-    if (has_dir(zdim)) call bnd_emf(wa, 'vybz', 'zdim')
-    if (has_dir(xdim)) call bnd_emf(wa, 'vybz', 'xdim')
+      if (has_dir(zdim)) call bnd_emf(wa, 'vzby', 'zdim')
+      if (has_dir(xdim)) call bnd_emf(wa, 'vzby', 'xdim')
+      if (has_dir(ydim)) call bnd_emf(wa, 'vzby', 'ydim')
 
-  end subroutine advectbz_y
-
-  subroutine advectbx_y
-    use arrays,        only: b, u, wa
-    use fluidindex,    only: ibx, flind
-    use grid,          only: cg
-    use magboundaries, only: bnd_emf
-    use mpisetup,      only: dt, xdim, ydim, zdim, has_dir
-    use rtvd,          only: tvdb
-
-    implicit none
-    real, dimension(cg%ny) :: vybx, bx_y, vy
-    integer             :: k, i, im, i_s, i_e
-
-    vybx = 0.0
-
-    if (has_dir(xdim)) then
-        i_s = 2
-        i_e = cg%nx
-    else
-        i_s = 1
-        i_e = 1
-    endif
-
-    do k=cg%ks, cg%ke
-      do i=i_s,i_e
-        im=i-1
-        vy=0.0
-        if (im == 0) then
-           vy = u(flind%ion%imy,1,:,k) / u(flind%ion%idn,1,:,k)
-        else
-           vy=(u(flind%ion%imy,im,:,k)+u(flind%ion%imy,i,:,k))/(u(flind%ion%idn,im,:,k)+u(flind%ion%idn,i,:,k))
-        endif
-        vy(2:cg%ny-1)=(vy(1:cg%ny-2) + vy(3:cg%ny) + 2.0*vy(2:cg%ny-1))*0.25
-        vy(1)  = vy(2)
-        vy(cg%ny) = vy(cg%ny-1)
-        bx_y=b(ibx,i,:,k)
-
-        call tvdb(vybx,bx_y,vy, cg%ny,dt, cg%idy)
-
-        wa(i,:,k) = vybx
-      enddo
-    enddo
-
-    if (has_dir(ydim)) call bnd_emf(wa, 'vybx', 'ydim')
-    if (has_dir(zdim)) call bnd_emf(wa, 'vybx', 'zdim')
-    if (has_dir(xdim)) call bnd_emf(wa, 'vybx', 'xdim')
-
-  end subroutine advectbx_y
-
-  subroutine advectbx_z
-    use arrays,        only: b, u, wa
-    use fluidindex,    only: ibx, flind
-    use grid,          only: cg
-    use magboundaries, only: bnd_emf
-    use mpisetup,      only: dt, xdim, ydim, zdim, has_dir
-    use rtvd,          only: tvdb
-
-    implicit none
-    real, dimension(cg%nz)  :: vzbx, bx_z, vz
-    integer              :: j, i, im, i_s, i_e
-
-    vzbx = 0.0
-
-    if (has_dir(xdim)) then
-        i_s = 2
-        i_e = cg%nx
-    else
-        i_s = 1
-        i_e = 1
-    endif
-    do j=cg%js, cg%je
-      do i=i_s,i_e
-        im=i-1
-        vz=0.0
-        if (im == 0) then
-           vz = u(flind%ion%imz,1,j,:) / u(flind%ion%idn,1,j,:)
-        else
-           vz = (u(flind%ion%imz,im,j,:)+u(flind%ion%imz,i,j,:))/(u(flind%ion%idn,im,j,:)+u(flind%ion%idn,i,j,:))
-        endif
-        vz(2:cg%nz-1)=(vz(1:cg%nz-2) + vz(3:cg%nz) + 2.0*vz(2:cg%nz-1))*0.25
-        vz(1)  = vz(2)
-        vz(cg%nz) = vz(cg%nz-1)
-        bx_z=b(ibx,i,j,:)
-
-        call tvdb(vzbx,bx_z,vz, cg%nz,dt, cg%idz)
-
-        wa(i,j,:) = vzbx
-      enddo
-    enddo
-
-    if (has_dir(zdim)) call bnd_emf(wa, 'vzbx', 'zdim')
-    if (has_dir(xdim)) call bnd_emf(wa, 'vzbx', 'xdim')
-    if (has_dir(ydim)) call bnd_emf(wa, 'vzbx', 'ydim')
-
-  end subroutine advectbx_z
-
-  subroutine advectby_z
-    use arrays,        only: b, u, wa
-    use fluidindex,    only: iby, flind
-    use grid,          only: cg
-    use magboundaries, only: bnd_emf
-    use mpisetup,      only: dt, xdim, ydim, zdim, has_dir
-    use rtvd,          only: tvdb
-
-    implicit none
-    real, dimension(cg%nz) :: vzby, by_z, vz
-    integer             :: i, j, jm, j_s, j_e
-
-    vzby = 0.0
-    if (has_dir(ydim)) then
-        j_s = 2
-        j_e = cg%ny
-    else
-        j_s = 1
-        j_e = 1
-    endif
-
-    do j=j_s,j_e
-      jm=j-1
-      do i=cg%is, cg%ie
-        vz=0.0
-        if (jm == 0) then
-           vz = u(flind%ion%imz,i,1,:) / u(flind%ion%idn,i,1,:)
-        else
-           vz=(u(flind%ion%imz,i,jm,:)+u(flind%ion%imz,i,j,:))/(u(flind%ion%idn,i,jm,:)+u(flind%ion%idn,i,j,:))
-        endif
-        vz(2:cg%nz-1)=(vz(1:cg%nz-2) + vz(3:cg%nz) + 2.0*vz(2:cg%nz-1))*0.25
-        vz(1)  = vz(2)
-        vz(cg%nz) = vz(cg%nz-1)
-        by_z=b(iby,i,j,:)
-
-        call tvdb(vzby,by_z,vz, cg%nz,dt, cg%idz)
-
-        wa(i,j,:) = vzby
-      enddo
-    enddo
-
-    if (has_dir(zdim)) call bnd_emf(wa, 'vzby', 'zdim')
-    if (has_dir(xdim)) call bnd_emf(wa, 'vzby', 'xdim')
-    if (has_dir(ydim)) call bnd_emf(wa, 'vzby', 'ydim')
-
-  end subroutine advectby_z
+   end subroutine advectby_z
 
 end module advects

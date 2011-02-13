@@ -559,7 +559,7 @@ contains
             do ib=1, cg%nb
 
                u((/iarr_all_dn,iarr_all_mx,iarr_all_my/),:,:,ib)        = u((/iarr_all_dn,iarr_all_mx,iarr_all_my/),:,:, cg%ks)
- !> \deprecated BEWARE: use of uninitialized value on first call (a side effect of r1726)
+!> \deprecated BEWARE: use of uninitialized value on first call (a side effect of r1726)
                u(iarr_all_mz,:,:,ib)                      = min(u(iarr_all_mz,:,:, cg%ks),0.0)
 #ifndef ISO
                u(iarr_all_en,:,:,ib)                      = u(iarr_all_en,:,:, cg%ks)
@@ -610,7 +610,7 @@ contains
             do ib=1, cg%nb
 
                u((/iarr_all_dn,iarr_all_mx,iarr_all_my/),:,:, cg%ke+ib) = u((/iarr_all_dn,iarr_all_mx,iarr_all_my/),:,:, cg%ke)
- !> \deprecated BEWARE: use of uninitialized value on first call (a side effect of r1726)
+!> \deprecated BEWARE: use of uninitialized value on first call (a side effect of r1726)
                u(iarr_all_mz,:,:, cg%ke+ib)               = max(u(iarr_all_mz,:,:, cg%ke),0.0)
 #ifndef ISO
                u(iarr_all_en,:,:, cg%ke+ib)               = u(iarr_all_en,:,:, cg%ke)

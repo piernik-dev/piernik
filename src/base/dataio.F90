@@ -776,17 +776,17 @@ contains
       tot_epot = mpi_addmul(u(iarr_all_dn(1), cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) *gpot(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), cg%dvol)
 #endif /* GRAV */
 
-      wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) &
-          = 0.5 * (u(iarr_all_mx(1), cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2   &
-                 + u(iarr_all_my(1), cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2   &
-                 + u(iarr_all_mz(1), cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2)/ &
-                   max(u(iarr_all_dn(1), cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke),smalld)
+      wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = &
+           & 0.5 * (u(iarr_all_mx(1), cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2   &
+           &      + u(iarr_all_my(1), cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2   &
+           &      + u(iarr_all_mz(1), cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2)/ &
+           & max(u(iarr_all_dn(1), cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke),smalld)
       tot_ekin = mpi_addmul(wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), cg%dvol)
 
-      wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) &
-         = 0.5 * (b(ibx, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2 + &
-                  b(iby, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2 + &
-                  b(ibz, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2)
+      wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = &
+           & 0.5 * (b(ibx, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2 + &
+           &        b(iby, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2 + &
+           &        b(ibz, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2)
       tot_emag = mpi_addmul(wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), cg%dvol)
 
       tot_mflx = mpi_addmul(b(ibx, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), cg%dy*cg%dz/dom%nxd)

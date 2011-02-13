@@ -152,17 +152,17 @@ contains
       norm = 1. / dens_Rdistr(R0,Rin,n)
 
       do k = 1, cg%nz
-        zk = cg%z(k)
-        do j = 1, cg%ny
-           yj = cg%y(j)
-           do i = 1, cg%nx
-              xi = cg%x(i)
-              rc = sqrt(xi**2+yj**2)
-              H = HtoR * rc
-              u(idnn,i,j,k) = max(rho0 * norm * dens_RdistR(rc,Rin,n) * exp(- 0.25 * zk**2 / H**2 ), smalld)
-              u(idnd,i,j,k) = eps*u(idnn,i,j,k)
-           enddo
-        enddo
+         zk = cg%z(k)
+         do j = 1, cg%ny
+            yj = cg%y(j)
+            do i = 1, cg%nx
+               xi = cg%x(i)
+               rc = sqrt(xi**2+yj**2)
+               H = HtoR * rc
+               u(idnn,i,j,k) = max(rho0 * norm * dens_RdistR(rc,Rin,n) * exp(- 0.25 * zk**2 / H**2 ), smalld)
+               u(idnd,i,j,k) = eps*u(idnn,i,j,k)
+            enddo
+         enddo
       enddo
 
       do i = 2, cg%nx-1   ! 2d
@@ -187,7 +187,7 @@ contains
 
             ilook = (rc-dom%xmin)/cg%dx/sqrt(2.) + 0.5 + cg%nb
             iOmega = omega(int(ilook))+(rc-cg%x(int(ilook))*sqrt(2.))*(omega(int(ilook)+1)-omega(int(ilook))) &
-                         /(cg%x(int(ilook)+1)-cg%x(int(ilook)))/sqrt(2.)
+                 &   / (cg%x(int(ilook)+1)-cg%x(int(ilook)))/sqrt(2.)
 !
 !
             u(imxn,i,j,:) = -yj*iOmega*u(idnn,i,j,:)

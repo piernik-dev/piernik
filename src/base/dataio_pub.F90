@@ -224,7 +224,7 @@ contains
       print '(a)', '  -p, --param       path to the current working directory'
       print '(a)', '  -h, --help        print usage information and exit'
       print '(a)', '  -t, --time        print time and exit'
-  end subroutine print_help
+   end subroutine print_help
 !-----------------------------------------------------------------------------
    subroutine colormessage(nm, mode)
       use mpi,       only: MPI_COMM_WORLD

@@ -111,7 +111,7 @@ contains
 
       nvars = 1
       do while ( len(trim(vars(nvars))) > 1)
-        nvars = nvars + 1
+         nvars = nvars + 1
       enddo
       nvars = nvars - 1
 
@@ -1648,10 +1648,10 @@ contains
          endif
          call write_arr(data,hdf_vars(i),file_id)
       enddo
-     if (allocated(data)) deallocate(data)
-     !
-     ! Close the property list.
-     !
+      if (allocated(data)) deallocate(data)
+      !
+      ! Close the property list.
+      !
 #ifdef NEW_HDF5
       call iterate_lhdf5(file_id)
 #endif /* NEW_HDF5 */

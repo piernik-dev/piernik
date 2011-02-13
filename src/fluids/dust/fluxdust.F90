@@ -95,7 +95,7 @@ contains
       fluxd   = 0.0; cfrd    = 0.0; vx      = 0.0; ps = 0.0
 
 !      where (uud(idn,RNG) > 0.0)
-       vx(RNG)=uud(imx,RNG)/uud(idn,RNG)
+      vx(RNG)=uud(imx,RNG)/uud(idn,RNG)
 !      elsewhere
 !         vx(RNG) = 0.0
 !      endwhere
