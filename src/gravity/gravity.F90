@@ -752,7 +752,7 @@ contains
       use arrays,       only: gp
       use dataio_pub,   only: die, warn
       use grid,         only: cg
-      use mpisetup,     only: master
+      use mpisetup,     only: master, geometry
       use types,        only: axes
 
       implicit none
@@ -766,6 +766,15 @@ contains
       ax%z = cg%z
 
       gp_status = ''
+
+      if (geometry /= "cartesian") then
+          select case (external_gp)
+             case ("user", "grav_user", "GRAV_USER")
+                ! The User knows what he/she is doing ...
+             case default ! standard cases do not support cylindrical geometry yet
+                call die("[gravity:default_grav_pot_3d] Non-cartesian geometry is not implemented.")
+          end select
+       endif
 
       select case (external_gp)
          case ("null", "grav_null", "GRAV_NULL")
