@@ -1,7 +1,19 @@
- $DOMAIN_SIZES
+ $DOMAIN
     nxd = 512
     nyd = 512
     nzd = 52
+    bnd_xl = 'out'
+    bnd_xr = 'out'
+    bnd_yl = 'out'
+    bnd_yr = 'out'
+    bnd_zl = 'outd'
+    bnd_zr = 'outd'
+    xmin   = -4.
+    xmax   =  4.
+    ymin   = -4.
+    ymax   =  4.
+    zmin   = -0.4
+    zmax   =  0.4
  /
 
  $MPI_BLOCKS
@@ -41,24 +53,6 @@
     vars(5) = 'velz'
     vars(6) = 'mgso'
     domain  = 'phys_domain'
- /
-
- $BOUNDARIES
-    bnd_xl = 'out'
-    bnd_xr = 'out'
-    bnd_yl = 'out'
-    bnd_yr = 'out'
-    bnd_zl = 'outd'
-    bnd_zr = 'outd'
- /
-
- $DOMAIN_LIMITS
-    xmin   = -4.
-    xmax   =  4.
-    ymin   = -4.
-    ymax   =  4.
-    zmin   = -0.4
-    zmax   =  0.4
  /
 
  $FLUID_IONIZED

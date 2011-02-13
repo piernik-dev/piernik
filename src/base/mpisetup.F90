@@ -97,9 +97,6 @@ module mpisetup
    integer, protected :: nyd  !< number of %grid cells in physical domain (without boundary cells) in y-direction (-- || --)
    integer, protected :: nzd  !< number of %grid cells in physical domain (without boundary cells) in z-direction (-- || --)
    integer, protected :: nb   !< number of boundary cells surrounding the physical domain, same for all directions
-
-   namelist /DOMAIN_SIZES/ nxd, nyd, nzd, nb
-
    character(len=bndlen) :: bnd_xl     !< type of boundary conditions for the left  x-boundary
    character(len=bndlen) :: bnd_xr     !< type of boundary conditions for the right x-boundary
    character(len=bndlen) :: bnd_yl     !< type of boundary conditions for the left  y-boundary
@@ -107,9 +104,6 @@ module mpisetup
    character(len=bndlen) :: bnd_zl     !< type of boundary conditions for the left  z-boundary
    character(len=bndlen) :: bnd_zr     !< type of boundary conditions for the right z-boundary
    character(len=bndlen) :: bnd_xl_dom, bnd_xr_dom, bnd_yl_dom, bnd_yr_dom, bnd_zl_dom, bnd_zr_dom !< computational domain boundaries
-
-   namelist /BOUNDARIES/ bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr
-
    real    :: xmin                           !< physical domain left x-boundary position
    real    :: xmax                           !< physical domain right x-boundary position
    real    :: ymin                           !< physical domain left y-boundary position
@@ -117,9 +111,8 @@ module mpisetup
    real    :: zmin                           !< physical domain left z-boundary position
    real    :: zmax                           !< physical domain right z-boundary position
    character(len=cbuff_len), protected :: geometry      !< define system of coordinates: "cartesian" or "cylindrical"
-   namelist /DOMAIN_LIMITS/ xmin, xmax, ymin, ymax, zmin, zmax, geometry
 
-   !! \todo merge DOMAIN_SIZES, BOUNDARIES and DOMAIN_LIMITS into DOMAIN namelist
+   namelist /DOMAIN/ nxd, nyd, nzd, nb, bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr, xmin, xmax, ymin, ymax, zmin, zmax, geometry
    !namelist /DOMAIN/ dom, geometry, nb
 
    real    :: dt_initial               !< initial timestep
@@ -159,32 +152,20 @@ contains
 !! <tr><td>reorder        </td><td>.false.</td><td>logical</td><td>\copydoc mpisetup::reorder        </td></tr>
 !! </table>
 !! \n \n
-!! @b DOMAIN_SIZES
-!! \n \n
-!! <table border="+1">
-!! <tr><td width="150pt"><b>parameter</b></td><td width="135pt"><b>default value</b></td><td width="200pt"><b>possible values</b></td><td width="315pt"> <b>description</b></td></tr>
-!! <tr><td>nxd</td><td>1</td><td>positive integer    </td><td>\copydoc mpisetup::nxd</td></tr>
-!! <tr><td>nyd</td><td>1</td><td>positive integer    </td><td>\copydoc mpisetup::nyd</td></tr>
-!! <tr><td>nzd</td><td>1</td><td>positive integer    </td><td>\copydoc mpisetup::nzd</td></tr>
-!! <tr><td>nb </td><td>4</td><td>non-negative integer</td><td>\copydoc mpisetup::nb </td></tr>
-!! </table>
-!! \n \n
-!! @b BOUNDARIES
-!! \n \n
-!! <table border="+1">
-!! <tr><td width="150pt"><b>parameter</b></td><td width="135pt"><b>default value</b></td><td width="200pt"><b>possible values</b></td><td width="315pt"> <b>description</b></td></tr>
-!! <tr><td>bnd_xl</td><td>'per'</td><td>'per', 'ref', 'out', 'outd', 'outh', 'cor'</td><td>\copydoc mpisetup::bnd_xl</td></tr>
-!! <tr><td>bnd_xr</td><td>'per'</td><td>'per', 'ref', 'out', 'outd', 'outh'       </td><td>\copydoc mpisetup::bnd_xr</td></tr>
-!! <tr><td>bnd_yl</td><td>'per'</td><td>'per', 'ref', 'out', 'outd', 'outh', 'cor'</td><td>\copydoc mpisetup::bnd_yl</td></tr>
-!! <tr><td>bnd_yr</td><td>'per'</td><td>'per', 'ref', 'out', 'outd', 'outh'       </td><td>\copydoc mpisetup::bnd_yr</td></tr>
-!! <tr><td>bnd_zl</td><td>'per'</td><td>'per', 'ref', 'out', 'outd', 'outh'       </td><td>\copydoc mpisetup::bnd_zl</td></tr>
-!! <tr><td>bnd_zr</td><td>'per'</td><td>'per', 'ref', 'out', 'outd', 'outh'       </td><td>\copydoc mpisetup::bnd_zr</td></tr>
-!! </table>
-!! \n \n
-!! @b DOMAIN_LIMITS
+!! @b DOMAIN
 !! \n \n
 !! <table border="+1">
 !!   <tr><td width="150pt"><b>parameter</b></td><td width="135pt"><b>default value</b></td><td width="200pt"><b>possible values</b></td><td width="315pt"> <b>description</b></td></tr>
+!!   <tr><td>nxd</td><td>1</td><td>positive integer    </td><td>\copydoc mpisetup::nxd</td></tr>
+!!   <tr><td>nyd</td><td>1</td><td>positive integer    </td><td>\copydoc mpisetup::nyd</td></tr>
+!!   <tr><td>nzd</td><td>1</td><td>positive integer    </td><td>\copydoc mpisetup::nzd</td></tr>
+!!   <tr><td>nb </td><td>4</td><td>non-negative integer</td><td>\copydoc mpisetup::nb </td></tr>
+!!   <tr><td>bnd_xl</td><td>'per'</td><td>'per', 'ref', 'out', 'outd', 'outh', 'cor'</td><td>\copydoc mpisetup::bnd_xl</td></tr>
+!!   <tr><td>bnd_xr</td><td>'per'</td><td>'per', 'ref', 'out', 'outd', 'outh'       </td><td>\copydoc mpisetup::bnd_xr</td></tr>
+!!   <tr><td>bnd_yl</td><td>'per'</td><td>'per', 'ref', 'out', 'outd', 'outh', 'cor'</td><td>\copydoc mpisetup::bnd_yl</td></tr>
+!!   <tr><td>bnd_yr</td><td>'per'</td><td>'per', 'ref', 'out', 'outd', 'outh'       </td><td>\copydoc mpisetup::bnd_yr</td></tr>
+!!   <tr><td>bnd_zl</td><td>'per'</td><td>'per', 'ref', 'out', 'outd', 'outh'       </td><td>\copydoc mpisetup::bnd_zl</td></tr>
+!!   <tr><td>bnd_zr</td><td>'per'</td><td>'per', 'ref', 'out', 'outd', 'outh'       </td><td>\copydoc mpisetup::bnd_zr</td></tr>
 !!   <tr><td> xmin     </td><td> 0.          </td><td> real                     </td><td> physical domain left x-boundary position  </td></tr>
 !!   <tr><td> xmax     </td><td> 1.          </td><td> real                     </td><td> physical domain right x-boundary position </td></tr>
 !!   <tr><td> ymin     </td><td> 0.          </td><td> real                     </td><td> physical domain left y-boundary position  </td></tr>
@@ -347,10 +328,8 @@ contains
 
       if (master) then
          diff_nml(MPI_BLOCKS)
-         diff_nml(BOUNDARIES)
          diff_nml(NUMERICAL_SETUP)
-         diff_nml(DOMAIN_SIZES)
-         diff_nml(DOMAIN_LIMITS)
+         diff_nml(DOMAIN)
       endif
 
       nxd = max(1, nxd)

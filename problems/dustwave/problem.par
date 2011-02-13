@@ -1,7 +1,19 @@
- $DOMAIN_SIZES
+ $DOMAIN
     nxd = 100
     nyd = 1
     nzd = 100
+    bnd_xl = 'per'
+    bnd_xr = 'per'
+    bnd_yl = 'per'
+    bnd_yr = 'per'
+    bnd_zl = 'per'
+    bnd_zr = 'per'
+    xmin   =-1.0
+    xmax   = 1.0
+    ymin   =-1.0
+    ymax   = 1.0
+    zmin   =-1.0
+    zmax   = 1.0
  /
 
  $MPI_BLOCKS
@@ -34,24 +46,6 @@
     vars(3) = 'vely'
     vars(4) = 'velz'
     domain  = 'full_domain'
- /
-
- $BOUNDARIES
-    bnd_xl = 'per'
-    bnd_xr = 'per'
-    bnd_yl = 'per'
-    bnd_yr = 'per'
-    bnd_zl = 'per'
-    bnd_zr = 'per'
- /
-
- $DOMAIN_LIMITS
-    xmin   =-1.0
-    xmax   = 1.0
-    ymin   =-1.0
-    ymax   = 1.0
-    zmin   =-1.0
-    zmax   = 1.0
  /
 
  $NUMERICAL_SETUP

@@ -1,8 +1,21 @@
- $DOMAIN_SIZES
+ $DOMAIN
     nxd = 64
     nyd = 64
     nzd = 64
+    bnd_xl = 'per'
+    bnd_xr = 'per'
+    bnd_yl = 'per'
+    bnd_yr = 'per'
+    bnd_zl = 'per'
+    bnd_zr = 'per'
+    xmin   =-1.0
+    xmax   = 1.0
+    ymin   =-1.0
+    ymax   = 1.0
+    zmin   =-1.0
+    zmax   = 1.0
  /
+
  $MPI_BLOCKS
     psize = 1, 1, 1
  /
@@ -42,24 +55,6 @@
     vars(8) = 'magz'
     vars(9) = 'fooo'
     domain  = 'phys_domain'
- /
-
- $BOUNDARIES
-    bnd_xl = 'per'
-    bnd_xr = 'per'
-    bnd_yl = 'per'
-    bnd_yr = 'per'
-    bnd_zl = 'per'
-    bnd_zr = 'per'
- /
-
- $DOMAIN_LIMITS
-    xmin   =-1.0
-    xmax   = 1.0
-    ymin   =-1.0
-    ymax   = 1.0
-    zmin   =-1.0
-    zmax   = 1.0
  /
 
  $FLUID_IONIZED

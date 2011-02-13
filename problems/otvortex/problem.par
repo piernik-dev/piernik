@@ -1,7 +1,19 @@
- $DOMAIN_SIZES
+ $DOMAIN
     nxd = 512
     nyd = 512
     nzd = 1
+    bnd_xl = 'per'
+    bnd_xr = 'per'
+    bnd_yl = 'per'
+    bnd_yr = 'per'
+    bnd_zl = 'per'
+    bnd_zr = 'per'
+    xmin   = 0.0
+    xmax   = 1.0
+    ymin   = 0.0
+    ymax   = 1.0
+    zmin   = -0.5
+    zmax   = 0.5
  /
 
  $MPI_BLOCKS
@@ -44,24 +56,6 @@
     mag_center = 'no'
  /
 
- $BOUNDARIES
-    bnd_xl = 'per'
-    bnd_xr = 'per'
-    bnd_yl = 'per'
-    bnd_yr = 'per'
-    bnd_zl = 'per'
-    bnd_zr = 'per'
- /
-
- $DOMAIN_LIMITS
-    xmin   = 0.0
-    xmax   = 1.0
-    ymin   = 0.0
-    ymax   = 1.0
-    zmin   = -0.5
-    zmax   = 0.5
- /
-
  $FLUID_IONIZED
     gamma_ion  = 1.666666666
  /
@@ -69,7 +63,6 @@
  $FLUID_NEUTRAL
     gamma_neut = 1.666666666
  /
-
 
  $EQUATION_OF_STATE
     c_si   = 1.0

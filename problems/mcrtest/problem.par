@@ -1,8 +1,20 @@
- $DOMAIN_SIZES
+ $DOMAIN
     nxd = 128
     nyd = 128
     nzd = 1
     nb  = 4
+    bnd_xl = 'per'
+    bnd_xr = 'per'
+    bnd_yl = 'per'
+    bnd_yr = 'per'
+    bnd_zl = 'per'
+    bnd_zr = 'per'
+    xmin   =-500.0
+    xmax   = 500.0
+    ymin   =-500.0
+    ymax   = 500.0
+    zmin   =-500.0
+    zmax   = 500.0
  /
 
  $MPI_BLOCKS
@@ -41,24 +53,6 @@
     vars(8) = 'magz'
     vars(9) = 'encr'
     domain  = 'phys_domain'
- /
-
- $BOUNDARIES
-    bnd_xl = 'per'
-    bnd_xr = 'per'
-    bnd_yl = 'per'
-    bnd_yr = 'per'
-    bnd_zl = 'per'
-    bnd_zr = 'per'
- /
-
- $DOMAIN_LIMITS
-    xmin   =-500.0
-    xmax   = 500.0
-    ymin   =-500.0
-    ymax   = 500.0
-    zmin   =-500.0
-    zmax   = 500.0
  /
 
  $NUMERICAL_SETUP

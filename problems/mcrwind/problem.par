@@ -1,8 +1,20 @@
- $DOMAIN_SIZES
+ $DOMAIN
     nxd          = 1
     nyd          = 48
     nzd          = 96
     nb           = 4
+    bnd_xl       = 'per'
+    bnd_xr       = 'per'
+    bnd_yl       = 'per'
+    bnd_yr       = 'per'
+    bnd_zl       = 'outd'
+    bnd_zr       = 'outd'
+    xmin         =-250.0
+    xmax         = 250.0
+    ymin         =-500.0
+    ymax         = 500.0
+    zmin         =-1000.0
+    zmax         = 1000.0
  /
 
  $MPI_BLOCKS
@@ -40,31 +52,11 @@
     vars(7)      = 'magy'
     vars(8)      = 'magz'
     domain       = 'phys_domain'
-
- /
-
- $BOUNDARIES
-    bnd_xl       = 'per'
-    bnd_xr       = 'per'
-    bnd_yl       = 'per'
-    bnd_yr       = 'per'
-    bnd_zl       = 'outd'
-    bnd_zr       = 'outd'
- /
-
- $DOMAIN_LIMITS
-    xmin         =-250.0
-    xmax         = 250.0
-    ymin         =-500.0
-    ymax         = 500.0
-    zmin         =-1000.0
-    zmax         = 1000.0
  /
 
  $FLUID_IONIZED
     gamma_ion = 1.66666667
     cs_iso_ion  =  7.0            ! sound speed
-
  /
 
  $NUMERICAL_SETUP

@@ -1,8 +1,21 @@
- $DOMAIN_SIZES
+ $DOMAIN
     nxd = 512
     nyd = 5
     nzd = 128
     nb  = 4
+    bnd_xl = 'out'
+    bnd_xr = 'ref'
+    bnd_yl = 'per'
+    bnd_yr = 'per'
+    bnd_zl = 'per'
+    bnd_zr = 'per'
+    geometry = "cylindrical"
+    xmin   = 0.9
+    xmax   = 8.0
+    ymin   = 0.0
+    ymax   = 6.28318530718
+    zmin   =-1.5
+    zmax   = 1.5
  /
 
  $MPI_BLOCKS
@@ -37,25 +50,6 @@
     vars(4) = 'velz'
     domain  = 'phys_domain'
     mag_center = 'no'
- /
-
- $BOUNDARIES
-    bnd_xl = 'out'
-    bnd_xr = 'ref'
-    bnd_yl = 'per'
-    bnd_yr = 'per'
-    bnd_zl = 'per'
-    bnd_zr = 'per'
- /
-
- $DOMAIN_LIMITS
-    geometry = "cylindrical"
-    xmin   = 0.9
-    xmax   = 8.0
-    ymin   = 0.0
-    ymax   = 6.28318530718
-    zmin   =-1.5
-    zmax   = 1.5
  /
 
  $FLUID_NEUTRAL

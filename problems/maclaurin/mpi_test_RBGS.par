@@ -1,8 +1,21 @@
- $DOMAIN_SIZES
+ $DOMAIN
     nxd = 64
     nyd = 32
     nzd = 16
+    bnd_xl = 'out'
+    bnd_xr = 'out'
+    bnd_yl = 'out'
+    bnd_yr = 'out'
+    bnd_zl = 'out'
+    bnd_zr = 'out'
+    xmin   = -2.
+    xmax   =  2.
+    ymin   = -2.
+    ymax   =  2.
+    zmin   = -2.
+    zmax   =  2.
  /
+
  $MPI_BLOCKS
     psize = 2, 2, 2
  /
@@ -38,24 +51,6 @@
     vars(3) = 'apot'
     vars(4) = 'errp'
     domain  = 'phys_domain'
- /
-
- $BOUNDARIES
-    bnd_xl = 'out'
-    bnd_xr = 'out'
-    bnd_yl = 'out'
-    bnd_yr = 'out'
-    bnd_zl = 'out'
-    bnd_zr = 'out'
- /
-
- $DOMAIN_LIMITS
-    xmin   = -2.
-    xmax   =  2.
-    ymin   = -2.
-    ymax   =  2.
-    zmin   = -2.
-    zmax   =  2.
  /
 
  $FLUID_IONIZED

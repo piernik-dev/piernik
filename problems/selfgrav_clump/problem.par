@@ -1,10 +1,22 @@
- $DOMAIN_SIZES
+ $DOMAIN
     nxd = 64
     nyd = 64
     nzd = 64
     ! set nyd and nzd to 64 if you want to have iy or iz /=0,
     ! when prefer_rbgs_relaxation is .true.
     ! or when parallel execution leads to nonconvergence
+    bnd_xl = 'per'
+    bnd_xr = 'per'
+    bnd_yl = 'per'
+    bnd_yr = 'per'
+    bnd_zl = 'per'
+    bnd_zr = 'per'
+    xmin   = -1.e5
+    xmax   =  1.e5
+    ymin   = -1.e5
+    ymax   =  1.e5
+    zmin   = -1.e5
+    zmax   =  1.e5
  /
 
  $MPI_BLOCKS
@@ -44,24 +56,6 @@
     vars(5) = 'ener'
     vars(6) = 'gpot'
     domain  = 'phys_domain'
- /
-
- $BOUNDARIES
-    bnd_xl = 'per'
-    bnd_xr = 'per'
-    bnd_yl = 'per'
-    bnd_yr = 'per'
-    bnd_zl = 'per'
-    bnd_zr = 'per'
- /
-
- $DOMAIN_LIMITS
-    xmin   = -1.e5
-    xmax   =  1.e5
-    ymin   = -1.e5
-    ymax   =  1.e5
-    zmin   = -1.e5
-    zmax   =  1.e5
  /
 
  $FLUID_IONIZED
@@ -116,8 +110,6 @@
     grav_bnd_str = "periodic"
 !    prefer_rbgs_relaxation = .true.
  /
-
-
 
  $INTERACTIONS
  /

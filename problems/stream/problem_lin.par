@@ -1,7 +1,26 @@
- $DOMAIN_SIZES
+ $DOMAIN
     nxd = 128
     nyd = 1
     nzd = 128
+    bnd_xl = 'per'
+    bnd_xr = 'per'
+    bnd_yl = 'per'
+    bnd_yr = 'per'
+    bnd_zl = 'per'
+    bnd_zr = 'per'
+    xmin   = -0.005236 ! lnA
+    xmax   =  0.005236 ! lnA
+    ymin   = -0.005236 ! lnA
+    ymax   =  0.005236 ! lnA
+    zmin   = -0.005236 ! lnA
+    zmax   =  0.005236 ! lnA
+
+!    xmin   = -0.026180 ! lnB
+!    xmax   =  0.026180 ! lnB   
+!    ymin   = -0.026180 ! lnB
+!    ymax   =  0.026180 ! lnB   
+!    zmin   = -0.026180 ! lnB
+!    zmax   =  0.026180 ! lnB   
  /
 
  $MPI_BLOCKS
@@ -37,31 +56,6 @@
     vars(4) = 'velz'
     vars(5) = 'ener'
     domain  = 'phys_domain'
- /
-
- $BOUNDARIES
-    bnd_xl = 'per'
-    bnd_xr = 'per'
-    bnd_yl = 'per'
-    bnd_yr = 'per'
-    bnd_zl = 'per'
-    bnd_zr = 'per'
- /
-
- $DOMAIN_LIMITS
-    xmin   = -0.005236 ! lnA
-    xmax   =  0.005236 ! lnA
-    ymin   = -0.005236 ! lnA
-    ymax   =  0.005236 ! lnA
-    zmin   = -0.005236 ! lnA
-    zmax   =  0.005236 ! lnA
-
-!    xmin   = -0.026180 ! lnB
-!    xmax   =  0.026180 ! lnB   
-!    ymin   = -0.026180 ! lnB
-!    ymax   =  0.026180 ! lnB   
-!    zmin   = -0.026180 ! lnB
-!    zmax   =  0.026180 ! lnB   
  /
 
  $FLUID_NEUTRAL

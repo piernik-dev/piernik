@@ -1,13 +1,26 @@
- $DOMAIN_SIZES
+ $DOMAIN
     nxd = 120
     nyd = 120
     nzd = 1
     nb  = 4
+    bnd_xl = 'she'
+    bnd_xr = 'she'
+    bnd_yl = 'per'
+    bnd_yr = 'per'
+    bnd_zl = 'per'
+    bnd_zr = 'per'
+    xmin   = -1.5807
+    xmax   = 1.5807
+    ymin   = -1.0
+    ymax   = 1.0
+    zmin   = -1.0
+    zmax   = 1.0
  /
 
  $MPI_BLOCKS
     psize = 1, 1, 1
  /
+
  $START_CONTROL
  /
 
@@ -44,24 +57,6 @@
     vars(10) = 'flx5'
     domain  = 'full_domain'
     mag_center = 'no'
- /
-
- $BOUNDARIES
-    bnd_xl = 'she'
-    bnd_xr = 'she'
-    bnd_yl = 'per'
-    bnd_yr = 'per'
-    bnd_zl = 'per'
-    bnd_zr = 'per'
- /
-
- $DOMAIN_LIMITS
-    xmin   = -1.5807
-    xmax   = 1.5807
-    ymin   = -1.0
-    ymax   = 1.0
-    zmin   = -1.0
-    zmax   = 1.0
  /
 
  $EQUATION_OF_STATE

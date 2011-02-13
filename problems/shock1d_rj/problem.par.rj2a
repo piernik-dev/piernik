@@ -1,8 +1,20 @@
- $DOMAIN_SIZES
+ $DOMAIN
     nxd = 512
     nyd = 4
     nzd = 4
     nb  = 4
+    bnd_xl = 'out'
+    bnd_xr = 'out'
+    bnd_yl = 'per'
+    bnd_yr = 'per'
+    bnd_zl = 'per'
+    bnd_zr = 'per'
+    xmin   = 0.0
+    xmax   = 1.0
+    ymin   = 0.0
+    ymax   = 1.0
+    zmin   = 0.0
+    zmax   = 1.0
  /
 
  $MPI_BLOCKS
@@ -45,24 +57,6 @@
     mag_center = 'no'
  /
 
- $BOUNDARIES
-    bnd_xl = 'out'
-    bnd_xr = 'out'
-    bnd_yl = 'per'
-    bnd_yr = 'per'
-    bnd_zl = 'per'
-    bnd_zr = 'per'
- /
-
- $DOMAIN_LIMITS
-    xmin   = 0.0
-    xmax   = 1.0
-    ymin   = 0.0
-    ymax   = 1.0
-    zmin   = 0.0
-    zmax   = 1.0
- /
-
  $EQUATION_OF_STATE
     c_si   = 1.0
     gamma  = 1.6666666666667
@@ -100,7 +94,6 @@
     byl     =  1.01554125   ! 3.6/sqrt(4pi)
     bzl     =  0.5641895835 ! 2.0/sqrt(4pi)
     el      =  0.95
-
     dr      =  1.0
     vxr     =  0.0
     vyr     =  0.0

@@ -1,8 +1,20 @@
- $DOMAIN_SIZES
+ $DOMAIN
     nxd          = 25
     nyd          = 50
     nzd          = 200
     nb           = 4
+    bnd_xl       = 'she'
+    bnd_xr       = 'she'
+    bnd_yl       = 'per'
+    bnd_yr       = 'per'
+    bnd_zl       = 'outd'
+    bnd_zr       = 'outd'
+    xmin         =-250.0
+    xmax         = 250.0
+    ymin         =-500.0
+    ymax         = 500.0
+    zmin         =-2000.0
+    zmax         = 2000.0
  /
 
  $MPI_BLOCKS
@@ -43,25 +55,6 @@
     vars(7)      = 'magy'
     vars(8)      = 'magz'
     domain       = 'phys_domain'
-
- /
-
- $BOUNDARIES
-    bnd_xl       = 'she'
-    bnd_xr       = 'she'
-    bnd_yl       = 'per'
-    bnd_yr       = 'per'
-    bnd_zl       = 'outd'
-    bnd_zr       = 'outd'
- /
-
- $DOMAIN_LIMITS
-    xmin         =-250.0
-    xmax         = 250.0
-    ymin         =-500.0
-    ymax         = 500.0
-    zmin         =-2000.0
-    zmax         = 2000.0
  /
 
  $EQUATION_OF_STATE

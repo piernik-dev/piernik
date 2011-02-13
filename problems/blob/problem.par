@@ -1,7 +1,19 @@
- $DOMAIN_SIZES
+ $DOMAIN
     nxd = 128
     nyd = 512
     nzd = 1
+    bnd_xl = 'per'
+    bnd_xr = 'per'
+    bnd_yl = 'per'
+    bnd_yr = 'per'
+    bnd_zl = 'per'
+    bnd_zr = 'per'
+    xmin   =  0.0
+    xmax   = 10.0
+    ymin   =  0.0
+    ymax   = 40.0
+    zmin   =  0.0
+    zmax   = 10.0
  /
 
  $MPI_BLOCKS
@@ -36,24 +48,6 @@
     domain  = 'phys_domain'
  /
 
- $BOUNDARIES
-    bnd_xl = 'per'
-    bnd_xr = 'per'
-    bnd_yl = 'per'
-    bnd_yr = 'per'
-    bnd_zl = 'per'
-    bnd_zr = 'per'
- /
-
- $DOMAIN_LIMITS
-    xmin   =  0.0
-    xmax   = 10.0
-    ymin   =  0.0
-    ymax   = 40.0
-    zmin   =  0.0
-    zmax   = 10.0
- /
-
  $FLUID_NEUTRAL
     gamma_neu  = 1.666666667
  /
@@ -77,7 +71,6 @@
     tkh     =  1.7
     vgal    =  0.0
  /
-
 
  $INTERACTIONS
  /

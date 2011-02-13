@@ -1,8 +1,20 @@
- $DOMAIN_SIZES
+ $DOMAIN
     nxd = 75
     nyd = 75
     nzd = 1
     nb=4
+    bnd_xl = 'cor'
+    bnd_xr = 'out'
+    bnd_yl = 'cor'
+    bnd_yr = 'out'
+    bnd_zl = 'outd'
+    bnd_zr = 'outd'
+    xmin   = 0.0
+    xmax   = 1.5
+    ymin   = 0.0
+    ymax   = 1.5
+    zmin   =-0.5
+    zmax   = 0.5
  /
 
  $MPI_BLOCKS
@@ -40,24 +52,6 @@
     vars(8) = 'magz'
     domain  = 'phys_domain'
     mag_center = 'no'
- /
-
- $BOUNDARIES
-    bnd_xl = 'cor'
-    bnd_xr = 'out'
-    bnd_yl = 'cor'
-    bnd_yr = 'out'
-    bnd_zl = 'outd'
-    bnd_zr = 'outd'
- /
-
- $DOMAIN_LIMITS
-    xmin   = 0.0
-    xmax   = 1.5
-    ymin   = 0.0
-    ymax   = 1.5
-    zmin   =-0.5
-    zmax   = 0.5
  /
 
  $FLUID_IONIZED
