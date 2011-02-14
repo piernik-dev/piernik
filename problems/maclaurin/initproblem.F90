@@ -49,7 +49,7 @@ contains
 
       use constants,     only: pi
       use dataio_pub,    only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml      ! QA_WARN required for diff_nml
-      use dataio_pub,    only: skip_advection, die, warn, user_vars_hdf5
+      use dataio_pub,    only: die, warn, user_vars_hdf5
       use mpisetup,      only: ierr, rbuff, ibuff, master, slave, buffer_dim, comm, smalld
       use mpi,           only: MPI_DOUBLE_PRECISION, MPI_INTEGER
       use list_hdf5,     only: additional_attrs
@@ -58,8 +58,6 @@ contains
       implicit none
 
       integer, parameter :: maxsub = 10  !< upper limit for subsampling
-
-      skip_advection = .true. ! skip sweeps in fluidupdate
 
       ! namelist default parameter values
       x0           = 0.0                 !< x-coordinate of the spheroid center

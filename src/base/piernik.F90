@@ -195,7 +195,7 @@ contains
       use shear,                 only: init_shear
 #endif /* SHEAR */
 #ifdef GRAV
-      use gravity,               only: init_grav, grav_pot_3d, grav_pot_3d_called
+      use gravity,               only: init_grav, grav_pot_3d, grav_pot_3d_called, source_terms_grav
 #endif /* GRAV */
       use interactions,          only: init_interactions
 #ifdef MULTIGRID
@@ -316,6 +316,8 @@ contains
                call die("[piernik:init_piernik] grav_pot_3d failed for the 2nd time!")
             endif
          endif
+         call source_terms_grav ! make sure that all contributions to the gravitational potential are computed before first dump
+         ! Possible side-effects: if variable_gp then grav_pot_3d may be called twice (second call from source_terms_grav)
 #endif /* GRAV */
          call write_data(output='all') ! moved from dataio::init_dataio
       endif

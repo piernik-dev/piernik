@@ -67,7 +67,6 @@ contains
 !<
    subroutine make_3sweeps(forward)
 
-      use dataio_pub,      only: skip_advection
       use types,           only: problem_customize_solution
       use mpisetup,        only: xdim, ydim, zdim
 #ifdef SHEAR
@@ -109,18 +108,16 @@ contains
       endif
 #endif /* COSM_RAYS && MULTIGRID */
 
-      if (.not. skip_advection) then
-         if (forward) then
-            do s = xdim, zdim
-               call make_sweep(s, forward)
-            enddo
-         else
-            do s = zdim, xdim, -1
-               call make_sweep(s, forward)
-            enddo
-         endif
-         if (associated(problem_customize_solution)) call problem_customize_solution
+      if (forward) then
+         do s = xdim, zdim
+            call make_sweep(s, forward)
+         enddo
+      else
+         do s = zdim, xdim, -1
+            call make_sweep(s, forward)
+         enddo
       endif
+      if (associated(problem_customize_solution)) call problem_customize_solution
 
    end subroutine make_3sweeps
 
