@@ -282,7 +282,7 @@ contains
 
       call read_problem_par ! may depend on anything but init_dataio, \todo add checks against PIERNIK_INIT_IO_IC to all initproblem::read_problem_par
 
-      call init_dataio ! depends on constants, fluids (through dataio_hdf5), fluidboundaries, arrays, grid and shear (through magboundaries::bnd_b or fluidboundaries::bnd_u)
+      call init_dataio ! depends on constants, fluids (through dataio_hdf5), fluidboundaries, arrays, grid and shear (through magboundaries::bnd_b or fluidboundaries::bnd_u) \todo split me
 
       if (master) then
          call printinfo("###############     Initial Conditions     ###############", .false.)
