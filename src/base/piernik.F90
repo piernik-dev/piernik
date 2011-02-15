@@ -220,11 +220,11 @@ contains
       call init_mpi
 
       code_progress = PIERNIK_INIT_MPI ! Now we can initialize grid and everything that depends at most on init_mpi. All calls prior to PIERNIK_INIT_BASE can be reshuffled when necessary
-      call init_grid
-
 #ifdef DEBUG
-      call init_piernikdebug
+      call init_piernikdebug ! Make it available as early as possible - right after init_mpi
 #endif /* DEBUG */
+
+      call init_grid
 
       call init_time_step
 
