@@ -70,12 +70,6 @@ contains
 !! <tr><td>do_ascii_dump   </td><td>.false.</td><td>logical        </td><td>\copydoc multigridhelpers::do_ascii_dump   </td></tr>
 !! <tr><td>dirty_debug     </td><td>.false.</td><td>logical        </td><td>\copydoc multigridhelpers::dirty_debug     </td></tr>
 !! <tr><td>multidim_code_3D</td><td>.false.</td><td>logical        </td><td>\copydoc multigridhelpers::multidim_code_3D</td></tr>
-!! <tr><td>aux_par_I0      </td><td>0      </td><td>integer value  </td><td>\copydoc multigridhelpers::aux_par_I0      </td></tr>
-!! <tr><td>aux_par_I1      </td><td>0      </td><td>integer value  </td><td>\copydoc multigridhelpers::aux_par_I1      </td></tr>
-!! <tr><td>aux_par_I2      </td><td>0      </td><td>integer value  </td><td>\copydoc multigridhelpers::aux_par_I2      </td></tr>
-!! <tr><td>aux_par_R0      </td><td>0.     </td><td>real value     </td><td>\copydoc multigridhelpers::aux_par_R0      </td></tr>
-!! <tr><td>aux_par_R1      </td><td>0.     </td><td>real value     </td><td>\copydoc multigridhelpers::aux_par_R1      </td></tr>
-!! <tr><td>aux_par_R2      </td><td>0.     </td><td>real value     </td><td>\copydoc multigridhelpers::aux_par_R2      </td></tr>
 !! </table>
 !! \n \n
 !<
@@ -86,11 +80,10 @@ contains
            &                         is_external, periodic_bnd_cnt, non_periodic_bnd_cnt, NDIM, &
            &                         XLO, XHI, YLO, YHI, ZLO, ZHI, LOW, HIGH, &
            &                         ord_prolong, ord_prolong_face, stdout, verbose_vcycle, tot_ts
-      use mpi,                 only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL
+      use mpi,                 only: MPI_INTEGER, MPI_LOGICAL
       use mpisetup,            only: buffer_dim, comm, comm3d, ierr, proc, master, slave, nproc, has_dir, xdim, ydim, zdim, ndims, psize, &
-           &                         ibuff, rbuff, lbuff, bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr, dom, eff_dim
-      use multigridhelpers,    only: mg_write_log, dirtyH, do_ascii_dump, dirty_debug, multidim_code_3D, &
-           &                         aux_par_I0, aux_par_I1, aux_par_I2, aux_par_R0, aux_par_R1, aux_par_R2
+           &                         ibuff, lbuff, bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr, dom, eff_dim
+      use multigridhelpers,    only: mg_write_log, dirtyH, do_ascii_dump, dirty_debug, multidim_code_3D
       use multigridmpifuncs,   only: mpi_multigrid_prep
       use dataio_pub,          only: die, code_progress, PIERNIK_INIT_ARRAYS
       use dataio_pub,          only: msg, par_file, namelist_errh, compare_namelist, cmdl_nml  ! QA_WARN required for diff_nml
@@ -108,9 +101,7 @@ contains
       real                             :: mb_alloc               !< Allocation counter
       integer, dimension(6)            :: aerr                   !> \deprecated BEWARE: hardcoded magic integer. Update when you change number of simultaneous error checks
 
-      namelist /MULTIGRID_SOLVER/ level_max, ord_prolong, ord_prolong_face, &
-           &                      stdout, verbose_vcycle, do_ascii_dump, dirty_debug, multidim_code_3D, &
-           &                      aux_par_I0, aux_par_I1, aux_par_I2, aux_par_R0, aux_par_R1, aux_par_R2
+      namelist /MULTIGRID_SOLVER/ level_max, ord_prolong, ord_prolong_face, stdout, verbose_vcycle, do_ascii_dump, dirty_debug, multidim_code_3D
 
       if (code_progress < PIERNIK_INIT_ARRAYS) call die("[multigrid:init_multigrid] grid, geometry, constants or arrays not initialized") ! This check is too weak (geometry), arrays are required only for multigrid_gravity
 
@@ -130,9 +121,6 @@ contains
       dirty_debug            = .false.
       multidim_code_3D       = .false.
 
-      aux_par_I0 = 0 ; aux_par_I1 = 0 ; aux_par_I2 = 0
-      aux_par_R0 = 0.; aux_par_R1 = 0.; aux_par_R2 = 0.
-
       if (master) then
 
          diff_nml(MULTIGRID_SOLVER)
@@ -147,19 +135,10 @@ contains
          lbuff(4) = dirty_debug
          lbuff(5) = multidim_code_3D
 
-         rbuff(buffer_dim  ) = aux_par_R0
-         rbuff(buffer_dim-1) = aux_par_R1
-         rbuff(buffer_dim-2) = aux_par_R2
-
-         ibuff(buffer_dim  ) = aux_par_I0
-         ibuff(buffer_dim-1) = aux_par_I1
-         ibuff(buffer_dim-2) = aux_par_I2
-
       endif
 
-      call MPI_Bcast(ibuff, buffer_dim, MPI_INTEGER,          0, comm, ierr)
-      call MPI_Bcast(rbuff, buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
-      call MPI_Bcast(lbuff, buffer_dim, MPI_LOGICAL,          0, comm, ierr)
+      call MPI_Bcast(ibuff, buffer_dim, MPI_INTEGER, 0, comm, ierr)
+      call MPI_Bcast(lbuff, buffer_dim, MPI_LOGICAL, 0, comm, ierr)
 
       if (slave) then
 
@@ -172,14 +151,6 @@ contains
          do_ascii_dump    = lbuff(3)
          dirty_debug      = lbuff(4)
          multidim_code_3D = lbuff(5)
-
-         aux_par_R0       = rbuff(buffer_dim)
-         aux_par_R1       = rbuff(buffer_dim-1)
-         aux_par_R2       = rbuff(buffer_dim-2)
-
-         aux_par_I0       = ibuff(buffer_dim)
-         aux_par_I1       = ibuff(buffer_dim-1)
-         aux_par_I2       = ibuff(buffer_dim-2)
 
       endif
 

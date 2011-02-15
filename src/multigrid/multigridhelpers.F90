@@ -40,18 +40,12 @@ module multigridhelpers
    private
 
    public :: set_dirty, check_dirty, vcycle_stats_init, brief_v_log, mg_write_log, numbered_ascii_dump
-   public :: do_ascii_dump, multidim_code_3D, dirty_debug, dirty_label, dirtyH, dirtyL, aux_par_I0, aux_par_I1, aux_par_I2, aux_par_R0, aux_par_R1, aux_par_R2
+   public :: do_ascii_dump, multidim_code_3D, dirty_debug, dirty_label, dirtyH, dirtyL
 
    ! namelist parameters
    logical            :: do_ascii_dump                      !< to dump, or not to dump: that is a question (ascii)
    logical            :: multidim_code_3D                   !< prefer code written for any 1D and 2D configuration even in 3D for benchmarking and debugging
    logical            :: dirty_debug                        !< Initialize everything with some insane values (dirtyH, defined below) and check if they can propagate
-   integer            :: aux_par_I0                         !< auxiliary integer parameter #0
-   integer            :: aux_par_I1                         !< auxiliary integer parameter #1
-   integer            :: aux_par_I2                         !< auxiliary integer parameter #2
-   real               :: aux_par_R0                         !< auxiliary real parameter #0
-   real               :: aux_par_R1                         !< auxiliary real parameter #1
-   real               :: aux_par_R2                         !< auxiliary real parameter #2
    integer, parameter    :: dl_len = 64                     !< length of label buffer
    character(len=dl_len) :: dirty_label                     !< buffer for label for check_dirty subroutine
    real, parameter    :: big_s =  huge(real(1.0,4))         !< largest single-precision number

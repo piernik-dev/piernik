@@ -31,24 +31,35 @@
 module piernikdebug
 ! pulled by DEBUG
 
+   use mpisetup, only: cbuff_len
+
    implicit none
 
    private
-   public :: init_piernikdebug, has_const_dt, constant_dt, force_hdf5_dump, force_log_dump
+   public :: init_piernikdebug, has_const_dt, constant_dt, force_hdf5_dump, force_log_dump, aux_R, aux_I, aux_L, aux_S
+
+   ! Auxiliary input parameters for debugging, quick tweaks and tests of new features.
+   ! Their purpose is to avoid messing up existing namelists until it becomes clear that certain parameter is really useful.
+   ! There is no reason to give them protected attribute.
+   integer, parameter                        :: naux = 3 !< number of auxiliary variables of each kind
+   real, dimension(naux)                     :: aux_R    !< real auxiliary parameter
+   integer, dimension(naux)                  :: aux_I    !< integer auxiliary parameter
+   logical, dimension(naux)                  :: aux_L    !< boolean auxiliary parameter
+   character(len=cbuff_len), dimension(naux) :: aux_S    !< string auxiliary parameter
 
    real, protected    :: constant_dt               !< value of timestep regardless of fluid state
    logical, protected :: has_const_dt              !< true if piernikdebug::constant_dt > 0
    logical, protected :: force_hdf5_dump           !< dump hdf5 every sweep regardless of dataio_pub::dt_hdf
    logical, protected :: force_log_dump            !< dump log every sweep regardless of dataio_pub:dt_log
 
-   namelist /PIERNIK_DEBUG/ constant_dt, force_hdf5_dump, force_log_dump
+   namelist /PIERNIK_DEBUG/ constant_dt, force_hdf5_dump, force_log_dump, aux_R, aux_I, aux_L, aux_S
 
 contains
 
    subroutine init_piernikdebug
 
-      use mpisetup,              only: master, slave, comm, ierr, buffer_dim, rbuff, lbuff
-      use mpi,                   only: MPI_DOUBLE_PRECISION, MPI_LOGICAL
+      use mpisetup,              only: master, slave, comm, ierr, buffer_dim, rbuff, lbuff, cbuff, ibuff
+      use mpi,                   only: MPI_DOUBLE_PRECISION, MPI_LOGICAL, MPI_CHARACTER, MPI_INTEGER
       use dataio_pub,            only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml  ! QA_WARN required for diff_nml
       use dataio_pub,            only: code_progress, PIERNIK_INIT_MPI, die
 
@@ -57,6 +68,10 @@ contains
       if (code_progress < PIERNIK_INIT_MPI) call die("[debug:init_piernikdebug] MPI not initialized.")
 
       constant_dt = 0.0
+      aux_R(:) = 0.
+      aux_I(:) = 0
+      aux_L(:) = .false.
+      aux_S(:) = ""
 
       if (master) then
          diff_nml(PIERNIK_DEBUG)
@@ -65,8 +80,16 @@ contains
 
          lbuff(1) = force_hdf5_dump
          lbuff(2) = force_log_dump
+
+         rbuff(buffer_dim-naux+1:buffer_dim) = aux_R(:)
+         ibuff(buffer_dim-naux+1:buffer_dim) = aux_I(:)
+         lbuff(buffer_dim-naux+1:buffer_dim) = aux_L(:)
+         cbuff(buffer_dim-naux+1:buffer_dim) = aux_S(:)
+
       endif
 
+      call MPI_Bcast(cbuff, cbuff_len*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
+      call MPI_Bcast(ibuff,           buffer_dim, MPI_INTEGER,          0, comm, ierr)
       call MPI_Bcast(rbuff,           buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
       call MPI_Bcast(lbuff,           buffer_dim, MPI_LOGICAL,          0, comm, ierr)
 
@@ -75,6 +98,12 @@ contains
 
          force_hdf5_dump = lbuff(1)
          force_log_dump  = lbuff(2)
+
+         aux_R(:) = rbuff(buffer_dim-naux+1:buffer_dim)
+         aux_I(:) = ibuff(buffer_dim-naux+1:buffer_dim)
+         aux_L(:) = lbuff(buffer_dim-naux+1:buffer_dim)
+         aux_S(:) = cbuff(buffer_dim-naux+1:buffer_dim)
+
       endif
 
       has_const_dt = (constant_dt > 0.0)

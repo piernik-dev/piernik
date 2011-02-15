@@ -1083,7 +1083,8 @@ contains
 !!$
 !!$      use dataio_pub,         only: die, printinfo, msg
 !!$      use constants,          only: newtong
-!!$      use multigridhelpers,   only: aux_par_R0, aux_par_R1, aux_par_R2, aux_par_I0, dirty_debug
+!!$      use multigridhelpers,   only: dirty_debug
+!!$      use debug,              only: aux_R, aux_I
 !!$
 !!$      implicit none
 !!$
@@ -1098,9 +1099,7 @@ contains
 !!$      irmin = rqbin
 !!$
 !!$      p(0) = 1./newtong
-!!$      p(1) = aux_par_R0
-!!$      p(2) = aux_par_R1
-!!$      p(3) = aux_par_R2
+!!$      p(1:3) = aux_R(1:3)
 !!$
 !!$      call point2moments(p(0), p(1), p(2), p(3))
 !!$
@@ -1125,7 +1124,7 @@ contains
 !!$         do j = -60, 60
 !!$            x(1) = 0.05 * i
 !!$            x(2) = 0.05 * j
-!!$            x(3) = 0.1 * aux_par_I0
+!!$            x(3) = 0.1 * aux_I(1)
 !!$
 !!$            cphi = - p(0)*newtong / sqrt(1e-290+sum((p(1:3)-x(1:3))**2))
 !!$
