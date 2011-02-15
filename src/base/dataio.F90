@@ -1044,6 +1044,16 @@ contains
       type(value) :: gpxmax, gpymax, gpzmax
 #endif /* VARIABLE_GP */
       character(len=idlen) :: id
+#if defined VARIABLE_GP || defined MAGNETIC
+      integer :: nxl, nyl, nzl, nxu, nyu, nzu !< auxiliary indexes to compute any gradients (\todo should they be moved to another module, e.g. grid?)
+
+      nxl = min(2, cg%nx)
+      nyl = min(2, cg%ny)
+      nzl = min(2, cg%nz)
+      nxu = max(cg%nx-1,1)
+      nyu = max(cg%ny-1,1)
+      nzu = max(cg%nz-1,1)
+#endif /* VARIABLE_GP || MAGNETIC */
 
       id = '' ! suppress compiler warnings if noe of the modules requiring the id variable are swithed on.
       if (cg%dxmn >= sqrt(huge(1.0))) then
@@ -1109,11 +1119,11 @@ contains
 #endif /* DUST */
 
 #ifdef VARIABLE_GP
-      wa(1:cg%nx-1,:,:) = abs((gpot(2:cg%nx,:,:)-gpot(1:cg%nx-1,:,:))/cg%dx)
+      wa(1:nxu,:,:) = abs((gpot(nxl:cg%nx,:,:)-gpot(1:nxu,:,:))*cg%idx) ; wa(cg%nx,:,:) = wa(nxu,:,:)
       call get_extremum(wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), 'max', gpxmax)
-      wa(:,1:cg%ny-1,:) = abs((gpot(:,2:cg%ny,:)-gpot(:,1:cg%ny-1,:))/cg%dy)
+      wa(:,1:nyu,:) = abs((gpot(:,nyl:cg%ny,:)-gpot(:,1:nyu,:))*cg%idy) ; wa(:,cg%ny,:) = wa(:,nyu,:)
       call get_extremum(wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), 'max', gpymax)
-      wa(:,:,1:cg%nz-1) = abs((gpot(:,:,2:cg%nz)-gpot(:,:,1:cg%nz-1))/cg%dz)
+      wa(:,:,1:nzu) = abs((gpot(:,:,nzl:cg%nz)-gpot(:,:,1:nzu))*cg%idz) ; wa(:,:,cg%nz) = wa(:,:,nzu)
       call get_extremum(wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), 'max', gpzmax)
 #endif /* VARIABLE_GP */
 
@@ -1125,15 +1135,15 @@ contains
 #endif /* RESISTIVE */
 
 #ifdef MAGNETIC
-      wa(1:cg%nx-1,1:cg%ny-1,1:max(cg%nz-1,1)) = &
-                 (b(ibx,2:cg%nx,1:cg%ny-1,1:max(cg%nz-1,1)) - b(ibx,1:cg%nx-1,1:cg%ny-1,1:max(cg%nz-1,1)))*cg%dy*cg%dz &
-                +(b(iby,1:cg%nx-1,2:cg%ny,1:max(cg%nz-1,1)) - b(iby,1:cg%nx-1,1:cg%ny-1,1:max(cg%nz-1,1)))*cg%dx*cg%dz &
-                +(b(ibz,1:cg%nx-1,1:cg%ny-1,min(2, cg%nz):cg%nz) - b(ibz,1:cg%nx-1,1:cg%ny-1,1:max(cg%nz-1,1)))*cg%dx*cg%dy
+      wa(1:nxu,1:nyu,1:nzu) = &
+                 (b(ibx,nxl:cg%nx,  1:nyu  ,  1:nzu  ) - b(ibx,1:nxu,1:nyu,1:nzu))*cg%dy*cg%dz &
+               + (b(iby,  1:nxu  ,nyl:cg%ny,  1:nzu  ) - b(iby,1:nxu,1:nyu,1:nzu))*cg%dx*cg%dz &
+               + (b(ibz,  1:nxu  ,  1:nyu  ,nzl:cg%nz) - b(ibz,1:nxu,1:nyu,1:nzu))*cg%dx*cg%dy
       wa = abs(wa)
 
-      wa(cg%ie,:,:) = wa(max(cg%ie-1,1),:,:)
-      wa(:, cg%je,:) = wa(:,max(cg%je-1,1),:)
-      wa(:,:, cg%ke) = wa(:,:,max(cg%ke-1,1))
+      wa(cg%nx,:,:) = wa(nxu,:,:)
+      wa(:,cg%ny,:) = wa(:,nyu,:)
+      wa(:,:,cg%nz) = wa(:,:,nzu)
 
       call get_extremum(wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), 'max', divb_max)
 #endif /* MAGNETIC */
