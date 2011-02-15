@@ -695,9 +695,9 @@ contains
             remain = (/.false.,.true.,.true./)
             pij    = "yz_"
             nib    = cg%nyb
-            nid    = dom%nyd
+            nid    = dom%n_d(ydim)
             njb    = cg%nzb
-            njd    = dom%nzd
+            njd    = dom%n_d(zdim)
             nkb    = cg%nxb
             pisize = psize(ydim)
             pjsize = psize(zdim)
@@ -710,9 +710,9 @@ contains
             remain = (/.true.,.false.,.true./)
             pij    = "xz_"
             nib    = cg%nxb
-            nid    = dom%nxd
+            nid    = dom%n_d(xdim)
             njb    = cg%nzb
-            njd    = dom%nzd
+            njd    = dom%n_d(zdim)
             nkb    = cg%nyb
             pisize = psize(xdim)
             pjsize = psize(zdim)
@@ -725,9 +725,9 @@ contains
             remain = (/.true.,.true.,.false./)
             pij    = "xy_"
             nib    = cg%nxb
-            nid    = dom%nxd
+            nid    = dom%n_d(xdim)
             njb    = cg%nyb
-            njd    = dom%nyd
+            njd    = dom%n_d(ydim)
             nkb    = cg%nzb
             pisize = psize(xdim)
             pjsize = psize(ydim)
@@ -1023,7 +1023,7 @@ contains
       !----------------------------------------------------------------------------------
       !  WRITE X Axis
       !
-      dimsf  = [dom%nxd] ! Dataset dimensions
+      dimsf  = [dom%n_d(xdim)] ! Dataset dimensions
       dimsfi = dimsf
       chunk_dims = [cg%nxb]    ! Chunks dimensions
 
@@ -1062,7 +1062,7 @@ contains
       !----------------------------------------------------------------------------------
       !  WRITE Y Axis
       !
-      dimsf  = [dom%nyd] ! Dataset dimensions
+      dimsf  = [dom%n_d(ydim)] ! Dataset dimensions
       dimsfi = dimsf
       chunk_dims = [cg%nyb]    ! Chunks dimensions
 
@@ -1101,7 +1101,7 @@ contains
       !----------------------------------------------------------------------------------
       !  WRITE Z Axis
       !
-      dimsf  = [dom%nzd] ! Dataset dimensions
+      dimsf  = [dom%n_d(zdim)] ! Dataset dimensions
       dimsfi = dimsf
       chunk_dims = [cg%nzb]    ! Chunks dimensions
 
@@ -1394,7 +1394,7 @@ contains
          if (rbuf(1) < piernik_hdf5_version) call warn("[dataio_hdf5:read_restart_hdf5] Old versions of the restart file may not always work fully correctly.")
 
          call h5ltget_attribute_int_f(file_id,"/","nxd", ibuf,error)
-         if (ibuf(1) /= dom%nxd .or. error /= 0) call die("[dataio_hdf5:read_restart_hdf5] nxd does not match")
+         if (ibuf(1) /= dom%n_d(xdim) .or. error /= 0) call die("[dataio_hdf5:read_restart_hdf5] nxd does not match")
          if (has_dir(xdim)) then
             call h5ltget_attribute_double_f(file_id,"/","xmin", rbuf, error)
             if (rbuf(1) /= dom%xmin .or. error /= 0) call die("[dataio_hdf5:read_restart_hdf5] xmin does not match")
@@ -1403,7 +1403,7 @@ contains
          endif
 
          call h5ltget_attribute_int_f(file_id,"/","nyd", ibuf,error)
-         if (ibuf(1) /= dom%nyd .or. error /= 0) call die("[dataio_hdf5:read_restart_hdf5] nyd does not match")
+         if (ibuf(1) /= dom%n_d(ydim) .or. error /= 0) call die("[dataio_hdf5:read_restart_hdf5] nyd does not match")
          if (has_dir(ydim)) then
             call h5ltget_attribute_double_f(file_id,"/","ymin", rbuf, error)
             if (rbuf(1) /= dom%ymin .or. error /= 0) call die("[dataio_hdf5:read_restart_hdf5] ymin does not match")
@@ -1412,7 +1412,7 @@ contains
          endif
 
          call h5ltget_attribute_int_f(file_id,"/","nzd", ibuf,error)
-         if (ibuf(1) /= dom%nzd .or. error /= 0) call die("[dataio_hdf5:read_restart_hdf5] nzd does not match")
+         if (ibuf(1) /= dom%n_d(zdim) .or. error /= 0) call die("[dataio_hdf5:read_restart_hdf5] nzd does not match")
          if (has_dir(zdim)) then
             call h5ltget_attribute_double_f(file_id,"/","zmin", rbuf, error)
             if (rbuf(1) /= dom%zmin .or. error /= 0) call die("[dataio_hdf5:read_restart_hdf5] zmin does not match")
@@ -1448,9 +1448,9 @@ contains
       rank = 4
       allocate(dimsf(rank), dimsfi(rank), chunk_dims(rank))
       allocate(block(rank), offset(rank), count(rank), stride(rank))
-      dimsf = [nu, dom%nxd, dom%nyd, dom%nzd] ! Dataset dimensions
+      dimsf = [nu, dom%n_d(:)] ! Dataset dimensions
       dimsfi = dimsf
-      chunk_dims = [nu, cg%nxb, cg%nyb, cg%nzb]
+      chunk_dims = [nu, cg%n_b(:)]
       if (.not.associated(p4d)) p4d => u(:,cg%is:cg%ie,cg%js:cg%je,cg%ks:cg%ke)
 
       ! Create chunked dataset.
@@ -1701,8 +1701,8 @@ contains
       integer(HSIZE_T),  DIMENSION(ndims) :: dimsf, dimsfi, chunk_dims
       integer :: error
 
-      chunk_dims = [cg%nxb, cg%nyb, cg%nzb]                     ! Chunks dimensions
-      dimsf  = [dom%nxd, dom%nyd, dom%nzd]  ! Dataset dimensions
+      chunk_dims = cg%n_b(:) ! Chunks dimensions
+      dimsf  = dom%n_d(:)    ! Dataset dimensions
       dimsfi = dimsf
       !
       ! Create the data space for the  dataset.
@@ -1821,16 +1821,14 @@ contains
          rbuffer(12) = chdf%next_t_tsl          ; rbuffer_name(12) = "next_t_tsl" !rr2
          rbuffer(13) = chdf%next_t_log          ; rbuffer_name(13) = "next_t_log" !rr2
 
-         ibuffer(1)  = chdf%nstep               ; ibuffer_name(1)  = "nstep" !rr2
-         ibuffer(2)  = chdf%nres+1              ; ibuffer_name(2)  = "nres" !rr2
-         ibuffer(3)  = chdf%nhdf                ; ibuffer_name(3)  = "nhdf" !rr2
-         ibuffer(4)  = chdf%nstep               ; ibuffer_name(4)  = "step_res" !rr2
-         ibuffer(5)  = chdf%step_hdf            ; ibuffer_name(5)  = "step_hdf" !rr2
-         ibuffer(6)  = dom%nxd                  ; ibuffer_name(6)  = "nxd" !rr1
-         ibuffer(7)  = dom%nyd                  ; ibuffer_name(7)  = "nyd" !rr1
-         ibuffer(8)  = dom%nzd                  ; ibuffer_name(8)  = "nzd" !rr1
-         ibuffer(9)  = cg%nb                    ; ibuffer_name(9)  = "nb"
-         ibuffer(10) = require_init_prob        ; ibuffer_name(10) = "require_init_prob" !rr2
+         ibuffer(1)   = chdf%nstep              ; ibuffer_name(1)   = "nstep" !rr2
+         ibuffer(2)   = chdf%nres+1             ; ibuffer_name(2)   = "nres" !rr2
+         ibuffer(3)   = chdf%nhdf               ; ibuffer_name(3)   = "nhdf" !rr2
+         ibuffer(4)   = chdf%nstep              ; ibuffer_name(4)   = "step_res" !rr2
+         ibuffer(5)   = chdf%step_hdf           ; ibuffer_name(5)   = "step_hdf" !rr2
+         ibuffer(6:8) = dom%n_d(:)              ; ibuffer_name(6:8) = [ "nxd", "nyd", "nzd" ] !rr1
+         ibuffer(9)   = cg%nb                   ; ibuffer_name(9)   = "nb"
+         ibuffer(10)  = require_init_prob       ; ibuffer_name(10)  = "require_init_prob" !rr2
 
          !> \deprecated BEWARE: A memory leak was detected here. h5lt calls use HD5f2cstring and probably sometimes don't free the allocated buffer
 

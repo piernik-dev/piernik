@@ -98,7 +98,7 @@ contains
          cg%isb   = 2*nb
          cg%ieb   = cg%nxb+1
          D_x      = 1
-         cg%dx    = dom%Lx / dom%nxd
+         cg%dx    = dom%Lx / dom%n_d(xdim)
          cg%dxmn  = min(cg%dxmn, cg%dx)
          cg%xminb = dom%xmin + cg%dx *  cg%off(xdim)
          cg%xmaxb = dom%xmin + cg%dx * (cg%off(xdim) + cg%nxb)
@@ -121,7 +121,7 @@ contains
          cg%jsb   = 2*nb
          cg%jeb   = cg%nyb+1
          D_y      = 1
-         cg%dy    = dom%Ly / dom%nyd
+         cg%dy    = dom%Ly / dom%n_d(ydim)
          cg%dxmn  = min(cg%dxmn, cg%dy)
          cg%yminb = dom%ymin + cg%dy *  cg%off(ydim)
          cg%ymaxb = dom%ymin + cg%dy * (cg%off(ydim) + cg%nyb)
@@ -144,7 +144,7 @@ contains
          cg%ksb   = 2*nb
          cg%keb   = cg%nzb+1
          D_z      = 1
-         cg%dz    = dom%Lz / dom%nzd
+         cg%dz    = dom%Lz / dom%n_d(zdim)
          cg%dxmn  = min(cg%dxmn, cg%dz)
          cg%zminb = dom%zmin + cg%dz *  cg%off(zdim)
          cg%zmaxb = dom%zmin + cg%dz * (cg%off(zdim) + cg%nzb)
@@ -168,7 +168,7 @@ contains
       cg%idl(:) = 1./cg%dl(:)
 
       cg%dvol = product(cg%dl(:))
-      total_ncells = dom%nxd * dom%nyd * dom%nzd
+      total_ncells = product(dom%n_d(:))
 
       allocate(cg%x(cg%nx), cg%xl(cg%nx), cg%xr(cg%nx), cg%inv_x(cg%nx))
       allocate(cg%y(cg%ny), cg%yl(cg%ny), cg%yr(cg%ny), cg%inv_y(cg%ny))

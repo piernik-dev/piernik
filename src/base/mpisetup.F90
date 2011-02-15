@@ -330,11 +330,10 @@ contains
          diff_nml(MPI_BLOCKS)
          diff_nml(NUMERICAL_SETUP)
          diff_nml(DOMAIN)
-      endif
 
-      nxd = max(1, nxd)
-      nyd = max(1, nyd)
-      nzd = max(1, nzd)
+         dom%n_d(:) = max(1, [nxd, nyd, nzd])
+
+      endif
 
       cfl_max = min(max(cfl_max, min(cfl*1.1, cfl+0.05, (1.+cfl)/2.) ), 1.0) ! automatically sanitize cfl_max
 
@@ -352,9 +351,7 @@ contains
 
          ibuff(xdim:zdim) = psize(:)
          ibuff(4) = integration_order
-         ibuff(5) = nxd
-         ibuff(6) = nyd
-         ibuff(7) = nzd
+         ibuff(5:7) = dom%n_d(:)
          ibuff(8) = nb
 
          rbuff( 1) = smalld
@@ -420,20 +417,14 @@ contains
 
          psize(:)   = ibuff(xdim:zdim)
          integration_order = ibuff(4)
-         nxd        = ibuff(5)
-         nyd        = ibuff(6)
-         nzd        = ibuff(7)
+         dom%n_d(:) = ibuff(5:7)
          nb         = ibuff(8)
 
       endif
 
       ! set up the global domain
-      dom%n_d(:) = [nxd, nyd, nzd]
       has_dir(:) = dom%n_d(:) > 1
       eff_dim = count(has_dir(:))
-      dom%nxd = nxd
-      dom%nyd = nyd
-      dom%nzd = nzd
 
       dom%bnd_xl_dom = bnd_xl
       dom%bnd_xr_dom = bnd_xr
@@ -456,21 +447,21 @@ contains
       dom%Vol = 1.
       if (has_dir(xdim)) then
          dom%Vol = dom%Vol * dom%Lx
-         dom%nxt = dom%nxd + 2 * nb     ! Domain total grid sizes
+         dom%nxt = dom%n_d(xdim) + 2 * nb     ! Domain total grid sizes
       else
          dom%nxt = 1
       endif
 
       if (has_dir(ydim)) then
          dom%Vol = dom%Vol * dom%Ly
-         dom%nyt = dom%nyd + 2 * nb
+         dom%nyt = dom%n_d(ydim) + 2 * nb
       else
          dom%nyt = 1
       endif
 
       if (has_dir(zdim)) then
          dom%Vol = dom%Vol * dom%Lz
-         dom%nzt = dom%nzd + 2 * nb
+         dom%nzt = dom%n_d(zdim) + 2 * nb
       else
          dom%nzt = 1
       endif
@@ -492,8 +483,10 @@ contains
          deallocate(primes)
       endif
 
-      if ( (bnd_xl(1:3) == 'cor' .or. bnd_yl(1:3) == 'cor' .or. bnd_xr(1:3) == 'cor' .or. bnd_yr(1:3) == 'cor') .and. (psize(xdim) /= psize(ydim) .or. nxd /= nyd) ) then
-         write(msg, '(a,4(i4,a))')"[mpisetup:init_mpi] Corner BC require psize(xdim) equal to psize(ydim) and nxd equal to nyd. Detected: [",psize(xdim),",",psize(ydim),"] and [",nxd,",",nyd,"]"
+      if ( (bnd_xl(1:3) == 'cor' .or. bnd_yl(1:3) == 'cor' .or. bnd_xr(1:3) == 'cor' .or. bnd_yr(1:3) == 'cor') .and. &
+           (psize(xdim) /= psize(ydim) .or. dom%n_d(xdim) /= dom%n_d(ydim)) ) then
+         write(msg, '(a,4(i4,a))')"[mpisetup:init_mpi] Corner BC require psize(xdim) equal to psize(ydim) and nxd equal to nyd. Detected: [",psize(xdim),",",psize(ydim),&
+              &                   "] and [",dom%n_d(xdim),",",dom%n_d(ydim),"]"
          call die(msg)
       endif
 

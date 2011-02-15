@@ -90,10 +90,7 @@ module types
       real    :: ymax                           !< physical domain right y-boundary position
       real    :: zmin                           !< physical domain left z-boundary position
       real    :: zmax                           !< physical domain right z-boundary position
-      integer :: nxd                            !< number of grid cells in physical domain in x-direction (if equal to 1 then x-dimension is reduced to a point with no boundary cells)
-      integer :: nyd                            !< number of grid cells in physical domain in y-direction ( - || - )
-      integer :: nzd                            !< number of grid cells in physical domain in z-direction ( - || - )
-      integer, dimension(dims) :: n_d           !< [nxd, nyd, nzd]
+      integer, dimension(dims) :: n_d           !< number of grid cells in physical domain in x-, y- and z-direction (where equal to 1, the dimension is reduced to a point with no boundary cells)
       character(len=bndlen) :: bnd_xl_dom       !< low-x computational domain boundary
       character(len=bndlen) :: bnd_xr_dom       !< high-x computational domain boundary
       character(len=bndlen) :: bnd_yl_dom       !< low-y computational domain boundary

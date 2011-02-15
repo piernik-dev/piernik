@@ -315,7 +315,7 @@ contains
       item%p    => get_cr
       if (.not.allocated(item%ivec)) allocate(item%ivec(10))
       if (.not.allocated(item%rvec)) allocate(item%rvec(0))
-      item%ivec  = [cg%nxb, cg%nyb, cg%nzb, cg%is, cg%ie, cg%js, cg%je, cg%ks, cg%ke]
+      item%ivec  = [cg%n_b(:), cg%is, cg%ie, cg%js, cg%je, cg%ks, cg%ke]
 
       do i = 1, flind_crs
 
