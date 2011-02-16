@@ -1024,6 +1024,9 @@ contains
 #ifdef VARIABLE_GP
       use arrays,             only: gpot
 #endif /* VARIABLE_GP */
+#if defined VARIABLE_GP || defined MAGNETIC
+      use grid,               only: D_x, D_y, D_z
+#endif /* VARIABLE_GP || MAGNETIC */
 
       implicit none
 
@@ -1047,12 +1050,12 @@ contains
 #if defined VARIABLE_GP || defined MAGNETIC
       integer :: nxl, nyl, nzl, nxu, nyu, nzu !< auxiliary indexes to compute any gradients (\todo should they be moved to another module, e.g. grid?)
 
-      nxl = min(2, cg%nx)
-      nyl = min(2, cg%ny)
-      nzl = min(2, cg%nz)
-      nxu = max(cg%nx-1,1)
-      nyu = max(cg%ny-1,1)
-      nzu = max(cg%nz-1,1)
+      nxl = 1 + D_x
+      nyl = 1 + D_y
+      nzl = 1 + D_z
+      nxu = cg%nx - D_x
+      nyu = cg%ny - D_y
+      nzu = cg%nz - D_z
 #endif /* VARIABLE_GP || MAGNETIC */
 
       id = '' ! suppress compiler warnings if noe of the modules requiring the id variable are swithed on.
