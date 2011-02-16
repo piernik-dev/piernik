@@ -929,6 +929,8 @@ contains
       rank = 4
       allocate(dimsf(rank),dimsfi(rank),chunk_dims(rank))
       allocate(count(rank),offset(rank),stride(rank),block(rank))
+      !> \deprecated The code for writing fluid data, mag field and write_3darr_to_restart is almost replicated.
+      !> \todo Try to put it in a separate subroutine.
       !----------------------------------------------------------------------------------
       !  WRITE FLUID VARIABLES
       !
@@ -1028,6 +1030,9 @@ contains
       allocate(dimsf(rank),dimsfi(rank),chunk_dims(rank))
       allocate(count(rank),offset(rank),stride(rank),block(rank))
 
+      !> \deprecated The code for writing axes is almost replicated.
+      !> \todo Try to put them in a separate subroutine.
+      !> \deprecated Some values are written multiple times, eg. each cg%x(:) is written by psize(ydim)*psize(zdim) CPUs.
       !----------------------------------------------------------------------------------
       !  WRITE X Axis
       !
@@ -1449,6 +1454,8 @@ contains
       call read_3darr_from_restart(file_id, "gp", p3d, cg%nx, cg%ny, cg%nz)
       if (associated(p3d)) nullify(p3d)
 #endif /* GRAV */
+      !> \deprecated The code for reading fluid data, mag field and read_3darr_from_restart is almost replicated.
+      !> \todo Try to put it in a separate subroutine.
       !----------------------------------------------------------------------------------
       !  READ FLUID VARIABLES
       !
@@ -1777,7 +1784,7 @@ contains
            &                   h5tcopy_f, h5tset_size_f, h5screate_simple_f, H5Dcreate_f, H5Dwrite_f, H5Dclose_f, H5Sclose_f, H5Tclose_f, H5Pclose_f
       use h5lt,          only: h5ltset_attribute_double_f, h5ltset_attribute_int_f, h5ltset_attribute_string_f
       use list_hdf5,     only: additional_attrs
-      use mpisetup,      only: master, t, dt, cbuff_len, local_magic_mass, comm, ierr, magic_mass, dom
+      use mpisetup,      only: slave, t, dt, cbuff_len, local_magic_mass, comm, ierr, magic_mass, dom
       use mpi,           only: MPI_DOUBLE_PRECISION, MPI_SUM
       use types,         only: hdf
       use version,       only: env, nenv
@@ -1806,103 +1813,103 @@ contains
       magic_mass       = magic_mass + magic_mass0
       local_magic_mass = 0.0
 
+      if (slave) return ! This data need not be written in parallel.
+
       !! The rr1 marks critical attributes that are read by read_restart_hdf5 and compared against value read from the problem.par file.
       !! The rr2 marks runtime values that are read by read_restart_hdf5 and assigned to something in the code.
       !> \todo Set up an universal table(s) of attribute names for use by both set_common_attributes and read_restart_hdf5.
       !! Provide indices for critical attributes (rr1) and for runtime attributes (rr2).
       !<
-      if (master) then
 
-         call h5fopen_f (filename, H5F_ACC_RDWR_F, file_id, error)
+      call h5fopen_f (filename, H5F_ACC_RDWR_F, file_id, error)
 
-         rbuffer(1)  = t                        ; rbuffer_name(1)  = "time" !rr2
-         rbuffer(2)  = dt                       ; rbuffer_name(2)  = "timestep" !rr2
-         rbuffer(3)  = chdf%last_hdf_time       ; rbuffer_name(3)  = "last_hdf_time" !rr2
-         rbuffer(4)  = dom%xmin                 ; rbuffer_name(4)  = "xmin" !rr1
-         rbuffer(5)  = dom%xmax                 ; rbuffer_name(5)  = "xmax" !rr1
-         rbuffer(6)  = dom%ymin                 ; rbuffer_name(6)  = "ymin" !rr1
-         rbuffer(7)  = dom%ymax                 ; rbuffer_name(7)  = "ymax" !rr1
-         rbuffer(8)  = dom%zmin                 ; rbuffer_name(8)  = "zmin" !rr1
-         rbuffer(9)  = dom%zmax                 ; rbuffer_name(9)  = "zmax" !rr1
-         rbuffer(10) = piernik_hdf5_version     ; rbuffer_name(10) = "piernik" !rr1,rr2
-         rbuffer(11) = magic_mass               ; rbuffer_name(11) = "magic_mass" !rr2
-         rbuffer(12) = chdf%next_t_tsl          ; rbuffer_name(12) = "next_t_tsl" !rr2
-         rbuffer(13) = chdf%next_t_log          ; rbuffer_name(13) = "next_t_log" !rr2
+      rbuffer(1)  = t                        ; rbuffer_name(1)  = "time" !rr2
+      rbuffer(2)  = dt                       ; rbuffer_name(2)  = "timestep" !rr2
+      rbuffer(3)  = chdf%last_hdf_time       ; rbuffer_name(3)  = "last_hdf_time" !rr2
+      rbuffer(4)  = dom%xmin                 ; rbuffer_name(4)  = "xmin" !rr1
+      rbuffer(5)  = dom%xmax                 ; rbuffer_name(5)  = "xmax" !rr1
+      rbuffer(6)  = dom%ymin                 ; rbuffer_name(6)  = "ymin" !rr1
+      rbuffer(7)  = dom%ymax                 ; rbuffer_name(7)  = "ymax" !rr1
+      rbuffer(8)  = dom%zmin                 ; rbuffer_name(8)  = "zmin" !rr1
+      rbuffer(9)  = dom%zmax                 ; rbuffer_name(9)  = "zmax" !rr1
+      rbuffer(10) = piernik_hdf5_version     ; rbuffer_name(10) = "piernik" !rr1,rr2
+      rbuffer(11) = magic_mass               ; rbuffer_name(11) = "magic_mass" !rr2
+      rbuffer(12) = chdf%next_t_tsl          ; rbuffer_name(12) = "next_t_tsl" !rr2
+      rbuffer(13) = chdf%next_t_log          ; rbuffer_name(13) = "next_t_log" !rr2
 
-         ibuffer(1)   = chdf%nstep              ; ibuffer_name(1)   = "nstep" !rr2
-         ibuffer(2)   = chdf%nres+1             ; ibuffer_name(2)   = "nres" !rr2
-         ibuffer(3)   = chdf%nhdf               ; ibuffer_name(3)   = "nhdf" !rr2
-         ibuffer(4)   = chdf%nstep              ; ibuffer_name(4)   = "step_res" !rr2
-         ibuffer(5)   = chdf%step_hdf           ; ibuffer_name(5)   = "step_hdf" !rr2
-         ibuffer(6:8) = dom%n_d(:)              ; ibuffer_name(6:8) = [ "nxd", "nyd", "nzd" ] !rr1
-         ibuffer(9)   = cg%nb                   ; ibuffer_name(9)   = "nb"
-         ibuffer(10)  = require_init_prob       ; ibuffer_name(10)  = "require_init_prob" !rr2
+      ibuffer(1)   = chdf%nstep              ; ibuffer_name(1)   = "nstep" !rr2
+      ibuffer(2)   = chdf%nres+1             ; ibuffer_name(2)   = "nres" !rr2
+      ibuffer(3)   = chdf%nhdf               ; ibuffer_name(3)   = "nhdf" !rr2
+      ibuffer(4)   = chdf%nstep              ; ibuffer_name(4)   = "step_res" !rr2
+      ibuffer(5)   = chdf%step_hdf           ; ibuffer_name(5)   = "step_hdf" !rr2
+      ibuffer(6:8) = dom%n_d(:)              ; ibuffer_name(6:8) = [ "nxd", "nyd", "nzd" ] !rr1
+      ibuffer(9)   = cg%nb                   ; ibuffer_name(9)   = "nb"
+      ibuffer(10)  = require_init_prob       ; ibuffer_name(10)  = "require_init_prob" !rr2
 
-         !> \deprecated BEWARE: A memory leak was detected here. h5lt calls use HD5f2cstring and probably sometimes don't free the allocated buffer
+      bufsize = 1
 
-         bufsize = 1
+      i = 1
+      do while (rbuffer_name(i) /= "")
+         call h5ltset_attribute_double_f(file_id, "/", rbuffer_name(i), rbuffer(i), bufsize, error)
+         i = i+1
+      enddo
 
-         i = 1
-         do while (rbuffer_name(i) /= "")
-            call h5ltset_attribute_double_f(file_id, "/", rbuffer_name(i), rbuffer(i), bufsize, error)
-            i = i+1
-         enddo
+      i = 1
+      do while (ibuffer_name(i) /= "")
+         call h5ltset_attribute_int_f(file_id, "/", ibuffer_name(i), ibuffer(i), bufsize, error)
+         i = i+1
+      enddo
 
-         i = 1
-         do while (ibuffer_name(i) /= "")
-            call h5ltset_attribute_int_f(file_id, "/", ibuffer_name(i), ibuffer(i), bufsize, error)
-            i = i+1
-         enddo
-
-         ! Store a compressed copy of the problem.par file.
-         maxlen = maxval(len_trim(parfile(:parfilelines)))
-         dimstr = [parfilelines]
-         call H5Zfilter_avail_f(H5Z_FILTER_DEFLATE_F, Z_avail, error)
-         ! call H5Zget_filter_info_f ! everything should be always fine for gzip
-         call H5Pcreate_f(H5P_DATASET_CREATE_F, prp_id, error)
-         if (Z_avail) then
-            call H5Pset_deflate_f(prp_id, 9, error)
-            call H5Pset_chunk_f(prp_id, 1, dimstr, error)
-         endif
-         call H5Tcopy_f(H5T_NATIVE_CHARACTER, type_id, error)
-         call H5Tset_size_f(type_id, maxlen, error)
-         call H5Screate_simple_f(1, dimstr, dspace_id, error)
-         call H5Dcreate_f(file_id, "problem.par", type_id,  dspace_id, dset_id, error, dcpl_id = prp_id)
-         call H5Dwrite_f(dset_id, type_id, parfile(:)(:maxlen), dimstr, error)
-         call H5Dclose_f(dset_id, error)
-         call H5Sclose_f(dspace_id, error)
-
-         ! Store a compressed copy of the piernik.def file and Id lines from source files.
-         ! We recycle type_id and prp_id, so we don't close them yet.
-         maxlen = maxval(len_trim(env(:nenv)))
-         dimstr = [nenv]
-         if (Z_avail) call H5Pset_chunk_f(prp_id, 1, dimstr, error)
-         call H5Tset_size_f(type_id, maxlen, error)
-         call H5Screate_simple_f(1, dimstr, dspace_id, error)
-         call H5Dcreate_f(file_id, "env", type_id,  dspace_id, dset_id, error, dcpl_id = prp_id)
-         call H5Dwrite_f(dset_id, type_id, env(:)(:maxlen), dimstr, error)
-         call H5Dclose_f(dset_id, error)
-         call H5Sclose_f(dspace_id, error)
-         call H5Tclose_f(type_id, error)
-         call H5Pclose_f(prp_id, error)
-
-         !bufsize = 3
-         !call h5ltset_attribute_int_f(file_id, "/", "psize", psize, bufsize, error) ! unused and will be obsolete soon
-
-         fe = len_trim(problem_name)
-         call h5ltset_attribute_string_f(file_id, "/", "problem_name", problem_name(1:fe), error) !rr2
-         fe = len_trim(chdf%domain)
-         call h5ltset_attribute_string_f(file_id, "/", "domain", chdf%domain(1:fe), error) !rr2
-         fe = len_trim(run_id)
-         call h5ltset_attribute_string_f(file_id, "/", "run_id", run_id(1:fe), error) !rr2
-
-         call additional_attrs(file_id)
-
-         call h5fclose_f(file_id, error)
-
-         write(msg,'(4a)') 'Writing ',stype,' file: ',trim(filename)
-         call printio(msg)
+      ! Store a compressed copy of the problem.par file.
+      maxlen = maxval(len_trim(parfile(:parfilelines)))
+      dimstr = [parfilelines]
+      call H5Zfilter_avail_f(H5Z_FILTER_DEFLATE_F, Z_avail, error)
+      ! call H5Zget_filter_info_f ! everything should be always fine for gzip
+      call H5Pcreate_f(H5P_DATASET_CREATE_F, prp_id, error)
+      if (Z_avail) then
+         call H5Pset_deflate_f(prp_id, 9, error)
+         call H5Pset_chunk_f(prp_id, 1, dimstr, error)
       endif
+      call H5Tcopy_f(H5T_NATIVE_CHARACTER, type_id, error)
+      call H5Tset_size_f(type_id, maxlen, error)
+      call H5Screate_simple_f(1, dimstr, dspace_id, error)
+      call H5Dcreate_f(file_id, "problem.par", type_id,  dspace_id, dset_id, error, dcpl_id = prp_id)
+      call H5Dwrite_f(dset_id, type_id, parfile(:)(:maxlen), dimstr, error)
+      call H5Dclose_f(dset_id, error)
+      call H5Sclose_f(dspace_id, error)
+
+      ! Store a compressed copy of the piernik.def file and Id lines from source files.
+      ! We recycle type_id and prp_id, so we don't close them yet.
+      maxlen = maxval(len_trim(env(:nenv)))
+      dimstr = [nenv]
+      if (Z_avail) call H5Pset_chunk_f(prp_id, 1, dimstr, error)
+      call H5Tset_size_f(type_id, maxlen, error)
+      call H5Screate_simple_f(1, dimstr, dspace_id, error)
+      call H5Dcreate_f(file_id, "env", type_id,  dspace_id, dset_id, error, dcpl_id = prp_id)
+      call H5Dwrite_f(dset_id, type_id, env(:)(:maxlen), dimstr, error)
+      call H5Dclose_f(dset_id, error)
+      call H5Sclose_f(dspace_id, error)
+      call H5Tclose_f(type_id, error)
+      call H5Pclose_f(prp_id, error)
+
+      !bufsize = 3
+      !call h5ltset_attribute_int_f(file_id, "/", "psize", psize, bufsize, error) ! unused and will be obsolete soon
+
+      fe = len_trim(problem_name)
+      call h5ltset_attribute_string_f(file_id, "/", "problem_name", problem_name(1:fe), error) !rr2
+      fe = len_trim(chdf%domain)
+      call h5ltset_attribute_string_f(file_id, "/", "domain", chdf%domain(1:fe), error) !rr2
+      fe = len_trim(run_id)
+      call h5ltset_attribute_string_f(file_id, "/", "run_id", run_id(1:fe), error) !rr2
+
+      call additional_attrs(file_id)
+
+      call h5fclose_f(file_id, error)
+
+      write(msg,'(4a)') 'Writing ',stype,' file: ',trim(filename)
+      call printio(msg)
+
+      ! only master process exits here
 
    end subroutine set_common_attributes
 

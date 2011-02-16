@@ -1048,7 +1048,7 @@ contains
 #endif /* VARIABLE_GP */
       character(len=idlen) :: id
 #if defined VARIABLE_GP || defined MAGNETIC
-      integer :: nxl, nyl, nzl, nxu, nyu, nzu !< auxiliary indexes to compute any gradients (\todo should they be moved to another module, e.g. grid?)
+      integer :: nxl, nyl, nzl, nxu, nyu, nzu !< shortcuts for indices to compute all gradients regardless of dimensionality of the simulation
 
       nxl = 1 + D_x
       nyl = 1 + D_y
