@@ -74,7 +74,10 @@ module constants
    public                                                ! QA_WARN no secrets are kept here
    private :: au_cm, pc_au, pc_cm, msun_g, mjup_g, day_s, yr_day, yr_s, newton_cgs, kB_cgs  ! QA_WARN don't use those vars outside constants!
 
-   character(len=cbuff_len) :: s_len_u, s_time_u, s_mass_u
+   character(len=cbuff_len) :: constants_set             !< type of constants set
+   character(len=cbuff_len) :: s_len_u                   !< name of length unit
+   character(len=cbuff_len) :: s_time_u                  !< name of time unit
+   character(len=cbuff_len) :: s_mass_u                  !< name of mass unit
 
    real, parameter :: one        = 1.0                   !< one
    real, parameter :: half       = 0.5                   !< a half
@@ -183,7 +186,6 @@ contains
 
       implicit none
 
-      character(len=cbuff_len) :: constants_set       !< type of constants set
       logical, save            :: scale_me = .false.
       logical                  :: to_stdout
 
