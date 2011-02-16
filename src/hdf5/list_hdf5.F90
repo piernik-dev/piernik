@@ -204,11 +204,11 @@ contains
       integer(HID_T) :: memspace                !< Dataspace identifier in memory
 
       integer, parameter :: ndims = 3
-      integer(HSIZE_T),  DIMENSION(ndims) :: count
-      integer(HSSIZE_T), DIMENSION(ndims) :: offset
-      integer(HSIZE_T),  DIMENSION(ndims) :: stride
-      integer(HSIZE_T),  DIMENSION(ndims) :: block
-      integer(HSIZE_T),  DIMENSION(ndims) :: dimsf, dimsfi, chunk_dims
+      integer(HSIZE_T),  dimension(ndims) :: count
+      integer(HSSIZE_T), dimension(ndims) :: offset
+      integer(HSIZE_T),  dimension(ndims) :: stride
+      integer(HSIZE_T),  dimension(ndims) :: block
+      integer(HSIZE_T),  dimension(ndims) :: dimsf, dimsfi, chunk_dims
       integer :: error
 
       dimsf = (/size(data,1)*psize(1),size(data,2)*psize(2),size(data,3)*psize(3)/) ! Dataset dimensions

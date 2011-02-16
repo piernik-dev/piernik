@@ -862,7 +862,7 @@ contains
            &                   h5pcreate_f, h5pclose_f, h5pset_fapl_mpio_f, h5pset_chunk_f, h5pset_dxpl_mpio_f, &
            &                   h5screate_simple_f, h5sclose_f, h5sselect_hyperslab_f
       use list_hdf5,     only: problem_write_restart
-      use mpisetup,      only: comm3d, comm, info, ierr, master, nstep, dom, xdim, ydim, zdim
+      use mpisetup,      only: comm3d, comm, info, ierr, master, nstep, xdim, ydim, zdim
       use mpi,           only: MPI_CHARACTER
       use types,         only: hdf
 #ifdef ISO_LOCAL
@@ -883,11 +883,11 @@ contains
       integer(HID_T) :: filespace     !> Dataspace identifier in file
       integer(HID_T) :: memspace      !> Dataspace identifier in memory
 
-      integer(HSIZE_T),  DIMENSION(:), allocatable :: count
-      integer(HSSIZE_T), DIMENSION(:), allocatable :: offset
-      integer(HSIZE_T),  DIMENSION(:), allocatable :: stride
-      integer(HSIZE_T),  DIMENSION(:), allocatable :: block
-      integer(HSIZE_T),  DIMENSION(:), allocatable :: dimsf, dimsfi, chunk_dims
+      integer(HSIZE_T),  dimension(:), allocatable :: count
+      integer(HSSIZE_T), dimension(:), allocatable :: offset
+      integer(HSIZE_T),  dimension(:), allocatable :: stride
+      integer(HSIZE_T),  dimension(:), allocatable :: block
+      integer(HSIZE_T),  dimension(:), allocatable :: dimsf, dimsfi, chunk_dims
 
       integer :: error, rank
       real, pointer, dimension(:,:,:,:) :: p
@@ -1012,6 +1012,7 @@ contains
       call h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_INDEPENDENT_F, error)
       p => b(:,lleft(xdim):lright(xdim),lleft(ydim):lright(ydim),lleft(zdim):lright(zdim))
       call h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, p, dimsfi, error, file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
+      if (associated(p)) nullify(p)
 
       call h5sclose_f(filespace, error)
       call h5sclose_f(memspace, error)
@@ -1026,146 +1027,99 @@ contains
       if (allocated(stride))     deallocate(stride)
       if (allocated(block))      deallocate(block)
 
-      rank = 1
-      allocate(dimsf(rank),dimsfi(rank),chunk_dims(rank))
-      allocate(count(rank),offset(rank),stride(rank),block(rank))
+      call write_axes_to_restart(file_id)
 
-      !> \deprecated The code for writing axes is almost replicated.
-      !> \todo Try to put them in a separate subroutine.
-      !> \deprecated Some values are written multiple times, eg. each cg%x(:) is written by psize(ydim)*psize(zdim) CPUs.
-      !----------------------------------------------------------------------------------
-      !  WRITE X Axis
-      !
-      dimsf  = [dom%n_d(xdim)] ! Dataset dimensions
-      dimsfi = dimsf
-      chunk_dims = [cg%nxb]    ! Chunks dimensions
-
-      ! Create the data space for the  dataset.
-      call h5screate_simple_f(rank, dimsf, filespace, error)
-      call h5screate_simple_f(rank, chunk_dims, memspace, error)
-
-      ! Create chunked dataset.
-      call h5pcreate_f(H5P_DATASET_CREATE_F, plist_id, error)
-      call h5pset_chunk_f(plist_id, rank, chunk_dims, error)
-      call h5dcreate_f(file_id, "X axis", H5T_NATIVE_DOUBLE, filespace, dset_id, error, plist_id)
-      call h5sclose_f(filespace, error)
-      call h5pclose_f(plist_id, error)
-
-      ! Each process defines dataset in memory and writes it to the hyperslab
-      ! in the file.
-      stride(:) = 1
-      count(:)  = 1
-      block(:)  = chunk_dims(:)
-
-      offset(1) = cg%off(xdim)
-
-      ! Select hyperslab in the file.
-      call h5dget_space_f(dset_id, filespace, error)
-      call h5sselect_hyperslab_f (filespace, H5S_SELECT_SET_F, offset, count, error, stride, block)
-      call h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error)
-      call h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_INDEPENDENT_F, error)
-      call h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, cg%x(cg%is:cg%ie), dimsfi, error, file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
-
-      call h5sclose_f(filespace, error)
-      call h5sclose_f(memspace, error)
-      call h5dclose_f(dset_id, error)
-      call h5pclose_f(plist_id, error)
-      !----------------------------------------------------------------------------------
-
-      !----------------------------------------------------------------------------------
-      !  WRITE Y Axis
-      !
-      dimsf  = [dom%n_d(ydim)] ! Dataset dimensions
-      dimsfi = dimsf
-      chunk_dims = [cg%nyb]    ! Chunks dimensions
-
-      ! Create the data space for the  dataset.
-      call h5screate_simple_f(rank, dimsf, filespace, error)
-      call h5screate_simple_f(rank, chunk_dims, memspace, error)
-
-      ! Create chunked dataset.
-      call h5pcreate_f(H5P_DATASET_CREATE_F, plist_id, error)
-      call h5pset_chunk_f(plist_id, rank, chunk_dims, error)
-      call h5dcreate_f(file_id, "Y axis", H5T_NATIVE_DOUBLE, filespace, dset_id, error, plist_id)
-      call h5sclose_f(filespace, error)
-      call h5pclose_f(plist_id, error)
-
-      ! Each process defines dataset in memory and writes it to the hyperslab
-      ! in the file.
-      stride(:) = 1
-      count(:)  = 1
-      block(:)  = chunk_dims(:)
-
-      offset(1) = cg%off(ydim)
-
-      ! Select hyperslab in the file.
-      call h5dget_space_f(dset_id, filespace, error)
-      call h5sselect_hyperslab_f (filespace, H5S_SELECT_SET_F, offset, count, error, stride, block)
-      call h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error)
-      call h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_INDEPENDENT_F, error)
-      call h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, cg%y(cg%js:cg%je), dimsfi, error, file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
-
-      call h5sclose_f(filespace, error)
-      call h5sclose_f(memspace, error)
-      call h5dclose_f(dset_id, error)
-      call h5pclose_f(plist_id, error)
-      !----------------------------------------------------------------------------------
-
-      !----------------------------------------------------------------------------------
-      !  WRITE Z Axis
-      !
-      dimsf  = [dom%n_d(zdim)] ! Dataset dimensions
-      dimsfi = dimsf
-      chunk_dims = [cg%nzb]    ! Chunks dimensions
-
-      ! Create the data space for the  dataset.
-      call h5screate_simple_f(rank, dimsf, filespace, error)
-      call h5screate_simple_f(rank, chunk_dims, memspace, error)
-
-      ! Create chunked dataset.
-      call h5pcreate_f(H5P_DATASET_CREATE_F, plist_id, error)
-      call h5pset_chunk_f(plist_id, rank, chunk_dims, error)
-      call h5dcreate_f(file_id, "Z axis", H5T_NATIVE_DOUBLE, filespace, dset_id, error, plist_id)
-      call h5sclose_f(filespace, error)
-      call h5pclose_f(plist_id, error)
-
-      ! Each process defines dataset in memory and writes it to the hyperslab
-      ! in the file.
-      stride(:) = 1
-      count(:)  = 1
-      block(:)  = chunk_dims(:)
-
-      offset(1) = cg%off(zdim)
-
-      ! Select hyperslab in the file.
-      call h5dget_space_f(dset_id, filespace, error)
-      call h5sselect_hyperslab_f (filespace, H5S_SELECT_SET_F, offset, count, error, stride, block)
-      call h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error)
-      call h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_INDEPENDENT_F, error)
-      call h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, cg%z(cg%ks:cg%ke), dimsfi, error, file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
-
-      call h5sclose_f(filespace, error)
-      call h5sclose_f(memspace, error)
-      call h5dclose_f(dset_id, error)
-      !----------------------------------------------------------------------------------
-      call h5pclose_f(plist_id, error)
+      ! End of parallel writing
       call h5fclose_f(file_id, error)
-      if (allocated(dimsf))      deallocate(dimsf)
-      if (allocated(dimsfi))     deallocate(dimsfi)
-      if (allocated(chunk_dims)) deallocate(chunk_dims)
-      if (allocated(count))      deallocate(count)
-      if (allocated(offset))     deallocate(offset)
-      if (allocated(stride))     deallocate(stride)
-      if (allocated(block))      deallocate(block)
 
       call set_common_attributes(filename, chdf, "restart")
 
       call h5close_f(error)
 
       nres = nres + 1
-      if (associated(p)) nullify(p)
 
    end subroutine write_restart_hdf5
+
+   !----------------------------------------------------------------------------------
+   !
+   !  WRITE Axes
+   !
+   subroutine write_axes_to_restart(file_id)
+
+      use hdf5,       only: HSIZE_T, HID_T, H5T_NATIVE_DOUBLE, H5FD_MPIO_INDEPENDENT_F, H5P_DATASET_CREATE_F, H5P_DATASET_XFER_F, H5S_SELECT_SET_F, &
+           &                h5screate_simple_f, h5pcreate_f, h5pset_chunk_f, h5pset_dxpl_mpio_f, h5dcreate_f, h5dget_space_f, h5dwrite_f, &
+           &                h5sclose_f, h5pclose_f, h5dclose_f, h5sselect_hyperslab_f
+      use mpisetup,   only: dom, xdim, ydim, zdim, ndims
+      use grid,       only: cg
+
+      implicit none
+
+      integer(HID_T), intent(in) :: file_id !> File identifier
+
+      integer :: dir
+      integer :: error
+      integer, parameter :: rank=1
+      integer(HSIZE_T),  dimension(rank) :: offset, count, stride, block, dimsf, chunk_dims
+      integer(HID_T) :: dset_id                !> Dataset identifier
+      integer(HID_T) :: dplist_id, plist_id    !> Property list identifiers
+      integer(HID_T) :: dfilespace, filespace  !> Dataspace identifiers in file
+      integer(HID_T) :: memspace               !> Dataspace identifier in memory
+      integer, parameter :: asis_n_len = 6
+      character(len=asis_n_len) :: dset_axis_n !> Dataspace name
+      character(len=ndims), parameter :: axis_n = "XYZ"
+
+      do dir = xdim, zdim
+
+         write(dset_axis_n,'(a,"-axis")')axis_n(dir:dir)
+         dimsf      = [dom%n_d(dir)] ! Dataset dimensions
+         chunk_dims = [cg%n_b(dir)]  ! Chunk dimensions
+
+         ! Create the file space for the dataset and make it chunked
+         call h5screate_simple_f(rank, dimsf, dfilespace, error)
+         call h5pcreate_f(H5P_DATASET_CREATE_F, dplist_id, error)
+         call h5pset_chunk_f(dplist_id, rank, chunk_dims, error)
+         call h5dcreate_f(file_id, dset_axis_n, H5T_NATIVE_DOUBLE, dfilespace, dset_id, error, dplist_id)
+
+         ! It is sufficient that only one CPU writes each piece of axis data.
+         ! The other CPUs also need to call at least everything up to h5dcreate_f, and then just close the stuff.
+         if (cg%off(mod(dir, ndims)+1) == 0 .and. cg%off(mod(dir+ndims-2, ndims)+1) == 0) then
+
+            call h5dget_space_f(dset_id, filespace, error)
+
+            ! Each contributing process defines dataset in memory and writes it to the hyperslab in the file.
+            stride(:) = 1
+            count(:)  = 1
+            block(:)  = chunk_dims(:)
+            offset(:) = [ cg%off(dir) ]
+            call h5sselect_hyperslab_f (filespace, H5S_SELECT_SET_F, offset, count, error, stride, block)
+
+            call h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error)
+            call h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_INDEPENDENT_F, error)
+
+            ! Create the memory space for the dataset.
+            call h5screate_simple_f(rank, chunk_dims, memspace, error)
+            ! What a pity that cg%[xyz](:) cannot have a target attribute (at least in gfortran 4.5.1)
+            select case (dir)
+               case (xdim)
+                  call h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, cg%x(cg%is:cg%ie), dimsf, error, file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
+               case (ydim)
+                  call h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, cg%y(cg%js:cg%je), dimsf, error, file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
+               case (zdim)
+                  call h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, cg%z(cg%ks:cg%ke), dimsf, error, file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
+            end select
+            call h5sclose_f(memspace, error)
+            call h5pclose_f(plist_id, error)
+            call h5sclose_f(filespace, error)
+
+         endif
+
+         call h5dclose_f(dset_id, error)
+         call h5pclose_f(dplist_id, error)
+         call h5sclose_f(dfilespace, error)
+
+      enddo
+
+   end subroutine write_axes_to_restart
 
    subroutine write_3darr_to_restart(tab,file_id,dname,nx,ny,nz)
 
@@ -1189,11 +1143,11 @@ contains
       integer(HID_T) :: filespace     !> Dataspace identifier in file
       integer(HID_T) :: memspace      !> Dataspace identifier in memory
 
-      integer(HSIZE_T),  DIMENSION(:), allocatable :: count
-      integer(HSSIZE_T), DIMENSION(:), allocatable :: offset
-      integer(HSIZE_T),  DIMENSION(:), allocatable :: stride
-      integer(HSIZE_T),  DIMENSION(:), allocatable :: block
-      integer(HSIZE_T),  DIMENSION(:), allocatable :: dimsf, dimsfi, chunk_dims
+      integer(HSIZE_T),  dimension(:), allocatable :: count
+      integer(HSSIZE_T), dimension(:), allocatable :: offset
+      integer(HSIZE_T),  dimension(:), allocatable :: stride
+      integer(HSIZE_T),  dimension(:), allocatable :: block
+      integer(HSIZE_T),  dimension(:), allocatable :: dimsf, dimsfi, chunk_dims
 
       integer :: error, rank
 
@@ -1269,11 +1223,11 @@ contains
       integer(HID_T)        :: filespace     ! Dataspace identifier in file
       integer(HID_T)        :: memspace      ! Dataspace identifier in memory
 
-      integer(HSIZE_T),  DIMENSION(:), allocatable :: count
-      integer(HSSIZE_T), DIMENSION(:), allocatable :: offset
-      integer(HSIZE_T),  DIMENSION(:), allocatable :: stride
-      integer(HSIZE_T),  DIMENSION(:), allocatable :: block
-      integer(HSIZE_T),  DIMENSION(:), allocatable :: dimsf, dimsfi, chunk_dims
+      integer(HSIZE_T),  dimension(:), allocatable :: count
+      integer(HSSIZE_T), dimension(:), allocatable :: offset
+      integer(HSIZE_T),  dimension(:), allocatable :: stride
+      integer(HSIZE_T),  dimension(:), allocatable :: block
+      integer(HSIZE_T),  dimension(:), allocatable :: dimsf, dimsfi, chunk_dims
 
       integer               :: error, rank
 
@@ -1362,11 +1316,11 @@ contains
       integer(HID_T)        :: memspace      ! Dataspace identifier in memory
       integer(SIZE_T)       :: bufsize
 
-      integer(HSIZE_T),  DIMENSION(:), allocatable :: count
-      integer(HSSIZE_T), DIMENSION(:), allocatable :: offset
-      integer(HSIZE_T),  DIMENSION(:), allocatable :: stride
-      integer(HSIZE_T),  DIMENSION(:), allocatable :: block
-      integer(HSIZE_T),  DIMENSION(:), allocatable :: dimsf, dimsfi, chunk_dims
+      integer(HSIZE_T),  dimension(:), allocatable :: count
+      integer(HSSIZE_T), dimension(:), allocatable :: offset
+      integer(HSIZE_T),  dimension(:), allocatable :: stride
+      integer(HSIZE_T),  dimension(:), allocatable :: block
+      integer(HSIZE_T),  dimension(:), allocatable :: dimsf, dimsfi, chunk_dims
 
       integer               :: error, rank
       logical               :: file_exist
@@ -1709,11 +1663,11 @@ contains
       integer(HID_T)        :: memspace       ! Dataspace identifier in memory
 
       integer, parameter :: ndims = 3
-      integer(HSIZE_T),  DIMENSION(ndims) :: count
-      integer(HSSIZE_T), DIMENSION(ndims) :: offset
-      integer(HSIZE_T),  DIMENSION(ndims) :: stride
-      integer(HSIZE_T),  DIMENSION(ndims) :: block
-      integer(HSIZE_T),  DIMENSION(ndims) :: dimsf, dimsfi, chunk_dims
+      integer(HSIZE_T),  dimension(ndims) :: count
+      integer(HSSIZE_T), dimension(ndims) :: offset
+      integer(HSIZE_T),  dimension(ndims) :: stride
+      integer(HSIZE_T),  dimension(ndims) :: block
+      integer(HSIZE_T),  dimension(ndims) :: dimsf, dimsfi, chunk_dims
       integer :: error
 
       chunk_dims = cg%n_b(:) ! Chunks dimensions
