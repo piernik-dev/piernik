@@ -893,10 +893,18 @@ contains
       real, pointer, dimension(:,:,:,:) :: p
 
       integer, parameter    :: atlen = 6
+      integer, parameter    :: extlen = 4
       character(len=atlen)  :: area_type
+      character(len=extlen) :: file_extension
       integer, dimension(3) :: area, lleft, lright, loffs, chnk
 
-      if (master) write(filename, '(a,a1,a3,a1,i4.4,a4)') trim(problem_name), '_', run_id, '_', nres, '.res'
+      if (present(debug_res)) then
+         file_extension = '.dmp'
+      else
+         file_extension = '.res'
+      endif
+
+      if (master) write(filename, '(a,a1,a3,a1,i4.4,a4)') trim(problem_name), '_', run_id, '_', nres, file_extension
       call MPI_Bcast(filename, cwdlen, MPI_CHARACTER, 0, comm, ierr)
       call set_container_chdf(nstep)
 
