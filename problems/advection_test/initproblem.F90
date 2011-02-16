@@ -30,6 +30,8 @@
 
 module initproblem
 
+   use dataio_pub, only: varlen
+
    implicit none
 
    private
@@ -40,7 +42,8 @@ module initproblem
 
    namelist /PROBLEM_CONTROL/  pulse_size, pulse_vel_x, pulse_vel_y, pulse_vel_z, pulse_amp
 
-   real, dimension(:,:,:), allocatable :: inid
+   real, dimension(:,:,:), allocatable, target :: inid
+   character(len=varlen), parameter :: inid_n = "inid"
 
 contains
 
@@ -53,6 +56,7 @@ contains
       use mpisetup,      only: ierr, rbuff, master, slave, buffer_dim, comm, dom
       use mpi,           only: MPI_DOUBLE_PRECISION
       use types,         only: finalize_problem, cleanup_problem
+      use list_hdf5,     only: problem_write_restart, problem_read_restart
 
       implicit none
 
@@ -96,9 +100,11 @@ contains
       pulse_z_min = dom%z0 - dom%Lz * pulse_size/2.
       pulse_z_max = dom%z0 + dom%Lz * pulse_size/2.
 
-      finalize_problem => finalize_problem_adv
-      cleanup_problem  => cleanup_adv
-      user_vars_hdf5   => inid_var_hdf5
+      finalize_problem      => finalize_problem_adv
+      cleanup_problem       => cleanup_adv
+      user_vars_hdf5        => inid_var_hdf5
+      problem_write_restart => write_IC_to_restart
+      problem_read_restart  => read_IC_from_restart
 
    end subroutine read_problem_par
 
@@ -141,7 +147,7 @@ contains
 
       where (u(flind%neu%idn, :, :, :) < smalld) u(flind%neu%idn, :, :, :) = smalld
 
-      call my_allocate(inid, [cg%nxb, cg%nyb, cg%nzb], "inid")
+      call my_allocate(inid, [cg%nxb, cg%nyb, cg%nzb], inid_n)
       inid(1:cg%nxb, 1:cg%nyb, 1:cg%nzb) = u(flind%neu%idn, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
 
       u(flind%neu%imx, :, :, :) = pulse_vel_x * u(flind%neu%idn, :, :, :)
@@ -171,13 +177,62 @@ contains
 
       ierrh = 0
       select case (trim(var))
-         case ("inid")
+         case (inid_n)
             tab(:,:,:) = inid(:,:,:)
             case default
             ierrh = -1
       end select
 
    end subroutine inid_var_hdf5
+
+!-----------------------------------------------------------------------------
+
+   subroutine write_IC_to_restart(file_id)
+
+      use dataio_pub,  only: warn
+      use dataio_hdf5, only: write_3darr_to_restart
+      use grid,        only: cg
+      use hdf5,        only: HID_T
+
+      implicit none
+
+      integer(HID_T), intent(in) :: file_id
+
+      if (allocated(inid)) then
+         call write_3darr_to_restart(inid(:,:,:), file_id, inid_n, cg%nxb, cg%nyb, cg%nzb)
+      else
+         call warn("[initproblem:write_IC_to_restart] Cannot store inid(:,:,:) in the restart file because it mysteriously deallocated.")
+      endif
+
+   end subroutine write_IC_to_restart
+
+!-----------------------------------------------------------------------------
+
+   subroutine read_IC_from_restart(file_id)
+
+      use dataio_pub,  only: warn
+      use dataio_hdf5, only: read_3darr_from_restart
+      use diagnostics, only: my_allocate
+      use grid,        only: cg
+      use hdf5,        only: HID_T
+
+      implicit none
+
+      integer(HID_T), intent(in) :: file_id
+
+      real, dimension(:,:,:), pointer :: p3d
+
+      if (.not.allocated(inid)) call my_allocate(inid, [cg%nxb, cg%nyb, cg%nzb], inid_n)
+      if (.not.associated(p3d)) p3d => inid(:,:,:)
+
+      if (associated(p3d)) then
+         call read_3darr_from_restart(file_id, inid_n, p3d, cg%nxb, cg%nyb, cg%nzb)
+         nullify(p3d)
+      else
+         call warn("[initproblem:read_IC_from_restart] Cannot read inid(:,:,:). It's really weird...")
+      endif
+
+   end subroutine read_IC_from_restart
 
 !-----------------------------------------------------------------------------
 
@@ -235,7 +290,7 @@ contains
 
       implicit none
 
-      call my_deallocate(inid)
+      if (allocated(inid)) call my_deallocate(inid)
 
    end subroutine cleanup_adv
 
