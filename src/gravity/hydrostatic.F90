@@ -74,7 +74,6 @@ contains
    subroutine hydrostatic_zeq_coldens(iia,jja,coldens,csim2)
 
       use arrays,   only: dprof  !! \todo convert to intent(inout)
-      use grid,     only: cg
 
       implicit none
 
@@ -84,8 +83,7 @@ contains
 
       sdprof = 1.0
       call hydrostatic_zeq_densmid(iia,jja,sdprof,csim2,sd)
-      sdprof = sd * cg%dz
-      dprof = dprof * coldens / sdprof
+      dprof = dprof * coldens / sd
 
    end subroutine hydrostatic_zeq_coldens
 
@@ -166,19 +164,21 @@ contains
       endif
 
       dprof(:) =0.0
-      if (present(sd)) sd = 0.0
       do k=1, cg%nz
          do ksub=1, nstot
             if (zs(ksub) > cg%zl(k) .and. zs(ksub) < cg%zr(k)) then
                dprof(k) = dprof(k) + dprofs(ksub)/real(nsub)
             endif
-            if (present(sd)) then
-               if (zs(ksub) > dom%zmin .and. zs(ksub) < dom%zmax) then
-                  sd = sd + dprofs(ksub)/real(nsub)
-               endif
-            endif
          enddo
       enddo
+      if (present(sd)) then
+         sd = 0.0
+         do ksub=1, nstot
+            if (zs(ksub) > dom%zmin .and. zs(ksub) < dom%zmax) then
+               sd = sd + dprofs(ksub)*dzs
+            endif
+         enddo
+      endif
 
       if (allocated(dprofs)) deallocate(dprofs)
 
