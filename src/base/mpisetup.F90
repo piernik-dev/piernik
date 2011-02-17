@@ -494,17 +494,17 @@ contains
 
       if (bnd_xl(1:3) == 'per' .or. bnd_xr(1:3) == 'per' .or. bnd_xl(1:3) == 'she'  .or. bnd_xr(1:3) == 'she') then
          periods(xdim) = .true.  ! x periodic
-         if (bnd_xr(1:3) /= bnd_xl(1:3)) call die("[mpisetup:init_mpi] Periodic or shear BC do not match in X-direction")
+         if (bnd_xr(1:3) /= bnd_xl(1:3) .and. has_dir(xdim)) call die("[mpisetup:init_mpi] Periodic or shear BC do not match in X-direction")
       endif
 
       if (bnd_yl(1:3) == 'per' .or. bnd_yr(1:3) == 'per') then
          periods(ydim) = .true.  ! y periodic
-         if (bnd_yr(1:3) /= bnd_yl(1:3)) call die("[mpisetup:init_mpi] Periodic BC do not match in Y-direction")
+         if (bnd_yr(1:3) /= bnd_yl(1:3) .and. has_dir(ydim)) call die("[mpisetup:init_mpi] Periodic BC do not match in Y-direction")
       endif
 
       if (bnd_zl(1:3) == 'per' .or. bnd_zr(1:3) == 'per') then
          periods(zdim) = .true.  ! z periodic
-         if (bnd_zr(1:3) /= bnd_zl(1:3)) call die("[mpisetup:init_mpi] Periodic BC do not match in Z-direction")
+         if (bnd_zr(1:3) /= bnd_zl(1:3) .and. has_dir(zdim)) call die("[mpisetup:init_mpi] Periodic BC do not match in Z-direction")
       endif
 
       call MPI_Cart_create(comm, ndims, psize, periods, reorder, comm3d, ierr)
