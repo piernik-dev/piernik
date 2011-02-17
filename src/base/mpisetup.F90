@@ -478,7 +478,7 @@ contains
       endif
 
       if (product(psize(:)) /= nproc) then
-         call Eratosthenes_sieve(primes, nproc) ! it is possible to use primes onlt to sqrt(nproc), but it is easier to have the full table. Cheap for any reasonable nproc.
+         call Eratosthenes_sieve(primes, nproc) ! it is possible to use primes only to sqrt(nproc), but it is easier to have the full table. Cheap for any reasonable nproc.
          call divide_domain_uniform
          deallocate(primes)
       endif

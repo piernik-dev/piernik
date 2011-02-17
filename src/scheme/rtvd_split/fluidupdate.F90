@@ -93,8 +93,8 @@ contains
 
 #ifdef SHEAR
       if (has_dir(ydim)) call yshift(t, dt)
-      if (has_dir(xdim)) call bnd_u('xdim')
-      if (has_dir(ydim)) call bnd_u('ydim')
+      if (has_dir(xdim)) call bnd_u(xdim)
+      if (has_dir(ydim)) call bnd_u(ydim)
 #endif /* SHEAR */
 
 #ifdef GRAV

@@ -63,7 +63,7 @@ contains
             func_bnd_xl => bnd_xl_outd
          case default
             func_bnd_xl => bnd_null
-            write(msg,'("[fluid_boundaries:bnd_u]: Boundary condition ",a," not implemented in ",a)') trim(bnd_xl), "xdim"
+            write(msg,'("[fluid_boundaries:init_fluidboundaries]: Left boundary condition ",a," not implemented in X-direction")') trim(bnd_xl)
             call warn(msg)
       end select  ! (bnd_xl)
 
@@ -82,16 +82,16 @@ contains
             func_bnd_xr => bnd_xr_outd
          case default
             func_bnd_xr => bnd_null
-            write(msg,'("[fluid_boundaries:bnd_u]: Boundary condition ",a," not implemented in ",a)') trim(bnd_xr), "xdim"
+            write(msg,'("[fluid_boundaries:init_fluidboundaries]: Right boundary condition ",a," not implemented in X-direction")') trim(bnd_xr)
             call warn(msg)
       end select  ! (bnd_xr)
 
    end subroutine init_fluidboundaries
 
-   subroutine bnd_u(dim)
+   subroutine bnd_u(dir)
 
       use arrays,              only: u, b
-      use dataio_pub,          only: msg, warn
+      use dataio_pub,          only: msg, warn, die
       use fluidboundaries_pub, only: user_bnd_yl, user_bnd_yr, user_bnd_zl, user_bnd_zr, func_bnd_xl, func_bnd_xr
       use fluidindex,          only: flind, iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
       use grid,                only: cg
@@ -114,7 +114,8 @@ contains
 
       implicit none
 
-      character(len=*) :: dim
+      integer, intent(in) :: dir
+
       logical, save    :: frun = .true.
       integer :: i,j, ib
       real, allocatable :: send_left(:,:,:,:),recv_left(:,:,:,:)
@@ -125,14 +126,16 @@ contains
       real, allocatable :: send_right(:,:,:,:),recv_right(:,:,:,:)
 #endif /* SHEAR_BND */
 
+      if (.not. any([xdim, ydim, zdim] == dir)) call die("[fluidboundaries:bnd_u] Invalid direction.")
+
       if (frun) then
          call init_fluidboundaries
          frun = .false.
       endif
 
 ! MPI block communication
-      select case (dim)
-      case ('xdim')
+      select case (dir)
+      case (xdim)
 #ifdef SHEAR_BND
 #ifndef FFTW
          allocate(send_right(flind%all, cg%nb,ny,nz), send_left(flind%all, cg%nb,ny,nz), &
@@ -293,7 +296,7 @@ contains
             call MPI_Waitall(4,req(:),status(:,:),ierr)
          endif
 #endif /* !SHEAR_BND */
-      case ('ydim')
+      case (ydim)
          if (psize(ydim) > 1) then
 
             call MPI_Isend   (u(1,1,1,1), 1, cg%MPI_XZ_LEFT_DOM,  procyl, 30, comm3d, req(1), ierr)
@@ -304,7 +307,7 @@ contains
             call MPI_Waitall(4,req(:),status(:,:),ierr)
          endif
 
-      case ('zdim')
+      case (zdim)
          if (psize(zdim) > 1) then
 
             call MPI_Isend   (u(1,1,1,1), 1, cg%MPI_XY_LEFT_DOM,  proczl, 50, comm3d, req(1), ierr)
@@ -435,11 +438,11 @@ contains
 
 ! Non-MPI boundary conditions
 
-      select case (dim)
-      case ('xdim')
+      select case (dir)
+      case (xdim)
          call func_bnd_xl
          call func_bnd_xr
-      case ('ydim')
+      case (ydim)
 
          select case (bnd_yl)
          case ('cor', 'inf', 'mpi')
@@ -480,7 +483,7 @@ contains
 #endif /* COSM_RAYS */
             enddo
          case default
-            write(msg,'("[fluid_boundaries:bnd_u]: Boundary condition ",a," not implemented in ",a)') trim(bnd_yl), trim(dim)
+            write(msg,'("[fluid_boundaries:bnd_u]: Left boundary condition ",a," not implemented in Y-direction")') trim(bnd_yl)
             call warn(msg)
          end select  ! (bnd_yl)
 
@@ -523,11 +526,11 @@ contains
 #endif /* COSM_RAYS */
             enddo
          case default
-            write(msg,'("[fluid_boundaries:bnd_u]: Boundary condition ",a," not implemented in ",a)') trim(bnd_yr), trim(dim)
+            write(msg,'("[fluid_boundaries:bnd_u]: Right boundary condition ",a," not implemented in Y-direction")') trim(bnd_yr)
             call warn(msg)
          end select  ! (bnd_yr)
 
-      case ('zdim')
+      case (zdim)
 
          select case (bnd_zl)
          case ('mpi')
@@ -576,7 +579,7 @@ contains
             enddo ! ib
 #endif /* GRAV */
          case default
-            write(msg,'("[fluid_boundaries:bnd_u]: Boundary condition ",a," not implemented in ",a)') trim(bnd_zl), trim(dim)
+            write(msg,'("[fluid_boundaries:bnd_u]: Left boundary condition ",a," not implemented in Z-direction")') trim(bnd_zl)
             call warn(msg)
          end select  ! (bnd_zl)
 
@@ -627,7 +630,7 @@ contains
             enddo ! ib
 #endif /* GRAV */
          case default
-            write(msg,'("[fluid_boundaries:bnd_u]: Boundary condition ",a," not implemented in ",a)') trim(bnd_zr), trim(dim)
+            write(msg,'("[fluid_boundaries:bnd_u]: Right boundary condition ",a," not implemented in Z-direction")') trim(bnd_zr)
             call warn(msg)
          end select  ! (bnd_zr)
 
@@ -637,13 +640,15 @@ contains
 
    subroutine all_fluid_boundaries
 
-      use mpisetup, only: has_dir, xdim, ydim, zdim
+      use mpisetup, only: has_dir, xdim, zdim
 
       implicit none
 
-      if (has_dir(xdim)) call bnd_u('xdim')
-      if (has_dir(ydim)) call bnd_u('ydim')
-      if (has_dir(zdim)) call bnd_u('zdim')
+      integer :: dir
+
+      do dir = xdim, zdim
+         if (has_dir(dir)) call bnd_u(dir)
+      enddo
 
    end subroutine all_fluid_boundaries
 
