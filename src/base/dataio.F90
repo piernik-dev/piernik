@@ -1144,9 +1144,9 @@ contains
                + (b(ibz,  1:nxu  ,  1:nyu  ,nzl:cg%nz) - b(ibz,1:nxu,1:nyu,1:nzu))*cg%dx*cg%dy
       wa = abs(wa)
 
-      wa(cg%nx,:,:) = wa(nxu,:,:)
-      wa(:,cg%ny,:) = wa(:,nyu,:)
-      wa(:,:,cg%nz) = wa(:,:,nzu)
+      wa(cg%ie,:,:) = wa(cg%ie-D_x,:,:)
+      wa(:,cg%je,:) = wa(:,cg%je-D_y,:)
+      wa(:,:,cg%ke) = wa(:,:,cg%ke-D_z)
 
       call get_extremum(wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), 'max', divb_max)
 #endif /* MAGNETIC */

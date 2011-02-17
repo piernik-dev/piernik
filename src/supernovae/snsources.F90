@@ -192,13 +192,13 @@ contains
                   do jpm=-1,1
 
                      decr = amp_ecr_sn * ethu  &
-                           * exp(-((cg%x(i)-xsn+real(ipm)*dom%Lx)**2  &
-                           + (cg%y(j)-ysna+real(jpm)*dom%Ly)**2  &
-                           + (cg%z(k)-zsn)**2)/r_sn**2)
+                           * exp(-((cg%x(i)-xsn +real(ipm)*dom%Lx)**2  &
+                                 + (cg%y(j)-ysna+real(jpm)*dom%Ly)**2  &
+                                 + (cg%z(k)-zsn)**2)/r_sn**2)
 
 #ifdef COSM_RAYS_SOURCES
                      do icr=1,flind%crn%all
-                        if (icr == icr_H1) u(iarr_crn(icr),i,j,k) = u(iarr_crn(icr),i,j,k) + decr
+                        if (icr == icr_H1 ) u(iarr_crn(icr),i,j,k) = u(iarr_crn(icr),i,j,k) + decr
                         if (icr == icr_C12) u(iarr_crn(icr),i,j,k) = u(iarr_crn(icr),i,j,k) + primary_C12*12*decr
                         if (icr == icr_N14) u(iarr_crn(icr),i,j,k) = u(iarr_crn(icr),i,j,k) + primary_N14*14*decr
                         if (icr == icr_O16) u(iarr_crn(icr),i,j,k) = u(iarr_crn(icr),i,j,k) + primary_O16*16*decr
