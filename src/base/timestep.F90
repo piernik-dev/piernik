@@ -167,7 +167,7 @@ contains
          call write_crashed("[timestep:time_step] dt < dt_min")
       endif
 
-      dt  = min(dt, (tend-t)/2.*(1+2.*epsilon(1.)))
+      dt  = min(dt, (0.5*(tend-t)) + (2.*epsilon(1.)*((tend-t))))
 #ifdef DEBUG
       ! We still need all above for c_all
       if (has_const_dt) then
