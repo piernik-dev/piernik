@@ -93,7 +93,7 @@ contains
       use fluidindex,      only: flind, iarr_all_swpx, ibx, iby, ibz, nmag
       use grid,            only: cg
       use gridgeometry,    only: set_geo_coeffs
-      use mpisetup,        only: dt, ydim, zdim, has_dir
+      use mpisetup,        only: dt, xdim, ydim, zdim, has_dir
       use rtvd,            only: relaxing_tvd
 #ifdef COSM_RAYS
       use crhelpers,       only: div_v
@@ -122,11 +122,11 @@ contains
             if (has_dir(zdim) .and. k <= cg%ke)  b_x(ibz,:)=b_x(ibz,:)+0.5*b(ibz,:,j,kp)
 #endif /* MAGNETIC */
 
-            call set_geo_coeffs('xsweep',flind,j,k)
+            call set_geo_coeffs(xdim,flind,j,k)
 
             u_x(iarr_all_swpx,:)=u(:,:,j,k)
 
-            call relaxing_tvd(cg%nx, u_x, b_x, 'xsweep', j, k, cg%dx, dt)
+            call relaxing_tvd(cg%nx, u_x, b_x, xdim, j, k, cg%dx, dt)
             u(:,:,j,k)=u_x(iarr_all_swpx,:)
          enddo
       enddo
@@ -141,7 +141,7 @@ contains
       use fluidindex,      only: flind, iarr_all_swpy, ibx, iby, ibz, nmag
       use grid,            only: cg
       use gridgeometry,    only: set_geo_coeffs
-      use mpisetup,        only: dt, xdim, zdim, has_dir
+      use mpisetup,        only: dt, xdim, ydim, zdim, has_dir
       use rtvd,            only: relaxing_tvd
 #ifdef COSM_RAYS
       use crhelpers,       only: div_v
@@ -171,11 +171,11 @@ contains
             b_y((/iby,ibx,ibz/),:)=b_y(:,:)
 #endif /* MAGNETIC */
 
-            call set_geo_coeffs('ysweep',flind,k,i)
+            call set_geo_coeffs(ydim,flind,k,i)
 
             u_y(iarr_all_swpy,:)=u(:,i,:,k)
 
-            call relaxing_tvd(cg%ny, u_y, b_y, 'ysweep', k, i, cg%dy, dt)
+            call relaxing_tvd(cg%ny, u_y, b_y, ydim, k, i, cg%dy, dt)
             u(:,i,:,k)=u_y(iarr_all_swpy,:)
 
          enddo
@@ -191,7 +191,7 @@ contains
       use fluidindex,      only: flind, iarr_all_swpz, ibx, iby, ibz, nmag
       use grid,            only: cg
       use gridgeometry,    only: set_geo_coeffs
-      use mpisetup,        only: dt, xdim, ydim, has_dir
+      use mpisetup,        only: dt, xdim, ydim, zdim, has_dir
       use rtvd,            only: relaxing_tvd
 #ifdef COSM_RAYS
       use crhelpers,       only: div_v
@@ -222,14 +222,14 @@ contains
             b_z((/ibz,iby,ibx/),:)=b_z(:,:)
 #endif /* MAGNETIC */
 
-            call set_geo_coeffs('zsweep',flind,i,j)
+            call set_geo_coeffs(zdim,flind,i,j)
 
             !OPT: It looks that u_z gets re-assigned to something inside relaxing_tvd. \todo try to merge these assignments
             !OPT: 3% D1mr, 3% D2mr, 20% D1mw, Ir:Dr:Dw ~ 10:4:1
             !OPT: The same applies to sweepy and sweepz
             u_z(iarr_all_swpz,:)=u(:,i,j,:)
 
-            call relaxing_tvd(cg%nz, u_z, b_z, 'zsweep', i, j, cg%dz, dt)
+            call relaxing_tvd(cg%nz, u_z, b_z, zdim, i, j, cg%dz, dt)
             u(:,i,j,:)=u_z(iarr_all_swpz,:)
          enddo
       enddo

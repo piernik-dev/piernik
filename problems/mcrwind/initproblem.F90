@@ -254,10 +254,11 @@ contains
 
       use constants,   only: r_gc_sun, kpc
       use gravity,     only: r_gc
+      use mpisetup,    only: zdim
 
       implicit none
 
-      character(len=*), intent(in)   :: sweep
+      integer, intent(in)            :: sweep
       integer, intent(in)            :: i1, i2
       integer, intent(in)            :: n
       real, dimension(n),intent(in)  :: xsw
@@ -265,7 +266,7 @@ contains
 
       if (.false.) grav(1) = i1+i2 ! suppress compiler warning on unused argument
 
-      if (sweep == 'zsweep') then
+      if (sweep == zdim) then
          grav = 3.23e8 * (  &
            (-4.4e-9 * exp(-(r_gc-r_gc_sun)/(4.9*kpc)) * xsw/sqrt(xsw**2+(0.2*kpc)**2)) &
            -( 1.7e-9 * (r_gc_sun**2 + (2.2*kpc)**2)/(r_gc**2 + (2.2*kpc)**2)*xsw/kpc) )

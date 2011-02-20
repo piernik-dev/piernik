@@ -79,20 +79,21 @@ contains
    subroutine coriolis_force(sweep, u, rotacc)
 
       use fluidindex, only: flind, iarr_all_dn, iarr_all_mx, iarr_all_my
+      use mpisetup,   only: xdim, ydim !, zdim
 
       implicit none
 
-      character(len=*), intent(in)                   :: sweep  !< string of characters that points out the current sweep direction
+      integer, intent(in)                            :: sweep  !< string of characters that points out the current sweep direction
       real, dimension(:,:), intent(in)               :: u      !< current fluid state vector
       real, dimension(flind%fluids, size(u,2)), intent(inout) :: rotacc !< an array for Coriolis accelerations
 
       ! Coriolis force for corotating coords
       select case (sweep)
-         case ('xsweep')
+         case (xdim)
             rotacc(:,:) = rotacc(:,:) + 2.0 * coriolis_omega * u(iarr_all_my(:), :)/u(iarr_all_dn(:), :)
-         case ('ysweep')
+         case (ydim)
             rotacc(:,:) = rotacc(:,:) - 2.0 * coriolis_omega * u(iarr_all_mx(:), :)/u(iarr_all_dn(:), :)
-!         case ('zsweep') !no z-component of the Coriolis force
+!         case (zdim) !no z-component of the Coriolis force
       end select
 
    end subroutine coriolis_force

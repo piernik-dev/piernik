@@ -57,8 +57,8 @@ module gridgeometry
 
          implicit none
 
-         character(len=*), intent(in)  :: sweep         !< direction (x, y or z) we are doing calculations for
-         type(var_numbers), intent(in) :: flind          !< \copydoc fluidindex::flind
+         integer, intent(in)  :: sweep                  !< direction (xdim, ydim or zdim) we are doing calculations for
+         type(var_numbers), intent(in) :: flind         !< \copydoc fluidindex::flind
          integer, intent(in)           :: i1            !< coordinate of sweep in the 1st remaining direction
          integer, intent(in)           :: i2            !< coordinate of sweep in the 2st remaining direction
 
@@ -73,7 +73,7 @@ module gridgeometry
 
          implicit none
 
-         character(len=*), intent(in)           :: sweep !< direction (x, y or z) we are doing calculations for
+         integer, intent(in)                    :: sweep !< direction (x, y or z) we are doing calculations for
          real, dimension(:,:), intent(in)       :: u     !< sweep of fluid conservative variables
          real, dimension(:,:), intent(in)       :: p     !< sweep of pressure
          real, dimension(size(p,1),size(p,2))   :: res   !< output sweep of accelerations
@@ -159,10 +159,11 @@ contains
 
       use types,         only: var_numbers
       use dataio_pub,    only: die, msg
+      use mpisetup,      only: xdim, ydim, zdim
 
       implicit none
 
-      character(len=*), intent(in)  :: sweep
+      integer, intent(in)           :: sweep
       type(var_numbers), intent(in) :: flind
       integer, intent(in)           :: i1, i2
       logical, save                 :: frun = .true.
@@ -176,14 +177,14 @@ contains
       endif
 
       select case (sweep)
-         case ("xsweep")
+         case (xdim)
             gc => gc_xdim
-         case ("ysweep")
+         case (ydim)
             gc => gc_ydim
-         case ("zsweep")
+         case (zdim)
             gc => gc_zdim
          case default
-            write(msg,'(2a)') "[gridgeometry:set_cart_coeffs] Unknown sweep : ",sweep
+            write(msg,'(a,i2)') "[gridgeometry:set_cart_coeffs] Unknown sweep : ",sweep
             call die(msg)
             write(6,*) i1,i2   ! fool the compiler    QA_WARN
       end select
@@ -197,10 +198,11 @@ contains
       use types,         only: var_numbers
       use dataio_pub,    only: die, msg
       use grid,          only: cg
+      use mpisetup,      only: xdim, ydim, zdim
 
       implicit none
 
-      character(len=*), intent(in)  :: sweep
+      integer, intent(in)           :: sweep
       type(var_numbers), intent(in) :: flind
       integer, intent(in)           :: i1, i2
       integer                       :: i
@@ -226,15 +228,15 @@ contains
       endif
 
       select case (sweep)
-         case ("xsweep")
+         case (xdim)
             gc => gc_xdim
-         case ("ysweep")
+         case (ydim)
             gc_ydim(1,:,:)   = cg%inv_x(i2)
             gc => gc_ydim
-         case ("zsweep")
+         case (zdim)
             gc => gc_zdim
          case default
-            write(msg,'(2a)') "[gridgeometry:set_cyl_coeffs] Unknown sweep : ",sweep
+            write(msg,'(a,i2)') "[gridgeometry:set_cyl_coeffs] Unknown sweep : ",sweep
             call die(msg)
             write(6,*) i1,i2   ! fool the compiler    QA_WARN
       end select
@@ -248,7 +250,7 @@ contains
 
       implicit none
 
-      character(len=*), intent(in)           :: sweep
+      integer, intent(in)                    :: sweep
       real, dimension(:,:), intent(in)       :: u, p
       real, dimension(size(p,1),size(p,2))   :: res
 
@@ -264,15 +266,16 @@ contains
 
       use fluidindex, only: iarr_all_dn, iarr_all_my
       use grid,       only: cg
+      use mpisetup,   only: xdim
 
       implicit none
 
-      character(len=*), intent(in)           :: sweep
+      integer, intent(in)                    :: sweep
       real, dimension(:,:), intent(in)       :: u, p
       real, dimension(size(p,1),size(p,2))   :: res
       integer :: i
 
-      if (sweep == 'xsweep') then
+      if (sweep == xdim) then
          do i = 1, size(iarr_all_dn)
             res(i,:) = cg%inv_x(:) * (u(iarr_all_my(i),:)**2 / u(iarr_all_dn(i),:) + p(i,:))
          enddo

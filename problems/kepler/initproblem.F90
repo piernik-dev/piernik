@@ -245,7 +245,7 @@ contains
       use gravity,             only: r_smooth, r_grav, n_gravr, ptmass, source_terms_grav, grav_pot2accel, grav_pot_3d
       use grid,                only: cg
       use hydrostatic,         only: hydrostatic_zeq_densmid
-      use mpisetup,            only: zdim, has_dir, dom, master, geometry
+      use mpisetup,            only: zdim, has_dir, dom, master, geometry, xdim
       use types,               only: component_fluid
 
       implicit none
@@ -350,7 +350,7 @@ contains
          if (.not.allocated(dens_cutoff)) allocate(dens_cutoff(cg%nx))
 
          call source_terms_grav
-         call grav_pot2accel('xsweep',1,1, cg%nx, grav, 1)
+         call grav_pot2accel(xdim,1,1, cg%nx, grav, 1)
 
          dens_prof(:) = d0 * cg%x(:)**(-dens_exp)  * gram / cm**2
 
@@ -628,7 +628,10 @@ contains
 #ifndef ISO
       use fluidindex,   only: iarr_all_en
 #endif /* ISO */
+
+      use mpisetup,     only: xdim
       implicit none
+
       integer :: i, p
       real, dimension(cg%nx) :: grav
       real, dimension(size(iarr_all_my), cg%ny, cg%nz) :: vy,vym
@@ -640,7 +643,7 @@ contains
          cs2_arr(i) = flind%all_fluids(i)%cs2
       enddo
 
-      call grav_pot2accel('xsweep',1,1, cg%nx, grav, 1)
+      call grav_pot2accel(xdim,1,1, cg%nx, grav, 1)
 
       do i = 1, cg%nb
          u(iarr_all_dn,i,:,:) = u(iarr_all_dn, cg%is,:,:)

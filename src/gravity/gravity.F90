@@ -95,7 +95,7 @@ module gravity
 
       subroutine user_grav_accel(sweep, i1,i2, xsw, n, grav)
          implicit none
-         character(len=*), intent(in)   :: sweep            !< COMMENT ME
+         integer, intent(in)            :: sweep            !< COMMENT ME
          integer, intent(in)            :: i1               !< COMMENT ME
          integer, intent(in)            :: i2               !< COMMENT ME
          integer, intent(in)            :: n                !< COMMENT ME
@@ -832,7 +832,7 @@ contains
 
       implicit none
 
-      character(len=*), intent(in)   :: sweep      !< string of characters that points out the current sweep direction
+      integer, intent(in)            :: sweep      !< string of characters that points out the current sweep direction
       integer, intent(in)            :: i1         !< number of column in the first direction after one pointed out by sweep
       integer, intent(in)            :: i2         !< number of column in the second direction after one pointed out by sweep
       integer, intent(in)            :: n          !< number of elements of returned array grav
@@ -845,20 +845,20 @@ contains
 
 !      if (istep==1) then
 !         select case (sweep)
-!            case ('xsweep')
+!            case (xdim)
 !               grav(3:n-2) = onetw*(hgpot(5:n,i1,i2) - 8.*hgpot(4:n-1,i1,i2) + 8.*hgpot(2:n-3,i1,i2) - hgpot(1:n-4,i1,i2) )/dl(xdim)
-!            case ('ysweep')
+!            case (ydim)
 !               grav(3:n-2) = onetw*(hgpot(i2,5:n,i1) - 8.*hgpot(i2,4:n-1,i1) + 8.*hgpot(i2,2:n-3,i1) - hgpot(i2,1:n-4,i1) )/dl(xdim)
-!            case ('zsweep')
+!            case (zdim)
 !               grav(3:n-2) = onetw*(hgpot(i1,i2,5:n) - 8.*hgpot(i1,i2,4:n-1) + 8.*hgpot(i1,i2,2:n-3) - hgpot(i1,i2,1:n-4) )/dl(xdim)
 !         end select
 !      else
 !         select case (sweep)
-!            case ('xsweep')
+!            case (xdim)
 !               grav(3:n-2) = onetw*(gpot(5:n,i1,i2) - 8.*gpot(4:n-1,i1,i2) + 8.*gpot(2:n-3,i1,i2) - gpot(1:n-4,i1,i2) )/dl(xdim)
-!            case ('ysweep')
+!            case (ydim)
 !               grav(3:n-2) = onetw*(gpot(i2,5:n,i1) - 8.*gpot(i2,4:n-1,i1) + 8.*gpot(i2,2:n-3,i1) - gpot(i2,1:n-4,i1) )/dl(xdim)
-!            case ('zsweep')
+!            case (zdim)
 !               grav(3:n-2) = onetw*(gpot(i1,i2,5:n) - 8.*gpot(i1,i2,4:n-1) + 8.*gpot(i1,i2,2:n-3) - gpot(i1,i2,1:n-4) )/dl(xdim)
 !         end select
 !      endif
@@ -866,21 +866,21 @@ contains
 !      grav(1) = grav(2); grav(n) = grav(n-1)
       if (istep==1) then
          select case (sweep)
-            case ('xsweep')
+            case (xdim)
                grav(2:n-1) = 0.5*(hgpot(1:n-2,i1,i2) - hgpot(3:n,i1,i2))/cg%dl(xdim)
-            case ('ysweep')
+            case (ydim)
                grav(2:n-1) = 0.5*(hgpot(i2,1:n-2,i1) - hgpot(i2,3:n,i1))/cg%dl(ydim)
-            case ('zsweep')
+            case (zdim)
                grav(2:n-1) = 0.5*(hgpot(i1,i2,1:n-2) - hgpot(i1,i2,3:n))/cg%dl(zdim)
          end select
 
       else
          select case (sweep)
-            case ('xsweep')
+            case (xdim)
                grav(2:n-1) = 0.5*(gpot(1:n-2,i1,i2) - gpot(3:n,i1,i2))/cg%dl(xdim)
-            case ('ysweep')
+            case (ydim)
                grav(2:n-1) = 0.5*(gpot(i2,1:n-2,i1) - gpot(i2,3:n,i1))/cg%dl(ydim)
-            case ('zsweep')
+            case (zdim)
                grav(2:n-1) = 0.5*(gpot(i1,i2,1:n-2) - gpot(i1,i2,3:n))/cg%dl(zdim)
          end select
       endif
@@ -923,13 +923,13 @@ contains
       allocate(gpwork(cg%nx, cg%ny, cg%nz))
       gpwork(1,1,1) = 0.0
 
-      call grav_accel('xsweep',1,1, cg%xr(:), cg%nx, gravrx)
+      call grav_accel(xdim, 1, 1, cg%xr(:), cg%nx, gravrx)
       do i = 1, cg%nx-1
          gpwork(i+1,1,1) = gpwork(i,1,1) - gravrx(i)*cg%dl(xdim)
       enddo
 
       do i=1, cg%nx
-         call grav_accel('ysweep',1, i, cg%yr(:), cg%ny, gravry)
+         call grav_accel(ydim, 1, i, cg%yr(:), cg%ny, gravry)
          do j = 1, cg%ny-1
             gpwork(i,j+1,1) = gpwork(i,j,1) - gravry(j)*cg%dl(ydim)
          enddo
@@ -937,7 +937,7 @@ contains
 
       do i=1, cg%nx
          do j=1, cg%ny
-            call grav_accel('zsweep', i, j, cg%zr(:), cg%nz, gravrz)
+            call grav_accel(zdim, i, j, cg%zr(:), cg%nz, gravrz)
             do k = 1, cg%nz-1
                gpwork(i,j,k+1) = gpwork(i,j,k) - gravrz(k)*cg%dl(zdim)
             enddo

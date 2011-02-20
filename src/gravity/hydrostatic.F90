@@ -204,13 +204,16 @@ contains
    subroutine get_gprofs_accel(iia,jja)
       use gravity, only: tune_zeq, grav_accel
       use grid,    only: cg
+      use mpisetup, only: zdim
+
       implicit none
+
       integer, intent(in) :: iia, jja
       integer :: ia, ja
 
       ia = min(cg%nx,max(1, iia))
       ja = min(cg%ny,max(1, jja))
-      call grav_accel('zsweep',ia, ja, zs, nstot, gprofs)
+      call grav_accel(zdim, ia, ja, zs, nstot, gprofs)
       gprofs = tune_zeq*gprofs
 
    end subroutine get_gprofs_accel
@@ -312,7 +315,7 @@ contains
       use gravity,             only: grav_accel, nsub, tune_zeq_bnd
       use arrays,              only: u
       use grid,                only: cg
-      use mpisetup,            only: smalld
+      use mpisetup,            only: smalld, zdim
       use fluidindex,          only: flind, iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
 #ifndef ISO
       use fluidindex,          only: iarr_all_en
@@ -364,7 +367,7 @@ contains
       do j=1, cg%ny
          do i=1, cg%nx
 
-            call grav_accel('zsweep',i,j, zs, nsub, gprofs)
+            call grav_accel(zdim, i, j, zs, nsub, gprofs)
             gprofs=tune_zeq_bnd * gprofs
 
             dprofs(:,1) = db(:,i,j)

@@ -213,7 +213,7 @@ contains
       implicit none
       integer, intent(in)   :: i1,i2,n
       real, dimension(flind%all,n)  :: du,uu
-      character(len=*), intent(in) :: sweep
+      integer, intent(in)           :: sweep
       real, dimension(flind%all,n)  :: ddu
 
       du=0.0
@@ -234,14 +234,17 @@ contains
    subroutine dragforce(sweep, i1, i2, n, du, uu)
       use fluidindex,   only: flind, iarr_all_dn, iarr_all_mx
       use grid,         only: cg
+      use mpisetup,     only: xdim, ydim, zdim
 #ifndef ISO
       use fluidindex,   only: iarr_all_en
 #endif /* !ISO */
+
       implicit none
+
       real                  :: a1
       integer, intent(in)   :: i1, i2, n
       real, dimension(flind%all,n)  :: du,uu
-      character(len=*), intent(in) :: sweep
+      integer, intent(in)           :: sweep
       integer  :: ifl,jfl,rend
       real, dimension(flind%fluids,flind%fluids,n) :: flch
       real, dimension(flind%fluids,n)             :: colls
@@ -250,17 +253,17 @@ contains
       du=0.0
 !-----collisions between fluids------
       select case (sweep)
-         case ('xsweep')
+         case (xdim)
             a1    = cg%y(i1)
             rend  = size(cg%x)
             r1(1:rend) = cg%x(:)                            ! r1   max(size(x),size(y),size(z))
             r2(1:rend) = a1 / (r1(1:rend)*r1(1:rend) + a1 * a1)
-         case ('ysweep')
+         case (ydim)
             a1    = cg%x(i2)
             rend  = size(cg%y)
             r1(1:rend) = cg%y(1:rend)
             r2(1:rend) = a1 / (r1(1:rend)*r1(1:rend) + a1 * a1)
-         case ('zsweep')
+         case (zdim)
             a1    = 1.0
             rend  = size(cg%z)
             r1(1:rend) = 0.0

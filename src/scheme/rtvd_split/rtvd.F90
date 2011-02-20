@@ -234,7 +234,7 @@ contains
       use dataio_pub,       only: msg, die
       use fluidindex,       only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz, ibx, iby, ibz, flind, nmag
       use fluxes,           only: flimiter, all_fluxes
-      use mpisetup,         only: smalld, integration_order, use_smalld, local_magic_mass
+      use mpisetup,         only: smalld, integration_order, use_smalld, local_magic_mass, xdim, ydim, zdim
       use gridgeometry,     only: gc, geometry_source_terms
       use interactions,     only: fluid_interactions
 #ifndef ISO
@@ -270,7 +270,7 @@ contains
       integer,                     intent(in)  :: n                  !< array size
       real, dimension(flind%all,n), intent(out) :: u                  !< vector of conservative variables
       real, dimension(nmag,n),     intent(in)  :: bb                 !< local copy of magnetic field
-      character(len=*),            intent(in)  :: sweep              !< direction (x, y or z) we are doing calculations for
+      integer,                     intent(in)  :: sweep              !< direction (x, y or z) we are doing calculations for
       integer,                     intent(in)  :: i1                 !< coordinate of sweep in the 1st remaining direction
       integer,                     intent(in)  :: i2                 !< coordinate of sweep in the 2nd remaining direction
       real,                        intent(in)  :: dx                 !< cell length
@@ -342,7 +342,7 @@ contains
       if (.false.) dummy = i1 + i2 ! suppress compiler warnings on unused arguments
 #endif /* !ISO_LOCAL && !GRAV && !FLUID_INTERACTIONS_DW && !(COSM_RAYS && IONIZED) */
 #if !defined(ISO_LOCAL) && !defined(SHEAR) && !defined(GRAV) && ! defined(FLUID_INTERACTIONS_DW) && !(defined COSM_RAYS && defined IONIZED)
-      if (.false.) dummy = len(sweep)
+      if (.false.) dummy = sweep
 #endif /* !ISO_LOCAL && !SHEAR && !GRAV && !FLUID_INTERACTIONS_DW && !(COSM_RAYS && IONIZED) */
 
       !OPT: try to avoid these explicit initializations of w(:,:), cfr(:,:), u1(:,:) and u0(:,:)
@@ -357,9 +357,9 @@ contains
       dens => density
 
 #ifdef ISO_LOCAL
-      if (sweep .eq. 'xsweep') then
+      if (sweep .eq. xdim) then
          cs_iso2(:) =  cs_iso2_arr(:,i1,i2)
-      else if (sweep .eq. 'ysweep')  then
+      else if (sweep .eq. ydim)  then
          cs_iso2(:) =  cs_iso2_arr(i2,:,i1)
       else
          cs_iso2(:) =  cs_iso2_arr(i1,i2,:)
@@ -440,16 +440,16 @@ contains
             vy0(:,:)  = 0.0
          endwhere
          do ind = 1, flind%fluids
-!            if (sweep .eq. 'xsweep') then
+!            if (sweep .eq. xdim) then
 !               rotacc(ind,:) =  2.0*omega*(vy0(ind,:) + qshear*omega*cg%x(:))
-!            else if (sweep .eq. 'ysweep')  then
+!            else if (sweep .eq. ydim)  then
 !               rotacc(ind,:) = - 2.0*omega*vy0(ind,:)          ! with global shear
 !            else
 !               rotacc(ind,:) = 0.0
 !            endif
-            if (sweep .eq. 'xsweep') then
+            if (sweep .eq. xdim) then
                rotacc(ind,:) =  2.0*omega*vy0(ind,:) + df(ind)  ! global_gradient
-            else if (sweep .eq. 'ysweep')  then
+            else if (sweep .eq. ydim)  then
                rotacc(ind,:) = (qshear - 2.0)*omega*vy0(ind,:)  ! with respect to global shear (2.5D)
             else
                rotacc(ind,:) = 0.0
@@ -493,11 +493,11 @@ contains
 
 #if defined COSM_RAYS && defined IONIZED
          select case (sweep)
-            case ('xsweep')
+            case (xdim)
                divv = divvel(:,i1,i2)
-            case ('ysweep')
+            case (ydim)
                divv = divvel(i2,:,i1)
-            case ('zsweep')
+            case (zdim)
                divv = divvel(i1,i2,:)
          end select
 
