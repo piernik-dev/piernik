@@ -46,8 +46,7 @@
 
 module dataio
 
-   use dataio_pub,    only: cwdlen, hnlen, varlen, domain, fmin, fmax, vizit, nend, tend, wend, nrestart, problem_name, run_id
-   use mpisetup,      only: cbuff_len
+   use dataio_pub,    only: cwdlen, hnlen, varlen, domain, fmin, fmax, vizit, nend, tend, wend, nrestart, problem_name, run_id, cbuff_len
    use types,         only: idlen
 
    implicit none
@@ -204,11 +203,11 @@ contains
 
       use constants,       only: small
       use dataio_hdf5,     only: init_hdf5, read_restart_hdf5, parfile, parfilelines
-      use dataio_pub,      only: chdf, nres, last_hdf_time, step_hdf, next_t_log, next_t_tsl, log_file_initialized, log_file, cwdlen, maxparfilelines, cwd, &
+      use dataio_pub,      only: chdf, nres, last_hdf_time, step_hdf, next_t_log, next_t_tsl, log_file_initialized, log_file, cwdlen, maxparfilelines, cwd, cbuff_len, &
            &                     tmp_log_file, msglen, printinfo, warn, msg, nhdf, nstep_start, set_container_chdf, get_container, die, code_progress, PIERNIK_INIT_IO_IC
       use dataio_pub,      only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml  ! QA_WARN required for diff_nml
       use fluidboundaries, only: all_fluid_boundaries
-      use mpisetup,        only: lbuff, ibuff, rbuff, cbuff, master, slave, cbuff_len, comm, ierr, buffer_dim, &
+      use mpisetup,        only: lbuff, ibuff, rbuff, cbuff, master, slave, comm, ierr, buffer_dim, &
            &                      t, nstep, bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr
       use mpi,             only: MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL
       use timer,           only: time_left
@@ -341,9 +340,9 @@ contains
       endif
 
       call MPI_Bcast(cbuff, cbuff_len*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
-      call MPI_Bcast(lbuff,    buffer_dim, MPI_LOGICAL,          0, comm, ierr)
-      call MPI_Bcast(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
-      call MPI_Bcast(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+      call MPI_Bcast(lbuff,           buffer_dim, MPI_LOGICAL,          0, comm, ierr)
+      call MPI_Bcast(ibuff,           buffer_dim, MPI_INTEGER,          0, comm, ierr)
+      call MPI_Bcast(rbuff,           buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
       if (slave) then
 

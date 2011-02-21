@@ -33,7 +33,8 @@ module initproblem
 ! Initial condition for Keplerian disk
 ! Written by: M. Hanasz, March 2006
 
-   use mpisetup,    only: cbuff_len
+   use dataio_pub,    only: cbuff_len
+
    implicit none
 
    private

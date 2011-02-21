@@ -44,7 +44,7 @@ module multigrid_gravity
 ! pulled by MULTIGRID && GRAV
 #if defined(MULTIGRID) && defined(GRAV)
 
-   use mpisetup,      only: cbuff_len
+   use dataio_pub,    only: cbuff_len
    use multigridvars, only: vcycle_stats
 
    implicit none
@@ -928,11 +928,11 @@ contains
 
    subroutine vcycle_hg(history)
 
-      use mpisetup,           only: master, nproc, cbuff_len
+      use mpisetup,           only: master, nproc
       use timer,              only: set_timer
       use multigridhelpers,   only: set_dirty, check_dirty, mg_write_log, brief_v_log, do_ascii_dump, numbered_ascii_dump
       use multigridbasefuncs, only: norm_sq, restrict_all, substract_average
-      use dataio_pub,         only: msg, die, warn
+      use dataio_pub,         only: msg, die, warn, cbuff_len
       use multigridvars,      only: roof, base, source, solution, correction, defect, verbose_vcycle, &
            &                        bnd_periodic, level_min, level_max, stdout, tot_ts, ts
 

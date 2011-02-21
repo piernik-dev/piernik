@@ -43,7 +43,7 @@ module multigrid_diffusion
 #if defined(COSM_RAYS) && defined(MULTIGRID)
 
    use multigridvars, only: correction, vcycle_stats
-   use mpisetup,      only: cbuff_len
+   use dataio_pub,    only: cbuff_len
 
    implicit none
 

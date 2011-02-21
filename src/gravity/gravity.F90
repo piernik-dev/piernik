@@ -37,7 +37,7 @@
 !<
 module gravity
 ! pulled by GRAV
-   use mpisetup, only: cbuff_len
+   use dataio_pub, only: cbuff_len
    implicit none
 
    private
@@ -146,7 +146,7 @@ contains
       use arrays,        only: gpot
       use dataio_pub,    only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml    ! QA_WARN required for diff_nml
       use dataio_pub,    only: warn, die, code_progress, PIERNIK_INIT_ARRAYS
-      use mpisetup,      only: ibuff, rbuff, cbuff, cbuff_len, buffer_dim, comm, ierr, master, slave, lbuff
+      use mpisetup,      only: ibuff, rbuff, cbuff, buffer_dim, comm, ierr, master, slave, lbuff
       use mpi,           only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL, MPI_CHARACTER
       use constants,     only: newtong
 #ifdef CORIOLIS
@@ -218,10 +218,10 @@ contains
 
       endif
 
-      call MPI_Bcast(ibuff, buffer_dim, MPI_INTEGER,          0, comm, ierr)
-      call MPI_Bcast(lbuff, buffer_dim, MPI_LOGICAL,          0, comm, ierr)
-      call MPI_Bcast(rbuff, buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
-      call MPI_Bcast(cbuff, cbuff_len*buffer_dim, MPI_CHARACTER, 0, comm, ierr)
+      call MPI_Bcast(ibuff,           buffer_dim, MPI_INTEGER,          0, comm, ierr)
+      call MPI_Bcast(lbuff,           buffer_dim, MPI_LOGICAL,          0, comm, ierr)
+      call MPI_Bcast(rbuff,           buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+      call MPI_Bcast(cbuff, cbuff_len*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
 
       if (slave) then
 

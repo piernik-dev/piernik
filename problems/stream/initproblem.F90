@@ -30,7 +30,8 @@
 
 module initproblem
 
-   use mpisetup,    only: cbuff_len
+   use dataio_pub,    only: cbuff_len
+
    implicit none
 
    private
