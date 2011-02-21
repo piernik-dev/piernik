@@ -28,7 +28,7 @@ if (len(tab) < 1):
 
 names = tab.pop(0)
 tab.remove(["#"])
-
+if (len(tab) > 18980): tab = tab[::10]
 data=np.array(tab)
 
 plt = P.plot(data[:,1], data[:,args[1]])
