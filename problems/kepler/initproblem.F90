@@ -442,15 +442,16 @@ contains
          b = 0.0
          if (allocated(grav)) deallocate(grav)
          if (allocated(dens_prof)) deallocate(dens_prof)
+#ifdef DEBUG
+         open(123,file="tau.dat",status="unknown")
+         do i = 1, cg%nx
+            write(123,*) cg%x(i), tauf(i), taus(i)
+         enddo
+         close(123)
+#endif /* DEBUG */
       else
          call die("[initproblem:init_prob] I don't know what to do... :/")
       endif
-
-      open(123,file="tau.dat",status="unknown")
-      do i = 1, cg%nx
-         write(123,*) cg%x(i), tauf(i), taus(i)
-      enddo
-      close(123)
 
    end subroutine init_prob
 !-----------------------------------------------------------------------------
