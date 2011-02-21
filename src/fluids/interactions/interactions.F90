@@ -90,7 +90,6 @@ contains
       use fluidindex,    only: flind
 
       implicit none
-      integer :: i
 
       namelist /INTERACTIONS/ collision_factor, cfl_interact, dragc_gas_dust, has_interactions, grain_size, grain_dens
 
@@ -135,7 +134,7 @@ contains
 
       fluid_interactions => fluid_interactions_dummy
       grain_size = grain_size * cm
-      grain_dens = grain_dens * gram * cm**-3
+      grain_dens = grain_dens * gram * cm**(-3)
       if (.not.allocated(epstein_factor)) allocate(epstein_factor(flind%fluids))
 
       epstein_factor = 0.0
