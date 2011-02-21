@@ -259,7 +259,7 @@ contains
 
       implicit none
 
-      integer :: i, j, k, kmid, p, middle_of_nx, nxt
+      integer :: i, j, k, kmid, p, middle_of_nx
       integer, dimension(1) :: n_x_cut
       real    :: xi, yj, zk, rc, vx, vy, vz, b0, sqr_gm, vr, vphi
       real    :: csim2, gprim, H2
@@ -661,7 +661,7 @@ contains
       use mpisetup,     only: xdim
       implicit none
 
-      integer :: i, p
+      integer :: i
       real, dimension(cg%nx) :: grav
       real, dimension(size(iarr_all_my), cg%ny, cg%nz) :: vy,vym
       real, dimension(size(flind%all_fluids))    :: cs2_arr
@@ -805,7 +805,7 @@ contains
       nmax = n
       nxd = size(gdens) - 2*cg%nb
 
-      if  (nxd == n) then
+      if (nxd == n) then
          call printinfo("[initproblem:read_dens_profile] Saved profile has required dimension \o/")
          gdens(cg%is:cg%ie) = y(:)
       else
@@ -828,7 +828,7 @@ contains
       do i = 1, cg%nb
          gdens(i)       = gdens(cg%is)
          gdens(cg%ie+i) = gdens(cg%ie)
-      enddo 
+      enddo
       deallocate(x,y)
       return
    end subroutine read_dens_profile
