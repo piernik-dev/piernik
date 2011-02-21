@@ -1,7 +1,7 @@
  $DOMAIN
-    nxd = 512
+    nxd = 1024
     nyd = 5
-    nzd = 128
+    nzd = 256
     nb  = 4
     bnd_xl = 'out'
     bnd_xr = 'ref'
@@ -10,8 +10,8 @@
     bnd_zl = 'per'
     bnd_zr = 'per'
     geometry = "cylindrical"
-    xmin   = 0.9
-    xmax   = 8.0
+    xmin   = 2.0
+    xmax   = 12.0
     ymin   = 0.0
     ymax   = 6.28318530718
     zmin   =-1.5
@@ -33,7 +33,7 @@
  /
 
  $END_CONTROL
-    tend   = 500.0
+    tend   = 100.0
     nend   = 10000000
  /
 
@@ -41,30 +41,31 @@
     problem_name ='kepler'
     run_id  =  'tst'
     dt_hdf  = 1.0
-    dt_res  = 500.0
+    dt_res  = 100.0
     dt_log  = 1.0e-12
     dt_tsl  = 1.0e-12
     vars(1) = 'dens'
     vars(2) = 'velx'
     vars(3) = 'vely'
     vars(4) = 'velz'
+    vars(5) = 'tauf'
     domain  = 'phys_domain'
     mag_center = 'no'
  /
 
  $FLUID_NEUTRAL
     gamma_neu  = 1.0
-    cs_iso_neu = 1.0 ! 0.05507   ! 150K for PLN
+    cs_iso_neu = 0.25 ! 0.05507   ! 150K for PLN
  /
 
  $FLUID_DUST
  /
 
  $NUMERICAL_SETUP
-    cfl    = 0.6
+    cfl    = 0.4
     use_smalld = .true.
 !    smalld = 1.e-7
-    relax_time = 15.0
+    relax_time = 10.0
     integration_order = 2
     limiter= 'vanleer'
     cfr_smooth = 0.01
@@ -81,21 +82,21 @@
  /
 
  $PROBLEM_CONTROL
-    d0      = 17000.0  ! g/cm**2 Desch
-    dout    = 1.0e-4
-    r_max   = 9.5
-    r_in    = 1.2
-    r_out   = 7.5
+    d0      = 1700.0  ! g/cm**2 Desch
+    dout    = 1e-6
+    r_max   = 11.5
+    r_in    = 2.4
+    r_out   = 11.5
     f_out   = 11.0
     f_in    = 10.0
     mag_field_orient = 'none'
     use_inner_orbital_period = .false.
-    dumping_coeff = 100.0
+    dumping_coeff = 10.0
     dens_exp = 1.5    ! Desch
-    dens_amb = 5.e-4
-    cutoff_ncells = 100
-    x_cut   = 2.5
-    eps     = 0.1
+    dens_amb = 5.e-12
+    cutoff_ncells = 300
+    x_cut    = 7.0
+    eps      = 1.0
  /
 
  $PIERNIK_DEBUG
@@ -103,7 +104,7 @@
  /
 
  $INTERACTIONS
-   collision_factor  = 100.0
-   dragc_gas_dust    = 100.0
+   collision_factor  = 10.0
+   dragc_gas_dust    = 10.0
    cfl_interact      = 0.8
  /

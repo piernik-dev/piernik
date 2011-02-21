@@ -55,6 +55,7 @@ module initproblem
    character(len=cbuff_len) :: mag_field_orient
    real, target, allocatable, dimension(:,:,:,:) :: den0, mtx0, mty0, mtz0, ene0
    integer, parameter       :: dname_len = 10
+   real, dimension(:), allocatable :: taus, tauf
 
    namelist /PROBLEM_CONTROL/  alpha, d0, dout, r_max, mag_field_orient, r_in, r_out, f_in, f_out, &
       & dens_exp, eps, dens_amb, x_cut, cutoff_ncells, dumping_coeff, use_inner_orbital_period, &
@@ -64,6 +65,7 @@ contains
 !-----------------------------------------------------------------------------
    subroutine read_problem_par
       use dataio_pub,          only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml      ! QA_WARN required for diff_nml
+      use dataio_pub,          only: user_vars_hdf5
       use mpisetup,            only: cbuff, rbuff, ibuff, lbuff, buffer_dim, master, slave, comm, ierr, geometry
       use mpi,                 only: MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL
       use gravity,             only: grav_pot_3d
@@ -159,8 +161,9 @@ contains
          user_bnd_xl => my_bnd_xl
          user_bnd_xr => my_bnd_xr
          grav_pot_3d => my_grav_pot_3d
-!         problem_grace_passed => add_random_noise
-         problem_grace_passed => add_sine
+         user_vars_hdf5 => prob_vars_hdf5
+         problem_grace_passed => add_random_noise
+!         problem_grace_passed => add_sine
       endif
 
    end subroutine read_problem_par
@@ -205,7 +208,7 @@ contains
 #endif /* DEBUG */
 
    end subroutine add_sine
-
+!-----------------------------------------------------------------------------
    subroutine add_random_noise
       use grid,         only: cg
       use arrays,       only: u
@@ -247,6 +250,7 @@ contains
       use hydrostatic,         only: hydrostatic_zeq_densmid
       use mpisetup,            only: zdim, has_dir, dom, master, geometry, xdim
       use types,               only: component_fluid
+      use interactions,        only: epstein_factor
 
       implicit none
 
@@ -331,7 +335,7 @@ contains
             write(msg,'(A,F9.5)') " cs2(T_mean) = ", kboltz * 0.5*(mmsn_T(dom%xmin)+mmsn_T(dom%xmax)) / mH
             call printinfo(msg)
             if (associated(flind%neu)) then
-               write(msg,'(A,ES12.3,A)') " T_real(cs2) = ", flind%neu%cs2*mH/kboltz, " K"
+               write(msg,'(A,F12.3,A)') " T_real(cs2) = ", flind%neu%cs2*mH/kboltz, " K"
                call printinfo(msg)
             endif
             call printinfo("------------------------------------------------------------------")
@@ -348,11 +352,15 @@ contains
          if (.not.allocated(ln_dens_der)) allocate(ln_dens_der(cg%nx))
          if (.not.allocated(dens_prof)) allocate(dens_prof(cg%nx))
          if (.not.allocated(dens_cutoff)) allocate(dens_cutoff(cg%nx))
+         if (.not.allocated(tauf)) allocate(tauf(cg%nx))
+         if (.not.allocated(taus)) allocate(taus(cg%nx))
 
          call source_terms_grav
          call grav_pot2accel(xdim,1,1, cg%nx, grav, 1)
 
          dens_prof(:) = d0 * cg%x(:)**(-dens_exp)  * gram / cm**2
+
+         tauf(:) = epstein_factor(flind%neu%pos)/dens_prof(:)
 
          middle_of_nx = cg%nx/2 + 1
          n_x_cut      = maxloc(cg%x, mask=cg%x<=x_cut)
@@ -422,6 +430,7 @@ contains
                         ene0(p,i,j,k)   = 0.0
                      endif
                   enddo
+                  taus(i) = vphi/cg%x(i)*tauf(i)
                enddo
             enddo
 
@@ -436,6 +445,12 @@ contains
       else
          call die("[initproblem:init_prob] I don't know what to do... :/")
       endif
+
+      open(123,file="tau.dat",status="unknown")
+      do i = 1, cg%nx
+         write(123,*) cg%x(i), tauf(i), taus(i)
+      enddo
+      close(123)
 
    end subroutine init_prob
 !-----------------------------------------------------------------------------
@@ -547,13 +562,13 @@ contains
       real, dimension(:,:), allocatable, save :: funcR
       real, save :: x0, x1, y0, y1, a, b
 
-      if (grace_period_passed() .and. t <= x1) then
-         dragc_gas_dust = a*t+b
-#ifdef VERBOSE
-         if (master) write(msg,'(A,F6.1)') 'dragc_gas_dust = ', dragc_gas_dust
-         call printinfo(msg)
-#endif /* VERBOSE */
-      endif
+!      if (grace_period_passed() .and. t <= x1) then
+!         dragc_gas_dust = a*t+b
+!#ifdef VERBOSE
+!         if (master) write(msg,'(A,F6.1)') 'dragc_gas_dust = ', dragc_gas_dust
+!         call printinfo(msg)
+!#endif /* VERBOSE */
+!      endif
 
       if (frun) then
          x0 = relax_time + 2.0
@@ -647,10 +662,11 @@ contains
 
       do i = 1, cg%nb
          u(iarr_all_dn,i,:,:) = u(iarr_all_dn, cg%is,:,:)
-         u(iarr_all_mx,i,:,:) = max(0.0,u(iarr_all_mx, cg%is,:,:))
-         do p = 1, size(flind%all_fluids)
-            u(iarr_all_my(p),i,:,:) = sqrt( abs(grav(i)) * cg%x(i) - cs2_arr(p)*dens_exp) *  u(iarr_all_dn(p),i,:,:)
-         enddo
+         u(iarr_all_mx,i,:,:) = min(0.0,u(iarr_all_mx, cg%is,:,:))
+!         do p = 1, size(flind%all_fluids)
+!            u(iarr_all_my(p),i,:,:) = sqrt( abs(grav(i)) * cg%x(i) - cs2_arr(p)*dens_exp) *  u(iarr_all_dn(p),i,:,:)
+!         enddo
+         u(iarr_all_my,i,:,:) = u(iarr_all_my, cg%is,:,:)
          u(iarr_all_mz,i,:,:) = u(iarr_all_mz, cg%is,:,:)
 #ifndef ISO
          u(iarr_all_en,i,:,:) = u(iarr_all_en, cg%is,:,:)
@@ -660,7 +676,7 @@ contains
       do i = cg%nb,1,-1
          vym(:,:,:) = u(iarr_all_my,i+2,:,:)/u(iarr_all_dn,i+1,:,:)
          vy(:,:,:)  = u(iarr_all_my,i+1,:,:)/u(iarr_all_dn,i+1,:,:)
-         u(iarr_all_my,i,:,:) = (vym(:,:,:) + (cg%x(i) - cg%x(i+2)) / (cg%x(i+1) - cg%x(i+2)) * (vy - vym))*u(iarr_all_dn,i,:,:)
+!         u(iarr_all_my,i,:,:) = (vym(:,:,:) + (cg%x(i) - cg%x(i+2)) / (cg%x(i+1) - cg%x(i+2)) * (vy - vym))*u(iarr_all_dn,i,:,:)
       enddo
 
    end subroutine my_bnd_xl
@@ -723,5 +739,27 @@ contains
       y = tanh(x*k)
       get_ncells = count(y > -0.99 .and. y < 0.99)
    end function get_ncells
+!-----------------------------------------------------------------------------
+   subroutine prob_vars_hdf5(var,tab, ierrh)
+
+      use arrays,       only: u
+      use interactions, only: epstein_factor
+      use fluidindex,   only: flind
+
+      implicit none
+
+      character(len=*), intent(in)                    :: var
+      real(kind=4), dimension(:,:,:), intent(inout)   :: tab
+      integer, intent(inout)                          :: ierrh
+
+      ierrh = 0
+      select case (trim(var))
+         case ("tauf")
+            tab(:,:,:) = epstein_factor(flind%neu%pos) / u(flind%neu%idn,:,:,:)
+         case default
+            ierrh = -1
+      end select
+
+   end subroutine prob_vars_hdf5
 !-----------------------------------------------------------------------------
 end module initproblem
