@@ -199,13 +199,13 @@ contains
 !<
    subroutine init_mpi
 
-      use constants,     only: dpi
       use mpi,           only: MPI_COMM_WORLD, MPI_INFO_NULL, MPI_INFO_NULL, MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION, MPI_LOGICAL, MPI_PROC_NULL
       use dataio_pub,    only: die, printinfo, msg, cwdlen, hnlen, cwd, ansi_white, ansi_black, warn, tmp_log_file
       use dataio_pub,    only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml  ! QA_WARN required for diff_nml
 
       implicit none
 
+      real :: dpi
       integer :: iproc
 
       character(len=cwdlen) :: cwd_proc
@@ -221,6 +221,8 @@ contains
       integer :: cwd_status
       logical :: par_file_exist
       logical :: tmp_log_exist
+
+      dpi = 8*atan(1.0)
 
       call MPI_Init( ierr )
       call MPI_Comm_rank(MPI_COMM_WORLD, proc, ierr)
