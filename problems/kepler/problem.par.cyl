@@ -1,7 +1,7 @@
  $DOMAIN
-    nxd = 1024
+    nxd = 2048
     nyd = 5
-    nzd = 256
+    nzd = 10
     nb  = 4
     bnd_xl = 'out'
     bnd_xr = 'ref'
@@ -19,7 +19,7 @@
  /
 
  $MPI_BLOCKS
-    psize = 1, 1, 2
+    psize = 4, 1, 1
  /
 
  $CONSTANTS
@@ -33,7 +33,7 @@
  /
 
  $END_CONTROL
-    tend   = 100.0
+    tend   = 0.01
     nend   = 10000000
  /
 
@@ -97,6 +97,7 @@
     cutoff_ncells = 300
     x_cut    = 7.0
     eps      = 1.0
+    densfile = "dens.bin"
  /
 
  $PIERNIK_DEBUG

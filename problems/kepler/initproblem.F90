@@ -53,13 +53,14 @@ module initproblem
    real                     :: dumping_coeff, drag_max, drag_min
    logical                  :: use_inner_orbital_period  !< use 1./T_inner as dumping_coeff
    character(len=cbuff_len) :: mag_field_orient
+   character(len=cbuff_len) :: densfile
    real, target, allocatable, dimension(:,:,:,:) :: den0, mtx0, mty0, mtz0, ene0
    integer, parameter       :: dname_len = 10
    real, dimension(:), allocatable :: taus, tauf
 
    namelist /PROBLEM_CONTROL/  alpha, d0, dout, r_max, mag_field_orient, r_in, r_out, f_in, f_out, &
       & dens_exp, eps, dens_amb, x_cut, cutoff_ncells, dumping_coeff, use_inner_orbital_period, &
-      & drag_max, drag_min
+      & drag_max, drag_min, densfile
 
 contains
 !-----------------------------------------------------------------------------
@@ -78,6 +79,7 @@ contains
       dout             = 1.0e-4
       r_max            = 1.0
       mag_field_orient = 'none'
+      densfile         = ''
       alpha            = 1.0
 
       r_in             = 0.5
@@ -104,6 +106,7 @@ contains
          lbuff(1) = use_inner_orbital_period
 
          cbuff(1) = mag_field_orient
+         cbuff(2) = densfile
 
          rbuff(1) = d0
          rbuff(2) = dout
@@ -135,6 +138,7 @@ contains
          use_inner_orbital_period = lbuff(1)
 
          mag_field_orient = cbuff(1)
+         densfile         = cbuff(2)
 
          d0               = rbuff(1)
          dout             = rbuff(2)
@@ -248,18 +252,19 @@ contains
       use gravity,             only: r_smooth, r_grav, n_gravr, ptmass, source_terms_grav, grav_pot2accel, grav_pot_3d
       use grid,                only: cg
       use hydrostatic,         only: hydrostatic_zeq_densmid
-      use mpisetup,            only: zdim, has_dir, dom, master, geometry, xdim
+      use mpisetup,            only: zdim, has_dir, dom, master, geometry, xdim, pcoords, dom, comm, ierr
+      use mpi,                 only: MPI_DOUBLE_PRECISION
       use types,               only: component_fluid
       use interactions,        only: epstein_factor
 
       implicit none
 
-      integer :: i, j, k, kmid, p, middle_of_nx
+      integer :: i, j, k, kmid, p, middle_of_nx, nxt
       integer, dimension(1) :: n_x_cut
       real    :: xi, yj, zk, rc, vx, vy, vz, b0, sqr_gm, vr, vphi
       real    :: csim2, gprim, H2
 
-      real, dimension(:), allocatable :: grav, dens_prof, dens_cutoff, ln_dens_der
+      real, dimension(:), allocatable :: grav, dens_prof, dens_cutoff, ln_dens_der, gdens
       type(component_fluid), pointer  :: fl
 
 !   Secondary parameters
@@ -364,8 +369,16 @@ contains
 
          middle_of_nx = cg%nx/2 + 1
          n_x_cut      = maxloc(cg%x, mask=cg%x<=x_cut)
-!         dens_prof    = min(dens_prof, get_lcutoff(cutoff_ncells, (middle_of_nx - n_x_cut(1)), cg%nx, dens_amb, dens_prof(n_x_cut(1))) )
-         dens_prof    = dens_prof * get_lcutoff(cutoff_ncells, (middle_of_nx - n_x_cut(1)), cg%nx, 0.0, 1.0) + dens_amb
+         if (densfile /= "") then
+            allocate(gdens(dom%n_d(xdim)+cg%nb*2))
+            if (master) call read_dens_profile(densfile,gdens)
+            call MPI_Bcast(gdens, size(gdens), MPI_DOUBLE_PRECISION, 0, comm, ierr)
+
+            dens_prof(:)    = gdens(1+pcoords(xdim)*cg%nxb:cg%nx+pcoords(xdim)*cg%nxb)
+            deallocate(gdens)
+         else
+            dens_prof    = dens_prof * get_lcutoff(cutoff_ncells, (middle_of_nx - n_x_cut(1)), cg%nx, 0.0, 1.0) + dens_amb
+         endif
 
          !! \f$ v_\phi = \sqrt{R\left(c_s^2 \partial_R \ln\rho + \partial_R \Phi \right)} \f$
          ln_dens_der  = log(dens_prof)
@@ -762,5 +775,62 @@ contains
       end select
 
    end subroutine prob_vars_hdf5
+!-----------------------------------------------------------------------------
+   subroutine read_dens_profile(densfile,gdens)
+      use grid,       only: cg
+      use dataio_pub, only: printinfo, msg, warn
+      use fgsl,       only: fgsl_size_t, fgsl_interp_accel, fgsl_interp, fgsl_spline, fgsl_int, fgsl_char, fgsl_strmax, fgsl_interp_cspline, &
+         & fgsl_interp_accel_alloc, fgsl_interp_alloc, fgsl_interp_name, fgsl_interp_init, fgsl_interp_eval, fgsl_interp_free, fgsl_interp_accel_free
+      implicit none
+      character(len=*), intent(in)                   :: densfile
+      real, dimension(:), intent(out)                :: gdens
+
+      type(fgsl_interp_accel) :: acc
+      type(fgsl_interp) :: a_interp
+      integer(fgsl_int) :: fstatus
+      character(kind=fgsl_char,len=fgsl_strmax) :: fname
+      real, dimension(:), allocatable :: x,y
+      real                            :: xi
+      integer                         :: n, nxd, i
+      integer(fgsl_size_t)            :: nmax
+
+      write(msg,*) "[initproblem:read_dens_profile] Reading ", trim(densfile)
+      open(1,file=densfile, status="old", form='unformatted')
+         read(1) n
+         allocate(y(n), x(n))
+         read(1) x
+         read(1) y
+      close(1)
+
+      nmax = n
+      nxd = size(gdens) - 2*cg%nb
+
+      if  (nxd == n) then
+         call printinfo("[initproblem:read_dens_profile] Saved profile has required dimension \o/")
+         gdens(cg%is:cg%ie) = y(:)
+      else
+         call warn("[initproblem:read_dens_profile] Saved profile has different dimension :/")
+         write(msg,'(A,I5,A,I5,A)') "[initproblem:read_dens_profile] Performing spline interpolation from",n," to ",nxd," cells."
+         call printinfo(msg)
+         acc = fgsl_interp_accel_alloc()
+         a_interp = fgsl_interp_alloc(fgsl_interp_cspline,nmax)
+         fname = fgsl_interp_name(a_interp)
+         fstatus = fgsl_interp_init(a_interp,x,y,nmax)
+         do i = 1, nxd
+            xi = (1-i /real(nxd))*x(1) + (i/real(nxd))*x(n)
+            gdens(cg%nb+i) = fgsl_interp_eval(a_interp, x, y, xi, acc)
+         enddo
+
+         call fgsl_interp_free(a_interp)
+         call fgsl_interp_accel_free(acc)
+      endif
+
+      do i = 1, cg%nb
+         gdens(i)       = gdens(cg%is)
+         gdens(cg%ie+i) = gdens(cg%ie)
+      enddo 
+      deallocate(x,y)
+      return
+   end subroutine read_dens_profile
 !-----------------------------------------------------------------------------
 end module initproblem
