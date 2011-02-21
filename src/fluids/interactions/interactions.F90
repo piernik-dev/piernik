@@ -41,13 +41,16 @@ module interactions
 
    private
    public :: init_interactions, fluid_interactions, collfaq, cfl_interact, dragc_gas_dust, has_interactions, &
-      & interactions_grace_passed
+      & interactions_grace_passed, epstein_factor
 
    real, allocatable, dimension(:,:)      :: collfaq     !< flind%fluids x flind%fluids array of collision factors
    real :: collision_factor                              !< collision factor
    real :: cfl_interact                                  !< Courant factor for %interactions
    real :: dragc_gas_dust                                !< \deprecated remove me
    real :: taus                                          !< stopping time
+   real :: grain_size                                    !< size of dust grains in cm
+   real :: grain_dens                                    !< density of dust grains in g/cm^3
+   real, dimension(:), allocatable :: epstein_factor     !< grain_size * grain_dens / c_s for iso case
    logical :: has_interactions
 
    interface
@@ -83,16 +86,21 @@ contains
       use dataio_pub,    only: die, code_progress, PIERNIK_INIT_MPI
       use mpisetup,      only: master, slave, lbuff, rbuff, buffer_dim, ierr, comm!, grace_period_passed
       use mpi,           only: MPI_DOUBLE_PRECISION, MPI_LOGICAL
+      use constants,     only: cm, gram
+      use fluidindex,    only: flind
 
       implicit none
+      integer :: i
 
-      namelist /INTERACTIONS/ collision_factor, cfl_interact, dragc_gas_dust, has_interactions
+      namelist /INTERACTIONS/ collision_factor, cfl_interact, dragc_gas_dust, has_interactions, grain_size, grain_dens
 
       if (code_progress < PIERNIK_INIT_MPI) call die("[interactions:init_interactions] MPI not initialized.")
 
       collision_factor  = 0.0
       cfl_interact      = 0.8
       dragc_gas_dust    = 0.0
+      grain_size        = 10.0
+      grain_dens        = 1.6
 
       has_interactions  = .false.
 
@@ -103,6 +111,8 @@ contains
          rbuff(1)  = collision_factor
          rbuff(2)  = cfl_interact
          rbuff(3)  = dragc_gas_dust
+         rbuff(4)  = grain_size
+         rbuff(5)  = grain_dens
 
          lbuff(1)  = has_interactions
 
@@ -116,12 +126,20 @@ contains
          collision_factor     = rbuff(1)
          cfl_interact         = rbuff(2)
          dragc_gas_dust       = rbuff(3)
+         grain_size           = rbuff(4)
+         grain_dens           = rbuff(5)
 
          has_interactions     = lbuff(1)
 
       endif
 
       fluid_interactions => fluid_interactions_dummy
+      grain_size = grain_size * cm
+      grain_dens = grain_dens * gram * cm**-3
+      if (.not.allocated(epstein_factor)) allocate(epstein_factor(flind%fluids))
+
+      epstein_factor = 0.0
+
 !      if (grace_period_passed()) call interactions_grace_passed
 
    end subroutine init_interactions
@@ -138,6 +156,7 @@ contains
       implicit none
 
       logical, save :: warned = .false.
+      integer :: i
 
       if (dragc_gas_dust > 0.0 .or. collision_factor > 0.0) then
          if (associated(flind%dst)) then
@@ -150,8 +169,17 @@ contains
             collfaq(:,flind%dst%pos) = dragc_gas_dust
 
             taus = 1. / dragc_gas_dust
-            fluid_interactions => fluid_interactions_aero_drag
+
+            fluid_interactions => fluid_interactions_aero_drag_ep
             has_interactions = .true.    !> \deprecated BEWARE: temporary hack
+            do i = 1, flind%fluids
+               if (flind%all_fluids(i)%tag /= "DST") then
+                  epstein_factor(flind%all_fluids(i)%pos) = grain_size * grain_dens / flind%all_fluids(i)%cs !BEWARE iso assumed
+               else
+                  epstein_factor(flind%all_fluids(i)%pos) = 0.0
+               endif
+            enddo
+
          else
             if (.not. warned .and. master) call warn("[interactions:interactions_grace_passed] Cannot initialize aerodynamical drag because dust does not exist.")
             warned = .true.
@@ -190,6 +218,20 @@ contains
 
    end subroutine fluid_interactions_aero_drag
 
+   subroutine fluid_interactions_aero_drag_ep(dens, velx, acc)
+
+      use fluidindex,       only: flind
+
+      implicit none
+
+      real, dimension(:,:), intent(in), pointer :: dens
+      real, dimension(:,:), intent(in), pointer :: velx
+      real, dimension(size(dens,1),size(dens,2)), intent(out) :: acc
+
+      acc(flind%dst%pos,:) = -dens(flind%neu%pos,:) / epstein_factor(flind%neu%pos) * (velx(flind%dst%pos,:) - velx(flind%neu%pos,:))
+      acc(flind%neu%pos,:) = -acc(flind%dst%pos,:) * dens(flind%dst%pos,:) / dens(flind%neu%pos,:)
+
+   end subroutine fluid_interactions_aero_drag_ep
 #ifdef FLUID_INTERACTIONS_DW
 !>
 !! \brief Routine that governs the type of interaction
