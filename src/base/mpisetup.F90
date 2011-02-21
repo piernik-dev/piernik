@@ -199,6 +199,7 @@ contains
 !<
    subroutine init_mpi
 
+      use constants,     only: dpi
       use mpi,           only: MPI_COMM_WORLD, MPI_INFO_NULL, MPI_INFO_NULL, MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION, MPI_LOGICAL, MPI_PROC_NULL
       use dataio_pub,    only: die, printinfo, msg, cwdlen, hnlen, cwd, ansi_white, ansi_black, warn, tmp_log_file
       use dataio_pub,    only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml  ! QA_WARN required for diff_nml
@@ -296,7 +297,7 @@ contains
       nzd    = 1
       nb     = 4
       xmin = 0.; xmax = 1.
-      ymin = 0.; ymax = 1.
+      ymin = -big_float; ymax = big_float
       zmin = 0.; zmax = 1.
       geometry = "cartesian"
 
@@ -332,6 +333,20 @@ contains
          diff_nml(DOMAIN)
 
          dom%n_d(:) = max(1, [nxd, nyd, nzd])
+
+         ! If ymin or ymax are set here, their values will not be properly reported in the log file.
+         select case (geometry)
+            case ("cylindrical") !> \todo replace strings by enums
+               if (ymin <= -big_float) ymin = 0.
+               if (ymax >= big_float) ymax = dpi
+               if (ymax-ymin > dpi) call die("[mpisetup:init_mpi] Hyperbolic spaces are not implemented.")
+            case ("cartesian")
+               if (nyd > 1 .and. (ymin <= -big_float .or. ymax >= big_float)) call warn("[mpisetup:init_mpi] y range not specified. Defaulting to [0..1]")
+               if (ymin <= -big_float) ymin = 0.
+               if (ymax >= big_float) ymax = 1.
+            case default
+               call die("[mpisetup:init_mpi] Invalid geometry name.")
+         end select
 
       endif
 
