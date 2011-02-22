@@ -422,7 +422,7 @@ contains
             log_file_initialized = .true.
          endif
       endif
-      call MPI_Bcast(log_file, cwdlen, MPI_CHARACTER, 0, comm, ierr)
+      call MPI_Bcast(log_file, cwdlen, MPI_CHARACTER, 0, comm, ierr)          ! BEWARE: every msg issued by slaves before this sync may lead to race condition on tmp_log_file
       call MPI_Bcast(log_file_initialized, 1, MPI_LOGICAL, 0, comm, ierr)
 
       call set_container_chdf(nstep); chdf%nres = nrestart
