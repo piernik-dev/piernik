@@ -263,6 +263,7 @@ contains
          endif
       endif
 
+      !> \todo implement mixed BC
       select case (mode)         !> \deprecated BEWARE: some cylindrical factors may be helpful
          case (extbnd_donothing) ! remember to initialize everything first!
             return

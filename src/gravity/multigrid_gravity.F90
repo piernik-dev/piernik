@@ -159,9 +159,10 @@ contains
 !<
    subroutine init_multigrid_grav
 
-      use multigridvars,      only: bnd_periodic, bnd_dirichlet, bnd_isolated, bnd_invalid, correction, mg_nb, ngridvars, periodic_bnd_cnt, non_periodic_bnd_cnt
+      use multigridvars,      only: bnd_periodic, bnd_dirichlet, bnd_isolated, bnd_invalid, correction, mg_nb, ngridvars, periodic_bnd_cnt, non_periodic_bnd_cnt, &
+           &                        mg_geometry, MG_GEO_XYZ, MG_GEO_RPZ
       use multipole,          only: use_point_monopole, lmax, mmax, ord_prolong_mpole, coarsen_multipole, interp_pt2mom, interp_mom2pot
-      use mpisetup,           only: buffer_dim, comm, ierr, master, slave, ibuff, cbuff, rbuff, lbuff, dom, has_dir, geometry
+      use mpisetup,           only: buffer_dim, comm, ierr, master, slave, ibuff, cbuff, rbuff, lbuff, dom, has_dir
       use mpi,                only: MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL
       use dataio_pub,         only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml  ! QA_WARN required for diff_nml
       use dataio_pub,         only: msg, die, warn
@@ -178,8 +179,6 @@ contains
 
       if (.not.frun) call die("[multigrid_gravity:init_multigrid_grav] Called more than once.")
       frun = .false.
-
-      if (geometry /= "cartesian") call die("[multigrid_gravity:init_multigrid_grav] non-cartesian geometry not implemented yet.")
 
       ! Default values for namelist variables
       norm_tol               = 1.e-6
@@ -221,6 +220,19 @@ contains
       if (master) then
 
          diff_nml(MULTIGRID_GRAVITY)
+
+         ! FIXME when ready
+         if (mg_geometry == MG_GEO_RPZ) then
+            call warn("[multigrid_gravity:init_multigrid_grav] cynindrical geometry support is under development.")
+            ! switch off FFT-related bits
+            gb_no_fft = .true.
+            prefer_rbgs_relaxation = .true.
+            ord_laplacian = 2
+            L4_strength = 0.
+            ! ord_prolong_mpole = 0
+         else if (mg_geometry /= MG_GEO_XYZ) then
+            call die("[multigrid_gravity:init_multigrid_grav] non-cartesian geometry not implemented yet.")
+         endif
 
          rbuff(1) = norm_tol
          rbuff(2) = overrelax
@@ -371,7 +383,7 @@ contains
    subroutine init_multigrid_grav_post(mb_alloc)
 
       use arrays,             only: sgp
-      use multigridvars,      only: lvl, roof, base, gb, level_gb, level_max, level_min, bnd_periodic, bnd_dirichlet, bnd_isolated, vcycle_stats
+      use multigridvars,      only: lvl, roof, base, gb, level_gb, level_max, level_min, bnd_periodic, bnd_dirichlet, bnd_isolated, vcycle_stats, mg_geometry, MG_GEO_XYZ
       use mpisetup,           only: master, nproc, psize, xdim, ydim, zdim
       use multigridhelpers,   only: vcycle_stats_init, dirty_debug, dirtyH
       use constants,          only: pi, dpi
@@ -462,6 +474,8 @@ contains
       !special initialization of global base-level FFT-related data
       if (gb%fft_type /= fft_none) then
 
+         if (mg_geometry /= MG_GEO_XYZ) call die("[multigrid_gravity:init_multigrid_grav_post] FFT at base level is not allowed in non-cartesian coordinates.")
+
          !> \deprecated BEWARE only small subset of gb% members is ever initialized
 
          gb%nxb = base%nxb * psize(xdim)
@@ -490,6 +504,8 @@ contains
          lvl(idx)%plani = 0
 
          if (lvl(idx)%fft_type /= fft_none) then
+
+            if (mg_geometry == MG_GEO_XYZ) call die("[multigrid_gravity:init_multigrid_grav_post] FFT is not allowed in non-cartesian coordinates.")
 
             select case (lvl(idx)%fft_type)
                case (fft_rcr)
@@ -738,12 +754,16 @@ contains
       use dataio_pub,         only: die
       use multigridhelpers,   only: set_dirty, check_dirty
       use multigridbasefuncs, only: substract_average
-      use multigridvars,      only: roof, source, level_max, is_external, bnd_periodic, bnd_dirichlet, bnd_givenval, &
-           &                        XLO, XHI, YLO, YHI, ZLO, ZHI, LOW, HIGH
+      use multigridvars,      only: roof, source, level_max, is_external, bnd_periodic, bnd_dirichlet, bnd_givenval, mg_geometry, &
+           &                        XLO, XHI, YLO, YHI, ZLO, ZHI, LOW, HIGH, MG_GEO_RPZ
+#ifdef DEBUG
+      use piernikdebug,       only: aux_R, aux_L
+#endif
 
       implicit none
 
       real, optional, dimension(:,:,:), intent(in)  :: dens !< input source field or nothing for empty space
+      real :: fac
 
       call set_dirty(source)
 
@@ -763,13 +783,28 @@ contains
                  &         roof%mgvar(roof%is:roof%ie, roof%js:roof%je, roof%ks:roof%ke, source) - fpiG * jeans_d0 ! remove density bias
 #endif /* JEANS_PROBLEM */
          case (bnd_givenval) ! convert potential into a layer of imaginary mass (subtract second derivative normal to computational domain boundary)
-            !> \deprecated BEWARE: cylindrical factors go here
-            if (is_external(XLO)) roof%mgvar(roof%is,         roof%js:roof%je, roof%ks:roof%ke, source) = &
-                 &                roof%mgvar(roof%is,         roof%js:roof%je, roof%ks:roof%ke, source) - &
-                 &                roof%bnd_x(                 roof%js:roof%je, roof%ks:roof%ke, LOW)  * 2. * roof%idx2 / fpiG
-            if (is_external(XHI)) roof%mgvar(        roof%ie, roof%js:roof%je, roof%ks:roof%ke, source) = &
-                 &                roof%mgvar(        roof%ie, roof%js:roof%je, roof%ks:roof%ke, source) - &
-                 &                roof%bnd_x(                 roof%js:roof%je, roof%ks:roof%ke, HIGH) * 2. * roof%idx2 / fpiG
+            if (is_external(XLO)) then
+               fac = 2. * roof%idx2 / fpiG
+#ifdef DEBUG
+               if (mg_geometry == MG_GEO_RPZ .and. roof%x(roof%is) /= 0. .and. aux_L(1)) fac = fac - 1./ (roof%dx * (roof%x(roof%is) - aux_R(1)*roof%dx) * fpiG)
+#else
+               if (mg_geometry == MG_GEO_RPZ .and. roof%x(roof%is) /= 0.) fac = fac - 1./(roof%dx * roof%x(roof%is) * fpiG) !> BEWARE is it roof%x(ie), roof%x(ie+1) or something in the middle?
+#endif
+               roof%mgvar(roof%is,         roof%js:roof%je, roof%ks:roof%ke, source) = &
+                    &                roof%mgvar(roof%is,         roof%js:roof%je, roof%ks:roof%ke, source) - &
+                    &                roof%bnd_x(                 roof%js:roof%je, roof%ks:roof%ke, LOW)  * fac
+            endif
+            if (is_external(XHI)) then
+               fac = 2. * roof%idx2 / fpiG
+#ifdef DEBUG
+               if (mg_geometry == MG_GEO_RPZ .and. roof%x(roof%ie) /= 0. .and. aux_L(1)) fac = fac - 1. / (roof%dx * (roof%x(roof%ie) + aux_R(1)*roof%dx) * fpiG)
+#else
+               if (mg_geometry == MG_GEO_RPZ .and. roof%x(roof%ie) /= 0.) fac = fac - 1./ (roof%dx * roof%x(roof%ie) * fpiG) !> BEWARE is it roof%x(ie), roof%x(ie+1) or something in the middle?
+#endif
+               roof%mgvar(        roof%ie, roof%js:roof%je, roof%ks:roof%ke, source) = &
+                    &                roof%mgvar(        roof%ie, roof%js:roof%je, roof%ks:roof%ke, source) - &
+                    &                roof%bnd_x(                 roof%js:roof%je, roof%ks:roof%ke, HIGH) * fac
+            endif
             if (is_external(YLO)) roof%mgvar(roof%is:roof%ie, roof%js,         roof%ks:roof%ke, source) = &
                  &                roof%mgvar(roof%is:roof%ie, roof%js,         roof%ks:roof%ke, source) - &
                  &                roof%bnd_y(roof%is:roof%ie,                  roof%ks:roof%ke, LOW)  * 2. * roof%idy2 / fpiG
@@ -1110,10 +1145,11 @@ contains
 
    subroutine residual2(lev, src, soln, def)
 
+      use dataio_pub,         only: die
       use mpisetup,           only: xdim, ydim, zdim, has_dir, eff_dim
       use multigridhelpers,   only: multidim_code_3D
       use multigridmpifuncs,  only: mpi_multigrid_bnd
-      use multigridvars,      only: lvl, NDIM, extbnd_antimirror
+      use multigridvars,      only: lvl, NDIM, extbnd_antimirror, mg_geometry, MG_GEO_XYZ, MG_GEO_RPZ
 
       implicit none
 
@@ -1122,8 +1158,8 @@ contains
       integer, intent(in) :: soln !< index of solution in lvl()%mgvar
       integer, intent(in) :: def  !< index of defect in lvl()%mgvar
 
-      real                :: L0, Lx, Ly, Lz
-      integer :: k
+      real    :: L0, Lx, Ly, Lz, Lx1
+      integer :: i, j, k
 
       call mpi_multigrid_bnd(lev, soln, 1, extbnd_antimirror) ! no corners required
 
@@ -1136,42 +1172,72 @@ contains
 
       ! Possible optimization candidate: reduce cache misses (secondary importance, cache-aware implementation required)
       ! Explicit loop over k gives here better performance than array operation due to less cache misses (at least on 32^3 and 64^3 arrays)
-      !> \deprecated BEWARE: cylindrical factors go here
-      if (eff_dim == NDIM .and. .not. multidim_code_3D) then
-         do k = lvl(lev)%ks, lvl(lev)%ke
-            lvl(       lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k,   def)        = &
-                 & lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k,   src)        - &
-                 ( lvl(lev)%mgvar(lvl(lev)%is-1:lvl(lev)%ie-1, lvl(lev)%js  :lvl(lev)%je,   k,   soln)       + &
-                 & lvl(lev)%mgvar(lvl(lev)%is+1:lvl(lev)%ie+1, lvl(lev)%js  :lvl(lev)%je,   k,   soln)) * Lx - &
-                 ( lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js-1:lvl(lev)%je-1, k,   soln)       + &
-                 & lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js+1:lvl(lev)%je+1, k,   soln)) * Ly - &
-                 ( lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k-1, soln)       + &
-                 & lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k+1, soln)) * Lz - &
-                 & lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k,   soln)  * L0
-         enddo
-      else
-         ! In 3D this implementation can give a bit more cache misses, few times more writes and significantly more instructions executed than monolithic 3D above
-         do k = lvl(lev)%ks, lvl(lev)%ke
-            lvl(       lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k,   def)   = &
-                 & lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k,   src)   - &
-                 & lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k,   soln)  * L0
-            if (has_dir(xdim)) &
-                 & lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k,   def)   = &
-                 & lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k,   def)   - &
-                 ( lvl(lev)%mgvar(lvl(lev)%is-1:lvl(lev)%ie-1, lvl(lev)%js  :lvl(lev)%je,   k,   soln)  + &
-                 & lvl(lev)%mgvar(lvl(lev)%is+1:lvl(lev)%ie+1, lvl(lev)%js  :lvl(lev)%je,   k,   soln)) * Lx
-            if (has_dir(ydim)) &
-                 & lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k,   def)   = &
-                 & lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k,   def)   - &
-                 ( lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js-1:lvl(lev)%je-1, k,   soln)  + &
-                 & lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js+1:lvl(lev)%je+1, k,   soln)) * Ly
-            if (has_dir(zdim)) &
-                 & lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k,   def)   = &
-                 & lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k,   def)   - &
-                 ( lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k-1, soln)  + &
-                 & lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k+1, soln)) * Lz
-         enddo
-      endif
+
+      select case (mg_geometry)
+         case (MG_GEO_XYZ)
+            if (eff_dim == NDIM .and. .not. multidim_code_3D) then
+               do k = lvl(lev)%ks, lvl(lev)%ke
+                  lvl(       lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k,   def)        = &
+                       & lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k,   src)        - &
+                       ( lvl(lev)%mgvar(lvl(lev)%is-1:lvl(lev)%ie-1, lvl(lev)%js  :lvl(lev)%je,   k,   soln)       + &
+                       & lvl(lev)%mgvar(lvl(lev)%is+1:lvl(lev)%ie+1, lvl(lev)%js  :lvl(lev)%je,   k,   soln)) * Lx - &
+                       ( lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js-1:lvl(lev)%je-1, k,   soln)       + &
+                       & lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js+1:lvl(lev)%je+1, k,   soln)) * Ly - &
+                       ( lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k-1, soln)       + &
+                       & lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k+1, soln)) * Lz - &
+                       & lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k,   soln)  * L0
+               enddo
+            else
+               ! In 3D this implementation can give a bit more cache misses, few times more writes and significantly more instructions executed than monolithic 3D above
+               do k = lvl(lev)%ks, lvl(lev)%ke
+                  lvl(       lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k,   def)   = &
+                       & lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k,   src)   - &
+                       & lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k,   soln)  * L0
+                  if (has_dir(xdim)) &
+                       & lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k,   def)   = &
+                       & lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k,   def)   - &
+                       ( lvl(lev)%mgvar(lvl(lev)%is-1:lvl(lev)%ie-1, lvl(lev)%js  :lvl(lev)%je,   k,   soln)  + &
+                       & lvl(lev)%mgvar(lvl(lev)%is+1:lvl(lev)%ie+1, lvl(lev)%js  :lvl(lev)%je,   k,   soln)) * Lx
+                  if (has_dir(ydim)) &
+                       & lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k,   def)   = &
+                       & lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k,   def)   - &
+                       ( lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js-1:lvl(lev)%je-1, k,   soln)  + &
+                       & lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js+1:lvl(lev)%je+1, k,   soln)) * Ly
+                  if (has_dir(zdim)) &
+                       & lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k,   def)   = &
+                       & lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k,   def)   - &
+                       ( lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k-1, soln)  + &
+                       & lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k+1, soln)) * Lz
+               enddo
+            endif
+         case (MG_GEO_RPZ)
+            Lx = lvl(lev)%idx2
+            Lz = lvl(lev)%idz2
+            do k = lvl(lev)%ks, lvl(lev)%ke
+               do j = lvl(lev)%js, lvl(lev)%je
+                  do i = lvl(lev)%is, lvl(lev)%ie
+                     if (lvl(lev)%x(i) /= 0.) then !> \todo convert Ly, Lx1 and L0 into precomputed arrays
+                        Ly = lvl(lev)%idy2 / lvl(lev)%x(i)**2 ! cylindrical factor
+                        Lx1 = 0.5 / (lvl(lev)%dx * lvl(lev)%x(i))
+                     else
+                        Ly = 0.
+                        Lx1 = 0.
+                     endif
+                     L0 = -2. * (Lx + Ly + Lz)
+                     lvl(lev)%mgvar(i, j, k, def) = lvl(lev)%mgvar(i, j, k, src) - lvl(lev)%mgvar(i, j, k, soln) * L0
+                     if (has_dir(xdim)) lvl(lev)%mgvar(i,   j,   k,   def)  = lvl(lev)%mgvar(i,   j,   k,   def)        - &
+                          &            (lvl(lev)%mgvar(i+1, j,   k,   soln) + lvl(lev)%mgvar(i-1, j,   k,   soln)) * Lx - &
+                          &            (lvl(lev)%mgvar(i+1, j,   k,   soln) - lvl(lev)%mgvar(i-1, j,   k,   soln)) * Lx1    ! cylindrical term
+                     if (has_dir(ydim)) lvl(lev)%mgvar(i,   j,   k,   def)  = lvl(lev)%mgvar(i,   j,   k,   def)        - &
+                          &            (lvl(lev)%mgvar(i,   j+1, k,   soln) + lvl(lev)%mgvar(i,   j-1, k,   soln)) * Ly
+                     if (has_dir(zdim)) lvl(lev)%mgvar(i,   j,   k,   def)  = lvl(lev)%mgvar(i,   j,   k,   def)        - &
+                          &            (lvl(lev)%mgvar(i,   j,   k+1, soln) + lvl(lev)%mgvar(i,   j,   k-1, soln)) * Lz
+                  enddo
+               enddo
+            enddo
+         case default
+            call die("[multigrid_gravity:residual2] Unsupported geometry.")
+      end select
 
    end subroutine residual2
 
@@ -1329,10 +1395,11 @@ contains
 
    subroutine approximate_solution_rbgs(lev, src, soln)
 
+      use dataio_pub,         only: die
       use mpisetup,           only: xdim, ydim, zdim, has_dir, eff_dim
       use multigridhelpers,   only: dirty_debug, check_dirty, multidim_code_3D, dirty_label
       use multigridmpifuncs,  only: mpi_multigrid_bnd
-      use multigridvars,      only: lvl, level_min, NDIM, extbnd_antimirror
+      use multigridvars,      only: lvl, level_min, NDIM, extbnd_antimirror, mg_geometry, MG_GEO_XYZ, MG_GEO_RPZ
 
       implicit none
 
@@ -1342,14 +1409,17 @@ contains
 
       integer, parameter :: RED_BLACK = 2 !< the checkerboard requires two sweeps
 
-      integer :: n, j, k, i1, j1, k1, id, jd, kd
+      integer :: n, i, j, k, i1, j1, k1, id, jd, kd
       integer :: nsmoo
+      real    :: crx, crx1, cry, crz, cr
 
       if (lev == level_min) then
          nsmoo = nsmoob
       else
          nsmoo = nsmool
       endif
+
+      if (mg_geometry == MG_GEO_RPZ .and. .not. multidim_code_3D) call die("[multigrid_gravity:approximate_solution_rbgs] multidim_code_3D = .false. not implemented")
 
       do n = 1, RED_BLACK*nsmoo
          call mpi_multigrid_bnd(lev, soln, 1, extbnd_antimirror) ! no corners are required here
@@ -1374,11 +1444,21 @@ contains
             do k = lvl(lev)%ks, lvl(lev)%ke
                do j = lvl(lev)%js, lvl(lev)%je
                   i1 = lvl(lev)%is + mod(n+j+k, RED_BLACK)
-                  lvl(          lev          )%mgvar(i1  :lvl(lev)%ie  :2, j,   k,   soln) = &
-                       lvl(lev)%rx * (lvl(lev)%mgvar(i1-1:lvl(lev)%ie-1:2, j,   k,   soln) + lvl(lev)%mgvar(i1+1:lvl(lev)%ie+1:2, j,   k,   soln)) + &
-                       lvl(lev)%ry * (lvl(lev)%mgvar(i1  :lvl(lev)%ie  :2, j-1, k,   soln) + lvl(lev)%mgvar(i1:  lvl(lev)%ie:  2, j+1, k,   soln)) + &
-                       lvl(lev)%rz * (lvl(lev)%mgvar(i1  :lvl(lev)%ie  :2, j,   k-1, soln) + lvl(lev)%mgvar(i1:  lvl(lev)%ie:  2, j,   k+1, soln)) - &
-                       lvl(lev)%r  *  lvl(lev)%mgvar(i1  :lvl(lev)%ie  :2, j,   k,   src)
+                  if (mg_geometry == MG_GEO_RPZ) then
+!!$                     lvl(          lev          )%mgvar(i1  :lvl(lev)%ie  :2, j,   k,   soln) = &
+!!$                          lvl(lev)%rx * (lvl(lev)%mgvar(i1-1:lvl(lev)%ie-1:2, j,   k,   soln) + lvl(lev)%mgvar(i1+1:lvl(lev)%ie+1:2, j,   k,   soln)) + &
+!!$                          lvl(lev)%ry * (lvl(lev)%mgvar(i1  :lvl(lev)%ie  :2, j-1, k,   soln) + lvl(lev)%mgvar(i1:  lvl(lev)%ie:  2, j+1, k,   soln)) + &
+!!$                          lvl(lev)%rz * (lvl(lev)%mgvar(i1  :lvl(lev)%ie  :2, j,   k-1, soln) + lvl(lev)%mgvar(i1:  lvl(lev)%ie:  2, j,   k+1, soln)) - &
+!!$                          lvl(lev)%r  *  lvl(lev)%mgvar(i1  :lvl(lev)%ie  :2, j,   k,   src)  + &
+!!$                          lvl(lev)%rx * (lvl(lev)%mgvar(i1+1:lvl(lev)%ie+1:2, j,   k,   soln) - lvl(lev)%mgvar(i1-1:lvl(lev)%ie-1:2, j,   k,   soln)) * fac(i1:lvl(lev)%ie:2)
+                     call die("[multigrid_gravity:approximate_solution_rbgs] This variant of relaxation loop is not implemented for cylindrical coordinates.")
+                  else
+                     lvl(          lev          )%mgvar(i1  :lvl(lev)%ie  :2, j,   k,   soln) = &
+                          lvl(lev)%rx * (lvl(lev)%mgvar(i1-1:lvl(lev)%ie-1:2, j,   k,   soln) + lvl(lev)%mgvar(i1+1:lvl(lev)%ie+1:2, j,   k,   soln)) + &
+                          lvl(lev)%ry * (lvl(lev)%mgvar(i1  :lvl(lev)%ie  :2, j-1, k,   soln) + lvl(lev)%mgvar(i1:  lvl(lev)%ie:  2, j+1, k,   soln)) + &
+                          lvl(lev)%rz * (lvl(lev)%mgvar(i1  :lvl(lev)%ie  :2, j,   k-1, soln) + lvl(lev)%mgvar(i1:  lvl(lev)%ie:  2, j,   k+1, soln)) - &
+                          lvl(lev)%r  *  lvl(lev)%mgvar(i1  :lvl(lev)%ie  :2, j,   k,   src)
+                  endif
                enddo
             enddo
          else
@@ -1395,24 +1475,57 @@ contains
             endif
 
             if (kd == RED_BLACK) k1 = lvl(lev)%ks + mod(n, RED_BLACK)
-            do k = k1, lvl(lev)%ke, kd
-               if (jd == RED_BLACK) j1 = lvl(lev)%js + mod(n+k, RED_BLACK)
-               do j = j1, lvl(lev)%je, jd
-                  if (id == RED_BLACK) i1 = lvl(lev)%is + mod(n+j+k, RED_BLACK)
-                  lvl(      lev)%mgvar(i1  :lvl(lev)%ie  :id, j,   k,   soln) = &
-                       & (1. - Jacobi_damp)* lvl(lev)%mgvar(i1  :lvl(lev)%ie  :id, j,   k,   soln) &
-                       &     - Jacobi_damp * lvl(lev)%mgvar(i1  :lvl(lev)%ie  :id, j,   k,   src)  * lvl(lev)%r
-                  if (has_dir(xdim)) &
-                       lvl (lev)%mgvar(i1  :lvl(lev)%ie  :id, j,   k,   soln) = lvl(lev)%mgvar(i1:  lvl(lev)%ie:  id, j,   k,   soln)  + &
-                       &       Jacobi_damp *(lvl(lev)%mgvar(i1-1:lvl(lev)%ie-1:id, j,   k,   soln) + lvl(lev)%mgvar(i1+1:lvl(lev)%ie+1:id, j,   k,   soln)) * lvl(lev)%rx
-                  if (has_dir(ydim)) &
-                       lvl (lev)%mgvar(i1  :lvl(lev)%ie  :id, j,   k,   soln) = lvl(lev)%mgvar(i1:  lvl(lev)%ie:  id, j,   k,   soln)  + &
-                       &       Jacobi_damp *(lvl(lev)%mgvar(i1  :lvl(lev)%ie  :id, j-1, k,   soln) + lvl(lev)%mgvar(i1:  lvl(lev)%ie:  id, j+1, k,   soln)) * lvl(lev)%ry
-                  if (has_dir(zdim)) &
-                       lvl (lev)%mgvar(i1  :lvl(lev)%ie  :id, j,   k,   soln) = lvl(lev)%mgvar(i1:  lvl(lev)%ie:  id, j,   k,   soln)  + &
-                       &       Jacobi_damp *(lvl(lev)%mgvar(i1  :lvl(lev)%ie  :id, j,   k-1, soln) + lvl(lev)%mgvar(i1:  lvl(lev)%ie:  id, j,   k+1, soln)) * lvl(lev)%rz
-               enddo
-            enddo
+            select case (mg_geometry)
+               case (MG_GEO_XYZ)
+                  do k = k1, lvl(lev)%ke, kd
+                     if (jd == RED_BLACK) j1 = lvl(lev)%js + mod(n+k, RED_BLACK)
+                     do j = j1, lvl(lev)%je, jd
+                        if (id == RED_BLACK) i1 = lvl(lev)%is + mod(n+j+k, RED_BLACK)
+                        lvl                           (lev)%mgvar(i1:  lvl(lev)%ie  :id, j,   k,   soln) = &
+                             & (1. - Jacobi_damp)* lvl(lev)%mgvar(i1  :lvl(lev)%ie  :id, j,   k,   soln) - &
+                             &       Jacobi_damp * lvl(lev)%mgvar(i1  :lvl(lev)%ie  :id, j,   k,   src)  * lvl(lev)%r
+                        if (has_dir(xdim))         lvl(lev)%mgvar(i1  :lvl(lev)%ie  :id, j,   k,   soln) = lvl(lev)%mgvar(i1:  lvl(lev)%ie:  id, j,   k,   soln)  + &
+                             &       Jacobi_damp *(lvl(lev)%mgvar(i1-1:lvl(lev)%ie-1:id, j,   k,   soln) + lvl(lev)%mgvar(i1+1:lvl(lev)%ie+1:id, j,   k,   soln)) * lvl(lev)%rx
+                        if (has_dir(ydim))         lvl(lev)%mgvar(i1  :lvl(lev)%ie  :id, j,   k,   soln) = lvl(lev)%mgvar(i1:  lvl(lev)%ie:  id, j,   k,   soln)  + &
+                             &       Jacobi_damp *(lvl(lev)%mgvar(i1  :lvl(lev)%ie  :id, j-1, k,   soln) + lvl(lev)%mgvar(i1:  lvl(lev)%ie:  id, j+1, k,   soln)) * lvl(lev)%ry
+                        if (has_dir(zdim))         lvl(lev)%mgvar(i1  :lvl(lev)%ie  :id, j,   k,   soln) = lvl(lev)%mgvar(i1:  lvl(lev)%ie:  id, j,   k,   soln)  + &
+                             &       Jacobi_damp *(lvl(lev)%mgvar(i1  :lvl(lev)%ie  :id, j,   k-1, soln) + lvl(lev)%mgvar(i1:  lvl(lev)%ie:  id, j,   k+1, soln)) * lvl(lev)%rz
+                     enddo
+                  enddo
+               case (MG_GEO_RPZ)
+                  do k = k1, lvl(lev)%ke, kd
+                     if (jd == RED_BLACK) j1 = lvl(lev)%js + mod(n+k, RED_BLACK)
+                     do j = j1, lvl(lev)%je, jd
+                        if (id == RED_BLACK) i1 = lvl(lev)%is + mod(n+j+k, RED_BLACK)
+                        do i = i1, lvl(lev)%ie, id
+                           cr  = overrelax / 2.
+                           crx = lvl(lev)%dvol2 * lvl(lev)%idx2 * lvl(lev)%x(i)**2
+                           cry = lvl(lev)%dvol2 * lvl(lev)%idy2
+                           crz = lvl(lev)%dvol2 * lvl(lev)%idz2 * lvl(lev)%x(i)**2
+                           cr  = cr  / (crx + cry + crz)
+                           crx = overrelax_x * crx * cr
+                           cry = overrelax_y * cry * cr
+                           crz = overrelax_z * crz * cr
+                           cr  = cr * lvl(lev)%dvol2 * lvl(lev)%x(i)**2
+
+                           crx1 = 2. * lvl(lev)%x(i) / lvl(lev)%dx
+                           if (crx1 /= 0.) crx1 = 1./crx1
+                           lvl                           (lev)%mgvar(i,   j,   k,   soln) = &
+                                & (1. - Jacobi_damp)* lvl(lev)%mgvar(i,   j,   k,   soln) - &
+                                &       Jacobi_damp * lvl(lev)%mgvar(i,   j,   k,   src)  * cr
+                           if (has_dir(xdim))         lvl(lev)%mgvar(i,   j,   k,   soln) = lvl(lev)%mgvar(i,   j,   k,   soln)  + &
+                                &       Jacobi_damp *(lvl(lev)%mgvar(i-1, j,   k,   soln) + lvl(lev)%mgvar(i+1, j,   k,   soln)) * crx + &
+                                &       Jacobi_damp *(lvl(lev)%mgvar(i+1, j,   k,   soln) - lvl(lev)%mgvar(i-1, j,   k,   soln)) * crx * crx1
+                           if (has_dir(ydim))        lvl (lev)%mgvar(i,   j,   k,   soln) = lvl(lev)%mgvar(i,   j,   k,   soln)  + &
+                                &       Jacobi_damp *(lvl(lev)%mgvar(i,   j-1, k,   soln) + lvl(lev)%mgvar(i,   j+1, k,   soln)) * cry
+                           if (has_dir(zdim))        lvl (lev)%mgvar(i,   j,   k,   soln) = lvl(lev)%mgvar(i,   j,   k,   soln)  + &
+                                &       Jacobi_damp *(lvl(lev)%mgvar(i,   j,   k-1, soln) + lvl(lev)%mgvar(i,   j,   k+1, soln)) * crz
+                        enddo
+                     enddo
+                  enddo
+               case default
+                  call die("[multigrid_gravity:approximate_solution_rbgs] Unsupported geometry.")
+            end select
          endif
 
          if (dirty_debug) then
@@ -1438,7 +1551,7 @@ contains
       use dataio_pub,         only: die, warn
       use multigridhelpers,   only: dirty_debug, check_dirty, dirtyL, multidim_code_3D
       use multigridmpifuncs,  only: mpi_multigrid_bnd
-      use multigridvars,      only: lvl, LOW, HIGH, NDIM, extbnd_antimirror
+      use multigridvars,      only: lvl, LOW, HIGH, NDIM, extbnd_antimirror, mg_geometry, MG_GEO_XYZ
 
       implicit none
 
@@ -1447,6 +1560,8 @@ contains
       integer, intent(in) :: soln !< index of solution in lvl()%mgvar
 
       integer :: nf, n
+
+      if (mg_geometry /= MG_GEO_XYZ) call die("[multigrid_gravity:approximate_solution_fft] FFT is not allowed in non-cartesian coordinates.")
 
       do nf = 1, nsmoof
          lvl(lev)%src(:, :, :) = lvl(lev)%mgvar(lvl(lev)%is:lvl(lev)%ie, lvl(lev)%js:lvl(lev)%je, lvl(lev)%ks:lvl(lev)%ke, src)

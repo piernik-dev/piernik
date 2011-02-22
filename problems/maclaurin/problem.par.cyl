@@ -1,0 +1,107 @@
+ $DOMAIN
+    nxd = 128
+    nyd = 128
+    nzd = 128
+    bnd_xl = 'out'
+    bnd_xr = 'out'
+    bnd_yl = 'out'
+    bnd_yr = 'out'
+    bnd_zl = 'out'
+    bnd_zr = 'out'
+    xmin   =  2.5
+    xmax   =  3.5
+    ymin   =  0.7
+    ymax   =  1.3
+    zmin   = -.5
+    zmax   =  .5
+    geometry = "cylindrical"
+ /
+
+ $MPI_BLOCKS
+    psize = 1, 1, 1
+ /
+
+ $CONSTANTS
+    constants_set = "cgs"
+ /
+
+ $RESTART_CONTROL
+    restart  = 'none'
+    new_id   = ''
+    nrestart = 0
+ /
+
+ $END_CONTROL
+    tend   = 0.0
+    nend   = 1 ! we can set here 0 as weel, but this would issue a warning
+ /
+
+ $OUTPUT_CONTROL
+    problem_name ='maclaurin'
+    run_id =  'sph'
+    ix      = 0
+    iy      = 0
+    iz      = 0
+    dt_hdf  = 10.0
+    dt_res  = 0.0
+    dt_plt  = 0.0
+    dt_log  = 0.001
+    dt_tsl  = 0.001
+    vars(1) = 'dens'
+    vars(2) = 'gpot'
+    vars(3) = 'apot'
+    vars(4) = 'errp'
+    domain  = 'phys_domain'
+ /
+
+ $FLUID_IONIZED
+    gamma_ion  = 1.67
+    selfgrav_ion = .true.
+ /
+
+ $FLUID_NEUTRAL
+    gamma_neu = 1.67
+    selfgrav_neu = .false.
+ /
+
+ $NUMERICAL_SETUP
+    cfl    = 0.7
+    smalld = 1.e-20
+    smallei= 1.e-20
+    limiter= 'vanleer'
+ /
+
+ $GRAVITY
+ /
+
+ $THERMAL
+ /
+
+ $RESISTIVITY
+ /
+
+ $PROBLEM_CONTROL
+    x0     = 3.
+    y0     = 1.
+    z0     = 0.
+    d0     = 1.
+    a1     = 0.2
+    e      = 0.
+    nsub   = 3
+ /
+
+ $MULTIGRID_SOLVER
+    level_max = 3
+    stdout    = .true.
+    ord_prolong   = -2
+    dirty_debug = .true.
+ /
+
+ $MULTIGRID_GRAVITY
+    norm_tol  = 1.e-6
+    nsmool    = 4
+!    grav_bnd_str  = "isolated"
+ /
+
+ $INTERACTIONS
+ /

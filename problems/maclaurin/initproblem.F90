@@ -133,10 +133,10 @@ contains
 
       use arrays,        only: u
       use constants,     only: pi
-      use dataio_pub,    only: msg, printinfo, warn
+      use dataio_pub,    only: msg, printinfo, warn, die
       use grid,          only: cg
       use initionized,   only: gamma_ion, idni, imxi, imzi, ieni
-      use mpisetup,      only: master, dom
+      use mpisetup,      only: master, dom, geometry
 #ifdef MAGNETIC
       use arrays,        only: b
 #endif /* MAGNETIC */
@@ -144,21 +144,34 @@ contains
       implicit none
 
       integer :: i, j, k, ii, jj, kk
-      real    :: xx, yy, zz, dm
+      real    :: xx, yy, zz, rr, dm
 
       do k = cg%ks, cg%ke
          do j = cg%js, cg%je
             do i = cg%is, cg%ie
 
+               !< \todo use subsampling only near the surface of the spheroid
                dm = 0.
                do kk = -nsub+1, nsub-1, 2
                   zz = ((cg%z(k) + kk*cg%dz/(2.*nsub) - z0)/a3)**2
                   do jj = -nsub+1, nsub-1, 2
-                     yy = ((cg%y(j) + jj*cg%dy/(2.*nsub) - y0)/a1)**2
                      do ii = -nsub+1, nsub-1, 2
-                        xx = ((cg%x(i) + ii*cg%dx/(2.*nsub) - x0)/a1)**2
 
-                        if (xx+yy+zz <= 1.) then
+                        select case (geometry)
+                           case ("cartesian")
+                              yy = ((cg%y(j) + jj*cg%dy/(2.*nsub) - y0)/a1)**2
+                              xx = ((cg%x(i) + ii*cg%dx/(2.*nsub) - x0)/a1)**2
+                              rr = xx + yy + zz
+                           case ("cylindrical")
+                              yy = cg%y(j) + jj*cg%dy/(2.*nsub) - y0
+                              xx = cg%x(i) + ii*cg%dx/(2.*nsub)
+                              rr = (xx**2 + x0**2 - 2. * xx * x0 * cos(yy))/a1**2 + zz
+                           case default
+                              call die("[initproblem:init_prob] Usupported geometry")
+                              rr = 0.
+                        end select
+
+                        if (rr <= 1.) then
                            dm = dm + d0
                         else
                            dm = dm + d1
@@ -185,8 +198,10 @@ contains
       if (master) then
          write(msg, '(3(a,g12.5),a)')"[initproblem:init_prob] Set up spheroid with a1 and a3 axes = ", a1, ", ", a3, " (eccentricity = ", e, ")"
          call printinfo(msg, .true.)
-         if (x0-a1<dom%xmin .or. x0+a1>dom%xmax .or. y0-a1<dom%ymin .or. y0+a1>dom%ymax .or. z0-a3<dom%zmin .or. z0+a3>dom%zmax) &
-              call warn("[initproblem:init_prob] Part of the spheroid is outside the domain")
+         if (   ((geometry == "cartesian" .and. (x0-a1<dom%xmin .or. z0-a3<dom%zmin .or. z0+a3>dom%zmax)) .or. &
+              &  (geometry == "cylindrical" .and. dom%xmin > 0.)) .or. &
+              &  z0-a3<dom%zmin .or. z0+a3>dom%zmax) &
+                    call warn("[initproblem:init_prob] Part of the spheroid is outside the domain")
          write(msg,'(2(a,g12.5))')   "[initproblem:init_prob] Density = ", d0, " mass = ", 4./3.*pi * a1**2 * a3 * d0
          call printinfo(msg, .true.)
       endif
@@ -230,15 +245,15 @@ contains
 
       use diagnostics,   only: my_allocate
       use constants,     only: pi, newtong
-      use dataio_pub,    only: warn
+      use dataio_pub,    only: warn, die
       use grid,          only: cg
-      use mpisetup,      only: master
+      use mpisetup,      only: master, geometry
 
       implicit none
 
       integer            :: i, j, k
       real               :: potential, r2, rr
-      real               :: AA1, AA3, a12, a32, x02, y02, z02, lam, h
+      real               :: AA1, AA3, a12, a32, x02, y02, z02, lam, h, cdphi
       real, parameter    :: small_e = 1e-3
 
       call my_allocate(apot, [cg%nxb, cg%nyb, cg%nzb], "apot")
@@ -262,10 +277,21 @@ contains
       do k = cg%ks, cg%ke
          z02 = (cg%z(k)-z0)**2
          do j = cg%js, cg%je
-            y02 = (cg%y(j)-y0)**2
             do i = cg%is, cg%ie
-               x02 = (cg%x(i)-x0)**2
-               r2 = (x02+y02)/a12 + z02/a32
+               select case (geometry)
+                  case ("cartesian")
+                     y02 = (cg%y(j)-y0)**2
+                     x02 = (cg%x(i)-x0)**2
+                     r2 = (x02+y02)/a12 + z02/a32
+                  case ("cylindrical")
+                     cdphi = cos(cg%y(j)-y0)
+                     r2 = (cg%x(i)**2 + x0**2 - 2. * cg%x(i) * x0 * cdphi)/a12 + z02/a32
+                     x02 = r2 * cdphi**2
+                     y02 = r2 - x02
+                  case default
+                     call die("[initproblem:compute_maclaurin_potential] Invalid geometry.")
+                     r2 = 0 ; x02 = 0 ; y02 = 0 ! suppress compiler warnings
+               end select
                rr = r2 * a12
                if (r2 > 1.) then
                   if (e > small_e) then
@@ -320,15 +346,16 @@ contains
       use arrays,        only: sgp
       use dataio_pub,    only: msg, printinfo
       use grid,          only: cg
-      use mpisetup,      only: master, comm3d, ierr
+      use mpisetup,      only: master, comm3d, ierr, geometry
       use mpi,           only: MPI_DOUBLE_PRECISION, MPI_SUM, MPI_MIN, MPI_MAX, MPI_IN_PLACE
 
       implicit none
 
       integer            :: i, j, k
       real, dimension(2) :: norm, dev
-      real               :: potential
+      real               :: potential, fac
 
+      fac = 1.
       norm(:) = 0.
       dev(1) = huge(1.0)
       dev(2) = -dev(1)
@@ -337,8 +364,9 @@ contains
          do j = cg%js, cg%je
             do i = cg%is, cg%ie
                potential =  apot(i-cg%is+1, j-cg%js+1, k-cg%ks+1)
-               norm(1) = norm(1) + (potential - sgp(i, j, k))**2
-               norm(2) = norm(2) + potential**2
+               if (geometry == "cylindrical") fac = cg%x(i)
+               norm(1) = norm(1) + (potential - sgp(i, j, k))**2 * fac
+               norm(2) = norm(2) + potential**2 * fac
                dev(1) = min(dev(1), (potential - sgp(i, j, k))/potential)
                dev(2) = max(dev(2), (potential - sgp(i, j, k))/potential)
             enddo

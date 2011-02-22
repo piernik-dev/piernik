@@ -82,7 +82,8 @@ module multigridvars
       integer :: level                                                !< multigrid level, level_min == 1: coarsest, level_max: finest
       integer :: nxb, nyb, nzb                                        !< x, y and z local active cell count
       integer :: is, ie, js, je, ks, ke                               !< lowest and highest active cell indices
-      real    :: dx, dy, dz, dvol, vol                                !< physical cell sizes, cell volume, processor domain volume
+      real    :: dx, dy, dz                                           !< physical cell sizes,
+      real    :: dvol, vol                                            !< dvol=dx*dy*dz (cell volume), processor domain volume; BEWARE: for cylindrical geometry multiply by appropriate x(:) to get real volume
       real    :: dxy, dxz, dyz                                        !< cell surface area
       real    :: idx2, idy2, idz2                                     !< inverse of d{x,y,z} square
       real    :: dvol2                                                !< square of cell volume
@@ -136,6 +137,12 @@ module multigridvars
       integer, dimension(NDIM) :: lo, up, proc
    end type cart
    type(cart), dimension(:),       allocatable :: gb_cartmap          !< rank-to-coordinates array and ranges on gb_src for assembling base level;
+
+   ! geometry
+   integer, parameter :: MG_GEO_INVALID = -1                       !< non-recognized grid geometry
+   integer, parameter :: MG_GEO_XYZ = 0                            !< cartesian grid with uniform cell spacing
+   integer, parameter :: MG_GEO_RPZ = MG_GEO_XYZ + 1               !< cylindrical grid with uniform spacing
+   integer :: mg_geometry                                          !< one of the above values , depending on mpisetup::geometry
 
    ! miscellaneous
    real                    :: ts                                      !< time for runtime profiling

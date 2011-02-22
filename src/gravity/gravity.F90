@@ -769,6 +769,8 @@ contains
 
       if (geometry /= "cartesian") then
           select case (external_gp)
+             case ("null", "grav_null", "GRAV_NULL")
+                ! No gravity - no problem, selfgravity has to check the geometry during initialization
              case ("user", "grav_user", "GRAV_USER")
                 ! The User knows what he/she is doing ...
              case default ! standard cases do not support cylindrical geometry yet

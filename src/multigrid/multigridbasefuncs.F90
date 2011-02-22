@@ -205,6 +205,7 @@ contains
            & fine%mgvar( fine%is+D_x:fine%ie    :(1+D_x), fine%js    :fine%je-D_y:(1+D_y), fine%ks+D_z:fine%ke    :(1+D_z), iv) + &
            & fine%mgvar( fine%is    :fine%ie-D_x:(1+D_x), fine%js+D_y:fine%je    :(1+D_y), fine%ks+D_z:fine%ke    :(1+D_z), iv) + &
            & fine%mgvar( fine%is+D_x:fine%ie    :(1+D_x), fine%js+D_y:fine%je    :(1+D_y), fine%ks+D_z:fine%ke    :(1+D_z), iv) ) *0.125  !/ ((1.+D_x)*(1.+D_y)*(1.+D_z))
+      !\todo add geometrical terms to improve convergence on cylindrical grids
 
       call check_dirty(coarse%level, iv, "restrict_level+")
 
@@ -220,7 +221,7 @@ contains
       use dataio_pub,    only: die
       use mpisetup,      only: comm3d, ierr
       use mpi,           only: MPI_DOUBLE_PRECISION, MPI_SUM
-      use multigridvars, only: ngridvars, roof
+      use multigridvars, only: ngridvars, roof, mg_geometry, MG_GEO_XYZ, MG_GEO_RPZ
 
       implicit none
 
@@ -228,10 +229,21 @@ contains
       real,    intent(out) :: norm !< the calculated norm
 
       real                 :: lsum
+      integer              :: i
 
       if (iv <= 0 .or. iv > ngridvars) call die("[multigridbasefuncs:norm_sq] Invalid variable index")
 
-      lsum = sum(roof%mgvar(roof%is:roof%ie, roof%js:roof%je, roof%ks:roof%ke, iv)**2) * roof%dvol !> \deprecated BEWARE: cylindrical factors go here
+      select case (mg_geometry)
+         case (MG_GEO_XYZ)
+            lsum = sum(roof%mgvar(roof%is:roof%ie, roof%js:roof%je, roof%ks:roof%ke, iv)**2) * roof%dvol
+         case (MG_GEO_RPZ)
+            lsum = 0.
+            do i = roof%is, roof%ie
+               lsum = lsum + sum(roof%mgvar(i, roof%js:roof%je, roof%ks:roof%ke, iv)**2) * roof%dvol * roof%x(i)
+            enddo
+         case default
+            call die("[multigridbasefuncs:norm_sq] Unsupported geometry.")
+      end select
       call MPI_Allreduce(lsum, norm, 1, MPI_DOUBLE_PRECISION, MPI_SUM, comm3d, ierr)
       norm = sqrt(norm)
 
@@ -247,7 +259,7 @@ contains
       use dataio_pub,    only: die
       use mpisetup,      only: comm3d, ierr
       use mpi,           only: MPI_DOUBLE_PRECISION, MPI_SUM
-      use multigridvars, only: lvl, level_min, level_max, ngridvars
+      use multigridvars, only: lvl, level_min, level_max, ngridvars, mg_geometry, MG_GEO_XYZ, MG_GEO_RPZ
 
       implicit none
 
@@ -255,11 +267,22 @@ contains
       integer, intent(in) :: iv   !< index of variable in lvl()%mgvar which we want to have zero average
 
       real                :: lsum, avg, vol
+      integer             :: i
 
       if (lev < level_min .or. lev > level_max) call die("[multigridbasefuncs:substract_average] Invalid level number.")
       if (iv < 1 .or. iv > ngridvars) call die("[multigridbasefuncs:substract_average] Invalid variable index.")
 
-      lsum = sum(lvl(lev)%mgvar(lvl(lev)%is:lvl(lev)%ie, lvl(lev)%js:lvl(lev)%je, lvl(lev)%ks:lvl(lev)%ke, iv)) * lvl(lev)%dvol !> \deprecated BEWARE: cylindrical factors go here
+      select case (mg_geometry)
+         case (MG_GEO_XYZ)
+            lsum = sum(lvl(lev)%mgvar(lvl(lev)%is:lvl(lev)%ie, lvl(lev)%js:lvl(lev)%je, lvl(lev)%ks:lvl(lev)%ke, iv)) * lvl(lev)%dvol
+         case (MG_GEO_RPZ)
+            lsum = 0.
+            do i = lvl(lev)%is, lvl(lev)%ie
+               lsum = lsum + sum(lvl(lev)%mgvar(i, lvl(lev)%js:lvl(lev)%je, lvl(lev)%ks:lvl(lev)%ke, iv)) * lvl(lev)%dvol * lvl(lev)%x(i)
+            enddo
+         case default
+            call die("[multigridbasefuncs:substract_average] Unsupported geometry.")
+      end select
       call MPI_Allreduce(lsum, avg, 1, MPI_DOUBLE_PRECISION, MPI_SUM, comm3d, ierr)
       call MPI_Allreduce(lvl(lev)%vol, vol, 1, MPI_DOUBLE_PRECISION, MPI_SUM, comm3d, ierr) ! This probably can be calculated in init_multigrid
       avg = avg / vol
