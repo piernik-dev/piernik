@@ -206,6 +206,7 @@ contains
       implicit none
 
       real :: dpi
+      real :: xmno, ymno, ymxo
       integer :: iproc
 
       character(len=cwdlen) :: cwd_proc
@@ -334,14 +335,32 @@ contains
          diff_nml(NUMERICAL_SETUP)
          diff_nml(DOMAIN)
 
+         ! Sanitize input parameters, if possible
+
          dom%n_d(:) = max(1, [nxd, nyd, nzd])
 
-         ! If ymin or ymax are set here, their values will not be properly reported in the log file.
+         xmno = xmin
+         ymno = ymin
+         ymxo = ymax
          select case (geometry)
             case ("cylindrical") !> \todo replace strings by enums
                if (ymin <= -big_float) ymin = 0.
                if (ymax >= big_float) ymax = dpi
-               if (ymax-ymin > dpi) call die("[mpisetup:init_mpi] Hyperbolic spaces are not implemented.")
+               if (ymax-ymin > dpi) then
+                  call warn("[mpisetup:init_mpi] Hyperbolic spaces are not implemented. Setting azimuthal span to 2pi.")
+                  if (abs(ymin) < 1./epsilon(1.)) then
+                     ymax = ymin + dpi
+                  else
+                     ymin = ymax - dpi
+                  endif
+                  if (abs(ymax-ymin - dpi) > 100*epsilon(1.)) call die("[mpisetup:init_mpi] absolute values for both ymax and ymin too high.") ! magic number
+               endif
+               if (xmin <= 0.) then
+                  xmin = 0.
+                  if (bnd_xl /= "ref") call warn("[mpisetup:init_mpi] Enforcing bnd_xl = 'ref'.")
+                  bnd_xl = "ref"
+               endif
+               if (bnd_xr == "per") call die("[mpisetup:init_mpi] Periodicity in radial direction is not allowed in cylindrical coordinates")
             case ("cartesian")
                if (nyd > 1 .and. (ymin <= -big_float .or. ymax >= big_float)) call warn("[mpisetup:init_mpi] y range not specified. Defaulting to [0..1]")
                if (ymin <= -big_float) ymin = 0.
@@ -350,9 +369,25 @@ contains
                call die("[mpisetup:init_mpi] Invalid geometry name.")
          end select
 
-      endif
+         if (xmno /= xmin) then
+            write(msg,'(2(a,g20.12))')"[mpisetup:init_mpi] Sanitized xmin: ",xmno," -> ",xmin
+            call warn(msg)
+         endif
+         if (ymno /= ymin .and. ymno /= -big_float) then
+            write(msg,'(2(a,g20.12))')"[mpisetup:init_mpi] Sanitized ymin: ",ymno," -> ",ymin
+            call warn(msg)
+         endif
+         if (ymxo /= ymax .and. ymxo /= big_float) then
+            write(msg,'(2(a,g20.12))')"[mpisetup:init_mpi] Sanitized ymax: ",ymno," -> ",ymax
+            call warn(msg)
+         endif
+         if (xmin > xmax) call die("[[mpisetup:init_mpi] Negative span in X-direction")
+         if (ymin > ymax) call die("[[mpisetup:init_mpi] Negative span in Y-direction")
+         if (zmin > zmax) call die("[[mpisetup:init_mpi] Negative span in Z-direction")
 
-      cfl_max = min(max(cfl_max, min(cfl*1.1, cfl+0.05, (1.+cfl)/2.) ), 1.0) ! automatically sanitize cfl_max
+         cfl_max = min(max(cfl_max, min(cfl*1.1, cfl+0.05, (1.+cfl)/2.) ), 1.0) ! automatically sanitize cfl_max
+
+      endif
 
       if (master) then
 
