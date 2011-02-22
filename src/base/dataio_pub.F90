@@ -274,11 +274,11 @@ contains
          case (T_SILENT)
             ansicolor = ansi_black
             outunit   = stdout
-            msg_type_str = ""
+            msg_type_str = ''
          case default ! T_PLAIN
             ansicolor = ansi_black
             outunit   = stdout
-            msg_type_str = ""
+            msg_type_str = ''
       end select
 
       call MPI_Comm_rank(MPI_COMM_WORLD, proc, ierrh)
@@ -294,7 +294,7 @@ contains
       if (log_file_initialized) then
          open(log_lun, file=log_file, position='append')
       else
-         open(log_lun, file=tmp_log_file, status='unknown', position='append')
+         open(log_lun, file=tmp_log_file, status='unknown', position='append')   ! BEWARE: possible race condition
       endif
       if (proc == 0 .and. mode == T_ERR) write(log_lun,'(/,a,/)')"###############     Crashing     ###############"
       write(log_lun,'(2a,i5,2a)') msg_type_str," @", proc, ': ', trim(nm)
