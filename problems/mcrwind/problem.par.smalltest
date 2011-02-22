@@ -24,8 +24,8 @@
  $START_CONTROL
  /
 
- $CONSTANTS
-    constants_set = "PSM"
+ $UNITS
+    units_set = "PSM"
  /
 
  $RESTART_CONTROL

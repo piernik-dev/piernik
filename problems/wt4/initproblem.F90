@@ -270,7 +270,8 @@ contains
    subroutine init_prob
 
       use arrays,        only: u, b, cs_iso2_arr
-      use constants,     only: small, kboltz, mH
+      use constants,     only: small
+      use units,         only: kboltz, mH
       use dataio_pub,    only: warn, printinfo, msg
       use grid,          only: cg
       use initionized,   only: idni, imxi, imyi, imzi
@@ -381,9 +382,9 @@ contains
 
    subroutine init_prob_attrs(file_id)
 
-      use constants, only: fpiG
-      use hdf5, only: HID_T, SIZE_T
-      use h5lt, only: h5ltset_attribute_double_f
+      use units, only: fpiG
+      use hdf5,  only: HID_T, SIZE_T
+      use h5lt,  only: h5ltset_attribute_double_f
 
       implicit none
 

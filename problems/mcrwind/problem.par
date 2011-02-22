@@ -21,8 +21,8 @@
     psize = 1, 1, 1
  /
 
- $CONSTANTS
-    constants_set = "PSM"
+ $UNITS
+    units_set = "PSM"
  /
 
  $RESTART_CONTROL

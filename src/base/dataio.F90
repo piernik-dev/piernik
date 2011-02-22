@@ -936,7 +936,7 @@ contains
       use mpisetup,   only: smallp
       use grid,       only: cg
       use types,      only: phys_prop, component_fluid
-      use constants,  only: mH, kboltz
+      use units,      only: mH, kboltz
 
       implicit none
 

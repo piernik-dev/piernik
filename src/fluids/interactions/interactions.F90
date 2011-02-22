@@ -86,7 +86,7 @@ contains
       use dataio_pub,    only: die, code_progress, PIERNIK_INIT_MPI
       use mpisetup,      only: master, slave, lbuff, rbuff, buffer_dim, ierr, comm!, grace_period_passed
       use mpi,           only: MPI_DOUBLE_PRECISION, MPI_LOGICAL
-      use constants,     only: cm, gram
+      use units,     only: cm, gram
       use fluidindex,    only: flind
 
       implicit none

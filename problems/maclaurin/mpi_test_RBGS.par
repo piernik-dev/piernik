@@ -20,8 +20,8 @@
     psize = 2, 2, 2
  /
 
- $CONSTANTS
-    constants_set = "cgs"
+ $UNITS
+    units_set = "cgs"
  /
 
  $RESTART_CONTROL

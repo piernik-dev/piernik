@@ -110,9 +110,11 @@ contains
    end function dens_Rdistr
 
    subroutine init_prob
+
       use arrays,      only: u,gp
       use grid,        only: cg
-      use constants,   only: newtong,pi,dpi
+      use constants,   only: pi, dpi
+      use units,       only: newtong
       use gravity,     only: ptmass
       use initneutral, only: idnn, imxn, imyn, imzn
       use initdust,    only: idnd, imxd, imyd, imzd

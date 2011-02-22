@@ -301,7 +301,7 @@ contains
       use dataio_pub,    only: die
       use mpisetup,      only: xdim, ydim, zdim
       use multigridvars, only: LOW, HIGH, is_external, XLO, XHI, YLO, YHI, ZLO, ZHI, mg_geometry, MG_GEO_XYZ !, MG_GEO_RPZ
-      use constants,     only: newtong
+      use units,     only: newtong
 
       implicit none
 
@@ -898,7 +898,7 @@ contains
 
    subroutine moments2pot(potential, x, y, z)
 
-      use constants, only: newtong
+      use units, only: newtong
 
       implicit none
 
@@ -1082,7 +1082,7 @@ contains
 !!$   subroutine test_multipoles
 !!$
 !!$      use dataio_pub,         only: die, printinfo, msg
-!!$      use constants,          only: newtong
+!!$      use units,          only: newtong
 !!$      use multigridhelpers,   only: dirty_debug
 !!$      use debug,              only: aux_R, aux_I
 !!$

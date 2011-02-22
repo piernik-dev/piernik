@@ -248,7 +248,8 @@ contains
       use dataio_pub,          only: msg, printinfo, die
       use types,               only: component_fluid
       use arrays,              only: u, b, dprof
-      use constants,           only: newtong, gram, cm, kboltz, mH, dpi
+      use constants,           only: dpi
+      use units,               only: newtong, gram, cm, kboltz, mH
       use fluidindex,          only: ibx, iby, ibz, flind
       use gravity,             only: r_smooth, r_grav, n_gravr, ptmass, source_terms_grav, grav_pot2accel, grav_pot_3d
       use grid,                only: cg
@@ -627,11 +628,14 @@ contains
    end subroutine problem_customize_solution_kepler
 !-----------------------------------------------------------------------------
    subroutine my_grav_pot_3d
-      use constants, only: newtong
+
+      use units,     only: newtong
       use gravity,   only: ptmass, sum_potential
       use arrays,    only: gp
       use grid,      only: cg
+
       implicit none
+
       logical, save :: frun = .true.
       real          :: r2
       integer       :: i, k

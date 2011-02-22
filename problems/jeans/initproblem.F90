@@ -134,7 +134,8 @@ contains
    subroutine init_prob
 
       use arrays,        only: u
-      use constants,     only: fpiG, pi, newtong
+      use constants,     only: pi
+      use units,         only: fpiG, newtong
       use dataio_pub,    only: tend, msg, printinfo, warn
       use grid,          only: cg
       use initionized,   only: gamma_ion, idni, imxi, imzi, ieni

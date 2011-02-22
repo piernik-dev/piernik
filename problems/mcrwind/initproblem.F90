@@ -252,7 +252,7 @@ contains
 
    subroutine galactic_grav_accel(sweep, i1,i2, xsw, n, grav)
 
-      use constants,   only: r_gc_sun, kpc
+      use units,       only: r_gc_sun, kpc
       use gravity,     only: r_gc
       use mpisetup,    only: zdim
 

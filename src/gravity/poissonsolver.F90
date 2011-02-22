@@ -109,7 +109,8 @@ contains
    subroutine poisson_xy2d(den, pot, lpot, rpot, dx)
 
       use arrays,    only: x
-      use constants, only: newtong, dpi
+      use constants, only: dpi
+      use units,     only: newtong
       use grid,      only: cg
       use shear,     only: dely
       use mpisetup,  only: dom
@@ -255,7 +256,8 @@ contains
 !<
    subroutine poisson_xy(den, pot, dx)
 
-      use constants, only: newtong, dpi
+      use constants, only: dpi
+      use units,     only: newtong
 
       implicit none
 
@@ -369,7 +371,8 @@ contains
 !<
    subroutine poisson_xyp(den, pot, dz)
 
-      use constants, only: fpiG, dpi
+      use constants, only: dpi
+      use units,     only: fpiG
 
       implicit none
 
@@ -521,7 +524,8 @@ contains
 !<
    subroutine poisson_xyzp(den, pot)
 
-      use constants, only: fpiG, dpi
+      use constants, only: dpi
+      use units,     only: fpiG
       use grid,      only: cg
 
       implicit none

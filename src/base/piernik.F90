@@ -171,7 +171,7 @@ contains
    subroutine init_piernik
 
       use arrays,                only: init_arrays
-      use constants,             only: init_constants
+      use units,             only: init_units
       use dataio,                only: init_dataio, write_data
       use dataio_pub,            only: nrestart, cwd, par_file, tmp_log_file, msg, printio, die, warn, printinfo, require_init_prob, problem_name, run_id, parse_cmdline, &
            &                           code_progress, PIERNIK_INIT_MPI, PIERNIK_INIT_BASE, PIERNIK_INIT_ARRAYS, PIERNIK_INIT_IO_IC
@@ -228,7 +228,7 @@ contains
 
       call init_time_step
 
-      call init_constants
+      call init_units
 
       call init_fluidboundaries
 
@@ -254,7 +254,7 @@ contains
 #endif /* RESISTIVE */
 
 #ifdef GRAV
-      call init_grav ! depends on constants and arrays
+      call init_grav ! depends on units and arrays
 !> \deprecated It is only temporary solution, but grav_pot_3d must be called after init_prob due to csim2,c_si,alpha clash!!!
       if (associated(grav_pot_3d)) then
          call grav_pot_3d ! depends on grav
@@ -275,14 +275,14 @@ contains
 #endif /* SN_SRC */
 
 #ifdef MULTIGRID
-      call init_multigrid ! depends on grid, geometry, constants and arrays
+      call init_multigrid ! depends on grid, geometry, units and arrays
 #endif /* MULTIGRID */
 
       code_progress = PIERNIK_INIT_IO_IC       ! Almost everything is initialized: do problem-related stuff here, set-up I/O and create or read the initial conditions.
 
       call read_problem_par ! may depend on anything but init_dataio, \todo add checks against PIERNIK_INIT_IO_IC to all initproblem::read_problem_par
 
-      call init_dataio ! depends on constants, fluids (through dataio_hdf5), fluidboundaries, arrays, grid and shear (through magboundaries::bnd_b or fluidboundaries::bnd_u) \todo split me
+      call init_dataio ! depends on units, fluids (through dataio_hdf5), fluidboundaries, arrays, grid and shear (through magboundaries::bnd_b or fluidboundaries::bnd_u) \todo split me
 
       if (master) then
          call printinfo("###############     Initial Conditions     ###############", .false.)

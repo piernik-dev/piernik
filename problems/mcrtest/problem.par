@@ -21,7 +21,7 @@
     psize = 2, 2, 1
  /
 
- $CONSTANTS
+ $UNITS
  /
 
  $RESTART_CONTROL

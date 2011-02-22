@@ -19,8 +19,8 @@
  $MPI_BLOCKS
  /
 
- $CONSTANTS
-    constants_set = "cgs"
+ $UNITS
+    units_set = "cgs"
  /
 
  $RESTART_CONTROL

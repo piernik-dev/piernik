@@ -141,7 +141,8 @@ contains
    subroutine init_prob
 
       use arrays,            only: u, b, sgp, gpot, hgpot
-      use constants,         only: pi, newtong
+      use constants,         only: pi
+      use units,             only: newtong
       use dataio_pub,        only: msg, die, warn, printinfo
       use grid,              only: cg
       use initionized,       only: gamma_ion, idni, imxi, imyi, imzi, ieni

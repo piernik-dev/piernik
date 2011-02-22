@@ -22,8 +22,8 @@
     psize = 4, 1, 1
  /
 
- $CONSTANTS
-   constants_set = "pln"
+ $UNITS
+   units_set = "pln"
  /
 
  $RESTART_CONTROL

@@ -215,9 +215,9 @@ contains
 
    subroutine init_prob_attrs(file_id)
 
-      use constants, only: fpiG
-      use hdf5,      only: HID_T, SIZE_T
-      use h5lt,      only: h5ltset_attribute_double_f
+      use units, only: fpiG
+      use hdf5,  only: HID_T, SIZE_T
+      use h5lt,  only: h5ltset_attribute_double_f
 
       implicit none
 
@@ -244,7 +244,8 @@ contains
    subroutine compute_maclaurin_potential
 
       use diagnostics,   only: my_allocate
-      use constants,     only: pi, newtong
+      use constants,     only: pi
+      use units,         only: newtong
       use dataio_pub,    only: warn, die
       use grid,          only: cg
       use mpisetup,      only: master, geometry

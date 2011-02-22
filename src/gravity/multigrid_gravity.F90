@@ -749,7 +749,7 @@ contains
 #ifdef JEANS_PROBLEM
       use problem_pub,        only: jeans_d0, jeans_mode ! hack for tests
 #endif /* JEANS_PROBLEM */
-      use constants,          only: fpiG
+      use units,              only: fpiG
       use grid,               only: cg
       use dataio_pub,         only: die
       use multigridhelpers,   only: set_dirty, check_dirty
