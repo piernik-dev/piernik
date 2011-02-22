@@ -505,7 +505,7 @@ contains
 
          if (lvl(idx)%fft_type /= fft_none) then
 
-            if (mg_geometry == MG_GEO_XYZ) call die("[multigrid_gravity:init_multigrid_grav_post] FFT is not allowed in non-cartesian coordinates.")
+            if (mg_geometry /= MG_GEO_XYZ) call die("[multigrid_gravity:init_multigrid_grav_post] FFT is not allowed in non-cartesian coordinates.")
 
             select case (lvl(idx)%fft_type)
                case (fft_rcr)
