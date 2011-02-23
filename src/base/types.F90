@@ -27,23 +27,19 @@
 !
 #include "piernik.h"
 !>
-!! \brief (KK)
+!! \brief Definitions of compound types and subroutine templates for user hooks
 !<
 module types
+
+   use constants, only: domlen, idlen, bndlen, ndims
 
    implicit none
 
    private
-   public :: axes, hdf, value, domain_container, grid_container, tsl_container, phys_prop, &
-   & problem_customize_solution, finalize_problem, domlen, idlen, bndlen, &
-   & component_fluid, var_numbers, custom_emf_bnd, cleanup_problem, &
-   & problem_grace_passed
+   public :: axes, hdf, value, domain_container, grid_container, tsl_container, phys_prop, problem_customize_solution, finalize_problem, &
+        &    component_fluid, var_numbers, custom_emf_bnd, cleanup_problem, problem_grace_passed
 
-   integer, parameter :: domlen = 16 ! should be <= dataio_pub::cbuff_len
-   integer, parameter :: bndlen = 4 !< length of boundary names
-   integer, parameter :: idlen  = 3
-
-   integer, parameter :: dims   = 3
+   public :: domlen, idlen, bndlen  ! \deprecated re-exported
 
    type :: hdf
       integer :: nhdf, nres, step_hdf, step_res, nstep, nrestart
@@ -53,9 +49,9 @@ module types
    end type hdf
 
    type :: value
-      real                     :: val
-      integer, dimension(dims) :: loc
-      integer                  :: proc
+      real                      :: val
+      integer, dimension(ndims) :: loc
+      integer                   :: proc
    end type value
 
    type :: phys_prop
@@ -90,7 +86,7 @@ module types
       real    :: ymax                           !< physical domain right y-boundary position
       real    :: zmin                           !< physical domain left z-boundary position
       real    :: zmax                           !< physical domain right z-boundary position
-      integer, dimension(dims) :: n_d           !< number of grid cells in physical domain in x-, y- and z-direction (where equal to 1, the dimension is reduced to a point with no boundary cells)
+      integer, dimension(ndims) :: n_d          !< number of grid cells in physical domain in x-, y- and z-direction (where equal to 1, the dimension is reduced to a point with no boundary cells)
       character(len=bndlen) :: bnd_xl_dom       !< low-x computational domain boundary
       character(len=bndlen) :: bnd_xr_dom       !< high-x computational domain boundary
       character(len=bndlen) :: bnd_yl_dom       !< low-y computational domain boundary
@@ -131,8 +127,8 @@ module types
       real    :: zminb                          !< current block left z-boundary position
       real    :: zmaxb                          !< current block right z-boundary position
 
-      real, dimension(dims)           :: dl     !< array of %grid cell sizes in all directions
-      real, dimension(dims)           :: idl    !< array of inverted %grid cell sizes in all directions
+      real, dimension(ndims)          :: dl     !< array of %grid cell sizes in all directions
+      real, dimension(ndims)          :: idl    !< array of inverted %grid cell sizes in all directions
       real, allocatable, dimension(:) :: inv_x  !< array of invert x-positions of %grid cells centers
       real, allocatable, dimension(:) :: inv_y  !< array of invert y-positions of %grid cells centers
       real, allocatable, dimension(:) :: inv_z  !< array of invert z-positions of %grid cells centers
@@ -157,8 +153,8 @@ module types
       integer :: ke                             !< index of the last %grid cell of physical domain in z-direction
       integer :: nb                             !< number of boundary cells surrounding the physical domain, same for all directions
       integer :: isb, ieb, jsb, jeb, ksb, keb   !< auxiliary indices for exchanging boundary data, (e.g. is:isb -> ie+1:nx, ieb:ie -> 1:nb)
-      integer, dimension(dims) :: off           !< offset of the local domain within computational domain
-      integer, dimension(dims) :: n_b           !< [nxb, nyb, nzb]
+      integer, dimension(ndims) :: off          !< offset of the local domain within computational domain
+      integer, dimension(ndims) :: n_b          !< [nxb, nyb, nzb]
       integer :: maxxyz                         !< maximum number of %grid cells in any direction
 
       ! a pointer to the next cg

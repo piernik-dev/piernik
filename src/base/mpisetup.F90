@@ -34,9 +34,10 @@
 !! \copydetails mpisetup::init_mpi
 !<
 module mpisetup
+
 !   use mpi, only: MPI_STATUS_SIZE
-   use dataio_pub, only: cbuff_len
-   use types,      only: bndlen, domain_container
+   use types,      only: domain_container
+   use constants,  only: xdim, ydim, zdim, ndims, big_float, cbuff_len, buffer_dim, bndlen
 
    implicit none
 
@@ -44,11 +45,13 @@ module mpisetup
 
    private
    public :: bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr, &
-        &    buffer_dim, cbuff, cfl, cfl_max, cflcontrol, &
+        &    cbuff, cfl, cfl_max, cflcontrol, &
         &    cfr_smooth, cleanup_mpi, comm, comm3d, dt, dt_initial, dt_max_grow, dt_min, dt_old, dtm, err, ibuff, ierr, info, init_mpi, &
-        &    integration_order, lbuff, limiter, mpifind, ndims, nproc, nstep, pcoords, proc, procxl, procxr, procxyl, procyl, procyr, procyxl, proczl, &
+        &    integration_order, lbuff, limiter, mpifind, nproc, nstep, pcoords, proc, procxl, procxr, procxyl, procyl, procyr, procyxl, proczl, &
         &    proczr, psize, rbuff, req, smalld, smallei, smallp, status, t, use_smalld, magic_mass, local_magic_mass, master, slave, &
-        &    nb, xdim, ydim, zdim, has_dir, eff_dim, big_float, relax_time, grace_period_passed, dom, geometry
+        &    nb, has_dir, eff_dim, relax_time, grace_period_passed, dom, geometry
+
+   public :: xdim, ydim, zdim, ndims, big_float, buffer_dim ! \deprecated re-exported
 
    integer :: nproc, proc, ierr , rc, info
    integer :: status(MPI_STATUS_SIZE,4)
@@ -57,16 +60,11 @@ module mpisetup
    logical, protected    :: master, slave
 
    real, parameter       :: dt_default_grow = 2.
-   real, parameter       :: big_float =  huge(real(1.0,4))
    real                  :: t, dt, dt_old, dtm
    real, save            :: magic_mass = 0.0
    real, save            :: local_magic_mass = 0.0
    integer               :: nstep
 
-   integer, parameter    :: xdim=1                          !< parameter assigned to x-direction
-   integer, parameter    :: ydim=2                          !< parameter assigned to y-direction
-   integer, parameter    :: zdim=3                          !< parameter assigned to z-direction
-   integer, parameter    :: ndims = 3       ! 3D grid
    integer               :: comm, comm3d
    integer, dimension(ndims) :: pcoords, coords
    logical, dimension(ndims) :: periods
@@ -76,7 +74,6 @@ module mpisetup
 
    type(domain_container), protected :: dom
 
-   integer, parameter               :: buffer_dim=200
    character(len=cbuff_len), dimension(buffer_dim) :: cbuff
    integer,   dimension(buffer_dim) :: ibuff
    real,      dimension(buffer_dim) :: rbuff
@@ -200,7 +197,7 @@ contains
    subroutine init_mpi
 
       use mpi,           only: MPI_COMM_WORLD, MPI_INFO_NULL, MPI_INFO_NULL, MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION, MPI_LOGICAL, MPI_PROC_NULL
-      use dataio_pub,    only: die, printinfo, msg, cwdlen, hnlen, cwd, ansi_white, ansi_black, warn, tmp_log_file
+      use dataio_pub,    only: die, printinfo, msg, cwdlen, cwd, ansi_white, ansi_black, warn, tmp_log_file
       use dataio_pub,    only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml  ! QA_WARN required for diff_nml
 
       implicit none
@@ -209,6 +206,7 @@ contains
       real :: xmno, ymno, ymxo
       integer :: iproc
 
+      integer, parameter :: hnlen = 32             !< hostname length limit
       character(len=cwdlen) :: cwd_proc
       character(len=hnlen)  :: host_proc
       integer               :: pid_proc

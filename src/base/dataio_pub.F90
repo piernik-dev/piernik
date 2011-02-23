@@ -31,8 +31,11 @@
 !<
 module dataio_pub
 
-   use iso_fortran_env, only: error_unit, output_unit
-   use types,           only: hdf, domlen, idlen
+   use constants, only: cbuff_len, domlen, idlen, cwdlen
+   use constants, only: fplen, varlen, stdout, stderr, &  ! QA_WARN !< \todo fix dependencies everywhere else to avoid using re-exported parameters
+        &               PIERNIK_START, PIERNIK_INIT_MPI, PIERNIK_INIT_BASE, PIERNIK_INIT_ARRAYS, PIERNIK_INITIALIZED, PIERNIK_FINISHED, PIERNIK_CLEANUP, PIERNIK_INIT_IO_IC
+
+   use types,           only: hdf
 
    implicit none
 
@@ -42,17 +45,9 @@ module dataio_pub
 
    real, parameter    :: piernik_hdf5_version = 1.17   !< output version
 
-   integer, parameter :: stdout = output_unit
-   integer, parameter :: stderr = error_unit
-
-   ! Buffer lengths for global use
+   ! Buffer lengths used only in I/O routines
    integer, parameter :: planelen = 2           !< length of planes names e.g. "xy","yz","rp" etc.
-   integer, parameter :: varlen = 4             !< length of state variable names in hdf files
-   integer, parameter :: fplen = 24             !< length of buffer for printed FP or integer number
-   integer, parameter :: hnlen = 32             !< hostname length limit
-   integer, parameter :: cwdlen = 512           !< allow for quite long CWD
    integer, parameter :: msglen = 1024          !< 1kB for a message ought to be enough for anybody ;-)
-   integer, parameter :: cbuff_len=32           !< length for problem parameters
    integer, parameter :: ansilen = 7, ansirst=4 !< length of our ANSI color-strings
    integer, parameter :: maxparfilelen   = 128  !< max length of line in problem.par file
    integer, parameter :: maxparfilelines = 256  !< max number of lines in problem.par
@@ -82,16 +77,6 @@ module dataio_pub
    ! Handy variables
    integer            :: ierrh                  !< variable for iostat
    type(hdf)          :: chdf                   !< container for some vital simulation parameters
-
-   ! Simulation state
-   integer, parameter :: PIERNIK_START       = 1                       ! before initialization
-   integer, parameter :: PIERNIK_INIT_MPI    = PIERNIK_START       + 1 ! initialized MPI
-   integer, parameter :: PIERNIK_INIT_BASE   = PIERNIK_INIT_MPI    + 1 ! initialized most fundamental modules that depend only on MPI: constants, grid, fluids, etc.
-   integer, parameter :: PIERNIK_INIT_ARRAYS = PIERNIK_INIT_BASE   + 1 ! initialized arrays
-   integer, parameter :: PIERNIK_INIT_IO_IC  = PIERNIK_INIT_ARRAYS + 1 ! initialized all physics
-   integer, parameter :: PIERNIK_INITIALIZED = PIERNIK_INIT_IO_IC  + 1 ! initialized I/O and IC, running
-   integer, parameter :: PIERNIK_FINISHED    = PIERNIK_INITIALIZED + 1 ! finished simulation
-   integer, parameter :: PIERNIK_CLEANUP     = PIERNIK_FINISHED    + 1 ! finished post-simulation computations and I/O
 
    real               :: last_hdf_time                  !< time in simulation of the last resent hdf file dump
    integer            :: code_progress                  !< rough estimate of code execution progress
@@ -156,6 +141,8 @@ module dataio_pub
 contains
 !-----------------------------------------------------------------------------
    subroutine parse_cmdline
+
+      use constants, only: stdout
 
       implicit none
 
@@ -226,7 +213,10 @@ contains
    end subroutine print_help
 !-----------------------------------------------------------------------------
    subroutine colormessage(nm, mode)
+
+      use constants, only: stdout, stderr
       use mpi,       only: MPI_COMM_WORLD
+
       implicit none
 
       character(len=*),  intent(in) :: nm
@@ -343,7 +333,9 @@ contains
 !-----------------------------------------------------------------------------
    !> \deprecated BEWARE: routine is not finished, it should kill PIERNIK gracefully
    subroutine die(nm, allprocs)
+
       use mpi,    only: MPI_COMM_WORLD
+
       implicit none
 
       character(len=*), intent(in)  :: nm
@@ -440,7 +432,8 @@ contains
 !-----------------------------------------------------------------------------
    subroutine compare_namelist(nml_bef, nml_aft)
 
-      use mpi,    only: MPI_COMM_WORLD
+      use constants, only: PIERNIK_INIT_IO_IC
+      use mpi,       only: MPI_COMM_WORLD
 
       implicit none
 

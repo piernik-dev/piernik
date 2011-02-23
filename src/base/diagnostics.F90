@@ -27,6 +27,9 @@
 !
 #include "piernik.h"
 module diagnostics
+
+   use constants, only: big_int, big_float
+
    implicit none
 
    interface my_allocate
@@ -66,8 +69,6 @@ module diagnostics
 
    real,    parameter :: MiB = 8./1048576.  ! sizeof(double) / 2**20
    integer, parameter :: an_len = 64
-   real,    parameter :: big_float =  huge(real(1.0,4))
-   integer, parameter :: big_int   =  huge(int(1,4))
    real, save         :: used_memory = 0.0
 
    real, dimension(:), allocatable                  :: array_sizes

@@ -681,7 +681,7 @@ contains
       implicit none
 
       character(len=cwdlen)                           :: tsl_file, head_fmt
-      character(len=hnlen), dimension(:), allocatable :: tsl_names
+      character(len=cbuff_len), dimension(:), allocatable :: tsl_names
       real, allocatable, dimension(:)                 :: tsl_vars
       type(phys_prop), pointer                        :: sn
 
@@ -713,31 +713,31 @@ contains
               trim(cwd),'/',trim(problem_name),'_', run_id,'_',nrestart,'.tsl'
 
          if (tsl_firstcall) then
-            call pop_vector(tsl_names, hnlen, ["nstep   ", "time    ", "timestep"])
-            call pop_vector(tsl_names, hnlen, ["mass", "momx", "momy", "momz", "ener", "epot", "eint", "ekin"])
+            call pop_vector(tsl_names, cbuff_len, ["nstep   ", "time    ", "timestep"])
+            call pop_vector(tsl_names, cbuff_len, ["mass", "momx", "momy", "momz", "ener", "epot", "eint", "ekin"])
 
 #ifdef COSM_RAYS
-            call pop_vector(tsl_names, hnlen, ["encr_tot", "encr_min", "encr_max"])
+            call pop_vector(tsl_names, cbuff_len, ["encr_tot", "encr_min", "encr_max"])
 #endif /* COSM_RAYS */
 #ifdef MAGNETIC
-            call pop_vector(tsl_names, hnlen, ["emag   ", "mflx   ", "mfly   ", "mflz   ", "vai_max", "b_min  ", "b_max  "])
-            call pop_vector(tsl_names, hnlen, ["divb_max"])
+            call pop_vector(tsl_names, cbuff_len, ["emag   ", "mflx   ", "mfly   ", "mflz   ", "vai_max", "b_min  ", "b_max  "])
+            call pop_vector(tsl_names, cbuff_len, ["divb_max"])
 #ifdef RESISTIVE
-            call pop_vector(tsl_names, hnlen, ["eta_max"])
+            call pop_vector(tsl_names, cbuff_len, ["eta_max"])
 #endif /* RESISTIVE */
 #endif /* MAGNETIC */
 #ifdef IONIZED
-            call pop_vector(tsl_names, hnlen, ["vxi_max ", "vyi_max ", "vzi_max " , "csi_max ", "deni_min", "deni_max", "prei_min", "prei_max"])
+            call pop_vector(tsl_names, cbuff_len, ["vxi_max ", "vyi_max ", "vzi_max " , "csi_max ", "deni_min", "deni_max", "prei_min", "prei_max"])
 #ifndef ISO
-            call pop_vector(tsl_names, hnlen, ["temi_min", "temi_max"])
+            call pop_vector(tsl_names, cbuff_len, ["temi_min", "temi_max"])
 #endif /* !ISO */
 #endif /* IONIZED */
 #ifdef NEUTRAL
-            call pop_vector(tsl_names, hnlen, ["denn_min", "denn_max", "vxn_max ", "vyn_max ", "vzn_max ", "pren_min", &
+            call pop_vector(tsl_names, cbuff_len, ["denn_min", "denn_max", "vxn_max ", "vyn_max ", "vzn_max ", "pren_min", &
                "pren_max", "temn_min", "temn_max", "csn_max "])
 #endif /* NEUTRAL */
 #ifdef DUST
-            call pop_vector(tsl_names, hnlen, ["dend_min", "dend_max", "vxd_max ", "vyd_max ", "vzd_max "])
+            call pop_vector(tsl_names, cbuff_len, ["dend_min", "dend_max", "vxd_max ", "vyd_max ", "vzd_max "])
 #endif /* DUST */
             if (associated(user_tsl)) call user_tsl(tsl_vars, tsl_names)
             write(head_fmt,'(A,I2,A)') "(a1,a8,",size(tsl_names)-1,"a16)"

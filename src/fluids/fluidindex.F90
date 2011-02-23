@@ -45,6 +45,7 @@
 
 module fluidindex
 ! pulled by ANY
+   use constants, only: ndims, xdim, ydim, zdim
    use types, only: var_numbers
 
    implicit none
@@ -53,20 +54,18 @@ module fluidindex
 
    type(var_numbers),save :: flind     !< COMMENT ME
 
-   integer, parameter  :: nmag = 3    !< number of magnetic field components
-
-   integer, parameter  :: ibx = 1     !< index of x-component of magnetic field
-   integer, parameter  :: iby = 2     !< index of y-component of magnetic field
-   integer, parameter  :: ibz = 3     !< index of z-component of magnetic field
-   integer, parameter  :: idn = 1     !< position of density in the vector of conserv. variables for single fluid
-   integer, parameter  :: imx = 2     !< position of x-mom. in the vector of conserv. variables for single fluid
-   integer, parameter  :: imy = 3     !< position of y-mom. in the vector of conserv. variables for single fluid
-   integer, parameter  :: imz = 4     !< position of z-mom. in the vector of conserv. variables for single fluid
-   integer, parameter  :: ien = 5     !< position of energy density in the vector of conserv. variables for single fluid (only for adiabatic fluids)
-
-   integer, parameter  :: icx = 1     !< index of x-component of current density
-   integer, parameter  :: icy = 2     !< index of y-component of current density
-   integer, parameter  :: icz = 3     !< index of z-component of current density
+   integer, parameter  :: nmag = ndims     !< number of magnetic field components
+   integer, parameter  :: ibx = xdim       !< index of x-component of magnetic field
+   integer, parameter  :: iby = ydim       !< index of y-component of magnetic field
+   integer, parameter  :: ibz = xdim       !< index of z-component of magnetic field
+   integer, parameter  :: idn = 1          !< position of density in the vector of conserv. variables for single fluid
+   integer, parameter  :: imx = idn + xdim !< position of x-mom. in the vector of conserv. variables for single fluid
+   integer, parameter  :: imy = idn + ydim !< position of y-mom. in the vector of conserv. variables for single fluid
+   integer, parameter  :: imz = idn + zdim !< position of z-mom. in the vector of conserv. variables for single fluid
+   integer, parameter  :: ien = imz + 1    !< position of energy density in the vector of conserv. variables for single fluid (only for adiabatic fluids)
+   integer, parameter  :: icx = xdim       !< index of x-component of current density
+   integer, parameter  :: icy = ydim       !< index of y-component of current density
+   integer, parameter  :: icz = zdim       !< index of z-component of current density
 
    integer, allocatable, dimension(:) :: iarr_all_dn   !< array of indexes pointing to mass densities of all fluids
    integer, allocatable, dimension(:) :: iarr_all_sg   !< array of indexes pointing to mass densities of all selfgravitating fluids
