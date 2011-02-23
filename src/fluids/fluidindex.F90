@@ -57,7 +57,7 @@ module fluidindex
    integer, parameter  :: nmag = ndims     !< number of magnetic field components
    integer, parameter  :: ibx = xdim       !< index of x-component of magnetic field
    integer, parameter  :: iby = ydim       !< index of y-component of magnetic field
-   integer, parameter  :: ibz = xdim       !< index of z-component of magnetic field
+   integer, parameter  :: ibz = zdim       !< index of z-component of magnetic field
    integer, parameter  :: idn = 1          !< position of density in the vector of conserv. variables for single fluid
    integer, parameter  :: imx = idn + xdim !< position of x-mom. in the vector of conserv. variables for single fluid
    integer, parameter  :: imy = idn + ydim !< position of y-mom. in the vector of conserv. variables for single fluid
