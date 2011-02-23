@@ -106,7 +106,7 @@ contains
          enddo
       enddo
       vol = cg%nx*cg%ny*cg%nz
-      rms = dsqrt( sum(dv**2) / vol )
+      rms = sqrt( sum(dv**2) / vol )
 
       cma = 1.0
       if ( rms/c_si < 0.1) then

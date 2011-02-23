@@ -115,11 +115,11 @@ contains
       lambda = 1./6.
 
       p0 = lambda**2 * (1.+chi)**2 /(chi*tkh**2) *dbot &
-            / ( (Mtop*dsqrt(chi)+Mbot)**2 * gamma_neu)
-      vtop  =  1.*Mtop*dsqrt(gamma_neu*p0/dtop)
-      vbot  = -1.*Mbot*dsqrt(gamma_neu*p0/dbot)
+            / ( (Mtop*sqrt(chi)+Mbot)**2 * gamma_neu)
+      vtop  =  1.*Mtop*sqrt(gamma_neu*p0/dtop)
+      vbot  = -1.*Mbot*sqrt(gamma_neu*p0/dbot)
       k0    = dpi/lambda
-      vp    = (Mtop*dsqrt(chi)+Mbot)*dsqrt(gamma_neu*p0/dbot)/dpert
+      vp    = (Mtop*sqrt(chi)+Mbot)*sqrt(gamma_neu*p0/dbot)/dpert
 
       do i = 1, cg%nx
          rcx = cg%x(i)

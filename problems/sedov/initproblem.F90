@@ -161,7 +161,7 @@ contains
          do k = 1, cg%nz
             do j = 1, cg%ny
                do i = 1, cg%nx
-                  r = dsqrt( (cg%x(i)-x0)**2 + (cg%y(j)-y0)**2 + (cg%z(k)-z0)**2 )
+                  r = sqrt( (cg%x(i)-x0)**2 + (cg%y(j)-y0)**2 + (cg%z(k)-z0)**2 )
                   if ( r**2 < r0**2) u(fl%ien,i,j,k)   = u(fl%ien,i,j,k) + Eexpl
                enddo
             enddo

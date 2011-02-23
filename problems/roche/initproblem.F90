@@ -149,7 +149,7 @@ contains
                u(ienn,i,j,k) = pamb/(gamma_neu-1.0) + &
                     pblob/(gamma_neu-1.0)*exp(-((xi-xblob)**2+(yj-yblob)**2+zk**2)/dblob)
 
-               vx = vxfac*dsqrt(gamma_neu*pblob/dnblob)
+               vx = vxfac*sqrt(gamma_neu*pblob/dnblob)
                vy = 0.0
                vz = 0.0
 
@@ -197,8 +197,8 @@ contains
                xi = cg%x(i)
 
 
-               r1=dsqrt((xi-ptm_x)**2  + yj**2 + zk**2)
-               r2=dsqrt((xi-ptm2_x)**2 + yj**2 + zk**2)
+               r1=sqrt((xi-ptm_x)**2  + yj**2 + zk**2)
+               r2=sqrt((xi-ptm2_x)**2 + yj**2 + zk**2)
 
 
                if (r1<rclear) then
@@ -256,7 +256,7 @@ contains
 !               u(idnn,i,j,k) = dnold
 !               u(ienn,i,j,k) = enold
 
-               vx = vxfac*dsqrt(gamma_neu*pblob/dnblob)
+               vx = vxfac*sqrt(gamma_neu*pblob/dnblob)
                vy = 0.0
                vz = 0.0
 
