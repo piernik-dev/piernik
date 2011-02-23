@@ -51,7 +51,8 @@ contains
 
    subroutine init_time_step
 
-      use dataio_pub, only: msg, die, warn, code_progress, PIERNIK_INIT_MPI
+      use dataio_pub, only: msg, die, warn, code_progress
+      use constants,  only: PIERNIK_INIT_MPI
       use mpisetup,   only: cflcontrol
 
       implicit none

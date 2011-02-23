@@ -31,7 +31,7 @@
 module piernikdebug
 ! pulled by DEBUG
 
-   use dataio_pub, only: cbuff_len
+   use constants, only: cbuff_len
 
    implicit none
 
@@ -58,10 +58,11 @@ contains
 
    subroutine init_piernikdebug
 
-      use mpisetup,              only: master, slave, comm, ierr, buffer_dim, rbuff, lbuff, cbuff, ibuff
+      use mpisetup,              only: master, slave, comm, ierr, rbuff, lbuff, cbuff, ibuff, buffer_dim
       use mpi,                   only: MPI_DOUBLE_PRECISION, MPI_LOGICAL, MPI_CHARACTER, MPI_INTEGER
       use dataio_pub,            only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml  ! QA_WARN required for diff_nml
-      use dataio_pub,            only: code_progress, PIERNIK_INIT_MPI, die
+      use dataio_pub,            only: code_progress, die
+      use constants,             only: PIERNIK_INIT_MPI
 
       implicit none
 

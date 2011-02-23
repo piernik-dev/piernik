@@ -101,9 +101,9 @@ contains
    subroutine init_prob
 
       use arrays,      only: u
-      use constants,   only: dpi
+      use constants,   only: dpi, zdim
       use grid,        only: cg
-      use mpisetup,    only: zdim, has_dir, dom
+      use mpisetup,    only: has_dir, dom
       use initneutral, only: idnn, imxn, imyn, imzn, ienn, gamma_neu
 
       implicit none

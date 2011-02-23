@@ -67,7 +67,7 @@
 !<
 module units
 
-   use dataio_pub, only: cbuff_len
+   use constants, only: cbuff_len
 
    implicit none
 
@@ -165,11 +165,11 @@ contains
 !<
    subroutine init_units
 
-      use constants,  only: one, pi, fpi, small
+      use constants,  only: one, pi, fpi, small, PIERNIK_INIT_MPI
       use mpisetup,   only: cbuff, rbuff, buffer_dim, comm, ierr, master, slave
       use mpi,        only: MPI_CHARACTER, MPI_DOUBLE_PRECISION
       use dataio_pub, only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml  ! QA_WARN required for diff_nml
-      use dataio_pub, only: warn, printinfo, msg, die, code_progress, PIERNIK_INIT_MPI
+      use dataio_pub, only: warn, printinfo, msg, die, code_progress
 
       implicit none
 

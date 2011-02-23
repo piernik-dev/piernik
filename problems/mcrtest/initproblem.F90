@@ -132,7 +132,8 @@ contains
       use grid,           only: cg
       use initcosmicrays, only: iarr_crn, iarr_crs, gamma_crn, K_crn_paral, K_crn_perp
       use initionized,    only: idni, imxi, imzi, ieni, gamma_ion
-      use mpisetup,       only: comm3d, ierr, master, xdim, ydim, zdim, has_dir, dom
+      use mpisetup,       only: comm3d, ierr, master, has_dir, dom
+      use constants,      only: xdim, ydim, zdim
       use mpi,            only: MPI_IN_PLACE, MPI_INTEGER, MPI_MAX
 #ifdef COSM_RAYS_SOURCES
       use crcomposition,  only: icr_H1, icr_C12

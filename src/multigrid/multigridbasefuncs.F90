@@ -299,7 +299,8 @@ contains
    subroutine prolong_faces(lev, soln)
 
       use grid,               only: D_x, D_y, D_z
-      use mpisetup,           only: has_dir, xdim, ydim, zdim
+      use mpisetup,           only: has_dir
+      use constants,          only: xdim, ydim, zdim
       use dataio_pub,         only: die, warn
       use multigridhelpers,   only: check_dirty
       use multigridmpifuncs,  only: mpi_multigrid_bnd

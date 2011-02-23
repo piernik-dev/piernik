@@ -49,7 +49,8 @@ contains
       use fluidindex,     only: ibx, iby, ibz, flind
       use grid,           only: cg
       use initcosmicrays, only: iarr_crs, K_crs_paral, K_crs_perp
-      use mpisetup,       only: dt, xdim, ydim, zdim, has_dir
+      use mpisetup,       only: dt, has_dir
+      use constants,      only: xdim, ydim, zdim
 
       implicit none
 
@@ -120,7 +121,8 @@ contains
       use fluidindex,     only: ibx, iby, ibz, flind
       use grid,           only: cg
       use initcosmicrays, only: iarr_crs, K_crs_paral, K_crs_perp
-      use mpisetup,       only: dt, xdim, ydim, zdim, has_dir
+      use mpisetup,       only: dt, has_dir
+      use constants,      only: xdim, ydim, zdim
 
       implicit none
 
@@ -191,7 +193,8 @@ contains
       use fluidindex,     only: ibx, iby, ibz, flind
       use grid,           only: cg
       use initcosmicrays, only: iarr_crs, K_crs_paral, K_crs_perp
-      use mpisetup,       only: dt, xdim, ydim, zdim, has_dir
+      use mpisetup,       only: dt, has_dir
+      use constants,      only: xdim, ydim, zdim
 
       implicit none
 

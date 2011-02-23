@@ -83,10 +83,11 @@ contains
    subroutine init_interactions
 
       use dataio_pub,    only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml      ! QA_WARN required for diff_nml
-      use dataio_pub,    only: die, code_progress, PIERNIK_INIT_MPI
+      use dataio_pub,    only: die, code_progress
+      use constants,     only: PIERNIK_INIT_MPI
       use mpisetup,      only: master, slave, lbuff, rbuff, buffer_dim, ierr, comm!, grace_period_passed
       use mpi,           only: MPI_DOUBLE_PRECISION, MPI_LOGICAL
-      use units,     only: cm, gram
+      use units,         only: cm, gram
       use fluidindex,    only: flind
 
       implicit none
@@ -275,7 +276,7 @@ contains
    subroutine dragforce(sweep, i1, i2, n, du, uu)
       use fluidindex,   only: flind, iarr_all_dn, iarr_all_mx
       use grid,         only: cg
-      use mpisetup,     only: xdim, ydim, zdim
+      use constants,    only: xdim, ydim, zdim
 #ifndef ISO
       use fluidindex,   only: iarr_all_en
 #endif /* !ISO */

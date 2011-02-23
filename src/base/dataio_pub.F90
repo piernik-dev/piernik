@@ -32,15 +32,13 @@
 module dataio_pub
 
    use constants, only: cbuff_len, domlen, idlen, cwdlen
-   use constants, only: fplen, varlen, stdout, stderr, &  ! QA_WARN !< \todo fix dependencies everywhere else to avoid using re-exported parameters
-        &               PIERNIK_START, PIERNIK_INIT_MPI, PIERNIK_INIT_BASE, PIERNIK_INIT_ARRAYS, PIERNIK_INITIALIZED, PIERNIK_FINISHED, PIERNIK_CLEANUP, PIERNIK_INIT_IO_IC
-
-   use types,           only: hdf
+   use types,     only: hdf
 
    implicit none
 
    public  ! QA_WARN most variables are not secrets here
    private :: colormessage, T_PLAIN, T_ERR, T_WARN, T_INFO, T_IO, T_SILENT, ansi_red, ansi_green, ansi_yellow, ansi_blue, ansi_magenta, ansi_cyan ! QA_WARN no need to use these symbols outside dataio_pub
+   private :: cbuff_len, domlen, idlen, cwdlen, hdf ! QA_WARN prevent re-exporting
    !mpisetup uses: ansi_white and ansi_black
 
    real, parameter    :: piernik_hdf5_version = 1.17   !< output version

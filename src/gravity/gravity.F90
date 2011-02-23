@@ -37,7 +37,9 @@
 !<
 module gravity
 ! pulled by GRAV
-   use dataio_pub, only: cbuff_len
+
+   use constants, only: cbuff_len
+
    implicit none
 
    private
@@ -145,8 +147,9 @@ contains
 
       use arrays,        only: gpot
       use dataio_pub,    only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml    ! QA_WARN required for diff_nml
-      use dataio_pub,    only: warn, die, code_progress, PIERNIK_INIT_ARRAYS
-      use mpisetup,      only: ibuff, rbuff, cbuff, buffer_dim, comm, ierr, master, slave, lbuff
+      use dataio_pub,    only: warn, die, code_progress
+      use constants,     only: PIERNIK_INIT_ARRAYS
+      use mpisetup,      only: ibuff, rbuff, cbuff, comm, ierr, master, slave, lbuff, buffer_dim
       use mpi,           only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL, MPI_CHARACTER
       use units,     only: newtong
 #ifdef CORIOLIS
@@ -358,7 +361,8 @@ contains
       use grid,          only: cg
       use mpi,           only: MPI_STATUS_SIZE, MPI_REQUEST_NULL
       use mpisetup,      only: comm3d, ierr, procxl, procxr, procyl, procyr, proczl, proczr, psize, &
-           &                   bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr, xdim, ydim, zdim, has_dir
+           &                   bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr, has_dir
+      use constants,     only: xdim, ydim, zdim
 
       implicit none
 
@@ -828,9 +832,9 @@ contains
 !<
    subroutine grav_pot2accel(sweep, i1,i2, n, grav,istep)
 
-      use arrays,   only: gpot, hgpot
-      use grid,     only: cg
-      use mpisetup, only: xdim, ydim, zdim
+      use arrays,    only: gpot, hgpot
+      use grid,      only: cg
+      use constants, only: xdim, ydim, zdim
 
       implicit none
 
@@ -900,10 +904,11 @@ contains
 !<
    subroutine grav_accel2pot
 
-      use arrays,   only: gp
-      use grid,     only: cg
-      use mpi,      only: MPI_DOUBLE_PRECISION
-      use mpisetup, only: psize, pcoords, master, nproc, xdim, ydim, zdim, ndims, comm, comm3d, err, ierr, mpifind
+      use arrays,    only: gp
+      use grid,      only: cg
+      use mpi,       only: MPI_DOUBLE_PRECISION
+      use mpisetup,  only: psize, pcoords, master, nproc, comm, comm3d, err, ierr, mpifind
+      use constants, only: xdim, ydim, zdim, ndims
 
       implicit none
 

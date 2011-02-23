@@ -38,8 +38,9 @@ contains
 
    subroutine bnd_a(A)
 
-      use mpisetup, only: ierr, req, comm3d, procxl, procxr, procyl, procyr, proczl, proczr, status, psize, xdim, ydim, zdim
-      use grid,     only: cg
+      use mpisetup,  only: ierr, req, comm3d, procxl, procxr, procyl, procyr, proczl, proczr, status, psize
+      use constants, only: xdim, ydim, zdim
+      use grid,      only: cg
 
       implicit none
 
@@ -84,7 +85,8 @@ contains
       use mpi,           only: MPI_DOUBLE_PRECISION
       use mpisetup,      only: bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr, &
            &                   ierr, req, comm3d, procxl, procxr, procyl, procyr, proczl, proczr, status, &
-           &                   psize, xdim, ydim, zdim, procxyl, procyxl, pcoords, comm
+           &                   psize, procxyl, procyxl, pcoords, comm
+      use constants,     only: xdim, ydim, zdim
 #ifdef SHEAR
       use shear,         only: eps,delj
 #endif /* SHEAR */
@@ -622,7 +624,8 @@ contains
 
    subroutine all_mag_boundaries
 
-      use mpisetup, only: has_dir, xdim, ydim, zdim
+      use mpisetup,  only: has_dir
+      use constants, only: xdim, ydim, zdim
 
       implicit none
 

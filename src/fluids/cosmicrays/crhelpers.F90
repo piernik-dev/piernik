@@ -41,7 +41,8 @@ contains
       use arrays,      only: u, divvel
       use fluidindex,  only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
       use grid,        only: cg
-      use mpisetup,    only: xdim, ydim, zdim, has_dir
+      use constants,   only: xdim, ydim, zdim
+      use mpisetup,    only: has_dir
 
       implicit none
 

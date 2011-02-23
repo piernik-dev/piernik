@@ -33,7 +33,7 @@ module initproblem
 ! Initial condition for Keplerian disk
 ! Written by: M. Hanasz, March 2006
 
-   use dataio_pub,    only: cbuff_len
+   use constants,    only: cbuff_len
 
    implicit none
 
@@ -248,13 +248,13 @@ contains
       use dataio_pub,          only: msg, printinfo, die
       use types,               only: component_fluid
       use arrays,              only: u, b, dprof
-      use constants,           only: dpi
+      use constants,           only: dpi, xdim, zdim
       use units,               only: newtong, gram, cm, kboltz, mH
       use fluidindex,          only: ibx, iby, ibz, flind
       use gravity,             only: r_smooth, r_grav, n_gravr, ptmass, source_terms_grav, grav_pot2accel, grav_pot_3d
       use grid,                only: cg
       use hydrostatic,         only: hydrostatic_zeq_densmid
-      use mpisetup,            only: zdim, has_dir, dom, master, geometry, xdim, pcoords, dom, comm, ierr
+      use mpisetup,            only: has_dir, dom, master, geometry, pcoords, dom, comm, ierr
       use mpi,                 only: MPI_DOUBLE_PRECISION
       use types,               only: component_fluid
       use interactions,        only: epstein_factor
@@ -662,8 +662,8 @@ contains
 #ifndef ISO
       use fluidindex,   only: iarr_all_en
 #endif /* ISO */
+      use constants,    only: xdim
 
-      use mpisetup,     only: xdim
       implicit none
 
       integer :: i

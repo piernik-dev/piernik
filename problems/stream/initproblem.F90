@@ -30,7 +30,7 @@
 
 module initproblem
 
-   use dataio_pub,    only: cbuff_len
+   use constants,    only: cbuff_len
 
    implicit none
 

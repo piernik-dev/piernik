@@ -234,7 +234,8 @@ contains
       use dataio_pub,       only: msg, die
       use fluidindex,       only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz, ibx, iby, ibz, flind, nmag
       use fluxes,           only: flimiter, all_fluxes
-      use mpisetup,         only: smalld, integration_order, use_smalld, local_magic_mass, xdim, ydim, zdim
+      use mpisetup,         only: smalld, integration_order, use_smalld, local_magic_mass
+      use constants,        only: xdim, ydim, zdim
       use gridgeometry,     only: gc, geometry_source_terms
       use interactions,     only: fluid_interactions
 #ifndef ISO

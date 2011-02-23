@@ -105,7 +105,8 @@ contains
 
       use arrays,       only: u
       use grid,         only: cg
-      use mpisetup,     only: zdim, has_dir
+      use mpisetup,     only: has_dir
+      use constants,    only: zdim
       use initneutral,  only: gamma_neu, idnn, imxn, imyn, imzn, ienn
 
       implicit none

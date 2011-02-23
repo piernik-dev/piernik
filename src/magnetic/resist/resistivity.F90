@@ -91,9 +91,10 @@ contains
    subroutine init_resistivity
 
       use dataio_pub,    only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml  ! QA_WARN required for diff_nml
-      use dataio_pub,    only: die, code_progress, PIERNIK_INIT_BASE
+      use dataio_pub,    only: die, code_progress
+      use constants,     only: PIERNIK_INIT_BASE, zdim, xdim, ydim
       use grid,          only: cg
-      use mpisetup,      only: rbuff, ibuff, ierr, buffer_dim, comm, master, slave, has_dir, zdim, xdim, ydim
+      use mpisetup,      only: rbuff, ibuff, ierr, comm, master, slave, has_dir, buffer_dim
       use mpi,           only: MPI_INTEGER, MPI_DOUBLE_PRECISION
 
       implicit none
@@ -169,10 +170,10 @@ contains
    subroutine compute_resist
 
       use arrays,       only: b, u
-      use constants,    only: small
+      use constants,    only: small, xdim, ydim, zdim
       use fluidindex,   only: ibx, iby, ibz
       use grid,         only: cg
-      use mpisetup,     only: comm, ierr, xdim, ydim, zdim, has_dir
+      use mpisetup,     only: comm, ierr, has_dir
       use mpi,          only: MPI_DOUBLE_PRECISION, MPI_MAX, MPI_IN_PLACE
 #ifndef ISO
       use fluidindex,   only: flind
@@ -336,7 +337,8 @@ contains
       use fluidindex,    only: iby
       use grid,          only: cg
       use magboundaries, only: bnd_emf
-      use mpisetup,      only: dt, has_dir, xdim, ydim, zdim
+      use mpisetup,      only: dt, has_dir
+      use constants,     only: xdim, ydim, zdim
 
       implicit none
 
@@ -370,7 +372,8 @@ contains
       use fluidindex,    only: ibz
       use grid,          only: cg
       use magboundaries, only: bnd_emf
-      use mpisetup,      only: dt, has_dir, xdim, ydim, zdim
+      use mpisetup,      only: dt, has_dir
+      use constants,     only: xdim, ydim, zdim
 
       implicit none
 
@@ -403,7 +406,8 @@ contains
       use fluidindex,    only: ibz
       use grid,          only: cg
       use magboundaries, only: bnd_emf
-      use mpisetup,      only: dt, has_dir, xdim, ydim, zdim
+      use mpisetup,      only: dt, has_dir
+      use constants,     only: xdim, ydim, zdim
 
       implicit none
 
@@ -436,7 +440,8 @@ contains
       use fluidindex,    only: ibx
       use grid,          only: cg
       use magboundaries, only: bnd_emf
-      use mpisetup,      only: dt, has_dir, xdim, ydim, zdim
+      use mpisetup,      only: dt, has_dir
+      use constants,     only: xdim, ydim, zdim
 
       implicit none
 
@@ -469,7 +474,8 @@ contains
       use fluidindex,    only: ibx
       use grid,          only: cg
       use magboundaries, only: bnd_emf
-      use mpisetup,      only: dt, has_dir, xdim, ydim, zdim
+      use mpisetup,      only: dt, has_dir
+      use constants,     only: xdim, ydim, zdim
 
       implicit none
 
@@ -502,7 +508,8 @@ contains
       use fluidindex,    only: iby
       use grid,          only: cg
       use magboundaries, only: bnd_emf
-      use mpisetup,      only: dt, has_dir, xdim, ydim, zdim
+      use mpisetup,      only: dt, has_dir
+      use constants,     only: xdim, ydim, zdim
 
       implicit none
 

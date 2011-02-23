@@ -31,15 +31,13 @@
 !<
 module types
 
-   use constants, only: domlen, idlen, bndlen, ndims
+   use constants, only: domlen, idlen, bndlen, ndims !> \todo fix setup.py to not report unused imports here
 
    implicit none
 
    private
-   public :: axes, hdf, value, domain_container, grid_container, tsl_container, phys_prop, problem_customize_solution, finalize_problem, &
-        &    component_fluid, var_numbers, custom_emf_bnd, cleanup_problem, problem_grace_passed
-
-   public :: domlen, idlen, bndlen  ! \deprecated re-exported
+   public :: hdf, value, phys_prop, axes, grid_container, domain_container, component_fluid, var_numbers, tsl_container, &
+        &    problem_customize_solution, problem_grace_passed, finalize_problem, cleanup_problem, custom_emf_bnd
 
    type :: hdf
       integer :: nhdf, nres, step_hdf, step_res, nstep, nrestart

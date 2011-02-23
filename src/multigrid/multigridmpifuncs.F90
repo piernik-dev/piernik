@@ -51,7 +51,8 @@ contains
    subroutine mpi_multigrid_prep
 
       use multigridvars, only: level_min, level_max, lvl, NDIM
-      use mpisetup,      only: ierr, xdim, ydim, zdim, has_dir
+      use mpisetup,      only: ierr, has_dir
+      use constants,     only: xdim, ydim, zdim
       use mpi,           only: MPI_DOUBLE_PRECISION, MPI_ORDER_FORTRAN
 
       implicit none
@@ -151,7 +152,8 @@ contains
    subroutine mpi_multigrid_bnd(lev, iv, ng, mode, corners)
 
       use dataio_pub,         only: die
-      use mpisetup,           only: comm3d, ierr, procxl, procxr, procyl, procyr, proczl, proczr, proc, psize, xdim, ydim, zdim, has_dir
+      use mpisetup,           only: comm3d, ierr, procxl, procxr, procyl, procyr, proczl, proczr, proc, psize, has_dir
+      use constants,          only: xdim, ydim, zdim
       use mpi,                only: MPI_STATUS_SIZE, MPI_REQUEST_NULL
       use multigridvars,      only: NDIM, lvl, XLO, XHI, YLO, YHI, ZLO, ZHI, is_external, ngridvars, level_min, level_max
 

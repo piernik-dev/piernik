@@ -111,7 +111,8 @@ contains
       use fluidindex,      only: fluid_index
       use fluxes,          only: set_limiter, init_fluxes
       use mpisetup,        only: limiter
-      use dataio_pub,      only: die, code_progress, PIERNIK_INIT_MPI
+      use dataio_pub,      only: die, code_progress
+      use constants,       only: PIERNIK_INIT_MPI
 #ifdef VERBOSE
       use dataio_pub,      only: printinfo
 #endif /* VERBOSE */
@@ -189,7 +190,8 @@ contains
 
    subroutine sanitize_smallx_checks
 
-      use mpisetup,   only: smalld, smallp, big_float, master, comm, ierr
+      use mpisetup,   only: smalld, smallp, master, comm, ierr
+      use constants,  only: big_float
       use mpi,        only: MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_MIN
       use func,       only: emag, ekin
       use dataio_pub, only: warn, msg

@@ -51,7 +51,8 @@ contains
 
    subroutine init_coriolis
 
-      use dataio_pub, only: die, code_progress, PIERNIK_INIT_BASE
+      use dataio_pub, only: die, code_progress
+      use constants,  only: PIERNIK_INIT_BASE
       use mpisetup,   only: geometry
 
       implicit none
@@ -79,7 +80,7 @@ contains
    subroutine coriolis_force(sweep, u, rotacc)
 
       use fluidindex, only: flind, iarr_all_dn, iarr_all_mx, iarr_all_my
-      use mpisetup,   only: xdim, ydim !, zdim
+      use constants,  only: xdim, ydim !, zdim
 
       implicit none
 

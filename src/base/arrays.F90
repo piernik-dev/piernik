@@ -30,7 +30,9 @@
 !! Module storing all global %arrays used in simulation
 !<
 module arrays
+
    implicit none
+
    public  ! QA_WARN nothing to hide here
 
    real, allocatable, dimension(:,:,:,:), target :: u    !< Main array of all fluids' components
@@ -70,8 +72,9 @@ contains
 
    subroutine init_arrays(flind)
 
+      use constants,   only: PIERNIK_INIT_BASE
       use diagnostics, only: ma3d, ma4d, my_allocate
-      use dataio_pub,  only: die, code_progress, PIERNIK_INIT_BASE
+      use dataio_pub,  only: die, code_progress
       use types,       only: var_numbers
       use grid,        only: cg
 #ifdef GRAV

@@ -88,7 +88,6 @@ module constants
    integer, parameter :: PIERNIK_CLEANUP     = PIERNIK_FINISHED    + 1 ! finished post-simulation computations and I/O
 
    ! misc
-   integer, parameter :: buffer_dim = 200                !< size of [cilr]buff arrays used to exchange namelist parameters
    integer, parameter :: stdout = output_unit
    integer, parameter :: stderr = error_unit
 

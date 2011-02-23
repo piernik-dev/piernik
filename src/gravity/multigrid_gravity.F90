@@ -43,7 +43,7 @@
 module multigrid_gravity
 ! pulled by MULTIGRID && GRAV
 
-   use dataio_pub,    only: cbuff_len
+   use constants,     only: cbuff_len
    use multigridvars, only: vcycle_stats
 
    implicit none
@@ -384,9 +384,9 @@ contains
 
       use arrays,             only: sgp
       use multigridvars,      only: lvl, roof, base, gb, level_gb, level_max, level_min, bnd_periodic, bnd_dirichlet, bnd_isolated, vcycle_stats, mg_geometry, MG_GEO_XYZ
-      use mpisetup,           only: master, nproc, psize, xdim, ydim, zdim
+      use mpisetup,           only: master, nproc, psize
       use multigridhelpers,   only: vcycle_stats_init, dirty_debug, dirtyH
-      use constants,          only: pi, dpi
+      use constants,          only: pi, dpi, xdim, ydim, zdim
       use dataio_pub,         only: die, warn
       use multipole,          only: init_multipole
 
@@ -614,7 +614,7 @@ contains
 
    subroutine cleanup_multigrid_grav
 
-      use multipole,          only: cleanup_multipole
+      use multipole,     only: cleanup_multipole
       use multigridvars, only: lvl, level_gb, level_max
 
       implicit none
@@ -870,10 +870,11 @@ contains
 
    subroutine multigrid_solve_grav(dens)
 
+      use constants,     only: xdim, ydim, zdim
       use timer,         only: set_timer
       use arrays,        only: sgp
       use grid,          only: cg
-      use mpisetup,      only: xdim, ydim, zdim, has_dir
+      use mpisetup,      only: has_dir
       use dataio_pub,    only: die
       use multipole,     only: multipole_solver
       use multigridvars, only: roof, solution, bnd_isolated, bnd_dirichlet, bnd_givenval, mg_nb, tot_ts, ts
@@ -963,11 +964,12 @@ contains
 
    subroutine vcycle_hg(history)
 
+      use constants,          only: cbuff_len
       use mpisetup,           only: master, nproc
       use timer,              only: set_timer
       use multigridhelpers,   only: set_dirty, check_dirty, mg_write_log, brief_v_log, do_ascii_dump, numbered_ascii_dump
       use multigridbasefuncs, only: norm_sq, restrict_all, substract_average
-      use dataio_pub,         only: msg, die, warn, cbuff_len
+      use dataio_pub,         only: msg, die, warn
       use multigridvars,      only: roof, base, source, solution, correction, defect, verbose_vcycle, &
            &                        bnd_periodic, level_min, level_max, stdout, tot_ts, ts
 
@@ -1145,8 +1147,9 @@ contains
 
    subroutine residual2(lev, src, soln, def)
 
+      use constants,          only: xdim, ydim, zdim
       use dataio_pub,         only: die
-      use mpisetup,           only: xdim, ydim, zdim, has_dir, eff_dim
+      use mpisetup,           only: has_dir, eff_dim
       use multigridhelpers,   only: multidim_code_3D
       use multigridmpifuncs,  only: mpi_multigrid_bnd
       use multigridvars,      only: lvl, NDIM, extbnd_antimirror, mg_geometry, MG_GEO_XYZ, MG_GEO_RPZ
@@ -1396,7 +1399,8 @@ contains
    subroutine approximate_solution_rbgs(lev, src, soln)
 
       use dataio_pub,         only: die
-      use mpisetup,           only: xdim, ydim, zdim, has_dir, eff_dim
+      use constants,          only: xdim, ydim, zdim
+      use mpisetup,           only: has_dir, eff_dim
       use multigridhelpers,   only: dirty_debug, check_dirty, multidim_code_3D, dirty_label
       use multigridmpifuncs,  only: mpi_multigrid_bnd
       use multigridvars,      only: lvl, level_min, NDIM, extbnd_antimirror, mg_geometry, MG_GEO_XYZ, MG_GEO_RPZ
@@ -1546,8 +1550,9 @@ contains
 
    subroutine approximate_solution_fft(lev, src, soln)
 
+      use constants,          only: xdim, ydim, zdim
       use grid,               only: D_x, D_y, D_z
-      use mpisetup,           only: xdim, ydim, zdim, has_dir, eff_dim
+      use mpisetup,           only: has_dir, eff_dim
       use dataio_pub,         only: die, warn
       use multigridhelpers,   only: dirty_debug, check_dirty, dirtyL, multidim_code_3D
       use multigridmpifuncs,  only: mpi_multigrid_bnd
@@ -1783,7 +1788,8 @@ contains
 
    subroutine gb_fft_solve_sendrecv(src, soln)
 
-      use mpisetup,      only: nproc, proc, master, ierr, comm3d, status, xdim, ydim, zdim
+      use constants,     only: xdim, ydim, zdim
+      use mpisetup,      only: nproc, proc, master, ierr, comm3d, status
       use mpi,           only: MPI_DOUBLE_PRECISION
       use multigridvars, only: gb, gb_cartmap, base
 
@@ -1845,7 +1851,8 @@ contains
 
    subroutine gb_fft_solve_gather(src, soln)
 
-      use mpisetup,      only: nproc, master, ierr, comm3d, xdim, ydim, zdim
+      use constants,     only: xdim, ydim, zdim
+      use mpisetup,      only: nproc, master, ierr, comm3d
       use mpi,           only: MPI_DOUBLE_PRECISION
       use multigridvars, only: gb, gb_cartmap, base
 

@@ -32,8 +32,8 @@
 program piernik
 ! pulled by ANY
    use dataio,        only: write_data, user_msg_handler, check_log, check_tsl
-   use dataio_pub,    only: nend, tend, msg, fplen, printinfo, warn, die, cwdlen, stdout, &
-        &                   code_progress, PIERNIK_START, PIERNIK_INITIALIZED, PIERNIK_FINISHED, PIERNIK_CLEANUP
+   use dataio_pub,    only: nend, tend, msg, printinfo, warn, die, code_progress
+   use constants,     only: PIERNIK_START, PIERNIK_INITIALIZED, PIERNIK_FINISHED, PIERNIK_CLEANUP, cwdlen, fplen, stdout
    use fluidupdate,   only: fluid_update
    use mpisetup,      only: comm, comm3d, ierr, master, t, nstep, dt, dtm
    use timer,         only: time_left
@@ -173,8 +173,8 @@ contains
       use arrays,                only: init_arrays
       use units,             only: init_units
       use dataio,                only: init_dataio, write_data
-      use dataio_pub,            only: nrestart, cwd, par_file, tmp_log_file, msg, printio, die, warn, printinfo, require_init_prob, problem_name, run_id, parse_cmdline, &
-           &                           code_progress, PIERNIK_INIT_MPI, PIERNIK_INIT_BASE, PIERNIK_INIT_ARRAYS, PIERNIK_INIT_IO_IC
+      use dataio_pub,            only: nrestart, cwd, par_file, tmp_log_file, msg, printio, die, warn, printinfo, require_init_prob, problem_name, run_id, parse_cmdline, code_progress
+      use constants,             only: PIERNIK_INIT_MPI, PIERNIK_INIT_BASE, PIERNIK_INIT_ARRAYS, PIERNIK_INIT_IO_IC
       use diagnostics,           only: diagnose_arrays
       use fluidboundaries,       only: all_fluid_boundaries
       use fluidboundaries_pub,   only: init_fluidboundaries
@@ -334,20 +334,21 @@ contains
 !! Meta subroutine responsible for cleaning after successful run
 !<
    subroutine cleanup_piernik
-      use types,       only: cleanup_problem
-      use arrays,      only: cleanup_arrays
-      use dataio,      only: cleanup_dataio
-      use grid,        only: cleanup_grid
+
+      use types,        only: cleanup_problem
+      use arrays,       only: cleanup_arrays
+      use dataio,       only: cleanup_dataio
+      use grid,         only: cleanup_grid
       use gridgeometry, only: cleanup_geometry
-      use initfluids,  only: cleanup_fluids
-      use fluidindex,  only: cleanup_fluidindex
-      use mpisetup,    only: cleanup_mpi
-      use timer,       only: cleanup_timers
+      use initfluids,   only: cleanup_fluids
+      use fluidindex,   only: cleanup_fluidindex
+      use mpisetup,     only: cleanup_mpi
+      use timer,        only: cleanup_timers
 #ifdef RESISTIVE
-      use resistivity, only: cleanup_resistivity
+      use resistivity,  only: cleanup_resistivity
 #endif /* RESISTIVE */
 #ifdef MULTIGRID
-      use multigrid,   only: cleanup_multigrid
+      use multigrid,    only: cleanup_multigrid
 #endif /* MULTIGRID */
       implicit none
 
@@ -401,8 +402,8 @@ contains
 !<
    subroutine nextdot(advance)
 
-      use mpisetup,      only: master
-      use dataio_pub,    only: stdout
+      use mpisetup,  only: master
+      use constants, only: stdout
 
       implicit none
 

@@ -30,7 +30,7 @@
 
 module initproblem
 
-   use dataio_pub, only: varlen
+   use constants, only: varlen
 
    implicit none
 

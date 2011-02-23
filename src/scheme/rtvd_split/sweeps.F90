@@ -88,12 +88,14 @@ contains
 #endif /* SHEAR && FLUID_INTERACTIONS */
 !------------------------------------------------------------------------------------------
    subroutine sweepx
+
       use arrays,          only: u, b
       use fluidboundaries, only: all_fluid_boundaries
       use fluidindex,      only: flind, iarr_all_swpx, ibx, iby, ibz, nmag
       use grid,            only: cg
       use gridgeometry,    only: set_geo_coeffs
-      use mpisetup,        only: dt, xdim, ydim, zdim, has_dir
+      use mpisetup,        only: dt, has_dir
+      use constants,       only: xdim, ydim, zdim
       use rtvd,            only: relaxing_tvd
 #ifdef COSM_RAYS
       use crhelpers,       only: div_v
@@ -141,7 +143,8 @@ contains
       use fluidindex,      only: flind, iarr_all_swpy, ibx, iby, ibz, nmag
       use grid,            only: cg
       use gridgeometry,    only: set_geo_coeffs
-      use mpisetup,        only: dt, xdim, ydim, zdim, has_dir
+      use mpisetup,        only: dt, has_dir
+      use constants,       only: xdim, ydim, zdim
       use rtvd,            only: relaxing_tvd
 #ifdef COSM_RAYS
       use crhelpers,       only: div_v
@@ -191,7 +194,8 @@ contains
       use fluidindex,      only: flind, iarr_all_swpz, ibx, iby, ibz, nmag
       use grid,            only: cg
       use gridgeometry,    only: set_geo_coeffs
-      use mpisetup,        only: dt, xdim, ydim, zdim, has_dir
+      use mpisetup,        only: dt, has_dir
+      use constants,       only: xdim, ydim, zdim
       use rtvd,            only: relaxing_tvd
 #ifdef COSM_RAYS
       use crhelpers,       only: div_v

@@ -68,7 +68,7 @@ contains
    subroutine make_3sweeps(forward)
 
       use types,           only: problem_customize_solution
-      use mpisetup,        only: xdim, ydim, zdim
+      use constants,       only: xdim, ydim, zdim
 #ifdef SHEAR
       use fluidboundaries, only: bnd_u
       use mpisetup,        only: has_dir, t, dt
@@ -127,7 +127,8 @@ contains
    subroutine make_sweep(dir, forward)
 
       use dataio_pub,     only: msg, die
-      use mpisetup,       only: has_dir, xdim, ydim, zdim
+      use mpisetup,       only: has_dir
+      use constants,      only: xdim, ydim, zdim
       use sweeps,         only: sweepx, sweepy, sweepz
 #if defined SHEAR && defined FLUID_INTERACTIONS
       use sweeps,         only: source_terms_y
@@ -243,7 +244,7 @@ contains
       use advects,     only: advectby_x, advectbz_x
       use arrays,      only: b
       use fluidindex,  only: ibx, iby, ibz
-      use mpisetup,    only: xdim, ydim, zdim
+      use constants,   only: xdim, ydim, zdim
 #ifdef RESISTIVE
       use resistivity, only: diffuseby_x, diffusebz_x
 #endif /* RESISTIVE */
@@ -275,7 +276,7 @@ contains
       use advects,     only: advectbx_y, advectbz_y
       use arrays,      only: b
       use fluidindex,  only: ibx, iby, ibz
-      use mpisetup,    only: xdim, ydim, zdim
+      use constants,   only: xdim, ydim, zdim
 #ifdef RESISTIVE
       use resistivity, only: diffusebx_y, diffusebz_y
 #endif /* RESISTIVE */
@@ -307,7 +308,7 @@ contains
       use advects,     only: advectbx_z, advectby_z
       use arrays,      only: b
       use fluidindex,  only: ibx, iby, ibz
-      use mpisetup,    only: xdim, ydim, zdim
+      use constants,   only: xdim, ydim, zdim
 #ifdef RESISTIVE
       use resistivity, only: diffusebx_z, diffuseby_z
 #endif /* RESISTIVE */

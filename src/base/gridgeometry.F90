@@ -93,7 +93,8 @@ contains
 !<
    subroutine init_geometry
 
-      use dataio_pub, only: msg, die, code_progress, PIERNIK_INIT_BASE
+      use dataio_pub, only: msg, die, code_progress
+      use constants,  only: PIERNIK_INIT_BASE
       use mpisetup,   only: geometry
 
       implicit none
@@ -159,7 +160,7 @@ contains
 
       use types,         only: var_numbers
       use dataio_pub,    only: die, msg
-      use mpisetup,      only: xdim, ydim, zdim
+      use constants,     only: xdim, ydim, zdim
 
       implicit none
 
@@ -198,7 +199,7 @@ contains
       use types,         only: var_numbers
       use dataio_pub,    only: die, msg
       use grid,          only: cg
-      use mpisetup,      only: xdim, ydim, zdim
+      use constants,     only: xdim, ydim, zdim
 
       implicit none
 
@@ -266,7 +267,7 @@ contains
 
       use fluidindex, only: iarr_all_dn, iarr_all_my
       use grid,       only: cg
-      use mpisetup,   only: xdim
+      use constants,  only: xdim
 
       implicit none
 

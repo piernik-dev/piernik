@@ -31,17 +31,23 @@
 !! \brief (KK)
 !<
 module timestepfuncs
+
 ! pulled by ANY
+
    implicit none
+
    private
    public :: compute_c_max, compute_dt
 
 contains
 
    subroutine compute_c_max(fl,cs,i,j,k,cx,cy,cz,c_max)
+
       use arrays,      only: u
       use types,       only: component_fluid
+
       implicit none
+
       type(component_fluid), pointer, intent(in) :: fl
       real, intent(in)                           :: cs
       integer, intent(in)                        :: i, j, k
@@ -60,15 +66,16 @@ contains
       cy    = max(cy,vy+cs)
       cz    = max(cz,vz+cs)
       c_max = max(c_max,cx,cy,cz)
+
    end subroutine compute_c_max
 
    subroutine compute_dt(fl,cx,cy,cz,c_max,c_out,dt_out)
 
       use types,     only: component_fluid
       use grid,      only: cg
-      use constants, only: big
+      use constants, only: big, xdim, ydim, zdim
       use mpi,       only: MPI_DOUBLE_PRECISION, MPI_MIN, MPI_MAX
-      use mpisetup,  only: comm, ierr, cfl, has_dir, xdim, ydim, zdim, dom, geometry
+      use mpisetup,  only: comm, ierr, cfl, has_dir, dom, geometry
 
       implicit none
 
@@ -113,7 +120,6 @@ contains
       fl%snap%c  = c_max_all
       fl%snap%dt = dt_out
 
-      return
    end subroutine compute_dt
 
 end module timestepfuncs

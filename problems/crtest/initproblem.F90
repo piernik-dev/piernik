@@ -147,7 +147,8 @@ contains
       use dataio_pub,     only: die, warn
       use fluidindex,     only: ibx, iby, ibz
       use grid,           only: cg
-      use mpisetup,       only: xdim, ydim, zdim, has_dir, dom
+      use mpisetup,       only: has_dir, dom
+      use constants,      only: xdim, ydim, zdim
       use initcosmicrays, only: gamma_crs, iarr_crs, ncrn, ncre, K_crn_paral, K_crn_perp
       use initionized,    only: idni, imxi, imzi, ieni, gamma_ion
 
@@ -282,7 +283,8 @@ contains
    subroutine check_norm
 
       use arrays,         only: u
-      use dataio_pub,     only: code_progress, PIERNIK_FINISHED, halfstep, msg, die, printinfo
+      use dataio_pub,     only: code_progress, halfstep, msg, die, printinfo
+      use constants,      only: PIERNIK_FINISHED
       use grid,           only: cg
       use initcosmicrays, only: iarr_crs, ncrn, ncre
       use mpisetup,       only: master, comm3d, ierr, t, nstep

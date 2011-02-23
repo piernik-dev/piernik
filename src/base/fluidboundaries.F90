@@ -39,7 +39,8 @@ contains
 
    subroutine init_fluidboundaries
 
-      use dataio_pub,            only: msg, warn, die, code_progress, PIERNIK_INIT_MPI
+      use dataio_pub,            only: msg, warn, die, code_progress
+      use constants,             only: PIERNIK_INIT_MPI
       use fluidboundaries_funcs, only: bnd_null, bnd_xl_per, bnd_xl_ref, bnd_xl_out, bnd_xl_outd, bnd_xr_per, bnd_xr_ref, bnd_xr_out, bnd_xr_outd
       use fluidboundaries_pub,   only: user_bnd_xl, user_bnd_xr, func_bnd_xl, func_bnd_xr
       use mpisetup,              only: bnd_xl, bnd_xr
@@ -96,7 +97,8 @@ contains
       use fluidindex,          only: flind, iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
       use grid,                only: cg
       use mpisetup,            only: ierr, psize, proczl, proczr, procyl, procyr, procxl, procxr, procxyl, procyxl, smalld, &
-           &                         pcoords, bnd_xr, bnd_xl, bnd_yl, bnd_yr, bnd_zl, bnd_zr, req, status, comm, comm3d, xdim, ydim, zdim
+           &                         pcoords, bnd_xr, bnd_xl, bnd_yl, bnd_yr, bnd_zl, bnd_zr, req, status, comm, comm3d
+      use constants,           only: xdim, ydim, zdim
       use mpi,                 only: MPI_DOUBLE_PRECISION
 #ifdef COSM_RAYS
       use initcosmicrays,      only: smallecr
@@ -640,7 +642,8 @@ contains
 
    subroutine all_fluid_boundaries
 
-      use mpisetup, only: has_dir, xdim, zdim
+      use mpisetup,  only: has_dir
+      use constants, only: xdim, zdim
 
       implicit none
 

@@ -117,7 +117,8 @@ contains
    subroutine init_multipole(mb_alloc)
 
       use dataio_pub,    only: die, warn
-      use mpisetup,      only: master, xdim, ydim, zdim, dom, eff_dim
+      use mpisetup,      only: master, dom, eff_dim
+      use constants,     only: xdim, ydim, zdim
       use multigridvars, only: level_min, level_max, lvl, mg_geometry, MG_GEO_XYZ !, MG_GEO_RPZ
       use grid,          only: cg
 
@@ -299,7 +300,7 @@ contains
    subroutine isolated_monopole
 
       use dataio_pub,    only: die
-      use mpisetup,      only: xdim, ydim, zdim
+      use constants,     only: xdim, ydim, zdim
       use multigridvars, only: LOW, HIGH, is_external, XLO, XHI, YLO, YHI, ZLO, ZHI, mg_geometry, MG_GEO_XYZ !, MG_GEO_RPZ
       use units,     only: newtong
 
@@ -352,7 +353,8 @@ contains
 
       use multigridvars,   only: is_external, XLO, XHI, YLO, YHI, ZLO, ZHI, LOW, HIGH, mg_geometry, MG_GEO_XYZ !, MG_GEO_RPZ
       use dataio_pub,      only: die
-      use mpisetup,        only: xdim, ydim, zdim, comm3d, ierr
+      use constants,       only: xdim, ydim, zdim
+      use mpisetup,        only: comm3d, ierr
       use mpi,             only: MPI_DOUBLE_PRECISION, MPI_SUM
 
       implicit none
@@ -689,7 +691,8 @@ contains
    subroutine img_mass2moments
 
       use multigridvars, only: is_external, XLO, XHI, YLO, YHI, ZLO, ZHI, LOW, HIGH
-      use mpisetup,      only: comm3d, ierr, xdim, ydim, zdim
+      use mpisetup,      only: comm3d, ierr
+      use constants,     only: xdim, ydim, zdim
       use mpi,           only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_SUM, MPI_MIN, MPI_MAX, MPI_IN_PLACE
 
       implicit none
@@ -853,7 +856,7 @@ contains
 
    subroutine moments2bnd_potential
 
-      use mpisetup,        only: xdim, ydim, zdim
+      use constants,       only: xdim, ydim, zdim
       use multigridvars,   only: is_external, XLO, XHI, YLO, YHI, ZLO, ZHI, LOW, HIGH
 
       implicit none

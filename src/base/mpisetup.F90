@@ -37,7 +37,7 @@ module mpisetup
 
 !   use mpi, only: MPI_STATUS_SIZE
    use types,      only: domain_container
-   use constants,  only: xdim, ydim, zdim, ndims, big_float, cbuff_len, buffer_dim, bndlen
+   use constants,  only: ndims, cbuff_len, bndlen
 
    implicit none
 
@@ -45,13 +45,11 @@ module mpisetup
 
    private
    public :: bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr, &
-        &    cbuff, cfl, cfl_max, cflcontrol, &
+        &    buffer_dim, cbuff, cfl, cfl_max, cflcontrol, &
         &    cfr_smooth, cleanup_mpi, comm, comm3d, dt, dt_initial, dt_max_grow, dt_min, dt_old, dtm, err, ibuff, ierr, info, init_mpi, &
         &    integration_order, lbuff, limiter, mpifind, nproc, nstep, pcoords, proc, procxl, procxr, procxyl, procyl, procyr, procyxl, proczl, &
         &    proczr, psize, rbuff, req, smalld, smallei, smallp, status, t, use_smalld, magic_mass, local_magic_mass, master, slave, &
         &    nb, has_dir, eff_dim, relax_time, grace_period_passed, dom, geometry
-
-   public :: xdim, ydim, zdim, ndims, big_float, buffer_dim ! \deprecated re-exported
 
    integer :: nproc, proc, ierr , rc, info
    integer :: status(MPI_STATUS_SIZE,4)
@@ -74,6 +72,7 @@ module mpisetup
 
    type(domain_container), protected :: dom
 
+   integer, parameter :: buffer_dim = 200                !< size of [cilr]buff arrays used to exchange namelist parameters
    character(len=cbuff_len), dimension(buffer_dim) :: cbuff
    integer,   dimension(buffer_dim) :: ibuff
    real,      dimension(buffer_dim) :: rbuff
@@ -196,8 +195,9 @@ contains
 !<
    subroutine init_mpi
 
+      use constants,     only: cwdlen, xdim, ydim, zdim, big_float
       use mpi,           only: MPI_COMM_WORLD, MPI_INFO_NULL, MPI_INFO_NULL, MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION, MPI_LOGICAL, MPI_PROC_NULL
-      use dataio_pub,    only: die, printinfo, msg, cwdlen, cwd, ansi_white, ansi_black, warn, tmp_log_file
+      use dataio_pub,    only: die, printinfo, msg, cwd, ansi_white, ansi_black, warn, tmp_log_file
       use dataio_pub,    only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml  ! QA_WARN required for diff_nml
 
       implicit none
@@ -723,6 +723,7 @@ contains
 !<
    subroutine divide_domain_uniform
 
+      use constants,     only: xdim, zdim
       use dataio_pub,    only: die, printinfo, msg
 
       implicit none

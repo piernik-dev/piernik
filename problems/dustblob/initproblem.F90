@@ -99,14 +99,17 @@ contains
 !-----------------------------------------------------------------------------
 
    subroutine init_prob
+
       use arrays,       only: u
       use grid,         only: cg
       use initdust,     only: idnd, imxd, imyd, imzd
       use initneutral,  only: idnn, imxn, imyn, imzn, gamma_neu
-      use mpisetup,     only: smalld, zdim, has_dir
+      use mpisetup,     only: smalld, has_dir
+      use constants,    only: zdim
 #ifndef ISO
       use initneutral,  only: ienn
 #endif /* !ISO */
+
       implicit none
 
       real    :: xi,yj,zk, rc

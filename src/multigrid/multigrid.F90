@@ -81,11 +81,12 @@ contains
            &                         MG_GEO_INVALID, MG_GEO_XYZ, MG_GEO_RPZ, NDIM, XLO, XHI, YLO, YHI, ZLO, ZHI, LOW, HIGH, &
            &                         ord_prolong, ord_prolong_face, stdout, verbose_vcycle, tot_ts
       use mpi,                 only: MPI_INTEGER, MPI_LOGICAL
-      use mpisetup,            only: buffer_dim, comm, comm3d, ierr, proc, master, slave, nproc, has_dir, xdim, ydim, zdim, ndims, psize, &
+      use mpisetup,            only: comm, comm3d, ierr, proc, master, slave, nproc, has_dir, psize, buffer_dim, &
            &                         ibuff, lbuff, bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr, dom, eff_dim, geometry
       use multigridhelpers,    only: mg_write_log, dirtyH, do_ascii_dump, dirty_debug, multidim_code_3D
       use multigridmpifuncs,   only: mpi_multigrid_prep
-      use dataio_pub,          only: die, code_progress, PIERNIK_INIT_ARRAYS
+      use dataio_pub,          only: die, code_progress
+      use constants,           only: PIERNIK_INIT_ARRAYS, xdim, ydim, zdim, ndims
       use dataio_pub,          only: msg, par_file, namelist_errh, compare_namelist, cmdl_nml  ! QA_WARN required for diff_nml
 #ifdef GRAV
       use multigrid_gravity,   only: init_multigrid_grav, init_multigrid_grav_post
@@ -460,7 +461,8 @@ contains
    subroutine cleanup_multigrid
 
       use multigridvars,      only: lvl, level_gb, level_min, level_max, tot_ts, gb_cartmap
-      use mpisetup,           only: master, nproc, comm3d, ierr, xdim, ydim, zdim, has_dir
+      use mpisetup,           only: master, nproc, comm3d, ierr, has_dir
+      use constants,          only: xdim, ydim, zdim
       use mpi,                only: MPI_DOUBLE_PRECISION
       use multigridhelpers,   only: mg_write_log
       use dataio_pub,         only: msg

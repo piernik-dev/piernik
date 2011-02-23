@@ -61,8 +61,9 @@ contains
    subroutine init_grid
 
       use dataio_pub, only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml  ! QA_WARN required for diff_nml
-      use dataio_pub, only: printinfo, die, code_progress, PIERNIK_INIT_MPI
-      use mpisetup,   only: psize, pcoords, comm, has_dir, xdim, ydim, zdim, dom, nb
+      use dataio_pub, only: printinfo, die, code_progress
+      use constants,  only: PIERNIK_INIT_MPI, xdim, ydim, zdim
+      use mpisetup,   only: psize, pcoords, comm, has_dir, dom, nb
 
       implicit none
 
@@ -248,9 +249,10 @@ contains
 
    subroutine grid_mpi_boundaries_prep(numfluids)
 
-      use dataio_pub, only: die, code_progress, PIERNIK_INIT_BASE
+      use dataio_pub, only: die, code_progress
+      use constants,  only: PIERNIK_INIT_BASE, xdim, ydim, zdim, ndims
       use mpi,        only: MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION
-      use mpisetup,   only: ierr, xdim, ydim, zdim, has_dir, ndims
+      use mpisetup,   only: ierr, has_dir
 
       implicit none
 
@@ -559,7 +561,8 @@ contains
 !<
    subroutine cleanup_grid
 
-      use mpisetup, only: has_dir, xdim, ydim, zdim, ierr
+      use mpisetup,  only: has_dir, ierr
+      use constants, only: xdim, ydim, zdim
 
       implicit none
 

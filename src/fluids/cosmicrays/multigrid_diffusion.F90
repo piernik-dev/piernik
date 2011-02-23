@@ -43,7 +43,7 @@ module multigrid_diffusion
 #if defined(COSM_RAYS) && defined(MULTIGRID)
 
    use multigridvars, only: correction, vcycle_stats
-   use dataio_pub,    only: cbuff_len
+   use constants,     only: cbuff_len
 
    implicit none
 
@@ -106,7 +106,7 @@ contains
    subroutine init_multigrid_diff
 
       use multigridvars,      only: ngridvars, extbnd_zero, extbnd_extrapolate, extbnd_mirror, extbnd_antimirror, mg_geometry, MG_GEO_XYZ
-      use mpisetup,           only: buffer_dim, comm, ierr, master, slave, ibuff, rbuff, lbuff, cbuff
+      use mpisetup,           only: comm, ierr, master, slave, ibuff, rbuff, lbuff, cbuff, buffer_dim
       use mpi,                only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL, MPI_CHARACTER
       use dataio_pub,         only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml      ! QA_WARN required for diff_nml
       use dataio_pub,         only: die, warn, msg
@@ -554,7 +554,8 @@ contains
 
       use multigridvars,     only: lvl
       use initcosmicrays,    only: K_crs_perp, K_crs_paral
-      use mpisetup,          only: dt, has_dir, ydim, zdim
+      use mpisetup,          only: dt, has_dir
+      use constants,         only: ydim, zdim
       use arrays,            only: wa
 
       implicit none
@@ -618,7 +619,8 @@ contains
 
       use multigridvars,     only: lvl
       use initcosmicrays,    only: K_crs_perp, K_crs_paral
-      use mpisetup,          only: dt, has_dir, xdim, zdim
+      use mpisetup,          only: dt, has_dir
+      use constants,         only: xdim, zdim
       use arrays,            only: wa
 
       implicit none
@@ -682,7 +684,8 @@ contains
 
       use multigridvars,     only: lvl
       use initcosmicrays,    only: K_crs_perp, K_crs_paral
-      use mpisetup,          only: dt, has_dir, xdim, ydim
+      use mpisetup,          only: dt, has_dir
+      use constants,         only: xdim, ydim
       use arrays,            only: wa
 
       implicit none
@@ -746,7 +749,8 @@ contains
 
    subroutine residual(lev, src, soln, def, cr_id)
 
-      use mpisetup,          only: has_dir, xdim, ydim, zdim
+      use mpisetup,          only: has_dir
+      use constants,         only: xdim, ydim, zdim
       use multigridvars,     only: lvl
       use multigridmpifuncs, only: mpi_multigrid_bnd
       use arrays,            only: wa
@@ -829,7 +833,8 @@ contains
 
       use multigridvars,      only: level_min, lvl, extbnd_donothing
       use multigridmpifuncs,  only: mpi_multigrid_bnd
-      use mpisetup,           only: dt, has_dir, xdim, ydim, zdim
+      use mpisetup,           only: dt, has_dir
+      use constants,          only: xdim, ydim, zdim
       use arrays,             only: wa
 
       implicit none

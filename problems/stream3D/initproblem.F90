@@ -33,7 +33,7 @@ module initproblem
 ! Initial condition for Keplerian disk
 ! Written by: M. Hanasz, March 2006
 
-   use dataio_pub,    only: cbuff_len
+   use constants,    only: cbuff_len
 
    implicit none
 
@@ -52,8 +52,8 @@ contains
    subroutine read_problem_par
 
       use dataio_pub,    only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml         ! QA_WARN required for diff_nml
-      use dataio_pub,    only: cbuff_len
-      use mpisetup,      only: cbuff, rbuff, buffer_dim, master, slave, comm, ierr
+      use constants,     only: cbuff_len
+      use mpisetup,      only: cbuff, rbuff, master, slave, comm, ierr, buffer_dim
       use mpi,           only: MPI_CHARACTER, MPI_DOUBLE_PRECISION
 
       implicit none

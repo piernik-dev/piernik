@@ -254,7 +254,7 @@ contains
 
       use units,       only: r_gc_sun, kpc
       use gravity,     only: r_gc
-      use mpisetup,    only: zdim
+      use constants,   only: zdim
 
       implicit none
 

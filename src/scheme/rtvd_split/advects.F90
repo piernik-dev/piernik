@@ -42,7 +42,8 @@ contains
       use fluidindex,    only: iby, flind
       use grid,          only: cg
       use magboundaries, only: bnd_emf
-      use mpisetup,      only: dt, xdim, ydim, zdim, has_dir
+      use mpisetup,      only: dt, has_dir
+      use constants,     only: xdim, ydim, zdim
       use rtvd,          only: tvdb
 
       implicit none
@@ -91,7 +92,8 @@ contains
       use fluidindex,    only: ibz, flind
       use grid,          only: cg
       use magboundaries, only: bnd_emf
-      use mpisetup,      only: dt, xdim, ydim, zdim, has_dir
+      use mpisetup,      only: dt, has_dir
+      use constants,     only: xdim, ydim, zdim
       use rtvd,          only: tvdb
 
       implicit none
@@ -141,7 +143,8 @@ contains
       use fluidindex,    only: ibz, flind
       use grid,          only: cg
       use magboundaries, only: bnd_emf
-      use mpisetup,      only: dt, xdim, ydim, zdim, has_dir
+      use mpisetup,      only: dt, has_dir
+      use constants,     only: xdim, ydim, zdim
       use rtvd,          only: tvdb
 
       implicit none
@@ -190,7 +193,8 @@ contains
       use fluidindex,    only: ibx, flind
       use grid,          only: cg
       use magboundaries, only: bnd_emf
-      use mpisetup,      only: dt, xdim, ydim, zdim, has_dir
+      use mpisetup,      only: dt, has_dir
+      use constants,     only: xdim, ydim, zdim
       use rtvd,          only: tvdb
 
       implicit none
@@ -239,7 +243,8 @@ contains
       use fluidindex,    only: ibx, flind
       use grid,          only: cg
       use magboundaries, only: bnd_emf
-      use mpisetup,      only: dt, xdim, ydim, zdim, has_dir
+      use mpisetup,      only: dt, has_dir
+      use constants,     only: xdim, ydim, zdim
       use rtvd,          only: tvdb
 
       implicit none
@@ -287,7 +292,8 @@ contains
       use fluidindex,    only: iby, flind
       use grid,          only: cg
       use magboundaries, only: bnd_emf
-      use mpisetup,      only: dt, xdim, ydim, zdim, has_dir
+      use mpisetup,      only: dt, has_dir
+      use constants,     only: xdim, ydim, zdim
       use rtvd,          only: tvdb
 
       implicit none

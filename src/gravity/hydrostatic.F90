@@ -202,9 +202,10 @@ contains
    end subroutine hzeq_scheme_v2
 
    subroutine get_gprofs_accel(iia,jja)
-      use gravity, only: tune_zeq, grav_accel
-      use grid,    only: cg
-      use mpisetup, only: zdim
+
+      use gravity,   only: tune_zeq, grav_accel
+      use grid,      only: cg
+      use constants, only: zdim
 
       implicit none
 
@@ -269,7 +270,8 @@ contains
       use dataio_pub, only: die
       use gravity,    only: get_gprofs, gprofs_target, nsub
       use grid,       only: cg
-      use mpisetup,   only: zdim, dom
+      use constants,  only: zdim
+      use mpisetup,   only: dom
 
       implicit none
 
@@ -315,7 +317,8 @@ contains
       use gravity,             only: grav_accel, nsub, tune_zeq_bnd
       use arrays,              only: u
       use grid,                only: cg
-      use mpisetup,            only: smalld, zdim
+      use mpisetup,            only: smalld
+      use constants,           only: zdim
       use fluidindex,          only: flind, iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
 #ifndef ISO
       use fluidindex,          only: iarr_all_en

@@ -181,9 +181,10 @@ contains
 
    subroutine brief_v_log(vs)
 
+      use constants,     only: fplen
       use multigridvars, only: stdout, vcycle_stats
       use mpisetup,      only: slave
-      use dataio_pub,    only: msg, fplen, warn
+      use dataio_pub,    only: msg, warn
 
       implicit none
 
@@ -251,8 +252,9 @@ contains
 
    subroutine ascii_dump(filename)
 
+      use constants,     only: xdim, ydim, zdim
       use dataio_pub,    only: msg
-      use mpisetup,      only: proc, master, xdim, ydim, zdim
+      use mpisetup,      only: proc, master
       use multigridvars, only: level_min, level_max, lvl, gb_cartmap, ngridvars
 
       implicit none

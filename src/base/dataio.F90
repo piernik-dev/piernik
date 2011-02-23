@@ -46,8 +46,8 @@
 
 module dataio
 
-   use dataio_pub,    only: cwdlen, varlen, domain, fmin, fmax, vizit, nend, tend, wend, nrestart, problem_name, run_id, cbuff_len
-   use types,         only: idlen
+   use dataio_pub,    only: domain, fmin, fmax, vizit, nend, tend, wend, nrestart, problem_name, run_id
+   use constants,     only: cwdlen, cbuff_len, varlen, idlen
 
    implicit none
 
@@ -195,10 +195,10 @@ contains
 !<
    subroutine init_dataio
 
-      use constants,       only: small
+      use constants,       only: small, cwdlen, cbuff_len, PIERNIK_INIT_IO_IC
       use dataio_hdf5,     only: init_hdf5, read_restart_hdf5, parfile, parfilelines
-      use dataio_pub,      only: chdf, nres, last_hdf_time, step_hdf, next_t_log, next_t_tsl, log_file_initialized, log_file, cwdlen, maxparfilelines, cwd, cbuff_len, &
-           &                     tmp_log_file, msglen, printinfo, warn, msg, nhdf, nstep_start, set_container_chdf, get_container, die, code_progress, PIERNIK_INIT_IO_IC
+      use dataio_pub,      only: chdf, nres, last_hdf_time, step_hdf, next_t_log, next_t_tsl, log_file_initialized, log_file, maxparfilelines, cwd, &
+           &                     tmp_log_file, msglen, printinfo, warn, msg, nhdf, nstep_start, set_container_chdf, get_container, die, code_progress
       use dataio_pub,      only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml  ! QA_WARN required for diff_nml
       use fluidboundaries, only: all_fluid_boundaries
       use mpisetup,        only: lbuff, ibuff, rbuff, cbuff, master, slave, comm, ierr, buffer_dim, &
@@ -596,7 +596,8 @@ contains
 
    subroutine find_last_restart(restart_number)
 
-      use dataio_pub,    only: cwdlen, cwd
+      use dataio_pub,    only: cwd
+      use constants,     only: cwdlen
 #if defined(__INTEL_COMPILER)
       use ifport,        only: unlink
 #endif /* __INTEL_COMPILER */
@@ -662,11 +663,12 @@ contains
    subroutine write_timeslice
 
       use arrays,          only: u, b, wa
-      use dataio_pub,      only: cwdlen, cwd, user_tsl
+      use dataio_pub,      only: cwd, user_tsl
+      use constants,       only: cwdlen, xdim, ydim, zdim
       use diagnostics,     only: pop_vector
       use fluidindex,      only: flind, iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz, ibx, iby, ibz
       use grid,            only: cg
-      use mpisetup,        only: master, t, dt, smalld, nstep, dom, xdim, ydim, zdim
+      use mpisetup,        only: master, t, dt, smalld, nstep, dom
       use types,           only: tsl_container, phys_prop
 #ifndef ISO
       use fluidindex,      only: iarr_all_en
@@ -995,7 +997,7 @@ contains
       use fluidindex,         only: ibx, iby, ibz, flind
       use grid,               only: cg
       use mpisetup,           only: cfl, t, dt, master
-      use types,              only: tsl_container, value, idlen
+      use types,              only: tsl_container, value
       use interactions,       only: has_interactions, collfaq
       use func,               only: L2norm
 #ifdef COSM_RAYS
@@ -1238,7 +1240,8 @@ contains
 !-------------------------------------------------------------------------
 
 !> \todo process multiple commands at once
-      use dataio_pub,    only: cwdlen, msg, printinfo, warn
+      use constants,     only: cwdlen
+      use dataio_pub,    only: msg, printinfo, warn
       use mpisetup,      only: master
 #if defined(__INTEL_COMPILER)
       use ifport,        only: unlink, stat
