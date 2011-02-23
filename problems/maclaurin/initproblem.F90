@@ -167,7 +167,7 @@ contains
                               xx = cg%x(i) + ii*cg%dx/(2.*nsub)
                               rr = (xx**2 + x0**2 - 2. * xx * x0 * cos(yy))/a1**2 + zz
                            case default
-                              call die("[initproblem:init_prob] Usupported geometry_type")
+                              call die("[initproblem:init_prob] Unsupported geometry_type")
                               rr = 0.
                         end select
 
