@@ -756,8 +756,9 @@ contains
       use arrays,       only: gp
       use dataio_pub,   only: die, warn
       use grid,         only: cg
-      use mpisetup,     only: master, geometry
+      use mpisetup,     only: master, geometry_type
       use types,        only: axes
+      use constants,    only: GEO_XYZ
 
       implicit none
       type(axes) :: ax
@@ -771,7 +772,7 @@ contains
 
       gp_status = ''
 
-      if (geometry /= "cartesian") then
+      if (geometry_type /= GEO_XYZ) then
           select case (external_gp)
              case ("null", "grav_null", "GRAV_NULL")
                 ! No gravity - no problem, selfgravity has to check the geometry during initialization

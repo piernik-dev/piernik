@@ -219,9 +219,10 @@ contains
    subroutine norm_sq(iv, norm)
 
       use dataio_pub,    only: die
-      use mpisetup,      only: comm3d, ierr
+      use mpisetup,      only: comm3d, ierr, geometry_type
       use mpi,           only: MPI_DOUBLE_PRECISION, MPI_SUM
-      use multigridvars, only: ngridvars, roof, mg_geometry, MG_GEO_XYZ, MG_GEO_RPZ
+      use multigridvars, only: ngridvars, roof
+      use constants,     only: GEO_XYZ, GEO_RPZ
 
       implicit none
 
@@ -233,10 +234,10 @@ contains
 
       if (iv <= 0 .or. iv > ngridvars) call die("[multigridbasefuncs:norm_sq] Invalid variable index")
 
-      select case (mg_geometry)
-         case (MG_GEO_XYZ)
+      select case (geometry_type)
+         case (GEO_XYZ)
             lsum = sum(roof%mgvar(roof%is:roof%ie, roof%js:roof%je, roof%ks:roof%ke, iv)**2) * roof%dvol
-         case (MG_GEO_RPZ)
+         case (GEO_RPZ)
             lsum = 0.
             do i = roof%is, roof%ie
                lsum = lsum + sum(roof%mgvar(i, roof%js:roof%je, roof%ks:roof%ke, iv)**2) * roof%dvol * roof%x(i)
@@ -257,9 +258,10 @@ contains
    subroutine substract_average(lev, iv)
 
       use dataio_pub,    only: die
-      use mpisetup,      only: comm3d, ierr
+      use mpisetup,      only: comm3d, ierr, geometry_type
       use mpi,           only: MPI_DOUBLE_PRECISION, MPI_SUM
-      use multigridvars, only: lvl, level_min, level_max, ngridvars, mg_geometry, MG_GEO_XYZ, MG_GEO_RPZ
+      use multigridvars, only: lvl, level_min, level_max, ngridvars
+      use constants,     only: GEO_XYZ, GEO_RPZ
 
       implicit none
 
@@ -272,10 +274,10 @@ contains
       if (lev < level_min .or. lev > level_max) call die("[multigridbasefuncs:substract_average] Invalid level number.")
       if (iv < 1 .or. iv > ngridvars) call die("[multigridbasefuncs:substract_average] Invalid variable index.")
 
-      select case (mg_geometry)
-         case (MG_GEO_XYZ)
+      select case (geometry_type)
+         case (GEO_XYZ)
             lsum = sum(lvl(lev)%mgvar(lvl(lev)%is:lvl(lev)%ie, lvl(lev)%js:lvl(lev)%je, lvl(lev)%ks:lvl(lev)%ke, iv)) * lvl(lev)%dvol
-         case (MG_GEO_RPZ)
+         case (GEO_RPZ)
             lsum = 0.
             do i = lvl(lev)%is, lvl(lev)%ie
                lsum = lsum + sum(lvl(lev)%mgvar(i, lvl(lev)%js:lvl(lev)%je, lvl(lev)%ks:lvl(lev)%ke, iv)) * lvl(lev)%dvol * lvl(lev)%x(i)

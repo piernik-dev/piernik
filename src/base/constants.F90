@@ -87,6 +87,11 @@ module constants
    integer, parameter :: PIERNIK_FINISHED    = PIERNIK_INITIALIZED + 1 ! finished simulation
    integer, parameter :: PIERNIK_CLEANUP     = PIERNIK_FINISHED    + 1 ! finished post-simulation computations and I/O
 
+   ! grid geometry type
+   integer, parameter :: GEO_XYZ = 0                     !< cartesian grid with uniform cell spacing
+   integer, parameter :: GEO_RPZ = GEO_XYZ + 1           !< cylindrical grid with uniform spacing
+   integer, parameter :: GEO_INVALID = GEO_XYZ - 1       !< non-recognized grid geometry
+
    ! misc
    integer, parameter :: stdout = output_unit
    integer, parameter :: stderr = error_unit

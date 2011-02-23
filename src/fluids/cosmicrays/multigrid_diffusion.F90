@@ -105,11 +105,12 @@ contains
 !<
    subroutine init_multigrid_diff
 
-      use multigridvars,      only: ngridvars, extbnd_zero, extbnd_extrapolate, extbnd_mirror, extbnd_antimirror, mg_geometry, MG_GEO_XYZ
-      use mpisetup,           only: comm, ierr, master, slave, ibuff, rbuff, lbuff, cbuff, buffer_dim
-      use mpi,                only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL, MPI_CHARACTER
-      use dataio_pub,         only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml      ! QA_WARN required for diff_nml
-      use dataio_pub,         only: die, warn, msg
+      use multigridvars, only: ngridvars, extbnd_zero, extbnd_extrapolate, extbnd_mirror, extbnd_antimirror
+      use constants,     only: GEO_XYZ
+      use mpisetup,      only: comm, ierr, master, slave, ibuff, rbuff, lbuff, cbuff, buffer_dim, geometry_type
+      use mpi,           only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL, MPI_CHARACTER
+      use dataio_pub,    only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml      ! QA_WARN required for diff_nml
+      use dataio_pub,    only: die, warn, msg
 
       implicit none
 
@@ -120,7 +121,7 @@ contains
 
       if (.not.frun) call die("[multigrid_diffusion:init_multigrid_diff] Called more than once.")
       frun = .false.
-      if (mg_geometry /= MG_GEO_XYZ) call die("[multigrid_gravity:init_multigrid_gravdiffusion:init_multigrid_diff] non-cartesian geometry not implemented yet.")
+      if (geometry_type /= GEO_XYZ) call die("[multigrid_gravity:init_multigrid_gravdiffusion:init_multigrid_diff] non-cartesian geometry not implemented yet.")
 
       ! Default values for namelist variables
       norm_tol       = 1.e-2

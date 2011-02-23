@@ -94,22 +94,22 @@ contains
    subroutine init_geometry
 
       use dataio_pub, only: msg, die, code_progress
-      use constants,  only: PIERNIK_INIT_BASE
-      use mpisetup,   only: geometry
+      use constants,  only: PIERNIK_INIT_BASE, GEO_XYZ, GEO_RPZ
+      use mpisetup,   only: geometry_type
 
       implicit none
 
       if (code_progress < PIERNIK_INIT_BASE) call die("[gridgeometry:init_geometry] grid not initialized")
 
-      select case (geometry)
-         case ("cartesian")
+      select case (geometry_type)
+         case (GEO_XYZ)
             set_geo_coeffs          => set_cart_coeffs
             geometry_source_terms   => cart_geometry_source_terms
-         case ("cylindrical")
+         case (GEO_RPZ)
             set_geo_coeffs          => set_cyl_coeffs
             geometry_source_terms   => cyl_geometry_source_terms
          case default
-            write(msg,'(2a)') "[gridgeometry:init_geometry] Unknown system of coordinates ", geometry
+            write(msg,'(a,i3)') "[gridgeometry:init_geometry] Unknown system of coordinates ", geometry_type
             call die(msg)
       end select
 

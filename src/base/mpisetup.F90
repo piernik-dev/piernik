@@ -49,7 +49,7 @@ module mpisetup
         &    cfr_smooth, cleanup_mpi, comm, comm3d, dt, dt_initial, dt_max_grow, dt_min, dt_old, dtm, err, ibuff, ierr, info, init_mpi, &
         &    integration_order, lbuff, limiter, mpifind, nproc, nstep, pcoords, proc, procxl, procxr, procxyl, procyl, procyr, procyxl, proczl, &
         &    proczr, psize, rbuff, req, smalld, smallei, smallp, status, t, use_smalld, magic_mass, local_magic_mass, master, slave, &
-        &    nb, has_dir, eff_dim, relax_time, grace_period_passed, dom, geometry
+        &    nb, has_dir, eff_dim, relax_time, grace_period_passed, dom, geometry_type
 
    integer :: nproc, proc, ierr , rc, info
    integer :: status(MPI_STATUS_SIZE,4)
@@ -81,6 +81,7 @@ module mpisetup
    logical     :: have_mpi           !< .true. when run on more than one processor
 
    integer, allocatable, dimension(:) :: primes
+   integer, protected :: geometry_type  !< the type of geometry: cartesian: GEO_XYZ, cylindrical: GEO_RPZ, other: GEO_INVALID
 
    ! Namelist variables
 
@@ -106,7 +107,7 @@ module mpisetup
    real    :: ymax                           !< physical domain right y-boundary position
    real    :: zmin                           !< physical domain left z-boundary position
    real    :: zmax                           !< physical domain right z-boundary position
-   character(len=cbuff_len), protected :: geometry      !< define system of coordinates: "cartesian" or "cylindrical"
+   character(len=cbuff_len) :: geometry      !< define system of coordinates: "cartesian" or "cylindrical"
 
    namelist /DOMAIN/ nxd, nyd, nzd, nb, bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr, xmin, xmax, ymin, ymax, zmin, zmax, geometry
    !namelist /DOMAIN/ dom, geometry, nb
@@ -195,7 +196,7 @@ contains
 !<
    subroutine init_mpi
 
-      use constants,     only: cwdlen, xdim, ydim, zdim, big_float
+      use constants,     only: cwdlen, xdim, ydim, zdim, big_float, GEO_XYZ, GEO_RPZ, GEO_INVALID
       use mpi,           only: MPI_COMM_WORLD, MPI_INFO_NULL, MPI_INFO_NULL, MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION, MPI_LOGICAL, MPI_PROC_NULL
       use dataio_pub,    only: die, printinfo, msg, cwd, ansi_white, ansi_black, warn, tmp_log_file
       use dataio_pub,    only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml  ! QA_WARN required for diff_nml
@@ -334,55 +335,7 @@ contains
          diff_nml(DOMAIN)
 
          ! Sanitize input parameters, if possible
-
          dom%n_d(:) = max(1, [nxd, nyd, nzd])
-
-         xmno = xmin
-         ymno = ymin
-         ymxo = ymax
-         select case (geometry)
-            case ("cylindrical") !> \todo replace strings by enums
-               if (ymin <= -big_float) ymin = 0.
-               if (ymax >= big_float) ymax = dpi
-               if (ymax-ymin > dpi) then
-                  call warn("[mpisetup:init_mpi] Hyperbolic spaces are not implemented. Setting azimuthal span to 2pi.")
-                  if (abs(ymin) < 1./epsilon(1.)) then
-                     ymax = ymin + dpi
-                  else
-                     ymin = ymax - dpi
-                  endif
-                  if (abs(ymax-ymin - dpi) > 100*epsilon(1.)) call die("[mpisetup:init_mpi] absolute values for both ymax and ymin too high.") ! magic number
-               endif
-               if (xmin <= 0.) then
-                  xmin = 0.
-                  if (bnd_xl /= "ref") call warn("[mpisetup:init_mpi] Enforcing bnd_xl = 'ref'.")
-                  bnd_xl = "ref"
-               endif
-               if (bnd_xr == "per") call die("[mpisetup:init_mpi] Periodicity in radial direction is not allowed in cylindrical coordinates")
-            case ("cartesian")
-               if (nyd > 1 .and. (ymin <= -big_float .or. ymax >= big_float)) call warn("[mpisetup:init_mpi] y range not specified. Defaulting to [0..1]")
-               if (ymin <= -big_float) ymin = 0.
-               if (ymax >= big_float) ymax = 1.
-            case default
-               call die("[mpisetup:init_mpi] Invalid geometry name.")
-         end select
-
-         if (xmno /= xmin) then
-            write(msg,'(2(a,g20.12))')"[mpisetup:init_mpi] Sanitized xmin: ",xmno," -> ",xmin
-            call warn(msg)
-         endif
-         if (ymno /= ymin .and. ymno /= -big_float) then
-            write(msg,'(2(a,g20.12))')"[mpisetup:init_mpi] Sanitized ymin: ",ymno," -> ",ymin
-            call warn(msg)
-         endif
-         if (ymxo /= ymax .and. ymxo /= big_float) then
-            write(msg,'(2(a,g20.12))')"[mpisetup:init_mpi] Sanitized ymax: ",ymno," -> ",ymax
-            call warn(msg)
-         endif
-         if (xmin > xmax) call die("[[mpisetup:init_mpi] Negative span in X-direction")
-         if (ymin > ymax) call die("[[mpisetup:init_mpi] Negative span in Y-direction")
-         if (zmin > zmax) call die("[[mpisetup:init_mpi] Negative span in Z-direction")
-
          cfl_max = min(max(cfl_max, min(cfl*1.1, cfl+0.05, (1.+cfl)/2.) ), 1.0) ! automatically sanitize cfl_max
 
       endif
@@ -472,10 +425,65 @@ contains
 
       endif
 
-      ! set up the global domain
       has_dir(:) = dom%n_d(:) > 1
       eff_dim = count(has_dir(:))
 
+      select case (geometry)
+         case ("cartesian", "cart", "xyz", "XYZ")
+            geometry_type = GEO_XYZ
+         case ("cylindrical", "cyl", "rpz", "RPZ")
+            geometry_type = GEO_RPZ
+         case default
+            geometry_type = GEO_INVALID
+      end select
+
+      ! sanitize domain
+      xmno = xmin
+      ymno = ymin
+      ymxo = ymax
+      select case (geometry_type)
+         case (GEO_XYZ)
+            if (ymin <= -big_float .or. ymax >= big_float) call warn("[mpisetup:init_mpi] y range not specified. Defaulting to [0..1]")
+            if (ymin <= -big_float) ymin = 0.
+            if (ymax >= big_float) ymax = 1.
+         case (GEO_RPZ)
+            if (ymin <= -big_float) ymin = 0.
+            if (ymax >= big_float) ymax = dpi
+            if (ymax-ymin > dpi) then
+               call warn("[mpisetup:init_mpi] Hyperbolic spaces are not implemented. Setting azimuthal span to 2pi.")
+               if (abs(ymin) < 1./epsilon(1.)) then
+                  ymax = ymin + dpi
+               else
+                  ymin = ymax - dpi
+               endif
+               if (abs(ymax-ymin - dpi) > 100*epsilon(1.)) call die("[mpisetup:init_mpi] absolute values for both ymax and ymin too high.") ! magic number
+            endif
+            if (xmin <= 0.) then
+               xmin = 0.
+               if (bnd_xl /= "ref") call warn("[mpisetup:init_mpi] Enforcing bnd_xl = 'ref'.")
+               bnd_xl = "ref"
+            endif
+            if (bnd_xr == "per") call die("[mpisetup:init_mpi] Periodicity in radial direction is not allowed in cylindrical coordinates")
+         case default
+            call die("[mpisetup:init_mpi] Invalid geometry type.")
+      end select
+      if (xmno /= xmin) then
+         write(msg,'(2(a,g20.12))')"[mpisetup:init_mpi] Sanitized xmin: ",xmno," -> ",xmin
+         call warn(msg)
+      endif
+      if (ymno /= ymin .and. ymno /= -big_float) then
+         write(msg,'(2(a,g20.12))')"[mpisetup:init_mpi] Sanitized ymin: ",ymno," -> ",ymin
+         call warn(msg)
+      endif
+      if (ymxo /= ymax .and. ymxo /= big_float) then
+         write(msg,'(2(a,g20.12))')"[mpisetup:init_mpi] Sanitized ymax: ",ymno," -> ",ymax
+         call warn(msg)
+      endif
+      if (xmin > xmax) call die("[[mpisetup:init_mpi] Negative span in X-direction")
+      if (ymin > ymax) call die("[[mpisetup:init_mpi] Negative span in Y-direction")
+      if (zmin > zmax) call die("[[mpisetup:init_mpi] Negative span in Z-direction")
+
+      ! set up the global domain
       dom%bnd_xl_dom = bnd_xl
       dom%bnd_xr_dom = bnd_xr
       dom%bnd_yl_dom = bnd_yl

@@ -117,9 +117,9 @@ contains
    subroutine init_multipole(mb_alloc)
 
       use dataio_pub,    only: die, warn
-      use mpisetup,      only: master, dom, eff_dim
-      use constants,     only: xdim, ydim, zdim
-      use multigridvars, only: level_min, level_max, lvl, mg_geometry, MG_GEO_XYZ !, MG_GEO_RPZ
+      use mpisetup,      only: master, dom, eff_dim, geometry_type
+      use constants,     only: xdim, ydim, zdim, GEO_XYZ !, GEO_RPZ
+      use multigridvars, only: level_min, level_max, lvl
       use grid,          only: cg
 
       implicit none
@@ -129,7 +129,7 @@ contains
       integer, dimension(4) :: aerr
       integer               :: l,m
 
-      if (mg_geometry /= MG_GEO_XYZ) call die("[multigridmultipole:init_multipole] non-cartesian geometry not implemented yet.")
+      if (geometry_type /= GEO_XYZ) call die("[multigridmultipole:init_multipole] non-cartesian geometry not implemented yet.")
 
       ! external face coordinates
       fbnd_x(LOW:HIGH) = [ cg%xminb, cg%xmaxb ]
@@ -300,16 +300,17 @@ contains
    subroutine isolated_monopole
 
       use dataio_pub,    only: die
-      use constants,     only: xdim, ydim, zdim
-      use multigridvars, only: LOW, HIGH, is_external, XLO, XHI, YLO, YHI, ZLO, ZHI, mg_geometry, MG_GEO_XYZ !, MG_GEO_RPZ
-      use units,     only: newtong
+      use constants,     only: xdim, ydim, zdim, GEO_XYZ !, GEO_RPZ
+      use multigridvars, only: LOW, HIGH, is_external, XLO, XHI, YLO, YHI, ZLO, ZHI
+      use mpisetup,      only: geometry_type
+      use units,         only: newtong
 
       implicit none
 
       integer :: i, j, k
       real    :: r2
 
-      if (mg_geometry /= MG_GEO_XYZ) call die("[multigridmultipole:isolated_monopole] non-cartesian geometry not implemented yet")
+      if (geometry_type /= GEO_XYZ) call die("[multigridmultipole:isolated_monopole] non-cartesian geometry not implemented yet")
 
       if (is_external(XLO) .or. is_external(XHI)) then
          do j = lmpole%js, lmpole%je
@@ -351,17 +352,17 @@ contains
 
    subroutine find_img_CoM
 
-      use multigridvars,   only: is_external, XLO, XHI, YLO, YHI, ZLO, ZHI, LOW, HIGH, mg_geometry, MG_GEO_XYZ !, MG_GEO_RPZ
+      use multigridvars,   only: is_external, XLO, XHI, YLO, YHI, ZLO, ZHI, LOW, HIGH
       use dataio_pub,      only: die
-      use constants,       only: xdim, ydim, zdim
-      use mpisetup,        only: comm3d, ierr
+      use constants,       only: xdim, ydim, zdim, GEO_XYZ !, GEO_RPZ
+      use mpisetup,        only: comm3d, ierr, geometry_type
       use mpi,             only: MPI_DOUBLE_PRECISION, MPI_SUM
 
       implicit none
 
       real, dimension(0:NDIM) :: lsum, dsum
 
-      if (mg_geometry /= MG_GEO_XYZ) call die("[multigridmultipole:find_img_CoM] non-cartesian geometry not implemented yet")
+      if (geometry_type /= GEO_XYZ) call die("[multigridmultipole:find_img_CoM] non-cartesian geometry not implemented yet")
 
       lsum(:) = 0.
 
@@ -989,8 +990,9 @@ contains
 
    subroutine geomfac4moments(factor, x, y, z, sin_th, cos_th, ir, delta)
 
-      use dataio_pub,    only: die
-      use multigridvars, only: mg_geometry, MG_GEO_XYZ !, MG_GEO_RPZ
+      use dataio_pub, only: die
+      use mpisetup,   only: geometry_type
+      use constants,  only: GEO_XYZ !, GEO_RPZ
 
       implicit none
 
@@ -1007,7 +1009,7 @@ contains
       real    :: sin_ph, cos_ph
       integer :: l, m
 
-      if (mg_geometry /= MG_GEO_XYZ) call die("[multigridmultipole:geomfac4moments] non-cartesian geometry not implemented yet")
+      if (geometry_type /= GEO_XYZ) call die("[multigridmultipole:geomfac4moments] non-cartesian geometry not implemented yet")
 
       ! radius and its projection onto XY plane
       rxy  = x**2 + y**2

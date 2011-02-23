@@ -66,14 +66,17 @@ module initproblem
 contains
 !-----------------------------------------------------------------------------
    subroutine read_problem_par
+
       use dataio_pub,          only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml      ! QA_WARN required for diff_nml
       use dataio_pub,          only: user_vars_hdf5
-      use mpisetup,            only: cbuff, rbuff, ibuff, lbuff, buffer_dim, master, slave, comm, ierr, geometry
+      use mpisetup,            only: cbuff, rbuff, ibuff, lbuff, buffer_dim, master, slave, comm, ierr, geometry_type
       use mpi,                 only: MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL
       use gravity,             only: grav_pot_3d
       use types,               only: problem_customize_solution, problem_grace_passed
       use list_hdf5,           only: problem_write_restart, problem_read_restart
       use fluidboundaries_pub, only: user_bnd_xl, user_bnd_xr
+      use constants,           only: GEO_RPZ
+
       implicit none
 
       d0               = 1.0
@@ -159,7 +162,7 @@ contains
 
       endif
 
-      if (geometry=="cylindrical") then
+      if (geometry_type == GEO_RPZ) then
          problem_write_restart => write_initial_fld_to_restart
          problem_read_restart  => read_initial_fld_from_restart
          problem_customize_solution => problem_customize_solution_kepler
@@ -248,13 +251,13 @@ contains
       use dataio_pub,          only: msg, printinfo, die
       use types,               only: component_fluid
       use arrays,              only: u, b, dprof
-      use constants,           only: dpi, xdim, zdim
+      use constants,           only: dpi, xdim, zdim, GEO_XYZ, GEO_RPZ
       use units,               only: newtong, gram, cm, kboltz, mH
       use fluidindex,          only: ibx, iby, ibz, flind
       use gravity,             only: r_smooth, r_grav, n_gravr, ptmass, source_terms_grav, grav_pot2accel, grav_pot_3d
       use grid,                only: cg
       use hydrostatic,         only: hydrostatic_zeq_densmid
-      use mpisetup,            only: has_dir, dom, master, geometry, pcoords, dom, comm, ierr
+      use mpisetup,            only: has_dir, dom, master, geometry_type, pcoords, dom, comm, ierr
       use mpi,                 only: MPI_DOUBLE_PRECISION
       use types,               only: component_fluid
       use interactions,        only: epstein_factor
@@ -276,7 +279,7 @@ contains
          if (cg%z(k) < 0.0) kmid = k       ! the midplane is in between ksmid and ksmid+1
       enddo
 
-      if (associated(flind%ion) .and. geometry=='cartesian') then
+      if (associated(flind%ion) .and. geometry_type == GEO_XYZ) then
          fl => flind%ion
          csim2 = fl%cs2*(1.0+alpha)
          b0    = sqrt(2.*alpha*d0*fl%cs2)
@@ -328,7 +331,7 @@ contains
                enddo
             enddo
          enddo
-      else if (geometry=='cylindrical') then
+      else if (geometry_type == GEO_RPZ) then
          if (master) then
             call printinfo("------------------------------------------------------------------")
             call printinfo(" Assuming temperature profile for MMSN ")

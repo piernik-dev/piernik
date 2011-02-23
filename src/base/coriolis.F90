@@ -52,8 +52,8 @@ contains
    subroutine init_coriolis
 
       use dataio_pub, only: die, code_progress
-      use constants,  only: PIERNIK_INIT_BASE
-      use mpisetup,   only: geometry
+      use constants,  only: PIERNIK_INIT_BASE, GEO_XYZ
+      use mpisetup,   only: geometry_type
 
       implicit none
 
@@ -61,7 +61,7 @@ contains
 
       if (omega_uninitialized) coriolis_omega = 0.
 
-      if (geometry /= "cartesian") call die("[coriolis:init_coriolis] Only cartesian geometry is implemented")
+      if (geometry_type /= GEO_XYZ) call die("[coriolis:init_coriolis] Only cartesian geometry is implemented")
 #if !(defined GRAV || defined SHEAR || defined FLUID_INTERACTIONS)
       call die("coriolis:init_coriolis] Check how and under what conditions the rtvd::relaxing_tvd handles additional source terms")
 #endif /* !(GRAV || SHEAR || FLUID_INTERACTIONS) */

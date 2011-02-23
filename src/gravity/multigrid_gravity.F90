@@ -159,10 +159,10 @@ contains
 !<
    subroutine init_multigrid_grav
 
-      use multigridvars,      only: bnd_periodic, bnd_dirichlet, bnd_isolated, bnd_invalid, correction, mg_nb, ngridvars, periodic_bnd_cnt, non_periodic_bnd_cnt, &
-           &                        mg_geometry, MG_GEO_XYZ, MG_GEO_RPZ
+      use multigridvars,      only: bnd_periodic, bnd_dirichlet, bnd_isolated, bnd_invalid, correction, mg_nb, ngridvars, periodic_bnd_cnt, non_periodic_bnd_cnt
+      use constants,          only: GEO_XYZ, GEO_RPZ
       use multipole,          only: use_point_monopole, lmax, mmax, ord_prolong_mpole, coarsen_multipole, interp_pt2mom, interp_mom2pot
-      use mpisetup,           only: buffer_dim, comm, ierr, master, slave, ibuff, cbuff, rbuff, lbuff, dom, has_dir
+      use mpisetup,           only: buffer_dim, comm, ierr, master, slave, ibuff, cbuff, rbuff, lbuff, dom, has_dir, geometry_type
       use mpi,                only: MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL
       use dataio_pub,         only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml  ! QA_WARN required for diff_nml
       use dataio_pub,         only: msg, die, warn
@@ -222,7 +222,7 @@ contains
          diff_nml(MULTIGRID_GRAVITY)
 
          ! FIXME when ready
-         if (mg_geometry == MG_GEO_RPZ) then
+         if (geometry_type == GEO_RPZ) then
             call warn("[multigrid_gravity:init_multigrid_grav] cynindrical geometry support is under development.")
             ! switch off FFT-related bits
             gb_no_fft = .true.
@@ -230,7 +230,7 @@ contains
             ord_laplacian = 2
             L4_strength = 0.
             ! ord_prolong_mpole = 0
-         else if (mg_geometry /= MG_GEO_XYZ) then
+         else if (geometry_type /= GEO_XYZ) then
             call die("[multigrid_gravity:init_multigrid_grav] non-cartesian geometry not implemented yet.")
          endif
 
@@ -383,10 +383,10 @@ contains
    subroutine init_multigrid_grav_post(mb_alloc)
 
       use arrays,             only: sgp
-      use multigridvars,      only: lvl, roof, base, gb, level_gb, level_max, level_min, bnd_periodic, bnd_dirichlet, bnd_isolated, vcycle_stats, mg_geometry, MG_GEO_XYZ
-      use mpisetup,           only: master, nproc, psize
+      use multigridvars,      only: lvl, roof, base, gb, level_gb, level_max, level_min, bnd_periodic, bnd_dirichlet, bnd_isolated, vcycle_stats
+      use mpisetup,           only: master, nproc, psize, geometry_type
       use multigridhelpers,   only: vcycle_stats_init, dirty_debug, dirtyH
-      use constants,          only: pi, dpi, xdim, ydim, zdim
+      use constants,          only: pi, dpi, xdim, ydim, zdim, GEO_XYZ
       use dataio_pub,         only: die, warn
       use multipole,          only: init_multipole
 
@@ -474,7 +474,7 @@ contains
       !special initialization of global base-level FFT-related data
       if (gb%fft_type /= fft_none) then
 
-         if (mg_geometry /= MG_GEO_XYZ) call die("[multigrid_gravity:init_multigrid_grav_post] FFT at base level is not allowed in non-cartesian coordinates.")
+         if (geometry_type /= GEO_XYZ) call die("[multigrid_gravity:init_multigrid_grav_post] FFT at base level is not allowed in non-cartesian coordinates.")
 
          !> \deprecated BEWARE only small subset of gb% members is ever initialized
 
@@ -505,7 +505,7 @@ contains
 
          if (lvl(idx)%fft_type /= fft_none) then
 
-            if (mg_geometry /= MG_GEO_XYZ) call die("[multigrid_gravity:init_multigrid_grav_post] FFT is not allowed in non-cartesian coordinates.")
+            if (geometry_type /= GEO_XYZ) call die("[multigrid_gravity:init_multigrid_grav_post] FFT is not allowed in non-cartesian coordinates.")
 
             select case (lvl(idx)%fft_type)
                case (fft_rcr)
@@ -754,8 +754,9 @@ contains
       use dataio_pub,         only: die
       use multigridhelpers,   only: set_dirty, check_dirty
       use multigridbasefuncs, only: substract_average
-      use multigridvars,      only: roof, source, level_max, is_external, bnd_periodic, bnd_dirichlet, bnd_givenval, mg_geometry, &
-           &                        XLO, XHI, YLO, YHI, ZLO, ZHI, LOW, HIGH, MG_GEO_RPZ
+      use multigridvars,      only: roof, source, level_max, is_external, bnd_periodic, bnd_dirichlet, bnd_givenval, XLO, XHI, YLO, YHI, ZLO, ZHI, LOW, HIGH
+      use mpisetup,           only: geometry_type
+      use constants,          only: GEO_RPZ
 #ifdef DEBUG
       use piernikdebug,       only: aux_R, aux_L
 #endif
@@ -786,9 +787,9 @@ contains
             if (is_external(XLO)) then
                fac = 2. * roof%idx2 / fpiG
 #ifdef DEBUG
-               if (mg_geometry == MG_GEO_RPZ .and. roof%x(roof%is) /= 0. .and. aux_L(1)) fac = fac - 1./ (roof%dx * (roof%x(roof%is) - aux_R(1)*roof%dx) * fpiG)
+               if (geometry_type == GEO_RPZ .and. roof%x(roof%is) /= 0. .and. aux_L(1)) fac = fac - 1./ (roof%dx * (roof%x(roof%is) - aux_R(1)*roof%dx) * fpiG)
 #else
-               if (mg_geometry == MG_GEO_RPZ .and. roof%x(roof%is) /= 0.) fac = fac - 1./(roof%dx * roof%x(roof%is) * fpiG) !> BEWARE is it roof%x(ie), roof%x(ie+1) or something in the middle?
+               if (geometry_type == GEO_RPZ .and. roof%x(roof%is) /= 0.) fac = fac - 1./(roof%dx * roof%x(roof%is) * fpiG) !> BEWARE is it roof%x(ie), roof%x(ie+1) or something in the middle?
 #endif
                roof%mgvar(roof%is,         roof%js:roof%je, roof%ks:roof%ke, source) = &
                     &                roof%mgvar(roof%is,         roof%js:roof%je, roof%ks:roof%ke, source) - &
@@ -797,9 +798,9 @@ contains
             if (is_external(XHI)) then
                fac = 2. * roof%idx2 / fpiG
 #ifdef DEBUG
-               if (mg_geometry == MG_GEO_RPZ .and. roof%x(roof%ie) /= 0. .and. aux_L(1)) fac = fac - 1. / (roof%dx * (roof%x(roof%ie) + aux_R(1)*roof%dx) * fpiG)
+               if (geometry_type == GEO_RPZ .and. roof%x(roof%ie) /= 0. .and. aux_L(1)) fac = fac - 1. / (roof%dx * (roof%x(roof%ie) + aux_R(1)*roof%dx) * fpiG)
 #else
-               if (mg_geometry == MG_GEO_RPZ .and. roof%x(roof%ie) /= 0.) fac = fac - 1./ (roof%dx * roof%x(roof%ie) * fpiG) !> BEWARE is it roof%x(ie), roof%x(ie+1) or something in the middle?
+               if (geometry_type == GEO_RPZ .and. roof%x(roof%ie) /= 0.) fac = fac - 1./ (roof%dx * roof%x(roof%ie) * fpiG) !> BEWARE is it roof%x(ie), roof%x(ie+1) or something in the middle?
 #endif
                roof%mgvar(        roof%ie, roof%js:roof%je, roof%ks:roof%ke, source) = &
                     &                roof%mgvar(        roof%ie, roof%js:roof%je, roof%ks:roof%ke, source) - &
@@ -1147,12 +1148,12 @@ contains
 
    subroutine residual2(lev, src, soln, def)
 
-      use constants,          only: xdim, ydim, zdim
+      use constants,          only: xdim, ydim, zdim, GEO_XYZ, GEO_RPZ
       use dataio_pub,         only: die
-      use mpisetup,           only: has_dir, eff_dim
+      use mpisetup,           only: has_dir, eff_dim, geometry_type
       use multigridhelpers,   only: multidim_code_3D
       use multigridmpifuncs,  only: mpi_multigrid_bnd
-      use multigridvars,      only: lvl, NDIM, extbnd_antimirror, mg_geometry, MG_GEO_XYZ, MG_GEO_RPZ
+      use multigridvars,      only: lvl, NDIM, extbnd_antimirror
 
       implicit none
 
@@ -1176,8 +1177,8 @@ contains
       ! Possible optimization candidate: reduce cache misses (secondary importance, cache-aware implementation required)
       ! Explicit loop over k gives here better performance than array operation due to less cache misses (at least on 32^3 and 64^3 arrays)
 
-      select case (mg_geometry)
-         case (MG_GEO_XYZ)
+      select case (geometry_type)
+         case (GEO_XYZ)
             if (eff_dim == NDIM .and. .not. multidim_code_3D) then
                do k = lvl(lev)%ks, lvl(lev)%ke
                   lvl(       lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k,   def)        = &
@@ -1213,7 +1214,7 @@ contains
                        & lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k+1, soln)) * Lz
                enddo
             endif
-         case (MG_GEO_RPZ)
+         case (GEO_RPZ)
             Lx = lvl(lev)%idx2
             Lz = lvl(lev)%idz2
             do k = lvl(lev)%ks, lvl(lev)%ke
@@ -1399,11 +1400,11 @@ contains
    subroutine approximate_solution_rbgs(lev, src, soln)
 
       use dataio_pub,         only: die
-      use constants,          only: xdim, ydim, zdim
-      use mpisetup,           only: has_dir, eff_dim
+      use constants,          only: xdim, ydim, zdim, GEO_XYZ, GEO_RPZ
+      use mpisetup,           only: has_dir, eff_dim, geometry_type
       use multigridhelpers,   only: dirty_debug, check_dirty, multidim_code_3D, dirty_label
       use multigridmpifuncs,  only: mpi_multigrid_bnd
-      use multigridvars,      only: lvl, level_min, NDIM, extbnd_antimirror, mg_geometry, MG_GEO_XYZ, MG_GEO_RPZ
+      use multigridvars,      only: lvl, level_min, NDIM, extbnd_antimirror
 
       implicit none
 
@@ -1423,7 +1424,7 @@ contains
          nsmoo = nsmool
       endif
 
-      if (mg_geometry == MG_GEO_RPZ .and. .not. multidim_code_3D) call die("[multigrid_gravity:approximate_solution_rbgs] multidim_code_3D = .false. not implemented")
+      if (geometry_type == GEO_RPZ .and. .not. multidim_code_3D) call die("[multigrid_gravity:approximate_solution_rbgs] multidim_code_3D = .false. not implemented")
 
       do n = 1, RED_BLACK*nsmoo
          call mpi_multigrid_bnd(lev, soln, 1, extbnd_antimirror) ! no corners are required here
@@ -1448,7 +1449,7 @@ contains
             do k = lvl(lev)%ks, lvl(lev)%ke
                do j = lvl(lev)%js, lvl(lev)%je
                   i1 = lvl(lev)%is + mod(n+j+k, RED_BLACK)
-                  if (mg_geometry == MG_GEO_RPZ) then
+                  if (geometry_type == GEO_RPZ) then
 !!$                     lvl(          lev          )%mgvar(i1  :lvl(lev)%ie  :2, j,   k,   soln) = &
 !!$                          lvl(lev)%rx * (lvl(lev)%mgvar(i1-1:lvl(lev)%ie-1:2, j,   k,   soln) + lvl(lev)%mgvar(i1+1:lvl(lev)%ie+1:2, j,   k,   soln)) + &
 !!$                          lvl(lev)%ry * (lvl(lev)%mgvar(i1  :lvl(lev)%ie  :2, j-1, k,   soln) + lvl(lev)%mgvar(i1:  lvl(lev)%ie:  2, j+1, k,   soln)) + &
@@ -1479,8 +1480,8 @@ contains
             endif
 
             if (kd == RED_BLACK) k1 = lvl(lev)%ks + mod(n, RED_BLACK)
-            select case (mg_geometry)
-               case (MG_GEO_XYZ)
+            select case (geometry_type)
+               case (GEO_XYZ)
                   do k = k1, lvl(lev)%ke, kd
                      if (jd == RED_BLACK) j1 = lvl(lev)%js + mod(n+k, RED_BLACK)
                      do j = j1, lvl(lev)%je, jd
@@ -1496,7 +1497,7 @@ contains
                              &       Jacobi_damp *(lvl(lev)%mgvar(i1  :lvl(lev)%ie  :id, j,   k-1, soln) + lvl(lev)%mgvar(i1:  lvl(lev)%ie:  id, j,   k+1, soln)) * lvl(lev)%rz
                      enddo
                   enddo
-               case (MG_GEO_RPZ)
+               case (GEO_RPZ)
                   do k = k1, lvl(lev)%ke, kd
                      if (jd == RED_BLACK) j1 = lvl(lev)%js + mod(n+k, RED_BLACK)
                      do j = j1, lvl(lev)%je, jd
@@ -1550,13 +1551,13 @@ contains
 
    subroutine approximate_solution_fft(lev, src, soln)
 
-      use constants,          only: xdim, ydim, zdim
+      use constants,          only: xdim, ydim, zdim, GEO_XYZ
       use grid,               only: D_x, D_y, D_z
-      use mpisetup,           only: has_dir, eff_dim
+      use mpisetup,           only: has_dir, eff_dim, geometry_type
       use dataio_pub,         only: die, warn
       use multigridhelpers,   only: dirty_debug, check_dirty, dirtyL, multidim_code_3D
       use multigridmpifuncs,  only: mpi_multigrid_bnd
-      use multigridvars,      only: lvl, LOW, HIGH, NDIM, extbnd_antimirror, mg_geometry, MG_GEO_XYZ
+      use multigridvars,      only: lvl, LOW, HIGH, NDIM, extbnd_antimirror
 
       implicit none
 
@@ -1566,7 +1567,7 @@ contains
 
       integer :: nf, n
 
-      if (mg_geometry /= MG_GEO_XYZ) call die("[multigrid_gravity:approximate_solution_fft] FFT is not allowed in non-cartesian coordinates.")
+      if (geometry_type /= GEO_XYZ) call die("[multigrid_gravity:approximate_solution_fft] FFT is not allowed in non-cartesian coordinates.")
 
       do nf = 1, nsmoof
          lvl(lev)%src(:, :, :) = lvl(lev)%mgvar(lvl(lev)%is:lvl(lev)%ie, lvl(lev)%js:lvl(lev)%je, lvl(lev)%ks:lvl(lev)%ke, src)

@@ -77,16 +77,15 @@ contains
 
       use grid,                only: cg, D_x, D_y, D_z
       use multigridvars,       only: lvl, level_max, level_min, level_gb, roof, base, gb, gb_cartmap, mg_nb, ngridvars, correction, &
-           &                         is_external, periodic_bnd_cnt, non_periodic_bnd_cnt, mg_geometry, &
-           &                         MG_GEO_INVALID, MG_GEO_XYZ, MG_GEO_RPZ, NDIM, XLO, XHI, YLO, YHI, ZLO, ZHI, LOW, HIGH, &
+           &                         is_external, periodic_bnd_cnt, non_periodic_bnd_cnt, NDIM, XLO, XHI, YLO, YHI, ZLO, ZHI, LOW, HIGH, &
            &                         ord_prolong, ord_prolong_face, stdout, verbose_vcycle, tot_ts
       use mpi,                 only: MPI_INTEGER, MPI_LOGICAL
       use mpisetup,            only: comm, comm3d, ierr, proc, master, slave, nproc, has_dir, psize, buffer_dim, &
-           &                         ibuff, lbuff, bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr, dom, eff_dim, geometry
+           &                         ibuff, lbuff, bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr, dom, eff_dim, geometry_type
       use multigridhelpers,    only: mg_write_log, dirtyH, do_ascii_dump, dirty_debug, multidim_code_3D
       use multigridmpifuncs,   only: mpi_multigrid_prep
       use dataio_pub,          only: die, code_progress
-      use constants,           only: PIERNIK_INIT_ARRAYS, xdim, ydim, zdim, ndims
+      use constants,           only: PIERNIK_INIT_ARRAYS, xdim, ydim, zdim, ndims, GEO_RPZ
       use dataio_pub,          only: msg, par_file, namelist_errh, compare_namelist, cmdl_nml  ! QA_WARN required for diff_nml
 #ifdef GRAV
       use multigrid_gravity,   only: init_multigrid_grav, init_multigrid_grav_post
@@ -174,15 +173,7 @@ contains
          call count_periodic(dom%bnd_zr_dom)
       endif
 
-      select case (geometry)
-         case ("cartesian")
-            mg_geometry = MG_GEO_XYZ
-         case ("cylindrical")
-            mg_geometry = MG_GEO_RPZ
-            multidim_code_3D = .true.
-         case default
-            mg_geometry = MG_GEO_INVALID
-      end select
+      if (geometry_type == GEO_RPZ) multidim_code_3D = .true. ! temporarily
 
 !> \todo Make array of subroutine pointers
 #ifdef GRAV

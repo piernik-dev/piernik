@@ -132,11 +132,11 @@ contains
    subroutine init_prob
 
       use arrays,        only: u
-      use constants,     only: pi
+      use constants,     only: pi, GEO_XYZ, GEO_RPZ
       use dataio_pub,    only: msg, printinfo, warn, die
       use grid,          only: cg
       use initionized,   only: gamma_ion, idni, imxi, imzi, ieni
-      use mpisetup,      only: master, dom, geometry
+      use mpisetup,      only: master, dom, geometry_type
 #ifdef MAGNETIC
       use arrays,        only: b
 #endif /* MAGNETIC */
@@ -157,17 +157,17 @@ contains
                   do jj = -nsub+1, nsub-1, 2
                      do ii = -nsub+1, nsub-1, 2
 
-                        select case (geometry)
-                           case ("cartesian")
+                        select case (geometry_type)
+                           case (GEO_XYZ)
                               yy = ((cg%y(j) + jj*cg%dy/(2.*nsub) - y0)/a1)**2
                               xx = ((cg%x(i) + ii*cg%dx/(2.*nsub) - x0)/a1)**2
                               rr = xx + yy + zz
-                           case ("cylindrical")
+                           case (GEO_RPZ)
                               yy = cg%y(j) + jj*cg%dy/(2.*nsub) - y0
                               xx = cg%x(i) + ii*cg%dx/(2.*nsub)
                               rr = (xx**2 + x0**2 - 2. * xx * x0 * cos(yy))/a1**2 + zz
                            case default
-                              call die("[initproblem:init_prob] Usupported geometry")
+                              call die("[initproblem:init_prob] Usupported geometry_type")
                               rr = 0.
                         end select
 
@@ -198,8 +198,8 @@ contains
       if (master) then
          write(msg, '(3(a,g12.5),a)')"[initproblem:init_prob] Set up spheroid with a1 and a3 axes = ", a1, ", ", a3, " (eccentricity = ", e, ")"
          call printinfo(msg, .true.)
-         if (   ((geometry == "cartesian" .and. (x0-a1<dom%xmin .or. z0-a3<dom%zmin .or. z0+a3>dom%zmax)) .or. &
-              &  (geometry == "cylindrical" .and. dom%xmin > 0.)) .or. &
+         if (   ((geometry_type == GEO_XYZ .and. (x0-a1<dom%xmin .or. z0-a3<dom%zmin .or. z0+a3>dom%zmax)) .or. &
+              &  (geometry_type == GEO_RPZ .and. dom%xmin > 0.)) .or. &
               &  z0-a3<dom%zmin .or. z0+a3>dom%zmax) &
                     call warn("[initproblem:init_prob] Part of the spheroid is outside the domain")
          write(msg,'(2(a,g12.5))')   "[initproblem:init_prob] Density = ", d0, " mass = ", 4./3.*pi * a1**2 * a3 * d0
@@ -244,11 +244,11 @@ contains
    subroutine compute_maclaurin_potential
 
       use diagnostics,   only: my_allocate
-      use constants,     only: pi
+      use constants,     only: pi, GEO_XYZ, GEO_RPZ
       use units,         only: newtong
       use dataio_pub,    only: warn, die
       use grid,          only: cg
-      use mpisetup,      only: master, geometry
+      use mpisetup,      only: master, geometry_type
 
       implicit none
 
@@ -279,18 +279,18 @@ contains
          z02 = (cg%z(k)-z0)**2
          do j = cg%js, cg%je
             do i = cg%is, cg%ie
-               select case (geometry)
-                  case ("cartesian")
+               select case (geometry_type)
+                  case (GEO_XYZ)
                      y02 = (cg%y(j)-y0)**2
                      x02 = (cg%x(i)-x0)**2
                      r2 = (x02+y02)/a12 + z02/a32
-                  case ("cylindrical")
+                  case (GEO_RPZ)
                      cdphi = cos(cg%y(j)-y0)
                      r2 = (cg%x(i)**2 + x0**2 - 2. * cg%x(i) * x0 * cdphi)/a12 + z02/a32
                      x02 = r2 * cdphi**2
                      y02 = r2 - x02
                   case default
-                     call die("[initproblem:compute_maclaurin_potential] Invalid geometry.")
+                     call die("[initproblem:compute_maclaurin_potential] Invalid geometry_type.")
                      r2 = 0 ; x02 = 0 ; y02 = 0 ! suppress compiler warnings
                end select
                rr = r2 * a12
@@ -345,9 +345,10 @@ contains
    subroutine finalize_problem_maclaurin
 
       use arrays,        only: sgp
+      use constants,     only: GEO_RPZ
       use dataio_pub,    only: msg, printinfo
       use grid,          only: cg
-      use mpisetup,      only: master, comm3d, ierr, geometry
+      use mpisetup,      only: master, comm3d, ierr, geometry_type
       use mpi,           only: MPI_DOUBLE_PRECISION, MPI_SUM, MPI_MIN, MPI_MAX, MPI_IN_PLACE
 
       implicit none
@@ -365,7 +366,7 @@ contains
          do j = cg%js, cg%je
             do i = cg%is, cg%ie
                potential =  apot(i-cg%is+1, j-cg%js+1, k-cg%ks+1)
-               if (geometry == "cylindrical") fac = cg%x(i)
+               if (geometry_type == GEO_RPZ) fac = cg%x(i)
                norm(1) = norm(1) + (potential - sgp(i, j, k))**2 * fac
                norm(2) = norm(2) + potential**2 * fac
                dev(1) = min(dev(1), (potential - sgp(i, j, k))/potential)

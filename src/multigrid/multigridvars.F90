@@ -138,12 +138,6 @@ module multigridvars
    end type cart
    type(cart), dimension(:),       allocatable :: gb_cartmap          !< rank-to-coordinates array and ranges on gb_src for assembling base level;
 
-   ! geometry
-   integer, parameter :: MG_GEO_INVALID = -1                       !< non-recognized grid geometry
-   integer, parameter :: MG_GEO_XYZ = 0                            !< cartesian grid with uniform cell spacing
-   integer, parameter :: MG_GEO_RPZ = MG_GEO_XYZ + 1               !< cylindrical grid with uniform spacing
-   integer :: mg_geometry                                          !< one of the above values , depending on mpisetup::geometry
-
    ! miscellaneous
    real                    :: ts                                      !< time for runtime profiling
    real                    :: tot_ts                                  !< total multigrid time

@@ -73,9 +73,9 @@ contains
 
       use types,     only: component_fluid
       use grid,      only: cg
-      use constants, only: big, xdim, ydim, zdim
+      use constants, only: big, xdim, ydim, zdim, GEO_RPZ
       use mpi,       only: MPI_DOUBLE_PRECISION, MPI_MIN, MPI_MAX
-      use mpisetup,  only: comm, ierr, cfl, has_dir, dom, geometry
+      use mpisetup,  only: comm, ierr, cfl, has_dir, dom, geometry_type
 
       implicit none
 
@@ -96,7 +96,7 @@ contains
       endif
       if (has_dir(ydim) .and. cy /= 0) then
          dt_proc_y = cg%dy/cy
-         if (geometry == 'cylindrical') dt_proc_y = dt_proc_y * dom%xmin
+         if (geometry_type == GEO_RPZ) dt_proc_y = dt_proc_y * dom%xmin
       else
          dt_proc_y = big
       endif
