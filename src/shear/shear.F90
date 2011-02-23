@@ -43,6 +43,8 @@ module shear
    public  :: unshear_fft
 #endif FFTW
 
+   include "fftw3.f"
+
    real    :: ts, dely, eps, omega, qshear, dts, ddly, eta_gas, csvk
    integer :: delj
    real, dimension(:), allocatable :: global_gradP
@@ -149,7 +151,7 @@ contains
 
       implicit none
 
-      !    include "fftw3.f" ! this may give tons of warnings on unused parameters
+      !integer, parameter :: FFTW_ESTIMATE=64
 
       real, intent(in) :: ddy
       logical, optional               :: inv
@@ -164,9 +166,6 @@ contains
       complex*16      , dimension(:)   , allocatable :: ctmp
       real(kind=8)    , dimension(:)   , allocatable :: rtmp
       real(kind=8)    , dimension(:)     , allocatable :: ky
-
-      ! constants from fftw3.f
-      integer, parameter :: FFTW_ESTIMATE=64
 
       St = - ddy / cg%dy / dom%Lx
       if (.not.present(inv)) St = -St

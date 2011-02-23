@@ -42,7 +42,6 @@
 
 module multigrid_gravity
 ! pulled by MULTIGRID && GRAV
-#if defined(MULTIGRID) && defined(GRAV)
 
    use dataio_pub,    only: cbuff_len
    use multigridvars, only: vcycle_stats
@@ -52,6 +51,11 @@ module multigrid_gravity
    private
    public :: init_multigrid_grav, init_multigrid_grav_post, cleanup_multigrid_grav, multigrid_solve_grav
    public :: grav_bnd
+
+   include "fftw3.f"
+   ! constants from fftw3.f
+   !   integer, parameter :: FFTW_MEASURE=0, FFTW_PATIENT=32, FFTW_ESTIMATE=64
+   !   integer, parameter :: FFTW_RODFT01=8, FFTW_RODFT10=9
 
    ! multigrid constants
    integer, parameter :: fft_rcr=1                                    !< type of FFT transform: full
@@ -88,10 +92,6 @@ module multigrid_gravity
 
    ! global base-level FFT solver
    real,       dimension(:,:,:,:), allocatable :: gb_src_temp         !< Storage for collected base level if using gb_solve_gather
-
-   ! constants from fftw3.f
-   integer, parameter :: FFTW_MEASURE=0, FFTW_PATIENT=32, FFTW_ESTIMATE=64
-   integer, parameter :: FFTW_RODFT01=8, FFTW_RODFT10=9
 
    integer            :: fftw_flags = FFTW_MEASURE                    !< or FFTW_PATIENT on request
 
@@ -1931,8 +1931,8 @@ contains
 
    end subroutine fft_convolve
 
-#else /* !(MULTIGRID && GRAV) */
+#if !defined(MULTIGRID) || !defined(GRAV)
 #warning This should not happen. Probably the multigrid_gravity.F90 file is included in object directory by mistake.
-#endif /* !(MULTIGRID && GRAV) */
+#endif /* !MULTIGRID || !GRAV) */
 
 end module multigrid_gravity

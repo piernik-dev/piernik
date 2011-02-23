@@ -34,6 +34,8 @@ module poissonsolver
    private
    public :: poisson_solve
 
+   include "fftw3.f"
+
 contains
 
 !!=====================================================================
@@ -117,6 +119,10 @@ contains
 
       implicit none
 
+!!$      integer*8     , parameter :: FFTW_ESTIMATE = 64
+!!$      integer*8     , parameter :: FFTW_FORWARD  = 1
+!!$      integer*8     , parameter :: FFTW_BACKWARD = -1
+
       real, dimension(:,:), intent(in)              :: den
       real, dimension(:,:), intent(out)             :: pot
       real, dimension(:,:), intent(out)             :: lpot, rpot
@@ -141,9 +147,6 @@ contains
 
       integer*8      :: n,np, p, q, i
 
-      integer*8     , parameter :: FFTW_ESTIMATE = 64
-      integer*8     , parameter :: FFTW_FORWARD  = 1
-      integer*8     , parameter :: FFTW_BACKWARD = -1
 !
 !----------------------------------------------------------------------
 !
@@ -276,7 +279,7 @@ contains
 
       integer         :: nx, ny, np, p, q
 
-      integer     , parameter :: FFTW_ESTIMATE = 64
+!      integer     , parameter :: FFTW_ESTIMATE = 64
 !
 !----------------------------------------------------------------------
 !
@@ -396,7 +399,7 @@ contains
 
       integer         :: nx, ny, nz, np, p, q, k, info
 
-      integer     , parameter :: FFTW_ESTIMATE = 64
+!      integer     , parameter :: FFTW_ESTIMATE = 64
 !
 !----------------------------------------------------------------------
 !
@@ -540,7 +543,7 @@ contains
       real    :: norm
       integer(kind=selected_int_kind(16)) :: planf, plani
       integer         :: nx, ny, nz, np, i, j, k
-      integer     , parameter :: FFTW_ESTIMATE = 64
+!      integer     , parameter :: FFTW_ESTIMATE = 64
 !
 !----------------------------------------------------------------------
 !
