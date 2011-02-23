@@ -46,7 +46,7 @@
 
 module dataio
 
-   use dataio_pub,    only: cwdlen, hnlen, varlen, domain, fmin, fmax, vizit, nend, tend, wend, nrestart, problem_name, run_id, cbuff_len
+   use dataio_pub,    only: cwdlen, varlen, domain, fmin, fmax, vizit, nend, tend, wend, nrestart, problem_name, run_id, cbuff_len
    use types,         only: idlen
 
    implicit none
@@ -88,12 +88,6 @@ module dataio
    integer, parameter    :: umsg_len = 16
    character(len=umsg_len) :: umsg                    !< string of characters - content of a user/system message
    real                  :: umsg_param              !< parameter changed by a user/system message
-
-   character(len=hnlen)  :: hostfull, host
-   integer               :: pid
-   integer               :: uid
-   integer               :: ihost
-   integer               :: scstatus
 
    character(len=cwdlen) :: filename               !< string of characters indicating currently used file
    character(len=cwdlen), parameter :: fmt_loc = "(2x,a12,a3,'  = ',es16.9,16x,           5(1x,i4))"
@@ -219,8 +213,6 @@ contains
       implicit none
 
       logical              :: tn
-      integer(kind=1)      :: getpid
-      integer(kind=1)      :: hostnm
       integer(kind=1)      :: system
       integer              :: system_status, i
       character(len=msglen):: system_command
@@ -263,13 +255,6 @@ contains
       nend = 1
       tend = -1.0
       wend = huge(1.0)
-
-      pid = getpid()
-
-      scstatus = hostnm(hostfull)
-      ihost = index(hostfull,'.')
-      if (ihost .eq. 0) ihost = index(hostfull,' ')
-      host = hostfull(1:ihost-1)
 
       if (master) then
 
