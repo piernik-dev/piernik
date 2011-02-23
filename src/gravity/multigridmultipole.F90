@@ -69,6 +69,7 @@ module multipole
 
    type(plvl), pointer       :: lmpole                           !< pointer to the level where multipoles are evaluated
    real, dimension(0:NDIM)   :: CoM                              !< Total mass and center of mass coordinates
+   logical                   :: zaxis_inside                     !< true when z-axis belongs to the inner radial boundary in polar coordinates
 
    ! boundaries
    real, dimension(LOW:HIGH) :: fbnd_x                           !< coordinates at x-faces of local domain
@@ -118,7 +119,7 @@ contains
 
       use dataio_pub,    only: die, warn
       use mpisetup,      only: master, dom, eff_dim, geometry_type
-      use constants,     only: xdim, ydim, zdim, GEO_XYZ !, GEO_RPZ
+      use constants,     only: small, pi, xdim, ydim, zdim, GEO_XYZ, GEO_RPZ
       use multigridvars, only: level_min, level_max, lvl
       use grid,          only: cg
 
@@ -129,8 +130,6 @@ contains
       integer, dimension(4) :: aerr
       integer               :: l,m
 
-      if (geometry_type /= GEO_XYZ) call die("[multigridmultipole:init_multipole] non-cartesian geometry not implemented yet.")
-
       ! external face coordinates
       fbnd_x(LOW:HIGH) = [ cg%xminb, cg%xmaxb ]
       fbnd_y(LOW:HIGH) = [ cg%yminb, cg%ymaxb ]
@@ -138,12 +137,36 @@ contains
 
       ! assume that Center of Mass is approximately in the center of computational domain by default
       CoM(0) = 1.
-      !> \deprecated BEWARE: cylindrical factors go here
-      CoM(xdim) = dom%x0
-      CoM(ydim) = dom%y0
-      CoM(zdim) = dom%z0
 
-      if (eff_dim /= NDIM) call die("[multipole:init_multipole] Only 3D is supported")
+      select case (geometry_type)
+         case (GEO_XYZ)
+            CoM(xdim) = dom%x0
+            CoM(ydim) = dom%y0
+            CoM(zdim) = dom%z0
+            zaxis_inside = .false.
+         case (GEO_RPZ)
+            if (dom%Ly >= (2.-small)*pi) then
+               CoM(xdim) = 0.
+               CoM(ydim) = 0.
+            else
+!!$               CoM(xdim) = 2./3. * (dom%xmax**3-dom%xmin**3)/(dom%xmax**2-dom%xmin**2)
+!!$               if (dom%Ly /= 0.) CoM(xdim) = CoM(xdim) * sin(dom%Ly/2.)/(dom%Ly/2.)
+!!$               CoM(ydim) = dom%y0
+               CoM(xdim) = 0.
+               CoM(ydim) = 0.
+            endif
+            CoM(zdim) = dom%z0
+            zaxis_inside = dom%xmin <= dom%Lx/dom%n_d(xdim)
+            if (master) then
+               if (zaxis_inside) call warn("[multipole:init_multipole] Setups with Z-axis at the edge of the domain may not work as expected yet.")
+               if (use_point_monopole) call warn("[multipole:init_multipole] Point-like monopole is not implemented.")
+            endif
+            use_point_monopole = .false.
+         case default
+            call die("[multipole:init_multipole] Unsupported geometry.")
+      end select
+
+      if (eff_dim /= NDIM) call die("[multipole:init_multipole] Only 3D is supported") !> \todo add support for 2D RZ
 
       !multipole moments
       if (mmax > lmax) then
@@ -178,15 +201,23 @@ contains
          if (any(aerr(1:4) /= 0)) call die("[multipole:init_multipole] Allocation error: rn, irn sfac or cfac")
          mb_alloc = mb_alloc + size(rn) + size(irn) + size(sfac) + size(cfac)
 
-         !> \deprecated BEWARE: cylindrical factors go here
-         drq = min(lmpole%dx, lmpole%dy, lmpole%dz) / 2.
-         rqbin = int(sqrt(dom%Lx**2 + dom%Ly**2 + dom%Lz**2)/drq) + 1
-         ! arithmetic average of the closest and farthest points of computational domain with respect to its center
-         !>
-         !!\todo check what happens if there are points that are really close to the domain center (maybe we should use a harmonic average?)
-         !! Issue a warning or error if it is known that given lmax leads to FP overflows in rn(:) and irn(:)
-         !<
-         rscale = ( min(dom%Lx, dom%Ly, dom%Lz) + sqrt(dom%Lx**2 + dom%Ly**2 + dom%Lz**2) )/4.
+         select case (geometry_type)
+            case (GEO_XYZ)
+               drq = min(lmpole%dx, lmpole%dy, lmpole%dz) / 2.
+               rqbin = int(sqrt(dom%Lx**2 + dom%Ly**2 + dom%Lz**2)/drq) + 1
+               ! arithmetic average of the closest and farthest points of computational domain with respect to its center
+               !>
+               !!\todo check what happens if there are points that are really close to the domain center (maybe we should use a harmonic average?)
+               !! Issue a warning or error if it is known that given lmax leads to FP overflows in rn(:) and irn(:)
+               !<
+               rscale = ( min(dom%Lx, dom%Ly, dom%Lz) + sqrt(dom%Lx**2 + dom%Ly**2 + dom%Lz**2) )/4.
+            case (GEO_RPZ)
+               drq = min(lmpole%dx, dom%x0*lmpole%dy, lmpole%dz) / 2.
+               rqbin = int(sqrt((2.*dom%xmax)**2 + dom%Lz**2)/drq) + 1
+               rscale = ( min(2.*dom%xmax, dom%Lz) + sqrt((2.*dom%xmax)**2 + dom%Lz**2) )/4.
+            case default
+               call die("[multipole:init_multipole] Unsupported geometry.")
+         end select
          if (allocated(k12) .or. allocated(ofact) .or. allocated(Q)) call die("[multipole:init_multipole] k12, ofact or Q already allocated")
          allocate(   k12(2, 1:lmax, 0:mmax), stat=aerr(1))
          allocate(ofact(0:lm(lmax, 2*mmax)), stat=aerr(2))
@@ -433,30 +464,61 @@ contains
    subroutine potential2img_mass
 
       use multigridvars,   only: is_external, XLO, XHI, YLO, YHI, ZLO, ZHI, LOW, HIGH, solution
+      use mpisetup,        only: geometry_type
+      use constants,       only: GEO_RPZ
 
       implicit none
 
+      integer :: i
       real, parameter :: a1 = -2., a2 = (-2. - a1)/3. ! interpolation parameters;   <---- a1=-2 => a2=0
       ! a1 = -2. is the simplest, low order choice, gives best agreement of total mass and CoM location when compared to 3-D integration
       ! a1 = -1., a2 = -1./3. seems to do the best job,
       !> \todo: find out how and why
 
       !> \deprecated BEWARE: some cylindrical factors may be helpful
-      if (is_external(XLO)) lmpole%bnd_x(             lmpole%js:lmpole%je, lmpole%ks:lmpole%ke, LOW) =    ( &
-           &           a1 * lmpole%mgvar(lmpole%is,   lmpole%js:lmpole%je, lmpole%ks:lmpole%ke, solution) + &
-           &           a2 * lmpole%mgvar(lmpole%is+1, lmpole%js:lmpole%je, lmpole%ks:lmpole%ke, solution) ) / lmpole%dx
+      if (is_external(XLO)) then
+         if (zaxis_inside .and. geometry_type == GEO_RPZ) then
+             lmpole%bnd_x(                      lmpole%js:lmpole%je, lmpole%ks:lmpole%ke, LOW) = 0. ! treat as internal
+          else
+             lmpole%bnd_x(                      lmpole%js:lmpole%je, lmpole%ks:lmpole%ke, LOW) =   ( &
+                  &           a1 * lmpole%mgvar(lmpole%is,   lmpole%js:lmpole%je, lmpole%ks:lmpole%ke, solution) + &
+                  &           a2 * lmpole%mgvar(lmpole%is+1, lmpole%js:lmpole%je, lmpole%ks:lmpole%ke, solution) ) / lmpole%dx
+          endif
+       endif
 
       if (is_external(XHI)) lmpole%bnd_x(             lmpole%js:lmpole%je, lmpole%ks:lmpole%ke, HIGH) =   ( &
            &           a1 * lmpole%mgvar(lmpole%ie,   lmpole%js:lmpole%je, lmpole%ks:lmpole%ke, solution) + &
            &           a2 * lmpole%mgvar(lmpole%ie-1, lmpole%js:lmpole%je, lmpole%ks:lmpole%ke, solution) ) / lmpole%dx
 
-      if (is_external(YLO)) lmpole%bnd_y(lmpole%is:lmpole%ie,              lmpole%ks:lmpole%ke, LOW) =    ( &
-           &           a1 * lmpole%mgvar(lmpole%is:lmpole%ie, lmpole%js,   lmpole%ks:lmpole%ke, solution) + &
-           &           a2 * lmpole%mgvar(lmpole%is:lmpole%ie, lmpole%js+1, lmpole%ks:lmpole%ke, solution) ) / lmpole%dy
+      if (is_external(YLO)) then
+         lmpole%bnd_y(lmpole%is:lmpole%ie,              lmpole%ks:lmpole%ke, LOW) =    ( &
+              &           a1 * lmpole%mgvar(lmpole%is:lmpole%ie, lmpole%js,   lmpole%ks:lmpole%ke, solution) + &
+              &           a2 * lmpole%mgvar(lmpole%is:lmpole%ie, lmpole%js+1, lmpole%ks:lmpole%ke, solution) ) / lmpole%dy
+         if (geometry_type == GEO_RPZ) then
+            do i = lmpole%is, lmpole%ie
+               if (lmpole%x(i) /= 0.) then ! cylindrical factor in the gradient operator
+                  lmpole%bnd_y(i, lmpole%ks:lmpole%ke, LOW) = lmpole%bnd_y(i, lmpole%ks:lmpole%ke, LOW) / lmpole%x(i) !> \todo precompute sanitized 1/x(:) (convert plvl% into cg%)
+               else
+                  lmpole%bnd_y(i, lmpole%ks:lmpole%ke, LOW) = 0.
+               endif
+            enddo
+         endif
+      endif
 
-      if (is_external(YHI)) lmpole%bnd_y(lmpole%is:lmpole%ie,              lmpole%ks:lmpole%ke, HIGH) =   ( &
-           &           a1 * lmpole%mgvar(lmpole%is:lmpole%ie, lmpole%je,   lmpole%ks:lmpole%ke, solution) + &
-           &           a2 * lmpole%mgvar(lmpole%is:lmpole%ie, lmpole%je-1, lmpole%ks:lmpole%ke, solution) ) / lmpole%dy
+      if (is_external(YHI)) then
+         lmpole%bnd_y(lmpole%is:lmpole%ie,              lmpole%ks:lmpole%ke, HIGH) =   ( &
+              &           a1 * lmpole%mgvar(lmpole%is:lmpole%ie, lmpole%je,   lmpole%ks:lmpole%ke, solution) + &
+              &           a2 * lmpole%mgvar(lmpole%is:lmpole%ie, lmpole%je-1, lmpole%ks:lmpole%ke, solution) ) / lmpole%dy
+         if (geometry_type == GEO_RPZ) then
+            do i = lmpole%is, lmpole%ie
+               if (lmpole%x(i) /= 0.) then
+                  lmpole%bnd_y(i, lmpole%ks:lmpole%ke, HIGH) = lmpole%bnd_y(i, lmpole%ks:lmpole%ke, HIGH) / lmpole%x(i)
+               else
+                  lmpole%bnd_y(i, lmpole%ks:lmpole%ke, HIGH) = 0.
+               endif
+            enddo
+         endif
+      endif
 
       if (is_external(ZLO)) lmpole%bnd_z(lmpole%is:lmpole%ie, lmpole%js:lmpole%je,              LOW) =    ( &
            &           a1 * lmpole%mgvar(lmpole%is:lmpole%ie, lmpole%js:lmpole%je, lmpole%ks,   solution) + &
@@ -691,27 +753,35 @@ contains
 
    subroutine img_mass2moments
 
+      use dataio_pub,    only: die
       use multigridvars, only: is_external, XLO, XHI, YLO, YHI, ZLO, ZHI, LOW, HIGH
-      use mpisetup,      only: comm3d, ierr
-      use constants,     only: xdim, ydim, zdim
+      use mpisetup,      only: comm3d, ierr, geometry_type
+      use constants,     only: xdim, ydim, zdim, GEO_XYZ, GEO_RPZ
       use mpi,           only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_SUM, MPI_MIN, MPI_MAX, MPI_IN_PLACE
 
       implicit none
 
       integer :: i, j, k, r, rr
+      real, dimension(LOW:HIGH) :: geofac
+
+      if (geometry_type /= GEO_XYZ .and. any(CoM(xdim:zdim) /= 0.)) call die("[multipole:img_mass2moments] CoM not allowed for non-cartesian geometry")
 
       ! reset the multipole data
       Q(:, :, :) = 0.
 
       irmax = 0
       irmin = rqbin
+      geofac(:) = 1.
 
+      !OPT: try to exchange loops i < j < k -> k < j < i
       ! scan
       if (is_external(XLO) .or. is_external(XHI)) then
+         if (geometry_type == GEO_RPZ) geofac(:) = [ fbnd_x(LOW), fbnd_x(HIGH) ]
          do j = lmpole%js, lmpole%je
             do k = lmpole%ks, lmpole%ke
-               if (is_external(XLO)) call point2moments(lmpole%bnd_x(j, k, LOW) *lmpole%dyz, fbnd_x(LOW) -CoM(xdim), lmpole%y(j)-CoM(ydim),  lmpole%z(k)-CoM(zdim))
-               if (is_external(XHI)) call point2moments(lmpole%bnd_x(j, k, HIGH)*lmpole%dyz, fbnd_x(HIGH)-CoM(xdim), lmpole%y(j)-CoM(ydim),  lmpole%z(k)-CoM(zdim))
+               if (is_external(XLO) .and. (geometry_type /= GEO_RPZ .or. .not. zaxis_inside)) &
+                    &                call point2moments(lmpole%bnd_x(j, k, LOW) *lmpole%dyz*geofac(LOW),  fbnd_x(LOW) -CoM(xdim), lmpole%y(j)-CoM(ydim),  lmpole%z(k)-CoM(zdim))
+               if (is_external(XHI)) call point2moments(lmpole%bnd_x(j, k, HIGH)*lmpole%dyz*geofac(HIGH), fbnd_x(HIGH)-CoM(xdim), lmpole%y(j)-CoM(ydim),  lmpole%z(k)-CoM(zdim))
             enddo
          enddo
       endif
@@ -727,9 +797,10 @@ contains
 
       if (is_external(ZLO) .or. is_external(ZHI)) then
          do i = lmpole%is, lmpole%ie
+            if (geometry_type == GEO_RPZ) geofac(LOW) = lmpole%x(i)
             do j = lmpole%js, lmpole%je
-               if (is_external(ZLO)) call point2moments(lmpole%bnd_z(i, j, LOW) *lmpole%dxy, lmpole%x(i)-CoM(xdim),  lmpole%y(j)-CoM(ydim),  fbnd_z(LOW) -CoM(zdim))
-               if (is_external(ZHI)) call point2moments(lmpole%bnd_z(i, j, HIGH)*lmpole%dxy, lmpole%x(i)-CoM(xdim),  lmpole%y(j)-CoM(ydim),  fbnd_z(HIGH)-CoM(zdim))
+               if (is_external(ZLO)) call point2moments(lmpole%bnd_z(i, j, LOW) *lmpole%dxy*geofac(LOW), lmpole%x(i)-CoM(xdim),  lmpole%y(j)-CoM(ydim),  fbnd_z(LOW) -CoM(zdim))
+               if (is_external(ZHI)) call point2moments(lmpole%bnd_z(i, j, HIGH)*lmpole%dxy*geofac(LOW), lmpole%x(i)-CoM(xdim),  lmpole%y(j)-CoM(ydim),  fbnd_z(HIGH)-CoM(zdim))
             enddo
          enddo
       endif
@@ -857,17 +928,22 @@ contains
 
    subroutine moments2bnd_potential
 
-      use constants,       only: xdim, ydim, zdim
+      use dataio_pub,      only: die
+      use constants,       only: xdim, ydim, zdim, GEO_XYZ, GEO_RPZ
       use multigridvars,   only: is_external, XLO, XHI, YLO, YHI, ZLO, ZHI, LOW, HIGH
+      use mpisetup,        only: geometry_type
 
       implicit none
 
       integer :: i, j, k
 
+      if (geometry_type /= GEO_XYZ .and. any(CoM(xdim:zdim) /= 0.)) call die("[multipole:img_mass2moments] CoM not allowed for non-cartesian geometry")
+
       if (is_external(XLO) .or. is_external(XHI)) then
          do j = lmpole%js, lmpole%je
             do k = lmpole%ks, lmpole%ke
-               if (is_external(XLO)) call moments2pot(lmpole%bnd_x(j, k, LOW),  fbnd_x(LOW) -CoM(xdim), lmpole%y(j)-CoM(ydim),  lmpole%z(k)-CoM(zdim))
+               if (is_external(XLO) .and. (geometry_type /= GEO_RPZ .or. .not. zaxis_inside)) &
+                    &                call moments2pot(lmpole%bnd_x(j, k, LOW),  fbnd_x(LOW) -CoM(xdim), lmpole%y(j)-CoM(ydim),  lmpole%z(k)-CoM(zdim))
                if (is_external(XHI)) call moments2pot(lmpole%bnd_x(j, k, HIGH), fbnd_x(HIGH)-CoM(xdim), lmpole%y(j)-CoM(ydim),  lmpole%z(k)-CoM(zdim))
             enddo
          enddo
@@ -990,9 +1066,9 @@ contains
 
    subroutine geomfac4moments(factor, x, y, z, sin_th, cos_th, ir, delta)
 
-      use dataio_pub, only: die
+      use dataio_pub, only: die, msg
       use mpisetup,   only: geometry_type
-      use constants,  only: GEO_XYZ !, GEO_RPZ
+      use constants,  only: GEO_XYZ, GEO_RPZ
 
       implicit none
 
@@ -1009,10 +1085,16 @@ contains
       real    :: sin_ph, cos_ph
       integer :: l, m
 
-      if (geometry_type /= GEO_XYZ) call die("[multigridmultipole:geomfac4moments] non-cartesian geometry not implemented yet")
-
       ! radius and its projection onto XY plane
-      rxy  = x**2 + y**2
+      select case (geometry_type)
+         case (GEO_XYZ)
+            rxy = x**2 + y**2
+         case (GEO_RPZ)
+            rxy = x**2
+         case default
+            call die("[multigridmultipole:geomfac4moments] Unsupported geometry.")
+            rxy = 0.
+      end select
       r    = sqrt(rxy + z**2)
       rxy  = sqrt(rxy)
       if (r /= 0.) then
@@ -1028,7 +1110,10 @@ contains
       else
          delta = 0
       endif
-      if (ir > rqbin .or. ir < 0) call die("[multipole:geomfac4moments] radial index outside Q(:, :, r) range")
+      if (ir > rqbin .or. ir < 0) then
+         write(msg,'(2(a,i7),a)')"[multipole:geomfac4moments] radial index = ",ir," outside Q(:, :, ",rqbin,") range"
+         call die(msg)
+      endif
       irmax = max(irmax, ir)
       irmin = min(irmin, ir)
 
@@ -1036,8 +1121,17 @@ contains
       ! ph = atan2(y, x); cfac(m) = cos(m * ph); sfac(m) = sin(m * ph)
       ! cfac(0) and sfac(0) are set in init_multigrid
       if (rxy /= 0.) then
-         cos_ph = x / rxy
-         sin_ph = y / rxy
+         select case (geometry_type)
+            case (GEO_XYZ)
+               cos_ph = x / rxy
+               sin_ph = y / rxy
+            case (GEO_RPZ)
+               cos_ph = cos(y)
+               sin_ph = sin(y)
+            case default
+               call die("[multigridmultipole:geomfac4moments] Unsupported geometry.")
+               cos_ph = 0. ; sin_ph = 0.
+         end select
       else
          cos_ph = 1.
          sin_ph = 0.
