@@ -49,7 +49,7 @@ module mpisetup
         &    cfr_smooth, cleanup_mpi, comm, comm3d, dt, dt_initial, dt_max_grow, dt_min, dt_old, dtm, err, ibuff, ierr, info, init_mpi, &
         &    integration_order, lbuff, limiter, mpifind, nproc, nstep, pcoords, proc, procxl, procxr, procxyl, procyl, procyr, procyxl, proczl, &
         &    proczr, psize, rbuff, req, smalld, smallei, smallp, status, t, use_smalld, magic_mass, local_magic_mass, master, slave, &
-        &    nb, has_dir, eff_dim, relax_time, grace_period_passed, dom, geometry_type
+        &    nb, has_dir, eff_dim, relax_time, grace_period_passed, dom, geometry_type, translate_bnds_to_ints
 
    integer :: nproc, proc, ierr , rc, info
    integer :: status(MPI_STATUS_SIZE,4)
@@ -196,7 +196,7 @@ contains
 !<
    subroutine init_mpi
 
-      use constants,     only: cwdlen, xdim, ydim, zdim, big_float, GEO_XYZ, GEO_RPZ, GEO_INVALID
+      use constants,     only: bndlen, cwdlen, xdim, ydim, zdim, big_float, GEO_XYZ, GEO_RPZ, GEO_INVALID
       use mpi,           only: MPI_COMM_WORLD, MPI_INFO_NULL, MPI_INFO_NULL, MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION, MPI_LOGICAL, MPI_PROC_NULL
       use dataio_pub,    only: die, printinfo, msg, cwd, ansi_white, ansi_black, warn, tmp_log_file
       use dataio_pub,    only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml  ! QA_WARN required for diff_nml
@@ -292,6 +292,10 @@ contains
       deallocate(pid_all)
       deallocate(cwd_all)
 
+      dt_old = -1.
+
+      ! Begin processing of namelist parameters
+
       psize(:) = [1, 1, 1]
 
       nxd    = 1
@@ -337,6 +341,15 @@ contains
          ! Sanitize input parameters, if possible
          dom%n_d(:) = max(1, [nxd, nyd, nzd])
          cfl_max = min(max(cfl_max, min(cfl*1.1, cfl+0.05, (1.+cfl)/2.) ), 1.0) ! automatically sanitize cfl_max
+         if (integration_order > 2) call die ('[mpisetup:init_mpi]: "ORIG" scheme integration_order must be 1 or 2')
+
+         if (dt_max_grow < 1.01) then
+            if (master) then
+               write(msg,'(2(a,g10.3))')"[mpisetup:init_mpi] dt_max_grow = ",dt_max_grow," is way too low. Resetting to ",dt_default_grow
+               call warn(msg)
+            endif
+            dt_max_grow = dt_default_grow
+         endif
 
       endif
 
@@ -408,12 +421,12 @@ contains
          zmin        = rbuff(16)
          zmax        = rbuff(17)
 
-         bnd_xl     = cbuff(1)(1:4)
-         bnd_xr     = cbuff(2)(1:4)
-         bnd_yl     = cbuff(3)(1:4)
-         bnd_yr     = cbuff(4)(1:4)
-         bnd_zl     = cbuff(5)(1:4)
-         bnd_zr     = cbuff(6)(1:4)
+         bnd_xl     = cbuff(1)(1:bndlen)
+         bnd_xr     = cbuff(2)(1:bndlen)
+         bnd_yl     = cbuff(3)(1:bndlen)
+         bnd_yr     = cbuff(4)(1:bndlen)
+         bnd_zl     = cbuff(5)(1:bndlen)
+         bnd_zr     = cbuff(6)(1:bndlen)
          limiter    = cbuff(7)
          cflcontrol = cbuff(8)
          geometry   = cbuff(9)
@@ -641,16 +654,6 @@ contains
       call printinfo(msg)
 #endif /* DEBUG */
 
-      if (integration_order > 2) call die ('[mpisetup:init_mpi]: "ORIG" scheme integration_order must be 1 or 2')
-
-      dt_old = -1.
-      if (dt_max_grow < 1.01) then
-         if (master) then
-            write(msg,'(2(a,g10.3))')"[mpisetup:init_mpi] dt_max_grow = ",dt_max_grow," is way too low. Resetting to ",dt_default_grow
-            call warn(msg)
-         endif
-         dt_max_grow = dt_default_grow
-      endif
 #ifdef VERBOSE
       call printinfo("[mpisetup:init_mpi]: finished. \o/")
 #endif /* VERBOSE */
@@ -719,6 +722,7 @@ contains
 
    end subroutine mpifind
 
+!-----------------------------------------------------------------------------
 !>
 !! \brief This routine tries to divide the computational domain into local domains.
 !! \details The goal is to minimize the ratio of longest to shortest edge to minimize the amount of inter-process communication.
@@ -785,10 +789,14 @@ contains
 
    end subroutine divide_domain_uniform
 
+!-----------------------------------------------------------------------------
+
    logical function grace_period_passed()
       implicit none
       grace_period_passed = (t >= relax_time)
    end function grace_period_passed
+
+!-----------------------------------------------------------------------------
 
    subroutine Eratosthenes_sieve(tab,n)
 #ifdef DEBUG
@@ -818,5 +826,45 @@ contains
       endif
 #endif /* DEBUG */
    end subroutine Eratosthenes_sieve
+
+!-----------------------------------------------------------------------------
+
+   function translate_bnds_to_ints(bnds) result(tab)
+
+      use constants, only: xdim, zdim, ndims, LO, HI, &
+         &                 BND_MPI, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_OUTH, BND_COR, BND_SHE, BND_INVALID
+
+      implicit none
+
+      character(len=*), dimension(HI*ndims) :: bnds ! expect exactly 6 descriptions
+      integer, dimension(ndims, LO:HI) :: tab
+
+      integer :: d, lh
+
+      do d = xdim, zdim
+         do lh = LO, HI
+            select case (bnds(HI*(d-xdim)+lh))
+               case ('per', 'periodic')
+                  tab(d, lh) = BND_PER
+               case ('ref', 'refl', 'reflecting')
+                  tab(d, lh) = BND_REF
+               case ('out', 'free')
+                  tab(d, lh) = BND_OUT
+               case ('outd', 'diode')
+                  tab(d, lh) = BND_OUTD
+               case ('outh')
+                  tab(d, lh) = BND_OUTH
+               case ('she', 'shear', 'shearing')
+                  tab(d, lh) = BND_SHE
+               case ('cor', 'corner')
+                  tab(d, lh) = BND_COR
+               case ('mpi')
+                  tab(d, lh) = BND_MPI
+               case default
+                  tab(d, lh) = BND_INVALID
+            end select
+         enddo
+      enddo
+   end function translate_bnds_to_ints
 
 end module mpisetup

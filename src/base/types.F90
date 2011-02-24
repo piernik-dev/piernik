@@ -31,7 +31,7 @@
 !<
 module types
 
-   use constants, only: domlen, idlen, bndlen, ndims !> \todo fix setup.py to not report unused imports here
+   use constants, only: domlen, idlen, bndlen, ndims, LO, HI !> \todo fix setup.py to not report unused imports here
 
    implicit none
 
@@ -91,6 +91,7 @@ module types
       character(len=bndlen) :: bnd_yr_dom       !< high-y computational domain boundary
       character(len=bndlen) :: bnd_zl_dom       !< low-z computational domain boundary
       character(len=bndlen) :: bnd_zr_dom       !< high-z computational domain boundary
+      !\todo use integer, dimension(ndims, LO:HI) :: bnd , like cg%
 
       ! derived parameters
       real    :: Lx                             !< span of the physical domain in x-direction (xmax-xmin)
@@ -155,8 +156,9 @@ module types
       integer, dimension(ndims) :: n_b          !< [nxb, nyb, nzb]
       integer :: maxxyz                         !< maximum number of %grid cells in any direction
 
-      ! a pointer to the next cg
-      ! grid level
+      integer, dimension(ndims, LO:HI) :: bnd   !< type of boundary conditions coded in integers
+
+      ! \todo a pointer to the next cg, grid level
 
       ! a list of MPI types for communication with neighbours
       ! AMR: these will become lists
@@ -169,6 +171,7 @@ module types
       integer :: ARR_YZ_LEFT_BND, ARR_YZ_RIGHT_BND, ARR_YZ_LEFT_DOM, ARR_YZ_RIGHT_DOM !< communicator types for the sgp(:,:,:,:) and similar arrays
       integer :: ARR_XZ_LEFT_BND, ARR_XZ_RIGHT_BND, ARR_XZ_LEFT_DOM, ARR_XZ_RIGHT_DOM !< - || -, y-direction
       integer :: ARR_XY_LEFT_BND, ARR_XY_RIGHT_BND, ARR_XY_LEFT_DOM, ARR_XY_RIGHT_DOM !< - || -, z-direction
+      ! \todo make these an array: mbc(FLUID|MAG|ARR, xdim|ydim|zdim, LO|HI) (MPI Boundary conditions Container)
 
    end type grid_container
 

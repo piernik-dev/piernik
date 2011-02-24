@@ -67,6 +67,9 @@ module constants
    integer, parameter :: ydim    = xdim + 1              !< parameter assigned to the y-direction
    integer, parameter :: zdim    = ydim + 1              !< parameter assigned to the z-direction
    integer, parameter :: ndims   = zdim - xdim + 1       !< We live in a 3-dimensional world
+   integer, parameter :: LO = 1                          !< index for low (left) boundary
+   integer, parameter :: HI = LO + 1                     !< index for high (right) boundary
+   ! \todo remove analogous vars from multigridvars
 
    ! string lengths
    integer, parameter :: cwdlen = 512                    !< allow for quite long CWD
@@ -88,9 +91,20 @@ module constants
    integer, parameter :: PIERNIK_CLEANUP     = PIERNIK_FINISHED    + 1 ! finished post-simulation computations and I/O
 
    ! grid geometry type
-   integer, parameter :: GEO_XYZ = 0                     !< cartesian grid with uniform cell spacing
-   integer, parameter :: GEO_RPZ = GEO_XYZ + 1           !< cylindrical grid with uniform spacing
+   integer, parameter :: GEO_XYZ     = 0                 !< cartesian grid with uniform cell spacing
+   integer, parameter :: GEO_RPZ     = GEO_XYZ + 1       !< cylindrical grid with uniform spacing
    integer, parameter :: GEO_INVALID = GEO_XYZ - 1       !< non-recognized grid geometry
+
+   ! boundary conditions type
+   integer, parameter :: BND_MPI     = 0                 !< internal, processor-processor boundary
+   integer, parameter :: BND_PER     = BND_MPI  + 1      !< periodic boudary
+   integer, parameter :: BND_REF     = BND_PER  + 1      !< reflecting boundary
+   integer, parameter :: BND_OUT     = BND_REF  + 1      !< free boundary
+   integer, parameter :: BND_OUTD    = BND_OUT  + 1      !< one-way outflow boundary
+   integer, parameter :: BND_OUTH    = BND_OUTD + 1      !< hydrostatic boundary
+   integer, parameter :: BND_COR     = BND_OUTH + 1      !< corner boundary
+   integer, parameter :: BND_SHE     = BND_COR  + 1      !< shear boundary
+   integer, parameter :: BND_INVALID = BND_MPI  - 1      !< non-recognized boundary
 
    ! misc
    integer, parameter :: stdout = output_unit

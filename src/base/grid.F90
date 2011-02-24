@@ -63,7 +63,7 @@ contains
       use dataio_pub, only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml  ! QA_WARN required for diff_nml
       use dataio_pub, only: printinfo, die, code_progress
       use constants,  only: PIERNIK_INIT_MPI, xdim, ydim, zdim
-      use mpisetup,   only: psize, pcoords, comm, has_dir, dom, nb
+      use mpisetup,   only: psize, pcoords, comm, has_dir, dom, nb, translate_bnds_to_ints, bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr
 
       implicit none
 
@@ -175,6 +175,8 @@ contains
       allocate(cg%y(cg%ny), cg%yl(cg%ny), cg%yr(cg%ny), cg%inv_y(cg%ny))
       allocate(cg%z(cg%nz), cg%zl(cg%nz), cg%zr(cg%nz), cg%inv_z(cg%nz))
       cg%maxxyz = maxval([size(cg%x), size(cg%y), size(cg%z)])
+
+      cg%bnd(:,:) = translate_bnds_to_ints([bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr])
 
 !--- Assignments -----------------------------------------------------------
       ! left zone boundaries:  xl, yl, zl
