@@ -35,7 +35,7 @@ program piernik
    use dataio_pub,    only: nend, tend, msg, printinfo, warn, die, code_progress
    use constants,     only: PIERNIK_START, PIERNIK_INITIALIZED, PIERNIK_FINISHED, PIERNIK_CLEANUP, cwdlen, fplen, stdout
    use fluidupdate,   only: fluid_update
-   use mpisetup,      only: comm, comm3d, ierr, master, t, nstep, dt, dtm
+   use mpisetup,      only: comm, comm3d, ierr, master, t, nstep, dt, dtm, cfl_violated
    use timer,         only: time_left
    use types,         only: finalize_problem
    use timestep,      only: time_step
@@ -86,9 +86,9 @@ program piernik
          dt  = 0.0    !> \deprecated BEWARE: smells like some dirty trick
 #endif /* RESISTIVE */
       else
-         dtm = dt
+         if (.not.cfl_violated) dtm = dt
       endif
-      if (master) then
+      if (master.and.first_step) then
          write(msg, fmt900) nstep, dt, t, ts
          call printinfo(msg, .true.)
       endif
@@ -102,9 +102,13 @@ program piernik
       else
          ts=set_timer("fluid_update")
       endif
-      tlast = t
+      if (.not.cfl_violated) tlast = t
       call fluid_update
-      if (t == tlast .and. .not. first_step) call die("[piernik] timestep is too small: t == t + 2 * dt")
+      if (master.and..not.first_step) then
+         write(msg, fmt900) nstep, dt, t, ts
+         call printinfo(msg, .true.)
+      endif
+      if (t == tlast .and. .not. first_step .and. .not. cfl_violated) call die("[piernik] timestep is too small: t == t + 2 * dt")
       ts=set_timer("fluid_update")
 
       nstep=nstep+1

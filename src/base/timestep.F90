@@ -66,6 +66,7 @@ contains
          case ('auto', 'adaptive')
             cfl_manager => cfl_auto
          case ('none', '')
+            if (associated(cfl_manager)) nullify(cfl_manager)
          case default
             write(msg, '(3a)')"[timestep:init_time_step] Unknown cfl_manager '",trim(cflcontrol),"'. Assuming 'none'."
             call warn(msg)
@@ -188,7 +189,7 @@ contains
    subroutine cfl_warn
 
       use dataio_pub, only: msg, warn
-      use mpisetup,   only: cfl, cfl_max, master
+      use mpisetup,   only: cfl, cfl_max, master, cfl_violated
 
       implicit none
 
@@ -198,9 +199,11 @@ contains
       if (c_all_old > 0.) stepcfl = c_all/c_all_old*cfl
 
       if (master) then
-         msg = ""
+         msg = ''
+         cfl_violated = .false.
          if (stepcfl > cfl_max) then
             write(msg,'(a,g10.3)') "[timestep:cfl_warn] Possible violation of CFL: ",stepcfl
+            cfl_violated = .true.
          else if (stepcfl < 2*cfl - cfl_max) then
             write(msg,'(2(a,g10.3))') "[timestep:cfl_warn] Low CFL: ", stepcfl, " << ", cfl
          endif
@@ -241,7 +244,7 @@ contains
       endif
 
       if (master) then
-         msg = ""
+         msg = ''
          if (stepcfl > cfl_max) then
             write(msg,'(a,g10.3)') "[timestep:cfl_auto] Possible violation of CFL: ",stepcfl
          else if (stepcfl < 2*cfl - cfl_max) then

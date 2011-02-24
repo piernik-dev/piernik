@@ -37,6 +37,8 @@ module arrays
 
    real, allocatable, dimension(:,:,:,:), target :: u    !< Main array of all fluids' components
    real, allocatable, dimension(:,:,:,:), target :: b    !< Main array of magnetic field's components
+   real, allocatable, dimension(:,:,:,:), target :: u0   !< Copy of main array of all fluids' components
+   real, allocatable, dimension(:,:,:,:), target :: b0   !< Copy of main array of magnetic field's components
    real, allocatable, dimension(:,:,:)           :: wa   !< Temporary array used for different purposes, usually has dimension (grid::nx, grid::ny, grid::nz)
 
 #ifdef RESISTIVE
@@ -89,8 +91,12 @@ contains
 
       ma4d = [flind%all, cg%nx, cg%ny, cg%nz]
       call my_allocate(u, ma4d, "u")
+      ma4d = [flind%all, cg%nx, cg%ny, cg%nz]
+      call my_allocate(u0, ma4d, "u0")
       ma4d = [3, cg%nx, cg%ny, cg%nz]
       call my_allocate(b, ma4d, "b")
+      ma4d = [3, cg%nx, cg%ny, cg%nz]
+      call my_allocate(b0, ma4d, "b0")
       ma3d = [cg%nx, cg%ny, cg%nz]
       call my_allocate(wa, ma3d, "wa")
 
@@ -132,6 +138,8 @@ contains
 
       if (allocated(u))       deallocate(u)
       if (allocated(b))       deallocate(b)
+      if (allocated(u0))      deallocate(u0)
+      if (allocated(b0))      deallocate(b0)
       if (allocated(wa))      deallocate(wa)
 
 #ifdef RESISTIVE

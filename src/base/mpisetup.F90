@@ -45,7 +45,7 @@ module mpisetup
 
    private
    public :: bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr, &
-        &    buffer_dim, cbuff, cfl, cfl_max, cflcontrol, &
+        &    buffer_dim, cbuff, cfl, cfl_max, cflcontrol, cfl_violated, &
         &    cfr_smooth, cleanup_mpi, comm, comm3d, dt, dt_initial, dt_max_grow, dt_min, dt_old, dtm, err, ibuff, ierr, info, init_mpi, &
         &    integration_order, lbuff, limiter, mpifind, nproc, nstep, pcoords, proc, procxl, procxr, procxyl, procyl, procyr, procyxl, proczl, &
         &    proczr, psize, rbuff, req, smalld, smallei, smallp, status, t, use_smalld, magic_mass, local_magic_mass, master, slave, &
@@ -58,6 +58,7 @@ module mpisetup
    logical, protected    :: master, slave
 
    real, parameter       :: dt_default_grow = 2.
+   logical               :: cfl_violated             !< True when cfl condition is violated
    real                  :: t, dt, dt_old, dtm
    real, save            :: magic_mass = 0.0
    real, save            :: local_magic_mass = 0.0

@@ -36,14 +36,26 @@ module fluidupdate   ! SPLIT
 contains
 
    subroutine fluid_update
-
-      use dataio_pub,    only: halfstep
-      use mpisetup,      only: dt, dtm, t
+      use arrays,        only: u, u0, b, b0
+      use dataio_pub,    only: halfstep, warn
+      use mpisetup,      only: dt, dtm, t, cfl_violated, nstep
 #ifdef SN_SRC
       use snsources,     only: random_sn
 #endif /* SN_SRC */
 
       implicit none
+
+      if (cfl_violated) then
+         t = t-2*dtm
+         u = u0
+         b = b0
+         dt = 0.9*dtm   ! BEWARE: magic number \todo extract proper coefficient from cfl_warn or use magic spell from cfl_auto
+         nstep = nstep - 1
+         call warn("[fluidupdate:fluid_update] Redoing previous step...")
+      else
+         u0 = u
+         b0 = b
+      endif
 
       halfstep = .false.
       t=t+dt
