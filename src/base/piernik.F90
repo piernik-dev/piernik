@@ -104,12 +104,13 @@ program piernik
       endif
       if (.not.cfl_violated) tlast = t
       call fluid_update
+      ts=set_timer("fluid_update")
+
       if (master.and..not.first_step) then
          write(msg, fmt900) nstep, dt, t, ts
          call printinfo(msg, .true.)
       endif
       if (t == tlast .and. .not. first_step .and. .not. cfl_violated) call die("[piernik] timestep is too small: t == t + 2 * dt")
-      ts=set_timer("fluid_update")
 
       nstep=nstep+1
 
