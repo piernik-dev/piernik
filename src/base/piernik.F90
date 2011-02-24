@@ -54,6 +54,7 @@ program piernik
    real                             :: tlast
 
    ts = 0.0
+   tlast = 0.0
 
    code_progress = PIERNIK_START
 
