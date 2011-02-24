@@ -38,7 +38,7 @@ contains
    subroutine fluid_update
       use arrays,        only: u, u0, b, b0
       use dataio_pub,    only: halfstep, warn
-      use mpisetup,      only: dt, dtm, t, cfl_violated, nstep
+      use mpisetup,      only: dt, dtm, t, cfl_violated, nstep, dt_max_grow
 #ifdef SN_SRC
       use snsources,     only: random_sn
 #endif /* SN_SRC */
@@ -49,7 +49,7 @@ contains
          t = t-2*dtm
          u = u0
          b = b0
-         dt = 0.9*dtm   ! BEWARE: magic number \todo extract proper coefficient from cfl_warn or use magic spell from cfl_auto
+         dt = dtm/dt_max_grow**2
          nstep = nstep - 1
          call warn("[fluidupdate:fluid_update] Redoing previous step...")
       else
