@@ -360,142 +360,85 @@ contains
       use dataio_pub,    only: die
       use grid,          only: cg
       use mpi,           only: MPI_STATUS_SIZE, MPI_REQUEST_NULL
-      use mpisetup,      only: comm3d, ierr, procxl, procxr, procyl, procyr, proczl, proczr, psize, &
-           &                   bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr, has_dir
-      use constants,     only: ARR, xdim, ydim, zdim, LO, HI, BND, DOM
+      use mpisetup,      only: comm3d, ierr, procxl, procxr, procyl, procyr, proczl, proczr, psize,has_dir, proc
+      use constants,     only: ARR, xdim, ydim, zdim, LO, HI, BND, DOM, BND_PER, BND_MPI, BND_SHE, BND_COR
 
       implicit none
 
       integer, parameter                        :: nreq = 3 * 4
       integer, dimension(nreq)                  :: req3d
       integer, dimension(MPI_STATUS_SIZE, nreq) :: status3d
-      integer                                   :: i
+      integer                                   :: i, d, lh, p
 
       req3d(:) = MPI_REQUEST_NULL
 
-      if (has_dir(xdim)) then
+      do d = xdim, zdim
+         if (has_dir(d)) then
+            do lh = LO, HI
 
-         select case (bnd_xl)
-            case ('per')
-               do i = 1, ceiling(cg%nb/real(cg%nxb)) ! Repeating is important for domains that are narrower than their guardcells (e.g. cg%nxb = 2)
-                  sgp(1:cg%nb, :, :) = sgp(cg%ieb:cg%ie, :, :)
-               enddo
-            case ('mpi')
-               if (psize(xdim) > 1) then
-                  call MPI_Isend(sgp(1, 1, 1), 1, cg%mbc(ARR, xdim, LO, DOM),  procxl, 12, comm3d, req3d(1), ierr)
-                  call MPI_Irecv(sgp(1, 1, 1), 1, cg%mbc(ARR, xdim, LO, BND),  procxl, 22, comm3d, req3d(2), ierr)
-               else
-                  call die("[gravity:all_grav_boundaries] bnd_xl == 'mpi' && psize(xdim) <= 1")
-               endif
-            case ('she') !> \todo move appropriate code from poissonsolver::poisson_solve or do nothing. Or die until someone really needs SHEAR.
-                call die("[gravity:all_grav_boundaries] bnd_xl == 'she' not implemented")
-            case default ! Set gradient == 0 on the boundaries
-               do i = 1, cg%nb
-                  sgp(i, :, :) = sgp(cg%is, :, :)
-               enddo
-         end select
+               select case (cg%bnd(d, lh))
+                  case (BND_PER)
+                     do i = 1, ceiling(cg%nb/real(cg%n_b(d))) ! Repeating is important for domains that are narrower than their guardcells (e.g. cg%n_b(d) = 2)
+                        select case (2*d+lh)
+                           case (2*xdim+LO)
+                              sgp(1:cg%nb, :, :) = sgp(cg%ieb:cg%ie, :, :)
+                           case (2*ydim+LO)
+                              sgp(:, 1:cg%nb, :) = sgp(:, cg%jeb:cg%je, :)
+                           case (2*zdim+LO)
+                              sgp(:, :, 1:cg%nb) = sgp(:, :, cg%keb:cg%ke)
+                           case (2*xdim+HI)
+                              sgp(cg%ie+1:cg%nx, :, :) = sgp(cg%is:cg%isb, :, :)
+                           case (2*ydim+HI)
+                              sgp(:, cg%je+1:cg%ny, :) = sgp(:, cg%js:cg%jsb, :)
+                           case (2*zdim+HI)
+                              sgp(:, :, cg%ke+1:cg%nz) = sgp(:, :, cg%ks:cg%ksb)
+                        end select
+                     enddo
+                  case (BND_MPI)
+                     if (psize(d) > 1) then
+                        select case (2*d+lh)
+                           case (2*xdim+LO)
+                              p = procxl
+                           case (2*ydim+LO)
+                              p = procyl
+                           case (2*zdim+LO)
+                              p = proczl
+                           case (2*xdim+HI)
+                              p = procxr
+                           case (2*ydim+HI)
+                              p = procyr
+                           case (2*zdim+HI)
+                              p = proczr
+                        end select
+                        call MPI_Isend(sgp(1, 1, 1), 1, cg%mbc(ARR, d, lh, DOM),  p, 2*d+(LO+HI-lh), comm3d, req3d(4*(d-xdim)+1+2*(lh-LO)), ierr)
+                        call MPI_Irecv(sgp(1, 1, 1), 1, cg%mbc(ARR, d, lh, BND),  p, 2*d+       lh,  comm3d, req3d(4*(d-xdim)+2+2*(lh-LO)), ierr)
+                     else
+                        call die("[gravity:all_grav_boundaries] bnd_[xyz][lr] == 'mpi' && psize([xyz]dim) <= 1")
+                     endif
+                  case (BND_SHE, BND_COR) !> \todo move appropriate code from poissonsolver::poisson_solve or do nothing. or die until someone really needs SHEAR.
+                     call die("[gravity:all_grav_boundaries] 'she' not implemented")
+                  case default ! Set gradient == 0 on the external boundaries
+                     do i = 1, cg%nb
+                        select case (2*d+lh)
+                           case (2*xdim+LO)
+                              sgp(i, :, :) = sgp(cg%is, :, :)
+                           case (2*ydim+LO)
+                              sgp(:, i, :) = sgp(:, cg%js, :)
+                           case (2*zdim+LO)
+                              sgp(:, :, i) = sgp(:, :, cg%ks)
+                           case (2*xdim+HI)
+                              sgp(cg%ie+i, :, :) = sgp(cg%ie, :, :)
+                           case (2*ydim+HI)
+                              sgp(:, cg%je+i, :) = sgp(:, cg%je, :)
+                           case (2*zdim+HI)
+                              sgp(:, :, cg%ke+i) = sgp(:, :, cg%ke)
+                        end select
+                     enddo
+               end select
 
-         select case (bnd_xr)
-            case ('per')
-               do i = 1, ceiling(cg%nb/real(cg%nxb))
-                  sgp(cg%ie+1:cg%nx, :, :) = sgp(cg%is:cg%isb, :, :)
-               enddo
-            case ('mpi')
-               if (psize(xdim) > 1) then
-                  call MPI_Isend(sgp(1, 1, 1), 1, cg%mbc(ARR, xdim, HI, DOM), procxr, 22, comm3d, req3d(3), ierr)
-                  call MPI_Irecv(sgp(1, 1, 1), 1, cg%mbc(ARR, xdim, HI, BND), procxr, 12, comm3d, req3d(4), ierr)
-               else
-                  call die("[gravity:all_grav_boundaries] bnd_xr == 'mpi' && psize(xdim) <= 1")
-               endif
-            case ('she')
-                call die("[gravity:all_grav_boundaries] bnd_xl == 'she' not implemented")
-            case default
-               do i = 1, cg%nb
-                  sgp(cg%ie+i, :, :) = sgp(cg%ie, :, :)
-               enddo
-         end select
-
-      endif
-
-      if (has_dir(ydim)) then
-
-         select case (bnd_yl)
-            case ('per')
-               do i = 1, ceiling(cg%nb/real(cg%nyb))
-                  sgp(:, 1:cg%nb, :) = sgp(:, cg%jeb:cg%je, :)
-               enddo
-            case ('mpi')
-               if (psize(ydim) > 1) then
-                  call MPI_Isend(sgp(1, 1, 1), 1, cg%mbc(ARR, ydim, LO, DOM),  procyl, 32, comm3d, req3d(5), ierr)
-                  call MPI_Irecv(sgp(1, 1, 1), 1, cg%mbc(ARR, ydim, LO, BND),  procyl, 42, comm3d, req3d(6), ierr)
-               else
-                  call die("[gravity:all_grav_boundaries] bnd_yl == 'mpi' && psize(ydim) <= 1")
-               endif
-            case default
-               do i = 1, cg%nb
-                  sgp(:, i, :) = sgp(:, cg%js, :)
-               enddo
-         end select
-
-         select case (bnd_yr)
-            case ('per')
-               do i = 1, ceiling(cg%nb/real(cg%nyb))
-                  sgp(:, cg%je+1:cg%ny, :) = sgp(:, cg%js:cg%jsb, :)
-               enddo
-            case ('mpi')
-               if (psize(ydim) > 1) then
-                  call MPI_Isend(sgp(1, 1, 1), 1, cg%mbc(ARR, ydim, HI, DOM), procyr, 42, comm3d, req3d(7), ierr)
-                  call MPI_Irecv(sgp(1, 1, 1), 1, cg%mbc(ARR, ydim, HI, BND), procyr, 32, comm3d, req3d(8), ierr)
-               else
-                  call die("[gravity:all_grav_boundaries] bnd_yr == 'mpi' && psize(ydim) <= 1")
-               endif
-            case default
-               do i = 1, cg%nb
-                  sgp(:, cg%je+i, :) = sgp(:, cg%je, :)
-               enddo
-         end select
-
-      endif
-
-      if (has_dir(zdim)) then
-
-         select case (bnd_zl)
-            case ('per')
-               do i = 1, ceiling(cg%nb/real(cg%nzb))
-                  sgp(:, :, 1:cg%nb) = sgp(:, :, cg%keb:cg%ke)
-               enddo
-            case ('mpi')
-               if (psize(zdim) > 1) then
-                  call MPI_Isend(sgp(1, 1, 1), 1, cg%mbc(ARR, zdim, LO, DOM),  proczl, 52, comm3d, req3d(9), ierr)
-                  call MPI_Irecv(sgp(1, 1, 1), 1, cg%mbc(ARR, zdim, LO, BND),  proczl, 62, comm3d, req3d(10), ierr)
-               else
-                  call die("[gravity:all_grav_boundaries] bnd_zl == 'mpi' && psize(zdim) <= 1")
-               endif
-            case default
-               do i = 1, cg%nb
-                  sgp(:, :, i) = sgp(:, :, cg%ks)
-               enddo
-         end select
-
-         select case (bnd_zr)
-            case ('per')
-               do i = 1, ceiling(cg%nb/real(cg%nzb))
-                  sgp(:, :, cg%ke+1:cg%nz) = sgp(:, :, cg%ks:cg%ksb)
-               enddo
-            case ('mpi')
-               if (psize(zdim) > 1) then
-                  call MPI_Isend(sgp(1, 1, 1), 1, cg%mbc(ARR, zdim, HI, DOM), proczr, 62, comm3d, req3d(11), ierr)
-                  call MPI_Irecv(sgp(1, 1, 1), 1, cg%mbc(ARR, zdim, HI, BND), proczr, 52, comm3d, req3d(12), ierr)
-               else
-                  call die("[gravity:all_grav_boundaries] bnd_zr == 'mpi' && psize(zdim) <= 1")
-               endif
-            case default
-               do i = 1, cg%nb
-                  sgp(:, :, cg%ke+i) = sgp(:, :, cg%ke)
-               enddo
-         end select
-
-      endif
+            enddo
+         endif
+      enddo
 
       call MPI_Waitall(nreq, req3d(:), status3d(:,:), ierr)
 
