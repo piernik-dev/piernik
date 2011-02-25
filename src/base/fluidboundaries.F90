@@ -98,7 +98,7 @@ contains
       use grid,                only: cg
       use mpisetup,            only: ierr, psize, proczl, proczr, procyl, procyr, procxl, procxr, procxyl, procyxl, smalld, &
            &                         pcoords, bnd_xr, bnd_xl, bnd_yl, bnd_yr, bnd_zl, bnd_zr, req, status, comm, comm3d
-      use constants,           only: xdim, ydim, zdim
+      use constants,           only: FLUID, xdim, ydim, zdim, LO, HI, BND, DOM
       use mpi,                 only: MPI_DOUBLE_PRECISION
 #ifdef COSM_RAYS
       use initcosmicrays,      only: smallecr
@@ -290,10 +290,10 @@ contains
 #else /* !SHEAR_BND */
          if (psize(xdim) > 1) then
 
-            call MPI_Isend   (u(1,1,1,1), 1, cg%MPI_YZ_LEFT_DOM,  procxl, 10, comm3d, req(1), ierr)
-            call MPI_Isend   (u(1,1,1,1), 1, cg%MPI_YZ_RIGHT_DOM, procxr, 20, comm3d, req(3), ierr)
-            call MPI_Irecv   (u(1,1,1,1), 1, cg%MPI_YZ_LEFT_BND,  procxl, 20, comm3d, req(2), ierr)
-            call MPI_Irecv   (u(1,1,1,1), 1, cg%MPI_YZ_RIGHT_BND, procxr, 10, comm3d, req(4), ierr)
+            call MPI_Isend   (u(1,1,1,1), 1, cg%mbc(FLUID, xdim, LO, DOM),  procxl, 10, comm3d, req(1), ierr)
+            call MPI_Isend   (u(1,1,1,1), 1, cg%mbc(FLUID, xdim, HI, DOM), procxr, 20, comm3d, req(3), ierr)
+            call MPI_Irecv   (u(1,1,1,1), 1, cg%mbc(FLUID, xdim, LO, BND),  procxl, 20, comm3d, req(2), ierr)
+            call MPI_Irecv   (u(1,1,1,1), 1, cg%mbc(FLUID, xdim, HI, BND), procxr, 10, comm3d, req(4), ierr)
 
             call MPI_Waitall(4,req(:),status(:,:),ierr)
          endif
@@ -301,10 +301,10 @@ contains
       case (ydim)
          if (psize(ydim) > 1) then
 
-            call MPI_Isend   (u(1,1,1,1), 1, cg%MPI_XZ_LEFT_DOM,  procyl, 30, comm3d, req(1), ierr)
-            call MPI_Isend   (u(1,1,1,1), 1, cg%MPI_XZ_RIGHT_DOM, procyr, 40, comm3d, req(3), ierr)
-            call MPI_Irecv   (u(1,1,1,1), 1, cg%MPI_XZ_LEFT_BND,  procyl, 40, comm3d, req(2), ierr)
-            call MPI_Irecv   (u(1,1,1,1), 1, cg%MPI_XZ_RIGHT_BND, procyr, 30, comm3d, req(4), ierr)
+            call MPI_Isend   (u(1,1,1,1), 1, cg%mbc(FLUID, ydim, LO, DOM),  procyl, 30, comm3d, req(1), ierr)
+            call MPI_Isend   (u(1,1,1,1), 1, cg%mbc(FLUID, ydim, HI, DOM), procyr, 40, comm3d, req(3), ierr)
+            call MPI_Irecv   (u(1,1,1,1), 1, cg%mbc(FLUID, ydim, LO, BND),  procyl, 40, comm3d, req(2), ierr)
+            call MPI_Irecv   (u(1,1,1,1), 1, cg%mbc(FLUID, ydim, HI, BND), procyr, 30, comm3d, req(4), ierr)
 
             call MPI_Waitall(4,req(:),status(:,:),ierr)
          endif
@@ -312,10 +312,10 @@ contains
       case (zdim)
          if (psize(zdim) > 1) then
 
-            call MPI_Isend   (u(1,1,1,1), 1, cg%MPI_XY_LEFT_DOM,  proczl, 50, comm3d, req(1), ierr)
-            call MPI_Isend   (u(1,1,1,1), 1, cg%MPI_XY_RIGHT_DOM, proczr, 60, comm3d, req(3), ierr)
-            call MPI_Irecv   (u(1,1,1,1), 1, cg%MPI_XY_LEFT_BND,  proczl, 60, comm3d, req(2), ierr)
-            call MPI_Irecv   (u(1,1,1,1), 1, cg%MPI_XY_RIGHT_BND, proczr, 50, comm3d, req(4), ierr)
+            call MPI_Isend   (u(1,1,1,1), 1, cg%mbc(FLUID, zdim, LO, DOM),  proczl, 50, comm3d, req(1), ierr)
+            call MPI_Isend   (u(1,1,1,1), 1, cg%mbc(FLUID, zdim, HI, DOM), proczr, 60, comm3d, req(3), ierr)
+            call MPI_Irecv   (u(1,1,1,1), 1, cg%mbc(FLUID, zdim, LO, BND),  proczl, 60, comm3d, req(2), ierr)
+            call MPI_Irecv   (u(1,1,1,1), 1, cg%mbc(FLUID, zdim, HI, BND), proczr, 50, comm3d, req(4), ierr)
 
             call MPI_Waitall(4,req(:),status(:,:),ierr)
          endif

@@ -362,7 +362,7 @@ contains
       use mpi,           only: MPI_STATUS_SIZE, MPI_REQUEST_NULL
       use mpisetup,      only: comm3d, ierr, procxl, procxr, procyl, procyr, proczl, proczr, psize, &
            &                   bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr, has_dir
-      use constants,     only: xdim, ydim, zdim
+      use constants,     only: ARR, xdim, ydim, zdim, LO, HI, BND, DOM
 
       implicit none
 
@@ -382,8 +382,8 @@ contains
                enddo
             case ('mpi')
                if (psize(xdim) > 1) then
-                  call MPI_Isend(sgp(1, 1, 1), 1, cg%ARR_YZ_LEFT_DOM,  procxl, 12, comm3d, req3d(1), ierr)
-                  call MPI_Irecv(sgp(1, 1, 1), 1, cg%ARR_YZ_LEFT_BND,  procxl, 22, comm3d, req3d(2), ierr)
+                  call MPI_Isend(sgp(1, 1, 1), 1, cg%mbc(ARR, xdim, LO, DOM),  procxl, 12, comm3d, req3d(1), ierr)
+                  call MPI_Irecv(sgp(1, 1, 1), 1, cg%mbc(ARR, xdim, LO, BND),  procxl, 22, comm3d, req3d(2), ierr)
                else
                   call die("[gravity:all_grav_boundaries] bnd_xl == 'mpi' && psize(xdim) <= 1")
                endif
@@ -402,8 +402,8 @@ contains
                enddo
             case ('mpi')
                if (psize(xdim) > 1) then
-                  call MPI_Isend(sgp(1, 1, 1), 1, cg%ARR_YZ_RIGHT_DOM, procxr, 22, comm3d, req3d(3), ierr)
-                  call MPI_Irecv(sgp(1, 1, 1), 1, cg%ARR_YZ_RIGHT_BND, procxr, 12, comm3d, req3d(4), ierr)
+                  call MPI_Isend(sgp(1, 1, 1), 1, cg%mbc(ARR, xdim, HI, DOM), procxr, 22, comm3d, req3d(3), ierr)
+                  call MPI_Irecv(sgp(1, 1, 1), 1, cg%mbc(ARR, xdim, HI, BND), procxr, 12, comm3d, req3d(4), ierr)
                else
                   call die("[gravity:all_grav_boundaries] bnd_xr == 'mpi' && psize(xdim) <= 1")
                endif
@@ -426,8 +426,8 @@ contains
                enddo
             case ('mpi')
                if (psize(ydim) > 1) then
-                  call MPI_Isend(sgp(1, 1, 1), 1, cg%ARR_XZ_LEFT_DOM,  procyl, 32, comm3d, req3d(5), ierr)
-                  call MPI_Irecv(sgp(1, 1, 1), 1, cg%ARR_XZ_LEFT_BND,  procyl, 42, comm3d, req3d(6), ierr)
+                  call MPI_Isend(sgp(1, 1, 1), 1, cg%mbc(ARR, ydim, LO, DOM),  procyl, 32, comm3d, req3d(5), ierr)
+                  call MPI_Irecv(sgp(1, 1, 1), 1, cg%mbc(ARR, ydim, LO, BND),  procyl, 42, comm3d, req3d(6), ierr)
                else
                   call die("[gravity:all_grav_boundaries] bnd_yl == 'mpi' && psize(ydim) <= 1")
                endif
@@ -444,8 +444,8 @@ contains
                enddo
             case ('mpi')
                if (psize(ydim) > 1) then
-                  call MPI_Isend(sgp(1, 1, 1), 1, cg%ARR_XZ_RIGHT_DOM, procyr, 42, comm3d, req3d(7), ierr)
-                  call MPI_Irecv(sgp(1, 1, 1), 1, cg%ARR_XZ_RIGHT_BND, procyr, 32, comm3d, req3d(8), ierr)
+                  call MPI_Isend(sgp(1, 1, 1), 1, cg%mbc(ARR, ydim, HI, DOM), procyr, 42, comm3d, req3d(7), ierr)
+                  call MPI_Irecv(sgp(1, 1, 1), 1, cg%mbc(ARR, ydim, HI, BND), procyr, 32, comm3d, req3d(8), ierr)
                else
                   call die("[gravity:all_grav_boundaries] bnd_yr == 'mpi' && psize(ydim) <= 1")
                endif
@@ -466,8 +466,8 @@ contains
                enddo
             case ('mpi')
                if (psize(zdim) > 1) then
-                  call MPI_Isend(sgp(1, 1, 1), 1, cg%ARR_XY_LEFT_DOM,  proczl, 52, comm3d, req3d(9), ierr)
-                  call MPI_Irecv(sgp(1, 1, 1), 1, cg%ARR_XY_LEFT_BND,  proczl, 62, comm3d, req3d(10), ierr)
+                  call MPI_Isend(sgp(1, 1, 1), 1, cg%mbc(ARR, zdim, LO, DOM),  proczl, 52, comm3d, req3d(9), ierr)
+                  call MPI_Irecv(sgp(1, 1, 1), 1, cg%mbc(ARR, zdim, LO, BND),  proczl, 62, comm3d, req3d(10), ierr)
                else
                   call die("[gravity:all_grav_boundaries] bnd_zl == 'mpi' && psize(zdim) <= 1")
                endif
@@ -484,8 +484,8 @@ contains
                enddo
             case ('mpi')
                if (psize(zdim) > 1) then
-                  call MPI_Isend(sgp(1, 1, 1), 1, cg%ARR_XY_RIGHT_DOM, proczr, 62, comm3d, req3d(11), ierr)
-                  call MPI_Irecv(sgp(1, 1, 1), 1, cg%ARR_XY_RIGHT_BND, proczr, 52, comm3d, req3d(12), ierr)
+                  call MPI_Isend(sgp(1, 1, 1), 1, cg%mbc(ARR, zdim, HI, DOM), proczr, 62, comm3d, req3d(11), ierr)
+                  call MPI_Irecv(sgp(1, 1, 1), 1, cg%mbc(ARR, zdim, HI, BND), proczr, 52, comm3d, req3d(12), ierr)
                else
                   call die("[gravity:all_grav_boundaries] bnd_zr == 'mpi' && psize(zdim) <= 1")
                endif

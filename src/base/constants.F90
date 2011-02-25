@@ -106,6 +106,13 @@ module constants
    integer, parameter :: BND_SHE     = BND_COR  + 1      !< shear boundary
    integer, parameter :: BND_INVALID = BND_MPI  - 1      !< non-recognized boundary
 
+   ! first index of cg%mbc(:,:,:) array
+   integer, parameter :: FLUID = 1                       !< MPI container type for exchanging u(:,:,:,:)
+   integer, parameter :: MAG   = FLUID + 1               !< MPI container type for exchanging b(3,:,:,:)
+   integer, parameter :: ARR   = MAG   + 1               !< MPI container type for exchanging a rank-3 array
+   integer, parameter :: BND   = 1                       !< receiving area
+   integer, parameter :: DOM   = BND + 1                 !< sending area
+
    ! misc
    integer, parameter :: stdout = output_unit
    integer, parameter :: stderr = error_unit

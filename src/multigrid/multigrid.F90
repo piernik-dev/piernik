@@ -453,7 +453,7 @@ contains
 
       use multigridvars,      only: lvl, level_gb, level_min, level_max, tot_ts, gb_cartmap
       use mpisetup,           only: master, nproc, comm3d, ierr, has_dir
-      use constants,          only: xdim, ydim, zdim
+      use constants,          only: xdim, zdim, LO, HI, BND, DOM
       use mpi,                only: MPI_DOUBLE_PRECISION
       use multigridhelpers,   only: mg_write_log
       use dataio_pub,         only: msg
@@ -466,7 +466,7 @@ contains
 
       implicit none
 
-      integer :: i, ib
+      integer :: i, ib, d
       real, allocatable, dimension(:) :: all_ts
 
 #ifdef GRAV
@@ -490,27 +490,14 @@ contains
 
             if (i >= level_min) then
                do ib = 1, lvl(i)%nb
-                  if (has_dir(xdim)) then
-                     call MPI_Type_free(lvl(i)%MPI_YZ_LEFT_BND(ib), ierr)
-                     call MPI_Type_free(lvl(i)%MPI_YZ_LEFT_DOM(ib), ierr)
-                     call MPI_Type_free(lvl(i)%MPI_YZ_RIGHT_DOM(ib), ierr)
-                     call MPI_Type_free(lvl(i)%MPI_YZ_RIGHT_BND(ib), ierr)
-                  endif
-
-                  if (has_dir(ydim)) then
-                     call MPI_Type_free(lvl(i)%MPI_XZ_LEFT_BND(ib), ierr)
-                     call MPI_Type_free(lvl(i)%MPI_XZ_LEFT_DOM(ib), ierr)
-                     call MPI_Type_free(lvl(i)%MPI_XZ_RIGHT_DOM(ib), ierr)
-                     call MPI_Type_free(lvl(i)%MPI_XZ_RIGHT_BND(ib), ierr)
-                  endif
-
-                  if (has_dir(zdim)) then
-                     call MPI_Type_free(lvl(i)%MPI_XY_LEFT_BND(ib), ierr)
-                     call MPI_Type_free(lvl(i)%MPI_XY_LEFT_DOM(ib), ierr)
-                     call MPI_Type_free(lvl(i)%MPI_XY_RIGHT_DOM(ib), ierr)
-                     call MPI_Type_free(lvl(i)%MPI_XY_RIGHT_BND(ib), ierr)
-                  endif
-
+                  do d = xdim, zdim
+                     if (has_dir(d)) then
+                        call MPI_Type_free(lvl(i)%mbc(d, LO, BND, ib), ierr)
+                        call MPI_Type_free(lvl(i)%mbc(d, LO, DOM, ib), ierr)
+                        call MPI_Type_free(lvl(i)%mbc(d, HI, DOM, ib), ierr)
+                        call MPI_Type_free(lvl(i)%mbc(d, HI, BND, ib), ierr)
+                     endif
+                  enddo
                enddo
             endif
 

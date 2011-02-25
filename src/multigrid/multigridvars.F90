@@ -37,6 +37,9 @@
 
 module multigridvars
 ! pulled by MULTIGRID
+
+   use constants, only: xdim, zdim, LO, HI, BND, DOM
+
    implicit none
 
    public ! QA_WARN no secrets are kept here
@@ -90,12 +93,7 @@ module multigridvars
       real    :: r, rx, ry, rz                                        !< geometric factors for relaxation (diffusion) used in approximate_solution_rbgs
 
       ! MPI datatype shortcuts
-      integer, dimension(mg_nb) :: MPI_XZ_LEFT_BND, MPI_XZ_RIGHT_BND  !< MPI types for block boundary exchange
-      integer, dimension(mg_nb) :: MPI_XZ_LEFT_DOM, MPI_XZ_RIGHT_DOM  !< To exchange ng guardcells use e.g. MPI_XZ_LEFT_BND(ng)
-      integer, dimension(mg_nb) :: MPI_XY_LEFT_BND, MPI_XY_RIGHT_BND
-      integer, dimension(mg_nb) :: MPI_XY_LEFT_DOM, MPI_XY_RIGHT_DOM
-      integer, dimension(mg_nb) :: MPI_YZ_LEFT_BND, MPI_YZ_RIGHT_BND
-      integer, dimension(mg_nb) :: MPI_YZ_LEFT_DOM, MPI_YZ_RIGHT_DOM
+      integer, dimension(xdim:zdim, LO:HI, BND:DOM, mg_nb) :: mbc     !< MPI types for block boundary exchange, 1 .. mg_nb layers
 
       ! data for FFT solver
       integer                                :: nxc                   !< first index (complex or real: fft(:,:,:) or fftr(:,:,:)) cell count
