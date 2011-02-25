@@ -234,7 +234,10 @@ class DirectoryWalker:
 
 #print desc
 usage = "usage: %prog [options] FILES"
-parser = OptionParser(usage=usage, epilog="Frequently used options (like --linkexe, --laconic or -c <configuration>) can be stored in .setuprc and .setuprc.${HOSTNAME} files")
+try:
+   parser = OptionParser(usage=usage, epilog="Frequently used options (like --linkexe, --laconic or -c <configuration>) can be stored in .setuprc and .setuprc.${HOSTNAME} files")
+except TypeError:
+   parser = OptionParser(usage=usage)
 parser.add_option("-v", "--verbose", action="store_true", dest="verbose", default=False,
    help="try to confuse the user with some diagnostics ;-)")
 parser.add_option("-q", "--laconic", action="store_true", dest="laconic", default=False,
