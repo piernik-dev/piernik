@@ -244,7 +244,7 @@ contains
          endif
       endif
 #ifdef VERBOSE
-      call printinfo("[mpisetup:init_mpi]: commencing...")
+      if (master) call printinfo("[mpisetup:init_mpi]: commencing...")
 #endif /* VERBOSE */
 
       if (allocated(cwd_all) .or. allocated(host_all) .or. allocated(pid_all)) call die("[mpisetup:init_mpi] cwd_all, host_all or pid_all already allocated")
