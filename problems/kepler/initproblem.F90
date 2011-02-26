@@ -51,7 +51,7 @@ module initproblem
    !! \f$\tau\f$ in \f$\frac{Du}{Dt} = - \frac{u-u_0}{\tau}f(R)
    !! when initproblem::problem_customize_solution is used
    !<
-   real                     :: dumping_coeff, drag_max, drag_min
+   real                     :: dumping_coeff, drag_max, drag_min, amp_noise
    logical                  :: use_inner_orbital_period  !< use 1./T_inner as dumping_coeff
    character(len=cbuff_len) :: mag_field_orient
    character(len=cbuff_len) :: densfile
@@ -61,7 +61,7 @@ module initproblem
 
    namelist /PROBLEM_CONTROL/  alpha, d0, dout, r_max, mag_field_orient, r_in, r_out, f_in, f_out, &
       & dens_exp, eps, dens_amb, x_cut, cutoff_ncells, dumping_coeff, use_inner_orbital_period, &
-      & drag_max, drag_min, densfile
+      & drag_max, drag_min, densfile, amp_noise
 
 contains
 !-----------------------------------------------------------------------------
@@ -85,6 +85,7 @@ contains
       mag_field_orient = 'none'
       densfile         = ''
       alpha            = 1.0
+      amp_noise        = 1.e-6
 
       r_in             = 0.5
       f_in             = 10.0
@@ -127,6 +128,7 @@ contains
          rbuff(13) = dumping_coeff
          rbuff(14) = drag_max
          rbuff(15) = drag_min
+         rbuff(16) = amp_noise
 
       endif
 
@@ -159,6 +161,7 @@ contains
          dumping_coeff    = rbuff(13)
          drag_max         = rbuff(14)
          drag_min         = rbuff(15)
+         amp_noise        = rbuff(16)
 
       endif
 
@@ -228,8 +231,8 @@ contains
       integer, dimension(:), allocatable  :: seed
       integer :: n, clock, i
       real, dimension(:,:,:,:), allocatable :: noise
-      real, parameter :: amp = 1.e-6
 
+      if (amp_noise <= 0.0) return
       if (master) call printinfo("[initproblem:add_random_noise]: adding random noise to dust")
       call random_seed(size=n)
       allocate(seed(n))
@@ -240,9 +243,9 @@ contains
 
       allocate(noise(3,cg%nx,cg%ny,cg%nz))
       call random_number(noise)
-      u(flind%dst%imx,:,:,:) = u(flind%dst%imx,:,:,:) +amp -2.0*amp*noise(1,:,:,:) * u(flind%dst%idn,:,:,:)
-      u(flind%dst%imy,:,:,:) = u(flind%dst%imy,:,:,:) +amp -2.0*amp*noise(2,:,:,:) * u(flind%dst%idn,:,:,:)
-      u(flind%dst%imz,:,:,:) = u(flind%dst%imz,:,:,:) +amp -2.0*amp*noise(3,:,:,:) * u(flind%dst%idn,:,:,:)
+      u(flind%dst%imx,:,:,:) = u(flind%dst%imx,:,:,:) +amp_noise -2.0*amp_noise*noise(1,:,:,:) * u(flind%dst%idn,:,:,:)
+      u(flind%dst%imy,:,:,:) = u(flind%dst%imy,:,:,:) +amp_noise -2.0*amp_noise*noise(2,:,:,:) * u(flind%dst%idn,:,:,:)
+      u(flind%dst%imz,:,:,:) = u(flind%dst%imz,:,:,:) +amp_noise -2.0*amp_noise*noise(3,:,:,:) * u(flind%dst%idn,:,:,:)
       deallocate(noise)
    end subroutine add_random_noise
 !-----------------------------------------------------------------------------
@@ -390,6 +393,8 @@ contains
          ln_dens_der(2:cg%nx)  = ( ln_dens_der(2:cg%nx) - ln_dens_der(1:cg%nx-1) ) / cg%dx
          ln_dens_der(1)        = ln_dens_der(2)
          T_inner               = dpi*cg%x(cg%is) / sqrt( abs(grav(cg%is)) * cg%x(cg%is) )
+         write(msg,*) "T_inner = ", T_inner
+         if (master) call printinfo(msg)
          write(msg,*) "III Kepler Law gives T = ", sqr_gm/dpi , " yr at 1 AU"
          if (master) call printinfo(msg)
 #ifdef DEBUG
@@ -562,7 +567,7 @@ contains
    end subroutine read_initial_fld_from_restart
 !-----------------------------------------------------------------------------
    subroutine problem_customize_solution_kepler
-      use mpisetup,        only: dt, t, grace_period_passed, relax_time
+      use mpisetup,        only: dt, t, grace_period_passed, relax_time, smalld
       use arrays,          only: u
       use grid,            only: cg
       use fluidboundaries, only: all_fluid_boundaries
@@ -627,6 +632,10 @@ contains
 #endif
          enddo
       enddo
+      where ( u(iarr_all_dn,:,:,:) < 2.*smalld )
+         u(iarr_all_mx,:,:,:) = u(iarr_all_mx,:,:,:)*0.1
+         u(iarr_all_mz,:,:,:) = u(iarr_all_mz,:,:,:)*0.1
+      endwhere
       call all_fluid_boundaries
    end subroutine problem_customize_solution_kepler
 !-----------------------------------------------------------------------------
