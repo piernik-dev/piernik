@@ -1364,9 +1364,16 @@ contains
 
          call h5ltget_attribute_double_f(file_id,"/","piernik", rbuf, error)
          if (error /= 0) call die("[dataio_hdf5:read_restart_hdf5] Cannot read 'piernik' attribute from the restart file. The file may be either damaged or incompatible")
-         if (rbuf(1) > piernik_hdf5_version) call die("[dataio_hdf5:read_restart_hdf5] Cannot read future versions of the restart file. Upgrade your Piernik code and try again.")
-         if (int(rbuf(1)) < int(piernik_hdf5_version)) call die("[dataio_hdf5:read_restart_hdf5] The restart file is too ancient. Try to temporarily disable this statement if you are sure that it can be interpreted correctly.")
-         if (rbuf(1) < piernik_hdf5_version) call warn("[dataio_hdf5:read_restart_hdf5] Old versions of the restart file may not always work fully correctly.")
+         if (rbuf(1) > piernik_hdf5_version) then
+            write(msg,'(2(a,f5.2))')"[dataio_hdf5:read_restart_hdf5] Cannot read future versions of the restart file: ",rbuf(1)," > ",piernik_hdf5_version
+            call die(msg)
+         else if (int(rbuf(1)) < int(piernik_hdf5_version)) then
+            write(msg,'(2(a,f5.2))')"[dataio_hdf5:read_restart_hdf5] The restart file is too ancient. It is unlikely that it could work correctly: ",rbuf(1)," << ",piernik_hdf5_version
+            call die(msg)
+         else if (rbuf(1) < piernik_hdf5_version) then
+            write(msg,'(2(a,f5.2))')"[dataio_hdf5:read_restart_hdf5] Old versions of the restart file may not always work fully correctly: ",rbuf(1)," < ",piernik_hdf5_version
+            call warn(msg)
+         endif
 
          call h5ltget_attribute_int_f(file_id,"/","nxd", ibuf,error)
          if (ibuf(1) /= dom%n_d(xdim) .or. error /= 0) call die("[dataio_hdf5:read_restart_hdf5] nxd does not match")
