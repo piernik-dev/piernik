@@ -84,7 +84,7 @@ contains
       use mpisetup,      only: ierr, rbuff, cbuff, ibuff, lbuff, master, slave, buffer_dim, comm
       use mpi,           only: MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL
       use list_hdf5,     only: additional_attrs, problem_write_restart, problem_read_restart
-      use types,         only: problem_customize_solution
+      use types,         only: problem_customize_solution, finalize_problem
 
       implicit none
 
@@ -178,8 +178,21 @@ contains
       additional_attrs           => init_prob_attrs
       problem_write_restart      => write_initial_fld_to_restart
       problem_read_restart       => read_initial_fld_from_restart
+      finalize_problem           => cleanup_wt4
 
    end subroutine read_problem_par
+
+!-----------------------------------------------------------------------------
+
+   subroutine cleanup_wt4
+
+      implicit none
+
+      if (allocated(den0)) deallocate(den0)
+      if (allocated(vlx0)) deallocate(vlx0)
+      if (allocated(vly0)) deallocate(vly0)
+
+   end subroutine cleanup_wt4
 
 !-----------------------------------------------------------------------------
 
