@@ -38,7 +38,7 @@ contains
    subroutine fluid_update
       use arrays,        only: u, u0, b, b0
       use dataio_pub,    only: halfstep, warn
-      use mpisetup,      only: dt, dtm, t, cfl_violated, nstep, dt_max_grow
+      use mpisetup,      only: dt, dtm, t, cfl_violated, nstep, dt_max_grow, master
 #ifdef SN_SRC
       use snsources,     only: random_sn
 #endif /* SN_SRC */
@@ -51,7 +51,7 @@ contains
          b = b0
          dt = dtm/dt_max_grow**2
          nstep = nstep - 1
-         call warn("[fluidupdate:fluid_update] Redoing previous step...")
+         if (master) call warn("[fluidupdate:fluid_update] Redoing previous step...")
       else
          u0 = u
          b0 = b
