@@ -189,7 +189,8 @@ contains
    subroutine cfl_warn
 
       use dataio_pub, only: msg, warn
-      use mpisetup,   only: cfl, cfl_max, master, cfl_violated
+      use mpisetup,   only: cfl, cfl_max, master, cfl_violated, comm, ierr
+      use mpi,        only: MPI_LOGICAL
 
       implicit none
 
@@ -209,6 +210,8 @@ contains
          endif
          if (len_trim(msg) > 0) call warn(msg)
       endif
+
+      call MPI_Bcast(cfl_violated, 1, MPI_LOGICAL, 0, comm, ierr)
 
    end subroutine cfl_warn
 
