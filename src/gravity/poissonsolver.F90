@@ -58,22 +58,22 @@ contains
 
       if (.not. all(has_dir(:))) call die("[poissonsolver:poisson_solve] Only 3D setups are supported") !> \deprecated BEWARE 2D and 1D probably need small fixes
 
-      if ( bnd_xl .eq. 'per' .and. bnd_xr .eq. 'per' .and. &
-           bnd_yl .eq. 'per' .and. bnd_yr .eq. 'per' .and. &
-           bnd_zl .ne. 'per' .and. bnd_zr .ne. 'per'        ) then ! Periodic in X and Y, nonperiodic in Z
+      if ( bnd_xl == 'per' .and. bnd_xr == 'per' .and. &
+           bnd_yl == 'per' .and. bnd_yr == 'per' .and. &
+           bnd_zl /= 'per' .and. bnd_zr /= 'per'        ) then ! Periodic in X and Y, nonperiodic in Z
 
          call poisson_xyp(dens(cg%is:cg%ie, cg%js:cg%je,:), sgp(cg%is:cg%ie, cg%js:cg%je,:), cg%dz)
 
          call die("[poissonsolver:poisson_solve] poisson_xyp called")
 
-      elseif ( bnd_xl .eq. 'per' .and. bnd_xr .eq. 'per' .and. &
-           &   bnd_yl .eq. 'per' .and. bnd_yr .eq. 'per' .and. &
-           &   bnd_zl .eq. 'per' .and. bnd_zr .eq. 'per'        ) then ! Fully 3D periodic
+      elseif ( bnd_xl == 'per' .and. bnd_xr == 'per' .and. &
+           &   bnd_yl == 'per' .and. bnd_yr == 'per' .and. &
+           &   bnd_zl == 'per' .and. bnd_zr == 'per'        ) then ! Fully 3D periodic
          call poisson_xyzp(dens(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), sgp(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)) !> \deprecated BEWARE: something may not be fully initialized here
 
 #ifdef SHEAR
-      elseif ( bnd_xl .eq. 'she' .and. bnd_xr .eq. 'she' .and. &
-           &   bnd_yl .eq. 'per' .and. bnd_yr .eq. 'per' ) then ! 2D shearing box
+      elseif ( bnd_xl == 'she' .and. bnd_xr == 'she' .and. &
+           &   bnd_yl == 'per' .and. bnd_yr == 'per' ) then ! 2D shearing box
 
          if (dimensions=='3d') then
             if (.not.allocated(ala)) allocate(ala(cg%nxb, cg%nyb, cg%nzb))

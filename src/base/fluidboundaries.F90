@@ -323,9 +323,9 @@ contains
 
 ! MPI + non-MPI corner-periodic boundary condition
 
-      if (bnd_xl .eq. 'cor') then
+      if (bnd_xl == 'cor') then
 !   - lower to left
-         if (pcoords(1) .eq. 0 .and. pcoords(2) .eq. 0) then
+         if (pcoords(1) == 0 .and. pcoords(2) == 0) then
             do i=1, cg%nb
                do j=cg%js, cg%ny
                   u(iarr_all_dn,i,j,:) =  u(iarr_all_dn,j,cg%isb+1-i,:)
@@ -372,9 +372,9 @@ contains
          endif
       endif
 
-      if (bnd_yl .eq. 'cor') then
+      if (bnd_yl == 'cor') then
 !   - left to lower
-         if (pcoords(2) .eq. 0 .and. pcoords(1) .eq. 0 ) then
+         if (pcoords(2) == 0 .and. pcoords(1) == 0 ) then
             do j=1, cg%nb
                do i=cg%is, cg%nx
                   u(iarr_all_dn,i,j,:) =  u(iarr_all_dn,cg%isb+1-j,i,:)

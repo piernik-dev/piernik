@@ -67,7 +67,7 @@ contains
       vxfac            = 1.0
       taucool          = 1.0e30
 
-      if (proc .eq. 0) then
+      if (proc == 0) then
 
          diff_nml(PROBLEM_CONTROL)
 

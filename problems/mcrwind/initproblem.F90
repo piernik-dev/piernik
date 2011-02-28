@@ -315,9 +315,9 @@ contains
 
                   ysna = ysn
 ! ToDo: when implementing SHEAR, use select case construct or an assignment like this: ysna = ysn_array(ipm)
-!                  if (ipm .eq. -1) ysna = ysn   ! if (SHEAR) => ysna = ysno
-!                  if (ipm .eq.  0) ysna = ysn
-!                  if (ipm .eq.  1) ysna = ysn   ! if (SHEAR) => ysna = ysni
+!                  if (ipm == -1) ysna = ysn   ! if (SHEAR) => ysna = ysno
+!                  if (ipm == 0) ysna = ysn
+!                  if (ipm == 1) ysna = ysn   ! if (SHEAR) => ysna = ysni
 
                   do jpm=-1,1
 

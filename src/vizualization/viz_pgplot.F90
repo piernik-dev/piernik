@@ -133,19 +133,19 @@ contains
       data ab /0.0, 0.0, 0.3, 0.3, 0.7, 0.7, 0.7, 0.7, 0.9, 0.9, &
                0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0/
 !
-      if (ttype.eq.1) then
+      if (ttype == 1) then
 !        -- gray scale
          call pgctab(gl, gr, gg, gb, 2, contra, bright)
-      else if (ttype.eq.2) then
+      else if (ttype == 2) then
 !        -- rainbow
          call pgctab(rl, rr, rg, rb, 9, contra, bright)
-      else if (ttype.eq.3) then
+      else if (ttype == 3) then
 !        -- heat
          call pgctab(hl, hr, hg, hb, 5, contra, bright)
-      else if (ttype.eq.4) then
+      else if (ttype == 4) then
 !        -- weird iraf
          call pgctab(wl, wr, wg, wb, 10, contra, bright)
-      else if (ttype.eq.5) then
+      else if (ttype == 5) then
 !        -- aips
          call pgctab(al, ar, ag, ab, 20, contra, bright)
       endif

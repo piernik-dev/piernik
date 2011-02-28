@@ -318,15 +318,15 @@ contains
 !                     u(fl%ien,i,j,k) = max(u(fl%ien,i,j,k), smallei)
                      u(fl%ien,i,j,k) = u(fl%ien,i,j,k) +0.5*(vx**2+vy**2+vz**2)*u(fl%idn,i,j,k)
                   endif
-                  if (trim(mag_field_orient) .eq. 'toroidal') then
+                  if (trim(mag_field_orient) == 'toroidal') then
                      b(ibx,i,j,k)   = -b0*sqrt(u(fl%idn,i,j,k)/d0)*yj/rc
                      b(iby,i,j,k)   =  b0*sqrt(u(fl%idn,i,j,k)/d0)*xi/rc
                      b(ibz,i,j,k)   =  0.0
-                  else if (trim(mag_field_orient) .eq. 'vertical') then
+                  else if (trim(mag_field_orient) == 'vertical') then
                      b(ibx,i,j,k)   =  0.0
                      b(iby,i,j,k)   =  0.0
                      b(ibz,i,j,k)   =  b0
-                  else if (trim(mag_field_orient) .eq. 'none') then
+                  else if (trim(mag_field_orient) == 'none') then
                      b(:,i,j,k)     =  0.0
                   endif
 

@@ -358,9 +358,9 @@ contains
       dens => density
 
 #ifdef ISO_LOCAL
-      if (sweep .eq. xdim) then
+      if (sweep == xdim) then
          cs_iso2(:) =  cs_iso2_arr(:,i1,i2)
-      else if (sweep .eq. ydim)  then
+      else if (sweep == ydim)  then
          cs_iso2(:) =  cs_iso2_arr(i2,:,i1)
       else
          cs_iso2(:) =  cs_iso2_arr(i1,i2,:)
@@ -441,16 +441,16 @@ contains
             vy0(:,:)  = 0.0
          endwhere
          do ind = 1, flind%fluids
-!            if (sweep .eq. xdim) then
+!            if (sweep == xdim) then
 !               rotacc(ind,:) =  2.0*omega*(vy0(ind,:) + qshear*omega*cg%x(:))
-!            else if (sweep .eq. ydim)  then
+!            else if (sweep == ydim)  then
 !               rotacc(ind,:) = - 2.0*omega*vy0(ind,:)          ! with global shear
 !            else
 !               rotacc(ind,:) = 0.0
 !            endif
-            if (sweep .eq. xdim) then
+            if (sweep == xdim) then
                rotacc(ind,:) =  2.0*omega*vy0(ind,:) + df(ind)  ! global_gradient
-            else if (sweep .eq. ydim)  then
+            else if (sweep == ydim)  then
                rotacc(ind,:) = (qshear - 2.0)*omega*vy0(ind,:)  ! with respect to global shear (2.5D)
             else
                rotacc(ind,:) = 0.0

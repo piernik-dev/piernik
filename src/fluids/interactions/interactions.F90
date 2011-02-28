@@ -314,7 +314,7 @@ contains
 
       do ifl=1,flind%fluids
          do jfl=1,flind%fluids
-            if (ifl .ne. jfl) then
+            if (ifl /= jfl) then
                flch(ifl,jfl,:)= collfaq(ifl,jfl)*uu(iarr_all_dn(ifl),:) * uu(iarr_all_dn(jfl),:) &
                         *( uu(iarr_all_mx(jfl),:)/uu(iarr_all_dn(jfl),:) &
                          - uu(iarr_all_mx(ifl),:)/uu(iarr_all_dn(ifl),:))

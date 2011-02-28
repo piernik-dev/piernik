@@ -385,7 +385,7 @@ contains
 
       call init_hdf5(vars,ix,iy,iz,dt_plt)
 
-      if (master .and. restart .eq. 'last') call find_last_restart(nrestart)
+      if (master .and. restart == 'last') call find_last_restart(nrestart)
       call MPI_Barrier(comm,ierr)
       call MPI_Bcast(nrestart, 1, MPI_INTEGER, 0, comm, ierr)
 
@@ -420,7 +420,7 @@ contains
          t_start     = t
          nres_start  = nrestart
          nhdf_start  = nhdf-1
-         if (new_id .ne. '') run_id=new_id
+         if (new_id /= '') run_id=new_id
          if (all([bnd_xl,bnd_xr,bnd_yl,bnd_yr,bnd_zl,bnd_zr] /= "user")) then
             call all_fluid_boundaries
 #ifdef MAGNETIC
@@ -559,13 +559,13 @@ contains
 
 !- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-      if (output .eq. 'log' .or. output .eq. 'end') call write_log
-      if (output .eq. 'tsl' .or. output .eq. 'end') call write_timeslice
+      if (output == 'log' .or. output == 'end') call write_log
+      if (output == 'tsl' .or. output == 'end') call write_timeslice
 
 !    call checkdf
 
-      if (dt_hdf > 0.0 .and. nstep > step_hdf .and. output .ne. 'gpt') then
-         if ((t-last_hdf_time) >= dt_hdf .or. output .eq. 'hdf' .or. output .eq. 'end') then
+      if (dt_hdf > 0.0 .and. nstep > step_hdf .and. output /= 'gpt') then
+         if ((t-last_hdf_time) >= dt_hdf .or. output == 'hdf' .or. output == 'end') then
             call set_container_chdf(nstep)
             call write_hdf5(chdf)
 
@@ -578,7 +578,7 @@ contains
 
       if (dt_res > 0.0 .and. nstep > step_res) then
          if ((nres-nres_start) < (int((t-t_start) / dt_res) + 1) &
-                .or. output .eq. 'res' .or. output .eq. 'end') then
+                .or. output == 'res' .or. output == 'end') then
             if (nres > 0) then
                call write_restart_hdf5
             else

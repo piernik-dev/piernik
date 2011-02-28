@@ -681,7 +681,7 @@ contains
 
 !-----------------------
 
-      if (gp_status .eq. 'undefined') then
+      if (gp_status == 'undefined') then
          if (associated(grav_accel)) then
             if (master) call warn("[gravity:default_grav_pot_3d]: using 'grav_accel' defined by user")
             call grav_accel2pot

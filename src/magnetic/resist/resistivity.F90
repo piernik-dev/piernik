@@ -268,7 +268,7 @@ contains
 
       implicit none
 
-      if (eta_max .ne. 0. .and. .not. inactive) then
+      if (eta_max /= 0. .and. .not. inactive) then
          dt_resist = cfl_resist * cg%dxmn**2 / (2. * eta_max)
 #ifndef ISO
          dt_resist = min(dt_resist,dt_eint)
