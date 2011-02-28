@@ -42,7 +42,7 @@ module grid
    implicit none
 
    private
-   public :: cleanup_grid, init_grid, grid_mpi_boundaries_prep
+   public :: cleanup_grid, init_grid, grid_mpi_boundaries_prep, arr3d_boundaries
    public :: total_ncells, cg, D_x, D_y, D_z
 
    integer, protected :: total_ncells                   !< total number of %grid cells
@@ -307,6 +307,101 @@ contains
       enddo
 
    end subroutine grid_mpi_boundaries_prep
+
+
+!-----------------------------------------------------------------------------
+
+   subroutine arr3d_boundaries(pa3d)
+
+      use dataio_pub,    only: die
+      use mpi,           only: MPI_STATUS_SIZE, MPI_REQUEST_NULL
+      use constants,     only: ARR, xdim, ydim, zdim, LO, HI, BND, DOM, BND_PER, BND_MPI, BND_SHE, BND_COR
+      use mpisetup,      only: comm3d, ierr, has_dir, psize, procxl, procyl, proczl, procxr, procyr, proczr
+
+      implicit none
+
+      real, dimension(:,:,:), pointer, intent(in) :: pa3d
+
+      integer, parameter                          :: nreq = 3 * 4
+      integer, dimension(nreq)                    :: req3d
+      integer, dimension(MPI_STATUS_SIZE, nreq)   :: status3d
+      integer                                     :: i, d, lh, p
+
+      !> \todo fill corners with big_float ?
+
+      req3d(:) = MPI_REQUEST_NULL
+
+      do d = xdim, zdim
+         if (has_dir(d)) then
+            do lh = LO, HI
+
+               select case (cg%bnd(d, lh))
+                  case (BND_PER)
+                     do i = 1, ceiling(cg%nb/real(cg%n_b(d))) ! Repeating is important for domains that are narrower than their guardcells (e.g. cg%n_b(d) = 2)
+                        select case (2*d+lh)
+                           case (2*xdim+LO)
+                              pa3d(1:cg%nb, :, :) = pa3d(cg%ieb:cg%ie, :, :)
+                           case (2*ydim+LO)
+                              pa3d(:, 1:cg%nb, :) = pa3d(:, cg%jeb:cg%je, :)
+                           case (2*zdim+LO)
+                              pa3d(:, :, 1:cg%nb) = pa3d(:, :, cg%keb:cg%ke)
+                           case (2*xdim+HI)
+                              pa3d(cg%ie+1:cg%nx, :, :) = pa3d(cg%is:cg%isb, :, :)
+                           case (2*ydim+HI)
+                              pa3d(:, cg%je+1:cg%ny, :) = pa3d(:, cg%js:cg%jsb, :)
+                           case (2*zdim+HI)
+                              pa3d(:, :, cg%ke+1:cg%nz) = pa3d(:, :, cg%ks:cg%ksb)
+                        end select
+                     enddo
+                  case (BND_MPI)
+                     if (psize(d) > 1) then
+                        select case (2*d+lh)
+                           case (2*xdim+LO)
+                              p = procxl
+                           case (2*ydim+LO)
+                              p = procyl
+                           case (2*zdim+LO)
+                              p = proczl
+                           case (2*xdim+HI)
+                              p = procxr
+                           case (2*ydim+HI)
+                              p = procyr
+                           case (2*zdim+HI)
+                              p = proczr
+                        end select
+                        call MPI_Isend(pa3d(1, 1, 1), 1, cg%mbc(ARR, d, lh, DOM),  p, 2*d+(LO+HI-lh), comm3d, req3d(4*(d-xdim)+1+2*(lh-LO)), ierr)
+                        call MPI_Irecv(pa3d(1, 1, 1), 1, cg%mbc(ARR, d, lh, BND),  p, 2*d+       lh,  comm3d, req3d(4*(d-xdim)+2+2*(lh-LO)), ierr)
+                     else
+                        call die("[mpisetup:arr3d_boundaries] bnd_[xyz][lr] == 'mpi' && psize([xyz]dim) <= 1")
+                     endif
+                  case (BND_SHE, BND_COR) !> \todo move appropriate code from poissonsolver::poisson_solve or do nothing. or die until someone really needs SHEAR.
+                     call die("[mpisetup:arr3d_boundaries] 'she' not implemented")
+                  case default ! Set gradient == 0 on the external boundaries
+                     do i = 1, cg%nb
+                        select case (2*d+lh)
+                           case (2*xdim+LO)
+                              pa3d(i, :, :) = pa3d(cg%is, :, :)
+                           case (2*ydim+LO)
+                              pa3d(:, i, :) = pa3d(:, cg%js, :)
+                           case (2*zdim+LO)
+                              pa3d(:, :, i) = pa3d(:, :, cg%ks)
+                           case (2*xdim+HI)
+                              pa3d(cg%ie+i, :, :) = pa3d(cg%ie, :, :)
+                           case (2*ydim+HI)
+                              pa3d(:, cg%je+i, :) = pa3d(:, cg%je, :)
+                           case (2*zdim+HI)
+                              pa3d(:, :, cg%ke+i) = pa3d(:, :, cg%ke)
+                        end select
+                     enddo
+               end select
+
+            enddo
+         endif
+      enddo
+
+      call MPI_Waitall(nreq, req3d(:), status3d(:,:), ierr)
+
+   end subroutine arr3d_boundaries
 
 !>
 !! \brief Routines that deallocates directional meshes.

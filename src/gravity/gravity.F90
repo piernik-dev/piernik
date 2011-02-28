@@ -356,8 +356,8 @@ contains
 
    subroutine all_sgp_boundaries
 
-      use arrays,   only: sgp
-      use mpisetup, only: arr3d_boundaries
+      use arrays, only: sgp
+      use grid,   only: arr3d_boundaries
 
       implicit none
 

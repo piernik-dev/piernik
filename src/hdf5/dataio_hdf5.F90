@@ -1223,13 +1223,13 @@ contains
    subroutine read_3darr_from_restart(file_id, dname, pa3d)
 
       use dataio_pub,   only: msg, die
-      use grid,         only: cg
+      use grid,         only: cg, arr3d_boundaries
       use hdf5,         only: HID_T, HSIZE_T, HSSIZE_T, SIZE_T, H5T_NATIVE_DOUBLE, &
            &                  H5S_SELECT_SET_F, H5FD_MPIO_INDEPENDENT_F, H5P_DATASET_XFER_F, &
            &                  h5pcreate_f, h5pclose_f, h5screate_simple_f, h5dopen_f, &
            &                  h5dget_space_f, h5sget_simple_extent_ndims_f, h5dget_create_plist_f, &
            &                  h5sselect_hyperslab_f, h5dread_f, h5sclose_f, h5pset_dxpl_mpio_f, h5dclose_f
-      use mpisetup,     only: dom, arr3d_boundaries
+      use mpisetup,     only: dom
 
       implicit none
 
