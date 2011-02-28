@@ -94,11 +94,12 @@ module dataio_pub
 
    ! stdout and logfile messages
    integer, parameter :: T_PLAIN  = 0, &        !< enum for message types
-        &                T_ERR    = T_PLAIN + 1, &
-        &                T_WARN   = T_ERR   + 1, &
-        &                T_INFO   = T_WARN  + 1, &
-        &                T_IO     = T_INFO  + 1, &
-        &                T_SILENT = T_IO    + 1
+        &                T_ERR    = T_PLAIN  + 1, &
+        &                T_WARN   = T_ERR    + 1, &
+        &                T_INFO   = T_WARN   + 1, &
+        &                T_IO     = T_INFO   + 1, &
+        &                T_IO_NOA = T_IO     + 1, &
+        &                T_SILENT = T_IO_NOA + 1
    character(len=msglen)  :: msg                !< buffer for messages
    character(len=ansirst) :: ansi_black
    character(len=ansilen) :: ansi_red, ansi_green, ansi_yellow, ansi_blue, ansi_magenta, ansi_cyan, ansi_white
@@ -212,7 +213,7 @@ contains
 !-----------------------------------------------------------------------------
    subroutine colormessage(nm, mode)
 
-      use constants, only: stdout, stderr
+      use constants, only: stdout, stderr, idlen
       use mpi,       only: MPI_COMM_WORLD
 
       implicit none
@@ -227,6 +228,7 @@ contains
       integer                       :: proc
       integer                       :: outunit
       logical, save                 :: frun = .true.
+      character(len=idlen)              :: adv
 
       if (frun) then
          write(ansi_black,  '(A1,A3)') char(27),"[0m"
@@ -241,7 +243,8 @@ contains
       endif
 
 !      write(stdout,*) ansi_red, "Red ", ansi_green, "Green ", ansi_yellow, "Yellow ", ansi_blue, "Blue ", ansi_magenta, "Magenta ", ansi_cyan, "Cyan ", ansi_white, "White ", ansi_black
-
+      adv = 'yes'
+      if (mode == T_IO_NOA) adv = 'no'
       select case (mode)
          case (T_ERR)
             ansicolor = ansi_red
@@ -255,7 +258,7 @@ contains
             ansicolor = ansi_green
             outunit   = stdout
             msg_type_str = "Info   "
-         case (T_IO)
+         case (T_IO, T_IO_NOA)
             ansicolor = ansi_blue
             outunit   = stdout
             msg_type_str = "I/O    "
@@ -275,7 +278,7 @@ contains
          if (mode == T_PLAIN) then
             write(outunit,'(a)') trim(nm)
          else
-            write(outunit,'(a,a," @",a,i5,2a)') trim(ansicolor),msg_type_str,ansi_black, proc, ': ', trim(nm)
+            write(outunit,'(a,a," @",a,i5,2a)', advance=adv) trim(ansicolor),msg_type_str,ansi_black, proc, ': ', trim(nm)
          endif
       endif
 
@@ -309,13 +312,25 @@ contains
 
    end subroutine printinfo
 !-----------------------------------------------------------------------------
-   subroutine printio(nm)
+   subroutine printio(nm, noadvance)
 
       implicit none
 
       character(len=*), intent(in) :: nm
+      logical, optional, intent(in) :: noadvance
 
-      call colormessage(nm, T_IO)
+      logical :: adv
+
+      adv  = .true.
+      if (present(noadvance)) then
+         if (noadvance) adv = .false.
+      endif
+
+      if (adv) then
+         call colormessage(nm, T_IO)
+      else
+         call colormessage(nm, T_IO_NOA)
+      endif
 
    end subroutine printio
 !-----------------------------------------------------------------------------

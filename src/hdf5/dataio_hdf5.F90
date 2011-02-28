@@ -643,11 +643,11 @@ contains
 
       use constants,     only: xdim, ydim, zdim, varlen, cwdlen
       use arrays,        only: u
-      use dataio_pub,    only: vizit, fmin, fmax, log_file, msg, die, warn, user_plt_hdf5, planelen
+      use dataio_pub,    only: vizit, fmin, fmax, log_file, msg, die, warn, printio, user_plt_hdf5, planelen
       use grid,          only: cg
       use hdf5,          only: HID_T, HSIZE_T, SIZE_T, H5F_ACC_RDWR_F, h5fopen_f, h5gopen_f, h5gclose_f, h5fclose_f
       use h5lt,          only: h5ltmake_dataset_double_f, h5ltset_attribute_double_f
-      use mpisetup,      only: comm3d, ierr, psize, t, has_dir, dom
+      use mpisetup,      only: comm3d, ierr, psize, t, has_dir, dom, master
       use mpi,           only: MPI_CHARACTER, MPI_DOUBLE_PRECISION
 #ifdef PGPLOT
       use viz,           only: draw_me
@@ -685,7 +685,11 @@ contains
 
       rank = 2
       fe = len_trim(log_file)
-      write(fname,'(2a)') trim(log_file(1:fe-3)),"plt"
+      if (master) then
+         write(fname,'(2a)') trim(log_file(1:fe-3)),"plt"
+         write(msg,'(3a)') 'Writing slicefile ',trim(fname), " ... "
+         call printio(msg, .true.)
+      endif
       call MPI_Bcast(fname, cwdlen, MPI_CHARACTER, 0, comm3d, ierr)
 
       nib = 0; nid = 0; njb = 0; njd = 0; nkb = 0; pisize = 0; pjsize = 0
@@ -855,10 +859,9 @@ contains
 
    subroutine write_restart_hdf5(debug_res)
 
-
       use constants,     only: xdim, ydim, zdim, cwdlen
       use arrays,        only: u, b
-      use dataio_pub,    only: chdf, nres, set_container_chdf, problem_name, run_id
+      use dataio_pub,    only: chdf, nres, set_container_chdf, problem_name, run_id, msg, printio
       use fluidindex,    only: flind
       use grid,          only: cg
       use hdf5,          only: HID_T, HSIZE_T, HSSIZE_T, H5P_FILE_ACCESS_F, H5F_ACC_TRUNC_F, H5P_DATASET_CREATE_F, H5S_SELECT_SET_F, &
@@ -910,7 +913,11 @@ contains
          file_extension = '.res'
       endif
 
-      if (master) write(filename, '(a,a1,a3,a1,i4.4,a4)') trim(problem_name), '_', run_id, '_', nres, file_extension
+      if (master) then
+         write(filename, '(a,a1,a3,a1,i4.4,a4)') trim(problem_name), '_', run_id, '_', nres, file_extension
+         write(msg,'(3a)') 'Writing restart ', trim(filename), " ... "
+         call printio(msg, .true.)
+      endif
       call MPI_Bcast(filename, cwdlen, MPI_CHARACTER, 0, comm, ierr)
       call set_container_chdf(nstep)
 
@@ -1038,7 +1045,7 @@ contains
       ! End of parallel writing
       call h5fclose_f(file_id, error)
 
-      call set_common_attributes(filename, chdf, "restart")
+      call set_common_attributes(filename, chdf)
 
       call h5close_f(error)
 
@@ -1210,6 +1217,7 @@ contains
 
    subroutine read_3darr_from_restart(file_id,dname,p3d,nx,ny,nz)
 
+      use dataio_pub,   only: msg, die
       use grid,         only: cg
       use hdf5,         only: HID_T, HSIZE_T, HSSIZE_T, SIZE_T, H5T_NATIVE_DOUBLE, &
            &                  H5S_SELECT_SET_F, H5FD_MPIO_INDEPENDENT_F, H5P_DATASET_XFER_F, &
@@ -1269,6 +1277,11 @@ contains
       call h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_INDEPENDENT_F, error)
       call h5screate_simple_f(rank, chunk_dims, memspace, error)
       call h5dread_f(dset_id, H5T_NATIVE_DOUBLE, p3d, dimsfi, error, file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
+
+      if (error /= 0) then
+         write(msg, '(3a)') "[dataio_hdf5:read_3darr_from_restart] Reading dataset '",dname,"' failed."
+         call die(msg)
+      endif
 
       call h5sclose_f(filespace, error)
       call h5sclose_f(memspace, error)
@@ -1583,12 +1596,13 @@ contains
 !
    subroutine write_hdf5(chdf)
 
-      use constants,     only: cwdlen, varlen
-      use dataio_pub,    only: msg, die, user_vars_hdf5, nhdf, problem_name, run_id
+      use constants,     only: cwdlen
+      use dataio_pub,    only: printio, msg, die, user_vars_hdf5, nhdf, problem_name, run_id
       use grid,          only: cg
       use hdf5,          only: HID_T, H5F_ACC_TRUNC_F, H5P_FILE_ACCESS_F, H5P_DEFAULT_F, &
            &                   h5open_f, h5close_f, h5fcreate_f, h5fclose_f, h5pcreate_f, h5pclose_f, h5pset_fapl_mpio_f
-      use mpisetup,      only: comm3d, ierr, info
+      use mpisetup,      only: comm3d, comm, ierr, info, master
+      use mpi,           only: MPI_CHARACTER
       use types,         only: hdf
 #ifdef NEW_HDF5
       use list_hdf5,     only: iterate_lhdf5
@@ -1601,15 +1615,18 @@ contains
       integer(HID_T)          :: plist_id      ! Property list identifier
       integer                 :: ierrh, error, i
       logical                 :: ok_var
-      character(len=varlen)   :: dd
       character(len=cwdlen)   :: fname
 
       real(kind=4), allocatable :: data (:,:,:)  ! Data to write
 
       ! Initialize HDF5 library and Fortran interfaces.
       !
-      write(dd,'(i4.4)') chdf%nhdf
-      write(fname, '(6a)') trim(problem_name),"_",trim(run_id),"_",dd,".h5"
+      if (master) then
+         write(fname, '(a,a1,a3,a1,i4.4,a3)') trim(problem_name),"_",trim(run_id),"_",chdf%nhdf,".h5"
+         write(msg,'(3a)') 'Writing datafile ', trim(fname), " ... "
+         call printio(msg, .true.)
+      endif
+      call MPI_Bcast(fname, cwdlen, MPI_CHARACTER, 0, comm, ierr)
 
       call h5open_f(error)
       !
@@ -1647,7 +1664,7 @@ contains
       !
       call h5fclose_f(file_id, error)
 
-      call set_common_attributes(fname, chdf, "output")
+      call set_common_attributes(fname, chdf)
 
       call MPI_Barrier(comm3d,ierr)
       call h5close_f(error)
@@ -1746,7 +1763,7 @@ contains
 !! \brief This routine writes all attributes that are common to restart and output files.
 !! \details Other common elements may also be moved here.
 !<
-   subroutine set_common_attributes(filename, chdf, stype)
+   subroutine set_common_attributes(filename, chdf)
 
       use constants,     only: cbuff_len
       use dataio_pub,    only: msg, printio, require_init_prob, piernik_hdf5_version, problem_name, run_id
@@ -1764,7 +1781,6 @@ contains
       implicit none
 
       character(len=*), intent(in) :: filename  !> HDF File name
-      character(len=*), intent(in) :: stype     !> "output" or "restart"
       type(hdf), intent(in)        :: chdf
 
       integer(HID_T)                 :: file_id       !> File identifier
@@ -1878,7 +1894,7 @@ contains
 
       call h5fclose_f(file_id, error)
 
-      write(msg,'(4a)') 'Writing ',stype,' file: ',trim(filename)
+      write(msg,'(a)') 'done'
       call printio(msg)
 
       ! only master process exits here
