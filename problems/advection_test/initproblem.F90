@@ -147,8 +147,8 @@ contains
 
       where (u(flind%neu%idn, :, :, :) < smalld) u(flind%neu%idn, :, :, :) = smalld
 
-      call my_allocate(inid, [cg%nxb, cg%nyb, cg%nzb], inid_n)
-      inid(1:cg%nxb, 1:cg%nyb, 1:cg%nzb) = u(flind%neu%idn, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
+      call my_allocate(inid, [cg%nx, cg%ny, cg%nz], inid_n)
+      inid(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = u(flind%neu%idn, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
 
       u(flind%neu%imx, :, :, :) = pulse_vel_x * u(flind%neu%idn, :, :, :)
       u(flind%neu%imy, :, :, :) = pulse_vel_y * u(flind%neu%idn, :, :, :)
@@ -169,6 +169,8 @@ contains
 
    subroutine inid_var_hdf5(var, tab, ierrh)
 
+      use grid, only: cg
+
       implicit none
 
       character(len=*), intent(in)                    :: var
@@ -178,7 +180,7 @@ contains
       ierrh = 0
       select case (trim(var))
          case (inid_n)
-            tab(:,:,:) = inid(:,:,:)
+            tab(:,:,:) = inid(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
             case default
             ierrh = -1
       end select
@@ -199,7 +201,7 @@ contains
       integer(HID_T), intent(in) :: file_id
 
       if (allocated(inid)) then
-         call write_3darr_to_restart(inid(:,:,:), file_id, inid_n, cg%nxb, cg%nyb, cg%nzb)
+         call write_3darr_to_restart(inid(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), file_id, inid_n)
       else
          call warn("[initproblem:write_IC_to_restart] Cannot store inid(:,:,:) in the restart file because it mysteriously deallocated.")
       endif
@@ -222,11 +224,11 @@ contains
 
       real, dimension(:,:,:), pointer :: p3d
 
-      if (.not.allocated(inid)) call my_allocate(inid, [cg%nxb, cg%nyb, cg%nzb], inid_n)
+      if (.not.allocated(inid)) call my_allocate(inid, [cg%nx, cg%ny, cg%nz], inid_n)
       if (.not.associated(p3d)) p3d => inid(:,:,:)
 
       if (associated(p3d)) then
-         call read_3darr_from_restart(file_id, inid_n, p3d, cg%nxb, cg%nyb, cg%nzb)
+         call read_3darr_from_restart(file_id, inid_n, p3d)
          nullify(p3d)
       else
          call warn("[initproblem:read_IC_from_restart] Cannot read inid(:,:,:). It's really weird...")
@@ -263,7 +265,7 @@ contains
       do k = cg%ks, cg%ke
          do j = cg%js, cg%je
             do i = cg%is, cg%ie
-               dini =  inid(i-cg%is+1, j-cg%js+1, k-cg%ks+1)
+               dini =  inid(i, j, k)
                norm(1) = norm(1) + (dini - u(flind%neu%idn, i, j, k))**2
                norm(2) = norm(2) + dini**2
                dev(1) = min(dev(1), (dini - u(flind%neu%idn, i, j, k))/dini)

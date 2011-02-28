@@ -933,10 +933,10 @@ contains
       if (associated(problem_write_restart)) call problem_write_restart(file_id)
 
 #ifdef ISO_LOCAL
-      call write_3darr_to_restart(cs_iso2_arr(:,:,:),file_id,"cs_iso2", cg%nx, cg%ny, cg%nz)
+      call write_3darr_to_restart(cs_iso2_arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), file_id, "cs_iso2")
 #endif /* ISO_LOCAL */
 #ifdef GRAV
-      call write_3darr_to_restart(gp(:,:,:),file_id, "gp", cg%nx, cg%ny, cg%nz)
+      call write_3darr_to_restart(gp(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke),file_id, "gp")
 #endif /* GRAV */
 
       rank = 4
@@ -1135,7 +1135,9 @@ contains
 
    end subroutine write_axes_to_restart
 
-   subroutine write_3darr_to_restart(tab,file_id,dname,nx,ny,nz)
+! This routine expects tab to be a (cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) subset of an array
+
+   subroutine write_3darr_to_restart(tab, file_id, dname)
 
       use grid,        only: cg
       use hdf5,        only: HID_T, HSIZE_T, HSSIZE_T, H5P_DATASET_CREATE_F, H5S_SELECT_SET_F, &
@@ -1143,12 +1145,11 @@ contains
            &                 h5dcreate_f, h5dwrite_f, h5dclose_f, h5dget_space_f, &
            &                 h5pcreate_f, h5pset_chunk_f, h5pset_dxpl_mpio_f, &
            &                 h5screate_simple_f, h5sclose_f, h5sselect_hyperslab_f
-      use mpisetup,    only: psize
+      use mpisetup,    only: dom
 
       implicit none
 
-      integer, intent(in)                      :: nx,ny,nz
-      real, dimension(nx,ny,nz), intent(in)    :: tab
+      real, dimension(cg%nxb,cg%nyb,cg%nzb), intent(in)    :: tab
       integer(HID_T), intent(in)               :: file_id       !> File identifier
       character(len=*), intent(in)             :: dname
 
@@ -1171,9 +1172,9 @@ contains
       !----------------------------------------------------------------------------------
       !  WRITE TAB
       !
-      dimsf = [nx, ny, nz] * psize(:)           ! Dataset dimensions
+      dimsf = dom%n_d(:)         ! Dataset dimensions
       dimsfi = dimsf
-      chunk_dims = [nx, ny, nz]                 ! Chunks dimensions
+      chunk_dims = cg%n_b(:)     ! Chunks dimensions
 
       ! Create the data space for the  dataset.
       call h5screate_simple_f(rank, dimsf, filespace, error)
@@ -1215,7 +1216,11 @@ contains
 
    end subroutine write_3darr_to_restart
 
-   subroutine read_3darr_from_restart(file_id,dname,p3d,nx,ny,nz)
+! This routine reads only interior cells of a pointed array from the restart file.
+! Boundary cells are exchanged with the neughbours. Corner boundary cells are not guaranteed to be correct (area_type = 'all_bnd' not implemented yet).
+! External boundary cells are not stored in the restart file and thus all of them are lost (area_type = 'outbnd' not implemented yet).
+
+   subroutine read_3darr_from_restart(file_id, dname, pa3d)
 
       use dataio_pub,   only: msg, die
       use grid,         only: cg
@@ -1224,12 +1229,13 @@ contains
            &                  h5pcreate_f, h5pclose_f, h5screate_simple_f, h5dopen_f, &
            &                  h5dget_space_f, h5sget_simple_extent_ndims_f, h5dget_create_plist_f, &
            &                  h5sselect_hyperslab_f, h5dread_f, h5sclose_f, h5pset_dxpl_mpio_f, h5dclose_f
-      use mpisetup,     only: psize
+      use mpisetup,     only: dom, arr3d_boundaries
 
       implicit none
 
-      integer, intent(in)                  :: nx,ny,nz
-      real, dimension(:,:,:), pointer      :: p3d
+      real, dimension(:,:,:), pointer, intent(in) :: pa3d   ! pointer to (1:cg%nx, 1:cg%ny, 1:cg%ns)-sized array
+
+      real, dimension(:,:,:), pointer             :: pa3di
       integer(HID_T), intent(in)           :: file_id       ! File identifier
       character(len=*), intent(in)         :: dname
 
@@ -1246,15 +1252,19 @@ contains
 
       integer               :: error, rank
 
+
+      if (associated(pa3di)) nullify(pa3di)
+      pa3di => pa3d(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
+
       !----------------------------------------------------------------------------------
       !  READ TAB
       !
       rank = 3
       allocate(dimsf(rank), dimsfi(rank), chunk_dims(rank))
       allocate(block(rank), offset(rank), count(rank), stride(rank))
-      dimsf = [nx, ny, nz] * psize(:)           ! Dataset dimensions
+      dimsf = dom%n_d(:)           ! Dataset dimensions
       dimsfi = dimsf
-      chunk_dims = [nx, ny, nz]
+      chunk_dims = cg%n_b(:)
 
       ! Create chunked dataset.
       call h5dopen_f(file_id, dname, dset_id, error)
@@ -1276,7 +1286,7 @@ contains
       call h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error)
       call h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_INDEPENDENT_F, error)
       call h5screate_simple_f(rank, chunk_dims, memspace, error)
-      call h5dread_f(dset_id, H5T_NATIVE_DOUBLE, p3d, dimsfi, error, file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
+      call h5dread_f(dset_id, H5T_NATIVE_DOUBLE, pa3di, dimsfi, error, file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
 
       if (error /= 0) then
          write(msg, '(3a)') "[dataio_hdf5:read_3darr_from_restart] Reading dataset '",dname,"' failed."
@@ -1295,6 +1305,9 @@ contains
       if (allocated(offset))     deallocate(offset)
       if (allocated(stride))     deallocate(stride)
       if (allocated(block))      deallocate(block)
+
+      ! Originally the pa3d array was written with the guardcells. The internal guardcells will be exchanged but the external ones are lost.
+      call arr3d_boundaries(pa3d)
 
    end subroutine read_3darr_from_restart
 
@@ -1428,12 +1441,12 @@ contains
 
 #ifdef ISO_LOCAL
       if (.not.associated(p3d)) p3d => cs_iso2_arr(:,:,:)
-      call read_3darr_from_restart(file_id, "cs_iso2", p3d, cg%nx, cg%ny, cg%nz)
+      call read_3darr_from_restart(file_id, "cs_iso2", p3d)
       if (associated(p3d)) nullify(p3d)
 #endif /* ISO_LOCAL */
 #ifdef GRAV
       if (.not.associated(p3d)) p3d => gp(:,:,:)
-      call read_3darr_from_restart(file_id, "gp", p3d, cg%nx, cg%ny, cg%nz)
+      call read_3darr_from_restart(file_id, "gp", p3d)
       if (associated(p3d)) nullify(p3d)
 #endif /* GRAV */
       !> \deprecated The code for reading fluid data, mag field and read_3darr_from_restart is almost replicated.

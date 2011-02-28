@@ -423,9 +423,9 @@ contains
       integer(HID_T),intent(in)  :: file_id
 
       if ( divine_intervention_type == 3) then
-         if (allocated(den0)) call write_3darr_to_restart(den0(:,:,:), file_id, "den0", cg%nx, cg%ny, cg%nz)
-         if (allocated(vlx0)) call write_3darr_to_restart(vlx0(:,:,:), file_id, "vlx0", cg%nx, cg%ny, cg%nz)
-         if (allocated(vly0)) call write_3darr_to_restart(vly0(:,:,:), file_id, "vly0", cg%nx, cg%ny, cg%nz)
+         if (allocated(den0)) call write_3darr_to_restart(den0(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), file_id, "den0")
+         if (allocated(vlx0)) call write_3darr_to_restart(vlx0(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), file_id, "vlx0")
+         if (allocated(vly0)) call write_3darr_to_restart(vly0(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), file_id, "vly0")
       endif
 
    end subroutine write_initial_fld_to_restart
@@ -451,13 +451,13 @@ contains
          if (.not.allocated(vly0)) allocate(vly0(cg%nx, cg%ny, cg%nz))
 
          if (.not.associated(p3d)) p3d => den0(:,:,:)
-         call read_3darr_from_restart(file_id,"den0",p3d, cg%nx, cg%ny, cg%nz)
+         call read_3darr_from_restart(file_id,"den0",p3d)
          if (associated(p3d)) nullify(p3d)
          if (.not.associated(p3d)) p3d => vlx0(:,:,:)
-         call read_3darr_from_restart(file_id,"vlx0",p3d, cg%nx, cg%ny, cg%nz)
+         call read_3darr_from_restart(file_id,"vlx0",p3d)
          if (associated(p3d)) nullify(p3d)
          if (.not.associated(p3d)) p3d => vly0(:,:,:)
-         call read_3darr_from_restart(file_id,"vly0",p3d, cg%nx, cg%ny, cg%nz)
+         call read_3darr_from_restart(file_id,"vly0",p3d)
          if (associated(p3d)) nullify(p3d)
       endif
 

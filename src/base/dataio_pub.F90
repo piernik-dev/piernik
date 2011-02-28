@@ -228,7 +228,7 @@ contains
       integer                       :: proc
       integer                       :: outunit
       logical, save                 :: frun = .true.
-      character(len=idlen)              :: adv
+      character(len=idlen)          :: adv
 
       if (frun) then
          write(ansi_black,  '(A1,A3)') char(27),"[0m"

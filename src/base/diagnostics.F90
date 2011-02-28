@@ -28,8 +28,6 @@
 #include "piernik.h"
 module diagnostics
 
-   use constants, only: big_int, big_float
-
    implicit none
 
    interface my_allocate
@@ -267,7 +265,11 @@ contains
    end subroutine deallocate_array_5D_real
 
    subroutine allocate_array_1D_int(array,as,aname)
+
+      use constants, only: big_int
+
       implicit none
+
       integer, dimension(:), allocatable, intent(inout)  :: array
       integer, dimension(1), intent(in)                  :: as
       character(len=*), intent(in), optional             :: aname
@@ -282,7 +284,11 @@ contains
    end subroutine allocate_array_1D_int
 
    subroutine allocate_array_2D_int(array,as,aname)
+
+      use constants, only: big_int
+
       implicit none
+
       integer, dimension(:,:), allocatable, intent(inout)  :: array
       integer, dimension(2), intent(in)                    :: as
       character(len=*), intent(in), optional               :: aname
@@ -297,7 +303,11 @@ contains
    end subroutine allocate_array_2D_int
 
    subroutine allocate_array_3D_int(array,as,aname)
+
+      use constants, only: big_int
+
       implicit none
+
       integer, dimension(:,:,:), allocatable, intent(inout)  :: array
       integer, dimension(3), intent(in)                      :: as
       character(len=*), intent(in), optional                 :: aname
@@ -312,7 +322,11 @@ contains
    end subroutine allocate_array_3D_int
 
    subroutine allocate_array_1D_real(array,as,aname)
+
+      use constants, only: big_float
+
       implicit none
+
       real, dimension(:), allocatable, intent(inout)  :: array
       integer, dimension(1), intent(in)               :: as
       character(len=*), intent(in), optional          :: aname
@@ -327,7 +341,11 @@ contains
    end subroutine allocate_array_1D_real
 
    subroutine allocate_array_2D_real(array,as,aname)
+
+      use constants, only: big_float
+
       implicit none
+
       real, dimension(:,:), allocatable, intent(inout)  :: array
       integer, dimension(2), intent(in)                 :: as
       character(len=*), intent(in), optional            :: aname
@@ -342,7 +360,11 @@ contains
    end subroutine allocate_array_2D_real
 
    subroutine allocate_array_3D_real(array,as,aname)
+
+      use constants, only: big_float
+
       implicit none
+
       real, dimension(:,:,:), allocatable, intent(inout)  :: array
       integer, dimension(3), intent(in)                   :: as
       character(len=*), intent(in), optional              :: aname
@@ -357,7 +379,11 @@ contains
    end subroutine allocate_array_3D_real
 
    subroutine allocate_array_4D_real(array,as,aname)
+
+      use constants, only: big_float
+
       implicit none
+
       real, dimension(:,:,:,:), allocatable, intent(inout)  :: array
       integer, dimension(4), intent(in)                     :: as
       character(len=*), intent(in), optional                :: aname
@@ -372,7 +398,11 @@ contains
    end subroutine allocate_array_4D_real
 
    subroutine allocate_array_5D_real(array,as,aname)
+
+      use constants, only: big_float
+
       implicit none
+
       real, dimension(:,:,:,:,:), allocatable, intent(inout)  :: array
       integer, dimension(5), intent(in)                       :: as
       character(len=*), intent(in), optional                  :: aname

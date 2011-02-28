@@ -935,13 +935,13 @@ contains
       call get_extremum(wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), 'max', pr%dens_max)
       call get_extremum(wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), 'min', pr%dens_min)
 
-      wa = abs(u(fl%imx,:,:,:)/u(fl%idn,:,:,:))
+      wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = abs(u(fl%imx,cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)/u(fl%idn,cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke))
       call get_extremum(wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), 'max', pr%velx_max)
 
-      wa = abs(u(fl%imy,:,:,:)/u(fl%idn,:,:,:))
+      wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = abs(u(fl%imy,cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)/u(fl%idn,cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke))
       call get_extremum(wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), 'max', pr%vely_max)
 
-      wa = abs(u(fl%imz,:,:,:)/u(fl%idn,:,:,:))
+      wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = abs(u(fl%imz,cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)/u(fl%idn,cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke))
       call get_extremum(wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), 'max', pr%velz_max)
 
 #ifdef ISO

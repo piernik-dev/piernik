@@ -502,15 +502,15 @@ contains
 
       do i = lbound(den0,1), ubound(den0,1)
          write(dname,'(2a)') flind%all_fluids(i)%tag, '_den0'
-         if (allocated(den0)) call write_3darr_to_restart(den0(i,:,:,:), file_id, dname, cg%nx, cg%ny, cg%nz)
+         if (allocated(den0)) call write_3darr_to_restart(den0(i, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), file_id, dname)
          write(dname,'(2a)') flind%all_fluids(i)%tag, '_mtx0'
-         if (allocated(mtx0)) call write_3darr_to_restart(mtx0(i,:,:,:), file_id, dname, cg%nx, cg%ny, cg%nz)
+         if (allocated(mtx0)) call write_3darr_to_restart(mtx0(i, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), file_id, dname)
          write(dname,'(2a)') flind%all_fluids(i)%tag, '_mty0'
-         if (allocated(mty0)) call write_3darr_to_restart(mty0(i,:,:,:), file_id, dname, cg%nx, cg%ny, cg%nz)
+         if (allocated(mty0)) call write_3darr_to_restart(mty0(i, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), file_id, dname)
          write(dname,'(2a)') flind%all_fluids(i)%tag, '_mtz0'
-         if (allocated(mtz0)) call write_3darr_to_restart(mtz0(i,:,:,:), file_id, dname, cg%nx, cg%ny, cg%nz)
+         if (allocated(mtz0)) call write_3darr_to_restart(mtz0(i, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), file_id, dname)
          write(dname,'(2a)') flind%all_fluids(i)%tag, '_ene0'
-         if (allocated(ene0)) call write_3darr_to_restart(ene0(i,:,:,:), file_id, dname, cg%nx, cg%ny, cg%nz)
+         if (allocated(ene0)) call write_3darr_to_restart(ene0(i, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), file_id, dname)
       enddo
 
    end subroutine write_initial_fld_to_restart
@@ -540,27 +540,27 @@ contains
       do i=1, flind%fluids
          write(dname,'(2a)') flind%all_fluids(i)%tag, '_den0'
          if (.not.associated(p3d)) p3d => den0(i,:,:,:)
-         call read_3darr_from_restart(file_id,dname,p3d, cg%nx, cg%ny, cg%nz)
+         call read_3darr_from_restart(file_id,dname,p3d)
          if (associated(p3d)) nullify(p3d)
 
          write(dname,'(2a)') flind%all_fluids(i)%tag, '_mtx0'
          if (.not.associated(p3d)) p3d => mtx0(i,:,:,:)
-         call read_3darr_from_restart(file_id,dname,p3d, cg%nx, cg%ny, cg%nz)
+         call read_3darr_from_restart(file_id,dname,p3d)
          if (associated(p3d)) nullify(p3d)
 
          write(dname,'(2a)') flind%all_fluids(i)%tag, '_mty0'
          if (.not.associated(p3d)) p3d => mty0(i,:,:,:)
-         call read_3darr_from_restart(file_id,dname,p3d, cg%nx, cg%ny, cg%nz)
+         call read_3darr_from_restart(file_id,dname,p3d)
          if (associated(p3d)) nullify(p3d)
 
          write(dname,'(2a)') flind%all_fluids(i)%tag, '_mtz0'
          if (.not.associated(p3d)) p3d => mtz0(i,:,:,:)
-         call read_3darr_from_restart(file_id,dname,p3d, cg%nx, cg%ny, cg%nz)
+         call read_3darr_from_restart(file_id,dname,p3d)
          if (associated(p3d)) nullify(p3d)
 
          write(dname,'(2a)') flind%all_fluids(i)%tag, '_ene0'
          if (.not.associated(p3d)) p3d => ene0(i,:,:,:)
-         call read_3darr_from_restart(file_id,dname,p3d, cg%nx, cg%ny, cg%nz)
+         call read_3darr_from_restart(file_id,dname,p3d)
          if (associated(p3d)) nullify(p3d)
       enddo
 
