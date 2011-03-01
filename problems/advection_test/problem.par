@@ -21,6 +21,7 @@
 
  $MPI_BLOCKS
     psize = 1, 1, 1
+    allow_uneven = .true.
  /
 
  $UNITS

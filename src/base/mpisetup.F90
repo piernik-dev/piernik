@@ -49,7 +49,8 @@ module mpisetup
         &    cfr_smooth, cleanup_mpi, comm, comm3d, dt, dt_initial, dt_max_grow, dt_min, dt_old, dtm, err, ibuff, ierr, info, init_mpi, &
         &    integration_order, lbuff, limiter, mpifind, nproc, nstep, pcoords, proc, procxl, procxr, procxyl, procyl, procyr, procyxl, proczl, &
         &    proczr, psize, rbuff, req, smalld, smallei, smallp, status, t, use_smalld, magic_mass, local_magic_mass, master, slave, &
-        &    nb, has_dir, eff_dim, relax_time, grace_period_passed, dom, geometry_type, translate_bnds_to_ints
+        &    nb, has_dir, eff_dim, relax_time, grace_period_passed, dom, geometry_type, translate_bnds_to_ints, &
+        &    have_mpi, is_uneven
 
    integer :: nproc, proc, ierr , rc, info
    integer :: status(MPI_STATUS_SIZE,4)
@@ -80,16 +81,20 @@ module mpisetup
    logical,   dimension(buffer_dim) :: lbuff
 
    logical     :: have_mpi           !< .true. when run on more than one processor
+   logical     :: is_uneven          !< .true. when n[xyz]b depend on process number
 
    integer, allocatable, dimension(:) :: primes
+   real :: ideal_bsize
    integer, protected :: geometry_type  !< the type of geometry: cartesian: GEO_XYZ, cylindrical: GEO_RPZ, other: GEO_INVALID
 
    ! Namelist variables
 
    integer, dimension(ndims) :: psize !< desired number of MPI blocks in x, y and z-dimension
    logical :: reorder                 !< allows processes reordered for efficiency (a parameter of MPI_Cart_create and MPI_graph_create)
+   logical :: allow_uneven    !< allows different values of n[xyz]b on divverent processes
+   real    :: dd_unif_quality !< uniform domain decomposition may be rejected it its quality is below this threshold (e.g. very elongated local domains are found)
 
-   namelist /MPI_BLOCKS/ psize, reorder
+   namelist /MPI_BLOCKS/ psize, reorder, allow_uneven, dd_unif_quality
 
    integer, protected :: nxd  !< number of %grid cells in physical domain (without boundary cells) in x-direction (if == 1 then x-dimension is reduced to a point with no boundary cells)
    integer, protected :: nyd  !< number of %grid cells in physical domain (without boundary cells) in y-direction (-- || --)
@@ -148,6 +153,8 @@ contains
 !! <tr><td width="150pt"><b>parameter</b></td><td width="135pt"><b>default value</b></td><td width="200pt"><b>possible values</b></td><td width="315pt"> <b>description</b></td></tr>
 !! <tr><td>psize(3)       </td><td>1      </td><td>integer</td><td>\copydoc mpisetup::psize          </td></tr>
 !! <tr><td>reorder        </td><td>.false.</td><td>logical</td><td>\copydoc mpisetup::reorder        </td></tr>
+!! <tr><td>allow_uneven   </td><td>.false.</td><td>logical</td><td>\copydoc mpisetup::allow_uneven   </td></tr>
+!! <tr><td>dd_unif_quality</td><td>0.9    </td><td>real   </td><td>\copydoc mpisetup::dd_unif_quality</td></tr>
 !! </table>
 !! \n \n
 !! @b DOMAIN
@@ -309,6 +316,7 @@ contains
       geometry = "cartesian"
 
       reorder   = .false.      !< \todo test it!
+      allow_uneven = .false.
 
       bnd_xl = 'per'
       bnd_xr = 'per'
@@ -331,6 +339,7 @@ contains
       dt_initial  = -1.              !< negative value indicates automatic choice of initial timestep
       dt_max_grow = dt_default_grow  !< for sensitive setups consider setting this as low as 1.1
       dt_min      = tiny(1.)
+      dd_unif_quality = 0.9
 
       integration_order  = 2
 
@@ -388,9 +397,11 @@ contains
          rbuff(15) = ymax
          rbuff(16) = zmin
          rbuff(17) = zmax
+         rbuff(18) = dd_unif_quality
 
          lbuff(1) = use_smalld
          lbuff(2) = reorder
+         lbuff(3) = allow_uneven
 
       endif
 
@@ -403,6 +414,7 @@ contains
 
          use_smalld    = lbuff(1)
          reorder       = lbuff(2)
+         allow_uneven  = lbuff(3)
 
          smalld      = rbuff( 1)
          smallc      = rbuff( 2)
@@ -421,6 +433,7 @@ contains
          ymax        = rbuff(15)
          zmin        = rbuff(16)
          zmax        = rbuff(17)
+         dd_unif_quality = rbuff(18)
 
          bnd_xl     = cbuff(1)(1:bndlen)
          bnd_xr     = cbuff(2)(1:bndlen)
@@ -549,11 +562,13 @@ contains
          psize(:) = 1
       endif
 
-      if (product(psize(:)) /= nproc) then
-         call Eratosthenes_sieve(primes, nproc) ! it is possible to use primes only to sqrt(nproc), but it is easier to have the full table. Cheap for any reasonable nproc.
-         call divide_domain_uniform
-         deallocate(primes)
-      endif
+#ifdef MULTIGRID
+      if (allow_uneven .and. master) call warn("[mpisetup:init_mpi] Multigrid solver is not yet capable of using unevenly divided domains.")
+      allow_uneven = .false.
+#endif /* MULTIGRID */
+      if (allow_uneven .and. master .and. have_mpi) call warn("[mpisetup:init_mpi] Uneven domain decomposition is experimental.")
+      is_uneven = .false.
+      call divide_domain
 
       if ( (bnd_xl(1:3) == 'cor' .or. bnd_yl(1:3) == 'cor' .or. bnd_xr(1:3) == 'cor' .or. bnd_yr(1:3) == 'cor') .and. &
            (psize(xdim) /= psize(ydim) .or. dom%n_d(xdim) /= dom%n_d(ydim)) ) then
@@ -724,6 +739,60 @@ contains
    end subroutine mpifind
 
 !-----------------------------------------------------------------------------
+
+   subroutine divide_domain
+
+      use dataio_pub,    only: die, warn, printinfo, msg
+
+      implicit none
+
+      real :: quality
+
+      if (product(psize) == nproc) then
+         if (all(mod(dom%n_d(:), psize(:)) == 0)) then
+            if (master .and. have_mpi) then
+               write(msg,'(a,3i4,a,3i6,a)')"[mpisetup:divide_domain] Domain divided to [",psize(:)," ] pieces, each of [",dom%n_d(:)/psize(:)," ] cells."
+               call printinfo(msg)
+            endif
+            return
+         else
+            write(msg,'(a,3i6,a,3i4,a)')"[mpisetup:divide_domain] Cannot divide domain with [",dom%n_d(:)," ] cells to [",psize(:)," ] piecess. "
+            if (master) call warn(msg)
+            psize(:) = 1
+         endif
+      endif
+
+      call Eratosthenes_sieve(primes, nproc) ! it is possible to use primes only to sqrt(nproc), but it is easier to have the full table. Cheap for any reasonable nproc.
+
+      ! this is the minimal total area of internal boundaries (periodic case), achievable for some perfect domain divisions
+      ideal_bsize = eff_dim * (nproc * product(dble(dom%n_d(:)))**(eff_dim-1))**(1./eff_dim)
+
+      call divide_domain_uniform
+      if (product(psize) == nproc) then
+         quality = ideal_bsize / sum(psize(:)/dble(dom%n_d(:)) * product(dom%n_d(:)), MASK = dom%n_d(:) > 1)
+         if (quality >= dd_unif_quality .or. .not. allow_uneven) return
+         write(msg,'(2(a,f6.3),a)')"[mpisetup:divide_domain] Quality of uniform division = ",quality," is below threshold ",dd_unif_quality, ", trying harder ..."
+         if (master) call warn(msg)
+      endif
+
+      if (allow_uneven) then
+         call divide_domain_rectlinear
+         if (product(psize) == nproc) then
+            ! if (quality > dd_rect_quality .or. .not. allow_noncart) return
+            return
+         endif
+      else
+         if (master) call warn("[mpisetup:divide_domain] Did not try uneven domain division")
+      endif
+
+      deallocate(primes)
+
+      write(msg,'(a,3i6,a,i4,a)') "[mpisetup:divide_domain] Cannot divide domain with [",dom%n_d(:)," ] cells to ",nproc," piecess. "
+      call die(msg)
+
+   end subroutine divide_domain
+
+!-----------------------------------------------------------------------------
 !>
 !! \brief This routine tries to divide the computational domain into local domains.
 !! \details The goal is to minimize the ratio of longest to shortest edge to minimize the amount of inter-process communication.
@@ -737,7 +806,7 @@ contains
    subroutine divide_domain_uniform
 
       use constants,     only: xdim, zdim
-      use dataio_pub,    only: die, printinfo, msg
+      use dataio_pub,    only: warn, printinfo, msg
 
       implicit none
 
@@ -768,7 +837,9 @@ contains
             endif
 
             if (jj == 0) then
-               call die("[divide_domain_uniform]: Can't find divisible edge")
+               if (master) call warn("[mpisetup:divide_domain_uniform]: Can't find divisible edge")
+               psize(:) = 1
+               return
             else
                psize(jj) = psize(jj) * primes(p)
                n         = n         / primes(p)
@@ -778,7 +849,11 @@ contains
          enddo
       enddo
 
-      if (n /= 1) call die("[divide_domain_uniform]: I am not that intelligent") ! nproc has too big prime factors
+      if (n /= 1) then
+         if (master) call warn("[mpisetup:divide_domain_uniform]: I am not that intelligent") ! nproc has too big prime factors
+         psize(:) = 1
+         return
+      endif
 
       tmp(xdim:zdim) = psize(zdim:xdim:-1) ! directions were reverted at ldom assignment
       psize(:) = tmp(:)
@@ -789,6 +864,109 @@ contains
       endif
 
    end subroutine divide_domain_uniform
+
+!-----------------------------------------------------------------------------
+!>
+!! \brief Divide the computational domain into local domains. Allow their size to change by +/- 1 depending on CPU rank (this will introduce some load imbalance)
+!! if it is not possible to divide an edge evenly. Try to minimize the imbalance and total internal boundaries size.
+!<
+   subroutine divide_domain_rectlinear
+
+      use constants,     only: xdim, ydim
+      use dataio_pub,    only: printinfo, msg
+
+      implicit none
+
+      real, parameter :: b_load_fac = 0.25 ! estimated increase of execution time after doubling the total size of internal boundaries.
+      ! \todo estimate this factor for massively parallel runs and for Intel processors
+
+      integer, allocatable, dimension(:) :: ppow
+      integer, allocatable, dimension(:,:) :: fac
+      integer, dimension(ndims) :: ldom
+      integer :: p, i, j, k, n, nf, ii, bsize
+      real :: load_balance, best, quality
+
+      psize(:) = 1
+      if (nproc == 1) return
+
+      allocate(ppow(size(primes)))
+
+      p = nproc
+      do i = 1, size(primes)
+         ppow(i) = 0
+         do while (mod(p, primes(i)) == 0)
+            ppow(i) = ppow(i) + 1
+            p = p / primes(i)
+         enddo
+      enddo
+
+      nf = count(ppow(:) > 0)
+      allocate(fac(nf,3))
+      j = 1
+      do i = 1, size(primes)
+         if (ppow(i)>0) then
+            fac(j,:) = [ primes(i), ppow(i), (ppow(i)+1)*(ppow(i)+2)/2 ] ! prime, its power and number of different decompositions in three dimensions for this prime
+            j = j + 1
+         endif
+      enddo
+      deallocate(ppow)
+
+      best = 0.
+      ii = 0
+      do while (all(fac(:,3) > 0))
+         ldom(:) = 1
+         do n = 1, nf ! find an unique decomposition of fac(n,2) into [i,j,k], all([i,j,k] >= 0) && i+j+k = fac(n,2). The decompositions are enumerated with fac(n,3).
+            i = int(sqrt(1./4.+2.*(fac(n,3)-1)) - 1./2.) ! i and k enumerate a point in a triangle: (i>=0 && k>=0 && i+k<=fac(n,2))
+            k = fac(n,3) - 1 - i*(i+1)/2
+            i = fac(n,2) - i
+            j = fac(n,2) - (i + k)
+            ldom(:) = ldom(:) * fac(n,1)**[i, j, k]
+         enddo
+
+         ii = ii + 1
+         bsize = int(sum(ldom(:)/dble(dom%n_d(:)) * product(dom%n_d(:)), MASK = dom%n_d(:) > 1)) !ldom(1)*dom%n_d(2)*dom%n_d(3) + ldom(2)*dom%n_d(1)*dom%n_d(3) + ldom(3)*dom%n_d(1)*dom%n_d(2)
+         load_balance = product(dom%n_d(:)) / ( dble(nproc) * product( int((dom%n_d(:)-1)/ldom(:)) + 1 ) )
+
+         quality = load_balance/ (1 + b_load_fac*(bsize/dble(ideal_bsize) - 1))
+         ! \todo add a factor that estimates lower cost when x-direction is not chopped too much
+         quality = quality * (1. - (0.001 * ldom(xdim) + 0.0001 * ldom(ydim))/nproc) ! \deprecated estimate these magic numbers
+
+         if (quality > best) then
+            best = quality
+            psize(:) = ldom(:)
+         endif
+         do j = 1, nf ! search for next unique combination
+            if (fac(j,3) > 1) then
+               fac(j,3) = fac(j,3) - 1
+               exit
+            else
+               if (j<nf) then
+                  fac(j,3) = (fac(j,2)+1)*(fac(j,2)+2)/2
+               else
+                  fac(:,3) = 0 ! no more combinations to try
+               endif
+            endif
+         enddo
+      enddo
+
+      deallocate(fac)
+
+      is_uneven = any(mod(dom%n_d(:), psize(:)) /= 0)
+
+      if (master) then
+         write(msg,'(a,3i4,a)')      "[mpisetup:divide_domain_rectlinear] Domain divided to [",psize(:)," ] pieces"
+         call printinfo(msg)
+         if (is_uneven) then
+            write(msg,'(2(a,3i5),a)')"                                    Sizes are from [", int(dom%n_d(:)/psize(:))," ] to [",int((dom%n_d(:)-1)/psize(:))+1," ] cells."
+            call printinfo(msg)
+            write(msg,'(a,f6.3)')    "                                    Load balance is ",product(dom%n_d(:)) / ( dble(nproc) * product( int((dom%n_d(:)-1)/psize(:)) + 1 ) )
+         else
+            write(msg,'(a,3i5,a)')   "                                    Size is [", int(dom%n_d(:)/psize(:))," ] cells."
+         endif
+         call printinfo(msg)
+      endif
+
+   end subroutine divide_domain_rectlinear
 
 !-----------------------------------------------------------------------------
 

@@ -384,7 +384,7 @@ contains
 
       use arrays,             only: sgp
       use multigridvars,      only: lvl, roof, base, gb, level_gb, level_max, level_min, bnd_periodic, bnd_dirichlet, bnd_isolated, vcycle_stats
-      use mpisetup,           only: master, nproc, psize, geometry_type
+      use mpisetup,           only: master, nproc, psize, geometry_type, have_mpi, is_uneven
       use multigridhelpers,   only: vcycle_stats_init, dirty_debug, dirtyH
       use constants,          only: pi, dpi, xdim, ydim, zdim, GEO_XYZ
       use dataio_pub,         only: die, warn
@@ -477,6 +477,7 @@ contains
          if (geometry_type /= GEO_XYZ) call die("[multigrid_gravity:init_multigrid_grav_post] FFT at base level is not allowed in non-cartesian coordinates.")
 
          !> \deprecated BEWARE only small subset of gb% members is ever initialized
+         if (have_mpi .and. is_uneven) call die("[multigrid_gravity:init_multigrid_grav_post] is_uneven is not implemented") ! base%n[xyz]b * p[xyz]size
 
          gb%nxb = base%nxb * psize(xdim)
          gb%nyb = base%nyb * psize(ydim)

@@ -60,9 +60,9 @@ contains
 !<
    subroutine init_grid
 
-      use dataio_pub, only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml  ! QA_WARN required for diff_nml
-      use dataio_pub, only: printinfo, die, code_progress
       use constants,  only: PIERNIK_INIT_MPI, xdim, ydim, zdim
+      use dataio_pub, only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml  ! QA_WARN required for diff_nml
+      use dataio_pub, only: printinfo, die, warn, code_progress
       use mpisetup,   only: psize, pcoords, comm, has_dir, dom, nb, translate_bnds_to_ints, bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr
 
       implicit none
@@ -75,9 +75,6 @@ contains
       call printinfo("[grid:init_grid]: commencing...")
 #endif /* VERBOSE */
 
-      ! This statement will be removed soon
-      if ( any(mod(dom%n_d(:), psize(:)) /= 0) ) call die("One of: (mod(n_d,p_size) /= 0")
-
       cg%nb = nb
       cg%dxmn = huge(1.0)
 
@@ -85,8 +82,15 @@ contains
       cg%n_b(:) = 1
       where (has_dir(:))
          cg%off(:) = (dom%n_d(:) * pcoords(:) ) / psize(:) ! Block offset on the dom% should be between 0 and nxd-nxb
-         cg%n_b(:) = dom%n_d(:) / psize(:)                 ! Block 'physical' grid sizes
+         cg%n_b(:) = (dom%n_d(:) * (pcoords(:)+1))/psize(:) - cg%off(:)  ! Block 'physical' grid sizes
       endwhere
+
+      do i = xdim, zdim
+         if (has_dir(i)) then
+            if (cg%n_b(i) < 1) call die("[grid:init_grid] Too many CPUs for a small grid.")
+            if (cg%n_b(i) < nb) call warn("[grid:init_grid] domain size in some directions is < nb, which may result in incomplete boundary cell update")
+         endif
+      enddo
 
       cg%nxb = cg%n_b(xdim)
       cg%nyb = cg%n_b(ydim)

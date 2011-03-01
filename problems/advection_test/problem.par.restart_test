@@ -17,6 +17,7 @@
  /
 
  $MPI_BLOCKS
+    allow_uneven = .true.
  /
 
  $UNITS
