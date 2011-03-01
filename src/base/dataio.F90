@@ -679,6 +679,9 @@ contains
 #ifdef GRAV
       use arrays,          only: gpot
 #endif /* GRAV */
+#ifdef RESISTIVE
+      use resistivity,     only: eta1_inactive
+#endif /* RESISTIVE */
 
       implicit none
 
@@ -725,7 +728,7 @@ contains
             call pop_vector(tsl_names, cbuff_len, ["emag   ", "mflx   ", "mfly   ", "mflz   ", "vai_max", "b_min  ", "b_max  "])
             call pop_vector(tsl_names, cbuff_len, ["divb_max"])
 #ifdef RESISTIVE
-            call pop_vector(tsl_names, cbuff_len, ["eta_max"])
+            if (.not.eta1_inactive) call pop_vector(tsl_names, cbuff_len, ["eta_max"])
 #endif /* RESISTIVE */
 #endif /* MAGNETIC */
 #ifdef IONIZED
@@ -800,7 +803,7 @@ contains
 #ifdef MAGNETIC
          call pop_vector(tsl_vars, [tot_emag, tot_mflx, tot_mfly, tot_mflz, tsl%vai_max, tsl%b_min, tsl%b_max, tsl%divb_max])
 #ifdef RESISTIVE
-         call pop_vector(tsl_vars, [tsl%etamax])
+         if (.not. eta1_inactive) call pop_vector(tsl_vars, [tsl%etamax])
 #endif /* RESISTIVE */
 #endif /* MAGNETIC */
 #ifdef COSM_RAYS
@@ -1005,7 +1008,7 @@ contains
       use timestepcosmicrays, only: dt_crs
 #endif /* COSM_RAYS */
 #ifdef RESISTIVE
-      use resistivity,        only: dt_resist, etamax, cu2max
+      use resistivity,        only: dt_resist, etamax, cu2max, eta1_inactive
 #ifndef ISO
       use resistivity,        only: deimin
 #endif /* !ISO */
@@ -1183,15 +1186,17 @@ contains
             call printinfo(msg, .false.)
 #endif /* COSM_RAYS */
 #ifdef RESISTIVE
-            id = "RES"
-            write(msg, fmt_dtloc) 'max(eta)    ', id, etamax%val, dt_resist, etamax%proc, etamax%loc
-            call printinfo(msg, .false.)
-            write(msg, fmt_dtloc) 'max(cu2)    ', id, cu2max%val, dt_resist, cu2max%proc, cu2max%loc
-            call printinfo(msg, .false.)
+            if (.not.eta1_inactive) then
+               id = "RES"
+               write(msg, fmt_dtloc) 'max(eta)    ', id, etamax%val, dt_resist, etamax%proc, etamax%loc
+               call printinfo(msg, .false.)
+               write(msg, fmt_dtloc) 'max(cu2)    ', id, cu2max%val, dt_resist, cu2max%proc, cu2max%loc
+               call printinfo(msg, .false.)
 #ifndef ISO
-            write(msg, fmt_dtloc) 'min(dei)    ', id, deimin%val, dt_resist, deimin%proc, deimin%loc
-            call printinfo(msg, .false.)
+               write(msg, fmt_dtloc) 'min(dei)    ', id, deimin%val, dt_resist, deimin%proc, deimin%loc
+               call printinfo(msg, .false.)
 #endif /* !ISO */
+            endif
 #endif /* RESISTIVE */
 #ifdef VARIABLE_GP
             id = "GPT"
@@ -1217,7 +1222,7 @@ contains
 #endif /* COSM_RAYS */
 
 #ifdef RESISTIVE
-            tsl%etamax = etamax%val
+            if (.not.eta1_inactive) tsl%etamax = etamax%val
 #endif /* RESISTIVE */
 
 #ifdef VARIABLE_GP

@@ -41,7 +41,7 @@ module resistivity
    private
    public  :: init_resistivity, timestep_resist, cleanup_resistivity, dt_resist, etamax,   &
         &     diffuseby_x, diffusebz_x, diffusebx_y, diffusebz_y, diffusebx_z, diffuseby_z, &
-        &     cu2max, deimin
+        &     cu2max, deimin, eta1_inactive
 
    real    :: cfl_resist                     !< CFL factor for resistivity effect
    real    :: eta_0                          !< uniform resistivity
@@ -55,7 +55,7 @@ module resistivity
    type(value) :: etamax, cu2max, deimin
    real, dimension(:,:,:), allocatable, target :: wb, eh, eta
    real, dimension(:,:,:), allocatable         :: dbx, dby, dbz
-   logical, save :: inactive = .false.       !< resistivity off-switcher while x or y dimension does not exist
+   logical, save :: eta1_inactive = .false.       !< resistivity off-switcher while eta_1 == 0.0
 
 contains
 
@@ -63,8 +63,8 @@ contains
 
       implicit none
 
-      if (allocated(wb) ) deallocate(wb)
       if (allocated(eta)) deallocate(eta)
+      if (allocated(wb) ) deallocate(wb)
       if (allocated(eh) ) deallocate(eh)
       if (allocated(dbx)) deallocate(dbx)
       if (allocated(dby)) deallocate(dby)
@@ -143,28 +143,32 @@ contains
 
       if (eta_scale < 0) call die("eta_scale must be greater or equal 0")
 
-      if (.not.allocated(wb) ) allocate( wb(cg%nx, cg%ny, cg%nz))
+#ifdef ISO
+      if (eta_1 == 0.) then
+         eta = eta_0
+         eta1_inactive = .true.
+      endif
+#endif /* ISO */
+
       if (.not.allocated(eta)) allocate(eta(cg%nx, cg%ny, cg%nz))
-      if (.not.allocated(eh) ) allocate( eh(cg%nx, cg%ny, cg%nz))
-      if (.not.allocated(dbx)) allocate(dbx(cg%nx, cg%ny, cg%nz))
-      if (.not.allocated(dby)) allocate(dby(cg%nx, cg%ny, cg%nz))
-      if (.not.allocated(dbz)) allocate(dbz(cg%nx, cg%ny, cg%nz))
+      if (.not.eta1_inactive) then
+         if (.not.allocated(wb) ) allocate( wb(cg%nx, cg%ny, cg%nz))
+         if (.not.allocated(eh) ) allocate( eh(cg%nx, cg%ny, cg%nz))
+         if (.not.allocated(dbx)) allocate(dbx(cg%nx, cg%ny, cg%nz))
+         if (.not.allocated(dby)) allocate(dby(cg%nx, cg%ny, cg%nz))
+         if (.not.allocated(dbz)) allocate(dbz(cg%nx, cg%ny, cg%nz))
 
-      if (.not.has_dir(xdim)) dbx = 0.0
-      if (.not.has_dir(ydim)) dby = 0.0
-      if (.not.has_dir(zdim)) dbz = 0.0
+         if (.not.has_dir(xdim)) dbx = 0.0
+         if (.not.has_dir(ydim)) dby = 0.0
+         if (.not.has_dir(zdim)) dbz = 0.0
 
-      jc2 = j_crit**2
-      dims_twice = 0.0
-      if (has_dir(xdim)) dims_twice = dims_twice + 2.0
-      if (has_dir(ydim)) dims_twice = dims_twice + 2.0
-      if (has_dir(zdim)) dims_twice = dims_twice + 2.0
-      d_eta_factor = 1./(dims_twice+dble(eta_scale))
-
-!      if (.not. all(has_dir(xdim:ydim))) then
-!         if (master) call warn("[resistivity:init_resistivity] Resistivity module needs both x and y dimension. Switching off.")
-!         inactive = .true.
-!      endif
+         jc2 = j_crit**2
+         dims_twice = 0.0
+         if (has_dir(xdim)) dims_twice = dims_twice + 2.0
+         if (has_dir(ydim)) dims_twice = dims_twice + 2.0
+         if (has_dir(zdim)) dims_twice = dims_twice + 2.0
+         d_eta_factor = 1./(dims_twice+dble(eta_scale))
+      endif
 
    end subroutine init_resistivity
 
@@ -182,7 +186,7 @@ contains
 
       implicit none
 
-      if (inactive) return
+      if (eta1_inactive) return
 !> \deprecated BEWARE: uninitialized values are poisoning the wb(:,:,:) array - should change  with rev. 3893
 !> \deprecated BEWARE: significant differences between single-CPU run and multi-CPU run (due to uninits?)
 !--- square current computing in cell corner step by step
@@ -269,7 +273,7 @@ contains
 
       implicit none
 
-      if (etamax%val /= 0. .and. .not. inactive) then
+      if (etamax%val /= 0.) then
          dt_resist = cfl_resist * cg%dxmn**2 / (2. * etamax%val)
 #ifndef ISO
          dt_resist = min(dt_resist,dt_eint)
@@ -315,8 +319,6 @@ contains
       real, dimension(size(b1d))                 :: w, wp, wm, b1
       integer                                    :: n
 
-      if (inactive) return
-
       n = size(b1d)
       w(2:n)    = eta1d(2:n) * ( b1d(2:n) - b1d(1:n-1) )*idi ; w(1)  = w(2)
       b1(1:n-1) = b1d(1:n-1) + 0.5*(w(2:n) - w(1:n-1))*dt*idi; b1(n) = b1(n-1)
@@ -346,8 +348,6 @@ contains
       real, dimension(:), pointer :: b1d, eta1d
       real, dimension(cg%nx)      :: wcu1d
       integer                     :: j, k
-
-      if (inactive) return
 
       call compute_resist
       eta(:,:,1:cg%nz-1) = 0.5*(eta(:,:,1:cg%nz-1)+eta(:,:,2:cg%nz))
@@ -382,8 +382,6 @@ contains
       real, dimension(cg%nx)      :: wcu1d
       integer                     :: j, k
 
-      if (inactive) return
-
       call compute_resist
       eta(:,1:cg%ny-1,:) = 0.5*(eta(:,1:cg%ny-1,:)+eta(:,2:cg%ny,:))
 
@@ -415,8 +413,6 @@ contains
       real, dimension(:), pointer :: b1d, eta1d
       real, dimension(cg%ny)      :: wcu1d
       integer                     :: i, k
-
-      if (inactive) return
 
       call compute_resist
       eta(1:cg%nx-1,:,:) = 0.5*(eta(1:cg%nx-1,:,:)+eta(2:cg%nx,:,:))
@@ -450,8 +446,6 @@ contains
       real, dimension(cg%ny)      :: wcu1d
       integer                     :: i, k
 
-      if (inactive) return
-
       call compute_resist
       eta(:,:,1:cg%nz-1) = 0.5*(eta(:,:,1:cg%nz-1)+eta(:,:,2:cg%nz))
 
@@ -484,8 +478,6 @@ contains
       real, dimension(cg%nz)      :: wcu1d
       integer                     :: i, j
 
-      if (inactive) return
-
       call compute_resist
       eta(:,1:cg%ny-1,:) = 0.5*(eta(:,1:cg%ny-1,:)+eta(:,2:cg%ny,:))
 
@@ -517,8 +509,6 @@ contains
       real, dimension(:), pointer :: b1d, eta1d
       real, dimension(cg%nz)      :: wcu1d
       integer                     :: i, j
-
-      if (inactive) return
 
       call compute_resist
       eta(1:cg%nx-1,:,:) = 0.5*(eta(1:cg%nx-1,:,:)+eta(2:cg%nx,:,:))
