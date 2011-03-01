@@ -1005,7 +1005,10 @@ contains
       use timestepcosmicrays, only: dt_crs
 #endif /* COSM_RAYS */
 #ifdef RESISTIVE
-      use resistivity,        only: dt_resist, eta_max
+      use resistivity,        only: dt_resist, etamax, cu2max
+#ifndef ISO
+      use resistivity,        only: deimin
+#endif /* !ISO */
 #endif /* RESISTIVE */
 #ifdef VARIABLE_GP
       use arrays,             only: gpot
@@ -1026,9 +1029,6 @@ contains
 #ifdef COSM_RAYS
       type(value) :: encr_min, encr_max
 #endif /* COSM_RAYS */
-#ifdef RESISTIVE
-      type(value) :: etamax
-#endif /* RESISTIVE */
 #ifdef VARIABLE_GP
       type(value) :: gpxmax, gpymax, gpzmax
 #endif /* VARIABLE_GP */
@@ -1116,13 +1116,6 @@ contains
       call get_extremum(wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), 'max', gpzmax)
 #endif /* VARIABLE_GP */
 
-#ifdef RESISTIVE
-      etamax%val = eta_max
-      etamax%proc = 0
-      etamax%loc = [ 0 , 0, 0 ]
-!      call mpifind(etamax%val, 'max', etamax%loc, etamax%proc) ! Nothing to scan or compare here
-#endif /* RESISTIVE */
-
 #ifdef MAGNETIC
       wa(1:nxu,1:nyu,1:nzu) = &
                  (b(ibx,nxl:cg%nx,  1:nyu  ,  1:nzu  ) - b(ibx,1:nxu,1:nyu,1:nzu))*cg%dy*cg%dz &
@@ -1193,6 +1186,12 @@ contains
             id = "RES"
             write(msg, fmt_dtloc) 'max(eta)    ', id, etamax%val, dt_resist, etamax%proc, etamax%loc
             call printinfo(msg, .false.)
+            write(msg, fmt_dtloc) 'max(cu2)    ', id, cu2max%val, dt_resist, cu2max%proc, cu2max%loc
+            call printinfo(msg, .false.)
+#ifndef ISO
+            write(msg, fmt_dtloc) 'min(dei)    ', id, deimin%val, dt_resist, deimin%proc, deimin%loc
+            call printinfo(msg, .false.)
+#endif /* !ISO */
 #endif /* RESISTIVE */
 #ifdef VARIABLE_GP
             id = "GPT"

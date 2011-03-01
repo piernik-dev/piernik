@@ -35,12 +35,13 @@
 !<
 module resistivity
 ! pulled by RESISTIVE
-
+   use types, only: value
    implicit none
 
    private
-   public  :: init_resistivity, timestep_resist, cleanup_resistivity, dt_resist, eta_max, &
-        &     diffuseby_x, diffusebz_x, diffusebx_y, diffusebz_y, diffusebx_z, diffuseby_z
+   public  :: init_resistivity, timestep_resist, cleanup_resistivity, dt_resist, etamax,   &
+        &     diffuseby_x, diffusebz_x, diffusebx_y, diffusebz_y, diffusebx_z, diffuseby_z, &
+        &     cu2max, deimin
 
    real    :: cfl_resist                     !< CFL factor for resistivity effect
    real    :: eta_0                          !< uniform resistivity
@@ -49,9 +50,9 @@ module resistivity
    real    :: jc2                            !< squared critical value of current density
    real    :: deint_max                      !< COMMENT ME
    integer :: eta_scale                      !< COMMENT ME
+   real    :: dt_resist, dt_eint
    double precision :: d_eta_factor
-   real    :: eta_max, dt_resist, dt_eint
-   integer, dimension(3) :: loc_eta_max
+   type(value) :: etamax, cu2max, deimin
    real, dimension(:,:,:), allocatable, target :: wb, eh, eta
    real, dimension(:,:,:), allocatable         :: dbx, dby, dbz
    logical, save :: inactive = .false.       !< resistivity off-switcher while x or y dimension does not exist
@@ -173,8 +174,8 @@ contains
       use constants,    only: small, xdim, ydim, zdim
       use fluidindex,   only: ibx, iby, ibz
       use grid,         only: cg
-      use mpisetup,     only: comm, ierr, has_dir
-      use mpi,          only: MPI_DOUBLE_PRECISION, MPI_MAX, MPI_IN_PLACE
+      use mpisetup,     only: comm, ierr, has_dir, mpifind
+      use mpi,          only: MPI_DOUBLE_PRECISION
 #ifndef ISO
       use fluidindex,   only: flind
 #endif /* !ISO */
@@ -236,23 +237,23 @@ contains
          eta = eh
       endwhere
 
-      eta_max           = maxval(eta(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke))
-      loc_eta_max       = maxloc(eta(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke))
+      etamax%val       = maxval(eta(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke))
+      etamax%loc       = maxloc(eta(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)) + [cg%nb, cg%nb, cg%nb]
+      call mpifind(etamax%val, 'max', etamax%loc, etamax%proc)
+      call MPI_Bcast(etamax%val, 1, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
-      call MPI_Allreduce(MPI_IN_PLACE, eta_max, 1, MPI_DOUBLE_PRECISION, MPI_MAX, comm, ierr)
+      cu2max%val       = maxval(wb(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke))
+      cu2max%loc       = maxloc(wb(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)) + [cg%nb, cg%nb, cg%nb]
+      call mpifind(cu2max%val, 'max', cu2max%loc, cu2max%proc)
 
 #ifndef ISO
-      dt_eint = deint_max * abs(minval(               &
-                      ( u(flind%ion%ien, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)     &
-                - 0.5*( u(flind%ion%imx, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2  &
-                      + u(flind%ion%imy, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2  &
-                      + u(flind%ion%imz, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2 )&
-                      / u(flind%ion%idn, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)     &
-                - 0.5 * ( b(ibx,         cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2  &
-                      +   b(iby,         cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2  &
-                      +   b(ibz,         cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2))&
-                      / ( eta(           cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)     &
-                      *    wb(           cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)+small) ))
+      wb = ( u(flind%ion%ien,:,:,:) - 0.5*( u(flind%ion%imx,:,:,:)**2  + u(flind%ion%imy,:,:,:)**2  + u(flind%ion%imz,:,:,:)**2 ) &
+           / u(flind%ion%idn,:,:,:) - 0.5 * ( b(ibx,:,:,:)**2  +   b(iby,:,:,:)**2  +   b(ibz,:,:,:)**2))/ ( eta * wb+small)
+      dt_eint = deint_max * abs(minval(wb(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)))
+
+      deimin%val       = minval(wb(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke))
+      deimin%loc       = minloc(wb(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)) + [cg%nb, cg%nb, cg%nb]
+      call mpifind(deimin%val, 'min', deimin%loc, deimin%proc)
 #endif /* !ISO */
 
    end subroutine compute_resist
@@ -268,8 +269,8 @@ contains
 
       implicit none
 
-      if (eta_max /= 0. .and. .not. inactive) then
-         dt_resist = cfl_resist * cg%dxmn**2 / (2. * eta_max)
+      if (etamax%val /= 0. .and. .not. inactive) then
+         dt_resist = cfl_resist * cg%dxmn**2 / (2. * etamax%val)
 #ifndef ISO
          dt_resist = min(dt_resist,dt_eint)
 #endif /* !ISO */
