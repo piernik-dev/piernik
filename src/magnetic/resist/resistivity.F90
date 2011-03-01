@@ -41,7 +41,7 @@ module resistivity
    private
    public  :: init_resistivity, timestep_resist, cleanup_resistivity, dt_resist, etamax,   &
         &     diffuseby_x, diffusebz_x, diffusebx_y, diffusebz_y, diffusebx_z, diffuseby_z, &
-        &     cu2max, deimin, eta1_inactive
+        &     cu2max, deimin, eta1_active
 
    real    :: cfl_resist                     !< CFL factor for resistivity effect
    real    :: eta_0                          !< uniform resistivity
@@ -55,7 +55,7 @@ module resistivity
    type(value) :: etamax, cu2max, deimin
    real, dimension(:,:,:), allocatable, target :: wb, eh, eta
    real, dimension(:,:,:), allocatable         :: dbx, dby, dbz
-   logical, save :: eta1_inactive = .false.       !< resistivity off-switcher while eta_1 == 0.0
+   logical, save :: eta1_active = .true.       !< resistivity off-switcher while eta_1 == 0.0
 
 contains
 
@@ -143,15 +143,15 @@ contains
 
       if (eta_scale < 0) call die("eta_scale must be greater or equal 0")
 
+      if (.not.allocated(eta)) allocate(eta(cg%nx, cg%ny, cg%nz))
 #ifdef ISO
       if (eta_1 == 0.) then
          eta = eta_0
-         eta1_inactive = .true.
+         eta1_active = .false.
       endif
 #endif /* ISO */
 
-      if (.not.allocated(eta)) allocate(eta(cg%nx, cg%ny, cg%nz))
-      if (.not.eta1_inactive) then
+      if (eta1_active) then
          if (.not.allocated(wb) ) allocate( wb(cg%nx, cg%ny, cg%nz))
          if (.not.allocated(eh) ) allocate( eh(cg%nx, cg%ny, cg%nz))
          if (.not.allocated(dbx)) allocate(dbx(cg%nx, cg%ny, cg%nz))
@@ -186,7 +186,7 @@ contains
 
       implicit none
 
-      if (eta1_inactive) return
+      if (.not.eta1_active) return
 !> \deprecated BEWARE: uninitialized values are poisoning the wb(:,:,:) array - should change  with rev. 3893
 !> \deprecated BEWARE: significant differences between single-CPU run and multi-CPU run (due to uninits?)
 !--- square current computing in cell corner step by step
