@@ -721,9 +721,6 @@ contains
             call pop_vector(tsl_names, cbuff_len, ["nstep   ", "time    ", "timestep"])
             call pop_vector(tsl_names, cbuff_len, ["mass", "momx", "momy", "momz", "ener", "epot", "eint", "ekin"])
 
-#ifdef COSM_RAYS
-            call pop_vector(tsl_names, cbuff_len, ["encr_tot", "encr_min", "encr_max"])
-#endif /* COSM_RAYS */
 #ifdef MAGNETIC
             call pop_vector(tsl_names, cbuff_len, ["emag   ", "mflx   ", "mfly   ", "mflz   ", "vai_max", "b_min  ", "b_max  "])
             call pop_vector(tsl_names, cbuff_len, ["divb_max"])
@@ -731,15 +728,16 @@ contains
             if (eta1_active) call pop_vector(tsl_names, cbuff_len, ["eta_max"])
 #endif /* RESISTIVE */
 #endif /* MAGNETIC */
+#ifdef COSM_RAYS
+            call pop_vector(tsl_names, cbuff_len, ["encr_tot", "encr_min", "encr_max"])
+#endif /* COSM_RAYS */
 #ifdef IONIZED
-            call pop_vector(tsl_names, cbuff_len, ["vxi_max ", "vyi_max ", "vzi_max " , "csi_max ", "deni_min", "deni_max", "prei_min", "prei_max"])
-#ifndef ISO
-            call pop_vector(tsl_names, cbuff_len, ["temi_min", "temi_max"])
-#endif /* !ISO */
+            call pop_vector(tsl_names, cbuff_len, ["deni_min", "deni_max", "vxi_max ", "vyi_max ", "vzi_max ", &
+                                                   "prei_min", "prei_max", "temi_min", "temi_max", "csi_max "])
 #endif /* IONIZED */
 #ifdef NEUTRAL
-            call pop_vector(tsl_names, cbuff_len, ["denn_min", "denn_max", "vxn_max ", "vyn_max ", "vzn_max ", "pren_min", &
-               "pren_max", "temn_min", "temn_max", "csn_max "])
+            call pop_vector(tsl_names, cbuff_len, ["denn_min", "denn_max", "vxn_max ", "vyn_max ", "vzn_max ", &
+                                                   "pren_min", "pren_max", "temn_min", "temn_max", "csn_max "])
 #endif /* NEUTRAL */
 #ifdef DUST
             call pop_vector(tsl_names, cbuff_len, ["dend_min", "dend_max", "vxd_max ", "vyd_max ", "vzd_max "])
@@ -811,11 +809,8 @@ contains
 #endif /* COSM_RAYS */
 #ifdef IONIZED
          sn=>flind%ion%snap
-         call pop_vector(tsl_vars, [sn%velx_max%val, sn%vely_max%val, sn%velz_max%val, sn%cs_max%val, &
-                                    sn%dens_min%val, sn%dens_max%val, sn%pres_min%val, sn%pres_max%val])
-#ifndef ISO
-         call pop_vector(tsl_vars, [sn%temp_min%val, sn%temp_max%val])
-#endif /* !ISO */
+         call pop_vector(tsl_vars, [sn%dens_min%val, sn%dens_max%val, sn%velx_max%val, sn%vely_max%val, sn%velz_max%val, &
+                                    sn%pres_min%val, sn%pres_max%val, sn%temp_min%val, sn%temp_max%val, sn%cs_max%val])
 #endif /* IONIZED */
 
 #ifdef NEUTRAL
