@@ -1460,6 +1460,7 @@ contains
 #ifdef NEW_HDF5
       use list_hdf5,     only: iterate_lhdf5
 #endif /* NEW_HDF5 */
+      use list_hdf5,     only: write_arr
 
       implicit none
 
@@ -1523,92 +1524,6 @@ contains
       nhdf = nhdf + 1
 
    end subroutine write_hdf5
-
-   subroutine write_arr(data,dsetname,file_id)
-
-      use constants,     only: varlen
-      use grid,          only: cg
-      use hdf5,          only: HID_T, HSIZE_T, HSSIZE_T, h5screate_simple_f, h5pcreate_f, h5pset_chunk_f, &
-           &                   h5sclose_f, h5pset_dxpl_mpio_f, h5dwrite_f, h5dclose_f, H5P_DATASET_XFER_F, H5P_DATASET_CREATE_F, &
-           &                   H5T_NATIVE_REAL, H5S_SELECT_SET_F, H5FD_MPIO_INDEPENDENT_F, h5dcreate_f, h5dget_space_f, &
-           &                   h5sselect_hyperslab_f
-      use mpisetup,      only: dom, is_uneven
-
-      implicit none
-      real(kind=4), dimension(:,:,:) :: data
-
-      integer, parameter :: rank = 3       ! Dataset rank
-
-      character(len=varlen) :: dsetname       ! Dataset name
-
-      integer(HID_T)        :: file_id        ! Dataset identifier
-      integer(HID_T)        :: dset_id        ! Dataset identifier
-      integer(HID_T)        :: plist_id       ! Dataset identifier
-      integer(HID_T)        :: filespace      ! Dataspace identifier in file
-      integer(HID_T)        :: memspace       ! Dataspace identifier in memory
-
-      integer, parameter :: ndims = 3
-      integer(HSIZE_T),  dimension(ndims) :: count
-      integer(HSSIZE_T), dimension(ndims) :: offset
-      integer(HSIZE_T),  dimension(ndims) :: stride
-      integer(HSIZE_T),  dimension(ndims) :: block
-      integer(HSIZE_T),  dimension(ndims) :: dimsf, dimsfi, chunk_dims
-      integer :: error
-
-      chunk_dims = cg%n_b(:) ! Chunks dimensions
-      dimsf  = dom%n_d(:)    ! Dataset dimensions
-      dimsfi = dimsf
-      !
-      ! Create the data space for the  dataset.
-      !
-      call h5screate_simple_f(rank, dimsf, filespace, error)
-      call h5screate_simple_f(rank, chunk_dims, memspace, error)
-
-      !
-      ! Create chunked dataset.
-      !
-      call h5pcreate_f(H5P_DATASET_CREATE_F, plist_id, error)
-      if (.not. is_uneven) call h5pset_chunk_f(plist_id, rank, chunk_dims, error) !> \todo check how much performance it gives (massively parallel I/O is required)
-      call h5dcreate_f(file_id, dsetname, H5T_NATIVE_REAL, filespace, dset_id, error, plist_id)
-      call h5sclose_f(filespace, error)
-
-      !
-      ! Each process defines dataset in memory and writes it to the hyperslab
-      ! in the file.
-      !
-      stride(:) = 1
-      count(:) =  1
-      block(:) = chunk_dims(:)
-
-      offset(:) = cg%off(:)
-      !
-      ! Select hyperslab in the file.
-      !
-      call h5dget_space_f(dset_id, filespace, error)
-      call h5sselect_hyperslab_f (filespace, H5S_SELECT_SET_F, offset, count, error, stride, block)
-
-      !
-      ! Create property list for collective dataset write
-      !
-      call h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error)
-      call h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_INDEPENDENT_F, error)
-
-      !
-      ! Write the dataset collectively.
-      !
-      call h5dwrite_f(dset_id, H5T_NATIVE_REAL, data, dimsfi, error, file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
-
-      !
-      ! Close dataspaces.
-      !
-      call h5sclose_f(filespace, error)
-      call h5sclose_f(memspace, error)
-      !
-      ! Close the dataset.
-      !
-      call h5dclose_f(dset_id, error)
-
-   end subroutine write_arr
 
 !>
 !! \brief This routine writes all attributes that are common to restart and output files.

@@ -184,10 +184,11 @@ contains
 
    subroutine write_arr(data,dsetname,file_id)
 
-      use hdf5,       only: HID_T, HSIZE_T, HSSIZE_T, H5FD_MPIO_INDEPENDENT_F, H5P_DATASET_CREATE_F, H5P_DATASET_XFER_F, H5S_SELECT_SET_F, &
+      use grid,       only: cg
+      use hdf5,       only: HID_T, HSIZE_T, H5FD_MPIO_INDEPENDENT_F, H5P_DATASET_CREATE_F, H5P_DATASET_XFER_F, H5S_SELECT_SET_F, &
            &                H5T_NATIVE_REAL, h5dwrite_f, h5screate_simple_f, h5pcreate_f, h5pset_chunk_f, h5dcreate_f, h5sclose_f, &
            &                h5dget_space_f, h5sselect_hyperslab_f, h5pset_dxpl_mpio_f, h5dclose_f
-      use mpisetup,   only: psize, pcoords
+      use mpisetup,   only: dom, is_uneven
 
       implicit none
 
@@ -195,7 +196,7 @@ contains
 
       integer, parameter :: rank = 3            !< Dataset rank
 
-      character(len=S_LEN) :: dsetname          !< Dataset name
+      character(len=*) :: dsetname              !< Dataset name
 
       integer(HID_T) :: file_id                 !< File identifier
       integer(HID_T) :: dset_id                 !< Dataset identifier
@@ -204,16 +205,11 @@ contains
       integer(HID_T) :: memspace                !< Dataspace identifier in memory
 
       integer, parameter :: ndims = 3
-      integer(HSIZE_T),  dimension(ndims) :: count
-      integer(HSSIZE_T), dimension(ndims) :: offset
-      integer(HSIZE_T),  dimension(ndims) :: stride
-      integer(HSIZE_T),  dimension(ndims) :: block
-      integer(HSIZE_T),  dimension(ndims) :: dimsf, dimsfi, chunk_dims
+      integer(HSIZE_T), dimension(ndims) :: count, offset, stride, block, dimsf, chunk_dims
       integer :: error
 
-      dimsf = (/size(data,1)*psize(1),size(data,2)*psize(2),size(data,3)*psize(3)/) ! Dataset dimensions
-      dimsfi = dimsf
-      chunk_dims = (/size(data,1),size(data,2),size(data,3)/) ! Chunks dimensions
+      chunk_dims = cg%n_b(:) ! Chunks dimensions
+      dimsf  = dom%n_d(:)    ! Dataset dimensions
       !
       ! Create the data space for the  dataset.
       !
@@ -224,8 +220,8 @@ contains
       ! Create chunked dataset.
       !
       call h5pcreate_f(H5P_DATASET_CREATE_F, plist_id, error)
-      call h5pset_chunk_f(plist_id, rank, chunk_dims, error)
-      call h5dcreate_f(file_id, dsetname, H5T_NATIVE_real, filespace, dset_id, error, plist_id)
+      if (.not. is_uneven) call h5pset_chunk_f(plist_id, rank, chunk_dims, error) !> \todo check how much performance it gives (massively parallel I/O is required)
+      call h5dcreate_f(file_id, dsetname, H5T_NATIVE_REAL, filespace, dset_id, error, plist_id)
       call h5sclose_f(filespace, error)
 
       !
@@ -236,7 +232,7 @@ contains
       count(:) =  1
       block(:) = chunk_dims(:)
 
-      offset(:) = pcoords(:)*chunk_dims(:)
+      offset(:) = cg%off(:)
       !
       ! Select hyperslab in the file.
       !
@@ -251,7 +247,7 @@ contains
       !
       ! Write the dataset collectively.
       !
-      call h5dwrite_f(dset_id, H5T_NATIVE_real, data, dimsfi, error, file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
+      call h5dwrite_f(dset_id, H5T_NATIVE_REAL, data, dimsf, error, file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
 
       !
       ! Close dataspaces.
