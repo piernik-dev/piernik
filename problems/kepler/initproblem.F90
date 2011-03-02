@@ -539,10 +539,11 @@ contains
 !-----------------------------------------------------------------------------
    subroutine read_initial_fld_from_restart(file_id)
 
+      use constants,   only: AT_NO_B
       use hdf5,        only: HID_T
       use grid,        only: cg
       use fluidindex,  only: flind
-      use dataio_hdf5, only: read_3darr_from_restart
+      use dataio_hdf5, only: read_arr_from_restart
 
       implicit none
 
@@ -562,27 +563,27 @@ contains
       do i=1, flind%fluids
          write(dname,'(2a)') flind%all_fluids(i)%tag, '_den0'
          if (.not.associated(p3d)) p3d => den0(i,:,:,:)
-         call read_3darr_from_restart(file_id,dname,p3d)
+         call read_arr_from_restart(file_id, p3d, null(), AT_NO_B, dname)
          if (associated(p3d)) nullify(p3d)
 
          write(dname,'(2a)') flind%all_fluids(i)%tag, '_mtx0'
          if (.not.associated(p3d)) p3d => mtx0(i,:,:,:)
-         call read_3darr_from_restart(file_id,dname,p3d)
+         call read_arr_from_restart(file_id, p3d, null(), AT_NO_B, dname)
          if (associated(p3d)) nullify(p3d)
 
          write(dname,'(2a)') flind%all_fluids(i)%tag, '_mty0'
          if (.not.associated(p3d)) p3d => mty0(i,:,:,:)
-         call read_3darr_from_restart(file_id,dname,p3d)
+         call read_arr_from_restart(file_id, p3d, null(), AT_NO_B, dname)
          if (associated(p3d)) nullify(p3d)
 
          write(dname,'(2a)') flind%all_fluids(i)%tag, '_mtz0'
          if (.not.associated(p3d)) p3d => mtz0(i,:,:,:)
-         call read_3darr_from_restart(file_id,dname,p3d)
+         call read_arr_from_restart(file_id, p3d, null(), AT_NO_B, dname)
          if (associated(p3d)) nullify(p3d)
 
          write(dname,'(2a)') flind%all_fluids(i)%tag, '_ene0'
          if (.not.associated(p3d)) p3d => ene0(i,:,:,:)
-         call read_3darr_from_restart(file_id,dname,p3d)
+         call read_arr_from_restart(file_id, p3d, null(), AT_NO_B, dname)
          if (associated(p3d)) nullify(p3d)
       enddo
 

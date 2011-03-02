@@ -215,8 +215,9 @@ contains
 
    subroutine read_IC_from_restart(file_id)
 
+      use constants,   only: AT_NO_B
       use dataio_pub,  only: warn
-      use dataio_hdf5, only: read_3darr_from_restart
+      use dataio_hdf5, only: read_arr_from_restart
       use diagnostics, only: my_allocate
       use grid,        only: cg
       use hdf5,        only: HID_T
@@ -227,11 +228,12 @@ contains
 
       real, dimension(:,:,:), pointer :: p3d
 
+      if (associated(p3d)) nullify(p3d)
       if (.not.allocated(inid)) call my_allocate(inid, [cg%nx, cg%ny, cg%nz], inid_n)
-      if (.not.associated(p3d)) p3d => inid(:,:,:)
+      p3d => inid(:,:,:)
 
-      if (associated(p3d)) then
-         call read_3darr_from_restart(file_id, inid_n, p3d)
+      if (allocated(inid) .and. associated(p3d)) then
+         call read_arr_from_restart(file_id, p3d, null(), AT_NO_B, inid_n)
          nullify(p3d)
       else
          call warn("[initproblem:read_IC_from_restart] Cannot read inid(:,:,:). It's really weird...")

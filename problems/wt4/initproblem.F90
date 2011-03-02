@@ -448,7 +448,8 @@ contains
 
    subroutine read_initial_fld_from_restart(file_id)
 
-      use dataio_hdf5, only: read_3darr_from_restart
+      use constants,   only: AT_NO_B
+      use dataio_hdf5, only: read_arr_from_restart
       use grid,        only: cg
       use hdf5,        only: HID_T
 
@@ -465,13 +466,13 @@ contains
          if (.not.allocated(vly0)) allocate(vly0(cg%nx, cg%ny, cg%nz))
 
          if (.not.associated(p3d)) p3d => den0(:,:,:)
-         call read_3darr_from_restart(file_id,"den0",p3d)
+         call read_arr_from_restart(file_id, p3d, null(), AT_NO_B, "den0")
          if (associated(p3d)) nullify(p3d)
          if (.not.associated(p3d)) p3d => vlx0(:,:,:)
-         call read_3darr_from_restart(file_id,"vlx0",p3d)
+         call read_arr_from_restart(file_id, p3d, null(), AT_NO_B, "vlx0")
          if (associated(p3d)) nullify(p3d)
          if (.not.associated(p3d)) p3d => vly0(:,:,:)
-         call read_3darr_from_restart(file_id,"vly0",p3d)
+         call read_arr_from_restart(file_id, p3d, null(), AT_NO_B, "vly0")
          if (associated(p3d)) nullify(p3d)
       endif
 

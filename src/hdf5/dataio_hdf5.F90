@@ -47,7 +47,7 @@ module dataio_hdf5
    implicit none
 
    private
-   public :: init_hdf5, read_restart_hdf5, cleanup_hdf5, write_hdf5, write_restart_hdf5, write_plot, write_arr_to_restart, read_3darr_from_restart
+   public :: init_hdf5, read_restart_hdf5, cleanup_hdf5, write_hdf5, write_restart_hdf5, write_plot, write_arr_to_restart, read_arr_from_restart
    public :: parfile, parfilelines
 
    integer, parameter :: dnamelen=5
@@ -990,7 +990,7 @@ contains
       integer(HID_T), intent(in)                    :: file_id   !> File identifier
       real, pointer, dimension(:,:,:,:), intent(in) :: pa4d      !> 4-D array pointer
       real, pointer, dimension(:,:,:), intent(in)   :: pa3d      !> 3-D array pointer, mutually exclusive with pa4d
-      integer, intent(in)                           :: area_type !> no boundaries, onlu outer boundaries or all boundaries
+      integer, intent(in)                           :: area_type !> no boundaries, only outer boundaries or all boundaries
       character(len=*), intent(in)                  :: dname
 
       integer, parameter :: rank4 = 1 + ndims
@@ -1142,7 +1142,7 @@ contains
 ! Boundary cells are exchanged with the neughbours. Corner boundary cells are not guaranteed to be correct (area_type = AT_ALL_B not implemented yet).
 ! External boundary cells are not stored in the restart file and thus all of them are lost (area_type = AT_OUT_B not implemented yet).
 
-   subroutine read_3darr_from_restart(file_id, dname, pa3d)
+   subroutine read_arr_from_restart(file_id, pa3d, pa4d, area_type, dname)
 
       use dataio_pub,   only: msg, die
       use grid,         only: cg, arr3d_boundaries
@@ -1155,11 +1155,13 @@ contains
 
       implicit none
 
-      real, dimension(:,:,:), pointer, intent(in) :: pa3d   ! pointer to (1:cg%nx, 1:cg%ny, 1:cg%ns)-sized array
+      integer(HID_T), intent(in)                  :: file_id   ! File identifier
+      real, dimension(:,:,:), pointer, intent(in) :: pa3d      ! pointer to (1:cg%nx, 1:cg%ny, 1:cg%ns)-sized array
+      real, dimension(:,:,:), pointer, intent(in) :: pa4d      ! pointer to (:, 1:cg%nx, 1:cg%ny, 1:cg%ns)-sized array
+      integer, intent(in)                         :: area_type !> no boundaries, only outer boundaries or all boundaries
+      character(len=*), intent(in)                :: dname
 
       real, dimension(:,:,:), pointer             :: pa3di
-      integer(HID_T), intent(in)           :: file_id       ! File identifier
-      character(len=*), intent(in)         :: dname
 
       integer(HID_T)        :: dset_id       ! Dataset identifier
       integer(HID_T)        :: plist_id      ! Property list identifier
@@ -1173,7 +1175,6 @@ contains
       integer(HSIZE_T),  dimension(:), allocatable :: dimsf, dimsfi, chunk_dims
 
       integer               :: error, rank
-
 
       if (associated(pa3di)) nullify(pa3di)
       pa3di => pa3d(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
@@ -1231,7 +1232,7 @@ contains
       ! Originally the pa3d array was written with the guardcells. The internal guardcells will be exchanged but the external ones are lost.
       call arr3d_boundaries(pa3d)
 
-   end subroutine read_3darr_from_restart
+   end subroutine read_arr_from_restart
 
    subroutine read_restart_hdf5(chdf)
 
@@ -1251,7 +1252,7 @@ contains
       use mpisetup,      only: comm, ierr, magic_mass, master, t, info, comm3d, dt, dom, has_dir
       use mpi,           only: MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION
       use types,         only: hdf
-      use constants,     only: cwdlen, cbuff_len, domlen, idlen, xdim, ydim, zdim
+      use constants,     only: cwdlen, cbuff_len, domlen, idlen, xdim, ydim, zdim, AT_NO_B
 #ifdef ISO_LOCAL
       use arrays,        only: cs_iso2_arr
 #endif /* ISO_LOCAL */
@@ -1285,9 +1286,7 @@ contains
       integer, dimension(1) :: ibuf
 
       real, dimension(:,:,:,:), pointer :: p4d
-#if defined(ISO_LOCAL) || defined(GRAV)
       real, dimension(:,:,:), pointer :: p3d
-#endif /* ISO_LOCAL || GRAV */
 
       real                  :: restart_hdf5_version
 
@@ -1361,15 +1360,16 @@ contains
 
       if (associated(problem_read_restart)) call problem_read_restart(file_id)
 
-#ifdef ISO_LOCAL
-      if (.not.associated(p3d)) p3d => cs_iso2_arr(:,:,:)
-      call read_3darr_from_restart(file_id, "cs_iso2", p3d)
       if (associated(p3d)) nullify(p3d)
+#ifdef ISO_LOCAL
+      p3d => cs_iso2_arr(:,:,:)
+      call read_arr_from_restart(file_id, p3d, null(), AT_NO_B, "cs_iso2")
+      nullify(p3d)
 #endif /* ISO_LOCAL */
 #ifdef GRAV
-      if (.not.associated(p3d)) p3d => gp(:,:,:)
-      call read_3darr_from_restart(file_id, "gp", p3d)
-      if (associated(p3d)) nullify(p3d)
+      p3d => gp(:,:,:)
+      call read_arr_from_restart(file_id, p3d, null(), AT_NO_B, "gp")
+      nullify(p3d)
 #endif /* GRAV */
       !> \deprecated The code for reading fluid data, mag field and read_3darr_from_restart is almost replicated.
       !> \todo Try to put it in a separate subroutine.
