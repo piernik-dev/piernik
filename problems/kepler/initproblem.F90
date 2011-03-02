@@ -590,7 +590,7 @@ contains
    end subroutine read_initial_fld_from_restart
 !-----------------------------------------------------------------------------
    subroutine problem_customize_solution_kepler
-      use mpisetup,        only: dt, t, grace_period_passed, relax_time, smalld
+      use mpisetup,        only: dt, t, relax_time, smalld !, grace_period_passed
       use arrays,          only: u
       use grid,            only: cg
       use fluidboundaries, only: all_fluid_boundaries
@@ -598,10 +598,10 @@ contains
 #ifndef ISO
       use fluidindex,      only: iarr_all_en
 #endif /* ISO */
-      use interactions,    only: dragc_gas_dust
+      ! use interactions,    only: dragc_gas_dust
 #ifdef VERBOSE
-      use dataio_pub,      only: msg, printinfo
-      use mpisetup,        only: master
+!      use dataio_pub,      only: msg, printinfo
+!      use mpisetup,        only: master
 #endif /* VERBOSE */
       implicit none
       integer                               :: j, k
@@ -819,8 +819,8 @@ contains
    subroutine read_dens_profile(densfile,gdens)
       use grid,       only: cg
       use dataio_pub, only: printinfo, msg, warn
-      use fgsl,       only: fgsl_size_t, fgsl_interp_accel, fgsl_interp, fgsl_spline, fgsl_int, fgsl_char, fgsl_strmax, fgsl_interp_cspline, &
-         & fgsl_interp_accel_alloc, fgsl_interp_alloc, fgsl_interp_name, fgsl_interp_init, fgsl_interp_eval, fgsl_interp_free, fgsl_interp_accel_free
+      use fgsl,       only: fgsl_size_t, fgsl_interp_accel, fgsl_interp, fgsl_int, fgsl_char, fgsl_strmax, fgsl_interp_cspline, &
+         & fgsl_interp_accel_alloc, fgsl_interp_alloc, fgsl_interp_name, fgsl_interp_init, fgsl_interp_eval, fgsl_interp_free, fgsl_interp_accel_free !, fgsl_spline
       implicit none
       character(len=*), intent(in)                   :: densfile
       real, dimension(:), intent(out)                :: gdens
