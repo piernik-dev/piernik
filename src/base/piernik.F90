@@ -94,8 +94,10 @@ program piernik
          call printinfo(msg, .true.)
       endif
 
-      call check_log
-      call check_tsl
+      if (.not.cfl_violated) then
+        call check_log
+        call check_tsl
+      endif
 
       if (first_step) then
          ts=set_timer("fluid_update",.true.)
