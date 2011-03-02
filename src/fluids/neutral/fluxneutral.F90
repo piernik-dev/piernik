@@ -102,7 +102,7 @@ contains
       real               :: amp       !<
 #endif /* LOCAL_FR_SPEED */
 
-      ! OPT: These initializastions may cost about 30% of the routine. Probably we can just delete them.
+      ! OPT: These initializations may cost about 30% of the routine. Probably we can just delete them.
       fluxn   = 0.0; cfrn    = 0.0; vx      = 0.0; p       = 0.0
 
       vx(RNG) = uun(imx,RNG)/uun(idn,RNG)

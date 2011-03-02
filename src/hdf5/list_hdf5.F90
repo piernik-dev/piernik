@@ -182,6 +182,8 @@ contains
 
 #endif /* NEW_HDF5 */
 
+   !> \todo this routine should be merged with dataio_hdf5:write_arr_to_restart
+
    subroutine write_arr(data,dsetname,file_id)
 
       use grid,       only: cg

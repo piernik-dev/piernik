@@ -295,6 +295,8 @@ contains
 #endif /* COSM_RAYS */
 
       ierrh = 0
+
+      !> \todo compactify this long select
       select case (var)
          case ("dend")
             if (ij=="yz") tab(:,:) = u(flind%dst%idn, xn, cg%js:cg%je, cg%ks:cg%ke)
@@ -642,6 +644,8 @@ contains
       endif
 
    end subroutine write_plot
+
+   !> \todo use parallel HDF5 here, rewrite without pijsize (something like write_axes_to_restart)
 
    subroutine write_plot_hdf5(var,plane,nimg)
 
@@ -1145,7 +1149,7 @@ contains
 
       use constants,  only: xdim, ydim, zdim, ndims
       use dataio_pub, only: msg, die
-      use grid,       only: cg, arr3d_boundaries
+      use grid,       only: arr3d_boundaries
       use hdf5,       only: HID_T, HSIZE_T, SIZE_T, H5T_NATIVE_DOUBLE, &
            &                H5S_SELECT_SET_F, H5FD_MPIO_INDEPENDENT_F, H5P_DATASET_XFER_F, &
            &                h5pcreate_f, h5pclose_f, h5screate_simple_f, h5dopen_f, &
@@ -1205,7 +1209,7 @@ contains
       stride(:) = 1
       count(:)  = 1
       block(:)  = chunk_dims(:)
-      offset(:) = [ 0, cg%off(:) ]
+      offset(:) = [ 0, loffs(:) ]
       call h5sselect_hyperslab_f (filespace, H5S_SELECT_SET_F, offset(ir:), count(ir:), error, stride(ir:), block(ir:))
 
       call h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error)
