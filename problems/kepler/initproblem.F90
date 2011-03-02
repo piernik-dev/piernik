@@ -489,9 +489,9 @@ contains
 !-----------------------------------------------------------------------------
    subroutine write_initial_fld_to_restart(file_id)
 
+      use constants,   only: AT_NO_B
       use hdf5,        only: HID_T
-      use grid,        only: cg
-      use dataio_hdf5, only: write_3darr_to_restart
+      use dataio_hdf5, only: write_arr_to_restart
       use fluidindex,  only: flind
 
       implicit none
@@ -499,18 +499,40 @@ contains
       integer(HID_T),intent(in)  :: file_id
       integer :: i
       character(len=dname_len) :: dname
+      real, dimension(:,:,:), pointer :: p3d
 
+      if (associated(p3d)) nullify(p3d)
       do i = lbound(den0,1), ubound(den0,1)
-         write(dname,'(2a)') flind%all_fluids(i)%tag, '_den0'
-         if (allocated(den0)) call write_3darr_to_restart(den0(i, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), file_id, dname)
-         write(dname,'(2a)') flind%all_fluids(i)%tag, '_mtx0'
-         if (allocated(mtx0)) call write_3darr_to_restart(mtx0(i, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), file_id, dname)
-         write(dname,'(2a)') flind%all_fluids(i)%tag, '_mty0'
-         if (allocated(mty0)) call write_3darr_to_restart(mty0(i, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), file_id, dname)
-         write(dname,'(2a)') flind%all_fluids(i)%tag, '_mtz0'
-         if (allocated(mtz0)) call write_3darr_to_restart(mtz0(i, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), file_id, dname)
-         write(dname,'(2a)') flind%all_fluids(i)%tag, '_ene0'
-         if (allocated(ene0)) call write_3darr_to_restart(ene0(i, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), file_id, dname)
+         if (allocated(den0)) then
+            write(dname,'(2a)') flind%all_fluids(i)%tag, '_den0'
+            p3d => den0(i, :, :, :)
+            call write_arr_to_restart(file_id, p3d, null(), AT_NO_B, dname)
+            nullify(p3d)
+         endif
+         if (allocated(mtx0)) then
+            write(dname,'(2a)') flind%all_fluids(i)%tag, '_mtx0'
+            p3d => mtx0(i, :, :, :)
+            call write_arr_to_restart(file_id, p3d, null(), AT_NO_B, dname)
+            nullify(p3d)
+         endif
+         if (allocated(mty0)) then
+            write(dname,'(2a)') flind%all_fluids(i)%tag, '_mty0'
+            p3d => mty0(i, :, :, :)
+            call write_arr_to_restart(file_id, p3d, null(), AT_NO_B, dname)
+            nullify(p3d)
+         endif
+         if (allocated(mtz0)) then
+            write(dname,'(2a)') flind%all_fluids(i)%tag, '_mtz0'
+            p3d => mtz0(i, :, :, :)
+            call write_arr_to_restart(file_id, p3d, null(), AT_NO_B, dname)
+            nullify(p3d)
+         endif
+         if (allocated(ene0)) then
+            write(dname,'(2a)') flind%all_fluids(i)%tag, '_ene0'
+            p3d => den0(i, :, :, :)
+            call write_arr_to_restart(file_id, p3d, null(), AT_NO_B, dname)
+            nullify(p3d)
+         endif
       enddo
 
    end subroutine write_initial_fld_to_restart

@@ -191,17 +191,20 @@ contains
 
    subroutine write_IC_to_restart(file_id)
 
+      use constants,   only: AT_NO_B
       use dataio_pub,  only: warn
-      use dataio_hdf5, only: write_3darr_to_restart
-      use grid,        only: cg
+      use dataio_hdf5, only: write_arr_to_restart
       use hdf5,        only: HID_T
 
       implicit none
 
       integer(HID_T), intent(in) :: file_id
+      real, dimension(:,:,:), pointer :: p3d
 
       if (allocated(inid)) then
-         call write_3darr_to_restart(inid(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), file_id, inid_n)
+         if (associated(p3d)) nullify(p3d)
+         p3d => inid
+         call write_arr_to_restart(file_id, p3d, null(), AT_NO_B, inid_n)
       else
          call warn("[initproblem:write_IC_to_restart] Cannot store inid(:,:,:) in the restart file because it mysteriously deallocated.")
       endif

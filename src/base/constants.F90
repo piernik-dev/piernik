@@ -113,6 +113,11 @@ module constants
    integer, parameter :: BND   = 1                       !< receiving area
    integer, parameter :: DOM   = BND + 1                 !< sending area
 
+   ! Handling boundary cells in the output
+   integer, parameter :: AT_NO_B  = 0             !< No boundary cells in the output
+   integer, parameter :: AT_OUT_B = AT_NO_B  + 1  !< External boundary cells in the output
+   integer, parameter :: AT_ALL_B = AT_OUT_B + 1  !< All boundary cells in the output
+
    ! misc
    integer, parameter :: stdout = output_unit
    integer, parameter :: stderr = error_unit

@@ -47,7 +47,7 @@ module dataio_hdf5
    implicit none
 
    private
-   public :: init_hdf5, read_restart_hdf5, cleanup_hdf5, write_hdf5, write_restart_hdf5, write_plot, write_3darr_to_restart, read_3darr_from_restart
+   public :: init_hdf5, read_restart_hdf5, cleanup_hdf5, write_hdf5, write_restart_hdf5, write_plot, write_arr_to_restart, read_3darr_from_restart
    public :: parfile, parfilelines
 
    integer, parameter :: dnamelen=5
@@ -63,10 +63,6 @@ module dataio_hdf5
    ! storage for the problem.par
    character(len=maxparfilelen), dimension(maxparfilelines) :: parfile !< contents of the parameter file
    integer, save                             :: parfilelines = 0       !< number of lines in the parameter file
-
-   integer, parameter :: AT_NO_B  = 0             !< No boundary cells in the output
-   integer, parameter :: AT_OUT_B = AT_NO_B  + 1  !< External boundary cells in the output
-   integer, parameter :: AT_ALL_B = AT_OUT_B + 1  !< All boundary cells in the output
 
 contains
 
@@ -825,7 +821,7 @@ contains
 !<
    subroutine set_dims_to_write(area_type, area, chnk, lleft, lright, loffs)
 
-      use constants,  only: ndims
+      use constants,  only: ndims, AT_ALL_B, AT_OUT_B, AT_NO_B
       use dataio_pub, only: die, warn
       use grid,       only: cg
       use mpisetup,   only: dom, has_dir, psize, pcoords, is_uneven
@@ -877,32 +873,34 @@ contains
 
    subroutine write_restart_hdf5(debug_res)
 
-      use constants,     only: cwdlen
-      use dataio_pub,    only: chdf, nres, set_container_chdf, problem_name, run_id, msg, printio
-      use grid,          only: cg
-      use hdf5,          only: HID_T, H5P_FILE_ACCESS_F, H5F_ACC_TRUNC_F, h5open_f, h5close_f, h5fcreate_f, h5fclose_f, h5pcreate_f, h5pclose_f, h5pset_fapl_mpio_f
-      use list_hdf5,     only: problem_write_restart
-      use mpisetup,      only: comm3d, comm, info, ierr, master, nstep
-      use mpi,           only: MPI_CHARACTER
-      use types,         only: hdf
+      use arrays,     only: u, b
+      use constants,  only: cwdlen, AT_ALL_B, AT_OUT_B, AT_NO_B
+      use dataio_pub, only: chdf, nres, set_container_chdf, problem_name, run_id, msg, printio
+      use hdf5,       only: HID_T, H5P_FILE_ACCESS_F, H5F_ACC_TRUNC_F, h5open_f, h5close_f, h5fcreate_f, h5fclose_f, h5pcreate_f, h5pclose_f, h5pset_fapl_mpio_f
+      use list_hdf5,  only: problem_write_restart
+      use mpisetup,   only: comm3d, comm, info, ierr, master, nstep
+      use mpi,        only: MPI_CHARACTER
+      use types,      only: hdf
 #ifdef ISO_LOCAL
-      use arrays,        only: cs_iso2_arr
+      use arrays,     only: cs_iso2_arr
 #endif /* ISO_LOCAL */
 #ifdef GRAV
-      use arrays,        only: gp
+      use arrays,     only: gp
 #endif /* GRAV */
 
       implicit none
 
       logical, optional, intent(in) :: debug_res
 
+      real, pointer, dimension(:,:,:,:) :: pa4d
+      real, pointer, dimension(:,:,:)   :: pa3d
       integer, parameter    :: extlen = 4
       character(len=extlen) :: file_extension
       character(len=cwdlen) :: filename  !> HDF File name
       integer(HID_T)        :: file_id       !> File identifier
       integer(HID_T)        :: plist_id      !> Property list identifier
+      integer               :: area_type
       integer               :: error
-      logical               :: allbnd
 
       ! Construct the filename
       if (present(debug_res)) then
@@ -927,15 +925,35 @@ contains
 
       ! Write all data in parallel
       if (associated(problem_write_restart)) call problem_write_restart(file_id)
+      if (associated(pa3d)) nullify(pa3d)
 #ifdef ISO_LOCAL
-      call write_3darr_to_restart(cs_iso2_arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), file_id, "cs_iso2")
+      pa3d => cs_iso2_arr
+      call write_arr_to_restart(file_id, pa3d, null(), AT_NO_B, "cs_iso2")
+      nullify(pa3d)
 #endif /* ISO_LOCAL */
 #ifdef GRAV
-      call write_3darr_to_restart(gp(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), file_id, "gp")
+      pa3d => gp
+      call write_arr_to_restart(file_id, pa3d, null(), AT_NO_B, "gp")
+      nullify(pa3d)
 #endif /* GRAV */
-      allbnd = present(debug_res)
-      call write_flmag_to_restart(file_id, FLUID, allbnd)
-      call write_flmag_to_restart(file_id, MAG, allbnd)
+      if (associated(pa3d)) nullify(pa3d)
+
+      if (associated(pa4d)) nullify(pa4d)
+
+      ! Write fluids
+      area_type = AT_NO_B
+      if (present(debug_res)) area_type = AT_ALL_B
+      pa4d => u
+      call write_arr_to_restart(file_id, null(), pa4d, area_type, dname(FLUID))
+      nullify(pa4d)
+
+      ! Write magnetic field
+      area_type = AT_OUT_B ! unlike fluids, we need magnetic field boundaries values. Then chunks might be non-uniform
+      if (present(debug_res)) area_type = AT_ALL_B
+      pa4d => b
+      call write_arr_to_restart(file_id, null(), pa4d, area_type, dname(MAG))
+      nullify(pa4d)
+
       call write_axes_to_restart(file_id)
 
       ! End of parallel writing (close the HDF5 file stuff)
@@ -951,17 +969,15 @@ contains
    end subroutine write_restart_hdf5
 
    !----------------------------------------------------------------------------------
-   ! Write fluid or mag variables (4-D arrays)
+   ! Write fluid, mag or other variables (4-D and 3-D arrays)
    !
-   ! This file is very similar to write_3darr_to_restart; \todo: merge them
-   !
+   ! Having both rank-3 array pointer and rank-4 array pointer doesn;t look elegant, but works.
+   ! Is there a way to pass only one, "universal" array pointer in Fortran?
 
-   subroutine write_flmag_to_restart(file_id, type, allbnd)
+   subroutine write_arr_to_restart(file_id, pa3d, pa4d, area_type, dname)
 
-      use arrays,     only: u, b
-      use constants,  only: FLUID, MAG, xdim, ydim, zdim, ndims
+      use constants,  only: xdim, ydim, zdim, ndims, AT_OUT_B
       use dataio_pub, only: die
-      use fluidindex, only: flind
       use hdf5,       only: HID_T, HSIZE_T, H5T_NATIVE_DOUBLE, &
            &                H5P_DATASET_CREATE_F, H5S_SELECT_SET_F, H5P_DATASET_XFER_F, H5FD_MPIO_INDEPENDENT_F, &
            &                h5screate_simple_f, h5pcreate_f, h5dcreate_f, h5dget_space_f, &
@@ -971,12 +987,14 @@ contains
 
       implicit none
 
-      integer(HID_T), intent(in) :: file_id       !> File identifier
-      integer, intent(in)        :: type          !> FLUID or MAG
-      logical, intent(in)        :: allbnd        !> If .true. then dump also internal boundary cells. This will make the restart file unsuitable for running on a different number of CPUs
+      integer(HID_T), intent(in)                    :: file_id   !> File identifier
+      real, pointer, dimension(:,:,:,:), intent(in) :: pa4d      !> 4-D array pointer
+      real, pointer, dimension(:,:,:), intent(in)   :: pa3d      !> 3-D array pointer, mutually exclusive with pa4d
+      integer, intent(in)                           :: area_type !> no boundaries, onlu outer boundaries or all boundaries
+      character(len=*), intent(in)                  :: dname
 
-      integer, parameter :: rank = 1 + ndims
-      integer(HSIZE_T), dimension(rank) :: count, offset, stride, block, dimsf, chunk_dims
+      integer, parameter :: rank4 = 1 + ndims
+      integer(HSIZE_T), dimension(rank4) :: count, offset, stride, block, dimsf, chunk_dims
       integer(HID_T) :: dset_id               !> Dataset identifier
       integer(HID_T) :: dplist_id, plist_id   !> Property list identifiers
       integer(HID_T) :: dfilespace, filespace !> Dataspace identifiers in file
@@ -984,35 +1002,29 @@ contains
 
       integer, dimension(ndims) :: area, lleft, lright, loffs, chnk
 
-      integer :: numc, area_type, error
-      real, pointer, dimension(:,:,:,:) :: p
+      integer :: ir, rank
+      integer :: error
 
-      if (associated(p)) nullify(p)
-      select case (type)
-         case (FLUID)
-            numc = flind%all
-            area_type = AT_NO_B
-             p => u
-         case (MAG)
-            numc = ndims
-            area_type = AT_OUT_B ! unlike fluids, we need magnetic field boundaries values. Then chunks might be non-uniform
-            p => b
-         case default
-            call die("[dataio_hdf5:write_flmag_to_restart] Invalid array flavor")
-            return
-      end select
-
-      if (allbnd) area_type = AT_ALL_B
       call set_dims_to_write(area_type, area, chnk, lleft, lright, loffs)
 
-      dimsf = [numc, area(:)]      ! Dataset dimensions
-      chunk_dims = [numc, chnk(:)] ! Chunks dimensions
+      dimsf = [1, area(:)]      ! Dataset dimensions
+      chunk_dims = [1, chnk(:)] ! Chunks dimensions
+      if (associated(pa4d)) then
+         if (associated(pa3d)) call die("[dataio_hdf5:write_arr_to_restart] Cannot handle rank-3 and rank-4 arrays at once")
+         rank = rank4
+         dimsf(1) = size(pa4d,1)
+         chunk_dims(1) = dimsf(1)
+      else
+         if (.not. associated(pa3d)) call die("[dataio_hdf5:write_arr_to_restart] Need either rank-3 or rank-4 array to write")
+         rank = ndims
+      endif
+      ir = rank4 - rank + 1 ! 1 for 4-D arrays, 2 for 3-D arrays (to simplify use of count(:), offset(:), stride(:), block(:), dimsf(:) and chunk_dims(:)
 
       ! Create the file space for the dataset and make it chunked if possible
-      call h5screate_simple_f(rank, dimsf, dfilespace, error)
+      call h5screate_simple_f(rank, dimsf(ir:), dfilespace, error)
       call h5pcreate_f(H5P_DATASET_CREATE_F, dplist_id, error)
-      if (.not. (is_uneven .or. (area_type == AT_OUT_B))) call h5pset_chunk_f(dplist_id, rank, chunk_dims, error)
-      call h5dcreate_f(file_id, dname(type), H5T_NATIVE_DOUBLE, dfilespace, dset_id, error, dplist_id)
+      if (.not. (is_uneven .or. (area_type == AT_OUT_B))) call h5pset_chunk_f(dplist_id, rank, chunk_dims(ir:), error)
+      call h5dcreate_f(file_id, dname, H5T_NATIVE_DOUBLE, dfilespace, dset_id, error, dplist_id)
 
       ! Each process defines dataset in memory and writes it to the hyperslab in the file.
       call h5dget_space_f(dset_id, filespace, error)
@@ -1021,16 +1033,18 @@ contains
       count(:)  = 1
       block(:)  = chunk_dims(:)
       offset(:) = [0, loffs(:)]
-      call h5sselect_hyperslab_f (filespace, H5S_SELECT_SET_F, offset, count, error, stride, block)
+      call h5sselect_hyperslab_f (filespace, H5S_SELECT_SET_F, offset(ir:), count(ir:), error, stride(ir:), block(ir:))
 
       call h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error)
       call h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_INDEPENDENT_F, error)
 
-      call h5screate_simple_f(rank, chunk_dims, memspace, error)
+      call h5screate_simple_f(rank, chunk_dims(ir:), memspace, error)
 
       ! write data
-      call h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, p(:, lleft(xdim):lright(xdim), lleft(ydim):lright(ydim), lleft(zdim):lright(zdim)), dimsf, error, &
-           &          file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
+      if (associated(pa4d)) call h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, pa4d(:, lleft(xdim):lright(xdim), lleft(ydim):lright(ydim), lleft(zdim):lright(zdim)), &
+           &                                dimsf(ir:), error, file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
+      if (associated(pa3d)) call h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, pa3d(lleft(xdim):lright(xdim), lleft(ydim):lright(ydim), lleft(zdim):lright(zdim)), &
+           &                                dimsf(ir:), error, file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
 
       ! cleanup
       call h5sclose_f(memspace, error)
@@ -1040,9 +1054,7 @@ contains
       call h5pclose_f(dplist_id, error)
       call h5sclose_f(dfilespace, error)
 
-      if (associated(p)) nullify(p)
-
-   end subroutine write_flmag_to_restart
+   end subroutine write_arr_to_restart
 
    !----------------------------------------------------------------------------------
    !
@@ -1125,87 +1137,6 @@ contains
       enddo
 
    end subroutine write_axes_to_restart
-
-! This routine expects tab to be a (cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) subset of an array
-
-   subroutine write_3darr_to_restart(tab, file_id, dname)
-
-      use grid,        only: cg
-      use hdf5,        only: HID_T, HSIZE_T, HSSIZE_T, H5P_DATASET_CREATE_F, H5S_SELECT_SET_F, &
-           &                 H5P_DATASET_XFER_F, H5FD_MPIO_INDEPENDENT_F, H5T_NATIVE_DOUBLE, &
-           &                 h5dcreate_f, h5dwrite_f, h5dclose_f, h5dget_space_f, &
-           &                 h5pcreate_f, h5pset_chunk_f, h5pset_dxpl_mpio_f, &
-           &                 h5screate_simple_f, h5sclose_f, h5sselect_hyperslab_f
-      use mpisetup,    only: dom, is_uneven
-
-      implicit none
-
-      real, dimension(cg%nxb,cg%nyb,cg%nzb), intent(in)    :: tab
-      integer(HID_T), intent(in)               :: file_id       !> File identifier
-      character(len=*), intent(in)             :: dname
-
-      integer(HID_T) :: dset_id       !> Dataset identifier
-      integer(HID_T) :: plist_id      !> Property list identifier
-      integer(HID_T) :: filespace     !> Dataspace identifier in file
-      integer(HID_T) :: memspace      !> Dataspace identifier in memory
-
-      integer(HSIZE_T),  dimension(:), allocatable :: count
-      integer(HSSIZE_T), dimension(:), allocatable :: offset
-      integer(HSIZE_T),  dimension(:), allocatable :: stride
-      integer(HSIZE_T),  dimension(:), allocatable :: block
-      integer(HSIZE_T),  dimension(:), allocatable :: dimsf, dimsfi, chunk_dims
-
-      integer :: error, rank
-
-      rank = 3
-      allocate(dimsf(rank),dimsfi(rank),chunk_dims(rank))
-      allocate(count(rank),offset(rank),stride(rank),block(rank))
-      !----------------------------------------------------------------------------------
-      !  WRITE TAB
-      !
-      dimsf = dom%n_d(:)         ! Dataset dimensions
-      dimsfi = dimsf
-      chunk_dims = cg%n_b(:)     ! Chunks dimensions
-
-      ! Create the data space for the  dataset.
-      call h5screate_simple_f(rank, dimsf, filespace, error)
-      call h5screate_simple_f(rank, chunk_dims, memspace, error)
-
-      ! Create chunked dataset if possible
-      call h5pcreate_f(H5P_DATASET_CREATE_F, plist_id, error)
-      if (.not. is_uneven) call h5pset_chunk_f(plist_id, rank, chunk_dims, error)
-      call h5dcreate_f(file_id, trim(dname), H5T_NATIVE_DOUBLE, filespace, dset_id, error, plist_id)
-      call h5sclose_f(filespace, error)
-
-      ! Each process defines dataset in memory and writes it to the hyperslab
-      ! in the file.
-      stride(:) = 1
-      count(:)  = 1
-      block(:)  = chunk_dims(:)
-
-      offset(:) = cg%off(:)
-
-      ! Select hyperslab in the file.
-      call h5dget_space_f(dset_id, filespace, error)
-      call h5sselect_hyperslab_f (filespace, H5S_SELECT_SET_F, offset, count, error, stride, block)
-      call h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error)
-      call h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_INDEPENDENT_F, error)
-      call h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, tab, dimsfi, error, file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
-
-      call h5sclose_f(filespace, error)
-      call h5sclose_f(memspace, error)
-      call h5dclose_f(dset_id, error)
-
-      if (allocated(dimsf))      deallocate(dimsf)
-      if (allocated(dimsfi))     deallocate(dimsfi)
-      if (allocated(chunk_dims)) deallocate(chunk_dims)
-      if (allocated(count))      deallocate(count)
-      if (allocated(offset))     deallocate(offset)
-      if (allocated(stride))     deallocate(stride)
-      if (allocated(block))      deallocate(block)
-      !----------------------------------------------------------------------------------
-
-   end subroutine write_3darr_to_restart
 
 ! This routine reads only interior cells of a pointed array from the restart file.
 ! Boundary cells are exchanged with the neughbours. Corner boundary cells are not guaranteed to be correct (area_type = AT_ALL_B not implemented yet).

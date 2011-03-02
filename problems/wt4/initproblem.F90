@@ -414,18 +414,32 @@ contains
 
    subroutine write_initial_fld_to_restart(file_id)
 
-      use dataio_hdf5, only: write_3darr_to_restart
-      use grid,        only: cg
+      use constants,   only: AT_NO_B
+      use dataio_hdf5, only: write_arr_to_restart
       use hdf5,        only: HID_T
 
       implicit none
 
       integer(HID_T),intent(in)  :: file_id
+      real, dimension(:,:,:), pointer :: p3d
 
+      if (associated(p3d)) nullify(p3d)
       if ( divine_intervention_type == 3) then
-         if (allocated(den0)) call write_3darr_to_restart(den0(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), file_id, "den0")
-         if (allocated(vlx0)) call write_3darr_to_restart(vlx0(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), file_id, "vlx0")
-         if (allocated(vly0)) call write_3darr_to_restart(vly0(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), file_id, "vly0")
+         if (allocated(den0)) then
+            p3d => den0(:, :, :)
+            call write_arr_to_restart(file_id, p3d, null(), AT_NO_B, "den0")
+            nullify(p3d)
+         endif
+         if (allocated(vlx0)) then
+            p3d => vlx0(:, :, :)
+            call write_arr_to_restart(file_id, p3d, null(), AT_NO_B, "vlx0")
+            nullify(p3d)
+         endif
+         if (allocated(vly0)) then
+            p3d => vly0(:, :, :)
+            call write_arr_to_restart(file_id, p3d, null(), AT_NO_B, "vly0")
+            nullify(p3d)
+         endif
       endif
 
    end subroutine write_initial_fld_to_restart
