@@ -91,7 +91,7 @@ contains
       ! locals
 !      real               :: minvx, maxvx, amp
       real, dimension(size(vx)) :: absvx
-      integer                   :: nm, i
+      integer                   :: nm
 
       nm = n-1
 

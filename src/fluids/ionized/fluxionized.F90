@@ -80,7 +80,9 @@ contains
       use mpisetup,        only: cfr_smooth
 
       implicit none
+
       integer, intent(in)                        :: n           !< number of cells in the current sweep
+
       real, dimension(:,:), intent(in),  pointer :: uui         !< part of u for ionized fluid
       real, dimension(:,:), intent(out), pointer :: fluxi       !< flux of ionized fluid
       real, dimension(:,:), intent(out), pointer :: cfri        !< freezing speed for ionized fluid
@@ -91,8 +93,9 @@ contains
 
       real, dimension(n)               :: p           !< thermal pressure of ionized fluid
       real, dimension(n)               :: pmag        !< pressure of magnetic field
-      integer                          :: i, nm
+      integer                          :: nm
 #ifdef LOCAL_FR_SPEED
+      integer                          :: i
       real                             :: minvx       !<
       real                             :: maxvx       !<
       real                             :: amp         !<
