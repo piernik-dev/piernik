@@ -94,8 +94,7 @@ contains
                p  = fl%cs2*u(fl%idn,i,j,k)
                cs = sqrt(fl%cs2)
 #else /* !ISO */
-               p  = (u(fl%ien,i,j,k)-sum(u(fl%imx:fl%imz,i,j,k)**2,1) &
-                     /u(fl%idn,i,j,k)/2.)*(fl%gam_1)
+               p  = (u(fl%ien,i,j,k)-0.5*sum(u(fl%imx:fl%imz,i,j,k)**2,1)/u(fl%idn,i,j,k))*(fl%gam_1)
 
                cs = sqrt(abs(  (fl%gam*p)/u(fl%idn,i,j,k)) )
 #endif /* !ISO */
