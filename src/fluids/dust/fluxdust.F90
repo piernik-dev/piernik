@@ -95,6 +95,7 @@ contains
 
       nm = n-1
 
+      ps(:)  = 0.0
       vx(RNG)=uud(imx,RNG)/uud(idn,RNG) ; vx(1) = vx(2); vx(n) = vx(nm)
 
       fluxd(idn,RNG)=uud(imx,RNG)
