@@ -26,7 +26,7 @@
 !    For full list of developers see $PIERNIK_HOME/license/pdt.txt
 !
 #include "piernik.h"
-#define RNG 2:n-1
+#define RNG 2:nm
 !/*
 !>
 !! \brief (MH/JD) [R] Computation of %fluxes for the neutral fluid
@@ -94,20 +94,19 @@ contains
       real, dimension(:),   intent(out), pointer :: vx        !< velocity of neutral fluid for current sweep
       real, dimension(:),   intent(out), pointer :: p         !< pressure of neutral fluid for current sweep
       real, dimension(:),   intent(in),  pointer :: cs_iso2   !< isothermal sound speed squared
-
       ! locals
+      integer            :: nm
 #ifdef LOCAL_FR_SPEED
       real               :: minvx     !<
       real               :: maxvx     !<
       real               :: amp       !<
+      integer            :: i
 #endif /* LOCAL_FR_SPEED */
 
-      ! OPT: These initializations may cost about 30% of the routine. Probably we can just delete them.
-      fluxn   = 0.0; cfrn    = 0.0; vx      = 0.0; p       = 0.0
-
-      vx(RNG) = uun(imx,RNG)/uun(idn,RNG)
+      nm = n-1
+      vx(RNG) = uun(imx,RNG)/uun(idn,RNG)  ; vx(1) = vx(2); vx(n) = vx(nm)
 #ifdef ISO
-      p(RNG)  = flind%neu%cs2*uun(idn,RNG)
+      p(RNG)  = flind%neu%cs2*uun(idn,RNG) ; p(1) = p(2); p(n) = p(nm)
 #else /* !ISO */
       p(RNG)  = (uun(ien,RNG)  &
            - 0.5*( uun(imx,RNG)**2 + uun(imy,RNG)**2 + uun(imz,RNG)**2 ) &
@@ -122,6 +121,7 @@ contains
 #ifndef ISO
       fluxn(ien,RNG)=(uun(ien,RNG)+p(RNG))*vx(RNG)
 #endif /* !ISO */
+      fluxn(:,1) = fluxn(:,2) ; fluxn(:,n) = fluxn(:,nm)
 
 #ifdef LOCAL_FR_SPEED
 
@@ -141,15 +141,15 @@ contains
       !>
       !! \todo find why is it so
       !! if such a treatment is OK then should be applied also in both cases of neutral and ionized gas
-      !!    do i = 2,n-1
+      !!    do i = 2,nm
       !!       cfrn(1,i) = maxval( [c_fr(i-1), c_fr(i), c_fr(i+1)] )
       !!    enddo
       !<
 
-      cfrn(1,1) = cfrn(1,2)
-      cfrn(1,n) = cfrn(1,n-1)
-      ! OPT: This may cost about 20% of the whole routine, let's what happens with an explicit loop.
-      cfrn = spread(cfrn(1,:),1,flind%neu%all)
+      cfrn(1,1) = cfrn(1,2);  cfrn(1,n) = cfrn(1,nm)
+      do i = 2, flind%neu%all
+         cfrn(i,:) = cfrn(1,:)
+      enddo
 #endif /* LOCAL_FR_SPEED */
 
 #ifdef GLOBAL_FR_SPEED

@@ -26,7 +26,7 @@
 !    For full list of developers see $PIERNIK_HOME/license/pdt.txt
 !
 #include "piernik.h"
-#define RNG 2:n-1
+#define RNG 2:nm
 !/*
 !>
 !! \brief (MH/JD) [R] Computation of %fluxes for the ionized fluid
@@ -91,20 +91,20 @@ contains
 
       real, dimension(n)               :: p           !< thermal pressure of ionized fluid
       real, dimension(n)               :: pmag        !< pressure of magnetic field
+      integer                          :: i, nm
 #ifdef LOCAL_FR_SPEED
       real                             :: minvx       !<
       real                             :: maxvx       !<
       real                             :: amp         !<
 #endif /* LOCAL_FR_SPEED */
 
-      fluxi = 0.0; cfri = 0.0; vx = 0.0; ps = 0.0; p = 0.0; pmag = 0.0
-
+      nm = n-1
 #ifdef MAGNETIC
-      pmag(RNG)=0.5*( bb(ibx,RNG)**2 + bb(iby,RNG)**2 +bb(ibz,RNG)**2 )
+      pmag(RNG)=0.5*( bb(ibx,RNG)**2 + bb(iby,RNG)**2 +bb(ibz,RNG)**2 );  pmag(1) = pmag(2); pmag(n) = pmag(nm)
 #else /* !MAGNETIC */
       pmag(:) = 0.0
 #endif /* !MAGNETIC */
-      vx(RNG)=uui(imx,RNG)/uui(idn,RNG)
+      vx(RNG)=uui(imx,RNG)/uui(idn,RNG); vx(1) = vx(2); vx(n) = vx(nm)
 
 #ifndef ISO_LOCAL
       if (associated(cs_iso2)) call die("[fluxionized:flux_ion] cs_iso2 should not be present")
@@ -121,8 +121,9 @@ contains
       ps(RNG)=(uui(ien,RNG) - &
            0.5*( uui(imx,RNG)**2 + uui(imy,RNG)**2 + uui(imz,RNG)**2 ) &
            / uui(idn,RNG))*(flind%ion%gam_1) + (2.0-flind%ion%gam)*pmag(RNG)
-      p(RNG) = ps(RNG)- pmag(RNG)
+      p(RNG) = ps(RNG)- pmag(RNG);  p(1) = p(2); p(n) = p(nm)
 #endif /* !ISO */
+      ps(1) = ps(2); ps(n) = ps(nm)
 
       fluxi(idn,RNG)=uui(imx,RNG)
       fluxi(imx,RNG)=uui(imx,RNG)*vx(RNG)+ps(RNG) - bb(ibx,RNG)**2
@@ -132,7 +133,7 @@ contains
       fluxi(ien,RNG)=(uui(ien,RNG)+ps(RNG))*vx(RNG)-bb(ibx,RNG)*(bb(ibx,RNG)*uui(imx,RNG) &
                 +bb(iby,RNG)*uui(imy,RNG)+bb(ibz,RNG)*uui(imz,RNG))/uui(idn,RNG)
 #endif /* !ISO */
-
+      fluxi(:,1) = fluxi(:,2); fluxi(:,n) = fluxi(:,nm)
 #ifdef LOCAL_FR_SPEED
 
       ! The freezing speed is now computed locally (in each cell)
@@ -142,7 +143,7 @@ contains
       maxvx = maxval(vx(RNG))
       amp   = 0.5*(maxvx-minvx)
 #ifdef ISO
-      cfri(1,RNG) = sqrt(vx(RNG)**2+cfr_smooth*amp) + max(sqrt( abs(2.0*pmag(RNG) +              p(RNG))/uui(idn,RNG)),small)
+      cfri(1,RNG) = sqrt(vx(RNG)**2+cfr_smooth*amp) + max(sqrt( abs(2.0*pmag(RNG) +               p(RNG))/uui(idn,RNG)),small)
 #else /* !ISO */
       cfri(1,RNG) = sqrt(vx(RNG)**2+cfr_smooth*amp) + max(sqrt( abs(2.0*pmag(RNG) + flind%ion%gam*p(RNG))/uui(idn,RNG)),small)
 #endif /* !ISO */
@@ -150,14 +151,15 @@ contains
       !>
       !! \todo  find why is it so
       !! if such a treatment is OK then should be applied also in both cases of neutral and ionized gas
-      !!    do i = 2,n-1
+      !!    do i = 2,nm
       !!       cfri(1,i) = maxval( [c_fr(i-1), c_fr(i), c_fr(i+1)] )
       !!    enddo
       !<
 
-      cfri(1,1) = cfri(1,2)
-      cfri(1,n) = cfri(1,n-1)
-      cfri = spread(cfri(1,:),1,flind%ion%all)
+      cfri(1,1) = cfri(1,2);  cfri(1,n) = cfri(1,nm)
+      do i = 2, flind%ion%all
+         cfri(i,:) = cfri(1,:)
+      enddo
 #endif /* LOCAL_FR_SPEED */
 
 #ifdef GLOBAL_FR_SPEED

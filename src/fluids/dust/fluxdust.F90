@@ -26,7 +26,7 @@
 !    For full list of developers see $PIERNIK_HOME/license/pdt.txt
 !
 #include "piernik.h"
-#define RNG 2:n-1
+#define RNG 2:nm
 !/*
 !>
 !! \brief (MH/JD) [R] Computation of %fluxes for the dust fluid
@@ -72,7 +72,7 @@ contains
    subroutine flux_dst(fluxd,cfrd,uud,n,vx,ps,bb,cs_iso2)
 
       !use constants,  only: small
-      use fluidindex, only: idn, imx, imy, imz, flind
+      use fluidindex, only: idn, imx, imy, imz
       !use mpisetup,   only: cfr_smooth
 #ifdef GLOBAL_FR_SPEED
       use timestep,   only: c_all
@@ -91,21 +91,18 @@ contains
       ! locals
 !      real               :: minvx, maxvx, amp
       real, dimension(size(vx)) :: absvx
+      integer                   :: nm, i
 
-      fluxd   = 0.0; cfrd    = 0.0; vx      = 0.0; ps = 0.0
+      nm = n-1
 
-!      where (uud(idn,RNG) > 0.0)
-      vx(RNG)=uud(imx,RNG)/uud(idn,RNG)
-!      elsewhere
-!         vx(RNG) = 0.0
-!      endwhere
-
-!      where (abs(vx) < 1.e-20 .and. vx /= 0.0) vx = sign(1.e-20,vx)   !> \deprecated BEWARE: cheat
+      vx(RNG)=uud(imx,RNG)/uud(idn,RNG) ; vx(1) = vx(2); vx(n) = vx(nm)
 
       fluxd(idn,RNG)=uud(imx,RNG)
       fluxd(imx,RNG)=uud(imx,RNG)*vx(RNG)
       fluxd(imy,RNG)=uud(imy,RNG)*vx(RNG)
       fluxd(imz,RNG)=uud(imz,RNG)*vx(RNG)
+
+      fluxd(:,1) = fluxd(:,2); fluxd(:,n) = fluxd(:,nm)
 
 #ifdef LOCAL_FR_SPEED
       ! The freezing speed is now computed locally (in each cell)
@@ -117,11 +114,14 @@ contains
 !     amp   = (maxvx-minvx)*0.5
 !      cfrd(1,RNG) = max(sqrt(vx(RNG)**2+cfr_smooth*amp),small)
       absvx = abs(vx)
-      cfrd(1,RNG)  = max( absvx(1:n-2), absvx(2:n-1), absvx(3:n) )
+      cfrd(idn,RNG) = max( absvx(1:n-2), absvx(2:nm), absvx(3:n) )
 
-      cfrd(1,1) = cfrd(1,2)
-      cfrd(1,n) = cfrd(1,n-1)
-      cfrd = spread(cfrd(1,:),1,flind%dst%all)
+      cfrd(idn,1) = cfrd(idn,2); cfrd(idn,n) = cfrd(idn,nm)
+
+      cfrd(imx,:) = cfrd(idn,:)
+      cfrd(imy,:) = cfrd(idn,:)
+      cfrd(imz,:) = cfrd(idn,:)
+
 #endif /* LOCAL_FR_SPEED */
 
 #ifdef GLOBAL_FR_SPEED
