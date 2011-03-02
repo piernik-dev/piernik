@@ -647,7 +647,7 @@ contains
 
       use constants,     only: xdim, ydim, zdim, varlen, cwdlen
       use arrays,        only: u
-      use dataio_pub,    only: vizit, fmin, fmax, log_file, msg, die, warn, printio, user_plt_hdf5, planelen
+      use dataio_pub,    only: vizit, fmin, fmax, log_file, msg, die, warn, user_plt_hdf5, planelen
       use grid,          only: cg
       use hdf5,          only: HID_T, HSIZE_T, SIZE_T, H5F_ACC_RDWR_F, h5fopen_f, h5gopen_f, h5gclose_f, h5fclose_f
       use h5lt,          only: h5ltmake_dataset_double_f, h5ltset_attribute_double_f
@@ -690,11 +690,7 @@ contains
       if (have_mpi .and. is_uneven) call die("[dataio_hdf5:write_plot_hdf5] is_uneven is not implemented") ! nib,njb,pisize*pjsize, ...
       rank = 2
       fe = len_trim(log_file)
-      if (master) then
-         write(fname,'(2a)') trim(log_file(1:fe-3)),"plt"
-         write(msg,'(3a)') 'Writing slicefile ',trim(fname), " ... "
-         call printio(msg, .true.)
-      endif
+      if (master) write(fname,'(2a)') trim(log_file(1:fe-3)),"plt"
       call MPI_Bcast(fname, cwdlen, MPI_CHARACTER, 0, comm3d, ierr)
 
       nib = 0; nid = 0; njb = 0; njd = 0; nkb = 0; pisize = 0; pjsize = 0
