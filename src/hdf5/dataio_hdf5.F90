@@ -1006,12 +1006,12 @@ contains
       dimsf = [1, area(:)]      ! Dataset dimensions
       chunk_dims = [1, chnk(:)] ! Chunks dimensions
       if (associated(pa4d)) then
-         if (associated(pa3d)) call die("[dataio_hdf5:write_arr_to_restart] Cannot handle rank-3 and rank-4 arrays at once")
+         if (associated(pa3d)) call die("[dataio_hdf5:write_arr_to_restart] Cannot handle rank-3 and rank-4 arrays at once.")
          rank = rank4
          dimsf(1) = size(pa4d,1)
          chunk_dims(1) = dimsf(1)
       else
-         if (.not. associated(pa3d)) call die("[dataio_hdf5:write_arr_to_restart] Need either rank-3 or rank-4 array to write")
+         if (.not. associated(pa3d)) call die("[dataio_hdf5:write_arr_to_restart] Need either rank-3 or rank-4 array to write.")
          rank = ndims
       endif
       ir = rank4 - rank + 1 ! 1 for 4-D arrays, 2 for 3-D arrays (to simplify use of count(:), offset(:), stride(:), block(:), dimsf(:) and chunk_dims(:)
@@ -1037,10 +1037,13 @@ contains
       call h5screate_simple_f(rank, chunk_dims(ir:), memspace, error)
 
       ! write data
-      if (associated(pa4d)) call h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, pa4d(:, lleft(xdim):lright(xdim), lleft(ydim):lright(ydim), lleft(zdim):lright(zdim)), &
-           &                                dimsf(ir:), error, file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
-      if (associated(pa3d)) call h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, pa3d(lleft(xdim):lright(xdim), lleft(ydim):lright(ydim), lleft(zdim):lright(zdim)), &
-           &                                dimsf(ir:), error, file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
+      if (associated(pa4d)) then
+         call h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, pa4d(:, lleft(xdim):lright(xdim), lleft(ydim):lright(ydim), lleft(zdim):lright(zdim)), &
+              &          dimsf(ir:), error, file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
+      else if (associated(pa3d)) then
+         call h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, pa3d(lleft(xdim):lright(xdim), lleft(ydim):lright(ydim), lleft(zdim):lright(zdim)), &
+              &          dimsf(ir:), error, file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
+      endif
 
       ! cleanup
       call h5sclose_f(memspace, error)
@@ -1140,93 +1143,99 @@ contains
 
    subroutine read_arr_from_restart(file_id, pa3d, pa4d, area_type, dname)
 
-      use dataio_pub,   only: msg, die
-      use grid,         only: cg, arr3d_boundaries
-      use hdf5,         only: HID_T, HSIZE_T, HSSIZE_T, SIZE_T, H5T_NATIVE_DOUBLE, &
-           &                  H5S_SELECT_SET_F, H5FD_MPIO_INDEPENDENT_F, H5P_DATASET_XFER_F, &
-           &                  h5pcreate_f, h5pclose_f, h5screate_simple_f, h5dopen_f, &
-           &                  h5dget_space_f, h5sget_simple_extent_ndims_f, h5dget_create_plist_f, &
-           &                  h5sselect_hyperslab_f, h5dread_f, h5sclose_f, h5pset_dxpl_mpio_f, h5dclose_f
-      use mpisetup,     only: dom
+      use constants,  only: xdim, ydim, zdim, ndims
+      use dataio_pub, only: msg, die
+      use grid,       only: cg, arr3d_boundaries
+      use hdf5,       only: HID_T, HSIZE_T, SIZE_T, H5T_NATIVE_DOUBLE, &
+           &                H5S_SELECT_SET_F, H5FD_MPIO_INDEPENDENT_F, H5P_DATASET_XFER_F, &
+           &                h5pcreate_f, h5pclose_f, h5screate_simple_f, h5dopen_f, &
+           &                h5dget_space_f, h5sget_simple_extent_ndims_f, &
+           &                h5sselect_hyperslab_f, h5dread_f, h5sclose_f, h5pset_dxpl_mpio_f, h5dclose_f
 
       implicit none
 
-      integer(HID_T), intent(in)                  :: file_id   ! File identifier
-      real, dimension(:,:,:), pointer, intent(in) :: pa3d      ! pointer to (1:cg%nx, 1:cg%ny, 1:cg%ns)-sized array
-      real, dimension(:,:,:), pointer, intent(in) :: pa4d      ! pointer to (:, 1:cg%nx, 1:cg%ny, 1:cg%ns)-sized array
-      integer, intent(in)                         :: area_type !> no boundaries, only outer boundaries or all boundaries
-      character(len=*), intent(in)                :: dname
-
-      real, dimension(:,:,:), pointer             :: pa3di
+      integer(HID_T), intent(in)                    :: file_id   ! File identifier
+      real, dimension(:,:,:), pointer, intent(in)   :: pa3d      ! pointer to (1:cg%nx, 1:cg%ny, 1:cg%ns)-sized array
+      real, dimension(:,:,:,:), pointer, intent(in) :: pa4d      ! pointer to (:, 1:cg%nx, 1:cg%ny, 1:cg%ns)-sized array
+      integer, intent(in)                           :: area_type !> no boundaries, only outer boundaries or all boundaries
+      character(len=*), intent(in)                  :: dname
 
       integer(HID_T)        :: dset_id       ! Dataset identifier
       integer(HID_T)        :: plist_id      ! Property list identifier
       integer(HID_T)        :: filespace     ! Dataspace identifier in file
       integer(HID_T)        :: memspace      ! Dataspace identifier in memory
 
-      integer(HSIZE_T),  dimension(:), allocatable :: count
-      integer(HSSIZE_T), dimension(:), allocatable :: offset
-      integer(HSIZE_T),  dimension(:), allocatable :: stride
-      integer(HSIZE_T),  dimension(:), allocatable :: block
-      integer(HSIZE_T),  dimension(:), allocatable :: dimsf, dimsfi, chunk_dims
+      integer, parameter :: rank4 = 1 + ndims
+      integer(HSIZE_T), dimension(rank4) :: count, offset, stride, block, dimsf, chunk_dims
 
-      integer               :: error, rank
+      integer, dimension(ndims) :: area, lleft, lright, loffs, chnk
+      integer :: ir, rank, rankf
+      integer :: error
 
-      if (associated(pa3di)) nullify(pa3di)
-      pa3di => pa3d(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
+      call set_dims_to_write(area_type, area, chnk, lleft, lright, loffs)
 
-      !----------------------------------------------------------------------------------
-      !  READ TAB
-      !
-      rank = 3
-      allocate(dimsf(rank), dimsfi(rank), chunk_dims(rank))
-      allocate(block(rank), offset(rank), count(rank), stride(rank))
-      dimsf = dom%n_d(:)           ! Dataset dimensions
-      dimsfi = dimsf
-      chunk_dims = cg%n_b(:)
+      dimsf = [1, area(:)]      ! Dataset dimensions
+      chunk_dims = [1, chnk(:)] ! Chunks dimensions
+      if (associated(pa4d)) then
+         if (associated(pa3d)) call die("[dataio_hdf5:read_arr_from_restart] Cannot handle rank-3 and rank-4 arrays at once.")
+         rank = rank4
+         dimsf(1) = size(pa4d,1)
+         chunk_dims(1) = dimsf(1)
+      else
+         if (.not. associated(pa3d)) call die("[dataio_hdf5:read_arr_from_restart] Need either rank-3 or rank-4 array to read.")
+         rank = ndims
+      endif
+      ir = rank4 - rank + 1 ! 1 for 4-D arrays, 2 for 3-D arrays (to simplify use of count(:), offset(:), stride(:), block(:), dimsf(:) and chunk_dims(:)
 
-      ! Create chunked dataset.
+      ! Create dataset.and filespace
       call h5dopen_f(file_id, dname, dset_id, error)
+      if (error /= 0) then
+         write(msg, '(3a)') "[dataio_hdf5:read_3darr_from_restart] Opening dataset '",dname,"' failed."
+         call die(msg)
+      endif
 
       call h5dget_space_f(dset_id, filespace, error)
-      call H5sget_simple_extent_ndims_f (filespace,rank,error)
-      call H5dget_create_plist_f (dset_id,plist_id,error)
+      call h5sget_simple_extent_ndims_f (filespace, rankf, error)
+      if (rank /= rankf) then
+         write(msg,'(3a,2(i2,a))')"[dataio_hdf5:read_arr_from_restart] Rank mismatch in array '", dname, "' (", rank, " /= ", rankf, ")"
+         call die(msg)
+      endif
 
-      ! Each process defines dataset in memory and writes it to the hyperslab
-      ! in the file.
+      ! Select hyperslab in the file.
       stride(:) = 1
       count(:)  = 1
       block(:)  = chunk_dims(:)
+      offset(:) = [ 0, cg%off(:) ]
+      call h5sselect_hyperslab_f (filespace, H5S_SELECT_SET_F, offset(ir:), count(ir:), error, stride(ir:), block(ir:))
 
-      offset(:) = cg%off(:)
-
-      ! Select hyperslab in the file.
-      call h5sselect_hyperslab_f (filespace, H5S_SELECT_SET_F, offset, count, error, stride, block)
       call h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error)
       call h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_INDEPENDENT_F, error)
-      call h5screate_simple_f(rank, chunk_dims, memspace, error)
-      call h5dread_f(dset_id, H5T_NATIVE_DOUBLE, pa3di, dimsfi, error, file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
+      call h5screate_simple_f(rank, chunk_dims(ir:), memspace, error)
+
+      ! Read the array
+      if (associated(pa4d)) then
+         call h5dread_f(dset_id, H5T_NATIVE_DOUBLE, pa4d(:, lleft(xdim):lright(xdim), lleft(ydim):lright(ydim), lleft(zdim):lright(zdim)), &
+              &         dimsf(ir:), error, file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
+      else if (associated(pa3d)) then
+         call h5dread_f(dset_id, H5T_NATIVE_DOUBLE, pa3d(lleft(xdim):lright(xdim), lleft(ydim):lright(ydim), lleft(zdim):lright(zdim)), &
+              &         dimsf(ir:), error, file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
+      else
+         error = -1
+      endif
 
       if (error /= 0) then
          write(msg, '(3a)') "[dataio_hdf5:read_3darr_from_restart] Reading dataset '",dname,"' failed."
          call die(msg)
       endif
 
-      call h5sclose_f(filespace, error)
       call h5sclose_f(memspace, error)
       call h5pclose_f(plist_id, error)
+      call h5sclose_f(filespace, error)
       call h5dclose_f(dset_id, error)
-      !----------------------------------------------------------------------------------
-      if (allocated(dimsf))      deallocate(dimsf)
-      if (allocated(dimsfi))     deallocate(dimsfi)
-      if (allocated(chunk_dims)) deallocate(chunk_dims)
-      if (allocated(count))      deallocate(count)
-      if (allocated(offset))     deallocate(offset)
-      if (allocated(stride))     deallocate(stride)
-      if (allocated(block))      deallocate(block)
 
       ! Originally the pa3d array was written with the guardcells. The internal guardcells will be exchanged but the external ones are lost.
-      call arr3d_boundaries(pa3d)
+      if (associated(pa3d)) call arr3d_boundaries(pa3d)
+      ! rank-4 arrays (u(:,:,:,:) and b(:,:,:,:)) have their own guardcell-exchange routines, which can also be called here
 
    end subroutine read_arr_from_restart
 
@@ -1236,19 +1245,14 @@ contains
       use dataio_pub,    only: msg, printio, warn, die, require_init_prob, problem_name, run_id, piernik_hdf5_version
       use fluidindex,    only: flind
       use func,          only: fix_string
-      use grid,          only: cg
-      use hdf5,          only: HID_T, HSIZE_T, HSSIZE_T, SIZE_T, H5P_FILE_ACCESS_F, H5T_NATIVE_DOUBLE, &
-           &                   H5S_SELECT_SET_F, H5F_ACC_RDONLY_F, H5FD_MPIO_INDEPENDENT_F, H5P_DATASET_XFER_F, &
-           &                   h5open_f, h5pcreate_f, h5pset_fapl_mpio_f, h5fopen_f, h5pclose_f, h5dopen_f, &
-           &                   h5dget_space_f, h5sget_simple_extent_ndims_f, h5dget_create_plist_f, &
-           &                   h5sselect_hyperslab_f, h5dread_f, h5sclose_f, h5pset_dxpl_mpio_f, h5dclose_f, &
-           &                   h5screate_simple_f, h5fclose_f, h5close_f
+      use hdf5,          only: HID_T, SIZE_T, H5P_FILE_ACCESS_F, H5F_ACC_RDONLY_F, &
+           &                   h5open_f, h5pcreate_f, h5pset_fapl_mpio_f, h5fopen_f, h5pclose_f, h5fclose_f, h5close_f
       use h5lt,          only: h5ltget_attribute_double_f, h5ltget_attribute_int_f, h5ltget_attribute_string_f
       use list_hdf5,     only: problem_read_restart
       use mpisetup,      only: comm, ierr, magic_mass, master, t, info, comm3d, dt, dom, has_dir
       use mpi,           only: MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION
       use types,         only: hdf
-      use constants,     only: cwdlen, cbuff_len, domlen, idlen, xdim, ydim, zdim, AT_NO_B
+      use constants,     only: cwdlen, cbuff_len, domlen, idlen, xdim, ydim, zdim, AT_NO_B, AT_OUT_B
 #ifdef ISO_LOCAL
       use arrays,        only: cs_iso2_arr
 #endif /* ISO_LOCAL */
@@ -1263,19 +1267,10 @@ contains
       character(len=cwdlen) :: filename  ! File name
 
       integer(HID_T)        :: file_id       ! File identifier
-      integer(HID_T)        :: dset_id       ! Dataset identifier
       integer(HID_T)        :: plist_id      ! Property list identifier
-      integer(HID_T)        :: filespace     ! Dataspace identifier in file
-      integer(HID_T)        :: memspace      ! Dataspace identifier in memory
       integer(SIZE_T)       :: bufsize
 
-      integer(HSIZE_T),  dimension(:), allocatable :: count
-      integer(HSSIZE_T), dimension(:), allocatable :: offset
-      integer(HSIZE_T),  dimension(:), allocatable :: stride
-      integer(HSIZE_T),  dimension(:), allocatable :: block
-      integer(HSIZE_T),  dimension(:), allocatable :: dimsf, dimsfi, chunk_dims
-
-      integer               :: error, rank
+      integer               :: error
       logical               :: file_exist
 
       real, dimension(1)    :: rbuf
@@ -1367,93 +1362,20 @@ contains
       call read_arr_from_restart(file_id, p3d, null(), AT_NO_B, "gp")
       nullify(p3d)
 #endif /* GRAV */
-      !> \deprecated The code for reading fluid data, mag field and read_3darr_from_restart is almost replicated.
-      !> \todo Try to put it in a separate subroutine.
-      !----------------------------------------------------------------------------------
+
+      if (associated(p4d)) nullify(p4d)
       !  READ FLUID VARIABLES
-      !
+      p4d => u(:, :, :, :)
+      call read_arr_from_restart(file_id, null(), p4d, AT_NO_B, dname(FLUID))
+      nullify(p4d)
 
-      rank = 4
-      allocate(dimsf(rank), dimsfi(rank), chunk_dims(rank))
-      allocate(block(rank), offset(rank), count(rank), stride(rank))
-      dimsf = [nu, dom%n_d(:)] ! Dataset dimensions
-      dimsfi = dimsf
-      chunk_dims = [nu, cg%n_b(:)]
-      if (.not.associated(p4d)) p4d => u(:,cg%is:cg%ie,cg%js:cg%je,cg%ks:cg%ke)
-
-      ! Create chunked dataset.
-      call h5dopen_f(file_id, dname(1), dset_id, error)
-
-      call h5dget_space_f(dset_id, filespace, error)
-      call H5sget_simple_extent_ndims_f (filespace,rank,error)
-      call H5dget_create_plist_f (dset_id,plist_id,error)
-
-      ! Each process defines dataset in memory and writes it to the hyperslab
-      ! in the file.
-      stride(:) = 1
-      count(:)  = 1
-      block(:)  = chunk_dims(:)
-
-      offset(:)   = [0, cg%off(:)]
-
-      ! Select hyperslab in the file.
-      call h5sselect_hyperslab_f (filespace, H5S_SELECT_SET_F, offset, count, error, stride, block)
-      call h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error)
-      call h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_INDEPENDENT_F, error)
-      call h5screate_simple_f(rank, chunk_dims, memspace, error)
-      call h5dread_f(dset_id, H5T_NATIVE_DOUBLE, p4d, dimsfi, error, file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
-
-      call h5sclose_f(filespace, error)
-      call h5sclose_f(memspace, error)
-      call h5pclose_f(plist_id, error)
-      call h5dclose_f(dset_id, error)
-      if (associated(p4d)) nullify(p4d)
-      !----------------------------------------------------------------------------------
-
-      !----------------------------------------------------------------------------------
       !  READ MAG VARIABLES
-      !
-      dimsf = [3, dom%nxt, dom%nyt, dom%nzt] ! Dataset dimensions - we do need the whole domain of mag data
-      dimsfi = dimsf
-      chunk_dims = [3, cg%nx, cg%ny, cg%nz]
-      if (.not.associated(p4d)) p4d => b(:,:,:,:)
+      p4d => b(:,:,:,:)
+      call read_arr_from_restart(file_id, null(), p4d, AT_OUT_B, dname(MAG))
+      nullify(p4d)
 
-      ! Create chunked dataset.
-      call h5dopen_f(file_id, dname(2), dset_id, error)
-
-      call h5dget_space_f(dset_id, filespace, error)
-      call H5Sget_simple_extent_ndims_f (filespace,rank,error)
-      call H5Dget_create_plist_f (dset_id,plist_id,error)
-
-      ! Each process defines dataset in memory and writes it to the hyperslab
-      ! in the file.
-      stride(:) = 1
-      count(:)  = 1
-      block(:)  = chunk_dims(:)
-
-      offset(:) = [0, cg%off(:)]
-
-      ! Select hyperslab in the file.
-      call h5sselect_hyperslab_f (filespace, H5S_SELECT_SET_F, offset, count, error, stride, block)
-      call h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error)
-      call h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_INDEPENDENT_F, error)
-      call h5screate_simple_f(rank, chunk_dims, memspace, error)
-      call h5dread_f(dset_id, H5T_NATIVE_DOUBLE, p4d, dimsfi, error, file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
-
-      call h5sclose_f(filespace, error)
-      call h5sclose_f(memspace, error)
-      call h5pclose_f(plist_id, error)
-      call h5dclose_f(dset_id, error)
-      if (associated(p4d)) nullify(p4d)
-      !----------------------------------------------------------------------------------
       call h5fclose_f(file_id, error)
-      if (allocated(dimsf))      deallocate(dimsf)
-      if (allocated(dimsfi))     deallocate(dimsfi)
-      if (allocated(chunk_dims)) deallocate(chunk_dims)
-      if (allocated(count))      deallocate(count)
-      if (allocated(offset))     deallocate(offset)
-      if (allocated(stride))     deallocate(stride)
-      if (allocated(block))      deallocate(block)
+
       if (master) then
          call h5fopen_f (filename, H5F_ACC_RDONLY_F, file_id, error)
          bufsize = 1
