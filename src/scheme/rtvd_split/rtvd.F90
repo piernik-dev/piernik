@@ -346,9 +346,7 @@ contains
       if (.false.) dummy = sweep
 #endif /* !ISO_LOCAL && !SHEAR && !GRAV && !FLUID_INTERACTIONS_DW && !(COSM_RAYS && IONIZED) */
 
-      !OPT: try to avoid these explicit initializations of w(:,:), cfr(:,:), u1(:,:) and u0(:,:)
-      w         = 0.0
-      cfr       = 0.0
+      !OPT: try to avoid these explicit initializations of u1(:,:) and u0(:,:)
       dtx       = dt / dx
 
       u1 = u
