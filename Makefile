@@ -40,9 +40,15 @@ ifeq ("$(RS)","1")
 		$(ECHO) -e "\033[31;1mDon't know how to resetup '"$@"'\033[0m"; \
 	fi
 else
+ifeq ("$(CL)","1")
+	$(MAKE) -k -C $@ clean && $(ECHO) -e "\033[32;1m"Cleaned $@"\033[0m" || echo -e "\033[31;1m"Unable to clean $@"\033[0m"
+else
 	@$(MAKE) -k -C $@ && $(ECHO) -e "\033[32;1m"$@ ready"\033[0m" || echo -e "\033[31;1m"$@ failed"\033[0m"
+endif
 endif
 
 resetup:
 	@RS=1 $(MAKE) all
 
+clean:
+	@CL=1 $(MAKE) all
