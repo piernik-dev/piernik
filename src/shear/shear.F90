@@ -38,7 +38,7 @@ module shear
    implicit none
 
    private
-   public :: csvk, delj, dely, eps, eta_gas, global_gradP, init_shear, omega, qshear, yshift
+   public :: csvk, delj, dely, eps, eta_gas, global_gradP, init_shear, omega, qshear, yshift, shear_acc
 #ifdef FFTW
    public  :: unshear_fft
 #endif FFTW
@@ -116,6 +116,44 @@ contains
       enddo
 
    end subroutine init_shear
+!--------------------------------------------------------------------------------------------------
+   function shear_acc(sweep,u) result(rotacc)
+      use fluidindex, only: flind, iarr_all_dn, iarr_all_my
+      use constants,  only: xdim, ydim
+      implicit none
+      real, dimension(:,:), intent(in)        :: u
+      integer, intent(in)                     :: sweep
+      real, dimension(2)                      :: df                 !< \deprecated  additional acceleration term used in streaming problem
+      real, dimension(flind%fluids,size(u,2)) :: vy0
+      real, dimension(flind%fluids,size(u,2)) :: rotacc
+      integer :: ind
+
+      df = 0.0
+#ifdef FLUID_INTERACTIONS
+      df = global_gradP       !! \deprecated BEWARE: only for backward compatibility with old streaming problem
+#endif /* !FLUID_INTERACTIONS */
+      where (u(iarr_all_dn,:) > 0.0)
+         vy0(:,:)  = u(iarr_all_my,:)/u(iarr_all_dn,:)
+      elsewhere
+         vy0(:,:)  = 0.0
+      endwhere
+      do ind = 1, flind%fluids
+!        if (sweep == xdim) then
+!           rotacc(ind,:) =  2.0*omega*(vy0(ind,:) + qshear*omega*cg%x(:))
+!        else if (sweep == ydim)  then
+!           rotacc(ind,:) = - 2.0*omega*vy0(ind,:)          ! with global shear
+!        else
+!           rotacc(ind,:) = 0.0
+!        endif
+         if (sweep == xdim) then
+            rotacc(ind,:) =  2.0*omega*vy0(ind,:) + df(ind)  ! global_gradient
+         else if (sweep == ydim)  then
+            rotacc(ind,:) = (qshear - 2.0)*omega*vy0(ind,:)  ! with respect to global shear (2.5D)
+         else
+            rotacc(ind,:) = 0.0
+         endif
+      enddo
+   end function shear_acc
 
    subroutine yshift(ts,dts)
 
@@ -142,7 +180,7 @@ contains
       u(:,:, cg%je+1:cg%ny,:) = u(:,:, cg%js:cg%jsb,:)
 #endif /* FFTW */
    end subroutine yshift
-
+!--------------------------------------------------------------------------------------------------
 #ifdef FFTW
    function unshear_fft(qty,x,ddy,inv)
 
@@ -209,7 +247,7 @@ contains
 
    end function unshear_fft
 #endif /* FFTW */
-
+!--------------------------------------------------------------------------------------------------
    function unshear(qty,x,inv)
 
       use grid,     only: cg
@@ -269,5 +307,7 @@ contains
       if (allocated(temp)) deallocate(temp)
 
    end function unshear
+
+!--------------------------------------------------------------------------------------------------
 
 end module shear

@@ -245,10 +245,6 @@ contains
 #ifdef GRAV
       use gravity,          only: grav_pot2accel
 #endif /* GRAV */
-#ifdef SHEAR
-!      use grid,             only: cg
-      use shear,            only: qshear, omega, global_gradP
-#endif /* SHEAR */
 #ifdef COSM_RAYS
       use arrays,           only: divvel
       use initcosmicrays,   only: iarr_crs, iarr_crn, gamma_crs, cr_active, smallecr
@@ -265,12 +261,15 @@ contains
 #ifdef CORIOLIS
       use coriolis,         only: coriolis_force
 #endif /* CORIOLIS */
+#ifdef SHEAR
+      use shear,            only: shear_acc
+#endif /* SHEAR */
 
       implicit none
 
-      integer,                     intent(in)  :: n                  !< array size
-      real, dimension(flind%all,n), intent(out) :: u                  !< vector of conservative variables
-      real, dimension(nmag,n),     intent(in)  :: bb                 !< local copy of magnetic field
+      integer,                     intent(in)     :: n                  !< array size
+      real, dimension(flind%all,n), intent(inout) :: u                  !< vector of conservative variables
+      real, dimension(nmag,n),     intent(in)     :: bb                 !< local copy of magnetic field
       integer,                     intent(in)  :: sweep              !< direction (x, y or z) we are doing calculations for
       integer,                     intent(in)  :: i1                 !< coordinate of sweep in the 1st remaining direction
       integer,                     intent(in)  :: i2                 !< coordinate of sweep in the 2nd remaining direction
@@ -285,9 +284,7 @@ contains
       real                           :: dtx                !< dt/dx
       real, dimension(flind%all,n)    :: cfr                !< freezing speed
 !locals
-#if defined GRAV || defined SHEAR
       real, dimension(flind%fluids,n) :: acc                !< acceleration
-#endif /* defined GRAV || defined SHEAR */
       real, dimension(flind%all,n)    :: u0                 !< initial state of conservative variables
       real, dimension(flind%all,n)    :: w                  !< auxiliary vector to calculate fluxes
       real, dimension(flind%all,n)    :: fr                 !< flux of the right-moving waves
@@ -298,7 +295,9 @@ contains
       real, dimension(flind%all,n)    :: dflm               !< second order correction of left-moving waves flux on the left cell boundary
       real, dimension(flind%all,n)    :: dflp               !< second order correction of left-moving waves flux on the right cell boundary
       real, dimension(flind%all,n)    :: u1                 !< updated vector of conservative variables (after one timestep in second order scheme)
-      real, dimension(flind%fluids,n) :: rotacc             !< acceleration caused by rotation
+#ifdef CORIOLIS
+      real, dimension(flind%fluids,n) :: rotcacc            !< acceleration caused by rotation
+#endif /* CORIOLIS */
       real, dimension(flind%fluids,n) :: fricacc            !< acceleration caused by friction
       real, dimension(flind%fluids,n) :: geosrc             !< source terms caused by geometry of coordinate system
       real, dimension(flind%fluids,n), target :: pressure   !< gas pressure
@@ -309,11 +308,6 @@ contains
 #ifdef ISO_LOCAL
       real, dimension(n)             :: cs_iso2            !< square of local isothermal sound speed (optional for ISO_LOCAL)
 #endif /* ISO_LOCAL */
-
-#ifdef SHEAR
-      real, dimension(2)             :: df                 !< \deprecated additional acceleration term used in streaming problem
-      real, dimension(flind%fluids,n) :: vy0
-#endif /* SHEAR */
 
 #ifdef COSM_RAYS
       integer                       :: icr
@@ -416,78 +410,47 @@ contains
          endif
 
 ! Source terms -------------------------------------
+
          geosrc = geometry_source_terms(u,pressure,sweep)
 
-         u1(iarr_all_mx,:) = u1(iarr_all_mx,:) + rk2coef(integration_order,istep)*geosrc(:,:)*dt !> \deprecated if GRAV is defined then look ~50 lines below (BEWARE: semi-duplicated code)
+         u1(iarr_all_mx,:) = u1(iarr_all_mx,:) + rk2coef(integration_order,istep)*geosrc(:,:)*dt
+
+         acc = 0.0
 
          call fluid_interactions(dens, vx, fricacc)  !> \todo convert me to func similar to gridgeometry::geometry_source_terms
+         acc     =  acc + fricacc
 
-!>
-!! \deprecated BEWARE: whole shearing bit is heavily biased towards streaming problem, currently works only for 2.5D case, i.e. nyd=1 + source_terms_y
-!! \todo FIX ME!!!
-!! \todo move me to shear module and provide pointer
-!<
 #ifdef SHEAR
-         df = 0.0
-#ifdef FLUID_INTERACTIONS
-         df = global_gradP       !! \deprecated BEWARE: only for backward compatibility with old streaming problem
-#endif /* !FLUID_INTERACTIONS */
-         where (u(iarr_all_dn,:) > 0.0)
-            vy0(:,:)  = u(iarr_all_my,:)/u(iarr_all_dn,:)
-         elsewhere
-            vy0(:,:)  = 0.0
-         endwhere
-         do ind = 1, flind%fluids
-!            if (sweep == xdim) then
-!               rotacc(ind,:) =  2.0*omega*(vy0(ind,:) + qshear*omega*cg%x(:))
-!            else if (sweep == ydim)  then
-!               rotacc(ind,:) = - 2.0*omega*vy0(ind,:)          ! with global shear
-!            else
-!               rotacc(ind,:) = 0.0
-!            endif
-            if (sweep == xdim) then
-               rotacc(ind,:) =  2.0*omega*vy0(ind,:) + df(ind)  ! global_gradient
-            else if (sweep == ydim)  then
-               rotacc(ind,:) = (qshear - 2.0)*omega*vy0(ind,:)  ! with respect to global shear (2.5D)
-            else
-               rotacc(ind,:) = 0.0
-            endif
-         enddo
-#else /* !SHEAR */
-         rotacc(:,:) = 0.0
+         acc(:,:) = acc(:,:) + shear_acc(sweep,u)
 #endif /* !SHEAR */
 
 #ifdef CORIOLIS
          !> \deprecated BEWARE: if GRAV is not defined and any(geosrc(:,:) /= 0.), u1(iarr_all_mx,:) is already altered
-         call coriolis_force(sweep, u, rotacc(:,:))
+         call coriolis_force(sweep, u, rotacc(:,:))  !> \todo convert me to func similar to gridgeometry::geometry_source_terms
+         acc(:,:) = acc(:,:) + rotacc(:,:)
 #endif /* CORIOLIS */
 
 #ifdef GRAV
          call grav_pot2accel(sweep, i1, i2, n, gravacc, istep)
-#else /* !GRAV */
-         gravacc = 0.0
-#endif /* !GRAV */
-
-#if defined GRAV || defined SHEAR
-         acc     =  rotacc + fricacc
          do ind = 1, flind%fluids
             acc(ind,:) =  acc(ind,:) + gravacc(:)
          enddo
+#endif /* !GRAV */
 
-         acc(:,n)   = acc(:,n-1); acc(:,1) = acc(:,2)
+         acc(:,n)   = acc(:,n-1);  acc(:,1) = acc(:,2)
 
          u1(iarr_all_mx,:) = u1(iarr_all_mx,:) + rk2coef(integration_order,istep)*acc(:,:)*u(iarr_all_dn,:)*dt
 #ifndef ISO
          u1(iarr_all_en,:) = u1(iarr_all_en,:) + rk2coef(integration_order,istep)*acc(:,:)*u(iarr_all_mx,:)*dt
 #endif /* !ISO */
 
-#endif /* defined GRAV || defined SHEAR */
+! --------------------------------------------------
 
-#ifdef FLUID_INTERACTIONS_DW
-         !!!! old, more general way of adding interactions
-         call fluid_interactions_dw(sweep,i1,i2, n, dintr, u)
-         u1 = u1 + rk2coef(integration_order,istep)*dintr*dt
-#endif /* FLUID_INTERACTIONS_DW */
+!#ifdef FLUID_INTERACTIONS_DW
+!         !!!! old, more general way of adding interactions
+!         call fluid_interactions_dw(sweep,i1,i2, n, dintr, u)
+!         u1 = u1 + rk2coef(integration_order,istep)*dintr*dt
+!#endif /* FLUID_INTERACTIONS_DW */
 
 #if defined COSM_RAYS && defined IONIZED
          select case (sweep)
