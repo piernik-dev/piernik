@@ -64,6 +64,11 @@ module dataio_hdf5
    character(len=maxparfilelen), dimension(maxparfilelines) :: parfile !< contents of the parameter file
    integer, save                             :: parfilelines = 0       !< number of lines in the parameter file
 
+   interface write_arr_to_restart
+      module procedure write_4darr_to_restart, write_3darr_to_restart
+   end interface
+
+
 contains
 
 !>
@@ -891,12 +896,12 @@ contains
       if (associated(pa3d)) nullify(pa3d)
 #ifdef ISO_LOCAL
       pa3d => cs_iso2_arr
-      call write_arr_to_restart(file_id, pa3d, null(), AT_NO_B, "cs_iso2")
+      call write_arr_to_restart(file_id, pa3d, AT_NO_B, "cs_iso2")
       nullify(pa3d)
 #endif /* ISO_LOCAL */
 #ifdef GRAV
       pa3d => gp
-      call write_arr_to_restart(file_id, pa3d, null(), AT_NO_B, "gp")
+      call write_arr_to_restart(file_id, pa3d, AT_NO_B, "gp")
       nullify(pa3d)
 #endif /* GRAV */
       if (associated(pa3d)) nullify(pa3d)
@@ -907,14 +912,14 @@ contains
       area_type = AT_NO_B
       if (present(debug_res)) area_type = AT_ALL_B
       pa4d => u
-      call write_arr_to_restart(file_id, null(), pa4d, area_type, dname(FLUID))
+      call write_arr_to_restart(file_id, pa4d, area_type, dname(FLUID))
       nullify(pa4d)
 
       ! Write magnetic field
       area_type = AT_OUT_B ! unlike fluids, we need magnetic field boundaries values. Then chunks might be non-uniform
       if (present(debug_res)) area_type = AT_ALL_B
       pa4d => b
-      call write_arr_to_restart(file_id, null(), pa4d, area_type, dname(MAG))
+      call write_arr_to_restart(file_id, pa4d, area_type, dname(MAG))
       nullify(pa4d)
 
       call write_axes_to_restart(file_id)
@@ -999,7 +1004,7 @@ contains
       call h5sclose_f(dfilespace, error)
    end subroutine clean_arr_write
 
-   subroutine write_arr_to_restart(file_id, pa3d, pa4d, area_type, dname)
+   subroutine write_4darr_to_restart(file_id, pa4d, area_type, dname)
 
       use constants,  only: xdim, ydim, zdim, ndims
       use dataio_pub, only: die
@@ -1009,6 +1014,47 @@ contains
 
       integer(HID_T), intent(in)                    :: file_id   !> File identifier
       real, pointer, dimension(:,:,:,:), intent(in) :: pa4d      !> 4-D array pointer
+      integer, intent(in)                           :: area_type !> no boundaries, only outer boundaries or all boundaries
+      character(len=*), intent(in)                  :: dname
+
+      integer, parameter :: rank4 = 1 + ndims
+      integer(HSIZE_T), dimension(rank4) :: dimsf, chunk_dims
+      integer(HID_T) :: dset_id               !> Dataset identifier
+      integer(HID_T) :: dplist_id, plist_id   !> Property list identifiers
+      integer(HID_T) :: dfilespace, filespace !> Dataspace identifiers in file
+      integer(HID_T) :: memspace              !> Dataspace identifier in memory
+
+      integer, dimension(ndims) :: area, lleft, lright, loffs, chnk
+
+      integer :: rank
+      integer :: error
+
+      call set_dims_to_write(area_type, area, chnk, lleft, lright, loffs)
+
+      if (.not.associated(pa4d)) call die("[dataio_hdf5:write_4darr_to_restart] Null pointer given.")
+      dimsf      = [size(pa4d,1), area(:)]   ! Dataset dimensions
+      chunk_dims = [size(pa4d,1), chnk(:)]   ! Chunks dimensions
+      rank = rank4
+
+      call prep_arr_write(rank, 1, area_type, loffs, chunk_dims, dimsf, file_id, dname, memspace, plist_id, filespace, dset_id, dplist_id, dfilespace)
+
+      ! write data
+      call h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, pa4d(:, lleft(xdim):lright(xdim), lleft(ydim):lright(ydim), lleft(zdim):lright(zdim)), &
+           &          dimsf(:), error, file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
+
+      call clean_arr_write(memspace, plist_id, filespace, dset_id, dplist_id, dfilespace)
+
+   end subroutine write_4darr_to_restart
+
+   subroutine write_3darr_to_restart(file_id, pa3d, area_type, dname)
+
+      use constants,  only: xdim, ydim, zdim, ndims
+      use dataio_pub, only: die
+      use hdf5,       only: HID_T, HSIZE_T, H5T_NATIVE_DOUBLE, h5dwrite_f
+
+      implicit none
+
+      integer(HID_T), intent(in)                    :: file_id   !> File identifier
       real, pointer, dimension(:,:,:), intent(in)   :: pa3d      !> 3-D array pointer, mutually exclusive with pa4d
       integer, intent(in)                           :: area_type !> no boundaries, only outer boundaries or all boundaries
       character(len=*), intent(in)                  :: dname
@@ -1022,40 +1068,27 @@ contains
 
       integer, dimension(ndims) :: area, lleft, lright, loffs, chnk
 
-      integer :: ir, rank
+      integer :: rank
       integer :: error
+
+      if (.not. associated(pa3d)) call die("[dataio_hdf5:write_3darr_to_restart] Null pointer given.")
 
       call set_dims_to_write(area_type, area, chnk, lleft, lright, loffs)
 
       dimsf = [1, area(:)]      ! Dataset dimensions
       chunk_dims = [1, chnk(:)] ! Chunks dimensions
 
-      if (associated(pa4d)) then
-         if (associated(pa3d)) call die("[dataio_hdf5:write_arr_to_restart] Cannot handle rank-3 and rank-4 arrays at once.")
-         rank = rank4
-         dimsf(1) = size(pa4d,1)
-         chunk_dims(1) = dimsf(1)
-      else
-         if (.not. associated(pa3d)) call die("[dataio_hdf5:write_arr_to_restart] Need either rank-3 or rank-4 array to write.")
-         rank = ndims
-      endif
-      ir = rank4 - rank + 1 ! 1 for 4-D arrays, 2 for 3-D arrays (to simplify use of count(:), offset(:), stride(:), block(:), dimsf(:) and chunk_dims(:)
+      rank = ndims
 
-      call prep_arr_write(rank, ir, area_type, loffs, chunk_dims, dimsf, file_id, dname, memspace, plist_id, filespace, dset_id, dplist_id, dfilespace)
+      call prep_arr_write(rank, 2, area_type, loffs, chunk_dims, dimsf, file_id, dname, memspace, plist_id, filespace, dset_id, dplist_id, dfilespace)
 
       ! write data
-      if (associated(pa4d)) then
-         call h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, pa4d(:, lleft(xdim):lright(xdim), lleft(ydim):lright(ydim), lleft(zdim):lright(zdim)), &
-              &          dimsf(ir:), error, file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
-      else if (associated(pa3d)) then
-         call h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, pa3d(lleft(xdim):lright(xdim), lleft(ydim):lright(ydim), lleft(zdim):lright(zdim)), &
-              &          dimsf(ir:), error, file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
-      endif
+      call h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, pa3d(lleft(xdim):lright(xdim), lleft(ydim):lright(ydim), lleft(zdim):lright(zdim)), &
+           &          dimsf(2:), error, file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
 
       call clean_arr_write(memspace, plist_id, filespace, dset_id, dplist_id, dfilespace)
 
-   end subroutine write_arr_to_restart
-
+   end subroutine write_3darr_to_restart
    !----------------------------------------------------------------------------------
    !
    !  WRITE Axes
