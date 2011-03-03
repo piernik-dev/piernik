@@ -117,7 +117,7 @@ env.dat: piernik.def *.h $(SRCS_V)
 
 head_block2='''
 \tsed -n '/Id:/p' *.h $(SRCS_V) | column -t; \\
-\tsed -e '/^$$/ d' -e "/^\// d" piernik.def ) > env.dat
+\tawk '{print}' piernik.def | sed -e '/^$$/ d' -e "/^\// d" ) > env.dat
 
 version.F90: env.dat
 \t@( $(ECHO) -e "module version\\n   implicit none\\n   public\\n"; \\
