@@ -167,6 +167,8 @@ def qa_checks(files,options):
       for obj in parse_f90file(pfile,f,warns):
          if (debug): print obj
          part = np.array(pfile[obj['beg']:obj['end']])
+         # False refs need to be done before removal of types in module body
+         qa_false_refs(part,obj['name'],warns,f)
          if(obj['type'] == 'mod'):
             # module body is always last, remove lines that've been already checked
             part = np.delete(part,np.array(clean_ind)-obj['beg'])
@@ -174,7 +176,6 @@ def qa_checks(files,options):
          else:
             clean_ind += range(obj['beg'],obj['end']+1)
 
-         qa_false_refs(part,obj['name'],warns,f)
          qa_depreciated_syntax(part,obj['name'],warns,f)
          if(obj['type'] != 'type'):
             qa_have_implicit(part,obj['name'],errors,f)
