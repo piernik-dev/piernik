@@ -83,10 +83,8 @@ contains
       use fluidindex,    only: ibx, iby, ibz
       use grid,          only: cg
       use mpi,           only: MPI_DOUBLE_PRECISION
-      use mpisetup,      only: bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr, &
-           &                   ierr, req, comm3d, procxl, procxr, procyl, procyr, proczl, proczr, status, &
-           &                   psize, procxyl, procyxl, pcoords, comm
-      use constants,     only: MAG, xdim, ydim, zdim, LO, HI, BND, DOM
+      use mpisetup,      only: ierr, req, comm3d, procxl, procxr, procyl, procyr, proczl, proczr, status, psize, procxyl, procyxl, pcoords, comm
+      use constants,     only: MAG, xdim, ydim, zdim, LO, HI, BND, DOM, BND_MPI, BND_PER, BND_REF, BND_OUT,BND_COR, BND_SHE, BND_INF
 #ifdef SHEAR
       use shear,         only: eps,delj
 #endif /* SHEAR */
@@ -118,7 +116,7 @@ contains
             send_left (:,:,:,:)  = b(:, cg%is:cg%isb,:,:)
             send_right(:,:,:,:)  = b(:, cg%ieb:cg%ie,:,:)
 
-            if (bnd_xl == "she") then
+            if (cg%bnd(xdim, LO) == BND_SHE) then
 !
 ! przesuwamy o calkowita liczbe komorek + periodyczny wb w kierunku y
 !
@@ -131,9 +129,9 @@ contains
                send_left (:,:,:,:)  = (1.+eps)*(1.-eps) * send_left (:,:,:,:) &
                                       -0.5*eps*(1.-eps) * cshift(send_left (:,:,:,:),shift=-1,dim=3) &
                                       +0.5*eps*(1.+eps) * cshift(send_left (:,:,:,:),shift=1,dim=3)
-            endif ! (bnd_xl == "she")
+            endif ! (cg%bnd(xdim, LO) == BND_SHE)
 
-            if (bnd_xr == "she") then
+            if (cg%bnd(xdim, HI) == BND_SHE) then
 !
 ! przesuwamy o calkowita liczbe komorek + periodyczny wb w kierunku y
 !
@@ -146,7 +144,7 @@ contains
                send_right (:,:,:,:) = (1.+eps)*(1.-eps) * send_right (:,:,:,:) &
                                       -0.5*eps*(1.-eps) * cshift(send_right (:,:,:,:),shift=1,dim=3) &
                                       +0.5*eps*(1.+eps) * cshift(send_right (:,:,:,:),shift=-1,dim=3)
-            endif ! (bnd_xr == "she")
+            endif ! (cg%bnd(xdim, HI) == BND_SHE)
 !
 ! wysylamy na drugi brzeg
 !
@@ -204,7 +202,7 @@ contains
 
 ! MPI + non-MPI corner-periodic boundary condition
 
-      if (bnd_xl == "cor") then
+      if (cg%bnd(xdim, LO) == BND_COR) then
 !   - lower to left
          if (pcoords(1) == 0 .and. pcoords(2) == 0) then
             do i=1, cg%nb
@@ -239,7 +237,7 @@ contains
          endif
       endif
 
-      if (bnd_yl == "cor") then
+      if (cg%bnd(ydim, LO) == BND_COR) then
 !   - left to lower
          if (pcoords(2) == 0 .and. pcoords(1) == 0 ) then
             do j=1, cg%nb
@@ -284,13 +282,12 @@ contains
 
 ! Non-MPI boundary conditions
       if (frun) then
-         bnd_xl_not_provided = any( [bnd_xl(1:3) == "cor", bnd_xl(1:3) == "inf", bnd_xl(1:3) == "mpi", bnd_xl(1:3) == "ref", bnd_xl(1:3) == "she"] )
-         bnd_xr_not_provided = any( [bnd_xr(1:3) == "cor", bnd_xr(1:3) == "inf", bnd_xr(1:3) == "mpi", bnd_xr(1:3) == "ref", bnd_xr(1:3) == "she"] )
-         bnd_yl_not_provided = any( [bnd_yl(1:3) == "cor", bnd_yl(1:3) == "inf", bnd_yl(1:3) == "mpi", bnd_yl(1:3) == "ref" ] )
-         bnd_yr_not_provided = any( [bnd_yr(1:3) == "cor", bnd_yr(1:3) == "inf", bnd_yr(1:3) == "mpi", bnd_yr(1:3) == "ref" ] )
-         bnd_zl_not_provided = any( [bnd_zl(1:3) == "inf", bnd_zl(1:3) == "ref", bnd_zl(1:3) == "mpi" ] )
-         bnd_zr_not_provided = any( [bnd_zr(1:3) == "inf", bnd_zr(1:3) == "ref", bnd_zr(1:3) == "mpi" ] )
-         frun = .false.
+         bnd_xl_not_provided = any( [BND_COR, BND_INF, BND_REF, BND_MPI, BND_SHE] == cg%bnd(xdim, LO))
+         bnd_xr_not_provided = any( [BND_COR, BND_INF, BND_REF, BND_MPI, BND_SHE] == cg%bnd(xdim, HI))
+         bnd_yl_not_provided = any( [BND_COR, BND_INF, BND_REF, BND_MPI ] == cg%bnd(ydim, LO))
+         bnd_yr_not_provided = any( [BND_COR, BND_INF, BND_REF, BND_MPI ] == cg%bnd(ydim, HI))
+         bnd_zl_not_provided = any( [BND_INF, BND_REF, BND_MPI ] == cg%bnd(zdim, LO))
+         bnd_zr_not_provided = any( [BND_INF, BND_REF, BND_MPI ] == cg%bnd(zdim, HI))
       endif
 
       if (dim=="xdim" .and. bnd_xl_not_provided .and. bnd_xr_not_provided) return  ! avoid triple case
@@ -300,82 +297,82 @@ contains
       select case (dim)
          case ("xdim")
 
-            select case (bnd_xl(1:3))
-               case ("cor", "inf", "mpi", "ref", "she")
+            select case (cg%bnd(xdim, LO))
+               case (BND_COR, BND_INF, BND_MPI, BND_REF, BND_SHE)
                   ! Do nothing
-               case ("per")
+               case (BND_PER)
                   b(:,1:cg%nb,:,:)              = b(:, cg%ieb:cg%ie,:,:)
-               case ("out")
+               case (BND_OUT)
                   b(:,1,:,:) = b(:,2,:,:)
                case default
-                  write(msg,'(4a)') "[magboundaries:bnd_b]: Boundary condition ",bnd_xl," not implemented in ",dim
+                  write(msg,'(4a)') "[magboundaries:bnd_b]: Boundary condition ",cg%bnd(xdim, LO)," not implemented in ",dim
                   call warn(msg)
-            end select  ! (bnd_xl)
+            end select  ! (cg%bnd(xdim, LO))
 
-            select case (bnd_xr(1:3))
-               case ("cor", "inf", "mpi", "ref", "she")
+            select case (cg%bnd(xdim, HI))
+               case (BND_COR, BND_INF, BND_MPI, BND_REF, BND_SHE)
                   ! Do nothing
-               case ("per")
+               case (BND_PER)
                   b(:, cg%ie+1:cg%nx,:,:) = b(:, cg%is:cg%isb,:,:)
-               case ("out")
+               case (BND_OUT)
                   b(:, cg%nx,:,:) = b(:, cg%nx-1,:,:)
                case default
-                  write(msg,'(4a)') "[magboundaries:bnd_b]: Boundary condition ",bnd_xr," not implemented in ",dim
+                  write(msg,'(4a)') "[magboundaries:bnd_b]: Boundary condition ",cg%bnd(xdim, HI)," not implemented in ",dim
                   call warn(msg)
-            end select  ! (bnd_xr)
+            end select  ! (cg%bnd(xdim, HI))
 
          case ("ydim")
 
-            select case (bnd_yl(1:3))
-               case ("cor", "inf", "mpi", "ref")
+            select case (cg%bnd(ydim, LO))
+               case (BND_COR, BND_INF, BND_MPI, BND_REF)
                   ! Do nothing
-               case ("per")
+               case (BND_PER)
                   b(:,:,1:cg%nb,:)              = b(:,:, cg%jeb:cg%je,:)
-               case ("out")
+               case (BND_OUT)
                   b(:,:,1,:) = b(:,:,2,:)
                case default
-                  write(msg,'(4a)') "[magboundaries:bnd_b]: Boundary condition ",bnd_yl," not implemented in ",dim
+                  write(msg,'(4a)') "[magboundaries:bnd_b]: Boundary condition ",cg%bnd(ydim, LO)," not implemented in ",dim
                   call warn(msg)
-            end select  ! (bnd_yl)
+            end select  ! (cg%bnd(ydim, LO))
 
-            select case (bnd_yr(1:3))
-               case ("cor", "inf", "mpi", "ref")
+            select case (cg%bnd(ydim, HI))
+               case (BND_COR, BND_INF, BND_MPI, BND_REF)
                   ! Do nothing
-               case ("per")
+               case (BND_PER)
                   b(:,:, cg%je+1:cg%ny,:) = b(:,:, cg%js:cg%jsb,:)
-               case ("out")
+               case (BND_OUT)
                   b(:,:, cg%ny,:) = b(:,:, cg%ny-1,:)
                case default
-                  write(msg,'(4a)') "[magboundaries:bnd_b]: Boundary condition ",bnd_yr," not implemented in ",dim
+                  write(msg,'(4a)') "[magboundaries:bnd_b]: Boundary condition ",cg%bnd(ydim, HI)," not implemented in ",dim
                   call warn(msg)
 
-            end select  ! (bnd_yr)
+            end select  ! (cg%bnd(ydim, HI))
 
          case ("zdim")
 
-            select case (bnd_zl(1:3))
-               case ("mpi", "ref")
+            select case (cg%bnd(zdim, LO))
+               case (BND_MPI, BND_REF)
                   ! Do nothing
-               case ("per")
+               case (BND_PER)
                   b(:,:,:,1:cg%nb)              = b(:,:,:, cg%keb:cg%ke)
-               case ("out")
+               case (BND_OUT)
                   b(:,:,:,1) = b(:,:,:,2)
                case default
-                  write(msg,'(4a)') "[magboundaries:bnd_b]: Boundary condition ",bnd_zl," not implemented in ",dim
+                  write(msg,'(4a)') "[magboundaries:bnd_b]: Boundary condition ",cg%bnd(zdim, LO)," not implemented in ",dim
                   call warn(msg)
-            end select  ! (bnd_zl)
+            end select  ! (cg%bnd(zdim, LO))
 
-            select case (bnd_zr(1:3))
-               case ("mpi", "ref")
+            select case (cg%bnd(zdim, HI))
+               case (BND_MPI, BND_REF)
                   ! Do nothing
-               case ("per")
+               case (BND_PER)
                   b(:,:,:, cg%ke+1:cg%nz) = b(:,:,:, cg%ks:cg%ksb)
-               case ("out")
+               case (BND_OUT)
                   b(:,:,:, cg%nz) = b(:,:,:, cg%nz-1)
                case default
-                  write(msg,'(4a)') "[magboundaries:bnd_b]: Boundary condition ",bnd_zr," not implemented in ",dim
+                  write(msg,'(4a)') "[magboundaries:bnd_b]: Boundary condition ",cg%bnd(zdim, HI)," not implemented in ",dim
                   call warn(msg)
-            end select  ! (bnd_zr)
+            end select  ! (cg%bnd(zdim, HI))
 
       end select  ! (dim)
 
@@ -385,9 +382,9 @@ contains
 
    subroutine bnd_emf(var, name, dim)
 
+      use constants,     only: xdim, ydim, zdim, LO, HI, BND_MPI, BND_PER, BND_REF, BND_OUT, BND_COR, BND_SHE, BND_INF
       use dataio_pub,    only: msg, warn
       use grid,          only: cg
-      use mpisetup,      only: bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr
 
       implicit none
 
@@ -408,12 +405,12 @@ contains
       real                                  :: bndsign
 
       if (frun) then
-         bnd_xl_not_provided = any( [bnd_xl(1:3) == "cor", bnd_xl(1:3) == "inf", bnd_xl(1:3) == "per", bnd_xl(1:3) == "mpi", bnd_xl(1:3) == "she"] )
-         bnd_xr_not_provided = any( [bnd_xr(1:3) == "cor", bnd_xr(1:3) == "inf", bnd_xr(1:3) == "per", bnd_xr(1:3) == "mpi", bnd_xr(1:3) == "she"] )
-         bnd_yl_not_provided = any( [bnd_yl(1:3) == "cor", bnd_yl(1:3) == "inf", bnd_yl(1:3) == "per", bnd_yl(1:3) == "mpi" ] )
-         bnd_yr_not_provided = any( [bnd_yr(1:3) == "cor", bnd_yr(1:3) == "inf", bnd_yr(1:3) == "per", bnd_yr(1:3) == "mpi" ] )
-         bnd_zl_not_provided = any( [bnd_zl(1:3) == "inf", bnd_zl(1:3) == "per", bnd_zl(1:3) == "mpi" ] )
-         bnd_zr_not_provided = any( [bnd_zr(1:3) == "inf", bnd_zr(1:3) == "per", bnd_zr(1:3) == "mpi" ] )
+         bnd_xl_not_provided = any( [BND_COR, BND_INF, BND_PER, BND_MPI, BND_SHE] == cg%bnd(xdim, LO))
+         bnd_xr_not_provided = any( [BND_COR, BND_INF, BND_PER, BND_MPI, BND_SHE] == cg%bnd(xdim, HI))
+         bnd_yl_not_provided = any( [BND_COR, BND_INF, BND_PER, BND_MPI ] == cg%bnd(ydim, LO))
+         bnd_yr_not_provided = any( [BND_COR, BND_INF, BND_PER, BND_MPI ] == cg%bnd(ydim, HI))
+         bnd_zl_not_provided = any( [BND_INF, BND_PER, BND_MPI ] == cg%bnd(zdim, LO))
+         bnd_zr_not_provided = any( [BND_INF, BND_PER, BND_MPI ] == cg%bnd(zdim, HI))
          frun = .false.
       endif
 
@@ -427,7 +424,7 @@ contains
       select case (dim)
          case ("xdim")
 
-            if (any( [bnd_xl(1:3) == "ref", bnd_xr(1:3) == "ref", bnd_xl(1:3) == "out", bnd_xr(1:3) == "out"] )) then
+            if (any( [cg%bnd(xdim, LO) == BND_REF, cg%bnd(xdim, HI) == BND_REF, cg%bnd(xdim, LO) == BND_OUT, cg%bnd(xdim, HI) == BND_OUT] )) then
                select case (name)
                   case ("vxby","vxbz")
                      call compute_bnd_indxs(1, cg%nxb,ledge,redge,lnbcells,rnbcells,bndsign,zndiff,rrbase)
@@ -438,47 +435,47 @@ contains
                end select  ! (name)
             endif
 
-            select case (bnd_xl(1:3))
-               case ("cor", "inf", "mpi", "per", "she")
+            select case (cg%bnd(xdim, LO))
+               case (BND_COR, BND_INF, BND_MPI, BND_PER, BND_SHE)
                   ! Do nothing
-               case ("ref")
+               case (BND_REF)
                   if (zndiff == 1) var(ledge,:,:) = 0.0
                   do ib=1,lnbcells
                      var(lnbcells+1-ib,:,:) = bndsign * var(ledge+ib,:,:)
                   enddo
-               case ("out")
+               case (BND_OUT)
                   ledge = ledge + 1 ; lnbcells = lnbcells + 1
                   dvarx = var(ledge+1,:,:)-var(ledge,:,:)
                   do ib=1,lnbcells
                      var(ib,:,:) = var(cg%is,:,:) - real(cg%is-ib)*dvarx
                   enddo
                case default
-                  write(msg,'(6a)') "[magboundaries:bnd_emf]: Boundary condition ",bnd_xl," not implemented for ",name, " in ", dim
+                  write(msg,'(6a)') "[magboundaries:bnd_emf]: Boundary condition ",cg%bnd(xdim, LO)," not implemented for ",name, " in ", dim
                   call warn(msg)
-            end select  ! (bnd_xl)
+            end select  ! (cg%bnd(xdim, LO))
 
-            select case (bnd_xr(1:3))
-               case ("cor", "inf", "mpi", "per", "she")
+            select case (cg%bnd(xdim, HI))
+               case (BND_COR, BND_INF, BND_MPI, BND_PER, BND_SHE)
                   ! Do nothing
-               case ("ref")
+               case (BND_REF)
                   if (zndiff == 1) var(redge,:,:) = 0.0
                   do ib=1,rnbcells
                      var(redge+ib,:,:) = bndsign * var(rrbase-ib,:,:)
                   enddo
-               case ("out")
+               case (BND_OUT)
 !                  dvarx = var(rrbase,:,:)-var(rrbase-1,:,:) original
                   dvarx = var(redge,:,:)-var(redge-1,:,:)
                   do ib=1,rnbcells
                      var(redge+ib,:,:) = var(redge,:,:) + real(ib)*dvarx
                   enddo
                case default
-                  write(msg,'(6a)') "[magboundaries:bnd_emf]: Boundary condition ",bnd_xr," not implemented for ",name, " in ", dim
+                  write(msg,'(6a)') "[magboundaries:bnd_emf]: Boundary condition ",cg%bnd(xdim, HI)," not implemented for ",name, " in ", dim
                   call warn(msg)
-            end select ! (bnd_xr)
+            end select ! (cg%bnd(xdim, HI))
 
          case ("ydim")
 
-            if (any( [bnd_yl(1:3) == "ref", bnd_yr(1:3) == "ref", bnd_yl(1:3) == "out", bnd_yr(1:3) == "out"] )) then
+            if (any( [cg%bnd(ydim, LO) == BND_REF, cg%bnd(ydim, HI) == BND_REF, cg%bnd(ydim, LO) == BND_OUT, cg%bnd(ydim, HI) == BND_OUT] )) then
                select case (name)
                   case ("vybz","vybx")
                      call compute_bnd_indxs(1, cg%nyb,ledge,redge,lnbcells,rnbcells,bndsign,zndiff,rrbase)
@@ -489,47 +486,47 @@ contains
                end select  ! (name)
             endif
 
-            select case (bnd_yl(1:3))
-               case ("cor", "inf", "mpi", "per")
+            select case (cg%bnd(ydim, LO))
+               case (BND_COR, BND_INF, BND_MPI, BND_PER)
                   ! Do nothing
-               case ("ref")
+               case (BND_REF)
                   if (zndiff == 1) var(:,ledge,:) = 0.0
                   do ib=1,lnbcells
                      var(:,lnbcells+1-ib,:) = bndsign * var(:,ledge+ib,:)
                   enddo
-               case ("out")
+               case (BND_OUT)
                   ledge = ledge + 1 ; lnbcells = lnbcells + 1
                   dvary = var(:,ledge+1,:)-var(:,ledge,:)
                   do ib=1,lnbcells
                      var(:,ib,:) = var(:, cg%js,:) - real(cg%js-ib)*dvary
                   enddo
                case default
-                  write(msg,'(6a)') "[magboundaries:bnd_emf]: Boundary condition ",bnd_yl," not implemented for ",name, " in ", dim
+                  write(msg,'(6a)') "[magboundaries:bnd_emf]: Boundary condition ",cg%bnd(ydim, LO)," not implemented for ",name, " in ", dim
                   call warn(msg)
-            end select  ! (bnd_yl)
+            end select  ! (cg%bnd(ydim, LO))
 
-            select case (bnd_yr(1:3))
-               case ("cor", "inf", "mpi", "per")
+            select case (cg%bnd(ydim, HI))
+               case (BND_COR, BND_INF, BND_MPI, BND_PER)
                   ! Do nothing
-               case ("ref")
+               case (BND_REF)
                   if (zndiff == 1) var(:,redge,:) = 0.0
                   do ib=1,rnbcells
                      var(:,redge+ib,:) = bndsign * var(:,rrbase-ib,:)
                   enddo
-               case ("out")
+               case (BND_OUT)
 !                  dvary = var(:,rrbase,:)-var(:,rrbase-1,:) original
                   dvary = var(:,redge,:)-var(:,redge-1,:)
                   do ib=1,rnbcells
                      var(:,redge+ib,:) = var(:,redge,:) + real(ib)*dvary
                   enddo
                case default
-                  write(msg,'(6a)') "[magboundaries:bnd_emf]: Boundary condition ",bnd_yr," not implemented for ",name, " in ", dim
+                  write(msg,'(6a)') "[magboundaries:bnd_emf]: Boundary condition ",cg%bnd(ydim, HI)," not implemented for ",name, " in ", dim
                   call warn(msg)
-            end select ! (bnd_yr)
+            end select ! (cg%bnd(ydim, HI))
 
          case ("zdim")
 
-            if (any( [bnd_zl(1:3) == "ref", bnd_zr(1:3) == "ref", bnd_zl(1:3) == "out", bnd_zr(1:3) == "out"] )) then
+            if (any( [cg%bnd(zdim, LO) == BND_REF, cg%bnd(zdim, HI) == BND_REF, cg%bnd(zdim, LO) == BND_OUT, cg%bnd(zdim, HI) == BND_OUT] )) then
                select case (name)
                   case ("vzbx","vzby")
                      call compute_bnd_indxs(1, cg%nzb,ledge,redge,lnbcells,rnbcells,bndsign,zndiff,rrbase)
@@ -540,43 +537,43 @@ contains
                end select  ! (name)
             endif
 
-            select case (bnd_zl(1:3))
-               case ("inf", "mpi", "per")
+            select case (cg%bnd(zdim, LO))
+               case (BND_INF, BND_MPI, BND_PER)
                   ! Do nothing
-               case ("ref")
+               case (BND_REF)
                   if (zndiff == 1) var(:,:,ledge) = 0.0
                   do ib=1,lnbcells
                      var(:,:,lnbcells+1-ib) = bndsign * var(:,:,ledge+ib)
                   enddo
-               case ("out")
+               case (BND_OUT)
                   ledge = ledge + 1 ; lnbcells = lnbcells + 1
                   dvarz = var(:,:,ledge+1)-var(:,:,ledge)
                   do ib=1,lnbcells
                      var(:,:,ib) = var(:,:, cg%ks) - real(cg%ks-ib)*dvarz
                   enddo
                case default
-                  write(msg,'(6a)') "[magboundaries:bnd_emf]: Boundary condition ",bnd_zl," not implemented for ",name, " in ", dim
+                  write(msg,'(6a)') "[magboundaries:bnd_emf]: Boundary condition ",cg%bnd(zdim, LO)," not implemented for ",name, " in ", dim
                   call warn(msg)
-            end select  ! (bnd_zl)
+            end select  ! (cg%bnd(zdim, LO))
 
-            select case (bnd_zr(1:3))
-               case ("inf", "mpi", "per")
+            select case (cg%bnd(zdim, HI))
+               case (BND_INF, BND_MPI, BND_PER)
                   ! Do nothing
-               case ("ref")
+               case (BND_REF)
                   if (zndiff == 1) var(:,:,redge) = 0.0
                   do ib=1,rnbcells
                      var(:,:,redge+ib) = bndsign * var(:,:,rrbase-ib)
                   enddo
-               case ("out")
+               case (BND_OUT)
 !                  dvarz = var(:,:,rrbase)-var(:,:,rrbase-1) original
                   dvarz = var(:,:,redge)-var(:,:,redge-1)
                   do ib=1,rnbcells
                      var(:,:,redge+ib) = var(:,:,redge) + real(ib)*dvarz
                   enddo
                case default
-                  write(msg,'(6a)') "[magboundaries:bnd_emf]: Boundary condition ",bnd_zr," not implemented for ",name, " in ", dim
+                  write(msg,'(6a)') "[magboundaries:bnd_emf]: Boundary condition ",cg%bnd(zdim, HI)," not implemented for ",name, " in ", dim
                   call warn(msg)
-            end select ! (bnd_zr)
+            end select ! (cg%bnd(zdim, HI))
 
       end select ! (dim)
 

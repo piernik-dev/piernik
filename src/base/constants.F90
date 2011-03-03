@@ -104,6 +104,8 @@ module constants
    integer, parameter :: BND_OUTH    = BND_OUTD + 1      !< hydrostatic boundary
    integer, parameter :: BND_COR     = BND_OUTH + 1      !< corner boundary
    integer, parameter :: BND_SHE     = BND_COR  + 1      !< shear boundary
+   integer, parameter :: BND_INF     = BND_SHE  + 1      !< 'inf', COMMENT ME
+   integer, parameter :: BND_USER    = BND_INF  + 1      !< user boundaries (provided in read_problem_par)
    integer, parameter :: BND_INVALID = BND_MPI  - 1      !< non-recognized boundary
 
    ! first index of cg%mbc(:,:,:) array

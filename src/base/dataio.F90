@@ -195,17 +195,17 @@ contains
 !<
    subroutine init_dataio
 
-      use constants,       only: small, cwdlen, cbuff_len, PIERNIK_INIT_IO_IC
+      use constants,       only: small, cwdlen, cbuff_len, PIERNIK_INIT_IO_IC, BND_USER
       use dataio_hdf5,     only: init_hdf5, read_restart_hdf5, parfile, parfilelines
       use dataio_pub,      only: chdf, nres, last_hdf_time, step_hdf, next_t_log, next_t_tsl, log_file_initialized, log_file, maxparfilelines, cwd, &
            &                     tmp_log_file, msglen, printinfo, warn, msg, nhdf, nstep_start, set_container_chdf, get_container, die, code_progress
       use dataio_pub,      only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml  ! QA_WARN required for diff_nml
       use fluidboundaries, only: all_fluid_boundaries
-      use mpisetup,        only: lbuff, ibuff, rbuff, cbuff, master, slave, comm, ierr, buffer_dim, &
-           &                      t, nstep, bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr
+      use mpisetup,        only: lbuff, ibuff, rbuff, cbuff, master, slave, comm, ierr, buffer_dim, t, nstep
       use mpi,             only: MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL
       use timer,           only: time_left
       use version,         only: nenv,env, init_version
+      use grid,            only: cg
 #ifdef MAGNETIC
       use magboundaries,   only: all_mag_boundaries
 #endif /* MAGNETIC */
@@ -421,7 +421,7 @@ contains
          nres_start  = nrestart
          nhdf_start  = nhdf-1
          if (new_id /= '') run_id=new_id
-         if (all([bnd_xl,bnd_xr,bnd_yl,bnd_yr,bnd_zl,bnd_zr] /= "user")) then
+         if (all(cg%bnd(:,:) /= BND_USER)) then
             call all_fluid_boundaries
 #ifdef MAGNETIC
             call all_mag_boundaries

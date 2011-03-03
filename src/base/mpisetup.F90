@@ -44,13 +44,13 @@ module mpisetup
    integer, parameter :: MPI_STATUS_SIZE = 5  ! taken from mpi to silence warnings
 
    private
-   public :: bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr, &
-        &    buffer_dim, cbuff, cfl, cfl_max, cflcontrol, cfl_violated, &
+   public :: buffer_dim, cbuff, cfl, cfl_max, cflcontrol, cfl_violated, &
         &    cfr_smooth, cleanup_mpi, comm, comm3d, dt, dt_initial, dt_max_grow, dt_min, dt_old, dtm, err, ibuff, ierr, info, init_mpi, &
         &    integration_order, lbuff, limiter, mpifind, nproc, nstep, pcoords, proc, procxl, procxr, procxyl, procyl, procyr, procyxl, proczl, &
         &    proczr, psize, rbuff, req, smalld, smallei, smallp, status, t, use_smalld, magic_mass, local_magic_mass, master, slave, &
-        &    nb, has_dir, eff_dim, relax_time, grace_period_passed, dom, geometry_type, translate_bnds_to_ints, &
+        &    nb, has_dir, eff_dim, relax_time, grace_period_passed, dom, geometry_type, translate_bnds_to_ints_dom, &
         &    have_mpi, is_uneven
+   !bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr, &
 
    integer :: nproc, proc, ierr , rc, info
    integer :: status(MPI_STATUS_SIZE,4)
@@ -1007,11 +1007,27 @@ contains
    end subroutine Eratosthenes_sieve
 
 !-----------------------------------------------------------------------------
+!
+!  temporary wrapper
+!
+   function translate_bnds_to_ints_dom() result(tab)
+
+      use constants, only: ndims, LO, HI
+
+      implicit none
+
+      integer, dimension(ndims, LO:HI) :: tab
+
+      tab(:,:) = translate_bnds_to_ints([bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr])
+
+   end function translate_bnds_to_ints_dom
+
+!-----------------------------------------------------------------------------
 
    function translate_bnds_to_ints(bnds) result(tab)
 
       use constants, only: xdim, zdim, ndims, LO, HI, &
-         &                 BND_MPI, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_OUTH, BND_COR, BND_SHE, BND_INVALID
+         &                 BND_MPI, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_OUTH, BND_COR, BND_SHE, BND_USER, BND_INF, BND_INVALID
 
       implicit none
 
@@ -1039,6 +1055,10 @@ contains
                   tab(d, lh) = BND_COR
                case ('mpi')
                   tab(d, lh) = BND_MPI
+               case ('user')
+                  tab(d, lh) = BND_USER
+               case ('inf') ! what is this?
+                  tab(d, lh) = BND_INF
                case default
                   tab(d, lh) = BND_INVALID
             end select

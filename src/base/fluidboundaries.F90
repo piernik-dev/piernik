@@ -40,52 +40,53 @@ contains
    subroutine init_fluidboundaries
 
       use dataio_pub,            only: msg, warn, die, code_progress
-      use constants,             only: PIERNIK_INIT_MPI
+      use constants,             only: PIERNIK_INIT_MPI, xdim, LO, HI, &
+           &                           BND_MPI, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_COR, BND_SHE, BND_INF, BND_USER
       use fluidboundaries_funcs, only: bnd_null, bnd_xl_per, bnd_xl_ref, bnd_xl_out, bnd_xl_outd, bnd_xr_per, bnd_xr_ref, bnd_xr_out, bnd_xr_outd
       use fluidboundaries_pub,   only: user_bnd_xl, user_bnd_xr, func_bnd_xl, func_bnd_xr
-      use mpisetup,              only: bnd_xl, bnd_xr
+      use grid,                  only: cg
 
       implicit none
 
       if (code_progress < PIERNIK_INIT_MPI) call die("[fluidboundaries:init_fluidboundaries] MPI not initialized.") ! bnd_xl, bnd_xr
 
-      select case (bnd_xl)
-         case ('cor', 'inf', 'mpi', 'she', 'shef')
+      select case (cg%bnd(xdim, LO))
+         case (BND_COR, BND_MPI, BND_SHE, BND_INF)
             func_bnd_xl => bnd_null
-         case ('per')
+         case (BND_PER)
             func_bnd_xl => bnd_xl_per
-         case ('user')
+         case (BND_USER)
             func_bnd_xl => user_bnd_xl
-         case ('ref')
+         case (BND_REF)
             func_bnd_xl => bnd_xl_ref
-         case ('out')
+         case (BND_OUT)
             func_bnd_xl => bnd_xl_out
-         case ('outd')
+         case (BND_OUTD)
             func_bnd_xl => bnd_xl_outd
          case default
             func_bnd_xl => bnd_null
-            write(msg,'("[fluid_boundaries:init_fluidboundaries]: Left boundary condition ",a," not implemented in X-direction")') trim(bnd_xl)
+            write(msg,'("[fluid_boundaries:init_fluidboundaries]: Left boundary condition ",i3," not implemented in X-direction")') cg%bnd(xdim, LO)
             call warn(msg)
-      end select  ! (bnd_xl)
+      end select
 
-      select case (bnd_xr)
-         case ('cor', 'inf', 'mpi', 'she', 'shef')
+      select case (cg%bnd(xdim, HI))
+         case (BND_COR, BND_MPI, BND_SHE, BND_INF)
             func_bnd_xr => bnd_null
-         case ('per')
+         case (BND_PER)
             func_bnd_xr => bnd_xr_per
-         case ('user')
+         case (BND_USER)
             func_bnd_xr => user_bnd_xr
-         case ('ref')
+         case (BND_REF)
             func_bnd_xr => bnd_xr_ref
-         case ('out')
+         case (BND_OUT)
             func_bnd_xr => bnd_xr_out
-         case ('outd')
+         case (BND_OUTD)
             func_bnd_xr => bnd_xr_outd
          case default
             func_bnd_xr => bnd_null
-            write(msg,'("[fluid_boundaries:init_fluidboundaries]: Right boundary condition ",a," not implemented in X-direction")') trim(bnd_xr)
+            write(msg,'("[fluid_boundaries:init_fluidboundaries]: Right boundary condition ",i3," not implemented in X-direction")') cg%bnd(xdim, HI)
             call warn(msg)
-      end select  ! (bnd_xr)
+      end select
 
    end subroutine init_fluidboundaries
 
@@ -96,9 +97,9 @@ contains
       use fluidboundaries_pub, only: user_bnd_yl, user_bnd_yr, user_bnd_zl, user_bnd_zr, func_bnd_xl, func_bnd_xr
       use fluidindex,          only: flind, iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
       use grid,                only: cg
-      use mpisetup,            only: ierr, psize, proczl, proczr, procyl, procyr, procxl, procxr, procxyl, procyxl, smalld, &
-           &                         pcoords, bnd_xr, bnd_xl, bnd_yl, bnd_yr, bnd_zl, bnd_zr, req, status, comm, comm3d
-      use constants,           only: FLUID, xdim, ydim, zdim, LO, HI, BND, DOM
+      use mpisetup,            only: ierr, psize, proczl, proczr, procyl, procyr, procxl, procxr, procxyl, procyxl, smalld, pcoords, req, status, comm, comm3d
+      use constants,           only: FLUID, xdim, ydim, zdim, LO, HI, BND, DOM, &
+           &                         BND_MPI, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_OUTH, BND_COR, BND_SHE, BND_INF, BND_USER
       use mpi,                 only: MPI_DOUBLE_PRECISION
 #ifdef COSM_RAYS
       use initcosmicrays,      only: smallecr
@@ -147,7 +148,7 @@ contains
 !
 ! odejmujemy ped_y i energie odpowiadajace niezaburzonej rozniczkowej rotacji na lewym brzegu
 !
-         if (bnd_xl == 'she') then
+         if (cg%bnd(xdim, LO) == BND_SHE) then
             do i=1, cg%nb
                send_left (iarr_all_my,i,:,:) = send_left(iarr_all_my,i,:,:) &
                                          +qshear*omega * x(cg%nb+i)     * send_left(iarr_all_dn,i,:,:)
@@ -170,11 +171,11 @@ contains
             send_left (:,:,:,:)  = (1.+eps)*(1.-eps) * send_left (:,:,:,:) &
                                  -0.5*eps*(1.-eps) * cshift(send_left(:,:,:,:),shift=-1,dim=3) &
                                  +0.5*eps*(1.+eps) * cshift(send_left(:,:,:,:),shift=1 ,dim=3)
-         endif !(bnd_xl == 'she')
+         endif !(cg%bnd(xdim, LO) == BND_SHE)
 !
 ! odejmujemy ped_y i energie odpowiadajace niezaburzonej rozniczkowej rotacji na prawym brzegu
 !
-         if (bnd_xr == 'she') then
+         if (cg%bnd(xdim, HI) == BND_SHE) then
             do i=1, cg%nb
                send_right(iarr_all_my,i,:,:) = send_right(iarr_all_my,i,:,:) &
                                          +qshear*omega * x(cg%nxb+i)     * send_right(iarr_all_dn,i,:,:)
@@ -198,7 +199,7 @@ contains
             send_right (:,:,:,:) = (1.+eps)*(1.-eps) * send_right (:,:,:,:) &
                                  -0.5*eps*(1.-eps) * cshift(send_right(:,:,:,:),shift=1 ,dim=3) &
                                  +0.5*eps*(1.+eps) * cshift(send_right(:,:,:,:),shift=-1,dim=3)
-         endif !(bnd_xr == 'she')
+         endif !(cg%bnd(xdim, HI) == BND_SHE)
 !
 ! wysylamy na drugi brzeg
 !
@@ -212,7 +213,7 @@ contains
 !
 ! dodajemy ped_y i energie odpowiadajace niezaburzonej rozniczkowej rotacji na prawym brzegu
 !
-         if (bnd_xr == 'she') then
+         if (cg%bnd(xdim, HI) == BND_SHE) then
             do i=1, cg%nb
 #ifndef ISO
                recv_right (iarr_all_en,i,:,:) = recv_right (iarr_all_en,i,:,:) &
@@ -221,11 +222,11 @@ contains
                recv_right (iarr_all_my,i,:,:) = recv_right (iarr_all_my,i,:,:) &
                                            -qshear*omega * x(cg%ie+i)     * recv_right(iarr_all_dn,i,:,:)
             enddo
-         endif !(bnd_xr == 'she')
+         endif !(cg%bnd(xdim, HI) == BND_SHE)
 !
 ! dodajemy ped_y i energie odpowiadajace niezaburzonej rozniczkowej rotacji na lewym brzegu
 !
-         if (bnd_xl == 'she') then
+         if (cg%bnd(xdim, LO) == BND_SHE) then
             do i=1, cg%nb
 #ifndef ISO
                recv_left(iarr_all_en,i,:,:) = recv_left(iarr_all_en,i,:,:) &
@@ -234,7 +235,7 @@ contains
                recv_left(iarr_all_my,i,:,:) = recv_left(iarr_all_my,i,:,:) &
                                          -qshear*omega * x(i)     * recv_left(iarr_all_dn,i,:,:)
             enddo
-         endif !(bnd_xl == 'she')
+         endif !(cg%bnd(xdim, LO) == BND_SHE)
 
          u(:,1:cg%nb,:,:)              = recv_left(:,1:cg%nb,:,:)
          u(:, cg%ie+1:cg%nx,:,:) = recv_right(:,1:cg%nb,:,:)
@@ -249,7 +250,7 @@ contains
 
 #else /* FFTW */
 
-         if ( (bnd_xl == 'she').and.(bnd_xr == 'she')) then
+         if ( all(cg%bnd(xdim, LO:HI) == BND_SHE) ) then
 
          if (allocated(send_right)) deallocate(send_right)
          if (.not.allocated(send_right)) allocate(send_right(flind%all, cg%nb, cg%nyb, cg%nz))
@@ -323,7 +324,7 @@ contains
 
 ! MPI + non-MPI corner-periodic boundary condition
 
-      if (bnd_xl == 'cor') then
+      if (cg%bnd(xdim, LO) == BND_COR) then
 !   - lower to left
          if (pcoords(1) == 0 .and. pcoords(2) == 0) then
             do i=1, cg%nb
@@ -372,7 +373,7 @@ contains
          endif
       endif
 
-      if (bnd_yl == 'cor') then
+      if (cg%bnd(ydim, LO) == BND_COR) then
 !   - left to lower
          if (pcoords(2) == 0 .and. pcoords(1) == 0 ) then
             do j=1, cg%nb
@@ -446,14 +447,14 @@ contains
          call func_bnd_xr
       case (ydim)
 
-         select case (bnd_yl)
-         case ('cor', 'inf', 'mpi')
+         select case (cg%bnd(ydim, LO))
+         case (BND_COR, BND_INF, BND_MPI)
             ! Do nothing
-         case ('per')
+         case (BND_PER)
             u(:,:,1:cg%nb,:)                         = u(:,:, cg%jeb:cg%je,:)
-         case ('user')
+         case (BND_USER)
             call user_bnd_yl
-         case ('ref')
+         case (BND_REF)
             do ib=1, cg%nb
 
                u((/iarr_all_dn,iarr_all_mx,iarr_all_mz/),:, cg%js-ib,:)   = u((/iarr_all_dn,iarr_all_mx,iarr_all_mz/),:, cg%nb+ib,:)
@@ -465,14 +466,14 @@ contains
                u(iarr_all_crs,:, cg%js-ib,:)                 = u(iarr_all_crs,:, cg%nb+ib,:)
 #endif /* COSM_RAYS */
             enddo
-         case ('out')
+         case (BND_OUT)
             do ib=1, cg%nb
                u(:,:,ib,:)                         = u(:,:, cg%js,:)
 #ifdef COSM_RAYS
                u(iarr_all_crs,:,ib,:)                      = smallecr
 #endif /* COSM_RAYS */
             enddo
-         case ('outd')
+         case (BND_OUTD)
             do ib=1, cg%nb
 
                u((/iarr_all_dn,iarr_all_mx,iarr_all_mz/),:,ib,:)        = u((/iarr_all_dn,iarr_all_mx,iarr_all_mz/),:, cg%js,:)
@@ -485,18 +486,18 @@ contains
 #endif /* COSM_RAYS */
             enddo
          case default
-            write(msg,'("[fluid_boundaries:bnd_u]: Left boundary condition ",a," not implemented in Y-direction")') trim(bnd_yl)
+            write(msg,'("[fluid_boundaries:bnd_u]: Left boundary condition ",i3," not implemented in Y-direction")') cg%bnd(ydim, LO)
             call warn(msg)
-         end select  ! (bnd_yl)
+         end select  ! (cg%bnd(ydim, LO))
 
-         select case (bnd_yr)
-         case ('cor', 'inf', 'mpi')
+         select case (cg%bnd(ydim, HI))
+         case (BND_COR, BND_INF, BND_MPI)
             ! Do nothing
-         case ('per')
+         case (BND_PER)
             u(:,:, cg%je+1:cg%ny,:)            = u(:,:, cg%js:cg%jsb,:)
-         case ('user')
+         case (BND_USER)
             call user_bnd_yr
-         case ('ref')
+         case (BND_REF)
             do ib=1, cg%nb
 
                u((/iarr_all_dn,iarr_all_mx,iarr_all_mz/),:, cg%je+ib,:) = u((/iarr_all_dn,iarr_all_mx,iarr_all_mz/),:, cg%je+1-ib,:)
@@ -508,14 +509,14 @@ contains
                u(iarr_all_crs,:, cg%je+ib,:)               = u(iarr_all_crs,:, cg%je+1-ib,:)
 #endif /* COSM_RAYS */
             enddo
-         case ('out')
+         case (BND_OUT)
             do ib=1, cg%nb
                u(:,:, cg%je+ib,:)                  = u(:,:, cg%je,:)
 #ifdef COSM_RAYS
                u(iarr_all_crs,:, cg%je+ib,:)               = smallecr
 #endif /* COSM_RAYS */
             enddo
-         case ('outd')
+         case (BND_OUTD)
             do ib=1, cg%nb
 
                u((/iarr_all_dn,iarr_all_mx,iarr_all_mz/),:, cg%je+ib,:) = u((/iarr_all_dn,iarr_all_mx,iarr_all_mz/),:, cg%je,:)
@@ -528,20 +529,20 @@ contains
 #endif /* COSM_RAYS */
             enddo
          case default
-            write(msg,'("[fluid_boundaries:bnd_u]: Right boundary condition ",a," not implemented in Y-direction")') trim(bnd_yr)
+            write(msg,'("[fluid_boundaries:bnd_u]: Right boundary condition ",i3," not implemented in Y-direction")') cg%bnd(ydim, HI)
             call warn(msg)
-         end select  ! (bnd_yr)
+         end select  ! (cg%bnd(ydim, HI))
 
       case (zdim)
 
-         select case (bnd_zl)
-         case ('mpi')
+         select case (cg%bnd(zdim, LO))
+         case (BND_MPI)
             ! Do nothing if mpi
-         case ('user')
+         case (BND_USER)
             call user_bnd_zl
-         case ('per')
+         case (BND_PER)
             u(:,:,:,1:cg%nb)                         = u(:,:,:, cg%keb:cg%ke)
-         case ('ref')
+         case (BND_REF)
             do ib=1, cg%nb
 
                u((/iarr_all_dn,iarr_all_mx,iarr_all_my/),:,:, cg%ks-ib)   = u((/iarr_all_dn,iarr_all_mx,iarr_all_my/),:,:, cg%nb+ib)
@@ -553,14 +554,14 @@ contains
                u(iarr_all_crs,:,:, cg%ks-ib)                 = u(iarr_all_crs,:,:, cg%nb+ib)
 #endif /* COSM_RAYS */
             enddo
-         case ('out')
+         case (BND_OUT)
             do ib=1, cg%nb
                u(:,:,:,ib)                         = u(:,:,:, cg%ks)
 #ifdef COSM_RAYS
                u(iarr_all_crs,:,:,ib)                      = smallecr
 #endif /* COSM_RAYS */
             enddo
-         case ('outd')
+         case (BND_OUTD)
             do ib=1, cg%nb
 
                u((/iarr_all_dn,iarr_all_mx,iarr_all_my/),:,:,ib)        = u((/iarr_all_dn,iarr_all_mx,iarr_all_my/),:,:, cg%ks)
@@ -574,25 +575,25 @@ contains
 #endif /* COSM_RAYS */
             enddo
 #ifdef GRAV
-         case ('outh')
+         case (BND_OUTH)
             do ib=1, cg%nb
                kb = cg%ks-ib
                call outh_bnd(kb+1, kb, "min")
             enddo ! ib
 #endif /* GRAV */
          case default
-            write(msg,'("[fluid_boundaries:bnd_u]: Left boundary condition ",a," not implemented in Z-direction")') trim(bnd_zl)
+            write(msg,'("[fluid_boundaries:bnd_u]: Left boundary condition ",i3," not implemented in Z-direction")') cg%bnd(zdim, LO)
             call warn(msg)
-         end select  ! (bnd_zl)
+         end select  ! (cg%bnd(zdim, LO))
 
-         select case (bnd_zr)
-         case ('mpi')
+         select case (cg%bnd(zdim, HI))
+         case (BND_MPI)
             ! Do nothing if mpi
-         case ('user')
+         case (BND_USER)
             call user_bnd_zr
-         case ('per')
+         case (BND_PER)
             u(:,:,:, cg%ke+1:cg%nz)            = u(:,:,:, cg%ks:cg%ksb)
-         case ('ref')
+         case (BND_REF)
             do ib=1, cg%nb
 
                u((/iarr_all_dn,iarr_all_mx,iarr_all_my/),:,:, cg%ke+ib) = u((/iarr_all_dn,iarr_all_mx,iarr_all_my/),:,:, cg%ke+1-ib)
@@ -604,14 +605,14 @@ contains
                u(iarr_all_crs,:,:, cg%ke+ib)               = u(iarr_all_crs,:,:, cg%ke+1-ib)
 #endif /* COSM_RAYS */
             enddo
-         case ('out')
+         case (BND_OUT)
             do ib=1, cg%nb
                u(:,:,:, cg%ke+ib)                  = u(:,:,:, cg%ke)
 #ifdef COSM_RAYS
                u(iarr_all_crs,:,:, cg%ke+ib)               = smallecr
 #endif /* COSM_RAYS */
             enddo
-         case ('outd')
+         case (BND_OUTD)
             do ib=1, cg%nb
 
                u((/iarr_all_dn,iarr_all_mx,iarr_all_my/),:,:, cg%ke+ib) = u((/iarr_all_dn,iarr_all_mx,iarr_all_my/),:,:, cg%ke)
@@ -625,16 +626,16 @@ contains
 #endif /* COSM_RAYS */
             enddo
 #ifdef GRAV
-         case ('outh')
+         case (BND_OUTH)
             do ib=1, cg%nb
                kb = cg%ke-1+ib
                call outh_bnd(kb, kb+1, "max")
             enddo ! ib
 #endif /* GRAV */
          case default
-            write(msg,'("[fluid_boundaries:bnd_u]: Right boundary condition ",a," not implemented in Z-direction")') trim(bnd_zr)
+            write(msg,'("[fluid_boundaries:bnd_u]: Right boundary condition ",i3," not implemented in Z-direction")') cg%bnd(zdim, HI)
             call warn(msg)
-         end select  ! (bnd_zr)
+         end select  ! (cg%bnd(zdim, HI))
 
       end select  ! (dim)
 
