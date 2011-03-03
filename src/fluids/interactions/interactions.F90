@@ -54,12 +54,12 @@ module interactions
    logical :: has_interactions
 
    interface
-      subroutine fluid_interactions_iface(dens,vel,acc)
+      function fluid_interactions_iface(dens,vel) result(acc)
          implicit none
          real, dimension(:,:), pointer, intent(in)  :: dens
          real, dimension(:,:), pointer, intent(in)  :: vel
-         real, dimension(size(dens,1),size(dens,2)), intent(out) :: acc
-      end subroutine fluid_interactions_iface
+         real, dimension(size(dens,1),size(dens,2)) :: acc
+      end function fluid_interactions_iface
    end interface
 
    procedure(fluid_interactions_iface), pointer :: fluid_interactions
@@ -188,50 +188,50 @@ contains
 
    end subroutine interactions_grace_passed
 
-   subroutine fluid_interactions_dummy(dens, velx, acc)
+   function fluid_interactions_dummy(dens, velx) result(acc)
 
       implicit none
 
-      real, dimension(:,:), intent(in)  :: dens
-      real, dimension(:,:), intent(in)  :: velx
-      real, dimension(size(dens,1),size(dens,2)), intent(out) :: acc
+      real, dimension(:,:), intent(in)           :: dens
+      real, dimension(:,:), intent(in)           :: velx
+      real, dimension(size(dens,1),size(dens,2)) :: acc
 
       acc = 0.0
 
       if (.false.) acc(1,1) = acc(1,1) + 0.*velx(1,1) ! suppress compiler warning on unused argument
 
-   end subroutine fluid_interactions_dummy
+   end function fluid_interactions_dummy
 
-   subroutine fluid_interactions_aero_drag(dens, velx, acc)
+   function fluid_interactions_aero_drag(dens, velx) result(acc)
 
       use fluidindex,       only: flind
 
       implicit none
 
-      real, dimension(:,:), intent(in), pointer :: dens
-      real, dimension(:,:), intent(in), pointer :: velx
-      real, dimension(size(dens,1),size(dens,2)), intent(out) :: acc
+      real, dimension(:,:), intent(in), pointer  :: dens
+      real, dimension(:,:), intent(in), pointer  :: velx
+      real, dimension(size(dens,1),size(dens,2)) :: acc
 
       acc(flind%dst%pos,:) = -dragc_gas_dust * (velx(flind%dst%pos,:) - velx(flind%neu%pos,:))
       acc(flind%neu%pos,:) = -acc(flind%dst%pos,:) * dens(flind%dst%pos,:) / dens(flind%neu%pos,:)
 !      acc(flind%neu%pos,:) = -dragc_gas_dust * dens(flind%dst%pos,:) / dens(flind%neu%pos,:) * ( velx(flind%neu%pos,:) - velx(flind%dst%pos,:) )
 
-   end subroutine fluid_interactions_aero_drag
+   end function fluid_interactions_aero_drag
 
-   subroutine fluid_interactions_aero_drag_ep(dens, velx, acc)
+   function fluid_interactions_aero_drag_ep(dens, velx) result(acc)
 
       use fluidindex,       only: flind
 
       implicit none
 
-      real, dimension(:,:), intent(in), pointer :: dens
-      real, dimension(:,:), intent(in), pointer :: velx
-      real, dimension(size(dens,1),size(dens,2)), intent(out) :: acc
+      real, dimension(:,:), intent(in), pointer  :: dens
+      real, dimension(:,:), intent(in), pointer  :: velx
+      real, dimension(size(dens,1),size(dens,2)) :: acc
 
       acc(flind%dst%pos,:) = -dens(flind%neu%pos,:) / epstein_factor(flind%neu%pos) * (velx(flind%dst%pos,:) - velx(flind%neu%pos,:))
       acc(flind%neu%pos,:) = -acc(flind%dst%pos,:) * dens(flind%dst%pos,:) / dens(flind%neu%pos,:)
 
-   end subroutine fluid_interactions_aero_drag_ep
+   end function fluid_interactions_aero_drag_ep
 #ifdef FLUID_INTERACTIONS_DW
 !>
 !! \brief Routine that governs the type of interaction

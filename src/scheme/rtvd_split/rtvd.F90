@@ -299,7 +299,6 @@ contains
 #ifdef CORIOLIS
       real, dimension(flind%fluids,n) :: rotacc             !< acceleration caused by rotation
 #endif /* CORIOLIS */
-      real, dimension(flind%fluids,n) :: fricacc            !< acceleration caused by friction
       real, dimension(flind%fluids,n) :: geosrc             !< source terms caused by geometry of coordinate system
       real, dimension(flind%fluids,n), target :: pressure   !< gas pressure
       real, dimension(flind%fluids,n), target :: density    !< gas density
@@ -417,9 +416,7 @@ contains
 
          acc = 0.0
 
-         call fluid_interactions(dens, vx, fricacc)  !> \todo convert me to func similar to gridgeometry::geometry_source_terms
-         acc     =  acc + fricacc
-
+         acc     =  acc + fluid_interactions(dens, vx)
 #ifdef SHEAR
          acc(:,:) = acc(:,:) + shear_acc(sweep,u)
 #endif /* !SHEAR */
