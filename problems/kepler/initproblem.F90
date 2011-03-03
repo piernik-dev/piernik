@@ -797,6 +797,7 @@ contains
    subroutine prob_vars_hdf5(var,tab, ierrh)
 
       use arrays,       only: u
+      use grid,         only: cg
       use interactions, only: epstein_factor
       use fluidindex,   only: flind
 
@@ -809,7 +810,7 @@ contains
       ierrh = 0
       select case (trim(var))
          case ("tauf")
-            tab(:,:,:) = epstein_factor(flind%neu%pos) / u(flind%neu%idn,:,:,:)
+            tab(:,:,:) = epstein_factor(flind%neu%pos) / u(flind%neu%idn,cg%is:cg%ie,cg%js:cg%je,cg%ks:cg%ke)
          case default
             ierrh = -1
       end select
