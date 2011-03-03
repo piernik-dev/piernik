@@ -277,9 +277,9 @@ contains
       real,                        intent(in)  :: dt                 !< time step
 
       integer                        :: istep              !< step number in the time integration scheme
-#if defined GRAV || defined SHEAR
+#if defined GRAV
       integer                        :: ind                !< fluid index
-#endif /* defined GRAV || defined SHEAR */
+#endif /* defined GRAV */
 
       real                           :: dtx                !< dt/dx
       real, dimension(flind%all,n)    :: cfr                !< freezing speed
@@ -296,7 +296,7 @@ contains
       real, dimension(flind%all,n)    :: dflp               !< second order correction of left-moving waves flux on the right cell boundary
       real, dimension(flind%all,n)    :: u1                 !< updated vector of conservative variables (after one timestep in second order scheme)
 #ifdef CORIOLIS
-      real, dimension(flind%fluids,n) :: rotcacc            !< acceleration caused by rotation
+      real, dimension(flind%fluids,n) :: rotacc             !< acceleration caused by rotation
 #endif /* CORIOLIS */
       real, dimension(flind%fluids,n) :: fricacc            !< acceleration caused by friction
       real, dimension(flind%fluids,n) :: geosrc             !< source terms caused by geometry of coordinate system
