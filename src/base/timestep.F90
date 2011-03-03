@@ -85,16 +85,11 @@ contains
 
       use dataio,               only: write_crashed
       use dataio_pub,           only: tend, msg, warn
+      use fluids_pub,           only: has_ion, has_dst, has_neu
       use mpisetup,             only: t, dt_old, dt_max_grow, dt_initial, dt_min, nstep, master, cflcontrol
-#ifdef IONIZED
-      use timestepionized,      only: timestep_ion, dt_ion, c_ion
-#endif /* IONIZED */
-#ifdef NEUTRAL
-      use timestepneutral,      only: timestep_neu, dt_neu, c_neu
-#endif /* NEUTRAL */
-#ifdef DUST
-      use timestepdust,         only: timestep_dst, dt_dst, c_dst
-#endif /* DUST */
+      use timestepionized,      only: timestep_ion, c_ion
+      use timestepneutral,      only: timestep_neu, c_neu
+      use timestepdust,         only: timestep_dst, c_dst
 #ifdef COSM_RAYS
       use timestepcosmicrays,   only: timestep_crs, dt_crs
 #endif /* COSM_RAYS */
@@ -117,23 +112,20 @@ contains
       c_all = 0.0
       dt = huge(1.0)
 
-#ifdef IONIZED
-      call timestep_ion
-      dt=min(dt,dt_ion)
-      c_all = max(c_all,c_ion)
-#endif /* IONIZED */
+      if (has_ion) then
+         dt    = min(dt, timestep_ion())
+         c_all = max(c_all,c_ion)
+      endif
 
-#ifdef NEUTRAL
-      call timestep_neu
-      dt=min(dt,dt_neu)
-      c_all = max(c_all,c_neu)
-#endif /* NEUTRAL */
+      if (has_neu) then
+         dt    = min(dt, timestep_neu())
+         c_all = max(c_all,c_neu)
+      endif
 
-#ifdef DUST
-      call timestep_dst
-      dt=min(dt,dt_dst)
-      c_all = max(c_all,c_dst)
-#endif /* DUST */
+      if (has_dst) then
+         dt    = min(dt, timestep_dst())
+         c_all = max(c_all,c_dst)
+      endif
 
 #ifdef COSM_RAYS
       call timestep_crs

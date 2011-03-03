@@ -33,16 +33,15 @@
 !!
 !<
 module timestepdust
-! pulled by DUST
+! pulled by ANY
    implicit none
    private
-   public :: dt_dst, c_dst, timestep_dst
-   real   :: dt_dst                !< final timestep for dust
+   public :: c_dst, timestep_dst
    real   :: c_dst                 !< maximum speed at which information travels in dust
 
 contains
 
-   subroutine timestep_dst
+   real function timestep_dst() result(dt)
       use types,         only: component_fluid
       use arrays,        only: u
       use grid,          only: cg
@@ -71,8 +70,8 @@ contains
             enddo
          enddo
       enddo
-      call compute_dt(fl,cx,cy,cz,c_max,c_dst,dt_dst)
+      call compute_dt(fl,cx,cy,cz,c_max,c_dst,dt)
 
-   end subroutine timestep_dst
+   end function timestep_dst
 
 end module timestepdust

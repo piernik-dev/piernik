@@ -50,18 +50,17 @@
 !! The final %timestep is multiplied by the Courant number specified in parameters of each task.
 !<
 module timestepionized
-! pulled by IONIZED
+! pulled by ANY
    implicit none
 
    private
-   public :: dt_ion, c_ion, timestep_ion
+   public :: c_ion, timestep_ion
 
-   real   :: dt_ion             !< final timestep for ionized fluids
    real   :: c_ion              !< maximum speed at which information travels in the ionized fluid
 
 contains
 
-   subroutine timestep_ion
+   real function timestep_ion() result(dt)
 
       use types,         only: component_fluid
       use arrays,        only: u, b
@@ -114,8 +113,8 @@ contains
             enddo
          enddo
       enddo
-      call compute_dt(fl,cx,cy,cz,c_max,c_ion,dt_ion)
+      call compute_dt(fl,cx,cy,cz,c_max,c_ion,dt)
 
-   end subroutine timestep_ion
+   end function timestep_ion
 
 end module timestepionized

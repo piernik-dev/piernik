@@ -50,18 +50,17 @@
 !! The final %timestep is multiplied by the Courant number specified in parameters of each task.
 !<
 module timestepneutral
-! pulled by NEUTRAL
+! pulled by ANY
    implicit none
 
    private
-   public :: dt_neu, c_neu, timestep_neu
+   public :: c_neu, timestep_neu
 
-   real   :: dt_neu               !< final timestep for neutral fluid
    real   :: c_neu                !< maximum speed at which information travels in the neutral fluid
 
 contains
 
-   subroutine timestep_neu
+   real function timestep_neu() result(dt)
 
       use types,         only: component_fluid
       use arrays,        only: u
@@ -102,8 +101,8 @@ contains
             enddo
          enddo
       enddo
-      call compute_dt(fl,cx,cy,cz,c_max,c_neu,dt_neu)
+      call compute_dt(fl,cx,cy,cz,c_max,c_neu,dt)
 
-   end subroutine timestep_neu
+   end function timestep_neu
 
 end module timestepneutral
