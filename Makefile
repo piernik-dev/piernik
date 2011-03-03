@@ -3,6 +3,7 @@
 # This Makefile can be used to rebuild one or more object directories at a time.
 #
 # Usage:
+#
 #   'make'                 # rebuilds all obj*/piernik executables calling make
 #                            for all obj* directories
 #   'make obj_abc obj_xyz' # rebuilds just the two specified directories
@@ -10,6 +11,9 @@
 #                            obj*/.setup.call and current .setuprc file.
 #   'RS=1 make obj_abc'    # calls setup only for obj_abc directory
 #   'make obj_abc RS=1'    # same as above
+#   'make clean'           # calls make clean for all obj* directories
+#   'make allsetup'        # creates object directories for all valid problems,
+#                            but does not compile them
 #
 # Resetup will also call make for the object directories, unless you've 
 # specified --nocompile either in your .setuprc* files or it was stored in 
@@ -52,3 +56,15 @@ resetup:
 
 clean:
 	@CL=1 $(MAKE) all
+
+allsetup:
+	for i in problems/* ../problems/* ; do \
+		if [ ! -e $$i/OBSOLETE ] ; then \
+			if [ $$( dirname $$( dirname $$i ) ) == "." ] ; then \
+				nm=$$( basename $$i ); \
+			else \
+				nm="../"$$i; \
+			fi; \
+			./setup $$nm -o "_"$$( basename $$i )"_" --nocompile && sed -i 's/ --nocompile//' "obj__"$$( basename $$i )"_/"* "obj__"$$( basename $$i )"_/."??* & \
+		fi; \
+	done
