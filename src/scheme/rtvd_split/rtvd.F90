@@ -514,6 +514,7 @@ contains
          grad_pcr(1:2)   = 0.0 ; grad_pcr(n-1:n) = 0.0
 
 #ifndef ISO
+         !> \deprecated BEWARE: we shouldn't use u1 to calculate source terms!!!
          u1(iarr_all_en(flind%ion%pos),:) = u1(iarr_all_en(flind%ion%pos),:) &
                               - rk2coef(integration_order,istep)*u1(iarr_all_mx(flind%ion%pos),:)/u1(iarr_all_dn(flind%ion%pos),:)*grad_pcr*dt
 #endif /* !ISO */
