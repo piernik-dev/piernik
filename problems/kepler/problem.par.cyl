@@ -1,7 +1,7 @@
  $DOMAIN
-    nxd = 2048
+    nxd = 1024
     nyd = 5
-    nzd = 10
+    nzd = 128
     nb  = 4
     bnd_xl = 'out'
     bnd_xr = 'ref'
@@ -33,7 +33,7 @@
  /
 
  $END_CONTROL
-    tend   = 0.01
+    tend   = 100.0
     nend   = 10000000
  /
 
@@ -108,4 +108,5 @@
    collision_factor  = 10.0
    dragc_gas_dust    = 10.0
    cfl_interact      = 0.8
+   grain_size        = 10.0
  /
