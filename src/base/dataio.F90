@@ -664,6 +664,7 @@ contains
 
       use arrays,          only: u, b, wa
       use dataio_pub,      only: cwd, user_tsl
+      use fluids_pub,      only: has_ion, has_dst, has_neu
       use constants,       only: cwdlen, xdim, ydim, zdim
       use diagnostics,     only: pop_vector
       use fluidindex,      only: flind, iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz, ibx, iby, ibz
@@ -702,16 +703,13 @@ contains
       real     :: cs_iso2
 !- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 !
-#ifdef IONIZED
-      cs_iso2 = flind%ion%cs2
-#endif /* IONIZED */
-#ifdef NEUTRAL
-      cs_iso2 = flind%neu%cs2
-#else /* !NEUTRAL */
-#ifndef IONIZED
-      cs_iso2 = 0.0
-#endif /* !IONIZED */
-#endif /* !NEUTRAL */
+      if (has_ion) then
+         cs_iso2 = flind%ion%cs2
+      elseif (has_neu) then
+         cs_iso2 = flind%neu%cs2
+      else
+         cs_iso2 = 0.0
+      endif
 
       if (master) then
          write(tsl_file,'(a,a1,a,a1,a3,a1,i3.3,a4)') &
@@ -731,17 +729,13 @@ contains
 #ifdef COSM_RAYS
             call pop_vector(tsl_names, cbuff_len, ["encr_tot", "encr_min", "encr_max"])
 #endif /* COSM_RAYS */
-#ifdef IONIZED
-            call pop_vector(tsl_names, cbuff_len, ["deni_min", "deni_max", "vxi_max ", "vyi_max ", "vzi_max ", &
+            ! \todo: replicated code, simplify me
+            if (has_ion) call pop_vector(tsl_names, cbuff_len, ["deni_min", "deni_max", "vxi_max ", "vyi_max ", "vzi_max ", &
                                                    "prei_min", "prei_max", "temi_min", "temi_max", "csi_max "])
-#endif /* IONIZED */
-#ifdef NEUTRAL
-            call pop_vector(tsl_names, cbuff_len, ["denn_min", "denn_max", "vxn_max ", "vyn_max ", "vzn_max ", &
+            if (has_neu) call pop_vector(tsl_names, cbuff_len, ["denn_min", "denn_max", "vxn_max ", "vyn_max ", "vzn_max ", &
                                                    "pren_min", "pren_max", "temn_min", "temn_max", "csn_max "])
-#endif /* NEUTRAL */
-#ifdef DUST
-            call pop_vector(tsl_names, cbuff_len, ["dend_min", "dend_max", "vxd_max ", "vyd_max ", "vzd_max "])
-#endif /* DUST */
+            if (has_dst) call pop_vector(tsl_names, cbuff_len, ["dend_min", "dend_max", "vxd_max ", "vyd_max ", "vzd_max "])
+
             if (associated(user_tsl)) call user_tsl(tsl_vars, tsl_names)
             write(head_fmt,'(A,I2,A)') "(a1,a8,",size(tsl_names)-1,"a16)"
 
@@ -807,21 +801,23 @@ contains
 #ifdef COSM_RAYS
          call pop_vector(tsl_vars, [tot_encr, tsl%encr_min, tsl%encr_max])
 #endif /* COSM_RAYS */
-#ifdef IONIZED
-         sn=>flind%ion%snap
-         call pop_vector(tsl_vars, [sn%dens_min%val, sn%dens_max%val, sn%velx_max%val, sn%vely_max%val, sn%velz_max%val, &
-                                    sn%pres_min%val, sn%pres_max%val, sn%temp_min%val, sn%temp_max%val, sn%cs_max%val])
-#endif /* IONIZED */
 
-#ifdef NEUTRAL
-         sn=>flind%neu%snap
-         call pop_vector(tsl_vars, [sn%dens_min%val, sn%dens_max%val, sn%velx_max%val, sn%vely_max%val, sn%velz_max%val, &
+         ! \todo: replicated code, simplify me
+         if (has_ion) then
+            sn=>flind%ion%snap
+            call pop_vector(tsl_vars, [sn%dens_min%val, sn%dens_max%val, sn%velx_max%val, sn%vely_max%val, sn%velz_max%val, &
                                     sn%pres_min%val, sn%pres_max%val, sn%temp_min%val, sn%temp_max%val, sn%cs_max%val])
-#endif /* NEUTRAL */
-#ifdef DUST
-         sn=>flind%dst%snap
-         call pop_vector(tsl_vars, [sn%dens_min%val, sn%dens_max%val, sn%velx_max%val, sn%vely_max%val, sn%velz_max%val])
-#endif /* DUST */
+         endif
+         if (has_neu) then
+            sn=>flind%neu%snap
+            call pop_vector(tsl_vars, [sn%dens_min%val, sn%dens_max%val, sn%velx_max%val, sn%vely_max%val, sn%velz_max%val, &
+                                    sn%pres_min%val, sn%pres_max%val, sn%temp_min%val, sn%temp_max%val, sn%cs_max%val])
+         endif
+         if (has_dst) then
+            sn=>flind%dst%snap
+            call pop_vector(tsl_vars, [sn%dens_min%val, sn%dens_max%val, sn%velx_max%val, sn%vely_max%val, sn%velz_max%val])
+         endif
+
       endif
 
       if (associated(user_tsl)) call user_tsl(tsl_vars)
@@ -992,6 +988,7 @@ contains
       use arrays,             only: wa, u, b
       use constants,          only: small
       use dataio_pub,         only: msg, printinfo
+      use fluids_pub,         only: has_dst, has_ion, has_neu
       use fluidindex,         only: ibx, iby, ibz, flind
       use grid,               only: cg
       use mpisetup,           only: cfl, t, dt, master
@@ -1050,20 +1047,18 @@ contains
       endif
 
    ! Timestep diagnostics
-#ifdef NEUTRAL
-      call get_common_vars(flind%neu)
-#endif /* NEUTRAL */
+      if (has_neu) call get_common_vars(flind%neu)
 
-#ifdef IONIZED
-      call get_common_vars(flind%ion)
+      if (has_ion) then
+         call get_common_vars(flind%ion)
 
 #ifdef MAGNETIC
-      wa(:,:,:)  = sqrt(b(1,:,:,:)*b(1,:,:,:) + b(2,:,:,:)*b(2,:,:,:) + b(3,:,:,:)*b(3,:,:,:))
-      call get_extremum(wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), 'max', b_max)
-      call get_extremum(wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), 'min', b_min)
+         wa(:,:,:)  = sqrt(b(1,:,:,:)*b(1,:,:,:) + b(2,:,:,:)*b(2,:,:,:) + b(3,:,:,:)*b(3,:,:,:))
+         call get_extremum(wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), 'max', b_max)
+         call get_extremum(wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), 'min', b_min)
 
-      wa(:,:,:)  = wa(:,:,:) / sqrt(u(flind%ion%idn,:,:,:))
-      call get_extremum(wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), 'max', vai_max)
+         wa(:,:,:)  = wa(:,:,:) / sqrt(u(flind%ion%idn,:,:,:))
+         call get_extremum(wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), 'max', vai_max)
 #endif /* MAGNETIC */
 
 #ifdef ISO
@@ -1099,11 +1094,9 @@ contains
 !                   b(ibz,:,:,:)**2)
 #endif /* MAGNETIC */
 #endif /* !ISO */
-#endif /* IONIZED */
+      endif
 
-#ifdef DUST
-      call get_common_vars(flind%dst)
-#endif /* DUST */
+      if (has_dst) call get_common_vars(flind%dst)
 
 #ifdef VARIABLE_GP
       wa(1:nxu,:,:) = abs((gpot(nxl:cg%nx,:,:)-gpot(1:nxu,:,:))*cg%idx) ; wa(cg%nx,:,:) = wa(nxu,:,:)
@@ -1142,33 +1135,29 @@ contains
       if (master)  then
          if (.not.present(tsl)) then
             call printinfo('===========================================================================', .false.)
-#ifdef IONIZED
-            call common_shout(flind%ion%snap,'ION',.true.,.true.,.true.)
+            if (has_ion) then
+               call common_shout(flind%ion%snap,'ION',.true.,.true.,.true.)
 #ifdef MAGNETIC
-            id = "ION"
-            write(msg, fmt_dtloc) 'max(c_f)    ', id, sqrt(flind%ion%snap%cs_max%val**2+vai_max%val**2), &
-                 &             cfl*dxmn_safe/sqrt(flind%ion%snap%cs_max%val**2+vai_max%val**2+small)
-            call printinfo(msg, .false.)
-            write(msg, fmt_dtloc) 'max(v_a)    ', id, vai_max%val, cfl*dxmn_safe/(vai_max%val+small), vai_max%proc, vai_max%loc
-            call printinfo(msg, .false.)
-            id = "MAG"
-            write(msg, fmt_loc)   'min(|b|)    ', id, b_min%val,     b_min%proc,     b_min%loc
-            call printinfo(msg, .false.)
-            write(msg, fmt_loc)   'max(|b|)    ', id, b_max%val,     b_max%proc,     b_max%loc
-            call printinfo(msg, .false.)
-            write(msg, fmt_loc)   'max(|divb|) ', id, divb_max%val,  divb_max%proc,  divb_max%loc
-            call printinfo(msg, .false.)
+               id = "ION"
+               write(msg, fmt_dtloc) 'max(c_f)    ', id, sqrt(flind%ion%snap%cs_max%val**2+vai_max%val**2), &
+                    &             cfl*dxmn_safe/sqrt(flind%ion%snap%cs_max%val**2+vai_max%val**2+small)
+               call printinfo(msg, .false.)
+               write(msg, fmt_dtloc) 'max(v_a)    ', id, vai_max%val, cfl*dxmn_safe/(vai_max%val+small), vai_max%proc, vai_max%loc
+               call printinfo(msg, .false.)
+               id = "MAG"
+               write(msg, fmt_loc)   'min(|b|)    ', id, b_min%val,     b_min%proc,     b_min%loc
+               call printinfo(msg, .false.)
+               write(msg, fmt_loc)   'max(|b|)    ', id, b_max%val,     b_max%proc,     b_max%loc
+               call printinfo(msg, .false.)
+               write(msg, fmt_loc)   'max(|divb|) ', id, divb_max%val,  divb_max%proc,  divb_max%loc
+               call printinfo(msg, .false.)
 #else /* !MAGNETIC */
-!            if (csi_max%val > 0.) write(msg, fmtff8) 'max(c_s )   ION  =', sqrt(csi_max%val**2), 'dt=',cfl*dxmn_safe/sqrt(csi_max%val**2)
-!            call printinfo(msg, .false.)
+!               if (csi_max%val > 0.) write(msg, fmtff8) 'max(c_s )   ION  =', sqrt(csi_max%val**2), 'dt=',cfl*dxmn_safe/sqrt(csi_max%val**2)
+!               call printinfo(msg, .false.)
 #endif /* !MAGNETIC */
-#endif /* IONIZED */
-#ifdef NEUTRAL
-            call common_shout(flind%neu%snap,'NEU',.true.,.true.,.true.)
-#endif /* NEUTRAL */
-#ifdef DUST
-            call common_shout(flind%dst%snap,'DST',.false.,.false.,.false.)
-#endif /* DUST */
+            endif
+            if (has_neu) call common_shout(flind%neu%snap,'NEU',.true.,.true.,.true.)
+            if (has_dst) call common_shout(flind%dst%snap,'DST',.false.,.false.,.false.)
             if (has_interactions) then
                write(msg, fmt_dtloc) 'max(drag)   ', "INT", drag%val, flind%neu%cs/(maxval(collfaq) * drag%val + small), drag%proc, drag%loc
                call printinfo(msg, .false.)

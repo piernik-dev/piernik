@@ -92,6 +92,7 @@ contains
       use fluidindex,    only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
       use list_hdf5,     only: additional_attrs, problem_write_restart, problem_read_restart
       use constants,     only: varlen
+      use fluids_pub,    only: has_ion, has_dst, has_neu
 #ifdef COSM_RAYS
       use fluidindex,    only: iarr_all_crs
       use dataio_pub,    only: warn, msg
@@ -132,9 +133,7 @@ contains
                nhdf_vars = nhdf_vars + size(iarr_all_mz,1)
             case ('ener')
                nhdf_vars = nhdf_vars + size(iarr_all_mz,1)
-#ifdef DUST
-               nhdf_vars = nhdf_vars - 1
-#endif /* DUST */
+               if (has_dst) nhdf_vars = nhdf_vars - 1
 #ifdef GRAV
             case ('gpot')
                nhdf_vars = nhdf_vars + 1
@@ -165,52 +164,24 @@ contains
       do i = 1, nvars
          select case (vars(i))
             case ('dens')
-#ifdef DUST
-               hdf_vars(j) = 'dend' ; j = j + 1
-#endif /* DUST */
-#ifdef NEUTRAL
-               hdf_vars(j) = 'denn' ; j = j + 1
-#endif /* NEUTRAL */
-#ifdef IONIZED
-               hdf_vars(j) = 'deni' ; j = j + 1
-#endif /* IONIZED */
+               if (has_dst) then ; hdf_vars(j) = 'dend' ; j = j + 1 ; endif
+               if (has_neu) then ; hdf_vars(j) = 'denn' ; j = j + 1 ; endif
+               if (has_ion) then ; hdf_vars(j) = 'deni' ; j = j + 1 ; endif
             case ('velx')
-#ifdef DUST
-               hdf_vars(j) = 'vlxd' ; j = j + 1
-#endif /* DUST */
-#ifdef NEUTRAL
-               hdf_vars(j) = 'vlxn' ; j = j + 1
-#endif /* NEUTRAL */
-#ifdef IONIZED
-               hdf_vars(j) = 'vlxi' ; j = j + 1
-#endif /* IONIZED */
+               if (has_dst) then ; hdf_vars(j) = 'vlxd' ; j = j + 1 ; endif
+               if (has_neu) then ; hdf_vars(j) = 'vlxn' ; j = j + 1 ; endif
+               if (has_ion) then ; hdf_vars(j) = 'vlxi' ; j = j + 1 ; endif
             case ('vely')
-#ifdef DUST
-               hdf_vars(j) = 'vlyd' ; j = j + 1
-#endif /* DUST */
-#ifdef NEUTRAL
-               hdf_vars(j) = 'vlyn' ; j = j + 1
-#endif /* NEUTRAL */
-#ifdef IONIZED
-               hdf_vars(j) = 'vlyi' ; j = j + 1
-#endif /* IONIZED */
+               if (has_dst) then ; hdf_vars(j) = 'vlyd' ; j = j + 1 ; endif
+               if (has_neu) then ; hdf_vars(j) = 'vlyn' ; j = j + 1 ; endif
+               if (has_ion) then ; hdf_vars(j) = 'vlyi' ; j = j + 1 ; endif
             case ('velz')
-#ifdef DUST
-               hdf_vars(j) = 'vlzd' ; j = j + 1
-#endif /* DUST */
-#ifdef NEUTRAL
-               hdf_vars(j) = 'vlzn' ; j = j + 1
-#endif /* NEUTRAL */
-#ifdef IONIZED
-               hdf_vars(j) = 'vlzi' ; j = j + 1
-#endif /* IONIZED */
+               if (has_dst) then ; hdf_vars(j) = 'vlzd' ; j = j + 1 ; endif
+               if (has_neu) then ; hdf_vars(j) = 'vlzn' ; j = j + 1 ; endif
+               if (has_ion) then ; hdf_vars(j) = 'vlzi' ; j = j + 1 ; endif
             case ('ener')
-#ifdef NEUTRAL
-               hdf_vars(j) = 'enen' ; j = j + 1
-#endif /* NEUTRAL */
-#ifdef IONIZED
-               hdf_vars(j) = 'enei' ; j = j + 1
-#endif /* IONIZED */
+               if (has_neu) then ; hdf_vars(j) = 'enen' ; j = j + 1 ; endif
+               if (has_ion) then ; hdf_vars(j) = 'enei' ; j = j + 1 ; endif
             case ('magx')
                hdf_vars(j) = 'magx' ; j = j + 1
             case ('magy')
@@ -240,12 +211,8 @@ contains
 #endif /* MULTIGRID */
 #endif /* GRAV */
             case ('pres')
-#ifdef NEUTRAL
-               hdf_vars(j) = 'pren' ; j = j + 1
-#endif /* NEUTRAL */
-#ifdef IONIZED
-               hdf_vars(j) = 'prei' ; j = j + 1
-#endif /* IONIZED */
+               if (has_neu) then ; hdf_vars(j) = 'pren' ; j = j + 1 ; endif
+               if (has_ion) then ; hdf_vars(j) = 'prei' ; j = j + 1 ; endif
             case default
                hdf_vars(j) = trim(vars(i)) ; j = j + 1
          end select
@@ -397,7 +364,6 @@ contains
 #endif /* !ISO */
          case ('prei')
             tab(:,:) = 0.0
-#ifdef NEUTRAL
          case ("pren")
 #ifdef ISO
             tab = 0.0
@@ -408,7 +374,6 @@ contains
                         u(flind%neu%imz, cg%is:cg%ie, cg%js:cg%je, xn)**2 ) / u(flind%neu%idn, cg%is:cg%ie, cg%js:cg%je, xn),4)*(flind%neu%gam_1)
             endif
 #endif /* !ISO */
-#endif /* NEUTRAL */
          case ("enei")
 #ifdef ISO
             if (ij=="yz") tab(:,:) = 0.5 * (                     &
@@ -542,7 +507,6 @@ contains
 #else /* !ISO */
             tab(:,:,:) = real(u(flind%neu%ien,RNG),4)
 #endif /* !ISO */
-#ifdef IONIZED
          case ("enei")
 #ifdef ISO
             tab(:,:,:) = real(0.5 *( u(flind%ion%imx,RNG)**2 + &
@@ -561,7 +525,6 @@ contains
             tab(:,:,:) = tab(:,:,:) - real( 0.5*(flind%ion%gam_1)*(b(ibx,RNG)**2 + &
                b(iby,RNG)**2 + b(ibz,RNG)**2),4)
 #endif /* !ISO */
-#endif /* IONIZED */
          case ("magx")
             tab(:,:,:) = real(b(ibx,RNG),4)
          case ("magy")
