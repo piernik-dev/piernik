@@ -279,6 +279,7 @@ contains
       integer                        :: istep              !< step number in the time integration scheme
 #if defined GRAV
       integer                        :: ind                !< fluid index
+      real, dimension(n)             :: gravacc            !< acceleration caused by gravitation
 #endif /* defined GRAV */
 
       real                           :: dtx                !< dt/dx
@@ -304,7 +305,6 @@ contains
       real, dimension(flind%fluids,n), target :: density    !< gas density
       real, dimension(flind%fluids,n), target :: vel_sweep  !< velocity in the direction of current sweep
       real, dimension(:,:), pointer  :: dens, vx
-      real, dimension(n)             :: gravacc            !< acceleration caused by gravitation
 #ifdef ISO_LOCAL
       real, dimension(n)             :: cs_iso2            !< square of local isothermal sound speed (optional for ISO_LOCAL)
 #endif /* ISO_LOCAL */
