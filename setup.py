@@ -311,7 +311,10 @@ if (len(args) < 1):
 
 # set problem dir
 probdir = 'problems/'+args[0]+'/'
-
+if (not os.path.isdir(probdir)):
+   print "\033[91mCannot find problem directory '%s'." % probdir + '\033[0m'
+   exit()
+   
 # parse cppflags
 if(options.cppflags):
    cppflags = '-D' + ' -D'.join(options.cppflags.split(","))
@@ -323,7 +326,6 @@ if(not re.search('\.in$',options.compiler)):
    compiler = options.compiler + '.in'
 else:
    compiler = options.compiler
-
 
 objdir = 'obj'
 rundir = 'runs/'+os.path.basename(args[0])
