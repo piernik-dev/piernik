@@ -204,7 +204,7 @@ contains
       if (allocated(inid)) then
          if (associated(p3d)) nullify(p3d)
          p3d => inid
-         call write_arr_to_restart(file_id, p3d, null(), AT_NO_B, inid_n)
+         call write_arr_to_restart(file_id, p3d, AT_NO_B, inid_n)
       else
          call warn("[initproblem:write_IC_to_restart] Cannot store inid(:,:,:) in the restart file because it mysteriously deallocated.")
       endif

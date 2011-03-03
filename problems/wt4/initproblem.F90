@@ -427,17 +427,17 @@ contains
       if ( divine_intervention_type == 3) then
          if (allocated(den0)) then
             p3d => den0(:, :, :)
-            call write_arr_to_restart(file_id, p3d, null(), AT_NO_B, "den0")
+            call write_arr_to_restart(file_id, p3d, AT_NO_B, "den0")
             nullify(p3d)
          endif
          if (allocated(vlx0)) then
             p3d => vlx0(:, :, :)
-            call write_arr_to_restart(file_id, p3d, null(), AT_NO_B, "vlx0")
+            call write_arr_to_restart(file_id, p3d, AT_NO_B, "vlx0")
             nullify(p3d)
          endif
          if (allocated(vly0)) then
             p3d => vly0(:, :, :)
-            call write_arr_to_restart(file_id, p3d, null(), AT_NO_B, "vly0")
+            call write_arr_to_restart(file_id, p3d, AT_NO_B, "vly0")
             nullify(p3d)
          endif
       endif

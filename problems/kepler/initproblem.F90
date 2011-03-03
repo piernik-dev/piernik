@@ -506,31 +506,31 @@ contains
          if (allocated(den0)) then
             write(dname,'(2a)') flind%all_fluids(i)%tag, '_den0'
             p3d => den0(i, :, :, :)
-            call write_arr_to_restart(file_id, p3d, null(), AT_NO_B, dname)
+            call write_arr_to_restart(file_id, p3d, AT_NO_B, dname)
             nullify(p3d)
          endif
          if (allocated(mtx0)) then
             write(dname,'(2a)') flind%all_fluids(i)%tag, '_mtx0'
             p3d => mtx0(i, :, :, :)
-            call write_arr_to_restart(file_id, p3d, null(), AT_NO_B, dname)
+            call write_arr_to_restart(file_id, p3d, AT_NO_B, dname)
             nullify(p3d)
          endif
          if (allocated(mty0)) then
             write(dname,'(2a)') flind%all_fluids(i)%tag, '_mty0'
             p3d => mty0(i, :, :, :)
-            call write_arr_to_restart(file_id, p3d, null(), AT_NO_B, dname)
+            call write_arr_to_restart(file_id, p3d, AT_NO_B, dname)
             nullify(p3d)
          endif
          if (allocated(mtz0)) then
             write(dname,'(2a)') flind%all_fluids(i)%tag, '_mtz0'
             p3d => mtz0(i, :, :, :)
-            call write_arr_to_restart(file_id, p3d, null(), AT_NO_B, dname)
+            call write_arr_to_restart(file_id, p3d, AT_NO_B, dname)
             nullify(p3d)
          endif
          if (allocated(ene0)) then
             write(dname,'(2a)') flind%all_fluids(i)%tag, '_ene0'
             p3d => den0(i, :, :, :)
-            call write_arr_to_restart(file_id, p3d, null(), AT_NO_B, dname)
+            call write_arr_to_restart(file_id, p3d, AT_NO_B, dname)
             nullify(p3d)
          endif
       enddo
