@@ -755,9 +755,9 @@ contains
       use dataio_pub,         only: die
       use multigridhelpers,   only: set_dirty, check_dirty
       use multigridbasefuncs, only: substract_average
-      use multigridvars,      only: roof, source, level_max, is_external, bnd_periodic, bnd_dirichlet, bnd_givenval, XLO, XHI, YLO, YHI, ZLO, ZHI, LOW, HIGH
+      use multigridvars,      only: roof, source, level_max, is_external, bnd_periodic, bnd_dirichlet, bnd_givenval, XLO, XHI, YLO, YHI, ZLO, ZHI
       use mpisetup,           only: geometry_type
-      use constants,          only: GEO_RPZ
+      use constants,          only: GEO_RPZ, LO, HI
 
       implicit none
 
@@ -788,14 +788,14 @@ contains
                if (geometry_type == GEO_RPZ .and. roof%x(roof%is) /= 0.) fac = fac - 1./(roof%dx * roof%x(roof%is) * fpiG) !> BEWARE is it roof%x(ie), roof%x(ie+1) or something in the middle?
                roof%mgvar(roof%is,         roof%js:roof%je, roof%ks:roof%ke, source) = &
                     &                roof%mgvar(roof%is,         roof%js:roof%je, roof%ks:roof%ke, source) - &
-                    &                roof%bnd_x(                 roof%js:roof%je, roof%ks:roof%ke, LOW)  * fac
+                    &                roof%bnd_x(                 roof%js:roof%je, roof%ks:roof%ke, LO)  * fac
             endif
             if (is_external(XHI)) then
                fac = 2. * roof%idx2 / fpiG
                if (geometry_type == GEO_RPZ .and. roof%x(roof%ie) /= 0.) fac = fac - 1./ (roof%dx * roof%x(roof%ie) * fpiG) !> BEWARE is it roof%x(ie), roof%x(ie+1) or something in the middle?
                roof%mgvar(        roof%ie, roof%js:roof%je, roof%ks:roof%ke, source) = &
                     &                roof%mgvar(        roof%ie, roof%js:roof%je, roof%ks:roof%ke, source) - &
-                    &                roof%bnd_x(                 roof%js:roof%je, roof%ks:roof%ke, HIGH) * fac
+                    &                roof%bnd_x(                 roof%js:roof%je, roof%ks:roof%ke, HI) * fac
             endif
             if (is_external(YLO)) then
                if (geometry_type == GEO_RPZ) then
@@ -803,13 +803,13 @@ contains
                      if (roof%x(i) /= 0.) then
                         roof%mgvar       (i, roof%js, roof%ks:roof%ke, source) = &
                              & roof%mgvar(i, roof%js, roof%ks:roof%ke, source) - &
-                             & roof%bnd_y(i,          roof%ks:roof%ke, LOW)    * 2. * roof%idy2 / fpiG / roof%x(i)**2
+                             & roof%bnd_y(i,          roof%ks:roof%ke, LO)    * 2. * roof%idy2 / fpiG / roof%x(i)**2
                      endif
                   enddo
                else
                   roof%mgvar(roof%is:roof%ie, roof%js,         roof%ks:roof%ke, source) = &
                        &                roof%mgvar(roof%is:roof%ie, roof%js,         roof%ks:roof%ke, source) - &
-                       &                roof%bnd_y(roof%is:roof%ie,                  roof%ks:roof%ke, LOW)  * 2. * roof%idy2 / fpiG
+                       &                roof%bnd_y(roof%is:roof%ie,                  roof%ks:roof%ke, LO)  * 2. * roof%idy2 / fpiG
                endif
             endif
             if (is_external(YHI)) then
@@ -818,21 +818,21 @@ contains
                      if (roof%x(i) /= 0.) then
                         roof%mgvar       (i, roof%je, roof%ks:roof%ke, source) = &
                              & roof%mgvar(i, roof%je, roof%ks:roof%ke, source) - &
-                             & roof%bnd_y(i,          roof%ks:roof%ke, HIGH)    * 2. * roof%idy2 / fpiG / roof%x(i)**2
+                             & roof%bnd_y(i,          roof%ks:roof%ke, HI)    * 2. * roof%idy2 / fpiG / roof%x(i)**2
                      endif
                   enddo
                else
                   roof%mgvar(roof%is:roof%ie,         roof%je, roof%ks:roof%ke, source) = &
                        &                roof%mgvar(roof%is:roof%ie,         roof%je, roof%ks:roof%ke, source) - &
-                       &                roof%bnd_y(roof%is:roof%ie,                  roof%ks:roof%ke, HIGH) * 2. * roof%idy2 / fpiG
+                       &                roof%bnd_y(roof%is:roof%ie,                  roof%ks:roof%ke, HI) * 2. * roof%idy2 / fpiG
                endif
             endif
             if (is_external(ZLO)) roof%mgvar(roof%is:roof%ie, roof%js:roof%je, roof%ks,         source) = &
                  &                roof%mgvar(roof%is:roof%ie, roof%js:roof%je, roof%ks,         source) - &
-                 &                roof%bnd_z(roof%is:roof%ie, roof%js:roof%je,                  LOW)  * 2. * roof%idz2 / fpiG
+                 &                roof%bnd_z(roof%is:roof%ie, roof%js:roof%je,                  LO)  * 2. * roof%idz2 / fpiG
             if (is_external(ZHI)) roof%mgvar(roof%is:roof%ie, roof%js:roof%je,         roof%ke, source) = &
                  &                roof%mgvar(roof%is:roof%ie, roof%js:roof%je,         roof%ke, source) - &
-                 &                roof%bnd_z(roof%is:roof%ie, roof%js:roof%je,                  HIGH) * 2. * roof%idz2 / fpiG
+                 &                roof%bnd_z(roof%is:roof%ie, roof%js:roof%je,                  HI) * 2. * roof%idz2 / fpiG
             !> \todo compactify the above mess
          case default
             call die("[multigrid_gravity:init_source] Unknown boundary type")
@@ -1164,12 +1164,12 @@ contains
 
    subroutine residual2(lev, src, soln, def)
 
-      use constants,          only: xdim, ydim, zdim, GEO_XYZ, GEO_RPZ
+      use constants,          only: xdim, ydim, zdim, ndims, GEO_XYZ, GEO_RPZ
       use dataio_pub,         only: die
       use mpisetup,           only: has_dir, eff_dim, geometry_type
       use multigridhelpers,   only: multidim_code_3D
       use multigridmpifuncs,  only: mpi_multigrid_bnd
-      use multigridvars,      only: lvl, NDIM, extbnd_antimirror
+      use multigridvars,      only: lvl, extbnd_antimirror
 
       implicit none
 
@@ -1195,7 +1195,7 @@ contains
 
       select case (geometry_type)
          case (GEO_XYZ)
-            if (eff_dim == NDIM .and. .not. multidim_code_3D) then
+            if (eff_dim == ndims .and. .not. multidim_code_3D) then
                do k = lvl(lev)%ks, lvl(lev)%ke
                   lvl(       lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k,   def)        = &
                        & lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k,   src)        - &
@@ -1279,7 +1279,8 @@ contains
       use dataio_pub,         only: die, warn
       use mpisetup,           only: master, eff_dim
       use multigridmpifuncs,  only: mpi_multigrid_bnd
-      use multigridvars,      only: lvl, NDIM, bnd_givenval, extbnd_antimirror
+      use multigridvars,      only: lvl, bnd_givenval, extbnd_antimirror
+      use constants,          only: ndims
 
       implicit none
 
@@ -1297,7 +1298,7 @@ contains
       logical, save       :: firstcall = .true.
       integer             :: i, j, k
 
-      if (eff_dim<NDIM) call die("[multigrid_gravity:residual4] Only 3D is implemented")
+      if (eff_dim<ndims) call die("[multigrid_gravity:residual4] Only 3D is implemented")
 
       if (firstcall) then
          if (master) call warn("[multigrid_gravity:residual4] residual order 4 is experimental.")
@@ -1416,11 +1417,11 @@ contains
    subroutine approximate_solution_rbgs(lev, src, soln)
 
       use dataio_pub,         only: die
-      use constants,          only: xdim, ydim, zdim, GEO_XYZ, GEO_RPZ
+      use constants,          only: xdim, ydim, zdim, ndims, GEO_XYZ, GEO_RPZ
       use mpisetup,           only: has_dir, eff_dim, geometry_type
       use multigridhelpers,   only: dirty_debug, check_dirty, multidim_code_3D, dirty_label
       use multigridmpifuncs,  only: mpi_multigrid_bnd
-      use multigridvars,      only: lvl, level_min, NDIM, extbnd_antimirror
+      use multigridvars,      only: lvl, level_min, extbnd_antimirror
 
       implicit none
 
@@ -1461,7 +1462,7 @@ contains
 
          ! with explicit outer loops it is easier to describe a 3-D checkerboard :-)
 
-         if (eff_dim==NDIM .and. .not. multidim_code_3D) then
+         if (eff_dim==ndims .and. .not. multidim_code_3D) then
             do k = lvl(lev)%ks, lvl(lev)%ke
                do j = lvl(lev)%js, lvl(lev)%je
                   i1 = lvl(lev)%is + mod(n+j+k, RED_BLACK)
@@ -1567,13 +1568,13 @@ contains
 
    subroutine approximate_solution_fft(lev, src, soln)
 
-      use constants,          only: xdim, ydim, zdim, GEO_XYZ
+      use constants,          only: LO, HI, ndims, xdim, ydim, zdim, GEO_XYZ
       use grid,               only: D_x, D_y, D_z
       use mpisetup,           only: has_dir, eff_dim, geometry_type
       use dataio_pub,         only: die, warn
       use multigridhelpers,   only: dirty_debug, check_dirty, dirtyL, multidim_code_3D
       use multigridmpifuncs,  only: mpi_multigrid_bnd
-      use multigridvars,      only: lvl, LOW, HIGH, NDIM, extbnd_antimirror
+      use multigridvars,      only: lvl, extbnd_antimirror
 
       implicit none
 
@@ -1594,16 +1595,16 @@ contains
             else
                call mpi_multigrid_bnd(lev, soln, 1, extbnd_antimirror)
                if (has_dir(xdim)) then
-                  lvl(lev)%bnd_x(:, :, LOW)  = 0.5* sum (lvl(lev)%mgvar(lvl(lev)%is-1:lvl(lev)%is, lvl(lev)%js:lvl(lev)%je, lvl(lev)%ks:lvl(lev)%ke, soln), 1)
-                  lvl(lev)%bnd_x(:, :, HIGH) = 0.5* sum (lvl(lev)%mgvar(lvl(lev)%ie:lvl(lev)%ie+1, lvl(lev)%js:lvl(lev)%je, lvl(lev)%ks:lvl(lev)%ke, soln), 1)
+                  lvl(lev)%bnd_x(:, :, LO)  = 0.5* sum (lvl(lev)%mgvar(lvl(lev)%is-1:lvl(lev)%is, lvl(lev)%js:lvl(lev)%je, lvl(lev)%ks:lvl(lev)%ke, soln), 1)
+                  lvl(lev)%bnd_x(:, :, HI) = 0.5* sum (lvl(lev)%mgvar(lvl(lev)%ie:lvl(lev)%ie+1, lvl(lev)%js:lvl(lev)%je, lvl(lev)%ks:lvl(lev)%ke, soln), 1)
                endif
                if (has_dir(ydim)) then
-                  lvl(lev)%bnd_y(:, :, LOW)  = 0.5* sum (lvl(lev)%mgvar(lvl(lev)%is:lvl(lev)%ie, lvl(lev)%js-1:lvl(lev)%js, lvl(lev)%ks:lvl(lev)%ke, soln), 2)
-                  lvl(lev)%bnd_y(:, :, HIGH) = 0.5* sum (lvl(lev)%mgvar(lvl(lev)%is:lvl(lev)%ie, lvl(lev)%je:lvl(lev)%je+1, lvl(lev)%ks:lvl(lev)%ke, soln), 2)
+                  lvl(lev)%bnd_y(:, :, LO)  = 0.5* sum (lvl(lev)%mgvar(lvl(lev)%is:lvl(lev)%ie, lvl(lev)%js-1:lvl(lev)%js, lvl(lev)%ks:lvl(lev)%ke, soln), 2)
+                  lvl(lev)%bnd_y(:, :, HI) = 0.5* sum (lvl(lev)%mgvar(lvl(lev)%is:lvl(lev)%ie, lvl(lev)%je:lvl(lev)%je+1, lvl(lev)%ks:lvl(lev)%ke, soln), 2)
                endif
                if (has_dir(zdim)) then
-                  lvl(lev)%bnd_z(:, :, LOW)  = 0.5* sum (lvl(lev)%mgvar(lvl(lev)%is:lvl(lev)%ie, lvl(lev)%js:lvl(lev)%je, lvl(lev)%ks-1:lvl(lev)%ks, soln), 3)
-                  lvl(lev)%bnd_z(:, :, HIGH) = 0.5* sum (lvl(lev)%mgvar(lvl(lev)%is:lvl(lev)%ie, lvl(lev)%js:lvl(lev)%je, lvl(lev)%ke:lvl(lev)%ke+1, soln), 3)
+                  lvl(lev)%bnd_z(:, :, LO)  = 0.5* sum (lvl(lev)%mgvar(lvl(lev)%is:lvl(lev)%ie, lvl(lev)%js:lvl(lev)%je, lvl(lev)%ks-1:lvl(lev)%ks, soln), 3)
+                  lvl(lev)%bnd_z(:, :, HI) = 0.5* sum (lvl(lev)%mgvar(lvl(lev)%is:lvl(lev)%ie, lvl(lev)%js:lvl(lev)%je, lvl(lev)%ke:lvl(lev)%ke+1, soln), 3)
                endif
             endif
 
@@ -1614,16 +1615,16 @@ contains
             endif
 
             if (has_dir(xdim)) then
-               lvl(lev)%src(1,            :, :) = lvl(lev)%src(1,            :, :) - lvl(lev)%bnd_x(:, :, LOW)  * 2. * lvl(lev)%idx2
-               lvl(lev)%src(lvl(lev)%nxb, :, :) = lvl(lev)%src(lvl(lev)%nxb, :, :) - lvl(lev)%bnd_x(:, :, HIGH) * 2. * lvl(lev)%idx2
+               lvl(lev)%src(1,            :, :) = lvl(lev)%src(1,            :, :) - lvl(lev)%bnd_x(:, :, LO)  * 2. * lvl(lev)%idx2
+               lvl(lev)%src(lvl(lev)%nxb, :, :) = lvl(lev)%src(lvl(lev)%nxb, :, :) - lvl(lev)%bnd_x(:, :, HI) * 2. * lvl(lev)%idx2
             endif
             if (has_dir(ydim)) then
-               lvl(lev)%src(:, 1,            :) = lvl(lev)%src(:, 1,            :) - lvl(lev)%bnd_y(:, :, LOW)  * 2. * lvl(lev)%idy2
-               lvl(lev)%src(:, lvl(lev)%nyb, :) = lvl(lev)%src(:, lvl(lev)%nyb, :) - lvl(lev)%bnd_y(:, :, HIGH) * 2. * lvl(lev)%idy2
+               lvl(lev)%src(:, 1,            :) = lvl(lev)%src(:, 1,            :) - lvl(lev)%bnd_y(:, :, LO)  * 2. * lvl(lev)%idy2
+               lvl(lev)%src(:, lvl(lev)%nyb, :) = lvl(lev)%src(:, lvl(lev)%nyb, :) - lvl(lev)%bnd_y(:, :, HI) * 2. * lvl(lev)%idy2
             endif
             if (has_dir(zdim)) then
-               lvl(lev)%src(:, :, 1           ) = lvl(lev)%src(:, :, 1           ) - lvl(lev)%bnd_z(:, :, LOW)  * 2. * lvl(lev)%idz2
-               lvl(lev)%src(:, :, lvl(lev)%nzb) = lvl(lev)%src(:, :, lvl(lev)%nzb) - lvl(lev)%bnd_z(:, :, HIGH) * 2. * lvl(lev)%idz2
+               lvl(lev)%src(:, :, 1           ) = lvl(lev)%src(:, :, 1           ) - lvl(lev)%bnd_z(:, :, LO)  * 2. * lvl(lev)%idz2
+               lvl(lev)%src(:, :, lvl(lev)%nzb) = lvl(lev)%src(:, :, lvl(lev)%nzb) - lvl(lev)%bnd_z(:, :, HI) * 2. * lvl(lev)%idz2
             endif
          endif
 
@@ -1640,7 +1641,7 @@ contains
             call mpi_multigrid_bnd(lev, soln, 1, extbnd_antimirror)
             ! Possible optimization: This is a quite costly part of the local FFT solver
             if (fft_full_relax) then
-               if (eff_dim == NDIM .and. .not. multidim_code_3D) then
+               if (eff_dim == ndims .and. .not. multidim_code_3D) then
                   lvl                    (lev)%mgvar(lvl(lev)%is:lvl(lev)%ie,     lvl(lev)%js:lvl(lev)%je,     lvl(lev)%ks:lvl(lev)%ke,     soln)  = &
                        lvl(lev)%rx * (lvl(lev)%mgvar(lvl(lev)%is-1:lvl(lev)%ie-1, lvl(lev)%js:lvl(lev)%je,     lvl(lev)%ks:lvl(lev)%ke,     soln)  + &
                        &              lvl(lev)%mgvar(lvl(lev)%is+1:lvl(lev)%ie+1, lvl(lev)%js:lvl(lev)%je,     lvl(lev)%ks:lvl(lev)%ke,     soln)) + &

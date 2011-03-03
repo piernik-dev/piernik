@@ -93,7 +93,8 @@ contains
 
       use dataio_pub,    only: die, warn, msg
       use mpisetup,      only: proc, eff_dim
-      use multigridvars, only: ngridvars, lvl, level_min, level_max, mg_nb, NDIM
+      use multigridvars, only: ngridvars, lvl, level_min, level_max, mg_nb
+      use constants,     only: ndims
 
       implicit none
 
@@ -116,7 +117,7 @@ contains
          l2 = lev
       endif
 
-      if (present(expand) .and. eff_dim==NDIM) then ! for 1D and 2D one should define ng_x,ng_y and ng_z
+      if (present(expand) .and. eff_dim==ndims) then ! for 1D and 2D one should define ng_x,ng_y and ng_z
          if (expand > mg_nb) then
             ng = mg_nb
          else

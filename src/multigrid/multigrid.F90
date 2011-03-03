@@ -77,7 +77,7 @@ contains
 
       use grid,                only: cg, D_x, D_y, D_z
       use multigridvars,       only: lvl, level_max, level_min, level_gb, roof, base, gb, gb_cartmap, mg_nb, ngridvars, correction, &
-           &                         is_external, periodic_bnd_cnt, non_periodic_bnd_cnt, NDIM, XLO, XHI, YLO, YHI, ZLO, ZHI, LOW, HIGH, &
+           &                         is_external, periodic_bnd_cnt, non_periodic_bnd_cnt, XLO, XHI, YLO, YHI, ZLO, ZHI, &
            &                         ord_prolong, ord_prolong_face, stdout, verbose_vcycle, tot_ts
       use mpi,                 only: MPI_INTEGER, MPI_LOGICAL
       use mpisetup,            only: comm, comm3d, ierr, proc, master, slave, nproc, has_dir, psize, buffer_dim, ibuff, lbuff, dom, eff_dim, geometry_type
@@ -106,8 +106,6 @@ contains
 
       if (.not.frun) call die("[multigrid:init_multigrid] Called more than once.")
       frun = .false.
-
-      if (ndims /= NDIM) call die("[multigrid:init_multigrid] broken dimensional constants")
 
       ! Default values for namelist variables
       level_max         = 1
@@ -320,9 +318,9 @@ contains
          mb_alloc  = mb_alloc + size(lvl(idx)%prolong_x) + size(lvl(idx)%prolong_xy) + size(lvl(idx)%mgvar) + size(lvl(idx)%x)  + size(lvl(idx)%y) + size(lvl(idx)%z)
 
          if ( allocated(lvl(idx)%bnd_x) .or. allocated(lvl(idx)%bnd_y) .or. allocated(lvl(idx)%bnd_z)) call die("[multigrid:init_multigrid] multigrid boundary arrays already allocated")
-         allocate( lvl(idx)%bnd_x(lvl(idx)%js:lvl(idx)%je, lvl(idx)%ks:lvl(idx)%ke, LOW:HIGH), stat=aerr(1) )
-         allocate( lvl(idx)%bnd_y(lvl(idx)%is:lvl(idx)%ie, lvl(idx)%ks:lvl(idx)%ke, LOW:HIGH), stat=aerr(2) )
-         allocate( lvl(idx)%bnd_z(lvl(idx)%is:lvl(idx)%ie, lvl(idx)%js:lvl(idx)%je, LOW:HIGH), stat=aerr(3) )
+         allocate( lvl(idx)%bnd_x(lvl(idx)%js:lvl(idx)%je, lvl(idx)%ks:lvl(idx)%ke, LO:HI), stat=aerr(1) )
+         allocate( lvl(idx)%bnd_y(lvl(idx)%is:lvl(idx)%ie, lvl(idx)%ks:lvl(idx)%ke, LO:HI), stat=aerr(2) )
+         allocate( lvl(idx)%bnd_z(lvl(idx)%is:lvl(idx)%ie, lvl(idx)%js:lvl(idx)%je, LO:HI), stat=aerr(3) )
          if (any(aerr(1:3) /= 0)) call die("[multigrid:init_multigrid] Allocation error: lvl(idx)%bnd_?")
          mb_alloc  = mb_alloc + size(lvl(idx)%bnd_x) + size(lvl(idx)%bnd_y) + size(lvl(idx)%bnd_z)
 
@@ -379,7 +377,7 @@ contains
       if (aerr(1) /= 0) call die("[multigrid:init_multigrid] Allocation error: gb_cartmap")
       mb_alloc = mb_alloc + size(gb_cartmap) !may be inaccurate
       do j=0, nproc-1
-         call MPI_Cart_coords(comm3d, j, NDIM, gb_cartmap(j)%proc, ierr)
+         call MPI_Cart_coords(comm3d, j, ndims, gb_cartmap(j)%proc, ierr)
          gb_cartmap(j)%lo(xdim) = gb_cartmap(j)%proc(xdim) * base%nxb + 1 ! starting x, y and z indices of interior cells from
          gb_cartmap(j)%lo(ydim) = gb_cartmap(j)%proc(ydim) * base%nyb + 1 ! coarsest level on the gb_src array
          gb_cartmap(j)%lo(zdim) = gb_cartmap(j)%proc(zdim) * base%nzb + 1
@@ -424,7 +422,7 @@ contains
 !! \brief Count periodic boundaries by updating periodic_bnd_cnt and non_periodic_bnd_cnt variables.
 !!
 !! \details This routine is meant to be called for each boundary description string in all existing directions.
-!! \todo pack bnd_{x,y,z}{l,r}_dom into a bnd_dom(xdim:zdim)(LOW:HIGH)  array
+!! \todo pack bnd_{x,y,z}{l,r}_dom into a bnd_dom(xdim:zdim)(LO:HI)  array
 !<
 
    subroutine count_periodic(bnd_str)

@@ -149,7 +149,8 @@ contains
    subroutine prolong_level2I(lev, iv)
 
       use dataio_pub,    only: die
-      use multigridvars, only: plvl, lvl, NDIM
+      use multigridvars, only: plvl, lvl
+      use constants,     only: ndims
       use mpisetup,      only: eff_dim
 
       implicit none
@@ -161,7 +162,7 @@ contains
 
       real, parameter :: P0 = 1., P1 = 1./8.
 
-      if (eff_dim<NDIM) call die("[multigridexperimental:prolong_level2I] 1D and 2D not finished")
+      if (eff_dim<ndims) call die("[multigridexperimental:prolong_level2I] 1D and 2D not finished")
 
       coarse => lvl(lev)
       fine   => lvl(lev + 1)
@@ -204,7 +205,8 @@ contains
    subroutine prolong_level2D(lev, iv)
 
       use dataio_pub,    only: die
-      use multigridvars, only: plvl, lvl, NDIM
+      use multigridvars, only: plvl, lvl
+      use constants,     only: ndims
       use mpisetup,      only: eff_dim
 
       implicit none
@@ -215,7 +217,7 @@ contains
       type(plvl), pointer :: coarse, fine
       real, parameter :: P_1 = -3./32., P0 = 30./32., P1 = 5./32.
 
-      if (eff_dim<NDIM) call die("[multigridexperimental:prolong_level2D] 1D and 2D not finished")
+      if (eff_dim<ndims) call die("[multigridexperimental:prolong_level2D] 1D and 2D not finished")
 
       coarse => lvl(lev)
       fine   => lvl(lev + 1)
@@ -258,7 +260,8 @@ contains
    subroutine prolong_level4I(lev, iv)
 
       use dataio_pub,    only: die
-      use multigridvars, only: plvl, lvl, NDIM
+      use multigridvars, only: plvl, lvl
+      use constants,     only: ndims
       use mpisetup,      only: eff_dim
 
       implicit none
@@ -270,7 +273,7 @@ contains
 
       real, parameter :: P0 = 1., P1 = 11./64., P2 = 3./128.
 
-      if (eff_dim<NDIM) call die("[multigridexperimental:prolong_level4I] 1D and 2D not finished")
+      if (eff_dim<ndims) call die("[multigridexperimental:prolong_level4I] 1D and 2D not finished")
 
       coarse => lvl(lev)
       fine   => lvl(lev + 1)
@@ -325,7 +328,8 @@ contains
    subroutine prolong_level4D(lev, iv)
 
       use dataio_pub,    only: die
-      use multigridvars, only: plvl, lvl, NDIM
+      use multigridvars, only: plvl, lvl
+      use constants,     only: ndims
       use mpisetup,      only: eff_dim
 
       implicit none
@@ -337,7 +341,7 @@ contains
 
       real, parameter :: P_2 = 35./2048., P_1 = -252./2048., P0 = 1890./2048., P1 = 420./2048., P2 = -45./2048.
 
-      if (eff_dim<NDIM) call die("[multigridexperimental:prolong_level4D] 1D and 2D not finished")
+      if (eff_dim<ndims) call die("[multigridexperimental:prolong_level4D] 1D and 2D not finished")
 
       coarse => lvl(lev)
       fine   => lvl(lev + 1)

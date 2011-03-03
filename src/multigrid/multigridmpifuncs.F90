@@ -50,9 +50,9 @@ contains
 
    subroutine mpi_multigrid_prep
 
-      use multigridvars, only: level_min, level_max, lvl, NDIM
+      use multigridvars, only: level_min, level_max, lvl
       use mpisetup,      only: ierr, has_dir
-      use constants,     only: xdim, ydim, zdim, LO, HI, BND, DOM
+      use constants,     only: xdim, ydim, zdim, LO, HI, BND, DOM, ndims
       use mpi,           only: MPI_DOUBLE_PRECISION, MPI_ORDER_FORTRAN
 
       implicit none
@@ -64,7 +64,7 @@ contains
       ord = MPI_ORDER_FORTRAN
       old = MPI_DOUBLE_PRECISION
 
-      allocate( sizes(NDIM), subsizes(NDIM), starts(NDIM) )
+      allocate( sizes(ndims), subsizes(ndims), starts(ndims) )
 
       do i = level_min, level_max
          lnb = lvl(i)%nb
@@ -77,19 +77,19 @@ contains
                subsizes = [    ib,     lvl(i)%ny, lvl(i)%nz ]
                starts   = [  lnb-ib,       0,         0     ]
 
-               call MPI_Type_create_subarray(NDIM, sizes, subsizes, starts, ord, old, lvl(i)%mbc(xdim, LO, BND, ib), ierr)
+               call MPI_Type_create_subarray(ndims, sizes, subsizes, starts, ord, old, lvl(i)%mbc(xdim, LO, BND, ib), ierr)
                call MPI_Type_commit(lvl(i)%mbc(xdim, LO, BND, ib), ierr)
 
                starts(xdim) = lnb
-               call MPI_Type_create_subarray(NDIM, sizes, subsizes,  starts, ord, old, lvl(i)%mbc(xdim, LO, DOM, ib), ierr)
+               call MPI_Type_create_subarray(ndims, sizes, subsizes,  starts, ord, old, lvl(i)%mbc(xdim, LO, DOM, ib), ierr)
                call MPI_Type_commit(lvl(i)%mbc(xdim, LO, DOM, ib), ierr)
 
                starts(xdim) = lvl(i)%nxb + lnb - ib
-               call MPI_Type_create_subarray(NDIM, sizes, subsizes,  starts, ord, old, lvl(i)%mbc(xdim, HI, DOM, ib), ierr)
+               call MPI_Type_create_subarray(ndims, sizes, subsizes,  starts, ord, old, lvl(i)%mbc(xdim, HI, DOM, ib), ierr)
                call MPI_Type_commit(lvl(i)%mbc(xdim, HI, DOM, ib), ierr)
 
                starts(xdim) = lvl(i)%nxb + lnb
-               call MPI_Type_create_subarray(NDIM, sizes, subsizes, starts,  ord, old, lvl(i)%mbc(xdim, HI, BND, ib), ierr)
+               call MPI_Type_create_subarray(ndims, sizes, subsizes, starts,  ord, old, lvl(i)%mbc(xdim, HI, BND, ib), ierr)
                call MPI_Type_commit(lvl(i)%mbc(xdim, HI, BND, ib), ierr)
             endif
 
@@ -98,19 +98,19 @@ contains
                subsizes = [ lvl(i)%nx,     ib,    lvl(i)%nz ]
                starts   = [     0,      lnb-ib,       0     ]
 
-               call MPI_Type_create_subarray(NDIM, sizes, subsizes, starts, ord, old, lvl(i)%mbc(ydim, LO, BND, ib), ierr)
+               call MPI_Type_create_subarray(ndims, sizes, subsizes, starts, ord, old, lvl(i)%mbc(ydim, LO, BND, ib), ierr)
                call MPI_Type_commit(lvl(i)%mbc(ydim, LO, BND, ib), ierr)
 
                starts(ydim) = lnb
-               call MPI_Type_create_subarray(NDIM, sizes, subsizes, starts, ord, old, lvl(i)%mbc(ydim, LO, DOM, ib), ierr)
+               call MPI_Type_create_subarray(ndims, sizes, subsizes, starts, ord, old, lvl(i)%mbc(ydim, LO, DOM, ib), ierr)
                call MPI_Type_commit(lvl(i)%mbc(ydim, LO, DOM, ib), ierr)
 
                starts(ydim) = lvl(i)%nyb + lnb - ib
-               call MPI_Type_create_subarray(NDIM, sizes, subsizes, starts, ord, old, lvl(i)%mbc(ydim, HI, DOM, ib), ierr)
+               call MPI_Type_create_subarray(ndims, sizes, subsizes, starts, ord, old, lvl(i)%mbc(ydim, HI, DOM, ib), ierr)
                call MPI_Type_commit(lvl(i)%mbc(ydim, HI, DOM, ib), ierr)
 
                starts(ydim) = lvl(i)%nyb + lnb
-               call MPI_Type_create_subarray(NDIM, sizes, subsizes, starts, ord, old, lvl(i)%mbc(ydim, HI, BND, ib), ierr)
+               call MPI_Type_create_subarray(ndims, sizes, subsizes, starts, ord, old, lvl(i)%mbc(ydim, HI, BND, ib), ierr)
                call MPI_Type_commit(lvl(i)%mbc(ydim, HI, BND, ib), ierr)
             endif
 
@@ -119,19 +119,19 @@ contains
                subsizes = [ lvl(i)%nx, lvl(i)%ny,     ib    ]
                starts   = [     0,         0,       lnb-ib  ]
 
-               call MPI_Type_create_subarray(NDIM, sizes, subsizes, starts, ord, old, lvl(i)%mbc(zdim, LO, BND, ib), ierr)
+               call MPI_Type_create_subarray(ndims, sizes, subsizes, starts, ord, old, lvl(i)%mbc(zdim, LO, BND, ib), ierr)
                call MPI_Type_commit(lvl(i)%mbc(zdim, LO, BND, ib), ierr)
 
                starts(zdim) = lnb
-               call MPI_Type_create_subarray(NDIM, sizes, subsizes, starts, ord, old, lvl(i)%mbc(zdim, LO, DOM, ib), ierr)
+               call MPI_Type_create_subarray(ndims, sizes, subsizes, starts, ord, old, lvl(i)%mbc(zdim, LO, DOM, ib), ierr)
                call MPI_Type_commit(lvl(i)%mbc(zdim, LO, DOM, ib), ierr)
 
                starts(zdim) = lvl(i)%nzb + lnb - ib
-               call MPI_Type_create_subarray(NDIM, sizes, subsizes, starts, ord, old, lvl(i)%mbc(zdim, HI, DOM, ib), ierr)
+               call MPI_Type_create_subarray(ndims, sizes, subsizes, starts, ord, old, lvl(i)%mbc(zdim, HI, DOM, ib), ierr)
                call MPI_Type_commit(lvl(i)%mbc(zdim, HI, DOM, ib), ierr)
 
                starts(zdim) = lvl(i)%nzb + lnb
-               call MPI_Type_create_subarray(NDIM, sizes, subsizes, starts, ord, old, lvl(i)%mbc(zdim, HI, BND, ib), ierr)
+               call MPI_Type_create_subarray(ndims, sizes, subsizes, starts, ord, old, lvl(i)%mbc(zdim, HI, BND, ib), ierr)
                call MPI_Type_commit(lvl(i)%mbc(zdim, HI, BND, ib), ierr)
             endif
 
@@ -154,9 +154,9 @@ contains
 
       use dataio_pub,         only: die
       use mpisetup,           only: comm3d, ierr, procxl, procxr, procyl, procyr, proczl, proczr, proc, psize, has_dir
-      use constants,          only: xdim, ydim, zdim, LO, HI, BND, DOM
+      use constants,          only: ndims, xdim, ydim, zdim, LO, HI, BND, DOM
       use mpi,                only: MPI_STATUS_SIZE, MPI_REQUEST_NULL
-      use multigridvars,      only: NDIM, lvl, XLO, XHI, YLO, YHI, ZLO, ZHI, is_external, ngridvars, level_min, level_max
+      use multigridvars,      only: lvl, XLO, XHI, YLO, YHI, ZLO, ZHI, is_external, ngridvars, level_min, level_max
 
       implicit none
 
@@ -166,7 +166,7 @@ contains
       integer, intent(in) :: mode              !< what to do with external boundaries
       logical, intent(in), optional :: corners !< if .true. then don't forget aboutpay close attention to corners
 
-      integer, parameter                        :: nreq = NDIM*4
+      integer, parameter                        :: nreq = ndims*4
       integer, dimension(nreq)                  :: req3d
       integer, dimension(MPI_STATUS_SIZE, nreq) :: status3d
       logical                                   :: cor

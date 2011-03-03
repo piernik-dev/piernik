@@ -38,11 +38,12 @@
 module multigridvars
 ! pulled by MULTIGRID
 
-   use constants, only: xdim, zdim, LO, HI, BND, DOM
+   use constants, only: xdim, zdim, ndims, LO, HI, BND, DOM
 
    implicit none
 
    public ! QA_WARN no secrets are kept here
+   private :: xdim, zdim, ndims, LO, HI, BND, DOM ! QA_WARN prevent re-exporting
 
    ! multigrid constants
    integer, parameter :: source=1                                     !< Index of the density field
@@ -53,10 +54,7 @@ module multigridvars
    integer, parameter :: level_gb = level_min-1                       !< Global-base level number
    integer, parameter :: mg_nb = 2                                    !< Number of guardcells in multigrid (simplest laplacian and relaxation require only 1)
 
-   ! these constants can be #defined and used in other source files as well
-   integer, parameter :: LOW=1                                        !< index for low (left) boundary values (third index of plvl%bnd_[xyz] array)
-   integer, parameter :: HIGH=LOW+1                                   !< index for high (right) boundary values
-   integer, parameter :: NDIM=3                                       !< number of dimensions
+   ! these constants should be moved to constants module
    integer, parameter :: XLO=1                                        !< Index for low x-boundary  (used for is_external(:))
    integer, parameter :: XHI=XLO+1                                    !< Index for high x-boundary
    integer, parameter :: YLO=XHI+1                                    !< Index for low y-boundary
@@ -132,7 +130,7 @@ module multigridvars
    integer, parameter :: extbnd_antimirror = - extbnd_mirror          !< mirroring external boundaries with opposite sign
 
    type :: cart   ! auxiliary type for rank-to-coordinates array
-      integer, dimension(NDIM) :: lo, up, proc
+      integer, dimension(ndims) :: lo, up, proc
    end type cart
    type(cart), dimension(:),       allocatable :: gb_cartmap          !< rank-to-coordinates array and ranges on gb_src for assembling base level;
 

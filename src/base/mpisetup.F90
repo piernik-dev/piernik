@@ -48,9 +48,7 @@ module mpisetup
         &    cfr_smooth, cleanup_mpi, comm, comm3d, dt, dt_initial, dt_max_grow, dt_min, dt_old, dtm, err, ibuff, ierr, info, init_mpi, &
         &    integration_order, lbuff, limiter, mpifind, nproc, nstep, pcoords, proc, procxl, procxr, procxyl, procyl, procyr, procyxl, proczl, &
         &    proczr, psize, rbuff, req, smalld, smallei, smallp, status, t, use_smalld, magic_mass, local_magic_mass, master, slave, &
-        &    nb, has_dir, eff_dim, relax_time, grace_period_passed, dom, geometry_type, translate_bnds_to_ints_dom, &
-        &    have_mpi, is_uneven
-   !bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr, &
+        &    nb, has_dir, eff_dim, relax_time, grace_period_passed, dom, geometry_type, translate_bnds_to_ints_dom, have_mpi, is_uneven
 
    integer :: nproc, proc, ierr , rc, info
    integer :: status(MPI_STATUS_SIZE,4)
