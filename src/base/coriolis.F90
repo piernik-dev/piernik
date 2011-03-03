@@ -77,27 +77,29 @@ contains
 !! \todo add cylindrical geometry support (check carefully what exactly is u(iarr_all_my(:), :)/u(iarr_all_dn(:), :) and fogure out whether any geometrical factors are needed)
 !<
 
-   subroutine coriolis_force(sweep, u, rotacc)
+   function coriolis_force(sweep, u) result(rotacc)
 
       use fluidindex, only: flind, iarr_all_dn, iarr_all_mx, iarr_all_my
       use constants,  only: xdim, ydim !, zdim
 
       implicit none
 
-      integer, intent(in)                            :: sweep  !< string of characters that points out the current sweep direction
-      real, dimension(:,:), intent(in)               :: u      !< current fluid state vector
-      real, dimension(flind%fluids, size(u,2)), intent(inout) :: rotacc !< an array for Coriolis accelerations
+      integer, intent(in)                      :: sweep  !< string of characters that points out the current sweep direction
+      real, dimension(:,:), intent(in)         :: u      !< current fluid state vector
+      real, dimension(flind%fluids, size(u,2)) :: rotacc !< an array for Coriolis accelerations
 
       ! Coriolis force for corotating coords
       select case (sweep)
          case (xdim)
-            rotacc(:,:) = rotacc(:,:) + 2.0 * coriolis_omega * u(iarr_all_my(:), :)/u(iarr_all_dn(:), :)
+            rotacc(:,:) = +2.0 * coriolis_omega * u(iarr_all_my(:), :)/u(iarr_all_dn(:), :)
          case (ydim)
-            rotacc(:,:) = rotacc(:,:) - 2.0 * coriolis_omega * u(iarr_all_mx(:), :)/u(iarr_all_dn(:), :)
+            rotacc(:,:) = -2.0 * coriolis_omega * u(iarr_all_mx(:), :)/u(iarr_all_dn(:), :)
 !         case (zdim) !no z-component of the Coriolis force
+         case default
+            rotacc(:,:) = 0.0
       end select
 
-   end subroutine coriolis_force
+   end function coriolis_force
 
 !> \brief Provides a way to set the protected variable coriolis_omega
 

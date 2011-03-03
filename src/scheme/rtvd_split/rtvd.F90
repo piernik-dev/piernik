@@ -296,9 +296,6 @@ contains
       real, dimension(flind%all,n)    :: dflm               !< second order correction of left-moving waves flux on the left cell boundary
       real, dimension(flind%all,n)    :: dflp               !< second order correction of left-moving waves flux on the right cell boundary
       real, dimension(flind%all,n)    :: u1                 !< updated vector of conservative variables (after one timestep in second order scheme)
-#ifdef CORIOLIS
-      real, dimension(flind%fluids,n) :: rotacc             !< acceleration caused by rotation
-#endif /* CORIOLIS */
       real, dimension(flind%fluids,n) :: geosrc             !< source terms caused by geometry of coordinate system
       real, dimension(flind%fluids,n), target :: pressure   !< gas pressure
       real, dimension(flind%fluids,n), target :: density    !< gas density
@@ -416,15 +413,12 @@ contains
 
          acc = 0.0
 
-         acc     =  acc + fluid_interactions(dens, vx)
+         acc = acc + fluid_interactions(dens, vx)
 #ifdef SHEAR
-         acc(:,:) = acc(:,:) + shear_acc(sweep,u)
-#endif /* !SHEAR */
-
+         acc = acc + shear_acc(sweep,u)
+#endif /* SHEAR */
 #ifdef CORIOLIS
-         !> \deprecated BEWARE: if GRAV is not defined and any(geosrc(:,:) /= 0.), u1(iarr_all_mx,:) is already altered
-         call coriolis_force(sweep, u, rotacc(:,:))  !> \todo convert me to func similar to gridgeometry::geometry_source_terms
-         acc(:,:) = acc(:,:) + rotacc(:,:)
+         acc = acc + coriolis_force(sweep,u)
 #endif /* CORIOLIS */
 
 #ifdef GRAV
