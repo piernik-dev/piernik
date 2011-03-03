@@ -937,51 +937,31 @@ contains
    ! Having both rank-3 array pointer and rank-4 array pointer doesn;t look elegant, but works.
    ! Is there a way to pass only one, "universal" array pointer in Fortran?
 
-   subroutine write_arr_to_restart(file_id, pa3d, pa4d, area_type, dname)
-
-      use constants,  only: xdim, ydim, zdim, ndims, AT_OUT_B
-      use dataio_pub, only: die
+   subroutine prep_arr_write(rank, ir, area_type, loffs, chunk_dims, dimsf, file_id, dname, memspace, plist_id, filespace, dset_id, dplist_id, dfilespace)
       use hdf5,       only: HID_T, HSIZE_T, H5T_NATIVE_DOUBLE, &
            &                H5P_DATASET_CREATE_F, H5S_SELECT_SET_F, H5P_DATASET_XFER_F, H5FD_MPIO_INDEPENDENT_F, &
            &                h5screate_simple_f, h5pcreate_f, h5dcreate_f, h5dget_space_f, &
-           &                h5pset_chunk_f, h5pset_dxpl_mpio_f, h5sselect_hyperslab_f, h5dwrite_f, &
-           &                h5sclose_f, h5pclose_f, h5dclose_f
+           &                h5pset_chunk_f, h5pset_dxpl_mpio_f, h5sselect_hyperslab_f
       use mpisetup,   only: is_uneven
-
+      use constants,  only: ndims, AT_OUT_B
       implicit none
+      integer, parameter                             :: rank4 = 1 + ndims
+      integer, intent(in)                            :: rank, ir
+      integer, intent(in)                            :: area_type !> no boundaries, only outer boundaries or all boundaries
+      integer(HSIZE_T), dimension(rank4), intent(in) :: chunk_dims, dimsf
+      integer, dimension(ndims), intent(in)          :: loffs
+      integer(HID_T), intent(in)                     :: file_id   !> File identifier
+      character(len=*), intent(in)                   :: dname
 
-      integer(HID_T), intent(in)                    :: file_id   !> File identifier
-      real, pointer, dimension(:,:,:,:), intent(in) :: pa4d      !> 4-D array pointer
-      real, pointer, dimension(:,:,:), intent(in)   :: pa3d      !> 3-D array pointer, mutually exclusive with pa4d
-      integer, intent(in)                           :: area_type !> no boundaries, only outer boundaries or all boundaries
-      character(len=*), intent(in)                  :: dname
+      integer(HID_T), intent(out) :: dset_id    !> Dataset identifier
+      integer(HID_T), intent(out) :: filespace  !>
+      integer(HID_T), intent(out) :: dfilespace !>
+      integer(HID_T), intent(out) :: memspace   !> Dataspace identifier in memory
+      integer(HID_T), intent(out) :: plist_id   !>
+      integer(HID_T), intent(out) :: dplist_id  !>
 
-      integer, parameter :: rank4 = 1 + ndims
-      integer(HSIZE_T), dimension(rank4) :: count, offset, stride, block, dimsf, chunk_dims
-      integer(HID_T) :: dset_id               !> Dataset identifier
-      integer(HID_T) :: dplist_id, plist_id   !> Property list identifiers
-      integer(HID_T) :: dfilespace, filespace !> Dataspace identifiers in file
-      integer(HID_T) :: memspace              !> Dataspace identifier in memory
-
-      integer, dimension(ndims) :: area, lleft, lright, loffs, chnk
-
-      integer :: ir, rank
+      integer(HSIZE_T), dimension(rank4) :: count, offset, stride, block
       integer :: error
-
-      call set_dims_to_write(area_type, area, chnk, lleft, lright, loffs)
-
-      dimsf = [1, area(:)]      ! Dataset dimensions
-      chunk_dims = [1, chnk(:)] ! Chunks dimensions
-      if (associated(pa4d)) then
-         if (associated(pa3d)) call die("[dataio_hdf5:write_arr_to_restart] Cannot handle rank-3 and rank-4 arrays at once.")
-         rank = rank4
-         dimsf(1) = size(pa4d,1)
-         chunk_dims(1) = dimsf(1)
-      else
-         if (.not. associated(pa3d)) call die("[dataio_hdf5:write_arr_to_restart] Need either rank-3 or rank-4 array to write.")
-         rank = ndims
-      endif
-      ir = rank4 - rank + 1 ! 1 for 4-D arrays, 2 for 3-D arrays (to simplify use of count(:), offset(:), stride(:), block(:), dimsf(:) and chunk_dims(:)
 
       ! Create the file space for the dataset and make it chunked if possible
       call h5screate_simple_f(rank, dimsf(ir:), dfilespace, error)
@@ -1002,6 +982,66 @@ contains
       call h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_INDEPENDENT_F, error)
 
       call h5screate_simple_f(rank, chunk_dims(ir:), memspace, error)
+      return
+   end subroutine prep_arr_write
+
+   subroutine clean_arr_write(memspace, plist_id, filespace, dset_id, dplist_id, dfilespace)
+      use hdf5,       only: HID_T, h5sclose_f, h5pclose_f, h5dclose_f
+      implicit none
+      integer(HID_T), intent(inout) :: memspace, plist_id, filespace, dset_id, dplist_id, dfilespace
+      integer :: error
+
+      call h5sclose_f(memspace, error)
+      call h5pclose_f(plist_id, error)
+      call h5sclose_f(filespace, error)
+      call h5dclose_f(dset_id, error)
+      call h5pclose_f(dplist_id, error)
+      call h5sclose_f(dfilespace, error)
+   end subroutine clean_arr_write
+
+   subroutine write_arr_to_restart(file_id, pa3d, pa4d, area_type, dname)
+
+      use constants,  only: xdim, ydim, zdim, ndims
+      use dataio_pub, only: die
+      use hdf5,       only: HID_T, HSIZE_T, H5T_NATIVE_DOUBLE, h5dwrite_f
+
+      implicit none
+
+      integer(HID_T), intent(in)                    :: file_id   !> File identifier
+      real, pointer, dimension(:,:,:,:), intent(in) :: pa4d      !> 4-D array pointer
+      real, pointer, dimension(:,:,:), intent(in)   :: pa3d      !> 3-D array pointer, mutually exclusive with pa4d
+      integer, intent(in)                           :: area_type !> no boundaries, only outer boundaries or all boundaries
+      character(len=*), intent(in)                  :: dname
+
+      integer, parameter :: rank4 = 1 + ndims
+      integer(HSIZE_T), dimension(rank4) :: dimsf, chunk_dims
+      integer(HID_T) :: dset_id               !> Dataset identifier
+      integer(HID_T) :: dplist_id, plist_id   !> Property list identifiers
+      integer(HID_T) :: dfilespace, filespace !> Dataspace identifiers in file
+      integer(HID_T) :: memspace              !> Dataspace identifier in memory
+
+      integer, dimension(ndims) :: area, lleft, lright, loffs, chnk
+
+      integer :: ir, rank
+      integer :: error
+
+      call set_dims_to_write(area_type, area, chnk, lleft, lright, loffs)
+
+      dimsf = [1, area(:)]      ! Dataset dimensions
+      chunk_dims = [1, chnk(:)] ! Chunks dimensions
+
+      if (associated(pa4d)) then
+         if (associated(pa3d)) call die("[dataio_hdf5:write_arr_to_restart] Cannot handle rank-3 and rank-4 arrays at once.")
+         rank = rank4
+         dimsf(1) = size(pa4d,1)
+         chunk_dims(1) = dimsf(1)
+      else
+         if (.not. associated(pa3d)) call die("[dataio_hdf5:write_arr_to_restart] Need either rank-3 or rank-4 array to write.")
+         rank = ndims
+      endif
+      ir = rank4 - rank + 1 ! 1 for 4-D arrays, 2 for 3-D arrays (to simplify use of count(:), offset(:), stride(:), block(:), dimsf(:) and chunk_dims(:)
+
+      call prep_arr_write(rank, ir, area_type, loffs, chunk_dims, dimsf, file_id, dname, memspace, plist_id, filespace, dset_id, dplist_id, dfilespace)
 
       ! write data
       if (associated(pa4d)) then
@@ -1012,13 +1052,7 @@ contains
               &          dimsf(ir:), error, file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
       endif
 
-      ! cleanup
-      call h5sclose_f(memspace, error)
-      call h5pclose_f(plist_id, error)
-      call h5sclose_f(filespace, error)
-      call h5dclose_f(dset_id, error)
-      call h5pclose_f(dplist_id, error)
-      call h5sclose_f(dfilespace, error)
+      call clean_arr_write(memspace, plist_id, filespace, dset_id, dplist_id, dfilespace)
 
    end subroutine write_arr_to_restart
 
