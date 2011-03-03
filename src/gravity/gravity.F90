@@ -525,8 +525,9 @@ contains
 
    subroutine grav_roche(gp, ax, flatten)
 
-      use units,    only: newtong
-      use types,        only: axes
+      use units,     only: newtong
+      use types,     only: axes
+      use constants, only: ydim, zdim
 
       implicit none
 
@@ -542,9 +543,9 @@ contains
       GM1 =  newtong * ptmass
       GM2 =  newtong * ptmass2
 
-      do k = 1, ubound(gp,1)
+      do k = 1, ubound(gp,zdim)
          z2 = ax%z(k)**2
-         do j = 1, ubound(gp,2)
+         do j = 1, ubound(gp,ydim)
             yz2 = ax%y(j)**2 + z2
             gp(:,j,k) =  - GM1 / sqrt((ax%x(:) - ptm_x)**2  + yz2 + r_smooth2) &
                  &       - GM2 / sqrt((ax%x(:) - ptm2_x)**2 + yz2 + r_smooth2) &
