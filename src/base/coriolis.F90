@@ -62,9 +62,9 @@ contains
       if (omega_uninitialized) coriolis_omega = 0.
 
       if (geometry_type /= GEO_XYZ) call die("[coriolis:init_coriolis] Only cartesian geometry is implemented")
-#if !(defined GRAV || defined SHEAR || defined FLUID_INTERACTIONS)
+#if !(defined GRAV || defined SHEAR )
       call die("coriolis:init_coriolis] Check how and under what conditions the rtvd::relaxing_tvd handles additional source terms")
-#endif /* !(GRAV || SHEAR || FLUID_INTERACTIONS) */
+#endif /* !(GRAV || SHEAR ) */
 
    end subroutine init_coriolis
 

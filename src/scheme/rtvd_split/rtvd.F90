@@ -278,16 +278,16 @@ contains
       real,                        intent(in)  :: dt                 !< time step
 
       integer                        :: istep              !< step number in the time integration scheme
-#if defined GRAV || defined SHEAR || defined FLUID_INTERACTIONS
+#if defined GRAV || defined SHEAR
       integer                        :: ind                !< fluid index
-#endif /* defined GRAV || defined SHEAR || defined FLUID_INTERACTIONS */
+#endif /* defined GRAV || defined SHEAR */
 
       real                           :: dtx                !< dt/dx
       real, dimension(flind%all,n)    :: cfr                !< freezing speed
 !locals
-#if defined GRAV || defined SHEAR || defined FLUID_INTERACTIONS
+#if defined GRAV || defined SHEAR
       real, dimension(flind%fluids,n) :: acc                !< acceleration
-#endif /* defined GRAV || defined SHEAR || defined FLUID_INTERACTIONS */
+#endif /* defined GRAV || defined SHEAR */
       real, dimension(flind%all,n)    :: u0                 !< initial state of conservative variables
       real, dimension(flind%all,n)    :: w                  !< auxiliary vector to calculate fluxes
       real, dimension(flind%all,n)    :: fr                 !< flux of the right-moving waves
@@ -417,9 +417,8 @@ contains
 
 ! Source terms -------------------------------------
          geosrc = geometry_source_terms(u,pressure,sweep)
-#ifndef GRAV
+
          u1(iarr_all_mx,:) = u1(iarr_all_mx,:) + rk2coef(integration_order,istep)*geosrc(:,:)*dt !> \deprecated if GRAV is defined then look ~50 lines below (BEWARE: semi-duplicated code)
-#endif /* !GRAV */
 
          call fluid_interactions(dens, vx, fricacc)  !> \todo convert me to func similar to gridgeometry::geometry_source_terms
 
@@ -469,7 +468,7 @@ contains
          gravacc = 0.0
 #endif /* !GRAV */
 
-#if defined GRAV || defined SHEAR || defined FLUID_INTERACTIONS
+#if defined GRAV || defined SHEAR
          acc     =  rotacc + fricacc
          do ind = 1, flind%fluids
             acc(ind,:) =  acc(ind,:) + gravacc(:)
@@ -477,12 +476,12 @@ contains
 
          acc(:,n)   = acc(:,n-1); acc(:,1) = acc(:,2)
 
-         u1(iarr_all_mx,:) = u1(iarr_all_mx,:) + rk2coef(integration_order,istep)*(acc(:,:)*u(iarr_all_dn,:)+geosrc(:,:))*dt
+         u1(iarr_all_mx,:) = u1(iarr_all_mx,:) + rk2coef(integration_order,istep)*acc(:,:)*u(iarr_all_dn,:)*dt
 #ifndef ISO
          u1(iarr_all_en,:) = u1(iarr_all_en,:) + rk2coef(integration_order,istep)*acc(:,:)*u(iarr_all_mx,:)*dt
 #endif /* !ISO */
 
-#endif /* defined GRAV || defined SHEAR || defined FLUID_INTERACTIONS */
+#endif /* defined GRAV || defined SHEAR */
 
 #ifdef FLUID_INTERACTIONS_DW
          !!!! old, more general way of adding interactions
