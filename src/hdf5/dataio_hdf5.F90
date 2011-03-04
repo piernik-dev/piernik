@@ -1188,11 +1188,11 @@ contains
 
       implicit none
 
-      integer(HID_T), intent(in)                    :: file_id   ! File identifier
-      real, dimension(:,:,:), pointer, intent(in)   :: pa3d      ! pointer to (1:cg%nx, 1:cg%ny, 1:cg%ns)-sized array
-      real, dimension(:,:,:,:), pointer, intent(in) :: pa4d      ! pointer to (:, 1:cg%nx, 1:cg%ny, 1:cg%ns)-sized array
-      integer, intent(in)                           :: area_type !> no boundaries, only outer boundaries or all boundaries
-      character(len=*), intent(in)                  :: dname
+      integer(HID_T), intent(in)                       :: file_id   ! File identifier
+      real, dimension(:,:,:), pointer, intent(inout)   :: pa3d      ! pointer to (1:cg%nx, 1:cg%ny, 1:cg%ns)-sized array
+      real, dimension(:,:,:,:), pointer, intent(inout) :: pa4d      ! pointer to (:, 1:cg%nx, 1:cg%ny, 1:cg%ns)-sized array
+      integer, intent(in)                              :: area_type !> no boundaries, only outer boundaries or all boundaries
+      character(len=*), intent(in)                     :: dname
 
       integer(HID_T)        :: dset_id       ! Dataset identifier
       integer(HID_T)        :: plist_id      ! Property list identifier

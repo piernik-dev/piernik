@@ -324,7 +324,7 @@ contains
 
       implicit none
 
-      real, dimension(:,:,:), pointer, intent(in) :: pa3d
+      real, dimension(:,:,:), pointer, intent(inout) :: pa3d
 
       integer, parameter                          :: nreq = 3 * 4
       integer, dimension(nreq)                    :: req3d
