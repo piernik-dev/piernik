@@ -233,7 +233,7 @@ contains
       p3d => inid(:,:,:)
 
       if (allocated(inid) .and. associated(p3d)) then
-         call read_arr_from_restart(file_id, p3d, null(), AT_NO_B, inid_n)
+         call read_arr_from_restart(file_id, p3d, AT_NO_B, inid_n)
          nullify(p3d)
       else
          call warn("[initproblem:read_IC_from_restart] Cannot read inid(:,:,:). It's really weird...")

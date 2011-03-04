@@ -466,13 +466,13 @@ contains
          if (.not.allocated(vly0)) allocate(vly0(cg%nx, cg%ny, cg%nz))
 
          if (.not.associated(p3d)) p3d => den0(:,:,:)
-         call read_arr_from_restart(file_id, p3d, null(), AT_NO_B, "den0")
+         call read_arr_from_restart(file_id, p3d, AT_NO_B, "den0")
          if (associated(p3d)) nullify(p3d)
          if (.not.associated(p3d)) p3d => vlx0(:,:,:)
-         call read_arr_from_restart(file_id, p3d, null(), AT_NO_B, "vlx0")
+         call read_arr_from_restart(file_id, p3d, AT_NO_B, "vlx0")
          if (associated(p3d)) nullify(p3d)
          if (.not.associated(p3d)) p3d => vly0(:,:,:)
-         call read_arr_from_restart(file_id, p3d, null(), AT_NO_B, "vly0")
+         call read_arr_from_restart(file_id, p3d, AT_NO_B, "vly0")
          if (associated(p3d)) nullify(p3d)
       endif
 
