@@ -67,6 +67,10 @@ module dataio_hdf5
    interface write_arr_to_restart
       module procedure write_4darr_to_restart, write_3darr_to_restart
    end interface
+   interface read_arr_from_restart
+      module procedure read_4darr_from_restart, read_3darr_from_restart
+   end interface
+
 
 
 contains
@@ -1175,63 +1179,39 @@ contains
 ! Boundary cells are exchanged with the neughbours. Corner boundary cells are not guaranteed to be correct (area_type = AT_ALL_B not implemented yet).
 ! External boundary cells are not stored in the restart file and thus all of them are lost (area_type = AT_OUT_B not implemented yet).
 
-   subroutine read_arr_from_restart(file_id, pa3d, pa4d, area_type, dname)
-
-      use constants,  only: xdim, ydim, zdim, ndims
+   subroutine prep_arr_read(rank, ir, loffs, chunk_dims, file_id, dname, memspace, plist_id, filespace, dset_id)
+      use hdf5,       only: HID_T, HSIZE_T, H5S_SELECT_SET_F, H5P_DATASET_XFER_F, H5FD_MPIO_INDEPENDENT_F, &
+           &                h5dopen_f, h5sget_simple_extent_ndims_f, h5dget_space_f, &
+           &                h5pcreate_f, h5pset_dxpl_mpio_f, h5sselect_hyperslab_f, h5screate_simple_f
+      use constants,  only: ndims
       use dataio_pub, only: msg, die
-      use grid,       only: arr3d_boundaries
-      use hdf5,       only: HID_T, HSIZE_T, SIZE_T, H5T_NATIVE_DOUBLE, &
-           &                H5S_SELECT_SET_F, H5FD_MPIO_INDEPENDENT_F, H5P_DATASET_XFER_F, &
-           &                h5pcreate_f, h5pclose_f, h5screate_simple_f, h5dopen_f, &
-           &                h5dget_space_f, h5sget_simple_extent_ndims_f, &
-           &                h5sselect_hyperslab_f, h5dread_f, h5sclose_f, h5pset_dxpl_mpio_f, h5dclose_f
-
       implicit none
+      integer, parameter                             :: rank4 = 1 + ndims
+      integer, intent(in)                            :: rank, ir
+      integer(HSIZE_T), dimension(rank4), intent(in) :: chunk_dims
+      integer, dimension(ndims), intent(in)          :: loffs
+      integer(HID_T), intent(in)                     :: file_id   !> File identifier
+      character(len=*), intent(in)                   :: dname
 
-      integer(HID_T), intent(in)                       :: file_id   ! File identifier
-      real, dimension(:,:,:), pointer, intent(inout)   :: pa3d      ! pointer to (1:cg%nx, 1:cg%ny, 1:cg%ns)-sized array
-      real, dimension(:,:,:,:), pointer, intent(inout) :: pa4d      ! pointer to (:, 1:cg%nx, 1:cg%ny, 1:cg%ns)-sized array
-      integer, intent(in)                              :: area_type !> no boundaries, only outer boundaries or all boundaries
-      character(len=*), intent(in)                     :: dname
+      integer(HID_T), intent(out) :: dset_id    !> Dataset identifier
+      integer(HID_T), intent(out) :: filespace  !>
+      integer(HID_T), intent(out) :: memspace   !> Dataspace identifier in memory
+      integer(HID_T), intent(out) :: plist_id   !>
 
-      integer(HID_T)        :: dset_id       ! Dataset identifier
-      integer(HID_T)        :: plist_id      ! Property list identifier
-      integer(HID_T)        :: filespace     ! Dataspace identifier in file
-      integer(HID_T)        :: memspace      ! Dataspace identifier in memory
-
-      integer, parameter :: rank4 = 1 + ndims
-      integer(HSIZE_T), dimension(rank4) :: count, offset, stride, block, dimsf, chunk_dims
-
-      integer, dimension(ndims) :: area, lleft, lright, loffs, chnk
-      integer :: ir, rank, rankf
-      integer :: error
-
-      call set_dims_to_write(area_type, area, chnk, lleft, lright, loffs)
-
-      dimsf = [1, area(:)]      ! Dataset dimensions
-      chunk_dims = [1, chnk(:)] ! Chunks dimensions
-      if (associated(pa4d)) then
-         if (associated(pa3d)) call die("[dataio_hdf5:read_arr_from_restart] Cannot handle rank-3 and rank-4 arrays at once.")
-         rank = rank4
-         dimsf(1) = size(pa4d,1)
-         chunk_dims(1) = dimsf(1)
-      else
-         if (.not. associated(pa3d)) call die("[dataio_hdf5:read_arr_from_restart] Need either rank-3 or rank-4 array to read.")
-         rank = ndims
-      endif
-      ir = rank4 - rank + 1 ! 1 for 4-D arrays, 2 for 3-D arrays (to simplify use of count(:), offset(:), stride(:), block(:), dimsf(:) and chunk_dims(:)
+      integer(HSIZE_T), dimension(rank4) :: count, offset, stride, block
+      integer :: error, rankf
 
       ! Create dataset.and filespace
       call h5dopen_f(file_id, dname, dset_id, error)
       if (error /= 0) then
-         write(msg, '(3a)') "[dataio_hdf5:read_3darr_from_restart] Opening dataset '",dname,"' failed."
+         write(msg, '(3a)') "[dataio_hdf5:prep_arr_read] Opening dataset '",dname,"' failed."
          call die(msg)
       endif
 
       call h5dget_space_f(dset_id, filespace, error)
       call h5sget_simple_extent_ndims_f (filespace, rankf, error)
       if (rank /= rankf) then
-         write(msg,'(3a,2(i2,a))')"[dataio_hdf5:read_arr_from_restart] Rank mismatch in array '", dname, "' (", rank, " /= ", rankf, ")"
+         write(msg,'(3a,2(i2,a))')"[dataio_hdf5:prep_arr_read] Rank mismatch in array '", dname, "' (", rank, " /= ", rankf, ")"
          call die(msg)
       endif
 
@@ -1246,32 +1226,120 @@ contains
       call h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_INDEPENDENT_F, error)
       call h5screate_simple_f(rank, chunk_dims(ir:), memspace, error)
 
-      ! Read the array
-      if (associated(pa4d)) then
-         call h5dread_f(dset_id, H5T_NATIVE_DOUBLE, pa4d(:, lleft(xdim):lright(xdim), lleft(ydim):lright(ydim), lleft(zdim):lright(zdim)), &
-              &         dimsf(ir:), error, file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
-      else if (associated(pa3d)) then
-         call h5dread_f(dset_id, H5T_NATIVE_DOUBLE, pa3d(lleft(xdim):lright(xdim), lleft(ydim):lright(ydim), lleft(zdim):lright(zdim)), &
-              &         dimsf(ir:), error, file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
-      else
-         error = -1
-      endif
+   end subroutine prep_arr_read
 
-      if (error /= 0) then
-         write(msg, '(3a)') "[dataio_hdf5:read_3darr_from_restart] Reading dataset '",dname,"' failed."
-         call die(msg)
-      endif
+   subroutine clean_arr_read(memspace, plist_id, filespace, dset_id)
+      use hdf5,       only: HID_T, h5sclose_f, h5pclose_f, h5dclose_f
+      implicit none
+      integer(HID_T), intent(inout) :: memspace, plist_id, filespace, dset_id
+      integer :: error
 
       call h5sclose_f(memspace, error)
       call h5pclose_f(plist_id, error)
       call h5sclose_f(filespace, error)
       call h5dclose_f(dset_id, error)
 
-      ! Originally the pa3d array was written with the guardcells. The internal guardcells will be exchanged but the external ones are lost.
-      if (associated(pa3d)) call arr3d_boundaries(pa3d)
+   end subroutine clean_arr_read
+
+   subroutine read_4darr_from_restart(file_id, pa4d, area_type, dname)
+
+      use constants,  only: xdim, ydim, zdim, ndims
+      use dataio_pub, only: msg, die
+      use hdf5,       only: HID_T, HSIZE_T, SIZE_T, H5T_NATIVE_DOUBLE, h5dread_f
+
+      implicit none
+
+      integer(HID_T), intent(in)                       :: file_id   ! File identifier
+      real, dimension(:,:,:,:), pointer, intent(inout) :: pa4d      ! pointer to (:, 1:cg%nx, 1:cg%ny, 1:cg%ns)-sized array
+      integer, intent(in)                              :: area_type !> no boundaries, only outer boundaries or all boundaries
+      character(len=*), intent(in)                     :: dname
+
+      integer(HID_T)        :: dset_id       ! Dataset identifier
+      integer(HID_T)        :: plist_id      ! Property list identifier
+      integer(HID_T)        :: filespace     ! Dataspace identifier in file
+      integer(HID_T)        :: memspace      ! Dataspace identifier in memory
+
+      integer, parameter :: rank4 = 1 + ndims
+      integer(HSIZE_T), dimension(rank4) :: dimsf, chunk_dims
+
+      integer, dimension(ndims) :: area, lleft, lright, loffs, chnk
+      integer :: ir, rank
+      integer :: error
+
+      call set_dims_to_write(area_type, area, chnk, lleft, lright, loffs)
+
+      dimsf = [size(pa4d,1), area(:)]      ! Dataset dimensions
+      chunk_dims = [size(pa4d,1), chnk(:)] ! Chunks dimensions
+      rank = rank4
+      ir = rank4 - rank + 1 ! 1 for 4-D arrays, 2 for 3-D arrays (to simplify use of count(:), offset(:), stride(:), block(:), dimsf(:) and chunk_dims(:)
+
+      call prep_arr_read(rank, ir, loffs, chunk_dims, file_id, dname, memspace, plist_id, filespace, dset_id)
+
+      ! Read the array
+      call h5dread_f(dset_id, H5T_NATIVE_DOUBLE, pa4d(:, lleft(xdim):lright(xdim), lleft(ydim):lright(ydim), lleft(zdim):lright(zdim)), &
+           &         dimsf(ir:), error, file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
+
+      if (error /= 0) then
+         write(msg, '(3a)') "[dataio_hdf5:read_3darr_from_restart] Reading dataset '",dname,"' failed."
+         call die(msg)
+      endif
+
+      call clean_arr_read(memspace, plist_id, filespace, dset_id)
       ! rank-4 arrays (u(:,:,:,:) and b(:,:,:,:)) have their own guardcell-exchange routines, which can also be called here
 
-   end subroutine read_arr_from_restart
+   end subroutine read_4darr_from_restart
+
+   subroutine read_3darr_from_restart(file_id, pa3d, area_type, dname)
+
+      use constants,  only: xdim, ydim, zdim, ndims
+      use dataio_pub, only: msg, die
+      use grid,       only: arr3d_boundaries
+      use hdf5,       only: HID_T, HSIZE_T, SIZE_T, h5dread_f, H5T_NATIVE_DOUBLE
+
+      implicit none
+
+      integer(HID_T), intent(in)                       :: file_id   ! File identifier
+      real, dimension(:,:,:), pointer, intent(inout)   :: pa3d      ! pointer to (1:cg%nx, 1:cg%ny, 1:cg%ns)-sized array
+      integer, intent(in)                              :: area_type !> no boundaries, only outer boundaries or all boundaries
+      character(len=*), intent(in)                     :: dname
+
+      integer(HID_T)        :: dset_id       ! Dataset identifier
+      integer(HID_T)        :: plist_id      ! Property list identifier
+      integer(HID_T)        :: filespace     ! Dataspace identifier in file
+      integer(HID_T)        :: memspace      ! Dataspace identifier in memory
+
+      integer, parameter :: rank4 = 1 + ndims
+      integer(HSIZE_T), dimension(rank4) :: dimsf, chunk_dims
+
+      integer, dimension(ndims) :: area, lleft, lright, loffs, chnk
+      integer :: ir, rank
+      integer :: error
+
+      call set_dims_to_write(area_type, area, chnk, lleft, lright, loffs)
+
+      dimsf = [1, area(:)]      ! Dataset dimensions
+      chunk_dims = [1, chnk(:)] ! Chunks dimensions
+      if (.not. associated(pa3d)) call die("[dataio_hdf5:read_3darr_from_restart] Null pointer given.")
+      rank = ndims
+      ir = rank4 - rank + 1 ! 1 for 4-D arrays, 2 for 3-D arrays (to simplify use of count(:), offset(:), stride(:), block(:), dimsf(:) and chunk_dims(:)
+
+      call prep_arr_read(rank, ir, loffs, chunk_dims, file_id, dname, memspace, plist_id, filespace, dset_id)
+
+      ! Read the array
+      call h5dread_f(dset_id, H5T_NATIVE_DOUBLE, pa3d(lleft(xdim):lright(xdim), lleft(ydim):lright(ydim), lleft(zdim):lright(zdim)), &
+           &         dimsf(ir:), error, file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
+
+      if (error /= 0) then
+         write(msg, '(3a)') "[dataio_hdf5:read_3darr_from_restart] Reading dataset '",dname,"' failed."
+         call die(msg)
+      endif
+
+      call clean_arr_read(memspace, plist_id, filespace, dset_id)
+
+      ! Originally the pa3d array was written with the guardcells. The internal guardcells will be exchanged but the external ones are lost.
+      call arr3d_boundaries(pa3d)
+
+   end subroutine read_3darr_from_restart
 
    subroutine read_restart_hdf5(chdf)
 
@@ -1388,24 +1456,24 @@ contains
       if (associated(p3d)) nullify(p3d)
 #ifdef ISO_LOCAL
       p3d => cs_iso2_arr(:,:,:)
-      call read_arr_from_restart(file_id, p3d, null(), AT_NO_B, "cs_iso2")
+      call read_arr_from_restart(file_id, p3d, AT_NO_B, "cs_iso2")
       nullify(p3d)
 #endif /* ISO_LOCAL */
 #ifdef GRAV
       p3d => gp(:,:,:)
-      call read_arr_from_restart(file_id, p3d, null(), AT_NO_B, "gp")
+      call read_arr_from_restart(file_id, p3d, AT_NO_B, "gp")
       nullify(p3d)
 #endif /* GRAV */
 
       if (associated(p4d)) nullify(p4d)
       !  READ FLUID VARIABLES
       p4d => u(:, :, :, :)
-      call read_arr_from_restart(file_id, null(), p4d, AT_NO_B, dname(FLUID))
+      call read_arr_from_restart(file_id, p4d, AT_NO_B, dname(FLUID))
       nullify(p4d)
 
       !  READ MAG VARIABLES
       p4d => b(:,:,:,:)
-      call read_arr_from_restart(file_id, null(), p4d, AT_OUT_B, dname(MAG))
+      call read_arr_from_restart(file_id, p4d, AT_OUT_B, dname(MAG))
       nullify(p4d)
 
       call h5fclose_f(file_id, error)
