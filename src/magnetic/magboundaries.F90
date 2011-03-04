@@ -76,7 +76,7 @@ contains
 
    end subroutine bnd_a
 
-   subroutine bnd_b(dim)
+   subroutine bnd_b(dir)
 
       use arrays,        only: b
       use dataio_pub,    only: msg, warn
@@ -91,7 +91,7 @@ contains
 
       implicit none
 
-      character(len=*)  :: dim
+      integer, intent(in) :: dir
       integer           :: i, j
       real, allocatable :: send_left(:,:,:,:),recv_left(:,:,:,:)
 #ifdef SHEAR
@@ -107,8 +107,8 @@ contains
 
 ! MPI block comunication
 
-      select case (dim)
-         case ("xdim")
+      select case (dir)
+         case (xdim)
 #ifdef SHEAR
             allocate(send_left(3, cg%nb, cg%ny, cg%nz),send_right(3, cg%nb, cg%ny, cg%nz), &
                      recv_left(3, cg%nb, cg%ny, cg%nz),recv_right(3, cg%nb, cg%ny, cg%nz))
@@ -178,7 +178,7 @@ contains
             endif
 #endif /* !SHEAR */
 
-         case ("ydim")
+         case (ydim)
             if (psize(ydim) > 1) then
 
                call MPI_Isend  (b(1,1,1,1), 1, cg%mbc(MAG, ydim, LO, DOM),  procyl, 30, comm3d, req(1), ierr)
@@ -189,7 +189,7 @@ contains
                call MPI_Waitall(4,req(:),status(:,:),ierr)
             endif
 
-         case ("zdim")
+         case (zdim)
             if (psize(zdim) > 1) then
                call MPI_Isend  (b(1,1,1,1), 1, cg%mbc(MAG, zdim, LO, DOM),  proczl, 50, comm3d, req(1), ierr)
                call MPI_Isend  (b(1,1,1,1), 1, cg%mbc(MAG, zdim, HI, DOM), proczr, 60, comm3d, req(3), ierr)
@@ -290,12 +290,12 @@ contains
          bnd_zr_not_provided = any( [BND_INF, BND_REF, BND_MPI ] == cg%bnd(zdim, HI))
       endif
 
-      if (dim=="xdim" .and. bnd_xl_not_provided .and. bnd_xr_not_provided) return  ! avoid triple case
-      if (dim=="ydim" .and. bnd_yl_not_provided .and. bnd_yr_not_provided) return  ! avoid triple case
-      if (dim=="zdim" .and. bnd_zl_not_provided .and. bnd_zr_not_provided) return  ! avoid triple case
+      if (dir==xdim .and. bnd_xl_not_provided .and. bnd_xr_not_provided) return  ! avoid triple case
+      if (dir==ydim .and. bnd_yl_not_provided .and. bnd_yr_not_provided) return  ! avoid triple case
+      if (dir==zdim .and. bnd_zl_not_provided .and. bnd_zr_not_provided) return  ! avoid triple case
 
-      select case (dim)
-         case ("xdim")
+      select case (dir)
+         case (xdim)
 
             select case (cg%bnd(xdim, LO))
                case (BND_COR, BND_INF, BND_MPI, BND_REF, BND_SHE)
@@ -305,7 +305,7 @@ contains
                case (BND_OUT)
                   b(:,1,:,:) = b(:,2,:,:)
                case default
-                  write(msg,'(4a)') "[magboundaries:bnd_b]: Boundary condition ",cg%bnd(xdim, LO)," not implemented in ",dim
+                  write(msg,'(2(a,i3))') "[magboundaries:bnd_b]: Boundary condition ",cg%bnd(xdim, LO)," not implemented in ",dir
                   call warn(msg)
             end select  ! (cg%bnd(xdim, LO))
 
@@ -317,11 +317,11 @@ contains
                case (BND_OUT)
                   b(:, cg%nx,:,:) = b(:, cg%nx-1,:,:)
                case default
-                  write(msg,'(4a)') "[magboundaries:bnd_b]: Boundary condition ",cg%bnd(xdim, HI)," not implemented in ",dim
+                  write(msg,'(2(a,i3))') "[magboundaries:bnd_b]: Boundary condition ",cg%bnd(xdim, HI)," not implemented in ",dir
                   call warn(msg)
             end select  ! (cg%bnd(xdim, HI))
 
-         case ("ydim")
+         case (ydim)
 
             select case (cg%bnd(ydim, LO))
                case (BND_COR, BND_INF, BND_MPI, BND_REF)
@@ -331,7 +331,7 @@ contains
                case (BND_OUT)
                   b(:,:,1,:) = b(:,:,2,:)
                case default
-                  write(msg,'(4a)') "[magboundaries:bnd_b]: Boundary condition ",cg%bnd(ydim, LO)," not implemented in ",dim
+                  write(msg,'(2(a,i3))') "[magboundaries:bnd_b]: Boundary condition ",cg%bnd(ydim, LO)," not implemented in ",dir
                   call warn(msg)
             end select  ! (cg%bnd(ydim, LO))
 
@@ -343,12 +343,12 @@ contains
                case (BND_OUT)
                   b(:,:, cg%ny,:) = b(:,:, cg%ny-1,:)
                case default
-                  write(msg,'(4a)') "[magboundaries:bnd_b]: Boundary condition ",cg%bnd(ydim, HI)," not implemented in ",dim
+                  write(msg,'(2(a,i3))') "[magboundaries:bnd_b]: Boundary condition ",cg%bnd(ydim, HI)," not implemented in ",dir
                   call warn(msg)
 
             end select  ! (cg%bnd(ydim, HI))
 
-         case ("zdim")
+         case (zdim)
 
             select case (cg%bnd(zdim, LO))
                case (BND_MPI, BND_REF)
@@ -358,7 +358,7 @@ contains
                case (BND_OUT)
                   b(:,:,:,1) = b(:,:,:,2)
                case default
-                  write(msg,'(4a)') "[magboundaries:bnd_b]: Boundary condition ",cg%bnd(zdim, LO)," not implemented in ",dim
+                  write(msg,'(2(a,i3))') "[magboundaries:bnd_b]: Boundary condition ",cg%bnd(zdim, LO)," not implemented in ",dir
                   call warn(msg)
             end select  ! (cg%bnd(zdim, LO))
 
@@ -370,7 +370,7 @@ contains
                case (BND_OUT)
                   b(:,:,:, cg%nz) = b(:,:,:, cg%nz-1)
                case default
-                  write(msg,'(4a)') "[magboundaries:bnd_b]: Boundary condition ",cg%bnd(zdim, HI)," not implemented in ",dim
+                  write(msg,'(2(a,i3))') "[magboundaries:bnd_b]: Boundary condition ",cg%bnd(zdim, HI)," not implemented in ",dir
                   call warn(msg)
             end select  ! (cg%bnd(zdim, HI))
 
@@ -622,13 +622,15 @@ contains
    subroutine all_mag_boundaries
 
       use mpisetup,  only: has_dir
-      use constants, only: xdim, ydim, zdim
+      use constants, only: xdim, zdim
 
       implicit none
 
-      if (has_dir(xdim)) call bnd_b("xdim")
-      if (has_dir(ydim)) call bnd_b("ydim")
-      if (has_dir(zdim)) call bnd_b("zdim")
+      integer :: dir
+
+      do dir = xdim, zdim
+         if (has_dir(dir)) call bnd_b(dir)
+      enddo
 
    end subroutine all_mag_boundaries
 
