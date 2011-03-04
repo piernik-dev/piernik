@@ -468,9 +468,9 @@ contains
          grad_pcr(1:2)   = 0.0 ; grad_pcr(n-1:n) = 0.0
 
 #ifndef ISO
-         !> \deprecated BEWARE: we shouldn't use u1 to calculate source terms!!!
+         !> \deprecated BEWARE: u1(imx)/u1(idn) was changed to vx, CHECK VALIDITY!
          u1(iarr_all_en(flind%ion%pos),:) = u1(iarr_all_en(flind%ion%pos),:) &
-                              - rk2coef(integration_order,istep)*u1(iarr_all_mx(flind%ion%pos),:)/u1(iarr_all_dn(flind%ion%pos),:)*grad_pcr*dt
+                              - rk2coef(integration_order,istep)*vx(flind%ion%pos,:)*grad_pcr*dt
 #endif /* !ISO */
          u1(iarr_all_mx(flind%ion%pos),:) = u1(iarr_all_mx(flind%ion%pos),:) - rk2coef(integration_order,istep)*grad_pcr*dt
 
