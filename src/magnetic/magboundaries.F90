@@ -380,7 +380,7 @@ contains
 
 !=====================================================================================================
 
-   subroutine bnd_emf(var, name, dim)
+   subroutine bnd_emf(var, name, dir)
 
       use constants,     only: xdim, ydim, zdim, LO, HI, BND_MPI, BND_PER, BND_REF, BND_OUT, BND_COR, BND_SHE, BND_INF
       use dataio_pub,    only: msg, warn
@@ -389,7 +389,8 @@ contains
       implicit none
 
       real, dimension(:,:,:), intent(inout) :: var
-      character(len=*), intent(in)          :: name, dim
+      character(len=*), intent(in)          :: name
+      integer, intent(in)                   :: dir
       real, dimension(cg%ny, cg%nz)                :: dvarx
       real, dimension(cg%nx, cg%nz)                :: dvary
       real, dimension(cg%nx, cg%ny)                :: dvarz
@@ -414,15 +415,15 @@ contains
          frun = .false.
       endif
 
-      if (dim=="xdim" .and. bnd_xl_not_provided .and. bnd_xr_not_provided) return  ! avoid triple case
-      if (dim=="ydim" .and. bnd_yl_not_provided .and. bnd_yr_not_provided) return  ! avoid triple case
-      if (dim=="zdim" .and. bnd_zl_not_provided .and. bnd_zr_not_provided) return  ! avoid triple case
+      if (dir==xdim .and. bnd_xl_not_provided .and. bnd_xr_not_provided) return  ! avoid triple case
+      if (dir==ydim .and. bnd_yl_not_provided .and. bnd_yr_not_provided) return  ! avoid triple case
+      if (dir==zdim .and. bnd_zl_not_provided .and. bnd_zr_not_provided) return  ! avoid triple case
 
       bndsign = huge(1.0); ledge=huge(1); redge=huge(1); lnbcells=huge(1); rnbcells=huge(1); zndiff=huge(1); rrbase=huge(1)
       ! the code below should not use these values and the compiler should not complain on possible use of uninitialized variables.
 
-      select case (dim)
-         case ("xdim")
+      select case (dir)
+         case (xdim)
 
             if (any( [cg%bnd(xdim, LO) == BND_REF, cg%bnd(xdim, HI) == BND_REF, cg%bnd(xdim, LO) == BND_OUT, cg%bnd(xdim, HI) == BND_OUT] )) then
                select case (name)
@@ -450,7 +451,7 @@ contains
                      var(ib,:,:) = var(cg%is,:,:) - real(cg%is-ib)*dvarx
                   enddo
                case default
-                  write(msg,'(6a)') "[magboundaries:bnd_emf]: Boundary condition ",cg%bnd(xdim, LO)," not implemented for ",name, " in ", dim
+                  write(msg,'(a,i3,3a,i3)') "[magboundaries:bnd_emf]: Boundary condition ",cg%bnd(xdim, LO)," not implemented for ",name, " in ", dir
                   call warn(msg)
             end select  ! (cg%bnd(xdim, LO))
 
@@ -469,11 +470,11 @@ contains
                      var(redge+ib,:,:) = var(redge,:,:) + real(ib)*dvarx
                   enddo
                case default
-                  write(msg,'(6a)') "[magboundaries:bnd_emf]: Boundary condition ",cg%bnd(xdim, HI)," not implemented for ",name, " in ", dim
+                  write(msg,'(a,i3,3a,i3)') "[magboundaries:bnd_emf]: Boundary condition ",cg%bnd(xdim, HI)," not implemented for ",name, " in ", dir
                   call warn(msg)
             end select ! (cg%bnd(xdim, HI))
 
-         case ("ydim")
+         case (ydim)
 
             if (any( [cg%bnd(ydim, LO) == BND_REF, cg%bnd(ydim, HI) == BND_REF, cg%bnd(ydim, LO) == BND_OUT, cg%bnd(ydim, HI) == BND_OUT] )) then
                select case (name)
@@ -501,7 +502,7 @@ contains
                      var(:,ib,:) = var(:, cg%js,:) - real(cg%js-ib)*dvary
                   enddo
                case default
-                  write(msg,'(6a)') "[magboundaries:bnd_emf]: Boundary condition ",cg%bnd(ydim, LO)," not implemented for ",name, " in ", dim
+                  write(msg,'(a,i3,3a,i3)') "[magboundaries:bnd_emf]: Boundary condition ",cg%bnd(ydim, LO)," not implemented for ",name, " in ", dir
                   call warn(msg)
             end select  ! (cg%bnd(ydim, LO))
 
@@ -520,11 +521,11 @@ contains
                      var(:,redge+ib,:) = var(:,redge,:) + real(ib)*dvary
                   enddo
                case default
-                  write(msg,'(6a)') "[magboundaries:bnd_emf]: Boundary condition ",cg%bnd(ydim, HI)," not implemented for ",name, " in ", dim
+                  write(msg,'(a,i3,3a,i3)') "[magboundaries:bnd_emf]: Boundary condition ",cg%bnd(ydim, HI)," not implemented for ",name, " in ", dir
                   call warn(msg)
             end select ! (cg%bnd(ydim, HI))
 
-         case ("zdim")
+         case (zdim)
 
             if (any( [cg%bnd(zdim, LO) == BND_REF, cg%bnd(zdim, HI) == BND_REF, cg%bnd(zdim, LO) == BND_OUT, cg%bnd(zdim, HI) == BND_OUT] )) then
                select case (name)
@@ -552,7 +553,7 @@ contains
                      var(:,:,ib) = var(:,:, cg%ks) - real(cg%ks-ib)*dvarz
                   enddo
                case default
-                  write(msg,'(6a)') "[magboundaries:bnd_emf]: Boundary condition ",cg%bnd(zdim, LO)," not implemented for ",name, " in ", dim
+                  write(msg,'(a,i3,3a,i3)') "[magboundaries:bnd_emf]: Boundary condition ",cg%bnd(zdim, LO)," not implemented for ",name, " in ", dir
                   call warn(msg)
             end select  ! (cg%bnd(zdim, LO))
 
@@ -571,7 +572,7 @@ contains
                      var(:,:,redge+ib) = var(:,:,redge) + real(ib)*dvarz
                   enddo
                case default
-                  write(msg,'(6a)') "[magboundaries:bnd_emf]: Boundary condition ",cg%bnd(zdim, HI)," not implemented for ",name, " in ", dim
+                  write(msg,'(a,i3,3a,i3)') "[magboundaries:bnd_emf]: Boundary condition ",cg%bnd(zdim, HI)," not implemented for ",name, " in ", dir
                   call warn(msg)
             end select ! (cg%bnd(zdim, HI))
 

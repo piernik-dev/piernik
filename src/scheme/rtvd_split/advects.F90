@@ -80,9 +80,9 @@ contains
          enddo
       enddo
 
-      if (has_dir(xdim)) call bnd_emf(wa, 'vxby', 'xdim')
-      if (has_dir(ydim)) call bnd_emf(wa, 'vxby', 'ydim')
-      if (has_dir(zdim)) call bnd_emf(wa, 'vxby', 'zdim')
+      do j = xdim, zdim
+         if (has_dir(j)) call bnd_emf(wa,'vxby',j)
+      enddo
 
    end subroutine advectby_x
 
@@ -93,7 +93,7 @@ contains
       use grid,          only: cg
       use magboundaries, only: bnd_emf
       use mpisetup,      only: dt, has_dir
-      use constants,     only: xdim, ydim, zdim
+      use constants,     only: xdim, zdim
       use rtvd,          only: tvdb
 
       implicit none
@@ -131,9 +131,9 @@ contains
          enddo
       enddo
 
-      if (has_dir(xdim)) call bnd_emf(wa, 'vxbz', 'xdim')
-      if (has_dir(ydim)) call bnd_emf(wa, 'vxbz', 'ydim')
-      if (has_dir(zdim)) call bnd_emf(wa, 'vxbz', 'zdim')
+      do j = xdim, zdim
+         if (has_dir(j)) call bnd_emf(wa,'vxbz',j)
+      enddo
 
    end subroutine advectbz_x
 
@@ -144,7 +144,7 @@ contains
       use grid,          only: cg
       use magboundaries, only: bnd_emf
       use mpisetup,      only: dt, has_dir
-      use constants,     only: xdim, ydim, zdim
+      use constants,     only: xdim, zdim
       use rtvd,          only: tvdb
 
       implicit none
@@ -181,9 +181,9 @@ contains
          enddo
       enddo
 
-      if (has_dir(ydim)) call bnd_emf(wa, 'vybz', 'ydim')
-      if (has_dir(zdim)) call bnd_emf(wa, 'vybz', 'zdim')
-      if (has_dir(xdim)) call bnd_emf(wa, 'vybz', 'xdim')
+      do i = xdim, zdim
+         if (has_dir(i)) call bnd_emf(wa,'vybz',i)
+      enddo
 
    end subroutine advectbz_y
 
@@ -194,7 +194,7 @@ contains
       use grid,          only: cg
       use magboundaries, only: bnd_emf
       use mpisetup,      only: dt, has_dir
-      use constants,     only: xdim, ydim, zdim
+      use constants,     only: xdim, zdim
       use rtvd,          only: tvdb
 
       implicit none
@@ -232,9 +232,9 @@ contains
          enddo
       enddo
 
-      if (has_dir(ydim)) call bnd_emf(wa, 'vybx', 'ydim')
-      if (has_dir(zdim)) call bnd_emf(wa, 'vybx', 'zdim')
-      if (has_dir(xdim)) call bnd_emf(wa, 'vybx', 'xdim')
+      do i = xdim, zdim
+         if (has_dir(i)) call bnd_emf(wa,'vybx',i)
+      enddo
 
    end subroutine advectbx_y
 
@@ -244,7 +244,7 @@ contains
       use grid,          only: cg
       use magboundaries, only: bnd_emf
       use mpisetup,      only: dt, has_dir
-      use constants,     only: xdim, ydim, zdim
+      use constants,     only: xdim, zdim
       use rtvd,          only: tvdb
 
       implicit none
@@ -280,9 +280,9 @@ contains
          enddo
       enddo
 
-      if (has_dir(zdim)) call bnd_emf(wa, 'vzbx', 'zdim')
-      if (has_dir(xdim)) call bnd_emf(wa, 'vzbx', 'xdim')
-      if (has_dir(ydim)) call bnd_emf(wa, 'vzbx', 'ydim')
+      do i = xdim, zdim
+         if (has_dir(i)) call bnd_emf(wa,'vzbx',i)
+      enddo
 
    end subroutine advectbx_z
 
@@ -330,9 +330,9 @@ contains
          enddo
       enddo
 
-      if (has_dir(zdim)) call bnd_emf(wa, 'vzby', 'zdim')
-      if (has_dir(xdim)) call bnd_emf(wa, 'vzby', 'xdim')
-      if (has_dir(ydim)) call bnd_emf(wa, 'vzby', 'ydim')
+      do i = xdim, zdim
+         if (has_dir(i)) call bnd_emf(wa,'vzby',i)
+      enddo
 
    end subroutine advectby_z
 

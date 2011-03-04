@@ -163,10 +163,7 @@ contains
          if (.not.has_dir(zdim)) dbz = 0.0
 
          jc2 = j_crit**2
-         dims_twice = 0.0
-         if (has_dir(xdim)) dims_twice = dims_twice + 2.0
-         if (has_dir(ydim)) dims_twice = dims_twice + 2.0
-         if (has_dir(zdim)) dims_twice = dims_twice + 2.0
+         dims_twice = 2. * count(has_dir)
          d_eta_factor = 1./(dims_twice+dble(eta_scale))
       endif
 
@@ -341,7 +338,7 @@ contains
       use grid,          only: cg
       use magboundaries, only: bnd_emf
       use mpisetup,      only: dt, has_dir
-      use constants,     only: xdim, ydim, zdim
+      use constants,     only: xdim, zdim
 
       implicit none
 
@@ -361,9 +358,9 @@ contains
          enddo
       enddo
 
-      if (has_dir(xdim)) call bnd_emf(wcu,'emfz','xdim')
-      if (has_dir(ydim)) call bnd_emf(wcu,'emfz','ydim')
-      if (has_dir(zdim)) call bnd_emf(wcu,'emfz','zdim')
+      do j = xdim, zdim
+         if (has_dir(j)) call bnd_emf(wcu,'emfz',j)
+      enddo
 
    end subroutine diffuseby_x
 
@@ -374,7 +371,7 @@ contains
       use grid,          only: cg
       use magboundaries, only: bnd_emf
       use mpisetup,      only: dt, has_dir
-      use constants,     only: xdim, ydim, zdim
+      use constants,     only: xdim, zdim
 
       implicit none
 
@@ -393,9 +390,10 @@ contains
             wcu(:,j,k) = wcu1d
          enddo
       enddo
-      if (has_dir(xdim)) call bnd_emf(wcu,'emfy','xdim')
-      if (has_dir(ydim)) call bnd_emf(wcu,'emfy','ydim')
-      if (has_dir(zdim)) call bnd_emf(wcu,'emfy','zdim')
+
+      do j = xdim, zdim
+         if (has_dir(j)) call bnd_emf(wcu,'emfy',j)
+      enddo
 
    end subroutine diffusebz_x
 
@@ -425,9 +423,10 @@ contains
             wcu(i,:,k) = wcu1d
          enddo
       enddo
-      if (has_dir(ydim)) call bnd_emf(wcu,'emfx','ydim')
-      if (has_dir(zdim)) call bnd_emf(wcu,'emfx','zdim')
-      if (has_dir(xdim)) call bnd_emf(wcu,'emfx','xdim')
+
+      do i = xdim, zdim
+         if (has_dir(i)) call bnd_emf(wcu,'emfx',i)
+      enddo
 
    end subroutine diffusebz_y
 
@@ -457,9 +456,10 @@ contains
             wcu(i,:,k) = wcu1d
          enddo
       enddo
-      if (has_dir(ydim)) call bnd_emf(wcu, 'emfz', 'ydim')
-      if (has_dir(zdim)) call bnd_emf(wcu, 'emfz', 'zdim')
-      if (has_dir(xdim)) call bnd_emf(wcu, 'emfz', 'xdim')
+
+      do i = xdim, zdim
+         if (has_dir(i)) call bnd_emf(wcu,'emfz',i)
+      enddo
 
    end subroutine diffusebx_y
 
@@ -470,7 +470,7 @@ contains
       use grid,          only: cg
       use magboundaries, only: bnd_emf
       use mpisetup,      only: dt, has_dir
-      use constants,     only: xdim, ydim, zdim
+      use constants,     only: xdim, zdim
 
       implicit none
 
@@ -489,9 +489,10 @@ contains
             wcu(i,j,:) = wcu1d
          enddo
       enddo
-      if (has_dir(zdim)) call bnd_emf(wcu, 'emfy', 'zdim')
-      if (has_dir(xdim)) call bnd_emf(wcu, 'emfy', 'xdim')
-      if (has_dir(ydim)) call bnd_emf(wcu, 'emfy', 'ydim')
+
+      do i = xdim, zdim
+         if (has_dir(i)) call bnd_emf(wcu,'emfy',i)
+      enddo
 
    end subroutine diffusebx_z
 
@@ -502,7 +503,7 @@ contains
       use grid,          only: cg
       use magboundaries, only: bnd_emf
       use mpisetup,      only: dt, has_dir
-      use constants,     only: xdim, ydim, zdim
+      use constants,     only: xdim, zdim
 
       implicit none
 
@@ -521,9 +522,10 @@ contains
             wcu(i,j,:) = wcu1d
          enddo
       enddo
-      if (has_dir(zdim)) call bnd_emf(wcu, 'emfx', 'zdim')
-      if (has_dir(xdim)) call bnd_emf(wcu, 'emfx', 'xdim')
-      if (has_dir(ydim)) call bnd_emf(wcu, 'emfx', 'ydim')
+
+      do j = xdim, zdim
+         if (has_dir(j)) call bnd_emf(wcu,'emfx',j)
+      enddo
 
    end subroutine diffuseby_z
 
