@@ -229,7 +229,7 @@ contains
 ! OPT: we may also try to work on bigger parts of the u(:,:,:,:) at a time , but the exact amount may depend on size of the L2 cache
 ! OPT: try an explicit loop over n to see if berrer pipelining can be achieved
 
-   subroutine relaxing_tvd(n, u, bb, sweep, i1, i2, dx, dt)
+   subroutine relaxing_tvd(n, u, u0, bb, istep, sweep, i1, i2, dx, dt)
 
       use dataio_pub,       only: msg, die
       use fluidindex,       only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz, ibx, iby, ibz, flind, nmag
@@ -269,14 +269,14 @@ contains
 
       integer,                     intent(in)     :: n                  !< array size
       real, dimension(flind%all,n), intent(inout) :: u                  !< vector of conservative variables
+      real, dimension(flind%all,n), intent(in)    :: u0                 !< vector of conservative variables
       real, dimension(nmag,n),     intent(in)     :: bb                 !< local copy of magnetic field
-      integer,                     intent(in)  :: sweep              !< direction (x, y or z) we are doing calculations for
-      integer,                     intent(in)  :: i1                 !< coordinate of sweep in the 1st remaining direction
-      integer,                     intent(in)  :: i2                 !< coordinate of sweep in the 2nd remaining direction
-      real,                        intent(in)  :: dx                 !< cell length
-      real,                        intent(in)  :: dt                 !< time step
-
-      integer                        :: istep              !< step number in the time integration scheme
+      integer,                     intent(in)     :: sweep              !< direction (x, y or z) we are doing calculations for
+      integer,                     intent(in)     :: i1                 !< coordinate of sweep in the 1st remaining direction
+      integer,                     intent(in)     :: i2                 !< coordinate of sweep in the 2nd remaining direction
+      real,                        intent(in)     :: dx                 !< cell length
+      real,                        intent(in)     :: dt                 !< time step
+      integer,                     intent(in)     :: istep              !< step number in the time integration scheme
 #if defined GRAV
       integer                        :: ind                !< fluid index
       real, dimension(n)             :: gravacc            !< acceleration caused by gravitation
@@ -286,7 +286,6 @@ contains
       real, dimension(flind%all,n)    :: cfr                !< freezing speed
 !locals
       real, dimension(flind%fluids,n) :: acc                !< acceleration
-      real, dimension(flind%all,n)    :: u0                 !< initial state of conservative variables
       real, dimension(flind%all,n)    :: w                  !< auxiliary vector to calculate fluxes
       real, dimension(flind%all,n)    :: fr                 !< flux of the right-moving waves
       real, dimension(flind%all,n)    :: fl                 !< flux of the left-moving waves
@@ -340,7 +339,7 @@ contains
       dtx       = dt / dx
 
       u1 = u
-      u0 = u
+!     u0 = u
 
       vx   => vel_sweep
       dens => density
@@ -355,7 +354,7 @@ contains
       endif
 #endif /* ISO_LOCAL */
 
-      do istep=1,integration_order
+!     do istep=1,integration_order
          density(:,:) = u(iarr_all_dn,:)
 ! Fluxes calculation for cells centers
 #ifdef ISO_LOCAL
@@ -502,7 +501,7 @@ contains
 #endif /*  defined IONIZED || defined NEUTRAL  */
 
          u(:,:) = u1(:,:)
-      enddo
+!      enddo
 
    end subroutine relaxing_tvd
 
