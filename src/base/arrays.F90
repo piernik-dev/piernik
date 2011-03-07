@@ -75,7 +75,7 @@ contains
 
    subroutine init_arrays(flind)
 
-      use constants,   only: PIERNIK_INIT_BASE
+      use constants,   only: PIERNIK_INIT_BASE, ndims
       use diagnostics, only: ma3d, ma4d, my_allocate
       use dataio_pub,  only: die, code_progress
       use types,       only: var_numbers
@@ -95,7 +95,7 @@ contains
       call my_allocate(u0, ma4d, "u0")
       call my_allocate(uh, ma4d, "uh")
 
-      ma4d = [3, cg%nx, cg%ny, cg%nz]
+      ma4d = [ndims, cg%nx, cg%ny, cg%nz]
       call my_allocate(b, ma4d, "b")
       call my_allocate(b0, ma4d, "b0")
 
