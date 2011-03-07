@@ -6,9 +6,6 @@ function read_attr_h5, file
          nxd:           0l,   $
          nyd:           0l,   $
          nzd:           0l,   $
-         nxb:           0l,   $
-         nyb:           0l,   $
-         nzb:           0l,   $
          nb:            0l,   $
          crdsys:        'xyz',$
          xmin:          0.0,  $
@@ -56,21 +53,6 @@ function read_attr_h5, file
    a.nzd = H5A_READ(attr)
    H5A_CLOSE,attr
 
-   a.nxb = 0
-   attr = H5A_OPEN_NAME(file_id, "nxb")
-   a.nxb = H5A_READ(attr)
-   H5A_CLOSE,attr
-
-   a.nyb = 0
-   attr = H5A_OPEN_NAME(file_id, "nyb")
-   a.nyb = H5A_READ(attr)
-   H5A_CLOSE,attr
-
-   a.nzb = 0
-   attr = H5A_OPEN_NAME(file_id, "nzb")
-   a.nzb = H5A_READ(attr)
-   H5A_CLOSE,attr
-
    a.nb = 0
    attr = H5A_OPEN_NAME(file_id, "nb")
    a.nb = H5A_READ(attr)
@@ -100,14 +82,6 @@ function read_attr_h5, file
    attr = H5A_OPEN_NAME(file_id, "zmin")
    a.zmin = H5A_READ(attr)
    H5A_CLOSE,attr
-
-   psize = INTARR(3)
-   attr = H5A_OPEN_NAME(file_id, "psize")
-   psize = H5A_READ(attr)
-   H5A_CLOSE,attr
-   a.pxsize = psize[0]
-   a.pysize = psize[1]
-   a.pzsize = psize[2]
 
    a.zmax = 0
    attr = H5A_OPEN_NAME(file_id, "zmax")

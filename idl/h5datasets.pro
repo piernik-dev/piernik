@@ -12,5 +12,8 @@ for i=0,N_ELEMENTS(tags)-1 do begin
    endif
 endfor
 
+true_datasets = WHERE(datasets NE 'problem_par' AND datasets NE 'fooo' AND datasets NE 'env')
+datasets = datasets(true_datasets)
+
 return, datasets
 end
