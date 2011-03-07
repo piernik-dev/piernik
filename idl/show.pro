@@ -1,7 +1,7 @@
 PRO SHOW
 
-data_dir = '../obj_mcrtmg'
-prefix = 'crwind_tst'
+data_dir = '../runs/sedov'
+prefix = 'sedov_tst'
 
 png_dir = data_dir+'/frames'
 
@@ -48,14 +48,14 @@ s.sw	= 'on'
 s.panel_name	= 'a'			; If more slices of the same type 
                                         ; are needed use this index
 
-s.type		= 'yz'			; Chose 'yz', 'xz' or 'xy' plane
+s.type		= 'xy'			; Chose 'yz', 'xz' or 'xy' plane
 s.coord		=  0.0         ; Position at the complementary coordinate
-s.vect_disp	= 'mag'			; Vector field to display: 'b' or 'v'
+s.vect_disp	= 'veli'			; Vector field to display: 'b' or 'v'
 s.vect_scaling	= 'free'		; 'fix' or 'free' 
 s.vect_scale	=  1.0
 
 
-s.scal_disp	= 'ecr1'	        ; Scalar field to display 'd' or 'e'
+s.scal_disp	= 'deni'	        ; Scalar field to display 'd' or 'e'
 s.scal_pert     = ''			; inactive
 s.scal_scaling	= 'free'		; 'fix' or 'free'
 s.scal_scale	= [-4.0,-1.5]
@@ -67,87 +67,19 @@ n_slices = n_slices+1
 
 ;------------------------------------------------------------------------------
 
-s.sw	= 'off'  
+
+s.sw	= 'on'  
 s.panel_name	= 'b'			; If more slices of the same type 
                                         ; are needed use this index
 
-s.type		= 'yz'			; Chose 'yz', 'xz' or 'xy' plane
-s.coord		=  0.0         		; Position at the complementary coordinate
-s.vect_disp	= 'mag'			; Vector field to display: 'b' or 'v'
-s.vect_scaling	= 'free'		; 'fix' or 'free' 
-s.vect_scale	=  1.0
-
-
-s.scal_disp	= 'ecr2'	        ; Scalar field to display 'd' or 'e'
-s.scal_pert     = ''			; inactive
-s.scal_scaling	= 'free'		; 'fix' or 'free'
-s.scal_scale	= [-4.0,-1.5]
-
-s.name=s.vect_disp+'_'+s.scal_disp+'_'+s.type+'_'+s.panel_name
-
-slice_array = [slice_array,s]
-n_slices = n_slices+1
-
-;------------------------------------------------------------------------------
-
-s.sw	= 'off'  
-s.panel_name	= 'c'			; If more slices of the same type 
-                                        ; are needed use this index
-
-s.type		= 'yz'			; Chose 'yz', 'xz' or 'xy' plane
-s.coord		=  0.0         		; Position at the complementary coordinate
-s.vect_disp	= 'mag'			; Vector field to display: 'b' or 'v'
-s.vect_scaling	= 'free'		; 'fix' or 'free' 
-s.vect_scale	=  1.0
-
-
-s.scal_disp	= 'ecr3'	        ; Scalar field to display 'd' or 'e'
-s.scal_pert     = ''			; inactive
-s.scal_scaling	= 'free'		; 'fix' or 'free'
-s.scal_scale	= [-4.0,-1.5]
-
-s.name=s.vect_disp+'_'+s.scal_disp+'_'+s.type+'_'+s.panel_name
-
-slice_array = [slice_array,s]
-n_slices = n_slices+1
-
-;------------------------------------------------------------------------------
-
-s.sw	= 'off'  
-s.panel_name	= 'd'			; If more slices of the same type 
-                                        ; are needed use this index
-
-s.type		= 'yz'			; Chose 'yz', 'xz' or 'xy' plane
-s.coord		=  0.0         		; Position at the complementary coordinate
-s.vect_disp	= 'mag'			; Vector field to display: 'b' or 'v'
-s.vect_scaling	= 'free'		; 'fix' or 'free' 
-s.vect_scale	=  1.0
-
-
-s.scal_disp	= 'ecr4'	        ; Scalar field to display 'd' or 'e'
-s.scal_pert     = ''			; inactive
-s.scal_scaling	= 'free'		; 'fix' or 'free'
-s.scal_scale	= [-4.0,-1.5]
-
-s.name=s.vect_disp+'_'+s.scal_disp+'_'+s.type+'_'+s.panel_name
-
-slice_array = [slice_array,s]
-n_slices = n_slices+1
-
-;------------------------------------------------------------------------------
-
-s.sw	= 'on'  
-s.panel_name	= 'e'			; If more slices of the same type 
-                                        ; are needed use this index
-
-s.type		= 'yz'			; Chose 'yz', 'xz' or 'xy' plane
+s.type		= 'xy'			; Chose 'yz', 'xz' or 'xy' plane
 s.coord		=  0.0         		; Position at the complementary coordinate
 s.vect_disp	= 'veli'		; Vector field to display: 'mag', 'veli', 'veln' or 'veld'
 s.vect_scaling	= 'free'		; 'fix' or 'free' 
 s.vect_scale	=  1.0
 
 
-s.scal_disp	= 'deni'	        ; Scalar field to display: any valid variable, eg. 'deni', 'vlxi',etc... 
+s.scal_disp	= 'enei'	        ; Scalar field to display: any valid variable, eg. 'deni', 'vlxi',etc... 
 s.scal_pert     = ''			; inactive
 s.scal_scaling	= 'free'		; 'fix' or 'free'
 s.scal_scale	= [-4.0,-1.5]
