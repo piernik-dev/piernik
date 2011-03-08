@@ -83,7 +83,7 @@ contains
       use fluidindex,    only: ibx, iby, ibz
       use grid,          only: cg
       use mpi,           only: MPI_DOUBLE_PRECISION
-      use mpisetup,      only: ierr, req, comm3d, procxl, procxr, procyl, procyr, proczl, proczr, status, psize, procxyl, procyxl, pcoords, comm
+      use mpisetup,      only: ierr, req, comm3d, procxl, procxr, procyl, procyr, proczl, proczr, status, psize, procxyl, procyxl, pcoords, comm, master
       use constants,     only: MAG, xdim, ydim, zdim, LO, HI, BND, DOM, BND_MPI, BND_PER, BND_REF, BND_OUT,BND_COR, BND_SHE, BND_INF
 #ifdef SHEAR
       use shear,         only: eps,delj
@@ -306,7 +306,7 @@ contains
                   b(:,1,:,:) = b(:,2,:,:)
                case default
                   write(msg,'(2(a,i3))') "[magboundaries:bnd_b]: Boundary condition ",cg%bnd(xdim, LO)," not implemented in ",dir
-                  call warn(msg)
+                  if (master) call warn(msg)
             end select  ! (cg%bnd(xdim, LO))
 
             select case (cg%bnd(xdim, HI))
@@ -318,7 +318,7 @@ contains
                   b(:, cg%nx,:,:) = b(:, cg%nx-1,:,:)
                case default
                   write(msg,'(2(a,i3))') "[magboundaries:bnd_b]: Boundary condition ",cg%bnd(xdim, HI)," not implemented in ",dir
-                  call warn(msg)
+                  if (master) call warn(msg)
             end select  ! (cg%bnd(xdim, HI))
 
          case (ydim)
@@ -332,7 +332,7 @@ contains
                   b(:,:,1,:) = b(:,:,2,:)
                case default
                   write(msg,'(2(a,i3))') "[magboundaries:bnd_b]: Boundary condition ",cg%bnd(ydim, LO)," not implemented in ",dir
-                  call warn(msg)
+                  if (master) call warn(msg)
             end select  ! (cg%bnd(ydim, LO))
 
             select case (cg%bnd(ydim, HI))
@@ -344,7 +344,7 @@ contains
                   b(:,:, cg%ny,:) = b(:,:, cg%ny-1,:)
                case default
                   write(msg,'(2(a,i3))') "[magboundaries:bnd_b]: Boundary condition ",cg%bnd(ydim, HI)," not implemented in ",dir
-                  call warn(msg)
+                  if (master) call warn(msg)
 
             end select  ! (cg%bnd(ydim, HI))
 
@@ -359,7 +359,7 @@ contains
                   b(:,:,:,1) = b(:,:,:,2)
                case default
                   write(msg,'(2(a,i3))') "[magboundaries:bnd_b]: Boundary condition ",cg%bnd(zdim, LO)," not implemented in ",dir
-                  call warn(msg)
+                  if (master) call warn(msg)
             end select  ! (cg%bnd(zdim, LO))
 
             select case (cg%bnd(zdim, HI))
@@ -371,7 +371,7 @@ contains
                   b(:,:,:, cg%nz) = b(:,:,:, cg%nz-1)
                case default
                   write(msg,'(2(a,i3))') "[magboundaries:bnd_b]: Boundary condition ",cg%bnd(zdim, HI)," not implemented in ",dir
-                  call warn(msg)
+                  if (master) call warn(msg)
             end select  ! (cg%bnd(zdim, HI))
 
       end select  ! (dim)
@@ -385,6 +385,7 @@ contains
       use constants,     only: xdim, ydim, zdim, LO, HI, BND_MPI, BND_PER, BND_REF, BND_OUT, BND_COR, BND_SHE, BND_INF
       use dataio_pub,    only: msg, warn
       use grid,          only: cg
+      use mpisetup,      only: master
 
       implicit none
 
@@ -452,7 +453,7 @@ contains
                   enddo
                case default
                   write(msg,'(a,i3,3a,i3)') "[magboundaries:bnd_emf]: Boundary condition ",cg%bnd(xdim, LO)," not implemented for ",name, " in ", dir
-                  call warn(msg)
+                  if (master) call warn(msg)
             end select  ! (cg%bnd(xdim, LO))
 
             select case (cg%bnd(xdim, HI))
@@ -471,7 +472,7 @@ contains
                   enddo
                case default
                   write(msg,'(a,i3,3a,i3)') "[magboundaries:bnd_emf]: Boundary condition ",cg%bnd(xdim, HI)," not implemented for ",name, " in ", dir
-                  call warn(msg)
+                  if (master) call warn(msg)
             end select ! (cg%bnd(xdim, HI))
 
          case (ydim)
@@ -503,7 +504,7 @@ contains
                   enddo
                case default
                   write(msg,'(a,i3,3a,i3)') "[magboundaries:bnd_emf]: Boundary condition ",cg%bnd(ydim, LO)," not implemented for ",name, " in ", dir
-                  call warn(msg)
+                  if (master) call warn(msg)
             end select  ! (cg%bnd(ydim, LO))
 
             select case (cg%bnd(ydim, HI))
@@ -522,7 +523,7 @@ contains
                   enddo
                case default
                   write(msg,'(a,i3,3a,i3)') "[magboundaries:bnd_emf]: Boundary condition ",cg%bnd(ydim, HI)," not implemented for ",name, " in ", dir
-                  call warn(msg)
+                  if (master) call warn(msg)
             end select ! (cg%bnd(ydim, HI))
 
          case (zdim)
@@ -554,7 +555,7 @@ contains
                   enddo
                case default
                   write(msg,'(a,i3,3a,i3)') "[magboundaries:bnd_emf]: Boundary condition ",cg%bnd(zdim, LO)," not implemented for ",name, " in ", dir
-                  call warn(msg)
+                  if (master) call warn(msg)
             end select  ! (cg%bnd(zdim, LO))
 
             select case (cg%bnd(zdim, HI))
@@ -573,7 +574,7 @@ contains
                   enddo
                case default
                   write(msg,'(a,i3,3a,i3)') "[magboundaries:bnd_emf]: Boundary condition ",cg%bnd(zdim, HI)," not implemented for ",name, " in ", dir
-                  call warn(msg)
+                  if (master) call warn(msg)
             end select ! (cg%bnd(zdim, HI))
 
       end select ! (dim)
