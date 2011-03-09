@@ -106,7 +106,7 @@ contains
 
       do j=1, cg%ny
          do i = 1, cg%nx
-            A(i,j,1) = b0*(dcos(fpi*cg%xl(i))/fpi + dcos(dpi*cg%yl(j))/dpi)
+            A(i,j,1) = b0*(cos(fpi*cg%xl(i))/fpi + cos(dpi*cg%yl(j))/dpi)
          enddo
       enddo
 
@@ -117,10 +117,10 @@ contains
             do k = 1, cg%nz
                zk = cg%z(k)
 
-               vx  = -dsin(dpi*yj)
-               vy  = dsin(dpi*xi)
+               vx  = -sin(dpi*yj)
+               vy  = sin(dpi*xi)
                bx  = b0*vx
-               by  = b0*dsin(fpi*xi)
+               by  = b0*sin(fpi*xi)
                bz  = 0.0
 
                u(idni,i,j,k) = rho

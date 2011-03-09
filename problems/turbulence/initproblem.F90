@@ -90,15 +90,15 @@ contains
 !                     somx = dpi*(float(n)*y(j) + float(m)*z(k)) / dom%Lx
 !                     somy = dpi*(float(n)*x(i) + float(m)*z(k)) / dom%Ly
 !                     somz = dpi*(float(n)*x(i) + float(m)*y(j)) / dom%Lz
-!                     deltav(1) = deltav(1) + mn(1)*dsin(somx) + mn(2)*dcos(somx)
-!                     deltav(2) = deltav(2) + mn(3)*dsin(somy) + mn(4)*dcos(somy)
-!                     deltav(3) = deltav(3) + mn(5)*dsin(somz) + mn(6)*dcos(somz)
-                     deltav(1) = deltav(1) + mn(1)*dsin(float(m)*cg%z(k)) &
-                                           + mn(2)*dcos(float(n)*cg%y(j))
-                     deltav(2) = deltav(2) + mn(3)*dsin(float(m)*cg%x(i)) &
-                                           + mn(4)*dcos(float(n)*cg%z(k))
-                     deltav(3) = deltav(3) + mn(5)*dsin(float(m)*cg%y(j)) &
-                                           + mn(6)*dcos(float(n)*cg%x(i))
+!                     deltav(1) = deltav(1) + mn(1)*sin(somx) + mn(2)*cos(somx)
+!                     deltav(2) = deltav(2) + mn(3)*sin(somy) + mn(4)*cos(somy)
+!                     deltav(3) = deltav(3) + mn(5)*sin(somz) + mn(6)*cos(somz)
+                     deltav(1) = deltav(1) + mn(1)*sin(float(m)*cg%z(k)) &
+                                           + mn(2)*cos(float(n)*cg%y(j))
+                     deltav(2) = deltav(2) + mn(3)*sin(float(m)*cg%x(i)) &
+                                           + mn(4)*cos(float(n)*cg%z(k))
+                     deltav(3) = deltav(3) + mn(5)*sin(float(m)*cg%y(j)) &
+                                           + mn(6)*cos(float(n)*cg%x(i))
                   enddo
                enddo
                dv(:,i,j,k) = deltav(:)

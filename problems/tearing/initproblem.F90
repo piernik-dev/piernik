@@ -123,7 +123,7 @@ contains
          do j = 1, cg%ny
             do i = 1, cg%nx
 
-               vzab = v0*dcos(2.*pi*cg%y(j))
+               vzab = v0*cos(2.*pi*cg%y(j))
                u(imxi,i,j,k) = u(idni,i,j,k)*vzab
 
                if (abs(cg%x(i)) .LE. xmid) then

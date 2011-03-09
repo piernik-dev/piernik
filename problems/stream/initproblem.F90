@@ -217,36 +217,36 @@ contains
 
 ! Linear test
                if (linear) then
-!               u(dst%idn,i,j,k) =  u(dst%idn,i,j,k) + amp*eps*dsin(kz*cg%z(k))*dcos(kx*cg%x(i))
-                  u(dst%idn,i,j,k) =  u(dst%idn,i,j,k) + amp*eps*dcos(kz*cg%z(k))*dcos(kx*cg%x(i))
-! ...                u(dst%idn,i,j,k) =  u(dst%idn,i,j,k) + amp*eps*dcos(kx*x(i))*dcos(kz*cg%z(k))
+!               u(dst%idn,i,j,k) =  u(dst%idn,i,j,k) + amp*eps*sin(kz*cg%z(k))*cos(kx*cg%x(i))
+                  u(dst%idn,i,j,k) =  u(dst%idn,i,j,k) + amp*eps*cos(kz*cg%z(k))*cos(kx*cg%x(i))
+! ...                u(dst%idn,i,j,k) =  u(dst%idn,i,j,k) + amp*eps*cos(kx*x(i))*cos(kz*cg%z(k))
 ! B              u(dst%idn,i,j,k) =  u(dst%idn,i,j,k) + amp * eps *&
-! B                 ( real(coeff(7))*dcos(kx*cg%x(i)) - &
-! B                  aimag(coeff(7))*dsin(kx*cg%x(i))) * dcos(kz*z(k))
+! B                 ( real(coeff(7))*cos(kx*cg%x(i)) - &
+! B                  aimag(coeff(7))*sin(kx*cg%x(i))) * cos(kz*z(k))
                   u(dst%imx,i,j,k) =  u(dst%imx,i,j,k) + eta*vk*amp * &
-                       ( real(coeff(1))*dcos(kx*cg%x(i)) - &
-                       aimag(coeff(1))*dsin(kx*cg%x(i))) * dcos(kz*cg%z(k))
+                       ( real(coeff(1))*cos(kx*cg%x(i)) - &
+                       aimag(coeff(1))*sin(kx*cg%x(i))) * cos(kz*cg%z(k))
                   u(dst%imy,i,j,k) =  u(dst%imy,i,j,k) + eta*vk*amp * &
-                       ( real(coeff(2))*dcos(kx*cg%x(i)) - &
-                       aimag(coeff(2))*dsin(kx*cg%x(i))) * dcos(kz*cg%z(k))
+                       ( real(coeff(2))*cos(kx*cg%x(i)) - &
+                       aimag(coeff(2))*sin(kx*cg%x(i))) * cos(kz*cg%z(k))
                   u(dst%imz,i,j,k) =  u(dst%imz,i,j,k) + eta*vk*(-amp) * &
-                       (aimag(coeff(3))*dcos(kx*cg%x(i)) + &
-                       real(coeff(3))*dsin(kx*cg%x(i))) * dsin(kz*cg%z(k))
+                       (aimag(coeff(3))*cos(kx*cg%x(i)) + &
+                       real(coeff(3))*sin(kx*cg%x(i))) * sin(kz*cg%z(k))
                   u(neu%imx,i,j,k) =  u(neu%imx,i,j,k) + eta*vk*amp * &
-                       ( real(coeff(4))*dcos(kx*cg%x(i)) - &
-                       aimag(coeff(4))*dsin(kx*cg%x(i))) * dcos(kz*cg%z(k))
+                       ( real(coeff(4))*cos(kx*cg%x(i)) - &
+                       aimag(coeff(4))*sin(kx*cg%x(i))) * cos(kz*cg%z(k))
                   u(neu%imy,i,j,k) =  u(neu%imy,i,j,k) + eta*vk*amp * &
-                       ( real(coeff(5))*dcos(kx*cg%x(i)) - &
-                       aimag(coeff(5))*dsin(kx*cg%x(i))) * dcos(kz*cg%z(k))
+                       ( real(coeff(5))*cos(kx*cg%x(i)) - &
+                       aimag(coeff(5))*sin(kx*cg%x(i))) * cos(kz*cg%z(k))
                   u(neu%imz,i,j,k) =  u(neu%imz,i,j,k) + eta*vk*(-amp) * &
-                       (aimag(coeff(6))*dcos(kx*cg%x(i)) + &
-                       real(coeff(6))*dsin(kx*cg%x(i))) * dsin(kz*cg%z(k))
+                       (aimag(coeff(6))*cos(kx*cg%x(i)) + &
+                       real(coeff(6))*sin(kx*cg%x(i))) * sin(kz*cg%z(k))
 !               u(neu%idn,i,j,k) =  u(neu%idn,i,j,k) + amp * &
-!                  ( real(coeff(7))*dcos(kx*cg%x(i)) - &
-!                   aimag(coeff(7))*dsin(kx*cg%x(i))) * dcos(kz*cg%z(k))
+!                  ( real(coeff(7))*cos(kx*cg%x(i)) - &
+!                   aimag(coeff(7))*sin(kx*cg%x(i))) * cos(kz*cg%z(k))
                   u(neu%idn,i,j,k) =  u(neu%idn,i,j,k) + (eta*vk)**2 * amp * &
-                       ( real(coeff(7))*dcos(kx*cg%x(i)) - &
-                       aimag(coeff(7))*dsin(kx*cg%x(i))) * dcos(kz*cg%z(k))
+                       ( real(coeff(7))*cos(kx*cg%x(i)) - &
+                       aimag(coeff(7))*sin(kx*cg%x(i))) * cos(kz*cg%z(k))
                endif
 !-------
 
