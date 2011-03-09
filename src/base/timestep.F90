@@ -137,7 +137,9 @@ contains
       dt = min(dt,dt_resist)
 #endif /* RESISTIVE */
 
+#ifndef BALSARA
       dt = min(dt,timestep_interactions())
+#endif /* BALSARA)
 
       ! finally apply some sanity factors
       if (nstep <=1) then
