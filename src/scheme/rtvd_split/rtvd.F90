@@ -305,7 +305,7 @@ contains
 #endif /* ISO_LOCAL */
 
 #ifdef BALSARA
-      real, dimension(flind%fluids,n) :: vprim, psi
+      real, dimension(flind%fluids,n) :: vprim
       real, dimension(n) :: delta, drag
 #endif /* BALSARA */
 #ifdef COSM_RAYS
@@ -436,18 +436,12 @@ contains
             vprim(1,:) =  delta(:)*( (1./u1(iarr_all_dn(1),:) + drag(:))*u1(iarr_all_mx(1),:) + drag(:)*u1(iarr_all_mx(2),:) )
             vprim(2,:) =  delta(:)*( (1./u1(iarr_all_dn(2),:) + drag(:))*u1(iarr_all_mx(2),:) + drag(:)*u1(iarr_all_mx(1),:) )
          else
-!            psi(1,:) = ( u1(iarr_all_mx(1),:) - drag(:)*(u0(iarr_all_dn(2),:)*u0(iarr_all_mx(1),:) - u0(iarr_all_dn(1),:)*u0(iarr_all_mx(2),:)) )
-!            psi(2,:) = ( u1(iarr_all_mx(2),:) - drag(:)*(u0(iarr_all_dn(1),:)*u0(iarr_all_mx(2),:) - u0(iarr_all_dn(2),:)*u0(iarr_all_mx(1),:)) )
-
             vprim(2,:) =  delta(:)*(  &
-                 drag(:)*( u0(iarr_all_dn(2),:)/u1(iarr_all_dn(2),:)*u0(iarr_all_mx(1),:) - u0(iarr_all_dn(1),:)/u1(iarr_all_dn(2),:)*u0(iarr_all_mx(2),:) + u1(iarr_all_mx(1),:) ) + &
-                 u1(iarr_all_mx(2),:) * ( 1./u1(iarr_all_dn(2),:) + drag(:) ) &
-               )
+                 drag(:)*( u0(iarr_all_dn(2),:)/u1(iarr_all_dn(2),:)*u0(iarr_all_mx(1),:) - u0(iarr_all_dn(1),:)/u1(iarr_all_dn(2),:)*u0(iarr_all_mx(2),:) &
+                           + u1(iarr_all_mx(1),:) ) + u1(iarr_all_mx(2),:) * ( 1./u1(iarr_all_dn(2),:) + drag(:) )  )
             vprim(1,:) =  delta(:)*(  &
-                 drag(:)*( u0(iarr_all_dn(1),:)/u1(iarr_all_dn(1),:)*u0(iarr_all_mx(2),:) - u0(iarr_all_dn(2),:)/u1(iarr_all_dn(1),:)*u0(iarr_all_mx(1),:) + u1(iarr_all_mx(2),:) ) + &
-                 u1(iarr_all_mx(1),:) * ( 1./u1(iarr_all_dn(1),:) + drag(:) ) &
-               )
-            !vprim(2,:) =  delta(:)*( (1./u1(iarr_all_dn(2),:) + drag(:))*psi(2,:) + drag(:)*psi(1,:) )
+                 drag(:)*( u0(iarr_all_dn(1),:)/u1(iarr_all_dn(1),:)*u0(iarr_all_mx(2),:) - u0(iarr_all_dn(2),:)/u1(iarr_all_dn(1),:)*u0(iarr_all_mx(1),:) &
+                           + u1(iarr_all_mx(2),:) ) + u1(iarr_all_mx(1),:) * ( 1./u1(iarr_all_dn(1),:) + drag(:) )  )
          endif
          u1(iarr_all_mx,:) = u1(iarr_all_dn,:) * vprim(:,:)
 #endif /* BALSARA */
