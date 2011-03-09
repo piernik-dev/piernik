@@ -237,7 +237,11 @@ contains
       use mpisetup,         only: smalld, integration_order, use_smalld, local_magic_mass
       use constants,        only: xdim, ydim, zdim
       use gridgeometry,     only: gc, geometry_source_terms
+#ifdef BALSARA
+      use interactions,     only: balsara_implicit_interactions
+#else
       use interactions,     only: fluid_interactions
+#endif /* BALSARA */
 #ifndef ISO
       use fluidindex,       only: iarr_all_en
       use mpisetup,         only: smallei
@@ -304,10 +308,6 @@ contains
       real, dimension(n)             :: cs_iso2            !< square of local isothermal sound speed (optional for ISO_LOCAL)
 #endif /* ISO_LOCAL */
 
-#ifdef BALSARA
-      real, dimension(flind%fluids,n) :: vprim
-      real, dimension(n) :: delta, drag
-#endif /* BALSARA */
 #ifdef COSM_RAYS
       integer                       :: icr
 #ifdef COSM_RAYS_SOURCES
@@ -418,32 +418,7 @@ contains
 #ifndef BALSARA
          acc = acc + fluid_interactions(dens, vx)
 #else /* !BALSARA */
-         ! BEWARE: this bit assumes that we have 2 fluids && u1 == u0 - \grad F
-         ! \todo:
-         !  1) Calculate drag
-         !  2) half-time step should be \le \frac{1}{2}\frac{c_s}{drag * \rho\prim_? |v'_d - v'_g|}
-         !  3) what if not isothermal?
-         !  4) remove hardcoded integers
-
-         drag(:) = 10.0 ! BEWARE: CHEAT!
-
-         drag(:) = drag(:)*dt*0.5
-
-         delta(:) = 1.0 + drag(:) * (u1(iarr_all_dn(1),:) + u1(iarr_all_dn(2),:))
-         delta(:) = 1./delta(:)
-
-         if (istep == 1) then
-            vprim(1,:) =  delta(:)*( (1./u1(iarr_all_dn(1),:) + drag(:))*u1(iarr_all_mx(1),:) + drag(:)*u1(iarr_all_mx(2),:) )
-            vprim(2,:) =  delta(:)*( (1./u1(iarr_all_dn(2),:) + drag(:))*u1(iarr_all_mx(2),:) + drag(:)*u1(iarr_all_mx(1),:) )
-         else
-            vprim(2,:) =  delta(:)*(  &
-                 drag(:)*( u0(iarr_all_dn(2),:)/u1(iarr_all_dn(2),:)*u0(iarr_all_mx(1),:) - u0(iarr_all_dn(1),:)/u1(iarr_all_dn(2),:)*u0(iarr_all_mx(2),:) &
-                           + u1(iarr_all_mx(1),:) ) + u1(iarr_all_mx(2),:) * ( 1./u1(iarr_all_dn(2),:) + drag(:) )  )
-            vprim(1,:) =  delta(:)*(  &
-                 drag(:)*( u0(iarr_all_dn(1),:)/u1(iarr_all_dn(1),:)*u0(iarr_all_mx(2),:) - u0(iarr_all_dn(2),:)/u1(iarr_all_dn(1),:)*u0(iarr_all_mx(1),:) &
-                           + u1(iarr_all_mx(2),:) ) + u1(iarr_all_mx(1),:) * ( 1./u1(iarr_all_dn(1),:) + drag(:) )  )
-         endif
-         u1(iarr_all_mx,:) = u1(iarr_all_dn,:) * vprim(:,:)
+         call balsara_implicit_interactions(u1,u0,istep)
 #endif /* BALSARA */
 #ifdef SHEAR
          acc = acc + shear_acc(sweep,u)

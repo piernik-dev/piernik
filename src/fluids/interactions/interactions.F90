@@ -41,7 +41,7 @@ module interactions
 
    private
    public :: init_interactions, fluid_interactions, collfaq, cfl_interact, dragc_gas_dust, has_interactions, &
-      & interactions_grace_passed, epstein_factor
+      & interactions_grace_passed, epstein_factor, balsara_implicit_interactions
 
    real, allocatable, dimension(:,:)      :: collfaq     !< flind%fluids x flind%fluids array of collision factors
    real :: collision_factor                              !< collision factor
@@ -232,6 +232,49 @@ contains
       acc(flind%neu%pos,:) = -acc(flind%dst%pos,:) * dens(flind%dst%pos,:) / dens(flind%neu%pos,:)
 
    end function fluid_interactions_aero_drag_ep
+
+   subroutine balsara_implicit_interactions(u1,u0,istep)
+      ! Balsara Dinshaw S., Tilley David A., Rettig Terrence, Brittain Sean D. MNRAS (2009) 397: 24.
+      ! Tilley, David A., Balsara, Dinshaw S. MNRAS (2008) 389: 1058.
+      use fluidindex, only: iarr_all_dn, iarr_all_mx, flind
+      use mpisetup,   only: dt
+      implicit none
+      real, dimension(:,:), intent(inout) :: u1
+      real, dimension(:,:), intent(in)    :: u0
+      integer, intent(in)                 :: istep
+
+      real, dimension(flind%fluids,size(u1,2)) :: vprim
+      real, dimension(size(u1,2))              :: delta, drag
+
+      ! BEWARE: this bit assumes that we have 2 fluids && u1 == u0 - \grad F
+      ! \todo:
+      !  1) Calculate drag
+      !  2) half-time step should be \le \frac{1}{2}\frac{c_s}{drag * \rho\prim_? |v'_d - v'_g|}
+      !  3) what if not isothermal?
+      !  4) remove hardcoded integers
+
+      drag(:) = 10.0 ! BEWARE: CHEAT!
+
+      drag(:) = drag(:)*dt*0.5
+
+      delta(:) = 1.0 + drag(:) * (u1(iarr_all_dn(1),:) + u1(iarr_all_dn(2),:))
+      delta(:) = 1./delta(:)
+
+      if (istep == 1) then
+         vprim(1,:) =  delta(:)*( (1./u1(iarr_all_dn(1),:) + drag(:))*u1(iarr_all_mx(1),:) + drag(:)*u1(iarr_all_mx(2),:) )
+         vprim(2,:) =  delta(:)*( (1./u1(iarr_all_dn(2),:) + drag(:))*u1(iarr_all_mx(2),:) + drag(:)*u1(iarr_all_mx(1),:) )
+      else
+         vprim(2,:) =  delta(:)*(  &
+            drag(:)*( u0(iarr_all_dn(2),:)/u1(iarr_all_dn(2),:)*u0(iarr_all_mx(1),:) - u0(iarr_all_dn(1),:)/u1(iarr_all_dn(2),:)*u0(iarr_all_mx(2),:) &
+                    + u1(iarr_all_mx(1),:) ) + u1(iarr_all_mx(2),:) * ( 1./u1(iarr_all_dn(2),:) + drag(:) )  )
+         vprim(1,:) =  delta(:)*(  &
+            drag(:)*( u0(iarr_all_dn(1),:)/u1(iarr_all_dn(1),:)*u0(iarr_all_mx(2),:) - u0(iarr_all_dn(2),:)/u1(iarr_all_dn(1),:)*u0(iarr_all_mx(1),:) &
+                    + u1(iarr_all_mx(2),:) ) + u1(iarr_all_mx(1),:) * ( 1./u1(iarr_all_dn(1),:) + drag(:) )  )
+      endif
+      u1(iarr_all_mx,:) = u1(iarr_all_dn,:) * vprim(:,:)
+      return
+   end subroutine balsara_implicit_interactions
+
 #ifdef FLUID_INTERACTIONS_DW
 !>
 !! \brief Routine that governs the type of interaction
