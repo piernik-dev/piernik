@@ -343,7 +343,6 @@ contains
       dtx       = dt / dx
 
       u1 = u
-!     u0 = u
 
       vx   => vel_sweep
       dens => density
@@ -358,87 +357,86 @@ contains
       endif
 #endif /* ISO_LOCAL */
 
-!     do istep=1,integration_order
-         density(:,:) = u(iarr_all_dn,:)
+      density(:,:) = u(iarr_all_dn,:)
 ! Fluxes calculation for cells centers
 #ifdef ISO_LOCAL
-         call all_fluxes(n, w, cfr, u1, bb, pressure, vel_sweep, cs_iso2)
+      call all_fluxes(n, w, cfr, u1, bb, pressure, vel_sweep, cs_iso2)
 #else /* !ISO_LOCAL */
-         call all_fluxes(n, w, cfr, u1, bb, pressure, vel_sweep)
+      call all_fluxes(n, w, cfr, u1, bb, pressure, vel_sweep)
 #endif /* !ISO_LOCAL */
 ! Right and left fluxes decoupling
 
-         fl = (u1*cfr-w)*0.5
-!        fr = (u1*cfr+w)*0.5
-         fr = fl + w
+      fl = (u1*cfr-w)*0.5
+!     fr = (u1*cfr+w)*0.5
+      fr = fl + w
 
-         fl(:,1:n-1) = fl(:,2:n)                         ; fl(:,n)   = fl(:,n-1)
+      fl(:,1:n-1) = fl(:,2:n)                         ; fl(:,n)   = fl(:,n-1)
 
-         if (istep == 2) then
+      if (istep == 2) then
 
 ! Second order flux corrections
 
-            dfrp(:,1:n-1) = 0.5*(fr(:,2:n) - fr(:,1:n-1)); dfrp(:,n) = dfrp(:,n-1)
-            dfrm(:,2:n)   = dfrp(:,1:n-1);                 dfrm(:,1) = dfrm(:,2)
+         dfrp(:,1:n-1) = 0.5*(fr(:,2:n) - fr(:,1:n-1)); dfrp(:,n) = dfrp(:,n-1)
+         dfrm(:,2:n)   = dfrp(:,1:n-1);                 dfrm(:,1) = dfrm(:,2)
 
 ! Flux limiter application
 
-            call flimiter(fr,dfrm,dfrp)
+         call flimiter(fr,dfrm,dfrp)
 
-            dflp(:,1:n-1) = 0.5*(fl(:,1:n-1) - fl(:,2:n)); dflp(:,n) = dflp(:,n-1)
-            dflm(:,2:n)   = dflp(:,1:n-1);                 dflm(:,1) = dflm(:,2)
-            call flimiter(fl,dflm,dflp)
+         dflp(:,1:n-1) = 0.5*(fl(:,1:n-1) - fl(:,2:n)); dflp(:,n) = dflp(:,n-1)
+         dflm(:,2:n)   = dflp(:,1:n-1);                 dflm(:,1) = dflm(:,2)
+         call flimiter(fl,dflm,dflp)
 !OPT 60% of D1mr and 40% D1mw occured in few above lines (D1mr = 0.1% Dr, D1mw = 0.5% Dw)
-         endif
+      endif
 
 ! u update
 
-         fu = fr - fl
-         u1(:,2:n) = u0(:,2:n) - rk2coef(integration_order,istep) * gc(1,:,2:n) * dtx * ( gc(2,:,2:n)*fu(:,2:n) - gc(3,:,2:n)*fu(:,1:n-1) )
-         u1(:,1)   = u1(:,2)
+      fu = fr - fl
+      u1(:,2:n) = u0(:,2:n) - rk2coef(integration_order,istep) * gc(1,:,2:n) * dtx * ( gc(2,:,2:n)*fu(:,2:n) - gc(3,:,2:n)*fu(:,1:n-1) )
+      u1(:,1)   = u1(:,2)
 
-         if (use_smalld) then
-            ! This is needed e.g. for outflow boundaries in presence of perp. gravity
-            u1(iarr_all_dn,:) = max(u1(iarr_all_dn,:),smalld)
+      if (use_smalld) then
+         ! This is needed e.g. for outflow boundaries in presence of perp. gravity
+         u1(iarr_all_dn,:) = max(u1(iarr_all_dn,:),smalld)
             local_magic_mass = local_magic_mass + sum( abs(u1(iarr_all_dn,2:n-1) - u0(iarr_all_dn,2:n-1)) )
-         else
-            if (any(u1(iarr_all_dn,:) < 0.0)) then
-               write(msg,'(3A,I4,1X,I4,A)') "[rtvd:relaxing_tvd] negative density in sweep ",sweep,"( ", i1, i2, " )"
-               call die(msg)
-            endif
+      else
+         if (any(u1(iarr_all_dn,:) < 0.0)) then
+            write(msg,'(3A,I4,1X,I4,A)') "[rtvd:relaxing_tvd] negative density in sweep ",sweep,"( ", i1, i2, " )"
+            call die(msg)
          endif
+      endif
 
 ! Source terms -------------------------------------
 
-         geosrc = geometry_source_terms(u,pressure,sweep)
+      geosrc = geometry_source_terms(u,pressure,sweep)
 
-         u1(iarr_all_mx,:) = u1(iarr_all_mx,:) + rk2coef(integration_order,istep)*geosrc(:,:)*dt
+      u1(iarr_all_mx,:) = u1(iarr_all_mx,:) + rk2coef(integration_order,istep)*geosrc(:,:)*dt
 
-         acc = 0.0
+      acc = 0.0
 #ifndef BALSARA
-         acc = acc + fluid_interactions(dens, vx)
+      acc = acc + fluid_interactions(dens, vx)
 #else /* !BALSARA */
-         call balsara_implicit_interactions(u1,u0,istep)
+      call balsara_implicit_interactions(u1,u0,istep)
 #endif /* BALSARA */
 #ifdef SHEAR
-         acc = acc + shear_acc(sweep,u)
+      acc = acc + shear_acc(sweep,u)
 #endif /* SHEAR */
 #ifdef CORIOLIS
-         acc = acc + coriolis_force(sweep,u)
+      acc = acc + coriolis_force(sweep,u)
 #endif /* CORIOLIS */
 
 #ifdef GRAV
-         call grav_pot2accel(sweep, i1, i2, n, gravacc, istep)
-         do ind = 1, flind%fluids
-            acc(ind,:) =  acc(ind,:) + gravacc(:)
-         enddo
+      call grav_pot2accel(sweep, i1, i2, n, gravacc, istep)
+      do ind = 1, flind%fluids
+         acc(ind,:) =  acc(ind,:) + gravacc(:)
+      enddo
 #endif /* !GRAV */
 
-         acc(:,n)   = acc(:,n-1);  acc(:,1) = acc(:,2)
+      acc(:,n)   = acc(:,n-1);  acc(:,1) = acc(:,2)
 
-         u1(iarr_all_mx,:) = u1(iarr_all_mx,:) + rk2coef(integration_order,istep)*acc(:,:)*u(iarr_all_dn,:)*dt
+      u1(iarr_all_mx,:) = u1(iarr_all_mx,:) + rk2coef(integration_order,istep)*acc(:,:)*u(iarr_all_dn,:)*dt
 #ifndef ISO
-         u1(iarr_all_en,:) = u1(iarr_all_en,:) + rk2coef(integration_order,istep)*acc(:,:)*u(iarr_all_mx,:)*dt
+      u1(iarr_all_en,:) = u1(iarr_all_en,:) + rk2coef(integration_order,istep)*acc(:,:)*u(iarr_all_mx,:)*dt
 #endif /* !ISO */
 
 ! --------------------------------------------------
@@ -450,65 +448,64 @@ contains
 !#endif /* FLUID_INTERACTIONS_DW */
 
 #if defined COSM_RAYS && defined IONIZED
-         select case (sweep)
-            case (xdim)
-               divv = divvel(:,i1,i2)
-            case (ydim)
-               divv = divvel(i2,:,i1)
+      select case (sweep)
+         case (xdim)
+            divv = divvel(:,i1,i2)
+         case (ydim)
+            divv = divvel(i2,:,i1)
             case (zdim)
-               divv = divvel(i1,i2,:)
-         end select
+            divv = divvel(i1,i2,:)
+      end select
 
-         grad_pcr(:) = 0
-         if (flind%crn%all > 0) then !> \deprecated BEWARE: quick hack
-            do icr = 1, 1 !> \deprecated flind_crs  !BEWARE TEMPORARY!
-               decr(:)                = -(gamma_crs(icr)-1.)*u1(iarr_crs(icr),:)*divv(:)*dt
-               u1  (iarr_crs(icr),:)  = u1(iarr_crs(icr),:) + rk2coef(integration_order,istep)*decr(:)
-               u1  (iarr_crs(icr),:)  = max(smallecr,u1(iarr_crs(icr),:))
+      grad_pcr(:) = 0
+      if (flind%crn%all > 0) then !> \deprecated BEWARE: quick hack
+         do icr = 1, 1 !> \deprecated flind_crs  !BEWARE TEMPORARY!
+            decr(:)                = -(gamma_crs(icr)-1.)*u1(iarr_crs(icr),:)*divv(:)*dt
+            u1  (iarr_crs(icr),:)  = u1(iarr_crs(icr),:) + rk2coef(integration_order,istep)*decr(:)
+            u1  (iarr_crs(icr),:)  = max(smallecr,u1(iarr_crs(icr),:))
 
-               ecr                    = u1(iarr_crs(icr),:)
-               grad_pcr(2:n-1) = grad_pcr(2:n-1) + cr_active*(gamma_crs(icr) -1.)*(ecr(3:n)-ecr(1:n-2))/(2.*dx)
+            ecr                    = u1(iarr_crs(icr),:)
+            grad_pcr(2:n-1) = grad_pcr(2:n-1) + cr_active*(gamma_crs(icr) -1.)*(ecr(3:n)-ecr(1:n-2))/(2.*dx)
 
-            enddo
-         endif
-         grad_pcr(1:2)   = 0.0 ; grad_pcr(n-1:n) = 0.0
+         enddo
+      endif
+      grad_pcr(1:2)   = 0.0 ; grad_pcr(n-1:n) = 0.0
 
 #ifndef ISO
-         !> \deprecated BEWARE: u1(imx)/u1(idn) was changed to vx, CHECK VALIDITY!
-         u1(iarr_all_en(flind%ion%pos),:) = u1(iarr_all_en(flind%ion%pos),:) &
-                              - rk2coef(integration_order,istep)*vx(flind%ion%pos,:)*grad_pcr*dt
+      !> \deprecated BEWARE: u1(imx)/u1(idn) was changed to vx, CHECK VALIDITY!
+      u1(iarr_all_en(flind%ion%pos),:) = u1(iarr_all_en(flind%ion%pos),:) &
+                        - rk2coef(integration_order,istep)*vx(flind%ion%pos,:)*grad_pcr*dt
 #endif /* !ISO */
-         u1(iarr_all_mx(flind%ion%pos),:) = u1(iarr_all_mx(flind%ion%pos),:) - rk2coef(integration_order,istep)*grad_pcr*dt
+
+      u1(iarr_all_mx(flind%ion%pos),:) = u1(iarr_all_mx(flind%ion%pos),:) - rk2coef(integration_order,istep)*grad_pcr*dt
 
 #ifdef COSM_RAYS_SOURCES
-         call src_crn(u1,n, srccrn)
-         u1  (iarr_crn,:)  = u1(iarr_crn,:) + rk2coef(integration_order,istep)*srccrn(:,:)*dt
-
+      call src_crn(u1,n, srccrn)
+      u1(iarr_crn,:)  = u1(iarr_crn,:) +  rk2coef(integration_order,istep)*srccrn(:,:)*dt
 #endif /* COSM_RAYS_SOURCES */
 
 #endif /* COSM_RAYS && IONIZED */
 
 #if defined IONIZED || defined NEUTRAL
 #ifndef ISO
-         ekin = 0.5*( u1(iarr_all_mx,:)**2 + u1(iarr_all_my,:)**2 &
-                +u1(iarr_all_mz,:)**2) /u1(iarr_all_dn,:)
-         eint = u1(iarr_all_en,:)-ekin
+      ekin = 0.5*( u1(iarr_all_mx,:)**2 + u1(iarr_all_my,:)**2 &
+             +u1(iarr_all_mz,:)**2) /u1(iarr_all_dn,:)
+      eint = u1(iarr_all_en,:)-ekin
 #if defined IONIZED && defined MAGNETIC
-         emag = 0.5*(bb(ibx,:)*bb(ibx,:) + bb(iby,:)*bb(iby,:) + bb(ibz,:)*bb(ibz,:))
-         eint(flind%ion%pos,:) = eint(flind%ion%pos,:) - emag
+      emag = 0.5*(bb(ibx,:)*bb(ibx,:) + bb(iby,:)*bb(iby,:) + bb(ibz,:)*bb(ibz,:))
+      eint(flind%ion%pos,:) = eint(flind%ion%pos,:) - emag
 #endif /* IONIZED && MAGNETIC */
 
-         eint = max(eint,smallei)
+      eint = max(eint,smallei)
 
-         u1(iarr_all_en,:) = eint+ekin
+      u1(iarr_all_en,:) = eint+ekin
 #if defined IONIZED && defined MAGNETIC
-         u1(iarr_all_en(flind%ion%pos),:) = u1(iarr_all_en(flind%ion%pos),:)+emag
+      u1(iarr_all_en(flind%ion%pos),:) = u1(iarr_all_en(flind%ion%pos),:)+emag
 #endif /* IONIZED && MAGNETIC */
 #endif /* !ISO */
 #endif /*  defined IONIZED || defined NEUTRAL  */
 
-         u(:,:) = u1(:,:)
-!      enddo
+      u(:,:) = u1(:,:)
 
    end subroutine relaxing_tvd
 
