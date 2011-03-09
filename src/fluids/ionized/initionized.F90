@@ -115,6 +115,7 @@ contains
 
    subroutine ionized_index(flind)
 
+      use constants,    only: ION
       use diagnostics,  only: ma1d, my_allocate
       use types,        only: var_numbers
 
@@ -175,7 +176,7 @@ contains
       flind%ion%gam_1 = gamma_ion-1.0
       flind%ion%cs    = cs_iso_ion
       flind%ion%cs2   = cs_iso_ion**2
-      flind%ion%tag   = "ION"
+      flind%ion%tag   = ION
       flind%ion%is_selfgrav = selfgrav_ion
 
    end subroutine ionized_index

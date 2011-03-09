@@ -254,7 +254,7 @@ contains
       use dataio_pub,          only: msg, printinfo, die
       use types,               only: component_fluid
       use arrays,              only: u, b, dprof
-      use constants,           only: dpi, xdim, zdim, GEO_XYZ, GEO_RPZ
+      use constants,           only: dpi, xdim, zdim, GEO_XYZ, GEO_RPZ, DST
       use units,               only: newtong, gram, cm, kboltz, mH
       use fluidindex,          only: ibx, iby, ibz, flind
       use gravity,             only: r_smooth, r_grav, n_gravr, ptmass, source_terms_grav, grav_pot2accel, grav_pot_3d
@@ -408,7 +408,7 @@ contains
 
          do p = 1, flind%fluids
             fl => flind%all_fluids(p)
-            if (fl%tag /= "DST" .and. master) then
+            if (fl%tag /= DST .and. master) then
                write(msg,'(A,F9.5)') "[init_problem:initprob] cs2 used = ", fl%cs2
                call printinfo(msg)
             endif
@@ -430,11 +430,11 @@ contains
                      zk = cg%z(k)
 !                     u(fl%idn,i,j,k) = max(d0*(1./cosh((xi/r_max)**10)) * exp(-zk**2/H2),1.e-10))
                      u(fl%idn,i,j,k) = dens_prof(i)
-                     if (fl%tag == "DST") u(fl%idn,i,j,k) = eps * u(fl%idn,i,j,k)
+                     if (fl%tag == DST) u(fl%idn,i,j,k) = eps * u(fl%idn,i,j,k)
 
                      vr   = 0.0
                      ! that condition is not necessary since cs2 == 0.0 for dust
-                     if (fl%tag /= "DST") then
+                     if (fl%tag /= DST) then
 !                        vphi = sqrt( max(abs(grav(i)) * rc - fl%cs2*dens_exp,0.0))
                          vphi = sqrt( max(cg%x(i)*(fl%cs2*ln_dens_der(i) + abs(grav(i))),0.0) )
                      else

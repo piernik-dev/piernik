@@ -90,6 +90,7 @@ contains
    subroutine dust_index(flind)
       use diagnostics,   only: ma1d, my_allocate
       use types,         only: var_numbers
+      use constants,     only: DST
 
       implicit none
       type(var_numbers), intent(inout) :: flind
@@ -129,7 +130,7 @@ contains
       flind%dst%gam = -1.
       flind%dst%cs  = 0.0
       flind%dst%cs2 = 0.0
-      flind%dst%tag = "DST"
+      flind%dst%tag = DST
       flind%dst%is_selfgrav = selfgrav_dst
 
    end subroutine dust_index

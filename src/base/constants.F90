@@ -120,6 +120,11 @@ module constants
    integer, parameter :: AT_OUT_B = AT_NO_B  + 1  !< External boundary cells in the output
    integer, parameter :: AT_ALL_B = AT_OUT_B + 1  !< All boundary cells in the output
 
+   ! Fluid type index, used in flind%tag
+   integer, parameter :: ION = 1                  !< ionized fluid
+   integer, parameter :: NEU = ION + 1            !< neutral fluid
+   integer, parameter :: DST = NEU + 1            !< dust fluid
+
    ! misc
    integer, parameter :: stdout = output_unit
    integer, parameter :: stderr = error_unit

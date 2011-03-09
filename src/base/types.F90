@@ -189,7 +189,7 @@ module types
       logical :: is_magnetized = .false. !< True if fluid is magnetized
       logical :: has_energy    = .false. !< True if fluid has additional energy array
 
-      character(len=idlen) :: tag = '' !< Human readable tag describing fluid
+      integer :: tag = -1 !< Human readable tag describing fluid
 
       integer, allocatable, dimension(:)  :: iarr
       integer, allocatable, dimension(:)  :: iarr_swpx

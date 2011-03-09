@@ -191,7 +191,7 @@ contains
    subroutine sanitize_smallx_checks
 
       use mpisetup,   only: smalld, smallp, master, comm, ierr
-      use constants,  only: big_float
+      use constants,  only: big_float, DST
       use mpi,        only: MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_MIN
       use func,       only: emag, ekin
       use dataio_pub, only: warn, msg
@@ -238,7 +238,7 @@ contains
       if (smallp >= big_float) then
          do i = lbound(flind%all_fluids,1), ubound(flind%all_fluids,1)
             fl => flind%all_fluids(i)
-            if (fl%tag=='DST') cycle
+            if (fl%tag == DST) cycle
             dn => u(fl%idn,:,:,:)
             mx => u(fl%imx,:,:,:)
             my => u(fl%imy,:,:,:)

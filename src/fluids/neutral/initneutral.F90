@@ -110,7 +110,7 @@ contains
    end subroutine init_neutral
 
    subroutine neutral_index(flind)
-
+      use constants,    only: NEU
       use diagnostics,  only: ma1d, my_allocate
       use types,        only: var_numbers
 
@@ -171,7 +171,7 @@ contains
       flind%neu%gam_1 = gamma_neu-1.0
       flind%neu%cs    = cs_iso_neu
       flind%neu%cs2   = cs_iso_neu**2
-      flind%neu%tag   = "NEU"
+      flind%neu%tag   = NEU
       flind%neu%is_selfgrav = selfgrav_neu
 
    end subroutine neutral_index

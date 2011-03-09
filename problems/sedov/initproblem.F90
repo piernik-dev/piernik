@@ -118,6 +118,7 @@ contains
 !-----------------------------------------------------------------------------
    subroutine init_prob
 
+      use constants,      only: ION, DST
       use arrays,         only: u, b
       use dataio_pub,     only: msg, die, printinfo
       use fluidindex,     only: flind, ibx, iby, ibz
@@ -138,7 +139,7 @@ contains
 
       do p = 1, flind%energ
          fl => flind%all_fluids(p)
-         if (fl%tag=="DST") call die("[initproblem:init_prob] This setup is not suitable for dust!")
+         if (fl%tag == DST) call die("[initproblem:init_prob] This setup is not suitable for dust!")
          write(msg,*) "Working with ", fl%tag, " fluid."
          if (master) call printinfo(msg)
 
@@ -167,7 +168,7 @@ contains
             enddo
          enddo
 
-         if (fl%tag=="ION") then
+         if (fl%tag == ION) then
             do k = 1, cg%nz
                do j = 1, cg%ny
                   do i = 1, cg%nx

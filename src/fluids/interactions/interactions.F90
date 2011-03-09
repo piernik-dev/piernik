@@ -146,6 +146,7 @@ contains
 
    subroutine interactions_grace_passed
 
+      use constants,     only: DST
       use fluidindex,    only: flind
       use dataio_pub,    only: warn
       use mpisetup,      only: master
@@ -173,7 +174,7 @@ contains
             fluid_interactions => fluid_interactions_aero_drag_ep
             has_interactions = .true.    !> \deprecated BEWARE: temporary hack
             do i = 1, flind%fluids
-               if (flind%all_fluids(i)%tag /= "DST") then
+               if (flind%all_fluids(i)%tag /= DST) then
                   epstein_factor(flind%all_fluids(i)%pos) = grain_size * grain_dens / flind%all_fluids(i)%cs !BEWARE iso assumed
                else
                   epstein_factor(flind%all_fluids(i)%pos) = 0.0
