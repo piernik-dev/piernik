@@ -63,13 +63,14 @@ module constants
    integer, parameter :: big_int = huge(int(1,4))
 
    ! dimensions
-   integer, parameter :: xdim    = 1                     !< parameter assigned to the x-direction
-   integer, parameter :: ydim    = xdim + 1              !< parameter assigned to the y-direction
-   integer, parameter :: zdim    = ydim + 1              !< parameter assigned to the z-direction
+   enum, bind(C)
+      enumerator :: xdim = 1, ydim, zdim                 !< parameters assigned to the x-, y- and z-direction
+   end enum
    integer, parameter :: ndims   = zdim - xdim + 1       !< We live in a 3-dimensional world
-   integer, parameter :: LO = 1                          !< index for low (left) boundary
-   integer, parameter :: HI = LO + 1                     !< index for high (right) boundary
-   ! \todo remove analogous vars from multigridvars
+
+   enum, bind(C)
+      enumerator :: LO = 1, HI                           !< indices for low (left) and high (right) boundaries
+   end enum
 
    ! string lengths
    integer, parameter :: cwdlen = 512                    !< allow for quite long CWD
@@ -81,44 +82,47 @@ module constants
    integer, parameter :: idlen  = 3                      !< COMMENT ME
 
    ! simulation state
-   integer, parameter :: PIERNIK_START       = 1                       ! before initialization
-   integer, parameter :: PIERNIK_INIT_MPI    = PIERNIK_START       + 1 ! initialized MPI
-   integer, parameter :: PIERNIK_INIT_BASE   = PIERNIK_INIT_MPI    + 1 ! initialized most fundamental modules that depend only on MPI: constants, grid, fluids, etc.
-   integer, parameter :: PIERNIK_INIT_ARRAYS = PIERNIK_INIT_BASE   + 1 ! initialized arrays
-   integer, parameter :: PIERNIK_INIT_IO_IC  = PIERNIK_INIT_ARRAYS + 1 ! initialized all physics
-   integer, parameter :: PIERNIK_INITIALIZED = PIERNIK_INIT_IO_IC  + 1 ! initialized I/O and IC, running
-   integer, parameter :: PIERNIK_FINISHED    = PIERNIK_INITIALIZED + 1 ! finished simulation
-   integer, parameter :: PIERNIK_CLEANUP     = PIERNIK_FINISHED    + 1 ! finished post-simulation computations and I/O
+   enum, bind(C)
+      enumerator :: PIERNIK_START                        ! before initialization
+      enumerator :: PIERNIK_INIT_MPI                     ! initialized MPI
+      enumerator :: PIERNIK_INIT_BASE                    ! initialized most fundamental modules that depend only on MPI: constants, grid, fluids, etc.
+      enumerator :: PIERNIK_INIT_ARRAYS                  ! initialized arrays
+      enumerator :: PIERNIK_INIT_IO_IC                   ! initialized all physics
+      enumerator :: PIERNIK_INITIALIZED                  ! initialized I/O and IC, running
+      enumerator :: PIERNIK_FINISHED                     ! finished simulation
+      enumerator :: PIERNIK_CLEANUP                      ! finished post-simulation computations and I/O
+   end enum
 
    ! grid geometry type
-   integer, parameter :: GEO_XYZ     = 0                 !< cartesian grid with uniform cell spacing
-   integer, parameter :: GEO_RPZ     = GEO_XYZ + 1       !< cylindrical grid with uniform spacing
-   integer, parameter :: GEO_INVALID = GEO_XYZ - 1       !< non-recognized grid geometry
+   enum, bind(C)
+       enumerator :: GEO_XYZ, GEO_RPZ                    !< cartesian (0) or cylindrical (1) grid with uniform cell spacing
+       enumerator :: GEO_INVALID = GEO_XYZ - 1           !< non-recognized grid geometry (-1)
+   end enum
 
    ! boundary conditions type
-   integer, parameter :: BND_MPI     = 0                 !< internal, processor-processor boundary
-   integer, parameter :: BND_PER     = BND_MPI  + 1      !< periodic boudary
-   integer, parameter :: BND_REF     = BND_PER  + 1      !< reflecting boundary
-   integer, parameter :: BND_OUT     = BND_REF  + 1      !< free boundary
-   integer, parameter :: BND_OUTD    = BND_OUT  + 1      !< one-way outflow boundary
-   integer, parameter :: BND_OUTH    = BND_OUTD + 1      !< hydrostatic boundary
-   integer, parameter :: BND_COR     = BND_OUTH + 1      !< corner boundary
-   integer, parameter :: BND_SHE     = BND_COR  + 1      !< shear boundary
-   integer, parameter :: BND_INF     = BND_SHE  + 1      !< 'inf', COMMENT ME
-   integer, parameter :: BND_USER    = BND_INF  + 1      !< user boundaries (provided in read_problem_par)
-   integer, parameter :: BND_INVALID = BND_MPI  - 1      !< non-recognized boundary
+   enum, bind(C)
+      enumerator :: BND_MPI                              !< internal, processor-processor boundary (by default equal to 0)
+      enumerator :: BND_PER, BND_REF                     !< periodic boundary, reflecting boudary
+      enumerator :: BND_OUT, BND_OUTD, BND_OUTH          !< free boundary, one-way outflow boundary, hydrostatic boundary
+      enumerator :: BND_COR, BND_SHE                     !< corner boundary, shear boundary
+      enumerator :: BND_INF                              !< 'inf', COMMENT ME
+      enumerator :: BND_USER                             !< user boundaries (provided in read_problem_par)
+      enumerator :: BND_INVALID = BND_MPI  - 1           !< non-recognized boundary
+   end enum
 
    ! first index of cg%mbc(:,:,:) array
-   integer, parameter :: FLUID = 1                       !< MPI container type for exchanging u(:,:,:,:)
-   integer, parameter :: MAG   = FLUID + 1               !< MPI container type for exchanging b(3,:,:,:)
-   integer, parameter :: ARR   = MAG   + 1               !< MPI container type for exchanging a rank-3 array
-   integer, parameter :: BND   = 1                       !< receiving area
-   integer, parameter :: DOM   = BND + 1                 !< sending area
+   enum, bind(C)
+      enumerator :: FLUID = 1, MAG, ARR                  !< MPI container type for exchanging u(:,:,:,:),  b(ndims,:,:,:) and a rank-3 arrays
+   end enum
+   ! last index of cg%mbc(:,:,:) array
+   enum, bind(C)
+      enumerator :: BND = 1, DOM                         !< receiving and sending area
+   end enum
 
    ! Handling boundary cells in the output
-   integer, parameter :: AT_NO_B  = 0             !< No boundary cells in the output
-   integer, parameter :: AT_OUT_B = AT_NO_B  + 1  !< External boundary cells in the output
-   integer, parameter :: AT_ALL_B = AT_OUT_B + 1  !< All boundary cells in the output
+   enum, bind(C)
+      enumerator :: AT_NO_B, AT_OUT_B, AT_ALL_B          !< No boundary cells, external boundary cells and all boundary cells in the output
+   end enum
 
    ! Fluid type index, used in flind%tag
    integer, parameter :: ION = 1                  !< ionized fluid
