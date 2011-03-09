@@ -441,13 +441,11 @@ contains
 
 ! --------------------------------------------------
 
-!#ifdef FLUID_INTERACTIONS_DW
-!         !!!! old, more general way of adding interactions
-!         call fluid_interactions_dw(sweep,i1,i2, n, dintr, u)
-!         u1 = u1 + rk2coef(integration_order,istep)*dintr*dt
-!#endif /* FLUID_INTERACTIONS_DW */
-
 #if defined COSM_RAYS && defined IONIZED
+   ! ---- 2 -----------------------
+   ! \todo move to proper module
+      ! ---- 1 --------------------
+      ! \todo move divv selection to sweeps?
       select case (sweep)
          case (xdim)
             divv = divvel(:,i1,i2)
@@ -456,6 +454,7 @@ contains
             case (zdim)
             divv = divvel(i1,i2,:)
       end select
+      ! ---- 1 ----------------------
 
       grad_pcr(:) = 0
       if (flind%crn%all > 0) then !> \deprecated BEWARE: quick hack
@@ -483,14 +482,13 @@ contains
       call src_crn(u1,n, srccrn)
       u1(iarr_crn,:)  = u1(iarr_crn,:) +  rk2coef(integration_order,istep)*srccrn(:,:)*dt
 #endif /* COSM_RAYS_SOURCES */
-
+   ! ---- 2 ----------------------
 #endif /* COSM_RAYS && IONIZED */
 
 #if defined IONIZED || defined NEUTRAL
 #ifndef ISO
-      ekin = 0.5*( u1(iarr_all_mx,:)**2 + u1(iarr_all_my,:)**2 &
-             +u1(iarr_all_mz,:)**2) /u1(iarr_all_dn,:)
-      eint = u1(iarr_all_en,:)-ekin
+      ekin = 0.5*( u1(iarr_all_mx,:)**2 + u1(iarr_all_my,:)**2 + u1(iarr_all_mz,:)**2 ) /u1(iarr_all_dn,:)
+      eint = u1(iarr_all_en,:) - ekin
 #if defined IONIZED && defined MAGNETIC
       emag = 0.5*(bb(ibx,:)*bb(ibx,:) + bb(iby,:)*bb(iby,:) + bb(ibz,:)*bb(ibz,:))
       eint(flind%ion%pos,:) = eint(flind%ion%pos,:) - emag
