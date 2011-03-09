@@ -476,7 +476,7 @@ contains
             case ('tend')
                tend   = umsg_param
             case ('nend')
-               nend   = umsg_param
+               nend   = int(umsg_param)
             case ('dtres')
                dt_res = umsg_param
             case ('dthdf')
@@ -488,7 +488,7 @@ contains
             case ('dtplt')
                dt_plt = umsg_param
             case ('sleep')
-               tsleep = 60*umsg_param
+               tsleep = int(60*umsg_param)
                call sleep(tsleep)
             case ('stop')
                end_sim = .true.

@@ -232,7 +232,7 @@ contains
       if (has_dir(zdim)) then
          eh(:,:,2:cg%nz-1) = eh(:,:,2:cg%nz-1) + eta(:,:,1:cg%nz-2) + eta(:,:,3:cg%nz) ;  eh(:,:,1) = eh(:,:,2) ; eh(:,:,cg%nz) = eh(:,:,cg%nz-1)
       endif
-      eh = (eh + dble(eta_scale)*eta)*d_eta_factor
+      eh = real((eh + eta_scale*eta)*d_eta_factor)
 
       where (eta > eta_0)
          eta = eh

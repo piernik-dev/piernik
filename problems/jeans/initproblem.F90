@@ -202,11 +202,11 @@ contains
                xi = cg%x(i)-dom%xmin
                select case (mode)
                case (0)
-                  u(idni,i,j,k)   = d0 * (1.d0 +             amp * sin(kx*xi + ky*yj + kz*zk))
-                  pres            = p0 * (1.d0 + gamma_ion * amp * sin(kx*xi + ky*yj + kz*zk))
+                  u(idni,i,j,k)   = d0 * (1. +             amp * sin(kx*xi + ky*yj + kz*zk))
+                  pres            = p0 * (1. + gamma_ion * amp * sin(kx*xi + ky*yj + kz*zk))
                case (1)
-                  u(idni,i,j,k)   = d0 * (1.d0 +             amp * sin(kx*xi) * sin(ky*yj) * sin(kz*zk))
-                  pres            = p0 * (1.d0 + gamma_ion * amp * sin(kx*xi) * sin(ky*yj) * sin(kz*zk))
+                  u(idni,i,j,k)   = d0 * (1. +             amp * sin(kx*xi) * sin(ky*yj) * sin(kz*zk))
+                  pres            = p0 * (1. + gamma_ion * amp * sin(kx*xi) * sin(ky*yj) * sin(kz*zk))
                case default ! should not happen
                   u(idni,i,j,k)   = d0
                   pres            = p0

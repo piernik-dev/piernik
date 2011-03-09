@@ -137,7 +137,7 @@ contains
 
       dt_sn = 1./(f_sn+small)
 
-      nsn = t/dt_sn
+      nsn = int(t/dt_sn)
       nsn_per_timestep = nsn - nsn_last
       nsn_last = nsn
 

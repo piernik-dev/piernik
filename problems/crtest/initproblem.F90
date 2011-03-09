@@ -359,9 +359,9 @@ contains
       ierrh = 0
       select case (trim(var))
          case ("acr1")
-            tab(:,:,:) = aecr1(:,:,:)
+            tab(:,:,:) = real(aecr1(:,:,:), 4)
          case ("err1")
-            tab(:,:,:) = aecr1(:,:,:) - u(iarr_crs(1), cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
+            tab(:,:,:) = real(aecr1(:,:,:) - u(iarr_crs(1), cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), 4)
          case default
             ierrh = -1
       end select

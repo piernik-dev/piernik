@@ -180,7 +180,7 @@ contains
       ierrh = 0
       select case (trim(var))
          case (inid_n)
-            tab(:,:,:) = inid(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
+            tab(:,:,:) = real(inid(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), 4)
             case default
             ierrh = -1
       end select

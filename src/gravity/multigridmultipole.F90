@@ -232,12 +232,12 @@ contains
                if (m == 0) then
                   ofact(l) = 2. ! lm(l,0)
                else                     ! ofact(l, 2*m) = ((-1)^m (2m-1)!!)**2 (l-m)! / (l+m)! ; Should work up to m=512 and even beyond
-                  ofact(lm(l, 2*m))   = ofact(lm(l, 2*(m-1))) * dble(1 - 2*m)**2 / dble((l+m) * (l-m+1))
+                  ofact(lm(l, 2*m))   = ofact(lm(l, 2*(m-1))) * real(1 - 2*m)**2 / real((l+m) * (l-m+1))
                   ofact(lm(l, 2*m-1)) = ofact(lm(l, 2*m))
                endif
                if (l>m) then
-                  k12(1, l, m) = dble(2 * l - 1) / dble(l - m)
-                  k12(2, l, m) = dble(l + m - 1) / dble(l - m)
+                  k12(1, l, m) = real(2 * l - 1) / real(l - m)
+                  k12(2, l, m) = real(l + m - 1) / real(l - m)
                endif
             enddo
          enddo

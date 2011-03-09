@@ -504,7 +504,7 @@ contains
             tab = 0.0
 #else /* !ISO */
             tab(:,:,:) = real( u(flind%neu%ien,RNG) - &
-              0.5 *( u(flind%neu%imx,RNG)**2 + u(flind%neu%imy,RNG)**2 + u(flind%neu%imz,RNG)**2 ) / u(flind%neu%idn,RNG),4)*(flind%neu%gam_1)
+              0.5 *( u(flind%neu%imx,RNG)**2 + u(flind%neu%imy,RNG)**2 + u(flind%neu%imz,RNG)**2 ) / u(flind%neu%idn,RNG),4)*real(flind%neu%gam_1, 4)
 #endif /* !ISO */
 #endif /* NEUTRAL */
          case ("enen")
@@ -530,7 +530,7 @@ contains
             tab = 0.0
 #else /* !ISO */
             tab(:,:,:) = real( u(flind%ion%ien,RNG) - &
-              0.5 *( u(flind%ion%imx,RNG)**2 + u(flind%ion%imy,RNG)**2 + u(flind%ion%imz,RNG)**2 ) / u(flind%ion%idn,RNG),4)*(flind%ion%gam_1)
+              0.5 *( u(flind%ion%imx,RNG)**2 + u(flind%ion%imy,RNG)**2 + u(flind%ion%imz,RNG)**2 ) / u(flind%ion%idn,RNG),4)*real(flind%ion%gam_1, 4)
             tab(:,:,:) = tab(:,:,:) - real( 0.5*(flind%ion%gam_1)*(b(ibx,RNG)**2 + &
                b(iby,RNG)**2 + b(ibz,RNG)**2),4)
 #endif /* !ISO */
@@ -834,7 +834,7 @@ contains
             loffs(:)  = cg%off(:)
          case default
             call die("[dataio_hdf5:set_dims_to_write] Non-recognized area_type.")
-            area(:) = 0. ! suppres compiler warnings
+            area(:) = 0 ! suppres compiler warnings
       end select
 
    end subroutine set_dims_to_write

@@ -721,7 +721,7 @@ contains
 
       if (master) then
          var = rrecv(1)
-         loc_proc = rrecv(2)
+         loc_proc = int(rrecv(2))
       endif
 
       call MPI_Bcast(loc_proc, 1, MPI_INTEGER, 0, comm, ierr)
@@ -763,11 +763,11 @@ contains
       call Eratosthenes_sieve(primes, nproc) ! it is possible to use primes only to sqrt(nproc), but it is easier to have the full table. Cheap for any reasonable nproc.
 
       ! this is the minimal total area of internal boundaries (periodic case), achievable for some perfect domain divisions
-      ideal_bsize = eff_dim * (nproc * product(dble(dom%n_d(:)))**(eff_dim-1))**(1./eff_dim)
+      ideal_bsize = eff_dim * (nproc * product(real(dom%n_d(:)))**(eff_dim-1))**(1./eff_dim)
 
       call divide_domain_uniform
       if (product(psize) == nproc) then
-         quality = ideal_bsize / sum(psize(:)/dble(dom%n_d(:)) * product(dom%n_d(:)), MASK = dom%n_d(:) > 1)
+         quality = ideal_bsize / sum(psize(:)/real(dom%n_d(:)) * product(real(dom%n_d(:))), MASK = dom%n_d(:) > 1)
          if (quality >= dd_unif_quality .or. .not. allow_uneven) return
          write(msg,'(2(a,f6.3),a)')"[mpisetup:divide_domain] Quality of uniform division = ",quality," is below threshold ",dd_unif_quality, ", trying harder ..."
          if (master) call warn(msg)
@@ -923,9 +923,9 @@ contains
 
          ii = ii + 1
          bsize = int(sum(ldom(:)/dble(dom%n_d(:)) * product(dom%n_d(:)), MASK = dom%n_d(:) > 1)) !ldom(1)*dom%n_d(2)*dom%n_d(3) + ldom(2)*dom%n_d(1)*dom%n_d(3) + ldom(3)*dom%n_d(1)*dom%n_d(2)
-         load_balance = product(dom%n_d(:)) / ( dble(nproc) * product( int((dom%n_d(:)-1)/ldom(:)) + 1 ) )
+         load_balance = product(real(dom%n_d(:))) / ( real(nproc) * product( int((dom%n_d(:)-1)/ldom(:)) + 1 ) )
 
-         quality = load_balance/ (1 + b_load_fac*(bsize/dble(ideal_bsize) - 1))
+         quality = load_balance/ (1 + b_load_fac*(bsize/ideal_bsize - 1.))
          ! \todo add a factor that estimates lower cost when x-direction is not chopped too much
          quality = quality * (1. - (0.001 * ldom(xdim) + 0.0001 * ldom(ydim))/nproc) ! \deprecated estimate these magic numbers
 
