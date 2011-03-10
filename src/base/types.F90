@@ -31,7 +31,7 @@
 !<
 module types
 
-   use constants, only: domlen, idlen, bndlen, xdim, zdim, ndims, LO, HI, BND, DOM, FLUID, MAG, ARR !> \todo fix setup.py to not report unused imports here
+   use constants, only: domlen, idlen, bndlen, xdim, zdim, ndims, LO, HI, BND, DOM, FLUID, ARR
 
    implicit none
 
@@ -67,12 +67,6 @@ module types
       real        :: dt
    end type phys_prop
 
-   type :: axes
-      real, allocatable, dimension(:) :: x      !< array of x-positions of %grid cells centers
-      real, allocatable, dimension(:) :: y      !< array of y-positions of %grid cells centers
-      real, allocatable, dimension(:) :: z      !< array of z-positions of %grid cells centers
-   end type axes
-
 ! AMR: There will be at least one domain container for the base grid. It will be possible to host one or more refined domains on the base container and on the refined containers.
 !      The refined domains may cover whole parent domain or only a tiny part of it.
 !      The multigrid solver will operate also on a stack of coarser domains - parents of the base domain. The coarser domains must be no smaller than the base domain.
@@ -85,6 +79,7 @@ module types
       real    :: zmin                           !< physical domain left z-boundary position
       real    :: zmax                           !< physical domain right z-boundary position
       integer, dimension(ndims) :: n_d          !< number of grid cells in physical domain in x-, y- and z-direction (where equal to 1, the dimension is reduced to a point with no boundary cells)
+      integer                   :: nb           !< number of boundary cells surrounding the physical domain, same for all directions
       character(len=bndlen) :: bnd_xl_dom       !< low-x computational domain boundary
       character(len=bndlen) :: bnd_xr_dom       !< high-x computational domain boundary
       character(len=bndlen) :: bnd_yl_dom       !< low-y computational domain boundary
@@ -103,12 +98,19 @@ module types
       real    :: Vol                            !< total volume of the physical domain
 
       ! Do not use n[xyz]t components in the Piernik source tree. Avoid using them in your problem-specific files because it seriuosly limits paralelization
+      ! \todo move them to another type, that extends domain_container
       integer :: nxt                            !< total number of %grid cells in the whole domain in x-direction
       integer :: nyt                            !< total number of %grid cells in the whole domain in y-direction
       integer :: nzt                            !< total number of %grid cells in the whole domain in z-direction
 
       !! \todo add hooks to parent and a list of children domains
    end type domain_container
+
+   type :: axes
+      real, allocatable, dimension(:) :: x      !< array of x-positions of %grid cells centers
+      real, allocatable, dimension(:) :: y      !< array of y-positions of %grid cells centers
+      real, allocatable, dimension(:) :: z      !< array of z-positions of %grid cells centers
+   end type axes
 
    type, extends(axes) :: grid_container
       real    :: dx                             !< length of the %grid cell in x-direction

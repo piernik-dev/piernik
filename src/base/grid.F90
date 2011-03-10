@@ -49,7 +49,7 @@ module grid
    integer, protected :: D_x                            !< set to 1 when x-direction exists, 0 otherwise. Use to construct dimensionally-safe indices for arrays
    integer, protected :: D_y                            !< set to 1 when y-direction exists, 0 otherwise.
    integer, protected :: D_z                            !< set to 1 when z-direction exists, 0 otherwise.
-   type(grid_container),     protected :: cg            !< A container for the grid. For AMR this will be a dynamically resized array
+   type(grid_container), protected :: cg                !< A container for the grid. For AMR this will be a dynamically resized array
 
 contains
 
@@ -61,13 +61,10 @@ contains
    subroutine init_grid
 
       use constants,  only: PIERNIK_INIT_MPI, xdim, ydim, zdim
-      use dataio_pub, only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml  ! QA_WARN required for diff_nml
-      use dataio_pub, only: printinfo, die, warn, code_progress
-      use mpisetup,   only: psize, pcoords, comm, has_dir, dom, nb, translate_bnds_to_ints_dom
+      use dataio_pub, only: printinfo, die, code_progress
+      use mpisetup,   only: dom, has_dir
 
       implicit none
-
-      integer :: i, j, k
 
       if (code_progress < PIERNIK_INIT_MPI) call die("[grid:init_grid] MPI not initialized.")
 
@@ -75,112 +72,135 @@ contains
       call printinfo("[grid:init_grid]: commencing...")
 #endif /* VERBOSE */
 
-      cg%nb = nb
-      cg%dxmn = huge(1.0)
+      call set_cg(cg, dom)
 
-      cg%off(:) = 0
-      cg%n_b(:) = 1
+      D_x = 0; D_y = 0; D_z = 0
+      if (has_dir(xdim)) D_x = 1
+      if (has_dir(ydim)) D_y = 1
+      if (has_dir(zdim)) D_z = 1
+      total_ncells = product(dom%n_d(:))
+
+#ifdef VERBOSE
+      call printinfo("[grid:init_grid]: finished. \o/")
+#endif /* VERBOSE */
+
+   end subroutine init_grid
+
+   subroutine set_cg(this, dom)
+
+      use constants,  only: PIERNIK_INIT_MPI, xdim, ydim, zdim
+      use dataio_pub, only: die, warn, code_progress
+      use mpisetup,   only: psize, pcoords, has_dir, translate_bnds_to_ints_dom
+      use types,      only: domain_container
+
+      implicit none
+
+      type(grid_container), intent(out) :: this
+      type(domain_container), intent(in) :: dom
+
+      integer :: i, j, k
+
+      if (code_progress < PIERNIK_INIT_MPI) call die("[grid:set_cg] MPI not initialized.")
+
+      this%nb = dom%nb
+      this%dxmn = huge(1.0)
+
+      this%off(:) = 0
+      this%n_b(:) = 1
       where (has_dir(:))
-         cg%off(:) = (dom%n_d(:) * pcoords(:) ) / psize(:) ! Block offset on the dom% should be between 0 and nxd-nxb
-         cg%n_b(:) = (dom%n_d(:) * (pcoords(:)+1))/psize(:) - cg%off(:)  ! Block 'physical' grid sizes
+         this%off(:) = (dom%n_d(:) * pcoords(:) ) / psize(:) ! Block offset on the dom% should be between 0 and nxd-nxb
+         this%n_b(:) = (dom%n_d(:) * (pcoords(:)+1))/psize(:) - this%off(:)  ! Block 'physical' grid sizes
       endwhere
 
       do i = xdim, zdim
          if (has_dir(i)) then
-            if (cg%n_b(i) < 1) call die("[grid:init_grid] Too many CPUs for a small grid.")
-            if (cg%n_b(i) < nb) call warn("[grid:init_grid] domain size in some directions is < nb, which may result in incomplete boundary cell update")
+            if (this%n_b(i) < 1) call die("[grid_set_cg] Too many CPUs for a small grid.")
+            if (this%n_b(i) < this%nb) call warn("[grid_set_cg] domain size in some directions is < nb, which may result in incomplete boundary cell update")
          endif
       enddo
 
-      cg%nxb = cg%n_b(xdim)
-      cg%nyb = cg%n_b(ydim)
-      cg%nzb = cg%n_b(zdim)
+      this%nxb = this%n_b(xdim)
+      this%nyb = this%n_b(ydim)
+      this%nzb = this%n_b(zdim)
 
       if (has_dir(xdim)) then
-         cg%nx    = cg%nxb + 2 * nb       ! Block total grid sizes
-         cg%is    = nb + 1
-         cg%ie    = nb + cg%nxb
-         cg%isb   = 2*nb
-         cg%ieb   = cg%nxb+1
-         D_x      = 1
-         cg%dx    = dom%Lx / dom%n_d(xdim)
-         cg%dxmn  = min(cg%dxmn, cg%dx)
-         cg%xminb = dom%xmin + cg%dx *  cg%off(xdim)
-         cg%xmaxb = dom%xmin + cg%dx * (cg%off(xdim) + cg%nxb)
+         this%nx    = this%nxb + 2 * this%nb       ! Block total grid sizes
+         this%is    = this%nb + 1
+         this%ie    = this%nb + this%nxb
+         this%isb   = 2*this%nb
+         this%ieb   = this%nxb+1
+         this%dx    = dom%Lx / dom%n_d(xdim)
+         this%dxmn  = min(this%dxmn, this%dx)
+         this%xminb = dom%xmin + this%dx *  this%off(xdim)
+         this%xmaxb = dom%xmin + this%dx * (this%off(xdim) + this%nxb)
       else
-         cg%nx    = 1
-         cg%is    = 1
-         cg%ie    = 1
-         cg%isb   = 1
-         cg%ieb   = 1
-         D_x      = 0
-         cg%dx    = 1.0
-         cg%xminb = dom%xmin
-         cg%xmaxb = dom%xmax
+         this%nx    = 1
+         this%is    = 1
+         this%ie    = 1
+         this%isb   = 1
+         this%ieb   = 1
+         this%dx    = 1.0
+         this%xminb = dom%xmin
+         this%xmaxb = dom%xmax
       endif
 
       if (has_dir(ydim)) then
-         cg%ny    = cg%nyb + 2 * nb
-         cg%js    = nb + 1
-         cg%je    = nb + cg%nyb
-         cg%jsb   = 2*nb
-         cg%jeb   = cg%nyb+1
-         D_y      = 1
-         cg%dy    = dom%Ly / dom%n_d(ydim)
-         cg%dxmn  = min(cg%dxmn, cg%dy)
-         cg%yminb = dom%ymin + cg%dy *  cg%off(ydim)
-         cg%ymaxb = dom%ymin + cg%dy * (cg%off(ydim) + cg%nyb)
+         this%ny    = this%nyb + 2 * this%nb
+         this%js    = this%nb + 1
+         this%je    = this%nb + this%nyb
+         this%jsb   = 2*this%nb
+         this%jeb   = this%nyb+1
+         this%dy    = dom%Ly / dom%n_d(ydim)
+         this%dxmn  = min(this%dxmn, this%dy)
+         this%yminb = dom%ymin + this%dy *  this%off(ydim)
+         this%ymaxb = dom%ymin + this%dy * (this%off(ydim) + this%nyb)
       else
-         cg%ny    = 1
-         cg%js    = 1
-         cg%je    = 1
-         cg%jsb   = 1
-         cg%jeb   = 1
-         D_y      = 0
-         cg%dy    = 1.0
-         cg%yminb = dom%ymin
-         cg%ymaxb = dom%ymax
+         this%ny    = 1
+         this%js    = 1
+         this%je    = 1
+         this%jsb   = 1
+         this%jeb   = 1
+         this%dy    = 1.0
+         this%yminb = dom%ymin
+         this%ymaxb = dom%ymax
       endif
 
       if (has_dir(zdim)) then
-         cg%nz    = cg%nzb + 2 * nb
-         cg%ks    = nb + 1
-         cg%ke    = nb + cg%nzb
-         cg%ksb   = 2*nb
-         cg%keb   = cg%nzb+1
-         D_z      = 1
-         cg%dz    = dom%Lz / dom%n_d(zdim)
-         cg%dxmn  = min(cg%dxmn, cg%dz)
-         cg%zminb = dom%zmin + cg%dz *  cg%off(zdim)
-         cg%zmaxb = dom%zmin + cg%dz * (cg%off(zdim) + cg%nzb)
+         this%nz    = this%nzb + 2 * this%nb
+         this%ks    = this%nb + 1
+         this%ke    = this%nb + this%nzb
+         this%ksb   = 2*this%nb
+         this%keb   = this%nzb+1
+         this%dz    = dom%Lz / dom%n_d(zdim)
+         this%dxmn  = min(this%dxmn, this%dz)
+         this%zminb = dom%zmin + this%dz *  this%off(zdim)
+         this%zmaxb = dom%zmin + this%dz * (this%off(zdim) + this%nzb)
       else
-         cg%nz    = 1
-         cg%ks    = 1
-         cg%ke    = 1
-         cg%ksb   = 1
-         cg%keb   = 1
-         D_z      = 0
-         cg%dz    = 1.0
-         cg%zminb = dom%zmin
-         cg%zmaxb = dom%zmax
+         this%nz    = 1
+         this%ks    = 1
+         this%ke    = 1
+         this%ksb   = 1
+         this%keb   = 1
+         this%dz    = 1.0
+         this%zminb = dom%zmin
+         this%zmaxb = dom%zmax
       endif
 
-      cg%idx = 1./cg%dx
-      cg%idy = 1./cg%dy
-      cg%idz = 1./cg%dz
+      this%idx = 1./this%dx
+      this%idy = 1./this%dy
+      this%idz = 1./this%dz
 
-      cg%dl(xdim:zdim) = [ cg%dx, cg%dy, cg%dz ]
-      cg%idl(:) = 1./cg%dl(:)
+      this%dl(xdim:zdim) = [ this%dx, this%dy, this%dz ]
+      this%idl(:) = 1./this%dl(:)
 
-      cg%dvol = product(cg%dl(:))
-      total_ncells = product(dom%n_d(:))
+      this%dvol = product(this%dl(:))
 
-      allocate(cg%x(cg%nx), cg%xl(cg%nx), cg%xr(cg%nx), cg%inv_x(cg%nx))
-      allocate(cg%y(cg%ny), cg%yl(cg%ny), cg%yr(cg%ny), cg%inv_y(cg%ny))
-      allocate(cg%z(cg%nz), cg%zl(cg%nz), cg%zr(cg%nz), cg%inv_z(cg%nz))
-      cg%maxxyz = maxval([size(cg%x), size(cg%y), size(cg%z)])
+      allocate(this%x(this%nx), this%xl(this%nx), this%xr(this%nx), this%inv_x(this%nx))
+      allocate(this%y(this%ny), this%yl(this%ny), this%yr(this%ny), this%inv_y(this%ny))
+      allocate(this%z(this%nz), this%zl(this%nz), this%zr(this%nz), this%inv_z(this%nz))
+      this%maxxyz = maxval([size(this%x), size(this%y), size(this%z)])
 
-      cg%bnd(:,:) = translate_bnds_to_ints_dom()
+      this%bnd(:,:) = translate_bnds_to_ints_dom()
 
 !--- Assignments -----------------------------------------------------------
       ! left zone boundaries:  xl, yl, zl
@@ -190,64 +210,61 @@ contains
 !--- x-grids --------------------------------------------------------------
 
       if (has_dir(xdim)) then
-         do i= 1, cg%nx
-            cg%x(i)  = cg%xminb + 0.5*cg%dx + (i-nb-1)*cg%dx
-            cg%xl(i) = cg%x(i)  - 0.5*cg%dx
-            cg%xr(i) = cg%x(i)  + 0.5*cg%dx
+         do i= 1, this%nx
+            this%x(i)  = this%xminb + 0.5*this%dx + (i-this%nb-1)*this%dx
+            this%xl(i) = this%x(i)  - 0.5*this%dx
+            this%xr(i) = this%x(i)  + 0.5*this%dx
          enddo
       else
-         cg%x  =  0.5*(cg%xminb + cg%xmaxb)
-         cg%xl = -0.5*cg%dx
-         cg%xr =  0.5*cg%dx
+         this%x  =  0.5*(this%xminb + this%xmaxb)
+         this%xl = -0.5*this%dx
+         this%xr =  0.5*this%dx
       endif
-      where ( cg%x /= 0.0 )
-         cg%inv_x = 1./cg%x
+      where ( this%x /= 0.0 )
+         this%inv_x = 1./this%x
       elsewhere
-         cg%inv_x = 0.
+         this%inv_x = 0.
       endwhere
 
 !--- y-grids --------------------------------------------------------------
 
       if (has_dir(ydim)) then
-         do j= 1, cg%ny
-            cg%y(j)  = cg%yminb + 0.5*cg%dy + (j-nb-1)*cg%dy
-            cg%yl(j) = cg%y(j)  - 0.5*cg%dy
-            cg%yr(j) = cg%y(j)  + 0.5*cg%dy
+         do j= 1, this%ny
+            this%y(j)  = this%yminb + 0.5*this%dy + (j-this%nb-1)*this%dy
+            this%yl(j) = this%y(j)  - 0.5*this%dy
+            this%yr(j) = this%y(j)  + 0.5*this%dy
          enddo
       else
-         cg%y  =  0.5*(cg%yminb + cg%ymaxb)
-         cg%yl = -0.5*cg%dy
-         cg%yr =  0.5*cg%dy
+         this%y  =  0.5*(this%yminb + this%ymaxb)
+         this%yl = -0.5*this%dy
+         this%yr =  0.5*this%dy
       endif
-      where ( cg%y /= 0.0 )
-         cg%inv_y = 1./cg%y
+      where ( this%y /= 0.0 )
+         this%inv_y = 1./this%y
       elsewhere
-         cg%inv_y = 0.
+         this%inv_y = 0.
       endwhere
 
 !--- z-grids --------------------------------------------------------------
 
       if (has_dir(zdim)) then
-         do k= 1, cg%nz
-            cg%z(k)  = cg%zminb + 0.5*cg%dz + (k-nb-1) * cg%dz
-            cg%zl(k) = cg%z(k)  - 0.5*cg%dz
-            cg%zr(k) = cg%z(k)  + 0.5*cg%dz
+         do k= 1, this%nz
+            this%z(k)  = this%zminb + 0.5*this%dz + (k-this%nb-1) * this%dz
+            this%zl(k) = this%z(k)  - 0.5*this%dz
+            this%zr(k) = this%z(k)  + 0.5*this%dz
          enddo
       else
-         cg%z  =  0.5*(cg%zminb + cg%zmaxb)
-         cg%zl = -0.5*cg%dz
-         cg%zr =  0.5*cg%dz
+         this%z  =  0.5*(this%zminb + this%zmaxb)
+         this%zl = -0.5*this%dz
+         this%zr =  0.5*this%dz
       endif
-      where ( cg%z /= 0.0 )
-         cg%inv_z = 1./cg%z
+      where ( this%z /= 0.0 )
+         this%inv_z = 1./this%z
       elsewhere
-         cg%inv_z = 0.
+         this%inv_z = 0.
       endwhere
 
-#ifdef VERBOSE
-      call printinfo("[grid:init_grid]: finished. \o/")
-#endif /* VERBOSE */
-   end subroutine init_grid
+   end subroutine set_cg
 
 !>
 !! \brief Set up subsets of u,b and sgp arrays for MPI communication

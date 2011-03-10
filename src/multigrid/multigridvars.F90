@@ -39,6 +39,7 @@ module multigridvars
 ! pulled by MULTIGRID
 
    use constants, only: xdim, zdim, ndims, LO, HI, BND, DOM
+   use types, only: domain_container, grid_container
 
    implicit none
 
@@ -46,21 +47,21 @@ module multigridvars
    private :: xdim, zdim, ndims, LO, HI, BND, DOM ! QA_WARN prevent re-exporting
 
    ! multigrid constants
-   integer, parameter :: source=1                                     !< Index of the density field
-   integer, parameter :: solution=source+1                            !< Index of the iterated solution (potential) fields
-   integer, parameter :: defect=solution+1                            !< Index of the defect field (effectively the density not accounted in current solution)
-   integer, parameter :: correction=defect+1                          !< Index of the correction to the potential to be applied at the end of V-cycle
+   enum, bind(C)
+      enumerator :: source = 1                                        !< Index of the density field
+      enumerator :: solution                                          !< Index of the iterated solution (potential) fields
+      enumerator :: defect                                            !< Index of the defect field (effectively the density not accounted in current solution)
+      enumerator :: correction                                        !< Index of the correction to the potential to be applied at the end of V-cycle
+   end enum
+
    integer, parameter :: level_min = 1                                !< Base (coarsest) level number
    integer, parameter :: level_gb = level_min-1                       !< Global-base level number
    integer, parameter :: mg_nb = 2                                    !< Number of guardcells in multigrid (simplest laplacian and relaxation require only 1)
 
    ! these constants should be moved to constants module
-   integer, parameter :: XLO=1                                        !< Index for low x-boundary  (used for is_external(:))
-   integer, parameter :: XHI=XLO+1                                    !< Index for high x-boundary
-   integer, parameter :: YLO=XHI+1                                    !< Index for low y-boundary
-   integer, parameter :: YHI=YLO+1                                    !< Index for high y-boundary
-   integer, parameter :: ZLO=YHI+1                                    !< Index for low z-boundary
-   integer, parameter :: ZHI=ZLO+1                                    !< Index for high z-boundary
+   enum, bind(C)
+      enumerator :: XLO=1, XHI, YLO, YHI, ZLO, ZHI                    !< Indices for boundaries in is_external(:)
+   end enum
 
    ! namelist parameters
    integer            :: level_max                                    !< Levels of multigrid refinement
@@ -70,28 +71,23 @@ module multigridvars
    logical            :: verbose_vcycle                               !< Print one line of log per V-cycle, summary otherwise
 
    ! single level container
-   type :: plvl
+   type, extends(grid_container) :: plvl
 
       ! storage
       real, allocatable, dimension(:,:,:,:) :: mgvar                  !< main working array
       real, allocatable, dimension(:,:,:)   :: prolong_x, prolong_xy  !< auxiliary prolongation arrays
-      real, allocatable, dimension(:)       :: x, y, z                !< coords of cell centers
       real, allocatable, dimension(:,:,:)   :: bnd_x, bnd_y, bnd_z    !< given boundary values for potential
 
       ! geometrical factors, cell counters, etc.
-      integer :: nx, ny, nz, nb                                       !< x, y, z cell count (including boundary cells), boundary local cell count
       integer :: level                                                !< multigrid level, level_min == 1: coarsest, level_max: finest
-      integer :: nxb, nyb, nzb                                        !< x, y and z local active cell count
-      integer :: is, ie, js, je, ks, ke                               !< lowest and highest active cell indices
-      real    :: dx, dy, dz                                           !< physical cell sizes,
-      real    :: dvol, vol                                            !< dvol=dx*dy*dz (cell volume), processor domain volume; BEWARE: for cylindrical geometry multiply by appropriate x(:) to get real volume
+      real    :: vol                                                  !< processor domain volume; BEWARE: for cylindrical geometry multiply by appropriate x(:) to get real volume
       real    :: dxy, dxz, dyz                                        !< cell surface area
       real    :: idx2, idy2, idz2                                     !< inverse of d{x,y,z} square
       real    :: dvol2                                                !< square of cell volume
       real    :: r, rx, ry, rz                                        !< geometric factors for relaxation (diffusion) used in approximate_solution_rbgs
 
-      ! MPI datatype shortcuts
-      integer, dimension(xdim:zdim, LO:HI, BND:DOM, mg_nb) :: mbc     !< MPI types for block boundary exchange, 1 .. mg_nb layers
+      ! MPI datatype shortcut, similar to grid_container%mbc(ARR, :, :, :)
+      integer, dimension(xdim:zdim, LO:HI, BND:DOM, mg_nb) :: mmbc    !< Multigrid  MPI Boundary conditions Container for block boundary exchanges with 1 .. mg_nb layers
 
       ! data for FFT solver
       integer                                :: nxc                   !< first index (complex or real: fft(:,:,:) or fftr(:,:,:)) cell count
@@ -109,25 +105,30 @@ module multigridvars
    type(plvl), pointer                           :: base              !< pointer to coarsest level
    type(plvl), pointer                           :: roof              !< pointer to finest level
    type(plvl), pointer                           :: gb                !< pointer to global-base level
+   type(domain_container), dimension(:), allocatable :: dom_lvl       !< a stack of domains with various resolutions
 
    ! dimensions
    integer                                 :: ngridvars               !< number of variables required for implementation of multigrid
 
    ! boundaries
-   integer, parameter :: bnd_periodic=1                               !< constants for enumerating multigrid boundary types: periodic
-   integer, parameter :: bnd_dirichlet=2                              !< 0-value boundary type (uniform Dirichlet)
-   integer, parameter :: bnd_isolated=3                               !< isolated boundary type
-   integer, parameter :: bnd_neumann=4                                !< 0-gradient boundary type (uniform Neumann)
-   integer, parameter :: bnd_givenval=5                               !< given value boundary type (general Dirichlet)
-   integer, parameter :: bnd_invalid=-1                               !< invalid
+   enum, bind(C)                                                      !< constants for enumerating multigrid boundary types
+      enumerator :: bnd_periodic                                      !< periodic
+      enumerator :: bnd_dirichlet                                     !< 0-value boundary type (uniform Dirichlet)
+      enumerator :: bnd_isolated                                      !< isolated boundary type
+      enumerator :: bnd_neumann                                       !< 0-gradient boundary type (uniform Neumann)
+      enumerator :: bnd_givenval                                      !< given value boundary type (general Dirichlet)
+      enumerator :: bnd_invalid = bnd_periodic - 1                    !< invalid
+   end enum
    logical, dimension(XLO:ZHI) :: is_external                         !< .true. for non-"mpi" local domain boundaries
    integer :: periodic_bnd_cnt                                        !< counter of periodic boundaries in existing directions
    integer :: non_periodic_bnd_cnt                                    !< counter of non-periodic boundaries in existing directions
-   integer, parameter :: extbnd_donothing = 0                         !< Do not touch external boundaries
-   integer, parameter :: extbnd_zero = extbnd_donothing + 1           !< Fill external boundaries with zeroes
-   integer, parameter :: extbnd_extrapolate = extbnd_zero + 1         !< Perform extrapolation in external boundaries
-   integer, parameter :: extbnd_mirror = extbnd_extrapolate + 1       !< Zero-gradient, mirroring external boundaries
-   integer, parameter :: extbnd_antimirror = - extbnd_mirror          !< mirroring external boundaries with opposite sign
+   enum, bind(C)
+      enumerator :: extbnd_donothing                                  !< Do not touch external boundaries
+      enumerator :: extbnd_zero                                       !< Fill external boundaries with zeroes
+      enumerator :: extbnd_extrapolate                                !< Perform extrapolation in external boundaries
+      enumerator :: extbnd_mirror                                     !< Zero-gradient, mirroring external boundaries
+      enumerator :: extbnd_antimirror = - extbnd_mirror               !< mirroring external boundaries with opposite sign
+   end enum
 
    type :: cart   ! auxiliary type for rank-to-coordinates array
       integer, dimension(ndims) :: lo, up, proc

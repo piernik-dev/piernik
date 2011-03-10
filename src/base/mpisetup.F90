@@ -48,7 +48,7 @@ module mpisetup
         &    cfr_smooth, cleanup_mpi, comm, comm3d, dt, dt_initial, dt_max_grow, dt_min, dt_old, dtm, err, ibuff, ierr, info, init_mpi, &
         &    integration_order, lbuff, limiter, mpifind, nproc, nstep, pcoords, proc, procxl, procxr, procxyl, procyl, procyr, procyxl, proczl, &
         &    proczr, psize, rbuff, req, smalld, smallei, smallp, status, t, use_smalld, magic_mass, local_magic_mass, master, slave, &
-        &    nb, has_dir, eff_dim, relax_time, grace_period_passed, dom, geometry_type, translate_bnds_to_ints_dom, have_mpi, is_uneven
+        &    has_dir, eff_dim, relax_time, grace_period_passed, dom, geometry_type, translate_bnds_to_ints_dom, have_mpi, is_uneven
 
    integer :: nproc, proc, ierr , rc, info
    integer :: status(MPI_STATUS_SIZE,4)
@@ -509,6 +509,8 @@ contains
       if (zmin > zmax) call die("[[mpisetup:init_mpi] Negative span in Z-direction")
 
       ! set up the global domain
+      dom%nb = nb
+
       dom%bnd_xl_dom = bnd_xl
       dom%bnd_xr_dom = bnd_xr
       dom%bnd_yl_dom = bnd_yl

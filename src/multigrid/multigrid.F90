@@ -76,7 +76,7 @@ contains
    subroutine init_multigrid
 
       use grid,                only: cg, D_x, D_y, D_z
-      use multigridvars,       only: lvl, level_max, level_min, level_gb, roof, base, gb, gb_cartmap, mg_nb, ngridvars, correction, &
+      use multigridvars,       only: lvl, dom_lvl, level_max, level_min, level_gb, roof, base, gb, gb_cartmap, mg_nb, ngridvars, correction, &
            &                         is_external, periodic_bnd_cnt, non_periodic_bnd_cnt, XLO, XHI, YLO, YHI, ZLO, ZHI, &
            &                         ord_prolong, ord_prolong_face, stdout, verbose_vcycle, tot_ts
       use mpi,                 only: MPI_INTEGER, MPI_LOGICAL
@@ -186,6 +186,23 @@ contains
       allocate(lvl(level_gb:level_max), stat=aerr(1))                                 ! level_gb = level_min-1 contains some global base level data
       if (aerr(1) /= 0) call die("[multigrid:init_multigrid] Allocation error: lvl")
       mb_alloc = size(lvl)
+
+      if (allocated(dom_lvl)) call die("[multigrid:init_multigrid] dom_lvl already allocated")
+      allocate(dom_lvl(level_min:level_max), stat=aerr(1))                             ! level_gb = level_min-1 contains some global base level data
+      if (aerr(1) /= 0) call die("[multigrid:init_multigrid] Allocation error: dom_lvl")
+      mb_alloc = mb_alloc + size(dom_lvl)
+
+      dom_lvl(level_max) = dom
+      dom_lvl(level_max)%nb = mg_nb
+      do idx = level_max-1, level_min, -1
+         dom_lvl(idx) = dom_lvl(idx + 1)
+         where (has_dir(:)) dom_lvl(idx)%n_d(:) = dom_lvl(idx)%n_d(:) / 2
+         if (any(dom_lvl(idx)%n_d(:)*2 /= dom_lvl(idx + 1)%n_d(:) .and. has_dir(:))) then
+            write(msg, '(a,3f10.1)')"[multigrid:init_multigrid] Fractional number of domain cells: ", 0.5*dom_lvl(idx + 1)%n_d(:)
+            call die(msg)
+         endif
+         ! dom_lvl(idx)%n[xyz]t is not maintained
+      enddo
 
       !! Initialization of all regular levels (all but global base)
       !! Following loop gives us:
@@ -489,10 +506,10 @@ contains
                do ib = 1, lvl(i)%nb
                   do d = xdim, zdim
                      if (has_dir(d)) then
-                        call MPI_Type_free(lvl(i)%mbc(d, LO, BND, ib), ierr)
-                        call MPI_Type_free(lvl(i)%mbc(d, LO, DOM, ib), ierr)
-                        call MPI_Type_free(lvl(i)%mbc(d, HI, DOM, ib), ierr)
-                        call MPI_Type_free(lvl(i)%mbc(d, HI, BND, ib), ierr)
+                        call MPI_Type_free(lvl(i)%mmbc(d, LO, BND, ib), ierr)
+                        call MPI_Type_free(lvl(i)%mmbc(d, LO, DOM, ib), ierr)
+                        call MPI_Type_free(lvl(i)%mmbc(d, HI, DOM, ib), ierr)
+                        call MPI_Type_free(lvl(i)%mmbc(d, HI, BND, ib), ierr)
                      endif
                   enddo
                enddo
