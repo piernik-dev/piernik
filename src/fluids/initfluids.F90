@@ -195,7 +195,7 @@ contains
       use mpi,        only: MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_MIN
       use func,       only: emag, ekin
       use dataio_pub, only: warn, msg
-      use types,      only: component_fluid
+      use fluidtypes, only: component_fluid
       use arrays,     only: u, b
       use fluidindex, only: flind, ibx, iby, ibz
 

@@ -62,7 +62,7 @@ contains
 
    real function timestep_ion() result(dt)
 
-      use types,         only: component_fluid
+      use fluidtypes,    only: component_fluid
       use arrays,        only: u, b
       use grid,          only: D_x, D_y, D_z, cg
       use fluidindex,    only: flind, ibx, iby, ibz

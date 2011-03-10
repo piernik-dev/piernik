@@ -112,7 +112,7 @@ contains
    subroutine neutral_index(flind)
       use constants,    only: NEU
       use diagnostics,  only: ma1d, my_allocate
-      use types,        only: var_numbers
+      use fluidtypes,   only: var_numbers
 
       implicit none
 

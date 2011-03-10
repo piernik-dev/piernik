@@ -36,7 +36,7 @@ module types
    implicit none
 
    private
-   public :: hdf, value, phys_prop, axes, grid_container, domain_container, component_fluid, var_numbers, tsl_container, &
+   public :: hdf, axes, grid_container, domain_container, tsl_container, value, &
         &    problem_customize_solution, problem_grace_passed, finalize_problem, cleanup_problem, custom_emf_bnd
 
    type :: hdf
@@ -51,21 +51,6 @@ module types
       integer, dimension(ndims) :: loc
       integer                   :: proc
    end type value
-
-   type :: phys_prop
-      type(value) :: dens_min
-      type(value) :: dens_max
-      type(value) :: velx_max
-      type(value) :: vely_max
-      type(value) :: velz_max
-      type(value) :: pres_max
-      type(value) :: pres_min
-      type(value) :: temp_max
-      type(value) :: temp_min
-      type(value) :: cs_max
-      real        :: c
-      real        :: dt
-   end type phys_prop
 
 ! AMR: There will be at least one domain container for the base grid. It will be possible to host one or more refined domains on the base container and on the refined containers.
 !      The refined domains may cover whole parent domain or only a tiny part of it.
@@ -166,61 +151,6 @@ module types
       integer, dimension(FLUID:ARR, xdim:zdim, LO:HI, BND:DOM) :: mbc     !< MPI Boundary conditions Container
 
    end type grid_container
-
-   type :: component
-      integer :: all = 0   !< number of all variables in fluid/component
-      integer :: beg = 0   !< beginning number of variables in fluid/component
-      integer :: end = 0   !< end number of variables in fluid/component
-      integer :: pos = 0   !< index denoting position of the fluid in the row of fluids
-   end type component
-
-   type, extends(component) :: component_fluid
-
-      integer :: idn = -1      !< index denoting position of the fluid density in array arrays::u
-      integer :: imx = -1      !< index denoting position of the fluid x-momentum in array arrays::u
-      integer :: imy = -1      !< index denoting position of the fluid y-momentum in array arrays::u
-      integer :: imz = -1      !< index denoting position of the fluid z-momentum in array arrays::u
-      integer :: ien = -1      !< index denoting position of the fluid energy in array arrays::u
-
-      real    :: cs    = 0.0   !< fluid's isothermal sound speed
-      real    :: cs2   = 0.0   !< fluid's isothermal sound speed squared
-      real    :: gam   = -1.0  !< fluid's adiabatic index
-      real    :: gam_1 = -1.0  !< fluid's adiabatic index minus one
-
-      logical :: is_selfgrav   = .false. !< True if fluid is selfgravitating
-      logical :: is_magnetized = .false. !< True if fluid is magnetized
-      logical :: has_energy    = .false. !< True if fluid has additional energy array
-
-      integer :: tag = -1 !< Human readable tag describing fluid
-
-      integer, allocatable, dimension(:)  :: iarr
-      integer, allocatable, dimension(:)  :: iarr_swpx
-      integer, allocatable, dimension(:)  :: iarr_swpy
-      integer, allocatable, dimension(:)  :: iarr_swpz
-
-      type(phys_prop) :: snap
-   end type component_fluid
-
-   type :: var_numbers
-
-      integer :: all         = 0      !< total number of fluid variables = the size of array \a u(:,:,:,:) in the first index
-      integer :: fluids      = 0      !< number of fluids (ionized gas, neutral gas, dust)
-      integer :: energ       = 0      !< number of non-isothermal fluids (indicating the presence of energy density in the vector of conservative variables)
-      integer :: components  = 0      !< number of components, such as CRs, tracers, magnetic helicity (in future), whose formal description does not involve [???]
-      integer :: fluids_sg   = 0      !< number of selfgravitating fluids (ionized gas, neutral gas, dust)
-
-      type(component_fluid), dimension(:), pointer :: all_fluids
-
-      type(component_fluid), pointer :: ion         !< numbers of variables for the ionized fluid
-      type(component_fluid), pointer :: neu         !< numbers of variables for the neutral fluid
-      type(component_fluid), pointer :: dst         !< numbers of variables for the dust fluid
-
-      !> \todo those vars should be converted to pointers
-      type(component) :: crs         !< numbers of variables in all cosmic ray components
-      type(component) :: crn         !< numbers of variables in cosmic ray nuclear components
-      type(component) :: cre         !< numbers of variables in cosmic ray electron components
-
-   end type var_numbers
 
    type :: tsl_container
       logical :: dummy

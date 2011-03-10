@@ -53,7 +53,7 @@ module gridgeometry
       !<
       subroutine set_gc(sweep,flind,i1,i2)
 
-         use types,         only: var_numbers
+         use fluidtypes,      only: var_numbers
 
          implicit none
 
@@ -136,7 +136,7 @@ contains
 !<
    subroutine geo_coeffs_arrays(flind)
 
-      use types,         only: var_numbers
+      use fluidtypes,    only: var_numbers
       use dataio_pub,    only: die
       use grid,          only: cg
 
@@ -158,7 +158,7 @@ contains
 !<
    subroutine set_cart_coeffs(sweep,flind,i1,i2)
 
-      use types,         only: var_numbers
+      use fluidtypes,    only: var_numbers
       use dataio_pub,    only: die, msg
       use constants,     only: xdim, ydim, zdim
 
@@ -196,7 +196,7 @@ contains
 !<
    subroutine set_cyl_coeffs(sweep,flind,i1,i2)
 
-      use types,         only: var_numbers
+      use fluidtypes,    only: var_numbers
       use dataio_pub,    only: die, msg
       use grid,          only: cg
       use constants,     only: xdim, ydim, zdim

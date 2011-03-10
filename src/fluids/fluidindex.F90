@@ -45,8 +45,8 @@
 
 module fluidindex
 ! pulled by ANY
-   use constants, only: ndims, xdim, ydim, zdim
-   use types, only: var_numbers
+   use constants,  only: ndims, xdim, ydim, zdim
+   use fluidtypes, only: var_numbers
 
    implicit none
 
@@ -91,7 +91,7 @@ contains
 
    subroutine set_fluidindex_arrays(fl, have_ener)
 
-      use types, only: component_fluid
+      use fluidtypes, only: component_fluid
 
       implicit none
 
@@ -270,14 +270,4 @@ contains
 
    end subroutine cleanup_fluidindex
 
-   subroutine update_sound_speed(new_cs, tag)
-      implicit none
-      real, intent(in)    :: new_cs
-      integer, intent(in) :: tag
-
-      where (flind%all_fluids(:)%tag == tag)
-         flind%all_fluids(:)%cs  = new_cs
-         flind%all_fluids(:)%cs2 = new_cs**2
-      endwhere
-   end subroutine update_sound_speed
 end module fluidindex

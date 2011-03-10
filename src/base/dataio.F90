@@ -670,7 +670,8 @@ contains
       use fluidindex,      only: flind, iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz, ibx, iby, ibz
       use grid,            only: cg
       use mpisetup,        only: master, t, dt, smalld, nstep, dom
-      use types,           only: tsl_container, phys_prop
+      use types,           only: tsl_container
+      use fluidtypes,      only: phys_prop
 #ifndef ISO
       use fluidindex,      only: iarr_all_en
 #endif /* !ISO */
@@ -866,7 +867,7 @@ contains
       use dataio_pub,      only: msg, printinfo
       use grid,            only: cg
       use mpisetup,        only: cfl
-      use types,           only: phys_prop
+      use fluidtypes,      only: phys_prop
 
       implicit none
 
@@ -917,7 +918,7 @@ contains
       use constants,  only: ION, DST
       use mpisetup,   only: smallp
       use grid,       only: cg
-      use types,      only: phys_prop, component_fluid
+      use fluidtypes, only: phys_prop, component_fluid
       use units,      only: mH, kboltz
 
       implicit none

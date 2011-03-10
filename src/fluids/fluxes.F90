@@ -133,7 +133,7 @@ contains
 !<
 
    subroutine all_fluxes(n, flux, cfr, uu, bb, pp, vx, cs_iso2)
-      use types,          only: component_fluid
+      use fluidtypes,     only: component_fluid
 #ifdef COSM_RAYS
       use fluxcosmicrays, only: flux_crs
 #endif /* COSM_RAYS */

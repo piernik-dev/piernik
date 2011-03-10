@@ -78,7 +78,7 @@ contains
       use constants,   only: PIERNIK_INIT_BASE, ndims
       use diagnostics, only: ma3d, ma4d, my_allocate
       use dataio_pub,  only: die, code_progress
-      use types,       only: var_numbers
+      use fluidtypes,  only: var_numbers
       use grid,        only: cg
 #ifdef GRAV
       use diagnostics, only: ma1d

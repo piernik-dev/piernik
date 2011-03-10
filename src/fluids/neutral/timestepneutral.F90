@@ -62,7 +62,7 @@ contains
 
    real function timestep_neu() result(dt)
 
-      use types,         only: component_fluid
+      use fluidtypes,    only: component_fluid
       use arrays,        only: u
       use grid,          only: cg
       use fluidindex,    only: flind

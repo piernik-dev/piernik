@@ -44,7 +44,7 @@ contains
    subroutine compute_c_max(fl,cs,i,j,k,cx,cy,cz,c_max)
 
       use arrays,      only: u
-      use types,       only: component_fluid
+      use fluidtypes,  only: component_fluid
 
       implicit none
 
@@ -71,11 +71,11 @@ contains
 
    subroutine compute_dt(fl,cx,cy,cz,c_max,c_out,dt_out)
 
-      use types,     only: component_fluid
-      use grid,      only: cg
-      use constants, only: big, xdim, ydim, zdim, GEO_RPZ
-      use mpi,       only: MPI_DOUBLE_PRECISION, MPI_MIN, MPI_MAX
-      use mpisetup,  only: comm, ierr, cfl, has_dir, dom, geometry_type
+      use fluidtypes, only: component_fluid
+      use grid,       only: cg
+      use constants,  only: big, xdim, ydim, zdim, GEO_RPZ
+      use mpi,        only: MPI_DOUBLE_PRECISION, MPI_MIN, MPI_MAX
+      use mpisetup,   only: comm, ierr, cfl, has_dir, dom, geometry_type
 
       implicit none
 
