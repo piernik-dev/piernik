@@ -315,12 +315,11 @@ contains
       item%p    => get_cr
       if (.not.allocated(item%ivec)) allocate(item%ivec(10))
       if (.not.allocated(item%rvec)) allocate(item%rvec(0))
-      item%ivec  = [cg%n_b(:), cg%is, cg%ie, cg%js, cg%je, cg%ks, cg%ke]
 
       do i = 1, flind_crs
 
-         write(item%key,'(A,I1)')  "ecr",i
-         item%ivec(10) = iarr_crs(i)
+         write(item%key,'(A,I1)')  "cr",i
+         item%ivec  = [cg%n_b(:), cg%is, cg%ie, cg%js, cg%je, cg%ks, cg%ke, iarr_crs(i)]
          call add_lhdf5(item)
 
       enddo
