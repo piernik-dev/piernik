@@ -37,13 +37,73 @@
 !<
 module grid
 
-   use types,    only: grid_container
+   use constants, only: xdim, zdim, ndims, LO, HI, BND, DOM, FLUID, ARR
+   use types,    only: axes
 
    implicit none
 
    private
    public :: cleanup_grid, init_grid, grid_mpi_boundaries_prep, arr3d_boundaries
-   public :: total_ncells, cg, D_x, D_y, D_z
+   public :: grid_container, total_ncells, cg, D_x, D_y, D_z
+
+   type, extends(axes) :: grid_container
+      real    :: dx                             !< length of the %grid cell in x-direction
+      real    :: dy                             !< length of the %grid cell in y-direction
+      real    :: dz                             !< length of the %grid cell in z-direction
+      real    :: idx                            !< inverted length of the %grid cell in x-direction
+      real    :: idy                            !< inverted length of the %grid cell in y-direction
+      real    :: idz                            !< inverted length of the %grid cell in z-direction
+      real    :: dxmn                           !< the smallest length of the %grid cell (among dx, dy, and dz)
+      real    :: dvol                           !< volume of one %grid cell
+      real    :: xminb                          !< current block left x-boundary position
+      real    :: xmaxb                          !< current block right x-boundary position
+      real    :: yminb                          !< current block left y-boundary position
+      real    :: ymaxb                          !< current block right y-boundary position
+      real    :: zminb                          !< current block left z-boundary position
+      real    :: zmaxb                          !< current block right z-boundary position
+
+      real, dimension(ndims)          :: dl     !< array of %grid cell sizes in all directions
+      real, dimension(ndims)          :: idl    !< array of inverted %grid cell sizes in all directions
+      real, allocatable, dimension(:) :: inv_x  !< array of invert x-positions of %grid cells centers
+      real, allocatable, dimension(:) :: inv_y  !< array of invert y-positions of %grid cells centers
+      real, allocatable, dimension(:) :: inv_z  !< array of invert z-positions of %grid cells centers
+      real, allocatable, dimension(:) :: xl     !< array of x-positions of %grid cells left borders
+      real, allocatable, dimension(:) :: yl     !< array of y-positions of %grid cells left borders
+      real, allocatable, dimension(:) :: zl     !< array of z-positions of %grid cells left borders
+      real, allocatable, dimension(:) :: xr     !< array of x-positions of %grid cells right borders
+      real, allocatable, dimension(:) :: yr     !< array of y-positions of %grid cells right borders
+      real, allocatable, dimension(:) :: zr     !< array of z-positions of %grid cells right borders
+
+      integer :: nx                             !< number of %grid cells in one block in x-direction
+      integer :: ny                             !< number of %grid cells in one block in y-direction
+      integer :: nz                             !< number of %grid cells in one block in z-direction
+      integer :: nxb                            !< number of %grid cells in one block (without boundary cells) in x-direction
+      integer :: nyb                            !< number of %grid cells in one block (without boundary cells) in y-direction
+      integer :: nzb                            !< number of %grid cells in one block (without boundary cells) in z-direction
+      integer :: is                             !< index of the first %grid cell of physical domain in x-direction
+      integer :: ie                             !< index of the last %grid cell of physical domain in x-direction
+      integer :: js                             !< index of the first %grid cell of physical domain in y-direction
+      integer :: je                             !< index of the last %grid cell of physical domain in y-direction
+      integer :: ks                             !< index of the first %grid cell of physical domain in z-direction
+      integer :: ke                             !< index of the last %grid cell of physical domain in z-direction
+      integer :: nb                             !< number of boundary cells surrounding the physical domain, same for all directions
+      integer :: isb, ieb, jsb, jeb, ksb, keb   !< auxiliary indices for exchanging boundary data, (e.g. is:isb -> ie+1:nx, ieb:ie -> 1:nb)
+      integer, dimension(ndims) :: off          !< offset of the local domain within computational domain
+      integer, dimension(ndims) :: n_b          !< [nxb, nyb, nzb]
+      integer :: maxxyz                         !< maximum number of %grid cells in any direction
+
+      integer, dimension(ndims, LO:HI) :: bnd   !< type of boundary conditions coded in integers
+
+      ! \todo a pointer to the next cg, grid level
+
+      ! AMR: this will be a list
+      integer, dimension(FLUID:ARR, xdim:zdim, LO:HI, BND:DOM) :: mbc     !< MPI Boundary conditions Container
+
+   contains
+
+      procedure :: init => set_cg
+
+   end type grid_container
 
    integer, protected :: total_ncells                   !< total number of %grid cells
    integer, protected :: D_x                            !< set to 1 when x-direction exists, 0 otherwise. Use to construct dimensionally-safe indices for arrays
@@ -72,7 +132,7 @@ contains
       call printinfo("[grid:init_grid]: commencing...")
 #endif /* VERBOSE */
 
-      call set_cg(cg, dom)
+      call cg%init(dom)
 
       D_x = 0; D_y = 0; D_z = 0
       if (has_dir(xdim)) D_x = 1
@@ -95,7 +155,7 @@ contains
 
       implicit none
 
-      type(grid_container), intent(out) :: this
+      class(grid_container), intent(out) :: this
       type(domain_container), intent(in) :: dom
 
       integer :: i, j, k

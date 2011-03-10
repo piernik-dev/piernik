@@ -95,10 +95,10 @@ contains
 
       implicit none
 
-      integer                          :: ierrh, div, idx, i, j, nxc, nx
+      integer                          :: ierrh, div, idx, j
       logical, save                    :: frun = .true.          !< First run flag
       real                             :: mb_alloc               !< Allocation counter
-      integer, dimension(6)            :: aerr                   !> \deprecated BEWARE: hardcoded magic integer. Update when you change number of simultaneous error checks
+      integer, dimension(3)            :: aerr                   !> \deprecated BEWARE: hardcoded magic integer. Update when you change number of simultaneous error checks
 
       namelist /MULTIGRID_SOLVER/ level_max, ord_prolong, ord_prolong_face, stdout, verbose_vcycle, do_ascii_dump, dirty_debug, multidim_code_3D
 
@@ -213,48 +213,24 @@ contains
       !!    * shape (lvl(1)) = (cg%nxb/2**(level_max-1), cg%nyb/2**(level_max-1), cg%nzb/2**(level_max-1)) + (2*cg%nb, 2*cg%nb, 2*ncg%b)
       do idx = level_max, level_min, -1
 
+         call lvl(idx)%init(dom_lvl(idx))
+
          lvl(idx)%level = idx                                      ! level number
 
          div = 2**(level_max -idx)                                 ! derefinement factor with respect to the top level
-         lvl(idx)%nb    = mg_nb                                    ! number of guardcells
 
-         nxc = 1  ! suppres warning on possibly uninitialized variables
-         do i = xdim, zdim ! this can be rewritten as a three subroutine/function calls
-            select case (i)
-               case (xdim)
-                  nxc = cg%nxb
-               case (ydim)
-                  nxc = cg%nyb
-               case (zdim)
-                  nxc = cg%nzb
-            end select
+         if (any(lvl(idx)%n_b(:) < lvl(idx)%nb .and. has_dir(:))) then
+            write(msg, '(a,i1,a,3i4,2(a,i2))')"[multigrid:init_multigrid] Number of guardcells exceeds number of interior cells: ", &
+                 lvl(idx)%nb, " > ", lvl(idx)%n_b(:), " at level ", idx, ". You may try to set level_max <=", level_max-idx
+            call die(msg)
+         endif
 
-            nx = 1
-            if (has_dir(i)) then
-               nx = nxc / div ! number of interior cells in direction i
-               if (nx < lvl(idx)%nb) then
-                  write(msg, '(2(a,i1),a,i4,2(a,i2))')"[multigrid:init_multigrid] Number of guardcells exceeds number of interior cells in the ",i," direction, ", &
-                       lvl(idx)%nb, " > ", nx, " at level ", idx, ". You may try to set level_max <=", level_max-idx
-                  call die(msg)
-               endif
-               if (nx * div /= nxc) then
-                  write(msg, '(a,i1,a,f6.1,2(a,i2))')"[multigrid:init_multigrid] Fractional number of cells in ",i," direction ", &
-                       nxc/real(div), " at level ", idx, ". You may try to set level_max <=", level_max-idx
-                  call die(msg)
-               endif
-            endif
+         if (any(lvl(idx)%n_b(:) * div /= lvl(level_max)%n_b(:) .and. has_dir(:))) then
+            write(msg, '(a,3f6.1,2(a,i2))')"[multigrid:init_multigrid] Fractional number of cells in: ", &
+                 lvl(level_max)%n_b(:)/real(div), " at level ", idx, ". You may try to set level_max <=", level_max-idx
+            call die(msg)
+         endif
 
-            select case (i)
-               case (xdim)
-                  lvl(idx)%nxb = nx
-               case (ydim)
-                  lvl(idx)%nyb = nx
-               case (zdim)
-                  lvl(idx)%nzb = nx
-            end select
-         enddo
-
-         lvl(idx)%dvol = 1.
          lvl(idx)%vol  = 1.
 
          !> \todo check if these are correctly defined for multipole solver
@@ -263,56 +239,29 @@ contains
          lvl(idx)%dyz = 1.
 
          if (has_dir(xdim)) then
-            lvl(idx)%nx    = lvl(idx)%nxb + 2*lvl(idx)%nb             ! total number of cells in x, y and z directions
-            lvl(idx)%dx    = (cg%xmaxb-cg%xminb) / lvl(idx)%nxb ! cell size in x, y and z directions
-            lvl(idx)%is    = lvl(idx)%nb + 1                          ! lowest and highest indices for interior cells
-            lvl(idx)%ie    = lvl(idx)%nb + lvl(idx)%nxb
             lvl(idx)%idx2  = 1. / lvl(idx)%dx**2                      ! auxiliary invariants
-            lvl(idx)%dvol  = lvl(idx)%dvol * lvl(idx)%dx              ! cell volume
             lvl(idx)%vol   = lvl(idx)%vol * (cg%xmaxb-cg%xminb)
             lvl(idx)%dxy   = lvl(idx)%dxy * lvl(idx)%dx
             lvl(idx)%dxz   = lvl(idx)%dxz * lvl(idx)%dx
          else
-            lvl(idx)%nx    = 1
-            lvl(idx)%dx    = huge(1.0)
-            lvl(idx)%is    = 1
-            lvl(idx)%ie    = 1
             lvl(idx)%idx2  = 0.
          endif
 
          if (has_dir(ydim)) then
-            lvl(idx)%ny    = lvl(idx)%nyb + 2*lvl(idx)%nb
-            lvl(idx)%dy    = (cg%ymaxb-cg%yminb) / lvl(idx)%nyb
-            lvl(idx)%js    = lvl(idx)%nb + 1
-            lvl(idx)%je    = lvl(idx)%nb + lvl(idx)%nyb
             lvl(idx)%idy2  = 1. / lvl(idx)%dy**2
-            lvl(idx)%dvol  = lvl(idx)%dvol * lvl(idx)%dy
             lvl(idx)%vol   = lvl(idx)%vol * (cg%ymaxb-cg%yminb)
             lvl(idx)%dxy   = lvl(idx)%dxy * lvl(idx)%dy
             lvl(idx)%dyz   = lvl(idx)%dyz * lvl(idx)%dy
          else
-            lvl(idx)%ny    = 1
-            lvl(idx)%dy    = huge(1.0)
-            lvl(idx)%js    = 1
-            lvl(idx)%je    = 1
             lvl(idx)%idy2  = 0.
          endif
 
          if (has_dir(zdim)) then
-            lvl(idx)%nz    = lvl(idx)%nzb + 2*lvl(idx)%nb
-            lvl(idx)%dz    = (cg%zmaxb-cg%zminb) / lvl(idx)%nzb
-            lvl(idx)%ks    = lvl(idx)%nb + 1
-            lvl(idx)%ke    = lvl(idx)%nb + lvl(idx)%nzb
             lvl(idx)%idz2  = 1. / lvl(idx)%dz**2
-            lvl(idx)%dvol  = lvl(idx)%dvol * lvl(idx)%dz
             lvl(idx)%vol   = lvl(idx)%vol * (cg%zmaxb-cg%zminb)
             lvl(idx)%dxz   = lvl(idx)%dxz * lvl(idx)%dz
             lvl(idx)%dyz   = lvl(idx)%dyz * lvl(idx)%dz
          else
-            lvl(idx)%nz    = 1
-            lvl(idx)%dz    = huge(1.0)
-            lvl(idx)%ks    = 1
-            lvl(idx)%ke    = 1
             lvl(idx)%idz2  = 0.
          endif
 
@@ -320,15 +269,11 @@ contains
 
          ! data storage
          !> \deprecated BEWARE prolong_x and %prolong_xy are used only with RBGS relaxation when ord_prolong /= 0
-         if ( allocated(lvl(idx)%prolong_x) .or. allocated(lvl(idx)%prolong_xy) .or. allocated(lvl(idx)%mgvar) .or. &
-              allocated(lvl(idx)%x) .or. allocated(lvl(idx)%y) .or. allocated(lvl(idx)%z) ) call die("[multigrid:init_multigrid] multigrid arrays already allocated")
+         if ( allocated(lvl(idx)%prolong_x) .or. allocated(lvl(idx)%prolong_xy) .or. allocated(lvl(idx)%mgvar) ) call die("[multigrid:init_multigrid] multigrid arrays already allocated")
          allocate( lvl(idx)%mgvar     (lvl(idx)%nx, lvl(idx)%ny,                  lvl(idx)%nz,                  ngridvars), stat=aerr(1) )
          allocate( lvl(idx)%prolong_x (lvl(idx)%nx, lvl(idx)%nyb/2+2*lvl(idx)%nb, lvl(idx)%nzb/2+2*lvl(idx)%nb),            stat=aerr(2) )
          allocate( lvl(idx)%prolong_xy(lvl(idx)%nx, lvl(idx)%ny,                  lvl(idx)%nzb/2+2*lvl(idx)%nb),            stat=aerr(3) )
-         allocate( lvl(idx)%x         (lvl(idx)%nx),                                                                        stat=aerr(4) )
-         allocate( lvl(idx)%y         (lvl(idx)%ny),                                                                        stat=aerr(5) )
-         allocate( lvl(idx)%z         (lvl(idx)%nz),                                                                        stat=aerr(6) )
-         if (any(aerr(1:6) /= 0)) call die("[multigrid:init_multigrid] Allocation error: lvl(idx)%*")
+         if (any(aerr(1:3) /= 0)) call die("[multigrid:init_multigrid] Allocation error: lvl(idx)%*")
          if ( .not. allocated(lvl(idx)%prolong_x) .or. .not. allocated(lvl(idx)%prolong_xy) .or. .not. allocated(lvl(idx)%mgvar) .or. &
               .not. allocated(lvl(idx)%x) .or. .not. allocated(lvl(idx)%y) .or. .not. allocated(lvl(idx)%z) ) &
               call die("[multigrid:init_multigrid] some multigrid arrays not allocated")
@@ -351,30 +296,6 @@ contains
             lvl(idx)%bnd_z     (:, :, :)    = dirtyH
          else
             lvl(idx)%mgvar     (:, :, :, :) = 0.0 ! should not be necessary if dirty_debug shows nothing suspicious
-         endif
-
-         if (has_dir(xdim)) then
-            do j = 1, lvl(idx)%nx
-               lvl(idx)%x(j)  = cg%xminb + 0.5*lvl(idx)%dx + (j-lvl(idx)%nb-1)*lvl(idx)%dx
-            enddo
-         else
-            lvl(idx)%x(:) = (cg%xminb + cg%xmaxb) / 2.
-         endif
-
-         if (has_dir(ydim)) then
-            do j = 1, lvl(idx)%ny
-               lvl(idx)%y(j)  = cg%yminb + 0.5*lvl(idx)%dy + (j-lvl(idx)%nb-1)*lvl(idx)%dy
-            enddo
-         else
-            lvl(idx)%y(:) = (cg%yminb + cg%ymaxb) / 2.
-         endif
-
-         if (has_dir(zdim)) then
-            do j = 1, lvl(idx)%nz
-               lvl(idx)%z(j)  = cg%zminb + 0.5*lvl(idx)%dz + (j-lvl(idx)%nb-1)*lvl(idx)%dz
-            enddo
-         else
-            lvl(idx)%z(:) = (cg%zminb + cg%zmaxb) / 2.
          endif
 
       enddo
