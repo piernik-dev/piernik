@@ -239,7 +239,7 @@ contains
    subroutine cosmicray_index(flind)
 
       use grid,            only: cg
-      use types,           only: var_numbers
+      use fluidtypes,      only: var_numbers
 
       implicit none
 

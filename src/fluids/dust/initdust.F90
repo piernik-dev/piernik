@@ -89,7 +89,7 @@ contains
 
    subroutine dust_index(flind)
       use diagnostics,   only: ma1d, my_allocate
-      use types,         only: var_numbers
+      use fluidtypes,    only: var_numbers
       use constants,     only: DST
 
       implicit none
