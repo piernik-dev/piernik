@@ -46,9 +46,9 @@ module initproblem
    private
    public :: read_problem_par, init_prob
 
-   real   :: beta, v0
+   real   :: beta, v0, d0, alpha
 
-   namelist /PROBLEM_CONTROL/ beta, v0
+   namelist /PROBLEM_CONTROL/ beta, v0, d0, alpha
 
 contains
 
@@ -63,7 +63,9 @@ contains
       implicit none
 
       beta         =  1.0
+      d0           =  1.0
       v0           =  0.1
+      alpha        =  1.0
 
       if (master) then
 
@@ -71,6 +73,8 @@ contains
 
          rbuff(1) = beta
          rbuff(2) = v0
+         rbuff(3) = d0
+         rbuff(4) = alpha
 
       endif
 
@@ -80,6 +84,8 @@ contains
 
          beta         = rbuff(1)
          v0           = rbuff(2)
+         d0           = rbuff(3)
+         alpha        = rbuff(4)
 
       endif
 
@@ -91,7 +97,7 @@ contains
 
       use arrays,       only: u, b
       use constants,    only: pi
-      use fluidindex,   only: ibx, iby, ibz
+      use fluidindex,   only: ibx, iby, ibz, flind
       use grid,         only: cg
       use initionized,  only: idni, imxi, imyi, imzi
       use mpisetup,     only: dom
@@ -108,7 +114,7 @@ contains
       ymid = dom%y0
       zmid = dom%z0
 
-      u(idni,:,:,:) = 1.0
+      u(idni,:,:,:) = d0
       u(imyi,:,:,:) = 0.0
       u(imzi,:,:,:) = 0.0
 
@@ -117,16 +123,16 @@ contains
 
       call read_problem_par
 
-      b0 = 1.0
+      b0 = sqrt(2.*alpha*d0*flind%ion%cs2)
 
       do k = 1, cg%nz
          do j = 1, cg%ny
             do i = 1, cg%nx
 
-               vzab = v0*cos(2.*pi*cg%y(j))
+               vzab = v0*cos(2.*pi*cg%y(j)/dom%Ly)
                u(imxi,i,j,k) = u(idni,i,j,k)*vzab
 
-               if (abs(cg%x(i)) .LE. xmid) then
+               if (abs(cg%x(i)-xmid) <= 0.25*dom%Lx) then
                   b(iby,i,j,k) = -b0
                else
                   b(iby,i,j,k) =  b0

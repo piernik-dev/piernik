@@ -59,12 +59,7 @@
     gamma_ion  = 1.666666666
  /
 
- $EQUATION_OF_STATE
-    c_si  = 1.0
-    alpha = 1.0
- /
-
- $NUMERICAL_SETUP
+  $NUMERICAL_SETUP
     cfl    = 0.4
     smalld = 1.e-5
     smallei= 1.e-5
