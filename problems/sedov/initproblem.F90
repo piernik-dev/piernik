@@ -123,7 +123,7 @@ contains
       use dataio_pub,     only: msg, die, printinfo
       use fluidindex,     only: flind, ibx, iby, ibz
       use grid,           only: cg
-      use types,          only: component_fluid
+      use fluidtypes,     only: component_fluid
       use mpisetup,       only: master
 
       implicit none

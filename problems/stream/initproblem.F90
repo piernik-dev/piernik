@@ -110,7 +110,7 @@ contains
       use grid,          only: cg
       use mpisetup,      only: proc, dom
       use shear,         only: omega
-      use types,         only: component_fluid
+      use fluidtypes,    only: component_fluid
       use interactions,  only: dragc_gas_dust
 #ifdef SHEAR
       use shear,         only: eta_gas, csvk

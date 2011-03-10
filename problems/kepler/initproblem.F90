@@ -252,7 +252,7 @@ contains
    subroutine init_prob
 
       use dataio_pub,          only: msg, printinfo, die
-      use types,               only: component_fluid
+      use fluidtypes,          only: component_fluid
       use arrays,              only: u, b, dprof
       use constants,           only: dpi, xdim, zdim, GEO_XYZ, GEO_RPZ, DST
       use units,               only: newtong, gram, cm, kboltz, mH
@@ -262,7 +262,6 @@ contains
       use hydrostatic,         only: hydrostatic_zeq_densmid
       use mpisetup,            only: has_dir, dom, master, geometry_type, pcoords, dom, comm, ierr
       use mpi,                 only: MPI_DOUBLE_PRECISION
-      use types,               only: component_fluid
       use interactions,        only: epstein_factor
 
       implicit none
