@@ -34,12 +34,12 @@ cp $OUT2 $OUT2_1
 
 rm *.res
 cp $PPRT $PP
-mpirun -np 3 $PRG
+mpirun -np 6 $PRG
 echo "Comparing $OUT1 and $OUT1_1"
 h5diff $OUT1 $OUT1_1
 
 sed '/tend/s/.*/ tend = 2.0/' $PPRT > $PP
-mpirun -np 5 $PRG
+mpirun -np 8 $PRG
 
 echo "Comparing $OUT2 and $OUT2_1"
 h5diff $OUT2 $OUT2_1

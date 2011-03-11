@@ -52,10 +52,10 @@ endif
 endif
 
 resetup:
-	@RS=1 $(MAKE) all
+	@RS=1 $(MAKE) -k all
 
 clean:
-	@CL=1 $(MAKE) all
+	@CL=1 $(MAKE) -k all
 
 allsetup:
 	for i in problems/* ../problems/* ; do \

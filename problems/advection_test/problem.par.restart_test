@@ -1,7 +1,7 @@
  $DOMAIN
-    nxd = 20 !20
-    nyd = 18 !18
-    nzd = 14 !14
+    nxd = 25 !20
+    nyd = 35 !18
+    nzd = 30 !14
     bnd_xl = 'per'
     bnd_xr = 'per'
     bnd_yl = 'per'
