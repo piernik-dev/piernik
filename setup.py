@@ -79,11 +79,14 @@ ifndef PRECOMP
 endif
 ifeq ("$(SILENT)","1")
 MAKEFLAGS += -s
+ifdef PNAME
+override PNAME+=""
+endif
 define ECHO_FC
-@$(ECHO) [FC] $<
+@$(ECHO) [$(PNAME)FC] $<
 endef
 define ECHO_CC
-@$(ECHO) [CC] $<
+@$(ECHO) [$(PNAME)CC] $<
 endef
 else
 define ECHO_FC
@@ -96,8 +99,8 @@ all: env.dat $(PROG)
 
 $(PROG): $(OBJS)
 ifeq ("$(SILENT)","1")
-\t@$(ECHO) FC = $(F90) $(CPPFLAGS) $(F90FLAGS) -c
-\t@$(ECHO) CC = $(CC) $(CPPFLAGS) $(CFLAGS) -c
+\t@$(ECHO) $(PNAME)FC = $(F90) $(CPPFLAGS) $(F90FLAGS) -c
+\t@$(ECHO) $(PNAME)CC = $(CC) $(CPPFLAGS) $(CFLAGS) -c
 endif
 \t@$(ECHO) $(F90) $(LDFLAGS) -o $@ '*.o' $(LIBS)
 \t@$(F90) $(LDFLAGS) -o $@ $(OBJS) $(LIBS)
