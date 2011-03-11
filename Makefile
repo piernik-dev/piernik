@@ -65,6 +65,6 @@ allsetup:
 			else \
 				nm="../"$$i; \
 			fi; \
-			./setup $$nm -o "_"$$( basename $$i )"_" --nocompile && sed -i 's/ --nocompile//' "obj__"$$( basename $$i )"_/"* "obj__"$$( basename $$i )"_/."??* & \
+			./setup $$nm -o "_"$$( basename $$i )"_" --nocompile && sed -i 's/ --nocompile//' "obj__"$$( basename $$i )"_/"{.setup.call,Makefile,env.dat,version.F90} & \
 		fi; \
 	done
