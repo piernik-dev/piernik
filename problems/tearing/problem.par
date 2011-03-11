@@ -20,9 +20,6 @@
     psize = 1, 1, 1
  /
 
- $START_CONTROL
- /
-
  $UNITS
  /
 
@@ -68,9 +65,6 @@
  /
 
  $GRAVITY
- /
-
- $THERMAL
  /
 
  $RESISTIVITY

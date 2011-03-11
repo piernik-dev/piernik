@@ -21,9 +21,6 @@
     psize = 1, 1, 1
  /
 
- $START_CONTROL
- /
-
  $UNITS
     units_set = "PSM"
  /
@@ -57,9 +54,9 @@
     domain       = 'phys_domain'
  /
 
- $EQUATION_OF_STATE
-    c_si         = 7.0
-    alpha        = 0.1
+ $FLUID_IONIZED
+    gamma_ion = 1.66666667
+    cs_iso_ion  =  7.0            ! sound speed
  /
 
  $NUMERICAL_SETUP
@@ -71,11 +68,9 @@
   /
 
  $GRAVITY
+    user_grav    = .true.
     r_gc         = 5000
     nsub         = 10
- /
-
- $THERMAL
  /
 
  $RESISTIVITY

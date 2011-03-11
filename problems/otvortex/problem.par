@@ -20,9 +20,6 @@
     psize = 1, 1, 1
  /
 
- $START_CONTROL
- /
-
  $UNITS
  /
 
@@ -64,11 +61,6 @@
     gamma_neut = 1.666666666
  /
 
- $EQUATION_OF_STATE
-    c_si   = 1.0
-    alpha  = 0.0
- /
-
  $NUMERICAL_SETUP
     cfl    = 0.8
     smalld = 1.e-3
@@ -78,9 +70,6 @@
  /
 
  $GRAVITY
- /
-
- $THERMAL
  /
 
  $RESISTIVITY

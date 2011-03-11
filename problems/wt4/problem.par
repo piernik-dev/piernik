@@ -84,9 +84,6 @@
     ptm_z  = 0.0
  /
 
- $THERMAL
- /
-
  $RESISTIVITY
  /
 

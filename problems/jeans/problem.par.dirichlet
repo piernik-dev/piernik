@@ -76,9 +76,6 @@
     external_gp = "null"
  /
 
- $THERMAL
- /
-
  $RESISTIVITY
  /
 

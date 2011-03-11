@@ -21,9 +21,6 @@
     psize = 1, 1, 1
  /
 
- $START_CONTROL
- /
-
  $UNITS
  /
 
@@ -76,9 +73,6 @@
     nsub    = 10
     r_grav  =  0.7
     n_gravr = 10
- /
-
- $THERMAL
  /
 
  $RESISTIVITY

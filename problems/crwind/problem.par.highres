@@ -21,9 +21,6 @@
     psize = 1, 1, 4
  /
 
- $START_CONTROL
- /
-
  $UNITS
  /
 
@@ -56,9 +53,8 @@
     domain       = 'phys_domain'
  /
 
- $EQUATION_OF_STATE
-    c_si         = 7.0
-    alpha        = 0.01
+ $FLUID_IONIZED
+    gamma_ion = 1.66666667
  /
 
  $NUMERICAL_SETUP
@@ -72,9 +68,6 @@
  $GRAVITY
     r_gc         = 5000
     nsub         = 10
- /
-
- $THERMAL
  /
 
  $RESISTIVITY

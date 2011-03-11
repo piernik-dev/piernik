@@ -21,9 +21,6 @@
     psize = 1, 1, 1
  /
 
- $START_CONTROL
- /
-
  $UNITS
  /
 
@@ -54,9 +51,9 @@
     mag_center = 'no'
  /
 
- $EQUATION_OF_STATE
-    c_si   = 0.2
-    alpha  = 0.1
+ $FLUID_IONIZED
+    cs_ion     = 0.2
+    cs_iso_ion = 0.2
  /
 
  $NUMERICAL_SETUP
@@ -65,10 +62,6 @@
     smallei= 1.e-4
     integration_order = 2
     limiter= 'vanleer'
-    magnetic = 'no'
-    dimensions = '3d'
-    nu_bulk    = 0.0001
-    cfl_visc   = 0.4
  /
 
  $GRAVITY
@@ -81,9 +74,6 @@
     nsub    = 10
     r_grav  = 0.6
     n_gravr = 10
- /
-
- $THERMAL
  /
 
  $RESISTIVITY
