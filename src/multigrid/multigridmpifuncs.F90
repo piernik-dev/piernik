@@ -156,7 +156,7 @@ contains
       use mpisetup,           only: comm3d, ierr, procxl, procxr, procyl, procyr, proczl, proczr, proc, psize, has_dir
       use constants,          only: ndims, xdim, ydim, zdim, LO, HI, BND, DOM
       use mpi,                only: MPI_STATUS_SIZE, MPI_REQUEST_NULL
-      use multigridvars,      only: lvl, XLO, XHI, YLO, YHI, ZLO, ZHI, is_external, ngridvars, level_min, level_max
+      use multigridvars,      only: lvl, is_external, ngridvars, level_min, level_max
 
       implicit none
 
@@ -183,45 +183,45 @@ contains
       endif
 
       ! Set the external boundary, where appropriate
-      if (any(is_external(:))) call multigrid_ext_bnd(lev, iv, ng, mode, cor)
+      if (any(is_external(:, :))) call multigrid_ext_bnd(lev, iv, ng, mode, cor)
 
       req3d(:) = MPI_REQUEST_NULL
 
       if (has_dir(xdim)) then
          if (psize(xdim) > 1) then
-            if (.not. is_external(XLO)) call MPI_Isend (lvl(lev)%mgvar(1, 1, 1, iv), 1, lvl(lev)%mmbc(xdim, LO, DOM, ng),  procxl, 15, comm3d, req3d(1),  ierr)
-            if (.not. is_external(XHI)) call MPI_Isend (lvl(lev)%mgvar(1, 1, 1, iv), 1, lvl(lev)%mmbc(xdim, HI, DOM, ng), procxr, 25, comm3d, req3d(3),  ierr)
-            if (.not. is_external(XLO)) call MPI_Irecv (lvl(lev)%mgvar(1, 1, 1, iv), 1, lvl(lev)%mmbc(xdim, LO, BND, ng),  procxl, 25, comm3d, req3d(2),  ierr)
-            if (.not. is_external(XHI)) call MPI_Irecv (lvl(lev)%mgvar(1, 1, 1, iv), 1, lvl(lev)%mmbc(xdim, HI, BND, ng), procxr, 15, comm3d, req3d(4),  ierr)
+            if (.not. is_external(xdim, LO)) call MPI_Isend (lvl(lev)%mgvar(1, 1, 1, iv), 1, lvl(lev)%mmbc(xdim, LO, DOM, ng), procxl, 15, comm3d, req3d(1),  ierr)
+            if (.not. is_external(xdim, HI)) call MPI_Isend (lvl(lev)%mgvar(1, 1, 1, iv), 1, lvl(lev)%mmbc(xdim, HI, DOM, ng), procxr, 25, comm3d, req3d(3),  ierr)
+            if (.not. is_external(xdim, LO)) call MPI_Irecv (lvl(lev)%mgvar(1, 1, 1, iv), 1, lvl(lev)%mmbc(xdim, LO, BND, ng), procxl, 25, comm3d, req3d(2),  ierr)
+            if (.not. is_external(xdim, HI)) call MPI_Irecv (lvl(lev)%mgvar(1, 1, 1, iv), 1, lvl(lev)%mmbc(xdim, HI, BND, ng), procxr, 15, comm3d, req3d(4),  ierr)
          else
-            if (.not. is_external(XLO)) lvl(lev)%mgvar(lvl(lev)%is-ng:lvl(lev)%is-1,  :, :, iv) = lvl(lev)%mgvar(lvl(lev)%ie-ng+1:lvl(lev)%ie,      :, :, iv)
-            if (.not. is_external(XHI)) lvl(lev)%mgvar(lvl(lev)%ie+1 :lvl(lev)%ie+ng, :, :, iv) = lvl(lev)%mgvar(lvl(lev)%is     :lvl(lev)%is+ng-1, :, :, iv)
+            if (.not. is_external(xdim, LO)) lvl(lev)%mgvar(lvl(lev)%is-ng:lvl(lev)%is-1,  :, :, iv) = lvl(lev)%mgvar(lvl(lev)%ie-ng+1:lvl(lev)%ie,      :, :, iv)
+            if (.not. is_external(xdim, HI)) lvl(lev)%mgvar(lvl(lev)%ie+1 :lvl(lev)%ie+ng, :, :, iv) = lvl(lev)%mgvar(lvl(lev)%is     :lvl(lev)%is+ng-1, :, :, iv)
          endif
          if (cor) call MPI_Waitall(4, req3d(1:4), status3d(:,1:4), ierr)
       endif
 
       if (has_dir(ydim)) then
          if (psize(ydim) > 1) then
-            if (.not. is_external(YLO)) call MPI_Isend (lvl(lev)%mgvar(1, 1, 1, iv), 1, lvl(lev)%mmbc(ydim, LO, DOM, ng),  procyl, 35, comm3d, req3d(5),  ierr)
-            if (.not. is_external(YHI)) call MPI_Isend (lvl(lev)%mgvar(1, 1, 1, iv), 1, lvl(lev)%mmbc(ydim, HI, DOM, ng), procyr, 45, comm3d, req3d(6),  ierr)
-            if (.not. is_external(YLO)) call MPI_Irecv (lvl(lev)%mgvar(1, 1, 1, iv), 1, lvl(lev)%mmbc(ydim, LO, BND, ng),  procyl, 45, comm3d, req3d(7),  ierr)
-            if (.not. is_external(YHI)) call MPI_Irecv (lvl(lev)%mgvar(1, 1, 1, iv), 1, lvl(lev)%mmbc(ydim, HI, BND, ng), procyr, 35, comm3d, req3d(8),  ierr)
+            if (.not. is_external(ydim, LO)) call MPI_Isend (lvl(lev)%mgvar(1, 1, 1, iv), 1, lvl(lev)%mmbc(ydim, LO, DOM, ng), procyl, 35, comm3d, req3d(5),  ierr)
+            if (.not. is_external(ydim, HI)) call MPI_Isend (lvl(lev)%mgvar(1, 1, 1, iv), 1, lvl(lev)%mmbc(ydim, HI, DOM, ng), procyr, 45, comm3d, req3d(6),  ierr)
+            if (.not. is_external(ydim, LO)) call MPI_Irecv (lvl(lev)%mgvar(1, 1, 1, iv), 1, lvl(lev)%mmbc(ydim, LO, BND, ng), procyl, 45, comm3d, req3d(7),  ierr)
+            if (.not. is_external(ydim, HI)) call MPI_Irecv (lvl(lev)%mgvar(1, 1, 1, iv), 1, lvl(lev)%mmbc(ydim, HI, BND, ng), procyr, 35, comm3d, req3d(8),  ierr)
          else
-            if (.not. is_external(YLO)) lvl(lev)%mgvar(:, lvl(lev)%js-ng:lvl(lev)%js-1,  :, iv) = lvl(lev)%mgvar(:, lvl(lev)%je-ng+1:lvl(lev)%je,      :, iv)
-            if (.not. is_external(YHI)) lvl(lev)%mgvar(:, lvl(lev)%je+1 :lvl(lev)%je+ng, :, iv) = lvl(lev)%mgvar(:, lvl(lev)%js     :lvl(lev)%js+ng-1, :, iv)
+            if (.not. is_external(ydim, LO)) lvl(lev)%mgvar(:, lvl(lev)%js-ng:lvl(lev)%js-1,  :, iv) = lvl(lev)%mgvar(:, lvl(lev)%je-ng+1:lvl(lev)%je,      :, iv)
+            if (.not. is_external(ydim, HI)) lvl(lev)%mgvar(:, lvl(lev)%je+1 :lvl(lev)%je+ng, :, iv) = lvl(lev)%mgvar(:, lvl(lev)%js     :lvl(lev)%js+ng-1, :, iv)
          endif
          if (cor) call MPI_Waitall(4, req3d(5:8), status3d(:,5:8), ierr)
       endif
 
       if (has_dir(zdim)) then
          if (psize(zdim) > 1) then
-            if (.not. is_external(ZLO)) call MPI_Isend (lvl(lev)%mgvar(1, 1, 1, iv), 1, lvl(lev)%mmbc(zdim, LO, DOM, ng),  proczl, 55, comm3d, req3d(9),  ierr)
-            if (.not. is_external(ZHI)) call MPI_Isend (lvl(lev)%mgvar(1, 1, 1, iv), 1, lvl(lev)%mmbc(zdim, HI, DOM, ng), proczr, 65, comm3d, req3d(10), ierr)
-            if (.not. is_external(ZLO)) call MPI_Irecv (lvl(lev)%mgvar(1, 1, 1, iv), 1, lvl(lev)%mmbc(zdim, LO, BND, ng),  proczl, 65, comm3d, req3d(11), ierr)
-            if (.not. is_external(ZHI)) call MPI_Irecv (lvl(lev)%mgvar(1, 1, 1, iv), 1, lvl(lev)%mmbc(zdim, HI, BND, ng), proczr, 55, comm3d, req3d(12), ierr)
+            if (.not. is_external(zdim, LO)) call MPI_Isend (lvl(lev)%mgvar(1, 1, 1, iv), 1, lvl(lev)%mmbc(zdim, LO, DOM, ng), proczl, 55, comm3d, req3d(9),  ierr)
+            if (.not. is_external(zdim, HI)) call MPI_Isend (lvl(lev)%mgvar(1, 1, 1, iv), 1, lvl(lev)%mmbc(zdim, HI, DOM, ng), proczr, 65, comm3d, req3d(10), ierr)
+            if (.not. is_external(zdim, LO)) call MPI_Irecv (lvl(lev)%mgvar(1, 1, 1, iv), 1, lvl(lev)%mmbc(zdim, LO, BND, ng), proczl, 65, comm3d, req3d(11), ierr)
+            if (.not. is_external(zdim, HI)) call MPI_Irecv (lvl(lev)%mgvar(1, 1, 1, iv), 1, lvl(lev)%mmbc(zdim, HI, BND, ng), proczr, 55, comm3d, req3d(12), ierr)
          else
-            if (.not. is_external(ZLO)) lvl(lev)%mgvar(:, :, lvl(lev)%ks-ng:lvl(lev)%ks-1,  iv) = lvl(lev)%mgvar(:, :, lvl(lev)%ke-ng+1:lvl(lev)%ke,      iv)
-            if (.not. is_external(ZHI)) lvl(lev)%mgvar(:, :, lvl(lev)%ke+1 :lvl(lev)%ke+ng, iv) = lvl(lev)%mgvar(:, :, lvl(lev)%ks     :lvl(lev)%ks+ng-1, iv)
+            if (.not. is_external(zdim, LO)) lvl(lev)%mgvar(:, :, lvl(lev)%ks-ng:lvl(lev)%ks-1,  iv) = lvl(lev)%mgvar(:, :, lvl(lev)%ke-ng+1:lvl(lev)%ke,      iv)
+            if (.not. is_external(zdim, HI)) lvl(lev)%mgvar(:, :, lvl(lev)%ke+1 :lvl(lev)%ke+ng, iv) = lvl(lev)%mgvar(:, :, lvl(lev)%ks     :lvl(lev)%ks+ng-1, iv)
          endif
          if (cor) call MPI_Waitall(4, req3d(9:12), status3d(:,9:12), ierr)
       endif
@@ -244,9 +244,9 @@ contains
 
    subroutine multigrid_ext_bnd(lev, iv, ng, mode, cor)
 
+      use constants,       only: LO, HI, xdim, ydim, zdim
       use dataio_pub,      only: die, msg, warn
-      use multigridvars,   only: extbnd_donothing, extbnd_zero, extbnd_extrapolate, extbnd_mirror, extbnd_antimirror, &
-           &                     XLO, XHI, YLO, YHI, ZLO, ZHI, lvl, is_external
+      use multigridvars,   only: extbnd_donothing, extbnd_zero, extbnd_extrapolate, extbnd_mirror, extbnd_antimirror, lvl, is_external
 
       implicit none
 
@@ -272,37 +272,37 @@ contains
             return
          case (extbnd_extrapolate) !> \deprecated mixed-tybe BC: free flux; BEWARE: it is not protected from inflow
             do i = 1, ng
-               if (is_external(XLO)) lvl(lev)%mgvar(lvl(lev)%is-i, :, :, iv) = (1+i) * lvl(lev)%mgvar(lvl(lev)%is, :, :, iv) - i * lvl(lev)%mgvar(lvl(lev)%is+1, :, :, iv)
-               if (is_external(XHI)) lvl(lev)%mgvar(lvl(lev)%ie+i, :, :, iv) = (1+i) * lvl(lev)%mgvar(lvl(lev)%ie, :, :, iv) - i * lvl(lev)%mgvar(lvl(lev)%ie-1, :, :, iv)
-               if (is_external(YLO)) lvl(lev)%mgvar(:, lvl(lev)%js-i, :, iv) = (1+i) * lvl(lev)%mgvar(:, lvl(lev)%js, :, iv) - i * lvl(lev)%mgvar(:, lvl(lev)%js+1, :, iv)
-               if (is_external(YHI)) lvl(lev)%mgvar(:, lvl(lev)%je+i, :, iv) = (1+i) * lvl(lev)%mgvar(:, lvl(lev)%je, :, iv) - i * lvl(lev)%mgvar(:, lvl(lev)%je-1, :, iv)
-               if (is_external(ZLO)) lvl(lev)%mgvar(:, :, lvl(lev)%ks-i, iv) = (1+i) * lvl(lev)%mgvar(:, :, lvl(lev)%ks, iv) - i * lvl(lev)%mgvar(:, :, lvl(lev)%ks+1, iv)
-               if (is_external(ZHI)) lvl(lev)%mgvar(:, :, lvl(lev)%ke+i, iv) = (1+i) * lvl(lev)%mgvar(:, :, lvl(lev)%ke, iv) - i * lvl(lev)%mgvar(:, :, lvl(lev)%ke-1, iv)
+               if (is_external(xdim, LO)) lvl(lev)%mgvar(lvl(lev)%is-i, :, :, iv) = (1+i) * lvl(lev)%mgvar(lvl(lev)%is, :, :, iv) - i * lvl(lev)%mgvar(lvl(lev)%is+1, :, :, iv)
+               if (is_external(xdim, HI)) lvl(lev)%mgvar(lvl(lev)%ie+i, :, :, iv) = (1+i) * lvl(lev)%mgvar(lvl(lev)%ie, :, :, iv) - i * lvl(lev)%mgvar(lvl(lev)%ie-1, :, :, iv)
+               if (is_external(ydim, LO)) lvl(lev)%mgvar(:, lvl(lev)%js-i, :, iv) = (1+i) * lvl(lev)%mgvar(:, lvl(lev)%js, :, iv) - i * lvl(lev)%mgvar(:, lvl(lev)%js+1, :, iv)
+               if (is_external(ydim, HI)) lvl(lev)%mgvar(:, lvl(lev)%je+i, :, iv) = (1+i) * lvl(lev)%mgvar(:, lvl(lev)%je, :, iv) - i * lvl(lev)%mgvar(:, lvl(lev)%je-1, :, iv)
+               if (is_external(zdim, LO)) lvl(lev)%mgvar(:, :, lvl(lev)%ks-i, iv) = (1+i) * lvl(lev)%mgvar(:, :, lvl(lev)%ks, iv) - i * lvl(lev)%mgvar(:, :, lvl(lev)%ks+1, iv)
+               if (is_external(zdim, HI)) lvl(lev)%mgvar(:, :, lvl(lev)%ke+i, iv) = (1+i) * lvl(lev)%mgvar(:, :, lvl(lev)%ke, iv) - i * lvl(lev)%mgvar(:, :, lvl(lev)%ke-1, iv)
             enddo
          case (extbnd_zero) ! homogenous Dirichlet BC with 0 at first guardcell row
-            if (is_external(XLO)) lvl(lev)%mgvar(:lvl(lev)%is, :, :, iv) = 0.
-            if (is_external(XHI)) lvl(lev)%mgvar(lvl(lev)%ie:, :, :, iv) = 0.
-            if (is_external(YLO)) lvl(lev)%mgvar(:, :lvl(lev)%js, :, iv) = 0.
-            if (is_external(YHI)) lvl(lev)%mgvar(:, lvl(lev)%je:, :, iv) = 0.
-            if (is_external(ZLO)) lvl(lev)%mgvar(:, :, :lvl(lev)%ks, iv) = 0.
-            if (is_external(ZHI)) lvl(lev)%mgvar(:, :, lvl(lev)%ke:, iv) = 0.
+            if (is_external(xdim, LO)) lvl(lev)%mgvar(:lvl(lev)%is, :, :, iv) = 0.
+            if (is_external(xdim, HI)) lvl(lev)%mgvar(lvl(lev)%ie:, :, :, iv) = 0.
+            if (is_external(ydim, LO)) lvl(lev)%mgvar(:, :lvl(lev)%js, :, iv) = 0.
+            if (is_external(ydim, HI)) lvl(lev)%mgvar(:, lvl(lev)%je:, :, iv) = 0.
+            if (is_external(zdim, LO)) lvl(lev)%mgvar(:, :, :lvl(lev)%ks, iv) = 0.
+            if (is_external(zdim, HI)) lvl(lev)%mgvar(:, :, lvl(lev)%ke:, iv) = 0.
          case (extbnd_mirror) ! reflecting BC (homogenous Neumamnn)
             do i = 1, ng
-               if (is_external(XLO)) lvl(lev)%mgvar(lvl(lev)%is-i, :, :, iv) = lvl(lev)%mgvar(lvl(lev)%is+i-1, :, :, iv)
-               if (is_external(XHI)) lvl(lev)%mgvar(lvl(lev)%ie+i, :, :, iv) = lvl(lev)%mgvar(lvl(lev)%ie-i+1, :, :, iv)
-               if (is_external(YLO)) lvl(lev)%mgvar(:, lvl(lev)%js-i, :, iv) = lvl(lev)%mgvar(:, lvl(lev)%js+i-1, :, iv)
-               if (is_external(YHI)) lvl(lev)%mgvar(:, lvl(lev)%je+i, :, iv) = lvl(lev)%mgvar(:, lvl(lev)%je-i+1, :, iv)
-               if (is_external(ZLO)) lvl(lev)%mgvar(:, :, lvl(lev)%ks-i, iv) = lvl(lev)%mgvar(:, :, lvl(lev)%ks+i-1, iv)
-               if (is_external(ZHI)) lvl(lev)%mgvar(:, :, lvl(lev)%ke+i, iv) = lvl(lev)%mgvar(:, :, lvl(lev)%ke-i+1, iv)
+               if (is_external(xdim, LO)) lvl(lev)%mgvar(lvl(lev)%is-i, :, :, iv) = lvl(lev)%mgvar(lvl(lev)%is+i-1, :, :, iv)
+               if (is_external(xdim, HI)) lvl(lev)%mgvar(lvl(lev)%ie+i, :, :, iv) = lvl(lev)%mgvar(lvl(lev)%ie-i+1, :, :, iv)
+               if (is_external(ydim, LO)) lvl(lev)%mgvar(:, lvl(lev)%js-i, :, iv) = lvl(lev)%mgvar(:, lvl(lev)%js+i-1, :, iv)
+               if (is_external(ydim, HI)) lvl(lev)%mgvar(:, lvl(lev)%je+i, :, iv) = lvl(lev)%mgvar(:, lvl(lev)%je-i+1, :, iv)
+               if (is_external(zdim, LO)) lvl(lev)%mgvar(:, :, lvl(lev)%ks-i, iv) = lvl(lev)%mgvar(:, :, lvl(lev)%ks+i-1, iv)
+               if (is_external(zdim, HI)) lvl(lev)%mgvar(:, :, lvl(lev)%ke+i, iv) = lvl(lev)%mgvar(:, :, lvl(lev)%ke-i+1, iv)
             enddo
          case (extbnd_antimirror) ! homogenous Dirichlet BC with 0 at external faces
             do i = 1, ng
-               if (is_external(XLO)) lvl(lev)%mgvar(lvl(lev)%is-i, :, :, iv) = - lvl(lev)%mgvar(lvl(lev)%is+i-1, :, :, iv)
-               if (is_external(XHI)) lvl(lev)%mgvar(lvl(lev)%ie+i, :, :, iv) = - lvl(lev)%mgvar(lvl(lev)%ie-i+1, :, :, iv)
-               if (is_external(YLO)) lvl(lev)%mgvar(:, lvl(lev)%js-i, :, iv) = - lvl(lev)%mgvar(:, lvl(lev)%js+i-1, :, iv)
-               if (is_external(YHI)) lvl(lev)%mgvar(:, lvl(lev)%je+i, :, iv) = - lvl(lev)%mgvar(:, lvl(lev)%je-i+1, :, iv)
-               if (is_external(ZLO)) lvl(lev)%mgvar(:, :, lvl(lev)%ks-i, iv) = - lvl(lev)%mgvar(:, :, lvl(lev)%ks+i-1, iv)
-               if (is_external(ZHI)) lvl(lev)%mgvar(:, :, lvl(lev)%ke+i, iv) = - lvl(lev)%mgvar(:, :, lvl(lev)%ke-i+1, iv)
+               if (is_external(xdim, LO)) lvl(lev)%mgvar(lvl(lev)%is-i, :, :, iv) = - lvl(lev)%mgvar(lvl(lev)%is+i-1, :, :, iv)
+               if (is_external(xdim, HI)) lvl(lev)%mgvar(lvl(lev)%ie+i, :, :, iv) = - lvl(lev)%mgvar(lvl(lev)%ie-i+1, :, :, iv)
+               if (is_external(ydim, LO)) lvl(lev)%mgvar(:, lvl(lev)%js-i, :, iv) = - lvl(lev)%mgvar(:, lvl(lev)%js+i-1, :, iv)
+               if (is_external(ydim, HI)) lvl(lev)%mgvar(:, lvl(lev)%je+i, :, iv) = - lvl(lev)%mgvar(:, lvl(lev)%je-i+1, :, iv)
+               if (is_external(zdim, LO)) lvl(lev)%mgvar(:, :, lvl(lev)%ks-i, iv) = - lvl(lev)%mgvar(:, :, lvl(lev)%ks+i-1, iv)
+               if (is_external(zdim, HI)) lvl(lev)%mgvar(:, :, lvl(lev)%ke+i, iv) = - lvl(lev)%mgvar(:, :, lvl(lev)%ke-i+1, iv)
             enddo
          case default
             write(msg, '(a,i3,a)')"[multigridmpifuncs:multigrid_ext_bnd] boundary type ",mode," not implemented"

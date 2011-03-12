@@ -60,9 +60,6 @@ module multigridvars
    integer, parameter :: mg_nb = 2                                    !< Number of guardcells in multigrid (simplest laplacian and relaxation require only 1)
 
    ! these constants should be moved to constants module
-   enum, bind(C)
-      enumerator :: XLO=1, XHI, YLO, YHI, ZLO, ZHI                    !< Indices for boundaries in is_external(:)
-   end enum
 
    ! namelist parameters
    integer            :: level_max                                    !< Levels of multigrid refinement
@@ -77,7 +74,7 @@ module multigridvars
       ! storage
       real, allocatable, dimension(:,:,:,:) :: mgvar                  !< main working array
       real, allocatable, dimension(:,:,:)   :: prolong_x, prolong_xy  !< auxiliary prolongation arrays
-      real, allocatable, dimension(:,:,:)   :: bnd_x, bnd_y, bnd_z    !< given boundary values for potential
+      real, allocatable, dimension(:,:,:)   :: bnd_x, bnd_y, bnd_z    !< given boundary values for potential; \todo consider converting it to bnd(:,:,:,xdim:zdim)
 
       ! geometrical factors, cell counters, etc.
       integer :: level                                                !< multigrid level, level_min == 1: coarsest, level_max: finest
@@ -120,7 +117,7 @@ module multigridvars
       enumerator :: bnd_givenval                                      !< given value boundary type (general Dirichlet)
       enumerator :: bnd_invalid = bnd_periodic - 1                    !< invalid
    end enum
-   logical, dimension(XLO:ZHI) :: is_external                         !< .true. for non-"mpi" local domain boundaries
+   logical, dimension(xdim:zdim, LO:HI) :: is_external                !< .true. for non-"mpi" local domain boundaries
    integer :: periodic_bnd_cnt                                        !< counter of periodic boundaries in existing directions
    integer :: non_periodic_bnd_cnt                                    !< counter of non-periodic boundaries in existing directions
    enum, bind(C)

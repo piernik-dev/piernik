@@ -333,46 +333,43 @@ contains
 
       use dataio_pub,    only: die
       use constants,     only: xdim, ydim, zdim, LO, HI, GEO_XYZ !, GEO_RPZ
-      use multigridvars, only: is_external, XLO, XHI, YLO, YHI, ZLO, ZHI
+      use multigridvars, only: is_external
       use mpisetup,      only: geometry_type
       use units,         only: newtong
 
       implicit none
 
-      integer :: i, j, k
+      integer :: i, j, k, lh
       real    :: r2
 
       if (geometry_type /= GEO_XYZ) call die("[multigridmultipole:isolated_monopole] non-cartesian geometry not implemented yet")
 
-      if (is_external(XLO) .or. is_external(XHI)) then
-         do j = lmpole%js, lmpole%je
-            do k = lmpole%ks, lmpole%ke
-               r2 = (lmpole%y(j)-CoM(ydim))**2 + (lmpole%z(k) - CoM(zdim))**2
-               if (is_external(XLO)) lmpole%bnd_x(j, k, LO)  = - newtong * CoM(0) / sqrt(r2 + (fbnd_x(LO) -CoM(xdim))**2)
-               if (is_external(XHI)) lmpole%bnd_x(j, k, HI) = - newtong * CoM(0) / sqrt(r2 + (fbnd_x(HI)-CoM(xdim))**2)
-            enddo
-         enddo
-      endif
-
-      if (is_external(YLO) .or. is_external(YHI)) then
-         do i = lmpole%is, lmpole%ie
-            do k = lmpole%ks, lmpole%ke
-               r2 = (lmpole%x(i)-CoM(xdim))**2 + (lmpole%z(k) - CoM(zdim))**2
-               if (is_external(YLO)) lmpole%bnd_y(i, k, LO)  = - newtong * CoM(0) / sqrt(r2 + (fbnd_y(LO) -CoM(ydim))**2)
-               if (is_external(YHI)) lmpole%bnd_y(i, k, HI) = - newtong * CoM(0) / sqrt(r2 + (fbnd_y(HI)-CoM(ydim))**2)
-            enddo
-         enddo
-      endif
-
-      if (is_external(ZLO) .or. is_external(ZHI)) then
-         do i = lmpole%is, lmpole%ie
+      do lh = LO, HI
+         if (is_external(xdim, lh)) then
             do j = lmpole%js, lmpole%je
-               r2 = (lmpole%x(i)-CoM(xdim))**2 + (lmpole%y(j) - CoM(ydim))**2
-               if (is_external(ZLO)) lmpole%bnd_z(i, j, LO)  = - newtong * CoM(0) / sqrt(r2 + (fbnd_z(LO) -CoM(zdim))**2)
-               if (is_external(ZHI)) lmpole%bnd_z(i, j, HI) = - newtong * CoM(0) / sqrt(r2 + (fbnd_z(HI)-CoM(zdim))**2)
+               do k = lmpole%ks, lmpole%ke
+                  r2 = (lmpole%y(j)-CoM(ydim))**2 + (lmpole%z(k) - CoM(zdim))**2
+                  lmpole%bnd_x(j, k, lh) = - newtong * CoM(0) / sqrt(r2 + (fbnd_x(lh)-CoM(xdim))**2)
+               enddo
             enddo
-         enddo
-      endif
+         endif
+         if (is_external(ydim, lh)) then
+            do i = lmpole%is, lmpole%ie
+               do k = lmpole%ks, lmpole%ke
+                  r2 = (lmpole%x(i)-CoM(xdim))**2 + (lmpole%z(k) - CoM(zdim))**2
+                  lmpole%bnd_y(i, k, lh) = - newtong * CoM(0) / sqrt(r2 + (fbnd_y(lh)-CoM(ydim))**2)
+               enddo
+            enddo
+         endif
+         if (is_external(zdim, lh)) then
+            do i = lmpole%is, lmpole%ie
+               do j = lmpole%js, lmpole%je
+                  r2 = (lmpole%x(i)-CoM(xdim))**2 + (lmpole%y(j) - CoM(ydim))**2
+                  lmpole%bnd_z(i, j, lh) = - newtong * CoM(0) / sqrt(r2 + (fbnd_z(lh)-CoM(zdim))**2)
+               enddo
+            enddo
+         endif
+      enddo
 
    end subroutine isolated_monopole
 
@@ -384,7 +381,7 @@ contains
 
    subroutine find_img_CoM
 
-      use multigridvars,   only: is_external, XLO, XHI, YLO, YHI, ZLO, ZHI
+      use multigridvars,   only: is_external
       use dataio_pub,      only: die
       use constants,       only: ndims, xdim, ydim, zdim, LO, HI, GEO_XYZ !, GEO_RPZ
       use mpisetup,        only: comm3d, ierr, geometry_type
@@ -393,58 +390,35 @@ contains
       implicit none
 
       real, dimension(0:ndims) :: lsum, dsum
+      integer :: lh
 
       if (geometry_type /= GEO_XYZ) call die("[multigridmultipole:find_img_CoM] non-cartesian geometry not implemented yet")
 
       lsum(:) = 0.
 
-      if (is_external(XLO)) then
-         dsum(0)    =      sum( lmpole%bnd_x(lmpole%js:lmpole%je, lmpole%ks:lmpole%ke, LO) )
-         dsum(xdim) = dsum(0) * fbnd_x(LO)
-         dsum(ydim) = sum( sum( lmpole%bnd_x(lmpole%js:lmpole%je, lmpole%ks:lmpole%ke, LO),  dim=2) * lmpole%y(lmpole%js:lmpole%je) )
-         dsum(zdim) = sum( sum( lmpole%bnd_x(lmpole%js:lmpole%je, lmpole%ks:lmpole%ke, LO),  dim=1) * lmpole%z(lmpole%ks:lmpole%ke) )
-         lsum(:)    = lsum(:) + dsum(:) * lmpole%dyz
-      endif
-
-      if (is_external(XHI)) then
-         dsum(0)    =      sum( lmpole%bnd_x(lmpole%js:lmpole%je, lmpole%ks:lmpole%ke, HI) )
-         dsum(xdim) = dsum(0) * fbnd_x(HI)
-         dsum(ydim) = sum( sum( lmpole%bnd_x(lmpole%js:lmpole%je, lmpole%ks:lmpole%ke, HI), dim=2) * lmpole%y(lmpole%js:lmpole%je) )
-         dsum(zdim) = sum( sum( lmpole%bnd_x(lmpole%js:lmpole%je, lmpole%ks:lmpole%ke, HI), dim=1) * lmpole%z(lmpole%ks:lmpole%ke) )
-         lsum(:)    = lsum(:) + dsum(:) * lmpole%dyz
-      endif
-
-      if (is_external(YLO)) then
-         dsum(0)    =      sum( lmpole%bnd_y(lmpole%is:lmpole%ie, lmpole%ks:lmpole%ke, LO) )
-         dsum(xdim) = sum( sum( lmpole%bnd_y(lmpole%is:lmpole%ie, lmpole%ks:lmpole%ke, LO),  dim=2) * lmpole%x(lmpole%is:lmpole%ie) )
-         dsum(ydim) = dsum(0) * fbnd_y(LO)
-         dsum(zdim) = sum( sum( lmpole%bnd_y(lmpole%is:lmpole%ie, lmpole%ks:lmpole%ke, LO),  dim=1) * lmpole%z(lmpole%ks:lmpole%ke) )
-         lsum(:)    = lsum(:) + dsum(:) * lmpole%dxz
-      endif
-
-      if (is_external(YHI)) then
-         dsum(0)    =      sum( lmpole%bnd_y(lmpole%is:lmpole%ie, lmpole%ks:lmpole%ke, HI) )
-         dsum(xdim) = sum( sum( lmpole%bnd_y(lmpole%is:lmpole%ie, lmpole%ks:lmpole%ke, HI), dim=2) * lmpole%x(lmpole%is:lmpole%ie) )
-         dsum(ydim) = dsum(0) * fbnd_y(HI)
-         dsum(zdim) = sum( sum( lmpole%bnd_y(lmpole%is:lmpole%ie, lmpole%ks:lmpole%ke, HI), dim=1) * lmpole%z(lmpole%ks:lmpole%ke) )
-         lsum(:)    = lsum(:) + dsum(:) * lmpole%dxz
-      endif
-
-      if (is_external(ZLO)) then
-         dsum(0)    =      sum( lmpole%bnd_z(lmpole%is:lmpole%ie, lmpole%js:lmpole%je, LO) )
-         dsum(xdim) = sum( sum( lmpole%bnd_z(lmpole%is:lmpole%ie, lmpole%js:lmpole%je, LO),  dim=2) * lmpole%x(lmpole%is:lmpole%ie) )
-         dsum(ydim) = sum( sum( lmpole%bnd_z(lmpole%is:lmpole%ie, lmpole%js:lmpole%je, LO),  dim=1) * lmpole%z(lmpole%ks:lmpole%ke) )
-         dsum(zdim) = dsum(0) * fbnd_z(LO)
-         lsum(:)    = lsum(:) + dsum(:) * lmpole%dxy
-      endif
-
-      if (is_external(ZHI)) then
-         dsum(0)    =      sum( lmpole%bnd_z(lmpole%is:lmpole%ie, lmpole%js:lmpole%je, HI) )
-         dsum(xdim) = sum( sum( lmpole%bnd_z(lmpole%is:lmpole%ie, lmpole%js:lmpole%je, HI), dim=2) * lmpole%x(lmpole%is:lmpole%ie) )
-         dsum(ydim) = sum( sum( lmpole%bnd_z(lmpole%is:lmpole%ie, lmpole%js:lmpole%je, HI), dim=1) * lmpole%z(lmpole%ks:lmpole%ke) )
-         dsum(zdim) = dsum(0) * fbnd_z(HI)
-         lsum(:)    = lsum(:) + dsum(:) * lmpole%dxy
-      endif
+      do lh = LO, HI
+         if (is_external(xdim, lh)) then
+            dsum(0)    =      sum( lmpole%bnd_x(lmpole%js:lmpole%je, lmpole%ks:lmpole%ke, lh) )
+            dsum(xdim) = dsum(0) * fbnd_x(lh)
+            dsum(ydim) = sum( sum( lmpole%bnd_x(lmpole%js:lmpole%je, lmpole%ks:lmpole%ke, lh),  dim=2) * lmpole%y(lmpole%js:lmpole%je) )
+            dsum(zdim) = sum( sum( lmpole%bnd_x(lmpole%js:lmpole%je, lmpole%ks:lmpole%ke, lh),  dim=1) * lmpole%z(lmpole%ks:lmpole%ke) )
+            lsum(:)    = lsum(:) + dsum(:) * lmpole%dyz
+         endif
+         if (is_external(ydim, lh)) then
+            dsum(0)    =      sum( lmpole%bnd_y(lmpole%is:lmpole%ie, lmpole%ks:lmpole%ke, lh) )
+            dsum(xdim) = sum( sum( lmpole%bnd_y(lmpole%is:lmpole%ie, lmpole%ks:lmpole%ke, lh),  dim=2) * lmpole%x(lmpole%is:lmpole%ie) )
+            dsum(ydim) = dsum(0) * fbnd_y(lh)
+            dsum(zdim) = sum( sum( lmpole%bnd_y(lmpole%is:lmpole%ie, lmpole%ks:lmpole%ke, lh),  dim=1) * lmpole%z(lmpole%ks:lmpole%ke) )
+            lsum(:)    = lsum(:) + dsum(:) * lmpole%dxz
+         endif
+         if (is_external(zdim, lh)) then
+            dsum(0)    =      sum( lmpole%bnd_z(lmpole%is:lmpole%ie, lmpole%js:lmpole%je, lh) )
+            dsum(xdim) = sum( sum( lmpole%bnd_z(lmpole%is:lmpole%ie, lmpole%js:lmpole%je, lh),  dim=2) * lmpole%x(lmpole%is:lmpole%ie) )
+            dsum(ydim) = sum( sum( lmpole%bnd_z(lmpole%is:lmpole%ie, lmpole%js:lmpole%je, lh),  dim=1) * lmpole%z(lmpole%ks:lmpole%ke) )
+            dsum(zdim) = dsum(0) * fbnd_z(lh)
+            lsum(:)    = lsum(:) + dsum(:) * lmpole%dxy
+         endif
+      enddo
 
       call MPI_Allreduce(lsum(0:ndims), CoM(0:ndims), 4, MPI_DOUBLE_PRECISION, MPI_SUM, comm3d, ierr)
 
@@ -464,9 +438,9 @@ contains
 
    subroutine potential2img_mass
 
-      use multigridvars,   only: is_external, XLO, XHI, YLO, YHI, ZLO, ZHI, solution
+      use multigridvars,   only: is_external, solution
       use mpisetup,        only: geometry_type
-      use constants,       only: GEO_RPZ, LO, HI
+      use constants,       only: GEO_RPZ, LO, HI, xdim, ydim, zdim
 
       implicit none
 
@@ -477,24 +451,24 @@ contains
       !> \todo: find out how and why
 
       !> \deprecated BEWARE: some cylindrical factors may be helpful
-      if (is_external(XLO)) then
+      if (is_external(xdim, LO)) then
          if (zaxis_inside .and. geometry_type == GEO_RPZ) then
-             lmpole%bnd_x(                      lmpole%js:lmpole%je, lmpole%ks:lmpole%ke, LO) = 0. ! treat as internal
-          else
-             lmpole%bnd_x(                      lmpole%js:lmpole%je, lmpole%ks:lmpole%ke, LO) =   ( &
-                  &           a1 * lmpole%mgvar(lmpole%is,   lmpole%js:lmpole%je, lmpole%ks:lmpole%ke, solution) + &
-                  &           a2 * lmpole%mgvar(lmpole%is+1, lmpole%js:lmpole%je, lmpole%ks:lmpole%ke, solution) ) / lmpole%dx
-          endif
-       endif
+            lmpole%bnd_x(                         lmpole%js:lmpole%je, lmpole%ks:lmpole%ke, LO) = 0. ! treat as internal
+         else
+            lmpole%bnd_x(                         lmpole%js:lmpole%je, lmpole%ks:lmpole%ke, LO) =   ( &
+                 & a1 * lmpole%mgvar(lmpole%is,   lmpole%js:lmpole%je, lmpole%ks:lmpole%ke, solution) + &
+                 & a2 * lmpole%mgvar(lmpole%is+1, lmpole%js:lmpole%je, lmpole%ks:lmpole%ke, solution) ) / lmpole%dx
+         endif
+      endif
 
-      if (is_external(XHI)) lmpole%bnd_x(             lmpole%js:lmpole%je, lmpole%ks:lmpole%ke, HI) =   ( &
-           &           a1 * lmpole%mgvar(lmpole%ie,   lmpole%js:lmpole%je, lmpole%ks:lmpole%ke, solution) + &
-           &           a2 * lmpole%mgvar(lmpole%ie-1, lmpole%js:lmpole%je, lmpole%ks:lmpole%ke, solution) ) / lmpole%dx
+      if (is_external(xdim, HI)) lmpole%bnd_x(lmpole%js:lmpole%je, lmpole%ks:lmpole%ke, HI) =   ( &
+           &   a1 * lmpole%mgvar(lmpole%ie,   lmpole%js:lmpole%je, lmpole%ks:lmpole%ke, solution) + &
+           &   a2 * lmpole%mgvar(lmpole%ie-1, lmpole%js:lmpole%je, lmpole%ks:lmpole%ke, solution) ) / lmpole%dx
 
-      if (is_external(YLO)) then
-         lmpole%bnd_y(lmpole%is:lmpole%ie,              lmpole%ks:lmpole%ke, LO) =    ( &
-              &           a1 * lmpole%mgvar(lmpole%is:lmpole%ie, lmpole%js,   lmpole%ks:lmpole%ke, solution) + &
-              &           a2 * lmpole%mgvar(lmpole%is:lmpole%ie, lmpole%js+1, lmpole%ks:lmpole%ke, solution) ) / lmpole%dy
+      if (is_external(ydim, LO)) then
+         lmpole%bnd_y(            lmpole%is:lmpole%ie,              lmpole%ks:lmpole%ke, LO) =    ( &
+              & a1 * lmpole%mgvar(lmpole%is:lmpole%ie, lmpole%js,   lmpole%ks:lmpole%ke, solution) + &
+              & a2 * lmpole%mgvar(lmpole%is:lmpole%ie, lmpole%js+1, lmpole%ks:lmpole%ke, solution) ) / lmpole%dy
          if (geometry_type == GEO_RPZ) then
             do i = lmpole%is, lmpole%ie
                if (lmpole%x(i) /= 0.) then ! cylindrical factor in the gradient operator
@@ -506,10 +480,10 @@ contains
          endif
       endif
 
-      if (is_external(YHI)) then
-         lmpole%bnd_y(lmpole%is:lmpole%ie,              lmpole%ks:lmpole%ke, HI) =   ( &
-              &           a1 * lmpole%mgvar(lmpole%is:lmpole%ie, lmpole%je,   lmpole%ks:lmpole%ke, solution) + &
-              &           a2 * lmpole%mgvar(lmpole%is:lmpole%ie, lmpole%je-1, lmpole%ks:lmpole%ke, solution) ) / lmpole%dy
+      if (is_external(ydim, HI)) then
+         lmpole%bnd_y(            lmpole%is:lmpole%ie,              lmpole%ks:lmpole%ke, HI) =   ( &
+              & a1 * lmpole%mgvar(lmpole%is:lmpole%ie, lmpole%je,   lmpole%ks:lmpole%ke, solution) + &
+              & a2 * lmpole%mgvar(lmpole%is:lmpole%ie, lmpole%je-1, lmpole%ks:lmpole%ke, solution) ) / lmpole%dy
          if (geometry_type == GEO_RPZ) then
             do i = lmpole%is, lmpole%ie
                if (lmpole%x(i) /= 0.) then
@@ -521,13 +495,13 @@ contains
          endif
       endif
 
-      if (is_external(ZLO)) lmpole%bnd_z(lmpole%is:lmpole%ie, lmpole%js:lmpole%je,              LO) =    ( &
-           &           a1 * lmpole%mgvar(lmpole%is:lmpole%ie, lmpole%js:lmpole%je, lmpole%ks,   solution) + &
-           &           a2 * lmpole%mgvar(lmpole%is:lmpole%ie, lmpole%js:lmpole%je, lmpole%ks+1, solution) ) / lmpole%dz
+      if (is_external(zdim, LO)) lmpole%bnd_z(lmpole%is:lmpole%ie, lmpole%js:lmpole%je,              LO) =    ( &
+           &                a1 * lmpole%mgvar(lmpole%is:lmpole%ie, lmpole%js:lmpole%je, lmpole%ks,   solution) + &
+           &                a2 * lmpole%mgvar(lmpole%is:lmpole%ie, lmpole%js:lmpole%je, lmpole%ks+1, solution) ) / lmpole%dz
 
-      if (is_external(ZHI)) lmpole%bnd_z(lmpole%is:lmpole%ie, lmpole%js:lmpole%je,              HI) =   ( &
-           &           a1 * lmpole%mgvar(lmpole%is:lmpole%ie, lmpole%js:lmpole%je, lmpole%ke,   solution) + &
-           &           a2 * lmpole%mgvar(lmpole%is:lmpole%ie, lmpole%js:lmpole%je, lmpole%ke-1, solution) ) / lmpole%dz
+      if (is_external(zdim, HI)) lmpole%bnd_z(lmpole%is:lmpole%ie, lmpole%js:lmpole%je,              HI) =   ( &
+           &                a1 * lmpole%mgvar(lmpole%is:lmpole%ie, lmpole%js:lmpole%je, lmpole%ke,   solution) + &
+           &                a2 * lmpole%mgvar(lmpole%is:lmpole%ie, lmpole%js:lmpole%je, lmpole%ke-1, solution) ) / lmpole%dz
 
    end subroutine potential2img_mass
 
@@ -548,7 +522,7 @@ contains
       if (abs(ord_prolong_mpole) > 2) call die("[multipole:prolong_ext_bnd] interpolation order too high")
 
       !> \deprecated BEWARE: do we need cylindrical factors for prolongation?
-      if (any(is_external(:))) then
+      if (any(is_external(:, :))) then
          if (ord_prolong_mpole == 0) then
             call prolong_ext_bnd0(lev)
          else
@@ -565,8 +539,8 @@ contains
 
    subroutine prolong_ext_bnd0(lev)
 
-      use multigridvars,   only: lvl, is_external, level_max, XLO, XHI, YLO, YHI, ZLO, ZHI
-      use constants,       only: HI, LO, ndims
+      use multigridvars,   only: lvl, is_external, level_max
+      use constants,       only: HI, LO, ndims, xdim, ydim, zdim
       use dataio_pub,      only: die
       use mpisetup,        only: eff_dim
 
@@ -575,6 +549,7 @@ contains
       integer, intent(in) :: lev !< level to prolong from
 
       type(plvl), pointer :: coarse, fine
+      integer :: lh
 
       if (lev >= level_max) return
 
@@ -583,41 +558,23 @@ contains
       coarse => lvl(lev)
       fine   => lvl(lev + 1)
 
-      if (is_external(XLO)) then
-         fine%bnd_x(fine%js  :fine%je-1:2, fine%ks  :fine%ke-1:2, LO)  = coarse%bnd_x(coarse%js:coarse%je,   coarse%ks:coarse%ke,   LO)
-         fine%bnd_x(fine%js+1:fine%je  :2, fine%ks  :fine%ke-1:2, LO)  = fine  %bnd_x(fine%js  :fine%je-1:2, fine%ks  :fine%ke-1:2, LO)
-         fine%bnd_x(fine%js  :fine%je,     fine%ks+1:fine%ke  :2, LO)  = fine  %bnd_x(fine%js  :fine%je,     fine%ks  :fine%ke-1:2, LO)
-      endif
-
-      if (is_external(XHI)) then
-         fine%bnd_x(fine%js  :fine%je-1:2, fine%ks  :fine%ke-1:2, HI) = coarse%bnd_x(coarse%js:coarse%je,   coarse%ks:coarse%ke,   HI)
-         fine%bnd_x(fine%js+1:fine%je  :2, fine%ks  :fine%ke-1:2, HI) = fine  %bnd_x(fine%js  :fine%je-1:2, fine%ks  :fine%ke-1:2, HI)
-         fine%bnd_x(fine%js  :fine%je,     fine%ks+1:fine%ke  :2, HI) = fine  %bnd_x(fine%js  :fine%je,     fine%ks  :fine%ke-1:2, HI)
-      endif
-
-      if (is_external(YLO)) then
-         fine%bnd_y(fine%is  :fine%ie-1:2, fine%ks  :fine%ke-1:2, LO)  = coarse%bnd_y(coarse%is:coarse%ie,   coarse%ks:coarse%ke,   LO)
-         fine%bnd_y(fine%is+1:fine%ie  :2, fine%ks  :fine%ke-1:2, LO)  = fine  %bnd_y(fine%is  :fine%ie-1:2, fine%ks  :fine%ke-1:2, LO)
-         fine%bnd_y(fine%is  :fine%ie,     fine%ks+1:fine%ke  :2, LO)  = fine  %bnd_y(fine%is  :fine%ie,     fine%ks  :fine%ke-1:2, LO)
-      endif
-
-      if (is_external(YHI)) then
-         fine%bnd_y(fine%is  :fine%ie-1:2, fine%ks  :fine%ke-1:2, HI) = coarse%bnd_y(coarse%is:coarse%ie,   coarse%ks:coarse%ke,   HI)
-         fine%bnd_y(fine%is+1:fine%ie  :2, fine%ks  :fine%ke-1:2, HI) = fine  %bnd_y(fine%is  :fine%ie-1:2, fine%ks  :fine%ke-1:2, HI)
-         fine%bnd_y(fine%is  :fine%ie,     fine%ks+1:fine%ke  :2, HI) = fine  %bnd_y(fine%is  :fine%ie,     fine%ks  :fine%ke-1:2, HI)
-      endif
-
-      if (is_external(ZLO)) then
-         fine%bnd_z(fine%is  :fine%ie-1:2, fine%js  :fine%je-1:2, LO)  = coarse%bnd_z(coarse%is:coarse%ie,   coarse%js:coarse%je,   LO)
-         fine%bnd_z(fine%is+1:fine%ie  :2, fine%js  :fine%je-1:2, LO)  = fine  %bnd_z(fine%is  :fine%ie-1:2, fine%js  :fine%je-1:2, LO)
-         fine%bnd_z(fine%is  :fine%ie,     fine%js+1:fine%je  :2, LO)  = fine  %bnd_z(fine%is  :fine%ie,     fine%js  :fine%je-1:2, LO)
-      endif
-
-      if (is_external(ZHI)) then
-         fine%bnd_z(fine%is  :fine%ie-1:2, fine%js  :fine%je-1:2, HI) = coarse%bnd_z(coarse%is:coarse%ie,   coarse%js:coarse%je,   HI)
-         fine%bnd_z(fine%is+1:fine%ie  :2, fine%js  :fine%je-1:2, HI) = fine  %bnd_z(fine%is  :fine%ie-1:2, fine%js  :fine%je-1:2, HI)
-         fine%bnd_z(fine%is  :fine%ie,     fine%js+1:fine%je  :2, HI) = fine  %bnd_z(fine%is  :fine%ie,     fine%js  :fine%je-1:2, HI)
-      endif
+      do lh = LO, HI
+         if (is_external(xdim, lh)) then
+            fine%bnd_x(fine%js  :fine%je-1:2, fine%ks  :fine%ke-1:2, lh) = coarse%bnd_x(coarse%js:coarse%je,   coarse%ks:coarse%ke,   lh)
+            fine%bnd_x(fine%js+1:fine%je  :2, fine%ks  :fine%ke-1:2, lh) = fine  %bnd_x(fine%js  :fine%je-1:2, fine%ks  :fine%ke-1:2, lh)
+            fine%bnd_x(fine%js  :fine%je,     fine%ks+1:fine%ke  :2, lh) = fine  %bnd_x(fine%js  :fine%je,     fine%ks  :fine%ke-1:2, lh)
+         endif
+         if (is_external(ydim, lh)) then
+            fine%bnd_y(fine%is  :fine%ie-1:2, fine%ks  :fine%ke-1:2, lh) = coarse%bnd_y(coarse%is:coarse%ie,   coarse%ks:coarse%ke,   lh)
+            fine%bnd_y(fine%is+1:fine%ie  :2, fine%ks  :fine%ke-1:2, lh) = fine  %bnd_y(fine%is  :fine%ie-1:2, fine%ks  :fine%ke-1:2, lh)
+            fine%bnd_y(fine%is  :fine%ie,     fine%ks+1:fine%ke  :2, lh) = fine  %bnd_y(fine%is  :fine%ie,     fine%ks  :fine%ke-1:2, lh)
+         endif
+         if (is_external(zdim, lh)) then
+            fine%bnd_z(fine%is  :fine%ie-1:2, fine%js  :fine%je-1:2, lh) = coarse%bnd_z(coarse%is:coarse%ie,   coarse%js:coarse%je,   lh)
+            fine%bnd_z(fine%is+1:fine%ie  :2, fine%js  :fine%je-1:2, lh) = fine  %bnd_z(fine%is  :fine%ie-1:2, fine%js  :fine%je-1:2, lh)
+            fine%bnd_z(fine%is  :fine%ie,     fine%js+1:fine%je  :2, lh) = fine  %bnd_z(fine%is  :fine%ie,     fine%js  :fine%je-1:2, lh)
+         endif
+      enddo
 
    end subroutine prolong_ext_bnd0
 
@@ -631,8 +588,8 @@ contains
 
    subroutine prolong_ext_bnd2(lev)
 
-      use multigridvars,   only: lvl, is_external, level_max, XLO, XHI, YLO, YHI, ZLO, ZHI
-      use constants,       only: HI, LO, ndims
+      use multigridvars,   only: lvl, is_external, level_max
+      use constants,       only: HI, LO, ndims, xdim, ydim, zdim
       use dataio_pub,      only: die
       use mpisetup,        only: eff_dim
 
@@ -642,7 +599,7 @@ contains
 
       type(plvl), pointer :: coarse, fine
 
-      integer                       :: i, j, k
+      integer                       :: i, j, k, lh
       real, parameter, dimension(3) :: p0  = [ 0.,       1.,     0.     ] ! injection
       real, parameter, dimension(3) :: p1  = [ 0.,       3./4.,  1./4.  ] ! 1D linear prolongation stencil
       real, parameter, dimension(3) :: p2i = [ -1./8.,   1.,     1./8.  ] ! 1D integral cubic prolongation stencil
@@ -680,71 +637,40 @@ contains
       !at edges and corners we can only inject
       call prolong_ext_bnd0(lev) ! overkill: replace this
 
-      if (is_external(XLO)) then
-         do j = coarse%js+1, coarse%je-1
-            do k = coarse%ks+1, coarse%ke-1
-               fine%bnd_x(-fine%js+2*j,  -fine%ks+2*k,  LO) =sum(pp(:,:,1,1) * coarse%bnd_x(j-1:j+1,k-1:k+1,LO))
-               fine%bnd_x(-fine%js+2*j+1,-fine%ks+2*k,  LO) =sum(pp(:,:,2,1) * coarse%bnd_x(j-1:j+1,k-1:k+1,LO))
-               fine%bnd_x(-fine%js+2*j,  -fine%ks+2*k+1,LO) =sum(pp(:,:,1,2) * coarse%bnd_x(j-1:j+1,k-1:k+1,LO))
-               fine%bnd_x(-fine%js+2*j+1,-fine%ks+2*k+1,LO) =sum(pp(:,:,2,2) * coarse%bnd_x(j-1:j+1,k-1:k+1,LO))
-            enddo
-         enddo
-      endif
-
-      if (is_external(XHI)) then
-         do j = coarse%js+1, coarse%je-1
-            do k = coarse%ks+1, coarse%ke-1
-               fine%bnd_x(-fine%js+2*j,  -fine%ks+2*k,  HI)=sum(pp(:,:,1,1) * coarse%bnd_x(j-1:j+1,k-1:k+1,HI))
-               fine%bnd_x(-fine%js+2*j+1,-fine%ks+2*k,  HI)=sum(pp(:,:,2,1) * coarse%bnd_x(j-1:j+1,k-1:k+1,HI))
-               fine%bnd_x(-fine%js+2*j,  -fine%ks+2*k+1,HI)=sum(pp(:,:,1,2) * coarse%bnd_x(j-1:j+1,k-1:k+1,HI))
-               fine%bnd_x(-fine%js+2*j+1,-fine%ks+2*k+1,HI)=sum(pp(:,:,2,2) * coarse%bnd_x(j-1:j+1,k-1:k+1,HI))
-            enddo
-         enddo
-      endif
-
-      if (is_external(YLO)) then
-         do i = coarse%is+1, coarse%ie-1
-            do k = coarse%ks+1, coarse%ke-1
-               fine%bnd_y(-fine%is+2*i,  -fine%ks+2*k,  LO) =sum(pp(:,:,1,1) * coarse%bnd_y(i-1:i+1,k-1:k+1,LO))
-               fine%bnd_y(-fine%is+2*i+1,-fine%ks+2*k,  LO) =sum(pp(:,:,2,1) * coarse%bnd_y(i-1:i+1,k-1:k+1,LO))
-               fine%bnd_y(-fine%is+2*i,  -fine%ks+2*k+1,LO) =sum(pp(:,:,1,2) * coarse%bnd_y(i-1:i+1,k-1:k+1,LO))
-               fine%bnd_y(-fine%is+2*i+1,-fine%ks+2*k+1,LO) =sum(pp(:,:,2,2) * coarse%bnd_y(i-1:i+1,k-1:k+1,LO))
-            enddo
-         enddo
-      endif
-
-      if (is_external(YHI)) then
-         do i = coarse%is+1, coarse%ie-1
-            do k = coarse%ks+1, coarse%ke-1
-               fine%bnd_y(-fine%is+2*i,  -fine%ks+2*k,  HI) =sum(pp(:,:,1,1) * coarse%bnd_y(i-1:i+1,k-1:k+1,HI))
-               fine%bnd_y(-fine%is+2*i+1,-fine%ks+2*k,  HI) =sum(pp(:,:,2,1) * coarse%bnd_y(i-1:i+1,k-1:k+1,HI))
-               fine%bnd_y(-fine%is+2*i,  -fine%ks+2*k+1,HI) =sum(pp(:,:,1,2) * coarse%bnd_y(i-1:i+1,k-1:k+1,HI))
-               fine%bnd_y(-fine%is+2*i+1,-fine%ks+2*k+1,HI) =sum(pp(:,:,2,2) * coarse%bnd_y(i-1:i+1,k-1:k+1,HI))
-            enddo
-         enddo
-      endif
-
-      if (is_external(ZLO)) then
-         do i = coarse%is+1, coarse%ie-1
+      do lh = LO, HI
+         if (is_external(xdim, lh)) then
             do j = coarse%js+1, coarse%je-1
-               fine%bnd_z(-fine%is+2*i,  -fine%js+2*j,  LO) =sum(pp(:,:,1,1) * coarse%bnd_z(i-1:i+1,j-1:j+1,LO))
-               fine%bnd_z(-fine%is+2*i+1,-fine%js+2*j,  LO) =sum(pp(:,:,2,1) * coarse%bnd_z(i-1:i+1,j-1:j+1,LO))
-               fine%bnd_z(-fine%is+2*i,  -fine%js+2*j+1,LO) =sum(pp(:,:,1,2) * coarse%bnd_z(i-1:i+1,j-1:j+1,LO))
-               fine%bnd_z(-fine%is+2*i+1,-fine%js+2*j+1,LO) =sum(pp(:,:,2,2) * coarse%bnd_z(i-1:i+1,j-1:j+1,LO))
+               do k = coarse%ks+1, coarse%ke-1
+                  fine%bnd_x(-fine%js+2*j,  -fine%ks+2*k,  lh) =sum(pp(:,:,1,1) * coarse%bnd_x(j-1:j+1,k-1:k+1,lh))
+                  fine%bnd_x(-fine%js+2*j+1,-fine%ks+2*k,  lh) =sum(pp(:,:,2,1) * coarse%bnd_x(j-1:j+1,k-1:k+1,lh))
+                  fine%bnd_x(-fine%js+2*j,  -fine%ks+2*k+1,lh) =sum(pp(:,:,1,2) * coarse%bnd_x(j-1:j+1,k-1:k+1,lh))
+                  fine%bnd_x(-fine%js+2*j+1,-fine%ks+2*k+1,lh) =sum(pp(:,:,2,2) * coarse%bnd_x(j-1:j+1,k-1:k+1,lh))
+               enddo
             enddo
-         enddo
-      endif
+         endif
 
-      if (is_external(ZHI)) then
-         do i = coarse%is+1, coarse%ie-1
-            do j = coarse%js+1, coarse%je-1
-               fine%bnd_z(-fine%is+2*i,  -fine%js+2*j,  HI) =sum(pp(:,:,1,1) * coarse%bnd_z(i-1:i+1,j-1:j+1,HI))
-               fine%bnd_z(-fine%is+2*i+1,-fine%js+2*j,  HI) =sum(pp(:,:,2,1) * coarse%bnd_z(i-1:i+1,j-1:j+1,HI))
-               fine%bnd_z(-fine%is+2*i,  -fine%js+2*j+1,HI) =sum(pp(:,:,1,2) * coarse%bnd_z(i-1:i+1,j-1:j+1,HI))
-               fine%bnd_z(-fine%is+2*i+1,-fine%js+2*j+1,HI) =sum(pp(:,:,2,2) * coarse%bnd_z(i-1:i+1,j-1:j+1,HI))
+         if (is_external(ydim, lh)) then
+            do i = coarse%is+1, coarse%ie-1
+               do k = coarse%ks+1, coarse%ke-1
+                  fine%bnd_y(-fine%is+2*i,  -fine%ks+2*k,  lh) =sum(pp(:,:,1,1) * coarse%bnd_y(i-1:i+1,k-1:k+1,lh))
+                  fine%bnd_y(-fine%is+2*i+1,-fine%ks+2*k,  lh) =sum(pp(:,:,2,1) * coarse%bnd_y(i-1:i+1,k-1:k+1,lh))
+                  fine%bnd_y(-fine%is+2*i,  -fine%ks+2*k+1,lh) =sum(pp(:,:,1,2) * coarse%bnd_y(i-1:i+1,k-1:k+1,lh))
+                  fine%bnd_y(-fine%is+2*i+1,-fine%ks+2*k+1,lh) =sum(pp(:,:,2,2) * coarse%bnd_y(i-1:i+1,k-1:k+1,lh))
+               enddo
             enddo
-         enddo
-      endif
+         endif
+
+         if (is_external(zdim, lh)) then
+            do i = coarse%is+1, coarse%ie-1
+               do j = coarse%js+1, coarse%je-1
+                  fine%bnd_z(-fine%is+2*i,  -fine%js+2*j,  lh) =sum(pp(:,:,1,1) * coarse%bnd_z(i-1:i+1,j-1:j+1,lh))
+                  fine%bnd_z(-fine%is+2*i+1,-fine%js+2*j,  lh) =sum(pp(:,:,2,1) * coarse%bnd_z(i-1:i+1,j-1:j+1,lh))
+                  fine%bnd_z(-fine%is+2*i,  -fine%js+2*j+1,lh) =sum(pp(:,:,1,2) * coarse%bnd_z(i-1:i+1,j-1:j+1,lh))
+                  fine%bnd_z(-fine%is+2*i+1,-fine%js+2*j+1,lh) =sum(pp(:,:,2,2) * coarse%bnd_z(i-1:i+1,j-1:j+1,lh))
+               enddo
+            enddo
+         endif
+      enddo
 
    end subroutine prolong_ext_bnd2
 
@@ -757,7 +683,7 @@ contains
    subroutine img_mass2moments
 
       use dataio_pub,    only: die
-      use multigridvars, only: is_external, XLO, XHI, YLO, YHI, ZLO, ZHI
+      use multigridvars, only: is_external
       use mpisetup,      only: comm3d, ierr, geometry_type
       use constants,     only: xdim, ydim, zdim, GEO_XYZ, GEO_RPZ, LO, HI
       use mpi,           only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_SUM, MPI_MIN, MPI_MAX, MPI_IN_PLACE
@@ -778,32 +704,32 @@ contains
 
       !OPT: try to exchange loops i < j < k -> k < j < i
       ! scan
-      if (is_external(XLO) .or. is_external(XHI)) then
+      if (any(is_external(xdim, :))) then
          if (geometry_type == GEO_RPZ) geofac(:) = [ fbnd_x(LO), fbnd_x(HI) ]
          do j = lmpole%js, lmpole%je
             do k = lmpole%ks, lmpole%ke
-               if (is_external(XLO) .and. (geometry_type /= GEO_RPZ .or. .not. zaxis_inside)) &
-                    &                call point2moments(lmpole%bnd_x(j, k, LO) *lmpole%dyz*geofac(LO),  fbnd_x(LO) -CoM(xdim), lmpole%y(j)-CoM(ydim),  lmpole%z(k)-CoM(zdim))
-               if (is_external(XHI)) call point2moments(lmpole%bnd_x(j, k, HI)*lmpole%dyz*geofac(HI), fbnd_x(HI)-CoM(xdim), lmpole%y(j)-CoM(ydim),  lmpole%z(k)-CoM(zdim))
+               if (is_external(xdim, LO) .and. (geometry_type /= GEO_RPZ .or. .not. zaxis_inside)) &
+                    &                     call point2moments(lmpole%bnd_x(j, k, LO)*lmpole%dyz*geofac(LO), fbnd_x(LO)-CoM(xdim), lmpole%y(j)-CoM(ydim), lmpole%z(k)-CoM(zdim))
+               if (is_external(xdim, HI)) call point2moments(lmpole%bnd_x(j, k, HI)*lmpole%dyz*geofac(HI), fbnd_x(HI)-CoM(xdim), lmpole%y(j)-CoM(ydim), lmpole%z(k)-CoM(zdim))
             enddo
          enddo
       endif
 
-      if (is_external(YLO) .or. is_external(YHI)) then
+      if (any(is_external(ydim, :))) then
          do i = lmpole%is, lmpole%ie
             do k = lmpole%ks, lmpole%ke
-               if (is_external(YLO)) call point2moments(lmpole%bnd_y(i, k, LO) *lmpole%dxz, lmpole%x(i)-CoM(xdim),  fbnd_y(LO) -CoM(ydim), lmpole%z(k)-CoM(zdim))
-               if (is_external(YHI)) call point2moments(lmpole%bnd_y(i, k, HI)*lmpole%dxz, lmpole%x(i)-CoM(xdim),  fbnd_y(HI)-CoM(ydim), lmpole%z(k)-CoM(zdim))
+               if (is_external(ydim, LO)) call point2moments(lmpole%bnd_y(i, k, LO)*lmpole%dxz, lmpole%x(i)-CoM(xdim), fbnd_y(LO)-CoM(ydim), lmpole%z(k)-CoM(zdim))
+               if (is_external(ydim, HI)) call point2moments(lmpole%bnd_y(i, k, HI)*lmpole%dxz, lmpole%x(i)-CoM(xdim), fbnd_y(HI)-CoM(ydim), lmpole%z(k)-CoM(zdim))
             enddo
          enddo
       endif
 
-      if (is_external(ZLO) .or. is_external(ZHI)) then
+      if (any(is_external(zdim, :))) then
          do i = lmpole%is, lmpole%ie
             if (geometry_type == GEO_RPZ) geofac(LO) = lmpole%x(i)
             do j = lmpole%js, lmpole%je
-               if (is_external(ZLO)) call point2moments(lmpole%bnd_z(i, j, LO) *lmpole%dxy*geofac(LO), lmpole%x(i)-CoM(xdim),  lmpole%y(j)-CoM(ydim),  fbnd_z(LO) -CoM(zdim))
-               if (is_external(ZHI)) call point2moments(lmpole%bnd_z(i, j, HI)*lmpole%dxy*geofac(LO), lmpole%x(i)-CoM(xdim),  lmpole%y(j)-CoM(ydim),  fbnd_z(HI)-CoM(zdim))
+               if (is_external(zdim, LO)) call point2moments(lmpole%bnd_z(i, j, LO)*lmpole%dxy*geofac(LO), lmpole%x(i)-CoM(xdim), lmpole%y(j)-CoM(ydim), fbnd_z(LO)-CoM(zdim))
+               if (is_external(zdim, HI)) call point2moments(lmpole%bnd_z(i, j, HI)*lmpole%dxy*geofac(LO), lmpole%x(i)-CoM(xdim), lmpole%y(j)-CoM(ydim), fbnd_z(HI)-CoM(zdim))
             enddo
          enddo
       endif
@@ -933,7 +859,7 @@ contains
 
       use dataio_pub,      only: die
       use constants,       only: xdim, ydim, zdim, GEO_XYZ, GEO_RPZ, LO, HI
-      use multigridvars,   only: is_external, XLO, XHI, YLO, YHI, ZLO, ZHI
+      use multigridvars,   only: is_external
       use mpisetup,        only: geometry_type
 
       implicit none
@@ -942,30 +868,30 @@ contains
 
       if (geometry_type /= GEO_XYZ .and. any(CoM(xdim:zdim) /= 0.)) call die("[multipole:img_mass2moments] CoM not allowed for non-cartesian geometry")
 
-      if (is_external(XLO) .or. is_external(XHI)) then
+      if (any(is_external(xdim, :))) then
          do j = lmpole%js, lmpole%je
             do k = lmpole%ks, lmpole%ke
-               if (is_external(XLO) .and. (geometry_type /= GEO_RPZ .or. .not. zaxis_inside)) &
-                    &                call moments2pot(lmpole%bnd_x(j, k, LO),  fbnd_x(LO) -CoM(xdim), lmpole%y(j)-CoM(ydim),  lmpole%z(k)-CoM(zdim))
-               if (is_external(XHI)) call moments2pot(lmpole%bnd_x(j, k, HI), fbnd_x(HI)-CoM(xdim), lmpole%y(j)-CoM(ydim),  lmpole%z(k)-CoM(zdim))
+               if (is_external(xdim, LO) .and. (geometry_type /= GEO_RPZ .or. .not. zaxis_inside)) &
+                    &                     call moments2pot(lmpole%bnd_x(j, k, LO), fbnd_x(LO)-CoM(xdim), lmpole%y(j)-CoM(ydim), lmpole%z(k)-CoM(zdim))
+               if (is_external(xdim, HI)) call moments2pot(lmpole%bnd_x(j, k, HI), fbnd_x(HI)-CoM(xdim), lmpole%y(j)-CoM(ydim), lmpole%z(k)-CoM(zdim))
             enddo
          enddo
       endif
 
-      if (is_external(YLO) .or. is_external(YHI)) then
+      if (any(is_external(ydim, :))) then
          do i = lmpole%is, lmpole%ie
             do k = lmpole%ks, lmpole%ke
-               if (is_external(YLO)) call moments2pot(lmpole%bnd_y(i, k, LO),  lmpole%x(i)-CoM(xdim),  fbnd_y(LO) -CoM(ydim), lmpole%z(k)-CoM(zdim))
-               if (is_external(YHI)) call moments2pot(lmpole%bnd_y(i, k, HI), lmpole%x(i)-CoM(xdim),  fbnd_y(HI)-CoM(ydim), lmpole%z(k)-CoM(zdim))
+               if (is_external(ydim, LO)) call moments2pot(lmpole%bnd_y(i, k, LO), lmpole%x(i)-CoM(xdim), fbnd_y(LO)-CoM(ydim), lmpole%z(k)-CoM(zdim))
+               if (is_external(ydim, HI)) call moments2pot(lmpole%bnd_y(i, k, HI), lmpole%x(i)-CoM(xdim), fbnd_y(HI)-CoM(ydim), lmpole%z(k)-CoM(zdim))
             enddo
          enddo
       endif
 
-      if (is_external(ZLO) .or. is_external(ZHI)) then
+      if (any(is_external(zdim, :))) then
          do i = lmpole%is, lmpole%ie
             do j = lmpole%js, lmpole%je
-               if (is_external(ZLO)) call moments2pot(lmpole%bnd_z(i, j, LO),  lmpole%x(i)-CoM(xdim),  lmpole%y(j)-CoM(ydim),  fbnd_z(LO) -CoM(zdim))
-               if (is_external(ZHI)) call moments2pot(lmpole%bnd_z(i, j, HI), lmpole%x(i)-CoM(xdim),  lmpole%y(j)-CoM(ydim),  fbnd_z(HI)-CoM(zdim))
+               if (is_external(zdim, LO)) call moments2pot(lmpole%bnd_z(i, j, LO), lmpole%x(i)-CoM(xdim), lmpole%y(j)-CoM(ydim), fbnd_z(LO)-CoM(zdim))
+               if (is_external(zdim, HI)) call moments2pot(lmpole%bnd_z(i, j, HI), lmpole%x(i)-CoM(xdim), lmpole%y(j)-CoM(ydim), fbnd_z(HI)-CoM(zdim))
             enddo
          enddo
       endif

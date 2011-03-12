@@ -77,8 +77,7 @@ contains
 
       use grid,                only: cg, D_x, D_y, D_z
       use multigridvars,       only: lvl, dom_lvl, level_max, level_min, level_gb, roof, base, gb, gb_cartmap, mg_nb, ngridvars, correction, &
-           &                         is_external, periodic_bnd_cnt, non_periodic_bnd_cnt, XLO, XHI, YLO, YHI, ZLO, ZHI, &
-           &                         ord_prolong, ord_prolong_face, stdout, verbose_vcycle, tot_ts
+           &                         is_external, periodic_bnd_cnt, non_periodic_bnd_cnt, ord_prolong, ord_prolong_face, stdout, verbose_vcycle, tot_ts
       use mpi,                 only: MPI_INTEGER, MPI_LOGICAL
       use mpisetup,            only: comm, comm3d, ierr, proc, master, slave, nproc, has_dir, psize, buffer_dim, ibuff, lbuff, dom, eff_dim, geometry_type
       use multigridhelpers,    only: mg_write_log, dirtyH, do_ascii_dump, dirty_debug, multidim_code_3D
@@ -326,18 +325,12 @@ contains
 
       ! mark external faces
       !> \deprecated BEWARE The checks may not work correctly for shear and corner boundaries
-      is_external(:) = .false.
-
-      if (gb_cartmap(proc)%proc(xdim) == 0             .and. (cg%bnd(xdim, LO) /= BND_MPI .and. cg%bnd(xdim, LO) /= BND_PER)) is_external(XLO) = .true.
-      if (gb_cartmap(proc)%proc(xdim) == psize(xdim)-1 .and. (cg%bnd(xdim, HI) /= BND_MPI .and. cg%bnd(xdim, HI) /= BND_PER)) is_external(XHI) = .true.
-      if (gb_cartmap(proc)%proc(ydim) == 0             .and. (cg%bnd(ydim, LO) /= BND_MPI .and. cg%bnd(ydim, LO) /= BND_PER)) is_external(YLO) = .true.
-      if (gb_cartmap(proc)%proc(ydim) == psize(ydim)-1 .and. (cg%bnd(ydim, HI) /= BND_MPI .and. cg%bnd(ydim, HI) /= BND_PER)) is_external(YHI) = .true.
-      if (gb_cartmap(proc)%proc(zdim) == 0             .and. (cg%bnd(zdim, LO) /= BND_MPI .and. cg%bnd(zdim, LO) /= BND_PER)) is_external(ZLO) = .true.
-      if (gb_cartmap(proc)%proc(zdim) == psize(zdim)-1 .and. (cg%bnd(zdim, HI) /= BND_MPI .and. cg%bnd(zdim, HI) /= BND_PER)) is_external(ZHI) = .true.
-
-      if (.not. has_dir(xdim)) is_external(XLO:XHI) = .false.
-      if (.not. has_dir(ydim)) is_external(YLO:YHI) = .false.
-      if (.not. has_dir(zdim)) is_external(ZLO:ZHI) = .false.
+      is_external(:, :) = .false.
+      do j=xdim, zdim
+         if (gb_cartmap(proc)%proc(j) == 0          .and. (cg%bnd(j, LO) /= BND_MPI .and. cg%bnd(j, LO) /= BND_PER)) is_external(j, LO) = .true.
+         if (gb_cartmap(proc)%proc(j) == psize(j)-1 .and. (cg%bnd(j, HI) /= BND_MPI .and. cg%bnd(j, HI) /= BND_PER)) is_external(j, HI) = .true.
+         if (.not. has_dir(j)) is_external(j, :) = .false.
+      enddo
 
 #ifdef GRAV
       call init_multigrid_grav_post(mb_alloc)

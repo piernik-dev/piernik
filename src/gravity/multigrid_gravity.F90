@@ -755,9 +755,9 @@ contains
       use dataio_pub,         only: die
       use multigridhelpers,   only: set_dirty, check_dirty
       use multigridbasefuncs, only: substract_average
-      use multigridvars,      only: roof, source, level_max, is_external, bnd_periodic, bnd_dirichlet, bnd_givenval, XLO, XHI, YLO, YHI, ZLO, ZHI
+      use multigridvars,      only: roof, source, level_max, is_external, bnd_periodic, bnd_dirichlet, bnd_givenval
       use mpisetup,           only: geometry_type
-      use constants,          only: GEO_RPZ, LO, HI
+      use constants,          only: GEO_RPZ, LO, HI, xdim, ydim, zdim
 
       implicit none
 
@@ -783,56 +783,56 @@ contains
                  &         roof%mgvar(roof%is:roof%ie, roof%js:roof%je, roof%ks:roof%ke, source) - fpiG * jeans_d0 ! remove density bias
 #endif /* JEANS_PROBLEM */
          case (bnd_givenval) ! convert potential into a layer of imaginary mass (subtract second derivative normal to computational domain boundary)
-            if (is_external(XLO)) then
+            if (is_external(xdim, LO)) then
                fac = 2. * roof%idx2 / fpiG
                if (geometry_type == GEO_RPZ .and. roof%x(roof%is) /= 0.) fac = fac - 1./(roof%dx * roof%x(roof%is) * fpiG) !> BEWARE is it roof%x(ie), roof%x(ie+1) or something in the middle?
-               roof%mgvar(roof%is,         roof%js:roof%je, roof%ks:roof%ke, source) = &
-                    &                roof%mgvar(roof%is,         roof%js:roof%je, roof%ks:roof%ke, source) - &
-                    &                roof%bnd_x(                 roof%js:roof%je, roof%ks:roof%ke, LO)  * fac
+               roof%mgvar       (roof%is, roof%js:roof%je, roof%ks:roof%ke, source) = &
+                    & roof%mgvar(roof%is, roof%js:roof%je, roof%ks:roof%ke, source) - &
+                    & roof%bnd_x(         roof%js:roof%je, roof%ks:roof%ke, LO) * fac
             endif
-            if (is_external(XHI)) then
+            if (is_external(xdim, HI)) then
                fac = 2. * roof%idx2 / fpiG
-               if (geometry_type == GEO_RPZ .and. roof%x(roof%ie) /= 0.) fac = fac - 1./ (roof%dx * roof%x(roof%ie) * fpiG) !> BEWARE is it roof%x(ie), roof%x(ie+1) or something in the middle?
-               roof%mgvar(        roof%ie, roof%js:roof%je, roof%ks:roof%ke, source) = &
-                    &                roof%mgvar(        roof%ie, roof%js:roof%je, roof%ks:roof%ke, source) - &
-                    &                roof%bnd_x(                 roof%js:roof%je, roof%ks:roof%ke, HI) * fac
+               if (geometry_type == GEO_RPZ .and. roof%x(roof%ie) /= 0.) fac = fac - 1./(roof%dx * roof%x(roof%ie) * fpiG) !> BEWARE is it roof%x(ie), roof%x(ie+1) or something in the middle?
+               roof%mgvar       (roof%ie, roof%js:roof%je, roof%ks:roof%ke, source) = &
+                    & roof%mgvar(roof%ie, roof%js:roof%je, roof%ks:roof%ke, source) - &
+                    & roof%bnd_x(         roof%js:roof%je, roof%ks:roof%ke, HI) * fac
             endif
-            if (is_external(YLO)) then
+            if (is_external(ydim, LO)) then
                if (geometry_type == GEO_RPZ) then
                   do i = roof%is, roof%ie
                      if (roof%x(i) /= 0.) then
                         roof%mgvar       (i, roof%js, roof%ks:roof%ke, source) = &
                              & roof%mgvar(i, roof%js, roof%ks:roof%ke, source) - &
-                             & roof%bnd_y(i,          roof%ks:roof%ke, LO)    * 2. * roof%idy2 / fpiG / roof%x(i)**2
+                             & roof%bnd_y(i,          roof%ks:roof%ke, LO) * 2. * roof%idy2 / fpiG / roof%x(i)**2
                      endif
                   enddo
                else
-                  roof%mgvar(roof%is:roof%ie, roof%js,         roof%ks:roof%ke, source) = &
-                       &                roof%mgvar(roof%is:roof%ie, roof%js,         roof%ks:roof%ke, source) - &
-                       &                roof%bnd_y(roof%is:roof%ie,                  roof%ks:roof%ke, LO)  * 2. * roof%idy2 / fpiG
+                  roof%mgvar       (roof%is:roof%ie, roof%js, roof%ks:roof%ke, source) = &
+                       & roof%mgvar(roof%is:roof%ie, roof%js, roof%ks:roof%ke, source) - &
+                       & roof%bnd_y(roof%is:roof%ie,          roof%ks:roof%ke, LO) * 2. * roof%idy2 / fpiG
                endif
             endif
-            if (is_external(YHI)) then
+            if (is_external(ydim, HI)) then
                if (geometry_type == GEO_RPZ) then
                   do i = roof%is, roof%ie
                      if (roof%x(i) /= 0.) then
                         roof%mgvar       (i, roof%je, roof%ks:roof%ke, source) = &
                              & roof%mgvar(i, roof%je, roof%ks:roof%ke, source) - &
-                             & roof%bnd_y(i,          roof%ks:roof%ke, HI)    * 2. * roof%idy2 / fpiG / roof%x(i)**2
+                             & roof%bnd_y(i,          roof%ks:roof%ke, HI) * 2. * roof%idy2 / fpiG / roof%x(i)**2
                      endif
                   enddo
                else
-                  roof%mgvar(roof%is:roof%ie,         roof%je, roof%ks:roof%ke, source) = &
-                       &                roof%mgvar(roof%is:roof%ie,         roof%je, roof%ks:roof%ke, source) - &
-                       &                roof%bnd_y(roof%is:roof%ie,                  roof%ks:roof%ke, HI) * 2. * roof%idy2 / fpiG
+                  roof%mgvar       (roof%is:roof%ie, roof%je, roof%ks:roof%ke, source) = &
+                       & roof%mgvar(roof%is:roof%ie, roof%je, roof%ks:roof%ke, source) - &
+                       & roof%bnd_y(roof%is:roof%ie,          roof%ks:roof%ke, HI) * 2. * roof%idy2 / fpiG
                endif
             endif
-            if (is_external(ZLO)) roof%mgvar(roof%is:roof%ie, roof%js:roof%je, roof%ks,         source) = &
-                 &                roof%mgvar(roof%is:roof%ie, roof%js:roof%je, roof%ks,         source) - &
-                 &                roof%bnd_z(roof%is:roof%ie, roof%js:roof%je,                  LO)  * 2. * roof%idz2 / fpiG
-            if (is_external(ZHI)) roof%mgvar(roof%is:roof%ie, roof%js:roof%je,         roof%ke, source) = &
-                 &                roof%mgvar(roof%is:roof%ie, roof%js:roof%je,         roof%ke, source) - &
-                 &                roof%bnd_z(roof%is:roof%ie, roof%js:roof%je,                  HI) * 2. * roof%idz2 / fpiG
+            if (is_external(zdim, LO)) roof%mgvar(roof%is:roof%ie, roof%js:roof%je, roof%ks, source) = &
+                 &                     roof%mgvar(roof%is:roof%ie, roof%js:roof%je, roof%ks, source) - &
+                 &                     roof%bnd_z(roof%is:roof%ie, roof%js:roof%je,          LO) * 2. * roof%idz2 / fpiG
+            if (is_external(zdim, HI)) roof%mgvar(roof%is:roof%ie, roof%js:roof%je, roof%ke, source) = &
+                 &                     roof%mgvar(roof%is:roof%ie, roof%js:roof%je, roof%ke, source) - &
+                 &                     roof%bnd_z(roof%is:roof%ie, roof%js:roof%je,          HI) * 2. * roof%idz2 / fpiG
             !> \todo compactify the above mess
          case default
             call die("[multigrid_gravity:init_source] Unknown boundary type")
