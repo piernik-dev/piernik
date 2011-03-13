@@ -148,11 +148,8 @@ contains
 
       use constants,     only: DST
       use fluidindex,    only: flind
-      use dataio_pub,    only: warn
+      use dataio_pub,    only: warn, printinfo
       use mpisetup,      only: master
-#ifdef VERBOSE
-      use dataio_pub,    only: printinfo
-#endif /* VERBOSE */
 
       implicit none
 
@@ -161,9 +158,7 @@ contains
 
       if (dragc_gas_dust > 0.0 .or. collision_factor > 0.0) then
          if (associated(flind%dst)) then
-#ifdef VERBOSE
             if (master) call printinfo("[interactions:interactions_grace_passed] Initializing aerodynamical drag")
-#endif /* VERBOSE */
             allocate(collfaq(flind%fluids,flind%fluids))
             collfaq = collision_factor
             collfaq(flind%dst%pos,:) = dragc_gas_dust
