@@ -125,9 +125,9 @@ module constants
    end enum
 
    ! Fluid type index, used in flind%tag
-   integer, parameter :: ION = 1                  !< ionized fluid
-   integer, parameter :: NEU = ION + 1            !< neutral fluid
-   integer, parameter :: DST = NEU + 1            !< dust fluid
+   enum, bind(C)
+      enumerator :: ION = 1, NEU, DST
+   end enum
 
    ! misc
    integer, parameter :: stdout = output_unit
