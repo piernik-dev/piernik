@@ -89,6 +89,7 @@ module fluidtypes
          procedure :: set_cs  => update_sound_speed
          procedure :: set_gam => update_adiabatic_index
          procedure :: info    => printinfo_component_fluid
+         procedure :: get_tag
    end type component_fluid
 
    type :: var_numbers
@@ -134,6 +135,24 @@ module fluidtypes
          this%cs  = new_cs
          this%cs2 = new_cs**2
       end subroutine update_sound_speed
+
+      function get_tag(this) result(tag)
+         use constants, only: ION, NEU, DST, idlen
+         implicit none
+         class(component_fluid) :: this
+         character(len=idlen)   :: tag
+
+         select case (this%tag)
+            case (ION)
+               tag = "ION"
+            case (NEU)
+               tag = "NEU"
+            case (DST)
+               tag = "DST"
+            case default
+               tag = "---"
+         end select
+      end function get_tag
 
       subroutine printinfo_component_fluid(this)
          use dataio_pub,  only: msg, printinfo
