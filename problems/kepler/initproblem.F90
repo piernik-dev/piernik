@@ -503,32 +503,32 @@ contains
       if (associated(p3d)) nullify(p3d)
       do i = lbound(den0,1), ubound(den0,1)
          if (allocated(den0)) then
-            write(dname,'(2a)') flind%all_fluids(i)%tag, '_den0'
+            write(dname,'(2a)') flind%all_fluids(i)%get_tag(), '_den0'
             p3d => den0(i, :, :, :)
             call write_arr_to_restart(file_id, p3d, AT_NO_B, dname)
             nullify(p3d)
          endif
          if (allocated(mtx0)) then
-            write(dname,'(2a)') flind%all_fluids(i)%tag, '_mtx0'
+            write(dname,'(2a)') flind%all_fluids(i)%get_tag(), '_mtx0'
             p3d => mtx0(i, :, :, :)
             call write_arr_to_restart(file_id, p3d, AT_NO_B, dname)
             nullify(p3d)
          endif
          if (allocated(mty0)) then
-            write(dname,'(2a)') flind%all_fluids(i)%tag, '_mty0'
+            write(dname,'(2a)') flind%all_fluids(i)%get_tag(), '_mty0'
             p3d => mty0(i, :, :, :)
             call write_arr_to_restart(file_id, p3d, AT_NO_B, dname)
             nullify(p3d)
          endif
          if (allocated(mtz0)) then
-            write(dname,'(2a)') flind%all_fluids(i)%tag, '_mtz0'
+            write(dname,'(2a)') flind%all_fluids(i)%get_tag(), '_mtz0'
             p3d => mtz0(i, :, :, :)
             call write_arr_to_restart(file_id, p3d, AT_NO_B, dname)
             nullify(p3d)
          endif
          if (allocated(ene0)) then
-            write(dname,'(2a)') flind%all_fluids(i)%tag, '_ene0'
-            p3d => den0(i, :, :, :)
+            write(dname,'(2a)') flind%all_fluids(i)%get_tag(), '_ene0'
+            p3d => ene0(i, :, :, :)
             call write_arr_to_restart(file_id, p3d, AT_NO_B, dname)
             nullify(p3d)
          endif
@@ -560,27 +560,27 @@ contains
       if (.not.allocated(ene0)) allocate(ene0(flind%fluids, cg%nx, cg%ny, cg%nz))
 
       do i=1, flind%fluids
-         write(dname,'(2a)') flind%all_fluids(i)%tag, '_den0'
+         write(dname,'(2a)') flind%all_fluids(i)%get_tag(), '_den0'
          if (.not.associated(p3d)) p3d => den0(i,:,:,:)
          call read_arr_from_restart(file_id, p3d, AT_NO_B, dname)
          if (associated(p3d)) nullify(p3d)
 
-         write(dname,'(2a)') flind%all_fluids(i)%tag, '_mtx0'
+         write(dname,'(2a)') flind%all_fluids(i)%get_tag(), '_mtx0'
          if (.not.associated(p3d)) p3d => mtx0(i,:,:,:)
          call read_arr_from_restart(file_id, p3d, AT_NO_B, dname)
          if (associated(p3d)) nullify(p3d)
 
-         write(dname,'(2a)') flind%all_fluids(i)%tag, '_mty0'
+         write(dname,'(2a)') flind%all_fluids(i)%get_tag(), '_mty0'
          if (.not.associated(p3d)) p3d => mty0(i,:,:,:)
          call read_arr_from_restart(file_id, p3d, AT_NO_B, dname)
          if (associated(p3d)) nullify(p3d)
 
-         write(dname,'(2a)') flind%all_fluids(i)%tag, '_mtz0'
+         write(dname,'(2a)') flind%all_fluids(i)%get_tag(), '_mtz0'
          if (.not.associated(p3d)) p3d => mtz0(i,:,:,:)
          call read_arr_from_restart(file_id, p3d, AT_NO_B, dname)
          if (associated(p3d)) nullify(p3d)
 
-         write(dname,'(2a)') flind%all_fluids(i)%tag, '_ene0'
+         write(dname,'(2a)') flind%all_fluids(i)%get_tag(), '_ene0'
          if (.not.associated(p3d)) p3d => ene0(i,:,:,:)
          call read_arr_from_restart(file_id, p3d, AT_NO_B, dname)
          if (associated(p3d)) nullify(p3d)
