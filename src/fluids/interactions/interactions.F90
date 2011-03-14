@@ -229,7 +229,7 @@ contains
 
    end function fluid_interactions_aero_drag_ep
 
-   subroutine balsara_implicit_interactions(u1,u0,istep)
+   subroutine balsara_implicit_interactions(u1,u0,vx,istep)
       ! Balsara Dinshaw S., Tilley David A., Rettig Terrence, Brittain Sean D. MNRAS (2009) 397: 24.
       ! Tilley, David A., Balsara, Dinshaw S. MNRAS (2008) 389: 1058.
       use fluidindex, only: iarr_all_dn, iarr_all_mx, flind
@@ -237,6 +237,7 @@ contains
       implicit none
       real, dimension(:,:), intent(inout) :: u1
       real, dimension(:,:), intent(in)    :: u0
+      real, dimension(:,:), intent(in)    :: vx
       integer, intent(in)                 :: istep
 
       real, dimension(flind%fluids,size(u1,2)) :: vprim
@@ -244,14 +245,12 @@ contains
 
       ! BEWARE: this bit assumes that we have 2 fluids && u1 == u0 - \grad F
       ! \todo:
-      !  1) Calculate drag
       !  2) half-time step should be \le \frac{1}{2}\frac{c_s}{drag * \rho\prim_? |v'_d - v'_g|}
       !  3) what if not isothermal?
       !  4) remove hardcoded integers
 
-      drag(:) = 10.0 ! BEWARE: CHEAT!
-
-      drag(:) = drag(:)*dt*0.5
+      if (epstein_factor(flind%neu%pos) <= 0.0) return
+      drag(:) = dt*0.5 / (grain_size * grain_dens) * sqrt( flind%neu%cs2 + abs( vx(1,:) - vx(2,:) )**2)
 
       delta(:) = 1.0 + drag(:) * (u1(iarr_all_dn(1),:) + u1(iarr_all_dn(2),:))
       delta(:) = 1./delta(:)
