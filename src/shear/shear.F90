@@ -41,7 +41,7 @@ module shear
    public :: csvk, delj, dely, eps, eta_gas, global_gradP, init_shear, omega, qshear, yshift, shear_acc
 #ifdef FFTW
    public  :: unshear_fft
-#endif FFTW
+#endif /* FFTW */
 
    include "fftw3.f"
 

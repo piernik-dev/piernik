@@ -33,19 +33,19 @@ module fluids_pub
 
 #ifdef IONIZED
    logical, protected                         :: has_ion = .true.
-#else
+#else /* IONIZED */
    logical, protected                         :: has_ion = .false.
-#endif
+#endif /* !IONIZED */
 
 #ifdef NEUTRAL
    logical, protected                         :: has_neu = .true.
-#else
+#else /* NEUTRAL */
    logical, protected                         :: has_neu = .false.
-#endif
+#endif /* !NEUTRAL */
 
 #ifdef DUST
    logical, protected                         :: has_dst = .true.
-#else
+#else /* DUST */
    logical, protected                         :: has_dst = .false.
-#endif
+#endif /* !DUST */
 end module fluids_pub
