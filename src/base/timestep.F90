@@ -139,7 +139,7 @@ contains
 
 #ifndef BALSARA
       dt = min(dt,timestep_interactions())
-#endif /* BALSARA)
+#endif /* BALSARA */
 
       ! finally apply some sanity factors
       if (nstep <=1) then
