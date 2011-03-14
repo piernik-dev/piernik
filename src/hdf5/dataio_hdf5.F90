@@ -905,7 +905,7 @@ contains
 #endif /* ISO_LOCAL */
 #ifdef GRAV
       pa3d => gp
-      call write_arr_to_restart(file_id, pa3d, AT_NO_B, "gp")
+      call write_arr_to_restart(file_id, pa3d, AT_OUT_B, "gp")
       nullify(pa3d)
 #endif /* GRAV */
       if (associated(pa3d)) nullify(pa3d)
@@ -1280,7 +1280,7 @@ contains
            &         dimsf(ir:), error, file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
 
       if (error /= 0) then
-         write(msg, '(3a)') "[dataio_hdf5:read_3darr_from_restart] Reading dataset '",dname,"' failed."
+         write(msg, '(3a)') "[dataio_hdf5:read_4darr_from_restart] Reading dataset '",dname,"' failed."
          call die(msg)
       endif
 
@@ -1291,7 +1291,7 @@ contains
 
    subroutine read_3darr_from_restart(file_id, pa3d, area_type, dname)
 
-      use constants,  only: xdim, ydim, zdim, ndims
+      use constants,  only: xdim, ydim, zdim, ndims, AT_NO_B
       use dataio_pub, only: msg, die
       use grid,       only: arr3d_boundaries
       use hdf5,       only: HID_T, HSIZE_T, SIZE_T, h5dread_f, H5T_NATIVE_DOUBLE
@@ -1337,7 +1337,7 @@ contains
       call clean_arr_read(memspace, plist_id, filespace, dset_id)
 
       ! Originally the pa3d array was written with the guardcells. The internal guardcells will be exchanged but the external ones are lost.
-      call arr3d_boundaries(pa3d)
+      if (area_type == AT_NO_B) call arr3d_boundaries(pa3d)
 
    end subroutine read_3darr_from_restart
 
@@ -1461,7 +1461,7 @@ contains
 #endif /* ISO_LOCAL */
 #ifdef GRAV
       p3d => gp(:,:,:)
-      call read_arr_from_restart(file_id, p3d, AT_NO_B, "gp")
+      call read_arr_from_restart(file_id, p3d, AT_OUT_B, "gp")
       nullify(p3d)
 #endif /* GRAV */
 
