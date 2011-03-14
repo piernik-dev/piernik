@@ -392,11 +392,11 @@ contains
 
 !-----------------------------------------------------------------------------
 
-   subroutine arr3d_boundaries(pa3d)
+   subroutine arr3d_boundaries(pa3d, area_type)
 
       use dataio_pub,    only: die
       use mpi,           only: MPI_STATUS_SIZE, MPI_REQUEST_NULL
-      use constants,     only: ARR, xdim, ydim, zdim, LO, HI, BND, DOM, BND_PER, BND_MPI, BND_SHE, BND_COR
+      use constants,     only: ARR, xdim, ydim, zdim, LO, HI, BND, DOM, BND_PER, BND_MPI, BND_SHE, BND_COR, AT_NO_B
       use mpisetup,      only: comm3d, ierr, has_dir, psize, procxl, procyl, proczl, procxr, procyr, proczr
 
       implicit none
@@ -407,6 +407,7 @@ contains
       integer, dimension(nreq)                    :: req3d
       integer, dimension(MPI_STATUS_SIZE, nreq)   :: status3d
       integer                                     :: i, d, lh, p
+      integer, intent(in), optional               :: area_type
 
       !> \todo fill corners with big_float ?
 
@@ -418,6 +419,9 @@ contains
 
                select case (cg%bnd(d, lh))
                   case (BND_PER)
+                     if (present(area_type)) then
+                        if (area_type /= AT_NO_B) cycle
+                     endif
                      do i = 1, ceiling(cg%nb/real(cg%n_b(d))) ! Repeating is important for domains that are narrower than their guardcells (e.g. cg%n_b(d) = 2)
                         select case (2*d+lh)
                            case (2*xdim+LO)
@@ -458,6 +462,9 @@ contains
                   case (BND_SHE, BND_COR) !> \todo move appropriate code from poissonsolver::poisson_solve or do nothing. or die until someone really needs SHEAR.
                      call die("[mpisetup:arr3d_boundaries] 'she' not implemented")
                   case default ! Set gradient == 0 on the external boundaries
+                     if (present(area_type)) then
+                        if (area_type /= AT_NO_B) cycle
+                     endif
                      do i = 1, cg%nb
                         select case (2*d+lh)
                            case (2*xdim+LO)
