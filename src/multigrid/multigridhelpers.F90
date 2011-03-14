@@ -202,7 +202,7 @@ contains
       at = 0.
       if (vs%count > 0) at = sum(vs%time(1:vs%count))/vs%count ! average V-cycle time on PE# 0
 
-      write(msg, '(a,i3,1x,2a,f7.3,a,i3,a,f7.3,a,f11.9,a)') &
+      write(msg, '(a,i3,1x,2a,f7.3,a,i3,a,f7.3,a,f12.9,a)') &
            "[multigrid] ", vs%count, trim(vs%cprefix), "cycles, dt_wall=", vs%time(0), " +", vs%count, "*", at, ", norm/rhs= ", vs%norm_final, " : "
 
       do i = 0, min(vs%count, ubound(vs%factor, 1))
@@ -211,7 +211,7 @@ contains
          else if (vs%factor(i) < 1.0e7) then
             write(normred, '(f8.0)') vs%factor(i)
          else
-            write(normred, '(es8.2)') vs%factor(i)
+            write(normred, '(es9.2)') vs%factor(i)
          endif
          lm = len_trim(msg)
          if (len(msg) >= lm + 9) msg(lm+2:lm+9) = normred(1:8)
