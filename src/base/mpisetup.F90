@@ -37,7 +37,7 @@ module mpisetup
 
 !   use mpi, only: MPI_STATUS_SIZE
    use types,      only: domain_container
-   use constants,  only: ndims, cbuff_len, bndlen
+   use constants,  only: ndims, cbuff_len
 
    implicit none
 
@@ -65,7 +65,6 @@ module mpisetup
 
    integer               :: comm, comm3d
    integer, dimension(ndims) :: pcoords, coords
-   logical, dimension(ndims) :: periods
    integer               ::   procxl, procxr, procyl, procyr, proczl, proczr, procxyl, procyxl, procxyr, procyxr
    logical, protected, dimension(ndims) :: has_dir   !< .true. for existing directions
    integer, protected    :: eff_dim                  !< effective dimensionality of the simulation
@@ -98,13 +97,12 @@ module mpisetup
    integer, protected :: nyd  !< number of %grid cells in physical domain (without boundary cells) in y-direction (-- || --)
    integer, protected :: nzd  !< number of %grid cells in physical domain (without boundary cells) in z-direction (-- || --)
    integer, protected :: nb   !< number of boundary cells surrounding the physical domain, same for all directions
-   character(len=bndlen) :: bnd_xl     !< type of boundary conditions for the left  x-boundary
-   character(len=bndlen) :: bnd_xr     !< type of boundary conditions for the right x-boundary
-   character(len=bndlen) :: bnd_yl     !< type of boundary conditions for the left  y-boundary
-   character(len=bndlen) :: bnd_yr     !< type of boundary conditions for the right y-boundary
-   character(len=bndlen) :: bnd_zl     !< type of boundary conditions for the left  z-boundary
-   character(len=bndlen) :: bnd_zr     !< type of boundary conditions for the right z-boundary
-   character(len=bndlen) :: bnd_xl_dom, bnd_xr_dom, bnd_yl_dom, bnd_yr_dom, bnd_zl_dom, bnd_zr_dom !< computational domain boundaries
+   character(len=cbuff_len) :: bnd_xl     !< type of boundary conditions for the left  x-boundary
+   character(len=cbuff_len) :: bnd_xr     !< type of boundary conditions for the right x-boundary
+   character(len=cbuff_len) :: bnd_yl     !< type of boundary conditions for the left  y-boundary
+   character(len=cbuff_len) :: bnd_yr     !< type of boundary conditions for the right y-boundary
+   character(len=cbuff_len) :: bnd_zl     !< type of boundary conditions for the left  z-boundary
+   character(len=cbuff_len) :: bnd_zr     !< type of boundary conditions for the right z-boundary
    real    :: xmin                           !< physical domain left x-boundary position
    real    :: xmax                           !< physical domain right x-boundary position
    real    :: ymin                           !< physical domain left y-boundary position
@@ -202,7 +200,7 @@ contains
 !<
    subroutine init_mpi
 
-      use constants,     only: bndlen, cwdlen, xdim, ydim, zdim, big_float, GEO_XYZ, GEO_RPZ, GEO_INVALID
+      use constants,     only: cwdlen, xdim, ydim, zdim, LO, HI, big_float, GEO_XYZ, GEO_RPZ, GEO_INVALID, BND_PER, BND_COR, BND_SHE, BND_REF
       use mpi,           only: MPI_COMM_WORLD, MPI_INFO_NULL, MPI_INFO_NULL, MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION, MPI_LOGICAL, MPI_PROC_NULL
       use dataio_pub,    only: die, printinfo, msg, cwd, ansi_white, ansi_black, warn, tmp_log_file
       use dataio_pub,    only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml  ! QA_WARN required for diff_nml
@@ -227,6 +225,7 @@ contains
       integer :: cwd_status
       logical :: par_file_exist
       logical :: tmp_log_exist
+      integer :: d
 
       dpi = 8*atan(1.0)
 
@@ -433,12 +432,12 @@ contains
          zmax        = rbuff(17)
          dd_unif_quality = rbuff(18)
 
-         bnd_xl     = cbuff(1)(1:bndlen)
-         bnd_xr     = cbuff(2)(1:bndlen)
-         bnd_yl     = cbuff(3)(1:bndlen)
-         bnd_yr     = cbuff(4)(1:bndlen)
-         bnd_zl     = cbuff(5)(1:bndlen)
-         bnd_zr     = cbuff(6)(1:bndlen)
+         bnd_xl     = cbuff(1)
+         bnd_xr     = cbuff(2)
+         bnd_yl     = cbuff(3)
+         bnd_yr     = cbuff(4)
+         bnd_zl     = cbuff(5)
+         bnd_zr     = cbuff(6)
          limiter    = cbuff(7)
          cflcontrol = cbuff(8)
          geometry   = cbuff(9)
@@ -461,6 +460,8 @@ contains
          case default
             geometry_type = GEO_INVALID
       end select
+
+      dom%bnd(:,:) = translate_bnds_to_ints_dom()
 
       ! sanitize domain
       xmno = xmin
@@ -485,10 +486,10 @@ contains
             endif
             if (xmin <= 0.) then
                xmin = 0.
-               if (bnd_xl /= "ref") call warn("[mpisetup:init_mpi] Enforcing bnd_xl = 'ref'.")
-               bnd_xl = "ref"
+               if (dom%bnd(xdim, LO) /= BND_REF) call warn("[mpisetup:init_mpi] Enforcing dom%bnd(xdim, LO) = 'ref'.")
+               dom%bnd(xdim, LO) = BND_REF
             endif
-            if (bnd_xr == "per") call die("[mpisetup:init_mpi] Periodicity in radial direction is not allowed in cylindrical coordinates")
+            if (dom%bnd(xdim, HI) == BND_PER) call die("[mpisetup:init_mpi] Periodicity in radial direction is not allowed in cylindrical coordinates")
          case default
             call die("[mpisetup:init_mpi] Invalid geometry type.")
       end select
@@ -510,13 +511,6 @@ contains
 
       ! set up the global domain
       dom%nb = nb
-
-      dom%bnd_xl_dom = bnd_xl
-      dom%bnd_xr_dom = bnd_xr
-      dom%bnd_yl_dom = bnd_yl
-      dom%bnd_yr_dom = bnd_yr
-      dom%bnd_zl_dom = bnd_zl
-      dom%bnd_zr_dom = bnd_zr
 
       dom%xmin = xmin
       dom%ymin = ymin
@@ -570,31 +564,24 @@ contains
       is_uneven = .false.
       call divide_domain
 
-      if ( (bnd_xl(1:3) == 'cor' .or. bnd_yl(1:3) == 'cor' .or. bnd_xr(1:3) == 'cor' .or. bnd_yr(1:3) == 'cor') .and. &
-           (psize(xdim) /= psize(ydim) .or. dom%n_d(xdim) /= dom%n_d(ydim)) ) then
+      if ( any(dom%bnd(xdim:ydim, LO:HI) == BND_COR) .and. (psize(xdim) /= psize(ydim) .or. dom%n_d(xdim) /= dom%n_d(ydim)) ) then
          write(msg, '(a,4(i4,a))')"[mpisetup:init_mpi] Corner BC require psize(xdim) equal to psize(ydim) and nxd equal to nyd. Detected: [",psize(xdim),",",psize(ydim),&
               &                   "] and [",dom%n_d(xdim),",",dom%n_d(ydim),"]"
          call die(msg)
       endif
+      if (any(dom%bnd(zdim, LO:HI) == BND_COR)) call die("[mpisetup:init_mpi] Corner BC not allowed for z-direction")
 
-      periods(:) = .false.
+      dom%periodic(:) = .false.
 
-      if (bnd_xl(1:3) == 'per' .or. bnd_xr(1:3) == 'per' .or. bnd_xl(1:3) == 'she'  .or. bnd_xr(1:3) == 'she') then
-         periods(xdim) = .true.  ! x periodic
-         if (bnd_xr(1:3) /= bnd_xl(1:3) .and. has_dir(xdim)) call die("[mpisetup:init_mpi] Periodic or shear BC do not match in X-direction")
-      endif
+      do d = xdim, zdim
+         if ((any(dom%bnd(d, LO:HI) == BND_PER) .or. (d==xdim .and. any(dom%bnd(d, LO:HI) == BND_SHE))) .and. has_dir(d)) then
+            dom%periodic(d) = .true.
+            if (dom%bnd(d, LO) /= dom%bnd(d, HI)) call die("[mpisetup:init_mpi] Periodic BC do not match")
+         endif
+      enddo
+      if (any(dom%bnd(ydim:zdim, LO:HI) == BND_SHE)) call die("[mpisetup:init_mpi] Shearing BC not allowed for y- and z-direction")
 
-      if (bnd_yl(1:3) == 'per' .or. bnd_yr(1:3) == 'per') then
-         periods(ydim) = .true.  ! y periodic
-         if (bnd_yr(1:3) /= bnd_yl(1:3) .and. has_dir(ydim)) call die("[mpisetup:init_mpi] Periodic BC do not match in Y-direction")
-      endif
-
-      if (bnd_zl(1:3) == 'per' .or. bnd_zr(1:3) == 'per') then
-         periods(zdim) = .true.  ! z periodic
-         if (bnd_zr(1:3) /= bnd_zl(1:3) .and. has_dir(zdim)) call die("[mpisetup:init_mpi] Periodic BC do not match in Z-direction")
-      endif
-
-      call MPI_Cart_create(comm, ndims, psize, periods, reorder, comm3d, ierr)
+      call MPI_Cart_create(comm, ndims, psize, dom%periodic, reorder, comm3d, ierr)
       call MPI_Cart_coords(comm3d, proc, ndims, pcoords, ierr)
 
 ! Compute neighbors
@@ -603,7 +590,7 @@ contains
       call MPI_Cart_shift(comm3d,1,1,procyl,procyr,ierr)   ! y dim
       call MPI_Cart_shift(comm3d,2,1,proczl,proczr,ierr)   ! z dim
 
-      if (bnd_xl(1:3) == 'cor' .and. bnd_yl(1:3) == 'cor' ) then
+      if (any(dom%bnd(xdim:ydim, LO) == BND_COR)) then
          if (pcoords(xdim) == 0 .and. pcoords(ydim) > 0) then
             coords = (/pcoords(ydim),pcoords(xdim),pcoords(zdim)/)
             call MPI_Cart_rank(comm3d,coords,procxyl,ierr)
@@ -618,7 +605,7 @@ contains
          endif
       endif
 
-      if (bnd_xr(1:3) == 'cor' .and. bnd_yr(1:3) == 'cor' ) then
+      if (any(dom%bnd(xdim:ydim, HI) == BND_COR)) then
          if (pcoords(xdim) == psize(xdim)-1 .and. pcoords(ydim) < psize(ydim)-1) then
             coords = (/pcoords(ydim),pcoords(xdim),pcoords(zdim)/)
             call MPI_Cart_rank(comm3d,coords,procxyr,ierr)
@@ -634,7 +621,7 @@ contains
       endif
 
 #ifdef SHEAR_BND
-      if (psize(ydim) > 1) stop 'Shear-pediodic boundary conditions do not permit psize(ydim) > 1'
+      if (psize(ydim) > 1) call die["[mpisetup:initmpi] Shear-pediodic boundary conditions do not permit psize(ydim) > 1"]
 
 #ifndef FFTW
       if (pcoords(xdim) == 0) then
@@ -1008,7 +995,7 @@ contains
 
 !-----------------------------------------------------------------------------
 !
-!  temporary wrapper
+!  public wrapper
 !
    function translate_bnds_to_ints_dom() result(tab)
 

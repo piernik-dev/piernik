@@ -78,7 +78,6 @@ module constants
    integer, parameter :: fplen = 24                      !< length of buffer for printed FP or integer number
    integer, parameter :: domlen = 16                     !< should be <= cbuff_len
    integer, parameter :: varlen = 4                      !< length of state variable names in hdf files
-   integer, parameter :: bndlen = 4                      !< length of boundary names
    integer, parameter :: idlen  = 3                      !< COMMENT ME
 
    ! simulation state

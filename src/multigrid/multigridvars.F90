@@ -118,8 +118,6 @@ module multigridvars
       enumerator :: bnd_invalid = bnd_periodic - 1                    !< invalid
    end enum
    logical, dimension(xdim:zdim, LO:HI) :: is_external                !< .true. for non-"mpi" local domain boundaries
-   integer :: periodic_bnd_cnt                                        !< counter of periodic boundaries in existing directions
-   integer :: non_periodic_bnd_cnt                                    !< counter of non-periodic boundaries in existing directions
    enum, bind(C)
       enumerator :: extbnd_donothing                                  !< Do not touch external boundaries
       enumerator :: extbnd_zero                                       !< Fill external boundaries with zeroes

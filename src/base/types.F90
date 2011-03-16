@@ -31,7 +31,7 @@
 !<
 module types
 
-   use constants, only: domlen, idlen, bndlen, ndims
+   use constants, only: domlen, idlen, ndims, LO, HI
 
    implicit none
 
@@ -64,13 +64,8 @@ module types
       real    :: zmax                           !< physical domain right z-boundary position
       integer, dimension(ndims) :: n_d          !< number of grid cells in physical domain in x-, y- and z-direction (where equal to 1, the dimension is reduced to a point with no boundary cells)
       integer                   :: nb           !< number of boundary cells surrounding the physical domain, same for all directions
-      character(len=bndlen) :: bnd_xl_dom       !< low-x computational domain boundary
-      character(len=bndlen) :: bnd_xr_dom       !< high-x computational domain boundary
-      character(len=bndlen) :: bnd_yl_dom       !< low-y computational domain boundary
-      character(len=bndlen) :: bnd_yr_dom       !< high-y computational domain boundary
-      character(len=bndlen) :: bnd_zl_dom       !< low-z computational domain boundary
-      character(len=bndlen) :: bnd_zr_dom       !< high-z computational domain boundary
-      !\todo use integer, dimension(ndims, LO:HI) :: bnd , like cg%
+      integer, dimension(ndims, LO:HI) :: bnd  !< type of boundary conditions coded in integers
+      logical, dimension(ndims) :: periodic     !< .true. for periodic and shearing boundary pairs
 
       ! derived parameters
       real    :: Lx                             !< span of the physical domain in x-direction (xmax-xmin)

@@ -77,7 +77,7 @@ contains
 
       use grid,                only: cg, D_x, D_y, D_z
       use multigridvars,       only: lvl, dom_lvl, level_max, level_min, level_gb, roof, base, gb, gb_cartmap, mg_nb, ngridvars, correction, &
-           &                         is_external, periodic_bnd_cnt, non_periodic_bnd_cnt, ord_prolong, ord_prolong_face, stdout, verbose_vcycle, tot_ts
+           &                         is_external, ord_prolong, ord_prolong_face, stdout, verbose_vcycle, tot_ts
       use mpi,                 only: MPI_INTEGER, MPI_LOGICAL
       use mpisetup,            only: comm, comm3d, ierr, proc, master, slave, nproc, has_dir, psize, buffer_dim, ibuff, lbuff, dom, eff_dim, geometry_type
       use multigridhelpers,    only: mg_write_log, dirtyH, do_ascii_dump, dirty_debug, multidim_code_3D
@@ -152,22 +152,6 @@ contains
 
       ngridvars = correction  !< 4 variables are required for basic use of the multigrid solver
       if (eff_dim < 1 .or. eff_dim > 3) call die("[multigrid:init_multigrid] Unsupported number of dimensions.")
-
-      !! \todo move this to mpisetup
-      periodic_bnd_cnt = 0
-      non_periodic_bnd_cnt = 0
-      if (has_dir(xdim)) then
-         call count_periodic(dom%bnd_xl_dom)
-         call count_periodic(dom%bnd_xr_dom)
-      endif
-      if (has_dir(ydim)) then
-         call count_periodic(dom%bnd_yl_dom)
-         call count_periodic(dom%bnd_yr_dom)
-      endif
-      if (has_dir(zdim)) then
-         call count_periodic(dom%bnd_zl_dom)
-         call count_periodic(dom%bnd_zr_dom)
-      endif
 
       if (geometry_type == GEO_RPZ) multidim_code_3D = .true. ! temporarily
 
@@ -347,30 +331,6 @@ contains
       endif
 
    end subroutine init_multigrid
-
-!!$ ============================================================================
-!>
-!! \brief Count periodic boundaries by updating periodic_bnd_cnt and non_periodic_bnd_cnt variables.
-!!
-!! \details This routine is meant to be called for each boundary description string in all existing directions.
-!! \todo pack bnd_{x,y,z}{l,r}_dom into a bnd_dom(xdim:zdim)(LO:HI)  array
-!<
-
-   subroutine count_periodic(bnd_str)
-
-      use multigridvars, only: periodic_bnd_cnt, non_periodic_bnd_cnt
-
-      implicit none
-
-      character(len=*), intent(in) :: bnd_str   !< boundary description string
-
-      if (bnd_str == 'per') then
-         periodic_bnd_cnt = periodic_bnd_cnt + 1
-      else
-         non_periodic_bnd_cnt = non_periodic_bnd_cnt + 1
-      endif
-
-   end subroutine count_periodic
 
 !!$ ============================================================================
 !>
