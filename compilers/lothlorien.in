@@ -3,7 +3,11 @@
 # Make definitions for lothlorien (Fedora 14, x86)
 #
 # System packages:
-#   openmpi, openmpi-devel, hdf5, hdf5-openmpi, hdf5-openmpi-devel, fftw-devel
+#   gcc-4.6.0-0.11.fc15.i686, fftw-devel
+#
+# User-compiled packages:
+#   openmpi --enable-memchecker --with-valgrind --enable-branch-probabilities
+#   hdf5 --enable-fortran --enable-using-memchecker --enable-parallel
 #
 # ~/.bashrc:
 #   export HDF5_USE_SHLIB=yes
@@ -11,7 +15,11 @@
 
 PROG     = piernik
 F90      = h5pfc
-F90FLAGS = -O3 -funroll-loops -fdefault-real-8 -Wall -Wextra -W -std=gnu -fimplicit-none -ffree-line-length-none -fbacktrace -ggdb
+F90FLAGS  = -fdefault-real-8 -ffree-form -std=gnu -fimplicit-none -ffree-line-length-none 
+F90FLAGS += -O3 -funroll-loops
+F90FLAGS += -fno-realloc-lhs
+F90FLAGS += -Wall -Wextra -W -fbacktrace -ggdb
 #F90FLAGS += -fbounds-check -Wsurprising -Wcharacter-truncation -ffpe-trap=invalid,zero,overflow,denormal -pedantic
+LDFLAGS   = -Wl,--as-needed -Wl,-O1
 USE_GNUCPP = yes
 MAKEFLAGS += -j4
