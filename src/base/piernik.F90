@@ -179,11 +179,11 @@ contains
    subroutine init_piernik
 
       use arrays,                only: init_arrays
-      use units,             only: init_units
+      use units,                 only: init_units
       use dataio,                only: init_dataio, write_data
       use dataio_pub,            only: nrestart, cwd, par_file, tmp_log_file, msg, printio, die, warn, printinfo, require_init_prob, problem_name, run_id, parse_cmdline, code_progress
       use constants,             only: PIERNIK_INIT_MPI, PIERNIK_INIT_BASE, PIERNIK_INIT_ARRAYS, PIERNIK_INIT_IO_IC
-      use diagnostics,           only: diagnose_arrays
+      use diagnostics,           only: diagnose_arrays, check_environment
       use fluidboundaries,       only: all_fluid_boundaries
       use fluidboundaries_pub,   only: init_fluidboundaries
       use fluidindex,            only: flind
@@ -226,6 +226,8 @@ contains
 
       ! First, we must initialize the communication (and things that do not depend on init_mpi if there are any)
       call init_mpi
+
+      call check_environment
 
       code_progress = PIERNIK_INIT_MPI ! Now we can initialize grid and everything that depends at most on init_mpi. All calls prior to PIERNIK_INIT_BASE can be reshuffled when necessary
 #ifdef DEBUG

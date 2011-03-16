@@ -63,7 +63,7 @@ module diagnostics
    end interface pop_vector
 
    private
-   public :: diagnose_arrays, ma1d, ma2d, ma3d, ma4d, ma5d, my_allocate, my_deallocate, pop_vector
+   public :: diagnose_arrays, ma1d, ma2d, ma3d, ma4d, ma5d, my_allocate, my_deallocate, pop_vector, check_environment
 
    real,    parameter :: MiB = 8./1048576.  ! sizeof(double) / 2**20
    integer, parameter :: an_len = 64
@@ -78,6 +78,39 @@ module diagnostics
    integer, dimension(5) :: ma5d
 
 contains
+
+   subroutine check_environment
+      implicit none
+
+      call check_lhs_realloc
+
+   end subroutine check_environment
+
+   subroutine check_lhs_realloc
+      use dataio_pub,   only: die
+      implicit none
+      integer, dimension(:), allocatable :: ivec
+      integer, parameter :: n = 1
+      integer :: i, nsize
+
+      allocate(ivec(n))
+      ivec  = [(i,i=1,n+1)]
+      nsize = abs(n-size(ivec))
+      deallocate(ivec)
+
+      ! \todo Decide are we using lhs realloc or not
+      !   Against:
+      !     * the whole code needs to be reviewed for possible unintentional usage
+      !     * requires heightened awareness, i.e. BE C4R3FUL WH4T Y0U TYP3 !!
+      !   In favour:
+      !     * it can be handy (especially in mc module)
+      !     * supported by both gcc and intel
+
+!      if (nsize == 0) call die("[diagnostics:check_lhs_realloc]: No lhs realloc!")
+      if (nsize /= 0) call die("[diagnostics:check_lhs_realloc]: LHS realloc detected.")
+
+   end subroutine check_lhs_realloc
+
    subroutine diagnose_arrays
       use dataio_pub,    only: printinfo, warn, msg
       implicit none
