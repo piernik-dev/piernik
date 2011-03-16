@@ -40,7 +40,7 @@ module multigridbasefuncs
 
    private
 
-   public :: prolong_level, restrict_all, norm_sq, substract_average, prolong_faces, zero_boundaries, restrict_level
+   public :: prolong_level, restrict_all, norm_sq, substract_average, prolong_faces, zero_boundaries
 
 contains
 
@@ -146,7 +146,7 @@ contains
 
       use dataio_pub,         only: die
       use multigridhelpers,   only: check_dirty
-      use multigridvars,      only: level_min, level_max, ngridvars
+      use multigridvars,      only: level_min, level_max, ngridvars, lvl
 
       implicit none
 
@@ -159,57 +159,12 @@ contains
       call check_dirty(level_max, iv, "restrict_all-")
 
       do i = level_max, level_min+1, -1
-         call restrict_level(i, iv)
+         call lvl(i)%restrict_level(iv)
       enddo
 
-      call check_dirty(0, iv, "restrict_all+")
+      call check_dirty(level_min, iv, "restrict_all+")
 
    end subroutine restrict_all
-
-!!$ ============================================================================
-!>
-!! \brief Simplest restriction (averaging).
-!! \todo implement high order restriction and test its influence on V-cycle convergence rate
-!<
-
-   subroutine restrict_level(lev, iv)
-
-      use dataio_pub,         only: die
-      use multigridhelpers,   only: check_dirty
-      use multigridvars,      only: plvl, lvl, level_min, level_max, ngridvars
-      use grid,               only: D_x, D_y, D_z
-
-      implicit none
-
-      integer, intent(in)      :: lev   !< level to restrict from
-      integer, intent(in)      :: iv    !< variable to be restricted
-
-      type(plvl), pointer :: coarse, fine
-
-      if (lev <= level_min) return ! can't restrict base level
-      if (lev >  level_max) call die("[multigridbasefuncs:restrict_level] level>max.")
-      if (iv < 1 .or. iv > ngridvars) call die("[multigridbasefuncs:restrict_level] Invalid variable index.")
-
-      coarse => lvl(lev-1)
-      fine   => lvl(lev)
-
-      call check_dirty(fine%level, iv, "restrict_level-")
-
-      !> \deprecated BEWARE: unoptimized: some cells are used multiple times (1D and 2D speed-ups possible)
-      coarse%mgvar(      coarse%is:coarse%ie,   coarse%js:coarse%je,   coarse%ks:coarse%ke,   iv) = &
-           ( fine%mgvar( fine%is    :fine%ie-D_x:(1+D_x), fine%js    :fine%je-D_y:(1+D_y), fine%ks    :fine%ke-D_z:(1+D_z), iv) + &
-           & fine%mgvar( fine%is+D_x:fine%ie    :(1+D_x), fine%js    :fine%je-D_y:(1+D_y), fine%ks    :fine%ke-D_z:(1+D_z), iv) + &
-           & fine%mgvar( fine%is    :fine%ie-D_x:(1+D_x), fine%js+D_y:fine%je    :(1+D_y), fine%ks    :fine%ke-D_z:(1+D_z), iv) + &
-           & fine%mgvar( fine%is+D_x:fine%ie    :(1+D_x), fine%js+D_y:fine%je    :(1+D_y), fine%ks    :fine%ke-D_z:(1+D_z), iv) + &
-           & fine%mgvar( fine%is    :fine%ie-D_x:(1+D_x), fine%js    :fine%je-D_y:(1+D_y), fine%ks+D_z:fine%ke    :(1+D_z), iv) + &
-           & fine%mgvar( fine%is+D_x:fine%ie    :(1+D_x), fine%js    :fine%je-D_y:(1+D_y), fine%ks+D_z:fine%ke    :(1+D_z), iv) + &
-           & fine%mgvar( fine%is    :fine%ie-D_x:(1+D_x), fine%js+D_y:fine%je    :(1+D_y), fine%ks+D_z:fine%ke    :(1+D_z), iv) + &
-           & fine%mgvar( fine%is+D_x:fine%ie    :(1+D_x), fine%js+D_y:fine%je    :(1+D_y), fine%ks+D_z:fine%ke    :(1+D_z), iv) ) *0.125  !/ ((1.+D_x)*(1.+D_y)*(1.+D_z))
-      !\todo add geometrical terms to improve convergence on cylindrical grids
-
-      call check_dirty(coarse%level, iv, "restrict_level+")
-
-   end subroutine restrict_level
 
 !!$ ============================================================================
 !>

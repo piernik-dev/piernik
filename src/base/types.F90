@@ -31,12 +31,12 @@
 !<
 module types
 
-   use constants, only: domlen, idlen, ndims, LO, HI
+   use constants, only: domlen, idlen, ndims, LO, HI, xdim, zdim
 
    implicit none
 
    private
-   public :: hdf, axes, domain_container, tsl_container, value, problem_customize_solution, problem_grace_passed, finalize_problem, cleanup_problem, custom_emf_bnd
+   public :: hdf, axes, domain_container, segment, tsl_container, value, problem_customize_solution, problem_grace_passed, finalize_problem, cleanup_problem, custom_emf_bnd
 
    type :: hdf
       integer :: nhdf, nres, step_hdf, step_res, nstep, nrestart
@@ -82,8 +82,16 @@ module types
       integer :: nyt                            !< total number of %grid cells in the whole domain in y-direction
       integer :: nzt                            !< total number of %grid cells in the whole domain in z-direction
 
+      integer, dimension(:,:,:), allocatable :: se !< span of all domains (0:nproc-1, xdim:zdim, LO:HI); Use with care, because this is an antiparallel thing
       !! \todo add hooks to parent and a list of children domains
    end type domain_container
+
+   ! specify segment of data for boundary exchange, prolongation and restriction.
+   type :: segment
+      integer :: proc                               !< target process
+      integer, dimension(xdim:zdim, LO:HI) :: se    !< range
+      integer, dimension(:), allocatable   :: mc    !< MPI type Containers
+   end type segment
 
    type :: axes
       real, allocatable, dimension(:) :: x      !< array of x-positions of %grid cells centers

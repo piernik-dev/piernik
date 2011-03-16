@@ -38,14 +38,14 @@
 module multigridvars
 ! pulled by MULTIGRID
 
-   use constants, only: xdim, zdim, ndims, LO, HI, BND, DOM
+   use constants, only: xdim, zdim, ndims, LO, HI, BND, BLK
    use grid, only: grid_container
-   use types, only: domain_container
+   use types, only: domain_container, segment
 
    implicit none
 
    public ! QA_WARN no secrets are kept here
-   private :: xdim, zdim, ndims, LO, HI, BND, DOM ! QA_WARN prevent re-exporting
+   private :: xdim, zdim, ndims, LO, HI, BND, BLK ! QA_WARN prevent re-exporting
 
    ! multigrid constants
    enum, bind(C)
@@ -67,43 +67,6 @@ module multigridvars
    integer            :: ord_prolong_face                             !< Face prolongation operator order; allowed values are -2 .. 2
    logical            :: stdout                                       !< print verbose messages to stdout
    logical            :: verbose_vcycle                               !< Print one line of log per V-cycle, summary otherwise
-
-   ! single level container
-   type, extends(grid_container) :: plvl
-
-      ! storage
-      real, allocatable, dimension(:,:,:,:) :: mgvar                  !< main working array
-      real, allocatable, dimension(:,:,:)   :: prolong_x, prolong_xy  !< auxiliary prolongation arrays
-      real, allocatable, dimension(:,:,:)   :: bnd_x, bnd_y, bnd_z    !< given boundary values for potential; \todo consider converting it to bnd(:,:,:,xdim:zdim)
-
-      ! geometrical factors, cell counters, etc.
-      integer :: level                                                !< multigrid level, level_min == 1: coarsest, level_max: finest
-      real    :: vol                                                  !< processor domain volume; BEWARE: for cylindrical geometry multiply by appropriate x(:) to get real volume
-      real    :: dxy, dxz, dyz                                        !< cell surface area
-      real    :: idx2, idy2, idz2                                     !< inverse of d{x,y,z} square
-      real    :: dvol2                                                !< square of cell volume
-      real    :: r, rx, ry, rz                                        !< geometric factors for relaxation (diffusion) used in approximate_solution_rbgs
-
-      ! MPI datatype shortcut, similar to grid_container%mbc(ARR, :, :, :)
-      integer, dimension(xdim:zdim, LO:HI, BND:DOM, mg_nb) :: mmbc    !< Multigrid  MPI Boundary conditions Container for block boundary exchanges with 1 .. mg_nb layers
-
-      ! data for FFT solver
-      integer                                :: nxc                   !< first index (complex or real: fft(:,:,:) or fftr(:,:,:)) cell count
-      integer                                :: fft_type              !< type of FFT to employ (depending on boundaries)
-      complex, allocatable, dimension(:,:,:) :: fft                   !< a complex array for FFT operations (Fourier space)
-      real,    allocatable, dimension(:,:,:) :: fftr                  !< a real array for FFT operations (Fourier space for sine transform)
-      real,    allocatable, dimension(:,:,:) :: src                   !< an input array for FFT (real space data)
-      real,    allocatable, dimension(:,:,:) :: Green3D               !< Green's function (0.5 * gb_fft_norm / (kx + ky + kz))
-      integer (kind = selected_int_kind(16)) :: planf, plani          !< FFT forward and inverse plans
-      real                                   :: fft_norm              !< normalization factor
-
-   end type plvl
-
-   type(plvl), dimension(:), allocatable, target :: lvl               !< a stack of multigrid arrays
-   type(plvl), pointer                           :: base              !< pointer to coarsest level
-   type(plvl), pointer                           :: roof              !< pointer to finest level
-   type(plvl), pointer                           :: gb                !< pointer to global-base level
-   type(domain_container), dimension(:), allocatable :: dom_lvl       !< a stack of domains with various resolutions
 
    ! dimensions
    integer                                 :: ngridvars               !< number of variables required for implementation of multigrid
@@ -144,5 +107,125 @@ module multigridvars
       real                            :: norm_final                   !< norm of the defect relative to the source
       character(len=prefix_len)       :: cprefix                      !< prefix for distinguishing V-cycles in the log (e.g inner or outer potential, CR component)
    end type vcycle_stats
+
+   type, extends(segment) :: lvl_segment
+     type(plvl), pointer :: nextgrid
+   end type lvl_segment
+
+   ! single level container
+   type, extends(grid_container) :: plvl
+
+      ! storage
+      real, allocatable, dimension(:,:,:,:) :: mgvar                  !< main working array
+      real, allocatable, dimension(:,:,:)   :: prolong_x, prolong_xy  !< auxiliary prolongation arrays
+      real, allocatable, dimension(:,:,:)   :: bnd_x, bnd_y, bnd_z    !< given boundary values for potential; \todo consider converting it to bnd(:,:,:,xdim:zdim)
+
+      ! geometrical factors, cell counters, etc.
+      integer :: level                                                !< multigrid level, level_min == 1: coarsest, level_max: finest
+      real    :: vol                                                  !< processor domain volume; BEWARE: for cylindrical geometry multiply by appropriate x(:) to get real volume
+      real    :: dxy, dxz, dyz                                        !< cell surface area
+      real    :: idx2, idy2, idz2                                     !< inverse of d{x,y,z} square
+      real    :: dvol2                                                !< square of cell volume
+      real    :: r, rx, ry, rz                                        !< geometric factors for relaxation (diffusion) used in approximate_solution_rbgs
+
+      ! MPI datatype shortcut, similar to grid_container%mbc(ARR, :, :, :)
+      integer, dimension(xdim:zdim, LO:HI, BND:BLK, mg_nb) :: mmbc    !< Multigrid  MPI Boundary conditions Container for block boundary exchanges with 1 .. mg_nb layers
+
+      type(lvl_segment) :: i_rst, o_rst                       !< description of incoming and outgoing restriction data (this will be a linked list)
+
+      ! data for FFT solver
+      integer                                :: nxc                   !< first index (complex or real: fft(:,:,:) or fftr(:,:,:)) cell count
+      integer                                :: fft_type              !< type of FFT to employ (depending on boundaries)
+      complex, allocatable, dimension(:,:,:) :: fft                   !< a complex array for FFT operations (Fourier space)
+      real,    allocatable, dimension(:,:,:) :: fftr                  !< a real array for FFT operations (Fourier space for sine transform)
+      real,    allocatable, dimension(:,:,:) :: src                   !< an input array for FFT (real space data)
+      real,    allocatable, dimension(:,:,:) :: Green3D               !< Green's function (0.5 * gb_fft_norm / (kx + ky + kz))
+      integer (kind = selected_int_kind(16)) :: planf, plani          !< FFT forward and inverse plans
+      real                                   :: fft_norm              !< normalization factor
+
+    contains
+
+      procedure :: restrict_level
+
+   end type plvl
+
+   type(plvl), dimension(:), allocatable, target :: lvl               !< a stack of multigrid arrays
+   type(plvl), pointer                           :: base              !< pointer to coarsest level
+   type(plvl), pointer                           :: roof              !< pointer to finest level
+   type(plvl), pointer                           :: gb                !< pointer to global-base level
+   type(domain_container), dimension(:), allocatable :: dom_lvl       !< a stack of domains with various resolutions
+
+contains
+
+!!$ ============================================================================
+!>
+!! \brief Simplest restriction (averaging).
+!! \todo implement high order restriction and test its influence on V-cycle convergence rate
+!<
+
+   subroutine restrict_level(this, iv)
+
+      use constants,  only: xdim, ydim, zdim, LO, HI
+      use dataio_pub, only: msg, warn, die
+      use grid,       only: D_x, D_y, D_z
+      use mpisetup,   only: proc
+
+      implicit none
+
+      class(plvl), intent(in), target  :: this
+      integer, intent(in)      :: iv
+
+      class(plvl), pointer :: coarse
+
+      if (iv < 1 .or. iv > ngridvars) call die("[multigridbasefuncs:restrict_level] Invalid variable index.")
+
+      coarse => this%o_rst%nextgrid
+      if (.not. associated(coarse)) then
+         write(msg,'(a,i3)')"[multigridvars:restrict_level] no coarse level here: ", this%level
+         call warn(msg) ! can't restrict base level
+         return
+      endif
+
+      if (this%o_rst%proc /= proc) call die("[multigridvars:restrict_level] cross-processor restriction not implemented yet")
+
+!!$      call check_dirty(this%level, iv, "restrict_level-")
+
+      if (this%o_rst%proc == coarse%i_rst%proc) then
+      !> \deprecated BEWARE: unoptimized: some cells are used multiple times (1D and 2D speed-ups possible). Normalization factor will be: / ((1.+D_x)*(1.+D_y)*(1.+D_z))
+         coarse%mgvar(   coarse%i_rst%se(xdim, LO)  :coarse%i_rst%se(xdim, HI), &
+              &          coarse%i_rst%se(ydim, LO)  :coarse%i_rst%se(ydim, HI),         &
+              &          coarse%i_rst%se(zdim, LO)  :coarse%i_rst%se(zdim, HI),   iv) = &
+              ( this%mgvar(this%o_rst%se(xdim, LO)    :this%o_rst%se(xdim, HI)-D_x:(1+D_x),&
+              &            this%o_rst%se(ydim, LO)    :this%o_rst%se(ydim, HI)-D_y:(1+D_y), &
+              &            this%o_rst%se(zdim, LO)    :this%o_rst%se(zdim, HI)-D_z:(1+D_z), iv) + &
+              & this%mgvar(this%o_rst%se(xdim, LO)+D_x:this%o_rst%se(xdim, HI)    :(1+D_x),&
+              &            this%o_rst%se(ydim, LO)    :this%o_rst%se(ydim, HI)-D_y:(1+D_y), &
+              &            this%o_rst%se(zdim, LO)    :this%o_rst%se(zdim, HI)-D_z:(1+D_z), iv) + &
+              & this%mgvar(this%o_rst%se(xdim, LO)    :this%o_rst%se(xdim, HI)-D_x:(1+D_x),&
+              &            this%o_rst%se(ydim, LO)+D_y:this%o_rst%se(ydim, HI)    :(1+D_y),&
+              &            this%o_rst%se(zdim, LO)    :this%o_rst%se(zdim, HI)-D_z:(1+D_z), iv) + &
+              & this%mgvar(this%o_rst%se(xdim, LO)+D_x:this%o_rst%se(xdim, HI)    :(1+D_x),&
+              &            this%o_rst%se(ydim, LO)+D_y:this%o_rst%se(ydim, HI)    :(1+D_y),&
+              &            this%o_rst%se(zdim, LO)    :this%o_rst%se(zdim, HI)-D_z:(1+D_z), iv) + &
+              & this%mgvar(this%o_rst%se(xdim, LO)    :this%o_rst%se(xdim, HI)-D_x:(1+D_x),&
+              &            this%o_rst%se(ydim, LO)    :this%o_rst%se(ydim, HI)-D_y:(1+D_y),&
+              &            this%o_rst%se(zdim, LO)+D_z:this%o_rst%se(zdim, HI)    :(1+D_z), iv) + &
+              & this%mgvar(this%o_rst%se(xdim, LO)+D_x:this%o_rst%se(xdim, HI)    :(1+D_x),&
+              &            this%o_rst%se(ydim, LO)    :this%o_rst%se(ydim, HI)-D_y:(1+D_y),&
+              &            this%o_rst%se(zdim, LO)+D_z:this%o_rst%se(zdim, HI)    :(1+D_z), iv) + &
+              & this%mgvar(this%o_rst%se(xdim, LO)    :this%o_rst%se(xdim, HI)-D_x:(1+D_x),&
+              &            this%o_rst%se(ydim, LO)+D_y:this%o_rst%se(ydim, HI)    :(1+D_y),&
+              &            this%o_rst%se(zdim, LO)+D_z:this%o_rst%se(zdim, HI)    :(1+D_z), iv) + &
+              & this%mgvar(this%o_rst%se(xdim, LO)+D_x:this%o_rst%se(xdim, HI)    :(1+D_x),&
+              &            this%o_rst%se(ydim, LO)+D_y:this%o_rst%se(ydim, HI)    :(1+D_y),&
+              &            this%o_rst%se(zdim, LO)+D_z:this%o_rst%se(zdim, HI)    :(1+D_z), iv) ) * 0.125
+         !\todo add geometrical terms to improve convergence on cylindrical grids
+      else
+         call die("[multigridvars:restrict_level] cross-processor restriction not implemented yet")
+      endif
+
+!!$      call check_dirty(coarse%level, iv, "restrict_level+")
+
+   end subroutine restrict_level
 
 end module multigridvars

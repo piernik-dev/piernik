@@ -280,9 +280,9 @@ contains
 
    subroutine multipole_solver
 
-      use multigridvars,      only: level_max, solution
+      use multigridvars,      only: level_max, solution, lvl
       use multigridhelpers,   only: dirtyH, dirty_debug
-      use multigridbasefuncs, only: zero_boundaries, restrict_level
+      use multigridbasefuncs, only: zero_boundaries
 
       implicit none
 
@@ -298,7 +298,7 @@ contains
 
       if (lmpole%level <  level_max) then
          do lev = level_max, lmpole%level + 1, -1
-            call restrict_level(lev, solution) ! Overkill, only some layers next to external boundary are needed.
+             call lvl(lev)%restrict_level(solution)  ! Overkill, only some layers next to external boundary are needed.
          enddo                                ! An alternative: do potential2img_mass on the roof and restrict bnd_[xyz] data.
       endif
       call potential2img_mass

@@ -37,22 +37,26 @@ module mpisetup
 
 !   use mpi, only: MPI_STATUS_SIZE
    use types,      only: domain_container
-   use constants,  only: ndims, cbuff_len
+   use constants,  only: ndims, cbuff_len, LO, HI, BLK, BND
 
    implicit none
 
    integer, parameter :: MPI_STATUS_SIZE = 5  ! taken from mpi to silence warnings
 
    private
-   public :: buffer_dim, cbuff, cfl, cfl_max, cflcontrol, cfl_violated, &
-        &    cfr_smooth, cleanup_mpi, comm, comm3d, dt, dt_initial, dt_max_grow, dt_min, dt_old, dtm, err, ibuff, ierr, info, init_mpi, &
-        &    integration_order, lbuff, limiter, mpifind, nproc, nstep, pcoords, proc, procxl, procxr, procxyl, procyl, procyr, procyxl, proczl, &
-        &    proczr, psize, rbuff, req, smalld, smallei, smallp, status, t, use_smalld, magic_mass, local_magic_mass, master, slave, &
-        &    has_dir, eff_dim, relax_time, grace_period_passed, dom, geometry_type, translate_bnds_to_ints_dom, have_mpi, is_uneven
+   public :: cleanup_mpi, init_mpi, mpifind, translate_bnds_to_ints_dom, &
+        &    buffer_dim, cbuff, ibuff, lbuff, rbuff, comm, comm3d, req, status, ierr, info, &
+        &    master, slave, have_mpi, has_dir, eff_dim, is_uneven, &
+        &    nproc, pcoords, proc, procxl, procxr, procxyl, procyl, procyr, procyxl, proczl, proczr, psize, &
+        &    dom, geometry_type, &
+        &    cfl, cfl_max, cflcontrol, cfl_violated, &
+        &    dt, dt_initial, dt_max_grow, dt_min, dt_old, dtm, t, nstep, &
+        &    integration_order, limiter, smalld, smallei, smallp, use_smalld, magic_mass, local_magic_mass, relax_time, grace_period_passed, cfr_smooth
 
-   integer :: nproc, proc, ierr , rc, info
-   integer :: status(MPI_STATUS_SIZE,4)
-   integer, dimension(4) :: req, err
+   integer, protected :: nproc, proc, ierr, info
+   integer, parameter :: nreq = size([LO, HI]) * size([BLK, BND]) ! just another way of defining '4' ;-)
+   integer, dimension(MPI_STATUS_SIZE, nreq) :: status
+   integer, dimension(nreq) :: req
 
    logical, protected    :: master, slave
 
@@ -63,9 +67,9 @@ module mpisetup
    real, save            :: local_magic_mass = 0.0
    integer               :: nstep
 
-   integer               :: comm, comm3d
-   integer, dimension(ndims) :: pcoords, coords
-   integer               ::   procxl, procxr, procyl, procyr, proczl, proczr, procxyl, procyxl, procxyr, procyxr
+   integer, protected        :: comm, comm3d
+   integer, dimension(ndims), protected :: pcoords
+   integer, protected               ::   procxl, procxr, procyl, procyr, proczl, proczr, procxyl, procyxl, procxyr, procyxr
    logical, protected, dimension(ndims) :: has_dir   !< .true. for existing directions
    integer, protected    :: eff_dim                  !< effective dimensionality of the simulation
 
@@ -73,12 +77,12 @@ module mpisetup
 
    integer, parameter :: buffer_dim = 200                !< size of [cilr]buff arrays used to exchange namelist parameters
    character(len=cbuff_len), dimension(buffer_dim) :: cbuff
-   integer,   dimension(buffer_dim) :: ibuff
-   real,      dimension(buffer_dim) :: rbuff
-   logical,   dimension(buffer_dim) :: lbuff
+   integer,                  dimension(buffer_dim) :: ibuff
+   real,                     dimension(buffer_dim) :: rbuff
+   logical,                  dimension(buffer_dim) :: lbuff
 
-   logical     :: have_mpi           !< .true. when run on more than one processor
-   logical     :: is_uneven          !< .true. when n[xyz]b depend on process number
+   logical, protected :: have_mpi           !< .true. when run on more than one processor
+   logical, protected :: is_uneven          !< .true. when n[xyz]b depend on process number
 
    integer, allocatable, dimension(:) :: primes
    real :: ideal_bsize
@@ -86,7 +90,7 @@ module mpisetup
 
    ! Namelist variables
 
-   integer, dimension(ndims) :: psize !< desired number of MPI blocks in x, y and z-dimension
+   integer, dimension(ndims), protected :: psize !< desired number of MPI blocks in x, y and z-dimension
    logical :: reorder                 !< allows processes reordered for efficiency (a parameter of MPI_Cart_create and MPI_graph_create)
    logical :: allow_uneven    !< allows different values of n[xyz]b on divverent processes
    real    :: dd_unif_quality !< uniform domain decomposition may be rejected it its quality is below this threshold (e.g. very elongated local domains are found)
@@ -129,7 +133,7 @@ module mpisetup
    !! \f$c_{\textrm{fr}} = \sqrt{v^2 + \frac{1}{2}(\max{v} - \min{v})c_{\textrm{fr}}^{\textrm{smooth}}} + \ldots\f$
    !<
    real    :: cfr_smooth
-   integer :: integration_order           !< Runge-Kutta time integration order (1 - 1st order, 2 - 2nd order)
+   integer, protected :: integration_order           !< Runge-Kutta time integration order (1 - 1st order, 2 - 2nd order)
    character(len=cbuff_len) :: limiter    !< type of flux limiter
    character(len=cbuff_len) :: cflcontrol !< type of cfl control just before each sweep (possibilities: 'none', 'main', 'user')
    real    :: relax_time                  !< relaxation/grace time, additional physics will be turned off until mpisetup::t >= mpisetup::relax_time
@@ -200,14 +204,13 @@ contains
 !<
    subroutine init_mpi
 
-      use constants,     only: cwdlen, xdim, ydim, zdim, LO, HI, big_float, GEO_XYZ, GEO_RPZ, GEO_INVALID, BND_PER, BND_COR, BND_SHE, BND_REF
+      use constants,     only: cwdlen, xdim, ydim, zdim, LO, HI, big_float, dpi, GEO_XYZ, GEO_RPZ, GEO_INVALID, BND_PER, BND_COR, BND_SHE, BND_REF
       use mpi,           only: MPI_COMM_WORLD, MPI_INFO_NULL, MPI_INFO_NULL, MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION, MPI_LOGICAL, MPI_PROC_NULL
       use dataio_pub,    only: die, printinfo, msg, cwd, ansi_white, ansi_black, warn, tmp_log_file
       use dataio_pub,    only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml  ! QA_WARN required for diff_nml
 
       implicit none
 
-      real :: dpi
       real :: xmno, ymno, ymxo
       integer :: iproc
 
@@ -222,12 +225,12 @@ contains
 
       integer(kind=1)       :: getcwd, hostnm
       integer(kind=4)       :: getpid
-      integer :: cwd_status
+      integer :: cwd_status, host_status
       logical :: par_file_exist
       logical :: tmp_log_exist
+      integer :: p
+      integer, dimension(ndims) :: pc
       integer :: d
-
-      dpi = 8*atan(1.0)
 
       call MPI_Init( ierr )
       call MPI_Comm_rank(MPI_COMM_WORLD, proc, ierr)
@@ -258,9 +261,9 @@ contains
       allocate(host_all(0:nproc))
       allocate(pid_all(0:nproc))
 
-      pid_proc   = getpid()
-      status     = hostnm(host_proc)
-      cwd_status = getcwd(cwd_proc)
+      pid_proc    = getpid()
+      host_status = hostnm(host_proc)
+      cwd_status  = getcwd(cwd_proc)
 
       if (cwd_status /= 0) call die("[mpisetup:init_mpi] problems accessing current working directory.")
 #ifdef DEBUG
@@ -268,9 +271,9 @@ contains
       call printinfo(msg)
 #endif /* DEBUG */
 
-      call MPI_Gather(cwd_proc,  cwdlen, MPI_CHARACTER, cwd_all,  cwdlen, MPI_CHARACTER, 0, comm, err)
-      call MPI_Gather(host_proc, hnlen,  MPI_CHARACTER, host_all, hnlen,  MPI_CHARACTER, 0, comm, err)
-      call MPI_Gather(pid_proc,  1,      MPI_INTEGER,   pid_all,  1,      MPI_INTEGER,   0, comm, err)
+      call MPI_Gather(cwd_proc,  cwdlen, MPI_CHARACTER, cwd_all,  cwdlen, MPI_CHARACTER, 0, comm, ierr)
+      call MPI_Gather(host_proc, hnlen,  MPI_CHARACTER, host_all, hnlen,  MPI_CHARACTER, 0, comm, ierr)
+      call MPI_Gather(pid_proc,  1,      MPI_INTEGER,   pid_all,  1,      MPI_INTEGER,   0, comm, ierr)
 
       ! cwd = trim(cwd_proc)  !> \deprecated BEWARE: It's redundant, we get cwd for command line in init_piernik subroutine
 
@@ -584,6 +587,19 @@ contains
       call MPI_Cart_create(comm, ndims, psize, dom%periodic, reorder, comm3d, ierr)
       call MPI_Cart_coords(comm3d, proc, ndims, pcoords, ierr)
 
+      if (allocated(dom%se)) call die("[mpisetup:init_mpi] dom%se already allocated")
+      allocate(dom%se(0:nproc-1, xdim:zdim, LO:HI)) !> \deprecated nowhere deallocated
+      do p = 0, nproc-1
+         call MPI_Cart_coords(comm3d, p, ndims, pc, ierr)
+         where (has_dir(:))
+            dom%se(p, :, LO) = (dom%n_d(:) *  pc(:) ) / psize(:)     ! offset of low boundaries of the local domain (0 at low external boundaries)
+            dom%se(p, :, HI) = (dom%n_d(:) * (pc(:)+1))/psize(:) - 1 ! offset of high boundaties of the local domain (n_d(:) - 1 at right external boundaries)
+         elsewhere
+            dom%se(p, :, LO) = 0
+            dom%se(p, :, HI) = 0
+         endwhere
+      enddo
+
 ! Compute neighbors
 
       call MPI_Cart_shift(comm3d,0,1,procxl,procxr,ierr)   ! x dim
@@ -592,14 +608,14 @@ contains
 
       if (any(dom%bnd(xdim:ydim, LO) == BND_COR)) then
          if (pcoords(xdim) == 0 .and. pcoords(ydim) > 0) then
-            coords = (/pcoords(ydim),pcoords(xdim),pcoords(zdim)/)
-            call MPI_Cart_rank(comm3d,coords,procxyl,ierr)
+            pc = (/pcoords(ydim),pcoords(xdim),pcoords(zdim)/)
+            call MPI_Cart_rank(comm3d,pc,procxyl,ierr)
          else
             procxyl = MPI_PROC_NULL
          endif
          if (pcoords(ydim) == 0 .and. pcoords(xdim) > 0 ) then
-            coords = (/pcoords(ydim),pcoords(xdim),pcoords(zdim)/)
-            call MPI_Cart_rank(comm3d,coords,procyxl,ierr)
+            pc = (/pcoords(ydim),pcoords(xdim),pcoords(zdim)/)
+            call MPI_Cart_rank(comm3d,pc,procyxl,ierr)
          else
             procyxl = MPI_PROC_NULL
          endif
@@ -607,14 +623,14 @@ contains
 
       if (any(dom%bnd(xdim:ydim, HI) == BND_COR)) then
          if (pcoords(xdim) == psize(xdim)-1 .and. pcoords(ydim) < psize(ydim)-1) then
-            coords = (/pcoords(ydim),pcoords(xdim),pcoords(zdim)/)
-            call MPI_Cart_rank(comm3d,coords,procxyr,ierr)
+            pc = (/pcoords(ydim),pcoords(xdim),pcoords(zdim)/)
+            call MPI_Cart_rank(comm3d,pc,procxyr,ierr)
          else
             procxyr = MPI_PROC_NULL
          endif
          if (pcoords(ydim) == psize(ydim)-1 .and. pcoords(xdim) < psize(xdim)-1 ) then
-            coords = (/pcoords(ydim),pcoords(xdim),pcoords(zdim)/)
-            call MPI_Cart_rank(comm3d,coords,procyxr,ierr)
+            pc = (/pcoords(ydim),pcoords(xdim),pcoords(zdim)/)
+            call MPI_Cart_rank(comm3d,pc,procyxr,ierr)
          else
             procyxr = MPI_PROC_NULL
          endif
@@ -694,6 +710,7 @@ contains
       real, dimension(2)           :: rsend, rrecv
       integer, dimension(ndims)    :: loc_arr
       integer                      :: loc_proc
+      integer                      :: status
 
       rsend(1) = var
       rsend(2) = proc
@@ -726,7 +743,11 @@ contains
    end subroutine mpifind
 
 !-----------------------------------------------------------------------------
-
+!
+!> \brief This routine computes optimal allowed domain division
+!
+!> \todo make this a member of types::domain_container
+!
    subroutine divide_domain
 
       use dataio_pub,    only: die, warn, printinfo, msg

@@ -82,7 +82,7 @@ contains
       use mpisetup,            only: comm, comm3d, ierr, proc, master, slave, nproc, has_dir, psize, buffer_dim, ibuff, lbuff, dom, eff_dim, geometry_type
       use multigridhelpers,    only: mg_write_log, dirtyH, do_ascii_dump, dirty_debug, multidim_code_3D
       use multigridmpifuncs,   only: mpi_multigrid_prep
-      use dataio_pub,          only: die, code_progress
+      use dataio_pub,          only: warn, die, code_progress
       use constants,           only: PIERNIK_INIT_ARRAYS, xdim, ydim, zdim, ndims, GEO_RPZ, LO, HI, BND_MPI, BND_PER
       use dataio_pub,          only: msg, par_file, namelist_errh, compare_namelist, cmdl_nml  ! QA_WARN required for diff_nml
 #ifdef GRAV
@@ -184,8 +184,15 @@ contains
             write(msg, '(a,3f10.1)')"[multigrid:init_multigrid] Fractional number of domain cells: ", 0.5*dom_lvl(idx + 1)%n_d(:)
             call die(msg)
          endif
+         if (.not. allocated(dom_lvl(idx)%se)) then
+            if (master) call warn("[multigrid:init_multigrid] dom_lvl%se not allocated implicitly")! this should detect changes in compiler behavior
+            allocate(dom_lvl(idx)%se(0:nproc-1, xdim:zdim, LO:HI))
+            !else dom_lvl%se was implicitly allocated during assignment
+         endif
+         dom_lvl(idx)%se(:, :, :) = dom%se(:, :, :) / 2**(level_max -idx)
          ! dom_lvl(idx)%n[xyz]t is not maintained
       enddo
+      if (any(dom%se(:,:,:) /= dom_lvl(level_max)%se(:,:,:))) call die("[multigrid:init_multigrid] dom%se or dom_lvl(level_max)%se corrupted") ! this should detect changes in compiler behavior
 
       !! Initialization of all regular levels (all but global base)
       !! Following loop gives us:
@@ -281,6 +288,14 @@ contains
             lvl(idx)%mgvar     (:, :, :, :) = 0.0 ! should not be necessary if dirty_debug shows nothing suspicious
          endif
 
+         ! set up connections between levels
+         lvl(idx)%i_rst%proc = proc
+         lvl(idx)%i_rst%se(:,:) = reshape( [ lvl(idx)%is, lvl(idx)%js, lvl(idx)%ks, lvl(idx)%ie, lvl(idx)%je, lvl(idx)%ke ], shape(lvl(idx)%i_rst%se(:,:)) )
+         lvl(idx)%i_rst%nextgrid => null()
+         lvl(idx)%o_rst = lvl(idx)%i_rst
+
+         if (idx<level_max) lvl(idx)%i_rst%nextgrid => lvl(idx+1)
+         if (idx>level_min) lvl(idx)%o_rst%nextgrid => lvl(idx-1)
       enddo
 
       ! handy shortcuts
@@ -339,9 +354,9 @@ contains
 
    subroutine cleanup_multigrid
 
-      use multigridvars,      only: lvl, level_gb, level_min, level_max, tot_ts, gb_cartmap
+      use multigridvars,      only: lvl, dom_lvl, level_gb, level_min, level_max, tot_ts, gb_cartmap
       use mpisetup,           only: master, nproc, comm3d, ierr, has_dir
-      use constants,          only: xdim, zdim, LO, HI, BND, DOM
+      use constants,          only: xdim, zdim, LO, HI, BND, BLK
       use mpi,                only: MPI_DOUBLE_PRECISION
       use multigridhelpers,   only: mg_write_log
       use dataio_pub,         only: msg
@@ -364,6 +379,12 @@ contains
       call cleanup_multigrid_diff
 #endif /* COSM_RAYS */
 
+      if (allocated(dom_lvl)) then
+         do i=level_min, level_max
+            if (allocated(dom_lvl(i)%se))     deallocate(dom_lvl(i)%se)
+         enddo
+         deallocate(dom_lvl)
+      endif
       if (allocated(lvl)) then
          do i=level_gb, level_max
             if (allocated(lvl(i)%prolong_xy)) deallocate(lvl(i)%prolong_xy)
@@ -381,8 +402,8 @@ contains
                   do d = xdim, zdim
                      if (has_dir(d)) then
                         call MPI_Type_free(lvl(i)%mmbc(d, LO, BND, ib), ierr)
-                        call MPI_Type_free(lvl(i)%mmbc(d, LO, DOM, ib), ierr)
-                        call MPI_Type_free(lvl(i)%mmbc(d, HI, DOM, ib), ierr)
+                        call MPI_Type_free(lvl(i)%mmbc(d, LO, BLK, ib), ierr)
+                        call MPI_Type_free(lvl(i)%mmbc(d, HI, BLK, ib), ierr)
                         call MPI_Type_free(lvl(i)%mmbc(d, HI, BND, ib), ierr)
                      endif
                   enddo

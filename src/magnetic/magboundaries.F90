@@ -39,7 +39,7 @@ contains
    subroutine bnd_a(A)
 
       use mpisetup,  only: ierr, req, comm3d, procxl, procxr, procyl, procyr, proczl, proczr, status, psize
-      use constants, only: MAG, xdim, ydim, zdim, LO, HI, BND, DOM
+      use constants, only: MAG, xdim, ydim, zdim, LO, HI, BND, BLK
       use grid,      only: cg
 
       implicit none
@@ -48,8 +48,8 @@ contains
 
       if (psize(xdim) > 1) then
 
-         call MPI_Isend  (A(1,1,1,1), 1, cg%mbc(MAG, xdim, LO, DOM), procxl, 10, comm3d, req(1), ierr)
-         call MPI_Isend  (A(1,1,1,1), 1, cg%mbc(MAG, xdim, HI, DOM), procxr, 20, comm3d, req(3), ierr)
+         call MPI_Isend  (A(1,1,1,1), 1, cg%mbc(MAG, xdim, LO, BLK), procxl, 10, comm3d, req(1), ierr)
+         call MPI_Isend  (A(1,1,1,1), 1, cg%mbc(MAG, xdim, HI, BLK), procxr, 20, comm3d, req(3), ierr)
          call MPI_Irecv  (A(1,1,1,1), 1, cg%mbc(MAG, xdim, LO, BND), procxl, 20, comm3d, req(2), ierr)
          call MPI_Irecv  (A(1,1,1,1), 1, cg%mbc(MAG, xdim, HI, BND), procxr, 10, comm3d, req(4), ierr)
 
@@ -57,8 +57,8 @@ contains
       endif
 
       if (psize(ydim) > 1) then
-         call MPI_Isend  (A(1,1,1,1), 1, cg%mbc(MAG, ydim, LO, DOM), procyl, 30, comm3d, req(1), ierr)
-         call MPI_Isend  (A(1,1,1,1), 1, cg%mbc(MAG, ydim, HI, DOM), procyr, 40, comm3d, req(3), ierr)
+         call MPI_Isend  (A(1,1,1,1), 1, cg%mbc(MAG, ydim, LO, BLK), procyl, 30, comm3d, req(1), ierr)
+         call MPI_Isend  (A(1,1,1,1), 1, cg%mbc(MAG, ydim, HI, BLK), procyr, 40, comm3d, req(3), ierr)
          call MPI_Irecv  (A(1,1,1,1), 1, cg%mbc(MAG, ydim, LO, BND), procyl, 40, comm3d, req(2), ierr)
          call MPI_Irecv  (A(1,1,1,1), 1, cg%mbc(MAG, ydim, HI, BND), procyr, 30, comm3d, req(4), ierr)
 
@@ -66,8 +66,8 @@ contains
       endif
 
       if (psize(zdim) > 1) then
-         call MPI_Isend  (A(1,1,1,1), 1, cg%mbc(MAG, zdim, LO, DOM), proczl, 50, comm3d, req(1), ierr)
-         call MPI_Isend  (A(1,1,1,1), 1, cg%mbc(MAG, zdim, HI, DOM), proczr, 60, comm3d, req(3), ierr)
+         call MPI_Isend  (A(1,1,1,1), 1, cg%mbc(MAG, zdim, LO, BLK), proczl, 50, comm3d, req(1), ierr)
+         call MPI_Isend  (A(1,1,1,1), 1, cg%mbc(MAG, zdim, HI, BLK), proczr, 60, comm3d, req(3), ierr)
          call MPI_Irecv  (A(1,1,1,1), 1, cg%mbc(MAG, zdim, LO, BND), proczl, 60, comm3d, req(2), ierr)
          call MPI_Irecv  (A(1,1,1,1), 1, cg%mbc(MAG, zdim, HI, BND), proczr, 50, comm3d, req(4), ierr)
 
@@ -84,7 +84,7 @@ contains
       use grid,          only: cg
       use mpi,           only: MPI_DOUBLE_PRECISION
       use mpisetup,      only: ierr, req, comm3d, procxl, procxr, procyl, procyr, proczl, proczr, status, psize, procxyl, procyxl, pcoords, comm, master
-      use constants,     only: MAG, xdim, ydim, zdim, LO, HI, BND, DOM, BND_MPI, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_OUTH, BND_COR, BND_SHE, BND_INF
+      use constants,     only: MAG, xdim, ydim, zdim, LO, HI, BND, BLK, BND_MPI, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_OUTH, BND_COR, BND_SHE, BND_INF
 #ifdef SHEAR
       use shear,         only: eps,delj
 #endif /* SHEAR */
@@ -168,8 +168,8 @@ contains
 
             if (psize(xdim) > 1) then
 
-               call MPI_Isend  (b(1,1,1,1), 1, cg%mbc(MAG, xdim, LO, DOM), procxl, 10, comm3d, req(1), ierr)
-               call MPI_Isend  (b(1,1,1,1), 1, cg%mbc(MAG, xdim, HI, DOM), procxr, 20, comm3d, req(3), ierr)
+               call MPI_Isend  (b(1,1,1,1), 1, cg%mbc(MAG, xdim, LO, BLK), procxl, 10, comm3d, req(1), ierr)
+               call MPI_Isend  (b(1,1,1,1), 1, cg%mbc(MAG, xdim, HI, BLK), procxr, 20, comm3d, req(3), ierr)
                call MPI_Irecv  (b(1,1,1,1), 1, cg%mbc(MAG, xdim, LO, BND), procxl, 20, comm3d, req(2), ierr)
                call MPI_Irecv  (b(1,1,1,1), 1, cg%mbc(MAG, xdim, HI, BND), procxr, 10, comm3d, req(4), ierr)
 
@@ -181,8 +181,8 @@ contains
          case (ydim)
             if (psize(ydim) > 1) then
 
-               call MPI_Isend  (b(1,1,1,1), 1, cg%mbc(MAG, ydim, LO, DOM), procyl, 30, comm3d, req(1), ierr)
-               call MPI_Isend  (b(1,1,1,1), 1, cg%mbc(MAG, ydim, HI, DOM), procyr, 40, comm3d, req(3), ierr)
+               call MPI_Isend  (b(1,1,1,1), 1, cg%mbc(MAG, ydim, LO, BLK), procyl, 30, comm3d, req(1), ierr)
+               call MPI_Isend  (b(1,1,1,1), 1, cg%mbc(MAG, ydim, HI, BLK), procyr, 40, comm3d, req(3), ierr)
                call MPI_Irecv  (b(1,1,1,1), 1, cg%mbc(MAG, ydim, LO, BND), procyl, 40, comm3d, req(2), ierr)
                call MPI_Irecv  (b(1,1,1,1), 1, cg%mbc(MAG, ydim, HI, BND), procyr, 30, comm3d, req(4), ierr)
 
@@ -191,8 +191,8 @@ contains
 
          case (zdim)
             if (psize(zdim) > 1) then
-               call MPI_Isend  (b(1,1,1,1), 1, cg%mbc(MAG, zdim, LO, DOM), proczl, 50, comm3d, req(1), ierr)
-               call MPI_Isend  (b(1,1,1,1), 1, cg%mbc(MAG, zdim, HI, DOM), proczr, 60, comm3d, req(3), ierr)
+               call MPI_Isend  (b(1,1,1,1), 1, cg%mbc(MAG, zdim, LO, BLK), proczl, 50, comm3d, req(1), ierr)
+               call MPI_Isend  (b(1,1,1,1), 1, cg%mbc(MAG, zdim, HI, BLK), proczr, 60, comm3d, req(3), ierr)
                call MPI_Irecv  (b(1,1,1,1), 1, cg%mbc(MAG, zdim, LO, BND), proczl, 60, comm3d, req(2), ierr)
                call MPI_Irecv  (b(1,1,1,1), 1, cg%mbc(MAG, zdim, HI, BND), proczr, 50, comm3d, req(4), ierr)
 

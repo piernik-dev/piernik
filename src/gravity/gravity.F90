@@ -777,7 +777,7 @@ contains
       use arrays,    only: gp
       use grid,      only: cg
       use mpi,       only: MPI_DOUBLE_PRECISION
-      use mpisetup,  only: psize, pcoords, master, nproc, comm, comm3d, err, ierr, mpifind
+      use mpisetup,  only: psize, pcoords, master, nproc, comm, comm3d, ierr, mpifind
       use constants, only: xdim, ydim, zdim, ndims
 
       implicit none

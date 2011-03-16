@@ -37,7 +37,7 @@
 !<
 module grid
 
-   use constants, only: xdim, zdim, ndims, LO, HI, BND, DOM, FLUID, ARR
+   use constants, only: xdim, zdim, ndims, LO, HI, BND, BLK, FLUID, ARR
    use types,    only: axes
 
    implicit none
@@ -97,11 +97,11 @@ module grid
       ! \todo a pointer to the next cg, grid level
 
       ! AMR: this will be a list
-      integer, dimension(FLUID:ARR, xdim:zdim, LO:HI, BND:DOM) :: mbc     !< MPI Boundary conditions Container
+      integer, dimension(FLUID:ARR, xdim:zdim, LO:HI, BND:BLK) :: mbc     !< MPI Boundary conditions Container
 
    contains
 
-      procedure :: init => set_cg
+      procedure :: init
 
    end type grid_container
 
@@ -146,11 +146,11 @@ contains
 
    end subroutine init_grid
 
-   subroutine set_cg(this, dom)
+   subroutine init(this, dom)
 
       use constants,  only: PIERNIK_INIT_MPI, xdim, ydim, zdim
       use dataio_pub, only: die, warn, code_progress
-      use mpisetup,   only: psize, pcoords, has_dir, translate_bnds_to_ints_dom
+      use mpisetup,   only: has_dir, translate_bnds_to_ints_dom, proc
       use types,      only: domain_container
 
       implicit none
@@ -160,22 +160,18 @@ contains
 
       integer :: i, j, k
 
-      if (code_progress < PIERNIK_INIT_MPI) call die("[grid:set_cg] MPI not initialized.")
+      if (code_progress < PIERNIK_INIT_MPI) call die("[grid:init] MPI not initialized.")
 
       this%nb = dom%nb
       this%dxmn = huge(1.0)
 
-      this%off(:) = 0
-      this%n_b(:) = 1
-      where (has_dir(:))
-         this%off(:) = (dom%n_d(:) * pcoords(:) ) / psize(:) ! Block offset on the dom% should be between 0 and nxd-nxb
-         this%n_b(:) = (dom%n_d(:) * (pcoords(:)+1))/psize(:) - this%off(:)  ! Block 'physical' grid sizes
-      endwhere
+      this%off(:) = dom%se(proc, :, LO)  ! Block offset on the dom% should be between 0 and nxd-nxb
+      this%n_b(:) = dom%se(proc, :, HI) - dom%se(proc, :, LO) + 1 ! Block 'physical' grid sizes
 
       do i = xdim, zdim
          if (has_dir(i)) then
-            if (this%n_b(i) < 1) call die("[grid_set_cg] Too many CPUs for a small grid.")
-            if (this%n_b(i) < this%nb) call warn("[grid_set_cg] domain size in some directions is < nb, which may result in incomplete boundary cell update")
+            if (this%n_b(i) < 1) call die("[grid_init] Too many CPUs for a small grid.")
+            if (this%n_b(i) < this%nb) call warn("[grid_init] domain size in some directions is < nb, which may result in incomplete boundary cell update")
          endif
       enddo
 
@@ -324,7 +320,7 @@ contains
          this%inv_z = 0.
       endwhere
 
-   end subroutine set_cg
+   end subroutine init
 
 !>
 !! \brief Set up subsets of u,b and sgp arrays for MPI communication
@@ -333,7 +329,7 @@ contains
    subroutine grid_mpi_boundaries_prep(numfluids)
 
       use dataio_pub, only: die, code_progress
-      use constants,  only: PIERNIK_INIT_BASE, FLUID, ARR, xdim, zdim, ndims, LO, HI, BND, DOM
+      use constants,  only: PIERNIK_INIT_BASE, FLUID, ARR, xdim, zdim, ndims, LO, HI, BND, BLK
       use mpi,        only: MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION
       use mpisetup,   only: ierr, has_dir
 
@@ -370,12 +366,12 @@ contains
                call MPI_Type_commit(cg%mbc(t, d, LO, BND), ierr)
 
                starts(dim(t)-zdim+d) = cg%nb
-               call MPI_Type_create_subarray(dim(t), sizes, subsizes, starts, MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, cg%mbc(t, d, LO, DOM), ierr)
-               call MPI_Type_commit(cg%mbc(t, d, LO, DOM), ierr)
+               call MPI_Type_create_subarray(dim(t), sizes, subsizes, starts, MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, cg%mbc(t, d, LO, BLK), ierr)
+               call MPI_Type_commit(cg%mbc(t, d, LO, BLK), ierr)
 
                starts(dim(t)-zdim+d) = cg%n_b(d)
-               call MPI_Type_create_subarray(dim(t), sizes, subsizes, starts, MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, cg%mbc(t, d, HI, DOM), ierr)
-               call MPI_Type_commit(cg%mbc(t, d, HI, DOM), ierr)
+               call MPI_Type_create_subarray(dim(t), sizes, subsizes, starts, MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, cg%mbc(t, d, HI, BLK), ierr)
+               call MPI_Type_commit(cg%mbc(t, d, HI, BLK), ierr)
 
                starts(dim(t)-zdim+d) = HBstart(d)
                call MPI_Type_create_subarray(dim(t), sizes, subsizes, starts, MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, cg%mbc(t, d, HI, BND), ierr)
@@ -396,7 +392,7 @@ contains
 
       use dataio_pub,    only: die
       use mpi,           only: MPI_STATUS_SIZE, MPI_REQUEST_NULL
-      use constants,     only: ARR, xdim, ydim, zdim, LO, HI, BND, DOM, BND_PER, BND_MPI, BND_SHE, BND_COR, AT_NO_B
+      use constants,     only: ARR, xdim, ydim, zdim, LO, HI, BND, BLK, BND_PER, BND_MPI, BND_SHE, BND_COR, AT_NO_B
       use mpisetup,      only: comm3d, ierr, has_dir, psize, procxl, procyl, proczl, procxr, procyr, proczr
 
       implicit none
@@ -454,7 +450,7 @@ contains
                            case (2*zdim+HI)
                               p = proczr
                         end select
-                        call MPI_Isend(pa3d(1, 1, 1), 1, cg%mbc(ARR, d, lh, DOM),  p, 2*d+(LO+HI-lh), comm3d, req3d(4*(d-xdim)+1+2*(lh-LO)), ierr)
+                        call MPI_Isend(pa3d(1, 1, 1), 1, cg%mbc(ARR, d, lh, BLK),  p, 2*d+(LO+HI-lh), comm3d, req3d(4*(d-xdim)+1+2*(lh-LO)), ierr)
                         call MPI_Irecv(pa3d(1, 1, 1), 1, cg%mbc(ARR, d, lh, BND),  p, 2*d+       lh,  comm3d, req3d(4*(d-xdim)+2+2*(lh-LO)), ierr)
                      else
                         call die("[mpisetup:arr3d_boundaries] bnd_[xyz][lr] == 'mpi' && psize([xyz]dim) <= 1")
@@ -497,7 +493,7 @@ contains
    subroutine cleanup_grid
 
       use mpisetup,  only: has_dir, ierr
-      use constants, only: FLUID, ARR, xdim, zdim, LO, HI, BND, DOM
+      use constants, only: FLUID, ARR, xdim, zdim, LO, HI, BND, BLK
 
       implicit none
 
@@ -519,9 +515,9 @@ contains
       do d = xdim, zdim
          if (has_dir(d)) then
             do t = FLUID, ARR
-               call MPI_Type_free(cg%mbc(t, d, LO, BND),  ierr)
-               call MPI_Type_free(cg%mbc(t, d, LO, DOM),  ierr)
-               call MPI_Type_free(cg%mbc(t, d, HI, DOM), ierr)
+               call MPI_Type_free(cg%mbc(t, d, LO, BLK), ierr)
+               call MPI_Type_free(cg%mbc(t, d, LO, BND), ierr)
+               call MPI_Type_free(cg%mbc(t, d, HI, BLK), ierr)
                call MPI_Type_free(cg%mbc(t, d, HI, BND), ierr)
             enddo
          endif

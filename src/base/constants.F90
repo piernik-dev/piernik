@@ -115,7 +115,7 @@ module constants
    end enum
    ! last index of cg%mbc(:,:,:) array
    enum, bind(C)
-      enumerator :: BND = 1, DOM                         !< receiving and sending area
+      enumerator :: BND = 1, BLK                         !< receiving and sending area
    end enum
 
    ! Handling boundary cells in the output
