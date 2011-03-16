@@ -2,5 +2,8 @@ PROG      = piernik
 
 ### INTEL
 F90       = /opt/intel/openmpi/bin/mpif90
-F90FLAGS  = -xHost -O3 -r8 -ipo -heap-arrays -I/opt/intel/hdf5/include
-LDFLAGS   = -L/opt/intel/hdf5/lib
+F90FLAGS   = -r8 -ipo -heap-arrays -I/opt/intel/hdf5/include -I/opt/intel/fgsl/include
+F90FLAGS  += -xHost -O3
+F90FLAGS  += -assume norealloc_lhs
+LDFLAGS    = -L/opt/intel/hdf5/lib -L/opt/intel/fgsl/lib
+#LIBS       = -lfgsl
