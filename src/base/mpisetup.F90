@@ -637,7 +637,7 @@ contains
       endif
 
 #ifdef SHEAR_BND
-      if (psize(ydim) > 1) call die["[mpisetup:initmpi] Shear-pediodic boundary conditions do not permit psize(ydim) > 1"]
+      if (psize(ydim) > 1) call die("[mpisetup:initmpi] Shear-pediodic boundary conditions do not permit psize(ydim) > 1")
 
 #ifndef FFTW
       if (pcoords(xdim) == 0) then
