@@ -190,7 +190,7 @@ contains
             !else dom_lvl%se was implicitly allocated during assignment
          endif
          dom_lvl(idx)%se(:, :, :) = dom%se(:, :, :) / 2**(level_max -idx)
-         ! dom_lvl(idx)%n[xyz]t is not maintained
+         call dom_lvl(idx)%set_derived
       enddo
       if (any(dom%se(:,:,:) /= dom_lvl(level_max)%se(:,:,:))) call die("[multigrid:init_multigrid] dom%se or dom_lvl(level_max)%se corrupted") ! this should detect changes in compiler behavior
 

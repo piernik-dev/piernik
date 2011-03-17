@@ -846,12 +846,11 @@ contains
 
       use arrays,     only: u, b
       use constants,  only: cwdlen, AT_ALL_B, AT_OUT_B, AT_NO_B
-      use dataio_pub, only: chdf, nres, set_container_chdf, problem_name, run_id, msg, printio
+      use dataio_pub, only: chdf, nres, set_container_chdf, problem_name, run_id, msg, printio, hdf
       use hdf5,       only: HID_T, H5P_FILE_ACCESS_F, H5F_ACC_TRUNC_F, h5open_f, h5close_f, h5fcreate_f, h5fclose_f, h5pcreate_f, h5pclose_f, h5pset_fapl_mpio_f
       use list_hdf5,  only: problem_write_restart
       use mpisetup,   only: comm3d, comm, info, ierr, master, nstep
       use mpi,        only: MPI_CHARACTER
-      use types,      only: hdf
 #ifdef ISO_LOCAL
       use arrays,     only: cs_iso2_arr
 #endif /* ISO_LOCAL */
@@ -1343,7 +1342,7 @@ contains
    subroutine read_restart_hdf5(chdf)
 
       use arrays,        only: u, b
-      use dataio_pub,    only: msg, printio, warn, die, require_init_prob, problem_name, run_id, piernik_hdf5_version
+      use dataio_pub,    only: msg, printio, warn, die, require_init_prob, problem_name, run_id, piernik_hdf5_version, hdf
       use fluidindex,    only: flind
       use func,          only: fix_string
       use hdf5,          only: HID_T, SIZE_T, H5P_FILE_ACCESS_F, H5F_ACC_RDONLY_F, &
@@ -1352,7 +1351,6 @@ contains
       use list_hdf5,     only: problem_read_restart
       use mpisetup,      only: comm, ierr, magic_mass, master, t, info, comm3d, dt, dom, has_dir
       use mpi,           only: MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION
-      use types,         only: hdf
       use constants,     only: cwdlen, cbuff_len, domlen, idlen, xdim, ydim, zdim, AT_NO_B, AT_OUT_B
 #ifdef ISO_LOCAL
       use arrays,        only: cs_iso2_arr
@@ -1551,13 +1549,12 @@ contains
    subroutine write_hdf5(chdf)
 
       use constants,     only: cwdlen
-      use dataio_pub,    only: printio, msg, die, user_vars_hdf5, nhdf, problem_name, run_id
+      use dataio_pub,    only: printio, msg, die, user_vars_hdf5, nhdf, problem_name, run_id, hdf
       use grid,          only: cg
       use hdf5,          only: HID_T, H5F_ACC_TRUNC_F, H5P_FILE_ACCESS_F, H5P_DEFAULT_F, &
            &                   h5open_f, h5close_f, h5fcreate_f, h5fclose_f, h5pcreate_f, h5pclose_f, h5pset_fapl_mpio_f
       use mpisetup,      only: comm3d, comm, ierr, info, master
       use mpi,           only: MPI_CHARACTER
-      use types,         only: hdf
 #ifdef NEW_HDF5
       use list_hdf5,     only: iterate_lhdf5
 #endif /* NEW_HDF5 */
@@ -1633,7 +1630,7 @@ contains
    subroutine set_common_attributes(filename, chdf)
 
       use constants,     only: cbuff_len
-      use dataio_pub,    only: msg, printio, require_init_prob, piernik_hdf5_version, problem_name, run_id
+      use dataio_pub,    only: msg, printio, require_init_prob, piernik_hdf5_version, problem_name, run_id, hdf
       use grid,          only: cg
       use hdf5,          only: HID_T, SIZE_T, HSIZE_T, H5F_ACC_RDWR_F, H5T_NATIVE_CHARACTER, H5Z_FILTER_DEFLATE_F, H5P_DATASET_CREATE_F, &
            &                   h5open_f, h5fopen_f, h5fclose_f, H5Zfilter_avail_f, H5Pcreate_f, H5Pset_deflate_f, H5Pset_chunk_f, &
@@ -1642,7 +1639,6 @@ contains
       use list_hdf5,     only: additional_attrs
       use mpisetup,      only: slave, t, dt, local_magic_mass, comm, ierr, magic_mass, dom
       use mpi,           only: MPI_DOUBLE_PRECISION, MPI_SUM
-      use types,         only: hdf
       use version,       only: env, nenv
 
       implicit none

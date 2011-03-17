@@ -32,13 +32,12 @@
 module dataio_pub
 
    use constants, only: cbuff_len, domlen, idlen, cwdlen
-   use types,     only: hdf
 
    implicit none
 
    public  ! QA_WARN most variables are not secrets here
    private :: colormessage, T_PLAIN, T_ERR, T_WARN, T_INFO, T_IO, T_SILENT, ansi_red, ansi_green, ansi_yellow, ansi_blue, ansi_magenta, ansi_cyan ! QA_WARN no need to use these symbols outside dataio_pub
-   private :: cbuff_len, domlen, idlen, cwdlen, hdf ! QA_WARN prevent re-exporting
+   private :: cbuff_len, domlen, idlen, cwdlen ! QA_WARN prevent re-exporting
    !mpisetup uses: ansi_white and ansi_black
 
    real, parameter    :: piernik_hdf5_version = 1.17   !< output version
@@ -74,6 +73,14 @@ module dataio_pub
    character(len=cwdlen) :: par_file            !< path to the parameter file
    ! Handy variables
    integer            :: ierrh                  !< variable for iostat
+
+   ! the stuff related to type(hdf) has nothing in common with rest of this file. \todo move it to a separate file to prevent spurious cyclic dependencies
+   type :: hdf
+      integer :: nhdf, nres, step_hdf, step_res, nstep, nrestart
+      real    :: last_hdf_time, next_t_tsl,  next_t_log
+      character(len=domlen)  :: domain
+      character(len=idlen)   :: new_id
+   end type hdf
    type(hdf)          :: chdf                   !< container for some vital simulation parameters
 
    real               :: last_hdf_time                  !< time in simulation of the last resent hdf file dump

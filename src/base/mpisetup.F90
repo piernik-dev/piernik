@@ -204,7 +204,7 @@ contains
 !<
    subroutine init_mpi
 
-      use constants,     only: cwdlen, xdim, ydim, zdim, LO, HI, big_float, dpi, GEO_XYZ, GEO_RPZ, GEO_INVALID, BND_PER, BND_COR, BND_SHE, BND_REF
+      use constants,     only: cwdlen, xdim, ydim, zdim, LO, HI, big_float, dpi, GEO_XYZ, GEO_RPZ, GEO_INVALID, BND_PER, BND_COR, BND_REF
       use mpi,           only: MPI_COMM_WORLD, MPI_INFO_NULL, MPI_INFO_NULL, MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION, MPI_LOGICAL, MPI_PROC_NULL
       use dataio_pub,    only: die, printinfo, msg, cwd, ansi_white, ansi_black, warn, tmp_log_file
       use dataio_pub,    only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml  ! QA_WARN required for diff_nml
@@ -230,7 +230,6 @@ contains
       logical :: tmp_log_exist
       integer :: p
       integer, dimension(ndims) :: pc
-      integer :: d
 
       call MPI_Init( ierr )
       call MPI_Comm_rank(MPI_COMM_WORLD, proc, ierr)
@@ -522,42 +521,7 @@ contains
       dom%ymax = ymax
       dom%zmax = zmax
 
-      dom%Lx = dom%xmax - dom%xmin
-      dom%Ly = dom%ymax - dom%ymin
-      dom%Lz = dom%zmax - dom%zmin
-
-      dom%Vol = 1.
-      if (has_dir(xdim)) then
-         dom%Vol = dom%Vol * dom%Lx
-         dom%nxt = dom%n_d(xdim) + 2 * nb     ! Domain total grid sizes
-      else
-         dom%nxt = 1
-      endif
-
-      if (has_dir(ydim)) then
-         dom%Vol = dom%Vol * dom%Ly
-         dom%nyt = dom%n_d(ydim) + 2 * nb
-      else
-         dom%nyt = 1
-      endif
-
-      if (has_dir(zdim)) then
-         dom%Vol = dom%Vol * dom%Lz
-         dom%nzt = dom%n_d(zdim) + 2 * nb
-      else
-         dom%nzt = 1
-      endif
-      !> \deprecated BEWARE: dom\%Vol computed above is not true for non-cartesian geometry
-
-      dom%x0 = (dom%xmax + dom%xmin)/2.
-      dom%y0 = (dom%ymax + dom%ymin)/2.
-      dom%z0 = (dom%zmax + dom%zmin)/2.
-
-      where (.not. has_dir(:)) psize(:) = 1
-      if (.not. have_mpi) then
-         if (any(psize(:) > 1)) call warn("[mpisetup:init_mpi] Ignoring p[xyz]size > 1 on a single-CPU run")
-         psize(:) = 1
-      endif
+      call dom%set_derived ! finish up with the rest of domain_container members
 
 #ifdef MULTIGRID
       if (allow_uneven .and. master) call warn("[mpisetup:init_mpi] Multigrid solver is not yet capable of using unevenly divided domains.")
@@ -565,6 +529,8 @@ contains
 #endif /* MULTIGRID */
       if (allow_uneven .and. master .and. have_mpi) call warn("[mpisetup:init_mpi] Uneven domain decomposition is experimental.")
       is_uneven = .false.
+
+      where (.not. has_dir(:)) psize(:) = 1
       call divide_domain
 
       if ( any(dom%bnd(xdim:ydim, LO:HI) == BND_COR) .and. (psize(xdim) /= psize(ydim) .or. dom%n_d(xdim) /= dom%n_d(ydim)) ) then
@@ -573,16 +539,6 @@ contains
          call die(msg)
       endif
       if (any(dom%bnd(zdim, LO:HI) == BND_COR)) call die("[mpisetup:init_mpi] Corner BC not allowed for z-direction")
-
-      dom%periodic(:) = .false.
-
-      do d = xdim, zdim
-         if ((any(dom%bnd(d, LO:HI) == BND_PER) .or. (d==xdim .and. any(dom%bnd(d, LO:HI) == BND_SHE))) .and. has_dir(d)) then
-            dom%periodic(d) = .true.
-            if (dom%bnd(d, LO) /= dom%bnd(d, HI)) call die("[mpisetup:init_mpi] Periodic BC do not match")
-         endif
-      enddo
-      if (any(dom%bnd(ydim:zdim, LO:HI) == BND_SHE)) call die("[mpisetup:init_mpi] Shearing BC not allowed for y- and z-direction")
 
       call MPI_Cart_create(comm, ndims, psize, dom%periodic, reorder, comm3d, ierr)
       call MPI_Cart_coords(comm3d, proc, ndims, pcoords, ierr)

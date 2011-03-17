@@ -31,19 +31,12 @@
 !<
 module types
 
-   use constants, only: domlen, idlen, ndims, LO, HI, xdim, zdim
+   use constants, only: ndims, LO, HI, xdim, zdim
 
    implicit none
 
    private
-   public :: hdf, axes, domain_container, segment, tsl_container, value, problem_customize_solution, problem_grace_passed, finalize_problem, cleanup_problem, custom_emf_bnd
-
-   type :: hdf
-      integer :: nhdf, nres, step_hdf, step_res, nstep, nrestart
-      real    :: last_hdf_time, next_t_tsl,  next_t_log
-      character(len=domlen)  :: domain
-      character(len=idlen)   :: new_id
-   end type hdf
+   public :: axes, domain_container, segment, tsl_container, value, problem_customize_solution, problem_grace_passed, finalize_problem, cleanup_problem, custom_emf_bnd
 
    type :: value
       real                      :: val
@@ -64,8 +57,10 @@ module types
       real    :: zmax                           !< physical domain right z-boundary position
       integer, dimension(ndims) :: n_d          !< number of grid cells in physical domain in x-, y- and z-direction (where equal to 1, the dimension is reduced to a point with no boundary cells)
       integer                   :: nb           !< number of boundary cells surrounding the physical domain, same for all directions
-      integer, dimension(ndims, LO:HI) :: bnd  !< type of boundary conditions coded in integers
-      logical, dimension(ndims) :: periodic     !< .true. for periodic and shearing boundary pairs
+      integer, dimension(ndims, LO:HI) :: bnd   !< type of boundary conditions coded in integers
+
+      integer, dimension(:,:,:), allocatable :: se !< span of all domains (0:nproc-1, xdim:zdim, LO:HI); Use with care, because this is an antiparallel thing
+      !! \todo add hooks to parent and a list of children domains
 
       ! derived parameters
       real    :: Lx                             !< span of the physical domain in x-direction (xmax-xmin)
@@ -76,14 +71,19 @@ module types
       real    :: z0                             !< center of the physical domain in z-direction (zmax+zmin)/2.
       real    :: Vol                            !< total volume of the physical domain
 
-      ! Do not use n[xyz]t components in the Piernik source tree. Avoid using them in your problem-specific files because it seriuosly limits paralelization
-      ! \todo move them to another type, that extends domain_container
+      logical, dimension(ndims) :: periodic     !< .true. for periodic and shearing boundary pairs
+
+      ! Do not use n[xyz]t components in the Piernik source tree without a good reason
+      ! Avoid as a plague allocating buffers of that size because it negates benefits of parallelization
+      ! \todo move them to another type, that extends domain_container?
       integer :: nxt                            !< total number of %grid cells in the whole domain in x-direction
       integer :: nyt                            !< total number of %grid cells in the whole domain in y-direction
       integer :: nzt                            !< total number of %grid cells in the whole domain in z-direction
 
-      integer, dimension(:,:,:), allocatable :: se !< span of all domains (0:nproc-1, xdim:zdim, LO:HI); Use with care, because this is an antiparallel thing
-      !! \todo add hooks to parent and a list of children domains
+    contains
+
+      procedure :: set_derived
+
    end type domain_container
 
    ! specify segment of data for boundary exchange, prolongation and restriction.
@@ -140,5 +140,65 @@ module types
    procedure(no_args),  pointer :: finalize_problem           => NULL()
    procedure(no_args),  pointer :: cleanup_problem            => NULL()
    procedure(tab_args), pointer :: custom_emf_bnd             => NULL()
+
+contains
+
+   subroutine set_derived(this)
+
+      use constants,  only: xdim, ydim, zdim, LO, HI, BND_PER, BND_SHE
+      use dataio_pub, only: die
+
+      implicit none
+
+      class(domain_container), intent(inout) :: this
+      logical, dimension(xdim:zdim) :: has_dir
+      integer :: d
+
+      has_dir(:) = this%n_d(:) > 1
+
+      this%periodic(:) = .false.
+      do d = xdim, zdim
+         if ((any(this%bnd(d, LO:HI) == BND_PER) .or. (d==xdim .and. any(this%bnd(d, LO:HI) == BND_SHE))) .and. has_dir(d)) then
+            this%periodic(d) = .true.
+            if (this%bnd(d, LO) /= this%bnd(d, HI)) call die("[types:set_derived] Periodic BC do not match")
+         endif
+      enddo
+      if (any(this%bnd(ydim:zdim, LO:HI) == BND_SHE)) call die("[types:set_derived] Shearing BC not allowed for y- and z-direction")
+
+      !> \todo convert L[xyz], [xyz]0 and n[xyz]t to (xdim:zdim)-sized arrays
+
+      ! auxiliary lengths
+      this%Lx = this%xmax - this%xmin
+      this%Ly = this%ymax - this%ymin
+      this%Lz = this%zmax - this%zmin
+      this%x0 = (this%xmax + this%xmin)/2.
+      this%y0 = (this%ymax + this%ymin)/2.
+      this%z0 = (this%zmax + this%zmin)/2.
+
+      !volume and total grid sizes
+      this%Vol = 1.
+      if (has_dir(xdim)) then
+         this%Vol = this%Vol * this%Lx
+         this%nxt = this%n_d(xdim) + 2 * this%nb
+      else
+         this%nxt = 1
+      endif
+
+      if (has_dir(ydim)) then
+         this%Vol = this%Vol * this%Ly
+         this%nyt = this%n_d(ydim) + 2 * this%nb
+      else
+         this%nyt = 1
+      endif
+
+      if (has_dir(zdim)) then
+         this%Vol = this%Vol * this%Lz
+         this%nzt = this%n_d(zdim) + 2 * this%nb
+      else
+         this%nzt = 1
+      endif
+      !> \deprecated BEWARE: Vol computed above is not true for non-cartesian geometry
+
+   end subroutine set_derived
 
 end module types
