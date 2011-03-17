@@ -778,7 +778,7 @@ contains
       use grid,      only: cg
       use mpi,       only: MPI_DOUBLE_PRECISION
       use mpisetup,  only: psize, pcoords, master, nproc, comm, comm3d, ierr, mpifind
-      use constants, only: xdim, ydim, zdim, ndims
+      use constants, only: xdim, ydim, zdim, ndims, MAXL
 
       implicit none
 
@@ -877,7 +877,7 @@ contains
       loc_gp_max  = maxloc(gpwork(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)) &
                   + [ cg%nb, cg%nb, cg%nb ]
 
-      call mpifind(gp_max, 'max', loc_gp_max, proc_gp_max)
+      call mpifind(gp_max, MAXL, loc_gp_max, proc_gp_max)
       pgpmax = proc_gp_max
 
       call MPI_Bcast(gp_max, 1, MPI_DOUBLE_PRECISION, pgpmax, comm, ierr)

@@ -700,12 +700,13 @@ contains
 
    subroutine mpifind(var, what, loc_arr, loc_proc)
 
+      use constants,     only: MINL, MAXL
       use mpi,           only: MPI_2DOUBLE_PRECISION, MPI_INTEGER, MPI_MINLOC, MPI_MAXLOC
       use dataio_pub,    only: msg, warn
 
       implicit none
 
-      character(len=*), intent(in) :: what
+      integer, intent(in)          :: what
       real                         :: var
       real, dimension(2)           :: rsend, rrecv
       integer, dimension(ndims)    :: loc_arr
@@ -715,14 +716,14 @@ contains
       rsend(1) = var
       rsend(2) = proc
 
-      select case (what(1:3))
-      case ('min')
-         call MPI_Reduce(rsend, rrecv, 1, MPI_2DOUBLE_PRECISION, MPI_MINLOC, 0, comm, ierr)
-      case ('max')
-         call MPI_Reduce(rsend, rrecv, 1, MPI_2DOUBLE_PRECISION, MPI_MAXLOC, 0, comm, ierr)
-      case default
-         write(msg,*) '[mpisetup:mpifind] actual parameter "', what, '"is not allowed'
-         call warn(msg)
+      select case (what)
+         case (MINL)
+            call MPI_Reduce(rsend, rrecv, 1, MPI_2DOUBLE_PRECISION, MPI_MINLOC, 0, comm, ierr)
+         case (MAXL)
+            call MPI_Reduce(rsend, rrecv, 1, MPI_2DOUBLE_PRECISION, MPI_MAXLOC, 0, comm, ierr)
+         case default
+            write(msg,*) '[mpisetup:mpifind] actual parameter "', what, '"is not allowed'
+            call warn(msg)
       end select
 
       if (master) then

@@ -835,6 +835,7 @@ contains
 
    subroutine get_extremum(tab,minmax,prop)
 
+      use constants,     only: MINL, MAXL
       use dataio_pub,    only: msg, warn
       use types,         only: value
       use grid,          only: cg
@@ -843,21 +844,22 @@ contains
       implicit none
 
       real, dimension(:,:,:), intent(in) :: tab
-      character(len=*), intent(in)       :: minmax
+      integer, intent(in)                :: minmax
       type(value), intent(out)           :: prop
 
-      if (minmax=='min') then
-         prop%val = minval(tab)
-         prop%loc = minloc(tab) + [cg%nb, cg%nb, cg%nb]
-      elseif (minmax=='max') then
-         prop%val = maxval(tab)
-         prop%loc = maxloc(tab) + [cg%nb, cg%nb, cg%nb]
-      else
-         write(msg,*) "[dataio:get_extremum]: I don't know what to do with minmax = ", trim(minmax)
-         call warn(msg)
-      endif
+      select case (minmax)
+         case (MINL)
+            prop%val = minval(tab)
+            prop%loc = minloc(tab) + [cg%nb, cg%nb, cg%nb]
+         case (MAXL)
+            prop%val = maxval(tab)
+            prop%loc = maxloc(tab) + [cg%nb, cg%nb, cg%nb]
+         case default
+            write(msg,*) "[dataio:get_extremum]: I don't know what to do with minmax = ", minmax
+            call warn(msg)
+      end select
 
-      call mpifind(prop%val, trim(minmax), prop%loc, prop%proc)
+      call mpifind(prop%val, minmax, prop%loc, prop%proc)
 
    end subroutine get_extremum
 
@@ -915,7 +917,7 @@ contains
    subroutine get_common_vars(fl)
 
       use arrays,     only: u, b, wa
-      use constants,  only: ION, DST
+      use constants,  only: ION, DST, MINL, MAXL
       use mpisetup,   only: smallp
       use grid,       only: cg
       use fluidtypes, only: phys_prop, component_fluid
@@ -928,17 +930,17 @@ contains
 
       pr => fl%snap
       wa = u(fl%idn,:,:,:)
-      call get_extremum(wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), 'max', pr%dens_max)
-      call get_extremum(wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), 'min', pr%dens_min)
+      call get_extremum(wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), MAXL, pr%dens_max)
+      call get_extremum(wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), MINL, pr%dens_min)
 
       wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = abs(u(fl%imx,cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)/u(fl%idn,cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke))
-      call get_extremum(wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), 'max', pr%velx_max)
+      call get_extremum(wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), MAXL, pr%velx_max)
 
       wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = abs(u(fl%imy,cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)/u(fl%idn,cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke))
-      call get_extremum(wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), 'max', pr%vely_max)
+      call get_extremum(wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), MAXL, pr%vely_max)
 
       wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = abs(u(fl%imz,cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)/u(fl%idn,cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke))
-      call get_extremum(wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), 'max', pr%velz_max)
+      call get_extremum(wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), MAXL, pr%velz_max)
 
 #ifdef ISO
       pr%pres_min%val  = fl%cs2*pr%dens_min%val
@@ -962,18 +964,18 @@ contains
                    - 0.5*((u(fl%imx,:,:,:)**2 +u(fl%imy,:,:,:)**2 + u(fl%imz,:,:,:)**2)/u(fl%idn,:,:,:)))
          if (fl%tag == ION) wa(:,:,:) = wa(:,:,:) - 0.5*(sum(b**2,dim=1))
 
-         wa(:,:,:) = max((fl%gam_1)*wa(:,:,:),smallp)  ! pres
+         wa(:,:,:) = max(fl%gam_1*wa(:,:,:),smallp)  ! pres
 
-         call get_extremum(wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), 'max', pr%pres_max)
-         call get_extremum(wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), 'min', pr%pres_min)
+         call get_extremum(wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), MAXL, pr%pres_max)
+         call get_extremum(wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), MINL, pr%pres_min)
 
          wa(:,:,:) = fl%gam*wa(:,:,:)/u(fl%idn,:,:,:) ! sound speed squared
-         call get_extremum(wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), 'max', pr%cs_max)
+         call get_extremum(wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), MAXL, pr%cs_max)
          pr%cs_max%val = sqrt(pr%cs_max%val)
 
          wa(:,:,:) = (mH * wa(:,:,:))/ (kboltz * fl%gam) ! temperature
-         call get_extremum(wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), 'max', pr%temp_max)
-         call get_extremum(wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), 'min', pr%temp_min)
+         call get_extremum(wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), MAXL, pr%temp_max)
+         call get_extremum(wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), MINL, pr%temp_min)
       endif
 #endif /* !ISO */
    end subroutine get_common_vars
@@ -988,7 +990,7 @@ contains
    subroutine  write_log(tsl)
 
       use arrays,             only: wa, u, b
-      use constants,          only: small
+      use constants,          only: small, MINL, MAXL
       use dataio_pub,         only: msg, printinfo
       use fluids_pub,         only: has_dst, has_ion, has_neu
       use fluidindex,         only: ibx, iby, ibz, flind
@@ -1056,11 +1058,11 @@ contains
 
 #ifdef MAGNETIC
          wa(:,:,:)  = sqrt(b(1,:,:,:)*b(1,:,:,:) + b(2,:,:,:)*b(2,:,:,:) + b(3,:,:,:)*b(3,:,:,:))
-         call get_extremum(wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), 'max', b_max)
-         call get_extremum(wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), 'min', b_min)
+         call get_extremum(wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), MAXL, b_max)
+         call get_extremum(wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), MINL, b_min)
 
          wa(:,:,:)  = wa(:,:,:) / sqrt(u(flind%ion%idn,:,:,:))
-         call get_extremum(wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), 'max', vai_max)
+         call get_extremum(wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), MAXL, vai_max)
 #endif /* MAGNETIC */
 
 #ifdef ISO
@@ -1068,24 +1070,24 @@ contains
 !        wa            = cs_iso2_arr(:,:,:)*u(idni,:,:,:)
 !        prei_min%val  = minval(wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke))
 !        prei_min%loc  = minloc(wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)) + [cg%nb, cg%nb, cg%nb]
-!        call mpifind(prei_min%val, 'min', prei_min%loc, prei_min%proc)
+!        call mpifind(prei_min%val, MINL, prei_min%loc, prei_min%proc)
 !
 !        prei_max%val  = maxval(wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke))
 !        prei_max%loc  = maxloc(wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)) + [cg%nb, cg%nb, cg%nb]
-!        call mpifind(prei_max%val, 'max', prei_max%loc, prei_max%proc)
+!        call mpifind(prei_max%val, MAXL, prei_max%loc, prei_max%proc)
 !
 !        csi_max%val   = maxval(cs_iso2_arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke))
 !        csi_max%loc   = maxloc(cs_iso2_arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)) + [cg%nb, cg%nb, cg%nb]
-!        call mpifind(csi_max%val, 'max', csi_max%loc, csi_max%proc)
+!        call mpifind(csi_max%val, MAXL, csi_max%loc, csi_max%proc)
 !
 !        wa            = mH / kboltz * cs_iso2_arr(:,:,:)
 !        temi_min%val  = minval(wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke))
 !        temi_min%loc  = minloc(wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)) + [cg%nb, cg%nb, cg%nb]
-!        call mpifind(temi_min%val, 'min', temi_min%loc, temi_min%proc)
+!        call mpifind(temi_min%val, MINL, temi_min%loc, temi_min%proc)
 !
 !        temi_max%val  = maxval(wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke))
 !        temi_max%loc  = maxloc(wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)) + [cg%nb, cg%nb, cg%nb]
-!        call mpifind(temi_max%val, 'max', temi_max%loc, temi_max%proc)
+!        call mpifind(temi_max%val, MAXL, temi_max%loc, temi_max%proc)
 #endif /* ISO_LOCAL */
 #else /* !ISO */
 !        wa(:,:,:) = (u(ieni,:,:,:) &                ! eint
@@ -1102,11 +1104,11 @@ contains
 
 #ifdef VARIABLE_GP
       wa(1:nxu,:,:) = abs((gpot(nxl:cg%nx,:,:)-gpot(1:nxu,:,:))*cg%idx) ; wa(cg%nx,:,:) = wa(nxu,:,:)
-      call get_extremum(wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), 'max', gpxmax)
+      call get_extremum(wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), MAXL, gpxmax)
       wa(:,1:nyu,:) = abs((gpot(:,nyl:cg%ny,:)-gpot(:,1:nyu,:))*cg%idy) ; wa(:,cg%ny,:) = wa(:,nyu,:)
-      call get_extremum(wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), 'max', gpymax)
+      call get_extremum(wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), MAXL, gpymax)
       wa(:,:,1:nzu) = abs((gpot(:,:,nzl:cg%nz)-gpot(:,:,1:nzu))*cg%idz) ; wa(:,:,cg%nz) = wa(:,:,nzu)
-      call get_extremum(wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), 'max', gpzmax)
+      call get_extremum(wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), MAXL, gpzmax)
 #endif /* VARIABLE_GP */
 
 #ifdef MAGNETIC
@@ -1120,18 +1122,18 @@ contains
       wa(:,cg%je,:) = wa(:,cg%je-D_y,:)
       wa(:,:,cg%ke) = wa(:,:,cg%ke-D_z)
 
-      call get_extremum(wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), 'max', divb_max)
+      call get_extremum(wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), MAXL, divb_max)
 #endif /* MAGNETIC */
 
 #ifdef COSM_RAYS
       wa            = sum(u(iarr_all_crs,:,:,:),1)
-      call get_extremum(wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), 'max', encr_max)
-      call get_extremum(wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), 'min', encr_min)
+      call get_extremum(wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), MAXL, encr_max)
+      call get_extremum(wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), MINL, encr_min)
 #endif /* COSM_RAYS */
 
       if (has_interactions) then
          wa = L2norm(u(flind%dst%imx,:,:,:),u(flind%dst%imy,:,:,:),u(flind%dst%imz,:,:,:),u(flind%neu%imx,:,:,:),u(flind%neu%imy,:,:,:),u(flind%neu%imz,:,:,:) ) * u(flind%dst%idn,:,:,:)
-         call get_extremum(wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), 'max', drag)
+         call get_extremum(wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), MAXL, drag)
       endif
 
       if (master)  then

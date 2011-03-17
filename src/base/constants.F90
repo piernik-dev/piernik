@@ -129,6 +129,9 @@ module constants
    end enum
 
    ! misc
+   enum, bind(C)
+      enumerator :: MINL, MAXL                             !< cinstants for mpifind
+   end enum
    integer, parameter :: stdout = output_unit
    integer, parameter :: stderr = error_unit
 
