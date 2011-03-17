@@ -67,11 +67,10 @@ module dataio_hdf5
    interface write_arr_to_restart
       module procedure write_4darr_to_restart, write_3darr_to_restart
    end interface
+
    interface read_arr_from_restart
       module procedure read_4darr_from_restart, read_3darr_from_restart
    end interface
-
-
 
 contains
 

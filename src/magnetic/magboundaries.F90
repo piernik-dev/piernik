@@ -48,28 +48,28 @@ contains
 
       if (psize(xdim) > 1) then
 
-         call MPI_Isend  (A(1,1,1,1), 1, cg%mbc(MAG, xdim, LO, BLK), procxl, 10, comm3d, req(1), ierr)
-         call MPI_Isend  (A(1,1,1,1), 1, cg%mbc(MAG, xdim, HI, BLK), procxr, 20, comm3d, req(3), ierr)
-         call MPI_Irecv  (A(1,1,1,1), 1, cg%mbc(MAG, xdim, LO, BND), procxl, 20, comm3d, req(2), ierr)
-         call MPI_Irecv  (A(1,1,1,1), 1, cg%mbc(MAG, xdim, HI, BND), procxr, 10, comm3d, req(4), ierr)
+         call MPI_Isend(A(1,1,1,1), 1, cg%mbc(MAG, xdim, LO, BLK), procxl, 10, comm3d, req(1), ierr)
+         call MPI_Isend(A(1,1,1,1), 1, cg%mbc(MAG, xdim, HI, BLK), procxr, 20, comm3d, req(3), ierr)
+         call MPI_Irecv(A(1,1,1,1), 1, cg%mbc(MAG, xdim, LO, BND), procxl, 20, comm3d, req(2), ierr)
+         call MPI_Irecv(A(1,1,1,1), 1, cg%mbc(MAG, xdim, HI, BND), procxr, 10, comm3d, req(4), ierr)
 
          call MPI_Waitall(4,req(:),status(:,:),ierr)
       endif
 
       if (psize(ydim) > 1) then
-         call MPI_Isend  (A(1,1,1,1), 1, cg%mbc(MAG, ydim, LO, BLK), procyl, 30, comm3d, req(1), ierr)
-         call MPI_Isend  (A(1,1,1,1), 1, cg%mbc(MAG, ydim, HI, BLK), procyr, 40, comm3d, req(3), ierr)
-         call MPI_Irecv  (A(1,1,1,1), 1, cg%mbc(MAG, ydim, LO, BND), procyl, 40, comm3d, req(2), ierr)
-         call MPI_Irecv  (A(1,1,1,1), 1, cg%mbc(MAG, ydim, HI, BND), procyr, 30, comm3d, req(4), ierr)
+         call MPI_Isend(A(1,1,1,1), 1, cg%mbc(MAG, ydim, LO, BLK), procyl, 30, comm3d, req(1), ierr)
+         call MPI_Isend(A(1,1,1,1), 1, cg%mbc(MAG, ydim, HI, BLK), procyr, 40, comm3d, req(3), ierr)
+         call MPI_Irecv(A(1,1,1,1), 1, cg%mbc(MAG, ydim, LO, BND), procyl, 40, comm3d, req(2), ierr)
+         call MPI_Irecv(A(1,1,1,1), 1, cg%mbc(MAG, ydim, HI, BND), procyr, 30, comm3d, req(4), ierr)
 
          call MPI_Waitall(4,req(:),status(:,:),ierr)
       endif
 
       if (psize(zdim) > 1) then
-         call MPI_Isend  (A(1,1,1,1), 1, cg%mbc(MAG, zdim, LO, BLK), proczl, 50, comm3d, req(1), ierr)
-         call MPI_Isend  (A(1,1,1,1), 1, cg%mbc(MAG, zdim, HI, BLK), proczr, 60, comm3d, req(3), ierr)
-         call MPI_Irecv  (A(1,1,1,1), 1, cg%mbc(MAG, zdim, LO, BND), proczl, 60, comm3d, req(2), ierr)
-         call MPI_Irecv  (A(1,1,1,1), 1, cg%mbc(MAG, zdim, HI, BND), proczr, 50, comm3d, req(4), ierr)
+         call MPI_Isend(A(1,1,1,1), 1, cg%mbc(MAG, zdim, LO, BLK), proczl, 50, comm3d, req(1), ierr)
+         call MPI_Isend(A(1,1,1,1), 1, cg%mbc(MAG, zdim, HI, BLK), proczr, 60, comm3d, req(3), ierr)
+         call MPI_Irecv(A(1,1,1,1), 1, cg%mbc(MAG, zdim, LO, BND), proczl, 60, comm3d, req(2), ierr)
+         call MPI_Irecv(A(1,1,1,1), 1, cg%mbc(MAG, zdim, HI, BND), proczr, 50, comm3d, req(4), ierr)
 
          call MPI_Waitall(4,req(:),status(:,:),ierr)
       endif
@@ -148,10 +148,10 @@ contains
 !
 ! wysylamy na drugi brzeg
 !
-            call MPI_Isend   (send_left , 3*cg%ny*cg%nz*cg%nb, MPI_DOUBLE_PRECISION, procxl, 10, comm, req(1), ierr)
-            call MPI_Isend   (send_right, 3*cg%ny*cg%nz*cg%nb, MPI_DOUBLE_PRECISION, procxr, 20, comm, req(3), ierr)
-            call MPI_Irecv   (recv_left , 3*cg%ny*cg%nz*cg%nb, MPI_DOUBLE_PRECISION, procxl, 20, comm, req(2), ierr)
-            call MPI_Irecv   (recv_right, 3*cg%ny*cg%nz*cg%nb, MPI_DOUBLE_PRECISION, procxr, 10, comm, req(4), ierr)
+            call MPI_Isend(send_left , 3*cg%ny*cg%nz*cg%nb, MPI_DOUBLE_PRECISION, procxl, 10, comm, req(1), ierr)
+            call MPI_Isend(send_right, 3*cg%ny*cg%nz*cg%nb, MPI_DOUBLE_PRECISION, procxr, 20, comm, req(3), ierr)
+            call MPI_Irecv(recv_left , 3*cg%ny*cg%nz*cg%nb, MPI_DOUBLE_PRECISION, procxl, 20, comm, req(2), ierr)
+            call MPI_Irecv(recv_right, 3*cg%ny*cg%nz*cg%nb, MPI_DOUBLE_PRECISION, procxr, 10, comm, req(4), ierr)
 
             call MPI_Waitall(4,req(:),status(:,:),ierr)
 
@@ -168,10 +168,10 @@ contains
 
             if (psize(xdim) > 1) then
 
-               call MPI_Isend  (b(1,1,1,1), 1, cg%mbc(MAG, xdim, LO, BLK), procxl, 10, comm3d, req(1), ierr)
-               call MPI_Isend  (b(1,1,1,1), 1, cg%mbc(MAG, xdim, HI, BLK), procxr, 20, comm3d, req(3), ierr)
-               call MPI_Irecv  (b(1,1,1,1), 1, cg%mbc(MAG, xdim, LO, BND), procxl, 20, comm3d, req(2), ierr)
-               call MPI_Irecv  (b(1,1,1,1), 1, cg%mbc(MAG, xdim, HI, BND), procxr, 10, comm3d, req(4), ierr)
+               call MPI_Isend(b(1,1,1,1), 1, cg%mbc(MAG, xdim, LO, BLK), procxl, 10, comm3d, req(1), ierr)
+               call MPI_Isend(b(1,1,1,1), 1, cg%mbc(MAG, xdim, HI, BLK), procxr, 20, comm3d, req(3), ierr)
+               call MPI_Irecv(b(1,1,1,1), 1, cg%mbc(MAG, xdim, LO, BND), procxl, 20, comm3d, req(2), ierr)
+               call MPI_Irecv(b(1,1,1,1), 1, cg%mbc(MAG, xdim, HI, BND), procxr, 10, comm3d, req(4), ierr)
 
                call MPI_Waitall(4,req(:),status(:,:),ierr)
 
@@ -181,20 +181,20 @@ contains
          case (ydim)
             if (psize(ydim) > 1) then
 
-               call MPI_Isend  (b(1,1,1,1), 1, cg%mbc(MAG, ydim, LO, BLK), procyl, 30, comm3d, req(1), ierr)
-               call MPI_Isend  (b(1,1,1,1), 1, cg%mbc(MAG, ydim, HI, BLK), procyr, 40, comm3d, req(3), ierr)
-               call MPI_Irecv  (b(1,1,1,1), 1, cg%mbc(MAG, ydim, LO, BND), procyl, 40, comm3d, req(2), ierr)
-               call MPI_Irecv  (b(1,1,1,1), 1, cg%mbc(MAG, ydim, HI, BND), procyr, 30, comm3d, req(4), ierr)
+               call MPI_Isend(b(1,1,1,1), 1, cg%mbc(MAG, ydim, LO, BLK), procyl, 30, comm3d, req(1), ierr)
+               call MPI_Isend(b(1,1,1,1), 1, cg%mbc(MAG, ydim, HI, BLK), procyr, 40, comm3d, req(3), ierr)
+               call MPI_Irecv(b(1,1,1,1), 1, cg%mbc(MAG, ydim, LO, BND), procyl, 40, comm3d, req(2), ierr)
+               call MPI_Irecv(b(1,1,1,1), 1, cg%mbc(MAG, ydim, HI, BND), procyr, 30, comm3d, req(4), ierr)
 
                call MPI_Waitall(4,req(:),status(:,:),ierr)
             endif
 
          case (zdim)
             if (psize(zdim) > 1) then
-               call MPI_Isend  (b(1,1,1,1), 1, cg%mbc(MAG, zdim, LO, BLK), proczl, 50, comm3d, req(1), ierr)
-               call MPI_Isend  (b(1,1,1,1), 1, cg%mbc(MAG, zdim, HI, BLK), proczr, 60, comm3d, req(3), ierr)
-               call MPI_Irecv  (b(1,1,1,1), 1, cg%mbc(MAG, zdim, LO, BND), proczl, 60, comm3d, req(2), ierr)
-               call MPI_Irecv  (b(1,1,1,1), 1, cg%mbc(MAG, zdim, HI, BND), proczr, 50, comm3d, req(4), ierr)
+               call MPI_Isend(b(1,1,1,1), 1, cg%mbc(MAG, zdim, LO, BLK), proczl, 50, comm3d, req(1), ierr)
+               call MPI_Isend(b(1,1,1,1), 1, cg%mbc(MAG, zdim, HI, BLK), proczr, 60, comm3d, req(3), ierr)
+               call MPI_Irecv(b(1,1,1,1), 1, cg%mbc(MAG, zdim, LO, BND), proczl, 60, comm3d, req(2), ierr)
+               call MPI_Irecv(b(1,1,1,1), 1, cg%mbc(MAG, zdim, HI, BND), proczr, 50, comm3d, req(4), ierr)
 
                call MPI_Waitall(4,req(:),status(:,:),ierr)
             endif
@@ -219,8 +219,8 @@ contains
 
             send_left(:,:,:,:) = b(:, cg%is:cg%isb,:,:)
 
-            call MPI_Isend   (send_left , 3*cg%nb*cg%ny*cg%nz, MPI_DOUBLE_PRECISION, procxyl, 70, comm, req(1), ierr)
-            call MPI_Irecv   (recv_left , 3*cg%nx*cg%nb*cg%nz, MPI_DOUBLE_PRECISION, procxyl, 80, comm, req(2), ierr)
+            call MPI_Isend(send_left, 3*cg%nb*cg%ny*cg%nz, MPI_DOUBLE_PRECISION, procxyl, 70, comm, req(1), ierr)
+            call MPI_Irecv(recv_left, 3*cg%nx*cg%nb*cg%nz, MPI_DOUBLE_PRECISION, procxyl, 80, comm, req(2), ierr)
 
             call MPI_Waitall(2,req(:),status(:,:),ierr)
 
@@ -232,8 +232,8 @@ contains
                enddo
             enddo
 
-            if (allocated(send_left))  deallocate(send_left)
-            if (allocated(recv_left))  deallocate(recv_left)
+            if (allocated(send_left)) deallocate(send_left)
+            if (allocated(recv_left)) deallocate(recv_left)
          endif
       endif
 
@@ -275,8 +275,8 @@ contains
                enddo
             enddo
 
-            if (allocated(send_left))  deallocate(send_left)
-            if (allocated(recv_left))  deallocate(recv_left)
+            if (allocated(send_left)) deallocate(send_left)
+            if (allocated(recv_left)) deallocate(recv_left)
          endif
       endif
 
