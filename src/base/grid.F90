@@ -453,10 +453,10 @@ contains
                         call MPI_Isend(pa3d(1, 1, 1), 1, cg%mbc(ARR, d, lh, BLK),  p, 2*d+(LO+HI-lh), comm3d, req3d(4*(d-xdim)+1+2*(lh-LO)), ierr)
                         call MPI_Irecv(pa3d(1, 1, 1), 1, cg%mbc(ARR, d, lh, BND),  p, 2*d+       lh,  comm3d, req3d(4*(d-xdim)+2+2*(lh-LO)), ierr)
                      else
-                        call die("[mpisetup:arr3d_boundaries] bnd_[xyz][lr] == 'mpi' && psize([xyz]dim) <= 1")
+                        call die("[grid:arr3d_boundaries] bnd_[xyz][lr] == 'mpi' && psize([xyz]dim) <= 1")
                      endif
                   case (BND_SHE, BND_COR) !> \todo move appropriate code from poissonsolver::poisson_solve or do nothing. or die until someone really needs SHEAR.
-                     call die("[mpisetup:arr3d_boundaries] 'she' not implemented")
+                     call die("[grid:arr3d_boundaries] 'she' or 'cor' not implemented")
                   case default ! Set gradient == 0 on the external boundaries
                      if (present(area_type)) then
                         if (area_type /= AT_NO_B) cycle
