@@ -262,7 +262,7 @@ contains
       implicit none
       character(len=varlen)   :: var !< quantity to be plotted
       character(len=planelen) :: ij  !< plane of plot
-      integer                 :: xn  !< no. of cell at which we are slicing the local block
+      integer(kind=8)         :: xn  !< no. of cell at which we are slicing the local block
       integer                 :: ierrh !< error handling
       real, dimension(:,:)    :: tab !< array containing given quantity
 #ifdef COSM_RAYS
@@ -644,7 +644,8 @@ contains
       real, dimension(:,:,:), allocatable :: temp
       real                                :: imax, imin, di
       integer                             :: ierrh, i, j
-      integer                             :: comm2d, lp, ls, xn, error
+      integer                             :: comm2d, lp, ls, error
+      integer(kind=8)                     :: xn
       integer, parameter                  :: suffixed_planelen = planelen + 1  !< plane name + suffix e.g "xy_"
       character(len=suffixed_planelen)    :: pij
       character(len=cwdlen)               :: fname
@@ -799,8 +800,9 @@ contains
 
       implicit none
 
-      integer,                   intent(in)  :: area_type
-      integer, dimension(ndims), intent(out) :: area, lleft, lright, loffs, chnk
+      integer,                           intent(in)  :: area_type
+      integer,         dimension(ndims), intent(out) :: area, lleft, lright, chnk
+      integer(kind=8), dimension(ndims), intent(out) :: loffs
 
       select case (area_type)
          case (AT_ALL_B)                           ! whole domain with mpi boundaries
@@ -945,18 +947,21 @@ contains
    ! Is there a way to pass only one, "universal" array pointer in Fortran?
 
    subroutine prep_arr_write(rank, ir, area_type, loffs, chunk_dims, dimsf, file_id, dname, memspace, plist_id, filespace, dset_id, dplist_id, dfilespace)
+
       use hdf5,       only: HID_T, HSIZE_T, H5T_NATIVE_DOUBLE, &
            &                H5P_DATASET_CREATE_F, H5S_SELECT_SET_F, H5P_DATASET_XFER_F, H5FD_MPIO_INDEPENDENT_F, &
            &                h5screate_simple_f, h5pcreate_f, h5dcreate_f, h5dget_space_f, &
            &                h5pset_chunk_f, h5pset_dxpl_mpio_f, h5sselect_hyperslab_f
       use mpisetup,   only: is_uneven
-      use constants,  only: ndims, AT_OUT_B
+      use constants,  only: ndims, AT_OUT_B, LONG
+
       implicit none
+
       integer, parameter                             :: rank4 = 1 + ndims
       integer, intent(in)                            :: rank, ir
       integer, intent(in)                            :: area_type !> no boundaries, only outer boundaries or all boundaries
       integer(HSIZE_T), dimension(rank4), intent(in) :: chunk_dims, dimsf
-      integer, dimension(ndims), intent(in)          :: loffs
+      integer(kind=8),  dimension(ndims), intent(in) :: loffs
       integer(HID_T), intent(in)                     :: file_id   !> File identifier
       character(len=*), intent(in)                   :: dname
 
@@ -982,7 +987,7 @@ contains
       stride(:) = 1
       count(:)  = 1
       block(:)  = chunk_dims(:)
-      offset(:) = [0, loffs(:)]
+      offset(:) = [0_LONG, loffs(:)]
       call h5sselect_hyperslab_f (filespace, H5S_SELECT_SET_F, offset(ir:), count(ir:), error, stride(ir:), block(ir:))
 
       call h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error)
@@ -1026,7 +1031,8 @@ contains
       integer(HID_T) :: dfilespace, filespace !> Dataspace identifiers in file
       integer(HID_T) :: memspace              !> Dataspace identifier in memory
 
-      integer, dimension(ndims) :: area, lleft, lright, loffs, chnk
+      integer,         dimension(ndims) :: area, lleft, lright, chnk
+      integer(kind=8), dimension(ndims) :: loffs
 
       integer :: rank
       integer :: error
@@ -1068,7 +1074,8 @@ contains
       integer(HID_T) :: dfilespace, filespace !> Dataspace identifiers in file
       integer(HID_T) :: memspace              !> Dataspace identifier in memory
 
-      integer, dimension(ndims) :: area, lleft, lright, loffs, chnk
+      integer,         dimension(ndims) :: area, lleft, lright, chnk
+      integer(kind=8), dimension(ndims) :: loffs
 
       integer :: rank
       integer :: error
@@ -1178,16 +1185,19 @@ contains
 ! External boundary cells are not stored in the restart file and thus all of them are lost (area_type = AT_OUT_B not implemented yet).
 
    subroutine prep_arr_read(rank, ir, loffs, chunk_dims, file_id, dname, memspace, plist_id, filespace, dset_id)
+
       use hdf5,       only: HID_T, HSIZE_T, H5S_SELECT_SET_F, H5P_DATASET_XFER_F, H5FD_MPIO_INDEPENDENT_F, &
            &                h5dopen_f, h5sget_simple_extent_ndims_f, h5dget_space_f, &
            &                h5pcreate_f, h5pset_dxpl_mpio_f, h5sselect_hyperslab_f, h5screate_simple_f
-      use constants,  only: ndims
+      use constants,  only: ndims, LONG
       use dataio_pub, only: msg, die
+
       implicit none
+
       integer, parameter                             :: rank4 = 1 + ndims
       integer, intent(in)                            :: rank, ir
       integer(HSIZE_T), dimension(rank4), intent(in) :: chunk_dims
-      integer, dimension(ndims), intent(in)          :: loffs
+      integer(kind=8),  dimension(ndims), intent(in) :: loffs
       integer(HID_T), intent(in)                     :: file_id   !> File identifier
       character(len=*), intent(in)                   :: dname
 
@@ -1217,7 +1227,7 @@ contains
       stride(:) = 1
       count(:)  = 1
       block(:)  = chunk_dims(:)
-      offset(:) = [ 0, loffs(:) ]
+      offset(:) = [ 0_LONG, loffs(:) ]
       call h5sselect_hyperslab_f (filespace, H5S_SELECT_SET_F, offset(ir:), count(ir:), error, stride(ir:), block(ir:))
 
       call h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error)
@@ -1260,7 +1270,8 @@ contains
       integer, parameter :: rank4 = 1 + ndims
       integer(HSIZE_T), dimension(rank4) :: dimsf, chunk_dims
 
-      integer, dimension(ndims) :: area, lleft, lright, loffs, chnk
+      integer,         dimension(ndims) :: area, lleft, lright, chnk
+      integer(kind=8), dimension(ndims) :: loffs
       integer :: ir, rank
       integer :: error
 
@@ -1309,7 +1320,8 @@ contains
       integer, parameter :: rank4 = 1 + ndims
       integer(HSIZE_T), dimension(rank4) :: dimsf, chunk_dims
 
-      integer, dimension(ndims) :: area, lleft, lright, loffs, chnk
+      integer,         dimension(ndims) :: area, lleft, lright, chnk
+      integer(kind=8), dimension(ndims) :: loffs
       integer :: ir, rank
       integer :: error
 

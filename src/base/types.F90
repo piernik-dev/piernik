@@ -59,7 +59,7 @@ module types
       integer                   :: nb           !< number of boundary cells surrounding the physical domain, same for all directions
       integer, dimension(ndims, LO:HI) :: bnd   !< type of boundary conditions coded in integers
 
-      integer, dimension(:,:,:), allocatable :: se !< span of all domains (0:nproc-1, xdim:zdim, LO:HI); Use with care, because this is an antiparallel thing
+      integer(kind=8), dimension(:,:,:), allocatable :: se !< span of all domains (0:nproc-1, xdim:zdim, LO:HI); Use with care, because this is an antiparallel thing
       !! \todo add hooks to parent and a list of children domains
 
       ! derived parameters
@@ -88,9 +88,9 @@ module types
 
    ! specify segment of data for boundary exchange, prolongation and restriction.
    type :: segment
-      integer :: proc                               !< target process
-      integer, dimension(xdim:zdim, LO:HI) :: se    !< range
-      integer, dimension(:), allocatable   :: mc    !< MPI type Containers
+      integer :: proc                                    !< target process
+      integer(kind=8), dimension(xdim:zdim, LO:HI) :: se !< range
+      integer, dimension(:), allocatable   :: mc         !< MPI type Containers
    end type segment
 
    type :: axes

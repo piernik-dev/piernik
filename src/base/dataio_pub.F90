@@ -116,7 +116,7 @@ module dataio_pub
          implicit none
          character(len=*), intent(in)        :: var   !< quantity to be plotted
          character(len=*), intent(in)        :: ij    !< plane of plot
-         integer, intent(in)                 :: xn    !< no. of cell at which we are slicing the local block
+         integer(kind=8), intent(in)         :: xn    !< no. of cell at which we are slicing the local block
          integer, intent(inout)              :: ierrh !< error handling
          real, dimension(:,:), intent(inout) :: tab   !< array  containing given quantity
       end subroutine plt_hdf5

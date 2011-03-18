@@ -88,7 +88,7 @@ module grid
       integer :: ke                             !< index of the last %grid cell of physical domain in z-direction
       integer :: nb                             !< number of boundary cells surrounding the physical domain, same for all directions
       integer :: isb, ieb, jsb, jeb, ksb, keb   !< auxiliary indices for exchanging boundary data, (e.g. is:isb -> ie+1:nx, ieb:ie -> 1:nb)
-      integer, dimension(ndims) :: off          !< offset of the local domain within computational domain
+      integer(kind=8), dimension(ndims) :: off  !< offset of the local domain within computational domain
       integer, dimension(ndims) :: n_b          !< [nxb, nyb, nzb]
       integer :: maxxyz                         !< maximum number of %grid cells in any direction
 
@@ -166,7 +166,7 @@ contains
       this%dxmn = huge(1.0)
 
       this%off(:) = dom%se(proc, :, LO)  ! Block offset on the dom% should be between 0 and nxd-nxb
-      this%n_b(:) = dom%se(proc, :, HI) - dom%se(proc, :, LO) + 1 ! Block 'physical' grid sizes
+      this%n_b(:) = int(dom%se(proc, :, HI) - dom%se(proc, :, LO) + 1, 4) ! Block 'physical' grid sizes
 
       do i = xdim, zdim
          if (has_dir(i)) then
