@@ -147,7 +147,7 @@ contains
          else
             call insert_lhdf5(tp%next,item)
          endif
-
+         return
       enddo
 
    contains
