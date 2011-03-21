@@ -46,7 +46,9 @@ nasty_spaces = [
  re.compile("where(|\s{2,})\(",  re.IGNORECASE), "where (",
  re.compile("while(|\s{2,})\(",  re.IGNORECASE), "while (",
  re.compile("forall(|\s{2,})\(", re.IGNORECASE), "forall (",
- re.compile("\scase(|\s{2,})\(", re.IGNORECASE), " case ("
+ re.compile("\scase(|\s{2,})\(", re.IGNORECASE), " case (",
+ re.compile("(\w*)(|\s{2,})::",  re.IGNORECASE), r"\1 ::",
+ re.compile("::\s{2,}(\w*)",     re.IGNORECASE), r":: \1"
 ]
 
 class bcolors:
