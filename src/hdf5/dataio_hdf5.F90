@@ -1347,7 +1347,7 @@ contains
       call clean_arr_read(memspace, plist_id, filespace, dset_id)
 
       ! Originally the pa3d array was written with the guardcells. The internal guardcells will be exchanged but the external ones are lost.
-      call arr3d_boundaries(pa3d, area_type)
+      call arr3d_boundaries(pa3d, area_type, dname)
 
    end subroutine read_3darr_from_restart
 

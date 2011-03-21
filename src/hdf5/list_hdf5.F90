@@ -69,8 +69,8 @@ module list_hdf5
    abstract interface
       subroutine get_tab(ivec,rvec,tab)
          implicit none
-         integer,  dimension(:), intent(in),  allocatable :: ivec
-         real,     dimension(:), intent(in),  allocatable :: rvec
+         integer,  dimension(:), allocatable, intent(in)  :: ivec
+         real,     dimension(:), allocatable, intent(in)  :: rvec
          real, dimension(:,:,:), allocatable, intent(out) :: tab
       end subroutine get_tab
    end interface

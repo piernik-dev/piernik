@@ -388,12 +388,12 @@ contains
 
 !-----------------------------------------------------------------------------
 
-   subroutine arr3d_boundaries(pa3d, area_type)
+   subroutine arr3d_boundaries(pa3d, area_type, dname)
 
-      use dataio_pub,    only: die
-      use mpi,           only: MPI_STATUS_SIZE, MPI_REQUEST_NULL
+      use dataio_pub,    only: die, msg
+      use mpi,           only: MPI_STATUS_SIZE, MPI_REQUEST_NULL, MPI_IN_PLACE, MPI_LOGICAL, MPI_LOR
       use constants,     only: ARR, xdim, ydim, zdim, LO, HI, BND, BLK, BND_PER, BND_MPI, BND_SHE, BND_COR, AT_NO_B
-      use mpisetup,      only: comm3d, ierr, has_dir, psize, procxl, procyl, proczl, procxr, procyr, proczr
+      use mpisetup,      only: comm3d, ierr, has_dir, psize, procxl, procyl, proczl, procxr, procyr, proczr, comm
 
       implicit none
 
@@ -404,6 +404,10 @@ contains
       integer, dimension(MPI_STATUS_SIZE, nreq)   :: status3d
       integer                                     :: i, d, lh, p
       integer, intent(in), optional               :: area_type
+      character(len=*), intent(in), optional      :: dname
+      logical :: dodie
+
+      dodie = .false.
 
       !> \todo fill corners with big_float ?
 
@@ -455,8 +459,14 @@ contains
                      else
                         call die("[grid:arr3d_boundaries] bnd_[xyz][lr] == 'mpi' && psize([xyz]dim) <= 1")
                      endif
-                  case (BND_SHE, BND_COR) !> \todo move appropriate code from poissonsolver::poisson_solve or do nothing. or die until someone really needs SHEAR.
-                     call die("[grid:arr3d_boundaries] 'she' or 'cor' not implemented")
+                  case (BND_SHE) !> \todo move appropriate code from poissonsolver::poisson_solve or do nothing. or die until someone really needs SHEAR.
+                     write(msg,*) "[grid:arr3d_boundaries] 'she' not implemented for ",dname
+!                     call die(msg)
+                     dodie = .true.
+                  case (BND_COR)
+                     write(msg,*) "[grid:arr3d_boundaries] 'cor' not implemented for ", dname
+!                     call die(msg)
+                     dodie = .true.
                   case default ! Set gradient == 0 on the external boundaries
                      if (present(area_type)) then
                         if (area_type /= AT_NO_B) cycle
@@ -484,6 +494,8 @@ contains
       enddo
 
       call MPI_Waitall(nreq, req3d(:), status3d(:,:), ierr)
+      call MPI_Allreduce(MPI_IN_PLACE,dodie,1,MPI_LOGICAL,MPI_LOR,comm,ierr)
+      if (dodie) call die(msg)
 
    end subroutine arr3d_boundaries
 
