@@ -37,18 +37,18 @@ implicit_save      = re.compile('''(?i)(?:real(?:\s|,)|integer(?:\s|,)|logical(?
 not_param_nor_save = re.compile("(?!.*(parameter|save))", re.IGNORECASE)
 
 nasty_spaces = [
- re.compile("end\s{1,}do",       re.IGNORECASE), "enddo",
- re.compile("end\s{1,}if",       re.IGNORECASE), "endif",
- re.compile("end\s{1,}while",    re.IGNORECASE), "endwhile",
- re.compile("end\s{1,}where",    re.IGNORECASE), "endwhere",
- re.compile("only\s{1,}:",       re.IGNORECASE), "only:",
- re.compile("if(|\s{2,})\(",     re.IGNORECASE), "if (",
- re.compile("where(|\s{2,})\(",  re.IGNORECASE), "where (",
- re.compile("while(|\s{2,})\(",  re.IGNORECASE), "while (",
- re.compile("forall(|\s{2,})\(", re.IGNORECASE), "forall (",
- re.compile("\scase(|\s{2,})\(", re.IGNORECASE), " case (",
- re.compile("(\w*)(|\s{2,})::",  re.IGNORECASE), r"\1 ::",
- re.compile("::\s{2,}(\w*)",     re.IGNORECASE), r":: \1"
+ re.compile("end\s{1,}do",        re.IGNORECASE), "enddo",
+ re.compile("end\s{1,}if",        re.IGNORECASE), "endif",
+ re.compile("end\s{1,}while",     re.IGNORECASE), "endwhile",
+ re.compile("end\s{1,}where",     re.IGNORECASE), "endwhere",
+ re.compile("only\s{1,}:",        re.IGNORECASE), "only:",
+ re.compile("if(|\s{2,})\(",      re.IGNORECASE), "if (",
+ re.compile("where(|\s{2,})\(",   re.IGNORECASE), "where (",
+ re.compile("while(|\s{2,})\(",   re.IGNORECASE), "while (",
+ re.compile("forall(|\s{2,})\(",  re.IGNORECASE), "forall (",
+ re.compile("\scase(|\s{2,})\(",  re.IGNORECASE), " case ("
+# re.compile("type(|\s{2,})::",    re.IGNORECASE), r"type ::",
+# re.compile("type ::\s{2,}(\w*)", re.IGNORECASE), r"type :: \1"
 ]
 
 class bcolors:
