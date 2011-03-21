@@ -47,22 +47,22 @@ module dataio_hdf5
    implicit none
 
    private
-   public  :: init_hdf5, read_restart_hdf5, cleanup_hdf5, write_hdf5, write_restart_hdf5, write_plot, write_arr_to_restart, read_arr_from_restart
-   public  :: parfile, parfilelines
+   public :: init_hdf5, read_restart_hdf5, cleanup_hdf5, write_hdf5, write_restart_hdf5, write_plot, write_arr_to_restart, read_arr_from_restart
+   public :: parfile, parfilelines
 
-   integer, parameter  :: dnamelen=5
-   character(len=dnamelen), dimension(FLUID:MAG)  :: dname = [ "fluid", "mag  " ]  !< dataset names for restart files
+   integer, parameter :: dnamelen=5
+   character(len=dnamelen), dimension(FLUID:MAG) :: dname = [ "fluid", "mag  " ]  !< dataset names for restart files
 
-   character(len=S_LEN), allocatable, dimension(:)  :: hdf_vars  !< dataset names for hdf files
-   integer  :: nhdf_vars !< number of quantities plotted to hdf files
-   integer  :: ix !< no. of cell (1 <= ix < nxd) for YZ slice in plt files
-   integer  :: iy !< no. of cell (1 <= iy < nyd) for XZ slice in plt files
-   integer  :: iz !< no. of cell (1 <= iz < nzd) for XY slice in plt files
-   real :: dt_plt !< frequency of plt output
+   character(len=S_LEN), allocatable, dimension(:) :: hdf_vars  !< dataset names for hdf files
+   integer :: nhdf_vars !< number of quantities plotted to hdf files
+   integer :: ix !< no. of cell (1 <= ix < nxd) for YZ slice in plt files
+   integer :: iy !< no. of cell (1 <= iy < nyd) for XZ slice in plt files
+   integer :: iz !< no. of cell (1 <= iz < nzd) for XY slice in plt files
+   real    :: dt_plt !< frequency of plt output
 
    ! storage for the problem.par
-   character(len=maxparfilelen), dimension(maxparfilelines)  :: parfile !< contents of the parameter file
-   integer, save :: parfilelines = 0       !< number of lines in the parameter file
+   character(len=maxparfilelen), dimension(maxparfilelines) :: parfile !< contents of the parameter file
+   integer, save                             :: parfilelines = 0       !< number of lines in the parameter file
 
    interface write_arr_to_restart
       module procedure write_4darr_to_restart, write_3darr_to_restart
@@ -84,9 +84,9 @@ contains
 
       implicit none
 
-      integer(HID_T), intent(in)  :: file_id
+      integer(HID_T), intent(in) :: file_id
 
-      integer  :: dummy ! just for suppressing compiler warning
+      integer :: dummy ! just for suppressing compiler warning
       if (.false.) dummy = kind(file_id)
 
    end subroutine null_attrs
@@ -105,21 +105,19 @@ contains
       use fluidindex,    only: iarr_all_crs
       use dataio_pub,    only: warn, msg
 #endif /* COSM_RAYS */
-      use timer,         only: set_timer
 
       implicit none
 
-      character(len=varlen), dimension(:), intent(in)  :: vars  !< quantities to be plotted, see dataio ::vars
-      integer, intent(in)  :: tix     !< local copy of dataio ::ix
-      integer, intent(in)  :: tiy     !< local copy of dataio ::iy
-      integer, intent(in)  :: tiz     !< local copy of dataio ::iz
-      real, intent(in) :: tdt_plt !< local copy of dataio ::dt_plt
+      character(len=varlen), dimension(:), intent(in) :: vars  !< quantities to be plotted, see dataio::vars
+      integer, intent(in) :: tix     !< local copy of dataio::ix
+      integer, intent(in) :: tiy     !< local copy of dataio::iy
+      integer, intent(in) :: tiz     !< local copy of dataio::iz
+      real, intent(in)    :: tdt_plt !< local copy of dataio::dt_plt
 
-      real :: ts
-      integer  :: nvars, i, j
+      integer :: nvars, i, j
 #if defined COSM_RAYS && !defined NEW_HDF5
-      integer  :: k
-      character(len=varlen)  :: aux
+      integer :: k
+      character(len=varlen) :: aux
 #endif /* COSM_RAYS && !NEW_HDF5 */
 
       ix = tix; iy = tiy; iz = tiz; dt_plt = tdt_plt
@@ -232,8 +230,6 @@ contains
       if ( .not. associated(problem_write_restart)) problem_write_restart => null_attrs
       if ( .not. associated(problem_read_restart))  problem_read_restart  => null_attrs
 
-      ts = set_timer("IO",.true.)
-
    end subroutine init_hdf5
 
 !>
@@ -264,13 +260,13 @@ contains
 #endif /* COSM_RAYS */
 
       implicit none
-      character(len=varlen) :: var !< quantity to be plotted
-      character(len=planelen)  :: ij  !< plane of plot
-      integer(kind=8) :: xn  !< no. of cell at which we are slicing the local block
-      integer :: ierrh !< error handling
-      real, dimension(:,:) :: tab !< array containing given quantity
+      character(len=varlen)   :: var !< quantity to be plotted
+      character(len=planelen) :: ij  !< plane of plot
+      integer(kind=8)         :: xn  !< no. of cell at which we are slicing the local block
+      integer                 :: ierrh !< error handling
+      real, dimension(:,:)    :: tab !< array containing given quantity
 #ifdef COSM_RAYS
-      integer :: i
+      integer                 :: i
 #endif /* COSM_RAYS */
 
       ierrh = 0
@@ -461,13 +457,13 @@ contains
 #endif /* GRAV */
 
       implicit none
-      character(len=varlen), intent(in)  :: var
-      real(kind=4), dimension(:,:,:) :: tab
-      integer, intent(out) :: ierrh
+      character(len=varlen), intent(in) :: var
+      real(kind=4), dimension(:,:,:)    :: tab
+      integer, intent(out)              :: ierrh
 #ifdef COSM_RAYS
-      integer  :: i
-      integer, parameter :: auxlen = varlen - 1
-      character(len=auxlen)  :: aux
+      integer :: i
+      integer, parameter    :: auxlen = varlen - 1
+      character(len=auxlen) :: aux
 #endif /* COSM_RAYS */
 
       ierrh = 0
@@ -567,13 +563,13 @@ contains
 
       implicit none
 
-      integer, save :: nimg = 0, error = 0
-      real, save :: last_plt_time = 0.0
-      character(len=cwdlen)  :: fname
-      integer :: i, fe
-      logical, save :: first_entry = .true.
-      integer(HID_T) :: file_id                 !> File identifier
-      integer(HID_T) :: gr_id, gr2_id           !> Groups identifier
+      integer, save     :: nimg = 0, error = 0
+      real, save        :: last_plt_time = 0.0
+      character(len=cwdlen) :: fname
+      integer           :: i, fe
+      logical, save     :: first_entry = .true.
+      integer(HID_T)    :: file_id                 !> File identifier
+      integer(HID_T)    :: gr_id, gr2_id           !> Groups identifier
 
       if ( ((t-last_plt_time > dt_plt) .or. first_entry ) .and. dt_plt > 0.0 ) then
          fe = len_trim(log_file)
@@ -638,34 +634,34 @@ contains
 
       implicit none
 
-      character(len=planelen), intent(in)  :: plane
-      character(len=varlen), intent(in) :: var                           !> not yet implemented
-      integer, intent(in) :: nimg
-      logical, dimension(3) :: remain
-      logical :: ok_plt_var
-      real, dimension(:), allocatable :: buff
-      real, dimension(:,:), allocatable :: send, img
-      real, dimension(:,:,:), allocatable  :: temp
-      real :: imax, imin, di
-      integer :: ierrh, i, j
-      integer :: comm2d, lp, ls, error
-      integer(kind=8) :: xn
-      integer, parameter :: suffixed_planelen = planelen + 1  !< plane name + suffix e.g "xy_"
-      character(len=suffixed_planelen) :: pij
-      character(len=cwdlen) :: fname
-      integer, parameter :: vdn_len = 12
-      character(len=vdn_len) :: vdname
+      character(len=planelen), intent(in) :: plane
+      character(len=varlen), intent(in)   :: var                           !> not yet implemented
+      integer, intent(in)                 :: nimg
+      logical, dimension(3)               :: remain
+      logical                             :: ok_plt_var
+      real, dimension(:), allocatable     :: buff
+      real, dimension(:,:), allocatable   :: send, img
+      real, dimension(:,:,:), allocatable :: temp
+      real                                :: imax, imin, di
+      integer                             :: ierrh, i, j
+      integer                             :: comm2d, lp, ls, error
+      integer(kind=8)                     :: xn
+      integer, parameter                  :: suffixed_planelen = planelen + 1  !< plane name + suffix e.g "xy_"
+      character(len=suffixed_planelen)    :: pij
+      character(len=cwdlen)               :: fname
+      integer, parameter                  :: vdn_len = 12
+      character(len=vdn_len)              :: vdname
 
-      integer(HID_T) :: file_id                       !> File identifier
-      integer(HID_T) :: gr_id,gr2_id                  !> Group identifier
-      integer(HSIZE_T), dimension(2) :: dims
-      integer(SIZE_T) :: bufsize
-      integer :: rank
+      integer(HID_T)                      :: file_id                       !> File identifier
+      integer(HID_T)                      :: gr_id,gr2_id                  !> Group identifier
+      integer(HSIZE_T), dimension(2)      :: dims
+      integer(SIZE_T)                     :: bufsize
+      integer                             :: rank
 
-      integer :: nib, nid, njb, njd, nkb
-      integer :: pisize, pjsize, fe
+      integer                             :: nib, nid, njb, njd, nkb
+      integer                             :: pisize, pjsize, fe
 
-      real, dimension(1) :: timebuffer
+      real, dimension(1)                  :: timebuffer
 
       if (have_mpi .and. is_uneven) call die("[dataio_hdf5:write_plot_hdf5] is_uneven is not implemented") ! nib,njb,pisize*pjsize, ...
       rank = 2
@@ -804,9 +800,9 @@ contains
 
       implicit none
 
-      integer,                           intent(in) :: area_type
-      integer,         dimension(ndims), intent(out)  :: area, lleft, lright, chnk
-      integer(kind=8), dimension(ndims), intent(out)  :: loffs
+      integer,                           intent(in)  :: area_type
+      integer,         dimension(ndims), intent(out) :: area, lleft, lright, chnk
+      integer(kind=8), dimension(ndims), intent(out) :: loffs
 
       select case (area_type)
          case (AT_ALL_B)                           ! whole domain with mpi boundaries
@@ -866,17 +862,17 @@ contains
 
       implicit none
 
-      logical, optional, intent(in)  :: debug_res
+      logical, optional, intent(in) :: debug_res
 
-      real, pointer, dimension(:,:,:,:)  :: pa4d
-      real, pointer, dimension(:,:,:) :: pa3d
-      integer, parameter :: extlen = 4
-      character(len=extlen)  :: file_extension
-      character(len=cwdlen)  :: filename  !> HDF File name
-      integer(HID_T) :: file_id       !> File identifier
-      integer(HID_T) :: plist_id      !> Property list identifier
-      integer :: area_type
-      integer :: error
+      real, pointer, dimension(:,:,:,:) :: pa4d
+      real, pointer, dimension(:,:,:)   :: pa3d
+      integer, parameter    :: extlen = 4
+      character(len=extlen) :: file_extension
+      character(len=cwdlen) :: filename  !> HDF File name
+      integer(HID_T)        :: file_id       !> File identifier
+      integer(HID_T)        :: plist_id      !> Property list identifier
+      integer               :: area_type
+      integer               :: error
 
       ! Construct the filename
       if (present(debug_res)) then
@@ -961,23 +957,23 @@ contains
 
       implicit none
 
-      integer, parameter :: rank4 = 1 + ndims
-      integer, intent(in) :: rank, ir
-      integer, intent(in) :: area_type !> no boundaries, only outer boundaries or all boundaries
-      integer(HSIZE_T), dimension(rank4), intent(in)  :: chunk_dims, dimsf
-      integer(kind=8),  dimension(ndims), intent(in)  :: loffs
-      integer(HID_T), intent(in) :: file_id   !> File identifier
-      character(len=*), intent(in) :: dname
+      integer, parameter                             :: rank4 = 1 + ndims
+      integer, intent(in)                            :: rank, ir
+      integer, intent(in)                            :: area_type !> no boundaries, only outer boundaries or all boundaries
+      integer(HSIZE_T), dimension(rank4), intent(in) :: chunk_dims, dimsf
+      integer(kind=8),  dimension(ndims), intent(in) :: loffs
+      integer(HID_T), intent(in)                     :: file_id   !> File identifier
+      character(len=*), intent(in)                   :: dname
 
-      integer(HID_T), intent(out)  :: dset_id    !> Dataset identifier
-      integer(HID_T), intent(out)  :: filespace  !>
-      integer(HID_T), intent(out)  :: dfilespace !>
-      integer(HID_T), intent(out)  :: memspace   !> Dataspace identifier in memory
-      integer(HID_T), intent(out)  :: plist_id   !>
-      integer(HID_T), intent(out)  :: dplist_id  !>
+      integer(HID_T), intent(out) :: dset_id    !> Dataset identifier
+      integer(HID_T), intent(out) :: filespace  !>
+      integer(HID_T), intent(out) :: dfilespace !>
+      integer(HID_T), intent(out) :: memspace   !> Dataspace identifier in memory
+      integer(HID_T), intent(out) :: plist_id   !>
+      integer(HID_T), intent(out) :: dplist_id  !>
 
-      integer(HSIZE_T), dimension(rank4)  :: count, offset, stride, block
-      integer  :: error
+      integer(HSIZE_T), dimension(rank4) :: count, offset, stride, block
+      integer :: error
 
       ! Create the file space for the dataset and make it chunked if possible
       call h5screate_simple_f(rank, dimsf(ir:), dfilespace, error)
@@ -1004,8 +1000,8 @@ contains
    subroutine clean_arr_write(memspace, plist_id, filespace, dset_id, dplist_id, dfilespace)
       use hdf5,       only: HID_T, h5sclose_f, h5pclose_f, h5dclose_f
       implicit none
-      integer(HID_T), intent(inout)  :: memspace, plist_id, filespace, dset_id, dplist_id, dfilespace
-      integer  :: error
+      integer(HID_T), intent(inout) :: memspace, plist_id, filespace, dset_id, dplist_id, dfilespace
+      integer :: error
 
       call h5sclose_f(memspace, error)
       call h5pclose_f(plist_id, error)
@@ -1023,23 +1019,23 @@ contains
 
       implicit none
 
-      integer(HID_T), intent(in) :: file_id   !> File identifier
-      real, pointer, dimension(:,:,:,:), intent(in)  :: pa4d      !> 4-D array pointer
-      integer, intent(in) :: area_type !> no boundaries, only outer boundaries or all boundaries
-      character(len=*), intent(in) :: dname
+      integer(HID_T), intent(in)                    :: file_id   !> File identifier
+      real, pointer, dimension(:,:,:,:), intent(in) :: pa4d      !> 4-D array pointer
+      integer, intent(in)                           :: area_type !> no boundaries, only outer boundaries or all boundaries
+      character(len=*), intent(in)                  :: dname
 
-      integer, parameter  :: rank4 = 1 + ndims
-      integer(HSIZE_T), dimension(rank4)  :: dimsf, chunk_dims
-      integer(HID_T)  :: dset_id               !> Dataset identifier
-      integer(HID_T)  :: dplist_id, plist_id   !> Property list identifiers
-      integer(HID_T)  :: dfilespace, filespace !> Dataspace identifiers in file
-      integer(HID_T)  :: memspace              !> Dataspace identifier in memory
+      integer, parameter :: rank4 = 1 + ndims
+      integer(HSIZE_T), dimension(rank4) :: dimsf, chunk_dims
+      integer(HID_T) :: dset_id               !> Dataset identifier
+      integer(HID_T) :: dplist_id, plist_id   !> Property list identifiers
+      integer(HID_T) :: dfilespace, filespace !> Dataspace identifiers in file
+      integer(HID_T) :: memspace              !> Dataspace identifier in memory
 
-      integer,         dimension(ndims)  :: area, lleft, lright, chnk
-      integer(kind=8), dimension(ndims)  :: loffs
+      integer,         dimension(ndims) :: area, lleft, lright, chnk
+      integer(kind=8), dimension(ndims) :: loffs
 
-      integer  :: rank
-      integer  :: error
+      integer :: rank
+      integer :: error
 
       call set_dims_to_write(area_type, area, chnk, lleft, lright, loffs)
 
@@ -1066,23 +1062,23 @@ contains
 
       implicit none
 
-      integer(HID_T), intent(in) :: file_id   !> File identifier
-      real, pointer, dimension(:,:,:), intent(in) :: pa3d      !> 3-D array pointer, mutually exclusive with pa4d
-      integer, intent(in) :: area_type !> no boundaries, only outer boundaries or all boundaries
-      character(len=*), intent(in) :: dname
+      integer(HID_T), intent(in)                    :: file_id   !> File identifier
+      real, pointer, dimension(:,:,:), intent(in)   :: pa3d      !> 3-D array pointer, mutually exclusive with pa4d
+      integer, intent(in)                           :: area_type !> no boundaries, only outer boundaries or all boundaries
+      character(len=*), intent(in)                  :: dname
 
-      integer, parameter  :: rank4 = 1 + ndims
-      integer(HSIZE_T), dimension(rank4)  :: dimsf, chunk_dims
-      integer(HID_T)  :: dset_id               !> Dataset identifier
-      integer(HID_T)  :: dplist_id, plist_id   !> Property list identifiers
-      integer(HID_T)  :: dfilespace, filespace !> Dataspace identifiers in file
-      integer(HID_T)  :: memspace              !> Dataspace identifier in memory
+      integer, parameter :: rank4 = 1 + ndims
+      integer(HSIZE_T), dimension(rank4) :: dimsf, chunk_dims
+      integer(HID_T) :: dset_id               !> Dataset identifier
+      integer(HID_T) :: dplist_id, plist_id   !> Property list identifiers
+      integer(HID_T) :: dfilespace, filespace !> Dataspace identifiers in file
+      integer(HID_T) :: memspace              !> Dataspace identifier in memory
 
-      integer,         dimension(ndims)  :: area, lleft, lright, chnk
-      integer(kind=8), dimension(ndims)  :: loffs
+      integer,         dimension(ndims) :: area, lleft, lright, chnk
+      integer(kind=8), dimension(ndims) :: loffs
 
-      integer  :: rank
-      integer  :: error
+      integer :: rank
+      integer :: error
 
       if (.not. associated(pa3d)) call die("[dataio_hdf5:write_3darr_to_restart] Null pointer given.")
 
@@ -1117,19 +1113,19 @@ contains
 
       implicit none
 
-      integer(HID_T), intent(in)  :: file_id !> File identifier
+      integer(HID_T), intent(in) :: file_id !> File identifier
 
-      integer  :: dir
-      integer  :: error
-      integer, parameter  :: rank=1
-      integer(HSIZE_T),  dimension(rank)  :: offset, count, stride, block, dimsf, chunk_dims
-      integer(HID_T)  :: dset_id                !> Dataset identifier
-      integer(HID_T)  :: dplist_id, plist_id    !> Property list identifiers
-      integer(HID_T)  :: dfilespace, filespace  !> Dataspace identifiers in file
-      integer(HID_T)  :: memspace               !> Dataspace identifier in memory
-      integer, parameter  :: asis_n_len = 6
-      character(len=asis_n_len)  :: dset_axis_n !> Dataspace name
-      character(len=ndims), parameter  :: axis_n = "XYZ"
+      integer :: dir
+      integer :: error
+      integer, parameter :: rank=1
+      integer(HSIZE_T),  dimension(rank) :: offset, count, stride, block, dimsf, chunk_dims
+      integer(HID_T) :: dset_id                !> Dataset identifier
+      integer(HID_T) :: dplist_id, plist_id    !> Property list identifiers
+      integer(HID_T) :: dfilespace, filespace  !> Dataspace identifiers in file
+      integer(HID_T) :: memspace               !> Dataspace identifier in memory
+      integer, parameter :: asis_n_len = 6
+      character(len=asis_n_len) :: dset_axis_n !> Dataspace name
+      character(len=ndims), parameter :: axis_n = "XYZ"
 
       do dir = xdim, zdim
 
@@ -1198,20 +1194,20 @@ contains
 
       implicit none
 
-      integer, parameter :: rank4 = 1 + ndims
-      integer, intent(in) :: rank, ir
-      integer(HSIZE_T), dimension(rank4), intent(in)  :: chunk_dims
-      integer(kind=8),  dimension(ndims), intent(in)  :: loffs
-      integer(HID_T), intent(in) :: file_id   !> File identifier
-      character(len=*), intent(in) :: dname
+      integer, parameter                             :: rank4 = 1 + ndims
+      integer, intent(in)                            :: rank, ir
+      integer(HSIZE_T), dimension(rank4), intent(in) :: chunk_dims
+      integer(kind=8),  dimension(ndims), intent(in) :: loffs
+      integer(HID_T), intent(in)                     :: file_id   !> File identifier
+      character(len=*), intent(in)                   :: dname
 
-      integer(HID_T), intent(out)  :: dset_id    !> Dataset identifier
-      integer(HID_T), intent(out)  :: filespace  !>
-      integer(HID_T), intent(out)  :: memspace   !> Dataspace identifier in memory
-      integer(HID_T), intent(out)  :: plist_id   !>
+      integer(HID_T), intent(out) :: dset_id    !> Dataset identifier
+      integer(HID_T), intent(out) :: filespace  !>
+      integer(HID_T), intent(out) :: memspace   !> Dataspace identifier in memory
+      integer(HID_T), intent(out) :: plist_id   !>
 
-      integer(HSIZE_T), dimension(rank4)  :: count, offset, stride, block
-      integer  :: error, rankf
+      integer(HSIZE_T), dimension(rank4) :: count, offset, stride, block
+      integer :: error, rankf
 
       ! Create dataset.and filespace
       call h5dopen_f(file_id, dname, dset_id, error)
@@ -1243,8 +1239,8 @@ contains
    subroutine clean_arr_read(memspace, plist_id, filespace, dset_id)
       use hdf5,       only: HID_T, h5sclose_f, h5pclose_f, h5dclose_f
       implicit none
-      integer(HID_T), intent(inout)  :: memspace, plist_id, filespace, dset_id
-      integer  :: error
+      integer(HID_T), intent(inout) :: memspace, plist_id, filespace, dset_id
+      integer :: error
 
       call h5sclose_f(memspace, error)
       call h5pclose_f(plist_id, error)
@@ -1261,23 +1257,23 @@ contains
 
       implicit none
 
-      integer(HID_T), intent(in) :: file_id   ! File identifier
-      real, dimension(:,:,:,:), pointer, intent(inout)  :: pa4d      ! pointer to (:, 1:cg%nx, 1:cg%ny, 1:cg%ns)-sized array
-      integer, intent(in) :: area_type !> no boundaries, only outer boundaries or all boundaries
-      character(len=*), intent(in) :: dname
+      integer(HID_T), intent(in)                       :: file_id   ! File identifier
+      real, dimension(:,:,:,:), pointer, intent(inout) :: pa4d      ! pointer to (:, 1:cg%nx, 1:cg%ny, 1:cg%ns)-sized array
+      integer, intent(in)                              :: area_type !> no boundaries, only outer boundaries or all boundaries
+      character(len=*), intent(in)                     :: dname
 
-      integer(HID_T) :: dset_id       ! Dataset identifier
-      integer(HID_T) :: plist_id      ! Property list identifier
-      integer(HID_T) :: filespace     ! Dataspace identifier in file
-      integer(HID_T) :: memspace      ! Dataspace identifier in memory
+      integer(HID_T)        :: dset_id       ! Dataset identifier
+      integer(HID_T)        :: plist_id      ! Property list identifier
+      integer(HID_T)        :: filespace     ! Dataspace identifier in file
+      integer(HID_T)        :: memspace      ! Dataspace identifier in memory
 
-      integer, parameter  :: rank4 = 1 + ndims
-      integer(HSIZE_T), dimension(rank4)  :: dimsf, chunk_dims
+      integer, parameter :: rank4 = 1 + ndims
+      integer(HSIZE_T), dimension(rank4) :: dimsf, chunk_dims
 
-      integer,         dimension(ndims)  :: area, lleft, lright, chnk
-      integer(kind=8), dimension(ndims)  :: loffs
-      integer  :: ir, rank
-      integer  :: error
+      integer,         dimension(ndims) :: area, lleft, lright, chnk
+      integer(kind=8), dimension(ndims) :: loffs
+      integer :: ir, rank
+      integer :: error
 
       call set_dims_to_write(area_type, area, chnk, lleft, lright, loffs)
 
@@ -1311,23 +1307,23 @@ contains
 
       implicit none
 
-      integer(HID_T), intent(in) :: file_id   ! File identifier
-      real, dimension(:,:,:), pointer, intent(inout) :: pa3d      ! pointer to (1:cg%nx, 1:cg%ny, 1:cg%ns)-sized array
-      integer, intent(in) :: area_type !> no boundaries, only outer boundaries or all boundaries
-      character(len=*), intent(in) :: dname
+      integer(HID_T), intent(in)                       :: file_id   ! File identifier
+      real, dimension(:,:,:), pointer, intent(inout)   :: pa3d      ! pointer to (1:cg%nx, 1:cg%ny, 1:cg%ns)-sized array
+      integer, intent(in)                              :: area_type !> no boundaries, only outer boundaries or all boundaries
+      character(len=*), intent(in)                     :: dname
 
-      integer(HID_T) :: dset_id       ! Dataset identifier
-      integer(HID_T) :: plist_id      ! Property list identifier
-      integer(HID_T) :: filespace     ! Dataspace identifier in file
-      integer(HID_T) :: memspace      ! Dataspace identifier in memory
+      integer(HID_T)        :: dset_id       ! Dataset identifier
+      integer(HID_T)        :: plist_id      ! Property list identifier
+      integer(HID_T)        :: filespace     ! Dataspace identifier in file
+      integer(HID_T)        :: memspace      ! Dataspace identifier in memory
 
-      integer, parameter  :: rank4 = 1 + ndims
-      integer(HSIZE_T), dimension(rank4)  :: dimsf, chunk_dims
+      integer, parameter :: rank4 = 1 + ndims
+      integer(HSIZE_T), dimension(rank4) :: dimsf, chunk_dims
 
-      integer,         dimension(ndims)  :: area, lleft, lright, chnk
-      integer(kind=8), dimension(ndims)  :: loffs
-      integer  :: ir, rank
-      integer  :: error
+      integer,         dimension(ndims) :: area, lleft, lright, chnk
+      integer(kind=8), dimension(ndims) :: loffs
+      integer :: ir, rank
+      integer :: error
 
       call set_dims_to_write(area_type, area, chnk, lleft, lright, loffs)
 
@@ -1377,24 +1373,24 @@ contains
 
       implicit none
 
-      type(hdf) :: chdf
-      integer :: nu
-      character(len=cwdlen)  :: filename  ! File name
+      type(hdf)             :: chdf
+      integer               :: nu
+      character(len=cwdlen) :: filename  ! File name
 
-      integer(HID_T) :: file_id       ! File identifier
-      integer(HID_T) :: plist_id      ! Property list identifier
-      integer(SIZE_T) :: bufsize
+      integer(HID_T)        :: file_id       ! File identifier
+      integer(HID_T)        :: plist_id      ! Property list identifier
+      integer(SIZE_T)       :: bufsize
 
-      integer :: error
-      logical :: file_exist
+      integer               :: error
+      logical               :: file_exist
 
-      real, dimension(1) :: rbuf
-      integer, dimension(1)  :: ibuf
+      real, dimension(1)    :: rbuf
+      integer, dimension(1) :: ibuf
 
-      real, dimension(:,:,:,:), pointer  :: p4d
-      real, dimension(:,:,:), pointer  :: p3d
+      real, dimension(:,:,:,:), pointer :: p4d
+      real, dimension(:,:,:), pointer :: p3d
 
-      real :: restart_hdf5_version
+      real                  :: restart_hdf5_version
 
       nu = flind%all
 
@@ -1575,23 +1571,20 @@ contains
       use list_hdf5,     only: iterate_lhdf5
 #endif /* NEW_HDF5 */
       use list_hdf5,     only: write_arr
-      use timer,         only: set_timer
 
       implicit none
 
-      type(hdf), intent(in) :: chdf
-      integer(HID_T) :: file_id       ! File identifier
-      integer(HID_T) :: plist_id      ! Property list identifier
-      integer :: ierrh, error, i
-      logical :: ok_var
-      character(len=cwdlen) :: fname
-      real :: ts
+      type(hdf), intent(in)   :: chdf
+      integer(HID_T)          :: file_id       ! File identifier
+      integer(HID_T)          :: plist_id      ! Property list identifier
+      integer                 :: ierrh, error, i
+      logical                 :: ok_var
+      character(len=cwdlen)   :: fname
 
-      real(kind=4), allocatable  :: data (:,:,:)  ! Data to write
+      real(kind=4), allocatable :: data (:,:,:)  ! Data to write
 
       ! Initialize HDF5 library and Fortran interfaces.
       !
-      ts=set_timer("IO")
       if (master) then
          write(fname, '(a,a1,a3,a1,i4.4,a3)') trim(problem_name),"_",trim(run_id),"_",chdf%nhdf,".h5"
          write(msg,'(3a)') 'Writing datafile ', trim(fname), " ... "
@@ -1636,12 +1629,6 @@ contains
       call h5fclose_f(file_id, error)
       call h5close_f(error)
 
-      ts = set_timer("IO")
-      if (master) then
-         write(msg,'(a,f9.1,a)') 'Writing took ',ts,' s '
-         call printio(msg, .true.)
-      endif
-
       call set_common_attributes(fname, chdf)
 
       nhdf = nhdf + 1
@@ -1668,22 +1655,22 @@ contains
 
       implicit none
 
-      character(len=*), intent(in)  :: filename  !> HDF File name
-      type(hdf), intent(in) :: chdf
+      character(len=*), intent(in) :: filename  !> HDF File name
+      type(hdf), intent(in)        :: chdf
 
-      integer(HID_T) :: file_id       !> File identifier
-      integer(HID_T) :: type_id, dspace_id, dset_id, prp_id
-      integer(HSIZE_T), dimension(1)  :: dimstr
-      logical :: Z_avail
-      integer :: fe, i
-      integer(SIZE_T) :: bufsize, maxlen
-      integer :: error
-      real :: magic_mass0
-      integer, parameter :: buf_len = 50
-      integer, dimension(buf_len) :: ibuffer
-      real,    dimension(buf_len) :: rbuffer
-      character(len=cbuff_len), dimension(buf_len)  :: ibuffer_name = ''
-      character(len=cbuff_len), dimension(buf_len)  :: rbuffer_name = ''
+      integer(HID_T)                 :: file_id       !> File identifier
+      integer(HID_T)                 :: type_id, dspace_id, dset_id, prp_id
+      integer(HSIZE_T), dimension(1) :: dimstr
+      logical                        :: Z_avail
+      integer                        :: fe, i
+      integer(SIZE_T)                :: bufsize, maxlen
+      integer                        :: error
+      real                           :: magic_mass0
+      integer, parameter             :: buf_len = 50
+      integer, dimension(buf_len)    :: ibuffer
+      real,    dimension(buf_len)    :: rbuffer
+      character(len=cbuff_len), dimension(buf_len) :: ibuffer_name = ''
+      character(len=cbuff_len), dimension(buf_len) :: rbuffer_name = ''
 
       call MPI_Reduce(local_magic_mass, magic_mass0, 1, MPI_DOUBLE_PRECISION, MPI_SUM, 0, comm, ierr)
       magic_mass       = magic_mass + magic_mass0
