@@ -90,7 +90,7 @@ module types
    type :: segment
       integer :: proc                                    !< target process
       integer(kind=8), dimension(xdim:zdim, LO:HI) :: se !< range
-      integer, dimension(:), allocatable   :: mc         !< MPI type Containers
+      integer:: mc                                       !< MPI type Container
    end type segment
 
    type :: axes

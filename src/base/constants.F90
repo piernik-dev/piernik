@@ -42,7 +42,7 @@ module constants
 
    ! precision
    integer, parameter :: LONG = selected_int_kind(16)    ! it is much more clear to type 0_LONG than 0_8
-   ! \todo define 1- and 2-byte integers and short (4-byte),  long double (10-byte) or quad_precision (16-byte) reals if needed,
+   ! \todo define 1- and 2-byte integers and short (4-byte), long double (10-byte) or quad_precision (16-byte) reals if needed,
 
    ! integers and rationals
    real, parameter :: zero       = 0.0                   !< zero
@@ -138,6 +138,7 @@ module constants
    end enum
    integer, parameter :: stdout = output_unit
    integer, parameter :: stderr = error_unit
+   integer, parameter :: INVALID = -1
 
    ! \todo: add enums for boundary condition types
 

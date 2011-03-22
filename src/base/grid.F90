@@ -43,7 +43,7 @@ module grid
    implicit none
 
    private
-   public :: cleanup_grid, init_grid, grid_mpi_boundaries_prep, arr3d_boundaries
+   public :: init_grid, grid_mpi_boundaries_prep, arr3d_boundaries
    public :: grid_container, total_ncells, cg, D_x, D_y, D_z
 
    type, extends(axes) :: grid_container
@@ -101,7 +101,7 @@ module grid
 
    contains
 
-      procedure :: init
+      procedure :: init, cleanup
 
    end type grid_container
 
@@ -148,7 +148,7 @@ contains
 
    subroutine init(this, dom)
 
-      use constants,  only: PIERNIK_INIT_MPI, xdim, ydim, zdim
+      use constants,  only: PIERNIK_INIT_MPI, xdim, ydim, zdim, INVALID
       use dataio_pub, only: die, warn, code_progress
       use mpisetup,   only: has_dir, translate_bnds_to_ints_dom, proc
       use types,      only: domain_container
@@ -320,6 +320,8 @@ contains
          this%inv_z = 0.
       endwhere
 
+      this%mbc(:, :, :, :) = INVALID
+
    end subroutine init
 
 !>
@@ -338,15 +340,12 @@ contains
       integer, intent(in) :: numfluids !< expect flind%all, here, cannot grab it directly because of cyclic deps in CR-based setups
 
       integer, dimension(:), allocatable :: sizes, subsizes, starts
-      integer, parameter :: NOT_EXIST = -1
       integer :: d, t
       integer, dimension(FLUID:ARR) :: nc
       integer, parameter, dimension(FLUID:ARR) :: dim = [ 1+ndims, 1+ndims, ndims ] !< dimensionality of arrays
       integer, dimension(xdim:zdim) :: HBstart
 
       if (code_progress < PIERNIK_INIT_BASE) call die("[grid:grid_mpi_boundaries_prep] grid or fluids not initialized.")
-
-      cg%mbc(:, :, :, :) = NOT_EXIST
 
       nc = [ numfluids, ndims, 1 ]      !< number of fluids, magnetic field components and 1 for rank-3 array
       HBstart = [ cg%ie, cg%je, cg%ke ]
@@ -384,7 +383,6 @@ contains
       enddo
 
    end subroutine grid_mpi_boundaries_prep
-
 
 !-----------------------------------------------------------------------------
 
@@ -502,39 +500,41 @@ contains
 !>
 !! \brief Routines that deallocates directional meshes.
 !<
-   subroutine cleanup_grid
+
+   subroutine cleanup(this)
 
       use mpisetup,  only: has_dir, ierr
-      use constants, only: FLUID, ARR, xdim, zdim, LO, HI, BND, BLK
+      use constants, only: FLUID, ARR, xdim, zdim, LO, HI, BND, BLK, INVALID
 
       implicit none
 
+      class(grid_container) :: this
       integer :: d, t
 
-      if (allocated(cg%x))     deallocate(cg%x)
-      if (allocated(cg%xl))    deallocate(cg%xl)
-      if (allocated(cg%xr))    deallocate(cg%xr)
-      if (allocated(cg%inv_x)) deallocate(cg%inv_x)
-      if (allocated(cg%y))     deallocate(cg%y)
-      if (allocated(cg%yl))    deallocate(cg%yl)
-      if (allocated(cg%yr))    deallocate(cg%yr)
-      if (allocated(cg%inv_y)) deallocate(cg%inv_y)
-      if (allocated(cg%z))     deallocate(cg%z)
-      if (allocated(cg%zl))    deallocate(cg%zl)
-      if (allocated(cg%zr))    deallocate(cg%zr)
-      if (allocated(cg%inv_z)) deallocate(cg%inv_z)
+      if (allocated(this%x))     deallocate(this%x)
+      if (allocated(this%xl))    deallocate(this%xl)
+      if (allocated(this%xr))    deallocate(this%xr)
+      if (allocated(this%inv_x)) deallocate(this%inv_x)
+      if (allocated(this%y))     deallocate(this%y)
+      if (allocated(this%yl))    deallocate(this%yl)
+      if (allocated(this%yr))    deallocate(this%yr)
+      if (allocated(this%inv_y)) deallocate(this%inv_y)
+      if (allocated(this%z))     deallocate(this%z)
+      if (allocated(this%zl))    deallocate(this%zl)
+      if (allocated(this%zr))    deallocate(this%zr)
+      if (allocated(this%inv_z)) deallocate(this%inv_z)
 
       do d = xdim, zdim
          if (has_dir(d)) then
             do t = FLUID, ARR
-               call MPI_Type_free(cg%mbc(t, d, LO, BLK), ierr)
-               call MPI_Type_free(cg%mbc(t, d, LO, BND), ierr)
-               call MPI_Type_free(cg%mbc(t, d, HI, BLK), ierr)
-               call MPI_Type_free(cg%mbc(t, d, HI, BND), ierr)
+               if (this%mbc(t, d, LO, BLK) /= INVALID) call MPI_Type_free(this%mbc(t, d, LO, BLK), ierr)
+               if (this%mbc(t, d, LO, BND) /= INVALID) call MPI_Type_free(this%mbc(t, d, LO, BND), ierr)
+               if (this%mbc(t, d, HI, BLK) /= INVALID) call MPI_Type_free(this%mbc(t, d, HI, BLK), ierr)
+               if (this%mbc(t, d, HI, BND) /= INVALID) call MPI_Type_free(this%mbc(t, d, HI, BND), ierr)
             enddo
          endif
       enddo
 
-   end subroutine cleanup_grid
+   end subroutine cleanup
 
 end module grid

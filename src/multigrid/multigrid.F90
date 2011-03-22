@@ -41,7 +41,6 @@
 
 module multigrid
 ! pulled by MULTIGRID
-#ifdef MULTIGRID
 
    implicit none
 
@@ -173,7 +172,7 @@ contains
       if (allocated(dom_lvl)) call die("[multigrid:init_multigrid] dom_lvl already allocated")
       allocate(dom_lvl(level_min:level_max), stat=aerr(1))                             ! level_gb = level_min-1 contains some global base level data
       if (aerr(1) /= 0) call die("[multigrid:init_multigrid] Allocation error: dom_lvl")
-      mb_alloc = mb_alloc + size(dom_lvl)
+      mb_alloc = mb_alloc + size(dom_lvl) !> \deprecated it should be multiplied by the sizeof(dom_lvl)/sizeof(real)
 
       dom_lvl(level_max) = dom
       dom_lvl(level_max)%nb = mg_nb
@@ -189,7 +188,8 @@ contains
             allocate(dom_lvl(idx)%se(0:nproc-1, xdim:zdim, LO:HI))
             !else dom_lvl%se was implicitly allocated during assignment
          endif
-         dom_lvl(idx)%se(:, :, :) = dom%se(:, :, :) / 2**(level_max -idx)
+         dom_lvl(idx)%se(:, :, LO) = (dom_lvl(idx+1)%se(:, :, LO) + 1) / 2
+         dom_lvl(idx)%se(:, :, HI) =  dom_lvl(idx+1)%se(:, :, HI)      / 2
          call dom_lvl(idx)%set_derived
       enddo
       if (any(dom%se(:,:,:) /= dom_lvl(level_max)%se(:,:,:))) call die("[multigrid:init_multigrid] dom%se or dom_lvl(level_max)%se corrupted") ! this should detect changes in compiler behavior
@@ -301,7 +301,7 @@ contains
       ! handy shortcuts
       base => lvl(level_min)
       roof => lvl(level_max)
-      gb   => lvl(level_gb)
+      gb   => lvl(level_gb) !> \todo remove this feature. New restriction and prolongation will work with lvl(level_min) nonempty only on master
 
       call mpi_multigrid_prep
 
@@ -390,9 +390,6 @@ contains
             if (allocated(lvl(i)%prolong_xy)) deallocate(lvl(i)%prolong_xy)
             if (allocated(lvl(i)%prolong_x))  deallocate(lvl(i)%prolong_x)
             if (allocated(lvl(i)%mgvar))      deallocate(lvl(i)%mgvar)
-            if (allocated(lvl(i)%x))          deallocate(lvl(i)%x)
-            if (allocated(lvl(i)%y))          deallocate(lvl(i)%y)
-            if (allocated(lvl(i)%z))          deallocate(lvl(i)%z)
             if (allocated(lvl(i)%bnd_x))      deallocate(lvl(i)%bnd_x)
             if (allocated(lvl(i)%bnd_y))      deallocate(lvl(i)%bnd_y)
             if (allocated(lvl(i)%bnd_z))      deallocate(lvl(i)%bnd_z)
@@ -408,6 +405,7 @@ contains
                      endif
                   enddo
                enddo
+               call lvl(i)%cleanup
             endif
 
          enddo
@@ -430,11 +428,4 @@ contains
 
    end subroutine cleanup_multigrid
 
-#else /* MULTIGRID */
-#warning This should not happen. Probably the multigrid.F90 file is included in object directory by mistake.
-!> \todo I'm just curious what happens to the documentation lines after #else :-)
-#endif /* MULTIGRID */
-
 end module multigrid
-
-!!$ ============================================================================

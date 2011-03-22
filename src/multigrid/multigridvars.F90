@@ -56,7 +56,7 @@ module multigridvars
    end enum
 
    integer, parameter :: level_min = 1                                !< Base (coarsest) level number
-   integer, parameter :: level_gb = level_min-1                       !< Global-base level number
+   integer, parameter :: level_gb = level_min-1                       !< Global-base level number (will be obsolete soon)
    integer, parameter :: mg_nb = 2                                    !< Number of guardcells in multigrid (simplest laplacian and relaxation require only 1)
 
    ! these constants should be moved to constants module
@@ -112,8 +112,7 @@ module multigridvars
      type(plvl), pointer :: nextgrid
    end type lvl_segment
 
-   ! single level container
-   type, extends(grid_container) :: plvl
+   type, extends(grid_container) :: plvl                              !< single level container
 
       ! storage
       real, allocatable, dimension(:,:,:,:) :: mgvar                  !< main working array
@@ -153,7 +152,7 @@ module multigridvars
    type(plvl), pointer                           :: base              !< pointer to coarsest level
    type(plvl), pointer                           :: roof              !< pointer to finest level
    type(plvl), pointer                           :: gb                !< pointer to global-base level
-   type(domain_container), dimension(:), allocatable :: dom_lvl       !< a stack of domains with various resolutions
+   type(domain_container), dimension(:), allocatable, target :: dom_lvl       !< a stack of domains with various resolutions
 
 contains
 
@@ -176,8 +175,9 @@ contains
       integer, intent(in)      :: iv
 
       class(plvl), pointer :: coarse
+      integer(kind=8), dimension(:,:), pointer :: fse, cse ! shortcuts for fine segment and coarse segment
 
-      if (iv < 1 .or. iv > ngridvars) call die("[multigridbasefuncs:restrict_level] Invalid variable index.")
+      if (iv < lbound(this%mgvar(:,:,:,:), dim=4) .or. iv > ubound(this%mgvar(:,:,:,:), dim=4)) call die("[multigridvars:restrict_level] Invalid variable index.")
 
       coarse => this%o_rst%nextgrid
       if (.not. associated(coarse)) then
@@ -186,39 +186,22 @@ contains
          return
       endif
 
-      if (this%o_rst%proc /= proc) call die("[multigridvars:restrict_level] cross-processor restriction not implemented yet")
-
 !!$      call check_dirty(this%level, iv, "restrict_level-")
 
-      if (this%o_rst%proc == coarse%i_rst%proc) then
+      fse => this%o_rst%se
+      if (this%o_rst%proc == proc) then
       !> \deprecated BEWARE: unoptimized: some cells are used multiple times (1D and 2D speed-ups possible). Normalization factor will be: / ((1.+D_x)*(1.+D_y)*(1.+D_z))
-         coarse%mgvar(   coarse%i_rst%se(xdim, LO)  :coarse%i_rst%se(xdim, HI), &
-              &          coarse%i_rst%se(ydim, LO)  :coarse%i_rst%se(ydim, HI),         &
-              &          coarse%i_rst%se(zdim, LO)  :coarse%i_rst%se(zdim, HI),   iv) = &
-              ( this%mgvar(this%o_rst%se(xdim, LO)    :this%o_rst%se(xdim, HI)-D_x:(1+D_x),&
-              &            this%o_rst%se(ydim, LO)    :this%o_rst%se(ydim, HI)-D_y:(1+D_y), &
-              &            this%o_rst%se(zdim, LO)    :this%o_rst%se(zdim, HI)-D_z:(1+D_z), iv) + &
-              & this%mgvar(this%o_rst%se(xdim, LO)+D_x:this%o_rst%se(xdim, HI)    :(1+D_x),&
-              &            this%o_rst%se(ydim, LO)    :this%o_rst%se(ydim, HI)-D_y:(1+D_y), &
-              &            this%o_rst%se(zdim, LO)    :this%o_rst%se(zdim, HI)-D_z:(1+D_z), iv) + &
-              & this%mgvar(this%o_rst%se(xdim, LO)    :this%o_rst%se(xdim, HI)-D_x:(1+D_x),&
-              &            this%o_rst%se(ydim, LO)+D_y:this%o_rst%se(ydim, HI)    :(1+D_y),&
-              &            this%o_rst%se(zdim, LO)    :this%o_rst%se(zdim, HI)-D_z:(1+D_z), iv) + &
-              & this%mgvar(this%o_rst%se(xdim, LO)+D_x:this%o_rst%se(xdim, HI)    :(1+D_x),&
-              &            this%o_rst%se(ydim, LO)+D_y:this%o_rst%se(ydim, HI)    :(1+D_y),&
-              &            this%o_rst%se(zdim, LO)    :this%o_rst%se(zdim, HI)-D_z:(1+D_z), iv) + &
-              & this%mgvar(this%o_rst%se(xdim, LO)    :this%o_rst%se(xdim, HI)-D_x:(1+D_x),&
-              &            this%o_rst%se(ydim, LO)    :this%o_rst%se(ydim, HI)-D_y:(1+D_y),&
-              &            this%o_rst%se(zdim, LO)+D_z:this%o_rst%se(zdim, HI)    :(1+D_z), iv) + &
-              & this%mgvar(this%o_rst%se(xdim, LO)+D_x:this%o_rst%se(xdim, HI)    :(1+D_x),&
-              &            this%o_rst%se(ydim, LO)    :this%o_rst%se(ydim, HI)-D_y:(1+D_y),&
-              &            this%o_rst%se(zdim, LO)+D_z:this%o_rst%se(zdim, HI)    :(1+D_z), iv) + &
-              & this%mgvar(this%o_rst%se(xdim, LO)    :this%o_rst%se(xdim, HI)-D_x:(1+D_x),&
-              &            this%o_rst%se(ydim, LO)+D_y:this%o_rst%se(ydim, HI)    :(1+D_y),&
-              &            this%o_rst%se(zdim, LO)+D_z:this%o_rst%se(zdim, HI)    :(1+D_z), iv) + &
-              & this%mgvar(this%o_rst%se(xdim, LO)+D_x:this%o_rst%se(xdim, HI)    :(1+D_x),&
-              &            this%o_rst%se(ydim, LO)+D_y:this%o_rst%se(ydim, HI)    :(1+D_y),&
-              &            this%o_rst%se(zdim, LO)+D_z:this%o_rst%se(zdim, HI)    :(1+D_z), iv) ) * 0.125
+
+         cse => coarse%i_rst%se
+         coarse%mgvar(     cse(xdim, LO)    :cse(xdim, HI),             cse(ydim, LO)    :cse(ydim, HI),             cse(zdim, LO)    :cse(zdim, HI),             iv) = &
+              ( this%mgvar(fse(xdim, LO)    :fse(xdim, HI)-D_x:(1+D_x), fse(ydim, LO)    :fse(ydim, HI)-D_y:(1+D_y), fse(zdim, LO)    :fse(zdim, HI)-D_z:(1+D_z), iv) + &
+              & this%mgvar(fse(xdim, LO)+D_x:fse(xdim, HI)    :(1+D_x), fse(ydim, LO)    :fse(ydim, HI)-D_y:(1+D_y), fse(zdim, LO)    :fse(zdim, HI)-D_z:(1+D_z), iv) + &
+              & this%mgvar(fse(xdim, LO)    :fse(xdim, HI)-D_x:(1+D_x), fse(ydim, LO)+D_y:fse(ydim, HI)    :(1+D_y), fse(zdim, LO)    :fse(zdim, HI)-D_z:(1+D_z), iv) + &
+              & this%mgvar(fse(xdim, LO)+D_x:fse(xdim, HI)    :(1+D_x), fse(ydim, LO)+D_y:fse(ydim, HI)    :(1+D_y), fse(zdim, LO)    :fse(zdim, HI)-D_z:(1+D_z), iv) + &
+              & this%mgvar(fse(xdim, LO)    :fse(xdim, HI)-D_x:(1+D_x), fse(ydim, LO)    :fse(ydim, HI)-D_y:(1+D_y), fse(zdim, LO)+D_z:fse(zdim, HI)    :(1+D_z), iv) + &
+              & this%mgvar(fse(xdim, LO)+D_x:fse(xdim, HI)    :(1+D_x), fse(ydim, LO)    :fse(ydim, HI)-D_y:(1+D_y), fse(zdim, LO)+D_z:fse(zdim, HI)    :(1+D_z), iv) + &
+              & this%mgvar(fse(xdim, LO)    :fse(xdim, HI)-D_x:(1+D_x), fse(ydim, LO)+D_y:fse(ydim, HI)    :(1+D_y), fse(zdim, LO)+D_z:fse(zdim, HI)    :(1+D_z), iv) + &
+              & this%mgvar(fse(xdim, LO)+D_x:fse(xdim, HI)    :(1+D_x), fse(ydim, LO)+D_y:fse(ydim, HI)    :(1+D_y), fse(zdim, LO)+D_z:fse(zdim, HI)    :(1+D_z), iv) ) * 0.125
          !\todo add geometrical terms to improve convergence on cylindrical grids
       else
          call die("[multigridvars:restrict_level] cross-processor restriction not implemented yet")

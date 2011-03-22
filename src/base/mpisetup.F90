@@ -544,7 +544,7 @@ contains
       call MPI_Cart_coords(comm3d, proc, ndims, pcoords, ierr)
 
       if (allocated(dom%se)) call die("[mpisetup:init_mpi] dom%se already allocated")
-      allocate(dom%se(0:nproc-1, xdim:zdim, LO:HI)) !> \deprecated nowhere deallocated
+      allocate(dom%se(0:nproc-1, xdim:zdim, LO:HI))
       do p = 0, nproc-1
          call MPI_Cart_coords(comm3d, p, ndims, pc, ierr)
          where (has_dir(:))
@@ -642,6 +642,9 @@ contains
       use dataio_pub,    only: printinfo
 
       implicit none
+
+      if (allocated(dom%se)) deallocate(dom%se)
+      if (allocated(primes)) deallocate(primes)
 
       call MPI_Comm_free(comm3d, ierr)
 
@@ -749,8 +752,6 @@ contains
       else
          if (master) call warn("[mpisetup:divide_domain] Did not try uneven domain division")
       endif
-
-      deallocate(primes)
 
       write(msg,'(a,3i6,a,i4,a)') "[mpisetup:divide_domain] Cannot divide domain with [",dom%n_d(:)," ] cells to ",nproc," piecess. "
       call die(msg)
@@ -943,15 +944,21 @@ contains
 !-----------------------------------------------------------------------------
 
    subroutine Eratosthenes_sieve(tab,n)
+
+      use dataio_pub, only: die
 #ifdef DEBUG
       use dataio_pub, only: msg, printinfo
 #endif /* DEBUG */
+
       implicit none
+
       integer, intent(inout), allocatable, dimension(:) :: tab
       integer, intent(in)                               :: n
       integer, dimension(n)                             :: numb
 
       integer :: i, no_primes
+
+      if (allocated(tab)) call die("[mpisetup:Eratosthenes_sieve] tab already allocated")
 
       numb = [0, (i, i = 2, n)]
 

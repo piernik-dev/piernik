@@ -1959,8 +1959,4 @@ contains
 
    end subroutine fft_convolve
 
-#if !defined(MULTIGRID) || !defined(GRAV)
-#warning This should not happen. Probably the multigrid_gravity.F90 file is included in object directory by mistake.
-#endif /* !MULTIGRID || !GRAV) */
-
 end module multigrid_gravity
