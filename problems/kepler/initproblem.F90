@@ -847,7 +847,7 @@ contains
 
       if (nxd == n) then
          call printinfo("[initproblem:read_dens_profile] Saved profile has required dimension \o/")
-         gdens(cg%is:cg%ie) = y(:)
+         gdens(cg%nb+1:cg%nb+nxd) = y(:)
       else
          call warn("[initproblem:read_dens_profile] Saved profile has different dimension :/")
          write(msg,'(A,I5,A,I5,A)') "[initproblem:read_dens_profile] Performing spline interpolation from",n," to ",nxd," cells."
@@ -866,8 +866,8 @@ contains
       endif
 
       do i = 1, cg%nb
-         gdens(i)       = gdens(cg%is)
-         gdens(cg%ie+i) = gdens(cg%ie)
+         gdens(i)           = gdens(cg%nb+1)
+         gdens(nxd+cg%nb+i) = gdens(nxd+cg%nb)
       enddo
       deallocate(x,y)
       return
