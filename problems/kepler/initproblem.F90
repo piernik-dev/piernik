@@ -56,6 +56,7 @@ module initproblem
    character(len=cbuff_len) :: mag_field_orient
    character(len=cbuff_len) :: densfile
    real, target, allocatable, dimension(:,:,:,:) :: den0, mtx0, mty0, mtz0, ene0
+   real, target, allocatable, dimension(:,:,:)   :: harr
    integer, parameter       :: dname_len = 10
    real, dimension(:), allocatable :: taus, tauf
 
@@ -558,33 +559,32 @@ contains
       if (.not.allocated(mty0)) allocate(mty0(flind%fluids, cg%nx, cg%ny, cg%nz))
       if (.not.allocated(mtz0)) allocate(mtz0(flind%fluids, cg%nx, cg%ny, cg%nz))
       if (.not.allocated(ene0)) allocate(ene0(flind%fluids, cg%nx, cg%ny, cg%nz))
+      if (.not.allocated(harr)) allocate(harr(cg%nx, cg%ny, cg%nz))
 
+      if (.not.associated(p3d)) p3d => harr(:,:,:)
       do i=1, flind%fluids
          write(dname,'(2a)') flind%all_fluids(i)%get_tag(), '_den0'
-         if (.not.associated(p3d)) p3d => den0(i,:,:,:)
          call read_arr_from_restart(file_id, p3d, AT_NO_B, dname)
-         if (associated(p3d)) nullify(p3d)
+         den0(i,:,:,:) = harr(:,:,:)
 
          write(dname,'(2a)') flind%all_fluids(i)%get_tag(), '_mtx0'
-         if (.not.associated(p3d)) p3d => mtx0(i,:,:,:)
          call read_arr_from_restart(file_id, p3d, AT_NO_B, dname)
-         if (associated(p3d)) nullify(p3d)
+         mtx0(i,:,:,:) = harr(:,:,:)
 
          write(dname,'(2a)') flind%all_fluids(i)%get_tag(), '_mty0'
-         if (.not.associated(p3d)) p3d => mty0(i,:,:,:)
          call read_arr_from_restart(file_id, p3d, AT_NO_B, dname)
-         if (associated(p3d)) nullify(p3d)
+         mty0(i,:,:,:) = harr(:,:,:)
 
          write(dname,'(2a)') flind%all_fluids(i)%get_tag(), '_mtz0'
-         if (.not.associated(p3d)) p3d => mtz0(i,:,:,:)
          call read_arr_from_restart(file_id, p3d, AT_NO_B, dname)
-         if (associated(p3d)) nullify(p3d)
+         mtz0(i,:,:,:) = harr(:,:,:)
 
          write(dname,'(2a)') flind%all_fluids(i)%get_tag(), '_ene0'
-         if (.not.associated(p3d)) p3d => ene0(i,:,:,:)
          call read_arr_from_restart(file_id, p3d, AT_NO_B, dname)
-         if (associated(p3d)) nullify(p3d)
+         ene0(i,:,:,:) = harr(:,:,:)
       enddo
+      if (associated(p3d)) nullify(p3d)
+      if (allocated(harr)) deallocate(harr)
 
    end subroutine read_initial_fld_from_restart
 !-----------------------------------------------------------------------------
