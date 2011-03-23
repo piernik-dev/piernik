@@ -217,7 +217,7 @@ contains
       integer              :: system_status, i
       character(len=msglen):: system_command
 
-      if (code_progress < PIERNIK_INIT_IO_IC) call die("[dataio:init_dataio] Some physics modules are not initiaslized.")
+      if (code_progress < PIERNIK_INIT_IO_IC) call die("[dataio:init_dataio] Some physics modules are not initialized.")
 
       problem_name = "nameless"
       run_id = "___"
