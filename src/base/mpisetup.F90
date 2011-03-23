@@ -35,13 +35,11 @@
 !<
 module mpisetup
 
-!   use mpi, only: MPI_STATUS_SIZE
+   use mpi,        only: MPI_STATUS_SIZE
    use types,      only: domain_container
    use constants,  only: ndims, cbuff_len, LO, HI, BLK, BND
 
    implicit none
-
-   integer, parameter :: MPI_STATUS_SIZE = 5  ! taken from mpi to silence warnings
 
    private
    public :: cleanup_mpi, init_mpi, mpifind, translate_bnds_to_ints_dom, &
