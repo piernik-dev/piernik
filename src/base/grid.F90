@@ -462,6 +462,9 @@ contains
 !                     call die(msg)
                      dodie = .true.
                   case (BND_COR)
+                     if (present(area_type)) then
+                        if (area_type /= AT_NO_B) cycle
+                     endif
                      write(msg,*) "[grid:arr3d_boundaries] 'cor' not implemented for ", dname
 !                     call die(msg)
                      dodie = .true.
@@ -489,9 +492,13 @@ contains
 
             enddo
          endif
+         !>
+         !! \warning outside xdim-zdim loop MPI_Waitall may change the operations order (at least for openmpi-1.4.3)
+         !! and as a result may leave mpi-corners uninitiallized
+         !<
+         call MPI_Waitall(nreq, req3d(:), status3d(:,:), ierr)
       enddo
 
-      call MPI_Waitall(nreq, req3d(:), status3d(:,:), ierr)
       call MPI_Allreduce(MPI_IN_PLACE,dodie,1,MPI_LOGICAL,MPI_LOR,comm,ierr)
       if (dodie) call die(msg)
 
