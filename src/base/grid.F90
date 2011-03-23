@@ -101,7 +101,8 @@ module grid
 
    contains
 
-      procedure :: init, cleanup
+      procedure :: init
+      procedure :: cleanup
 
    end type grid_container
 
