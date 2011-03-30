@@ -341,7 +341,7 @@ contains
       ! summary
       if (master) then
          write(msg, '(a,i2,a,3(i4,a),f6.1,a)')"[multigrid:init_multigrid] Initialized ", level_max, " levels, coarsest resolution [ ", &
-            lvl(1)%nxb, ",", lvl(1)%nyb, ",", lvl(1)%nzb, " ] per processor, allocated", mb_alloc*8./1048576., "MiB" ! sizeof(double)/2.**20
+            lvl(level_min)%nxb, ",", lvl(level_min)%nyb, ",", lvl(level_min)%nzb, " ] per processor, allocated", mb_alloc*8./1048576., "MiB" ! sizeof(double)/2.**20
          call mg_write_log(msg)
       endif
 

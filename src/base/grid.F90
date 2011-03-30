@@ -460,14 +460,12 @@ contains
                      endif
                   case (BND_SHE) !> \todo move appropriate code from poissonsolver::poisson_solve or do nothing. or die until someone really needs SHEAR.
                      write(msg,*) "[grid:arr3d_boundaries] 'she' not implemented for ",dname
-!                     call die(msg)
                      dodie = .true.
                   case (BND_COR)
                      if (present(area_type)) then
                         if (area_type /= AT_NO_B) cycle
                      endif
                      write(msg,*) "[grid:arr3d_boundaries] 'cor' not implemented for ", dname
-!                     call die(msg)
                      dodie = .true.
                   case default ! Set gradient == 0 on the external boundaries
                      if (present(area_type)) then

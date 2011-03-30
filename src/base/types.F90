@@ -80,6 +80,9 @@ module types
       integer :: nyt                            !< total number of %grid cells in the whole domain in y-direction
       integer :: nzt                            !< total number of %grid cells in the whole domain in z-direction
 
+      integer :: pdiv_type                      !< 0 for cartesian decomposition of base level, /= 0 for more spthisticated patterns
+      integer, dimension(xdim:zdim) :: pdiv     !< when pdiv_type == 0 it is like psize(:)
+
     contains
 
       procedure :: set_derived
@@ -90,7 +93,6 @@ module types
    type :: segment
       integer :: proc                                    !< target process
       integer(kind=8), dimension(xdim:zdim, LO:HI) :: se !< range
-      integer:: mc                                       !< MPI type Container
    end type segment
 
    type :: axes

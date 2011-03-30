@@ -94,7 +94,7 @@ contains
       integer :: i, nsize
 
       allocate(ivec(n))
-      ivec  = [(i,i=1,n+1)]
+      ivec  = [(i,i=1,n+1)]       ! valgrind: Invalid write of size 4
       nsize = abs(n-size(ivec))
       deallocate(ivec)
 

@@ -132,9 +132,14 @@ module constants
       enumerator :: ION = 1, NEU, DST
    end enum
 
+   ! Domain decompositions
+   enum, bind(C)
+      enumerator :: DD_CART, DD_UE                       !< cartesian and uneven domain decompositions
+   end enum
+
    ! misc
    enum, bind(C)
-      enumerator :: MINL, MAXL                             !< cinstants for mpifind
+      enumerator :: MINL, MAXL                           !< constants for mpifind
    end enum
    integer, parameter :: stdout = output_unit
    integer, parameter :: stderr = error_unit

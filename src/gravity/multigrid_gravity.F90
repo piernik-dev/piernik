@@ -435,7 +435,7 @@ contains
       nold = ord_time_extrap + 1
       if (nold > 0) then
          do j = 1, 2 ! inner and outer arrays
-            if (associated(os)) nullify(os)
+            nullify(os)
             select case (j)
                case (1)
                   os => inner

@@ -42,7 +42,7 @@ module mpisetup
    implicit none
 
    private
-   public :: cleanup_mpi, init_mpi, mpifind, translate_bnds_to_ints_dom, &
+   public :: cleanup_mpi, init_mpi, mpifind, translate_bnds_to_ints_dom, is_neigh, &
         &    buffer_dim, cbuff, ibuff, lbuff, rbuff, comm, comm3d, req, status, ierr, info, &
         &    master, slave, have_mpi, has_dir, eff_dim, is_uneven, &
         &    nproc, pcoords, proc, procxl, procxr, procxyl, procyl, procyr, procyxl, proczl, proczr, psize, &
@@ -138,6 +138,10 @@ module mpisetup
 
    namelist /NUMERICAL_SETUP/  cfl, smalld, smallei, integration_order, cfr_smooth, dt_initial, dt_max_grow, dt_min, smallc, smallp, limiter, cflcontrol, use_smalld, cfl_max, relax_time
 
+   interface is_neigh
+      module procedure is_neigh_simple, is_neigh_per
+   end interface
+
 contains
 
 !-----------------------------------------------------------------------------
@@ -202,7 +206,7 @@ contains
 !<
    subroutine init_mpi
 
-      use constants,     only: cwdlen, xdim, ydim, zdim, LO, HI, big_float, dpi, GEO_XYZ, GEO_RPZ, GEO_INVALID, BND_PER, BND_COR, BND_REF
+      use constants,     only: cwdlen, xdim, ydim, zdim, LO, HI, big_float, dpi, GEO_XYZ, GEO_RPZ, GEO_INVALID, BND_PER, BND_COR, BND_REF, DD_CART
       use mpi,           only: MPI_COMM_WORLD, MPI_INFO_NULL, MPI_INFO_NULL, MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION, MPI_LOGICAL, MPI_PROC_NULL
       use dataio_pub,    only: die, printinfo, msg, cwd, ansi_white, ansi_black, warn, tmp_log_file
       use dataio_pub,    only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml  ! QA_WARN required for diff_nml
@@ -538,57 +542,64 @@ contains
       endif
       if (any(dom%bnd(zdim, LO:HI) == BND_COR)) call die("[mpisetup:init_mpi] Corner BC not allowed for z-direction")
 
-      call MPI_Cart_create(comm, ndims, psize, dom%periodic, reorder, comm3d, ierr)
-      call MPI_Cart_coords(comm3d, proc, ndims, pcoords, ierr)
-
       if (allocated(dom%se)) call die("[mpisetup:init_mpi] dom%se already allocated")
       allocate(dom%se(0:nproc-1, xdim:zdim, LO:HI))
-      do p = 0, nproc-1
-         call MPI_Cart_coords(comm3d, p, ndims, pc, ierr)
-         where (has_dir(:))
-            dom%se(p, :, LO) = (dom%n_d(:) *  pc(:) ) / psize(:)     ! offset of low boundaries of the local domain (0 at low external boundaries)
-            dom%se(p, :, HI) = (dom%n_d(:) * (pc(:)+1))/psize(:) - 1 ! offset of high boundaties of the local domain (n_d(:) - 1 at right external boundaries)
-         elsewhere
-            dom%se(p, :, LO) = 0
-            dom%se(p, :, HI) = 0
-         endwhere
-      enddo
+      dom%se(:, :, :) = 0
 
-! Compute neighbors
+      procxl = MPI_PROC_NULL; procxr = MPI_PROC_NULL
+      procyl = MPI_PROC_NULL; procyr = MPI_PROC_NULL
+      proczl = MPI_PROC_NULL; proczr = MPI_PROC_NULL
 
-      call MPI_Cart_shift(comm3d,0,1,procxl,procxr,ierr)   ! x dim
-      call MPI_Cart_shift(comm3d,1,1,procyl,procyr,ierr)   ! y dim
-      call MPI_Cart_shift(comm3d,2,1,proczl,proczr,ierr)   ! z dim
+      select case (dom%pdiv_type)
+         case (DD_CART)
+            call MPI_Cart_create(comm, ndims, psize, dom%periodic, reorder, comm3d, ierr)
+            call MPI_Cart_coords(comm3d, proc, ndims, pcoords, ierr)
 
-      if (any(dom%bnd(xdim:ydim, LO) == BND_COR)) then
-         if (pcoords(xdim) == 0 .and. pcoords(ydim) > 0) then
-            pc = (/pcoords(ydim),pcoords(xdim),pcoords(zdim)/)
-            call MPI_Cart_rank(comm3d,pc,procxyl,ierr)
-         else
-            procxyl = MPI_PROC_NULL
-         endif
-         if (pcoords(ydim) == 0 .and. pcoords(xdim) > 0 ) then
-            pc = (/pcoords(ydim),pcoords(xdim),pcoords(zdim)/)
-            call MPI_Cart_rank(comm3d,pc,procyxl,ierr)
-         else
-            procyxl = MPI_PROC_NULL
-         endif
-      endif
+            do p = 0, nproc-1
+               call MPI_Cart_coords(comm3d, p, ndims, pc, ierr)
+               where (has_dir(:))
+                  dom%se(p, :, LO) = (dom%n_d(:) *  pc(:) ) / psize(:)     ! offset of low boundaries of the local domain (0 at low external boundaries)
+                  dom%se(p, :, HI) = (dom%n_d(:) * (pc(:)+1))/psize(:) - 1 ! offset of high boundaties of the local domain (n_d(:) - 1 at right external boundaries)
+               endwhere
+            enddo
 
-      if (any(dom%bnd(xdim:ydim, HI) == BND_COR)) then
-         if (pcoords(xdim) == psize(xdim)-1 .and. pcoords(ydim) < psize(ydim)-1) then
-            pc = (/pcoords(ydim),pcoords(xdim),pcoords(zdim)/)
-            call MPI_Cart_rank(comm3d,pc,procxyr,ierr)
-         else
-            procxyr = MPI_PROC_NULL
-         endif
-         if (pcoords(ydim) == psize(ydim)-1 .and. pcoords(xdim) < psize(xdim)-1 ) then
-            pc = (/pcoords(ydim),pcoords(xdim),pcoords(zdim)/)
-            call MPI_Cart_rank(comm3d,pc,procyxr,ierr)
-         else
-            procyxr = MPI_PROC_NULL
-         endif
-      endif
+            ! Compute neighbors
+            call MPI_Cart_shift(comm3d,0,1,procxl,procxr,ierr)   ! x dim
+            call MPI_Cart_shift(comm3d,1,1,procyl,procyr,ierr)   ! y dim
+            call MPI_Cart_shift(comm3d,2,1,proczl,proczr,ierr)   ! z dim
+
+            if (any(dom%bnd(xdim:ydim, LO) == BND_COR)) then
+               if (pcoords(xdim) == 0 .and. pcoords(ydim) > 0) then
+                  pc = (/pcoords(ydim),pcoords(xdim),pcoords(zdim)/)
+                  call MPI_Cart_rank(comm3d,pc,procxyl,ierr)
+               else
+                  procxyl = MPI_PROC_NULL
+               endif
+               if (pcoords(ydim) == 0 .and. pcoords(xdim) > 0 ) then
+                  pc = (/pcoords(ydim),pcoords(xdim),pcoords(zdim)/)
+                  call MPI_Cart_rank(comm3d,pc,procyxl,ierr)
+               else
+                  procyxl = MPI_PROC_NULL
+               endif
+            endif
+
+            if (any(dom%bnd(xdim:ydim, HI) == BND_COR)) then
+               if (pcoords(xdim) == psize(xdim)-1 .and. pcoords(ydim) < psize(ydim)-1) then
+                  pc = (/pcoords(ydim),pcoords(xdim),pcoords(zdim)/)
+                  call MPI_Cart_rank(comm3d,pc,procxyr,ierr)
+               else
+                  procxyr = MPI_PROC_NULL
+               endif
+               if (pcoords(ydim) == psize(ydim)-1 .and. pcoords(xdim) < psize(xdim)-1 ) then
+                  pc = (/pcoords(ydim),pcoords(xdim),pcoords(zdim)/)
+                  call MPI_Cart_rank(comm3d,pc,procyxr,ierr)
+               else
+                  procyxr = MPI_PROC_NULL
+               endif
+            endif
+         case default
+            call die("[mpisetup:init_mpi] unknown strategy for generating domain division")
+      end select
 
 #ifdef SHEAR_BND
       if (psize(ydim) > 1) call die("[mpisetup:initmpi] Shear-pediodic boundary conditions do not permit psize(ydim) > 1")
@@ -632,6 +643,96 @@ contains
 #endif /* VERBOSE */
 
    end subroutine init_mpi
+
+!-----------------------------------------------------------------------------
+!!
+!> \brief is_neigh_per checks if two given blocks placed within a periodic domain are overlapping and determines whether the second block can provide face or corner guardcells
+!!
+!! to handle shearing box which is divided in y-direction atthe edges, one has to provide another subroutine (is_neigh_per_shear) and add it to interface is_neigh
+!!
+   subroutine is_neigh_per(this, other, neigh, share, corner, face, periods)
+
+      use constants,  only: xdim, ydim, zdim, LO, HI
+
+      implicit none
+
+      integer(kind=8), dimension(xdim:zdim, LO:HI), intent(in) :: this, other !< two boxes
+      logical, dimension(xdim:zdim, LO:HI), intent(out)        :: neigh       !< on which sides the other can offer useful guardcells?
+      logical, intent(out)                                     :: share       !< is there overlap between this and the other?
+      logical, intent(out)                                     :: corner      !< is there overlap in edge or corner guardcells? (anything but face guardcells)
+      logical, intent(out)                                     :: face        !< are there any directly (face) neighbouring grid cells?
+      integer(kind=8), dimension(xdim:zdim), intent(in)                :: periods     !< where >0 then the direction is periodic with the given number of cells
+
+      integer :: i, j, k
+      integer(kind=8), dimension(xdim:zdim, LO:HI) :: oth
+      logical, dimension(xdim:zdim, LO:HI) :: nei
+      logical :: sha, cor, fac
+
+      neigh(:,:) = .false. ; share = .false. ; corner = .false. ; face = .false.
+      do i = -1, 1
+         if ((has_dir(xdim) .or. periods(xdim)>0) .or. i==0) then
+            do j = -1, 1
+               if ((has_dir(ydim) .or. periods(ydim)>0) .or. j==0) then
+                  do k = -1, 1
+                     if ((has_dir(zdim) .or. periods(zdim)>0) .or. k==0) then
+                        oth(:,:) = other(:,:) + reshape([i*periods(xdim), j*periods(ydim), k*periods(zdim), i*periods(xdim), j*periods(ydim), k*periods(zdim)], [3,2])
+                        call is_neigh_simple(this, oth, nei, sha, cor, fac)
+                        neigh(:,:) = neigh(:,:) .or. nei(:,:)
+                        share = share .or. sha
+                        face = face .or. fac
+                        corner = (corner .or. cor) .and. .not. face
+                     endif
+                  enddo
+               endif
+            enddo
+         endif
+      enddo
+
+   end subroutine is_neigh_per
+
+!!-----------------------------------------------------------------------------
+!!
+!> \brief is_neigh_simple checks if two given blocks placed within a nonperiodic domain are overlapping and determines whether the second block can provide face or corner guardcells
+!!
+
+   subroutine is_neigh_simple(this, other, neigh, share, corner, face)
+
+      use constants,  only: xdim, zdim, LO, HI
+
+      implicit none
+
+      integer(kind=8), dimension(xdim:zdim, LO:HI), intent(in) :: this, other !< two boxes
+      logical, dimension(xdim:zdim, LO:HI), intent(out)        :: neigh       !< on which sides the other can offer useful guardcells?
+      logical, intent(out)                                     :: share       !< is there overlap between this and the other?
+      logical, intent(out)                                     :: corner      !< is there overlap in edge or corner guardcells? (anything but face guardcells)
+      logical, intent(out)                                     :: face        !< are there any directly (face) neighbouring grid cells?
+
+      logical, dimension(xdim:zdim, LO:HI) :: d_neigh
+      logical, dimension(xdim:zdim)        :: d_share
+      logical                              :: aux
+      integer                              :: d
+
+      ! periodicity ignored
+
+      do d = xdim, zdim
+         if (has_dir(d)) then
+            d_neigh(d, LO) = (other(d, HI) + 1 >= this(d, LO)) .and. (other(d, LO) <  this(d, LO))
+            d_neigh(d, HI) = (other(d, LO) - 1 <= this(d, HI)) .and. (other(d, HI) >  this(d, HI))
+            d_share(d)     = (other(d, LO)     <= this(d, HI)) .and. (other(d, HI) >= this(d, LO))
+         else
+            d_neigh(d, :) = .false.
+            d_share(d)    = .true.
+         endif
+      enddo
+
+      aux = all(d_neigh(:, LO) .or. d_neigh(:, HI) .or. d_share(:))
+
+      neigh(:,:) = d_neigh(:, :) .and. aux
+      share = all(d_share(:))
+      corner = count(d_share(:))<=1 .and. count((d_neigh(:, LO) .or. d_neigh(:, HI)) .and. aux) > 1
+      face = count(neigh(:, :)) > 0 .and. .not. corner
+
+   end subroutine is_neigh_simple
 
 !-----------------------------------------------------------------------------
 
@@ -708,11 +809,15 @@ contains
 !
    subroutine divide_domain
 
-      use dataio_pub,    only: die, warn, printinfo, msg
+      use constants,  only: DD_CART
+      use dataio_pub, only: die, warn, printinfo, msg
 
       implicit none
 
       real :: quality
+
+      dom%pdiv_type = DD_CART
+      dom%pdiv(:) = psize(:)
 
       if (product(psize) == nproc) then
          if (all(mod(dom%n_d(:), psize(:)) == 0)) then
@@ -736,7 +841,10 @@ contains
       call divide_domain_uniform
       if (product(psize) == nproc) then
          quality = ideal_bsize / sum(psize(:)/real(dom%n_d(:)) * product(real(dom%n_d(:))), MASK = dom%n_d(:) > 1)
-         if (quality >= dd_unif_quality .or. .not. allow_uneven) return
+         if (quality >= dd_unif_quality .or. .not. allow_uneven) then
+            dom%pdiv(:) = psize(:)
+            return
+         endif
          write(msg,'(2(a,f6.3),a)')"[mpisetup:divide_domain] Quality of uniform division = ",quality," is below threshold ",dd_unif_quality, ", trying harder ..."
          if (master) call warn(msg)
       endif
@@ -745,6 +853,7 @@ contains
          call divide_domain_rectlinear
          if (product(psize) == nproc) then
             ! if (quality > dd_rect_quality .or. .not. allow_noncart) return
+            dom%pdiv(:) = psize(:)
             return
          endif
       else

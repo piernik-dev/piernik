@@ -128,7 +128,7 @@ module multigridvars
       real    :: r, rx, ry, rz                                        !< geometric factors for relaxation (diffusion) used in approximate_solution_rbgs
 
       ! MPI datatype shortcut, similar to grid_container%mbc(ARR, :, :, :)
-      integer, dimension(xdim:zdim, LO:HI, BND:BLK, mg_nb) :: mmbc    !< Multigrid  MPI Boundary conditions Container for block boundary exchanges with 1 .. mg_nb layers
+      integer, dimension(xdim:zdim, LO:HI, BND:BLK, mg_nb) :: mmbc    !< Multigrid MPI Boundary conditions Container for block boundary exchanges with 1 .. mg_nb layers
 
       type(lvl_segment) :: i_rst, o_rst                       !< description of incoming and outgoing restriction data (this will be a linked list)
 
@@ -171,7 +171,7 @@ contains
 
       implicit none
 
-      class(plvl), intent(in), target  :: this
+      class(plvl), intent(inout), target  :: this
       integer, intent(in)      :: iv
 
       class(plvl), pointer :: coarse
