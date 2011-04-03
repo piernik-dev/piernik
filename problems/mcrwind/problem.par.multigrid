@@ -68,6 +68,8 @@
   /
 
  $GRAVITY
+    user_grav    = .true.
+    gprofs_target= 'accel'
     r_gc         = 5000     ! Galactic radius of coordinate system
     nsub         = 10
  /

@@ -69,6 +69,7 @@
 
  $GRAVITY
     user_grav    = .true.
+    gprofs_target= 'accel'
     r_gc         = 5000
     nsub         = 10
  /
