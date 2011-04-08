@@ -72,7 +72,7 @@ contains
 
       use dataio_pub,            only: die
       use multigridhelpers,      only: dirty_debug, check_dirty, dirtyH
-      use multigridvars,         only: plvl, lvl, level_min, level_max, ord_prolong, ngridvars
+      use multigridvars,         only: plvl, lvl, level_min, level_max, ord_prolong, ngridvars, is_mg_uneven
       use multigridexperimental, only: prolong_level_hord
 
       implicit none
@@ -93,7 +93,7 @@ contains
 
       call check_dirty(coarse%level, iv, "prolong-")
 
-      if (ord_prolong == 0) then
+      if (ord_prolong == 0 .or. is_mg_uneven) then
          call prolong_level0(lev, iv)
       else
          call prolong_level_hord(lev, iv) ! experimental part

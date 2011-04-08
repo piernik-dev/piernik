@@ -44,7 +44,7 @@ module mpisetup
    private
    public :: cleanup_mpi, init_mpi, mpifind, translate_bnds_to_ints_dom, is_neigh, &
         &    buffer_dim, cbuff, ibuff, lbuff, rbuff, comm, comm3d, req, status, ierr, info, &
-        &    master, slave, have_mpi, has_dir, eff_dim, is_uneven, &
+        &    master, slave, have_mpi, has_dir, eff_dim, is_uneven, is_mpi_noncart, &
         &    nproc, pcoords, proc, procxl, procxr, procxyl, procyl, procyr, procyxl, proczl, proczr, psize, &
         &    dom, geometry_type, &
         &    cfl, cfl_max, cflcontrol, cfl_violated, &
@@ -81,6 +81,7 @@ module mpisetup
 
    logical, protected :: have_mpi           !< .true. when run on more than one processor
    logical, protected :: is_uneven          !< .true. when n[xyz]b depend on process number
+   logical, protected :: is_mpi_noncart     !< .true. when there exist a process that has more than one neighbour in any direction
 
    integer, allocatable, dimension(:) :: primes
    real :: ideal_bsize
@@ -531,14 +532,22 @@ contains
 #endif /* MULTIGRID */
       if (allow_uneven .and. master .and. have_mpi) call warn("[mpisetup:init_mpi] Uneven domain decomposition is experimental.")
       is_uneven = .false.
+      is_mpi_noncart = .false.
 
       where (.not. has_dir(:)) psize(:) = 1
       call divide_domain
 
-      if ( any(dom%bnd(xdim:ydim, LO:HI) == BND_COR) .and. (psize(xdim) /= psize(ydim) .or. dom%n_d(xdim) /= dom%n_d(ydim)) ) then
-         write(msg, '(a,4(i4,a))')"[mpisetup:init_mpi] Corner BC require psize(xdim) equal to psize(ydim) and nxd equal to nyd. Detected: [",psize(xdim),",",psize(ydim),&
-              &                   "] and [",dom%n_d(xdim),",",dom%n_d(ydim),"]"
-         call die(msg)
+      if (is_mpi_noncart) is_uneven = .true.
+
+      ! most of the code below is incompatible with noncartesian domain decomposition and shoould be called from divide_domain_uniform and divide_domain_rectlinear
+
+      if (any(dom%bnd(xdim:ydim, LO:HI) == BND_COR)) then
+         if (is_mpi_noncart) call die("[mpisetup:init_mpi] Corner BC with noncartesian domain division not implemented")
+         if (psize(xdim) /= psize(ydim) .or. dom%n_d(xdim) /= dom%n_d(ydim)) then
+            write(msg, '(a,4(i4,a))')"[mpisetup:init_mpi] Corner BC require psize(xdim) equal to psize(ydim) and nxd equal to nyd. Detected: [",psize(xdim),",",psize(ydim),&
+                 &                   "] and [",dom%n_d(xdim),",",dom%n_d(ydim),"]"
+            call die(msg)
+         endif
       endif
       if (any(dom%bnd(zdim, LO:HI) == BND_COR)) call die("[mpisetup:init_mpi] Corner BC not allowed for z-direction")
 
@@ -552,6 +561,8 @@ contains
 
       select case (dom%pdiv_type)
          case (DD_CART)
+            if (is_mpi_noncart) call die("[[mpisetup:init_mpi] MPI_Cart_create cannot be used for non-rectilinear domain decomposition")
+
             call MPI_Cart_create(comm, ndims, psize, dom%periodic, reorder, comm3d, ierr)
             call MPI_Cart_coords(comm3d, proc, ndims, pcoords, ierr)
 
@@ -1032,7 +1043,7 @@ contains
          if (is_uneven) then
             write(msg,'(2(a,3i5),a)')"                                    Sizes are from [", int(dom%n_d(:)/psize(:))," ] to [",int((dom%n_d(:)-1)/psize(:))+1," ] cells."
             call printinfo(msg)
-            write(msg,'(a,f6.3)')    "                                    Load balance is ",product(dom%n_d(:)) / ( dble(nproc) * product( int((dom%n_d(:)-1)/psize(:)) + 1 ) )
+            write(msg,'(a,f8.5)')    "                                    Load balance is ",product(dom%n_d(:)) / ( dble(nproc) * product( int((dom%n_d(:)-1)/psize(:)) + 1 ) )
          else
             write(msg,'(a,3i5,a)')   "                                    Size is [", int(dom%n_d(:)/psize(:))," ] cells."
          endif

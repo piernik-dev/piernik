@@ -162,7 +162,7 @@ contains
       use multigridvars,      only: bnd_periodic, bnd_dirichlet, bnd_isolated, bnd_invalid, correction, mg_nb, ngridvars
       use constants,          only: GEO_XYZ, GEO_RPZ, BND_PER
       use multipole,          only: use_point_monopole, lmax, mmax, ord_prolong_mpole, coarsen_multipole, interp_pt2mom, interp_mom2pot
-      use mpisetup,           only: buffer_dim, comm, ierr, master, slave, ibuff, cbuff, rbuff, lbuff, dom, has_dir, geometry_type
+      use mpisetup,           only: buffer_dim, comm, ierr, master, slave, ibuff, cbuff, rbuff, lbuff, dom, has_dir, geometry_type, is_uneven
       use mpi,                only: MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL
       use dataio_pub,         only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml  ! QA_WARN required for diff_nml
       use dataio_pub,         only: msg, die, warn
@@ -192,6 +192,7 @@ contains
       L4_strength            = 1.0
 
       coarsen_multipole      = 1
+      if (is_uneven) coarsen_multipole = 0
       lmax                   = 16
       mmax                   = -1 ! will be automatically set to lmax unless explicitly limited in problem.par
       max_cycles             = 20
@@ -204,8 +205,8 @@ contains
 
       use_point_monopole     = .false.
       trust_fft_solution     = .false.
-      gb_no_fft              = .false.
-      prefer_rbgs_relaxation = .false.
+      gb_no_fft              = is_uneven
+      prefer_rbgs_relaxation = is_uneven
       fft_full_relax         = .false.
       gb_solve_gather        = .false.
       fft_patient            = .false.
@@ -386,12 +387,12 @@ contains
    subroutine init_multigrid_grav_post(mb_alloc)
 
       use arrays,             only: sgp
-      use multigridvars,      only: lvl, roof, base, gb, level_gb, level_max, level_min, bnd_periodic, bnd_dirichlet, bnd_isolated, vcycle_stats
-      use mpisetup,           only: master, nproc, psize, geometry_type, have_mpi, is_uneven
+      use multigridvars,      only: lvl, roof, base, gb, level_gb, level_max, level_min, bnd_periodic, bnd_dirichlet, bnd_isolated, vcycle_stats, is_mg_uneven, gb_cartmap
+      use mpisetup,           only: master, nproc, psize, geometry_type, dom, proc, comm3d, ierr, have_mpi, is_uneven, is_mpi_noncart
       use multigridhelpers,   only: vcycle_stats_init, dirty_debug, dirtyH
-      use constants,          only: pi, dpi, xdim, ydim, zdim, GEO_XYZ
+      use constants,          only: pi, dpi, xdim, ydim, zdim, ndims, GEO_XYZ
       use dataio_pub,         only: die, warn
-      use multipole,          only: init_multipole
+      use multipole,          only: init_multipole, coarsen_multipole
 
       implicit none
 
@@ -401,6 +402,40 @@ contains
       real, allocatable, dimension(:)  :: kx, ky, kz             !< FFT kernel directional components for convolution
       integer, dimension(6)            :: aerr                   !> \deprecated BEWARE: hardcoded magic integer. Update when you change number of simultaneous error checks
       integer :: i, j, idx
+
+      if ((is_uneven .or. is_mg_uneven) .and. .not. gb_no_fft) then
+         gb_no_fft = .true.
+         if (master) call warn("[multigrid_gravity:init_multigrid_grav_post] FFT on base level disabled on uneven domains")
+      endif
+
+      if ((is_uneven .or. is_mg_uneven) .and. .not. prefer_rbgs_relaxation) then
+         prefer_rbgs_relaxation = .true.
+         if (master) call warn("[multigrid_gravity:init_multigrid_grav_post] FFT relaxation not implemented on uneven domains. Forcing red-black Gauss-Seidel.")
+      endif
+
+      if ((is_uneven .or. is_mg_uneven) .and. coarsen_multipole /= 0) then
+         coarsen_multipole = 0
+         if (master) call warn("[multigrid_gravity:init_multigrid_grav_post] multipole coarsening on uneven domains not implemented yet.")
+      endif
+
+      if (.not. gb_no_fft) then ! This will be obsolete soon
+         if (have_mpi .and. is_mpi_noncart) call die("[multigrid:init_multigrid] is_mpi_noncart is not implemented") ! MPI_Cart_coords, psize, gb_cartmap
+
+         ! construct global PE mapping
+         if (allocated(gb_cartmap)) call die("[multigrid:init_multigrid] gb_cartmap array already allocated")
+         allocate(gb_cartmap(0:nproc-1), stat=aerr(1))
+         if (aerr(1) /= 0) call die("[multigrid:init_multigrid] Allocation error: gb_cartmap")
+         mb_alloc = mb_alloc + size(gb_cartmap) !may be inaccurate
+         do j=0, nproc-1
+            call MPI_Cart_coords(comm3d, j, ndims, gb_cartmap(j)%proc, ierr)
+            gb_cartmap(j)%lo(xdim) = gb_cartmap(j)%proc(xdim) * base%nxb + 1 ! starting x, y and z indices of interior cells from
+            gb_cartmap(j)%lo(ydim) = gb_cartmap(j)%proc(ydim) * base%nyb + 1 ! coarsest level on the gb_src array
+            gb_cartmap(j)%lo(zdim) = gb_cartmap(j)%proc(zdim) * base%nzb + 1
+            gb_cartmap(j)%up(xdim) = gb_cartmap(j)%lo(xdim)   + base%nxb - 1 ! ending indices
+            gb_cartmap(j)%up(ydim) = gb_cartmap(j)%lo(ydim)   + base%nyb - 1
+            gb_cartmap(j)%up(zdim) = gb_cartmap(j)%lo(zdim)   + base%nzb - 1
+         enddo
+      endif
 
       do idx = level_max, level_min, -1
          ! this should work correctly also when eff_dim < 3
@@ -480,7 +515,8 @@ contains
          if (geometry_type /= GEO_XYZ) call die("[multigrid_gravity:init_multigrid_grav_post] FFT at base level is not allowed in non-cartesian coordinates.")
 
          !> \deprecated BEWARE only small subset of gb% members is ever initialized
-         if (have_mpi .and. is_uneven) call die("[multigrid_gravity:init_multigrid_grav_post] is_uneven is not implemented") ! base%n[xyz]b * p[xyz]size
+         if (have_mpi .and. is_uneven) call die("[multigrid_gravity:init_multigrid_grav_post] is_uneven is not implemented") ! base%n[xyz]b * psize
+         if (have_mpi .and. is_mpi_noncart) call die("[multigrid_gravity:init_multigrid_grav_post] is_mpi_noncart is not implemented") ! psize
 
          gb%nxb = base%nxb * psize(xdim)
          gb%nyb = base%nyb * psize(ydim)
@@ -1805,6 +1841,8 @@ contains
 !! \details The source is gathered on the master PE (possible bottleneck), solution is obtained through FFT, then its parts are sent to all PEs.
 !! Unfortunately non-blocking communication probably will not change much here.
 !! Alternative implementation: set gb_src to 0, copy local part to it, then call MPI_Allreduce and solve with FFT on each PE (no need to communicate the solution)
+!!
+!! will be obsolete soon
 !<
 
    subroutine gb_fft_solve_sendrecv(src, soln)
@@ -1868,6 +1906,8 @@ contains
 !!       5. gather (4.) on master proc
 !!       6. fft in X dim on master
 !!       7. Scatter
+!!
+!! will be obsolete soon
 !<
 
    subroutine gb_fft_solve_gather(src, soln)

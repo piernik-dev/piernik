@@ -75,14 +75,14 @@ contains
    subroutine init_multigrid
 
       use grid,                only: cg, D_x, D_y, D_z
-      use multigridvars,       only: lvl, dom_lvl, level_max, level_min, level_gb, roof, base, gb, gb_cartmap, mg_nb, ngridvars, correction, &
-           &                         is_external, ord_prolong, ord_prolong_face, stdout, verbose_vcycle, tot_ts
-      use mpi,                 only: MPI_INTEGER, MPI_LOGICAL
-      use mpisetup,            only: comm, comm3d, ierr, proc, master, slave, nproc, has_dir, psize, buffer_dim, ibuff, lbuff, dom, eff_dim, geometry_type
+      use multigridvars,       only: lvl, dom_lvl, level_max, level_min, level_gb, roof, base, gb, mg_nb, ngridvars, correction, &
+           &                         is_external, ord_prolong, ord_prolong_face, stdout, verbose_vcycle, tot_ts, is_mg_uneven
+      use mpi,                 only: MPI_INTEGER, MPI_LOGICAL, MPI_IN_PLACE, MPI_LOR
+      use mpisetup,            only: comm, ierr, proc, master, slave, nproc, has_dir, buffer_dim, ibuff, lbuff, dom, eff_dim, geometry_type, is_uneven
       use multigridhelpers,    only: mg_write_log, dirtyH, do_ascii_dump, dirty_debug, multidim_code_3D
       use multigridmpifuncs,   only: mpi_multigrid_prep
       use dataio_pub,          only: warn, die, code_progress
-      use constants,           only: PIERNIK_INIT_ARRAYS, xdim, ydim, zdim, ndims, GEO_RPZ, LO, HI, BND_MPI, BND_PER
+      use constants,           only: PIERNIK_INIT_ARRAYS, xdim, ydim, zdim, GEO_RPZ, LO, HI
       use dataio_pub,          only: msg, par_file, namelist_errh, compare_namelist, cmdl_nml  ! QA_WARN required for diff_nml
 #ifdef GRAV
       use multigrid_gravity,   only: init_multigrid_grav, init_multigrid_grav_post
@@ -148,6 +148,8 @@ contains
          multidim_code_3D = lbuff(5)
 
       endif
+
+      is_mg_uneven = is_uneven
 
       ngridvars = correction  !< 4 variables are required for basic use of the multigrid solver
       if (eff_dim < 1 .or. eff_dim > 3) call die("[multigrid:init_multigrid] Unsupported number of dimensions.")
@@ -219,6 +221,7 @@ contains
             write(msg, '(a,3f6.1,2(a,i2))')"[multigrid:init_multigrid] Fractional number of cells in: ", &
                  lvl(level_max)%n_b(:)/real(div), " at level ", idx, ". You may try to set level_max <=", level_max-idx
             call die(msg)
+            is_mg_uneven = .true.
          endif
 
          lvl(idx)%vol  = 1.
@@ -298,37 +301,28 @@ contains
          if (idx>level_min) lvl(idx)%o_rst%nextgrid => lvl(idx-1)
       enddo
 
+      call MPI_Allreduce(MPI_IN_PLACE, is_mg_uneven, 1, MPI_LOGICAL, MPI_LOR, comm, ierr)
+      if ((is_mg_uneven .or. is_uneven) .and. ord_prolong /= 0) then
+         ord_prolong = 0
+         if (master) call warn("[multigrid:init_multigrid] prolongation order /= injection not implemented on uneven domains.")
+      endif
+
+      call mpi_multigrid_prep
+
       ! handy shortcuts
       base => lvl(level_min)
       roof => lvl(level_max)
       gb   => lvl(level_gb) !> \todo remove this feature. New restriction and prolongation will work with lvl(level_min) nonempty only on master
 
-      call mpi_multigrid_prep
-
       tot_ts = 0.
 
-      ! construct global PE mapping
-      if (allocated(gb_cartmap)) call die("[multigrid:init_multigrid] gb_cartmap array already allocated")
-      allocate(gb_cartmap(0:nproc-1), stat=aerr(1))
-      if (aerr(1) /= 0) call die("[multigrid:init_multigrid] Allocation error: gb_cartmap")
-      mb_alloc = mb_alloc + size(gb_cartmap) !may be inaccurate
-      do j=0, nproc-1
-         call MPI_Cart_coords(comm3d, j, ndims, gb_cartmap(j)%proc, ierr)
-         gb_cartmap(j)%lo(xdim) = gb_cartmap(j)%proc(xdim) * base%nxb + 1 ! starting x, y and z indices of interior cells from
-         gb_cartmap(j)%lo(ydim) = gb_cartmap(j)%proc(ydim) * base%nyb + 1 ! coarsest level on the gb_src array
-         gb_cartmap(j)%lo(zdim) = gb_cartmap(j)%proc(zdim) * base%nzb + 1
-         gb_cartmap(j)%up(xdim) = gb_cartmap(j)%lo(xdim)   + base%nxb - 1 ! ending indices
-         gb_cartmap(j)%up(ydim) = gb_cartmap(j)%lo(ydim)   + base%nyb - 1
-         gb_cartmap(j)%up(zdim) = gb_cartmap(j)%lo(zdim)   + base%nzb - 1
-      enddo
-
       ! mark external faces
-      !> \deprecated BEWARE The checks may not work correctly for shear and corner boundaries
       is_external(:, :) = .false.
       do j=xdim, zdim
-         if (gb_cartmap(proc)%proc(j) == 0          .and. (cg%bnd(j, LO) /= BND_MPI .and. cg%bnd(j, LO) /= BND_PER)) is_external(j, LO) = .true.
-         if (gb_cartmap(proc)%proc(j) == psize(j)-1 .and. (cg%bnd(j, HI) /= BND_MPI .and. cg%bnd(j, HI) /= BND_PER)) is_external(j, HI) = .true.
-         if (.not. has_dir(j)) is_external(j, :) = .false.
+         if (has_dir(j) .and. .not. dom%periodic(j)) then
+            is_external(j, LO) = (cg%off(j) == 0)
+            is_external(j, HI) = (cg%off(j)+cg%n_b(j) == dom%n_d(j))
+         endif
       enddo
 
 #ifdef GRAV
