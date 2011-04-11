@@ -198,7 +198,8 @@ contains
       integer, intent(in)  :: ksub
       real,    intent(in)  :: up
       real,    intent(out) :: factor
-      factor = (4.0 + up*(gprofs(ksub)+gprofs(ksub+1)))/(4.0 - up*(gprofs(ksub)+gprofs(ksub+1)))
+      factor = gprofs(ksub)+gprofs(ksub+nint(up))
+      factor = (4.0 + up*factor)/(4.0 - up*factor)
    end subroutine hzeq_scheme_v2
 
    subroutine get_gprofs_accel(iia,jja)
@@ -294,7 +295,7 @@ contains
       dzs = (dom%zmax-dom%zmin)/real(nstot-2*cg%nb*nsub)
       allocate(zs(nstot), gprofs(nstot))
       do ksub=1, nstot
-         zs(ksub) = dom%zmin-cg%nb*cg%dl(zdim) + dzs/2 + (ksub-1)*dzs
+         zs(ksub) = dom%zmin-cg%nb*cg%dl(zdim) + (real(ksub)-0.5)*dzs
       enddo
       call get_gprofs(iia,jja)
       gprofs = gprofs / csim2 *dzs
