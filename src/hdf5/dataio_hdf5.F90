@@ -926,7 +926,10 @@ contains
       call write_arr_to_restart(file_id, pa4d, area_type, dname(MAG))
       nullify(pa4d)
 
-      call write_axes_to_restart(file_id)
+!     \todo writing axes using collective I/O takes order of magnitude more than
+!        dumping U and B arrays alltogether, since XYZ-axis is not even read
+!        back during restart I'm commenting this out. Rewrite or punt.
+!      call write_axes_to_restart(file_id)
 
       ! End of parallel writing (close the HDF5 file stuff)
       call h5pclose_f(plist_id, error)
@@ -949,7 +952,7 @@ contains
    subroutine prep_arr_write(rank, ir, area_type, loffs, chunk_dims, dimsf, file_id, dname, memspace, plist_id, filespace, dset_id, dplist_id, dfilespace)
 
       use hdf5,       only: HID_T, HSIZE_T, H5T_NATIVE_DOUBLE, &
-           &                H5P_DATASET_CREATE_F, H5S_SELECT_SET_F, H5P_DATASET_XFER_F, H5FD_MPIO_INDEPENDENT_F, &
+           &                H5P_DATASET_CREATE_F, H5S_SELECT_SET_F, H5P_DATASET_XFER_F, H5FD_MPIO_COLLECTIVE_F, &
            &                h5screate_simple_f, h5pcreate_f, h5dcreate_f, h5dget_space_f, &
            &                h5pset_chunk_f, h5pset_dxpl_mpio_f, h5sselect_hyperslab_f
       use mpisetup,   only: is_uneven
@@ -991,7 +994,7 @@ contains
       call h5sselect_hyperslab_f (filespace, H5S_SELECT_SET_F, offset(ir:), count(ir:), error, stride(ir:), block(ir:))
 
       call h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error)
-      call h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_INDEPENDENT_F, error)
+      call h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_COLLECTIVE_F, error)
 
       call h5screate_simple_f(rank, chunk_dims(ir:), memspace, error)
       return
@@ -1105,7 +1108,7 @@ contains
    subroutine write_axes_to_restart(file_id)
 
       use constants,  only: xdim, ydim, zdim, ndims
-      use hdf5,       only: HSIZE_T, HID_T, H5T_NATIVE_DOUBLE, H5FD_MPIO_INDEPENDENT_F, H5P_DATASET_CREATE_F, H5P_DATASET_XFER_F, H5S_SELECT_SET_F, &
+      use hdf5,       only: HSIZE_T, HID_T, H5T_NATIVE_DOUBLE, H5FD_MPIO_COLLECTIVE_F, H5P_DATASET_CREATE_F, H5P_DATASET_XFER_F, H5S_SELECT_SET_F, &
            &                h5screate_simple_f, h5pcreate_f, h5pset_chunk_f, h5pset_dxpl_mpio_f, h5dcreate_f, h5dget_space_f, h5dwrite_f, &
            &                h5sclose_f, h5pclose_f, h5dclose_f, h5sselect_hyperslab_f
       use mpisetup,   only: dom, is_uneven
@@ -1153,7 +1156,7 @@ contains
             call h5sselect_hyperslab_f (filespace, H5S_SELECT_SET_F, offset, count, error, stride, block)
 
             call h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error)
-            call h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_INDEPENDENT_F, error)
+            call h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_COLLECTIVE_F, error)
 
             ! Create the memory space for the dataset.
             call h5screate_simple_f(rank, chunk_dims, memspace, error)
@@ -1186,7 +1189,7 @@ contains
 
    subroutine prep_arr_read(rank, ir, loffs, chunk_dims, file_id, dname, memspace, plist_id, filespace, dset_id)
 
-      use hdf5,       only: HID_T, HSIZE_T, H5S_SELECT_SET_F, H5P_DATASET_XFER_F, H5FD_MPIO_INDEPENDENT_F, &
+      use hdf5,       only: HID_T, HSIZE_T, H5S_SELECT_SET_F, H5P_DATASET_XFER_F, H5FD_MPIO_COLLECTIVE_F, &
            &                h5dopen_f, h5sget_simple_extent_ndims_f, h5dget_space_f, &
            &                h5pcreate_f, h5pset_dxpl_mpio_f, h5sselect_hyperslab_f, h5screate_simple_f
       use constants,  only: ndims, LONG
@@ -1231,7 +1234,7 @@ contains
       call h5sselect_hyperslab_f (filespace, H5S_SELECT_SET_F, offset(ir:), count(ir:), error, stride(ir:), block(ir:))
 
       call h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error)
-      call h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_INDEPENDENT_F, error)
+      call h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_COLLECTIVE_F, error)
       call h5screate_simple_f(rank, chunk_dims(ir:), memspace, error)
 
    end subroutine prep_arr_read
