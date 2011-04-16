@@ -200,7 +200,7 @@ contains
 
       use dataio_pub,    only: msg, die
       use grid,          only: cg
-      use mpisetup,      only: proc, master, nproc, comm3d, status, ierr
+      use mpisetup,      only: proc, master, nproc, comm, status, ierr
       use mpi,           only: MPI_INTEGER, MPI_DOUBLE_PRECISION
 
       implicit none
@@ -243,16 +243,16 @@ contains
             enddo
             ic_data(ic_is:ic_ie, ic_js:ic_je, ic_ks:ic_ke, v) = ic_v(ic_is:ic_ie, ic_js:ic_je, ic_ks:ic_ke)
             do pe = 1, nproc-1
-               call MPI_Recv( ic_rng, 2*NDIM, MPI_INTEGER, pe, pe, comm3d, status, ierr)
+               call MPI_Recv( ic_rng, 2*NDIM, MPI_INTEGER, pe, pe, comm, status, ierr)
                call MPI_Send(      ic_v(ic_rng(1):ic_rng(2), ic_rng(3):ic_rng(4), ic_rng(5):ic_rng(6)), &
                     &         size(ic_v(ic_rng(1):ic_rng(2), ic_rng(3):ic_rng(4), ic_rng(5):ic_rng(6))), &
-                    &         MPI_DOUBLE_PRECISION, pe, pe, comm3d, ierr)
+                    &         MPI_DOUBLE_PRECISION, pe, pe, comm, ierr)
             enddo
          else
-            call MPI_Send( [ ic_is, ic_ie, ic_js, ic_je, ic_ks, ic_ke ], 2*NDIM, MPI_INTEGER, 0, proc, comm3d, ierr)
+            call MPI_Send( [ ic_is, ic_ie, ic_js, ic_je, ic_ks, ic_ke ], 2*NDIM, MPI_INTEGER, 0, proc, comm, ierr)
             call MPI_Recv(      ic_data(ic_is:ic_ie, ic_js:ic_je, ic_ks:ic_ke, v), &
                  &         size(ic_data(ic_is:ic_ie, ic_js:ic_je, ic_ks:ic_ke, v)), &
-                 &         MPI_DOUBLE_PRECISION, 0, proc, comm3d, status, ierr)
+                 &         MPI_DOUBLE_PRECISION, 0, proc, comm, status, ierr)
          endif
       enddo
 

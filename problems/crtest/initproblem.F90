@@ -287,7 +287,7 @@ contains
       use constants,      only: PIERNIK_FINISHED
       use grid,           only: cg
       use initcosmicrays, only: iarr_crs, ncrn, ncre
-      use mpisetup,       only: master, comm3d, ierr, t, nstep
+      use mpisetup,       only: master, comm, ierr, t, nstep
       use mpi,            only: MPI_DOUBLE_PRECISION, MPI_SUM, MPI_MIN, MPI_MAX, MPI_IN_PLACE
 
       implicit none
@@ -325,9 +325,9 @@ contains
          enddo
       enddo
 
-      call MPI_Allreduce(MPI_IN_PLACE, norm,   2, MPI_DOUBLE_PRECISION, MPI_SUM, comm3d, ierr)
-      call MPI_Allreduce(MPI_IN_PLACE, dev(1), 1, MPI_DOUBLE_PRECISION, MPI_MIN, comm3d, ierr)
-      call MPI_Allreduce(MPI_IN_PLACE, dev(2), 1, MPI_DOUBLE_PRECISION, MPI_MAX, comm3d, ierr)
+      call MPI_Allreduce(MPI_IN_PLACE, norm,   2, MPI_DOUBLE_PRECISION, MPI_SUM, comm, ierr)
+      call MPI_Allreduce(MPI_IN_PLACE, dev(1), 1, MPI_DOUBLE_PRECISION, MPI_MIN, comm, ierr)
+      call MPI_Allreduce(MPI_IN_PLACE, dev(2), 1, MPI_DOUBLE_PRECISION, MPI_MAX, comm, ierr)
 
       if (master) then
          if (norm(2) /= 0) then

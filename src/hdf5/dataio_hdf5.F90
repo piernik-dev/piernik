@@ -559,7 +559,7 @@ contains
       use constants,     only: cwdlen
       use dataio_pub,    only: log_file
       use hdf5,          only: HID_T, H5open_f, H5Fcreate_f, H5Gcreate_f, H5F_ACC_TRUNC_F, H5Gclose_f, H5close_f, h5fclose_f
-      use mpisetup,      only: t, comm3d, ierr, master
+      use mpisetup,      only: t, comm, ierr, master
 
       implicit none
 
@@ -599,7 +599,7 @@ contains
             call H5Fclose_f(file_id,error)
             first_entry = .false.
          endif
-         call MPI_Barrier(comm3d,ierr)
+         call MPI_Barrier(comm,ierr)
          do i = 1,nhdf_vars
             if (ix > 0) call write_plot_hdf5(hdf_vars(i),"yz",nimg)
             if (iy > 0) call write_plot_hdf5(hdf_vars(i),"xz",nimg)
@@ -626,8 +626,8 @@ contains
       use grid,          only: cg
       use hdf5,          only: HID_T, HSIZE_T, SIZE_T, H5F_ACC_RDWR_F, h5fopen_f, h5gopen_f, h5gclose_f, h5fclose_f
       use h5lt,          only: h5ltmake_dataset_double_f, h5ltset_attribute_double_f
-      use mpisetup,      only: comm3d, ierr, psize, t, has_dir, dom, master, have_mpi, is_uneven
-      use mpi,           only: MPI_CHARACTER, MPI_DOUBLE_PRECISION
+      use mpisetup,      only: comm, comm3d, ierr, psize, t, has_dir, dom, master, have_mpi, is_uneven
+      use mpi,           only: MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_COMM_NULL
 #ifdef PGPLOT
       use viz,           only: draw_me
 #endif /* PGPLOT */
@@ -664,10 +664,15 @@ contains
       real, dimension(1)                  :: timebuffer
 
       if (have_mpi .and. is_uneven) call die("[dataio_hdf5:write_plot_hdf5] is_uneven is not implemented") ! nib,njb,pisize*pjsize, ...
+      if (comm3d == MPI_COMM_NULL) then
+         call warn("[dataio_hdf5:write_plot_hdf5] comm3d == MPI_COMM_NULL. Bailing out")
+         return
+      endif
+
       rank = 2
       fe = len_trim(log_file)
       if (master) write(fname,'(2a)') trim(log_file(1:fe-3)),"plt"
-      call MPI_Bcast(fname, cwdlen, MPI_CHARACTER, 0, comm3d, ierr)
+      call MPI_Bcast(fname, cwdlen, MPI_CHARACTER, 0, comm, ierr)
 
       nib = 0; nid = 0; njb = 0; njd = 0; nkb = 0; pisize = 0; pjsize = 0
       select case (plane)
@@ -722,7 +727,7 @@ contains
 
       dims(1) = nid
       dims(2) = njd
-      call MPI_Barrier(comm3d,ierr)
+      call MPI_Barrier(comm,ierr)
       call MPI_Cart_sub(comm3d,remain,comm2d,ierr)
       call MPI_Comm_size(comm2d, ls, ierr)
       call MPI_Comm_rank(comm2d, lp, ierr)
@@ -775,7 +780,7 @@ contains
          if (allocated(temp)) deallocate(temp)
          if (allocated(img))  deallocate(img)
       endif
-      call MPI_Barrier(comm3d,ierr)
+      call MPI_Barrier(comm,ierr)
 
    end subroutine write_plot_hdf5
 
@@ -851,7 +856,7 @@ contains
       use dataio_pub, only: chdf, nres, set_container_chdf, problem_name, run_id, msg, printio, hdf
       use hdf5,       only: HID_T, H5P_FILE_ACCESS_F, H5F_ACC_TRUNC_F, h5open_f, h5close_f, h5fcreate_f, h5fclose_f, h5pcreate_f, h5pclose_f, h5pset_fapl_mpio_f
       use list_hdf5,  only: problem_write_restart
-      use mpisetup,   only: comm3d, comm, info, ierr, master, nstep
+      use mpisetup,   only: comm, info, ierr, master, nstep
       use mpi,        only: MPI_CHARACTER
 #ifdef ISO_LOCAL
       use arrays,     only: cs_iso2_arr
@@ -892,7 +897,7 @@ contains
       ! Set up a new HDF5 file for parallel write
       call h5open_f(error)
       call h5pcreate_f(H5P_FILE_ACCESS_F, plist_id, error)
-      call h5pset_fapl_mpio_f(plist_id, comm3d, info, error)
+      call h5pset_fapl_mpio_f(plist_id, comm, info, error)
       call h5fcreate_f(filename, H5F_ACC_TRUNC_F, file_id, error, access_prp = plist_id)
 
       ! Write all data in parallel
@@ -1364,7 +1369,7 @@ contains
            &                   h5open_f, h5pcreate_f, h5pset_fapl_mpio_f, h5fopen_f, h5pclose_f, h5fclose_f, h5close_f
       use h5lt,          only: h5ltget_attribute_double_f, h5ltget_attribute_int_f, h5ltget_attribute_string_f
       use list_hdf5,     only: problem_read_restart
-      use mpisetup,      only: comm, ierr, magic_mass, master, t, info, comm3d, dt, dom, has_dir
+      use mpisetup,      only: comm, ierr, magic_mass, master, t, info, comm, dt, dom, has_dir
       use mpi,           only: MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION
       use constants,     only: cwdlen, cbuff_len, domlen, idlen, xdim, ydim, zdim, AT_NO_B, AT_OUT_B
 #ifdef ISO_LOCAL
@@ -1458,7 +1463,7 @@ contains
       endif
 
       call h5pcreate_f(H5P_FILE_ACCESS_F, plist_id, error)
-      call h5pset_fapl_mpio_f(plist_id, comm3d, info, error)
+      call h5pset_fapl_mpio_f(plist_id, comm, info, error)
 
       call h5fopen_f(trim(filename), H5F_ACC_RDONLY_F, file_id, error, access_prp = plist_id)
       call h5pclose_f(plist_id, error)
@@ -1538,24 +1543,24 @@ contains
       endif
       call h5close_f(error)
 
-      call MPI_Bcast(restart_hdf5_version,    1, MPI_DOUBLE_PRECISION, 0, comm3d, ierr)
+      call MPI_Bcast(restart_hdf5_version,    1, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
-      call MPI_Bcast(chdf%nstep,    1, MPI_INTEGER, 0, comm3d, ierr)
-      call MPI_Bcast(chdf%nres,     1, MPI_INTEGER, 0, comm3d, ierr)
-      call MPI_Bcast(chdf%nhdf,     1, MPI_INTEGER, 0, comm3d, ierr)
-      call MPI_Bcast(chdf%step_res, 1, MPI_INTEGER, 0, comm3d, ierr)
-      call MPI_Bcast(chdf%step_hdf, 1, MPI_INTEGER, 0, comm3d, ierr)
-      if (restart_hdf5_version > 1.11) call MPI_Bcast(require_init_prob, 1, MPI_INTEGER, 0, comm3d, ierr)
+      call MPI_Bcast(chdf%nstep,    1, MPI_INTEGER, 0, comm, ierr)
+      call MPI_Bcast(chdf%nres,     1, MPI_INTEGER, 0, comm, ierr)
+      call MPI_Bcast(chdf%nhdf,     1, MPI_INTEGER, 0, comm, ierr)
+      call MPI_Bcast(chdf%step_res, 1, MPI_INTEGER, 0, comm, ierr)
+      call MPI_Bcast(chdf%step_hdf, 1, MPI_INTEGER, 0, comm, ierr)
+      if (restart_hdf5_version > 1.11) call MPI_Bcast(require_init_prob, 1, MPI_INTEGER, 0, comm, ierr)
 
-      call MPI_Bcast(chdf%next_t_tsl,    1, MPI_DOUBLE_PRECISION, 0, comm3d, ierr)
-      call MPI_Bcast(chdf%next_t_log,    1, MPI_DOUBLE_PRECISION, 0, comm3d, ierr)
-      call MPI_Bcast(chdf%last_hdf_time, 1, MPI_DOUBLE_PRECISION, 0, comm3d, ierr)
-      call MPI_Bcast(t,                  1, MPI_DOUBLE_PRECISION, 0, comm3d, ierr)
-      call MPI_Bcast(dt,                 1, MPI_DOUBLE_PRECISION, 0, comm3d, ierr)
+      call MPI_Bcast(chdf%next_t_tsl,    1, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+      call MPI_Bcast(chdf%next_t_log,    1, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+      call MPI_Bcast(chdf%last_hdf_time, 1, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+      call MPI_Bcast(t,                  1, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+      call MPI_Bcast(dt,                 1, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
-      call MPI_Bcast(problem_name, cbuff_len, MPI_CHARACTER, 0, comm3d, ierr)
-      call MPI_Bcast(chdf%domain,  domlen,    MPI_CHARACTER, 0, comm3d, ierr)
-      call MPI_Bcast(chdf%new_id,  idlen,     MPI_CHARACTER, 0, comm3d, ierr)
+      call MPI_Bcast(problem_name, cbuff_len, MPI_CHARACTER, 0, comm, ierr)
+      call MPI_Bcast(chdf%domain,  domlen,    MPI_CHARACTER, 0, comm, ierr)
+      call MPI_Bcast(chdf%new_id,  idlen,     MPI_CHARACTER, 0, comm, ierr)
 
    end subroutine read_restart_hdf5
 !
@@ -1568,7 +1573,7 @@ contains
       use grid,          only: cg
       use hdf5,          only: HID_T, H5F_ACC_TRUNC_F, H5P_FILE_ACCESS_F, H5P_DEFAULT_F, &
            &                   h5open_f, h5close_f, h5fcreate_f, h5fclose_f, h5pcreate_f, h5pclose_f, h5pset_fapl_mpio_f
-      use mpisetup,      only: comm3d, comm, ierr, info, master
+      use mpisetup,      only: comm, ierr, info, master
       use mpi,           only: MPI_CHARACTER
 #ifdef NEW_HDF5
       use list_hdf5,     only: iterate_lhdf5
@@ -1600,7 +1605,7 @@ contains
       ! Setup file access property list with parallel I/O access.
       !
       call h5pcreate_f(H5P_FILE_ACCESS_F, plist_id, error)
-      call h5pset_fapl_mpio_f(plist_id, comm3d, info, error)
+      call h5pset_fapl_mpio_f(plist_id, comm, info, error)
       !
       ! Create the file collectively.
       !

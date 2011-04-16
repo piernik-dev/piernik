@@ -128,17 +128,21 @@ contains
       endif
 
       do l = l1, l2
-         do k = lvl(l)%ks-ng, lvl(l)%ke+ng
-            do j = lvl(l)%js-ng, lvl(l)%je+ng
-               do i = lvl(l)%is-ng, lvl(l)%ie+ng
-                  if (abs(lvl(l)%mgvar(i, j, k, iv)) > dirtyL) then
-                     write(msg, '(3a,i4,a,i2,a,3(i3,a),i2,a,g20.12)') &
-                        "[multigridhelpers:check_dirty] ", label, "@", proc, " lvl(", l, ")%mgvar(", i, ",", j, ",", k, ",", iv, ") = ", lvl(l)%mgvar(i, j, k, iv)
-                     call warn(msg)
-                  endif
+         if (.not. lvl(l)%empty) then
+            do k = lvl(l)%ks-ng, lvl(l)%ke+ng
+               do j = lvl(l)%js-ng, lvl(l)%je+ng
+                  do i = lvl(l)%is-ng, lvl(l)%ie+ng
+                     if (abs(lvl(l)%mgvar(i, j, k, iv)) > dirtyL) then
+                        if (count([i<lvl(l)%is .or. i>lvl(l)%ie, j<lvl(l)%js .or. j>lvl(l)%je, k<lvl(l)%ks .or. k>lvl(l)%ke]) <=1) then ! excludes corners
+                           write(msg, '(3a,i4,a,i2,a,3(i3,a),i2,a,g20.12)') &
+                                "[multigridhelpers:check_dirty] ", label, "@", proc, " lvl(", l, ")%mgvar(", i, ",", j, ",", k, ",", iv, ") = ", lvl(l)%mgvar(i, j, k, iv)
+                           call warn(msg)
+                        endif
+                     endif
+                  enddo
                enddo
             enddo
-         enddo
+         endif
       enddo
 
    end subroutine check_dirty
@@ -255,8 +259,8 @@ contains
 
       use constants,     only: xdim, ydim, zdim
       use dataio_pub,    only: msg
-      use mpisetup,      only: proc, master
-      use multigridvars, only: level_min, level_max, lvl, gb_cartmap, ngridvars
+      use mpisetup,      only: master
+      use multigridvars, only: level_min, level_max, lvl, ngridvars
 
       implicit none
 
@@ -274,9 +278,7 @@ contains
          do i = lvl(l)%is, lvl(l)%ie
             do j = lvl(l)%js, lvl(l)%je
                do k = lvl(l)%ks, lvl(l)%ke
-                  write(fu, '(3i4,i6,10es20.11e3)')i-lvl(l)%is+gb_cartmap(proc)%proc(xdim)*lvl(l)%nxb, &
-                       &                           j-lvl(l)%js+gb_cartmap(proc)%proc(ydim)*lvl(l)%nyb, &
-                       &                           k-lvl(l)%ks+gb_cartmap(proc)%proc(zdim)*lvl(l)%nzb, &
+                  write(fu, '(3i4,i6,10es20.11e3)')i-lvl(l)%is+lvl(l)%off(xdim), j-lvl(l)%js+lvl(l)%off(ydim), k-lvl(l)%ks+lvl(l)%off(zdim), &
                        &                           l, lvl(l)%x(i), lvl(l)%y(j), lvl(l)%z(k), lvl(l)%mgvar(i, j, k, 1:ngridvars)
                enddo
                write(fu, '(/)')

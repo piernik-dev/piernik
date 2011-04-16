@@ -38,13 +38,17 @@ contains
 
    subroutine bnd_a(A)
 
-      use mpisetup,  only: ierr, req, comm3d, procxl, procxr, procyl, procyr, proczl, proczr, status, psize
-      use constants, only: MAG, xdim, ydim, zdim, LO, HI, BND, BLK
-      use grid,      only: cg
+      use dataio_pub, only: die
+      use mpisetup,   only: ierr, req, comm3d, procxl, procxr, procyl, procyr, proczl, proczr, status, psize
+      use constants,  only: MAG, xdim, ydim, zdim, LO, HI, BND, BLK
+      use grid,       only: cg
+      use mpi,        only: MPI_COMM_NULL
 
       implicit none
 
       real, dimension(:,:,:,:) :: A
+
+      if (comm3d == MPI_COMM_NULL) call die("[magboundaries:bnd_a] comm3d == MPI_COMM_NULL")
 
       if (psize(xdim) > 1) then
 
@@ -79,10 +83,10 @@ contains
    subroutine bnd_b(dir)
 
       use arrays,        only: b
-      use dataio_pub,    only: msg, warn
+      use dataio_pub,    only: msg, warn, die
       use fluidindex,    only: ibx, iby, ibz
       use grid,          only: cg
-      use mpi,           only: MPI_DOUBLE_PRECISION
+      use mpi,           only: MPI_DOUBLE_PRECISION, MPI_COMM_NULL
       use mpisetup,      only: ierr, req, comm3d, procxl, procxr, procyl, procyr, proczl, proczr, status, psize, procxyl, procyxl, pcoords, comm, master
       use constants,     only: MAG, xdim, ydim, zdim, LO, HI, BND, BLK, BND_MPI, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_OUTH, BND_COR, BND_SHE, BND_INF
 #ifdef SHEAR
@@ -104,6 +108,8 @@ contains
       logical, save                         :: bnd_yr_not_provided = .false.
       logical, save                         :: bnd_zl_not_provided = .false.
       logical, save                         :: bnd_zr_not_provided = .false.
+
+      if (comm3d == MPI_COMM_NULL) call die("[magboundaries:bnd_a] comm3d == MPI_COMM_NULL")
 
 ! MPI block comunication
 

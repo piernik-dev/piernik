@@ -46,99 +46,122 @@ module multigridmpifuncs
 contains
 
 !!$ ============================================================================
-!> \brief Initialize MPI shortcuts for local domain communication
+!> \brief Initialize MPI shortcuts for communication. Called from init_multigrid.
 
    subroutine mpi_multigrid_prep
 
+      use constants,     only: xdim, ydim, zdim, LO, HI, BND, BLK, ndims, INVALID
+      use dataio_pub,    only: die
+      use mpi,           only: MPI_DOUBLE_PRECISION, MPI_ORDER_FORTRAN, MPI_COMM_NULL
+      use mpisetup,      only: ierr, has_dir, comm3d, proc
       use multigridvars, only: level_min, level_max, lvl
-      use mpisetup,      only: ierr, has_dir
-      use constants,     only: xdim, ydim, zdim, LO, HI, BND, BLK, ndims
-      use mpi,           only: MPI_DOUBLE_PRECISION, MPI_ORDER_FORTRAN
 
       implicit none
 
-      integer                  :: i, ib, lnb
-      integer (kind=4)         :: ord, old
-      integer, dimension(:), allocatable :: sizes, subsizes, starts
+      integer :: ib, l
+      integer, dimension(ndims) :: sizes, subsizes, starts
 
-      ord = MPI_ORDER_FORTRAN
-      old = MPI_DOUBLE_PRECISION
+      ! set up connections between levels
+      do l = level_min, level_max
 
-      allocate( sizes(ndims), subsizes(ndims), starts(ndims) )
+         lvl(l)%i_rst%proc = proc
+         lvl(l)%i_rst%se(:,:) = reshape( [ lvl(l)%is, lvl(l)%js, lvl(l)%ks, lvl(l)%ie, lvl(l)%je, lvl(l)%ke ], shape(lvl(l)%i_rst%se(:,:)) )
+         lvl(l)%i_rst%nextgrid => null()
+         lvl(l)%o_rst = lvl(l)%i_rst
 
-      do i = level_min, level_max
-         lnb = lvl(i)%nb
+         if (l<level_max) lvl(l)%i_rst%nextgrid => lvl(l+1)
+         if (l>level_min) lvl(l)%o_rst%nextgrid => lvl(l-1)
 
-         do ib = 1, lnb
-
-            !> \todo provide a loop-friendly array lvl(i)%n_b(xdim:zdim) and add a loop "do d = xdim, zdim"
-            if (has_dir(xdim)) then          !! X direction
-               sizes    = [ lvl(i)%nx, lvl(i)%ny, lvl(i)%nz ]
-               subsizes = [    ib,     lvl(i)%ny, lvl(i)%nz ]
-               starts   = [  lnb-ib,       0,         0     ]
-
-               call MPI_Type_create_subarray(ndims, sizes, subsizes, starts, ord, old, lvl(i)%mmbc(xdim, LO, BND, ib), ierr)
-               call MPI_Type_commit(lvl(i)%mmbc(xdim, LO, BND, ib), ierr)
-
-               starts(xdim) = lnb
-               call MPI_Type_create_subarray(ndims, sizes, subsizes,  starts, ord, old, lvl(i)%mmbc(xdim, LO, BLK, ib), ierr)
-               call MPI_Type_commit(lvl(i)%mmbc(xdim, LO, BLK, ib), ierr)
-
-               starts(xdim) = lvl(i)%nxb + lnb - ib
-               call MPI_Type_create_subarray(ndims, sizes, subsizes,  starts, ord, old, lvl(i)%mmbc(xdim, HI, BLK, ib), ierr)
-               call MPI_Type_commit(lvl(i)%mmbc(xdim, HI, BLK, ib), ierr)
-
-               starts(xdim) = lvl(i)%nxb + lnb
-               call MPI_Type_create_subarray(ndims, sizes, subsizes, starts,  ord, old, lvl(i)%mmbc(xdim, HI, BND, ib), ierr)
-               call MPI_Type_commit(lvl(i)%mmbc(xdim, HI, BND, ib), ierr)
-            endif
-
-            if (has_dir(ydim)) then         !! Y Direction
-               sizes    = [ lvl(i)%nx, lvl(i)%ny, lvl(i)%nz ]
-               subsizes = [ lvl(i)%nx,     ib,    lvl(i)%nz ]
-               starts   = [     0,      lnb-ib,       0     ]
-
-               call MPI_Type_create_subarray(ndims, sizes, subsizes, starts, ord, old, lvl(i)%mmbc(ydim, LO, BND, ib), ierr)
-               call MPI_Type_commit(lvl(i)%mmbc(ydim, LO, BND, ib), ierr)
-
-               starts(ydim) = lnb
-               call MPI_Type_create_subarray(ndims, sizes, subsizes, starts, ord, old, lvl(i)%mmbc(ydim, LO, BLK, ib), ierr)
-               call MPI_Type_commit(lvl(i)%mmbc(ydim, LO, BLK, ib), ierr)
-
-               starts(ydim) = lvl(i)%nyb + lnb - ib
-               call MPI_Type_create_subarray(ndims, sizes, subsizes, starts, ord, old, lvl(i)%mmbc(ydim, HI, BLK, ib), ierr)
-               call MPI_Type_commit(lvl(i)%mmbc(ydim, HI, BLK, ib), ierr)
-
-               starts(ydim) = lvl(i)%nyb + lnb
-               call MPI_Type_create_subarray(ndims, sizes, subsizes, starts, ord, old, lvl(i)%mmbc(ydim, HI, BND, ib), ierr)
-               call MPI_Type_commit(lvl(i)%mmbc(ydim, HI, BND, ib), ierr)
-            endif
-
-            if (has_dir(zdim)) then         !! Z Direction
-               sizes    = [ lvl(i)%nx, lvl(i)%ny, lvl(i)%nz ]
-               subsizes = [ lvl(i)%nx, lvl(i)%ny,     ib    ]
-               starts   = [     0,         0,       lnb-ib  ]
-
-               call MPI_Type_create_subarray(ndims, sizes, subsizes, starts, ord, old, lvl(i)%mmbc(zdim, LO, BND, ib), ierr)
-               call MPI_Type_commit(lvl(i)%mmbc(zdim, LO, BND, ib), ierr)
-
-               starts(zdim) = lnb
-               call MPI_Type_create_subarray(ndims, sizes, subsizes, starts, ord, old, lvl(i)%mmbc(zdim, LO, BLK, ib), ierr)
-               call MPI_Type_commit(lvl(i)%mmbc(zdim, LO, BLK, ib), ierr)
-
-               starts(zdim) = lvl(i)%nzb + lnb - ib
-               call MPI_Type_create_subarray(ndims, sizes, subsizes, starts, ord, old, lvl(i)%mmbc(zdim, HI, BLK, ib), ierr)
-               call MPI_Type_commit(lvl(i)%mmbc(zdim, HI, BLK, ib), ierr)
-
-               starts(zdim) = lvl(i)%nzb + lnb
-               call MPI_Type_create_subarray(ndims, sizes, subsizes, starts, ord, old, lvl(i)%mmbc(zdim, HI, BND, ib), ierr)
-               call MPI_Type_commit(lvl(i)%mmbc(zdim, HI, BND, ib), ierr)
-            endif
-
-         enddo
       enddo
 
-      deallocate( sizes, subsizes, starts )
+      do l = level_min, level_max
+
+         ! find neighbours and set up the MPI containers
+         if (comm3d == MPI_COMM_NULL) then
+
+            ! assume that cuboids fill the domain and don't collide
+
+            lvl(l)%mmbc(:, :, :, :) = INVALID
+
+            call die("mmf:imf comm3d == MPI_COMM_NULL not implemented yet")
+
+         else
+
+            ! assume cartesian decomposition
+
+            if (.not. lvl(l)%empty) then
+
+               do ib = 1, lvl(l)%nb
+
+                  !> \todo provide a loop-friendly array lvl(l)%n_b(xdim:zdim) and add a loop "do d = xdim, zdim"
+                  if (has_dir(xdim)) then          !! X direction
+                     sizes    = [  lvl(l)%nx,   lvl(l)%ny, lvl(l)%nz ]
+                     subsizes = [      ib,      lvl(l)%ny, lvl(l)%nz ]
+                     starts   = [ lvl(l)%nb-ib,     0,         0     ]
+
+                     call MPI_Type_create_subarray(ndims, sizes, subsizes, starts, MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, lvl(l)%mmbc(xdim, LO, BND, ib), ierr)
+                     call MPI_Type_commit(lvl(l)%mmbc(xdim, LO, BND, ib), ierr)
+
+                     starts(xdim) = lvl(l)%nb
+                     call MPI_Type_create_subarray(ndims, sizes, subsizes,  starts, MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, lvl(l)%mmbc(xdim, LO, BLK, ib), ierr)
+                     call MPI_Type_commit(lvl(l)%mmbc(xdim, LO, BLK, ib), ierr)
+
+                     starts(xdim) = lvl(l)%nxb + lvl(l)%nb - ib
+                     call MPI_Type_create_subarray(ndims, sizes, subsizes,  starts, MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, lvl(l)%mmbc(xdim, HI, BLK, ib), ierr)
+                     call MPI_Type_commit(lvl(l)%mmbc(xdim, HI, BLK, ib), ierr)
+
+                     starts(xdim) = lvl(l)%nxb + lvl(l)%nb
+                     call MPI_Type_create_subarray(ndims, sizes, subsizes, starts,  MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, lvl(l)%mmbc(xdim, HI, BND, ib), ierr)
+                     call MPI_Type_commit(lvl(l)%mmbc(xdim, HI, BND, ib), ierr)
+                  endif
+
+                  if (has_dir(ydim)) then         !! Y Direction
+                     sizes    = [ lvl(l)%nx,  lvl(l)%ny,  lvl(l)%nz ]
+                     subsizes = [ lvl(l)%nx,     ib,      lvl(l)%nz ]
+                     starts   = [     0,     lvl(l)%nb-ib,    0     ]
+
+                     call MPI_Type_create_subarray(ndims, sizes, subsizes, starts, MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, lvl(l)%mmbc(ydim, LO, BND, ib), ierr)
+                     call MPI_Type_commit(lvl(l)%mmbc(ydim, LO, BND, ib), ierr)
+
+                     starts(ydim) = lvl(l)%nb
+                     call MPI_Type_create_subarray(ndims, sizes, subsizes, starts, MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, lvl(l)%mmbc(ydim, LO, BLK, ib), ierr)
+                     call MPI_Type_commit(lvl(l)%mmbc(ydim, LO, BLK, ib), ierr)
+
+                     starts(ydim) = lvl(l)%nyb + lvl(l)%nb - ib
+                     call MPI_Type_create_subarray(ndims, sizes, subsizes, starts, MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, lvl(l)%mmbc(ydim, HI, BLK, ib), ierr)
+                     call MPI_Type_commit(lvl(l)%mmbc(ydim, HI, BLK, ib), ierr)
+
+                     starts(ydim) = lvl(l)%nyb + lvl(l)%nb
+                     call MPI_Type_create_subarray(ndims, sizes, subsizes, starts, MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, lvl(l)%mmbc(ydim, HI, BND, ib), ierr)
+                     call MPI_Type_commit(lvl(l)%mmbc(ydim, HI, BND, ib), ierr)
+                  endif
+
+                  if (has_dir(zdim)) then         !! Z Direction
+                     sizes    = [ lvl(l)%nx, lvl(l)%ny,  lvl(l)%nz   ]
+                     subsizes = [ lvl(l)%nx, lvl(l)%ny,      ib      ]
+                     starts   = [     0,         0,     lvl(l)%nb-ib ]
+
+                     call MPI_Type_create_subarray(ndims, sizes, subsizes, starts, MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, lvl(l)%mmbc(zdim, LO, BND, ib), ierr)
+                     call MPI_Type_commit(lvl(l)%mmbc(zdim, LO, BND, ib), ierr)
+
+                     starts(zdim) = lvl(l)%nb
+                     call MPI_Type_create_subarray(ndims, sizes, subsizes, starts, MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, lvl(l)%mmbc(zdim, LO, BLK, ib), ierr)
+                     call MPI_Type_commit(lvl(l)%mmbc(zdim, LO, BLK, ib), ierr)
+
+                     starts(zdim) = lvl(l)%nzb + lvl(l)%nb - ib
+                     call MPI_Type_create_subarray(ndims, sizes, subsizes, starts, MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, lvl(l)%mmbc(zdim, HI, BLK, ib), ierr)
+                     call MPI_Type_commit(lvl(l)%mmbc(zdim, HI, BLK, ib), ierr)
+
+                     starts(zdim) = lvl(l)%nzb + lvl(l)%nb
+                     call MPI_Type_create_subarray(ndims, sizes, subsizes, starts, MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, lvl(l)%mmbc(zdim, HI, BND, ib), ierr)
+                     call MPI_Type_commit(lvl(l)%mmbc(zdim, HI, BND, ib), ierr)
+                  endif
+
+               enddo
+            endif
+
+         endif
+      enddo
 
    end subroutine mpi_multigrid_prep
 
@@ -152,11 +175,11 @@ contains
 
    subroutine mpi_multigrid_bnd(lev, iv, ng, mode, corners)
 
-      use dataio_pub,         only: die
-      use mpisetup,           only: comm3d, ierr, procxl, procxr, procyl, procyr, proczl, proczr, proc, psize, has_dir
-      use constants,          only: ndims, xdim, ydim, zdim, LO, HI, BND, BLK
-      use mpi,                only: MPI_STATUS_SIZE, MPI_REQUEST_NULL
-      use multigridvars,      only: lvl, is_external, ngridvars, level_min, level_max
+      use dataio_pub,    only: die
+      use mpisetup,      only: comm, comm3d, ierr, procxl, procxr, procyl, procyr, proczl, proczr, proc, psize, has_dir
+      use constants,     only: ndims, xdim, ydim, zdim, LO, HI, BND, BLK
+      use mpi,           only: MPI_STATUS_SIZE, MPI_REQUEST_NULL, MPI_COMM_NULL
+      use multigridvars, only: lvl, is_external, ngridvars, level_min, level_max
 
       implicit none
 
@@ -185,52 +208,60 @@ contains
       ! Set the external boundary, where appropriate
       if (any(is_external(:, :))) call multigrid_ext_bnd(lev, iv, ng, mode, cor)
 
-      req3d(:) = MPI_REQUEST_NULL
+      if (comm3d == MPI_COMM_NULL) then
 
-      if (has_dir(xdim)) then
-         if (psize(xdim) > 1) then
-            if (.not. is_external(xdim, LO)) call MPI_Isend (lvl(lev)%mgvar(1, 1, 1, iv), 1, lvl(lev)%mmbc(xdim, LO, BLK, ng), procxl, 15, comm3d, req3d(1),  ierr)
-            if (.not. is_external(xdim, HI)) call MPI_Isend (lvl(lev)%mgvar(1, 1, 1, iv), 1, lvl(lev)%mmbc(xdim, HI, BLK, ng), procxr, 25, comm3d, req3d(3),  ierr)
-            if (.not. is_external(xdim, LO)) call MPI_Irecv (lvl(lev)%mgvar(1, 1, 1, iv), 1, lvl(lev)%mmbc(xdim, LO, BND, ng), procxl, 25, comm3d, req3d(2),  ierr)
-            if (.not. is_external(xdim, HI)) call MPI_Irecv (lvl(lev)%mgvar(1, 1, 1, iv), 1, lvl(lev)%mmbc(xdim, HI, BND, ng), procxr, 15, comm3d, req3d(4),  ierr)
-         else
-            if (.not. is_external(xdim, LO)) lvl(lev)%mgvar(lvl(lev)%is-ng:lvl(lev)%is-1,  :, :, iv) = lvl(lev)%mgvar(lvl(lev)%ie-ng+1:lvl(lev)%ie,      :, :, iv)
-            if (.not. is_external(xdim, HI)) lvl(lev)%mgvar(lvl(lev)%ie+1 :lvl(lev)%ie+ng, :, :, iv) = lvl(lev)%mgvar(lvl(lev)%is     :lvl(lev)%is+ng-1, :, :, iv)
-         endif
-         if (cor) call MPI_Waitall(4, req3d(1:4), status3d(:,1:4), ierr)
-      endif
+         call die("mmf:mmb comm3d == MPI_COMM_NULL not implemented yet")
 
-      if (has_dir(ydim)) then
-         if (psize(ydim) > 1) then
-            if (.not. is_external(ydim, LO)) call MPI_Isend (lvl(lev)%mgvar(1, 1, 1, iv), 1, lvl(lev)%mmbc(ydim, LO, BLK, ng), procyl, 35, comm3d, req3d(5),  ierr)
-            if (.not. is_external(ydim, HI)) call MPI_Isend (lvl(lev)%mgvar(1, 1, 1, iv), 1, lvl(lev)%mmbc(ydim, HI, BLK, ng), procyr, 45, comm3d, req3d(6),  ierr)
-            if (.not. is_external(ydim, LO)) call MPI_Irecv (lvl(lev)%mgvar(1, 1, 1, iv), 1, lvl(lev)%mmbc(ydim, LO, BND, ng), procyl, 45, comm3d, req3d(7),  ierr)
-            if (.not. is_external(ydim, HI)) call MPI_Irecv (lvl(lev)%mgvar(1, 1, 1, iv), 1, lvl(lev)%mmbc(ydim, HI, BND, ng), procyr, 35, comm3d, req3d(8),  ierr)
-         else
-            if (.not. is_external(ydim, LO)) lvl(lev)%mgvar(:, lvl(lev)%js-ng:lvl(lev)%js-1,  :, iv) = lvl(lev)%mgvar(:, lvl(lev)%je-ng+1:lvl(lev)%je,      :, iv)
-            if (.not. is_external(ydim, HI)) lvl(lev)%mgvar(:, lvl(lev)%je+1 :lvl(lev)%je+ng, :, iv) = lvl(lev)%mgvar(:, lvl(lev)%js     :lvl(lev)%js+ng-1, :, iv)
-         endif
-         if (cor) call MPI_Waitall(4, req3d(5:8), status3d(:,5:8), ierr)
-      endif
+      else
 
-      if (has_dir(zdim)) then
-         if (psize(zdim) > 1) then
-            if (.not. is_external(zdim, LO)) call MPI_Isend (lvl(lev)%mgvar(1, 1, 1, iv), 1, lvl(lev)%mmbc(zdim, LO, BLK, ng), proczl, 55, comm3d, req3d(9),  ierr)
-            if (.not. is_external(zdim, HI)) call MPI_Isend (lvl(lev)%mgvar(1, 1, 1, iv), 1, lvl(lev)%mmbc(zdim, HI, BLK, ng), proczr, 65, comm3d, req3d(10), ierr)
-            if (.not. is_external(zdim, LO)) call MPI_Irecv (lvl(lev)%mgvar(1, 1, 1, iv), 1, lvl(lev)%mmbc(zdim, LO, BND, ng), proczl, 65, comm3d, req3d(11), ierr)
-            if (.not. is_external(zdim, HI)) call MPI_Irecv (lvl(lev)%mgvar(1, 1, 1, iv), 1, lvl(lev)%mmbc(zdim, HI, BND, ng), proczr, 55, comm3d, req3d(12), ierr)
-         else
-            if (.not. is_external(zdim, LO)) lvl(lev)%mgvar(:, :, lvl(lev)%ks-ng:lvl(lev)%ks-1,  iv) = lvl(lev)%mgvar(:, :, lvl(lev)%ke-ng+1:lvl(lev)%ke,      iv)
-            if (.not. is_external(zdim, HI)) lvl(lev)%mgvar(:, :, lvl(lev)%ke+1 :lvl(lev)%ke+ng, iv) = lvl(lev)%mgvar(:, :, lvl(lev)%ks     :lvl(lev)%ks+ng-1, iv)
+         req3d(:) = MPI_REQUEST_NULL
+
+         if (has_dir(xdim)) then
+            if (psize(xdim) > 1) then
+               if (.not. is_external(xdim, LO)) call MPI_Isend (lvl(lev)%mgvar(1, 1, 1, iv), 1, lvl(lev)%mmbc(xdim, LO, BLK, ng), procxl, 15, comm3d, req3d(1),  ierr)
+               if (.not. is_external(xdim, HI)) call MPI_Isend (lvl(lev)%mgvar(1, 1, 1, iv), 1, lvl(lev)%mmbc(xdim, HI, BLK, ng), procxr, 25, comm3d, req3d(3),  ierr)
+               if (.not. is_external(xdim, LO)) call MPI_Irecv (lvl(lev)%mgvar(1, 1, 1, iv), 1, lvl(lev)%mmbc(xdim, LO, BND, ng), procxl, 25, comm3d, req3d(2),  ierr)
+               if (.not. is_external(xdim, HI)) call MPI_Irecv (lvl(lev)%mgvar(1, 1, 1, iv), 1, lvl(lev)%mmbc(xdim, HI, BND, ng), procxr, 15, comm3d, req3d(4),  ierr)
+            else
+               if (.not. is_external(xdim, LO)) lvl(lev)%mgvar(lvl(lev)%is-ng:lvl(lev)%is-1,  :, :, iv) = lvl(lev)%mgvar(lvl(lev)%ie-ng+1:lvl(lev)%ie,      :, :, iv)
+               if (.not. is_external(xdim, HI)) lvl(lev)%mgvar(lvl(lev)%ie+1 :lvl(lev)%ie+ng, :, :, iv) = lvl(lev)%mgvar(lvl(lev)%is     :lvl(lev)%is+ng-1, :, :, iv)
+            endif
+            if (cor) call MPI_Waitall(4, req3d(1:4), status3d(:,1:4), ierr)
          endif
-         if (cor) call MPI_Waitall(4, req3d(9:12), status3d(:,9:12), ierr)
-      endif
+
+         if (has_dir(ydim)) then
+            if (psize(ydim) > 1) then
+               if (.not. is_external(ydim, LO)) call MPI_Isend (lvl(lev)%mgvar(1, 1, 1, iv), 1, lvl(lev)%mmbc(ydim, LO, BLK, ng), procyl, 35, comm3d, req3d(5),  ierr)
+               if (.not. is_external(ydim, HI)) call MPI_Isend (lvl(lev)%mgvar(1, 1, 1, iv), 1, lvl(lev)%mmbc(ydim, HI, BLK, ng), procyr, 45, comm3d, req3d(6),  ierr)
+               if (.not. is_external(ydim, LO)) call MPI_Irecv (lvl(lev)%mgvar(1, 1, 1, iv), 1, lvl(lev)%mmbc(ydim, LO, BND, ng), procyl, 45, comm3d, req3d(7),  ierr)
+               if (.not. is_external(ydim, HI)) call MPI_Irecv (lvl(lev)%mgvar(1, 1, 1, iv), 1, lvl(lev)%mmbc(ydim, HI, BND, ng), procyr, 35, comm3d, req3d(8),  ierr)
+            else
+               if (.not. is_external(ydim, LO)) lvl(lev)%mgvar(:, lvl(lev)%js-ng:lvl(lev)%js-1,  :, iv) = lvl(lev)%mgvar(:, lvl(lev)%je-ng+1:lvl(lev)%je,      :, iv)
+               if (.not. is_external(ydim, HI)) lvl(lev)%mgvar(:, lvl(lev)%je+1 :lvl(lev)%je+ng, :, iv) = lvl(lev)%mgvar(:, lvl(lev)%js     :lvl(lev)%js+ng-1, :, iv)
+            endif
+            if (cor) call MPI_Waitall(4, req3d(5:8), status3d(:,5:8), ierr)
+         endif
+
+         if (has_dir(zdim)) then
+            if (psize(zdim) > 1) then
+               if (.not. is_external(zdim, LO)) call MPI_Isend (lvl(lev)%mgvar(1, 1, 1, iv), 1, lvl(lev)%mmbc(zdim, LO, BLK, ng), proczl, 55, comm3d, req3d(9),  ierr)
+               if (.not. is_external(zdim, HI)) call MPI_Isend (lvl(lev)%mgvar(1, 1, 1, iv), 1, lvl(lev)%mmbc(zdim, HI, BLK, ng), proczr, 65, comm3d, req3d(10), ierr)
+               if (.not. is_external(zdim, LO)) call MPI_Irecv (lvl(lev)%mgvar(1, 1, 1, iv), 1, lvl(lev)%mmbc(zdim, LO, BND, ng), proczl, 65, comm3d, req3d(11), ierr)
+               if (.not. is_external(zdim, HI)) call MPI_Irecv (lvl(lev)%mgvar(1, 1, 1, iv), 1, lvl(lev)%mmbc(zdim, HI, BND, ng), proczr, 55, comm3d, req3d(12), ierr)
+            else
+               if (.not. is_external(zdim, LO)) lvl(lev)%mgvar(:, :, lvl(lev)%ks-ng:lvl(lev)%ks-1,  iv) = lvl(lev)%mgvar(:, :, lvl(lev)%ke-ng+1:lvl(lev)%ke,      iv)
+               if (.not. is_external(zdim, HI)) lvl(lev)%mgvar(:, :, lvl(lev)%ke+1 :lvl(lev)%ke+ng, iv) = lvl(lev)%mgvar(:, :, lvl(lev)%ks     :lvl(lev)%ks+ng-1, iv)
+            endif
+            if (cor) call MPI_Waitall(4, req3d(9:12), status3d(:,9:12), ierr)
+         endif
 
 !>
 !! \todo Make a benchmark of a massively parallel run to determine difference in execution between calling MPI_Waitall for each direction and calling it once.
 !! If the difference is small then set cor permanently to .true.
 !<
-      if (.not. cor) call MPI_Waitall(nreq, req3d(:), status3d(:,:), ierr)
+         if (.not. cor) call MPI_Waitall(nreq, req3d(:), status3d(:,:), ierr)
+
+      endif
 
    end subroutine mpi_multigrid_bnd
 
@@ -258,6 +289,8 @@ contains
 
       integer :: i
       logical, save :: warned = .false.
+
+      if (lvl(lev)%empty) return
 
       if (cor) then
          if (.not. warned) then

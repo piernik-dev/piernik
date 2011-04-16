@@ -32,7 +32,7 @@
 
  $END_CONTROL
     tend   = 1.0
-    nend   = 200
+    nend   = 1000
  /
 
  $OUTPUT_CONTROL
@@ -82,7 +82,7 @@
  $PROBLEM_CONTROL
     d0     = 1.5e7
     p0     = 1.5e7
-    amp    = 0.01
+    amp    = 0.001
     ix     = 2
     iy     = 2
     iz     = 2

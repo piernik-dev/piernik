@@ -384,7 +384,7 @@ contains
       use multigridvars,   only: is_external
       use dataio_pub,      only: die
       use constants,       only: ndims, xdim, ydim, zdim, LO, HI, GEO_XYZ !, GEO_RPZ
-      use mpisetup,        only: comm3d, ierr, geometry_type
+      use mpisetup,        only: comm, ierr, geometry_type
       use mpi,             only: MPI_DOUBLE_PRECISION, MPI_SUM
 
       implicit none
@@ -420,7 +420,7 @@ contains
          endif
       enddo
 
-      call MPI_Allreduce(lsum(0:ndims), CoM(0:ndims), 4, MPI_DOUBLE_PRECISION, MPI_SUM, comm3d, ierr)
+      call MPI_Allreduce(lsum(0:ndims), CoM(0:ndims), 4, MPI_DOUBLE_PRECISION, MPI_SUM, comm, ierr)
 
       if (CoM(0) /= 0.) then
          CoM(xdim:zdim) = CoM(xdim:zdim) / CoM(0)
@@ -684,7 +684,7 @@ contains
 
       use dataio_pub,    only: die
       use multigridvars, only: is_external
-      use mpisetup,      only: comm3d, ierr, geometry_type
+      use mpisetup,      only: comm, ierr, geometry_type
       use constants,     only: xdim, ydim, zdim, GEO_XYZ, GEO_RPZ, LO, HI
       use mpi,           only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_SUM, MPI_MIN, MPI_MAX, MPI_IN_PLACE
 
@@ -734,8 +734,8 @@ contains
          enddo
       endif
 
-      call MPI_Allreduce(MPI_IN_PLACE, irmin, 1, MPI_INTEGER, MPI_MIN, comm3d, ierr)
-      call MPI_Allreduce(MPI_IN_PLACE, irmax, 1, MPI_INTEGER, MPI_MAX, comm3d, ierr)
+      call MPI_Allreduce(MPI_IN_PLACE, irmin, 1, MPI_INTEGER, MPI_MIN, comm, ierr)
+      call MPI_Allreduce(MPI_IN_PLACE, irmax, 1, MPI_INTEGER, MPI_MAX, comm, ierr)
 
       ! integrate radially and apply normalization factor (the (4 \pi)/(2 l  + 1) terms cancel out)
       rr = max(1, irmin)
@@ -749,7 +749,7 @@ contains
          Q(:, OUTSIDE, r) = Q(:, OUTSIDE, r) * ofact(:) + Q(:, OUTSIDE, r+1)
       enddo
 
-      call MPI_Allreduce(MPI_IN_PLACE, Q(:, :, irmin:irmax), size(Q(:, :, irmin:irmax)), MPI_DOUBLE_PRECISION, MPI_SUM, comm3d, ierr)
+      call MPI_Allreduce(MPI_IN_PLACE, Q(:, :, irmin:irmax), size(Q(:, :, irmin:irmax)), MPI_DOUBLE_PRECISION, MPI_SUM, comm, ierr)
 
    end subroutine img_mass2moments
 

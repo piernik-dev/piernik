@@ -58,9 +58,11 @@ module multigrid_gravity
    !   integer, parameter :: FFTW_RODFT01=8, FFTW_RODFT10=9
 
    ! multigrid constants
-   integer, parameter :: fft_rcr=1                                    !< type of FFT transform: full
-   integer, parameter :: fft_dst=fft_rcr+1                            !< type of FFT transform: discrete sine
-   integer, parameter :: fft_none=-1                                  !< type of FFT transform: none
+   enum, bind(C)
+      enumerator :: fft_rcr = 1                                       !< type of FFT transform: full
+      enumerator :: fft_dst                                           !< type of FFT transform: discrete sine
+      enumerator :: fft_none=-1                                       !< type of FFT transform: none
+   end enum
 
    ! namelist parameters
    real               :: norm_tol                                     !< stop V-cycle iterations when the ratio of norms ||residual||/||source|| is below this value
@@ -73,7 +75,7 @@ module multigrid_gravity
    real               :: L4_strength                                  !< strength of the 4th order terms in the Laplace operator; 0.: 2nd, 1.: 4th direct, 0.5: 4th integral
    integer            :: max_cycles                                   !< Maximum allowed number of V-cycles
    integer            :: nsmool                                       !< smoothing cycles per call
-   integer            :: nsmoob                                       !< smoothing cycles on base level when gb_no_fft = .true. (a convergence check would be much better)
+   integer            :: nsmoob                                       !< smoothing cycles on base level when cannot use FFT. (a convergence check would be much better)
    integer            :: nsmoof                                       !< FFT iterations per call
    integer            :: ord_laplacian                                !< Laplace operator order; allowed values are 2 (default) and 4 (experimental, not fully implemented)
    integer            :: ord_time_extrap                              !< Order of temporal extrapolation for solution recycling; -1 means 0-guess, 2 does parabolic interpolation
@@ -387,7 +389,7 @@ contains
    subroutine init_multigrid_grav_post(mb_alloc)
 
       use arrays,             only: sgp
-      use multigridvars,      only: lvl, roof, base, gb, level_gb, level_max, level_min, bnd_periodic, bnd_dirichlet, bnd_isolated, vcycle_stats, is_mg_uneven, gb_cartmap
+      use multigridvars,      only: lvl, roof, base, gb, level_gb, level_max, level_min, bnd_periodic, bnd_dirichlet, bnd_isolated, vcycle_stats, is_mg_uneven, plvl, gb_cartmap
       use mpisetup,           only: master, nproc, psize, geometry_type, dom, proc, comm3d, ierr, have_mpi, is_uneven, is_mpi_noncart
       use multigridhelpers,   only: vcycle_stats_init, dirty_debug, dirtyH
       use constants,          only: pi, dpi, xdim, ydim, zdim, ndims, GEO_XYZ
@@ -402,6 +404,7 @@ contains
       real, allocatable, dimension(:)  :: kx, ky, kz             !< FFT kernel directional components for convolution
       integer, dimension(6)            :: aerr                   !> \deprecated BEWARE: hardcoded magic integer. Update when you change number of simultaneous error checks
       integer :: i, j, idx
+      type(plvl), pointer :: cur_l
 
       if ((is_uneven .or. is_mg_uneven) .and. .not. gb_no_fft) then
          gb_no_fft = .true.
@@ -410,60 +413,13 @@ contains
 
       if ((is_uneven .or. is_mg_uneven) .and. .not. prefer_rbgs_relaxation) then
          prefer_rbgs_relaxation = .true.
-         if (master) call warn("[multigrid_gravity:init_multigrid_grav_post] FFT relaxation not implemented on uneven domains. Forcing red-black Gauss-Seidel.")
+         if (master) call warn("[multigrid_gravity:init_multigrid_grav_post] FFT relaxation not implemented on uneven domains. Forcing red-black Gauss-Seidel.") !prolong_faces
       endif
 
       if ((is_uneven .or. is_mg_uneven) .and. coarsen_multipole /= 0) then
          coarsen_multipole = 0
          if (master) call warn("[multigrid_gravity:init_multigrid_grav_post] multipole coarsening on uneven domains not implemented yet.")
       endif
-
-      if (.not. gb_no_fft) then ! This will be obsolete soon
-         if (have_mpi .and. is_mpi_noncart) call die("[multigrid:init_multigrid] is_mpi_noncart is not implemented") ! MPI_Cart_coords, psize, gb_cartmap
-
-         ! construct global PE mapping
-         if (allocated(gb_cartmap)) call die("[multigrid:init_multigrid] gb_cartmap array already allocated")
-         allocate(gb_cartmap(0:nproc-1), stat=aerr(1))
-         if (aerr(1) /= 0) call die("[multigrid:init_multigrid] Allocation error: gb_cartmap")
-         mb_alloc = mb_alloc + size(gb_cartmap) !may be inaccurate
-         do j=0, nproc-1
-            call MPI_Cart_coords(comm3d, j, ndims, gb_cartmap(j)%proc, ierr)
-            gb_cartmap(j)%lo(xdim) = gb_cartmap(j)%proc(xdim) * base%nxb + 1 ! starting x, y and z indices of interior cells from
-            gb_cartmap(j)%lo(ydim) = gb_cartmap(j)%proc(ydim) * base%nyb + 1 ! coarsest level on the gb_src array
-            gb_cartmap(j)%lo(zdim) = gb_cartmap(j)%proc(zdim) * base%nzb + 1
-            gb_cartmap(j)%up(xdim) = gb_cartmap(j)%lo(xdim)   + base%nxb - 1 ! ending indices
-            gb_cartmap(j)%up(ydim) = gb_cartmap(j)%lo(ydim)   + base%nyb - 1
-            gb_cartmap(j)%up(zdim) = gb_cartmap(j)%lo(zdim)   + base%nzb - 1
-         enddo
-      endif
-
-      do idx = level_max, level_min, -1
-         ! this should work correctly also when eff_dim < 3
-         lvl(idx)%r  = overrelax   / 2.
-         lvl(idx)%rx = lvl(idx)%dvol2 * lvl(idx)%idx2
-         lvl(idx)%ry = lvl(idx)%dvol2 * lvl(idx)%idy2
-         lvl(idx)%rz = lvl(idx)%dvol2 * lvl(idx)%idz2
-         lvl(idx)%r  = lvl(idx)%r  / (lvl(idx)%rx + lvl(idx)%ry + lvl(idx)%rz)
-         lvl(idx)%rx = overrelax_x * lvl(idx)%rx * lvl(idx)%r
-         lvl(idx)%ry = overrelax_y * lvl(idx)%ry * lvl(idx)%r
-         lvl(idx)%rz = overrelax_z * lvl(idx)%rz * lvl(idx)%r
-         lvl(idx)%r  = lvl(idx)%r  * lvl(idx)%dvol2
-
-         !>
-         !! \deprecated BEWARE: some of the above invariants may be not optimally defined - the convergence ratio drops when dx /= dy or dy /= dz or dx /= dz
-         !! and overrelaxation factors are required to get any convergence (often poor)
-         !<
-
-         if (prefer_rbgs_relaxation) then
-            lvl(idx)%fft_type = fft_none
-         else if (grav_bnd == bnd_periodic .and. nproc == 1) then
-            lvl(idx)%fft_type = fft_rcr
-         else if (grav_bnd == bnd_periodic .or. grav_bnd == bnd_dirichlet .or. grav_bnd == bnd_isolated) then
-            lvl(idx)%fft_type = fft_dst
-         else
-            lvl(idx)%fft_type = fft_none
-         endif
-      enddo
 
       ! solution recycling
       ord_time_extrap = min(nold_max-1, max(-1, ord_time_extrap))
@@ -494,19 +450,79 @@ contains
 
       sgp(:,:,:) = 0. !Initialize all the guardcells, even those which does not impact the solution
 
+      if (.not. gb_no_fft) then ! This will be obsolete soon
+         if (have_mpi .and. is_mpi_noncart) call die("[multigrid:init_multigrid] is_mpi_noncart is not implemented") ! MPI_Cart_coords, psize, gb_cartmap
+
+         ! construct global PE mapping
+         if (allocated(gb_cartmap)) call die("[multigrid:init_multigrid] gb_cartmap array already allocated")
+         allocate(gb_cartmap(0:nproc-1), stat=aerr(1))
+         if (aerr(1) /= 0) call die("[multigrid:init_multigrid] Allocation error: gb_cartmap")
+         mb_alloc = mb_alloc + size(gb_cartmap) !may be inaccurate
+         do j=0, nproc-1
+            call MPI_Cart_coords(comm3d, j, ndims, gb_cartmap(j)%proc, ierr)
+            gb_cartmap(j)%lo(xdim) = gb_cartmap(j)%proc(xdim) * base%nxb + 1 ! starting x, y and z indices of interior cells from
+            gb_cartmap(j)%lo(ydim) = gb_cartmap(j)%proc(ydim) * base%nyb + 1 ! coarsest level on the gb_src array
+            gb_cartmap(j)%lo(zdim) = gb_cartmap(j)%proc(zdim) * base%nzb + 1
+            gb_cartmap(j)%up(xdim) = gb_cartmap(j)%lo(xdim)   + base%nxb - 1 ! ending indices
+            gb_cartmap(j)%up(ydim) = gb_cartmap(j)%lo(ydim)   + base%nyb - 1
+            gb_cartmap(j)%up(zdim) = gb_cartmap(j)%lo(zdim)   + base%nzb - 1
+         enddo
+      endif
+
+      do idx = level_max, level_min, -1
+         cur_l => lvl(idx)
+         ! this should work correctly also when eff_dim < 3
+         if (cur_l%empty) then
+            cur_l%fft_type = fft_none
+            cur_l%r  = 0.
+            cur_l%rx = 0.
+            cur_l%ry = 0.
+            cur_l%rz = 0.
+         else
+            cur_l%r  = overrelax   / 2.
+            cur_l%rx = cur_l%dvol2 * cur_l%idx2
+            cur_l%ry = cur_l%dvol2 * cur_l%idy2
+            cur_l%rz = cur_l%dvol2 * cur_l%idz2
+            cur_l%r  = cur_l%r  / (cur_l%rx + cur_l%ry + cur_l%rz)
+            cur_l%rx = overrelax_x * cur_l%rx * cur_l%r
+            cur_l%ry = overrelax_y * cur_l%ry * cur_l%r
+            cur_l%rz = overrelax_z * cur_l%rz * cur_l%r
+            cur_l%r  = cur_l%r  * cur_l%dvol2
+
+            !>
+            !! \deprecated BEWARE: some of the above invariants may be not optimally defined - the convergence ratio drops when dx /= dy or dy /= dz or dx /= dz
+            !! and overrelaxation factors are required to get any convergence (often poor)
+            !<
+
+            if (prefer_rbgs_relaxation) then
+               cur_l%fft_type = fft_none
+            else if (grav_bnd == bnd_periodic .and. nproc == 1) then
+               cur_l%fft_type = fft_rcr
+            else if (grav_bnd == bnd_periodic .or. grav_bnd == bnd_dirichlet .or. grav_bnd == bnd_isolated) then
+               cur_l%fft_type = fft_dst
+            else
+               cur_l%fft_type = fft_none
+            endif
+         endif
+      enddo
+
+      gb%empty = .false.
+
       ! data related to local and global base-level FFT solver
-      if (gb_no_fft) then
-         gb%fft_type = fft_none
-      else
-         select case (grav_bnd)
-            case (bnd_periodic)
-               gb%fft_type = fft_rcr
-            case (bnd_dirichlet, bnd_isolated)
-               gb%fft_type = fft_dst
-            case default
-               gb%fft_type = fft_none
-               if (master) call warn("[multigrid_gravity:init_multigrid_grav_post] gb_no_fft set but no suitable boundary conditions found. Reverting to RBGS relaxation.")
-         end select
+      if (.not. gb%empty) then
+         if (gb_no_fft) then
+            gb%fft_type = fft_none
+         else
+            select case (grav_bnd)
+               case (bnd_periodic)
+                  gb%fft_type = fft_rcr
+               case (bnd_dirichlet, bnd_isolated)
+                  gb%fft_type = fft_dst
+               case default
+                  gb%fft_type = fft_none
+                  if (master) call warn("[multigrid_gravity:init_multigrid_grav_post] gb_no_fft set but no suitable boundary conditions found. Reverting to RBGS relaxation.")
+            end select
+         endif
       endif
 
       !special initialization of global base-level FFT-related data
@@ -539,49 +555,50 @@ contains
 
       ! FFT solver storage and data
       do idx = level_max, level_gb, -1
+         cur_l => lvl(idx)
 
-         lvl(idx)%planf = 0
-         lvl(idx)%plani = 0
+         cur_l%planf = 0
+         cur_l%plani = 0
 
-         if (lvl(idx)%fft_type /= fft_none) then
+         if (cur_l%fft_type /= fft_none .and. .not. cur_l%empty) then
 
             if (geometry_type /= GEO_XYZ) call die("[multigrid_gravity:init_multigrid_grav_post] FFT is not allowed in non-cartesian coordinates.")
 
-            select case (lvl(idx)%fft_type)
+            select case (cur_l%fft_type)
                case (fft_rcr)
-                  lvl(idx)%nxc = lvl(idx)%nxb / 2 + 1
+                  cur_l%nxc = cur_l%nxb / 2 + 1
                case (fft_dst)
-                  lvl(idx)%nxc = lvl(idx)%nxb
+                  cur_l%nxc = cur_l%nxb
                case default
                   call die("[multigrid_gravity:init_multigrid_grav_post] Unknown FFT type.")
             end select
 
-            if (allocated(lvl(idx)%Green3D) .or. allocated(lvl(idx)%src)) call die("[multigrid_gravity:init_multigrid_grav_post] Green3D or src arrays already allocated")
-            allocate(lvl(idx)%Green3D(lvl(idx)%nxc, lvl(idx)%nyb, lvl(idx)%nzb), stat=aerr(1))
-            allocate(lvl(idx)%src    (lvl(idx)%nxb, lvl(idx)%nyb, lvl(idx)%nzb), stat=aerr(2))
-            if (any(aerr(1:2) /= 0)) call die("[multigrid_gravity:init_multigrid_grav_post] Allocation error: lvl(idx)%Green3D or lvl(idx)%src.")
-            mb_alloc = mb_alloc + size(lvl(idx)%Green3D) + size(lvl(idx)%src)
+            if (allocated(cur_l%Green3D) .or. allocated(cur_l%src)) call die("[multigrid_gravity:init_multigrid_grav_post] Green3D or src arrays already allocated")
+            allocate(cur_l%Green3D(cur_l%nxc, cur_l%nyb, cur_l%nzb), stat=aerr(1))
+            allocate(cur_l%src    (cur_l%nxb, cur_l%nyb, cur_l%nzb), stat=aerr(2))
+            if (any(aerr(1:2) /= 0)) call die("[multigrid_gravity:init_multigrid_grav_post] Allocation error: cur_l%Green3D or cur_l%src.")
+            mb_alloc = mb_alloc + size(cur_l%Green3D) + size(cur_l%src)
 
             if (allocated(kx)) deallocate(kx)
             if (allocated(ky)) deallocate(ky)
             if (allocated(kz)) deallocate(kz)
-            allocate(kx(lvl(idx)%nxc), stat=aerr(1))
-            allocate(ky(lvl(idx)%nyb), stat=aerr(2))
-            allocate(kz(lvl(idx)%nzb), stat=aerr(3))
+            allocate(kx(cur_l%nxc), stat=aerr(1))
+            allocate(ky(cur_l%nyb), stat=aerr(2))
+            allocate(kz(cur_l%nzb), stat=aerr(3))
             if (any(aerr(1:3) /= 0)) call die("[multigrid_gravity:init_multigrid_grav_post] Allocation error: k[xyz]")
 
-            select case (lvl(idx)%fft_type)
+            select case (cur_l%fft_type)
 
-              ! lvl(idx)%fft_norm is set such that the following sequence gives identity:
-              ! call dfftw_execute(lvl(idx)%planf); lvl(idx)%fftr(:, :, :) = lvl(idx)%fftr(:, :, :) * lvl(idx)%fft_norm ; call dfftw_execute(lvl(idx)%plani)
+              ! cur_l%fft_norm is set such that the following sequence gives identity:
+              ! call dfftw_execute(cur_l%planf); cur_l%fftr(:, :, :) = cur_l%fftr(:, :, :) * cur_l%fft_norm ; call dfftw_execute(cur_l%plani)
 
                case (fft_rcr)
-                  if (allocated(lvl(idx)%fft)) call die("[multigrid_gravity:init_multigrid_grav_post] fft or Green3D array already allocated")
-                  allocate(lvl(idx)%fft(lvl(idx)%nxc, lvl(idx)%nyb, lvl(idx)%nzb), stat=aerr(1))
+                  if (allocated(cur_l%fft)) call die("[multigrid_gravity:init_multigrid_grav_post] fft or Green3D array already allocated")
+                  allocate(cur_l%fft(cur_l%nxc, cur_l%nyb, cur_l%nzb), stat=aerr(1))
                   if (aerr(1) /= 0) call die("[multigrid_gravity:init_multigrid_grav_post] Allocation error: fft.")
-                  mb_alloc  = mb_alloc + 2*size(lvl(idx)%fft)
+                  mb_alloc  = mb_alloc + 2*size(cur_l%fft)
 
-                  lvl(idx)%fft_norm = 1. / real( lvl(idx)%nxb * lvl(idx)%nyb * lvl(idx)%nzb ) ! No 4 pi G factor here because the source was already multiplied by it
+                  cur_l%fft_norm = 1. / real( cur_l%nxb * cur_l%nyb * cur_l%nzb ) ! No 4 pi G factor here because the source was already multiplied by it
 
                   ! FFT local solver initialization for 2nd order (3-point) Laplacian
                   ! sin(k*x-d) - 2.*sin(k*x) + sin(k*x+d) = 2 * (cos(d)-1) * sin(k*x) = -4 * sin(d/2)**2 * sin(k*x)
@@ -591,39 +608,37 @@ contains
                   ! 2*(3*a+4*b+2*c+4*(a+2*b+c)*cos(d)+2*(a+2*(b+c))*cos(2*d)) * sin(d/2)**2 * sin(k*x)
                   ! asymptotically: -d**2/2 for d<pi
 
-                  kx(:) = lvl(idx)%idx2 * (cos(dpi/lvl(idx)%nxb*(/(j, j=0, lvl(idx)%nxc-1)/)) - 1.)
-                  ky(:) = lvl(idx)%idy2 * (cos(dpi/lvl(idx)%nyb*(/(j, j=0, lvl(idx)%nyb-1)/)) - 1.)
-                  kz(:) = lvl(idx)%idz2 * (cos(dpi/lvl(idx)%nzb*(/(j, j=0, lvl(idx)%nzb-1)/)) - 1.)
-                  call dfftw_plan_dft_r2c_3d(lvl(idx)%planf, lvl(idx)%nxb, lvl(idx)%nyb, lvl(idx)%nzb, lvl(idx)%src, lvl(idx)%fft, fftw_flags)
-                  call dfftw_plan_dft_c2r_3d(lvl(idx)%plani, lvl(idx)%nxb, lvl(idx)%nyb, lvl(idx)%nzb, lvl(idx)%fft, lvl(idx)%src, fftw_flags)
+                  kx(:) = cur_l%idx2 * (cos(dpi/cur_l%nxb*(/(j, j=0, cur_l%nxc-1)/)) - 1.)
+                  ky(:) = cur_l%idy2 * (cos(dpi/cur_l%nyb*(/(j, j=0, cur_l%nyb-1)/)) - 1.)
+                  kz(:) = cur_l%idz2 * (cos(dpi/cur_l%nzb*(/(j, j=0, cur_l%nzb-1)/)) - 1.)
+                  call dfftw_plan_dft_r2c_3d(cur_l%planf, cur_l%nxb, cur_l%nyb, cur_l%nzb, cur_l%src, cur_l%fft, fftw_flags)
+                  call dfftw_plan_dft_c2r_3d(cur_l%plani, cur_l%nxb, cur_l%nyb, cur_l%nzb, cur_l%fft, cur_l%src, fftw_flags)
 
                case (fft_dst)
 
-                  if (allocated(lvl(idx)%fftr)) call die("[multigrid_gravity:init_multigrid_grav_post] fftr array already allocated")
-                  allocate(lvl(idx)%fftr(lvl(idx)%nxc, lvl(idx)%nyb, lvl(idx)%nzb), stat=aerr(1))
+                  if (allocated(cur_l%fftr)) call die("[multigrid_gravity:init_multigrid_grav_post] fftr array already allocated")
+                  allocate(cur_l%fftr(cur_l%nxc, cur_l%nyb, cur_l%nzb), stat=aerr(1))
                   if (aerr(1) /= 0) call die("[multigrid_gravity:init_multigrid_grav_post] Allocation error: fftr.")
-                  mb_alloc  = mb_alloc + size(lvl(idx)%fftr)
+                  mb_alloc  = mb_alloc + size(cur_l%fftr)
 
-                  lvl(idx)%fft_norm = 1. / (8. * real( lvl(idx)%nxb * lvl(idx)%nyb * lvl(idx)%nzb ))
-                  kx(:) = lvl(idx)%idx2 * (cos(pi/lvl(idx)%nxb*(/(j, j=1, lvl(idx)%nxc)/)) - 1.)
-                  ky(:) = lvl(idx)%idy2 * (cos(pi/lvl(idx)%nyb*(/(j, j=1, lvl(idx)%nyb)/)) - 1.)
-                  kz(:) = lvl(idx)%idz2 * (cos(pi/lvl(idx)%nzb*(/(j, j=1, lvl(idx)%nzb)/)) - 1.)
-                  call dfftw_plan_r2r_3d(lvl(idx)%planf, lvl(idx)%nxb, lvl(idx)%nyb, lvl(idx)%nzb, lvl(idx)%src,  lvl(idx)%fftr, &
-                       &                 FFTW_RODFT10, FFTW_RODFT10, FFTW_RODFT10, fftw_flags)
-                  call dfftw_plan_r2r_3d(lvl(idx)%plani, lvl(idx)%nxb, lvl(idx)%nyb, lvl(idx)%nzb, lvl(idx)%fftr, lvl(idx)%src,  &
-                       &                 FFTW_RODFT01, FFTW_RODFT01, FFTW_RODFT01, fftw_flags)
+                  cur_l%fft_norm = 1. / (8. * real( cur_l%nxb * cur_l%nyb * cur_l%nzb ))
+                  kx(:) = cur_l%idx2 * (cos(pi/cur_l%nxb*(/(j, j=1, cur_l%nxc)/)) - 1.)
+                  ky(:) = cur_l%idy2 * (cos(pi/cur_l%nyb*(/(j, j=1, cur_l%nyb)/)) - 1.)
+                  kz(:) = cur_l%idz2 * (cos(pi/cur_l%nzb*(/(j, j=1, cur_l%nzb)/)) - 1.)
+                  call dfftw_plan_r2r_3d(cur_l%planf, cur_l%nxb, cur_l%nyb, cur_l%nzb, cur_l%src,  cur_l%fftr, FFTW_RODFT10, FFTW_RODFT10, FFTW_RODFT10, fftw_flags)
+                  call dfftw_plan_r2r_3d(cur_l%plani, cur_l%nxb, cur_l%nyb, cur_l%nzb, cur_l%fftr, cur_l%src,  FFTW_RODFT01, FFTW_RODFT01, FFTW_RODFT01, fftw_flags)
 
                case default
                   call die("[multigrid_gravity:init_multigrid_grav_post] Unknown FFT type.")
             end select
 
             ! compute Green's function for 7-point 3D discrete laplacian
-            do i = 1, lvl(idx)%nxc
-               do j = 1, lvl(idx)%nyb
+            do i = 1, cur_l%nxc
+               do j = 1, cur_l%nyb
                   where ( (kx(i) + ky(j) + kz(:)) /= 0 )
-                     lvl(idx)%Green3D(i,j,:) = 0.5 * lvl(idx)%fft_norm / (kx(i) + ky(j) + kz(:))
+                     cur_l%Green3D(i,j,:) = 0.5 * cur_l%fft_norm / (kx(i) + ky(j) + kz(:))
                   elsewhere
-                     lvl(idx)%Green3D(i,j,:) = 0.0
+                     cur_l%Green3D(i,j,:) = 0.0
                   endwhere
                enddo
             enddo
@@ -1474,6 +1489,8 @@ contains
       integer :: nsmoo
       real    :: crx, crx1, cry, crz, cr
 
+      if (lvl(lev)%empty) return
+
       if (lev == level_min) then
          nsmoo = nsmoob
       else
@@ -1622,6 +1639,10 @@ contains
       integer, intent(in) :: soln !< index of solution in lvl()%mgvar
 
       integer :: nf, n
+
+      if (lvl(lev)%empty) return
+
+      if (lvl(lev)%fft_type == fft_none) call die("[multigrid_gravity:approximate_solution_fft] unknown FFT type")
 
       if (geometry_type /= GEO_XYZ) call die("[multigrid_gravity:approximate_solution_fft] FFT is not allowed in non-cartesian coordinates.")
 

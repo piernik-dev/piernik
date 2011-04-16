@@ -149,6 +149,15 @@ contains
 
       endif
 
+      ! mark external faces
+      is_external(:, :) = .false.
+      do j=xdim, zdim
+         if (has_dir(j) .and. .not. dom%periodic(j)) then
+            is_external(j, LO) = (cg%off(j) == 0)
+            is_external(j, HI) = (cg%off(j)+cg%n_b(j) == dom%n_d(j))
+         endif
+      enddo
+
       is_mg_uneven = is_uneven
 
       ngridvars = correction  !< 4 variables are required for basic use of the multigrid solver
@@ -156,7 +165,7 @@ contains
 
       if (geometry_type == GEO_RPZ) multidim_code_3D = .true. ! temporarily
 
-!> \todo Make array of subroutine pointers
+!> \todo Make an array of subroutine pointers
 #ifdef GRAV
       call init_multigrid_grav
 #endif /* GRAV */
@@ -183,7 +192,7 @@ contains
          where (has_dir(:)) dom_lvl(idx)%n_d(:) = dom_lvl(idx)%n_d(:) / 2
          if (any(dom_lvl(idx)%n_d(:)*2 /= dom_lvl(idx + 1)%n_d(:) .and. has_dir(:))) then
             write(msg, '(a,3f10.1)')"[multigrid:init_multigrid] Fractional number of domain cells: ", 0.5*dom_lvl(idx + 1)%n_d(:)
-            call die(msg)
+            call die(msg) ! handling this would require coarse grids bigger than base grid
          endif
          if (.not. allocated(dom_lvl(idx)%se)) then
             if (master) call warn("[multigrid:init_multigrid] dom_lvl%se not allocated implicitly")! this should detect changes in compiler behavior
@@ -211,7 +220,7 @@ contains
 
          div = 2**(level_max -idx)                                 ! derefinement factor with respect to the top level
 
-         if (any(lvl(idx)%n_b(:) < lvl(idx)%nb .and. has_dir(:))) then
+         if (any(lvl(idx)%n_b(:) < lvl(idx)%nb .and. has_dir(:) .and. .not. lvl(idx)%empty)) then
             write(msg, '(a,i1,a,3i4,2(a,i2))')"[multigrid:init_multigrid] Number of guardcells exceeds number of interior cells: ", &
                  lvl(idx)%nb, " > ", lvl(idx)%n_b(:), " at level ", idx, ". You may try to set level_max <=", level_max-idx
             call die(msg)
@@ -268,7 +277,7 @@ contains
          allocate( lvl(idx)%prolong_xy(lvl(idx)%nx, lvl(idx)%ny,                  lvl(idx)%nzb/2+2*lvl(idx)%nb),            stat=aerr(3) )
          if (any(aerr(1:3) /= 0)) call die("[multigrid:init_multigrid] Allocation error: lvl(idx)%*")
          if ( .not. allocated(lvl(idx)%prolong_x) .or. .not. allocated(lvl(idx)%prolong_xy) .or. .not. allocated(lvl(idx)%mgvar) .or. &
-              .not. allocated(lvl(idx)%x) .or. .not. allocated(lvl(idx)%y) .or. .not. allocated(lvl(idx)%z) ) &
+              ((.not. allocated(lvl(idx)%x) .or. .not. allocated(lvl(idx)%y) .or. .not. allocated(lvl(idx)%z)) .and. .not. lvl(idx)%empty) ) &
               call die("[multigrid:init_multigrid] some multigrid arrays not allocated")
          mb_alloc  = mb_alloc + size(lvl(idx)%prolong_x) + size(lvl(idx)%prolong_xy) + size(lvl(idx)%mgvar) + size(lvl(idx)%x)  + size(lvl(idx)%y) + size(lvl(idx)%z)
 
@@ -291,15 +300,12 @@ contains
             lvl(idx)%mgvar     (:, :, :, :) = 0.0 ! should not be necessary if dirty_debug shows nothing suspicious
          endif
 
-         ! set up connections between levels
-         lvl(idx)%i_rst%proc = proc
-         lvl(idx)%i_rst%se(:,:) = reshape( [ lvl(idx)%is, lvl(idx)%js, lvl(idx)%ks, lvl(idx)%ie, lvl(idx)%je, lvl(idx)%ke ], shape(lvl(idx)%i_rst%se(:,:)) )
-         lvl(idx)%i_rst%nextgrid => null()
-         lvl(idx)%o_rst = lvl(idx)%i_rst
-
-         if (idx<level_max) lvl(idx)%i_rst%nextgrid => lvl(idx+1)
-         if (idx>level_min) lvl(idx)%o_rst%nextgrid => lvl(idx-1)
       enddo
+
+      ! handy shortcuts
+      base => lvl(level_min)
+      roof => lvl(level_max)
+      gb   => lvl(level_gb) !> \todo remove this feature. New restriction and prolongation will work with lvl(level_min) nonempty only on master
 
       call MPI_Allreduce(MPI_IN_PLACE, is_mg_uneven, 1, MPI_LOGICAL, MPI_LOR, comm, ierr)
       if ((is_mg_uneven .or. is_uneven) .and. ord_prolong /= 0) then
@@ -309,21 +315,7 @@ contains
 
       call mpi_multigrid_prep
 
-      ! handy shortcuts
-      base => lvl(level_min)
-      roof => lvl(level_max)
-      gb   => lvl(level_gb) !> \todo remove this feature. New restriction and prolongation will work with lvl(level_min) nonempty only on master
-
       tot_ts = 0.
-
-      ! mark external faces
-      is_external(:, :) = .false.
-      do j=xdim, zdim
-         if (has_dir(j) .and. .not. dom%periodic(j)) then
-            is_external(j, LO) = (cg%off(j) == 0)
-            is_external(j, HI) = (cg%off(j)+cg%n_b(j) == dom%n_d(j))
-         endif
-      enddo
 
 #ifdef GRAV
       call init_multigrid_grav_post(mb_alloc)
@@ -334,8 +326,8 @@ contains
 
       ! summary
       if (master) then
-         write(msg, '(a,i2,a,3(i4,a),f6.1,a)')"[multigrid:init_multigrid] Initialized ", level_max, " levels, coarsest resolution [ ", &
-            lvl(level_min)%nxb, ",", lvl(level_min)%nyb, ",", lvl(level_min)%nzb, " ] per processor, allocated", mb_alloc*8./1048576., "MiB" ! sizeof(double)/2.**20
+         write(msg, '(a,i2,a,3i4,a,f6.1,a)')"[multigrid:init_multigrid] Initialized ", level_max, " levels, coarse level resolution [ ", &
+            dom_lvl(level_min)%n_d(:)," ], allocated", mb_alloc*8./1048576., "MiB" ! sizeof(double)/2.**20
          call mg_write_log(msg)
       endif
 
@@ -349,7 +341,7 @@ contains
    subroutine cleanup_multigrid
 
       use multigridvars,      only: lvl, dom_lvl, level_gb, level_min, level_max, tot_ts, gb_cartmap
-      use mpisetup,           only: master, nproc, comm3d, ierr, has_dir
+      use mpisetup,           only: master, nproc, comm, ierr, has_dir
       use constants,          only: xdim, zdim, LO, HI, BND, BLK
       use mpi,                only: MPI_DOUBLE_PRECISION
       use multigridhelpers,   only: mg_write_log
@@ -411,7 +403,7 @@ contains
       if (allocated(all_ts)) deallocate(all_ts)
       allocate(all_ts(0:nproc-1))
 
-      call MPI_Gather(tot_ts, 1, MPI_DOUBLE_PRECISION, all_ts, 1, MPI_DOUBLE_PRECISION, 0, comm3d, ierr)
+      call MPI_Gather(tot_ts, 1, MPI_DOUBLE_PRECISION, all_ts, 1, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
       if (master) then
          write(msg, '(a,3(g11.4,a))')"[multigrid] Spent ", sum(all_ts)/nproc, " seconds in multigrid_solve_* (min= ",minval(all_ts)," max= ",maxval(all_ts),")."

@@ -248,7 +248,7 @@ contains
       use arrays,        only: u
       use dataio_pub,    only: msg, printinfo, warn
       use grid,          only: cg
-      use mpisetup,      only: master, comm3d, ierr
+      use mpisetup,      only: master, comm, ierr
       use mpi,           only: MPI_DOUBLE_PRECISION, MPI_SUM, MPI_MIN, MPI_MAX, MPI_IN_PLACE
       use fluidindex,    only: flind
 
@@ -278,9 +278,9 @@ contains
             enddo
          enddo
       enddo
-      call MPI_Allreduce(MPI_IN_PLACE, norm,   2, MPI_DOUBLE_PRECISION, MPI_SUM, comm3d, ierr)
-      call MPI_Allreduce(MPI_IN_PLACE, dev(1), 1, MPI_DOUBLE_PRECISION, MPI_MIN, comm3d, ierr)
-      call MPI_Allreduce(MPI_IN_PLACE, dev(2), 1, MPI_DOUBLE_PRECISION, MPI_MAX, comm3d, ierr)
+      call MPI_Allreduce(MPI_IN_PLACE, norm,   2, MPI_DOUBLE_PRECISION, MPI_SUM, comm, ierr)
+      call MPI_Allreduce(MPI_IN_PLACE, dev(1), 1, MPI_DOUBLE_PRECISION, MPI_MIN, comm, ierr)
+      call MPI_Allreduce(MPI_IN_PLACE, dev(2), 1, MPI_DOUBLE_PRECISION, MPI_MAX, comm, ierr)
 
       if (master) then
          write(msg,'(a,f12.6,a,2f12.6)')"[initproblem:finalize_problem_adv] L2 error norm = ", sqrt(norm(1)/norm(2)), ", min and max error = ", dev(1:2)

@@ -208,7 +208,7 @@ contains
    subroutine init_mpi
 
       use constants,     only: cwdlen, xdim, ydim, zdim, LO, HI, big_float, dpi, GEO_XYZ, GEO_RPZ, GEO_INVALID, BND_PER, BND_COR, BND_REF, DD_CART
-      use mpi,           only: MPI_COMM_WORLD, MPI_INFO_NULL, MPI_INFO_NULL, MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION, MPI_LOGICAL, MPI_PROC_NULL
+      use mpi,           only: MPI_COMM_WORLD, MPI_COMM_NULL, MPI_INFO_NULL, MPI_INFO_NULL, MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION, MPI_LOGICAL, MPI_PROC_NULL
       use dataio_pub,    only: die, printinfo, msg, cwd, ansi_white, ansi_black, warn, tmp_log_file
       use dataio_pub,    only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml  ! QA_WARN required for diff_nml
 
@@ -558,10 +558,11 @@ contains
       procxl = MPI_PROC_NULL; procxr = MPI_PROC_NULL
       procyl = MPI_PROC_NULL; procyr = MPI_PROC_NULL
       proczl = MPI_PROC_NULL; proczr = MPI_PROC_NULL
+      comm3d = MPI_COMM_NULL
 
       select case (dom%pdiv_type)
          case (DD_CART)
-            if (is_mpi_noncart) call die("[[mpisetup:init_mpi] MPI_Cart_create cannot be used for non-rectilinear domain decomposition")
+            if (is_mpi_noncart) call die("[mpisetup:init_mpi] MPI_Cart_create cannot be used for non-rectilinear domain decomposition")
 
             call MPI_Cart_create(comm, ndims, psize, dom%periodic, reorder, comm3d, ierr)
             call MPI_Cart_coords(comm3d, proc, ndims, pcoords, ierr)
@@ -749,14 +750,15 @@ contains
 
    subroutine cleanup_mpi
 
-      use dataio_pub,    only: printinfo
+      use dataio_pub, only: printinfo
+      use mpi,        only: MPI_COMM_NULL
 
       implicit none
 
       if (allocated(dom%se)) deallocate(dom%se)
       if (allocated(primes)) deallocate(primes)
 
-      call MPI_Comm_free(comm3d, ierr)
+      if (comm3d /= MPI_COMM_NULL) call MPI_Comm_free(comm3d, ierr)
 
       if (master) call printinfo("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++", .false.)
       call MPI_Barrier(comm,ierr)

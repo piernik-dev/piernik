@@ -35,7 +35,7 @@ program piernik
    use dataio_pub,    only: nend, tend, msg, printinfo, warn, die, code_progress
    use constants,     only: PIERNIK_START, PIERNIK_INITIALIZED, PIERNIK_FINISHED, PIERNIK_CLEANUP, cwdlen, fplen, stdout
    use fluidupdate,   only: fluid_update
-   use mpisetup,      only: comm, comm3d, ierr, master, t, nstep, dt, dtm, cfl_violated
+   use mpisetup,      only: comm, ierr, master, t, nstep, dt, dtm, cfl_violated
    use timer,         only: time_left
    use types,         only: finalize_problem
    use timestep,      only: time_step
@@ -60,7 +60,7 @@ program piernik
 
    call init_piernik
 
-   call MPI_Barrier(comm3d,ierr)
+   call MPI_Barrier(comm,ierr)
 !-------------------------------- MAIN LOOP ----------------------------------
 #ifdef PERFMON
    call timer_start
@@ -117,7 +117,7 @@ program piernik
 
       nstep=nstep+1
 
-      call MPI_Barrier(comm3d,ierr)
+      call MPI_Barrier(comm,ierr)
       call write_data(output='all')
 
       call user_msg_handler(end_sim)

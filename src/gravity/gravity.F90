@@ -774,10 +774,11 @@ contains
 !<
    subroutine grav_accel2pot
 
-      use arrays,    only: gp
-      use grid,      only: cg
-      use mpi,       only: MPI_DOUBLE_PRECISION
-      use mpisetup,  only: psize, pcoords, master, nproc, comm, comm3d, ierr, mpifind
+      use arrays,     only: gp
+      use dataio_pub, only: die
+      use grid,       only: cg
+      use mpi,        only: MPI_DOUBLE_PRECISION, MPI_COMM_NULL
+      use mpisetup,   only: psize, pcoords, master, nproc, comm, comm3d, ierr, mpifind
       use constants, only: xdim, ydim, zdim, ndims, MAXL
 
       implicit none
@@ -796,6 +797,8 @@ contains
                                              dgpy(0:psize(xdim)-1,0:psize(ydim)-1,0:psize(zdim)-1), &
                                              dgpz(0:psize(xdim)-1,0:psize(ydim)-1,0:psize(zdim)-1), &
                                              ddgp(0:psize(xdim)-1,0:psize(ydim)-1,0:psize(zdim)-1)
+
+      if (comm3d == MPI_COMM_NULL) call die("[gravity:grav_accel2pot] comm3d == MPI_COMM_NULL")
 
       allocate(gpwork(cg%nx, cg%ny, cg%nz))
       gpwork(1,1,1) = 0.0

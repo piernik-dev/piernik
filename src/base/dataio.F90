@@ -634,25 +634,25 @@ contains
    end subroutine find_last_restart
 
    function mpi_sum4d_and_multiply(tab,factor) result(output)
-      use mpisetup, only: comm3d, ierr
+      use mpisetup, only: comm, ierr
       use mpi,      only: MPI_DOUBLE_PRECISION, MPI_SUM
       implicit none
       real, dimension(:,:,:,:), intent(in) :: tab
       real, intent(in)                     :: factor
       real :: local, output
       local = sum(tab(:,:,:,:)) * factor
-      call MPI_Allreduce(local, output, 1, MPI_DOUBLE_PRECISION, MPI_SUM, comm3d, ierr)
+      call MPI_Allreduce(local, output, 1, MPI_DOUBLE_PRECISION, MPI_SUM, comm, ierr)
    end function mpi_sum4d_and_multiply
 
    function mpi_sum3d_and_multiply(tab,factor) result(output)
-      use mpisetup, only: comm3d, ierr
+      use mpisetup, only: comm, ierr
       use mpi,      only: MPI_DOUBLE_PRECISION, MPI_SUM
       implicit none
       real, dimension(:,:,:), intent(in) :: tab
       real, intent(in)                   :: factor
       real :: local, output
       local = sum(tab(:,:,:)) * factor
-      call MPI_Allreduce(local, output, 1, MPI_DOUBLE_PRECISION, MPI_SUM, comm3d, ierr)
+      call MPI_Allreduce(local, output, 1, MPI_DOUBLE_PRECISION, MPI_SUM, comm, ierr)
    end function mpi_sum3d_and_multiply
 !---------------------------------------------------------------------
 !>

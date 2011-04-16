@@ -57,7 +57,7 @@ module multigrid_diffusion
    real               :: overrelax                                    !< overrealaxation factor (if < 1. then works as underrelaxation), use with care
    integer            :: max_cycles                                   !< Maximum allowed number of V-cycles
    integer            :: nsmool                                       !< smoothing cycles per call
-   integer            :: nsmoob                                       !< smoothing cycles on base level when gb_no_fft = .true. (a convergence check would be much better)
+   integer            :: nsmoob                                       !< smoothing cycles on base level;  \todo implement a convergence check
    real               :: diff_theta                                   !< 0. is explicit, 1. is fully implicit 0.5 is Crank-Nicholson
    real,    protected :: diff_tstep_fac                               !< How much we stretch timestep. Note that for diff_theta == 0. this should not be > 1.
    logical, protected :: diff_explicit                                !< If .true. then do not use multigrid for diffusion
