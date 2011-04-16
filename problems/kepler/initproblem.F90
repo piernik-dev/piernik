@@ -98,7 +98,7 @@ contains
       eps              = 1.0
       x_cut            = 0.6
 
-      cutoff_ncells    = 8.0
+      cutoff_ncells    = 8
       dumping_coeff    = 1.0
 
       use_inner_orbital_period = .false.
@@ -366,7 +366,7 @@ contains
          if (.not.allocated(dens_prof)) allocate(dens_prof(cg%nx))
          if (.not.allocated(dens_cutoff)) allocate(dens_cutoff(cg%nx))
          if (.not.allocated(tauf)) allocate(tauf(cg%nx))
-         if (.not.allocated(taus)) allocate(taus(cg%nx))
+         if (.not.allocated(taus)) allocate(taus(cg%nx)) ! not deallocated
 
          call source_terms_grav
          call grav_pot2accel(xdim,1,1, cg%nx, grav, 1)
@@ -453,7 +453,7 @@ contains
                         ene0(p,i,j,k)   = 0.0
                      endif
                   enddo
-                  taus(i) = vphi/cg%x(i)*tauf(i)
+                  taus(i) = vphi/cg%x(i)*tauf(i) ! compiler complains that vphi may be used uninitialized here
                enddo
             enddo
 
@@ -809,7 +809,7 @@ contains
       ierrh = 0
       select case (trim(var))
          case ("tauf")
-            tab(:,:,:) = epstein_factor(flind%neu%pos) / u(flind%neu%idn,cg%is:cg%ie,cg%js:cg%je,cg%ks:cg%ke)
+            tab(:,:,:) = real(epstein_factor(flind%neu%pos) / u(flind%neu%idn,cg%is:cg%ie,cg%js:cg%je,cg%ks:cg%ke), 4)
          case default
             ierrh = -1
       end select

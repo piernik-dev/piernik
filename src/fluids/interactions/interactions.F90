@@ -47,7 +47,7 @@ module interactions
    real :: collision_factor                              !< collision factor
    real :: cfl_interact                                  !< Courant factor for %interactions
    real :: dragc_gas_dust                                !< \deprecated remove me
-   real :: taus                                          !< stopping time
+!   real :: taus                                          !< stopping time
    real :: grain_size                                    !< size of dust grains in cm
    real :: grain_dens                                    !< density of dust grains in g/cm^3
    real, dimension(:), allocatable :: epstein_factor     !< grain_size * grain_dens / c_s for iso case
@@ -164,7 +164,7 @@ contains
             collfaq(flind%dst%pos,:) = dragc_gas_dust
             collfaq(:,flind%dst%pos) = dragc_gas_dust
 
-            taus = 1. / dragc_gas_dust
+!            taus = 1. / dragc_gas_dust ! unused
 
             fluid_interactions => fluid_interactions_aero_drag_ep
             has_interactions = .true.    !> \deprecated BEWARE: temporary hack
