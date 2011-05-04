@@ -802,6 +802,7 @@ contains
       use dataio_pub, only: die, warn
       use grid,       only: cg
       use mpisetup,   only: dom, has_dir, psize, pcoords, is_uneven
+      use types,      only: at_user_settings
 
       implicit none
 
