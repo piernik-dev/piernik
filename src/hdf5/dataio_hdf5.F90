@@ -798,7 +798,7 @@ contains
 !<
    subroutine set_dims_to_write(area_type, area, chnk, lleft, lright, loffs)
 
-      use constants,  only: ndims, AT_ALL_B, AT_OUT_B, AT_NO_B
+      use constants,  only: ndims, AT_ALL_B, AT_OUT_B, AT_NO_B, AT_USER
       use dataio_pub, only: die, warn
       use grid,       only: cg
       use mpisetup,   only: dom, has_dir, psize, pcoords, is_uneven
@@ -817,7 +817,7 @@ contains
             lleft(:)  = 1
             lright(:) = chnk
             loffs(:)  = cg%off(:) + 2 * cg%nb * pcoords(:) !\todo invent something better
-         case (AT_OUT_B)                           ! physical domain with outer boundaries
+         case (AT_OUT_B)                                   ! physical domain with outer boundaries
             area(:)   = [dom%nxt, dom%nyt, dom%nzt]
             lleft(:)  = [cg%is,   cg%js,   cg%ks  ]
             lright(:) = [cg%ie,   cg%je,   cg%ke  ]
@@ -832,12 +832,18 @@ contains
             endwhere
             loffs(:)  = cg%off(:)
             where (loffs(:)>0) loffs(:) = loffs(:) + cg%nb ! the block adjacent to the left boundary are cg%nb cells wider than cg%n[xyz]b
-         case (AT_NO_B)                           ! only physical domain without any boundaries
+         case (AT_NO_B)                                    ! only physical domain without any boundaries
             area(:)   = dom%n_d(:)
             lleft(:)  = [cg%is,   cg%js,   cg%ks  ]
             lright(:) = [cg%ie,   cg%je,   cg%ke  ]
             chnk(:)   = cg%n_b(:)
             loffs(:)  = cg%off(:)
+         case (AT_USER)                                    ! user defined domain (with no reference to simulations domain)
+            if (associated(at_user_settings)) then
+               call at_user_settings(area, lleft, lright, chnk, loffs)
+            else
+               call die("[dataio_hdf5:set_dims_to_write] Routine at_user_settings not associated")
+            endif
          case default
             call die("[dataio_hdf5:set_dims_to_write] Non-recognized area_type.")
             area(:) = 0 ! suppres compiler warnings
