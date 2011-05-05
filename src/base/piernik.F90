@@ -33,7 +33,7 @@ program piernik
 ! pulled by ANY
    use dataio,        only: write_data, user_msg_handler, check_log, check_tsl
    use dataio_pub,    only: nend, tend, msg, printinfo, warn, die, code_progress
-   use constants,     only: PIERNIK_START, PIERNIK_INITIALIZED, PIERNIK_FINISHED, PIERNIK_CLEANUP, cwdlen, fplen, stdout
+   use constants,     only: PIERNIK_START, PIERNIK_INITIALIZED, PIERNIK_FINISHED, PIERNIK_CLEANUP, fplen, stdout
    use fluidupdate,   only: fluid_update
    use mpisetup,      only: comm, ierr, master, t, nstep, dt, dtm, cfl_violated
    use timer,         only: time_left
@@ -48,12 +48,12 @@ program piernik
 
    logical              :: end_sim !< Used in main loop, to test whether to stop simulation or not
    character(len=fplen) :: nstr, tstr
-   character(len=cwdlen), parameter :: fmt900 = "('   nstep = ',i7,'   dt = ',es23.16,'   t = ',es23.16,'   dWallClock = ',f7.2,' s')"
-   logical, save                    :: first_step = .true.
-   real                             :: ts    ! Timestep wallclock
-   real                             :: tlast
+   logical, save        :: first_step = .true.
+   real                 :: ts    ! Timestep wallclock
+   real                 :: tlast
+   character(len=*),parameter :: tmr_fu = "fluid_update"
 
-   ts = 0.0
+   ts=set_timer(tmr_fu,.true.)
    tlast = 0.0
 
    code_progress = PIERNIK_START
@@ -75,13 +75,14 @@ program piernik
       call printinfo("###############     Simulation     ###############", .false.)
    endif
 
+   call print_progress(nstep)
+
    do while (t < tend .and. nstep < nend .and. .not.(end_sim) .and. time_left() ) ! main loop
 
       call time_step(dt)
       call grace_period
 
       if (first_step) then
-         ts  = 0.0
          dtm = 0.0
 #ifdef RESISTIVE
          dt  = 0.0    !> \deprecated BEWARE: smells like some dirty trick
@@ -89,33 +90,18 @@ program piernik
       else
          if (.not.cfl_violated) dtm = dt
       endif
-      if (master.and.first_step) then
-         write(msg, fmt900) nstep, dt, t, ts
-         call printinfo(msg, .true.)
-      endif
 
       if (.not.cfl_violated) then
         call check_log
         call check_tsl
       endif
 
-      if (first_step) then
-         ts=set_timer("fluid_update",.true.)
-         ts = 0.0
-      else
-         ts=set_timer("fluid_update")
-      endif
       if (.not.cfl_violated) tlast = t
       call fluid_update
-      ts=set_timer("fluid_update")
-
-      if (master.and..not.first_step) then
-         write(msg, fmt900) nstep, dt, t, ts
-         call printinfo(msg, .true.)
-      endif
-      if (t == tlast .and. .not. first_step .and. .not. cfl_violated) call die("[piernik] timestep is too small: t == t + 2 * dt")
-
       nstep=nstep+1
+      call print_progress(nstep)
+
+      if (t == tlast .and. .not. first_step .and. .not. cfl_violated) call die("[piernik] timestep is too small: t == t + 2 * dt")
 
       call MPI_Barrier(comm,ierr)
       call write_data(output='all')
@@ -124,11 +110,6 @@ program piernik
 
       first_step = .false.
    enddo ! main loop
-
-   if (master) then
-      write(msg, fmt900) nstep, dt, t, ts
-      call printinfo(msg, .true.)
-   endif
 
    code_progress = PIERNIK_FINISHED
 
@@ -173,6 +154,27 @@ program piernik
    call cleanup_piernik
 
 contains
+
+   subroutine print_progress(nstep)
+
+      use constants,  only: cwdlen
+      use dataio_pub, only: printinfo, msg
+      use mpisetup,   only: dt, t
+
+      implicit none
+
+      integer, intent(in) :: nstep
+
+      character(len=cwdlen), parameter :: fmt900 = "('   nstep = ',i7,'   dt = ',es23.16,'   t = ',es23.16,'   dWallClock = ',f7.2,' s')"
+
+      ts = set_timer(tmr_fu)
+      if (master) then
+         write(msg, fmt900) nstep, dt, t, ts
+         call printinfo(msg, .true.)
+      endif
+
+   end subroutine print_progress
+
 !>
 !! Meta subroutine responsible for initializing all piernik modules
 !<
@@ -419,9 +421,11 @@ contains
 
       logical, intent(in) :: advance
 
+      ts = set_timer(tmr_fu)
+
       if (master) then
          if (advance) then
-            write(stdout,'(a)')"."
+            write(stdout,'(a,f7.2,a)')".", ts," s"
          else
             write(stdout,'(a)',advance='no')"."
          endif
