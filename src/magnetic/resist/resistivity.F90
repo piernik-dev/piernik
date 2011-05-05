@@ -174,8 +174,9 @@ contains
       use arrays,       only: b, u
       use constants,    only: small, xdim, ydim, zdim, MINL, MAXL
       use fluidindex,   only: ibx, iby, ibz
+      use func,         only: get_extremum
       use grid,         only: cg
-      use mpisetup,     only: comm, ierr, has_dir, mpifind
+      use mpisetup,     only: comm, ierr, has_dir
       use mpi,          only: MPI_DOUBLE_PRECISION
 #ifndef ISO
       use fluidindex,   only: flind
@@ -238,23 +239,16 @@ contains
          eta = eh
       endwhere
 
-      etamax%val       = maxval(eta(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke))
-      etamax%loc       = maxloc(eta(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)) + [cg%nb, cg%nb, cg%nb]
-      call mpifind(etamax, MAXL)
+      call get_extremum(eta(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), MAXL, etamax)
       call MPI_Bcast(etamax%val, 1, MPI_DOUBLE_PRECISION, 0, comm, ierr)
-
-      cu2max%val       = maxval(wb(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke))
-      cu2max%loc       = maxloc(wb(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)) + [cg%nb, cg%nb, cg%nb]
-      call mpifind(cu2max, MAXL)
+      call get_extremum(wb(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), MAXL, cu2max)
 
 #ifndef ISO
       wb = ( u(flind%ion%ien,:,:,:) - 0.5*( u(flind%ion%imx,:,:,:)**2  + u(flind%ion%imy,:,:,:)**2  + u(flind%ion%imz,:,:,:)**2 ) &
            / u(flind%ion%idn,:,:,:) - 0.5 * ( b(ibx,:,:,:)**2  +   b(iby,:,:,:)**2  +   b(ibz,:,:,:)**2))/ ( eta * wb+small)
       dt_eint = deint_max * abs(minval(wb(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)))
 
-      deimin%val       = minval(wb(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke))
-      deimin%loc       = minloc(wb(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)) + [cg%nb, cg%nb, cg%nb]
-      call mpifind(deimin, MINL)
+      call get_extremum(wb(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), MINL, deimin)
 #endif /* !ISO */
 
    end subroutine compute_resist

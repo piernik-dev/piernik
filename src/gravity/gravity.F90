@@ -778,9 +778,10 @@ contains
       use arrays,     only: gp
       use constants,  only: xdim, ydim, zdim, ndims, MAXL
       use dataio_pub, only: die
+      use func,       only: get_extremum
       use grid,       only: cg
       use mpi,        only: MPI_DOUBLE_PRECISION, MPI_COMM_NULL
-      use mpisetup,   only: psize, pcoords, master, nproc, comm, comm3d, ierr, mpifind
+      use mpisetup,   only: psize, pcoords, master, nproc, comm, comm3d, ierr
 
       implicit none
 
@@ -875,10 +876,7 @@ contains
 
       gpwork = gpwork + ddgp(px,py,pz)
 
-      gp_max%val  = maxval(gpwork(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke))
-      gp_max%loc  = maxloc(gpwork(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)) + [ cg%nb, cg%nb, cg%nb ]
-
-      call mpifind(gp_max, MAXL)
+      call get_extremum(gpwork(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), MAXL, gp_max)
       pgpmax = gp_max%proc
 
       call MPI_Bcast(gp_max, 1, MPI_DOUBLE_PRECISION, pgpmax, comm, ierr)
