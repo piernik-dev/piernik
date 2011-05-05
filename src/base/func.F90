@@ -37,7 +37,7 @@
 module func
    implicit none
    private
-   public :: pshift, mshift, fix_string, ekin, emag, L2norm
+   public :: pshift, mshift, fix_string, ekin, emag, L2norm, get_extremum
    integer, parameter :: one = 1
 contains
 
@@ -114,6 +114,37 @@ contains
 
       return
    end function mshift
+
+!> \todo move to a better place (possibly dataio_pub since stop types module stops using die routine)
+   subroutine get_extremum(tab,minmax,prop)
+
+      use constants,     only: MINL, MAXL
+      use dataio_pub,    only: msg, warn
+      use types,         only: value
+      use grid,          only: cg
+      use mpisetup,      only: mpifind
+
+      implicit none
+
+      real, dimension(:,:,:), intent(in)  :: tab
+      integer,                intent(in)  :: minmax
+      type(value),            intent(out) :: prop
+
+      select case (minmax)
+         case (MINL)
+            prop%val = minval(tab)
+            prop%loc = minloc(tab) + [cg%nb, cg%nb, cg%nb]
+         case (MAXL)
+            prop%val = maxval(tab)
+            prop%loc = maxloc(tab) + [cg%nb, cg%nb, cg%nb]
+         case default
+            write(msg,*) "[func:get_extremum]: I don't know what to do with minmax = ", minmax
+            call warn(msg)
+      end select
+
+      call mpifind(prop, minmax)
+
+   end subroutine get_extremum
 
    function fix_string(str) result (outstr)
       implicit none

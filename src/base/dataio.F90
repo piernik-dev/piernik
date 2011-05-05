@@ -833,36 +833,6 @@ contains
 
    end subroutine write_timeslice
 
-   subroutine get_extremum(tab,minmax,prop)
-
-      use constants,     only: MINL, MAXL
-      use dataio_pub,    only: msg, warn
-      use types,         only: value
-      use grid,          only: cg
-      use mpisetup,      only: mpifind
-
-      implicit none
-
-      real, dimension(:,:,:), intent(in) :: tab
-      integer, intent(in)                :: minmax
-      type(value), intent(out)           :: prop
-
-      select case (minmax)
-         case (MINL)
-            prop%val = minval(tab)
-            prop%loc = minloc(tab) + [cg%nb, cg%nb, cg%nb]
-         case (MAXL)
-            prop%val = maxval(tab)
-            prop%loc = maxloc(tab) + [cg%nb, cg%nb, cg%nb]
-         case default
-            write(msg,*) "[dataio:get_extremum]: I don't know what to do with minmax = ", minmax
-            call warn(msg)
-      end select
-
-      call mpifind(prop, minmax)
-
-   end subroutine get_extremum
-
    subroutine common_shout(pr, fluid, pres_tn, temp_tn, cs_tn)
 
       use constants,       only: small
@@ -918,9 +888,10 @@ contains
 
       use arrays,     only: u, b, wa
       use constants,  only: ION, DST, MINL, MAXL
-      use mpisetup,   only: smallp
-      use grid,       only: cg
       use fluidtypes, only: phys_prop, component_fluid
+      use func,       only: get_extremum
+      use grid,       only: cg
+      use mpisetup,   only: smallp
       use units,      only: mH, kboltz
 
       implicit none
@@ -994,6 +965,7 @@ contains
       use dataio_pub,         only: msg, printinfo
       use fluids_pub,         only: has_dst, has_ion, has_neu
       use fluidindex,         only: ibx, iby, ibz, flind
+      use func,               only: get_extremum
       use grid,               only: cg
       use mpisetup,           only: cfl, t, dt, master
       use types,              only: tsl_container, value
