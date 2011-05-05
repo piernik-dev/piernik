@@ -118,11 +118,12 @@ contains
 !> \todo move to a better place (possibly dataio_pub since stop types module stops using die routine)
    subroutine get_extremum(tab,minmax,prop)
 
-      use constants,     only: MINL, MAXL
+      use constants,     only: MINL, MAXL, ndims, xdim, ydim, zdim
       use dataio_pub,    only: msg, warn
       use types,         only: value
       use grid,          only: cg
-      use mpisetup,      only: mpifind
+      use mpisetup,      only: mpifind, comm, ierr, master, proc, status, has_dir
+      use mpi,           only: MPI_DOUBLE_PRECISION
 
       implicit none
 
@@ -143,6 +144,17 @@ contains
       end select
 
       call mpifind(prop, minmax)
+
+      if (has_dir(xdim)) prop%coords(xdim) = cg%x(prop%loc(xdim))
+      if (has_dir(ydim)) prop%coords(ydim) = cg%y(prop%loc(ydim))
+      if (has_dir(zdim)) prop%coords(zdim) = cg%z(prop%loc(zdim))
+      if (prop%proc /= 0) then
+         if (proc == prop%proc) then
+            call MPI_Send  (prop%coords, ndims, MPI_DOUBLE_PRECISION, 0, 12, comm, ierr)
+         else if (master) then
+            call MPI_Recv  (prop%coords, ndims, MPI_DOUBLE_PRECISION, prop%proc, 12, comm, status, ierr)
+         endif
+      endif
 
    end subroutine get_extremum
 
