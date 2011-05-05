@@ -774,21 +774,20 @@ contains
 !<
    subroutine grav_accel2pot
 
+      use types,      only: value
       use arrays,     only: gp
+      use constants,  only: xdim, ydim, zdim, ndims, MAXL
       use dataio_pub, only: die
       use grid,       only: cg
       use mpi,        only: MPI_DOUBLE_PRECISION, MPI_COMM_NULL
       use mpisetup,   only: psize, pcoords, master, nproc, comm, comm3d, ierr, mpifind
-      use constants, only: xdim, ydim, zdim, ndims, MAXL
 
       implicit none
 
       integer                             :: i, j, k, ip, pgpmax
       real, allocatable, dimension(:,:,:) :: gpwork
       real                                :: gravrx(cg%nx), gravry(cg%ny), gravrz(cg%nz)
-      real                                :: gp_max
-      integer, dimension(3)               :: loc_gp_max
-      integer                             :: proc_gp_max
+      type(value)                         :: gp_max
       integer                             :: px, py, pz, pc(3)
       real                                :: dgpx_proc, dgpx_all(0:nproc-1), &
                                              dgpy_proc, dgpy_all(0:nproc-1), &
@@ -876,15 +875,14 @@ contains
 
       gpwork = gpwork + ddgp(px,py,pz)
 
-      gp_max      = maxval(gpwork(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke))
-      loc_gp_max  = maxloc(gpwork(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)) &
-                  + [ cg%nb, cg%nb, cg%nb ]
+      gp_max%val  = maxval(gpwork(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke))
+      gp_max%loc  = maxloc(gpwork(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)) + [ cg%nb, cg%nb, cg%nb ]
 
-      call mpifind(gp_max, MAXL, loc_gp_max, proc_gp_max)
-      pgpmax = proc_gp_max
+      call mpifind(gp_max, MAXL)
+      pgpmax = gp_max%proc
 
       call MPI_Bcast(gp_max, 1, MPI_DOUBLE_PRECISION, pgpmax, comm, ierr)
-      gpwork = gpwork - gp_max
+      gpwork = gpwork - gp_max%val
 
       gp=gpwork
       if (allocated(gpwork)) deallocate(gpwork)

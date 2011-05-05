@@ -240,12 +240,12 @@ contains
 
       etamax%val       = maxval(eta(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke))
       etamax%loc       = maxloc(eta(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)) + [cg%nb, cg%nb, cg%nb]
-      call mpifind(etamax%val, MAXL, etamax%loc, etamax%proc)
+      call mpifind(etamax, MAXL)
       call MPI_Bcast(etamax%val, 1, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
       cu2max%val       = maxval(wb(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke))
       cu2max%loc       = maxloc(wb(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)) + [cg%nb, cg%nb, cg%nb]
-      call mpifind(cu2max%val, MAXL, cu2max%loc, cu2max%proc)
+      call mpifind(cu2max, MAXL)
 
 #ifndef ISO
       wb = ( u(flind%ion%ien,:,:,:) - 0.5*( u(flind%ion%imx,:,:,:)**2  + u(flind%ion%imy,:,:,:)**2  + u(flind%ion%imz,:,:,:)**2 ) &
@@ -254,7 +254,7 @@ contains
 
       deimin%val       = minval(wb(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke))
       deimin%loc       = minloc(wb(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)) + [cg%nb, cg%nb, cg%nb]
-      call mpifind(deimin%val, MINL, deimin%loc, deimin%proc)
+      call mpifind(deimin, MINL)
 #endif /* !ISO */
 
    end subroutine compute_resist

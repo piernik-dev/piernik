@@ -769,22 +769,21 @@ contains
 
 !-----------------------------------------------------------------------------
 
-   subroutine mpifind(var, what, loc_arr, loc_proc)
+   subroutine mpifind(var, what)
 
+      use types,         only: value
       use constants,     only: MINL, MAXL
-      use mpi,           only: MPI_2DOUBLE_PRECISION, MPI_INTEGER, MPI_MINLOC, MPI_MAXLOC
       use dataio_pub,    only: msg, warn
+      use mpi,           only: MPI_2DOUBLE_PRECISION, MPI_INTEGER, MPI_MINLOC, MPI_MAXLOC
 
       implicit none
 
+      type(value)                  :: var
       integer, intent(in)          :: what
-      real                         :: var
       real, dimension(2)           :: rsend, rrecv
-      integer, dimension(ndims)    :: loc_arr
-      integer                      :: loc_proc
       integer                      :: status
 
-      rsend(1) = var
+      rsend(1) = var%val
       rsend(2) = proc
 
       select case (what)
@@ -798,17 +797,17 @@ contains
       end select
 
       if (master) then
-         var = rrecv(1)
-         loc_proc = int(rrecv(2))
+         var%val = rrecv(1)
+         var%proc = int(rrecv(2))
       endif
 
-      call MPI_Bcast(loc_proc, 1, MPI_INTEGER, 0, comm, ierr)
+      call MPI_Bcast(var%proc, 1, MPI_INTEGER, 0, comm, ierr)
 
-      if (loc_proc /= 0) then
-         if (proc == loc_proc) then
-            call MPI_Send  (loc_arr, ndims, MPI_INTEGER, 0,        11, comm, ierr)
+      if (var%proc /= 0) then
+         if (proc == var%proc) then
+            call MPI_Send  (var%loc,    ndims, MPI_INTEGER,          0, 11, comm, ierr)
          else if (master) then
-            call MPI_Recv  (loc_arr, ndims, MPI_INTEGER, loc_proc, 11, comm, status, ierr)
+            call MPI_Recv  (var%loc,    ndims, MPI_INTEGER,          var%proc, 11, comm, status, ierr)
          endif
       endif
 

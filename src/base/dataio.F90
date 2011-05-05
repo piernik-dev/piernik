@@ -90,8 +90,8 @@ module dataio
    real                  :: umsg_param              !< parameter changed by a user/system message
 
    character(len=cwdlen) :: filename               !< string of characters indicating currently used file
-   character(len=cwdlen), parameter :: fmt_loc = "(2x,a12,a3,'  = ',es16.9,16x,           5(1x,i4))"
-   character(len=cwdlen), parameter :: fmt_dtloc = "(2x,a12,a3,'  = ',es16.9,'  dt=',es11.4,5(1x,i4))"
+   character(len=cwdlen), parameter :: fmt_loc   = "(2x,a12,a3,'  = ',es16.9,16x,            5(1x,i4))"
+   character(len=cwdlen), parameter :: fmt_dtloc = "(2x,a12,a3,'  = ',es16.9,'  dt=',es11.4, 5(1x,i4))"
 
    namelist /END_CONTROL/ nend, tend, wend
    namelist /RESTART_CONTROL/ restart, new_id, nrestart, resdel
@@ -859,7 +859,7 @@ contains
             call warn(msg)
       end select
 
-      call mpifind(prop%val, minmax, prop%loc, prop%proc)
+      call mpifind(prop, minmax)
 
    end subroutine get_extremum
 
@@ -1070,24 +1070,24 @@ contains
 !        wa            = cs_iso2_arr(:,:,:)*u(idni,:,:,:)
 !        prei_min%val  = minval(wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke))
 !        prei_min%loc  = minloc(wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)) + [cg%nb, cg%nb, cg%nb]
-!        call mpifind(prei_min%val, MINL, prei_min%loc, prei_min%proc)
+!        call mpifind(prei_min, MINL)
 !
 !        prei_max%val  = maxval(wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke))
 !        prei_max%loc  = maxloc(wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)) + [cg%nb, cg%nb, cg%nb]
-!        call mpifind(prei_max%val, MAXL, prei_max%loc, prei_max%proc)
+!        call mpifind(prei_max, MAXL)
 !
 !        csi_max%val   = maxval(cs_iso2_arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke))
 !        csi_max%loc   = maxloc(cs_iso2_arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)) + [cg%nb, cg%nb, cg%nb]
-!        call mpifind(csi_max%val, MAXL, csi_max%loc, csi_max%proc)
+!        call mpifind(csi_max, MAXL)
 !
 !        wa            = mH / kboltz * cs_iso2_arr(:,:,:)
 !        temi_min%val  = minval(wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke))
 !        temi_min%loc  = minloc(wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)) + [cg%nb, cg%nb, cg%nb]
-!        call mpifind(temi_min%val, MINL, temi_min%loc, temi_min%proc)
+!        call mpifind(temi_min, MINL)
 !
 !        temi_max%val  = maxval(wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke))
 !        temi_max%loc  = maxloc(wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)) + [cg%nb, cg%nb, cg%nb]
-!        call mpifind(temi_max%val, MAXL, temi_max%loc, temi_max%proc)
+!        call mpifind(temi_max, MAXL)
 #endif /* ISO_LOCAL */
 #else /* !ISO */
 !        wa(:,:,:) = (u(ieni,:,:,:) &                ! eint
