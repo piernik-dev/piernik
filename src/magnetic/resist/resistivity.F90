@@ -183,6 +183,7 @@ contains
 #endif /* !ISO */
 
       implicit none
+      real, dimension(:,:,:), pointer :: p
 
       if (.not.eta1_active) return
 !> \deprecated BEWARE: uninitialized values are poisoning the wb(:,:,:) array - should change  with rev. 3893
@@ -239,17 +240,20 @@ contains
          eta = eh
       endwhere
 
-      call get_extremum(eta(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), MAXL, etamax)
+      p => eta(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
+      call get_extremum(p, MAXL, etamax) ; NULLIFY(p)
       call MPI_Bcast(etamax%val, 1, MPI_DOUBLE_PRECISION, 0, comm, ierr)
-      call get_extremum(wb(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), MAXL, cu2max)
+      p => wb(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
+      call get_extremum(p, MAXL, cu2max)
 
 #ifndef ISO
       wb = ( u(flind%ion%ien,:,:,:) - 0.5*( u(flind%ion%imx,:,:,:)**2  + u(flind%ion%imy,:,:,:)**2  + u(flind%ion%imz,:,:,:)**2 ) &
            / u(flind%ion%idn,:,:,:) - 0.5 * ( b(ibx,:,:,:)**2  +   b(iby,:,:,:)**2  +   b(ibz,:,:,:)**2))/ ( eta * wb+small)
       dt_eint = deint_max * abs(minval(wb(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)))
 
-      call get_extremum(wb(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), MINL, deimin)
+      call get_extremum(p, MINL, deimin)
 #endif /* !ISO */
+      NULLIFY(p)
 
    end subroutine compute_resist
 

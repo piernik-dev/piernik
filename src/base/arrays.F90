@@ -40,7 +40,7 @@ module arrays
    real, allocatable, dimension(:,:,:,:), target :: b    !< Main array of magnetic field's components
    real, allocatable, dimension(:,:,:,:), target :: u0   !< Copy of main array of all fluids' components
    real, allocatable, dimension(:,:,:,:), target :: b0   !< Copy of main array of magnetic field's components
-   real, allocatable, dimension(:,:,:)           :: wa   !< Temporary array used for different purposes, usually has dimension (grid::nx, grid::ny, grid::nz)
+   real, allocatable, dimension(:,:,:),   target :: wa   !< Temporary array used for different purposes, usually has dimension (grid::nx, grid::ny, grid::nz)
 
 #ifdef RESISTIVE
    real, allocatable, dimension(:,:,:)       :: wcu      !< Temporary array used in resistivity module

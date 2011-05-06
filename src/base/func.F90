@@ -127,7 +127,7 @@ contains
 
       implicit none
 
-      real, dimension(:,:,:), intent(in)  :: tab
+      real, dimension(:,:,:), intent(in), pointer  :: tab
       integer,                intent(in)  :: minmax
       type(value),            intent(out) :: prop
 

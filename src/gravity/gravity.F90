@@ -786,7 +786,8 @@ contains
       implicit none
 
       integer                             :: i, j, k, ip, pgpmax
-      real, allocatable, dimension(:,:,:) :: gpwork
+      real, allocatable, dimension(:,:,:), target :: gpwork
+      real, dimension(:,:,:), pointer     :: p
       real                                :: gravrx(cg%nx), gravry(cg%ny), gravrz(cg%nz)
       type(value)                         :: gp_max
       integer                             :: px, py, pz, pc(3)
@@ -875,8 +876,8 @@ contains
       pz = pcoords(3)
 
       gpwork = gpwork + ddgp(px,py,pz)
-
-      call get_extremum(gpwork(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), MAXL, gp_max)
+      p => gpwork(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
+      call get_extremum(p, MAXL, gp_max)
       pgpmax = gp_max%proc
 
       call MPI_Bcast(gp_max, 1, MPI_DOUBLE_PRECISION, pgpmax, comm, ierr)
