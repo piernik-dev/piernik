@@ -95,7 +95,7 @@ contains
       use dataio_pub,    only: die, code_progress
       use constants,     only: PIERNIK_INIT_BASE, zdim, xdim, ydim
       use grid,          only: cg
-      use mpisetup,      only: rbuff, ibuff, ierr, comm, master, slave, has_dir, buffer_dim
+      use mpisetup,      only: rbuff, ibuff, ierr, comm, master, slave, eff_dim, has_dir, buffer_dim
       use mpi,           only: MPI_INTEGER, MPI_DOUBLE_PRECISION
 
       implicit none
@@ -163,7 +163,7 @@ contains
          if (.not.has_dir(zdim)) dbz = 0.0
 
          jc2 = j_crit**2
-         dims_twice = 2. * count(has_dir)
+         dims_twice = 2. * eff_dim
          d_eta_factor = 1./(dims_twice+dble(eta_scale))
       endif
 

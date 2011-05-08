@@ -200,7 +200,7 @@ contains
            &                     tmp_log_file, msglen, printinfo, warn, msg, nhdf, nstep_start, set_container_chdf, get_container, die, code_progress
       use dataio_pub,      only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml  ! QA_WARN required for diff_nml
       use fluidboundaries, only: all_fluid_boundaries
-      use mpisetup,        only: lbuff, ibuff, rbuff, cbuff, master, slave, comm, ierr, buffer_dim, t, nstep, has_dir
+      use mpisetup,        only: lbuff, ibuff, rbuff, cbuff, master, slave, comm, ierr, buffer_dim, t, nstep, eff_dim
       use mpi,             only: MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL
       use timer,           only: time_left
       use version,         only: nenv,env, init_version
@@ -215,7 +215,6 @@ contains
       integer(kind=1)      :: system
       integer              :: system_status, i
       character(len=msglen):: system_command
-      integer              :: ndims
 
       if (code_progress < PIERNIK_INIT_IO_IC) call die("[dataio:init_dataio] Some physics modules are not initialized.")
 
@@ -379,9 +378,8 @@ contains
 
       endif
 
-      ndims = count(has_dir)
-      write(fmt_loc,  '(2(a,i1),a)') "(2x,a12,a3,'  = ',es16.9,16x,            ",ndims+1,"(1x,i4),",ndims,"(1x,f12.4))"
-      write(fmt_dtloc,'(2(a,i1),a)') "(2x,a12,a3,'  = ',es16.9,'  dt=',es11.4, ",ndims+1,"(1x,i4),",ndims,"(1x,f12.4))"
+      write(fmt_loc,  '(2(a,i1),a)') "(2x,a12,a3,'  = ',es16.9,16x,            ",eff_dim+1,"(1x,i4),",eff_dim,"(1x,f12.4))"
+      write(fmt_dtloc,'(2(a,i1),a)') "(2x,a12,a3,'  = ',es16.9,'  dt=',es11.4, ",eff_dim+1,"(1x,i4),",eff_dim,"(1x,f12.4))"
 
       tn = time_left(wend)
 

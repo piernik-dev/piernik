@@ -164,7 +164,7 @@ contains
       use multigridvars,      only: bnd_periodic, bnd_dirichlet, bnd_isolated, bnd_invalid, correction, mg_nb, ngridvars
       use constants,          only: GEO_XYZ, GEO_RPZ, BND_PER
       use multipole,          only: use_point_monopole, lmax, mmax, ord_prolong_mpole, coarsen_multipole, interp_pt2mom, interp_mom2pot
-      use mpisetup,           only: buffer_dim, comm, ierr, master, slave, ibuff, cbuff, rbuff, lbuff, dom, has_dir, geometry_type, is_uneven
+      use mpisetup,           only: buffer_dim, comm, ierr, master, slave, ibuff, cbuff, rbuff, lbuff, dom, has_dir, eff_dim, geometry_type, is_uneven
       use mpi,                only: MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL
       use dataio_pub,         only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml  ! QA_WARN required for diff_nml
       use dataio_pub,         only: msg, die, warn
@@ -217,7 +217,7 @@ contains
 
       periodic_bnd_cnt = count(dom%periodic(:) .and. has_dir(:))
 
-      if (periodic_bnd_cnt == count(has_dir(:))) then
+      if (periodic_bnd_cnt == eff_dim) then
          grav_bnd_str = "periodic"
       else
          grav_bnd_str = "dirichlet"
@@ -332,10 +332,10 @@ contains
             call die("[multigrid_gravity:init_multigrid_grav] Non-recognized boundary description.")
       end select
 
-      if (periodic_bnd_cnt == count(has_dir(:))) then ! fully periodic domain
+      if (periodic_bnd_cnt == eff_dim) then ! fully periodic domain
          if (grav_bnd /= bnd_periodic .and. master) call warn("[multigrid_gravity:init_multigrid_grav] Ignoring non-periodic boundary conditions for gravity on a fully periodic domain.")
          grav_bnd = bnd_periodic
-      else if (periodic_bnd_cnt > 0 .and. periodic_bnd_cnt < count(has_dir(:))) then
+      else if (periodic_bnd_cnt > 0 .and. periodic_bnd_cnt < eff_dim) then
          if (master) call warn("[multigrid_gravity:init_multigrid_grav] Mixing periodic and non-periodic boundary conditions for gravity is experimental.")
          prefer_rbgs_relaxation = .true.
          gb_no_fft = .true.
