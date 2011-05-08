@@ -14,6 +14,7 @@
 #   'make clean'           # calls make clean for all obj* directories
 #   'make allsetup'        # creates object directories for all valid problems,
 #                            but does not compile them
+#   'make ctags'           # recreate ctags for {src,problems}
 #
 # Resetup will also call make for the object directories, unless you've 
 # specified --nocompile either in your .setuprc* files or it was stored in 
@@ -50,6 +51,9 @@ else
 	@$(MAKE) -k -C $@ PNAME=$@ && $(ECHO) -e "\033[32;1m"$@ ready"\033[0m" || echo -e "\033[31;1m"$@ failed"\033[0m"
 endif
 endif
+
+ctags:
+	ctags -R {src,problems}
 
 resetup:
 	@RS=1 $(MAKE) -k all
