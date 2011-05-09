@@ -49,7 +49,8 @@ module mpisetup
         &    dom, geometry_type, &
         &    cfl, cfl_max, cflcontrol, cfl_violated, &
         &    dt, dt_initial, dt_max_grow, dt_min, dt_old, dtm, t, nstep, &
-        &    integration_order, limiter, smalld, smallei, smallp, use_smalld, magic_mass, local_magic_mass, relax_time, grace_period_passed, cfr_smooth
+        &    integration_order, limiter, smalld, smallei, smallp, use_smalld, magic_mass, local_magic_mass, &
+        &    relax_time, grace_period_passed, cfr_smooth, repeat_step
 
    integer, protected :: nproc, proc, ierr, info
    integer, parameter :: nreq = size([LO, HI]) * size([BLK, BND]) ! just another way of defining '4' ;-)
@@ -133,11 +134,12 @@ module mpisetup
    !<
    real    :: cfr_smooth
    integer, protected :: integration_order           !< Runge-Kutta time integration order (1 - 1st order, 2 - 2nd order)
-   character(len=cbuff_len) :: limiter    !< type of flux limiter
-   character(len=cbuff_len) :: cflcontrol !< type of cfl control just before each sweep (possibilities: 'none', 'main', 'user')
-   real    :: relax_time                  !< relaxation/grace time, additional physics will be turned off until mpisetup::t >= mpisetup::relax_time
+   character(len=cbuff_len) :: limiter     !< type of flux limiter
+   character(len=cbuff_len) :: cflcontrol  !< type of cfl control just before each sweep (possibilities: 'none', 'main', 'user')
+   logical                  :: repeat_step !< repeat fluid step if cfl condition is violated (significantly increases mem usage)
+   real    :: relax_time                   !< relaxation/grace time, additional physics will be turned off until mpisetup::t >= mpisetup::relax_time
 
-   namelist /NUMERICAL_SETUP/  cfl, smalld, smallei, integration_order, cfr_smooth, dt_initial, dt_max_grow, dt_min, smallc, smallp, limiter, cflcontrol, use_smalld, cfl_max, relax_time
+   namelist /NUMERICAL_SETUP/  cfl, smalld, smallei, integration_order, cfr_smooth, dt_initial, dt_max_grow, dt_min, smallc, smallp, limiter, cflcontrol, use_smalld, cfl_max, relax_time, repeat_step
 
    interface is_neigh
       module procedure is_neigh_simple, is_neigh_per
@@ -190,6 +192,7 @@ contains
 !! <tr><td>cfl              </td><td>0.7   </td><td>real value between 0.0 and 1.0       </td><td>\copydoc mpisetup::cfl              </td></tr>
 !! <tr><td>cfl_max          </td><td>0.9   </td><td>real value between cfl and 1.0       </td><td>\copydoc mpisetup::cfl_max          </td></tr>
 !! <tr><td>cflcontrol       </td><td>       </td><td>string                              </td><td>\copydoc mpisetup::cflcontrol       </td></tr>
+!! <tr><td>repeat_step      </td><td>.true.</td><td>logical value                        </td><td>\copydoc mpisetup::use_smalld       </td></tr>
 !! <tr><td>smallp           </td><td>1.e-10</td><td>real value                           </td><td>\copydoc mpisetup::smallp           </td></tr>
 !! <tr><td>smalld           </td><td>1.e-10</td><td>real value                           </td><td>\copydoc mpisetup::smalld           </td></tr>
 !! <tr><td>use_smalld       </td><td>.true.</td><td>logical value                        </td><td>\copydoc mpisetup::use_smalld       </td></tr>
@@ -329,6 +332,7 @@ contains
 
       limiter     = 'vanleer'
       cflcontrol  = 'warn'
+      repeat_step = .true.
 
       cfl         = 0.7
       cfl_max     = 0.9
@@ -404,6 +408,7 @@ contains
          lbuff(1) = use_smalld
          lbuff(2) = reorder
          lbuff(3) = allow_uneven
+         lbuff(4) = repeat_step
 
       endif
 
@@ -417,6 +422,7 @@ contains
          use_smalld    = lbuff(1)
          reorder       = lbuff(2)
          allow_uneven  = lbuff(3)
+         repeat_step   = lbuff(4)
 
          smalld      = rbuff( 1)
          smallc      = rbuff( 2)

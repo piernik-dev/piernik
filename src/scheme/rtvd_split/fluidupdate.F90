@@ -35,27 +35,38 @@ module fluidupdate   ! SPLIT
 
 contains
 
+   subroutine repeat_fluidstep
+      use arrays,       only: u, u0, b, b0
+      use mpisetup,     only: dt, dtm, t, cfl_violated, nstep, dt_max_grow, master, repeat_step
+      use dataio_pub,   only: warn
+      implicit none
+
+      if (.not.repeat_step) return
+
+      if (cfl_violated) then
+         t = t-2.0*dtm
+         u = u0
+         b = b0
+         dt = dtm/dt_max_grow**2
+         nstep = nstep-1
+         if (master) call warn("[fluidupdate:fluid_update] Redoing previous step...")
+      else
+         u0 = u
+         b0 = b
+      endif
+   end subroutine repeat_fluidstep
+
    subroutine fluid_update
-      use arrays,        only: u, u0, b, b0
-      use dataio_pub,    only: halfstep, warn
-      use mpisetup,      only: dt, dtm, t, cfl_violated, nstep, dt_max_grow, master
+      use arrays,        only: u, b
+      use dataio_pub,    only: halfstep
+      use mpisetup,      only: dt, dtm, t
 #ifdef SN_SRC
       use snsources,     only: random_sn
 #endif /* SN_SRC */
 
       implicit none
 
-      if (cfl_violated) then
-         t = t-2*dtm
-         u = u0
-         b = b0
-         dt = dtm/dt_max_grow**2
-         nstep = nstep - 1
-         if (master) call warn("[fluidupdate:fluid_update] Redoing previous step...")
-      else
-         u0 = u
-         b0 = b
-      endif
+      call repeat_fluidstep
 
       halfstep = .false.
       t=t+dt

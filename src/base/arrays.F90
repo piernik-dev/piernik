@@ -80,6 +80,7 @@ contains
       use dataio_pub,  only: die, code_progress
       use fluidtypes,  only: var_numbers
       use grid,        only: cg
+      use mpisetup,    only: repeat_step
 #ifdef GRAV
       use diagnostics, only: ma1d
 #endif /* GRAV */
@@ -92,12 +93,12 @@ contains
 
       ma4d = [flind%all, cg%nx, cg%ny, cg%nz]
       call my_allocate(u, ma4d, "u")
-      call my_allocate(u0, ma4d, "u0")
+      if (repeat_step) call my_allocate(u0, ma4d, "u0")
       call my_allocate(uh, ma4d, "uh")
 
       ma4d = [ndims, cg%nx, cg%ny, cg%nz]
       call my_allocate(b, ma4d, "b")
-      call my_allocate(b0, ma4d, "b0")
+      if (repeat_step) call my_allocate(b0, ma4d, "b0")
 
       ma3d = [cg%nx, cg%ny, cg%nz]
       call my_allocate(wa, ma3d, "wa")

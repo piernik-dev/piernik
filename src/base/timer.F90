@@ -40,8 +40,8 @@ module timer
 
    type, private :: timer_info
       character(len=S_LEN) :: key
-      logical :: reset
-      real :: time
+      logical              :: reset
+      real(kind=8)         :: time = 0.0
    end type timer_info
 
    type, private :: timer_list
@@ -149,6 +149,7 @@ contains
    contains
 
       real function modify_timer(tp,reset)
+         use mpi, only: MPI_Wtime
          implicit none
          type(timer_node), pointer :: tp
          logical, intent(in) :: reset
@@ -156,7 +157,7 @@ contains
          real :: time_old
 
          time_old = tp%info%time
-         call cpu_time(tp%info%time)
+         tp%info%time = MPI_Wtime()
          !if (.not.reset) write(*,'(3A,F7.3,A)') "Timer [",trim(tp%info%key),"] = ", tp%info%time - time_old, " s"  ! QA_WARN debug?
          if (.not.reset) then
             modify_timer = tp%info%time - time_old

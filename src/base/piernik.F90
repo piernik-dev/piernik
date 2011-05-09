@@ -165,7 +165,7 @@ contains
 
       integer, intent(in) :: nstep
 
-      character(len=cwdlen), parameter :: fmt900 = "('   nstep = ',i7,'   dt = ',es23.16,'   t = ',es23.16,'   dWallClock = ',f7.2,' s')"
+      character(len=cwdlen), parameter :: fmt900 = "('   nstep = ',i7,'   dt = ',es23.16,'   t = ',es23.16,'   dWallClock = ',f10.2,' s')"
 
       ts = set_timer(tmr_fu)
       if (master) then
