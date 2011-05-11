@@ -776,43 +776,27 @@ contains
 
       use types,         only: value
       use constants,     only: MINL, MAXL
-      use dataio_pub,    only: msg, warn
-      use mpi,           only: MPI_2DOUBLE_PRECISION, MPI_INTEGER, MPI_MINLOC, MPI_MAXLOC
+      use dataio_pub,    only: die
+      use mpi,           only: MPI_2DOUBLE_PRECISION, MPI_MINLOC, MPI_MAXLOC, MPI_IN_PLACE
 
       implicit none
 
-      type(value)                  :: var
-      integer, intent(in)          :: what
-      real, dimension(2)           :: rsend, rrecv
-      integer                      :: status
+      type(value), intent(inout) :: var
+      integer, intent(in)       :: what
 
-      rsend(1) = var%val
-      rsend(2) = proc
+      real, dimension(2)  :: v_red
+      integer, dimension(MINL:MAXL), parameter :: op = [ MPI_MINLOC, MPI_MAXLOC ]
 
-      select case (what)
-         case (MINL)
-            call MPI_Reduce(rsend, rrecv, 1, MPI_2DOUBLE_PRECISION, MPI_MINLOC, 0, comm, ierr)
-         case (MAXL)
-            call MPI_Reduce(rsend, rrecv, 1, MPI_2DOUBLE_PRECISION, MPI_MAXLOC, 0, comm, ierr)
-         case default
-            write(msg,*) '[mpisetup:mpifind] actual parameter "', what, '"is not allowed'
-            call warn(msg)
-      end select
+      v_red(:) = [ var%val, real(proc) ]
 
-      if (master) then
-         var%val = rrecv(1)
-         var%proc = int(rrecv(2))
+      if (any([MINL, MAXL] == what)) then
+         call MPI_Allreduce(MPI_IN_PLACE, v_red, 1, MPI_2DOUBLE_PRECISION, op(what), comm, ierr)
+      else
+         call die("[mpisetup:mpifind] invalid extremum type")
       endif
 
-      call MPI_Bcast(var%proc, 1, MPI_INTEGER, 0, comm, ierr)
-
-      if (var%proc /= 0) then
-         if (proc == var%proc) then
-            call MPI_Send  (var%loc,    ndims, MPI_INTEGER,          0, 11, comm, ierr)
-         else if (master) then
-            call MPI_Recv  (var%loc,    ndims, MPI_INTEGER,          var%proc, 11, comm, status, ierr)
-         endif
-      endif
+      var%val = v_red(1)
+      var%proc = int(v_red(2))
 
    end subroutine mpifind
 
