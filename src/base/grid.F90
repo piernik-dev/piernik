@@ -380,7 +380,7 @@ contains
 !! \brief Set up subsets of u,b and sgp arrays for MPI communication
 !<
 
-   subroutine grid_mpi_boundaries_prep(numfluids)
+   subroutine grid_mpi_boundaries_prep(numfluids, numcrs)
 
       use dataio_pub, only: die, code_progress
       use constants,  only: PIERNIK_INIT_BASE, FLUID, ARR, xdim, zdim, ndims, LO, HI, BND, BLK
@@ -389,43 +389,44 @@ contains
 
       implicit none
 
-      integer, intent(in) :: numfluids !< expect flind%all, here, cannot grab it directly because of cyclic deps in CR-based setups
+      integer, intent(in) :: numfluids !< expect flind%all,     here, cannot grab it directly because of cyclic deps in CR-based setups
+      integer, intent(in) :: numcrs    !< expect flind%crs%all, here, cannot grab it directly because of cyclic deps in CR-based setups
 
       integer, dimension(:), allocatable :: sizes, subsizes, starts
       integer :: d, t
       integer, dimension(FLUID:ARR) :: nc
-      integer, parameter, dimension(FLUID:ARR) :: dim = [ 1+ndims, 1+ndims, ndims ] !< dimensionality of arrays
+      integer, parameter, dimension(FLUID:ARR) :: dims = [ 1+ndims, 1+ndims, 1+ndims, ndims ] !< dimensionality of arrays
       integer, dimension(xdim:zdim) :: HBstart
 
       if (code_progress < PIERNIK_INIT_BASE) call die("[grid:grid_mpi_boundaries_prep] grid or fluids not initialized.")
 
-      nc = [ numfluids, ndims, 1 ]      !< number of fluids, magnetic field components and 1 for rank-3 array
+      nc = [ numfluids, ndims, numcrs, 1 ]      !< number of fluids, magnetic field components, CRs, and 1 for rank-3 array
       HBstart = [ cg%ie, cg%je, cg%ke ]
       do d = xdim, zdim
          if (has_dir(d)) then
-            do t = FLUID, ARR  ! fluid, Bfield, grav
+            do t = FLUID, ARR  ! fluid, Bfield, wcr, grav
 
-               allocate(sizes(dim(t)), subsizes(dim(t)), starts(dim(t)))
+               allocate(sizes(dims(t)), subsizes(dims(t)), starts(dims(t)))
 
-               if (dim(t) == 1+ndims) sizes(1) = nc(t)
-               sizes(dim(t)-zdim+xdim:dim(t)) = [ cg%nx, cg%ny, cg%nz ]
+               if (dims(t) == 1+ndims) sizes(1) = nc(t)
+               sizes(dims(t)-zdim+xdim:dims(t)) = [ cg%nx, cg%ny, cg%nz ]
                subsizes(:) = sizes(:)
-               subsizes(dim(t)-zdim+d) = cg%nb
+               subsizes(dims(t)-zdim+d) = cg%nb
 
                starts(:) = 0
-               call MPI_Type_create_subarray(dim(t), sizes, subsizes, starts, MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, cg%mbc(t, d, LO, BND), ierr)
+               call MPI_Type_create_subarray(dims(t), sizes, subsizes, starts, MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, cg%mbc(t, d, LO, BND), ierr)
                call MPI_Type_commit(cg%mbc(t, d, LO, BND), ierr)
 
-               starts(dim(t)-zdim+d) = cg%nb
-               call MPI_Type_create_subarray(dim(t), sizes, subsizes, starts, MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, cg%mbc(t, d, LO, BLK), ierr)
+               starts(dims(t)-zdim+d) = cg%nb
+               call MPI_Type_create_subarray(dims(t), sizes, subsizes, starts, MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, cg%mbc(t, d, LO, BLK), ierr)
                call MPI_Type_commit(cg%mbc(t, d, LO, BLK), ierr)
 
-               starts(dim(t)-zdim+d) = cg%n_b(d)
-               call MPI_Type_create_subarray(dim(t), sizes, subsizes, starts, MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, cg%mbc(t, d, HI, BLK), ierr)
+               starts(dims(t)-zdim+d) = cg%n_b(d)
+               call MPI_Type_create_subarray(dims(t), sizes, subsizes, starts, MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, cg%mbc(t, d, HI, BLK), ierr)
                call MPI_Type_commit(cg%mbc(t, d, HI, BLK), ierr)
 
-               starts(dim(t)-zdim+d) = HBstart(d)
-               call MPI_Type_create_subarray(dim(t), sizes, subsizes, starts, MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, cg%mbc(t, d, HI, BND), ierr)
+               starts(dims(t)-zdim+d) = HBstart(d)
+               call MPI_Type_create_subarray(dims(t), sizes, subsizes, starts, MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, cg%mbc(t, d, HI, BND), ierr)
                call MPI_Type_commit(cg%mbc(t, d, HI, BND), ierr)
 
                deallocate(sizes, subsizes, starts)

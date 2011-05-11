@@ -115,7 +115,7 @@ module constants
 
    ! first index of cg%mbc(:,:,:) array
    enum, bind(C)
-      enumerator :: FLUID = 1, MAG, ARR                  !< MPI container type for exchanging u(:,:,:,:),  b(ndims,:,:,:) and a rank-3 arrays
+      enumerator :: FLUID = 1, MAG, CR, ARR              !< MPI container type for exchanging u(:,:,:,:),  b(ndims,:,:,:), wcr(flind%crs%all,:,:,:) and a rank-3 arrays
    end enum
    ! last index of cg%mbc(:,:,:) array
    enum, bind(C)
