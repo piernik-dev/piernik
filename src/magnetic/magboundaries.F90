@@ -38,9 +38,9 @@ contains
 
    subroutine bnd_a(A)
 
+      use constants,  only: MAG, xdim, zdim, LO, HI, BND, BLK
       use dataio_pub, only: die
       use mpisetup,   only: ierr, req, comm3d, procn, status, psize
-      use constants,  only: MAG, xdim, zdim, LO, HI, BND, BLK
       use grid,       only: cg
       use mpi,        only: MPI_COMM_NULL
 
@@ -56,10 +56,10 @@ contains
 
             jtag = 20*i
             itag = jtag - 10
-            call MPI_Isend(A(1,1,1,1), 1, cg%mbc(MAG, i, LO, BLK), procn(i,1), itag, comm3d, req(1), ierr)
-            call MPI_Isend(A(1,1,1,1), 1, cg%mbc(MAG, i, HI, BLK), procn(i,2), jtag, comm3d, req(3), ierr)
-            call MPI_Irecv(A(1,1,1,1), 1, cg%mbc(MAG, i, LO, BND), procn(i,1), jtag, comm3d, req(2), ierr)
-            call MPI_Irecv(A(1,1,1,1), 1, cg%mbc(MAG, i, HI, BND), procn(i,2), itag, comm3d, req(4), ierr)
+            call MPI_Isend(A(1,1,1,1), 1, cg%mbc(MAG, i, LO, BLK), procn(i,LO), itag, comm3d, req(1), ierr)
+            call MPI_Isend(A(1,1,1,1), 1, cg%mbc(MAG, i, HI, BLK), procn(i,HI), jtag, comm3d, req(3), ierr)
+            call MPI_Irecv(A(1,1,1,1), 1, cg%mbc(MAG, i, LO, BND), procn(i,LO), jtag, comm3d, req(2), ierr)
+            call MPI_Irecv(A(1,1,1,1), 1, cg%mbc(MAG, i, HI, BND), procn(i,HI), itag, comm3d, req(4), ierr)
 
             call MPI_Waitall(4,req(:),status(:,:),ierr)
          endif
@@ -70,12 +70,12 @@ contains
    subroutine bnd_b(dir)
 
       use arrays,        only: b
+      use constants,     only: MAG, xdim, ydim, zdim, LO, HI, BND, BLK, BND_MPI, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_OUTH, BND_COR, BND_SHE, BND_INF
       use dataio_pub,    only: msg, warn, die
       use fluidindex,    only: ibx, iby, ibz
       use grid,          only: cg
       use mpi,           only: MPI_DOUBLE_PRECISION, MPI_COMM_NULL
       use mpisetup,      only: ierr, req, comm3d, procn, status, psize, procxyl, procyxl, pcoords, comm, master
-      use constants,     only: MAG, xdim, ydim, zdim, LO, HI, BND, BLK, BND_MPI, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_OUTH, BND_COR, BND_SHE, BND_INF
 #ifdef SHEAR
       use shear,         only: eps,delj
 #endif /* SHEAR */
@@ -140,10 +140,10 @@ contains
 !
 ! wysylamy na drugi brzeg
 !
-         call MPI_Isend(send_left , 3*cg%ny*cg%nz*cg%nb, MPI_DOUBLE_PRECISION, procn(dir,1), 10, comm, req(1), ierr)
-         call MPI_Isend(send_right, 3*cg%ny*cg%nz*cg%nb, MPI_DOUBLE_PRECISION, procn(dir,2), 20, comm, req(3), ierr)
-         call MPI_Irecv(recv_left , 3*cg%ny*cg%nz*cg%nb, MPI_DOUBLE_PRECISION, procn(dir,1), 20, comm, req(2), ierr)
-         call MPI_Irecv(recv_right, 3*cg%ny*cg%nz*cg%nb, MPI_DOUBLE_PRECISION, procn(dir,2), 10, comm, req(4), ierr)
+         call MPI_Isend(send_left , 3*cg%ny*cg%nz*cg%nb, MPI_DOUBLE_PRECISION, procn(dir,LO), 10, comm, req(1), ierr)
+         call MPI_Isend(send_right, 3*cg%ny*cg%nz*cg%nb, MPI_DOUBLE_PRECISION, procn(dir,HI), 20, comm, req(3), ierr)
+         call MPI_Irecv(recv_left , 3*cg%ny*cg%nz*cg%nb, MPI_DOUBLE_PRECISION, procn(dir,LO), 20, comm, req(2), ierr)
+         call MPI_Irecv(recv_right, 3*cg%ny*cg%nz*cg%nb, MPI_DOUBLE_PRECISION, procn(dir,HI), 10, comm, req(4), ierr)
 
          call MPI_Waitall(4,req(:),status(:,:),ierr)
 
@@ -163,10 +163,10 @@ contains
 
             jtag = 20*dir
             itag = jtag - 10
-            call MPI_Isend(b(1,1,1,1), 1, cg%mbc(MAG, dir, LO, BLK), procn(dir,1), itag, comm3d, req(1), ierr)
-            call MPI_Isend(b(1,1,1,1), 1, cg%mbc(MAG, dir, HI, BLK), procn(dir,2), jtag, comm3d, req(3), ierr)
-            call MPI_Irecv(b(1,1,1,1), 1, cg%mbc(MAG, dir, LO, BND), procn(dir,1), jtag, comm3d, req(2), ierr)
-            call MPI_Irecv(b(1,1,1,1), 1, cg%mbc(MAG, dir, HI, BND), procn(dir,2), itag, comm3d, req(4), ierr)
+            call MPI_Isend(b(1,1,1,1), 1, cg%mbc(MAG, dir, LO, BLK), procn(dir,LO), itag, comm3d, req(1), ierr)
+            call MPI_Isend(b(1,1,1,1), 1, cg%mbc(MAG, dir, HI, BLK), procn(dir,HI), jtag, comm3d, req(3), ierr)
+            call MPI_Irecv(b(1,1,1,1), 1, cg%mbc(MAG, dir, LO, BND), procn(dir,LO), jtag, comm3d, req(2), ierr)
+            call MPI_Irecv(b(1,1,1,1), 1, cg%mbc(MAG, dir, HI, BND), procn(dir,HI), itag, comm3d, req(4), ierr)
 
             call MPI_Waitall(4,req(:),status(:,:),ierr)
          endif

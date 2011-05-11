@@ -648,12 +648,12 @@ contains
       if (proczl /= MPI_PROC_NULL .and. proczl /= proc) bnd_zl = 'mpi'
       if (proczr /= MPI_PROC_NULL .and. proczr /= proc) bnd_zr = 'mpi'
 
-      procn(xdim,1) = procxl
-      procn(xdim,2) = procxr
-      procn(ydim,1) = procyl
-      procn(ydim,2) = procyr
-      procn(zdim,1) = proczl
-      procn(zdim,2) = proczr
+      procn(xdim,LO) = procxl
+      procn(xdim,HI) = procxr
+      procn(ydim,LO) = procyl
+      procn(ydim,HI) = procyr
+      procn(zdim,LO) = proczl
+      procn(zdim,HI) = proczr
 #ifdef DEBUG
       write(msg,*) 'xdir: ',procxl, proc, procxr
       call printinfo(msg)
