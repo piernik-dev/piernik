@@ -39,44 +39,31 @@ contains
    subroutine bnd_a(A)
 
       use dataio_pub, only: die
-      use mpisetup,   only: ierr, req, comm3d, procxl, procxr, procyl, procyr, proczl, proczr, status, psize
-      use constants,  only: MAG, xdim, ydim, zdim, LO, HI, BND, BLK
+      use mpisetup,   only: ierr, req, comm3d, procn, status, psize
+      use constants,  only: MAG, xdim, zdim, LO, HI, BND, BLK
       use grid,       only: cg
       use mpi,        only: MPI_COMM_NULL
 
       implicit none
 
       real, dimension(:,:,:,:) :: A
+      integer                  :: i, itag, jtag
 
       if (comm3d == MPI_COMM_NULL) call die("[magboundaries:bnd_a] comm3d == MPI_COMM_NULL")
 
-      if (psize(xdim) > 1) then
+      do i = xdim, zdim
+         if (psize(i) > 1) then
 
-         call MPI_Isend(A(1,1,1,1), 1, cg%mbc(MAG, xdim, LO, BLK), procxl, 10, comm3d, req(1), ierr)
-         call MPI_Isend(A(1,1,1,1), 1, cg%mbc(MAG, xdim, HI, BLK), procxr, 20, comm3d, req(3), ierr)
-         call MPI_Irecv(A(1,1,1,1), 1, cg%mbc(MAG, xdim, LO, BND), procxl, 20, comm3d, req(2), ierr)
-         call MPI_Irecv(A(1,1,1,1), 1, cg%mbc(MAG, xdim, HI, BND), procxr, 10, comm3d, req(4), ierr)
+            jtag = 20*i
+            itag = jtag - 10
+            call MPI_Isend(A(1,1,1,1), 1, cg%mbc(MAG, i, LO, BLK), procn(i,1), itag, comm3d, req(1), ierr)
+            call MPI_Isend(A(1,1,1,1), 1, cg%mbc(MAG, i, HI, BLK), procn(i,2), jtag, comm3d, req(3), ierr)
+            call MPI_Irecv(A(1,1,1,1), 1, cg%mbc(MAG, i, LO, BND), procn(i,1), jtag, comm3d, req(2), ierr)
+            call MPI_Irecv(A(1,1,1,1), 1, cg%mbc(MAG, i, HI, BND), procn(i,2), itag, comm3d, req(4), ierr)
 
-         call MPI_Waitall(4,req(:),status(:,:),ierr)
-      endif
-
-      if (psize(ydim) > 1) then
-         call MPI_Isend(A(1,1,1,1), 1, cg%mbc(MAG, ydim, LO, BLK), procyl, 30, comm3d, req(1), ierr)
-         call MPI_Isend(A(1,1,1,1), 1, cg%mbc(MAG, ydim, HI, BLK), procyr, 40, comm3d, req(3), ierr)
-         call MPI_Irecv(A(1,1,1,1), 1, cg%mbc(MAG, ydim, LO, BND), procyl, 40, comm3d, req(2), ierr)
-         call MPI_Irecv(A(1,1,1,1), 1, cg%mbc(MAG, ydim, HI, BND), procyr, 30, comm3d, req(4), ierr)
-
-         call MPI_Waitall(4,req(:),status(:,:),ierr)
-      endif
-
-      if (psize(zdim) > 1) then
-         call MPI_Isend(A(1,1,1,1), 1, cg%mbc(MAG, zdim, LO, BLK), proczl, 50, comm3d, req(1), ierr)
-         call MPI_Isend(A(1,1,1,1), 1, cg%mbc(MAG, zdim, HI, BLK), proczr, 60, comm3d, req(3), ierr)
-         call MPI_Irecv(A(1,1,1,1), 1, cg%mbc(MAG, zdim, LO, BND), proczl, 60, comm3d, req(2), ierr)
-         call MPI_Irecv(A(1,1,1,1), 1, cg%mbc(MAG, zdim, HI, BND), proczr, 50, comm3d, req(4), ierr)
-
-         call MPI_Waitall(4,req(:),status(:,:),ierr)
-      endif
+            call MPI_Waitall(4,req(:),status(:,:),ierr)
+         endif
+      enddo
 
    end subroutine bnd_a
 
@@ -87,7 +74,7 @@ contains
       use fluidindex,    only: ibx, iby, ibz
       use grid,          only: cg
       use mpi,           only: MPI_DOUBLE_PRECISION, MPI_COMM_NULL
-      use mpisetup,      only: ierr, req, comm3d, procxl, procxr, procyl, procyr, proczl, proczr, status, psize, procxyl, procyxl, pcoords, comm, master
+      use mpisetup,      only: ierr, req, comm3d, procn, status, psize, procxyl, procyxl, pcoords, comm, master
       use constants,     only: MAG, xdim, ydim, zdim, LO, HI, BND, BLK, BND_MPI, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_OUTH, BND_COR, BND_SHE, BND_INF
 #ifdef SHEAR
       use shear,         only: eps,delj
@@ -96,7 +83,7 @@ contains
       implicit none
 
       integer, intent(in) :: dir
-      integer           :: i, j
+      integer           :: i, j, itag, jtag
       real, allocatable :: send_left(:,:,:,:),recv_left(:,:,:,:)
 #ifdef SHEAR
       real, allocatable :: send_right(:,:,:,:),recv_right(:,:,:,:)
@@ -113,98 +100,80 @@ contains
 
 ! MPI block comunication
 
-      select case (dir)
-         case (xdim)
 #ifdef SHEAR
-            allocate(send_left(3, cg%nb, cg%ny, cg%nz),send_right(3, cg%nb, cg%ny, cg%nz), &
-                     recv_left(3, cg%nb, cg%ny, cg%nz),recv_right(3, cg%nb, cg%ny, cg%nz))
+      if (dir == xdim) then
+         allocate(send_left(3, cg%nb, cg%ny, cg%nz),send_right(3, cg%nb, cg%ny, cg%nz), &
+                  recv_left(3, cg%nb, cg%ny, cg%nz),recv_right(3, cg%nb, cg%ny, cg%nz))
 
-            send_left (:,:,:,:)  = b(:, cg%is:cg%isb,:,:)
-            send_right(:,:,:,:)  = b(:, cg%ieb:cg%ie,:,:)
+         send_left (:,:,:,:)  = b(:, cg%is:cg%isb,:,:)
+         send_right(:,:,:,:)  = b(:, cg%ieb:cg%ie,:,:)
 
-            if (cg%bnd(xdim, LO) == BND_SHE) then
+         if (cg%bnd(xdim, LO) == BND_SHE) then
 !
 ! przesuwamy o calkowita liczbe komorek + periodyczny wb w kierunku y
 !
-               send_left (:,:,  cg%js:cg%je,:) = cshift(send_left (:,:, cg%js :cg%je, :),dim=3,shift= delj)
-               send_left (:,:,      1:cg%nb,:) =        send_left (:,:, cg%jeb:cg%je, :)
-               send_left (:,:,cg%je+1:cg%ny,:) =        send_left (:,:, cg%js :cg%jsb,:)
+            send_left (:,:,  cg%js:cg%je,:) = cshift(send_left (:,:, cg%js :cg%je, :),dim=3,shift= delj)
+            send_left (:,:,      1:cg%nb,:) =        send_left (:,:, cg%jeb:cg%je, :)
+            send_left (:,:,cg%je+1:cg%ny,:) =        send_left (:,:, cg%js :cg%jsb,:)
 !
 ! remapujemy  - interpolacja kwadratowa
 !
-               send_left (:,:,:,:)  = (1.+eps)*(1.-eps) * send_left (:,:,:,:) &
-                                      -0.5*eps*(1.-eps) * cshift(send_left (:,:,:,:),shift=-1,dim=3) &
-                                      +0.5*eps*(1.+eps) * cshift(send_left (:,:,:,:),shift= 1,dim=3)
-            endif ! (cg%bnd(xdim, LO) == BND_SHE)
+            send_left (:,:,:,:)  = (1.+eps)*(1.-eps) * send_left (:,:,:,:) &
+                                   -0.5*eps*(1.-eps) * cshift(send_left (:,:,:,:),shift=-1,dim=3) &
+                                   +0.5*eps*(1.+eps) * cshift(send_left (:,:,:,:),shift= 1,dim=3)
+         endif ! (cg%bnd(xdim, LO) == BND_SHE)
 
-            if (cg%bnd(xdim, HI) == BND_SHE) then
+         if (cg%bnd(xdim, HI) == BND_SHE) then
 !
 ! przesuwamy o calkowita liczbe komorek + periodyczny wb w kierunku y
 !
-               send_right (:,:,  cg%js:cg%je,:) = cshift(send_right(:,:, cg%js :cg%je, :),dim=3,shift=-delj)
-               send_right (:,:,      1:cg%nb,:) =        send_right(:,:, cg%jeb:cg%je, :)
-               send_right (:,:,cg%je+1:cg%ny,:) =        send_right(:,:, cg%js :cg%jsb,:)
+            send_right (:,:,  cg%js:cg%je,:) = cshift(send_right(:,:, cg%js :cg%je, :),dim=3,shift=-delj)
+            send_right (:,:,      1:cg%nb,:) =        send_right(:,:, cg%jeb:cg%je, :)
+            send_right (:,:,cg%je+1:cg%ny,:) =        send_right(:,:, cg%js :cg%jsb,:)
 !
 ! remapujemy - interpolacja kwadratowa
 !
-               send_right (:,:,:,:) = (1.+eps)*(1.-eps) * send_right (:,:,:,:) &
-                                      -0.5*eps*(1.-eps) * cshift(send_right (:,:,:,:),shift= 1,dim=3) &
-                                      +0.5*eps*(1.+eps) * cshift(send_right (:,:,:,:),shift=-1,dim=3)
-            endif ! (cg%bnd(xdim, HI) == BND_SHE)
+            send_right (:,:,:,:) = (1.+eps)*(1.-eps) * send_right (:,:,:,:) &
+                                   -0.5*eps*(1.-eps) * cshift(send_right (:,:,:,:),shift= 1,dim=3) &
+                                   +0.5*eps*(1.+eps) * cshift(send_right (:,:,:,:),shift=-1,dim=3)
+         endif ! (cg%bnd(xdim, HI) == BND_SHE)
 !
 ! wysylamy na drugi brzeg
 !
-            call MPI_Isend(send_left , 3*cg%ny*cg%nz*cg%nb, MPI_DOUBLE_PRECISION, procxl, 10, comm, req(1), ierr)
-            call MPI_Isend(send_right, 3*cg%ny*cg%nz*cg%nb, MPI_DOUBLE_PRECISION, procxr, 20, comm, req(3), ierr)
-            call MPI_Irecv(recv_left , 3*cg%ny*cg%nz*cg%nb, MPI_DOUBLE_PRECISION, procxl, 20, comm, req(2), ierr)
-            call MPI_Irecv(recv_right, 3*cg%ny*cg%nz*cg%nb, MPI_DOUBLE_PRECISION, procxr, 10, comm, req(4), ierr)
+         call MPI_Isend(send_left , 3*cg%ny*cg%nz*cg%nb, MPI_DOUBLE_PRECISION, procn(dir,1), 10, comm, req(1), ierr)
+         call MPI_Isend(send_right, 3*cg%ny*cg%nz*cg%nb, MPI_DOUBLE_PRECISION, procn(dir,2), 20, comm, req(3), ierr)
+         call MPI_Irecv(recv_left , 3*cg%ny*cg%nz*cg%nb, MPI_DOUBLE_PRECISION, procn(dir,1), 20, comm, req(2), ierr)
+         call MPI_Irecv(recv_right, 3*cg%ny*cg%nz*cg%nb, MPI_DOUBLE_PRECISION, procn(dir,2), 10, comm, req(4), ierr)
 
-            call MPI_Waitall(4,req(:),status(:,:),ierr)
+         call MPI_Waitall(4,req(:),status(:,:),ierr)
 
-            b(:,        1:cg%nb-1,:,:) = recv_left (:,  1:cg%nb-1,:,:)
-            b(:,cg%ie+1+1:cg%nx,  :,:) = recv_right(:,1+1:cg%nb,  :,:)
+         b(:,        1:cg%nb-1,:,:) = recv_left (:,  1:cg%nb-1,:,:)
+         b(:,cg%ie+1+1:cg%nx,  :,:) = recv_right(:,1+1:cg%nb,  :,:)
 
-            if (allocated(send_left))  deallocate(send_left)
-            if (allocated(send_right)) deallocate(send_right)
-            if (allocated(recv_left))  deallocate(recv_left)
-            if (allocated(recv_right)) deallocate(recv_right)
+         if (allocated(send_left))  deallocate(send_left)
+         if (allocated(send_right)) deallocate(send_right)
+         if (allocated(recv_left))  deallocate(recv_left)
+         if (allocated(recv_right)) deallocate(recv_right)
 
 !===============================================================================
-#else /* !SHEAR */
+      else
+#endif /* SHEAR */
 
-            if (psize(xdim) > 1) then
+         if (psize(dir) > 1) then
 
-               call MPI_Isend(b(1,1,1,1), 1, cg%mbc(MAG, xdim, LO, BLK), procxl, 10, comm3d, req(1), ierr)
-               call MPI_Isend(b(1,1,1,1), 1, cg%mbc(MAG, xdim, HI, BLK), procxr, 20, comm3d, req(3), ierr)
-               call MPI_Irecv(b(1,1,1,1), 1, cg%mbc(MAG, xdim, LO, BND), procxl, 20, comm3d, req(2), ierr)
-               call MPI_Irecv(b(1,1,1,1), 1, cg%mbc(MAG, xdim, HI, BND), procxr, 10, comm3d, req(4), ierr)
+            jtag = 20*dir
+            itag = jtag - 10
+            call MPI_Isend(b(1,1,1,1), 1, cg%mbc(MAG, dir, LO, BLK), procn(dir,1), itag, comm3d, req(1), ierr)
+            call MPI_Isend(b(1,1,1,1), 1, cg%mbc(MAG, dir, HI, BLK), procn(dir,2), jtag, comm3d, req(3), ierr)
+            call MPI_Irecv(b(1,1,1,1), 1, cg%mbc(MAG, dir, LO, BND), procn(dir,1), jtag, comm3d, req(2), ierr)
+            call MPI_Irecv(b(1,1,1,1), 1, cg%mbc(MAG, dir, HI, BND), procn(dir,2), itag, comm3d, req(4), ierr)
 
-               call MPI_Waitall(4,req(:),status(:,:),ierr)
+            call MPI_Waitall(4,req(:),status(:,:),ierr)
+         endif
 
-            endif
-#endif /* !SHEAR */
-
-         case (ydim)
-            if (psize(ydim) > 1) then
-
-               call MPI_Isend(b(1,1,1,1), 1, cg%mbc(MAG, ydim, LO, BLK), procyl, 30, comm3d, req(1), ierr)
-               call MPI_Isend(b(1,1,1,1), 1, cg%mbc(MAG, ydim, HI, BLK), procyr, 40, comm3d, req(3), ierr)
-               call MPI_Irecv(b(1,1,1,1), 1, cg%mbc(MAG, ydim, LO, BND), procyl, 40, comm3d, req(2), ierr)
-               call MPI_Irecv(b(1,1,1,1), 1, cg%mbc(MAG, ydim, HI, BND), procyr, 30, comm3d, req(4), ierr)
-
-               call MPI_Waitall(4,req(:),status(:,:),ierr)
-            endif
-
-         case (zdim)
-            if (psize(zdim) > 1) then
-               call MPI_Isend(b(1,1,1,1), 1, cg%mbc(MAG, zdim, LO, BLK), proczl, 50, comm3d, req(1), ierr)
-               call MPI_Isend(b(1,1,1,1), 1, cg%mbc(MAG, zdim, HI, BLK), proczr, 60, comm3d, req(3), ierr)
-               call MPI_Irecv(b(1,1,1,1), 1, cg%mbc(MAG, zdim, LO, BND), proczl, 60, comm3d, req(2), ierr)
-               call MPI_Irecv(b(1,1,1,1), 1, cg%mbc(MAG, zdim, HI, BND), proczr, 50, comm3d, req(4), ierr)
-
-               call MPI_Waitall(4,req(:),status(:,:),ierr)
-            endif
-      end select ! (dim)
+#ifdef SHEAR
+      endif
+#endif /* SHEAR */
 
 ! MPI + non-MPI corner-periodic boundary condition
 

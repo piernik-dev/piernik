@@ -239,9 +239,9 @@ contains
       use gridgeometry,     only: gc, geometry_source_terms
 #ifdef BALSARA
       use interactions,     only: balsara_implicit_interactions
-#else
+#else /* !BALSARA */
       use interactions,     only: fluid_interactions
-#endif /* BALSARA */
+#endif /* !BALSARA */
 #ifndef ISO
       use fluidindex,       only: iarr_all_en
       use mpisetup,         only: smallei
@@ -281,10 +281,10 @@ contains
       real,                        intent(in)     :: dx                 !< cell length
       real,                        intent(in)     :: dt                 !< time step
       integer,                     intent(in)     :: istep              !< step number in the time integration scheme
-#if defined GRAV
+#ifdef GRAV
       integer                        :: ind                !< fluid index
       real, dimension(n)             :: gravacc            !< acceleration caused by gravitation
-#endif /* defined GRAV */
+#endif /* GRAV */
 
       real                           :: dtx                !< dt/dx
       real, dimension(flind%all,n)    :: cfr                !< freezing speed
@@ -417,7 +417,7 @@ contains
       acc = acc + fluid_interactions(dens, vx)
 #else /* !BALSARA */
       call balsara_implicit_interactions(u1,u0,vx,istep)
-#endif /* BALSARA */
+#endif /* !BALSARA */
 #ifdef SHEAR
       acc = acc + shear_acc(sweep,u)
 #endif /* SHEAR */

@@ -45,7 +45,7 @@ module mpisetup
    public :: cleanup_mpi, init_mpi, mpifind, translate_bnds_to_ints_dom, is_neigh, &
         &    buffer_dim, cbuff, ibuff, lbuff, rbuff, comm, comm3d, req, status, ierr, info, &
         &    master, slave, have_mpi, has_dir, eff_dim, is_uneven, is_mpi_noncart, &
-        &    nproc, pcoords, proc, procxl, procxr, procxyl, procyl, procyr, procyxl, proczl, proczr, psize, &
+        &    nproc, pcoords, proc, procn, procxl, procxr, procxyl, procyl, procyr, procyxl, proczl, proczr, psize, &
         &    dom, geometry_type, &
         &    cfl, cfl_max, cflcontrol, cfl_violated, &
         &    dt, dt_initial, dt_max_grow, dt_min, dt_old, dtm, t, nstep, &
@@ -69,6 +69,7 @@ module mpisetup
    integer, protected        :: comm, comm3d
    integer, dimension(ndims), protected :: pcoords
    integer, protected               ::   procxl, procxr, procyl, procyr, proczl, proczr, procxyl, procyxl, procxyr, procyxr
+   integer, protected, dimension(ndims,2) :: procn   !< array of neighbours proc numbers
    logical, protected, dimension(ndims) :: has_dir   !< .true. for existing directions
    integer, protected    :: eff_dim                  !< effective dimensionality of the simulation
 
@@ -647,6 +648,12 @@ contains
       if (proczl /= MPI_PROC_NULL .and. proczl /= proc) bnd_zl = 'mpi'
       if (proczr /= MPI_PROC_NULL .and. proczr /= proc) bnd_zr = 'mpi'
 
+      procn(xdim,1) = procxl
+      procn(xdim,2) = procxr
+      procn(ydim,1) = procyl
+      procn(ydim,2) = procyr
+      procn(zdim,1) = proczl
+      procn(zdim,2) = proczr
 #ifdef DEBUG
       write(msg,*) 'xdir: ',procxl, proc, procxr
       call printinfo(msg)
