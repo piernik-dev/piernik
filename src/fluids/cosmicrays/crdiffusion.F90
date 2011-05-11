@@ -39,6 +39,98 @@ module crdiffusion
    public :: cr_diff_x, cr_diff_y, cr_diff_z
 
 contains
+!>
+!! \brief boundaries for wcr
+!! This procedure is a shameless copy of grid::arr3d_boundaries adapted for wcr
+!! \todo REMOVE ME, FIX ME, MERGE ME with grid::arr3d_boundaries or at least
+!!  have a decency to make me more general
+!<
+   subroutine all_wcr_boundaries
+   use arrays,        only: wcr   !< \todo doesn't it belong only to this module? What's the point in keeping it in arrays...
+      use dataio_pub,    only: die
+      use mpi,           only: MPI_STATUS_SIZE, MPI_REQUEST_NULL
+      use constants,     only: CR, xdim, ydim, zdim, LO, HI, BND, BLK, BND_PER, BND_MPI
+      use mpisetup,      only: comm, ierr, has_dir, psize, procxl, procyl, proczl, procxr, procyr, proczr
+      use grid,          only: cg
+      implicit none
+      integer, parameter                          :: nreq = 3 * 4
+      integer, dimension(nreq)                    :: req3d
+      integer, dimension(MPI_STATUS_SIZE, nreq)   :: status3d
+      integer                                     :: i, d, lh, p
+
+      req3d(:) = MPI_REQUEST_NULL
+
+      do d = xdim, zdim
+         if (has_dir(d)) then
+            do lh = LO, HI
+               select case (cg%bnd(d, lh))
+                  case (BND_PER)
+                     do i = 1, ceiling(cg%nb/real(cg%n_b(d))) ! Repeating is important for domains that are narrower than their guardcells (e.g. cg%n_b(d) = 2)
+                        select case (2*d+lh)
+                           case (2*xdim+LO)
+                              wcr(:,1:cg%nb, :, :) = wcr(:,cg%ieb:cg%ie, :, :)
+                           case (2*ydim+LO)
+                              wcr(:,:, 1:cg%nb, :) = wcr(:,:, cg%jeb:cg%je, :)
+                           case (2*zdim+LO)
+                              wcr(:,:, :, 1:cg%nb) = wcr(:,:, :, cg%keb:cg%ke)
+                           case (2*xdim+HI)
+                              wcr(:,cg%ie+1:cg%nx, :, :) = wcr(:,cg%is:cg%isb, :, :)
+                           case (2*ydim+HI)
+                              wcr(:,:, cg%je+1:cg%ny, :) = wcr(:,:, cg%js:cg%jsb, :)
+                           case (2*zdim+HI)
+                              wcr(:,:, :, cg%ke+1:cg%nz) = wcr(:,:, :, cg%ks:cg%ksb)
+                        end select
+                     enddo
+                  case (BND_MPI)
+                     if (psize(d) > 1) then
+                        select case (2*d+lh)
+                           case (2*xdim+LO)
+                              p = procxl
+                           case (2*ydim+LO)
+                              p = procyl
+                           case (2*zdim+LO)
+                              p = proczl
+                           case (2*xdim+HI)
+                              p = procxr
+                           case (2*ydim+HI)
+                              p = procyr
+                           case (2*zdim+HI)
+                              p = proczr
+                        end select
+                        call MPI_Isend(wcr(1,1,1,1), 1, cg%mbc(CR, d, lh, BLK),  p, 2*d+(LO+HI-lh), comm, req3d(4*(d-xdim)+1+2*(lh-LO)), ierr)
+                        call MPI_Irecv(wcr(1,1,1,1), 1, cg%mbc(CR, d, lh, BND),  p, 2*d+       lh,  comm, req3d(4*(d-xdim)+2+2*(lh-LO)), ierr)
+                    else
+                        call die("[crdiffiusion:all_wcr_boundaries] bnd_[xyz][lr] == 'mpi' && psize([xyz]dim) <= 1")
+                     endif
+                  case default ! Set gradient == 0 on the external boundaries
+                     do i = 1, cg%nb
+                        select case (2*d+lh)
+                           case (2*xdim+LO)
+                              wcr(:, i, :, :) = wcr(:, cg%is, :, :)
+                           case (2*ydim+LO)
+                              wcr(:, :, i, :) = wcr(:, :, cg%js, :)
+                           case (2*zdim+LO)
+                              wcr(:, :, :, i) = wcr(:, :, :, cg%ks)
+                           case (2*xdim+HI)
+                              wcr(:, cg%ie+i, :, :) = wcr(:, cg%ie, :, :)
+                           case (2*ydim+HI)
+                              wcr(:, :, cg%je+i, :) = wcr(:, :, cg%je, :)
+                           case (2*zdim+HI)
+                              wcr(:, :, :, cg%ke+i) = wcr(:, :, :, cg%ke)
+                        end select
+                     enddo
+               end select
+
+            enddo
+         endif
+         !>
+         !! \warning outside xdim-zdim loop MPI_Waitall may change the operations order (at least for openmpi-1.4.3)
+         !! and as a result may leave mpi-corners uninitiallized
+         !<
+         call MPI_Waitall(nreq, req3d(:), status3d(:,:), ierr)
+      enddo
+
+   end subroutine all_wcr_boundaries
 
 !>
 !! \brief Diffusive transport of ecr in 1-direction
@@ -56,18 +148,12 @@ contains
 
       integer :: i, j, k
       real    :: b1b, b2b, b3b, bb
-      real, dimension(flind%crs%all) :: decr1, decr2, decr3, fcrdif1
-      real, dimension(flind%crs%all) :: dqp, dqm
+      real, dimension(flind%crs%all)  :: decr1, decr2, decr3, fcrdif1
+      real, dimension(flind%crs%all)  :: dqp, dqm
 
       !=======================================================================
 
       if (.not.has_dir(xdim)) return
-
-      wcr(:, 1, :, :) = 0.
-      wcr(:, :, :, :cg%ks-1) = 0.
-      wcr(:, :, :, cg%ke+1:) = 0.
-      wcr(:, :, :cg%js-1, :) = 0.
-      wcr(:, :, cg%je+1:, :) = 0.
 
       do k=cg%ks, cg%ke
          do j=cg%js, cg%je
@@ -107,6 +193,7 @@ contains
          enddo
       enddo
 
+      call all_wcr_boundaries
       u(iarr_crs,1:cg%nx-1,:,:) = u(iarr_crs,1:cg%nx-1,:,:) - ( wcr(:,2:cg%nx,:,:) - wcr(:,1:cg%nx-1,:,:) )
       u(iarr_crs, cg%nx,:,:) = u(iarr_crs, cg%nx-1,:,:) ! for sanity
 
@@ -128,18 +215,12 @@ contains
 
       integer :: i, j, k
       real    :: b1b, b2b, b3b, bb
-      real, dimension(flind%crs%all) :: decr1, decr2, decr3, fcrdif2
-      real, dimension(flind%crs%all) :: dqp, dqm
+      real, dimension(flind%crs%all)  :: decr1, decr2, decr3, fcrdif2
+      real, dimension(flind%crs%all)  :: dqp, dqm
 
 !=======================================================================
 
       if (.not.has_dir(ydim)) return
-
-      wcr(:, :, 1, :) = 0.
-      wcr(:, :cg%is-1, :, :) = 0.
-      wcr(:, cg%ie+1:, :, :) = 0.
-      wcr(:, :, :, :cg%ks-1) = 0.
-      wcr(:, :, :, cg%ke+1:) = 0.
 
       do k=cg%ks, cg%ke
          do j=2, cg%ny ! if we are here nyb /= 1
@@ -179,6 +260,7 @@ contains
          enddo
       enddo
 
+      call all_wcr_boundaries
       u(iarr_crs,:,1:cg%ny-1,:) = u(iarr_crs,:,1:cg%ny-1,:) - ( wcr(:,:,2:cg%ny,:) - wcr(:,:,1:cg%ny-1,:) )
       u(iarr_crs,:, cg%ny,:) = u(iarr_crs,:, cg%ny-1,:) ! for sanity
 
@@ -206,12 +288,6 @@ contains
 !=======================================================================
 
       if (.not.has_dir(zdim)) return
-
-      wcr(:, :, :, 1) = 0.
-      wcr(:, :cg%is-1, :, :) = 0.
-      wcr(:, cg%ie+1:, :, :) = 0.
-      wcr(:, :, :cg%js-1, :) = 0.
-      wcr(:, :, cg%je+1:, :) = 0.
 
       do k=2, cg%nz      ! nzb /= 1
          do j=cg%js, cg%je
@@ -251,6 +327,7 @@ contains
          enddo
       enddo
 
+      call all_wcr_boundaries
       u(iarr_crs,:,:,1:cg%nz-1) = u(iarr_crs,:,:,1:cg%nz-1) - ( wcr(:,:,:,2:cg%nz) - wcr(:,:,:,1:cg%nz-1) )
       u(iarr_crs,:,:, cg%nz) = u(iarr_crs,:,:, cg%nz-1) ! for sanity
 
