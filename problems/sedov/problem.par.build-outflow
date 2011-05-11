@@ -1,7 +1,7 @@
  $DOMAIN
-    nxd = 32
-    nyd = 32
-    nzd = 32
+    nxd = 64
+    nyd = 56
+    nzd = 48
     nb  = 5
     bnd_xl = 'out'
     bnd_xr = 'out'
@@ -31,17 +31,17 @@
  /
 
  $END_CONTROL
-    tend   = 0.0015
-    nend   = 10
+    tend   = 0.015
+    nend   = 5
  /
 
  $OUTPUT_CONTROL
     problem_name ='sedov'
-    run_id =  'tst'
+    run_id =  't11'
     ix = 0
     iy = 0
     iz = 0
-    dt_hdf  = 0.0
+    dt_hdf  = 0.1
     dt_res  = 0.0
     dt_plt  = 0.0
     dt_log  = 0.0
@@ -59,11 +59,11 @@
  /
 
  $FLUID_IONIZED
-    gamma_ion  = 1.666666666
+    gamma_ion  = 1.666666667
  /
 
  $FLUID_NEUTRAL
-    gamma_neu = 1.666666666
+    gamma_neu = 1.666666667
  /
 
  $NUMERICAL_SETUP
@@ -81,9 +81,9 @@
     d0     = 1.0
     p0     = 1.0
     Eexpl  = 1.e4
-    bx0    = 0.0
-    by0    = 0.0
-    bz0    = 0.0
+    bx0    = -1.0
+    by0    = 1.0
+    bz0    = 0.5
     x0     = -0.0
     y0     = -0.0
     z0     = -0.0
