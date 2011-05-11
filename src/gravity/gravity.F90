@@ -785,7 +785,7 @@ contains
 
       implicit none
 
-      integer                             :: i, j, k, ip, pgpmax
+      integer                             :: i, j, k, ip
       real, allocatable, dimension(:,:,:), target :: gpwork
       real, dimension(:,:,:), pointer     :: p
       real                                :: gravrx(cg%nx), gravry(cg%ny), gravrz(cg%nz)
@@ -878,9 +878,8 @@ contains
       gpwork = gpwork + ddgp(px,py,pz)
       p => gpwork(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
       call get_extremum(p, MAXL, gp_max)
-      pgpmax = gp_max%proc
 
-      call MPI_Bcast(gp_max, 1, MPI_DOUBLE_PRECISION, pgpmax, comm, ierr)
+      call MPI_Bcast(gp_max%val, 1, MPI_DOUBLE_PRECISION, gp_max%proc, comm, ierr)
       gpwork = gpwork - gp_max%val
 
       gp=gpwork
