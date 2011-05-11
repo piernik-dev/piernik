@@ -27,6 +27,9 @@
 !
 #include "piernik.h"
 
+!>
+!! \todo remove workaround for http://gcc.gnu.org/bugzilla/show_bug.cgi?id=48955
+!<
 module advects
 ! pulled by MAGNETIC
    implicit none
@@ -48,6 +51,7 @@ contains
 
       implicit none
       real, dimension(cg%nx) :: vxby, by_x, vx
+      real, dimension(cg%nx) :: vx0 !< \todo workaround for bug in gcc-4.6, REMOVE ME
       integer             :: j, k, jm, j_s, j_e
 
       vxby = 0.0
@@ -65,11 +69,14 @@ contains
             jm=j-1
             vx=0.0
             if (jm == 0) then
-               vx = u(flind%ion%imx,:,1,k) / u(flind%ion%idn,:,1,k)
+               !vx = u(flind%ion%imx,:,1,k) / u(flind%ion%idn,:,1,k)
+               vx0 = u(flind%ion%imx,:,1,k) / u(flind%ion%idn,:,1,k) !< \todo workaround for bug in gcc-4.6, REMOVE ME
             else
-               vx=(u(flind%ion%imx,:,jm,k)+u(flind%ion%imx,:,j,k))/(u(flind%ion%idn,:,jm,k)+u(flind%ion%idn,:,j,k))
+               !vx =(u(flind%ion%imx,:,jm,k)+u(flind%ion%imx,:,j,k))/(u(flind%ion%idn,:,jm,k)+u(flind%ion%idn,:,j,k))
+               vx0 =(u(flind%ion%imx,:,jm,k)+u(flind%ion%imx,:,j,k))/(u(flind%ion%idn,:,jm,k)+u(flind%ion%idn,:,j,k)) !< \todo workaround for bug in gcc-4.6, REMOVE ME
             endif
-            vx(2:cg%nx-1)=(vx(1:cg%nx-2) + vx(3:cg%nx) + 2.0*vx(2:cg%nx-1))*0.25
+            !vx(2:cg%nx-1)=(vx(1:cg%nx-2) + vx(3:cg%nx) + 2.0*vx(2:cg%nx-1))*0.25
+            vx(2:cg%nx-1)=(vx0(1:cg%nx-2) + vx0(3:cg%nx) + 2.0*vx0(2:cg%nx-1))*0.25 !< \todo workaround for bug in gcc-4.6, REMOVE ME
             vx(1)  = vx(2)
             vx(cg%nx) = vx(cg%nx-1)
             by_x=b(iby,:,j,k)
@@ -99,6 +106,7 @@ contains
       implicit none
 
       real, dimension(cg%nx) :: vxbz, bz_x, vx
+      real, dimension(cg%nx) :: vx0 !< \todo workaround for bug in gcc-4.6, REMOVE ME
       integer             :: j, k, km, k_s, k_e
 
       vxbz = 0.0
@@ -116,11 +124,14 @@ contains
          do j=cg%js, cg%je
             vx=0.0
             if (km == 0) then
-               vx = u(flind%ion%imx,:,j,1) / u(flind%ion%idn,:,j,1)
+               !vx = u(flind%ion%imx,:,j,1) / u(flind%ion%idn,:,j,1)
+               vx0 = u(flind%ion%imx,:,j,1) / u(flind%ion%idn,:,j,1) !< \todo workaround for bug in gcc-4.6, REMOVE ME
             else
-               vx=(u(flind%ion%imx,:,j,km)+u(flind%ion%imx,:,j,k))/(u(flind%ion%idn,:,j,km)+u(flind%ion%idn,:,j,k))
+               !vx = (u(flind%ion%imx,:,j,km)+u(flind%ion%imx,:,j,k))/(u(flind%ion%idn,:,j,km)+u(flind%ion%idn,:,j,k))
+               vx0 = (u(flind%ion%imx,:,j,km)+u(flind%ion%imx,:,j,k))/(u(flind%ion%idn,:,j,km)+u(flind%ion%idn,:,j,k)) !< \todo workaround for bug in gcc-4.6, REMOVE ME
             endif
-            vx(2:cg%nx-1)=(vx(1:cg%nx-2) + vx(3:cg%nx) + 2.0*vx(2:cg%nx-1))*0.25
+            !vx(2:cg%nx-1)=(vx(1:cg%nx-2) + vx(3:cg%nx) + 2.0*vx(2:cg%nx-1))*0.25
+            vx(2:cg%nx-1)=(vx0(1:cg%nx-2) + vx0(3:cg%nx) + 2.0*vx0(2:cg%nx-1))*0.25 !< \todo workaround for bug in gcc-4.6, REMOVE ME
             vx(1)  = vx(2)
             vx(cg%nx) = vx(cg%nx-1)
             bz_x=b(ibz,:,j,k)
@@ -150,6 +161,7 @@ contains
       implicit none
 
       real, dimension(cg%ny) :: vybz, bz_y, vy
+      real, dimension(cg%ny) :: vy0 !< \todo workaround for bug in gcc-4.6, REMOVE ME
       integer             :: i, k, km, k_s, k_e
 
       vybz = 0.0
@@ -166,11 +178,14 @@ contains
          do i=cg%is, cg%ie
             vy=0.0
             if (km == 0) then
-               vy = u(flind%ion%imy,i,:,1) / u(flind%ion%idn,i,:,1)
+               !vy = u(flind%ion%imy,i,:,1) / u(flind%ion%idn,i,:,1)
+               vy0 = u(flind%ion%imy,i,:,1) / u(flind%ion%idn,i,:,1) !< \todo workaround for bug in gcc-4.6, REMOVE ME
             else
-               vy=(u(flind%ion%imy,i,:,km)+u(flind%ion%imy,i,:,k))/(u(flind%ion%idn,i,:,km)+u(flind%ion%idn,i,:,k))
+               !vy=(u(flind%ion%imy,i,:,km)+u(flind%ion%imy,i,:,k))/(u(flind%ion%idn,i,:,km)+u(flind%ion%idn,i,:,k))
+               vy0=(u(flind%ion%imy,i,:,km)+u(flind%ion%imy,i,:,k))/(u(flind%ion%idn,i,:,km)+u(flind%ion%idn,i,:,k)) !< \todo workaround for bug in gcc-4.6, REMOVE ME
             endif
-            vy(2:cg%ny-1)=(vy(1:cg%ny-2) + vy(3:cg%ny) + 2.0*vy(2:cg%ny-1))*0.25
+            !vy(2:cg%ny-1)=(vy(1:cg%ny-2) + vy(3:cg%ny) + 2.0*vy(2:cg%ny-1))*0.25
+            vy(2:cg%ny-1)=(vy0(1:cg%ny-2) + vy0(3:cg%ny) + 2.0*vy0(2:cg%ny-1))*0.25 !< \todo workaround for bug in gcc-4.6, REMOVE ME
             vy(1)  = vy(2)
             vy(cg%ny) = vy(cg%ny-1)
             bz_y=b(ibz,i,:,k)
@@ -200,6 +215,7 @@ contains
       implicit none
 
       real, dimension(cg%ny) :: vybx, bx_y, vy
+      real, dimension(cg%ny) :: vy0 !< \todo workaround for bug in gcc-4.6, REMOVE ME
       integer             :: k, i, im, i_s, i_e
 
       vybx = 0.0
@@ -217,11 +233,14 @@ contains
             im=i-1
             vy=0.0
             if (im == 0) then
-               vy = u(flind%ion%imy,1,:,k) / u(flind%ion%idn,1,:,k)
+               !vy = u(flind%ion%imy,1,:,k) / u(flind%ion%idn,1,:,k)
+               vy0 = u(flind%ion%imy,1,:,k) / u(flind%ion%idn,1,:,k) !< \todo workaround for bug in gcc-4.6, REMOVE ME
             else
-               vy=(u(flind%ion%imy,im,:,k)+u(flind%ion%imy,i,:,k))/(u(flind%ion%idn,im,:,k)+u(flind%ion%idn,i,:,k))
+               !vy=(u(flind%ion%imy,im,:,k)+u(flind%ion%imy,i,:,k))/(u(flind%ion%idn,im,:,k)+u(flind%ion%idn,i,:,k))
+               vy0=(u(flind%ion%imy,im,:,k)+u(flind%ion%imy,i,:,k))/(u(flind%ion%idn,im,:,k)+u(flind%ion%idn,i,:,k)) !< \todo workaround for bug in gcc-4.6, REMOVE ME
             endif
-            vy(2:cg%ny-1)=(vy(1:cg%ny-2) + vy(3:cg%ny) + 2.0*vy(2:cg%ny-1))*0.25
+            !vy(2:cg%ny-1)=(vy(1:cg%ny-2) + vy(3:cg%ny) + 2.0*vy(2:cg%ny-1))*0.25
+            vy(2:cg%ny-1)=(vy0(1:cg%ny-2) + vy0(3:cg%ny) + 2.0*vy0(2:cg%ny-1))*0.25 !< \todo workaround for bug in gcc-4.6, REMOVE ME
             vy(1)  = vy(2)
             vy(cg%ny) = vy(cg%ny-1)
             bx_y=b(ibx,i,:,k)
@@ -249,6 +268,7 @@ contains
 
       implicit none
       real, dimension(cg%nz)  :: vzbx, bx_z, vz
+      real, dimension(cg%nz)  :: vz0 !< \todo workaround for bug in gcc-4.6, REMOVE ME
       integer              :: j, i, im, i_s, i_e
 
       vzbx = 0.0
@@ -265,11 +285,14 @@ contains
             im=i-1
             vz=0.0
             if (im == 0) then
-               vz = u(flind%ion%imz,1,j,:) / u(flind%ion%idn,1,j,:)
+               !vz = u(flind%ion%imz,1,j,:) / u(flind%ion%idn,1,j,:)
+               vz0 = u(flind%ion%imz,1,j,:) / u(flind%ion%idn,1,j,:) !< \todo workaround for bug in gcc-4.6, REMOVE ME
             else
-               vz = (u(flind%ion%imz,im,j,:)+u(flind%ion%imz,i,j,:))/(u(flind%ion%idn,im,j,:)+u(flind%ion%idn,i,j,:))
+               !vz = (u(flind%ion%imz,im,j,:)+u(flind%ion%imz,i,j,:))/(u(flind%ion%idn,im,j,:)+u(flind%ion%idn,i,j,:))
+               vz0 = (u(flind%ion%imz,im,j,:)+u(flind%ion%imz,i,j,:))/(u(flind%ion%idn,im,j,:)+u(flind%ion%idn,i,j,:)) !< \todo workaround for bug in gcc-4.6, REMOVE ME
             endif
-            vz(2:cg%nz-1)=(vz(1:cg%nz-2) + vz(3:cg%nz) + 2.0*vz(2:cg%nz-1))*0.25
+            !vz(2:cg%nz-1)=(vz(1:cg%nz-2) + vz(3:cg%nz) + 2.0*vz(2:cg%nz-1))*0.25
+            vz(2:cg%nz-1)=(vz0(1:cg%nz-2) + vz0(3:cg%nz) + 2.0*vz0(2:cg%nz-1))*0.25 !< \todo workaround for bug in gcc-4.6, REMOVE ME
             vz(1)  = vz(2)
             vz(cg%nz) = vz(cg%nz-1)
             bx_z=b(ibx,i,j,:)
@@ -299,6 +322,7 @@ contains
       implicit none
 
       real, dimension(cg%nz) :: vzby, by_z, vz
+      real, dimension(cg%nz) :: vz0 !< \todo workaround for bug in gcc-4.6, REMOVE ME
       integer             :: i, j, jm, j_s, j_e
 
       vzby = 0.0
@@ -315,11 +339,14 @@ contains
          do i=cg%is, cg%ie
             vz=0.0
             if (jm == 0) then
-               vz = u(flind%ion%imz,i,1,:) / u(flind%ion%idn,i,1,:)
+               !vz = u(flind%ion%imz,i,1,:) / u(flind%ion%idn,i,1,:)
+               vz0 = u(flind%ion%imz,i,1,:) / u(flind%ion%idn,i,1,:) !< \todo workaround for bug in gcc-4.6, REMOVE ME
             else
-               vz=(u(flind%ion%imz,i,jm,:)+u(flind%ion%imz,i,j,:))/(u(flind%ion%idn,i,jm,:)+u(flind%ion%idn,i,j,:))
+               !vz=(u(flind%ion%imz,i,jm,:)+u(flind%ion%imz,i,j,:))/(u(flind%ion%idn,i,jm,:)+u(flind%ion%idn,i,j,:))
+               vz0=(u(flind%ion%imz,i,jm,:)+u(flind%ion%imz,i,j,:))/(u(flind%ion%idn,i,jm,:)+u(flind%ion%idn,i,j,:)) !< \todo workaround for bug in gcc-4.6, REMOVE ME
             endif
-            vz(2:cg%nz-1)=(vz(1:cg%nz-2) + vz(3:cg%nz) + 2.0*vz(2:cg%nz-1))*0.25
+            !vz(2:cg%nz-1)=(vz(1:cg%nz-2) + vz(3:cg%nz) + 2.0*vz(2:cg%nz-1))*0.25
+            vz(2:cg%nz-1)=(vz0(1:cg%nz-2) + vz0(3:cg%nz) + 2.0*vz0(2:cg%nz-1))*0.25 !< \todo workaround for bug in gcc-4.6, REMOVE ME
             vz(1)  = vz(2)
             vz(cg%nz) = vz(cg%nz-1)
             by_z=b(iby,i,j,:)
