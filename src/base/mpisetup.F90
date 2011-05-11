@@ -45,7 +45,7 @@ module mpisetup
    public :: cleanup_mpi, init_mpi, mpifind, translate_bnds_to_ints_dom, is_neigh, &
         &    buffer_dim, cbuff, ibuff, lbuff, rbuff, comm, comm3d, req, status, ierr, info, &
         &    master, slave, have_mpi, has_dir, eff_dim, is_uneven, is_mpi_noncart, &
-        &    nproc, pcoords, proc, procn, procxl, procxr, procxyl, procyl, procyr, procyxl, proczl, proczr, psize, &
+        &    nproc, pcoords, proc, procn, psize, procxyl, procyxl, &
         &    dom, geometry_type, &
         &    cfl, cfl_max, cflcontrol, cfl_violated, &
         &    dt, dt_initial, dt_max_grow, dt_min, dt_old, dtm, t, nstep, &
@@ -68,8 +68,8 @@ module mpisetup
 
    integer, protected        :: comm, comm3d
    integer, dimension(ndims), protected :: pcoords
-   integer, protected               ::   procxl, procxr, procyl, procyr, proczl, proczr, procxyl, procyxl, procxyr, procyxr
-   integer, protected, dimension(ndims,2) :: procn   !< array of neighbours proc numbers
+   integer, protected :: procxyl, procyxl!, procxyr, procyxr
+   integer, protected, dimension(ndims, LO:HI) :: procn   !< array of neighbours proc numbers
    logical, protected, dimension(ndims) :: has_dir   !< .true. for existing directions
    integer, protected    :: eff_dim                  !< effective dimensionality of the simulation
 
@@ -562,9 +562,7 @@ contains
       allocate(dom%se(0:nproc-1, xdim:zdim, LO:HI))
       dom%se(:, :, :) = 0
 
-      procxl = MPI_PROC_NULL; procxr = MPI_PROC_NULL
-      procyl = MPI_PROC_NULL; procyr = MPI_PROC_NULL
-      proczl = MPI_PROC_NULL; proczr = MPI_PROC_NULL
+      procn(:,:) = MPI_PROC_NULL
       comm3d = MPI_COMM_NULL
 
       select case (dom%pdiv_type)
@@ -583,9 +581,9 @@ contains
             enddo
 
             ! Compute neighbors
-            call MPI_Cart_shift(comm3d,0,1,procxl,procxr,ierr)   ! x dim
-            call MPI_Cart_shift(comm3d,1,1,procyl,procyr,ierr)   ! y dim
-            call MPI_Cart_shift(comm3d,2,1,proczl,proczr,ierr)   ! z dim
+            do p = xdim, zdim
+               call MPI_Cart_shift(comm3d, p-xdim, 1, procn(p, LO), procn(p, HI), ierr)
+            enddo
 
             if (any(dom%bnd(xdim:ydim, LO) == BND_COR)) then
                if (pcoords(xdim) == 0 .and. pcoords(ydim) > 0) then
@@ -602,20 +600,20 @@ contains
                endif
             endif
 
-            if (any(dom%bnd(xdim:ydim, HI) == BND_COR)) then
-               if (pcoords(xdim) == psize(xdim)-1 .and. pcoords(ydim) < psize(ydim)-1) then
-                  pc = (/pcoords(ydim),pcoords(xdim),pcoords(zdim)/)
-                  call MPI_Cart_rank(comm3d,pc,procxyr,ierr)
-               else
-                  procxyr = MPI_PROC_NULL
-               endif
-               if (pcoords(ydim) == psize(ydim)-1 .and. pcoords(xdim) < psize(xdim)-1 ) then
-                  pc = (/pcoords(ydim),pcoords(xdim),pcoords(zdim)/)
-                  call MPI_Cart_rank(comm3d,pc,procyxr,ierr)
-               else
-                  procyxr = MPI_PROC_NULL
-               endif
-            endif
+            if (any(dom%bnd(xdim:ydim, HI) == BND_COR)) call die("[mpisetup:init_mpi] Corner boundary on the right side not implemented anywhere")
+!!$               if (pcoords(xdim) == psize(xdim)-1 .and. pcoords(ydim) < psize(ydim)-1) then
+!!$                  pc = (/pcoords(ydim),pcoords(xdim),pcoords(zdim)/)
+!!$                  call MPI_Cart_rank(comm3d,pc,procxyr,ierr)
+!!$               else
+!!$                  procxyr = MPI_PROC_NULL
+!!$               endif
+!!$               if (pcoords(ydim) == psize(ydim)-1 .and. pcoords(xdim) < psize(xdim)-1 ) then
+!!$                  pc = (/pcoords(ydim),pcoords(xdim),pcoords(zdim)/)
+!!$                  call MPI_Cart_rank(comm3d,pc,procyxr,ierr)
+!!$               else
+!!$                  procyxr = MPI_PROC_NULL
+!!$               endif
+!!$            endif
          case default
             call die("[mpisetup:init_mpi] unknown strategy for generating domain division")
       end select
@@ -638,29 +636,21 @@ contains
 #endif /* !FFTW */
 
 #else /* !SHEAR_BND */
-      if (procxl /= MPI_PROC_NULL .and. procxl /= proc) bnd_xl = 'mpi'
-      if (procxr /= MPI_PROC_NULL .and. procxr /= proc) bnd_xr = 'mpi'
+      if (procn(xdim, LO) /= MPI_PROC_NULL .and. procn(xdim, LO) /= proc) bnd_xl = 'mpi'
+      if (procn(xdim, HI) /= MPI_PROC_NULL .and. procn(xdim, HI) /= proc) bnd_xr = 'mpi'
 #endif /* !SHEAR_BND */
 
-      if (procyl /= MPI_PROC_NULL .and. procyl /= proc) bnd_yl = 'mpi'
-      if (procyr /= MPI_PROC_NULL .and. procyr /= proc) bnd_yr = 'mpi'
+      if (procn(ydim, LO) /= MPI_PROC_NULL .and. procn(ydim, LO) /= proc) bnd_yl = 'mpi'
+      if (procn(ydim, HI) /= MPI_PROC_NULL .and. procn(ydim, HI) /= proc) bnd_yr = 'mpi'
 
-      if (proczl /= MPI_PROC_NULL .and. proczl /= proc) bnd_zl = 'mpi'
-      if (proczr /= MPI_PROC_NULL .and. proczr /= proc) bnd_zr = 'mpi'
+      if (procn(zdim, LO) /= MPI_PROC_NULL .and. procn(zdim, LO) /= proc) bnd_zl = 'mpi'
+      if (procn(zdim, HI) /= MPI_PROC_NULL .and. procn(zdim, HI) /= proc) bnd_zr = 'mpi'
 
-      procn(xdim,LO) = procxl
-      procn(xdim,HI) = procxr
-      procn(ydim,LO) = procyl
-      procn(ydim,HI) = procyr
-      procn(zdim,LO) = proczl
-      procn(zdim,HI) = proczr
 #ifdef DEBUG
-      write(msg,*) 'xdir: ',procxl, proc, procxr
-      call printinfo(msg)
-      write(msg,*) 'ydir: ',procyl, proc, procyr
-      call printinfo(msg)
-      write(msg,*) 'zdir: ',proczl, proc, proczr
-      call printinfo(msg)
+      do p = xdir, zdir
+         write(msg,*) 'dir',p,': ',procn(p, LO), proc, procn(p, HI)
+         call printinfo(msg)
+      enddo
 #endif /* DEBUG */
 
 #ifdef VERBOSE

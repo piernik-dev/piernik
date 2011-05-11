@@ -444,7 +444,7 @@ contains
       use dataio_pub,    only: die, msg
       use mpi,           only: MPI_STATUS_SIZE, MPI_REQUEST_NULL, MPI_IN_PLACE, MPI_LOGICAL, MPI_LOR
       use constants,     only: ARR, xdim, ydim, zdim, LO, HI, BND, BLK, BND_PER, BND_MPI, BND_SHE, BND_COR, AT_NO_B
-      use mpisetup,      only: comm, ierr, has_dir, psize, procxl, procyl, proczl, procxr, procyr, proczr, comm
+      use mpisetup,      only: comm, ierr, has_dir, psize, procn, comm
 
       implicit none
 
@@ -453,7 +453,7 @@ contains
       integer, parameter                          :: nreq = 3 * 4
       integer, dimension(nreq)                    :: req3d
       integer, dimension(MPI_STATUS_SIZE, nreq)   :: status3d
-      integer                                     :: i, d, lh, p
+      integer                                     :: i, d, lh
       integer, intent(in), optional               :: area_type
       character(len=*), intent(in), optional      :: dname
       logical :: dodie
@@ -491,22 +491,8 @@ contains
                      enddo
                   case (BND_MPI)
                      if (psize(d) > 1) then
-                        select case (2*d+lh)
-                           case (2*xdim+LO)
-                              p = procxl
-                           case (2*ydim+LO)
-                              p = procyl
-                           case (2*zdim+LO)
-                              p = proczl
-                           case (2*xdim+HI)
-                              p = procxr
-                           case (2*ydim+HI)
-                              p = procyr
-                           case (2*zdim+HI)
-                              p = proczr
-                        end select
-                        call MPI_Isend(pa3d(1, 1, 1), 1, cg%mbc(ARR, d, lh, BLK),  p, 2*d+(LO+HI-lh), comm, req3d(4*(d-xdim)+1+2*(lh-LO)), ierr)
-                        call MPI_Irecv(pa3d(1, 1, 1), 1, cg%mbc(ARR, d, lh, BND),  p, 2*d+       lh,  comm, req3d(4*(d-xdim)+2+2*(lh-LO)), ierr)
+                        call MPI_Isend(pa3d(1, 1, 1), 1, cg%mbc(ARR, d, lh, BLK), procn(d, lh), 2*d+(LO+HI-lh), comm, req3d(4*(d-xdim)+1+2*(lh-LO)), ierr)
+                        call MPI_Irecv(pa3d(1, 1, 1), 1, cg%mbc(ARR, d, lh, BND), procn(d, lh), 2*d+       lh,  comm, req3d(4*(d-xdim)+2+2*(lh-LO)), ierr)
                      else
                         call die("[grid:arr3d_boundaries] bnd_[xyz][lr] == 'mpi' && psize([xyz]dim) <= 1")
                      endif

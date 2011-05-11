@@ -46,17 +46,20 @@ contains
 !!  have a decency to make me more general
 !<
    subroutine all_wcr_boundaries
-   use arrays,        only: wcr   !< \todo doesn't it belong only to this module? What's the point in keeping it in arrays...
+
+      use arrays,        only: wcr   !< \todo doesn't it belong only to this module? What's the point in keeping it in arrays...
       use dataio_pub,    only: die
       use mpi,           only: MPI_STATUS_SIZE, MPI_REQUEST_NULL
       use constants,     only: CR, xdim, ydim, zdim, LO, HI, BND, BLK, BND_PER, BND_MPI
-      use mpisetup,      only: comm, ierr, has_dir, psize, procxl, procyl, proczl, procxr, procyr, proczr
+      use mpisetup,      only: comm, ierr, has_dir, psize, procn
       use grid,          only: cg
+
       implicit none
+
       integer, parameter                          :: nreq = 3 * 4
       integer, dimension(nreq)                    :: req3d
       integer, dimension(MPI_STATUS_SIZE, nreq)   :: status3d
-      integer                                     :: i, d, lh, p
+      integer                                     :: i, d, lh
 
       req3d(:) = MPI_REQUEST_NULL
 
@@ -83,23 +86,9 @@ contains
                      enddo
                   case (BND_MPI)
                      if (psize(d) > 1) then
-                        select case (2*d+lh)
-                           case (2*xdim+LO)
-                              p = procxl
-                           case (2*ydim+LO)
-                              p = procyl
-                           case (2*zdim+LO)
-                              p = proczl
-                           case (2*xdim+HI)
-                              p = procxr
-                           case (2*ydim+HI)
-                              p = procyr
-                           case (2*zdim+HI)
-                              p = proczr
-                        end select
-                        call MPI_Isend(wcr(1,1,1,1), 1, cg%mbc(CR, d, lh, BLK),  p, 2*d+(LO+HI-lh), comm, req3d(4*(d-xdim)+1+2*(lh-LO)), ierr)
-                        call MPI_Irecv(wcr(1,1,1,1), 1, cg%mbc(CR, d, lh, BND),  p, 2*d+       lh,  comm, req3d(4*(d-xdim)+2+2*(lh-LO)), ierr)
-                    else
+                        call MPI_Isend(wcr(1,1,1,1), 1, cg%mbc(CR, d, lh, BLK),  procn(d, lh), 2*d+(LO+HI-lh), comm, req3d(4*(d-xdim)+1+2*(lh-LO)), ierr)
+                        call MPI_Irecv(wcr(1,1,1,1), 1, cg%mbc(CR, d, lh, BND),  procn(d, lh), 2*d+       lh,  comm, req3d(4*(d-xdim)+2+2*(lh-LO)), ierr)
+                     else
                         call die("[crdiffiusion:all_wcr_boundaries] bnd_[xyz][lr] == 'mpi' && psize([xyz]dim) <= 1")
                      endif
                   case default ! Set gradient == 0 on the external boundaries
