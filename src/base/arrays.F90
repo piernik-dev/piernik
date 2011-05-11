@@ -59,12 +59,12 @@ module arrays
 #endif /* GRAV */
 
 #ifdef COSM_RAYS
-   real, allocatable, dimension(:,:,:)       :: divvel   !< Array storing \f$\nabla\cdot\mathbf{v}\f$, needed in cosmic ray transport
-   real, allocatable, dimension(:,:,:,:)     :: wcr      !< Temporary array used in crdiffusion module
+   real, allocatable, dimension(:,:,:),   target :: divvel   !< Array storing \f$\nabla\cdot\mathbf{v}\f$, needed in cosmic ray transport
+   real, allocatable, dimension(:,:,:,:), target :: wcr      !< Temporary array used in crdiffusion module
 #endif /* COSM_RAYS  */
 
 #ifdef ISO_LOCAL
-   real, allocatable, dimension(:,:,:),target:: cs_iso2_arr !< Array storing squared local isothermal sound speed
+   real, allocatable, dimension(:,:,:),   target :: cs_iso2_arr !< Array storing squared local isothermal sound speed
 #endif /* ISO_LOCAL */
 
 contains
